@@ -13,7 +13,7 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
-SW_TEST_LOAD_SUITE( PhysicsBenchTest, "physics step cost with a far mover, many bodies and worker counts" );
+SW_TEST_LOAD_SUITE( PhysicsBenchTest, "physics step cost with a far mover, many bodies, worker counts and cloth" );
 SW_TEST_TIME_BUDGET( PhysicsBenchTest, 2500, "Release 케이스 최대 577 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
 
 SW_LOG_CALLER( "PhysicsBench" );
@@ -181,6 +181,89 @@ SW_TEST_CASE( PhysicsBenchTest, Box2DStepByWorkerCount )
         sw::StringBuilder<sw::constant::kMaxBuffer64> label;
         label.appendFormat( "Box2D step  3000 dynamic bodies / workers %#", workerCount );
         test::logBenchSamples( label.c_str(), listSample );
+    }
+}
+
+/**
+ * @brief [PhysicsBenchTest] Jolt 스텝 시간 — 동적 상자 500 개 더미만 있을 때와, 윗변을 고정한 천(21 × 21 정점) 넷을 더했을 때
+ * @details 소프트 바디는 강체와 같은 `PhysicsSystem::Update` 안에서 풀린다. 첫 줄은 강체 경로의 기준이고(천이 없는 씬은 소프트 바디 표가 비어 있다),
+ *          둘째 줄과의 차가 천 넷의 값이다. 천은 매 스텝 고정 자세를 다시 준다(`ClothComponent` 처럼). 값은 Release 로 읽는다.
+ */
+SW_TEST_CASE( PhysicsBenchTest, JoltStepWithAndWithoutCloth )
+{
+    constexpr uint32  kBoxCount         = 500;
+    constexpr uint32  kBoxColumnCount   = 25;
+    constexpr uint32  kClothCount       = 4;
+    constexpr uint32  kClothSide        = 21;
+    constexpr uint32  kWarmupStepCount  = 60;
+    constexpr uint32  kMeasureStepCount = 120;
+    constexpr float32 kStep             = 1.0f / 60.0f;
+    for ( const bool bWithCloth : { false, true } )
+    {
+        sw::PhysicsSettings settings;
+        settings.ensureDefaults();
+        sw::unique_ptr<sw::IPhysicsScene3D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D( settings );
+        SW_ASSERT_TRUE( pScene != nullptr );
+        sw::PhysicsBodyDesc3D  floorDesc;
+        sw::PhysicsShapeDesc3D floorShape;
+        floorShape._halfExtents = sw::float3{ 100.0f, 0.5f, 100.0f };
+        floorDesc._listShape.push_back( floorShape );
+        floorDesc._position = sw::float3{ 0.0f, -0.5f, 0.0f };
+        floorDesc._type     = sw::PhysicsBodyType::Static;
+        (void)pScene->createBody( floorDesc ); // 바닥 핸들은 다시 쓰지 않는다 — 만들지 못하면 상자가 떨어져 잰 값만 달라진다
+        for ( uint32 boxIndex = 0; boxIndex < kBoxCount; ++boxIndex )
+        {
+            sw::PhysicsBodyDesc3D  desc;
+            sw::PhysicsShapeDesc3D shape;
+            shape._halfExtents = sw::float3{ 0.4f, 0.4f, 0.4f };
+            desc._listShape.push_back( shape );
+            desc._position = sw::float3{ static_cast<float32>( boxIndex % kBoxColumnCount ) * 0.9f, 0.5f + static_cast<float32>( boxIndex / kBoxColumnCount ) * 0.9f, 0.0f };
+            desc._type     = sw::PhysicsBodyType::Dynamic;
+            (void)pScene->createBody( desc ); // 상자 핸들은 다시 쓰지 않는다 — 씬이 지워질 때 함께 지워진다
+        }
+        sw::vector<sw::PhysicsSoftBodyHandle> listCloth;
+        sw::vector<sw::float3>                listClothPosition;
+        if ( bWithCloth )
+        {
+            for ( uint32 clothIndex = 0; clothIndex < kClothCount; ++clothIndex )
+            {
+                sw::PhysicsSoftBodyDesc desc;
+                for ( uint32 row = 0; row < kClothSide; ++row )
+                {
+                    for ( uint32 column = 0; column < kClothSide; ++column )
+                    {
+                        desc._listVertex.push_back( sw::float3{ static_cast<float32>( column ) * 0.1f - 1.0f, -static_cast<float32>( row ) * 0.1f, 0.0f } );
+                        if ( row + 1 < kClothSide && column + 1 < kClothSide )
+                        {
+                            const uint32 topLeft = row * kClothSide + column;
+                            desc._listTriangleIndex.insert( desc._listTriangleIndex.end(),
+                                                            { topLeft, topLeft + kClothSide, topLeft + 1, topLeft + 1, topLeft + kClothSide, topLeft + kClothSide + 1 } );
+                        }
+                    }
+                }
+                for ( uint32 column = 0; column < kClothSide; ++column )
+                {
+                    desc._listPinnedVertex.push_back( column ); // 윗줄
+                }
+                desc._position = sw::float3{ static_cast<float32>( clothIndex ) * 3.0f - 5.0f, 6.0f, -3.0f };
+                listClothPosition.push_back( desc._position );
+                listCloth.push_back( pScene->createSoftBody( desc ) );
+                SW_EXPECT_TRUE( listCloth.back().isValid() );
+            }
+        }
+        sw::vector<int64> listSample;
+        for ( uint32 stepIndex = 0; stepIndex < kWarmupStepCount + kMeasureStepCount; ++stepIndex )
+        {
+            const sw::Stopwatch stopwatch;
+            for ( size_t clothIndex = 0; clothIndex < listCloth.size(); ++clothIndex )
+            {
+                pScene->setSoftBodyPinnedTransform( listCloth[clothIndex], listClothPosition[clothIndex], sw::quaternion{} );
+            }
+            pScene->step( kStep );
+            if ( kWarmupStepCount <= stepIndex )
+                listSample.push_back( stopwatch.getElapsedMicroseconds() );
+        }
+        test::logBenchSamples( bWithCloth ? "Jolt step  500 dynamic boxes + 4 pinned cloths (21 x 21)" : "Jolt step  500 dynamic boxes", listSample );
     }
 }
 

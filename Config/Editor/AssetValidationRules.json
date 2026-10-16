@@ -172,7 +172,7 @@
       "severity": "error",
       "include_patterns": ["*.scene.xml", "*.prefab.xml"],
       "component_types": ["RigidBodyComponent", "RigidBody2DComponent", "CharacterControllerComponent", "CharacterController2DComponent",
-                          "TerrainColliderComponent", "FractureComponentBase", "DismembermentComponent"],
+                          "TerrainColliderComponent", "FractureComponentBase", "DismembermentComponent", "ClothComponent"],
       "attributes": ["_layer", "_staticLayer", "_chunkLayer", "_debrisLayer", "_pieceLayer"],
       "target_patterns": ["engine/physics/physicssettings.xml"],
       "target_elements": ["PhysicsLayerDef"],

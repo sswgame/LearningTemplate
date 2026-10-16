@@ -17,6 +17,7 @@
  *          | 캐릭터 | `IPhysicsCharacterScene` | 캐릭터 컨트롤러 |
  *          | 질의 | `IPhysicsQueryScene` | 맞힘 판정, 소리 가림, 발 IK, 탈것 |
  *          | 바퀴 차(3D 만) | `IPhysicsVehicleScene` | 바퀴 차 컴포넌트 |
+ *          | 소프트 바디(3D 만) | `IPhysicsSoftBodyScene` | 천 컴포넌트 |
  *          | 월드 | `IPhysicsScene` | `ScenePhysics`(스텝, 이벤트), 디버그 그리기 |
  *
  *          **스레드.** 씬 하나는 한 스레드(게임 스레드)에서 다룬다. `step` 안에서만 백엔드가 작업을 나눠 돌린다. step 중에 다른 스레드가 바디를
@@ -37,6 +38,7 @@
 #include "Engine/Physics/IPhysicsCharacterScene.h"
 #include "Engine/Physics/IPhysicsJointScene.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
+#include "Engine/Physics/IPhysicsSoftBodyScene.h"
 #include "Engine/Physics/IPhysicsVehicleScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsTypes.h"
@@ -48,7 +50,7 @@ namespace sw
 
     /**
      * @brief 물리 씬 하나입니다. 차원 트레이트(`PhysicsDimension3D`, `PhysicsDimension2D`)만 다르고 함수는 같습니다.
-     * @details 바퀴 차는 차원 트레이트의 `kSupportsVehicle` 이 참일 때만 상속한다(2D 는 빈 `PhysicsNoVehicleScene`).
+     * @details 바퀴 차 · 소프트 바디는 차원 트레이트의 `kSupportsVehicle` · `kSupportsSoftBody` 가 참일 때만 상속한다(2D 는 빈 `PhysicsNoVehicleScene` · `PhysicsNoSoftBodyScene`).
      *          역할 인터페이스의 타입 이름(`Vector`, `CastHit` …)은 여러 바탕 클래스에 있어 그대로면 모호하므로 여기서 다시 선언해 가린다.
      */
     template <typename TDimension>
@@ -56,7 +58,8 @@ namespace sw
                           public IPhysicsJointScene<TDimension>,
                           public IPhysicsCharacterScene<TDimension>,
                           public IPhysicsQueryScene<TDimension>,
-                          public std::conditional_t<TDimension::kSupportsVehicle, IPhysicsVehicleScene, PhysicsNoVehicleScene>
+                          public std::conditional_t<TDimension::kSupportsVehicle, IPhysicsVehicleScene, PhysicsNoVehicleScene>,
+                          public std::conditional_t<TDimension::kSupportsSoftBody, IPhysicsSoftBodyScene, PhysicsNoSoftBodyScene>
     {
     public:
         using Vector         = typename TDimension::Vector;
