@@ -23,13 +23,13 @@ namespace sw
             /** @brief 부호(0 은 +)입니다. */
             static float32 signNotZero( float32 value ) { return value >= 0.0f ? 1.0f : -1.0f; }
 
-            /** @brief 쿠킹본 매직 · 머리 크기 · 플래그입니다. */
+            /** @brief 쿠킹본 매직, 헤더 크기, 플래그입니다. */
             static constexpr uint8  kArrMagic[4]    = { 'S', 'W', 'V', 'A' };
             static constexpr size_t kHeaderSize     = 28;
             static constexpr uint32 kFlagLoop       = 1u;
             static constexpr uint32 kFlagAnchorRoot = 2u;
 
-            /** @brief 값 하나를 리틀 엔디언 그대로 덧붙입니다(엔진은 리틀 엔디언만 짓는다). */
+            /** @brief 값 하나를 리틀 엔디언 그대로 덧붙입니다(엔진은 리틀 엔디언만 생성한다). */
             template <typename T>
             static void appendValue( vector<uint8>& outBytes, const T& value )
             {
@@ -53,7 +53,7 @@ namespace sw
 {
     float32 MeshVertexAnimation::packNormal( const float3& normal )
     {
-        // 팔면체 사상 — 단위 구를 팔면체에 투영하고 아래 반구를 접어 [-1, 1]^2 사각형에 펼친다.
+        // 팔면체 매핑이다. 단위 구를 팔면체에 투영하고 아래 반구를 접어 [-1, 1]^2 사각형에 펼친다.
         const float32 sum = MathUtil::abs( normal._x ) + MathUtil::abs( normal._y ) + MathUtil::abs( normal._z );
         float32       u   = sum > 0.0f ? normal._x / sum : 0.0f;
         float32       v   = sum > 0.0f ? normal._y / sum : 0.0f;
@@ -91,7 +91,7 @@ namespace sw
     {
         if ( isEmpty() || vertexIndex >= _vertexCount )
             return float3{};
-        // 셰이더(swLoadVertexAnimation)와 같은 식 — 반복이면 프레임 수로 감고, 아니면 마지막 프레임에 멈춘다.
+        // 셰이더(swLoadVertexAnimation)와 같은 식이다. 반복이면 프레임 수로 감고, 아니면 마지막 프레임에 멈춘다.
         const float32 framePosition = MathUtil::max( time, 0.0f ) * _framesPerSecond;
         const float32 frameCount    = static_cast<float32>( _frameCount );
         float32       wrapped       = framePosition;

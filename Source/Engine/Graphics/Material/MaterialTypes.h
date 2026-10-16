@@ -1,6 +1,6 @@
 /**
  * @file MaterialTypes.h
- * @brief Material · MaterialInstance 가 함께 쓰는 타입과 서술체입니다.
+ * @brief Material 과 MaterialInstance 가 함께 쓰는 타입과 디스크립터입니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -66,7 +66,7 @@ namespace sw
         SplineMesh    = SW_BIT( 9 ),
     };
 
-    /// @brief 머티리얼 enum 항목(이름 + 값)입니다.
+    /// @brief 머티리얼 enum 항목(이름과 값)입니다.
     struct MaterialEnumEntry
     {
         string _name;
@@ -83,9 +83,9 @@ namespace sw
         MaterialPropertyType _type;
         MaterialPropertyType _shaderType;
 
-        /** @brief 작성 기본값입니다(XML `_defaultValue`. 로드할 때 `_value` 로 폴백합니다). */
+        /** @brief 작성 기본값입니다. XML 의 `_defaultValue` 이며, 로드할 때 `_value` 의 기본으로 씁니다. */
         string _defaultValue;
-        /** @brief 현재 패킹 값입니다(처음에는 `_defaultValue`). */
+        /** @brief 현재 패킹 값입니다(처음에는 `_defaultValue` 와 같습니다). */
         string _value;
 
         string                    _assetPath;
@@ -109,14 +109,14 @@ namespace sw
         uint8 _bAdvanced : 1;
         uint8 _reserved  : 4;
 
-        /** @brief 플래그 · 범위를 끈 기본값으로 만듭니다. */
+        /** @brief 플래그와 범위를 끈 기본값으로 만듭니다. */
         MaterialProperty() noexcept;
     };
 } // namespace sw
 
 namespace sw
 {
-    /// @brief 정적 스위치입니다(켜면 셰이더 define).
+    /// @brief 정적 스위치입니다(켜면 셰이더 define 이 추가됩니다).
     struct MaterialStaticSwitch
     {
         string _name;
@@ -125,8 +125,8 @@ namespace sw
 
         uint8 _bEnabled : 1;
         /**
-         * @brief 1 이면 에셋이 정한 상태만 쿠킹합니다(유니티 shader_feature). 0 이면 런타임에 바꿀 수 있는 스위치라 켬 · 끔 둘 다 쿠킹합니다(multi_compile).
-         * @details Shipping 에는 실시간 컴파일이 없다 — 1 인 스위치를 코드가 `setStaticSwitch` 로 바꾸면 그 변형은 Dev 에서만 그려진다.
+         * @brief 1 이면 에셋이 정한 상태만 쿠킹합니다(유니티 shader_feature). 0 이면 런타임에 바꿀 수 있는 스위치이므로 켠 상태와 끈 상태를 모두 쿠킹합니다(multi_compile).
+         * @details Shipping 에는 실시간 컴파일이 없다. 1 인 스위치를 코드가 `setStaticSwitch` 로 바꾸면 그 변형은 Dev 에서만 그려진다.
          */
         uint8 _bShaderFeature : 1;
         uint8 _reserved       : 6;
@@ -149,7 +149,7 @@ namespace sw
 
 namespace sw
 {
-    /// @brief 스위치 + 멀티 컴파일 + 품질 퍼뮤테이션입니다.
+    /// @brief 스위치, 멀티 컴파일, 품질을 합친 퍼뮤테이션입니다.
     struct MaterialPermutationDesc
     {
         MaterialQualityLevel         _quality   = MaterialQualityLevel::High;
@@ -163,7 +163,7 @@ namespace sw
 
 namespace sw
 {
-    /// @brief 머티리얼 에셋 서술입니다(셰이더 경로, 프로퍼티, 퍼뮤테이션).
+    /// @brief 머티리얼 에셋의 디스크립터입니다(셰이더 경로, 프로퍼티, 퍼뮤테이션).
     struct MaterialDesc
     {
         /** @brief .material 리소스에서 채웁니다(팩별 C++ 기본값 없음). */
@@ -181,7 +181,7 @@ namespace sw
     struct MaterialInstanceDesc
     {
         string _name;
-        string _parentPath; ///< 선택적 힌트. 런타임에는 여전히 Material* 부모가 필요함
+        string _parentPath; ///< 선택적 힌트입니다. 런타임에는 여전히 Material* 부모가 필요합니다
 
         /// @brief 인스턴스가 덮어쓴 프로퍼티 값입니다.
         struct Override
@@ -211,13 +211,13 @@ namespace sw
 
         vector<MultiCompileOverride> _listMultiCompile;
 
-        string _quality; ///< 비어 있으면 부모를 따름
+        string _quality; ///< 비어 있으면 부모를 따릅니다
     };
 } // namespace sw
 
 namespace sw
 {
-    /// @brief 런타임 머티리얼 데이터입니다(패킹 버퍼 + 디스크립터).
+    /// @brief 런타임 머티리얼 데이터입니다(패킹 버퍼와 디스크립터).
     struct MaterialData
     {
         vector<MaterialProperty> _listProperty;

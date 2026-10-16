@@ -30,7 +30,7 @@ namespace sw
                 unordered_set<string> _uniquePath;
             };
 
-            /** @brief 프로세스에 하나인 공유 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않습니다). 경로 → 약한 참조. */
+            /** @brief 프로세스에 하나인 공유 테이블입니다(Engine.dll 안에 있어 모듈 핫 리로드에 사라지지 않습니다). 경로를 키로 약한 참조를 보관합니다. */
             static WeakInternTable<string, Mesh>& getSharedTable()
             {
                 static WeakInternTable<string, Mesh> s_table;
@@ -43,10 +43,10 @@ namespace sw
                 return s_set;
             }
 
-            /** @brief 표의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 칸에 닿습니다. */
+            /** @brief 테이블의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 항목에 닿습니다. */
             static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
 
-            /** @brief 그 경로를 지금 쥔 메시입니다. 없으면 nullptr 입니다. */
+            /** @brief 그 경로를 지금 보관 중인 메시입니다. 없으면 nullptr 입니다. */
             static shared_ptr<Mesh> findLive( string_view path ) { return getSharedTable().findLive( makeKey( path ) ); }
 
             /** @brief 읽지 못한 경로를 처음 한 번만 경고합니다. */
@@ -58,7 +58,7 @@ namespace sw
                     SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
 
-            /** @brief 물리 셰이프 캐시의 읽기 함수입니다 — `.mesh` 정점(삼각형 목록)의 위치만 꺼냅니다. */
+            /** @brief 물리 셰이프 캐시의 읽기 함수입니다. `.mesh` 정점(삼각형 목록)의 위치만 꺼냅니다. */
             [[nodiscard]] static bool loadTrianglePositions( string_view path, vector<float3>& outListPosition )
             {
                 vector<RHIVertex> listVertex;
@@ -123,7 +123,7 @@ namespace sw
         if ( live == nullptr )
             return false;
 
-        // 읽기에 실패하면 옛 정점을 지킨다(반쯤 쓴 파일을 저장 중에 본 경우 — 다음 감시 이벤트가 다시 읽는다).
+        // 읽기에 실패하면 이전 정점을 유지한다. 저장 중이라 반쯤 쓰인 파일을 읽은 경우이며, 다음 감시 이벤트가 다시 읽는다.
         MeshAssetData data{};
         if ( MeshAssetFormat::loadFromResource( path, data ) == false )
         {
@@ -131,7 +131,7 @@ namespace sw
             return false;
         }
 
-        // 지난 프레임이 아직 옛 정점 버퍼로 그리고 있을 수 있다. setVertices 는 버퍼를 곧바로 돌려주므로 먼저 기다린다(TextureCache::reload 와 같은 이유).
+        // 지난 프레임이 아직 이전 정점 버퍼로 그리고 있을 수 있다. setVertices 는 버퍼를 곧바로 반환하므로 먼저 기다린다(TextureCache::reload 와 같은 이유).
         if ( pDevice != nullptr )
             pDevice->waitIdle();
         live->setVertices( std::move( data._listVertex ) );
@@ -147,8 +147,8 @@ namespace sw
 
     void MeshCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
-        (void)reloadShared( relativePath, pDevice ); // 쥔 쪽이 없으면 다시 읽을 것이 없다 — 다음에 읽는 쪽이 새 내용을 읽는다
-        PhysicsMeshShapeCache::clear();              // 물리 표는 렌더 메시를 쥔 쪽과 따로 붙든다 — 이미 만든 바디는 옛 기하 그대로다
+        (void)reloadShared( relativePath, pDevice ); // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다
+        PhysicsMeshShapeCache::clear();              // 물리 캐시는 렌더 메시와 따로 보관한다. 이미 만든 바디는 이전 기하 그대로다
     }
 
     size_t MeshCache::getCachedCount() const

@@ -29,7 +29,7 @@ namespace sw
         TaskManager& taskManager = engine::getSubsystem<TaskManager>();
         _stage                   = taskManager.createStage( "MeshPreload" );
         TaskHandle handle        = taskManager.emplaceTask( "MeshPreload", SW_DELEGATE_METHOD( TaskArgsDelegate, &MeshPreloadSet::loadAll, this ), TaskArgs{} );
-        handle.setPriority( TaskPriority::Low ); // 백그라운드 IO 줄 — 프레임 잡을 막지 않는다(AssetStreamingQueue 와 같다)
+        handle.setPriority( TaskPriority::Low ); // 백그라운드 IO 큐에서 돌아 프레임 작업을 막지 않는다(AssetStreamingQueue 와 같다)
         _stage.addTask( handle );
         handle.submit();
     }

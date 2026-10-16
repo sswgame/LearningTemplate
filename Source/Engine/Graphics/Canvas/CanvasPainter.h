@@ -99,7 +99,7 @@ namespace sw
         /** @brief 지금 변환, 자르기, 불투명도 아래에서 사각형을 칠합니다. 이미지가 있으면 이미지(9-슬라이스는 `drawImage`)를, 없으면 단색, 둥근 모서리, 테두리를 칠합니다. */
         void fillRect( const float2& position, const float2& size, const CanvasBrush& brush );
         /**
-         * @brief 이미지를 칠합니다. 여백(`_nineSliceMargin`)이 있으면 조각 아홉 개(가운데는 늘입니다)로 그리고, 사각형이 여백 합보다 작으면 여백을 비율대로 줄입니다.
+         * @brief 이미지를 칠합니다. 여백(`_nineSliceMargin`)이 있으면 조각 아홉 개(가운데 조각은 늘려 그립니다)로 그리고, 사각형이 여백 합보다 작으면 여백을 비율대로 줄입니다.
          * @details 줄이는 규칙은 `SpriteMeshBuilder` 의 월드 9-슬라이스와 같다. 크기가 0이 된 조각은 내지 않는다.
          */
         void drawImage( const float2& position, const float2& size, const CanvasBrush& brush );

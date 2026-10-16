@@ -42,7 +42,7 @@ namespace sw
 
     void MaterialUtil::appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine )
     {
-        // define 이름은 열거자 이름에서 만든다(`PostProcess` → `MATERIAL_USAGE_POST_PROCESS`) — 셰이더 쪽 철자의 정본은 MaterialUsageFlags 하나다.
+        // define 이름은 열거자 이름에서 만든다(`PostProcess` → `MATERIAL_USAGE_POST_PROCESS`). 셰이더 쪽 철자의 원본은 MaterialUsageFlags 하나다.
         for ( uint32 bit = 0; bit < sizeof( MaterialUsageFlags ) * 8; ++bit )
         {
             const MaterialUsageFlags flag = static_cast<MaterialUsageFlags>( 1u << bit );
