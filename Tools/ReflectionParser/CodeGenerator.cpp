@@ -168,9 +168,10 @@ namespace sw
 
 namespace sw
 {
-    CodeGenerator::CodeGenerator( const ParsedHeader& header, const string& sourceFilePath, const ParserSession& session,
-                                  const string& sourceRoot )
+    CodeGenerator::CodeGenerator( const ParsedHeader& header, const FixedCodecGenerator& fixedCodec, const string& sourceFilePath,
+                                  const ParserSession& session, const string& sourceRoot )
         : _header{ header }
+        , _fixedCodec{ fixedCodec }
         , _session{ session }
         , _sourceFilePath{ sourceFilePath }
         , _moduleName{}
@@ -194,9 +195,9 @@ namespace sw
 
         emitFileHeader( buffer );
         buffer.append( _session._config._emitGeneratedNsOpen );
-        for ( const ParsedTypeInfo& typeInfo : _header._listType )
+        for ( size_t typeIndex = 0; typeIndex < _header._listType.size(); ++typeIndex )
         {
-            emitTypeRegistrar( buffer, typeInfo );
+            emitTypeRegistrar( buffer, _header._listType[typeIndex], typeIndex );
         }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
@@ -209,6 +210,12 @@ namespace sw
             emitReflectTypeTraits( buffer, typeInfo );
             if ( typeInfo.requiresTypeAPI() )
                 emitTypeInfoAccessors( buffer, typeInfo );
+        }
+
+        // 고정 배치형 코덱의 정규 문자열(또는 적격이 아닌 이유)입니다. 대상의 `FixedSchemas.gen.txt` 가 이 줄들을 모읍니다.
+        for ( size_t typeIndex = 0; typeIndex < _header._listType.size(); ++typeIndex )
+        {
+            _fixedCodec.appendSchemaLine( buffer, typeIndex );
         }
         return string( buffer.view() );
     }
@@ -557,7 +564,7 @@ namespace sw
         return config._defaultModule;
     }
 
-    void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
+    void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, const size_t typeIndex ) const
     {
         const string registrarName = sanitizeIdentifier( typeInfo._fullyQualifiedName );
 
@@ -609,12 +616,15 @@ namespace sw
         if ( typeInfo._listMethod.empty() == false )
             emitMethodList( emit, typeInfo );
 
+        _fixedCodec.emitRegistration( emit, typeIndex );
+
         appendTemplate( outBuffer, templatefile::kTypeRegistrarEnd,
                         {
                             { templatekey::kID, registrarName },
                             { templatekey::kFqn, typeInfo._fullyQualifiedName },
                             { templatekey::kAliasRegs,
-                             CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
+                             CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) },
+                            { templatekey::kFixedCodec, _fixedCodec.getMemberText( typeIndex ) },
         } );
     }
 

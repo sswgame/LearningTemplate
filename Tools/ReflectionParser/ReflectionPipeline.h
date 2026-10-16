@@ -63,6 +63,8 @@ namespace sw
         [[nodiscard]] bool writeDepfile() const;
         /** @brief ENUM(Flags) 트레이트를 담은 .gen.h 들을 모으는 우산(FlagOps.gen.h)을 씁니다. */
         [[nodiscard]] bool writeFlagOpsUmbrella() const;
+        /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */
+        [[nodiscard]] bool writeFixedSchemaList() const;
 
     private:
         const ParserOptions* _pOptions;

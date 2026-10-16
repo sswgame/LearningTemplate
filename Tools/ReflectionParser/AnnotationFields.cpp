@@ -31,6 +31,10 @@ namespace sw
                     return AnnotationValue::Float;
                 else if constexpr ( std::is_same_v<TMember, FunctionNetRole> )
                     return AnnotationValue::NetRole;
+                else if constexpr ( std::is_same_v<TMember, ParsedRangeExpr> )
+                    return AnnotationValue::Range;
+                else if constexpr ( std::is_same_v<TMember, uint32> )
+                    return AnnotationValue::Count;
                 else
                     return AnnotationValue::String;
             }
@@ -175,9 +179,14 @@ namespace sw
                 target._bReplicated = SW_TRUE;
             }
 
-            /** @brief 아래 경계만 적는다 — 위 경계는 따로다(한쪽만 적은 범위는 그쪽만 막는다). 숫자가 아니면 `AnnotationApply` 가 이미 거절했다. */
+            /**
+             * @brief 아래 경계만 적습니다. 위 경계는 따로이고, 한쪽만 적은 범위는 그쪽만 막습니다. 꼴이 틀리면 `AnnotationApply` 가 이미 거절했습니다.
+             * @details 글은 늘 남깁니다(고정 배치형 코덱이 읽습니다). 숫자 하나일 때만 인스펙터 범위가 됩니다. 필드 이름 · 목록 꼴은 값이 실행 시간에
+             *          정해지므로 인스펙터는 그 필드의 범위를 막지 않습니다.
+             */
             static void applyMinRange( ParsedPropertyInfo& target, const string_view value )
             {
+                target._minRangeExpr._text = string( StringUtil::trim( value ) );
                 float32 parsed{ 0.0f };
                 if ( StringUtil::parseFloat( value, parsed ) == false )
                     return;
@@ -187,11 +196,32 @@ namespace sw
 
             static void applyMaxRange( ParsedPropertyInfo& target, const string_view value )
             {
+                target._maxRangeExpr._text = string( StringUtil::trim( value ) );
                 float32 parsed{ 0.0f };
                 if ( StringUtil::parseFloat( value, parsed ) == false )
                     return;
                 target._maxRange     = parsed;
                 target._bHasMaxRange = SW_TRUE;
+            }
+
+            /** @brief 고정 배치형 코덱의 양자화 간격입니다. 숫자인지는 `AnnotationApply` 가 이미 봤습니다. */
+            static void applyStep( ParsedPropertyInfo& target, const string_view value )
+            {
+                float32 parsed{ 0.0f };
+                if ( StringUtil::parseFloat( value, parsed ) == false )
+                    return;
+                target._step     = parsed;
+                target._bHasStep = SW_TRUE;
+            }
+
+            /** @brief 문자열 · 컨테이너 최대 길이입니다. 1 이상의 32 비트 정수인지는 `AnnotationApply` 가 이미 봤습니다. */
+            static void applyMaxCount( ParsedPropertyInfo& target, const string_view value )
+            {
+                uint64 parsed = 0;
+                if ( StringUtil::parseUint64( StringUtil::trim( value ), parsed ) == false )
+                    return;
+                target._maxCount     = static_cast<uint32>( parsed );
+                target._bHasMaxCount = SW_TRUE;
             }
 
             /** @brief 슬라이더 아래 경계입니다(허용 범위 `Min` 과 따로). */
@@ -234,9 +264,12 @@ namespace sw
                     case AnnotationValue::String:
                         return kind == AnnotationBinding::Kind::String;
                     case AnnotationValue::Float:
+                    case AnnotationValue::Range:
                         return kind == AnnotationBinding::Kind::Float;
                     case AnnotationValue::NetRole:
                         return kind == AnnotationBinding::Kind::NetRole;
+                    case AnnotationValue::Count:
+                        return kind == AnnotationBinding::Kind::Count;
                 }
                 return false;
             }

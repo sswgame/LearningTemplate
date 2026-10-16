@@ -2,6 +2,11 @@
 
 Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
+- `A-14` [결함] **`BitStream` 의 손 코덱 경로가 범위 밖 값을 조용히 자른다.** `BitWriter::writeInt` 는 범위 밖 정수를 경계로 잘라 쓰고, `BitReader::readInt` ·
+  `readQuantizedFloat` 은 범위 비트로 읽은 값이 범위를 넘으면 `min` 으로 잘라 읽는다. 깨진 패킷이 경고 없이 다른 값이 된다.
+  손 코덱(롤백 · Mech · Horror 스냅샷 · 온라인 `*Protocol`)이 남아 있는 동안의 안전망으로, 쓰기는 `[[nodiscard]] bool`, 읽기는 실패를 돌려주는 모양으로 바꾼다.
+  고정 배치형(`FixedCodecUtil::readQuantizedFloat32`)은 칸 번호를 직접 읽어 `OutOfRange` 로 거절한다. 손 코덱을 B 로 옮기면(계획 단계 2 ~ 5) 이 경로를 쓰는 곳이 줄어든다.
+
 - `B-9` [검증대기] **패킷 압축의 남은 것**(UDP 압축을 끈 결정과 측정값은 [결정 기록](../09_Decisions.md) 5-9). WSL Release 로 `NetCompressionBenchTest` 를 한 번 돌린다(압축 시간은
   컴파일러 · libc 에 따라 다르다). 채팅 수치는 채팅 키트가 실제 기록을 내면 다시 잰다. 스트림 프레임 압축은 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
 

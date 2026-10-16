@@ -44,12 +44,13 @@ namespace sw
              *          타입(부모 · 팩토리 · 추상), 프로퍼티(타입 · 값 자리 · 컨테이너 · 범위 ·
              *          플래그), 함수, enum 값까지 적는다. 헤더 여럿을 동시에 쓸 수 있어 한 덩어리로 내보낸다.
              */
-            static void printParsedHeader( const string& inputFile, const ParsedHeader& parsed )
+            static void printParsedHeader( const string& inputFile, const ParsedHeader& parsed, const FixedCodecGenerator& fixedCodec )
             {
                 StringBuilder<constant::kMaxBuffer8192> out;
                 out.appendFormat( "== %#\n", inputFile );
-                for ( const ParsedTypeInfo& type : parsed._listType )
+                for ( size_t typeIndex = 0; typeIndex < parsed._listType.size(); ++typeIndex )
                 {
+                    const ParsedTypeInfo& type = parsed._listType[typeIndex];
                     out.appendFormat( "REFLECT %#", type._fullyQualifiedName );
                     if ( type._parentFQN.empty() == false )
                         out.appendFormat( " : %#", type._parentFQN );
@@ -146,6 +147,7 @@ namespace sw
                         appendParameterList( out, event._listParameter );
                         out.append( ")\n" );
                     }
+                    out.appendFormat( "%#\n", fixedCodec.makeDumpLine( typeIndex ) );
                 }
                 for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
                 {
@@ -332,6 +334,8 @@ namespace sw
 
         if ( writeFlagOpsUmbrella() == false )
             ++errorCount;
+        if ( writeFixedSchemaList() == false )
+            ++errorCount;
         if ( writeDepfile() == false )
             ++errorCount;
         return errorCount;
@@ -472,10 +476,17 @@ namespace sw
                                            const vector<StampDependency>& listDependency ) const
     {
         const ParserConfig& config = _pSession->_config;
+        FixedCodecGenerator fixedCodec( parsed, inputFile );
+        const bool          bFixedPlanned = fixedCodec.makePlan();
         if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
-            ReflectionPipelineInternal::printParsedHeader( inputFile, parsed );
+            ReflectionPipelineInternal::printParsedHeader( inputFile, parsed, fixedCodec );
+        if ( bFixedPlanned == false )
+        {
+            SW_LOG_ERROR( "Code generation failed (fixed layout annotations): %#", inputFile );
+            return false;
+        }
 
-        const CodeGenerator generator( parsed, inputFile, *_pSession, _pOptions->_sourceRoot );
+        const CodeGenerator generator( parsed, fixedCodec, inputFile, *_pSession, _pOptions->_sourceRoot );
         string              headerText;
         if ( generator.makeHeaderText( headerText ) == false )
         {
@@ -555,6 +566,38 @@ namespace sw
             return false;
         }
         return true;
+    }
+
+    /**
+     * @details 진단 파일입니다. 빌드는 읽지 않으므로 CMake 산출물 목록에 넣지 않습니다. 스키마 해시가 왜 바뀌었는지 빌드 두 개의 이 파일을
+     *          비교해 봅니다(`docs/plans/ReflectionFormats.md` 3.11). 이번 실행에서 최신이라 다시 쓰지 않은 입력도 `.gen.cpp` 에 줄이 남아 있습니다.
+     */
+    bool ReflectionPipeline::writeFixedSchemaList() const
+    {
+        const ParserConfig& config = _pSession->_config;
+        const string_view   marker = fixedlayout::kSchemaLineMarker;
+        string              text;
+        for ( const string& inputFile : _pOptions->_listInputFile )
+        {
+            const string genCpp = ParserUtil::makeGeneratedPath( _pOptions->_outputDir, inputFile, config._emitCppExtension );
+            string       genText;
+            // 입력마다 산출물이 있습니다(애노테이션이 없는 헤더도 빈 산출물을 씁니다). 없거나 못 읽으면 목록이 조용히 빠지므로 실패로 알립니다.
+            if ( FileUtil::readTextFile( genCpp, genText ) == false )
+            {
+                SW_LOG_ERROR( "Failed to read generated file for the fixed schema list: %#", genCpp );
+                return false;
+            }
+            size_t lineStart = genText.find( marker.data(), 0, marker.size() );
+            while ( lineStart != string::npos )
+            {
+                const size_t lineEnd = genText.find( '\n', lineStart );
+                const size_t textEnd = ( lineEnd == string::npos ) ? genText.size() : lineEnd;
+                text.append( genText, lineStart + marker.size(), textEnd - lineStart - marker.size() );
+                text.push_back( '\n' );
+                lineStart = genText.find( marker.data(), textEnd, marker.size() );
+            }
+        }
+        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, fixedlayout::kSchemaListFile ), text );
     }
 
     bool ReflectionPipeline::writeFlagOpsUmbrella() const

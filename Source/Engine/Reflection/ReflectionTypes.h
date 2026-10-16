@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    struct FixedCodec;
     struct ReflectEventOps;
     struct ReflectTypeOps;
 
@@ -894,7 +895,12 @@ namespace sw
          */
         Component* ( *_addComponent )( GameObject* pOwner );
         /** @brief `REFLECT( Validate = fn )` 의 타입 검증 함수입니다. 없으면 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다. */
-        ReflectValidateFunction                                   _pValidate;
+        ReflectValidateFunction _pValidate;
+        /**
+         * @brief 고정 배치형(B) 코덱 테이블입니다(`Engine/Serialization/Fixed/FixedLayout.h`). 코드젠이 모든 `REFLECT` 타입에 채우고, 적격이 아니면
+         *        이유만 든 테이블입니다. 코드젠을 거치지 않은 타입(내장 스칼라)은 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다.
+         */
+        const FixedCodec*                                         _pFixedCodec;
         hashed_string                                             _name;
         hashed_string                                             _fullyQualifiedName;
         hashed_string                                             _parentFQN;

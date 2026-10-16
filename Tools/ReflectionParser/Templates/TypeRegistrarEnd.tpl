@@ -1,7 +1,7 @@
 			registry.registerClass( info );
 $AliasRegs
 		}
-
+$FixedCodec
 		Registrar()
 		{
 			static ::sw::TypeRegistrar reg{ &RegisterType };

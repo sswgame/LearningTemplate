@@ -10,6 +10,7 @@
 #   string   key=value → 문자열 필드
 #   float    key=value → float (Min/Max 범위)
 #   netrole  단독 토큰 → FunctionNetRole (PredefinedFunctionNetRole.xxx)
+#   count    key=value → 1 이상의 정수 (MaxCount)
 #
 # flag 한 줄이 두 형태(단독 토큰 · `X = true`)를 함께 맡는다. 두 형태를 따로 적지 말 것 — 한쪽이 빠지면
 # `PROPERTY( Polymorphic = true )` 같은 것이 경고 한 줄 없이 버려지고, 별칭도 한쪽만 늘어나는데 눈에 보이지 않는다.
@@ -63,8 +64,14 @@ string.Tooltip = Tooltip
 string.DefaultValue = Default, DefaultValue
 string.AssetType = AssetType
 string.Meta = Meta, meta, CustomMeta
+# 허용 범위입니다. 숫자 하나, 또는 따옴표 안에 쉼표로 나눈 숫자 · 앞선 필드 이름 목록("-_halfSize, 0, -_halfSize")을 적습니다. 수학 타입은 원소마다 적습니다.
+# 고정 배치형(롤백 · 넷) 코덱은 이 범위를 와이어 범위로 씁니다. 정수는 범위 비트 수로 쓰고, 범위 밖 값은 쓰기 실패입니다.
 float.MinRange = Min
 float.MaxRange = Max
+# 고정 배치형 코덱의 양자화 간격입니다(float32 만, Min · Max 필수). 적으면 그 필드는 손실 인코딩입니다.
+float.Step = Step
+# 문자열 · vector 의 최대 길이입니다. 고정 배치형 코덱은 이것이 없는 가변 길이 필드를 인코딩하지 않습니다.
+count.MaxCount = MaxCount
 # 인스펙터 슬라이더 · 드래그 범위(허용 범위 Min/Max 와 따로). 둘 다 적으면 슬라이더로 그리고, 값은 여전히 Min/Max 로 막는다
 float.UIMinRange = UIMin
 float.UIMaxRange = UIMax

@@ -14,3 +14,5 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Serialization/Fixed/FixedLayout.h"

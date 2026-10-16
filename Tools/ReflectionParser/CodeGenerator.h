@@ -8,6 +8,7 @@
 #include "Engine/EngineMinimal.h"
 
 #include "ReflectionParser/CodeEmit.h"
+#include "ReflectionParser/FixedCodecGenerator.h"
 #include "ReflectionParser/ParsedReflection.h"
 #include "ReflectionParser/ParserSession.h"
 
@@ -20,10 +21,14 @@ namespace sw
     {
     public:
         /**
+         * @param fixedCodec 계획을 마친(`FixedCodecGenerator::makePlan`) 고정 배치형 코덱 생성기입니다. 타입마다 코덱 등록과 멤버를 덧붙입니다.
          * @param sourceRoot 모듈 판별을 이 경로 기준 상대 경로로 합니다. 비면 전체 경로로 매칭합니다.
          */
-        CodeGenerator( const ParsedHeader& header, const string& sourceFilePath, const ParserSession& session,
+        CodeGenerator( const ParsedHeader& header, const FixedCodecGenerator& fixedCodec, const string& sourceFilePath, const ParserSession& session,
                        const string& sourceRoot = string{} );
+
+        /** @brief FQN을 C++ 식별자로 안전하게 바꿉니다. */
+        static string sanitizeIdentifier( string_view fqn );
 
         /** @brief .gen.cpp 의 내용을 만듭니다. 리플렉트된 것이 없으면 한 줄짜리 빈 산출물입니다. */
         string makeSourceText() const;
@@ -38,7 +43,7 @@ namespace sw
         /** @brief 파일 상단 배너·include 를 출력합니다. */
         void emitFileHeader( CodeEmitBuffer& outBuffer ) const;
         /** @brief TypeRegistrar 본문을 출력합니다. */
-        void emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
+        void emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, size_t typeIndex ) const;
         /** @brief PropertyInfo 한 항목을 출력합니다. */
         void emitPropertyInfoEntry( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 프로퍼티 메타데이터(필드 표 + 범위)를 출력합니다. */
@@ -71,16 +76,14 @@ namespace sw
         /** @brief 이름 또는 FQN으로 enumerator 를 찾습니다. */
         static const ParsedEnumeratorInfo* findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec );
 
-        /** @brief FQN을 C++ 식별자로 안전하게 바꿉니다. */
-        static string sanitizeIdentifier( string_view fqn );
-
         /** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
         void appendTemplate( CodeEmitBuffer& outBuffer, const string_view name, const EmitTemplateStore::TemplateVars vars ) const;
 
     private:
-        const ParsedHeader&  _header;
-        const ParserSession& _session;
-        string               _sourceFilePath;
-        string               _moduleName; ///< 타입 · 열거형 · 팩토리 등록마다 쓰던 것을 한 번만 판별한다
+        const ParsedHeader&        _header;
+        const FixedCodecGenerator& _fixedCodec;
+        const ParserSession&       _session;
+        string                     _sourceFilePath;
+        string                     _moduleName; ///< 타입 · 열거형 · 팩토리 등록마다 쓰던 것을 한 번만 판별한다
     };
 } // namespace sw

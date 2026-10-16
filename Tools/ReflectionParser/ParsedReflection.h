@@ -45,6 +45,98 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 열거형 안의 개별 enumerator */
+    struct ParsedEnumeratorInfo
+    {
+        string _name;
+        int64  _value{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief `Min` · `Max` 에 적은 글 그대로입니다. 숫자 하나이거나, 쉼표로 나눈 숫자 · 필드 이름(`-_halfSize`) 목록입니다.
+     * @details 숫자 하나면 인스펙터 범위(`_minRange` 등)로도 쓰입니다. 목록 · 이름 꼴은 고정 배치형 코덱만 씁니다(필드 이름은 실행 시간에 값이 정해집니다).
+     */
+    struct ParsedRangeExpr
+    {
+        string _text;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 고정 배치형(B) 코덱에서 값 하나를 어떤 꼴로 인코딩하는지 나타냅니다(`docs/plans/ReflectionFormats.md` 3.4 표). */
+    enum class FixedValueKind : uint8
+    {
+        Ineligible, ///< 인코딩 표 밖입니다. 그 필드를 가진 타입은 코덱이 없습니다(`ParsedFixedType::_reason`)
+        Bool,
+        Integer,
+        Float32,
+        Float64,
+        Enum,
+        String,
+        Math,       ///< `float3` 같은 수학 타입입니다. 원소마다 실수 규칙을 씁니다
+        Vector,     ///< 가변 길이 시퀀스입니다. `MaxCount` 가 필요합니다
+        FixedArray, ///< `T[N]` · `std::array<T, N>` 입니다. 개수 없이 원소 N 개를 씁니다
+        Reflect,    ///< 다른 `REFLECT` 타입입니다. 그 타입의 필드를 씁니다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 필드가 가리키는 열거형 하나입니다. 다른 헤더의 열거형도 선언에서 읽습니다. */
+    struct ParsedFixedEnum
+    {
+        string                       _fullyQualifiedName;
+        string                       _underlyingTypeName; ///< 정규 이름(`uint8`)
+        vector<ParsedEnumeratorInfo> _listEnumerator;     ///< 선언 순서, `Count` 포함
+        string                       _countEnumerator;    ///< `ENUM( Count = … )` 의 이름입니다. 없으면 비어 있습니다
+        uint8                        _bIsBitFlag : 1;
+        [[maybe_unused]] uint8       _reserved   : 7;
+
+        ParsedFixedEnum() noexcept
+            : _fullyQualifiedName{}
+            , _underlyingTypeName{}
+            , _listEnumerator{}
+            , _countEnumerator{}
+            , _bIsBitFlag{ SW_FALSE }
+            , _reserved{ 0 }
+        {
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 필드 타입을 고정 배치형 인코딩 표에 맞춰 분류한 결과입니다. 컨테이너는 원소를 재귀로 담습니다.
+     * @details 선언(clang 타입)에서 읽습니다. 사용자는 B 형식을 따로 선언하지 않습니다.
+     */
+    struct ParsedFixedType
+    {
+        string                      _typeName;           ///< 정규 타입 이름입니다. 수학 타입 표를 찾고 진단에 씁니다
+        string                      _reason;             ///< Ineligible 이면 이유입니다(영문, 로그와 생성 주석에 그대로 나갑니다)
+        string                      _fullyQualifiedName; ///< Reflect 의 FQN
+        shared_ptr<ParsedFixedType> _element;            ///< Vector · FixedArray 의 원소
+        shared_ptr<ParsedFixedEnum> _enum;               ///< Enum 의 열거자
+        FixedValueKind              _kind;
+
+        ParsedFixedType() noexcept
+            : _typeName{}
+            , _reason{}
+            , _fullyQualifiedName{}
+            , _element{ nullptr }
+            , _enum{ nullptr }
+            , _kind{ FixedValueKind::Ineligible }
+        {
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief PROPERTY(...) 가 붙은 멤버 필드, 또는 값 참조를 돌려주는 메서드(값이 객체 밖에 있는 프로퍼티) */
     struct ParsedPropertyInfo
     {
@@ -69,20 +161,27 @@ namespace sw
         string                          _elementTypeName;
         string                          _keyTypeName;
         shared_ptr<ParsedContainerNode> _containerTree;
-        float32                         _minRange;
-        float32                         _maxRange;
-        float32                         _uiMinRange; ///< `UIMin` — 슬라이더 범위(허용 범위와 따로)
-        float32                         _uiMaxRange;
-        ContainerKind                   _containerKind;
-        uint8                           _bIsBitField   : 1;
-        uint8                           _bReadOnly     : 1;
-        uint8                           _bXMLAttribute : 1;
-        uint8                           _bAssetPath    : 1;
-        uint8                           _bPolymorphic  : 1;
-        uint8                           _bHasMinRange  : 1;
-        uint8                           _bHasMaxRange  : 1;
-        uint8                           _bIsContainer  : 1;
-        uint8                           _bTransient    : 1;
+        /** @brief 고정 배치형 코덱에서의 분류입니다. 필드면 늘 있고, 접근자 프로퍼티는 Ineligible 입니다. */
+        shared_ptr<ParsedFixedType> _fixedType;
+        ParsedRangeExpr             _minRangeExpr; ///< `Min` 의 글입니다. 숫자 하나면 `_minRange` 에도 들어갑니다
+        ParsedRangeExpr             _maxRangeExpr;
+        float32                     _minRange;
+        float32                     _maxRange;
+        float32                     _uiMinRange; ///< `UIMin` — 슬라이더 범위(허용 범위와 따로)
+        float32                     _uiMaxRange;
+        float32                     _step;     ///< `Step` 양자화 간격입니다(`_bHasStep`)
+        uint32                      _maxCount; ///< `MaxCount` 문자열 · 컨테이너 최대 길이입니다(`_bHasMaxCount`)
+        uint32                      _line;     ///< 선언 줄입니다. 생성 오류 메시지에 씁니다
+        ContainerKind               _containerKind;
+        uint8                       _bIsBitField   : 1;
+        uint8                       _bReadOnly     : 1;
+        uint8                       _bXMLAttribute : 1;
+        uint8                       _bAssetPath    : 1;
+        uint8                       _bPolymorphic  : 1;
+        uint8                       _bHasMinRange  : 1;
+        uint8                       _bHasMaxRange  : 1;
+        uint8                       _bIsContainer  : 1;
+        uint8                       _bTransient    : 1;
         /** @brief 값이 비어 있으면 직렬화에서 생략합니다(PROPERTY(SkipIfEmpty)). */
         uint8 _bSkipIfEmpty : 1;
         /** @brief 데이터 파일이 반드시 적어야 하는 칸입니다(PROPERTY(Required)). */
@@ -97,13 +196,17 @@ namespace sw
         uint8 _bSaveGame   : 1;
         uint8 _bInterp     : 1;
         /** @brief `RepNotify` 함수가 이전 값을 받는다(`void fn( const T& )`). 선언에서 온 사실이다(애노테이션 줄이 아니다). */
-        uint8                   _bRepNotifyTakesOldValue : 1;
-        uint8                   _bHasUIMinRange          : 1;
-        uint8                   _bHasUIMaxRange          : 1;
-        uint8                   _bEditConditionHides     : 1;
-        uint8                   _bColorHdr               : 1;
-        uint8                   _bMultiline              : 1;
-        [[maybe_unused]] uint8  _reserved                : 4;
+        uint8 _bRepNotifyTakesOldValue : 1;
+        uint8 _bHasUIMinRange          : 1;
+        uint8 _bHasUIMaxRange          : 1;
+        uint8 _bEditConditionHides     : 1;
+        uint8 _bColorHdr               : 1;
+        uint8 _bMultiline              : 1;
+        uint8 _bHasStep                : 1;
+        uint8 _bHasMaxCount            : 1;
+        /** @brief 공개 멤버입니다. 다른 타입의 코덱이 이 필드를 직접 읽고 쓸 수 있는지(중첩 타입 펼치기) 정합니다. */
+        uint8                   _bPublic  : 1;
+        [[maybe_unused]] uint8  _reserved : 1;
         [[maybe_unused]] uint16 _padding;
 
         ParsedPropertyInfo() noexcept
@@ -126,10 +229,16 @@ namespace sw
             , _elementTypeName{}
             , _keyTypeName{}
             , _containerTree{ nullptr }
+            , _fixedType{ nullptr }
+            , _minRangeExpr{}
+            , _maxRangeExpr{}
             , _minRange{ 0.0f }
             , _maxRange{ 1.0f }
             , _uiMinRange{ 0.0f }
             , _uiMaxRange{ 1.0f }
+            , _step{ 0.0f }
+            , _maxCount{ 0 }
+            , _line{ 0 }
             , _containerKind{ ContainerKind::None }
             , _bIsBitField{ SW_FALSE }
             , _bReadOnly{ SW_FALSE }
@@ -153,6 +262,9 @@ namespace sw
             , _bEditConditionHides{ SW_FALSE }
             , _bColorHdr{ SW_FALSE }
             , _bMultiline{ SW_FALSE }
+            , _bHasStep{ SW_FALSE }
+            , _bHasMaxCount{ SW_FALSE }
+            , _bPublic{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {
@@ -264,12 +376,15 @@ namespace sw
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
         vector<ParsedEventInfo>      _listEvent;
+        uint32                       _baseCount; ///< 기반 클래스 수입니다. 둘 이상이면 고정 배치형 코덱이 없습니다
         uint8                        _bAbstract         : 1;
         uint8                        _bStatic           : 1;
         uint8                        _bReflectBody      : 1;
         uint8                        _bComponentFactory : 1;
         uint8                        _bHideInMenu       : 1;
-        [[maybe_unused]] uint8       _reserved          : 3;
+        /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 고정 배치형 코덱도 기반을 건너뜁니다. */
+        uint8                  _bParentReflected : 1;
+        [[maybe_unused]] uint8 _reserved         : 2;
 
         ParsedTypeInfo() noexcept
             : _name{}
@@ -284,27 +399,19 @@ namespace sw
             , _listProperty{}
             , _listMethod{}
             , _listEvent{}
+            , _baseCount{ 0 }
             , _bAbstract{ SW_FALSE }
             , _bStatic{ SW_FALSE }
             , _bReflectBody{ SW_FALSE }
             , _bComponentFactory{ SW_FALSE }
             , _bHideInMenu{ SW_FALSE }
+            , _bParentReflected{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
 
         bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 열거형 안의 개별 enumerator */
-    struct ParsedEnumeratorInfo
-    {
-        string _name;
-        int64  _value{ 0 };
     };
 } // namespace sw
 
