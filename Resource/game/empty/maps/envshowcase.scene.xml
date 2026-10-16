@@ -71,7 +71,7 @@
 					                  _attachComponent="None"
 					                  _heightfieldPath="game/empty/heightfields/valley.heightfield"
 					                  _materialPath="engine/materials/terrain.material"
-					                  _splatTexturePath="game/empty/textures/valley_splat.dds"
+					                  _splatTexturePath="game/empty/heightfields/valley.layerweights"
 					                  _detailTexturePath="engine/textures/terrain/terrain_detail.dds"
 					                  _size="256,256"
 					                  _heightMin="0"

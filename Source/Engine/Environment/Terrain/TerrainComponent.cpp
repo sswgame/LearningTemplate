@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Environment/Terrain/LayerWeightsData.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -16,9 +17,6 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/Image/DDSLoader.h"
-#include "Engine/Resource/Image/ImageFileWriter.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
@@ -29,11 +27,6 @@ namespace sw
     {
         struct TerrainComponentInternal
         {
-            /** @brief DXGI 비압축 8 비트 4 채널 포맷입니다. RGBA(UNORM, SRGB)와 BGRA(UNORM, SRGB)가 있습니다. */
-            static constexpr uint32 kDxgiRgba8     = 28;
-            static constexpr uint32 kDxgiRgba8Srgb = 29;
-            static constexpr uint32 kDxgiBgra8     = 87;
-            static constexpr uint32 kDxgiBgra8Srgb = 91;
             /** @brief LOD 를 바꾸기 전에 거리가 임계값을 넘어야 하는 비율입니다. 임계값에 선 카메라가 매 프레임 메시를 다시 만들지 않게 합니다. */
             static constexpr float32 kLODHysteresis = 0.1f;
             /**
@@ -261,7 +254,7 @@ namespace sw
         ++_heightfieldGeneration; // 실패해도 오른다 — 비워진 높이장으로 만든 바디도 낡았다
         _splatRevision   = 0;
         _bHeightsWritten = false;
-        releaseCPUSplat(); // 칠한 것은 버리고 디스크 스플랫으로 돌아간다
+        releaseCPUSplat(); // 칠한 것은 버리고 디스크 가중치로 다시 만든다
         if ( _heightfieldPath.empty() )
             return false;
 
@@ -277,7 +270,11 @@ namespace sw
             _heightfield.shutdown();
             return false;
         }
-        loadSplatWeights();
+        if ( loadSplatWeights() == false )
+        {
+            _heightfield.shutdown();
+            return false;
+        }
         acquireMaterial();
         createChunks();
         _listChunkGeneration.assign( _layout.getChunkCount(), _heightfieldGeneration );
@@ -341,26 +338,13 @@ namespace sw
         if ( _heightfield.writeSplatWeights( listWeight, rect ) == false )
             return false;
         ++_splatRevision;
-        // 엔진 서비스가 없으면(CPU 테스트) CPU 값만 바뀐다.
-        if ( engine::areEngineServicesBound() == false )
+        // 엔진 서비스가 없으면(CPU 테스트) 텍스처가 없고 CPU 값만 바뀐다.
+        if ( _cpuSplatPath.empty() )
             return true;
         TextureCache&        textures   = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         const uint32         splatWidth = _heightfield.getSplatWidth();
         const vector<uint8>& listByte   = _heightfield.getSplatBytes();
-        // 처음 칠하면 이 지형만의 스플랫 텍스처를 지금 가중치 전부로 만들고 머티리얼을 그쪽으로 바꾼다(헤더 — 디스크 DDS 는 다른 지형과 나눠 쓴다).
-        if ( _cpuSplatPath.empty() )
-        {
-            string path = TerrainComponentInternal::makeCPUSplatPath();
-            if ( textures.createCPUTexture( path, splatWidth, _heightfield.getSplatHeight(), listByte ) == false )
-            {
-                SW_LOG_WARNING( "Terrain '%#': could not create its own splat texture - the painted weights stay on the CPU", _heightfieldPath.c_str() );
-                return true;
-            }
-            _cpuSplatPath = std::move( path );
-            _material.setTexture( hashed_string( "splatMap" ), _cpuSplatPath );
-            return true;
-        }
-        // 그 뒤로는 바뀐 사각형만 한 번에 올린다(렌더 스레드가 다음 프레임 기록 전에 올린다).
+        // 바뀐 사각형만 한 번에 올린다(렌더 스레드가 다음 프레임 기록 전에 올린다).
         const uint32  width  = rect._maxX - rect._minX + 1;
         const uint32  height = rect._maxZ - rect._minZ + 1;
         vector<uint8> rgbaBytes( static_cast<size_t>( width ) * height * 4 );
@@ -395,7 +379,11 @@ namespace sw
     {
         if ( _heightfield.getSplatWidth() == 0 )
             return false;
-        return ImageFileWriter::writeDDSRgba8( filePath, _heightfield.getSplatBytes(), _heightfield.getSplatWidth(), _heightfield.getSplatHeight() );
+        LayerWeightsData data;
+        data._width  = _heightfield.getSplatWidth();
+        data._height = _heightfield.getSplatHeight();
+        data._bytes  = _heightfield.getSplatBytes();
+        return data.saveToFile( filePath );
     }
 
     void TerrainComponent::writeState( Archive& outArchive ) const
@@ -479,46 +467,31 @@ namespace sw
             SW_LOG_WARNING( "Terrain '%#': could not write back the unsaved splat edits", _heightfieldPath.c_str() );
     }
 
-    void TerrainComponent::loadSplatWeights()
+    bool TerrainComponent::loadSplatWeights()
     {
-        using Internal = TerrainComponentInternal;
+        _heightfield.setSplat( 0, 0, {} );
+        // 경로가 비었으면 이 지형은 레이어를 칠하지 않는다(데이터가 정한 것이다). 정한 가중치를 읽지 못하면 레이어 0 으로 두지 않고 지형을 읽지 않는다.
         if ( _splatTexturePath.empty() )
+            return true;
+        LayerWeightsData data;
+        if ( data.loadFromResource( _splatTexturePath ) == false )
         {
-            _heightfield.setSplat( 0, 0, {} );
-            return;
+            SW_LOG_ERROR( "Terrain '%#': layer weights '%#' did not load - the terrain is not loaded (expected a %# asset)", _heightfieldPath.c_str(), _splatTexturePath.c_str(),
+                          string( LayerWeightsData::kExtension ).c_str() );
+            return false;
         }
-        // 전용 서버의 패키지에는 텍스처가 없다. 레이어 질의는 레이어 0 이다(경고를 남기지 않는다).
-        if ( ResourcePaths::isExcludedForHost( _splatTexturePath ) )
+        _heightfield.setSplat( data._width, data._height, data._bytes );
+        // 그리는 호스트는 이 바이트로 자기 GPU 텍스처를 만든다(칠하기도 이 텍스처를 고친다). 엔진 서비스가 없으면(CPU 테스트) CPU 값만 둔다.
+        if ( engine::areEngineServicesBound() == false )
+            return true;
+        string path = TerrainComponentInternal::makeCPUSplatPath();
+        if ( engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().createCPUTexture( path, data._width, data._height, std::move( data._bytes ) ) == false )
         {
-            _heightfield.setSplat( 0, 0, {} );
-            return;
+            SW_LOG_ERROR( "Terrain '%#': could not create the splat texture for '%#' (%#x%#)", _heightfieldPath.c_str(), _splatTexturePath.c_str(), data._width, data._height );
+            return false;
         }
-        DDSImageData image;
-        if ( DDSLoader::loadFromResource( _splatTexturePath, image ) == false )
-        {
-            SW_LOG_WARNING( "Terrain splat '%#' could not be read - layer queries return layer 0", _splatTexturePath.c_str() );
-            _heightfield.setSplat( 0, 0, {} );
-            return;
-        }
-        const bool   bRgba      = image._dxgiFormat == Internal::kDxgiRgba8 || image._dxgiFormat == Internal::kDxgiRgba8Srgb;
-        const bool   bBgra      = image._dxgiFormat == Internal::kDxgiBgra8 || image._dxgiFormat == Internal::kDxgiBgra8Srgb;
-        const size_t texelCount = static_cast<size_t>( image._width ) * image._height;
-        if ( ( bRgba == false && bBgra == false ) || image._bytes.size() < texelCount * 4 )
-        {
-            SW_LOG_WARNING( "Terrain splat '%#' is DXGI format %# - CPU layer queries need uncompressed RGBA8 (import rule Terrain_Weights)", _splatTexturePath.c_str(),
-                            image._dxgiFormat );
-            _heightfield.setSplat( 0, 0, {} );
-            return;
-        }
-        vector<uint8> rgbaBytes( image._bytes.begin(), image._bytes.begin() + static_cast<ptrdiff_t>( texelCount * 4 ) );
-        if ( bBgra )
-        {
-            for ( size_t texel = 0; texel < texelCount; ++texel )
-            {
-                std::swap( rgbaBytes[texel * 4], rgbaBytes[texel * 4 + 2] );
-            }
-        }
-        _heightfield.setSplat( image._width, image._height, rgbaBytes );
+        _cpuSplatPath = std::move( path );
+        return true;
     }
 
     void TerrainComponent::acquireMaterial()
@@ -543,7 +516,7 @@ namespace sw
         // x 는 스플랫 너비(텍셀 중심 맞추기), y 는 디테일 반복(1/m), z 는 절벽 임계값(노멀 y), w 는 절벽 레이어(-1 이면 끔)다.
         const float32 splatWidth = static_cast<float32>( _heightfield.getSplatWidth() );
         _material.setVector( hashed_string( "terrainParams" ), float4{ splatWidth, _detailTiling, _cliffStart, static_cast<float32>( _cliffLayer ) } );
-        _material.setTexture( hashed_string( "splatMap" ), _splatTexturePath );
+        _material.setTexture( hashed_string( "splatMap" ), _cpuSplatPath );
         _material.setTexture( hashed_string( "detailMap" ), _detailTexturePath );
     }
 

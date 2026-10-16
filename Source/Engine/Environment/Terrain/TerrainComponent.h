@@ -51,8 +51,10 @@ namespace sw
      *          만들지 않으므로 씬에 저장되지 않고 계층 창에도 보이지 않는다. 틱마다 카메라 거리로 청크 LOD 를 고르고, LOD 나 이웃 LOD 가 바뀐
      *          청크만 메시를 다시 만들어 배치에 교체한다(`MeshInstanceBatch::setMesh`). 이웃이 더 거친 변은 정점을 접어 틈이 없다(`TerrainMeshBuilder`).
      *
-     *          레이어 가중치 맵(`_splatTexturePath`, 비압축 RGBA8 DDS)은 GPU 텍스처로도 쓰고 CPU 에서도 읽는다. `computeLayerWeightsAt` 이 셰이더와
-     *          같은 값을 주므로 배치 규칙의 레이어 필터와 밀도 맵에 쓸 수 있다. 레이어 색, 디테일, 3 축 투영은 `_listLayer` 가 머티리얼 인스턴스에 싣는다.
+     *          레이어 가중치 맵(`_splatTexturePath`, `.layerweights` 데이터 에셋 — `LayerWeightsData`)은 클라이언트와 전용 서버가 같은 파일을 CPU 로 읽는다.
+     *          텍스처가 아니므로 서버 패키지에 남아 서버의 레이어 질의(발소리 · 표면 재질 · 이동 속도)도 정확하다. 그리는 쪽의 GPU 텍스처는 읽은 바이트로
+     *          지형마다 하나 만든다(`getCPUSplatPath`). `computeLayerWeightsAt` 이 셰이더와 같은 값을 주므로 배치 규칙의 레이어 필터와 밀도 맵에 쓸 수 있다.
+     *          레이어 색, 디테일, 3 축 투영은 `_listLayer` 가 머티리얼 인스턴스에 싣는다.
      *
      *          스레드: 질의(`findHeightAt` 등)는 읽기만 하므로 병렬 틱과 배치 계산이 동시에 호출해도 된다. 다시 읽기(`reloadTerrain`)는 틱 밖에서만 호출한다.
      */
@@ -82,7 +84,7 @@ namespace sw
          * @brief 높이장과 스플랫을 다시 읽고 청크를 다시 만듭니다. 등록 전이면 데이터만 읽습니다.
          * @details 디스크 값으로 돌아간다 — 저장하지 않은 높이 · 스플랫 편집은 버린다. 트랜스폼 · 프로퍼티가 바뀌어 다시 읽을 때는 편집을 넘기는
          *          `reloadTerrainKeepingEdits` 를 쓴다.
-         * @return 높이장을 읽었으면 true 를 반환합니다(경로가 비었거나 읽지 못하면 false 이며, 그리지 않습니다).
+         * @return 높이장과(정했으면) 레이어 가중치를 읽었으면 true 를 반환합니다(경로가 비었거나 읽지 못하면 false 이며, 그리지 않습니다).
          */
         [[nodiscard]] bool reloadTerrain();
         /**
@@ -127,19 +129,19 @@ namespace sw
         [[nodiscard]] bool writeHeights( const vector<float32>& listHeight, const TerrainSampleRect& rect );
         /**
          * @brief 레이어 가중치 전부(`getHeightfield().readSplatWeights` 로 읽어 고친 사본)에서 @p rect(스플랫 텍셀 좌표)를 CPU 스플랫에 반영하고 `getSplatRevision` 을 올립니다.
-         * @details 처음 쓸 때 이 지형만의 CPU 텍스처(`getCPUSplatPath`, `TextureCache::createCPUTexture`)를 만들어 머티리얼의 스플랫을 그것으로 바꾼다 — 디스크 DDS 는
-         *          경로로 캐시가 나눠 쓰므로 그대로 칠하면 같은 스플랫을 쓰는 다른 지형도 칠해지고, 디바이스를 다시 만들면 디스크 값으로 돌아간다(언리얼 랜드스케이프 가중치 맵처럼
-         *          지형마다 자기 텍스처를 둔다). 다음 쓰기부터는 @p rect 만 한 번에 맡긴다(`TextureCache::requestRegionUpdate` — 렌더 스레드가 다음 프레임 기록 전에 올린다).
-         *          디스크 DDS 는 `saveSplat` 전까지 그대로이고 `reloadTerrain` 은 디스크 값으로 돌아간다. 틱 밖에서만 부른다.
+         * @details 텍스처는 읽을 때 지형마다 하나 만든 CPU 텍스처(`getCPUSplatPath`, `TextureCache::createCPUTexture`)라 같은 에셋을 쓰는 다른 지형은 칠해지지 않고,
+         *          디바이스를 다시 만들어도 칠한 값이 남는다(언리얼 랜드스케이프 가중치 맵처럼 지형마다 자기 텍스처를 둔다). @p rect 만 한 번에 맡긴다
+         *          (`TextureCache::requestRegionUpdate` — 렌더 스레드가 다음 프레임 기록 전에 올린다). 디스크 에셋은 `saveSplat` 전까지 그대로이고
+         *          `reloadTerrain` 은 디스크 값으로 돌아간다. 틱 밖에서만 부른다.
          */
         [[nodiscard]] bool writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
         /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). 가중치로 만든 것(레이어 필터 배치)이 낡았는지 견줍니다. */
         uint32 getSplatRevision() const { return _splatRevision; }
-        /** @brief 칠한 뒤 이 지형이 그리는 자기 스플랫 텍스처의 캐시 경로(`cpu/terrain/...`)입니다. 아직 칠하지 않았으면 비어 있습니다(디스크 스플랫을 그린다). */
+        /** @brief 이 지형이 그리는 자기 스플랫 텍스처의 캐시 경로(`cpu/terrain/...`)입니다. 가중치가 없거나 엔진 서비스가 없으면(CPU 테스트) 비어 있습니다. */
         const string& getCPUSplatPath() const { return _cpuSplatPath; }
         /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 `_heightMin`..`_heightMax` 로 양자화). 높이장이 없으면 false 입니다. */
         [[nodiscard]] bool saveHeightfield( string_view filePath ) const;
-        /** @brief 지금 CPU 스플랫을 비압축 RGBA8 DDS 로 절대 경로에 씁니다. 스플랫이 없으면 false 입니다. */
+        /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsData`)으로 절대 경로에 씁니다. 가중치가 없으면 false 입니다. */
         [[nodiscard]] bool saveSplat( string_view filePath ) const;
 
         /**
@@ -205,8 +207,11 @@ namespace sw
         void fillNeighborLODs( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLOD, uint32 ( &outArrLOD )[4] ) const;
         /** @brief 머티리얼을 만들고 인스턴스에 레이어와 텍스처 값을 싣습니다. 엔진 서비스가 없으면(CPU 테스트) 건너뜁니다. */
         void acquireMaterial();
-        /** @brief 스플랫 DDS 를 CPU 로 읽어 높이장에 줍니다. 비압축 RGBA8/BGRA8 만 읽습니다. */
-        void loadSplatWeights();
+        /**
+         * @brief 가중치 에셋(`.layerweights`)을 읽어 높이장에 주고, 엔진 서비스가 있으면 그 바이트로 자기 스플랫 텍스처를 만듭니다.
+         * @return 경로가 비었거나 읽었으면 true 입니다. 정한 가중치를 읽지 못하면 오류를 남기고 false 입니다 — 레이어 0 으로 두지 않는다.
+         */
+        [[nodiscard]] bool loadSplatWeights();
         /** @brief 자기 스플랫 텍스처(`_cpuSplatPath`)를 캐시에 돌려줍니다. 없으면 아무것도 하지 않습니다. */
         void releaseCPUSplat();
 
@@ -215,7 +220,7 @@ namespace sw
         string _heightfieldPath;
         PROPERTY( Category = "Terrain", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Terrain material (terrain.hlsl)" )
         string _materialPath;
-        PROPERTY( Category = "Terrain", DisplayName = "Splat Map", AssetPath, AssetType = "Texture", Tooltip = "Layer weights RGBA = layers 0..3 (uncompressed RGBA8 DDS)" )
+        PROPERTY( Category = "Terrain", DisplayName = "Splat Map", AssetPath, Tooltip = "Layer weights asset (.layerweights, layers 0..3); read by client and dedicated server" )
         string _splatTexturePath;
         PROPERTY( Category = "Terrain", DisplayName = "Detail Map", AssetPath, AssetType = "Texture", Tooltip = "Tileable detail, one channel per layer" )
         string _detailTexturePath;
@@ -245,7 +250,7 @@ namespace sw
         vector<uint32>      _listChunkGeneration; ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
         vector<uint32>      _listStaleChunk;      ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
         EnvironmentMaterial _material;
-        string              _cpuSplatPath;          ///< 칠한 뒤의 자기 스플랫 텍스처(`getCPUSplatPath`)
+        string              _cpuSplatPath;          ///< 가중치로 만든 자기 스플랫 텍스처(`getCPUSplatPath`)
         PrimitiveRegistry*  _pPrimitiveRegistry;    ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
         uint32              _heightfieldGeneration; ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
         uint32              _splatRevision;         ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
