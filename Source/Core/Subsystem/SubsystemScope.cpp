@@ -2,6 +2,8 @@
 
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     SubsystemScope::SubsystemScope( const ISubsystemLocator* pParent )
@@ -19,22 +21,15 @@ namespace sw
     void SubsystemScope::destroyAll()
     {
         // 조회 칸을 먼저 지운다 — 소멸자가 같은 범위를 조회해도 지워지는 서브시스템을 돌려주지 않는다.
-        for ( size_t index = _listEntry.size(); index > 0; --index )
-        {
-            if ( _listEntry[index - 1]._bOwned )
-                _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( index - 1 ) );
-        }
+        VectorUtil::removeIf( _listEntry, []( const Entry& entry )
+        { return entry._bOwned; } );
         _collection.destroyAll();
     }
 
     void* SubsystemScope::findInScope( uint64 typeHash ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._typeHash == typeHash )
-                return entry._pObject;
-        }
-        return nullptr;
+        const Entry* pEntry = VectorUtil::findBy<&Entry::_typeHash>( _listEntry, typeHash );
+        return pEntry != nullptr ? pEntry->_pObject : nullptr;
     }
 
     bool SubsystemScope::registerEntry( uint64 typeHash, void* pObject, bool bOwned )
@@ -59,11 +54,7 @@ namespace sw
 
     bool SubsystemScope::isOwnedEntry( uint64 typeHash ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._typeHash == typeHash )
-                return entry._bOwned;
-        }
-        return false;
+        const Entry* pEntry = VectorUtil::findBy<&Entry::_typeHash>( _listEntry, typeHash );
+        return pEntry != nullptr && pEntry->_bOwned;
     }
 } // namespace sw

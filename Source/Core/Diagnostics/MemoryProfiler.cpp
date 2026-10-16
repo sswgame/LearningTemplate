@@ -5,6 +5,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Container/vector.h"
@@ -539,8 +540,7 @@ namespace sw
             if ( byteDelta > 0 || blockCountDelta > 0 )
                 listGrowth.push_back( MemoryTagGrowth{ static_cast<MemoryTag>( tagIndex ), byteDelta, blockCountDelta } );
         }
-        std::sort( listGrowth.begin(), listGrowth.end(), []( const MemoryTagGrowth& lhs, const MemoryTagGrowth& rhs )
-        { return lhs._byteDelta > rhs._byteDelta; } );
+        std::sort( listGrowth.begin(), listGrowth.end(), Descending<&MemoryTagGrowth::_byteDelta>{} );
         return listGrowth;
     }
 
@@ -619,13 +619,11 @@ namespace sw
         MemoryProfilerInternal::t_bIsInsideProfiler = false;
         if ( order == TopCallStackOrder::LiveBytes )
         {
-            std::sort( listResult.begin(), listResult.end(), []( const CallStackAllocInfo& infoA, const CallStackAllocInfo& infoB )
-            { return infoA._currentBytes > infoB._currentBytes; } );
+            std::sort( listResult.begin(), listResult.end(), Descending<&CallStackAllocInfo::_currentBytes>{} );
         }
         else
         {
-            std::sort( listResult.begin(), listResult.end(), []( const CallStackAllocInfo& infoA, const CallStackAllocInfo& infoB )
-            { return infoA._totalCount > infoB._totalCount; } );
+            std::sort( listResult.begin(), listResult.end(), Descending<&CallStackAllocInfo::_totalCount>{} );
         }
         return listResult;
     }

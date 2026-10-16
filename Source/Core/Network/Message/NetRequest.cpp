@@ -15,22 +15,13 @@ namespace sw
 {
     namespace
     {
-        struct NetRequestInternal
+        /** @brief 바이트 정렬한 뒤의 몸 — 읽은 비트를 바이트로 올림한 자리부터 끝까지입니다. */
+        void findNetRequestPayload( const BitReader& reader, const uint8* pBody, int32 bodySize, const uint8*& pOutPayload, int32& outPayloadSize )
         {
-            static uint64 mixHash( uint64 hash, uint64 value )
-            {
-                hash = HashUtil::combine( hash, value );
-                return hash;
-            }
-
-            /** @brief 바이트 정렬한 뒤의 몸 — 읽은 비트를 바이트로 올림한 자리부터 끝까지입니다. */
-            static void findPayload( const BitReader& reader, const uint8* pBody, int32 bodySize, const uint8*& pOutPayload, int32& outPayloadSize )
-            {
-                const int32 offset = ( reader.getBitPosition() + 7 ) / 8;
-                pOutPayload        = pBody + offset;
-                outPayloadSize     = bodySize - offset;
-            }
-        };
+            const int32 offset = ( reader.getBitPosition() + 7 ) / 8;
+            pOutPayload        = pBody + offset;
+            outPayloadSize     = bodySize - offset;
+        }
     } // namespace
 } // namespace sw
 
@@ -219,7 +210,7 @@ namespace sw
         }
         const uint8* pPayload    = nullptr;
         int32        payloadSize = 0;
-        NetRequestInternal::findPayload( reader, pBody, bodySize, pPayload, payloadSize );
+        findNetRequestPayload( reader, pBody, bodySize, pPayload, payloadSize );
         finish( requestID, std::move( pending ), status, pPayload, payloadSize );
         return true;
     }
@@ -287,16 +278,9 @@ namespace sw
         return _owner == other._owner && _keyHigh == other._keyHigh && _keyLow == other._keyLow && _method == other._method && _bConnectionScope == other._bConnectionScope;
     }
 
-    size_t NetRequestServer::ScopeKeyHash::operator()( const ScopeKey& key ) const
+    uint64 NetRequestServer::ScopeKey::computeHash() const
     {
-        uint64 hash = NetRequestInternal::mixHash( key._owner, key._keyHigh );
-        hash        = NetRequestInternal::mixHash( hash, key._keyLow );
-        return static_cast<size_t>( NetRequestInternal::mixHash( hash, ( static_cast<uint64>( key._method ) << 1 ) | key._bConnectionScope ) );
-    }
-
-    size_t NetRequestServer::RequestKeyHash::operator()( const RequestKey& key ) const
-    {
-        return static_cast<size_t>( NetRequestInternal::mixHash( key._handlePacked, key._requestID ) );
+        return HashUtil::makeHash( _owner, _keyHigh, _keyLow, _method, _bConnectionScope );
     }
 
     NetRequestServer::NetRequestServer()
@@ -409,7 +393,7 @@ namespace sw
         }
         const uint8* pPayload    = nullptr;
         int32        payloadSize = 0;
-        NetRequestInternal::findPayload( reader, pBody, bodySize, pPayload, payloadSize );
+        findNetRequestPayload( reader, pBody, bodySize, pPayload, payloadSize );
 
         enum class RequestAction : uint8
         {

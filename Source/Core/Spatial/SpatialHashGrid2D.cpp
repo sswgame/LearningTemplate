@@ -223,8 +223,7 @@ namespace sw
                 outListHandle.push_back( handle );
         } );
 
-        std::sort( outListHandle.begin(), outListHandle.end() );
-        outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
+        VectorUtil::sortUnique( outListHandle );
     }
 
     void SpatialHashGrid2D::queryCircle( float32 centerX, float32 centerY, float32 radius, vector<SlotHandle>& outListHandle ) const
@@ -247,8 +246,7 @@ namespace sw
                 outListHandle.push_back( handle );
         } );
 
-        std::sort( outListHandle.begin(), outListHandle.end() );
-        outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
+        VectorUtil::sortUnique( outListHandle );
     }
 
     void SpatialHashGrid2D::queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<SlotHandle>& outListHandle ) const
@@ -335,8 +333,7 @@ namespace sw
             }
         }
 
-        std::sort( outListHandle.begin(), outListHandle.end() );
-        outListHandle.erase( std::unique( outListHandle.begin(), outListHandle.end() ), outListHandle.end() );
+        VectorUtil::sortUnique( outListHandle );
     }
 
 } // namespace sw

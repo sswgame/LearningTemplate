@@ -2,9 +2,8 @@
 
 #include "Core/Network/Message/NetMessage.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/Connection/NetHost.h"
-
-#include <algorithm>
 
 namespace sw
 {
@@ -68,7 +67,7 @@ namespace sw
     {
         if ( pHandler == nullptr )
             return false;
-        if ( std::find( _listHandler.begin(), _listHandler.end(), pHandler ) != _listHandler.end() )
+        if ( VectorUtil::contains( _listHandler, pHandler ) )
             return true;
         const uint8  rangeBase = pHandler->getMessageRangeBase();
         const uint16 kindMask  = pHandler->getMessageKindMask();
@@ -89,7 +88,8 @@ namespace sw
 
     void NetMessageRouter::unregisterHandler( INetMessageHandler* pHandler )
     {
-        _listHandler.erase( std::remove( _listHandler.begin(), _listHandler.end(), pHandler ), _listHandler.end() );
+        VectorUtil::removeIf( _listHandler, [pHandler]( const INetMessageHandler* pRegistered )
+        { return pRegistered == pHandler; } );
         rebuildKindTable();
     }
 
