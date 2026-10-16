@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -62,16 +63,22 @@ namespace sw::editor
         prefabCache.reload( prefabPath, nullptr );
 
         // 같은 프리팹의 다른 인스턴스에 퍼뜨린다(덮어쓴 값은 남긴다). 파일 쓰기와 인스턴스 갱신을 되돌리기 하나로 묶는다.
+        // 인스턴스는 두 갈래다 — 씬에 놓은 인스턴스(에디터 작업 공간이 경로를 기록)와, 다른 프리팹 인스턴스가 스폰한 중첩 부품
+        // (`PrefabInstanceRegistry`). 부품은 씬에 저장되지 않고 바깥 프리팹이 다시 스폰하므로 지금 보이는 부품만 고치면 된다(언리얼 차일드 액터).
         EditorWorkspace&    workspace = pContext->getSubsystem<EditorWorkspace>();
         GameObjectManager*  pManager  = pObj->getManager();
         vector<GameObject*> listInstance;
         if ( pManager != nullptr && oldBaseState.empty() == false )
         {
+            const PrefabInstanceRegistry& nestedParts = pManager->getSubsystem<PrefabInstanceRegistry>();
             pManager->forEachGameObject( [&]( GameObject* pOther )
             {
-                const bool bOtherInstance = pOther != nullptr && pOther != pObj && pOther->isPendingDestroy() == false &&
-                                            FileUtil::pathsEqualNormalized( workspace.getGameObjectPrefabPath( pOther->getObjectID() ), prefabPath );
-                if ( bOtherInstance )
+                const bool bNotOtherLiveObject = pOther == nullptr || pOther == pObj || pOther->isPendingDestroy();
+                if ( bNotOtherLiveObject )
+                    return;
+                const PrefabNestedPart* pPart       = nestedParts.isAttachedNestedPart( pOther ) ? nestedParts.findNestedPart( pOther->getObjectID() ) : nullptr;
+                const string_view       otherPrefab = pPart != nullptr ? string_view{ pPart->_prefabPath } : workspace.getGameObjectPrefabPath( pOther->getObjectID() );
+                if ( otherPrefab.empty() == false && FileUtil::pathsEqualNormalized( otherPrefab, prefabPath ) )
                     listInstance.push_back( pOther );
             } );
         }
@@ -143,5 +150,41 @@ namespace sw::editor
 
         pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( pObj->getObjectID(), "" );
         pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
+    }
+
+    uint32 EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )
+    {
+        EditorContext*     pContext = EditorContext::get();
+        GameObjectManager* pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;
+        if ( pContext == nullptr || pManager == nullptr )
+            return 0;
+        EditorWorkspace&        workspace = pContext->getSubsystem<EditorWorkspace>();
+        PrefabInstanceRegistry& registry  = pManager->getSubsystem<PrefabInstanceRegistry>();
+
+        // 부모를 먼저 기록한다 — 프리팹 쓰기가 기록 순서(스폰 순서)로 돌며 부모 노드가 자식 노드보다 앞에 있기를 바란다.
+        uint32              adoptedCount = 0;
+        vector<GameObject*> listPending{ pRoot };
+        vector<GameObject*> listChild;
+        while ( listPending.empty() == false )
+        {
+            GameObject* pParent = listPending.back();
+            listPending.pop_back();
+            pParent->getChildren( listChild );
+            for ( GameObject* pChild : listChild )
+            {
+                if ( pChild == nullptr || pChild->isPendingDestroy() )
+                    continue;
+                const string childPrefab{ workspace.getGameObjectPrefabPath( pChild->getObjectID() ) };
+                if ( childPrefab.empty() )
+                    continue; // 프리팹 인스턴스가 아니다 — 프리팹 본문에 들지 않는다
+                registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab );
+                workspace.setGameObjectPrefabPath( pChild->getObjectID(), "" );
+                listPending.push_back( pChild );
+                ++adoptedCount;
+            }
+        }
+        if ( adoptedCount > 0 )
+            SW_LOG_INFO( "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), adoptedCount );
+        return adoptedCount;
     }
 } // namespace sw::editor

@@ -14,6 +14,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
@@ -315,6 +316,7 @@ namespace sw::editor
                     return false;
                 }
                 (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );
+                (void)EditorInspectorCommands::adoptChildPrefabInstances( pObject ); // 옮긴 수는 로그가 알린다
                 PrefabAsset asset;
                 asset.setFromGameObject( pObject );
                 if ( asset.saveToFile( absolutePath ) == false )
