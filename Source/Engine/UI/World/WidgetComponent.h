@@ -21,6 +21,8 @@ namespace sw
     struct UILayoutContext;
     struct UIPaintContext;
 
+    class CameraComponent;
+    class GameObjectManager;
     class UISystem;
     class Widget;
     class WidgetTree;
@@ -51,14 +53,31 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 한 프레임 동안 화면 마커들이 함께 쓰는 게임 카메라입니다(`UISystem::update` 가 마커 갱신마다 넘긴다).
+     * @details 카메라 찾기와 뷰 · 투영 행렬은 오브젝트 관리자마다 한 번만 구한다(마커 2,000 개가 저마다 구하면 그 몫이 프레임을 먹는다). 관리자가 바뀌면 다시 구한다.
+     */
+    struct WidgetMarkerView
+    {
+        const GameObjectManager* _pManager{ nullptr }; ///< 아래 값을 구한 관리자입니다(nullptr 이면 아직 구하지 않았다).
+        const CameraComponent*   _pCamera{ nullptr };  ///< 그 관리자의 게임 카메라입니다(없으면 nullptr — 마커를 숨긴다).
+        float4x4                 _viewProjection{};
+        float3                   _cameraPosition{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class WidgetComponent
      * @brief 오브젝트 위치에 위젯 하나를 띄웁니다.
      * @details **Screen**: `UISystem` 의 HUD 레이어 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 `UISystem::update`
-     *          (게임 틱과 트랜스폼 적용 뒤, 병렬 틱 밖)가 오브젝트의 월드 점을 게임 카메라로 투영해 그 슬롯을 옮긴다.
+     *          (게임 틱과 트랜스폼 적용 뒤, 병렬 틱 밖)가 오브젝트의 월드 점을 게임 카메라로 투영해 그 위젯의 화면 앵커(`UISystem::setScreenMarkerAnchor`)를 옮긴다.
+     *          위젯은 피벗이 앵커 점에 오도록 원점 기준으로 배치 · 칠하고, 위치와 거리 배율은 캔버스 셰이더가 앵커로 적용한다. 그래서 마커가 움직여도
+     *          다시 배치 · 칠하지 않고 사각형 버퍼도 다시 올리지 않는다(RTS 이름표 2,000 개 측정은 `docs/09_Decisions.md` UI 절). 마커 내용은 자르기를 쓸 수 없다.
      *          **World**: 위젯 트리를 렌더 텍스처에 그려 사각형 메시에 붙인다(렌더 텍스처 경로는 `getRenderTargetPath`).
      *
-     *          위젯은 `setContent` 로 코드가 넘긴다(문서 `_documentPath` 를 해석하는 것은 5-1 단계에서 한다). 화면 마커는 `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고
-     *          (위치가 바뀌어도 그 아래만 다시 배치한다), 없으면 위젯의 원하는 크기를 쓴다. 기준점은 오브젝트 위치 + `_worldOffset`(월드 축, 머리 위 HP 바)이다.
+     *          위젯은 `setContent` 로 코드가 넘긴다(문서 `_documentPath` 를 해석하는 것은 5-1 단계에서 한다). 화면 마커는 `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고,
+     *          없으면 위젯의 원하는 크기를 쓴다. 기준점은 주 씬 컴포넌트의 위치 + `_worldOffset`(월드 축, 머리 위 HP 바)이다(씬 컴포넌트가 없으면 시작할 때 오류를 남긴다).
      *          카메라 뒤나 화면 밖은 숨기고(`_bClampToScreenEdge` 면 가장자리에 붙인다), `_maxDistance` 밖도 숨긴다. 코드가 `setHidden` 으로 숨길 수도 있다
      *          (HP 바의 "맞으면 보임" 정책이며 저장하지 않는다). 2D(직교 카메라)도 같은 코드로 처리한다. 서버처럼 UI 가 없으면 아무것도 하지 않는다.
      */
@@ -111,9 +130,12 @@ namespace sw
          */
         WidgetMarkerPlacement computeMarkerPlacement( const float4x4& viewProjection, const float3& cameraPosition, const float3& worldPosition,
                                                       const float2& viewportSize ) const;
-        /** @brief 이번 프레임의 마커 위치를 적용합니다(`UISystem::update` 가 부르며, 카메라와 오브젝트 위치는 스스로 찾습니다). */
-        void updateScreenMarker( const UIViewport& viewport );
-        /** @brief 계산한 위치를 마커 위젯 슬롯에 적습니다(테스트가 카메라 없이 부릅니다). 보이면 끝에 `onMarkerPlaced` 를 부릅니다. */
+        /**
+         * @brief 이번 프레임의 마커 위치를 적용합니다(`UISystem::update` 가 부르며, 오브젝트 위치는 스스로 찾습니다).
+         * @param inoutView 이번 프레임의 마커들이 함께 쓰는 카메라입니다. 자기 관리자의 것이 아니면 다시 구해 채웁니다.
+         */
+        void updateScreenMarker( const UIViewport& viewport, WidgetMarkerView& inoutView );
+        /** @brief 계산한 위치를 마커 위젯의 화면 앵커에 적습니다(테스트가 카메라 없이 부릅니다). 보이면 끝에 `onMarkerPlaced` 를 부릅니다. */
         void applyPlacement( const WidgetMarkerPlacement& placement );
         /**
          * @brief 등록할 UI 시스템을 바꿉니다. 기존 시스템에서 마커를 떼고 등록을 해제한 뒤, 새 시스템에 등록하고 마커를 붙입니다. nullptr 이면 해제만 합니다.

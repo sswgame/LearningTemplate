@@ -203,13 +203,18 @@ namespace sw
         // --- 화면 마커(WidgetComponent Screen) -------------------------------------------
         /**
          * @brief 마커 화면(HUD 레이어, 캔버스 패널 루트, 클릭을 막지 않음)에 위젯을 붙이고 그 번호를 반환합니다. 마커 화면은 처음 붙일 때 만들고, 마지막 위젯을 뗄 때 닫습니다.
-         * @details 위치는 붙인 쪽이 슬롯 앵커와 오프셋으로 매 프레임 정한다(`WidgetComponent::applyPlacement`).
+         * @details 위젯마다 화면 앵커 하나를 주고(`Widget::getPaintAnchor`) 위젯은 앵커 점을 원점으로 배치한다. 화면 위치와 배율은 붙인 쪽이 매 프레임
+         *          앵커로 정한다(`setScreenMarkerAnchor`, `WidgetComponent::applyPlacement`). 마커가 움직여도 배치 · 칠하기 · 사각형 업로드가 없다.
          */
         WidgetID addScreenMarker( unique_ptr<Widget> widget );
-        /** @brief 마커 위젯을 떼어 지웁니다. */
+        /** @brief 마커 위젯을 떼어 지웁니다(그 앵커 번호는 다음 마커가 다시 쓴다). */
         void removeScreenMarker( WidgetID widget );
         /** @brief 마커 위젯을 반환합니다(없으면 nullptr). */
         Widget* findScreenMarker( WidgetID widget ) const;
+        /** @brief 마커 위젯의 앵커 @p anchor(`Widget::getPaintAnchor`)를 이번 프레임 화면 위치(UI 단위)와 배율로 정합니다. 그리기 단계가 물리 픽셀 정수로 바꿔 냅니다. */
+        void setScreenMarkerAnchor( uint32 anchor, const float2& position, float32 scale );
+        /** @brief 마지막 그리기 단계가 낸 화면 앵커 표입니다(번호 = `CanvasQuad::_anchor`, 물리 픽셀). `Engine` 가 렌더 패킷 캔버스에 주 출력과 함께 싣습니다. */
+        const vector<CanvasAnchor>& getCanvasAnchors() const { return _listCanvasAnchor; }
         /** @brief 위젯 컴포넌트를 등록합니다. 컴포넌트가 시작할 때 부르며, `update` 가 레이아웃 앞에서 화면 마커 위치를 갱신합니다. */
         void   registerWidgetComponent( WidgetComponent& component );
         void   unregisterWidgetComponent( WidgetComponent& component );
@@ -352,6 +357,8 @@ namespace sw
         const LocalizationManager* findLocalization() const;
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
+        /** @brief 화면 마커 앵커(UI 단위)를 이번 프레임 배율의 물리 픽셀 정수로 바꿔 `getCanvasAnchors` 표로 냅니다. */
+        void publishCanvasAnchors();
         /** @brief 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)이 바뀌었으면 그 테마로 바꿉니다(빈 값이거나 테마 목록이 없으면 그대로 둡니다). */
         void syncThemeSetting();
         /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
@@ -392,27 +399,32 @@ namespace sw
 #if SW_DEV_COMMANDS_ENABLED
         unique_ptr<DebugHUD> _debugHUD; ///< 서브시스템이 붙인 디버그 HUD 입니다(Dev 전용).
 #endif
-        UIScaleSettings          _scaleSettings;
-        UISubtitleService        _subtitles;
-        UIViewport               _viewport;
-        CanvasDrawList           _canvas;         ///< 이번 프레임의 그리기 목록입니다.
-        CanvasDrawList           _canvasScratch;  ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
-        uint64                   _canvasRevision; ///< `_canvas` 내용의 번호입니다.
-        UIScreenHandle           _activeScreen;
-        UIScreenHandle           _markerScreen;        ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
-        vector<WidgetComponent*> _listWidgetComponent; ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
-        vector<UIScreenHandle>   _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
-        vector<SwitchScreen>     _listSwitchScreen;    ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
-        string                   _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
-        string                   _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
-        UIScreenHandle           _nextScreenHandle;
-        uint32                   _nextPushOrder;
-        uint32                   _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
-        InputGlyphStyle          _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
-        uint8                    _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
-        uint8                    _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
-        uint8                    _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
-        uint8                    _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
-        uint8                    _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
+        UIScaleSettings           _scaleSettings;
+        UISubtitleService         _subtitles;
+        UIViewport                _viewport;
+        CanvasDrawList            _canvas;              ///< 이번 프레임의 그리기 목록입니다.
+        CanvasDrawList            _canvasScratch;       ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
+        uint64                    _canvasRevision;      ///< `_canvas` 내용의 번호입니다.
+        vector<const WidgetTree*> _listPaintedTree;     ///< 지난 그리기의 화면 트리 순서입니다(같고 모두 재사용이면 이어 붙이기를 건너뛴다).
+        uint8                     _bLastCanvasReusable; ///< 지난 그리기 목록이 트리 출력만으로 이루어졌다(포커스 테두리 · 숨김 없음).
+        UIScreenHandle            _activeScreen;
+        UIScreenHandle            _markerScreen;         ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
+        vector<CanvasAnchor>      _listMarkerAnchor;     ///< 화면 마커의 앵커입니다(번호 = 마커 위젯의 그리기 앵커, UI 단위).
+        vector<CanvasAnchor>      _listCanvasAnchor;     ///< 그리기 단계가 낸 앵커입니다(물리 픽셀 정수, `getCanvasAnchors`).
+        vector<uint32>            _listFreeMarkerAnchor; ///< 뗀 마커가 돌려준 앵커 번호입니다(다음 마커가 다시 쓴다).
+        vector<WidgetComponent*>  _listWidgetComponent;  ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
+        vector<UIScreenHandle>    _listTickScratch;      ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
+        vector<SwitchScreen>      _listSwitchScreen;     ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
+        string                    _optionsMenuDocument;  ///< 옵션 메뉴 문서입니다.
+        string                    _pauseMenuDocument;    ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
+        UIScreenHandle            _nextScreenHandle;
+        uint32                    _nextPushOrder;
+        uint32                    _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
+        InputGlyphStyle           _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
+        uint8                     _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
+        uint8                     _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
+        uint8                     _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
+        uint8                     _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
+        uint8                     _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
     };
 } // namespace sw

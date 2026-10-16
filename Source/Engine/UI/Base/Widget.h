@@ -123,6 +123,13 @@ namespace sw
         virtual PanelWidget* asPanel() { return nullptr; }
         /** @brief 글리프 아틀라스를 쓰는 위젯(텍스트 위젯)이면 true 입니다. 아틀라스 페이지를 비우면(세대가 오르면) 그리기 캐시를 다시 칠합니다. */
         virtual bool usesGlyphAtlas() const { return false; }
+        /**
+         * @brief 이 위젯과 자손이 칠하는 사각형을 화면 앵커 @p anchor(`CanvasAnchor` 번호)에 붙입니다. 없으면 invalid_index::kUint32 입니다.
+         * @details 화면 마커가 쓴다. 위젯은 앵커 점을 원점으로 배치 · 칠하고, 앵커가 움직여도 다시 배치 · 칠하지 않는다(셰이더가 옮긴다).
+         *          앵커 아래에서는 자르기를 쓸 수 없다(가위는 대상 픽셀이라 앵커를 따라가지 않는다). 바뀌면 자기와 자손을 다시 칠한다.
+         */
+        void   setPaintAnchor( uint32 anchor );
+        uint32 getPaintAnchor() const { return _paintAnchor; }
 
         // --- 바인딩과 애니메이션 ---------------------------------------------------------------
         /**
@@ -244,6 +251,7 @@ namespace sw
         WidgetID       _id;
         uint32         _dirtyFlags;   ///< WidgetDirty 비트입니다.
         uint32         _layoutSerial; ///< 마지막으로 측정한 레이아웃 순회 번호입니다(0 이면 아직 측정한 적 없음).
+        uint32         _paintAnchor;  ///< 칠한 사각형을 붙일 화면 앵커 번호입니다(없으면 invalid_index::kUint32, `setPaintAnchor`).
 
         PROPERTY( DisplayName = "Opacity", Min = 0.0, Max = 1.0 )
         float32 _opacity;

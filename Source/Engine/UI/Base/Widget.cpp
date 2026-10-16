@@ -45,6 +45,7 @@ namespace sw
         , _id{ s_nextWidgetID.fetch_add( 1, std::memory_order_relaxed ) }
         , _dirtyFlags{ WidgetDirty::kLayout | WidgetDirty::kPaint | WidgetDirty::kStyle }
         , _layoutSerial{ 0 }
+        , _paintAnchor{ invalid_index::kUint32 }
         , _opacity{ 1.0f }
         , _visibility{ WidgetVisibility::Visible }
         , _flowDirection{ UIFlowDirection::Inherit }
@@ -137,6 +138,14 @@ namespace sw
             return;
         _flowDirection = flowDirection;
         invalidate( WidgetDirty::kArrange );
+    }
+
+    void Widget::setPaintAnchor( uint32 anchor )
+    {
+        if ( _paintAnchor == anchor )
+            return;
+        _paintAnchor = anchor;
+        invalidate( WidgetDirty::kTransform ); // 자손 캐시의 사각형도 앵커 번호를 가진다
     }
 
     void Widget::setLayoutSlot( const WidgetLayoutSlot& slot )

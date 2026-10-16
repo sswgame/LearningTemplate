@@ -662,7 +662,7 @@ namespace sw
                         beginInfo._width             = target._width;
                         beginInfo._height            = target._height;
                         context._pCmd->beginRenderPass( beginInfo );
-                        (void)_canvasRenderer.drawList( *context._pCmd, _canvasFrame._mainOutput, 0, psoCanvas, target._width, target._height,
+                        (void)_canvasRenderer.drawList( *context._pCmd, _canvasFrame._mainOutput, _canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
                                                         _pDevice->supportsNativeBindlessSampling(), _canvasFrame._colorVisionMode );
                         context._pCmd->endRenderPass();
                     }

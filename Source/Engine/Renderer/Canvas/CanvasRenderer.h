@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    struct CanvasAnchor;
     struct CanvasDrawList;
     struct CanvasFrameData;
     struct CanvasQuad;
@@ -71,6 +72,8 @@ namespace sw
         void drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache, RHIPipelineStateHandle fallbackPSO );
         /** @brief 마지막 `drawTargets` 가 다시 그린 렌더 텍스처 대상 수입니다(테스트와 진단용). */
         uint32 getLastDrawnTargetCount() const { return _lastDrawnTargetCount; }
+        /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 자리입니다(버퍼 맨 앞은 화면 앵커다). */
+        uint32 getMainQuadBase() const { return _mainQuadBase; }
         /** @brief 마지막 `prepareFrame` 에서 대상 @p targetIndex 의 사각형이 버퍼에서 시작하는 자리입니다. */
         uint32 getTargetQuadBase( uint32 targetIndex ) const { return targetIndex < _listTargetQuadBase.size() ? _listTargetQuadBase[targetIndex] : 0; }
         /**
@@ -101,6 +104,8 @@ namespace sw
             uint8                  _bWholePageDirty{ SW_FALSE }; ///< 페이지 전체를 올려야 한다(새 텍스처 · 비운 페이지)
         };
 
+        /** @brief 화면 앵커를 버퍼 맨 앞에 올립니다. @p bForce 가 아니면 지난번과 같을 때 올리지 않습니다. */
+        void uploadAnchors( IRHIDevice& device, const vector<CanvasAnchor>& listAnchor, bool bForce );
         /** @brief 업로드 하나를 거울에 옮기고 올릴 구간으로 적습니다. */
         void applyAtlasUpload( const GlyphAtlasUpload& upload );
         /** @brief 페이지 텍스처를 갖추고(없으면 만든다) 바뀐 구간을 올립니다. */
@@ -134,12 +139,15 @@ namespace sw
         vector<AtlasPage>       _listAtlasPage;
         vector<PathTexture>     _listPathTexture;    ///< 경로 그림(HUD 아이콘 · 조준선 — 몇 개뿐이라 선형 검색)
         vector<uint8>           _regionScratchBytes; ///< 구간 업로드용 빈틈없는 행 사본
+        vector<CanvasQuad>      _listAnchorScratch;  ///< 앵커를 사각형 원소 꼴(rect = x, y, 배율, -)로 옮긴 사본
+        vector<CanvasAnchor>    _listUploadedAnchor; ///< 버퍼 앞에 지금 든 앵커(같으면 다시 올리지 않는다)
         vector<CanvasQuad>      _listQuadScratch;    ///< 대상이 있을 때 주 출력 + 대상 사각형을 이어 붙인 사본
         vector<uint32>          _listTargetQuadBase; ///< 대상마다 버퍼 안 시작 자리
         vector<TargetState>     _listTarget;         ///< 렌더 텍스처 대상(월드 공간 UI)
         RHIStructuredBufferSlot _quadBuffer;
         uint64                  _uploadedRevision; ///< 사각형 버퍼에 지금 든 내용의 서명(주 출력 · 대상 내용 번호 — 0 = 없음)
         uint32                  _uploadedQuadCount;
+        uint32                  _mainQuadBase; ///< 주 출력 사각형이 버퍼에서 시작하는 자리(앞의 앵커 수)
         uint32                  _lastUploadCallCount;
         uint32                  _lastDrawnTargetCount;
         uint8                   _bTargetPSOMissingLogged; ///< 셋업에 없는 대상 포맷을 한 번만 알리는 래치(렌더 스레드 프리패스에서만 쓴다)

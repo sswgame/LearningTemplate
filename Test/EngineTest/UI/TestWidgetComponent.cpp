@@ -101,39 +101,56 @@ SW_TEST_CASE( WidgetComponentTest, ScaleWithDistance )
 }
 
 /**
- * @brief [WidgetComponentTest] 화면 마커는 UI 시스템의 HUD 마커 화면에 붙고, 자리 = 기준점 − 피벗 × 크기, 배율은 피벗 둘레 렌더 변환으로 기하에 얹힌다 · 숨김은 접기 ·
- *        등록을 풀면 마커 화면이 닫힌다
- * @details 변이: `Widget::setRenderTransform` 의 kArrange 를 빼면 배율만 바뀐 프레임에 기하가 그대로라 진다.
+ * @brief [WidgetComponentTest] 화면 마커는 UI 시스템의 HUD 마커 화면에 붙고 앵커 하나를 받는다 — 위젯은 피벗이 원점에 오게(− 피벗 × 크기) 놓이고, 화면 자리 · 배율은
+ *        앵커(물리 픽셀 정수)가 갖는다. 움직이거나 배율이 바뀌어도 다시 배치 · 칠하지 않는다(그리기 목록 번호 그대로) · 숨김은 접기 · 등록을 풀면 마커 화면이 닫힌다
+ * @details 배율 1.5 화면이라 앵커는 UI 자리 × 1.5 를 반올림한 값이다. 사각형은 앵커 번호를 갖고 앵커 기준 위치(−75, −30 물리 픽셀)다.
+ *          변이: `applyPlacement` 가 자리를 슬롯 오프셋에 다시 쓰면 움직인 프레임에 그리기 목록 번호가 올라 진다.
  */
 SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUISystem )
 {
-    sw::UISystem   ui;
-    sw::UIViewport viewport{};
+    constexpr float32 kScale = 1.5f;
+    sw::UISystem      ui;
+    sw::UIViewport    viewport{};
     viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
-    viewport._physicalSize = viewport._size;
+    viewport._physicalSize = sw::float2{ viewport._size._x * kScale, viewport._size._y * kScale };
+    viewport._uiScale      = kScale;
     sw::WidgetComponent component;
     component.setDrawSize( sw::float2{ 100.0f, 20.0f } );
     component.setPivot( sw::float2{ 0.5f, 1.0f } );
-    component.setContent( sw::make_unique<sw::uitest::TestBoxWidget>( "hp" ) );
+    sw::unique_ptr<sw::ImageWidget> plate = sw::make_unique<sw::ImageWidget>();
+    plate->setBrush( sw::UIBrush::makeSolid( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
+    component.setContent( std::move( plate ) );
     component.bindUISystem( &ui );
     SW_ASSERT_EQUAL( 1u, ui.getScreenCount() );
     SW_EXPECT_TRUE( ui.getActiveScreen() == nullptr ); // HUD — 포커스를 받지 않는다
 
     sw::WidgetMarkerPlacement placement{};
-    placement._position = sw::float2{ 500.0f, 300.0f };
+    placement._position = sw::float2{ 500.3f, 300.0f };
     component.applyPlacement( placement );
     ui.update( 1.0f / 60.0f, viewport );
     sw::Widget* pMarker = component.getContent();
     SW_ASSERT_NOT_NULL( pMarker );
-    SW_EXPECT_NEAR_EQUAL( 450.0f, pMarker->getGeometry().computeScreenBounds().getLeft(), 0.01f );
-    SW_EXPECT_NEAR_EQUAL( 280.0f, pMarker->getGeometry().computeScreenBounds().getTop(), 0.01f );
+    const uint32 anchor = pMarker->getPaintAnchor();
+    SW_ASSERT_TRUE( anchor < ui.getCanvasAnchors().size() );
+    SW_EXPECT_NEAR_EQUAL( 750.0f, ui.getCanvasAnchors()[anchor]._position._x, 1e-4f ); // 500.3 × 1.5 = 750.45 → 750
+    SW_EXPECT_NEAR_EQUAL( 450.0f, ui.getCanvasAnchors()[anchor]._position._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -50.0f, pMarker->getGeometry().computeScreenBounds().getLeft(), 0.01f );
+    SW_EXPECT_NEAR_EQUAL( -20.0f, pMarker->getGeometry().computeScreenBounds().getTop(), 0.01f );
+    SW_ASSERT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() );
+    const sw::CanvasQuad& quad = ui.getCanvas()._listQuad[0];
+    SW_EXPECT_EQUAL( anchor, quad._anchor );
+    SW_EXPECT_NEAR_EQUAL( -75.0f, quad._rect._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -30.0f, quad._rect._y, 1e-4f );
+    const uint64 placedRevision = ui.getCanvasRevision();
 
-    placement._scale = 2.0f;
+    placement._position = sw::float2{ 800.0f, 120.0f };
+    placement._scale    = 2.0f;
     component.applyPlacement( placement );
     ui.update( 1.0f / 60.0f, viewport );
-    const sw::UIRect scaled = pMarker->getGeometry().computeScreenBounds();
-    SW_EXPECT_NEAR_EQUAL( 200.0f, scaled.getRight() - scaled.getLeft(), 0.01f );
-    SW_EXPECT_NEAR_EQUAL( 300.0f, scaled.getBottom(), 0.01f ); // 피벗(가운데 아래)은 그대로
+    SW_EXPECT_NEAR_EQUAL( 1200.0f, ui.getCanvasAnchors()[anchor]._position._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 180.0f, ui.getCanvasAnchors()[anchor]._position._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, ui.getCanvasAnchors()[anchor]._scale, 1e-6f );
+    SW_EXPECT_EQUAL( placedRevision, ui.getCanvasRevision() ); // 사각형은 그대로 — 앵커만 바뀌었다
 
     placement._bVisible = SW_FALSE;
     component.applyPlacement( placement );
@@ -147,7 +164,7 @@ SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUISystem )
 
 /**
  * @brief [WidgetComponentTest] 화면 마커의 기준점은 오브젝트 자리 + 월드 오프셋(머리 위 HP 바)이고, 코드가 숨기면(`setHidden`) 카메라 안이어도 숨는다
- * @details `updateScreenMarker` 는 게임 카메라를 스스로 찾는다 — 기대값은 같은 카메라 행렬로 `computeMarkerPlacement` 에 오프셋 더한 점을 넣은 것이다.
+ * @details `updateScreenMarker` 는 빈 `WidgetMarkerView` 를 받으면 게임 카메라를 스스로 찾는다 — 기대값은 같은 카메라 행렬로 `computeMarkerPlacement` 에 오프셋 더한 점을 넣은 것이다.
  *          변이: `updateScreenMarker` 가 `_worldOffset` 을 더하지 않으면 자리가 오브젝트 발밑이라 진다.
  */
 SW_TEST_CASE( WidgetComponentTest, ScreenMarkerAnchorsAtWorldOffsetAndHides )
@@ -183,17 +200,26 @@ SW_TEST_CASE( WidgetComponentTest, ScreenMarkerAnchorsAtWorldOffsetAndHides )
     SW_ASSERT_TRUE( atOffset._bVisible == SW_TRUE );
     SW_EXPECT_TRUE( atOffset._position._y < atFeet._position._y - 10.0f ); // 머리 위는 화면에서 위다
 
-    pMarker->updateScreenMarker( viewport );
+    {
+        sw::WidgetMarkerView view{};
+        pMarker->updateScreenMarker( viewport, view );
+    }
     SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_TRUE );
     SW_EXPECT_NEAR_EQUAL( atOffset._position._x, pMarker->getLastPlacement()._position._x, 0.01f );
     SW_EXPECT_NEAR_EQUAL( atOffset._position._y, pMarker->getLastPlacement()._position._y, 0.01f );
 
     pMarker->setHidden( true );
-    pMarker->updateScreenMarker( viewport );
+    {
+        sw::WidgetMarkerView view{};
+        pMarker->updateScreenMarker( viewport, view );
+    }
     SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_FALSE );
     SW_EXPECT_TRUE( pMarker->getContent()->getVisibility() == sw::WidgetVisibility::Collapsed );
     pMarker->setHidden( false );
-    pMarker->updateScreenMarker( viewport );
+    {
+        sw::WidgetMarkerView view{};
+        pMarker->updateScreenMarker( viewport, view );
+    }
     SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_TRUE );
     pMarker->bindUISystem( nullptr );
     manager.endPlay();

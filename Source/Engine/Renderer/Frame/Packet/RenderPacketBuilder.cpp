@@ -325,6 +325,7 @@ namespace sw
         if ( bSubmitMainCanvas )
         {
             packet._canvas._mainOutput      = pUISystem->getCanvas();
+            packet._canvas._listAnchor      = pUISystem->getCanvasAnchors(); // 화면 마커 위치 — 사각형과 달리 프레임마다 바뀐다
             packet._canvas._contentRevision = pUISystem->getCanvasRevision();
         }
         if ( bUIReady )

@@ -24,6 +24,11 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "WidgetComponent" );
+} // namespace sw
+
+namespace sw
+{
     namespace
     {
         struct WidgetComponentInternal
@@ -85,6 +90,10 @@ namespace sw
     void WidgetComponent::onBeginPlay()
     {
         Component::onBeginPlay();
+        // 마커와 월드 사각형은 주 씬 컴포넌트의 월드 점을 따른다. 없으면 마커가 늘 접혀 아무것도 그리지 않으므로 조용히 넘기지 않는다.
+        const GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr && pOwner->getPrimarySceneComponent() == nullptr )
+            SW_LOG_ERROR( "[UI] WidgetComponent on '%#' has no scene component to follow - add a SceneComponent first; the widget is never shown", pOwner->getName().c_str() );
         UISystem* pUI = WidgetComponentInternal::findUISystem();
         bindUISystem( pUI );
         if ( pUI != nullptr && _space == WidgetSpace::World )
@@ -231,17 +240,26 @@ namespace sw
         return placement;
     }
 
-    void WidgetComponent::updateScreenMarker( const UIViewport& viewport )
+    void WidgetComponent::updateScreenMarker( const UIViewport& viewport, WidgetMarkerView& inoutView )
     {
         if ( _markerWidget == kInvalidWidgetID || viewport._physicalSize._y <= 0.0f )
             return;
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return; // 오브젝트 밖이다(테스트가 `applyPlacement` 로 직접 놓는다)
-        const GameObjectManager* pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const SceneComponent*    pScene        = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const CameraComponent*   pCamera       = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;
-        const bool               bMarkerHidden = pScene == nullptr || pCamera == nullptr || isActive() == false || _bHidden == SW_TRUE;
+        const GameObjectManager* pManager = pOwner->getManager();
+        if ( pManager != inoutView._pManager )
+        {
+            inoutView._pManager = pManager;
+            inoutView._pCamera  = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;
+            if ( inoutView._pCamera != nullptr )
+            {
+                inoutView._viewProjection = inoutView._pCamera->getViewProjectionMatrix( viewport._physicalSize._x / viewport._physicalSize._y );
+                inoutView._cameraPosition = inoutView._pCamera->getCameraPosition();
+            }
+        }
+        const SceneComponent* pScene        = pOwner->getPrimarySceneComponent();
+        const bool            bMarkerHidden = pScene == nullptr || inoutView._pCamera == nullptr || isActive() == false || _bHidden == SW_TRUE;
         if ( bMarkerHidden )
         {
             WidgetMarkerPlacement hidden{};
@@ -249,10 +267,8 @@ namespace sw
             applyPlacement( hidden );
             return;
         }
-        const float32  aspect         = viewport._physicalSize._x / viewport._physicalSize._y;
-        const float4x4 viewProjection = pCamera->getViewProjectionMatrix( aspect );
-        const float3   anchor         = pScene->getWorldPosition() + _worldOffset;
-        applyPlacement( computeMarkerPlacement( viewProjection, pCamera->getCameraPosition(), anchor, viewport._size ) );
+        const float3 anchor = pScene->getWorldPosition() + _worldOffset;
+        applyPlacement( computeMarkerPlacement( inoutView._viewProjection, inoutView._cameraPosition, anchor, viewport._size ) );
     }
 
     void WidgetComponent::applyPlacement( const WidgetMarkerPlacement& placement )
@@ -268,11 +284,13 @@ namespace sw
         }
         pMarker->setVisibility( WidgetVisibility::HitTestInvisible ); // 마커는 클릭을 막지 않는다
 
-        // 고정 크기면 그 크기를 쓴다(레이아웃 경계이므로 위치가 바뀌어도 그 아래만 다시 배치한다). 아니면 지난 원하는 크기로 피벗을 맞춘다.
+        // 위치와 배율은 화면 앵커가 정한다(셰이더가 옮긴다). 위젯은 피벗이 앵커 점(원점)에 오도록 배치하므로, 움직여도 다시 배치하거나 칠하지 않는다.
+        _pUISystem->setScreenMarkerAnchor( pMarker->getPaintAnchor(), placement._position, placement._scale );
+        // 고정 크기면 그 크기를 쓴다(레이아웃 경계). 아니면 지난 원하는 크기로 피벗을 맞춘다 — 슬롯은 크기가 바뀔 때만 바뀐다.
         const bool       bFixed = _drawSize._x > 0.0f && _drawSize._y > 0.0f;
         const float2     size   = bFixed ? _drawSize : pMarker->getDesiredSize();
         WidgetLayoutSlot slot   = pMarker->getLayoutSlot();
-        const float2     topLeft{ placement._position._x - _pivot._x * size._x, placement._position._y - _pivot._y * size._y };
+        const float2     topLeft{ -_pivot._x * size._x, -_pivot._y * size._y };
         const float2     bottomRight{ topLeft._x + size._x, topLeft._y + size._y };
         const bool       bSlotChanged = slot._offsetMin != topLeft || slot._offsetMax != bottomRight || slot._anchorMin != float2{} || slot._anchorMax != float2{} ||
                                   slot._bAutoSize != ( bFixed == false ) || slot._widthOverride != ( bFixed ? size._x : 0.0f ) ||
@@ -288,10 +306,6 @@ namespace sw
             slot._heightOverride = bFixed ? size._y : 0.0f;
             pMarker->setLayoutSlot( slot );
         }
-        WidgetRenderTransform transform = pMarker->getRenderTransform();
-        transform._scale                = float2{ placement._scale, placement._scale };
-        transform._pivot                = _pivot;
-        pMarker->setRenderTransform( transform );
         onMarkerPlaced( *pMarker, placement );
     }
 

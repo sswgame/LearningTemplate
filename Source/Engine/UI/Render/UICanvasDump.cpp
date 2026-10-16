@@ -101,6 +101,8 @@ namespace sw
                     text += " tex ";
                     Internal::appendTextureName( batch._arrTexture[quad._textureSlot], text );
                 }
+                if ( quad._anchor != invalid_index::kUint32 )
+                    text += " anchor " + to_string( quad._anchor ); // 위치가 화면 앵커 기준이다
                 text += "\n";
             }
         }

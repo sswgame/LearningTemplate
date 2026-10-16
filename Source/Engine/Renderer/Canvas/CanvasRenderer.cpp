@@ -58,9 +58,12 @@ namespace sw
         : _listAtlasPage{}
         , _listPathTexture{}
         , _regionScratchBytes{}
+        , _listAnchorScratch{}
+        , _listUploadedAnchor{}
         , _quadBuffer{}
         , _uploadedRevision{ 0 }
         , _uploadedQuadCount{ 0 }
+        , _mainQuadBase{ 0 }
         , _lastUploadCallCount{ 0 }
         , _lastDrawnTargetCount{ 0 }
         , _bTargetPSOMissingLogged{ SW_FALSE }
@@ -94,11 +97,13 @@ namespace sw
             acquirePathTextures( device, target._list );
         }
 
-        // 3) 사각형 버퍼 — 주 출력 뒤에 대상들을 잇는다. 내용 서명(주 출력 · 대상의 내용 번호)이 같고 버퍼가 그대로면 올리지 않는다
-        //    (번호 0 은 "모른다" 라 늘 올린다).
-        uint32 quadCount = static_cast<uint32>( inoutFrame._mainOutput._listQuad.size() );
-        uint64 signature = inoutFrame._contentRevision;
-        bool   bKnown    = inoutFrame._contentRevision != 0;
+        // 3) 사각형 버퍼 — 앞에 화면 앵커, 그 뒤에 주 출력, 그 뒤에 대상들을 잇는다. 내용 서명(주 출력 · 대상의 내용 번호)과 앵커 수가 같고 버퍼가 그대로면
+        //    사각형은 올리지 않고 바뀐 앵커만 올린다(번호 0 은 "모른다" 라 늘 올린다).
+        const uint32 anchorCount = static_cast<uint32>( inoutFrame._listAnchor.size() );
+        _mainQuadBase            = anchorCount;
+        uint32 quadCount         = anchorCount + static_cast<uint32>( inoutFrame._mainOutput._listQuad.size() );
+        uint64 signature         = inoutFrame._contentRevision;
+        bool   bKnown            = inoutFrame._contentRevision != 0;
         _listTargetQuadBase.clear();
         for ( const CanvasTargetDrawList& target : inoutFrame._listTarget )
         {
@@ -112,7 +117,10 @@ namespace sw
         signature               = signature == 0 ? 1 : signature;
         const bool bSameContent = bKnown && signature == _uploadedRevision && quadCount == _uploadedQuadCount && _quadBuffer.isValid();
         if ( bSameContent )
+        {
+            uploadAnchors( device, inoutFrame._listAnchor, false );
             return;
+        }
         const CanvasQuad* pQuads = inoutFrame._mainOutput._listQuad.data();
         if ( inoutFrame._listTarget.empty() == false )
         {
@@ -135,9 +143,31 @@ namespace sw
                 return;
             }
         }
-        _quadBuffer.upload( &device, pQuads, quadCount * static_cast<uint32>( sizeof( CanvasQuad ) ) );
+        const uint32 anchorBytes = anchorCount * static_cast<uint32>( sizeof( CanvasQuad ) );
+        _quadBuffer.upload( &device, pQuads, ( quadCount - anchorCount ) * static_cast<uint32>( sizeof( CanvasQuad ) ), anchorBytes );
+        uploadAnchors( device, inoutFrame._listAnchor, true );
         _uploadedRevision  = bKnown ? signature : 0;
         _uploadedQuadCount = quadCount;
+    }
+
+    void CanvasRenderer::uploadAnchors( IRHIDevice& device, const vector<CanvasAnchor>& listAnchor, bool bForce )
+    {
+        const bool bSameAnchors = bForce == false && listAnchor.size() == _listUploadedAnchor.size() &&
+                                  ( listAnchor.empty() || Memory::compare( listAnchor.data(), _listUploadedAnchor.data(), listAnchor.size() * sizeof( CanvasAnchor ) ) == 0 );
+        if ( bSameAnchors || listAnchor.empty() )
+        {
+            _listUploadedAnchor = listAnchor;
+            return;
+        }
+        // 앵커 하나가 사각형 원소 하나다(셰이더는 그 rect 만 읽는다). 구조 버퍼 하나에 두어 캔버스 패스의 바인딩을 늘리지 않는다.
+        _listAnchorScratch.resize( listAnchor.size() );
+        for ( size_t index = 0; index < listAnchor.size(); ++index )
+        {
+            const CanvasAnchor& anchor      = listAnchor[index];
+            _listAnchorScratch[index]._rect = float4{ anchor._position._x, anchor._position._y, anchor._scale, 0.0f };
+        }
+        _quadBuffer.upload( &device, _listAnchorScratch.data(), static_cast<uint32>( listAnchor.size() * sizeof( CanvasQuad ) ) );
+        _listUploadedAnchor = listAnchor;
     }
 
     uint32 CanvasRenderer::drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,
@@ -238,6 +268,7 @@ namespace sw
         _quadBuffer.release( pDevice );
         _uploadedRevision  = 0;
         _uploadedQuadCount = 0;
+        _listUploadedAnchor.clear();
     }
 
     void CanvasRenderer::drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache,
