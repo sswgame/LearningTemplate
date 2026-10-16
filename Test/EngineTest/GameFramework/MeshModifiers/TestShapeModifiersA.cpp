@@ -10,10 +10,10 @@ using namespace sw::editor;
 
 namespace
 {
-    struct ShapeModifiersATestInternal
+    bool isNearShapeValue( const float3& actual, const float3& expected )
     {
-        static bool isNear( const float3& actual, const float3& expected ) { return ( actual - expected ).getLength() < 1e-4f; }
-    };
+        return ( actual - expected ).getLength() < 1e-4f;
+    }
 } // namespace
 
 SW_TEST_CASE( ShapeModifiersATest, BubblePushesInsideRadiusOnly )
@@ -28,8 +28,8 @@ SW_TEST_CASE( ShapeModifiersATest, BubblePushesInsideRadiusOnly )
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *bubble, "Strength", 1.0f ) );
     test::MeshModifierTestUtil::applyOne( *bubble, mesh );
     // 0.5 + (1 - 0.25)² = 1.0625, 반경 밖은 그대로
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[0], float3{ 1.0625f, 0.0f, 0.0f } ) );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[1], float3{ 2.0f, 0.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[0], float3{ 1.0625f, 0.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[1], float3{ 2.0f, 0.0f, 0.0f } ) );
 }
 
 SW_TEST_CASE( ShapeModifiersATest, BulgeWidensTheMiddleAndKeepsTheEnds )
@@ -44,9 +44,9 @@ SW_TEST_CASE( ShapeModifiersATest, BulgeWidensTheMiddleAndKeepsTheEnds )
     SW_ASSERT_NOT_NULL( bulge.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *bulge, "Amount", 1.0f ) );
     test::MeshModifierTestUtil::applyOne( *bulge, mesh );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[0], float3{ 1.0f, -2.0f, 0.0f } ) );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[1], float3{ 2.0f, 0.0f, 0.0f } ) );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[2], float3{ 1.0f, 2.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[0], float3{ 1.0f, -2.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[1], float3{ 2.0f, 0.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[2], float3{ 1.0f, 2.0f, 0.0f } ) );
 }
 
 SW_TEST_CASE( ShapeModifiersATest, CylindrifyFullPercentLandsOnTheCylinder )
@@ -61,8 +61,8 @@ SW_TEST_CASE( ShapeModifiersATest, CylindrifyFullPercentLandsOnTheCylinder )
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *cylindrify, "Percent", 1.0f ) );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *cylindrify, "Radius", 2.0f ) );
     test::MeshModifierTestUtil::applyOne( *cylindrify, mesh );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[0], float3{ 2.0f, 5.0f, 0.0f } ) );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[1], float3{ 0.0f, 1.0f, 2.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[0], float3{ 2.0f, 5.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[1], float3{ 0.0f, 1.0f, 2.0f } ) );
 }
 
 SW_TEST_CASE( ShapeModifiersATest, GlobeInterpolatesTowardTheFixedRadius )
@@ -77,7 +77,7 @@ SW_TEST_CASE( ShapeModifiersATest, GlobeInterpolatesTowardTheFixedRadius )
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *globe, "Percent", 0.5f ) );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *globe, "Radius", 3.0f ) );
     test::MeshModifierTestUtil::applyOne( *globe, mesh );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[0], float3{ 2.5f, 0.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[0], float3{ 2.5f, 0.0f, 0.0f } ) );
     SW_EXPECT_NEAR_EQUAL( ( MathUtil::sqrt( 3.0f ) + 3.0f ) * 0.5f, mesh._listPosition[1].getLength(), 1e-4f );
 }
 
@@ -92,7 +92,7 @@ SW_TEST_CASE( ShapeModifiersATest, HumpIsGaussianAlongTheAxis )
     SW_ASSERT_NOT_NULL( hump.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *hump, "Height", 2.0f ) );
     test::MeshModifierTestUtil::applyOne( *hump, mesh );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[0], float3{ 0.0f, 2.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[0], float3{ 0.0f, 2.0f, 0.0f } ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f * MathUtil::exp( -1.0f ), mesh._listPosition[1]._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, mesh._listPosition[1]._x, 1e-5f );
 }
@@ -109,8 +109,8 @@ SW_TEST_CASE( ShapeModifiersATest, RadialSkewOpensWithHeight )
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *radialSkew, "Angle", 45.0f ) );
     test::MeshModifierTestUtil::applyOne( *radialSkew, mesh );
     // 아래(상자 바닥)는 그대로, 높이 2 는 tan 45 · 2 만큼 바깥으로
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[0], float3{ 1.0f, 0.0f, 0.0f } ) );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[1], float3{ 3.0f, 2.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[0], float3{ 1.0f, 0.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[1], float3{ 3.0f, 2.0f, 0.0f } ) );
 }
 
 SW_TEST_CASE( ShapeModifiersATest, SkewShearsLinearlyAlongTheAxis )
@@ -126,7 +126,7 @@ SW_TEST_CASE( ShapeModifiersATest, SkewShearsLinearlyAlongTheAxis )
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *skew, "Amount", 2.0f ) );
     test::MeshModifierTestUtil::applyOne( *skew, mesh );
     // 주축 Y 의 방향 0 은 다음 축 Z 쪽이다
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[0], float3{ 0.0f, -2.0f, 0.0f } ) );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[1], float3{ 0.0f, 0.0f, 1.0f } ) );
-    SW_EXPECT_TRUE( ShapeModifiersATestInternal::isNear( mesh._listPosition[2], float3{ 0.0f, 2.0f, 2.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[0], float3{ 0.0f, -2.0f, 0.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[1], float3{ 0.0f, 0.0f, 1.0f } ) );
+    SW_EXPECT_TRUE( isNearShapeValue( mesh._listPosition[2], float3{ 0.0f, 2.0f, 2.0f } ) );
 }

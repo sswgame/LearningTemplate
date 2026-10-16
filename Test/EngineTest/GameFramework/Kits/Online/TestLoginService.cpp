@@ -110,6 +110,35 @@ namespace
             }
             return count;
         }
+
+        static ServiceAuditEntry makeAudit()
+        {
+            ServiceAuditEntry audit;
+            audit._actor   = "gm.0000000000000001";
+            audit._action  = "config.set";
+            audit._subject = "config";
+            audit._timeMs  = 1;
+            return audit;
+        }
+
+        static RemoteConfigValue makeText( const utf8* pText )
+        {
+            RemoteConfigValue value;
+            value._type = RemoteConfigValueType::Text;
+            value._text = pText;
+            return value;
+        }
+
+        static void writeSanction( MemoryServiceDatabase& database, uint64 accountID, ServiceSanctionKind kind, int64 untilMs )
+        {
+            ServiceSanctionState state;
+            (void)ServiceSanction::readState( database, accountID, state ); // 없으면 빈 상태로 시작한다 — 테스트 준비라 아래 commit 결과만 쓴다
+            state._arrUntilMs[static_cast<int32>( kind )] = untilMs;
+            state._reasonCode                             = "sanction.cheat";
+            ServiceTransaction transaction;
+            ServiceSanction::stageWrite( transaction, accountID, state );
+            (void)database.commit( transaction );
+        }
     };
 
     /** @brief 서버 한 대 — 앞(MemoryServiceStore) + 서비스. 데이터는 밖에서 빌린다. 동기 도우미는 맡기고 거둔 뒤 완료를 돌려준다(메모리 구현은 맡기는 자리에서 돈다). */
@@ -323,37 +352,6 @@ namespace
         LoginNode* operator->() { return &_node; }
     };
 
-    struct TestLoginServiceGuestInternal
-    {
-        static ServiceAuditEntry makeAudit()
-        {
-            ServiceAuditEntry audit;
-            audit._actor   = "gm.0000000000000001";
-            audit._action  = "config.set";
-            audit._subject = "config";
-            audit._timeMs  = 1;
-            return audit;
-        }
-
-        static RemoteConfigValue makeText( const utf8* pText )
-        {
-            RemoteConfigValue value;
-            value._type = RemoteConfigValueType::Text;
-            value._text = pText;
-            return value;
-        }
-
-        static void writeSanction( MemoryServiceDatabase& database, uint64 accountID, ServiceSanctionKind kind, int64 untilMs )
-        {
-            ServiceSanctionState state;
-            (void)ServiceSanction::readState( database, accountID, state ); // 없으면 빈 상태로 시작한다 — 테스트 준비라 아래 commit 결과만 쓴다
-            state._arrUntilMs[static_cast<int32>( kind )] = untilMs;
-            state._reasonCode                             = "sanction.cheat";
-            ServiceTransaction transaction;
-            ServiceSanction::stageWrite( transaction, accountID, state );
-            (void)database.commit( transaction );
-        }
-    };
 } // namespace
 
 SW_TEST_CASE( LoginServiceTest, RegisterLoginAndValidate )
@@ -846,7 +844,7 @@ SW_TEST_CASE( LoginServiceTest, MultipleLinksAndTheLastMethodCannotBeUnlinked )
 
 SW_TEST_CASE( LoginServiceTest, OldBuildIsToldToUpdate )
 {
-    using Internal = TestLoginServiceGuestInternal;
+    using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     RemoteConfig config;
     config.submitSet( fixture->_store, nullptr, "account.minimum_build.windows", Internal::makeText( "1.9.0" ), Internal::makeAudit() );
@@ -891,7 +889,7 @@ SW_TEST_CASE( LoginServiceTest, SuspendedAccountCannotLoginAndIsKicked )
     vector<LoginEvent> listEvent;
     fixture->drainEvents( listEvent );
 
-    TestLoginServiceGuestInternal::writeSanction( fixture._database, accountID, ServiceSanctionKind::Suspend, 5000 );
+    TestLoginServiceInternal::writeSanction( fixture._database, accountID, ServiceSanctionKind::Suspend, 5000 );
     SW_ASSERT_TRUE( fixture->revokeAccountSessions( accountID, LoginRevokeReason::Sanctioned, 100 ) == LoginResult::Ok );
     listEvent.clear();
     fixture->drainEvents( listEvent );
@@ -908,7 +906,7 @@ SW_TEST_CASE( LoginServiceTest, SuspendedAccountCannotLoginAndIsKicked )
     LoginGrant after;
     SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 4, 5000, after ) == LoginResult::Ok ); // 끝나면 다시
 
-    TestLoginServiceGuestInternal::writeSanction( fixture._database, accountID, ServiceSanctionKind::Ban, ServiceSanctionState::kPermanentMs );
+    TestLoginServiceInternal::writeSanction( fixture._database, accountID, ServiceSanctionKind::Ban, ServiceSanctionState::kPermanentMs );
     LoginGrant resumed;
     SW_EXPECT_TRUE( fixture->resumeSession( after._token, 4, 6000, resumed ) == LoginResult::AccountSuspended ); // 재접속도 막는다
 }

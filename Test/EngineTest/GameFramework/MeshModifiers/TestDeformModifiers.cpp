@@ -10,14 +10,11 @@ using namespace sw::editor;
 
 namespace
 {
-    struct DeformModifiersTestInternal
+    float32 computeBoxVolume( const vector<float3>& listPoint )
     {
-        static float32 computeBoxVolume( const vector<float3>& listPoint )
-        {
-            const float3 size = MeshModifierBounds::makeFromPoints( listPoint ).getSize();
-            return size._x * size._y * size._z;
-        }
-    };
+        const float3 size = MeshModifierBounds::makeFromPoints( listPoint ).getSize();
+        return size._x * size._y * size._z;
+    }
 } // namespace
 
 SW_TEST_CASE( DeformModifiersTest, BendQuarterTurnLaysTheTopSideways )
@@ -64,13 +61,13 @@ SW_TEST_CASE( DeformModifiersTest, TwistKeepsPointsOnTheAxis )
 SW_TEST_CASE( DeformModifiersTest, StretchPreservesBoxVolume )
 {
     MeshModifierMesh         mesh    = test::MeshModifierTestUtil::makeBoxMesh( 2 );
-    const float32            before  = DeformModifiersTestInternal::computeBoxVolume( mesh._listPosition );
+    const float32            before  = computeBoxVolume( mesh._listPosition );
     unique_ptr<MeshModifier> stretch = MeshModifierRegistry::create( "stretch" );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *stretch, "Amount", 1.5f ) );
     test::MeshModifierTestUtil::applyOne( *stretch, mesh );
     const MeshModifierBounds after = MeshModifierBounds::makeFromPoints( mesh._listPosition );
     SW_EXPECT_NEAR_EQUAL( 10.0f, after.getSize()._y, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( before, DeformModifiersTestInternal::computeBoxVolume( mesh._listPosition ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( before, computeBoxVolume( mesh._listPosition ), 1e-3f );
 }
 
 SW_TEST_CASE( DeformModifiersTest, NoiseIsSeedDeterministicAndSeedSensitive )

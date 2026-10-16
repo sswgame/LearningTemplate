@@ -58,23 +58,19 @@ namespace
         }
     };
 
-    struct LiveOpsStreamTestInternal
+    LiveEventDefinition makeEvent( string_view eventID, string_view kind )
     {
-        static LiveEventDefinition makeEvent( string_view eventID, string_view kind )
-        {
-            LiveEventDefinition definition;
-            definition._eventID = string( eventID );
-            definition._kind    = string( kind );
-            definition._startMs = 0;
-            definition._endMs   = 1000000;
-            return definition;
-        }
-    };
+        LiveEventDefinition definition;
+        definition._eventID = string( eventID );
+        definition._kind    = string( kind );
+        definition._startMs = 0;
+        definition._endMs   = 1000000;
+        return definition;
+    }
 } // namespace
 
 SW_TEST_CASE( LiveOpsStreamTest, ClientRefreshesWhenOperationsPutAnEvent )
 {
-    using Internal = LiveOpsStreamTestInternal;
     LoopbackStreamNetwork   network( 3u );
     MemoryServiceDatabase   database;
     MemoryEphemeralDatabase cacheDatabase;
@@ -97,9 +93,9 @@ SW_TEST_CASE( LiveOpsStreamTest, ClientRefreshesWhenOperationsPutAnEvent )
 
     clients.login( clientIndex, 5 );
     test::updateAll( { &server }, clients, 1000 );
-    LiveEventDefinition hidden = Internal::makeEvent( "server_only", "balance" );
+    LiveEventDefinition hidden = makeEvent( "server_only", "balance" );
     hidden._bClientVisible     = SW_FALSE;
-    LiveEventDefinition future = Internal::makeEvent( "future_build", "preview" );
+    LiveEventDefinition future = makeEvent( "future_build", "preview" );
     future._minBuildVersion    = 200;
     liveOps._service.putEvent( hidden, 0, "", 1000, 1 );
     liveOps._service.putEvent( future, 0, "", 1000, 2 );
@@ -110,7 +106,7 @@ SW_TEST_CASE( LiveOpsStreamTest, ClientRefreshesWhenOperationsPutAnEvent )
     SW_EXPECT_TRUE( liveOpsClient.getActiveEvents().empty() ); // 숨긴 것 · 빌드 판이 낮아 대상 밖
     const uint64 revisionBefore = liveOpsClient.getRevision();
 
-    liveOps._service.putEvent( Internal::makeEvent( "halloween", "xp_boost" ), 0, "", 1000, 3 ); // 운영(GM 도구)
+    liveOps._service.putEvent( makeEvent( "halloween", "xp_boost" ), 0, "", 1000, 3 ); // 운영(GM 도구)
     test::updateAll( { &server }, clients, 2000 );
     test::updateAll( { &server }, clients, 2000 );
     SW_EXPECT_TRUE( liveOpsClient.getRevision() > revisionBefore ); // 알림 → 스스로 다시 받음

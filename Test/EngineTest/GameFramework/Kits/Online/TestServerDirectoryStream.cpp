@@ -81,21 +81,17 @@ namespace
         }
     };
 
-    struct ServerDirectoryStreamTestInternal
+    ServerAssignmentRequest makeDirectoryRequest( string_view kind )
     {
-        static ServerAssignmentRequest makeRequest( string_view kind )
-        {
-            ServerAssignmentRequest request;
-            request._kind   = string( kind );
-            request._region = "kr";
-            return request;
-        }
-    };
+        ServerAssignmentRequest request;
+        request._kind   = string( kind );
+        request._region = "kr";
+        return request;
+    }
 } // namespace
 
 SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaintenancePush )
 {
-    using Internal = ServerDirectoryStreamTestInternal;
     LoopbackStreamNetwork   network( 3u );
     MemoryServiceDatabase   database;
     MemoryEphemeralDatabase cacheDatabase;
@@ -127,7 +123,7 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
     (void)directoryClient.requestStatus( ServerDirectoryClient::StatusDelegate::create<&DirectoryRecorder::onStatus>( &recorder ) );
     (void)directoryClient.requestServerList( "game", ServerDirectoryClient::ServerListDelegate::create<&DirectoryRecorder::onServerList>( &recorder ) );
     (void)directoryClient.requestServerList( "chat", ServerDirectoryClient::ServerListDelegate::create<&DirectoryRecorder::onServerList>( &recorder ) );
-    (void)directoryClient.requestAssignment( Internal::makeRequest( "game" ),
+    (void)directoryClient.requestAssignment( makeDirectoryRequest( "game" ),
                                              ServerDirectoryClient::AssignmentDelegate::create<&DirectoryRecorder::onAssignment>( &recorder ) );
     test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_EQUAL( recorder._listStatusError.size(), size_t( 1 ) );
@@ -142,7 +138,7 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
 
     clients.login( clientIndex, 500 );
     test::updateAll( { &server }, clients, 0 );
-    (void)directoryClient.requestAssignment( Internal::makeRequest( "game" ),
+    (void)directoryClient.requestAssignment( makeDirectoryRequest( "game" ),
                                              ServerDirectoryClient::AssignmentDelegate::create<&DirectoryRecorder::onAssignment>( &recorder ) );
     test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_EQUAL( recorder._listAssignment.size(), size_t( 2 ) );
@@ -161,7 +157,7 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
     SW_EXPECT_TRUE( directoryClient.getLastStatus()._listMaintenance[0]._messageKey == "notice.maintenance" );
     SW_EXPECT_EQUAL( directoryClient.getStatusRevision(), revisionBefore + 1 );
 
-    (void)directoryClient.requestAssignment( Internal::makeRequest( "game" ),
+    (void)directoryClient.requestAssignment( makeDirectoryRequest( "game" ),
                                              ServerDirectoryClient::AssignmentDelegate::create<&DirectoryRecorder::onAssignment>( &recorder ) );
     test::updateAll( { &server }, clients, 10 );
     SW_ASSERT_EQUAL( recorder._listAssignment.size(), size_t( 3 ) );

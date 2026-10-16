@@ -15,21 +15,18 @@
 
 namespace
 {
-    struct ModuleBuildIDTestInternal
+    bool isHex( sw::string_view text )
     {
-        static bool isHex( sw::string_view text )
+        for ( const utf8 character : text )
         {
-            for ( const utf8 character : text )
-            {
-                const bool bDigit = '0' <= character && character <= '9';
-                const bool bLower = 'a' <= character && character <= 'f';
-                const bool bUpper = 'A' <= character && character <= 'F';
-                if ( ( bDigit || bLower || bUpper ) == false )
-                    return false;
-            }
-            return text.empty() == false;
+            const bool bDigit = '0' <= character && character <= '9';
+            const bool bLower = 'a' <= character && character <= 'f';
+            const bool bUpper = 'A' <= character && character <= 'F';
+            if ( ( bDigit || bLower || bUpper ) == false )
+                return false;
         }
-    };
+        return text.empty() == false;
+    }
 } // namespace
 
 /**
@@ -41,7 +38,7 @@ SW_TEST_CASE( ModuleBuildIDTest, ExecutableHasAStableSymbolKey )
     SW_EXPECT_FALSE( executable._modulePath.empty() );
     // 모든 구성이 서명을 적는다 — Windows 는 /DEBUG 의 PE CodeView RSDS, 리눅스는 --build-id 의 ELF 노트(cmake/Modules/Compiler/Clang.cmake).
     SW_ASSERT_TRUE_MSG( executable.isValid(), "every configuration links with a build id (Windows /DEBUG RSDS, Linux --build-id)" );
-    SW_EXPECT_TRUE_MSG( ModuleBuildIDTestInternal::isHex( executable._id ), executable._id.c_str() );
+    SW_EXPECT_TRUE_MSG( isHex( executable._id ), executable._id.c_str() );
 #if defined( SW_PLATFORM_WINDOWS )
     SW_EXPECT_TRUE( executable._id.size() >= 33 );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::endsWith( executable._debugFile, ".pdb", true ), executable._debugFile.c_str() );
@@ -51,7 +48,7 @@ SW_TEST_CASE( ModuleBuildIDTest, ExecutableHasAStableSymbolKey )
     #endif
 #endif
     // 이 함수의 주소도 실행 파일 안이다(Core 는 테스트 실행 파일에 들어 있다).
-    const sw::ModuleBuildID self = sw::ModuleBuildID::find( reinterpret_cast<const void*>( &ModuleBuildIDTestInternal::isHex ) );
+    const sw::ModuleBuildID self = sw::ModuleBuildID::find( reinterpret_cast<const void*>( &isHex ) );
     SW_EXPECT_TRUE( self._id == executable._id );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( self._modulePath, executable._modulePath ) );
 }

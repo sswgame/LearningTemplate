@@ -566,27 +566,24 @@ namespace
         }
     }
 
-    struct InputTriggerTestInternal
+    /** @brief 키 하나를 누른 채 `frameCount` 프레임을 돌려 `action` 이 발화한 프레임 수를 셉니다(끝에 키를 뗀다). */
+    uint32 countTriggeredFrames( sw::InputManager& input, const sw::hashed_string& action, sw::Key key, uint32 frameCount )
     {
-        /** @brief 키 하나를 누른 채 `frameCount` 프레임을 돌려 `action` 이 발화한 프레임 수를 셉니다(끝에 키를 뗀다). */
-        static uint32 countTriggeredFrames( sw::InputManager& input, const sw::hashed_string& action, sw::Key key, uint32 frameCount )
+        sw::InputMap& inputMap = input.getInputMap();
+        input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
+        uint32 triggeredCount = 0;
+        for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
-            sw::InputMap& inputMap = input.getInputMap();
-            input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
-            uint32 triggeredCount = 0;
-            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-            {
-                input.beginFrame( 0.016f );
-                if ( inputMap.wasActionTriggered( action ) )
-                    ++triggeredCount;
-                input.endFrame();
-            }
-            input.postRawEvent( sw::RawInputEvent::makeKeyUp( key ) );
             input.beginFrame( 0.016f );
+            if ( inputMap.wasActionTriggered( action ) )
+                ++triggeredCount;
             input.endFrame();
-            return triggeredCount;
         }
-    };
+        input.postRawEvent( sw::RawInputEvent::makeKeyUp( key ) );
+        input.beginFrame( 0.016f );
+        input.endFrame();
+        return triggeredCount;
+    }
 
     /** @brief 키를 한 번 눌렀다 뗀다(두 프레임, 각 @p frameSecond 초). 누른 프레임에 발화했는지 돌려준다. */
     bool tapKeyOnce( sw::InputManager& input, const sw::hashed_string& action, sw::Key key, float32 frameSecond )
@@ -1152,9 +1149,9 @@ SW_TEST_CASE( InputMapTest, Axis1DBindingFollowsTheActionTrigger )
     SW_EXPECT_TRUE( pMoveBinding->_trigger == sw::ActionTrigger::Down );
 
     // 누른 채 세 프레임 — 첫 프레임만 발화한다. 떼었다 다시 누르면 다시 한 번.
-    SW_EXPECT_EQUAL( 1u, InputTriggerTestInternal::countTriggeredFrames( input, "SwitchWeapon", sw::Key::E, 3 ) );
-    SW_EXPECT_EQUAL( 1u, InputTriggerTestInternal::countTriggeredFrames( input, "SwitchWeapon", sw::Key::Q, 3 ) );
-    SW_EXPECT_EQUAL( 3u, InputTriggerTestInternal::countTriggeredFrames( input, "Steer", sw::Key::D, 3 ) );
+    SW_EXPECT_EQUAL( 1u, countTriggeredFrames( input, "SwitchWeapon", sw::Key::E, 3 ) );
+    SW_EXPECT_EQUAL( 1u, countTriggeredFrames( input, "SwitchWeapon", sw::Key::Q, 3 ) );
+    SW_EXPECT_EQUAL( 3u, countTriggeredFrames( input, "Steer", sw::Key::D, 3 ) );
 
     // 축 값은 누르는 동안 +1 이다.
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::E ) );

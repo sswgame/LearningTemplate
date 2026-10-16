@@ -9,19 +9,16 @@ using namespace sw::editor;
 
 namespace
 {
-    struct TestEditorNodeGraphRulesInternal
+    /** @brief 묶음 둘이 섞인 종류 목록입니다(묶음 순서: Flow → Data). */
+    vector<EditorGraphNodeKind> makeKinds()
     {
-        /** @brief 묶음 둘이 섞인 종류 목록입니다(묶음 순서: Flow → Data). */
-        static vector<EditorGraphNodeKind> makeKinds()
-        {
-            return vector<EditorGraphNodeKind>{
-                EditorGraphNodeKind{  "Branch", "Flow", 10},
-                EditorGraphNodeKind{     "Add", "Data", 20},
-                EditorGraphNodeKind{"Sequence", "Flow", 11},
-                EditorGraphNodeKind{"Multiply", "Data", 21}
-            };
-        }
-    };
+        return vector<EditorGraphNodeKind>{
+            EditorGraphNodeKind{  "Branch", "Flow", 10},
+            EditorGraphNodeKind{     "Add", "Data", 20},
+            EditorGraphNodeKind{"Sequence", "Flow", 11},
+            EditorGraphNodeKind{"Multiply", "Data", 21}
+        };
+    }
 } // namespace
 
 /**
@@ -30,7 +27,7 @@ namespace
 SW_TEST_CASE( EditorNodeGraphRulesTest, EmptySearchListsEveryKindByCategory )
 {
     vector<uint32> listIndex;
-    EditorNodeGraphRules::filterNodeKinds( TestEditorNodeGraphRulesInternal::makeKinds(), "", listIndex );
+    EditorNodeGraphRules::filterNodeKinds( makeKinds(), "", listIndex );
     SW_ASSERT_EQUAL( listIndex.size(), size_t{ 4 } );
     SW_EXPECT_EQUAL( listIndex[0], 0u ); // Flow: Branch
     SW_EXPECT_EQUAL( listIndex[1], 2u ); //       Sequence
@@ -44,12 +41,12 @@ SW_TEST_CASE( EditorNodeGraphRulesTest, EmptySearchListsEveryKindByCategory )
 SW_TEST_CASE( EditorNodeGraphRulesTest, SearchMatchesNameOrCategory )
 {
     vector<uint32> listIndex;
-    EditorNodeGraphRules::filterNodeKinds( TestEditorNodeGraphRulesInternal::makeKinds(), "mul", listIndex );
+    EditorNodeGraphRules::filterNodeKinds( makeKinds(), "mul", listIndex );
     SW_ASSERT_EQUAL( listIndex.size(), size_t{ 1 } );
     SW_EXPECT_EQUAL( listIndex[0], 3u );
-    EditorNodeGraphRules::filterNodeKinds( TestEditorNodeGraphRulesInternal::makeKinds(), "FLOW", listIndex );
+    EditorNodeGraphRules::filterNodeKinds( makeKinds(), "FLOW", listIndex );
     SW_EXPECT_EQUAL( listIndex.size(), size_t{ 2 } );
-    EditorNodeGraphRules::filterNodeKinds( TestEditorNodeGraphRulesInternal::makeKinds(), "zzz", listIndex );
+    EditorNodeGraphRules::filterNodeKinds( makeKinds(), "zzz", listIndex );
     SW_EXPECT_TRUE( listIndex.empty() );
 }
 

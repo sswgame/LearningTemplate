@@ -65,23 +65,19 @@ namespace
         }
     };
 
-    struct SocialStreamTestInternal
+    int32 countSocialNotificationKind( const vector<SocialNotification>& listNotification, SocialNotificationKind kind )
     {
-        static int32 countKind( const vector<SocialNotification>& listNotification, SocialNotificationKind kind )
+        int32 count = 0;
+        for ( const SocialNotification& notification : listNotification )
         {
-            int32 count = 0;
-            for ( const SocialNotification& notification : listNotification )
-            {
-                count += notification._kind == kind ? 1 : 0;
-            }
-            return count;
+            count += notification._kind == kind ? 1 : 0;
         }
-    };
+        return count;
+    }
 } // namespace
 
 SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
 {
-    using Internal = SocialStreamTestInternal;
     LoopbackStreamNetwork   network( 7u );
     MemoryServiceDatabase   database;
     MemoryEphemeralDatabase cacheDatabase;
@@ -129,10 +125,10 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == SocialResult::Ok );
     vector<SocialNotification> listNotificationOfFirst;
     clientOfFirst.drainNotifications( listNotificationOfFirst );
-    SW_EXPECT_EQUAL( Internal::countKind( listNotificationOfFirst, SocialNotificationKind::FriendAdded ), 1 );
+    SW_EXPECT_EQUAL( countSocialNotificationKind( listNotificationOfFirst, SocialNotificationKind::FriendAdded ), 1 );
     listNotificationOfSecond.clear();
     clientOfSecond.drainNotifications( listNotificationOfSecond );
-    SW_EXPECT_EQUAL( Internal::countKind( listNotificationOfSecond, SocialNotificationKind::FriendAdded ), 1 ); // 수락한 쪽도 안다
+    SW_EXPECT_EQUAL( countSocialNotificationKind( listNotificationOfSecond, SocialNotificationKind::FriendAdded ), 1 ); // 수락한 쪽도 안다
     (void)clientOfFirst.listLinks( recorder.makeDelegate() );
     test::updateAll( { &server }, clients, 30 );
     SW_ASSERT_EQUAL( recorder.getLast()._reply._listLink.size(), size_t( 1 ) );
@@ -181,7 +177,7 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == SocialResult::Ok );
     listNotificationOfSecond.clear();
     clientOfSecond.drainNotifications( listNotificationOfSecond );
-    SW_EXPECT_EQUAL( Internal::countKind( listNotificationOfSecond, SocialNotificationKind::FriendRequested ), 0 );
+    SW_EXPECT_EQUAL( countSocialNotificationKind( listNotificationOfSecond, SocialNotificationKind::FriendRequested ), 0 );
 
     // 5) 다른 서버에 붙은 계정에게 신청 — 알림은 접속 상태 창구로
     server._presence.setOnline( AccountIdentity{ string( "carol" ), 3, SW_FALSE }, 2 );

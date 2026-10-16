@@ -13,18 +13,15 @@ using namespace sw::editor;
 
 namespace
 {
-    struct TestEditorSceneGenerationSyncInternal
+    /** @brief undo · redo 가 있는(스택이 받는) 빈 명령입니다. */
+    CommandStack::Command makeProbeCommand()
     {
-        /** @brief undo · redo 가 있는(스택이 받는) 빈 명령입니다. */
-        static CommandStack::Command makeProbeCommand()
-        {
-            CommandStack::Command command;
-            command._label = "probe";
-            command._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} );
-            command._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} );
-            return command;
-        }
-    };
+        CommandStack::Command command;
+        command._label = "probe";
+        command._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} );
+        command._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} );
+        return command;
+    }
 } // namespace
 
 /**
@@ -32,11 +29,10 @@ namespace
  */
 SW_TEST_CASE( EditorSceneGenerationSyncTest, NewGenerationDropsTheOldSceneStateOnce )
 {
-    using Internal = TestEditorSceneGenerationSyncInternal;
     EditorSelection selection;
     EditorWorkspace workspace{ &selection };
     CommandStack    stack;
-    stack.push( Internal::makeProbeCommand() );
+    stack.push( makeProbeCommand() );
     workspace.markSceneDirty();
     workspace.pushPrefabIsolation( PrefabIsolationFrame{} );
     SW_ASSERT_TRUE( stack.canUndo() );
@@ -49,7 +45,7 @@ SW_TEST_CASE( EditorSceneGenerationSyncTest, NewGenerationDropsTheOldSceneStateO
 
     // 같은 세대 — 그 뒤의 편집은 그대로 남는다.
     workspace.markSceneDirty();
-    stack.push( Internal::makeProbeCommand() );
+    stack.push( makeProbeCommand() );
     SW_EXPECT_FALSE( EditorSceneGenerationSync::apply( workspace, workspace.getObservedSceneGeneration(), &stack ) );
     SW_EXPECT_TRUE( workspace.isSceneDirty() );
     SW_EXPECT_TRUE( stack.canUndo() );

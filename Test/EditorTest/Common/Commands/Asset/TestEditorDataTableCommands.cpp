@@ -13,20 +13,17 @@ using namespace sw::editor;
 
 namespace
 {
-    struct EditorDataTableCommandsTestInternal
+    /** @brief 원문 표 하나 · 문화권 ko 를 가진 프로젝트를 임시 폴더에 만들고 프로젝트 경로를 돌려줍니다. */
+    string writeProject( const string& folder, const string& koreanJSON )
     {
-        /** @brief 원문 표 하나 · 문화권 ko 를 가진 프로젝트를 임시 폴더에 만들고 프로젝트 경로를 돌려줍니다. */
-        static string writeProject( const string& folder, const string& koreanJSON )
-        {
-            const string projectPath = FileUtil::joinPath( folder, "test.locproject.json" );
-            // 테스트 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤 단언이 깨진다
-            (void)FileUtil::writeTextFile( projectPath, R"({ "name": "test", "sourceCulture": "en", "cultures": [ "ko" ], "stringTables": [ "test.strings.json" ] })" );
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.json" ), // 위와 같다
-                                           R"({ "culture": "en", "entries": { "greeting": { "source": "Hello", "comment": "Title screen" } } })" );
-            (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.json" ), koreanJSON ); // 위와 같다
-            return projectPath;
-        }
-    };
+        const string projectPath = FileUtil::joinPath( folder, "test.locproject.json" );
+        // 테스트 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤 단언이 깨진다
+        (void)FileUtil::writeTextFile( projectPath, R"({ "name": "test", "sourceCulture": "en", "cultures": [ "ko" ], "stringTables": [ "test.strings.json" ] })" );
+        (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.json" ), // 위와 같다
+                                       R"({ "culture": "en", "entries": { "greeting": { "source": "Hello", "comment": "Title screen" } } })" );
+        (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.json" ), koreanJSON ); // 위와 같다
+        return projectPath;
+    }
 } // namespace
 
 /**
@@ -39,7 +36,7 @@ SW_TEST_CASE( EditorDataTableCommandsTest, SaveDoesNotOverwriteATranslationFileI
 {
     const string folder        = test::makeTempDirectory( "localization" );
     const string kBrokenKorean = "{ \"culture\": \"ko\", \"entries\": { \"greeting\": { \"text\": \"안녕하세요\" }, } }\n";
-    const string projectPath   = EditorDataTableCommandsTestInternal::writeProject( folder, kBrokenKorean );
+    const string projectPath   = writeProject( folder, kBrokenKorean );
     const string koPath        = FileUtil::joinPath( folder, "ko.translation.json" );
 
     LocalizationSheet sheet;
@@ -78,7 +75,7 @@ SW_TEST_CASE( EditorDataTableCommandsTest, SaveDoesNotOverwriteATranslationFileI
 SW_TEST_CASE( EditorDataTableCommandsTest, EditedTranslationIsCurrentAndSourceEditMakesOthersStale )
 {
     const string folder      = test::makeTempDirectory( "localization_states" );
-    const string projectPath = EditorDataTableCommandsTestInternal::writeProject(
+    const string projectPath = writeProject(
         folder, R"({ "culture": "ko", "entries": { "greeting": { "text": "안녕", "translatorComment": "반말로" } } })" );
 
     LocalizationSheet sheet;

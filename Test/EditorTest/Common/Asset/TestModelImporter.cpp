@@ -155,10 +155,7 @@ namespace
             }
             return false;
         }
-    };
 
-    struct TestModelFractureInternal
-    {
         static void appendQuad( sw::vector<float32>& inoutList, const sw::float3& a, const sw::float3& b, const sw::float3& c, const sw::float3& d )
         {
             for ( const sw::float3& point : { a, b, c, a, c, d } )
@@ -607,7 +604,7 @@ SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
     const sw::string resourceRoot = test::makeTempDirectory( "model_import_fracture_resource" );
     const sw::string sourcePath   = sw::FileUtil::joinPath( resourceRoot, "game/probe/models_raw/box.gltf" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( sourcePath ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, TestModelFractureInternal::makeBoxGltf() ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, TestModelImporterInternal::makeBoxGltf() ) );
     SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, fractureConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
     const sw::string  fracturePath = sw::FileUtil::joinPath( resourceRoot, "game/probe/models/box.fracture" );
     sw::FractureAsset asset;

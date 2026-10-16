@@ -25,25 +25,22 @@ using sw::test::LocalizationTestUtil;
 // ------------------------------------------------------------------------------
 namespace
 {
-    struct LocalizationManagerTestInternal
+    /** @brief en 원문 셋 · ko 번역 둘(하나는 낡음) · ko_kr 번역 하나 · ja 번역 하나(검토 표시)의 프로젝트입니다. */
+    sw::string writeSampleProject( const sw::string& folder )
     {
-        /** @brief en 원문 셋 · ko 번역 둘(하나는 낡음) · ko_kr 번역 하나 · ja 번역 하나(검토 표시)의 프로젝트입니다. */
-        static sw::string writeSampleProject( const sw::string& folder )
-        {
-            const sw::string projectPath = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ko_kr", "ja" ])" );
-            LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.title": { "source": "Mystery Island", "maxLength": 20 },
-                                                                    "ui.start": { "source": "Start Game" },
-                                                                    "ui.quit": { "source": "Quit" })" );
-            const sw::string titleHash = sw::LocalizationTextUtil::formatSourceHash( sw::LocalizationTextUtil::computeSourceHash( "Mystery Island" ) );
-            const sw::string staleHash = sw::LocalizationTextUtil::formatSourceHash( sw::LocalizationTextUtil::computeSourceHash( "Begin" ) );
-            LocalizationTestUtil::writeTranslation( folder, "ko",
-                                                    "\"ui.title\": { \"text\": \"신비의 섬\", \"sourceHash\": \"" + titleHash + "\" }, \"ui.start\": { \"text\": \"시작\", \"sourceHash\": \"" +
-                                                        staleHash + "\" }" );
-            LocalizationTestUtil::writeTranslation( folder, "ko_kr", R"json("ui.quit": { "text": "종료(한국)" })json" );
-            LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.title": { "text": "神秘の島", "review": true }, "ui.quit": { "text": "終了" })" );
-            return projectPath;
-        }
-    };
+        const sw::string projectPath = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ko_kr", "ja" ])" );
+        LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.title": { "source": "Mystery Island", "maxLength": 20 },
+                                                            "ui.start": { "source": "Start Game" },
+                                                            "ui.quit": { "source": "Quit" })" );
+        const sw::string titleHash = sw::LocalizationTextUtil::formatSourceHash( sw::LocalizationTextUtil::computeSourceHash( "Mystery Island" ) );
+        const sw::string staleHash = sw::LocalizationTextUtil::formatSourceHash( sw::LocalizationTextUtil::computeSourceHash( "Begin" ) );
+        LocalizationTestUtil::writeTranslation( folder, "ko",
+                                                "\"ui.title\": { \"text\": \"신비의 섬\", \"sourceHash\": \"" + titleHash + "\" }, \"ui.start\": { \"text\": \"시작\", \"sourceHash\": \"" +
+                                                    staleHash + "\" }" );
+        LocalizationTestUtil::writeTranslation( folder, "ko_kr", R"json("ui.quit": { "text": "종료(한국)" })json" );
+        LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.title": { "text": "神秘の島", "review": true }, "ui.quit": { "text": "終了" })" );
+        return projectPath;
+    }
 } // namespace
 
 /**
@@ -82,7 +79,7 @@ SW_TEST_CASE( LocalizationManagerTest, NonSingletonIndependence )
 SW_TEST_CASE( LocalizationManagerTest, ProjectCultureChainSkipsStaleAndReviewTranslations )
 {
     const sw::string folder      = test::makeTempDirectory( "loc_chain" );
-    const sw::string projectPath = LocalizationManagerTestInternal::writeSampleProject( folder );
+    const sw::string projectPath = writeSampleProject( folder );
 
     sw::LocalizationManager loc;
     SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );
@@ -119,7 +116,7 @@ SW_TEST_CASE( LocalizationManagerTest, MissingKeysAreReportedOnce )
 
     const sw::string        folder = test::makeTempDirectory( "loc_missing" );
     sw::LocalizationManager loc;
-    SW_ASSERT_TRUE( loc.mountProject( LocalizationManagerTestInternal::writeSampleProject( folder ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( loc.mountProject( writeSampleProject( folder ), sw::LocalizationScope::Game ) );
     test::ScopedLogCollector logs;
     SW_EXPECT_STREQ( "fallback", loc.getString( sw::hashed_string( "ui.unknown" ), "fallback" ) );
     SW_EXPECT_STREQ( "fallback", loc.getString( sw::hashed_string( "ui.unknown" ), "fallback" ) );
@@ -159,7 +156,7 @@ SW_TEST_CASE( LocalizationManagerTest, UnknownFieldsInTablesAreLoadErrors )
 SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOldOnError )
 {
     const sw::string folder      = test::makeTempDirectory( "loc_reload" );
-    const sw::string projectPath = LocalizationManagerTestInternal::writeSampleProject( folder );
+    const sw::string projectPath = writeSampleProject( folder );
 
     sw::LocalizationManager loc;
     SW_ASSERT_TRUE( loc.mountProject( projectPath, sw::LocalizationScope::Game ) );
@@ -201,7 +198,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
 SW_TEST_CASE( LocalizationManagerTest, HotReloadGoesThroughTheAssetCacheRegistry )
 {
     const sw::string         folder           = test::makeTempDirectory( "loc_hot_reload" );
-    const sw::string         projectPath      = LocalizationManagerTestInternal::writeSampleProject( folder );
+    const sw::string         projectPath      = writeSampleProject( folder );
     sw::LocalizationManager& loc              = sw::engine::getSubsystem<sw::LocalizationManager>();
     const sw::string         previousLanguage = loc.getCurrentLanguage();
     SW_ASSERT_TRUE( loc.mountProject( projectPath, sw::LocalizationScope::Game ) );
@@ -293,7 +290,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
     sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
 
     const sw::string folder           = test::makeTempDirectory( "loc_gamestrings" );
-    const sw::string projectPath      = LocalizationManagerTestInternal::writeSampleProject( folder );
+    const sw::string projectPath      = writeSampleProject( folder );
     const sw::string previousLanguage = sw::engine::getSubsystem<sw::LocalizationManager>().getCurrentLanguage();
     const sw::string previousFallback = sw::engine::getSubsystem<sw::LocalizationManager>().getFallbackLanguage();
 
@@ -433,7 +430,7 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
     const sw::string        folder = test::makeTempDirectory( "loc_copy" );
     sw::LocalizationManager original;
     SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( original ) );
-    SW_ASSERT_TRUE( original.mountProject( LocalizationManagerTestInternal::writeSampleProject( folder ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( original.mountProject( writeSampleProject( folder ), sw::LocalizationScope::Game ) );
     SW_ASSERT_TRUE( original.setCurrentLanguage( "ko" ) );
     const uint32 originalRevision = original.getTextRevision();
 

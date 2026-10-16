@@ -121,10 +121,7 @@ namespace
         }
 
         static float3 findPosition( const GameObject& object ) { return object.getPrimarySceneComponent()->getWorldPosition(); }
-    };
 
-    struct ControlWalkTestInternal
-    {
         /** @brief 캐릭터 컨트롤러(발 @p position) · 폰 · 폰 이동(걸음 4 m/s)을 가진 걷는 폰입니다. */
         static GameObject* spawnWalker( GameObjectManager& manager, const utf8* pName, const float3& position )
         {
@@ -138,10 +135,7 @@ namespace
         }
 
         static float3 findFeet( const GameObject& object ) { return object.getComponent<CharacterControllerComponent>()->getWorldPosition(); }
-    };
 
-    struct ControlRecordTestInternal
-    {
         static constexpr uint32 kTickCount = 120;
 
         /** @brief 아날로그 "Throttle" 을 가진 폰입니다. */
@@ -186,10 +180,7 @@ namespace
             input.endFrame();
             return result;
         }
-    };
 
-    struct ControlViewTestInternal
-    {
         /** @brief 카메라 · 폰(시점 액션 "Look") · 1인칭 카메라를 가진 1인칭 폰입니다. */
         static GameObject* spawnFirstPersonPawn( GameObjectManager& manager, bool bLockMouse )
         {
@@ -484,7 +475,7 @@ SW_TEST_CASE( ControlTest, ControlSystemFollowsItsComponents )
 SW_TEST_CASE( ControlTest, PlayerAndNpcWalkTheSameOnTheCharacterController )
 {
     using Internal = ControlTestInternal;
-    using Walk     = ControlWalkTestInternal;
+    using Walk     = ControlTestInternal;
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
@@ -525,7 +516,7 @@ SW_TEST_CASE( ControlTest, PlayerAndNpcWalkTheSameOnTheCharacterController )
 SW_TEST_CASE( ControlTest, NpcRoutesAroundCratesThroughIntent )
 {
     using Internal = ControlTestInternal;
-    using Walk     = ControlWalkTestInternal;
+    using Walk     = ControlTestInternal;
     GameObjectManager manager;
     navtest::spawnPhysicsCrateScene( manager );
     GameObject*            pWalker = Walk::spawnWalker( manager, "Walker", float3{ -6.0f, 0.05f, 0.0f } );
@@ -570,7 +561,7 @@ SW_TEST_CASE( ControlTest, NpcRoutesAroundCratesThroughIntent )
  */
 SW_TEST_CASE( ControlTest, RecordedIntentsReplayTheSameTrajectory )
 {
-    using Internal = ControlRecordTestInternal;
+    using Internal = ControlTestInternal;
     vector<float3> listRecordedPosition;
     vector<uint8>  fileBytes;
     {
@@ -700,7 +691,7 @@ SW_TEST_CASE( ControlTest, IntentFileRoundTrips )
  */
 SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
 {
-    using Internal                    = ControlRecordTestInternal;
+    using Internal                    = ControlTestInternal;
     static constexpr uint32 kLagTicks = 2;
     const NetInputFormat    format{ 0, ControlIntent::kMaxSerializedBytes, 32, SW_FALSE };
     NetInputSendWindow      window;
@@ -795,7 +786,7 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAI )
         AutomationResult result = AutomationResult::Running;
         for ( uint32 frame = 0; frame < 60 && result == AutomationResult::Running; ++frame )
         {
-            result                  = ControlRecordTestInternal::runFrame( runner, manager, input );
+            result                  = ControlTestInternal::runFrame( runner, manager, input );
             const float3 heroAt     = Internal::findPosition( *pHero );
             const float3 twinAt     = Internal::findPosition( *pTwin );
             const bool   bIntentRun = frame < 30;
@@ -819,7 +810,7 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAI )
         AutomationRunner badRunner;
         badRunner.setObjectManager( &manager );
         SW_ASSERT_TRUE( badRunner.startFromText( "<Scenario name=\"control.bad\"><At frame=\"0\"><Intent pawn=\"Hero\" speed=\"1\"/></At></Scenario>" ) );
-        SW_EXPECT_TRUE( ControlRecordTestInternal::runFrame( badRunner, manager, input ) == AutomationResult::LoadError );
+        SW_EXPECT_TRUE( ControlTestInternal::runFrame( badRunner, manager, input ) == AutomationResult::LoadError );
     }
     input.shutdown();
 }
@@ -830,7 +821,7 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAI )
 SW_TEST_CASE( ControlTest, FirstPersonCameraFollowsTheControlRotation )
 {
     using Internal = ControlTestInternal;
-    using View     = ControlViewTestInternal;
+    using View     = ControlTestInternal;
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bindMouseDelta( "Look", 3.0f ); // 배율 3 — 액션 값이 원시 이동량의 세 배다
@@ -908,7 +899,7 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
         AutomationResult result = AutomationResult::Running;
         for ( uint32 frame = 0; frame < 30 && result == AutomationResult::Running; ++frame )
         {
-            result = ControlRecordTestInternal::runFrame( runner, manager, input );
+            result = ControlTestInternal::runFrame( runner, manager, input );
             if ( frame == 4 )
                 SW_EXPECT_TRUE( pHero->getController() == pPlayer->getHandle() );
             if ( frame == 5 )
@@ -930,7 +921,7 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
 SW_TEST_CASE( ControlTest, PlayerControllerTogglesTheMouseLockOfItsPawn )
 {
     using Internal = ControlTestInternal;
-    using View     = ControlViewTestInternal;
+    using View     = ControlTestInternal;
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bindMouseDelta( "Look" );
@@ -1068,7 +1059,7 @@ SW_TEST_CASE( ControlTest, UIConsumedInputDoesNotReachThePawn )
  */
 SW_TEST_CASE( ControlTest, PlaybackEntryReplaysAFileAndSkipsMissingPawns )
 {
-    using Internal = ControlRecordTestInternal;
+    using Internal = ControlTestInternal;
     vector<float3> listRecordedPosition;
     const string   path = test::makeTempPath( "playback.swintent" );
     {

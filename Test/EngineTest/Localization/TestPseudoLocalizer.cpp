@@ -16,19 +16,16 @@ using sw::test::LocalizationTestUtil;
 
 namespace
 {
-    struct PseudoLocalizerTestInternal
+    uint32 countCodepoints( sw::string_view text )
     {
-        static uint32 countCodepoints( sw::string_view text )
+        uint32 count{ 0 };
+        for ( size_t offset = 0; offset < text.size(); )
         {
-            uint32 count{ 0 };
-            for ( size_t offset = 0; offset < text.size(); )
-            {
-                (void)sw::StringUtil::decodeUtf8( text, offset );
-                ++count;
-            }
-            return count;
+            (void)sw::StringUtil::decodeUtf8( text, offset );
+            ++count;
         }
-    };
+        return count;
+    }
 } // namespace
 
 /**
@@ -42,8 +39,8 @@ SW_TEST_CASE( PseudoLocalizerTest, AccentsLengthensAndBrackets )
         const sw::string pseudo = sw::PseudoLocalizer::transform( source, sw::PseudoLocaleMode::Accented );
         SW_EXPECT_TRUE( sw::PseudoLocalizer::isPseudoText( pseudo ) );
         SW_EXPECT_TRUE( pseudo.front() == '[' && pseudo.back() == ']' );
-        const uint32 sourceLength = PseudoLocalizerTestInternal::countCodepoints( source );
-        const uint32 pseudoLength = PseudoLocalizerTestInternal::countCodepoints( pseudo );
+        const uint32 sourceLength = countCodepoints( source );
+        const uint32 pseudoLength = countCodepoints( pseudo );
         SW_EXPECT_TRUE_MSG( pseudoLength * 10 >= sourceLength * 13, pseudo.c_str() );
         for ( size_t index = 1; index + 1 < pseudo.size(); ++index )
         {

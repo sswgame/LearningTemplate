@@ -10,18 +10,15 @@
 
 namespace
 {
-    struct EditorColliderHandleMathTestInternal
+    const sw::editor::ColliderHandle* findHandle( const sw::vector<sw::editor::ColliderHandle>& listHandle, uint32 axis, float32 sign )
     {
-        static const sw::editor::ColliderHandle* findHandle( const sw::vector<sw::editor::ColliderHandle>& listHandle, uint32 axis, float32 sign )
+        for ( const sw::editor::ColliderHandle& handle : listHandle )
         {
-            for ( const sw::editor::ColliderHandle& handle : listHandle )
-            {
-                if ( handle._axis == axis && handle._sign == sign )
-                    return &handle;
-            }
-            return nullptr;
+            if ( handle._axis == axis && handle._sign == sign )
+                return &handle;
         }
-    };
+        return nullptr;
+    }
 } // namespace
 
 /**
@@ -29,7 +26,6 @@ namespace
  */
 SW_TEST_CASE( EditorColliderHandleMathTest, BoxHandlesFollowTheScaledEdges )
 {
-    using Internal = EditorColliderHandleMathTestInternal;
     sw::PhysicsShapeDesc3D box;
     box._type        = sw::PhysicsShapeType3D::Box;
     box._halfExtents = sw::float3{ 0.5f, 0.5f, 0.5f };
@@ -38,7 +34,7 @@ SW_TEST_CASE( EditorColliderHandleMathTest, BoxHandlesFollowTheScaledEdges )
     sw::editor::EditorColliderHandleMath::collectHandles( box, 0, sw::float3{ 1.0f, 2.0f, 3.0f }, sw::quaternion{}, bodyScale, listHandle );
     SW_ASSERT_EQUAL( size_t( 6 ), listHandle.size() );
 
-    const sw::editor::ColliderHandle* pPlusX = Internal::findHandle( listHandle, 0, 1.0f );
+    const sw::editor::ColliderHandle* pPlusX = findHandle( listHandle, 0, 1.0f );
     SW_ASSERT_NOT_NULL( pPlusX );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pPlusX->_position._x, 0.0001f ); // 중심 1 + 반 크기 0.5 × 배율 2
     SW_EXPECT_NEAR_EQUAL( 2.0f, pPlusX->_position._y, 0.0001f );
@@ -60,7 +56,6 @@ SW_TEST_CASE( EditorColliderHandleMathTest, BoxHandlesFollowTheScaledEdges )
  */
 SW_TEST_CASE( EditorColliderHandleMathTest, SphereAndCapsuleUseTheScaleRulesOfTheBody )
 {
-    using Internal = EditorColliderHandleMathTestInternal;
     sw::PhysicsShapeDesc3D sphere;
     sphere._type   = sw::PhysicsShapeType3D::Sphere;
     sphere._radius = 0.5f;
@@ -68,7 +63,7 @@ SW_TEST_CASE( EditorColliderHandleMathTest, SphereAndCapsuleUseTheScaleRulesOfTh
     sw::vector<sw::editor::ColliderHandle> listHandle;
     sw::editor::EditorColliderHandleMath::collectHandles( sphere, 0, sw::float3{}, sw::quaternion{}, bodyScale, listHandle );
     SW_ASSERT_EQUAL( size_t( 6 ), listHandle.size() );
-    const sw::editor::ColliderHandle* pPlusY = Internal::findHandle( listHandle, 1, 1.0f );
+    const sw::editor::ColliderHandle* pPlusY = findHandle( listHandle, 1, 1.0f );
     SW_ASSERT_NOT_NULL( pPlusY );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pPlusY->_position._y, 0.0001f ); // 반지름 0.5 × 균일 배율 2
     SW_EXPECT_NEAR_EQUAL( 2.0f, sw::editor::EditorColliderHandleMath::applyDrag( sphere, *pPlusY, 4.0f, bodyScale )._radius, 0.0001f );
@@ -80,7 +75,7 @@ SW_TEST_CASE( EditorColliderHandleMathTest, SphereAndCapsuleUseTheScaleRulesOfTh
     listHandle.clear();
     sw::editor::EditorColliderHandleMath::collectHandles( capsule, 2, sw::float3{}, sw::quaternion{}, sw::float3{ 1.0f, 1.0f, 1.0f }, listHandle );
     SW_ASSERT_EQUAL( size_t( 6 ), listHandle.size() );
-    const sw::editor::ColliderHandle* pTop = Internal::findHandle( listHandle, 1, 1.0f );
+    const sw::editor::ColliderHandle* pTop = findHandle( listHandle, 1, 1.0f );
     SW_ASSERT_NOT_NULL( pTop );
     SW_EXPECT_TRUE( pTop->_kind == sw::editor::ColliderHandleKind::CapsuleHalfHeight );
     SW_EXPECT_EQUAL( 2u, pTop->_shapeIndex );
@@ -88,7 +83,7 @@ SW_TEST_CASE( EditorColliderHandleMathTest, SphereAndCapsuleUseTheScaleRulesOfTh
     const sw::float3 unitScale{ 1.0f, 1.0f, 1.0f };
     SW_EXPECT_NEAR_EQUAL( 2.5f, sw::editor::EditorColliderHandleMath::applyDrag( capsule, *pTop, 3.0f, unitScale )._halfHeight, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, sw::editor::EditorColliderHandleMath::applyDrag( capsule, *pTop, 0.2f, unitScale )._halfHeight, 0.0001f ); // 반지름보다 안쪽이면 반 높이 0
-    const sw::editor::ColliderHandle* pSide = Internal::findHandle( listHandle, 0, -1.0f );
+    const sw::editor::ColliderHandle* pSide = findHandle( listHandle, 0, -1.0f );
     SW_ASSERT_NOT_NULL( pSide );
     SW_EXPECT_TRUE( pSide->_kind == sw::editor::ColliderHandleKind::CapsuleRadius );
     SW_EXPECT_NEAR_EQUAL( 0.8f, sw::editor::EditorColliderHandleMath::applyDrag( capsule, *pSide, 0.8f, unitScale )._radius, 0.0001f );

@@ -8,11 +8,11 @@ using sw::editor::EditorLabelLayoutUtil;
 
 namespace
 {
-    struct TestEditorLabelLayoutInternal
+    /** @brief 바이트 하나 = 10 px 인 고정 폭 글꼴입니다. */
+    float32 measureFixed( sw::string_view text, void* /*pUserData*/ )
     {
-        /** @brief 바이트 하나 = 10 px 인 고정 폭 글꼴입니다. */
-        static float32 measureFixed( sw::string_view text, void* /*pUserData*/ ) { return static_cast<float32>( text.size() ) * 10.0f; }
-    };
+        return static_cast<float32>( text.size() ) * 10.0f;
+    }
 } // namespace
 
 /**
@@ -21,7 +21,7 @@ namespace
 SW_TEST_CASE( EditorLabelLayoutTest, BreaksAfterSeparatorBeforeMidWord )
 {
     sw::vector<sw::string_view> listLine;
-    EditorLabelLayoutUtil::breakLines( "harvest_valley", 100.0f, 2, &TestEditorLabelLayoutInternal::measureFixed, nullptr, listLine );
+    EditorLabelLayoutUtil::breakLines( "harvest_valley", 100.0f, 2, &measureFixed, nullptr, listLine );
     SW_ASSERT_EQUAL( listLine.size(), size_t{ 2 } );
     SW_EXPECT_TRUE( listLine[0] == "harvest_" );
     SW_EXPECT_TRUE( listLine[1] == "valley" );
@@ -33,7 +33,7 @@ SW_TEST_CASE( EditorLabelLayoutTest, BreaksAfterSeparatorBeforeMidWord )
 SW_TEST_CASE( EditorLabelLayoutTest, LongWordWithoutSeparatorKeepsWholeLastLine )
 {
     sw::vector<sw::string_view> listLine;
-    EditorLabelLayoutUtil::breakLines( "starskirmishfolder", 80.0f, 2, &TestEditorLabelLayoutInternal::measureFixed, nullptr, listLine );
+    EditorLabelLayoutUtil::breakLines( "starskirmishfolder", 80.0f, 2, &measureFixed, nullptr, listLine );
     SW_ASSERT_EQUAL( listLine.size(), size_t{ 2 } );
     SW_EXPECT_TRUE( listLine[0] == "starskir" );
     SW_EXPECT_TRUE( listLine[1] == "mishfolder" );
@@ -45,10 +45,10 @@ SW_TEST_CASE( EditorLabelLayoutTest, LongWordWithoutSeparatorKeepsWholeLastLine 
 SW_TEST_CASE( EditorLabelLayoutTest, ShortTextIsOneLine )
 {
     sw::vector<sw::string_view> listLine;
-    EditorLabelLayoutUtil::breakLines( "empty", 80.0f, 2, &TestEditorLabelLayoutInternal::measureFixed, nullptr, listLine );
+    EditorLabelLayoutUtil::breakLines( "empty", 80.0f, 2, &measureFixed, nullptr, listLine );
     SW_ASSERT_EQUAL( listLine.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listLine[0] == "empty" );
-    EditorLabelLayoutUtil::breakLines( "", 80.0f, 2, &TestEditorLabelLayoutInternal::measureFixed, nullptr, listLine );
+    EditorLabelLayoutUtil::breakLines( "", 80.0f, 2, &measureFixed, nullptr, listLine );
     SW_ASSERT_EQUAL( listLine.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listLine[0].empty() );
 }
@@ -59,13 +59,13 @@ SW_TEST_CASE( EditorLabelLayoutTest, ShortTextIsOneLine )
 SW_TEST_CASE( EditorLabelLayoutTest, SkipsLeadingSpaceAndKeepsUtf8Whole )
 {
     sw::vector<sw::string_view> listLine;
-    EditorLabelLayoutUtil::breakLines( "big  tree", 50.0f, 2, &TestEditorLabelLayoutInternal::measureFixed, nullptr, listLine );
+    EditorLabelLayoutUtil::breakLines( "big  tree", 50.0f, 2, &measureFixed, nullptr, listLine );
     SW_ASSERT_EQUAL( listLine.size(), size_t{ 2 } );
     SW_EXPECT_TRUE( listLine[0] == "big  " );
     SW_EXPECT_TRUE( listLine[1] == "tree" );
 
     // "가나다" 는 글자마다 3 바이트(30 px) — 폭 40 이면 첫 줄에 한 글자만 든다. 바이트 단위로 끊으면 4 바이트째에서 글자가 깨진다.
-    EditorLabelLayoutUtil::breakLines( "\xEA\xB0\x80\xEB\x82\x98\xEB\x8B\xA4", 40.0f, 2, &TestEditorLabelLayoutInternal::measureFixed, nullptr, listLine );
+    EditorLabelLayoutUtil::breakLines( "\xEA\xB0\x80\xEB\x82\x98\xEB\x8B\xA4", 40.0f, 2, &measureFixed, nullptr, listLine );
     SW_ASSERT_EQUAL( listLine.size(), size_t{ 2 } );
     SW_EXPECT_EQUAL( listLine[0].size(), size_t{ 3 } );
     SW_EXPECT_EQUAL( listLine[1].size(), size_t{ 6 } );

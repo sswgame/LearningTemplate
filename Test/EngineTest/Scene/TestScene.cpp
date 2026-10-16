@@ -105,11 +105,8 @@ namespace sw
                 }
                 return nonDefaultCount;
             }
-        };
 
-        /** @brief 그림자 볼륨 맞춤 테스트의 도우미입니다(ThemePark 의 직교 리그 · 해와 같은 모양). */
-        struct ShadowFitTestInternal
-        {
+            // 아래는 그림자 볼륨 맞춤 테스트의 도우미다(ThemePark 의 직교 리그 · 해와 같은 모양).
             static constexpr uint32  kResolution = 2048;
             static constexpr float32 kPitch      = 0.5235988f; ///< 30°
             static constexpr float32 kYaw        = 0.7853982f; ///< 45°
@@ -716,7 +713,7 @@ SW_TEST_CASE( SceneTest, ShadowBiasStaysInWorldUnits )
  */
 SW_TEST_CASE( SceneTest, ShadowVolumeFollowsOrthoCamera )
 {
-    using Internal = sw::ShadowFitTestInternal;
+    using Internal = sw::SceneTestInternal;
     sw::Scene scene{ "ShadowFit" };
     SW_ASSERT_NOT_NULL( scene.getObjectManager() );
     sw::DirectionalLightComponent* pLight = Internal::addParkSun( scene );
@@ -767,7 +764,7 @@ SW_TEST_CASE( SceneTest, ShadowVolumeFollowsOrthoCamera )
  */
 SW_TEST_CASE( SceneTest, ShadowVolumeSnapsToTexelsWhilePanning )
 {
-    using Internal = sw::ShadowFitTestInternal;
+    using Internal = sw::SceneTestInternal;
     sw::Scene scene{ "ShadowSnap" };
     SW_ASSERT_NOT_NULL( scene.getObjectManager() );
     sw::DirectionalLightComponent* pLight = Internal::addParkSun( scene );
