@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
@@ -166,11 +167,11 @@ namespace sw
         }
     }
 
-    void MechArenaWorld::writeState( BitWriter& outWriter ) const
+    bool MechArenaWorld::writeState( BitWriter& outWriter ) const
     {
         MechArenaSnapshot snapshot;
         makeSnapshot( snapshot );
-        MechArenaSnapshotCodec::write( snapshot, outWriter );
+        return FixedLayout::write( snapshot, outWriter );
     }
 
     void MechArenaWorld::writeState( Archive& outArchive ) const

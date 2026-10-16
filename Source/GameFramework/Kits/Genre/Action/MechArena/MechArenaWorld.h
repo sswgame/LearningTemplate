@@ -210,7 +210,9 @@ namespace sw
      *     world.start();
      *     world.setInput( amuro, input );
      *     world.update( deltaTime );
-     *     world.writeState( writer ); // 넷 키트의 스냅샷에 싣는다
+     *     if ( world.writeState( writer ) == false ) // 범위 밖 값이면 잘라 쓰지 않고 실패한다
+     *         return false;
+     *     // writer 의 바이트를 넷 키트의 스냅샷에 싣는다
      * @endcode
      */
     class SW_KIT_API MechArenaWorld
@@ -240,8 +242,11 @@ namespace sw
 
         /** @brief 지금 상태를 스냅샷으로 만듭니다. */
         void makeSnapshot( MechArenaSnapshot& outSnapshot ) const;
-        /** @brief 서버 권위 상태를 바이트로 씁니다(`MechArenaSnapshotCodec::write`). */
-        void writeState( BitWriter& outWriter ) const;
+        /**
+         * @brief 서버 권위 상태(`MechArenaSnapshot`)를 고정 배치형 바이트로 씁니다(`FixedLayout::write`).
+         * @return 범위 밖 값(255 개를 넘는 조종사, 1 보다 작은 판 크기 등)이 있으면 잘라 쓰지 않고 false 이며, @p outWriter 에는 쓰다 만 비트가 남습니다.
+         */
+        [[nodiscard]] bool writeState( BitWriter& outWriter ) const;
         /**
          * @brief 세이브와 핫 리로드용 전체 상태를 씁니다. 팀 이름, 판(`MatchState`), 걸음, 조종사(덱과 스킬 id, 위치, 속도, 입력, 타이머, 체력, 부스트,
          *        록온, 근접 타임라인, 무기, 쿨다운, 전적), 탄을 씁니다. 넷 스냅샷(`writeState( BitWriter& )`)은 화면용으로 양자화되어 복원할 수 없으므로 따로 둡니다.

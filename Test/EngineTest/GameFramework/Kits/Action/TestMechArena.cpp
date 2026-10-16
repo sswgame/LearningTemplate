@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
@@ -450,7 +451,8 @@ SW_TEST_CASE( MechArenaTest, StateBytesRoundTripAndReplayDeterministically )
             world.setInput( second, inputSecond );
             world.update( kMechArenaStep );
         }
-        world.writeState( outWriter );
+        const bool bWritten = world.writeState( outWriter );
+        SW_EXPECT_TRUE( bWritten );
         return world.getTick();
     };
 
@@ -462,21 +464,102 @@ SW_TEST_CASE( MechArenaTest, StateBytesRoundTripAndReplayDeterministically )
     SW_EXPECT_TRUE( firstRun.getBytes() == secondRun.getBytes() );
 
     // 읽어서 다시 쓰면 같은 바이트다.
-    MechArenaSnapshot snapshot;
-    BitReader         reader( firstRun.getBytes().data(), firstRun.getByteCount() );
-    SW_ASSERT_TRUE( MechArenaSnapshotCodec::read( reader, snapshot ) );
+    MechArenaSnapshot     snapshot;
+    const FixedReadResult result = FixedLayout::read( firstRun.getBytes().data(), firstRun.getByteCount(), snapshot );
+    SW_ASSERT_TRUE_MSG( result == FixedReadResult::Ok, FixedLayout::toString( result ) );
     SW_EXPECT_EQUAL( snapshot._tick, 240u );
     SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listPilot.size() ), 2 );
     SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listTeamGauge.size() ), 2 );
     SW_EXPECT_TRUE( snapshot._phase == MatchPhase::InProgress );
-    BitWriter rewritten;
-    MechArenaSnapshotCodec::write( snapshot, rewritten );
+    BitWriter  rewritten;
+    const bool bRewritten = FixedLayout::write( snapshot, rewritten );
+    SW_EXPECT_TRUE( bRewritten );
     SW_EXPECT_TRUE( rewritten.getBytes() == firstRun.getBytes() );
 
-    // 모자란 바이트는 거절한다.
-    MechArenaSnapshot broken;
-    BitReader         shortReader( firstRun.getBytes().data(), firstRun.getByteCount() / 2 );
-    SW_EXPECT_FALSE( MechArenaSnapshotCodec::read( shortReader, broken ) );
+    // 모자란 바이트는 거절하고 대상은 그대로다.
+    MechArenaSnapshot     broken;
+    const FixedReadResult shortResult = FixedLayout::read( firstRun.getBytes().data(), firstRun.getByteCount() / 2, broken );
+    SW_EXPECT_TRUE( shortResult == FixedReadResult::Truncated );
+    SW_EXPECT_TRUE( FixedLayout::equals( broken, MechArenaSnapshot{} ) );
+}
+
+/**
+ * @brief [MechArenaTest] 스냅샷은 경계값까지 왕복하고, 범위 밖 값은 잘라 쓰지 않고 쓰기가 실패한다
+ * @details 손 코덱은 개수를 255 로 잘라 버리고 판 크기를 1 로 올려 썼습니다. 이제 선언한 범위(`MaxCount`, `Min`)가 와이어 형식이고, 넘으면 오류입니다.
+ */
+SW_TEST_CASE( MechArenaTest, SnapshotRoundTripsAndRefusesOutOfRangeValues )
+{
+    MechArenaSnapshot source;
+    source._arenaHalfSize = 50.0f;
+    source._ceiling       = 20.0f;
+    source._remainingTime = 12.34f;
+    source._tick          = 77u;
+    source._winningTeam   = 1;
+    source._phase         = MatchPhase::Ended;
+    source._listTeamGauge = { 3, -2 };
+    MechPilotSnapshot pilot;
+    pilot._position        = float3{ -50.0f, 20.0f, 50.0f }; // 판 경계
+    pilot._health          = 100000.0f;
+    pilot._boostHeat       = 1.0f;
+    pilot._mechIndex       = -1;
+    pilot._magazineAmmo    = 4095;
+    pilot._state           = MechPilotState::Retired;
+    pilot._bOverheated     = SW_TRUE;
+    pilot._bReloading      = SW_TRUE;
+    pilot._activeSkillMask = 0x80000001u;
+    source._listPilot.push_back( pilot );
+    MechProjectileSnapshot projectile;
+    projectile._position = float3{ 1.0f, 2.0f, 3.0f };
+    projectile._owner    = 0;
+    source._listProjectile.push_back( projectile );
+
+    // `Step` 필드는 첫 쓰기에서 한 번 양자화되므로, 두 번째 왕복부터 비트까지 같아야 한다.
+    MechArenaSnapshot loaded;
+    for ( int32 pass = 0; pass < 2; ++pass )
+    {
+        const MechArenaSnapshot written = pass == 0 ? source : loaded;
+        BitWriter               writer;
+        const bool              bWritten = FixedLayout::write( written, writer );
+        SW_ASSERT_TRUE( bWritten );
+        loaded                       = MechArenaSnapshot{};
+        const FixedReadResult result = FixedLayout::read( writer.getBytes().data(), writer.getByteCount(), loaded );
+        SW_ASSERT_TRUE_MSG( result == FixedReadResult::Ok, FixedLayout::toString( result ) );
+        if ( pass == 1 )
+            SW_EXPECT_TRUE( FixedLayout::equals( loaded, written ) );
+    }
+    SW_EXPECT_NEAR_EQUAL( loaded._remainingTime, 12.34f, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( loaded._listPilot[0]._position._x, -50.0f, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( loaded._listPilot[0]._position._y, 20.0f, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( loaded._listPilot[0]._health, 100000.0f, 0.1f );
+    SW_EXPECT_EQUAL( loaded._listPilot[0]._magazineAmmo, 4095 );
+    SW_EXPECT_EQUAL( loaded._listPilot[0]._mechIndex, -1 );
+    SW_EXPECT_EQUAL( loaded._listPilot[0]._activeSkillMask, 0x80000001u );
+    SW_EXPECT_TRUE( loaded._listPilot[0]._state == MechPilotState::Retired );
+    SW_EXPECT_TRUE( loaded._listPilot[0]._bReloading == SW_TRUE );
+    SW_EXPECT_EQUAL( static_cast<int32>( loaded._listTeamGauge.size() ), 2 );
+    SW_EXPECT_EQUAL( loaded._listTeamGauge[1], -2 );
+    SW_EXPECT_EQUAL( loaded._listProjectile[0]._owner, 0 );
+
+    // 255 개를 넘는 목록은 잘라 쓰지 않는다.
+    MechArenaSnapshot tooMany = source;
+    tooMany._listProjectile.resize( 256 );
+    BitWriter  tooManyWriter;
+    const bool bTooManyWritten = FixedLayout::write( tooMany, tooManyWriter );
+    SW_EXPECT_FALSE( bTooManyWritten );
+
+    // 1 보다 작은 판 크기는 1 로 올리지 않는다.
+    MechArenaSnapshot tinyArena = source;
+    tinyArena._arenaHalfSize    = 0.5f;
+    BitWriter  tinyWriter;
+    const bool bTinyWritten = FixedLayout::write( tinyArena, tinyWriter );
+    SW_EXPECT_FALSE( bTinyWritten );
+
+    // 범위 밖 정수(팀 번호)도 쓰기 실패다.
+    MechArenaSnapshot badTeam   = source;
+    badTeam._listPilot[0]._team = 256;
+    BitWriter  badTeamWriter;
+    const bool bBadTeamWritten = FixedLayout::write( badTeam, badTeamWriter );
+    SW_EXPECT_FALSE( bBadTeamWritten );
 }
 
 SW_TEST_CASE( MechArenaTest, ShotsLockOnAndProjectilesSkipTeammates )

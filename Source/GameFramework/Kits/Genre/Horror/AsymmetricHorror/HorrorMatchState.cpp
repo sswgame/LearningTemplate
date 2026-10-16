@@ -4,6 +4,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/AI/AIPerception.h"
@@ -46,8 +47,10 @@ namespace sw
             flag |= generator._progress.isCompleted() ? 1u : 0u;
             flag |= generator._bKicked == SW_TRUE ? 2u : 0u;
             flag |= generator._bBlocked == SW_TRUE ? 4u : 0u;
-            outSnapshot._listGeneratorProgress.push_back( generator._progress.getProgress() );
-            outSnapshot._listGeneratorFlag.push_back( flag );
+            HorrorGeneratorSnapshot entry;
+            entry._progress = generator._progress.getProgress();
+            entry._flag     = flag;
+            outSnapshot._listGenerator.push_back( entry );
         }
         for ( const HorrorGate& gate : _listGate )
         {
@@ -60,11 +63,11 @@ namespace sw
         }
     }
 
-    void HorrorMatch::writeState( BitWriter& outWriter ) const
+    bool HorrorMatch::writeState( BitWriter& outWriter ) const
     {
         HorrorSnapshot snapshot;
         makeSnapshot( snapshot );
-        HorrorSnapshotCodec::write( snapshot, outWriter );
+        return FixedLayout::write( snapshot, outWriter );
     }
 
     void HorrorMatch::writeState( Archive& outArchive ) const
