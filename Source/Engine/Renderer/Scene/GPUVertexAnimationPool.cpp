@@ -16,7 +16,7 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return;
-        // 표는 굽고 나면 변하지 않는다 — 목록(포인터 · 내용 번호)이 같으면 다시 올리지 않는다.
+        // 테이블은 베이크하고 나면 변하지 않는다. 목록(포인터와 내용 번호)이 같으면 다시 업로드하지 않는다.
         bool bSame = _listBuilt.size() == listMesh.size();
         for ( size_t index = 0; bSame && index < listMesh.size(); ++index )
         {
@@ -53,7 +53,7 @@ namespace sw
                 continue;
             }
             const uint32 base = static_cast<uint32>( listElement.size() );
-            // 머리 원소 — 셰이더(swComputeVertexAnimationElements)가 프레임 수 · 프레임율 · 정점 수 · 반복을 여기서 읽는다.
+            // 헤더 원소: 셰이더(swComputeVertexAnimationElements)가 프레임 수, 프레임율, 정점 수, 반복을 여기서 읽는다.
             listElement.push_back( float4{ static_cast<float32>( pAnimation->_frameCount ), pAnimation->_framesPerSecond, static_cast<float32>( pAnimation->_vertexCount ),
                                            pAnimation->_bLoop == SW_TRUE ? 1.0f : 0.0f } );
             listElement.insert( listElement.end(), pAnimation->_listFrameVertex.begin(), pAnimation->_listFrameVertex.end() );

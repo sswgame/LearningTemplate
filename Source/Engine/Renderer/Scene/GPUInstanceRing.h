@@ -1,6 +1,6 @@
 /**
  * @file GPUInstanceRing.h
- * @brief 게임 스레드가 짓고 렌더 스레드가 읽는 인스턴스 배열의 **링**입니다. 되복사 없는 발행과 낡은 슬롯 따라잡기를 맡습니다.
+ * @brief 게임 스레드가 만들고 렌더 스레드가 읽는 인스턴스 배열의 **링**입니다. 되복사 없는 발행과 낡은 슬롯 따라잡기를 맡습니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -14,8 +14,8 @@ namespace sw
     /**
      * @class GPUInstanceRing
      * @brief 인스턴스 배열 슬롯의 링입니다. 쓰는 슬롯과 읽히는 슬롯이 다른 메모리라 복사도 옮기기도 되복사도 없습니다.
-     * @details 발행 · 재사용 · 따라잡기는 "어느 배열을 누가 읽고 있나" 의 문제이지 씬 수집의 문제가 아니라서
-     *          `GPUSceneBuilder` 와 따로 둡니다(빌더에 섞으면 빌더의 분기(부분 갱신 · 꼬리 재방출)와 얽힙니다). 이 타입 하나가 규칙을 듭니다:
+     * @details 발행, 재사용, 따라잡기는 "어느 배열을 누가 읽고 있나"의 문제이지 씬 수집의 문제가 아니라서
+     *          `GPUSceneBuilder` 와 따로 둡니다. 빌더에 섞으면 부분 갱신과 꼬리 재방출 같은 빌더의 분기와 얽힙니다. 이 타입 하나가 규칙을 보관합니다:
      *          - **발행**은 슬롯의 `shared_ptr` 를 넘기는 것입니다. 받는 쪽(패킷)이 드는 동안 그 슬롯은 불변입니다.
      *          - **쓰기 슬롯**은 아무도 안 읽는 것(`use_count() == 1`, 링만 듦)을 고릅니다. 패킷이 든 슬롯은 골라지지
      *            않으므로 렌더 큐 깊이를 알 필요가 없습니다. 모자라면 하나 더 만듭니다(큐 깊이 + 1 에서 멈춥니다).
@@ -27,7 +27,7 @@ namespace sw
     class SW_API GPUInstanceRing
     {
     public:
-        /// @brief 발행 이력을 이만큼 듭니다. 링 슬롯 수(렌더 큐 깊이 + 1)보다 넉넉하면 됩니다.
+        /// @brief 발행 이력을 이만큼 보관합니다. 링 슬롯 수(렌더 큐 깊이 + 1)보다 넉넉하면 됩니다.
         static constexpr size_t kPublishHistoryCount = 8;
 
         GPUInstanceRing() noexcept = default;

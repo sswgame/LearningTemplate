@@ -19,7 +19,7 @@ namespace sw
 
     namespace
     {
-        /** @brief 그림자를 켠 점광 · 스폿이면 true 입니다(방향광은 씬이 하나 고른다). */
+        /** @brief 그림자를 켠 점광과 스폿이면 true 입니다(방향광은 씬이 하나 고릅니다). */
         bool castsLocalShadow( const LightComponent& light )
         {
             if ( light.getLightType() == shaderslot::kLightTypePoint )
@@ -39,11 +39,11 @@ namespace sw
             return;
 
         const ComponentRegistry& registry = pScene->getObjectManager()->getComponentRegistry();
-        // 그림자 플래그는 그림자 행렬을 만드는 쪽(Engine · FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
+        // 그림자 플래그는 그림자 행렬을 만드는 쪽(Engine, FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
         const DirectionalLightComponent* pShadowLight = pScene->findShadowCastingDirectionalLight();
 
-        // 종류 순서로 돈다. 방향광이 0 이라 앞에 온다(상한을 넘으면 뒤에서부터 잘린다). 원소의 칸은 빛이 스스로 쓴다
-        // (`LightComponent::writeGPULight`) — 여기는 종류를 모른다. 그림자 플래그만 씬이 고른 빛에 켠다.
+        // 종류 순서로 돈다. 방향광이 0 이라 앞에 온다(상한을 넘으면 뒤에서부터 잘린다). 원소의 필드는 빛이 스스로 쓴다
+        // (`LightComponent::writeGPULight`). 여기는 종류를 모른다. 그림자 플래그만 씬이 고른 빛에 켠다.
         for ( uint32 lightType = 0; lightType < shaderslot::kLightTypeCount; ++lightType )
         {
             for ( const LightComponent* pLight : registry.getAll<LightComponent>( lightType ) )
@@ -55,14 +55,14 @@ namespace sw
                 pLight->writeGPULight( light );
                 if ( pLight == pShadowLight )
                     light._params._x = 1.0f;
-                // 그림자를 드리우는 점광 · 스폿은 번호만 적는다 — 아틀라스 칸(`_params.x` · `_params.w`)은 칸 수를 아는 쪽이 나눠 준다(ShadowSetupUtil).
+                // 그림자를 드리우는 점광과 스폿은 번호만 적는다. 아틀라스 슬롯(`_params.x`, `_params.w`)은 슬롯 수를 아는 쪽이 나눠 준다(ShadowSetupUtil).
                 if ( pOutListShadowLightIndex != nullptr && castsLocalShadow( *pLight ) )
                     pOutListShadowLightIndex->push_back( static_cast<uint32>( outList.size() ) );
                 outList.push_back( light );
             }
         }
 
-        // 2D 그림자 가림막 토막은 빛 **뒤에** 붙는다 — 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting2d.hlsli).
+        // 2D 그림자 가림막 세그먼트는 빛 **뒤에** 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting2d.hlsli).
         for ( const ShadowCaster2DComponent* pCaster : registry.getAll<ShadowCaster2DComponent>() )
         {
             if ( pCaster != nullptr && pCaster->isActive() )
@@ -94,7 +94,7 @@ namespace sw
             return;
         }
 
-        // 점광 · 스폿 그림자 타일 원소는 (잘린) 빛 뒤에 붙는다 — 셰이더는 g_SwLightCount + 빛의 params.w 로 찾는다.
+        // 점광과 스폿 그림자 타일 원소는 (잘린) 빛 뒤에 붙는다. 셰이더는 g_SwLightCount + 빛의 params.w 로 찾는다.
         const GPULight* pUpload    = listLight.data();
         uint32          totalCount = count;
         if ( listShadowTileElement.empty() == false )

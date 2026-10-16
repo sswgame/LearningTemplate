@@ -1,6 +1,6 @@
 /**
  * @file RenderViewCollector.h
- * @brief 씬의 카메라에서 이번 프레임의 뷰 요청을 만드는 게임 스레드 쪽 창구입니다 — 주 시점의 출력 설정과 추가 뷰(캡처 · 화면 사각형) 목록.
+ * @brief 씬의 카메라에서 이번 프레임의 뷰 요청을 만드는 게임 스레드 쪽 함수 모음입니다. 주 시점의 출력 설정과 추가 뷰(캡처, 화면 사각형) 목록을 다룹니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -20,15 +20,15 @@ namespace sw
     /**
      * @struct RenderViewCollector
      * @brief 패킷 경로(Engine)와 씬 직접 경로(`FrameRenderer::execute( pScene )`)가 **같은 규칙**으로 뷰를 고르게 하는 한 자리입니다.
-     * @details 추가 뷰 = 레지스트리의 켜진 카메라 중 출력이 화면 사각형 · 렌더 텍스처인 것(주 시점 카메라 · 에디터 카메라 제외, `kMaxExtraRenderView` 까지).
+     * @details 추가 뷰는 레지스트리의 켜진 카메라 중 출력이 화면 사각형이나 렌더 텍스처인 것입니다(주 시점 카메라와 에디터 카메라 제외, `kMaxExtraRenderView` 까지).
      *          보이는가는 카메라 출력의 `_visibilityObject`(모니터)의 경계 구가 주 시점 절두체와 겹치는가이고, 그릴지는 `RenderViewScheduler`
-     *          (갱신 주기 · 예산)가 정합니다. 쉬는 뷰도 목록에 실어 렌더러가 그 뷰의 자원을 지키게 합니다.
+     *          (갱신 주기, 예산)가 정합니다. 쉬는 뷰도 목록에 실어 렌더러가 그 뷰의 자원을 유지하게 합니다.
      */
     struct SW_API RenderViewCollector
     {
-        /** @brief 주 시점 카메라의 출력 설정입니다(사각형 · 배율 · 끌 기능). 컷 표시는 여기서 읽고 지웁니다(`CameraComponent::consumeCut`). nullptr 이면 기본값입니다. */
+        /** @brief 주 시점 카메라의 출력 설정입니다(사각형, 배율, 끌 기능). 컷 표시는 여기서 읽고 지웁니다(`CameraComponent::consumeCut`). nullptr 이면 기본값입니다. */
         static RenderViewSettings makeMainSettings( CameraComponent* pMainCamera );
-        /** @brief 출력 크기 · 사각형의 화면 비율입니다(크기를 모르면 16:9). */
+        /** @brief 출력 크기와 사각형의 화면 비율입니다(크기를 모르면 16:9). */
         static float32 computeAspect( const RenderViewSettings& settings, uint32 outputWidth, uint32 outputHeight );
         /** @brief 한 프레임에 그릴 추가 뷰 수의 상한입니다(`-gv_renderViewBudget`). */
         static uint32 getDefaultBudget();
@@ -41,12 +41,12 @@ namespace sw
         static void collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj, uint32 outputWidth,
                                        uint32 outputHeight, float64 now, uint32 budget, RenderViewScheduler& scheduler, vector<RenderViewRequest>& outListView );
         /**
-         * @brief 호스트 타깃 뷰(에디터 씬 뷰) 요청을 @p inoutListView 끝에 더합니다. 예산 · 갱신 주기와 무관하게 매 프레임 그립니다.
-         * @details 목록이 가득 찼으면(`kMaxExtraRenderView`) 마지막 추가 뷰 자리를 씁니다 — 호스트 뷰는 빠지면 패널이 멈춰 보입니다.
-         * @param viewMode 이 뷰의 보기 모드(씬 뷰 툴바 — `FrameRenderer::getSceneViewMode`).
+         * @brief 호스트 타깃 뷰(에디터 씬 뷰) 요청을 @p inoutListView 끝에 더합니다. 예산과 갱신 주기와 무관하게 매 프레임 그립니다.
+         * @details 목록이 가득 찼으면(`kMaxExtraRenderView`) 마지막 추가 뷰 위치를 씁니다. 호스트 뷰는 빠지면 패널이 멈춰 보입니다.
+         * @param viewMode 이 뷰의 보기 모드(씬 뷰 툴바, `FrameRenderer::getSceneViewMode`).
          */
         static void appendHostView( CameraComponent& camera, const HostViewTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView );
-        /** @brief 화면 사각형 뷰(분할 화면 · PiP)를 뺍니다. 주 출력이 게임 화면이 아닐 때(씬 뷰만 그리는 프레임) 씁니다. */
+        /** @brief 화면 사각형 뷰(분할 화면, PiP)를 뺍니다. 주 출력이 게임 화면이 아닐 때(씬 뷰만 그리는 프레임) 씁니다. */
         static void removeScreenRectViews( vector<RenderViewRequest>& inoutListView );
     };
 } // namespace sw

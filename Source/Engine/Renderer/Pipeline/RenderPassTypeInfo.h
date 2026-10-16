@@ -1,10 +1,10 @@
 /**
  * @file RenderPassTypeInfo.h
- * @brief 패스 종류(`RenderPassType`) 하나에 대한 사실을 한 줄에 모은 테이블입니다.
- * @details 기본 셰이더, PSO 상태, 패스 define, 그리는 대상(씬 메시, 풀스크린, 컴퓨트), 입력 계약이 여기 있다.
+ * @brief 패스 종류(`RenderPassType`) 하나에 대한 사실을 한 항목에 모은 테이블입니다.
+ * @details 기본 셰이더, PSO 상태, 패스 define, 그리는 대상(씬 메시, 풀스크린, 컴퓨트), 입력 계약이 여기 있습니다.
  *          엔진 PSO 등록(`FrameRenderer::ensurePassResources`), 셰이더 쿠킹 요청(`ShaderCookDriver`), 패스 실행
- *          (`FrameRenderer::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 테이블을 enum 으로 읽는다.
- *          패스 종류를 하나 추가하려면 enum 에 한 줄을 더하고 이 테이블에 case 를 하나 추가한다(전용 실행 코드가 필요한 패스만 executePass 에 case 를 추가한다).
+ *          (`FrameRenderer::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 테이블을 enum 으로 읽습니다.
+ *          패스 종류를 하나 추가하려면 enum 에 한 줄을 더하고 이 테이블에 case 를 하나 추가합니다(전용 실행 코드가 필요한 패스만 executePass 에 case 를 추가합니다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -22,17 +22,17 @@ namespace sw
 {
     /**
      * @brief G버퍼 패스가 머티리얼 셰이더에 추가하는 define 입니다. 픽셀 출력 서명을 MRT 로 바꿉니다.
-     * @details 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 머티리얼의 `.hlsl` 로 그린다. 그 셰이더가
-     *          `SV_TARGET` 하나만 내면 노멀 타깃이 클리어 값 그대로 남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산한다.
-     *          언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 역할을 이 엔진에서는 define 이 맡는다.
+     * @details 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 머티리얼의 `.hlsl` 로 그립니다. 그 셰이더가
+     *          `SV_TARGET` 하나만 내면 노멀 타깃이 클리어 값 그대로 남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산합니다.
+     *          언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 역할을 이 엔진에서는 define 이 맡습니다.
      * @note 이 문자열과 `binding.hlsli` 의 `#if defined( SW_PASS_GBUFFER )` 가 어긋나면 컴파일은 되고 화면만 틀린다.
      */
     inline constexpr const utf8* kPassGBufferDefine = "SW_PASS_GBUFFER=1";
 
     /**
      * @brief 깊이 프리패스가 그림자와 같은 셰이더 파일(shadowdepth.hlsl)을 **카메라** 행렬로 그리게 하는 define 입니다.
-     * @details 이 define 이 없으면 프리패스가 광원 행렬(`g_LightViewProj`)로 그려 장면 깊이에 광원 공간의 깊이가 들어간다.
-     *          언리얼의 EarlyZ 패스, 유니티 URP 의 Depth Priming 에 해당한다.
+     * @details 이 define 이 없으면 프리패스가 광원 행렬(`g_LightViewProj`)로 그려 장면 깊이에 광원 공간의 깊이가 들어갑니다.
+     *          언리얼의 EarlyZ 패스, 유니티 URP 의 Depth Priming 에 해당합니다.
      */
     inline constexpr const utf8* kPassDepthPrepassDefine = "SW_PASS_DEPTH_PREPASS=1";
 
@@ -43,33 +43,33 @@ namespace sw
 
     /**
      * @brief 블룸 다운샘플 패스가 블룸 셰이더(postbloom.hlsl)에 추가하는 define 입니다. 합성 대신 반해상도의 밝은 부분만 내는 퍼뮤테이션을 고릅니다.
-     * @details 언리얼의 블룸 셋업 · 다운샘플 사슬처럼 밝은 부분은 낮은 해상도에서 구하고, Bloom 패스가 원래 해상도에서 업샘플해 더한다.
+     * @details 언리얼의 블룸 셋업과 다운샘플 체인처럼 밝은 부분은 낮은 해상도에서 구하고, Bloom 패스가 원래 해상도에서 업샘플해 더합니다.
      */
     inline constexpr const utf8* kPassBloomDownsampleDefine = "SW_PASS_BLOOM_DOWNSAMPLE=1";
 
     /**
      * @brief 메시 외곽선 패스가 그리는 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
-     * @details 머티리얼의 정적 스위치(`Outline`)가 켠다. 외곽선을 아는 셰이더만 이 스위치를 가지므로 다른 셰이더가 외곽선 define 으로
-     *          그려질 일이 없다(언리얼이 메시 패스 프로세서에서 머티리얼의 성질로 드로우를 거르는 것에 해당한다).
+     * @details 머티리얼의 정적 스위치(`Outline`)가 켭니다. 외곽선을 아는 셰이더만 이 스위치를 가지므로 다른 셰이더가 외곽선 define 으로
+     *          그려질 일이 없습니다(언리얼이 메시 패스 프로세서에서 머티리얼의 성질로 드로우를 거르는 것에 해당합니다).
      */
     inline constexpr const utf8* kMaterialOutlineDefine = "MATERIAL_OUTLINE";
 
     /**
      * @brief 양면 머티리얼의 define 입니다. 머티리얼 변형 PSO 가 후면 컬링을 끕니다(언리얼 머티리얼의 Two Sided).
-     * @details 앞면 컬링을 쓰는 패스(메시 외곽선)는 그대로 둔다. 껍질은 양면이어도 뒤집어 그려야 외곽선이 된다.
+     * @details 앞면 컬링을 쓰는 패스(메시 외곽선)는 그대로 둡니다. 껍질은 양면이어도 뒤집어 그려야 외곽선이 됩니다.
      */
     inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
 
     /** @brief 그림자 패스가 셰이더에 추가하는 define 입니다. 깊이 패스를 머티리얼 셰이더로 그릴 때 그 셰이더가 빛 행렬로 투영하는 퍼뮤테이션을 고릅니다. */
     inline constexpr const utf8* kPassShadowDefine = "SW_PASS_SHADOW=1";
 
-    /** @brief 알파 컷오프 머티리얼의 define 입니다. 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 모양으로 오린다(`FrameRendererUtil::drawsDepthWithMaterialShader`). */
+    /** @brief 알파 컷오프 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`FrameRendererUtil::drawsDepthWithMaterialShader`). */
     inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
 
     /** @brief 정점 셰이더가 정점을 옮기는 머티리얼(바람)의 define 입니다. 그림자 패스는 머티리얼 셰이더로 그리고 깊이 프리패스는 그 배치를 뺀다. */
     inline constexpr const utf8* kMaterialVertexDeformDefine = "MATERIAL_VERTEX_DEFORM";
 
-    /** @brief 그림자를 드리우지 않는 머티리얼의 define 입니다. 그림자 패스 셰이더가 정점을 클립 공간 밖으로 모아 그리지 않는다. */
+    /** @brief 그림자를 드리우지 않는 머티리얼의 define 입니다. 그림자 패스 셰이더가 정점을 클립 공간 밖으로 모아 그리지 않습니다. */
     inline constexpr const utf8* kMaterialShadowCastOffDefine = "MATERIAL_SHADOW_CAST_OFF";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
@@ -118,7 +118,7 @@ namespace sw
         const utf8* _pPassDefine{ nullptr };
         /**
          * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 입니다. nullptr 이면 모든 배치를 그립니다.
-         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠진다(`FrameRendererUtil::drawsBatchInPass`).
+         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::drawsBatchInPass`).
          */
         const utf8* _pRequiredMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
@@ -158,9 +158,9 @@ namespace sw
 
     /**
      * @brief 패스 PSO 의 셰이더 경로와 define 을 정합니다. 런타임 PSO 생성과 셰이더 쿠커가 함께 부릅니다.
-     * @details 경로는 패스 서술의 `_shaderPath` 가 우선이고, 비어 있으면 테이블의 기본 셰이더를 쓴다. define 은 패스 서술의
-     *          `_listPermutation` 뒤에 테이블의 패스 define 을 (겹치지 않게) 붙인 것이다. 둘이 어긋나면 런타임이 찾는 해시를
-     *          아무도 쿠킹하지 않아 Shipping 에서 그 패스의 드로우가 사라진다.
+     * @details 경로는 패스 서술의 `_shaderPath` 가 우선이고, 비어 있으면 테이블의 기본 셰이더를 씁니다. define 은 패스 서술의
+     *          `_listPermutation` 뒤에 테이블의 패스 define 을 (겹치지 않게) 붙인 것입니다. 둘이 어긋나면 런타임이 찾는 해시를
+     *          아무도 쿠킹하지 않아 Shipping 에서 그 패스의 드로우가 사라집니다.
      * @param pPassDesc 파이프라인의 패스 서술입니다. nullptr 이면 테이블의 기본값만 씁니다.
      */
     SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineDefaultAssets& engineDefaultAssets );

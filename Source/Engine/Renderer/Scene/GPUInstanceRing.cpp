@@ -11,7 +11,7 @@ namespace sw
         if ( _pWrite != nullptr )
             return *_pWrite;
 
-        // 아무도 안 읽는 슬롯, 곧 링만 들고 있는 것을 고른다. 발행본과 패킷이 든 슬롯은 use_count 가 2 이상이라 걸러진다.
+        // 아무도 안 읽는 슬롯, 곧 링만 보관하고 있는 것을 고른다. 발행본과 패킷이 가진 슬롯은 use_count 가 2 이상이라 걸러진다.
         for ( uint32 slotIndex = 0; slotIndex < _listSlot.size(); ++slotIndex )
         {
             if ( _listSlot[slotIndex] != nullptr && _listSlot[slotIndex].use_count() == 1 )
@@ -68,7 +68,7 @@ namespace sw
             {
                 if ( record._build <= slotBuild )
                     continue;
-                // 이력이 끊겼으면(중간 발행이 밀려났으면) 통째로.
+                // 이력이 끊겼으면(중간 발행이 밀려났으면) 통째로 복사한다.
                 if ( record._build != expected || record._bAll != SW_FALSE )
                 {
                     bWhole = true;

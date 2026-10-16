@@ -1,9 +1,9 @@
 /**
  * @file RenderPipelineAsset.h
- * @brief 프레임 렌더 파이프라인 서술(패스 그래프 + 임시 어태치먼트)입니다.
+ * @brief 프레임 렌더 파이프라인 디스크립터(패스 그래프 + 임시 어태치먼트)입니다.
  *
  * RenderPassAsset 와의 차이:
- * - RenderPass = 어태치먼트 묶음 · RHI 바인드 타깃(포맷, 클리어)
+ * - RenderPass = 어태치먼트 묶음 + RHI 바인드 타깃(포맷, 클리어)
  * - Pipeline   = 프레임 그래프 + 패스별 PSO(셰이더, 엔트리, 블렌드 · 깊이, 퍼뮤테이션)
  */
 #pragma once
@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    /// @brief RenderPipeline XML 의 서술(패스 + 어태치먼트)입니다.
+    /// @brief RenderPipeline XML 의 디스크립터(패스 + 어태치먼트)입니다.
     REFLECT()
     struct RenderPipelineDesc
     {
@@ -30,11 +30,11 @@ namespace sw
         PROPERTY()
         string _shadingModel = "Forward";
 
-        /** @brief 그래프가 쓰는 임시 · 논리 어태치먼트입니다. */
+        /** @brief 그래프가 쓰는 임시 어태치먼트와 논리 어태치먼트입니다. */
         PROPERTY()
         vector<RenderPassAttachment> _listAttachment;
 
-        /** @brief 그래프 노드(이름 · 타입 · 입력 · 출력)입니다. */
+        /** @brief 그래프 노드(이름, 타입, 입력, 출력)입니다. */
         PROPERTY()
         vector<RenderGraphPassDesc> _listPass;
 
@@ -90,7 +90,7 @@ namespace sw
         const vector<RenderGraphPassDesc>& getGraphPass() const { return _desc._listPass; }
 
     private:
-        /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 는 this · 경로 문자열입니다. */
+        /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 는 this 와 경로 문자열입니다. */
         static void loadFromXMLFileAsyncJob( const TaskArgs& args );
 
     private:

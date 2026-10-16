@@ -23,7 +23,7 @@ namespace sw
         inoutSnapshot._listSkinPalette.clear();
         shared_ptr<vector<float4>>  listRow    = make_shared<vector<float4>>();
         shared_ptr<vector<float32>> listWeight = make_shared<vector<float32>>();
-        // 행벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
+        // 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
         auto appendPalette = [&inoutSnapshot, &listRow, &listWeight]( const Mesh* pMesh, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
         {
             GPUSkinPalette entry{};

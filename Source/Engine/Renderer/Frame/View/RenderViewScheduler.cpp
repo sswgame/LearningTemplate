@@ -11,9 +11,9 @@ namespace sw
     {
         struct RenderViewSchedulerInternal
         {
-            /** @brief 갱신 시각 비교의 여유(초) — 60 Hz 프레임 여섯이 0.1 초에 조금 못 미쳐 한 프레임 늦게 그리는 일을 막는다. */
+            /** @brief 갱신 시각 비교의 여유(초)입니다. 60 Hz 프레임 여섯이 0.1 초에 조금 못 미쳐 한 프레임 늦게 그리는 일을 막습니다. */
             static constexpr float64 kTimeSlack = 1.0e-4;
-            /** @brief 처음 보는 뷰의 늦은 정도 — 어떤 기다린 뷰보다 먼저 그린다. */
+            /** @brief 처음 보는 뷰의 늦은 정도입니다. 어떤 기다린 뷰보다 먼저 그립니다. */
             static constexpr float64 kNeverRenderedOverdue = 1.0e30;
         };
     } // namespace

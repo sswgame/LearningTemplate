@@ -1,6 +1,6 @@
 /**
  * @file RenderPipelineAssetCache.h
- * @brief RenderPass(어태치먼트 · RHI)와 RenderPipeline(프레임 그래프) XML 에셋 캐시입니다.
+ * @brief RenderPass(어태치먼트, RHI)와 RenderPipeline(프레임 그래프) XML 에셋 캐시입니다.
  * @note FrameRenderer 가 소유합니다. 렌더러 수명을 따르므로 AssetManager 에 넣지 않습니다.
  */
 #pragma once
@@ -11,7 +11,7 @@ namespace sw
     class RenderPassAsset;
     class RenderPipelineAsset;
 
-    /// @brief FrameRenderer 가 소유하는 렌더 패스 · 파이프라인 에셋 캐시입니다.
+    /// @brief FrameRenderer 가 소유하는 렌더 패스와 파이프라인 에셋 캐시입니다.
     class SW_API RenderPipelineAssetCache
     {
     public:
@@ -34,7 +34,7 @@ namespace sw
         RenderPassAsset* loadRenderPass( string_view assetRelativePath );
         /** @brief XML 에서 프레임 파이프라인을 로드(또는 캐시 반환)합니다. */
         RenderPipelineAsset* loadPipeline( string_view assetRelativePath );
-        /** @brief 로드된 렌더 패스 · 파이프라인 캐시를 비웁니다. */
+        /** @brief 로드된 렌더 패스와 파이프라인 캐시를 비웁니다. */
         void clearCache();
 
         /** @brief 이름으로 이미 로드된 렌더 패스를 찾습니다. */
