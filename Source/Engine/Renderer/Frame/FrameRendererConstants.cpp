@@ -21,11 +21,11 @@ namespace sw
 
     void FrameRenderer::applyFrameShadow()
     {
-        // 게임 스레드가 배치를 만들지 않은 프레임(씬 없음)이거나 그림자 품질이 그 사이 바뀌었으면 아틀라스 배치를 지금 크기로 다시 세운다.
+        // 게임 스레드가 배치를 만들지 않은 프레임(씬 없음)이거나 그림자 품질이 그 사이 바뀌었으면 아틀라스 레이아웃을 지금 크기로 다시 만든다.
         const uint32 atlasResolution = getShadowMapResolution();
         if ( _frameShadow._layout.getAtlasResolution() != atlasResolution )
             _frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _frameShadow._layout.getCascadeCount(), static_cast<uint32>( _frameShadow._listLocalTile.size() ) );
-        // 주광이 없으면 프레임 키 라이트(기본 방향)의 작은 고정 볼륨으로 폴백한다 — 라이트 컴포넌트가 없는 씬도 그림자가 진다.
+        // 주 광원이 없으면 프레임 키 라이트(기본 방향)의 작은 고정 볼륨으로 폴백한다. 라이트 컴포넌트가 없는 씬도 그림자가 진다.
         if ( _frameShadow._mainView._bValid == SW_FALSE )
         {
             const float4& dirIntensity = _frameLight._dirIntensity;
@@ -51,8 +51,8 @@ namespace sw
         // **프레임당 한 번** 프레임 시드(_frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
         //
-        // 뷰 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다. 패킷이 자기 뷰 행렬을 갖고 있으면 executePacket 이
-        // 그 위에 덮어쓴다. 그림자는 `applyFrameShadow` 가 마련한 주 시점의 것이다(주광이 없으면 키 라이트 폴백).
+        // 뷰 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 설정한다. 패킷이 자기 뷰 행렬을 갖고 있으면 executePacket 이
+        // 그 위에 덮어쓴다. 그림자는 `applyFrameShadow` 가 준비한 주 시점의 것이다(주 광원이 없으면 키 라이트 폴백).
         applyViewShadowConstants( context, _mainView._shadow );
         view( RenderViewType::Shadow ).setViewProjection( _mainView._shadow._cullViewProj );
 
@@ -83,10 +83,10 @@ namespace sw
         const float32                  outlineY = pool.getWidth() > 0 ? ( 1.0f / static_cast<float32>( pool.getWidth() ) ) : 0.001f;
         const float32                  outlineZ = pool.getHeight() > 0 ? ( 1.0f / static_cast<float32>( pool.getHeight() ) ) : 0.001f;
         context._passValues.setFloat4( passConstantNames()._outlineParams, float4{ 0.02f, outlineY, outlineZ, 0.0f } );
-        // 원본 텍셀의 기본값은 프레임 텍셀이다 — 원본 역할 입력을 거는 패스가 그 첨부의 실제 크기로 덮는다(registerPassTexture).
+        // 원본 텍셀의 기본값은 프레임 텍셀이다. 원본 역할 입력을 바인딩하는 패스가 그 첨부의 실제 크기로 덮는다(registerPassTexture).
         context._passValues.setFloat4( passConstantNames()._sourceTexel,
                                        float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
-        // 패스 플래그 — 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 원본이다. 후처리는 뷰마다 끌 수 있다(CCTV).
+        // 패스 플래그: 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 기준이다. 후처리는 뷰마다 끌 수 있다(CCTV).
         uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
         if ( _pActiveView->_settings.usesPostProcess() == false )
             flags |= shaderslot::kPassFlagSkipPost;
@@ -112,9 +112,9 @@ namespace sw
     {
         context._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
         // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
-        // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고 그 증상은 "빛이 한 프레임 늦게 따라온다" 다.
+        // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다.
         context._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
-        // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
+        // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
         activeCullInput().setViewProjection( viewProj );
     }
 

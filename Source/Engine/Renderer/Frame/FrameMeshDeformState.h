@@ -28,7 +28,7 @@ namespace sw
         GPUMeshMorphPool _meshMorphPool{};
         /// @brief 정점 애니메이션(VAT) 테이블 풀입니다. RT 가 소유합니다(GPUVertexAnimationPool 참고).
         GPUVertexAnimationPool _vertexAnimationPool{};
-        /// @brief 진단(`-gv_morphDiag=3`)이 올리는 번호표 정점입니다. 스크래치이므로 프레임 밖에서는 의미가 없습니다.
+        /// @brief 진단(`-gv_morphDiag=3`)이 업로드하는 태그 정점입니다. 스크래치이므로 프레임 밖에서는 의미가 없습니다.
         vector<GPUMorphVertex> _listScratchMorphTag{};
         /// @brief 이번 프레임 모프 대상 메시입니다. 프레임마다 할당하지 않으려고 보관합니다.
         vector<Mesh*> _listScratchMorphMesh{};

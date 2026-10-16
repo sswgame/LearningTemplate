@@ -15,7 +15,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief `screenshot [file]` — 다음 프레임의 화면을 PNG 로(파일을 주지 않으면 `Saved/Screenshots/<시각>.png`). */
+        /** @brief `screenshot [file]`: 다음 프레임의 화면을 PNG 로 저장합니다(파일을 주지 않으면 `Saved/Screenshots/<시각>.png`). */
         bool runScreenshot( const vector<string>& listArgument, string& outReply )
         {
             if ( listArgument.size() > 1 )

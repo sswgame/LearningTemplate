@@ -1,7 +1,7 @@
 /**
  * @file PassConstantValues.h
- * @brief 패스 상수(PassCB)를 이름으로 담아 두는 값 저장소입니다.
- * @details FrameRenderer 가 프레임 · 패스 시드를 채우고 ShaderParameterBinder 가 리플렉션 오프셋으로
+ * @brief 패스 상수(PassCB)를 이름으로 보관하는 값 저장소입니다.
+ * @details FrameRenderer 가 프레임과 패스 시드를 채우고 ShaderParameterBinder 가 리플렉션 오프셋으로
  *          꺼내 씁니다. 두 쪽이 함께 쓰는 값 타입이라 어느 한쪽 헤더에 두면 반대쪽이 쓰지도 않는
  *          헤더를 통째로 포함하게 됩니다(FrameRenderer.h 가 이 타입 하나 때문에 ShaderParameterBinder.h 를 끌어옵니다).
  */
@@ -31,8 +31,8 @@ namespace sw
         }
 
         /**
-         * @brief 내용이 바뀔 때마다 오르는 번호입니다.
-         * @details 드로우마다 엔진 상수버퍼를 새로 만들어 올릴 필요가 있는지 판단하는 데 씁니다. 값이 그대로면
+         * @brief 내용이 바뀔 때마다 증가하는 번호입니다.
+         * @details 드로우마다 엔진 상수 버퍼를 새로 만들어 업로드할 필요가 있는지 판단하는 데 씁니다. 값이 그대로면
          *          같은 버퍼를 그대로 두면 됩니다. 배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli 1-0)
          *          한 패스 안에서는 보통 이 번호가 움직이지 않습니다.
          */

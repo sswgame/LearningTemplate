@@ -23,13 +23,13 @@ namespace sw
     {
         struct RenderDocCaptureInternal
         {
-            /** @brief 캡처 파일 경로 틀입니다(RenderDoc 이 `_frame<N>.rdc` 를 붙인다). 작업 폴더 기준. */
+            /** @brief 캡처 파일 경로 템플릿입니다(RenderDoc 이 `_frame<N>.rdc` 를 붙입니다). 작업 폴더 기준입니다. */
             static constexpr const utf8* kCaptureFilePathTemplate = "Saved/RenderDoc/capture";
 
             inline static RENDERDOC_API_1_6_0* _s_pAPI   = nullptr;
             inline static bool                 _s_bTried = false;
 
-            /** @brief 이미 올라온(또는 @p bLoadIfMissing 이면 설치 경로에서 올린) RenderDoc 의 `RENDERDOC_GetAPI` 입니다. 없으면 nullptr. */
+            /** @brief 이미 로드된(또는 @p bLoadIfMissing 이면 설치 경로에서 로드한) RenderDoc 의 `RENDERDOC_GetAPI` 입니다. 없으면 nullptr 입니다. */
             static pRENDERDOC_GetAPI findGetAPI( bool bLoadIfMissing )
             {
     #if defined( SW_PLATFORM_WINDOWS )
@@ -116,7 +116,7 @@ namespace sw
         }
         RenderDocCaptureInternal::_s_pAPI = static_cast<RENDERDOC_API_1_6_0*>( pAPI );
         RenderDocCaptureInternal::_s_pAPI->SetCaptureFilePathTemplate( RenderDocCaptureInternal::kCaptureFilePathTemplate );
-        // 화면 글자를 끈다 — 캡처하지 않는 프레임의 스크린샷 · 픽셀 테스트가 흔들리지 않게.
+        // 화면 글자를 끈다. 캡처하지 않는 프레임의 스크린샷과 픽셀 테스트가 흔들리지 않게 하기 위해서다.
         RenderDocCaptureInternal::_s_pAPI->MaskOverlayBits( eRENDERDOC_Overlay_None, eRENDERDOC_Overlay_None );
         SW_LOG_INFO( "RenderDoc attached - captures go to %#_frame<N>.rdc", RenderDocCaptureInternal::kCaptureFilePathTemplate );
     }

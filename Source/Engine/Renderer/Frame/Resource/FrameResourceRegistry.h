@@ -1,6 +1,6 @@
 /**
  * @file FrameResourceRegistry.h
- * @brief 패스 스코프 이름 → {텍스처 · 버퍼, bindless 인덱스} 레지스트리입니다.
+ * @brief 패스 스코프 이름에서 {텍스처 또는 버퍼, bindless 인덱스}로의 레지스트리입니다.
  * @details ShaderParameterBinder 가 `g_<Name>Index` 패턴의 CB 멤버를 자동으로 채울 때 씁니다.
  */
 #pragma once
@@ -48,7 +48,7 @@ namespace sw
     class SW_API FrameResourceRegistry
     {
     public:
-        /** @brief 등록된 텍스처 · 버퍼를 모두 비웁니다. */
+        /** @brief 등록된 텍스처와 버퍼를 모두 비웁니다. */
         void reset();
 
         /** @brief 텍스처를 이름으로 등록합니다. */
@@ -57,7 +57,7 @@ namespace sw
         void registerBuffer( hashed_string name, RHIBufferHandle handle, RHIDescriptorIndex index );
 
         /**
-         * @brief 등록 내용이 바뀔 때마다 오르는 번호입니다(PassConstantValues::getVersion 과 같은 용도).
+         * @brief 등록 내용이 바뀔 때마다 증가하는 번호입니다(PassConstantValues::getVersion 과 같은 용도).
          * @details 엔진 상수버퍼의 `g_<Name>Index` 멤버가 이 레지스트리에서 채워지므로, 등록이 그대로면
          *          상수버퍼도 그대로입니다.
          */

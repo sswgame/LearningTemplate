@@ -29,10 +29,10 @@ namespace sw
     {
         struct PortraitRendererInternal
         {
-            /** @brief 첫 프레임은 GPUScene 업로드 · 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다. */
+            /** @brief 첫 프레임은 GPUScene 업로드와 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다. */
             static constexpr uint32 kWarmupFrameCount = 3;
 
-            /** @brief 스튜디오 씬의 그릴 메시(로컬 경계 상자를 월드로 옮긴 것)를 모두 덮는 구(가운데 · 반지름)입니다. 메시가 없으면 false 입니다. */
+            /** @brief 스튜디오 씬의 그릴 메시(로컬 경계 상자를 월드로 옮긴 것)를 모두 덮는 구(중심과 반지름)입니다. 메시가 없으면 false 입니다. */
             static bool computeSubjectSphere( GameObjectManager& manager, float3& outCenter, float32& outRadius )
             {
                 vector<GameObject*> listObject;
@@ -47,7 +47,7 @@ namespace sw
                         const MeshComponent* pMesh = castTo<MeshComponent>( pComponent );
                         if ( pMesh == nullptr || pMesh->getMesh() == nullptr )
                             continue;
-                        // 메시의 실제 경계 상자를 월드로 옮긴다 — 컴포넌트의 경계 구(단위 상자 반지름일 수 있다)는 사람 모양처럼 좁은 대상을 크게 잡는다.
+                        // 메시의 실제 경계 상자를 월드로 옮긴다. 컴포넌트의 경계 구(단위 상자 반지름일 수 있다)는 사람 모양처럼 좁은 대상을 크게 잡는다.
                         const Mesh& mesh  = *pMesh->getMesh();
                         const AABB  world = AABB{ mesh.getLocalBoundsMin(), mesh.getLocalBoundsMax() }.transformedBy( pMesh->getWorldMatrix() );
                         boundsMin         = float3::min( boundsMin, world._min );
@@ -85,7 +85,7 @@ namespace sw
             return false;
         _pDevice  = pDevice;
         _renderer = make_unique<FrameRenderer>();
-        // 포워드 파이프라인 — TAA 가 없어(시간 누적 없음) 한 장으로 끝나는 그림이다.
+        // 포워드 파이프라인이다. TAA 가 없어(시간 누적 없음) 한 장으로 끝나는 이미지다.
         if ( _renderer->initialize( pDevice, engine::getSubsystem<EngineDefaultAssets>()._defaultForwardPipeline.get() ) == false )
         {
             _renderer.reset();
@@ -110,7 +110,7 @@ namespace sw
         if ( bCannotRender )
             return false;
 
-        // 스튜디오 — 씬 매니저에 등록하지 않는 씬이라 틱하지 않고 게임 화면에 나오지 않는다.
+        // 스튜디오: 씬 매니저에 등록하지 않는 씬이라 틱하지 않고 게임 화면에 나오지 않는다.
         Scene              studio( "PortraitStudio" );
         GameObjectManager* pManager = studio.getObjectManager();
         GameObject*        pSubject = engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, "PortraitSubject" );
@@ -119,7 +119,7 @@ namespace sw
             SW_LOG_ERROR( "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );
             return false;
         }
-        // 스폰이 경로로 잡은 머티리얼을 GPU 에 올린다 — 게임 루프에서는 틱마다 하는 일(`MaterialCache::initializePending`)인데 스튜디오는 틱하지 않는다.
+        // 스폰이 경로로 얻은 머티리얼을 GPU 에 초기화한다. 게임 루프에서는 틱마다 하는 일(`MaterialCache::initializePending`)인데 스튜디오는 틱하지 않는다.
         engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( _pDevice );
         float3  center{};
         float32 radius = 1.0f;
@@ -129,7 +129,7 @@ namespace sw
             return false;
         }
 
-        // 카메라 — 대상 정면(+Z) 쪽에서 요 · 피치만큼 돌아 경계 구가 시야각 안에 들도록 물러난다.
+        // 카메라: 대상 정면(+Z) 쪽에서 요와 피치만큼 돌아 경계 구가 시야각 안에 들도록 물러난다.
         const float32    fieldOfViewY = MathUtil::clamp( request._fieldOfViewY, 0.1f, 2.5f );
         const float32    distance     = radius * MathUtil::max( 1.0f, request._padding ) / MathUtil::sin( fieldOfViewY * 0.5f );
         const float3     toCamera{ MathUtil::sin( request._yaw ) * MathUtil::cos( request._pitch ), MathUtil::sin( request._pitch ),
@@ -145,7 +145,7 @@ namespace sw
         pCamera->lookAt( center );
         studio.setActiveGameCamera( pCamera );
 
-        // 조명 — 카메라 쪽 위에서 비스듬히 오는 키 라이트 하나 + 환경광. 스튜디오의 빛만 대상에 닿는다. 빛의 기본 방향은 정면(+Z) 위에서 오므로
+        // 조명: 카메라 쪽 위에서 비스듬히 오는 키 라이트 하나와 환경광이다. 스튜디오의 빛만 대상에 닿는다. 빛의 기본 방향은 정면(+Z) 위에서 오므로
         // 카메라와 같은 요만큼 돌린다.
         GameObject*                pLightObject = pManager->createGameObject( hashed_string( "PortraitKeyLight" ) );
         DirectionalLightComponent* pKeyLight    = pLightObject != nullptr ? pLightObject->addComponent<DirectionalLightComponent>() : nullptr;
@@ -172,14 +172,14 @@ namespace sw
             SW_LOG_ERROR( "Portrait: rendering '%#' failed", request._prefabPath.c_str() );
             return false;
         }
-        // 캡처는 계약 포맷(RGBA8)이고 행 바이트가 너비 × 4 보다 클 수 있다 — 빈틈없이 옮긴다.
+        // 캡처는 계약 포맷(RGBA8)이고 행 바이트가 너비 × 4 보다 클 수 있다. 빈틈없이 옮긴다.
         outRgbaBytes.resize( static_cast<size_t>( layout._width ) * layout._height * 4u );
         for ( uint32 row = 0; row < layout._height; ++row )
         {
             Memory::copy( outRgbaBytes.data() + static_cast<size_t>( row ) * layout._width * 4u, captureBytes.data() + static_cast<size_t>( row ) * layout._rowBytes,
                           static_cast<size_t>( layout._width ) * 4u );
         }
-        // 알파는 불투명으로 — 캡처의 알파는 셰이더마다 달라 썸네일에서 뜻이 없다.
+        // 알파는 불투명으로 설정한다. 캡처의 알파는 셰이더마다 달라 썸네일에서 의미가 없다.
         for ( size_t index = 3; index < outRgbaBytes.size(); index += 4 )
         {
             outRgbaBytes[index] = 255;

@@ -1,8 +1,8 @@
 /**
  * @file ShaderCookDriver.cpp
  * @brief 오프라인 쿠킹의 **정책**입니다. 요청 모두를 네 RHI 포맷으로 쿠킹하고 리플렉션 매니페스트를 씁니다.
- * @details 한 장을 쿠킹하는 법(`ShaderCooker::cookShader`)과 이름 짓기 · 최신 판정은 `Shader/Compile` 의 메커니즘이고,
- *          "무엇을 쿠킹하는가" 는 파이프라인 XML 과 패스 종류를 아는 렌더러의 지식입니다. 그래서 이 파일은
+ * @details 셰이더 하나를 쿠킹하는 법(`ShaderCooker::cookShader`)과 이름 짓기, 최신 판정은 `Shader/Compile` 의 메커니즘이고,
+ *          "무엇을 쿠킹하는가"는 파이프라인 XML 과 패스 종류를 아는 렌더러의 지식입니다. 그래서 이 파일은
  *          `Renderer/Cook` 에 있고 `Shader/` 는 `Renderer/` 를 include 하지 않습니다.
  */
 #include "pch.h"
@@ -41,7 +41,7 @@ namespace sw
         {
             SW_LOG_ERROR( "Resource root directory does not exist: %#", rootDir.c_str() );
             ShaderCookSummary nothingCooked{};
-            nothingCooked._failedCount = 1; // 쿠킹하지 못했다 — 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
+            nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
             return nothingCooked;
         }
 
@@ -67,19 +67,19 @@ namespace sw
         {
             SW_LOG_ERROR( "Shader cook requests could not be collected - engine default assets are missing or incomplete" );
             ShaderCookSummary nothingCooked{};
-            nothingCooked._failedCount = 1; // 쿠킹하지 못했다 — 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
+            nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
             return nothingCooked;
         }
 
         ShaderCookSummary summary{};
-        // 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다 — 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다.
+        // 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다. 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다.
         unordered_map<string, unordered_set<string>> mapFailedSourceByDir;
 
         // 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
         // 압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
         unordered_map<string, ShaderReflectionLibrary::EntryMap> mapManifest;
 
-        // 3) 요청 · 타깃 포맷마다 쿠킹한다
+        // 3) 요청과 타깃 포맷마다 쿠킹한다
         for ( const ShaderCookRequest& request : listRequest )
         {
             string absPath;
@@ -109,7 +109,7 @@ namespace sw
 
                 // **파일 시간이 아니라 내용 해시로 판정한다.** 이 저장소는 쿠킹된 바이너리까지 커밋하므로
                 // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도
-                // "산출물이 더 새것" 이 되어 그대로 넘어간다. 낡은 바이너리는 한 백엔드만 다른 그림을 내
+                // "산출물이 더 새것"이 되어 그대로 넘어간다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내
                 // 백엔드 버그처럼 보인다.
                 const bool bUpToDate = ( bForceAll == false ) && FileUtil::exists( outPath ) &&
                                        ShaderCooker::isCookedOutputCurrent( outDir, normPath );
@@ -137,7 +137,7 @@ namespace sw
                     if ( FileUtil::readFile( outPath, bytecode ) && bytecode.empty() == false )
                     {
                         ShaderReflectionData reflection = ShaderReflection::reflect( bytecode, fmt );
-                        // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름 · 숫자로 드러난다.
+                        // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
                         summary._contractViolationCount += ShaderBindingValidator::validate( reflection, fmt, outPath );
                         mapManifest[outDir].emplace( fileName, std::move( reflection ) );
                     }

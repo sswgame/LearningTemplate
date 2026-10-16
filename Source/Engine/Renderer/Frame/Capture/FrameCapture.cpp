@@ -50,7 +50,7 @@ namespace sw
         _outputHeight = outputHeight;
         if ( _pDevice == nullptr || _bEnabled == SW_FALSE )
             return;
-        // 캡처는 주 출력과 크기가 같아야 한다(주 시점 · 화면 사각형 뷰가 그 안에 그린다). 출력 크기가 바뀌었으면 다시 만든다.
+        // 캡처는 주 출력과 크기가 같아야 한다(주 시점과 화면 사각형 뷰가 그 안에 그린다). 출력 크기가 바뀌었으면 다시 만든다.
         const uint32 width  = outputWidth != 0 ? outputWidth : FrameRendererUtil::kDefaultTransientSize;
         const uint32 height = outputHeight != 0 ? outputHeight : FrameRendererUtil::kDefaultTransientSize;
         if ( _texture != 0 )
@@ -88,7 +88,7 @@ namespace sw
         const bool bSameFormat = format == constant::kBackBufferFormat;
         if ( bSameSize && bSameFormat )
             return true;
-        // 포맷을 모르는 출력은 아직(또는 이미) 없는 렌더 타깃이다 — 에디터 모듈을 다시 올리는 프레임의 게임 뷰. 어긋남이 아니라 건너뛸 프레임이다.
+        // 포맷을 모르는 출력은 아직(또는 이미) 없는 렌더 타깃이다. 에디터 모듈을 다시 로드하는 프레임의 게임 뷰가 그 예다. 어긋남이 아니라 건너뛸 프레임이다.
         if ( format == RHIFormat::Unknown )
             return false;
         if ( _bMismatchLogged.exchange( 1 ) == 0 )
