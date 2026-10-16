@@ -8,6 +8,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/String/Base64Util.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Base/Online/HTTP/HTTPServer.h"
@@ -22,6 +23,9 @@
 #include "GameFramework/Kits/Feature/Online/Account/Shared/API/LoopbackPkceLoginClient.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <chrono>
+#include <thread>
 
 using namespace sw;
 
@@ -233,8 +237,9 @@ namespace
         /** @brief 제공자 표 하나를 끝까지 확인합니다(서버 · 제공자를 번갈아 돌린다). */
         PlatformLoginVerification verify( IPlatformLoginProvider& provider, string_view ticket )
         {
-            const uint64 verificationID = provider.submitVerification( TestPlatformLoginInternal::toBytes( ticket ), _nowMs );
-            for ( int32 step = 0; step < 400; ++step )
+            const uint64   verificationID = provider.submitVerification( TestPlatformLoginInternal::toBytes( ticket ), _nowMs );
+            const Deadline deadline       = Deadline::afterMilliseconds( 10000 ); // localhost 는 HTTP 클라이언트의 해석 스레드가 푼다 — 횟수가 아니라 시간으로 기다린다
+            while ( deadline.isExpired() == false )
             {
                 _server.update();
                 provider.update( _nowMs );
@@ -246,6 +251,7 @@ namespace
                         return std::move( verification );
                 }
                 _nowMs += 10;
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
             }
             PlatformLoginVerification lost;
             lost._bUnavailable = SW_TRUE;
@@ -410,13 +416,14 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     (void)browserClient.submitRequest( redirect, kNowMs );
     vector<PlatformLoginClientResult> listResult;
     vector<HTTPClientResponse>        listPage;
-    for ( int32 step = 0; step < 600 && listResult.empty(); ++step )
+    for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listResult.empty() && deadline.isExpired() == false; )
     {
         fixture._server.update();
         browserClient.update( kNowMs );
         (void)browserClient.pollResponses( listPage );
         client.update( kNowMs );
         (void)client.pollResults( listResult );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
     SW_ASSERT_EQUAL( size_t( 1 ), listResult.size() );
     SW_EXPECT_EQUAL( requestID, listResult[0]._requestID );
@@ -438,13 +445,14 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     denied._url = redirectUri + "?error=access_denied&state=" + HTTPUtil::encodePercent( secondState );
     (void)browserClient.submitRequest( denied, kNowMs );
     listResult.clear();
-    for ( int32 step = 0; step < 600 && listResult.empty(); ++step )
+    for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listResult.empty() && deadline.isExpired() == false; )
     {
         fixture._server.update();
         browserClient.update( kNowMs );
         (void)browserClient.pollResponses( listPage );
         client.update( kNowMs );
         (void)client.pollResults( listResult );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
     SW_ASSERT_EQUAL( size_t( 1 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._bCancelled == SW_TRUE );
@@ -483,12 +491,13 @@ SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIDToke
     const string token = Internal::makeToken( key, "https://issuer.test", "client-a", 2000, "google-sub-9", nullptr );
     service.platformLogin( "google", Internal::toBytes( token ), AccountClientInfo{}, 1, fixture._nowMs, 42 );
     vector<LoginCompletion> listCompletion;
-    for ( int32 step = 0; step < 400 && listCompletion.empty(); ++step )
+    for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listCompletion.empty() && deadline.isExpired() == false; )
     {
         fixture._server.update();
         service.update( fixture._nowMs );
         (void)store.pollCompletions();
         service.drainCompletions( listCompletion );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
     SW_ASSERT_EQUAL( size_t( 1 ), listCompletion.size() );
     SW_EXPECT_EQUAL( uint64( 42 ), listCompletion[0]._requestTag );

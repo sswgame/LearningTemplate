@@ -864,7 +864,8 @@
 - **저장 드라이버는 키트 `.cpp` 의 정적 묶기 객체(`OnlineStoreDriverBinding`)로 서버 조립에 붙습니다**(2026-10-17, D7-5). 묶기 함수만 있고 부르는 곳이 없어 SQLite · PostgreSQL · RESP 를 고른 서버가 늘 기동을 멈췄고, 언로드 정리(`ServiceStoreFactory::shutdown`)도 불리지 않았습니다.
   모듈 수명과 같은 정적 객체가 묶고 풀어서 "실렸는데 안 묶임" · "풀지 않은 함수" 를 쓸 수 없게 했습니다. 키트 조립의 `SW_REGISTER_ONLINE_SERVER_KIT`, 언리얼 모듈의 `IModularFeatures` 등록과 같은 모양입니다.
 - **호스트 이름은 Core 의 막는 해석(`PlatformSocketUtil::resolveAddress`, `getaddrinfo` IPv4)으로 기동 때 한 번 풉니다**(2026-10-17, D7-5). `localhost` 만 손으로 바꾸던 자리(캐시 엔드포인트)를 이 함수로 바꿨고, 풀리지 않으면 기동 오류입니다.
-  틱 · 요청 경로(HTTP 클라이언트)는 DNS 왕복만큼 막히므로 그대로 부르지 않고 워커에 맡기는 단계를 따로 둡니다. 언리얼 `ISocketSubsystem::GetAddressInfo`(막는 판 + 비동기 판)와 같은 나눔입니다.
+  틱 · 요청 경로는 DNS 왕복만큼 막히므로 그대로 부르지 않습니다 — HTTP 클라이언트는 전용 해석 스레드(처음 이름을 받을 때 띄움)에 맡기고 `update` 가 연결을 겁니다. TaskManager 워커는 막는 일을 받지 않아 쓰지 않습니다.
+  언리얼 `ISocketSubsystem::GetAddressInfo`(막는 판 + 비동기 판), libcurl 의 스레드 해석기와 같은 나눔입니다.
 
 ### 5-10. 전용 서버
 

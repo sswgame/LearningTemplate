@@ -4,20 +4,28 @@
  * @details - 전송은 이 객체가 갖는다(처리기 = 이 객체). I/O 스레드가 없는 전송(루프백 테스트)은 `tick` 이 `pollIO` 를 돈다. 콜백은 I/O 스레드라 상태는 잠금 하나로 지킨다.
  *          - `https://` 는 그 호스트에 `registerTLSContext` 한 컨텍스트가 있어야 한다(서버 이름 검사 · 신뢰는 컨텍스트가 정한다) — 없으면 전송 실패로 끝난다.
  *          - 시한은 맡긴 때부터(`_timeoutMs`) — 넘으면 연결을 끊고 전송 실패. 응답 몸 상한을 넘어도 전송 실패.
+ *          - 호스트가 이름이면 전용 해석 스레드(`PlatformSocketUtil::resolveAddress`, 처음 쓸 때 띄운다)에 맡기고, 풀리면 `update` 가 연결을 건다.
+ *            DNS 왕복은 막는 호출이라 요청 경로(주인 스레드 · 잠금)와 TaskManager 워커에서 하지 않는다 — libcurl 의 스레드 해석기와 같은 자리다.
+ *            풀리지 않으면 전송 실패("could not resolve host"), 해석 중에도 시한은 흐른다. 숫자 주소는 해석 없이 바로 연결한다.
  *          언리얼 FHttpModule · libcurl multi 처럼 비동기 요청 · 완료 거두기 모양이다.
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
+#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPLink.h"
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
+
+#include <condition_variable>
 
 namespace sw
 {
@@ -67,29 +75,51 @@ namespace sw
         void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;
 
     private:
+        /** @brief 이름 해석의 진행입니다. */
+        enum class ResolveState : uint8
+        {
+            Pending = 0,
+            Resolved,
+            Failed
+        };
+
         struct Call
         {
             HTTPLink          _link{};
             HTTPMessageParser _parser{};
             vector<uint8>     _requestBytes{};
             vector<uint8>     _plainBytes{};
+            string            _resolveHost{}; ///< 해석을 기다리는 호스트 이름(숫자 주소면 비어 있다)
+            NetAddress        _address{};     ///< 연결할 주소 — 해석이 끝나면 채운다
             uint64            _requestID{ 0 };
             int64             _deadlineMs{ 0 };
+            ResolveState      _resolveState{ ResolveState::Pending };
             uint8             _bOpened{ SW_FALSE };
         };
 
         /** @brief 잠금 안에서 — 요청을 끝내고 응답을 쌓는다(연결은 부르는 쪽이 닫는다). */
         void finishLocked( Call& call, const utf8* pFailure );
         void failImmediately( uint64 requestID, const utf8* pFailure );
+        /** @brief 잠금 안에서 — @p call 의 주소로 연결을 걸고 연결 표에 넣는다. 걸지 못하면 응답을 쌓는다. */
+        void connectLocked( unique_ptr<Call> call );
+        /** @brief 잠금 안에서 — 해석이 끝났거나 시한이 지난 요청을 연결하거나 끝낸다(`update`). */
+        void advanceResolvingLocked( int64 nowMs );
+        /** @brief 해석 스레드 — 맡긴 이름을 하나씩 풀어 요청에 적는다. 내릴 때까지 돈다. */
+        void runResolver();
 
         mutable mutex                           _mutex;
         unordered_map<uint64, unique_ptr<Call>> _mapCall; ///< 연결(packed) → 요청
         unordered_map<string, ITLSContext*>     _mapHostToTLSContext;
+        vector<unique_ptr<Call>>                _listResolvingCall;    ///< 이름 해석을 기다리는 요청
+        deque<uint64>                           _listResolveRequestID; ///< 해석 스레드가 아직 집지 않은 요청 id
         vector<HTTPClientResponse>              _listDone;
         unique_ptr<IStreamTransport>            _transport;
         HTTPClientConfig                        _settings;
+        sw::thread                              _resolver; ///< 처음 이름을 받을 때 띄운다
+        std::condition_variable_any             _resolveReady;
         uint64                                  _nextRequestID;
         int32                                   _ioThreadCount;
         uint8                                   _bInitialized;
+        uint8                                   _bResolverStopping;
     };
 } // namespace sw
