@@ -484,7 +484,7 @@ namespace sw
                 const SceneComponent* pScene  = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
                 if ( pScene == nullptr )
                 {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : string( "'" + string( query._target ) + "' has no transform" ) );
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "transform" ) );
                     return false;
                 }
                 outPosition = pScene->getWorldPosition();

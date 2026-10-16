@@ -57,7 +57,9 @@ namespace sw
                                          StringUtil::parseInt( target.substr( open + 1, target.size() - open - 2 ), outIndex ) && outIndex >= 0;
                 if ( bWellFormed == false )
                 {
-                    outProblem = "target '" + string( target ) + "' must be Name[N] with N a non-negative integer";
+                    utf8 arrProblem[kProblemCapacity]{};
+                    formatstring( arrProblem, kProblemCapacity, "target '%#' must be Name[N] with N a non-negative integer", target );
+                    outProblem = arrProblem;
                     return false;
                 }
                 outBaseName = target.substr( 0, open );
@@ -66,6 +68,9 @@ namespace sw
 
             /** @brief 고를 수 없다는 실패 줄에 이름을 몇 개까지 적을지입니다. */
             static constexpr size_t kSiblingNameLimit = 4;
+
+            /** @brief 실패 까닭 한 줄의 버퍼 크기입니다. */
+            static constexpr uint32 kProblemCapacity = constant::kMaxBuffer512;
 
             static string describeSiblings( const vector<GameObject*>& listObject )
             {
@@ -158,8 +163,10 @@ namespace sw
                 outLookup = AutomationTargetLookup::Found;
                 return listObject[static_cast<size_t>( index )];
             }
-            outLookup  = AutomationTargetLookup::Missing;
-            outProblem = "no object " + string( target ) + " (" + to_string( listObject.size() ) + " live object(s) named " + string( baseName ) + ")";
+            outLookup = AutomationTargetLookup::Missing;
+            utf8 arrProblem[Internal::kProblemCapacity]{};
+            formatstring( arrProblem, Internal::kProblemCapacity, "no object %# (%# live object(s) named %#)", target, listObject.size(), baseName );
+            outProblem = arrProblem;
             return nullptr;
         }
         if ( outProblem.empty() == false )
@@ -170,8 +177,10 @@ namespace sw
         GameObject* pObject = pManager->findGameObjectByName( hashed_string( target ) );
         if ( pObject == nullptr )
         {
-            outLookup  = AutomationTargetLookup::Missing;
-            outProblem = "no object named '" + string( target ) + "'";
+            outLookup = AutomationTargetLookup::Missing;
+            utf8 arrProblem[Internal::kProblemCapacity]{};
+            formatstring( arrProblem, Internal::kProblemCapacity, "no object named '%#'", target );
+            outProblem = arrProblem;
             return nullptr;
         }
         // 번호를 적지 않은 이름인데 같은 밑의 오브젝트가 여럿이면 어느 것을 뜻했는지 모른다.
@@ -180,14 +189,23 @@ namespace sw
             Internal::collectByBaseName( *pManager, target, listObject );
             if ( listObject.size() > 1 )
             {
-                outLookup  = AutomationTargetLookup::Rejected;
-                outProblem = to_string( listObject.size() ) + " objects are named " + string( target ) + " (" + Internal::describeSiblings( listObject ) + ") - pick one with " +
-                             string( target ) + "[0.." + to_string( listObject.size() - 1 ) + "]";
+                outLookup = AutomationTargetLookup::Rejected;
+                utf8 arrProblem[Internal::kProblemCapacity]{};
+                formatstring( arrProblem, Internal::kProblemCapacity, "%# objects are named %# (%#) - pick one with %#[0..%#]", listObject.size(), target,
+                              Internal::describeSiblings( listObject ), target, listObject.size() - 1 );
+                outProblem = arrProblem;
                 return nullptr;
             }
         }
         outLookup = AutomationTargetLookup::Found;
         return pObject;
+    }
+
+    string AutomationProbeQuery::describeMissing( const utf8* pWhat ) const
+    {
+        utf8 arrProblem[AutomationProbeInternal::kProblemCapacity]{};
+        formatstring( arrProblem, AutomationProbeInternal::kProblemCapacity, "'%#' has no %#", _target, pWhat );
+        return string( arrProblem );
     }
 
     AutomationProbeQuery AutomationProbeQuery::make( const GameObjectManager* pManager, string_view target, string_view key )

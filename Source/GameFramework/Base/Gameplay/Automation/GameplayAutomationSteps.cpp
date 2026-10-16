@@ -416,7 +416,7 @@ namespace sw
                 const GameObject* pTarget    = query.findTargetObject();
                 const TComponent* pComponent = pTarget != nullptr ? pTarget->getComponent<TComponent>() : nullptr;
                 if ( pComponent == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : string( "'" + string( query._target ) + "' has no " + pWhat ) );
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( pWhat ) );
                 return pComponent;
             }
 

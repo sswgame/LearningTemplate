@@ -69,6 +69,8 @@ namespace sw
         AutomationTargetLookup getTargetLookup() const { return _targetLookup; }
         /** @brief 대상 오브젝트가 없을 때 그 까닭입니다(`no object named 'X'`, 여럿이라 고를 수 없음 등). 찾았으면 비어 있습니다. */
         const string& getTargetProblem() const { return _targetProblem; }
+        /** @brief 대상은 찾았지만 @p pWhat(예: `transform`)이 없을 때 실패 줄에 실을 까닭입니다(`'X' has no transform`). */
+        [[nodiscard]] string describeMissing( const utf8* pWhat ) const;
 
     private:
         AutomationProbeQuery() = default;
