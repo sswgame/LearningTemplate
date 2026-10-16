@@ -2,6 +2,8 @@
  * @file GameplayAutomationSteps.cpp
  * @brief 자동화 시나리오의 게임 로직 단계와 탐침입니다. 등록은 이 .cpp 의 정적 등록자가 합니다(Shipping 은 GameFramework 를 통째로 링크한다 — `sw_linkWholeArchive`).
  * @details - 게임 시간: `AdvanceGameTime`(minutes · hours · toHour) — 활성 씬의 판 상태(`SessionStateComponent`) 시계를 감는다. 탐침 `Clock.Hour` · `Clock.Day`.
+ *          - 판 상태: `Session.Money`(공유 지갑의 기본 화폐) · `Quest.Status`(퀘스트 id target).
+ *          - 오브젝트 대상(`target` · `rider` · `vehicle`)은 `AutomationTarget` 규칙으로 고른다 — 같은 이름이 여럿이면 `Name[N]`.
  *          - NPC 일정: `Schedule.Activity` · `Schedule.Phase` · `Schedule.DistanceToPlace` · `Schedule.DistanceToTarget` · `Schedule.MinuteOfDay` — 살아 있는 일정 시스템에서 NPC id 로 찾는다.
  *          - AI: `AI.State`(`AIControllerComponent::setStateName`) · `AI.BehaviorTask` · `AI.MoveStatus` · `AI.DistanceToDestination` · `AI.Blackboard`(key).
  *          - 빙의 · 탑승: 단계 `Mount` · `Dismount`(`MountUtil`), 탐침 `Pawn.Controller` · `Pawn.Seat`. 빙의 단계 `Possess` 는 조종 층(`ControlAutomationSteps`)에 있다.
@@ -29,6 +31,8 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Base/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Base/Gameplay/Vehicle/VehicleSeatComponent.h"
@@ -164,6 +168,51 @@ namespace sw
                 return true;
             }
 
+            /** @brief 탐침 `Session.Money` 입니다. 활성 씬의 첫 판 상태 지갑의 기본 화폐 잔액입니다. */
+            [[nodiscard]] static bool readSessionMoney( const GameObjectManager* pManager, float64& outValue )
+            {
+                const SessionStateComponent* pState = findSessionState( pManager );
+                if ( pState == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pState->getWallet().getBalance( Wallet::getDefaultCurrency() ) );
+                return true;
+            }
+
+            /** @brief 탐침 `Quest.Status` 입니다. 첫 판 상태의 퀘스트 일지에서 퀘스트 id `target` 의 상태(`NotStarted` · `Active` · `Completed` · `Failed`)입니다. */
+            [[nodiscard]] static bool readQuestStatus( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            {
+                const SessionStateComponent* pState = findSessionState( query._pManager );
+                if ( pState == nullptr )
+                {
+                    outValue.setText( "the active scene has no open SessionStateComponent (quest log)" );
+                    return false;
+                }
+                switch ( pState->getQuestLog().getStatus( hashed_string( query._target ) ) )
+                {
+                    case QuestStatus::NotStarted:
+                    {
+                        outValue.setText( "NotStarted" );
+                        break;
+                    }
+                    case QuestStatus::Active:
+                    {
+                        outValue.setText( "Active" );
+                        break;
+                    }
+                    case QuestStatus::Completed:
+                    {
+                        outValue.setText( "Completed" );
+                        break;
+                    }
+                    case QuestStatus::Failed:
+                    {
+                        outValue.setText( "Failed" );
+                        break;
+                    }
+                }
+                return true;
+            }
+
             /** @brief 살아 있는 일정 시스템에서 NPC id @p npcID 를 찾습니다. 없으면 이유를 적고 false 입니다. */
             [[nodiscard]] static bool findNpc( string_view npcID, const ScheduleSystem*& outpSystem, int32& outNpcIndex, AutomationProbeValue& outValue )
             {
@@ -272,13 +321,14 @@ namespace sw
                 return pValue;
             }
 
-            /** @brief 이름의 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
+            /** @brief 대상 고르기 규칙(`AutomationTarget` — `Name` · `Name[N]`)으로 찾은 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
             static GameObject* findObject( AutomationRunner& runner, const AutomationStep& step, const string& objectName )
             {
-                GameObjectManager* pManager = runner.findActiveObjectManager();
-                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( objectName ) ) : nullptr;
+                AutomationTargetLookup lookup = AutomationTargetLookup::NotGiven;
+                string                 problem;
+                GameObject*            pObject = AutomationTarget::find( runner.findActiveObjectManager(), objectName, lookup, problem );
                 if ( pObject == nullptr )
-                    runner.recordFailure( step, pManager == nullptr ? string( "there is no active scene" ) : "no object named '" + objectName + "'" );
+                    runner.recordFailure( step, problem );
                 return pObject;
             }
 
@@ -363,9 +413,10 @@ namespace sw
             template <typename TComponent>
             static const TComponent* findTargetComponent( const AutomationProbeQuery& query, const utf8* pWhat, AutomationProbeValue& outValue )
             {
-                const TComponent* pComponent = query._pTarget != nullptr ? query._pTarget->getComponent<TComponent>() : nullptr;
+                const GameObject* pTarget    = query.findTargetObject();
+                const TComponent* pComponent = pTarget != nullptr ? pTarget->getComponent<TComponent>() : nullptr;
                 if ( pComponent == nullptr )
-                    outValue.setText( query._pTarget == nullptr ? "no object named '" + string( query._target ) + "'" : "'" + string( query._target ) + "' has no " + pWhat );
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : string( "'" + string( query._target ) + "' has no " + pWhat ) );
                 return pComponent;
             }
 
@@ -490,6 +541,10 @@ namespace sw
     SW_AUTOMATION_PROBE( clockHour, "Clock.Hour", "Hour of day (0..24, fractional) of the active scene's game clock (SessionStateComponent)",
                          &GameplayAutomationStepsInternal::readClockHour );
     SW_AUTOMATION_PROBE( clockDay, "Clock.Day", "Day counted from 0 of the active scene's game clock (SessionStateComponent)", &GameplayAutomationStepsInternal::readClockDay );
+    SW_AUTOMATION_PROBE( sessionMoney, "Session.Money", "Default-currency balance of the active scene's shared wallet (SessionStateComponent)",
+                         &GameplayAutomationStepsInternal::readSessionMoney );
+    SW_AUTOMATION_QUERY_PROBE( questStatus, "Quest.Status", "NotStarted, Active, Completed or Failed for quest id target in the active scene's quest log",
+                               &GameplayAutomationStepsInternal::readQuestStatus, true, false );
     SW_AUTOMATION_PROBE( scheduleMinuteOfDay, "Schedule.MinuteOfDay", "Minute of day (0..1439) of the first live schedule system",
                          &GameplayAutomationStepsInternal::readScheduleMinuteOfDay );
     SW_AUTOMATION_QUERY_PROBE( scheduleActivity, "Schedule.Activity", "Activity of the schedule NPC with id target (none between blocks)",

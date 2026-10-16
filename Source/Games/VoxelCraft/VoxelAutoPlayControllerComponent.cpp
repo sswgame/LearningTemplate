@@ -61,8 +61,12 @@ namespace sw
         const bool        bBlocked =
             world.isSolid( static_cast<int32>( MathUtil::floor( ahead._x ) ), static_cast<int32>( MathUtil::floor( feet._y + 0.5f ) ), static_cast<int32>( MathUtil::floor( ahead._z ) ) );
         holdButton( hashed_string( "Voxel.Jump" ), bBlocked || pPlayer->getBody().isInWater() );
-        holdButton( hashed_string( "Voxel.Break" ), cycle > _breakStart && cycle < _breakEnd );
-        if ( previousCycle < _placeAt && cycle >= _placeAt )
+        const bool bBreaking = cycle > _breakStart && cycle < _breakEnd;
+        const bool bPlacing  = previousCycle < _placeAt && cycle >= _placeAt;
+        holdButton( hashed_string( "Voxel.Break" ), bBreaking );
+        if ( bPlacing )
             pressButton( hashed_string( "Voxel.Place" ) );
+        // 놓기는 한 틱뿐이라 그 틱에만 `Place` 다 — 탐침 이력은 값이 바뀔 때 적으므로 한 틱이어도 남는다.
+        setStateName( hashed_string( bPlacing ? "Place" : ( bBreaking ? "Break" : "Walk" ) ) );
     }
 } // namespace sw

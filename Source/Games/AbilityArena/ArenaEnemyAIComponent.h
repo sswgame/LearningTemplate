@@ -19,6 +19,7 @@ namespace sw
      * @details 판단은 조종 시스템이 틱 전에 게임 스레드에서 부릅니다(`think`) — 대상의 자리는 그 메시의 지금 월드 자리(이번 프레임 시작)를 읽습니다.
      *          언리얼 `AAIController` 처럼 목표를 쫓는 쪽은 한 프레임 앞 자리를 보고, 움직임은 플레이어와 같은 폰 이동(`ArenaUnitComponent`)이 합니다.
      *          바라보기는 대상을 초점으로(`setFocus`) — 적 유닛은 조종 요를 바라본다(`PawnFacingMode::ControlYaw`), 물러나도 대상을 본다.
+     *          판단 상태(`setStateName`, 탐침 `AI.State`): 근접은 `Idle` · `Chase` · `Strike`, 원거리는 `Idle` · `Chase` · `Retreat` · `Hold` 다.
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Enemy AI", Tooltip = "Grunt / caster AI controller of an arena enemy" )
     class ArenaEnemyAIComponent : public AIControllerComponent

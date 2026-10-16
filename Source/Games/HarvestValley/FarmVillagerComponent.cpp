@@ -14,6 +14,10 @@ namespace sw
         : _director{}
         , _npcIndex{ -1 }
         , _heightOffset{ 0.5f }
+        , _agent{}
+        , _listGoal{ float3{} }
+        , _listNeighbor{}
+        , _bPlaced{ false }
     {
         setCanEverTick( true );
     }
@@ -29,6 +33,7 @@ namespace sw
     {
         _director = director;
         _npcIndex = npcIndex;
+        _bPlaced  = false;
     }
 
     void FarmVillagerComponent::onTick( float32 deltaTime )
@@ -43,6 +48,22 @@ namespace sw
         const bool                          bFollowsAVillager = pDirector != nullptr && 0 <= _npcIndex && _npcIndex < pDirector->getVillagerCount();
         if ( bFollowsAVillager == false )
             return;
-        pMesh->setLocalPosition( pDirector->getVillagerPosition( _npcIndex ) + float3{ 0.0f, _heightOffset, 0.0f } );
+        const float3 goal     = pDirector->getVillagerPosition( _npcIndex );
+        const bool   bTooFar  = float3::getHorizontalDistance( _agent.getPosition(), goal ) > pDirector->getBodySnapDistance();
+        const bool   bJumpsTo = _bPlaced == false || bTooFar;
+        if ( bJumpsTo )
+        {
+            _agent.setPosition( goal );
+            _bPlaced = true;
+        }
+        else
+        {
+            _agent.setSettings( pDirector->makeBodySettings( _npcIndex ) );
+            _listGoal[0] = goal;
+            _agent.followPath( _listGoal );
+            pDirector->collectNeighborPositions( _npcIndex, _listNeighbor );
+            _agent.update( pDirector->getNavGrid(), _listNeighbor, deltaTime );
+        }
+        pMesh->setLocalPosition( _agent.getPosition() + float3{ 0.0f, _heightOffset, 0.0f } );
     }
 } // namespace sw
