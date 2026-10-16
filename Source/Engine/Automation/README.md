@@ -27,6 +27,9 @@ scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► A
 **시나리오 프레임.** 프레임 0 은 시작 조건이 처음 참인 프레임입니다(`startAfter="ScenePlaying"` 이면 씬이 플레이를 시작하고 로딩 화면이 사라진 첫 프레임).
 `WaitUntil` 이 기다리는 동안은 시나리오 프레임을 세지 않으므로 뒤 단계가 그만큼 밀립니다. 시간은 늘 고정 프레임 시간(`fixedDelta`)으로 흐릅니다.
 
+**에디터 실행.** 루트에 `editor="true"` 를 적은 시나리오는 `AppScenarioTest` 가 `-EnableEditor` 와 빈 에디터 상태 폴더로 돌립니다. 게임 팩 시나리오가 그 게임의 에디터 창(HarvestValley 의 NPC 일정 창)을 볼 때 씁니다.
+`engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않습니다. 실행기는 이 값을 보지 않습니다(`isolated` 와 같다).
+
 **기록.** `<Record>` 가 남긴 값은 보고의 `records` 에 적힙니다. 게임 상태는 CPU 에서만 정해지므로 같은 시나리오는 백엔드마다 같은 기록을 내야 하고, `AppScenarioTest` 가 이를 비교합니다.
 
 ## 따라 해 보기

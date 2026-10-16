@@ -41,8 +41,10 @@ namespace sw::editor
     public:
         CharacterEditorPanel();
 
-        const utf8*        getPanelTitle() const override { return "Character Editor"; }
-        bool               isToolPanel() const override { return true; }
+        const utf8* getPanelTitle() const override { return "Character Editor"; }
+        bool        isToolPanel() const override { return true; }
+        /** @brief 외형 탭은 데이터 줄 · 내보내기 · 선택 · 슬롯 · 꾸미기 값을 한 화면에 둔다 — 기본 크기(640x420)는 슬롯 줄이 창 밖에 남는다. */
+        float2             getInitialPanelSize() const override { return float2{ 760.0f, 900.0f }; }
         void               drawContent() override;
         [[nodiscard]] bool saveDocument() override;
         bool               canSaveDocument() const override { return _sockets.isDirty() || _pose.isDirty(); }
@@ -69,6 +71,12 @@ namespace sw::editor
         void drawExplanation();
         void drawFitCheck();
         void drawPresetRow();
+        void drawDataPresetRow();
+        /**
+         * @brief 지금 선택을 데이터 프리셋 에셋(`<폴더>/<id>.appearance.xml`)으로 쓰고, 이 창과 실행 중인 게임의 외형 데이터에 올립니다.
+         * @details 씬의 `CharacterAppearanceComponent` 가 그 id 를 가리키면 조립한다(언리얼 · 유니티의 프리셋 에셋). 세이브 형식(`Save as preset`)과 다른 길이다.
+         */
+        void exportDataPreset();
         void drawHistoryRow();
         void ensureKindTable();
         void loadSkeleton();
@@ -91,6 +99,8 @@ namespace sw::editor
         fixed_string<constant::kMaxPathSize>  _appearanceFolder;
         fixed_string<constant::kMaxPathSize>  _presetPath;
         fixed_string<constant::kMaxBuffer128> _presetName;
+        fixed_string<constant::kMaxPathSize>  _exportFolder; ///< 데이터 프리셋을 쓸 폴더(리소스 id). 기본은 외형 폴더의 `presets/`
+        fixed_string<constant::kMaxBuffer128> _exportID;     ///< 데이터 프리셋 id — 씬의 컴포넌트가 가리키는 이름
         fixed_string<constant::kMaxBuffer128> _newName;
         fixed_string<constant::kMaxBuffer128> _renameBuffer;
         string                                _status;

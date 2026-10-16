@@ -316,7 +316,7 @@ namespace sw::editor
                 pOutObj                 = ( pContext != nullptr ) ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
                 if ( pOutObj == nullptr )
                     return {};
-                return string{ pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( pOutObj->getObjectID() ) };
+                return string{ pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pOutObj ) };
             }
 
             static void commandApplyPrefabOverrides()

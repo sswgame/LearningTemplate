@@ -192,7 +192,7 @@ namespace sw::editor
         ImGui::Spacing();
         ImGui::Separator();
 
-        const string_view pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectID() );
+        const string_view pfbPath = ws.findPrefabPath( pObj );
         if ( pfbPath.empty() == false )
             drawPrefabLinkSection( pObj, pfbPath );
 

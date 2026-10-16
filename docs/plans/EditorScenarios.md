@@ -11,21 +11,21 @@
 | 기능 | 단독 시나리오 | 흐름 · 경계 시나리오 |
 |------|---------------|----------------------|
 | 콘텐츠 브라우저 · 에셋 관리 | `contentbrowser` · `contentthumbnails` · `assetmanage` · `openasset` | `flowedit`(메시를 씬 뷰로 끌어 놓기) |
-| 에셋 임포트 | 없음(아래 "시나리오로 못 하는 것") | 없음 |
+| 에셋 임포트 | `flowimport`(임포트 · 스폰 — 단독을 겸한다) | `flowimport`(임포트 → 씬에서 쓰기 → 저장 → 다시 열기) |
 | 씬 · 계층 | `hierarchyedit` · `hierarchydrag` · `hierarchyfilter` · `hierarchyorder` · `addcomponent` · `hidelock` · `multiedit` | `flowselection` · `flowboundaries` |
 | 인스펙터 | `inspectoredit` · `inspectorrename` · `inspectorcombo` · `propertyreset` · `colliderhandle` | `flowedit` · `flowprefab` · `flowselection` |
 | 뷰포트 · 선택 | `viewportpick` · `billboardpick` · `viewportbasics` · `viewporthover` · `viewmodes` | `flowselection`(계층 선택 → 씬 뷰 외곽선) |
-| 프리팹 | `flowprefab`(만들기 · 스폰 · 적용 — 단독을 겸한다) | `flowprefab`(적용 → 다른 인스턴스 갱신 · 덮어쓴 값 유지 · 되돌리기 · 저장 · 다시 열기) |
+| 프리팹 | `flowprefab`(만들기 · 스폰 · 적용 — 단독을 겸한다) | `flowprefab`(적용 → 다른 인스턴스 갱신 · 덮어쓴 값 유지 · 되돌리기 · 저장 · 다시 열기) · `flowprefabnested`(자식 인스턴스 → 중첩 부품, 적용 → 다른 프리팹이 스폰한 부품 갱신 · 다시 열기) |
 | 지형 브러시 | `terrainbrush` · `rhiswap/terrainedits` | `flowterrain`(편집 → 플레이 → 백엔드 교체 → 되돌리기) |
 | 메시 모디파이어 | `meshmodifiers` | `flowedit`(배치 → 휘기 → 플레이 뒤 미리보기 유지) |
-| 캐릭터 편집 | `charactereditor` | 없음(아래) |
+| 캐릭터 편집 | `charactereditor` | `game/shooter3d/automation/charactereditorscene`(외형 → 데이터 프리셋 내보내기 → 씬의 외형 컴포넌트가 그 id → 플레이 조립) |
 | 입력 맵 창 | `inputmapedit` · `inputmaptaps` | — |
 | UI 미리보기 · 디자이너 | `uipreview` · `uipreviewdesigner` · `uiscale` | — |
 | 다중 월드 미리보기 | `previewscene` | — |
 | 머티리얼 · 셰이더 | `materialpreview` | — |
 | 애니메이션 · 타임라인 | `animgraphedit` · `animgraphsave` · `sequencerkeys` · `curveedit` | — |
 | 대화 · 기믹 그래프 | `dialoguegraph` · `dialoguegraphsave` · `gimmickgraph` · `graphaddnode` | — |
-| 스케줄 편집(NPC 일정 디버그 창) | 없음(아래) | 없음 |
+| 스케줄 편집(NPC 일정 디버그 창) | `game/harvestvalley/automation/scheduleeditor`(루트 `editor="true"` — 게임 팩 시나리오를 에디터로) | `scheduleeditor`(플레이 → 창 → NPC 고르기 → 시계 감기) |
 | 서버 디버그 채널 | `netplay` · `netconditions` · `netprofiler` | — |
 | 되돌리기 · 명령 스택 | `workflow` · `undosurvivesplay` | `flowboundaries` · `flowselection` · `flowprefab` · `flowterrain` · `flowedit` |
 | 저장 · 로드 | `workflow` · `windowtitle` · `savedstate.1/.2` | `flowedit` · `flowprefab` |
@@ -45,10 +45,19 @@
 - 메시를 씬 뷰로 끌어 놓으면 배치되지 않고 메시 문서만 열렸다(`flowedit`).
 - 에디터 모듈만 다시 올려도 게임 인스턴스가 내려가 그 뒤 씬 저장이 막혔다(`flowboundaries` 끝의 저장 — 체인에서 뒤 시나리오의 저장이 줄줄이 졌다).
 
+## 시나리오 규칙 — 임시 자리
+
+- **임시 파일**은 작업 폴더의 `Saved/Automation/<시나리오>/` 에 둔다(`asset.open` · `prefab.create` · `scene.saveAs`). 리소스 트리는 거절한다.
+- **임포트한 에셋**은 리소스 id 가 있어야 씬이 쓰므로 리소스 트리 안의 임시 폴더 `editor/automationtemp/<시나리오>/` 에만 가져온다(`asset.import <원본> <폴더>`).
+  이 폴더는 `.gitignore` 가 무시하고, 시나리오가 처음과 끝에 `asset.removeImportFolder` 로 지운다. 남은 파일이 있으면 같은 이름이 새 이름(`_1`)을 받아 뒤 단계가 어긋난다.
+  원본은 작업 폴더 기준 경로나 리소스 id 이고, 모델 원본(glTF)의 변환은 에디터가 아니라 `App --import-models` 가 한다.
+- **에디터가 쓰는 게임 데이터**(캐릭터 편집 창의 데이터 프리셋)도 같은 임시 폴더로 내보낸다. 창의 내보내기 폴더 칸에 `editor/automationtemp/<시나리오>` 를 적으면
+  게임 데이터 폴더(`game/<팩>/data/appearance/presets/`)는 그대로이고, 내보내기가 실행 중인 게임의 외형 데이터에 그 파일을 올려 씬이 같은 실행에서 쓴다.
+- **게임 팩의 에디터 창**은 그 팩의 `automation/` 시나리오 루트에 `editor="true"` 를 적는다. `AppScenarioTest` 가 `-game=<게임> -EnableEditor` 와 빈 에디터 상태 폴더로 돌린다.
+
 ## 시나리오로 못 하는 것
 
-- **에셋 임포트.** 콘텐츠 브라우저의 Import 는 OS 파일 대화상자로 원본을 고르고 리소스 트리에 복사한다(`EditorAssetFileCommands::importFiles`). 무인 실행에서 대화상자를 닫을 수 없고,
-  임시 경로(`Saved/Automation`)로 가져오면 리소스 id 가 없어 씬이 그 에셋을 쓸 수 없다. 모델 원본(glTF)의 변환은 에디터가 아니라 `App --import-models` 가 한다.
-- **캐릭터 편집 → 저장 → 씬 사용.** 캐릭터 편집 창의 프리셋은 플레이어 세이브 형식(`UserAppearancePresetStore`)이고, 씬의 `CharacterAppearanceComponent` 는 데이터 프리셋 id
-  (`data/appearance/presets.xml`)만 가리킨다. 창에서 저장한 것을 씬이 쓰는 길이 엔진에 없다.
-- **스케줄 편집.** NPC 일정 디버그 창은 일정 시스템이 있는 게임(HarvestValley)에서만 내용이 있다. 에디터 시나리오 체인은 기본 게임(Empty)으로 돌고, 게임 팩 시나리오는 에디터 없이 돈다.
+- **다른 씬의 프리팹 인스턴스.** Apply Overrides 는 지금 연 씬의 인스턴스(놓은 인스턴스와 다른 프리팹이 스폰한 중첩 부품)만 고친다. 닫힌 씬의 인스턴스는
+  덮어쓴 값만 저장돼 있어 다시 열 때 새 프리팹 위에 얹힌다(유니티 · 언리얼도 닫힌 레벨은 로드할 때 받는다). 다른 바깥 프리팹 인스턴스에 새로 생긴 부품은 다시 열 때 생긴다.
+- **에디터 UI 화면 확인의 범위.** 흐름 시나리오의 `screenshot` · `-gv_screenshot` 은 게임 · 씬 뷰 렌더 출력만 담는다. 패널은 `CaptureEditorUI` 로 찍는데,
+  그 확인은 DX12 에서만 눈으로 봤다(네 백엔드가 같은 ImGui 그리기 목록을 그리므로 같다고 보지만 다른 백엔드의 그림은 보지 않았다).

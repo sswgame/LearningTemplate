@@ -95,7 +95,12 @@ namespace sw
         AutomationStartCondition getStartCondition() const { return _startCondition; }
         VirtualInputMode         getInputMode() const { return _inputMode; }
         /** @brief 새 프로세스에서만 도는 시나리오입니다(루트 `isolated="true"`). 시작 상태를 전제하거나 환경(창 크기 · 테마 · 세션)을 크게 바꿔 체인(`-scenario=a,b,c`)에 넣지 않는다. 실행기는 이 값을 쓰지 않고 테스트가 고른다. */
-        bool                          isIsolated() const { return _bIsolated; }
+        bool isIsolated() const { return _bIsolated; }
+        /**
+         * @brief 에디터를 켠 실행(`-EnableEditor`)에서 도는 시나리오입니다(루트 `editor="true"`). 게임 팩 시나리오가 그 게임의 에디터 창(일정 디버그 창 등)을 확인할 때 적는다.
+         * @details 실행기는 이 값을 쓰지 않고 테스트(`AppScenarioTest`)가 인자를 고른다. `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않는다.
+         */
+        bool                          requiresEditor() const { return _bRequiresEditor; }
         const vector<AutomationStep>& getSteps() const { return _listStep; }
         /** @brief 부하 선언입니다(`<Load>` 가 없으면 `_bDeclared` 가 false). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며, `timeoutFrames` 를 보지 않는다. */
         const AutomationLoad& getLoad() const { return _load; }
@@ -114,5 +119,6 @@ namespace sw
         AutomationStartCondition _startCondition;
         VirtualInputMode         _inputMode;
         bool                     _bIsolated;
+        bool                     _bRequiresEditor;
     };
 } // namespace sw

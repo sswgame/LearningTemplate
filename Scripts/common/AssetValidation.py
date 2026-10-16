@@ -439,13 +439,24 @@ def iterateJsonStringsInternal(value: object, key: str = "") -> Iterator[tuple[s
         yield key, value
 
 
-def checkMissingJsonReferenceInternal(relPath: str, context: ValidationContext) -> list[str]:
+def isTransientReferenceInternal(rule: Rule, value: str) -> bool:
+    """실행 중에만 생기는 임시 리소스 폴더(`transient_folders`, 예: 에디터 시나리오의 `editor/automationtemp/`) 아래를 가리키면 True 입니다."""
+    listFolder = rule.params.get("transient_folders")
+    if not listFolder:
+        return False
+    lowered = value.lower()
+    return any(lowered == folder or lowered.startswith(folder + "/") for folder in listFolder)
+
+
+def checkMissingJsonReferenceInternal(rule: Rule, relPath: str, context: ValidationContext) -> list[str]:
     try:
         data = json.loads((context.resourceRoot / relPath).read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         return [f"JSON does not parse: {error}"]
     listMessage: list[str] = []
     for key, value in iterateJsonStringsInternal(data):
+        if isTransientReferenceInternal(rule, value):
+            continue
         if _kResourcePathRe.match(value) and not context.hasResource(value):
             listMessage.append(f"\"{key}\" points at '{value}', which does not exist")
         elif key.endswith("Folder") and _kResourceFolderRe.match(value) and not context.hasDirectory(value):
@@ -455,12 +466,14 @@ def checkMissingJsonReferenceInternal(relPath: str, context: ValidationContext) 
 
 def checkMissingReferenceInternal(rule: Rule, relPath: str, context: ValidationContext) -> list[str]:
     if relPath.endswith(".json"):
-        return checkMissingJsonReferenceInternal(relPath, context)
+        return checkMissingJsonReferenceInternal(rule, relPath, context)
     root = context.readXml(relPath)
     if root is None:
         return []
     listMessage: list[str] = []
     for element, name, value in iterateXmlValuesInternal(root):
+        if isTransientReferenceInternal(rule, value):
+            continue  # 시나리오가 실행 중에 만들고 지우는 자리 — 저장소에는 없는 것이 맞다
         if name is not None and name.endswith("Folder") and _kResourceFolderRe.match(value):
             if not context.hasDirectory(value):
                 listMessage.append(f"{element.tag}@{name} points at folder '{value}', which holds no file")
@@ -721,7 +734,7 @@ _kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str], frozenset[str]]]
     "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "power_of_two", "require_mips", "allowed_formats"})),
     "mesh_budget": (checkMeshBudgetInternal, frozenset(), frozenset({"max_triangles", "max_bounding_radius"})),
     "xml_wellformed": (checkXmlWellFormedInternal, frozenset(), frozenset()),
-    "missing_reference": (checkMissingReferenceInternal, frozenset(), frozenset()),
+    "missing_reference": (checkMissingReferenceInternal, frozenset(), frozenset({"transient_folders"})),
     "orphan": (checkOrphanInternal, frozenset(), frozenset()),
     "material": (checkMaterialInternal, frozenset({"require_permutations"}), frozenset({"allowed_blend_modes"})),
     "material_keywords": (checkMaterialKeywordsInternal, frozenset(), frozenset()),

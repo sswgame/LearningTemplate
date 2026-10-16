@@ -167,6 +167,126 @@ namespace sw
                 }
             }
 
+            // --- 쓰기 — 위 읽기와 같은 형식(이름 목록은 쉼표, 색은 공백으로 나눈 rgba, 색 목록은 ;) -----------------------------------------
+
+            static void appendNumber( string& inoutText, float32 value )
+            {
+                utf8         arrBuffer[constant::kMaxBuffer64];
+                const uint32 length = StringUtil::formatNumber( arrBuffer, static_cast<uint32>( sizeof( arrBuffer ) ), value );
+                inoutText.append( arrBuffer, length );
+            }
+
+            static string formatColor( const float4& color )
+            {
+                string text;
+                appendNumber( text, color._x );
+                text += ' ';
+                appendNumber( text, color._y );
+                text += ' ';
+                appendNumber( text, color._z );
+                text += ' ';
+                appendNumber( text, color._w );
+                return text;
+            }
+
+            static string joinNames( const vector<hashed_string>& listName )
+            {
+                string text;
+                for ( const hashed_string& name : listName )
+                {
+                    if ( text.empty() == false )
+                        text += ',';
+                    text += name.c_str();
+                }
+                return text;
+            }
+
+            /** @brief 이름 목록 속성 — 비었으면 쓰지 않는다(읽기가 빈 목록을 "적지 않음" 으로 본다). */
+            static void appendNameList( const XMLNode& node, const utf8* pAttribute, const vector<hashed_string>& listName )
+            {
+                if ( listName.empty() == false )
+                    node.appendAttribute( pAttribute, string_view( joinNames( listName ) ) );
+            }
+
+            static void appendName( const XMLNode& node, const utf8* pAttribute, const hashed_string& name )
+            {
+                if ( name.empty() == false )
+                    node.appendAttribute( pAttribute, name.c_str() );
+            }
+
+            static void writeValue( const XMLNode& parent, const CharacterAppearanceValueDef& value )
+            {
+                const XMLNode node = parent.appendChild( "Value" );
+                node.appendAttribute( "name", value._parameter.c_str() );
+                if ( value._bHasNumber == SW_TRUE && value._min == value._max )
+                    node.appendAttribute( "value", value._min );
+                else if ( value._bHasNumber == SW_TRUE )
+                {
+                    node.appendAttribute( "min", value._min );
+                    node.appendAttribute( "max", value._max );
+                }
+                else if ( value._listOption.size() == 1 )
+                    node.appendAttribute( "option", value._listOption[0].c_str() );
+                else if ( value._listOption.empty() == false )
+                    node.appendAttribute( "options", string_view( joinNames( value._listOption ) ) );
+                else
+                {
+                    string colors;
+                    for ( const float4& color : value._listColor )
+                    {
+                        if ( colors.empty() == false )
+                            colors += "; ";
+                        colors += formatColor( color );
+                    }
+                    node.appendAttribute( value._listColor.size() == 1 ? "color" : "colors", string_view( colors ) );
+                }
+            }
+
+            static void writeSlot( const XMLNode& parent, const CharacterAppearanceSlotDef& slot )
+            {
+                const XMLNode node = parent.appendChild( "Equip" );
+                node.appendAttribute( "slot", slot._slot.c_str() );
+                if ( slot._bClear == SW_TRUE )
+                    node.appendAttribute( "item", "" );
+                else if ( slot._listItem.size() == 1 )
+                    node.appendAttribute( "item", slot._listItem[0].c_str() );
+                else
+                    appendNameList( node, "items", slot._listItem );
+                appendName( node, "visible", slot._visibleVisual );
+                appendName( node, "state", slot._state );
+                if ( slot._damage != 0.0f )
+                    node.appendAttribute( "damage", slot._damage );
+            }
+
+            static void writeSocketOverride( const XMLNode& parent, const AppearanceSocketOverride& socketOverride )
+            {
+                const XMLNode node = parent.appendChild( "SocketOverride" );
+                node.appendAttribute( "name", socketOverride._name.c_str() );
+                appendNameList( node, "parent", socketOverride._placement._listSocket );
+                const float3& offset   = socketOverride._placement._offset;
+                const float3& rotation = socketOverride._placement._rotation;
+                string        text;
+                if ( offset != float3::Zero )
+                {
+                    appendNumber( text, offset._x );
+                    text += ' ';
+                    appendNumber( text, offset._y );
+                    text += ' ';
+                    appendNumber( text, offset._z );
+                    node.appendAttribute( "offset", string_view( text ) );
+                }
+                if ( rotation != float3::Zero )
+                {
+                    text.clear();
+                    appendNumber( text, rotation._x );
+                    text += ' ';
+                    appendNumber( text, rotation._y );
+                    text += ' ';
+                    appendNumber( text, rotation._z );
+                    node.appendAttribute( "rotation", string_view( text ) );
+                }
+            }
+
             template <typename TList>
             static void replaceIfGiven( TList& inoutList, const TList& listGiven )
             {
@@ -229,6 +349,86 @@ namespace sw
             _listPreset.push_back( def );
         }
         return report.getErrors().size() == errorCountBefore;
+    }
+
+    bool CharacterAppearanceCatalog::loadPresetFromNode( const XMLNode& presetNode, AppearanceLoadReport& report, string_view sourceName )
+    {
+        const size_t errorCountBefore = report.getErrors().size();
+        if ( StringUtil::equals( presetNode.getName(), "CharacterAppearance", true ) == false )
+        {
+            report.addError( "%#: a preset asset needs a <CharacterAppearance> root, got <%#>", sourceName, presetNode.getName() );
+            return false;
+        }
+        CharacterAppearanceDef def;
+        def._id = AppearanceXMLUtil::readName( presetNode, "id" );
+        if ( def._id.empty() )
+        {
+            report.addError( "%#: <CharacterAppearance> without an id", sourceName );
+            return false;
+        }
+        CharacterAppearanceInternal::readPreset( presetNode, def, report, sourceName );
+        if ( report.getErrors().size() != errorCountBefore )
+            return false;
+        for ( CharacterAppearanceDef& existing : _listPreset )
+        {
+            if ( existing._id != def._id )
+                continue;
+            existing = std::move( def );
+            return true;
+        }
+        _listPreset.push_back( std::move( def ) );
+        return true;
+    }
+
+    bool CharacterAppearanceCatalog::writePresetToNode( const CharacterAppearanceDef& def, const XMLNode& outNode, string& outReason )
+    {
+        using Internal = CharacterAppearanceInternal;
+        if ( def._id.empty() )
+        {
+            outReason = "a preset needs an id";
+            return false;
+        }
+        for ( const CharacterAppearanceSlotDef& slot : def._listSlot )
+        {
+            if ( slot._customization.isEmpty() == false )
+            {
+                outReason = string( "slot '" ) + slot._slot.c_str() + "' has item instance values, which a preset asset cannot carry yet";
+                return false;
+            }
+        }
+        outNode.appendAttribute( "id", def._id.c_str() );
+        Internal::appendName( outNode, "parent", def._parent );
+        Internal::appendName( outNode, "schema", def._schema );
+        Internal::appendNameList( outNode, "bodyType", def._listBodyType );
+        Internal::appendNameList( outNode, "bodyShape", def._listBodyShape );
+        Internal::appendNameList( outNode, "face", def._listFace );
+        Internal::appendNameList( outNode, "body", def._listBody );
+        string tags;
+        for ( const TagID& tag : def._tags.getTags() )
+        {
+            if ( tags.empty() == false )
+                tags += ',';
+            tags += tag.getString();
+        }
+        if ( tags.empty() == false )
+            outNode.appendAttribute( "tags", string_view( tags ) );
+        for ( const CharacterAppearanceValueDef& value : def._listValue )
+        {
+            Internal::writeValue( outNode, value );
+        }
+        for ( const hashed_string& setID : def._listSet )
+        {
+            outNode.appendChild( "Equip" ).appendAttribute( "set", setID.c_str() );
+        }
+        for ( const CharacterAppearanceSlotDef& slot : def._listSlot )
+        {
+            Internal::writeSlot( outNode, slot );
+        }
+        for ( const AppearanceSocketOverride& socketOverride : def._listSocketOverride )
+        {
+            Internal::writeSocketOverride( outNode, socketOverride );
+        }
+        return true;
     }
 
     const CharacterAppearanceDef* CharacterAppearanceCatalog::findPreset( const hashed_string& id ) const

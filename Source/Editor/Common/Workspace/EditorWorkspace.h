@@ -149,12 +149,21 @@ namespace sw::editor
         void   setScrollToComponentID( uint64 id ) { _scrollToComponentID = id; }
 
         // ------------------------------------------------------------------------------
-        // 7) 프리팹 인스턴스 경로. 원본은 활성 씬(`Scene::getEntityPrefabPath`)이고 여기는 접근 함수일 뿐이다
+        // 7) 프리팹 인스턴스 경로. 인스턴스 기록은 둘이다 — 씬에 놓은 인스턴스(활성 씬의 `Scene::getEntityPrefabPath`)와,
+        //    다른 프리팹 인스턴스가 스폰한 중첩 부품(그 씬의 `PrefabInstanceRegistry`). "이 오브젝트는 어느 프리팹의 인스턴스인가" 는
+        //    `findPrefabPath` 하나로 묻는다. 놓은 인스턴스 기록만 따로 보는 일(복사 · 중첩으로 옮기기)만 `getPlacedPrefabPath` 를 쓴다.
         // ------------------------------------------------------------------------------
-        /** @brief 활성 씬에 오브젝트의 프리팹 경로를 기록합니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
-        void setGameObjectPrefabPath( uint64 objectID, string_view prefabPath );
-        /** @brief 활성 씬이 기록해 둔 오브젝트의 프리팹 경로를 반환합니다. 프리팹 인스턴스가 아니거나 활성 씬이 없으면 빈 문자열입니다. */
-        string_view getGameObjectPrefabPath( uint64 objectID ) const;
+        /** @brief 활성 씬에 놓은 인스턴스의 프리팹 경로를 기록합니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
+        void setPlacedPrefabPath( uint64 objectID, string_view prefabPath );
+        /** @brief 활성 씬에 놓은 인스턴스로 기록된 프리팹 경로입니다. 중첩 부품은 여기 없습니다(`findPrefabPath`). 없거나 활성 씬이 없으면 빈 문자열입니다. */
+        string_view getPlacedPrefabPath( uint64 objectID ) const;
+        /**
+         * @brief @p pObject 가 인스턴스인 프리팹의 경로입니다 — 아직 바깥 인스턴스 아래에 붙은 중첩 부품이면 그 부품의 원본 프리팹, 아니면 놓은 인스턴스 기록입니다.
+         * @details 인스펙터의 프리팹 줄 · 계층의 파란 이름 · Apply/Revert 대상 · 프리팹 격리가 모두 이 판정을 쓴다. 프리팹 인스턴스가 아니면 빈 문자열입니다.
+         */
+        string_view findPrefabPath( const GameObject* pObject ) const;
+        /** @brief @p pObject 가 바깥 프리팹 인스턴스가 스폰한 중첩 부품(아직 그 아래에 붙음)이면 true 입니다. 부품은 연결을 따로 끊을 수 없습니다(바깥 인스턴스가 다시 스폰한다). */
+        bool isNestedPrefabPart( const GameObject* pObject ) const;
 
         // ------------------------------------------------------------------------------
         // 8) 뷰포트 카메라 북마크. 인덱스는 0~8이고 슬롯은 1~9다

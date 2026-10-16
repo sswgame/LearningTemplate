@@ -1,11 +1,13 @@
 #include "pch.h"
 
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "EngineTest/AppearanceTestFixture.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceState.h"
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
@@ -218,6 +220,63 @@ SW_TEST_CASE( AppearanceTest, PresetInheritanceAndSeededCandidates )
     SW_EXPECT_EQUAL( size_t( 2 ), listBody.size() );
     SW_EXPECT_TRUE( 0 < baldCount && baldCount < 64 );
     SW_EXPECT_TRUE( listHeight.size() > 32u ); // 범위는 씨앗마다 다른 값
+}
+
+/**
+ * @brief [AppearanceTest] 편집 창의 선택을 데이터 프리셋으로 내보내고 프리셋 에셋 파일로 쓰면, 같은 값으로 다시 읽혀 부모 위에 덮인다
+ * @details 캐릭터 편집 → 씬 사용의 데이터 길이다(`makePresetDef` → `writePresetToNode` → `loadPresetFile` → `expand`). 같은 파일을 다시 올리면 같은 id 를 바꾼다.
+ *          값의 종류는 스키마가 정하고, 스키마에 없는 매개변수 · 부분 선택은 프리셋이 될 수 없어 이유와 함께 진다.
+ */
+SW_TEST_CASE( AppearanceTest, ExportedPresetRoundTripsAndOverlaysItsParent )
+{
+    Fixture fixture;
+    SW_ASSERT_TRUE_MSG( fixture.load(), fixture._database.getReport().joined().c_str() );
+
+    AppearanceSelection selection;
+    selection._basePresetID = hashed_string( "Human" );
+    selection._schema       = hashed_string( "Human" );
+    selection._customization.setNumber( hashed_string( "Height" ), 1.3f );
+    selection._customization.setColor( hashed_string( "Skin" ), float4( 0.5f, 0.4f, 0.3f, 1.0f ) );
+    selection._customization.setOption( hashed_string( "Hair" ), hashed_string( "Bald" ) );
+    AppearanceSlotRequest head;
+    head._slot   = hashed_string( "Head" );
+    head._itemID = hashed_string( "cap" );
+    selection._listSlot.push_back( head );
+    AppearanceSlotRequest back;
+    back._slot = hashed_string( "Back" ); // 비움
+    selection._listSlot.push_back( back );
+
+    CharacterAppearanceDef def;
+    string                 reason;
+    SW_ASSERT_TRUE_MSG( AppearanceSelectionUtil::makePresetDef( fixture._database, selection, hashed_string( "Exported" ), def, reason ), reason.c_str() );
+    XMLDocument doc;
+    SW_ASSERT_TRUE_MSG( CharacterAppearanceCatalog::writePresetToNode( def, doc.appendRoot( "CharacterAppearance" ), reason ), reason.c_str() );
+    const string path = test::makeTempPath( "exported.appearance.xml" );
+    SW_ASSERT_TRUE( doc.saveFile( path ) );
+
+    const size_t presetCount = fixture._database.getPresets().getPresets().size();
+    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( path ), fixture._database.getReport().joined().c_str() );
+    SW_EXPECT_EQUAL( presetCount + 1, fixture._database.getPresets().getPresets().size() );
+    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( path ), fixture._database.getReport().joined().c_str() ); // 다시 올리면 바꾼다
+    SW_EXPECT_EQUAL( presetCount + 1, fixture._database.getPresets().getPresets().size() );
+
+    CharacterAppearanceSpec spec;
+    SW_ASSERT_TRUE( fixture.expand( hashed_string( "Exported" ), 0u, spec ) );
+    SW_EXPECT_TRUE( spec._bodyVisual == hashed_string( "body_human" ) ); // 부모(기준 프리셋)에서
+    SW_EXPECT_NEAR_EQUAL( 1.3f, spec._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, spec._customization.findValue( hashed_string( "Skin" ) )->_number._y, 1.0e-5f );
+    SW_EXPECT_TRUE( spec._customization.findValue( hashed_string( "Hair" ) )->_option == hashed_string( "Bald" ) );
+    SW_EXPECT_TRUE( spec.findSlot( hashed_string( "Head" ) )->_itemID == hashed_string( "cap" ) );
+    SW_EXPECT_TRUE( spec.findSlot( hashed_string( "Back" ) )->_itemID.empty() );
+
+    // 나타낼 수 없는 선택은 이유와 함께 진다.
+    AppearanceSelection unknownValue = selection;
+    unknownValue._customization.setNumber( hashed_string( "NoSuchSlider" ), 1.0f );
+    SW_EXPECT_FALSE( AppearanceSelectionUtil::makePresetDef( fixture._database, unknownValue, hashed_string( "Bad" ), def, reason ) );
+    SW_EXPECT_TRUE_MSG( reason.find( "NoSuchSlider" ) != string::npos, reason.c_str() );
+    AppearanceSelection partial = selection;
+    partial._listCategory.push_back( hashed_string( "Hair" ) );
+    SW_EXPECT_FALSE( AppearanceSelectionUtil::makePresetDef( fixture._database, partial, hashed_string( "Bad" ), def, reason ) );
 }
 
 /**

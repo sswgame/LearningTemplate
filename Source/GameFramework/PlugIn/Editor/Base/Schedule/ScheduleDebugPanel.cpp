@@ -4,13 +4,47 @@
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 
 #include <imgui.h>
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct ScheduleDebugPanelInternal
+        {
+            /** @brief 자동화 탐침이 읽는 값입니다. 창이 그릴 때마다 게시합니다(게임 스레드). 창이 닫히면 마지막 값이 남습니다. */
+            struct Published
+            {
+                uint32 _npcCount{ 0 };         ///< 고른 일정 시스템의 NPC 수
+                uint32 _timelineRowCount{ 0 }; ///< 고른 NPC 의 오늘 타임라인 줄 수(고른 NPC 가 없으면 0)
+            };
+            static Published& getPublished()
+            {
+                static Published s_published;
+                return s_published;
+            }
+
+            [[nodiscard]] static bool readNpcCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._npcCount );
+                return true;
+            }
+            [[nodiscard]] static bool readTimelineRowCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._timelineRowCount );
+                return true;
+            }
+        };
+    } // namespace
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -35,6 +69,8 @@ namespace sw::editor
             if ( pSystem != nullptr && pSystem->getNpcCount() > 0 )
                 listActive.push_back( pSystem );
         }
+        ScheduleDebugPanelInternal::Published& published = ScheduleDebugPanelInternal::getPublished();
+        published                                        = {};
         if ( listActive.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdSchedule", "EmptyHint" ) );
@@ -50,6 +86,7 @@ namespace sw::editor
                 _systemIndex = 0;
         }
         const ScheduleSystem& system = *listActive[static_cast<size_t>( _systemIndex )];
+        published._npcCount          = static_cast<uint32>( system.getNpcCount() );
 
         if ( ImGui::BeginChild( "##ScheduleNpcList", ImVec2{ 200.0f, 0.0f }, ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
             drawNpcList( system );
@@ -67,6 +104,7 @@ namespace sw::editor
             {
                 drawTimeline( system, npcIndex );
                 drawExplanation( system, npcIndex );
+                published._timelineRowCount = static_cast<uint32>( _listRow.size() );
             }
         }
         ImGui::EndChild();
@@ -83,6 +121,7 @@ namespace sw::editor
             ImGui::PushID( npcIndex );
             if ( ImGui::Selectable( npcID.c_str(), bSelected ) )
                 _selectedNpc = npcID;
+            EditorSelfTestMarks::note( ( string( "schedule.npc." ) + npcID.c_str() ).c_str() ); // 자동화가 NPC 를 고를 자리
             ImGui::PopID();
         }
     }
@@ -157,4 +196,9 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( ScheduleDebugPanel, "npc_schedule", EditorPanelCategory::Custom, 9310 );
+
+    SW_AUTOMATION_PROBE( editorScheduleNpcCount, "Editor.ScheduleNpcCount", "NPCs of the schedule system the NPC Schedule window shows",
+                         &ScheduleDebugPanelInternal::readNpcCount );
+    SW_AUTOMATION_PROBE( editorScheduleTimelineRowCount, "Editor.ScheduleTimelineRowCount", "Rows of today's timeline for the NPC picked in the NPC Schedule window",
+                         &ScheduleDebugPanelInternal::readTimelineRowCount );
 } // namespace sw::editor

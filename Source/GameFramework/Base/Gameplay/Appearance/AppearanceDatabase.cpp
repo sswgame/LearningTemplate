@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -82,7 +83,41 @@ namespace sw
             // 실패는 각 섹션이 _report 에 오류로 남긴다
             (void)loadSectionFromNode( doc.getRoot(), absolutePath.empty() ? string_view( path ) : string_view( absolutePath ) );
         }
-        return finishLoad( pItemCatalog );
+        // 프리셋 에셋 — 폴더가 없으면 없는 것이다(선택). 이름순으로 읽어 같은 id 는 뒤 파일이 이긴다(실행마다 같다).
+        const string   presetFolder = ResourcePaths::getResourcePath( FileUtil::joinPath( folder, kPresetFolder ) );
+        vector<string> listPresetFile;
+        bool           bPresetsRead = true;
+        if ( presetFolder.empty() == false && FileUtil::collectFiles( presetFolder, ".xml", listPresetFile, false ) )
+        {
+            std::sort( listPresetFile.begin(), listPresetFile.end() );
+            for ( const string& presetFile : listPresetFile )
+            {
+                if ( StringUtil::endsWith( presetFile, kPresetExtension, true ) )
+                    bPresetsRead = readPresetFile( presetFile ) && bPresetsRead; // 검사는 아래 finishLoad 가 한 번 한다
+            }
+        }
+        return finishLoad( pItemCatalog ) && bPresetsRead;
+    }
+
+    bool AppearanceDatabase::loadPresetFile( string_view path )
+    {
+        const size_t errorCountBefore = _report.getErrors().size();
+        if ( readPresetFile( path ) == false )
+            return false;
+        validatePresets();
+        return _report.getErrors().size() == errorCountBefore;
+    }
+
+    bool AppearanceDatabase::readPresetFile( string_view path )
+    {
+        XMLDocument doc;
+        if ( doc.loadPath( path ) == false )
+        {
+            _report.addError( "%#: cannot read the appearance preset (%#)", path, doc.getLastError() );
+            return false;
+        }
+        ++_revision;
+        return _presets.loadPresetFromNode( doc.getRoot(), _report, path );
     }
 
     bool AppearanceDatabase::loadSectionFromXMLText( string_view xmlText, string_view sourceName )
