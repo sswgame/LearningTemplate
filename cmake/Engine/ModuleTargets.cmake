@@ -166,6 +166,52 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 endfunction()
 
+# ------------------------------------------------------------------------------
+# sw_addModulePart: 모듈 하나의 소스 일부를 의존을 좁힌 OBJECT 라이브러리로 짓고, 오브젝트를 그 모듈 이미지 안에 그대로 넣는다.
+#
+# 모듈이 링크하는 라이브러리(에디터의 imgui 계열) 가운데 이 부분이 몰라야 하는 것을 컴파일로 막는다. 부분은 `LINK` 의 include · 정의만 보므로
+# 그 헤더를 include 하면 "file not found" 로 멈춘다. 정적 라이브러리 · 별도 DLL 이 아닌 까닭: 확장 모듈이 따로 링크하면 정적 상태가
+# 두 벌이 되고 export 가 빠질 수 있다(언리얼이 모듈을 쪼개지 않고 Private 폴더 의존만 가르는 것과 같은 자리).
+# 정의 · 컴파일 옵션 · 자기 include 자리(내보내기 매크로 · 로그 태그 · 리플렉션 산출물 · FlagOps 강제 포함)는 모듈 타깃에서 그대로 받아
+# 같은 값을 두 곳에 적지 않는다. 모듈의 sw_addModuleLibrary 다음에 부른다(리플렉션 산출 단계에 의존을 건다).
+#
+#   OWNER    모듈 타깃(sw_addModuleLibrary 로 만든 것)
+#   SOURCES  부분의 소스(모듈 SOURCES 에서는 부르는 쪽이 뺀다)
+#   LINK     부분이 쓰는 라이브러리(모듈의 LINK_PRIVATE 보다 좁게)
+# ------------------------------------------------------------------------------
+function(sw_addModulePart PART_NAME)
+	cmake_parse_arguments(ARG "" "OWNER" "SOURCES;LINK" ${ARGN})
+	if(NOT TARGET ${ARG_OWNER})
+		message(FATAL_ERROR "sw_addModulePart(${PART_NAME}): OWNER '${ARG_OWNER}' is not a target")
+	endif()
+	if(NOT ARG_SOURCES)
+		message(FATAL_ERROR "sw_addModulePart(${PART_NAME}): SOURCES is empty")
+	endif()
+	add_library(${PART_NAME} OBJECT ${ARG_SOURCES})
+	get_target_property(ownerFolder ${ARG_OWNER} FOLDER)
+	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${ownerFolder}")
+	target_link_libraries(${PART_NAME} PRIVATE ${ARG_LINK} sw_global_options)
+	# 생성식(`$<TARGET_PROPERTY:…>`)으로 받으면 모듈이 링크한 라이브러리의 사용 요구까지 따라와(imgui include 자리) 경계가 사라진다.
+	# 구성 때 모듈 자신의 값만 읽는다.
+	foreach(property COMPILE_DEFINITIONS COMPILE_OPTIONS INCLUDE_DIRECTORIES)
+		get_target_property(listOwnerValue ${ARG_OWNER} ${property})
+		if(listOwnerValue)
+			set_property(TARGET ${PART_NAME} APPEND PROPERTY ${property} ${listOwnerValue})
+		endif()
+	endforeach()
+	if(TARGET ${ARG_OWNER}_ReflectionGen)
+		add_dependencies(${PART_NAME} ${ARG_OWNER}_ReflectionGen)
+	endif()
+	sw_configurePch(${PART_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	get_target_property(bOwnerUnity ${ARG_OWNER} UNITY_BUILD)
+	if(bOwnerUnity)
+		get_target_property(ownerBatch ${ARG_OWNER} UNITY_BUILD_BATCH_SIZE)
+		sw_setUnityBuild(${PART_NAME} BATCH_SIZE ${ownerBatch})
+	endif()
+	# OBJECT 라이브러리를 직접 링크하면 오브젝트가 모듈 이미지에 들어간다(CMake 3.12+). 확장 모듈은 모듈의 export 로 그대로 쓴다.
+	target_link_libraries(${ARG_OWNER} PRIVATE ${PART_NAME})
+endfunction()
+
 # RHI 그래픽스 백엔드 MODULE — 표(CookContract.json rhi_backends)의 이름 하나를 받는다. Dev 만 짓는다(배포는 Source/Engine/CMakeLists.txt 가
 # 백엔드 하나를 Engine 에 넣는다).
 function(sw_addRhiBackendModule BACKEND_NAME)

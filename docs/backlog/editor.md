@@ -10,6 +10,10 @@
   스크린샷 토스트의 "Show in Explorer" 단추(알림 매니저에 동작 단추가 없다), `screenshotbutton` 시나리오가 `Bin/Saved/Screenshots` 에 남기는 PNG, Engine README 개발 명령 줄의 경로.
   RenderDoc 은 RHI 단계 맨 앞에서 로드하고, `ThirdParty/renderdoc` 에 원문 헤더를 두며 그 폴더의 `.clang-format` 은 `DisableFormat` 이다.
 
+- `C-37` [정리] **모델 층의 ImGui 사용 한 곳(`Common/Commands/Play/EditorScenarioRecordCommands.cpp`)을 EditorModel 안으로 들이기.** 모델 폴더(`Source/Editor/CMakeLists.txt` 의
+  `listEditorModelDir`)는 ImGui 없이 컴파일되는 OBJECT 라이브러리 `EditorModel` 인데, 이 파일만 `#include <imgui.h>` 와 `ImGui::GetIO().DeltaTime`(녹화 프레임 간격)을 써서 예외 목록에 남아 있습니다.
+  간격을 셸이 넘기거나 엔진 프레임 시간으로 바꾸면 예외 줄(`list(REMOVE_ITEM listEditorModelSource …)`)을 지웁니다.
+
 - `D3-1` [기능] **에디터 로드맵 — 미룬 영역 패널을 그 영역 옆에.** 엔진 영역 패널은 EditorModule, 기반 GameFramework 영역은 `GF_EditorPlugIn_Base`(`Source/GameFramework/PlugIn/Editor/Base/`),
   키트 영역은 `GF_EditorPlugIn_<이름>` 확장 모듈에 둔다. 남은 것 —
   ⑦ 카탈로그 편집기 뒤: 엔진 데이터 종류(장면 · 머티리얼 · 파이프라인 …)는 아직 `ResourceDataSchemaTest` 의 표에 있고, 카탈로그 밖(Engine 쪽) 열거자 이름 표는 `EnumNameTable` 로 모으지 않았다.
