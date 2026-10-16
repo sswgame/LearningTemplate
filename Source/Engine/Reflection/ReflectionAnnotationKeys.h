@@ -196,10 +196,14 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey meta{};
         /** @brief string.Meta — `CustomMeta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
         static constexpr AnnotationKey CustomMeta{};
-        /** @brief float.MinRange — `Min = 1.5`. */
+        /** @brief float.MinRange — `Min = 1.5`. 허용 범위. 숫자 하나, 또는 따옴표 안에 쉼표로 나눈 숫자 · 앞선 필드 이름 목록("-_halfSize, 0, -_halfSize" — 수학 타입은 원소마다). 고정 배치형(롤백 · 넷) 코덱은 이 범위를 와이어 범위로 쓴다 — 정수는 범위 비트 수, 범위 밖 값은 쓰기 실패 */
         static constexpr AnnotationKey Min{};
         /** @brief float.MaxRange — `Max = 1.5`. */
         static constexpr AnnotationKey Max{};
+        /** @brief float.Step — `Step = 1.5`. 고정 배치형 코덱의 양자화 간격(float32 만, Min · Max 필수). 적으면 그 필드는 손실 인코딩이다 */
+        static constexpr AnnotationKey Step{};
+        /** @brief float.MaxCount — `MaxCount = 1.5`. 문자열 · vector 의 최대 길이. 고정 배치형 코덱은 이것이 없는 가변 길이 필드를 인코딩하지 않는다 */
+        static constexpr AnnotationKey MaxCount{};
         /** @brief float.UIMinRange — `UIMin = 1.5`. 인스펙터 슬라이더 · 드래그 범위(허용 범위 Min/Max 와 따로). 둘 다 적으면 슬라이더로 그리고, 값은 여전히 Min/Max 로 막는다 */
         static constexpr AnnotationKey UIMin{};
         /** @brief float.UIMaxRange — `UIMax = 1.5`. */
@@ -295,6 +299,8 @@ namespace sw::reflect::attr
         "CustomMeta",
         "Min",
         "Max",
+        "Step",
+        "MaxCount",
         "UIMin",
         "UIMax",
         "Units",

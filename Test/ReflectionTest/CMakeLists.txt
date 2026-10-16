@@ -15,7 +15,9 @@ sw_addTestExecutable(ReflectionTest
 target_include_directories(ReflectionTest PRIVATE "${CMAKE_SOURCE_DIR}/Tools")
 
 sw_addReflectionStep(ReflectionTest
-	HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/TestSampleActor.h"
+	HEADERS
+		"${CMAKE_CURRENT_SOURCE_DIR}/TestSampleActor.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/TestFixedLayoutTypes.h"
 	INCLUDES
 		"${CMAKE_SOURCE_DIR}/Source"
 		"${CMAKE_SOURCE_DIR}/Test"

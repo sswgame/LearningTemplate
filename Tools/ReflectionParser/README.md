@@ -169,6 +169,9 @@ libclang 의 타입 정보에 없는 것은 소스 토큰에서 직접 읽습니
 헤더 `MeshComponent.h` 가 리플렉션 대상이면 다음 파일이 생깁니다.
 
 - `MeshComponent.gen.cpp` — 타입마다 `Registrar<T>`. 프로퍼티의 이름, 위치, 메타데이터를 담은 `TypeInfo` 를 만들어 등록합니다. `REFLECT_BODY()` 가 있으면 `StaticType()` 정의도 들어 있습니다.
+  고정 배치형(B) 코덱도 여기 붙습니다(`FixedCodecGenerator`). 적격 타입은 `Registrar<T>` 의 정적 멤버 `fixedWrite` · `fixedRead` · `fixedEquals` · `computeFixedSchemaHash` 와
+  `info._pFixedCodec` 등록 줄이 생기고, 적격이 아닌 타입은 이유만 등록합니다. 파일 끝의 `// FixedSchema:` 줄이 타입마다의 정규 문자열(또는 이유)입니다.
+- `FixedSchemas.gen.txt` — 타깃마다 하나. 그 `// FixedSchema:` 줄들을 모은 진단 파일로, 스키마 해시가 왜 바뀌었는지 빌드 둘을 비교할 때 봅니다. 빌드는 읽지 않습니다.
 - `MeshComponent.gen.h` — 그 헤더의 `ENUM( Flags )` 열거형을 전방 선언하고 `IsBitFlagEnum` 을 특수화합니다. 비트 플래그가 없으면 머리글만 있습니다.
 - `MeshComponent.gen.cpp.stamp` — 증분 판정용 스탬프입니다.
 - `FlagOps.gen.h` — 타깃마다 하나. 그 타깃의 `.gen.h` 를 모은 헤더로, 그 타깃의 모든 소스에 강제 include 됩니다.
@@ -208,7 +211,7 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 1. `PredefinedAnnotationField.xxx` 에 한 줄을 추가합니다. 값을 멤버에 그대로 넣으면 `REGISTER_ANNOTATION_FIELD( Property, ReadOnly, _bReadOnly, Runtime )` 형태이고,
    함수로 변환해 넣으면 `REGISTER_ANNOTATION_FIELD_FN( Property, AssetType, _assetType, applyAssetType, Runtime )` 형태입니다.
    마지막 열은 출력 위치입니다. `Editor` 는 생성 코드의 `#if !defined( SW_SHIPPING )` 안에, `Runtime` 은 그 밖에 쓰고, `Manual` 은 코드 생성기가 손으로 씁니다.
-2. `ParsedReflection.h` 의 DTO 에 멤버를 추가합니다. 멤버 타입이 값의 종류를 정합니다. `uint8` 비트필드는 bool, 그 밖에 `string`, `float32`, `FunctionNetRole` 이 있습니다.
+2. `ParsedReflection.h` 의 DTO 에 멤버를 추가합니다. 멤버 타입이 값의 종류를 정합니다. `uint8` 비트필드는 bool, 그 밖에 `string`, `float32`, `FunctionNetRole`, `ParsedRangeExpr`(숫자 또는 숫자 · 필드 이름 목록 — `Min` · `Max`)이 있습니다.
 3. 출력 위치가 `Editor` 나 `Runtime` 이면 엔진 메타데이터(`Source/Engine/Reflection/ReflectionTypes.h`)에 **같은 이름**의 멤버를 추가합니다.
 4. `Source/Core/Predefined/AnnotationMeta.txt` 에 철자를 추가합니다. 예: `flag.MyFlag = MyFlag, myFlag`.
 
@@ -246,6 +249,11 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 
 **생성기에게 메모리 레이아웃을 재게 하지 마세요.** 생성기의 clang 인자에는 `SW_DEBUG` 와 `_DEBUG` 가 없어서, Debug 빌드의 레이아웃을 모릅니다.
 그래서 비트필드의 위치는 실행 중에 `PropertyInfo::resolveBitField` 가 찾습니다. 범위는 위쪽과 아래쪽을 따로 기록합니다(`_bHasMinRange`, `_bHasMaxRange`).
+
+**`PROPERTY` 의 선언 순서는 고정 배치형 와이어 형식입니다.** B 코덱은 필드를 선언 순서로 태그 없이 씁니다. 순서 · 이름 · 범위 키를 바꾸면 스키마 해시가 바뀌어
+다른 빌드의 바이트는 `SchemaMismatch` 로 거절됩니다(조용히 잘못 읽지는 않습니다). `Min` · `Max` 는 B 의 와이어 범위이기도 해서, 정수는 범위 비트 수로 쓰고
+범위 밖 값은 쓰기가 실패합니다. 키를 잘못 적은 것(범위 필드가 뒤에 있음, 2^24 를 넘는 정수 범위, 찾지 못한 범위 이름, 가변 길이가 아닌 필드의 `MaxCount`)은
+헤더 경로 · 줄 · 필드와 함께 생성 오류입니다. 표 밖의 타입(포인터, `MaxCount` 없는 vector)은 오류가 아니라 코덱이 없을 뿐입니다. 명세는 [리플렉션 직렬화 형식 계획](../../docs/plans/ReflectionFormats.md)입니다.
 
 **모르는 토큰은 빌드를 멈춥니다.** `PROPERTY( Color )` 처럼 철자 목록에 없는 토큰이 있으면 그 헤더의 생성이 실패합니다.
 에디터 힌트는 `Meta = "Color"` 로 적고, 단위는 `Units = m` 으로 적습니다. 목록에 있는 단위를 `Meta = "Units=m"` 으로 적으면 철자 검사를 건너뛰게 되므로 거절합니다.

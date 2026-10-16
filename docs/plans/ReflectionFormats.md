@@ -479,9 +479,10 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 
 ### 8.4 구현 중 확인할 기술 질문
 
-- `AstVisitor` 가 `_listProperty` 를 선언 순서로 채우는가(단계 1 첫 확인).
-- AST 순회가 입력 헤더 밖 타입의 `PROPERTY` 어노테이션을 읽을 수 있는가(3.6, 위험 2).
-- 템플릿 파일 · 키 상수가 `ParserDefines.h` 에 있는가(4절).
+- 단계 1 에서 답한 것(2026-10-17): `_listProperty` 는 `clang_visitChildren` 순서, 곧 선언 순서입니다. 다른 헤더의 선언도 같은 번역 단위에 있어
+  열거자 · `ENUM( Count, Flags )` · `REFLECT()` 표시를 읽습니다(`AstVisitor.cpp` `collectFixedEnum` · `isReflectedRecord`). 다만 다른 헤더 타입의 `PROPERTY` 를
+  다시 모으지는 않고 실행 시간에 그 코덱을 찾아 의존을 확인합니다(`FixedLayout::findCodec`). 템플릿 · 키 상수는 `ParserDefines.h` 의 `templatekey` · `fixedlayout` 입니다.
+  `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 입니다. 명세와 다르게 정한 것은 [결정 기록](../09_Decisions.md) 5-4 에 있습니다.
 - 클라이언트가 `kVersionMismatch` 를 어느 UI 로 보이는가(단계 5-a).
 - 지금 `ComponentHandle` 필드가 A 에서 어떤 바이트로 직렬화되는가(단계 7-d).
 - `GameObject::getTypeInfo` 에 타입 캐시가 있는가, `REFLECT` 타입 가운데 다중 상속이 있는가(단계 0).
@@ -491,7 +492,6 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 단계 | 내용 | 건드릴 파일 | 겹침 주의 | 에이전트(모델) |
 |---|---|---|---|---|
 | 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록 | 없음(읽기) | 없음 | `scout`(haiku) |
-| 1 | 생성기 · `TypeInfo::_pFixedCodec` · `FixedLayout` 런타임 · 테스트 | 4절 목록, `Source/Tests` 새 파일 | `ReflectionTypes.h` 한 번 전체 재빌드 | `integrator`(opus) |
 | 2 | `GimmickCircuit` 을 B 로 | `GimmickCircuit.*` | 없음 | `worker`(sonnet) |
 | 3 | `FightingMatch` 롤백 B, 세이브 A | `FightingMatch.*` | 없음 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷, 넷 채널 등록 · 해시 섞기 | `MechArenaSnapshot.*`, `HorrorSnapshot.*`, `NetTypes.h`, 넷 채널 | 두 스냅샷 한 손 | `worker`(opus) |
@@ -504,13 +504,9 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 7-c | 매니저의 타입별 컴포넌트 목록 | `GameObjectManager.*`, `GameObjectStore.*` | 7-d 와 같은 파일, 7-c 먼저 | `integrator`(opus) |
 | 7-d | 타입 핸들 `TComponentHandle<T>` | `ComponentHandle.h`, `GameObjectManager.*`, 호출부, 인스펙터 | 7-c 뒤 같은 손 | `integrator`(opus) |
 
-단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다. 단계 1 이 끝나기 전에는 시작하지 않습니다.
-
-**단계 1 의 끝 조건.**
-
-- 테스트 전용 헤더의 타입 세 개(스칼라만, 컨테이너 · 열거형 포함, 중첩)가 6 절의 왕복 · 거부 · 적격 판정 · 잘림 · 쓰기 실패 테스트를 통과합니다. 테스트 헤더에는 `REFLECT` · `PROPERTY` 외의 선언이 없습니다.
-- 범위 필드가 뒤에 있는 타입, 2^24 를 넘는 정수 범위가 생성 오류로 멈추는지 생성기를 직접 실행해 확인합니다(`ReflectionParser.exe --dump`, `Tools/ReflectionParser/README.md`).
-- 기존 `.gen.cpp` 의 등록 코드 부분이 바뀌지 않았는지 생성 폴더를 단계 전후로 비교합니다. 덧붙은 것은 코덱 부분뿐이어야 합니다. 실행 파일 크기 변화를 결정 기록에 남깁니다.
+단계 1(생성기 · `TypeInfo::_pFixedCodec` · `FixedLayout` 런타임 · 테스트)은 끝났습니다(2026-10-17). 런타임은 `Source/Engine/Serialization/Fixed/FixedLayout.h`,
+생성기는 `Tools/ReflectionParser/FixedCodecGenerator.*`, 테스트는 `Test/ReflectionTest/TestFixedLayout.cpp` · `TestFixedLayoutTypes.h` 와
+`ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` 입니다. 단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다.
 
 **단계 7-c · 7-d 상세.**
 

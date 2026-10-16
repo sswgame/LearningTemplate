@@ -370,6 +370,7 @@ namespace sw
         , _destroyInstance{ nullptr }
         , _addComponent{ nullptr }
         , _pValidate{ nullptr }
+        , _pFixedCodec{ nullptr }
         , _name{}
         , _fullyQualifiedName{}
         , _parentFQN{}
@@ -451,6 +452,7 @@ namespace sw
         _destroyInstance    = other._destroyInstance;
         _addComponent       = other._addComponent;
         _pValidate          = other._pValidate;
+        _pFixedCodec        = other._pFixedCodec;
         _name               = other._name;
         _fullyQualifiedName = other._fullyQualifiedName;
         _parentFQN          = other._parentFQN;
@@ -478,6 +480,7 @@ namespace sw
         _destroyInstance    = other._destroyInstance;
         _addComponent       = other._addComponent;
         _pValidate          = other._pValidate;
+        _pFixedCodec        = other._pFixedCodec;
         _name               = other._name;
         _fullyQualifiedName = other._fullyQualifiedName;
         _parentFQN          = other._parentFQN;
@@ -1350,6 +1353,7 @@ namespace sw
         _bSaveGameCalculated        = SW_FALSE;
         _bValidatorCalculated       = SW_FALSE;
         _pValidate                  = nullptr;
+        _pFixedCodec                = nullptr;
     }
 
     bool TypeInfo::computeAncestorDisplay() const

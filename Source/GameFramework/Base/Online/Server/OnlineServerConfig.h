@@ -116,8 +116,11 @@ namespace sw
         /** @brief 클라이언트가 이 서버의 게임 포트에 붙을 주소입니다. 비우면 디렉터리에 이 서버를 등록하지 않습니다(서비스 전용 서버). */
         PROPERTY()
         string _publicAddress{};
-        /** @brief 서버 간 버스와 접속 상태의 서버 id 입니다. 서버마다 달라야 합니다(32 비트 안). */
-        PROPERTY( Min = 1, Max = 2000000000 )
+        /**
+         * @brief 서버 간 버스와 접속 상태의 서버 id 입니다. 서버마다 달라야 합니다. 양수이고 위 경계는 int32 가 정합니다.
+         * @details `Max` 는 적지 않는다 — `Min` · `Max` 는 float32 로 보관해 2^24 를 넘는 정수 경계가 정확하지 않다(고정 배치형 코덱이 거절한다).
+         */
+        PROPERTY( Min = 1 )
         int32 _serverID{ 1 };
         /** @brief 디렉터리에 알릴 수용 인원입니다. */
         PROPERTY( Min = 0, Max = 1000000 )

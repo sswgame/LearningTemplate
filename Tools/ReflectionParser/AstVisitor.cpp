@@ -569,6 +569,141 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
+            // C-2) 고정 배치형 코덱 — 필드 타입을 인코딩 표(`docs/plans/ReflectionFormats.md` 3.4)에 맞춰 분류한다
+            //
+            // 선언(clang 타입)에서 읽는다. 다른 헤더의 열거형 · 구조체도 이 번역 단위 안에 선언이 있으므로 같은 길로 읽는다.
+            // 표 밖의 타입은 오류가 아니다 — 그 타입의 코덱이 없을 뿐이고, 코덱이 필요한 등록 API 가 이유와 함께 멈춘다.
+            // ------------------------------------------------------------------------------
+            static constexpr int32 kMaxFixedTypeDepth = 4;
+
+            static shared_ptr<ParsedFixedType> makeIneligibleFixedType( shared_ptr<ParsedFixedType> type, const string_view reason )
+            {
+                type->_kind   = FixedValueKind::Ineligible;
+                type->_reason = string( reason );
+                return type;
+            }
+
+            static bool isFixedIntegerKind( const CXTypeKind kind ) noexcept
+            {
+                return kind == CXType_Char_S || kind == CXType_SChar || kind == CXType_Char_U || kind == CXType_UChar || kind == CXType_Short ||
+                       kind == CXType_UShort || kind == CXType_Int || kind == CXType_UInt || kind == CXType_Long || kind == CXType_ULong ||
+                       kind == CXType_LongLong || kind == CXType_ULongLong;
+            }
+
+            static bool isFixedPointerKind( const CXTypeKind kind ) noexcept
+            {
+                return kind == CXType_Pointer || kind == CXType_LValueReference || kind == CXType_RValueReference || kind == CXType_MemberPointer ||
+                       kind == CXType_BlockPointer || kind == CXType_ObjCObjectPointer;
+            }
+
+            /** @brief 문자 하나가 8 비트인 문자열(`sw::string` · `std::string`)인가입니다. 넓은 문자열은 표 밖입니다. */
+            static bool isFixedStringType( const string_view normalizedName, const string_view canonicalSpelling ) noexcept
+            {
+                return normalizedName == "string" || StringUtil::startsWith( canonicalSpelling, "sw::basic_string<char>" ) ||
+                       StringUtil::startsWith( canonicalSpelling, "std::basic_string<char," ) || canonicalSpelling == "std::basic_string<char>";
+            }
+
+            /** @brief 열거형 선언에서 열거자 · `ENUM( Count, Flags )` 를 읽습니다. 다른 헤더의 열거형이면 그 헤더의 수집이 애노테이션 오류를 알린다. */
+            static shared_ptr<ParsedFixedEnum> collectFixedEnum( const CXCursor declaration, const ParserSession& session )
+            {
+                shared_ptr<ParsedFixedEnum> result = make_shared<ParsedFixedEnum>();
+                result->_fullyQualifiedName        = makeFullyQualifiedName( declaration );
+                result->_underlyingTypeName =
+                    session._typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getCanonicalType( clang_getEnumDeclIntegerType( declaration ) ) ) ) );
+                clang_visitChildren( declaration, enumeratorCollectorVisitor, &result->_listEnumerator );
+
+                string spelling = extractSourceAnnotation( declaration, annotation::kEnum, session._config );
+                if ( spelling.empty() )
+                    spelling = findAnnotateAttr( declaration, annotation::kEnumPrefix );
+                if ( spelling.empty() )
+                    return result;
+                ParsedEnumInfo annotated;
+                vector<string> listUnknownToken; // 그 열거형의 헤더를 수집할 때 알린다 — 여기서 다시 알리지 않는다
+                sw::AnnotationApply::apply( spelling, annotated, session._annotationMeta, listUnknownToken );
+                result->_countEnumerator = string( ParserUtil::scopeLeaf( annotated._countEnumerator ) );
+                result->_bIsBitFlag      = annotated._bIsBitFlag;
+                return result;
+            }
+
+            /**
+             * @brief 필드(또는 원소) 타입 하나를 분류합니다. 컨테이너는 원소를 재귀로 분류합니다.
+             * @param type 사용자 별칭을 벗긴 선언 타입
+             */
+            static shared_ptr<ParsedFixedType> classifyFixedType( const CXType type, const ParserSession& session, const int32 depth )
+            {
+                shared_ptr<ParsedFixedType> result            = make_shared<ParsedFixedType>();
+                const CXType                canonical         = clang_getCanonicalType( type );
+                const string                canonicalSpelling = takeString( clang_getTypeSpelling( canonical ) );
+                result->_typeName                             = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( type ) ) );
+                if ( depth > kMaxFixedTypeDepth )
+                    return makeIneligibleFixedType( result, "containers nested too deeply" );
+
+                const CXTypeKind kind = canonical.kind;
+                if ( kind == CXType_Bool )
+                {
+                    result->_kind = FixedValueKind::Bool;
+                    return result;
+                }
+                if ( isFixedIntegerKind( kind ) )
+                {
+                    result->_kind = FixedValueKind::Integer;
+                    return result;
+                }
+                if ( kind == CXType_Float || kind == CXType_Double )
+                {
+                    result->_kind = ( kind == CXType_Float ) ? FixedValueKind::Float32 : FixedValueKind::Float64;
+                    return result;
+                }
+                if ( kind == CXType_Enum )
+                {
+                    result->_kind = FixedValueKind::Enum;
+                    result->_enum = collectFixedEnum( clang_getTypeDeclaration( canonical ), session );
+                    return result;
+                }
+                if ( kind == CXType_ConstantArray )
+                {
+                    result->_kind    = FixedValueKind::FixedArray;
+                    result->_element = classifyFixedType( clang_getArrayElementType( canonical ), session, depth + 1 );
+                    return result;
+                }
+                if ( isFixedPointerKind( kind ) )
+                    return makeIneligibleFixedType( result, "pointer or reference" );
+                if ( kind != CXType_Record )
+                    return makeIneligibleFixedType( result, "type '" + result->_typeName + "' is outside the fixed layout encoding table" );
+
+                if ( isFixedStringType( result->_typeName, canonicalSpelling ) )
+                {
+                    result->_kind = FixedValueKind::String;
+                    return result;
+                }
+                for ( const FixedMathTypeDesc& math : fixedlayout::kArrMathType )
+                {
+                    if ( result->_typeName == math._pName )
+                    {
+                        result->_kind = FixedValueKind::Math;
+                        return result;
+                    }
+                }
+                // `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 다(`SW_ENABLE_STL_CONTAINER` 면 `std::vector` 별칭).
+                const bool bVector = StringUtil::startsWith( canonicalSpelling, "std::vector<" ) || StringUtil::startsWith( canonicalSpelling, "sw::vector<" );
+                const bool bArray  = StringUtil::startsWith( canonicalSpelling, "std::array<" ) || StringUtil::startsWith( canonicalSpelling, "sw::array<" );
+                if ( bVector || bArray )
+                {
+                    result->_kind    = bVector ? FixedValueKind::Vector : FixedValueKind::FixedArray;
+                    result->_element = classifyFixedType( clang_Type_getTemplateArgumentAsType( canonical, 0 ), session, depth + 1 );
+                    return result;
+                }
+                const CXCursor declaration = clang_getTypeDeclaration( canonical );
+                if ( isReflectedRecord( declaration, session._config ) )
+                {
+                    result->_kind               = FixedValueKind::Reflect;
+                    result->_fullyQualifiedName = makeFullyQualifiedName( declaration );
+                    return result;
+                }
+                return makeIneligibleFixedType( result, "type '" + result->_typeName + "' is outside the fixed layout encoding table" );
+            }
+
+            // ------------------------------------------------------------------------------
             // D) REFLECT 타입의 멤버 — 베이스 · PROPERTY · FUNCTION · 생성자 · BODY 마커
             // ------------------------------------------------------------------------------
             /** @brief REFLECT 타입 하나의 멤버를 한 번의 자식 순회로 모으는 상태입니다. */
@@ -610,6 +745,20 @@ namespace sw
             }
 
             /**
+             * @brief 레코드 선언에 `REFLECT()` 가 붙었는가입니다. 다른 헤더의 선언도 봅니다.
+             * @details clang_getTypeDeclaration 이 반환하는 커서는 AnnotateAttr 자식 순회에서 빠지는 경우가 있어 정의 커서를 보고,
+             *          (다른 어노테이션 검사와 마찬가지로) 소스 텍스트 폴백까지 함께 검사한다.
+             */
+            static bool isReflectedRecord( const CXCursor declaration, const ParserConfig& config )
+            {
+                if ( clang_Cursor_isNull( declaration ) != 0 )
+                    return false;
+                const CXCursor definition   = clang_getCursorDefinition( declaration );
+                const CXCursor searchCursor = clang_Cursor_isNull( definition ) == 0 ? definition : declaration;
+                return hasAnnotation( searchCursor, annotation::kReflect, config );
+            }
+
+            /**
              * @brief 베이스 클래스 FQN을 부모로 기록합니다. ParsedTypeInfo 는 부모 하나만 담습니다 (단일 상속 체인).
              * @details PropertyInfo 의 오프셋 접근 · 캐스팅은 "리플렉션 부모는 항상 파생 객체의 byte offset 0 에 있다" 는
              *          전제로 동작합니다(비가상 첫 번째 베이스는 C++ ABI 가 offset 0 을 보장하지만, 두 번째 이후 베이스는 그렇지
@@ -625,20 +774,16 @@ namespace sw
                 const string   baseFQN  = ( clang_Cursor_isNull( baseDecl ) == 0 ) ? makeFullyQualifiedName( baseDecl ) : string{};
 
                 ++collector._baseCount;
+                collector._pType->_baseCount = collector._baseCount;
                 if ( collector._baseCount == 1 )
                 {
-                    collector._pType->_parentFQN = baseFQN;
+                    collector._pType->_parentFQN        = baseFQN;
+                    collector._pType->_bParentReflected = isReflectedRecord( baseDecl, collector._pSession->_config ) ? SW_TRUE : SW_FALSE;
                     return;
                 }
 
                 // 두 번째 이후 베이스다. REFLECT() 가 없으면 잃을 프로퍼티가 없으므로 조용히 넘어간다.
-                // clang_getTypeDeclaration 이 반환하는 커서는 AnnotateAttr 자식 순회에서 빠지는 경우가 있어
-                // (다른 어노테이션 검사와 마찬가지로) 소스 텍스트 폴백까지 함께 검사한다.
-                if ( clang_Cursor_isNull( baseDecl ) != 0 )
-                    return;
-                const CXCursor baseDefinition = clang_getCursorDefinition( baseDecl );
-                const CXCursor searchCursor   = clang_Cursor_isNull( baseDefinition ) == 0 ? baseDefinition : baseDecl;
-                if ( hasAnnotation( searchCursor, annotation::kReflect, collector._pSession->_config ) == false )
+                if ( isReflectedRecord( baseDecl, collector._pSession->_config ) == false )
                     return;
 
                 SW_LOG_ERROR( "ERROR: %# has multiple base classes; '%#' has REFLECT() but is not the first base. "
@@ -977,7 +1122,28 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
+                fillFixedLayoutFacts( cursor, fieldType, prop, session );
                 collector._pType->_listProperty.push_back( std::move( prop ) );
+            }
+
+            /**
+             * @brief 고정 배치형 코덱이 쓰는 선언 사실(줄 · 공개 여부 · 인코딩 분류)을 채웁니다.
+             * @details 비트필드는 1 비트 플래그만 받으므로(위에서 막았다) 정수 · bool 비트필드는 bool 로 씁니다.
+             */
+            static void fillFixedLayoutFacts( const CXCursor cursor, const CXType fieldType, ParsedPropertyInfo& prop, const ParserSession& session )
+            {
+                uint32 line = 0;
+                clang_getExpansionLocation( clang_getCursorLocation( cursor ), nullptr, &line, nullptr, nullptr );
+                prop._line      = line;
+                prop._bPublic   = clang_getCXXAccessSpecifier( cursor ) == CX_CXXPublic ? SW_TRUE : SW_FALSE;
+                prop._fixedType = classifyFixedType( fieldType, session, 0 );
+                if ( prop._bIsBitField == SW_FALSE )
+                    return;
+                const FixedValueKind kind = prop._fixedType->_kind;
+                if ( kind == FixedValueKind::Bool || kind == FixedValueKind::Integer )
+                    prop._fixedType->_kind = FixedValueKind::Bool;
+                else
+                    prop._fixedType = makeIneligibleFixedType( prop._fixedType, "bit field of a non-integer type" );
             }
 
             /**
@@ -1031,6 +1197,8 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
+                // 값이 객체 밖에 있어 고정 배치형 코덱이 필드처럼 읽고 쓸 수 없다.
+                prop._fixedType = makeIneligibleFixedType( make_shared<ParsedFixedType>(), "accessor property (the value lives outside the object)" );
                 collector._pType->_listProperty.push_back( std::move( prop ) );
             }
 

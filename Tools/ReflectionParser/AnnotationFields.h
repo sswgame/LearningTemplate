@@ -36,6 +36,7 @@ namespace sw
         String,  ///< string · 목록 ← string
         Float,   ///< float32 ← float
         NetRole, ///< FunctionNetRole ← netrole
+        Range,   ///< ParsedRangeExpr ← float — 숫자 하나, 또는 숫자 · 필드 이름(`-_halfSize`)을 쉼표로 나눈 목록
     };
 
     /** @brief 필드 한 줄입니다. 함수 포인터 셋은 `.xxx` 의 한 줄에서 만들어집니다. */

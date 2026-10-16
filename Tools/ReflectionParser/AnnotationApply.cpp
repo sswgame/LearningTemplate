@@ -4,6 +4,7 @@
 
 #include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/string_splitter.h"
 
 #include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/AnnotationMeta.h"
@@ -76,6 +77,43 @@ namespace sw
                 if ( value.empty() || value.front() == '"' )
                     return false;
                 return value.find_first_of( " \t" ) != string_view::npos;
+            }
+
+            /** @brief `-` 를 앞에 붙일 수 있는 C++ 식별자인가입니다(범위 식의 필드 이름 한 항). */
+            static bool isFieldNameTerm( string_view term ) noexcept
+            {
+                if ( term.empty() == false && term.front() == '-' )
+                    term.remove_prefix( 1 );
+                if ( term.empty() )
+                    return false;
+                for ( size_t charIndex = 0; charIndex < term.size(); ++charIndex )
+                {
+                    const utf8 character = term[charIndex];
+                    const bool bLetter   = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || character == '_';
+                    const bool bDigit    = '0' <= character && character <= '9';
+                    if ( bLetter == false && ( bDigit == false || charIndex == 0 ) )
+                        return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief `Min` · `Max` 값의 꼴입니다 — 쉼표로 나눈 항마다 숫자이거나 필드 이름(`-_halfSize`)이어야 합니다.
+             * @details `0.5f` 처럼 C++ 습관의 접미사가 붙은 숫자는 어느 쪽도 아니므로 거절한다(조용히 0 이 되지 않게).
+             */
+            static bool isRangeExpression( const string_view value )
+            {
+                if ( StringUtil::trim( value ).empty() )
+                    return false;
+                const string_splitter parts( value, { "," } );
+                for ( const string_view part : parts.getSplitList() )
+                {
+                    const string_view term = StringUtil::trim( part );
+                    float32           number{ 0.0f };
+                    if ( StringUtil::parseFloat( term, number ) == false && isFieldNameTerm( term ) == false )
+                        return false;
+                }
+                return true;
             }
         };
     } // namespace
@@ -200,6 +238,11 @@ namespace sw
             if ( pField->_value == AnnotationValue::Float && StringUtil::parseFloat( value, number ) == false )
             {
                 outListUnknownToken.push_back( token + "  (value is not a number)" );
+                continue;
+            }
+            if ( pField->_value == AnnotationValue::Range && AnnotationApplyInternal::isRangeExpression( value ) == false )
+            {
+                outListUnknownToken.push_back( token + "  (value is not a number or a list of numbers and field names)" );
                 continue;
             }
             pField->_pApply( target, value );
