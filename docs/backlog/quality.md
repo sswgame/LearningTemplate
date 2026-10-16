@@ -2,17 +2,13 @@
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 빌드 속도, 간헐 실패 관찰의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `B-5` [검증대기] **커버리지 안내 퍼저(`LoaderFuzzer`)의 첫 퍼징 결과를 본다**(2026-10-06 들임, 리눅스 전용). 구성 · 빌드 · 링크는 CI 에서 성공했다(실행 38477313606).
-  2026-10-15 실행 38639501002(`37d4e72`)에서 `Material` 대상이 크래시 또는 타임아웃을 냈다. 그때는 주석에 스택 · 입력이 없었고 아티팩트는 밖에서 403 이라
-  원인을 못 봤다(Windows 의 변이 퍼징 `SW_FUZZ_TARGET=Material SW_FUZZ_ITERATIONS=20000` 은 통과). 이제 실패 주석에 새니타이저 보고 · 스택 · `Base64:` 입력이 실리므로
-  다음 야간 실행 주석으로 재현해 고치고, 그 입력을 `seedMaterial` 씨앗에 더한다.
-
-- `B-6` [검증대기] **리눅스 RPATH 는 CI 결과로 확인한다**(사용자 결정 2026-10-10 — 로컬 WSL 빌드는 하지 않는다).
+- `B-5` [결함] **`LoaderFuzzer` 의 `Compression` 대상이 야간 퍼징에서 타임아웃을 낸다**(실행 38806424034, 2026-10-15, 아티팩트 `fuzz-findings`). 입력은 `SWCS` 헤더로 시작하는 81 바이트(Base64 `U1dDUwEBAQBDAAAlAAAAAAAAAAAAAAAAAABEgAAAAAAAAPU2VkZlYyBwbW9lc3NpYmxlIGNvbWhwcmVziJZAiV8gdGUgMHR4MTIzNDU2Nzg5`)이다.
+  스택은 `CompressionStream::decompressBuffer`(CompressionStream.cpp:171 `outBytes.clear()`)의 `vector<uint8>::clearInternal`(vector.h:279)이다 — 소멸자가 필요 없는 형식도 원소마다 도는 루프이고, 헤더의 해제 크기를 믿고 `resize` 한 만큼 커버리지 계측을 돌아 10 초를 넘은 것으로 **추정**한다(헤더 값은 아직 해석하지 않았다).
+  고칠 곳 후보 둘: ① `clearInternal` 이 `is_trivially_destructible` 이면 루프를 건너뛴다(`if constexpr`) ② 헤더의 해제 크기에 상한을 두고 그 위면 `resize` 전에 거절한다. 고친 뒤 그 입력을 `Compression` 씨앗에 더한다.
+  이전의 `Material` 종료 순서 결함(실행 38639501002)은 고쳐졌고 이 실행에서 통과했다. 이 항목은 `Source/Core` 를 고치는 작업자가 맡는다(2026-10-16 정리 작업자는 소유 파일 밖이라 손대지 않았다).
 
 - `B-7` [검증대기] **리눅스에서 아직 자동으로 안 도는 것**: X11 입력(좌표 · `XkbSetDetectableAutoRepeat` — WSLg 의 `DISPLAY=:0` 이 있으니 손으로 한 번), yad 파일 대화상자의 두 번째
-  `--file-filter`(man 으로만 확인), 리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지(2026-10-05 실행은 네 잡 모두 Configure 의 vcpkg 설치에서 졌다 — 다음 실행부터
-  `CiFailureReport.py configure` 가 포트 로그 끝을 주석으로 올린다). 2026-10-05 WSL-Debug 로 돌려 확인한 것(net-ci-rest 제안서 조사): POSIX `pipe2` · `close_range` ·
-  `launchDetached`, `alarm` 시한, dlsym 도장, `parseWriteTime`(int64 를 넘는 스탬프 시각), 리눅스 ThinLTO(`llvm-ar`) 링크.
+  `--file-filter`(man 으로만 확인). 사용자가 WSL 확인을 요청할 때만 한다(2026-10-10 결정).
 
 - `B-12` [검증대기] **통합 3(`8fce26aaf..6f3373831`, 81 커밋)의 검증이 반쯤 남았다.**
   - **할 일**: Debug `-L hostgpu`(`ctest -j 1`, 약 16 분), Shipping `-L nogpu` · `-L hostgpu`, 게임 넷(Shooter3D · StarSkirmish · HarvestValley · VoxelCraft)을 `-game=` 으로 실행,
@@ -42,22 +38,18 @@
 
 - `C-2` [정리] **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](../plans/BuildSpeed.md).** 남은 것은 12 단계(리플렉션 헤더 팬아웃 — 다음으로 큰 것), 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요), 6 단계(`Engine.cpp`)다. 범위 결정은 [결정 기록](../09_Decisions.md) 5-2.
 
-- `C-14` [정리] **CI 린트 잡이 처음으로 린트 전부를 리눅스에서 돈다**(`RunLintSuite`, 2026-10-06 — 그 전엔 `CheckCodeConventions` 하나). 첫 실행에서 지는 게이트가 있으면
-  그 게이트의 결함(경로 대소문자 · 줄끝 · 외부 도구)이다 — 고치고, 급하면 그 단계에 `continue-on-error` 를 한 번 두고 여기 적는다. 훅 상한
-  `kHookBudgetSeconds`(1: 8 · 10: 12 s)는 이 PC 기준 짐작이다 — 첫 `lint-timing` 아티팩트를 보고 러너 값의 1.5 배로 고친다.
+- `C-14` [검증대기] **CI 린트 잡의 `CheckDataDrivenStructure` 수정을 push 뒤 CI 로 확인한다.** 실행 38893227125 에서 리눅스 린트 잡이 이 게이트 하나로 졌다(낡은 예외 `SilentFallback:Scripts/setup/*` — 나머지 71 개는 통과, 훅 시간은 staged 1 개 5.81 s · 10 개 6.35 s 라 `kHookBudgetSeconds` 를 1.5 배인 9 · 10 s 로 맞췄다).
+  예외와 다 고친 기준선 다섯 줄을 지웠고 이 PC 에서 같은 출력으로 통과하는 것까지 봤다. 리눅스 러너에서 통과하는지는 push 뒤 첫 린트 잡으로 본다.
 
-- `C-15` [정리] **Scripts 정리의 남은 후보.** `CheckFunctionVocabulary` 의 손으로 짠 주석 가리기를 `common.CodeText` 로 바꾼다.
-  `dev/MoveEditorState.py`(옛 위치의 에디터 로컬 상태를 옮기는 PC 마다 한 번짜리 이동기)는 모든 PC 가 돌렸으면 지운다 — 추적되지 않는 파일을 옮기므로 돌렸는지 저장소에서는 알 수 없다.
-  커밋 훅 바닥을 더 내리는 안은 [결정 기록](../09_Decisions.md) 3절 "`CheckConfigReference` 를 파일 단위로" 에서 기각했다.
+- `C-15` [정리] **`dev/MoveEditorState.py`**(옛 위치의 에디터 로컬 상태를 옮기는 PC 마다 한 번짜리 이동기, 2026-10-13 들임)는 모든 PC 가 돌렸으면 지운다 — 추적되지 않는 파일을 옮기므로 돌렸는지 저장소에서는 알 수 없다.
+  이 PC 는 `--dry-run` 에 옮길 것이 없다(2026-10-16). 다른 PC 는 사용자가 확인한 뒤에 지운다.
 
 - `C-28` [정리] **테스트 틀 개편(2026-10-15)의 남은 것.** 틀 · 정책 · 확장 지점은 들어갔다(`Test/README.md`, 결정 기록 5-2 끝). 남은 것 —
   ① 벤치 스위트는 부하 스위트로 옮겼다(2026-10-15). 옮긴 뒤의 `CoreTest` · `EngineTest` `seconds` 와 `loadSeconds` 는 뺄셈 어림이라 다음 정책 재측정 때 실제 값으로 맞춘다.
   `NetSimDestructionMatrixTest` 는 손실 회선의 수렴(정확성) 테스트라 nogpu 에 남겼고, 호스트 벤치(`NetUDPBenchTest` · `GlyphBenchTest`)는 스위트 종류가 하나뿐이라 호스트로 남겼다.
   ② 구성 차이 건너뜀 중 `SW_TEST_REQUIRES_FEATURE` 로 아직 안 바꾼 것 — Shipping 의 에디터 · 설정 파일 · 개발 전역 변수 · 서버 팩 오디오 쪽(`TestAppScenario` · `TestConfigManager` · `TestNetClientServer` 등 열 곳 안팎).
   필요하면 `BuildFeature` 에 `Editor` · `DevGlobalVariables` 를 더한다.
-  ③ `seconds` · `caseCosts` 는 부하가 걸린 이 PC(실행 파일 다섯 동시)에서 잰 값이다. CI 리눅스 Debug 가 조각마다 제한 시간의 절반을 넘으면 그 러너에서 다시 잰다.
-  ④ `ctest --test-load`(테스트 프리셋 `execution.testLoad`)가 Windows 에서 효과가 있는지 확인하지 않았다 — 효과가 있으면 로컬 프리셋에 넣는다.
-  ⑤ JUnit XML 리스너(`ITestRunListener`) — CI 대시보드가 필요해지면.
+  ③ JUnit XML 리스너(`ITestRunListener`) — CI 대시보드가 필요해지면.
 
 - `C-33` [정리] **로그 게이트(2026-10-15)의 남은 것.** 시나리오 · 호스트 스위트는 선언하지 않은 Warning · Error 로 진다(결정 기록 5-2, `Source/Engine/Automation/README.md`). 남은 것 —
   - CPU 단위 테스트(nogpu)는 아직 Error 도 세지 않는다. 2026-10-15 한 번에 표식 없는 Warning · Error 가 약 1,500 줄(일부러 깨진 카탈로그 픽스처 · 외형 스키마 테스트 · 경로 오류 등).
@@ -74,7 +66,7 @@
   ③ **실행 중 자동 품질 조정**(언리얼 Dynamic Resolution · 유니티 Adaptive Performance)은 아직 없다. 지금은 `load scale` 이 밖에서 단계를 내려 예산을 지키는 첫 단계를 찾는다.
   첫 측정에서는 모든 프로필이 GT · RT · GPU p99 예산(16.7 ms)의 1/10 안팎이라 실행 중 조정의 이득이 보이지 않았다 — 무거운 게임 장면이 예산을 깨면 그때 렌더 스케일부터(`gv_renderScale`) 들인다.
   ④ 하드웨어 흉내는 코어 수 · 메모리 · 디스크 · 해상도 · 품질까지다. 클럭 · 캐시 · GPU 성능은 흉내 내지 않으니 LowEnd 의 프레임 시간이 Native 보다 짧게 나올 수 있다 — 실제 저사양 기기로 한 번 재서 흉내와의 차이를 적는다.
-  ⑤ 야간 잡(`load.yml`)이 아직 돌지 않았다. 리눅스 `CI-Release` 에서 OnlineLoadBot 이 서버 키트를 이름으로 올리는지(`dlopen` — Windows 만 확인), 러너 속도로 시간 예산이 지는지 본다.
+  ⑤ 야간 잡(`load.yml`) 첫 실행(38813564584)은 성공했다 — 리눅스에서 OnlineLoadBot 이 서버 키트를 올려 connect × Mid, replication × Mid · LowEnd 가 통과했다(오류율 0, tick p99 약 15 ms). 러너에는 기준선이 없어 알림만 나오므로 기준선 비교는 이 PC 에서만 본다.
 
 - `E-1` [관찰] **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](../08_Verification.md) 4절).
   고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),
