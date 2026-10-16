@@ -1,13 +1,70 @@
 /**
- * binding.hlsli — 리플렉션 구동 바인딩용 셰이더 헬퍼.
+ * binding.hlsli — 셰이더가 엔진 리소스(상수 · 버퍼 · 텍스처 · 샘플러)를 읽는 경로를 한곳에 모은 헤더.
  *
- * - 셰이더는 `#include "binding.hlsli"` 하나만 하고, `g_ViewProj` / `g_World` 등 PassCB 필드와
- *   `swSampleShadow(uv)` / `swSampleSource(uv)` 등 헬퍼를 바로 쓴다(접근 함수 인다이렉션 없음).
+ * 셰이더는 `#include "binding.hlsli"` 하나만 한다. 처음 읽는 사람은 아래 0 절(bindless 입문)만 읽어도 셰이더를 쓸 수 있다.
+ * 슬롯 번호(t# · s# · space)의 원본은 bindingslots.hlsli 다 — 이 파일은 그 번호로 리소스를 선언하고 읽는 함수를 준다.
+ *
+ * ==============================================================================
+ * 0) bindless 입문
+ * ==============================================================================
+ * 정신 모델
+ *   옛 방식은 드로우마다 텍스처를 슬롯(t0, t1 …)에 바인딩하고 셰이더가 그 슬롯을 읽는다. 드로우가 바뀌면 바인딩도 바뀐다.
+ *   bindless 는 텍스처를 전부 **크기 제한이 없는 배열 하나**에 넣어 두고, 셰이더가 **정수 인덱스**로 배열의 원소를 읽는다.
+ *   바인딩은 프레임 내내 그대로이고, "어느 텍스처인가" 는 상수(uint 하나)로 넘어온다. 그래서 드로우 사이에 바인딩을
+ *   교체하지 않고, 같은 PSO 의 드로우를 멀티 드로우 하나로 낼 수 있다.
+ *   이 엔진의 배열은 SM5.1 의 무제한 배열(`Texture2D g_SwBindlessTex2D[]`)이다 — SM6.6 의 힙 직접 인덱싱(ResourceDescriptorHeap)이 아니다.
+ *
+ * 이름 규약
+ *   PassCB 의 `uint g_<Name>Index` ↔ 엔진 리소스 `"<Name>"` (예: `g_SceneDepthIndex` ↔ "SceneDepth").
+ *   엔진(C++ ShaderParameterBinder)이 리플렉션으로 필드 이름을 읽어 그 리소스의 인덱스를 채운다. 리소스가 없으면 `kInvalidIndex`(0xFFFFFFFF)다.
+ *   머티리얼 텍스처는 머티리얼 구조체의 `uint …Map` 필드다(9 절). 이 이름들은 C++ 가 읽으므로 바꾸면 C++ 도 함께 바꿔야 한다.
+ *
+ * 최소 예 — 텍스처 하나 샘플
+ *   float4 color  = swSampleIndex( g_SourceColorIndex, uv );                                // 엔진 텍스처(패스 입력)
+ *   float4 albedo = swSampleMaterialTexture( SW_MATERIAL( materialIndex ).albedoMap, uv );  // 머티리얼 텍스처
+ *
+ * 셰이더 작성자는 이 함수만 쓴다 — 네 백엔드에서 뜻이 같고, 무효 인덱스를 스스로 거른다
+ *   엔진 텍스처  swSampleIndex · swSampleIndexWith(샘플러 고르기) · swSampleShadow · swSampleAlbedo · swSampleNormal · swSampleDepth ·
+ *                swSampleSource · swSampleDepthPoint · swSampleSourcePoint · swSampleDepthCross · swGatherDepthRed ·
+ *                swSampleAmbientOcclusion · swSampleShadowComparison
+ *   머티리얼     swSampleMaterialTexture · swSampleMaterialTexturePoint · swComputeMaterialTextureSize
+ *   컴퓨트 RW    swStoreRwTexture2D · swLoadRwTexture2D
+ *   `SW_NATIVE_BINDLESS` · `__spirv__` 분기와 `g_SwBindlessTex2D` · `g_SwSlot#` · `g_SwMaterialTex#` 는 **이 파일 안에서만** 쓴다.
+ *   셰이더 파일(.hlsl)에 이 분기를 들이지 않는다 — 새 읽기 방식이 필요하면 여기에 진입 함수를 더한다.
+ *
+ * 백엔드 차이
+ *   ┌────────┬──────────────────┬─────────────────────────────────────────┬──────────────────────────────────────────┐
+ *   │ 백엔드 │ 방식             │ 텍스처가 있는 곳                        │ 인덱스의 뜻                              │
+ *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
+ *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
+ *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 텍스처 t0..t3 · 머티리얼 t5..t8    │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 0..3 · 5..8 (결합 샘플러)   │ 머티리얼: 서수 0..3 (DX11 과 같다)       │
+ *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
+ *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
+ *   에뮬 백엔드는 엔진이 아는 텍스처(PassCB 의 g_*Index)만 찾을 수 있다 — 모르는 인덱스는 슬롯 0 을 읽는다.
+ *
+ * 자주 하는 실수
+ *   - 무효 인덱스로 배열을 읽는다. `kInvalidIndex` 로 원소를 읽으면 DX12 는 페이지 폴트(DEVICE_HUNG), Vulkan 은 DEVICE_LOST 다.
+ *     진입 함수는 무효 인덱스를 먼저 걸러 정해진 값(색 (0,0,0,1) · 그림자 1 · AO 1 · 머티리얼 흰색)을 돌려준다.
+ *   - `if ( index != kInvalidIndex )` 분기만 믿는다. 드라이버 컴파일러는 서술자 읽기를 분기 앞으로 끌어올릴 수 있어(부작용이 없다고 본다)
+ *     분기 안의 읽기도 무효 인덱스로 실행될 수 있다. 그래서 첨자를 배열 크기로 **마스크**한다(swBindlessTextureSlot, 11 절).
+ *     배열을 직접 인덱싱하는 함수를 새로 쓰면 반드시 이 마스크를 거친다.
+ *   - 픽셀마다 다를 수 있는 인덱스(머티리얼 텍스처)에 `NonUniformResourceIndex` 를 빼먹는다 — 결과가 정의되지 않는다.
+ *   - 에뮬 백엔드에 엔진 텍스처를 더하면서 슬롯 대응(11-2 절의 swSampleIndex · C++ commitBindlessTextureBindings)을 함께 고치지 않는다.
+ *
+ * ==============================================================================
+ * 절 목차
+ * ==============================================================================
+ *    1) PassCB                 2) 드로우별 루트 상수      3) GPUScene 인스턴스 버퍼   4) 씬 배치 테이블
+ *    5) 모프 정점 풀           6) 정점 애니메이션(VAT)    7) 위치 · 노멀 변환        8) 인스턴스 읽기
+ *    9) 머티리얼 데이터       10) 샘플러 세트            11) 텍스처 읽기(11-1 네이티브 bindless · 11-2 슬롯 에뮬 · 11-3 공통 진입 함수)
+ *   12) 픽셀 출력
+ *
+ * 그 밖의 약속
+ * - 셰이더는 `g_ViewProj` / `g_World` 등 PassCB 필드와 진입 함수를 바로 쓴다(접근 함수 인다이렉션 없음).
  * - 엔진(C++ ShaderParameterBinder)이 ShaderReflection 으로 PassCB 멤버 이름을 읽어 값을 채운다.
  *   따라서 이 파일의 PassCB 를 고치면 C++ 는 자동으로 따라온다 (미러 없음).
- * - 텍스처는 이름 규약: `uint g_<Name>Index` (PassCB) ↔ 엔진 리소스 `"<Name>"`.
- *   네이티브 bindless(DX12 / Vulkan): 인덱스로 무제한 텍스처 배열을 직접 샘플 (SM6.6 힙 인덱싱 아님).
- *   에뮬(DX11 / OpenGL): 엔진이 리플렉션 t# 슬롯에 SRV 를 바인딩, 값 비교로 멀티플렉싱.
  * - GPUScene(언리얼 방식): 드로우별 데이터는 바인딩이 아니라 버퍼에서 읽는다.
  *     VS: `SwInstanceData instance = swLoadInstance( input.instanceSlot )` → instance.world / instance.materialIndex
  *     PS: `SW_MATERIAL( materialIndex ).color`  — VS 가 materialIndex 를 nointerpolation 으로 넘긴다.
@@ -72,13 +129,13 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 };
 
 // ------------------------------------------------------------------------------
-// 1-0) 드로우별 루트/푸시 상수 — **배치마다 달라지는 값만** 여기 둔다.
-//      PassCB 는 패스당 한 번 올리는 버퍼라, 배치마다 바뀌는 값을 거기 넣으면 한 패스의 드로우들이 서로를
-//      덮어써 전부 마지막 값을 읽는다(GPU 는 제출 뒤에 읽는다). 언리얼이 FMeshDrawCommand 의 느슨한
-//      파라미터를 드로우별로 싣는 자리와 같다. DX12 루트 상수 / Vulkan 푸시 상수 / DX11·GL 은 b2 에뮬.
+// 2) 드로우별 루트 상수 — **배치마다 달라지는 값만** 여기 둔다.
+//    PassCB 는 패스당 한 번 올리는 버퍼라, 배치마다 바뀌는 값을 거기 넣으면 한 패스의 드로우들이 서로를
+//    덮어써 전부 마지막 값을 읽는다(GPU 는 제출 뒤에 읽는다). 언리얼이 FMeshDrawCommand 의 느슨한
+//    파라미터를 드로우별로 싣는 자리와 같다. DX12 루트 상수 / Vulkan 푸시 상수 / DX11·GL 은 b2 에뮬.
+//    컴퓨트 셰이더는 자기 루트 상수 블록을 직접 선언하므로(예: computetexturewrite.hlsl) 여기서는 빼 둔다 —
+//    한 셰이더에 블록이 둘이면 재정의다. 자기 블록을 쓰는 그래픽스 셰이더(canvas.hlsl)는 include 앞에 SW_OWN_ROOT_CONSTANTS 를 정의한다.
 // ------------------------------------------------------------------------------
-//      컴퓨트 셰이더는 자기 루트 상수 블록을 직접 선언하므로(예: computetexturewrite.hlsl) 여기서는 빼 둔다 —
-//      한 셰이더에 블록이 둘이면 재정의다. 자기 블록을 쓰는 그래픽스 셰이더(canvas.hlsl)는 include 앞에 SW_OWN_ROOT_CONSTANTS 를 정의한다.
 #if !defined( SW_STAGE_COMPUTE ) && !defined( SW_OWN_ROOT_CONSTANTS )
 SW_ROOT_CONSTANTS_BEGIN
 	// 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
@@ -94,14 +151,14 @@ SW_ROOT_CONSTANTS_END
 #endif
 
 // ------------------------------------------------------------------------------
-// 1-1) GPUScene 인스턴스 (per-instance world/material/스프라이트 프레임 · 색). 원소 정의는 instancedata.hlsli 하나다(컴퓨트도 그것을 쓴다).
-//      네 백엔드 공통 — 엔진이 리플렉션 슬롯 t4 에 인스턴스 버퍼를 건다 (레지스트리 이름 "SwInstances").
+// 3) GPUScene 인스턴스 버퍼 (per-instance world/material/스프라이트 프레임 · 색). 원소 정의는 instancedata.hlsli 하나다(컴퓨트도 그것을 쓴다).
+//    네 백엔드 공통 — 엔진이 리플렉션 슬롯 t4 에 인스턴스 버퍼를 바인딩한다 (레지스트리 이름 "SwInstances"). 읽는 함수는 8 절.
 // ------------------------------------------------------------------------------
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
-// 1-1a) 씬 배치 표 — C++ GPUBatchInfo · gpucull.hlsl GPUBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트).
-//       배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(swLoadInstance)의 meshBatchIndex 로 자기 배치를 찾는다.
+// 4) 씬 배치 테이블 — C++ GPUBatchInfo · gpucull.hlsl GPUBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트).
+//    배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(swLoadInstance)의 meshBatchIndex 로 자기 배치를 찾는다.
 // ------------------------------------------------------------------------------
 struct SwBatchData
 {
@@ -139,9 +196,9 @@ SwBatchData swLoadBatch( uint batchIndex )
 }
 
 // ------------------------------------------------------------------------------
-// 1-2) GPU 가 변형한 정점 (메시 모프). C++ `GPUMorphVertex` 와 바이트 배치 일치(float4 둘).
-//      메시마다 버퍼를 따로 두지 않고 **풀 하나에 구간을 나눠 쓴다** — 언리얼 GPU Skin Cache 가 캐시
-//      버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
+// 5) 모프 정점 풀 — GPU 가 변형한 정점. C++ `GPUMorphVertex` 와 바이트 배치 일치(float4 둘).
+//    메시마다 버퍼를 따로 두지 않고 **풀 하나에 구간을 나눠 쓴다** — 언리얼 GPU Skin Cache 가 캐시
+//    버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
 // ------------------------------------------------------------------------------
 // **구조체가 아니라 평면 float4 배열이다.** 정점 하나가 원소 둘 — [2i] 위치, [2i+1] 노멀(w 는 안 쓴다).
 // 주의: `struct { float4 pos; float4 nrm; }` 로 두면 레이아웃이 네 백엔드에서 같아도(ArrayStride 32 · 오프셋 0/16)
@@ -207,10 +264,10 @@ float3 swLoadMorphPosition( uint batchIndex, uint vertexId, float3 restPosition 
 }
 
 // ------------------------------------------------------------------------------
-// 1-3) 정점 애니메이션(VAT) — 클립 하나를 미리 스키닝해 구운 프레임 × 정점 표(C++ `MeshVertexAnimation`, `GPUVertexAnimationPool`).
-//      먼 군중은 CPU 포즈 · GPU 스키닝 없이 이 표를 **인스턴스마다 다른 시각**(g_SwVertexAnimationTime + instance.vertexAnimationPhase)으로 읽는다.
-//      원소 하나 = float4(위치 xyz, 노멀을 정수로 담은 w). 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 · 반복) 하나 뒤에 프레임 우선 순서다.
-//      텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 길).
+// 6) 정점 애니메이션(VAT) — 클립 하나를 미리 스키닝해 베이크한 프레임 × 정점 테이블(C++ `MeshVertexAnimation`, `GPUVertexAnimationPool`).
+//    먼 군중은 CPU 포즈 · GPU 스키닝 없이 이 테이블을 **인스턴스마다 다른 시각**(g_SwVertexAnimationTime + instance.vertexAnimationPhase)으로 읽는다.
+//    원소 하나 = float4(위치 xyz, 노멀을 정수로 담은 w). 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 · 반복) 하나 뒤에 프레임 우선 순서다.
+//    텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 경로).
 // ------------------------------------------------------------------------------
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
 // 노멀 한 칸의 해상도(팔면체 12 + 12 비트)는 SW_VERTEX_ANIMATION_NORMAL_STEPS(bindingslots.hlsli 10 절 — C++ packNormal 과 같은 정의).
@@ -299,6 +356,9 @@ float3 swLoadAnimatedPosition( SwInstanceData instance, uint vertexId, float3 re
 	return bAnimated ? swComputeVertexAnimationPosition( firstElement, secondElement, alpha ) : morphed;
 }
 
+// ------------------------------------------------------------------------------
+// 7) 위치 · 노멀 변환 — 정점 위치를 만드는 모든 지오메트리 패스가 같은 식을 쓰게 한곳에 둔다.
+// ------------------------------------------------------------------------------
 /**
  * @brief 로컬 위치를 월드로 옮긴다. 정점 위치를 만드는 **모든** 지오메트리 패스가 이것과 swComputeClipPosition 를 쓴다.
  * @details 깊이 프리패스와 기본 패스가 같은 정점에서 **비트까지 같은 깊이**를 내야 기본 패스의 LessEqual 이 통과한다(언리얼은 depth-only 패스와
@@ -341,7 +401,10 @@ float3 swComputeWorldNormal( float3 localNormal, float4x4 world )
 	return normalize( worldNormal * handedness );
 }
 
-// GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 안 걸린다.
+// ------------------------------------------------------------------------------
+// 8) 인스턴스 읽기 — 인스턴스 슬롯을 실제 인스턴스 번호로 바꾸고(GPU 컬링의 가시 목록) 3 절의 버퍼에서 읽는다.
+// ------------------------------------------------------------------------------
+// GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 바인딩되지 않는다.
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIDs, SW_SLOT_VISIBLE_INSTANCE_SRV );
 
 /**
@@ -395,7 +458,7 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 }
 
 // ------------------------------------------------------------------------------
-// 1-2) 머티리얼 데이터 — 셰이더가 구조체를 선언하면 엔진이 그 타입의 머티리얼들을 StructuredBuffer 원소로 쌓는다.
+// 9) 머티리얼 데이터 — 셰이더가 구조체를 선언하면 엔진이 그 타입의 머티리얼들을 StructuredBuffer 원소로 쌓는다.
 //      SW_MATERIAL_BEGIN { float4 color; uint albedoMap; } SW_MATERIAL_END
 //      ... SW_MATERIAL( instance.materialIndex ).color
 //      리플렉션 이름 g_SwMaterials(t9) ↔ 레지스트리 "SwMaterials" (배치마다 그 셰이더 타입의 버퍼를 등록한다).
@@ -420,10 +483,10 @@ uint swClampMaterialIndex( uint index )
 #define SW_MATERIAL( index ) g_SwMaterials[swClampMaterialIndex( index )]
 
 // ------------------------------------------------------------------------------
-// 2) 샘플러 세트 — 네이티브 bindless 백엔드(DX12/Vulkan)만 쓴다. DX11/GL 은 슬롯 결합 샘플러(g_SwSlot#Sampler, s#)뿐이라
-//    여기서 s0 를 또 선언하면 같은 레지스터를 두 샘플러가 나눠 갖는다(FXC 는 안 쓰면 조용히 버려 드러나지 않았다).
-//    DX12 는 루트 시그니처 정적 샘플러 s0..s7, Vulkan 은 set SW_VK_TEXTURE_SET 의 immutable sampler 배열(binding 1) + 비교 샘플러(binding 2).
-//    번호는 bindingslots.hlsli 4 의 SW_SAMPLER_* 다 — 언리얼의 정적 샘플러 세트와 같은 자리.
+// 10) 샘플러 세트 — 네이티브 bindless 백엔드(DX12 · Vulkan)만 여기서 선언한다. 에뮬 백엔드(DX11 · OpenGL)는 슬롯 결합 샘플러(g_SwSlot#Sampler, s#)라
+//     여기서 s0 를 또 선언하면 같은 레지스터를 두 샘플러가 나눠 갖는다(FXC 는 안 쓰면 조용히 버려 드러나지 않았다). DX11 의 정적 세트는 11-2 절.
+//     DX12 는 루트 시그니처 정적 샘플러 s0..s7, Vulkan 은 set SW_VK_TEXTURE_SET 의 immutable sampler 배열(binding 1) + 비교 샘플러(binding 2).
+//     번호는 bindingslots.hlsli 4 절의 SW_SAMPLER_* 다 — 언리얼의 정적 샘플러 세트에 해당한다.
 // ------------------------------------------------------------------------------
 #if defined( SW_NATIVE_BINDLESS )
 #if defined( __spirv__ )
@@ -446,9 +509,15 @@ SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SH
 #endif
 
 // ------------------------------------------------------------------------------
-// 3) 텍스처 샘플 — 이름 기반. 컴퓨트 RW 텍스처는 swStoreRwTexture2D / swLoadRwTexture2D (컴퓨트 스테이지에서만 선언된다).
+// 11) 텍스처 읽기 — 백엔드 분기는 이 절 안에서 끝난다. 셰이더는 0 절의 진입 함수만 부른다.
+//     11-1 네이티브 bindless(DX12 · Vulkan): 무제한 배열 + 인덱스 마스크.
+//     11-2 슬롯 에뮬(DX11 · OpenGL): 고정 슬롯 + PassCB 인덱스 값 비교.
+//     11-3 공통 진입 함수: 머티리얼 텍스처와 이름 붙은 엔진 텍스처(swSampleShadow 등) — 두 경로 위에 하나로 선다.
+//     컴퓨트 RW 텍스처(swStoreRwTexture2D / swLoadRwTexture2D)는 컴퓨트 스테이지에서만 선언된다.
 // ------------------------------------------------------------------------------
 #if defined( SW_NATIVE_BINDLESS )
+
+// ---- 11-1) 네이티브 bindless (DX12 · Vulkan) ----------------------------------
 
 // 무제한 텍스처 배열 — DX12 t0 space1 (루트 시그니처 테이블), Vulkan set 1 binding 0. SM5.1 무제한 배열이지 6.6 힙 인덱싱이 아니다.
 #if defined( __spirv__ )
@@ -554,8 +623,9 @@ float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
 }
 #endif // SW_STAGE_COMPUTE
 
-#else
+#else // !SW_NATIVE_BINDLESS
 
+// ---- 11-2) 슬롯 에뮬 (DX11 · OpenGL) ------------------------------------------
 #if !defined( SW_STAGE_COMPUTE )
 // 에뮬 백엔드의 샘플 슬롯은 그래픽스 스테이지 전용이다 — GL 은 텍스처 유닛과 이미지 유닛이 SPIR-V 에서 같은 binding 번호를
 // 쓰므로 컴퓨트에서 둘을 함께 선언하면 DXC 가 RW 텍스처를 결합 샘플러와 합쳐 버린다(엔진도 컴퓨트에는 t0..t3 을 걸지 않는다).
@@ -715,8 +785,9 @@ float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
 }
 #endif // SW_STAGE_COMPUTE
 
-#endif
+#endif // SW_NATIVE_BINDLESS
 
+// ---- 11-3) 공통 진입 함수 (네 백엔드) -----------------------------------------
 #if defined( SW_NATIVE_BINDLESS ) || !defined( SW_STAGE_COMPUTE )
 /**
  * @brief 머티리얼이 준 텍스처 인덱스를 샘플링합니다 (머티리얼 데이터의 uint 슬롯).
@@ -817,12 +888,12 @@ float swSampleAmbientOcclusion( float2 uv )
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE
 
 // ------------------------------------------------------------------------------
-// 4) 픽셀 출력 — **같은 머티리얼 셰이더가 포워드와 G버퍼 양쪽에 쓰인다.**
-//    머티리얼이 셰이더 경로를 정하므로(usesMaterialShader) G버퍼 패스도 머티리얼의 .hlsl 로 그린다.
-//    그 셰이더가 SV_TARGET 하나만 내면 **G버퍼의 노멀 타깃이 클리어 값 그대로 남아**, 디퍼드 조명이 모든 픽셀을
-//    같은 노멀로 계산한다(오류도 경고도 없이).
-//    언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 자리다. 여기서는 패스가 define 을
-//    얹고(SW_PASS_GBUFFER), 출력 서명이 그 define 을 따라간다.
+// 12) 픽셀 출력 — **같은 머티리얼 셰이더가 포워드와 G버퍼 양쪽에 쓰인다.**
+//     머티리얼이 셰이더 경로를 정하므로(usesMaterialShader) G버퍼 패스도 머티리얼의 .hlsl 로 그린다.
+//     그 셰이더가 SV_TARGET 하나만 내면 **G버퍼의 노멀 타깃이 클리어 값 그대로 남아**, 디퍼드 조명이 모든 픽셀을
+//     같은 노멀로 계산한다(오류도 경고도 없이).
+//     언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 것에 해당한다. 여기서는 패스가 define 을
+//     추가하고(SW_PASS_GBUFFER), 출력 서명이 그 define 을 따라간다.
 // ------------------------------------------------------------------------------
 // 양쪽 다 **구조체**다. 포워드 쪽을 `float4` 로 두면 `SW_SURFACE_OUTPUT PSMain(...)` 에 반환
 // 시맨틱이 사라져 DXC 가 "Semantic must be defined for all outputs" 로 거절한다 — 그러면 머티리얼

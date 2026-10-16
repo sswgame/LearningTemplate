@@ -7,9 +7,9 @@ SWCOOK 4
 30ca18ffc0224bf4 engine:postbloom.hlsli
 432da0d9b59901be engine:meshmodifier.hlsli
 65613229fe8a27cd waterwaveprobe.hlsl
-8e21d601cc7aff7d engine:bindingslots.hlsli
+6d04bacd67fa6630 engine:binding.hlsli
+943d1594eb0ccd8c engine:bindingslots.hlsli
 980c18c4c174d3fb engine:postoutline.hlsli
-9a10f5ccb89bc4e0 engine:binding.hlsli
 9ee00d8a59ae021e engine:common.hlsli
 a16db7b2113a3424 engine:colorvision.hlsli
 b536aa3df9bce513 @toolchain
