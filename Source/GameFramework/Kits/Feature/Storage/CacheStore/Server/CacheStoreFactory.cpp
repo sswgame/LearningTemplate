@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Network/Transport/PlatformSocketUtil.h"
 
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
@@ -129,13 +130,9 @@ namespace sw
             outError = "cache endpoint needs host:port";
             return false;
         }
-        const string_view hostText = outEndpoint._host == "localhost" ? string_view{ "127.0.0.1" } : string_view{ outEndpoint._host };
-        string            addressText( hostText );
-        if ( colon != string_view::npos )
-            addressText.append( address.data() + colon, address.size() - colon );
-        if ( NetAddress::parse( addressText, kDefaultRespPort, outEndpoint._address ) == false )
+        if ( PlatformSocketUtil::resolveAddress( address, kDefaultRespPort, outEndpoint._address ) == false )
         {
-            outError = "cache endpoint '" + string( address ) + "' is not an IPv4 host:port (or localhost)";
+            outError = "cache endpoint '" + string( address ) + "' is not a host:port that resolves to IPv4";
             return false;
         }
         if ( query == string_view::npos )
@@ -155,12 +152,12 @@ namespace sw
             if ( CacheStoreFactoryInternal::applyQueryArgument( argument.substr( 0, equals ), argument.substr( equals + 1 ), outEndpoint, outError ) == false )
                 return false;
         }
+        return true;
+    }
+} // namespace sw
 
 namespace sw
 {
     // 모듈이 로드되면 서버 조립의 캐시 만들기를 이 팩토리에 묶고, 언로드되면 푼다.
     const OnlineStoreDriverBinding s_ephemeralStoreDriverBinding{ &CacheStoreFactory::createEphemeralStore, nullptr };
-} // namespace sw
-        return true;
-    }
 } // namespace sw

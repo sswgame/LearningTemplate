@@ -2,6 +2,8 @@
 
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 
+#include "Core/Container/StringUtil.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include <WinSock2.h>
     #include <WS2tcpip.h>
@@ -9,6 +11,7 @@
     #include <arpa/inet.h>
     #include <cerrno>
     #include <fcntl.h>
+    #include <netdb.h>
     #include <netinet/in.h>
     #include <poll.h>
     #include <sys/socket.h>
@@ -154,5 +157,31 @@ namespace sw
         pollEntry.events = POLLIN;
         return poll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLIN | POLLERR | POLLHUP ) ) != 0;
 #endif
+    }
+
+    bool PlatformSocketUtil::resolveAddress( string_view hostAndPort, uint16 defaultPort, NetAddress& outAddress )
+    {
+        if ( NetAddress::parse( hostAndPort, defaultPort, outAddress ) )
+            return true;
+        const size_t      colon = hostAndPort.rfind( ':' );
+        const string_view host  = hostAndPort.substr( 0, colon );
+        int32             port  = defaultPort;
+        if ( host.empty() )
+            return false;
+        const bool bBadPort = colon != string_view::npos && ( StringUtil::parseInt( hostAndPort.substr( colon + 1 ), port ) == false || port <= 0 || port > 65535 );
+        if ( bBadPort || initialize() == false )
+            return false;
+        addrinfo hints{};
+        hints.ai_family       = AF_INET;
+        hints.ai_socktype     = SOCK_STREAM; // 주소 하나에 소켓 종류마다 줄이 생기지 않게
+        addrinfo*    pResult  = nullptr;
+        const string hostText = string( host );
+        if ( getaddrinfo( hostText.c_str(), nullptr, &hints, &pResult ) != 0 || pResult == nullptr )
+            return false;
+        const sockaddr_in* pNative = reinterpret_cast<const sockaddr_in*>( pResult->ai_addr );
+        outAddress._ipv4           = ntohl( pNative->sin_addr.s_addr );
+        outAddress._port           = static_cast<uint16>( port );
+        freeaddrinfo( pResult );
+        return true;
     }
 } // namespace sw

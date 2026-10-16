@@ -39,5 +39,12 @@ namespace sw
          *        받을 것이 있으면 true 입니다. 기다리는 동안 소켓을 닫으면 안 된다(기다리는 스레드를 먼저 멈춘다).
          */
         static bool waitReadable( uint64 socketHandle, int32 timeoutMilli );
+        /**
+         * @brief "호스트:포트" 를 IPv4 주소로 풉니다. 호스트가 점 넷 숫자면 그대로 읽고, 이름이면 운영체제 해석기(`getaddrinfo`, A 레코드 첫 값)에 묻습니다.
+         *        포트가 없으면 @p defaultPort 입니다. 풀지 못하면 false 이며 다른 주소로 대신하지 않습니다.
+         * @details 막는 호출입니다 — 이름 해석은 DNS 왕복(수 ms ~ 해석기 시한 몇 초)이라 기동이나 전용 워커에서만 부르고 틱 · 요청 경로에서 부르지 않습니다.
+         *          언리얼 `ISocketSubsystem::GetAddressInfo` 의 막는 판과 같은 자리이고, `localhost` 같은 이름도 hosts 파일을 거쳐 이 길로 풉니다.
+         */
+        [[nodiscard]] static bool resolveAddress( string_view hostAndPort, uint16 defaultPort, NetAddress& outAddress );
     };
 } // namespace sw
