@@ -14,6 +14,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -1040,5 +1041,110 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
     SW_EXPECT_TRUE( workerChunkCount.load() > 0 );
     SW_EXPECT_EQUAL( 0, stackWrongTagCount.load() );
 
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] `runParallelByCost` 는 가벼운 일도 무거운 일도 구간을 빠짐없이 한 번씩 덮는다
+ * @details 앞 항목을 호출 스레드가 1, 2, 4, … 개씩 직접 돌고 나머지만 나누므로, 직렬로 끝나는 길과 나뉘는 길 모두 덮개가 정확해야 한다.
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelByCostCoversEveryIndexOnLightAndHeavyBodies )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    for ( const uint32 count : { 1u, 2u, 7u, 100u, 4096u, 100000u } )
+    {
+        for ( const bool bHeavy : { false, true } )
+        {
+            const uint32                  heavyCount = bHeavy ? sw::MathUtil::min( count, 256u ) : count;
+            sw::vector<sw::atomic<int32>> listHit( heavyCount );
+            sw::atomic<int32>*            pHit = listHit.data();
+            manager.runParallelByCost( heavyCount, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pHit, bHeavy]( uint32 start, uint32 end )
+            {
+                for ( uint32 index = start; index < end; ++index )
+                {
+                    pHit[index].fetch_add( 1, std::memory_order_relaxed );
+                    if ( bHeavy )
+                    {
+                        const sw::Stopwatch spin;
+                        while ( spin.getElapsedMicroseconds() < 20 )
+                        {
+                        }
+                    }
+                }
+            } ) );
+            uint32 wrongCount = 0;
+            for ( uint32 index = 0; index < heavyCount; ++index )
+            {
+                if ( pHit[index].load() != 1 )
+                    ++wrongCount;
+            }
+            SW_EXPECT_EQUAL( 0u, wrongCount );
+        }
+    }
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] `runParallelByCost`: 무거운 항목은 첫 항목에서 바로 나뉘어 여러 스레드가 돈다
+ * @details 항목 64 개가 각각 100 us 면 직렬로 6.4 ms 다. 고정 개수만큼 먼저 직렬로 돌았다면(앞 16 개) 나뉘지 못한다. 스케줄러가 한 번에 못 깨울 수 있어 다섯 번까지 본다.
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsHeavyItemsAcrossThreads )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    uint32 maxThreadCount = 0;
+    for ( uint32 attempt = 0; attempt < 5 && maxThreadCount < 2; ++attempt )
+    {
+        sw::mutex                   lock;
+        sw::vector<std::thread::id> listThread;
+        manager.runParallelByCost( 64, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&lock, &listThread]( uint32 start, uint32 end )
+        {
+            {
+                std::scoped_lock<sw::mutex> guard{ lock };
+                const std::thread::id       self = std::this_thread::get_id();
+                if ( std::find( listThread.begin(), listThread.end(), self ) == listThread.end() )
+                    listThread.push_back( self );
+            }
+            for ( uint32 index = start; index < end; ++index )
+            {
+                const sw::Stopwatch spin;
+                while ( spin.getElapsedMicroseconds() < 100 )
+                {
+                }
+            }
+        } ) );
+        maxThreadCount = sw::MathUtil::max( maxThreadCount, static_cast<uint32>( listThread.size() ) );
+    }
+    SW_EXPECT_TRUE( maxThreadCount >= 2u );
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] `runParallelByCost`: 아주 가벼운 일은 깨우지 않고 호출 스레드가 끝낸다
+ * @details 항목 하나가 수 ns 인 일 4000 개는 직렬 몇 us 다. 나누면 깨우는 비용이 더 크다. 스케줄러 잡음으로 한 번 나뉠 수 있어 다섯 번 가운데 한 번이라도 호출 스레드 혼자 끝내면 통과한다.
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkOnTheCallingThread )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    bool bStayedOnCaller = false;
+    for ( uint32 attempt = 0; attempt < 5 && bStayedOnCaller == false; ++attempt )
+    {
+        const std::thread::id caller = std::this_thread::get_id();
+        sw::atomic<int32>     otherThreadCount{ 0 };
+        manager.runParallelByCost( 4000, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&otherThreadCount, caller]( uint32 start, uint32 end )
+        {
+            (void)start;
+            (void)end;
+            if ( std::this_thread::get_id() != caller )
+                otherThreadCount.fetch_add( 1, std::memory_order_relaxed );
+        } ) );
+        bStayedOnCaller = otherThreadCount.load() == 0;
+    }
+    SW_EXPECT_TRUE( bStayedOnCaller );
     manager.shutdown();
 }

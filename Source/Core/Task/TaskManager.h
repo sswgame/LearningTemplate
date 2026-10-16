@@ -141,6 +141,16 @@ namespace sw
         void runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
 
         /**
+         * @brief 포크-조인 병렬 for 입니다. 일의 수가 아니라 **잰 비용**으로 나눌지 정합니다(`runParallel` 은 호출처가 고른 수 `serialThreshold` 를 따른다).
+         * @details 항목당 비용은 호출처가 알기 어렵다(무버 틱 ~25 ns, 애니메이션 평가는 수 us). 그래서 호출 스레드가 앞 항목을 1, 2, 4, … 개씩 늘려 가며
+         *          직접 돌고(이 일은 버려지지 않는 실제 일이다), 경과가 `kCostProbeNanos` 를 넘으면 남은 일의 예상 직렬 시간으로 고른다 — `kSerialBudgetNanos`
+         *          (디스패치 손익분기) 보다 짧으면 이어서 직렬로, 아니면 나머지 구간만 나눈다. 무거운 항목은 첫 항목에서 바로 나뉘고, 가벼운 일은 깨우는 비용을
+         *          치르지 않는다. 저장하는 추정이 없어 낡을 일도 없다. 본문은 `runParallel` 과 같이 임의 구간 순서로 불려도 되어야 한다. 엔진 코드는
+         *          서비스 바인딩까지 감싼 `engine::runParallelByCost` 를 쓰십시오.
+         */
+        void runParallelByCost( uint32 count, const ParallelBlockDelegate& body );
+
+        /**
          * @brief 스테이지를 만듭니다. 풀에서 꺼내므로 프레임이 안정된 상태에서는 힙을 건드리지 않습니다.
          * @details 이름으로 찾는 스테이지는 두지 않습니다. 스테이지를 나눠 쓰려면 핸들을 복사해 건네십시오.
          */
@@ -298,6 +308,8 @@ namespace sw
         void releaseUnlaunchedGroup( TaskNode* pNode );
         /** @brief 그룹의 청크가 남지 않을 때까지 가져와 실행합니다(티켓을 받은 워커와 호출 스레드가 함께 씁니다). */
         void runGroupChunks( ParallelGroup* pGroup );
+        /** @brief [start, end) 를 워커와 나눠 돌고 합류까지 기다립니다(`runParallel` · `runParallelByCost` 의 병렬 부분). 워커가 있어야 합니다. */
+        void runParallelRange( uint32 start, uint32 end, const ParallelBlockDelegate& body );
         /** @brief 청크 사이에 High 큐를 비웁니다. 그룹을 실행하는 동안에도 렌더 패스 기록이 줄을 서지 않게 하기 위해서입니다. */
         void drainHighQueueBetweenChunks();
         /** @brief 병렬 그룹의 티켓 하나를 처리합니다. 청크가 남아 있는 동안 가져와 실행하고 티켓을 닫습니다. */

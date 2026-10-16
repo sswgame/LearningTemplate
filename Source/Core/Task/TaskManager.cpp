@@ -118,6 +118,19 @@ namespace sw
             void operator()( ParallelGroupLaunch& ) const {}
         };
 
+        /** @brief `runParallelByCost` 가 직렬로 앞 항목을 도는 동안 경과가 이만큼 되면 비용을 믿고 고른다(ns). 항목 하나의 잡음(캐시 미스)을 거를 만큼 길게 잡았다. */
+        constexpr int64 kCostProbeNanos = 3000;
+        /**
+         * @brief 남은 일의 예상 직렬 시간이 이보다 짧으면 나누지 않는다(ns). 디스패치 최소 비용(잠든 풀 ~34 us, 깨어 있으면 ~7 us)을 넘는 일만 병렬이 이긴다.
+         *        무버 틱(항목당 ~25 ns)에서 직렬이 병렬보다 빠른 구간은 약 1000 개까지였다(`GameObjectBenchTest.SmallGroupTickKnee`).
+         */
+        constexpr int64 kSerialBudgetNanos = 16000;
+        /**
+         * @brief 이 수 이상이면 비용을 재지 않고 바로 나눈다. 가장 가벼운 항목(~10 ns)이라도 이만큼이면 직렬이 `kSerialBudgetNanos` 를 넘는다.
+         *        큰 씬에서는 직렬로 재는 약 3 us 가 병렬 시작을 늦추기만 한다(무버 8000 의 틱 90 us 대 98 us).
+         */
+        constexpr uint32 kObviouslyParallelCount = 4096;
+
         /** @brief 병렬 그룹을 어떻게 나눌지(청크 크기와 큐에 넣을 티켓 수)입니다. */
         struct ParallelSplit
         {
@@ -631,22 +644,74 @@ namespace sw
             return;
         }
 
-        const ParallelSplit split = ParallelSplit::compute( count, workerCount, true );
-        if ( split._ticketCount == 0 )
+        runParallelRange( 0, count, body );
+    }
+
+    void TaskManager::runParallelByCost( uint32 count, const ParallelBlockDelegate& body )
+    {
+        if ( count == 0 || body.isBound() == false )
+            return;
+        if ( _bInitialized == false || getWorkerCount() == 0 )
         {
             const ParallelTaskScope bodyScope{};
             body( 0, count );
             return;
         }
 
+        if ( count >= kObviouslyParallelCount )
+        {
+            runParallelRange( 0, count, body );
+            return;
+        }
+
+        uint32 done = 0;
+        {
+            const ParallelTaskScope bodyScope{};
+            const Stopwatch         probe;
+            uint32                  chunk = 1;
+            while ( true )
+            {
+                const uint32 end = MathUtil::min( count, done + chunk );
+                body( done, end );
+                done = end;
+                if ( done == count )
+                    return;
+                const int64 elapsed = probe.getElapsedNanoseconds();
+                if ( elapsed >= kCostProbeNanos )
+                {
+                    const int64 estimateRest = elapsed * static_cast<int64>( count - done ) / static_cast<int64>( done );
+                    if ( estimateRest < kSerialBudgetNanos )
+                    {
+                        body( done, count );
+                        return;
+                    }
+                    break;
+                }
+                chunk *= 2;
+            }
+        }
+        runParallelRange( done, count, body );
+    }
+
+    void TaskManager::runParallelRange( uint32 start, uint32 end, const ParallelBlockDelegate& body )
+    {
+        const uint32        workerCount = getWorkerCount();
+        const ParallelSplit split       = ParallelSplit::compute( end - start, workerCount, true );
+        if ( split._ticketCount == 0 )
+        {
+            const ParallelTaskScope bodyScope{};
+            body( start, end );
+            return;
+        }
+
         // 그룹은 이 스택에 있다. 마지막 티켓이 조인 카운터를 0 으로 만든 뒤에는 아무도 이 메모리를 건드리지 않는다.
         ParallelGroup group{};
         group._pBlockBody = &body;
-        group._rangeEnd   = count;
+        group._rangeEnd   = end;
         group._chunkSize  = split._chunkSize;
         if constexpr ( kMemoryTagScopesEnabled )
             group._memoryTag = Memory::getCurrentMemoryTag();
-        group._nextChunkStart.store( 0, std::memory_order_relaxed );
+        group._nextChunkStart.store( start, std::memory_order_relaxed );
         group._join.addPending( split._ticketCount );
 
         // `waitAll` 에게는 그룹 하나가 태스크 하나다. 티켓마다 활성 수를 올리고 내리지 않는다.
