@@ -5,13 +5,13 @@
 ## 1. 지금 상태 (2026-10-17 새벽)
 
 main 은 push 되지 않았다(원격 `main` 하나). 이 세션이 main 에 병합한 워크트리: `tickfollowup` `gamescn` `smallfix` `internalrule` `mountgame` `qualitycleanup` `terrainserver` `editorscn2` `corefuzz` `enginefeature` `netfeature` `uifollow` `gfxfeature` `gameplayfeature`. 병합마다 전체 Release 빌드와 관련 스위트를 돌렸다(병합 중 의미 충돌 · Release 전용 실패 4 건을 main 에서 고쳤다: WildWest 탐침, `PhysicsSoftBodyTest` 허용치, 셰이더 쿠킹의 낡은 바이너리 80 개, `WildWest` 데이터 종류 등록).
-**push 전에 Debug `-L lint` · `-L nogpu` · `-L race` 를 돌린다** — 이 세션이 시작한 Debug 전체 빌드(`/tmp/debug_build.log`)가 끝났는지 보고 이어서 돌린다. 지금까지 검증은 Release 뿐이다.
+Debug `-L lint` · `-L nogpu` · `-L race` 를 통과시키고(고친 둘: `WildWestHorseComponent` 의 단일 함수 `Internal`, 한 줄로 쓴 `prairie.scene.xml`) 2026-10-17 에 main 을 push 했다(`b21bf6c4f`).
 
 남은 워크트리: `netfeature`(병합됨 — 단 HTTP 이름 해석을 전용 스레드로 옮기는 변경이 **커밋되지 않은 채** 작업 트리에 있다: `TestHTTP` · `TestPlatformLogin` · 결정 기록/백로그 문장 포함. 빌드가 되는 사람이 EngineTest 빌드 → HTTPTest · PlatformLogin → `-L race` 를 거쳐 커밋한 뒤 지운다), `editordata` · `enginefallback` · `toolfollowup`(병합 안 된 커밋 — 다른 세션의 일, 건드리지 않는다), `gamesdata` · `testisolation`(병합됐지만 변경이 남아 있다), `perfbase` · `perfbase2`(성능 기준선).
 
 ## 2. 다음 할 일
 
-1. **Debug 검증 → push → CI 첫 결과**(사용자가 "CI 해보고"라고 승인함). 리눅스 · PCH 끈 Windows CI · `header-self-contained.yml`(Windows Debug 잡이 32 → 약 18 분인지) · 야간 `load.yml`. 리눅스 CI 가 `B-5`(퍼저 재확인) `B-7` `C-14`(린트 잡)를 풀 수 있다.
+1. **CI 첫 결과 확인**(push 는 끝났다. 사용자가 실패를 알려 주면 `ci-jobs` 로 읽는다). 리눅스 · PCH 끈 Windows CI · `header-self-contained.yml`(Windows Debug 잡이 32 → 약 18 분인지) · 야간 `load.yml`. 리눅스 CI 가 `B-5`(퍼저 재확인) `B-7` `C-14`(린트 잡)를 풀 수 있다.
 2. **`netfeature` 의 커밋 안 된 HTTP 이름 해석 스레드 변경**(위). 새로 찾은 결함도 있다: **Shipping 전용 서버가 게임 포트를 못 연다**(`gv_netListenPort` 가 Shipping 에 없는 테스트 전역 변수 — 백로그 network). `GameNetSession` 의 `-gv_netConnectAddress` 도 같은 호스트 이름 해석을 쓰게.
 3. **`Internal` 소거**: 린트(`Naming/MultipleInternalHelper` · `LoneFunctionInternalHelper` · `DuplicateAnonymousFunction`)는 병합됐고 기존 위반은 `Scripts/lint/rules/CheckCodeConventions.toml` 의 `internalHelperBaseline`(180 개)에 있다. 디렉터별로 파일을 규칙에 맞게 고치고(함수 하나 → 익명 namespace 자유 함수, 둘 이상 → 파일당 구조체 하나) 고친 파일의 기준선 줄을 지운다. `mech-worker` 를 디렉터리별로 나눈다. 병합 뒤 `-DSW_ENABLE_UNITY_BUILD` 로 충돌을 한 번 본다(`anonymousFunctionBaseline` 의 `findProbeDirector` 둘 포함).
 4. **함수 객체 · 람다 공통화**: 조사 요지 — 멤버 값으로 찾는 손 루프 약 337 건(214 파일), `VectorUtil::contains` 를 안 쓴 곳 115 건, 정렬 비교자 오름차순 45 · 내림차순 13 · 여러 키 약 41, 해시 구조체 15 개, erase-remove 약 67 건. 뿌리: `VectorUtil` 에 멤버 기준 찾기 · 비교 도구가 없고 `sw::unordered_map` 기본 해시가 `std::hash`. 제안: `VectorUtil::findBy<&T::_m>` · `findIndexBy` · `containsBy` · `removeIf` · `sortUnique`, 새 헤더 `Core/Container/CompareUtil.h`(`Ascending<&T::_m>` · `Descending` · `Lexicographic`), `HashUtil::makeHash`, 기본 해시 `sw::DefaultHash<Key>`(`computeHash()`). 위험: 순서가 결과에 나오는 곳(TickRegistry · PhysicsContact · NetPrioritizer · GPUSceneBuilder)은 전후 비교 테스트, 마지막 일치를 남기는 루프(`NetConnection.cpp:463`), 핫 경로 해시는 Release 재측정. 조사 표 원본은 이 PC 의 scratchpad `dup-shapes.md`(없으면 같은 지시로 다시 조사). 3 번 뒤에 한다.
