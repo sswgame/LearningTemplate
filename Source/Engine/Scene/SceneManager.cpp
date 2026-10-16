@@ -672,6 +672,17 @@ namespace sw
         }
     }
 
+    GameObjectManager* SceneManager::findActiveObjectManager() const
+    {
+        return _pActiveScene != nullptr ? _pActiveScene->getObjectManager() : nullptr;
+    }
+
+    GameObject* SceneManager::findActiveObject( const hashed_string& name ) const
+    {
+        const GameObjectManager* pManager = findActiveObjectManager();
+        return pManager != nullptr ? pManager->findGameObjectByName( name ) : nullptr;
+    }
+
     bool SceneManager::focusScene( Scene* pScene )
     {
         if ( pScene == nullptr )
@@ -895,4 +906,22 @@ namespace sw
                                                           PhysicsSystem::kSubsystemName, AssetManager::kSubsystemName, TaskManager::kSubsystemName };
         return kArrDependency;
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace engine
+    {
+        GameObjectManager* findActiveObjectManager()
+        {
+            const SceneManager* pSceneManager = findSubsystem<SceneManager>();
+            return pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+        }
+
+        GameObject* findActiveObject( const hashed_string& name )
+        {
+            const SceneManager* pSceneManager = findSubsystem<SceneManager>();
+            return pSceneManager != nullptr ? pSceneManager->findActiveObject( name ) : nullptr;
+        }
+    } // namespace engine
 } // namespace sw

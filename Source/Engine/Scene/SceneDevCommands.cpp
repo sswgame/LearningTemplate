@@ -13,12 +13,10 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/String/TagID.h"
 
-    #include "Engine/Common/EngineServices.h"
     #include "Engine/Object/SceneAnimation/AnimationSystem.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
-    #include "Engine/Scene/Scene.h"
     #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -27,13 +25,6 @@ namespace sw
     {
         struct SceneDevCommandsInternal
         {
-            /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). */
-            static GameObjectManager* findActiveObjectManager()
-            {
-                Scene* pScene = engine::areEngineServicesBound() ? engine::getSubsystem<SceneManager>().getActiveScene() : nullptr;
-                return pScene != nullptr ? pScene->getObjectManager() : nullptr;
-            }
-
             static bool runTeleport( const vector<string>& listArgument, string& outReply )
             {
                 float3     position{};
@@ -41,9 +32,8 @@ namespace sw
                                                    StringUtil::parseFloat( listArgument[2], position._y ) == false || StringUtil::parseFloat( listArgument[3], position._z ) == false;
                 if ( bInvalidMoveArguments )
                     return false;
-                GameObjectManager* pManager  = findActiveObjectManager();
-                GameObject*        pObject   = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( listArgument[0] ) ) : nullptr;
-                SceneComponent*    pRootNode = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
+                GameObject*     pObject   = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                SceneComponent* pRootNode = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
                 if ( pRootNode == nullptr )
                 {
                     outReply = "no object named '" + listArgument[0] + "' with a transform in the active scene";
@@ -58,8 +48,7 @@ namespace sw
             {
                 if ( listArgument.size() != 2 || listArgument[1].empty() )
                     return false;
-                GameObjectManager* pManager = findActiveObjectManager();
-                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( listArgument[0] ) ) : nullptr;
+                GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
                 if ( pObject == nullptr )
                 {
                     outReply = "no object named '" + listArgument[0] + "' in the active scene";
@@ -73,7 +62,7 @@ namespace sw
             /** @brief 활성 씬의 애니메이션 시스템입니다(없으면 nullptr). */
             static AnimationSystem* findActiveAnimationSystem()
             {
-                GameObjectManager* pManager = findActiveObjectManager();
+                GameObjectManager* pManager = engine::findActiveObjectManager();
                 return pManager != nullptr ? &pManager->getAnimationSystem() : nullptr;
             }
 

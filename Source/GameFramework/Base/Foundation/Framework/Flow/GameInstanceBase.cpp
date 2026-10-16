@@ -106,8 +106,7 @@ namespace sw
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return nullptr;
-        Scene* pActiveScene = pSceneManager->getActiveScene();
-        return ( pActiveScene != nullptr ) ? pActiveScene->getObjectManager() : nullptr;
+        return pSceneManager->findActiveObjectManager();
     }
 
     bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )

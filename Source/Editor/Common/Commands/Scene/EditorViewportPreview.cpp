@@ -40,14 +40,6 @@ namespace sw::editor
                 return pContext->getSubsystem<EditorWorkspace>().getSelectedObject();
             }
 
-            static GameObjectManager* getActiveObjectManager()
-            {
-                Scene* pScene = editor::getActiveScene();
-                if ( pScene == nullptr )
-                    return nullptr;
-                return pScene->getObjectManager();
-            }
-
             static bool matchesAnimationGraphPath( const SpriteAnimatorComponent* pAnimator, string_view graphPath )
             {
                 if ( pAnimator == nullptr )
@@ -96,7 +88,7 @@ namespace sw::editor
                 pPrimaryAnimator->play( nodeNameStr, false );
         }
 
-        GameObjectManager* pManager = EditorViewportPreviewInternal::getActiveObjectManager();
+        GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr )
             return;
         const vector<GameObject*> listObject = pManager->getAllGameObjects();
@@ -113,12 +105,12 @@ namespace sw::editor
 
     void EditorViewportPreview::applySequenceFrame( const SequenceAsset& asset, int32 frame )
     {
-        SequenceTimelineUtil::applyFrame( EditorViewportPreviewInternal::getActiveObjectManager(), asset, frame );
+        SequenceTimelineUtil::applyFrame( editor::getActiveObjectManager(), asset, frame );
     }
 
     void EditorViewportPreview::applyDialogueLine( string_view speaker, string_view text )
     {
-        GameObjectManager* pManager = EditorViewportPreviewInternal::getActiveObjectManager();
+        GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager != nullptr )
         {
             if ( speaker.empty() == false )

@@ -44,11 +44,7 @@ namespace sw
             static constexpr uint32 kMemoryTagLineCount = 4;
 
             /** @brief 활성 씬의 오브젝트 매니저입니다(씬이 없으면 nullptr). */
-            static GameObjectManager* findActiveObjectManager()
-            {
-                const Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
-                return pScene != nullptr ? pScene->getObjectManager() : nullptr;
-            }
+            static GameObjectManager* findActiveObjectManager() { return engine::getSubsystem<SceneManager>().findActiveObjectManager(); }
 
             /** @brief 프로파일러 구간 @p slot 의 마지막으로 접힌 프레임 시간(밀리초)입니다. */
             static float64 readLastFrameMilliseconds( uint32 slot )
