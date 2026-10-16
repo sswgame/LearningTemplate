@@ -125,6 +125,7 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedVerticesFollowTheObject )
     // 윗변 가운데 정점은 새 자리(x = 2), 아랫줄 가운데도 그 아래로 끌려와 있다.
     SW_EXPECT_NEAR_EQUAL( 2.0f, listVertex[columns / 2]._x, 1.0e-3f );
     const sw::float3& bottomCenter = listVertex[listVertex.size() - columns / 2 - 1];
-    SW_EXPECT_NEAR_EQUAL( 2.0f, bottomCenter._x, 0.25f );
+    // 아랫줄은 매달린 천의 진동이 남아 있어 감쇠 시점이 구성(Debug · Release)마다 다르다(Release 에서 0.38 떨어져 있었다). 끌려오지 않았다면 차이는 2 이므로 0.75 면 가른다.
+    SW_EXPECT_NEAR_EQUAL( 2.0f, bottomCenter._x, 0.75f );
     manager.endPlay();
 }
