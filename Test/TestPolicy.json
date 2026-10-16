@@ -139,8 +139,9 @@
     },
     "ServerTest": {
       "area": "server",
-      "seconds": 58,
+      "seconds": 157,
       "caseCosts": {
+        "ServerBootTest.EveryBuiltGameStartsAsADedicatedServer": 71,
         "ServerBootTest.PauseStopsTicksAndStepRunsExactlyN": 9,
         "ServerBootTest.StateHashHistoryFindsTheFirstDivergentTick": 9,
         "ServerBootTest.StartsTicksAndExitsWithoutWindowOrGPU": 6,
