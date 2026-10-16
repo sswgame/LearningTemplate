@@ -60,6 +60,35 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
+    GameObject* BenchCombatComponent::spawnEnemy( GameObjectManager& objects, const hashed_string& name, const float3& position )
+    {
+        using Internal = BenchCombatComponentInternal;
+        // 적 — 유닛 · 애니메이터(걷기, 발소리 알림) · 알림 디스패치 · 소켓 표 · 래그돌(히트 존 · 움찔 · 기상).
+        GameObject* pEnemy = objects.createGameObject( name );
+        if ( pEnemy == nullptr )
+            return nullptr;
+        SkeletalMeshComponent*     pUnit     = pEnemy->addComponent<SkeletalMeshComponent>();
+        SkeletalAnimatorComponent* pAnimator = pEnemy->addComponent<SkeletalAnimatorComponent>();
+        AnimationNotifyComponent*  pNotify   = pEnemy->addComponent<AnimationNotifyComponent>();
+        SocketSetComponent*        pSockets  = pEnemy->addComponent<SocketSetComponent>();
+        RagdollComponent*          pRagdoll  = pEnemy->addComponent<RagdollComponent>();
+        pUnit->setMeshID( Internal::kEnemyMesh );
+        pUnit->setSkeletonPath( Internal::kEnemySkeleton );
+        pUnit->resolveRenderAssets();
+        pUnit->setAnimateWhenOffscreen( true );
+        pUnit->setLocalPosition( position );
+        // KayKit 은 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다.
+        pUnit->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
+        pAnimator->setClipFolder( Internal::kEnemyClips );
+        pAnimator->setInitialState( "Walking_A" );
+        pNotify->setNotifyTablePath( Internal::makeDataPath( ".notifies.xml" ) );
+        pSockets->setSocketSetPath( Internal::makeDataPath( ".sockets.xml" ) );
+        pRagdoll->setPhysicsAssetPath( Internal::makeDataPath( ".physics.xml" ) );
+        pRagdoll->setFlinchClip( hashed_string( "Hit_A" ) );
+        pRagdoll->setGetUpClips( hashed_string( "Lie_StandUp" ), hashed_string{}, hashed_string( "Idle" ) );
+        return pEnemy;
+    }
+
     void BenchCombatComponent::spawnScene( Scene& scene, vector<GameObjectHandle>& outListObject )
     {
         using Internal              = BenchCombatComponentInternal;
@@ -82,26 +111,7 @@ namespace sw
         pFloorMesh->setLocalScale( float3{ 12.0f, 1.0f, 12.0f } );
         outListObject.push_back( pFloor->getHandle() );
 
-        // 적 — 유닛 · 애니메이터(걷기, 발소리 알림) · 알림 디스패치 · 소켓 표 · 래그돌(히트 존 · 움찔 · 기상).
-        GameObject*                pEnemy    = pObjects->createGameObject( hashed_string( "CombatEnemy" ) );
-        SkeletalMeshComponent*     pUnit     = pEnemy->addComponent<SkeletalMeshComponent>();
-        SkeletalAnimatorComponent* pAnimator = pEnemy->addComponent<SkeletalAnimatorComponent>();
-        AnimationNotifyComponent*  pNotify   = pEnemy->addComponent<AnimationNotifyComponent>();
-        SocketSetComponent*        pSockets  = pEnemy->addComponent<SocketSetComponent>();
-        RagdollComponent*          pRagdoll  = pEnemy->addComponent<RagdollComponent>();
-        pUnit->setMeshID( Internal::kEnemyMesh );
-        pUnit->setSkeletonPath( Internal::kEnemySkeleton );
-        pUnit->resolveRenderAssets();
-        pUnit->setAnimateWhenOffscreen( true );
-        // KayKit 은 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다.
-        pUnit->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
-        pAnimator->setClipFolder( Internal::kEnemyClips );
-        pAnimator->setInitialState( "Walking_A" );
-        pNotify->setNotifyTablePath( Internal::makeDataPath( ".notifies.xml" ) );
-        pSockets->setSocketSetPath( Internal::makeDataPath( ".sockets.xml" ) );
-        pRagdoll->setPhysicsAssetPath( Internal::makeDataPath( ".physics.xml" ) );
-        pRagdoll->setFlinchClip( hashed_string( "Hit_A" ) );
-        pRagdoll->setGetUpClips( hashed_string( "Lie_StandUp" ), hashed_string{}, hashed_string( "Idle" ) );
+        GameObject* pEnemy = spawnEnemy( *pObjects, hashed_string( "CombatEnemy" ), float3{} );
         outListObject.push_back( pEnemy->getHandle() );
 
         // 칼 — 강체(손을 따르는 키네마틱 → 떼면 동적) + 메시 + 소켓 부착.

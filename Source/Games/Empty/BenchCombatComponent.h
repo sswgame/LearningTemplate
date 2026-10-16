@@ -35,6 +35,9 @@ namespace sw
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
 
+        /** @brief 래그돌을 가진 걷는 스켈레톤 적 하나를 @p position 에 세웁니다(`-gv_benchRagdolls` 군중도 이것을 씁니다). */
+        static GameObject* spawnEnemy( GameObjectManager& objects, const hashed_string& name, const float3& position );
+
         /** @brief 바닥 · 적 · 칼 · 연출 오브젝트를 씬에 세웁니다. 만든 오브젝트들의 핸들을 @p outListObject 에 붙입니다. */
         static void spawnScene( Scene& scene, vector<GameObjectHandle>& outListObject );
 

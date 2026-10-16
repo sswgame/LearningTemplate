@@ -9,6 +9,7 @@
 #include "Core/Math/XorShift32.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -22,6 +23,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
@@ -45,6 +47,8 @@ namespace sw
         constexpr const utf8* kBenchSettingsPath = "game/empty/data/benchscene.xml";
         /** @brief 스트레스가 보관할 머티리얼 인스턴스 상한입니다. 넘으면 새로 붙이는 대신 제거합니다. */
         constexpr size_t kChurnInstanceCap = 512;
+        /** @brief 래그돌 군중이 쓰러진 수를 로그로 남기는 프레임 간격입니다. 소수라 `-gv_benchRagdollPeriod` 의 배수와 겹쳐 같은 상태만 찍히지 않는다. */
+        constexpr uint32 kRagdollLogInterval = 97;
         /** @brief 스트레스가 인스턴스에서 켜고 끄는 키워드입니다. 읽는 셰이더는 없고 퍼뮤테이션만 갈립니다. */
         constexpr const utf8* kChurnKeyword = "MATERIAL_BENCH_CHURN";
         /** @brief 스트레스가 흔드는 멀티컴파일 이름입니다. */
@@ -104,6 +108,15 @@ namespace sw
      * @details 개발 빌드 전용이다. 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다(`gv_benchCharacters` 와 같다).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCombat, 0, "벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기)" );
+
+    /**
+     * @brief `-gv_benchRagdolls=N`: 래그돌을 가진 KayKit 스켈레톤 N 명을 격자로 세우고 프레임마다 일부를 쓰러뜨리고 일으켜 틱 멤버십과 애니메이션 유닛 활성이 계속 바뀌게 합니다.
+     * @details 개발 빌드 전용이다. IK 부하는 `-gv_benchRig=M` 을 같이 준다(기사들이 같은 씬에 선다). 한 명은 `-gv_benchRagdollPeriod` 프레임마다 한 번 상태가 바뀐다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchRagdolls, 0, "벤치 래그돌 군중 수 (0=사용 안 함, KayKit 스켈레톤 — 쓰러지고 일어나기를 반복)" );
+
+    /** @brief `-gv_benchRagdollPeriod=P`: 군중의 각 캐릭터가 P 프레임마다 서 있으면 쓰러지고 쓰러져 있으면 일어납니다(시작 프레임은 인덱스로 흩어진다). */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchRagdollPeriod, 60, "래그돌 군중이 상태를 바꾸는 주기 (프레임)" );
 
     /**
      * @brief `-gv_benchMaterialInstances=1`: 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
@@ -275,6 +288,9 @@ namespace sw
         , _probeFrame{ 0 }
         , _bRefreshedCameras{ SW_FALSE }
         , _listRigBody{}
+        , _listRagdoll{}
+        , _ragdollHalfExtent{ 0.0f }
+        , _ragdollFrame{ 0 }
         , _rigLookTarget{}
         , _bCharacterFraming{ SW_FALSE }
         , _bFaceFraming{ SW_FALSE }
@@ -289,7 +305,7 @@ namespace sw
         // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
         // **이 모듈이 선언한다**(이 파일 위쪽). 그래서 이름으로 조회하지 않고 그대로 읽는다.
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
-        const bool bNoBenchmarkRequested = gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && gv_benchFaces <= 0 && getRigCharacterCount() == 0 && gv_benchCombat <= 0;
+        const bool bNoBenchmarkRequested = gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && gv_benchFaces <= 0 && getRigCharacterCount() == 0 && gv_benchCombat <= 0 && gv_benchRagdolls <= 0;
         if ( bNoBenchmarkRequested )
             return false;
         // 배치 · 튜닝 값은 데이터가 정본이다 — 못 읽으면 코드 쪽 값으로 대신 세우지 않는다(기준 이미지와 다른 그림이 된다).
@@ -310,6 +326,8 @@ namespace sw
             spawnRigCharacters( getRigCharacterCount() );
         if ( gv_benchCombat > 0 )
             spawnCombat();
+        if ( gv_benchRagdolls > 0 )
+            spawnRagdolls( static_cast<uint32>( gv_benchRagdolls ) );
         return isActive();
     }
 
@@ -633,6 +651,93 @@ namespace sw
         _bCharacterFraming = SW_TRUE;
         frameCharacterCameras( pScene, _settings._combatHalfExtent );
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 전투 연출(KayKit 스켈레톤 · 칼 · 바닥)을 세웠습니다.", pScene->getName() );
+    }
+
+    void BenchScene::spawnRagdolls( uint32 ragdollCount )
+    {
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return;
+        Scene* pScene = pSceneManager->getActiveScene();
+        if ( pScene == nullptr )
+            pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        pScene->ensureDefaultCameras();
+        GameObjectManager* pObjects = pScene->getObjectManager();
+
+        const uint32  columns    = static_cast<uint32>( MathUtil::ceil( MathUtil::sqrt( static_cast<float32>( ragdollCount ) ) ) );
+        const uint32  rows       = ( ragdollCount + columns - 1u ) / columns;
+        const float32 spacing    = _settings._characterSpacing;
+        const float32 originX    = -0.5f * static_cast<float32>( columns - 1u ) * spacing;
+        const float32 halfExtent = MathUtil::max( _settings._characterMinHalfExtent, 0.5f * static_cast<float32>( MathUtil::max( columns, rows ) ) * spacing );
+
+        // 바닥 — 래그돌이 쓰러져 닿는 정적 강체(보이는 면은 spawnGround).
+        if ( GameObject* pFloor = pObjects->createGameObject( hashed_string( "RagdollFloor" ) ) )
+        {
+            if ( RigidBodyComponent* pBody = pFloor->addComponent<RigidBodyComponent>() )
+            {
+                PhysicsShapeDesc3D box;
+                box._halfExtents   = float3{ halfExtent + spacing, 0.5f, halfExtent + spacing };
+                box._localPosition = float3{ 0.0f, -0.5f, halfExtent - spacing };
+                pBody->setShape( box );
+                pBody->setBodyType( PhysicsBodyType::Static );
+                pBody->setLayer( hashed_string( "Static" ) );
+                pBody->setMaterial( hashed_string( "Stone" ) );
+                _listBenchExtra.push_back( pBody->getHandle() );
+            }
+        }
+
+        for ( uint32 index = 0; index < ragdollCount; ++index )
+        {
+            StringBuilder<constant::kMaxBuffer64> nameBuilder;
+            nameBuilder.append( "BenchRagdoll_" ).append( index );
+            const float3 position{ originX + static_cast<float32>( index % columns ) * spacing, 0.0f, static_cast<float32>( index / columns ) * spacing };
+            GameObject*  pEnemy = BenchCombatComponent::spawnEnemy( *pObjects, hashed_string( nameBuilder.c_str(), nameBuilder.size() ), position );
+            if ( RagdollComponent* pRagdoll = pEnemy != nullptr ? pEnemy->getComponent<RagdollComponent>() : nullptr )
+            {
+                _listRagdoll.push_back( pRagdoll->getHandle() );
+                _listBenchExtra.push_back( pRagdoll->getHandle() );
+            }
+        }
+
+        spawnLight( pScene, halfExtent );
+        spawnGround( pScene, halfExtent );
+        _ragdollHalfExtent = halfExtent;
+        frameCharacterCameras( pScene, halfExtent );
+        SW_LOG_INFO( "[Bench] 씬 '%#' 에 래그돌 군중 %#명을 %#×%# 격자로 세웠습니다(주기 %# 프레임).", pScene->getName(), ragdollCount, columns, rows, gv_benchRagdollPeriod );
+    }
+
+    void BenchScene::updateRagdollChurn( GameObjectManager* pObjects )
+    {
+        if ( _listRagdoll.empty() )
+            return;
+        const uint32 period = static_cast<uint32>( MathUtil::max( gv_benchRagdollPeriod, 1 ) );
+        const uint32 frame  = _ragdollFrame++;
+        if ( frame % kRagdollLogInterval == kRagdollLogInterval - 1u )
+        {
+            // 상태가 실제로 오가는지 본다(기상이 계속 실패하면 모두 래그돌에 머문다).
+            [[maybe_unused]] uint32 ragdollCount = 0;
+            for ( const ComponentHandle& handle : _listRagdoll )
+            {
+                const RagdollComponent* pRagdoll = castTo<RagdollComponent>( pObjects->resolveComponent( handle ) );
+                ragdollCount += ( pRagdoll != nullptr && pRagdoll->getState() == RagdollState::Ragdoll ) ? 1u : 0u;
+            }
+            SW_LOG_INFO( "[Bench] 프레임 %# 쓰러진 수 %#/%#", frame + 1u, ragdollCount, static_cast<uint32>( _listRagdoll.size() ) );
+        }
+        for ( size_t index = 0; index < _listRagdoll.size(); ++index )
+        {
+            if ( ( frame + static_cast<uint32>( index ) ) % period != 0u )
+                continue;
+            RagdollComponent* pRagdoll = castTo<RagdollComponent>( pObjects->resolveComponent( _listRagdoll[index] ) );
+            if ( pRagdoll == nullptr )
+                continue;
+            // 서 있으면 쓰러뜨리고, 쓰러져 있으면 일으킨다(물리 자세를 읽기 전이라 실패하면 다음 주기에 다시). 일어나는 중이면 끝날 때까지 둔다.
+            if ( pRagdoll->getState() == RagdollState::Animated )
+                pRagdoll->startRagdoll( float3{}, invalid_index::kInt32 ); // 충격량 없이 쓰러진다
+            else if ( pRagdoll->getState() == RagdollState::Ragdoll )
+                (void)pRagdoll->getUp();
+        }
     }
 
     void BenchScene::spawnFaces( uint32 faceCount )
@@ -1074,6 +1179,8 @@ namespace sw
                         frameFaceCameras( pScene );
                     else if ( _listRigBody.empty() == false )
                         frameRigCameras( pScene );
+                    else if ( _listRagdoll.empty() == false )
+                        frameCharacterCameras( pScene, _ragdollHalfExtent );
                     else if ( _bCharacterFraming == SW_TRUE )
                         frameCharacterCameras( pScene, computeCharacterHalfExtent( static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) ) ) );
                     else
@@ -1094,6 +1201,7 @@ namespace sw
         updateMaterialChurn( pObjects );
         updateSpawnChurn( pObjects, pScene );
         updateRigCharacters( deltaTime );
+        updateRagdollChurn( pObjects );
 
         // 멈춰 세운 격자는 프레임마다 같은 그림을 낸다 — 픽셀 비교 검증의 전제다.
         // 회전(컴퓨트)만 끄고 이 사인파를 남기면 여전히 흔들린다.

@@ -76,6 +76,10 @@ namespace sw
         void spawnCharacters( uint32 characterCount );
         /** @brief `-gv_benchCombat=1`: 전투 연출(KayKit 스켈레톤 적, 칼, 강체 바닥, 연출 컴포넌트)을 스폰합니다. */
         void spawnCombat();
+        /** @brief `-gv_benchRagdolls=N`: 래그돌을 가진 스켈레톤 N 명을 격자로 세웁니다. */
+        void spawnRagdolls( uint32 ragdollCount );
+        /** @brief 군중의 일부를 프레임마다 래그돌 ↔ 기상으로 바꿉니다(`-gv_benchRagdollPeriod`). */
+        void updateRagdollChurn( GameObjectManager* pObjects );
         /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). 격자면 앞 위에서 내려다봅니다. */
         void frameCharacterCameras( Scene* pScene, float32 halfExtent );
         /** @brief 캐릭터 줄(격자면 한 행)의 반폭입니다. */
@@ -209,6 +213,12 @@ namespace sw
         uint8 _bRefreshedCameras : 1;
         /** @brief 리그 데모의 기사 몸 유닛 핸들입니다(몸 돌리기와 걷기). */
         vector<ComponentHandle> _listRigBody;
+        /** @brief 래그돌 군중의 래그돌 컴포넌트 핸들입니다. */
+        vector<ComponentHandle> _listRagdoll;
+        /** @brief 래그돌 군중 격자의 반폭입니다(카메라를 다시 맞출 때 씁니다). */
+        float32 _ragdollHalfExtent;
+        /** @brief 래그돌 군중이 센 프레임 수입니다. */
+        uint32 _ragdollFrame;
         /** @brief 리그 데모의 시선 목표(작은 구). */
         ComponentHandle _rigLookTarget;
         /** @brief 캐릭터 벤치를 스폰했으면 1 입니다. 카메라를 캐릭터 기준으로 맞춥니다. */

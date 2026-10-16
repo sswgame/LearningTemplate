@@ -201,6 +201,287 @@ SW_TEST_CASE( GameObjectBenchTest, TickMoversWithPrerequisite )
 }
 
 /**
+ * @brief [GameObjectBenchTest] "리더가 먼저 쓴 값을 팔로워가 같은 프레임에 읽는다" 를 세 가지로 표현해 비용을 견준다
+ * @details 4000 쌍(오브젝트 8000 개)이 서브틱으로 돈다. 리더는 (3, 0, 0) 을 쓰고 팔로워는 그것을 읽어 (3, 1, 0) 을 쓴다.
+ *          - none: 순서를 걸지 않는다(기준선, 읽은 값은 보장되지 않는다).
+ *          - group: 리더 `DuringPhysics`, 팔로워 `PostPhysics` — 그룹 사이 장벽으로 순서를 낸다.
+ *          - prerequisite: 둘 다 `DuringPhysics`, 팔로워에 리더의 선행 조건을 건다 — 스테이지로 순서를 낸다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, FollowerOrderingGroupVersusPrerequisite )
+{
+    enum class Mode : uint8
+    {
+        None,
+        Group,
+        Prerequisite
+    };
+    constexpr uint32 kPairCount = kObjectCount / 2;
+
+    const auto run = []( Mode mode, const utf8* pLabel )
+    {
+        sw::GameObjectManager manager;
+        sw::RegisterMockComponents();
+
+        sw::vector<sw::MockSubTickMoverComponent*> listFollower;
+        listFollower.reserve( kPairCount );
+        for ( uint32 index = 0; index < kPairCount; ++index )
+        {
+            sw::GameObject*                pLeaderObj   = manager.createGameObject( sw::hashed_string( "BenchLeader" ) );
+            sw::GameObject*                pFollowerObj = manager.createGameObject( sw::hashed_string( "BenchFollower" ) );
+            sw::MockSubTickMoverComponent* pLeader      = pLeaderObj->addComponent<sw::MockSubTickMoverComponent>();
+            sw::MockSubTickMoverComponent* pFollower    = pFollowerObj->addComponent<sw::MockSubTickMoverComponent>();
+            pLeader->_offset                            = sw::float3{ 3.0f, 0.0f, 0.0f };
+            pFollower->_pWatched                        = pLeader;
+            pFollower->_offset                          = sw::float3{ 0.0f, 1.0f, 0.0f };
+
+            const sw::TickGroup     followerGroup = mode == Mode::Group ? sw::TickGroup::PostPhysics : sw::TickGroup::DuringPhysics;
+            const sw::SubTickHandle leaderTick    = pLeader->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
+            pFollower->registerSubTick( followerGroup, sw::MockSubTickMoverComponent::kMoveSubTick );
+            if ( mode == Mode::Prerequisite )
+                SW_EXPECT_TRUE( pFollower->addSubTickPrerequisite( sw::MockSubTickMoverComponent::kMoveSubTick, leaderTick ) );
+            listFollower.push_back( pFollower );
+        }
+        manager.update( 0.016f );
+
+        sw::vector<int64> listTick;
+        for ( uint32 round = 0; round < 30; ++round )
+        {
+            const sw::Stopwatch stopwatch;
+            manager.update( 0.016f );
+            listTick.push_back( stopwatch.getElapsedMicroseconds() );
+        }
+        test::logBenchSamples( pLabel, listTick );
+
+        if ( mode != Mode::None )
+        {
+            uint32 wrongCount = 0;
+            for ( const sw::MockSubTickMoverComponent* pFollower : listFollower )
+            {
+                if ( sw::float3::getDistanceSquared( pFollower->_observedLocal, sw::float3{ 3.0f, 0.0f, 0.0f } ) > 1e-6f )
+                    ++wrongCount;
+            }
+            SW_EXPECT_EQUAL( 0u, wrongCount ); // 팔로워가 같은 프레임의 리더 값을 읽었다
+        }
+    };
+
+    run( Mode::None, "follower ordering: none (4000 pairs, baseline)" );
+    run( Mode::Group, "follower ordering: group (leader DuringPhysics, follower PostPhysics)" );
+    run( Mode::Prerequisite, "follower ordering: prerequisite (same group)" );
+}
+
+/**
+ * @brief [GameObjectBenchTest] 한 오브젝트의 서브틱 둘 — 같은 단계(`Normal`) 둘과 `Early` · `Late` 로 나눈 둘의 비용을 견준다
+ * @details 단계는 오브젝트의 항목을 다시 만들 때 한 번 정렬하는 값이라 정상 상태 틱 비용은 같아야 한다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, IntraObjectPhaseOrdering )
+{
+    const auto run = []( bool bSplitPhase, const utf8* pLabel )
+    {
+        sw::GameObjectManager manager;
+        sw::RegisterMockComponents();
+        for ( uint32 index = 0; index < kObjectCount; ++index )
+        {
+            sw::GameObject*                pObj  = manager.createGameObject( sw::hashed_string( "BenchObject" ) );
+            sw::MockSubTickMoverComponent* pComp = pObj->addComponent<sw::MockSubTickMoverComponent>();
+            pComp->registerSubTick( sw::TickGroup::DuringPhysics, 1, bSplitPhase ? sw::TickPhase::Early : sw::TickPhase::Normal );
+            pComp->registerSubTick( sw::TickGroup::DuringPhysics, 2, bSplitPhase ? sw::TickPhase::Late : sw::TickPhase::Normal );
+        }
+        manager.update( 0.016f );
+
+        sw::vector<int64> listTick;
+        for ( uint32 round = 0; round < 30; ++round )
+        {
+            const sw::Stopwatch stopwatch;
+            manager.update( 0.016f );
+            listTick.push_back( stopwatch.getElapsedMicroseconds() );
+        }
+        test::logBenchSamples( pLabel, listTick );
+    };
+
+    run( false, "two sub-ticks per object: same phase (8000 objects)" );
+    run( true, "two sub-ticks per object: Early + Late (8000 objects)" );
+}
+
+/**
+ * @brief [GameObjectBenchTest] 선행 조건 사슬 깊이별 틱 비용 — 오브젝트 8000 개를 깊이 D 의 사슬로 나눈다(D = 1 은 사슬 없음)
+ * @details 사슬 안의 k 번째는 k-1 번째가 같은 프레임에 쓴 값을 읽는다. 깊이 D 는 스테이지 D 개(포크-조인 D 번 + 트랜스폼 적용 D-1 번)다.
+ *          언리얼도 선행 조건을 단계(레벨)로 푼다 — 깊이당 고정 비용이 얼마인지 본다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, PrerequisiteChainDepthSweep )
+{
+    for ( const uint32 depth : { 1u, 2u, 4u, 8u, 16u, 64u } )
+    {
+        sw::GameObjectManager manager;
+        sw::RegisterMockComponents();
+
+        sw::vector<sw::MockSubTickMoverComponent*> listTail;
+        for ( uint32 chain = 0; chain < kObjectCount / depth; ++chain )
+        {
+            sw::MockSubTickMoverComponent* pPrev      = nullptr;
+            sw::SubTickHandle              prevHandle = {};
+            for ( uint32 level = 0; level < depth; ++level )
+            {
+                sw::GameObject*                pObj  = manager.createGameObject( sw::hashed_string( "BenchChain" ) );
+                sw::MockSubTickMoverComponent* pComp = pObj->addComponent<sw::MockSubTickMoverComponent>();
+                pComp->_pWatched                     = pPrev;
+                pComp->_offset                       = sw::float3{ 0.0f, 1.0f, 0.0f };
+                const sw::SubTickHandle handle       = pComp->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
+                if ( pPrev != nullptr )
+                    SW_EXPECT_TRUE( pComp->addSubTickPrerequisite( sw::MockSubTickMoverComponent::kMoveSubTick, prevHandle ) );
+                pPrev      = pComp;
+                prevHandle = handle;
+            }
+            listTail.push_back( pPrev );
+        }
+        manager.update( 0.016f );
+
+        sw::vector<int64> listTick;
+        for ( uint32 round = 0; round < 30; ++round )
+        {
+            const sw::Stopwatch stopwatch;
+            manager.update( 0.016f );
+            listTick.push_back( stopwatch.getElapsedMicroseconds() );
+        }
+        sw::fixed_string<sw::constant::kMaxBuffer256> label{};
+        sw::formatstring( label.data(), label.capacity(), "chain depth %# (8000 objects)", depth );
+        test::logBenchSamples( label.c_str(), listTick );
+
+        if ( depth > 1 )
+        {
+            // 사슬의 끝은 앞 단계가 같은 프레임에 쓴 값(깊이 - 1)을 읽는다.
+            for ( const sw::MockSubTickMoverComponent* pTail : listTail )
+            {
+                SW_EXPECT_TRUE( sw::float3::getDistanceSquared( pTail->_observedLocal, sw::float3{ 0.0f, static_cast<float32>( depth - 1 ), 0.0f } ) < 1e-4f );
+            }
+        }
+    }
+}
+
+/**
+ * @brief [GameObjectBenchTest] 한 리더를 8000 개 팔로워가 기다린다(일대다) — 선행 조건 목록 하나에 몰리는 모양(카메라 · 디렉터 뒤에 도는 뷰)
+ */
+SW_TEST_CASE( GameObjectBenchTest, PrerequisiteFanOut )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents();
+    sw::GameObject*                pLeaderObj               = manager.createGameObject( sw::hashed_string( "BenchLeader" ) );
+    sw::MockSubTickMoverComponent* pLeader                  = pLeaderObj->addComponent<sw::MockSubTickMoverComponent>();
+    pLeader->_offset                                        = sw::float3{ 3.0f, 0.0f, 0.0f };
+    const sw::SubTickHandle                    leaderHandle = pLeader->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
+    sw::vector<sw::MockSubTickMoverComponent*> listFollower;
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        sw::GameObject*                pObj  = manager.createGameObject( sw::hashed_string( "BenchFollower" ) );
+        sw::MockSubTickMoverComponent* pComp = pObj->addComponent<sw::MockSubTickMoverComponent>();
+        pComp->_pWatched                     = pLeader;
+        pComp->_offset                       = sw::float3{ 0.0f, 1.0f, 0.0f };
+        pComp->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
+        SW_EXPECT_TRUE( pComp->addSubTickPrerequisite( sw::MockSubTickMoverComponent::kMoveSubTick, leaderHandle ) );
+        listFollower.push_back( pComp );
+    }
+    const sw::Stopwatch firstStopwatch;
+    manager.update( 0.016f );
+    const int64 firstMicro = firstStopwatch.getElapsedMicroseconds();
+    SW_LOG_INFO( "[Bench] fan-out 1 -> 8000: first tick (registry + stage build) %# us", firstMicro );
+
+    sw::vector<int64> listTick;
+    for ( uint32 round = 0; round < 30; ++round )
+    {
+        const sw::Stopwatch stopwatch;
+        manager.update( 0.016f );
+        listTick.push_back( stopwatch.getElapsedMicroseconds() );
+    }
+    test::logBenchSamples( "fan-out 1 leader -> 8000 followers, steady tick", listTick );
+    for ( const sw::MockSubTickMoverComponent* pFollower : listFollower )
+    {
+        SW_EXPECT_TRUE( sw::float3::getDistanceSquared( pFollower->_observedLocal, sw::float3{ 3.0f, 0.0f, 0.0f } ) < 1e-4f );
+    }
+}
+
+/**
+ * @brief [GameObjectBenchTest] 스폰 변동 — 선행 조건을 가진 팔로워 4000 개가 있는 씬에서 프레임마다 팔로워 하나를 만들고 하나를 지운다
+ * @details 총알 · 이펙트 · 따라다니는 뷰가 이 모양이다. 스테이지가 선행 조건에 걸린 오브젝트가 바뀔 때마다 다시 지어지므로(`rebuildStages`)
+ *          그 비용이 프레임마다 드는지 본다. 같은 변동을 선행 조건 없이 한 판과 견준다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, PrerequisiteSpawnChurn )
+{
+    for ( const bool bWithPrerequisite : { false, true } )
+    {
+        sw::GameObjectManager manager;
+        sw::RegisterMockComponents();
+        sw::GameObject*                pLeaderObj = manager.createGameObject( sw::hashed_string( "BenchLeader" ) );
+        sw::MockSubTickMoverComponent* pLeader    = pLeaderObj->addComponent<sw::MockSubTickMoverComponent>();
+        const sw::SubTickHandle        leaderTick = pLeader->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
+
+        const auto spawnFollower = [&]()
+        {
+            sw::GameObject*                pObj  = manager.createGameObject( sw::hashed_string( "BenchFollower" ) );
+            sw::MockSubTickMoverComponent* pComp = pObj->addComponent<sw::MockSubTickMoverComponent>();
+            pComp->_pWatched                     = pLeader;
+            pComp->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
+            if ( bWithPrerequisite )
+                (void)pComp->addSubTickPrerequisite( sw::MockSubTickMoverComponent::kMoveSubTick, leaderTick );
+            return pObj;
+        };
+
+        sw::vector<sw::GameObject*> listFollower;
+        for ( uint32 index = 0; index < kObjectCount / 2; ++index )
+        {
+            listFollower.push_back( spawnFollower() );
+        }
+        manager.update( 0.016f );
+
+        sw::vector<int64> listTick;
+        size_t            oldest = 0;
+        for ( uint32 round = 0; round < 60; ++round )
+        {
+            manager.destroyObject( listFollower[oldest++] );
+            listFollower.push_back( spawnFollower() );
+            const sw::Stopwatch stopwatch;
+            manager.update( 0.016f );
+            listTick.push_back( stopwatch.getElapsedMicroseconds() );
+        }
+        test::logBenchSamples( bWithPrerequisite ? "spawn churn 1/frame, 4000 followers WITH prerequisite" : "spawn churn 1/frame, 4000 followers no prerequisite",
+                               listTick );
+    }
+}
+
+/**
+ * @brief [GameObjectBenchTest] 작은 그룹의 틱 비용 — 무버 N 개(16 ~ 8000)의 `update` 한 번. 병렬 분배가 이기기 시작하는 무릎을 본다
+ * @details 항목이 `kParallelTickThreshold`(16) 개만 넘으면 포크-조인으로 도는데, 작은 그룹이면 깨우는 비용이 일보다 클 수 있다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, SmallGroupTickKnee )
+{
+    for ( const uint32 count : { 16u, 32u, 64u, 128u, 256u, 512u, 1024u, 8000u } )
+    {
+        sw::GameObjectManager manager;
+        sw::RegisterMockComponents();
+        sw::vector<sw::MockTickSceneComponent*> listMover;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            sw::GameObject* pObj = spawnMoverObject( manager, true );
+            listMover.push_back( pObj->getComponent<sw::MockTickSceneComponent>() );
+        }
+        manager.update( 0.016f );
+        sw::vector<int64> listTick;
+        for ( uint32 round = 0; round < 60; ++round )
+        {
+            const float32 height = static_cast<float32>( round + 1 ) * 0.25f;
+            for ( sw::MockTickSceneComponent* pMover : listMover )
+            {
+                pMover->_tickLocalPos._y = height;
+            }
+            const sw::Stopwatch stopwatch;
+            manager.update( 0.016f );
+            listTick.push_back( stopwatch.getElapsedMicroseconds() );
+        }
+        sw::fixed_string<sw::constant::kMaxBuffer256> label{};
+        sw::formatstring( label.data(), label.capacity(), "small group: %# movers", count );
+        test::logBenchSamples( label.c_str(), listTick );
+    }
+}
+
+/**
  * @brief [GameObjectBenchTest] 배치 트랜스폼 쓰기 8000 건(잎 루트, 핸들은 모두 다름) — `GameObjectManager::applyTransformBatch`
  * @details 벤치 씬의 인스턴스 모드가 매 프레임 이 길로 큐브 8000 개를 움직인다. 병렬 적용이 같은 대상을 두 워커에 주지 않게 대상 버킷으로
  *          나눈 비용(세는 정렬 두 번)을 여기서 본다.
