@@ -9,6 +9,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -36,7 +37,7 @@ namespace sw
     /**
      * @brief `-gv_benchUiHangulGlyphs=N`: `gv_benchProbeFrame` 프레임에 서로 다른 한글 음절 N 개로 된 긴 글을 화면에 띄웁니다.
      * @details 새 글리프 수백 개를 처음 그리는 프레임(래스터화 · SDF · 아틀라스 업로드)의 최악 시간을 잰다. 표의 `GT.Frame` max 와 `RT.Canvas.Upload` max 를 본다.
-     *          히치가 4 ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 정한다. 시스템 한글 글꼴(맑은 고딕 · Noto Sans KR)이 없으면 두부만 그려져 측정이 아니다.
+     *          히치가 4 ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 정한다. `-lang=ko` 로 띄운다 — 영어 문화권의 대체 글꼴 사슬에는 한글 글꼴이 없어 두부만 그려지고 측정이 아니다(시스템 한글 글꼴도 있어야 한다).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiHangulGlyphs, 0, "탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)" );
 
@@ -129,8 +130,10 @@ namespace sw
 
         if ( gv_benchUiHangulGlyphs > 0 && pObjects != nullptr )
         {
+            // 화면 마커는 주 씬 컴포넌트의 월드 점을 투영한다. 없으면 마커가 접혀 글리프를 하나도 만들지 않는다(격자 가운데인 원점에 둔다).
             GameObject*      pObject = pObjects->createGameObject( hashed_string( "BenchHangulText" ) );
-            WidgetComponent* pText   = ( pObject != nullptr ) ? pObject->addComponent<WidgetComponent>() : nullptr;
+            SceneComponent*  pAnchor = ( pObject != nullptr ) ? pObject->addComponent<SceneComponent>() : nullptr;
+            WidgetComponent* pText   = ( pAnchor != nullptr ) ? pObject->addComponent<WidgetComponent>() : nullptr;
             if ( pText != nullptr )
             {
                 unique_ptr<TextWidget> text = make_unique<TextWidget>();
