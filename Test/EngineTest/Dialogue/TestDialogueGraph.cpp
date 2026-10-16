@@ -159,30 +159,51 @@ SW_TEST_CASE( DialogueGraphTest, PinRefusesOffsetsThatWouldOverflowTheNodeID )
 }
 
 /**
- * @brief [DialogueGraphTest] 노드 타입 이름이 저장과 해석에서 같은 표를 보는지 검증
- * @details 이름을 짓는 쪽과 읽는 쪽이 목록을 따로 들고 있으면, 열거자를 하나 더하고 한쪽만
- *          고쳤을 때 그 노드가 조용히 Dialogue 로 떨어진다 — 파일은 멀쩡한데 대화만 달라진다.
+ * @brief [DialogueGraphTest] 모든 노드 타입이 파일 왕복에서 그대로이고, 모르는 종류 이름은 읽기 오류인지 검증
+ * @details 종류 이름은 리플렉션 열거자 이름 하나가 정본이다. 모르는 이름을 Dialogue 로 떨어뜨리면 파일은 멀쩡해 보이는데 대화만 달라진다.
  */
 SW_TEST_CASE( DialogueGraphTest, NodeTypeNameRoundTripsForEveryValue )
 {
-    const DialogueAssetNodeType arrType[] = {
-        DialogueAssetNodeType::Start,
-        DialogueAssetNodeType::Dialogue,
-        DialogueAssetNodeType::Choice,
-        DialogueAssetNodeType::Branch,
-        DialogueAssetNodeType::Action,
-        DialogueAssetNodeType::End,
-    };
-
-    for ( DialogueAssetNodeType type : arrType )
+    DialogueGraphAsset source;
+    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
     {
-        const utf8* pName = DialogueGraphAsset::nodeTypeName( type );
-        SW_EXPECT_TRUE( string_view( pName ) != string_view( "Unknown" ) );
-        SW_EXPECT_TRUE( DialogueGraphAsset::parseNodeType( pName ) == type );
+        DialogueAssetNode node{};
+        node._id   = static_cast<int32>( typeIndex ) + 1;
+        node._type = static_cast<DialogueAssetNodeType>( typeIndex );
+        source._listNode.push_back( node );
     }
+    const string       written = source.toJSON();
+    DialogueGraphAsset reread;
+    SW_ASSERT_TRUE( reread.parseJSON( written ) );
+    SW_ASSERT_EQUAL( static_cast<uint32>( source._listNode.size() ), static_cast<uint32>( reread._listNode.size() ) );
+    for ( size_t nodeIndex = 0; nodeIndex < source._listNode.size(); ++nodeIndex )
+    {
+        SW_EXPECT_TRUE( reread._listNode[nodeIndex]._type == source._listNode[nodeIndex]._type );
+    }
+    SW_EXPECT_TRUE( written.find( "\"Choice\"" ) != string::npos ); // 종류는 열거자 이름으로 적힌다
+    SW_EXPECT_STREQ( written.c_str(), reread.toJSON().c_str() );    // 다시 읽어 쓰면 바이트까지 같다
 
-    // 모르는 이름은 Dialogue 로 떨어진다 — 그것이 계약이다.
-    SW_EXPECT_TRUE( DialogueGraphAsset::parseNodeType( "NoSuchType" ) == DialogueAssetNodeType::Dialogue );
+    test::ScopedDefensiveTestLog expected( "an unknown node type name is a load error" );
+    DialogueGraphAsset           unknown;
+    SW_EXPECT_FALSE( unknown.parseJSON( R"({ "_listNode": [ { "_id": 1, "_type": "NoSuchType" } ] })" ) );
+    SW_EXPECT_TRUE( unknown._listNode.empty() );
+}
+
+/**
+ * @brief [DialogueGraphTest] 필수 칸이 빠졌거나, id 가 겹치거나, 옛 키 이름이면 읽지 않는지 검증
+ * @details 노드 · 링크 id 와 링크의 두 핀은 `PROPERTY( Required )` 다. 빠진 칸을 초기값(0)으로 읽거나 순번으로 채우면 링크가 다른 노드를 가리킨다.
+ *          옛 키(`"nodes"`, `"from"`)를 받아 주는 별칭은 없다.
+ */
+SW_TEST_CASE( DialogueGraphTest, MissingRequiredOrDuplicateIDIsRejected )
+{
+    test::ScopedDefensiveTestLog expected( "malformed dialogue graphs are rejected" );
+    DialogueGraphAsset           asset;
+    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_listNode": [ { "_type": "Start" } ] })" ) );
+    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_listNode": [ { "_id": 1, "_type": "Start" } ], "_listLink": [ { "_fromPin": 102, "_toPin": 201 } ] })" ) );
+    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_listNode": [ { "_id": 1, "_type": "Start" }, { "_id": 1, "_type": "End" } ] })" ) );
+    SW_EXPECT_FALSE( asset.parseJSON( R"({ "nodes": [ { "id": 1, "type": "Start" } ], "links": [] })" ) );
+    SW_EXPECT_TRUE( asset._listNode.empty() );
+    SW_EXPECT_TRUE( asset._listLink.empty() );
 }
 
 /**
@@ -208,7 +229,7 @@ SW_TEST_CASE( DialogueGraphTest, FollowsChoiceAndDefaultPins )
 
 /**
  * @brief [DialogueGraphTest] JSON 왕복과 loadFromFile 이 같은 결과를 내는지 검증
- * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프하지 않고 한 번만 파싱한다. 두 경로의 결과가 같음을 못박아 둔다.
+ * @details 두 경로는 같은 읽기(`readText`)로 모인다. 두 경로의 결과가 같음을 못박아 둔다.
  */
 SW_TEST_CASE( DialogueGraphTest, JSONRoundTripAndLoadFromFileAgree )
 {
@@ -260,7 +281,6 @@ SW_TEST_CASE( DialogueGraphTest, NodeInfoCoversEveryType )
         const DialogueNodeInfo*     pInfo = DialogueGraphAsset::findNodeInfo( type );
         SW_ASSERT_NOT_NULL( pInfo );
         SW_EXPECT_TRUE( pInfo->_type == type );
-        SW_EXPECT_TRUE( DialogueGraphAsset::parseNodeType( pInfo->_pName ) == type );
     }
     SW_EXPECT_NULL( DialogueGraphAsset::findNodeInfo( DialogueAssetNodeType::Count ) );
     SW_EXPECT_EQUAL( string_view( "Unknown" ), string_view( DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType::Count ) ) );
@@ -368,14 +388,14 @@ SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeFinishesTheDialogue )
 SW_TEST_CASE( DialogueGraphTest, ActionBeforeFirstLineContinues )
 {
     const utf8* pJSON = R"({
-		"nodes": [
-			{ "id": 1, "type": "Start" },
-			{ "id": 2, "type": "Action", "action": "open_curtain" },
-			{ "id": 3, "type": "Dialogue", "speaker": "NPC", "text": "Welcome" }
+		"_listNode": [
+			{ "_id": 1, "_type": "Start" },
+			{ "_id": 2, "_type": "Action", "_actionCommand": "open_curtain" },
+			{ "_id": 3, "_type": "Dialogue", "_speaker": "NPC", "_text": "Welcome" }
 		],
-		"links": [
-			{ "from": 102, "to": 201 },
-			{ "from": 202, "to": 301 }
+		"_listLink": [
+			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
+			{ "_id": 2, "_fromPin": 202, "_toPin": 301 }
 		]
 	})";
 

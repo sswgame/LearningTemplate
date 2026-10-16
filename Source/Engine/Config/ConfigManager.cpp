@@ -51,6 +51,45 @@ namespace sw
                     outListKey.push_back( path );
             }
         }
+
+        /**
+         * @brief `PROPERTY( Required )` 칸 가운데 @p object 에 적히지 않은 것을 경로(`_listBone[2]._parentIndex`)로 모읍니다.
+         * @details 구조체 칸과 구조체 목록(배열)의 원소 안으로 들어간다. 필수 칸의 초기값은 형식일 뿐이라, 빠진 칸을 초기값으로 읽으면
+         *          "적지 않음" 이 조용히 그럴듯한 값(루트 본의 부모 -1 같은)이 된다.
+         */
+        void collectMissingRequired( const JSONValue& object, const TypeInfo& typeInfo, const string& prefix, vector<string>& outListPath )
+        {
+            for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+            {
+                if ( prop._bIsBitField == SW_TRUE )
+                    continue;
+                const string    path  = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+                const JSONValue value = object.get( prop._name.c_str(), false );
+                if ( value.isValid() == false )
+                {
+                    if ( prop._metadata._bRequired != SW_FALSE )
+                        outListPath.push_back( path );
+                    continue;
+                }
+                const bool      bContainer = prop._bIsContainer == SW_TRUE;
+                const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault() );
+                if ( pNested == nullptr )
+                    continue;
+                if ( bContainer == false && value.isObject() )
+                {
+                    collectMissingRequired( value, *pNested, path, outListPath );
+                    continue;
+                }
+                if ( bContainer == false || value.isArray() == false )
+                    continue;
+                for ( size_t elementIndex = 0; elementIndex < value.size(); ++elementIndex )
+                {
+                    const JSONValue element = value.at( elementIndex );
+                    if ( element.isObject() )
+                        collectMissingRequired( element, *pNested, path + "[" + to_string( static_cast<uint64>( elementIndex ) ) + "]", outListPath );
+                }
+            }
+        }
     } // namespace
 } // namespace sw
 
@@ -73,8 +112,17 @@ namespace sw
             SW_LOG_ERROR( "Config %#: key '%#' is unknown to %# or its value %# cannot be read", pSourceLabel, pName, typeInfo._fullyQualifiedName.c_str(),
                           orphan._text.c_str() );
         }
+        // 필수 칸(`PROPERTY( Required )`)이 빠졌으면 초기값으로 읽지 않고 오류다 — 초기값은 형식이지 기본값이 아니다.
+        vector<string> listMissing;
+        JSONDocument   document;
+        if ( document.parse( jsonStr ) )
+            collectMissingRequired( document.getRoot(), typeInfo, string(), listMissing );
+        for ( const string& missingPath : listMissing )
+        {
+            SW_LOG_ERROR( "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
+        }
         const bool bWithinRange = isWithinRange( pInstance, typeInfo, pSourceLabel );
-        return listOrphan.empty() && bWithinRange;
+        return listOrphan.empty() && listMissing.empty() && bWithinRange;
     }
 
     bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )

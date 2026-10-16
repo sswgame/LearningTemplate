@@ -92,7 +92,7 @@ SW_TEST_CASE( LocalizationGatherTest, DialogueAndAssetRulesAreGathered )
     sw::LocalizationTools::gatherAssetFile( project, gatherer, R"(<UserSettingsSchema><Setting id="a" text="settings.a"/></UserSettingsSchema>)",
                                             "game/x/data/x.settings.xml" );
     sw::LocalizationTools::gatherAssetFile(
-        project, gatherer, R"({ "nodes": [ { "id": 1, "type": "Dialogue", "speaker": "npc.elder", "text": "Welcome back.", "choices": [ "Yes", "No" ] } ], "links": [] })",
+        project, gatherer, R"({ "_listNode": [ { "_id": 1, "_type": "Dialogue", "_speaker": "npc.elder", "_text": "Welcome back.", "_listChoice": [ "Yes", "No" ] } ], "_listLink": [] })",
         "game/x/dialogue/intro.dialogue.json" );
 
     const sw::GatheredText* pHelmet = LocalizationToolsTestInternal::findText( gatherer, "Combat Helmet" );

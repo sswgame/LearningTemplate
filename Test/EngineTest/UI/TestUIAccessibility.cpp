@@ -453,16 +453,16 @@ SW_TEST_CASE( UIAccessibilityTest, DialogueRunnerPostsSubtitlesWhenEnabled )
     UIAccessibilityFixture fixture;
     SW_ASSERT_TRUE( fixture._bReady );
     const sw::string            graph = R"({
-		"nodes": [
-			{ "id": 1, "type": "Start" },
-			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "Hello traveler!" },
-			{ "id": 3, "type": "Dialogue", "speaker": "NPC", "text": "Safe travels." },
-			{ "id": 4, "type": "End" }
+		"_listNode": [
+			{ "_id": 1, "_type": "Start" },
+			{ "_id": 2, "_type": "Dialogue", "_speaker": "NPC", "_text": "Hello traveler!" },
+			{ "_id": 3, "_type": "Dialogue", "_speaker": "NPC", "_text": "Safe travels." },
+			{ "_id": 4, "_type": "End" }
 		],
-		"links": [
-			{ "from": 102, "to": 201 },
-			{ "from": 202, "to": 301 },
-			{ "from": 302, "to": 401 }
+		"_listLink": [
+			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
+			{ "_id": 2, "_fromPin": 202, "_toPin": 301 },
+			{ "_id": 3, "_fromPin": 302, "_toPin": 401 }
 		]
 	})";
     sw::DialogueRunnerComponent runner;
