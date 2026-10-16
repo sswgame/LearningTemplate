@@ -614,9 +614,10 @@ SW_TEST_CASE( ReflectionParserTest, EveryAnnotationErrorOfATypeIsReported )
 }
 
 /**
- * @brief [ReflectionParserTest] 고정 배치형 키를 잘못 적으면 헤더 · 줄 · 필드와 함께 생성이 멈춘다
- * @details 범위 필드가 뒤에 있음(읽는 쪽이 범위를 모른다), 2^24 를 넘는 정수 범위(float32 로 보관해 정확하지 않다), 찾지 못한 범위 이름,
- *          가변 길이가 아닌 필드의 MaxCount. 적격이 아닌 것(포인터)은 오류가 아니다 — 코덱 대신 이유가 생성 주석에 남는다.
+ * @brief [ReflectionParserTest] 고정 배치형 키를 잘못 적으면 헤더 · 줄 · 필드와 함께 생성이 멈춥니다
+ * @details 범위 필드가 뒤에 있음(읽는 쪽이 범위를 모릅니다), float32 로 정확히 나타낼 수 없는 정수 경계(경계는 float32 로 보관합니다),
+ *          실수 필드를 범위로 쓰는 정수 필드, 찾지 못한 범위 이름, 가변 길이가 아닌 필드의 MaxCount, 정수가 아닌 MaxCount, bool 필드의 Min · Max 입니다.
+ *          적격이 아닌 것(포인터)은 오류가 아닙니다. 코덱 대신 이유가 생성 주석에 남습니다.
  */
 SW_TEST_CASE( ReflectionParserTest, FixedLayoutAnnotationMistakesStopTheBuild )
 {
@@ -645,12 +646,20 @@ SW_TEST_CASE( ReflectionParserTest, FixedLayoutAnnotationMistakesStopTheBuild )
                                                        "\tstruct FixedWideRangeSample\n"
                                                        "\t{\n"
                                                        "\t\tREFLECT_BODY();\n"
-                                                       "\t\tPROPERTY( Min = 0, Max = 100000000 )\n"
+                                                       "\t\tPROPERTY( Min = 0, Max = 16777217 )\n"
                                                        "\t\tint32 _value{ 0 };\n"
+                                                       "\t\tPROPERTY( Min = 0, Max = 2000000000 )\n"
+                                                       "\t\tint32 _exactWide{ 0 };\n"
                                                        "\t\tPROPERTY( MaxCount = 4 )\n"
                                                        "\t\tint32 _count{ 0 };\n"
                                                        "\t\tPROPERTY( Min = \"_missing\" )\n"
                                                        "\t\tint32 _orphan{ 0 };\n"
+                                                       "\t\tPROPERTY( Min = 1, Max = 10 )\n"
+                                                       "\t\tfloat32 _scale{ 1.0f };\n"
+                                                       "\t\tPROPERTY( Min = 0, Max = \"_scale\" )\n"
+                                                       "\t\tint32 _steps{ 0 };\n"
+                                                       "\t\tPROPERTY( Min = 0, Max = 1 )\n"
+                                                       "\t\tbool _bToggle{ false };\n"
                                                        "\t\tPROPERTY()\n"
                                                        "\t\tint32* _pIgnored{ nullptr };\n"
                                                        "\t};\n"
@@ -659,8 +668,31 @@ SW_TEST_CASE( ReflectionParserTest, FixedLayoutAnnotationMistakesStopTheBuild )
     const bool bLateRange = run._log.find( "FixedMistakeSample.h(10): fixed layout of 'sw::FixedLateRangeSample::_offset': range field '_half' must be "
                                            "declared before this field" ) != sw::string::npos;
     SW_EXPECT_TRUE_MSG( bLateRange, run._log.c_str() );
-    const bool bWideRange = run._log.find( "fixed layout of 'sw::FixedWideRangeSample::_value': integer range term '100000000' exceeds 2^24" ) != sw::string::npos;
+    const bool bWideRange = run._log.find( "fixed layout of 'sw::FixedWideRangeSample::_value': integer range term '16777217' is not exactly representable as float32" ) !=
+                            sw::string::npos;
     SW_EXPECT_TRUE_MSG( bWideRange, run._log.c_str() );
+    // 2e9 는 float32 로 정확합니다. 크기가 아니라 정확성이 기준입니다.
+    SW_EXPECT_TRUE_MSG( run._log.find( "FixedWideRangeSample::_exactWide" ) == sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_steps': range field '_scale' is floating-point" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_bToggle': Min/Max apply to integer" ) != sw::string::npos, run._log.c_str() );
+
+    // MaxCount 는 정수로 읽습니다. 실수로 읽어 반올림하지 않습니다. 애노테이션 단계의 오류라 따로 돌립니다(그 헤더는 코덱 생성까지 가지 않습니다).
+    const ParserRunResult countRun = runParserOnTempHeader( parserExe, "FixedFractionCountSample",
+                                                            "#pragma once\n"
+                                                            "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                            "#include \"Core/Container/vector.h\"\n"
+                                                            "namespace sw\n"
+                                                            "{\n"
+                                                            "\tREFLECT()\n"
+                                                            "\tstruct FixedFractionCountSample\n"
+                                                            "\t{\n"
+                                                            "\t\tREFLECT_BODY();\n"
+                                                            "\t\tPROPERTY( MaxCount = 2.5 )\n"
+                                                            "\t\tvector<int32> _listValue;\n"
+                                                            "\t};\n"
+                                                            "}\n" );
+    SW_EXPECT_TRUE_MSG( countRun._exitCode != 0, countRun._log.c_str() );
+    SW_EXPECT_TRUE_MSG( countRun._log.find( "MaxCount = 2.5  (value is not a whole number of at least 1)" ) != sw::string::npos, countRun._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_count': MaxCount applies to string and vector fields only" ) != sw::string::npos,
                         run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_orphan': range name '_missing' is not a field of this type" ) != sw::string::npos,

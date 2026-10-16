@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -15,12 +16,10 @@ namespace sw
     {
         struct FixedLayoutInternal
         {
-            static constexpr uint8 kDependencyUnknown = 0;
-            static constexpr uint8 kDependencyValid   = 1;
-            static constexpr uint8 kDependencyMissing = 2;
-            /** @brief 의존 확인이 따라 내려가는 깊이 상한입니다(서로를 담는 타입이 끝없이 돌지 않게). */
+            /** @brief 의존 확인이 따라 내려가는 깊이 상한입니다. 서로를 담는 타입이 끝없이 돌지 않게 합니다. */
             static constexpr int32 kMaxDependencyDepth = 32;
-            static constexpr int32 kHashHalfBits       = 32;
+            /** @brief `BitWriter::writeBits` · `BitReader::readBits` 한 번이 다루는 최대 비트 수입니다. */
+            static constexpr int32 kMaxBitsPerCall = 32;
 
             static uint64 appendHashBytes( uint64 hash, const void* pData, const size_t byteCount ) noexcept
             {
@@ -33,7 +32,7 @@ namespace sw
                 return hash;
             }
 
-            /** @brief 정수를 바이트 순서와 무관하게(낮은 바이트부터) 섞습니다. */
+            /** @brief 정수를 낮은 바이트부터 섞습니다. 호스트 바이트 순서와 무관합니다. */
             static uint64 appendHashInteger( uint64 hash, uint64 value ) noexcept
             {
                 for ( int32 index = 0; index < 8; ++index )
@@ -47,11 +46,11 @@ namespace sw
 
             /**
              * @brief 의존 코덱이 모두 적격인지 따라 내려가 봅니다. 아니면 @p outReason 에 경로와 이유를 적습니다.
-             * @param listVisited 지금 확인 중인 코덱들 — 서로를 담는 타입(`vector<Self>` 를 다른 헤더에서)이 다시 나오면 이미 확인 중이므로 통과다.
+             * @param listVisited 지금 확인 중인 코덱들입니다. 서로를 담는 타입이 다시 나오면 이미 확인 중이므로 통과합니다.
              */
             static bool areDependenciesValid( const FixedCodec& codec, vector<const FixedCodec*>& listVisited, string& outReason )
             {
-                if ( codec._dependencyState.load( std::memory_order_acquire ) == kDependencyValid )
+                if ( codec._dependencyState.load( std::memory_order_acquire ) == FixedDependencyState::Valid )
                     return true;
                 if ( std::find( listVisited.begin(), listVisited.end(), &codec ) != listVisited.end() )
                     return true;
@@ -86,27 +85,10 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool writeMissing( BitWriter&, const void* )
+            static bool isQuantizedRangeValid( const float32 minValue, const float32 maxValue, const float32 step ) noexcept
             {
-                SW_LOG_ERROR( "Fixed layout codec vanished after it was checked (module unloaded?)" );
-                return false;
-            }
-
-            [[nodiscard]] static FixedReadResult readMissing( BitReader&, void* )
-            {
-                SW_LOG_ERROR( "Fixed layout codec vanished after it was checked (module unloaded?)" );
-                return FixedReadResult::SchemaMismatch;
-            }
-
-            static bool equalsMissing( const void*, const void* )
-            {
-                SW_LOG_ERROR( "Fixed layout codec vanished after it was checked (module unloaded?)" );
-                return false;
-            }
-
-            static uint64 computeMissingHash()
-            {
-                return 0;
+                const bool bFiniteRange = std::isfinite( minValue ) && std::isfinite( maxValue );
+                return bFiniteRange && minValue < maxValue && step > 0.0f;
             }
         };
     } // namespace
@@ -124,7 +106,7 @@ namespace sw
         , _pIneligibleReason{ nullptr }
         , _pDependency{ pDependency }
         , _dependencyCount{ dependencyCount }
-        , _dependencyState{ dependencyCount == 0 ? FixedLayoutInternal::kDependencyValid : FixedLayoutInternal::kDependencyUnknown }
+        , _dependencyState{ dependencyCount == 0 ? FixedDependencyState::Valid : FixedDependencyState::Unknown }
     {
     }
 
@@ -137,7 +119,7 @@ namespace sw
         , _pIneligibleReason{ pIneligibleReason }
         , _pDependency{ nullptr }
         , _dependencyCount{ 0 }
-        , _dependencyState{ FixedLayoutInternal::kDependencyMissing }
+        , _dependencyState{ FixedDependencyState::Missing }
     {
     }
 } // namespace sw
@@ -148,7 +130,7 @@ namespace sw
     {
         if ( minValue > maxValue )
             return false;
-        // 차이는 부호 없는 수로 센다 — 양 끝이 int64 끝에 가까우면 부호 있는 뺄셈이 넘친다.
+        // 차이는 부호 없는 수로 셉니다. 양 끝이 int64 끝에 가까우면 부호 있는 뺄셈이 넘칩니다.
         const uint64 width = static_cast<uint64>( maxValue ) - static_cast<uint64>( minValue );
         return width <= static_cast<uint64>( std::numeric_limits<uint32>::max() );
     }
@@ -214,28 +196,39 @@ namespace sw
         return FixedReadResult::Ok;
     }
 
-    bool FixedCodecUtil::writeQuantizedFloat32( BitWriter& writer, const float32 value, const float32 minValue, const float32 maxValue, const float32 step )
+    bool FixedCodecUtil::computeQuantizedIndexCount( const float32 minValue, const float32 maxValue, const float32 step, uint32& outIndexCount )
     {
-        const bool bValidRange = std::isfinite( minValue ) && std::isfinite( maxValue ) && minValue < maxValue && step > 0.0f;
-        if ( bValidRange == false || std::isfinite( value ) == false )
+        if ( FixedLayoutInternal::isQuantizedRangeValid( minValue, maxValue, step ) == false )
             return false;
-        // 칸 수가 32 비트를 넘으면 `writeQuantizedFloat` 의 정수 변환이 넘친다.
+        // 칸 수가 32 비트를 넘으면 정수 변환이 넘칩니다. 반올림은 `BitWriter::writeQuantizedFloat` 와 같은 꼴입니다.
         const float64 indexCount = ( static_cast<float64>( maxValue ) - static_cast<float64>( minValue ) ) / static_cast<float64>( step );
         if ( indexCount >= static_cast<float64>( std::numeric_limits<uint32>::max() ) )
             return false;
-        writer.writeQuantizedFloat( value, minValue, maxValue, step );
+        outIndexCount = static_cast<uint32>( ( maxValue - minValue ) / step + 0.5f );
+        return true;
+    }
+
+    bool FixedCodecUtil::writeQuantizedFloat32( BitWriter& writer, const float32 value, const float32 minValue, const float32 maxValue, const float32 step )
+    {
+        uint32 indexCount = 0;
+        if ( std::isfinite( value ) == false || computeQuantizedIndexCount( minValue, maxValue, step, indexCount ) == false )
+            return false;
+        const float32 clamped = MathUtil::clamp( value, minValue, maxValue );
+        const uint32  index   = MathUtil::min( indexCount, static_cast<uint32>( ( clamped - minValue ) / step + 0.5f ) );
+        writer.writeBits( index, BitMath::computeBitsRequired( 0, static_cast<int64>( indexCount ) ) );
         return true;
     }
 
     FixedReadResult FixedCodecUtil::readQuantizedFloat32( BitReader& reader, const float32 minValue, const float32 maxValue, const float32 step, float32& outValue )
     {
-        const bool bValidRange = std::isfinite( minValue ) && std::isfinite( maxValue ) && minValue < maxValue && step > 0.0f;
-        if ( bValidRange == false )
+        uint32 indexCount = 0;
+        if ( computeQuantizedIndexCount( minValue, maxValue, step, indexCount ) == false )
             return FixedReadResult::OutOfRange;
-        const float64 indexCount = ( static_cast<float64>( maxValue ) - static_cast<float64>( minValue ) ) / static_cast<float64>( step );
-        if ( indexCount >= static_cast<float64>( std::numeric_limits<uint32>::max() ) )
+        const uint32 index = reader.readBits( BitMath::computeBitsRequired( 0, static_cast<int64>( indexCount ) ) );
+        if ( index > indexCount )
             return FixedReadResult::OutOfRange;
-        outValue = reader.readQuantizedFloat( minValue, maxValue, step );
+        // 마지막 칸은 간격의 반올림 오차로 최댓값을 넘을 수 있습니다. 그 칸의 값은 최댓값입니다(쓰기가 경계로 자른 값과 같은 칸입니다).
+        outValue = MathUtil::min( maxValue, minValue + static_cast<float32>( index ) * step );
         return FixedReadResult::Ok;
     }
 
@@ -301,18 +294,18 @@ namespace sw
 
     void FixedCodecUtil::writeRawBits( BitWriter& writer, const uint64 value, const int32 bitCount )
     {
-        const int32 lowBits = bitCount < FixedLayoutInternal::kHashHalfBits ? bitCount : FixedLayoutInternal::kHashHalfBits;
+        const int32 lowBits = MathUtil::min( bitCount, FixedLayoutInternal::kMaxBitsPerCall );
         writer.writeBits( static_cast<uint32>( value ), lowBits );
         if ( bitCount > lowBits )
-            writer.writeBits( static_cast<uint32>( value >> FixedLayoutInternal::kHashHalfBits ), bitCount - lowBits );
+            writer.writeBits( static_cast<uint32>( value >> FixedLayoutInternal::kMaxBitsPerCall ), bitCount - lowBits );
     }
 
     uint64 FixedCodecUtil::readRawBits( BitReader& reader, const int32 bitCount )
     {
-        const int32 lowBits = bitCount < FixedLayoutInternal::kHashHalfBits ? bitCount : FixedLayoutInternal::kHashHalfBits;
+        const int32 lowBits = MathUtil::min( bitCount, FixedLayoutInternal::kMaxBitsPerCall );
         uint64      value   = reader.readBits( lowBits );
         if ( bitCount > lowBits )
-            value |= static_cast<uint64>( reader.readBits( bitCount - lowBits ) ) << FixedLayoutInternal::kHashHalfBits;
+            value |= static_cast<uint64>( reader.readBits( bitCount - lowBits ) ) << FixedLayoutInternal::kMaxBitsPerCall;
         return value;
     }
 } // namespace sw
@@ -332,27 +325,31 @@ namespace sw
             outReason = pCodec->_pIneligibleReason;
             return nullptr;
         }
-        if ( pCodec->_dependencyState.load( std::memory_order_acquire ) == FixedLayoutInternal::kDependencyValid )
+        if ( pCodec->_dependencyState.load( std::memory_order_acquire ) == FixedDependencyState::Valid )
             return pCodec;
 
         vector<const FixedCodec*> listVisited;
         if ( FixedLayoutInternal::areDependenciesValid( *pCodec, listVisited, outReason ) == false )
             return nullptr;
-        pCodec->_dependencyState.store( FixedLayoutInternal::kDependencyValid, std::memory_order_release );
+        pCodec->_dependencyState.store( FixedDependencyState::Valid, std::memory_order_release );
         return pCodec;
     }
 
-    const FixedCodec& FixedLayout::getNestedCodec( const TypeLookupCache& cache, const hashed_string& fqn )
+    const FixedCodec* FixedLayout::findNestedCodec( const TypeLookupCache& cache, const hashed_string& fqn )
     {
-        static const FixedCodec s_missingCodec( &FixedLayoutInternal::writeMissing, &FixedLayoutInternal::readMissing, &FixedLayoutInternal::equalsMissing,
-                                                &FixedLayoutInternal::computeMissingHash, "", nullptr, 0 );
-        const TypeInfo*         pType  = cache.find( fqn );
-        const FixedCodec*       pCodec = pType != nullptr ? pType->_pFixedCodec : nullptr;
-        if ( pCodec != nullptr && pCodec->isEligible() )
-            return *pCodec;
-        SW_LOG_ERROR( "Fixed layout codec for '%#' is missing although its owner was checked", fqn.c_str() );
-        SW_ASSERT( false && "fixed layout nested codec is missing" );
-        return s_missingCodec;
+        const TypeInfo*   pType  = cache.find( fqn );
+        const FixedCodec* pCodec = pType != nullptr ? pType->_pFixedCodec : nullptr;
+        if ( pCodec == nullptr || pCodec->isEligible() == false )
+            return nullptr;
+        return pCodec;
+    }
+
+    const FixedCodec& FixedLayout::requireNestedCodec( const TypeLookupCache& cache, const hashed_string& fqn )
+    {
+        const FixedCodec* pCodec = findNestedCodec( cache, fqn );
+        if ( pCodec == nullptr )
+            stopForMissingCodec( fqn, "nested codec is missing although its owner was checked (module unloaded?)" );
+        return *pCodec;
     }
 
     uint64 FixedLayout::computeSchemaHash( const uint32 version, const string_view canonical, const std::initializer_list<uint64> listNestedHash )
@@ -387,10 +384,11 @@ namespace sw
         return "Unknown";
     }
 
-    void FixedLayout::reportMissingCodec( const hashed_string& fqn, const string& reason )
+    void FixedLayout::stopForMissingCodec( const hashed_string& fqn, const string& reason )
     {
+        // 대체 값(0 해시, 빈 결과)을 돌려주면 그 값이 핸드셰이크 해시나 롤백 상태에 섞입니다. 고칠 곳은 선언이므로 멈춥니다.
         SW_LOG_ERROR( "'%#' has no fixed layout codec: %#", fqn.c_str(), reason );
-        SW_ASSERT( false && "type has no fixed layout codec - see the log for the field and the reason" );
+        std::abort();
     }
 
     bool FixedLayout::writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer )
@@ -407,13 +405,13 @@ namespace sw
             return FixedReadResult::Truncated;
         if ( schemaHash != codec._pComputeSchemaHash() )
         {
-            // 변환 레지스트리를 볼 자리다((기록된 해시, 대상 타입) → 옛 바이트를 새 객체로 바꾸는 함수, ReflectionFormats.md 3.14).
-            // 변환할 옛 B 데이터가 없어 레지스트리가 아직 없으므로 거절한다.
+            // 변환 레지스트리를 볼 자리입니다. 키는 (기록된 해시, 대상 타입)이고 값은 옛 바이트를 새 객체로 바꾸는 함수입니다(ReflectionFormats.md 3.14).
+            // 변환할 옛 B 데이터가 없어 레지스트리가 아직 없으므로 거절합니다.
             return FixedReadResult::SchemaMismatch;
         }
 
         const FixedReadResult result = codec._pRead( reader, pObject );
-        // 모자란 스트림은 0 을 읽으므로 그 전에 범위 · 열거자 검사가 먼저 걸릴 수 있다. 원인은 잘림이다.
+        // 모자란 스트림은 0 을 읽으므로 그 전에 범위 · 열거자 검사가 먼저 걸릴 수 있습니다. 원인은 잘림입니다.
         if ( reader.hasOverflowed() )
             return FixedReadResult::Truncated;
         if ( result != FixedReadResult::Ok )

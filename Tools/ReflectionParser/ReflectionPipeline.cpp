@@ -569,8 +569,8 @@ namespace sw
     }
 
     /**
-     * @details 진단 파일입니다 — 빌드는 읽지 않으므로 CMake 산출물 목록에 넣지 않습니다. 스키마 해시가 왜 바뀌었는지 빌드 두 개의 이 파일을
-     *          비교해 봅니다(`docs/plans/ReflectionFormats.md` 3.11). 이번 실행에서 최신이라 다시 쓰지 않은 입력도 `.gen.cpp` 에 줄이 남아 있다.
+     * @details 진단 파일입니다. 빌드는 읽지 않으므로 CMake 산출물 목록에 넣지 않습니다. 스키마 해시가 왜 바뀌었는지 빌드 두 개의 이 파일을
+     *          비교해 봅니다(`docs/plans/ReflectionFormats.md` 3.11). 이번 실행에서 최신이라 다시 쓰지 않은 입력도 `.gen.cpp` 에 줄이 남아 있습니다.
      */
     bool ReflectionPipeline::writeFixedSchemaList() const
     {
@@ -581,8 +581,12 @@ namespace sw
         {
             const string genCpp = ParserUtil::makeGeneratedPath( _pOptions->_outputDir, inputFile, config._emitCppExtension );
             string       genText;
-            if ( FileUtil::exists( genCpp ) == false || FileUtil::readTextFile( genCpp, genText ) == false )
-                continue;
+            // 입력마다 산출물이 있습니다(애노테이션이 없는 헤더도 빈 산출물을 씁니다). 없거나 못 읽으면 목록이 조용히 빠지므로 실패로 알립니다.
+            if ( FileUtil::readTextFile( genCpp, genText ) == false )
+            {
+                SW_LOG_ERROR( "Failed to read generated file for the fixed schema list: %#", genCpp );
+                return false;
+            }
             size_t lineStart = genText.find( marker.data(), 0, marker.size() );
             while ( lineStart != string::npos )
             {

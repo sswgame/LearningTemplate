@@ -75,8 +75,8 @@ namespace sw
                                                               "uint64", "float32", "float64", "float2", "float3", "float4", "quaternion" };
     } // namespace annotation
 
-    /** @brief 고정 배치형 코덱이 원소마다 실수 규칙으로 쓰는 수학 타입 한 줄입니다 — 정규 이름과 float32 멤버(선언 순서, 쉼표로 나눔). */
-    struct FixedMathTypeDesc
+    /** @brief 고정 배치형 코덱이 원소마다 실수 규칙으로 쓰는 수학 타입 한 줄입니다. 정규 이름과 float32 멤버(선언 순서, 쉼표로 나눔)를 담습니다. */
+    struct FixedMathTypeDef
     {
         const utf8* _pName;
         const utf8* _pMemberList;
@@ -89,7 +89,7 @@ namespace sw
          *        생성 코드가 그 이름으로 멤버를 읽으므로 어긋나면 컴파일이 멈춥니다.
          * @details 핸들(`ComponentHandle` 등)처럼 모양이 같아도 뜻이 다른 타입이 섞이지 않도록 구조에서 추측하지 않고 목록으로 둡니다.
          */
-        inline constexpr FixedMathTypeDesc kArrMathType[] = {
+        inline constexpr FixedMathTypeDef kArrMathType[] = {
             {    "float2",                                                           "_x,_y"},
             {    "float3",                                                        "_x,_y,_z"},
             {    "float4",                                                     "_x,_y,_z,_w"},
@@ -98,10 +98,8 @@ namespace sw
         };
         /** @brief `.gen.cpp` 에 타입마다 적는 정규 문자열(또는 적격이 아닌 이유) 줄의 머리입니다. `FixedSchemas.gen.txt` 가 이 줄을 모읍니다. */
         inline constexpr const utf8* kSchemaLineMarker = "// FixedSchema: ";
-        /** @brief 대상마다 정규 문자열을 모아 두는 진단 파일 이름입니다(빌드는 읽지 않는다). */
+        /** @brief 대상마다 정규 문자열을 모아 두는 진단 파일 이름입니다. 빌드는 읽지 않습니다. */
         inline constexpr const utf8* kSchemaListFile = "FixedSchemas.gen.txt";
-        /** @brief 정수 범위의 상한입니다 — `Min` · `Max` 는 float32 로 읽으므로 그 너머의 정수는 정확하지 않습니다. */
-        inline constexpr float64 kMaxExactIntegerRange = 16777216.0;
     } // namespace fixedlayout
 
     // ------------------------------------------------------------------------------

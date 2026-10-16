@@ -21,7 +21,7 @@ namespace sw
     {
     public:
         /**
-         * @param fixedCodec 계획을 마친(`FixedCodecGenerator::makePlan`) 고정 배치형 코덱 생성기 — 타입마다 코덱 등록과 멤버를 덧붙입니다.
+         * @param fixedCodec 계획을 마친(`FixedCodecGenerator::makePlan`) 고정 배치형 코덱 생성기입니다. 타입마다 코덱 등록과 멤버를 덧붙입니다.
          * @param sourceRoot 모듈 판별을 이 경로 기준 상대 경로로 합니다. 비면 전체 경로로 매칭합니다.
          */
         CodeGenerator( const ParsedHeader& header, const FixedCodecGenerator& fixedCodec, const string& sourceFilePath, const ParserSession& session,

@@ -22,11 +22,11 @@ namespace sw
             static constexpr const utf8* kReadOutOfRange = "::sw::FixedReadResult::OutOfRange";
             static constexpr const utf8* kBaseFieldName  = "(base)";
 
-            /** @brief 범위 한쪽 끝입니다. 숫자면 `_value`, 필드 이름이면 `_expr`(쓰기 · 읽기 함수의 `object` 기준 식)입니다. */
+            /** @brief 범위 한쪽 끝입니다. 숫자면 `_value` 이고, 필드 이름이면 `_expr`(쓰기 · 읽기 함수의 `object` 기준 식)입니다. */
             struct Bound
             {
-                string  _text; ///< 적힌 글(진단용)
-                string  _expr; ///< 필드 이름이면 C++ 식(`( -object._halfSize )`)
+                string  _text; ///< 적힌 글입니다(진단용)
+                string  _expr; ///< 필드 이름이면 C++ 식입니다(`( -object._halfSize )`)
                 float64 _value;
                 uint8   _bPresent;
                 uint8   _bLiteral;
@@ -41,20 +41,20 @@ namespace sw
                 }
             };
 
-            /** @brief 값 하나를 쓰는 자리입니다 — 쓰기 · 읽기 식, 비교의 두 식, 원소마다의 범위. */
+            /** @brief 값 하나를 쓰는 자리입니다. 쓰기 · 읽기 식, 비교의 두 식, 원소마다의 범위를 담습니다. */
             struct Site
             {
                 const ParsedPropertyInfo* _pProp;
                 string                    _expr;
                 string                    _exprA;
                 string                    _exprB;
-                vector<Bound>             _listMin; ///< 하나면 모든 원소에, 수학 타입 원소 수만큼이면 원소마다
+                vector<Bound>             _listMin; ///< 하나면 모든 원소에, 수학 타입 원소 수만큼이면 원소마다 씁니다
                 vector<Bound>             _listMax;
                 int32                     _depth;
                 uint8                     _bBitField;
             };
 
-            /** @brief 범위 이름을 찾는 범위 하나 — 타입, 그 객체의 식, 볼 수 있는 필드 수(앞선 필드만). */
+            /** @brief 범위 이름을 찾는 범위 하나입니다. 타입, 그 객체의 식, 볼 수 있는 필드 수(앞선 필드만)를 담습니다. */
             struct ScopeFrame
             {
                 const ParsedTypeInfo* _pType;
@@ -62,7 +62,7 @@ namespace sw
                 size_t                _limit;
             };
 
-            /** @brief 타입 하나(최상위)의 코덱을 만드는 동안의 상태입니다. */
+            /** @brief 최상위 타입 하나의 코덱을 만드는 동안의 상태입니다. */
             struct EmitState
             {
                 const ParsedHeader*            _pHeader;
@@ -78,8 +78,8 @@ namespace sw
                 vector<pair<string, string>>   _listDependency;
                 vector<const ParsedFixedEnum*> _listEnum;
                 vector<ScopeFrame>             _listScope;
-                vector<string>                 _listInlineFqn;   ///< 지금 펼치는 중첩 타입들(순환을 막는다)
-                vector<string>                 _listResolvedFqn; ///< 펼치며 바깥 범위 이름을 푼 중첩 타입
+                vector<string>                 _listInlineFqn;   ///< 지금 펼치는 중첩 타입들입니다(순환을 막습니다)
+                vector<string>                 _listResolvedFqn; ///< 펼치며 바깥 범위 이름을 푼 중첩 타입입니다
                 string                         _reason;
                 string                         _unresolvedName;
                 string                         _unresolvedMember;
@@ -121,7 +121,7 @@ namespace sw
                 state._bError = SW_TRUE;
             }
 
-            /** @brief 첫 이유만 남깁니다(타입이 적격이 아닌 까닭 하나면 충분하다). 오류와 달리 생성은 계속된다. */
+            /** @brief 첫 이유만 남깁니다. 타입이 적격이 아닌 까닭은 하나면 충분합니다. 오류와 달리 생성은 계속됩니다. */
             static void markIneligible( EmitState& state, const ParsedPropertyInfo& prop, const string_view reason )
             {
                 if ( state._reason.empty() )
@@ -142,9 +142,9 @@ namespace sw
                 return string( b.view() );
             }
 
-            static const FixedMathTypeDesc* findMathType( const string_view typeName )
+            static const FixedMathTypeDef* findMathType( const string_view typeName )
             {
-                for ( const FixedMathTypeDesc& math : fixedlayout::kArrMathType )
+                for ( const FixedMathTypeDef& math : fixedlayout::kArrMathType )
                 {
                     if ( typeName == math._pName )
                         return &math;
@@ -163,18 +163,21 @@ namespace sw
                 return listMember;
             }
 
-            /** @brief 쓰기 · 읽기 · 비교 · 정규 문자열을 볼 원소 종류입니다(컨테이너는 원소까지 내려간다). */
+            /** @brief 쓰기 · 읽기 · 비교 · 정규 문자열이 볼 원소 종류입니다. 컨테이너는 원소까지 내려갑니다. */
             static const ParsedFixedType& findLeafType( const ParsedFixedType& type )
             {
                 const ParsedFixedType* pType = &type;
-                while ( ( pType->_kind == FixedValueKind::Vector || pType->_kind == FixedValueKind::FixedArray ) && pType->_element != nullptr )
+                while ( pType->_element != nullptr )
                 {
+                    const bool bContainer = pType->_kind == FixedValueKind::Vector || pType->_kind == FixedValueKind::FixedArray;
+                    if ( bContainer == false )
+                        break;
                     pType = pType->_element.get();
                 }
                 return *pType;
             }
 
-            /** @brief 가변 길이 단계 수입니다(vector · 문자열). 중첩 REFLECT 타입 안은 그 타입의 키가 맡으므로 세지 않는다. */
+            /** @brief 가변 길이 단계 수입니다(vector · 문자열). 중첩 REFLECT 타입 안은 그 타입의 키가 맡으므로 세지 않습니다. */
             static int32 countVariableLengthLevels( const ParsedFixedType& type )
             {
                 int32 count = ( type._kind == FixedValueKind::Vector || type._kind == FixedValueKind::String ) ? 1 : 0;
@@ -183,7 +186,7 @@ namespace sw
                 return count;
             }
 
-            /** @brief 원소 타입까지 내려가 표 밖의 것을 찾습니다. 없으면 빈 문자열입니다. */
+            /** @brief 원소 타입까지 내려가 인코딩 표 밖의 것을 찾습니다. 없으면 빈 문자열입니다. */
             static string findIneligibleReason( const ParsedFixedType& type )
             {
                 if ( type._kind == FixedValueKind::Ineligible )
@@ -196,7 +199,7 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // B) 범위 — `Min` · `Max` 의 항을 숫자 · 앞선 필드 식으로 푼다
+            // B) 범위. `Min` · `Max` 의 항을 숫자나 앞선 필드의 식으로 풉니다
             // ------------------------------------------------------------------------------
             static bool isNumericTerm( const string_view term ) noexcept
             {
@@ -204,12 +207,11 @@ namespace sw
                     return false;
                 const utf8 first  = term.front();
                 const utf8 second = term.size() > 1 ? term[1] : '\0';
-                if ( '0' <= first && first <= '9' )
+                if ( ( '0' <= first && first <= '9' ) || first == '.' )
                     return true;
-                if ( first == '.' )
-                    return true;
-                const bool bSigned = first == '-' || first == '+';
-                return bSigned && ( ( '0' <= second && second <= '9' ) || second == '.' );
+                const bool bSigned      = first == '-' || first == '+';
+                const bool bDigitSecond = ( '0' <= second && second <= '9' ) || second == '.';
+                return bSigned && bDigitSecond;
             }
 
             enum class LookupResult : uint8
@@ -219,8 +221,11 @@ namespace sw
                 Error,
             };
 
-            /** @brief 범위 이름을 안쪽 범위부터 바깥으로 찾습니다. 찾은 필드는 앞에 선언된 비 Transient 정수 · 실수여야 합니다. */
-            static LookupResult lookupRangeName( EmitState& state, const ParsedPropertyInfo& prop, const string& name, string& outExpr )
+            /**
+             * @brief 범위 이름을 안쪽 범위부터 바깥으로 찾습니다. 찾은 필드는 앞에 선언된 Transient 아닌 정수 · 실수여야 합니다.
+             * @param bIntegerSite 범위를 받는 값이 정수입니다. 그러면 범위 필드도 정수여야 합니다. 실수 필드를 정수로 바꾸면 소수부가 잘리기 때문입니다.
+             */
+            static LookupResult lookupRangeName( EmitState& state, const ParsedPropertyInfo& prop, const string& name, const bool bIntegerSite, string& outExpr )
             {
                 for ( auto frameIt = state._listScope.rbegin(); frameIt != state._listScope.rend(); ++frameIt )
                 {
@@ -232,16 +237,20 @@ namespace sw
                             continue;
                         if ( index >= frameIt->_limit )
                         {
-                            reportError( state, prop,
-                                         "range field '" + name + "' must be declared before this field - the reader needs its value first" );
+                            reportError( state, prop, "range field '" + name + "' must be declared before this field - the reader needs its value first" );
                             return LookupResult::Error;
                         }
                         const FixedValueKind kind     = candidate._fixedType != nullptr ? candidate._fixedType->_kind : FixedValueKind::Ineligible;
                         const bool           bNumeric = kind == FixedValueKind::Integer || kind == FixedValueKind::Float32 || kind == FixedValueKind::Float64;
-                        const bool           bUsable  = bNumeric && candidate._bTransient == SW_FALSE && candidate._bIsBitField == SW_FALSE;
-                        if ( bUsable == false )
+                        const bool           bStored  = candidate._bTransient == SW_FALSE && candidate._bIsBitField == SW_FALSE;
+                        if ( ( bNumeric && bStored ) == false )
                         {
                             reportError( state, prop, "range field '" + name + "' must be a non-transient integer or floating-point field" );
+                            return LookupResult::Error;
+                        }
+                        if ( bIntegerSite && kind != FixedValueKind::Integer )
+                        {
+                            reportError( state, prop, "range field '" + name + "' is floating-point but this field is an integer - the fraction would be cut" );
                             return LookupResult::Error;
                         }
                         outExpr = frameIt->_objectExpr + "." + name;
@@ -253,7 +262,7 @@ namespace sw
 
             /**
              * @brief `Min` 또는 `Max` 글을 항마다 풉니다.
-             * @return 생성 오류이거나 이름을 찾지 못했으면 false(이름을 못 찾은 것은 `state._unresolvedName` 에 남는다)
+             * @return 생성 오류이거나 이름을 찾지 못했으면 false 입니다. 이름을 못 찾은 것은 `state._unresolvedName` 에 남습니다.
              */
             static bool resolveBounds( EmitState& state, const ParsedPropertyInfo& prop, const string& text, const bool bInteger, vector<Bound>& outListBound )
             {
@@ -277,9 +286,10 @@ namespace sw
                             reportError( state, prop, "range term '" + bound._text + "' is not a number" );
                             return false;
                         }
-                        bound._bLiteral         = SW_TRUE;
+                        bound._bLiteral = SW_TRUE;
+                        // 경계는 float32 로 보관합니다(`PropertyMetadata::_minRange`). 정수 경계는 float32 로 정확히 나타나야 두 형식이 같은 값을 봅니다.
                         const bool bWholeNumber = std::floor( bound._value ) == bound._value;
-                        const bool bExact       = -fixedlayout::kMaxExactIntegerRange <= bound._value && bound._value <= fixedlayout::kMaxExactIntegerRange;
+                        const bool bExact       = static_cast<float64>( static_cast<float32>( bound._value ) ) == bound._value;
                         if ( bInteger && bWholeNumber == false )
                         {
                             reportError( state, prop, "integer range term '" + bound._text + "' is not a whole number" );
@@ -287,7 +297,7 @@ namespace sw
                         }
                         if ( bInteger && bExact == false )
                         {
-                            reportError( state, prop, "integer range term '" + bound._text + "' exceeds 2^24 - Min/Max are stored as float32 and are not exact beyond it" );
+                            reportError( state, prop, "integer range term '" + bound._text + "' is not exactly representable as float32 - Min/Max are stored as float32" );
                             return false;
                         }
                         outListBound.push_back( std::move( bound ) );
@@ -297,7 +307,7 @@ namespace sw
                     const bool         bNegative = term.front() == '-';
                     const string       name( bNegative ? term.substr( 1 ) : term );
                     string             fieldExpr;
-                    const LookupResult result = lookupRangeName( state, prop, name, fieldExpr );
+                    const LookupResult result = lookupRangeName( state, prop, name, bInteger, fieldExpr );
                     if ( result == LookupResult::Error )
                         return false;
                     if ( result == LookupResult::NotFound )
@@ -307,7 +317,7 @@ namespace sw
                             reportError( state, prop, "range name '" + name + "' is not a field of this type or of any enclosing type" );
                             return false;
                         }
-                        // 자기 타입에는 없다 — 같은 헤더의 바깥 타입이 펼치며 풀 수 있다. 그 타입 혼자서는 코덱이 없다.
+                        // 자기 타입에는 없습니다. 같은 헤더의 바깥 타입이 펼치며 풀 수 있고, 그 타입 혼자서는 코덱이 없습니다.
                         if ( state._unresolvedName.empty() )
                         {
                             state._unresolvedName   = name;
@@ -323,7 +333,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 원소 @p elementIndex 의 범위입니다(항이 하나면 모든 원소에 같다). */
+            /** @brief 원소 @p elementIndex 의 범위입니다. 항이 하나면 모든 원소가 같습니다. */
             static const Bound& pickBound( const vector<Bound>& listBound, const size_t elementIndex )
             {
                 return listBound.size() == 1 ? listBound.front() : listBound[elementIndex];
@@ -380,7 +390,7 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // D) 값 하나의 코드 — 쓰기 · 읽기 · 비교를 같은 순서로 낸다
+            // D) 값 하나의 코드. 쓰기 · 읽기 · 비교를 같은 순서로 냅니다
             // ------------------------------------------------------------------------------
             static string makeEnumHelperName( const ParsedFixedEnum& enumInfo )
             {
@@ -455,10 +465,8 @@ namespace sw
                     const string minExpr  = makeFloatBound( minBound, true, "float32" );
                     const string maxExpr  = makeFloatBound( maxBound, false, "float32" );
                     const string stepExpr = "static_cast<float32>( " + formatFloat( static_cast<float64>( prop._step ) ) + " )";
-                    emitWriteCheck( state, "::sw::FixedCodecUtil::writeQuantizedFloat32( writer, " + site._expr + ", " + minExpr + ", " + maxExpr + ", " +
-                                               stepExpr + " )" );
-                    emitReadCheck( state, "::sw::FixedCodecUtil::readQuantizedFloat32( reader, " + minExpr + ", " + maxExpr + ", " + stepExpr + ", " +
-                                              site._expr + " )" );
+                    emitWriteCheck( state, "::sw::FixedCodecUtil::writeQuantizedFloat32( writer, " + site._expr + ", " + minExpr + ", " + maxExpr + ", " + stepExpr + " )" );
+                    emitReadCheck( state, "::sw::FixedCodecUtil::readQuantizedFloat32( reader, " + minExpr + ", " + maxExpr + ", " + stepExpr + ", " + site._expr + " )" );
                 }
                 else
                 {
@@ -469,10 +477,8 @@ namespace sw
                     if ( bBounded )
                     {
                         const utf8* pSuffix = b32 ? "Float32" : "Float64";
-                        emitWriteCheck( state, string( "::sw::FixedCodecUtil::writeBounded" ) + pSuffix + "( writer, " + site._expr + ", " + minExpr + ", " +
-                                                   maxExpr + " )" );
-                        emitReadCheck( state, string( "::sw::FixedCodecUtil::readBounded" ) + pSuffix + "( reader, " + minExpr + ", " + maxExpr + ", " +
-                                                  site._expr + " )" );
+                        emitWriteCheck( state, string( "::sw::FixedCodecUtil::writeBounded" ) + pSuffix + "( writer, " + site._expr + ", " + minExpr + ", " + maxExpr + " )" );
+                        emitReadCheck( state, string( "::sw::FixedCodecUtil::readBounded" ) + pSuffix + "( reader, " + minExpr + ", " + maxExpr + ", " + site._expr + " )" );
                     }
                     else if ( b32 )
                     {
@@ -498,7 +504,7 @@ namespace sw
                 const bool bCounted = enumInfo._countEnumerator.empty() == false && enumInfo._bIsBitFlag == SW_FALSE;
                 if ( bCounted )
                 {
-                    // 범위 [가장 작은 열거자, Count - 1] — 값은 컴파일러가 계산한다(파서의 값은 진단용).
+                    // 범위는 [가장 작은 열거자, Count - 1] 입니다. 값은 컴파일러가 계산합니다(파서의 값은 진단용입니다).
                     const ParsedEnumeratorInfo* pMin = nullptr;
                     for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
                     {
@@ -509,8 +515,7 @@ namespace sw
                     }
                     const string minExpr = "static_cast<int64>( " + enumType + "::" + pMin->_name + " )";
                     const string maxExpr = "static_cast<int64>( " + enumType + "::" + enumInfo._countEnumerator + " ) - 1";
-                    emitWriteCheck( state, "::sw::FixedCodecUtil::writeRangedInteger( writer, static_cast<int64>( " + site._expr + " ), " + minExpr + ", " +
-                                               maxExpr + " )" );
+                    emitWriteCheck( state, "::sw::FixedCodecUtil::writeRangedInteger( writer, static_cast<int64>( " + site._expr + " ), " + minExpr + ", " + maxExpr + " )" );
                     const string value = "value" + formatInteger( site._depth );
                     state._read.line( "{" ).push();
                     state._read.linef( "int64 %# = 0;", value );
@@ -593,7 +598,7 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 같은 헤더의 중첩 타입을 부모 코덱 안에 펼칠 수 있는가입니다 — 기반 · 검증 함수가 없고 코덱 필드가 모두 공개여야 합니다. */
+            /** @brief 같은 헤더의 중첩 타입을 부모 코덱 안에 펼칠 수 있는지 봅니다. 기반과 검증 함수가 없고 코덱 필드가 모두 공개여야 합니다. */
             static bool canInline( const EmitState& state, const ParsedTypeInfo* pNested )
             {
                 if ( pNested == nullptr )
@@ -618,13 +623,12 @@ namespace sw
                 if ( canInline( state, pNested ) )
                 {
                     outCanonical += "inline{T=" + fqn + "|";
-                    const size_t unresolvedBefore = state._unresolvedName.size();
                     state._listInlineFqn.push_back( fqn );
                     emitFields( state, *pNested, site._expr, site._exprA, site._exprB, site._depth + 1, outCanonical );
                     state._listInlineFqn.pop_back();
                     outCanonical += "}";
-                    // 펼친 타입이 혼자서는 풀지 못하던 바깥 범위 이름을 여기서 풀었다면, 그 타입의 "바깥 이름" 오류는 사라진다.
-                    if ( state._bError == SW_FALSE && unresolvedBefore == state._unresolvedName.size() )
+                    // 펼친 타입이 혼자서는 풀지 못하던 바깥 범위 이름을 여기서 풀었습니다. 그 타입의 "바깥 이름" 오류는 사라집니다.
+                    if ( state._bError == SW_FALSE )
                         state._listResolvedFqn.push_back( fqn );
                     return;
                 }
@@ -681,8 +685,8 @@ namespace sw
                     }
                     case FixedValueKind::Math:
                     {
-                        const FixedMathTypeDesc* pMath      = findMathType( type._typeName );
-                        const vector<string>     listMember = splitMembers( pMath->_pMemberList );
+                        const FixedMathTypeDef* pMath      = findMathType( type._typeName );
+                        const vector<string>    listMember = splitMembers( pMath->_pMemberList );
                         outCanonical += "math(" + type._typeName + ")";
                         for ( size_t memberIndex = 0; memberIndex < listMember.size(); ++memberIndex )
                         {
@@ -721,9 +725,20 @@ namespace sw
                 }
             }
 
+            /** @brief 열거형 값이 있는지 봅니다. `Count` 열거자는 값이 아닙니다. */
+            static bool hasEnumValues( const ParsedFixedEnum& enumInfo )
+            {
+                for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
+                {
+                    if ( enumerator._name != enumInfo._countEnumerator )
+                        return true;
+                }
+                return false;
+            }
+
             /**
              * @brief 프로퍼티 하나의 키를 검사하고 코드를 냅니다. 적격이 아니면 이유만 남기고 코드를 내지 않습니다.
-             * @details 키를 잘못 적은 것은 타입이 적격이든 아니든 생성 오류입니다 — 고칠 곳이 선언에 있다.
+             * @details 키를 잘못 적은 것은 타입이 적격이든 아니든 생성 오류입니다. 고칠 곳이 선언에 있기 때문입니다.
              */
             static void emitProperty( EmitState& state, const ParsedPropertyInfo& prop, const string& objectExpr, const string& exprA, const string& exprB,
                                       const int32 depth, string& outCanonical )
@@ -739,12 +754,16 @@ namespace sw
                 const ParsedFixedType& leaf     = findLeafType( type );
                 const FixedValueKind   leafKind = leaf._kind;
                 const int32            variable = countVariableLengthLevels( type );
-                const bool             bNumeric = leafKind == FixedValueKind::Integer || leafKind == FixedValueKind::Float32 ||
-                                      leafKind == FixedValueKind::Float64 || leafKind == FixedValueKind::Math;
-                const FixedMathTypeDesc* pMath        = leafKind == FixedValueKind::Math ? findMathType( leaf._typeName ) : nullptr;
-                const size_t             elementCount = pMath != nullptr ? splitMembers( pMath->_pMemberList ).size() : 1;
+                const bool             bNumeric = leafKind == FixedValueKind::Integer || leafKind == FixedValueKind::Float32 || leafKind == FixedValueKind::Float64 ||
+                                      leafKind == FixedValueKind::Math;
+                const bool              bHasRange    = prop._minRangeExpr._text.empty() == false || prop._maxRangeExpr._text.empty() == false;
+                const FixedMathTypeDef* pMath        = leafKind == FixedValueKind::Math ? findMathType( leaf._typeName ) : nullptr;
+                const size_t            elementCount = pMath != nullptr ? splitMembers( pMath->_pMemberList ).size() : 1;
 
-                // 1) 키 검사 — 생성 오류
+                // 1) 키 검사. 생성 오류입니다
+                const bool bRangeOnNonNumeric = bHasRange && bNumeric == false && leafKind != FixedValueKind::Ineligible;
+                if ( bRangeOnNonNumeric )
+                    reportError( state, prop, "Min/Max apply to integer, floating-point and math fields only" );
                 if ( prop._bHasStep == SW_TRUE )
                 {
                     const bool bFloat32 = leafKind == FixedValueKind::Float32 || leafKind == FixedValueKind::Math;
@@ -755,15 +774,8 @@ namespace sw
                     else if ( prop._minRangeExpr._text.empty() || prop._maxRangeExpr._text.empty() )
                         reportError( state, prop, "Step needs both Min and Max" );
                 }
-                if ( prop._bHasMaxCount == SW_TRUE )
-                {
-                    const float64 maxCount     = static_cast<float64>( prop._maxCount );
-                    const bool    bWholeNumber = std::floor( maxCount ) == maxCount;
-                    if ( variable == 0 )
-                        reportError( state, prop, "MaxCount applies to string and vector fields only" );
-                    else if ( bWholeNumber == false || ( 1.0 <= maxCount && maxCount <= fixedlayout::kMaxExactIntegerRange ) == false )
-                        reportError( state, prop, "MaxCount must be a whole number in [1, 2^24]" );
-                }
+                if ( prop._bHasMaxCount == SW_TRUE && variable == 0 )
+                    reportError( state, prop, "MaxCount applies to string and vector fields only" );
 
                 Site site;
                 site._pProp     = &prop;
@@ -780,16 +792,16 @@ namespace sw
                     if ( resolveBounds( state, prop, prop._minRangeExpr._text, bInteger, site._listMin ) == false ||
                          resolveBounds( state, prop, prop._maxRangeExpr._text, bInteger, site._listMax ) == false )
                         return;
-                    const bool bCountMismatch = ( site._listMin.size() != 1 && site._listMin.size() != elementCount ) ||
-                                                ( site._listMax.size() != 1 && site._listMax.size() != elementCount );
-                    if ( bCountMismatch )
+                    const bool bMinCountMismatch = site._listMin.size() != 1 && site._listMin.size() != elementCount;
+                    const bool bMaxCountMismatch = site._listMax.size() != 1 && site._listMax.size() != elementCount;
+                    if ( bMinCountMismatch || bMaxCountMismatch )
                     {
                         reportError( state, prop, "Min/Max list has " + formatInteger( static_cast<int64>( site._listMin.size() ) ) + "/" + formatInteger( static_cast<int64>( site._listMax.size() ) ) + " terms but the value has " + formatInteger( static_cast<int64>( elementCount ) ) + " elements" );
                         return;
                     }
                 }
 
-                // 2) 적격 판정 — 오류가 아니다
+                // 2) 적격 판정. 오류가 아닙니다
                 const string reason = findIneligibleReason( type );
                 if ( reason.empty() == false )
                 {
@@ -806,20 +818,10 @@ namespace sw
                     markIneligible( state, prop, "variable-length value without MaxCount" );
                     return;
                 }
-                if ( leafKind == FixedValueKind::Enum )
+                if ( leafKind == FixedValueKind::Enum && hasEnumValues( *leaf._enum ) == false )
                 {
-                    const ParsedFixedEnum& enumInfo   = *leaf._enum;
-                    size_t                 valueCount = 0;
-                    for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
-                    {
-                        if ( enumerator._name != enumInfo._countEnumerator )
-                            ++valueCount;
-                    }
-                    if ( valueCount == 0 )
-                    {
-                        markIneligible( state, prop, "enum has no enumerators" );
-                        return;
-                    }
+                    markIneligible( state, prop, "enum has no enumerators" );
+                    return;
                 }
 
                 appendFieldHead( outCanonical, prop );
@@ -840,13 +842,8 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // E) 멤버 함수 글 — Registrar<T> 안
+            // E) 멤버 함수 글. Registrar<T> 안에 들어갑니다
             // ------------------------------------------------------------------------------
-            static void appendBody( CodeEmit& emit, const CodeEmitBuffer& body )
-            {
-                emit.raw( body.view() );
-            }
-
             static string makeMemberText( EmitState& state, const ParsedTypeInfo& type, const bool bHasBase, const string& canonical )
             {
                 const string&  fqn = type._fullyQualifiedName;
@@ -857,19 +854,18 @@ namespace sw
                 emit.linef( "static constexpr const utf8* kFixedCanonical = %#;", CodeEmit::quoted( canonical ) );
                 emit.blank();
 
-                // 쓰기
+                // 쓰기. 필드가 없는 타입도 있으므로 인자를 쓰지 않는 경고를 막습니다
                 emit.line( "static bool fixedWrite( ::sw::BitWriter& writer, const void* pObject )" );
                 emit.line( "{" ).push();
                 emit.linef( "const %#& object = *static_cast<const %#*>( pObject );", fqn, fqn );
                 emit.line( "(void)object;" );
-                emit.line( "(void)writer; // 필드가 없는 타입" );
+                emit.line( "(void)writer;" );
                 if ( bHasBase )
                 {
-                    emit.linef( "if ( %#()._pWrite( writer, static_cast<const ::%#*>( &object ) ) == false )", makeCodecAccessorName( type._parentFQN ),
-                                type._parentFQN );
+                    emit.linef( "if ( %#()._pWrite( writer, static_cast<const ::%#*>( &object ) ) == false )", makeCodecAccessorName( type._parentFQN ), type._parentFQN );
                     emit.push().line( "return false;" ).pop();
                 }
-                appendBody( emit, state._writeBuffer );
+                emit.raw( state._writeBuffer.view() );
                 emit.line( "return true;" );
                 emit.pop().line( "}" );
                 emit.blank();
@@ -879,7 +875,7 @@ namespace sw
                 emit.line( "{" ).push();
                 emit.linef( "%#& object = *static_cast<%#*>( pObject );", fqn, fqn );
                 emit.line( "(void)object;" );
-                emit.line( "(void)reader; // 필드가 없는 타입" );
+                emit.line( "(void)reader;" );
                 emit.linef( "::sw::FixedReadResult result = %#;", kReadOk );
                 if ( bHasBase )
                 {
@@ -887,7 +883,7 @@ namespace sw
                     emit.linef( "if ( result != %# )", kReadOk );
                     emit.push().line( "return result;" ).pop();
                 }
-                appendBody( emit, state._readBuffer );
+                emit.raw( state._readBuffer.view() );
                 if ( type._validate.empty() == false )
                 {
                     emit.line( "{" ).push();
@@ -910,16 +906,16 @@ namespace sw
                 emit.line( "(void)b;" );
                 if ( bHasBase )
                 {
-                    emit.linef( "if ( %#()._pEquals( static_cast<const ::%#*>( &a ), static_cast<const ::%#*>( &b ) ) == false )",
-                                makeCodecAccessorName( type._parentFQN ), type._parentFQN, type._parentFQN );
+                    emit.linef( "if ( %#()._pEquals( static_cast<const ::%#*>( &a ), static_cast<const ::%#*>( &b ) ) == false )", makeCodecAccessorName( type._parentFQN ),
+                                type._parentFQN, type._parentFQN );
                     emit.push().line( "return false;" ).pop();
                 }
-                appendBody( emit, state._equalsBuffer );
+                emit.raw( state._equalsBuffer.view() );
                 emit.line( "return true;" );
                 emit.pop().line( "}" );
                 emit.blank();
 
-                // 스키마 해시 — 다른 타입의 해시는 실행 시간에 그 코덱에서 얻어 섞는다(다른 헤더 · 모듈일 수 있다).
+                // 스키마 해시. 다른 타입의 해시는 다른 헤더 · 모듈일 수 있으므로 실행 시간에 그 코덱에서 얻어 섞습니다
                 emit.line( "static uint64 computeFixedSchemaHash()" );
                 emit.line( "{" ).push();
                 StringBuilder<constant::kMaxBuffer1024> nested;
@@ -929,12 +925,11 @@ namespace sw
                         nested.append( ", " );
                     nested.appendFormat( "%#()._pComputeSchemaHash()", makeCodecAccessorName( dependency.second ) );
                 }
-                emit.linef( "static const uint64 s_hash = ::sw::FixedLayout::computeSchemaHash( ::sw::FixedLayout::kVersion, kFixedCanonical, { %# } );",
-                            nested.view() );
+                emit.linef( "static const uint64 s_hash = ::sw::FixedLayout::computeSchemaHash( ::sw::FixedLayout::kVersion, kFixedCanonical, { %# } );", nested.view() );
                 emit.line( "return s_hash;" );
                 emit.pop().line( "}" );
 
-                // 다른 타입의 코덱 찾기
+                // 다른 타입의 코덱
                 for ( const pair<string, string>& dependency : state._listDependency )
                 {
                     emit.blank();
@@ -942,11 +937,11 @@ namespace sw
                     emit.line( "{" ).push();
                     emit.linef( "static const ::sw::hashed_string s_fqn( %# );", CodeEmit::quoted( dependency.second ) );
                     emit.line( "static ::sw::TypeLookupCache     s_cache;" );
-                    emit.line( "return ::sw::FixedLayout::getNestedCodec( s_cache, s_fqn );" );
+                    emit.line( "return ::sw::FixedLayout::requireNestedCodec( s_cache, s_fqn );" );
                     emit.pop().line( "}" );
                 }
 
-                // 열거자 확인 — 등록된 열거자(비트 플래그면 등록된 비트)만 받는다
+                // 열거자 확인. 등록된 열거자(비트 플래그면 등록된 비트)만 받습니다
                 for ( const ParsedFixedEnum* pEnum : state._listEnum )
                 {
                     const string enumType = "::" + pEnum->_fullyQualifiedName;
@@ -1027,7 +1022,7 @@ namespace sw
             const ParsedTypeInfo& type = _header._listType[typeIndex];
             TypePlan&             plan = _listPlan[typeIndex];
             Internal::EmitState   state( _header, _sourceFilePath, type );
-            // 함수 본문 들여쓰기 — 네임스페이스 · 구조체 · 함수 안이다.
+            // 함수 본문 들여쓰기입니다. 네임스페이스, 구조체, 함수 안입니다.
             state._write.push( Internal::kMemberIndent + 1 );
             state._read.push( Internal::kMemberIndent + 1 );
             state._equals.push( Internal::kMemberIndent + 1 );
@@ -1061,7 +1056,7 @@ namespace sw
             plan._memberText     = Internal::makeMemberText( state, type, bHasBase, canonical );
         }
 
-        // 바깥 타입의 필드를 범위로 쓰는 타입은 같은 헤더의 부모가 펼치며 그 이름을 풀어야 한다. 아무도 풀지 않았으면 선언이 틀렸다.
+        // 바깥 타입의 필드를 범위로 쓰는 타입은 같은 헤더의 부모가 펼치며 그 이름을 풀어야 합니다. 아무도 풀지 않았으면 선언이 틀렸습니다.
         for ( size_t typeIndex = 0; typeIndex < _listPlan.size(); ++typeIndex )
         {
             TypePlan&             plan = _listPlan[typeIndex];

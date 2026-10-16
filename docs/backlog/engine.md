@@ -2,6 +2,10 @@
 
 엔진과 GameFramework 의 구조 정리, 오브젝트와 씬, 물리와 내비게이션, 핫 리로드와 모듈의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
+- `A-13` [결함] **자기 기술형 바이너리가 모르는 값 타입을 1 바이트 건너뛰고 성공으로 읽는다.** `SerializerUtil::deserializeValueBinary` 는 핸들러 · 열거형 · 타입 레지스트리
+  어디에도 없는 타입이면 1 바이트를 넘기고 성공을 돌려준다(`SerializerUtil.cpp` 의 마지막 분기). 이유를 담은 읽기 오류로 바꾼다. 고정 배치형은 표 밖의 타입에 코덱을
+  만들지 않는 형식으로 막았다([리플렉션 직렬화 형식 계획](../plans/ReflectionFormats.md) 1.4 · 8.2). 쓰는 쪽도 같은 타입을 무엇으로 쓰는지 함께 본다.
+
 - `B-11` [검증대기] **어노테이션 키 완성을 Visual Studio IntelliSense(EDG)에서 손으로 확인하지 못했다.** `ReflectionMacros.h` 는 `__INTELLISENSE__` 에서도 풀이(`ReflectionIntellisense.h`)를 읽는다.
   풀이는 MS 호환 모드의 dependent base 찾기 · `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다 — EDG 가 오류 없이 읽는지 본다.
   DTE `ErrorList.ErrorItems` 로는 IntelliSense 오류가 나오지 않아 자동 확인 길이 없다. 손 확인: VS 로 저장소 폴더를 연다 → `CameraComponent.h` 의 `PROPERTY( ` 안에서

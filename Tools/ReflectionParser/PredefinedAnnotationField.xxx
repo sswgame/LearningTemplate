@@ -12,7 +12,8 @@
  *                     uint8 비트필드   → bool    (단독 토큰 `X` 와 `X = true/false`)
  *                     string · 목록    → 문자열  (`X = "..."`)
  *                     float32          → 실수    (`X = 1.5`)
- *                     ParsedRangeExpr  → 범위    (`X = 1.5` 또는 `X = "-_halfSize, 0"` — 숫자 · 필드 이름 목록)
+ *                     ParsedRangeExpr  → 범위    (`X = 1.5` 또는 숫자 · 필드 이름 목록 `X = "-_halfSize, 0"`)
+ *                     uint32           → 개수    (`X = 16`, 1 이상의 정수)
  *                     FunctionNetRole  → 넷 역할 (단독 토큰 `Server` 등. 토큰 자체가 값입니다)
  *                   그대로 넣는 줄(`REGISTER_ANNOTATION_FIELD`)은 uint8 과 string 만 받습니다. 나머지는 `_FN` 입니다.
  *          Fn     : `void Fn( 대상&, string_view 값 )`. `AnnotationFields.cpp` 에 있습니다.

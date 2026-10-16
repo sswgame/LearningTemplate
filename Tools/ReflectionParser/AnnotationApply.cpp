@@ -79,7 +79,7 @@ namespace sw
                 return value.find_first_of( " \t" ) != string_view::npos;
             }
 
-            /** @brief `-` 를 앞에 붙일 수 있는 C++ 식별자인가입니다(범위 식의 필드 이름 한 항). */
+            /** @brief `-` 를 앞에 붙일 수 있는 C++ 식별자인지 봅니다(범위 식의 필드 이름 한 항입니다). */
             static bool isFieldNameTerm( string_view term ) noexcept
             {
                 if ( term.empty() == false && term.front() == '-' )
@@ -88,18 +88,28 @@ namespace sw
                     return false;
                 for ( size_t charIndex = 0; charIndex < term.size(); ++charIndex )
                 {
-                    const utf8 character = term[charIndex];
-                    const bool bLetter   = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || character == '_';
-                    const bool bDigit    = '0' <= character && character <= '9';
-                    if ( bLetter == false && ( bDigit == false || charIndex == 0 ) )
+                    const utf8 character   = term[charIndex];
+                    const bool bLetter     = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || character == '_';
+                    const bool bDigit      = '0' <= character && character <= '9';
+                    const bool bLaterDigit = bDigit && charIndex > 0;
+                    if ( bLetter == false && bLaterDigit == false )
                         return false;
                 }
                 return true;
             }
 
+            /** @brief `MaxCount` 값의 꼴입니다. 1 이상의 32 비트 정수여야 합니다(실수로 읽어 반올림하지 않습니다). */
+            static bool isCountValue( const string_view value )
+            {
+                uint64 parsed = 0;
+                if ( StringUtil::parseUint64( StringUtil::trim( value ), parsed ) == false )
+                    return false;
+                return 1 <= parsed && parsed <= static_cast<uint64>( std::numeric_limits<uint32>::max() );
+            }
+
             /**
-             * @brief `Min` · `Max` 값의 꼴입니다 — 쉼표로 나눈 항마다 숫자이거나 필드 이름(`-_halfSize`)이어야 합니다.
-             * @details `0.5f` 처럼 C++ 습관의 접미사가 붙은 숫자는 어느 쪽도 아니므로 거절한다(조용히 0 이 되지 않게).
+             * @brief `Min` · `Max` 값의 꼴입니다. 쉼표로 나눈 항마다 숫자이거나 필드 이름(`-_halfSize`)이어야 합니다.
+             * @details `0.5f` 처럼 C++ 습관의 접미사가 붙은 숫자는 어느 쪽도 아니므로 거절합니다. 조용히 0 이 되지 않게 하려는 것입니다.
              */
             static bool isRangeExpression( const string_view value )
             {
@@ -243,6 +253,11 @@ namespace sw
             if ( pField->_value == AnnotationValue::Range && AnnotationApplyInternal::isRangeExpression( value ) == false )
             {
                 outListUnknownToken.push_back( token + "  (value is not a number or a list of numbers and field names)" );
+                continue;
+            }
+            if ( pField->_value == AnnotationValue::Count && AnnotationApplyInternal::isCountValue( value ) == false )
+            {
+                outListUnknownToken.push_back( token + "  (value is not a whole number of at least 1)" );
                 continue;
             }
             pField->_pApply( target, value );

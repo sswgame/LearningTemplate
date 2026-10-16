@@ -99,7 +99,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 3) 중첩 — 같은 헤더의 공개 타입은 펼치고, 기반이 있는 타입은 실행 시간에 그 코덱을 찾는다
+    // 3) 중첩. 같은 헤더의 공개 타입은 펼치고, 기반이 있는 타입은 실행 시간에 그 코덱을 찾습니다
     // ------------------------------------------------------------------------------
     REFLECT()
     struct FixedInnerSample
@@ -138,7 +138,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 범위가 바깥 타입의 필드다 — 혼자서는 코덱이 없고, 펼치는 부모가 이름을 푼다. */
+    /** @brief 범위가 바깥 타입의 필드입니다. 혼자서는 코덱이 없고, 펼치는 부모가 이름을 풉니다. */
     REFLECT()
     struct FixedPointSample
     {
@@ -172,7 +172,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 4) 스키마 변경 거부 — 한 가지만 다른 짝
+    // 4) 스키마 변경 거부. 한 가지만 다른 짝입니다
     // ------------------------------------------------------------------------------
     REFLECT()
     struct FixedOrderASample
@@ -304,7 +304,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 5) 적격이 아닌 타입 — 코덱 대신 이유가 등록된다
+    // 5) 적격이 아닌 타입. 코덱 대신 이유가 등록됩니다
     // ------------------------------------------------------------------------------
     REFLECT()
     struct FixedPointerSample
@@ -313,7 +313,7 @@ namespace sw
         PROPERTY()
         int32 _count = 0;
         PROPERTY( MaxCount = 4 )
-        vector<FixedInnerBaseSample*> _listOwned; ///< 자기 기술형은 소유 포인터 원소를 싣지만 고정 배치형 표에는 포인터가 없다
+        vector<FixedInnerBaseSample*> _listOwned; ///< 자기 기술형은 소유 포인터 원소를 싣지만 고정 배치형 표에는 포인터가 없습니다
     };
 } // namespace sw
 
@@ -325,5 +325,17 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         vector<int32> _listValue;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 가변 길이가 두 겹입니다. `MaxCount` 하나로 vector 와 문자열의 길이를 함께 정할 수 없습니다. */
+    REFLECT()
+    struct FixedVectorOfStringSample
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 4 )
+        vector<string> _listName;
     };
 } // namespace sw

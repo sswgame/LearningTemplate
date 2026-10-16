@@ -57,7 +57,7 @@ namespace sw
 {
     /**
      * @brief `Min` · `Max` 에 적은 글 그대로입니다. 숫자 하나이거나, 쉼표로 나눈 숫자 · 필드 이름(`-_halfSize`) 목록입니다.
-     * @details 숫자 하나면 인스펙터 범위(`_minRange` 등)로도 쓰입니다. 목록 · 이름 꼴은 고정 배치형 코덱만 씁니다(필드 이름은 실행 시간에 값이 정해진다).
+     * @details 숫자 하나면 인스펙터 범위(`_minRange` 등)로도 쓰입니다. 목록 · 이름 꼴은 고정 배치형 코덱만 씁니다(필드 이름은 실행 시간에 값이 정해집니다).
      */
     struct ParsedRangeExpr
     {
@@ -67,20 +67,20 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 고정 배치형(B) 코덱에서 값 하나가 어떤 꼴로 인코딩되는가입니다(`docs/plans/ReflectionFormats.md` 3.4 표). */
+    /** @brief 고정 배치형(B) 코덱에서 값 하나를 어떤 꼴로 인코딩하는지 나타냅니다(`docs/plans/ReflectionFormats.md` 3.4 표). */
     enum class FixedValueKind : uint8
     {
-        Ineligible, ///< 인코딩 표 밖 — 그 필드를 가진 타입은 코덱이 없다(`ParsedFixedType::_reason`)
+        Ineligible, ///< 인코딩 표 밖입니다. 그 필드를 가진 타입은 코덱이 없습니다(`ParsedFixedType::_reason`)
         Bool,
         Integer,
         Float32,
         Float64,
         Enum,
         String,
-        Math,       ///< `float3` 같은 수학 타입 — 원소마다 실수 규칙
-        Vector,     ///< 가변 길이 시퀀스 — `MaxCount` 필수
-        FixedArray, ///< `T[N]` · `std::array<T, N>` — 개수 없이 원소 N 개
-        Reflect,    ///< 다른 `REFLECT` 타입 — 그 타입의 필드
+        Math,       ///< `float3` 같은 수학 타입입니다. 원소마다 실수 규칙을 씁니다
+        Vector,     ///< 가변 길이 시퀀스입니다. `MaxCount` 가 필요합니다
+        FixedArray, ///< `T[N]` · `std::array<T, N>` 입니다. 개수 없이 원소 N 개를 씁니다
+        Reflect,    ///< 다른 `REFLECT` 타입입니다. 그 타입의 필드를 씁니다
     };
 } // namespace sw
 
@@ -92,7 +92,7 @@ namespace sw
         string                       _fullyQualifiedName;
         string                       _underlyingTypeName; ///< 정규 이름(`uint8`)
         vector<ParsedEnumeratorInfo> _listEnumerator;     ///< 선언 순서, `Count` 포함
-        string                       _countEnumerator;    ///< `ENUM( Count = … )` 의 이름. 없으면 비어 있다
+        string                       _countEnumerator;    ///< `ENUM( Count = … )` 의 이름입니다. 없으면 비어 있습니다
         uint8                        _bIsBitFlag : 1;
         [[maybe_unused]] uint8       _reserved   : 7;
 
@@ -116,8 +116,8 @@ namespace sw
      */
     struct ParsedFixedType
     {
-        string                      _typeName;           ///< 정규 타입 이름 — 수학 타입 표를 찾고 진단에 쓴다
-        string                      _reason;             ///< Ineligible 이면 이유(영문, 로그 · 생성 주석에 그대로 나간다)
+        string                      _typeName;           ///< 정규 타입 이름입니다. 수학 타입 표를 찾고 진단에 씁니다
+        string                      _reason;             ///< Ineligible 이면 이유입니다(영문, 로그와 생성 주석에 그대로 나갑니다)
         string                      _fullyQualifiedName; ///< Reflect 의 FQN
         shared_ptr<ParsedFixedType> _element;            ///< Vector · FixedArray 의 원소
         shared_ptr<ParsedFixedEnum> _enum;               ///< Enum 의 열거자
@@ -163,15 +163,15 @@ namespace sw
         shared_ptr<ParsedContainerNode> _containerTree;
         /** @brief 고정 배치형 코덱에서의 분류입니다. 필드면 늘 있고, 접근자 프로퍼티는 Ineligible 입니다. */
         shared_ptr<ParsedFixedType> _fixedType;
-        ParsedRangeExpr             _minRangeExpr; ///< `Min` 의 글 — 숫자 하나면 `_minRange` 에도 들어간다
+        ParsedRangeExpr             _minRangeExpr; ///< `Min` 의 글입니다. 숫자 하나면 `_minRange` 에도 들어갑니다
         ParsedRangeExpr             _maxRangeExpr;
         float32                     _minRange;
         float32                     _maxRange;
         float32                     _uiMinRange; ///< `UIMin` — 슬라이더 범위(허용 범위와 따로)
         float32                     _uiMaxRange;
-        float32                     _step;     ///< `Step` — 양자화 간격(`_bHasStep`)
-        float32                     _maxCount; ///< `MaxCount` — 문자열 · 컨테이너 최대 길이(`_bHasMaxCount`). 정수인지는 코덱 생성기가 본다
-        uint32                      _line;     ///< 선언 줄 — 생성 오류 메시지에 쓴다
+        float32                     _step;     ///< `Step` 양자화 간격입니다(`_bHasStep`)
+        uint32                      _maxCount; ///< `MaxCount` 문자열 · 컨테이너 최대 길이입니다(`_bHasMaxCount`)
+        uint32                      _line;     ///< 선언 줄입니다. 생성 오류 메시지에 씁니다
         ContainerKind               _containerKind;
         uint8                       _bIsBitField   : 1;
         uint8                       _bReadOnly     : 1;
@@ -237,7 +237,7 @@ namespace sw
             , _uiMinRange{ 0.0f }
             , _uiMaxRange{ 1.0f }
             , _step{ 0.0f }
-            , _maxCount{ 0.0f }
+            , _maxCount{ 0 }
             , _line{ 0 }
             , _containerKind{ ContainerKind::None }
             , _bIsBitField{ SW_FALSE }
@@ -376,7 +376,7 @@ namespace sw
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
         vector<ParsedEventInfo>      _listEvent;
-        uint32                       _baseCount; ///< 기반 클래스 수 — 둘 이상이면 고정 배치형 코덱이 없다
+        uint32                       _baseCount; ///< 기반 클래스 수입니다. 둘 이상이면 고정 배치형 코덱이 없습니다
         uint8                        _bAbstract         : 1;
         uint8                        _bStatic           : 1;
         uint8                        _bReflectBody      : 1;

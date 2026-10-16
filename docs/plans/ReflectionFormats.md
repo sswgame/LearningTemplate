@@ -175,8 +175,9 @@ _client.call( ChatMethod::kSend, request, onReply );
 | `bool`, `uint8` 플래그 | 1 비트 |
 | 정수, `Min` · `Max` 있음 | 범위 비트 수(`BitMath::computeBitsRequired`) |
 | 정수, 범위 없음 | 부호 있으면 `writeVarInt`, 없으면 `writeVarUint` |
-| `float32`, `Step` 있음 | `writeQuantizedFloat`(`Min` · `Max` 필수) |
-| `float32`, `Step` 없음 | 32 비트 원본 비트 |
+| `float32`, `Step` 있음 | 칸 번호를 범위 비트 수로 씀(`FixedCodecUtil::writeQuantizedFloat32`, `Min` · `Max` 필수). 읽을 때 칸 수를 넘는 번호는 `OutOfRange` |
+| `float32`, `Step` 없음 | 32 비트 원본 비트. `Min` · `Max` 가 있으면 쓰기 · 읽기 모두 범위를 확인 |
+| `float64` | 64 비트 원본 비트(`Step` 은 받지 않음). `Min` · `Max` 는 `float32` 와 같음 |
 | `float3` 등 수학 타입 | 원소마다 위 규칙 |
 | 열거형 | 3.7 |
 | `string`, `vector<T>` | `MaxCount` 필수, 개수 + 원소(3.5) |
@@ -193,11 +194,12 @@ _client.call( ChatMethod::kSend, request, onReply );
 |---|---|---|
 | `Min` · `Max` | 실수 리터럴, 허용 범위(`float.MinRange`) | 정수 비트 폭과 양자화 범위로도 씀. 필드 이름과 쉼표 목록도 받음 |
 | `Step` | 없음(새 키) | 양자화 간격. 값의 의미 있는 최소 단위 |
-| `MaxCount` | 없음(새 키) | 문자열 · 컨테이너 최대 길이 |
+| `MaxCount` | 없음(새 키, `count` 종류) | 문자열 · 컨테이너 최대 길이. 1 이상의 정수로 읽음 |
 
 - `Min` · `Max` 를 재사용하는 근거는 이 키가 이미 "허용 범위"라는 점입니다. 인스펙터 슬라이더 범위는 `UIMin` · `UIMax` 로 따로 있습니다(`AnnotationMeta.txt` 의 `float.UIMinRange` 주석).
   허용 범위 밖의 값은 이미 잘못된 값이므로 와이어 범위로 써도 뜻이 바뀌지 않습니다.
-- `Min` · `Max` 는 지금 `float32` 로 보관합니다. 정수 범위는 2^24 이하에서만 정확합니다. 그보다 큰 정수 범위를 적으면 생성 오류입니다.
+- `Min` · `Max` 는 지금 `float32` 로 보관합니다. 정수 경계는 `float32` 로 정확히 나타나는 값이어야 하고, 아니면 생성 오류입니다(2e9 는 정확하고 16777217 은 아닙니다).
+  숫자가 아닌 필드(bool, 열거형, 문자열, 구조체)의 `Min` · `Max` 도 생성 오류입니다. 정수 필드는 실수 필드 이름을 범위로 쓸 수 없습니다(소수부가 잘립니다).
 - 범위 밖 정수는 **쓰기가 실패**합니다. `writeInt` 처럼 자르지 않습니다(`BitStream.cpp:70-74`). 실수 양자화는 `Step` 를 적는 순간 손실 인코딩이므로 경계로 자릅니다. `Step` 이 붙은 필드만 손실이 있습니다.
 - 쓰기 실패는 결함이므로 `FixedLayout::write` 는 `[[nodiscard]] bool` 을 반환하고, 등록 API 는 단언하거나 오류로 멈춥니다.
 
@@ -268,7 +270,8 @@ struct MechArenaSnapshot
 - 넷 채널과 온라인 연결은 핸드셰이크가 해시를 이미 확인했으므로 메시지마다 해시를 싣지 않습니다(5절). 본문만 쓰는 경로는 확인을 마친 채널 · 연결 객체 안에만 있고 공개 API 로 내보내지 않습니다.
 - **원자성**: 읽기는 대상 객체를 복사한 임시 객체에 읽고, 끝까지 성공했을 때만 옮깁니다. 실패하면 대상은 그대로입니다.
   복사본에서 시작하는 이유는 B 에 없는 필드(`FighterRuntime::_pDef` 같은 정의 포인터)를 보존하기 위해서입니다. `FightingMatch::loadState` 의 `arrLoaded` 복사(`:1147`)를 생성 코드가 대신합니다.
-- **결과 형식**: `FixedReadResult` 는 `[[nodiscard]]` 열거형입니다. 값은 `Ok`, `SchemaMismatch`, `Truncated`, `OutOfRange`, `ValidateFailed` 입니다. 호출부가 이유를 로그에 남길 수 있습니다.
+- **결과 형식**: `FixedReadResult` 는 `[[nodiscard]]` 열거형입니다. 값은 `Ok`, `SchemaMismatch`, `Truncated`, `OutOfRange`, `ValidateFailed`, `TrailingData` 입니다. 호출부가 이유를 로그에 남길 수 있습니다.
+- **코덱이 없는 타입**: `write` · `read` · `equals` · `getSchemaHash` 에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성). 0 해시 같은 대체 값을 돌려주지 않습니다. 등록 API 는 기동 때 `findCodec` 으로 이유를 미리 보입니다.
 - **검증 훅**: 타입에 기존 `REFLECT( Validate = 함수 )`(`CodeGenerator.cpp:572-576`)가 있으면 읽기 끝에 부르고, 오류가 있으면 `ValidateFailed` 입니다. 새 훅을 만들지 않습니다.
   데이터 범위 검사(`_moveIndex` 등)와 "같은 캐릭터인가" 대조 값(`FightingMatch.cpp:1100`)이 이 훅으로 갑니다.
 - 남은 비트가 있으면 실패입니다. 바이트 경계까지의 패딩 비트만 허용합니다.
@@ -277,7 +280,7 @@ struct MechArenaSnapshot
 
 생성기가 적격 타입마다 **정규 문자열**을 만들고 FNV-1a 64 로 해시합니다. 정규 문자열에 들어가는 것은 아래와 같습니다.
 
-1. B 인코딩 규칙 버전 상수 `kFixedFormatVersion`. 인코더 규칙(varint 형태, 양자화 반올림)을 바꾸면 이 값 하나만 높여 모든 해시를 바꿉니다.
+1. B 인코딩 규칙 버전 상수 `FixedLayout::kVersion`. 인코더 규칙(varint 형태, 양자화 반올림)을 바꾸면 이 값 하나만 높여 모든 해시를 바꿉니다.
 2. 타입의 FQN.
 3. 필드마다 선언 순서로 이름, `TypeNameMap::normalize` 로 정규화한 타입 이름, B 에 영향을 주는 키(`Min`, `Max`, `Step`, `MaxCount`)와 값, 비트필드 여부.
 4. 필드 타입이 열거형이면 FQN, 기반 타입, 모든 열거자의 `이름=값`.
@@ -331,7 +334,7 @@ B 의 기본 동작은 스키마 해시가 다르면 거절입니다. 다만 구
 
 - 함수 본문은 템플릿보다 `CodeEmit` 로 쓰는 편이 맞습니다. 필드마다 분기가 많아서입니다. 머리와 꼬리만 템플릿으로 두어 `TypeRegistrarBegin.tpl` · `End.tpl` 과 맞춥니다.
 - 리플렉션 타입의 인코딩은 Serialization 이 가진다는 기존 원칙(`SerializeReflectionRPC.cpp` 머리 주석)을 따라 런타임은 `Engine/Serialization/Fixed` 에 둡니다.
-- 생성 오류(범위 필드가 뒤에 있음, 정수 범위 2^24 초과, 이름을 찾지 못한 범위)는 헤더 경로, 줄, 필드 이름을 담고 생성기를 실패로 끝냅니다. 적격이 아닌 것은 오류가 아닙니다(3.1).
+- 생성 오류(범위 필드가 뒤에 있음, `float32` 로 정확하지 않은 정수 경계, 이름을 찾지 못한 범위, 숫자가 아닌 필드의 `Min` · `Max`)는 헤더 경로, 줄, 필드 이름을 담고 생성기를 실패로 끝냅니다. 적격이 아닌 것은 오류가 아닙니다(3.1).
 
 **유니티 빌드 ODR.** `.gen.cpp` 는 유니티 배치에서 빠집니다(`ReflectionCodeGen.cmake:183`). 코덱 함수는 `Registrar<T>` 특수화의 멤버이고 정의가 하나뿐입니다.
 `.gen.cpp` 안 도우미는 이름 없는 네임스페이스에 두고 이름에 타입 식별자(`sanitizeIdentifier`)를 붙입니다. 나중에 유니티 제외가 풀려도 충돌하지 않습니다.
@@ -371,7 +374,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
 
 - **왕복**: 값을 채운 객체를 쓰고 읽어 `FixedLayout::equals` 로 비교합니다. 경계값(범위 최소 · 최대, 빈 컨테이너, `MaxCount` 개)을 포함합니다.
 - **스키마 변경 거부**: 테스트 전용 헤더에 필드 순서만 다른 두 타입을 두고 정규 문자열 해시를 비교합니다. 해시가 달라야 하고, 한쪽이 쓴 바이트를 다른 쪽이 읽으면 `SchemaMismatch` 여야 합니다.
-  같은 방법으로 필드 이름 변경, 열거자 추가, `Step` · `Min` 변경, `kFixedFormatVersion` 변경을 각각 확인합니다.
+  같은 방법으로 필드 이름 변경, 열거자 추가, `Step` · `Min` 변경, `FixedLayout::kVersion` 변경을 각각 확인합니다.
 - **적격 판정**: 포인터 필드, `MaxCount` 없는 `vector` 를 가진 타입에 코덱이 없고, 그 타입을 등록 API 에 넘기면 이유를 담은 오류로 멈추는지 확인합니다.
 - **잘림 · 범위**: 바이트를 한 개씩 줄인 모든 접두에 대해 `Truncated` 가 나오는지, 범위 밖 개수와 열거자가 `OutOfRange` 인지 확인합니다. 실패 뒤 대상 객체가 그대로인지도 확인합니다.
 - **쓰기 실패**: 범위 밖 정수, `MaxCount` 초과에서 `FixedLayout::write` 가 `false` 인지 확인합니다.
@@ -461,10 +464,10 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 6. **해시에 들어가지 않는 의미 변경**: 단위를 미터에서 센티미터로 바꾸는 변경은 해시를 바꾸지 않습니다. 이 경우를 위해 넷 손 버전 상수는 지우지 않습니다.
 7. **`REFLECT` 를 처음 붙이는 타입**: 스냅샷 구조체에 `REFLECT` 를 붙이면 `TypeRegistry` 에 등록되고 인스펙터 · A 직렬화 대상이 됩니다. 의도한 결과이지만 등록 수가 늘어납니다.
 
-### 8.2 백로그로 넘길 것
+### 8.2 백로그로 넘긴 것
 
-- `SerializerUtil::deserializeValueBinary` 의 "모르는 타입이면 1 바이트 건너뛰고 성공"(`SerializerUtil.cpp:629-633`)을 오류로 바꿉니다. A 의 결함이며 이 계획과 독립입니다.
-- `BitWriter::writeInt` 의 조용한 범위 자르기를 단언으로 바꿉니다. 손 코덱이 남아 있는 동안의 안전망입니다.
+- `SerializerUtil::deserializeValueBinary` 의 "모르는 타입이면 1 바이트 건너뛰고 성공"은 [engine.md](../backlog/engine.md) `A-13` 입니다. A 의 결함이며 이 계획과 독립입니다.
+- `BitWriter::writeInt` 의 조용한 범위 자르기와 `BitReader::readInt` · `readQuantizedFloat` 의 읽기 자르기는 [network.md](../backlog/network.md) `A-14` 입니다. 손 코덱이 남아 있는 동안의 안전망입니다.
 
 ### 8.3 정한 것
 

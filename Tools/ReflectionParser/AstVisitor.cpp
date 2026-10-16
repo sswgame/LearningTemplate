@@ -569,10 +569,10 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // C-2) 고정 배치형 코덱 — 필드 타입을 인코딩 표(`docs/plans/ReflectionFormats.md` 3.4)에 맞춰 분류한다
+            // C-2) 고정 배치형 코덱. 필드 타입을 인코딩 표(`docs/plans/ReflectionFormats.md` 3.4)에 맞춰 분류합니다
             //
-            // 선언(clang 타입)에서 읽는다. 다른 헤더의 열거형 · 구조체도 이 번역 단위 안에 선언이 있으므로 같은 길로 읽는다.
-            // 표 밖의 타입은 오류가 아니다 — 그 타입의 코덱이 없을 뿐이고, 코덱이 필요한 등록 API 가 이유와 함께 멈춘다.
+            // 선언(clang 타입)에서 읽습니다. 다른 헤더의 열거형 · 구조체도 이 번역 단위 안에 선언이 있으므로 같은 길로 읽습니다.
+            // 표 밖의 타입은 오류가 아닙니다. 그 타입의 코덱이 없을 뿐이고, 코덱이 필요한 등록 API 가 이유와 함께 멈춥니다.
             // ------------------------------------------------------------------------------
             static constexpr int32 kMaxFixedTypeDepth = 4;
 
@@ -596,14 +596,14 @@ namespace sw
                        kind == CXType_BlockPointer || kind == CXType_ObjCObjectPointer;
             }
 
-            /** @brief 문자 하나가 8 비트인 문자열(`sw::string` · `std::string`)인가입니다. 넓은 문자열은 표 밖입니다. */
+            /** @brief 문자 하나가 8 비트인 문자열(`sw::string` · `std::string`)인지 봅니다. 넓은 문자열은 표 밖입니다. */
             static bool isFixedStringType( const string_view normalizedName, const string_view canonicalSpelling ) noexcept
             {
                 return normalizedName == "string" || StringUtil::startsWith( canonicalSpelling, "sw::basic_string<char>" ) ||
                        StringUtil::startsWith( canonicalSpelling, "std::basic_string<char," ) || canonicalSpelling == "std::basic_string<char>";
             }
 
-            /** @brief 열거형 선언에서 열거자 · `ENUM( Count, Flags )` 를 읽습니다. 다른 헤더의 열거형이면 그 헤더의 수집이 애노테이션 오류를 알린다. */
+            /** @brief 열거형 선언에서 열거자 · `ENUM( Count, Flags )` 를 읽습니다. 다른 헤더의 열거형이면 그 헤더의 수집이 애노테이션 오류를 알립니다. */
             static shared_ptr<ParsedFixedEnum> collectFixedEnum( const CXCursor declaration, const ParserSession& session )
             {
                 shared_ptr<ParsedFixedEnum> result = make_shared<ParsedFixedEnum>();
@@ -618,7 +618,7 @@ namespace sw
                 if ( spelling.empty() )
                     return result;
                 ParsedEnumInfo annotated;
-                vector<string> listUnknownToken; // 그 열거형의 헤더를 수집할 때 알린다 — 여기서 다시 알리지 않는다
+                vector<string> listUnknownToken; // 그 열거형의 헤더를 수집할 때 알립니다. 여기서 다시 알리지 않습니다
                 sw::AnnotationApply::apply( spelling, annotated, session._annotationMeta, listUnknownToken );
                 result->_countEnumerator = string( ParserUtil::scopeLeaf( annotated._countEnumerator ) );
                 result->_bIsBitFlag      = annotated._bIsBitFlag;
@@ -676,7 +676,7 @@ namespace sw
                     result->_kind = FixedValueKind::String;
                     return result;
                 }
-                for ( const FixedMathTypeDesc& math : fixedlayout::kArrMathType )
+                for ( const FixedMathTypeDef& math : fixedlayout::kArrMathType )
                 {
                     if ( result->_typeName == math._pName )
                     {
@@ -684,7 +684,7 @@ namespace sw
                         return result;
                     }
                 }
-                // `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 다(`SW_ENABLE_STL_CONTAINER` 면 `std::vector` 별칭).
+                // `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 입니다(`SW_ENABLE_STL_CONTAINER` 면 `std::vector` 별칭입니다).
                 const bool bVector = StringUtil::startsWith( canonicalSpelling, "std::vector<" ) || StringUtil::startsWith( canonicalSpelling, "sw::vector<" );
                 const bool bArray  = StringUtil::startsWith( canonicalSpelling, "std::array<" ) || StringUtil::startsWith( canonicalSpelling, "sw::array<" );
                 if ( bVector || bArray )
@@ -745,9 +745,9 @@ namespace sw
             }
 
             /**
-             * @brief 레코드 선언에 `REFLECT()` 가 붙었는가입니다. 다른 헤더의 선언도 봅니다.
+             * @brief 레코드 선언에 `REFLECT()` 가 붙었는지 봅니다. 다른 헤더의 선언도 봅니다.
              * @details clang_getTypeDeclaration 이 반환하는 커서는 AnnotateAttr 자식 순회에서 빠지는 경우가 있어 정의 커서를 보고,
-             *          (다른 어노테이션 검사와 마찬가지로) 소스 텍스트 폴백까지 함께 검사한다.
+             *          (다른 어노테이션 검사와 마찬가지로) 소스 텍스트 폴백까지 함께 검사합니다.
              */
             static bool isReflectedRecord( const CXCursor declaration, const ParserConfig& config )
             {
@@ -1128,7 +1128,7 @@ namespace sw
 
             /**
              * @brief 고정 배치형 코덱이 쓰는 선언 사실(줄 · 공개 여부 · 인코딩 분류)을 채웁니다.
-             * @details 비트필드는 1 비트 플래그만 받으므로(위에서 막았다) 정수 · bool 비트필드는 bool 로 씁니다.
+             * @details 비트필드는 1 비트 플래그만 받으므로(위에서 막았습니다) 정수 · bool 비트필드는 bool 로 씁니다.
              */
             static void fillFixedLayoutFacts( const CXCursor cursor, const CXType fieldType, ParsedPropertyInfo& prop, const ParserSession& session )
             {
@@ -1197,7 +1197,7 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
-                // 값이 객체 밖에 있어 고정 배치형 코덱이 필드처럼 읽고 쓸 수 없다.
+                // 값이 객체 밖에 있어 고정 배치형 코덱이 필드처럼 읽고 쓸 수 없습니다.
                 prop._fixedType = makeIneligibleFixedType( make_shared<ParsedFixedType>(), "accessor property (the value lives outside the object)" );
                 collector._pType->_listProperty.push_back( std::move( prop ) );
             }

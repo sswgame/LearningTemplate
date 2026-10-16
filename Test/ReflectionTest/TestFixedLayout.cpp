@@ -6,11 +6,12 @@
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include "ReflectionTest/TestFixedLayoutTypes.h"
+#include "ReflectionTest/TestSampleActor.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 고정 배치형(B) 코덱 — 생성된 쓰기 · 읽기 · 비교가 왕복하고, 다른 스키마 · 잘린 스트림 · 범위 밖 값을 거절하는가.
-// 명세는 docs/plans/ReflectionFormats.md 6 절이다. 표본 타입은 TestFixedLayoutTypes.h 이고 손 코덱 · 비교가 없다.
+// 고정 배치형(B) 코덱을 봅니다. 생성된 쓰기 · 읽기 · 비교가 왕복하고, 다른 스키마 · 잘린 스트림 · 범위 밖 값을 거절해야 합니다.
+// 명세는 docs/plans/ReflectionFormats.md 6 절입니다. 표본 타입은 TestFixedLayoutTypes.h 에 있고 손 코덱 · 비교 함수가 없습니다.
 
 namespace
 {
@@ -29,7 +30,7 @@ namespace
         return sw::FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), inoutObject );
     }
 
-    /** @brief 쓰고 읽은 값입니다. `Step` 필드는 한 번 양자화되므로 두 번째 왕복부터 비트까지 같아야 한다. */
+    /** @brief 쓰고 읽은 값입니다. `Step` 필드는 한 번 양자화되므로 두 번째 왕복부터 비트까지 같아야 합니다. */
     template <typename T>
     T roundTrip( const T& source )
     {
@@ -53,6 +54,16 @@ namespace
         }
     }
 
+    /** @brief 스키마 해시 뒤에 @p pWriteBody 가 쓴 본문을 붙인 바이트입니다. 손으로 깨진 스트림을 만들 때 씁니다. */
+    template <typename TWriteBody>
+    sw::vector<uint8> makeStream( const uint64 schemaHash, TWriteBody writeBody )
+    {
+        sw::BitWriter writer;
+        sw::FixedCodecUtil::writeRawBits( writer, schemaHash, 64 );
+        writeBody( writer );
+        return writer.releaseBytes();
+    }
+
     template <typename T>
     const utf8* findCanonical()
     {
@@ -60,6 +71,15 @@ namespace
         const sw::FixedCodec* pCodec = sw::FixedLayout::findCodec<T>( reason );
         SW_EXPECT_TRUE_MSG( pCodec != nullptr, reason.c_str() );
         return pCodec != nullptr ? pCodec->_pCanonical : "";
+    }
+
+    template <typename T>
+    sw::string findIneligibleReason()
+    {
+        sw::string            reason;
+        const sw::FixedCodec* pCodec = sw::FixedLayout::findCodec<T>( reason );
+        SW_EXPECT_NULL( pCodec );
+        return reason;
     }
 
     sw::string replaceAll( sw::string text, const sw::string& from, const sw::string& to )
@@ -102,7 +122,7 @@ namespace
         sample._ammo     = 65535;
         sample._score    = std::numeric_limits<int64>::min();
         sample._seed     = 0;
-        sample._speed    = std::numeric_limits<float32>::quiet_NaN(); // 범위 없는 실수는 비트 그대로
+        sample._speed    = std::numeric_limits<float32>::quiet_NaN(); // 범위 없는 실수는 비트 그대로 씁니다
         sample._halfSize = 1000.0f;
         sample._offset   = 12.5f; // Step 0.5 격자 위
         sample._ratio    = 1.0f;
@@ -147,7 +167,7 @@ namespace
 } // namespace
 
 /**
- * @brief [FixedLayoutTest] 세 표본이 왕복하고 생성 비교가 같다고 답한다 — 경계값 · 빈 컨테이너 · MaxCount 개 포함
+ * @brief [FixedLayoutTest] 세 표본이 왕복하고 생성 비교가 같다고 답합니다. 경계값, 빈 컨테이너, MaxCount 개를 포함합니다
  */
 SW_TEST_CASE( FixedLayoutTest, SamplesRoundTripAtTheBoundaries )
 {
@@ -156,12 +176,12 @@ SW_TEST_CASE( FixedLayoutTest, SamplesRoundTripAtTheBoundaries )
 
     const sw::FixedContainerSample container = makeContainerSample();
     SW_EXPECT_TRUE( sw::FixedLayout::equals( roundTrip( container ), container ) );
-    // 빈 컨테이너. `_position` 의 0 은 Step 0.01 격자(-10 에서 센다) 위에 정확히 있지 않으므로 한 번 양자화한 값을 비교한다.
+    // 빈 컨테이너입니다. `_position` 의 0 은 -10 에서 세는 Step 0.01 격자 위에 정확히 있지 않으므로 한 번 양자화한 값을 비교합니다.
     const sw::FixedContainerSample emptyContainer = roundTrip( sw::FixedContainerSample{} );
     SW_EXPECT_TRUE( emptyContainer._listValue.empty() && emptyContainer._name.empty() );
     SW_EXPECT_TRUE( sw::FixedLayout::equals( roundTrip( emptyContainer ), emptyContainer ) );
 
-    // Step 필드는 한 번 양자화된다 — 첫 왕복 값은 간격 안에 있고, 그 값은 다시 왕복해도 비트까지 같다.
+    // Step 필드는 한 번 양자화됩니다. 첫 왕복 값은 간격 안에 있고, 그 값은 다시 왕복해도 비트까지 같습니다.
     const sw::FixedNestedSample nested = makeNestedSample();
     const sw::FixedNestedSample once   = roundTrip( nested );
     SW_EXPECT_NEAR_EQUAL( once._inner._x, nested._inner._x, 0.05f );
@@ -172,7 +192,7 @@ SW_TEST_CASE( FixedLayoutTest, SamplesRoundTripAtTheBoundaries )
 }
 
 /**
- * @brief [FixedLayoutTest] 코덱에 없는 필드(Transient)는 읽기 대상의 값이 남는다 — 읽기는 대상 복사본에서 시작한다
+ * @brief [FixedLayoutTest] 코덱에 없는 필드(Transient)는 읽기 대상의 값이 남습니다. 읽기는 대상의 복사본에서 시작합니다
  */
 SW_TEST_CASE( FixedLayoutTest, ReadKeepsFieldsOutsideTheCodec )
 {
@@ -184,7 +204,7 @@ SW_TEST_CASE( FixedLayoutTest, ReadKeepsFieldsOutsideTheCodec )
 }
 
 /**
- * @brief [FixedLayoutTest] 비교는 비트 패턴이다 — NaN 은 NaN 과 같고 -0 은 +0 과 다르다(같은 바이트를 만드는가와 같은 뜻)
+ * @brief [FixedLayoutTest] 비교는 비트 패턴입니다. NaN 은 NaN 과 같고 -0 은 +0 과 다릅니다(같은 바이트를 만드는지와 같은 뜻입니다)
  */
 SW_TEST_CASE( FixedLayoutTest, EqualsComparesBitPatterns )
 {
@@ -200,7 +220,7 @@ SW_TEST_CASE( FixedLayoutTest, EqualsComparesBitPatterns )
 }
 
 /**
- * @brief [FixedLayoutTest] 필드 순서 · 이름 · 열거자 · Step · Min 이 다르면 정규 문자열과 해시가 달라 다른 쪽 바이트를 SchemaMismatch 로 거절한다
+ * @brief [FixedLayoutTest] 필드 순서 · 이름 · 열거자 · Step · Min 이 다르면 정규 문자열과 해시가 달라 다른 쪽 바이트를 SchemaMismatch 로 거절합니다
  */
 SW_TEST_CASE( FixedLayoutTest, SchemaChangesAreRejected )
 {
@@ -210,43 +230,77 @@ SW_TEST_CASE( FixedLayoutTest, SchemaChangesAreRejected )
     expectSchemaChangeRejected<sw::FixedStepASample, sw::FixedStepBSample>( "FixedStepASample", "FixedStepBSample", {}, {} );
     expectSchemaChangeRejected<sw::FixedMinASample, sw::FixedMinBSample>( "FixedMinASample", "FixedMinBSample", {}, {} );
 
-    // 인코딩 규칙 버전을 올리면 모든 해시가 바뀐다.
+    // 인코딩 규칙 버전을 올리면 모든 해시가 바뀝니다.
     const sw::string canonical = findCanonical<sw::FixedOrderASample>();
     SW_EXPECT_TRUE( sw::FixedLayout::computeSchemaHash( sw::FixedLayout::kVersion, canonical, {} ) !=
                     sw::FixedLayout::computeSchemaHash( sw::FixedLayout::kVersion + 1, canonical, {} ) );
 }
 
 /**
- * @brief [FixedLayoutTest] 포인터 필드 · MaxCount 없는 vector · 바깥 필드 범위를 가진 타입은 코덱이 없고, 진입점이 이유와 함께 멈춘다
+ * @brief [FixedLayoutTest] FQN 이 같고 필드 순서만 바뀐 빌드가 쓴 바이트도 SchemaMismatch 입니다
+ * @details 한 빌드에 같은 FQN 의 두 선언을 둘 수 없으므로, `FixedOrderBSample` 의 정규 문자열에서 타입 이름만 `FixedOrderASample` 로 바꿔
+ *          "필드 순서를 바꾼 A" 의 해시를 만들고 그 해시와 B 의 본문으로 스트림을 씁니다. 해시에 이름이 아닌 순서가 들어가 있어야 거절됩니다.
  */
-SW_TEST_CASE( FixedLayoutTest, IneligibleTypesStopWithTheReason )
+SW_TEST_CASE( FixedLayoutTest, ReorderedFieldsWithTheSameNameAreRejected )
 {
-    sw::string reason;
-    SW_EXPECT_NULL( sw::FixedLayout::findCodec<sw::FixedPointerSample>( reason ) );
-    SW_EXPECT_TRUE_MSG( reason.find( "_listOwned" ) != sw::string::npos && reason.find( "pointer" ) != sw::string::npos, reason.c_str() );
+    const sw::string reorderedCanonical = replaceAll( findCanonical<sw::FixedOrderBSample>(), "FixedOrderBSample", "FixedOrderASample" );
+    const uint64     reorderedHash      = sw::FixedLayout::computeSchemaHash( sw::FixedLayout::kVersion, reorderedCanonical, {} );
+    SW_EXPECT_TRUE( reorderedHash != sw::FixedLayout::getSchemaHash<sw::FixedOrderASample>() );
 
-    reason.clear();
-    SW_EXPECT_NULL( sw::FixedLayout::findCodec<sw::FixedUnboundedVectorSample>( reason ) );
-    SW_EXPECT_TRUE_MSG( reason.find( "_listValue" ) != sw::string::npos && reason.find( "MaxCount" ) != sw::string::npos, reason.c_str() );
-
-    reason.clear();
-    SW_EXPECT_NULL( sw::FixedLayout::findCodec<sw::FixedPointSample>( reason ) );
-    SW_EXPECT_TRUE_MSG( reason.find( "_arenaHalfSize" ) != sw::string::npos, reason.c_str() );
-
-    // 기반 · 펼치지 못한 중첩 타입은 실행 시간에 찾아 확인한다.
-    reason.clear();
-    SW_EXPECT_NOT_NULL( sw::FixedLayout::findCodec<sw::FixedNestedSample>( reason ) );
-
-    SW_TEST_REQUIRES_FEATURE( DebugAsserts );
-    SW_TEST_DEFENSIVE_SCOPE( "writing a type without a fixed layout codec logs the reason and asserts" );
-    test::ScopedAssertCapture assertCapture;
-    sw::BitWriter             writer;
-    SW_EXPECT_FALSE( sw::FixedLayout::write( sw::FixedPointerSample{}, writer ) );
-    SW_EXPECT_EQUAL( assertCapture.getCount(), 1u );
+    sw::FixedOrderBSample source;
+    source._first                  = 1;
+    source._second                 = 2;
+    const sw::vector<uint8> stream = makeStream( reorderedHash, [&source]( sw::BitWriter& writer )
+    {
+        const bool bWritten = sw::FixedCodecUtil::writeVarInteger( writer, source._second, sw::FixedCodecUtil::kNoLowerBound, sw::FixedCodecUtil::kNoUpperBound ) &&
+                              sw::FixedCodecUtil::writeVarInteger( writer, source._first, sw::FixedCodecUtil::kNoLowerBound, sw::FixedCodecUtil::kNoUpperBound );
+        SW_EXPECT_TRUE( bWritten );
+    } );
+    sw::FixedOrderASample   target;
+    SW_EXPECT_TRUE( readBytes( stream, target ) == sw::FixedReadResult::SchemaMismatch );
+    SW_EXPECT_EQUAL( target._first, 0 );
 }
 
 /**
- * @brief [FixedLayoutTest] 바이트를 하나씩 줄인 모든 접두는 Truncated, 남는 바이트는 TrailingData 이고 실패 뒤 대상은 그대로다
+ * @brief [FixedLayoutTest] 포인터 · MaxCount 없는 vector · 바깥 필드 범위 · 다중 상속 · vector<string> 을 가진 타입은 코덱 대신 이유가 있습니다
+ */
+SW_TEST_CASE( FixedLayoutTest, IneligibleTypesReportTheReason )
+{
+    sw::string reason = findIneligibleReason<sw::FixedPointerSample>();
+    SW_EXPECT_TRUE_MSG( reason.find( "_listOwned" ) != sw::string::npos && reason.find( "pointer" ) != sw::string::npos, reason.c_str() );
+
+    reason = findIneligibleReason<sw::FixedUnboundedVectorSample>();
+    SW_EXPECT_TRUE_MSG( reason.find( "_listValue" ) != sw::string::npos && reason.find( "MaxCount" ) != sw::string::npos, reason.c_str() );
+
+    reason = findIneligibleReason<sw::FixedPointSample>();
+    SW_EXPECT_TRUE_MSG( reason.find( "_arenaHalfSize" ) != sw::string::npos, reason.c_str() );
+
+    reason = findIneligibleReason<sw::MultiBaseOrderTestActor>();
+    SW_EXPECT_TRUE_MSG( reason.find( "multiple inheritance" ) != sw::string::npos, reason.c_str() );
+
+    reason = findIneligibleReason<sw::FixedVectorOfStringSample>();
+    SW_EXPECT_TRUE_MSG( reason.find( "_listName" ) != sw::string::npos && reason.find( "nested variable-length" ) != sw::string::npos, reason.c_str() );
+
+    // 기반 · 펼치지 못한 중첩 타입은 실행 시간에 찾아 확인합니다.
+    reason.clear();
+    SW_EXPECT_NOT_NULL( sw::FixedLayout::findCodec<sw::FixedNestedSample>( reason ) );
+}
+
+/**
+ * @brief [FixedLayoutTest] 생성 코드가 다른 타입의 코덱을 찾는 길은 등록되지 않았거나 적격이 아닌 타입에 대신 쓸 코덱을 돌려주지 않습니다
+ */
+SW_TEST_CASE( FixedLayoutTest, NestedCodecLookupHasNoSubstitute )
+{
+    const sw::TypeLookupCache missingCache;
+    SW_EXPECT_NULL( sw::FixedLayout::findNestedCodec( missingCache, sw::hashed_string( "sw::FixedNoSuchSample" ) ) );
+    const sw::TypeLookupCache ineligibleCache;
+    SW_EXPECT_NULL( sw::FixedLayout::findNestedCodec( ineligibleCache, sw::hashed_string( "sw::FixedPointerSample" ) ) );
+    const sw::TypeLookupCache eligibleCache;
+    SW_EXPECT_NOT_NULL( sw::FixedLayout::findNestedCodec( eligibleCache, sw::hashed_string( "sw::FixedInnerBaseSample" ) ) );
+}
+
+/**
+ * @brief [FixedLayoutTest] 바이트를 하나씩 줄인 모든 접두는 Truncated, 남는 바이트는 TrailingData 이고 실패 뒤 대상은 그대로입니다
  */
 SW_TEST_CASE( FixedLayoutTest, TruncatedAndTrailingStreamsAreRejected )
 {
@@ -262,29 +316,43 @@ SW_TEST_CASE( FixedLayoutTest, TruncatedAndTrailingStreamsAreRejected )
 }
 
 /**
- * @brief [FixedLayoutTest] 범위 밖 열거자 · 개수는 OutOfRange 이고 대상은 그대로다
- * @details 표본의 첫 필드는 `ENUM( Count )` 열거형(2 비트), 둘째는 MaxCount 4 인 vector 의 개수(3 비트)다.
+ * @brief [FixedLayoutTest] 범위 밖 열거자 · 개수 · 실수 · 양자화 칸 번호는 자르지 않고 OutOfRange 이며 대상은 그대로입니다
+ * @details `FixedContainerSample` 의 첫 필드는 `ENUM( Count )` 열거형(2 비트), 둘째는 MaxCount 4 인 vector 의 개수(3 비트)입니다.
+ *          `FixedNestedSample` 의 첫 필드는 [1, 1000] 실수(32 비트), `FixedStepASample` 의 필드는 [0, 1] 을 0.1 간격으로 나눈 칸 번호(4 비트, 0 ~ 10)입니다.
  */
 SW_TEST_CASE( FixedLayoutTest, OutOfRangeValuesAreRejected )
 {
-    const uint64 schemaHash = sw::FixedLayout::getSchemaHash<sw::FixedContainerSample>();
+    const uint64             containerHash = sw::FixedLayout::getSchemaHash<sw::FixedContainerSample>();
+    sw::FixedContainerSample container     = makeContainerSample();
+    SW_EXPECT_TRUE( readBytes( makeStream( containerHash, []( sw::BitWriter& writer )
+    { writer.writeBits( 3, 2 ); } ),
+                               container ) ==
+                    sw::FixedReadResult::OutOfRange ); // Count 자리는 열거자가 아닙니다
+    SW_EXPECT_TRUE( readBytes( makeStream( containerHash,
+                                           []( sw::BitWriter& writer )
+    {
+        writer.writeBits( 0, 2 );
+        writer.writeBits( 7, 3 ); // MaxCount 4 를 넘는 개수
+    } ),
+                               container ) == sw::FixedReadResult::OutOfRange );
+    SW_EXPECT_TRUE( sw::FixedLayout::equals( container, makeContainerSample() ) );
 
-    sw::BitWriter badEnum;
-    sw::FixedCodecUtil::writeRawBits( badEnum, schemaHash, 64 );
-    badEnum.writeBits( 3, 2 ); // Count 자리 — 열거자가 아니다
-    sw::FixedContainerSample target = makeContainerSample();
-    SW_EXPECT_TRUE( readBytes( badEnum.getBytes(), target ) == sw::FixedReadResult::OutOfRange );
+    sw::FixedNestedSample nested;
+    SW_EXPECT_TRUE( readBytes( makeStream( sw::FixedLayout::getSchemaHash<sw::FixedNestedSample>(), []( sw::BitWriter& writer )
+    { writer.writeFloat( 0.5f ); } ),
+                               nested ) == sw::FixedReadResult::OutOfRange );
+    SW_EXPECT_EQUAL( nested._arenaHalfSize, 10.0f );
 
-    sw::BitWriter badCount;
-    sw::FixedCodecUtil::writeRawBits( badCount, schemaHash, 64 );
-    badCount.writeBits( 0, 2 );
-    badCount.writeBits( 7, 3 ); // MaxCount 4 를 넘는 개수
-    SW_EXPECT_TRUE( readBytes( badCount.getBytes(), target ) == sw::FixedReadResult::OutOfRange );
-    SW_EXPECT_TRUE( sw::FixedLayout::equals( target, makeContainerSample() ) );
+    sw::FixedStepASample step;
+    step._value = 0.3f;
+    SW_EXPECT_TRUE( readBytes( makeStream( sw::FixedLayout::getSchemaHash<sw::FixedStepASample>(), []( sw::BitWriter& writer )
+    { writer.writeBits( 15, 4 ); } ),
+                               step ) == sw::FixedReadResult::OutOfRange ); // 칸 수 10 을 넘는 칸 번호
+    SW_EXPECT_EQUAL( step._value, 0.3f );
 }
 
 /**
- * @brief [FixedLayoutTest] 범위 밖 정수 · MaxCount 초과 · 등록되지 않은 열거자 · 허용 범위 밖 실수는 쓰기가 실패한다(잘라 쓰지 않는다)
+ * @brief [FixedLayoutTest] 범위 밖 정수 · MaxCount 초과 · 등록되지 않은 열거자 · 허용 범위 밖 실수는 쓰기가 실패합니다(잘라 쓰지 않습니다)
  */
 SW_TEST_CASE( FixedLayoutTest, OutOfRangeValuesFailToWrite )
 {
@@ -294,7 +362,7 @@ SW_TEST_CASE( FixedLayoutTest, OutOfRangeValuesFailToWrite )
     scalar._hp                   = 101;
     SW_EXPECT_FALSE( sw::FixedLayout::write( scalar, writer ) );
     scalar           = makeScalarSample();
-    scalar._halfSize = 0.5f; // 범위 필드는 자기 Min 을 강제한다
+    scalar._halfSize = 0.5f; // 범위 필드는 자기 Min 을 강제합니다
     SW_EXPECT_FALSE( sw::FixedLayout::write( scalar, writer ) );
 
     sw::FixedContainerSample container = makeContainerSample();
