@@ -299,7 +299,7 @@ namespace
         }
 
         static bool isSequence( sw::string_view resourceID ) { return endsWith( resourceID, ".seq.json" ); }
-        /** @brief 시퀀스 — 키 트랙은 모두 아는 종류여야 한다(모르는 종류는 읽지만 적용하지 않는다). */
+        /** @brief 시퀀스 — 키 트랙은 모두 아는 종류여야 한다(모르는 종류 이름 · 채널 수가 틀린 트랙은 읽기 오류다). */
         [[nodiscard]] static bool loadSequence( const sw::string& resourceID )
         {
             sw::SequenceAsset sequence;
