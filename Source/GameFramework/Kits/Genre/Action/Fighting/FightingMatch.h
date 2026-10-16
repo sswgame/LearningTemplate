@@ -8,12 +8,13 @@
  *          공격 방향은 기술을 시작할 때 상대 쪽으로 고정된다(추적 기술은 매 프레임 상대를 따라간다). 그래서 횡이동으로 각도를 벌리면 직선 기술이 빗나간다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
 #include "GameFramework/Base/Actor/Input/InputCommandBuffer.h"
@@ -24,6 +25,7 @@
 namespace sw
 {
     class Archive;
+    class ValidationContext;
 
     /** @brief 대전 규칙 수치입니다. 시간 단위는 모두 프레임이며 60프레임이 1초입니다. */
     struct FightingSettings
@@ -63,6 +65,7 @@ namespace sw
 namespace sw
 {
     /** @brief 캐릭터의 상태 기계 상태입니다. */
+    ENUM()
     enum class FighterState : uint8
     {
         Neutral = 0, ///< 움직일 수 있다(서기, 앉기, 고유 자세, 걷기, 가드)
@@ -113,46 +116,90 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 캐릭터 하나의 실행 상태입니다. 모든 필드가 상태 저장에 들어가지만, `_pDef` 는 빌려 온 정의라서 저장하지 않습니다. */
+    /**
+     * @brief 캐릭터 하나의 실행 상태입니다. `PROPERTY` 필드가 롤백(고정 배치형)과 세이브(자기 기술형)에 들어갑니다.
+     * @details `_pDef` 는 빌려 온 정의라서 싣지 않습니다. 읽기는 대상의 복사본에 읽으므로 정의 포인터가 그대로 이어지고,
+     *          기술 · 자세 인덱스가 그 정의 안에 있는지는 `FightingMatch::validateState` 가 봅니다. 필드 순서가 롤백 바이트의 순서입니다.
+     */
+    REFLECT()
     struct SW_KIT_API FighterRuntime
     {
-        MoveTimeline       _timeline{};
+        REFLECT_BODY();
+        PROPERTY()
+        MoveTimeline _timeline{};
+        PROPERTY()
         InputCommandBuffer _inputBuffer{};
         const FighterDef*  _pDef{ nullptr };
-        float32            _x{ 0.0f };
-        float32            _z{ 0.0f };
-        float32            _y{ 0.0f };    ///< 높이(점프, 저글)
-        float32            _dirX{ 1.0f }; ///< 공격하거나 바라보는 방향(단위 벡터)
-        float32            _dirZ{ 0.0f };
-        float32            _velocityY{ 0.0f };
-        float32            _gravity{ 0.0f };
-        float32            _carryX{ 0.0f }; ///< 공중에서 밀려가는 속도
-        float32            _carryZ{ 0.0f };
-        int32              _health{ 0 };
-        int32              _stateFrames{ 0 }; ///< 상태별 남은 프레임(경직, 다운, 기상, 풀기 입력 시간, 횡이동 등)
-        int32              _hitstop{ 0 };     ///< 맞은 쪽의 히트스톱(때린 쪽은 타임라인이 가지고 있다)
-        int32              _moveIndex{ -1 };  ///< 지금 쓰는 기술(`_pDef->_listMove` 인덱스)
-        int32              _bufferedMove{ -1 };
-        int32              _bufferedAge{ 0 };
-        int32              _stanceIndex{ -1 };
-        int32              _stanceFrames{ 0 };
-        int32              _comboHits{ 0 }; ///< 이번 콤보에 맞은 수
-        int32              _airHits{ 0 };   ///< 떠서 맞은 횟수(띄우기 포함, 피해 감쇠에 쓴다)
-        int32              _heatFrames{ 0 };
-        int32              _sidestepSign{ 0 }; ///< +1은 안쪽, −1은 바깥쪽
-        int32              _side{ 1 };         ///< 화면 쪽, +1이면 앞 = 6
-        uint16             _breakButtons{ 0 }; ///< 잡혔을 때 풀기에 쓰는 버튼
-        FighterState       _state{ FighterState::Neutral };
-        FighterPosture     _posture{ FighterPosture::Standing };
-        GuardStance        _guard{ GuardStance::Standing };
-        uint8              _bAirborne{ SW_FALSE };
-        uint8              _bScrewUsed{ SW_FALSE };
-        uint8              _bBoundUsed{ SW_FALSE };
-        uint8              _bWallSplatUsed{ SW_FALSE };
-        uint8              _bRage{ SW_FALSE };
-        uint8              _bRageUsed{ SW_FALSE }; ///< 이번 라운드에 레이지 아츠를 썼다(레이지가 다시 켜지지 않는다)
-        uint8              _bHeatUsed{ SW_FALSE };
-        uint8              _bThrowAttempted{ SW_FALSE }; ///< 잡혔을 때 이미 버튼을 눌렀다(한 번만 시도할 수 있다)
+        PROPERTY()
+        uint32 _fighterIDHash{ 0 }; ///< 정의 id(`FighterDef::_id`)의 해시. 읽은 상태가 같은 캐릭터의 것인지 대조한다
+        PROPERTY()
+        float32 _x{ 0.0f };
+        PROPERTY()
+        float32 _z{ 0.0f };
+        PROPERTY()
+        float32 _y{ 0.0f }; ///< 높이(점프, 저글)
+        PROPERTY()
+        float32 _dirX{ 1.0f }; ///< 공격하거나 바라보는 방향(단위 벡터)
+        PROPERTY()
+        float32 _dirZ{ 0.0f };
+        PROPERTY()
+        float32 _velocityY{ 0.0f };
+        PROPERTY()
+        float32 _gravity{ 0.0f };
+        PROPERTY()
+        float32 _carryX{ 0.0f }; ///< 공중에서 밀려가는 속도
+        PROPERTY()
+        float32 _carryZ{ 0.0f };
+        PROPERTY()
+        int32 _health{ 0 };
+        PROPERTY()
+        int32 _stateFrames{ 0 }; ///< 상태별 남은 프레임(경직, 다운, 기상, 풀기 입력 시간, 횡이동 등)
+        PROPERTY()
+        int32 _hitstop{ 0 }; ///< 맞은 쪽의 히트스톱(때린 쪽은 타임라인이 가지고 있다)
+        PROPERTY( Min = -1 )
+        int32 _moveIndex{ -1 }; ///< 지금 쓰는 기술(`_pDef->_listMove` 인덱스)
+        PROPERTY( Min = -1 )
+        int32 _bufferedMove{ -1 };
+        PROPERTY()
+        int32 _bufferedAge{ 0 };
+        PROPERTY( Min = -1 )
+        int32 _stanceIndex{ -1 };
+        PROPERTY()
+        int32 _stanceFrames{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _comboHits{ 0 }; ///< 이번 콤보에 맞은 수
+        PROPERTY( Min = 0 )
+        int32 _airHits{ 0 }; ///< 떠서 맞은 횟수(띄우기 포함, 피해 감쇠에 쓴다)
+        PROPERTY()
+        int32 _heatFrames{ 0 };
+        PROPERTY( Min = -1, Max = 1 )
+        int32 _sidestepSign{ 0 }; ///< +1은 안쪽, −1은 바깥쪽
+        PROPERTY( Min = -1, Max = 1 )
+        int32 _side{ 1 }; ///< 화면 쪽, +1이면 앞 = 6
+        PROPERTY()
+        uint16 _breakButtons{ 0 }; ///< 잡혔을 때 풀기에 쓰는 버튼
+        PROPERTY()
+        FighterState _state{ FighterState::Neutral };
+        PROPERTY()
+        FighterPosture _posture{ FighterPosture::Standing };
+        PROPERTY()
+        GuardStance _guard{ GuardStance::Standing };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bAirborne{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bScrewUsed{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bBoundUsed{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bWallSplatUsed{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bRage{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bRageUsed{ SW_FALSE }; ///< 이번 라운드에 레이지 아츠를 썼다(레이지가 다시 켜지지 않는다)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bHeatUsed{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bThrowAttempted{ SW_FALSE }; ///< 잡혔을 때 이미 버튼을 눌렀다(한 번만 시도할 수 있다)
 
         /** @brief 지금 쓰는 기술입니다. 없으면 nullptr 입니다. */
         const FighterMove* findCurrentMove() const;
@@ -174,11 +221,18 @@ namespace sw
      *          경직은 닿은 다음 프레임부터 센다. 그래서 `MoveTimeline::computeFrameAdvantage` 의 이득이 그대로 성립한다(−10이면 10프레임 기술이 확정된다).
      *          라운드 번호, 선승 조건, 라운드 시간, 라운드 사이 대기는 기반 클래스 `RoundSeries` 가 가진다. 라운드 승은 1위가 1점이고, 무승부 라운드는 둘 다 1승이다.
      *          둘이 함께 선승 조건에 닿으면 대전이 무승부다.
+     *
+     *          상태는 `PROPERTY` 필드(두 캐릭터, 라운드 시리즈, 프레임, 지난 라운드 결과) 한 벌이고, 형식은 쓰는 곳이 고른다.
+     *          롤백(`saveState` · `loadState`)은 같은 빌드끼리만 읽는 고정 배치형(`FixedLayout`)이고, 세이브(`writeState` · `readState`)는
+     *          버전 머리가 붙은 자기 기술형(`BinarySerializer`)이다. 롤백 바이트를 세이브에 싣지 않으므로 빌드가 바뀌어도 세이브는 마이그레이션 경로로 읽힌다.
+     *          설정, 이벤트, 판정 임시 버퍼는 상태가 아니라서 싣지 않는다.
      */
+    REFLECT( Validate = validateState )
     class SW_KIT_API FightingMatch
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "FGTM" );
+        REFLECT_BODY();
+        /** @brief 세이브 본문(자기 기술형)의 버전입니다. 필드의 뜻이 바뀌면 올리고 `SchemaMigrateFn` 을 등록합니다. 롤백 바이트는 스키마 해시가 가리므로 버전이 없습니다. */
         static constexpr uint32 kStateVersion = 1;
         static constexpr int32  kPlayerCount  = 2;
         static constexpr int32  kDraw         = 2; ///< 라운드와 대전 결과의 무승부 값
@@ -192,15 +246,20 @@ namespace sw
         /** @brief 롤백 어댑터용 `advanceFrame` 입니다. 플레이어 순서대로 1바이트 입력(`encodeInput`)을 받고, 모자란 플레이어는 중립으로 처리합니다. */
         void advanceFrame( const vector<uint8>& listInput );
 
-        /** @brief 이벤트를 뺀 전체 상태를 바이트로 씁니다. */
+        /** @brief 이벤트를 뺀 전체 상태를 롤백 바이트(고정 배치형)로 씁니다. 범위 밖 값이 있으면 결함이므로 오류를 남기고 단언하며, @p outBuffer 는 빈 채입니다. */
         void saveState( vector<uint8>& outBuffer ) const;
         /** @brief `saveState` 가 쓴 바이트로 상태를 되돌립니다. 같은 캐릭터로 `initialize` 한 대전이어야 하고, 바이트가 깨졌거나 맞지 않으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool loadState( const vector<uint8>& buffer );
-        /** @brief 세이브(`Archive`)에 `saveState` 의 바이트를 길이가 붙은 본문으로 그대로 씁니다. 같은 상태를 두 형식으로 따로 쓰지 않기 위해서입니다. */
+        /** @brief 세이브(`Archive`)에 상태를 버전 머리(`kStateVersion`)가 붙은 자기 기술형으로 씁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 본문을 `loadState` 로 되돌립니다. 본문이 잘렸거나 `loadState` 가 거절하면 상태를 바꾸지 않고 false 를 반환합니다. */
+        /** @brief `writeState` 의 본문으로 상태를 되돌립니다. 같은 캐릭터로 `initialize` 한 대전이어야 하고, 본문이 잘렸거나 맞지 않으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
         void               drainEvents( vector<FightingEvent>& outListEvent );
+        /**
+         * @brief 읽은 상태가 이 대전의 캐릭터 정의와 맞는지 봅니다(`REFLECT( Validate )`, 롤백과 세이브가 함께 씁니다).
+         * @details 같은 캐릭터인지, 기술 · 자세 인덱스가 정의 안인지, 재생 중인 타임라인의 프레임이 그 기술 안인지, 참가자가 둘인지 봅니다.
+         */
+        void validateState( ValidationContext& context ) const;
 
         /** @brief 연습 모드와 테스트에서 위치를 옮깁니다. 벽 안으로 잘라 냅니다. */
         void setFighterPosition( int32 player, float32 x, float32 z );
@@ -259,13 +318,19 @@ namespace sw
         void  resetCombo( int32 player );
         void  endRound( int32 winner, FightingEvent::Kind reason );
         void  pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveID = hashed_string() );
+        /** @brief 읽은 타임라인에 기술 정의를 다시 붙이고 이벤트를 비웁니다. `validateState` 를 통과한 상태에만 부릅니다. */
+        void completeLoad();
 
-        FighterRuntime             _arrFighter[kPlayerCount];
-        FightingSettings           _settings;
-        RoundSeries                _series; ///< 라운드 번호, 시간, 대기, 라운드 승, 대전 결과(롤백 상태의 맨 뒤)
+        PROPERTY()
+        FighterRuntime   _arrFighter[kPlayerCount];
+        FightingSettings _settings;
+        PROPERTY()
+        RoundSeries                _series; ///< 라운드 번호, 시간, 대기, 라운드 승, 대전 결과
         EventBuffer<FightingEvent> _eventBuffer;
         vector<MoveHitbox>         _listHitboxScratch; ///< 판정에 쓰는 임시 버퍼(상태가 아님)
-        int32                      _frame;
-        int32                      _lastRoundWinner;
+        PROPERTY( Min = 0 )
+        int32 _frame;
+        PROPERTY( Min = -1, Max = 2 )
+        int32 _lastRoundWinner; ///< 0, 1, `kDraw`(2), 아직 없으면 −1
     };
 } // namespace sw

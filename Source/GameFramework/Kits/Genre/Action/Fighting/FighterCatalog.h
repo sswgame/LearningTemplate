@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
 #include "GameFramework/Base/Actor/Input/InputCommandBuffer.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
@@ -20,6 +22,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 기술을 낼 수 있는 자세입니다. 순서가 비트 번호입니다(`FighterMove::_postureMask`). */
+    ENUM()
     enum class FighterPosture : uint8
     {
         Standing = 0,

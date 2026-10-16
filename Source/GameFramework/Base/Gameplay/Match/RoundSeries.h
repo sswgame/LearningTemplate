@@ -10,14 +10,18 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class BitReader;
     class BitWriter;
+    class ValidationContext;
 
     /** @brief 라운드 시리즈의 단계입니다. 상태 바이트에 번호로 저장되므로 뒤에만 추가합니다. */
+    ENUM()
     enum class RoundSeriesPhase : uint8
     {
         Waiting = 0, ///< `start` 전
@@ -72,11 +76,15 @@ namespace sw
      * @details 같은 라운드 점수는 같은 순위이고 같은 순위 점수를 받는다. 무승부 라운드는 모두 1 위이다. 목표 점수에 닿은 참가자 중 총점이 가장 높은 한 명이 우승하고,
      *          그 총점이 같으면 `_tieRule` 을 따른다. 라운드 번호는 0 부터 시작하고, 라운드 목록(미니 게임, 무대)은 키트가 번호로 고른다.
      *          알림은 내지 않는다. 반환한 결과(`RoundSeriesOutcome`, `RoundSeriesTick`)를 보고 키트가 자기 이벤트를 낸다. 격투 이벤트는 롤백 상태에 포함되지 않기 때문이다.
-     *          상태 바이트(`writeState`)는 단계, 라운드 번호, 남은 라운드 시간, 남은 대기, 우승자, 참가자 수, 총점 순서이고, 롤백 키트가 자기 상태에 그대로 싣는다.
+     *          상태 바이트(`writeState`)는 단계, 라운드 번호, 남은 라운드 시간, 남은 대기, 우승자, 참가자 수, 총점 순서이다.
+     *          같은 상태가 리플렉션 프로퍼티이기도 해서, 롤백 키트는 고정 배치형(`FixedLayout`)으로, 세이브는 자기 기술형(`BinarySerializer`)으로 싣는다.
+     *          설정(`_settings`)은 `initialize` 가 주는 값이라 싣지 않는다. 참가자 수 대조는 싣는 키트가 한다.
      */
+    REFLECT( Validate = validateState )
     class SW_GF_API RoundSeries
     {
     public:
+        REFLECT_BODY();
         static constexpr int32 kNoWinner = -1; ///< 우승자 없음을 뜻한다(끝나지 않았거나 무승부). `reportRoundWinner` 에서는 무승부 라운드를 뜻한다
 
         RoundSeries();
@@ -113,6 +121,8 @@ namespace sw
         int32 getWinner() const { return _winner; }
         int32 getParticipantCount() const { return static_cast<int32>( _listTotal.size() ); }
         int32 getTotal( int32 participant ) const;
+        /** @brief 읽은 우승자가 참가자 안에 있는지 봅니다(`REFLECT( Validate )`). */
+        void validateState( ValidationContext& context ) const;
 
     private:
         bool               isValidParticipant( int32 participant ) const { return 0 <= participant && participant < getParticipantCount(); }
@@ -120,11 +130,17 @@ namespace sw
         RoundSeriesOutcome finishRound();
 
         RoundSeriesSettings _settings;
-        vector<int32>       _listTotal;
-        int32               _roundIndex;
-        int32               _roundTicksRemaining;
-        int32               _intermissionTicksRemaining;
-        int32               _winner;
-        RoundSeriesPhase    _phase;
+        PROPERTY( MaxCount = 64 )
+        vector<int32> _listTotal; ///< 참가자마다 총점. 64 는 고정 배치형이 싣는 참가자 수의 상한이다
+        PROPERTY( Min = 0 )
+        int32 _roundIndex;
+        PROPERTY( Min = 0 )
+        int32 _roundTicksRemaining;
+        PROPERTY( Min = 0 )
+        int32 _intermissionTicksRemaining;
+        PROPERTY( Min = -1 )
+        int32 _winner;
+        PROPERTY()
+        RoundSeriesPhase _phase;
     };
 } // namespace sw

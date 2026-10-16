@@ -511,6 +511,13 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 생성기는 `Tools/ReflectionParser/FixedCodecGenerator.*`, 테스트는 `Test/ReflectionTest/TestFixedLayout.cpp` · `TestFixedLayoutTypes.h` 와
 `ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` 입니다. 단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다.
 
+단계 3 은 끝났습니다(2026-10-17). `FightingMatch` 가 `REFLECT` 타입이고 상태 필드(`FighterRuntime`, `MoveTimeline`, `InputCommandBuffer`, `RoundSeries`)가 `PROPERTY` 입니다.
+롤백은 `FixedLayout`, 세이브는 `BinarySerializer::serializeVersioned` 이고, 두 읽기가 같은 `validateState` 를 씁니다. 손 코덱과 손 버전 상수는 지웠습니다.
+`RoundSeries::writeState(BitWriter)` 와 `InputCommandBuffer::writeState(BitWriter)` 손 코덱은 소스 안 사용처가 없어졌지만 남아 있습니다(테스트만 씁니다).
+
+단계 2 는 보류합니다. `GimmickCircuit` 상태 바이트는 `GimmickCircuitComponent::_stateBytes`(`PROPERTY`)로 씬 · 프리팹 · 레벨 세이브에 남으므로 B 의 조건(같은 빌드끼리만 읽는다)에 맞지 않습니다.
+옮긴다면 상태를 `REFLECT` 구조체로 꺼내 컴포넌트에는 A 로, 체크포인트 · 넷 스냅샷에는 B 로 싣는 구조가 됩니다. 이 결정은 단계 3 처럼 세이브 형식을 바꾸므로 따로 정합니다.
+
 **단계 7-c · 7-d 상세.**
 
 - 7-c: 매니저가 타입별 컴포넌트 목록을 보관하고 컴포넌트 추가 · 제거 때 그 타입과 조상 타입 목록을 갱신합니다(7.2). `forEachComponentOfType` 의 API 는 그대로이고 내부만 바뀝니다.

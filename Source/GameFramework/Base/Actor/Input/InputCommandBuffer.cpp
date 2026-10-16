@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Reflection/ReflectionValidation.h"
+
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
@@ -213,8 +215,18 @@ namespace sw
 
     void InputCommandBuffer::clear()
     {
+        // 칸까지 비워야 같은 입력 내력이 같은 상태 바이트가 된다(고리 버퍼 전체가 롤백 상태다).
+        _listFrame.assign( static_cast<size_t>( _capacity ), InputFrame{} );
         _head  = 0;
         _count = 0;
+    }
+
+    void InputCommandBuffer::validateState( ValidationContext& context ) const
+    {
+        if ( _listFrame.size() != static_cast<size_t>( _capacity ) )
+            context.addError( "input ring length does not match the buffer capacity" );
+        if ( _head >= _capacity || _count > _capacity )
+            context.addError( "input ring head or count is past the buffer capacity" );
     }
 
     const InputFrame& InputCommandBuffer::getFrame( int32 framesAgo ) const

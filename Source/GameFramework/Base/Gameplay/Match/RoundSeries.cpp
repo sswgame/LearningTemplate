@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Reflection/ReflectionValidation.h"
+
 namespace sw
 {
     namespace
@@ -145,6 +147,12 @@ namespace sw
         }
         openRound( _roundIndex + 1 );
         return RoundSeriesOutcome::NextRound;
+    }
+
+    void RoundSeries::validateState( ValidationContext& context ) const
+    {
+        if ( _winner >= getParticipantCount() )
+            context.addError( "round series winner is not a participant" );
     }
 
     void RoundSeries::writeState( BitWriter& outWriter ) const

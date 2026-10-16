@@ -13,18 +13,25 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class BitReader;
     class BitWriter;
+    class ValidationContext;
 
     /** @brief 한 틱의 입력입니다. 방향은 넘패드 표기이며 5 가 가운데, 6 이 오른쪽, 8 이 위입니다. */
-    struct InputFrame
+    REFLECT()
+    struct SW_GF_API InputFrame
     {
+        REFLECT_BODY();
+        PROPERTY()
         uint16 _buttons{ 0 };
-        uint8  _direction{ 5 };
+        PROPERTY()
+        uint8 _direction{ 5 };
     };
 } // namespace sw
 
@@ -81,10 +88,15 @@ namespace sw
     /**
      * @class InputCommandBuffer
      * @brief 지난 몇십 틱의 입력을 쌓아 둔 버퍼입니다. 매 고정 틱 `push` 한 뒤 `findCompleted` 로 이번 틱에 끝난 커맨드를 고릅니다.
+     * @details 고리 버퍼(`_listFrame` · `_head` · `_count`)가 리플렉션 프로퍼티라서 롤백 키트는 고정 배치형(`FixedLayout`)으로 그대로 싣습니다.
+     *          용량은 생성할 때 정하는 설정이라 싣지 않고, 읽은 고리 버퍼의 길이가 용량과 다르면 `validateState` 가 거절합니다.
+     *          `clear` 는 칸을 중립 입력으로 되돌리므로, 쌓인 수 밖의 칸에 지난 입력이 남아 같은 버퍼가 다른 바이트가 되는 일이 없습니다.
      */
+    REFLECT( Validate = validateState )
     class SW_GF_API InputCommandBuffer
     {
     public:
+        REFLECT_BODY();
         static constexpr int32 kSimultaneousFrames = 2; ///< 버튼 둘을 이 틱 안에 누르면 동시
 
         explicit InputCommandBuffer( int32 capacity = 60 );
@@ -110,13 +122,18 @@ namespace sw
         const InputFrame& getFrame( int32 framesAgo ) const;
         /** @brief 바라보는 쪽에 맞춰 뒤집은 방향입니다. */
         static uint8 mirrorDirection( uint8 direction, int32 facing );
+        /** @brief 읽은 고리 버퍼가 이 버퍼의 용량과 맞는지 봅니다(`REFLECT( Validate )`). 길이, 다음 자리, 쌓인 수를 봅니다. */
+        void validateState( ValidationContext& context ) const;
 
     private:
         bool matchesStep( const InputCommandStep& step, int32 framesAgo, int32 facing ) const;
 
-        vector<InputFrame> _listFrame; ///< 고리 버퍼
+        PROPERTY( MaxCount = 240 )
+        vector<InputFrame> _listFrame; ///< 고리 버퍼. 길이는 늘 용량이고, 240 은 고정 배치형이 싣는 용량의 상한이다
         int32              _capacity;
-        int32              _head; ///< 다음에 쓸 자리
-        int32              _count;
+        PROPERTY( Min = 0 )
+        int32 _head; ///< 다음에 쓸 자리
+        PROPERTY( Min = 0 )
+        int32 _count;
     };
 } // namespace sw
