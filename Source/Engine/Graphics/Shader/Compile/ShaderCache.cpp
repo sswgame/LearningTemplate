@@ -20,7 +20,7 @@ namespace sw
 
     namespace
     {
-        /** @brief 쿠커가 쓰는 파일 이름 그대로입니다(스템 · 스테이지 · 진입점 · 퍼뮤테이션 해시). 규칙은 한 곳(ShaderCooker)뿐입니다. */
+        /** @brief 쿠커가 쓰는 파일 이름 그대로입니다(스템, 스테이지, 진입점, 퍼뮤테이션 해시). 규칙은 한 곳(ShaderCooker)뿐입니다. */
         string makeBinaryFileName( const ShaderCompileDesc& desc )
         {
             const string fileName = FileUtil::getFileNamePart( desc._filePath );
@@ -51,7 +51,7 @@ namespace sw
 
     string ShaderCache::makeLocalCachePath( const ShaderCompileDesc& desc )
     {
-        // **경로에 유효 소스 해시를 한 칸 끼운다.** "캐시 파일이 소스보다 새것인가" 를 파일 시간으로 보면 안 된다 —
+        // **경로에 유효 소스 해시를 한 단계 끼운다.** "캐시 파일이 소스보다 새것인가"를 파일 시간으로 보면 안 된다 —
         // 이 저장소는 산출물까지 커밋해서 `git pull` 이 시간 순서를 임의로 뒤집는다(ShaderCooker::computeEffectiveSourceHash
         // 주석). 경로가 다르면 낡은 것은 애초에
         // 찾히지 않으므로 시간 비교가 필요 없다. 남는 폴더는 Saved/ 안이라 버려도 그만이다.
@@ -100,8 +100,8 @@ namespace sw
     void ShaderCache::shutdown()
     {
         clearCache();
-        // 리플렉션 매니페스트 캐시는 프로세스 정적 저장소라 엔진 종료 뒤에도 남는다. 셰이더 층이 내려갈 때 같이 비운다 —
-        // 안 비우면 백엔드 교체로 기동 뒤에 읽은 매니페스트가 종료 누수 검사에 남는다.
+        // 리플렉션 매니페스트 캐시는 프로세스 정적 저장소라 엔진 종료 뒤에도 남는다. 셰이더 층이 종료될 때 같이 비운다.
+        // 비우지 않으면 백엔드 교체로 기동 뒤에 읽은 매니페스트가 종료 누수 검사에 남는다.
         ShaderReflectionLibrary::clearCache();
     }
 
@@ -138,12 +138,12 @@ namespace sw
         }
 
         // 1순위(로컬 라이브 수정 캐시: Saved/ShaderCache/). 파일 이름에 퍼뮤테이션 해시가 들어간다(헤더 주석 참고).
-        // 경로는 **실시간 컴파일이 실제로 쓰는 요청**으로 정한다 — 아래 3순위가 그 요청으로 컴파일해 여기에 쓰고, 핫 리로드도 같은 요청으로 쓴다.
+        // 경로는 **실시간 컴파일이 실제로 쓰는 요청**으로 정한다. 아래 3순위가 그 요청으로 컴파일해 여기에 쓰고, 핫 리로드도 같은 요청으로 쓴다.
         const ShaderCompileDesc liveDesc       = makeLiveCompileDesc( desc );
         const string            localCachePath = makeLocalCachePath( liveDesc );
         if ( FileUtil::exists( localCachePath ) )
         {
-            // 경로에 이미 유효 소스 해시가 들어 있다. 찾혔다는 것이 곧 "이 소스에서 나온 것" 이다.
+            // 경로에 이미 유효 소스 해시가 들어 있다. 찾혔다는 것이 곧 "이 소스에서 나온 것"이다.
             {
                 vector<uint8> cacheBytes;
                 if ( FileUtil::readFile( localCachePath, cacheBytes ) && cacheBytes.empty() == false )
@@ -166,8 +166,8 @@ namespace sw
         const string precookedRelPath = makePrecookedRelativePath( desc );
         bool         bPrecookedUsable = true;
 #if !defined( SW_SHIPPING )
-        // **신선도는 `cook.stamp` 의 내용 해시로 본다.** mtime 비교는 안 된다 — 이 저장소는 쿠킹된 바이너리까지 커밋하므로
-        // `git pull` 이 둘의 시간 순서를 임의로 뒤집어, 소스가 바뀌었는데도 "바이너리가 더 새것" 이라 낡은 것을 쓴다.
+        // **신선도는 `cook.stamp` 의 내용 해시로 본다.** mtime 비교는 안 된다. 이 저장소는 쿠킹된 바이너리까지 커밋하므로
+        // `git pull` 이 둘의 시간 순서를 임의로 뒤집어, 소스가 바뀌었는데도 "바이너리가 더 새것"이라 낡은 것을 쓴다.
         // 검사는 개발 빌드 전용이다. 배포에는 다시 컴파일할 길이 없어
         // 거부하면 폴백이 아니라 빈 화면이고, 배포물의 신선도는 쿠킹이 같은 스탬프로 이미 막는다
         // (CookAssets.py --verify-shaders).
@@ -217,7 +217,7 @@ namespace sw
         }
         return compiledResult;
 #else
-        // 빠진 것은 파일이 아니라 (경로 · 스테이지 · 진입점 · 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
+        // 빠진 것은 파일이 아니라 (경로, 스테이지, 진입점, 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
         SW_LOG_ERROR( "Precompiled shader binary not found in shipping pack: '%#' [%#] — %#",
                       desc._filePath.c_str(), desc._entryPoint.c_str(), precookedRelPath.c_str() );
         ShaderCompileResult failedResult{};

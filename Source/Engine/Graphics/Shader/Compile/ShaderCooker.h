@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @struct ShaderCookResult
-     * @brief 셰이더 하나를 컴파일 · 쿠킹한 결과입니다.
+     * @brief 셰이더 하나를 컴파일하고 쿠킹한 결과입니다.
      */
     struct ShaderCookResult
     {
@@ -47,9 +47,9 @@ namespace sw
     /**
      * @struct ShaderCookRequest
      * @brief 쿠킹할 대상 하나입니다(셰이더, 진입점, 스테이지, define).
-     * @details "무엇을 쿠킹할지" 는 파이프라인 XML 과 머티리얼에서 나오고(`ShaderCookRequest.cpp`), "어떻게 쿠킹하는지" 는
+     * @details "무엇을 쿠킹할지"는 파이프라인 XML 과 머티리얼에서 나오고(`ShaderCookRequest.cpp`), "어떻게 쿠킹하는지"는
      *          그것을 받아 컴파일하는 쪽이 정한다(`ShaderCooker.cpp`). 그 둘 사이를 오가는 값이라 여기 있다(그래서
-     *          "이 빌드가 무엇을 쿠킹했나" 를 밖에서 볼 수 있다).
+     *          "이 빌드가 무엇을 쿠킹했나"를 밖에서 볼 수 있다).
      */
     struct ShaderCookRequest
     {
@@ -85,8 +85,8 @@ namespace sw
                                               const vector<string>* pListPermutation = nullptr,
                                               ShaderCookResult*     pOutResult       = nullptr );
 
-        // "무엇을 쿠킹할지" 와 "모두 쿠킹" 은 여기 없다. 파이프라인 XML 과 패스 종류를 아는 렌더러의 정책이라
-        // `Renderer/Cook/ShaderCookDriver` 에 있다. 여기는 한 장을 쿠킹하는 법과 이름 짓기, 최신 판정만 둔다.
+        // "무엇을 쿠킹할지"와 "모두 쿠킹"은 여기 없다. 파이프라인 XML 과 패스 종류를 아는 렌더러의 정책이라
+        // `Renderer/Cook/ShaderCookDriver` 에 있다. 여기는 셰이더 하나를 쿠킹하는 법과 이름 짓기, 최신 판정만 둔다.
 
         /**
          * @brief `bin/<rhi>/cook.stamp` 를 지금 소스의 내용 해시로 다시 씁니다(쿠킹이 끝난 뒤).
@@ -117,16 +117,16 @@ namespace sw
          *
          *          **파일 시간이 아니라 내용이다.** 이 저장소는 쿠킹된 바이너리까지 커밋하므로 `git pull`
          *          이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도 "산출물이
-         *          더 새것" 으로 판정되어 그대로 넘어가고, 한 백엔드만 다른 이미지를 내면 백엔드 버그로 보인다.
+         *          더 새것"으로 판정되어 그대로 넘어가고, 한 백엔드만 다른 이미지를 내면 백엔드 버그로 보인다.
          */
         static uint64 computeEffectiveSourceHash( string_view absShaderPath );
         /** @brief Resource 아래 모든 .hlsli 의 경로와 내용을 합친 해시입니다(값을 캐시합니다). */
         static uint64 getSharedHeaderContentHash();
 
         /**
-         * @brief 컴파일 옵션의 판입니다. **`ShaderCompiler.cpp` 가 컴파일러에 넘기는 인자(플래그 · 백엔드 define)를 바꾸면 올리세요.**
+         * @brief 컴파일 옵션의 버전입니다. **`ShaderCompiler.cpp` 가 컴파일러에 넘기는 인자(플래그, 백엔드 define)를 바꾸면 올리세요.**
          * @details 이 값은 `getToolchainFingerprint` 에 들어가 쿠킹 스탬프와 디스크 캐시 키를 바꾼다. 올리지 않으면 소스가 그대로라
-         *          옛 옵션으로 만든 바이너리가 "최신" 으로 남는다.
+         *          옛 옵션으로 만든 바이너리가 "최신"으로 남는다.
          */
         inline static constexpr uint32 kCompileOptionsRevision = 1;
 
@@ -139,12 +139,12 @@ namespace sw
         inline static constexpr const utf8* kCompilerVersion = "directx-dxc 2026-05-27";
 
         /**
-         * @brief 컴파일러 도구의 지문입니다. 컴파일 옵션 판 · Vulkan 타깃 판 · 컴파일러 버전 식별자를 합친다(`makeToolchainFingerprint` 에 이 클래스의 상수를 넣은 값).
+         * @brief 컴파일러 도구의 지문입니다. 컴파일 옵션 버전, Vulkan 타깃 버전, 컴파일러 버전 식별자를 합칩니다(`makeToolchainFingerprint` 에 이 클래스의 상수를 넣은 값).
          * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는
-         *          `bindingslots.hlsli` 에 있고 그 파일은 include 루트 헤더라 이미 스탬프에 들어간다. 파일 · OS 에 따라 달라지는 값은 넣지 않는다.
+         *          `bindingslots.hlsli` 에 있고 그 파일은 include 루트 헤더라 이미 스탬프에 들어간다. 파일이나 OS 에 따라 달라지는 값은 넣지 않는다.
          */
         static uint64 getToolchainFingerprint();
-        /** @brief 지문 계산의 본체입니다 — 입력만으로 정해진다(테스트가 상수만으로 같은 값이 나오는지 본다). */
+        /** @brief 지문 계산의 본체입니다. 입력만으로 정해집니다(테스트가 상수만으로 같은 값이 나오는지 확인합니다). */
         static uint64 makeToolchainFingerprint( uint32 compileOptionsRevision, uint32 vulkanTargetVersion, string_view compilerVersion );
 
         /**
@@ -162,7 +162,7 @@ namespace sw
         static bool isCookedOutputCurrent( string_view binDirectory, string_view absShaderPath );
 
         /**
-         * @brief 캐시된 공유 헤더 해시와 스탬프 읽기 결과를 버려, 다음 조회가 다시 훑게 합니다.
+         * @brief 캐시된 공유 헤더 해시와 스탬프 읽기 결과를 버려, 다음 조회가 다시 스캔하게 합니다.
          * @details 실행 중 `.hlsli` 를 고치고 수동 리로드를 누르는 경로에서만 부른다. 이것을 부르지 않으면
          *          컴파일 캐시의 키가 그대로라 **바뀐 헤더가 반영되지 않는다.** 로그는 성공을 찍는데
          *          화면은 그대로인, 가장 조용한 종류의 어긋남이다.
@@ -175,7 +175,7 @@ namespace sw
         /** @brief 타깃 포맷에 해당하는 확장자(".dxbc", ".dxil", ".spv")를 반환합니다. */
         static string_view getExtensionForFormat( ShaderTargetFormat format );
 
-        /** @brief 쿠킹 테이블의 셰이더 폴더 이름(`dx11`, `dx12`, `vulkan`, `opengl`)으로 ShaderTargetFormat 을 거꾸로 구합니다. 모르면 Count 입니다. */
+        /** @brief 쿠킹 테이블의 셰이더 폴더 이름(`dx11`, `dx12`, `vulkan`, `opengl`)으로 ShaderTargetFormat 을 역으로 구합니다. 모르면 Count 입니다. */
         static ShaderTargetFormat getFormatForSubfolder( string_view subfolder );
     };
 } // namespace sw

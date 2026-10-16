@@ -47,7 +47,7 @@ namespace sw
                 if ( ShaderReflectionLibrary::getOrReflect( compileDesc, outReflection ) == false )
                     return false;
 
-                // 리플렉션을 얻는 순간 계약과 대조한다. 어긋나면 로그에 이름 · 숫자로 남는다(검증 에러는 안 난다).
+                // 리플렉션을 얻는 순간 계약과 대조한다. 어긋나면 로그에 이름과 숫자로 남는다(검증 에러는 안 난다).
                 ShaderBindingValidator::validate( outReflection, targetFormat, shaderPath );
                 return true;
             }

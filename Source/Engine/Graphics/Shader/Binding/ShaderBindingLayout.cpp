@@ -32,7 +32,7 @@ namespace sw
             return ShaderBindingKind::Unknown;
         }
 
-        /** @brief `g_ShadowMap` / `g_ShadowMapIndex` / `ShadowMap` 을 `"ShadowMap"`(레지스트리 조회 키)으로 모읍니다. */
+        /** @brief `g_ShadowMap` 과 `g_ShadowMapIndex`, `ShadowMap` 을 `"ShadowMap"`(레지스트리 조회 키)으로 모읍니다. */
         string_view canonicalResourceView( string_view identifier, bool bStripIndexSuffix )
         {
             string_view name             = identifier;
@@ -112,7 +112,7 @@ namespace sw
                 }
             }
 
-            // 2) 텍스처 · 샘플러 · 버퍼 바인딩
+            // 2) 텍스처, 샘플러, 버퍼 바인딩
             for ( const ShaderReflectedBinding& res : pReflection->_listResource )
             {
                 const ShaderBindingKind kind = shaderBindingKindFromTypeLabel( static_cast<string_view>( res._type ) );
@@ -130,8 +130,8 @@ namespace sw
             }
         }
 
-        // 3) 구조버퍼 원소 stride: 리플렉션의 원소 레이아웃(_listStructuredElement)을 같은 이름의 슬롯에 붙인다.
-        //    이 슬롯에 거는 버퍼(GPUScene 머티리얼 데이터, 폴백 원소)는 이 stride 로 만들어야 한다.
+        // 3) 구조 버퍼 원소 stride: 리플렉션의 원소 레이아웃(_listStructuredElement)을 같은 이름의 슬롯에 붙인다.
+        //    이 슬롯에 설정하는 버퍼(GPUScene 머티리얼 데이터, 폴백 원소)는 이 stride 로 만들어야 한다.
         for ( const auto& [stage, pReflection] : listStageReflection )
         {
             if ( pReflection == nullptr )
@@ -185,7 +185,7 @@ namespace sw
                     planned._size     = member._size;
 
                     // `g_<Name>Index` 패턴은 명시 값이 없을 때 레지스트리의 bindless 인덱스로 채운다.
-                    // 그 조회 키를 지금 만들어 둔다 — 드로우마다 문자열을 자를 이유가 없다.
+                    // 그 조회 키를 지금 만들어 둔다. 드로우마다 문자열을 자를 이유가 없다.
                     if ( member._size == sizeof( uint32 ) && member._name.find( "Index" ) != string::npos )
                         planned._autoIndexKey = hashed_string( canonicalResourceView( static_cast<string_view>( member._name ), true ) );
 
@@ -223,8 +223,8 @@ namespace sw
             }
             _mapNameToSlot[slot._name] = index;
 
-            // 셰이더가 선언한 이름(`g_SwMaterials`)과 엔진이 쓰는 canonical 이름(`SwMaterials`)을 둘 다 건다.
-            // 리소스 바인딩 표(_listResourceBindOp)와 리소스 레지스트리는 canonical 키로 미리 계산한다. 주의: canonical 이름이 빠지면
+            // 셰이더가 선언한 이름(`g_SwMaterials`)과 엔진이 쓰는 canonical 이름(`SwMaterials`)을 둘 다 등록한다.
+            // 리소스 바인딩 목록(_listResourceBindOp)과 리소스 레지스트리는 canonical 키로 미리 계산한다. 주의: canonical 이름이 빠지면
             // find( "SwMaterials" ) 가 **언제나** nullptr 이라 머티리얼 없는 배치가 폴백 버퍼를 못 찾아 t9 를 비운 채 드로우를 내고,
             // Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
             const hashed_string canonicalName{ canonicalResourceView( slot._name.c_str(), false ) };

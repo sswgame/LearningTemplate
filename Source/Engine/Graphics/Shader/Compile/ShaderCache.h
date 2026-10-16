@@ -1,7 +1,7 @@
 /**
  * @file ShaderCache.h
  * @brief 셰이더 컴파일 결과 캐시 매니저입니다.
- * @note AssetManager 가 아닙니다. 셰이더 바이트코드는 RHI · 컴파일러 수명이며 팩 에셋 인스턴스와 분리합니다.
+ * @note AssetManager 가 아닙니다. 셰이더 바이트코드는 RHI와 컴파일러의 수명을 따르며 팩 에셋 인스턴스와 분리합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -29,7 +29,7 @@ namespace sw
 {
     /**
      * @brief 컴파일 결과 디스크 캐시 매니저입니다.
-     * @details 엔진에서는 서브시스템 `ShaderCache`(모든 호스트)입니다. 서버는 빈 캐시만 세운다(씬 쿠킹의 Headless 가 의존).
+     * @details 엔진에서는 서브시스템 `ShaderCache`(모든 호스트)입니다. 서버는 빈 캐시만 만듭니다(씬 쿠킹의 Headless 가 의존합니다).
      */
     class SW_API ShaderCache : public ISubsystem
     {
@@ -45,10 +45,10 @@ namespace sw
         /** @brief 셰이더 캐시를 정리하고 종료합니다. 리플렉션 매니페스트 캐시(`ShaderReflectionLibrary`)도 비웁니다. */
         void shutdown();
 
-        // ISubsystem — 기동 단계 `ShaderCache`.
+        // ISubsystem: 기동 단계 `ShaderCache`.
         SubsystemInitResult initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
         void                shutdownSubsystem() override { shutdown(); }
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킵니다). */
         static constexpr const utf8* kSubsystemName = "ShaderCache";
 
         const utf8*       getSubsystemName() const override { return kSubsystemName; }
@@ -62,14 +62,14 @@ namespace sw
 
         /**
          * @brief 지금까지 컴파일한 셰이더들의 요청을 모읍니다.
-         * @details **"이 실행에서 실제로 쓰이는 셰이더" 의 기준이 여기입니다.** 수동 리로드는 따로 등록표를
-         *          두지 않고 이것을 씁니다(따로 채우는 표는 채우는 쪽을 빠뜨리면 리로드 단축키가 빈 표를 돕니다).
+         * @details **"이 실행에서 실제로 쓰이는 셰이더"의 기준이 여기입니다.** 수동 리로드는 따로 등록 목록을
+         *          두지 않고 이것을 씁니다(따로 채우는 목록은 채우는 쪽을 빠뜨리면 리로드 단축키가 빈 목록을 돕니다).
          */
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
         /**
          * @brief 이 컴파일 요청이 읽을 쿠킹된 바이너리의 리소스 상대 경로입니다(`<domain>/shaders/bin/<rhi>/<이름>`).
-         * @details 파일 이름은 `ShaderCooker::computeBinaryFileName` 그대로입니다(스템 · 스테이지 · 진입점 · **퍼뮤테이션 해시**).
+         * @details 파일 이름은 `ShaderCooker::computeBinaryFileName` 그대로입니다(스템, 스테이지, 진입점, **퍼뮤테이션 해시**).
          *          주의: 해시를 빼면 쿠커는 퍼뮤테이션마다 다른 파일을 쿠킹해 두는데 캐시는 늘 해시 0(define 없음) 파일을 읽어,
          *          어떤 define 도 GPU 에 닿지 않습니다. 리플렉션 매니페스트(ShaderReflectionLibrary::tryGet)는 해시를 넣은 키로
          *          찾으므로 레이아웃은 맞고 바이트코드만 틀린, 가장 조용한 종류의 어긋남이 됩니다.
@@ -90,7 +90,7 @@ namespace sw
         static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
 
     private:
-        /** @brief 인메모리 캐시에 넣습니다. 로컬 캐시 · 쿠킹된 · 라이브 컴파일 세 갈래가 같은 항목을 만듭니다. */
+        /** @brief 인메모리 캐시에 넣습니다. 로컬 캐시, 쿠킹된 바이너리, 라이브 컴파일 세 경우가 같은 항목을 만듭니다. */
         void storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result, uint64 sourceHash );
 
         unordered_map<string, ShaderCacheEntry> _mapCache;

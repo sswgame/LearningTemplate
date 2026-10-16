@@ -1,7 +1,7 @@
 /**
  * @file SpirvConstants.h
- * @brief SPIR-V 명세의 번호(매직 · 연산 · 장식 · 저장 클래스 · 내장 변수)입니다. 리플렉션과 GL 패치가 같은 표를 봅니다.
- * @details 값은 Khronos SPIR-V 명세(spirv.core.grammar.json)의 것이다 — 바꾸지 않는다.
+ * @brief SPIR-V 명세의 번호(매직, 연산, 장식, 저장 클래스, 내장 변수)입니다. 리플렉션과 GL 패치가 같은 목록을 봅니다.
+ * @details 값은 Khronos SPIR-V 명세(spirv.core.grammar.json)의 것이므로 바꾸지 않는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
