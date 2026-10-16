@@ -22,7 +22,7 @@ namespace
     { "_uvRect": "0.5,0.5,0.25,0.5", "_durationMs": 0 }
   ],
   "_listKey": [
-    { "_time": 0.5, "_position": "1,2", "_angleDeg": 45 }
+    { "_time": 0.5, "_position": "1,2", "_angle": 0.7853982 }
   ]
 })";
 } // namespace
@@ -45,7 +45,7 @@ SW_TEST_CASE( SpriteClipAssetTest, ClipWithoutAnimationsReadsAsOneWholeClipAnima
     SW_EXPECT_EQUAL( 120, clip._listFrame[1]._durationMs );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( clip._listKey.size() ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, clip._listKey[0]._position._y, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 45.0f, clip._listKey[0]._angleDeg, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( sw::MathUtil::kPi * 0.25f, clip._listKey[0]._angle, 1e-6f );
     SW_EXPECT_TRUE( clip._listAnimation.empty() );
 
     // 이름 붙은 구간이 없으면 어떤 이름이든 프레임 전체 · 반복이다(클립 하나 = 애니메이션 하나).

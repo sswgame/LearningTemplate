@@ -550,9 +550,9 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
     { "_uvRect": "0.5,0.5,0.5,0.5", "_durationMs": 100 }
   ],
   "_listKey": [
-    { "_time": 0.4, "_position": "4.0,2.0", "_angleDeg": 0.0 },
-    { "_time": 0.0, "_position": "0.0,0.0", "_angleDeg": 0.0 },
-    { "_time": 0.2, "_position": "2.0,0.0", "_angleDeg": 90.0 }
+    { "_time": 0.4, "_position": "4.0,2.0", "_angle": 0.0 },
+    { "_time": 0.0, "_position": "0.0,0.0", "_angle": 0.0 },
+    { "_time": 0.2, "_position": "2.0,0.0", "_angle": 1.5707964 }
   ],
   "_listAnimation": [
     { "_name": "a", "_firstFrame": 0, "_frameCount": 2, "_bLoop": 1 },

@@ -55,7 +55,7 @@ namespace sw
      * @brief 클립의 트랜스폼 키입니다. 위치와 회전을 시간에 따라 움직이는 선택 트랙입니다.
      * @details `_time` 은 **클립 타임라인**의 초다. 프레임 0 이 0 초에 시작하고 프레임마다 그 프레임의 시간만큼 흐른다
      *          (`computeFrameStartSeconds`). 이름 붙은 애니메이션은 그 구간의 시각에서 트랙을 읽는다. 값은 애니메이터가 움직이는
-     *          스프라이트의 **로컬** 위치(x, y)와 Z 축 회전(도)이다(`SpriteAnimatorComponent`).
+     *          스프라이트의 **로컬** 위치(x, y)와 Z 축 회전(라디안, 엔진의 각도 단위)이다(`SpriteAnimatorComponent`).
      */
     REFLECT()
     struct SW_API SpriteClipKey
@@ -66,8 +66,8 @@ namespace sw
         float32 _time{ 0.0f };
         PROPERTY( Tooltip = "Local position (x, y) of the sprite at this key" )
         float2 _position{ 0.0f, 0.0f };
-        PROPERTY( Units = deg, Tooltip = "Rotation about Z at this key" )
-        float32 _angleDeg{ 0.0f };
+        PROPERTY( Units = rad, Tooltip = "Rotation about Z at this key" )
+        float32 _angle{ 0.0f };
     };
 } // namespace sw
 
