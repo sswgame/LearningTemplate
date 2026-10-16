@@ -708,7 +708,7 @@ namespace sw
 
         if ( bMigrateRequired )
         {
-            SW_LOG_ERROR( "(%#) schema version %# -> %# needs a migration and none is registered for (%#, %#) - add SW_SCHEMA_MIGRATION next to the type (%# orphans: %#)",
+            SW_LOG_ERROR( "(%#) schema version %# -> %# needs a migration and none is registered for (%#, %#) - rewrite the data, or register SW_SCHEMA_MIGRATION only when a value must be computed (%# orphans: %#)",
                           typeInfo._name.c_str(), fromVersion, currentVersion, typeInfo._fullyQualifiedName.c_str(), fromVersion,
                           static_cast<uint32>( listOrphan.size() ), listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
             return false;

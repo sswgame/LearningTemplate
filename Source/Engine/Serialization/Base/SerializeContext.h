@@ -98,7 +98,10 @@ namespace sw
             return *this;
         }
 
-        /** @brief 바이너리/텍스트 역직렬화에서 스키마에 없는 프로퍼티를 건너뛰고 계속할지 설정합니다. */
+        /**
+         * @brief 바이너리/텍스트 역직렬화에서 스키마에 없는 프로퍼티를 건너뛰고 계속할지 설정합니다.
+         * @details 바이너리의 버전 붙은 읽기에서는 같은 버전의 orphan 정책이 됩니다(켜면 `SchemaOrphanPolicy::Ignore`). 버전이 다른 데이터는 켜도 거절합니다.
+         */
         SerializeContext& setAllowUnknownProperties( bool bAllow )
         {
             _bAllowUnknownProperties = bAllow ? SW_TRUE : SW_FALSE;

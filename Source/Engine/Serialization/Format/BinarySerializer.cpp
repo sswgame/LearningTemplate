@@ -592,12 +592,13 @@ namespace sw
         const size_t bodySize = dataSize - reader.getOffset();
 
         // 절차는 JSON, XML 과 공통이다(`runVersionedDeserialize`). 바이너리만 다른 것은 두 가지다.
-        // 버전을 **본문 앞에서 이미 읽었고**(위 `reader.read`), orphan 이 하나라도 있으면 migrate 없이는
-        // 거절한다(이관은 `SchemaMigrationRegistry` 에서 찾는다). 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가
-        // 바뀌었다는 뜻이기 때문이다.
+        // 버전을 **본문 앞에서 이미 읽었고**(위 `reader.read`), orphan 이 하나라도 있으면 이관 없이는
+        // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이기 때문이다.
+        // 지운 필드를 버려도 되는 호출부는 컨텍스트로 그렇게 말한다(`setAllowUnknownProperties`, 오브젝트 상태). 버전이 다르면 그래도 거절한다.
+        const SchemaOrphanPolicy orphanPolicy = context.allowsUnknownProperties() ? SchemaOrphanPolicy::Ignore : SchemaOrphanPolicy::Reject;
         return runVersionedDeserialize(
             outVersion, pInstance, typeInfo, currentVersion, pLegacyTypeInfo, context,
-            SchemaVersionSource::Stream, SchemaOrphanPolicy::Reject,
+            SchemaVersionSource::Stream, orphanPolicy,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
         {

@@ -11,7 +11,7 @@
 | 변경 | 지금 동작 |
 |---|---|
 | 필드 추가 | 기본값으로 채웁니다. |
-| 필드 삭제 · 이름 변경 | (타입, 기록된 버전)에 등록된 변환 함수(`SW_SCHEMA_MIGRATION`)가 없으면 오류로 멈춥니다. 이름 변경은 버전을 올리고 옛 TypeInfo 로 스테이징한 값을 변환 함수가 옮깁니다(`ReflectionSerializationTest.BinaryFieldAddRemoveRenameRoundTrip`). |
+| 필드 삭제 · 이름 변경 | (타입, 기록된 버전)에 등록된 변환 함수(`SW_SCHEMA_MIGRATION`)가 없으면 오류로 멈춥니다. 기본은 데이터를 다시 쓰는 것이고, 값 계산이 불가피한 예외만 변환 함수를 씁니다(경로는 `ReflectionSerializationTest.BinaryFieldAddRemoveRenameRoundTrip` 이 고정). |
 | 열거자 이름 변경 · 삭제 | 이름 해시가 저장돼 있어 필드 읽기가 실패합니다. 변환 함수도 닿지 않습니다. |
 | 열거형 타입 이름 변경 | 기록된 FQN 이 레지스트리에 없어 변환할 수 없습니다. |
 | 열거자 값 · 순서 변경 | 안전합니다. |

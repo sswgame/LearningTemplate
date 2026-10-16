@@ -80,8 +80,8 @@ namespace sw
      *            건너뛴 필드는 조용히 넘어가지 않는다. `runSchemaMigrateStep` 이 타입과 필드 이름을 담아 로드마다 한 번 경고한다.
      *          - **바이너리는 `Reject`** 다. 쿠커나 같은 빌드가 쓴 산출물이라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이다. 이관
      *            함수(`SchemaMigrateFn`)가 받아 주지 않으면 실패한다. 언리얼 쿠킹 패키지가 버전(`FPackageFileSummary` 의 버전)이 다르면 로드를
-     *            거절하는 것과 같다. 오브젝트 상태처럼 지운 필드를 버려도 되는 곳은 지금 버전에 등록한 이관 함수가 그렇게 선언한다
-     *            (`ObjectStateSerializer` 의 `skipFieldsTheTypeNoLongerHas`).
+     *            거절하는 것과 같다. 오브젝트 상태처럼 지운 필드를 버려도 되는 호출부는 컨텍스트로 그렇게 말한다
+     *            (`SerializeContext::setAllowUnknownProperties`, 그때 바이너리도 `Ignore`). 버전이 다르면 그래도 거절한다.
      *          고정하는 테스트: `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`.
      */
     enum class SchemaOrphanPolicy : uint8
@@ -143,7 +143,8 @@ namespace sw
 
     /**
      * @brief fromVersion 에서 toVersion 으로 옮기는 이관 함수입니다. false 를 반환하면 deserializeVersioned 가 실패합니다.
-     * @details 타입 옆 .cpp 에 `SW_SCHEMA_MIGRATION` 으로 (타입, 기록된 버전)마다 등록한다(`SchemaMigrationRegistry.h`).
+     * @details 스키마가 바뀌면 기본은 데이터를 다시 쓰는 것이다(결정 기록 5-4). 이관은 값 계산이 불가피한 예외에만 쓰고,
+     *          그때 타입 옆 .cpp 에 `SW_SCHEMA_MIGRATION` 으로 (타입, 기록된 버전)마다 등록한다(`SchemaMigrationRegistry.h`).
      */
     using SchemaMigrateFn = bool ( * )( const SchemaMigrateContext& context );
 

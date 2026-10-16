@@ -8,6 +8,9 @@
 
 #include "Engine/Reflection/ReflectionCore.h"
 
+#include <cstdio>
+#include <cstdlib>
+
 namespace sw
 {
     SW_LOG_CALLER( "SchemaMigrationRegistry" );
@@ -40,19 +43,26 @@ namespace sw
 
 namespace sw
 {
-    bool SchemaMigrationRegistry::registerMigration( const SchemaMigration* pMigration )
+    void SchemaMigrationRegistry::registerMigration( const SchemaMigration* pMigration )
     {
-        const bool bInvalidMigration = pMigration == nullptr || pMigration->_pTypeName == nullptr || pMigration->_migrate == nullptr;
-        if ( bInvalidMigration )
-            return false;
-        const string                 key = SchemaMigrationRegistryInternal::makeKey( *pMigration );
-        const std::lock_guard<mutex> lock( SchemaMigrationRegistryInternal::getMutex() );
-        if ( SchemaMigrationRegistryInternal::getMigrations().add( pMigration, key ) != RegistrationResult::Added )
+        const bool         bInvalidMigration = pMigration == nullptr || pMigration->_pTypeName == nullptr || pMigration->_migrate == nullptr;
+        RegistrationResult result            = RegistrationResult::NullItem;
+        string             key;
+        if ( bInvalidMigration == false )
         {
-            SW_LOG_ERROR( "Schema migration <%#> is already registered - the second one is ignored", key.c_str() );
-            return false;
+            key = SchemaMigrationRegistryInternal::makeKey( *pMigration );
+            const std::lock_guard<mutex> lock( SchemaMigrationRegistryInternal::getMutex() );
+            result = SchemaMigrationRegistryInternal::getMigrations().add( pMigration, key );
         }
-        return true;
+        if ( result == RegistrationResult::Added )
+            return;
+        // 오르지 못한 이관은 그 데이터를 읽을 때에야 드러나고, 어느 것이 쓰일지 정적 초기화 순서가 정한다. 고칠 곳은 등록 줄이므로 모든 구성에서 멈춘다.
+        // 모듈 로드(정적 초기화) 중이라 로거가 아직 없을 수 있어 표준 오류에도 직접 쓴다(`OnlineProtocolRegistry` 와 같다).
+        const utf8* pKey = key.empty() ? "(missing type name or function)" : key.c_str();
+        std::fprintf( stderr, "Schema migration <%s> could not be registered (missing or duplicate)\n", pKey );
+        std::fflush( stderr );
+        SW_LOG_ERROR( "Schema migration <%#> could not be registered (missing or duplicate)", pKey );
+        std::abort();
     }
 
     void SchemaMigrationRegistry::unregisterMigration( const SchemaMigration* pMigration )
@@ -86,14 +96,12 @@ namespace sw
 
     SchemaMigrationRegistrar::SchemaMigrationRegistrar( const utf8* pTypeName, uint32 fromVersion, SchemaMigrateFn migrate )
         : _migration{ pTypeName, fromVersion, migrate }
-        , _bRegistered{ false }
     {
-        _bRegistered = SchemaMigrationRegistry::registerMigration( &_migration );
+        SchemaMigrationRegistry::registerMigration( &_migration );
     }
 
     SchemaMigrationRegistrar::~SchemaMigrationRegistrar()
     {
-        if ( _bRegistered )
-            SchemaMigrationRegistry::unregisterMigration( &_migration );
+        SchemaMigrationRegistry::unregisterMigration( &_migration );
     }
 } // namespace sw
