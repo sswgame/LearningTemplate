@@ -36,6 +36,8 @@ namespace sw
      * @brief 와이어 형식의 버전입니다. 계층마다 하나씩 있으며, Core(핸드셰이크, 패킷, 채널, 메시지 헤더)는 `kCore`, 키트는 `NetKitWireVersion`, 게임은 자기 값을 씁니다.
      * @details 형식(필드, 의미, 종류 바이트)을 바꾸는 커밋은 그 계층의 버전을 올린다. 버전이 다른 빌드끼리는 핸드셰이크에서 `VersionMismatch` 로 갈리며,
      *          옛 형식을 읽는 경로는 두지 않는다. 게임과 키트 버전은 `combine` 으로 묶어 `NetHostConfig::_wireVersion` 에 둔다(Core 버전은 자동으로 섞인다).
+     *          고정 배치형(B) 메시지는 손 버전 대신 그 타입의 스키마 해시를 `mixSchemaHash` 로 섞는다(Engine 의 `FixedNetWireVersion::combine`).
+     *          그래서 바이트 배치가 바뀌면 손 버전을 올리지 않아도 핸드셰이크가 거절한다. 손 버전은 배치는 그대로이고 의미만 바뀐 경우에 올린다.
      */
     struct NetWireVersion
     {
@@ -53,6 +55,12 @@ namespace sw
                 }
             }
             return hash;
+        }
+
+        /** @brief 계층 버전에 메시지 타입의 64 비트 스키마 해시 하나를 섞습니다. 아래 32 비트, 위 32 비트 순서로 `combine` 에 넣습니다. */
+        static constexpr uint32 mixSchemaHash( uint32 version, uint64 schemaHash )
+        {
+            return combine( { version, static_cast<uint32>( schemaHash ), static_cast<uint32>( schemaHash >> 32 ) } );
         }
     };
 } // namespace sw

@@ -291,8 +291,11 @@ namespace sw
         void                       collectKillerStimuli( vector<AIStimulus>& outListStimulusEntry ) const;
         const InteractionProgress* findActivityProgress( int32 survivor ) const;
         void                       makeSnapshot( HorrorSnapshot& outSnapshot ) const;
-        /** @brief 서버 권위 상태를 바이트로 씁니다(`HorrorSnapshotCodec::write`). */
-        void writeState( BitWriter& outWriter ) const;
+        /**
+         * @brief 서버 권위 상태(`HorrorSnapshot`)를 고정 배치형 바이트로 씁니다(`FixedLayout::write`).
+         * @return 범위 밖 값(255 개를 넘는 목록, 갈고리 단계 15 초과 등)이 있으면 잘라 쓰지 않고 false 이며, @p outWriter 에는 쓰다 만 비트가 남습니다.
+         */
+        [[nodiscard]] bool writeState( BitWriter& outWriter ) const;
         /**
          * @brief 세이브와 핫 리로드용 전체 상태를 씁니다. 살인마 id, 판(`MatchState`), 걸음, 무대(위치, 판자, 사물함, 창틀, 발전기, 탈출구, 해치),
          *        생존자(체력, 치료 진행, 점수, 타이머, 갈고리, 하던 일), 살인마(점수, 위치, 쿨다운, 들고 있는 생존자), 엔드게임을 씁니다. 네트워크 스냅샷(`writeState( BitWriter& )`)은

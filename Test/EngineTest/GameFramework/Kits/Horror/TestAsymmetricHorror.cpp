@@ -5,6 +5,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/AI/AIPerception.h"
@@ -524,7 +525,8 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
         SW_ASSERT_TRUE( match.escape( first ) );
         match.update( kAsymmetricHorrorStep );
         SW_EXPECT_TRUE( match.isHatchOpen() ); // 한 명만 남았다
-        match.writeState( outWriter );
+        const bool bWritten = match.writeState( outWriter );
+        SW_EXPECT_TRUE( bWritten );
         if ( bLeaveSecond )
         {
             SW_ASSERT_TRUE( match.escape( second ) );
@@ -549,22 +551,95 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
     SW_ASSERT_EQUAL( firstRun.getByteCount(), secondRun.getByteCount() );
     SW_EXPECT_TRUE( firstRun.getBytes() == secondRun.getBytes() ); // 같은 입력까지는 같은 바이트
 
-    HorrorSnapshot snapshot;
-    BitReader      reader( firstRun.getBytes().data(), firstRun.getByteCount() );
-    SW_ASSERT_TRUE( HorrorSnapshotCodec::read( reader, snapshot ) );
+    HorrorSnapshot        snapshot;
+    const FixedReadResult result = FixedLayout::read( firstRun.getBytes().data(), firstRun.getByteCount(), snapshot );
+    SW_ASSERT_TRUE_MSG( result == FixedReadResult::Ok, FixedLayout::toString( result ) );
     SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listSurvivor.size() ), 2 );
     SW_EXPECT_TRUE( snapshot._listSurvivor[0]._state == SurvivorState::Escaped );
     SW_EXPECT_TRUE( snapshot._bGatesPowered == SW_TRUE );
     SW_EXPECT_TRUE( snapshot._bHatchOpen == SW_TRUE );
-    SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listGeneratorFlag.size() ), 2 );
-    SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listGeneratorFlag[0] & 1u ), 1 );
-    BitWriter rewritten;
-    HorrorSnapshotCodec::write( snapshot, rewritten );
+    SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listGenerator.size() ), 2 );
+    SW_EXPECT_EQUAL( static_cast<int32>( snapshot._listGenerator[0]._flag & 1u ), 1 );
+    BitWriter  rewritten;
+    const bool bRewritten = FixedLayout::write( snapshot, rewritten );
+    SW_EXPECT_TRUE( bRewritten );
     SW_EXPECT_TRUE( rewritten.getBytes() == firstRun.getBytes() );
 
-    HorrorSnapshot broken;
-    BitReader      shortReader( firstRun.getBytes().data(), firstRun.getByteCount() / 2 );
-    SW_EXPECT_FALSE( HorrorSnapshotCodec::read( shortReader, broken ) );
+    // 모자란 바이트는 거절하고 대상은 그대로다.
+    HorrorSnapshot        broken;
+    const FixedReadResult shortResult = FixedLayout::read( firstRun.getBytes().data(), firstRun.getByteCount() / 2, broken );
+    SW_EXPECT_TRUE( shortResult == FixedReadResult::Truncated );
+    SW_EXPECT_TRUE( FixedLayout::equals( broken, HorrorSnapshot{} ) );
+}
+
+/**
+ * @brief [AsymmetricHorrorTest] 스냅샷은 경계값까지 왕복하고, 범위 밖 값은 잘라 쓰지 않고 쓰기가 실패한다
+ * @details 손 코덱은 개수를 255 로 잘라 버리고, 발전기 표시가 모자라면 0 을 채워 썼습니다. 이제 진행과 표시가 한 원소이고, 선언한 범위를 넘으면 오류입니다.
+ */
+SW_TEST_CASE( AsymmetricHorrorTest, SnapshotRoundTripsAndRefusesOutOfRangeValues )
+{
+    HorrorSnapshot source;
+    source._tick              = 9u;
+    source._phase             = MatchPhase::InProgress;
+    source._killerPosition    = float3{ -1000.0f, 1.5f, 1000.0f }; // 위치 경계, 높이도 싣는다
+    source._killerCarrying    = 0;
+    source._collapseRemaining = 10000.0f;
+    source._bHatchOpen        = SW_TRUE;
+    HorrorSurvivorSnapshot survivor;
+    survivor._hookStage = 15;
+    survivor._state     = SurvivorState::Escaped;
+    survivor._activity  = SurvivorActivity::InLocker;
+    survivor._position  = float3{ 3.0f, 0.0f, -4.0f };
+    source._listSurvivor.push_back( survivor );
+    HorrorGeneratorSnapshot generator;
+    generator._progress = 1.0f;
+    generator._flag     = 7;
+    source._listGenerator.push_back( generator );
+    source._listGateProgress  = { 0.0f, 0.5f };
+    source._listPalletState   = { PalletState::Broken };
+    source._listWindowBlocked = { SW_TRUE, SW_FALSE };
+
+    HorrorSnapshot loaded;
+    for ( int32 pass = 0; pass < 2; ++pass )
+    {
+        const HorrorSnapshot written = pass == 0 ? source : loaded;
+        BitWriter            writer;
+        const bool           bWritten = FixedLayout::write( written, writer );
+        SW_ASSERT_TRUE( bWritten );
+        loaded                       = HorrorSnapshot{};
+        const FixedReadResult result = FixedLayout::read( writer.getBytes().data(), writer.getByteCount(), loaded );
+        SW_ASSERT_TRUE_MSG( result == FixedReadResult::Ok, FixedLayout::toString( result ) );
+        if ( pass == 1 )
+            SW_EXPECT_TRUE( FixedLayout::equals( loaded, written ) );
+    }
+    SW_EXPECT_NEAR_EQUAL( loaded._killerPosition._x, -1000.0f, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( loaded._killerPosition._y, 1.5f, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( loaded._collapseRemaining, 10000.0f, 0.01f );
+    SW_EXPECT_EQUAL( loaded._listSurvivor[0]._hookStage, 15 );
+    SW_EXPECT_TRUE( loaded._listSurvivor[0]._activity == SurvivorActivity::InLocker );
+    SW_EXPECT_EQUAL( static_cast<int32>( loaded._listGenerator[0]._flag ), 7 );
+    SW_EXPECT_TRUE( loaded._listPalletState[0] == PalletState::Broken );
+    SW_EXPECT_EQUAL( static_cast<int32>( loaded._listWindowBlocked.size() ), 2 );
+    SW_EXPECT_TRUE( loaded._listWindowBlocked[0] == SW_TRUE );
+
+    // 255 개를 넘는 목록은 잘라 쓰지 않는다.
+    HorrorSnapshot tooMany = source;
+    tooMany._listWindowBlocked.resize( 256 );
+    BitWriter  tooManyWriter;
+    const bool bTooManyWritten = FixedLayout::write( tooMany, tooManyWriter );
+    SW_EXPECT_FALSE( bTooManyWritten );
+
+    // 범위 밖 정수(갈고리 단계, 발전기 표시)도 쓰기 실패다.
+    HorrorSnapshot badHook              = source;
+    badHook._listSurvivor[0]._hookStage = 16;
+    BitWriter  badHookWriter;
+    const bool bBadHookWritten = FixedLayout::write( badHook, badHookWriter );
+    SW_EXPECT_FALSE( bBadHookWritten );
+    HorrorSnapshot badFlag          = source;
+    badFlag._listGenerator[0]._flag = 8;
+    BitWriter  badFlagWriter;
+    const bool bBadFlagWritten = FixedLayout::write( badFlag, badFlagWriter );
+    SW_EXPECT_FALSE( bBadFlagWritten );
 }
 
 /**

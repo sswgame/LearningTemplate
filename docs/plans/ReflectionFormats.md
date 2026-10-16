@@ -511,6 +511,11 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 생성기는 `Tools/ReflectionParser/FixedCodecGenerator.*`, 테스트는 `Test/ReflectionTest/TestFixedLayout.cpp` · `TestFixedLayoutTypes.h` 와
 `ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` 입니다. 단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다.
 
+단계 4-a 는 끝났습니다(2026-10-17). Mech · Horror 스냅샷은 `PROPERTY` 범위 키만 갖고 손 코덱 · `kMagic` 이 없습니다. 두 스냅샷은 디스크에 남지 않습니다(세이브는 `Archive` 의 `writeState` 가 따로 씁니다).
+채널 등록 API 가 아직 없어서, 넷 연결은 `Source/Engine/Serialization/Fixed/FixedNetWireVersion.h` 로 메시지 타입의 해시를 `NetWireVersion::mixSchemaHash` 에 섞습니다.
+메시지는 스트림 머리 해시를 그대로 싣습니다(3.10 의 본문만 쓰는 경로는 채널 객체가 생길 때 만듭니다). Horror 발전기의 진행 · 표시 두 목록은 원소 하나(`HorrorGeneratorSnapshot`)로 합쳤고, 위치는 높이까지 싣습니다.
+테스트는 `MechArenaTest` · `AsymmetricHorrorTest` 의 `SnapshotRoundTripsAndRefusesOutOfRangeValues` 와 `FixedLayoutTest.ChangedMessageLayoutIsRefusedAtTheHandshake` 입니다.
+
 **단계 7-c · 7-d 상세.**
 
 - 7-c: 매니저가 타입별 컴포넌트 목록을 보관하고 컴포넌트 추가 · 제거 때 그 타입과 조상 타입 목록을 갱신합니다(7.2). `forEachComponentOfType` 의 API 는 그대로이고 내부만 바뀝니다.
