@@ -150,7 +150,7 @@ namespace sw
             {
                 for ( const FloatCurveKey& key : channel._listKey )
                 {
-                    bValid = isFrameWithinLimit( key._time, sourceLabel, "key _time" ) && bValid;
+                    bValid = isFrameWithinLimit( static_cast<float64>( key._time ), sourceLabel, "key _time" ) && bValid;
                 }
             }
         }
