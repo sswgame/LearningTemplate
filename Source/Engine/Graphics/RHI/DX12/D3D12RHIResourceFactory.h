@@ -44,16 +44,16 @@ namespace sw
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
-        /** @brief 내용을 실어 업로드 힙 버퍼(GENERIC_READ)를 만듭니다. 정점 · 인덱스 버퍼가 같은 길입니다. */
+        /** @brief 내용을 채워 업로드 힙 버퍼(GENERIC_READ)를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
         RHIBufferHandle createUploadBuffer( const void* pData, uint32 sizeBytes );
         /**
-         * @brief bindless 힙에서 디스크립터 인덱스를 하나 집습니다.
-         * @param lock 부르는 쪽이 **이미 쥔** `_bindlessMutex` 잠금.
+         * @brief bindless 힙에서 디스크립터 인덱스를 하나 가져옵니다.
+         * @param lock 부르는 쪽이 **이미 잡고 있는** `_bindlessMutex` 잠금.
          * @return 힙이 가득 찼으면 `kInvalidDescriptorIndex`.
-         * @details 잠그지 않고 이미 쥔 것을 받는 이유: 인덱스를 집는 것과 **그 자리에 뷰를 만드는 것**이
+         * @details 여기서 잠그지 않고 이미 잡은 잠금을 받는 이유는, 인덱스를 가져오는 것과 **그 자리에 뷰를 만드는 것**이
          *          한 임계 구역이어야 합니다. 여기서 잠갔다 풀면 그 틈에 다른 스레드가 같은 인덱스를 받습니다.
          *          인자로 받으면 그 전제가 컴파일러에게도 부르는 쪽에게도 보입니다.
-         * @note 네 등록 함수(`registerBindlessTexture` · `registerBindlessBufferSrv` · `registerBindlessBufferUav` ·
+         * @note 네 등록 함수(`registerBindlessTexture`, `registerBindlessBufferSrv`, `registerBindlessBufferUav`,
          *       `registerBindlessTextureUav`)가 이것을 같이 씁니다. 용량 검사와 프리리스트 정책이 여러 벌이면 한 곳만
          *       고치고 넘어가기 쉽고, 그 결과는 **디스크립터가 어긋나 화면이 조용히 깨지는 것**입니다.
          */
@@ -66,38 +66,38 @@ namespace sw
             D3D12_CPU_DESCRIPTOR_HANDLE _offline{};
         };
         /**
-         * @brief 힙 인덱스의 디스크립터 핸들 셋을 계산합니다.
+         * @brief 힙 인덱스의 디스크립터 핸들 쌍을 계산합니다.
          * @details 뷰는 온라인 힙과 오프라인 힙에 **같이** 만듭니다(슬롯 테이블 t#/u# 은 오프라인에서 온라인 블록으로 복사합니다).
          *          네 등록 함수가 같이 씁니다. 한 곳이 오프라인 힙을 빠뜨리면 그 종류의 리소스만 슬롯 테이블에서 사라집니다.
          */
         BindlessHandleSet bindlessHandlesAt( RHIDescriptorIndex index ) const;
 
         /**
-         * @brief 어느 bindless 레지스트리인지입니다. **힙 인덱스 공간은 하나**지만 기록은 둘로 나뉩니다.
+         * @brief 어느 bindless 레지스트리인지 나타냅니다. **힙 인덱스 공간은 하나**지만 기록은 둘로 나뉩니다.
          * @details 둘이 같은 프리리스트를 쓰므로(`_listFreeBindless`) 인덱스는 섞이지 않습니다.
-         *          나뉘는 것은 "그 슬롯이 무엇을 들고 있었나" 뿐입니다.
+         *          나뉘는 것은 그 슬롯이 무엇을 보관했는지뿐입니다.
          */
         enum class BindlessRegistry : uint8
         {
-            ShaderResource, ///< SRV/CBV 레지스트리.
-            UnorderedAccess ///< UAV 레지스트리.
+            ShaderResource, ///< SRV/CBV 레지스트리입니다.
+            UnorderedAccess ///< UAV 레지스트리입니다.
         };
 
         /**
-         * @brief 레지스트리의 한 슬롯을 비우고 인덱스를 펜스 뒤 회수에 맡깁니다.
+         * @brief 레지스트리의 슬롯 하나를 비우고 인덱스를 펜스 뒤 회수에 맡깁니다.
          * @details **이미 빈 슬롯을 다시 돌려주면 같은 인덱스가 두 리소스에 발급됩니다.** 그 검사를 SRV/CBV 쪽과
          *          UAV 쪽이 같이 씁니다(다른 것은 레지스트리와 로그 문구뿐입니다).
          */
         void releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index );
         /**
-         * @brief 레지스트리의 칸 `index` 에 리소스 · 핸들 셋 · 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 적습니다. 칸이 모자라면 늘립니다.
-         * @details 다섯 등록 경로(텍스처 SRV · 구조버퍼 SRV · CBV · 버퍼 UAV · 텍스처 UAV)가 같이 씁니다.
+         * @brief 레지스트리의 슬롯 `index` 에 리소스, 핸들 쌍, 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 기록합니다. 슬롯이 모자라면 늘립니다.
+         * @details 다섯 등록 경로(텍스처 SRV, 구조 버퍼 SRV, CBV, 버퍼 UAV, 텍스처 UAV)가 같이 씁니다.
          *          인덱스를 집은 잠금 안에서 부릅니다.
          */
         void writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource, const BindlessHandleSet& handle,
                                   RHIBufferHandle buffer, RHITextureHandle texture );
 
-        /** @brief 텍스처/버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시). */
+        /** @brief 텍스처와 버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시합니다). */
         void releaseBindlessSlot( RHIDescriptorIndex index );
         /** @brief 인덱스를 GPU 펜스 뒤에 프리리스트로 돌려보냅니다. 실행 중인 리스트가 새 리소스를 읽지 않게 합니다. */
         void deferFreeBindlessIndex( RHIDescriptorIndex index );
@@ -110,9 +110,9 @@ namespace sw
          *          한 번 닫아 제출합니다. updateStructuredBufferRegions · uploadTexture2D 공용입니다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
          */
         bool acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped );
-        /** @brief 현재 프레임 링 슬롯의 복사 리스트만 엽니다(스테이징 없이. readback 처럼 소스가 다른 곳일 때 씁니다). */
+        /** @brief 현재 프레임 링 슬롯의 복사 리스트만 엽니다. 스테이징 없이 열며, readback 처럼 소스가 다른 곳에 있을 때 씁니다. */
         [[nodiscard]] bool openUploadSlot( uint32& outSlotIndex );
-        /** @brief 지금까지 큐에 넣은 작업이 끝날 때까지 CPU 를 세웁니다(readback 전용이며 프레임 경로에서 부르지 말 것). */
+        /** @brief 지금까지 큐에 넣은 작업이 끝날 때까지 CPU 를 멈춥니다(readback 전용이며 프레임 경로에서 부르지 마십시오). */
         bool waitForQueueDrain();
 
     public:

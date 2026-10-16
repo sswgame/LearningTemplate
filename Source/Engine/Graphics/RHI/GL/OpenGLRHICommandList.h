@@ -14,10 +14,10 @@ namespace sw
 {
     /**
      * @class OpenGLRHICommandList
-     * @brief 기록을 곧바로 GL 호출로 내보내는 IRHICommandList 입니다(CPU 쪽 기록 벡터 · 재생 없음).
+     * @brief 기록을 곧바로 GL 호출로 내보내는 IRHICommandList 입니다. CPU 쪽 기록 벡터와 재생이 없습니다.
      * @details OpenGL 은 커맨드 버퍼 개념이 없는 스레드 종속 상태 머신이라 `OpenGLRHICommandContext` 도
      *          매 호출을 즉시 GL API 로 발행합니다. 이 리스트는 그 컨텍스트를 그대로 감싸 호출을
-     *          넘길 뿐이고, begin · end 에서 따로 열고 닫을 자원이 없습니다.
+     *          넘길 뿐이고, begin 과 end 에서 따로 열고 닫을 자원이 없습니다.
      */
     class OpenGLRHICommandList : public RHICommandListForwarder<OpenGLRHICommandContext>
     {

@@ -1,7 +1,7 @@
 /**
  * @file D3D11RHIResourceFactoryPipeline.cpp
- * @brief DirectX 11 의 파이프라인 상태 객체(PSO · 셰이더 스테이지 · 렌더 패스 객체)입니다.
- * @details `D3D11RHIResourceFactory` 의 일부입니다. 리소스(버퍼 · 텍스처)를 만드는 것과 파이프라인을 만드는 것은
+ * @brief DirectX 11 의 파이프라인 상태 객체(PSO, 셰이더 스테이지, 렌더 패스 객체)입니다.
+ * @details `D3D11RHIResourceFactory` 의 일부입니다. 리소스(버퍼, 텍스처)를 만드는 것과 파이프라인을 만드는 것은
  *          배우는 내용이 다르고 백엔드별 차이도 가장 크게 드러나는 곳이라 따로 둡니다.
  */
 #include "pch.h"
@@ -31,15 +31,15 @@ namespace sw
             }
         };
 
-        // 서술체 해석(진입점 기본값 · define · 뎁스 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
+        // 디스크립터 해석(진입점 기본값, define, 뎁스 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
         // (컴퓨트 경로는 아래에서 fillDefines 를 그대로 쓴다. 그래픽스 요청에는 컴퓨트 스테이지가 없다.)
         const RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXBC_D3D11 );
 
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
         if ( desc._vertexShaderPath.empty() == false )
         {
-            // 셰이더를 못 만들면 PSO 도 만들지 않는다(핸들 0). 다른 세 백엔드와 같은 규칙이다. 주의: 실패를 그리기 때 "PS 가 없으면
-            // 건너뛴다" 로 삼키면 **원래 PS 가 없는** 깊이 전용 PSO(그림자 · 깊이 프리패스)의 드로우까지 버려진다(bindGraphicsPipelineForDraw
+            // 셰이더를 만들지 못하면 PSO 도 만들지 않는다(핸들 0). 다른 세 백엔드와 같은 규칙이다. 주의: 실패를 그릴 때 "PS 가 없으면
+            // 건너뛴다" 로 삼키면 **원래 PS 가 없는** 깊이 전용 PSO(그림자, 깊이 프리패스)의 드로우까지 버려진다(bindGraphicsPipelineForDraw
             // 참고). 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다.
             ShaderCompileResult vsResult{};
             ShaderCompileResult psResult{};
@@ -53,7 +53,7 @@ namespace sw
                                 desc._vertexShaderPath.c_str() );
                 return 0;
             }
-            // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX12 · Vulkan · GL 과 같은 표다.
+            // 입력 레이아웃은 **공용 테이블**(constant::arrVertexAttribute)에서 만든다. DX12, Vulkan, GL 과 같은 테이블이다.
             D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
             for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
             {
@@ -84,7 +84,7 @@ namespace sw
         rasterizerDesc.FillMode        = ( desc._fillMode == RHIFillMode::Wireframe ) ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID;
         rasterizerDesc.CullMode        = ( desc._cullMode == RHICullMode::Front ) ? D3D11_CULL_FRONT : ( ( desc._cullMode == RHICullMode::Back ) ? D3D11_CULL_BACK : D3D11_CULL_NONE );
         rasterizerDesc.DepthClipEnable = TRUE;
-        // 가위는 늘 켠다 — 뷰포트를 거는 자리(setViewport · beginRenderPass · beginFrame)가 가위를 뷰포트 전체로 함께 걸어 두므로
+        // 가위는 항상 켠다. 뷰포트를 바인딩하는 곳(setViewport, beginRenderPass, beginFrame)이 가위도 뷰포트 전체로 함께 바인딩하므로
         // setScissorRect 를 부르지 않은 드로우는 지금과 같다(언리얼 D3D11 래스터라이저 상태와 같은 방식).
         rasterizerDesc.ScissorEnable = TRUE;
         if ( _pDevice != nullptr )

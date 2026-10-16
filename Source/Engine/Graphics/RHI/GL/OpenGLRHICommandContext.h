@@ -27,7 +27,7 @@ namespace sw
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        /** @brief 버퍼의 이번 프레임 칸에 씁니다(`IRHIResourceFactory::updateConstantBuffer` 와 같은 일 — 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다). */
+        /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. `IRHIResourceFactory::updateConstantBuffer` 와 같은 일이며, 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
@@ -52,19 +52,19 @@ namespace sw
         void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
-        /** @brief _meshVao 를 바인딩하고, 공용 정점 속성 표(constant::arrVertexAttribute)대로 vbo 와 인스턴스 슬롯 스트림의 속성을 겁니다.
+        /** @brief _meshVao 를 바인딩하고, 공용 정점 속성 테이블(constant::arrVertexAttribute)대로 vbo 와 인스턴스 슬롯 스트림의 속성을 설정합니다.
          *         모든 드로우 진입점이 이것을 씁니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다. */
         void bindMeshVaoAttribs( uint32 vbo );
         /**
          * @brief 드로우가 쓸 프로그램과 토폴로지를 고릅니다. PSO 가 정하고, PSO 가 없으면 디바이스 기본 프로그램과 GL_TRIANGLES 입니다.
-         * @details 드로우 진입점 넷이 모두 이것을 씁니다. 따로 고르는 진입점은 PSO 토폴로지를 놓쳐 GL_TRIANGLES 로 굳기 쉽습니다.
-         * @return 프로그램이 0 이라 그릴 수 없으면 false.
+         * @details 드로우 진입점 네 개가 모두 이것을 씁니다. 따로 고르는 진입점은 PSO 토폴로지를 놓쳐 GL_TRIANGLES 로 굳기 쉽습니다.
+         * @return 프로그램이 0 이라 그릴 수 없으면 false 입니다.
          */
         bool resolveDrawProgram( uint32& outProgram, uint32& outMode ) const;
         /**
          * @brief 인덱스 없는 드로우의 몸통입니다. `draw` 와 `drawInstanced` 가 함께 씁니다.
-         * @details 메시 정점 버퍼가 걸려 있으면 그 VAO 로, 아니면 디바이스 기본 VAO 로 그립니다. 인스턴스가 하나면 `glDrawArrays`,
-         *          둘 이상이면 `glDrawArraysInstanced` 를 부릅니다(언리얼 OpenGL RHI 의 `RHIDrawPrimitive` 와 같은 갈래입니다).
+         * @details 메시 정점 버퍼가 설정되어 있으면 그 VAO 로, 아니면 디바이스 기본 VAO 로 그립니다. 인스턴스가 하나면 `glDrawArrays`,
+         *          둘 이상이면 `glDrawArraysInstanced` 를 부릅니다(언리얼 OpenGL RHI 의 `RHIDrawPrimitive` 와 같은 분기입니다).
          */
         void             drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex );
         OpenGLRHIDevice* _pDevice;

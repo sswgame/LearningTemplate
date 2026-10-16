@@ -1,6 +1,6 @@
 /**
  * @file RHIDxgiTearing.h
- * @brief DXGI 티어링 허용 여부 질의입니다(DX11 · DX12 공유).
+ * @brief DXGI 티어링 허용 여부 질의입니다(DX11, DX12 공유).
  *
  * [왜 필요한가]
  * `Present( 0, 0 )` 만으로는 VSync 가 꺼지지 않습니다. 플립 모델 스왑체인이라도 창이 DWM 합성을 거치는

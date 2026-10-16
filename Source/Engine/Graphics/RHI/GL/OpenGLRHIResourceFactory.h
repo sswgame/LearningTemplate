@@ -41,7 +41,7 @@ namespace sw
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
-        /** @brief 프로그램을 링크하고, 실패하면 로그와 함께 지웁니다. 그래픽스 · 컴퓨트가 같은 길이다. */
+        /** @brief 프로그램을 링크하고, 실패하면 로그와 함께 지웁니다. 그래픽스와 컴퓨트가 같은 경로를 씁니다. */
         static bool linkProgram( uint32 program, const utf8* pLabel );
 
         OpenGLRHIDevice* _pDevice;

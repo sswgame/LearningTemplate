@@ -1,16 +1,16 @@
 /**
  * @file D3D12RHIResourcePreset.h
- * @brief 이름 붙인 D3D12 리소스 조리법입니다. "버퍼 하나를 어떻게 만드는가" 를 한 곳에서 정합니다.
+ * @brief 이름을 붙인 D3D12 리소스 프리셋입니다. "버퍼 하나를 어떻게 만드는가"를 한 곳에서 정합니다.
  *
- * [왜 조리법인가]
+ * [왜 프리셋인가]
  * D3D12 에서 버퍼를 만들려면 `D3D12_RESOURCE_DESC` 의 일곱 필드를 **버퍼용 고정값**으로 채워야
- * 합니다(`Dimension=BUFFER` · `Height=1` · `DepthOrArraySize=1` · `MipLevels=1` · `Format=UNKNOWN` ·
- * `SampleDesc.Count=1` · `Layout=ROW_MAJOR`). 실제로 다른 것은 **크기와 플래그뿐**이고, 상수 버퍼 · 구조버퍼 ·
- * 업로드 스테이징 · 리드백 · 정점 버퍼 · 전체 화면 정점 버퍼가 모두 이 조리법을 씁니다.
+ * 합니다(`Dimension=BUFFER`, `Height=1`, `DepthOrArraySize=1`, `MipLevels=1`, `Format=UNKNOWN`,
+ * `SampleDesc.Count=1`, `Layout=ROW_MAJOR`). 실제로 다른 것은 **크기와 플래그뿐**이고, 상수 버퍼, 구조 버퍼,
+ * 업로드 스테이징, 리드백, 정점 버퍼, 전체 화면 정점 버퍼가 모두 이 프리셋을 씁니다.
  *
  * 이것은 `VulkanRHISamplerPreset` 와 같은 생각입니다. 객체를 공유하는 것이 아니라 **값을 만드는
  * 방법에 이름을 붙입니다.** 힙 종류(업로드/기본/리드백)와 초기 상태는 부르는 쪽이 정합니다. 그것이
- * 자리마다 정말로 다른 결정이기 때문입니다.
+ * 호출하는 곳마다 정말로 다른 결정이기 때문입니다.
  *
  * @note 크기를 `uint64` 로 받습니다. `elementSize * elementCount` 를 **32비트로 곱해** `Width`(UINT64)에 넣으면
  *       넘칠 때 조용히 작은 버퍼가 됩니다.
@@ -48,7 +48,7 @@ namespace sw
             return resourceDesc;
         }
 
-        /** @brief 힙 속성입니다. 버퍼 만들기에서 자리마다 다른 것은 이 종류와 초기 상태뿐입니다. */
+        /** @brief 힙 속성입니다. 버퍼를 만들 때 호출하는 곳마다 다른 것은 이 종류와 초기 상태뿐입니다. */
         static D3D12_HEAP_PROPERTIES heapProperties( D3D12_HEAP_TYPE type )
         {
             D3D12_HEAP_PROPERTIES heapProps{};

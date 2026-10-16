@@ -44,9 +44,9 @@ namespace sw
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
-        /** @brief 내용을 실어 바인드 용도 하나(정점 · 인덱스)의 기본 버퍼를 만듭니다. 정점 · 인덱스 버퍼가 같은 길입니다. */
+        /** @brief 내용을 채워 바인드 용도 하나(정점 또는 인덱스)의 기본 버퍼를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
         RHIBufferHandle createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags );
-        /** @brief UAV 를 레지스트리에 넣고 인덱스를 반환합니다. 반납된 자리를 먼저 씁니다. 버퍼 · 텍스처 UAV 가 같은 길입니다. */
+        /** @brief UAV 를 레지스트리에 넣고 인덱스를 반환합니다. 반납된 슬롯을 먼저 씁니다. 버퍼 UAV 와 텍스처 UAV 가 같은 경로를 씁니다. */
         RHIDescriptorIndex registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer );
 
         D3D11RHIDevice* _pDevice;

@@ -40,7 +40,7 @@ namespace sw
                 return 0;
             }
 
-            /** @brief 살아 있는 동안 X 오류 처리기를 바꿔 끼우고, `failed()` 로 그 사이 오류가 있었는지 묻습니다. */
+            /** @brief 살아 있는 동안 X 오류 처리기를 교체하고, `failed()` 로 그 사이 오류가 있었는지 묻습니다. */
             struct GlxXErrorScope
             {
                 Display*      _pDpy{ nullptr };
@@ -137,7 +137,7 @@ namespace sw
             GlxPlatformContextInternal::GlxXErrorScope trap( pDpy );
             if ( glXCreateContextAttribsARB )
             {
-                // 4.6 을 먼저 고르고, WSLg · Mesa 를 위해 낮은 버전으로 물러난다(흔히 4.1 이하 · 3.3).
+                // 4.6 을 먼저 시도하고, WSLg 와 Mesa 를 위해 낮은 버전으로 물러난다(흔히 4.1 이하나 3.3).
                 static const int32 kArrVersions[][2] = {
                     {4, 6},
                     {4, 5},

@@ -30,9 +30,9 @@ namespace sw
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
         /**
-         * @brief D3D11 에 상태 전이는 없지만 바인딩 해저드는 있습니다 — 이 텍스처가 걸린 PS SRV 슬롯을 뗍니다.
+         * @brief D3D11 에 상태 전이는 없지만 바인딩 해저드는 있습니다. 이 텍스처가 바인딩된 PS SRV 슬롯을 해제합니다.
          * @details 그대로 두면 뒤따르는 `OMSetRenderTargets` 가 그 SRV 를 NULL 로 강제하고 디버그 레이어가 해저드를 냅니다
-         *          ("still bound on input"). 그래프가 첨부로 쓰기 전에 이것을 부르므로(레벨 프롤로그 · 직렬 패스 앞) 패스의 바인딩을 지우지 않습니다.
+         *          ("still bound on input"). 그래프가 첨부로 쓰기 전에 이것을 부르므로(레벨 프롤로그, 직렬 패스 앞) 패스의 바인딩을 지우지 않습니다.
          */
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override;
         /** @brief D3D11 은 UAV 해저드를 런타임이 풀어 의도적으로 아무것도 하지 않습니다. */
@@ -42,7 +42,7 @@ namespace sw
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다 — Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 `_immediateContextMutex` 를 잡습니다. */
+        /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다. Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 `_immediateContextMutex` 를 잡습니다. */
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
@@ -50,16 +50,16 @@ namespace sw
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void setViewport( const RHIViewport& viewport ) override;
         void setScissorRect( const RHIScissorRect& rect ) override;
-        /** @brief 슬롯 1(인스턴스 슬롯 스트림)을 겁니다(걸려 있을 때만). */
+        /** @brief 슬롯 1(인스턴스 슬롯 스트림)을 바인딩합니다(설정되어 있을 때만). */
         void bindInstanceSlotStream();
 
         /**
-         * @brief 드로우 직전에 그래픽스 파이프라인을 **실제로 겁니다**. 걸 수 없으면 false 입니다(드로우하지 말 것).
+         * @brief 드로우 직전에 그래픽스 파이프라인을 **실제로 바인딩합니다**. 바인딩할 수 없으면 false 입니다(드로우하지 말 것).
          *
-         * @details DX11 은 `setPipelineState` 가 **핸들만 기록**하고, VS/PS/InputLayout · 정점 버퍼 · 토폴로지는
-         *          드로우 시점에 겁니다. 그래서 드로우 진입점(`draw` · `drawInstanced` · `drawIndirect` ·
+         * @details DX11 은 `setPipelineState` 가 **핸들만 기록**하고, VS/PS/InputLayout, 정점 버퍼, 토폴로지는
+         *          드로우 시점에 바인딩합니다. 그래서 드로우 진입점(`draw`, `drawInstanced`, `drawIndirect`,
          *          `drawIndexedIndirect`)마다 이것을 불러야 합니다. 주의: 한 진입점이라도 빠뜨리면 그 경로의
-         *          드로우가 **셰이더도 정점 버퍼도 없이 나가** 화면에 클리어 색만 남습니다. 새 진입점도 이것을 부를 것.
+         *          드로우가 **셰이더도 정점 버퍼도 없이 나가** 화면에 클리어 색만 남습니다. 새 진입점도 이것을 불러야 합니다.
          */
         bool bindGraphicsPipelineForDraw();
         void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
@@ -79,14 +79,14 @@ namespace sw
         void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
-        /** @brief beginEventMarker · endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */
+        /** @brief beginEventMarker 와 endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
-        /** @brief bindless 인덱스가 가리키는 구조버퍼의 SRV 를 반환합니다. 범위 밖 · 미등록이면 nullptr 입니다. 그래픽스 · 컴퓨트 바인딩이 같은 조회를 씁니다. */
+        /** @brief bindless 인덱스가 가리키는 구조 버퍼의 SRV 를 반환합니다. 범위 밖이거나 미등록이면 nullptr 입니다. 그래픽스와 컴퓨트 바인딩이 같은 조회를 씁니다. */
         ID3D11ShaderResourceView* findBindlessBufferSrv( RHIDescriptorIndex index ) const;
         /**
-         * @brief 루트 상수를 흉내 냅니다. 그림자 배열에 쓰고 계약 슬롯의 작은 상수버퍼를 다시 채워 겁니다.
-         * @details DX11 에는 루트 상수가 없습니다. 그래픽스 · 컴퓨트 진입점이 이것을 함께 쓰고 다른 것은 어느
-         *          스테이지에 거는가뿐입니다(VS+PS / CS). 상한 검사 · WRITE_DISCARD 재명명 규칙이 두 벌이면 한쪽만 고쳐집니다.
+         * @brief 루트 상수를 흉내 냅니다. 그림자 배열에 쓰고 계약 슬롯의 작은 상수 버퍼를 다시 채워 바인딩합니다.
+         * @details DX11 에는 루트 상수가 없습니다. 그래픽스와 컴퓨트 진입점이 이것을 함께 쓰고, 다른 점은 어느
+         *          스테이지에 바인딩하는가뿐입니다(VS+PS / CS). 상한 검사와 WRITE_DISCARD 재명명 규칙이 두 벌이면 한쪽만 고쳐집니다.
          */
         void                 writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute );
         D3D11RHIDevice*      _pDevice;

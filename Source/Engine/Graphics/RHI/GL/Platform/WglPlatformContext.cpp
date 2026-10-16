@@ -90,7 +90,7 @@ namespace sw
             for ( const int32( &ver )[2] : kArrVersions )
             {
                 // 디버그 컨텍스트는 비-Shipping 에서만 켠다. KHR_debug 메시지는 이 비트가 있어야 드라이버가 만들 의무가 있다
-                // (OpenGLRHIDeviceInit 이 콜백을 건다). Shipping 은 검증 비용을 지지 않는다.
+                // (OpenGLRHIDeviceInit 이 콜백을 등록한다). Shipping 은 검증 비용을 부담하지 않는다.
                 int32 arrAttrib[] = {
                     WGL_CONTEXT_MAJOR_VERSION_ARB, ver[0],
                     WGL_CONTEXT_MINOR_VERSION_ARB, ver[1],
@@ -153,7 +153,7 @@ namespace sw
         if ( _pDeviceContext == nullptr || _pRenderContext == nullptr )
             return false;
 
-        // **로그를 남기지 않는다.** 다른 스레드가 컨텍스트를 쥐고 있는 것(ERROR_BUSY)은 정상
+        // **로그를 남기지 않는다.** 다른 스레드가 컨텍스트를 가지고 있는 것(ERROR_BUSY)은 정상
         // 경합이고, 기다릴지 포기할지는 부르는 쪽이 정한다. 실패를 알려야 하는 쪽은
         // `OpenGLRHIDevice::bindGraphicsContext` 가, 기다리는 쪽은
         // `acquireGraphicsContextBlocking` 이 각자 로그를 남긴다.
@@ -174,7 +174,7 @@ namespace sw
 
     void WglPlatformContext::reacquireForFrame()
     {
-        // ImGui 멀티 뷰포트가 DC 를 바꿔 놓을 수 있어 매 프레임 되찾는다.
+        // ImGui 멀티 뷰포트가 DC 를 바꿔 놓을 수 있어 매 프레임 다시 가져온다.
         if ( _pDeviceContext != nullptr && _pRenderContext != nullptr )
             wglMakeCurrent( static_cast<HDC>( _pDeviceContext ), static_cast<HGLRC>( _pRenderContext ) );
     }
@@ -184,7 +184,7 @@ namespace sw
         if ( _pDeviceContext == nullptr )
             return;
 
-        // 멀티 뷰포트가 DC 를 바꿨을 수 있으니 스왑 직전에 한 번 더 되찾는다.
+        // 멀티 뷰포트가 DC 를 바꿨을 수 있으니 스왑 직전에 한 번 더 다시 가져온다.
         reacquireForFrame();
         SwapBuffers( static_cast<HDC>( _pDeviceContext ) );
     }
