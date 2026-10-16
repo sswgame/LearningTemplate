@@ -6,8 +6,9 @@
  * 머티리얼은 **정점 셰이더만** 읽는다(GL 은 구조버퍼를 두 단계에서 읽으면 링크를 거절한다) — 색 · 텍스처 인덱스는 보간 칸으로 넘긴다.
  * 흔들림 무게는 로컬 높이 / swayHeight 의 제곱이라 뿌리는 땅에 붙어 있다. 인스턴스마다 위상은 인스턴스 위치의 해시라 CPU 가 따로 싣지 않는다.
  * 밝기 흔들기는 인스턴스 색 칸(swComputeInstanceTint)이다.
- * 그림자 · 깊이 프리패스는 shadowdepth.hlsl 로 그려지므로 흔들리지 않는다 — 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끄고,
- * 흔드는 머티리얼은 MATERIAL_VERTEX_DEFORM 으로 깊이 프리패스에서 빠진다(흔들린 정점이 프리패스 깊이와 어긋나지 않게).
+ * 흔드는 머티리얼(MATERIAL_VERTEX_DEFORM)의 그림자는 이 파일의 그림자 퍼뮤테이션(SW_PASS_SHADOW)이 같은 흔들림으로 빛 행렬에 투영한다 — 정점 스테이지뿐이다
+ * (FrameRendererUtil::drawsDepthWithMaterialShader). 깊이 프리패스에서는 빠진다(shadowdepth.hlsl — 흔들린 정점이 프리패스 깊이와 어긋나지 않게).
+ * 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끈다(그림자 패스는 shadowdepth.hlsl 이 정점을 모아 그리지 않는다).
  */
 
 struct PSInput
@@ -98,7 +99,11 @@ PSInput VSMain( SwVertexInput input )
 	worldPosition.xz += bend;
 	worldPosition.y -= length( bend ) * 0.5f;
 
-	output.position      = swComputeClipPosition( worldPosition, g_ViewProj );
+#if defined( SW_PASS_SHADOW )
+	output.position = swComputeClipPosition( worldPosition, g_LightViewProj );
+#else
+	output.position = swComputeClipPosition( worldPosition, g_ViewProj );
+#endif
 	output.worldPosition = worldPosition.xyz;
 	output.normal        = swComputeWorldNormal( input.normal, instance.world );
 	// 뿌리는 어둡고 끝은 밝게 — 정점 색 × 머티리얼 색 × 인스턴스 밝기.

@@ -630,6 +630,11 @@
   방향광 캐스케이드(최대 4)도 같은 아틀라스 안의 타일이고, 추가 뷰는 자기 볼륨 · 그림자 컬링 슬롯을 씁니다.
   칸이 모자라면 주 시점의 화면 크기 대리값(경계 구 반경 / 카메라 깊이)이 큰 빛부터 받습니다(2026-10-17, `ShadowSetupUtil::computeLocalShadowPriority`) — 언리얼이 그림자 해상도 · 아틀라스 자리를
   투영한 화면 반경으로 고르는 것과 같은 기준입니다. 목록 순서였을 때는 씬에 먼저 놓인 먼 빛이 눈앞의 빛의 그림자를 밀어냈습니다. 화면 크기에 따라 칸 크기를 바꾸는 일은 하지 않았습니다(칸은 한 크기).
+- **깊이 패스(그림자 · 깊이 프리패스)는 모양을 머티리얼 코드가 정하는 배치만 머티리얼 셰이더로 그립니다**(2026-10-17, `FrameRendererUtil::drawsDepthWithMaterialShader`).
+  알파 컷오프는 두 깊이 패스 모두 머티리얼 셰이더의 깊이 퍼뮤테이션(`SW_PASS_SHADOW` · `SW_PASS_DEPTH_PREPASS`)에 픽셀 스테이지(`clip` 만)를 두고, 정점 변형(바람)은 그림자 패스만 정점 스테이지로 그립니다.
+  나머지는 shadowdepth.hlsl 하나를 나눠 씁니다 — 언리얼이 Masked · World Position Offset 머티리얼만 자기 깊이 · 그림자 셰이더를 컴파일하고 불투명은 기본 머티리얼의 것을 쓰는 것과 같습니다.
+  shadowdepth.hlsl 에 머티리얼 값을 읽게 하는 안은 기각했습니다 — 머티리얼마다 구조체 배치가 달라 공통 셰이더가 컷오프 값 · 텍스처 칸을 찾을 수 없고, 정점 변형 코드는 옮길 수 없습니다.
+  뎁스 전용 PSO 도 PS 경로가 있으면 픽셀 스테이지를 둡니다(`RHIShaderRequest::resolveGraphics`). 패스 PSO 는 FrameRenderer 가 PS 경로를 비우므로 그대로입니다.
 - **지형 쓰기는 "사본을 고쳐 사각형만 넘기는" 한 길입니다**(`D2-5` (7), 2026-10-15, `TerrainComponent::writeHeights` · `writeLayerWeights`). 에디터 브러시(`TerrainBrush::applyHeight` ·
   `applyLayerWeight`)가 이미 N × N 배열을 제자리에서 고치는 모양이라, 지형은 읽기용 배열을 내주고(`getHeightSamples` · `readSplatWeights`) 고친 배열에서 **바뀐 사각형만** 복사해 받습니다.
   개별 샘플 세터나 브러시 타입을 Engine 에 두지 않았고(브러시는 Editor 의 것), 되돌리기는 편집 전 사본을 같은 사각형으로 다시 쓰면 되므로 Undo 용 별도 API 가 없습니다.

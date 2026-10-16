@@ -316,14 +316,51 @@ namespace sw
             const utf8* pRequired = getRenderPassTypeInfo( passType )._pRequiredMaterialDefine;
             if ( pRequired == nullptr )
                 return true;
+            return hasMaterialDefine( pListMaterialDefine, pRequired );
+        }
+
+        /** @brief 머티리얼 define 목록에 이 define 이 있는지 반환합니다. nullptr(머티리얼 없는 배치)이면 false 입니다. */
+        static bool hasMaterialDefine( const vector<string>* pListMaterialDefine, const utf8* pDefine )
+        {
             if ( pListMaterialDefine == nullptr )
                 return false;
             for ( const string& define : *pListMaterialDefine )
             {
-                if ( define == pRequired )
+                if ( define == pDefine )
                     return true;
             }
             return false;
+        }
+
+        /**
+         * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 **머티리얼의 셰이더**로 그리는지 반환합니다.
+         * @details 깊이 패스는 지오메트리만 그리므로 보통 자기 셰이더(shadowdepth.hlsl)가 기준이다. 덮는 모양이나 정점 자리를 머티리얼 코드가 정하면
+         *          그 셰이더는 같은 모양을 못 만든다 — 알파 컷오프(머리카락 카드가 사각형 그림자를 드리운다)와 정점 변형(흔드는 식생의 그림자가 서 있다).
+         *          언리얼이 Masked · World Position Offset 머티리얼만 자기 깊이 · 그림자 셰이더를 컴파일하고 나머지는 기본 머티리얼의 것을 나눠 쓰는 것과 같다.
+         *          정점 변형은 그림자 패스만 갈아탄다 — 깊이 프리패스는 그 머티리얼을 빼므로(shadowdepth.hlsl 의 `MATERIAL_VERTEX_DEFORM`) 어긋날 깊이가 없다.
+         *          그림자를 끈 머티리얼은 패스 셰이더가 정점을 모아 그리지 않으므로 갈아타지 않는다.
+         *          갈아타는 머티리얼 셰이더는 `SW_PASS_SHADOW`(알파 컷오프면 `SW_PASS_DEPTH_PREPASS` 도) 퍼뮤테이션을 가져야 한다.
+         *          런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
+         */
+        static bool drawsDepthWithMaterialShader( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        {
+            if ( isDepthOnlyPassType( passType ) == false )
+                return false;
+            const bool bShadowPass = passType == RenderPassType::Shadow;
+            if ( bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialShadowCastOffDefine ) )
+                return false;
+            if ( hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine ) )
+                return true;
+            return bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialVertexDeformDefine );
+        }
+
+        /**
+         * @brief 깊이 패스가 머티리얼 셰이더로 그릴 때 픽셀 스테이지가 있는지 반환합니다 — 알파 컷오프만 있다(버리기가 픽셀에서 일어난다).
+         * @details 정점 변형만이면 정점 스테이지뿐이다. 컬러 출력이 없으므로 픽셀 셰이더는 아무것도 쓰지 않고 `clip` 만 한다.
+         */
+        static bool hasMaterialDepthPixelStage( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        {
+            return drawsDepthWithMaterialShader( passType, pListMaterialDefine ) && hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine );
         }
 
         /**

@@ -4878,6 +4878,87 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 알파 컷오프로 모두 오린 툰 큐브는 그림자 맵에 깊이를 쓰지 않는다 — 그림자 패스도 머티리얼 셰이더로 같은 알파를 버린다, 네 백엔드
+ * @details shadowdepth.hlsl 은 머티리얼을 몰라 오린 면도 깊이를 써서 머리카락 카드가 사각형 그림자를 드리웠다(`FrameRendererUtil::drawsDepthWithMaterialShader`).
+ *          기본색 알파 0.2 · 컷오프 0.5 의 큐브는 그림자 맵에 깊이가 없어야 한다. 대조: 컷오프를 끈 같은 머티리얼은 깊이를 쓴다(그림자 맵이 정말 그려졌다).
+ *          바닥을 두지 않는다 — 그림자 맵의 깊이는 큐브의 것뿐이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth )
+{
+    uint32                checkedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8* pName = device->getBackendName();
+        for ( const bool bCutoff : { false, true } )
+        {
+            const utf8* pCase = bCutoff ? "on" : "off";
+            sw::Scene   scene{ "AlphaCutoffShadow" };
+            SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+            sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            SW_ASSERT_TRUE( pLightObject != nullptr && pLightObject->addComponent<sw::DirectionalLightComponent>() != nullptr );
+
+            const sw::shared_ptr<sw::Material> material       = sw::Material::create();
+            const bool                         bMaterialReady = material->loadFromFile( "engine/materials/toon.material" ) &&
+                                        material->setParameter( nullptr, sw::hashed_string( "baseColor" ), "1.0 1.0 1.0 0.2" ) &&
+                                        material->setParameter( nullptr, sw::hashed_string( "alphaCutoff" ), "0.5" );
+            SW_ASSERT_TRUE( bMaterialReady );
+            material->setStaticSwitch( sw::hashed_string( "AlphaCutoff" ), bCutoff );
+            const sw::shared_ptr<sw::Mesh> mesh  = sw::MeshUtil::createUnitCube();
+            sw::GameObject*                pCube = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+            sw::MeshComponent*             pMesh = ( pCube != nullptr && mesh != nullptr ) ? pCube->addComponent<sw::MeshComponent>() : nullptr;
+            SW_ASSERT_NOT_NULL( pMesh );
+            pMesh->setMesh( mesh );
+            pMesh->setMaterial( material.get() );
+            pMesh->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+
+            sw::FrameRenderer renderer;
+            if ( renderer.initialize( device.get(), "engine/pipeline/forwardpipeline.xml" ) == false )
+                continue;
+            bool bRendered = true;
+            for ( uint32 frameIndex = 0; frameIndex < 3 && bRendered; ++frameIndex )
+            {
+                bRendered = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            }
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            sw::RHIFormat         format = sw::RHIFormat::Unknown;
+            const bool            bRead  = bRendered && renderer.getCapture().readbackTransient( "ShadowMap", bytes, layout, format );
+            renderer.shutdown();
+            mesh->releaseRHI( device.get() );
+            utf8 arrMessage[sw::constant::kMaxBuffer256];
+            sw::formatstring( arrMessage, sw::constant::kMaxBuffer256, "%# cutoff %#: 그림자 맵을 읽지 못했다", pName, pCase );
+            SW_EXPECT_TRUE_MSG( bRead, arrMessage );
+            if ( bRead == false )
+                continue;
+            ++checkedCount;
+            float32 minDepth = 1.0f;
+            for ( uint32 row = 0; row < layout._height; ++row )
+            {
+                for ( uint32 column = 0; column < layout._width; ++column )
+                {
+                    float32 depth = 1.0f;
+                    sw::Memory::copy( &depth, bytes.data() + static_cast<size_t>( row ) * layout._rowBytes + static_cast<size_t>( column ) * 4u, sizeof( depth ) );
+                    minDepth = sw::MathUtil::min( minDepth, depth );
+                }
+            }
+            if ( bCutoff )
+            {
+                sw::formatstring( arrMessage, sw::constant::kMaxBuffer256, "%# cutoff on: 최소 깊이 %# — 오린 면이 그림자 깊이를 썼다", pName, minDepth );
+                SW_EXPECT_TRUE_MSG( minDepth > 0.999f, arrMessage );
+            }
+            else
+            {
+                sw::formatstring( arrMessage, sw::constant::kMaxBuffer256, "%# cutoff off: 최소 깊이 %# — 대조 큐브가 그림자 깊이를 쓰지 않았다", pName, minDepth );
+                SW_EXPECT_TRUE_MSG( minDepth < 0.99f, arrMessage );
+            }
+        }
+    }
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could read the shadow map" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 원근 카메라의 캐스케이드 그림자(넷)가 바닥에 그림자를 드리운다 — 네 백엔드 모두
  * @details 캐스케이드는 아틀라스의 사분면에 하나씩 그리고(뷰포트), 셰이더가 카메라 깊이로 고른다. 칸 원점 · 배율 · 뷰포트 규약이 백엔드마다 어긋나면
  *          그림자가 사라지거나 옆 사분면을 읽는다. 그림자 패스 깊이 쓰기를 끈 판과 **달라야** 한다.

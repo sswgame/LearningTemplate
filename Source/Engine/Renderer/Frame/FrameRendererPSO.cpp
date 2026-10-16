@@ -211,14 +211,19 @@ namespace sw
                 desc._cullMode = RHICullMode::None;
                 bChanged       = true;
             }
-            // 머티리얼 셰이더를 쓰는 패스만 경로를 교체한다(그림자와 뎁스는 자기 지오메트리 셰이더가 기준이다).
-            const bool bReplaceShaderPath = FrameRendererUtil::usesMaterialShader( passType ) && pPermutation->_shaderPath.empty() == false &&
+            // 머티리얼 셰이더를 쓰는 패스만 경로를 교체한다. 그림자와 뎁스는 자기 지오메트리 셰이더가 기준이고, 모양을 머티리얼 코드가 정하는
+            // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더의 깊이 퍼뮤테이션으로 그린다(drawsDepthWithMaterialShader — 쿠커와 같은 판정).
+            const bool bMaterialDepthShader = FrameRendererUtil::drawsDepthWithMaterialShader( passType, &pPermutation->_listDefine );
+            const bool bReplaceShaderPath   = ( FrameRendererUtil::usesMaterialShader( passType ) || bMaterialDepthShader ) && pPermutation->_shaderPath.empty() == false &&
                                             pPermutation->_shaderPath != desc._vertexShaderPath;
             if ( bReplaceShaderPath )
             {
                 desc._vertexShaderPath = pPermutation->_shaderPath;
                 desc._pixelShaderPath  = pPermutation->_shaderPath;
-                bChanged               = true;
+                // 깊이 패스는 컬러 출력이 없다 — 픽셀 스테이지는 알파 컷오프의 버리기에만 둔다.
+                if ( bMaterialDepthShader && FrameRendererUtil::hasMaterialDepthPixelStage( passType, &pPermutation->_listDefine ) == false )
+                    desc._pixelShaderPath.clear();
+                bChanged = true;
             }
             for ( const string& defineStr : pPermutation->_listDefine )
             {
