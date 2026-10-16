@@ -54,9 +54,9 @@ namespace sw
             /** @brief 질의 대상 말의 탈것 이동입니다. 없으면 까닭을 적고 nullptr 입니다. */
             static const MountMovementComponent* findTargetMovement( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
-                const MountMovementComponent* pMovement = query._pTarget != nullptr ? query._pTarget->getComponent<MountMovementComponent>() : nullptr;
+                const MountMovementComponent* pMovement = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<MountMovementComponent>() : nullptr;
                 if ( pMovement == nullptr )
-                    outValue.setText( query._pTarget == nullptr ? "no object named '" + string( query._target ) + "'" : "'" + string( query._target ) + "' has no Mount Movement" );
+                    outValue.setText( query.findTargetObject() == nullptr ? query.getTargetProblem() : query.describeMissing( "Mount Movement" ) );
                 return pMovement;
             }
 
@@ -83,11 +83,11 @@ namespace sw
             /** @brief 탐침 `WildWest.Stamina` 입니다. 대상 말의 스태미나 비율(0..1)이고, 말을 열지 않았으면 값이 없습니다. */
             [[nodiscard]] static bool readStamina( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
-                const WildWestHorseComponent* pHorseComponent = query._pTarget != nullptr ? query._pTarget->getComponent<WildWestHorseComponent>() : nullptr;
+                const WildWestHorseComponent* pHorseComponent = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<WildWestHorseComponent>() : nullptr;
                 const WesternHorse*           pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
                 if ( pHorse == nullptr )
                 {
-                    outValue.setText( "'" + string( query._target ) + "' has no opened Wild West Horse" );
+                    outValue.setText( query.findTargetObject() == nullptr ? query.getTargetProblem() : query.describeMissing( "opened Wild West Horse" ) );
                     return false;
                 }
                 outValue.setNumber( static_cast<float64>( pHorse->getStamina().getRatio() ) );

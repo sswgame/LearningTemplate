@@ -10,7 +10,6 @@ main 은 push 되지 않았다(원격 `main` 하나). 이 세션이 main 에 병
 | 워크트리 | 맡은 일 | 상태 |
 |---|---|---|
 | `editorscn2` | `D3-11` 에디터 시나리오: (1)(3)(4) 끝(커밋 3개), (2) 캐릭터 편집 → 씬 · 미검증 항목 · 프리팹 판정 한 함수로 모으기는 진행 중. main 의 `AutomationTarget` 규칙을 받아 `flowprefab target="Lantern"` 이 통과하는지 확인하라고 전했다 | 진행 중 |
-| `mountgame` | `WildWest`(RDR2 · 젤다식 승마) 새 게임 + `Mount`/`Dismount`/`Pawn.Seat` 시나리오 | 진행 중 |
 | `terrainserver` | `F-1` 서버 지형 레이어 질의(가중치를 CPU 형식으로 서버 패키지에) | 진행 중 |
 | `qualitycleanup` | quality `C-14` `C-15` `C-28` `C-33` `C-29` 와 이 PC 에서 되는 검증 | 진행 중 |
 | `uifollow` | `C-8` `C-9` 측정 후 결정, `B-8` | 진행 중 |
