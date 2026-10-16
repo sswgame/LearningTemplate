@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ThemeParkTycoon 손님 풀과 자동 건설 — 같은 이름 오브젝트를 번호로 고르는 규칙(target="Name[N]")을 실제 게임에서 단언한다.
+  디렉터는 손님 뷰를 최대 손님 수만큼 미리 모두 ParkGuest 로 스폰한다(저장소가 ParkGuest, ParkGuest_2, ... 로 번호를 붙인다). Name[N] 은 만든 순서이므로
+  N 번째 뷰가 시뮬레이션의 N 번 손님을 따른다(ParkGuestComponent._guestIndex = N). 손님이 들어오면 0 번 뷰가 정문에서 걸어 나가고,
+  자동 건설(gv_parkAutoBuild)이 첫 놀이기구를 지으면 입구(RideEntrance)가 선다.
+  App -game=ThemeParkTycoon -scenario=game/themepark/automation/guests.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="themepark.guests" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0"><Variable name="gv_parkAutoBuild" value="1"/></At>
+	<At frame="30">
+		<Expect probe="Object.Property" target="ParkGuest[0]" key="ParkGuestComponent._guestIndex" equals="0"/>
+		<Expect probe="Object.Property" target="ParkGuest[3]" key="ParkGuestComponent._guestIndex" equals="3"/>
+		<Expect probe="Object.Property" target="ParkGuest_2" key="ParkGuestComponent._guestIndex" equals="1"/>
+		<Remember probe="Object.X" target="ParkGuest[0]" as="gateX"/>
+	</At>
+	<!-- 첫 손님이 들어와 0 번 뷰가 정문에서 움직인다. -->
+	<At frame="31"><WaitUntil probe="ThemePark.GuestCount" atLeast="1" timeoutSeconds="30"/></At>
+	<At after="1"><WaitUntil probe="Object.X" target="ParkGuest[0]" differsFrom="gateX" timeoutSeconds="20"/></At>
+	<!-- 자동 건설이 첫 놀이기구를 짓는다. -->
+	<At after="1"><WaitUntil probe="Object.Exists" target="RideEntrance[0]" equals="1" timeoutSeconds="30"/></At>
+	<At after="1">
+		<Record probe="ThemePark.GuestCount"/>
+		<Pass/>
+	</At>
+</Scenario>

@@ -389,12 +389,8 @@ namespace sw
             outError = "unknown probe '" + outCheckpoint._probe + "'";
             return false;
         }
-        AutomationProbeQuery query{};
-        query._pManager = pManager;
-        query._target   = outCheckpoint._target;
-        query._key      = outCheckpoint._key;
-        query._pTarget  = pManager != nullptr && outCheckpoint._target.empty() == false ? pManager->findGameObjectByName( hashed_string( outCheckpoint._target ) ) : nullptr;
-        AutomationProbeValue value{};
+        const AutomationProbeQuery query = AutomationProbeQuery::make( pManager, outCheckpoint._target, outCheckpoint._key );
+        AutomationProbeValue       value{};
         if ( AutomationProbes::read( *pRegistration, query, value ) == false )
         {
             outError = string( spec ) + " has no value" + ( value._bText ? " (" + value._text + ")" : string() );

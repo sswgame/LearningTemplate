@@ -20,7 +20,8 @@ cd build/Ninja-Debug/Bin
 ./App.exe -game=MeadowVillage -dx12 -gv_meadowAutoPlay=1    # 늘 8배속
 ```
 
-이 게임에는 아직 자동화 시나리오가 없습니다. 같은 흐름을 EngineTest 의 `KitCompositionTest` 가 모의 디렉터로 확인하고,
+자동화 시나리오 `game/meadowvillage/automation/day.scenario.xml` 이 공유 시계를 날 단위로 감아(`AdvanceGameTime`) 밭이 번 돈으로 부탁(`meadow_request`)이 끝나는지 봅니다(`Session.Money` · `Quest.Status`).
+같은 흐름을 EngineTest 의 `KitCompositionTest` 가 모의 디렉터로 확인하고,
 SmokeTest 의 `ArchitectureTest.LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly` 가 키트 하나만 다시 로드해도 게임만 함께 다시 로드되는지 봅니다.
 
 ## 조작

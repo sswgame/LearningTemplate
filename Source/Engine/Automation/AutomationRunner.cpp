@@ -11,12 +11,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Automation/AutomationActionSteps.h"
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
-#include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Input/InputManager.h"
@@ -482,10 +480,11 @@ namespace sw
             /** @brief 질의 탐침의 대상 오브젝트 월드 위치입니다. 대상이 없으면 이유를 적고 false 입니다. */
             [[nodiscard]] static bool readTargetPosition( const AutomationProbeQuery& query, float3& outPosition, AutomationProbeValue& outValue )
             {
-                const SceneComponent* pScene = query._pTarget != nullptr ? query._pTarget->getPrimarySceneComponent() : nullptr;
+                const GameObject*     pTarget = query.findTargetObject();
+                const SceneComponent* pScene  = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
                 if ( pScene == nullptr )
                 {
-                    outValue.setText( query._pTarget == nullptr ? "no object named '" + string( query._target ) + "'" : "'" + string( query._target ) + "' has no transform" );
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : string( "'" + string( query._target ) + "' has no transform" ) );
                     return false;
                 }
                 outPosition = pScene->getWorldPosition();
@@ -506,12 +505,17 @@ namespace sw
             [[nodiscard]] static bool readObjectY( const AutomationProbeQuery& query, AutomationProbeValue& outValue ) { return readObjectAxis( query, 1, outValue ); }
             [[nodiscard]] static bool readObjectZ( const AutomationProbeQuery& query, AutomationProbeValue& outValue ) { return readObjectAxis( query, 2, outValue ); }
 
-            /** @brief 탐침 `Object.Exists` 입니다. 활성 씬에 그 이름의 오브젝트가 있으면 1 입니다. */
+            /** @brief 탐침 `Object.Exists` 입니다. 활성 씬에 그 오브젝트가 있으면 1, 없으면 0 입니다. 고를 수 없는 대상(같은 이름 여럿, 틀린 번호 글)은 값이 없습니다. */
             [[nodiscard]] static bool readObjectExists( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
                 if ( query._pManager == nullptr )
                     return false;
-                outValue.setNumber( query._pTarget != nullptr ? 1.0 : 0.0 );
+                if ( query.getTargetLookup() == AutomationTargetLookup::Rejected )
+                {
+                    outValue.setText( query.getTargetProblem() );
+                    return false;
+                }
+                outValue.setNumber( query.getTargetLookup() == AutomationTargetLookup::Found ? 1.0 : 0.0 );
                 return true;
             }
 
@@ -522,8 +526,12 @@ namespace sw
              */
             [[nodiscard]] static bool readObjectProperty( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
-                if ( query._pTarget == nullptr )
+                const GameObject* pTarget = query.findTargetObject();
+                if ( pTarget == nullptr )
+                {
+                    outValue.setText( query.getTargetProblem() );
                     return false;
+                }
                 const size_t dot = query._key.find( '.' );
                 if ( dot == string_view::npos )
                 {
@@ -532,7 +540,7 @@ namespace sw
                 }
                 const string componentName( query._key.substr( 0, dot ) );
                 const string propertyName( query._key.substr( dot + 1 ) );
-                Component*   pComponent = query._pTarget->findComponentByTypeName( hashed_string( componentName ) );
+                Component*   pComponent = pTarget->findComponentByTypeName( hashed_string( componentName ) );
                 if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                 {
                     outValue.setText( "no " + componentName + " on the target" );
@@ -566,10 +574,8 @@ namespace sw
                 float3 position{};
                 if ( readTargetPosition( query, position, outValue ) == false )
                     return false;
-                AutomationProbeQuery otherQuery = query;
-                otherQuery._target              = query._key;
-                otherQuery._pTarget             = query._pManager != nullptr ? query._pManager->findGameObjectByName( hashed_string( query._key ) ) : nullptr;
-                float3 otherPosition{};
+                const AutomationProbeQuery otherQuery = AutomationProbeQuery::make( query._pManager, query._key, string_view{} );
+                float3                     otherPosition{};
                 if ( readTargetPosition( otherQuery, otherPosition, outValue ) == false )
                     return false;
                 outValue.setNumber( static_cast<float64>( float3::getDistance( position, otherPosition ) ) );
@@ -943,9 +949,6 @@ namespace sw
         , _bEnded{ SW_FALSE }
         , _reserved{ 0 }
     {
-        AutomationActionSteps::ensureLinked();
-        AutomationEnvironmentSteps::ensureLinked();
-        AutomationWindowSteps::ensureLinked();
     }
 
     // 로그 리스너 해제는 `_logCapture` 의 소멸자가 맡는다.
@@ -1266,14 +1269,11 @@ namespace sw
             outMessage = probeName + " is no longer registered";
             return false;
         }
-        const string*        pTarget = step.findAttribute( "target" );
-        const string*        pKey    = step.findAttribute( "key" );
-        AutomationProbeQuery query{};
-        query._pManager = findActiveObjectManager();
-        query._target   = pTarget != nullptr ? string_view{ *pTarget } : string_view{};
-        query._key      = pKey != nullptr ? string_view{ *pKey } : string_view{};
-        query._pTarget  = query._pManager != nullptr && pTarget != nullptr ? query._pManager->findGameObjectByName( hashed_string( *pTarget ) ) : nullptr;
-        string subject  = probeName;
+        const string*              pTarget = step.findAttribute( "target" );
+        const string*              pKey    = step.findAttribute( "key" );
+        const AutomationProbeQuery query   = AutomationProbeQuery::make( findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
+                                                                       pKey != nullptr ? string_view{ *pKey } : string_view{} );
+          string subject = probeName;
         if ( pTarget != nullptr )
             subject += "(" + *pTarget + ( pKey != nullptr ? ", " + *pKey : string() ) + ")";
         else if ( pKey != nullptr )

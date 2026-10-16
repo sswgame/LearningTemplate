@@ -1,6 +1,9 @@
+/**
+ * @file ControlAutomationSteps.cpp
+ * @brief 자동화 시나리오의 행동 층 단계 `<Intent>` · `<Possess>` — 입력 맵 없이 폰에 의도를 넣고 빙의를 옮깁니다(형식은 `Source/GameFramework/README.md` 의 "조종 — 폰, 조종자, 의도").
+ * @details 등록은 이 .cpp 의 정적 등록자가 한다(Shipping 은 GameFramework 를 통째로 링크한다 — `sw_linkWholeArchive`).
+ */
 #include "pch.h"
-
-#include "GameFramework/Base/Actor/Control/ControlAutomationSteps.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
@@ -222,11 +225,4 @@ namespace sw
     // 행동 층 단계는 그 프레임의 입력 재생 · 조종 시스템 전에 돈다 — 그 프레임의 의도부터 바뀐다.
     SW_AUTOMATION_STEP( controlIntent, "Intent", &ControlAutomationStepsInternal::runIntentStep, &ControlAutomationStepsInternal::validateIntentStep, true );
     SW_AUTOMATION_STEP( controlPossess, "Possess", &ControlAutomationStepsInternal::runPossessStep, &ControlAutomationStepsInternal::validatePossessStep, true );
-} // namespace sw
-
-namespace sw
-{
-    void ControlAutomationSteps::ensureLinked()
-    {
-    }
 } // namespace sw

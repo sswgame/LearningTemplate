@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MeadowVillage 키트 둘의 흐름 — 공유 시계(SessionStateComponent)를 날 단위로 감아 밭이 번 돈으로 마을이 부탁을 들어주는지 단언한다.
+  아침 6 시 · 시작 돈 20G 로 연다. 날이 넘어가면 밭(4 × 2 순무)이 자라고 다 자란 칸을 30G 에 판다. 낮에 sprout 가 찾아와 과수원을 부탁하고(퀘스트 meadow_request),
+  공유 지갑에 50G 가 모이면 마을이 나무 두 그루를 심어 부탁이 끝난다. 시간 감기는 AdvanceGameTime, 판 상태는 Clock.* · Session.Money · Quest.Status 로 본다.
+  App -game=MeadowVillage -scenario=game/meadowvillage/automation/day.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="meadowvillage.day" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
+	<At frame="0"><Variable name="gv_meadowAutoPlay" value="0"/></At>
+	<At frame="10">
+		<Expect probe="Clock.Day" equals="0"/>
+		<Expect probe="Clock.Hour" near="6" tolerance="0.2"/>
+		<Expect probe="Session.Money" equals="20"/>
+	</At>
+	<!-- 하루씩 감는다. 지나간 시 · 날 경계는 알림으로 남아 다음 틱의 밭 · 마을 디렉터가 받는다. -->
+	<At frame="11"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><Expect probe="Clock.Day" equals="1"/></At>
+	<At after="1"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><AdvanceGameTime hours="24"/></At>
+	<At after="2"><AdvanceGameTime hours="24"/></At>
+	<At after="2">
+		<Expect probe="Clock.Day" equals="8"/>
+		<ExpectVisited probe="Quest.Status" target="meadow_request" sequence="NotStarted, Active, Completed"/>
+		<Record probe="Session.Money"/>
+		<Record probe="Clock.Day"/>
+		<Pass/>
+	</At>
+</Scenario>

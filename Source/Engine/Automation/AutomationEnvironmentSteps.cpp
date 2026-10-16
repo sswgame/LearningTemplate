@@ -147,10 +147,6 @@ namespace sw
         };
     } // namespace
 
-    void AutomationEnvironmentSteps::ensureLinked()
-    {
-    }
-
     SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand,
                         false );
     SW_AUTOMATION_STEP( resizeWindow, "ResizeWindow", &AutomationEnvironmentStepsInternal::runResize, &AutomationEnvironmentStepsInternal::validateResize, false );

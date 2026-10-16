@@ -17,10 +17,8 @@
   (2) 끼어들기(말 걸기)와 호감도를 쓰게 되면 `ScheduleSaveState` 를 디렉터의 상태 바이트에 싣는다(지금은 머리만 — 일정이 시계의 함수라 복원하면 같은 자리에 선다).
   (3) 에디터 패널(`ScheduleDebugPanel`)을 실물로 열어 보지 않았다. (4) `AI/Schedule/README.md` 는 없다. 목록 함수는 시스템을 같은 스레드에서 읽는다고 가정한다.
 
-- `D5-4` [기능] **게임 로직 자동화(2026-10-15, `Engine/Automation/README.md`)의 남은 것.** (1) 탑승 단계 `Mount` · `Dismount` 와 탐침 `Pawn.Seat` 은 탈것을 쓰는 게임이 없어 실제로 돌리지 않았다
-  (키트 `OpenWorldWestern` 의 말이 생기면 시나리오로). (2) 새 단계를 쓰는 시나리오가 없는 게임: MeadowVillage · AbilityArena(적 AI `ArenaEnemyAIComponent` 는 상태 이름을 아직 안 낸다) · VoxelCraft · ThemePark.
-  (3) 적 AI 처럼 같은 이름의 오브젝트가 여럿이면(`AIController`) `target` 으로 하나를 고를 수 없다 — 이름 뒤 번호 규칙이나 "그 이름의 모두/아무나" 질의가 필요하다.
-  (4) GameFramework 의 `ensureLinked` 앵커(`ControlAutomationSteps`)는 Shipping 이 GameFramework 를 통째로 링크하므로(`sw_linkWholeArchive`) 필요 없다 — 지울 때 Engine 쪽 앵커도 같이 본다(Engine 은 테스트 실행 파일도 통째 링크).
+- `D5-4` [기능] **게임 로직 자동화(2026-10-15, `Engine/Automation/README.md`)의 남은 것.** 탑승 단계 `Mount` · `Dismount` 와 탐침 `Pawn.Seat` 은 탈것을 쓰는 게임이 없어 실제로 돌리지 않았다
+  (키트 `OpenWorldWestern` 의 말이 생기면 시나리오로 — 단계는 대상 고르기 규칙 `AutomationTarget` 을 이미 쓴다).
 
 ---
 
