@@ -16,20 +16,18 @@
 
 namespace sw
 {
-    class JSONValue;
-
     /**
      * @brief 프레임 번호가 가질 수 있는 절댓값 상한입니다.
      * @details 프레임 번호는 JSON 에서 오므로 그대로 믿으면 안 된다. 타임라인 코드는 두 프레임의
      *          **차**를 그냥 빼기로 구하는데(`_frameMax - _frameMin`, `_end - _start`), int32 의
      *          양 끝값이 쌍으로 들어오면 그 빼기가 부호 있는 오버플로(UB)가 된다. 범위를 절반으로
-     *          자르면 어떤 두 값의 차도 반드시 int32 안에 들어오므로, 빼는 곳마다 넓은 타입으로
-     *          올리지 않아도 된다. 30fps 기준 1,000만 일이 넘는 길이라 실사용을 자르지 않는다.
+     *          묶으면 어떤 두 값의 차도 반드시 int32 안에 들어오므로, 빼는 곳마다 넓은 타입으로
+     *          올리지 않아도 된다. 30fps 기준 1,000만 일이 넘는 길이라 실사용을 막지 않는다. 밖의 값은 읽기 오류다.
      */
     constexpr int32 kSequenceFrameLimit = MathUtil::kMaxInt32 / 2;
 
     /**
-     * @brief 시퀀서 트랙 항목의 종류입니다. JSON 에는 정수(`"type"`)로 적힙니다. 값을 바꾸면 기존 시퀀스 파일이 다른 종류로 읽힙니다.
+     * @brief 시퀀서 트랙 항목의 종류입니다. 파일에는 열거자 이름(`"CameraCut"`)으로 적힙니다. 이름을 바꾸면 데이터를 다시 씁니다.
      * @details 종류를 추가하면 값 하나와 `kArrSequenceItemKindInfo` 의 항목 하나를 추가한다(static_assert 가 알려 준다).
      */
     ENUM()
@@ -54,7 +52,7 @@ namespace sw
     };
 
     /**
-     * @brief 키 트랙의 종류입니다. JSON 에는 정수(`"type"`)로 적힙니다.
+     * @brief 키 트랙의 종류입니다. 파일에는 열거자 이름(`"Transform"`)으로 적힙니다.
      * @details 종류마다 채널 수가 정해져 있습니다(`SequenceKeyTrack::getChannelCount`).
      */
     ENUM()
@@ -101,20 +99,35 @@ namespace sw
                    "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindInfo 에도 줄을 더할 것" );
 
     /** @brief 시퀀서 트랙 항목입니다(클립, 이벤트, 카메라 컷, 카메라 흔들림). 구간 하나를 나타냅니다. */
-    struct SequenceTrackItem
+    REFLECT()
+    struct SW_API SequenceTrackItem
     {
+        REFLECT_BODY();
+
         /** @brief `_prerollFrames` 가 이 값이면 시퀀스의 프리롤(`SequenceAsset::_cameraPrerollFrames`)을 씁니다. */
         static constexpr int32 kUseSequencePreroll = -1;
 
-        string           _name;
-        string           _targetObject;
-        string           _preset; /**< 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. */
-        int32            _start{ 0 };
-        int32            _end{ 10 };
-        int32            _prerollFrames{ kUseSequencePreroll }; /**< 카메라 컷: 시작 몇 프레임 전에 대기 뷰 신호를 낼지입니다. */
-        float32          _amplitude{ 1.0f };                    /**< 카메라 흔들림: 최대 흔들림(m) 입니다. */
-        uint32           _color{ 0xFFAA8080 };
-        SequenceItemKind _kind{ SequenceItemKind::Clip }; /**< 테이블에 없는 값(새 버전 파일)은 읽고 다시 쓰지만 적용하지 않습니다. */
+        PROPERTY( Tooltip = "Item name (event name for Event items)" )
+        string _name;
+        PROPERTY( Tooltip = "Name of the object the item drives" )
+        string _targetObject;
+        /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. */
+        PROPERTY( Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is)" )
+        string _preset;
+        PROPERTY( Tooltip = "First frame of the span" )
+        int32 _start{ 0 };
+        PROPERTY( Tooltip = "Last frame of the span" )
+        int32 _end{ 10 };
+        /** @brief 카메라 컷: 시작 몇 프레임 전에 대기 뷰 신호를 낼지입니다. `kUseSequencePreroll` 이면 시퀀스의 값입니다. */
+        PROPERTY( Tooltip = "Camera cut: frames before the start to signal the standby view (-1: the sequence value)" )
+        int32 _prerollFrames{ kUseSequencePreroll };
+        /** @brief 카메라 흔들림: 최대 흔들림(m) 입니다. */
+        PROPERTY( Units = m, Tooltip = "Camera shake: largest shake offset" )
+        float32 _amplitude{ 1.0f };
+        PROPERTY( Tooltip = "Editor colour (0xAABBGGRR)" )
+        uint32 _color{ 0xFFAA8080 };
+        PROPERTY( Tooltip = "Item kind" )
+        SequenceItemKind _kind{ SequenceItemKind::Clip };
     };
 } // namespace sw
 
@@ -126,13 +139,23 @@ namespace sw
      * @details 키가 없는 채널은 대상 값을 건드리지 않는다. 키를 찍으면(`setKey`) 모든 채널에 같은 시각의 키가 생긴다. 언리얼 Sequencer 의
      *          트랜스폼 키와 같다. 채널 하나만 고치면(`setChannelKey`) 그 채널에만 키가 생긴다.
      */
+    REFLECT()
     struct SW_API SequenceKeyTrack
     {
-        string             _name;
-        string             _targetObject;
-        string             _propertyPath; /**< 프로퍼티 트랙의 `<컴포넌트 타입>.<프로퍼티>` 입니다(트랜스폼 트랙은 비어 있다). */
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Track name" )
+        string _name;
+        PROPERTY( Tooltip = "Name of the object the track drives" )
+        string _targetObject;
+        /** @brief 프로퍼티 트랙의 `<컴포넌트 타입>.<프로퍼티>` 입니다(트랜스폼 트랙은 비어 있다). 리그 슬롯 트랙은 슬롯 이름입니다. */
+        PROPERTY( Tooltip = "Property track: <component type>.<property>; rig slot track: slot name; transform track: empty" )
+        string _propertyPath;
+        /** @brief 채널마다 커브 하나입니다. 수는 종류가 정한다(`getChannelCount`) — 다르면 읽기 오류입니다. */
+        PROPERTY( Tooltip = "One curve per channel; the count is set by the kind" )
         vector<FloatCurve> _listChannel;
-        SequenceTrackKind  _kind{ SequenceTrackKind::Transform }; /**< 테이블에 없는 값은 읽고 다시 쓰지만 적용하지 않습니다. */
+        PROPERTY( Tooltip = "Track kind" )
+        SequenceTrackKind _kind{ SequenceTrackKind::Transform };
 
         /** @brief 종류의 채널 수입니다. 모르는 종류면 0 입니다. */
         static uint32 getChannelCount( SequenceTrackKind kind );
@@ -162,20 +185,23 @@ namespace sw
     /**
      * @class SequenceAsset
      * @brief 구간 항목(클립, 이벤트, 카메라 컷)과 키 트랙(트랜스폼, 프로퍼티)을 담는 타임라인 에셋입니다.
+     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigJSON` — 모르는 키 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류).
+     *          키는 PROPERTY 이름이 정본이다. 읽은 뒤 프레임 번호의 범위(`kSequenceFrameLimit`) · 순서, 종류마다의 채널 수를 따로 보고,
+     *          커브는 시각 순으로 정렬해 자동 접선을 다시 센다.
      */
+    REFLECT()
     class SW_API SequenceAsset
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 시퀀스 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
         static constexpr string_view kExtension = ".seq.json";
 
         /** @brief 빈 시퀀스를 만듭니다. */
         SequenceAsset() = default;
 
-        /**
-         * @brief JSON 파일을 읽습니다.
-         * @details 읽은 문서를 그대로 읽습니다(다시 문자열로 덤프해 재파싱하지 않습니다).
-         */
+        /** @brief JSON 파일(리소스 상대 경로나 절대 경로)을 읽습니다. 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromFile( string_view path );
         /** @brief JSON 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
@@ -185,7 +211,7 @@ namespace sw
          *          시퀀스가 새 시퀀스인 척한다.
          */
         [[nodiscard]] bool parseJSON( string_view json );
-        /** @brief JSON 본문을 만듭니다. */
+        /** @brief JSON 본문을 만듭니다(들여쓰기 2, 모든 PROPERTY). */
         string toJSON() const;
         /** @brief 종류의 특성 항목을 반환합니다. 테이블에 없는 값이면 nullptr 입니다. */
         static const SequenceItemKindInfo* findItemKindInfo( SequenceItemKind kind );
@@ -193,8 +219,10 @@ namespace sw
         void collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const;
 
     private:
-        /** @brief 파싱된 루트 하나를 읽습니다. 파일 경로와 문자열 경로가 모이는 지점입니다. */
-        [[nodiscard]] bool parseRoot( const JSONValue& root );
+        /** @brief 읽은 본문(@p json)을 이 에셋에 채우고 의미를 봅니다. 파일 경로와 문자열 경로가 모이는 지점이며, 틀리면 빈 에셋이 남습니다. */
+        [[nodiscard]] bool readText( string_view json, string_view sourceLabel );
+        /** @brief 프레임 번호의 범위 · 순서와 종류 · 채널 수를 봅니다. 어긋난 곳마다 오류를 남깁니다. */
+        [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
 
     public:
         /** @brief 카메라 컷 항목이 하나라도 있으면 true 를 반환합니다. 없으면 시퀀스가 게임 카메라를 건드리지 않습니다. */
@@ -204,16 +232,25 @@ namespace sw
         /** @brief 카메라 컷 항목의 프리롤 프레임입니다. 항목이 정하지 않았으면 시퀀스의 값입니다. */
         int32 getPrerollFrames( const SequenceTrackItem& item ) const;
 
-        int32                     _frameMin{ 0 };
-        int32                     _frameMax{ 100 };
-        string                    _note;
+        PROPERTY( Tooltip = "First frame of the sequence" )
+        int32 _frameMin{ 0 };
+        PROPERTY( Tooltip = "Last frame of the sequence (after the first)" )
+        int32 _frameMax{ 100 };
+        PROPERTY( Tooltip = "Free note" )
+        string _note;
+        PROPERTY( Tooltip = "Span items (clip, event, camera cut, camera shake)" )
         vector<SequenceTrackItem> _listItem;
-        vector<SequenceKeyTrack>  _listTrack; /**< 키 트랙(트랜스폼, 프로퍼티)입니다. 클립이나 이벤트와 달리 구간이 아니라 키로 값을 몹니다. */
+        /** @brief 키 트랙(트랜스폼, 프로퍼티)입니다. 클립이나 이벤트와 달리 구간이 아니라 키로 값을 몹니다. */
+        PROPERTY( Tooltip = "Key tracks (transform, property, rig slot)" )
+        vector<SequenceKeyTrack> _listTrack;
         /** @brief 게임 카메라에서 첫 카메라 컷으로 섞어 들어가는 시간(초)입니다. 0 이면 끊어 바꿉니다(언리얼 시퀀스의 Blend In). */
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Blend from the game camera into the first camera cut (0: cut)" )
         float32 _cameraBlendInSeconds{ 0.0f };
         /** @brief 마지막 카메라 컷에서 게임 카메라로 섞어 나오는 시간(초)입니다. 0 이면 끊어 바꿉니다(언리얼 시퀀스의 Blend Out). */
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Blend from the last camera cut back to the game camera (0: cut)" )
         float32 _cameraBlendOutSeconds{ 0.0f };
         /** @brief 카메라 컷 시작 몇 프레임 전에 대기 뷰 신호를 낼지의 기본값입니다(언리얼 Sequencer 의 preroll frames). 0 이면 내지 않습니다. */
+        PROPERTY( Min = 0, Tooltip = "Default frames before a camera cut to signal the standby view (0: none)" )
         int32 _cameraPrerollFrames{ 0 };
     };
 } // namespace sw

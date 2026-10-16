@@ -174,7 +174,10 @@ namespace sw::editor
             ImGui::DragFloat( "y", &k._position._y, 0.1f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            ImGui::DragFloat( "angleDeg", &k._angleDeg, 0.5f );
+            // 키는 라디안으로 담고(엔진의 각도 단위) 편집은 도로 한다.
+            float32 angleDeg = MathUtil::toDegree( k._angle );
+            if ( ImGui::DragFloat( "angleDeg", &angleDeg, 0.5f ) )
+                k._angle = MathUtil::toRadian( angleDeg );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyAngleTip" ) );

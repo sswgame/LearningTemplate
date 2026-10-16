@@ -11,21 +11,29 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
-    class JSONValue;
-
     /**
      * @struct SkeletonBone
-     * @brief 본 하나입니다. 부모는 항상 자기보다 앞에 있습니다(루트는 -1).
+     * @brief 본 하나입니다. 부모는 항상 자기보다 앞에 있습니다(루트는 -1). 모든 칸을 파일에 반드시 적습니다(`PROPERTY( Required )`).
      */
-    struct SkeletonBone
+    REFLECT()
+    struct SW_API SkeletonBone
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Bone name" )
         hashed_string _name;
-        int32         _parentIndex{ -1 };
-        BoneTransform _referencePose{};                   ///< 부모 기준 레퍼런스(바인드) 로컬 변환입니다.
-        float4x4      _inverseBind{ float4x4::Identity }; ///< 모델 공간 바인드 행렬의 역입니다. 스킨 팔레트 = 역 바인드 * 모델 공간.
+        PROPERTY( Required, Tooltip = "Index of the parent bone, an earlier bone in the list (-1: root)" )
+        int32 _parentIndex{ -1 };
+        /** @brief 부모 기준 레퍼런스(바인드) 로컬 변환입니다. */
+        PROPERTY( Required, Tooltip = "Reference (bind) local transform from the parent" )
+        BoneTransform _referencePose{};
+        /** @brief 모델 공간 바인드 행렬의 역입니다(행 우선 16 개). 스킨 팔레트 = 역 바인드 * 모델 공간. */
+        PROPERTY( Required, Tooltip = "Inverse of the model space bind matrix (16 numbers, row major)" )
+        float4x4 _inverseBind{ float4x4::Identity };
     };
 } // namespace sw
 
@@ -37,12 +45,20 @@ namespace sw
      * @details 소켓은 이 테이블이 아니라 따로 둔 소켓 에셋(`*.sockets.xml`)이 정한다. 재임포트가 이 파일을 다시 쓰기 때문이다.
      *          이 테이블은 그 소켓 파일을 처음 만들 때(무기나 투구가 어느 본의 어디에 있었는지) 읽는 근거다.
      */
-    struct SkeletonAttachment
+    REFLECT()
+    struct SW_API SkeletonAttachment
     {
-        string        _name;           ///< 원본 노드 이름입니다.
-        string        _meshPath;       ///< 따로 임포트된 메시(`.mesh`)의 리소스 경로입니다. 메시 공간은 노드 로컬입니다.
-        hashed_string _parentBone;     ///< 부모 본 이름입니다.
-        BoneTransform _localTransform; ///< 부모 본 기준 로컬 변환입니다.
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Source node name" )
+        string _name;
+        /** @brief 따로 임포트된 메시(`.mesh`)의 리소스 경로입니다. 메시 공간은 노드 로컬입니다. */
+        PROPERTY( Required, Tooltip = "Resource path of the separately imported mesh (mesh space is the node's local space)" )
+        string _meshPath;
+        PROPERTY( Required, Tooltip = "Parent bone name" )
+        hashed_string _parentBone;
+        PROPERTY( Required, Tooltip = "Local transform from the parent bone" )
+        BoneTransform _localTransform;
     };
 } // namespace sw
 
@@ -51,14 +67,16 @@ namespace sw
     /**
      * @class Skeleton
      * @brief 본 배열입니다(부모가 자식보다 앞에 옵니다). 런타임 포즈 계산(`Pose`)과 스킨 팔레트가 이것을 읽습니다.
-     * @details 파일 형식은 JSON 이며, 키는 모두 필수이고 모르는 키는 오류다.
-     *          `{ "bones": [ { "name", "parent", "translation": [3], "rotation": [x,y,z,w], "scale": [3], "inverse_bind": [16] } ],
-     *             "attachments": [ { "name", "mesh", "bone", "translation", "rotation", "scale" } ] }`.
-     *          `parent` 는 본 배열의 인덱스(루트 -1)이고 자기보다 앞이어야 한다. 행렬은 행 우선 16 개다.
+     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigJSON`). 키는 PROPERTY 이름(`_listBone`, `_listAttachment`)이 정본이고
+     *          모두 필수다(`PROPERTY( Required )`) — 빠진 키 · 모르는 키 · 읽지 못한 값은 오류다. 벡터 · 쿼터니언 · 행렬은 쉼표로 이은 숫자 글이다.
+     *          `_parentIndex` 는 본 배열의 인덱스(루트 -1)이고 자기보다 앞이어야 한다. 행렬은 행 우선 16 개다. 읽은 뒤 부모 순서와 부착 본 이름을 따로 본다.
      */
+    REFLECT()
     class SW_API Skeleton
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 스켈레톤 에셋 확장자입니다. */
         static constexpr string_view kExtension = ".skeleton.json";
 
@@ -90,17 +108,20 @@ namespace sw
         [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
-        /** @brief JSON 본문을 만듭니다(들여쓰기 2). */
+        /** @brief JSON 본문을 만듭니다(들여쓰기 2, 모든 PROPERTY). */
         string toJSON() const;
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( string_view path ) const;
 
     private:
-        /** @brief 파싱된 루트에서 내용을 읽습니다. */
-        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
+        /** @brief 읽은 본과 부착을 검증하며 다시 쌓습니다(부모가 앞에 있는지, 부착 본이 있는지). `_listParentIndex` 도 여기서 채웁니다. */
+        [[nodiscard]] bool rebuildFromLoaded( string_view sourceLabel );
 
-        vector<SkeletonBone>       _listBone;
-        vector<int32>              _listParentIndex;
+        PROPERTY( Required, Tooltip = "Bones; a parent comes before its children" )
+        vector<SkeletonBone> _listBone;
+        /** @brief 본마다 부모 인덱스입니다. `_listBone` 에서 다시 만들므로 파일에 적지 않습니다. */
+        vector<int32> _listParentIndex;
+        PROPERTY( Required, Tooltip = "Meshes the import found under bones (read only, the base for socket files)" )
         vector<SkeletonAttachment> _listAttachment;
     };
 } // namespace sw

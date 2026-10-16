@@ -463,18 +463,18 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string clipPath = test::makeTempPath( "hero.sprite.json" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"({
-  "atlas": "engine/textures/test/quadrants.dds",
-  "frames": [
-    { "u": 0.0, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
-    { "u": 0.5, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
-    { "u": 0.0, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 50 },
-    { "u": 0.5, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 300 },
-    { "u": 0.25, "v": 0.25, "w": 0.5, "h": 0.5, "durationMs": 0 }
+  "_atlasPath": "engine/textures/test/quadrants.dds",
+  "_listFrame": [
+    { "_uvRect": "0.0,0.0,0.5,0.5", "_durationMs": 100 },
+    { "_uvRect": "0.5,0.0,0.5,0.5", "_durationMs": 100 },
+    { "_uvRect": "0.0,0.5,0.5,0.5", "_durationMs": 50 },
+    { "_uvRect": "0.5,0.5,0.5,0.5", "_durationMs": 300 },
+    { "_uvRect": "0.25,0.25,0.5,0.5", "_durationMs": 0 }
   ],
-  "transformKeys": [],
-  "animations": [
-    { "name": "idle", "start": 0, "count": 2, "loop": true },
-    { "name": "run", "start": 2, "count": 3, "loop": false }
+  "_listKey": [],
+  "_listAnimation": [
+    { "_name": "idle", "_firstFrame": 0, "_frameCount": 2, "_bLoop": 1 },
+    { "_name": "run", "_firstFrame": 2, "_frameCount": 3, "_bLoop": 0 }
   ]
 })" ) );
 
@@ -542,21 +542,21 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string clipPath = test::makeTempPath( "keyed.sprite.json" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"({
-  "atlas": "engine/textures/test/quadrants.dds",
-  "frames": [
-    { "u": 0.0, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
-    { "u": 0.5, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
-    { "u": 0.0, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 100 },
-    { "u": 0.5, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 100 }
+  "_atlasPath": "engine/textures/test/quadrants.dds",
+  "_listFrame": [
+    { "_uvRect": "0.0,0.0,0.5,0.5", "_durationMs": 100 },
+    { "_uvRect": "0.5,0.0,0.5,0.5", "_durationMs": 100 },
+    { "_uvRect": "0.0,0.5,0.5,0.5", "_durationMs": 100 },
+    { "_uvRect": "0.5,0.5,0.5,0.5", "_durationMs": 100 }
   ],
-  "transformKeys": [
-    { "time": 0.4, "x": 4.0, "y": 2.0, "angleDeg": 0.0 },
-    { "time": 0.0, "x": 0.0, "y": 0.0, "angleDeg": 0.0 },
-    { "time": 0.2, "x": 2.0, "y": 0.0, "angleDeg": 90.0 }
+  "_listKey": [
+    { "_time": 0.4, "_position": "4.0,2.0", "_angle": 0.0 },
+    { "_time": 0.0, "_position": "0.0,0.0", "_angle": 0.0 },
+    { "_time": 0.2, "_position": "2.0,0.0", "_angle": 1.5707964 }
   ],
-  "animations": [
-    { "name": "a", "start": 0, "count": 2, "loop": true },
-    { "name": "b", "start": 2, "count": 2, "loop": false }
+  "_listAnimation": [
+    { "_name": "a", "_firstFrame": 0, "_frameCount": 2, "_bLoop": 1 },
+    { "_name": "b", "_firstFrame": 2, "_frameCount": 2, "_bLoop": 0 }
   ]
 })" ) );
 

@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
@@ -238,7 +239,7 @@ SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
 
 /**
  * @brief [SequencerTest] JSON 왕복이 값을 잃지 않는다 (파일 경유 포함)
- * @details loadFromFile 은 읽은 문서를 다시 문자열로 덤프하지 않고 그대로 읽는다. 이 테스트는 그 경로가 같은 결과를 내는지 본다.
+ * @details loadFromFile 과 parseJSON 은 같은 읽기(`readText`)로 모인다. 이 테스트는 파일 경로가 같은 결과를 내는지 본다.
  */
 SW_TEST_CASE( SequencerTest, JSONRoundTripThroughFileKeepsValues )
 {
@@ -328,26 +329,20 @@ SW_TEST_CASE( SequencerTest, LoadedAssetResetsPlaybackToItsOwnStart )
 }
 
 /**
- * @brief [SequencerTest] 파일이 준 프레임 번호가 int32 양 끝이어도 뺄셈이 넘치지 않는다
- * @details 프레임 번호는 JSON 에서 온다. int32 최대값이 그대로 들어오면 `_frameMax = _frameMin + 1`
- *          이 부호 있는 넘침이 되어 끝이 시작보다 **앞**이 되고, 트랙의 `_end - _start` 도 마찬가지로
- *          접혔다. 파싱 자리에서 절반 범위로 잘라 어떤 두 값의 차도 int32 안에 들어오게 한다.
+ * @brief [SequencerTest] 파일이 준 프레임 번호가 `kSequenceFrameLimit` 밖이거나 끝이 시작보다 앞이면 읽지 않는다
+ * @details 프레임 번호는 JSON 에서 온다. int32 최대값이 그대로 들어오면 `_frameMax - _frameMin` 과 트랙의 `_end - _start` 가
+ *          부호 있는 넘침이 된다. 예전에는 잘라서 읽었지만 잘린 값은 파일이 말한 값이 아니므로 읽기 오류로 멈춘다.
  */
-SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersCannotOverflowSpans )
+SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersAreRejected )
 {
-    sw::SequenceAsset asset;
-    SW_ASSERT_TRUE( asset.parseJSON( R"({
-        "frameMin": 2147483647,
-        "frameMax": 0,
-        "items": [ { "name": "Wide", "target": "SeqTarget", "start": 2147483647, "end": -2147483648 } ]
-    })" ) );
-
-    SW_EXPECT_TRUE( asset._frameMax > asset._frameMin );
-    SW_ASSERT_EQUAL( size_t( 1 ), asset._listItem.size() );
-
-    const int64 itemSpan = static_cast<int64>( asset._listItem[0]._end ) - static_cast<int64>( asset._listItem[0]._start );
-    SW_EXPECT_TRUE( itemSpan >= static_cast<int64>( sw::MathUtil::kMinInt32 ) );
-    SW_EXPECT_TRUE( itemSpan <= static_cast<int64>( sw::MathUtil::kMaxInt32 ) );
+    test::ScopedDefensiveTestLog expected( "frame numbers past the sequence frame limit" );
+    sw::SequenceAsset            asset;
+    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_frameMin": 2147483647, "_frameMax": 0 })" ) );
+    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_frameMin": 0, "_frameMax": 10, "_listItem": [ { "_name": "Wide", "_start": 2147483647, "_end": -2147483648 } ] })" ) );
+    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_frameMin": 10, "_frameMax": 10 })" ) );
+    SW_EXPECT_TRUE( asset._listItem.empty() );
+    SW_EXPECT_EQUAL( 0, asset._frameMin );
+    SW_EXPECT_EQUAL( 100, asset._frameMax );
 }
 
 /**
@@ -468,87 +463,110 @@ SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
 }
 
 /**
- * @brief [SequencerTest] 시퀀스 파일이 같은 바이트로 왕복한다(종류는 정수 그대로, 키 트랙은 채널마다 키 배열)
- * @details 아래 문서는 `toJSON` 출력이다(저장소에 시퀀스 파일이 하나뿐이라 테스트 안에 둔다). 세 번째 항목의 종류 7 은 이 버전이 모르는
- *          값이다 — 경고하고, 지우지 않고 다시 쓴다.
+ * @brief [SequencerTest] 시퀀스 파일이 같은 바이트로 왕복한다(종류는 열거자 이름, 키 트랙은 채널마다 키 배열), 모르는 종류 이름은 읽기 오류다
+ * @details 아래 문서는 `toJSON` 출력이다. 종류는 리플렉션 열거자 이름이 정본이다 — 모르는 이름(새 버전의 종류, 옛 정수)을 읽어 두고
+ *          적용만 하지 않던 예전 규칙은 없앴다(출시한 데이터가 없어 별칭 · 호환을 두지 않는다).
  */
-SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
+SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsKindNames )
 {
     const sw::string_view kSequenceJSON = R"({
-  "frameMin": 0,
-  "frameMax": 48,
-  "note": "golden",
-  "items": [
+  "_frameMin": 0,
+  "_frameMax": 48,
+  "_note": "golden",
+  "_listItem": [
     {
-      "name": "Walk",
-      "target": "Hero",
-      "start": 0,
-      "end": 24,
-      "type": 0,
-      "color": 4289364096
+      "_name": "Walk",
+      "_targetObject": "Hero",
+      "_preset": "",
+      "_start": 0,
+      "_end": 24,
+      "_prerollFrames": -1,
+      "_amplitude": 1,
+      "_color": 4289364096,
+      "_kind": "Clip"
     },
     {
-      "name": "Door",
-      "target": "Gate",
-      "start": 12,
-      "end": 12,
-      "type": 1,
-      "color": 4286611626
-    },
-    {
-      "name": "Future",
-      "target": "",
-      "start": 30,
-      "end": 40,
-      "type": 7,
-      "color": 4289364096
+      "_name": "Door",
+      "_targetObject": "Gate",
+      "_preset": "",
+      "_start": 12,
+      "_end": 12,
+      "_prerollFrames": -1,
+      "_amplitude": 1,
+      "_color": 4286611626,
+      "_kind": "Event"
     }
   ],
-  "tracks": [
+  "_listTrack": [
     {
-      "name": "Priority",
-      "target": "Hero",
-      "type": 1,
-      "property": "CameraComponent._priority",
-      "channels": [
+      "_name": "Priority",
+      "_targetObject": "Hero",
+      "_propertyPath": "CameraComponent._priority",
+      "_listChannel": [
         {
-          "keys": [
+          "_listKey": [
             {
-              "time": 0.0,
-              "value": 1.0,
-              "arriveTangent": 0.0,
-              "leaveTangent": 0.0,
-              "interpolation": 2,
-              "autoTangent": true
+              "_time": 0,
+              "_value": 1,
+              "_arriveTangent": 0,
+              "_leaveTangent": 0,
+              "_interpolation": "Cubic",
+              "_bAutoTangent": true
             },
             {
-              "time": 24.0,
-              "value": 3.0,
-              "arriveTangent": 0.0,
-              "leaveTangent": 0.0,
-              "interpolation": 1,
-              "autoTangent": true
+              "_time": 24,
+              "_value": 3,
+              "_arriveTangent": 0,
+              "_leaveTangent": 0,
+              "_interpolation": "Linear",
+              "_bAutoTangent": true
             }
           ]
         }
-      ]
+      ],
+      "_kind": "Property"
     }
-  ]
+  ],
+  "_cameraBlendInSeconds": 0,
+  "_cameraBlendOutSeconds": 0,
+  "_cameraPrerollFrames": 0
 })";
 
     sw::SequenceAsset asset;
-    {
-        test::ScopedDefensiveTestLog expected( "unknown sequence item type 7" );
-        SW_ASSERT_TRUE( asset.parseJSON( kSequenceJSON ) );
-    }
-    SW_ASSERT_EQUAL( size_t( 3 ), asset._listItem.size() );
+    SW_ASSERT_TRUE( asset.parseJSON( kSequenceJSON ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), asset._listItem.size() );
     SW_EXPECT_TRUE( asset._listItem[0]._kind == sw::SequenceItemKind::Clip );
     SW_EXPECT_TRUE( asset._listItem[1]._kind == sw::SequenceItemKind::Event );
-    SW_EXPECT_EQUAL( 7, static_cast<int32>( asset._listItem[2]._kind ) );
     SW_ASSERT_EQUAL( size_t( 1 ), asset._listTrack.size() );
     SW_EXPECT_TRUE( asset._listTrack[0]._kind == sw::SequenceTrackKind::Property );
     SW_EXPECT_TRUE( asset._listTrack[0]._listChannel[0]._listKey[1]._interpolation == sw::CurveInterpolation::Linear );
     SW_EXPECT_TRUE_MSG( asset.toJSON() == kSequenceJSON, "시퀀스 파일을 읽고 다시 쓰면 바이트가 달라진다" );
+
+    test::ScopedDefensiveTestLog expected( "unknown sequence kind names and old keys are load errors" );
+    sw::SequenceAsset            unknown;
+    SW_EXPECT_FALSE( unknown.parseJSON( R"({ "_listItem": [ { "_name": "Future", "_kind": "Teleport" } ] })" ) );
+    SW_EXPECT_FALSE( unknown.parseJSON( R"({ "frameMin": 0, "frameMax": 48, "items": [] })" ) );
+    SW_EXPECT_FALSE( unknown.parseJSON( R"({ "_listTrack": [ { "_name": "Short", "_kind": "Transform", "_listChannel": [ { "_listKey": [] } ] } ] })" ) );
+}
+
+/**
+ * @brief [SequencerTest] 저장소의 시퀀스 파일은 엔진이 쓰는 글 그대로다 — 읽고 다시 쓰면 바이트까지 같다
+ * @details 시나리오(`sequencerkeys`)가 여는 파일이다. 변환한 파일이 저장 형식과 어긋나면 에디터에서 한 번 저장할 때마다 파일 전체가 바뀐다.
+ */
+SW_TEST_CASE( SequencerTest, RepositorySequenceResavesByteForByte )
+{
+    constexpr const utf8* kSequencePath = "engine/automation/editor/sequencerkeys/sequencerkeys.seq.json";
+    sw::string            fileText;
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kSequencePath, fileText ) );
+    // core.autocrlf 체크아웃은 줄끝을 CRLF 로 바꾼다 — 저장소의 바이트(LF)로 비교한다.
+    fileText.erase( std::remove( fileText.begin(), fileText.end(), '\r' ), fileText.end() );
+    sw::SequenceAsset asset;
+    SW_ASSERT_TRUE( asset.loadFromFile( kSequencePath ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), asset._listTrack.size() );
+    SW_EXPECT_TRUE( asset._listTrack[0]._kind == sw::SequenceTrackKind::Transform );
+    SW_EXPECT_EQUAL( size_t( sw::kSequenceTransformChannelCount ), asset._listTrack[0]._listChannel.size() );
+    SW_EXPECT_STREQ( "GameCamera", asset._listTrack[0]._targetObject.c_str() );
+    SW_EXPECT_STREQ( fileText.c_str(), asset.toJSON().c_str() );
 }
 
 /**
@@ -927,7 +945,7 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCameraSignals )
 }
 
 /**
- * @brief [SequencerTest] 카메라 필드(프리셋 · 세기 · 프리롤 · 블렌드 인/아웃)는 JSON 으로 왕복하고, 기본값이면 쓰지 않는다
+ * @brief [SequencerTest] 카메라 필드(프리셋 · 세기 · 프리롤 · 블렌드 인/아웃)는 JSON 으로 왕복하고, 다시 쓴 글은 바이트까지 같다
  */
 SW_TEST_CASE( SequencerTest, CameraFieldsRoundTripThroughJSON )
 {
@@ -944,11 +962,6 @@ SW_TEST_CASE( SequencerTest, CameraFieldsRoundTripThroughJSON )
     SW_EXPECT_TRUE( restored._listItem[2]._kind == sw::SequenceItemKind::CameraShake );
     SW_EXPECT_NEAR_EQUAL( 0.4f, restored._listItem[2]._amplitude, 1.0e-6f );
     SW_EXPECT_TRUE( restored.toJSON() == source.toJSON() );
-
-    // 카메라를 쓰지 않는 시퀀스는 새 키를 쓰지 않는다(기존 파일 바이트가 그대로다).
-    const sw::string plain = sw::makeSequenceWithFirstFrameEvent().toJSON();
-    SW_EXPECT_TRUE( plain.find( "camera" ) == sw::string::npos );
-    SW_EXPECT_TRUE( plain.find( "preset" ) == sw::string::npos );
 }
 
 /** 리그 슬롯 트랙 — 키가 없으면 1(슬롯 미설정), 키 값은 0..1 로 자른다. */

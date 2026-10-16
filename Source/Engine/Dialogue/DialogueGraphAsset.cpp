@@ -7,13 +7,16 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextGatherer.h"
-#include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "DialogueGraph" );
+
     namespace
     {
         /** @brief 특성 테이블이 타입 값 순서대로인지 확인합니다. `findNodeInfo` 가 값으로 바로 찾습니다. */
@@ -41,12 +44,13 @@ namespace sw
         if ( path.empty() )
             return false;
 
-        JSONDocument doc;
-        if ( doc.loadPath( path ) == false )
+        string text;
+        if ( ResourceIO::readTextResource( path, text ) == false )
+        {
+            SW_LOG_WARNING( "Could not read dialogue graph '%#'", path );
             return false;
-        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseJSON 에 다시 넘기지 않는다).
-        parseRoot( doc.getRoot() );
-        return true;
+        }
+        return readText( text, path );
     }
 
     bool DialogueGraphAsset::saveToFile( string_view path ) const
@@ -59,100 +63,59 @@ namespace sw
 
     bool DialogueGraphAsset::parseJSON( string_view jsonView )
     {
-        _listNode.clear();
-        _listLink.clear();
-
-        JSONDocument doc;
-        if ( doc.parse( jsonView ) == false )
-            return false;
-
-        parseRoot( doc.getRoot() );
-        return true;
+        return readText( jsonView, "<dialogue graph text>" );
     }
 
-    void DialogueGraphAsset::parseRoot( const JSONValue& root )
+    bool DialogueGraphAsset::readText( string_view json, string_view sourceLabel )
     {
-        forEachObjectInArray( root, "nodes", [this]( const JSONValue& nodeJSON, size_t /*nodeIndex*/ )
-        {
-            DialogueAssetNode node{};
-            node._id            = static_cast<int32>( nodeJSON.get( "id" ).asInt( 0 ) );
-            node._type          = parseNodeType( nodeJSON.get( "type" ).asString() );
-            node._speaker       = nodeJSON.get( "speaker" ).asString();
-            node._text          = nodeJSON.get( "text" ).asString();
-            node._condition     = nodeJSON.get( "condition" ).asString();
-            node._actionCommand = nodeJSON.get( "action" ).asString();
-            node._position._x   = static_cast<float32>( nodeJSON.get( "x" ).asFloat( 40.0 ) );
-            node._position._y   = static_cast<float32>( nodeJSON.get( "y" ).asFloat( 40.0 ) );
+        _listNode.clear();
+        _listLink.clear();
+        const string label{ sourceLabel };
+        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 모르는 노드 종류 · 읽지 못한 값 · 빠진 필수 칸은 오류다(`readConfigJSON` 이 로그로 알린다).
+        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) && validateFile( sourceLabel ) )
+            return true;
+        _listNode.clear();
+        _listLink.clear();
+        return false;
+    }
 
-            // 선택지는 **문자열 배열**이라 객체만 거르는 위 도우미가 맞지 않는다. 여기서 그대로 읽는다.
-            const JSONValue choicesVal = nodeJSON.get( "choices" );
-            if ( choicesVal.isArray() )
+    bool DialogueGraphAsset::validateFile( string_view sourceLabel ) const
+    {
+        bool bValid = true;
+        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
+        {
+            const int32 nodeID     = _listNode[nodeIndex]._id;
+            bool        bDuplicate = false;
+            for ( size_t previousIndex = 0; previousIndex < nodeIndex; ++previousIndex )
             {
-                const size_t choiceCount = choicesVal.size();
-                node._listChoice.reserve( choiceCount );
-                for ( size_t choiceIndex = 0; choiceIndex < choiceCount; ++choiceIndex )
-                {
-                    node._listChoice.push_back( choicesVal.at( choiceIndex ).asString() );
-                }
+                bDuplicate = bDuplicate || _listNode[previousIndex]._id == nodeID;
             }
-
-            if ( node._id > 0 )
-                _listNode.push_back( std::move( node ) );
-        } );
-
-        forEachObjectInArray( root, "links", [this]( const JSONValue& linkJSON, size_t linkIndex )
+            if ( nodeID > 0 && bDuplicate == false )
+                continue;
+            SW_LOG_ERROR( "Dialogue graph '%#': node %# needs a unique _id of 1 or more (has %#)", sourceLabel, nodeIndex, nodeID );
+            bValid = false;
+        }
+        for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
         {
-            DialogueAssetLink link{};
-            // id 가 없으면 순번을 쓴다. 손으로 적은 파일이 id 를 빼먹는 일이 있다.
-            link._id      = static_cast<int32>( linkJSON.get( "id" ).asInt( static_cast<int32>( linkIndex + 1 ) ) );
-            link._fromPin = static_cast<int32>( linkJSON.get( "from" ).asInt( 0 ) );
-            link._toPin   = static_cast<int32>( linkJSON.get( "to" ).asInt( 0 ) );
-            if ( link._fromPin > 0 && link._toPin > 0 )
-                _listLink.push_back( link );
-        } );
+            const DialogueAssetLink& link       = _listLink[linkIndex];
+            bool                     bDuplicate = false;
+            for ( size_t previousIndex = 0; previousIndex < linkIndex; ++previousIndex )
+            {
+                bDuplicate = bDuplicate || _listLink[previousIndex]._id == link._id;
+            }
+            const bool bValidLink = link._id > 0 && bDuplicate == false && link._fromPin > 0 && link._toPin > 0;
+            if ( bValidLink )
+                continue;
+            SW_LOG_ERROR( "Dialogue graph '%#': link %# needs a unique _id of 1 or more and two pins (id %#, %# -> %#)", sourceLabel, linkIndex, link._id,
+                          link._fromPin, link._toPin );
+            bValid = false;
+        }
+        return bValid;
     }
 
     string DialogueGraphAsset::toJSON() const
     {
-        JSONDocument    doc;
-        const JSONValue root = doc.makeObject();
-
-        const JSONValue nodesVal = root.set( "nodes" );
-        nodesVal.setArray();
-        for ( const DialogueAssetNode& node : _listNode )
-        {
-            const JSONValue nodeJSON = nodesVal.pushBack();
-            nodeJSON.setObject();
-            nodeJSON.set( "id" ).setInt( node._id );
-            nodeJSON.set( "type" ).setString( nodeTypeName( node._type ) );
-            nodeJSON.set( "speaker" ).setString( node._speaker );
-            nodeJSON.set( "text" ).setString( node._text );
-            nodeJSON.set( "condition" ).setString( node._condition );
-            nodeJSON.set( "action" ).setString( node._actionCommand );
-
-            const JSONValue choicesVal = nodeJSON.set( "choices" );
-            choicesVal.setArray();
-            for ( const string& choice : node._listChoice )
-            {
-                choicesVal.pushBack().setString( choice );
-            }
-
-            nodeJSON.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
-            nodeJSON.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
-        }
-
-        const JSONValue linksVal = root.set( "links" );
-        linksVal.setArray();
-        for ( const DialogueAssetLink& link : _listLink )
-        {
-            const JSONValue linkJSON = linksVal.pushBack();
-            linkJSON.setObject();
-            linkJSON.set( "id" ).setInt( link._id );
-            linkJSON.set( "from" ).setInt( link._fromPin );
-            linkJSON.set( "to" ).setInt( link._toPin );
-        }
-
-        return doc.dump( 2 );
+        return JSONSerializer::serializePretty( this, *StaticType(), 2 );
     }
 
     const DialogueAssetNode* DialogueGraphAsset::findStartNode() const
@@ -246,16 +209,6 @@ namespace sw
     {
         const DialogueNodeInfo* pInfo = findNodeInfo( type );
         return pInfo != nullptr ? pInfo->_pName : "Unknown";
-    }
-
-    DialogueAssetNodeType DialogueGraphAsset::parseNodeType( string_view typeStr )
-    {
-        for ( const DialogueNodeInfo& info : kArrDialogueNodeInfo )
-        {
-            if ( typeStr == info._pName )
-                return info._type;
-        }
-        return DialogueAssetNodeType::Dialogue;
     }
 
     const DialogueNodeInfo* DialogueGraphAsset::findNodeInfo( DialogueAssetNodeType type )

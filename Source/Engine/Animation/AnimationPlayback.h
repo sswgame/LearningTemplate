@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/AnimationNotifyPhase.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -92,12 +93,19 @@ namespace sw
      * @struct AnimationNotifyEvent
      * @brief 클립 시각에 붙은 이름 하나입니다(발소리, 칼 휘두름 시작). `_duration` 이 0 보다 크면 구간 알림(NotifyState)입니다.
      *        시작 시각을 지날 때 `Begin`, 끝 시각(시작 + 길이, 한 바퀴 끝을 넘지 않음)을 지날 때 `End` 가 울립니다.
+     *        스프라이트 클립 파일(`SpriteClipAsset`)은 이 구조체를 리플렉션으로 읽고 씁니다.
      */
-    struct AnimationNotifyEvent
+    REFLECT()
+    struct SW_API AnimationNotifyEvent
     {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Notify name the listeners match" )
         hashed_string _name;
-        float32       _time{ 0.0f };
-        float32       _duration{ 0.0f };
+        PROPERTY( Units = s, Tooltip = "Clip time of the notify, from the start of its range" )
+        float32 _time{ 0.0f };
+        PROPERTY( Units = s, Tooltip = "Length of a state notify (0: a one-shot notify)" )
+        float32 _duration{ 0.0f };
     };
 } // namespace sw
 

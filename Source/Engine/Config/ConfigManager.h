@@ -196,7 +196,7 @@ namespace sw
 
         /**
          * @brief 설정 JSON 하나를 @p pInstance 에 엄격하게 읽습니다.
-         * @details 모르는 키, 대소문자만 다른 키, 읽지 못한 값, `PROPERTY( Min/Max )` 밖 숫자를 **모두** 키 이름과 @p pSourceLabel 로 오류 로그에 남기고
+         * @details 모르는 키, 대소문자만 다른 키, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )` — 구조체 칸 · 구조체 목록 원소 안까지), `PROPERTY( Min/Max )` 밖 숫자를 **모두** 키 이름과 @p pSourceLabel 로 오류 로그에 남기고
          *          false 를 반환한다(첫 오류에서 멈추지 않는다. 한 번에 다 고치게 하려는 것이다). 설정이 아닌 리플렉션 타입(`EditorToolDefaults`)도 이 함수로 읽는다.
          *          구조체 필드 안의 모르는 키는 바깥 필드 이름과 본문으로 표시된다.
          */

@@ -17,6 +17,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
@@ -234,7 +235,8 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipFileRoundTripsAndRejectsMalformedBytes 
 }
 
 /**
- * @brief [SkeletalAnimationTest] 스켈레톤 JSON 왕복과 검증 — 모르는 키 · 앞에 없는 부모 · 없는 본을 가리키는 부착은 로드 오류다
+ * @brief [SkeletalAnimationTest] 스켈레톤 JSON 왕복과 검증 — 모르는 키 · 빠진 필수 키 · 앞에 없는 부모 · 없는 본을 가리키는 부착은 로드 오류다
+ * @details 키는 리플렉션 PROPERTY 이름이고 모두 `Required` 다. 빠진 `_parentIndex` 를 초기값(-1)으로 읽으면 그 본이 조용히 루트가 된다.
  */
 SW_TEST_CASE( SkeletalAnimationTest, SkeletonJSONRoundTripsAndValidates )
 {
@@ -246,23 +248,57 @@ SW_TEST_CASE( SkeletalAnimationTest, SkeletonJSONRoundTripsAndValidates )
     attachment._localTransform = test::makeBoneTransform( float3{ 0.0f, 0.1f, 0.0f } );
     skeleton.addAttachment( attachment );
 
-    Skeleton loaded;
-    SW_ASSERT_TRUE( loaded.parseJSON( skeleton.toJSON(), "round trip" ) );
+    const string written = skeleton.toJSON();
+    Skeleton     loaded;
+    SW_ASSERT_TRUE( loaded.parseJSON( written, "round trip" ) );
     SW_EXPECT_EQUAL( 3u, loaded.getBoneCount() );
     SW_EXPECT_EQUAL( 1, loaded.getBone( 2 )._parentIndex );
+    SW_EXPECT_EQUAL( 1, loaded.getParentIndices()[2] );
     SW_EXPECT_NEAR_EQUAL( -1.0f, loaded.getBone( 1 )._inverseBind._42, 1e-5f );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( loaded.getAttachments().size() ) );
     SW_EXPECT_TRUE( loaded.getAttachments()[0]._parentBone == hashed_string( "bone2" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, loaded.getAttachments()[0]._localTransform._translation._y, 1e-6f );
+    SW_EXPECT_STREQ( written.c_str(), loaded.toJSON().c_str() ); // 다시 읽어 쓰면 바이트까지 같다
 
     test::ScopedDefensiveTestLog expected( "malformed skeleton data is rejected" );
-    string                       unknownKey = skeleton.toJSON();
-    unknownKey.replace( unknownKey.find( "\"parent\"" ), 8, "\"parnt\": 0, \"parent\"" );
+    string                       unknownKey = written;
+    unknownKey.replace( unknownKey.find( "\"_parentIndex\"" ), 14, "\"_parnt\": 0, \"_parentIndex\"" );
     Skeleton broken;
     SW_EXPECT_FALSE( broken.parseJSON( unknownKey, "unknown key" ) );
     SW_EXPECT_EQUAL( 0u, broken.getBoneCount() );
-    string badBone = skeleton.toJSON();
-    badBone.replace( badBone.find( "\"bone2\"", badBone.find( "\"attachments\"" ) ), 7, "\"bone9\"" );
+    // 첫 본의 `_parentIndex` 줄을 지운다 — 남은 글은 올바른 JSON 이고 모르는 키도 없다.
+    string       missingKey   = written;
+    const size_t missingStart = missingKey.find( "\"_parentIndex\"" );
+    missingKey.erase( missingStart, missingKey.find( '\n', missingStart ) + 1 - missingStart );
+    SW_EXPECT_FALSE( broken.parseJSON( missingKey, "missing parent index" ) );
+    string badBone = written;
+    badBone.replace( badBone.find( "\"bone2\"", badBone.find( "\"_listAttachment\"" ) ), 7, "\"bone9\"" );
     SW_EXPECT_FALSE( broken.parseJSON( badBone, "unknown attachment bone" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "bones": [], "attachments": [] })", "old keys" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listBone": [], "_listAttachment": [] })", "no bones" ) );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 저장소의 스켈레톤 파일은 엔진이 쓰는 글 그대로다 — 읽고 다시 쓰면 바이트까지 같다
+ * @details 임포트 결과 스켈레톤은 `import.stamp` 가 바이트 해시로 대조한다. 엔진 저장 형식과 어긋난 파일은 다시 임포트할 때마다 바뀐다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, RepositorySkeletonResavesByteForByte )
+{
+    const utf8* const arrSkeletonPath[] = {
+        "game/empty/models/testhead/testhead.skeleton.json",
+        "game/shooter3d/rigs/knight_cape.skeleton.json",
+    };
+    for ( const utf8* pSkeletonPath : arrSkeletonPath )
+    {
+        string fileText;
+        SW_ASSERT_TRUE_MSG( ResourceIO::readTextResource( pSkeletonPath, fileText ), pSkeletonPath );
+        // core.autocrlf 체크아웃은 줄끝을 CRLF 로 바꿀 수 있다 — 저장소의 바이트(LF)로 비교한다.
+        fileText.erase( std::remove( fileText.begin(), fileText.end(), '\r' ), fileText.end() );
+        Skeleton skeleton;
+        SW_ASSERT_TRUE_MSG( skeleton.loadFromResource( pSkeletonPath ), pSkeletonPath );
+        SW_EXPECT_TRUE( skeleton.getBoneCount() > 0u );
+        SW_EXPECT_TRUE_MSG( fileText == skeleton.toJSON(), pSkeletonPath );
+    }
 }
 
 /**

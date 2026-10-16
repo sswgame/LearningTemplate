@@ -6,119 +6,73 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include <algorithm>
 
 namespace sw
 {
+    SW_LOG_CALLER( "SequenceAsset" );
+
     namespace
     {
-        struct SequenceAssetInternal
+        /** @brief 프레임 번호가 `kSequenceFrameLimit` 안이면 true 입니다. 밖이면 오류를 남깁니다(@p pWhat 은 칸 이름). */
+        bool isFrameWithinLimit( float64 frame, string_view sourceLabel, const utf8* pWhat )
         {
-            /**
-             * @brief JSON 이 준 프레임 번호를 다룰 수 있는 범위로 자릅니다.
-             * @details `asInt` 는 int64 를 줍니다. int32 로 그냥 캐스팅하면 큰 값이 **음수로 접힙니다.**
-             *          자르는 이유는 `kSequenceFrameLimit` 에 적혀 있습니다.
-             */
-            static int32 clampFrame( int64 value )
-            {
-                const int64 limit = static_cast<int64>( kSequenceFrameLimit );
-                return static_cast<int32>( MathUtil::clamp( value, -limit, limit ) );
-            }
-
-            /** @brief 정수 종류 값을 int32 로 자릅니다. 모르는 값도 지우지 않고 그대로 둔다(다시 쓸 때 잃지 않는다). */
-            static int32 clampKindValue( int64 rawKind )
-            {
-                return static_cast<int32>( MathUtil::clamp<int64>( rawKind, MathUtil::kMinInt32, MathUtil::kMaxInt32 ) );
-            }
-
-            static void readCurve( const JSONValue& channelJSON, FloatCurve& outCurve )
-            {
-                outCurve._listKey.clear();
-                const float64 limit = static_cast<float64>( kSequenceFrameLimit );
-                forEachObjectInArray( channelJSON, "keys", [&outCurve, limit]( const JSONValue& keyJSON, size_t /*keyIndex*/ )
-                {
-                    FloatCurveKey key{};
-                    key._time                    = static_cast<float32>( MathUtil::clamp( keyJSON.get( "time" ).asFloat( 0.0 ), -limit, limit ) );
-                    key._value                   = static_cast<float32>( keyJSON.get( "value" ).asFloat( 0.0 ) );
-                    key._arriveTangent           = static_cast<float32>( keyJSON.get( "arriveTangent" ).asFloat( 0.0 ) );
-                    key._leaveTangent            = static_cast<float32>( keyJSON.get( "leaveTangent" ).asFloat( 0.0 ) );
-                    const int64 rawInterpolation = keyJSON.get( "interpolation" ).asInt( static_cast<int64>( CurveInterpolation::Cubic ) );
-                    key._interpolation           = ( rawInterpolation >= 0 && rawInterpolation <= static_cast<int64>( CurveInterpolation::Cubic ) )
-                                                     ? static_cast<CurveInterpolation>( rawInterpolation )
-                                                     : CurveInterpolation::Cubic;
-                    key._bAutoTangent            = keyJSON.get( "autoTangent" ).asBool( true );
-                    outCurve._listKey.push_back( key );
-                } );
-                outCurve.sortAndComputeAutoTangents();
-            }
-
-            static void writeCurve( const JSONValue& channelJSON, const FloatCurve& curve )
-            {
-                channelJSON.setObject();
-                const JSONValue keysJSON = channelJSON.set( "keys" );
-                keysJSON.setArray();
-                for ( const FloatCurveKey& key : curve._listKey )
-                {
-                    const JSONValue keyJSON = keysJSON.pushBack();
-                    keyJSON.setObject();
-                    keyJSON.set( "time" ).setFloat( static_cast<float64>( key._time ) );
-                    keyJSON.set( "value" ).setFloat( static_cast<float64>( key._value ) );
-                    keyJSON.set( "arriveTangent" ).setFloat( static_cast<float64>( key._arriveTangent ) );
-                    keyJSON.set( "leaveTangent" ).setFloat( static_cast<float64>( key._leaveTangent ) );
-                    keyJSON.set( "interpolation" ).setInt( static_cast<int32>( key._interpolation ) );
-                    keyJSON.set( "autoTangent" ).setBool( key._bAutoTangent );
-                }
-            }
-
-            /** @brief 채널 하나의 @p frame 키를 찍습니다(있으면 값만 바꾼다). */
-            static void setCurveKey( FloatCurve& curve, float32 frame, float32 value )
-            {
-                for ( FloatCurveKey& key : curve._listKey )
-                {
-                    if ( MathUtil::abs( key._time - frame ) < kSequenceKeyFrameTolerance )
-                    {
-                        key._value = value;
-                        curve.sortAndComputeAutoTangents();
-                        return;
-                    }
-                }
-                (void)curve.addKey( frame, value );
-            }
-
-            /** @brief 종류 테이블이 값 순서인지 확인합니다. `findItemKindInfo` 가 값으로 바로 찾습니다. */
-            static constexpr bool isKindTableOrdered()
-            {
-                for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindInfo ); ++kindIndex )
-                {
-                    if ( kArrSequenceItemKindInfo[kindIndex]._kind != static_cast<SequenceItemKind>( kindIndex ) )
-                        return false;
-                }
+            const float64 limit = static_cast<float64>( kSequenceFrameLimit );
+            if ( -limit <= frame && frame <= limit )
                 return true;
-            }
-        };
+            SW_LOG_ERROR( "Sequence '%#': %# %# is outside +-%# frames", sourceLabel, pWhat, frame, kSequenceFrameLimit );
+            return false;
+        }
 
-        static_assert( SequenceAssetInternal::isKindTableOrdered(), "kArrSequenceItemKindInfo must be ordered by SequenceItemKind" );
+        /** @brief 채널 하나의 @p frame 키를 찍습니다(있으면 값만 바꾼다). */
+        void setCurveKey( FloatCurve& curve, float32 frame, float32 value )
+        {
+            for ( FloatCurveKey& key : curve._listKey )
+            {
+                if ( MathUtil::abs( key._time - frame ) < kSequenceKeyFrameTolerance )
+                {
+                    key._value = value;
+                    curve.sortAndComputeAutoTangents();
+                    return;
+                }
+            }
+            (void)curve.addKey( frame, value );
+        }
+
+        /** @brief 종류 테이블이 값 순서인지 확인합니다. `findItemKindInfo` 가 값으로 바로 찾습니다. */
+        constexpr bool isKindTableOrdered()
+        {
+            for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindInfo ); ++kindIndex )
+            {
+                if ( kArrSequenceItemKindInfo[kindIndex]._kind != static_cast<SequenceItemKind>( kindIndex ) )
+                    return false;
+            }
+            return true;
+        }
+
+        static_assert( isKindTableOrdered(), "kArrSequenceItemKindInfo must be ordered by SequenceItemKind" );
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SequenceAsset" );
-
     bool SequenceAsset::loadFromFile( string_view path )
     {
         *this = SequenceAsset{};
         if ( path.empty() )
             return false;
 
-        JSONDocument doc;
-        if ( doc.loadPath( path ) == false )
+        string text;
+        if ( ResourceIO::readTextResource( path, text ) == false )
+        {
+            SW_LOG_WARNING( "Could not read sequence '%#'", path );
             return false;
-        // 읽은 문서를 **그대로** 읽는다(문자열로 되돌렸다가 다시 파싱하지 않는다).
-        return parseRoot( doc.getRoot() );
+        }
+        return readText( text, path );
     }
 
     bool SequenceAsset::saveToFile( string_view path ) const
@@ -131,129 +85,81 @@ namespace sw
 
     bool SequenceAsset::parseJSON( string_view jsonView )
     {
-        JSONDocument doc;
-        if ( doc.parse( jsonView ) == false )
+        return readText( jsonView, "<sequence text>" );
+    }
+
+    bool SequenceAsset::readText( string_view json, string_view sourceLabel )
+    {
+        // 반쯤 찬 에셋을 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
+        *this = SequenceAsset{};
+        const string label{ sourceLabel };
+        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigJSON` 이 로그로 알린다).
+        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) == false || validateFile( sourceLabel ) == false )
         {
-            // 반쯤 찬 에셋을 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
             *this = SequenceAsset{};
             return false;
         }
-        return parseRoot( doc.getRoot() );
+        // 커브는 시각 순이어야 한다(`FloatCurve`). 손으로 고친 파일도 같은 순서 · 자동 접선이 되게 다시 센다.
+        for ( SequenceKeyTrack& track : _listTrack )
+        {
+            for ( FloatCurve& channel : track._listChannel )
+            {
+                channel.sortAndComputeAutoTangents();
+            }
+        }
+        return true;
     }
 
-    bool SequenceAsset::parseRoot( const JSONValue& root )
+    bool SequenceAsset::validateFile( string_view sourceLabel ) const
     {
-        _listItem.clear();
-        _listTrack.clear();
-
-        // 파일에서 온 프레임 번호는 여기서 한 번 잘라 둔다. 아래의 `+ 1` 과 재생/타임라인 쪽의
-        // 뺄셈들이 넘치지 않는 것은 이 잘라 둠에 기댄다. 자세한 이유는 `kSequenceFrameLimit` 참고.
-        _frameMin = SequenceAssetInternal::clampFrame( root.get( "frameMin" ).asInt( 0 ) );
-        _frameMax = SequenceAssetInternal::clampFrame( root.get( "frameMax" ).asInt( 100 ) );
-        _note     = root.get( "note" ).asString();
+        // 프레임 번호는 `kSequenceFrameLimit` 안이어야 아래의 `+ 1` 과 재생 · 타임라인 쪽의 뺄셈들이 넘치지 않는다.
+        bool bValid = isFrameWithinLimit( _frameMin, sourceLabel, "_frameMin" );
+        bValid      = isFrameWithinLimit( _frameMax, sourceLabel, "_frameMax" ) && bValid;
+        bValid      = isFrameWithinLimit( _cameraPrerollFrames, sourceLabel, "_cameraPrerollFrames" ) && bValid;
         if ( _frameMax <= _frameMin )
-            _frameMax = _frameMin + 1;
-        _cameraBlendInSeconds  = MathUtil::max( 0.0f, static_cast<float32>( root.get( "cameraBlendIn" ).asFloat( 0.0 ) ) );
-        _cameraBlendOutSeconds = MathUtil::max( 0.0f, static_cast<float32>( root.get( "cameraBlendOut" ).asFloat( 0.0 ) ) );
-        _cameraPrerollFrames   = MathUtil::max( 0, SequenceAssetInternal::clampFrame( root.get( "cameraPreroll" ).asInt( 0 ) ) );
-
-        forEachObjectInArray( root, "items", [this]( const JSONValue& itemJSON, size_t /*itemIndex*/ )
         {
-            SequenceTrackItem item{};
-            item._name         = itemJSON.get( "name" ).asString();
-            item._targetObject = itemJSON.get( "target" ).asString();
-            item._start        = SequenceAssetInternal::clampFrame( itemJSON.get( "start" ).asInt( 0 ) );
-            item._end          = SequenceAssetInternal::clampFrame( itemJSON.get( "end" ).asInt( 10 ) );
-            // 종류는 정수 그대로 둔다. 모르는 값(새 버전이 쓴 종류)도 다시 쓸 때 잃지 않고, 적용만 하지 않는다.
-            const int64 rawKind = itemJSON.get( "type" ).asInt( 0 );
-            item._kind          = static_cast<SequenceItemKind>( SequenceAssetInternal::clampKindValue( rawKind ) );
-            if ( findItemKindInfo( item._kind ) == nullptr )
-                SW_LOG_WARNING( "Sequence item '%#' has unknown type %# - it is kept but not applied", item._name, rawKind );
-            item._color         = static_cast<uint32>( itemJSON.get( "color" ).asUint( 0xFFAA8080u ) );
-            item._preset        = itemJSON.get( "preset" ).asString();
-            item._amplitude     = static_cast<float32>( itemJSON.get( "amplitude" ).asFloat( 1.0 ) );
-            item._prerollFrames = SequenceAssetInternal::clampFrame( itemJSON.get( "preroll" ).asInt( SequenceTrackItem::kUseSequencePreroll ) );
-            if ( item._prerollFrames < 0 )
-                item._prerollFrames = SequenceTrackItem::kUseSequencePreroll;
-            _listItem.push_back( std::move( item ) );
-        } );
-
-        forEachObjectInArray( root, "tracks", [this]( const JSONValue& trackJSON, size_t /*trackIndex*/ )
+            SW_LOG_ERROR( "Sequence '%#': _frameMax %# must be after _frameMin %#", sourceLabel, _frameMax, _frameMin );
+            bValid = false;
+        }
+        for ( const SequenceTrackItem& item : _listItem )
         {
-            SequenceKeyTrack track{};
-            track._name         = trackJSON.get( "name" ).asString();
-            track._targetObject = trackJSON.get( "target" ).asString();
-            track._propertyPath = trackJSON.get( "property" ).asString();
-            const int64 rawKind = trackJSON.get( "type" ).asInt( 0 );
-            track._kind         = static_cast<SequenceTrackKind>( SequenceAssetInternal::clampKindValue( rawKind ) );
-            if ( SequenceKeyTrack::getChannelCount( track._kind ) == 0 )
-                SW_LOG_WARNING( "Sequence track '%#' has unknown type %# - it is kept but not applied", track._name, rawKind );
-            forEachObjectInArray( trackJSON, "channels", [&track]( const JSONValue& channelJSON, size_t /*channelIndex*/ )
+            bValid = isFrameWithinLimit( item._start, sourceLabel, "_start" ) && bValid;
+            bValid = isFrameWithinLimit( item._end, sourceLabel, "_end" ) && bValid;
+            bValid = isFrameWithinLimit( item._prerollFrames, sourceLabel, "_prerollFrames" ) && bValid;
+            if ( item._prerollFrames < SequenceTrackItem::kUseSequencePreroll )
             {
-                FloatCurve curve{};
-                SequenceAssetInternal::readCurve( channelJSON, curve );
-                track._listChannel.push_back( std::move( curve ) );
-            } );
-            track.fitChannelsToKind();
-            _listTrack.push_back( std::move( track ) );
-        } );
-        return true;
+                SW_LOG_ERROR( "Sequence '%#': item '%#' _prerollFrames %# must be 0 or more (-1: the sequence value)", sourceLabel, item._name, item._prerollFrames );
+                bValid = false;
+            }
+            if ( findItemKindInfo( item._kind ) == nullptr )
+            {
+                SW_LOG_ERROR( "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
+                bValid = false;
+            }
+        }
+        for ( const SequenceKeyTrack& track : _listTrack )
+        {
+            const uint32 channelCount = SequenceKeyTrack::getChannelCount( track._kind );
+            if ( channelCount == 0 || track._listChannel.size() != channelCount )
+            {
+                SW_LOG_ERROR( "Sequence '%#': track '%#' needs %# channel(s) for its kind, has %#", sourceLabel, track._name, channelCount,
+                              track._listChannel.size() );
+                bValid = false;
+            }
+            for ( const FloatCurve& channel : track._listChannel )
+            {
+                for ( const FloatCurveKey& key : channel._listKey )
+                {
+                    bValid = isFrameWithinLimit( key._time, sourceLabel, "key _time" ) && bValid;
+                }
+            }
+        }
+        return bValid;
     }
 
     string SequenceAsset::toJSON() const
     {
-        JSONDocument    doc;
-        const JSONValue root = doc.makeObject();
-        root.set( "frameMin" ).setInt( _frameMin );
-        root.set( "frameMax" ).setInt( _frameMax );
-        root.set( "note" ).setString( _note );
-        // 카메라 블렌드 · 프리롤은 기본값이 아닐 때만 쓴다 — 카메라를 쓰지 않는 시퀀스 파일은 바이트가 그대로다.
-        if ( _cameraBlendInSeconds > 0.0f )
-            root.set( "cameraBlendIn" ).setFloat( static_cast<float64>( _cameraBlendInSeconds ) );
-        if ( _cameraBlendOutSeconds > 0.0f )
-            root.set( "cameraBlendOut" ).setFloat( static_cast<float64>( _cameraBlendOutSeconds ) );
-        if ( _cameraPrerollFrames > 0 )
-            root.set( "cameraPreroll" ).setInt( _cameraPrerollFrames );
-
-        const JSONValue itemsVal = root.set( "items" );
-        itemsVal.setArray();
-        for ( const SequenceTrackItem& item : _listItem )
-        {
-            const JSONValue itemJSON = itemsVal.pushBack();
-            itemJSON.setObject();
-            itemJSON.set( "name" ).setString( item._name );
-            itemJSON.set( "target" ).setString( item._targetObject );
-            itemJSON.set( "start" ).setInt( item._start );
-            itemJSON.set( "end" ).setInt( item._end );
-            itemJSON.set( "type" ).setInt( static_cast<int32>( item._kind ) );
-            itemJSON.set( "color" ).setUint( item._color );
-            if ( item._preset.empty() == false )
-                itemJSON.set( "preset" ).setString( item._preset );
-            if ( item._amplitude != 1.0f )
-                itemJSON.set( "amplitude" ).setFloat( static_cast<float64>( item._amplitude ) );
-            if ( item._prerollFrames != SequenceTrackItem::kUseSequencePreroll )
-                itemJSON.set( "preroll" ).setInt( item._prerollFrames );
-        }
-
-        const JSONValue tracksVal = root.set( "tracks" );
-        tracksVal.setArray();
-        for ( const SequenceKeyTrack& track : _listTrack )
-        {
-            const JSONValue trackJSON = tracksVal.pushBack();
-            trackJSON.setObject();
-            trackJSON.set( "name" ).setString( track._name );
-            trackJSON.set( "target" ).setString( track._targetObject );
-            trackJSON.set( "type" ).setInt( static_cast<int32>( track._kind ) );
-            trackJSON.set( "property" ).setString( track._propertyPath );
-            const JSONValue channelsVal = trackJSON.set( "channels" );
-            channelsVal.setArray();
-            for ( const FloatCurve& channel : track._listChannel )
-            {
-                SequenceAssetInternal::writeCurve( channelsVal.pushBack(), channel );
-            }
-        }
-
-        return doc.dump( 2 );
+        return JSONSerializer::serializePretty( this, *StaticType(), 2 );
     }
 
     const SequenceItemKindInfo* SequenceAsset::findItemKindInfo( SequenceItemKind kind )
@@ -351,7 +257,7 @@ namespace sw
         const uint32 channelCount = static_cast<uint32>( _listChannel.size() );
         for ( uint32 channelIndex = 0; channelIndex < channelCount && channelIndex < valueCount; ++channelIndex )
         {
-            SequenceAssetInternal::setCurveKey( _listChannel[channelIndex], frame, pArrValue[channelIndex] );
+            setCurveKey( _listChannel[channelIndex], frame, pArrValue[channelIndex] );
         }
     }
 
@@ -359,7 +265,7 @@ namespace sw
     {
         if ( channelIndex >= _listChannel.size() )
             return false;
-        SequenceAssetInternal::setCurveKey( _listChannel[channelIndex], frame, value );
+        setCurveKey( _listChannel[channelIndex], frame, value );
         return true;
     }
 

@@ -471,14 +471,14 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentBasicFlow )
     DialogueRunnerComponent runner;
 
     const string testJSON = R"({
-		"nodes": [
-			{ "id": 1, "type": "Start" },
-			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "Hello traveler!" },
-			{ "id": 3, "type": "End" }
+		"_listNode": [
+			{ "_id": 1, "_type": "Start" },
+			{ "_id": 2, "_type": "Dialogue", "_speaker": "NPC", "_text": "Hello traveler!" },
+			{ "_id": 3, "_type": "End" }
 		],
-		"links": [
-			{ "from": 102, "to": 201 },
-			{ "from": 202, "to": 301 }
+		"_listLink": [
+			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
+			{ "_id": 2, "_fromPin": 202, "_toPin": 301 }
 		]
 	})";
 
@@ -519,21 +519,21 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
     runner.setFlags( &flags );
 
     const string testJSON = R"({
-		"nodes": [
-			{ "id": 1, "type": "Start" },
-			{ "id": 2, "type": "Choice", "speaker": "Guide", "text": "Take quest?", "choices": ["Accept", "Decline"] },
-			{ "id": 3, "type": "Action", "action": "set_flag:quest_started:1" },
-			{ "id": 4, "type": "Dialogue", "speaker": "Guide", "text": "Quest accepted!" },
-			{ "id": 5, "type": "Dialogue", "speaker": "Guide", "text": "Maybe next time." },
-			{ "id": 6, "type": "End" }
+		"_listNode": [
+			{ "_id": 1, "_type": "Start" },
+			{ "_id": 2, "_type": "Choice", "_speaker": "Guide", "_text": "Take quest?", "_listChoice": ["Accept", "Decline"] },
+			{ "_id": 3, "_type": "Action", "_actionCommand": "set_flag:quest_started:1" },
+			{ "_id": 4, "_type": "Dialogue", "_speaker": "Guide", "_text": "Quest accepted!" },
+			{ "_id": 5, "_type": "Dialogue", "_speaker": "Guide", "_text": "Maybe next time." },
+			{ "_id": 6, "_type": "End" }
 		],
-		"links": [
-			{ "from": 102, "to": 201 },
-			{ "from": 210, "to": 301 },
-			{ "from": 211, "to": 501 },
-			{ "from": 302, "to": 401 },
-			{ "from": 402, "to": 601 },
-			{ "from": 502, "to": 601 }
+		"_listLink": [
+			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
+			{ "_id": 2, "_fromPin": 210, "_toPin": 301 },
+			{ "_id": 3, "_fromPin": 211, "_toPin": 501 },
+			{ "_id": 4, "_fromPin": 302, "_toPin": 401 },
+			{ "_id": 5, "_fromPin": 402, "_toPin": 601 },
+			{ "_id": 6, "_fromPin": 502, "_toPin": 601 }
 		]
 	})";
 
@@ -572,16 +572,16 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
     // Start(1) Output(102) -> Dialogue(2) Input(201)
     // Dialogue(2) Choice 0(210) -> End(3) Input(301)
     const string testJSON = R"({
-		"nodes": [
-			{ "id": 1, "type": "Start" },
-			{ "id": 2, "type": "Choice", "speaker": "Guide", "text": "Are you ready?", "choices": ["Yes", "No"] },
-			{ "id": 3, "type": "Dialogue", "speaker": "Guide", "text": "Let us go!" },
-			{ "id": 4, "type": "Dialogue", "speaker": "Guide", "text": "Take your time." }
+		"_listNode": [
+			{ "_id": 1, "_type": "Start" },
+			{ "_id": 2, "_type": "Choice", "_speaker": "Guide", "_text": "Are you ready?", "_listChoice": ["Yes", "No"] },
+			{ "_id": 3, "_type": "Dialogue", "_speaker": "Guide", "_text": "Let us go!" },
+			{ "_id": 4, "_type": "Dialogue", "_speaker": "Guide", "_text": "Take your time." }
 		],
-		"links": [
-			{ "from": 102, "to": 201 },
-			{ "from": 210, "to": 301 },
-			{ "from": 211, "to": 401 }
+		"_listLink": [
+			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
+			{ "_id": 2, "_fromPin": 210, "_toPin": 301 },
+			{ "_id": 3, "_fromPin": 211, "_toPin": 401 }
 		]
 	})";
 
@@ -613,11 +613,11 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
     {
         DialogueRunnerComponent runner;
         runner.setFlags( &flags );
-        string json = R"({ "nodes": [ { "id": 1, "type": "Start" }, { "id": 2, "type": "Branch", "condition": ")";
+        string json = R"({ "_listNode": [ { "_id": 1, "_type": "Start" }, { "_id": 2, "_type": "Branch", "_condition": ")";
         json += pCondition;
-        json += R"(" }, { "id": 3, "type": "Dialogue", "speaker": "S", "text": "yes" },
-		                 { "id": 4, "type": "Dialogue", "speaker": "S", "text": "no" } ],
-		    "links": [ { "from": 102, "to": 201 }, { "from": 203, "to": 301 }, { "from": 204, "to": 401 } ] })";
+        json += R"(" }, { "_id": 3, "_type": "Dialogue", "_speaker": "S", "_text": "yes" },
+		                 { "_id": 4, "_type": "Dialogue", "_speaker": "S", "_text": "no" } ],
+		    "_listLink": [ { "_id": 1, "_fromPin": 102, "_toPin": 201 }, { "_id": 2, "_fromPin": 203, "_toPin": 301 }, { "_id": 3, "_fromPin": 204, "_toPin": 401 } ] })";
         SW_EXPECT_TRUE( runner.loadGraphJSON( json ) );
         SW_EXPECT_TRUE( runner.startDialogue() );
         return runner.getCurrentText() == "yes";
@@ -668,11 +668,11 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionAgreesWithWorldFlagConditions 
     {
         DialogueRunnerComponent runner;
         runner.setFlags( &flags );
-        string json = R"({ "nodes": [ { "id": 1, "type": "Start" }, { "id": 2, "type": "Branch", "condition": ")";
+        string json = R"({ "_listNode": [ { "_id": 1, "_type": "Start" }, { "_id": 2, "_type": "Branch", "_condition": ")";
         json += pCondition;
-        json += R"(" }, { "id": 3, "type": "Dialogue", "speaker": "S", "text": "yes" },
-		                 { "id": 4, "type": "Dialogue", "speaker": "S", "text": "no" } ],
-		    "links": [ { "from": 102, "to": 201 }, { "from": 203, "to": 301 }, { "from": 204, "to": 401 } ] })";
+        json += R"(" }, { "_id": 3, "_type": "Dialogue", "_speaker": "S", "_text": "yes" },
+		                 { "_id": 4, "_type": "Dialogue", "_speaker": "S", "_text": "no" } ],
+		    "_listLink": [ { "_id": 1, "_fromPin": 102, "_toPin": 201 }, { "_id": 2, "_fromPin": 203, "_toPin": 301 }, { "_id": 3, "_fromPin": 204, "_toPin": 401 } ] })";
         SW_EXPECT_TRUE( runner.loadGraphJSON( json ) );
         SW_EXPECT_TRUE( runner.startDialogue() );
         return runner.getCurrentText() == "yes";
@@ -1452,13 +1452,12 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_WarpLookupAndIndexCache )
 SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
 {
     const utf8* dialogueJSON = R"({
-		"startNodeID": 1,
-		"nodes": [
-			{ "id": 1, "type": "Action", "action": "CloseMenu" },
-			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "Should not appear" }
+		"_listNode": [
+			{ "_id": 1, "_type": "Action", "_actionCommand": "CloseMenu" },
+			{ "_id": 2, "_type": "Dialogue", "_speaker": "NPC", "_text": "Should not appear" }
 		],
-		"links": [
-			{ "id": 1, "from": 1, "to": 2 }
+		"_listLink": [
+			{ "_id": 1, "_fromPin": 1, "_toPin": 2 }
 		]
 	})";
 
@@ -2401,16 +2400,16 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrant
     DialogueRunnerComponent runner;
 
     const string testJSON = R"({
-		"nodes": [
-			{ "id": 1, "type": "Start" },
-			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "First line" },
-			{ "id": 3, "type": "Dialogue", "speaker": "NPC", "text": "Second line" },
-			{ "id": 4, "type": "End" }
+		"_listNode": [
+			{ "_id": 1, "_type": "Start" },
+			{ "_id": 2, "_type": "Dialogue", "_speaker": "NPC", "_text": "First line" },
+			{ "_id": 3, "_type": "Dialogue", "_speaker": "NPC", "_text": "Second line" },
+			{ "_id": 4, "_type": "End" }
 		],
-		"links": [
-			{ "from": 102, "to": 201 },
-			{ "from": 202, "to": 301 },
-			{ "from": 302, "to": 401 }
+		"_listLink": [
+			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
+			{ "_id": 2, "_fromPin": 202, "_toPin": 301 },
+			{ "_id": 3, "_fromPin": 302, "_toPin": 401 }
 		]
 	})";
     SW_ASSERT_TRUE( runner.loadGraphJSON( testJSON ) );
@@ -2445,16 +2444,16 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
     DialogueRunnerComponent runner;
 
     const string testJSON = R"({
-		"nodes": [
-			{ "id": 1, "type": "Start" },
-			{ "id": 2, "type": "Choice", "speaker": "Guide", "text": "Pick", "choices": ["Alpha", "Beta", "Gamma"] },
-			{ "id": 3, "type": "Dialogue", "speaker": "Guide", "text": "Took Beta" },
-			{ "id": 4, "type": "End" }
+		"_listNode": [
+			{ "_id": 1, "_type": "Start" },
+			{ "_id": 2, "_type": "Choice", "_speaker": "Guide", "_text": "Pick", "_listChoice": ["Alpha", "Beta", "Gamma"] },
+			{ "_id": 3, "_type": "Dialogue", "_speaker": "Guide", "_text": "Took Beta" },
+			{ "_id": 4, "_type": "End" }
 		],
-		"links": [
-			{ "from": 102, "to": 201 },
-			{ "from": 211, "to": 301 },
-			{ "from": 302, "to": 401 }
+		"_listLink": [
+			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
+			{ "_id": 2, "_fromPin": 211, "_toPin": 301 },
+			{ "_id": 3, "_fromPin": 302, "_toPin": 401 }
 		]
 	})";
     SW_ASSERT_TRUE( runner.loadGraphJSON( testJSON ) );
