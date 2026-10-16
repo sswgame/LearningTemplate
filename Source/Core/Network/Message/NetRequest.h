@@ -7,6 +7,7 @@
  *          요청 ID는 클라이언트마다 1부터 증가한다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
@@ -236,10 +237,8 @@ namespace sw
             uint8  _bConnectionScope{ SW_FALSE };
 
             bool operator==( const ScopeKey& other ) const;
-        };
-        struct ScopeKeyHash
-        {
-            size_t operator()( const ScopeKey& key ) const;
+            /** @brief 키의 해시입니다(`unordered_map` 의 기본 해시 `DefaultHash` 가 부릅니다). */
+            [[nodiscard]] uint64 computeHash() const;
         };
         struct RequestKey
         {
@@ -247,10 +246,8 @@ namespace sw
             uint64 _requestID{ 0 };
 
             bool operator==( const RequestKey& other ) const { return _handlePacked == other._handlePacked && _requestID == other._requestID; }
-        };
-        struct RequestKeyHash
-        {
-            size_t operator()( const RequestKey& key ) const;
+            /** @brief 키의 해시입니다(`unordered_map` 의 기본 해시 `DefaultHash` 가 부릅니다). */
+            [[nodiscard]] uint64 computeHash() const { return HashUtil::makeHash( _handlePacked, _requestID ); }
         };
         struct InFlight
         {
@@ -272,18 +269,18 @@ namespace sw
         void sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize );
         void purgeIdempotencyLocked( int64 now );
 
-        mutable mutex                                           _mutex;
-        unordered_map<uint16, INetRequestHandler*>              _mapHandler;
-        unordered_map<uint32, InFlight>                         _mapInFlight; ///< 일련번호에서 처리 중인 요청으로 가는 맵.
-        unordered_map<RequestKey, uint32, RequestKeyHash>       _mapSerialByRequest;
-        unordered_map<uint64, int32>                            _mapInFlightCount; ///< 연결에서 처리 중인 요청 수로 가는 맵.
-        unordered_map<uint64, uint64>                           _mapPrincipal;     ///< 연결에서 주체로 가는 맵.
-        unordered_map<ScopeKey, IdempotencyEntry, ScopeKeyHash> _mapIdempotency;
-        deque<pair<ScopeKey, int64>>                            _listExpiry; ///< 끝난 기억의 만료 순서.
-        mutex                                                   _writerMutex;
-        BitWriter                                               _writer; ///< _writerMutex 안에서만 쓴다.
-        NetRequestServerConfig                                  _settings;
-        StreamMessageEndpoint*                                  _pEndpoint;
-        uint32                                                  _nextSerial;
+        mutable mutex                              _mutex;
+        unordered_map<uint16, INetRequestHandler*> _mapHandler;
+        unordered_map<uint32, InFlight>            _mapInFlight; ///< 일련번호에서 처리 중인 요청으로 가는 맵.
+        unordered_map<RequestKey, uint32>          _mapSerialByRequest;
+        unordered_map<uint64, int32>               _mapInFlightCount; ///< 연결에서 처리 중인 요청 수로 가는 맵.
+        unordered_map<uint64, uint64>              _mapPrincipal;     ///< 연결에서 주체로 가는 맵.
+        unordered_map<ScopeKey, IdempotencyEntry>  _mapIdempotency;
+        deque<pair<ScopeKey, int64>>               _listExpiry; ///< 끝난 기억의 만료 순서.
+        mutex                                      _writerMutex;
+        BitWriter                                  _writer; ///< _writerMutex 안에서만 쓴다.
+        NetRequestServerConfig                     _settings;
+        StreamMessageEndpoint*                     _pEndpoint;
+        uint32                                     _nextSerial;
     };
 } // namespace sw

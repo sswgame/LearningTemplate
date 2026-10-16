@@ -3,6 +3,7 @@
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -267,10 +268,7 @@ namespace sw
             _listMountedPack.push_back( std::move( mounted ) );
 
             // 우선순위 내림차순으로 정렬한다(높은 priority 가 앞)
-            std::stable_sort( _listMountedPack.begin(), _listMountedPack.end(), []( const MountedPack& left, const MountedPack& right )
-            {
-                return left._priority > right._priority;
-            } );
+            std::stable_sort( _listMountedPack.begin(), _listMountedPack.end(), Descending<&MountedPack::_priority>{} );
         }
 
         SW_LOG_INFO( "Mounted resource pack: %# (Priority: %#)", normalizedPath, effectivePriority );

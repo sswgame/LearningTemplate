@@ -2,6 +2,7 @@
 
 #include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -96,14 +97,11 @@ namespace sw
 
     void MotionWarpingComponent::setWarpTarget( const hashed_string& name, const float3& position, float32 yaw )
     {
-        for ( MotionWarpTarget& target : _listTarget )
+        if ( MotionWarpTarget* pTarget = VectorUtil::findBy<&MotionWarpTarget::_name>( _listTarget, name ) )
         {
-            if ( target._name == name )
-            {
-                target._position = position;
-                target._yaw      = yaw;
-                return;
-            }
+            pTarget->_position = position;
+            pTarget->_yaw      = yaw;
+            return;
         }
         _listTarget.push_back( MotionWarpTarget{ name, position, yaw } );
     }
@@ -115,24 +113,13 @@ namespace sw
 
     void MotionWarpingComponent::clearWarpTarget( const hashed_string& name )
     {
-        for ( size_t targetIndex = 0; targetIndex < _listTarget.size(); ++targetIndex )
-        {
-            if ( _listTarget[targetIndex]._name == name )
-            {
-                _listTarget.erase( _listTarget.begin() + static_cast<ptrdiff_t>( targetIndex ) );
-                return;
-            }
-        }
+        if ( const std::optional<size_t> targetIndex = VectorUtil::findIndexBy<&MotionWarpTarget::_name>( _listTarget, name ) )
+            _listTarget.erase( _listTarget.begin() + static_cast<ptrdiff_t>( *targetIndex ) );
     }
 
     const MotionWarpTarget* MotionWarpingComponent::findWarpTarget( const hashed_string& name ) const
     {
-        for ( const MotionWarpTarget& target : _listTarget )
-        {
-            if ( target._name == name )
-                return &target;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&MotionWarpTarget::_name>( _listTarget, name );
     }
 
     void MotionWarpingComponent::beginWindow( const MotionWarpWindow& window )

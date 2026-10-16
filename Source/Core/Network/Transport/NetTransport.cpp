@@ -2,6 +2,7 @@
 
 #include "Core/Network/Transport/NetTransport.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <chrono>
@@ -47,11 +48,8 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const NetAddress        address = NetAddress::makeLoopback( port );
-        for ( const LoopbackTransport& endpoint : _listEndpoint )
-        {
-            if ( endpoint.getLocalAddress() == address )
-                return nullptr;
-        }
+        if ( VectorUtil::containsBy<&LoopbackTransport::getLocalAddress>( _listEndpoint, address ) )
+            return nullptr;
         _listEndpoint.emplace_back( this, address );
         return &_listEndpoint.back();
     }

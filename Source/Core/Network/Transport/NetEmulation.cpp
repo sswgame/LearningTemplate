@@ -3,7 +3,9 @@
 #include "Core/Network/Transport/NetEmulation.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
@@ -246,12 +248,8 @@ namespace sw
     NetEmulationConditions NetEmulationTransport::findConditions( const NetAddress& to ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        for ( const LinkState& link : _listLink )
-        {
-            if ( link._to == to )
-                return link._conditions;
-        }
-        return _defaultConditions;
+        const LinkState*        pLink = VectorUtil::findBy<&LinkState::_to>( _listLink, to );
+        return pLink != nullptr ? pLink->_conditions : _defaultConditions;
     }
 
     bool NetEmulationTransport::send( const NetAddress& to, const uint8* pData, int32 size )
@@ -405,8 +403,7 @@ namespace sw
             { return pending._deliverTime <= _time; } );
             listDue.assign( std::make_move_iterator( _listPending.begin() ), std::make_move_iterator( dueEnd ) );
             _listPending.erase( _listPending.begin(), dueEnd );
-            std::sort( listDue.begin(), listDue.end(), []( const Pending& lhs, const Pending& rhs )
-            { return lhs._deliverTime != rhs._deliverTime ? lhs._deliverTime < rhs._deliverTime : lhs._order < rhs._order; } );
+            std::sort( listDue.begin(), listDue.end(), Ascending<&Pending::_deliverTime, &Pending::_order>{} );
             for ( const Pending& pending : listDue )
             {
                 LinkState& link   = findOrAddLink( pending._to );
@@ -453,11 +450,8 @@ namespace sw
 
     NetEmulationTransport::LinkState& NetEmulationTransport::findOrAddLink( const NetAddress& to )
     {
-        for ( LinkState& link : _listLink )
-        {
-            if ( link._to == to )
-                return link;
-        }
+        if ( LinkState* pFound = VectorUtil::findBy<&LinkState::_to>( _listLink, to ) )
+            return *pFound;
         LinkState link{};
         link._to         = to;
         link._conditions = _defaultConditions;

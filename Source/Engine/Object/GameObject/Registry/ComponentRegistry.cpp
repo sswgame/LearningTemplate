@@ -6,6 +6,8 @@
 
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -55,11 +57,8 @@ namespace sw
             _listBucket.push_back( sw::make_unique<Bucket>( Bucket{ typeKey, channel, {} } ) );
             pBucket = _listBucket.back().get();
         }
-        for ( const Entry& entry : pBucket->_listEntry )
-        {
-            if ( entry._pComponent == pComponent )
-                return; // 이미 있다(멱등)
-        }
+        if ( VectorUtil::containsBy<&Entry::_pComponent>( pBucket->_listEntry, pComponent ) )
+            return; // 이미 있다(멱등)
         pBucket->_listEntry.push_back( Entry{ pComponent, pComponent->getHandle() } );
     }
 
@@ -72,14 +71,9 @@ namespace sw
         if ( pBucket == nullptr )
             return;
         vector<Entry>& listEntry = pBucket->_listEntry;
-        for ( size_t index = 0; index < listEntry.size(); ++index )
-        {
-            if ( listEntry[index]._pComponent != pComponent )
-                continue;
-            // 순서를 지키며 뺀다 — "활성인 첫 것" 고르기가 등록 순서로 정해진다.
-            listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
+        // 순서를 지키며 뺀다 — "활성인 첫 것" 고르기가 등록 순서로 정해진다.
+        if ( const std::optional<size_t> index = VectorUtil::findIndexBy<&Entry::_pComponent>( listEntry, pComponent ) )
+            listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( *index ) );
     }
 
     const vector<ComponentRegistry::Entry>& ComponentRegistry::findEntries( uint32 typeKey, uint32 channel ) const
@@ -92,11 +86,6 @@ namespace sw
     {
         if ( handle.isValid() == false )
             return false;
-        for ( const Entry& entry : findEntries( typeKey, channel ) )
-        {
-            if ( entry._handle == handle )
-                return true;
-        }
-        return false;
+        return VectorUtil::containsBy<&Entry::_handle>( findEntries( typeKey, channel ), handle );
     }
 } // namespace sw

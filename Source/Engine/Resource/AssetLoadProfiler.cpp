@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/AssetLoadProfiler.h"
 
+#include "Core/Container/CompareUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Task/TaskManager.h"
@@ -139,8 +140,7 @@ namespace sw
             if ( bFits )
             {
                 _listSlowest.push_back( record );
-                std::stable_sort( _listSlowest.begin(), _listSlowest.end(), []( const AssetLoadRecord& lhs, const AssetLoadRecord& rhs )
-                { return lhs.computeTotalNanos() > rhs.computeTotalNanos(); } );
+                std::stable_sort( _listSlowest.begin(), _listSlowest.end(), Descending<&AssetLoadRecord::computeTotalNanos>{} );
                 if ( _listSlowest.size() > kSlowestCount )
                     _listSlowest.resize( kSlowestCount );
             }

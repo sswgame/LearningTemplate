@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/AssetStreamingQueue.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -430,11 +431,8 @@ namespace sw
     void AssetStreamingQueue::retainDetachedIOLocked( const AsyncReadHandle& handle )
     {
         // 끝난 것은 버리고 남은 것만 든다 — 취소가 잦아도 목록이 자라지 않는다.
-        _listDetachedIO.erase( std::remove_if( _listDetachedIO.begin(), _listDetachedIO.end(), []( const AsyncReadHandle& detached )
-        {
-            return detached.isDone();
-        } ),
-                               _listDetachedIO.end() );
+        VectorUtil::removeIf( _listDetachedIO, []( const AsyncReadHandle& detached )
+        { return detached.isDone(); } );
         _listDetachedIO.push_back( handle );
     }
 

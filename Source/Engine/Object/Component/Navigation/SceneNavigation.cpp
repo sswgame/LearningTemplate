@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
@@ -227,12 +228,7 @@ namespace sw
     {
         if ( linkID == 0 )
             return nullptr;
-        for ( const NavMeshLinkComponent* pLink : _listLink )
-        {
-            if ( pLink->computeCurrentLinkID() == linkID )
-                return pLink;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&NavMeshLinkComponent::computeCurrentLinkID>( _listLink, linkID );
     }
 
     void SceneNavigation::applyLinkStates()
@@ -260,11 +256,8 @@ namespace sw
         const NavAgentTypeDef* pType = getSettings().findAgentType( agentType );
         if ( pType != nullptr )
             return pType;
-        for ( const hashed_string& failed : _listFailedAgentType )
-        {
-            if ( failed == agentType )
-                return nullptr;
-        }
+        if ( VectorUtil::contains( _listFailedAgentType, agentType ) )
+            return nullptr;
         _listFailedAgentType.push_back( agentType );
         SW_LOG_ERROR( "Navigation agent type '%#' is not in the navigation settings", agentType.c_str() );
         return nullptr;
@@ -275,12 +268,7 @@ namespace sw
         // 빈 이름은 기본 종류 — 표의 `_defaultAgentType`, 그것도 비면 첫 종류(`NavMeshSettings::findAgentType` 과 같은 규칙).
         const NavAgentTypeDef* pType  = _settings.findAgentType( agentType );
         const hashed_string&   wanted = pType != nullptr ? pType->_name : agentType;
-        for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
-        {
-            if ( pRuntime->_agentType == wanted )
-                return pRuntime.get();
-        }
-        return nullptr;
+        return VectorUtil::findBy<&NavMeshRuntime::_agentType>( _listRuntime, wanted );
     }
 
     const NavMeshSurfaceComponent* SceneNavigation::findSurface( const hashed_string& agentType )

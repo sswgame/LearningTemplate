@@ -8,8 +8,10 @@
  *    메모리 단편화를 없앱니다.
  * 3. 레이스 탐지: 디버그 빌드에서 ScopedRaceRead / ScopedRaceWrite 로 동시 쓰기와 읽기/쓰기 충돌을 바로 잡아냅니다.
  * 4. 이종 키 조회: `string_view` 같은 이종 키로 찾을 때 키를 새로 만들지 않습니다(할당 없음).
- *    성립 조건은 **해시가 transparent** 라는 것 하나입니다. `std::hash<sw::string>` 에 `string_view` 오버로드가 있어서
- *    같은 바이트에서 같은 해시가 나옵니다. 비교자의 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있습니다.
+ *    성립 조건은 **해시가 transparent** 라는 것 하나입니다. 기본 해시 `DefaultHash<sw::string>` 이 상속한 `std::hash<sw::string>` 에
+ *    `string_view` 오버로드가 있어서 같은 바이트에서 같은 해시가 나옵니다. 비교자의 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있습니다.
+ * 5. 기본 해시: `DefaultHash<Key>`(`Core/Common/HashUtil.h`)입니다. 키에 `computeHash() const` 가 있으면 그것을 부르므로 키마다 해시 구조체를
+ *    따로 두지 않습니다.
  *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너를 쓸 때만 이종 검색이 컴파일되지 않아,
  *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
  */
@@ -31,7 +33,7 @@ namespace sw
      * @details C++17 의 std 해시 컨테이너에는 이종 조회와 `contains` 가 없다. 이종 키(`string_view` 등)는 키 타입으로 바꿔 찾는다 — 임시 키 하나가
      *          생기지만 STL 모드는 할당자 · 레이스 탐지를 빼고 표준 구현과 비교하는 진단 구성이다.
      */
-    template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<pair<const Key, T>>>
+    template <typename Key, typename T, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<pair<const Key, T>>>
     class unordered_map : public std::unordered_map<Key, T, Hash, KeyEqual, Allocator>
     {
         using Base = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
@@ -77,7 +79,7 @@ namespace sw
      *
      * 주의: `erase` 는 마지막 원소를 빈 자리로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다.
      */
-    template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<pair<const Key, T>>>
+    template <typename Key, typename T, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<pair<const Key, T>>>
     class unordered_map
     {
         SW_RACE_CTX_MEMBER

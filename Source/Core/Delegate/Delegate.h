@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/array.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -544,14 +545,13 @@ namespace sw
         /** @brief 등록된 델리게이트 중 target 과 같은 항목을 찾아 삭제합니다. */
         void remove( const delegate_type& target )
         {
-            const auto iter = std::find_if( _listDelegate.begin(), _listDelegate.end(), [&]( const DelegateEntry& entry )
-            { return entry._delegate == target; } );
-
-            if ( iter == _listDelegate.end() )
+            const DelegateEntry* pEntry = VectorUtil::findBy<&DelegateEntry::_delegate>( _listDelegate, target );
+            if ( pEntry == nullptr )
                 return;
 
-            // 핸들 경로와 같은 지연 제거를 거쳐야 broadcast 중에 이터레이터가 깨지지 않는다.
-            remove( iter->_handle );
+            // 핸들 경로와 같은 지연 제거를 거쳐야 broadcast 중에 이터레이터가 깨지지 않는다. 핸들은 복사한다 — 지우면 원소가 사라진다.
+            const DelegateHandle handle = pEntry->_handle;
+            remove( handle );
         }
 
         /** @brief 등록된 델리게이트를 모두 해제합니다. */
@@ -596,10 +596,8 @@ namespace sw
         /** @brief 핸들에 해당하는 항목을 즉시 제거합니다. broadcast 밖에서만 부르십시오. */
         void removeNow( const DelegateHandle& handle )
         {
-            const auto iter = std::find_if( _listDelegate.begin(), _listDelegate.end(), [&]( const DelegateEntry& entry )
-            { return entry._handle == handle; } );
-            if ( iter != _listDelegate.end() )
-                _listDelegate.erase( iter );
+            if ( const std::optional<size_t> index = VectorUtil::findIndexBy<&DelegateEntry::_handle>( _listDelegate, handle ) )
+                _listDelegate.erase( _listDelegate.begin() + static_cast<ptrdiff_t>( *index ) );
         }
 
         vector<DelegateEntry>  _listDelegate;
