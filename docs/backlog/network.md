@@ -52,8 +52,9 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 - `D7-6` [기능] **네트워크 보안의 남은 것**(방향은 [결정 기록](../09_Decisions.md) 5-9). Core 창구(`Network/Security/`) · OpenSSL 3.6 구현 · 스트림 TLS 1.3 · UDP 보안 · 서버 설정의 TLS 인증서 배선은 있다.
   남은 것: 암호화 켠 하니스로 서버 틱 시간을 재어 [결정 기록](../09_Decisions.md) 3절에 숫자 한 줄(N18a 벤치에 `_security` 를 켠 판).
 
-- `F-1` [결정대기] **전용 서버의 지형 레이어 질의는 레이어 0 이다** — 스플랫 가중치가 텍스처(.dds)라 서버 패키지에서 빠진다(쿠킹 표 `Texture`). 서버 게임 로직이 지형 레이어
-  (발소리 판정 · 표면 마찰 등)를 쓰게 되면 스플랫을 데이터 종류로 쿠킹하거나 그 경로를 서버 패키지에 남긴다.
+- `F-1` [기능] **지형 가중치 에셋의 에디터 쪽 마무리** — 가중치는 `.layerweights` 데이터 에셋이 됐다([결정 기록](../09_Decisions.md) 5-10, 서버도 레이어 질의에 답한다).
+  남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다 ·
+  ② 에디터 에셋 종류(`EditorAssetType`)에 `.layerweights` 를 더해 콘텐츠 브라우저 · 속성 칸이 고르게 한다 · ③ 바깥 도구가 만든 스플랫 PNG 를 `.layerweights` 로 가져오는 임포트(높이장 임포터와 같은 길).
 
 - `G-2` [조건부] **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 테스트 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사

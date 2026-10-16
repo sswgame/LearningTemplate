@@ -3,10 +3,10 @@
 """
 환경 쇼케이스(`game/empty/maps/envshowcase.scene.xml`)의 지형 원본을 만듭니다 — 높이장 · 구멍 마스크 · 레이어 가중치(스플랫) · 디테일 맵.
 
-만드는 것(모두 원본 폴더 — 엔진은 임포트한 결과만 읽는다):
+만드는 것(가중치 말고는 원본 폴더 — 엔진은 임포트한 결과만 읽는다):
   Resource/game/empty/heightfields_raw/valley.png        257 × 257, 16 비트 회색(0..65535 = 높이 0..40 m)
   Resource/game/empty/heightfields_raw/valley_holes.png  256 × 256 칸, 8 비트(128 미만 = 구멍) — 절벽 아래 동굴 입구
-  Resource/game/empty/textures_raw/valley_splat.png      257 × 257 RGBA = 풀 · 흙 · 바위 · 모래
+  Resource/game/empty/heightfields/valley.layerweights   257 × 257 × 4 = 풀 · 흙 · 바위 · 모래 가중치(엔진이 바로 읽는 데이터 에셋, 임포트 없음)
   Resource/engine/textures_raw/terrain/terrain_detail.png 256 × 256 RGBA 이음매 없는 무늬(채널마다 레이어 하나)
 
 지형: 256 m 정사각(칸 1 m), 구릉 + 북서쪽 절벽 띠 + 호수 분지(바닥 3 m, 수면 8 m) + 호수로 흘러드는 강 골짜기.
@@ -147,6 +147,14 @@ def writePngInternal(path: pathlib.Path, width: int, height: int, bitDepth: int,
     print(f"wrote {path} ({len(data)} bytes)")
 
 
+def writeLayerWeightsInternal(path: pathlib.Path, width: int, height: int, rowBytes: list[bytes]) -> None:
+    """레이어 가중치 에셋(`.layerweights`, `LayerWeightsData.h` 의 형식 — 매직 `SWLW` · 판 1 · 너비 · 높이 · 레이어 수 4 · 텍셀마다 4 바이트)을 씁니다."""
+    data = b"SWLW" + struct.pack("<IIII", 1, width, height, 4) + b"".join(rowBytes)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    print(f"wrote {path} ({len(data)} bytes)")
+
+
 def writeTerrainSourcesInternal(resourceRoot: pathlib.Path) -> None:
     listHeight = [computeHeightInternal(float(x), float(z)) for z in range(kResolution) for x in range(kResolution)]
 
@@ -183,7 +191,7 @@ def writeTerrainSourcesInternal(resourceRoot: pathlib.Path) -> None:
             total = grass + dirt + rock + sand
             row += bytes(int(round(value / total * 255.0)) for value in (grass, dirt, rock, sand))
         splatRows.append(bytes(row))
-    writePngInternal(resourceRoot / "game/empty/textures_raw/valley_splat.png", kResolution, kResolution, 8, 6, splatRows)
+    writeLayerWeightsInternal(resourceRoot / "game/empty/heightfields/valley.layerweights", kResolution, kResolution, splatRows)
 
 
 def writeDetailTextureInternal(resourceRoot: pathlib.Path) -> None:

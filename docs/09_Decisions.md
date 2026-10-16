@@ -638,10 +638,10 @@
   식생은 지형 세대가 0.3 초 동안 그대로일 때(드래그가 끝난 뒤) 다시 뿌립니다 — 칠하는 프레임마다 숲 전체를 다시 계산하지 않습니다.
   가중치는 CPU 스플랫 바이트를 고치고 바뀐 사각형만 `TextureCache::requestRegionUpdate` 로 맡깁니다. 렌더 스레드가 다음 프레임 기록 전에 RHI 영역 업로드(`uploadTexture2DRegion`, 네 백엔드)로
   한 번에 올립니다 — 업로드 비용은 호출당이라 프레임마다 사각형 하나입니다. 칠하는 텍스처는 **지형마다 자기 것**입니다(언리얼 랜드스케이프 가중치 맵 · 유니티 `TerrainData` 알파맵으로 알고 있다).
-  처음 칠할 때 그 지형만의 CPU 텍스처(`TextureCache::createCPUTexture`, `cpu/` 경로)를 지금 가중치로 만들어 머티리얼을 바꿉니다. 원본 픽셀은 텍스처가 들고 구간 업로드가 함께 고치므로
-  디바이스를 다시 만들어도 칠한 그림이 남고(백엔드 교체 · 모듈 리로드는 씬을 다시 읽으므로 저장하지 않은 높이 · 스플랫은 `TerrainComponent::writeState` 가 상태 스냅샷에 싣는다), 같은 DDS 를 쓰는 다른 지형은 칠해지지 않습니다. 상용 엔진과 달리 칠하기 전에는 디스크 DDS 를 경로로 나눠 써(메모리 · 핫 리로드) 칠한 지형만 비용을 냅니다.
+  지형을 읽을 때 그 지형만의 CPU 텍스처(`TextureCache::createCPUTexture`, `cpu/` 경로)를 가중치 에셋(`.layerweights`, 5-10 절)으로 만들어 머티리얼에 겁니다. 원본 픽셀은 텍스처가 들고 구간 업로드가 함께 고치므로
+  디바이스를 다시 만들어도 칠한 그림이 남고(백엔드 교체 · 모듈 리로드는 씬을 다시 읽으므로 저장하지 않은 높이 · 스플랫은 `TerrainComponent::writeState` 가 상태 스냅샷에 싣는다), 같은 가중치 에셋을 쓰는 다른 지형은 칠해지지 않습니다.
   에디터 도구는 `TerrainBrushTool`(뷰포트 Terrain 토글)이고 드래그 하나가 되돌리기 하나입니다(닿은 사각형의 전 · 후 값만 담는다). 저장은 `saveHeightfield`(16 비트로 다시 양자화)와
-  `saveSplat`(비압축 RGBA8 DDS)입니다. 가중치 사각형은 스플랫 **텍셀** 좌표이고 브러시 격자의 해상도는 스플랫 너비입니다(정사각형 스플랫만 브러시가 다룹니다).
+  `saveSplat`(`.layerweights`)입니다. 가중치 사각형은 스플랫 **텍셀** 좌표이고 브러시 격자의 해상도는 스플랫 너비입니다(정사각형 스플랫만 브러시가 다룹니다).
 - **저장하지 않은 지형 편집은 상태 스냅샷으로 넘깁니다**(2026-10-15, `64c1fef75`). 교체 전에 묻는 대신(`setSaveBlockReason`) `GameInstanceBase` 가 `TerrainComponent` 를 `registerStatefulComponent` 로 올려 마지막 다시 읽기 뒤의 높이 · 스플랫을 싣습니다. 언리얼 랜드스케이프 편집도 저장 전까지 메모리의 레벨에 남는 것으로 알고 있습니다 — 렌더러를 바꾸는 일이 편집을 잃게 하면 안 됩니다.
 - **`FrameRenderer` 는 "한 씬의 프레임을 그래프로 그린다" 만 들고, 이미지를 꺼내는 일 · 진단 덮어쓰기 · 캔버스 렌더 텍스처 대상을 가릅니다**(2026-10-15, C-26 ⑤).
   캡처 · 되읽기(Present 캡처 텍스처, 트랜지언트 · 임의 텍스처 읽기와 파일 쓰기)는 `FrameCapture`(`getCapture()`) — 언리얼이 스크린샷 · 프레임 그랩(`FScreenshotRequest` · `FFrameGrabber`)을
@@ -832,6 +832,15 @@
 - **서버 설정은 Shipping 에서도 디스크에서 읽고, 없으면 기동이 실패합니다**(2026-10-06). Windows 서비스 모드도 있습니다.
 - **서버 전용 쿠킹은 하지 않고, 패키징할 때 타깃별로 에셋 종류를 뺍니다**(2026-10-06). 처음 빼는 종류는 텍스처, 셰이더 바이너리, 오디오입니다. 메시와 애니메이션은 충돌, 소켓, 히트박스, 루트 모션 때문에 남깁니다.
   패키징과 런타임이 같은 테이블(`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`)을 읽습니다. 언리얼이 전용 서버에서 텍스처와 사운드 로드를 건너뛰는 것과 같은 목적입니다.
+- **지형 레이어 가중치는 텍스처가 아닌 데이터 에셋(`.layerweights`)이고, 클라이언트와 전용 서버가 같은 파일을 CPU 로 읽습니다**(2026-10-16, 백로그 F-1 — 사용자가 "상용 엔진 기준 최선" 으로 위임).
+  옛 스플랫은 비압축 RGBA8 DDS 였고 텍스처 종류라 서버 패키지에서 빠져, 서버의 레이어 질의(`computeLayerWeightsAt` — 발소리 · 표면 재질 · 이동 속도)가 말없이 레이어 0 이었습니다.
+  상용 엔진은 가중치를 게임플레이 데이터로 서버에도 둡니다 — 언리얼 랜드스케이프는 전용 서버에서도 레이어 정보(물리 재질 판정)를 유지하고, 유니티 `TerrainData` 는 알파맵을 에셋 데이터로 담아
+  GPU 텍스처를 읽을 때 만듭니다. 그래서 정본을 하나(`LayerWeightsData` — 매직 `SWLW` · 판 · 너비 · 높이 · 레이어 수 4 · 텍셀마다 4 바이트)로 두고, 그리는 쪽 GPU 텍스처는
+  지형이 읽은 바이트로 지형마다 하나 만듭니다(`TextureCache::createCPUTexture` — 칠하기가 이미 쓰던 길). 버린 안: ① 쿠커가 DDS 에서 서버용 사본을 따로 뽑기 — 정본이 둘이 되고
+  경로 규약(같은 이름 다른 확장자)에 기대며, 클라이언트는 여전히 DDS 포맷(BC 압축이면 CPU 가 못 읽음)에 묶입니다. ② 쿠킹 표에서 스플랫 DDS 만 예외로 남기기 — 서버가 텍스처 로더를 타고
+  "텍스처는 서버에 없다" 는 표의 뜻이 깨집니다. 가중치에 밉이 필요 없고(옛 `Terrain_Weights` 규칙도 밉을 끔) 셰이더는 같은 RGBA8 을 받으므로 그림은 바뀌지 않습니다(쇼케이스 바이트 동일).
+  폴백은 없습니다 — 경로를 정했는데 읽지 못하면(없음 · 형식 틀림 · 서버가 읽지 않는 `.dds`) 오류를 남기고 `reloadTerrain` 이 실패합니다. 경로가 비면 레이어를 칠하지 않는 지형입니다(데이터가 정한 것).
+  서버 패키지에 남는지는 `TestServerPackExclusion.testServerPackKeepsTerrainData`, 서버 호스트의 질의는 `TerrainTest.DedicatedServerAnswersLayerQueries` 가 지킵니다.
 - **App · Server 가 같이 쓰는 모듈 호스트는 최상위 폴더 `Source/ModuleHost` 입니다**(2026-10-10, 사용자 결정 — 옛 이름 `AppHost`, 같은 날 안의 클래스 `ModuleHost` 와 이름을 맞췄다). 실행 파일 폴더(`Source/App`) 안에 두고 정규식으로 골라 내던 것을 폴더째 나눴고,
   `CheckEngineLayers` 가 방향(App · Server → ModuleHost → Engine · RuntimeAPI)을 지킵니다. 언리얼이 실행 파일 진입점(`Launch`)과 모듈 관리자(`Core` 의 `FModuleManager`)를 다른 모듈에 두는 것과 같습니다.
   고정 스텝 시간 정책 `FixedTimestep` 은 모듈 호스트가 아니라 Core(`Core/Time`, `GameTimer` 옆)에 둡니다 — 언리얼도 고정 시간 값(`FApp::FixedDeltaTime`, Core 모듈)과 프레임 시간 계산(`UEngine::UpdateTimeAndHandleMaxTickRate`)을 모듈 관리자 밖에 둡니다.

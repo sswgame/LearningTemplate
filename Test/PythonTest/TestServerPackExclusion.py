@@ -69,6 +69,12 @@ class ServerPackExclusionTest(unittest.TestCase):
         self.assertTrue(any(rel.endswith(".mesh") for rel in listServer))
         self.assertTrue(any(rel.endswith(".animclip") for rel in listServer))
 
+    def testServerPackKeepsTerrainData(self) -> None:
+        """지형 높이장과 레이어 가중치는 서버에 남는다 — 서버의 높이 · 레이어 질의(발소리 · 표면 재질 · 이동 속도)가 읽는다(백로그 F-1)."""
+        listServer = self.mapPackFilesByTarget["Server"]
+        self.assertIn("empty/heightfields/valley.heightfield", listServer)
+        self.assertIn("empty/heightfields/valley.layerweights", listServer)
+
     def testClientPackKeepsEveryKind(self) -> None:
         """클라이언트 패키지는 아무것도 빼지 않는다 — 같은 판단이 타깃마다 다른 답을 낸다(눈먼 필터가 아니다)."""
         self.assertEqual((), self.spec.mapExcludedKindByTarget.get("Client", ()))

@@ -5,6 +5,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Environment/Terrain/LayerWeightsData.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
@@ -18,6 +19,8 @@
 #include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Format/Archive.h"
+
+#include "EngineTest/HostTargetTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -52,6 +55,38 @@ namespace
         }
 
         static float32 wave( float32 x, float32 z ) { return 5.0f * MathUtil::sin( x * 0.1f ) * MathUtil::cos( z * 0.1f ); }
+
+        /** @brief @p size × @p size 의 가중치 맵을 모두 레이어 @p layer 로 채워 만듭니다. */
+        static LayerWeightsData makeUniformWeights( uint32 size, uint32 layer )
+        {
+            LayerWeightsData data;
+            data._width  = size;
+            data._height = size;
+            data._bytes.assign( static_cast<size_t>( size ) * size * LayerWeightsData::kLayerCount, 0u );
+            for ( size_t texel = 0; texel < static_cast<size_t>( size ) * size; ++texel )
+            {
+                data._bytes[texel * LayerWeightsData::kLayerCount + layer] = 255u;
+            }
+            return data;
+        }
+
+        /** @brief 높이장 하나와 가중치 맵 하나를 쓰는 32 m 지형을 @p manager 에 만듭니다(읽기 `reloadTerrain` 은 부르는 쪽이 합니다). */
+        static TerrainComponent* makeTerrain( GameObjectManager& manager, const utf8* pName, const string& heightfieldPath, const string& weightsPath )
+        {
+            GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
+            if ( pObject == nullptr )
+                return nullptr;
+            TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
+            if ( pTerrain == nullptr )
+                return nullptr;
+            pTerrain->setHeightfieldPath( heightfieldPath );
+            pTerrain->setSplatTexturePath( weightsPath );
+            pTerrain->setSize( float2{ 32.0f, 32.0f } );
+            pTerrain->setHeightRange( kHeightMin, kHeightMax );
+            pTerrain->setChunkCells( 16 );
+            pTerrain->setMaterialPath( "" );
+            return pTerrain;
+        }
 
         static TerrainHeightfield makeWaveField( uint32 resolution )
         {
@@ -477,29 +512,18 @@ SW_TEST_CASE( TerrainTest, UnsavedEditsSurviveStateSnapshot )
     const string    heightfieldPath = test::makeTempPath( "snapshot.heightfield" );
     HeightfieldData data            = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
     SW_ASSERT_TRUE( data.saveToFile( heightfieldPath ) );
-    constexpr uint32 kSplatSize = 8;
-    vector<uint8>    splatBytes( kSplatSize * kSplatSize * 4, 0u );
-    for ( size_t texel = 0; texel < kSplatSize * kSplatSize; ++texel )
-    {
-        splatBytes[texel * 4] = 255u;
-    }
-    const string splatPath = test::makeTempPath( "snapshot_splat.dds" );
-    SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( splatPath, splatBytes, kSplatSize, kSplatSize ) );
+    constexpr uint32       kSplatSize = 8;
+    const LayerWeightsData weights    = TerrainTestUtil::makeUniformWeights( kSplatSize, 0 );
+    const vector<uint8>&   splatBytes = weights._bytes;
+    const string           splatPath  = test::makeTempPath( "snapshot_splat.layerweights" );
+    SW_ASSERT_TRUE( weights.saveToFile( splatPath ) );
 
     GameObjectManager manager;
     TerrainComponent* arrTerrain[2]{};
     for ( TerrainComponent*& pTerrain : arrTerrain )
     {
-        GameObject* pObject = manager.createGameObject( hashed_string( "Terrain" ) );
-        SW_ASSERT_NOT_NULL( pObject );
-        pTerrain = pObject->addComponent<TerrainComponent>();
+        pTerrain = TerrainTestUtil::makeTerrain( manager, "Terrain", heightfieldPath, splatPath );
         SW_ASSERT_NOT_NULL( pTerrain );
-        pTerrain->setHeightfieldPath( heightfieldPath );
-        pTerrain->setSplatTexturePath( splatPath );
-        pTerrain->setSize( float2{ 32.0f, 32.0f } );
-        pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
-        pTerrain->setChunkCells( 16 );
-        pTerrain->setMaterialPath( "" );
         SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
     }
     TerrainComponent& edited   = *arrTerrain[0];
@@ -669,10 +693,9 @@ SW_TEST_CASE( TerrainTest, WriteLayerWeightsUpdatesSplat )
 }
 
 /**
- * @brief [TerrainTest] 칠하기는 지형마다 자기 스플랫 텍스처에 한다 — 같은 DDS 를 쓰는 다른 지형은 디스크 스플랫 그대로 · 텍스처 원본은 GPU 없이도 칠한 값을 따라간다
- *        (디바이스를 다시 만들면 이 원본을 올린다) · `reloadTerrain` 은 자기 텍스처를 캐시에서 놓는다
- * @details 변이: `writeLayerWeights` 가 디스크 경로(`_splatTexturePath`)에 구간을 올리면 자기 경로가 비어 첫 단언이 지고, 흘려보내기가 CPU 텍스처 원본을 고치지 않으면
- *          두 번째 바이트 비교가 진다.
+ * @brief [TerrainTest] 지형마다 읽을 때 가중치 바이트로 자기 스플랫 텍스처를 만든다 — 칠하기는 그 텍스처만 고쳐 같은 에셋을 쓰는 다른 지형은 디스크 값 그대로 ·
+ *        텍스처 원본은 GPU 없이도 칠한 값을 따라간다(디바이스를 다시 만들면 이 원본을 올린다) · `reloadTerrain` 은 옛 텍스처를 캐시에서 놓고 새로 만든다
+ * @details 변이: 두 지형이 텍스처 하나를 나눠 쓰면 경로가 같아 첫 단언이 지고, 흘려보내기가 CPU 텍스처 원본을 고치지 않으면 바이트 비교가 진다.
  */
 SW_TEST_CASE( TerrainTest, PaintedSplatIsPerTerrainAndKeptOnCPU )
 {
@@ -680,37 +703,36 @@ SW_TEST_CASE( TerrainTest, PaintedSplatIsPerTerrainAndKeptOnCPU )
     const string    heightfieldPath = test::makeTempPath( "paint.heightfield" );
     HeightfieldData data            = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
     SW_ASSERT_TRUE( data.saveToFile( heightfieldPath ) );
-    constexpr uint32 kSplatSize = 8;
-    vector<uint8>    splatBytes( kSplatSize * kSplatSize * 4, 0u );
-    for ( size_t texel = 0; texel < kSplatSize * kSplatSize; ++texel )
-    {
-        splatBytes[texel * 4] = 255u; // 전부 레이어 0
-    }
-    const string splatPath = test::makeTempPath( "paint_splat.dds" );
-    SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( splatPath, splatBytes, kSplatSize, kSplatSize ) );
+    constexpr uint32       kSplatSize = 8;
+    const LayerWeightsData weights    = TerrainTestUtil::makeUniformWeights( kSplatSize, 0 ); // 전부 레이어 0
+    const vector<uint8>&   splatBytes = weights._bytes;
+    const string           splatPath  = test::makeTempPath( "paint_splat.layerweights" );
+    SW_ASSERT_TRUE( weights.saveToFile( splatPath ) );
 
     GameObjectManager manager;
     TerrainComponent* arrTerrain[2]{};
     const utf8*       arrName[2] = { "PaintedTerrain", "OtherTerrain" };
     for ( uint32 index = 0; index < 2; ++index )
     {
-        GameObject* pObject = manager.createGameObject( hashed_string( arrName[index] ) );
-        SW_ASSERT_NOT_NULL( pObject );
-        TerrainComponent*& pTerrain = arrTerrain[index];
-        pTerrain                    = pObject->addComponent<TerrainComponent>();
-        SW_ASSERT_NOT_NULL( pTerrain );
-        pTerrain->setHeightfieldPath( heightfieldPath );
-        pTerrain->setSplatTexturePath( splatPath );
-        pTerrain->setSize( float2{ 32.0f, 32.0f } );
-        pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
-        pTerrain->setChunkCells( 16 );
-        pTerrain->setMaterialPath( "" );
-        SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+        arrTerrain[index] = TerrainTestUtil::makeTerrain( manager, arrName[index], heightfieldPath, splatPath );
+        SW_ASSERT_NOT_NULL( arrTerrain[index] );
+        SW_ASSERT_TRUE( arrTerrain[index]->reloadTerrain() );
     }
     TerrainComponent& painted  = *arrTerrain[0];
     TerrainComponent& other    = *arrTerrain[1];
     TextureCache&     textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
     (void)textures.flushRegionUpdates( nullptr ); // 앞선 테스트가 남긴 구간을 비운다
+
+    const string ownPath   = painted.getCPUSplatPath();
+    const string otherPath = other.getCPUSplatPath();
+    SW_ASSERT_TRUE( TextureCache::isCPUTexturePath( ownPath ) );
+    SW_ASSERT_TRUE( TextureCache::isCPUTexturePath( otherPath ) );
+    SW_EXPECT_NOT_EQUAL( ownPath, otherPath );
+    const Texture2D* pTexture      = textures.find( ownPath );
+    const Texture2D* pOtherTexture = textures.find( otherPath );
+    SW_ASSERT_NOT_NULL( pTexture );
+    SW_ASSERT_NOT_NULL( pOtherTexture );
+    SW_EXPECT_TRUE( pTexture->getCPUBytes() == splatBytes );
 
     vector<float4> listWeight;
     SW_ASSERT_TRUE( painted.getHeightfield().readSplatWeights( listWeight ) );
@@ -718,26 +740,94 @@ SW_TEST_CASE( TerrainTest, PaintedSplatIsPerTerrainAndKeptOnCPU )
     TerrainSampleRect first;
     first.include( 2, 3 );
     SW_ASSERT_TRUE( painted.writeLayerWeights( listWeight, first ) );
-    const string ownPath = painted.getCPUSplatPath();
-    SW_ASSERT_TRUE( TextureCache::isCPUTexturePath( ownPath ) );
-    SW_EXPECT_TRUE( other.getCPUSplatPath().empty() );
-    SW_EXPECT_TRUE( other.getHeightfield().getSplatBytes() == splatBytes );
-    const Texture2D* pTexture = textures.find( ownPath );
-    SW_ASSERT_NOT_NULL( pTexture );
-    SW_EXPECT_TRUE( pTexture->getCPUBytes() == painted.getHeightfield().getSplatBytes() );
-
-    // 두 번째 쓰기는 같은 텍스처에 구간으로 간다. GPU 가 없어도 원본은 따라간다.
     listWeight[5 * kSplatSize + 5] = float4{ 0.0f, 0.0f, 1.0f, 0.0f };
     TerrainSampleRect second;
     second.include( 5, 5 );
     SW_ASSERT_TRUE( painted.writeLayerWeights( listWeight, second ) );
     SW_EXPECT_EQUAL( ownPath, painted.getCPUSplatPath() );
-    SW_EXPECT_EQUAL( 1u, textures.flushRegionUpdates( nullptr ) );
+
+    // 쓰기마다 구간 하나가 같은 텍스처로 간다. GPU 가 없어도 원본은 따라간다.
+    SW_EXPECT_EQUAL( 2u, textures.flushRegionUpdates( nullptr ) );
     SW_EXPECT_TRUE( pTexture->getCPUBytes() == painted.getHeightfield().getSplatBytes() );
     SW_EXPECT_TRUE( pTexture->getCPUBytes() != splatBytes );
+    SW_EXPECT_TRUE( other.getHeightfield().getSplatBytes() == splatBytes );
+    SW_EXPECT_TRUE( pOtherTexture->getCPUBytes() == splatBytes );
 
-    // 다시 읽으면 디스크 스플랫으로 돌아가고 자기 텍스처는 캐시에서 빠진다(빌린 머티리얼이 없다).
+    // 다시 읽으면 디스크 가중치로 돌아가고, 옛 텍스처는 캐시에서 빠지고 새 텍스처를 만든다(빌린 머티리얼이 없다).
     SW_ASSERT_TRUE( painted.reloadTerrain() );
-    SW_EXPECT_TRUE( painted.getCPUSplatPath().empty() );
     SW_EXPECT_FALSE( textures.isCached( ownPath ) );
+    const Texture2D* pReloaded = textures.find( painted.getCPUSplatPath() );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_EXPECT_TRUE( pReloaded->getCPUBytes() == splatBytes );
+}
+
+/**
+ * @brief [TerrainTest] 가중치 형식(`.layerweights`)은 쓰고 읽으면 같다 · 매직 · 판 · 레이어 수 · 크기가 틀리면 읽지 않는다
+ */
+SW_TEST_CASE( TerrainTest, LayerWeightsFormatRoundTrips )
+{
+    LayerWeightsData data;
+    data._width  = 5;
+    data._height = 3;
+    data._bytes.assign( 5 * 3 * LayerWeightsData::kLayerCount, 0u );
+    for ( size_t index = 0; index < data._bytes.size(); ++index )
+    {
+        data._bytes[index] = static_cast<uint8>( index * 7u ); // 가로와 세로가 바뀌면 다른 바이트가 된다
+    }
+    vector<uint8> bytes;
+    data.saveToMemory( bytes );
+    LayerWeightsData loaded;
+    SW_ASSERT_TRUE( loaded.loadFromMemory( bytes, "roundtrip" ) );
+    SW_EXPECT_EQUAL( 5u, loaded._width );
+    SW_EXPECT_EQUAL( 3u, loaded._height );
+    SW_EXPECT_TRUE( loaded._bytes == data._bytes );
+
+    SW_TEST_DEFENSIVE_SCOPE( "malformed layer weight bytes are rejected" );
+    vector<uint8> truncated( bytes.begin(), bytes.end() - 1 );
+    SW_EXPECT_FALSE( loaded.loadFromMemory( truncated, "truncated" ) );
+    SW_EXPECT_TRUE( loaded._bytes.empty() );
+    vector<uint8> badMagic = bytes;
+    badMagic[0]            = 'X';
+    SW_EXPECT_FALSE( loaded.loadFromMemory( badMagic, "magic" ) );
+    vector<uint8> badVersion = bytes;
+    badVersion[4]            = 9u;
+    SW_EXPECT_FALSE( loaded.loadFromMemory( badVersion, "version" ) );
+    vector<uint8> badLayerCount = bytes;
+    badLayerCount[16]           = 3u;
+    SW_EXPECT_FALSE( loaded.loadFromMemory( badLayerCount, "layers" ) );
+    LayerWeightsData empty;
+    SW_EXPECT_FALSE( empty.saveToFile( test::makeTempPath( "empty.layerweights" ) ) );
+}
+
+/**
+ * @brief [TerrainTest] 전용 서버 호스트(`ResourcePaths::setHostTarget( "Server" )`)도 가중치 에셋을 읽어 레이어 질의에 정확히 답한다 — 레이어 0 이 아니다 ·
+ *        가중치를 못 읽으면(서버가 읽지 않는 텍스처 경로, 없는 파일) 레이어 0 으로 두지 않고 지형을 읽지 않는다
+ * @details 변이: 가중치를 서버가 빼는 종류(텍스처)로 두면 서버에서 읽기가 조용히 실패해 첫 단언이 지고(F-1 의 옛 동작), 읽지 못한 가중치를 레이어 0 으로 두면
+ *          `reloadTerrain` 이 true 라 마지막 단언들이 진다.
+ */
+SW_TEST_CASE( TerrainTest, DedicatedServerAnswersLayerQueries )
+{
+    const string    heightfieldPath = test::makeTempPath( "server.heightfield" );
+    HeightfieldData data            = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( data.saveToFile( heightfieldPath ) );
+    const string weightsPath = test::makeTempPath( "server.layerweights" );
+    SW_ASSERT_TRUE( TerrainTestUtil::makeUniformWeights( 8, 2 ).saveToFile( weightsPath ) ); // 전부 레이어 2(바위)
+
+    test::ScopedHostTarget serverHost( "Server" );
+    GameObjectManager      manager;
+    TerrainComponent*      pTerrain = TerrainTestUtil::makeTerrain( manager, "ServerTerrain", heightfieldPath, weightsPath );
+    SW_ASSERT_NOT_NULL( pTerrain );
+    SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+    const float4 weight = pTerrain->computeLayerWeightsAt( 16.0f, 16.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, weight._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, weight._z, 1e-4f );
+
+    SW_TEST_DEFENSIVE_SCOPE( "layer weights the server cannot read stop the terrain instead of answering layer 0" );
+    const string ddsPath = test::makeTempPath( "server_splat.dds" );
+    SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( ddsPath, TerrainTestUtil::makeUniformWeights( 8, 2 )._bytes, 8, 8 ) );
+    pTerrain->setSplatTexturePath( ddsPath );
+    SW_EXPECT_FALSE( pTerrain->reloadTerrain() );
+    SW_EXPECT_FALSE( pTerrain->getHeightfield().isValid() );
+    pTerrain->setSplatTexturePath( test::makeTempPath( "missing.layerweights" ) );
+    SW_EXPECT_FALSE( pTerrain->reloadTerrain() );
 }
