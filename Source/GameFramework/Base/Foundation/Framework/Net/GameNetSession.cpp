@@ -8,9 +8,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetStatsReport.h"
+#include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
 #include "Engine/Config/NetEmulationPresetTable.h"
+#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Observability/ServerServiceRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -232,7 +235,8 @@ namespace sw
 
     /**
      * @brief `-gv_netListenPort=<포트>`: 게임 인스턴스가 이 UDP 포트를 열고 클라이언트를 받습니다(0=끄기). 전용 서버 · 리슨 호스트 모두.
-     * @details 언리얼 `?listen` · `-port=` 의 자리. 기본은 꺼짐 — 한 기계에서 서버를 여럿 띄우는 테스트가 포트로 부딪히지 않게.
+     * @details 언리얼 `?listen` · `-port=` 의 자리. 리슨 호스트(App)는 이것으로만 연다. 전용 서버는 이것이 없으면 서버 설정(`ServerConfig::_gamePort`)을
+     *          열고, 있으면 개발 덮어쓰기로 설정보다 우선한다(에디터 멀티 프로세스 재생이 고른 포트). 테스트 변수라 Shipping 에는 없다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netListenPort, 0, "게임 네트워크 서버로 열 UDP 포트 (0=끄기)" );
     /**
@@ -244,6 +248,7 @@ namespace sw
      * @brief `-gv_netLoopbackOnly=0`: 게임 UDP 소켓을 모든 인터페이스에 묶는다(기본 1 = 127.0.0.1 만).
      * @details 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일 경로마다 "허용" 창을 띄운다 — 워크트리 · 테스트 실행 파일이 많은 개발 환경에서는 매번 뜬다.
      *          다른 기계와 붙을 때만 0 으로 둔다. 클라이언트는 서버 주소가 루프백이 아닐 때 이 값과 상관없이 모든 인터페이스에 묶는다(답을 받아야 한다).
+     *          서버 설정으로 연 전용 서버에는 쓰지 않는다 — 그쪽은 `ServerConfig::_listenAddress` 가 정한다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_netLoopbackOnly, true, "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)" );
     /**
@@ -275,14 +280,20 @@ namespace sw
         shutdown();
     }
 
-    bool GameNetSession::makeParamsFromGlobalVariables( GameNetSessionParams& outParams )
+    bool GameNetSession::makeLaunchParams( GameNetSessionParams& outParams )
     {
         outParams                = GameNetSessionParams{};
         outParams._bLoopbackOnly = gv_netLoopbackOnly;
         const bool bListen       = gv_netListenPort > 0;
         const bool bConnect      = gv_netConnectAddress.empty() == false;
         if ( bListen == false && bConnect == false )
-            return false;
+        {
+            // 개발 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 문맥이 없어 열지 않는다.
+            const ServerServiceContext* pHostContext = ServerServiceRegistry::findHostContext();
+            if ( pHostContext == nullptr || pHostContext->_pServerConfig == nullptr )
+                return false;
+            return makeServerParams( *pHostContext->_pServerConfig, outParams );
+        }
         if ( bListen )
         {
             if ( GameNetSessionInternal::kMaxPort < gv_netListenPort )
@@ -296,12 +307,46 @@ namespace sw
             outParams._listenPort = static_cast<uint16>( gv_netListenPort );
             return true;
         }
-        if ( NetAddress::parse( gv_netConnectAddress, kDefaultPort, outParams._serverAddress ) == false || outParams._serverAddress.isValid() == false )
+        // 기동 때 한 번 막고 푼다 — HTTP 클라이언트의 해석 스레드와 같은 해석기다(이름 · hosts 파일 · 점 넷 숫자).
+        if ( PlatformSocketUtil::resolveAddress( gv_netConnectAddress, kDefaultPort, outParams._serverAddress ) == false || outParams._serverAddress.isValid() == false )
         {
-            SW_LOG_WARNING( "gv_netConnectAddress '%#' is not an IPv4 address with a port - no net session", gv_netConnectAddress );
+            SW_LOG_WARNING( "gv_netConnectAddress '%#' did not resolve to an IPv4 address with a port - no net session", gv_netConnectAddress );
             return false;
         }
         outParams._role = GameNetRole::Client;
+        return true;
+    }
+
+    bool GameNetSession::makeServerParams( const ServerConfig& config, GameNetSessionParams& outParams )
+    {
+        outParams = GameNetSessionParams{};
+        NetAddress listenAddress;
+        if ( NetAddress::parse( config._listenAddress, 0, listenAddress ) == false )
+        {
+            SW_LOG_ERROR( "Server config _listenAddress '%#' is not an IPv4 address - the game port stays closed", config._listenAddress.c_str() );
+            return false;
+        }
+        // UDP 전송은 루프백 · 모든 인터페이스 두 가지로만 묶는다. 다른 주소를 조용히 모든 인터페이스로 바꾸지 않는다.
+        const bool bLoopbackOnly = listenAddress._ipv4 == NetAddress::makeLoopback( 0 )._ipv4;
+        const bool bAnyInterface = listenAddress._ipv4 == NetAddress::makeAnyInterface( 0 )._ipv4;
+        if ( bLoopbackOnly == false && bAnyInterface == false )
+        {
+            SW_LOG_ERROR( "Server config _listenAddress '%#' - the game port binds only 0.0.0.0 or 127.0.0.1", config._listenAddress.c_str() );
+            return false;
+        }
+        if ( config._gamePortShardCount != 1 )
+        {
+            SW_LOG_ERROR( "Server config _gamePortShardCount %# - the game net session opens one port (sharding is not implemented)", config._gamePortShardCount );
+            return false;
+        }
+        if ( config._gamePort < 0 || GameNetSessionInternal::kMaxPort < config._gamePort )
+        {
+            SW_LOG_ERROR( "Server config _gamePort %# is not a UDP port - the game port stays closed", config._gamePort );
+            return false;
+        }
+        outParams._role          = GameNetRole::Server;
+        outParams._listenPort    = static_cast<uint16>( config._gamePort );
+        outParams._bLoopbackOnly = bLoopbackOnly;
         return true;
     }
 
@@ -372,7 +417,7 @@ namespace sw
     SubsystemInitResult GameNetSession::initializeSubsystem()
     {
         GameNetSessionParams params;
-        if ( makeParamsFromGlobalVariables( params ) )
+        if ( makeLaunchParams( params ) )
             (void)initialize( params ); // 실패는 initialize 가 알린다 — 게임은 혼자 뜬다
         return SubsystemInitResult::Succeeded;
     }

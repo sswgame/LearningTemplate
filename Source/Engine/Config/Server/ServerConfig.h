@@ -69,13 +69,18 @@ namespace sw
         /** @brief 받는 주소(`0.0.0.0` 모두 · `127.0.0.1` 이 기계만)입니다. */
         PROPERTY()
         string _listenAddress{ "0.0.0.0" };
-        /** @brief 게임(UDP) 포트입니다. */
-        PROPERTY( Min = 1, Max = 65535 )
+        /**
+         * @brief 게임(UDP) 포트입니다. 전용 서버의 게임 인스턴스가 늘 이 포트를 엽니다(`GameNetSession::makeServerParams`, 받는 주소는 `_listenAddress`).
+         * @details 0 이면 운영체제가 고른 포트입니다 — 한 기계에서 서버를 여럿 띄우는 테스트용이고, 연 포트는 로그 `Net session listening on UDP port N` 에 남는다.
+         *          개발 빌드에서는 `-gv_netListenPort` 가 이 값보다 우선한다.
+         */
+        PROPERTY( Min = 0, Max = 65535 )
         int32 _gamePort{ 7777 };
         /**
          * @brief 게임 UDP 샤드 수입니다 — 서버는 `_gamePort` 부터 `_gamePort + _gamePortShardCount - 1` 까지 포트마다 소켓 하나(샤드마다 NetHost)를 엽니다.
          * @details 두 플랫폼 공통 받기 분산 계약(포트 샤딩): 로그인 토큰이 클라이언트에게 샤드 포트를 알려 줍니다. 리눅스에서 `_bGamePortReuse` 를 켜면
          *          같은 포트 하나에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눔)로 바뀝니다. 1 이면 소켓 하나.
+         * @warning 아직 계약만 있다 — 게임 세션(`GameNetSession`)은 소켓 하나만 열고, 2 이상이면 포트를 열지 않고 오류를 남긴다.
          */
         PROPERTY( Min = 1, Max = 64 )
         int32 _gamePortShardCount{ 1 };

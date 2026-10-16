@@ -6,9 +6,12 @@
  *          역할은 게임 코드가 아니라 실행 인자가 정하므로, 어느 게임이든(키트가 없는 Empty 도) 서버나 클라이언트로 뜬다.
  *          장르별 복제(클라이언트-서버, 락스텝, MMO)는 키트가 `getRouter()` 에 처리기를 달아 이 호스트 위에 얹는다.
  *
- *          - 서버: `-gv_netListenPort=<포트>` 로 연다. 전용 서버(`Server`)와 리슨 호스트(`App`) 모두 같다.
- *          - 클라이언트: `-gv_netConnectAddress=<주소:포트>` 로 붙는다. 포트를 빼면 `kDefaultPort` 를 쓴다.
- *          - 둘 다 없으면 세션을 열지 않는다. 혼자 하는 게임은 이전과 같이 동작한다.
+ *          - 전용 서버(`Server`): 서버 설정(`ServerConfig::_gamePort` · `_listenAddress`)의 게임 포트를 늘 연다(언리얼 전용 서버와 같다).
+ *            설정은 `ServerServiceRegistry::findHostContext` 로 받는다. 포트 0 은 운영체제가 고른 포트다(한 기계에서 서버를 여럿 띄우는 테스트).
+ *          - 서버(개발 덮어쓰기): `-gv_netListenPort=<포트>` 로 연다. 리슨 호스트(`App`)는 이 길뿐이고, 전용 서버에서는 설정보다 우선한다. Shipping 에는 없다.
+ *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다. 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
+ *            기동 때 한 번 막고 푼다). 포트를 빼면 `kDefaultPort` 를 쓴다.
+ *          - 전용 서버가 아니고 인자도 없으면 세션을 열지 않는다. 혼자 하는 게임은 이전과 같이 동작한다.
  *
  *          클라이언트는 연결이 시간 초과로 끝나면 다시 시도한다. 서버를 같이 띄우면 클라이언트가 먼저 설 수 있기 때문이다.
  *          거절이나 버전 불일치는 한 번 알리고 멈춘다.
@@ -43,6 +46,7 @@
 namespace sw
 {
     struct NetStatsReport;
+    struct ServerConfig;
 
     class UDPNetTransport;
 
@@ -76,7 +80,7 @@ namespace sw
      * @brief 게임 인스턴스 하나의 네트워크 호스트, 스레드, 메시지 라우터를 들고 있습니다. `GameInstanceBase` 가 소유합니다.
      * @code
      *     GameNetSessionParams params;
-     *     if ( GameNetSession::makeParamsFromGlobalVariables( params ) )
+     *     if ( GameNetSession::makeLaunchParams( params ) )
      *         (void)session.initialize( params );
      *     session.getRouter().registerHandler( &replicationServer ); // 키트
      *     session.update();                                     // 프레임마다(게임 스레드)
@@ -89,7 +93,7 @@ namespace sw
         static constexpr const utf8* kSubsystemName = "GameNetSession";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
         /**
-         * @brief 실행 인자(`-gv_netListenPort` · `-gv_netConnectAddress`)가 정한 역할로 세션을 엽니다. 인자가 없으면 열지 않습니다.
+         * @brief `makeLaunchParams` 가 정한 역할(실행 인자, 없으면 전용 서버 설정)로 세션을 엽니다. 둘 다 없으면 열지 않습니다.
          * @details 포트가 사용 중이라 열지 못해도 게임은 혼자 뜬다 — 늘 성공으로 답하고 실패는 `initialize` 가 로그에 남긴다.
          */
         SubsystemInitResult initializeSubsystem() override;
@@ -106,10 +110,16 @@ namespace sw
         GameNetSession& operator=( const GameNetSession& ) = delete;
 
         /**
-         * @brief 실행 인자(`-gv_netListenPort`, `-gv_netConnectAddress`)에서 세션 인자를 만듭니다. 둘 다 없으면 false 이며 세션을 열지 않습니다.
-         * @details 둘 다 있으면 서버를 고르고 경고한다. 주소를 읽지 못하면 경고하고 false 를 반환한다.
+         * @brief 이 프로세스의 기동 상태에서 세션 인자를 만듭니다. 실행 인자(`-gv_netListenPort`, `-gv_netConnectAddress`)가 먼저이고, 없으면 전용 서버의
+         *        서버 설정(`makeServerParams`)입니다. 어느 것도 없으면 false 이며 세션을 열지 않습니다.
+         * @details 실행 인자가 둘 다 있으면 서버를 고르고 경고한다. 주소를 풀지 못하거나 설정이 틀리면 로그를 남기고 false 를 반환한다.
          */
-        [[nodiscard]] static bool makeParamsFromGlobalVariables( GameNetSessionParams& outParams );
+        [[nodiscard]] static bool makeLaunchParams( GameNetSessionParams& outParams );
+        /**
+         * @brief 전용 서버 설정에서 서버 세션 인자를 만듭니다. `_listenAddress` 가 `127.0.0.1` 이면 루프백만, `0.0.0.0` 이면 모든 인터페이스입니다.
+         * @details 다른 주소, 샤드 2 개 이상(`_gamePortShardCount`), 포트 범위 밖은 오류 로그와 false 입니다 — 다른 값으로 대신 열지 않는다.
+         */
+        [[nodiscard]] static bool makeServerParams( const ServerConfig& config, GameNetSessionParams& outParams );
 
         /** @brief 소켓을 열고 역할을 시작합니다(서버는 listen, 클라이언트는 connectAsync). 실패하면 로그를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool initialize( const GameNetSessionParams& params );

@@ -58,9 +58,31 @@ namespace
         return serverPath;
     }
 
+    /** @brief 이 테스트 프로세스의 임시 폴더입니다(서버 설정을 쓴다). 프로세스마다 달라 CTest 가 나란히 돌려도 부딪히지 않는다. */
+    string makeConfigFolder()
+    {
+        return FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_server_boot_" + to_string( Process::getCurrentProcessID() ) );
+    }
+
+    /**
+     * @brief 루프백만 받고 서비스 포트를 끈 서버 설정을 임시 폴더에 쓰고 경로를 반환합니다. 못 쓰면 빈 글입니다.
+     * @param gamePort 게임 UDP 포트. 0 이면 서버가 운영체제에게 고르게 한다 — 전용 서버는 늘 게임 포트를 열므로, 고정 포트(7777)를 쓰면 나란히 도는 서버 테스트가 부딪힌다.
+     */
+    string writeServerConfig( uint16 gamePort )
+    {
+        const string folder = makeConfigFolder();
+        if ( FileUtil::ensureDirectoryExists( folder ) == false )
+            return {};
+        const string path = FileUtil::joinPath( folder, "server_" + to_string( gamePort ) + ".json" );
+        if ( FileUtil::writeTextFile( path, R"({ "_listenAddress": "127.0.0.1", "_servicePort": 0, "_gamePort": )" + to_string( gamePort ) + " }" ) == false )
+            return {};
+        return path;
+    }
+
     /**
      * @brief Server 를 @p arguments 로 띄우고 끝날 때까지 출력을 읽습니다. "ready" 줄을 처음 보면 @p onReady 를 한 번 부릅니다.
      * @details 시한은 공용 하네스(`test::runProcessWithDeadline`)가 지킨다 — 넘으면 서버를 죽이고 `_bTimedOut` 이 선다.
+     *          인자에 `-server-config` 가 없으면 게임 포트 0 인 설정(`writeServerConfig`)을 붙인다 — 저장소 설정(`Config/Server/<게임>.json`)의 고정 게임 포트로 뜨지 않게.
      */
     template <typename TOnReady>
     ServerRun runServer( string_view arguments, const ProcessOptions& options, TOnReady&& onReady )
@@ -69,11 +91,20 @@ namespace
         const string serverPath = findServerPath();
         if ( serverPath.empty() )
             return run;
+        string     fullArguments( arguments );
+        const bool bWriteConfig = fullArguments.find( "-server-config=" ) == string::npos;
+        if ( bWriteConfig )
+        {
+            const string configPath = writeServerConfig( 0 );
+            if ( configPath.empty() )
+                return run;
+            fullArguments = "-server-config=\"" + configPath + "\" " + fullArguments;
+        }
 #if defined( SW_PLATFORM_WINDOWS )
-        const string command = "\"" + serverPath + "\" " + string( arguments );
+        const string command = "\"" + serverPath + "\" " + fullArguments;
 #else
         // POSIX 는 `sh -c` 가 명령을 띄운다. `exec` 가 없으면(dash) sh 가 부모로 남아 SIGTERM 에 서버보다 먼저 죽고 종료 코드가 143 이 된다.
-        const string command = "exec \"" + serverPath + "\" " + string( arguments );
+        const string command = "exec \"" + serverPath + "\" " + fullArguments;
 #endif
         const test::ProcessRunResult result =
             test::runProcessWithDeadline( command, options, kRunTimeoutSeconds, [&run, &onReady]( Process& process, const string& line )
@@ -86,6 +117,8 @@ namespace
                 onReady( process );
             }
         } );
+        if ( bWriteConfig )
+            (void)FileUtil::removeDirectory( makeConfigFolder() ); // 임시 폴더 — 못 지워도 테스트 결과와 상관없다
         run._bLaunched = result._bLaunched;
         run._bTimedOut = result._bTimedOut;
         run._exitCode  = result._exitCode;
@@ -103,6 +136,60 @@ namespace
         const string requested = string( "Dedicated server shutdown requested (" ) + pExpectedCause + ")";
         SW_EXPECT_TRUE_MSG( run._output.find( requested ) != string::npos, requested.c_str() );
         SW_EXPECT_TRUE( run._output.find( kCompleteLine ) != string::npos );
+    }
+
+    /** @brief 지금 비어 있는 루프백 UDP 포트 번호입니다(열어 OS 가 고른 번호를 읽고 닫는다 — 닫은 뒤 서버가 연다). 못 열면 0 입니다. */
+    uint16 findFreeDatagramPort()
+    {
+        UDPNetTransport probe;
+        if ( probe.open( 0, true ) == false )
+            return 0;
+        const uint16 port = probe.getLocalAddress()._port;
+        probe.close();
+        return port;
+    }
+
+    /**
+     * @brief Server 를 @p arguments 로 띄우고, ready 뒤에 이 프로세스의 클라이언트가 게임 포트 @p port 에 붙은 다음 `net.status` · quit 를 보냅니다.
+     * @details 접속을 서버 로그 · 개발 명령 `net.status`(Dev) 로 확인하고, quit 뒤에 세션을 닫은 줄이 남는지 본다.
+     */
+    void expectServerAcceptsAClient( const string& arguments, uint16 port )
+    {
+        ProcessOptions options;
+        options._bPipeStandardInput = true;
+        bool            bConnected  = false;
+        const ServerRun run         = runServer( arguments, options, [port, &bConnected]( Process& process )
+                {
+            UDPNetTransport transport;
+            NetHost         client;
+            NetHostThread   thread;
+            if ( transport.open( 0, true ) )
+            {
+                client.initialize( &transport, NetHostConfig{} );
+                TaskFuture<NetConnectResult> future = client.connectAsync( NetAddress::makeLoopback( port ) );
+                if ( thread.start( &client ) )
+                {
+                    const Deadline deadline = Deadline::afterMilliseconds( 10000 );
+                    while ( future.isReady() == false && deadline.isExpired() == false )
+                    {
+                        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+                    }
+                    bConnected = future.isReady() && future.get().isConnected();
+                }
+            }
+            (void)process.writeInput( "net.status\nquit\n" );                // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
+            std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) ); // 끊기 전에 상태 줄이 연결 1 을 보게
+            thread.stop();
+            client.disconnectAll();
+        } );
+        expectCleanExit( run, "ConsoleCommand" );
+        SW_EXPECT_TRUE( bConnected );
+        SW_EXPECT_TRUE_MSG( run._output.find( "Net session listening on UDP port " + to_string( port ) ) != string::npos, "the game instance did not open the port" );
+        SW_EXPECT_TRUE_MSG( run._output.find( "Net session client 0 connected from 127.0.0.1" ) != string::npos, "the server did not log the client" );
+#if !defined( SW_SHIPPING )
+        SW_EXPECT_TRUE_MSG( run._output.find( "net session: Server, connected 1, port " + to_string( port ) ) != string::npos, "net.status did not report the client" );
+#endif
+        SW_EXPECT_TRUE( run._output.find( "Net session closed (Server)" ) != string::npos );
     }
 
 #if !defined( SW_SHIPPING ) // 서비스 포트 테스트만 쓴다 — Shipping 은 그 테스트를 건너뛴다
@@ -282,59 +369,35 @@ SW_TEST_CASE( ServerBootTest, StopRequestShutsDownGracefully )
 }
 
 /**
- * @brief [ServerBootTest] `-gv_netListenPort` 로 띄운 서버의 게임 인스턴스가 UDP 포트를 열고, 다른 프로세스(이 테스트)의 클라이언트를 받는다(서버 디버깅 S1 의 선행)
- * @details 키트가 없는 게임(Empty)도 네트워크 서버가 된다 — 역할은 게임 코드가 아니라 실행 인자가 정한다(`GameNetSession`). 접속을 서버 로그 ·
- *          개발 명령 `net.status`(Dev) 로 확인하고, quit 뒤에 세션을 닫은 줄이 남는지 본다.
+ * @brief [ServerBootTest] 전용 서버는 서버 설정의 게임 포트(`ServerConfig::_gamePort`)를 늘 열고, 다른 프로세스(이 테스트)의 클라이언트를 받는다 — Shipping 도
+ * @details 언리얼 전용 서버처럼 실행 인자 없이 연다. 키트가 없는 게임(Empty)도 네트워크 서버가 된다 — 역할은 게임 코드가 아니라 서버 설정 · 실행 인자가 정한다(`GameNetSession`).
  */
-SW_TEST_CASE( ServerBootTest, NetListenPortAcceptsAClientFromAnotherProcess )
+SW_TEST_CASE( ServerBootTest, ServerConfigGamePortAcceptsAClientFromAnotherProcess )
+{
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    const uint16 port = findFreeDatagramPort();
+    SW_ASSERT_TRUE( port != 0 );
+    const string configPath = writeServerConfig( port );
+    SW_ASSERT_TRUE( configPath.empty() == false );
+    expectServerAcceptsAClient( "-server-config=\"" + configPath + "\" -gv_serverExitAfterTicks=100000", port );
+    (void)FileUtil::removeDirectory( makeConfigFolder() ); // 임시 폴더 — 못 지워도 테스트 결과와 상관없다
+}
+
+/**
+ * @brief [ServerBootTest] 개발 빌드에서는 `-gv_netListenPort` 가 서버 설정의 게임 포트보다 우선한다(에디터 멀티 프로세스 재생이 고른 포트로 연다 — 서버 디버깅 S1)
+ * @details `runServer` 가 붙이는 설정은 게임 포트 0(운영체제가 고름)이다 — 실행 인자의 포트로 열렸으면 덮어쓰기가 이긴 것이다.
+ */
+SW_TEST_CASE( ServerBootTest, NetListenPortOverridesTheServerConfigGamePort )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "-gv_netListenPort is a development global variable - the shipping server opens its game port from the server config" );
+    SW_TEST_SKIP( "-gv_netListenPort is a development global variable - covered in Shipping by ServerConfigGamePortAcceptsAClientFromAnotherProcess" );
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
-    uint16 port = 0;
-    {
-        UDPNetTransport probe; // 비어 있는 포트를 고른다 — 닫은 뒤 서버가 연다
-        SW_ASSERT_TRUE( probe.open( 0, true ) );
-        port = probe.getLocalAddress()._port;
-        probe.close();
-    }
-    ProcessOptions options;
-    options._bPipeStandardInput = true;
-    bool            bConnected  = false;
-    const ServerRun run         = runServer( "-gv_serverExitAfterTicks=100000 -gv_netListenPort=" + to_string( port ), options, [port, &bConnected]( Process& process )
-            {
-        UDPNetTransport transport;
-        NetHost         client;
-        NetHostThread   thread;
-        if ( transport.open( 0, true ) )
-        {
-            client.initialize( &transport, NetHostConfig{} );
-            TaskFuture<NetConnectResult> future = client.connectAsync( NetAddress::makeLoopback( port ) );
-            if ( thread.start( &client ) )
-            {
-                const Deadline deadline = Deadline::afterMilliseconds( 10000 );
-                while ( future.isReady() == false && deadline.isExpired() == false )
-                {
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
-                }
-                bConnected = future.isReady() && future.get().isConnected();
-            }
-        }
-        (void)process.writeInput( "net.status\nquit\n" );                // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
-        std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) ); // 끊기 전에 상태 줄이 연결 1 을 보게
-        thread.stop();
-        client.disconnectAll();
-    } );
-    expectCleanExit( run, "ConsoleCommand" );
-    SW_EXPECT_TRUE( bConnected );
-    SW_EXPECT_TRUE_MSG( run._output.find( "Net session listening on UDP port " + to_string( port ) ) != string::npos, "the game instance did not open the port" );
-    SW_EXPECT_TRUE_MSG( run._output.find( "Net session client 0 connected from 127.0.0.1" ) != string::npos, "the server did not log the client" );
-    #if !defined( SW_SHIPPING )
-    SW_EXPECT_TRUE_MSG( run._output.find( "net session: Server, connected 1, port " + to_string( port ) ) != string::npos, "net.status did not report the client" );
-    #endif
-    SW_EXPECT_TRUE( run._output.find( "Net session closed (Server)" ) != string::npos );
+    const uint16 port = findFreeDatagramPort();
+    SW_ASSERT_TRUE( port != 0 );
+    expectServerAcceptsAClient( "-gv_serverExitAfterTicks=100000 -gv_netListenPort=" + to_string( port ), port );
 #endif
 }
 
@@ -356,7 +419,7 @@ SW_TEST_CASE( ServerBootTest, OnlineServicesStartFromTheOnlineConfigBesideTheSer
     SW_ASSERT_TRUE( FileUtil::ensureDirectoryExists( folder ) );
     const string serverConfigPath = FileUtil::joinPath( folder, "online_test.json" );
     const string onlineConfigPath = FileUtil::joinPath( folder, "online_test.online.json" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( serverConfigPath, R"({ "_listenAddress": "127.0.0.1", "_servicePort": )" + to_string( port ) + " }" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( serverConfigPath, R"({ "_listenAddress": "127.0.0.1", "_gamePort": 0, "_servicePort": )" + to_string( port ) + " }" ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( onlineConfigPath, R"({
         "_listKit": [
             { "_name": "account", "_listOption": [ { "_key": "lightPasswordHash", "_value": "1" } ] },
@@ -379,12 +442,19 @@ SW_TEST_CASE( ServerBootTest, OnlineServicesStartFromTheOnlineConfigBesideTheSer
 
 /**
  * @brief [ServerBootTest] 서버 설정 파일이 없으면 배포 서버는 서지 않는다(기본 포트로 조용히 뜬 서버는 틀린 DB 에 붙는다). Dev 는 기본값으로 선다.
+ * @details Dev 의 기본값은 게임 포트 7777 · 모든 인터페이스다 — 나란히 도는 테스트와 부딪히지 않게(방화벽 창도 뜨지 않게) 빈 포트를 `-gv_netListenPort` 로 덮어쓴다(루프백만).
  */
 SW_TEST_CASE( ServerBootTest, MissingServerConfigStopsOnlyTheShippingServer )
 {
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
-    const ServerRun run = runServer( "-server-config=Config/Server/does-not-exist.json -gv_serverExitAfterTicks=10", ProcessOptions{}, []( Process& ) {} );
+    string arguments = "-server-config=Config/Server/does-not-exist.json -gv_serverExitAfterTicks=10";
+#if !defined( SW_SHIPPING )
+    const uint16 port = findFreeDatagramPort();
+    SW_ASSERT_TRUE( port != 0 );
+    arguments += " -gv_netListenPort=" + to_string( port );
+#endif
+    const ServerRun run = runServer( arguments, ProcessOptions{}, []( Process& ) {} );
 #if defined( SW_SHIPPING )
     SW_EXPECT_TRUE( run._exitCode != 0 );
     SW_EXPECT_TRUE_MSG( run._firstErrorLine.find( "does-not-exist.json" ) != string::npos, run._firstErrorLine.c_str() );

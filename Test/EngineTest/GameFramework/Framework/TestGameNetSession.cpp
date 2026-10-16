@@ -3,6 +3,9 @@
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Observability/ServerServiceRegistry.h"
+
 #include "GameFramework/Base/Foundation/Framework/Net/GameNetSession.h"
 
 #include "TestFramework/TestFramework.h"
@@ -142,4 +145,62 @@ SW_TEST_CASE( GameNetSessionTest, ShutdownLogsConnectionsTheServerDidNotUpdate )
     client.shutdown();
     SW_EXPECT_FALSE( server.isActive() );
 #endif
+}
+
+/**
+ * @brief [GameNetSessionTest] 전용 서버의 세션 인자는 서버 설정(`_gamePort` · `_listenAddress`)에서 온다 — 127.0.0.1 은 루프백만, 0.0.0.0 은 모든 인터페이스, 포트 0 은 운영체제가 고름
+ */
+SW_TEST_CASE( GameNetSessionTest, ServerParamsComeFromTheServerConfig )
+{
+    ServerConfig config;
+    config._listenAddress = "127.0.0.1";
+    config._gamePort      = 0;
+    GameNetSessionParams params;
+    SW_ASSERT_TRUE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_TRUE( params._role == GameNetRole::Server );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( params._listenPort ) );
+    SW_EXPECT_TRUE( params._bLoopbackOnly );
+
+    config._listenAddress = "0.0.0.0";
+    config._gamePort      = 7777;
+    SW_ASSERT_TRUE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_EQUAL( 7777u, static_cast<uint32>( params._listenPort ) );
+    SW_EXPECT_FALSE( params._bLoopbackOnly );
+}
+
+/**
+ * @brief [GameNetSessionTest] 열 수 없는 서버 설정(특정 인터페이스 주소 · 주소가 아닌 글 · 샤드 2 개 이상)은 다른 값으로 대신 열지 않고 거절한다
+ */
+SW_TEST_CASE( GameNetSessionTest, ServerParamsRefuseAConfigTheyCannotOpen )
+{
+    GameNetSessionParams params;
+    ServerConfig         config;
+    config._listenAddress = "10.0.0.5";
+    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+    config._listenAddress = "not-an-address";
+    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+    config._listenAddress      = "127.0.0.1";
+    config._gamePortShardCount = 2;
+    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_TRUE( params._role == GameNetRole::None );
+}
+
+/**
+ * @brief [GameNetSessionTest] 실행 인자가 없으면 서버 문맥(전용 서버)이 있을 때만 그 설정의 게임 포트로 연다 — 리슨 호스트 · 테스트처럼 문맥이 없으면 열지 않는다
+ */
+SW_TEST_CASE( GameNetSessionTest, LaunchParamsOpenTheGamePortOnlyOnADedicatedServer )
+{
+    GameNetSessionParams params;
+    SW_EXPECT_FALSE( GameNetSession::makeLaunchParams( params ) ); // 문맥이 없다(App · 테스트)
+    ServerConfig config;
+    config._listenAddress = "127.0.0.1";
+    config._gamePort      = 0;
+    ServerServiceContext context;
+    context._pServerConfig = &config;
+    ServerServiceRegistry::bindHostContext( &context );
+    const bool bServer = GameNetSession::makeLaunchParams( params );
+    ServerServiceRegistry::bindHostContext( nullptr );
+    SW_ASSERT_TRUE( bServer );
+    SW_EXPECT_TRUE( params._role == GameNetRole::Server );
+    SW_EXPECT_TRUE( params._bLoopbackOnly );
 }
