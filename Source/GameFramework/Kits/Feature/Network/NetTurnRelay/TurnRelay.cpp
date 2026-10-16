@@ -16,7 +16,7 @@ namespace sw
     namespace
     {
         /** @brief 운영체제 난수 64비트(`UUID::generate`)를 반환합니다. 실행마다, 서버마다 다르고 미리 알 수 없습니다. */
-        uint64 makeRandomSeed()
+        uint64 makeTurnRelayTokenSeed()
         {
             const UUID uuid  = UUID::generate();
             uint64     value = 0;
@@ -54,7 +54,7 @@ namespace sw
         _pHost       = pHost;
         _seatCount   = MathUtil::max( 1, seatCount );
         _pPolicy     = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _tokenSecret = tokenSeed != 0 ? tokenSeed : makeRandomSeed();
+        _tokenSecret = tokenSeed != 0 ? tokenSeed : makeTurnRelayTokenSeed();
         _tokenCount  = 0;
         _listRoom.clear();
         _listPending.clear();
