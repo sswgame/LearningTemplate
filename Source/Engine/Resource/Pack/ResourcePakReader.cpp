@@ -225,8 +225,7 @@ namespace sw
         }
         else
         {
-            outBytes.resize( plan._uncompressedSize );
-            if ( decompressData( plan._compression, storedBytes.data(), storedBytes.size(), outBytes.data(), plan._uncompressedSize ) == false )
+            if ( decompressData( plan._compression, storedBytes.data(), storedBytes.size(), plan._uncompressedSize, outBytes ) == false )
             {
                 SW_LOG_ERROR( "Decompression failed for entry in pack: %#", packPath );
                 outBytes.clear();
@@ -479,19 +478,20 @@ namespace sw
         return true;
     }
 
-    bool ResourcePakReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize )
+    bool ResourcePakReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, size_t uncompressedSize, vector<uint8>& outBytes )
     {
+        outBytes.clear();
         // 풀 것이 없으면 둘 다 0 이어야 한다. `srcSize == 0` 만 보면 압축 크기 0 · 원본 크기 N 인 항목이 0 바이트 N 개로 읽힌다.
-        if ( dstSize == 0 )
+        if ( uncompressedSize == 0 )
             return srcSize == 0;
         if ( srcSize == 0 )
             return false;
 
         if ( type == PackCompressionType::None )
         {
-            if ( srcSize != dstSize )
+            if ( srcSize != uncompressedSize )
                 return false;
-            Memory::copy( pDst, pSrc, dstSize );
+            outBytes.assign( pSrc, pSrc + srcSize );
             return true;
         }
 
@@ -503,15 +503,24 @@ namespace sw
             return false;
         }
 
+        // 엔트리의 원본 크기는 파일에서 온 값이다. 압축 바이트로 나올 수 없는 크기면 resize 전에 끊는다(B-5).
+        if ( uncompressedSize > pCodec->decompressBound( srcSize ) )
+        {
+            SW_LOG_ERROR( "%# 엔트리의 원본 크기가 압축 크기로 나올 수 있는 상한을 넘습니다 (%# > %#, 압축 %#)", pCodec->getCodecName(),
+                          static_cast<uint64>( uncompressedSize ), static_cast<uint64>( pCodec->decompressBound( srcSize ) ), static_cast<uint64>( srcSize ) );
+            return false;
+        }
+        outBytes.resize( uncompressedSize );
+
         size_t decompressedSize{ 0 };
-        if ( pCodec->decompress( pSrc, srcSize, pDst, dstSize, decompressedSize ) == false )
+        if ( pCodec->decompress( pSrc, srcSize, outBytes.data(), uncompressedSize, decompressedSize ) == false )
             return false;
 
         // 엔트리 헤더가 말한 원본 크기와 실제로 푼 크기가 달라지면 그대로 쓰면 안 된다.
-        if ( decompressedSize != dstSize )
+        if ( decompressedSize != uncompressedSize )
         {
             SW_LOG_ERROR( "%# 해제 크기가 엔트리와 다릅니다 (%# != %#)", pCodec->getCodecName(),
-                          static_cast<uint64>( decompressedSize ), static_cast<uint64>( dstSize ) );
+                          static_cast<uint64>( decompressedSize ), static_cast<uint64>( uncompressedSize ) );
             return false;
         }
         return true;

@@ -527,6 +527,13 @@
   `OnlineServerRuntime` 의 `_bHostStarted` · `_bSchedulerStarted` 는 지웠다 — 호스트(`OnlineServiceHost::shutdown`)는 자기 초기화 비트를 보고 스케줄러는 목록을 비울 뿐이라 시작 여부를 밖에서 적을 필요가 없었다.
   테스트 하네스(`TestHostRuntime`)는 호스트 범위를 두지 않는다 — 모듈 DLL 을 올리고 내리지 않고 타입은 리플렉션 단계가 이미 모았다(`EngineInitSequenceTest.ModuleImageStepsReachTheHostScopeThroughTheParentChain` 이
   범위 사슬 찾기를, 호스트 범위가 없을 때의 무동작을 지킨다).
+- **압축 해제의 원본 크기 상한은 코덱이 낸다 — `ICompressionCodec::decompressBound` 는 순수 가상이다**(2026-10-17, B-5). 야간 퍼저 `Compression` 대상이 81 바이트 입력(RLE · 원본 620 MB · 압축 0 바이트)으로
+  10 초 타임아웃을 냈다. 헤더 검사는 절대 상한(`kMaxUncompressedSize`, 1 GiB)만 봐서 통과했고, 620 MB 를 resize(0 채우기)한 뒤에야 빈 페이로드로 실패해 clear 가 원소마다 소멸 루프를 돌았다.
+  뿌리는 헤더 값을 압축 크기와 견주지 않고 할당한 것이다. 최대 팽창률은 포맷마다 다르므로(RLE 65 · LZ4 255 · Deflate 1032 · Zstd 32768배) 코덱이 답하고, `CompressionStream` 은 두 해제 경로 모두
+  할당 전에 `findCodecForHeader` 에서 견준다. 기본 구현("모르면 무한대")을 두지 않는 까닭: 그 코덱으로 적힌 스트림은 다시 헤더를 그대로 믿게 되어 같은 결함이 조용히 돌아온다. 절대 상한은 남긴다 —
+  팽창률만으로는 Zstd 100 KB 가 3 GB 를 요구해도 통과한다. 같은 날 `vector` 의 소멸 루프는 `destroyRangeInternal` 하나로 모아 소멸자가 할 일이 없는 타입이면 루프를 두지 않고(`if constexpr`),
+  `resize` 의 값 초기화는 산술 · 열거 · 포인터 타입의 64 칸 이상 구간만 `std::memset` 으로 한다(멤버 포인터의 널은 0 바이트가 아닌 ABI 가 있어 사용자 구조체는 넣지 않았다.
+  짧은 구간까지 memset 으로 하면 크기가 변수인 함수 호출이 되어 `resize( size() + 1 )` 벤치가 Release 에서 두 배 느려졌다). 최적화 빌드는 원래 그 루프를 지우므로 Debug 와 계측 빌드의 비용만 준다.
 
 ### 5-4. 데이터, 직렬화, 설정
 

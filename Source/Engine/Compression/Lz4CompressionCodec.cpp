@@ -31,6 +31,14 @@ namespace sw
         return static_cast<size_t>( LZ4_compressBound( static_cast<int32>( uncompressedSize ) ) );
     }
 
+    size_t Lz4CompressionCodec::decompressBound( size_t compressedSize ) const
+    {
+        // LZ4 블록에서 가장 많이 불어나는 것은 매치 길이의 덧붙임 바이트로, 한 바이트가 255 바이트를 더한다. 토큰 · 오프셋(3 바이트)은
+        // 최대 19 바이트, 리터럴은 1 대 1 이므로 어느 바이트도 255 배를 넘지 못한다.
+        constexpr size_t kMaxExpansionRatio = 255;
+        return compressedSize * kMaxExpansionRatio;
+    }
+
     bool Lz4CompressionCodec::compress( const void* pSrc,
                                         size_t      srcSize,
                                         void*       pDst,

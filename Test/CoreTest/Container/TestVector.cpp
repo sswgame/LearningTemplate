@@ -627,3 +627,47 @@ SW_TEST_CASE( VectorTest, ShrinkToFitReleasesBufferWhenEmpty )
     SW_ASSERT_EQUAL( size_t( 1 ), listNested.size() );
     SW_EXPECT_EQUAL( 11, listNested[0][0] );
 }
+
+/**
+ * @brief [VectorTest] 소멸 · 값 초기화를 형식에 따라 건너뛰거나 한 번에 해도 결과는 원소 루프와 같다
+ * @details 소멸 루프는 `destroyRangeInternal` 하나로 모였고, 소멸자가 할 일이 없는 타입이면 루프가 없다(B-5: Debug · 계측 빌드에서
+ *          620 MB `vector<uint8>` 의 clear 가 원소마다 돌았다). 소멸자가 있는 타입은 clear · 줄이는 resize · 범위 erase · 줄이는 대입
+ *          모두에서 정확히 그만큼 소멸해야 하고, `uint8` 의 늘리는 resize 는 예전 값이 남은 자리도 0 으로 채워야 한다(`Memory::set` 경로).
+ */
+SW_TEST_CASE( VectorTest, DestroyAndValueInitializeMatchPerElementLoop )
+{
+    TrackedValue::s_liveCount = 0;
+    {
+        sw::vector<TrackedValue> listValue;
+        listValue.resize( 10 );
+        SW_EXPECT_EQUAL( 10, TrackedValue::s_liveCount );
+        listValue.resize( 6 );
+        SW_EXPECT_EQUAL( 6, TrackedValue::s_liveCount );
+        listValue.erase( listValue.begin() + 1, listValue.begin() + 3 );
+        SW_EXPECT_EQUAL( 4, TrackedValue::s_liveCount );
+        const sw::vector<TrackedValue> listSmaller( 1 );
+        listValue = listSmaller;
+        SW_EXPECT_EQUAL( 2, TrackedValue::s_liveCount );
+        listValue.clear();
+        SW_EXPECT_EQUAL( 1, TrackedValue::s_liveCount );
+    }
+    SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
+
+    // 짧은 구간(원소 루프)과 64 칸 이상 구간(memset) 둘 다 지난다.
+    sw::vector<uint8> bytes( 256, 0xAB );
+    bytes.resize( 8 );
+    bytes.resize( 16 );
+    bytes.resize( 256 );
+    for ( size_t index = 8; index < bytes.size(); ++index )
+    {
+        SW_EXPECT_EQUAL( uint8{ 0 }, bytes[index] );
+    }
+    SW_EXPECT_EQUAL( uint8{ 0xAB }, bytes[7] );
+
+    sw::vector<int32*> listPointer;
+    listPointer.resize( 5 );
+    for ( int32* const pValue : listPointer )
+    {
+        SW_EXPECT_TRUE( pValue == nullptr );
+    }
+}

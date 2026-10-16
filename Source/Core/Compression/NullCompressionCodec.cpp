@@ -21,6 +21,11 @@ namespace sw
         return uncompressedSize;
     }
 
+    size_t NullCompressionCodec::decompressBound( size_t compressedSize ) const
+    {
+        return compressedSize;
+    }
+
     bool NullCompressionCodec::compress( const void* pSrc,
                                          size_t      srcSize,
                                          void*       pDst,

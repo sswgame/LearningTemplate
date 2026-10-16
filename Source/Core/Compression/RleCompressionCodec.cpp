@@ -29,6 +29,13 @@ namespace sw
         return uncompressedSize + ( uncompressedSize / 128 ) + 64;
     }
 
+    size_t RleCompressionCodec::decompressBound( size_t compressedSize ) const
+    {
+        // 가장 많이 불어나는 것은 반복 런이다. 제어 바이트와 값 두 바이트가 kMaxRunLength 바이트가 된다(리터럴은 1 대 1 보다 작다).
+        constexpr size_t kRunRecordBytes = 2;
+        return ( compressedSize / kRunRecordBytes ) * kMaxRunLength;
+    }
+
     bool RleCompressionCodec::compress( const void* pSrc,
                                         size_t      srcSize,
                                         void*       pDst,

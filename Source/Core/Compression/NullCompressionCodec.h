@@ -21,6 +21,7 @@ namespace sw
         virtual CompressionCodecType getCodecType() const override;
         virtual const utf8*          getCodecName() const override;
         virtual size_t               compressBound( size_t uncompressedSize ) const override;
+        virtual size_t               decompressBound( size_t compressedSize ) const override;
 
         virtual bool compress( const void* pSrc,
                                size_t      srcSize,

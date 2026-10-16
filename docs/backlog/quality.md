@@ -2,10 +2,11 @@
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 빌드 속도, 간헐 실패 관찰의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `B-5` [결함] **`LoaderFuzzer` 의 `Compression` 대상이 야간 퍼징에서 타임아웃을 낸다**(실행 38806424034, 2026-10-15, 아티팩트 `fuzz-findings`). 입력은 `SWCS` 헤더로 시작하는 81 바이트(Base64 `U1dDUwEBAQBDAAAlAAAAAAAAAAAAAAAAAABEgAAAAAAAAPU2VkZlYyBwbW9lc3NpYmxlIGNvbWhwcmVziJZAiV8gdGUgMHR4MTIzNDU2Nzg5`)이다.
-  스택은 `CompressionStream::decompressBuffer`(CompressionStream.cpp:171 `outBytes.clear()`)의 `vector<uint8>::clearInternal`(vector.h:279)이다 — 소멸자가 필요 없는 형식도 원소마다 도는 루프이고, 헤더의 해제 크기를 믿고 `resize` 한 만큼 커버리지 계측을 돌아 10 초를 넘은 것으로 **추정**한다(헤더 값은 아직 해석하지 않았다).
-  고칠 곳 후보 둘: ① `clearInternal` 이 `is_trivially_destructible` 이면 루프를 건너뛴다(`if constexpr`) ② 헤더의 해제 크기에 상한을 두고 그 위면 `resize` 전에 거절한다. 고친 뒤 그 입력을 `Compression` 씨앗에 더한다.
-  이전의 `Material` 종료 순서 결함(실행 38639501002)은 고쳐졌고 이 실행에서 통과했다. 이 항목은 `Source/Core` 를 고치는 작업자가 맡는다(2026-10-16 정리 작업자는 소유 파일 밖이라 손대지 않았다).
+- `B-5` [검증대기] **`LoaderFuzzer` `Compression` 타임아웃은 고쳤고 퍼저 재확인과 씨앗이 남았다**(실행 38806424034). 원인은 헤더의 원본 크기(620 MB)를 압축 크기(0)와 견주지 않고 할당한 것이었다 —
+  코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 `vector` 소멸 루프 생략으로 고쳤다(결정 기록 5-3, 2026-10-17). 퍼저는 리눅스 전용이라 로컬에서는 `CompressionTest.FuzzTimeoutInputIsRejectedBeforeAllocating` 이
+  그 입력을 그대로 재현해 할당 전에 끊기는지(용량 0)만 본다. 남은 일: ① 다음 야간 퍼징에서 `Compression` 이 통과하는지 확인 ② 그 입력을 `Test/EngineTest/LoaderFuzzTargets.cpp` `seedCompression` 씨앗에 더하기
+  (소유 파일 밖이라 두었다). 같은 모양(헤더 원본 크기로 바로 `resize`)이던 `NetCompressionUtil::decompressEnvelope` · `LocalSlotEnvelope` `decompressBody` · `ResourcePakReader::decompressData` 도
+  할당 전에 `decompressBound` 와 견준다(팩은 할당을 `decompressData` 안으로 옮겨 부르는 쪽이 먼저 resize 하지 못한다).
 
 - `B-7` [검증대기] **리눅스에서 아직 자동으로 안 도는 것**: X11 입력(좌표 · `XkbSetDetectableAutoRepeat` — WSLg 의 `DISPLAY=:0` 이 있으니 손으로 한 번), yad 파일 대화상자의 두 번째
   `--file-filter`(man 으로만 확인). 사용자가 WSL 확인을 요청할 때만 한다(2026-10-10 결정).

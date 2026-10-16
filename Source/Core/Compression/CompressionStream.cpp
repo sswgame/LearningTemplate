@@ -47,6 +47,32 @@ namespace sw
 
                 return nullptr;
             }
+
+            /**
+             * @brief 검증한 헤더가 말하는 코덱을 찾고, 그 코덱으로 그 원본 크기가 **나올 수 있는지** 봅니다. 아니면 nullptr 입니다.
+             * @details 헤더의 `_uncompressedSize` 는 그대로 할당 크기가 됩니다. `kMaxUncompressedSize` 만으로는 81 바이트짜리 입력이
+             *          620 MB 를 요구해도 통과했고, 그만큼 할당 · 0 채우기 · 비우기를 한 뒤에야 페이로드가 비었다는 것을 알았습니다
+             *          (야간 퍼저 `Compression` 대상 10 초 타임아웃). 압축 크기에서 나올 수 있는 최대치는 코덱이 알므로
+             *          (`ICompressionCodec::decompressBound`) 할당 **전에** 그것과 견줍니다. 두 해제 경로가 모두 여기를 지납니다.
+             */
+            static ICompressionCodec* findCodecForHeader( const CompressionHeader& header, const CompressionCodecRegistry* pRegistry )
+            {
+                ICompressionCodec* const pCodec = findCodec( header._codecType, pRegistry );
+                if ( pCodec == nullptr )
+                {
+                    SW_LOG_ERROR( "Unsupported codec type in stream: %#", static_cast<uint32>( header._codecType ) );
+                    return nullptr;
+                }
+
+                const uint64 maxUncompressedSize = static_cast<uint64>( pCodec->decompressBound( static_cast<size_t>( header._compressedSize ) ) );
+                if ( header._uncompressedSize > maxUncompressedSize )
+                {
+                    SW_LOG_ERROR( "Stream claims %# bytes from %# compressed bytes, codec %# allows at most %#",
+                                  header._uncompressedSize, header._compressedSize, pCodec->getCodecName(), maxUncompressedSize );
+                    return nullptr;
+                }
+                return pCodec;
+            }
         };
     } // namespace
 } // namespace sw
@@ -162,6 +188,10 @@ namespace sw
         if ( header._uncompressedSize == 0 )
             return true;
 
+        // 할당 전에 코덱의 상한과 견준다(아래 resize 가 헤더 값을 그대로 쓴다).
+        if ( CompressionStreamInternal::findCodecForHeader( header, pRegistry ) == nullptr )
+            return false;
+
         outBytes.resize( static_cast<size_t>( header._uncompressedSize ) );
 
         size_t     outUncompressedSize = 0;
@@ -196,12 +226,9 @@ namespace sw
         if ( dstCapacity < static_cast<size_t>( header._uncompressedSize ) )
             return false;
 
-        ICompressionCodec* pCodec = CompressionStreamInternal::findCodec( header._codecType, pRegistry );
+        ICompressionCodec* const pCodec = CompressionStreamInternal::findCodecForHeader( header, pRegistry );
         if ( pCodec == nullptr )
-        {
-            SW_LOG_ERROR( "Unsupported codec type in stream: %#", static_cast<uint32>( header._codecType ) );
             return false;
-        }
 
         const uint8* const pSrcPayload    = static_cast<const uint8*>( pSrc ) + sizeof( CompressionHeader );
         const size_t       srcPayloadSize = static_cast<size_t>( header._compressedSize );

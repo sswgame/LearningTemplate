@@ -87,6 +87,8 @@ namespace sw
         ICompressionCodec*        pCodec    = pResolved != nullptr ? pResolved->getCodec( static_cast<CompressionCodecType>( pData[0] ) ) : nullptr;
         if ( pCodec == nullptr )
             return false;
+        if ( rawSize > pCodec->decompressBound( static_cast<size_t>( size - 1 - sizeBytes ) ) )
+            return false; // 압축 바이트로는 나올 수 없는 원본 크기 — resize 전에 끊는다(B-5)
         outBytes.resize( rawSize );
         size_t      written    = 0;
         const int32 headerSize = 1 + sizeBytes;

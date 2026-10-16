@@ -141,6 +141,13 @@ namespace sw
         return static_cast<size_t>( ::compressBound( static_cast<uLong>( uncompressedSize ) ) );
     }
 
+    size_t ZlibCompressionCodec::decompressBound( size_t compressedSize ) const
+    {
+        // Deflate 의 이론상 최대 압축률은 1032 대 1 이다(zlib 기술 문서). zlib 머리 · 꼬리(6 바이트)는 아무것도 내지 않으므로 넉넉하다.
+        constexpr size_t kMaxDeflateRatio = 1032;
+        return compressedSize * kMaxDeflateRatio;
+    }
+
     bool ZlibCompressionCodec::compress( const void* pSrc,
                                          size_t      srcSize,
                                          void*       pDst,

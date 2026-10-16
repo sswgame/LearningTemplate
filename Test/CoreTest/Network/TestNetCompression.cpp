@@ -27,6 +27,7 @@ namespace
         CompressionCodecType getCodecType() const override { return CompressionCodecType::Custom; }
         const utf8*          getCodecName() const override { return "Counting"; }
         size_t               compressBound( size_t uncompressedSize ) const override { return uncompressedSize; }
+        size_t               decompressBound( size_t compressedSize ) const override { return compressedSize; }
         bool                 compress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity, size_t& outCompressedSize, int32 compressionLevel ) override
         {
             (void)compressionLevel;
@@ -153,10 +154,11 @@ SW_TEST_CASE( NetCompressionTest, BombAndUnknownCodecAreRejectedBeforeInflating 
     SW_EXPECT_FALSE( NetCompressionUtil::decompressEnvelope( arrZero, 3, 1024, restoredBytes, &registry ) );
     SW_EXPECT_EQUAL( 1, decompressCount );
 
-    // 푼 크기가 칸과 다르면 거절(깨진 봉투) — 코덱은 불리지만 결과를 쓰지 않는다.
+    // 압축 3 바이트로는 나올 수 없는 원래 크기(8, 이 코덱의 상한은 1 배) — 상한 안이어도 할당 · 코덱 호출 전에 끊는다(B-5).
     const uint8 arrShort[5] = { 255, 8, 1, 2, 3 };
     SW_EXPECT_FALSE( NetCompressionUtil::decompressEnvelope( arrShort, 5, 1024, restoredBytes, &registry ) );
     SW_EXPECT_TRUE( restoredBytes.empty() );
+    SW_EXPECT_EQUAL( 1, decompressCount );
 }
 
 SW_TEST_CASE( NetCompressionTest, StreamEndpointInflatesCompressedFrames )
