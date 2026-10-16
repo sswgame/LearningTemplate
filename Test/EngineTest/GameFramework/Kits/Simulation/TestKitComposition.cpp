@@ -656,9 +656,10 @@ namespace
 {
     struct KitCompositionTestInternal
     {
-        static constexpr float32 kTickSeconds  = 0.5f; ///< 게임 30 분
-        static constexpr int32   kHalfRunTicks = 92;   ///< 6 시에서 46 시간 — 2 일 4 시
-        static constexpr int32   kHarvestTicks = 84;   ///< 2 일 0 시 — 첫 수확의 틱
+        static constexpr float32 kTickSeconds      = 0.5f; ///< 게임 30 분
+        static constexpr int32   kHalfRunTicks     = 92;   ///< 6 시에서 46 시간 — 2 일 4 시
+        static constexpr int32   kHarvestTicks     = 84;   ///< 2 일 0 시 — 첫 수확의 틱
+        static constexpr int32   kLandHalfRunTicks = 60;   ///< 30 초 — 막사가 다 서고 해병이 닿은 뒤
     };
 
     /** @brief 게임 서비스에 씬 매니저만 겁니다(파일 지역 — `TestGameDirector.cpp` 의 가드와 같은 일). */
@@ -760,11 +761,6 @@ namespace
         outDigest._requestStatus = pState->getQuestLog().getStatus( "meadow_request" );
         return true;
     }
-
-    struct LandCompositionTestInternal
-    {
-        static constexpr int32 kHalfRunTicks = 60; ///< 30 초 — 막사가 다 서고 해병이 닿은 뒤
-    };
 
     /** @brief 활성 씬 하나 + 공유 상태 · 도시 · RTS 를 (그 순서로) 붙인 오브젝트 하나입니다. */
     struct LandCompositionTestScene
@@ -1020,7 +1016,7 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishShareTheLandAndRouteAroundBuild
     GameObjectManager*       pManager = scene.getManager();
     SW_ASSERT_NOT_NULL( pManager );
     pManager->beginPlay();
-    runCompositionTicks( *pManager, 2 * LandCompositionTestInternal::kHalfRunTicks );
+    runCompositionTicks( *pManager, 2 * KitCompositionTestInternal::kLandHalfRunTicks );
 
     int32                  stateCount = 0;
     SessionStateComponent* pState     = findLandState( *pManager, stateCount );
@@ -1060,7 +1056,7 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishSurviveSaveFromAnotherRun )
     GameObjectManager*       pManager = scene.getManager();
     SW_ASSERT_NOT_NULL( pManager );
     pManager->beginPlay();
-    runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks );
+    runCompositionTicks( *pManager, KitCompositionTestInternal::kLandHalfRunTicks );
     LandCompositionDigest before;
     SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, before ) );
 
@@ -1096,14 +1092,14 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishHotReloadContinuesLikeAnUninter
         GameObjectManager*       pManager = scene.getManager();
         SW_ASSERT_NOT_NULL( pManager );
         pManager->beginPlay();
-        runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks / 2 ); // 막사를 짓는 중
+        runCompositionTicks( *pManager, KitCompositionTestInternal::kLandHalfRunTicks / 2 ); // 막사를 짓는 중
         LandCompositionGameInstance instance;
         vector<uint8>               snapshot;
         SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
         SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
         pManager->mergePendingAdds();
         pManager->update( 0.0f );
-        runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks );
+        runCompositionTicks( *pManager, KitCompositionTestInternal::kLandHalfRunTicks );
         SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, reloaded ) );
         pManager->endPlay();
     }
@@ -1114,9 +1110,9 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishHotReloadContinuesLikeAnUninter
         GameObjectManager*       pManager = scene.getManager();
         SW_ASSERT_NOT_NULL( pManager );
         pManager->beginPlay();
-        runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks / 2 );
+        runCompositionTicks( *pManager, KitCompositionTestInternal::kLandHalfRunTicks / 2 );
         pManager->update( 0.0f );
-        runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks );
+        runCompositionTicks( *pManager, KitCompositionTestInternal::kLandHalfRunTicks );
         SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, straight ) );
         pManager->endPlay();
     }

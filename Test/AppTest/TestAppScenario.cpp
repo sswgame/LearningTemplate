@@ -155,17 +155,11 @@ namespace
             }
             return bSame;
         }
-    };
 
 #if !defined( SW_SHIPPING )
-    /**
-     * @struct EditorScenarioRunInternal
-     * @brief 에디터 시나리오를 빈 에디터 상태 폴더(`-gv_editorStateDir`)로 돌립니다 — 사용자의 `Saved/Editor`(레이아웃 · 테마 · 최근 씬)와 무관하게 시작한다.
-     * @details 이름이 `<묶음>.<n>.scenario.xml` 인 파일은 묶음 하나로 같은 상태 폴더를 이어 쓴다(이름순). 첫 실행이 저장한 레이아웃 · 설정을
-     *          다음 실행이 읽는 "저장된 상태" 분기를 그렇게 확인한다. 묶음 이름이 없는 파일은 혼자 한 묶음이다.
-     */
-    struct EditorScenarioRunInternal
-    {
+        // 아래는 에디터 시나리오를 빈 에디터 상태 폴더(`-gv_editorStateDir`)로 도는 도우미다 — 사용자의 `Saved/Editor`(레이아웃 · 테마 · 최근 씬)와 무관하게 시작한다.
+        // 이름이 `<묶음>.<n>.scenario.xml` 인 파일은 묶음 하나로 같은 상태 폴더를 이어 쓴다(이름순). 첫 실행이 저장한 레이아웃 · 설정을
+        // 다음 실행이 읽는 "저장된 상태" 분기를 그렇게 확인한다. 묶음 이름이 없는 파일은 혼자 한 묶음이다.
         /** @brief 체인에서 시나리오 몇 개마다 모듈 리로드를 끼우는지입니다. */
         static constexpr uint32 kReloadEvery = 6;
 
@@ -304,8 +298,8 @@ namespace
             if ( ranCount == 0 )
                 SW_TEST_SKIP( "no editor scenario could run on this machine" );
         }
-    };
 #endif
+    };
 } // namespace
 
 /**
@@ -422,7 +416,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX12 )
 #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "the shipping build has no editor" );
 #else
-    EditorScenarioRunInternal::runEditorCase( "-dx12" );
+    AppScenarioTestInternal::runEditorCase( "-dx12" );
 #endif
 }
 
@@ -434,7 +428,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX11 )
 #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "the shipping build has no editor" );
 #else
-    EditorScenarioRunInternal::runEditorCase( "-dx11" );
+    AppScenarioTestInternal::runEditorCase( "-dx11" );
 #endif
 }
 
@@ -446,7 +440,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnVulkan )
 #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "the shipping build has no editor" );
 #else
-    EditorScenarioRunInternal::runEditorCase( "-vk" );
+    AppScenarioTestInternal::runEditorCase( "-vk" );
 #endif
 }
 
@@ -458,6 +452,6 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnOpenGL )
 #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "the shipping build has no editor" );
 #else
-    EditorScenarioRunInternal::runEditorCase( "-gl" );
+    AppScenarioTestInternal::runEditorCase( "-gl" );
 #endif
 }

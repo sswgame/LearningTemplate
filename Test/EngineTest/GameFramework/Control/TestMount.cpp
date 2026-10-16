@@ -158,10 +158,7 @@ namespace
             pObject->addComponent<ArcadeVehicleComponent>();
             return pObject;
         }
-    };
 
-    struct MountHorseTestInternal
-    {
         /** @brief 캡슐 말 — 캐릭터 컨트롤러(반지름 0.5) · 폰(버튼 Sprint · Exit) · 말 이동 · 운전석 · 내리기 버튼입니다(모델 없음 — 기본 도형으로 테스트). */
         static GameObject* spawnHorse( GameObjectManager& manager, const utf8* pName, const float3& feet )
         {
@@ -452,7 +449,7 @@ SW_TEST_CASE( MountTest, InputPeerFollowsTheDriver )
 SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
 {
     using Internal = MountTestInternal;
-    using Horse    = MountHorseTestInternal;
+    using Horse    = MountTestInternal;
     SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.0f, false ) == MountGait::Idle );
     SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.3f, false ) == MountGait::Walk );
     SW_EXPECT_TRUE( MountMovementComponent::computeRequestedGait( 0.7f, false ) == MountGait::Trot );
@@ -504,7 +501,7 @@ SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
 SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
 {
     using Internal = MountTestInternal;
-    using Horse    = MountHorseTestInternal;
+    using Horse    = MountTestInternal;
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     Internal::bindKeys( input );
