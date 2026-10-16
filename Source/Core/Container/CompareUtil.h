@@ -20,7 +20,7 @@
 namespace sw
 {
     /**
-     * @struct CompareUtil
+     * @class CompareUtil
      * @brief 비교자들이 함께 쓰는 키 읽기입니다. 직접 부르지 않고 `Ascending` · `Descending` · `Lexicographic` 을 씁니다.
      */
     struct CompareUtil
@@ -47,7 +47,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct Ascending
+     * @class Ascending
      * @brief 멤버 키 오름차순 비교자입니다. 키를 여럿 주면 앞 키부터 차례로 봅니다(`Ascending<&T::_layer, &T::_order>`).
      */
     template <auto... Member>
@@ -67,7 +67,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct Descending
+     * @class Descending
      * @brief 멤버 키 내림차순 비교자입니다. 키를 여럿 주면 앞 키부터 차례로, 모두 내림차순으로 봅니다.
      */
     template <auto... Member>
@@ -87,7 +87,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct Lexicographic
+     * @class Lexicographic
      * @brief 비교자를 차례로 잇는 비교자입니다. 앞 비교자가 두 원소를 같다고 볼 때만 다음 비교자를 봅니다.
      * @details 방향이 섞인 여러 키 정렬에 씁니다(`Lexicographic<Descending<&T::_priority>, Ascending<&T::_id>>`). 방향이 모두 같으면
      *          `Ascending<&T::_a, &T::_b>` 가 짧습니다. 각 비교자는 엄격한 약순서(strict weak ordering)여야 합니다.

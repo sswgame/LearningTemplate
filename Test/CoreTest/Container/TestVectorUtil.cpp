@@ -15,7 +15,6 @@ namespace
         int32 _order;
 
         int32 getDoubleID() const { return _id * 2; }
-        bool  operator==( const KeyedItem& other ) const { return _id == other._id && _layer == other._layer && _order == other._order; }
     };
 } // namespace
 

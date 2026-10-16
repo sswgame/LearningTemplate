@@ -16,7 +16,7 @@ namespace
 {
     const float3* getSamples( size_t& outCount )
     {
-        const float3 s_arrSample[] = {
+        static const float3 s_arrSample[] = {
             float3{ 0.0f, 0.0f,  0.0f},
             float3{ 1.0f, 1.0f,  1.0f},
             float3{0.25f, 0.5f, 0.75f},

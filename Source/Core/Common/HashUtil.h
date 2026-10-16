@@ -13,7 +13,7 @@
 namespace sw
 {
     /**
-     * @struct DefaultHash
+     * @class DefaultHash
      * @brief 해시 컨테이너의 기본 해시입니다. 키에 `computeHash() const` 가 있으면 그것을, 없으면 `std::hash<Key>` 를 씁니다.
      * @details `std::hash<Key>` 를 상속하므로 그 특수화가 가진 이종 키 오버로드(`std::hash<sw::string>` 의 `string_view`)가 그대로 남습니다.
      *          `computeHash` 쪽은 같은 키 타입만 받습니다 — 이종 조회가 필요하면 `std::hash` 특수화를 둡니다.
