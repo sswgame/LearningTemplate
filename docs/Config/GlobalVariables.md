@@ -125,6 +125,7 @@
 | `gv_animationRewind` | `int32` | `0` | 시험 | Record animation rewind history (poses, graph state, notifies, curves, root motion) | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_animationRewindSeconds` | `float32` | `10.0` | 시험 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_tickBatch` | `bool` | `true` | 시험 | 타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용) | [TickRegistry.cpp](../../Source/Engine/Object/GameObject/Tick/TickRegistry.cpp) |
+| `gv_tickCostDispatch` | `bool` | `false` | 시험 | 씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본) | [SceneTickScheduler.cpp](../../Source/Engine/Object/GameObject/Tick/SceneTickScheduler.cpp) |
 
 ## `Source/Engine/Profiling`
 
@@ -281,6 +282,8 @@
 | `gv_benchMeshVariants` | `int32` | `1` | 시험 | 벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMovePercent` | `int32` | `100` | 시험 | 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchProbeFrame` | `int32` | `180` | 시험 | 한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
+| `gv_benchRagdollPeriod` | `int32` | `60` | 시험 | 래그돌 군중이 상태를 바꾸는 주기 (프레임) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchRagdolls` | `int32` | `0` | 시험 | 벤치 래그돌 군중 수 (0=사용 안 함, KayKit 스켈레톤 — 쓰러지고 일어나기를 반복) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchRig` | `int32` | `0` | 시험 | 후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
 | `gv_benchRigEnabled` | `int32` | `1` | 시험 | 리그 데모의 PoseModifierComponent 를 켤지 (0=대조군) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
 | `gv_benchRigView` | `int32` | `0` | 시험 | 리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |

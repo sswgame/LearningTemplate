@@ -6,6 +6,7 @@
 
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineParallel.h"
@@ -19,12 +20,28 @@
 
 namespace sw
 {
+    /**
+     * @brief `-gv_tickCostDispatch=1`: 씬 틱의 병렬 분배를 앞 항목을 직접 돌아 잰 비용으로 고릅니다(`TaskManager::runParallelByCost`). 기동 때 정하는 값입니다.
+     * @details 기본(0)은 옛 방식(항목 16 개 이상이면 늘 나눈다)이다. 실제 게임 여덟 개에서 이득은 한 곳뿐이고 일곱 곳은 같거나 느렸다
+     *          (결정 기록 5-6). 상용 엔진도 틱 분배는 정적 그레인 크기를 쓴다. 프레임 사이에 비용을 기억하는 방식을 재 보기 위해 남긴 스위치다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_tickCostDispatch, false, "씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본)" );
+
     namespace
     {
         struct SceneTickSchedulerInternal
         {
-            /** @brief 항목(오브젝트)이 이 수보다 적으면 나누지 않고 이 스레드가 돕니다. 디스패치 바닥보다 작은 일입니다. */
-            static constexpr uint32 kParallelTickThreshold = 16;
+            /** @brief 옛 방식의 임계값입니다: 항목이 이 수보다 적으면 나누지 않고 이 스레드가 돕니다(`gv_tickCostDispatch` 가 0 일 때만). */
+            static constexpr uint32 kLegacyParallelThreshold = 16;
+
+            /** @brief [0, count) 를 병렬 분배합니다. 스위치가 켜지면 잰 비용으로, 기본(꺼짐)은 옛 고정 임계값으로 고릅니다. */
+            static void dispatch( uint32 count, const ParallelBlockDelegate& body )
+            {
+                if ( gv_tickCostDispatch )
+                    engine::runParallelByCost( count, body );
+                else
+                    engine::runParallel( count, kLegacyParallelThreshold, body );
+            }
 
             /** @brief 항목 하나를 돌립니다. 주 틱이면 `onTick`, 서브틱이면 `onSubTick` 입니다. 살아 있고 켜져 있는지는 부르는 쪽이 이미 봤습니다. */
             static void runTickItem( float32 deltaTime, const TickItem& item )
@@ -246,8 +263,7 @@ namespace sw
                 job._entryCount     = entryCount;
                 job._batchListCount = static_cast<uint32>( listBatch.size() );
                 job._deltaTime      = deltaTime;
-                engine::runParallel( totalCount, SceneTickSchedulerInternal::kParallelTickThreshold,
-                                     SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::ObjectGroupTick::tickRange, &job ) );
+                SceneTickSchedulerInternal::dispatch( totalCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::ObjectGroupTick::tickRange, &job ) );
             }
 
             // 스테이지는 그룹 순서로 지어진다(한 스테이지 = 한 그룹).
@@ -258,6 +274,8 @@ namespace sw
             for ( ; stageIndex < listStage.size() && listStage[stageIndex]._group == group; ++stageIndex )
             {
                 const TickStage& stage = listStage[stageIndex];
+                if ( stage._listItem.empty() ) // 증분 갱신이 비워 둔 스테이지는 돌 것도 적용할 것도 없다
+                    continue;
                 // 앞에서 돈 선행 조건(앞 스테이지 · 보통 길)이 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 스테이지 앞에서만.
                 if ( stage._bApplyBefore == SW_TRUE )
                     applyStageTransforms();
@@ -265,8 +283,8 @@ namespace sw
                 job._pItem      = stage._listItem.data();
                 job._pHierarchy = _pHierarchy;
                 job._deltaTime  = deltaTime;
-                engine::runParallel( static_cast<uint32>( stage._listItem.size() ), SceneTickSchedulerInternal::kParallelTickThreshold,
-                                     SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::StageTick::tickRange, &job ) );
+                SceneTickSchedulerInternal::dispatch( static_cast<uint32>( stage._listItem.size() ),
+                                                      SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::StageTick::tickRange, &job ) );
             }
         }
     }

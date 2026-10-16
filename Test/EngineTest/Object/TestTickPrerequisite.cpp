@@ -321,3 +321,226 @@ SW_TEST_CASE( TickPrerequisiteTest, MainTickOfAnotherComponentIsAPrerequisite )
     SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 8.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_FALSE( pFollower->removeSubTickPrerequisite( kMove, leaderTick ) );
 }
+
+/**
+ * @brief [TickPrerequisiteTest] 팔로워를 만들고 지우고 껐다 켜는 변동 속에서도 기다리는 쪽은 매 프레임 한 번만 돌고 선행 조건의 같은 프레임 값을 읽는다
+ * @details 말단 팔로워(아무도 기다리지 않고 선행 조건이 모두 보통 길)의 스폰 · 파괴는 스테이지를 다시 짓지 않고 끼우고 뺀다(`getStageDeltaCount`).
+ *          다른 팔로워를 기다리는 팔로워가 섞이면 그 대상이 가리켜진 오브젝트가 되어 전체 재구축으로 돌아간다. 두 길 모두 같은 결과여야 한다.
+ *          리더 하나는 뒤 그룹(PostPhysics)에 둬 팔로워가 그 그룹으로 옮겨 가는 길도 지나게 한다.
+ */
+SW_TEST_CASE( TickPrerequisiteTest, FollowerChurnKeepsOrderUnderIncrementalStageUpdates )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents();
+
+    sw::SubTickHandle              earlyTick{};
+    sw::SubTickHandle              lateTick{};
+    sw::MockSubTickMoverComponent* pEarlyLeader = createMover( manager, "EarlyLeader", sw::float3{ 3.0f, 0.0f, 0.0f }, nullptr, earlyTick );
+    sw::MockSubTickMoverComponent* pLateLeader  = createMover( manager, "LateLeader", sw::float3{ 0.0f, 0.0f, 7.0f }, nullptr, lateTick, sw::TickGroup::PostPhysics );
+
+    struct Follower
+    {
+        sw::MockSubTickMoverComponent* _pMover{ nullptr };
+        sw::MockSubTickMoverComponent* _pWatchedFollower{ nullptr }; ///< 다른 팔로워를 기다리면 그 팔로워다
+        sw::SubTickHandle              _handle{};                    ///< 이 팔로워의 서브틱 핸들(다른 팔로워가 선행 조건으로 건다)
+        sw::MockSubTickMoverComponent* _pLeader{ nullptr };
+        uint32                         _expectedCount{ 0 };
+        bool                           _bActive{ true };
+        bool                           _bChain{ false };
+    };
+    sw::vector<Follower> listFollower;
+    uint32               seed       = 12345;
+    const auto           nextRandom = [&seed]( uint32 bound )
+    {
+        seed = seed * 1664525u + 1013904223u;
+        return ( seed >> 8 ) % bound;
+    };
+
+    const auto spawn = [&]()
+    {
+        Follower          follower{};
+        const bool        bChain = listFollower.empty() == false && nextRandom( 6 ) == 0;
+        sw::SubTickHandle handle{};
+        if ( bChain )
+        {
+            Follower& target                      = listFollower[nextRandom( static_cast<uint32>( listFollower.size() ) )];
+            follower._pWatchedFollower            = target._pMover;
+            follower._pLeader                     = target._pLeader;
+            sw::MockSubTickMoverComponent* pMover = createMover( manager, "ChainFollower", sw::float3{ 0.0f, 0.0f, 0.0f }, target._pMover, handle );
+            follower._pMover                      = pMover;
+            follower._bChain                      = true;
+            SW_EXPECT_TRUE( pMover->addSubTickPrerequisite( kMove, target._handle ) );
+        }
+        else
+        {
+            const bool bLate                      = nextRandom( 2 ) == 0;
+            follower._pLeader                     = bLate ? pLateLeader : pEarlyLeader;
+            sw::MockSubTickMoverComponent* pMover = createMover( manager, "Follower", sw::float3{ 0.0f, 1.0f, 0.0f }, follower._pLeader, handle );
+            follower._pMover                      = pMover;
+            SW_EXPECT_TRUE( pMover->addSubTickPrerequisite( kMove, bLate ? lateTick : earlyTick ) );
+        }
+        follower._handle = handle;
+        listFollower.push_back( follower );
+    };
+
+    for ( uint32 index = 0; index < 20; ++index )
+    {
+        spawn();
+    }
+    manager.update( 0.016f );
+    for ( Follower& follower : listFollower )
+    {
+        follower._expectedCount = 1;
+    }
+
+    for ( uint32 frame = 0; frame < 300; ++frame )
+    {
+        const uint32 spawnThisFrame = nextRandom( 4 );
+        for ( uint32 index = 0; index < spawnThisFrame; ++index )
+        {
+            spawn();
+        }
+        const uint32 destroyThisFrame = nextRandom( 3 );
+        for ( uint32 index = 0; index < destroyThisFrame && listFollower.empty() == false; ++index )
+        {
+            const size_t victim = nextRandom( static_cast<uint32>( listFollower.size() ) );
+            // 이 팔로워를 기다리는 팔로워가 있으면 기다리던 쪽은 계속 돈다(선행 조건이 사라진 것 — 감시 값은 이 테스트가 보지 않는다).
+            for ( Follower& other : listFollower )
+            {
+                if ( other._pWatchedFollower == listFollower[victim]._pMover )
+                {
+                    other._pWatchedFollower  = nullptr;
+                    other._pMover->_pWatched = nullptr; // 지워질 컴포넌트를 틱에서 읽지 않게
+                }
+            }
+            manager.destroyObject( listFollower[victim]._pMover->getOwner() );
+            listFollower.erase( listFollower.begin() + static_cast<ptrdiff_t>( victim ) );
+        }
+        if ( listFollower.empty() == false && nextRandom( 3 ) == 0 )
+        {
+            Follower& toggled = listFollower[nextRandom( static_cast<uint32>( listFollower.size() ) )];
+            toggled._bActive  = toggled._bActive == false;
+            toggled._pMover->getOwner()->setActive( toggled._bActive );
+        }
+
+        manager.update( 0.016f );
+
+        uint32 wrongCount = 0;
+        for ( Follower& follower : listFollower )
+        {
+            if ( follower._bActive )
+                ++follower._expectedCount;
+            if ( follower._pMover->_subTickCount != follower._expectedCount )
+                ++wrongCount;
+            if ( follower._bActive == false || follower._bChain )
+                continue;
+            const sw::float3 expected = follower._pLeader == pLateLeader ? sw::float3{ 0.0f, 0.0f, 7.0f } : sw::float3{ 3.0f, 0.0f, 0.0f };
+            if ( isNear( follower._pMover->_observedLocal, expected ) == false || isNear( follower._pMover->_observedWorld, expected ) == false )
+                ++wrongCount;
+        }
+        SW_ASSERT_EQUAL( 0u, wrongCount );
+    }
+    SW_EXPECT_TRUE( manager.getTickRegistry().getStageDeltaCount() > 0u );
+}
+
+/**
+ * @brief [TickPrerequisiteTest] 증분으로 끼운 스테이지 배치가 전체 재구축이 만든 배치와 오브젝트마다 같은 (그룹, 레벨)이다
+ * @details 결과값(틱 횟수 · 관측값)만 보면 증분 경로가 스테이지를 다른 자리에 넣어도 드러나지 않는다. 같은 오브젝트 집합에서 `markTickStagesDirty` 로 전체 재구축을 세워
+ *          두 배치를 견준다(스테이지 안의 순서는 견주지 않는다 — 같은 레벨 안이라 정확성에 영향이 없다).
+ */
+SW_TEST_CASE( TickPrerequisiteTest, IncrementalStageLayoutMatchesFullRebuild )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents();
+
+    sw::SubTickHandle              earlyTick{};
+    sw::SubTickHandle              lateTick{};
+    sw::MockSubTickMoverComponent* pEarlyLeader = createMover( manager, "EarlyLeader", sw::float3{ 3.0f, 0.0f, 0.0f }, nullptr, earlyTick );
+    sw::MockSubTickMoverComponent* pLateLeader  = createMover( manager, "LateLeader", sw::float3{ 0.0f, 0.0f, 7.0f }, nullptr, lateTick, sw::TickGroup::PostPhysics );
+
+    // (오브젝트 id, 그룹, 레벨) 정렬 목록 — 스테이지 안의 순서와 스테이지 분할은 견주지 않는다.
+    const auto captureLayout = [&manager]()
+    {
+        sw::vector<std::array<uint64, 3>> listLayout;
+        for ( const sw::TickStage& stage : manager.getTickRegistry().getStages() )
+        {
+            for ( const uint64 objectID : stage._listItemObjectID )
+            {
+                listLayout.push_back( { objectID, static_cast<uint64>( stage._group ), static_cast<uint64>( stage._level ) } );
+            }
+        }
+        std::sort( listLayout.begin(), listLayout.end() );
+        return listLayout;
+    };
+
+    uint32     seed       = 777;
+    const auto nextRandom = [&seed]( uint32 bound )
+    {
+        seed = seed * 1664525u + 1013904223u;
+        return ( seed >> 8 ) % bound;
+    };
+    sw::vector<sw::MockSubTickMoverComponent*> listFollower;
+    for ( uint32 frame = 0; frame < 60; ++frame )
+    {
+        const uint32 spawnThisFrame = 1 + nextRandom( 3 );
+        for ( uint32 index = 0; index < spawnThisFrame; ++index )
+        {
+            const bool                     bLate = nextRandom( 2 ) == 0;
+            sw::SubTickHandle              handle{};
+            sw::MockSubTickMoverComponent* pMover = createMover( manager, "Follower", sw::float3{ 0.0f, 1.0f, 0.0f }, bLate ? pLateLeader : pEarlyLeader, handle );
+            SW_ASSERT_TRUE( pMover->addSubTickPrerequisite( kMove, bLate ? lateTick : earlyTick ) );
+            listFollower.push_back( pMover );
+        }
+        if ( listFollower.size() > 8 && nextRandom( 2 ) == 0 )
+        {
+            const size_t victim = nextRandom( static_cast<uint32>( listFollower.size() ) );
+            manager.destroyObject( listFollower[victim]->getOwner() );
+            listFollower.erase( listFollower.begin() + static_cast<ptrdiff_t>( victim ) );
+        }
+        manager.update( 0.016f );
+    }
+    SW_ASSERT_TRUE( manager.getTickRegistry().getStageDeltaCount() > 0u );
+
+    const auto incremental = captureLayout();
+    manager.markTickStagesDirty();
+    manager.update( 0.016f );
+    const auto rebuilt = captureLayout();
+    SW_EXPECT_EQUAL( rebuilt.size(), incremental.size() );
+    SW_EXPECT_TRUE( rebuilt == incremental );
+}
+
+/**
+ * @brief [TickPrerequisiteTest] 스테이지가 비어 있을 때 처음 들어온 팔로워도 증분으로 스테이지가 생기고, 뒤 그룹 리더의 같은 프레임 값을 읽는다
+ * @details 리더가 뒤 그룹(PostPhysics)의 보통 길에서 돌면 팔로워는 그 그룹으로 옮겨 가고, 그 스테이지는 돌기 전에 틱 중 쓰기를 적용해야 한다.
+ *          전체 재구축 없이(빌드 횟수 그대로) 끼운 스테이지도 같아야 한다.
+ */
+SW_TEST_CASE( TickPrerequisiteTest, FirstFollowerAddedIncrementallyAppliesTransformsBeforeItsStage )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents();
+
+    sw::SubTickHandle              leaderTick{};
+    sw::SubTickHandle              followerTick{};
+    sw::MockSubTickMoverComponent* pLeader = createMover( manager, "LateLeader", sw::float3{ 0.0f, 0.0f, 7.0f }, nullptr, leaderTick, sw::TickGroup::PostPhysics );
+    manager.update( 0.016f ); // 의존 오브젝트가 없다 — 스테이지는 비어 있다
+    SW_ASSERT_EQUAL( 0u, static_cast<uint32>( manager.getTickRegistry().getStages().size() ) );
+
+    const uint32                   buildBefore = manager.getTickRegistry().getStageBuildCount();
+    sw::MockSubTickMoverComponent* pFollower   = createMover( manager, "EarlyFollower", sw::float3{ 1.0f, 0.0f, 0.0f }, pLeader, followerTick );
+    SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, leaderTick ) );
+    manager.update( 0.016f );
+
+    SW_EXPECT_EQUAL( buildBefore, manager.getTickRegistry().getStageBuildCount() );
+    SW_EXPECT_EQUAL( 1u, manager.getTickRegistry().getStageDeltaCount() );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( manager.getTickRegistry().getStages().size() ) );
+    SW_EXPECT_EQUAL( static_cast<uint8>( sw::TickGroup::PostPhysics ), manager.getTickRegistry().getStages()[0]._group );
+    SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 0.0f, 0.0f, 7.0f } ) );
+    SW_EXPECT_TRUE( isNear( pFollower->_observedWorld, sw::float3{ 0.0f, 0.0f, 7.0f } ) ); // 월드 값은 적용을 거쳐야 보인다
+    SW_EXPECT_TRUE( isNear( pFollower->getLocalPosition(), sw::float3{ 1.0f, 0.0f, 7.0f } ) );
+
+    // 지우면 스테이지에서 빠진다(빈 스테이지는 남아도 돌 것이 없다).
+    manager.destroyObject( pFollower->getOwner() );
+    manager.update( 0.016f );
+    SW_EXPECT_EQUAL( 0u, manager.getTickRegistry().getStageItemCount() );
+    SW_EXPECT_EQUAL( buildBefore, manager.getTickRegistry().getStageBuildCount() );
+}

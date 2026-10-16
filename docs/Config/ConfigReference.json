@@ -2672,6 +2672,22 @@
    "source": "Source/Games/Empty/BenchSceneProbes.cpp"
   },
   {
+   "name": "gv_benchRagdollPeriod",
+   "type": "int32",
+   "default": "60",
+   "kind": "시험",
+   "description": "래그돌 군중이 상태를 바꾸는 주기 (프레임)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchRagdolls",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "벤치 래그돌 군중 수 (0=사용 안 함, KayKit 스켈레톤 — 쓰러지고 일어나기를 반복)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
    "name": "gv_benchRig",
    "type": "int32",
    "default": "0",
@@ -3654,6 +3670,14 @@
    "kind": "시험",
    "description": "타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용)",
    "source": "Source/Engine/Object/GameObject/Tick/TickRegistry.cpp"
+  },
+  {
+   "name": "gv_tickCostDispatch",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본)",
+   "source": "Source/Engine/Object/GameObject/Tick/SceneTickScheduler.cpp"
   },
   {
    "name": "gv_timeScale",

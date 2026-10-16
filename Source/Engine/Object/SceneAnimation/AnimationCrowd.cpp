@@ -40,7 +40,7 @@ namespace sw
                 }
             };
 
-            /** @brief 묶음 하나가 본 수십 개의 샘플 · 팔레트라 이 수 이상이면 나눈다(`AnimationSystem::kParallelUnitCount` 와 같은 값). */
+            /** @brief 묶음 하나가 본 수십 개의 샘플 · 팔레트라 이 수 이상이면 나눈다. */
             static constexpr uint32 kParallelBucketCount = 8;
 
             /** @brief 0 이상 @p period 미만으로 감습니다. */

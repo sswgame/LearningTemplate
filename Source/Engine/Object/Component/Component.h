@@ -45,6 +45,9 @@ namespace sw
     /**
      * @enum TickPhase
      * @brief 같은 TickGroup 안의 세부 실행 단계입니다. 단계는 64 간격이고, 서브틱 우선순위(0..`kMaxTickPriority`)는 한 단계 안에서의 순서입니다.
+     * @details **한 오브젝트 안의** 컴포넌트 틱 순서를 정하는 수단이다(UE 의 컴포넌트 틱 순서 · Unity 의 Script Execution Order 자리). 같은 프레임, 같은 그룹 안에서 (단계, 우선순위) 순으로 돈다.
+     *          **오브젝트 사이** 순서는 그룹(`TickGroup`)이나 서브틱 선행 조건(`addSubTickPrerequisite`)으로 정한다.
+     *          예: 래그돌 합성이 애니메이션 평가 뒤에 와야 하는 컴포넌트는 `registerSubTick( TickGroup::PrePhysics, id, TickPhase::Late )` 로 등록한다.
      */
     enum class TickPhase : uint8
     {

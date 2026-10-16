@@ -61,11 +61,6 @@
 - `C-36` [정리] **데이터 주도 구조 정리(2026-10-16, 사용자 지시 "원천적인 문제 해결").** 6 영역 조사가 경로 리터럴 약 200곳 · 조용한 폴백 약 60곳 · 이중 정본 약 30곳을 드러냈다. 뿌리 원인 · 형식으로 막는 해법 · 작업 묶음 W0~W8 은 [데이터 주도 구조 정리 계획](../plans/DataDriven.md).
   기준은 "게이트는 최후의 수단" — 위반을 쓸 수 없는 형식(`DataPath` · `Optional` · `[[nodiscard]]` 로더 결과)이 먼저고 린트 `CheckDataDrivenStructure` 는 틈을 지키는 안전망이다. 진행 표는 그 게이트의 `--summary`.
 
-- `C-35` [정리] **서브틱(`registerSubTick`) 활용 조사.** 서브틱은 `GameDirectorComponent.cpp` 한 곳에서만 쓰이고 `TickPhase` 의 `Early` · `Late` · `Finalize` 는 정의 밖 사용이 0 이다. 반면 `setTickGroup` 은 48 개 파일, `PostUpdate` 는 41 개 파일이다.
-  주석을 읽은 14 개는 "디렉터(`PrePhysics`)가 이 프레임의 ○○ 를 끝낸 뒤에 읽는다" 였고(HarvestValley · NileCity · StarSkirmish 의 컴포넌트, 카메라 계열), 선행 조건(`getTickHandle()` 로 다른 오브젝트 컴포넌트에도 건다)이 이 의도를 정확히 표현한다.
-  할 일: `PostUpdate` 41 개를 (렌더 직전이 필요한 것 / 특정 컴포넌트 뒤에 읽는 것 / 이유를 모르는 것) 로 분류한다. 후보 몇 개를 실제로 바꿔 프레임 시간과 동작을 비교한다. 이득이 없으면 서브틱 · `TickPhase` 를 삭제 후보로 구조 리팩토링 지도에 올린다.
-  선행 조건이 있는 서브틱은 별도 스테이지로 가므로 지금 방식보다 느릴 수도 있다 — 측정하지 않았다.
-
 - `D1-2` [기능] **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다

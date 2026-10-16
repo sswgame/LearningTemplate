@@ -346,8 +346,11 @@ SW_TEST_CASE( ComponentSubTickHybridTest, CircularPrerequisiteDependencyCycleRes
     pCompA->addSubTickPrerequisite( 1, handleB );
     pCompB->addSubTickPrerequisite( 2, handleA );
 
-    // 틱 실행: 무한루프나 크래시 없이 안전하게 실행 완료되어야 함
-    manager.update( 0.016f );
+    // 틱 실행: 무한루프나 크래시 없이 안전하게 실행 완료되어야 하고, 순환은 오류로 알려야 함(조용히 순서만 정하지 않는다)
+    {
+        test::ScopedDefensiveTestLog expected( "a sub-tick prerequisite cycle is reported and still ticks" );
+        manager.update( 0.016f );
+    }
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
 }
 

@@ -152,16 +152,13 @@ namespace sw
      * @class AnimationSystem
      * @brief 등록된 유닛을 의존(위 유닛 → 아래 유닛) 레벨로 나눠 단계마다 평가합니다. 언리얼의 애니메이션 평가, 유니티의 Playable 그래프 평가에 해당합니다.
      * @details 프레임 순서는 다음과 같다. (0) 의존이 바뀌었으면 레벨을 다시 만든다(위상 정렬이며, 고리는 오류로 알리고 남은 유닛은 마지막 레벨에 둔다). (1) 유닛마다 이번 프레임
-     *          할 일과 LOD(갱신 주기, 화면 밖 여부)를 정한다. (2) 단계마다 레벨 순서로 `engine::runParallel` 을 돌리고, 시간 단계 뒤에는 동기 그룹을 맞춘다.
+     *          할 일과 LOD(갱신 주기, 화면 밖 여부)를 정한다. (2) 단계마다 레벨 순서로 `engine::runParallelByCost` 를 돌리고, 시간 단계 뒤에는 동기 그룹을 맞춘다.
      *          (3) 게임 스레드에서 `finishAnimationFrame` 을 부른다. 쉬는 유닛(할 일 없음, 포즈 깨끗함)은 (1) 에서 빠지므로 비용이 없다.
-     *          "상태를 가진 시스템 타입, `engine::runParallel`, 매니저 tick 의 단계 한 줄"이라는 구조를 따른다(`SceneTransformHierarchy` 와 같다).
+     *          "상태를 가진 시스템 타입, `engine::runParallel` · `runParallelByCost`, 매니저 tick 의 단계 한 줄"이라는 구조를 따른다(`SceneTransformHierarchy` 와 같다).
      */
     class SW_API AnimationSystem
     {
     public:
-        /** @brief 한 레벨의 유닛이 이 수 이상이면 단계를 워커에 나눕니다. 유닛 하나가 본 수십 개의 샘플과 블렌드라 수 마이크로초입니다. */
-        static constexpr uint32 kParallelUnitCount = 8;
-
         AnimationSystem();
         ~AnimationSystem() = default;
 

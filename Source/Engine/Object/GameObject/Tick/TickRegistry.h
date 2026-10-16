@@ -36,7 +36,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 
 namespace sw
@@ -98,6 +97,8 @@ namespace sw
     struct TickStage
     {
         vector<TickItem> _listItem;
+        vector<uint64>   _listItemObjectID;         ///< `_listItem` 과 같은 순서로, 항목마다 그 오브젝트의 id 다(증분 갱신이 오브젝트의 항목을 찾는다)
+        uint32           _level{ 0 };               ///< 이 스테이지가 속한 선행 조건 레벨이다(0 = 후보 사이에 기다릴 것이 없는 레벨, 순환의 남은 항목은 최댓값)
         uint8            _group{ 0 };               ///< 이 스테이지 항목의 그룹이다(한 스테이지는 한 그룹)
         uint8            _bApplyBefore{ SW_FALSE }; ///< 실행하기 전에 틱 중 트랜스폼 쓰기를 적용할지 나타낸다
     };
@@ -191,6 +192,8 @@ namespace sw
         uint32 getStageItemCount() const { return _stageItemCount; }
         /** @brief 스테이지를 다시 만든 횟수(누적)입니다. 체인 밖 오브젝트의 스폰과 파괴로는 오르지 않습니다. 진단과 회귀 테스트용입니다. */
         uint32 getStageBuildCount() const { return _stageBuildCount; }
+        /** @brief 스테이지를 다시 만들지 않고 말단 오브젝트의 항목만 끼우거나 뺀 횟수(누적)입니다. 진단과 회귀 테스트용입니다. */
+        uint32 getStageDeltaCount() const { return _stageDeltaCount; }
 
     private:
         /**
@@ -203,7 +206,16 @@ namespace sw
          */
         void rebuildStages( GameObjectManager& manager );
         /** @brief 오브젝트 하나의 항목을 컴포넌트에서 다시 만들고 그룹 멤버십을 맞춥니다. */
-        void refreshObject( GameObject* pObj );
+        void refreshObject( GameObjectManager& manager, GameObject* pObj );
+        /**
+         * @brief 아무도 기다리지 않는 오브젝트의 선행 조건 항목만 스테이지에 다시 끼웁니다(스폰 · 파괴가 잦은 팔로워가 매번 전체 재구축을 부르지 않게).
+         * @details 말단의 조건은 새 항목의 선행 조건이 모두 의존 오브젝트 밖(보통 길)을 가리키는 것이다. 그러면 후보 사이의 간선이 없어 레벨 0 에 들고,
+         *          뒤에 오는 항목의 순서는 달라지지 않는다. 오브젝트 id 로 이전 항목을 빼고(아무도 기다리지 않으니 늘 안전하다) 새 항목을 그룹의 레벨 0 스테이지에
+         *          순서 키 자리로 넣는다. 말단이 아니면 false 를 돌려, 부른 쪽이 전체 재구축을 세운다.
+         */
+        [[nodiscard]] bool applyStageDelta( GameObjectManager& manager, GameObject* pObj );
+        /** @brief 스테이지에서 이 오브젝트의 항목을 모두 뺍니다. */
+        void removeStageItems( uint64 objectID );
         /**
          * @brief 그룹 목록(오브젝트 칸 또는 타입별 일괄 목록)에 넣거나 뺍니다. 오브젝트가 자기 위치(`_arrTickIndex`)를 가지고 있어 O(1) 입니다(일괄 목록은 타입 수만큼 본다).
          * @details @p pBatchFunction 이 있으면 그 타입의 일괄 목록에, 없으면 오브젝트 칸 목록에 @p entry 로 넣는다. 이미 같은 목록에 있으면 그 자리에 쓰고,
@@ -229,10 +241,11 @@ namespace sw
         uint32                  _prerequisiteCount;         ///< 등록된 서브틱 선행 조건의 총수
         uint32                  _stageItemCount;            ///< 스테이지가 도는 항목 수
         uint32                  _stageBuildCount;           ///< 스테이지를 다시 만든 횟수(진단)
+        uint32                  _stageDeltaCount;           ///< 말단 오브젝트의 항목만 끼우거나 뺀 횟수(진단)
         uint64                  _stageGeneration;           ///< 선행 조건에 걸린 오브젝트가 바뀔 때마다 오른다
         uint64                  _builtStageGeneration;      ///< `_listStage` 를 만든 세대
-        unordered_set<uint64>   _uniqueDependentObjectID;   ///< 선행 조건을 가진 항목이 있는 오브젝트
-        unordered_set<uint64>   _uniqueReferencedObjectID;  ///< 지난 스테이지 빌드에서 선행 조건이 가리킨 오브젝트다. 바뀌면 다시 만든다
+        vector<uint64>          _listDependentObjectID;     ///< 선행 조건을 가진 항목이 있는 오브젝트 id(정렬됨 — 스테이지가 늘 같은 순서로 지어진다)
+        vector<uint64>          _listReferencedObjectID;    ///< 지난 스테이지 빌드에서 선행 조건이 가리킨 오브젝트 id(정렬됨, 중복 없음)다. 바뀌면 다시 만든다
         vector<TickStage>       _listStage;                 ///< 선행 조건을 가진 항목의 스테이지(그룹 순)
     };
 } // namespace sw
