@@ -12,7 +12,6 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Base/Actor/Control/ControlAutomationSteps.h"
 #include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
@@ -77,8 +76,6 @@ namespace sw
         ControlSystem* pSystem = find( manager );
         if ( pSystem != nullptr )
             return *pSystem;
-        // 시나리오 단계(Intent · Possess) 등록자가 정적 링크에서 빠지지 않게 그 .cpp 를 붙든다.
-        ControlAutomationSteps::ensureLinked();
         unique_ptr<ControlSystem> pNew = make_unique<ControlSystem>();
         pSystem                        = pNew.get();
         (void)manager.addFrameSystem( ControlSystemInternal::getFrameSystemKey(), std::move( pNew ) );

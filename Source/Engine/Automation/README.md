@@ -48,7 +48,8 @@ HarvestValley 의 상점 주인이 10 시에 가게에 있는지 확인하는 �
 
 1. 프레임 10 에서 일정 탐침이 `pierre` 가 자고 있다는 것을 확인합니다. NPC id 는 일정 데이터(`villagers.schedules.xml`)의 것입니다.
 2. 프레임 11 에서 판 상태의 시계를 다음 10 시로 감습니다. 지나간 시와 날의 경계는 알림으로 남아 다음 틱의 디렉터와 일정이 받습니다.
-3. 한 프레임 뒤 일정상 활동과 위치를 확인하고, 그다음 프레임에 몸(`Villager.pierre` 오브젝트)이 가게 위치로 옮겨졌는지 봅니다. 몸은 다음 틱에 따라오므로 한 프레임을 띄웁니다.
+3. 한 프레임 뒤 일정상 활동과 위치를 확인하고, 그다음 프레임에 몸(`Villager.pierre` 오브젝트)이 가게 위치에 있는지 봅니다. 몸은 다음 틱에 따라오므로 한 프레임을 띄웁니다.
+   몸은 평소 내비 격자 위를 걸어 일정상 위치를 쫓고, 시계를 감아 일정상 위치가 멀리 뛰면 그 자리에 놓입니다(`FarmVillageDirectorComponent`).
 4. 실행합니다. `App -game=HarvestValley -scenario=game/harvestvalley/automation/schedule.scenario.xml` 의 종료 코드가 0 이면 통과입니다.
 
 단언이 실패하면 로그와 보고에 어느 단계에서 무엇이 달랐는지 한 줄이 남습니다.
@@ -66,6 +67,20 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 **입력 단계.** 키 단계(`Press`, `Release`, `Tap`, `MouseDelta`, `MousePosition`, `GamepadAxis`, `Text`, `Wheel`)와 액션 단계(`Action`, `ActionPress`, `ActionRelease`, `ActionAxis`)는 시작 프레임에 모두 가상 입력 스크립트로 옮겨집니다.
 액션 단계는 그때 통합 입력 맵(`InputManager::getInputMap`)에서 액션의 바인딩을 찾아 그 키, 단추, 스틱을 냅니다. 그래서 트리거(Hold, DoubleTap)와 레이어가 사람의 입력과 같은 경로를 지나고, 키 배치를 바꿔도 시나리오는 그대로입니다.
 `device="gamepad"` 처럼 장치를 고를 수 있고, 패드 바인딩을 쓰면 가상 패드를 먼저 연결합니다.
+
+**대상 고르기.** `target`(그리고 `Object.DistanceTo` 의 `key`, `Mount` 의 `rider` · `vehicle`)은 오브젝트 이름 글이고, 규칙은 `AutomationTarget` 하나가 정합니다.
+같은 이름으로 오브젝트를 또 만들면 오브젝트 저장소가 `_2` · `_3` 을 붙이므로(언리얼의 `MakeUniqueObjectName`), 스폰하는 적 · 손님 · 총알은 밑 이름이 같은 오브젝트가 여럿입니다.
+이름의 밑과 번호는 언리얼 `FName` 처럼 끝의 `_` + 숫자로 나눕니다(`Tree_3` 은 밑 `Tree`, `Tree_03` 은 번호가 아니다).
+
+| 글 | 고르는 것 |
+|----|-----------|
+| `ArenaGruntAI[0]` | 밑이 `ArenaGruntAI` 인 살아 있는 오브젝트를 만든 순서(오브젝트 id 오름차순)로 늘어놓은 0 번째. 없으면 그 오브젝트는 없다(`Object.Exists` 0) |
+| `ArenaGruntAI_2` | 그 이름 그대로. 번호까지 적었으면 그 오브젝트를 뜻한 것으로 본다 |
+| `ArenaGruntAI` | 그 이름 그대로. 단 밑이 같은 다른 오브젝트가 살아 있으면 **고를 수 없다는 실패**다 |
+
+마지막 줄이 조용히 첫째를 고르지 않는 까닭은 저장소가 지운 오브젝트의 번호를 재사용하기 때문입니다. 적이 죽고 다시 나면 `ArenaGruntAI` 가 다른 적일 수 있습니다.
+만든 순서는 같은 시나리오 · 같은 고정 틱이면 실행과 백엔드에 상관없이 같습니다. "그 이름의 아무나 · 모두" 질의는 두지 않았습니다. 탐침은 값 하나를 내므로
+"모두" 는 비교 연산마다 뜻이 갈리고(모두 `atLeast` 인가, 하나라도인가), "아무나" 는 실패 줄이 어느 오브젝트인지 감춥니다. 무리 전체는 게임이 수를 세는 씬 탐침(`Arena.KillCount`)으로 봅니다.
 
 **단언과 이력.** 단언 단계는 그 프레임의 씬 틱 뒤에 돕니다. `ExpectVisited` 가 있으면 시작할 때 그 탐침(탐침, 대상, 키 조합)마다 이력을 만들고, 프레임마다 값을 읽어 바뀔 때만 프레임 번호와 함께 적습니다.
 `sequence="A, B, C"` 는 그 값들을 이 순서로 거쳤는지(사이에 다른 값이 끼어도 된다), `since` 는 그 프레임에 이미 들어 있던 값부터 셀지를 정합니다.
@@ -97,7 +112,12 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 속성은 검사 함수에서 모두 확인합니다. 모르는 속성은 읽기 오류로 만들어 오타가 기본값으로 조용히 바뀌지 않게 합니다.
 
 AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 `think` 에서 상태가 바뀔 때 `setStateName( "Chase" )` 를 부르고, 판단 값은 `getBlackboard()` 에 둡니다. 탐침 `AI.State` 와 `AI.Blackboard` 가 그것을 읽습니다.
-게임 로직 단계와 탐침(시계, 일정, AI, 빙의, 탑승)의 정의는 `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` 에 있습니다.
+게임 로직 단계와 탐침(시계, 판 상태의 돈 · 퀘스트, 일정, AI, 빙의, 탑승)의 정의는 `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` 에 있습니다.
+게임마다 이 기반을 쓰는 시나리오는 `abilityarena/automation/ai`(적 AI 상태 · 번호 대상), `voxelcraft/automation/ai`(자동 플레이 빙의 · 상태), `meadowvillage/automation/day`(시간 감기 · 돈 · 퀘스트),
+`themepark/automation/guests`(손님 풀의 번호 대상), `harvestvalley/automation/schedule` · `autofarmer` 입니다. 탑승 단계(`Mount` · `Dismount` · `Pawn.Seat`)는 탈것을 쓰는 게임이 없어 시나리오가 없습니다.
+
+등록자는 단계 · 탐침을 정의한 .cpp 의 정적 객체입니다. Shipping 은 Engine · GameFramework · 키트 · 게임을 통째로 링크하므로(`sw_linkWholeArchive`, 테스트 실행 파일도 같다)
+그 .cpp 를 붙드는 빈 함수(`ensureLinked`)를 두지 않습니다.
 
 ## 함정과 주의
 
@@ -119,6 +139,7 @@ AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 
 | 파일 | 내용 |
 |------|------|
 | `AutomationRunner.cpp` | 엔진 단계와 엔진 탐침(`Object.*`, `Scene.*`, `Input.*`) |
+| `AutomationProbe.cpp` | 탐침 레지스트리, 대상 고르기 규칙(`AutomationTarget`, `AutomationProbeQuery::make`) |
 | `AutomationActionSteps.cpp` | 입력 맵 액션 단계 |
 | `ScenarioRecorder.cpp` | 녹화를 시나리오로 바꾸기 |
 | `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` | 게임 시간, 일정, AI, 빙의, 탑승 |

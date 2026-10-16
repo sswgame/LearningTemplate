@@ -762,6 +762,14 @@
 					                              _bActive="true"
 					                              _scheduleDataPath="game/harvestvalley/data/villagers.schedules.xml"
 					                              _villagerPrefab="game/harvestvalley/prefabs/villager.prefab.xml"
+					                              _navOrigin="-10,0,-8"
+					                              _navWidth="48"
+					                              _navHeight="42"
+					                              _navCellSize="1"
+					                              _navObstacleNames="FarmHouse, ShippingBin, SeedShop, Fence, Tree, Log, Stump"
+					                              _navObstacleRadius="0.8"
+					                              _bodyCatchUpScale="1.5"
+					                              _bodySnapDistance="3"
 					                              _bAutoPlay="false" />
 				</_listComponent>
 			</GameObject>

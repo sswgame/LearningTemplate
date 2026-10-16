@@ -17,7 +17,7 @@ namespace sw
      * @brief 자동 플레이가 켜지면 디렉터가 세워 플레이어 폰에 빙의시킵니다(`gv_voxelAutoPlay` · 에디터 툴바 스위치 하나 — 끄면 플레이어 조종자가 다시 쥔다).
      * @details 몸(`VoxelPlayerComponent`)에는 자동 플레이 분기가 없습니다 — 이 조종자가 플레이어와 같은 의도(이동 · 조종 회전 · `Voxel.Jump` · `Voxel.Break` ·
      *          `Voxel.Place`)를 냅니다. 한 주기(기본 12 초) 동안 앞으로 걸으며 천천히 돌고(앞 절반은 오른쪽, 뒤는 왼쪽), 아래를 조금 보며 주기의 정해진 구간에 부수고 한 번 놓는다(시각은 PROPERTY).
-     *          앞이 막혔거나 물 속이면 점프를 누른다(월드는 판단만 위해 읽는다).
+     *          앞이 막혔거나 물 속이면 점프를 누른다(월드는 판단만 위해 읽는다). 판단 상태(`setStateName`, 탐침 `AI.State`)는 `Walk` · `Break` · `Place` 다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Auto Play Controller", Tooltip = "AI controller that walks, breaks and places blocks with the player pawn when auto play is on" )
     class VoxelAutoPlayControllerComponent : public AIControllerComponent

@@ -29,6 +29,7 @@ cd build/Ninja-Debug/Bin
 `control.scenario.xml` 은 가상 키로 플레이어를 오른쪽으로 걷게 하고(D 를 반 초, 3m 남짓) 화염구를 한 번 쏜 뒤(K),
 자동 플레이를 켜서 자동 전투 AI 가 폰을 잡고 적을 쓰러뜨리는지, 끄면 플레이어 조종자가 되찾는지 봅니다.
 탐침은 `Arena.PlayerX`, `Arena.PlayerZ`, `Arena.PlayerShotCount`, `Arena.KillCount`, `Arena.PlayerControllerKind`(0 플레이어, 1 AI)입니다.
+`ai.scenario.xml` 은 첫 근접 적이 쫓다가(`Chase`) 때리는지(`Strike`) 적 AI 의 판단 상태(`AI.State`)로 봅니다. 적 AI 오브젝트는 모두 `ArenaGruntAI` 로 스폰되므로 `target="ArenaGruntAI[0]"` 처럼 만든 순서의 번호로 고릅니다.
 
 ## 조작
 

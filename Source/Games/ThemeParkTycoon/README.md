@@ -26,6 +26,7 @@ cd build/Ninja-Debug/Bin
 `shadow.scenario.xml` 은 고정 카메라와 고정 해, 자동 건설을 끈 상태에서 직교 카메라가 화면 끝까지 그림자를 받는지 봅니다.
 화면 띠와 나무 줄과 가운데 영역의 어두운 픽셀 비율을 단언하고, 측정값은 보고 JSON 과 `[Scenario] metric` 로그 줄에 남습니다.
 `ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly` 가 이 시나리오를 네 백엔드로 돌립니다.
+`guests.scenario.xml` 은 미리 스폰한 손님 뷰(모두 `ParkGuest`)를 `target="ParkGuest[N]"` 으로 골라 N 번째 뷰가 N 번 손님을 따르는지, 첫 손님이 정문에서 걸어 나가는지, 자동 건설이 첫 놀이기구를 짓는지 봅니다.
 
 ## 조작
 

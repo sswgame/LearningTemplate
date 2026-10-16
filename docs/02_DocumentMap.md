@@ -46,7 +46,8 @@
 ## README
 
 ### 엔진 모듈
-- [Automation](../Source/Engine/Automation/README.md) — 자동화 시나리오 형식, 단계와 탐침, 결정적 재생과 녹화
+- [Automation](../Source/Engine/Automation/README.md) — 자동화 시나리오 형식, 단계와 탐침, 대상 고르기 규칙, 결정적 재생과 녹화
+- [Schedule](../Source/GameFramework/Base/Actor/AI/Schedule/README.md) — NPC 하루 일정 런타임, 칸 고르기 · 일찍 나서기 · 끼어들기 · 경로 제공자
 
 ### 게임
 - [Source/Games](../Source/Games/README.md) — 게임을 더하는 법, 게임 목록
