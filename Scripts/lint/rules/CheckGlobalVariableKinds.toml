@@ -18,4 +18,5 @@ gv_parkAutoBuild = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골�
 gv_shooterAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_skirmishAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_voxelAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_wildWestAutoPlay = "Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_cameraPreset = "Test/QA/Games.json 골든이 배포본에서도 캡처 카메라를 고른다(Shooter3D)"

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WildWest 팩의 설정 — 시작 맵은 평원 씬이다(게임마다 팩의 data/gamesettings.xml 하나다).
+     inputMap 은 걷기 · 타기 · 질주 · 휘파람의 기본 바인딩이다. -->
+<GameSettings>
+  <startMap>game/wildwest/maps/prairie.scene.xml</startMap>
+  <inputMap>game/wildwest/data/wildwest.input.xml</inputMap>
+</GameSettings>

@@ -339,6 +339,12 @@
 |---|---|---|---|---|---|
 | `gv_voxelAutoPlay` | `int32` | `0` | 시험 · 배포본에도 | VoxelCraft: 걷기 · 부수기 · 놓기도 AI 가 (1=켜기) | [VoxelDirectorComponent.cpp](../../Source/Games/VoxelCraft/VoxelDirectorComponent.cpp) |
 
+## `Source/Games/WildWest`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_wildWestAutoPlay` | `int32` | `0` | 시험 · 배포본에도 | WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기) | [WildWestDirectorComponent.cpp](../../Source/Games/WildWest/WildWestDirectorComponent.cpp) |
+
 ## `Source/Server`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |

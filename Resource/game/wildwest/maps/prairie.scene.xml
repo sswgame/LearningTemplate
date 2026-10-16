@@ -1,0 +1,1367 @@
+<Scene formatVersion="1" name="WildWest">
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,20,-15"
+					                 _localRotation="0.9272952,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="120"
+					                 _orthoHeight="18"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<OrthoCameraRigComponent _componentName="OrthoCameraRigComponent"
+					                         _bActive="true"
+					                         _focus="0,0,0"
+					                         _yaw="0"
+					                         _pitch="0.9272952"
+					                         _distance="25"
+					                         _orthoHeight="18"
+					                         _minOrthoHeight="18"
+					                         _maxOrthoHeight="18"
+					                         _zoomStep="0.85"
+					                         _panSpeed="40"
+					                         _panReferenceHeight="18"
+					                         _rotateStep="1.5707964"
+					                         _farPlaneScale="4"
+					                         _bInputEnabled="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.75,0.9,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.86,0.66"
+					                           _intensity="1.5"
+					                           _ambient="0.32"
+					                           _shadowExtent="30"
+					                           _shadowDistance="60"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,-0.5,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="None"
+					                    _bodyType="Static"
+					                    _layer="Default"
+					                    _material="None"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="80,0.5,80" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.5,0"
+					               _localRotation="0,0,0"
+					               _localScale="160,1,160"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="RigidBodyComponent#0"
+					               _meshID="Plane"
+					               _materialPath="game/wildwest/materials/sand.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<CharacterControllerComponent _componentName="CharacterControllerComponent"
+					                              _bActive="true"
+					                              _localPosition="0,0.05,0"
+					                              _localRotation="0,0,0"
+					                              _localScale="1,1,1"
+					                              _attachOwner="None"
+					                              _attachOwnerID="0"
+					                              _attachComponent="None"
+					                              _radius="0.3"
+					                              _halfHeight="0.6"
+					                              _stepHeight="0.3"
+					                              _maxSlopeAngle="0.7853982"
+					                              _gravityScale="1"
+					                              _mass="70"
+					                              _layer="Character" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0.9,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.9,0.6"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="CharacterControllerComponent#0"
+					               _meshID="Capsule"
+					               _materialPath="game/wildwest/materials/rider.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.85,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.75,0.08,0.75"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="CharacterControllerComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/hat.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.97,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.42,0.2,0.42"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="CharacterControllerComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/hat.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<PawnComponent _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="West.Move"
+					               _lookAction="None"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="1.4"
+					               _autoPossess="Player0"
+					               _bLockMouse="false">
+						<_listButton>
+							<item>West.Interact</item>
+							<item>West.Whistle</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+					<CharacterPawnMovementComponent _componentName="CharacterPawnMovementComponent"
+					                                _bActive="true"
+					                                _sprintButton="None"
+					                                _jumpButton="None"
+					                                _walkSpeed="3.5"
+					                                _sprintSpeed="3.5"
+					                                _acceleration="30"
+					                                _deceleration="40"
+					                                _jumpSpeed="5"
+					                                _turnRate="12"
+					                                _facingMode="MoveDirection" />
+					<MountInteractionComponent _componentName="MountInteractionComponent"
+					                           _bActive="true"
+					                           _interactButton="West.Interact" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Bessie">
+			<GameObject _schemaVersion="0" _name="Bessie" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="1.6,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.15,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.7,0.7,1.7"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/morgan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.65,0.85"
+					               _localRotation="-0.5,0,0"
+					               _localScale="0.36,0.75,0.36"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/morgan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.95,1.2"
+					               _localRotation="0,0,0"
+					               _localScale="0.32,0.32,0.7"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/morgan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.85,0.75"
+					               _localRotation="-0.5,0,0"
+					               _localScale="0.1,0.55,0.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mane.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.1,-0.95"
+					               _localRotation="0.4,0,0"
+					               _localScale="0.12,0.6,0.12"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mane.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-0.24,0.42,-0.65"
+					               _localRotation="0,0,0"
+					               _localScale="0.16,0.84,0.16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/morgan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-0.24,0.42,0.65"
+					               _localRotation="0,0,0"
+					               _localScale="0.16,0.84,0.16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/morgan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0.24,0.42,-0.65"
+					               _localRotation="0,0,0"
+					               _localScale="0.16,0.84,0.16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/morgan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0.24,0.42,0.65"
+					               _localRotation="0,0,0"
+					               _localScale="0.16,0.84,0.16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/morgan.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.52,-0.05"
+					               _localRotation="0,0,0"
+					               _localScale="0.74,0.06,0.6"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/hat.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<PawnComponent _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="West.Move"
+					               _lookAction="None"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="1.4"
+					               _autoPossess="None"
+					               _bLockMouse="false">
+						<_listButton>
+							<item>West.Gallop</item>
+							<item>West.Interact</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+					<MountMovementComponent _componentName="MountMovementComponent"
+					                        _bActive="true"
+					                        _sprintButton="West.Gallop"
+					                        _gaitParameter="None"
+					                        _turnParameter="None"
+					                        _walkSpeed="1.8"
+					                        _trotSpeed="3.5"
+					                        _canterSpeed="6"
+					                        _gallopSpeed="10"
+					                        _acceleration="6"
+					                        _deceleration="8"
+					                        _idleTurnRate="2"
+					                        _walkTurnRate="2"
+					                        _trotTurnRate="1.8"
+					                        _canterTurnRate="1.5"
+					                        _gallopTurnRate="1.2"
+					                        _bUseRootMotion="false" />
+					<VehicleSeatComponent _componentName="VehicleSeatComponent"
+					                      _bActive="true"
+					                      _socketName="None"
+					                      _riderPoseParameter="None"
+					                      _seatOffset="0,1.5,-0.05"
+					                      _exitOffset="-1.6,0,0"
+					                      _enterDistance="2.5"
+					                      _bDriverSeat="true" />
+					<VehicleExitComponent _componentName="VehicleExitComponent"
+					                      _bActive="true"
+					                      _exitButton="West.Interact" />
+					<WesternHorseMountComponent _componentName="WesternHorseMountComponent"
+					                            _bActive="true"
+					                            _gallopAbility="None"
+					                            _resumeGallopRatio="0.3" />
+					<WildWestHorseComponent _componentName="WildWestHorseComponent"
+					                        _bActive="true"
+					                        _director="9"
+					                        _breed="morgan"
+					                        _seed="7"
+					                        _gameHoursPerSecond="0.0166667" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Shadow">
+			<GameObject _schemaVersion="0" _name="Shadow" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="-6,0,3.5"
+					                _localRotation="0,0.6,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.15,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.7,0.7,1.7"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mustang.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.65,0.85"
+					               _localRotation="-0.5,0,0"
+					               _localScale="0.36,0.75,0.36"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mustang.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.95,1.2"
+					               _localRotation="0,0,0"
+					               _localScale="0.32,0.32,0.7"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mustang.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.85,0.75"
+					               _localRotation="-0.5,0,0"
+					               _localScale="0.1,0.55,0.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mane.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.1,-0.95"
+					               _localRotation="0.4,0,0"
+					               _localScale="0.12,0.6,0.12"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mane.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-0.24,0.42,-0.65"
+					               _localRotation="0,0,0"
+					               _localScale="0.16,0.84,0.16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mustang.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-0.24,0.42,0.65"
+					               _localRotation="0,0,0"
+					               _localScale="0.16,0.84,0.16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mustang.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0.24,0.42,-0.65"
+					               _localRotation="0,0,0"
+					               _localScale="0.16,0.84,0.16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mustang.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0.24,0.42,0.65"
+					               _localRotation="0,0,0"
+					               _localScale="0.16,0.84,0.16"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/mustang.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.52,-0.05"
+					               _localRotation="0,0,0"
+					               _localScale="0.74,0.06,0.6"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="SceneComponent#0"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/hat.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<PawnComponent _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="West.Move"
+					               _lookAction="None"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="1.4"
+					               _autoPossess="None"
+					               _bLockMouse="false">
+						<_listButton>
+							<item>West.Gallop</item>
+							<item>West.Interact</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+					<MountMovementComponent _componentName="MountMovementComponent"
+					                        _bActive="true"
+					                        _sprintButton="West.Gallop"
+					                        _gaitParameter="None"
+					                        _turnParameter="None"
+					                        _walkSpeed="1.8"
+					                        _trotSpeed="3.5"
+					                        _canterSpeed="6"
+					                        _gallopSpeed="10"
+					                        _acceleration="6"
+					                        _deceleration="8"
+					                        _idleTurnRate="2"
+					                        _walkTurnRate="2"
+					                        _trotTurnRate="1.8"
+					                        _canterTurnRate="1.5"
+					                        _gallopTurnRate="1.2"
+					                        _bUseRootMotion="false" />
+					<VehicleSeatComponent _componentName="VehicleSeatComponent"
+					                      _bActive="true"
+					                      _socketName="None"
+					                      _riderPoseParameter="None"
+					                      _seatOffset="0,1.5,-0.05"
+					                      _exitOffset="-1.6,0,0"
+					                      _enterDistance="2.5"
+					                      _bDriverSeat="true" />
+					<VehicleExitComponent _componentName="VehicleExitComponent"
+					                      _bActive="true"
+					                      _exitButton="West.Interact" />
+					<WesternHorseMountComponent _componentName="WesternHorseMountComponent"
+					                            _bActive="true"
+					                            _gallopAbility="None"
+					                            _resumeGallopRatio="0.3" />
+					<WildWestHorseComponent _componentName="WildWestHorseComponent"
+					                        _bActive="true"
+					                        _director="9"
+					                        _breed="mustang"
+					                        _seed="11"
+					                        _gameHoursPerSecond="0.0166667" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="BessieAI">
+			<GameObject _schemaVersion="0" _name="BessieAI" _bActive="true">
+				<_listComponent>
+					<HorseFollowAIController _componentName="HorseFollowAIController"
+					                         _bActive="true"
+					                         _possessAtStart="5"
+					                         _turnRate="6"
+					                         _arriveDistance="1"
+					                         _ownerObject="4"
+					                         _followDistance="8"
+					                         _stopDistance="3" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="ShadowAI">
+			<GameObject _schemaVersion="0" _name="ShadowAI" _bActive="true">
+				<_listComponent>
+					<HorseFollowAIController _componentName="HorseFollowAIController"
+					                         _bActive="true"
+					                         _possessAtStart="6"
+					                         _turnRate="6"
+					                         _arriveDistance="1"
+					                         _ownerObject="4"
+					                         _followDistance="8"
+					                         _stopDistance="3" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Ranch">
+			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true">
+				<_listComponent>
+					<WildWestDirectorComponent _componentName="WildWestDirectorComponent"
+					                           _bActive="true"
+					                           _bAutoPlay="false"
+					                           _westernDataPath="game/wildwest/data/western.xml"
+					                           _player="4"
+					                           _cameraRig="1"
+					                           _whistleButton="West.Whistle" />
+					<HUDControllerComponent _componentName="HUDControllerComponent"
+					                        _bActive="true"
+					                        _documentPath="game/wildwest/ui/hud.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Cactus_1">
+			<GameObject _schemaVersion="0" _name="Cactus_1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-9,1.4,9"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,2.8,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-8.45,1.8,9"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-8.25,2.2,9"
+					               _localRotation="0,0,0"
+					               _localScale="0.3,0.9,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="Cactus_2">
+			<GameObject _schemaVersion="0" _name="Cactus_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="7,1.4,12"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,2.8,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="7.55,1.8,12"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="7.75,2.2,12"
+					               _localRotation="0,0,0"
+					               _localScale="0.3,0.9,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Cactus_3">
+			<GameObject _schemaVersion="0" _name="Cactus_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="14,1.4,-4"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,2.8,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="14.55,1.8,-4"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="14.75,2.2,-4"
+					               _localRotation="0,0,0"
+					               _localScale="0.3,0.9,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="Cactus_4">
+			<GameObject _schemaVersion="0" _name="Cactus_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-15,1.4,-6"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,2.8,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-14.45,1.8,-6"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-14.25,2.2,-6"
+					               _localRotation="0,0,0"
+					               _localScale="0.3,0.9,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="Cactus_5">
+			<GameObject _schemaVersion="0" _name="Cactus_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="3,1.4,22"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,2.8,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="3.55,1.8,22"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="3.75,2.2,22"
+					               _localRotation="0,0,0"
+					               _localScale="0.3,0.9,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Cactus_6">
+			<GameObject _schemaVersion="0" _name="Cactus_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-4,1.4,-14"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,2.8,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3.45,1.8,-14"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3.25,2.2,-14"
+					               _localRotation="0,0,0"
+					               _localScale="0.3,0.9,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="Cactus_7">
+			<GameObject _schemaVersion="0" _name="Cactus_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18,1.4,16"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,2.8,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18.55,1.8,16"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="18.75,2.2,16"
+					               _localRotation="0,0,0"
+					               _localScale="0.3,0.9,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="Cactus_8">
+			<GameObject _schemaVersion="0" _name="Cactus_8" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-20,1.4,14"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,2.8,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-19.45,1.8,14"
+					               _localRotation="0,0,0"
+					               _localScale="0.6,0.3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-19.25,2.2,14"
+					               _localRotation="0,0,0"
+					               _localScale="0.3,0.9,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/cactus.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="Rock_1">
+			<GameObject _schemaVersion="0" _name="Rock_1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="5,0.4,6"
+					               _localRotation="0,0.4,0"
+					               _localScale="1.6,0.8,1.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/rock.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="Rock_2">
+			<GameObject _schemaVersion="0" _name="Rock_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-11,0.55,2"
+					               _localRotation="0,0.4,0"
+					               _localScale="2.2,1.1,1.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/rock.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="Rock_3">
+			<GameObject _schemaVersion="0" _name="Rock_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="10,0.3,-10"
+					               _localRotation="0,0.4,0"
+					               _localScale="1.2,0.6,1.4"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/rock.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="Rock_4">
+			<GameObject _schemaVersion="0" _name="Rock_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-6,0.65,18"
+					               _localRotation="0,0.4,0"
+					               _localScale="2.6,1.3,2.0"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/rock.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="Rock_5">
+			<GameObject _schemaVersion="0" _name="Rock_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0.25,6"
+					               _localRotation="0,0.4,0"
+					               _localScale="1.0,0.5,0.9"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/rock.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="Fence_1">
+			<GameObject _schemaVersion="0" _name="Fence_1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.6,-6.0"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.9,-4.75"
+					               _localRotation="0,0,0"
+					               _localScale="0.1,0.12,2.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="Fence_2">
+			<GameObject _schemaVersion="0" _name="Fence_2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.6,-3.5"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.9,-2.25"
+					               _localRotation="0,0,0"
+					               _localScale="0.1,0.12,2.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="Fence_3">
+			<GameObject _schemaVersion="0" _name="Fence_3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.6,-1.0"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.9,0.25"
+					               _localRotation="0,0,0"
+					               _localScale="0.1,0.12,2.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="26" name="Fence_4">
+			<GameObject _schemaVersion="0" _name="Fence_4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.6,1.5"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.9,2.75"
+					               _localRotation="0,0,0"
+					               _localScale="0.1,0.12,2.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="27" name="Fence_5">
+			<GameObject _schemaVersion="0" _name="Fence_5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.6,4.0"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.9,5.25"
+					               _localRotation="0,0,0"
+					               _localScale="0.1,0.12,2.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="28" name="Fence_6">
+			<GameObject _schemaVersion="0" _name="Fence_6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.6,6.5"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.9,7.75"
+					               _localRotation="0,0,0"
+					               _localScale="0.1,0.12,2.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="29" name="Fence_7">
+			<GameObject _schemaVersion="0" _name="Fence_7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-3,0.6,9.0"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="game/wildwest/materials/wood.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
