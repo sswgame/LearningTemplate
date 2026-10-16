@@ -2,11 +2,11 @@
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 빌드 속도, 간헐 실패 관찰의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `B-5` [검증대기] **`LoaderFuzzer` `Compression` 타임아웃은 고쳤고 퍼저 재확인과 남은 디코더 셋이 남았다**(실행 38806424034). 원인은 헤더의 원본 크기(620 MB)를 압축 크기(0)와 견주지 않고 할당한 것이었다 —
+- `B-5` [검증대기] **`LoaderFuzzer` `Compression` 타임아웃은 고쳤고 퍼저 재확인과 씨앗이 남았다**(실행 38806424034). 원인은 헤더의 원본 크기(620 MB)를 압축 크기(0)와 견주지 않고 할당한 것이었다 —
   코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 `vector` 소멸 루프 생략으로 고쳤다(결정 기록 5-3, 2026-10-17). 퍼저는 리눅스 전용이라 로컬에서는 `CompressionTest.FuzzTimeoutInputIsRejectedBeforeAllocating` 이
   그 입력을 그대로 재현해 할당 전에 끊기는지(용량 0)만 본다. 남은 일: ① 다음 야간 퍼징에서 `Compression` 이 통과하는지 확인 ② 그 입력을 `Test/EngineTest/LoaderFuzzTargets.cpp` `seedCompression` 씨앗에 더하기
-  (소유 파일 밖이라 두었다) ③ 같은 모양(헤더 원본 크기로 바로 `resize`)인 `NetCompressionUtil::decompressEnvelope`(상한은 `maxRawSize` 뿐) · `LocalSlotEnvelope` `decompressBody`(`_originalSize`) ·
-  `ResourcePakReader::decompressData`(엔트리 원본 크기)가 할당 전에 `pCodec->decompressBound( 압축 크기 )` 와 견주게 하기.
+  (소유 파일 밖이라 두었다). 같은 모양(헤더 원본 크기로 바로 `resize`)이던 `NetCompressionUtil::decompressEnvelope` · `LocalSlotEnvelope` `decompressBody` · `ResourcePakReader::decompressData` 도
+  할당 전에 `decompressBound` 와 견준다(팩은 할당을 `decompressData` 안으로 옮겨 부르는 쪽이 먼저 resize 하지 못한다).
 
 - `B-7` [검증대기] **리눅스에서 아직 자동으로 안 도는 것**: X11 입력(좌표 · `XkbSetDetectableAutoRepeat` — WSLg 의 `DISPLAY=:0` 이 있으니 손으로 한 번), yad 파일 대화상자의 두 번째
   `--file-filter`(man 으로만 확인). 사용자가 WSL 확인을 요청할 때만 한다(2026-10-10 결정).

@@ -107,6 +107,8 @@ namespace sw
                 ICompressionCodec*        pCodec    = pRegistry != nullptr ? pRegistry->getCodec( static_cast<CompressionCodecType>( header._codec ) ) : nullptr;
                 if ( pCodec == nullptr )
                     return LocalStoreResult::Corrupt; // 이 구성에 없는 코덱 — 다른 코덱으로 바꾸지 않는다
+                if ( header._originalSize > pCodec->decompressBound( bodySize ) )
+                    return LocalStoreResult::Corrupt; // 본문 크기로는 나올 수 없는 원본 크기 — resize 전에 끊는다(B-5)
                 outBodyBytes.resize( static_cast<size_t>( header._originalSize ) );
                 size_t     decompressedSize = 0;
                 const bool bDecompressed    = pCodec->decompress( pBody, bodySize, outBodyBytes.data(), outBodyBytes.size(), decompressedSize );

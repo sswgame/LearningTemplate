@@ -123,7 +123,12 @@ namespace sw
         /** @brief FAT 항목 하나가 파일 안을 가리키는지, 크기가 다룰 만한지 봅니다. */
         bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const;
         [[nodiscard]] bool loadIndexTable();
-        static bool        decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize );
+        /**
+         * @brief 압축 항목을 풀어 @p outBytes 를 @p uncompressedSize 로 채웁니다. **할당도 여기서 합니다.**
+         * @details 엔트리의 원본 크기는 파일에서 온 값입니다. 코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 견준 뒤에만
+         *          resize 하도록 할당과 해제를 한 함수에 묶었습니다 — 부르는 쪽이 먼저 resize 하는 모양을 쓸 수 없게 하려는 것입니다(B-5).
+         */
+        static bool decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, size_t uncompressedSize, vector<uint8>& outBytes );
         /**
          * @brief @p other 의 파일 · 헤더 · 인덱스를 넘겨받고 @p other 의 파일 핸들을 비웁니다. 두 쪽의 `_fileMutex` 를 잡은 채로 부릅니다.
          * @details 이동 생성자와 이동 대입이 함께 씁니다. 멤버를 더하면 여기 한 곳만 고칩니다.
