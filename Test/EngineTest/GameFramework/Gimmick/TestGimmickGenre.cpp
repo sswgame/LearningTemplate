@@ -437,3 +437,69 @@ SW_TEST_CASE( GimmickGenreTest, Gimmick3DVariantsMirrorTheir2DPrefabs )
     }
     SW_EXPECT_EQUAL( 21, variantCount ); // 2D 콜라이더를 든 기믹 프리팹마다 하나
 }
+
+/**
+ * @brief [GimmickGenreTest] 3D 변형 프리팹의 트리거 강체는 3D 씬에서 들어온 강체의 겹침을 장치의 컴포넌트 겹침 훅(`onOverlapBegin`)으로 넘긴다
+ * @details 트리거 변형마다 10 m 씩 띄워 세우고, 같은 오브젝트에 태그 조건이 없는 센서를 더해 훅을 본다. 상자 가운데에 작은 동적 강체를 두고 몇 프레임 돌리면
+ *          센서에 그 강체가 들어 있어야 한다. 2D 짝은 `BoxCollider2DComponent` 겹침 월드로 받지만, 3D 변형은 강체 물리의 트리거 이벤트가 같은 훅으로 와야 장치가 돈다.
+ */
+SW_TEST_CASE( GimmickGenreTest, Gimmick3DTriggerVariantsReceiveOverlapsInA3DScene )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string   folder = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), "common/prefabs/gimmicks" );
+    vector<string> listFile;
+    SW_ASSERT_TRUE( FileUtil::collectFiles( folder, ".xml", listFile, true ) );
+    struct TriggerVariant
+    {
+        string                  _id;
+        GimmickSensorComponent* _pProbe;
+    };
+    GameObjectManager      manager;
+    vector<TriggerVariant> listVariant;
+    for ( const string& filePath : listFile )
+    {
+        constexpr string_view kVariantSuffix = "3d.prefab.xml";
+        if ( filePath.size() <= kVariantSuffix.size() || string_view( filePath ).substr( filePath.size() - kVariantSuffix.size() ) != kVariantSuffix )
+            continue;
+        const string variantID = ResourcePaths::toResourceID( filePath );
+        PrefabAsset  variant;
+        SW_ASSERT_TRUE_MSG( variant.loadFromXMLFile( variantID ), variantID.c_str() );
+        GameObject* pObject = manager.createGameObject( hashed_string( "Variant" ) );
+        SW_ASSERT_TRUE_MSG( variant.applyStateTo( pObject ), variantID.c_str() );
+        RigidBodyComponent* pBody = pObject->getComponent<RigidBodyComponent>();
+        SW_ASSERT_NOT_NULL( pBody );
+        if ( pBody->isTrigger() == false )
+            continue;
+        const float3 center = float3{ static_cast<float32>( listVariant.size() ) * 10.0f, 2.0f, 0.0f };
+        pBody->setLocalPosition( center );
+        GimmickSensorComponent* pProbe = pObject->addComponent<GimmickSensorComponent>();
+        SW_ASSERT_NOT_NULL( pProbe );
+        GameObject*         pVisitor     = manager.createGameObject( hashed_string( "Visitor" ) );
+        RigidBodyComponent* pVisitorBody = pVisitor->addComponent<RigidBodyComponent>();
+        SW_ASSERT_NOT_NULL( pVisitorBody );
+        PhysicsShapeDesc3D box;
+        box._halfExtents = float3{ 0.05f, 0.05f, 0.05f };
+        pVisitorBody->setShape( box );
+        pVisitorBody->setBodyType( PhysicsBodyType::Dynamic );
+        pVisitorBody->setLocalPosition( center + pBody->getShapes()[0]._localPosition );
+        listVariant.push_back( TriggerVariant{ variantID, pProbe } );
+    }
+    SW_ASSERT_FALSE( listVariant.empty() );
+    manager.beginPlay();
+    // 프레임마다 본다 — 한 번 쓰는 장치(아이템 상자)는 겹침에 반응해 바디를 끄므로 다음 프레임에 겹침이 끝난다.
+    vector<uint8> listSeen( listVariant.size(), SW_FALSE );
+    for ( int32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+    {
+        test::updateFrames( manager, 1 );
+        for ( size_t index = 0; index < listVariant.size(); ++index )
+        {
+            if ( listVariant[index]._pProbe->getOccupantCount() > 0 )
+                listSeen[index] = SW_TRUE;
+        }
+    }
+    for ( size_t index = 0; index < listVariant.size(); ++index )
+    {
+        SW_EXPECT_TRUE_MSG( listSeen[index] == SW_TRUE, listVariant[index]._id.c_str() );
+    }
+    manager.endPlay();
+}

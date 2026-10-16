@@ -99,7 +99,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
 
 - `D4-12` [기능] **상호작용 · 기믹의 남은 것**(`GameFramework/Base/Gameplay/Interaction` · `Gimmick` · `Spline` README).
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
-  - 실행 확인: 3D 기믹 프리팹 변형(`Resource/common/prefabs/gimmicks` 의 `<이름>3d.prefab.xml`)이 3D 씬에서 장치마다 겹침 이벤트를 받는지, 상호작용 단계 몽타주가 애니메이터를 실제로 부르는지(그래프 에셋이 있는 씬).
+  - 실행 확인: 상호작용 단계 몽타주가 애니메이터를 실제로 부르는지(그래프 에셋이 있는 씬). 3D 기믹 변형의 겹침은 `GimmickGenreTest.Gimmick3DTriggerVariantsReceiveOverlapsInA3DScene` 이 본다.
 
 - `D4-13` [기능] **의도 기록 · 원격 조종자의 남은 연결.** `NetClientServer` 의 입력 바이트(`ReplicationClient::sendInput` 이 게임이 준 바이트를 싣는 자리)를
   `ControlIntent::write` 로, 서버 폰은 `RemoteControllerComponent` 로 — 폰을 쓰는 넷 테스트 게임이 생기면(지금 0). 재생 진입점(`IntentPlayback::start` · `startFromFile`)은 있다.
