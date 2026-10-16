@@ -2,17 +2,20 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법은 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../backlog/README.md)(영역별 파일 · 상태 태그, `py -3 -m Scripts backlog` 로 목록), 작업 방식은 [작업 방식](../11_Workflow.md), 병렬 작업자 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다. 이 문서에는 지금 상태 · 다음 할 일 · 함정 · 시작 절차만 둡니다.
 
-## 1. 지금 상태 (2026-10-17 새벽)
+## 1. 지금 상태 (2026-10-17 밤)
 
 main 은 push 되지 않았다(원격 `main` 하나). 이 세션이 main 에 병합한 워크트리: `tickfollowup` `gamescn` `smallfix` `internalrule` `mountgame` `qualitycleanup` `terrainserver` `editorscn2` `corefuzz` `enginefeature` `netfeature` `uifollow` `gfxfeature` `gameplayfeature`. 병합마다 전체 Release 빌드와 관련 스위트를 돌렸다(병합 중 의미 충돌 · Release 전용 실패 4 건을 main 에서 고쳤다: WildWest 탐침, `PhysicsSoftBodyTest` 허용치, 셰이더 쿠킹의 낡은 바이너리 80 개, `WildWest` 데이터 종류 등록).
 Debug `-L lint` · `-L nogpu` · `-L race` 를 통과시키고(고친 둘: `WildWestHorseComponent` 의 단일 함수 `Internal`, 한 줄로 쓴 `prairie.scene.xml`) 2026-10-17 에 main 을 push 했다(`b21bf6c4f`).
 
 **(2026-10-17 오후) 아래가 모두 main 에 병합돼 push 됐다(`97dfd14fd`).** Release · Debug 모두 `-L lint` `-L nogpu` 통과, Debug `-L race` 통과(Release 에는 `race` 가 없다). 병합한 것: `netfeature`(HTTP 이름 해석 스레드) `internalgf` `internalrest` `internaltest`(`Internal` 소거 끝 — `internalHelperBaseline` 은 빈 목록) `serverport`(전용 서버가 `ServerConfig::_gamePort` 로 포트를 연다, `_gamePort` 0 = OS 가 고름) `containers`(`VectorUtil::findBy` 등 · `CompareUtil.h` · `DefaultHash`) `reflectfmt`(`ReflectionFormats.md` 설계) `c6graphics`(`C-16` 주석, Graphics · Renderer) `smalldebt`(이름 조회 한 곳 · `IFileWatcher` 끊김 · HUD 뷰모델 게임별) `visualizer`(시각화 색 테마 토큰 · LootTable/QuestCatalog 스키마) `shaderdoc`(bindless 입문 절) `loaders`(`C-19` R4: 스프라이트 · 시퀀스 · 스켈레톤 · 대화를 리플렉션으로). 병합 뒤 Debug 빌드가 낸 회귀 둘을 고쳤다(`TestLatticeModifier` 의 `static` 누락 — 지역 배열 주소 반환, `@struct` 문서 태그). 새 `REFLECT` 헤더가 들어오면 두 구성 모두 `cmake --preset` 으로 다시 구성해야 `CheckReflectionCandidates` 가 통과한다(`shared-lock acquire vcpkg` 아래에서).
-**돌고 있는 작업자는 없다.** 만들어 둔 워크트리도 모두 지웠다. 설계는 끝났고 구현은 아래 11 번의 순서로 새 세션에서 시작한다. 리플렉션 단계 1 은 `docs/plans/ReflectionFormats.md` 만 읽고 시작할 수 있다(사용자 결정이 모두 끝남: 사용자는 B 형식을 선언하지 않고 `REFLECT` 에서 도출, 온라인 프로토콜도 B 로 옮기고 핸드셰이크 스키마 해시로 거절, 마이그레이션 구조는 유지하되 지금은 변환 코드 없음, 타입 핸들 도입).
-남은 워크트리: `editordata` · `enginefallback` · `toolfollowup`(병합 안 된 커밋 — 다른 세션의 일, 건드리지 않는다), `gamesdata` · `testisolation`(병합됐지만 변경이 남아 있다), `perfbase` · `perfbase2`(성능 기준선).
+**(2026-10-17 밤) 리플렉션 B 와 에디터 경계가 main 에 병합됐다(push 안 함, `4136e0d70` 위).** 병합한 것: `reflectb`(B 코덱 단계 1 — 생성기 · `FixedLayout` 런타임), `editorboundary`(EditorModel 경계), `reflectstage23`(단계 3 `FightingMatch` 롤백 B · 세이브 A, 단계 2 는 보류), `reflectstage4a`(Mech · Horror 스냅샷 B, 채널 등록은 `D7-7`), `reflectstage5a`(Hello 첫 필드 온라인 스키마 해시 · `UpdateRequired`).
+병합 뒤 두 구성을 다시 구성하고(`shared-lock acquire vcpkg` 아래) 검증했다. Release · Debug `all AllTests` 경고 0, 두 구성 `-L lint`(73) · `-L nogpu`(53), Debug `-L race`(5) 모두 통과했다. 고친 것은 없다. hostgpu · 네 백엔드 × 대표 셋은 이번에 돌리지 않았다.
+**보류**: `wt/renameredirect`(이름 변경 리다이렉트 R1~R4)는 병합하지 않았다. 옛 이름 표가 "데이터에 별칭을 두지 않는다"(결정 기록 5-4)와 충돌하므로 사용자 결정이 필요하다. 계획 문서 `RenameRedirects.md` 머리에 보류를 적었다.
+**돌고 있는 작업자는 없다.** 병합한 다섯 워크트리는 지웠다. 남은 워크트리: `renameredirect`(보류), `editordata` · `enginefallback` · `toolfollowup`(병합 안 된 커밋 — 다른 세션의 일, 건드리지 않는다), `gamesdata` · `testisolation`(병합됐지만 변경이 남아 있다), `perfbase` · `perfbase2`(성능 기준선).
 
 ## 2. 다음 할 일
 
+0. **리플렉션 병합 묶음 마무리**: Shipping `-L hostgpu` 와 네 백엔드 × 대표 셋(Empty · 에디터 · Shooter3D · NileCity), FightingMatch · Mech · Horror 게임 × 네 백엔드를 돌린 뒤 push 한다. 그다음 리플렉션 남은 단계는 `ReflectionFormats.md` 9절 표 순서(5-b 온라인 11 키트 · `D7-7` 채널 등록 · 6 컴팩트 모드 삭제 · 7-a~7-d)다. 단계 1 끝에 기록하기로 한 실행 파일 크기 증가는 아직 적지 않았다.
 1. **CI 첫 결과 확인**(push 는 두 번 끝났다 — `b21bf6c4f`, `97dfd14fd`. 사용자가 실패를 알려 주면 `ci-jobs` 로 읽는다). 리눅스 · PCH 끈 Windows CI · `header-self-contained.yml`(Windows Debug 잡이 32 → 약 18 분인지) · 야간 `load.yml`. 리눅스 CI 가 `B-5`(퍼저 재확인) `B-7` `C-14`(린트 잡)를 풀 수 있다.
 2. (끝) HTTP 이름 해석 스레드와 전용 서버 게임 포트는 병합됐다. 남은 것: `gv_netLoopbackOnly` 도 테스트 전역 변수에서만 읽는 같은 모양, `_gamePortShardCount` 는 계약만 있고 구현이 없다(`D7-3` ⑤), Shipping 클라이언트에는 `gv_netConnectAddress` 가 없다.
 3. (끝) `Internal` 소거 — 기준선이 비었다. 남은 것: `-DSW_ENABLE_UNITY_BUILD` 로 충돌을 한 번 본다(`DuplicateAnonymousFunction` 은 `Source/` 만 보므로 `Test/` 이름 충돌은 직접 확인), 병합 때 작업자끼리 겹친 익명 함수 이름이 한 건 났다(`makeRandomSeed`).
@@ -26,7 +29,7 @@ Debug `-L lint` · `-L nogpu` · `-L race` 를 통과시키고(고친 둘: `Wild
 11. **구조 최적화(2026-10-17 조사, 측정이 아니라 구조 기준 — 근거는 읽은 코드)**. 하지 말 것: 스핀 늘리기 · hot pool · 깨우기 사슬 변경(결정 기록 09:102 · 136 · 137에서 손해 확인), Math SIMD(금지 결정), 큐 칸 패딩 · `TaskNode` 정렬(잡음으로 끝난 전례).
     - **A 동시성** — 먼저 Core 에 '스레드 칸에 쓰고 읽는 쪽이 합치는' 샤드 카운터 형식을 설계(`integrator`), 그 위에서 순서대로: ① 워크 훔치기 데크 빈 확인(`WorkStealingDeque.h:82-126`, 비어 있으면 펜스 전에 relaxed 로 반환) ② 대기자 스핀을 워커 루프처럼 세대(`_workEpoch`)로 막기(`TaskManager.cpp:892-922`) ③ 메모리 태그 통계(`MemoryProfiler.cpp:319-386`, 먼저 `alignas(64)` 다음 스레드별 블록) ④ 활성 태스크 수 샤드(`TaskManager.cpp:457` 외) ⑤ 비동기 로거 생산자(`AsyncLogSink.cpp`, 날짜 캐시 thread_local · 불변 스냅샷 · 대기자 있을 때만 깨우기).
     - **B 컨테이너 · 네트워크** — ① `SequenceBuffer` 크기를 2의 거듭제곱 템플릿 상수로 + 칸 용량 유지(잠복 결함: 크기가 65536 약수가 아니면 uint16 감김 때 칸이 겹침) ② `sw::deque` 를 바이트 기준 블록으로 직접 구현 + 고정 용량 큐는 링 버퍼(MSVC STL deque 블록 16B → 원소마다 할당; 주소 안정에 기대는 곳 `NetTransport.h:121` 주의) ③ 해시 표 노드 `uint32 next + 해시 태그`(map · set 표 코어 하나, `containers` 병합 뒤) ④ `BitStream` 64비트 스크래치 워드(와이어 바이트 동일성 테스트 먼저) ⑤ `Memory::copy/compare` 헤더 inline. 보류: `NetConnection` 수신 아레나(측정 기각 `C-4`), `NetPrioritizer` 힙, UDP `recvmmsg`(`B-10`).
-    - **C 리플렉션** — 설계: `docs/plans/ReflectionFormats.md`(자기 기술형 유지 + 고정 배치형 신설, 스키마 해시 1개, 코드젠이 타입별 write/read · `==` 생성, `castTo` 는 클래스 ID + 상속 구간 정수 비교 검토). 이 문서가 단계 표를 가진다. 별도로 ②③⑤⑥ 적용 후보(위 워크트리). 리플렉션 코드젠은 헤더만 읽으므로 `.cpp` 내부(익명 namespace) 형식에는 못 쓴다 → 모듈 내부 헤더로 옮겨 쓴다.
+    - **C 리플렉션** — 설계: `docs/plans/ReflectionFormats.md`(자기 기술형 유지 + 고정 배치형 신설, 스키마 해시 1개, 코드젠이 타입별 write/read · `==` 생성, `castTo` 는 클래스 ID + 상속 구간 정수 비교 검토). 이 문서가 단계 표를 가진다. 단계 1 · 3 · 4-a · 5-a 는 끝났고 2 는 보류다. 별도로 ②③⑤⑥ 적용 후보(위 워크트리). 리플렉션 코드젠은 헤더만 읽으므로 `.cpp` 내부(익명 namespace) 형식에는 못 쓴다 → 모듈 내부 헤더로 옮겨 쓴다.
     - **D 셰이더 bindless 입문** — `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정.
     - **공통화 2단계**: `containers` 가 남긴 후보 58 파일 80 건(`find_if` · `remove_if` · 해시 구조체)을 디렉터리별로. 손 멤버 루프를 못 쓰게 하는 형식 또는 린트(형식으로 못 막는 이유를 적는다).
     - 에이전트: 설계 · 모듈을 넘는 일은 `integrator`(Opus), 국소 구현은 `worker`(Opus), 이름 · 주석 · 반복은 `mech-worker`(Sonnet) — 이 세션에서 `worker` 정의가 Opus 인 것을 확인했다.
