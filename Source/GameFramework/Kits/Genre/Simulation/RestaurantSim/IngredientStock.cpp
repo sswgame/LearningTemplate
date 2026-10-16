@@ -14,11 +14,11 @@ namespace sw
 
     namespace
     {
-        struct IngredientStockInternal
+        /** @brief 정렬 키입니다. 상하지 않는 배치(-1)는 가장 뒤입니다. */
+        int32 makeExpiryKey( const IngredientBatch& batch )
         {
-            /** @brief 정렬 키입니다. 상하지 않는 배치(-1)는 가장 뒤입니다. */
-            static int32 makeExpiryKey( const IngredientBatch& batch ) { return batch._daysLeft < 0 ? 0x7fffffff : batch._daysLeft; }
-        };
+            return batch._daysLeft < 0 ? 0x7fffffff : batch._daysLeft;
+        }
     } // namespace
 } // namespace sw
 
@@ -164,7 +164,7 @@ namespace sw
     void IngredientStock::sortBatches()
     {
         std::stable_sort( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& lhs, const IngredientBatch& rhs )
-        { return IngredientStockInternal::makeExpiryKey( lhs ) < IngredientStockInternal::makeExpiryKey( rhs ); } );
+        { return makeExpiryKey( lhs ) < makeExpiryKey( rhs ); } );
     }
 
     void IngredientStock::writeState( Archive& outArchive ) const

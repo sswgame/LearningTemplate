@@ -15,36 +15,33 @@ namespace sw
 {
     namespace
     {
-        struct UnitStatsComponentInternal
+        /** @brief 틱 중의 피해와 회복을 틱 직후로 미룹니다. 미룬 피해도 @p instigator 를 유지하므로, 미룬 피해의 이벤트도 누가 냈는지 알 수 있습니다. */
+        void enqueueStatsMutation( GameObject* pOwner, int32 amount, bool bHeal, GameObjectHandle instigator )
         {
-            /** @brief 틱 중의 피해와 회복을 틱 직후로 미룹니다. 미룬 피해도 @p instigator 를 유지하므로, 미룬 피해의 이벤트도 누가 냈는지 알 수 있습니다. */
-            static void enqueueStatsMutation( GameObject* pOwner, int32 amount, bool bHeal, GameObjectHandle instigator )
+            if ( pOwner == nullptr )
+                return;
+
+            GameObjectManager* pManager = pOwner->getManager();
+            if ( pManager == nullptr )
+                return;
+
+            const uint64 objectID = pOwner->getObjectID();
+            pManager->deferPostTick( [pManager, objectID, amount, bHeal, instigator]()
             {
-                if ( pOwner == nullptr )
+                GameObject* pObj = pManager->findGameObjectByID( objectID );
+                if ( pObj == nullptr )
                     return;
 
-                GameObjectManager* pManager = pOwner->getManager();
-                if ( pManager == nullptr )
+                UnitStatsComponent* pStats = pObj->getComponent<UnitStatsComponent>();
+                if ( pStats == nullptr )
                     return;
 
-                const uint64 objectID = pOwner->getObjectID();
-                pManager->deferPostTick( [pManager, objectID, amount, bHeal, instigator]()
-                {
-                    GameObject* pObj = pManager->findGameObjectByID( objectID );
-                    if ( pObj == nullptr )
-                        return;
-
-                    UnitStatsComponent* pStats = pObj->getComponent<UnitStatsComponent>();
-                    if ( pStats == nullptr )
-                        return;
-
-                    if ( bHeal )
-                        pStats->heal( amount );
-                    else
-                        pStats->takeDamage( amount, instigator );
-                } );
-            }
-        };
+                if ( bHeal )
+                    pStats->heal( amount );
+                else
+                    pStats->takeDamage( amount, instigator );
+            } );
+        }
     } // namespace
 } // namespace sw
 
@@ -106,7 +103,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
-            UnitStatsComponentInternal::enqueueStatsMutation( pOwner, amount, false, instigator );
+            enqueueStatsMutation( pOwner, amount, false, instigator );
             return;
         }
         applyTakeDamage( amount, instigator );
@@ -118,7 +115,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
-            UnitStatsComponentInternal::enqueueStatsMutation( pOwner, amount, true, GameObjectHandle{} );
+            enqueueStatsMutation( pOwner, amount, true, GameObjectHandle{} );
             return;
         }
         applyHeal( amount );

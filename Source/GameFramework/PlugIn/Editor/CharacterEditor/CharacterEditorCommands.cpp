@@ -13,17 +13,14 @@ namespace sw::editor
 {
     namespace
     {
-        struct CharacterEditorCommandsInternal
+        void openCharacterEditorPanel()
         {
-            static void openPanel()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "charactereditor.main", true ) )
-                    SW_LOG_INFO( "Character Editor panel opened" );
-            }
-        };
+            EditorContext* pContext = EditorContext::get();
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "charactereditor.main", true ) )
+                SW_LOG_INFO( "Character Editor panel opened" );
+        }
     } // namespace
 
     SW_EDITOR_COMMAND( CharacterEditorOpen, "charactereditor.openPanel", 9120, "Character Editor", editoricon::kSkeleton, "Character", "캐릭터 편집 패널을 엽니다",
-                       "Open the character editor panel", {}, &CharacterEditorCommandsInternal::openPanel, nullptr, nullptr );
+                       "Open the character editor panel", {}, &openCharacterEditorPanel, nullptr, nullptr );
 } // namespace sw::editor

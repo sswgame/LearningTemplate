@@ -11,22 +11,18 @@ namespace sw::editor
 {
     namespace
     {
-        struct AdminToolSessionInternal
+        const utf8* getMethodName( uint16 method )
         {
-
-            static const utf8* getMethodName( uint16 method )
-            {
-                if ( method == AdminMethod::kLookupAccount )
-                    return "LookupAccount";
-                if ( method == AdminMethod::kAdjustAsset )
-                    return "AdjustAsset";
-                if ( method == AdminMethod::kSetSanction )
-                    return "SetSanction";
-                if ( method == AdminMethod::kListAudit )
-                    return "ListAudit";
-                return "Command";
-            }
-        };
+            if ( method == AdminMethod::kLookupAccount )
+                return "LookupAccount";
+            if ( method == AdminMethod::kAdjustAsset )
+                return "AdjustAsset";
+            if ( method == AdminMethod::kSetSanction )
+                return "SetSanction";
+            if ( method == AdminMethod::kListAudit )
+                return "ListAudit";
+            return "Command";
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -113,7 +109,7 @@ namespace sw::editor
         _bLastReplayed = reply._reply._bReplayed == SW_TRUE;
 
         StringBuilder<constant::kMaxBuffer128> status;
-        status.appendFormat( "%#: %#", AdminToolSessionInternal::getMethodName( reply._method ), getEnumName( reply._reply._result ) );
+        status.appendFormat( "%#: %#", getMethodName( reply._method ), getEnumName( reply._reply._result ) );
         if ( reply._errorCode != 0 )
             status.appendFormat( " (error %#)", reply._errorCode );
         _statusLine = string( status.view() );

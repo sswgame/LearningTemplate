@@ -10,14 +10,11 @@ namespace sw
 {
     namespace
     {
-        struct RTSCommanderAIInternal
+        const hashed_string& getThreatKey()
         {
-            static const hashed_string& getThreatKey()
-            {
-                static const hashed_string kThreatKey( "Threat" );
-                return kThreatKey;
-            }
-        };
+            static const hashed_string kThreatKey( "Threat" );
+            return kThreatKey;
+        }
     } // namespace
 } // namespace sw
 
@@ -51,7 +48,7 @@ namespace sw
     {
         _tree              = BehaviorTree{};
         const int32 root   = _tree.addSelector( -1, "Root", true );
-        const int32 threat = _tree.addBlackboardCondition( root, RTSCommanderAIInternal::getThreatKey(), BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::LowerPriority );
+        const int32 threat = _tree.addBlackboardCondition( root, getThreatKey(), BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::LowerPriority );
         _tree.addAction( threat, "Defend", &RTSCommanderAI::taskDefend );
         const int32 economy = _tree.addSequence( root, "Economy" );
         _tree.addAction( _tree.addForceSuccess( economy ), "GatherIdle", &RTSCommanderAI::taskGatherIdle );
@@ -83,7 +80,7 @@ namespace sw
         const RTSUnit* pDepot = _pWorld->findUnit( findDepot() );
         if ( pDepot != nullptr && float3::getHorizontalDistance( pDepot->_position, event._position ) > _settings._defendRadius )
             return;
-        _blackboard.setVector( RTSCommanderAIInternal::getThreatKey(), event._position );
+        _blackboard.setVector( getThreatKey(), event._position );
     }
 
     void RTSCommanderAI::writeState( Archive& outArchive ) const
@@ -173,12 +170,12 @@ namespace sw
     BehaviorStatus RTSCommanderAI::taskDefend( BehaviorContext& context )
     {
         RTSCommanderAI&   self   = *static_cast<RTSCommanderAI*>( context._pOwner );
-        const float3      threat = context._pBlackboard->getVector( RTSCommanderAIInternal::getThreatKey() );
+        const float3      threat = context._pBlackboard->getVector( getThreatKey() );
         vector<RTSUnitID> listArmy;
         self.collectArmy( listArmy );
         if ( listArmy.empty() == false )
             (void)self._pWorld->issueGroupMove( listArmy, threat, true );
-        context._pBlackboard->clearValue( RTSCommanderAIInternal::getThreatKey() );
+        context._pBlackboard->clearValue( getThreatKey() );
         return BehaviorStatus::Success;
     }
 

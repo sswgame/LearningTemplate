@@ -16,14 +16,11 @@ namespace sw
     namespace
     {
         /** @brief 틱마다 쓰는 이름입니다. 리터럴을 매번 intern 하지 않도록 한 번만 만듭니다. */
-        struct BrGearInternal
+        const hashed_string& getHelmetName()
         {
-            static const hashed_string& getHelmetName()
-            {
-                static const hashed_string name( "Helmet" );
-                return name;
-            }
-        };
+            static const hashed_string name( "Helmet" );
+            return name;
+        }
     } // namespace
 } // namespace sw
 
@@ -50,7 +47,7 @@ namespace sw
         const BrArmorDef* pDef = _pCatalog != nullptr ? _pCatalog->findArmor( itemID ) : nullptr;
         if ( pDef == nullptr )
             return false;
-        BrArmorSlot& slot = pDef->_slot == BrGearInternal::getHelmetName() ? _helmet : _vest;
+        BrArmorSlot& slot = pDef->_slot == getHelmetName() ? _helmet : _vest;
         slot._pDef        = pDef;
         slot._durability  = durability < 0.0f ? pDef->_durability : MathUtil::min( durability, pDef->_durability );
         return true;
@@ -152,7 +149,7 @@ namespace sw
             }
             slot._pDef               = _pCatalog->findArmor( armorID );
             const bool bHelmetSlot   = slotIndex == 0;
-            const bool bSlotMatches  = slot._pDef != nullptr && ( slot._pDef->_slot == BrGearInternal::getHelmetName() ) == bHelmetSlot;
+            const bool bSlotMatches  = slot._pDef != nullptr && ( slot._pDef->_slot == getHelmetName() ) == bHelmetSlot;
             const bool bDurableValid = 0.0f < slot._durability && slot._durability <= ( slot._pDef != nullptr ? slot._pDef->_durability : 0.0f );
             if ( bSlotMatches == false || bDurableValid == false )
                 return false;

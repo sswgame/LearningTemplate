@@ -8,25 +8,22 @@ namespace sw
 {
     namespace
     {
-        struct DismembermentInternal
+        /** @brief 자른 위치와 같은 위치의 정점을 표시합니다(UV 이음매로 갈라진 같은 위치 정점도 표시합니다). */
+        void flagSeamVertices( const AppearanceGeometry& piece, const vector<float3>& listSeamPosition, vector<uint8>& outListFlag )
         {
-            /** @brief 자른 위치와 같은 위치의 정점을 표시합니다(UV 이음매로 갈라진 같은 위치 정점도 표시합니다). */
-            static void flagSeamVertices( const AppearanceGeometry& piece, const vector<float3>& listSeamPosition, vector<uint8>& outListFlag )
+            outListFlag.assign( piece.getVertexCount(), SW_FALSE );
+            for ( uint32 vertex = 0; vertex < piece.getVertexCount(); ++vertex )
             {
-                outListFlag.assign( piece.getVertexCount(), SW_FALSE );
-                for ( uint32 vertex = 0; vertex < piece.getVertexCount(); ++vertex )
+                for ( const float3& seamPosition : listSeamPosition )
                 {
-                    for ( const float3& seamPosition : listSeamPosition )
+                    if ( float3::getDistanceSquared( piece._listPosition[vertex], seamPosition ) <= 1.0e-12f )
                     {
-                        if ( float3::getDistanceSquared( piece._listPosition[vertex], seamPosition ) <= 1.0e-12f )
-                        {
-                            outListFlag[vertex] = SW_TRUE;
-                            break;
-                        }
+                        outListFlag[vertex] = SW_TRUE;
+                        break;
                     }
                 }
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -83,9 +80,9 @@ namespace sw
                 listSeamPosition.push_back( body._listPosition[vertex] );
         }
         vector<uint8> listSeamFlag;
-        DismembermentInternal::flagSeamVertices( outResult._remaining, listSeamPosition, listSeamFlag );
+        flagSeamVertices( outResult._remaining, listSeamPosition, listSeamFlag );
         (void)GeometryCutUtil::createCaps( outResult._remaining, outResult._remainingCap, &listSeamFlag ); // 막은 고리 수일 뿐이다. 0 이면 막을 구멍이 없다.
-        DismembermentInternal::flagSeamVertices( outResult._severed, listSeamPosition, listSeamFlag );
+        flagSeamVertices( outResult._severed, listSeamPosition, listSeamFlag );
         (void)GeometryCutUtil::createCaps( outResult._severed, outResult._severedCap, &listSeamFlag ); // 막은 고리 수일 뿐이다. 0 이면 막을 구멍이 없다.
         return true;
     }

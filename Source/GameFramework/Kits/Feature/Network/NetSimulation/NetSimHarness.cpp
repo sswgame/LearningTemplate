@@ -12,15 +12,12 @@ namespace sw
 {
     namespace
     {
-        struct NetSimHarnessInternal
+        /** @brief 시드 하나에서 엔드포인트마다 다른 시드를 만듭니다(splitmix64 한 단계). */
+        uint64 mixNetSimSeed( uint64 seed, uint64 salt )
         {
-            /** @brief 시드 하나에서 엔드포인트마다 다른 시드를 만듭니다(splitmix64 한 단계). */
-            static uint64 mixSeed( uint64 seed, uint64 salt )
-            {
-                uint64 value = seed + HashUtil::kGoldenRatio64 * ( salt + 1u );
-                return HashUtil::mix64( value );
-            }
-        };
+            uint64 value = seed + HashUtil::kGoldenRatio64 * ( salt + 1u );
+            return HashUtil::mix64( value );
+        }
     } // namespace
 } // namespace sw
 
@@ -234,7 +231,7 @@ namespace sw
             return nullptr;
         }
         unique_ptr<Link> pLink = make_unique<Link>();
-        pLink->_pEmulation     = make_unique<NetEmulationTransport>( pEndpoint, static_cast<uint32>( NetSimHarnessInternal::mixSeed( _settings._seed, portOffset ) ) );
+        pLink->_pEmulation     = make_unique<NetEmulationTransport>( pEndpoint, static_cast<uint32>( mixNetSimSeed( _settings._seed, portOffset ) ) );
         pLink->_address        = pEndpoint->getLocalAddress();
         pLink->_worldIndex     = worldIndex;
         _listLink.push_back( std::move( pLink ) );
@@ -254,7 +251,7 @@ namespace sw
     NetSimWorld* NetSimHarness::createWorld( NetSimRole role, int32 worldIndex, Link& link )
     {
         NetHostConfig hostSettings = _settings._hostSettings;
-        hostSettings._saltSeed     = NetSimHarnessInternal::mixSeed( _settings._seed, 0x10000u + static_cast<uint64>( worldIndex ) ) | 1u;
+        hostSettings._saltSeed     = mixNetSimSeed( _settings._seed, 0x10000u + static_cast<uint64>( worldIndex ) ) | 1u;
         // 송신 간격이 틱의 배수일 때 틱 시각(틱 × 간격)의 반올림 오차로 한 틱 늦게 나갈 수 있다. 반 틱 앞당겨서 "k 틱마다 한 번" 이 정확히 지켜지게 한다.
         hostSettings._sendInterval = MathUtil::max( 0.0, hostSettings._sendInterval - _settings._tickInterval * 0.5 );
         return sw_new NetSimWorld( role, worldIndex, link._pEmulation.get(), hostSettings );

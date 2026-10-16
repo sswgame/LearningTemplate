@@ -15,14 +15,11 @@ namespace sw
     namespace
     {
         /** @brief 틱마다 쓰는 이름입니다. 리터럴을 매번 intern 하지 않도록 한 번만 만듭니다. */
-        struct WesternSurvivalInternal
+        const hashed_string& getTemperatureName()
         {
-            static const hashed_string& getTemperatureName()
-            {
-                static const hashed_string name( "temperature" );
-                return name;
-            }
-        };
+            static const hashed_string name( "temperature" );
+            return name;
+        }
     } // namespace
 } // namespace sw
 
@@ -109,7 +106,7 @@ namespace sw
 
     float32 WesternSurvival::computeAirTemperature( const WeatherSystem& weather, float32 regionBaseTemperature )
     {
-        return regionBaseTemperature + weather.computeValue( WesternSurvivalInternal::getTemperatureName() );
+        return regionBaseTemperature + weather.computeValue( getTemperatureName() );
     }
 
     bool WesternSurvival::eat( const hashed_string& foodID )

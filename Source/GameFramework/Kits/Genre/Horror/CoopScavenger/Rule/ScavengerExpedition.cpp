@@ -19,10 +19,10 @@ namespace sw
 
     namespace
     {
-        struct ScavengerExpeditionInternal
+        uint32 makeDaySeed( uint32 seed, int32 dayIndex, uint32 salt )
         {
-            static uint32 makeDaySeed( uint32 seed, int32 dayIndex, uint32 salt ) { return GameHash::hashCoord( dayIndex, static_cast<int32>( salt ), seed ); }
-        };
+            return GameHash::hashCoord( dayIndex, static_cast<int32>( salt ), seed );
+        }
     } // namespace
 } // namespace sw
 
@@ -115,12 +115,12 @@ namespace sw
         if ( _pWeather != nullptr && _data._pWeatherCatalog != nullptr )
         {
             WeatherSystem moonWeather;
-            moonWeather.initialize( _data._pWeatherCatalog, ScavengerExpeditionInternal::makeDaySeed( _seed, dayIndex, 0x57u ), _pMoon->_id );
+            moonWeather.initialize( _data._pWeatherCatalog, makeDaySeed( _seed, dayIndex, 0x57u ), _pMoon->_id );
             _pWeather->forceWeather( moonWeather.getCurrent(), moonWeather.getRemaining(), true );
         }
 
         const float32 valueScale = computeWeatherValue( "scrapValue" );
-        const uint32  layoutSeed = ScavengerExpeditionInternal::makeDaySeed( _seed ^ _pMoon->_id.getHash(), dayIndex, 0x46u );
+        const uint32  layoutSeed = makeDaySeed( _seed ^ _pMoon->_id.getHash(), dayIndex, 0x46u );
         if ( _facility.createLayout( catalog, *_pMoon, layoutSeed, valueScale ) == false )
             SW_LOG_WARNING( "facility layout for '%#' failed to load", _pMoon->_id.c_str() );
 
@@ -128,9 +128,9 @@ namespace sw
         _outdoorDirector.initialize( nullptr, 1u );
         if ( _data._pThreatTable != nullptr && _pMoon->_bCompany == SW_FALSE )
         {
-            _indoorDirector.initialize( _data._pThreatTable, ScavengerExpeditionInternal::makeDaySeed( _seed, dayIndex, 0x49u ) );
+            _indoorDirector.initialize( _data._pThreatTable, makeDaySeed( _seed, dayIndex, 0x49u ) );
             _indoorDirector.setAllowedTags( vector<hashed_string>{ hashed_string( "Indoor" ) } );
-            _outdoorDirector.initialize( _data._pThreatTable, ScavengerExpeditionInternal::makeDaySeed( _seed, dayIndex, 0x4fu ) );
+            _outdoorDirector.initialize( _data._pThreatTable, makeDaySeed( _seed, dayIndex, 0x4fu ) );
             _outdoorDirector.setAllowedTags( vector<hashed_string>{ hashed_string( "Outdoor" ) } );
         }
         resetCrew();

@@ -13,21 +13,18 @@ namespace sw::editor
 {
     namespace
     {
-        struct ParkLayoutCommandsInternal
+        // [doc:command-open]
+        void openParkLayoutPanel()
         {
-            // [doc:command-open]
-            static void openPanel()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "themepark.layout", true ) )
-                    SW_LOG_INFO( "Park Layout panel opened" );
-            }
-            // [/doc:command-open]
-        };
+            EditorContext* pContext = EditorContext::get();
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "themepark.layout", true ) )
+                SW_LOG_INFO( "Park Layout panel opened" );
+        }
+        // [/doc:command-open]
     } // namespace
 
     // [doc:command-register]
     SW_EDITOR_COMMAND( ParkLayoutOpen, "themepark.openLayoutPanel", 9100, "Park Layout", editoricon::kMap, "ThemePark", "놀이기구 배치 패널을 엽니다",
-                       "Open the park layout panel", {}, &ParkLayoutCommandsInternal::openPanel, nullptr, nullptr );
+                       "Open the park layout panel", {}, &openParkLayoutPanel, nullptr, nullptr );
     // [/doc:command-register]
 } // namespace sw::editor

@@ -13,10 +13,10 @@ namespace sw
 {
     namespace
     {
-        struct WitcherCatalogInternal
+        bool isNamed( string_view name, const utf8* pExpected )
         {
-            static bool isNamed( string_view name, const utf8* pExpected ) { return StringUtil::equals( name, string_view( pExpected ), true ); }
-        };
+            return StringUtil::equals( name, string_view( pExpected ), true );
+        }
     } // namespace
 } // namespace sw
 
@@ -49,14 +49,14 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( WitcherCatalogInternal::isNamed( name, "Alchemy" ) )
+            if ( isNamed( name, "Alchemy" ) )
             {
                 _alchemy._maxToxicity   = MathUtil::max( 1.0f, node.getAttributeFloat( "maxToxicity", _alchemy._maxToxicity ) );
                 _alchemy._toxicityDecay = MathUtil::max( 0.0f, node.getAttributeFloat( "toxicityDecay", _alchemy._toxicityDecay ) );
                 GameDataXML::parseNameList( node.getAttributeText( "alcohol" ), ",; ", _alchemy._listAlcohol );
                 continue;
             }
-            if ( WitcherCatalogInternal::isNamed( name, "Combat" ) )
+            if ( isNamed( name, "Combat" ) )
             {
                 WitcherCombatDef&   combat = _combat;
                 const hashed_string stat   = GameDataXML::readName( node, "intensityStat" );
@@ -75,7 +75,7 @@ namespace sw
                 combat._adrenalineDamageBonus = MathUtil::max( 0.0f, node.getAttributeFloat( "adrenalineBonus", combat._adrenalineDamageBonus ) );
                 continue;
             }
-            if ( WitcherCatalogInternal::isNamed( name, "SlotGroup" ) )
+            if ( isNamed( name, "SlotGroup" ) )
             {
                 WitcherSlotGroupDef group;
                 group._requiredLevel = MathUtil::max( 0, node.getAttributeInt( "level", group._requiredLevel ) );
@@ -84,7 +84,7 @@ namespace sw
                 ++loadedCount;
                 continue;
             }
-            if ( WitcherCatalogInternal::isNamed( name, "SkillColor" ) )
+            if ( isNamed( name, "SkillColor" ) )
             {
                 WitcherSkillColorDef color;
                 color._id    = GameDataXML::readName( node, "skill" );
@@ -96,9 +96,9 @@ namespace sw
                 continue;
             }
 
-            const bool bKnown = WitcherCatalogInternal::isNamed( name, "Monster" ) || WitcherCatalogInternal::isNamed( name, "Item" ) ||
-                                WitcherCatalogInternal::isNamed( name, "Sign" ) || WitcherCatalogInternal::isNamed( name, "Mutagen" ) ||
-                                WitcherCatalogInternal::isNamed( name, "Contract" );
+            const bool bKnown = isNamed( name, "Monster" ) || isNamed( name, "Item" ) ||
+                                isNamed( name, "Sign" ) || isNamed( name, "Mutagen" ) ||
+                                isNamed( name, "Contract" );
             if ( bKnown == false )
             {
                 SW_LOG_WARNING( "%#: unknown element <%#> - skipped", sourceName, name );
@@ -109,23 +109,23 @@ namespace sw
                 continue;
             const hashed_string id( pID );
             ++loadedCount;
-            if ( WitcherCatalogInternal::isNamed( name, "Monster" ) )
+            if ( isNamed( name, "Monster" ) )
             {
                 loadMonster( node, id, sourceName );
             }
-            else if ( WitcherCatalogInternal::isNamed( name, "Item" ) )
+            else if ( isNamed( name, "Item" ) )
             {
                 WitcherAlchemyDef item;
                 item._id               = id;
                 item._element          = GameDataXML::readName( node, "element" );
                 const string_view kind = node.getAttributeText( "kind" );
-                if ( WitcherCatalogInternal::isNamed( kind, "Decoction" ) )
+                if ( isNamed( kind, "Decoction" ) )
                     item._kind = WitcherAlchemyKind::Decoction;
-                else if ( WitcherCatalogInternal::isNamed( kind, "Oil" ) )
+                else if ( isNamed( kind, "Oil" ) )
                     item._kind = WitcherAlchemyKind::Oil;
-                else if ( WitcherCatalogInternal::isNamed( kind, "Bomb" ) )
+                else if ( isNamed( kind, "Bomb" ) )
                     item._kind = WitcherAlchemyKind::Bomb;
-                else if ( kind.empty() == false && WitcherCatalogInternal::isNamed( kind, "Potion" ) == false )
+                else if ( kind.empty() == false && isNamed( kind, "Potion" ) == false )
                     SW_LOG_WARNING( "%#: '%#' has an unknown kind '%#' - read as a potion", sourceName, pID, kind );
                 item._toxicity = MathUtil::max( 0.0f, node.getAttributeFloat( "toxicity", item._toxicity ) );
                 item._duration = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", item._duration ) );
@@ -133,7 +133,7 @@ namespace sw
                 item._hits     = MathUtil::max( 0, node.getAttributeInt( "hits", item._kind == WitcherAlchemyKind::Oil ? 20 : 0 ) );
                 (void)_alchemyCatalog.add( item );
             }
-            else if ( WitcherCatalogInternal::isNamed( name, "Sign" ) )
+            else if ( isNamed( name, "Sign" ) )
             {
                 WitcherSignDef sign;
                 sign._id            = id;
@@ -145,7 +145,7 @@ namespace sw
                 sign._altPowerScale = MathUtil::max( 0.0f, node.getAttributeFloat( "altPowerScale", sign._altPowerScale ) );
                 (void)_signCatalog.add( sign );
             }
-            else if ( WitcherCatalogInternal::isNamed( name, "Mutagen" ) )
+            else if ( isNamed( name, "Mutagen" ) )
             {
                 WitcherMutagenDef mutagen;
                 mutagen._id         = id;
@@ -191,9 +191,9 @@ namespace sw
             weakness._id           = GameDataXML::readName( child, "id" );
             weakness._knowledge    = MathUtil::clamp( child.getAttributeInt( "knowledge", weakness._knowledge ), 0, monster._maxKnowledge );
             const string_view kind = child.getAttributeText( "kind" );
-            if ( WitcherCatalogInternal::isNamed( kind, "Bomb" ) )
+            if ( isNamed( kind, "Bomb" ) )
                 weakness._kind = WitcherWeaknessKind::Bomb;
-            else if ( WitcherCatalogInternal::isNamed( kind, "Sign" ) )
+            else if ( isNamed( kind, "Sign" ) )
                 weakness._kind = WitcherWeaknessKind::Sign;
             if ( weakness._id.empty() )
             {

@@ -15,18 +15,15 @@ namespace sw
 
     namespace
     {
-        struct PartyRoundSeriesInternal
+        /** @brief 파티 기본 설정입니다. 순위 점수는 3, 2, 1, 0 이고, 먼저 5점을 얻으면 우승합니다. 함께 닿아 총점까지 같으면 서든 데스이며, 라운드 시간과 대기는 시리즈가 세지 않습니다. */
+        RoundSeriesSettings makeDefaultSettings()
         {
-            /** @brief 파티 기본 설정입니다. 순위 점수는 3, 2, 1, 0 이고, 먼저 5점을 얻으면 우승합니다. 함께 닿아 총점까지 같으면 서든 데스이며, 라운드 시간과 대기는 시리즈가 세지 않습니다. */
-            static RoundSeriesSettings makeDefaultSettings()
-            {
-                RoundSeriesSettings settings;
-                settings._listPlacementPoint = { 3, 2, 1, 0 };
-                settings._winScore           = 5;
-                settings._tieRule            = RoundSeriesTieRule::SuddenDeath;
-                return settings;
-            }
-        };
+            RoundSeriesSettings settings;
+            settings._listPlacementPoint = { 3, 2, 1, 0 };
+            settings._winScore           = 5;
+            settings._tieRule            = RoundSeriesTieRule::SuddenDeath;
+            return settings;
+        }
     } // namespace
 } // namespace sw
 
@@ -34,7 +31,7 @@ namespace sw
 {
     PartyRoundSeries::PartyRoundSeries()
         : _listRound{}
-        , _seriesSettings{ PartyRoundSeriesInternal::makeDefaultSettings() }
+        , _seriesSettings{ makeDefaultSettings() }
         , _series{}
         , _eventBuffer{}
     {

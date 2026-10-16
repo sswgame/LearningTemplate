@@ -15,10 +15,10 @@ namespace sw
 {
     namespace
     {
-        struct RTSWorldQueryInternal
+        bool isGroundUnitQuery( const RTSUnit& unit )
         {
-            static bool isGround( const RTSUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
-        };
+            return unit._pDef->_bAir == SW_FALSE;
+        }
     } // namespace
 
     // ------------------------------------------------------------------------------
@@ -107,7 +107,7 @@ namespace sw
         }
         for ( const RTSUnit& unit : _listUnit )
         {
-            const bool bBlockingUnit = unit._bAlive && unit.isMobile() && unit._id != ignoreUnit && RTSWorldQueryInternal::isGround( unit ) &&
+            const bool bBlockingUnit = unit._bAlive && unit.isMobile() && unit._id != ignoreUnit && isGroundUnitQuery( unit ) &&
                                        computeRectDistance( unit._position, cell, footprint ) < unit._pDef->_radius * 0.9f;
             if ( bBlockingUnit )
                 return false;

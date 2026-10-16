@@ -12,11 +12,11 @@ namespace sw
 {
     namespace
     {
-        struct VitalityInternal
+        /** @brief 이번 걸음 중 지연이 끝난 뒤의 시간입니다(@p elapsed 는 이번 걸음을 더한 뒤의 값). */
+        float32 computeRegenTime( float32 elapsed, float32 delay, float32 deltaTime )
         {
-            /** @brief 이번 걸음 중 지연이 끝난 뒤의 시간입니다(@p elapsed 는 이번 걸음을 더한 뒤의 값). */
-            static float32 computeRegenTime( float32 elapsed, float32 delay, float32 deltaTime ) { return MathUtil::clamp( elapsed - delay, 0.0f, deltaTime ); }
-        };
+            return MathUtil::clamp( elapsed - delay, 0.0f, deltaTime );
+        }
     } // namespace
 } // namespace sw
 
@@ -225,9 +225,9 @@ namespace sw
         }
 
         _sinceDamage += deltaTime;
-        const float32 shieldRegenTime = VitalityInternal::computeRegenTime( _sinceDamage, _settings._shieldRegenDelay, deltaTime );
+        const float32 shieldRegenTime = computeRegenTime( _sinceDamage, _settings._shieldRegenDelay, deltaTime );
         _shield                       = MathUtil::min( _settings._maxShield, _shield + MathUtil::max( 0.0f, _settings._shieldRegenRate ) * shieldRegenTime );
-        const float32 healthRegenTime = VitalityInternal::computeRegenTime( _sinceDamage, _settings._healthRegenDelay, deltaTime );
+        const float32 healthRegenTime = computeRegenTime( _sinceDamage, _settings._healthRegenDelay, deltaTime );
         _health                       = MathUtil::min( _settings._maxHealth, _health + MathUtil::max( 0.0f, _settings._healthRegenRate ) * healthRegenTime );
 
         if ( _settings._poiseMax <= 0.0f )
@@ -243,7 +243,7 @@ namespace sw
             return;
         }
         _sincePoiseDamage += deltaTime;
-        const float32 poiseRegenTime = VitalityInternal::computeRegenTime( _sincePoiseDamage, _settings._poiseRegenDelay, deltaTime );
+        const float32 poiseRegenTime = computeRegenTime( _sincePoiseDamage, _settings._poiseRegenDelay, deltaTime );
         _poise                       = MathUtil::min( _settings._poiseMax, _poise + MathUtil::max( 0.0f, _settings._poiseRegenRate ) * poiseRegenTime );
     }
 

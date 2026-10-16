@@ -17,16 +17,13 @@ namespace sw
 {
     namespace
     {
-        struct HealthBarComponentInternal
+        /** @brief @p current 를 @p target 쪽으로 옮깁니다. 속도가 0 이하면 바로 갑니다(지수 접근 — 프레임 속도에 덜 민감합니다). */
+        float32 approach( float32 current, float32 target, float32 speed, float32 deltaTime )
         {
-            /** @brief @p current 를 @p target 쪽으로 옮깁니다. 속도가 0 이하면 바로 갑니다(지수 접근 — 프레임 속도에 덜 민감합니다). */
-            static float32 approach( float32 current, float32 target, float32 speed, float32 deltaTime )
-            {
-                if ( speed <= 0.0f )
-                    return target;
-                return MathUtil::lerp( current, target, MathUtil::saturate( speed * deltaTime ) );
-            }
-        };
+            if ( speed <= 0.0f )
+                return target;
+            return MathUtil::lerp( current, target, MathUtil::saturate( speed * deltaTime ) );
+        }
     } // namespace
 } // namespace sw
 
@@ -82,11 +79,11 @@ namespace sw
         if ( _targetRatio < _hpRatio )
             _hpRatio = _targetRatio;
         else
-            _hpRatio = HealthBarComponentInternal::approach( _hpRatio, _targetRatio, _lerpSpeed, deltaTime );
+            _hpRatio = approach( _hpRatio, _targetRatio, _lerpSpeed, deltaTime );
         if ( _remainRatio < _hpRatio )
             _remainRatio = _hpRatio;
         else
-            _remainRatio = HealthBarComponentInternal::approach( _remainRatio, _hpRatio, _lerpSpeed, deltaTime );
+            _remainRatio = approach( _remainRatio, _hpRatio, _lerpSpeed, deltaTime );
 
         scheduleRefresh();
     }

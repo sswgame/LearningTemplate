@@ -13,16 +13,13 @@ namespace sw
 {
     namespace
     {
-        struct GimmickSensorComponentInternal
+        void addAtomic( atomic<float32>& inoutValue, float32 amount )
         {
-            static void addAtomic( atomic<float32>& inoutValue, float32 amount )
+            float32 expected = inoutValue.load( std::memory_order_relaxed );
+            while ( inoutValue.compare_exchange_weak( expected, expected + amount ) == false )
             {
-                float32 expected = inoutValue.load( std::memory_order_relaxed );
-                while ( inoutValue.compare_exchange_weak( expected, expected + amount ) == false )
-                {
-                }
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -134,12 +131,12 @@ namespace sw
     void GimmickSensorComponent::applyDamage( float32 amount )
     {
         if ( amount > 0.0f )
-            GimmickSensorComponentInternal::addAtomic( _pendingDamage, amount );
+            addAtomic( _pendingDamage, amount );
     }
 
     void GimmickSensorComponent::notifyUsed()
     {
-        GimmickSensorComponentInternal::addAtomic( _pendingUse, 1.0f );
+        addAtomic( _pendingUse, 1.0f );
     }
 
     float32 GimmickSensorComponent::consumeDamage()

@@ -17,13 +17,10 @@ namespace sw
 {
     namespace
     {
-        struct MechArenaWorldInternal
+        uint32 mixMechArenaSeed( uint32 seed, int32 pilot, int32 slot )
         {
-            static uint32 mixSeed( uint32 seed, int32 pilot, int32 slot )
-            {
-                return GameHash::mix32( seed ^ GameHash::mix32( static_cast<uint32>( pilot ) * 0x9E3779B1u + static_cast<uint32>( slot ) ) );
-            }
-        };
+            return GameHash::mix32( seed ^ GameHash::mix32( static_cast<uint32>( pilot ) * 0x9E3779B1u + static_cast<uint32>( slot ) ) );
+        }
     } // namespace
 
     const MechModeDef* MechPilot::getMode() const
@@ -323,7 +320,7 @@ namespace sw
                 const WeaponDef* pWeapon = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
                 if ( pWeapon != nullptr )
                     pilot._listWeaponState[static_cast<size_t>( slotIndex )].equip( *pWeapon, pWeapon->_maxReserveAmmo,
-                                                                                    MechArenaWorldInternal::mixSeed( _settings._seed, pilotIndex, slotIndex ) );
+                                                                                    mixMechArenaSeed( _settings._seed, pilotIndex, slotIndex ) );
                 ++slotIndex;
             }
         }

@@ -13,17 +13,14 @@ namespace sw::editor
 {
     namespace
     {
-        struct GimmickGraphCommandsInternal
+        void openGimmickGraphPanel()
         {
-            static void openPanel()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "gimmick_graph", true ) )
-                    SW_LOG_INFO( "Gimmick Graph panel opened" );
-            }
-        };
+            EditorContext* pContext = EditorContext::get();
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "gimmick_graph", true ) )
+                SW_LOG_INFO( "Gimmick Graph panel opened" );
+        }
     } // namespace
 
     SW_EDITOR_COMMAND( GimmickGraphOpen, "gimmick.openGraphPanel", 9300, "Gimmick Graph", editoricon::kSettings, "Gimmick", "기믹 회로 그래프 창을 엽니다", "Open the gimmick graph panel", {},
-                       &GimmickGraphCommandsInternal::openPanel, nullptr, nullptr );
+                       &openGimmickGraphPanel, nullptr, nullptr );
 } // namespace sw::editor
