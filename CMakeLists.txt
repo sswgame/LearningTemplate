@@ -107,6 +107,8 @@ endif()
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
 # (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
 sw_verifyDynamicModuleRegistry()
+# 동적 모듈을 모두 링크한 뒤에만 다시 쓰는 스탬프 — 바깥 빌드의 핫 리로드 신호(`LiveReloadManager`).
+sw_addModuleBuildStamp()
 
 # App · Server 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성(없는 타깃은 건너뛴다)
 sw_configureAppDependencies(App)

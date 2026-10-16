@@ -22,6 +22,8 @@
 #include "ModuleHost/ModuleImagePatch.h"
 #include "ModuleHost/ShadowCopyName.h"
 
+#include "sw/config/ConfigConstants.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileWatcher.h"
 #elif defined( SW_PLATFORM_LINUX )
@@ -106,6 +108,8 @@ namespace sw
               nullptr
 #endif
           }
+        , _buildStampPath{}
+        , _seenBuildStamp{}
         , _buildMutex{}
         , _buildNotice{}
         , _onBeforeCommitBatch{}
@@ -113,6 +117,7 @@ namespace sw
         , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
+        , _bBuildStampPending{ SW_FALSE }
         , _reserved{ 0 }
     {
         // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
@@ -251,6 +256,16 @@ namespace sw
             SW_LOG_ERROR( "Module directory does not exist: %#", moduleDir );
             return false;
         }
+        // 바깥 빌드의 신호는 모듈 폴더의 성공 스탬프다(`update`). 감시는 첫 등록이 한 번 건다 — 모듈이 없는 프로세스(테스트)는 감시 스레드를 띄우지 않는다.
+        const bool bWatchModuleFolder = _fileWatcher != nullptr && _fileWatcher->isWatching() == false;
+        if ( bWatchModuleFolder )
+        {
+            _buildStampPath = FileUtil::joinPath( moduleDir, config::kFileModuleBuildStamp );
+            if ( FileUtil::getFileStamp( _buildStampPath, _seenBuildStamp ) == false )
+                SW_LOG_WARNING( "%# is missing - outside builds are not reloaded until the build tree is configured (sw_addModuleBuildStamp)", _buildStampPath );
+            if ( _fileWatcher->startWatching( moduleDir, false ) == false )
+                SW_LOG_ERROR( "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir );
+        }
 
         // 의존 목록은 로드 **전에** 둔다 — 섀도 복사본이 의존 모듈의 import 를 그 의존의 지금 이름으로 바꿀 때 읽는다.
         _dependencyGraph.setDependsOn( moduleName, listDependsOn );
@@ -350,31 +365,32 @@ namespace sw
                 _fileWatcher->pollEvents( listEvent );
         }
 
-        for ( const FileChangeEvent& changeEvent : listEvent )
+        // 바깥 빌드는 모듈 DLL 의 쓰기가 아니라 성공 스탬프로 본다 — 연쇄 빌드가 모듈을 하나씩 다시 쓰는 도중의 반쯤 링크된 집합을 올리지 않는다.
+        // 이벤트는 깨우는 데만 쓰고 스탬프 자체를 견준다(넘쳐서 합성 리스캔이 와도, 이름이 바뀌며 써도 같다).
+        if ( listEvent.empty() == false )
         {
-            if ( changeEvent._action == FileWatcherAction::Modified )
+            FileStamp  currentStamp;
+            const bool bStampChanged = FileUtil::getFileStamp( _buildStampPath, currentStamp ) && currentStamp != _seenBuildStamp;
+            if ( bStampChanged )
             {
-                string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
-
-                for ( auto& [moduleName, moduleContext] : _mapModule )
-                {
-                    if ( moduleContext._originalModulePath != fullPath )
-                        continue;
-
-                    const uint64 sourceMtime = FileUtil::getFileTimestamp( moduleContext._originalModulePath );
-                    if ( sourceMtime <= moduleContext._loadedSourceMtime )
-                        continue;
-
-                    moduleContext._debounceMtime = sourceMtime;
-                    moduleContext._debounceTimer.resetTimer();
-                    moduleContext._debounceTimer.startTimer();
-                    moduleContext._bMtimeDebouncing = true;
-                }
+                _seenBuildStamp     = currentStamp;
+                _bBuildStampPending = SW_TRUE;
             }
         }
 
         // 이 프로세스가 시작한 빌드가 도는 동안은 변경을 모아 두기만 한다. 연쇄 빌드의 반쯤 완성된 집합을 로드하지 않기 위해서다(`notifyBuildStarted`).
         const bool bBuildInProgress = consumeBuildNotice();
+        if ( _bBuildStampPending == SW_TRUE && bBuildInProgress == false )
+        {
+            _bBuildStampPending = SW_FALSE;
+            for ( auto& [name, context] : _mapModule )
+            {
+                if ( FileUtil::getFileTimestamp( context._originalModulePath ) <= context._loadedSourceMtime )
+                    continue;
+                SW_LOG_TRACE( "Module build stamp changed — queuing reload for %#", context._moduleName );
+                context._bPendingReload = true;
+            }
+        }
         for ( auto& [name, context] : _mapModule )
         {
             if ( context._bMtimeDebouncing == false || bBuildInProgress )

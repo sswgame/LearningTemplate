@@ -28,6 +28,9 @@ kDirRuntimeGamePreset = "Config/Game"
 kDirRuntimeServerPreset = "Config/Server"
 # 빌드의 활성 게임 이름을 담는 파일(Dev, `Bin/Modules/<이 이름>`) — `-game=` 이 없을 때 `GameSelection` 이 읽는다. 엔진 TU 에 게임 이름을 굽지 않으려고 파일로 둔다.
 kFileActiveGame = "ActiveGame.txt"
+# 모듈 빌드 성공 스탬프(Dev, `Bin/Modules/<이 이름>`) — 빌드가 동적 모듈을 모두 링크한 뒤에만 다시 쓴다(`sw_addModuleBuildStamp`).
+# 바깥 빌드(터미널 · IDE)의 모듈 변경은 `LiveReloadManager` 가 이 파일이 바뀔 때만 올린다(반쯤 링크된 집합을 올리지 않는다).
+kFileModuleBuildStamp = "ModuleBuild.stamp"
 # 함께 지은 게임 팩 폴더(Dev, `Bin/<이 이름>/<게임>/SWGame` · `Bin/Symbols/<이 이름>/<게임>/`) — `SW_GAMES`.
 kDirBinGames = "Games"
 # 사람이 쓰는 에디터 도구 값 — 기본값과 다른 값이 있을 때만 만든다(없으면 기본값).
