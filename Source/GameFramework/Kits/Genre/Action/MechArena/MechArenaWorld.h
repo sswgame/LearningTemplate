@@ -210,7 +210,9 @@ namespace sw
      *     world.start();
      *     world.setInput( amuro, input );
      *     world.update( deltaTime );
-     *     world.writeState( writer ); // 넷 키트의 스냅샷에 싣는다
+     *     if ( world.writeState( writer ) == false ) // 범위 밖 값이면 잘라 쓰지 않고 실패한다
+     *         return false;
+     *     // writer 의 바이트를 넷 키트의 스냅샷에 싣는다
      * @endcode
      */
     class SW_KIT_API MechArenaWorld

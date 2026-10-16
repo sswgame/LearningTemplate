@@ -2,11 +2,11 @@
  * @file MechArenaSnapshot.h
  * @brief 기체 대전의 서버 권위 상태입니다. 판 단계, 남은 시간, 팀 게이지, 조종사(상태, 위치, 체력, 부스트, 다운치, 형태, 탄창, 록온, 콤보, 스킬), 탄을 담습니다.
  * @details 바이트는 고정 배치형(B, `FixedLayout`)입니다. 코드 생성기가 아래 `PROPERTY` 의 범위 키로 코덱을 만들고, 손 코덱과 손 버전 상수는 없습니다.
- *          범위 밖 정수, 255 개를 넘는 목록, 1 보다 작은 판 크기는 잘라 쓰지 않고 쓰기가 실패합니다. `Step` 이 붙은 실수만 양자화 손실이 있습니다
- *          (위치 0.01 m, 체력 0.1, 비율 0.001, 시간 0.01 초).
+ *          범위 밖 정수, 255 개를 넘는 목록, `Step` 없는 실수의 범위 밖 값(1 보다 작은 판 크기)은 잘라 쓰지 않고 쓰기가 실패합니다.
+ *          `Step` 이 붙은 실수(위치 0.01 m, 체력 0.1, 비율 0.001, 시간 0.01 초)는 손실 인코딩이므로 범위 밖 값을 경계로 잘라 씁니다.
  *          **필드 순서가 와이어 형식입니다.** 위치 범위가 `_arenaHalfSize` · `_ceiling` 이므로 그 둘이 목록보다 앞에 있습니다.
- *          장르 키트는 넷 키트를 include 하지 않습니다. 게임이 `MechArenaWorld::writeState` 의 바이트를 채널에 싣고,
- *          핸드셰이크 버전에 이 타입의 스키마 해시를 섞습니다(`FixedNetWireVersion::combine< MechArenaSnapshot >`). 받는 쪽은 `FixedLayout::read` 로 읽습니다.
+ *          장르 키트는 넷 키트를 include 하지 않습니다. 게임이 `MechArenaWorld::writeState` 의 바이트를 채널에 싣고, 받는 쪽은 `FixedLayout::read` 로 읽습니다.
+ *          바이트 머리에 스키마 해시가 있으므로 배치가 다른 빌드의 바이트는 `SchemaMismatch` 로 거절됩니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

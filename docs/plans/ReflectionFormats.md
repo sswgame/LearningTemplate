@@ -40,12 +40,12 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 | `FightingMatch.cpp:1089-1203` 롤백 | `BitWriter`, 필드 나열 | 손 상수 `kStateVersion = 2`(`:18`) | 필드를 더하고 버전을 안 높이면 조용히 잘못 읽음 |
 | `FightingMatch.cpp:1214-1229` 세이브 | 롤백 바이트를 그대로 섹션에 저장 | 위와 같음 | 빌드가 바뀌면 진행 중 대전 세이브를 읽지 못함 |
 | `GimmickCircuit.cpp:461-515` 상태 | `memcpy` 바이트 | `kStateTag`, `kStateVersion`, 회로 구조 해시 | 기대 크기를 손으로 계산(노드당 `16`, `:492`) |
-| `MechArenaSnapshot.cpp:42-155` | `BitWriter`, 양자화 | `kMagic` 만 | 개수를 255 로 잘라 조용히 버림(`:55,62,84`) |
-| `HorrorSnapshot.cpp` | `BitWriter`, 양자화 | `kMagic = "DBD1"`(`:15`) | 같은 개수 자르기(`:44`) |
+| Mech 스냅샷(옛 `MechArenaSnapshot.cpp`, 단계 4-a 에서 지움) | `BitWriter`, 양자화 | `kMagic` 만 | 개수를 255 로 잘라 조용히 버림 |
+| Horror 스냅샷(옛 `HorrorSnapshot.cpp`, 단계 4-a 에서 지움) | `BitWriter`, 양자화 | `kMagic = "DBD1"` | 같은 개수 자르기 |
 | 온라인 `*Protocol.cpp` 12 파일, 2,046 줄 | `BitWriter` | 키트마다 손 `kVersion`(`ChatProtocol.h:69` 등) | 와이어를 바꾸면 버전을 높이라는 주석(`ChatProtocol.h:23`)이 유일한 장치 |
 
 `BitWriter::writeInt` 는 범위 밖 정수를 경고 없이 잘라 씁니다(`Source/Core/Network/BitStream.cpp:70-74`). 범위를 잘못 정하면 값이 조용히 바뀝니다.
-Mech 스냅샷의 구조체(`MechArenaSnapshot.h:21-66`)와 `FighterRuntime`(`FightingMatch.h:117`)에는 `REFLECT` · `PROPERTY` 가 없습니다.
+`FighterRuntime`(`FightingMatch.h:117`)에는 `REFLECT` · `PROPERTY` 가 없습니다. Mech · Horror 스냅샷 구조체는 단계 4-a 에서 `REFLECT` · `PROPERTY` 를 받았습니다.
 
 손으로 쓴 `operator==` 는 `Source` 에 75 개입니다. 이 가운데 같은 파일에 `PROPERTY` 가 있는 것은 4 파일(`atomic.h`, `Component.h`, `DataPath.h`, `WidgetTypes.h`)뿐입니다.
 나머지는 `Core/Container`(12), `Core/Math`(8), `Engine/Graphics`(7), `Core/String`(6) 같은 값 형식이 대부분이고, 필드를 하나씩 비교하는 데이터 레코드인지는 분류하지 않았습니다(미확인, 단계 0).
@@ -71,7 +71,7 @@ Mech 스냅샷의 구조체(`MechArenaSnapshot.h:21-66`)와 `FighterRuntime`(`Fi
 
 - 손 버전 상수: `FightingMatch` `kStateVersion`, `GimmickCircuit` `kStateVersion`, 온라인 키트 `kVersion` 12 개, `NetWireVersion::kCore`(`Source/Core/Network/NetTypes.h:42`).
 - 손으로 계산한 크기: `GimmickCircuit.cpp:465,492` 의 `_listNode.size() * 16`.
-- 조용히 버리는 값: 개수 255 자르기(Mech · Horror), `writeInt` 의 범위 자르기, Mech 의 `max( 1.0f, halfSize )`(`MechArenaSnapshot.cpp:45-46`).
+- 조용히 버리는 값: `writeInt` 의 범위 자르기. Mech · Horror 의 개수 255 자르기와 Mech 의 `max( 1.0f, halfSize )` 는 단계 4-a 에서 쓰기 실패로 바뀌었습니다.
 - 스키마 확인 없는 순서 기반 형식: 컴팩트 모드(1.1).
 - 모르는 타입 폴백: `deserializeValueBinary` 는 어느 핸들러도 없으면 1 바이트를 건너뛰고 성공을 반환합니다(`SerializerUtil.cpp:629-633`). 이 문서의 범위 밖이지만 B 에서는 인코딩 테이블 밖의 타입을 가진 타입에 코덱이 생기지 않고, 등록 API 가 이유와 함께 멈추는 구조로 막습니다(3.1, 3.4). A 쪽 수정은 백로그 후보입니다(8.2).
 
@@ -225,7 +225,7 @@ _client.call( ChatMethod::kSend, request, onReply );
 
 ### 3.8 런타임 범위 양자화
 
-`MechArenaSnapshot` 은 위치 범위를 같은 스냅샷의 `_arenaHalfSize` · `_ceiling` 로 정하고 그 값도 바이트에 싣습니다(`MechArenaSnapshot.cpp:27-35,49-50`).
+`MechArenaSnapshot` 은 위치 범위를 같은 스냅샷의 `_arenaHalfSize` · `_ceiling` 로 정하고 그 값도 바이트에 싣습니다(`MechArenaSnapshot.h`).
 `Min` · `Max` 가 **필드 이름**을 받게 해서 표현합니다. 벡터 타입은 원소마다 쉼표로 나눠 적습니다.
 
 ```cpp
@@ -246,9 +246,9 @@ struct MechArenaSnapshot
 ```
 
 - 이름은 선언 위치에서 바깥으로 찾습니다. 자기 타입의 앞선 필드를 먼저 보고, 없으면 그 타입을 필드로 가진 바깥 타입의 앞선 필드를 봅니다.
-  읽기는 선언 순서이므로 범위 필드가 **앞에** 있어야 읽는 쪽이 범위를 압니다. 뒤에 있으면 생성 오류입니다. 지금 `MechArenaSnapshot` 은 `_arenaHalfSize` 가 `_listPilot` 뒤에 있어(`MechArenaSnapshot.h:56-62`) 단계 4 에서 순서를 바꿉니다.
+  읽기는 선언 순서이므로 범위 필드가 **앞에** 있어야 읽는 쪽이 범위를 압니다. 뒤에 있으면 생성 오류입니다. `MechArenaSnapshot` 은 단계 4-a 에서 `_arenaHalfSize` · `_ceiling` 을 목록 앞으로 옮겼습니다.
 - 바깥 타입으로 이름을 찾는 경우는 생성기가 중첩 타입을 부모 코덱 안에 펼칠 수 있을 때(3.2, 같은 헤더 · 공개 필드)만 됩니다. 펼칠 수 없거나 같은 중첩 타입을 이름이 다른 두 부모가 쓰면 생성 오류입니다.
-- 범위 필드는 자기 `Min` 으로 하한을 강제합니다. Mech 의 `>= 1.0f` 검사가 그것이고, 자르지 않고 읽기 실패입니다. 쓰는 쪽의 `max( 1.0f, … )`(`MechArenaSnapshot.cpp:45-46`)는 쓰기 실패로 바뀝니다.
+- 범위 필드는 자기 `Min` 으로 하한을 강제합니다. Mech 의 `>= 1.0f` 검사가 그것이고, 자르지 않고 읽기 실패입니다. 옛 손 코덱이 쓰던 `max( 1.0f, … )` 는 쓰기 실패로 바뀌었습니다.
 - 에디터는 지금 리터럴 `Min` · `Max` 만 압니다. 필드 이름 형태의 범위를 인스펙터가 쓰는 일은 별도 단계(9절 4-b)이고, 그 전까지 그 필드는 인스펙터에서 범위를 강제하지 않습니다. 에디터 메타데이터 생성은 이름 형태를 만나면 범위를 쓰지 않습니다.
 
 **한계.** 키 값은 리터럴이나 필드 이름만 받고 C++ 상수(`kMaxCount`)는 받지 않습니다. 파서가 상수 식을 계산하지 않기 때문입니다. 같은 값이 여러 필드에 반복될 수 있습니다(8.1 위험 4).
@@ -497,7 +497,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록 | 없음(읽기) | 없음 | `scout`(haiku) |
 | 2 | `GimmickCircuit` 을 B 로 | `GimmickCircuit.*` | 없음 | `worker`(sonnet) |
 | 3 | `FightingMatch` 롤백 B, 세이브 A | `FightingMatch.*` | 없음 | `worker`(opus) |
-| 4-a | Mech · Horror 스냅샷, 넷 채널 등록 · 해시 섞기 | `MechArenaSnapshot.*`, `HorrorSnapshot.*`, `NetTypes.h`, 넷 채널 | 두 스냅샷 한 손 | `worker`(opus) |
+| 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게 | 인스펙터 범위 코드(미확인 위치) | 단계 1 뒤 | `worker`(sonnet) |
 | 5-a | 온라인 핸드셰이크 첫 필드 해시, "업데이트 필요" 거절 | `OnlineServiceHost.*`, `OnlineServiceClient.*`, 클라이언트 오류 UI | 5-b 보다 먼저 | `integrator`(opus) |
 | 5-b | 온라인 프로토콜 12 파일을 B 로, `*Protocol::describe` 등록 | `*Protocol.*` | 12 파일 한 손 | `worker`(opus) |
@@ -511,10 +511,10 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 생성기는 `Tools/ReflectionParser/FixedCodecGenerator.*`, 테스트는 `Test/ReflectionTest/TestFixedLayout.cpp` · `TestFixedLayoutTypes.h` 와
 `ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` 입니다. 단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다.
 
-단계 4-a 는 끝났습니다(2026-10-17). Mech · Horror 스냅샷은 `PROPERTY` 범위 키만 갖고 손 코덱 · `kMagic` 이 없습니다. 두 스냅샷은 디스크에 남지 않습니다(세이브는 `Archive` 의 `writeState` 가 따로 씁니다).
-채널 등록 API 가 아직 없어서, 넷 연결은 `Source/Engine/Serialization/Fixed/FixedNetWireVersion.h` 로 메시지 타입의 해시를 `NetWireVersion::mixSchemaHash` 에 섞습니다.
-메시지는 스트림 머리 해시를 그대로 싣습니다(3.10 의 본문만 쓰는 경로는 채널 객체가 생길 때 만듭니다). Horror 발전기의 진행 · 표시 두 목록은 원소 하나(`HorrorGeneratorSnapshot`)로 합쳤고, 위치는 높이까지 싣습니다.
-테스트는 `MechArenaTest` · `AsymmetricHorrorTest` 의 `SnapshotRoundTripsAndRefusesOutOfRangeValues` 와 `FixedLayoutTest.ChangedMessageLayoutIsRefusedAtTheHandshake` 입니다.
+단계 4-a 가운데 스냅샷을 B 로 옮기는 일은 끝났습니다(2026-10-17). Mech · Horror 스냅샷은 `PROPERTY` 범위 키만 갖고 손 코덱 · `kMagic` 이 없습니다.
+두 스냅샷은 디스크에 남지 않습니다(세이브는 `Archive` 의 `writeState` 가 따로 씁니다). Horror 발전기의 진행 · 표시 두 목록은 원소 하나(`HorrorGeneratorSnapshot`)로 합쳤고, 위치는 높이까지 싣습니다.
+메시지는 스트림 머리 해시를 그대로 실어, 배치가 다른 빌드의 바이트는 읽기가 `SchemaMismatch` 로 거절합니다. 테스트는 `MechArenaTest` · `AsymmetricHorrorTest` 의 `SnapshotRoundTripsAndRefusesOutOfRangeValues` 입니다.
+채널 등록 API(`registerMessage<T>` 로 등록하면 해시가 핸드셰이크 버전에 섞이는 구조)와 3.10 의 본문만 쓰는 경로는 이 스냅샷을 싣는 게임이 아직 없어 백로그 `D7-7` 로 넘겼습니다.
 
 **단계 7-c · 7-d 상세.**
 

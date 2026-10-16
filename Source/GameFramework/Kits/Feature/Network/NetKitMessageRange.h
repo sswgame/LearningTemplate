@@ -33,10 +33,8 @@ namespace sw
      * @struct NetKitWireVersion
      * @brief 키트별 와이어 버전입니다. 키트 메시지의 형식이나 의미를 바꾸면 그 키트의 버전을 올립니다.
      * @details 게임은 쓰는 키트의 버전과 자기 버전을 묶어 호스트에 넘긴다. 버전이 다른 빌드끼리의 연결은 `VersionMismatch` 로 거절된다.
-     *          장르 키트의 고정 배치형 스냅샷(`MechArenaSnapshot` 등)을 채널에 실으면 그 타입도 `FixedNetWireVersion::combine` 으로 섞는다.
      * @code
-     *     const uint32 layerVersion = NetWireVersion::combine( { NetKitWireVersion::kClientServer, NetKitWireVersion::kDestruction, kMyGameWireVersion } );
-     *     settings._wireVersion     = FixedNetWireVersion::combine< MechArenaSnapshot >( layerVersion );
+     *     settings._wireVersion = NetWireVersion::combine( { NetKitWireVersion::kClientServer, NetKitWireVersion::kDestruction, kMyGameWireVersion } );
      * @endcode
      */
     struct NetKitWireVersion

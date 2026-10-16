@@ -4,7 +4,7 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 
 - `A-14` [결함] **`BitStream` 의 손 코덱 경로가 범위 밖 값을 조용히 자른다.** `BitWriter::writeInt` 는 범위 밖 정수를 경계로 잘라 쓰고, `BitReader::readInt` ·
   `readQuantizedFloat` 은 범위 비트로 읽은 값이 범위를 넘으면 `min` 으로 잘라 읽는다. 깨진 패킷이 경고 없이 다른 값이 된다.
-  손 코덱(롤백 · Mech · Horror 스냅샷 · 온라인 `*Protocol`)이 남아 있는 동안의 안전망으로, 쓰기는 `[[nodiscard]] bool`, 읽기는 실패를 돌려주는 모양으로 바꾼다.
+  손 코덱(롤백 · 온라인 `*Protocol`)이 남아 있는 동안의 안전망으로, 쓰기는 `[[nodiscard]] bool`, 읽기는 실패를 돌려주는 모양으로 바꾼다.
   고정 배치형(`FixedCodecUtil::readQuantizedFloat32`)은 칸 번호를 직접 읽어 `OutOfRange` 로 거절한다. 손 코덱을 B 로 옮기면(계획 단계 2 ~ 5) 이 경로를 쓰는 곳이 줄어든다.
 
 - `B-9` [검증대기] **패킷 압축의 남은 것**(UDP 압축을 끈 결정과 측정값은 [결정 기록](../09_Decisions.md) 5-9). WSL Release 로 `NetCompressionBenchTest` 를 한 번 돌린다(압축 시간은
@@ -56,6 +56,12 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 
 - `D7-6` [기능] **네트워크 보안의 남은 것**(방향은 [결정 기록](../09_Decisions.md) 5-9). Core 창구(`Network/Security/`) · OpenSSL 3.6 구현 · 스트림 TLS 1.3 · UDP 보안 · 서버 설정의 TLS 인증서 배선은 있다.
   남은 것: 암호화 켠 하니스로 서버 틱 시간을 재어 [결정 기록](../09_Decisions.md) 3절에 숫자 한 줄(N18a 벤치에 `_security` 를 켠 판).
+
+- `D7-7` [기능] **넷 채널 등록 API 로 B 메시지 타입의 스키마 해시를 핸드셰이크 버전에 저절로 섞는다.** 계획은 [리플렉션 형식](../plans/ReflectionFormats.md) 3.3 · 3.10 · 5절 "게임 넷 연결"이다.
+  Mech · Horror 스냅샷은 B 로 옮겼다(단계 4-a). 지금은 메시지마다 스트림 머리의 64 비트 해시가 실려, 배치가 다른 빌드의 바이트는 읽기가 `SchemaMismatch` 로 거절한다.
+  남은 것: 채널 객체에 `registerMessage<T>( kind )` 를 두고, 등록한 타입의 해시가 `NetHostConfig::_wireVersion` 에 섞이게 해 핸드셰이크가 `VersionMismatch` 로 먼저 거절하게 한다.
+  등록이 버전을 만들므로 섞는 일을 따로 부를 자리가 없어야 한다. 확인을 마친 채널 안에서만 본문만 쓰는 경로(3.10)를 만들어 메시지마다 싣는 해시 8 바이트를 뺀다.
+  시작 조건: 이 스냅샷을 채널에 싣는 게임이 생길 때. 지금은 호출부가 테스트뿐이라 범용 API 를 미리 두지 않았다.
 
 - `F-1` [기능] **지형 가중치 에셋의 에디터 쪽 마무리** — 가중치는 `.layerweights` 데이터 에셋이 됐다([결정 기록](../09_Decisions.md) 5-10, 서버도 레이어 질의에 답한다).
   남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다 ·

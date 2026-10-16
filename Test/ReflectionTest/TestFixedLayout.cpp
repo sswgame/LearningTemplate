@@ -1,12 +1,9 @@
 #include "pch.h"
 
 #include "Core/Network/BitStream.h"
-#include "Core/Network/Connection/NetHost.h"
-#include "Core/Network/Transport/NetTransport.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
-#include "Engine/Serialization/Fixed/FixedNetWireVersion.h"
 
 #include "ReflectionTest/TestFixedLayoutTypes.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -237,55 +234,6 @@ SW_TEST_CASE( FixedLayoutTest, SchemaChangesAreRejected )
     const sw::string canonical = findCanonical<sw::FixedOrderASample>();
     SW_EXPECT_TRUE( sw::FixedLayout::computeSchemaHash( sw::FixedLayout::kVersion, canonical, {} ) !=
                     sw::FixedLayout::computeSchemaHash( sw::FixedLayout::kVersion + 1, canonical, {} ) );
-}
-
-/**
- * @brief [FixedLayoutTest] 채널 메시지 타입의 배치가 다른 빌드는 손 버전이 같아도 핸드셰이크에서 VersionMismatch 로 거절됩니다
- * @details 게임 넷 연결은 채널에 싣는 B 메시지의 스키마 해시를 와이어 버전에 섞습니다(`FixedNetWireVersion`, ReflectionFormats.md 5절).
- *          한 빌드에 같은 FQN 의 두 선언을 둘 수 없으므로, 필드 순서만 다른 `FixedOrderASample` · `FixedOrderBSample` 이 "옛 빌드 · 새 빌드" 의 메시지입니다.
- */
-SW_TEST_CASE( FixedLayoutTest, ChangedMessageLayoutIsRefusedAtTheHandshake )
-{
-    constexpr uint32 kLayerVersion   = 1;
-    const uint32     currentVersion  = sw::FixedNetWireVersion::combine<sw::FixedOrderASample, sw::FixedStepASample>( kLayerVersion );
-    const uint32     reorderVersion  = sw::FixedNetWireVersion::combine<sw::FixedOrderBSample, sw::FixedStepASample>( kLayerVersion );
-    const uint32     restepVersion   = sw::FixedNetWireVersion::combine<sw::FixedOrderASample, sw::FixedStepBSample>( kLayerVersion );
-    const uint32     reversedVersion = sw::FixedNetWireVersion::combine<sw::FixedStepASample, sw::FixedOrderASample>( kLayerVersion );
-    const uint32     repeatedVersion = sw::FixedNetWireVersion::combine<sw::FixedOrderASample, sw::FixedStepASample>( kLayerVersion );
-    SW_EXPECT_TRUE( currentVersion == repeatedVersion ); // 같은 선언은 같은 값이다
-    SW_EXPECT_TRUE( currentVersion != reorderVersion );
-    SW_EXPECT_TRUE( currentVersion != restepVersion );
-    SW_EXPECT_TRUE( currentVersion != reversedVersion ); // 등록 순서도 버전이다
-    SW_EXPECT_TRUE( currentVersion != kLayerVersion );
-
-    sw::NetHostConfig serverSettings;
-    serverSettings._wireVersion        = currentVersion;
-    sw::NetHostConfig outdatedSettings = serverSettings;
-    outdatedSettings._wireVersion      = reorderVersion;
-    sw::LoopbackNetwork network;
-    sw::NetHost         server;
-    sw::NetHost         current;
-    sw::NetHost         outdated;
-    server.initialize( network.createEndpoint( 4000 ), serverSettings );
-    current.initialize( network.createEndpoint( 5001 ), serverSettings );
-    outdated.initialize( network.createEndpoint( 5002 ), outdatedSettings );
-    SW_ASSERT_TRUE( server.listen() );
-    SW_ASSERT_TRUE( current.connect( sw::NetAddress::makeLoopback( 4000 ) ) );
-    SW_ASSERT_TRUE( outdated.connect( sw::NetAddress::makeLoopback( 4000 ) ) );
-    float64 time = 0.0;
-    for ( int32 frame = 0; frame < 20; ++frame )
-    {
-        time += 1.0 / 60.0;
-        server.update( time );
-        current.update( time );
-        outdated.update( time );
-    }
-    SW_EXPECT_TRUE( current.getConnectionState( 0 ) == sw::NetConnectionState::Connected );
-    sw::vector<sw::NetHostEvent> listEvent;
-    outdated.drainEvents( listEvent );
-    SW_ASSERT_EQUAL( size_t{ 1 }, listEvent.size() );
-    SW_EXPECT_TRUE( listEvent[0]._reason == sw::NetDisconnectReason::VersionMismatch );
-    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 }
 
 /**
