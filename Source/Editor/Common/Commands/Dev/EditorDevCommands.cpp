@@ -13,6 +13,7 @@
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -41,6 +42,9 @@ namespace sw::editor
     {
         struct EditorDevCommandsInternal
         {
+            /** @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. `.gitignore` 의 `Resource/editor/automationtemp/` 와 같은 자리입니다. */
+            static constexpr const utf8* kImportTempFolder = "editor/automationtemp";
+
             /** @brief 낱말을 양의 정수로 읽습니다. 숫자가 아니면 false 입니다. */
             [[nodiscard]] static bool parseCount( const string& text, uint32& outValue )
             {
@@ -252,6 +256,66 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 임포트 대상 폴더(리소스 id)를 절대 경로로 바꿉니다. 임시 리소스 폴더(`kImportTempFolder`) 아래일 때만 true 입니다.
+             * @details 임포트한 에셋은 리소스 id 가 있어야 씬이 쓴다 — `Saved/Automation` 에는 id 가 없다. 그래서 리소스 트리 안의 한 폴더만 받고,
+             *          그 폴더는 `.gitignore` 가 무시하며 시나리오가 처음과 끝에 지운다(`asset.removeImportFolder`). 저장소 리소스를 바꾸지 않는 문지기다.
+             */
+            [[nodiscard]] static bool resolveImportFolder( const string& folderID, string& outAbsolutePath, string& outReply )
+            {
+                const string  normalized       = FileUtil::normalizePath( folderID );
+                const string& resourceRoot     = ResourcePaths::getRootFolderPath();
+                const bool    bOutsideTempArea = isUnderFolder( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos;
+                if ( bOutsideTempArea || resourceRoot.empty() )
+                {
+                    outReply = string( "imports go under the resource folder " ) + kImportTempFolder + "/: '" + folderID + "'";
+                    return false;
+                }
+                outAbsolutePath = FileUtil::joinPath( resourceRoot, folderID );
+                return true;
+            }
+
+            /**
+             * @brief 원본 파일 하나를 임시 리소스 폴더로 가져옵니다 — 콘텐츠 브라우저 Import 와 같은 길(`EditorAssetFileCommands::importFiles`, `.meta` 생성)이고
+             *          OS 파일 대화상자만 건너뜁니다. 원본은 작업 폴더 기준 경로나 리소스 id 입니다. 같은 이름이 있으면 새 이름을 받으므로 시나리오는 먼저 폴더를 지운다.
+             */
+            static bool runImportAsset( const vector<string>& listArgument, string& outReply )
+            {
+                string     sourcePath;
+                string     folderPath;
+                const bool bInvalidArguments = listArgument.size() != 2 || resolveScenePath( listArgument[0], sourcePath ) == false ||
+                                               resolveImportFolder( listArgument[1], folderPath, outReply ) == false;
+                if ( bInvalidArguments )
+                    return false;
+                if ( FileUtil::exists( sourcePath ) == false )
+                {
+                    outReply = "no source file '" + sourcePath + "'";
+                    return false;
+                }
+                if ( EditorAssetFileCommands::importFiles( folderPath, { sourcePath } ) != 1 )
+                {
+                    outReply = "could not import '" + sourcePath + "' into '" + listArgument[1] + "'";
+                    return false;
+                }
+                outReply = "imported " + FileUtil::getFileNamePart( sourcePath ) + " into " + listArgument[1];
+                return true;
+            }
+
+            /** @brief 시나리오 처음 · 끝 정리 — 임시 리소스 폴더 하나를 통째로 지웁니다(`.meta` 포함). 없으면 할 일이 없어 성공입니다. */
+            static bool runRemoveImportFolder( const vector<string>& listArgument, string& outReply )
+            {
+                string folderPath;
+                if ( listArgument.size() != 1 || resolveImportFolder( listArgument[0], folderPath, outReply ) == false )
+                    return false;
+                if ( FileUtil::removeDirectory( folderPath ) == false )
+                {
+                    outReply = "could not remove '" + folderPath + "'";
+                    return false;
+                }
+                outReply = "removed " + listArgument[0];
+                return true;
+            }
+
             /** @brief 마지막 `asset.open` 의 파일이 디스크에 있으면 1 입니다. 연 적이 없으면 0 입니다. */
             [[nodiscard]] static bool readTempAssetExists( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -412,6 +476,11 @@ namespace sw::editor
                     &EditorDevCommandsInternal::runOpenTempAsset );
     SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",
                     &EditorDevCommandsInternal::runRemoveTempAsset );
+    SW_DEV_COMMAND( ImportAsset, "asset.import", "asset.import <source file> <editor/automationtemp/...folder>",
+                    "Import a file into a temp resource folder the way Content Browser Import does, without the file dialog",
+                    &EditorDevCommandsInternal::runImportAsset );
+    SW_DEV_COMMAND( RemoveImportFolder, "asset.removeImportFolder", "asset.removeImportFolder <editor/automationtemp/...folder>",
+                    "Remove a temp resource folder that asset.import filled (with its .meta files)", &EditorDevCommandsInternal::runRemoveImportFolder );
     SW_AUTOMATION_PROBE( editorTempAssetExists, "Editor.TempAssetExists", "1 when the file of the last asset.open exists on disk",
                          &EditorDevCommandsInternal::readTempAssetExists );
     SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorDevCommandsInternal::runStep );
