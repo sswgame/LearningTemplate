@@ -984,6 +984,9 @@
   커맨드가 패널을 여는 일은 창구 `IEditorPanelHost`, UI 를 만지는 명령의 등록 줄은 그 UI 의 .cpp 입니다 — 언리얼에서 `FTabManager` 가 Slate 틀에, `IAssetTypeActions` 등록부가 AssetTools 에 있고
   편집기 모듈이 그 위에서 등록하는 것과 같습니다. 상태 막대 항목은 등록 줄(`SW_EDITOR_STATUS_BAR_ITEM`)로 더합니다(언리얼 상태 막대 확장).
   예외는 어느 층에서 include 해도 되는 잎 헤더(`prelude:`)와 모든 매니저를 만드는 조립 파일(`wiring:`)뿐입니다. 큰 패널은 `Panels/<패널>/`, 혼자인 패널은 영역 폴더(`Scene/` · `Animation/` · `Data/` · `Settings/`)에 둡니다.
+- **ImGui 를 모르는 층(Common 의 Asset · Commands · Config · Localization · SourceControl)은 OBJECT 라이브러리 `EditorModel` 로 짓고 오브젝트를 EditorModule DLL 에 그대로 넣습니다**(2026-10-17, `sw_addModulePart`).
+  정적 라이브러리나 별도 DLL 로 떼지 않습니다. 확장 모듈이 따로 링크하면 정적 상태가 두 벌이 되고 export 가 빠질 수 있습니다(언리얼도 모듈을 쪼개지 않고 모듈 안 의존만 가릅니다).
+  vcpkg 가 모든 패키지 헤더를 한 include 자리에 두어 include 자리로는 imgui.h 를 숨길 수 없으므로, `IMGUI_USER_CONFIG` 에 `#error` 헤더를 주어 imgui.h 를 거치는 include 를 컴파일 오류로 만듭니다(린트 게이트가 아님).
 - **패널과 커맨드의 `EditorContext::get()`(62 파일 224 곳)은 생성자 · 인자 주입으로 바꾸지 않습니다**(2026-10-11). 패널은 레지스트리가 인자 없이 만들고(`createEditorPanel<T>`),
   상용 엔진도 에디터 하위 시스템을 전역 창구로 줍니다(언리얼 `GEditor->GetEditorSubsystem<T>()`, 유니티 `Selection.activeObject` · `EditorWindow.GetWindow<T>()`).
   EditorTest 는 UI 매니저 때문에 `EditorContext` 를 만들 수 없으므로 컨텍스트를 인자로 바꿔도 테스트가 늘지 않습니다. 테스트할 판단이 생기면 그 함수만 필요한 서비스 하나(작업 공간, 선택)를 인자로 받습니다.

@@ -23,6 +23,17 @@ if(swSkipEditor)
 	return()
 endif()
 
+# ImGui 를 모르는 층(모델: 에셋 · 커맨드 · 설정 · 로컬라이즈 · 버전 관리)은 아래 2) 의 EditorModel 이 짓고 EditorModule 소스에서는 뺀다.
+# EditorScenarioRecordCommands.cpp 는 이미 ImGui 를 쓰는 파일이라 EditorModule 에 남는다(백로그 `C-37` "모델").
+set(listEditorModelDir Common/Asset Common/Commands Common/Config Common/Localization Common/SourceControl)
+set(listEditorModelSource "")
+foreach(modelDir IN LISTS listEditorModelDir)
+	file(GLOB_RECURSE listModelDirSource CONFIGURE_DEPENDS "${modelDir}/*.cpp" "${modelDir}/*.h")
+	list(APPEND listEditorModelSource ${listModelDirSource})
+endforeach()
+list(REMOVE_ITEM listEditorModelSource "${CMAKE_CURRENT_SOURCE_DIR}/Common/Commands/Play/EditorScenarioRecordCommands.cpp")
+list(REMOVE_ITEM listEditorSource ${listEditorModelSource})
+
 sw_addModuleLibrary(EditorModule
 	KIND editor
 	DEV_TYPE SHARED
@@ -41,8 +52,24 @@ sw_addModuleLibrary(EditorModule
 		"${CMAKE_CURRENT_SOURCE_DIR}/SelfTest/EditorCurveProbeComponent.h"
 )
 
+# ------------------------------------------------------------------------------
+# 2) EditorModel: 모델 층을 imgui 링크가 없는 OBJECT 라이브러리로 짓고 오브젝트를 EditorModule DLL 안에 그대로 넣는다(`sw_addModulePart`).
+#    vcpkg 는 모든 패키지 헤더를 한 include 자리에 두므로(DirectXTex · meshoptimizer 를 링크하면 imgui.h 도 보인다) include 자리만으로는 막지 못한다.
+#    그래서 ImGui 가 사용자 설정을 읽는 자리(`IMGUI_USER_CONFIG`, imgui.h 첫머리)에 #error 헤더를 준다. imgui.h 를 거치는 헤더(implot · ImGuizmo ·
+#    노드 편집기 · 백엔드 포함)를 include 하면 컴파일이 멈춘다.
+# ------------------------------------------------------------------------------
+sw_addModulePart(EditorModel
+	OWNER EditorModule
+	SOURCES ${listEditorModelSource}
+	LINK Engine RuntimeAPI Microsoft::DirectXTex cgltf meshoptimizer stb
+)
+set(editorModelImGuiBlock "${CMAKE_BINARY_DIR}/generated/sw/EditorModelForbidsImGui.h")
+file(GENERATE OUTPUT "${editorModelImGuiBlock}" CONTENT
+	"// EditorModel: generated - the editor model layer (Source/Editor/CMakeLists.txt listEditorModelDir) must not include ImGui\n#error \"EditorModel (ImGui-free editor layer) includes an ImGui header. Move the ImGui code to a view file outside listEditorModelDir.\"\n")
+target_compile_definitions(EditorModel PRIVATE "IMGUI_USER_CONFIG=\"${editorModelImGuiBlock}\"")
+
 # 에디터는 LTO 를 받지 않는다(링크 시간 — Test/ · Tools/ 와 같은 이유).
-set_target_properties(EditorModule PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
+set_target_properties(EditorModule EditorModel PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
 
 # 확장 모듈은 에디터 헤더(Source/ 기준 경로)를 쓴다. ImGui 링크는 확장이 스스로 한다 — vcpkg imgui 는 정적이라 DLL 마다 사본이고 결속기가 컨텍스트를 맞춘다.
 target_include_directories(EditorModule INTERFACE "${CMAKE_SOURCE_DIR}/Source")
