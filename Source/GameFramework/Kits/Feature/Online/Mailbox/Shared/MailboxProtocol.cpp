@@ -154,3 +154,8 @@ namespace sw
         return OnlineError::toResult( errorCode, kArrErrorResult, MailboxResult::Unavailable );
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry MailboxProtocol::kOnlineEntry{ "Mailbox", OnlineMethodRange::kMailbox, MailboxProtocol::kVersion };
+} // namespace sw

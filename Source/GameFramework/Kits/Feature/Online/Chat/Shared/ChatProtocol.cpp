@@ -146,3 +146,8 @@ namespace sw
         return topic;
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry ChatProtocol::kOnlineEntry{ "Chat", OnlineMethodRange::kChat, ChatProtocol::kVersion };
+} // namespace sw

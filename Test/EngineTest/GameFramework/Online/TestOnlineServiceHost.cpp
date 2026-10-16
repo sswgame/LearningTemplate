@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
@@ -9,12 +10,13 @@
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 서비스 틀 — 루프백 스트림 위 호스트 + 클라이언트(한 스레드, 결정적). Hello 전 요청 거절 · 판 불일치 · 로그인 확인(익명 메서드는 통과) · 몸 상한 · 주소 도배 제한 ·
+// 서비스 틀 — 루프백 스트림 위 호스트 + 클라이언트(한 스레드, 결정적). Hello 전 요청 거절 · 스키마 해시 불일치 · 로그인 확인(익명 메서드는 통과) · 몸 상한 · 주소 도배 제한 ·
 // 늦은 답(토큰) · 닫힌 뒤 답은 버림 · 계정 떼기 → 모든 서비스에 떠남 · 알림은 그 계정에만 · 모두에게 알림 · 멱등 재시도 · 캐시 답과 버스 메시지는 맡긴 · 구독한 서비스로만 ·
 // 공유 엔드포인트 클라이언트 둘 · 요청 추적 id 가 클라이언트 문맥에서 서비스의 로그 문맥까지.
 
@@ -35,11 +37,15 @@ namespace
         static constexpr uint16 kCount  = 5; ///< 로그인 필요 — 처리기를 센다(멱등)
     };
 
+    // 가짜 키트의 프로토콜 항목이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
+    const OnlineProtocolEntry kProtocolA{ "OnlineServiceHostTest.A", OnlineServiceHostTestInternal::kRangeA, 1 };
+    const OnlineProtocolEntry kProtocolB{ "OnlineServiceHostTest.B", OnlineServiceHostTestInternal::kRangeB, 1 };
+
     /** @brief 가짜 서비스 — 받은 것을 모두 적는다. */
     class FakeOnlineService final : public IOnlineHostService
     {
     public:
-        explicit FakeOnlineService( uint16 range )
+        explicit FakeOnlineService( const OnlineProtocolEntry& protocol )
             : _listLateToken{}
             , _listLateAnswer{}
             , _listLeftAccount{}
@@ -48,7 +54,8 @@ namespace
             , _cacheKeyToRead{}
             , _lastLogContext{}
             , _lastTraceID{}
-            , _range{ range }
+            , _pProtocol{ &protocol }
+            , _range{ protocol.getMethodRange() }
             , _handledCount{ 0 }
             , _hostShutdownCount{ 0 }
             , _cacheReplyCountAtHostShutdown{ -1 }
@@ -57,9 +64,8 @@ namespace
         {
         }
 
-        uint16 getMethodRange() const override { return _range; }
-        uint32 getProtocolVersion() const override { return 1; }
-        bool   isAnonymousMethod( uint16 method ) const override
+        const OnlineProtocolEntry& getProtocol() const override { return *_pProtocol; }
+        bool                       isAnonymousMethod( uint16 method ) const override
         {
             const uint16 offset = static_cast<uint16>( method - _range );
             return offset == OnlineServiceHostTestInternal::kEcho || offset == OnlineServiceHostTestInternal::kLogin;
@@ -142,37 +148,36 @@ namespace
 
         void onCacheReply( const EphemeralReply& reply ) { _listCacheReply.push_back( reply ); }
 
-        vector<NetRequestToken>  _listLateToken;
-        vector<bool>             _listLateAnswer;
-        vector<AccountID>        _listLeftAccount;
-        vector<ServerBusMessage> _listBusMessage;
-        vector<EphemeralReply>   _listCacheReply;
-        string                   _cacheKeyToRead;
-        LogContext               _lastLogContext; ///< 마지막 요청을 처리할 때의 로그 문맥
-        LogTraceID               _lastTraceID;    ///< 마지막 요청의 추적 id
-        uint16                   _range;
-        int32                    _handledCount;
-        int32                    _hostShutdownCount;
-        int32                    _cacheReplyCountAtHostShutdown; ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
-        bool                     _bReadCacheOnTick;
-        bool                     _bHoldLateAnswers; ///< 켜면 늦은 요청에 답하지 않고 토큰만 든다
+        vector<NetRequestToken>    _listLateToken;
+        vector<bool>               _listLateAnswer;
+        vector<AccountID>          _listLeftAccount;
+        vector<ServerBusMessage>   _listBusMessage;
+        vector<EphemeralReply>     _listCacheReply;
+        string                     _cacheKeyToRead;
+        LogContext                 _lastLogContext; ///< 마지막 요청을 처리할 때의 로그 문맥
+        LogTraceID                 _lastTraceID;    ///< 마지막 요청의 추적 id
+        const OnlineProtocolEntry* _pProtocol;
+        uint16                     _range;
+        int32                      _handledCount;
+        int32                      _hostShutdownCount;
+        int32                      _cacheReplyCountAtHostShutdown; ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
+        bool                       _bReadCacheOnTick;
+        bool                       _bHoldLateAnswers; ///< 켜면 늦은 요청에 답하지 않고 토큰만 든다
     };
 
     /** @brief 클라이언트 쪽 가짜 키트 — 알림을 적는다. */
     class FakeClientService final : public IOnlineClientService
     {
     public:
-        FakeClientService( uint16 range, uint32 version )
+        explicit FakeClientService( const OnlineProtocolEntry& protocol )
             : _listPushKind{}
-            , _range{ range }
-            , _version{ version }
+            , _pProtocol{ &protocol }
             , _readyCount{ 0 }
         {
         }
 
-        uint16 getMethodRange() const override { return _range; }
-        uint32 getProtocolVersion() const override { return _version; }
-        void   onServicePush( uint16 kind, BitReader& body ) override
+        const OnlineProtocolEntry& getProtocol() const override { return *_pProtocol; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             (void)body;
             _listPushKind.push_back( kind );
@@ -183,10 +188,9 @@ namespace
             ++_readyCount;
         }
 
-        vector<uint16> _listPushKind;
-        uint16         _range;
-        uint32         _version;
-        int32          _readyCount;
+        vector<uint16>             _listPushKind;
+        const OnlineProtocolEntry* _pProtocol;
+        int32                      _readyCount;
     };
 
     /** @brief 응답 하나를 적는 곳입니다. */
@@ -214,10 +218,10 @@ namespace
         FakeClientService            _serviceB;
         OnlineServiceClient          _client;
 
-        ClientSide( LoopbackStreamNetwork& network, uint16 port, uint32 versionA = 1 )
+        ClientSide( LoopbackStreamNetwork& network, uint16 port )
             : _transport{ network.createTransport() }
-            , _serviceA{ OnlineServiceHostTestInternal::kRangeA, versionA }
-            , _serviceB{ OnlineServiceHostTestInternal::kRangeB, 1 }
+            , _serviceA{ kProtocolA }
+            , _serviceB{ kProtocolB }
             , _client{}
         {
             SW_EXPECT_TRUE( _client.registerClientService( &_serviceA ) );
@@ -245,8 +249,8 @@ namespace
         explicit HostRig( OnlineServiceHostConfig settings = makeSettings() )
             : _network{ 13u }
             , _hostTransport{ _network.createTransport() }
-            , _serviceA{ OnlineServiceHostTestInternal::kRangeA }
-            , _serviceB{ OnlineServiceHostTestInternal::kRangeB }
+            , _serviceA{ kProtocolA }
+            , _serviceB{ kProtocolB }
             , _host{}
             , _listClient{}
             , _nowMs{ 1000 }
@@ -338,11 +342,25 @@ namespace
             (void)_endpoint.pump( *this );
         }
 
-        void send( uint16 method, const BitWriter& body )
+        void send( uint16 method, const BitWriter& body ) { sendBytes( method, body.getBytes().data(), body.getByteCount() ); }
+
+        void sendBytes( uint16 method, const uint8* pBody, int32 bodySize )
         {
             _bAnswered = false;
-            (void)_requestClient.sendRequest( _handle, method, body.getBytes().data(), body.getByteCount(), NetRequestOptions{},
+            (void)_requestClient.sendRequest( _handle, method, pBody, bodySize, NetRequestOptions{},
                                               Delegate<void( const NetResponse& )>::create<&RawClientSide::onResponse>( this ) );
+        }
+
+        /** @brief `[스키마 해시 u64][빈 게임 빌드][플랫폼 0]` 모양의 Hello 를 보냅니다. */
+        void sendHello( uint64 schemaHash )
+        {
+            BitWriter rest;
+            rest.writeBlob( nullptr, 0 );
+            rest.writeBits( 0, 8 );
+            vector<uint8> helloBytes;
+            LittleEndianUtil::appendUint64( helloBytes, schemaHash );
+            helloBytes.insert( helloBytes.end(), rest.getBytes().begin(), rest.getBytes().begin() + rest.getByteCount() );
+            sendBytes( OnlineHostMethod::kHello, helloBytes.data(), static_cast<int32>( helloBytes.size() ) );
         }
 
         uint16 getErrorCode() const { return _lastBodyBytes.size() >= 2 ? static_cast<uint16>( _lastBodyBytes[0] | ( _lastBodyBytes[1] << 8 ) ) : 0; }
@@ -376,12 +394,9 @@ namespace
         unique_ptr<IStreamTransport> _transport;
         StreamMessageEndpoint        _endpoint;
         NetRequestClient             _requestClient;
-        FakeClientService            _arrService[2]{
-            {OnlineServiceHostTestInternal::kRangeA, 1},
-            {OnlineServiceHostTestInternal::kRangeA, 1}
-        };
-        OnlineServiceClient    _arrClient[2]{};
-        StreamConnectionHandle _arrHandle[2]{};
+        FakeClientService            _arrService[2]{ FakeClientService{ kProtocolA }, FakeClientService{ kProtocolA } };
+        OnlineServiceClient          _arrClient[2]{};
+        StreamConnectionHandle       _arrHandle[2]{};
 
         SharedEndpointBots( LoopbackStreamNetwork& network, uint16 port )
             : _transport{ network.createTransport() }
@@ -450,7 +465,11 @@ namespace
     };
 } // namespace
 
-SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndVersionsAreNegotiated )
+/**
+ * @brief [OnlineServiceHostTest] Hello 전 요청은 거절되고, 스키마 해시가 다른 Hello 는 다른 바이트를 읽기 전에 서버 해시와 함께 거절된다
+ * @details 거절 몸은 B 가 아닌 고정 형식 `[kVersionMismatch u16][서버 해시 u64]` 이다. 거절한 뒤 서버는 연결을 닫는다.
+ */
+SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndSchemaHashIsComparedFirst )
 {
     HostRig       rig;
     RawClientSide raw( rig._network, rig.getPort() );
@@ -473,15 +492,9 @@ SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndVersionsAre
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, raw.getErrorCode() );
     SW_EXPECT_EQUAL( 0, rig._serviceA._handledCount );
 
-    // 서버에 없는 영역 0x9000 을 낸 Hello — 판 불일치와 서버의 (영역, 판) 목록
-    BitWriter hello;
-    hello.writeVarUint( OnlineProtocolConstant::kBaseVersion );
-    hello.writeVarUint( 1 );
-    hello.writeBits( 0x9000, 16 );
-    hello.writeVarUint( 1 );
-    hello.writeBlob( nullptr, 0 );
-    hello.writeBits( 0, 8 );
-    raw.send( OnlineHostMethod::kHello, hello );
+    // 다른 빌드의 해시는 서버 해시를 실은 kVersionMismatch 로 거절된다
+    const uint64 schemaHash = OnlineProtocolRegistry::computeSchemaHash();
+    raw.sendHello( schemaHash + 1 );
     for ( int32 index = 0; index < 6 && raw._bAnswered == false; ++index )
     {
         raw.pump();
@@ -489,26 +502,60 @@ SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndVersionsAre
         raw.pump();
     }
     SW_ASSERT_TRUE( raw._bAnswered );
+    SW_EXPECT_TRUE( raw._lastResponse._status == NetRequestStatus::ApplicationError );
     SW_EXPECT_EQUAL( OnlineError::kVersionMismatch, raw.getErrorCode() );
-    BitReader serverList( raw._lastBodyBytes.data() + 2, static_cast<int32>( raw._lastBodyBytes.size() ) - 2 );
-    SW_EXPECT_EQUAL( uint64( OnlineProtocolConstant::kBaseVersion ), serverList.readVarUint() );
-    SW_EXPECT_EQUAL( uint64( 2 ), serverList.readVarUint() );
-    SW_EXPECT_EQUAL( uint32( OnlineServiceHostTestInternal::kRangeA ), serverList.readBits( 16 ) );
+    SW_ASSERT_EQUAL( raw._lastBodyBytes.size(), size_t( 2 + OnlineProtocolConstant::kSchemaHashSize ) );
+    SW_EXPECT_EQUAL( schemaHash, LittleEndianUtil::readUint64( raw._lastBodyBytes.data() + 2 ) );
+    for ( int32 index = 0; index < 6; ++index )
+    {
+        raw.pump();
+        rig.step( 1 );
+    }
+    SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() ); // 거절한 연결은 서버가 닫았다
 }
 
-SW_TEST_CASE( OnlineServiceHostTest, VersionMismatchStopsTheClient )
+/**
+ * @brief [OnlineServiceHostTest] 해시가 같으면 Hello 가 통과하고 키트 일부만 올린 클라이언트도 서버와 같은 해시를 쓴다
+ * @details 해시는 빌드에 올라온 프로토콜 항목 전부에서 나오므로 클라이언트가 올린 키트 수와 상관없다.
+ */
+SW_TEST_CASE( OnlineServiceHostTest, SameSchemaHashConnects )
 {
     HostRig    rig;
-    ClientSide client( rig._network, rig.getPort(), 2 ); // 서버는 판 1
+    ClientSide client( rig._network, rig.getPort() );
+    rig._listClient.push_back( &client );
+    client._client.unregisterClientService( &client._serviceB ); // 서버가 맡은 키트 둘 가운데 하나만 쓴다
+    rig.step( 10 );
+    SW_ASSERT_TRUE( client._client.isReady() );
+    SW_EXPECT_EQUAL( 1, client._serviceA._readyCount );
+}
+
+/**
+ * @brief [OnlineServiceHostTest] 스키마 해시가 다르면 클라이언트는 "업데이트 필요" 상태가 되고, 서버가 연결을 닫아도 다시 접속하지 않는다
+ * @details 클라이언트 빌드에만 있는 키트 프로토콜 항목을 하나 더 올려 해시를 바꾼다. 서버 해시는 호스트 `initialize` 때 이미 정했다.
+ */
+SW_TEST_CASE( OnlineServiceHostTest, SchemaHashMismatchStopsTheClientWithoutReconnecting )
+{
+    HostRig                   rig;
+    const OnlineProtocolEntry clientOnlyProtocol{ "OnlineServiceHostTest.ClientOnly", OnlineServiceHostTestInternal::kRangeB + OnlineMethodRange::kSize, 1 };
+    ClientSide                client( rig._network, rig.getPort() ); // 이 클라이언트의 해시에는 위 항목이 섞인다
     rig._listClient.push_back( &client );
     {
         SW_TEST_DEFENSIVE_SCOPE( "the client warns that an update is required" );
         rig.step( 10 );
     }
     SW_EXPECT_TRUE( client._client.getState() == OnlineClientState::VersionMismatch );
+    SW_EXPECT_EQUAL( 0, client._serviceA._readyCount );
+
+    // 물러남 상한(5 초)보다 오래 돌려도 다시 접속하지 않는다
+    for ( int32 index = 0; index < 20; ++index )
+    {
+        rig.step( 1 );
+        rig._nowMs += 1000;
+    }
+    SW_EXPECT_TRUE( client._client.getState() == OnlineClientState::VersionMismatch );
+    SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() );
     const ResponseRecord record = rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kEcho, 1 );
     SW_EXPECT_EQUAL( OnlineError::kVersionMismatch, record._errorCode );
-    SW_EXPECT_EQUAL( 0, client._serviceA._readyCount );
 }
 
 SW_TEST_CASE( OnlineServiceHostTest, AnonymousMethodsPassAndOthersNeedALogin )

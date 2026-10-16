@@ -40,9 +40,8 @@ namespace sw
         void drainMessages( vector<ChatMessage>& outListMessage ) { _messageBuffer.drainTo( outListMessage ); }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kChat; }
-        uint32 getProtocolVersion() const override { return ChatProtocol::kVersion; }
-        void   onServicePush( uint16 kind, BitReader& body ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return ChatProtocol::kOnlineEntry; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
         EventBuffer<ChatMessage> _messageBuffer;

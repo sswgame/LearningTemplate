@@ -36,14 +36,13 @@ namespace
     class RangeService final : public IOnlineHostService
     {
     public:
-        explicit RangeService( uint16 range )
-            : _range{ range }
+        explicit RangeService( const OnlineProtocolEntry& protocol )
+            : _pProtocol{ &protocol }
         {
         }
 
-        uint16 getMethodRange() const override { return _range; }
-        uint32 getProtocolVersion() const override { return 1; }
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
+        const OnlineProtocolEntry& getProtocol() const override { return *_pProtocol; }
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
         {
             (void)host;
             (void)context;
@@ -51,8 +50,14 @@ namespace
         }
 
     private:
-        uint16 _range;
+        const OnlineProtocolEntry* _pProtocol;
     };
+
+    // 영역 확인용 항목들이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
+    const OnlineProtocolEntry kAccountRangeProtocol{ "OnlineServiceTest.Account", OnlineMethodRange::kAccount, 1 };
+    const OnlineProtocolEntry kSameRangeProtocol{ "OnlineServiceTest.SameRange", OnlineMethodRange::kAccount, 1 };
+    const OnlineProtocolEntry kNotABaseProtocol{ "OnlineServiceTest.NotABase", 0x0910, 1 };
+    const OnlineProtocolEntry kHostRangeProtocol{ "OnlineServiceTest.HostRange", OnlineMethodRange::kHost, 1 };
 
     static_assert( OnlineMethodRange::isInRange( OnlineMethodRange::kAccount + 0x7F, OnlineMethodRange::kAccount ), "last method of a range" );
     static_assert( OnlineMethodRange::isInRange( OnlineMethodRange::kTrade, OnlineMethodRange::kAccount ) == false, "ranges do not overlap" );
@@ -74,10 +79,10 @@ SW_TEST_CASE( OnlineServiceTest, RegisterMethodRefusesADuplicate )
     SW_EXPECT_TRUE( server.registerMethod( 0x8001, &second ) );
 
     OnlineServiceHost host;
-    RangeService      account( OnlineMethodRange::kAccount );
-    RangeService      sameRange( OnlineMethodRange::kAccount );
-    RangeService      notABase( 0x0910 );
-    RangeService      hostRange( OnlineMethodRange::kHost );
+    RangeService      account( kAccountRangeProtocol );
+    RangeService      sameRange( kSameRangeProtocol );
+    RangeService      notABase( kNotABaseProtocol );
+    RangeService      hostRange( kHostRangeProtocol );
     SW_EXPECT_TRUE( host.registerHostService( &account ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "overlapping or misaligned method ranges are refused" );

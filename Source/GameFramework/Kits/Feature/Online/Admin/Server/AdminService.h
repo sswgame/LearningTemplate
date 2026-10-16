@@ -63,10 +63,9 @@ namespace sw
         void update( int64 nowMs );
 
         // IOnlineHostService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kAdmin; }
-        uint32 getProtocolVersion() const override { return AdminProtocol::kVersion; }
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return AdminProtocol::kOnlineEntry; }
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void  completeCall( uint64 callID, AdminReply& inoutReply );

@@ -197,3 +197,8 @@ namespace sw
         return readText( reader, LoginConstant::kMaxReasonCodeSize, outReasonCode );
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry AccountProtocol::kOnlineEntry{ "Account", OnlineMethodRange::kAccount, AccountProtocol::kVersion };
+} // namespace sw

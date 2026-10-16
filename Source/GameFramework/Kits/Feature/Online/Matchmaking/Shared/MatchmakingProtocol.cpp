@@ -344,3 +344,8 @@ namespace sw
         return OnlineError::toResult( errorCode, kArrErrorResult, MatchmakingResult::Unavailable );
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry MatchmakingProtocol::kOnlineEntry{ "Matchmaking", OnlineMethodRange::kMatchmaking, MatchmakingProtocol::kVersion };
+} // namespace sw

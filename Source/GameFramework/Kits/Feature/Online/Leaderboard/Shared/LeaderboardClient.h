@@ -36,9 +36,8 @@ namespace sw
         void drainAchievementUnlocks( vector<AchievementState>& outListAchievement ) { _unlockBuffer.drainTo( outListAchievement ); }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kLeaderboard; }
-        uint32 getProtocolVersion() const override { return LeaderboardProtocol::kVersion; }
-        void   onServicePush( uint16 kind, BitReader& body ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return LeaderboardProtocol::kOnlineEntry; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
         uint64 send( uint16 method, const LeaderboardRequest& request, const ReplyDelegate& onReply );

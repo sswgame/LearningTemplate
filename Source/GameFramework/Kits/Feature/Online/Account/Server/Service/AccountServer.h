@@ -53,14 +53,13 @@ namespace sw
         void shutdown();
 
         // IOnlineHostService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kAccount; }
-        uint32 getProtocolVersion() const override;
-        bool   isAnonymousMethod( uint16 method ) const override;
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
-        void   onHostShutdown( OnlineServiceHost& host ) override;
-        void   onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
-        void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
+        const OnlineProtocolEntry& getProtocol() const override;
+        bool                       isAnonymousMethod( uint16 method ) const override;
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onHostShutdown( OnlineServiceHost& host ) override;
+        void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
+        void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
         // IAccountSessionControl
         void revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs ) override;

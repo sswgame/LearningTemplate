@@ -307,3 +307,8 @@ namespace sw
         }
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry AdminProtocol::kOnlineEntry{ "Admin", OnlineMethodRange::kAdmin, AdminProtocol::kVersion };
+} // namespace sw

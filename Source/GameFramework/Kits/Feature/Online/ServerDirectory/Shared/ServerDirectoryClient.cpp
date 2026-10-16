@@ -24,9 +24,9 @@ namespace sw
         _pClient = pClient;
     }
 
-    uint32 ServerDirectoryClient::getProtocolVersion() const
+    const OnlineProtocolEntry& ServerDirectoryClient::getProtocol() const
     {
-        return ServerDirectoryMethod::kWireVersion;
+        return ServerDirectoryProtocol::kOnlineEntry;
     }
 
     uint64 ServerDirectoryClient::requestStatus( const StatusDelegate& onStatus )

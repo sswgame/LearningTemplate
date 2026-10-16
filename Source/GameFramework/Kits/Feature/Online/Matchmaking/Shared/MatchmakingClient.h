@@ -52,9 +52,8 @@ namespace sw
         const PartySnapshot& getParty() const { return _party; }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kMatchmaking; }
-        uint32 getProtocolVersion() const override { return MatchmakingProtocol::kVersion; }
-        void   onServicePush( uint16 kind, BitReader& body ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return MatchmakingProtocol::kOnlineEntry; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
         EventBuffer<PartySnapshot>   _partyBuffer;

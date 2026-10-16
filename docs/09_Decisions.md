@@ -887,6 +887,10 @@
 - **호스트 이름은 Core 의 막는 해석(`PlatformSocketUtil::resolveAddress`, `getaddrinfo` IPv4)으로 기동 때 한 번 풉니다**(2026-10-17, D7-5). `localhost` 만 손으로 바꾸던 자리(캐시 엔드포인트)를 이 함수로 바꿨고, 풀리지 않으면 기동 오류입니다.
   틱 · 요청 경로는 DNS 왕복만큼 막히므로 그대로 부르지 않습니다 — HTTP 클라이언트는 전용 해석 스레드(처음 이름을 받을 때 띄움)에 맡기고 `update` 가 연결을 겁니다. TaskManager 워커는 막는 일을 받지 않아 쓰지 않습니다.
   언리얼 `ISocketSubsystem::GetAddressInfo`(막는 판 + 비동기 판), libcurl 의 스레드 해석기와 같은 나눔입니다.
+- **온라인 접속은 Hello 첫 필드의 온라인 스키마 해시 하나로 거절합니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 5-a). 키트마다 (영역, 판) 목록을 대조하던 협상을 없앴습니다.
+  해시는 빌드에 올라온 `OnlineProtocolEntry` 전부(영역 순)와 `kBaseVersion` 을 섞은 값이고, 키트 서비스가 `getProtocol` 로 그 항목을 돌려줘야 하므로 키트가 따로 목록을 적어 빠뜨릴 곳이 없습니다.
+  클라이언트가 올린 키트만 섞으면 키트 일부만 쓰는 클라이언트가 서버와 어긋나므로 빌드 전체를 섞습니다(서버와 클라이언트는 같은 빌드로 배포). 다르면 `[kVersionMismatch][서버 해시 u64]` 로 답하고 연결을 닫으며, 클라이언트는 다시 접속하지 않고 계정 키트는 `LoginResult::UpdateRequired` 를 냅니다.
+  언리얼 `FNetworkVersion::GetLocalNetworkVersion`(빌드 값 하나를 접속 때 비교), Unity Netcode `ProtocolVersion` 과 같은 자리입니다(기억에 의존). 옛 클라이언트를 받는 탈출구는 열지 않았습니다.
 
 ### 5-10. 전용 서버
 

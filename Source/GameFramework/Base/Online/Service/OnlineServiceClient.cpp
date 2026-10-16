@@ -41,6 +41,7 @@ namespace sw
         , _backoffMs{ 0 }
         , _serverTimeMs{ 0 }
         , _remoteConfigHash{ 0 }
+        , _schemaHash{ 0 }
         , _nextRequestID{ 1 }
         , _gateOwnerRange{ 0 }
         , _state{ OnlineClientState::Disconnected }
@@ -121,6 +122,7 @@ namespace sw
         SW_ASSERT( _bInitialized == SW_FALSE );
         _settings                        = settings;
         _pTransport                      = pTransport;
+        _schemaHash                      = OnlineProtocolRegistry::computeSchemaHash();
         _ownedEndpoint                   = sw::make_unique<StreamMessageEndpoint>();
         _ownedRequestClient              = sw::make_unique<NetRequestClient>();
         const bool bTransportStartFailed = pTransport == nullptr || _ownedEndpoint->initialize( pTransport, settings._endpointSettings ) == false ||
@@ -146,6 +148,7 @@ namespace sw
         if ( bInvalidClientArguments )
             return false;
         _settings        = settings;
+        _schemaHash      = OnlineProtocolRegistry::computeSchemaHash();
         _pEndpoint       = pEndpoint;
         _pRequestClient  = pRequestClient;
         _connection      = handle;
@@ -297,21 +300,17 @@ namespace sw
 
     void OnlineServiceClient::sendHello()
     {
-        // 몸: [기반 판 varuint][키트 수 varuint][(영역 u16, 판 varuint) …][게임 빌드 blob][플랫폼 u8]
-        BitWriter hello;
-        hello.writeVarUint( OnlineProtocolConstant::kBaseVersion );
-        hello.writeVarUint( _listService.size() );
-        for ( const IOnlineClientService* pService : _listService )
-        {
-            hello.writeBits( pService->getMethodRange(), 16 );
-            hello.writeVarUint( pService->getProtocolVersion() );
-        }
+        // 몸: [스키마 해시 u64 리틀 엔디언][게임 빌드 blob][플랫폼 u8]. 해시는 B 가 아닌 고정 형식이라 스키마가 바뀌어도 서버가 늘 읽는다.
+        BitWriter    rest;
         const size_t buildSize = std::min( _settings._gameBuild.size(), static_cast<size_t>( OnlineProtocolConstant::kMaxBuildTextSize ) );
-        hello.writeBlob( reinterpret_cast<const uint8*>( _settings._gameBuild.data() ), static_cast<int32>( buildSize ) );
-        hello.writeBits( _settings._platform, 8 );
+        rest.writeBlob( reinterpret_cast<const uint8*>( _settings._gameBuild.data() ), static_cast<int32>( buildSize ) );
+        rest.writeBits( _settings._platform, 8 );
+        vector<uint8> helloBytes;
+        LittleEndianUtil::appendUint64( helloBytes, _schemaHash );
+        helloBytes.insert( helloBytes.end(), rest.getBytes().begin(), rest.getBytes().begin() + rest.getByteCount() );
         NetRequestOptions options;
         options._timeoutSeconds = 10.0;
-        (void)_pRequestClient->sendRequest( _connection, OnlineHostMethod::kHello, hello.getBytes().data(), hello.getByteCount(), options,
+        (void)_pRequestClient->sendRequest( _connection, OnlineHostMethod::kHello, helloBytes.data(), static_cast<int32>( helloBytes.size() ), options,
                                             Delegate<void( const NetResponse& )>::create<&OnlineServiceClient::onHelloResponse>( this ) );
     }
 
@@ -378,17 +377,10 @@ namespace sw
     {
         if ( response._status == NetRequestStatus::Ok )
         {
-            BitReader    reader( response._pBody, response._bodySize );
-            const uint64 baseVersion = reader.readVarUint();
-            const uint64 kitCount    = reader.readVarUint();
-            for ( uint64 index = 0; index < kitCount && reader.hasOverflowed() == false; ++index )
-            {
-                (void)reader.readBits( 16 ); // 키트 항목은 건너뛴다 — 넘침은 아래 hasOverflowed 가 본다
-                (void)reader.readVarUint();  // 키트 항목은 건너뛴다 — 넘침은 아래 hasOverflowed 가 본다
-            }
+            BitReader reader( response._pBody, response._bodySize );
             _remoteConfigHash = reader.readVarUint();
             _serverTimeMs     = reader.readVarInt();
-            if ( reader.hasOverflowed() || baseVersion != OnlineProtocolConstant::kBaseVersion )
+            if ( reader.hasOverflowed() )
             {
                 SW_LOG_WARNING( "Online service Hello answer is malformed" );
                 return;
@@ -403,7 +395,10 @@ namespace sw
                                LittleEndianUtil::readUint16( response._pBody ) == OnlineError::kVersionMismatch;
         if ( bMismatch )
         {
-            SW_LOG_WARNING( "Online service protocol versions differ from the server - an update is required" );
+            const bool   bHasServerHash = response._bodySize >= 2 + OnlineProtocolConstant::kSchemaHashSize;
+            const uint64 serverHash     = bHasServerHash ? LittleEndianUtil::readUint64( response._pBody + 2 ) : 0;
+            SW_LOG_WARNING( "Online schema hash %# differs from the server's %# (%s) - an update is required", _schemaHash, serverHash,
+                            bHasServerHash ? "sent" : "missing from the answer" );
             _state = OnlineClientState::VersionMismatch;
             failQueuedCalls( NetRequestStatus::ApplicationError, OnlineError::kVersionMismatch );
         }

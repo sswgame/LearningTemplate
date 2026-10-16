@@ -39,9 +39,8 @@ namespace sw
         uint64 getRevision() const { return _revision; }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kLiveOps; }
-        uint32 getProtocolVersion() const override { return LiveOpsProtocol::kVersion; }
-        void   onServicePush( uint16 kind, BitReader& body ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return LiveOpsProtocol::kOnlineEntry; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
         void onCallSucceeded( const Call& call, const LiveOpsReply& reply ) override;

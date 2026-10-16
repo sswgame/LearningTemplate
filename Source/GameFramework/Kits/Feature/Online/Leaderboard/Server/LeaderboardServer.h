@@ -37,10 +37,9 @@ namespace sw
         void shutdown();
 
         // IOnlineHostService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kLeaderboard; }
-        uint32 getProtocolVersion() const override;
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        const OnlineProtocolEntry& getProtocol() const override;
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
 
     private:
         ServicePendingTable           _pendingTable;

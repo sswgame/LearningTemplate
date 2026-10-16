@@ -106,9 +106,9 @@ namespace sw
         _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
     }
 
-    uint32 SocialServer::getProtocolVersion() const
+    const OnlineProtocolEntry& SocialServer::getProtocol() const
     {
-        return SocialProtocol::kVersion;
+        return SocialProtocol::kOnlineEntry;
     }
 
     void SocialServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )

@@ -2,7 +2,7 @@
  * @file OnlineServiceHost.h
  * @brief 프로세스 하나의 서비스 호스트를 정의합니다.
  * @details 호스트는 스트림 엔드포인트와 요청 서버를 갖는다.
- *          버전 협상, 인증 확인, 요청 보호(주소와 계정마다 토큰 버킷, 몸 상한)를 거친 뒤 메서드 영역을 맡은 서비스(`IOnlineHostService`)로 요청을 넘긴다.
+ *          스키마 해시 비교, 인증 확인, 요청 보호(주소와 계정마다 토큰 버킷, 몸 상한)를 거친 뒤 메서드 영역을 맡은 서비스(`IOnlineHostService`)로 요청을 넘긴다.
  *          언리얼 Online Services 의 인터페이스 묶음, gRPC 서버의 서비스 등록과 같은 모양이다.
  *
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 돈다. 서비스의 콜백은 모두 그 스레드에서 불린다.
@@ -11,6 +11,8 @@
  *            캐시 답과 채널 메시지는 `getEphemeralRouter()` 가 요청 id 와 채널로, 버스 메시지는 `subscribeServerBus` 한 서비스에 나눠 준다.
  *            서비스가 `pollReplies` 나 `pollMessages` 를 직접 부르면 서로의 답을 가져간다.
  *          - 메서드 영역이 겹치는 서비스는 `registerHostService` 가 거절한다.
+ *          - **Hello 는 다른 어떤 바이트보다 먼저 온라인 스키마 해시(`OnlineProtocolRegistry`)를 비교한다.** 다르면 `kVersionMismatch` 와 서버 해시로 답하고 연결을 닫는다.
+ *            해시는 `initialize` 때 한 번 정한다. 이 비교는 B 형식이 아니라 고정된 작은 형식이라 스키마가 바뀌어도 늘 읽힌다.
  *          - **수명 계약**: 서비스는 빌려 쓴다. 호스트 `shutdown` 이 서비스마다 `onHostShutdown` 을 한 번 불러 호스트 포인터와 구독을 떼게 한다.
  *            그래서 서비스 객체는 호스트보다 먼저 내려가도 늦게 내려가도 된다.
  *            서비스 쪽에서 맡긴 비동기 일(캐시 라우터, 접속 상태 찾기)은 서비스 `shutdown` 이 `cancel` 한다.
@@ -30,6 +32,7 @@
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -69,8 +72,9 @@ namespace sw
         IOnlineHostService( const IOnlineHostService& )            = delete;
         IOnlineHostService& operator=( const IOnlineHostService& ) = delete;
 
-        virtual uint16 getMethodRange() const     = 0;
-        virtual uint32 getProtocolVersion() const = 0;
+        /** @brief 이 서비스의 키트 프로토콜 항목입니다. 영역은 여기서 나오고, 항목은 온라인 스키마 해시에 섞입니다. */
+        virtual const OnlineProtocolEntry& getProtocol() const = 0;
+        uint16                             getMethodRange() const { return getProtocol().getMethodRange(); }
         /** @brief 로그인 없이 부를 수 있는 메서드면 true 입니다. 기본값은 false 입니다. */
         virtual bool isAnonymousMethod( uint16 method ) const
         {
@@ -200,8 +204,9 @@ namespace sw
             IOnlineHostService* _pService{ nullptr };
         };
 
-        void                handleHello( const NetRequestContext& context, ConnectionState& connection );
-        void                writeServerVersions( BitWriter& outWriter ) const;
+        void handleHello( const NetRequestContext& context, ConnectionState& connection );
+        /** @brief `[kVersionMismatch u16][서버 스키마 해시 u64]` 로 답합니다. 리틀 엔디언 고정 형식입니다. */
+        void                respondVersionMismatch( const NetRequestToken& token );
         IOnlineHostService* findService( uint16 method ) const;
         bool                sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );
         void                dispatchServerBusMessage( const ServerBusMessage& message );
@@ -221,6 +226,7 @@ namespace sw
         unordered_map<AccountID, StreamConnectionHandle> _mapAccountToConnection;
         IStreamTransport*                                _pTransport;
         int64                                            _nowMs;
+        uint64                                           _schemaHash; ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
         uint8                                            _bInitialized;
     };
 } // namespace sw

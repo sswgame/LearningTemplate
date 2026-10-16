@@ -45,8 +45,7 @@ namespace sw
         uint32                       getRevision() const { return _revision; }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kEconomy; }
-        uint32 getProtocolVersion() const override { return EconomyProtocol::kVersion; }
+        const OnlineProtocolEntry& getProtocol() const override { return EconomyProtocol::kOnlineEntry; }
 
     private:
         void onCallSucceeded( const Call& call, const EconomyReply& reply ) override;

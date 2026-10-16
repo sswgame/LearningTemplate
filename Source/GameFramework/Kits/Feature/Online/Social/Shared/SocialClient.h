@@ -59,9 +59,8 @@ namespace sw
         void drainNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kSocial; }
-        uint32 getProtocolVersion() const override { return SocialProtocol::kVersion; }
-        void   onServicePush( uint16 kind, BitReader& body ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return SocialProtocol::kOnlineEntry; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
         uint64 send( uint16 method, const SocialRequest& request, const ReplyDelegate& onReply );

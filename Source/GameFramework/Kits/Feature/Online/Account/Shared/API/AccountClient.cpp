@@ -19,6 +19,7 @@ namespace sw
                 static constexpr OnlineErrorResult<LoginResult> kArrErrorResult[] = {
                     {    OnlineError::kRateLimited,    LoginResult::RateLimited},
                     { OnlineError::kUpdateRequired, LoginResult::UpdateRequired},
+                    {OnlineError::kVersionMismatch, LoginResult::UpdateRequired}, // 스키마 해시가 다르다. 다시 접속하지 않으므로 "저장소 오류" 로 두면 재시도만 부른다
                     {OnlineError::kUnauthenticated,   LoginResult::InvalidToken},
                     { OnlineError::kInvalidRequest, LoginResult::InvalidRequest},
                 };
@@ -186,14 +187,9 @@ namespace sw
         Memory::copy( outCredentials._secret._arrByte, ticket._arrSecret, NetGameTicket::kSecretSize );
     }
 
-    uint16 AccountClient::getMethodRange() const
+    const OnlineProtocolEntry& AccountClient::getProtocol() const
     {
-        return OnlineMethodRange::kAccount;
-    }
-
-    uint32 AccountClient::getProtocolVersion() const
-    {
-        return AccountProtocol::kVersion;
+        return AccountProtocol::kOnlineEntry;
     }
 
     void AccountClient::onServicePush( uint16 kind, BitReader& body )

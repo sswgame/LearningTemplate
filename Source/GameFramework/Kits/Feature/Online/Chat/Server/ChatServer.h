@@ -33,13 +33,12 @@ namespace sw
         void shutdown();
 
         // IOnlineHostService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kChat; }
-        uint32 getProtocolVersion() const override { return ChatProtocol::kVersion; }
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
-        void   onHostShutdown( OnlineServiceHost& host ) override;
-        void   onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
-        void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return ChatProtocol::kOnlineEntry; }
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onHostShutdown( OnlineServiceHost& host ) override;
+        void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
+        void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:
         void flushServiceOutput( OnlineServiceHost& host );

@@ -44,9 +44,8 @@ namespace sw
         uint64 getStatusRevision() const { return _statusRevision; }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kServerDirectory; }
-        uint32 getProtocolVersion() const override;
-        void   onServicePush( uint16 kind, BitReader& body ) override;
+        const OnlineProtocolEntry& getProtocol() const override;
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
         void onStatusResponse( const OnlineResponse& response );

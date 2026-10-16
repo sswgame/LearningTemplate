@@ -33,15 +33,17 @@
 
 namespace test
 {
+    /** @brief 테스트 로그인 서비스의 프로토콜 항목입니다. 테스트 실행 파일에 하나뿐이도록 inline 변수로 둡니다(서버와 클라이언트가 같은 해시를 얻는다). */
+    inline const sw::OnlineProtocolEntry kTestLoginProtocol{ "OnlineHostTestUtil.Login", sw::OnlineMethodRange::kGame, 1 };
+
     /** @brief 테스트 로그인 — 몸 `varuint 계정 id` 로 이 연결을 그 계정에 묶습니다. 이미 다른 연결에 붙은 계정이면 kConflict. */
     class TestLoginService final : public sw::IOnlineHostService
     {
     public:
         static constexpr uint16 kLoginMethod = sw::OnlineMethodRange::kGame + 0x01;
 
-        uint16 getMethodRange() const override { return sw::OnlineMethodRange::kGame; }
-        uint32 getProtocolVersion() const override { return 1; }
-        bool   isAnonymousMethod( uint16 method ) const override { return method == kLoginMethod; }
+        const sw::OnlineProtocolEntry& getProtocol() const override { return kTestLoginProtocol; }
+        bool                           isAnonymousMethod( uint16 method ) const override { return method == kLoginMethod; }
 
         void onServiceRequest( sw::OnlineServiceHost& host, const sw::OnlineCallContext& context, sw::BitReader& body ) override
         {
@@ -63,13 +65,12 @@ namespace test
 
 namespace test
 {
-    /** @brief 클라이언트 쪽 테스트 로그인(영역만 맞추면 되는 빈 서비스 — Hello 판 목록에 들어간다). */
+    /** @brief 클라이언트 쪽 테스트 로그인(영역만 맞추면 되는 빈 서비스). */
     class TestLoginClientService final : public sw::IOnlineClientService
     {
     public:
-        uint16 getMethodRange() const override { return sw::OnlineMethodRange::kGame; }
-        uint32 getProtocolVersion() const override { return 1; }
-        void   onServicePush( uint16 kind, sw::BitReader& body ) override
+        const sw::OnlineProtocolEntry& getProtocol() const override { return kTestLoginProtocol; }
+        void                           onServicePush( uint16 kind, sw::BitReader& body ) override
         {
             (void)kind;
             (void)body;

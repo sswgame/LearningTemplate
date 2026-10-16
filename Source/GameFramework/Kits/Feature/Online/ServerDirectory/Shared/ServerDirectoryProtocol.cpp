@@ -183,3 +183,8 @@ namespace sw
         return reader.hasOverflowed() == false;
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry ServerDirectoryProtocol::kOnlineEntry{ "ServerDirectory", OnlineMethodRange::kServerDirectory, ServerDirectoryMethod::kWireVersion };
+} // namespace sw

@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountTypes.h"
 
@@ -45,10 +46,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정 키트 프로토콜 버전입니다. Hello 에 싣는 값이며, 와이어 타입이나 본문 형식을 바꾸면 올립니다. */
-    struct AccountProtocol
+    /** @brief 계정 키트 프로토콜 버전입니다. 온라인 스키마 해시에 섞이는 값이며, 와이어 타입이나 본문 형식을 바꾸면 올립니다. */
+    struct SW_KIT_API AccountProtocol
     {
-        static constexpr uint32 kVersion = 1;
+        static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+        static constexpr uint32          kVersion = 1;
     };
 } // namespace sw
 

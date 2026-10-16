@@ -187,3 +187,8 @@ namespace sw
         return OnlineError::toResult( errorCode, kArrErrorResult, LiveOpsResult::Unavailable );
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry LiveOpsProtocol::kOnlineEntry{ "LiveOps", OnlineMethodRange::kLiveOps, LiveOpsProtocol::kVersion };
+} // namespace sw
