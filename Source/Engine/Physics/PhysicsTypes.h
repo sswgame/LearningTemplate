@@ -60,6 +60,19 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 소프트 바디(천 · 헤어 카드처럼 정점마다 움직이는 바디) 핸들의 태그입니다.
+     * @details 다른 핸들과 달리 `Engine/Common/PhysicsHandle.h` 에 두지 않는다 — 컴포넌트 모델 코어가 들 일이 없다(물리 폴더 안에서만 쓴다).
+     */
+    struct PhysicsSoftBodyTag
+    {
+    };
+
+    using PhysicsSoftBodyHandle = PhysicsHandle<PhysicsSoftBodyTag>;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 관절 하나의 모터입니다. Hinge(각), Slider(거리), Distance(거리)가 씁니다. */
     struct PhysicsJointMotor
     {

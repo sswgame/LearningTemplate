@@ -144,6 +144,9 @@ namespace sw
         } );
         _joints.clear();
         _characters.clear();
+        _softBodies.forEach( [this]( SoftBodyRecord& record )
+        { removeSoftBody( record ); } );
+        _softBodies.clear();
         JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
         _bodies.forEach( [&bodyInterface]( BodyRecord& record )
         {
@@ -200,6 +203,7 @@ namespace sw
             const float3 center = record._state._position + float3{ 0.0f, record._desc._halfHeight + record._desc._radius, 0.0f };
             PhysicsDebugDrawUtil::drawShape3D( renderer, capsule, center, quaternion{}, float4{ 0.9f, 0.4f, 1.0f, 1.0f } );
         } );
+        drawSoftBodies( renderer );
     }
 
     bool JoltPhysicsScene::drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const

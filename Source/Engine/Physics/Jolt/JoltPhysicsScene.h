@@ -207,6 +207,12 @@ namespace sw
         void                 setVehicleInput( PhysicsVehicleHandle vehicle, float32 forward, float32 right, float32 brake, float32 handBrake ) override;
         bool                 getVehicleState( PhysicsVehicleHandle vehicle, PhysicsVehicleState& outState ) const override;
 
+        PhysicsSoftBodyHandle createSoftBody( const PhysicsSoftBodyDesc& desc ) override;
+        void                  destroySoftBody( PhysicsSoftBodyHandle softBody ) override;
+        bool                  isSoftBodyValid( PhysicsSoftBodyHandle softBody ) const override;
+        bool                  getSoftBodyVertices( PhysicsSoftBodyHandle softBody, vector<float3>& outListPosition ) const override;
+        void                  setSoftBodyPinnedTransform( PhysicsSoftBodyHandle softBody, const float3& position, const quaternion& rotation ) override;
+
         bool   raycast( const float3& origin, const float3& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const override;
         bool   shapeCast( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction, float32 maxDistance,
                           const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const override;
@@ -264,6 +270,18 @@ namespace sw
             PhysicsBodyHandle                     _chassis{};
         };
 
+        /**
+         * @brief 소프트 바디 하나입니다. 접촉 이벤트 · 질의 결과의 바디 표(`_listBodyIDEntry`)에는 들지 않습니다(강체 이벤트를 내지 않는다).
+         * @details Jolt 는 정점을 질량 중심 기준으로 든다. 몸 자리를 고정해(`mUpdatePosition` 끔) 질량 중심 변환이 만든 때 그대로이고, 고정 정점은
+         *          그 변환의 역으로 로컬 위치를 만든다.
+         */
+        struct SoftBodyRecord
+        {
+            JPH::BodyID    _bodyID{};
+            vector<uint32> _listPinnedVertex;    ///< 고정 정점 인덱스(서술자 순서)
+            vector<float3> _listPinnedRestLocal; ///< 고정 정점의 서술자 로컬 위치(`_listPinnedVertex` 와 같은 순서)
+        };
+
         struct ShapeRecord
         {
             JPH::RefConst<JPH::Shape>       _pShape;
@@ -313,6 +331,10 @@ namespace sw
         void destroyJointsOf( span<const PhysicsBodyHandle> listBody );
         /** @brief 구속을 시스템에서 제거합니다(구속과 스텝 리스너 모두). */
         void removeVehicleConstraint( VehicleRecord& record );
+        /** @brief 소프트 바디를 시스템에서 빼고 지웁니다(`destroySoftBody` 와 소멸자가 함께 쓴다). */
+        void removeSoftBody( const SoftBodyRecord& record );
+        /** @brief 소프트 바디마다 늘어남 구속을 선으로 냅니다(`drawDebug`). */
+        void drawSoftBodies( IPhysicsDebugRenderer& renderer ) const;
         void recordContact( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings, uint8 kind );
         /** @brief 알림의 결정적 순서입니다(바디 쌍, 서브 셰이프, 종류 순). */
         static bool isEarlierReport( const ContactReport& lhs, const ContactReport& rhs );
@@ -331,6 +353,7 @@ namespace sw
         SlotHandleTable<JointRecord>              _joints;
         SlotHandleTable<CharacterRecord>          _characters;
         SlotHandleTable<VehicleRecord>            _vehicles;
+        SlotHandleTable<SoftBodyRecord>           _softBodies;
         SlotHandleTable<ShapeRecord>              _shapes;
         vector<BodyIDEntry>                       _listBodyIDEntry;
         PhysicsPairFilter                         _pairFilter;

@@ -45,6 +45,8 @@
 #include "TestFramework/Harness/TestPropertyCoverage.h"
 #include "TestFramework/TestFramework.h"
 
+#include "sw/config/ConfigConstants.h"
+
 #if !defined( SW_SHIPPING )
 
 namespace sw
@@ -326,6 +328,58 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadBrokenGraphIgnoresTrigger )
     SW_EXPECT_TRUE( manager.isGraphBroken() );
     manager.triggerReload( "SWGame" );
     SW_EXPECT_TRUE( manager.isGraphBroken() );
+}
+
+/**
+ * @brief 바깥 빌드가 다시 쓴 모듈은 빌드 성공 스탬프가 바뀐 뒤에만 올린다(DLL 쓰기만으로는 올리지 않는다)
+ * @details 연쇄 빌드는 모듈을 하나씩 다시 쓰므로 DLL 쓰기에 반응하면 반쯤 링크된 집합을 올린다. 스탬프(`sw_addModuleBuildStamp`)는 빌드가 모듈을
+ *          모두 링크한 뒤에만 바뀐다. DLL 시각만 미래로 옮겨 1 초 돌려 보고, 스탬프를 옮긴 뒤 리로드가 한 번 일어나는지 본다.
+ */
+SW_TEST_CASE( ArchitectureTest, LiveReloadOutsideBuildWaitsForStamp )
+{
+    const sw::string dllPath = sw::modulePath( "SWGame" );
+    if ( sw::FileUtil::exists( dllPath ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not built in this config" );
+    const sw::string stampPath = sw::FileUtil::joinPath( sw::ModuleImageUtil::getModuleDirectory(), sw::config::kFileModuleBuildStamp );
+    if ( sw::FileUtil::exists( stampPath ) == false )
+        SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( stampPath, "" ) );
+    int64 originalDllTicks{ 0 };
+    SW_EXPECT_TRUE( sw::FileUtil::getFileWriteTime( dllPath, originalDllTicks ) );
+
+    sw::LiveReloadManager manager;
+    SW_EXPECT_TRUE( manager.registerModule( "SWGame" ) );
+    uint32 reloadCount{ 0 };
+    manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadCount]( void* )
+    {
+        ++reloadCount;
+    } ) );
+
+    // 모듈 mtime 은 초 단위로 견주므로 2 초 미래로 옮긴다.
+    SW_EXPECT_TRUE( sw::FileUtil::setFileWriteTime( dllPath, originalDllTicks + 2 * sw::FileUtil::kFileTimeTicksPerSecond ) );
+    constexpr int64     kQuietMilliseconds  = 1000;
+    constexpr int64     kReloadMilliseconds = 10000;
+    const sw::Stopwatch quietWatch;
+    while ( quietWatch.getElapsedMilliseconds() < kQuietMilliseconds )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+    }
+    SW_EXPECT_EQUAL( 0u, reloadCount );
+
+    // 빌드처럼 내용을 다시 쓴다(시각만 바꾸면 리눅스 감시는 이벤트를 받지 않는다 — `WriteModuleBuildStamp.cmake`).
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( stampPath, "LiveReloadOutsideBuildWaitsForStamp\n" ) );
+    const sw::Stopwatch reloadWatch;
+    while ( reloadCount == 0 && reloadWatch.getElapsedMilliseconds() < kReloadMilliseconds )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        manager.update();
+    }
+    SW_EXPECT_EQUAL( 1u, reloadCount );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+
+    manager.setOnAfterReload( "SWGame", sw::LiveReloadManager::OnAfterReloadDelegate{} );
+    manager.shutdown();
+    SW_EXPECT_TRUE( sw::FileUtil::setFileWriteTime( dllPath, originalDllTicks ) );
 }
 
 /**

@@ -104,6 +104,30 @@ function(sw_addDynamicModuleDependencies TARGET_NAME)
 	endif()
 endfunction()
 
+# 모듈 빌드 성공 스탬프 — 레지스트리의 동적 모듈이 **모두** 지어진 뒤에만 `Bin/Modules/${SW_FILE_MODULE_BUILD_STAMP}` 를 다시 쓴다.
+#
+# 핫 리로드(`LiveReloadManager`)가 바깥 빌드(터미널 · IDE 의 `cmake --build`)의 모듈 변경을 올리는 신호다. DLL 의 mtime 만 보면 연쇄 빌드가
+# 모듈을 하나씩 다시 쓰는 도중의 반쯤 링크된 집합을 올린다. 이 타깃은 모든 모듈에 의존하므로 ninja 가 그것들을 다 링크한 뒤에만 돌고,
+# 링크가 하나라도 실패하면 돌지 않는다. 언리얼 Live Coding · 유니티 도메인 리로드처럼 "빌드가 끝난 뒤"에 올리는 규칙을 바깥 빌드에도 준다.
+# 스탬프는 모듈 산출물에 파일 단위로 의존한다(`DEPENDS` 에 타깃 이름) — 다시 링크된 모듈이 있을 때만 새로 쓰이고, 할 일 없는 빌드는 그대로 "no work" 다.
+# 리로드 쪽은 스탬프가 바뀌면 모듈마다 mtime 을 견줘 바뀐 것만 올린다.
+# 배포 빌드는 모듈을 정적으로 링크해 동적 모듈 타깃이 없으므로 만들지 않는다.
+function(sw_addModuleBuildStamp)
+	sw_getDynamicModules(listModule)
+	if(NOT listModule)
+		return()
+	endif()
+	set(swStampPath "${CMAKE_BINARY_DIR}/Bin/Modules/${SW_FILE_MODULE_BUILD_STAMP}")
+	add_custom_command(OUTPUT "${swStampPath}"
+		COMMAND "${CMAKE_COMMAND}" "-DSTAMP_PATH=${swStampPath}" -P "${CMAKE_SOURCE_DIR}/cmake/Engine/WriteModuleBuildStamp.cmake"
+		DEPENDS ${listModule}
+		COMMENT "Module build stamp (live reload signal)"
+		VERBATIM
+	)
+	add_custom_target(ModuleBuildStamp ALL DEPENDS "${swStampPath}")
+	set_target_properties(ModuleBuildStamp PROPERTIES FOLDER "Engine/Modules")
+endfunction()
+
 # 등록을 **잊을 수 없게** 한다 — 구성 마지막에 한 번 대조합니다.
 #
 # 레지스트리는 규칙이지 강제가 아니다. `EditorModule` 은 실제로 아무 데도 등록되지 않은 채
