@@ -18,17 +18,19 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   클라이언트 접속 인자 · 해시 로그 비교 스크립트). 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가
   지킨다(Windows Debug · Release · Shipping 같은 값 확인, 리눅스는 CI 잡 — 리눅스 clang 에서 다르면 그 잡이 진다).
 
-- `D7-2` [기능] **전용 서버 타깃에서 남은 것.** ③ 게임별 서버 기동 확인 — Empty 말고 각 게임을 `Server -gv_serverExitAfterTicks=60` 으로(게임 · 키트가 디바이스 · 창을 null 확인 없이 쓰는지), 게임별 기동 스크립트로 둔다.
-  ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로
-  libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 서버용 크래시 보고 전송 동의(운영 설정)는 `H-3`.
+- `D7-2` [기능] **전용 서버 타깃에서 남은 것.** (게임별 기동 확인은 ServerTest `EveryBuiltGameStartsAsADedicatedServer` — Debug 9 게임 77 s.)
+  ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). 렌더러 · RHI 를 Engine CMake 에서 타깃별로 가르는 일이라 Engine 소유 작업으로 남겼다.
+  ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 로컬 WSL 빌드는 하지 않기로 해서(사용자 결정) CI 리눅스 잡 몫이다. 서버용 크래시 보고 전송 동의(운영 설정)는 `H-3`.
 
 - `D7-3` [기능] **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](../plans/ServerDebug.md).** S3 · S6 · S7 의 프로세스 쪽은 들어갔고 다음은 에디터 쪽(Inspector · Sync 탭)이다. 방향 결정은 [결정 기록](../09_Decisions.md) 5-10. 단위를 끝내면 계획 문서에서 지운다. 운영 단위 O1 ~ O7 은 `H-3` 참고.
   S1 에서 남은 것: ① 사용자 프리셋 저장("서버 + 클라이언트 2" 를 이름 붙여 에디터 상태에 — 지금은 마지막 구성만 세션이 들고 있고 에디터를 다시 띄우면 Standalone) ② 리슨 호스트(App)의 줄에 틱 번호(전용 서버 줄에는 `[tick=N]` 이 붙는다 — 리슨 호스트는 고정 틱 루프가 없어 프레임 번호로 정해야 한다) ③ Stop 뒤 합친 트레이스를 Profiler 창 Timeline 탭에 저절로 열기(지금은 경로를 로그 · Session 탭에 남기고 Load Trace 로 연다) ④ 게임 모듈 핫 리로드를 넘어 세션 유지 — 게임 인스턴스가 다시 서면 `GameNetSession` 도 닫고 다시 열어 클라이언트가 끊긴다(리로드가 새 인스턴스를 먼저 만들면 포트가 아직 잡혀 있어 다시 열지 못한다; 세션을 엔진 쪽 수명으로 옮긴다 — 언리얼 넷 드라이버는 월드 소유) ⑤ 운영 서버가 `ServerConfig::_gamePort` 를 저절로 여는 길(지금은 `-gv_netListenPort` 를 줄 때만 연다 — 결정 기록 5-10) ⑥ 클라이언트 창 배치(여러 App 창이 겹쳐 뜬다 — 언리얼은 창 위치를 나란히 둔다).
+  ①③⑥ 은 에디터(`Source/Editor`), ②④⑤ 는 App · `GameNetSession`(`GameFramework/Base/Foundation/Framework/Net`) · 엔진 몫이라 2026-10-17 네트워크 작업(서버 · Core 네트워크 · 온라인 파일 소유)에서 남겼다.
+  ⑤ 덧붙임: Shipping 서버는 지금 게임 포트를 아예 열지 못한다 — `gv_netListenPort` 가 테스트 전역 변수라 Shipping 에 등록되지 않는다. ServerBootTest 의 Shipping 건너뛰기 문구("opens its game port from the server config")는 아직 사실이 아니며, ⑤ 가 그 길이다(서버가 `ServerConfig::_gamePort` · `_listenAddress` 를 세션 인자로 넘기는 창구 — 언리얼 전용 서버는 늘 자기 포트를 연다).
 
 - `D7-5` [기능] **네트워크 서비스 계층(로그인 · 채팅 · 거래 키트)의 남은 것.** 구성과 원칙(공통 기반 · 드라이버 키트 · 기능 키트, DB 와 캐시)은 [결정 기록](../09_Decisions.md) 5-9, 들어간 기반 · 키트 · 서버 조립
   (`OnlineServerRuntime`, 키트마다 `<키트>OnlineServerKit.cpp`, 서버 설정 옆 `<이름>.online.json`)은 Online README. 운영 쪽(관측 출력 · 오케스트레이터 · 비밀 배포 · 부하 기준선)은 `H-3`.
   - **할 일**
-    - 기반: 저장 키트가 SQLite · PostgreSQL · RESP 드라이버의 만들기 함수를 `OnlineStoreDriverTable` 에 묶기(지금은 memory 뿐 — 묶인 것이 없는 드라이버는 기동을 멈춘다), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다), 호스트 이름 해석(Core 주소는 IPv4 뿐 — 실제 외부 로그인 · 영수증 제공자 호스트에 먼저 필요).
+    - 기반: 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다), HTTP 클라이언트의 호스트 이름 해석(Core 에 막는 해석 `PlatformSocketUtil::resolveAddress` 가 있고 캐시 엔드포인트가 쓴다 — `HTTPClient::submitRequest` 는 잠금을 쥔 요청 경로라 그대로 부르면 DNS 왕복만큼 막힌다; 해석을 워커에 맡기고 끝나면 연결을 거는 단계가 필요하다. 실제 외부 로그인 · 영수증 제공자 호스트에 먼저 필요), 클라이언트 접속 인자 `-gv_netConnectAddress` 의 이름(`GameNetSession` — 같은 함수로 바꾸면 된다, 이 작업의 파일 소유 밖이라 남김).
     - 계정: 실제 외부 로그인 제공자 설정(구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면), 애플 client secret JWT · 탈퇴 때 토큰 철회(`Provider/Apple/`), 모바일 SDK 클라이언트,
       OS 브라우저 열기(`IExternalBrowser` 구현 — 게임 몫), 텔레메트리의 `IHTTPClient`(Engine, 막는 창구 · 기본 Null)를 이 HTTP 클라이언트로 연결하는 게임 어댑터(Engine 은 GameFramework 를 모른다).
     - 채팅: 신고(메시지 스냅숏 → GM 도구), 채널 샤딩(world 채널 수천 명 — 부하 봇 수치로 정함, 거르개 비용은 `ChatService.send` p99), 클라이언트 UI 위젯.

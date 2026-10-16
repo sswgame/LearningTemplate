@@ -155,6 +155,34 @@ SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGPU )
 }
 
 /**
+ * @brief [ServerBootTest] 빌드된 게임마다 전용 서버로 서고 60 틱을 돈 뒤 정상 종료한다 — 게임 · 키트가 디바이스 · 창을 null 확인 없이 쓰면 여기서 진다
+ * @details 게임 목록은 산출물 폴더 `Games/<이름>/` 를 훑어 정한다(빌드 구성 `SW_GAMES` 가 정본이라 테스트에 이름을 다시 적지 않는다). 기본 게임은
+ *          `StartsTicksAndExitsWithoutWindowOrGPU` 가 본다. 언리얼이 맵마다 서버 기동 자동화 테스트를 두는 것과 같은 자리다.
+ */
+SW_TEST_CASE( ServerBootTest, EveryBuiltGameStartsAsADedicatedServer )
+{
+    const string serverPath = findServerPath();
+    if ( serverPath.empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    vector<string> listGameFolder;
+    (void)FileUtil::collectFolders( FileUtil::joinPath( FileUtil::getDirectoryPart( serverPath ), "Games" ), listGameFolder, false ); // 폴더가 없으면 아래에서 건너뛴다
+    if ( listGameFolder.empty() )
+        SW_TEST_SKIP( "no game module folders next to Server (SW_GAMES is empty in this build)" );
+    for ( const string& folder : listGameFolder )
+    {
+        const string game = FileUtil::getFileNamePart( folder );
+        utf8         arrArgument[constant::kMaxBuffer256];
+        formatstring( arrArgument, constant::kMaxBuffer256, "-game=%# -gv_serverExitAfterTicks=60", game.c_str() );
+        const ServerRun run = runServer( arrArgument, ProcessOptions{}, []( Process& ) {} );
+        utf8            arrMessage[constant::kMaxBuffer1024];
+        formatstring( arrMessage, constant::kMaxBuffer1024, "%#: %#", game.c_str(),
+                      run._firstErrorLine.empty() ? "did not reach ready, stop at the tick limit or exit cleanly" : run._firstErrorLine.c_str() );
+        const bool bCleanRun = run._bReadySeen && run._exitCode == 0 && run._errorCount == 0;
+        SW_EXPECT_TRUE_MSG( bCleanRun && run._output.find( "Dedicated server shutdown requested (TickLimit)" ) != string::npos, arrMessage );
+    }
+}
+
+/**
  * @brief [ServerBootTest] 표준 입력의 quit 명령으로 정상 종료하고, status 가 틱 시간을 알린다
  */
 SW_TEST_CASE( ServerBootTest, QuitCommandOnStandardInputStopsTheServer )
@@ -428,7 +456,7 @@ namespace
 
 /**
  * @brief [ServerBootTest] 디버그 채널로 붙어 서버의 오브젝트 트리 · 컴포넌트 값을 읽고, 서버에서 바꾼 값이 검사기에 보이고, 잘못된 토큰은 거절된다(서버 디버깅 S3)
- * @details 확인 시나리오: 서버를 띄움 -> 채널에 연결 -> `scene.tree` · `object.dump` 로 읽음 -> 멈춘(`pause`) 서버에서 `teleport` 로 값을 바꿈 -> `scene.poses` · `object.dump` 에 새 값이 보임.
+ * @details 확인 시나리오: 서버를 띄움 -> 채널에 연결 -> `scene.tree` · `object.dump` 로 읽음 -> 멈춘(`pause`) 서버에서 `teleport` 로 값을 바꿈 -> `scene.poses` · `object.dump` 에 새 값이 보임 -> `help` 가 받는 줄을 알림.
  *          채널의 `pause` 는 서버 루프의 일시정지 명령이라 멈춘 동안에도 요청을 받는다(중단점에서 값을 보는 쓰임).
  */
 SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken )
@@ -448,6 +476,7 @@ SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken
     string          posesAfter;
     string          wrongTokenBody;
     string          unknownBody;
+    string          helpBody;
     bool            bWrongTokenRejected = false;
     bool            bUnknownFailed      = false;
     bool            bConnected          = false;
@@ -468,6 +497,7 @@ SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken
             (void)client.request( "scene.poses", 5000, posesAfter );
             (void)client.request( "object.dump " + objectName, 5000, dumpAfter );
             bUnknownFailed = client.request( "no.such.command", 5000, unknownBody ) == false;
+            (void)client.request( "help", 5000, helpBody );
         }
         DebugChannelClient intruder;
         if ( intruder.connect( NetAddress::makeLoopback( port ), "wrong-token", 10000 ) )
@@ -484,6 +514,8 @@ SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken
     SW_EXPECT_TRUE_MSG( posesAfter.find( objectName + " 11 22 33" ) != string::npos, posesAfter.c_str() );
     SW_EXPECT_TRUE_MSG( dumpAfter != dumpBefore && dumpAfter.find( "11" ) != string::npos, "the inspector did not show the changed position" );
     SW_EXPECT_TRUE_MSG( bUnknownFailed, unknownBody.c_str() );
+    // 채널 help 는 채널이 받는 줄 전부 — 서버 루프 명령과 개발 명령 이름(에디터 Inspector 탭의 자동완성 원천)을 함께 답한다.
+    SW_EXPECT_TRUE_MSG( helpBody.find( "server loop: pause | resume | step [N]" ) == 0 && helpBody.find( "scene.tree" ) != string::npos, helpBody.c_str() );
     SW_EXPECT_TRUE_MSG( bWrongTokenRejected, wrongTokenBody.c_str() );
     SW_EXPECT_TRUE( run._output.find( "Debug channel rejected a connection" ) != string::npos );
 #endif

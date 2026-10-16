@@ -30,7 +30,7 @@ namespace sw
          */
         static unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, int64 nowMs,
                                                              string& outError );
-        /** @brief 이 모듈이 등록한 드라이버를 레지스트리에서 해제합니다. 모듈을 언로드하기 전에 부릅니다. */
+        /** @brief 이 모듈이 등록한 드라이버를 레지스트리에서 해제합니다. 모듈 언로드 때 드라이버 테이블 묶기(`OnlineStoreDriverBinding`)가 부릅니다. */
         static void shutdown();
     };
 } // namespace sw

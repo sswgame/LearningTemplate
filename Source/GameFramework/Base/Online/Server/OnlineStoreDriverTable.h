@@ -5,6 +5,8 @@
  *            그래서 저장 키트가 모듈 로드 때 만들기 함수를 이 테이블에 묶고, 서버 조립은 이 테이블로 만듭니다.
  *          - `memory` 드라이버는 테이블과 상관없이 서버 조립이 직접 만듭니다(그 런타임 안에서만 나눠 쓰는 메모리 구현).
  *          - 묶인 함수가 없는데 다른 드라이버를 고르면 서버 조립은 기동을 멈춥니다. 다른 드라이버로 대신하지 않습니다.
+ *          - 키트는 묶기를 손으로 부르지 않고 `.cpp` 의 정적 `OnlineStoreDriverBinding` 하나로 둡니다. 모듈이 로드되면 묶이고 언로드되면 풀려서,
+ *            "키트는 실렸는데 묶지 않았다" 나 "풀지 않아 언로드된 함수를 부른다" 가 생기지 않습니다(키트 조립의 `SW_REGISTER_ONLINE_SERVER_KIT` 와 같은 모양).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -37,5 +39,48 @@ namespace sw
         static void                         bindEphemeralStoreFactory( CreateEphemeralStoreFunction pCreate );
         static CreateServiceStoreFunction   findServiceStoreFactory();
         static CreateEphemeralStoreFunction findEphemeralStoreFactory();
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class OnlineStoreDriverBinding
+     * @brief 저장 키트의 만들기 함수를 모듈 수명 동안 테이블에 묶는 정적 객체입니다. 키트 `.cpp` 의 `namespace sw` 에 하나 둡니다.
+     * @details @p pRelease 는 풀 때(모듈 언로드) 부르는 정리입니다 — 드라이버 레지스트리에서 이 모듈의 드라이버를 내리는 일처럼. 없으면 nullptr.
+     */
+    class OnlineStoreDriverBinding
+    {
+    public:
+        using ReleaseFunction = void ( * )();
+
+        OnlineStoreDriverBinding( OnlineStoreDriverTable::CreateServiceStoreFunction pCreate, ReleaseFunction pRelease )
+            : _pRelease{ pRelease }
+            , _bServiceStore{ true }
+        {
+            OnlineStoreDriverTable::bindServiceStoreFactory( pCreate );
+        }
+        OnlineStoreDriverBinding( OnlineStoreDriverTable::CreateEphemeralStoreFunction pCreate, ReleaseFunction pRelease )
+            : _pRelease{ pRelease }
+            , _bServiceStore{ false }
+        {
+            OnlineStoreDriverTable::bindEphemeralStoreFactory( pCreate );
+        }
+        ~OnlineStoreDriverBinding()
+        {
+            if ( _bServiceStore )
+                OnlineStoreDriverTable::bindServiceStoreFactory( nullptr );
+            else
+                OnlineStoreDriverTable::bindEphemeralStoreFactory( nullptr );
+            if ( _pRelease != nullptr )
+                _pRelease();
+        }
+
+        OnlineStoreDriverBinding( const OnlineStoreDriverBinding& )            = delete;
+        OnlineStoreDriverBinding& operator=( const OnlineStoreDriverBinding& ) = delete;
+
+    private:
+        ReleaseFunction _pRelease;
+        bool            _bServiceStore;
     };
 } // namespace sw

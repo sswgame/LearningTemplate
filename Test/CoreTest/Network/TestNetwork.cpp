@@ -10,6 +10,7 @@
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
+#include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
 #include "TestFramework/Harness/TestLoopbackCluster.h"
@@ -1122,6 +1123,20 @@ SW_TEST_CASE( NetworkTest, UDPTransportSendsDatagramsOverLocalhost )
     SW_EXPECT_TRUE( NetAddress::parse( "192.168.1.2", 3000, parsed ) && parsed._port == 3000 );
     SW_EXPECT_FALSE( NetAddress::parse( "300.1.1.1:5", 1, parsed ) );
     SW_EXPECT_FALSE( NetAddress::parse( "1.2.3", 1, parsed ) );
+}
+
+SW_TEST_CASE( NetworkTest, ResolveAddressReadsNumbersAndAsksTheResolverForNames )
+{
+    // 점 넷 숫자는 해석기를 거치지 않고, 이름은 운영체제 해석기(hosts 파일 포함)로 푼다. 풀리지 않거나 포트가 깨지면 false — 다른 주소로 대신하지 않는다.
+    NetAddress resolved{};
+    SW_EXPECT_TRUE( PlatformSocketUtil::resolveAddress( "10.0.0.7:7777", 1, resolved ) );
+    SW_EXPECT_TRUE( resolved == NetAddress::make( 10, 0, 0, 7, 7777 ) );
+    SW_EXPECT_TRUE( PlatformSocketUtil::resolveAddress( "localhost:6380", 1, resolved ) );
+    SW_EXPECT_TRUE( resolved == NetAddress::makeLoopback( 6380 ) );
+    SW_EXPECT_TRUE( PlatformSocketUtil::resolveAddress( "localhost", 6379, resolved ) && resolved._port == 6379 );
+    SW_EXPECT_FALSE( PlatformSocketUtil::resolveAddress( "localhost:70000", 1, resolved ) );
+    SW_EXPECT_FALSE( PlatformSocketUtil::resolveAddress( ":7777", 1, resolved ) );
+    SW_EXPECT_FALSE( PlatformSocketUtil::resolveAddress( "no-such-host.invalid:7777", 1, resolved ) );
 }
 
 SW_TEST_CASE( NetworkTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
