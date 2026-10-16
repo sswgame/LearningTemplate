@@ -9,7 +9,6 @@ main 은 push 되지 않았다(원격 `main` 하나). 이 세션이 main 에 병
 
 | 워크트리 | 맡은 일 | 상태 |
 |---|---|---|
-| `editorscn2` | `D3-11` 에디터 시나리오: (1)(3)(4) 끝(커밋 3개), (2) 캐릭터 편집 → 씬 · 미검증 항목 · 프리팹 판정 한 함수로 모으기는 진행 중. main 의 `AutomationTarget` 규칙을 받아 `flowprefab target="Lantern"` 이 통과하는지 확인하라고 전했다 | 진행 중 |
 | `uifollow` | `C-8` `C-9` 측정 후 결정, `B-8` | 진행 중 |
 | `corefuzz` | 결함 `B-5`: 퍼저 `Compression` 입력의 10 초 타임아웃(`CompressionStream::decompressBuffer` · `vector::clearInternal`) | 진행 중 |
 | (워크트리 없음) 읽기 전용 조사 | 같은 모양의 함수 객체 · 람다 목록 → scratchpad `dup-shapes.md` | 진행 중 |
