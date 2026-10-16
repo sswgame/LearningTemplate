@@ -12,7 +12,7 @@ namespace sw
 {
     /**
      * @class GlxPlatformContext
-     * @brief `glXCreateContextAttribsARB` 로 코어 프로파일 컨텍스트를 만듭니다 (WSLg 폴백 포함).
+     * @brief `glXCreateContextAttribsARB` 로 코어 프로파일 컨텍스트를 만듭니다(WSLg 폴백 포함).
      */
     class GlxPlatformContext final : public IOpenGLPlatformContext
     {

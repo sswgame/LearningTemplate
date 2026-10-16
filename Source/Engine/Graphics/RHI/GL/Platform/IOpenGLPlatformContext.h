@@ -1,14 +1,14 @@
 /**
  * @file IOpenGLPlatformContext.h
- * @brief OpenGL 컨텍스트의 플랫폼 의존부(생성 · 바인딩 · 프레젠트 · VSync)입니다.
+ * @brief OpenGL 컨텍스트의 플랫폼 의존부(생성, 바인딩, 프레젠트, VSync)입니다.
  *
- * @details GL 만 컨텍스트를 OS 가 만들어 줍니다(DX · Vulkan 은 API 가 직접 만듭니다). 그래서 WGL / GLX
- *          갈래가 필요하고, 그 분기를 `OpenGLRHIDevice` 에 두지 않고 플랫폼마다 구현 파일 하나로 가릅니다.
+ * @details GL 만 컨텍스트를 OS 가 만들어 줍니다(DX 와 Vulkan 은 API 가 직접 만듭니다). 그래서 WGL / GLX
+ *          분기가 필요하고, 그 분기를 `OpenGLRHIDevice` 에 두지 않고 플랫폼마다 구현 파일 하나로 나눕니다.
  *          플랫폼을 하나 더 지원하려면 **한 파일을 더하고 팩토리에 한 줄** 추가합니다.
  *
- *          `Window/Windows|Linux` 와 `Core/File/Windows|Linux` 가 폴더로 갈라진 것과 같은 형태입니다.
+ *          `Window/Windows|Linux` 와 `Core/File/Windows|Linux` 가 폴더로 나뉜 것과 같은 구조입니다.
  *
- * @note 디바이스는 핸들을 **불투명 `void*`** 로만 들고 있습니다(`getNativeDevice` 가 HDC 를 반환하는
+ * @note 디바이스는 핸들을 **불투명 `void*`** 로만 보관합니다(`getNativeDevice` 가 HDC 를 반환하는
  *       계약 때문). 그래서 이 인터페이스도 `OpenGLContextHandles` 로 값만 넘깁니다. 플랫폼 타입이
  *       디바이스 헤더로 새지 않습니다.
  */
@@ -23,9 +23,9 @@ namespace sw
     /** @brief 플랫폼이 만들어 낸 불투명 컨텍스트 핸들 한 쌍입니다. */
     struct OpenGLContextHandles
     {
-        /** @brief HDC(Windows) · Display*(Linux). */
+        /** @brief HDC(Windows), Display*(Linux). */
         void* _pDeviceContext{ nullptr };
-        /** @brief HGLRC(Windows) · GLXContext(Linux). */
+        /** @brief HGLRC(Windows), GLXContext(Linux). */
         void* _pRenderContext{ nullptr };
     };
 } // namespace sw
@@ -34,7 +34,7 @@ namespace sw
 {
     /**
      * @class IOpenGLPlatformContext
-     * @brief 플랫폼별 GL 컨텍스트의 수명 · 바인딩 · 프레젠트를 맡습니다.
+     * @brief 플랫폼별 GL 컨텍스트의 수명, 바인딩, 프레젠트를 맡습니다.
      */
     class IOpenGLPlatformContext
     {
@@ -52,7 +52,7 @@ namespace sw
          * @brief 컨텍스트를 만들고 current 로 만듭니다.
          * @param desc 창 핸들과(X11 이면) 디스플레이가 들어 있습니다.
          * @param outHandles 성공하면 불투명 핸들 한 쌍을 채웁니다.
-         * @return 실패하면 false. 실패 시 만든 것은 스스로 되돌립니다.
+         * @return 실패하면 false 입니다. 실패 시 만든 것은 스스로 되돌립니다.
          */
         virtual bool initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles ) = 0;
 
@@ -61,14 +61,14 @@ namespace sw
 
         /**
          * @brief 이 스레드에 컨텍스트를 바인딩합니다.
-         * @note 실패해도 **로그를 남기지 않습니다.** 다른 스레드가 쥐고 있는 것은 정상 경합이고,
+         * @note 실패해도 **로그를 남기지 않습니다.** 다른 스레드가 가지고 있는 것은 정상 경합이고,
          *       기다릴지 포기할지와 알릴지는 부르는 쪽이 정합니다
          *       (`OpenGLRHIDevice::bindGraphicsContext` / `acquireGraphicsContextBlocking`).
          */
         virtual bool makeCurrent() = 0;
         /** @brief 이 스레드의 current 컨텍스트가 내 것이면 true 입니다. 조회 수단이 없으면 false 입니다. */
         virtual bool isCurrent() const = 0;
-        /** @brief 이 스레드의 바인딩을 풉니다. */
+        /** @brief 이 스레드의 바인딩을 해제합니다. */
         virtual void clearCurrent() = 0;
 
         /**

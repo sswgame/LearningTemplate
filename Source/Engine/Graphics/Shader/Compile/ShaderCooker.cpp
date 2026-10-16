@@ -30,12 +30,12 @@ namespace sw
     {
         struct ShaderCookerInternal
         {
-            /** @brief 백엔드 하나의 셰이더 타깃 · 바이너리 폴더입니다. 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 줄마다 하나입니다. */
+            /** @brief 백엔드 하나의 셰이더 타깃과 바이너리 폴더입니다. 쿠킹 테이블(`SW_RHI_BACKEND_TABLE`)의 항목마다 하나입니다. */
             struct BackendFolder
             {
                 string_view        _folder;
                 ShaderTargetFormat _format;
-                bool               _bDefault; ///< 표의 기본 백엔드인가
+                bool               _bDefault; ///< 테이블의 기본 백엔드인가
             };
 
             static constexpr BackendFolder kArrBackendFolder[] = {
@@ -167,7 +167,7 @@ namespace sw
                 return ".dxbc";
             case ShaderTargetFormat::DXIL_D3D12:
                 return ".dxil";
-            // 둘 다 SPIR-V 라 확장자가 같다. 따로 적어 두면 "우연히 같은 값" 처럼 보여서, 한쪽만
+            // 둘 다 SPIR-V 라 확장자가 같다. 따로 적어 두면 "우연히 같은 값"처럼 보여서, 한쪽만
             // 바꾸는 실수가 나기 쉽다. 같이 묶어 같아야 한다는 것을 드러낸다.
             case ShaderTargetFormat::SPIRV_Vulkan:
             case ShaderTargetFormat::SPIRV_OpenGL:

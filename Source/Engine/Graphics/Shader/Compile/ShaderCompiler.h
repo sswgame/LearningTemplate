@@ -145,7 +145,7 @@ namespace sw
 {
     /**
      * @struct ShaderCompileDesc
-     * @brief 셰이더 컴파일 요청 서술체입니다.
+     * @brief 셰이더 컴파일 요청 디스크립터입니다.
      */
     struct ShaderCompileDesc
     {
@@ -190,7 +190,7 @@ namespace sw
     public:
         /**
          * @brief HLSL 셰이더를 컴파일합니다(디스크 캐시가 켜져 있으면 바이트코드 캐시를 씁니다).
-         * @param desc 컴파일 서술체
+         * @param desc 컴파일 디스크립터
          * @return 컴파일 결과(성공 여부와 바이트코드)
          */
         static ShaderCompileResult compileHlsl( const ShaderCompileDesc& desc );

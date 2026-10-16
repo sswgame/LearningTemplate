@@ -23,8 +23,8 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::create()
     {
-        // Material · MaterialInstance 와 같은 규칙이다. 제어 블록(소멸 코드)이 Engine.dll 에 살아야
-        // 게임 모듈이 만든 메시를 엔진이 마지막까지 들 수 있다. 도형을 채우는 것은 MeshUtil 의 일이다.
+        // Material 과 MaterialInstance 와 같은 규칙이다. 제어 블록(소멸 코드)이 Engine.dll 에 있어야
+        // 게임 모듈이 만든 메시를 엔진이 마지막까지 보관할 수 있다. 도형을 채우는 것은 MeshUtil 의 일이다.
         return sw::make_shared<Mesh>( CreateKey{} );
     }
 
@@ -34,7 +34,7 @@ namespace sw
         instance->setVertices( source._listVertex );
         instance->setSkin( source._listSkinVertex, source._skinBoneCount );
         instance->setMorphTargets( source._listMorphTarget );
-        // 정점 · 스킨이 원본과 같다 — 모프 풀이 원본 데이터를 한 번만 올리게 번호를 나눈다(setVertices · setSkin 이 지운 뒤에 적는다).
+        // 정점과 스킨이 원본과 같다. 모프 풀이 원본 데이터를 한 번만 업로드하도록 번호를 공유한다(setVertices 와 setSkin 이 지운 뒤에 적는다).
         instance->_sharedSkinDataID = source.getSkinDataID();
         return instance;
     }
@@ -142,12 +142,12 @@ namespace sw
         if ( pDevice == nullptr || _listVertex.empty() )
             return false;
 
-        // 워커에서 만들어도 되는지는 **백엔드가 말한다**. DX12 · DX11 · Vulkan 은 버퍼 생성이 디바이스 레벨이고
+        // 워커에서 만들어도 되는지는 **백엔드가 알려 준다**. DX12, DX11, Vulkan 은 버퍼 생성이 디바이스 레벨이고
         // 핸들 테이블도 잠겨 있어 안전하다. OpenGL 은 glGen* 이 현재 컨텍스트를 필요로 해서 안 된다. 그 백엔드에서
-        // 워커가 여기 들어왔다면 부른 쪽이 틀린 것이다(GPUUploadQueue 는 그 백엔드에서 요청을 받지 않는다 — 렌더 스레드가 만든다).
+        // 워커가 여기 들어왔다면 부른 쪽이 틀린 것이다. GPUUploadQueue 는 그 백엔드에서 요청을 받지 않고 렌더 스레드가 만든다.
         if ( engine::areEngineServicesBound() && pDevice->getCapabilities()._bThreadSafeResourceCreation == SW_FALSE )
             SW_ASSERT( engine::getSubsystem<TaskManager>().isWorkerThread() == false );
-        // 이미 올라가 있으면 그대로 둔다. 옛 디바이스가 죽었다면 통보(`releaseRHI` · `forgetRHI`)가 먼저 와서
+        // 이미 GPU 에 있으면 그대로 둔다. 이전 디바이스가 죽었다면 통보(`releaseRHI`, `forgetRHI`)가 먼저 와서
         // 여기를 비워 놓았으므로, 값이 남아 있다는 것은 곧 살아 있는 디바이스의 것이라는 뜻이다.
         if ( _vertex.isResident() )
             return true;
@@ -169,7 +169,7 @@ namespace sw
 
     void Mesh::releaseRHI( IRHIDevice* pDevice )
     {
-        // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
+        // 디바이스가 죽기 **전에** 오는 통보다. 정상적으로 반환한다. 다른 디바이스의 것이면 내 것이 아니다.
         if ( pDevice == nullptr || _vertex._pDevice != pDevice )
             return;
         releaseVertexBuffer();
@@ -177,7 +177,7 @@ namespace sw
 
     void Mesh::forgetRHI( IRHIDevice* pDevice )
     {
-        // 남의 디바이스가 죽었다는 통보다. 내 버퍼는 멀쩡하다.
+        // 다른 디바이스가 죽었다는 통보다. 내 버퍼는 멀쩡하다.
         if ( _vertex._pDevice != pDevice )
             return;
         // 디바이스가 이미 없다. 버퍼는 그와 함께 갔다. destroy 하면 해제 후 사용이다.
@@ -187,9 +187,9 @@ namespace sw
     void Mesh::releaseVertexBuffer()
     {
         // 소멸자에서도 불린다. 그 시점에 디바이스가 이미 죽었다면 통보가 먼저 와서 여기를 비워 놓았으므로,
-        // getLiveDevice() 는 널을 반환하고 반환으로 뛰어들지 않는다.
-        // 마지막 소유는 게임 스레드가 아무 때나 놓는다(지형 LOD 교체 · 씬 교체). 렌더 스레드가 프레임을 기록하는 동안이면 반환을 그 프레임 뒤로
-        // 미룬다 — 팩터리를 직접 부르면 기록이 읽는 백엔드 표(DX11 버퍼 SRV · 기록 상태의 묶인 정점 버퍼)를 기록과 겹쳐 쓴다.
+        // getLiveDevice() 는 널을 반환하고 반환 호출로 들어가지 않는다.
+        // 마지막 소유는 게임 스레드가 아무 때나 놓는다(지형 LOD 교체, 씬 교체). 렌더 스레드가 프레임을 기록하는 동안이면 반환을 그 프레임 뒤로
+        // 미룬다. 팩터리를 직접 부르면 기록이 읽는 백엔드 테이블(DX11 버퍼 SRV, 기록 상태에 바인딩된 정점 버퍼)을 기록과 동시에 바꾸게 된다.
         if ( IRHIDevice* pLiveDevice = _vertex.getLiveDevice() )
             pLiveDevice->releaseHandle( RHIHandleKind::Buffer, _vertex._buffer );
         _vertex.forget();

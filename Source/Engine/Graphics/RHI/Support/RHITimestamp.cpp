@@ -38,7 +38,7 @@ namespace sw
 
     int64 RHITimestamp::convertTickToNanos( uint64 tick, float64 nanosPerTick )
     {
-        // float64 는 53 비트 정밀도다 — 2^53 ns(약 104 일)까지 1 ns 안이다.
+        // float64 는 53비트 정밀도다. 2^53 ns(약 104 일)까지 1 ns 안이다.
         return static_cast<int64>( static_cast<float64>( tick ) * nanosPerTick );
     }
 } // namespace sw

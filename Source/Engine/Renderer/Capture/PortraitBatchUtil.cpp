@@ -21,7 +21,7 @@ namespace sw
     {
         if ( prefabList.empty() )
             return false;
-        // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL · DX11)는 이 스레드가 잡는다.
+        // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL, DX11)는 이 스레드가 잡는다.
         if ( pRenderThread != nullptr )
             pRenderThread->waitIdle();
         IRHIContextThreadBinding* pContextBinding = device.findContextThreadBinding();

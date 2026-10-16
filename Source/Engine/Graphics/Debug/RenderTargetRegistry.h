@@ -14,7 +14,7 @@
  *
  * [수명]
  * `Engine` 이 소유하고 `engine::findSubsystem<RenderTargetRegistry>()` 로 조회합니다. `FrameProfiler` 와 같은
- * 자리입니다. 싱글턴으로 두면 수명이 아무에게도 속하지 않아 종료 순서를 정할 수 없습니다.
+ * 방식입니다. 싱글턴으로 두면 수명이 아무에게도 속하지 않아 종료 순서를 정할 수 없습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -35,13 +35,13 @@ namespace sw
      */
     struct RenderTargetInfo
     {
-        string           _name;         ///< 파이프라인 XML 의 첨부 이름(검색 키이기도 함)
-        RHITextureHandle _texture{ 0 }; ///< RHI 텍스처 핸들(generation 이 들어 있어 죽은 핸들은 걸러짐)
+        string           _name;         ///< 파이프라인 XML 의 첨부 이름(검색 키이기도 합니다)
+        RHITextureHandle _texture{ 0 }; ///< RHI 텍스처 핸들(generation 이 들어 있어 죽은 핸들은 걸러집니다)
         uint32           _width{ 0 };
         uint32           _height{ 0 };
         RHIFormat        _format{ RHIFormat::R8G8B8A8_UNORM };
-        uint8            _bDepth{ SW_FALSE };     ///< 깊이 첨부면 1. 미리보기가 색으로 안 나옴
-        uint8            _bPresented{ SW_FALSE }; ///< 화면에 나가는 첨부면 1(Present 패스의 입력)
+        uint8            _bDepth{ SW_FALSE };     ///< 깊이 첨부면 1입니다. 미리보기가 색으로 나오지 않습니다
+        uint8            _bPresented{ SW_FALSE }; ///< 화면에 나가는 첨부면 1입니다(Present 패스의 입력)
     };
 } // namespace sw
 
@@ -49,12 +49,12 @@ namespace sw
 {
     /**
      * @struct RenderTargetReadback
-     * @brief 렌더 타깃 하나를 CPU 로 읽은 결과입니다(에디터 렌더 타깃 창의 채널 · 깊이 보기와 픽셀 값).
-     * @details 바이트 배치는 `IRHIResourceFactory::readbackTexture2D` 그대로입니다 — 깊이는 `kRHIDepthReadbackFormat`(0..1 float32)입니다.
+     * @brief 렌더 타깃 하나를 CPU 로 읽은 결과입니다(에디터 렌더 타깃 창의 채널 보기, 깊이 보기, 픽셀 값에 씁니다).
+     * @details 바이트 배치는 `IRHIResourceFactory::readbackTexture2D` 그대로입니다. 깊이는 `kRHIDepthReadbackFormat`(0..1 float32)입니다.
      */
     struct RenderTargetReadback
     {
-        vector<uint8>     _byte;                   ///< 첫 밉 · 첫 면의 픽셀(행은 빈틈없이)
+        vector<uint8>     _byte;                   ///< 첫 밉과 첫 면의 픽셀(행 사이에 빈틈이 없습니다)
         RHITextureMipSpan _layout{};               ///< 크기와 행 바이트
         RHITextureHandle  _texture{ 0 };           ///< 읽은 텍스처
         uint32            _serial{ 0 };            ///< 요청 번호(`requestReadback` 이 돌려준 값)
@@ -73,7 +73,7 @@ namespace sw
     class SW_API RenderTargetRegistry : public ISubsystem
     {
     public:
-        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */
         static constexpr const utf8* kSubsystemName = "RenderTargetRegistry";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
@@ -86,33 +86,33 @@ namespace sw
         RenderTargetRegistry( const RenderTargetRegistry& )            = delete;
         RenderTargetRegistry& operator=( const RenderTargetRegistry& ) = delete;
 
-        /** @brief 목록을 통째로 갈아 끼웁니다(렌더 스레드). */
+        /** @brief 목록을 통째로 교체합니다(렌더 스레드). */
         void publish( vector<RenderTargetInfo> listTarget );
         /** @brief 목록을 비웁니다. 트랜지언트를 놓을 때 부릅니다. */
         void clear();
 
         /** @brief 목록의 사본을 반환합니다(UI 스레드). */
         void snapshot( vector<RenderTargetInfo>& outList ) const;
-        /** @brief 목록이 바뀔 때마다 오르는 번호. 값이 같으면 다시 읽을 이유가 없습니다. */
+        /** @brief 목록이 바뀔 때마다 증가하는 번호입니다. 값이 같으면 다시 읽을 이유가 없습니다. */
         uint64 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
         /**
          * @brief @p texture 가 지금 공개된 목록에 있으면 true 입니다.
-         * @details UI 가 요청한 뒤 창 크기가 바뀌어 트랜지언트가 다시 만들어지면 요청의 핸들은 죽은 핸들이다(놓기 전에 목록을 먼저 비운다). 렌더 스레드가
-         *          읽기 전에 이것으로 걸러 죽은 핸들을 RHI 오류로 읽지 않는다. 트랜지언트를 놓는 것도 렌더 스레드라 확인과 읽기 사이에 바뀌지 않는다.
+         * @details UI 가 요청한 뒤 창 크기가 바뀌어 트랜지언트가 다시 만들어지면 요청의 핸들은 죽은 핸들이 된다. 놓기 전에 목록을 먼저 비우기 때문이다.
+         *          렌더 스레드는 읽기 전에 이 함수로 죽은 핸들을 걸러, 죽은 핸들을 RHI 오류로 읽지 않는다. 트랜지언트를 놓는 것도 렌더 스레드이므로 확인과 읽기 사이에 바뀌지 않는다.
          */
         bool isPublished( RHITextureHandle texture ) const;
 
         // ------------------------------------------------------------------------------
-        // CPU 읽기 — UI 가 요청하고 렌더 스레드가 프레임 끝(endFrame 뒤)에 읽어 둔다
+        // CPU 읽기: UI 가 요청하고 렌더 스레드가 프레임 끝(endFrame 뒤)에 읽어 둔다
         // ------------------------------------------------------------------------------
         /**
          * @brief @p texture 를 CPU 로 읽어 달라고 요청합니다(UI 스레드). 아직 처리하지 않은 요청은 이 요청으로 바뀝니다.
-         * @return 요청 번호. 결과의 `_serial` 이 이 값이면 그 요청의 결과입니다.
+         * @return 요청 번호입니다. 결과의 `_serial` 이 이 값이면 그 요청의 결과입니다.
          */
         uint32 requestReadback( RHITextureHandle texture );
         /** @brief 처리할 요청을 꺼냅니다(렌더 스레드). 없으면 false 입니다. */
         [[nodiscard]] bool takeReadbackRequest( RHITextureHandle& outTexture, uint32& outSerial );
-        /** @brief 읽은 결과를 둡니다(렌더 스레드). 이전 결과는 버립니다. */
+        /** @brief 읽은 결과를 저장합니다(렌더 스레드). 이전 결과는 버립니다. */
         void publishReadback( RenderTargetReadback readback );
         /** @brief 마지막 결과의 번호입니다. 0 이면 아직 결과가 없습니다. */
         uint32 getReadbackSerial() const { return _readbackSerial.load( std::memory_order_acquire ); }

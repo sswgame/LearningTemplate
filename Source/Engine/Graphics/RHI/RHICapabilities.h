@@ -1,6 +1,6 @@
 /**
  * @file RHICapabilities.h
- * @brief RHI 백엔드 능력 플래그입니다. 백엔드마다의 값과 가용성 조회는 `RHIBackendInfo.h` 의 기술자 표에 있습니다.
+ * @brief RHI 백엔드 능력 플래그입니다. 백엔드마다의 값과 가용성 조회는 `RHIBackendInfo.h` 의 기술자 테이블에 있습니다.
  */
 #pragma once
 #include "Engine/Config/RHIBackendType.h"
@@ -9,7 +9,7 @@
 namespace sw
 {
     /**
-     * @note 비트필드 대신 uint8 입니다. DLL · 컴파일러 간 패킹 · true 대입 문제를 피합니다. 0/1 만 씁니다.
+     * @note 비트필드 대신 uint8 입니다. DLL 과 컴파일러 사이의 패킹, true 대입 문제를 피합니다. 0/1 만 씁니다.
      * @note **여기에 에디터 능력을 넣지 말 것.** "이 백엔드로 에디터가 도는가" 는
      *       디바이스가 아니라 **에디터가 아는 사실**입니다(ImGui 렌더러 백엔드가 있느냐). 그 답의 기준은
      *       `IImGuiRendererBackend::createRendererBackend` 하나이고, 없으면 nullptr 을 반환합니다.

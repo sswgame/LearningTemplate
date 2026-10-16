@@ -83,7 +83,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE || ( _bNvxMemoryInfo == SW_FALSE && _bAtiMemInfo == SW_FALSE ) )
             return false;
 
-        // 확장 값은 KB 단위이고, 다른 프로세스 몫까지 든 디바이스 전체 값이다. 그래서 장부를 빼 "엔진 밖" 을 내지 않는다(Scope Device).
+        // 확장 값은 KB 단위이고, 다른 프로세스가 쓰는 양까지 포함한 디바이스 전체 값이다. 그래서 장부를 빼 "엔진 밖"을 내지 않는다(Scope Device).
         ScopedOpenGLContext contextScope( this );
         outBudget._scope = RHIMemoryScope::Device;
         if ( _bNvxMemoryInfo == SW_TRUE )

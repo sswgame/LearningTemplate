@@ -1,8 +1,8 @@
 /**
  * @file OpenGLRHIResourceFactoryBindless.cpp
- * @brief OpenGL 의 bindless 등록입니다. 리소스를 셰이더가 인덱스로 접근할 수 있게 올립니다.
- * @details `OpenGLRHIResourceFactory` 의 일부입니다. DX12/Vulkan 은 디스크립터 힙 · 배열에 쓰고, DX11/GL 은 슬롯
- *          기반이라 인덱스만 흉내 냅니다. 네 백엔드를 나란히 비교하기 좋은 지점입니다.
+ * @brief OpenGL 의 bindless 등록입니다. 리소스를 셰이더가 인덱스로 접근할 수 있게 등록합니다.
+ * @details `OpenGLRHIResourceFactory` 의 일부입니다. DX12/Vulkan 은 디스크립터 힙과 배열을 쓰고, DX11/GL 은 슬롯
+ *          기반이라 인덱스만 흉내 냅니다. 네 백엔드를 나란히 비교하기 좋은 곳입니다.
  */
 #include "pch.h"
 
@@ -30,7 +30,7 @@ namespace sw
         const uint32 glName = _pDevice->getGlTextureName( texture );
         if ( glName == 0 )
             return kInvalidDescriptorIndex;
-        // 셰이더의 텍스처 유닛은 sampler2D 로 선언돼 있다 — 배열 · 큐브는 걸 수 없다(RHITextureDimension 참고).
+        // 셰이더의 텍스처 유닛은 sampler2D 로 선언돼 있다. 배열과 큐브는 바인딩할 수 없다(RHITextureDimension 참고).
         const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord != nullptr && pRecord->_dimension != RHITextureDimension::Texture2D )
         {

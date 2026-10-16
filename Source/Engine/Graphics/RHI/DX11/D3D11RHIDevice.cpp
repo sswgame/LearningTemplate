@@ -23,7 +23,7 @@ namespace sw
     namespace
     {
     #if defined( SW_DEBUG )
-        // 아래 표와 판별 함수는 디버그 레이어 메시지를 거르는 `flushDebugMessages` 전용이고, 그 함수의
+        // 아래 목록과 판별 함수는 디버그 레이어 메시지를 거르는 `flushDebugMessages` 전용이고, 그 함수의
         // 본문 전체가 SW_DEBUG 안에 있다. 가드를 맞추지 않으면 Release 빌드에서 "정의했는데 아무도
         // 쓰지 않는다"(-Wunused-function)가 남는다.
 
@@ -131,8 +131,8 @@ namespace sw
     void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )
     {
     #if defined( SW_DEBUG )
-        // 디버그 레이어의 CORRUPTION/ERROR 만 로그로 올린다. WARNING(null 샘플러 → 기본 상태 등)은 정상 경로에서도 매 드로우
-        // 나오므로 버린다. DX12 의 flushDebugMessages 와 같은 자리(프레임 끝)에서 부른다.
+        // 디버그 레이어의 CORRUPTION/ERROR 만 로그로 남긴다. WARNING(null 샘플러 → 기본 상태 등)은 정상 경로에서도 매 드로우
+        // 나오므로 버린다. DX12 의 flushDebugMessages 와 같은 시점(프레임 끝)에 부른다.
         Microsoft::WRL::ComPtr<ID3D11InfoQueue> queue;
         const bool                              bInfoQueueUnavailable = _device == nullptr || FAILED( _device.As( &queue ) ) || queue == nullptr;
         if ( bInfoQueueUnavailable )
@@ -176,7 +176,7 @@ namespace sw
         desc.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         // `ID3D11Device::CreateBuffer` 는 free-threaded 라 병렬 기록 중에 만들어도 된다.
-        // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 표를 건드리지 않는다.
+        // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 테이블을 건드리지 않는다.
         if ( FAILED( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ) ) )
         {
             SW_LOG_ERROR( "Failed to create root-constant cbuffer." );
@@ -186,7 +186,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 리소스 조회 · 저장 — 핸들 표와 bindless 목록 (D3D11RHIResourceFactory 와 컨텍스트가 쓴다)
+    // 리소스 조회와 저장: 핸들 테이블과 bindless 목록 (D3D11RHIResourceFactory 와 컨텍스트가 쓴다)
     // ------------------------------------------------------------------------------
 
     ID3D11Buffer* D3D11RHIDevice::resolveBuffer( RHIBufferHandle handle ) const

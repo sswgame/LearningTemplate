@@ -84,7 +84,7 @@ namespace sw
 
     bool RHIRenderResource::initRHI( IRHIDevice* )
     {
-        // 기본은 아무것도 하지 않는다. 그릴 때 알아서 다시 올라가는 리소스는 여기 낄 이유가 없다.
+        // 기본은 아무것도 하지 않는다. 그릴 때 알아서 다시 초기화되는 리소스는 여기서 할 일이 없다.
         return true;
     }
 
@@ -121,7 +121,7 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return;
-        // 실패는 각자가 자기 자리에서 로그로 남긴다. 여기서 세어 봐야 어느 리소스인지 모르는 한 줄만 는다.
+        // 실패는 각 리소스가 자기 코드에서 로그로 남긴다. 여기서 세어 봐야 어느 리소스인지 모르는 한 줄만 늘어난다.
         broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
             (void)pResource->initRHI( pDevice );

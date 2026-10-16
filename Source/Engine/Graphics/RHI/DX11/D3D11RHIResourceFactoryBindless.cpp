@@ -1,8 +1,8 @@
 /**
  * @file D3D11RHIResourceFactoryBindless.cpp
- * @brief DirectX 11 의 bindless 등록입니다. 리소스를 셰이더가 인덱스로 접근할 수 있게 올립니다.
- * @details `D3D11RHIResourceFactory` 의 일부입니다. DX12/Vulkan 은 디스크립터 힙 · 배열에 쓰고, DX11/GL 은 슬롯
- *          기반이라 인덱스만 흉내 냅니다. 네 백엔드를 나란히 비교하기 좋은 지점입니다.
+ * @brief DirectX 11 의 bindless 등록입니다. 리소스를 셰이더가 인덱스로 접근할 수 있게 등록합니다.
+ * @details `D3D11RHIResourceFactory` 의 일부입니다. DX12/Vulkan 은 디스크립터 힙과 배열을 쓰고, DX11/GL 은 슬롯
+ *          기반이라 인덱스만 흉내 냅니다. 네 백엔드를 나란히 비교하기 좋은 곳입니다.
  */
 #include "pch.h"
 
@@ -29,7 +29,7 @@ namespace sw
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_srv == nullptr )
             return kInvalidDescriptorIndex;
-        // 셰이더의 텍스처 슬롯은 Texture2D 로 선언돼 있다 — 배열 · 큐브 뷰를 걸면 셰이더가 읽지 못한다(RHITextureDimension 참고).
+        // 셰이더의 텍스처 슬롯은 Texture2D 로 선언돼 있다. 배열이나 큐브 뷰를 바인딩하면 셰이더가 읽지 못한다(RHITextureDimension 참고).
         if ( pRecord->_dimension != RHITextureDimension::Texture2D )
         {
             SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture slots yet", texture,
@@ -114,7 +114,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_texture == nullptr )
             return kInvalidDescriptorIndex;
 
-        // 텍스처 UAV: bindComputeUav( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 건다.
+        // 텍스처 UAV: bindComputeUav( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 바인딩한다.
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
         if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ) ) )
             return kInvalidDescriptorIndex;

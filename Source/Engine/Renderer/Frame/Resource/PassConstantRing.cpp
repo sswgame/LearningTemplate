@@ -95,7 +95,7 @@ namespace sw
         }
 
         // 분배는 위의 atomic 커서가 하므로 락이 필요 없다. 다만 **const 로 읽어야** 한다. 비-const 접근은
-        // "쓰기" 로 취급되어, 서로 다른 슬롯을 읽기만 하는 드로우 둘도 레이스로 잡힌다.
+        // "쓰기"로 취급되어, 서로 다른 슬롯을 읽기만 하는 드로우 둘도 레이스로 잡힌다.
         const vector<RHIConstantBufferSlot>& listSlot = _listSlot;
         outBuffer                                     = listSlot[ticket]._buffer;
         outIndex                                      = listSlot[ticket]._index;

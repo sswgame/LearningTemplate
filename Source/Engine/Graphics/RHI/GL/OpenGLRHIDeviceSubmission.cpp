@@ -28,7 +28,7 @@ namespace sw
     bool OpenGLRHIDevice::readGPUClockNanos( int64& outGPUNanos )
     {
         outGPUNanos = 0;
-        // GL_TIMESTAMP 는 기다리지 않고 지금 GPU 시계(나노초, 쿼리 타임스탬프와 같은 시계)를 준다. 컨텍스트를 쥔 스레드에서만 부른다.
+        // GL_TIMESTAMP 는 기다리지 않고 지금 GPU 시계(나노초, 쿼리 타임스탬프와 같은 시계)를 준다. 컨텍스트를 소유한 스레드에서만 부른다.
         if ( _bInitialized == SW_FALSE || glGetInteger64v == nullptr )
             return false;
         GLint64 now{ 0 };
@@ -54,7 +54,7 @@ namespace sw
     {
         if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE )
             return;
-        // GL 3.3 코어이지만 로더가 못 채웠을 수 있다. 없으면 이 백엔드는 조용히 보고하지 않는다.
+        // GL 3.3 코어이지만 로더가 채우지 못했을 수 있다. 없으면 이 백엔드는 조용히 보고하지 않는다.
         const bool bQueryFunctionsMissing = glGenQueries == nullptr || glQueryCounter == nullptr || glGetQueryObjectui64v == nullptr ||
                                             glGetQueryObjectiv == nullptr;
         if ( bQueryFunctionsMissing )
@@ -84,7 +84,7 @@ namespace sw
                 continue;
 
             // **가용 여부부터 묻는다.** 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
-            // 측정하려던 파이프라인을 멈춰 세운다. 그러면 숫자가 거짓이 된다.
+            // 측정하려던 파이프라인을 멈춰 세운다. 그러면 측정값이 거짓이 된다.
             GLint bAvailable{ 0 };
             glGetQueryObjectiv( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT_AVAILABLE, &bAvailable );
             if ( bAvailable == GL_FALSE )
@@ -108,12 +108,12 @@ namespace sw
             _platformContext->reacquireForFrame();
 
         // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
-        // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩 · 클리어하는 것은 RenderThread 가 여는 명시적
+        // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩하고 클리어하는 것은 RenderThread 가 여는 명시적
         // beginRenderPass(핸들 0) 뿐이다. 뷰포트만 창 크기 전체로 되돌려 둔다.
         (void)clearColor;
         glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
 
-        // 이 묶음은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
+        // 이 슬롯은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
         ensureTimestampQueries();
         collectTimestampsForSlot();
         _arrTimestampMask[_timestampFrameIndex] = 0;
@@ -124,7 +124,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
-        // present 여부와 무관하게 이번 프레임의 칸은 다 찍혔다. 다음 묶음으로 넘긴다.
+        // present 여부와 무관하게 이번 프레임의 슬롯은 다 기록됐다. 다음 슬롯으로 넘긴다.
         _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::kMaxFrameCountInFlight;
 
         if ( bPresent == false )

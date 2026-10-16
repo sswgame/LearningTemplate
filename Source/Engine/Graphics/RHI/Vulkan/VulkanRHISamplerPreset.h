@@ -1,17 +1,17 @@
 /**
  * @file VulkanRHISamplerPreset.h
- * @brief 이름 붙인 Vulkan 샘플러 조리법입니다. "어떤 샘플러인가" 를 한 곳에서 정합니다.
+ * @brief 이름을 붙인 Vulkan 샘플러 프리셋입니다. "어떤 샘플러인가"를 한 곳에서 정합니다.
  *
- * [왜 조리법인가]
+ * [왜 프리셋인가]
  * 엔진의 기본 샘플러와 에디터 ImGui 샘플러가 같은 값을 씁니다. 그렇다고 둘을
  * 하나의 객체로 합칠 수는 없습니다. 엔진 쪽은 **씬 텍스처용**이라 나중에 비등방 필터링이나 다른 주소
- * 모드로 갈 수 있고, ImGui 폰트 · 아이콘이 그 변화를 따라가면 안 됩니다. 합치면 **없는 결합**이 생깁니다.
+ * 모드로 갈 수 있고, ImGui 폰트와 아이콘이 그 변화를 따라가면 안 됩니다. 합치면 **없던 결합**이 생깁니다.
  *
- * 그래서 공유하는 것은 객체가 아니라 **이름 붙은 조리법**입니다. 둘 다 "선형 보간 + 가장자리 고정"
+ * 그래서 공유하는 것은 객체가 아니라 **이름을 붙인 프리셋**입니다. 둘 다 "선형 보간 + 가장자리 고정"
  * 을 원해서 값이 같을 뿐이고, 그 사실을 `linearClamp()` 라는 이름으로 적어 둡니다. 한쪽이 다른
- * 성질을 원하게 되면 **이 조리법을 부르지 않으면 됩니다.** 그때 갈라지는 것이 옳습니다.
+ * 성질을 원하게 되면 **이 프리셋을 부르지 않으면 됩니다.** 그때 갈라지는 것이 옳습니다.
  *
- * @note 조리법에는 **쓰이는 값만** 담습니다(예: 주소 모드가 `CLAMP_TO_EDGE` 라 `borderColor` 는 쓰이지 않으므로 세우지 않습니다).
+ * @note 프리셋에는 **쓰이는 값만** 담습니다(예: 주소 모드가 `CLAMP_TO_EDGE` 라 `borderColor` 는 쓰이지 않으므로 설정하지 않습니다).
  */
 #pragma once
 #include "Core/Common/PlatformOsHeaders.h"
@@ -29,7 +29,7 @@ namespace sw
     {
         /**
          * @brief 선형 보간 + 가장자리 고정 샘플러 설정입니다.
-         * @details UI 텍스처 · 기본 씬 텍스처처럼 **타일링하지 않고 부드럽게** 읽고 싶은 것에 씁니다.
+         * @details UI 텍스처와 기본 씬 텍스처처럼 **타일링하지 않고 부드럽게** 읽고 싶은 것에 씁니다.
          *          `maxLod` 를 크게 열어 두어 밉이 있는 텍스처도 그대로 쓸 수 있습니다.
          */
         static VkSamplerCreateInfo linearClamp()
@@ -41,7 +41,7 @@ namespace sw
             samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            // 비등방을 켜지 않았으므로 1.0 이 곧 "쓰지 않는다" 는 뜻이다.
+            // 비등방을 켜지 않았으므로 1.0 이 곧 "쓰지 않는다"는 뜻이다.
             samplerInfo.maxAnisotropy = 1.0f;
             samplerInfo.maxLod        = 1000.0f;
             return samplerInfo;

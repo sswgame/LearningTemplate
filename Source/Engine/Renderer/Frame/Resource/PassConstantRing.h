@@ -2,8 +2,8 @@
  * @file PassConstantRing.h
  * @brief 프레임마다 되감는 패스 상수버퍼 슬롯 링입니다. 드로우마다 하나씩 나눠 줍니다.
  * @details `updateConstantBuffer` 는 버퍼의 **프레임 슬롯 하나**에 쓰고 GPU 는 제출 뒤에 읽습니다. 그래서 여러 드로우가
- *          같은 버퍼를 쓰면 모두 마지막에 쓴 값을 봅니다(한 패스의 드로우들이 서로를 덮어씁니다 —
- *          RenderPassGPUTest.MultiBatchPassKeepsPerBatchConstants). 언리얼도 드로우별 느슨한 파라미터는 드로우마다
+ *          같은 버퍼를 쓰면 모두 마지막에 쓴 값을 봅니다. 한 패스의 드로우들이 서로를 덮어쓰는 문제이며,
+ *          RenderPassGPUTest.MultiBatchPassKeepsPerBatchConstants 가 검증합니다. 언리얼도 드로우별 느슨한 파라미터는 드로우마다
  *          유니폼 버퍼를 따로 잡습니다. 여기서는 슬롯을 미리 만들어 두고 원자 커서로 나눠 줍니다. 패스가 병렬로
  *          기록되므로 락 없이 분배해야 합니다.
  *
@@ -23,7 +23,7 @@ namespace sw
 
     /**
      * @class PassConstantRing
-     * @brief 패스 · 드로우 상수버퍼 슬롯의 소유자입니다. 만들고(initialize · ensureCapacity), 나눠 주고(acquire), 놓습니다(release).
+     * @brief 패스와 드로우 상수 버퍼 슬롯의 소유자입니다. 만들고(initialize, ensureCapacity), 나눠 주고(acquire), 놓습니다(release).
      */
     class SW_API PassConstantRing
     {
@@ -48,7 +48,7 @@ namespace sw
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다(destroy 를 부르면 해제 후 사용입니다). */
         void forget();
 
-        /** @brief 프레임 시작: 커서를 1 번 슬롯으로 되감고 고갈 경고 래치를 풉니다. */
+        /** @brief 프레임 시작: 커서를 1번 슬롯으로 되돌리고 고갈 경고 래치를 해제합니다. */
         void beginFrame();
         /**
          * @brief 슬롯을 하나 빌립니다. **드로우마다** 하나씩입니다. 슬롯이 하나도 없으면 false 입니다.

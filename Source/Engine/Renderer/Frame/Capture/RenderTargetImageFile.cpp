@@ -11,12 +11,12 @@
 
 namespace sw
 {
-    // 로그 머리는 옮기기 전과 같게 둔다(로그를 읽는 스크립트와 사람이 같은 이름으로 찾는다).
+    // 로그 접두어는 옮기기 전과 같게 둔다(로그를 읽는 스크립트와 사람이 같은 이름으로 찾는다).
     SW_LOG_CALLER( "FrameRenderer" );
 
     namespace
     {
-        /** @brief RGBA8 을 PPM(P6 — 아스키 머리말 + RGB 8bit)으로 씁니다. */
+        /** @brief RGBA8 을 PPM(P6: 아스키 헤더 + RGB 8bit)으로 씁니다. */
         [[nodiscard]] bool writePpm( string_view outFilePath, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
         {
             StringBuilder<constant::kMaxBuffer64> header;
@@ -42,7 +42,7 @@ namespace sw
     bool RenderTargetImageFile::unpackRgba8( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRgbaBytes )
     {
         const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
-        // 단일 채널(깊이 읽기 배치 R32_FLOAT, 마스크 R8)은 회색으로 푼다 — 세 채널에 같은 값이다.
+        // 단일 채널(깊이 읽기 레이아웃 R32_FLOAT, 마스크 R8)은 회색으로 푼다. 세 채널에 같은 값이다.
         const bool bGrayFloat = ( format == RHIFormat::R32_FLOAT );
         const bool bGrayByte  = ( format == RHIFormat::R8_UNORM );
         if ( bGrayFloat || bGrayByte )

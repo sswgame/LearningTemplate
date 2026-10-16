@@ -18,10 +18,10 @@ namespace sw
     {
         struct BindlessIndexValidatorInternal
         {
-            // 검사 수준 — 0 끔, 1 죽은 번호(오류), 2 죽은 번호 + "없음(kInvalidDescriptorIndex)" 이 셰이더로 가는 자리(정보).
+            // 검사 수준: 0 끔, 1 죽은 번호(오류), 2 죽은 번호와 "없음(kInvalidDescriptorIndex)" 이 셰이더로 가는 곳(정보).
             static constexpr int32 kLevelDeadIndex   = 1;
             static constexpr int32 kLevelTraceAbsent = 2;
-            // Debug 는 늘 검사한다. Release 는 성능 측정에 쓰는 빌드라(검사는 드로우마다 읽기 잠금 하나) 끄고, 필요할 때 -gv_ 로 켠다.
+            // Debug 는 항상 검사한다. Release 는 성능 측정에 쓰는 빌드라(검사는 드로우마다 읽기 잠금 하나) 끄고, 필요할 때 -gv_ 로 켠다.
     #if defined( SW_DEBUG )
             static constexpr int32 kDefaultLevel = kLevelDeadIndex;
     #else
@@ -47,9 +47,9 @@ namespace sw
 
     /**
      * @brief 셰이더에 넘기기 직전의 bindless 인덱스를 검사합니다(Graphics README "함정과 주의").
-     * @details 1 이면 죽은 번호를 `[BindlessIndex] pass '<패스>' field '<이름>'[<원소>] = <값> is not a live <공간> slot` 오류로 자리마다 한 번 남긴다.
-     *          2 이면 "없음"(kInvalidDescriptorIndex)이 셰이더로 가는 자리도 `[BindlessIndex] ... = absent` 정보로 남긴다 — 셰이더가 분기로 거르는
-     *          번호인데 드라이버가 디스크립터 읽기를 분기 앞으로 끌어올리면 디바이스 손실이 나므로, 손실이 났을 때 후보 자리를 고르는 데 쓴다.
+     * @details 1 이면 죽은 번호를 `[BindlessIndex] pass '<패스>' field '<이름>'[<원소>] = <값> is not a live <공간> slot` 오류로 위치마다 한 번 남긴다.
+     *          2 이면 "없음"(kInvalidDescriptorIndex)이 셰이더로 가는 위치도 `[BindlessIndex] ... = absent` 정보로 남긴다. 셰이더가 분기로 거르는
+     *          번호인데 드라이버가 디스크립터 읽기를 분기 앞으로 끌어올리면 디바이스 손실이 나므로, 손실이 났을 때 후보 위치를 고르는 데 쓴다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_validateBindlessIndex, BindlessIndexValidatorInternal::kDefaultLevel,
                              "셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지" );
@@ -72,12 +72,12 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
         {
             if ( isTracingAbsent() )
-                (void)noteAbsent( site._passName, fieldName, element ); // 자리마다 한 번만 남긴다
+                (void)noteAbsent( site._passName, fieldName, element ); // 위치마다 한 번만 남긴다
             return true;
         }
         if ( site._pDevice->isBindlessIndexLive( space, index ) )
             return true;
-        (void)report( space, index, site._passName, fieldName, element ); // 같은 자리를 두 번째 본 것이면 이미 로그가 있다
+        (void)report( space, index, site._passName, fieldName, element ); // 같은 위치를 두 번째 본 것이면 이미 로그가 있다
         return false;
     }
 

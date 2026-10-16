@@ -1,8 +1,8 @@
 /**
  * @file RenderPSOCache.h
- * @brief FrameRenderer 가 만든 PSO 들의 저장소입니다: 엔진 패스 PSO · 출력 포맷별 PSO(Present · Canvas) · 머티리얼 퍼뮤테이션 변형과 그 바인딩 레이아웃.
- * @details **만드는 일은 하지 않습니다.** PSO 를 만드는 데는 파이프라인 XML · 디바이스 · 씬 배치가 필요하고 그것은 FrameRenderer 의
- *          일입니다(FrameRendererPSO.cpp). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 놓는가" 만 압니다.
+ * @brief FrameRenderer 가 만든 PSO 의 저장소입니다: 엔진 패스 PSO, 출력 포맷별 PSO(Present, Canvas), 머티리얼 퍼뮤테이션 변형과 그 바인딩 레이아웃.
+ * @details **만드는 일은 하지 않습니다.** PSO 를 만드는 데는 파이프라인 XML, 디바이스, 씬 배치가 필요하고 그것은 FrameRenderer 의
+ *          일입니다(FrameRendererPSO.cpp). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 해제하는가"만 압니다.
  *          해제 순서(변형 → 패스 PSO)도 이 타입이 지킵니다.
  *
  *          드로우 경로가 배치마다 조회하므로 조회는 락 하나로 짧게 끝납니다. 삽입은 기록 시작 전에만 일어납니다.
@@ -57,15 +57,15 @@ namespace sw
         RenderPSOCache& operator=( const RenderPSOCache& ) = delete;
 
         // ------------------------------------------------------------------------------
-        // 1) 바인딩 레이아웃: PSO 를 만든 desc 로 리플렉션 레이아웃을 만들어 핸들에 매핑한다
+        // 1) 바인딩 레이아웃: PSO 를 만든 desc 로 리플렉션 레이아웃을 만들어 핸들에 연결한다
         // ------------------------------------------------------------------------------
-        /** @brief PSO 생성 desc 로 레이아웃을 만들고(캐시) 핸들에 매핑합니다. 0 핸들은 무시합니다. */
+        /** @brief PSO 생성 desc 로 레이아웃을 만들고(캐시) 핸들에 연결합니다. 0 핸들은 무시합니다. */
         void registerLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc, RHIBackend backend );
         /** @brief PSO 핸들의 바인딩 레이아웃입니다. 없으면 nullptr 입니다. */
         const ShaderBindingLayout* findLayout( RHIPipelineStateHandle pso ) const;
         /**
-         * @brief PSO 를 만들 때 쓴 디스크립터를 돌려줍니다(셰이더 경로 · define · 렌더 상태). 모르는 PSO 면 false 입니다.
-         * @details 어떤 퍼뮤테이션이 실제로 걸렸는지 밖에서 볼 수 있는 유일한 창입니다. 픽셀로는 안 보이는
+         * @brief PSO 를 만들 때 쓴 디스크립터를 돌려줍니다(셰이더 경로, define, 렌더 상태). 모르는 PSO 면 false 입니다.
+         * @details 어떤 퍼뮤테이션이 실제로 걸렸는지 밖에서 볼 수 있는 유일한 방법입니다. 픽셀로는 안 보이는
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
          */
         bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
@@ -75,7 +75,7 @@ namespace sw
         void collectLayouts( vector<RegisteredLayout>& outListLayout ) const;
 
         // ------------------------------------------------------------------------------
-        // 2) 엔진 패스 PSO · 출력 포맷별 PSO(Present · Canvas — 주 출력에 그리는 패스는 대상 포맷마다 PSO 가 다르다)
+        // 2) 엔진 패스 PSO 와 출력 포맷별 PSO. Present 와 Canvas 처럼 주 출력에 그리는 패스는 대상 포맷마다 PSO 가 다르다
         // ------------------------------------------------------------------------------
         /** @brief 패스 타입의 엔진 PSO 를 둡니다(있으면 덮어씁니다). */
         void setEnginePSO( RenderPassType passType, RHIPipelineStateHandle pso );
@@ -84,9 +84,9 @@ namespace sw
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
         const unordered_map<RenderPassType, RHIPipelineStateHandle>& getEnginePSOs() const { return _mapEnginePSO; }
 
-        /** @brief 주 출력에 그리는 패스(Present · Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다 — 부르는 쪽이 폴백으로 갑니다. */
+        /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. */
         void setOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
-        /** @brief 그 패스 · 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
+        /** @brief 그 패스와 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         bool findOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
         // ------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 모두 파괴하고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다.
-         * @details 순서가 규칙입니다: 머티리얼 변형(소유한 것만) → 엔진 PSO → 출력 포맷별 PSO → 레이아웃 표.
+         * @details 순서가 규칙입니다: 머티리얼 변형(소유한 것만) → 엔진 PSO → 출력 포맷별 PSO → 레이아웃 테이블.
          *          `_bOwned` 가 0 인 변형은 패스 PSO 를 그대로 담고 있을 뿐이라 먼저 걸러야 두 번 파괴하지 않습니다.
          */
         void releaseAll( IRHIDevice* pDevice );

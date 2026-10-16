@@ -1,6 +1,6 @@
 /**
  * @file RHIStructuredBufferSlot.h
- * @brief 구조버퍼 하나와 그 뷰(SRV/UAV) · 용량을 함께 들고 다니는 자리입니다.
+ * @brief 구조 버퍼 하나와 그 뷰(SRV/UAV), 용량을 함께 보관하는 슬롯입니다.
  */
 #pragma once
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -12,11 +12,11 @@ namespace sw
 
     /**
      * @struct RHIStructuredBufferSlot
-     * @brief 매 프레임 크기가 변할 수 있는 구조버퍼의 수명 · 뷰 등록을 한 자리에 모읍니다.
-     * @details GPU 드리븐 경로는 같은 모양을 계속 반복합니다: "용량이 모자라면 옛 뷰를 등록 해제하고
-     *          버퍼를 다시 만들고 새 뷰를 등록한다". GPUScene 만 해도 인스턴스 · 가시 목록 · 배치 구간 ·
-     *          간접 인자 · 머티리얼 데이터로 다섯 번이고, 그중 하나에서 UAV 등록을 빠뜨려도 컴파일은
-     *          통과합니다. 여기 모아 두면 그럴 자리가 없습니다.
+     * @brief 매 프레임 크기가 변할 수 있는 구조 버퍼의 수명과 뷰 등록을 한 곳에 모읍니다.
+     * @details GPU 드리븐 경로는 같은 패턴을 계속 반복합니다: "용량이 모자라면 이전 뷰를 등록 해제하고
+     *          버퍼를 다시 만들고 새 뷰를 등록한다". GPUScene 만 해도 인스턴스, 가시 목록, 배치 구간,
+     *          간접 인자, 머티리얼 데이터로 다섯 번이고, 그중 하나에서 UAV 등록을 빠뜨려도 컴파일은
+     *          통과합니다. 여기 모아 두면 그럴 여지가 없습니다.
      *
      *          **뷰를 먼저 등록 해제하고 버퍼를 지우는 순서**가 중요합니다. 반대로 하면 bindless
      *          레지스트리에 죽은 핸들을 가리키는 항목이 남습니다.
@@ -38,16 +38,16 @@ namespace sw
         /**
          * @brief 용량을 확보합니다. 모자라면 다시 만들고, 충분하면 그대로 둡니다.
          * @details 만들기는 세 단계로 물러섭니다. (1) 요청한 usage 그대로, (2) UnorderedAccess 를 뺀 것,
-         *          (3) createStructuredBuffer. (2)가 있는 이유는 백엔드 · 드라이버가 구조버퍼 UAV 를 거절할
+         *          (3) createStructuredBuffer. (2)가 있는 이유는 백엔드나 드라이버가 구조 버퍼 UAV 를 거절할
          *          수 있어서입니다. 그때도 **그리기는 살려야 합니다**(컴퓨트 경로만 꺼집니다).
-         * @param elementCount 0 이면 버퍼를 놓아 줍니다.
-         * @param pInitialData 만들 때 넣을 내용 (없으면 nullptr).
-         * @return 요청한 용량을 확보했으면 true.
+         * @param elementCount 0 이면 버퍼를 해제합니다.
+         * @param pInitialData 만들 때 넣을 내용입니다(없으면 nullptr).
+         * @return 요청한 용량을 확보했으면 true 입니다.
          */
         bool ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,
                              bool bNeedsSrv, bool bNeedsUav, const void* pInitialData );
 
-        /** @brief `byteOffset` 부터 byteSize 만큼 올립니다 (버퍼가 없으면 아무것도 하지 않습니다). */
+        /** @brief `byteOffset` 부터 byteSize 만큼 업로드합니다(버퍼가 없으면 아무것도 하지 않습니다). */
         void upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize, uint32 byteOffset = 0 ) const;
 
         /** @brief 뷰를 등록 해제하고 버퍼를 지웁니다. 여러 번 불러도 안전합니다. */

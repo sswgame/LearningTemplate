@@ -1,6 +1,6 @@
 /**
  * @file ShaderParameterBinder.h
- * @brief 리플렉션 레이아웃 + 프레임 상수값 + 리소스 레지스트리로 실제 GPU 바인딩을 합니다.
+ * @brief 리플렉션 레이아웃, 프레임 상수값, 리소스 레지스트리로 실제 GPU 바인딩을 합니다.
  * @details FrameRenderer 가 `g_ViewProj`, `g_World`, `g_KeyLightColor`, `g_ShadowMapIndex`(=bindless idx) 등을
  *          이름으로 채우면, 이 클래스가 ShaderBindingLayout 을 읽어 CB 바이트를 조립하고 슬롯별로 바인딩합니다.
  *          C++ 미러 struct 를 두지 않습니다. 셰이더만 고치면 자동으로 따라옵니다.
@@ -35,7 +35,7 @@ namespace sw
 {
     /**
      * @struct ShaderParameterBinder
-     * @brief 드로우 직전에 레이아웃을 따라 CB 바이트를 조립 · 업로드하고 슬롯별로 바인딩합니다.
+     * @brief 드로우 직전에 레이아웃을 따라 CB 바이트를 조립하고 업로드하며 슬롯별로 바인딩합니다.
      */
     struct SW_API ShaderParameterBinder
     {
@@ -46,8 +46,8 @@ namespace sw
          *        이 플래그로 건너뛰지 않습니다(각 백엔드의 bindStructuredBuffer 가 스스로 판단합니다).
          * @param pMaterialTexSrv 머티리얼 텍스처 SRV 배열(shaderslot::kMaterialTextureCount 개, 서수 순).
          *        bNativeBindless 가 false 일 때만 쓰이며 t5..t8 에 바인딩됩니다. 없으면 nullptr.
-         * @param pIndexCheck 있으면 넘기는 bindless 인덱스(엔진 CB 의 `g_<Name>Index`, 머티리얼 텍스처, 구조버퍼 · 텍스처 슬롯)가 살아 있는
-         *        슬롯인지 검사합니다(`BindlessIndexValidator`, Debug · Dev 전용). Shipping 에서는 무시됩니다.
+         * @param pIndexCheck 있으면 넘기는 bindless 인덱스(엔진 CB 의 `g_<Name>Index`, 머티리얼 텍스처, 구조 버퍼와 텍스처 슬롯)가 살아 있는
+         *        슬롯인지 검사합니다(`BindlessIndexValidator`, Debug 와 Dev 전용). Shipping 에서는 무시됩니다.
          */
         static void bindGraphics( IRHICommandList&                cmd,
                                   const ShaderBindingLayout&      layout,

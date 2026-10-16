@@ -16,8 +16,8 @@ namespace sw
 
     /**
      * @class VulkanRHICommandList
-     * @brief 네이티브 Vulkan 커맨드 버퍼에 곧바로 기록하는 IRHICommandList 입니다(CPU 쪽 기록 벡터 · 재생 없음).
-     * @details 이 리스트는 **자기 커맨드 풀 + 커맨드 버퍼 + 기록 상태**를 소유합니다. `VkCommandPool` 은
+     * @brief 네이티브 Vulkan 커맨드 버퍼에 곧바로 기록하는 IRHICommandList 입니다. CPU 쪽 기록 벡터와 재생이 없습니다.
+     * @details 이 리스트는 **자기 커맨드 풀, 커맨드 버퍼, 기록 상태**를 소유합니다. `VkCommandPool` 은
      *          외부 동기화 대상이라, 여러 리스트가 서로 다른 스레드에서 동시에 기록하려면 풀이
      *          리스트마다 따로여야 합니다(DX12 의 얼로케이터와 같은 제약). 쌍은 디바이스 풀에서 빌리고
      *          다 쓰면 GPU 펜스 통과 후 돌려줍니다.
@@ -28,7 +28,7 @@ namespace sw
     class VulkanRHICommandList : public RHICommandListForwarder<VulkanRHICommandContext>
     {
     public:
-        /** @brief 디바이스 풀에서 커맨드 풀 + 버퍼 쌍을 빌립니다. */
+        /** @brief 디바이스 풀에서 커맨드 풀과 버퍼 쌍을 빌립니다. */
         explicit VulkanRHICommandList( VulkanRHIDevice* pDevice );
         /** @brief 빌린 쌍을 GPU 펜스 통과 후 풀로 돌려보냅니다. */
         ~VulkanRHICommandList() override;
@@ -44,13 +44,13 @@ namespace sw
         void beginCommandList() override;
         void endCommandList() override;
         void writeTimestamp( uint32 slotIndex ) override;
-        /** @brief 디바이스가 내려갈 때 쌍을 지금 부수고 연결을 끊습니다(디바이스 종료가 부릅니다). */
+        /** @brief 디바이스가 종료될 때 쌍을 지금 파괴하고 연결을 끊습니다(디바이스 종료가 부릅니다). */
         void detachFromDevice();
 
     private:
         VulkanRHIDevice*        _pDevice;
-        VulkanCommandListEntry  _entry;       ///< 이 리스트 전용 커맨드 풀 + 커맨드 버퍼
-        uint8                   _bEntryDirty; ///< 현재 쌍에 이미 기록했는가(있으면 다음 begin 때 교체)
+        VulkanCommandListEntry  _entry;       ///< 이 리스트 전용 커맨드 풀과 커맨드 버퍼
+        uint8                   _bEntryDirty; ///< 현재 쌍에 이미 기록했는가(있으면 다음 begin 때 교체합니다)
         VulkanRecordingState    _state;
         VulkanRHICommandContext _context;
     };

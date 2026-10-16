@@ -35,14 +35,14 @@ namespace sw
         ShaderBindingLayoutCache& operator=( const ShaderBindingLayoutCache& ) = delete;
 
         /**
-         * @brief PSO 서술로 레이아웃을 얻습니다. 캐시에 있으면 바로 반환합니다.
+         * @brief PSO 디스크립터로 레이아웃을 얻습니다. 캐시에 있으면 바로 반환합니다.
          * @param targetFormat 리플렉션에 쓸 셰이더 타깃 포맷. 호출자가 실제 활성 백엔드에서 얻습니다(`RHI::getShaderTargetFormat`).
          *        셰이더 층은 RHI 를 모르므로 백엔드가 아니라 포맷을 받습니다. 전역 상태를 쓰지 않습니다. 한 프로세스에 여러 IRHIDevice 가 공존하는
          *        경로(멀티 백엔드 테스트 등)에서 전역값이 실제 디바이스와 어긋나면 엉뚱한 셰이더
          *        변형을 리플렉션해 바인딩 슬롯이 통째로 빠지는 문제가 생깁니다.
          * @details 그래픽스 PSO 는 VS+PS(있으면 GS 등), 컴퓨트 PSO 는 CS 를 리플렉션합니다.
-         *          컴파일 · 리플렉션에 실패하면 빈 레이아웃을 캐시하고 반환합니다.
-         * @return 캐시가 소유하는 레이아웃 참조(캐시 수명 동안 유효).
+         *          컴파일이나 리플렉션에 실패하면 빈 레이아웃을 캐시하고 반환합니다.
+         * @return 캐시가 소유하는 레이아웃 참조입니다(캐시 수명 동안 유효합니다).
          */
         const ShaderBindingLayout& getOrBuild( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat );
 
@@ -61,7 +61,7 @@ namespace sw
 
         hashed_string makeCacheKey( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat ) const;
 
-        // unique_ptr 로 저장해 unordered_map 리해시가 일어나도 반환한 참조 · 포인터가 안정적이게 한다
+        // unique_ptr 로 저장해 unordered_map 리해시가 일어나도 반환한 참조와 포인터가 안정적이게 한다
         // (병렬 커맨드 기록에서 layoutForPSO 포인터가 재배치로 무효화되면 데이터 레이스).
         mutable mutex                                        _mutex;
         unordered_map<hashed_string, unique_ptr<CacheEntry>> _mapEntry;

@@ -19,7 +19,7 @@ namespace sw
         _format      = desc._format;
         _state       = D3D12_RESOURCE_STATE_PRESENT;
 
-        // 창이 없으면 네이티브 스왑체인도 없다. 크기만 기억해 두면 오프스크린 경로는 그대로 돈다.
+        // 창이 없으면 네이티브 스왑체인도 없다. 크기만 기억해 두면 오프스크린 경로는 그대로 동작한다.
         const bool bNoNativeSwapChain = _pHWnd == nullptr || _width == 0 || _height == 0;
         if ( bNoNativeSwapChain )
             return true;
@@ -29,7 +29,7 @@ namespace sw
 
         // VSync 를 끄려면 티어링 허용 스왑체인이어야 한다. 동기화 간격 0 만으로는 DWM 합성이
         // vblank 에 맞춰 넘겨 주므로 화면 주사율에 그대로 붙는다(RHIDxgiTearing.h). VSync 는 실행 중에도 바뀌므로(`IRHIDevice::setVSync`)
-        // 지원하면 늘 티어링 허용으로 만든다 — 켜진 VSync 는 Present( 1, 0 ) 이라 이 플래그와 상관없다.
+        // 지원하면 항상 티어링 허용으로 만든다. 켜진 VSync 는 Present( 1, 0 ) 이라 이 플래그와 상관없다.
         _bAllowTearing  = queryDxgiAllowTearing();
         _swapChainFlags = _bAllowTearing ? static_cast<uint32>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
 
@@ -138,7 +138,7 @@ namespace sw
             return;
 
         // 상태 확인과 배리어 기록이 한 덩어리여야 한다. 병렬 패스 기록에서 이 둘이 갈라지면 두
-        // 스레드가 같은 "이전 상태" 를 보고 각자 배리어를 쏘고, 두 번째가 before==after 가 된다.
+        // 스레드가 같은 "이전 상태"를 보고 각자 배리어를 기록하고, 두 번째가 before==after 가 된다.
         std::scoped_lock<mutex> lock{ _stateMutex };
         if ( _state == stateAfter )
             return;

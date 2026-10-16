@@ -11,7 +11,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 칸 하나의 값을 GPU 시계 나노초로 바꿉니다. 음수(안 적힌 칸)면 false 입니다. */
+        /** @brief 슬롯 하나의 값을 GPU 시계 나노초로 바꿉니다. 음수(기록되지 않은 슬롯)면 false 입니다. */
         bool findSlotNanos( const RHITimestampFrame& frame, uint32 slot, int64& outNanos )
         {
             if ( slot >= frame._listMicro.size() )
@@ -79,7 +79,7 @@ namespace sw
         if ( _gpuContext == IProfilerBackend::kInvalidGPUContext || frame._listMicro.empty() )
             return 0;
 
-        // 1) 적힌 쌍만 모은다(한쪽이라도 안 적혔으면 구간이 성립하지 않는다 — 엔진 표와 같은 규칙).
+        // 1) 기록된 쌍만 모은다(한쪽이라도 기록되지 않았으면 구간이 성립하지 않는다. 엔진 프로파일러와 같은 규칙이다).
         _listScratchSpan.clear();
         const size_t passCount = MathUtil::min( listPassSite.size(), static_cast<size_t>( FrameRendererUtil::kGPUTimedPassCapacity ) );
         for ( size_t passIndex = 0; passIndex < passCount; ++passIndex )
@@ -104,7 +104,7 @@ namespace sw
         if ( _listScratchSpan.empty() )
             return 0;
 
-        // 2) 시작 순으로 늘어놓는다(패스 번호 순이 곧 시간 순은 아니다 — 컴퓨트 프리패스가 앞에 선다). 패스는 열몇 개라 삽입 정렬이면 된다.
+        // 2) 시작 순으로 정렬한다(패스 번호 순이 곧 시간 순은 아니다. 컴퓨트 프리패스가 앞에 선다). 패스는 열몇 개라 삽입 정렬이면 된다.
         for ( size_t index = 1; index < _listScratchSpan.size(); ++index )
         {
             const Span moving = _listScratchSpan[index];
@@ -117,7 +117,7 @@ namespace sw
             _listScratchSpan[cursor] = moving;
         }
 
-        // 3) 프레임 구간 = 프레임 첫 명령 ~ 가장 늦은 끝. 첫 명령 칸이 없으면 가장 이른 시작으로 둔다.
+        // 3) 프레임 구간 = 프레임 첫 명령 ~ 가장 늦은 끝. 첫 명령 슬롯이 없으면 가장 이른 시작으로 둔다.
         int64 frameBegin{ 0 };
         if ( findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotFrameBegin, frameBegin ) == false )
             frameBegin = _listScratchSpan.front()._beginNanos;

@@ -16,8 +16,8 @@ namespace sw
             }
 
             /**
-             * @brief @p source 의 텍스처를 @p target 에 넣을 자리를 정합니다. 다 들어가면 true 이고 @p outArrSlot 이 원래 번호 → 새 번호입니다.
-             * @details 들어가지 않으면 @p target 을 바꾸지 않습니다. 일괄을 복사하지 않는다 — 텍스처 참조(shared_ptr)의 원자 증감이 위젯 캐시마다 든다.
+             * @brief @p source 의 텍스처를 @p target 에 넣을 슬롯을 정합니다. 모두 들어가면 true 를 반환하고 @p outArrSlot 에 원래 번호 → 새 번호가 담깁니다.
+             * @details 들어가지 않으면 @p target 을 바꾸지 않는다. 배치를 복사하지 않는 이유는, 복사하면 위젯 캐시마다 텍스처 참조(shared_ptr)의 원자적 증감이 발생하기 때문이다.
              */
             static bool mergeTextures( CanvasBatch& target, const CanvasBatch& source, uint32 ( &outArrSlot )[shaderslot::kMaterialTextureCount] )
             {
@@ -53,7 +53,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 텍스처 번호를 바꾸지 않는 자리 매김이면 true 입니다(사각형을 통째로 복사해도 된다). */
+            /** @brief 텍스처 번호를 바꾸지 않는 슬롯 매핑이면 true 입니다(사각형을 통째로 복사해도 됩니다). */
             static bool isIdentitySlotMap( const uint32 ( &arrSlot )[shaderslot::kMaterialTextureCount], uint32 textureCount )
             {
                 for ( uint32 index = 0; index < textureCount; ++index )
@@ -101,7 +101,7 @@ namespace sw
                     arrSlot[index] = index;
                 }
             }
-            // 사각형은 통째로 복사하고, 텍스처 번호가 바뀐 일괄만 번호를 다시 매긴다(사각형마다 push_back 하지 않는다).
+            // 사각형은 통째로 복사하고, 텍스처 번호가 바뀐 배치만 번호를 다시 매긴다(사각형마다 push_back 하지 않는다).
             const size_t firstNew = _listQuad.size();
             _listQuad.insert( _listQuad.end(), source._listQuad.begin() + sourceBatch._firstQuad,
                               source._listQuad.begin() + sourceBatch._firstQuad + sourceBatch._quadCount );

@@ -17,7 +17,7 @@ namespace sw
     /**
      * @brief `-gv_gpuUploadQueue=0` 이면 업로드를 워커로 앞당기지 않고 렌더 스레드가 그 자리에서 만듭니다.
      * @details 이 최적화가 무엇을 바꿨는지 측정하려면 같은 실행에서 끄고 켜 비교할 수 있어야 합니다(A/B). 스레딩을 건드리는
-     *          기능이라 의심스러울 때 끌 수 있는 스위치이기도 합니다. gv_useRenderThread · gv_gpuCulling 과 같은 자리입니다.
+     *          기능이라 의심스러울 때 끌 수 있는 스위치이기도 합니다. gv_useRenderThread, gv_gpuCulling 과 같은 종류입니다.
      */
     SW_GLOBAL_VARIABLE( int32, gv_gpuUploadQueue, 1, "GPU 업로드를 워커로 앞당긴다 (0=렌더 스레드가 그 자리에서 만든다)" );
 
@@ -41,11 +41,11 @@ namespace sw
 
     void GPUUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
     {
-        // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다 — 렌더 스레드가 그 프레임의 업로드(`GPUScene` 의 `initRHI`)에서 만든다.
-        // 주의: 게임 스레드가 대신 만들면 렌더 스레드가 컨텍스트를 오래 쥔 동안(셰이더 실시간 컴파일) 컨텍스트 대기가 시간을 넘겨 메시를 못 만든다.
+        // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다. 렌더 스레드가 그 프레임의 업로드(`GPUScene` 의 `initRHI`)에서 만든다.
+        // 주의: 게임 스레드가 대신 만들면 렌더 스레드가 컨텍스트를 오래 점유한 동안(셰이더 실시간 컴파일) 컨텍스트 대기가 시간을 넘겨 메시를 못 만든다.
         if ( _bParallel == SW_FALSE )
             return;
-        // 이미 이 디바이스에 올라가 있으면 할 일이 없다. 상주 판단은 Mesh 가 세대로 한다.
+        // 이미 이 디바이스에 업로드되어 있으면 할 일이 없다. 상주 판단은 Mesh 가 세대로 한다.
         const bool bNothingToUpload = mesh == nullptr || _pDevice == nullptr || mesh->isRHIValid();
         if ( bNothingToUpload )
             return;
@@ -53,7 +53,7 @@ namespace sw
             return;
 
         // 같은 프레임에 같은 메시가 여러 배치로 들어온다(메시 하나를 여러 오브젝트가 쓴다). 중복은 여기서 거른다.
-        // 안 거르면 워커 둘이 같은 메시를 동시에 만들어 한쪽 버퍼가 그대로 새어 나간다.
+        // 안 거르면 워커 둘이 같은 메시를 동시에 만들어 한쪽 버퍼가 누수된다.
         for ( const shared_ptr<Mesh>& pending : _listPendingMesh )
         {
             if ( pending == mesh )
@@ -100,7 +100,7 @@ namespace sw
             }
             else
             {
-                // 태스크를 못 만들었으면 여기서 직접 만든다. 조용히 안 올리는 것보다 낫다.
+                // 태스크를 만들지 못했으면 여기서 직접 만든다. 조용히 업로드하지 않는 것보다 낫다.
                 for ( uint32 index = 0; index < count; ++index )
                 {
                     uploadOne( index );

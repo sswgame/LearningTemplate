@@ -1,6 +1,6 @@
 /**
  * @file D3D12RHISwapChain.h
- * @brief 창 하나에 붙는 D3D12 백버퍼 묶음입니다.
+ * @brief 창 하나에 붙는 D3D12 백버퍼 모음입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,11 +17,11 @@ namespace sw
 {
     /**
      * @class D3D12RHISwapChain
-     * @brief 창 하나의 백버퍼 묶음입니다. **만들고 · 크기를 바꾸고 · 다음 백버퍼를 고르고 · 표시합니다.**
+     * @brief 창 하나의 백버퍼 모음입니다. **스왑체인을 만들고, 크기를 바꾸고, 다음 백버퍼를 고르고, 화면에 표시합니다.**
      * @details 백버퍼 리소스 상태와 그 상태를 바꾸는 배리어를 이 객체가 함께 가집니다. 상태를 바꾸는 곳
-     *          (`beginRenderPass` / `blitTexture` / `endFrame`)이 각자 배리어를 적으면 서로 어긋납니다.
+     *          (`beginRenderPass` / `blitTexture` / `endFrame`)이 각자 배리어를 기록하면 서로 어긋납니다.
      * @note RTV 힙은 **디바이스가 소유합니다.** 오프스크린 렌더 타깃과 같은 힙을 쓰기 때문입니다.
-     *       백버퍼는 그 힙의 앞쪽 `bufferCount()` 칸을 차지하고, 오프스크린은 그 뒤부터 씁니다.
+     *       백버퍼는 그 힙의 앞쪽 `bufferCount()` 슬롯을 차지하고, 오프스크린은 그 뒤부터 씁니다.
      */
     class D3D12RHISwapChain
     {
@@ -34,7 +34,7 @@ namespace sw
         /**
          * @brief DXGI 스왑체인을 만듭니다.
          * @details 창 핸들이 없거나 크기가 0 이면 **네이티브 스왑체인 없이 크기만 기억한 상태**로
-         *          성공합니다. 오프스크린 전용(테스트 · 헤드리스) 디바이스가 그 경로입니다.
+         *          성공합니다. 오프스크린 전용(테스트, 헤드리스) 디바이스가 그 경로입니다.
          */
         bool initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc );
 
@@ -42,7 +42,7 @@ namespace sw
         void shutdown();
 
         /**
-         * @brief 백버퍼를 얻어 RTV 를 만듭니다. RTV 힙의 앞쪽 `bufferCount()` 칸을 씁니다.
+         * @brief 백버퍼를 얻어 RTV 를 만듭니다. RTV 힙의 앞쪽 `bufferCount()` 슬롯을 씁니다.
          * @note 하나라도 실패하면 **전부 비웁니다.** 일부만 null 인 채로 두면 크기는 정상이라
          *       범위 검사를 통과해버리고, null 리소스가 그대로 배리어에 들어가 GPU PageFault 가 됩니다.
          */
@@ -71,7 +71,7 @@ namespace sw
         /**
          * @brief 현재 백버퍼를 `stateAfter` 로 전이합니다. 이미 그 상태면 아무것도 하지 않습니다.
          * @details 백버퍼의 리소스 상태는 커맨드 리스트가 아니라 **리소스 자체에 속한 전역 상태**라
-         *          이 객체가 들고 있습니다.
+         *          이 객체가 보관합니다.
          */
         void transitionTo( ID3D12GraphicsCommandList* pCmdList, D3D12_RESOURCE_STATES stateAfter );
 
@@ -81,7 +81,7 @@ namespace sw
         /**
          * @brief 병렬 기록 중 배리어 감시자를 붙입니다(디바이스 자신).
          * @details 스왑체인은 디바이스를 모르는 편이 낫지만, "기록 중에 상태가 바뀌면 알린다" 는
-         *          감시는 디바이스가 들고 있습니다. 그 한 가지만 포인터로 받습니다.
+         *          감시는 디바이스가 맡고 있습니다. 그 한 가지만 포인터로 받습니다.
          */
         void setBarrierWatcher( const IRHIDevice* pWatcher ) { _pBarrierWatcher = pWatcher; }
 
@@ -128,7 +128,7 @@ namespace sw
         /// @details `_stateMutex` 로 보호합니다. RenderGraph::executeParallel 이 같은 레벨의 패스
         ///          콜백을 여러 태스크 스레드에서 동시에 돌리는데, 백버퍼를 타깃으로 하는 패스가
         ///          둘 이상이면 그 콜백들이 동시에 이 상태를 읽고 바꿉니다. 락이 없으면 둘 다
-        ///          "아직 RENDER_TARGET 이 아니다" 를 보고 각자 배리어를 쏴서, 두 번째 것이
+        ///          "아직 RENDER_TARGET 이 아니다" 를 보고 각자 배리어를 기록해서, 두 번째 것이
         ///          before==after 가 됩니다(D3D12 검증 오류 → 디바이스 제거).
         mutable mutex         _stateMutex;
         D3D12_RESOURCE_STATES _state{ D3D12_RESOURCE_STATE_PRESENT };

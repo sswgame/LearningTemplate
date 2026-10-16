@@ -1,6 +1,6 @@
 /**
  * @file FrameRendererScenePreview.cpp
- * @brief 미리보기 씬(에디터 툴 창의 씬)을 씬마다 따로 둔 렌더러로 그리는 길입니다(`FrameRenderer::executeScenePreviewPacket`).
+ * @brief 미리보기 씬(에디터 툴 창의 씬)을 씬마다 따로 둔 렌더러로 그리는 경로입니다(`FrameRenderer::executeScenePreviewPacket`).
  */
 #include "pch.h"
 
@@ -26,7 +26,7 @@ namespace sw
         }
         if ( pRenderer == nullptr )
         {
-            // 주 렌더러와 같은 파이프라인 · 작업 관리자로 세운다. 계측 · 공개를 끄는 표시는 initialize 앞에 둔다(파이프라인 로드가 공개를 부른다).
+            // 주 렌더러와 같은 파이프라인과 작업 관리자로 만든다. 계측과 공개를 끄는 표시는 initialize 앞에 둔다(파이프라인 로드가 공개를 부른다).
             ScenePreviewRenderer created;
             created._renderer                 = make_unique<FrameRenderer>();
             created._renderer->_bScenePreview = SW_TRUE;
@@ -56,7 +56,7 @@ namespace sw
             }
             if ( bAlive )
                 continue;
-            // 디바이스의 해제는 GPU 완료 뒤로 미뤄진다 — 이미 낸 프레임이 쓰는 자원을 지금 부수지 않는다.
+            // 디바이스의 해제는 GPU 완료 뒤로 미뤄진다. 이미 낸 프레임이 쓰는 자원을 지금 파괴하지 않는다.
             preview._renderer->shutdown();
             _listScenePreviewRenderer.erase( _listScenePreviewRenderer.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }

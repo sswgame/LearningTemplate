@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    // 로그 머리는 옮기기 전과 같게 둔다(로그를 읽는 스크립트와 사람이 같은 이름으로 찾는다).
+    // 로그 접두어는 옮기기 전과 같게 둔다(로그를 읽는 스크립트와 사람이 같은 이름으로 찾는다).
     SW_LOG_CALLER( "FrameRenderer" );
 
     GPUPassTimeline::GPUPassTimeline()

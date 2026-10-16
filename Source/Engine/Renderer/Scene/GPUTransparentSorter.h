@@ -1,8 +1,8 @@
 /**
  * @file GPUTransparentSorter.h
  * @brief 투명 큐의 그리기 순서(정렬 레이어 키, 깊이, 후보 번호)를 정하는 규칙과 정렬 작업 배열을 가집니다.
- * @details `GPUSceneBuilder` 가 값 멤버로 두고 직접 부른다(가상 호출 없음). 키를 채우는 일은 후보를 아는 빌더가 하고,
- *          여기는 비교 규칙, 정렬 전략(삽입 정렬 → std::sort), 추가 뷰의 순번 테이블을 맡는다. GPU 도 씬도 모른다.
+ * @details `GPUSceneBuilder` 가 값 멤버로 두고 직접 부릅니다(가상 호출 없음). 키를 채우는 일은 후보를 아는 빌더가 하고,
+ *          여기는 비교 규칙, 정렬 전략(삽입 정렬 → std::sort), 추가 뷰의 순번 테이블을 맡습니다. GPU 도 씬도 모릅니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -17,7 +17,7 @@ namespace sw
     /**
      * @struct GPUTransparentSortKey
      * @brief 투명 정렬 키(정렬 레이어 키, 깊이, 후보 인덱스)입니다. 정렬 전에 한 번 계산해 둡니다.
-     * @details 깊이는 정렬 축이 영벡터면 카메라까지의 거리², 아니면 그 축 위의 깊이(카메라 기준)다. 둘 다 클수록 먼저 그린다.
+     * @details 깊이는 정렬 축이 영벡터면 카메라까지의 거리², 아니면 그 축 위의 깊이(카메라 기준)입니다. 둘 다 클수록 먼저 그립니다.
      */
     struct GPUTransparentSortKey
     {
@@ -38,15 +38,15 @@ namespace sw
     public:
         /**
          * @brief 투명 정렬이 삽입 정렬로 버틸 수 있는 이동 예산입니다(원소당 이동 횟수).
-         * @details 한 프레임에 조금씩 움직이는 씬은 뒤집힌 쌍이 원소 수보다 훨씬 적다. 이 예산을 넘는 프레임(카메라가 크게
-         *          돌았거나 나누기를 다시 했을 때)은 삽입 정렬을 멈추고 std::sort 가 마저 한다. 최악의 경우 N log N 에 예산만큼 더한 값이다.
+         * @details 한 프레임에 조금씩 움직이는 씬은 뒤집힌 쌍이 원소 수보다 훨씬 적습니다. 이 예산을 넘는 프레임(카메라가 크게
+         *          돌았거나 나누기를 다시 했을 때)은 삽입 정렬을 멈추고 std::sort 가 마저 합니다. 최악의 경우 N log N 에 예산만큼 더한 값입니다.
          */
         static constexpr size_t kTransparentInsertionMovesPerElement = 8;
 
         /**
          * @brief 투명 정렬 순서입니다. 정렬 레이어 키가 작은 것, 깊이가 큰 것(먼 것), 후보 인덱스가 작은 것 순입니다. 전순서입니다.
-         * @details 깊이가 같으면 후보 인덱스(등록 순서)로 가르므로 같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 뒤집히지 않는다.
-         *          정렬 루프가 원소마다 부르므로 헤더에 둔다(인라인).
+         * @details 깊이가 같으면 후보 인덱스(등록 순서)로 가르므로 같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 뒤집히지 않습니다.
+         *          정렬 루프가 원소마다 부르므로 헤더에 둡니다(인라인).
          */
         static bool isDrawnBefore( const GPUTransparentSortKey& keyA, const GPUTransparentSortKey& keyB )
         {
@@ -58,7 +58,7 @@ namespace sw
         }
         /**
          * @brief 투명 인스턴스 하나의 정렬 키를 채웁니다. 주 뷰(`GPUSceneBuilder::sortTransparent`)와 추가 뷰가 같은 규칙을 씁니다.
-         * @details 키를 채우는 루프가 원소마다 부르므로 헤더에 둔다(인라인).
+         * @details 키를 채우는 루프가 원소마다 부르므로 헤더에 둡니다(인라인).
          */
         static GPUTransparentSortKey makeTransparentSortKey( uint32 sortLayer, const float3& center, const float3& eye, const float3& axis, uint32 orderIndex )
         {
@@ -78,23 +78,23 @@ namespace sw
 
         /**
          * @brief 주 뷰 정렬의 키 배열을 count 개로 맞추고 돌려줍니다. 부르는 쪽이 원소마다 키를 채운 뒤 `sortKeys` 를 부릅니다.
-         * @details 배열은 프레임을 넘어 재사용한다(프레임당 할당이 없다).
+         * @details 배열은 프레임을 넘어 재사용합니다(프레임당 할당이 없습니다).
          */
         vector<GPUTransparentSortKey>& resizeKeys( size_t count );
         /**
-         * @brief 채워 둔 키를 정렬하고, 정렬된 후보 인덱스를 outListCandidateIndex 의 앞 (키 수)칸에 씁니다.
-         * @details **키 배열의 지금 순서에서 출발한다.** 지난 프레임 순서로 키를 채웠다면 삽입 정렬은 (원소 수 + 뒤집힌 쌍 수)에 비례한다.
-         *          이동 횟수가 원소당 `kTransparentInsertionMovesPerElement` 를 넘으면 std::sort 로 넘어간다. 순서는 전순서이므로 어느 쪽이든 결과가 같다.
-         *          outListCandidateIndex 는 키 수 이상의 크기여야 한다(재할당하지 않는다).
+         * @brief 채워 둔 키를 정렬하고, 정렬된 후보 인덱스를 outListCandidateIndex 의 앞 (키 수)개에 씁니다.
+         * @details **키 배열의 지금 순서에서 출발합니다.** 지난 프레임 순서로 키를 채웠다면 삽입 정렬은 (원소 수 + 뒤집힌 쌍 수)에 비례합니다.
+         *          이동 횟수가 원소당 `kTransparentInsertionMovesPerElement` 를 넘으면 std::sort 로 넘어갑니다. 순서는 전순서이므로 어느 쪽이든 결과가 같습니다.
+         *          outListCandidateIndex 는 키 수 이상의 크기여야 합니다(재할당하지 않습니다).
          */
         void sortKeys( vector<uint32>& outListCandidateIndex );
 
-        /** @brief 추가 뷰 정렬의 키 배열을 count 개로 맞추고 돌려줍니다. 뷰마다 다시 씁니다. 키의 후보 인덱스 칸에는 꼬리 번호를 넣습니다. */
+        /** @brief 추가 뷰 정렬의 키 배열을 count 개로 맞추고 돌려줍니다. 뷰마다 다시 씁니다. 키의 후보 인덱스 필드에는 꼬리 번호를 넣습니다. */
         vector<GPUTransparentSortKey>& resizeViewKeys( size_t count );
         /**
          * @brief 채워 둔 추가 뷰 키(꼬리 번호 순)로 그 뷰의 투명 순서를 만듭니다.
          * @details 꼬리 전체를 정렬해 꼬리 번호마다 순번을 매기고, 배치 안을 순번 순으로 다시 놓은 꼬리 슬롯(컬링 없는 백엔드의 인스턴스 슬롯 스트림)과
-         *          배치 순서(배치마다 가장 먼저 그릴 인스턴스의 순번 순, 같으면 원래 순서)를 만든다. 꼬리 안에 온전히 들지 않는 배치는 순서만 따른다.
+         *          배치 순서(배치마다 가장 먼저 그릴 인스턴스의 순번 순, 같으면 원래 순서)를 만듭니다. 꼬리 안에 온전히 들지 않는 배치는 순서만 따릅니다.
          */
         GPUViewTransparentOrder computeViewOrder( uint64 viewID, uint32 tailBase, const vector<GPUMeshBatch>& listBatch );
 
@@ -102,10 +102,10 @@ namespace sw
         /**
          * @brief 주 뷰 투명 정렬의 작업 배열입니다.
          * @details 비교 함수가 원소마다 raw 에서 바운드를 읽어 거리를 **다시** 구하면 투명 2000개에 비교 22000번,
-         *          무작위 읽기 44000번이 든다. 그 raw 는 다른 코어가 방금 쓴 것이라 원격 캐시에서 가져온다. 키를 한 번 계산해 두면 읽기는 2000번이고, 정렬은 12바이트 연속 배열 위에서 돈다.
+         *          무작위 읽기 44000번이 발생합니다. 그 raw 는 다른 코어가 방금 쓴 것이라 원격 캐시에서 가져옵니다. 키를 한 번 계산해 두면 읽기는 2000번이고, 정렬은 12바이트 연속 배열 위에서 돕니다.
          */
         vector<GPUTransparentSortKey> _listKey;
-        /// @brief 추가 뷰 정렬의 스크래치입니다. 뷰마다 다시 씁니다.
+        /// @brief 추가 뷰 정렬의 임시 배열입니다. 뷰마다 다시 씁니다.
         vector<GPUTransparentSortKey> _listViewKey;
         /** @brief 투명 정렬의 깊이 축입니다. 영벡터면 카메라까지의 거리를 씁니다. */
         float3 _axis{};

@@ -1,6 +1,6 @@
 /**
  * @file RHIDxgiFormat.h
- * @brief RHIFormat → DXGI_FORMAT 변환입니다(DX11 · DX12 공유).
+ * @brief RHIFormat 에서 DXGI_FORMAT 으로의 변환입니다(DX11, DX12 공유).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -55,8 +55,8 @@ namespace sw
     }
 
     /**
-     * @brief 정점 속성 하나가 쓸 DXGI 포맷을 정합니다(DX11 · DX12 공유).
-     * @details 입력 레이아웃은 **공용 표**(`constant::arrVertexAttribute`)에서 만들고, 그 표의 한 줄을
+     * @brief 정점 속성 하나가 쓸 DXGI 포맷을 정합니다(DX11, DX12 공유).
+     * @details 입력 레이아웃은 **공용 테이블**(`constant::arrVertexAttribute`)에서 만들고, 그 테이블의 한 항목을
      *          DXGI 포맷으로 옮기는 판단은 두 백엔드가 이 함수 하나를 씁니다. 주의: 성분 수를 하나 더할 때
      *          (예: 스칼라 float 속성) 여기를 빠뜨리면 **D3D 백엔드만 정점이 어긋난 채로 그려집니다.**
      */
@@ -81,7 +81,7 @@ namespace sw
      * @brief DXGI_FORMAT 을 RHIFormat 으로 되돌립니다. 대응이 없으면(typeless 등) Unknown 입니다.
      * @details DXGI_FORMAT 은 값이 110 개가 넘는 **플랫폼 enum** 이고 이 엔진이 다루는 것은 그중 일부입니다. 대응이 없는 값은 `default:` 가
      *          Unknown 으로 돌립니다(새 DXGI 포맷도 Unknown 이 맞는 답입니다). 반대 방향인 toDxgiFormat 은 `default:` 없이 모든
-     *          RHIFormat 을 다룹니다 — RHIFormat 은 **우리 enum** 이라 늘면 `-Werror=switch` 가 빌드를 세웁니다.
+     *          RHIFormat 을 다룹니다. RHIFormat 은 **우리 enum** 이라 늘면 `-Werror=switch` 가 빌드를 실패시킵니다.
      */
     inline RHIFormat fromDxgiFormat( DXGI_FORMAT format )
     {

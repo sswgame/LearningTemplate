@@ -65,7 +65,7 @@ namespace sw
                 return reg.tryLoadModule( backend, dllName );
             }
 
-            /** @brief 요청한 RHI MODULE 을 필요할 때 하나씩 로드합니다(한꺼번에 올리지 않습니다). */
+            /** @brief 요청한 RHI MODULE 을 필요할 때 하나씩 로드합니다(한꺼번에 로드하지 않습니다). */
             static bool ensureBackendModuleLoaded( RHIBackend backend )
             {
                 RHIBackendRegistry&    reg    = engine::getSubsystem<RHIBackendRegistry>();
@@ -228,7 +228,7 @@ namespace sw
             }
         }
 
-        // 내리지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 올라와 있을 뿐이다 — 이유는 경고로 남는다.
+        // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 남아 있을 뿐이다. 이유는 경고로 남는다.
         for ( const LoadedModule& module : _listLoadedModule )
         {
             (void)ModuleImageUtil::unloadModuleImage( module._modulePath, module._pHandle );

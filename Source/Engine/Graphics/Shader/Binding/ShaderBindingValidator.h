@@ -18,17 +18,17 @@ namespace sw
     struct ShaderBindingValidatorIssue
     {
         string _resource; ///< 리소스 이름(없으면 빈 문자열)
-        string _message;  ///< 사람이 읽는 설명(기대값 · 실제값 포함)
+        string _message;  ///< 사람이 읽는 설명(기대값과 실제값 포함)
     };
 } // namespace sw
 
 namespace sw
 {
-    /// @brief 예약 리소스가 한 백엔드에서 있어야 할 자리입니다. `_bDeclared == false` 면 그 백엔드에는 선언 자체가 없어야 합니다.
+    /// @brief 예약 리소스가 한 백엔드에서 있어야 할 위치입니다. `_bDeclared == false` 면 그 백엔드에는 선언 자체가 없어야 합니다.
     struct ShaderReservedLocation
     {
         uint32 _space{ 0 }; ///< DX: register space / Vulkan: descriptor set / GL: 항상 0
-        uint32 _bind{ 0 };  ///< DX: register 번호 / Vulkan: binding / GL: binding(UBO·텍스처 유닛·SSBO)
+        uint32 _bind{ 0 };  ///< DX: register 번호 / Vulkan: binding / GL: binding(UBO, 텍스처 유닛, SSBO)
         bool   _bDeclared{ false };
     };
 } // namespace sw
@@ -36,7 +36,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 예약 리소스 하나의 계약 위치입니다. 백엔드별로 "어디에 있어야 하는가" 를 담습니다.
+     * @brief 예약 리소스 하나의 계약 위치입니다. 백엔드별로 "어디에 있어야 하는가"를 담습니다.
      * @details 값은 모두 ShaderBindingSlots.h(= bindingslots.hlsli)에서 옵니다. 네이티브 bindless(DX12/Vulkan)는
      *          종류별 무제한 배열 번호(= DX12 space = Vulkan binding)이고, 에뮬(DX11/GL)은 register 슬롯입니다.
      */
@@ -56,20 +56,20 @@ namespace sw
     /**
      * @class ShaderBindingValidator
      * @brief 바인딩 계약 검증기입니다.
-     * @details 백엔드 불일치는 대개 "셰이더가 선언한 위치 ≠ 엔진이 거는 위치" 이고, 어느 쪽도
+     * @details 백엔드 불일치는 대개 "셰이더가 선언한 위치 ≠ 엔진이 바인딩하는 위치"이고, 어느 쪽도
      *          검증 에러를 내지 않아 화면이 검게 나오거나 비는 것으로만 드러납니다. 이 검사는 그 어긋남을
-     *          **바이너리를 읽는 순간**(PSO 레이아웃 빌드 · 쿠킹 · 테스트)에 이름과 숫자로 보고합니다.
+     *          **바이너리를 읽는 순간**(PSO 레이아웃 빌드, 쿠킹, 테스트)에 이름과 숫자로 보고합니다.
      *
      *          검사 항목(백엔드별 이름공간 기준):
      *           1. 예약 리소스(PassCB, MaterialCB, g_SwInstances, g_SwMaterials, g_SwBindlessTex2D, g_SwSlot#, …)의 종류와
-     *              위치가 계약 표와 같은가. 그 백엔드에 없어야 할 선언이 있는가.
+     *              위치가 계약 테이블과 같은가. 그 백엔드에 없어야 할 선언이 있는가.
      *           2. 같은 이름공간에서 두 리소스가 한 자리를 차지하는가. DX: (레지스터 종류, space, 번호),
      *              Vulkan: (set, binding), GL: (UBO/텍스처 유닛/SSBO, binding). GL 은 set 을 버리므로 여기서
      *              MaterialCB(set 10, binding 0) 가 PassCB(binding 0) 와 겹치는 것이 잡힙니다.
      *           3. DX12: space0 레지스터가 루트 시그니처의 슬롯 수 안인가, space1 은 텍스처 배열뿐인가, space2 는 루트 상수뿐인가.
-     *              Vulkan: set 0 binding 이 종류별 범위(b 0..15 / t 16..31 / u 32..47) 안인가, set 1 은 텍스처 배열 · 샘플러뿐인가.
+     *              Vulkan: set 0 binding 이 종류별 범위(b 0..15 / t 16..31 / u 32..47) 안인가, set 1 은 텍스처 배열과 샘플러뿐인가.
      *           4. OpenGL: 모든 리소스가 set 0 인가(0 이 아니면 작성자가 세트 의미를 가정한 것입니다).
-     *           5. 정점 입력: 시맨틱이 정점 레이아웃 표에 있는가. Vulkan · GL 은 location 까지 같은가.
+     *           5. 정점 입력: 시맨틱이 정점 레이아웃 테이블에 있는가. Vulkan 과 GL 은 location 까지 같은가.
      */
     class SW_API ShaderBindingValidator
     {
@@ -85,10 +85,10 @@ namespace sw
         static uint32 validate( const ShaderReflectionData& reflection, ShaderTargetFormat targetFormat, string_view shaderLabel,
                                 vector<ShaderBindingValidatorIssue>* pOutIssue = nullptr );
 
-        /// @brief 계약 표입니다. 예약 리소스 모두를 담습니다(테스트 · 문서용).
+        /// @brief 계약 테이블입니다. 예약 리소스 모두를 담습니다(테스트와 문서용).
         static const vector<ShaderReservedBinding>& getReservedBindings();
 
-        /// @brief 프로세스 시작 이후 validate 가 보고한 위반 누계입니다(앱 · 테스트가 "한 번도 없었는가" 를 확인할 때).
+        /// @brief 프로세스 시작 이후 validate 가 보고한 위반 누계입니다(앱과 테스트가 "한 번도 없었는가"를 확인할 때).
         static uint32 getTotalViolationCount();
     };
 } // namespace sw

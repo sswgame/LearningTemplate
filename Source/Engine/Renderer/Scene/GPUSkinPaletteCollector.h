@@ -1,8 +1,8 @@
 /**
  * @file GPUSkinPaletteCollector.h
  * @brief 애니메이션 유닛과 군중 묶음의 스킨 팔레트(본 행렬)와 모프 가중치를 스냅샷으로 옮깁니다.
- * @details `GPUSceneBuilder` 가 값 멤버로 두고 프레임마다 직접 부른다(가상 호출 없음). 애니메이션 쪽 의존(`AnimationSystem`, 군중,
- *          `SkeletalMeshComponent`)은 이 파일에만 있다.
+ * @details `GPUSceneBuilder` 가 값 멤버로 두고 프레임마다 직접 부릅니다(가상 호출 없음). 애니메이션 쪽 의존(`AnimationSystem`, 군중,
+ *          `SkeletalMeshComponent`)은 이 파일에만 있습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"

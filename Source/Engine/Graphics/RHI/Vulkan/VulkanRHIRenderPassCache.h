@@ -1,11 +1,11 @@
 /**
  * @file VulkanRHIRenderPassCache.h
- * @brief Vulkan 만 갖는 렌더패스 · 프레임버퍼 캐시입니다(PSO 호환 렌더패스, 합성(MRT · 컬러+깊이) 프레임버퍼, desc 로 만든 렌더패스).
+ * @brief Vulkan 에만 있는 렌더패스와 프레임버퍼 캐시입니다. PSO 호환 렌더패스, 합성 프레임버퍼(MRT, 컬러+깊이), desc 로 만든 렌더패스를 보관합니다.
  * @details 다른 API 는 렌더타깃을 그때그때 바인딩하지만 Vulkan 은 렌더패스와 프레임버퍼를 **미리 만들어** 두고 호환되는 것을
- *          골라 써야 합니다. 그 "만들어 둔 것" 의 키 · 레코드 · 맵 · 뮤텍스와 파괴 순서를 이 클래스 하나가 소유합니다.
+ *          골라 써야 합니다. 그 "만들어 둔 것"의 키, 레코드, 맵, 뮤텍스와 파괴 순서를 이 클래스 하나가 소유합니다.
  *
  *          스왑체인 렌더패스(CLEAR/LOAD 변종)와 공용 오프스크린 렌더패스는 캐시가 아니라 디바이스 상태라 여기 없습니다.
- *          그것들은 스왑체인 · 텍스처 레코드의 수명을 따릅니다.
+ *          그것들은 스왑체인과 텍스처 레코드의 수명을 따릅니다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -26,11 +26,11 @@ namespace sw
     {
     public:
         /**
-         * @brief VkRenderPass 하나의 서술입니다. 렌더패스를 만드는 모든 자리가 이것을 채워 `createFromSpec` 에 넘깁니다.
-         * @details 스왑체인(CLEAR/LOAD) · 공용 오프스크린 · 포맷별 오프스크린 · PSO 호환용 · 합성 프레임버퍼 · desc 기반 생성이
-         *          모두 이것으로 `VkAttachmentDescription` 과 서브패스 의존성을 만듭니다(자리마다 손으로 적으면 의존성 마스크가
-         *          조금씩 달라지고 한 곳을 고칠 때 나머지를 빠뜨립니다). 단일 서브패스 · 샘플 1 ·
-         *          스텐실 DONT_CARE 는 여기서 고정이고, 자리마다 다른 것(포맷 · loadOp · storeOp · 레이아웃)만 필드입니다.
+         * @brief VkRenderPass 하나의 디스크립터입니다. 렌더패스를 만드는 모든 곳이 이것을 채워 `createFromSpec` 에 넘깁니다.
+         * @details 스왑체인(CLEAR/LOAD), 공용 오프스크린, 포맷별 오프스크린, PSO 호환용, 합성 프레임버퍼, desc 기반 생성이
+         *          모두 이것으로 `VkAttachmentDescription` 과 서브패스 의존성을 만듭니다(곳마다 손으로 적으면 의존성 마스크가
+         *          조금씩 달라지고 한 곳을 고칠 때 나머지를 빠뜨립니다). 단일 서브패스, 샘플 1,
+         *          스텐실 DONT_CARE 는 여기서 고정이고, 곳마다 다른 것(포맷, loadOp, storeOp, 레이아웃)만 필드입니다.
          */
         struct RenderPassSpec
         {
@@ -51,7 +51,7 @@ namespace sw
             void setDepth( uint32 vkFormat, uint32 loadOp, uint32 initialLayout, uint32 finalLayout );
         };
 
-        /// @brief 합성 프레임버퍼 캐시 키입니다(컬러 · 깊이 핸들 + loadOp).
+        /// @brief 합성 프레임버퍼 캐시 키입니다(컬러와 깊이 핸들 + loadOp).
         struct CompositeKey
         {
             RHITextureHandle _arrColor[kMaxColorAttachments]{};
@@ -81,7 +81,7 @@ namespace sw
             uint32        _height{ 0 };
         };
 
-        /// @brief PSO 에 묶인 렌더패스 포맷 키입니다. 파이프라인은 이것과 "호환되는" 렌더패스 어디서든 쓰입니다.
+        /// @brief PSO 에 연결된 렌더패스 포맷 키입니다. 파이프라인은 이것과 "호환되는" 렌더패스 어디서든 쓰입니다.
         struct PipelineKey
         {
             uint32 _colorCount{ 1 };
@@ -118,14 +118,14 @@ namespace sw
         VkRenderPass ensurePipelineRenderPass( VkDevice device, const PipelineKey& key, const RenderPassSpec& spec );
 
         /**
-         * @brief 합성 프레임버퍼를 키로 찾고, 없으면 spec 과 첨부 뷰로 렌더패스 · 프레임버퍼를 만들어 넣습니다.
-         * @details 조회와 생성이 **한 임계구역**입니다. RenderGraph::executeParallel 이 여러 스레드에서 동시에 beginRenderPass 를
-         *          부르므로, 나눠 놓으면 같은 키를 둘이 만들어 하나가 샙니다. 첨부 뷰는 부르는 쪽이 미리 풀어 넘깁니다.
+         * @brief 합성 프레임버퍼를 키로 찾고, 없으면 spec 과 첨부 뷰로 렌더패스와 프레임버퍼를 만들어 넣습니다.
+         * @details 조회와 생성이 **한 임계 구역**입니다. RenderGraph::executeParallel 이 여러 스레드에서 동시에 beginRenderPass 를
+         *          부르므로, 나눠 놓으면 같은 키를 둘이 만들어 하나가 누수됩니다. 첨부 뷰는 부르는 쪽이 미리 찾아서 넘깁니다.
          */
         bool ensureComposite( VkDevice device, const CompositeKey& key, const RenderPassSpec& spec, const VkImageView* pAttachmentView,
                               uint32 attachmentCount, uint32 width, uint32 height, CompositeRecord& outRecord );
         /**
-         * @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 떼어 반환합니다. 파괴는 부르는 쪽이 GPU 펜스 뒤로 미룹니다.
+         * @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 분리해 반환합니다. 파괴는 부르는 쪽이 GPU 펜스 뒤로 미룹니다.
          * @details 실행 중인 커맨드버퍼가 아직 참조할 수 있어 여기서 바로 부수면 안 됩니다(게임뷰 리사이즈가 대표 경로).
          */
         void detachCompositesUsing( RHITextureHandle texture, vector<CompositeRecord>& outListDetached );

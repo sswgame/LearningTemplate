@@ -1,9 +1,9 @@
 /**
  * @file TransientAttachmentPool.h
- * @brief 이름으로 찾는 프레임 첨부(트랜지언트 렌더 타깃) 풀입니다. 파이프라인 XML 이 선언한 첨부를 창 크기로 들고 있습니다.
- * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어집니다(창 크기 · 파이프라인). 프레임 안에서는 이름 → (텍스처, SRV)
+ * @brief 이름으로 찾는 프레임 첨부(트랜지언트 렌더 타깃) 풀입니다. 파이프라인 XML 이 선언한 첨부를 창 크기로 보관합니다.
+ * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어집니다(창 크기, 파이프라인). 프레임 안에서는 이름 → (텍스처, SRV)
  *          조회와 "이 첨부를 이번 프레임에 처음 여는가" 판정만 일어나고, 후자는 같은 레벨의 패스들이 동시에 부릅니다.
- *          언리얼 RDG 는 생명주기가 겹치지 않는 트랜지언트끼리 메모리를 공유하지만 여기는 각 첨부를 프레임 내내 듭니다.
+ *          언리얼 RDG 는 생명주기가 겹치지 않는 트랜지언트끼리 메모리를 공유하지만 여기는 각 첨부를 프레임 내내 보관합니다.
  *          정확성 문제는 아니고 메모리 차이입니다.
  */
 #pragma once
@@ -36,7 +36,7 @@ namespace sw
         {
             RHITextureHandle   _texture{ 0 };
             RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-            uint32             _width{ 0 }; ///< 이 첨부의 실제 크기(풀 크기 / 나눗수, 올림)
+            uint32             _width{ 0 }; ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
             uint32             _height{ 0 };
         };
 
@@ -54,7 +54,7 @@ namespace sw
         TransientAttachmentPool( const TransientAttachmentPool& )            = delete;
         TransientAttachmentPool& operator=( const TransientAttachmentPool& ) = delete;
 
-        /** @brief 앞으로 만들 첨부의 크기입니다. 이미 든 첨부는 바꾸지 않습니다. 크기를 바꾸려면 먼저 놓습니다. */
+        /** @brief 앞으로 만들 첨부의 크기입니다. 이미 있는 첨부는 바꾸지 않습니다. 크기를 바꾸려면 먼저 놓습니다. */
         void   setSize( uint32 width, uint32 height );
         uint32 getWidth() const { return _width; }
         uint32 getHeight() const { return _height; }
@@ -62,12 +62,12 @@ namespace sw
         bool isEmpty() const { return _mapAttachment.empty(); }
 
         /**
-         * @brief 이름으로 첨부를 만듭니다 — 크기는 현재 크기를 `resolutionDivisor` 로 나눈 것(올림)입니다.
+         * @brief 이름으로 첨부를 만듭니다. 크기는 현재 크기를 `resolutionDivisor` 로 나눈 값(올림)입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
         bool allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 resolutionDivisor );
         /**
-         * @brief 프레임 크기와 상관없는 크기(width × height)로 첨부를 만듭니다 — 그림자 맵처럼 화면이 아니라 빛의 볼륨을 담는 타깃용입니다.
+         * @brief 프레임 크기와 상관없는 크기(width × height)로 첨부를 만듭니다. 그림자 맵처럼 화면이 아니라 빛의 볼륨을 담는 타깃용입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
         bool allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 width, uint32 height );
@@ -77,7 +77,7 @@ namespace sw
         RHITextureHandle findTexture( string_view name ) const;
         /** @brief 그 이름의 첨부가 있는지 반환합니다. */
         bool contains( string_view name ) const { return _mapAttachment.find( name ) != _mapAttachment.end(); }
-        /** @brief 모두입니다. 레지스트리 공개 · Present 소스 선택처럼 목록을 훑는 자리용입니다. */
+        /** @brief 전체 첨부입니다. 레지스트리 등록이나 Present 소스 선택처럼 목록을 훑는 곳에서 씁니다. */
         const unordered_map<string, Attachment>& getAll() const { return _mapAttachment; }
 
         /** @brief 모두 놓고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다. 텍스처 SRV 는 텍스처용 해제로 돌려줍니다(버퍼용과 인덱스 공간이 다릅니다). */

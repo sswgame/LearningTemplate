@@ -16,7 +16,7 @@ namespace sw
     {
         struct SpriteMeshBuilderInternal
         {
-            /** @brief 한 축의 구간 하나 — 위치 [start, end] 와 그 구간이 읽는 프레임 좌표 [uvStart, uvEnd] 입니다. */
+            /** @brief 한 축의 구간 하나입니다. 위치 [start, end] 와 그 구간이 읽는 프레임 좌표 [uvStart, uvEnd] 를 가집니다. */
             struct Span
             {
                 float32 _start;
@@ -26,9 +26,9 @@ namespace sw
             };
 
             /**
-             * @brief 한 축을 구간으로 나눕니다(가로는 왼쪽 → 오른쪽, 세로는 아래 → 위). 시작 테두리 · 가운데(늘이거나 되풀이) · 끝 테두리 순입니다.
+             * @brief 한 축을 구간으로 나눕니다(가로는 왼쪽에서 오른쪽, 세로는 아래에서 위). 시작 테두리, 가운데(늘이거나 반복), 끝 테두리 순서입니다.
              * @param length      그 축의 월드 길이
-             * @param borderStart 시작 쪽 테두리(프레임 비율 = 자연 크기의 월드 길이)
+             * @param borderStart 시작 쪽 테두리(프레임 비율이며 자연 크기의 월드 길이와 같습니다)
              * @param borderEnd   끝 쪽 테두리
              * @param bFlipUv     좌표가 축과 반대로 자라는가(세로: v 는 위가 0)
              */
@@ -36,7 +36,7 @@ namespace sw
             {
                 outListSpan.clear();
                 const float32 half = length * 0.5f;
-                // 크기가 테두리 합보다 작으면 테두리를 비율대로 줄인다 — 모서리 텍스처는 그대로 다 보인다(유니티와 같음).
+                // 크기가 테두리 합보다 작으면 테두리를 비율대로 줄인다. 모서리 텍스처는 그대로 다 보인다(유니티와 같음).
                 float32       worldStart = borderStart;
                 float32       worldEnd   = borderEnd;
                 const float32 borderSum  = borderStart + borderEnd;
@@ -64,7 +64,7 @@ namespace sw
                     }
                     else
                     {
-                        // 자연 크기 칸으로 되풀이한다. 마지막 칸은 남은 길이만큼 잘라 UV 도 그만큼만 쓴다. 칸이 상한을 넘으면 칸 크기를 키워 상한에 맞춘다.
+                        // 자연 크기 타일로 반복한다. 마지막 타일은 남은 길이만큼 잘라 UV 도 그만큼만 쓴다. 타일 수가 상한을 넘으면 타일 크기를 키워 상한에 맞춘다.
                         float32      tileLength = naturalTile;
                         const uint32 tileCount  = static_cast<uint32>( MathUtil::ceil( centerLength / tileLength - 1e-4f ) );
                         if ( tileCount > SpriteMeshBuilder::kMaxTileCountPerAxis )
@@ -98,7 +98,7 @@ namespace sw
 
             /**
              * @brief 사각형 하나를 삼각형 둘로 붙입니다. @p mirror 가 -1 이면 X 를 거울에 비춘 뒷면입니다.
-             * @details 감김은 `createSpriteQuad` 와 같다 — 앞면 (왼아래, 오른위, 오른아래) · (왼아래, 왼위, 오른위). X 를 뒤집으면 감김이 뒤집혀 노멀이 +Z 가 된다.
+             * @details 감김은 `createSpriteQuad` 와 같다. 앞면은 (왼아래, 오른위, 오른아래), (왼아래, 왼위, 오른위) 순서이다. X 를 뒤집으면 감김이 뒤집혀 노멀이 +Z 가 된다.
              */
             static void appendQuad( const Span& column, const Span& row, float32 mirror, vector<RHIVertex>& outListVertex )
             {
@@ -113,7 +113,7 @@ namespace sw
                 outListVertex.push_back( makeVertex( right, row._end, normalZ, column._uvEnd, row._uvEnd ) );
             }
 
-            /** @brief 메시 표의 키 해시입니다(값의 비트를 섞습니다). */
+            /** @brief 메시 캐시의 키 해시입니다(값의 비트를 섞습니다). */
             struct DescHash
             {
                 size_t operator()( const SlicedSpriteDesc& desc ) const noexcept
@@ -133,7 +133,7 @@ namespace sw
 
             using SlicedMeshCache = WeakInternCache<SlicedSpriteDesc, Mesh, DescHash>;
 
-            /** @brief 값의 정점을 지어 메시 하나로 만듭니다. 정점이 없으면(크기 0) nullptr 입니다. */
+            /** @brief 값에 맞는 정점을 만들어 메시 하나로 만듭니다. 정점이 없으면(크기 0) nullptr 입니다. */
             static shared_ptr<Mesh> createSlicedMesh( const SlicedSpriteDesc& desc )
             {
                 vector<RHIVertex> listVertex;
@@ -145,7 +145,7 @@ namespace sw
                 return mesh;
             }
 
-            /** @brief 9-슬라이스 · 타일 메시 표입니다. 사라진 칸은 새 칸을 넣을 때 걷는다 — 크기를 끌어 바꾸는 편집은 크기마다 칸을 남긴다. */
+            /** @brief 9-슬라이스와 타일 메시 캐시입니다. 사라진 항목은 새 항목을 넣을 때 정리한다. 크기를 끌어 바꾸는 편집은 크기마다 항목을 남기기 때문이다. */
             static SlicedMeshCache& getSlicedMeshCache()
             {
                 static SlicedMeshCache s_cache{ "SlicedSpriteMesh" };
@@ -172,7 +172,7 @@ namespace sw
         if ( width <= 0.0f || height <= 0.0f )
             return;
 
-        // 테두리는 0..1 로 묶고, 마주 보는 둘의 합이 1 을 넘으면 비율대로 줄인다(가운데가 음수가 되지 않게).
+        // 테두리는 0..1 로 제한하고, 마주 보는 둘의 합이 1 을 넘으면 비율대로 줄인다(가운데가 음수가 되지 않게).
         float32 left   = MathUtil::saturate( desc._border._x );
         float32 bottom = MathUtil::saturate( desc._border._y );
         float32 right  = MathUtil::saturate( desc._border._z );
@@ -193,7 +193,7 @@ namespace sw
         vector<Internal::Span> listColumn;
         vector<Internal::Span> listRow;
         Internal::makeSpans( width, left, right, desc._bTiled != SW_FALSE, false, listColumn );
-        // 세로는 아래 → 위로 자라고 v 는 위가 0 이라 좌표를 뒤집는다. 아래 테두리가 시작 쪽이다.
+        // 세로는 아래에서 위로 자라고 v 는 위가 0 이므로 좌표를 뒤집는다. 아래 테두리가 시작 쪽이다.
         Internal::makeSpans( height, bottom, top, desc._bTiled != SW_FALSE, true, listRow );
 
         outListVertex.reserve( listColumn.size() * listRow.size() * 12 );

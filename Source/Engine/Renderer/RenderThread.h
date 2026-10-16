@@ -1,8 +1,8 @@
 /**
  * @file RenderThread.h
  * @brief 패킷을 전용 렌더 스레드에서, 또는 부르는 스레드에서 바로(inline) 실행합니다.
- * @details start() 로 띄우면 워커가 그래픽스 컨텍스트를 가지고 GT 는 submit() 만 한다.
- *          bind() 만 하면(start 없음) submit() 이 부르는 스레드에서 executeInline 한다.
+ * @details start() 로 띄우면 워커가 그래픽스 컨텍스트를 가지고 GT 는 submit() 만 합니다.
+ *          bind() 만 하면(start 없음) submit() 이 부르는 스레드에서 executeInline 합니다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -24,8 +24,8 @@ namespace sw
 
     /**
      * @class RenderThread
-     * @details RHI 그리기와 Present 를 워커(start)에서, 또는 submit() 안에서 바로 실행한다.
-     *          패킷을 실행하는 스레드에서 bindGraphicsContext 를 부른다.
+     * @details RHI 그리기와 Present 를 워커(start)에서, 또는 submit() 안에서 바로 실행합니다.
+     *          패킷을 실행하는 스레드에서 bindGraphicsContext 를 부릅니다.
      */
     class SW_API RenderThread
     {
@@ -42,7 +42,7 @@ namespace sw
 
         /**
          * @brief 워커 없이 디바이스와 렌더러를 붙입니다(GT 에서 바로 실행합니다).
-         * @details submit() 이 부르는 스레드에서 executePacket 한다.
+         * @details submit() 이 부르는 스레드에서 executePacket 합니다.
          */
         bool bind( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
         /**
@@ -53,15 +53,15 @@ namespace sw
         void stop();
         /**
          * @brief 디바이스와 렌더러를 붙입니다. 전용 워커를 띄울지(`start`) 부르는 스레드에 붙일지(`bind`)는 `-gv_useRenderThread` 를 보고 정합니다.
-         * @details 실행 중에 그 값이 바뀌면 `submit()` 이 모드를 그 자리에서 바꾼다. 그래서 그 변수를 읽는 곳은 이 클래스뿐이다.
+         * @details 실행 중에 그 값이 바뀌면 `submit()` 이 모드를 그 자리에서 바꿉니다. 그래서 그 변수를 읽는 곳은 이 클래스뿐입니다.
          */
         [[nodiscard]] bool attach( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
 
         /**
          * @brief 워커가 있으면 링에 넣고, 없으면 executeInline 합니다.
-         * @details 패킷은 **맞바꾸기**로 들어간다. 호출하는 쪽의 패킷은 링에 있던 지난 패킷(저장소 포함)을 돌려받는다.
-         *          그래서 호출하는 쪽이 패킷 하나를 스크래치로 가지고 매 프레임 다시 채우면 프레임당 할당이 없다. 주의: 옮겨
-         *          넣기(move)로 받으면 링 슬롯의 저장소가 프레임마다 버려진다.
+         * @details 패킷은 **맞바꾸기**로 들어갑니다. 호출하는 쪽의 패킷은 링에 있던 지난 패킷(저장소 포함)을 돌려받습니다.
+         *          그래서 호출하는 쪽이 패킷 하나를 스크래치로 가지고 매 프레임 다시 채우면 프레임당 할당이 없습니다. 주의: 옮겨
+         *          넣기(move)로 받으면 링 슬롯의 저장소가 프레임마다 버려집니다.
          */
         void submit( RenderFramePacket& packet );
         /** @brief 워커가 돌고 있으면 RT 큐가 빌 때까지 기다리고 디바이스 waitIdle 까지 합니다. 워커가 없으면 할 일이 없습니다. */
@@ -89,9 +89,9 @@ namespace sw
         /**
          * @brief 다음에 그리는 프레임의 이미지를 @p filePath 에 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM 입니다. 어느 스레드에서 불러도 됩니다.
          * @details @p sourceTexture 가 0이면 화면에 나간 이미지(Present 결과이며, 에디터면 주 출력으로 게임 뷰가 보이면 게임 뷰, 아니면 씬 뷰)를 읽고,
-         *          아니면 그 렌더 타깃(포맷 @p sourceFormat)을 읽는다. 주 출력이 아닌 에디터 씬 뷰가 그 경우다.
-         *          Present 캡처는 켠 프레임에 아직 비어 있을 수 있어서, 캡처를 켜고 한 프레임을 더 그린 뒤 `endFrame` 다음에 읽는다.
-         *          요청은 렌더 스레드 하나가 받는다(엔진 전역 우편함). 앞 요청이 아직 남아 있으면 덮어쓴다.
+         *          아니면 그 렌더 타깃(포맷 @p sourceFormat)을 읽습니다. 주 출력이 아닌 에디터 씬 뷰가 그 경우입니다.
+         *          Present 캡처는 켠 프레임에 아직 비어 있을 수 있어서, 캡처를 켜고 한 프레임을 더 그린 뒤 `endFrame` 다음에 읽습니다.
+         *          요청은 렌더 스레드 하나가 받습니다(엔진 전역 우편함). 앞 요청이 아직 남아 있으면 덮어씁니다.
          */
         static void requestScreenshot( string_view filePath, RHITextureHandle sourceTexture = 0, RHIFormat sourceFormat = RHIFormat::R8G8B8A8_UNORM );
         /** @brief `requestScreenshot` 요청을 처리한 수입니다(성공과 실패 모두 셉니다). 값이 바뀌면 `getLastScreenshotPath` 가 그 결과를 가리킵니다. */
@@ -130,7 +130,7 @@ namespace sw
         sw::thread          _thread;
         atomic<bool>        _bRunning;
         atomic<bool>        _bStop;
-        atomic<bool>        _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타낸다.
+        atomic<bool>        _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
         bool             _bLastImmediateSubmit;
         uint8            _bScreenshotTaken;                 ///< -gv_screenshot 은 한 장만 찍는다.

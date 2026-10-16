@@ -18,8 +18,8 @@
 namespace sw
 {
     /**
-     * @brief `-gv_renderViewBudget=<n>` — 한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수입니다(0 = 제한 없음).
-     * @details 넘치면 가장 오래 기다린 뷰부터 그리고 나머지는 다음 프레임으로 미룬다(굶지 않는다 — `RenderViewScheduler`).
+     * @brief `-gv_renderViewBudget=<n>`: 한 프레임에 그리는 추가 뷰(CCTV, 백미러, PiP)의 최대 수입니다(0 = 제한 없음).
+     * @details 넘치면 가장 오래 기다린 뷰부터 그리고 나머지는 다음 프레임으로 미룬다(굶지 않는다. `RenderViewScheduler`).
      */
     SW_GLOBAL_VARIABLE( int32, gv_renderViewBudget, 4, "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)" );
 
@@ -41,7 +41,7 @@ namespace sw
                 return settings;
             }
 
-            /** @brief 오브젝트의 메시 경계 구가 절두체와 겹치는지입니다. 메시가 없으면 오브젝트 자리(반지름 1)로 봅니다. 오브젝트가 없으면 보인다고 칩니다. */
+            /** @brief 오브젝트의 메시 경계 구가 절두체와 겹치는지 확인합니다. 메시가 없으면 오브젝트 위치(반지름 1)로 봅니다. 오브젝트가 없으면 보인다고 칩니다. */
             static bool isObjectVisible( const GameObjectManager& manager, const GameObjectHandle& handle, const Frustum& frustum )
             {
                 const GameObject* pObject = manager.resolveGameObject( handle );
@@ -77,7 +77,7 @@ namespace sw
     {
         float32 width  = static_cast<float32>( outputWidth ) * settings._screenRect._z;
         float32 height = static_cast<float32>( outputHeight ) * settings._screenRect._w;
-        // 정수 업스케일이면 실제로 그리는 크기(사각형 / 배율의 내림)의 비율이다 — 키운 뒤에도 픽셀이 정사각이다.
+        // 정수 업스케일이면 실제로 그리는 크기(사각형 / 배율의 내림)의 비율이다. 키운 뒤에도 픽셀이 정사각이다.
         const bool bIntegerUpscale = settings._upscaleZoom > 0 && width > 0.0f && height > 0.0f;
         if ( bIntegerUpscale )
         {

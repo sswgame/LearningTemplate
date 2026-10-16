@@ -5,7 +5,7 @@
  *          이 저장소도 같은 방향이어야 합니다. `Graphics` 는 `Window` 를 include 하지 않고, `IWindow` 가
  *          이 인터페이스를 **구현**합니다. 그래서 인터페이스는 둘 다 볼 수 있는 `Common` 에 있습니다.
  *
- *          다섯 가지가 전부입니다. 스왑체인 생성에 드는 핸들 · 디스플레이 · 크기, 그리고 백엔드 교체가
+ *          다섯 가지가 전부입니다. 스왑체인 생성에 필요한 핸들, 디스플레이, 크기, 그리고 백엔드 교체가
  *          네이티브 표면 재생성을 요구할 때(OpenGL ↔ DXGI 는 픽셀 포맷이 창에 붙습니다) 부를 훅입니다.
  */
 #pragma once
@@ -16,21 +16,21 @@ namespace sw
 {
     /**
      * @class IRenderSurface
-     * @brief 스왑체인이 붙을 네이티브 표면. `IWindow` 가 구현하고 `RHI`·`IRHIDevice` 가 소비합니다.
+     * @brief 스왑체인이 붙을 네이티브 표면입니다. `IWindow` 가 구현하고 `RHI` 와 `IRHIDevice` 가 사용합니다.
      */
     class SW_API IRenderSurface
     {
     public:
-        /** @brief 빈 표면 인터페이스. */
+        /** @brief 빈 표면 인터페이스를 만듭니다. */
         IRenderSurface() = default;
-        /** @brief 가상 소멸. */
+        /** @brief 가상 소멸자입니다. */
         virtual ~IRenderSurface() = default;
         /** @brief 복사를 금지합니다. 표면은 창 하나와 일대일로 묶입니다. */
         IRenderSurface( const IRenderSurface& ) = delete;
         /** @brief 대입을 금지합니다. */
         IRenderSurface& operator=( const IRenderSurface& ) = delete;
 
-        /** @brief 네이티브 표면 핸들입니다(HWND · X11 Window · NSView). */
+        /** @brief 네이티브 표면 핸들입니다(HWND, X11 Window, NSView). */
         virtual void* getSurfaceHandle() const = 0;
         /** @brief 네이티브 디스플레이 연결입니다(X11 Display*). 없으면 nullptr 입니다. */
         virtual void* getSurfaceDisplay() const = 0;
@@ -39,8 +39,8 @@ namespace sw
         /** @brief 표면 높이(픽셀)입니다. */
         virtual uint32 getSurfaceHeight() const = 0;
         /**
-         * @brief 네이티브 표면을 같은 자리에 다시 만듭니다. 백엔드 교체가 그것을 요구할 때만 불립니다.
-         * @return 다시 만들었으면 true. 실패하거나 지원하지 않으면 false — 그 표면을 요구한 백엔드 교체는 그 자리에서 실패합니다.
+         * @brief 네이티브 표면을 같은 위치에 다시 만듭니다. 백엔드 교체가 그것을 요구할 때만 불립니다.
+         * @return 다시 만들었으면 true 입니다. 실패하거나 지원하지 않으면 false 이며, 그 표면을 요구한 백엔드 교체는 그 자리에서 실패합니다.
          */
         [[nodiscard]] virtual bool recreateSurface() = 0;
     };

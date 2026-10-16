@@ -1,11 +1,11 @@
 /**
  * @file OpenGLRHIDeviceInternal.h
- * @brief OpenGL 백엔드의 여러 TU 가 함께 쓰는 플랫폼 헤더 · 확장 상수 · 내부 도우미입니다.
- * @details `OpenGLRHIDevice.cpp` 를 초기화 · 제출 · 코어로 나누면서 세 TU 가 같은 WGL 상수와
- *          같은 도우미를 쓰게 됐습니다. 익명 네임스페이스에 두면 TU 마다 복사되어 "정의만 하고 안 쓰는"
+ * @brief OpenGL 백엔드의 여러 TU 가 함께 쓰는 플랫폼 헤더, 확장 상수, 내부 도우미입니다.
+ * @details `OpenGLRHIDevice.cpp` 를 초기화, 제출, 코어로 나누면서 세 TU 가 같은 WGL 상수와
+ *          같은 도우미를 쓰게 됐습니다. 익명 네임스페이스에 두면 TU 마다 복사되어 "정의만 하고 쓰지 않는"
  *          경고가 나고, 실제로 그렇게 됐습니다.
- * @note 백엔드 내부 전용입니다. GLX(X11) 는 여기 두지 않습니다 — 그것을 쓰는 `GlxPlatformContext.cpp` 만 include 합니다
- *       (X11 매크로가 GL 백엔드의 다른 TU 로 번지지 않게, `CheckX11Isolation.py`).
+ * @note 백엔드 내부 전용입니다. GLX(X11)는 여기 두지 않고, 그것을 쓰는 `GlxPlatformContext.cpp` 만 include 합니다
+ *       (X11 매크로가 GL 백엔드의 다른 TU 로 번지지 않게 하려는 것으로, `CheckX11Isolation.py` 가 검사합니다).
  */
 #pragma once
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
@@ -34,7 +34,7 @@ namespace sw
         static constexpr GLenum kGPUMemoryInfoCurrentAvailableNvx = 0x9049; ///< GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX (KB)
         static constexpr GLenum kTextureFreeMemoryAti             = 0x87FC; ///< TEXTURE_FREE_MEMORY_ATI (KB × 4)
 
-        /** @brief 컨텍스트가 이 확장을 내놓는지 봅니다(`glGetStringi( GL_EXTENSIONS, … )`). 컨텍스트가 붙은 스레드에서 부릅니다. */
+        /** @brief 컨텍스트가 이 확장을 제공하는지 확인합니다(`glGetStringi( GL_EXTENSIONS, … )`). 컨텍스트가 붙은 스레드에서 부릅니다. */
         static bool hasGlExtension( const utf8* pName )
         {
             GLint extensionCount{ 0 };
