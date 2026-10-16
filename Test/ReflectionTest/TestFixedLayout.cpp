@@ -237,6 +237,20 @@ SW_TEST_CASE( FixedLayoutTest, SchemaChangesAreRejected )
 }
 
 /**
+ * @brief [FixedLayoutTest] 이름 변경 리다이렉트(타입 · 열거형 Alias, 프로퍼티 Alias, ValueAlias, Removed)는 스키마 해시를 바꾸지 않습니다
+ * @details 리다이렉트는 옛 데이터를 읽기 위한 선언이고 바이트 배치와 무관합니다(docs/plans/RenameRedirects.md 2 절 규칙 5). 선언만 다른 짝의 정규 문자열에서
+ *          이름(`Declared` → `Plain`)만 맞추면 글자까지 같고, 그 해시가 선언 없는 쪽의 해시와 같아야 합니다.
+ */
+SW_TEST_CASE( FixedLayoutTest, RenameRedirectsDoNotChangeTheSchemaHash )
+{
+    const sw::string plainCanonical    = findCanonical<sw::FixedRedirectPlainSample>();
+    const sw::string declaredCanonical = replaceAll( findCanonical<sw::FixedRedirectDeclaredSample>(), "Declared", "Plain" );
+    SW_EXPECT_EQUAL( plainCanonical, declaredCanonical );
+    SW_EXPECT_EQUAL( sw::FixedLayout::getSchemaHash<sw::FixedRedirectPlainSample>(),
+                     sw::FixedLayout::computeSchemaHash( sw::FixedLayout::kVersion, declaredCanonical, {} ) );
+}
+
+/**
  * @brief [FixedLayoutTest] FQN 이 같고 필드 순서만 바뀐 빌드가 쓴 바이트도 SchemaMismatch 입니다
  * @details 한 빌드에 같은 FQN 의 두 선언을 둘 수 없으므로, `FixedOrderBSample` 의 정규 문자열에서 타입 이름만 `FixedOrderASample` 로 바꿔
  *          "필드 순서를 바꾼 A" 의 해시를 만들고 그 해시와 B 의 본문으로 스트림을 씁니다. 해시에 이름이 아닌 순서가 들어가 있어야 거절됩니다.

@@ -423,7 +423,8 @@ namespace sw
         string                       _name;
         string                       _fullyQualifiedName;
         vector<string>               _listAlias;
-        vector<pair<string, string>> _listValueAlias;
+        vector<pair<string, string>> _listValueAlias;        ///< `ValueAlias = "Old:Current"` — 이름을 바꾼 열거자의 (옛 이름, 지금 열거자)
+        vector<pair<string, string>> _listRemovedEnumerator; ///< `Removed = "Old:Replacement"` — 지운 열거자의 (옛 이름, 대신 읽을 열거자)
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedEnumeratorInfo> _listEnumerator;
         string                       _invalidEnumerator;
@@ -441,6 +442,7 @@ namespace sw
             , _fullyQualifiedName{}
             , _listAlias{}
             , _listValueAlias{}
+            , _listRemovedEnumerator{}
             , _listCustomMeta{}
             , _listEnumerator{}
             , _invalidEnumerator{}

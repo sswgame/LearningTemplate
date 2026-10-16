@@ -884,13 +884,16 @@ namespace sw
     const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
                                                        bool bIgnoreCaseKeys, bool& bCaseVariant )
     {
-        const PropertyInfo* pMatched = nullptr;
-        bCaseVariant                 = false;
+        // 지금 이름을 모두 본 뒤에만 옛 이름(Alias)을 본다. 앞 프로퍼티의 옛 이름이 뒤 프로퍼티의 지금 이름을 가로채지 않는다.
+        bCaseVariant = false;
         for ( const PropertyInfo& prop : listProp )
         {
             if ( SerializerUtil::keysEqual( keyRaw, prop._name.c_str(), bIgnoreCaseKeys ) )
                 return &prop;
             bCaseVariant = bCaseVariant || SerializerUtil::keysEqual( keyRaw, prop._name.c_str(), true );
+        }
+        for ( const PropertyInfo& prop : listProp )
+        {
             for ( const hashed_string& alias : prop._listAlias )
             {
                 if ( alias.empty() )
@@ -900,7 +903,22 @@ namespace sw
                 bCaseVariant = bCaseVariant || SerializerUtil::keysEqual( keyRaw, alias.c_str(), true );
             }
         }
-        return pMatched;
+        return nullptr;
+    }
+
+    size_t SerializerUtil::findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash )
+    {
+        for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
+        {
+            if ( listProp[propIndex].getNameHash() == nameHash )
+                return propIndex;
+        }
+        for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
+        {
+            if ( listProp[propIndex].matchesRedirectHash( nameHash ) )
+                return propIndex;
+        }
+        return listProp.size();
     }
 
     bool SerializerUtil::transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,

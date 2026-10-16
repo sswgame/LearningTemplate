@@ -444,3 +444,44 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumeratorsWhoseNameHashesClashAreReported
     registry.unregisterTypesByModule( "TestEnumClash" );
 #endif
 }
+
+/**
+ * @brief [ReflectionEnumInfoTest] 지금 열거자 이름이 늘 리다이렉트보다 먼저다 — 정상 경로는 리다이렉트 표를 보지 않는다
+ * @details 생성기는 지금 열거자와 같은 옛 이름을 막는다. 손으로 같은 이름을 다른 값으로 넣어도 지금 이름의 값이 나와야 지금 이름 읽기가 표를 거치지 않은 것이다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, CurrentEnumeratorNameWinsOverItsRedirect )
+{
+    sw::EnumInfo info;
+    info._name               = sw::hashed_string( "RedirectOrderColor" );
+    info._fullyQualifiedName = info._name;
+    info._mapNameToValue     = {
+        {  sw::hashed_string( "Red" ), 0},
+        {sw::hashed_string( "Green" ), 1}
+    };
+    info._mapValueToName = {
+        {0,   sw::hashed_string( "Red" )},
+        {1, sw::hashed_string( "Green" )}
+    };
+    info._mapRedirectNameToValue = {
+        {sw::hashed_string( "Green" ), 0},
+        { sw::hashed_string( "Lime" ), 1}
+    };
+
+    int64 value{ -1 };
+    SW_EXPECT_TRUE( info.findValueByNameHash( sw::hashed_string( "Green" ).getHash(), value ) );
+    SW_EXPECT_EQUAL( int64( 1 ), value );
+    SW_EXPECT_TRUE( info.tryParseText( "green", value ) );
+    SW_EXPECT_EQUAL( int64( 1 ), value );
+    SW_EXPECT_TRUE( info.tryParse( "Green", value ) );
+    SW_EXPECT_EQUAL( int64( 1 ), value );
+
+    // 지금 이름에 없는 옛 이름만 표로 간다. 쓰는 이름은 지금 이름이다.
+    value = -1;
+    SW_EXPECT_TRUE( info.findValueByNameHash( sw::hashed_string( "Lime" ).getHash(), value ) );
+    SW_EXPECT_EQUAL( int64( 1 ), value );
+    value = -1;
+    SW_EXPECT_TRUE( info.tryParseText( "LIME", value ) );
+    SW_EXPECT_EQUAL( int64( 1 ), value );
+    SW_EXPECT_TRUE( info.toString( 1 ) == sw::hashed_string( "Green" ) );
+    SW_EXPECT_FALSE( info.tryParseText( "Teal", value ) );
+}

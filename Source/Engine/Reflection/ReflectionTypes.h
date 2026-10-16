@@ -303,13 +303,18 @@ namespace sw
         /** @brief 이름이나 별칭 중 하나의 해시와 일치하면 true 입니다. */
         bool matchesNameHash( const uint32 nameOrAliasHash ) const noexcept
         {
-            if ( getNameHash() == nameOrAliasHash )
-                return true;
-            if ( _listAlias.empty() )
-                return false;
+            return getNameHash() == nameOrAliasHash || matchesRedirectHash( nameOrAliasHash );
+        }
+
+        /**
+         * @brief 옛 이름(`PROPERTY( Alias = … )`) 중 하나의 해시와 일치하면 true 입니다. 지금 이름은 보지 않습니다.
+         * @details 태그 스트림 읽기는 모든 프로퍼티의 지금 이름을 먼저 보고, 없을 때만 이것을 봅니다(`SerializerUtil::findPropertyIndexByNameHash`).
+         */
+        bool matchesRedirectHash( const uint32 oldNameHash ) const noexcept
+        {
             for ( const hashed_string& alias : _listAlias )
             {
-                if ( alias.empty() == false && alias.getHash() == nameOrAliasHash )
+                if ( alias.empty() == false && alias.getHash() == oldNameHash )
                     return true;
             }
             return false;
@@ -486,8 +491,15 @@ namespace sw
     /// @brief 등록된 enum 의 정보입니다. 이름과 값의 대응, Flags 여부, Invalid 와 Count 센티널을 담습니다.
     struct SW_API EnumInfo
     {
-        unordered_map<hashed_string, int64> _mapNameToValue;
+        unordered_map<hashed_string, int64> _mapNameToValue; ///< 지금 열거자 이름만 담습니다. 옛 이름은 `_mapRedirectNameToValue` 에 있습니다
         unordered_map<int64, hashed_string> _mapValueToName;
+        /**
+         * @brief 옛 열거자 이름에서 지금 값으로 가는 리다이렉트 표입니다. 이름 변경(`ENUM( ValueAlias = "Old:New" )`)과 지운 열거자의 대체
+         *        (`ENUM( Removed = "Old:Replacement" )`)를 생성기가 채웁니다.
+         * @details 읽기(바이너리 이름 해시, 텍스트 이름)는 지금 이름에서 찾지 못했을 때만 이 표를 봅니다. 쓰기는 이 이름을 쓰지 않습니다.
+         *          선언이 없는 옛 이름은 여기 없으므로 읽기가 실패합니다(조용히 기본값으로 읽지 않습니다).
+         */
+        unordered_map<hashed_string, int64> _mapRedirectNameToValue;
 #if !defined( SW_SHIPPING )
         unordered_map<hashed_string, string> _mapCustomMeta;
 #endif
@@ -641,23 +653,17 @@ namespace sw
         }
 
         /**
-         * @brief 이름 해시로 열거자 값을 찾습니다. 원본 이름과 ValueAlias 를 모두 찾습니다.
+         * @brief 이름 해시로 열거자 값을 찾습니다. 지금 이름에 없으면 리다이렉트 표(`_mapRedirectNameToValue`)를 한 번 봅니다.
          * @details 바이너리는 열거자를 이 해시로 저장한다. 값이 아니라 이름이 열거자의 정체성이기 때문이다.
          *          표식 값(`Invalid`, `Count`)도 받으며, 이 규칙은 `tryParseText` 와 같다. 필드에 들어 있는 값을 적힌 그대로 읽는다.
          *          이름 해시는 대소문자를 구분하지 않는다. `hashed_string` 이 그렇고, 텍스트 읽기도 마찬가지다.
-         *          ValueAlias 로 남긴 이전 이름도 새 열거자로 읽힌다. 실제 게임 데이터가 생긴 뒤 이름을 바꿀 때 쓰는 수단이고, 그 전에는 데이터를 새 이름으로 다시 쓴다.
+         *          옛 이름(`ValueAlias` · `Removed`)은 실제 게임 데이터가 생긴 뒤 이름을 바꾸거나 지울 때 쓰는 수단이고, 그 전에는 데이터를 새 이름으로 다시 쓴다.
          */
         [[nodiscard]] bool findValueByNameHash( uint32 nameHash, int64& outValue ) const
         {
-            for ( const auto& [nameKey, enumValue] : _mapNameToValue )
-            {
-                if ( nameKey.getHash() == nameHash )
-                {
-                    outValue = enumValue;
-                    return true;
-                }
-            }
-            return false;
+            if ( findInMapByNameHash( _mapNameToValue, nameHash, outValue ) )
+                return true;
+            return findInMapByNameHash( _mapRedirectNameToValue, nameHash, outValue );
         }
 
         /** @brief 값에 해당하는 intern 된 열거자 이름입니다. Invalid 나 Count 센티널이면 nullptr 입니다. */
@@ -688,15 +694,13 @@ namespace sw
                 }
             }
 
-            for ( const auto& [nameKey, enumValue] : _mapNameToValue )
+            int64 namedValue{ 0 };
+            if ( findValueByText( name, namedValue ) )
             {
-                if ( StringUtil::equals( name, nameKey.view(), true ) )
-                {
-                    if ( isValidValue( enumValue ) == false )
-                        return false;
-                    outValue = enumValue;
-                    return true;
-                }
+                if ( isValidValue( namedValue ) == false )
+                    return false;
+                outValue = namedValue;
+                return true;
             }
 
             int64      flagsValue{ 0 };
@@ -724,14 +728,8 @@ namespace sw
                 outValue = 0;
                 return true;
             }
-            for ( const auto& [nameKey, enumValue] : _mapNameToValue )
-            {
-                if ( StringUtil::equals( trimmed, nameKey.view(), true ) )
-                {
-                    outValue = enumValue;
-                    return true;
-                }
-            }
+            if ( findValueByText( trimmed, outValue ) )
+                return true;
             if ( _bIsBitFlag != SW_FALSE && tryParseFlags( trimmed, outValue ) )
                 return true;
             int64 number{ 0 };
@@ -756,6 +754,45 @@ namespace sw
         }
 
     private:
+        /** @brief 이름 → 값 표 하나에서 이름 해시로 찾습니다. */
+        [[nodiscard]] static bool findInMapByNameHash( const unordered_map<hashed_string, int64>& mapNameToValue, uint32 nameHash, int64& outValue )
+        {
+            for ( const auto& [nameKey, enumValue] : mapNameToValue )
+            {
+                if ( nameKey.getHash() == nameHash )
+                {
+                    outValue = enumValue;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** @brief 이름 → 값 표 하나에서 글(대소문자 무시)로 찾습니다. 글을 intern 하지 않습니다. */
+        [[nodiscard]] static bool findInMapByText( const unordered_map<hashed_string, int64>& mapNameToValue, string_view text, int64& outValue )
+        {
+            for ( const auto& [nameKey, enumValue] : mapNameToValue )
+            {
+                if ( StringUtil::equals( text, nameKey.view(), true ) )
+                {
+                    outValue = enumValue;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * @brief 열거자 이름 글(대소문자 무시)로 값을 찾습니다. 지금 이름에 없을 때만 리다이렉트 표를 봅니다.
+         * @details 텍스트 읽기(`tryParse` · `tryParseText` · `tryParseFlags`)가 모두 이 함수를 써서 바이너리(`findValueByNameHash`)와 같은 옛 이름을 받습니다.
+         */
+        [[nodiscard]] bool findValueByText( string_view text, int64& outValue ) const
+        {
+            if ( findInMapByText( _mapNameToValue, text, outValue ) )
+                return true;
+            return findInMapByText( _mapRedirectNameToValue, text, outValue );
+        }
+
         /** @brief `A | B` 를 읽습니다. 토큰마다 알려진 이름(대소문자 무시)이어야 하며, 하나라도 모르면 false 입니다. 표식 값 검사는 부르는 쪽이 합니다. */
         [[nodiscard]] bool tryParseFlags( string_view text, int64& outValue ) const
         {
@@ -769,16 +806,10 @@ namespace sw
                 const string_view token        = StringUtil::trim( text.substr( startPos, endPos - startPos ) );
                 if ( token.empty() == false )
                 {
-                    bool bKnown = false;
-                    for ( const auto& [nameKey, enumValue] : _mapNameToValue )
-                    {
-                        if ( StringUtil::equals( token, nameKey.view(), true ) )
-                        {
-                            result |= enumValue;
-                            bKnown = true;
-                            break;
-                        }
-                    }
+                    int64      tokenValue{ 0 };
+                    const bool bKnown = findValueByText( token, tokenValue );
+                    if ( bKnown )
+                        result |= tokenValue;
                     // `None` 은 0 열거자가 없는 플래그에 `toStringFlags` 가 0 을 적는 이름이다 . 읽을 때도 0 이어야 왕복이 맞는다.
                     if ( bKnown == false && StringUtil::equals( token, constant::reflection::kNone, true ) == false )
                         return false;

@@ -1403,6 +1403,105 @@ namespace sw
             }
 
             /**
+             * @brief 프로퍼티의 옛 이름(`PROPERTY( Alias = … )`)이 같은 타입의 지금 이름이나 다른 옛 이름과 겹치지 않는지 봅니다.
+             * @details 이름 해시는 대소문자를 가리지 않으므로 비교도 그렇게 한다. 겹치면 저장된 칸이 어느 프로퍼티로 읽힐지 선언만 보고 알 수 없다.
+             *          읽기는 지금 이름을 먼저 보지만(`SerializerUtil::findPropertyIndexByNameHash`), 그 순서에 기대는 선언은 여기서 멈춘다.
+             */
+            static void validatePropertyRedirects( MemberCollector& collector )
+            {
+                const vector<ParsedPropertyInfo>& listProperty = collector._pType->_listProperty;
+                vector<string_view>               listSeenAlias{};
+                for ( const ParsedPropertyInfo& prop : listProperty )
+                {
+                    for ( const string& alias : prop._listAlias )
+                    {
+                        const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name );
+                        for ( const ParsedPropertyInfo& other : listProperty )
+                        {
+                            if ( StringUtil::equals( alias, other._name, true ) )
+                            {
+                                SW_LOG_ERROR( "ERROR: PROPERTY( Alias = %# ) on '%#' is the current name of '%#' - an old name must not be a field that exists now.", alias,
+                                              owner, other._name );
+                                collector._bHasError = SW_TRUE;
+                            }
+                        }
+                        for ( const string_view seen : listSeenAlias )
+                        {
+                            if ( StringUtil::equals( alias, seen, true ) )
+                            {
+                                SW_LOG_ERROR( "ERROR: PROPERTY( Alias = %# ) on '%#' is declared twice in '%#' - one old name reads into one field.", alias, owner,
+                                              collector._pType->_fullyQualifiedName );
+                                collector._bHasError = SW_TRUE;
+                            }
+                        }
+                        listSeenAlias.push_back( alias );
+                    }
+                }
+            }
+
+            /** @brief 열거자 목록에서 이름(대소문자 무시)이 같은 열거자입니다. 없으면 nullptr 입니다. */
+            static const ParsedEnumeratorInfo* findEnumeratorIgnoreCase( const ParsedEnumInfo& enumInfo, const string_view name )
+            {
+                for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
+                {
+                    if ( StringUtil::equals( enumerator._name, name, true ) )
+                        return &enumerator;
+                }
+                return nullptr;
+            }
+
+            /**
+             * @brief 열거자 리다이렉트(`ValueAlias` · `Removed`)를 검사합니다. 틀리면 오류를 남기고 false 입니다.
+             * @details 항목마다 `옛 이름:대상` 꼴이어야 하고, 대상은 지금 열거자여야 하며(대소문자까지 같게 적는다. 생성 코드가 그 이름으로 값을 읽는다),
+             *          옛 이름은 지금 열거자가 아니어야 하고, 두 목록을 합쳐 한 번만 적는다. 대상이 없는 리다이렉트를 버리면 선언한 이름 변경이 말없이 사라진다.
+             */
+            [[nodiscard]] static bool validateEnumeratorRedirects( const ParsedEnumInfo& enumInfo )
+            {
+                bool                                      bValid       = true;
+                const vector<pair<string, string>>* const arrList[]    = { &enumInfo._listValueAlias, &enumInfo._listRemovedEnumerator };
+                const utf8* const                         arrKeyName[] = { "ValueAlias", "Removed" };
+                vector<string_view>                       listSeenOld{};
+                for ( size_t listIndex = 0; listIndex < std::size( arrList ); ++listIndex )
+                {
+                    for ( const auto& [oldName, targetName] : *arrList[listIndex] )
+                    {
+                        const utf8* const pKey = arrKeyName[listIndex];
+                        if ( oldName.empty() || targetName.empty() )
+                        {
+                            SW_LOG_ERROR( "ERROR: ENUM( %# ) on '%#' expects \"Old:Target\", got '%#:%#'.", pKey, enumInfo._fullyQualifiedName, oldName, targetName );
+                            bValid = false;
+                            continue;
+                        }
+                        const ParsedEnumeratorInfo* pTarget = findEnumeratorIgnoreCase( enumInfo, targetName );
+                        if ( pTarget == nullptr || pTarget->_name != targetName )
+                        {
+                            SW_LOG_ERROR( "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is not an enumerator of it (spell it as declared).", pKey, oldName, targetName,
+                                          enumInfo._fullyQualifiedName, targetName );
+                            bValid = false;
+                        }
+                        const ParsedEnumeratorInfo* pCurrent = findEnumeratorIgnoreCase( enumInfo, oldName );
+                        if ( pCurrent != nullptr )
+                        {
+                            SW_LOG_ERROR( "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is still an enumerator; an old name must be one that no longer exists.", pKey,
+                                          oldName, targetName, enumInfo._fullyQualifiedName, pCurrent->_name );
+                            bValid = false;
+                        }
+                        for ( const string_view seen : listSeenOld )
+                        {
+                            if ( StringUtil::equals( seen, oldName, true ) )
+                            {
+                                SW_LOG_ERROR( "ERROR: ENUM() on '%#' declares the old enumerator name '%#' twice (ValueAlias and Removed together count once).",
+                                              enumInfo._fullyQualifiedName, oldName );
+                                bValid = false;
+                            }
+                        }
+                        listSeenOld.push_back( oldName );
+                    }
+                }
+                return bValid;
+            }
+
+            /**
              * @brief 표시 메타를 검사하고 정리합니다 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 싣는다), 표에 있는 단위를 `Meta = "Units=…"` 로
              *        적으면 거절하고, `EditCondition` 은 네 꼴 중 하나여야 하며, C 고정 배열의 원소는 컨테이너일 수 없습니다.
              * @details 조건식이 가리키는 이름은 기반 클래스의 것일 수 있어 여기서는 꼴만 본다 — 이름은 등록된 뒤 `PropertyEditCondition::parse` 가 보고,
@@ -1848,6 +1947,7 @@ namespace sw
             clang_visitChildren( cursor, AstVisitorInternal::memberCollectVisitor, &collector );
             // 메서드는 프로퍼티 뒤에 선언될 수 있다 — 이름으로 가리키는 애노테이션은 멤버를 다 모은 뒤에 대조한다.
             AstVisitorInternal::validateMemberFunctions( collector );
+            AstVisitorInternal::validatePropertyRedirects( collector );
             if ( collector._bHasError == SW_TRUE )
             {
                 markHeaderError( outHeader );
@@ -1930,6 +2030,11 @@ namespace sw
             }
             if ( enumInfo._countEnumerator.empty() == false && enumInfo._invalidEnumerator.empty() )
                 enumInfo._invalidEnumerator = enumInfo._countEnumerator;
+            if ( AstVisitorInternal::validateEnumeratorRedirects( enumInfo ) == false )
+            {
+                markHeaderError( outHeader );
+                return;
+            }
         }
 
         // **비트플래그인지는 선언이 정한다. 값의 모양이 아니다.** 비트플래그 열거형은 `ENUM( Flags )` 로 **명시한다.**
