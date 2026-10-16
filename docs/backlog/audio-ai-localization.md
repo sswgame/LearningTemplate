@@ -12,10 +12,10 @@
   쿠킹에는 문화권 필터가 없어 `stagedCultures` 밖 문화권의 번역 테이블도 팩에 들어간다(언리얼은 스테이지 목록 밖 문화권을 빼고 패키징한다) — 목록 밖 테이블이 생기면 쿠킹에서 거른다.
   아이템 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 없다(무기 이름은 HUD 가 `getStringByText` 로 쓴다).
 
-- `D5-3` [기능] **NPC 하루 일정(`GameFramework/Base/Actor/AI/Schedule`)의 남은 것.** HarvestValley 마을 사람이 첫 사용처다(`FarmVillageDirectorComponent` — 판 상태 시계로 일정을 돌리고
-  `Villager.<id>` 몸이 일정상 자리를 곧장 따라간다, 시나리오 `harvestvalley/automation/schedule`). 남은 것: (1) 몸이 `NavAgent` 로 길을 따라가지 않는다(지금은 일정상 자리로 순간 이동 — 일정의 경로가 곧은 선이라 보이는 차이는 작다).
-  (2) 끼어들기(말 걸기)와 호감도를 쓰게 되면 `ScheduleSaveState` 를 디렉터의 상태 바이트에 싣는다(지금은 머리만 — 일정이 시계의 함수라 복원하면 같은 자리에 선다).
-  (3) 에디터 패널(`ScheduleDebugPanel`)을 실물로 열어 보지 않았다. (4) `AI/Schedule/README.md` 는 없다. 목록 함수는 시스템을 같은 스레드에서 읽는다고 가정한다.
+- `D5-3` [기능] **NPC 하루 일정(`GameFramework/Base/Actor/AI/Schedule`, `README.md`)의 남은 것.** HarvestValley 마을 사람이 첫 사용처다(`FarmVillageDirectorComponent` — 몸이 마을 내비 격자 위
+  `NavAgent` 로 일정상 자리를 쫓는다, 시나리오 `harvestvalley/automation/schedule`). 남은 것: (1) 끼어들기(말 걸기)와 호감도를 거는 곳이 생기면 `ScheduleSaveState` 를 디렉터의 상태 바이트에 싣는다
+  — 지금은 끼어들기 · 호감도를 쓰는 코드가 없어 복원할 상태가 모두 시계에서 나오므로 실을 바이트가 없다(먼저 실으면 쓰지 않는 형식을 굳힌다). (2) 에디터 패널(`ScheduleDebugPanel`)을 실물로 열어 보지 않았다(에디터 시나리오 쪽 일).
+  (3) 내비 장애물은 이름 목록의 오브젝트 자리 + 반지름이다(메시 경계는 비동기 로드라 결정적이지 않아 쓰지 않았다). 시계를 감지 않고 오래 걸으면 나무 옆에서 미끄러지며 일정상 자리를 3 m 넘게 놓칠 수 있다(놓치면 그 자리에 놓인다).
 
 - `D5-4` [기능] **게임 로직 자동화(2026-10-15, `Engine/Automation/README.md`)의 남은 것.** 탑승 단계 `Mount` · `Dismount` 와 탐침 `Pawn.Seat` 은 탈것을 쓰는 게임이 없어 실제로 돌리지 않았다
   (키트 `OpenWorldWestern` 의 말이 생기면 시나리오로 — 단계는 대상 고르기 규칙 `AutomationTarget` 을 이미 쓴다).
