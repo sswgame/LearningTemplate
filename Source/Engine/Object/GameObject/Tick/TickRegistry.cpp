@@ -61,11 +61,30 @@ namespace sw
             /** @brief 그룹의 단계 첫 그룹입니다(물리 앞이면 0, 뒤면 PostPhysics). */
             static uint8 getPhaseFirstGroup( uint8 group ) { return group >= kPostPhysicsGroup ? kPostPhysicsGroup : 0; }
 
-            /** @brief 순서 키로, 같으면 등록 순서로 비교합니다. 후보 목록을 정렬할 때의 유일한 규칙입니다. */
+            /** @brief 스테이지 안의 순서를 정하는 키입니다(순서 키, 오브젝트 id). 전체 재구축과 증분 끼움이 같은 키와 같은 비교를 쓰므로 두 길의 순서가 어긋날 수 없다. */
+            struct StageOrder
+            {
+                uint8  _orderKey{ 0 };
+                uint64 _objectID{ 0 };
+            };
+
+            /** @brief 스테이지 안의 순서 규칙의 유일한 정의입니다. @p left 가 @p right 보다 엄격하게 앞이면 true 입니다(같은 키면 둘 다 false). */
+            static bool isOrderedBefore( const StageOrder& left, const StageOrder& right )
+            {
+                if ( left._orderKey != right._orderKey )
+                    return left._orderKey < right._orderKey;
+                return left._objectID < right._objectID;
+            }
+
+            /** @brief `isOrderedBefore` 로, 같은 키(한 오브젝트의 항목끼리)면 등록 순서로 비교합니다. 후보 목록을 정렬할 때의 규칙입니다. */
             static bool isBefore( const StageCandidate& left, const StageCandidate& right )
             {
-                if ( left._item._orderKey != right._item._orderKey )
-                    return left._item._orderKey < right._item._orderKey;
+                const StageOrder leftOrder{ left._item._orderKey, left._objectID };
+                const StageOrder rightOrder{ right._item._orderKey, right._objectID };
+                if ( isOrderedBefore( leftOrder, rightOrder ) )
+                    return true;
+                if ( isOrderedBefore( rightOrder, leftOrder ) )
+                    return false;
                 return left._originalIndex < right._originalIndex;
             }
 
@@ -675,15 +694,15 @@ namespace sw
                     _listStage.insert( _listStage.begin() + static_cast<ptrdiff_t>( insertAt ), std::move( created ) );
                 }
                 TickStage& stage = _listStage[stageIndex];
-                // 전체 재구축은 스테이지 안을 (순서 키, 오브젝트 id) 순으로 둔다(후보를 id 순으로 모으고 `isBefore` 로 정렬) — 같은 키로 끼워 두 길의 순서를 맞춘다.
-                size_t low  = 0;
-                size_t high = stage._listItem.size();
+                // 전체 재구축과 같은 순서 규칙(`isOrderedBefore`)으로 끼운다. 같은 키면 뒤에 붙는다.
+                const TickRegistryInternal::StageOrder entryOrder{ entry._item._orderKey, objectID };
+                size_t                                 low  = 0;
+                size_t                                 high = stage._listItem.size();
                 while ( low < high )
                 {
-                    const size_t middle   = low + ( high - low ) / 2;
-                    const uint8  otherKey = stage._listItem[middle]._orderKey;
-                    const bool   bAfter   = otherKey > entry._item._orderKey || ( otherKey == entry._item._orderKey && stage._listItemObjectID[middle] > objectID );
-                    if ( bAfter )
+                    const size_t                           middle = low + ( high - low ) / 2;
+                    const TickRegistryInternal::StageOrder otherOrder{ stage._listItem[middle]._orderKey, stage._listItemObjectID[middle] };
+                    if ( TickRegistryInternal::isOrderedBefore( entryOrder, otherOrder ) )
                         high = middle;
                     else
                         low = middle + 1;

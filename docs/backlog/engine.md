@@ -61,10 +61,6 @@
 - `C-36` [정리] **데이터 주도 구조 정리(2026-10-16, 사용자 지시 "원천적인 문제 해결").** 6 영역 조사가 경로 리터럴 약 200곳 · 조용한 폴백 약 60곳 · 이중 정본 약 30곳을 드러냈다. 뿌리 원인 · 형식으로 막는 해법 · 작업 묶음 W0~W8 은 [데이터 주도 구조 정리 계획](../plans/DataDriven.md).
   기준은 "게이트는 최후의 수단" — 위반을 쓸 수 없는 형식(`DataPath` · `Optional` · `[[nodiscard]]` 로더 결과)이 먼저고 린트 `CheckDataDrivenStructure` 는 틈을 지키는 안전망이다. 진행 표는 그 게이트의 `--summary`.
 
-- `C-37` [정리] **`runParallelByCost` 의 비용 판단에 시계를 주입할 수 있게 한다.** 판단(경과 3 us, 남은 예상 16 us)이 `Stopwatch` 에 직접 기대어 "아주 가벼운 일은 직렬로 끝난다" 테스트
-  (`TaskManagerTest.RunParallelByCostKeepsVeryLightWorkSerial`)가 호출 스레드 선점 잡음에 흔들린다. 지금은 호출 기록(구간 열)으로 스레드 id 를 없애고 잠금 없는 기록으로 잡음을 줄인 뒤 스무 번까지 다시 본다(Debug 에서 6 개 동시에 300 회씩 통과).
-  구조로 풀려면 `Core/Task/TaskManager.cpp` 의 `kCostProbeNanos` · `kSerialBudgetNanos` 판단을 "경과 시각을 돌려주는 함수"를 받는 작은 결정 함수로 빼 테스트가 가짜 시계를 넣게 한다. 무거운 쪽 테스트는 이미 시계가 단조라는 것에만 기대 결정적이다.
-
 - `D1-2` [기능] **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다

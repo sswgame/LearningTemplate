@@ -91,6 +91,16 @@ namespace
             return listCall;
         }
     };
+
+    /** @brief 부를 때마다 정해진 만큼 가는 가짜 시계입니다. 호출 스레드 하나만 부르므로 잠금이 필요 없다. */
+    int64 gFakeClockNanos     = 0;
+    int64 gFakeClockStepNanos = 1;
+
+    int64 readFakeClock() noexcept
+    {
+        gFakeClockNanos += gFakeClockStepNanos;
+        return gFakeClockNanos;
+    }
 } // namespace
 
 /**
@@ -1160,8 +1170,8 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsHeavyItemsAtTheFirstItem )
 
 /**
  * @brief [TaskManagerTest] `runParallelByCost`: 아주 가벼운 일은 깨우지 않고 호출 스레드가 직렬로 끝낸다
- * @details 항목 하나가 수 ns 인 일 4000 개는 직렬 몇 us 다. 나누면 깨우는 비용이 더 크다. 직렬 길은 구간을 1, 2, 4, … 개씩 차례로 부르므로 호출 기록이 정확히 그 열이면 나뉘지 않은 것이다
- *          (나뉘면 남은 구간이 다른 크기의 청크로 쪼개져 열이 어긋난다). 호출 스레드가 몇 us 선점되면 비용이 부풀어 나뉠 수 있어, 이 한 가지 잡음만 스무 번까지 다시 본다(시계를 주입할 수 없는 동안의 한계 — 백로그 참고).
+ * @details 가짜 시계가 부를 때마다 1 ns 만 가므로 경과는 비용 문턱(3 us)에 닿지 않는다. 직렬 길은 구간을 1, 2, 4, … 개씩 차례로 부르므로 호출 기록이 정확히 그 열이면 나뉘지 않은 것이다.
+ *          실제 시계를 쓰지 않아 호출 스레드 선점 잡음에 흔들리지 않는다.
  */
 SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkSerial )
 {
@@ -1177,18 +1187,49 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkSerial )
         done = end;
     }
 
-    constexpr uint32 kMaxAttempt = 20;
-    bool             bSerial     = false;
-    for ( uint32 attempt = 0; attempt < kMaxAttempt && bSerial == false; ++attempt )
+    CostCallRecorder  recorder;
+    CostCallRecorder* pRecorder = &recorder;
+    gFakeClockNanos             = 0;
+    gFakeClockStepNanos         = 1;
+    manager.runParallelByCostWithClock( kCount, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pRecorder]( uint32 start, uint32 end )
     {
-        CostCallRecorder  recorder;
-        CostCallRecorder* pRecorder = &recorder;
-        manager.runParallelByCost( kCount, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pRecorder]( uint32 start, uint32 end )
-        {
-            pRecorder->record( start, end );
-        } ) );
-        bSerial = recorder.list() == listExpected;
+        pRecorder->record( start, end );
+    } ),
+                                        &readFakeClock );
+    SW_EXPECT_TRUE( recorder.list() == listExpected );
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] `runParallelByCost`: 시계가 첫 항목에서 문턱을 넘겼다고 하면 나머지를 나눈다
+ * @details 가짜 시계가 부를 때마다 5 us 가므로 첫 호출 (0, 1) 뒤 경과 5 us, 남은 예상이 직렬 예산을 넘어 나머지가 한 덩이 (1, 4000) 으로 끝나지 않는다.
+ */
+SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsWhenClockSaysCostly )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    CostCallRecorder  recorder;
+    CostCallRecorder* pRecorder = &recorder;
+    gFakeClockNanos             = 0;
+    gFakeClockStepNanos         = 5000;
+    manager.runParallelByCostWithClock( 4000, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pRecorder]( uint32 start, uint32 end )
+    {
+        pRecorder->record( start, end );
+    } ),
+                                        &readFakeClock );
+
+    const sw::vector<std::pair<uint32, uint32>> listCall = recorder.list();
+    SW_ASSERT_TRUE( listCall.empty() == false );
+    SW_EXPECT_EQUAL( 0u, listCall.front().first );
+    SW_EXPECT_EQUAL( 1u, listCall.front().second );
+    bool bRestInOneBlock = false;
+    for ( const auto& call : listCall )
+    {
+        if ( call.first == 1u && call.second == 4000u )
+            bRestInOneBlock = true;
     }
-    SW_EXPECT_TRUE( bSerial );
+    SW_EXPECT_FALSE( bRestInOneBlock );
+    SW_EXPECT_TRUE( listCall.size() >= 3u );
     manager.shutdown();
 }

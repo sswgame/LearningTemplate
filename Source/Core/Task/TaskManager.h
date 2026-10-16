@@ -150,6 +150,15 @@ namespace sw
          */
         void runParallelByCost( uint32 count, const ParallelBlockDelegate& body );
 
+        /** @brief 지금 시각을 ns 로 돌려주는 시계입니다. 값은 단조 증가해야 하고 절대 값은 뜻이 없습니다(차이만 쓴다). */
+        using NanosecondClock = int64 ( * )() noexcept;
+
+        /**
+         * @brief `runParallelByCost` 의 비용 재는 시계를 바꿀 수 있는 형태입니다. 제품은 `MonotonicClock::nowNanoseconds` 로 부르고(`runParallelByCost`),
+         *        테스트는 가짜 시계를 넣어 호출 스레드 선점 잡음 없이 판단을 결정적으로 만듭니다. 시계는 청크마다 한 번(1, 2, 4, … 개씩이라 로그 번)만 불리므로 함수 포인터로 충분합니다.
+         */
+        void runParallelByCostWithClock( uint32 count, const ParallelBlockDelegate& body, NanosecondClock pClock );
+
         /**
          * @brief 스테이지를 만듭니다. 풀에서 꺼내므로 프레임이 안정된 상태에서는 힙을 건드리지 않습니다.
          * @details 이름으로 찾는 스테이지는 두지 않습니다. 스테이지를 나눠 쓰려면 핸들을 복사해 건네십시오.

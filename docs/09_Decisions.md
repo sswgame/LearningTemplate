@@ -716,6 +716,8 @@
   언리얼 Automation Driver 의 "보일 때까지 기다리기" · Playwright 의 자동 대기와 같다. 고정 프레임 단계는 패널이 프레임을 건너뛰거나 팝업이 늦게 열리면 가끔 졌다.
   기다림은 `WaitUntil` 과 같은 창구(`AutomationRunner::holdUntilReady` — 붙잡은 프레임은 세지 않고 입력 이벤트를 민다)이고, 기다린 프레임은 로그에 남아 다음 실패의 증거가 된다.
 
+- **`runParallelByCost` 의 시계는 함수 포인터로 주입하고, 선행 조건 스테이지의 순서 키 비교는 한 곳에 둔다**(2026-10-16). 제품은 `MonotonicClock::nowNanoseconds` 를 넘기고(`runParallelByCostWithClock`), 테스트는 가짜 시계로 호출 스레드 선점 잡음 없이 직렬 · 분할 판단을 결정적으로 본다. 시계는 청크마다 한 번(로그 번)만 불려 핫 경로에 가상 호출이 없다. `TickRegistry` 의 재구축(`isBefore`)과 증분(`applyStageDelta`)은 `StageOrder` · `isOrderedBefore` 하나를 공유해 두 길의 순서가 어긋날 수 없다.
+
 ### 5-7. 런타임 UI 와 글자
 
 - **저장소에는 CC0 라틴 글꼴만 둡니다**(2026-10-06, 사용자 결정). 한글과 CJK 는 OS 시스템 글꼴로 대체하고, 시스템 글꼴을 쓰는 테스트는 글리프가 있는지만 확인합니다.
