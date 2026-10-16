@@ -18,6 +18,7 @@ namespace
         sw::CompressionCodecType getCodecType() const override { return sw::CompressionCodecType::Custom; }
         const utf8*              getCodecName() const override { return "XorTest"; }
         size_t                   compressBound( size_t uncompressedSize ) const override { return uncompressedSize; }
+        size_t                   decompressBound( size_t compressedSize ) const override { return compressedSize; }
 
         bool compress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity,
                        size_t& outCompressedSize, int32 ) override
@@ -371,4 +372,148 @@ SW_TEST_CASE( CompressionTest, StreamStartsWithMagicInFileOrder )
     SW_ASSERT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), compressedStream ) );
     SW_ASSERT_TRUE( compressedStream.size() >= 4 );
     SW_EXPECT_EQUAL( sw::string( "SWCS" ), sw::string( reinterpret_cast<const utf8*>( compressedStream.data() ), 4 ) );
+}
+
+/**
+ * @brief [CompressionTest] 야간 퍼저가 10 초 타임아웃을 낸 81 바이트 입력은 **할당 전에** 거절한다
+ * @details `LoaderFuzzer` 의 `Compression` 대상 입력 그대로다(실행 38806424034). 헤더는 RLE · 원본 620,757,059 바이트 ·
+ *          압축 0 바이트를 말한다. `kMaxUncompressedSize`(1 GiB) 아래라 헤더 검사를 통과해 620 MB 를 resize(0 채우기)하고, 빈
+ *          페이로드로 실패한 뒤 clear 가 원소마다 소멸 루프를 돌아 커버리지 계측 빌드에서 10 초를 넘겼다. 압축 0 바이트에서는
+ *          어떤 코덱도 한 바이트도 내지 못하므로 resize 전에 끊겨야 한다 — 그래서 실패 여부가 아니라 **용량**을 본다
+ *          (고치기 전에도 결과는 false 였고, 용량은 620 MB 가 남았다. Debug 에서 이 테스트 하나가 2.7 초였다).
+ *          퍼저는 리눅스 전용이라 이 테스트가 로컬 재현을 대신한다.
+ */
+SW_TEST_CASE( CompressionTest, FuzzTimeoutInputIsRejectedBeforeAllocating )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    static constexpr uint8 kArrFuzzInput[] = {
+        0x53,
+        0x57,
+        0x43,
+        0x53,
+        0x01,
+        0x01,
+        0x01,
+        0x00,
+        0x43,
+        0x00,
+        0x00,
+        0x25,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x44,
+        0x80,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0xF5,
+        0x36,
+        0x56,
+        0x46,
+        0x65,
+        0x63,
+        0x20,
+        0x70,
+        0x6D,
+        0x6F,
+        0x65,
+        0x73,
+        0x73,
+        0x69,
+        0x62,
+        0x6C,
+        0x65,
+        0x20,
+        0x63,
+        0x6F,
+        0x6D,
+        0x68,
+        0x70,
+        0x72,
+        0x65,
+        0x73,
+        0x88,
+        0x96,
+        0x40,
+        0x89,
+        0x5F,
+        0x20,
+        0x74,
+        0x65,
+        0x20,
+        0x30,
+        0x74,
+        0x78,
+        0x31,
+        0x32,
+        0x33,
+        0x34,
+        0x35,
+        0x36,
+        0x37,
+        0x38,
+        0x39,
+    };
+
+    sw::CompressionHeader header{};
+    SW_ASSERT_TRUE( sw::CompressionStream::verifyHeader( kArrFuzzInput, sizeof( kArrFuzzInput ), header ) );
+    SW_EXPECT_EQUAL( uint64{ 620757059 }, header._uncompressedSize );
+    SW_EXPECT_EQUAL( uint64{ 0 }, header._compressedSize );
+
+    sw::vector<uint8> out;
+    SW_EXPECT_FALSE( sw::CompressionStream::decompressBuffer( kArrFuzzInput, sizeof( kArrFuzzInput ), out ) );
+    SW_EXPECT_TRUE_MSG( out.capacity() == 0, "압축 0 바이트가 요구한 620 MB 를 할당한 뒤에야 거절했습니다" );
+}
+
+/**
+ * @brief [CompressionTest] 코덱의 해제 상한은 가장 많이 불어나는 입력을 덮고, 스트림은 그 위를 할당 전에 자른다
+ * @details RLE 의 최악은 반복 런(2 바이트 → 130 바이트)이다. 같은 바이트만 든 원본을 압축하면 그 최악이 나오므로 상한이
+ *          원본 크기 이상이어야 한다(헐거우면 정상 스트림을 거절한다). 그 상한보다 한 바이트 큰 원본을 적은 헤더는
+ *          `decompressBuffer` 가 할당 없이 거절해야 한다(조이지 않으면 퍼저 입력이 다시 통과한다).
+ */
+SW_TEST_CASE( CompressionTest, CodecDecompressBoundCoversWorstCaseAndStreamRejectsAbove )
+{
+    sw::RleCompressionCodec  rle;
+    sw::NullCompressionCodec none;
+    SW_EXPECT_EQUAL( size_t{ 130 }, rle.decompressBound( 2 ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, rle.decompressBound( 0 ) );
+    SW_EXPECT_EQUAL( size_t{ 77 }, none.decompressBound( 77 ) );
+
+    const sw::string  original( 130 * 64, 'R' );
+    sw::vector<uint8> stream;
+    SW_ASSERT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), stream, sw::CompressionCodecType::RLE ) );
+
+    sw::CompressionHeader header{};
+    SW_ASSERT_TRUE( sw::CompressionStream::verifyHeader( stream.data(), stream.size(), header ) );
+    const size_t bound = rle.decompressBound( static_cast<size_t>( header._compressedSize ) );
+    SW_EXPECT_TRUE( bound >= original.size() );
+
+    sw::vector<uint8> restored;
+    SW_EXPECT_TRUE( sw::CompressionStream::decompressBuffer( stream.data(), stream.size(), restored ) );
+    SW_EXPECT_EQUAL( original.size(), restored.size() );
+
+    SW_TEST_SUPPRESS_LOGS();
+    sw::vector<uint8>      attack = stream;
+    sw::CompressionHeader* pHead  = reinterpret_cast<sw::CompressionHeader*>( attack.data() );
+    pHead->_uncompressedSize      = static_cast<uint64>( bound ) + 1;
+
+    sw::vector<uint8> out;
+    SW_EXPECT_FALSE( sw::CompressionStream::decompressBuffer( attack.data(), attack.size(), out ) );
+    SW_EXPECT_TRUE_MSG( out.capacity() == 0, "코덱 상한을 넘는 원본 크기를 할당한 뒤에야 거절했습니다" );
 }

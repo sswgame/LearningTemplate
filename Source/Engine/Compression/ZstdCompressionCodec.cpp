@@ -44,6 +44,14 @@ namespace sw
         return ZSTD_compressBound( uncompressedSize );
     }
 
+    size_t ZstdCompressionCodec::decompressBound( size_t compressedSize ) const
+    {
+        // 블록 하나는 많아야 ZSTD_BLOCKSIZE_MAX(128 KB)를 내고, 가장 작은 블록(헤더 3 바이트 + RLE 값 1 바이트)도 4 바이트다.
+        // 프레임 헤더 · 건너뛰는 프레임은 아무것도 내지 않으므로 4 바이트마다 블록 하나로 잡으면 넉넉한 상한이다.
+        constexpr size_t kMinBlockBytes = 4;
+        return ( compressedSize / kMinBlockBytes ) * static_cast<size_t>( ZSTD_BLOCKSIZE_MAX );
+    }
+
     bool ZstdCompressionCodec::compress( const void* pSrc,
                                          size_t      srcSize,
                                          void*       pDst,

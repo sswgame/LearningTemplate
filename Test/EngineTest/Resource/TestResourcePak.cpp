@@ -182,6 +182,7 @@ namespace sw
             CompressionCodecType getCodecType() const override { return CompressionCodecType::RLE; }
             const utf8*          getCodecName() const override { return "CountingRle"; }
             size_t               compressBound( size_t uncompressedSize ) const override { return _rleCodec.compressBound( uncompressedSize ); }
+            size_t               decompressBound( size_t compressedSize ) const override { return _rleCodec.decompressBound( compressedSize ); }
 
             bool compress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity, size_t& outCompressedSize, int32 compressionLevel ) override
             {

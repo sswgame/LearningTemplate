@@ -157,6 +157,18 @@ namespace sw
         /** @brief 비어 있는 버퍼(size = 0, 용량은 확보됨)의 앞에서부터 count 개를 복사해 넣습니다. */
         void copyFromInternal( const T* pSource, size_t count );
         void clearInternal() noexcept;
+        /**
+         * @brief [first, last) 의 원소를 소멸시킵니다. 소멸자가 할 일이 없는 타입이면 **루프 자체가 없습니다**(컴파일 시간 분기).
+         * @details 최적화된 빌드는 빈 소멸자 루프를 지우지만 Debug 와 퍼저(커버리지 계측) 빌드는 원소마다 돈다. 620 MB `vector<uint8>`
+         *          하나를 비우는 데 퍼저의 10 초를 다 썼다(야간 퍼저 `Compression` 타임아웃). 소멸 루프는 모두 이 함수를 지난다.
+         */
+        void destroyRangeInternal( size_t first, size_t last ) noexcept;
+        /**
+         * @brief [first, last) 를 값 초기화(`T()`)로 만듭니다. 산술 · 열거 · 포인터 타입은 0 바이트와 같으므로 `Memory::set` 한 번입니다.
+         * @details 멤버 포인터는 널이 0 바이트가 아닌 ABI 가 있어(Itanium 의 데이터 멤버 포인터 널은 -1) 넣지 않았고, 그래서 사용자
+         *          구조체도 넣지 않았다(안에 멤버 포인터가 있는지 형식으로 알 수 없다).
+         */
+        void valueInitializeRangeInternal( size_t first, size_t last );
 
     private:
         SW_RACE_CTX_MEMBER
@@ -274,11 +286,38 @@ namespace sw
     template <typename T, typename Allocator>
     inline void vector<T, Allocator>::clearInternal() noexcept
     {
-        for ( size_t index = 0; index < _size; ++index )
-        {
-            _pData[index].~T();
-        }
+        destroyRangeInternal( 0, _size );
         _size = 0;
+    }
+
+    template <typename T, typename Allocator>
+    inline void vector<T, Allocator>::destroyRangeInternal( [[maybe_unused]] size_t first, [[maybe_unused]] size_t last ) noexcept
+    {
+        if constexpr ( std::is_trivially_destructible_v<T> == false )
+        {
+            for ( size_t index = first; index < last; ++index )
+            {
+                _pData[index].~T();
+            }
+        }
+    }
+
+    template <typename T, typename Allocator>
+    inline void vector<T, Allocator>::valueInitializeRangeInternal( size_t first, size_t last )
+    {
+        constexpr bool bZeroBytesIsValue = std::is_arithmetic_v<T> || std::is_enum_v<T> || std::is_pointer_v<T>;
+        if constexpr ( bZeroBytesIsValue )
+        {
+            if ( last > first )
+                Memory::set( _pData + first, 0, ( last - first ) * sizeof( T ) );
+        }
+        else
+        {
+            for ( size_t index = first; index < last; ++index )
+            {
+                sw_placement_new( ( _pData + ( index ) ) ) T();
+            }
+        }
     }
 
     template <typename T, typename Allocator>
@@ -434,10 +473,7 @@ namespace sw
                     {
                         sw_placement_new( ( _pData + ( index ) ) ) T( other._pData[index] );
                     }
-                    for ( size_t index = other._size; index < _size; ++index )
-                    {
-                        _pData[index].~T();
-                    }
+                    destroyRangeInternal( other._size, _size );
                     _size = other._size;
                     return *this;
                 }
@@ -966,10 +1002,7 @@ namespace sw
             {
                 _pData[itemIndex] = std::move( _pData[itemIndex + count] );
             }
-            for ( size_t itemIndex = _size - count; itemIndex < _size; ++itemIndex )
-            {
-                _pData[itemIndex].~T();
-            }
+            destroyRangeInternal( _size - count, _size );
             _size -= count;
         }
         return _pData + offset;
@@ -1047,10 +1080,7 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         if ( count < _size )
         {
-            for ( size_t itemIndex = count; itemIndex < _size; ++itemIndex )
-            {
-                _pData[itemIndex].~T();
-            }
+            destroyRangeInternal( count, _size );
         }
         else if ( count > _size )
         {
@@ -1058,10 +1088,7 @@ namespace sw
             // 딱 `count` 만큼만 잡으면 한 칸 늘릴 때마다 통째로 옮겨서 N번에 O(N^2) 이 된다(std::vector 도 resize 에서 기하급수로 키운다).
             if ( count > _capacity )
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
-            for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
-            {
-                sw_placement_new( ( _pData + ( itemIndex ) ) ) T();
-            }
+            valueInitializeRangeInternal( _size, count );
         }
         _size = count;
     }
@@ -1072,10 +1099,7 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         if ( count < _size )
         {
-            for ( size_t itemIndex = count; itemIndex < _size; ++itemIndex )
-            {
-                _pData[itemIndex].~T();
-            }
+            destroyRangeInternal( count, _size );
         }
         else if ( count > _size )
         {

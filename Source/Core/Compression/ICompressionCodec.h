@@ -59,6 +59,16 @@ namespace sw
         virtual size_t compressBound( size_t uncompressedSize ) const = 0;
 
         /**
+         * @brief 압축 데이터 compressedSize 바이트가 풀려 나올 수 있는 최대 크기를 구합니다(포맷이 허락하는 최대 팽창률).
+         * @details 해제하는 쪽은 스트림 헤더에 적힌 원본 크기를 그대로 할당 크기로 씁니다. 그 값을 할당 **전에** 이 상한과 견주어야
+         *          몇 바이트짜리 망가진 입력이 수백 MB 를 잡고 초기화하게 만들지 못합니다(야간 퍼저 `Compression` 대상의 타임아웃:
+         *          81 바이트 입력이 620 MB 를 요구했다). 팽창률은 포맷마다 달라서 코덱만 답할 수 있으므로 순수 가상입니다 —
+         *          "모르면 무한대" 같은 기본 구현을 두면 그 코덱으로 적힌 스트림은 다시 헤더 값을 그대로 믿게 됩니다.
+         *          compressedSize 는 메모리에 올라온 버퍼의 크기라 팽창률(최대 2^15)을 곱해도 64 비트를 넘지 않습니다.
+         */
+        virtual size_t decompressBound( size_t compressedSize ) const = 0;
+
+        /**
          * @brief 데이터를 압축합니다.
          * @param pSrc 원본 데이터
          * @param srcSize 원본 데이터 크기(바이트)
