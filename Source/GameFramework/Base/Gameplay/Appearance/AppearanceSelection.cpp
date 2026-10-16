@@ -367,6 +367,83 @@ namespace sw
         }
     }
 
+    bool AppearanceSelectionUtil::makePresetDef( const AppearanceDatabase& database, const AppearanceSelection& selection, const hashed_string& presetID,
+                                                 CharacterAppearanceDef& outDef, string& outReason )
+    {
+        outDef = CharacterAppearanceDef{};
+        if ( presetID.empty() || selection.isPartial() )
+        {
+            outReason = presetID.empty() ? "a preset needs an id" : "a partial selection (only some categories) cannot become a preset";
+            return false;
+        }
+        outDef._id     = presetID;
+        outDef._parent = selection._basePresetID;
+        outDef._schema = selection._schema;
+        if ( selection._bodyType.empty() == false )
+            outDef._listBodyType.push_back( selection._bodyType );
+        if ( selection._bodyShape.empty() == false )
+            outDef._listBodyShape.push_back( selection._bodyShape );
+        if ( selection._face.empty() == false )
+            outDef._listFace.push_back( selection._face );
+
+        // 꾸미기 값 — 종류는 스키마가 안다(값만으로는 슬라이더와 색을 가를 수 없다).
+        const CustomizationSchemaDef* pSchema = database.getSchemas().findSchema( selection._schema );
+        for ( const CustomizationValue& value : selection._customization.getValues() )
+        {
+            const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
+            if ( pParam == nullptr )
+            {
+                outReason = string( "value '" ) + value._parameter.c_str() + "' is not a parameter of schema '" + selection._schema.c_str() + "'";
+                return false;
+            }
+            CharacterAppearanceValueDef valueDef;
+            valueDef._parameter = value._parameter;
+            switch ( pParam->_kind )
+            {
+                case CustomizationKind::Slider:
+                {
+                    valueDef._bHasNumber = SW_TRUE;
+                    valueDef._min        = value._number._x;
+                    valueDef._max        = value._number._x;
+                    break;
+                }
+                case CustomizationKind::Color:
+                {
+                    valueDef._listColor.push_back( value._number );
+                    break;
+                }
+                case CustomizationKind::Choice:
+                case CustomizationKind::Attachment:
+                {
+                    valueDef._listOption.push_back( value._option );
+                    break;
+                }
+            }
+            outDef._listValue.push_back( valueDef );
+        }
+
+        for ( const AppearanceSlotRequest& request : selection._listSlot )
+        {
+            const bool bUnrepresentable = request._customization.isEmpty() == false || request._listDetachedPart.empty() == false;
+            if ( bUnrepresentable )
+            {
+                outReason = string( "slot '" ) + request._slot.c_str() + "' has item instance values or detached parts, which a preset cannot carry yet";
+                return false;
+            }
+            CharacterAppearanceSlotDef slot;
+            slot._slot = request._slot;
+            if ( request._itemID.empty() )
+                slot._bClear = SW_TRUE;
+            else
+                slot._listItem.push_back( request._itemID );
+            slot._visibleVisual = request._visibleVisual;
+            slot._state         = request._state;
+            slot._damage        = request._damage;
+            outDef._listSlot.push_back( slot );
+        }
+        return true;
+    }
+
     void AppearanceSelectionUtil::previewSelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
                                                     const IAppearanceUnlockQuery* pUnlockQuery, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport )
     {

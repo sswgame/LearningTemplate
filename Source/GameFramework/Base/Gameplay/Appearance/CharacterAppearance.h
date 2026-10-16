@@ -106,7 +106,17 @@ namespace sw
     {
     public:
         [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
-        void               clear() { _listPreset.clear(); }
+        /**
+         * @brief `<CharacterAppearance>` 원소 하나(프리셋 에셋 파일 `*.appearance.xml` 의 루트)를 읽어 더합니다. 같은 id 가 있으면 바꿉니다(에디터가 다시 내보낸 파일).
+         * @details 읽기 규칙은 카탈로그 파일의 원소와 같다. 오류는 @p report 에 남기고 그 프리셋은 더하지 않는다.
+         */
+        [[nodiscard]] bool loadPresetFromNode( const XMLNode& presetNode, AppearanceLoadReport& report, string_view sourceName );
+        /**
+         * @brief @p def 를 @p outNode(`<CharacterAppearance>` 원소)에 씁니다 — `loadPresetFromNode` 가 같은 값으로 다시 읽는 형식입니다(읽기와 쓰기가 이 파일 한 자리).
+         * @details 슬롯의 아이템 인스턴스 꾸미기 값은 종류(슬라이더 · 색)를 값만으로 알 수 없어 쓰지 않는다 — 그런 슬롯이 있으면 false 와 @p outReason 이다(조용히 버리지 않는다).
+         */
+        [[nodiscard]] static bool writePresetToNode( const CharacterAppearanceDef& def, const XMLNode& outNode, string& outReason );
+        void                      clear() { _listPreset.clear(); }
 
         const CharacterAppearanceDef*         findPreset( const hashed_string& id ) const;
         const vector<CharacterAppearanceDef>& getPresets() const { return _listPreset; }

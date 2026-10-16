@@ -87,13 +87,6 @@
     - **남은 한계**: 기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
   - **정리**: 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id). 값 노이즈는 `Stack/MeshModifierNoise.h` 한 곳으로 모았다(들어감).
 
-- `D3-11` [기능] **캐릭터 편집 → 씬 사용 흐름(2026-10-16 남김, `wt/editorscn2`).** 창의 프리셋은 세이브 형식(`UserAppearancePresetStore`)이고 `CharacterAppearanceComponent` 는
-  데이터 프리셋 id 만 가리켜 잇는 길이 없다. 방향은 정했다([결정 기록](../09_Decisions.md) 5-11 — 창이 데이터 프리셋 `CharacterAppearance` 로 내보내고 씬은 id 로 참조).
-  남은 일: ① `CharacterAppearanceCatalog` 에 읽기(`loadFromNode`) 옆 쓰기를 두고(`GameFramework/Base` — 읽기 · 쓰기 형식이 한 자리), ② 창의 `AppearanceSelection` 을 `CharacterAppearanceDef`
-  (부모 = 기준 프리셋, 바뀐 칸 · 꾸미기 값만)로 바꿔 게임의 `data/appearance/presets.xml` 에 id 로 넣거나 바꾸고(`AppearanceDatabase` 다시 읽기), ③ 외형 데이터가 있는 게임 팩(Shooter3D)의
-  `editor="true"` 시나리오로 내보내기 → 씬의 컴포넌트에 그 id → 조립 결과를 확인한다. 저장소 데이터를 바꾸지 않게 시나리오용 임시 카탈로그 자리가 먼저 필요하다.
-  못 한 이유: 쓰기 형식이 이 작업자의 파일 범위(에디터) 밖인 `GameFramework/Base` 에 있어야 하고(에디터 쪽에 따로 쓰면 읽기와 어긋난다), 시나리오가 게임 데이터 파일을 바꾸지 않을 자리가 없다.
-
 - `D3-12` [기능] **첫 UX 감사에서 남은 결함(2026-10-15).** 목록 · 우선순위 · 캡처 번호는 [에디터 UX 기반](../plans/EditorUX.md) 8-1 절이 원본이다. 큰 것부터:
   ① 기본 배치의 아래 도크(Output Log · Content Browser)가 낮아 내용이 거의 안 보인다(도크 최소 높이 · 기본 비율). ② 씬 뷰 통계 오버레이가 뷰포트 절반을 덮는다(접기 · 앵커).
   ③ 탭 · 표 열 · 콤보의 말줄임 · 툴팁 · 가로 스크롤 정책을 공용 위젯으로(Hierarchy · Profiler · Keyboard Shortcuts · Global Variables · Data Table · Project Settings).

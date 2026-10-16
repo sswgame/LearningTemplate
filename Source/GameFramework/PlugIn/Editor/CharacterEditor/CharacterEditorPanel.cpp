@@ -2,6 +2,7 @@
 
 #include "GameFramework/PlugIn/Editor/CharacterEditor/CharacterEditorPanel.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -12,8 +13,12 @@
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
+#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
 
 #include <imgui.h>
 
@@ -29,6 +34,7 @@ namespace sw::editor
             static constexpr const utf8* kDefaultItemsPath      = "game/shooter3d/data/items.xml";
             static constexpr const utf8* kDefaultAppearancePath = "game/shooter3d/data/appearance";
             static constexpr const utf8* kDefaultPresetPath     = "editor/characterpresets.txt";
+            static constexpr const utf8* kDefaultExportID       = "MyCharacter";
             static constexpr float32     kDragSpeed             = 0.005f;
             static constexpr float32     kRotationDragSpeed     = 0.5f;
             static constexpr float32     kPathButtonsWidth      = 240.0f;
@@ -81,6 +87,7 @@ namespace sw::editor
                 uint32 _equippedSlotCount{ 0 };
                 uint32 _traceCount{ 0 };
                 uint32 _presetCount{ 0 };
+                uint32 _exportCount{ 0 }; ///< 이 실행에서 데이터 프리셋으로 내보낸 수
             };
             static Published& getPublished()
             {
@@ -108,6 +115,11 @@ namespace sw::editor
                 outValue = static_cast<float64>( getPublished()._traceCount );
                 return true;
             }
+            [[nodiscard]] static bool readExportCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._exportCount );
+                return true;
+            }
             [[nodiscard]] static bool readPresetCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( getPublished()._presetCount );
@@ -124,6 +136,8 @@ namespace sw::editor
                          &CharacterEditorPanelInternal::readEquippedSlotCount );
     SW_AUTOMATION_PROBE( editorCharacterEditorTraceCount, "Editor.CharacterEditorTraceCount", "Rule explanation lines for the current appearance selection",
                          &CharacterEditorPanelInternal::readTraceCount );
+    SW_AUTOMATION_PROBE( editorCharacterEditorExportCount, "Editor.CharacterEditorExportCount", "Data presets the Character Editor exported in this run",
+                         &CharacterEditorPanelInternal::readExportCount );
     SW_AUTOMATION_PROBE( editorCharacterEditorPresetCount, "Editor.CharacterEditorPresetCount", "Presets in the Character Editor's preset store", &CharacterEditorPanelInternal::readPresetCount );
 } // namespace sw::editor
 
@@ -146,6 +160,8 @@ namespace sw::editor
         , _appearanceFolder{ CharacterEditorPanelInternal::kDefaultAppearancePath }
         , _presetPath{ CharacterEditorPanelInternal::kDefaultPresetPath }
         , _presetName{ "MyLook" }
+        , _exportFolder{}
+        , _exportID{ CharacterEditorPanelInternal::kDefaultExportID }
         , _newName{}
         , _renameBuffer{}
         , _status{}
@@ -161,6 +177,8 @@ namespace sw::editor
         , _bPreviewValid{ false }
     {
         _presetStore.setDatabase( &_database );
+        const string exportFolder = FileUtil::joinPath( CharacterEditorPanelInternal::kDefaultAppearancePath, AppearanceDatabase::kPresetFolder );
+        std::snprintf( _exportFolder.data(), _exportFolder.max_size(), "%s", exportFolder.c_str() );
     }
 
     void CharacterEditorPanel::drawContent()
@@ -568,6 +586,8 @@ namespace sw::editor
     void CharacterEditorPanel::drawAppearanceTab()
     {
         drawAppearanceDataRow();
+        // 데이터 프리셋 내보내기는 데이터 줄 바로 아래 — 씬이 쓰는 결과물이라 창을 열면 보이는 자리에 둔다.
+        drawDataPresetRow();
         ImGui::Separator();
         ImGui::TextDisabled( "Selection (base preset, body, slots, customization values)" );
         const AppearanceSelection selection = _appearance.getSelection();
@@ -838,6 +858,65 @@ namespace sw::editor
             }
         }
         ImGui::EndChild();
+    }
+
+    void CharacterEditorPanel::drawDataPresetRow()
+    {
+        if ( ImGui::CollapsingHeader( "Data preset (scene use)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
+            return;
+        ImGui::TextDisabled( "A scene's Character Appearance component names this id." );
+        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        ImGui::InputText( "##ExportFolder", _exportFolder.data(), _exportFolder.max_size() );
+        EditorSelfTestMarks::note( "charactereditor.exportFolder" );
+        ImGui::SetNextItemWidth( 180.0f );
+        ImGui::InputText( "##ExportID", _exportID.data(), _exportID.max_size() );
+        EditorSelfTestMarks::note( "charactereditor.exportID" );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _bDatabaseLoaded == false );
+        if ( ImGui::Button( "Export data preset" ) )
+            exportDataPreset();
+        EditorSelfTestMarks::note( "charactereditor.exportPreset" );
+        ImGui::EndDisabled();
+    }
+
+    void CharacterEditorPanel::exportDataPreset()
+    {
+        const hashed_string    presetID( string_view( _exportID.c_str() ) );
+        CharacterAppearanceDef def;
+        string                 reason;
+        XMLDocument            doc;
+        const bool             bMade = AppearanceSelectionUtil::makePresetDef( _database, _appearance.getSelection(), presetID, def, reason ) &&
+                           CharacterAppearanceCatalog::writePresetToNode( def, doc.appendRoot( "CharacterAppearance" ), reason );
+        if ( bMade == false )
+        {
+            _status = "Data preset could not be made - " + reason;
+            return;
+        }
+        const string resourceID = FileUtil::joinPath( string_view( _exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
+        const string writePath  = ResourcePaths::getWritePath( resourceID );
+        const bool   bWritten   = writePath.empty() == false && FileUtil::ensureParentDirectoryExists( writePath ) && doc.saveFile( writePath );
+        if ( bWritten == false )
+        {
+            _status = "Data preset could not be written to " + resourceID;
+            return;
+        }
+        // 이 창의 데이터와 실행 중인 게임의 데이터에 올린다 — 씬의 컴포넌트는 게임 서비스(`AppearanceDatabase`)에서 프리셋을 푼다.
+        if ( _database.loadPresetFile( writePath ) == false )
+        {
+            _status = "Exported preset has errors - " + _database.getReport().joined();
+            return;
+        }
+        AppearanceDatabase* pGameData = game::findSubsystem<AppearanceDatabase>();
+        if ( pGameData == nullptr )
+            SW_LOG_WARNING( "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
+        else if ( pGameData->loadPresetFile( writePath ) == false )
+        {
+            _status = "The game's appearance data rejected the preset - " + pGameData->getReport().joined();
+            return;
+        }
+        ++CharacterEditorPanelInternal::getPublished()._exportCount;
+        _status.clear();
+        SW_LOG_INFO( "Exported appearance preset '%#' to '%#'", presetID.c_str(), resourceID.c_str() );
     }
 
     void CharacterEditorPanel::loadSkeleton()

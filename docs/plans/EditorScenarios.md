@@ -18,7 +18,7 @@
 | 프리팹 | `flowprefab`(만들기 · 스폰 · 적용 — 단독을 겸한다) | `flowprefab`(적용 → 다른 인스턴스 갱신 · 덮어쓴 값 유지 · 되돌리기 · 저장 · 다시 열기) · `flowprefabnested`(자식 인스턴스 → 중첩 부품, 적용 → 다른 프리팹이 스폰한 부품 갱신 · 다시 열기) |
 | 지형 브러시 | `terrainbrush` · `rhiswap/terrainedits` | `flowterrain`(편집 → 플레이 → 백엔드 교체 → 되돌리기) |
 | 메시 모디파이어 | `meshmodifiers` | `flowedit`(배치 → 휘기 → 플레이 뒤 미리보기 유지) |
-| 캐릭터 편집 | `charactereditor` | 없음(아래) |
+| 캐릭터 편집 | `charactereditor` | `game/shooter3d/automation/charactereditorscene`(외형 → 데이터 프리셋 내보내기 → 씬의 외형 컴포넌트가 그 id → 플레이 조립) |
 | 입력 맵 창 | `inputmapedit` · `inputmaptaps` | — |
 | UI 미리보기 · 디자이너 | `uipreview` · `uipreviewdesigner` · `uiscale` | — |
 | 다중 월드 미리보기 | `previewscene` | — |
@@ -51,12 +51,12 @@
 - **임포트한 에셋**은 리소스 id 가 있어야 씬이 쓰므로 리소스 트리 안의 임시 폴더 `editor/automationtemp/<시나리오>/` 에만 가져온다(`asset.import <원본> <폴더>`).
   이 폴더는 `.gitignore` 가 무시하고, 시나리오가 처음과 끝에 `asset.removeImportFolder` 로 지운다. 남은 파일이 있으면 같은 이름이 새 이름(`_1`)을 받아 뒤 단계가 어긋난다.
   원본은 작업 폴더 기준 경로나 리소스 id 이고, 모델 원본(glTF)의 변환은 에디터가 아니라 `App --import-models` 가 한다.
+- **에디터가 쓰는 게임 데이터**(캐릭터 편집 창의 데이터 프리셋)도 같은 임시 폴더로 내보낸다. 창의 내보내기 폴더 칸에 `editor/automationtemp/<시나리오>` 를 적으면
+  게임 데이터 폴더(`game/<팩>/data/appearance/presets/`)는 그대로이고, 내보내기가 실행 중인 게임의 외형 데이터에 그 파일을 올려 씬이 같은 실행에서 쓴다.
 - **게임 팩의 에디터 창**은 그 팩의 `automation/` 시나리오 루트에 `editor="true"` 를 적는다. `AppScenarioTest` 가 `-game=<게임> -EnableEditor` 와 빈 에디터 상태 폴더로 돌린다.
 
 ## 시나리오로 못 하는 것
 
-- **캐릭터 편집 → 저장 → 씬 사용.** 캐릭터 편집 창의 프리셋은 플레이어 세이브 형식(`UserAppearancePresetStore`)이고, 씬의 `CharacterAppearanceComponent` 는 데이터 프리셋 id
-  (`data/appearance/presets.xml`)만 가리킨다. 창에서 데이터 프리셋으로 내보내는 길이 아직 없다(백로그 `D3-11`, 방향은 [결정 기록](../09_Decisions.md) 5-11).
 - **다른 씬의 프리팹 인스턴스.** Apply Overrides 는 지금 연 씬의 인스턴스(놓은 인스턴스와 다른 프리팹이 스폰한 중첩 부품)만 고친다. 닫힌 씬의 인스턴스는
   덮어쓴 값만 저장돼 있어 다시 열 때 새 프리팹 위에 얹힌다(유니티 · 언리얼도 닫힌 레벨은 로드할 때 받는다). 다른 바깥 프리팹 인스턴스에 새로 생긴 부품은 다시 열 때 생긴다.
 - **에디터 UI 화면 확인의 범위.** 흐름 시나리오의 `screenshot` · `-gv_screenshot` 은 게임 · 씬 뷰 렌더 출력만 담는다. 패널은 `CaptureEditorUI` 로 찍는데,

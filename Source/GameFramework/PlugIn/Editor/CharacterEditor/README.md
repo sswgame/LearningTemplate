@@ -17,6 +17,9 @@
 | `CharacterEditorPanel` / `CharacterEditorCommands.cpp` | 패널 `charactereditor.main`(소켓 탭, 스켈레톤 탭, 외형 탭)과 메뉴 커맨드 `charactereditor.openPanel` |
 
 - **편집 대상은 원본 데이터 파일**이다. 조립 결과(병합 메시, 펼친 외형)는 저장하지 않는다.
+- **씬이 쓰는 결과는 데이터 프리셋이다.** 외형 탭의 "Export data preset" 이 선택을 프리셋 에셋(`<폴더>/<id>.appearance.xml`, 기본 폴더는 외형 폴더의 `presets/`)으로 쓰고
+  창과 실행 중인 게임의 `AppearanceDatabase` 에 올린다(`loadPresetFile`). 씬의 `CharacterAppearanceComponent` 는 그 id 를 적는다. "Save as preset" 은 플레이어 세이브 형식(`UserAppearancePresetStore`)이라 씬이 읽지 않는다.
+  확인은 `Resource/game/shooter3d/automation/charactereditorscene.scenario.xml`(내보내기는 임시 폴더 `editor/automationtemp/` 로)이다.
 - **되돌리기는 모델마다 따로** 돈다(창 안에서만). 전역 `CommandStack` 에 섞지 않는다. 문서 패널 계약(`EditorDocumentPanel`)으로 옮기는 일은 `EditorMultiWorld` 뒤의 일이다.
 - **저장은 적은 필드만 쓴다.** `SocketSet::saveToXMLText` 가 `_fieldMask` 로 쓸 필드를 고르므로, 값을 고치는 편집은 그 필드 비트를 함께 켠다. 비트를 켜지 않으면 고친 값이 저장되지 않는다.
 - **좌우 짝은 이름 규칙으로만** 찾는다(`_L`/`_R`, `Left`/`Right` 등). 토큰은 이름의 앞 · 뒤나 구분자(`_ . - 공백`), CamelCase 경계에 놓일 때만 인정한다 — `Shoulder_Pad` 의 `r_` 은 짝이 아니다.
