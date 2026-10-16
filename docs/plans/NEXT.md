@@ -7,7 +7,9 @@
 main 은 push 되지 않았다(원격 `main` 하나). 이 세션이 main 에 병합한 워크트리: `tickfollowup` `gamescn` `smallfix` `internalrule` `mountgame` `qualitycleanup` `terrainserver` `editorscn2` `corefuzz` `enginefeature` `netfeature` `uifollow` `gfxfeature` `gameplayfeature`. 병합마다 전체 Release 빌드와 관련 스위트를 돌렸다(병합 중 의미 충돌 · Release 전용 실패 4 건을 main 에서 고쳤다: WildWest 탐침, `PhysicsSoftBodyTest` 허용치, 셰이더 쿠킹의 낡은 바이너리 80 개, `WildWest` 데이터 종류 등록).
 Debug `-L lint` · `-L nogpu` · `-L race` 를 통과시키고(고친 둘: `WildWestHorseComponent` 의 단일 함수 `Internal`, 한 줄로 쓴 `prairie.scene.xml`) 2026-10-17 에 main 을 push 했다(`b21bf6c4f`).
 
-남은 워크트리: `netfeature`(병합됨 — 단 HTTP 이름 해석을 전용 스레드로 옮기는 변경이 **커밋되지 않은 채** 작업 트리에 있다: `TestHTTP` · `TestPlatformLogin` · 결정 기록/백로그 문장 포함. 빌드가 되는 사람이 EngineTest 빌드 → HTTPTest · PlatformLogin → `-L race` 를 거쳐 커밋한 뒤 지운다), `editordata` · `enginefallback` · `toolfollowup`(병합 안 된 커밋 — 다른 세션의 일, 건드리지 않는다), `gamesdata` · `testisolation`(병합됐지만 변경이 남아 있다), `perfbase` · `perfbase2`(성능 기준선).
+**(2026-10-17 낮) main 에 병합했으나 push 전, Release · Debug 전체 검증 전**: `netfeature`(HTTP 이름 해석 스레드, 커밋 `b4c057b29`) `internalgf` `internalrest` `internaltest`(`Internal` 소거 — 남은 기준선은 `visualizer` 몫 몇 개) `serverport`(전용 서버가 `ServerConfig::_gamePort` 로 포트를 연다, `_gamePort` 최솟값 0 = OS 가 고름) `containers`(`VectorUtil::findBy` 등 · `CompareUtil.h` · `DefaultHash`). 병합 충돌은 `CheckCodeConventions.toml` 기준선에서만 났고 양쪽에 남은 줄만 두는 방식으로 풀었다. 다음 세션이 할 첫 일: Release 빌드 + Debug/Release 의 `-L lint` `-L nogpu` `-L race` → push.
+**돌고 있던 작업자(워크트리)**: `visualizer`(시각화 색 → 테마 토큰, LootTable · QuestCatalog 데이터 리터럴) `smalldebt`(이름 조회 · `IFileWatcher` · `D4-15`) `c6graphics`(`C-16` 주석) `loaders`(`C-19` R4) `shaderdoc`(bindless 입문 주석, 바이트코드 해시 일치 검증) `reflectfmt`(`docs/plans/ReflectionFormats.md` 설계 문서만, `castTo` 절 포함). 만들어 두고 작업자를 아직 안 띄운 워크트리: `savereflect`(리플렉션 ① 세이브 필드 나열, 새로 쓰는 방침 — 마이그레이션 없음) `catalogdefaults`(② `C-30` 카탈로그 리터럴 기본값) `enumnames`(⑤⑥ 열거형 이름 switch).
+남은 워크트리: `editordata` · `enginefallback` · `toolfollowup`(병합 안 된 커밋 — 다른 세션의 일, 건드리지 않는다), `gamesdata` · `testisolation`(병합됐지만 변경이 남아 있다), `perfbase` · `perfbase2`(성능 기준선).
 
 ## 2. 다음 할 일
 
@@ -21,6 +23,13 @@ Debug `-L lint` · `-L nogpu` · `-L race` 를 통과시키고(고친 둘: `Wild
 8. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃, [빌드 속도 계획](BuildSpeed.md)): 빌드가 도는 동안은 측정이 무효라 다른 작업이 모두 끝난 뒤 혼자.
 9. 이름 조회 흩어짐(`SceneDevCommands` · Sequencer), `IFileWatcher` 를 쓰는 곳의 조용한 실패(리눅스 감시 마스크에 `IN_ATTRIB` 없음), `HUDViewModel` 의 슈터 전용 칸(WildWest 가 칸을 빌려 씀, `D4-15`).
 10. 조건부 12 · 관찰 15 · 보류 3 · 조건이 붙은 기능은 조건이 올 때(백로그 안내 순서).
+11. **구조 최적화(2026-10-17 조사, 측정이 아니라 구조 기준 — 근거는 읽은 코드)**. 하지 말 것: 스핀 늘리기 · hot pool · 깨우기 사슬 변경(결정 기록 09:102 · 136 · 137에서 손해 확인), Math SIMD(금지 결정), 큐 칸 패딩 · `TaskNode` 정렬(잡음으로 끝난 전례).
+    - **A 동시성** — 먼저 Core 에 '스레드 칸에 쓰고 읽는 쪽이 합치는' 샤드 카운터 형식을 설계(`integrator`), 그 위에서 순서대로: ① 워크 훔치기 데크 빈 확인(`WorkStealingDeque.h:82-126`, 비어 있으면 펜스 전에 relaxed 로 반환) ② 대기자 스핀을 워커 루프처럼 세대(`_workEpoch`)로 막기(`TaskManager.cpp:892-922`) ③ 메모리 태그 통계(`MemoryProfiler.cpp:319-386`, 먼저 `alignas(64)` 다음 스레드별 블록) ④ 활성 태스크 수 샤드(`TaskManager.cpp:457` 외) ⑤ 비동기 로거 생산자(`AsyncLogSink.cpp`, 날짜 캐시 thread_local · 불변 스냅샷 · 대기자 있을 때만 깨우기).
+    - **B 컨테이너 · 네트워크** — ① `SequenceBuffer` 크기를 2의 거듭제곱 템플릿 상수로 + 칸 용량 유지(잠복 결함: 크기가 65536 약수가 아니면 uint16 감김 때 칸이 겹침) ② `sw::deque` 를 바이트 기준 블록으로 직접 구현 + 고정 용량 큐는 링 버퍼(MSVC STL deque 블록 16B → 원소마다 할당; 주소 안정에 기대는 곳 `NetTransport.h:121` 주의) ③ 해시 표 노드 `uint32 next + 해시 태그`(map · set 표 코어 하나, `containers` 병합 뒤) ④ `BitStream` 64비트 스크래치 워드(와이어 바이트 동일성 테스트 먼저) ⑤ `Memory::copy/compare` 헤더 inline. 보류: `NetConnection` 수신 아레나(측정 기각 `C-4`), `NetPrioritizer` 힙, UDP `recvmmsg`(`B-10`).
+    - **C 리플렉션** — 설계: `docs/plans/ReflectionFormats.md`(자기 기술형 유지 + 고정 배치형 신설, 스키마 해시 1개, 코드젠이 타입별 write/read · `==` 생성, `castTo` 는 클래스 ID + 상속 구간 정수 비교 검토). 이 문서가 단계 표를 가진다. 별도로 ②③⑤⑥ 적용 후보(위 워크트리). 리플렉션 코드젠은 헤더만 읽으므로 `.cpp` 내부(익명 namespace) 형식에는 못 쓴다 → 모듈 내부 헤더로 옮겨 쓴다.
+    - **D 셰이더 bindless 입문** — `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정.
+    - **공통화 2단계**: `containers` 가 남긴 후보 58 파일 80 건(`find_if` · `remove_if` · 해시 구조체)을 디렉터리별로. 손 멤버 루프를 못 쓰게 하는 형식 또는 린트(형식으로 못 막는 이유를 적는다).
+    - 에이전트: 설계 · 모듈을 넘는 일은 `integrator`(Opus), 국소 구현은 `worker`(Opus), 이름 · 주석 · 반복은 `mech-worker`(Sonnet) — 이 세션에서 `worker` 정의가 Opus 인 것을 확인했다.
 
 **병합 비용 교훈**: 작업자 둘을 따로 통과시킨 뒤 합치면 의미 충돌이 난다(`mountgame` + `gamescn`). 병합마다 전체 빌드를 돌리고 관련 스위트를 **Release 와 Debug 둘 다**(작업자가 Debug 만 돌려 Release 에서 깨진 테스트가 있었다) 돌린다. 작업자가 3 개 이상 빌드를 겹치면 서로 기다려 느려지고 측정이 무효가 되니 빌드 전 컴파일러 프로세스 수를 본다.
 
