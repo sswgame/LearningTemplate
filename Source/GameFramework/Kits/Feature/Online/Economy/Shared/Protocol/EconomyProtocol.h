@@ -68,6 +68,7 @@ namespace sw
         AlreadyRedeemed, ///< 다른 계정이 이미 받은 영수증이다
         Busy,            ///< 버전 충돌이 상한 횟수를 넘었다. 같은 멱등 키로 다시 시도한다
         Unavailable,     ///< 저장소나 전송을 쓸 수 없다. 적용됐는지 알 수 없으므로 같은 멱등 키로 다시 시도한다
+        UpdateRequired,  ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         Count
     };
 } // namespace sw

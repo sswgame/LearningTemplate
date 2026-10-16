@@ -512,7 +512,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 단계 1(생성기 · `TypeInfo::_pFixedCodec` · `FixedLayout` 런타임 · 테스트)은 끝났습니다(2026-10-17). 런타임은 `Source/Engine/Serialization/Fixed/FixedLayout.h`,
 생성기는 `Tools/ReflectionParser/FixedCodecGenerator.*`, 테스트는 `Test/ReflectionTest/TestFixedLayout.cpp` · `TestFixedLayoutTypes.h` 와
 `ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` 입니다. 단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다.
-단계 5-a(Hello 첫 필드 스키마 해시, `OnlineProtocolRegistry`, "업데이트 필요" 거절 뒤 재접속 없음)는 끝났습니다(2026-10-17). 테스트는 `OnlineServiceHostTest` 의 `RequestsBeforeHelloAreRefusedAndSchemaHashIsComparedFirst` · `SameSchemaHashConnects` · `SchemaHashMismatchStopsTheClientWithoutReconnecting` 입니다.
+단계 5-a(Hello 첫 필드 스키마 해시, `OnlineProtocolRegistry`, "업데이트 필요" 거절 뒤 재접속 없음)는 끝났습니다(2026-10-17). 테스트는 `OnlineServiceHostTest` 의 `RequestsBeforeHelloAreRefusedAndSchemaHashIsComparedFirst` · `HelloRefusalsReadOnlyTheFixedHashFieldFirst` · `SameSchemaHashConnects` · `SchemaHashMismatchStopsTheClientWithoutReconnecting`, `OnlineProtocolTest.VersionMismatchBecomesUpdateRequiredBeforeTheKitTable` 입니다.
+키트 결과 열거형은 모두 `UpdateRequired` 를 가지며, 공통 처리(`OnlineReplyUtil::markError`)가 키트 표보다 먼저 `kVersionMismatch` 를 그 값으로 바꿉니다.
 
 **단계 7-c · 7-d 상세.**
 

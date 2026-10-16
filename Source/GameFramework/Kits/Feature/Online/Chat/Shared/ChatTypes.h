@@ -32,7 +32,8 @@ namespace sw
         Invalid,       ///< 빈 글이거나 상한을 넘었거나 잘못된 UTF-8 이거나 규칙에 맞지 않는 채널 id 이다
         Unavailable,   ///< 저장소, 캐시, 전송을 쓸 수 없다
         TooManyChannels,
-        NotSignedIn ///< 로그인하지 않은 연결이다(공통 오류 `kUnauthenticated`)
+        NotSignedIn,   ///< 로그인하지 않은 연결이다(공통 오류 `kUnauthenticated`)
+        UpdateRequired ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
     };
 
     /** @brief 채널 종류입니다. 채널 id 의 접두어가 정합니다. */

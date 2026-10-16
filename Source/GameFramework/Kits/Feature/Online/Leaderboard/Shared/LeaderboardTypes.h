@@ -23,12 +23,13 @@ namespace sw
     {
         Ok = 0,
         NotSignedIn,
-        Invalid,      ///< 범위나 id 규칙에 맞지 않는다
-        UnknownBoard, ///< 등록하지 않은 보드이다
-        NotAllowed,   ///< 클라이언트가 낼 수 없는 보드이다
-        NotRanked,    ///< 이 기간에 점수가 없거나 시즌 밖이다
-        Unavailable,  ///< 저장소나 캐시를 쓸 수 없다. 다시 하면 된다
-        Conflict,     ///< 다시 해도 경합이 난다. 잠시 뒤에 시도한다
+        Invalid,        ///< 범위나 id 규칙에 맞지 않는다
+        UnknownBoard,   ///< 등록하지 않은 보드이다
+        NotAllowed,     ///< 클라이언트가 낼 수 없는 보드이다
+        NotRanked,      ///< 이 기간에 점수가 없거나 시즌 밖이다
+        Unavailable,    ///< 저장소나 캐시를 쓸 수 없다. 다시 하면 된다
+        Conflict,       ///< 다시 해도 경합이 난다. 잠시 뒤에 시도한다
+        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         Count
     };
 } // namespace sw

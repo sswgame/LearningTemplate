@@ -205,7 +205,10 @@ namespace sw
         };
 
         void handleHello( const NetRequestContext& context, ConnectionState& connection );
-        /** @brief `[kVersionMismatch u16][서버 스키마 해시 u64]` 로 답합니다. 리틀 엔디언 고정 형식입니다. */
+        /**
+         * @brief `[kVersionMismatch u16][서버 스키마 해시 u64]` 로 답합니다. 둘 다 리틀 엔디언 고정 형식입니다.
+         * @details `respondError` 는 자세한 몸을 `BitWriter` 로 받아 비트 배치를 그 형식에 맡깁니다. 이 답은 어느 빌드도 바이트로 읽어야 하므로 `LittleEndianUtil` 로 직접 씁니다.
+         */
         void                respondVersionMismatch( const NetRequestToken& token );
         IOnlineHostService* findService( uint16 method ) const;
         bool                sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );

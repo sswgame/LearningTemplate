@@ -6,6 +6,7 @@
  *            그래서 항목 없이는 서비스를 만들 수 없고, 서비스를 가진 키트는 빠짐없이 해시에 섞입니다. 키트가 따로 목록을 적는 곳은 없습니다.
  *          - 해시는 이 빌드에 올라온 항목 전부를 섞습니다. 클라이언트가 키트 일부만 올려도 서버와 같은 값이 나와야 하기 때문입니다.
  *            서버와 클라이언트는 같은 빌드로 배포하므로 같은 키트 모듈이 오르고 같은 해시가 나옵니다(`docs/plans/ReflectionFormats.md` 5절).
+ *            한쪽만 키트 모듈을 끄거나(`EditorModuleOverrides`) 핫 리로드로 바꾸면 그쪽 해시만 달라져 접속이 `kVersionMismatch` 로 거절됩니다. 의도한 동작입니다.
  *          - 지금은 영역과 손 버전(`kVersion`)을 섞습니다. 메시지 스키마 해시는 단계 5-b 에서 항목에 더해 같은 자리에서 섞습니다.
  *          언리얼 `FNetworkVersion::GetLocalNetworkVersion`(빌드에서 나온 값 하나를 접속 때 비교)과 같은 자리입니다(기억에 의존).
  */
@@ -26,7 +27,7 @@ namespace sw
     class SW_GF_API OnlineProtocolEntry final : private ServiceFactoryNode
     {
     public:
-        /** @param pName 로그에 쓰는 이름(문자열 리터럴). 빌드 안에서 하나뿐이어야 합니다. */
+        /** @param pName 로그에 쓰는 이름(문자열 리터럴). 빌드 안에서 하나뿐이어야 하며, 없거나 겹치면 해시가 키트 목록과 어긋나므로 모든 구성에서 프로세스를 멈춥니다. */
         OnlineProtocolEntry( const utf8* pName, uint16 methodRange, uint32 version );
         ~OnlineProtocolEntry();
 

@@ -351,6 +351,17 @@ namespace
                                               Delegate<void( const NetResponse& )>::create<&RawClientSide::onResponse>( this ) );
         }
 
+        /** @brief 답이 올 때까지 이 쪽과 @p rig 를 번갈아 돌립니다(최대 6 번). */
+        void waitAnswer( HostRig& rig )
+        {
+            for ( int32 index = 0; index < 6 && _bAnswered == false; ++index )
+            {
+                pump();
+                rig.step( 1 );
+                pump();
+            }
+        }
+
         /** @brief `[스키마 해시 u64][빈 게임 빌드][플랫폼 0]` 모양의 Hello 를 보냅니다. */
         void sendHello( uint64 schemaHash )
         {
@@ -515,6 +526,60 @@ SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndSchemaHashI
 }
 
 /**
+ * @brief [OnlineServiceHostTest] Hello 는 고정 해시 칸만 먼저 읽는다. 8 바이트보다 짧거나 해시가 다르면 뒤가 깨져도 kVersionMismatch 이고, 해시가 같고 뒤가 깨지면 kInvalidRequest 다
+ * @details 세 경우 모두 서버는 답한 뒤 연결을 닫는다.
+ */
+SW_TEST_CASE( OnlineServiceHostTest, HelloRefusalsReadOnlyTheFixedHashFieldFirst )
+{
+    HostRig       rig;
+    const uint64  schemaHash = OnlineProtocolRegistry::computeSchemaHash();
+    RawClientSide shortHello( rig._network, rig.getPort() );
+    RawClientSide wrongHashBrokenRest( rig._network, rig.getPort() );
+    RawClientSide sameHashBrokenRest( rig._network, rig.getPort() );
+    for ( int32 index = 0; index < 4; ++index ) // 세 연결이 열릴 때까지
+    {
+        shortHello.pump();
+        wrongHashBrokenRest.pump();
+        sameHashBrokenRest.pump();
+        rig.step( 1 );
+    }
+
+    // 8 바이트보다 짧다(옛 형식의 varuint 몸 같은 것)
+    const uint8 arrShortBody[4] = { 1, 2, 3, 4 };
+    shortHello.sendBytes( OnlineHostMethod::kHello, arrShortBody, 4 );
+    shortHello.waitAnswer( rig );
+    SW_ASSERT_TRUE( shortHello._bAnswered );
+    SW_EXPECT_EQUAL( OnlineError::kVersionMismatch, shortHello.getErrorCode() );
+    SW_ASSERT_EQUAL( shortHello._lastBodyBytes.size(), size_t( 2 + OnlineProtocolConstant::kSchemaHashSize ) );
+    SW_EXPECT_EQUAL( schemaHash, LittleEndianUtil::readUint64( shortHello._lastBodyBytes.data() + 2 ) );
+
+    // 해시가 다르고 뒤(게임 빌드, 플랫폼)가 없다. 뒤를 읽기 전에 해시로 거절된다
+    vector<uint8> wrongHashBytes;
+    LittleEndianUtil::appendUint64( wrongHashBytes, schemaHash + 1 );
+    wrongHashBrokenRest.sendBytes( OnlineHostMethod::kHello, wrongHashBytes.data(), static_cast<int32>( wrongHashBytes.size() ) );
+    wrongHashBrokenRest.waitAnswer( rig );
+    SW_ASSERT_TRUE( wrongHashBrokenRest._bAnswered );
+    SW_EXPECT_EQUAL( OnlineError::kVersionMismatch, wrongHashBrokenRest.getErrorCode() );
+
+    // 해시는 같고 뒤가 없다
+    vector<uint8> sameHashBytes;
+    LittleEndianUtil::appendUint64( sameHashBytes, schemaHash );
+    sameHashBrokenRest.sendBytes( OnlineHostMethod::kHello, sameHashBytes.data(), static_cast<int32>( sameHashBytes.size() ) );
+    sameHashBrokenRest.waitAnswer( rig );
+    SW_ASSERT_TRUE( sameHashBrokenRest._bAnswered );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, sameHashBrokenRest.getErrorCode() );
+
+    for ( int32 index = 0; index < 6; ++index )
+    {
+        shortHello.pump();
+        wrongHashBrokenRest.pump();
+        sameHashBrokenRest.pump();
+        rig.step( 1 );
+    }
+    SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() ); // 세 연결 모두 서버가 닫았다
+}
+
+/**
  * @brief [OnlineServiceHostTest] 해시가 같으면 Hello 가 통과하고 키트 일부만 올린 클라이언트도 서버와 같은 해시를 쓴다
  * @details 해시는 빌드에 올라온 프로토콜 항목 전부에서 나오므로 클라이언트가 올린 키트 수와 상관없다.
  */
@@ -554,6 +619,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SchemaHashMismatchStopsTheClientWithoutReco
     }
     SW_EXPECT_TRUE( client._client.getState() == OnlineClientState::VersionMismatch );
     SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() );
+    SW_EXPECT_EQUAL( uint64( 1 ), rig._hostTransport->getStats()._acceptedCount ); // 서버가 받은 연결은 처음 하나뿐이다
     const ResponseRecord record = rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kEcho, 1 );
     SW_EXPECT_EQUAL( OnlineError::kVersionMismatch, record._errorCode );
 }

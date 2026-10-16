@@ -14,6 +14,7 @@
  *            그러면 상태가 `VersionMismatch` 가 되고 다시 연결하지 않는다. 모은 요청과 이 뒤의 요청은 모두 `kVersionMismatch` 로 끝난다.
  *            "업데이트 필요" 를 보이는 신호는 `getState()` 와 응답의 `_errorCode` 이다. 계정 키트는 이것을 `LoginResult::UpdateRequired` 로 바꾼다.
  *            지금 이 신호를 화면으로 보이는 게임 UI 는 없다.
+ *          - Hello 에 다른 오류 코드나 깨진 답이 오면 `HandshakeFailed` 로 멈추고 요청은 `kInvalidRequest` 로 끝난다. 시한 초과와 과부하는 연결을 닫아 물러남 뒤 다시 연결한다.
  *          - 모든 콜백은 `tick`(공유 모드는 `handleFrame`, `handleClosed`)을 부른 스레드에서 불린다.
  */
 #pragma once
@@ -97,7 +98,8 @@ namespace sw
         Connecting,
         Negotiating, ///< 열렸고 Hello 를 기다린다
         Ready,
-        VersionMismatch ///< 다시 연결하지 않는다
+        VersionMismatch, ///< 온라인 스키마 해시가 다르다. 다시 연결하지 않는다
+        HandshakeFailed  ///< Hello 응답이 예상 밖이다(다른 오류 코드, 깨진 답). 같은 빌드에서는 결함이므로 다시 연결하지 않는다
     };
 
     struct OnlineServiceClientConfig
@@ -200,10 +202,14 @@ namespace sw
             uint16                 _method{ 0 }; ///< `cancelRequestsOf` 가 영역으로 가린다
         };
 
-        void        sendHello();
-        void        sendQueuedCall( QueuedCall& call );
-        void        flushQueuedCalls();
-        bool        isGated( uint16 method ) const;
+        void sendHello();
+        void sendQueuedCall( QueuedCall& call );
+        void flushQueuedCalls();
+        bool isGated( uint16 method ) const;
+        /** @brief Hello 가 끝내 실패한 상태(`VersionMismatch` · `HandshakeFailed`)인가입니다. 이 상태에서는 다시 연결하지 않고 요청은 바로 실패합니다. */
+        bool isStopped() const;
+        /** @brief @p state 로 멈추고 모은 요청을 @p errorCode 로 끝낸 뒤 연결을 닫습니다. */
+        void        stopAfterHello( OnlineClientState state, uint16 errorCode );
         void        failQueuedCalls( NetRequestStatus status, uint16 errorCode );
         void        beginConnect();
         void        onHelloResponse( const NetResponse& response );

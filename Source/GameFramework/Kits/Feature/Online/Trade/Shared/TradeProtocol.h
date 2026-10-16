@@ -43,6 +43,9 @@ namespace sw
     {
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr uint32          kVersion = 1;
+
+        /** @brief 공통 오류 코드를 거래 결과로 바꿉니다. `kVersionMismatch` 는 그 앞에서 `OnlineReplyUtil::markError` 가 `UpdateRequired` 로 바꿉니다. */
+        static constexpr TradeResult fromErrorCode( uint16 errorCode ) { return errorCode == OnlineError::kInvalidRequest ? TradeResult::Invalid : TradeResult::Unavailable; }
     };
 } // namespace sw
 

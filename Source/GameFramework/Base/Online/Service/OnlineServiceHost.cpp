@@ -421,6 +421,7 @@ namespace sw
         if ( bBuildRead == false || reader.hasOverflowed() )
         {
             (void)respondError( context._token, OnlineError::kInvalidRequest );
+            _endpoint.close( context._token._handle, StreamCloseMode::Graceful ); // 해시는 같은데 몸이 깨졌다. 클라이언트도 실패로 끝내므로 연결을 남기지 않는다
             return;
         }
         connection._bHelloDone = SW_TRUE;

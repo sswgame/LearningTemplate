@@ -42,7 +42,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct SW_KIT_API ServerDirectoryProtocol
+     * @struct ServerDirectoryProtocol
      * @brief 본문 코덱입니다. 읽을 때 상한(`ServerDirectoryLimit`)을 넘으면 false 를 반환합니다.
      */
     struct SW_KIT_API ServerDirectoryProtocol

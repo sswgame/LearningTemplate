@@ -92,6 +92,7 @@ namespace sw
         CapExceeded,
         Busy,
         Unavailable,
+        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         Count
     };
 } // namespace sw

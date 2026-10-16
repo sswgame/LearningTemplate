@@ -6,6 +6,9 @@
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 
+#include <cstdio>
+#include <cstdlib>
+
 namespace sw
 {
     namespace
@@ -43,7 +46,15 @@ namespace sw
 
     void OnlineProtocolRegistry::registerEntry( OnlineProtocolEntry* pEntry )
     {
-        (void)OnlineProtocolRegistryInternal::getList().add( pEntry, OnlineProtocolRegistryInternal::kListName ); // 같은 이름이면 목록이 오류 로그를 남기고 거절한다
+        if ( OnlineProtocolRegistryInternal::getList().add( pEntry, OnlineProtocolRegistryInternal::kListName ) )
+            return;
+        // 오르지 못한 항목은 해시에 빠지므로 이 빌드의 해시가 키트 목록과 어긋납니다. 고칠 곳은 항목 선언이므로 모든 구성에서 멈춥니다.
+        // 모듈 로드(정적 초기화) 중이라 로거가 아직 없을 수 있어 표준 오류에도 직접 씁니다.
+        const utf8* pName = pEntry->_pName != nullptr ? pEntry->_pName : "(no name)";
+        std::fprintf( stderr, "Online protocol entry '%s' could not be registered (missing or duplicate name)\n", pName );
+        std::fflush( stderr );
+        SW_LOG_ERROR( "Online protocol entry '%#' could not be registered (missing or duplicate name)", pName );
+        std::abort();
     }
 
     void OnlineProtocolRegistry::unregisterEntry( OnlineProtocolEntry* pEntry )
