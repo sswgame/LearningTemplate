@@ -653,9 +653,11 @@ SW_TEST_CASE( VectorTest, DestroyAndValueInitializeMatchPerElementLoop )
     }
     SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
 
-    sw::vector<uint8> bytes( 64, 0xAB );
+    // 짧은 구간(원소 루프)과 64 칸 이상 구간(memset) 둘 다 지난다.
+    sw::vector<uint8> bytes( 256, 0xAB );
     bytes.resize( 8 );
-    bytes.resize( 64 );
+    bytes.resize( 16 );
+    bytes.resize( 256 );
     for ( size_t index = 8; index < bytes.size(); ++index )
     {
         SW_EXPECT_EQUAL( uint8{ 0 }, bytes[index] );
