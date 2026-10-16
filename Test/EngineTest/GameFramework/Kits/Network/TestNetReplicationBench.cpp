@@ -1,10 +1,11 @@
-// 복제 벤치 — 가상 서버 하니스에서 클라이언트 16 × 엔티티 1000(틱마다 10 % 가 바뀐다), 60 Hz. 틱 시간(하니스 한 스텝 · 서버 복제)과 틱당 할당 수. 값은 Release 로 읽는다.
+// 복제 벤치 — 가상 서버 하니스에서 클라이언트 16 × 엔티티 1000(틱마다 10 % 가 바뀐다), 60 Hz. 틱 시간(하니스 한 스텝 · 서버 복제)과 틱당 할당 수. 평문 판과 UDP 암호화 판. 값은 Release 로 읽는다.
 #include "pch.h"
 
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
@@ -35,6 +36,9 @@ namespace
             const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
             return pProfiler != nullptr ? pProfiler->getTotalAllocationCount() : 0;
         }
+
+        /** @brief 하니스를 @p hostSettings 로 세워 측정 창을 돌고 `[Bench]` 줄에 @p pLabel 을 붙여 남깁니다. 암호화 판과 평문 판이 같은 몸을 씁니다. */
+        static void runBench( const NetHostConfig& hostSettings, const utf8* pLabel );
     };
 
     /** @brief 측정 창 안의 틱마다 서버 복제 시간 · 할당 수를 모읍니다. */
@@ -132,6 +136,57 @@ namespace
 
         BenchProbe _probe;
     };
+
+    void NetReplicationBenchInternal::runBench( const NetHostConfig& hostSettings, const utf8* pLabel )
+    {
+        BenchGame    game;
+        NetSimConfig settings;
+        settings._hostSettings = hostSettings;
+        NetSimHarness harness;
+        SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+        for ( uint32 index = 0; index < kClientCount; ++index )
+        {
+            SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions{} ) > 0 );
+        }
+        harness.stepTicks( kWarmupTicks );
+        SW_ASSERT_TRUE( harness.areAllClientsConnected() );
+
+        MemoryProfiler* pProfiler    = MemoryProfiler::getActive();
+        const bool      bWasTracking = pProfiler != nullptr && pProfiler->isTrackingEnabled();
+        if ( pProfiler != nullptr )
+            pProfiler->setTrackingEnabled( true );
+        game._probe._bMeasuring        = SW_TRUE;
+        const uint64  sentBytesBefore  = harness.getServer().getTraffic()._sentBytes;
+        const uint64  allocationBefore = readAllocationCount();
+        vector<int64> listStepMicrosecond;
+        for ( uint32 tick = 0; tick < kMeasureTicks; ++tick )
+        {
+            const Stopwatch stopwatch;
+            harness.step();
+            listStepMicrosecond.push_back( stopwatch.getElapsedMicroseconds() );
+        }
+        [[maybe_unused]] const uint64 allocationCount = readAllocationCount() - allocationBefore;
+        [[maybe_unused]] const uint64 sentBytes       = harness.getServer().getTraffic()._sentBytes - sentBytesBefore;
+        game._probe._bMeasuring                       = SW_FALSE;
+        if ( pProfiler != nullptr )
+            pProfiler->setTrackingEnabled( bWasTracking );
+
+        utf8 arrStepLabel[constant::kMaxBuffer128];
+        utf8 arrServerLabel[constant::kMaxBuffer128];
+        formatstring( arrStepLabel, constant::kMaxBuffer128, "NetSim step 16 clients x 1000 entities%# (us)", pLabel );
+        formatstring( arrServerLabel, constant::kMaxBuffer128, "ReplicationServer tick 16 clients x 1000 entities%# (us)", pLabel );
+        test::logBenchSamples( arrStepLabel, listStepMicrosecond );
+        test::logBenchSamples( arrServerLabel, game._probe._listServerMicroseconds );
+        SW_LOG_INFO( "[Bench] NetSim 16 x 1000%# per tick: allocations %# (server replication %#), server up %# B", pLabel, allocationCount / kMeasureTicks,
+                     game._probe._serverAllocationCount / kMeasureTicks, sentBytes / kMeasureTicks );
+        // 벤치도 복제가 흐르는지는 본다.
+        vector<NetSimWorld*> listClient;
+        harness.collectClients( listClient );
+        for ( NetSimWorld* pClient : listClient )
+        {
+            SW_EXPECT_NOT_NULL( static_cast<BenchClientSession*>( pClient->getSession() )->getClient().getLatest() );
+        }
+    }
 } // namespace
 
 /**
@@ -140,46 +195,21 @@ namespace
  */
 SW_TEST_CASE( NetReplicationBenchTest, SixteenClientsThousandEntitiesAtSixtyHertz )
 {
-    using Internal = NetReplicationBenchInternal;
-    BenchGame     game;
-    NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
-    for ( uint32 index = 0; index < Internal::kClientCount; ++index )
-    {
-        SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions{} ) > 0 );
-    }
-    harness.stepTicks( Internal::kWarmupTicks );
-    SW_ASSERT_TRUE( harness.areAllClientsConnected() );
+    NetReplicationBenchInternal::runBench( NetHostConfig{}, "" );
+}
 
-    MemoryProfiler* pProfiler    = MemoryProfiler::getActive();
-    const bool      bWasTracking = pProfiler != nullptr && pProfiler->isTrackingEnabled();
-    if ( pProfiler != nullptr )
-        pProfiler->setTrackingEnabled( true );
-    game._probe._bMeasuring        = SW_TRUE;
-    const uint64  sentBytesBefore  = harness.getServer().getTraffic()._sentBytes;
-    const uint64  allocationBefore = Internal::readAllocationCount();
-    vector<int64> listStepMicroseconds;
-    for ( uint32 tick = 0; tick < Internal::kMeasureTicks; ++tick )
-    {
-        const Stopwatch stopwatch;
-        harness.step();
-        listStepMicroseconds.push_back( stopwatch.getElapsedMicroseconds() );
-    }
-    [[maybe_unused]] const uint64 allocationCount = Internal::readAllocationCount() - allocationBefore;
-    [[maybe_unused]] const uint64 sentBytes       = harness.getServer().getTraffic()._sentBytes - sentBytesBefore;
-    game._probe._bMeasuring                       = SW_FALSE;
-    if ( pProfiler != nullptr )
-        pProfiler->setTrackingEnabled( bWasTracking );
-
-    test::logBenchSamples( "NetSim step 16 clients x 1000 entities (us)", listStepMicroseconds );
-    test::logBenchSamples( "ReplicationServer tick 16 clients x 1000 entities (us)", game._probe._listServerMicroseconds );
-    SW_LOG_INFO( "[Bench] NetSim 16 x 1000 per tick: allocations %# (server replication %#), server up %# B", allocationCount / Internal::kMeasureTicks,
-                 game._probe._serverAllocationCount / Internal::kMeasureTicks, sentBytes / Internal::kMeasureTicks );
-    // 벤치도 복제가 흐르는지는 본다.
-    vector<NetSimWorld*> listClient;
-    harness.collectClients( listClient );
-    for ( NetSimWorld* pClient : listClient )
-    {
-        SW_EXPECT_NOT_NULL( static_cast<BenchClientSession*>( pClient->getSession() )->getClient().getLatest() );
-    }
+/**
+ * @brief [NetReplicationBenchTest] 같은 부하를 UDP 암호화(X25519 키 교환 + 패킷마다 AEAD)를 켠 호스트로 — 평문 판과 줄을 나란히 놓아 암호화 비용을 읽는다
+ * @details 인증기 없는 암호화는 개발 빌드에만 있다(결정 기록 5-9). Shipping 은 건너뛴다. 서버 틱 시간은 "하니스 한 스텝"(봉인 · 열기가 든 송수신 포함)으로 읽는다.
+ */
+SW_TEST_CASE( NetReplicationBenchTest, SixteenClientsThousandEntitiesAtSixtyHertzEncrypted )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "UDP encryption without an authenticator is a development-build mode" );
+#else
+    NetHostConfig hostSettings;
+    hostSettings._security._mode      = NetSecurityMode::Encrypted;
+    hostSettings._security._pProvider = &NetSecurity::getProvider();
+    NetReplicationBenchInternal::runBench( hostSettings, " encrypted" );
+#endif
 }
