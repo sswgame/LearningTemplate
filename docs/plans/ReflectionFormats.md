@@ -351,10 +351,14 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
   지금 세이브 섹션은 롤백 바이트이고 변환할 옛 세이브가 없으므로, 현 단계에서는 옛 롤백 바이트 섹션을 읽는 변환 코드를 두지 않습니다.
 - **게임 넷 연결**: 지금도 정확히 같은 버전만 받습니다(`NetTypes.h:35-57`). 채널에 등록된 메시지 타입의 스키마 해시를 모두 `NetWireVersion::combine` 에 섞습니다.
   손 버전을 높이지 않아도 바이트 배치가 바뀌면 핸드셰이크가 `VersionMismatch` 로 거절합니다. 손 버전은 의미만 바뀌고 배치는 그대로인 경우에만 높입니다.
-- **온라인 서비스(사용자 결정: B 로 옮김)**: 서버와 클라이언트는 같은 빌드로 배포합니다. 지금도 키트마다 `getProtocolVersion()` 을 정확히 비교합니다(`OnlineServiceHost.cpp:408-425`).
-  - 접속 핸드셰이크의 **첫 필드**를 "온라인 스키마 해시"로 바꿉니다. 클라이언트와 서버가 같은 공유 등록 함수(`*Protocol::describe`)로 만든 메서드 · 타입 목록의 해시를 모두 섞은 값입니다. 서버는 다른 어떤 바이트보다 먼저 이것을 비교합니다.
+- **온라인 서비스(사용자 결정: B 로 옮김)**: 서버와 클라이언트는 같은 빌드로 배포합니다. 단계 5-a 에서 키트마다 `getProtocolVersion()` 을 대조하던 협상을 아래 해시 비교로 바꿨습니다(2026-10-17).
+  - 접속 핸드셰이크의 **첫 필드**를 "온라인 스키마 해시"로 바꿉니다. 서버는 다른 어떤 바이트보다 먼저 이것을 비교합니다.
+    5-a 의 해시는 빌드에 올라온 키트 프로토콜 항목(`OnlineProtocolEntry`, 키트 Shared `.cpp` 의 `XxxProtocol::kOnlineEntry`) 전부의 영역과 손 버전, `kBaseVersion` 을 섞습니다(`OnlineProtocolRegistry::computeSchemaHash`).
+    키트 서비스는 `getProtocol` 로 그 항목을 돌려줘야 하므로 항목 없는 키트는 서비스를 만들 수 없습니다. 클라이언트가 올린 키트만 섞으면 키트 일부만 쓰는 클라이언트가 어긋나므로 빌드 전체를 섞습니다.
+    5-b 는 메서드 · 타입 목록(`*Protocol::describe`)의 해시를 이 항목에 더해 같은 자리에서 섞습니다.
   - 다르면 연결을 `kVersionMismatch` 로 거절하고 응답에 서버 해시를 실어 보냅니다. 클라이언트는 이 오류를 "업데이트 필요" 화면으로 보이고 다시 접속하지 않습니다. 메시지를 하나라도 B 로 해석하기 전에 멈추므로 조용히 잘못 읽는 경로가 없습니다.
-    클라이언트가 이 오류를 어느 UI 로 보이는지는 읽지 않았습니다(미확인, 단계 5-a 에서 확인).
+    확인한 결과(단계 5-a): 이 오류를 화면으로 보이는 게임 UI 는 아직 없습니다. 신호는 `OnlineServiceClient::getState() == VersionMismatch` 와 응답의 `_errorCode` 이고,
+    계정 키트는 이것을 `LoginResult::UpdateRequired` 로 바꿉니다(전에는 표에 없어 `StoreUnavailable` 이 되어 재시도를 불렀습니다). 서버는 거절한 뒤 연결을 닫습니다.
   - 이 첫 필드와 거절 응답은 B 가 아니라 고정된 작은 형식(해시 64 비트 + 오류 코드)입니다. B 스키마가 바뀌어도 이 비교 자체는 항상 읽힐 수 있어야 하기 때문입니다.
   - 나중에 옛 클라이언트를 받아야 하면 로그인 · 버전 확인 같은 소수 메시지만 A 로 남기는 탈출구가 있습니다. 지금은 열지 않습니다(8.3).
 - 타입 ID(`TypeInfo::_typeID`)는 실행 순서에 따라 정해지는 로컬 인덱스이므로(`ReflectionCore.cpp:657`) 와이어에 싣지 않습니다. B 의 해시는 이름과 구조에서만 나오므로 빌드가 같으면 프로세스가 달라도 같습니다.
@@ -486,7 +490,6 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
   열거자 · `ENUM( Count, Flags )` · `REFLECT()` 표시를 읽습니다(`AstVisitor.cpp` `collectFixedEnum` · `isReflectedRecord`). 다만 다른 헤더 타입의 `PROPERTY` 를
   다시 모으지는 않고 실행 시간에 그 코덱을 찾아 의존을 확인합니다(`FixedLayout::findCodec`). 템플릿 · 키 상수는 `ParserDefines.h` 의 `templatekey` · `fixedlayout` 입니다.
   `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 입니다. 명세와 다르게 정한 것은 [결정 기록](../09_Decisions.md) 5-4 에 있습니다.
-- 클라이언트가 `kVersionMismatch` 를 어느 UI 로 보이는가(단계 5-a).
 - 지금 `ComponentHandle` 필드가 A 에서 어떤 바이트로 직렬화되는가(단계 7-d).
 - `GameObject::getTypeInfo` 에 타입 캐시가 있는가, `REFLECT` 타입 가운데 다중 상속이 있는가(단계 0).
 
@@ -498,8 +501,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 2 | (보류) `GimmickCircuit` 을 B 로. 상태 바이트 `_stateBytes` 가 씬 · 프리팹 XML 과 레벨 세이브에 남아 B 대상이 아님. 아래 문단 | `GimmickCircuit.*`, `GimmickCircuitComponent.*` | 세이브 형식 결정이 먼저 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게 | 인스펙터 범위 코드(미확인 위치) | 단계 1 뒤 | `worker`(sonnet) |
-| 5-a | 온라인 핸드셰이크 첫 필드 해시, "업데이트 필요" 거절 | `OnlineServiceHost.*`, `OnlineServiceClient.*`, 클라이언트 오류 UI | 5-b 보다 먼저 | `integrator`(opus) |
-| 5-b | 온라인 프로토콜 12 파일을 B 로, `*Protocol::describe` 등록 | `*Protocol.*` | 12 파일 한 손 | `worker`(opus) |
+| 5-b | 온라인 프로토콜 11 키트를 B 로, `*Protocol::describe` 의 해시를 `OnlineProtocolEntry` 에 더해 섞기 | `*Protocol.*`, `OnlineProtocolRegistry.*` | 11 키트 한 손 | `worker`(opus) |
 | 6 | 컴팩트 모드 삭제, `cloneObject` B | `BinarySerializer.*`, `Archive.*` | 다른 직렬화 작업과 겹침 | `worker`(sonnet) |
 | 7-a | `GameObject` 타입 캐시, 열거형 이름 배열 | `GameObject.*`, `EnumName.cpp`, 생성기 열거형 등록 | 생성기는 단계 1 뒤 | `worker`(sonnet) |
 | 7-b | `REFLECT` 다중 상속 생성 오류 | `AstVisitor.cpp` | 단계 1 과 같은 파일, 순서대로 | `worker`(sonnet) |
@@ -509,6 +511,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 단계 1(생성기 · `TypeInfo::_pFixedCodec` · `FixedLayout` 런타임 · 테스트)은 끝났습니다(2026-10-17). 런타임은 `Source/Engine/Serialization/Fixed/FixedLayout.h`,
 생성기는 `Tools/ReflectionParser/FixedCodecGenerator.*`, 테스트는 `Test/ReflectionTest/TestFixedLayout.cpp` · `TestFixedLayoutTypes.h` 와
 `ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` 입니다. 단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다.
+단계 5-a(Hello 첫 필드 스키마 해시, `OnlineProtocolRegistry`, "업데이트 필요" 거절 뒤 재접속 없음)는 끝났습니다(2026-10-17). 테스트는 `OnlineServiceHostTest` 의 `RequestsBeforeHelloAreRefusedAndSchemaHashIsComparedFirst` · `HelloRefusalsReadOnlyTheFixedHashFieldFirst` · `SameSchemaHashConnects` · `SchemaHashMismatchStopsTheClientWithoutReconnecting`, `OnlineProtocolTest.VersionMismatchBecomesUpdateRequiredBeforeTheKitTable` 입니다.
+키트 결과 열거형은 모두 `UpdateRequired` 를 가지며, 공통 처리(`OnlineReplyUtil::markError`)가 키트 표보다 먼저 `kVersionMismatch` 를 그 값으로 바꿉니다.
 
 단계 3 은 끝났습니다(2026-10-17). `FightingMatch` 가 `REFLECT` 타입이고 상태 필드(`FighterRuntime`, `MoveTimeline`, `InputCommandBuffer`, `RoundSeries`)가 `PROPERTY` 입니다.
 롤백은 `FixedLayout`, 세이브는 `BinarySerializer::serializeVersioned` 이고, 두 읽기가 같은 `validateState` 를 씁니다. 손 코덱과 손 버전 상수는 지웠습니다.

@@ -660,7 +660,7 @@ namespace sw
         if ( _pRemoteConfig == nullptr )
             return LoginResult::Ok;
         if ( AccountUtil::isValidLowerToken( clientInfo._platform, LoginConstant::kMaxPlatformTextSize ) == false )
-            return LoginResult::Ok; // 플랫폼을 모르면 빌드 버전을 확인할 수 없다. 프로토콜 버전(Hello)이 따로 막는다
+            return LoginResult::Ok; // 플랫폼을 모르면 빌드 버전을 확인할 수 없다. 온라인 스키마 해시(Hello)가 따로 막는다
         string minimumBuild;
         string recommendedBuild;
         (void)_pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kStoreURLKey, clientInfo._platform ), outGrant._storeURL );

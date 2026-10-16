@@ -14,6 +14,7 @@
 
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -67,6 +68,7 @@ namespace sw
         AlreadyRedeemed, ///< 다른 계정이 이미 받은 영수증이다
         Busy,            ///< 버전 충돌이 상한 횟수를 넘었다. 같은 멱등 키로 다시 시도한다
         Unavailable,     ///< 저장소나 전송을 쓸 수 없다. 적용됐는지 알 수 없으므로 같은 멱등 키로 다시 시도한다
+        UpdateRequired,  ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         Count
     };
 } // namespace sw
@@ -132,12 +134,13 @@ namespace sw
     /** @brief 형식을 읽고 씁니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
     struct SW_KIT_API EconomyProtocol
     {
-        static constexpr uint32 kVersion          = 1;
-        static constexpr int32  kMaxPayloadSize   = 16 * 1024; ///< 영수증의 상한이다. Apple JWS 는 수 KB 이다
-        static constexpr int32  kMaxIDSize        = 64;
-        static constexpr int32  kMaxCursorSize    = 512;
-        static constexpr int32  kMaxHistoryCount  = 100;
-        static constexpr int32  kMaxPurchaseCount = 1000;
+        static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+        static constexpr uint32          kVersion          = 1;
+        static constexpr int32           kMaxPayloadSize   = 16 * 1024; ///< 영수증의 상한이다. Apple JWS 는 수 KB 이다
+        static constexpr int32           kMaxIDSize        = 64;
+        static constexpr int32           kMaxCursorSize    = 512;
+        static constexpr int32           kMaxHistoryCount  = 100;
+        static constexpr int32           kMaxPurchaseCount = 1000;
 
         static void               writePurchaseRequest( BitWriter& outWriter, const EconomyPurchaseRequest& request );
         [[nodiscard]] static bool readPurchaseRequest( BitReader& reader, EconomyPurchaseRequest& outRequest );

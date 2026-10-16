@@ -109,11 +109,10 @@ namespace sw
         static void makeConnectCredentials( const NetGameTicket& ticket, NetConnectCredentials& outCredentials );
 
         // IOnlineClientService
-        uint16 getMethodRange() const override;
-        uint32 getProtocolVersion() const override;
-        void   onServicePush( uint16 kind, BitReader& body ) override;
-        void   onClientReady( OnlineServiceClient& client ) override;
-        void   onClientDisconnected( OnlineServiceClient& client ) override;
+        const OnlineProtocolEntry& getProtocol() const override;
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
+        void                       onClientReady( OnlineServiceClient& client ) override;
+        void                       onClientDisconnected( OnlineServiceClient& client ) override;
 
     private:
         struct PendingCall

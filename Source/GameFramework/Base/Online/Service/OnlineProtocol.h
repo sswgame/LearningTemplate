@@ -18,7 +18,7 @@ namespace sw
     {
         static constexpr uint16 kSize            = 0x0100;
         static constexpr uint16 kMethodCount     = 0x0080; ///< 영역 + 0x00..0x7F 가 메서드, 나머지는 알림 종류
-        static constexpr uint16 kHost            = 0x0000; ///< 판 협상 · 핑(호스트 자신)
+        static constexpr uint16 kHost            = 0x0000; ///< Hello · 핑(호스트 자신)
         static constexpr uint16 kAccount         = 0x0100;
         static constexpr uint16 kServerDirectory = 0x0200;
         static constexpr uint16 kTrade           = 0x0300;
@@ -73,7 +73,7 @@ namespace sw
     /** @brief 호스트 자신의 메서드입니다. */
     struct OnlineHostMethod
     {
-        static constexpr uint16 kHello = OnlineMethodRange::kHost + 1; ///< 판 협상 — 연결의 첫 요청(로그인 없이)
+        static constexpr uint16 kHello = OnlineMethodRange::kHost + 1; ///< 스키마 해시 비교. 연결의 첫 요청(로그인 없이)
         static constexpr uint16 kPing  = OnlineMethodRange::kHost + 2; ///< 서버 시각(ms) — Hello 뒤, 로그인 없이
     };
 } // namespace sw
@@ -100,7 +100,7 @@ namespace sw
         static constexpr uint16 kRateLimited     = 3; ///< 몸: varuint 기다릴 ms
         static constexpr uint16 kInvalidRequest  = 4; ///< Hello 전 요청 · 몸이 깨졌다 · 상한
         static constexpr uint16 kUnavailable     = 5; ///< 저장소 · 캐시 — 다시(멱등 키로)
-        static constexpr uint16 kVersionMismatch = 6; ///< 프로토콜 판이 안 맞는다 — 몸: 서버의 (영역, 판) 목록
+        static constexpr uint16 kVersionMismatch = 6; ///< 온라인 스키마 해시가 다르다. 몸: 서버 해시 u64 리틀 엔디언(`kSchemaHashSize`). 클라이언트는 다시 접속하지 않는다
         static constexpr uint16 kUpdateRequired  = 7; ///< 클라이언트 빌드가 최소 판보다 낮다(계정 키트가 낸다)
         static constexpr uint16 kNotFound        = 8;
         static constexpr uint16 kConflict        = 9;
@@ -128,8 +128,8 @@ namespace sw
 {
     struct OnlineProtocolConstant
     {
-        static constexpr uint32 kBaseVersion      = 1;  ///< 이 표 · Hello 몸 · 알림 프레임 형식의 판
-        static constexpr int32  kMaxKitCount      = 64; ///< Hello 하나에 실을 키트 판 상한
+        static constexpr uint32 kBaseVersion      = 2; ///< 이 표 · Hello 몸 · 알림 프레임 형식의 판. 온라인 스키마 해시에 섞인다(2: Hello 첫 필드가 스키마 해시)
+        static constexpr int32  kSchemaHashSize   = 8; ///< Hello 첫 필드와 `kVersionMismatch` 자세한 몸의 바이트 수(해시 u64 리틀 엔디언)
         static constexpr int32  kMaxBuildTextSize = 64;
     };
 } // namespace sw

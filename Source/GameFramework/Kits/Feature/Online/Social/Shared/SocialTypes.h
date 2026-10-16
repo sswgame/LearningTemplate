@@ -43,6 +43,7 @@ namespace sw
         InsufficientFunds, ///< 길드 창고 — 맡기는 계정이나 꺼낼 창고의 잔액이 모자란다
         CapExceeded,       ///< 길드 창고 — 꺼내면 계정 잔액 상한을 넘는다
         StorageNotEmpty,   ///< 길드 창고에 남은 것이 있어 길드를 해산할 수 없다(먼저 꺼낸다)
+        UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         Count
     };
 } // namespace sw

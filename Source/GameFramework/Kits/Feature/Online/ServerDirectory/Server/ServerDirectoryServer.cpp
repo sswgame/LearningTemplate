@@ -36,9 +36,9 @@ namespace sw
         _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
     }
 
-    uint32 ServerDirectoryServer::getProtocolVersion() const
+    const OnlineProtocolEntry& ServerDirectoryServer::getProtocol() const
     {
-        return ServerDirectoryMethod::kWireVersion;
+        return ServerDirectoryProtocol::kOnlineEntry;
     }
 
     bool ServerDirectoryServer::isAnonymousMethod( uint16 method ) const

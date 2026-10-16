@@ -22,7 +22,6 @@ namespace sw
         uint64 sendCommand( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply );
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kAdmin; }
-        uint32 getProtocolVersion() const override { return AdminProtocol::kVersion; }
+        const OnlineProtocolEntry& getProtocol() const override { return AdminProtocol::kOnlineEntry; }
     };
 } // namespace sw

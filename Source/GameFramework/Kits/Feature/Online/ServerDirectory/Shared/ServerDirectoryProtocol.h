@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Shared/ServerDirectoryTypes.h"
 
@@ -46,10 +47,11 @@ namespace sw
      */
     struct SW_KIT_API ServerDirectoryProtocol
     {
-        static void               writeMaintenance( BitWriter& outWriter, const MaintenanceWindow& window, bool bIncludeAllowList );
-        [[nodiscard]] static bool readMaintenance( BitReader& reader, bool bIncludeAllowList, MaintenanceWindow& outWindow );
-        static void               writeNotice( BitWriter& outWriter, const ServiceNotice& notice );
-        [[nodiscard]] static bool readNotice( BitReader& reader, ServiceNotice& outNotice );
+        static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+        static void                      writeMaintenance( BitWriter& outWriter, const MaintenanceWindow& window, bool bIncludeAllowList );
+        [[nodiscard]] static bool        readMaintenance( BitReader& reader, bool bIncludeAllowList, MaintenanceWindow& outWindow );
+        static void                      writeNotice( BitWriter& outWriter, const ServiceNotice& notice );
+        [[nodiscard]] static bool        readNotice( BitReader& reader, ServiceNotice& outNotice );
 
         static void               writeStatus( BitWriter& outWriter, const ServerDirectoryStatus& status );
         [[nodiscard]] static bool readStatus( BitReader& reader, ServerDirectoryStatus& outStatus );

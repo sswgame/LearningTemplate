@@ -5,6 +5,8 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeProtocol.h"
 
 namespace sw
 {
@@ -133,7 +135,7 @@ namespace sw
         reply._errorCode      = response._errorCode;
         if ( response.isOk() == false )
         {
-            reply._result = response._errorCode == OnlineError::kInvalidRequest ? TradeResult::Invalid : TradeResult::Unavailable;
+            OnlineReplyUtil::markError<TradeProtocol>( response._errorCode, reply ); // 공통 오류(해시 불일치)는 키트 표보다 먼저
         }
         else
         {

@@ -134,3 +134,8 @@ namespace sw
         return OnlineError::toResult( errorCode, kArrErrorResult, EconomyResult::Unavailable );
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry EconomyProtocol::kOnlineEntry{ "Economy", OnlineMethodRange::kEconomy, EconomyProtocol::kVersion };
+} // namespace sw

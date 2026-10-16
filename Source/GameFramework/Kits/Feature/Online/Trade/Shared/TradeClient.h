@@ -88,9 +88,8 @@ namespace sw
         const TradeSnapshot& getSnapshot() const { return _snapshot; }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kTrade; }
-        uint32 getProtocolVersion() const override { return TradeProtocol::kVersion; }
-        void   onServicePush( uint16 kind, BitReader& body ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return TradeProtocol::kOnlineEntry; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
         struct PendingCall

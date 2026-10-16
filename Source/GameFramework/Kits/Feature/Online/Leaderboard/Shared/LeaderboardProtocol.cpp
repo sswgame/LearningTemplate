@@ -126,3 +126,8 @@ namespace sw
         return OnlineError::toResult( errorCode, kArrErrorResult, LeaderboardResult::Unavailable );
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry LeaderboardProtocol::kOnlineEntry{ "Leaderboard", OnlineMethodRange::kLeaderboard, LeaderboardProtocol::kVersion };
+} // namespace sw

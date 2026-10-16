@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardTypes.h"
 
@@ -67,7 +68,8 @@ namespace sw
     /** @brief 형식을 읽고 씁니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
     struct SW_KIT_API LeaderboardProtocol
     {
-        static constexpr uint32 kVersion = 1;
+        static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+        static constexpr uint32          kVersion = 1;
 
         static void               writeRequest( BitWriter& outWriter, const LeaderboardRequest& request );
         [[nodiscard]] static bool readRequest( BitReader& reader, LeaderboardRequest& outRequest );

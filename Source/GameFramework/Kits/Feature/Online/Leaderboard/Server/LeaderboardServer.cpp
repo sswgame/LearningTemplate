@@ -35,9 +35,9 @@ namespace sw
         _pPresence  = nullptr;
     }
 
-    uint32 LeaderboardServer::getProtocolVersion() const
+    const OnlineProtocolEntry& LeaderboardServer::getProtocol() const
     {
-        return LeaderboardProtocol::kVersion;
+        return LeaderboardProtocol::kOnlineEntry;
     }
 
     void LeaderboardServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )

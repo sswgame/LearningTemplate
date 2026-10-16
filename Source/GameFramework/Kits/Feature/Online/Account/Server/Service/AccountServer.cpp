@@ -72,9 +72,9 @@ namespace sw
         _bHostAttached = SW_FALSE;
     }
 
-    uint32 AccountServer::getProtocolVersion() const
+    const OnlineProtocolEntry& AccountServer::getProtocol() const
     {
-        return AccountProtocol::kVersion;
+        return AccountProtocol::kOnlineEntry;
     }
 
     bool AccountServer::isAnonymousMethod( uint16 method ) const

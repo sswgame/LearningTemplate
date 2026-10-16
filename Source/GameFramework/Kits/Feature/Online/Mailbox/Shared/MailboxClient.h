@@ -49,8 +49,7 @@ namespace sw
         uint32                  getRevision() const { return _revision; }
 
         // IOnlineClientService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kMailbox; }
-        uint32 getProtocolVersion() const override { return MailboxProtocol::kVersion; }
+        const OnlineProtocolEntry& getProtocol() const override { return MailboxProtocol::kOnlineEntry; }
 
     private:
         uint64 send( uint16 method, const MailboxRequest& request, const NetIdempotencyKey& key, ReplyDelegate onReply );

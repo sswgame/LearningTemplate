@@ -31,13 +31,12 @@ namespace sw
         void shutdown();
 
         // IOnlineHostService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kServerDirectory; }
-        uint32 getProtocolVersion() const override;
-        bool   isAnonymousMethod( uint16 method ) const override;
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
-        void   onHostShutdown( OnlineServiceHost& host ) override;
-        void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
+        const OnlineProtocolEntry& getProtocol() const override;
+        bool                       isAnonymousMethod( uint16 method ) const override;
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onHostShutdown( OnlineServiceHost& host ) override;
+        void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:
         void attachHost( OnlineServiceHost& host );

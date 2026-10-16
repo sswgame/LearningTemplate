@@ -42,6 +42,7 @@ namespace sw
         , _mapAccountToConnection{}
         , _pTransport{ nullptr }
         , _nowMs{ 0 }
+        , _schemaHash{ 0 }
         , _bInitialized{ SW_FALSE }
     {
     }
@@ -61,6 +62,7 @@ namespace sw
         }
         _settings   = settings;
         _pTransport = pTransport;
+        _schemaHash = OnlineProtocolRegistry::computeSchemaHash(); // 서비스를 올린 뒤 기동 때 한 번. 같은 빌드의 클라이언트와 같은 값이다
         _accountBucket.initialize( settings._requestBurstPerAccount, settings._requestRefillMsPerAccount, OnlineServiceHostInternal::kMaxTrackedBucketCount );
         _remoteBucket.initialize( settings._requestBurstPerRemote, settings._requestRefillMsPerRemote, OnlineServiceHostInternal::kMaxTrackedBucketCount );
         if ( _endpoint.initialize( pTransport, settings._endpointSettings ) == false )
@@ -403,43 +405,38 @@ namespace sw
 
     void OnlineServiceHost::handleHello( const NetRequestContext& context, ConnectionState& connection )
     {
-        // 몸: [기반 판 varuint][키트 수 varuint][(영역 u16, 판 varuint) …][게임 빌드 blob][플랫폼 u8]
-        BitReader    reader( context._pBody, context._bodySize );
-        const uint64 baseVersion = reader.readVarUint();
-        const uint64 kitCount    = reader.readVarUint();
-        bool         bMatches    = baseVersion == OnlineProtocolConstant::kBaseVersion && kitCount <= static_cast<uint64>( OnlineProtocolConstant::kMaxKitCount );
-        for ( uint64 index = 0; bMatches && index < kitCount; ++index )
+        // 몸: [스키마 해시 u64 리틀 엔디언][게임 빌드 blob][플랫폼 u8]. 해시는 다른 어떤 바이트보다 먼저 비교한다.
+        const int32 hashSize    = OnlineProtocolConstant::kSchemaHashSize;
+        const bool  bHashEquals = context._bodySize >= hashSize && LittleEndianUtil::readUint64( context._pBody ) == _schemaHash;
+        if ( bHashEquals == false )
         {
-            const uint16              range    = static_cast<uint16>( reader.readBits( 16 ) );
-            const uint64              version  = reader.readVarUint();
-            const IOnlineHostService* pService = findService( range );
-            bMatches                           = pService != nullptr && pService->getMethodRange() == range && pService->getProtocolVersion() == version;
+            respondVersionMismatch( context._token );
+            _endpoint.close( context._token._handle, StreamCloseMode::Graceful ); // 답을 다 보낸 뒤 닫는다. 클라이언트는 다시 접속하지 않는다
+            return;
         }
+        BitReader     reader( context._pBody + hashSize, context._bodySize - hashSize );
         vector<uint8> buildBytes;
-        bMatches = bMatches && reader.readBlob( buildBytes, OnlineProtocolConstant::kMaxBuildTextSize );
-        (void)reader.readBits( 8 ); // 플랫폼 — 최소 빌드 판 확인은 계정 키트 몫
-        BitWriter answer;
-        writeServerVersions( answer );
-        if ( bMatches == false || reader.hasOverflowed() )
+        const bool    bBuildRead = reader.readBlob( buildBytes, OnlineProtocolConstant::kMaxBuildTextSize );
+        (void)reader.readBits( 8 ); // 플랫폼. 최소 빌드 판 확인은 계정 키트 몫
+        if ( bBuildRead == false || reader.hasOverflowed() )
         {
-            (void)respondError( context._token, OnlineError::kVersionMismatch, &answer );
+            (void)respondError( context._token, OnlineError::kInvalidRequest );
+            _endpoint.close( context._token._handle, StreamCloseMode::Graceful ); // 해시는 같은데 몸이 깨졌다. 클라이언트도 실패로 끝내므로 연결을 남기지 않는다
             return;
         }
         connection._bHelloDone = SW_TRUE;
+        BitWriter answer;
         answer.writeVarUint( _settings._pRemoteConfig != nullptr ? _settings._pRemoteConfig->getSnapshotHash() : 0 );
         answer.writeVarInt( _nowMs );
         (void)respondOk( context._token, answer );
     }
 
-    void OnlineServiceHost::writeServerVersions( BitWriter& outWriter ) const
+    void OnlineServiceHost::respondVersionMismatch( const NetRequestToken& token )
     {
-        outWriter.writeVarUint( OnlineProtocolConstant::kBaseVersion );
-        outWriter.writeVarUint( _listService.size() );
-        for ( const IOnlineHostService* pService : _listService )
-        {
-            outWriter.writeBits( pService->getMethodRange(), 16 );
-            outWriter.writeVarUint( pService->getProtocolVersion() );
-        }
+        _responseBytes.clear();
+        LittleEndianUtil::appendUint16( _responseBytes, OnlineError::kVersionMismatch );
+        LittleEndianUtil::appendUint64( _responseBytes, _schemaHash );
+        (void)_requestServer.respond( token, NetRequestStatus::ApplicationError, _responseBytes.data(), static_cast<int32>( _responseBytes.size() ) );
     }
 
     IOnlineHostService* OnlineServiceHost::findService( uint16 method ) const

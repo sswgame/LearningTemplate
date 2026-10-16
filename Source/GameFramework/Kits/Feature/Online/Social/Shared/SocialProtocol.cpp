@@ -202,3 +202,8 @@ namespace sw
         return OnlineError::toResult( errorCode, kArrErrorResult, SocialResult::Unavailable );
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry SocialProtocol::kOnlineEntry{ "Social", OnlineMethodRange::kSocial, SocialProtocol::kVersion };
+} // namespace sw

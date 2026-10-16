@@ -66,13 +66,16 @@ namespace
         }
     };
 
+    // 키트 항목이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
+    const OnlineProtocolEntry kKillerProtocol{ "ServiceClientCallTableTest.Killer", OnlineMethodRange::kGame + OnlineMethodRange::kSize, 1 };
+    const OnlineProtocolEntry kVictimProtocol{ "ServiceClientCallTableTest.Victim", OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize, 1 };
+
     /** @brief 수명 순서만 보는 빈 키트(테스트 로그인과 같은 영역). */
     class LifetimeClientService final : public IOnlineClientService
     {
     public:
-        uint16 getMethodRange() const override { return OnlineMethodRange::kGame; }
-        uint32 getProtocolVersion() const override { return 1; }
-        void   onServicePush( uint16 kind, BitReader& body ) override
+        const OnlineProtocolEntry& getProtocol() const override { return test::kTestLoginProtocol; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             (void)kind;
             (void)body;
@@ -86,9 +89,8 @@ namespace
         unique_ptr<SelfDestroyingClientService>* _pOwner{ nullptr };
         int32*                                   _pResponseCount{ nullptr };
 
-        uint16 getMethodRange() const override { return OnlineMethodRange::kGame; }
-        uint32 getProtocolVersion() const override { return 1; }
-        void   onServicePush( uint16 kind, BitReader& body ) override
+        const OnlineProtocolEntry& getProtocol() const override { return test::kTestLoginProtocol; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             (void)kind;
             (void)body;
@@ -102,38 +104,18 @@ namespace
         }
     };
 
-    /** @brief Hello 의 영역 · 판 대조를 맞추려고 서버에 등록하는, 요청을 받지 않는 서비스입니다. */
-    class StubOnlineService final : public IOnlineHostService
-    {
-    public:
-        explicit StubOnlineService( uint16 methodRange )
-            : _methodRange{ methodRange } {}
-
-        uint16 getMethodRange() const override { return _methodRange; }
-        uint32 getProtocolVersion() const override { return 1; }
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
-        {
-            (void)body;
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-        }
-
-    private:
-        uint16 _methodRange;
-    };
-
     /** @brief Ready 알림에서 다른 키트(@p _pVictim)를 파괴하는 키트입니다. */
     class DestroyOtherOnReadyClientService final : public IOnlineClientService
     {
     public:
-        explicit DestroyOtherOnReadyClientService( uint16 methodRange )
-            : _methodRange{ methodRange } {}
+        explicit DestroyOtherOnReadyClientService( const OnlineProtocolEntry& protocol )
+            : _pProtocol{ &protocol } {}
 
         unique_ptr<DestroyOtherOnReadyClientService>* _pVictim{ nullptr };
         int32*                                        _pReadyCount{ nullptr };
 
-        uint16 getMethodRange() const override { return _methodRange; }
-        uint32 getProtocolVersion() const override { return 1; }
-        void   onServicePush( uint16 kind, BitReader& body ) override
+        const OnlineProtocolEntry& getProtocol() const override { return *_pProtocol; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             (void)kind;
             (void)body;
@@ -147,7 +129,7 @@ namespace
         }
 
     private:
-        uint16 _methodRange;
+        const OnlineProtocolEntry* _pProtocol;
     };
 } // namespace
 
@@ -189,23 +171,17 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsS
     MemoryServiceDatabase   database;
     MemoryEphemeralDatabase cacheDatabase;
     LocalServerBusHub       hub;
-    // 서비스는 서버보다 먼저 — 서버 소멸(호스트 종료)이 등록된 서비스의 onHostShutdown 을 부른다.
-    StubOnlineService      killerService( OnlineMethodRange::kGame + OnlineMethodRange::kSize ); // 서버가 클라이언트 키트의 영역을 알아야 Hello 가 통과한다
-    StubOnlineService      victimService( OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize );
-    test::OnlineTestServer server( network, &database, &cacheDatabase, &hub, 1 );
-    SW_ASSERT_TRUE( server._host.registerHostService( &killerService ) );
-    SW_ASSERT_TRUE( server._host.registerHostService( &victimService ) );
+    test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     server.start();
     test::OnlineTestClients clients( network );
 
     int32                                        readyCount = 0;
-    unique_ptr<DestroyOtherOnReadyClientService> killer     = sw::make_unique<DestroyOtherOnReadyClientService>( OnlineMethodRange::kGame + OnlineMethodRange::kSize );
-    unique_ptr<DestroyOtherOnReadyClientService> victim =
-        sw::make_unique<DestroyOtherOnReadyClientService>( OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize );
-    killer->_pVictim        = &victim;
-    killer->_pReadyCount    = &readyCount;
-    victim->_pReadyCount    = &readyCount;
-    const int32 clientIndex = clients.connect( server._port, { killer.get(), victim.get() } );
+    unique_ptr<DestroyOtherOnReadyClientService> killer     = sw::make_unique<DestroyOtherOnReadyClientService>( kKillerProtocol );
+    unique_ptr<DestroyOtherOnReadyClientService> victim     = sw::make_unique<DestroyOtherOnReadyClientService>( kVictimProtocol );
+    killer->_pVictim                                        = &victim;
+    killer->_pReadyCount                                    = &readyCount;
+    victim->_pReadyCount                                    = &readyCount;
+    const int32 clientIndex                                 = clients.connect( server._port, { killer.get(), victim.get() } );
     test::updateAll( { &server }, clients, 0 );
 
     SW_EXPECT_TRUE( clients.getClient( clientIndex ).isReady() );

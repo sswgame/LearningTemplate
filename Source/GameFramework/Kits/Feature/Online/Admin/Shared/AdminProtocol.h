@@ -18,6 +18,7 @@
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -91,6 +92,7 @@ namespace sw
         CapExceeded,
         Busy,
         Unavailable,
+        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         Count
     };
 } // namespace sw
@@ -162,12 +164,13 @@ namespace sw
     /** @brief 형식을 읽고 쓰며 등급 테이블을 제공합니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
     struct SW_KIT_API AdminProtocol
     {
-        static constexpr uint32 kVersion        = 1;
-        static constexpr int32  kMaxBulkCount   = 16;
-        static constexpr int32  kMaxMemoSize    = 1024;
-        static constexpr int32  kMaxLookupCount = 10;
-        static constexpr int32  kMaxListCount   = 100;
-        static constexpr int32  kMaxTextSize    = 256;
+        static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+        static constexpr uint32          kVersion        = 1;
+        static constexpr int32           kMaxBulkCount   = 16;
+        static constexpr int32           kMaxMemoSize    = 1024;
+        static constexpr int32           kMaxLookupCount = 10;
+        static constexpr int32           kMaxListCount   = 100;
+        static constexpr int32           kMaxTextSize    = 256;
 
         static void               writeRequest( BitWriter& outWriter, const AdminRequest& request );
         [[nodiscard]] static bool readRequest( BitReader& reader, AdminRequest& outRequest );

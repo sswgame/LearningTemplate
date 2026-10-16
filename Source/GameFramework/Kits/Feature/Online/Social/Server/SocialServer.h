@@ -39,13 +39,12 @@ namespace sw
         void shutdown();
 
         // IOnlineHostService
-        uint16 getMethodRange() const override { return OnlineMethodRange::kSocial; }
-        uint32 getProtocolVersion() const override;
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
-        void   onHostShutdown( OnlineServiceHost& host ) override;
-        void   onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
-        void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
+        const OnlineProtocolEntry& getProtocol() const override;
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onHostShutdown( OnlineServiceHost& host ) override;
+        void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
+        void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:
         void attachHost( OnlineServiceHost& host );

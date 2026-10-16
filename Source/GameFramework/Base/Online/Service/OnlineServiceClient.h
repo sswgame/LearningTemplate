@@ -1,7 +1,7 @@
 /**
  * @file OnlineServiceClient.h
  * @brief 서비스 틀의 클라이언트 쪽을 정의합니다.
- * @details 연결 하나, 요청 클라이언트, Hello(키트 버전 협상), 알림을 영역마다 나누는 일, 끊겼을 때 다시 연결하는 일(물러남)을 맡는다.
+ * @details 연결 하나, 요청 클라이언트, Hello(온라인 스키마 해시 비교), 알림을 영역마다 나누는 일, 끊겼을 때 다시 연결하는 일(물러남)을 맡는다.
  *
  *          - 두 모드가 있다.
  *            **자기 엔드포인트**(`initialize`)는 전송은 빌려 쓰고 엔드포인트와 요청 클라이언트를 가진다. 게임 클라이언트가 쓴다.
@@ -10,7 +10,11 @@
  *          - Hello 가 끝나기 전에 보낸 요청은 모았다가, 끝나면 맡긴 순서대로 보낸다. 시한은 맡긴 때부터 센다.
  *            다시 연결하면 Hello 를 다시 하고 서비스에 `onClientReady` 를 알린다. 계정 키트는 여기서 재접속(토큰)을 먼저 보낸다.
  *            끊길 때 날아가던 요청은 ConnectionLost 로 끝난다. 재시도는 부르는 쪽이 같은 멱등 키로 해야 한다.
- *          - 버전이 안 맞으면(`kVersionMismatch`) 다시 연결하지 않는다. 클라이언트는 "업데이트 필요" 화면을 보여 준다.
+ *          - Hello 첫 필드는 `initialize` 때 정한 온라인 스키마 해시(`OnlineProtocolRegistry`)이다. 서버 해시와 다르면 서버가 `kVersionMismatch` 와 서버 해시로 답한다.
+ *            그러면 상태가 `VersionMismatch` 가 되고 다시 연결하지 않는다. 모은 요청과 이 뒤의 요청은 모두 `kVersionMismatch` 로 끝난다.
+ *            "업데이트 필요" 를 보이는 신호는 `getState()` 와 응답의 `_errorCode` 이다. 계정 키트는 이것을 `LoginResult::UpdateRequired` 로 바꾼다.
+ *            지금 이 신호를 화면으로 보이는 게임 UI 는 없다.
+ *          - Hello 에 다른 오류 코드나 깨진 답이 오면 `HandshakeFailed` 로 멈추고 요청은 `kInvalidRequest` 로 끝난다. 시한 초과와 과부하는 연결을 닫아 물러남 뒤 다시 연결한다.
  *          - 모든 콜백은 `tick`(공유 모드는 `handleFrame`, `handleClosed`)을 부른 스레드에서 불린다.
  */
 #pragma once
@@ -25,6 +29,7 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/NetTypes.h"
 
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -51,7 +56,7 @@ namespace sw
 {
     /**
      * @class IOnlineClientService
-     * @brief 클라이언트 쪽 키트 하나(계정, 거래, 채팅 등의 클라이언트)입니다. 영역과 버전을 Hello 에 싣고, 그 영역의 알림을 받습니다.
+     * @brief 클라이언트 쪽 키트 하나(계정, 거래, 채팅 등의 클라이언트)입니다. 그 영역의 요청을 보내고 알림을 받습니다.
      */
     class SW_GF_API IOnlineClientService
     {
@@ -68,9 +73,10 @@ namespace sw
         IOnlineClientService( const IOnlineClientService& )            = delete;
         IOnlineClientService& operator=( const IOnlineClientService& ) = delete;
 
-        virtual uint16 getMethodRange() const                        = 0;
-        virtual uint32 getProtocolVersion() const                    = 0;
-        virtual void   onServicePush( uint16 kind, BitReader& body ) = 0;
+        /** @brief 이 키트의 프로토콜 항목입니다. 영역은 여기서 나오고, 항목은 온라인 스키마 해시에 섞입니다. */
+        virtual const OnlineProtocolEntry& getProtocol() const = 0;
+        uint16                             getMethodRange() const { return getProtocol().getMethodRange(); }
+        virtual void                       onServicePush( uint16 kind, BitReader& body ) = 0;
         /** @brief Hello 가 끝났을 때(처음 연결과 다시 연결) 불립니다. 계정 키트는 여기서 재접속 요청을 보냅니다. */
         virtual void onClientReady( OnlineServiceClient& client ) { (void)client; }
         /** @brief 연결이 끊겼을 때 불립니다. 다시 연결을 기다리며, 계정 키트는 로그인 상태를 내립니다. */
@@ -92,7 +98,8 @@ namespace sw
         Connecting,
         Negotiating, ///< 열렸고 Hello 를 기다린다
         Ready,
-        VersionMismatch ///< 다시 연결하지 않는다
+        VersionMismatch, ///< 온라인 스키마 해시가 다르다. 다시 연결하지 않는다
+        HandshakeFailed  ///< Hello 응답이 예상 밖이다(다른 오류 코드, 깨진 답). 같은 빌드에서는 결함이므로 다시 연결하지 않는다
     };
 
     struct OnlineServiceClientConfig
@@ -125,7 +132,7 @@ namespace sw
         [[nodiscard]] bool registerClientService( IOnlineClientService* pService );
         /**
          * @brief 키트를 내리고 그 영역의 요청을 `cancelRequestsOf` 로 버립니다. 올리지 않은 키트면 아무것도 하지 않습니다.
-         * @details 키트 기반 소멸자가 부른다. 다시 연결하면 Hello 에 그 키트가 빠진다.
+         * @details 키트 기반 소멸자가 부른다. 스키마 해시는 빌드의 항목 전부에서 나오므로 내려도 바뀌지 않는다.
          */
         void unregisterClientService( IOnlineClientService* pService );
         /**
@@ -195,10 +202,14 @@ namespace sw
             uint16                 _method{ 0 }; ///< `cancelRequestsOf` 가 영역으로 가린다
         };
 
-        void        sendHello();
-        void        sendQueuedCall( QueuedCall& call );
-        void        flushQueuedCalls();
-        bool        isGated( uint16 method ) const;
+        void sendHello();
+        void sendQueuedCall( QueuedCall& call );
+        void flushQueuedCalls();
+        bool isGated( uint16 method ) const;
+        /** @brief Hello 가 끝내 실패한 상태(`VersionMismatch` · `HandshakeFailed`)인가입니다. 이 상태에서는 다시 연결하지 않고 요청은 바로 실패합니다. */
+        bool isStopped() const;
+        /** @brief @p state 로 멈추고 모은 요청을 @p errorCode 로 끝낸 뒤 연결을 닫습니다. */
+        void        stopAfterHello( OnlineClientState state, uint16 errorCode );
         void        failQueuedCalls( NetRequestStatus status, uint16 errorCode );
         void        beginConnect();
         void        onHelloResponse( const NetResponse& response );
@@ -224,6 +235,7 @@ namespace sw
         int64                              _backoffMs;
         int64                              _serverTimeMs;
         uint64                             _remoteConfigHash;
+        uint64                             _schemaHash; ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
         uint64                             _nextRequestID;
         uint16                             _gateOwnerRange;
         OnlineClientState                  _state;

@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingTypes.h"
 
@@ -100,8 +101,9 @@ namespace sw
      */
     struct SW_KIT_API MatchmakingProtocol
     {
-        static constexpr uint32 kVersion      = 1;
-        static constexpr uint8  kRecordFormat = 1;
+        static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+        static constexpr uint32          kVersion      = 1;
+        static constexpr uint8           kRecordFormat = 1;
 
         static void               writeParty( BitWriter& outWriter, const PartySnapshot& party );
         [[nodiscard]] static bool readParty( BitReader& reader, PartySnapshot& outParty );

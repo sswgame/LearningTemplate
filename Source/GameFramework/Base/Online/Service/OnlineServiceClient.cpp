@@ -41,6 +41,7 @@ namespace sw
         , _backoffMs{ 0 }
         , _serverTimeMs{ 0 }
         , _remoteConfigHash{ 0 }
+        , _schemaHash{ 0 }
         , _nextRequestID{ 1 }
         , _gateOwnerRange{ 0 }
         , _state{ OnlineClientState::Disconnected }
@@ -121,6 +122,7 @@ namespace sw
         SW_ASSERT( _bInitialized == SW_FALSE );
         _settings                        = settings;
         _pTransport                      = pTransport;
+        _schemaHash                      = OnlineProtocolRegistry::computeSchemaHash();
         _ownedEndpoint                   = sw::make_unique<StreamMessageEndpoint>();
         _ownedRequestClient              = sw::make_unique<NetRequestClient>();
         const bool bTransportStartFailed = pTransport == nullptr || _ownedEndpoint->initialize( pTransport, settings._endpointSettings ) == false ||
@@ -146,6 +148,7 @@ namespace sw
         if ( bInvalidClientArguments )
             return false;
         _settings        = settings;
+        _schemaHash      = OnlineProtocolRegistry::computeSchemaHash();
         _pEndpoint       = pEndpoint;
         _pRequestClient  = pRequestClient;
         _connection      = handle;
@@ -215,13 +218,14 @@ namespace sw
         call._deadlineMs       = _nowMs + static_cast<int64>( options._timeoutSeconds * constant::kMillisecondsPerSecond );
         call._method           = method;
         const uint64 requestID = call._requestID;
-        if ( _bInitialized == SW_FALSE || _state == OnlineClientState::VersionMismatch )
+        if ( _bInitialized == SW_FALSE || isStopped() )
         {
-            const bool     bMismatch = _state == OnlineClientState::VersionMismatch;
+            const bool     bStopped = isStopped();
+            const uint16   stopCode = _state == OnlineClientState::VersionMismatch ? OnlineError::kVersionMismatch : OnlineError::kInvalidRequest;
             OnlineResponse response;
             response._requestID = requestID;
-            response._status    = bMismatch ? NetRequestStatus::ApplicationError : NetRequestStatus::ConnectionLost;
-            response._errorCode = bMismatch ? OnlineError::kVersionMismatch : OnlineError::kUnavailable;
+            response._status    = bStopped ? NetRequestStatus::ApplicationError : NetRequestStatus::ConnectionLost;
+            response._errorCode = bStopped ? stopCode : OnlineError::kUnavailable;
             if ( onResponse.isBound() )
                 onResponse( response );
             return requestID;
@@ -248,6 +252,19 @@ namespace sw
         return _bGateClosed == SW_TRUE && OnlineMethodRange::getRangeBase( method ) != _gateOwnerRange;
     }
 
+    bool OnlineServiceClient::isStopped() const
+    {
+        return _state == OnlineClientState::VersionMismatch || _state == OnlineClientState::HandshakeFailed;
+    }
+
+    void OnlineServiceClient::stopAfterHello( OnlineClientState state, uint16 errorCode )
+    {
+        _state = state;
+        failQueuedCalls( NetRequestStatus::ApplicationError, errorCode );
+        if ( _connection.isValid() )
+            _pEndpoint->close( _connection, StreamCloseMode::Graceful ); // 서버도 닫지만 이쪽에서도 연결을 남기지 않는다. 닫힘 알림은 멈춘 상태라 다시 연결하지 않는다
+    }
+
     void OnlineServiceClient::handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize )
     {
         if ( kind == StreamFrameKind::Message )
@@ -257,7 +274,7 @@ namespace sw
     void OnlineServiceClient::handleClosed( StreamCloseReason reason )
     {
         (void)reason;
-        if ( _state != OnlineClientState::VersionMismatch )
+        if ( isStopped() == false )
             _state = OnlineClientState::Disconnected;
         failQueuedCalls( NetRequestStatus::ConnectionLost, OnlineError::kUnavailable ); // 공유 모드는 다시 연결하지 않는다
     }
@@ -287,8 +304,8 @@ namespace sw
             return;
         (void)reason;
         _connection = StreamConnectionHandle{};
-        if ( _state == OnlineClientState::VersionMismatch )
-            return;
+        if ( isStopped() )
+            return; // 다시 연결하지 않는다
         notifyServices( &IOnlineClientService::onClientDisconnected );
         _state         = OnlineClientState::Disconnected;
         _nextConnectMs = _nowMs + _backoffMs;
@@ -297,21 +314,17 @@ namespace sw
 
     void OnlineServiceClient::sendHello()
     {
-        // 몸: [기반 판 varuint][키트 수 varuint][(영역 u16, 판 varuint) …][게임 빌드 blob][플랫폼 u8]
-        BitWriter hello;
-        hello.writeVarUint( OnlineProtocolConstant::kBaseVersion );
-        hello.writeVarUint( _listService.size() );
-        for ( const IOnlineClientService* pService : _listService )
-        {
-            hello.writeBits( pService->getMethodRange(), 16 );
-            hello.writeVarUint( pService->getProtocolVersion() );
-        }
+        // 몸: [스키마 해시 u64 리틀 엔디언][게임 빌드 blob][플랫폼 u8]. 해시는 B 가 아닌 고정 형식이라 스키마가 바뀌어도 서버가 늘 읽는다.
+        BitWriter    rest;
         const size_t buildSize = std::min( _settings._gameBuild.size(), static_cast<size_t>( OnlineProtocolConstant::kMaxBuildTextSize ) );
-        hello.writeBlob( reinterpret_cast<const uint8*>( _settings._gameBuild.data() ), static_cast<int32>( buildSize ) );
-        hello.writeBits( _settings._platform, 8 );
+        rest.writeBlob( reinterpret_cast<const uint8*>( _settings._gameBuild.data() ), static_cast<int32>( buildSize ) );
+        rest.writeBits( _settings._platform, 8 );
+        vector<uint8> helloBytes;
+        LittleEndianUtil::appendUint64( helloBytes, _schemaHash );
+        helloBytes.insert( helloBytes.end(), rest.getBytes().begin(), rest.getBytes().begin() + rest.getByteCount() );
         NetRequestOptions options;
         options._timeoutSeconds = 10.0;
-        (void)_pRequestClient->sendRequest( _connection, OnlineHostMethod::kHello, hello.getBytes().data(), hello.getByteCount(), options,
+        (void)_pRequestClient->sendRequest( _connection, OnlineHostMethod::kHello, helloBytes.data(), static_cast<int32>( helloBytes.size() ), options,
                                             Delegate<void( const NetResponse& )>::create<&OnlineServiceClient::onHelloResponse>( this ) );
     }
 
@@ -378,19 +391,13 @@ namespace sw
     {
         if ( response._status == NetRequestStatus::Ok )
         {
-            BitReader    reader( response._pBody, response._bodySize );
-            const uint64 baseVersion = reader.readVarUint();
-            const uint64 kitCount    = reader.readVarUint();
-            for ( uint64 index = 0; index < kitCount && reader.hasOverflowed() == false; ++index )
-            {
-                (void)reader.readBits( 16 ); // 키트 항목은 건너뛴다 — 넘침은 아래 hasOverflowed 가 본다
-                (void)reader.readVarUint();  // 키트 항목은 건너뛴다 — 넘침은 아래 hasOverflowed 가 본다
-            }
+            BitReader reader( response._pBody, response._bodySize );
             _remoteConfigHash = reader.readVarUint();
             _serverTimeMs     = reader.readVarInt();
-            if ( reader.hasOverflowed() || baseVersion != OnlineProtocolConstant::kBaseVersion )
+            if ( reader.hasOverflowed() )
             {
-                SW_LOG_WARNING( "Online service Hello answer is malformed" );
+                SW_LOG_ERROR( "Online service Hello answer is malformed - the handshake failed" );
+                stopAfterHello( OnlineClientState::HandshakeFailed, OnlineError::kInvalidRequest );
                 return;
             }
             _state     = OnlineClientState::Ready;
@@ -399,14 +406,33 @@ namespace sw
             flushQueuedCalls();
             return;
         }
-        const bool bMismatch = response._status == NetRequestStatus::ApplicationError && response._bodySize >= 2 &&
-                               LittleEndianUtil::readUint16( response._pBody ) == OnlineError::kVersionMismatch;
+        // 연결이 닫혔거나 이쪽이 취소했으면 닫힘 처리가 다시 연결을 맡는다.
+        const bool bClosing = response._status == NetRequestStatus::ConnectionLost || response._status == NetRequestStatus::Cancelled;
+        if ( bClosing )
+            return;
+        // 시한 초과 · 과부하는 지나가는 일이다. 연결을 닫아 물러남 뒤 다시 연결하게 한다.
+        const bool bTransient = response._status == NetRequestStatus::DeadlineExceeded || response._status == NetRequestStatus::Overloaded;
+        if ( bTransient )
+        {
+            SW_LOG_WARNING( "Online service Hello got no answer (%#) - reconnecting after a backoff", toString( response._status ) );
+            if ( _connection.isValid() )
+                _pEndpoint->close( _connection, StreamCloseMode::Graceful );
+            return;
+        }
+        const bool   bApplicationError = response._status == NetRequestStatus::ApplicationError && response._bodySize >= 2;
+        const uint16 errorCode         = bApplicationError ? LittleEndianUtil::readUint16( response._pBody ) : OnlineError::kOk;
+        const bool   bMismatch         = errorCode == OnlineError::kVersionMismatch && response._bodySize == 2 + OnlineProtocolConstant::kSchemaHashSize;
         if ( bMismatch )
         {
-            SW_LOG_WARNING( "Online service protocol versions differ from the server - an update is required" );
-            _state = OnlineClientState::VersionMismatch;
-            failQueuedCalls( NetRequestStatus::ApplicationError, OnlineError::kVersionMismatch );
+            const uint64 serverHash = LittleEndianUtil::readUint64( response._pBody + 2 );
+            SW_LOG_WARNING( "Online schema hash %# differs from the server's %# - an update is required", _schemaHash, serverHash );
+            stopAfterHello( OnlineClientState::VersionMismatch, OnlineError::kVersionMismatch );
+            return;
         }
+        // 그 밖의 답(다른 오류 코드, 서버 해시가 없는 거절, 모르는 메서드)은 같은 빌드에서 나오지 않는다. 기다리지 않고 멈춘다.
+        SW_LOG_ERROR( "Online service Hello was refused (%#, error %#, %# bytes) - the handshake failed", toString( response._status ), static_cast<uint32>( errorCode ),
+                      response._bodySize );
+        stopAfterHello( OnlineClientState::HandshakeFailed, OnlineError::kInvalidRequest );
     }
 
     void OnlineServiceClient::onNetResponse( const NetResponse& response )

@@ -6,6 +6,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+
 namespace sw
 {
     /**
@@ -13,7 +15,7 @@ namespace sw
      * @brief "오류 코드면 결과로 바꾸고, 본문을 못 읽으면 Unavailable" 을 키트마다 적지 않게 모은 도우미입니다.
      * @details @p TResponse 는 `OnlineResponse`(`isOk` · `_errorCode` · `_pBody` · `_bodySize`)다 — 템플릿 인자라 이 헤더는 `OnlineServiceClient.h` 를 끌어오지 않는다.
      *          @p TProtocol 은 `fromErrorCode( uint16 )` 과 `readReply( BitReader&, TReply& )`(또는 메서드를 받는 판)를 가진 키트 프로토콜 구조체다.
-     *          @p TReply 는 `_result` 필드를 가지고, 그 열거형에 `Unavailable` 이 있어야 한다.
+     *          @p TReply 는 `_result` 필드를 가지고, 그 열거형에 `Unavailable` 과 `UpdateRequired` 가 있어야 한다.
      * @code
      *     if ( OnlineReplyUtil::readResponse<EconomyProtocol>( response, reply._reply ) && reply._reply._result == EconomyResult::Ok )
      *         applyBalances( ... ); // 본문을 읽은 성공 응답에만 하는 일
@@ -23,7 +25,7 @@ namespace sw
     {
         /**
          * @brief @p response 를 @p outReply 로 읽습니다. 본문을 읽었으면 true 입니다.
-         * @details 전송 · 서비스 오류면 `_result` 만 `TProtocol::fromErrorCode` 로 채우고 false 다.
+         * @details 전송 · 서비스 오류면 `_result` 만 `markError` 로 채우고 false 다(`kVersionMismatch` 는 `UpdateRequired`, 나머지는 `TProtocol::fromErrorCode`).
          *          본문을 못 읽으면 @p outReply 를 비우고 `_result` 를 `Unavailable` 로 두며 false 다.
          */
         template <typename TProtocol, typename TReply, typename TResponse>
@@ -31,7 +33,7 @@ namespace sw
         {
             if ( response.isOk() == false )
             {
-                outReply._result = TProtocol::fromErrorCode( response._errorCode );
+                markError<TProtocol>( response._errorCode, outReply );
                 return false;
             }
             BitReader body( response._pBody, response._bodySize );
@@ -47,7 +49,7 @@ namespace sw
         {
             if ( response.isOk() == false )
             {
-                outReply._result = TProtocol::fromErrorCode( response._errorCode );
+                markError<TProtocol>( response._errorCode, outReply );
                 return false;
             }
             BitReader body( response._pBody, response._bodySize );
@@ -70,6 +72,19 @@ namespace sw
                 return false;
             outValue = static_cast<TEnum>( value );
             return true;
+        }
+
+        /**
+         * @brief 오류 코드를 결과로 바꿉니다. 키트 표보다 먼저 공통 오류 `kVersionMismatch` 를 `UpdateRequired` 로 바꿉니다.
+         * @details 키트 표(`fromErrorCode`)는 모르는 코드를 대개 `Unavailable`(다시 시도)로 바꾼다. 해시 불일치는 다시 접속하지 않으므로 재시도를 부르면 안 된다.
+         *          그래서 키트 표가 아니라 이 한 곳에서 막는다. 결과 열거형에 `UpdateRequired` 가 없으면 컴파일되지 않는다.
+         *          `readResponse` 를 쓰지 않는 키트 클라이언트(거래)도 오류 응답은 이 함수로 바꾼다.
+         */
+        template <typename TProtocol, typename TReply>
+        static void markError( uint16 errorCode, TReply& outReply )
+        {
+            using TResult    = decltype( outReply._result );
+            outReply._result = errorCode == OnlineError::kVersionMismatch ? TResult::UpdateRequired : TProtocol::fromErrorCode( errorCode );
         }
 
     private:

@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialTypes.h"
 
@@ -92,9 +93,10 @@ namespace sw
     /** @brief 형식을 읽고 씁니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
     struct SW_KIT_API SocialProtocol
     {
-        static constexpr uint32 kVersion        = 2;                          ///< 2: 길드 창고(맡기기 · 꺼내기 · 목록)
-        static constexpr int32  kMaxTextSize    = GuildLimit::kMaxNoticeSize; ///< 이름, 활동 문구, 공지 중 가장 긴 것의 상한이다. 필드마다의 상한은 로직이 검사한다
-        static constexpr int32  kMaxPresenceRow = SocialLimit::kMaxFriend;
+        static const OnlineProtocolEntry kOnlineEntry;                                 ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+        static constexpr uint32          kVersion        = 2;                          ///< 2: 길드 창고(맡기기 · 꺼내기 · 목록)
+        static constexpr int32           kMaxTextSize    = GuildLimit::kMaxNoticeSize; ///< 이름, 활동 문구, 공지 중 가장 긴 것의 상한이다. 필드마다의 상한은 로직이 검사한다
+        static constexpr int32           kMaxPresenceRow = SocialLimit::kMaxFriend;
 
         static void               writeRequest( BitWriter& outWriter, const SocialRequest& request );
         [[nodiscard]] static bool readRequest( BitReader& reader, SocialRequest& outRequest );

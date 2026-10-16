@@ -35,11 +35,10 @@ namespace sw
         void initialize( TradeService* pTradeService, const IAccountDirectory* pDirectory, IAccountPresence* pPresence );
         void shutdown();
 
-        uint16 getMethodRange() const override { return OnlineMethodRange::kTrade; }
-        uint32 getProtocolVersion() const override { return TradeProtocol::kVersion; }
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
-        void   onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
+        const OnlineProtocolEntry& getProtocol() const override { return TradeProtocol::kOnlineEntry; }
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
 
         static constexpr const utf8* kFeatureFlag = "feature.trade_enabled";
 

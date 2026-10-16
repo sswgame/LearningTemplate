@@ -20,7 +20,22 @@ namespace
         Ok,
         NotSignedIn,
         Unavailable,
+        UpdateRequired,
         Count
+    };
+
+    /** @brief `OnlineReplyUtil::markError` 가 부르는 키트 프로토콜 모양입니다. 표에 없는 코드는 Unavailable 입니다. */
+    struct SampleOnlineProtocol
+    {
+        static SampleOnlineResult fromErrorCode( uint16 errorCode )
+        {
+            return errorCode == OnlineError::kUnauthenticated ? SampleOnlineResult::NotSignedIn : SampleOnlineResult::Unavailable;
+        }
+    };
+
+    struct SampleOnlineReply
+    {
+        SampleOnlineResult _result{ SampleOnlineResult::Ok };
     };
 
     class NullRequestHandler final : public INetRequestHandler
@@ -36,14 +51,13 @@ namespace
     class RangeService final : public IOnlineHostService
     {
     public:
-        explicit RangeService( uint16 range )
-            : _range{ range }
+        explicit RangeService( const OnlineProtocolEntry& protocol )
+            : _pProtocol{ &protocol }
         {
         }
 
-        uint16 getMethodRange() const override { return _range; }
-        uint32 getProtocolVersion() const override { return 1; }
-        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
+        const OnlineProtocolEntry& getProtocol() const override { return *_pProtocol; }
+        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
         {
             (void)host;
             (void)context;
@@ -51,8 +65,14 @@ namespace
         }
 
     private:
-        uint16 _range;
+        const OnlineProtocolEntry* _pProtocol;
     };
+
+    // 영역 확인용 항목들이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
+    const OnlineProtocolEntry kAccountRangeProtocol{ "OnlineServiceTest.Account", OnlineMethodRange::kAccount, 1 };
+    const OnlineProtocolEntry kSameRangeProtocol{ "OnlineServiceTest.SameRange", OnlineMethodRange::kAccount, 1 };
+    const OnlineProtocolEntry kNotABaseProtocol{ "OnlineServiceTest.NotABase", 0x0910, 1 };
+    const OnlineProtocolEntry kHostRangeProtocol{ "OnlineServiceTest.HostRange", OnlineMethodRange::kHost, 1 };
 
     static_assert( OnlineMethodRange::isInRange( OnlineMethodRange::kAccount + 0x7F, OnlineMethodRange::kAccount ), "last method of a range" );
     static_assert( OnlineMethodRange::isInRange( OnlineMethodRange::kTrade, OnlineMethodRange::kAccount ) == false, "ranges do not overlap" );
@@ -74,10 +94,10 @@ SW_TEST_CASE( OnlineServiceTest, RegisterMethodRefusesADuplicate )
     SW_EXPECT_TRUE( server.registerMethod( 0x8001, &second ) );
 
     OnlineServiceHost host;
-    RangeService      account( OnlineMethodRange::kAccount );
-    RangeService      sameRange( OnlineMethodRange::kAccount );
-    RangeService      notABase( 0x0910 );
-    RangeService      hostRange( OnlineMethodRange::kHost );
+    RangeService      account( kAccountRangeProtocol );
+    RangeService      sameRange( kSameRangeProtocol );
+    RangeService      notABase( kNotABaseProtocol );
+    RangeService      hostRange( kHostRangeProtocol );
     SW_EXPECT_TRUE( host.registerHostService( &account ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "overlapping or misaligned method ranges are refused" );
@@ -118,6 +138,21 @@ SW_TEST_CASE( OnlineProtocolTest, ErrorCodeMapsThroughKitTable )
                     SampleOnlineResult::NotSignedIn );
     SW_EXPECT_TRUE( OnlineError::toResult( OnlineError::kInternal, kArrErrorResult, SampleOnlineResult::Unavailable ) ==
                     SampleOnlineResult::Unavailable );
+}
+
+/**
+ * @brief [OnlineProtocolTest] 스키마 해시 불일치는 키트 표보다 먼저 UpdateRequired 가 되고, 나머지 코드는 키트 표를 따른다
+ * @details 키트 표는 모르는 코드를 Unavailable(다시 시도)로 바꾸므로, 다시 접속하지 않는 오류가 재시도를 부르지 않게 공통 처리가 먼저 막는다.
+ */
+SW_TEST_CASE( OnlineProtocolTest, VersionMismatchBecomesUpdateRequiredBeforeTheKitTable )
+{
+    SampleOnlineReply reply;
+    OnlineReplyUtil::markError<SampleOnlineProtocol>( OnlineError::kVersionMismatch, reply );
+    SW_EXPECT_TRUE( reply._result == SampleOnlineResult::UpdateRequired );
+    OnlineReplyUtil::markError<SampleOnlineProtocol>( OnlineError::kUnauthenticated, reply );
+    SW_EXPECT_TRUE( reply._result == SampleOnlineResult::NotSignedIn );
+    OnlineReplyUtil::markError<SampleOnlineProtocol>( OnlineError::kInternal, reply );
+    SW_EXPECT_TRUE( reply._result == SampleOnlineResult::Unavailable );
 }
 
 /**

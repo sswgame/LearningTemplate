@@ -44,3 +44,8 @@ namespace sw
         return reader.hasOverflowed() == false;
     }
 } // namespace sw
+
+namespace sw
+{
+    const OnlineProtocolEntry TradeProtocol::kOnlineEntry{ "Trade", OnlineMethodRange::kTrade, TradeProtocol::kVersion };
+} // namespace sw

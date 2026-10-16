@@ -59,7 +59,7 @@ namespace sw
         StoreUnavailable,    ///< 저장소에 닿지 못했거나 레코드가 깨졌다. 다시 시도한다
         AlreadyLinked,       ///< 연동에서 이름이나 외부 계정이 이미 다른 계정에 묶여 있거나, 이 계정에 이미 이름이 있다. 계정을 자동으로 합치지는 않는다
         AccountSuspended,    ///< 정지 또는 영구 정지 상태이다. 종료 시각은 `_sanctionUntilMs`, 사유는 `_sanctionReasonCode` 에 있다
-        UpdateRequired,      ///< 클라이언트 빌드가 최소 버전보다 낮다. 상점 주소는 `_storeURL` 에 있다
+        UpdateRequired,      ///< 클라이언트 빌드가 최소 버전보다 낮다(상점 주소는 `_storeURL`). 온라인 스키마 해시가 달라도(`kVersionMismatch`) 이 값이며, 그때 `_storeURL` 은 비어 있다
         ProviderUnavailable, ///< 없는 제공자이거나 제공자 서버에 닿지 못했다. 다시 시도한다
         ProviderRejected,    ///< 제공자가 티켓을 거절했다. 서명, 만료, 대상이 틀린 경우이다
         LastLoginMethod,     ///< 연동 해제에서 마지막 로그인 수단은 해제할 수 없다
