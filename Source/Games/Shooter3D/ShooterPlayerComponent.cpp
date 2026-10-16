@@ -32,6 +32,7 @@
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
+#include "Games/Shooter3D/ShooterHUDViewModel.h"
 
 namespace sw
 {
@@ -641,14 +642,16 @@ namespace sw
             return;
         // 값만 넣는다. 위젯은 HUD 문서의 바인딩이 연결한다(같은 값이면 알리지 않는다). 조준선은 1인칭에서만 보이고(다른 시점에서는 몸이 보인다),
         // 맞음 표시는 맞힌 직후 1인칭에서만 보인다. 무기 이름은 무기 테이블의 이름(원문)이 현지화 키이며, 글 위젯이 문화권에 맞게 해석한다.
-        HUDViewModel& hud        = pHUD->getViewModel();
-        const bool    bCrosshair = _bFirstPerson == SW_TRUE && _vitality.isAlive();
-        hud.setCrosshairShown( bCrosshair );
-        hud.setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
-        hud.setHealth( _vitality.getHealth(), _vitality.getHealthRatio() );
+        ShooterHUDViewModel* pViewModel = pHUD->getOrCreateViewModel<ShooterHUDViewModel>();
+        if ( pViewModel == nullptr )
+            return; // 다른 뷰모델이 걸려 있다 — HUD 컨트롤러가 오류를 남겼다
+        const bool bCrosshair = _bFirstPerson == SW_TRUE && _vitality.isAlive();
+        pViewModel->setCrosshairShown( bCrosshair );
+        pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
+        pViewModel->setHealth( _vitality.getHealth(), _vitality.getHealthRatio() );
         const WeaponState& weapon = getCurrentWeapon();
-        hud.setAmmo( weapon.getMagazineAmmo(), weapon.getReserveAmmo() );
-        hud.setWeaponName( weapon.getDef()._name );
+        pViewModel->setAmmo( weapon.getMagazineAmmo(), weapon.getReserveAmmo() );
+        pViewModel->setWeaponName( weapon.getDef()._name );
     }
 
     void ShooterPlayerComponent::resetRound()

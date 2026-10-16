@@ -19,9 +19,9 @@
 #include "GameFramework/Base/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Base/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Base/UI/HUD/HUDControllerComponent.h"
-#include "GameFramework/Base/UI/HUD/HUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/HorseFollowAIController.h"
 
+#include "Games/WildWest/WildWestHUDViewModel.h"
 #include "Games/WildWest/WildWestHorseComponent.h"
 
 namespace sw
@@ -250,13 +250,15 @@ namespace sw
         const PawnComponent*    pPlayerPawn = findPlayerPawn();
         if ( pHUD == nullptr || pPlayerPawn == nullptr )
             return;
-        HUDViewModel&               hud          = pHUD->getViewModel();
+        WildWestHUDViewModel* pViewModel = pHUD->getOrCreateViewModel<WildWestHUDViewModel>();
+        if ( pViewModel == nullptr )
+            return; // 다른 뷰모델이 걸려 있다 — HUD 컨트롤러가 오류를 남겼다
         const VehicleSeatComponent* pSeat        = MountUtil::findSeatOf( *pPlayerPawn );
         const GameObject*           pHorseObject = pSeat != nullptr ? pSeat->getOwner() : nullptr;
         if ( pHorseObject == nullptr )
         {
-            hud.setWeaponName( "On foot - E: mount  F: whistle" );
-            hud.setHealth( 0.0f, 0.0f );
+            pViewModel->setRideStatus( "On foot - E: mount  F: whistle" );
+            pViewModel->setStamina( 0.0f, 0.0f );
             return;
         }
         const MountMovementComponent* pMovement       = pHorseObject->getComponent<MountMovementComponent>();
@@ -267,7 +269,7 @@ namespace sw
         utf8                          arrStatus[constant::kMaxBuffer128]{};
         formatstring( arrStatus, constant::kMaxBuffer128, "Riding %s - %s %.1f m/s - E: dismount  Shift: gallop", pHorseObject->getName().c_str(),
                       WildWestDirectorComponentInternal::findGaitName( gait ), speed );
-        hud.setWeaponName( arrStatus );
-        hud.setHealth( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );
+        pViewModel->setRideStatus( arrStatus );
+        pViewModel->setStamina( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );
     }
 } // namespace sw

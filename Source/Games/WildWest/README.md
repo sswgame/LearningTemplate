@@ -43,7 +43,7 @@ cd build/Ninja-Debug/Bin
 - **말**(`Bessie` · `Shadow`)은 캐릭터 컨트롤러 없이 뿌리를 직접 옮기는 탈것입니다. 폰, 탈것 이동, 운전석, 내리기 버튼, 서부극 탈것 연결, 말 상태(`WildWestHorseComponent` — 품종은 `data/western.xml` 의 `<Horse id>`)가 붙어 있습니다.
 - **말 AI**(`BessieAI` · `ShadowAI`)는 시작할 때 말을 쥐고(`_possessAtStart`) 기수를 주인으로 따라갑니다. 기수가 타면 빙의를 내주고, 내리면 다시 쥡니다.
 - **목장**(`Ranch`)의 `WildWestDirectorComponent` 가 서부극 카탈로그를 읽고(`_westernDataPath`), 카메라 리그 초점을 기수에 두고, 휘파람을 말 AI 에 전하고, 같은 오브젝트의 HUD 에 한 줄을 씁니다.
-  HUD 는 기반 `HUDViewModel` 을 빌려 탑승 상태 글을 무기 이름 칸에, 말 스태미나를 체력 칸에 넣습니다(`ui/hud.ui.xml`).
+  HUD 는 게임의 `WildWestHUDViewModel`(탑승 상태 글 `_rideStatus` · 말 스태미나 `_stamina` · `_staminaRatio`)을 `HUDControllerComponent` 에 걸어 씁니다(`ui/hud.ui.xml`).
 - 말과 기수는 큐브와 캡슐을 쌓은 자리 표시입니다. 말 모델과 걸음새 애니메이션은 아직 없습니다.
 
 ## 더 볼 곳

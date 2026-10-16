@@ -1,6 +1,6 @@
 /**
- * @file HUDViewModel.h
- * @brief HUD 문서가 보이는 값(체력 · 탄약 · 무기 이름 · 조준선 · 맞음 표시)입니다 — 게임은 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
+ * @file ShooterHUDViewModel.h
+ * @brief 슈터 HUD 문서가 보이는 값(체력 · 탄약 · 무기 이름 · 조준선 · 맞음 표시)입니다 — 게임은 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -10,25 +10,24 @@
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Binding/UIViewModel.h"
 
-#include "GameFramework/GameFrameworkExports.h"
-
 namespace sw
 {
     /**
-     * @class HUDViewModel
-     * @brief 플레이어 HUD 의 뷰모델입니다(Lyra 의 HUD 위젯이 보는 값 · UE5 MVVM ViewModel 자리). `HUDControllerComponent` 가 들고 HUD 화면에 겁니다.
-     * @details 값은 보일 모양이 아니라 데이터입니다 — 탄약은 탄창 · 예비 두 수, 무기 이름은 현지화 키(글 위젯이 문화권으로 푼다 — 언어를 바꾸면 다시 풀린다).
+     * @class ShooterHUDViewModel
+     * @brief 슈터 플레이어 HUD 의 뷰모델입니다(Lyra 의 HUD 위젯이 보는 값 · UE5 MVVM ViewModel 자리). `HUDControllerComponent` 가 소유하고 HUD 화면에 겁니다.
+     * @details 칸은 슈터의 것이라 게임이 가집니다 — HUD 컨트롤러는 게임이 고른 뷰모델을 걸기만 합니다(`HUDControllerComponent::getOrCreateViewModel`).
+     *          값은 보일 모양이 아니라 데이터입니다 — 탄약은 탄창 · 예비 두 수, 무기 이름은 현지화 키(글 위젯이 문화권으로 푼다 — 언어를 바꾸면 다시 풀린다).
      *          보임은 `WidgetVisibility` 칸이라 문서가 `_visibility="{bind:_crosshairVisibility}"` 로 그대로 잇습니다(보이면 `HitTestInvisible` — HUD 는 클릭을 받지 않는다).
      *          세터는 값이 같으면 알리지 않으므로 게임이 매 프레임 불러도 바인딩은 바뀐 칸만 씁니다. 게임 스레드만(틱 안이면 틱 뒤 큐에서).
      */
-    REFLECT( DisplayName = "HUD View Model" )
-    class SW_GF_API HUDViewModel : public UIViewModel
+    REFLECT( DisplayName = "Shooter HUD View Model" )
+    class ShooterHUDViewModel : public UIViewModel
     {
     public:
         REFLECT_BODY();
 
-        HUDViewModel();
-        ~HUDViewModel() override;
+        ShooterHUDViewModel();
+        ~ShooterHUDViewModel() override;
 
         const TypeInfo* getTypeInfo() const override;
 

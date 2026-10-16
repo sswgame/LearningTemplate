@@ -40,7 +40,7 @@ namespace sw
      *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸을 숨기고 손에 든 총과 조준선을 보이며, 아니면 반대로 한다. 눈높이는 몸 소켓
      *          `Eyes` 의 바인드 포즈 높이다(없으면 `_eyeHeight`).
      *
-     *          **HUD**: 같은 오브젝트의 `HUDControllerComponent` 의 뷰모델(`HUDViewModel`)에 틱이 끝난 뒤 값을 넣는다. 조준선(1인칭이고 살아 있을 때),
+     *          **HUD**: 같은 오브젝트의 `HUDControllerComponent` 에 게임의 뷰모델(`ShooterHUDViewModel`)을 걸고 틱이 끝난 뒤 값을 넣는다. 조준선(1인칭이고 살아 있을 때),
      *          맞음 표시(맞힌 직후, 1인칭), 체력, 탄약(탄창과 예비), 무기 이름(무기 테이블의 이름이 곧 현지화 키)이 대상이다. 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
      *          `{bind:필드}` 가 연결한다. 이 컴포넌트는 위젯 이름을 모른다.
      *
