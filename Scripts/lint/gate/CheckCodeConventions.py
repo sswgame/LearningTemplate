@@ -52,6 +52,7 @@ from common import (  # noqa: E402
     kNotOurDirNames,
 )
 from LintGate import GateResult, LintGate  # noqa: E402
+from conventions.InternalHelperScan import kBaselineSchema  # noqa: E402
 from conventions.Model import ConventionViolation  # noqa: E402
 from conventions.Patterns import getExactPathMapInternal  # noqa: E402
 from conventions.FileScan import checkFileConventionsInternal, scopedTextCache  # noqa: E402
@@ -61,6 +62,7 @@ from conventions.CrossFile import (  # noqa: E402
     reportBitfieldBooleanLiteralsInternal,
     reportConstructorInitializesEveryFieldInternal,
     reportDuplicateAnonymousConstantsInternal,
+    reportDuplicateAnonymousFunctionsInternal,
     reportDuplicateHelperNamesInternal,
 )
 
@@ -129,6 +131,7 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
     # 파일 하나만 봐서는 알 수 없는 검사 — 전체 스캔일 때만 돈다(스테이지 파일 검사에는 상대편 파일이 없다). 이 순서가 보고 순서다.
     allViolations.extend(reportDuplicateHelperNamesInternal(listFacts))
     allViolations.extend(reportDuplicateAnonymousConstantsInternal(listFacts))
+    allViolations.extend(reportDuplicateAnonymousFunctionsInternal(listFacts))
     allViolations.extend(violation for facts in listFacts for violation in facts.listHeaderInitializerViolation)
     allViolations.extend(reportBitfieldBooleanLiteralsInternal(listFacts))
     allViolations.extend(reportConstructorInitializesEveryFieldInternal(filesToScan, listFacts))
@@ -161,6 +164,8 @@ class CheckCodeConventionsGate(LintGate):
     preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
     preCommitFileArgument = "--files"
     selfTestSkipReason = "규칙별 음성 테스트는 CheckCodeConventionsSelfTest.py 가 담당한다"
+    #: `rules/CheckCodeConventions.toml` — 도우미 구조체 규칙 둘이 보지 않는 파일(`conventions/InternalHelperScan.py` 가 읽는다).
+    ruleSchema = kBaselineSchema
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--category", type=str, default=None, help="특정 규칙 카테고리 필터링")
