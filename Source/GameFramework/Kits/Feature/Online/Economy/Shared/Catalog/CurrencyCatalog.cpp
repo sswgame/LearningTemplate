@@ -14,20 +14,17 @@ namespace sw
 
     namespace
     {
-        struct CurrencyCatalogInternal
+        /** @brief 재원이 모두 정의된 비가상 화폐이면 true 입니다. */
+        bool hasValidFunding( const CurrencyCatalog& catalog, const CurrencyDef& def )
         {
-            /** @brief 재원이 모두 정의된 비가상 화폐이면 true 입니다. */
-            static bool hasValidFunding( const CurrencyCatalog& catalog, const CurrencyDef& def )
+            for ( const string& funding : def._listFundingAsset )
             {
-                for ( const string& funding : def._listFundingAsset )
-                {
-                    const CurrencyDef* pFunding = catalog.findCurrency( funding );
-                    if ( pFunding == nullptr || pFunding->isVirtual() )
-                        return false;
-                }
-                return true;
+                const CurrencyDef* pFunding = catalog.findCurrency( funding );
+                if ( pFunding == nullptr || pFunding->isVirtual() )
+                    return false;
             }
-        };
+            return true;
+        }
     } // namespace
 } // namespace sw
 
@@ -94,7 +91,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( size_t defIndex = 0; defIndex < _listCurrency.size(); )
         {
-            if ( CurrencyCatalogInternal::hasValidFunding( *this, _listCurrency[defIndex] ) == false )
+            if ( hasValidFunding( *this, _listCurrency[defIndex] ) == false )
             {
                 SW_LOG_WARNING( "%#: virtual currency '%#' funds from an unknown or virtual currency - skipped", sourceName, _listCurrency[defIndex]._id );
                 _listCurrency.erase( _listCurrency.begin() + static_cast<ptrdiff_t>( defIndex ) );

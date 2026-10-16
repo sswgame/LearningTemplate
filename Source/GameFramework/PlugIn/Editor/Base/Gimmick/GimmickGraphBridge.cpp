@@ -10,15 +10,12 @@ namespace sw::editor
 {
     namespace
     {
-        struct GimmickGraphBridgeInternal
+        /** @brief 컴포넌트 타입에서 PROPERTY 하나를 찾습니다. 상속분도 봅니다. */
+        const PropertyInfo* findProperty( const GimmickCircuitComponent& component, const utf8* pName )
         {
-            /** @brief 컴포넌트 타입에서 PROPERTY 하나를 찾습니다. 상속분도 봅니다. */
-            static const PropertyInfo* findProperty( const GimmickCircuitComponent& component, const utf8* pName )
-            {
-                const TypeInfo* pType = component.getTypeInfo();
-                return pType != nullptr ? pType->findPropertyInHierarchy( hashed_string( pName ) ) : nullptr;
-            }
-        };
+            const TypeInfo* pType = component.getTypeInfo();
+            return pType != nullptr ? pType->findPropertyInHierarchy( hashed_string( pName ) ) : nullptr;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -26,9 +23,9 @@ namespace sw::editor
 {
     bool GimmickGraphBridge::load( const GimmickCircuitComponent& component, GimmickGraphModel& outModel )
     {
-        const PropertyInfo* pNode            = GimmickGraphBridgeInternal::findProperty( component, "_listNode" );
-        const PropertyInfo* pTarget          = GimmickGraphBridgeInternal::findProperty( component, "_listNodeTarget" );
-        const PropertyInfo* pWire            = GimmickGraphBridgeInternal::findProperty( component, "_listWire" );
+        const PropertyInfo* pNode            = findProperty( component, "_listNode" );
+        const PropertyInfo* pTarget          = findProperty( component, "_listNodeTarget" );
+        const PropertyInfo* pWire            = findProperty( component, "_listWire" );
         const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr;
         if ( bMissingProperty )
             return false;
@@ -52,9 +49,9 @@ namespace sw::editor
 
     bool GimmickGraphBridge::apply( GimmickCircuitComponent& component, const GimmickGraphModel& model )
     {
-        const PropertyInfo* pNode            = GimmickGraphBridgeInternal::findProperty( component, "_listNode" );
-        const PropertyInfo* pTarget          = GimmickGraphBridgeInternal::findProperty( component, "_listNodeTarget" );
-        const PropertyInfo* pWire            = GimmickGraphBridgeInternal::findProperty( component, "_listWire" );
+        const PropertyInfo* pNode            = findProperty( component, "_listNode" );
+        const PropertyInfo* pTarget          = findProperty( component, "_listNodeTarget" );
+        const PropertyInfo* pWire            = findProperty( component, "_listWire" );
         const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr;
         if ( bMissingProperty )
             return false;

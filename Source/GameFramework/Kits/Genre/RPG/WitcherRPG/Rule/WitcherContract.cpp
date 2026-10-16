@@ -14,16 +14,13 @@ namespace sw
 {
     namespace
     {
-        struct WitcherContractInternal
+        float32 computeDistanceSquared( const float3& lhs, const float3& rhs )
         {
-            static float32 computeDistanceSquared( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dy = lhs._y - rhs._y;
-                const float32 dz = lhs._z - rhs._z;
-                return dx * dx + dy * dy + dz * dz;
-            }
-        };
+            const float32 dx = lhs._x - rhs._x;
+            const float32 dy = lhs._y - rhs._y;
+            const float32 dz = lhs._z - rhs._z;
+            return dx * dx + dy * dy + dz * dz;
+        }
     } // namespace
 } // namespace sw
 
@@ -60,7 +57,7 @@ namespace sw
         {
             if ( clue._order > openOrder || isFoundInternal( clue._id ) )
                 continue;
-            if ( WitcherContractInternal::computeDistanceSquared( position, clue._position ) <= senseRadius * senseRadius )
+            if ( computeDistanceSquared( position, clue._position ) <= senseRadius * senseRadius )
                 outListClue.push_back( &clue );
         }
     }
@@ -82,7 +79,7 @@ namespace sw
             return WitcherClueResult::AlreadyFound;
         if ( pClue->_order > computeOpenOrder() )
             return WitcherClueResult::OutOfOrder;
-        if ( WitcherContractInternal::computeDistanceSquared( position, pClue->_position ) > pClue->_radius * pClue->_radius )
+        if ( computeDistanceSquared( position, pClue->_position ) > pClue->_radius * pClue->_radius )
             return WitcherClueResult::TooFar;
 
         _listFound.push_back( clueID );

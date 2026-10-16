@@ -12,16 +12,13 @@ namespace sw
 {
     namespace
     {
-        struct HealthSourceComponentInternal
+        /** @brief 읽기의 비율 0..1 입니다. 최대가 0 이하이거나 체력이 없는 주인이면 0 입니다. */
+        float32 computeRatio( const HealthReading& reading )
         {
-            /** @brief 읽기의 비율 0..1 입니다. 최대가 0 이하이거나 체력이 없는 주인이면 0 입니다. */
-            static float32 computeRatio( const HealthReading& reading )
-            {
-                if ( reading._bHasHealth == SW_FALSE || reading._maxHealth <= 0.0f )
-                    return 0.0f;
-                return MathUtil::saturate( reading._health / reading._maxHealth );
-            }
-        };
+            if ( reading._bHasHealth == SW_FALSE || reading._maxHealth <= 0.0f )
+                return 0.0f;
+            return MathUtil::saturate( reading._health / reading._maxHealth );
+        }
     } // namespace
 } // namespace sw
 
@@ -33,7 +30,7 @@ namespace sw
 
     float32 HealthSourceComponent::getHealthRatio() const
     {
-        return HealthSourceComponentInternal::computeRatio( getHealthReading() );
+        return computeRatio( getHealthReading() );
     }
 
     void HealthSourceComponent::notifyHealthChanged( bool bReset ) const
@@ -46,7 +43,7 @@ namespace sw
             return;
 
         HealthChangedEvent event;
-        event._ratio = HealthSourceComponentInternal::computeRatio( reading );
+        event._ratio = computeRatio( reading );
         if ( bReset )
             event._kind = HealthChangeKind::Reset;
         else if ( reading._bDead == SW_TRUE )

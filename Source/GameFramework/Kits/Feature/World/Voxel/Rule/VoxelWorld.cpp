@@ -10,14 +10,11 @@ namespace sw
 {
     namespace
     {
-        struct VoxelWorldInternal
+        /** @brief 청크 안 블록의 인덱스입니다. */
+        constexpr int32 computeLocalIndex( int32 localX, int32 y, int32 localZ )
         {
-            /** @brief 청크 안 블록의 인덱스입니다. */
-            static constexpr int32 computeLocalIndex( int32 localX, int32 y, int32 localZ )
-            {
-                return ( y * kVoxelChunkSize + localZ ) * kVoxelChunkSize + localX;
-            }
-        };
+            return ( y * kVoxelChunkSize + localZ ) * kVoxelChunkSize + localX;
+        }
     } // namespace
 } // namespace sw
 
@@ -65,7 +62,7 @@ namespace sw
         if ( isInside( x, y, z ) == false )
             return kVoxelAirBlock;
         const VoxelChunk& chunk = _listChunk[static_cast<size_t>( ( z / kVoxelChunkSize ) * _chunkCountX + x / kVoxelChunkSize )];
-        return chunk._listBlock[static_cast<size_t>( VoxelWorldInternal::computeLocalIndex( x % kVoxelChunkSize, y, z % kVoxelChunkSize ) )];
+        return chunk._listBlock[static_cast<size_t>( computeLocalIndex( x % kVoxelChunkSize, y, z % kVoxelChunkSize ) )];
     }
 
     bool VoxelWorld::setBlock( int32 x, int32 y, int32 z, VoxelBlockIndex block )
@@ -77,7 +74,7 @@ namespace sw
         const int32      localX = x % kVoxelChunkSize;
         const int32      localZ = z % kVoxelChunkSize;
         VoxelChunk&      chunk  = _listChunk[static_cast<size_t>( chunkZ * _chunkCountX + chunkX )];
-        VoxelBlockIndex& slot   = chunk._listBlock[static_cast<size_t>( VoxelWorldInternal::computeLocalIndex( localX, y, localZ ) )];
+        VoxelBlockIndex& slot   = chunk._listBlock[static_cast<size_t>( computeLocalIndex( localX, y, localZ ) )];
         if ( slot == block )
             return true;
         slot = block;

@@ -15,10 +15,10 @@ namespace sw
 {
     namespace
     {
-        struct RTSWorldCommandInternal
+        bool isGroundUnitCommand( const RTSUnit& unit )
         {
-            static bool isGround( const RTSUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
-        };
+            return unit._pDef->_bAir == SW_FALSE;
+        }
     } // namespace
 
     // ------------------------------------------------------------------------------
@@ -229,7 +229,7 @@ namespace sw
         for ( const RTSUnitID unitID : listUnit )
         {
             const RTSUnit* pUnit         = findUnit( unitID );
-            const bool     bGroundMobile = pUnit != nullptr && pUnit->isMobile() && RTSWorldCommandInternal::isGround( *pUnit );
+            const bool     bGroundMobile = pUnit != nullptr && pUnit->isMobile() && isGroundUnitCommand( *pUnit );
             if ( bGroundMobile )
                 ++groundCount;
         }
@@ -246,7 +246,7 @@ namespace sw
             order._type         = bAttackMove && pUnit->_pDef->canAttack() ? RTSOrderType::AttackMove : RTSOrderType::Move;
             order._target       = target;
             order._arriveRadius = listUnit.size() > 1 ? arriveRadius : 0.0f;
-            if ( bUseField && RTSWorldCommandInternal::isGround( *pUnit ) )
+            if ( bUseField && isGroundUnitCommand( *pUnit ) )
                 order._pFlowField = acquireFlowField( goalCell );
             (void)pushOrder( *pUnit, order, bQueue );
             ++issuedCount;

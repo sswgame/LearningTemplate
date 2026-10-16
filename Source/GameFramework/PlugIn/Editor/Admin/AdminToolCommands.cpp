@@ -13,17 +13,14 @@ namespace sw::editor
 {
     namespace
     {
-        struct AdminToolCommandsInternal
+        void openAdminToolPanel()
         {
-            static void openPanel()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", true ) )
-                    SW_LOG_INFO( "GM Tool panel opened" );
-            }
-        };
+            EditorContext* pContext = EditorContext::get();
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", true ) )
+                SW_LOG_INFO( "GM Tool panel opened" );
+        }
     } // namespace
 
     SW_EDITOR_COMMAND( AdminToolOpen, "admin.openToolPanel", 9200, "GM Tool", editoricon::kSettings, "Admin", "GM 도구 패널을 엽니다", "Open the GM tool panel", {},
-                       &AdminToolCommandsInternal::openPanel, nullptr, nullptr );
+                       &openAdminToolPanel, nullptr, nullptr );
 } // namespace sw::editor

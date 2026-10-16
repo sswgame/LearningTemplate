@@ -12,15 +12,12 @@ namespace sw
 {
     namespace
     {
-        struct WorldClockInternal
+        float32 smoothStep( float32 edge0, float32 edge1, float32 value )
         {
-            static float32 smoothStep( float32 edge0, float32 edge1, float32 value )
-            {
-                if ( edge1 <= edge0 )
-                    return value >= edge1 ? 1.0f : 0.0f;
-                return MathUtil::smoothstep( edge0, edge1, value );
-            }
-        };
+            if ( edge1 <= edge0 )
+                return value >= edge1 ? 1.0f : 0.0f;
+            return MathUtil::smoothstep( edge0, edge1, value );
+        }
     } // namespace
 
     WorldClock::WorldClock()
@@ -107,8 +104,8 @@ namespace sw
     float32 WorldClock::computeDaylight() const
     {
         const float32 hour = getHour();
-        return WorldClockInternal::smoothStep( _settings._dawnHour, _settings._dayHour, hour ) *
-               ( 1.0f - WorldClockInternal::smoothStep( _settings._duskHour, _settings._nightHour, hour ) );
+        return smoothStep( _settings._dawnHour, _settings._dayHour, hour ) *
+               ( 1.0f - smoothStep( _settings._duskHour, _settings._nightHour, hour ) );
     }
 
     float32 WorldClock::computeSunAngle() const

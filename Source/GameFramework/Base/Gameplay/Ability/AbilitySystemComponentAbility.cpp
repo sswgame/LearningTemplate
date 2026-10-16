@@ -26,19 +26,16 @@ namespace sw
 
     namespace
     {
-        struct AbilitySystemComponentAbilityInternal
+        /** @brief @p container 의 태그 중 하나라도 @p query 의 태그이거나 그 하위 태그이면 true 입니다. */
+        bool matchesAnyTag( const TagContainer& container, const TagContainer& query )
         {
-            /** @brief @p container 의 태그 중 하나라도 @p query 의 태그이거나 그 하위 태그이면 true 입니다. */
-            static bool matchesAnyTag( const TagContainer& container, const TagContainer& query )
+            for ( const TagID& queryTag : query.getTags() )
             {
-                for ( const TagID& queryTag : query.getTags() )
-                {
-                    if ( container.hasTag( queryTag, false ) )
-                        return true;
-                }
-                return false;
+                if ( container.hasTag( queryTag, false ) )
+                    return true;
             }
-        };
+            return false;
+        }
     } // namespace
 } // namespace sw
 
@@ -151,7 +148,7 @@ namespace sw
         for ( const unique_ptr<AbilitySpec>& pSpec : _listAbilitySpec )
         {
             const bool bMatches = pSpec->_bPendingRemove == SW_FALSE &&
-                                  AbilitySystemComponentAbilityInternal::matchesAnyTag( pSpec->_pAbility->getConfig()._abilityTags, tags );
+                                  matchesAnyTag( pSpec->_pAbility->getConfig()._abilityTags, tags );
             if ( bMatches )
                 listCandidate.push_back( pSpec->_handle );
         }
@@ -209,7 +206,7 @@ namespace sw
             const bool       bSkip    = spec._bPendingRemove == SW_TRUE || pAbility == pIgnore || pAbility->isActive() == false;
             if ( bSkip )
                 continue;
-            if ( AbilitySystemComponentAbilityInternal::matchesAnyTag( pAbility->getConfig()._abilityTags, tags ) )
+            if ( matchesAnyTag( pAbility->getConfig()._abilityTags, tags ) )
                 pAbility->cancelAbility();
         }
     }

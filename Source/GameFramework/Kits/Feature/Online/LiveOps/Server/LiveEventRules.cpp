@@ -12,18 +12,15 @@ namespace sw
 {
     namespace
     {
-        struct LiveEventRulesInternal
+        ScheduleDefinition makeSchedule( const LiveEventDefinition& definition )
         {
-            static ScheduleDefinition makeSchedule( const LiveEventDefinition& definition )
-            {
-                ScheduleDefinition schedule;
-                schedule._jobID       = definition._eventID;
-                schedule._kind        = definition._recurrence == LiveEventRecurrence::Daily ? ScheduleKind::Daily : ScheduleKind::Weekly;
-                schedule._minuteOfDay = definition._activeMinuteOfDay;
-                schedule._dayOfWeek   = definition._activeDayOfWeek;
-                return schedule;
-            }
-        };
+            ScheduleDefinition schedule;
+            schedule._jobID       = definition._eventID;
+            schedule._kind        = definition._recurrence == LiveEventRecurrence::Daily ? ScheduleKind::Daily : ScheduleKind::Weekly;
+            schedule._minuteOfDay = definition._activeMinuteOfDay;
+            schedule._dayOfWeek   = definition._activeDayOfWeek;
+            return schedule;
+        }
     } // namespace
 } // namespace sw
 
@@ -38,7 +35,7 @@ namespace sw
             outWindowEndMs = definition._endMs;
             return true;
         }
-        const int64 occurrenceMs = ServiceScheduler::computeLatestOccurrence( LiveEventRulesInternal::makeSchedule( definition ), nowMs );
+        const int64 occurrenceMs = ServiceScheduler::computeLatestOccurrence( makeSchedule( definition ), nowMs );
         if ( occurrenceMs < 0 || nowMs >= occurrenceMs + definition._activeDurationMs )
             return false;
         outWindowEndMs = std::min( occurrenceMs + definition._activeDurationMs, definition._endMs );
@@ -61,7 +58,7 @@ namespace sw
         const bool bIDOk     = LiveOpsLimit::isValidKey( definition._eventID, LiveOpsLimit::kMaxIDSize ) && definition._kind.size() <= static_cast<size_t>( LiveOpsLimit::kMaxKindSize );
         const bool bTimeOk   = definition._endMs > definition._startMs;
         const bool bRepeatOk = definition._recurrence == LiveEventRecurrence::Once ||
-                               ( definition._activeDurationMs > 0 && ServiceScheduler::isValidDefinition( LiveEventRulesInternal::makeSchedule( definition ) ) );
+                               ( definition._activeDurationMs > 0 && ServiceScheduler::isValidDefinition( makeSchedule( definition ) ) );
         const bool bRolloutOk = 0 <= definition._rolloutBasisPoints && definition._rolloutBasisPoints <= RemoteConfigValue::kFullRolloutPoints;
         const bool bCountOk   = static_cast<int32>( definition._listParameter.size() ) <= LiveOpsLimit::kMaxParameterCount &&
                               static_cast<int32>( definition._listRegion.size() ) <= LiveOpsLimit::kMaxRegionCount;

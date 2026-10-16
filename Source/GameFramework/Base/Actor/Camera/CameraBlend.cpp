@@ -8,23 +8,20 @@ namespace sw
 {
     namespace
     {
-        struct CameraBlendInternal
+        CameraPostProcessValues blendPostProcess( const CameraPostProcessValues& from, const CameraPostProcessValues& to, float32 weight )
         {
-            static CameraPostProcessValues blendPostProcess( const CameraPostProcessValues& from, const CameraPostProcessValues& to, float32 weight )
-            {
-                CameraPostProcessValues values;
-                values._exposureCompensation = MathUtil::lerp( from._exposureCompensation, to._exposureCompensation, weight );
-                values._bloomScale           = MathUtil::lerp( from._bloomScale, to._bloomScale, weight );
-                values._vignetteIntensity    = MathUtil::lerp( from._vignetteIntensity, to._vignetteIntensity, weight );
-                values._saturation           = MathUtil::lerp( from._saturation, to._saturation, weight );
-                values._contrast             = MathUtil::lerp( from._contrast, to._contrast, weight );
-                // 레터박스는 양쪽에 있을 때만 비율을 섞는다. 한쪽에만 있으면 0(없음)과 섞을 비율이 없으므로 투영처럼 절반에서 바꾼다.
-                const bool bBoth             = from._letterboxAspectRatio > 0.0f && to._letterboxAspectRatio > 0.0f;
-                values._letterboxAspectRatio = bBoth ? MathUtil::lerp( from._letterboxAspectRatio, to._letterboxAspectRatio, weight )
-                                                     : ( weight < 0.5f ? from._letterboxAspectRatio : to._letterboxAspectRatio );
-                return values;
-            }
-        };
+            CameraPostProcessValues values;
+            values._exposureCompensation = MathUtil::lerp( from._exposureCompensation, to._exposureCompensation, weight );
+            values._bloomScale           = MathUtil::lerp( from._bloomScale, to._bloomScale, weight );
+            values._vignetteIntensity    = MathUtil::lerp( from._vignetteIntensity, to._vignetteIntensity, weight );
+            values._saturation           = MathUtil::lerp( from._saturation, to._saturation, weight );
+            values._contrast             = MathUtil::lerp( from._contrast, to._contrast, weight );
+            // 레터박스는 양쪽에 있을 때만 비율을 섞는다. 한쪽에만 있으면 0(없음)과 섞을 비율이 없으므로 투영처럼 절반에서 바꾼다.
+            const bool bBoth             = from._letterboxAspectRatio > 0.0f && to._letterboxAspectRatio > 0.0f;
+            values._letterboxAspectRatio = bBoth ? MathUtil::lerp( from._letterboxAspectRatio, to._letterboxAspectRatio, weight )
+                                                 : ( weight < 0.5f ? from._letterboxAspectRatio : to._letterboxAspectRatio );
+            return values;
+        }
     } // namespace
 } // namespace sw
 
@@ -42,7 +39,7 @@ namespace sw
         pose._focusDistance = MathUtil::lerp( from._focusDistance, to._focusDistance, weight );
         pose._aperture      = MathUtil::lerp( from._aperture, to._aperture, weight );
         pose._lensShift     = float2::lerp( from._lensShift, to._lensShift, weight );
-        pose._postProcess   = CameraBlendInternal::blendPostProcess( from._postProcess, to._postProcess, weight );
+        pose._postProcess   = blendPostProcess( from._postProcess, to._postProcess, weight );
         pose._bOrthographic = weight < 0.5f ? from._bOrthographic : to._bOrthographic;
         return pose;
     }

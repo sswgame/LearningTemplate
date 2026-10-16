@@ -15,11 +15,10 @@ namespace sw
 {
     namespace
     {
-        struct RTSWorldSimulationInternal
+        bool isGroundUnitSimulation( const RTSUnit& unit )
         {
-
-            static bool isGround( const RTSUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
-        };
+            return unit._pDef->_bAir == SW_FALSE;
+        }
     } // namespace
 
     void RTSWorld::recomputeSupply()
@@ -90,7 +89,7 @@ namespace sw
 
     void RTSWorld::approach( RTSUnit& unit, const float3& target, bool bForce )
     {
-        if ( RTSWorldSimulationInternal::isGround( unit ) == false )
+        if ( isGroundUnitSimulation( unit ) == false )
         {
             const bool bShouldRepathAir = bForce || unit._agent.isMoving() == false || float3::getHorizontalDistance( unit._moveGoal, target ) > 0.25f;
             if ( bShouldRepathAir )
@@ -126,7 +125,7 @@ namespace sw
 
     void RTSWorld::updateMovement( RTSUnit& unit, float32 deltaTime )
     {
-        const bool bGround = RTSWorldSimulationInternal::isGround( unit );
+        const bool bGround = isGroundUnitSimulation( unit );
         _listNeighborScratch.clear();
         // 채취하는 일꾼은 서로 밀지 않는다. 스타크래프트처럼 광물 앞에 모여도 된다.
         const RTSOrder* pOrder = unit.findOrder();
@@ -136,7 +135,7 @@ namespace sw
             for ( const RTSUnitID otherID : _listQueryScratch )
             {
                 const RTSUnit* pOther         = findUnit( otherID );
-                const bool     bSkipOtherUnit = pOther == nullptr || pOther == &unit || pOther->isMobile() == false || RTSWorldSimulationInternal::isGround( *pOther ) != bGround;
+                const bool     bSkipOtherUnit = pOther == nullptr || pOther == &unit || pOther->isMobile() == false || isGroundUnitSimulation( *pOther ) != bGround;
                 if ( bSkipOtherUnit )
                     continue;
                 const RTSOrder* pOtherOrder = pOther->findOrder();

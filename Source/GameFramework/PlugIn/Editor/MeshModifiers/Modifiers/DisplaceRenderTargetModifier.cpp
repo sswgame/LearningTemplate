@@ -17,26 +17,23 @@ namespace sw::editor
 {
     namespace
     {
-        struct DisplaceRenderTargetModifierInternal
+        /** @brief 채널 번호(0 R · 1 G · 2 B · 3 A · 4 밝기)의 값입니다. */
+        float32 pickRenderTargetChannel( const float4& color, int32 channel )
         {
-            /** @brief 채널 번호(0 R · 1 G · 2 B · 3 A · 4 밝기)의 값입니다. */
-            static float32 pickChannel( const float4& color, int32 channel )
+            switch ( channel )
             {
-                switch ( channel )
-                {
-                    case 0:
-                        return color._x;
-                    case 1:
-                        return color._y;
-                    case 2:
-                        return color._z;
-                    case 3:
-                        return color._w;
-                    default:
-                        return color._x * 0.2126f + color._y * 0.7152f + color._z * 0.0722f;
-                }
+                case 0:
+                    return color._x;
+                case 1:
+                    return color._y;
+                case 2:
+                    return color._z;
+                case 3:
+                    return color._w;
+                default:
+                    return color._x * 0.2126f + color._y * 0.7152f + color._z * 0.0722f;
             }
-        };
+        }
     } // namespace
 
     /** @brief 정적 텍스처로 대체한 렌더 타깃 변위입니다. */
@@ -79,7 +76,7 @@ namespace sw::editor
             float4        color{ 0.0f, 0.0f, 0.0f, 0.0f };
             if ( pInputs->trySampleTexture( path, uv, color ) == false )
                 return point._position;
-            const float32 height = DisplaceRenderTargetModifierInternal::pickChannel( color, getInt( _channelParam ) ) - getFloat( _midLevelParam );
+            const float32 height = pickRenderTargetChannel( color, getInt( _channelParam ) ) - getFloat( _midLevelParam );
             return point._position + point._normal * ( amount * height );
         }
 

@@ -15,20 +15,17 @@ namespace sw
 
     namespace
     {
-        struct TurnRelayInternal
+        /** @brief 운영체제 난수 64비트(`UUID::generate`)를 반환합니다. 실행마다, 서버마다 다르고 미리 알 수 없습니다. */
+        uint64 makeRandomSeed()
         {
-            /** @brief 운영체제 난수 64비트(`UUID::generate`)를 반환합니다. 실행마다, 서버마다 다르고 미리 알 수 없습니다. */
-            static uint64 makeRandomSeed()
+            const UUID uuid  = UUID::generate();
+            uint64     value = 0;
+            for ( const uint8 byte : uuid._arrBytes )
             {
-                const UUID uuid  = UUID::generate();
-                uint64     value = 0;
-                for ( const uint8 byte : uuid._arrBytes )
-                {
-                    value = HashUtil::mix64( value ^ byte );
-                }
-                return value != 0 ? value : HashUtil::kGoldenRatio64;
+                value = HashUtil::mix64( value ^ byte );
             }
-        };
+            return value != 0 ? value : HashUtil::kGoldenRatio64;
+        }
     } // namespace
 } // namespace sw
 
@@ -57,7 +54,7 @@ namespace sw
         _pHost       = pHost;
         _seatCount   = MathUtil::max( 1, seatCount );
         _pPolicy     = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _tokenSecret = tokenSeed != 0 ? tokenSeed : TurnRelayInternal::makeRandomSeed();
+        _tokenSecret = tokenSeed != 0 ? tokenSeed : makeRandomSeed();
         _tokenCount  = 0;
         _listRoom.clear();
         _listPending.clear();

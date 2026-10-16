@@ -8,13 +8,10 @@ namespace sw::editor
 {
     namespace
     {
-        struct FitCheckSummaryInternal
+        hashed_string findPartName( const FitResult& result, uint32 partIndex )
         {
-            static hashed_string findPartName( const FitResult& result, uint32 partIndex )
-            {
-                return partIndex < result._listPart.size() ? result._listPart[partIndex]._name : hashed_string{};
-            }
-        };
+            return partIndex < result._listPart.size() ? result._listPart[partIndex]._name : hashed_string{};
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -22,7 +19,6 @@ namespace sw::editor
 {
     FitCheckSummary FitCheckSummary::fromResult( const FitResult& result )
     {
-        using Internal = FitCheckSummaryInternal;
 
         FitCheckSummary summary;
         for ( const FitPartResult& part : result._listPart )
@@ -46,8 +42,8 @@ namespace sw::editor
         for ( const FitPenetration& penetration : result._report._listPenetration )
         {
             FitPenetrationSummary row;
-            row._partA       = Internal::findPartName( result, penetration._partA );
-            row._partB       = Internal::findPartName( result, penetration._partB );
+            row._partA       = findPartName( result, penetration._partA );
+            row._partB       = findPartName( result, penetration._partB );
             row._vertexCount = penetration._vertexCount;
             row._maxDepth    = penetration._maxDepth;
             summary._listPenetration.push_back( row );

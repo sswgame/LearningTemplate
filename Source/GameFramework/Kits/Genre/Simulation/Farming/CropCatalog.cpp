@@ -17,24 +17,21 @@ namespace sw
 
     namespace
     {
-        struct CropCatalogInternal
+        /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 경고하고 뺍니다. */
+        void parseSeasons( string_view text, const vector<hashed_string>& listKnown, string_view sourceName, const utf8* pCropID,
+                           vector<hashed_string>& outListSeason )
         {
-            /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 경고하고 뺍니다. */
-            static void parseSeasons( string_view text, const vector<hashed_string>& listKnown, string_view sourceName, const utf8* pCropID,
-                                      vector<hashed_string>& outListSeason )
+            outListSeason.clear();
+            StringUtil::forEachToken( text, ",;| ", [&]( string_view token )
             {
-                outListSeason.clear();
-                StringUtil::forEachToken( text, ",;| ", [&]( string_view token )
-                {
-                    const hashed_string season( token );
-                    const bool          bKnown = listKnown.empty() || std::find( listKnown.begin(), listKnown.end(), season ) != listKnown.end();
-                    if ( bKnown )
-                        outListSeason.push_back( season );
-                    else
-                        SW_LOG_WARNING( "%#: crop '%#' names an unknown season '%#'", sourceName, pCropID, season.c_str() );
-                } );
-            }
-        };
+                const hashed_string season( token );
+                const bool          bKnown = listKnown.empty() || std::find( listKnown.begin(), listKnown.end(), season ) != listKnown.end();
+                if ( bKnown )
+                    outListSeason.push_back( season );
+                else
+                    SW_LOG_WARNING( "%#: crop '%#' names an unknown season '%#'", sourceName, pCropID, season.c_str() );
+            } );
+        }
     } // namespace
 } // namespace sw
 
@@ -112,7 +109,7 @@ namespace sw
                 crop._color = GameDataXML::parseFloat4( string_view( pColor ), crop._color );
             const utf8* pSeasons = node.findAttribute( "seasons" );
             if ( pSeasons != nullptr )
-                CropCatalogInternal::parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, pID, crop._listSeason );
+                parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, pID, crop._listSeason );
             else
                 crop._listSeason.push_back( hashed_string( "Spring" ) );
             if ( crop._listSeason.empty() )

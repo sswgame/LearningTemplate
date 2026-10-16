@@ -8,28 +8,25 @@ namespace sw
 {
     namespace
     {
-        struct AccountTypesInternal
+        /** @brief @p text 의 @p inoutCursor 부터 다음 '.' 까지를 정수로 읽고 커서를 그 뒤로 옮깁니다. 숫자가 아닌 글자를 만나면 그 항목은 거기까지 읽은 값입니다. */
+        uint64 readBuildPart( string_view text, size_t& inoutCursor )
         {
-            /** @brief @p text 의 @p inoutCursor 부터 다음 '.' 까지를 정수로 읽고 커서를 그 뒤로 옮깁니다. 숫자가 아닌 글자를 만나면 그 항목은 거기까지 읽은 값입니다. */
-            static uint64 readBuildPart( string_view text, size_t& inoutCursor )
+            uint64 value    = 0;
+            bool   bNumeric = true;
+            size_t cursor   = inoutCursor;
+            while ( cursor < text.size() && text[cursor] != '.' )
             {
-                uint64 value    = 0;
-                bool   bNumeric = true;
-                size_t cursor   = inoutCursor;
-                while ( cursor < text.size() && text[cursor] != '.' )
-                {
-                    const utf8 ch           = text[cursor];
-                    const bool bAppendDigit = bNumeric && '0' <= ch && ch <= '9' && value < 100000000ull;
-                    if ( bAppendDigit )
-                        value = value * 10 + static_cast<uint64>( ch - '0' );
-                    else
-                        bNumeric = false;
-                    ++cursor;
-                }
-                inoutCursor = cursor < text.size() ? cursor + 1 : cursor;
-                return value;
+                const utf8 ch           = text[cursor];
+                const bool bAppendDigit = bNumeric && '0' <= ch && ch <= '9' && value < 100000000ull;
+                if ( bAppendDigit )
+                    value = value * 10 + static_cast<uint64>( ch - '0' );
+                else
+                    bNumeric = false;
+                ++cursor;
             }
-        };
+            inoutCursor = cursor < text.size() ? cursor + 1 : cursor;
+            return value;
+        }
     } // namespace
 } // namespace sw
 
@@ -64,8 +61,8 @@ namespace sw
         size_t rightCursor = 0;
         while ( leftCursor < left.size() || rightCursor < right.size() )
         {
-            const uint64 leftPart  = AccountTypesInternal::readBuildPart( left, leftCursor );
-            const uint64 rightPart = AccountTypesInternal::readBuildPart( right, rightCursor );
+            const uint64 leftPart  = readBuildPart( left, leftCursor );
+            const uint64 rightPart = readBuildPart( right, rightCursor );
             if ( leftPart != rightPart )
                 return leftPart < rightPart ? -1 : 1;
         }

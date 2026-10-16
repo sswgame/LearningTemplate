@@ -13,27 +13,24 @@ namespace sw
 {
     namespace
     {
-        struct MonsterInstanceInternal
+        /** @brief 레벨 @p level 의 기술을 배웁니다. 슬롯이 차면 막힘 알림을 냅니다. */
+        void learnLevelMoves( const MonsterCollectorCatalog& catalog, const MonsterSpeciesDef& species, MonsterInstance& inoutMonster, int32 level,
+                              vector<MonsterGrowthEvent>& outListEvent )
         {
-            /** @brief 레벨 @p level 의 기술을 배웁니다. 슬롯이 차면 막힘 알림을 냅니다. */
-            static void learnLevelMoves( const MonsterCollectorCatalog& catalog, const MonsterSpeciesDef& species, MonsterInstance& inoutMonster, int32 level,
-                                         vector<MonsterGrowthEvent>& outListEvent )
+            for ( const MonsterLearnEntry& learn : species._listLearn )
             {
-                for ( const MonsterLearnEntry& learn : species._listLearn )
-                {
-                    if ( learn._level != level || inoutMonster.findMoveSlot( learn._moveID ) >= 0 )
-                        continue;
-                    MonsterGrowthEvent event;
-                    event._id    = learn._moveID;
-                    event._level = level;
-                    if ( MonsterRules::learnMove( catalog, inoutMonster, learn._moveID ) )
-                        event._kind = MonsterGrowthEvent::Kind::LearnedMove;
-                    else
-                        event._kind = MonsterGrowthEvent::Kind::MoveLearnBlocked;
-                    outListEvent.push_back( event );
-                }
+                if ( learn._level != level || inoutMonster.findMoveSlot( learn._moveID ) >= 0 )
+                    continue;
+                MonsterGrowthEvent event;
+                event._id    = learn._moveID;
+                event._level = level;
+                if ( MonsterRules::learnMove( catalog, inoutMonster, learn._moveID ) )
+                    event._kind = MonsterGrowthEvent::Kind::LearnedMove;
+                else
+                    event._kind = MonsterGrowthEvent::Kind::MoveLearnBlocked;
+                outListEvent.push_back( event );
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -238,7 +235,7 @@ namespace sw
             inoutMonster._friendship = MathUtil::min( kMaxFriendship, inoutMonster._friendship + kFriendshipPerLevel );
             recomputeStats( catalog, inoutMonster );
             outListEvent.push_back( MonsterGrowthEvent{ hashed_string{}, inoutMonster._level, MonsterGrowthEvent::Kind::LevelUp } );
-            MonsterInstanceInternal::learnLevelMoves( catalog, *pSpecies, inoutMonster, inoutMonster._level, outListEvent );
+            learnLevelMoves( catalog, *pSpecies, inoutMonster, inoutMonster._level, outListEvent );
         }
         if ( gained > 0 )
         {

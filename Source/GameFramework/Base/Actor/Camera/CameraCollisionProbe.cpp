@@ -15,23 +15,20 @@ namespace sw
 {
     namespace
     {
-        struct CameraCollisionProbeInternal
+        /** @brief 구를 상자 하나에 쓸어 닿는 거리(@p from 기준)를 @p inoutNearest 보다 가까우면 줄입니다. */
+        void sweepAgainst( const float3& from, const float3& displacement, float32 length, float32 radius, const AABB& box,
+                           float32& inoutNearest, bool& inoutHit )
         {
-            /** @brief 구를 상자 하나에 쓸어 닿는 거리(@p from 기준)를 @p inoutNearest 보다 가까우면 줄입니다. */
-            static void sweepAgainst( const float3& from, const float3& displacement, float32 length, float32 radius, const AABB& box,
-                                      float32& inoutNearest, bool& inoutHit )
+            SweepHit hit{};
+            if ( ContinuousCollision::sweepSphere( from, radius, displacement, box, hit ) == false )
+                return;
+            const float32 distance = hit._hitFraction * length;
+            if ( inoutHit == false || distance < inoutNearest )
             {
-                SweepHit hit{};
-                if ( ContinuousCollision::sweepSphere( from, radius, displacement, box, hit ) == false )
-                    return;
-                const float32 distance = hit._hitFraction * length;
-                if ( inoutHit == false || distance < inoutNearest )
-                {
-                    inoutNearest = distance;
-                    inoutHit     = true;
-                }
+                inoutNearest = distance;
+                inoutHit     = true;
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -52,7 +49,7 @@ namespace sw
             return false;
         for ( const AABB& box : _listBox )
         {
-            CameraCollisionProbeInternal::sweepAgainst( from, displacement, length, radius, box, nearest, bHit );
+            sweepAgainst( from, displacement, length, radius, box, nearest, bHit );
         }
         outDistance = nearest;
         return bHit;
@@ -85,7 +82,7 @@ namespace sw
                 continue;
             if ( _ignoredObjectID != 0 && body._objectID == _ignoredObjectID )
                 continue;
-            CameraCollisionProbeInternal::sweepAgainst( from, displacement, length, radius, body._aabb, nearest, bHit );
+            sweepAgainst( from, displacement, length, radius, body._aabb, nearest, bHit );
         }
         outDistance = nearest;
         return bHit;

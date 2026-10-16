@@ -15,29 +15,25 @@ namespace sw
 {
     namespace
     {
-        struct PropScatterComponentInternal
+        /** @brief 자리 하나에 모델 · 크기 · 요를 정해 목록에 넣습니다. 제외 원 안이면 모델만 꺼내고 넣지 않는다. */
+        void plant( const PropScatterParams& params, const float3& position, uint32& inoutState, vector<PropScatterPlacement>& outListPlacement )
         {
-
-            /** @brief 자리 하나에 모델 · 크기 · 요를 정해 목록에 넣습니다. 제외 원 안이면 모델만 꺼내고 넣지 않는다. */
-            static void plant( const PropScatterParams& params, const float3& position, uint32& inoutState, vector<PropScatterPlacement>& outListPlacement )
+            const float32 pick = PropScatterMath::nextUnit( inoutState );
+            for ( const PropScatterExclusion& exclusion : params._listExclusion )
             {
-                const float32 pick = PropScatterMath::nextUnit( inoutState );
-                for ( const PropScatterExclusion& exclusion : params._listExclusion )
-                {
-                    const float32 deltaX = position._x - exclusion._center._x;
-                    const float32 deltaZ = position._z - exclusion._center._z;
-                    if ( deltaX * deltaX + deltaZ * deltaZ < exclusion._radius * exclusion._radius )
-                        return;
-                }
-                PropScatterPlacement placement;
-                placement._position   = position;
-                placement._modelIndex = PropScatterMath::pickModel( params._listModel, pick );
-                placement._scale      = params._scaleMin + PropScatterMath::nextUnit( inoutState ) * ( params._scaleMax - params._scaleMin );
-                placement._yaw        = PropScatterMath::nextUnit( inoutState ) * MathUtil::kTwoPi;
-                if ( placement._modelIndex >= 0 )
-                    outListPlacement.push_back( placement );
+                const float32 deltaX = position._x - exclusion._center._x;
+                const float32 deltaZ = position._z - exclusion._center._z;
+                if ( deltaX * deltaX + deltaZ * deltaZ < exclusion._radius * exclusion._radius )
+                    return;
             }
-        };
+            PropScatterPlacement placement;
+            placement._position   = position;
+            placement._modelIndex = PropScatterMath::pickModel( params._listModel, pick );
+            placement._scale      = params._scaleMin + PropScatterMath::nextUnit( inoutState ) * ( params._scaleMax - params._scaleMin );
+            placement._yaw        = PropScatterMath::nextUnit( inoutState ) * MathUtil::kTwoPi;
+            if ( placement._modelIndex >= 0 )
+                outListPlacement.push_back( placement );
+        }
     } // namespace
 } // namespace sw
 
@@ -86,7 +82,6 @@ namespace sw
         }
         if ( params._spacing <= 0.0f || params._listModel.empty() )
             return;
-        using Internal         = PropScatterComponentInternal;
         uint32       state     = params._seed;
         const float3 regionMin = params._regionMin;
         const float3 regionMax = params._regionMax;
@@ -98,7 +93,7 @@ namespace sw
                 {
                     const float32 offsetX = PropScatterMath::nextUnit( state ) * params._inwardJitter;
                     const float32 offsetZ = PropScatterMath::nextUnit( state ) * params._inwardJitter;
-                    Internal::plant( params, float3{ x + offsetX, regionMin._y, z + offsetZ }, state, outListPlacement );
+                    plant( params, float3{ x + offsetX, regionMin._y, z + offsetZ }, state, outListPlacement );
                 }
             }
             return;
@@ -108,19 +103,19 @@ namespace sw
         {
             const float32 bottomX = x + PropScatterMath::nextUnit( state ) * params._alongJitter;
             const float32 bottomZ = regionMin._z + PropScatterMath::nextUnit( state ) * params._inwardJitter;
-            Internal::plant( params, float3{ bottomX, regionMin._y, bottomZ }, state, outListPlacement );
+            plant( params, float3{ bottomX, regionMin._y, bottomZ }, state, outListPlacement );
             const float32 topX = x + PropScatterMath::nextUnit( state ) * params._alongJitter;
             const float32 topZ = regionMax._z - PropScatterMath::nextUnit( state ) * params._inwardJitter;
-            Internal::plant( params, float3{ topX, regionMin._y, topZ }, state, outListPlacement );
+            plant( params, float3{ topX, regionMin._y, topZ }, state, outListPlacement );
         }
         for ( float32 z = regionMin._z + params._spacing; z < regionMax._z; z += params._spacing )
         {
             const float32 leftX = regionMin._x + PropScatterMath::nextUnit( state ) * params._inwardJitter;
             const float32 leftZ = z + PropScatterMath::nextUnit( state ) * params._alongJitter;
-            Internal::plant( params, float3{ leftX, regionMin._y, leftZ }, state, outListPlacement );
+            plant( params, float3{ leftX, regionMin._y, leftZ }, state, outListPlacement );
             const float32 rightX = regionMax._x - PropScatterMath::nextUnit( state ) * params._inwardJitter;
             const float32 rightZ = z + PropScatterMath::nextUnit( state ) * params._alongJitter;
-            Internal::plant( params, float3{ rightX, regionMin._y, rightZ }, state, outListPlacement );
+            plant( params, float3{ rightX, regionMin._y, rightZ }, state, outListPlacement );
         }
     }
 

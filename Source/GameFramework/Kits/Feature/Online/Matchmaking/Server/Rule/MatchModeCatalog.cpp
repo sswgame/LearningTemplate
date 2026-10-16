@@ -14,15 +14,12 @@ namespace sw
 
     namespace
     {
-        struct MatchModeCatalogInternal
+        /** @brief 빈 글이면 그대로 두고 true, 정수가 아니면 false 입니다. */
+        [[nodiscard]] bool readInt64( const XMLNode& node, const utf8* pName, int64& inoutValue )
         {
-            /** @brief 빈 글이면 그대로 두고 true, 정수가 아니면 false 입니다. */
-            [[nodiscard]] static bool readInt64( const XMLNode& node, const utf8* pName, int64& inoutValue )
-            {
-                const string_view text = node.getAttributeText( pName );
-                return text.empty() || StringUtil::parseInt64( text, inoutValue );
-            }
-        };
+            const string_view text = node.getAttributeText( pName );
+            return text.empty() || StringUtil::parseInt64( text, inoutValue );
+        }
     } // namespace
 } // namespace sw
 
@@ -68,8 +65,8 @@ namespace sw
             const string_view serverKind = node.getAttributeText( "serverKind" );
             if ( serverKind.empty() == false )
                 mode._serverKind = string( serverKind );
-            const bool bTimesOk = MatchModeCatalogInternal::readInt64( node, "regionRelaxMs", mode._regionRelaxMs ) &&
-                                  MatchModeCatalogInternal::readInt64( node, "maxWaitMs", mode._maxWaitMs );
+            const bool bTimesOk = readInt64( node, "regionRelaxMs", mode._regionRelaxMs ) &&
+                                  readInt64( node, "maxWaitMs", mode._maxWaitMs );
             const bool bInvalidModeValues = bTimesOk == false || mode._teamCount <= 0 || mode._teamSize <= 0;
             if ( bInvalidModeValues )
             {

@@ -13,17 +13,14 @@ namespace sw::editor
 {
     namespace
     {
-        struct MeshModifiersCommandsInternal
+        void openMeshModifiersPanel()
         {
-            static void openPanel()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "meshmodifiers.stack", true ) )
-                    SW_LOG_INFO( "Mesh Modifiers panel opened" );
-            }
-        };
+            EditorContext* pContext = EditorContext::get();
+            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "meshmodifiers.stack", true ) )
+                SW_LOG_INFO( "Mesh Modifiers panel opened" );
+        }
     } // namespace
 
     SW_EDITOR_COMMAND( MeshModifiersOpen, "meshmodifiers.openPanel", 9110, "Mesh Modifiers", editoricon::kCube, "Mesh", "메시 모디파이어 스택 패널을 엽니다",
-                       "Open the mesh modifier stack panel", {}, &MeshModifiersCommandsInternal::openPanel, nullptr, nullptr );
+                       "Open the mesh modifier stack panel", {}, &openMeshModifiersPanel, nullptr, nullptr );
 } // namespace sw::editor

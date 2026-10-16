@@ -13,22 +13,19 @@ namespace sw
 {
     namespace
     {
-        struct SRPGProgressInternal
+        bool isCommanderLost( const SRPGBattlefield& field, SRPGTeam team, bool& outHasCommander )
         {
-            static bool isCommanderLost( const SRPGBattlefield& field, SRPGTeam team, bool& outHasCommander )
+            outHasCommander = false;
+            bool bLost      = false;
+            for ( const SRPGUnit& unit : field.getUnits() )
             {
-                outHasCommander = false;
-                bool bLost      = false;
-                for ( const SRPGUnit& unit : field.getUnits() )
-                {
-                    if ( unit._team != team || unit._bCommander == SW_FALSE )
-                        continue;
-                    outHasCommander = true;
-                    bLost           = bLost || unit._bAlive == SW_FALSE;
-                }
-                return bLost;
+                if ( unit._team != team || unit._bCommander == SW_FALSE )
+                    continue;
+                outHasCommander = true;
+                bLost           = bLost || unit._bAlive == SW_FALSE;
             }
-        };
+            return bLost;
+        }
     } // namespace
 } // namespace sw
 
@@ -41,7 +38,7 @@ namespace sw
         if ( field.countAlive( SRPGTeam::Player ) == 0 )
             return SRPGOutcome::Defeat;
         bool bPlayerHasCommander = false;
-        if ( rule._bLoseOnCommander == SW_TRUE && SRPGProgressInternal::isCommanderLost( field, SRPGTeam::Player, bPlayerHasCommander ) )
+        if ( rule._bLoseOnCommander == SW_TRUE && isCommanderLost( field, SRPGTeam::Player, bPlayerHasCommander ) )
             return SRPGOutcome::Defeat;
         const bool bOverTurnLimit = rule._turnLimit > 0 && field.getTurn() > rule._turnLimit;
         if ( bOverTurnLimit && rule._objective != SRPGObjective::SurviveTurns )
@@ -56,7 +53,7 @@ namespace sw
             case SRPGObjective::DefeatCommander:
             {
                 bool       bEnemyHasCommander = false;
-                const bool bLost              = SRPGProgressInternal::isCommanderLost( field, SRPGTeam::Enemy, bEnemyHasCommander );
+                const bool bLost              = isCommanderLost( field, SRPGTeam::Enemy, bEnemyHasCommander );
                 if ( bEnemyHasCommander == false )
                     return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGOutcome::Victory : SRPGOutcome::Ongoing; // 지휘관이 없으면 전멸로 판정한다
                 return bLost ? SRPGOutcome::Victory : SRPGOutcome::Ongoing;
