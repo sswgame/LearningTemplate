@@ -59,6 +59,38 @@ namespace
         }
         manager.shutdown();
     }
+
+    /**
+     * @brief `runParallelByCost` 가 본문을 부른 구간 [start, end) 를 부른 차례대로 적습니다.
+     * @details 가벼운 일의 비용을 재는 시계(3 us 문턱)를 기록이 늘리지 않게 잠금 없이 고정 칸에 쓴다(`fetch_add` 한 번 + 저장 한 번). 나뉜 부분은 여러 스레드가 부른다.
+     */
+    struct CostCallRecorder
+    {
+        static constexpr uint32 kCapacity = 256;
+
+        sw::atomic<uint32>                        _count{ 0 };
+        std::array<sw::atomic<uint64>, kCapacity> _arrCall{};
+
+        void record( uint32 start, uint32 end )
+        {
+            const uint32 slot = _count.fetch_add( 1, std::memory_order_relaxed );
+            if ( slot < kCapacity )
+                _arrCall[slot].store( ( static_cast<uint64>( start ) << 32 ) | end, std::memory_order_relaxed );
+        }
+
+        /** @brief 부른 차례의 구간 목록입니다(호출이 모두 끝난 뒤에 읽는다). */
+        sw::vector<std::pair<uint32, uint32>> list() const
+        {
+            sw::vector<std::pair<uint32, uint32>> listCall;
+            const uint32                          count = sw::MathUtil::min( _count.load(), kCapacity );
+            for ( uint32 index = 0; index < count; ++index )
+            {
+                const uint64 packed = _arrCall[index].load();
+                listCall.emplace_back( static_cast<uint32>( packed >> 32 ), static_cast<uint32>( packed & 0xFFFFFFFFu ) );
+            }
+            return listCall;
+        }
+    };
 } // namespace
 
 /**
@@ -1087,64 +1119,76 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostCoversEveryIndexOnLightAndHeavyB
 }
 
 /**
- * @brief [TaskManagerTest] `runParallelByCost`: 무거운 항목은 첫 항목에서 바로 나뉘어 여러 스레드가 돈다
- * @details 항목 64 개가 각각 100 us 면 직렬로 6.4 ms 다. 고정 개수만큼 먼저 직렬로 돌았다면(앞 16 개) 나뉘지 못한다. 스케줄러가 한 번에 못 깨울 수 있어 다섯 번까지 본다.
+ * @brief [TaskManagerTest] `runParallelByCost`: 무거운 항목은 첫 항목에서 바로 나뉜다
+ * @details 항목 하나가 100 us 의 바쁜 대기라 첫 호출만으로 경과가 비용 문턱(3 us)을 넘고, 남은 63 개의 예상 시간(6 ms 이상)이 직렬 예산을 넘는다. 이 판단은 시계가 단조라는 것에만 기대므로
+ *          스레드가 실제로 깨어나는지(스케줄러)와 무관하게 결정적이다. 나뉘었다는 것은 호출 기록으로 본다: 첫 호출은 (0, 1) 이고, 남은 구간이 한 덩이 (1, 64) 로 직렬로 끝나지 않고
+ *          여러 청크로 쪼개져 불린다. 고정 개수만큼 먼저 직렬로 돌았다면(앞 16 개) 첫 호출이 (0, 1) 이 아니거나 나머지가 한 덩이가 된다.
  */
-SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsHeavyItemsAcrossThreads )
+SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsHeavyItemsAtTheFirstItem )
 {
     sw::TaskManager manager;
     SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
 
-    uint32 maxThreadCount = 0;
-    for ( uint32 attempt = 0; attempt < 5 && maxThreadCount < 2; ++attempt )
+    CostCallRecorder  recorder;
+    CostCallRecorder* pRecorder = &recorder;
+    manager.runParallelByCost( 64, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pRecorder]( uint32 start, uint32 end )
     {
-        sw::mutex                   lock;
-        sw::vector<std::thread::id> listThread;
-        manager.runParallelByCost( 64, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&lock, &listThread]( uint32 start, uint32 end )
+        pRecorder->record( start, end );
+        for ( uint32 index = start; index < end; ++index )
         {
+            const sw::Stopwatch spin;
+            while ( spin.getElapsedMicroseconds() < 100 )
             {
-                std::scoped_lock<sw::mutex> guard{ lock };
-                const std::thread::id       self = std::this_thread::get_id();
-                if ( std::find( listThread.begin(), listThread.end(), self ) == listThread.end() )
-                    listThread.push_back( self );
             }
-            for ( uint32 index = start; index < end; ++index )
-            {
-                const sw::Stopwatch spin;
-                while ( spin.getElapsedMicroseconds() < 100 )
-                {
-                }
-            }
-        } ) );
-        maxThreadCount = sw::MathUtil::max( maxThreadCount, static_cast<uint32>( listThread.size() ) );
+        }
+    } ) );
+
+    const sw::vector<std::pair<uint32, uint32>> listCall = recorder.list();
+    SW_ASSERT_TRUE( listCall.empty() == false );
+    SW_EXPECT_EQUAL( 0u, listCall.front().first );
+    SW_EXPECT_EQUAL( 1u, listCall.front().second );
+    SW_EXPECT_TRUE( listCall.size() >= 3u );
+    bool bRestInOneBlock = false;
+    for ( const auto& call : listCall )
+    {
+        if ( call.first == 1u && call.second == 64u )
+            bRestInOneBlock = true;
     }
-    SW_EXPECT_TRUE( maxThreadCount >= 2u );
+    SW_EXPECT_FALSE( bRestInOneBlock );
     manager.shutdown();
 }
 
 /**
- * @brief [TaskManagerTest] `runParallelByCost`: 아주 가벼운 일은 깨우지 않고 호출 스레드가 끝낸다
- * @details 항목 하나가 수 ns 인 일 4000 개는 직렬 몇 us 다. 나누면 깨우는 비용이 더 크다. 스케줄러 잡음으로 한 번 나뉠 수 있어 다섯 번 가운데 한 번이라도 호출 스레드 혼자 끝내면 통과한다.
+ * @brief [TaskManagerTest] `runParallelByCost`: 아주 가벼운 일은 깨우지 않고 호출 스레드가 직렬로 끝낸다
+ * @details 항목 하나가 수 ns 인 일 4000 개는 직렬 몇 us 다. 나누면 깨우는 비용이 더 크다. 직렬 길은 구간을 1, 2, 4, … 개씩 차례로 부르므로 호출 기록이 정확히 그 열이면 나뉘지 않은 것이다
+ *          (나뉘면 남은 구간이 다른 크기의 청크로 쪼개져 열이 어긋난다). 호출 스레드가 몇 us 선점되면 비용이 부풀어 나뉠 수 있어, 이 한 가지 잡음만 스무 번까지 다시 본다(시계를 주입할 수 없는 동안의 한계 — 백로그 참고).
  */
-SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkOnTheCallingThread )
+SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkSerial )
 {
     sw::TaskManager manager;
     SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
 
-    bool bStayedOnCaller = false;
-    for ( uint32 attempt = 0; attempt < 5 && bStayedOnCaller == false; ++attempt )
+    constexpr uint32                      kCount = 4000;
+    sw::vector<std::pair<uint32, uint32>> listExpected;
+    for ( uint32 done = 0, chunk = 1; done < kCount; chunk *= 2 )
     {
-        const std::thread::id caller = std::this_thread::get_id();
-        sw::atomic<int32>     otherThreadCount{ 0 };
-        manager.runParallelByCost( 4000, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&otherThreadCount, caller]( uint32 start, uint32 end )
-        {
-            (void)start;
-            (void)end;
-            if ( std::this_thread::get_id() != caller )
-                otherThreadCount.fetch_add( 1, std::memory_order_relaxed );
-        } ) );
-        bStayedOnCaller = otherThreadCount.load() == 0;
+        const uint32 end = sw::MathUtil::min( kCount, done + chunk );
+        listExpected.emplace_back( done, end );
+        done = end;
     }
-    SW_EXPECT_TRUE( bStayedOnCaller );
+
+    constexpr uint32 kMaxAttempt = 20;
+    bool             bSerial     = false;
+    for ( uint32 attempt = 0; attempt < kMaxAttempt && bSerial == false; ++attempt )
+    {
+        CostCallRecorder  recorder;
+        CostCallRecorder* pRecorder = &recorder;
+        manager.runParallelByCost( kCount, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pRecorder]( uint32 start, uint32 end )
+        {
+            pRecorder->record( start, end );
+        } ) );
+        bSerial = recorder.list() == listExpected;
+    }
+    SW_EXPECT_TRUE( bSerial );
     manager.shutdown();
 }

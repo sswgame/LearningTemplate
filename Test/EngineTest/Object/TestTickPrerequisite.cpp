@@ -444,9 +444,10 @@ SW_TEST_CASE( TickPrerequisiteTest, FollowerChurnKeepsOrderUnderIncrementalStage
 }
 
 /**
- * @brief [TickPrerequisiteTest] 증분으로 끼운 스테이지 배치가 전체 재구축이 만든 배치와 오브젝트마다 같은 (그룹, 레벨)이다
+ * @brief [TickPrerequisiteTest] 증분으로 끼운 스테이지 배치가 전체 재구축이 만든 배치와 같다(스테이지 안의 순서까지)
  * @details 결과값(틱 횟수 · 관측값)만 보면 증분 경로가 스테이지를 다른 자리에 넣어도 드러나지 않는다. 같은 오브젝트 집합에서 `markTickStagesDirty` 로 전체 재구축을 세워
- *          두 배치를 견준다(스테이지 안의 순서는 견주지 않는다 — 같은 레벨 안이라 정확성에 영향이 없다).
+ *          두 배치를 견준다. 스테이지 안의 순서가 다르면 같은 씬이 길에 따라 다른 순서로 돌아 결정성이 깨지므로 (그룹, 레벨, 오브젝트 id 차례)를 스테이지마다 견준다.
+ *          예전 오브젝트를 껐다 켜서 새 id 가 아닌 항목이 스테이지 중간에 끼는 경우를 만든다.
  */
 SW_TEST_CASE( TickPrerequisiteTest, IncrementalStageLayoutMatchesFullRebuild )
 {
@@ -458,18 +459,18 @@ SW_TEST_CASE( TickPrerequisiteTest, IncrementalStageLayoutMatchesFullRebuild )
     sw::MockSubTickMoverComponent* pEarlyLeader = createMover( manager, "EarlyLeader", sw::float3{ 3.0f, 0.0f, 0.0f }, nullptr, earlyTick );
     sw::MockSubTickMoverComponent* pLateLeader  = createMover( manager, "LateLeader", sw::float3{ 0.0f, 0.0f, 7.0f }, nullptr, lateTick, sw::TickGroup::PostPhysics );
 
-    // (오브젝트 id, 그룹, 레벨) 정렬 목록 — 스테이지 안의 순서와 스테이지 분할은 견주지 않는다.
+    // 비어 있지 않은 스테이지마다 (그룹, 레벨, 안의 오브젝트 id 차례) — 비운 스테이지는 증분 경로에만 남을 수 있어 건너뛴다.
     const auto captureLayout = [&manager]()
     {
-        sw::vector<std::array<uint64, 3>> listLayout;
+        sw::vector<sw::vector<uint64>> listLayout;
         for ( const sw::TickStage& stage : manager.getTickRegistry().getStages() )
         {
-            for ( const uint64 objectID : stage._listItemObjectID )
-            {
-                listLayout.push_back( { objectID, static_cast<uint64>( stage._group ), static_cast<uint64>( stage._level ) } );
-            }
+            if ( stage._listItemObjectID.empty() )
+                continue;
+            sw::vector<uint64> listStage{ static_cast<uint64>( stage._group ), static_cast<uint64>( stage._level ) };
+            listStage.insert( listStage.end(), stage._listItemObjectID.begin(), stage._listItemObjectID.end() );
+            listLayout.push_back( std::move( listStage ) );
         }
-        std::sort( listLayout.begin(), listLayout.end() );
         return listLayout;
     };
 
@@ -496,6 +497,12 @@ SW_TEST_CASE( TickPrerequisiteTest, IncrementalStageLayoutMatchesFullRebuild )
             const size_t victim = nextRandom( static_cast<uint32>( listFollower.size() ) );
             manager.destroyObject( listFollower[victim]->getOwner() );
             listFollower.erase( listFollower.begin() + static_cast<ptrdiff_t>( victim ) );
+        }
+        if ( listFollower.empty() == false && nextRandom( 2 ) == 0 )
+        {
+            // 예전(작은 id) 오브젝트를 껐다 켠다 — 다시 켜질 때 항목이 스테이지 끝이 아닌 중간에 끼어야 한다.
+            sw::GameObject* pToggled = listFollower[nextRandom( static_cast<uint32>( listFollower.size() ) )]->getOwner();
+            pToggled->setActive( pToggled->isActive() == false );
         }
         manager.update( 0.016f );
     }
