@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
@@ -18,7 +20,79 @@
 namespace sw
 {
     class XMLNode;
+} // namespace sw
 
+namespace sw
+{
+    /**
+     * @brief `<Quest>` 속성 중 기본값이 있는 칸의 스키마입니다(`GameDataXML::readFields` — 속성 이름은 칸 이름에서 `_` 를 뗀 것).
+     * @details `id` · `name` · `requires` 는 읽는 코드가 따로 읽는다(이름 · 이름 목록). 적지 않은 칸은 여기 초기값입니다.
+     */
+    REFLECT()
+    struct QuestRowDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _level{ 0 }; ///< 받을 수 있는 최소 레벨
+        PROPERTY()
+        bool _bRepeatable{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<Stage>` 속성 중 기본값이 있는 칸의 스키마입니다(`id` · `next` 는 이름으로 따로 읽는다). 범위 밖 값은 로드 오류입니다. */
+    REFLECT()
+    struct QuestStageRowDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _text{};
+        PROPERTY( Min = 0, Units = s )
+        float32 _time{ 0.0f }; ///< 0 이면 제한이 없다
+        PROPERTY()
+        bool _bComplete{ false };
+        PROPERTY()
+        bool _bFail{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<Objective>` 속성 중 기본값이 있는 칸의 스키마입니다(`kind` · `target` 은 이름으로 따로 읽는다). */
+    REFLECT()
+    struct QuestObjectiveRowDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _text{};
+        PROPERTY( Min = 1 )
+        int32 _count{ 1 };
+        PROPERTY()
+        bool _bOptional{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 보상의 `<Item>` 속성 스키마입니다. */
+    REFLECT()
+    struct QuestRewardItemRowDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _item{};
+        PROPERTY( Min = 1 )
+        int32 _count{ 1 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 목표 하나입니다. "무엇을(종류) 누구에게(대상) 몇 번" 하는지 담습니다. 종류와 대상은 문자열이므로 게임이 정합니다("Kill", "Collect", "Talk", "Reach"). */
     struct QuestObjective
     {

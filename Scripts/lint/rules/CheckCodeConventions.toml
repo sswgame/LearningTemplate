@@ -4,8 +4,6 @@
 # 두 규칙이 생길 때 이미 어기던 파일이다 — 소거는 따로 하고, 그 전까지 목록에 없는 파일의 새 위반만 막는다.
 # 파일을 규칙에 맞게 고치면 그 줄을 지운다(목록은 줄기만 하고 늘리지 않는다). 새 파일은 여기 넣지 않고 규칙에 맞게 쓴다.
 internalHelperBaseline = [
-    "Source/GameFramework/Base/Gameplay/Inventory/LootTable.cpp",
-    "Source/GameFramework/Base/Gameplay/Quest/QuestCatalog.cpp",
     "Test/AppTest/TestAppScenario.cpp",
     "Test/CoreTest/Process/TestModuleBuildID.cpp",
     "Test/EditorTest/Common/Asset/TestModelImporter.cpp",
