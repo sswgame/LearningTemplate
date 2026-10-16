@@ -66,7 +66,7 @@ float4 sampleWorldTriplanar(uint textureIndex, float3 worldPosition, float3 worl
 
 // 반환 타입이 **패스에 따라 갈린다** — 포워드는 SV_TARGET 하나, G버퍼 패스는 알베도·노멀 둘.
 // 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 이 파일로 그린다. float4 하나로 고정하면 **G버퍼의 노멀
-// 타깃이 클리어 값 그대로** 남는다(binding.hlsli 4 절).
+// 타깃이 클리어 값 그대로** 남는다(binding.hlsli 12 절 '픽셀 출력').
 SW_SURFACE_OUTPUT PSMain(PSInput input)
 {
 	float3 normal = normalize(input.normal);
