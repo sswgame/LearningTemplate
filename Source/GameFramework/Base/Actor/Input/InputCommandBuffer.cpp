@@ -3,7 +3,6 @@
 #include "GameFramework/Base/Actor/Input/InputCommandBuffer.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -179,40 +178,6 @@ namespace sw
         _count                                   = MathUtil::min( _count + 1, _capacity );
     }
 
-    void InputCommandBuffer::writeState( BitWriter& outWriter ) const
-    {
-        outWriter.writeInt( _count, 0, _capacity );
-        for ( int32 framesAgo = _count - 1; framesAgo >= 0; --framesAgo )
-        {
-            const InputFrame& frame = getFrame( framesAgo );
-            outWriter.writeBits( frame._buttons, 16 );
-            outWriter.writeBits( frame._direction, 4 );
-        }
-    }
-
-    bool InputCommandBuffer::readState( BitReader& reader )
-    {
-        const int32 count = reader.readInt( 0, _capacity );
-        if ( reader.hasOverflowed() )
-            return false;
-        vector<InputFrame> listFrame( static_cast<size_t>( count ) );
-        for ( InputFrame& frame : listFrame )
-        {
-            frame._buttons   = static_cast<uint16>( reader.readBits( 16 ) );
-            frame._direction = static_cast<uint8>( reader.readBits( 4 ) );
-            if ( frame._direction > 9 )
-                return false;
-        }
-        if ( reader.hasOverflowed() )
-            return false;
-        clear();
-        for ( const InputFrame& frame : listFrame )
-        {
-            push( frame );
-        }
-        return true;
-    }
-
     void InputCommandBuffer::clear()
     {
         // 칸까지 비워야 같은 입력 내력이 같은 상태 바이트가 된다(고리 버퍼 전체가 롤백 상태다).
@@ -225,8 +190,10 @@ namespace sw
     {
         if ( _listFrame.size() != static_cast<size_t>( _capacity ) )
             context.addError( "input ring length does not match the buffer capacity" );
-        if ( _head >= _capacity || _count > _capacity )
-            context.addError( "input ring head or count is past the buffer capacity" );
+        const bool bHeadInRing  = 0 <= _head && _head < _capacity;
+        const bool bCountInRing = 0 <= _count && _count <= _capacity;
+        if ( bHeadInRing == false || bCountInRing == false )
+            context.addError( "input ring head or count is outside the buffer capacity" );
     }
 
     const InputFrame& InputCommandBuffer::getFrame( int32 framesAgo ) const

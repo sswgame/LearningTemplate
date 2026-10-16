@@ -3,22 +3,8 @@
 #include "GameFramework/Base/Gameplay/Match/RoundSeries.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 
 #include "Engine/Reflection/ReflectionValidation.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct RoundSeriesInternal
-        {
-            static constexpr int64 kMaxStateValue = 0x3FFFFFFF; ///< 상태 바이트 정수의 상한. 깨진 바이트가 넘치는 값을 넣지 못하게 한다
-
-            static bool isStateValue( int64 value, int64 minValue ) { return minValue <= value && value <= kMaxStateValue; }
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -153,57 +139,6 @@ namespace sw
     {
         if ( _winner >= getParticipantCount() )
             context.addError( "round series winner is not a participant" );
-    }
-
-    void RoundSeries::writeState( BitWriter& outWriter ) const
-    {
-        outWriter.writeVarUint( static_cast<uint64>( _phase ) );
-        outWriter.writeVarInt( _roundIndex );
-        outWriter.writeVarInt( _roundTicksRemaining );
-        outWriter.writeVarInt( _intermissionTicksRemaining );
-        outWriter.writeVarInt( _winner );
-        outWriter.writeVarUint( static_cast<uint64>( _listTotal.size() ) );
-        for ( const int32 total : _listTotal )
-        {
-            outWriter.writeVarInt( total );
-        }
-    }
-
-    bool RoundSeries::readState( BitReader& reader )
-    {
-        const uint64 phase             = reader.readVarUint();
-        const int64  roundIndex        = reader.readVarInt();
-        const int64  roundTicks        = reader.readVarInt();
-        const int64  intermissionTicks = reader.readVarInt();
-        const int64  winner            = reader.readVarInt();
-        const uint64 participantCount  = reader.readVarUint();
-        const bool   bBadPhase         = phase > static_cast<uint64>( RoundSeriesPhase::Finished );
-        const bool   bBadCounter       = RoundSeriesInternal::isStateValue( roundIndex, 0 ) == false || RoundSeriesInternal::isStateValue( roundTicks, 0 ) == false ||
-                                 RoundSeriesInternal::isStateValue( intermissionTicks, 0 ) == false;
-        const bool bBadWinner = RoundSeriesInternal::isStateValue( winner, kNoWinner ) == false || winner >= static_cast<int64>( _listTotal.size() );
-        // 같은 참가자 수로 시작한 시리즈에만 복원한다.
-        const bool bOtherSeries        = participantCount != static_cast<uint64>( _listTotal.size() );
-        const bool bInvalidSeriesState = bBadPhase || bBadCounter || bBadWinner || bOtherSeries || reader.hasOverflowed();
-        if ( bInvalidSeriesState )
-            return false;
-        vector<int32> listTotal( _listTotal.size(), 0 );
-        for ( int32& total : listTotal )
-        {
-            const int64 value = reader.readVarInt();
-            if ( RoundSeriesInternal::isStateValue( value, -RoundSeriesInternal::kMaxStateValue ) == false )
-                return false;
-            total = static_cast<int32>( value );
-        }
-        if ( reader.hasOverflowed() )
-            return false;
-
-        _listTotal.swap( listTotal );
-        _roundIndex                 = static_cast<int32>( roundIndex );
-        _roundTicksRemaining        = static_cast<int32>( roundTicks );
-        _intermissionTicksRemaining = static_cast<int32>( intermissionTicks );
-        _winner                     = static_cast<int32>( winner );
-        _phase                      = static_cast<RoundSeriesPhase>( phase );
-        return true;
     }
 
     int32 RoundSeries::computeRank( const vector<int32>& listRoundScore, int32 participant )

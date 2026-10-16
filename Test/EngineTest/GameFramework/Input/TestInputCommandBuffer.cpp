@@ -2,6 +2,8 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Serialization/Fixed/FixedLayout.h"
+
 #include "GameFramework/Base/Actor/Input/InputCommandBuffer.h"
 
 #include "TestFramework/TestFramework.h"
@@ -115,16 +117,17 @@ SW_TEST_CASE( InputCommandBufferTest, BufferCountsFramesSavesStateAndPrefersSpec
     pushFrames( buffer, 5, 0, 20 );
     SW_EXPECT_EQUAL( 8, buffer.getFrameCount() );
 
-    // 상태 왕복 — 오래된 것부터 다시 쌓여 같은 판정이 난다.
+    // 상태 왕복(고정 배치형) — 고리 버퍼가 그대로 옮겨 가 같은 판정이 난다.
     buffer.clear();
     pushFrames( buffer, 6, 0, 1 );
     pushFrames( buffer, 5, 0, 1 );
     pushFrames( buffer, 6, kControlButton2, 1 );
     BitWriter writer;
-    buffer.writeState( writer );
-    InputCommandBuffer restored( 8 );
-    BitReader          reader( writer.getBytes().data(), writer.getByteCount() );
-    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_ASSERT_TRUE( FixedLayout::write( buffer, writer ) );
+    const vector<uint8> bytes = writer.releaseBytes();
+    InputCommandBuffer  restored( 8 );
+    SW_ASSERT_TRUE( FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), restored ) == FixedReadResult::Ok );
+    SW_EXPECT_TRUE( FixedLayout::equals( buffer, restored ) );
     SW_EXPECT_EQUAL( buffer.getFrameCount(), restored.getFrameCount() );
     for ( int32 framesAgo = 0; framesAgo < buffer.getFrameCount(); ++framesAgo )
     {
@@ -135,9 +138,13 @@ SW_TEST_CASE( InputCommandBufferTest, BufferCountsFramesSavesStateAndPrefersSpec
     InputCommand       dashPunch;
     SW_ASSERT_TRUE( parser.parse( "f,f+2", dashPunch ) );
     SW_EXPECT_TRUE( restored.isCompleted( dashPunch, 1 ) );
-    BitReader shortReader( writer.getBytes().data(), 1 );
-    SW_EXPECT_FALSE( restored.readState( shortReader ) ); // 모자란 바이트 — 그대로 둔다
+    SW_EXPECT_TRUE( FixedLayout::read( bytes.data(), 1, restored ) == FixedReadResult::Truncated ); // 모자란 바이트 — 그대로 둔다
     SW_EXPECT_EQUAL( 3, restored.getFrameCount() );
+
+    // 용량이 다른 버퍼는 고리 버퍼 길이가 맞지 않아 거절하고 그대로 둔다.
+    InputCommandBuffer other( 16 );
+    SW_EXPECT_TRUE( FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), other ) == FixedReadResult::ValidateFailed );
+    SW_EXPECT_EQUAL( 0, other.getFrameCount() );
 
     // 우선도 · 단계 수가 같으면 방향 · 버튼을 더 적은 쪽("d/f+1")이 목록 순서와 상관없이 이긴다.
     vector<InputCommand> listCommand( 2 );

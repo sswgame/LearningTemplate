@@ -2,6 +2,7 @@
 // 잡기 풀기 창, 횡이동 대 직선 · 추적, 라운드(시간 초과 · K.O. · 레이지 · 무승부), 롤백 저장 → 복원 → 재진행 결정성, 롤백(고정 배치형) 옮기기 · 거절, 세이브(자기 기술형) 왕복, 라운드 시간 · 대기 프레임 수.
 #include "pch.h"
 
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -158,6 +159,28 @@ namespace
     {
         runFrames( match, 1, press0, input1, inoutListEvent );
         runFrames( match, waitFrames, makeInput( 0, 5 ), input1, inoutListEvent );
+    }
+
+    /** @brief @p source 의 세이브를 같은 캐릭터로 새로 연 대전이 읽는지 반환합니다. 읽지 못하면 그 대전의 롤백 바이트가 그대로인지도 봅니다. */
+    bool readsSaveOf( const FightingMatch& source, const FighterDef& fighterDef )
+    {
+        Archive written;
+        source.writeState( written );
+        vector<uint8> bytes;
+        written.writeData( bytes );
+        FightingMatch target;
+        target.initialize( fighterDef, fighterDef );
+        vector<uint8> bytesBefore;
+        target.saveState( bytesBefore );
+        Archive    reader( bytes.data(), bytes.size() );
+        const bool bRead = target.readState( reader );
+        if ( bRead == false )
+        {
+            vector<uint8> bytesAfter;
+            target.saveState( bytesAfter );
+            SW_EXPECT_TRUE( bytesAfter == bytesBefore );
+        }
+        return bRead;
     }
 
     /**
@@ -846,7 +869,18 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
     match.writeState( written );
     vector<uint8> archiveBytes;
     written.writeData( archiveBytes );
-    SW_EXPECT_TRUE( archiveBytes != codecBytes ); // 세이브는 롤백 바이트를 싣지 않는다
+    // 세이브 본문은 버전 머리(uint32 리틀 엔디언)로 시작하고, 롤백 스트림의 머리인 고정 배치형 스키마 해시도, 롤백 바이트도 싣지 않는다.
+    SW_ASSERT_TRUE( archiveBytes.size() > sizeof( uint32 ) );
+    uint32 headerVersion = 0;
+    std::memcpy( &headerVersion, archiveBytes.data(), sizeof( uint32 ) );
+    SW_EXPECT_EQUAL( FightingMatch::kStateVersion, headerVersion );
+    const uint64 schemaHash = FixedLayout::getSchemaHash<FightingMatch>();
+    uint8        arrHashByte[sizeof( uint64 )];
+    std::memcpy( arrHashByte, &schemaHash, sizeof( uint64 ) );
+    SW_ASSERT_TRUE( codecBytes.size() > sizeof( uint64 ) );
+    SW_EXPECT_TRUE( std::equal( std::begin( arrHashByte ), std::end( arrHashByte ), codecBytes.begin() ) ); // 롤백 스트림은 해시로 시작한다
+    SW_EXPECT_TRUE( std::search( archiveBytes.begin(), archiveBytes.end(), std::begin( arrHashByte ), std::end( arrHashByte ) ) == archiveBytes.end() );
+    SW_EXPECT_TRUE( std::search( archiveBytes.begin(), archiveBytes.end(), codecBytes.begin(), codecBytes.end() ) == archiveBytes.end() );
 
     FightingMatch restored;
     restored.initialize( tester, tester );
@@ -877,4 +911,44 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
     Archive foreignReader( archiveBytes.data(), archiveBytes.size() );
     SW_EXPECT_FALSE( impostor.readState( foreignReader ) );
     SW_EXPECT_EQUAL( 0, impostor.getFrame() );
+}
+
+/**
+ * @brief [FightingTest] 범위 밖 값이 든 세이브는 거절하고 상태를 바꾸지 않는다.
+ * @details 자기 기술형 읽기는 `Min` · `Max` 를 보지 않으므로 `readState` 가 직접 본다. 최상위 칸(지난 라운드 결과), 배열 원소의 칸(기술 인덱스),
+ *          값으로 든 구조체의 칸(고리 버퍼 다음 자리), vector 원소의 칸(입력 방향)을 하나씩 망가뜨린다. 망가뜨리지 않은 세이브는 읽힌다.
+ */
+SW_TEST_CASE( FightingTest, SaveStateWithOutOfRangeValuesIsRejected )
+{
+    FightingFixture fixture;
+    SW_ASSERT_TRUE( fixture._bLoaded );
+    const FighterDef& tester = *fixture.findTester();
+    FightingMatch     source;
+    source.initialize( tester, tester );
+    SW_EXPECT_TRUE( readsSaveOf( source, tester ) );
+
+    const PropertyInfo* pLastWinner = FightingMatch::StaticType()->findProperty( "_lastRoundWinner" );
+    const PropertyInfo* pHead       = InputCommandBuffer::StaticType()->findProperty( "_head" );
+    const PropertyInfo* pFrameList  = InputCommandBuffer::StaticType()->findProperty( "_listFrame" );
+    SW_ASSERT_TRUE( pLastWinner != nullptr );
+    SW_ASSERT_TRUE( pHead != nullptr );
+    SW_ASSERT_TRUE( pFrameList != nullptr );
+
+    FightingMatch lastWinnerCase                        = source;
+    *pLastWinner->getValuePtr<int32>( &lastWinnerCase ) = 3; // [−1, 2] 밖
+    SW_EXPECT_FALSE( readsSaveOf( lastWinnerCase, tester ) );
+
+    FightingMatch moveIndexCase                                             = source;
+    const_cast<FighterRuntime&>( moveIndexCase.getFighter( 1 ) )._moveIndex = -2; // 배열 원소의 칸, 최소 −1 밖
+    SW_EXPECT_FALSE( readsSaveOf( moveIndexCase, tester ) );
+
+    FightingMatch headCase                                                                              = source;
+    *pHead->getValuePtr<int32>( &const_cast<FighterRuntime&>( headCase.getFighter( 0 ) )._inputBuffer ) = -1;
+    SW_EXPECT_FALSE( readsSaveOf( headCase, tester ) );
+
+    FightingMatch       directionCase = source;
+    vector<InputFrame>* pListFrame    = pFrameList->getValuePtr<vector<InputFrame>>( &const_cast<FighterRuntime&>( directionCase.getFighter( 0 ) )._inputBuffer );
+    SW_ASSERT_TRUE( pListFrame != nullptr && pListFrame->empty() == false );
+    ( *pListFrame )[0]._direction = 12; // vector 원소의 칸, 최대 9 밖
+    SW_EXPECT_FALSE( readsSaveOf( directionCase, tester ) );
 }

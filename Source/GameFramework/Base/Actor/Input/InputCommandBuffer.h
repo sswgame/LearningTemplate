@@ -19,8 +19,6 @@
 
 namespace sw
 {
-    class BitReader;
-    class BitWriter;
     class ValidationContext;
 
     /** @brief 한 틱의 입력입니다. 방향은 넘패드 표기이며 5 가 가운데, 6 이 오른쪽, 8 이 위입니다. */
@@ -30,8 +28,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         uint16 _buttons{ 0 };
-        PROPERTY()
-        uint8 _direction{ 5 };
+        PROPERTY( Min = 0, Max = 9 )
+        uint8 _direction{ 5 }; ///< 넘패드 1..9. 0 은 입력이 방향을 적지 않은 경우라 받는다
     };
 } // namespace sw
 
@@ -107,14 +105,6 @@ namespace sw
         bool isCompleted( const InputCommand& command, int32 facing ) const;
         /** @brief 이번 틱에 완성된 커맨드 가운데 우선도가 가장 높은 것을 반환합니다. 없으면 nullptr 입니다. */
         const InputCommand* findCompleted( const vector<InputCommand>& listCommand, int32 facing ) const;
-
-        /**
-         * @brief 상태를 바이트로 씁니다. 롤백과 리플레이에 씁니다. 쌓인 프레임만 오래된 것부터 씁니다.
-         * @details 프레임마다 버튼 16 비트와 방향 4 비트를 쓴다. 더 작게 싣고 싶은 키트는 `getFrame` 으로 직접 쓴다.
-         */
-        void writeState( BitWriter& outWriter ) const;
-        /** @brief `writeState` 로 쓴 상태를 읽습니다. 바이트가 모자라거나 용량을 넘으면 false 를 반환하고 버퍼는 그대로입니다. */
-        [[nodiscard]] bool readState( BitReader& reader );
 
         /** @brief 지금 쌓인 프레임 수입니다. `push` 한 수이며 용량에서 멈춥니다. */
         int32             getFrameCount() const { return _count; }

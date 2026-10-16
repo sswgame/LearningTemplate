@@ -495,8 +495,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 단계 | 내용 | 건드릴 파일 | 겹침 주의 | 에이전트(모델) |
 |---|---|---|---|---|
 | 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록 | 없음(읽기) | 없음 | `scout`(haiku) |
-| 2 | `GimmickCircuit` 을 B 로 | `GimmickCircuit.*` | 없음 | `worker`(sonnet) |
-| 3 | `FightingMatch` 롤백 B, 세이브 A | `FightingMatch.*` | 없음 | `worker`(opus) |
+| 2 | (보류) `GimmickCircuit` 을 B 로. 상태 바이트 `_stateBytes` 가 씬 · 프리팹 XML 과 레벨 세이브에 남아 B 대상이 아님. 아래 문단 | `GimmickCircuit.*`, `GimmickCircuitComponent.*` | 세이브 형식 결정이 먼저 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷, 넷 채널 등록 · 해시 섞기 | `MechArenaSnapshot.*`, `HorrorSnapshot.*`, `NetTypes.h`, 넷 채널 | 두 스냅샷 한 손 | `worker`(opus) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게 | 인스펙터 범위 코드(미확인 위치) | 단계 1 뒤 | `worker`(sonnet) |
 | 5-a | 온라인 핸드셰이크 첫 필드 해시, "업데이트 필요" 거절 | `OnlineServiceHost.*`, `OnlineServiceClient.*`, 클라이언트 오류 UI | 5-b 보다 먼저 | `integrator`(opus) |
@@ -513,7 +512,11 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 
 단계 3 은 끝났습니다(2026-10-17). `FightingMatch` 가 `REFLECT` 타입이고 상태 필드(`FighterRuntime`, `MoveTimeline`, `InputCommandBuffer`, `RoundSeries`)가 `PROPERTY` 입니다.
 롤백은 `FixedLayout`, 세이브는 `BinarySerializer::serializeVersioned` 이고, 두 읽기가 같은 `validateState` 를 씁니다. 손 코덱과 손 버전 상수는 지웠습니다.
-`RoundSeries::writeState(BitWriter)` 와 `InputCommandBuffer::writeState(BitWriter)` 손 코덱은 소스 안 사용처가 없어졌지만 남아 있습니다(테스트만 씁니다).
+같은 상태를 두 벌 두지 않도록 `RoundSeries` · `InputCommandBuffer` 의 손 코덱(`writeState(BitWriter)` · `readState(BitReader)`)과 그 테스트도 지웠습니다.
+기반 헤더 셋이 바뀌었습니다. `FrameData.h`(`MoveTimeline` 의 `REFLECT`, `GuardStance` 의 `ENUM`), `InputCommandBuffer.h`(`InputFrame` · `InputCommandBuffer` 의 `REFLECT`, `clear` 가 칸을 비움),
+`RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.
+세이브 읽기는 자기 기술형이 `Min` · `Max` 를 보지 않으므로 `SerializerUtil::collectRangeErrors( ..., RangeCheckScope::IncludeSequenceElements )` 를 직접 부릅니다.
+자기 기술형 읽기 전반의 범위 검사는 기존 에셋을 깰 수 있어 백로그 `A-15` 로 남겼습니다.
 
 단계 2 는 보류합니다. `GimmickCircuit` 상태 바이트는 `GimmickCircuitComponent::_stateBytes`(`PROPERTY`)로 씬 · 프리팹 · 레벨 세이브에 남으므로 B 의 조건(같은 빌드끼리만 읽는다)에 맞지 않습니다.
 옮긴다면 상태를 `REFLECT` 구조체로 꺼내 컴포넌트에는 A 로, 체크포인트 · 넷 스냅샷에는 B 로 싣는 구조가 됩니다. 이 결정은 단계 3 처럼 세이브 형식을 바꾸므로 따로 정합니다.

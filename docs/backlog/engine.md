@@ -6,6 +6,11 @@
   어디에도 없는 타입이면 1 바이트를 넘기고 성공을 돌려준다(`SerializerUtil.cpp` 의 마지막 분기). 이유를 담은 읽기 오류로 바꾼다. 고정 배치형은 표 밖의 타입에 코덱을
   만들지 않는 형식으로 막았다([리플렉션 직렬화 형식 계획](../plans/ReflectionFormats.md) 1.4 · 8.2). 쓰는 쪽도 같은 타입을 무엇으로 쓰는지 함께 본다.
 
+- `A-15` [결함] **`PROPERTY( Min · Max )` 를 고정 배치형 코덱만 지킨다.** 자기 기술형 읽기(`BinarySerializer` · JSON · XML)는 범위 밖 값을 그대로 넣는다.
+  범위를 보는 `SerializerUtil::collectRangeErrors` 는 설정 JSON · 데이터 XML 로드만 부르고, 기본값(`RangeCheckScope::FieldsOnly`)은 컨테이너 원소를 보지 않는다.
+  지금은 `FightingMatch::readState` 만 `IncludeSequenceElements` 로 직접 부른다(2026-10-17). 뿌리는 범위 계약을 읽기 경로마다 따로 지킨다는 것이다.
+  자기 기술형 읽기 공통 경로에서 원소까지 보게 하려면, 먼저 지금 에셋 · 세이브 가운데 범위 밖 값이 있는지 전수로 세고(쿠커나 테스트로), 고친 뒤 기본값을 바꾼다.
+
 - `B-11` [검증대기] **어노테이션 키 완성을 Visual Studio IntelliSense(EDG)에서 손으로 확인하지 못했다.** `ReflectionMacros.h` 는 `__INTELLISENSE__` 에서도 풀이(`ReflectionIntellisense.h`)를 읽는다.
   풀이는 MS 호환 모드의 dependent base 찾기 · `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다 — EDG 가 오류 없이 읽는지 본다.
   DTE `ErrorList.ErrorItems` 로는 IntelliSense 오류가 나오지 않아 자동 확인 길이 없다. 손 확인: VS 로 저장소 폴더를 연다 → `CameraComponent.h` 의 `PROPERTY( ` 안에서

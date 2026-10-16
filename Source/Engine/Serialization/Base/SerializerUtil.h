@@ -90,6 +90,16 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `SerializerUtil::collectRangeErrors` 가 컨테이너 원소까지 보는지입니다. */
+    enum class RangeCheckScope : uint8
+    {
+        FieldsOnly,              ///< 컨테이너를 건너뛴다(설정 JSON · 데이터 XML 의 지금 동작)
+        IncludeSequenceElements, ///< 시퀀스(vector, 고정 배열) 원소의 칸과 값까지 본다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @enum SchemaVersionSource
      * @brief 버전 번호를 **어디서 얻는지** 나타냅니다. 포맷마다 다릅니다.
@@ -221,9 +231,12 @@ namespace sw
 
         /**
          * @brief `Min`/`Max` 밖 숫자 칸마다 "경로 = 값 is outside [아래, 위]" 한 줄을 모읍니다(로드 시점 계약 검사 — 설정 JSON 과 데이터 XML 이 함께 씁니다).
-         * @details 구조체 칸은 들어가 본다. 컨테이너 · 비트필드 · 접근자 칸은 보지 않는다(원소 검사는 원소마다 다시 부른다).
+         * @details 구조체 칸은 들어가 본다. 비트필드 · 접근자 칸은 보지 않는다.
+         *          컨테이너는 @p scope 가 `IncludeSequenceElements` 일 때만 시퀀스 원소(구조체는 그 칸, 숫자는 그 프로퍼티의 범위)까지 본다.
+         *          `FieldsOnly` 는 설정 JSON 과 데이터 XML 의 지금 동작이다. 원소까지 보게 바꾸면 기존 에셋이 멈출 수 있어 부르는 쪽이 고른다.
          */
-        SW_API static void collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError );
+        SW_API static void collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError,
+                                               RangeCheckScope scope = RangeCheckScope::FieldsOnly );
 
         /** @brief 프로퍼티 목록에서 키에 맞는 프로퍼티 메타데이터를 찾습니다. */
         static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,

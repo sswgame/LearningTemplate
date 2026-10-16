@@ -6,6 +6,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -1106,6 +1107,15 @@ namespace sw
         uint32        version = 0;
         if ( BinarySerializer::deserializeVersioned( version, &loaded, *StaticType(), archive, kStateVersion ) == false )
             return false;
+        // 자기 기술형 읽기는 `Min` · `Max` 를 보지 않으므로, 롤백 코덱이 지키는 범위를 두 캐릭터 배열 · 고리 버퍼 원소까지 여기서 본다.
+        vector<string> listRangeError;
+        SerializerUtil::collectRangeErrors( *StaticType(), &loaded, string(), listRangeError, RangeCheckScope::IncludeSequenceElements );
+        if ( listRangeError.empty() == false )
+        {
+            SW_LOG_WARNING( "Fighting save state has %# value(s) outside the declared range (first: %#) - the match keeps its current state",
+                            static_cast<int32>( listRangeError.size() ), listRangeError.front().c_str() );
+            return false;
+        }
         // 롤백 읽기와 같은 검증(이 타입과 값으로 든 고리 버퍼 · 라운드 시리즈의 `Validate`)을 돌린다.
         ValidationContext context;
         (void)ReflectionValidation::validateObject( *StaticType(), &loaded, context ); // 결과는 context 의 오류로 본다
