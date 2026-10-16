@@ -50,6 +50,9 @@ namespace sw::editor
                 {           "_axisX",            &EditorThemeColorDef::_axisX,            &EditorThemeConfig::_axisX},
                 {           "_axisY",            &EditorThemeColorDef::_axisY,            &EditorThemeConfig::_axisY},
                 {           "_axisZ",            &EditorThemeColorDef::_axisZ,            &EditorThemeConfig::_axisZ},
+                {    "_colliderWire",     &EditorThemeColorDef::_colliderWire,     &EditorThemeConfig::_colliderWire},
+                {      "_cameraWire",       &EditorThemeColorDef::_cameraWire,       &EditorThemeConfig::_cameraWire},
+                {   "_viewportLabel",    &EditorThemeColorDef::_viewportLabel,    &EditorThemeConfig::_viewportLabel},
             };
 
             /** @brief 폴더 순회 콜백입니다. 토큰 파일이면 접미사를 뺀 이름을 목록(@p pContext)에 더합니다. */

@@ -495,6 +495,21 @@ namespace sw::editor
         return EditorThemeInternal::activeTheme()._axisZ;
     }
 
+    const Color& EditorThemeUtil::getColliderWireColor()
+    {
+        return EditorThemeInternal::activeTheme()._colliderWire;
+    }
+
+    const Color& EditorThemeUtil::getCameraWireColor()
+    {
+        return EditorThemeInternal::activeTheme()._cameraWire;
+    }
+
+    const Color& EditorThemeUtil::getViewportLabelColor()
+    {
+        return EditorThemeInternal::activeTheme()._viewportLabel;
+    }
+
     void EditorThemeUtil::textAccent( const utf8* pText )
     {
         if ( pText != nullptr )

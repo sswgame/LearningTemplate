@@ -23,7 +23,10 @@
         "_toggleInactive": "#33384299",
         "_axisX": "#D94040",
         "_axisY": "#4CBF59",
-        "_axisZ": "#408CF2"
+        "_axisZ": "#408CF2",
+        "_colliderWire": "#3CE650DC",
+        "_cameraWire": "#3CC8FFC8",
+        "_viewportLabel": "#FFE678"
     },
     "_radius": {
         "_window": 4,

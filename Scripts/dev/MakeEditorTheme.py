@@ -34,7 +34,7 @@ from common import getProjectRoot  # noqa: E402
 kSchema: dict[str, tuple[str, ...]] = {
     "color": ("text", "textMuted", "accent", "windowBg", "panelBg", "headerBg", "frameBg", "border", "success", "warning", "error", "info",
               "scrollbarBg", "dockingEmptyBg", "tableRowBgAlt", "overlayBg", "selectionOutline", "highlight", "toggleInactive",
-              "axisX", "axisY", "axisZ"),
+              "axisX", "axisY", "axisZ", "colliderWire", "cameraWire", "viewportLabel"),
     "radius": ("window", "frame", "popup", "tab", "scrollbar", "grab"),
     "spacing": ("windowPaddingX", "windowPaddingY", "framePaddingX", "framePaddingY", "itemSpacingX", "itemSpacingY",
                 "itemInnerSpacingX", "itemInnerSpacingY", "indent", "scrollbarSize", "grabMinSize"),

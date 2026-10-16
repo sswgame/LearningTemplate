@@ -6,6 +6,7 @@
 
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
@@ -19,46 +20,42 @@ namespace sw::editor
 {
     namespace
     {
-        struct BoxCollider2DVisualizerInternal
+        /**
+         * @brief BoxCollider2D 사각형을 와이어프레임으로 그립니다 — 물리가 판정하는 그 상자(월드 회전 · 스케일을 받은 것)입니다.
+         * @details 씬 전체를 훑지 않고 매니저의 콜라이더 레지스트리를 봅니다(`EditorViewportVisualizerArgs::_pListCollider`). 색은 테마 토큰 `_colliderWire` 입니다.
+         */
+        void drawBoxCollider2DWire( const EditorViewportVisualizerArgs& args )
         {
-            /**
-             * @brief BoxCollider2D 사각형을 와이어프레임으로 그립니다 — 물리가 판정하는 그 상자(월드 회전 · 스케일을 받은 것)입니다.
-             * @details 씬 전체를 훑지 않고 매니저의 콜라이더 레지스트리를 봅니다(`EditorViewportVisualizerArgs::_pListCollider`).
-             */
-            static void draw( const EditorViewportVisualizerArgs& args )
+            if ( args._pListCollider == nullptr )
+                return;
+            const ImU32 colorWire = EditorColorUtil::toImU32( EditorThemeUtil::getColliderWireColor() );
+
+            for ( const BoxCollider2DComponent* pBox : *args._pListCollider )
             {
-                if ( args._pListCollider == nullptr )
-                    return;
-                static constexpr Color kWire{ Color::fromBytes( 60, 230, 80, 220 ) };
-                const ImU32            colorWire = EditorColorUtil::toImU32( kWire );
+                const GameObject* pOwner       = ( pBox != nullptr ) ? pBox->getOwner() : nullptr;
+                const bool        bInactiveBox = pOwner == nullptr || pOwner->isActive() == false || pBox->isActive() == false;
+                if ( bInactiveBox )
+                    continue;
 
-                for ( const BoxCollider2DComponent* pBox : *args._pListCollider )
+                float3 arrCorner[4];
+                EditorVisualizerGeometryUtil::computeColliderCorners( *pBox, arrCorner );
+                ImVec2 arrScreen[4];
+                bool   bVisible = true;
+                for ( uint32 cornerIndex = 0; cornerIndex < 4 && bVisible; ++cornerIndex )
                 {
-                    const GameObject* pOwner       = ( pBox != nullptr ) ? pBox->getOwner() : nullptr;
-                    const bool        bInactiveBox = pOwner == nullptr || pOwner->isActive() == false || pBox->isActive() == false;
-                    if ( bInactiveBox )
-                        continue;
-
-                    float3 arrCorner[4];
-                    EditorVisualizerGeometryUtil::computeColliderCorners( *pBox, arrCorner );
-                    ImVec2 arrScreen[4];
-                    bool   bVisible = true;
-                    for ( uint32 cornerIndex = 0; cornerIndex < 4 && bVisible; ++cornerIndex )
-                    {
-                        bVisible = EditorViewportProjectionUtil::projectPoint( *args._pViewProj, arrCorner[cornerIndex], args._canvasPos, args._canvasSize,
-                                                                               arrScreen[cornerIndex] );
-                    }
-                    if ( bVisible == false )
-                        continue;
-                    for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
-                    {
-                        args._pDrawList->AddLine( arrScreen[cornerIndex], arrScreen[( cornerIndex + 1 ) % 4], colorWire, 1.5f );
-                    }
+                    bVisible = EditorViewportProjectionUtil::projectPoint( *args._pViewProj, arrCorner[cornerIndex], args._canvasPos, args._canvasSize,
+                                                                           arrScreen[cornerIndex] );
+                }
+                if ( bVisible == false )
+                    continue;
+                for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
+                {
+                    args._pDrawList->AddLine( arrScreen[cornerIndex], arrScreen[( cornerIndex + 1 ) % 4], colorWire, 1.5f );
                 }
             }
-        };
+        }
     } // namespace
 
     SW_EDITOR_VISUALIZER( BoxCollider2D, "box_collider_2d", 100, editoricon::kCollider, "Col", "BoxCollider2D 사각형을 와이어프레임으로 표시합니다", true,
-                          &BoxCollider2DVisualizerInternal::draw );
+                          &drawBoxCollider2DWire );
 } // namespace sw::editor

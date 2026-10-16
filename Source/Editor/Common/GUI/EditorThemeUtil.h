@@ -93,6 +93,12 @@ namespace sw::editor
         static const Color& getAxisXColor();
         static const Color& getAxisYColor();
         static const Color& getAxisZColor();
+        /** @brief 씬 뷰 2D 콜라이더 와이어프레임 색입니다. */
+        static const Color& getColliderWireColor();
+        /** @brief 씬 뷰 카메라 프러스텀 색입니다. */
+        static const Color& getCameraWireColor();
+        /** @brief 씬 뷰 위에 겹쳐 그리는 이름표 색입니다(시각화 레이블). */
+        static const Color& getViewportLabelColor();
 
         // ----------------------------------------------------------------------
         // 2) UI 텍스트와 스타일 헬퍼

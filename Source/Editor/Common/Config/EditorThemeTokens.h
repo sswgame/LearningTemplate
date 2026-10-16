@@ -70,6 +70,12 @@ namespace sw::editor
         string _axisY{};
         PROPERTY()
         string _axisZ{};
+        PROPERTY()
+        string _colliderWire{}; ///< 씬 뷰 2D 콜라이더 와이어프레임
+        PROPERTY()
+        string _cameraWire{}; ///< 씬 뷰 카메라 프러스텀
+        PROPERTY()
+        string _viewportLabel{}; ///< 씬 뷰 위에 겹쳐 그리는 이름표(시각화 레이블)
     };
 } // namespace sw::editor
 
