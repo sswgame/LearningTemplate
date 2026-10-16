@@ -40,6 +40,10 @@
     "VoxelCraft": {
       "arguments": ["-gv_voxelAutoPlay=1"],
       "screenshot_frame": 180
+    },
+    "WildWest": {
+      "arguments": ["-gv_wildWestAutoPlay=1"],
+      "screenshot_frame": 180
     }
   }
 }

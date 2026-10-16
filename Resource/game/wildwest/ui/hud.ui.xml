@@ -1,0 +1,19 @@
+<UIDocument _schemaVersion="1">
+	<UIScreenDesc _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="RideStatus" _text="{bind:_weaponName}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="1048,76" />
+			</TextWidget>
+			<TextWidget _name="StaminaLabel" _text="Stamina" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-120" _offsetMax="248,-84" />
+			</TextWidget>
+			<TextWidget _name="StaminaValue" _text="{bind:_health}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="248,-120" _offsetMax="368,-84" />
+			</TextWidget>
+			<ProgressBarWidget _name="StaminaBar" _percent="{bind:_healthRatio}" _visibility="HitTestInvisible" _fillColor="0.95,0.75,0.25,1" _backgroundColor="0,0,0,0.55">
+				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-76" _offsetMax="368,-56" />
+			</ProgressBarWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

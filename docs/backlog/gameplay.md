@@ -108,6 +108,10 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   `Camera.Pan` 이 없어 포토 모드의 이동 입력이 0 이다 — 맵에 액션을 더하고(오르내림 `Camera.PhotoRise` · 노출 `Camera.PhotoExposure` 는 들어갔다) 다른 게임 맵에도 같은 액션을 단다.
   Simulate 중 Pause 는 씬 틱이 멈춰 포토 모드가 갱신되지 않는다(게임 카메라가 없는 상황이라 고치지 않았다). 롤이 있던 시점은 둘러보기를 시작하면 롤이 사라진다.
 
+- `D4-15` [기능] **WildWest 승마의 남은 것**(2026-10-16, `Source/Games/WildWest`). 말 모델이 저장소에 없어 말과 기수가 큐브 · 캡슐 자리 표시다 — 네발 말 glTF(걸음새 클립 넷:
+  걷기 · 속보 · 구보 · 질주, 안장 소켓)를 `Resource/game/wildwest/models_raw/` 에 들이고 `MountMovementComponent` 의 `_gaitParameter` · 좌석 `_socketName` 을 잇는다(KayKit · Kenney 에 말이 없다).
+  HUD 는 기반 `HUDViewModel` 의 무기 이름 · 체력 칸을 탑승 상태 글 · 말 스태미나로 빌려 쓴다 — 게임이 고르는 범용 상태 글 칸(또는 게임 뷰모델을 HUD 컨트롤러에 거는 길)이 생기면 옮긴다.
+
 - `G-4` [조건부] **상호작용 대상의 공유 공간 격자**(조건: 하는 쪽 · 대상이 모두 수천 — 지금 하는 쪽은 등록된 대상 목록을 한 번 돈다, 대상 16 · 10k 오브젝트에서 +2~6 us).
   대상이 움직일 수 있어 격자를 프레임마다 맞추는 비용이 목록을 도는 비용과 같으므로, 하는 쪽이 여럿일 때만 씬당 하나(`SpatialHashGrid2D`, 셀 = 최대 상호작용 반경)를 틱 앞에 맞춘다.
 

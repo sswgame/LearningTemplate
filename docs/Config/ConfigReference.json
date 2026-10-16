@@ -3870,6 +3870,14 @@
    "kind": "시험 · 배포본에도",
    "description": "VoxelCraft: 걷기 · 부수기 · 놓기도 AI 가 (1=켜기)",
    "source": "Source/Games/VoxelCraft/VoxelDirectorComponent.cpp"
+  },
+  {
+   "name": "gv_wildWestAutoPlay",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기)",
+   "source": "Source/Games/WildWest/WildWestDirectorComponent.cpp"
   }
  ],
  "arguments": [
