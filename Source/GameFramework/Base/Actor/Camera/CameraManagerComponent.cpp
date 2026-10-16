@@ -14,6 +14,7 @@
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
+#include "GameFramework/Base/Actor/Camera/CameraUserSettings.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 namespace sw
@@ -212,7 +213,8 @@ namespace sw
         }
         const CameraPose& blended = _blender.step( deltaTime, incoming, pLiveFrom );
         _impulseListener.step( deltaTime );
-        const CameraPose output = _impulseListener.isActive() ? applyCameraShake( blended, _impulseListener.computeOffset( blended._position ) ) : blended;
+        const float32    shakeScale = CameraUserSettings::makeFromGlobalVariables()._shakeScale;
+        const CameraPose output     = _impulseListener.isActive() ? applyCameraShake( blended, _impulseListener.computeOffset( blended._position ) * shakeScale ) : blended;
         CameraPoseUtil::applyToCamera( *pCamera, output );
         // 블렌드 없는 전환, 또는 타깃 카메라 자신의 컷(디렉터의 컷 전환)은 이 카메라의 화면도 끊는다.
         const bool bTargetCut = pTargetCamera != nullptr && pTargetCamera->consumeCut();

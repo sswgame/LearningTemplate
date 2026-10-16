@@ -10,6 +10,8 @@
 
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
+#include "GameFramework/Base/Actor/Camera/CameraShake.h"
+#include "GameFramework/Base/Actor/Camera/CameraUserSettings.h"
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
@@ -35,8 +37,11 @@ namespace sw
         , _viewModelName{}
         , _viewModelOffset{ 0.0f, 0.0f, 0.0f }
         , _viewModelYawOffset{ 0.0f }
+        , _headBob{}
         , _look{}
         , _eyePosition{ 0.0f, 0.0f, 0.0f }
+        , _modeState{}
+        , _pendingDeltaTime{ 0.0f }
     {
         setCanEverTick( true );
     }
@@ -54,6 +59,7 @@ namespace sw
         const CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
         if ( pCamera != nullptr )
             _eyePosition = pCamera->getLocalPosition();
+        _modeState.reset(); // 눈 자리가 정해지기 전의 평가가 흔들림 위상에 거리를 넣지 않게
         applyToCamera();
     }
 
@@ -66,6 +72,7 @@ namespace sw
             const ControlIntent& intent = pPawn->getIntent();
             _look.setAngles( intent._controlYaw, intent._controlPitch );
         }
+        _pendingDeltaTime += MathUtil::max( 0.0f, deltaTime );
         applyToCamera();
     }
 
@@ -118,10 +125,15 @@ namespace sw
             def._lens._nearPlane    = _nearPlane;
             def._lens._farPlane     = _farPlane;
             CameraTarget target;
-            target._focus = _eyePosition;
-            target._yaw   = _look.getYaw();
-            target._pitch = -_look.getPitch();
-            CameraPoseUtil::applyToCameraLocal( *pCamera, evaluatePreset( def, target ) );
+            target._focus                     = _eyePosition;
+            target._yaw                       = _look.getYaw();
+            target._pitch                     = -_look.getPitch();
+            const CameraUserSettings settings = CameraUserSettings::makeFromGlobalVariables();
+            CameraPose               pose     = settings.applyFieldOfView( def._view._mode, evaluatePreset( def, target ) );
+            if ( settings._bHeadBob )
+                pose = applyCameraShake( pose, computeCameraHeadBob( _headBob, _eyePosition, _pendingDeltaTime, _modeState ) );
+            _pendingDeltaTime = 0.0f;
+            CameraPoseUtil::applyToCameraLocal( *pCamera, pose );
         }
         MeshComponent* pViewModel = findViewModel();
         if ( pViewModel == nullptr || pCamera == nullptr )

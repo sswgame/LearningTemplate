@@ -278,6 +278,37 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 머리 흔들림 섹션(`<HeadBob>`)입니다. 1인칭으로 걸을 때 화면이 위아래 · 좌우로 흔들리는 것이며, 언리얼의 걷기 카메라 셰이크(진동 셰이크),
+     *        유니티 FPS 템플릿의 head bob 에 해당합니다.
+     * @details 위상은 대상이 수평으로 간 **거리**로 간다(시간이 아니다). 그래서 걸음 빠르기와 흔들림이 어긋나지 않는다.
+     *          한 주기(`_strideLength`, 왼발과 오른발 두 걸음)에 위아래는 두 번, 좌우는 한 번 흔든다.
+     *          크기는 수평 빠르기가 `_referenceSpeed` 일 때 최대이고, 멈추면 `_blendTime` 시간 상수로 0 이 된다. 한 평가에 한 주기보다 멀리 간 것은 순간 이동으로 보고 넣지 않는다.
+     *          사용자 설정 `gameplay.headBob`(`gv_cameraHeadBob`)을 끄면 0 이다. 진폭이 0 이면(기본) 없다.
+     * @code
+     *     <HeadBob verticalAmplitude="0.03" lateralAmplitude="0.015" strideLength="1.6" referenceSpeed="4" blendTime="0.15"/>
+     * @endcode
+     */
+    REFLECT()
+    struct SW_GF_API CameraHeadBobDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0, Tooltip = "Up and down bob at full speed; 0 turns it off", Units = m )
+        float32 _verticalAmplitude{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Side sway at full speed", Units = m )
+        float32 _lateralAmplitude{ 0.0f };
+        PROPERTY( Min = 0.1, Tooltip = "Distance walked in one bob cycle (two steps)", Units = m )
+        float32 _strideLength{ 1.6f };
+        PROPERTY( Min = 0.01, Tooltip = "Horizontal speed at which the bob reaches full amplitude", Units = "m/s" )
+        float32 _referenceSpeed{ 4.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Time constant the amplitude follows the speed with", Units = s )
+        float32 _blendTime{ 0.15f };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 훑기 섹션(`<Sweep>`)입니다. 요를 사인 곡선으로 오가는 CCTV 팬이며 고정 모드와 궤도 모드에서 씁니다. */
     REFLECT()
     struct SW_GF_API CameraSweepDef
@@ -364,6 +395,8 @@ namespace sw
         CameraCollisionDef _collision{};
         PROPERTY()
         CameraNoiseDef _noise{};
+        PROPERTY()
+        CameraHeadBobDef _headBob{};
         PROPERTY()
         CameraSweepDef _sweep{};
         PROPERTY()

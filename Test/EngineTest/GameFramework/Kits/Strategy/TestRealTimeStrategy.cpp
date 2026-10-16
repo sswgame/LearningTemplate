@@ -730,6 +730,13 @@ SW_TEST_CASE( RealTimeStrategyTest, WorldBuildsOnlyOnUsableLandAndRepaintsTheGri
     SW_EXPECT_TRUE( land.isBlockedFor( other, 25, 25 ) );
     SW_EXPECT_FALSE( scene.spawn( "depot", player, 10.5f, 10.5f ).isValid() );
 
+    // 이 월드의 막힘과 상관없는 땅 변경(남의 새 도로)은 땅 리비전만 올린다 — 격자 리비전이 그대로라 흐름장을 다시 구하지 않는다.
+    scene.run( 0.1f );
+    const uint32 gridRevision = scene._world.getGrid().getRevision();
+    SW_ASSERT_TRUE( land.claimRect( other, 0, 28, 3, 28, false ) );
+    scene.run( 0.1f );
+    SW_EXPECT_EQUAL( gridRevision, scene._world.getGrid().getRevision() );
+
     land.releaseRect( other, 8, 8, 11, 11 );
     scene.run( 0.1f ); // 리비전이 바뀐 걸음에 다시 칠한다
     SW_EXPECT_TRUE( scene._world.getGrid().isWalkable( 9, 9 ) );

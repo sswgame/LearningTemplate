@@ -14,6 +14,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraPose.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 #include "GameFramework/Base/Actor/Camera/CameraShake.h"
+#include "GameFramework/Base/Actor/Camera/CameraUserSettings.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -30,7 +31,8 @@ namespace sw
      *          그래서 켠 순간 화면이 튀지 않고, 나가던 블렌드의 움직임도 살아 있다.
      *          층이 `kMaxLayerCount` 를 넘으면 가장 아래 둘을 그 순간의 섞인 포즈로 고정해 하나로 합친다.
      *          층이 다 섞이면(가중치 1) 그 아래 층은 버린다.
-     *          감쇠와 손떨림은 층마다의 포즈에 걸린다. 새로 켠 프리셋은 감쇠 없이 그 자리에서 시작한다.
+     *          감쇠와 손떨림 · 머리 흔들림은 층마다의 포즈에 걸린다. 새로 켠 프리셋은 감쇠 없이 그 자리에서 시작한다.
+     *          사용자 설정(`setUserSettings`)의 시야각은 층의 모드가 1인칭 · 3인칭일 때 감쇠 전 포즈에, 흔들림 배율은 손떨림과 충격에 건다.
      *          충격(`addImpulse`)은 섞인 포즈 위에 마지막으로 얹는다.
      *          처음 켠 프리셋(아직 낸 포즈가 없다)과 컷 블렌드는 스택을 비우고 바로 붙는다.
      *          포즈를 내던 중의 컷은 `consumeCut` 이 한 번 알리며, 렌더러의 컷 신호로 쓴다.
@@ -67,6 +69,11 @@ namespace sw
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _impulseListener.addImpulse( def, origin ); }
         /** @brief 시야각 킥(+) · 줌 펀치(−)를 더합니다. 섞인 포즈의 시야각과 직교 높이에 마지막으로 곱합니다. */
         void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _fieldOfViewKickListener.addKick( def ); }
+        /**
+         * @brief 다음 `step` 부터 쓸 사용자 설정(시야각 · 흔들림 배율 · 머리 흔들림)을 정합니다. 기본값은 바꾸지 않은 상태입니다.
+         * @details 디렉터는 전역 변수를 읽지 않는다 — 컴포넌트가 `CameraUserSettings::makeFromGlobalVariables` 로 읽어 넣고, 테스트는 값을 직접 넣는다.
+         */
+        void setUserSettings( const CameraUserSettings& settings ) { _userSettings = settings; }
 
         /** @brief 시간을 흘리고 이번 프레임의 포즈를 반환합니다. 켠 프리셋이 없으면 지난 포즈를 그대로 반환하며, 처음에는 기본값입니다. */
         const CameraPose& step( float32 deltaTime, const CameraTarget& target );
@@ -124,6 +131,7 @@ namespace sw
         CameraFieldOfViewKickListener _fieldOfViewKickListener;
         CameraModeState               _emptyState; ///< 켠 프리셋이 없을 때 `getModeState` 가 내주는 빈 상태
         CameraPose                    _outputPose;
+        CameraUserSettings            _userSettings;
         const ICameraCollisionProbe*  _pProbe;
         uint8                         _bHasPose   : 1;
         uint8                         _bCutQueued : 1;

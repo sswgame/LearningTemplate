@@ -300,7 +300,7 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
 }
 
 /**
- * @brief [CameraPresetTest] 카탈로그는 렌즈 물리값(초점 길이 · 센서 · 초점 거리 · 조리개 · 시프트 · 더치), 돌리 레일, 카메라별 후처리를 읽는다
+ * @brief [CameraPresetTest] 카탈로그는 렌즈 물리값(초점 길이 · 센서 · 초점 거리 · 조리개 · 시프트 · 더치), 돌리 레일, 카메라별 후처리, 머리 흔들림을 읽는다
  */
 SW_TEST_CASE( CameraPresetTest, CatalogReadsLensDollyAndPostProcess )
 {
@@ -311,6 +311,7 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsLensDollyAndPostProcess )
             <Lens focalLength="35" sensor="24.89 18.66" focusDistance="4" aperture="2" shift="0 0.05" dutch="12"/>
             <Dolly type="Linear" closed="false" pathOffset="1.5"><Point position="0 2 0"/><Point position="10 2 0"/></Dolly>
             <PostProcess exposure="-0.5" bloom="1.5" vignette="0.3" saturation="0.8" contrast="1.1" letterbox="2.39"/>
+            <HeadBob verticalAmplitude="0.03" lateralAmplitude="0.015" strideLength="1.8" referenceSpeed="5" blendTime="0.2"/>
         </Preset>
     </CameraPresets>)",
                                              "lens-test" ) );
@@ -333,6 +334,11 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsLensDollyAndPostProcess )
     SW_EXPECT_NEAR_EQUAL( 0.8f, pCine->_postProcess._saturation, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.1f, pCine->_postProcess._contrast, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 2.39f, pCine->_postProcess._letterboxAspectRatio, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.03f, pCine->_headBob._verticalAmplitude, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.015f, pCine->_headBob._lateralAmplitude, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.8f, pCine->_headBob._strideLength, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pCine->_headBob._referenceSpeed, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, pCine->_headBob._blendTime, 1.0e-6f );
 }
 
 /**

@@ -12,6 +12,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Actor/Camera/CameraMode.h"
+#include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 #include "GameFramework/Base/Actor/Input/FirstPersonLook.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -48,6 +50,9 @@ namespace sw
      *          **뷰 모델**: 같은 오브젝트의 메시 컴포넌트 중 컴포넌트 이름이 `_viewModelName` 인 것(손에 든 총)을 카메라의 자식으로 둔다.
      *          위치는 로컬 `_viewModelOffset`(오른쪽, 위, 앞)이고 요는 `_viewModelYawOffset` 이다. 시점을 따라 도는 것은 계층이 한다(피치까지).
      *          같은 오브젝트의 씬 컴포넌트는 기본으로 첫 씬 컴포넌트(카메라)에 붙는다. 붙어 있지 않으면 틱 밖에서 붙인다. 이름을 비우면 뷰 모델이 없다.
+     *
+     *          **사용자 설정**: 옵션 메뉴의 시야각은 `_fieldOfViewY` 를 기본 시야각 대비 비율로 넓히고 좁히며, 머리 흔들림(`_headBob`, 진폭 0 이면 없음)은
+     *          `gameplay.headBob` 이 끄면 멈춘다(`CameraUserSettings`). 흔들림의 위상은 눈 자리가 간 거리로 가므로 `setEyePosition` 이 틱 밖에서 불려도 맞는다.
      */
     REFLECT( Category = "Camera", DisplayName = "First Person Camera", Tooltip = "First-person camera: follows the pawn's control rotation, pitch limit, eye position and a view-model slot" )
     class SW_GF_API FirstPersonCameraComponent : public Component
@@ -97,8 +102,12 @@ namespace sw
         float3 _viewModelOffset;
         PROPERTY( Category = "View Model", DisplayName = "Yaw Offset", Tooltip = "Turns the model so its front faces the view (pi when the muzzle is -Z)", Units = rad )
         float32 _viewModelYawOffset;
+        PROPERTY( Category = "Head Bob", DisplayName = "Head Bob", Tooltip = "Walking bob of the view; zero amplitude turns it off" )
+        CameraHeadBobDef _headBob;
 
         FirstPersonLook _look;
         float3          _eyePosition;
+        CameraModeState _modeState;        ///< 머리 흔들림의 위상 · 크기
+        float32         _pendingDeltaTime; ///< 틱이 흘린 시간 — 다음 `applyToCamera` 가 머리 흔들림에 쓰고 비운다
     };
 } // namespace sw

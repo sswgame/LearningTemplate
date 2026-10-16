@@ -4,16 +4,16 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
 
 - `D4-2` [기능] **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`.
   (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 ·
-  텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다),
-  카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
+  텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다) — 모두 렌더러 몫.
+  카메라 세 값은 `CameraUserSettings` 가 읽는다. 머리 흔들림은 데이터(`<HeadBob>` · `FirstPersonCameraComponent::_headBob`)로 켜는데 아직 켠 게임이 없다 — Shooter3D · VoxelCraft 1인칭에 진폭을 넣고 화면으로 확인한다.
+  (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 
 - `D4-3` [기능] **패드 가상 커서(명령형 게임)를 실제로 확인하기.** 스틱 시점과 가상 커서(`InputManager::getVirtualCursor`)는 들어갔고, StarSkirmish · NileCity 는 `onInitialize` 에서 켜고
   `onShutdown` 에서 끈다(2026-10-14). 확인할 것: 그 시점에 `InputManager` 서비스가 이미 묶여 있는지(아니면 조용히 안 켜진다), 패드 A 를 누를 때 가상 커서가 마우스 왼쪽 누름도 내서 한 액션의 바인딩 두 개가
   같은 프레임에 눌리는데 디렉터가 바인딩을 따로 읽는 곳이 없는지. 두 맵에는 오른쪽 스틱 바인딩이 없다.
 
 - `D4-4` [기능] **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
-  들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 남은 것 — RTS 가 땅 리비전마다 땅 격자 전체를 다시 칠하는 비용(64 × 64 에서 재고
-  결정, 1-8), 둘째 조립(RTS + City)의 테스트 게임(필요해지면 MeadowVillage 모양). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
+  들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 남은 것 — 둘째 조립(RTS + City)의 테스트 게임(필요해지면 MeadowVillage 모양 — 조건부라 남김). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
   `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
 - `D4-5` [기능] **카메라의 남은 것.** 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일은 들어갔다(`Source/GameFramework/` "카메라" 절, `Source/Engine/Renderer/` "다중 뷰").
@@ -23,7 +23,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   - 컷 프레임 신호(`RenderViewSettings::_bCut`)는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다.
     대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽(컷 준비)은 `D4-7`.
   - 렌더러 쪽: 피사계 심도 패스, 카메라별 후처리 값(`CameraPostProcessValues` — 포즈가 나르기만 한다)을 렌더러가 읽기.
-  - 게임이 디렉터 컴포넌트를 `registerStatefulComponent` 로 올려 세이브 · 핫 리로드가 켠 프리셋과 블렌드를 싣게 하는 일.
+  - 게임이 디렉터 컴포넌트를 `registerStatefulComponent` 로 올려 세이브 · 핫 리로드가 켠 프리셋과 블렌드를 싣게 하는 일. 게임마다 한 줄씩 넣지 말고 `GameInstanceBase` 생성자가
+    `TerrainComponent` 처럼 올리면 모든 게임에 걸린다(`Base/Foundation` 몫).
 
 - `D4-6` [기능] **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/`(임포트 · 코덱 · 재생 · 상태 기계 · 블렌드 스페이스 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생),
   알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/`. 남은 것 —
@@ -98,7 +99,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
 
 - `D4-12` [기능] **상호작용 · 기믹의 남은 것**(`GameFramework/Base/Gameplay/Interaction` · `Gimmick` · `Spline` README).
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
-  - 실행 확인: 3D 기믹 프리팹 변형(`Resource/common/prefabs/gimmicks` 의 `<이름>3d.prefab.xml`)이 3D 씬에서 장치마다 겹침 이벤트를 받는지, 상호작용 단계 몽타주가 애니메이터를 실제로 부르는지(그래프 에셋이 있는 씬).
+  - 실행 확인: 상호작용 단계 몽타주가 애니메이터를 실제로 부르는지(그래프 에셋이 있는 씬). 3D 기믹 변형의 겹침은 `GimmickGenreTest.Gimmick3DTriggerVariantsReceiveOverlapsInA3DScene` 이 본다.
 
 - `D4-13` [기능] **의도 기록 · 원격 조종자의 남은 연결.** `NetClientServer` 의 입력 바이트(`ReplicationClient::sendInput` 이 게임이 준 바이트를 싣는 자리)를
   `ControlIntent::write` 로, 서버 폰은 `RemoteControllerComponent` 로 — 폰을 쓰는 넷 테스트 게임이 생기면(지금 0). 재생 진입점(`IntentPlayback::start` · `startFromFile`)은 있다.

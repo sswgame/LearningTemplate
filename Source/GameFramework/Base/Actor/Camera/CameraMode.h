@@ -14,6 +14,7 @@
 
 #include "GameFramework/Base/Actor/Camera/CameraPose.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
+#include "GameFramework/Base/Actor/Camera/CameraShake.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -45,6 +46,10 @@ namespace sw
         float3     _panOffset{};            ///< 이동 키가 옮긴 초점(월드)
         float3     _previousFocus{};        ///< 지난 프레임의 대상 초점 — look-ahead 의 속도
         float3     _lookAhead{};            ///< 부드럽게 따라가는 look-ahead 오프셋(월드)
+        float3     _bobPreviousFocus{};     ///< 머리 흔들림이 지난 평가에 본 초점 — 수평으로 간 거리
+        float32    _bobPhase{ 0.0f };       ///< 머리 흔들림 위상(rad). 간 거리로 간다
+        float32    _bobWeight{ 0.0f };      ///< 머리 흔들림 크기 비율(0..1). 빠르기를 따라간다
+        float32    _bobDistance{ 0.0f };    ///< 시간이 흐르지 않은 평가(틱 밖에서 눈 자리를 넣은 것)까지 모은, 아직 빠르기로 바꾸지 않은 거리
         float32    _yawOffset{ 0.0f };      ///< 마우스가 돌린 요(rad)
         float32    _pitchOffset{ 0.0f };    ///< 마우스가 돌린 피치(rad)
         float32    _rotateYaw{ 0.0f };      ///< 회전 키가 정한 요(rad)
@@ -58,6 +63,7 @@ namespace sw
         uint8      _bHasPreviousFocus{ SW_FALSE };
         uint8      _bArmBlocked{ SW_FALSE }; ///< 지난 평가에서 암이 막혀 당겨졌다(진단 · 테스트)
         uint8      _bDollyPathBuilt{ SW_FALSE };
+        uint8      _bHasBobFocus{ SW_FALSE };
 
         /** @brief 새로 시작합니다. 프리셋을 켤 때 부릅니다. */
         void reset() { *this = CameraModeState{}; }
@@ -81,6 +87,13 @@ namespace sw
      */
     SW_GF_API CameraPose evaluateCameraMode( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
                                              const ICameraCollisionProbe* pProbe );
+
+    /**
+     * @brief 머리 흔들림(`<HeadBob>`)을 대상 초점 @p focus 의 수평 이동으로 풀어 오프셋을 냅니다. 진폭이 0 이면 0 이고 상태도 건드리지 않습니다.
+     * @details 위상은 간 거리로, 크기는 빠르기(모은 거리 ÷ @p deltaTime)로 간다. @p deltaTime 이 0 인 평가(틱 밖에서 눈 자리를 넣은 것)는 거리만 모으고,
+     *          다음에 시간이 흐른 평가가 그 거리로 빠르기를 구한다. 그래서 같은 프레임에 여러 번 불러도 위상이 겹쳐 가지 않는다.
+     */
+    SW_GF_API CameraShakeOffset computeCameraHeadBob( const CameraHeadBobDef& headBob, const float3& focus, float32 deltaTime, CameraModeState& inoutState );
 
     /** @brief 프리셋을 대상에 맞춰 상태 없이 풉니다. 입력, 암, 프레이밍 상태가 없고 시간은 0 입니다. 순수 함수입니다. */
     SW_GF_API CameraPose evaluatePreset( const CameraPresetDef& def, const CameraTarget& target );

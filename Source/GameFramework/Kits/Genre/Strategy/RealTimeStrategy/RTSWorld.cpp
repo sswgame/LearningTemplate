@@ -95,19 +95,38 @@ namespace sw
 
     void RTSWorld::repaintGrid()
     {
+        // 칠할 막힘을 먼저 다 구한 뒤 바뀐 칸만 쓴다. 지형 · 땅으로 칠하고 건물 발자국을 다시 덮으면 그대로인 건물 칸이 풀렸다 막히며 격자 리비전이 올라,
+        // 땅이 이 월드와 상관없이 바뀌어도(다른 키트의 도로) 모든 흐름장이 다시 구해졌다.
+        vector<uint8> listBlocked( _listTerrainBlocked.size(), SW_FALSE );
         for ( int32 y = 0; y < _grid.getHeight(); ++y )
         {
             for ( int32 x = 0; x < _grid.getWidth(); ++x )
             {
-                const bool bTerrain = _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE;
-                _grid.setBlocked( x, y, bTerrain || _land.isBlocked( x, y ) );
+                const size_t index = static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) );
+                listBlocked[index] = ( _listTerrainBlocked[index] != SW_FALSE || _land.isBlocked( x, y ) ) ? SW_TRUE : SW_FALSE;
             }
         }
         for ( const RTSUnit& unit : _listUnit )
         {
             const bool bStaticBlocker = unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE;
-            if ( bStaticBlocker )
-                placeFootprint( unit, true );
+            if ( bStaticBlocker == false )
+                continue;
+            const int32 footprint = unit._pDef->_footprint;
+            for ( int32 y = unit._cell._y; y < unit._cell._y + footprint; ++y )
+            {
+                for ( int32 x = unit._cell._x; x < unit._cell._x + footprint; ++x )
+                {
+                    if ( _grid.isInside( x, y ) )
+                        listBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] = SW_TRUE;
+                }
+            }
+        }
+        for ( int32 y = 0; y < _grid.getHeight(); ++y )
+        {
+            for ( int32 x = 0; x < _grid.getWidth(); ++x )
+            {
+                _grid.setBlocked( x, y, listBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE ); // 같은 값이면 리비전이 오르지 않는다
+            }
         }
     }
 

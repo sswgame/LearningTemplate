@@ -266,7 +266,8 @@ namespace sw
             _director.getModeState()._rotateYaw = _yaw;
 
         CameraTarget target;
-        target._focus             = _focus;
+        target._focus = _focus;
+        _director.setUserSettings( CameraUserSettings::makeFromGlobalVariables() );
         const CameraPose& pose    = _director.step( deltaTime, target );
         GameObject*       pOwner  = getOwner();
         CameraComponent*  pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;

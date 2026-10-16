@@ -31,6 +31,9 @@ namespace sw
             _rotation = _rotation + other._rotation;
             return *this;
         }
+
+        /** @brief 자리와 회전에 @p scale 을 곱한 흔들림입니다(사용자 설정의 흔들림 배율). */
+        CameraShakeOffset operator*( float32 scale ) const { return CameraShakeOffset{ _position * scale, _rotation * scale }; }
     };
 
     /**
