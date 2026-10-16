@@ -241,9 +241,9 @@ namespace sw
         static void serializeVersionedInto( IXMLBackend& backend, uint32 version, const void* pInstance, const TypeInfo& typeInfo,
                                             const SerializeContext& context = SerializeContext::getDefault() );
 
-        /** @brief 버전을 읽고 soft 역직렬화한 뒤, 필요하면 migrate 를 부릅니다. */
+        /** @brief 버전을 읽고 soft 역직렬화한 뒤, 필요하면 등록된 이관(`SchemaMigrationRegistry`)을 부릅니다. */
         [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-                                                        uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr,
+                                                        uint32                  currentVersion  = 0,
                                                         const TypeInfo*         pLegacyTypeInfo = nullptr,
                                                         const SerializeContext& context         = SerializeContext::getDefault() );
     };

@@ -232,7 +232,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-        /** @brief 세이브 본문(자기 기술형)의 버전입니다. 필드의 뜻이 바뀌면 올리고 `SchemaMigrateFn` 을 등록합니다. 롤백 바이트는 스키마 해시가 가리므로 버전이 없습니다. */
+        /** @brief 세이브 본문(자기 기술형)의 버전입니다. 필드의 뜻이 바뀌면 올리고 데이터를 다시 씁니다(값 계산이 불가피할 때만 `SW_SCHEMA_MIGRATION`). 롤백 바이트는 스키마 해시가 가리므로 버전이 없습니다. */
         static constexpr uint32 kStateVersion = 1;
         static constexpr int32  kPlayerCount  = 2;
         static constexpr int32  kDraw         = 2; ///< 라운드와 대전 결과의 무승부 값

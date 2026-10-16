@@ -277,7 +277,7 @@ namespace sw
         [[nodiscard]] bool serializeVersionedObject( uint32 version, const void* pInstance, const TypeInfo& typeInfo );
         /** @brief 버전 헤더를 검증하고 필요하면 이관하며 객체를 역직렬화합니다. */
         [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                                       uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr, const TypeInfo* pLegacyTypeInfo = nullptr );
+                                                       uint32 currentVersion = 0, const TypeInfo* pLegacyTypeInfo = nullptr );
 
         template <typename T>
         [[nodiscard]] bool serializeVersionedObject( uint32 version, const T& instance )
@@ -286,9 +286,9 @@ namespace sw
         }
 
         template <typename T>
-        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, T& instance, uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr, const TypeInfo* pLegacyTypeInfo = nullptr )
+        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, T& instance, uint32 currentVersion = 0, const TypeInfo* pLegacyTypeInfo = nullptr )
         {
-            return deserializeVersionedObject( outVersion, &instance, *T::StaticType(), currentVersion, migrate, pLegacyTypeInfo );
+            return deserializeVersionedObject( outVersion, &instance, *T::StaticType(), currentVersion, pLegacyTypeInfo );
         }
 
         // ------------------------------------------------------------------------------

@@ -19,7 +19,6 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
-#include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -182,21 +181,11 @@ namespace sw
                 serializeContext.setRuntimeTypeInfoFn( &getComponentRuntimeTypeInfo );
                 serializeContext.setOpaqueElementHandlers( &keepMissingComponent, &queryMissingComponent );
                 // 현재 타입에 없는 필드는 건너뛰고 읽는다. 세 형식이 같은 규칙이다. 바이너리가 실패하면 컴포넌트 PROPERTY 하나를 지웠을 때 그
-                // 컴포넌트를 가진 모든 오브젝트의 세이브와 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못한다.
+                // 컴포넌트를 가진 모든 오브젝트의 세이브와 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못한다. 오브젝트 자기 필드도 같다. 바이너리의
+                // 버전 붙은 읽기가 이 값을 같은 버전의 orphan 정책으로 읽는다(`SchemaOrphanPolicy::Ignore`). 버전이 다른 상태는 그래도 거절한다.
+                // 버린 필드는 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이름과 함께 로드마다 한 번 알린다.
                 serializeContext.setAllowUnknownProperties( true );
                 return serializeContext;
-            }
-
-            /**
-             * @brief 오브젝트 자기 필드 가운데 현재 타입에 없는 것(지운 필드)을 넘깁니다. 스키마 버전이 같을 때만 받습니다.
-             * @details 바이너리의 버전 붙은 읽기는 남는 필드가 있으면 이관 함수를 부르고, 없으면 실패한다. 오브젝트 상태에는 이관할 것이 없다.
-             *          지운 필드는 버리고 나머지를 읽는 것이 XML, JSON 과 같은 규칙이다. 버전이 다르면 받지 않는다(진짜 이관이 필요하기 때문이다).
-             *          버린 필드는 여기서 알리지 않는다. 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이관이 찾아 보지 않은 필드를
-             *          이름과 함께 로드마다 한 번 알린다(여기서도 알리면 같은 경고가 두 번 나온다).
-             */
-            static bool skipFieldsTheTypeNoLongerHas( const SchemaMigrateContext& migrateContext )
-            {
-                return migrateContext._fromVersion == migrateContext._toVersion;
             }
 
             /** @brief `GameObjectHandle` 의 타입 이름입니다. 리플렉션 PROPERTY 의 타입 이름과 텍스트 핸들러 이름이 같습니다. */
@@ -384,7 +373,7 @@ namespace sw
 
         return loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
         {
-            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, nullptr, nullptr, serializeContext );
+            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, nullptr, serializeContext );
         } );
     }
 
@@ -448,7 +437,7 @@ namespace sw
         const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
         {
             return BinarySerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
-                                                           kObjectReflectedSchemaVersion, &ObjectStateSerializerInternal::skipFieldsTheTypeNoLongerHas, nullptr, serializeContext );
+                                                           kObjectReflectedSchemaVersion, nullptr, serializeContext );
         } );
         return bLoaded ? bodyStart + bodySize : 0;
     }
