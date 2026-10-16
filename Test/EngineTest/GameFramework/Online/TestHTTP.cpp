@@ -1,16 +1,20 @@
 // 최소 HTTP — URL · 퍼센트 · 폼, 파서(Content-Length · chunked · 닫힐 때까지 · 상한), 루프백 클라이언트 ↔ 서버(평문 · TLS 1.3 자체 서명 신뢰),
-// 404 · 쿼리 · POST 몸, 시한 · 이름 해석 없음 · TLS 컨텍스트 없음은 전송 실패.
+// 404 · 쿼리 · POST 몸(localhost 는 해석 스레드가 푼다), 시한 · 풀리지 않는 이름 · TLS 컨텍스트 없음은 전송 실패.
 #include "pch.h"
 
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Base/Online/HTTP/HTTPServer.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <chrono>
+#include <thread>
 
 using namespace sw;
 
@@ -87,6 +91,7 @@ namespace
                         return std::move( response );
                 }
                 nowMs += 100;
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) ); // 이름(localhost)은 해석 스레드가 푼다 — 실제 시간을 조금 준다
             }
             HTTPClientResponse lost;
             lost._failureText = "test harness ran out of steps";
@@ -253,9 +258,9 @@ SW_TEST_CASE( HTTPTest, TransportFailuresAreReportedOnce )
     SW_EXPECT_TRUE( largeResponse._bTransportFailed == SW_TRUE );
 
     HTTPClientRequest named;
-    named._url                             = "http://accounts.example.com/x";
+    named._url                             = "http://accounts.invalid/x"; // .invalid 는 풀리지 않는 이름(RFC 6761)
     const HTTPClientResponse namedResponse = pair.run( named );
-    SW_EXPECT_TRUE( namedResponse._bTransportFailed == SW_TRUE ); // 이름 해석 없음 — 분명한 실패
+    SW_EXPECT_TRUE( namedResponse._bTransportFailed == SW_TRUE ); // 풀리지 않거나(해석 실패) 해석기가 시한을 넘긴다 — 둘 다 분명한 전송 실패
 
     HTTPClientRequest noTLS;
     noTLS._url                             = pair.makeURL( "https", "/echo" ); // 그 호스트의 TLS 컨텍스트를 올리지 않았다

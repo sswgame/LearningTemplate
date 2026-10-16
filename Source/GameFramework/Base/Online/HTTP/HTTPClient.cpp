@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/Transport/PlatformSocketUtil.h"
 
 namespace sw
 {
@@ -15,12 +15,17 @@ namespace sw
         : _mutex{}
         , _mapCall{}
         , _mapHostToTLSContext{}
+        , _listResolvingCall{}
+        , _listResolveRequestID{}
         , _listDone{}
         , _transport{}
         , _settings{}
+        , _resolver{}
+        , _resolveReady{}
         , _nextRequestID{ 1 }
         , _ioThreadCount{ 0 }
         , _bInitialized{ SW_FALSE }
+        , _bResolverStopping{ SW_FALSE }
     {
     }
 
@@ -50,6 +55,13 @@ namespace sw
     {
         if ( _bInitialized == SW_FALSE )
             return;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            _bResolverStopping = SW_TRUE;
+        }
+        _resolveReady.notify_all();
+        if ( _resolver.joinable() )
+            _resolver.join();   // 풀던 이름 하나는 해석기 시한까지 기다린다
         _transport->shutdown(); // 열린 연결은 Shutdown 으로 닫히며 onStreamClosed 가 요청을 끝낸다
         _transport.reset();
         std::scoped_lock<mutex> lock{ _mutex };
@@ -58,8 +70,15 @@ namespace sw
             (void)packed;
             finishLocked( *call, "client shut down" );
         }
+        for ( unique_ptr<Call>& call : _listResolvingCall )
+        {
+            finishLocked( *call, "client shut down" );
+        }
         _mapCall.clear();
-        _bInitialized = SW_FALSE;
+        _listResolvingCall.clear();
+        _listResolveRequestID.clear();
+        _bResolverStopping = SW_FALSE;
+        _bInitialized      = SW_FALSE;
     }
 
     void HTTPClient::registerTLSContext( string_view host, ITLSContext* pTLSContext )
@@ -88,12 +107,6 @@ namespace sw
             failImmediately( requestID, "too many requests in flight" );
             return requestID;
         }
-        NetAddress address;
-        if ( NetAddress::parse( url._host == "localhost" ? string_view( "127.0.0.1" ) : string_view( url._host ), url._port, address ) == false )
-        {
-            failImmediately( requestID, "host name resolution is not supported (IPv4 or localhost only)" );
-            return requestID;
-        }
         ITLSContext* pTLSContext = nullptr;
         if ( url._bSecure == SW_TRUE )
         {
@@ -115,15 +128,93 @@ namespace sw
             failImmediately( requestID, "could not create a TLS session" );
             return requestID;
         }
-        const StreamConnectionHandle handle = _transport->connect( address );
+        if ( NetAddress::parse( url._host, url._port, call->_address ) )
+        {
+            connectLocked( std::move( call ) );
+            return requestID;
+        }
+        // 이름이다 — 해석 스레드에 맡기고 `update` 가 연결을 건다. 여기서 풀면 DNS 왕복만큼 주인 스레드와 I/O 콜백이 잠금에 막힌다.
+        call->_resolveHost  = url._host;
+        call->_address      = NetAddress::makeAnyInterface( url._port );
+        call->_resolveState = ResolveState::Pending;
+        _listResolvingCall.push_back( std::move( call ) );
+        _listResolveRequestID.push_back( requestID );
+        if ( _resolver.joinable() == false )
+            _resolver = sw::thread( &HTTPClient::runResolver, this );
+        _resolveReady.notify_one();
+        return requestID;
+    }
+
+    void HTTPClient::connectLocked( unique_ptr<Call> call )
+    {
+        const StreamConnectionHandle handle = _transport->connect( call->_address );
         if ( handle.isValid() == false )
         {
-            failImmediately( requestID, "could not connect" );
-            return requestID;
+            finishLocked( *call, "could not connect" );
+            return;
         }
         call->_link.setHandle( handle );
         _mapCall[handle.packed()] = std::move( call );
-        return requestID;
+    }
+
+    void HTTPClient::advanceResolvingLocked( int64 nowMs )
+    {
+        for ( size_t index = 0; index < _listResolvingCall.size(); )
+        {
+            unique_ptr<Call>& call     = _listResolvingCall[index];
+            const bool        bExpired = nowMs >= call->_deadlineMs;
+            if ( call->_resolveState == ResolveState::Pending && bExpired == false )
+            {
+                ++index;
+                continue;
+            }
+            unique_ptr<Call> finished = std::move( call );
+            _listResolvingCall.erase( _listResolvingCall.begin() + static_cast<ptrdiff_t>( index ) );
+            if ( finished->_resolveState == ResolveState::Resolved && bExpired == false )
+                connectLocked( std::move( finished ) );
+            else
+                finishLocked( *finished, bExpired ? "timed out" : "could not resolve host" );
+        }
+    }
+
+    void HTTPClient::runResolver()
+    {
+        for ( ;; )
+        {
+            uint64     requestID = 0;
+            string     host;
+            NetAddress address;
+            {
+                std::unique_lock<mutex> lock{ _mutex };
+                while ( _listResolveRequestID.empty() && _bResolverStopping == SW_FALSE )
+                {
+                    _resolveReady.wait( lock );
+                }
+                if ( _bResolverStopping == SW_TRUE )
+                    return; // 남은 요청은 shutdown 이 끝낸다
+                requestID = _listResolveRequestID.front();
+                _listResolveRequestID.pop_front();
+                for ( const unique_ptr<Call>& call : _listResolvingCall )
+                {
+                    if ( call->_requestID == requestID )
+                    {
+                        host    = call->_resolveHost;
+                        address = call->_address;
+                    }
+                }
+            }
+            if ( host.empty() )
+                continue; // 그새 시한으로 끝났다
+            const bool              bResolved = PlatformSocketUtil::resolveAddress( host, address._port, address );
+            std::scoped_lock<mutex> lock{ _mutex };
+            for ( unique_ptr<Call>& call : _listResolvingCall )
+            {
+                if ( call->_requestID != requestID )
+                    continue;
+                call->_address      = address;
+                call->_resolveState = bResolved ? ResolveState::Resolved : ResolveState::Failed;
+            }
+        }
     }
 
     void HTTPClient::update( int64 nowMs )
@@ -135,6 +226,7 @@ namespace sw
         vector<StreamConnectionHandle> listExpired;
         {
             std::scoped_lock<mutex> lock{ _mutex };
+            advanceResolvingLocked( nowMs );
             for ( auto& [packed, call] : _mapCall )
             {
                 if ( nowMs >= call->_deadlineMs && call->_requestID != 0 )
@@ -165,7 +257,7 @@ namespace sw
     int32 HTTPClient::getPendingCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        int32                   count = 0;
+        int32                   count = static_cast<int32>( _listResolvingCall.size() );
         for ( const auto& [packed, call] : _mapCall )
         {
             (void)packed;
