@@ -174,7 +174,7 @@ SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsTakeTheRest )
 }
 
 /**
- * @brief [ShadowSetupTest] 점광 · 스폿은 앞에서부터 칸을 받고, 칸이 모자란 빛은 그림자 없이 남는다 — 빛 원소의 params.x · w 와 타일 원소 수
+ * @brief [ShadowSetupTest] 카메라가 없으면 점광 · 스폿은 앞에서부터 칸을 받고, 칸이 모자란 빛은 그림자 없이 남는다 — 빛 원소의 params.x · w 와 타일 원소 수
  * @details 캐스케이드 하나 + 점광 둘 + 스폿 하나면 칸 열둘 중 점광(6) · 스폿(1)이 먼저 받고 뒤의 점광(6)은 못 받는다. 스폿의 첫 타일 원소는 점광 여섯 면 뒤(12)다.
  */
 SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
@@ -205,6 +205,39 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
     SW_EXPECT_EQUAL( frame._listLocalBound.size(), static_cast<size_t>( 2 ) );
     // 주광이 없으면 주 시점 그림자는 비고 렌더러가 키 라이트로 폴백한다.
     SW_EXPECT_TRUE( frame._mainView._bValid == SW_FALSE );
+}
+
+/**
+ * @brief [ShadowSetupTest] 카메라가 있으면 칸은 화면에 크게 보이는 빛부터 받는다 — 목록 앞의 먼 점광보다 뒤의 가까운 점광이 먼저다
+ * @details 칸 열둘에 먼 점광(6) · 스폿(1) · 가까운 점광(6). 목록 순서면 가까운 점광이 빠지지만 우선순위(반경 / 카메라 깊이)로는 먼 점광이 빠진다.
+ *          카메라 뒤의 빛은 0 이고, 카메라가 빛 구 안이면 값이 깊이 하한으로 막혀 유한하다.
+ */
+SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsByScreenPriority )
+{
+    using Internal                    = sw::ShadowSetupTestInternal;
+    const sw::float4x4       viewProj = Internal::makePerspectiveViewProj( sw::float3{ 0.0f, 2.0f, 0.0f }, sw::float3{ 0.0f, 2.0f, 10.0f } );
+    sw::vector<sw::GPULight> listLight;
+    listLight.push_back( Internal::makePointLight( sw::float3{ 0.0f, 3.0f, 80.0f }, 8.0f ) );
+    listLight.push_back( Internal::makeSpotLight( sw::float3{ 2.0f, 4.0f, 12.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
+    listLight.push_back( Internal::makePointLight( sw::float3{ -1.0f, 2.0f, 6.0f }, 6.0f ) );
+    const sw::vector<uint32> listShadowIndex{ 0u, 1u, 2u };
+
+    sw::FrameShadowData frame;
+    sw::ShadowSetupUtil::populateFrame( nullptr, &viewProj, false, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    SW_ASSERT_EQUAL( frame._layout.getLocalCapacity(), 12u );
+    SW_EXPECT_NEAR_EQUAL( listLight[0]._params._x, 0.0f, 1e-6f ); // 먼 점광은 칸이 모자라 그림자 없음
+    SW_EXPECT_NEAR_EQUAL( listLight[1]._params._x, 1.0f, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( listLight[2]._params._x, 1.0f, 1e-6f );
+    // 가까운 점광이 가장 먼저 받아 첫 타일 원소(0)를 쓰고, 스폿은 그 여섯 면 뒤다.
+    SW_EXPECT_NEAR_EQUAL( listLight[2]._params._w, 0.0f, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( listLight[1]._params._w, static_cast<float32>( sw::shaderslot::kPointShadowFaceCount * sw::shaderslot::kShadowTileElementCount ), 1e-6f );
+    SW_EXPECT_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 7 ) );
+
+    const sw::GPULight behind = Internal::makePointLight( sw::float3{ 0.0f, 2.0f, -30.0f }, 5.0f );
+    SW_EXPECT_NEAR_EQUAL( sw::ShadowSetupUtil::computeLocalShadowPriority( behind, viewProj ), 0.0f, 1e-6f );
+    const sw::GPULight around   = Internal::makePointLight( sw::float3{ 0.0f, 2.0f, 0.0f }, 5.0f );
+    const float32      priority = sw::ShadowSetupUtil::computeLocalShadowPriority( around, viewProj );
+    SW_EXPECT_NEAR_EQUAL( priority, 1.0f / sw::ShadowSetupUtil::kLocalPriorityMinDepthFraction, 1e-3f );
 }
 
 /**

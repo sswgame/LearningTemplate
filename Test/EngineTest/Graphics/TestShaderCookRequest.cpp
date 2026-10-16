@@ -68,6 +68,12 @@ namespace
         }
         return false;
     }
+
+    /** @brief 요청의 퍼뮤테이션에 이 define 이 있는가. */
+    bool hasPermutationDefineInternal( const sw::ShaderCookRequest& request, const utf8* pDefine )
+    {
+        return std::find( request._listPermutation.begin(), request._listPermutation.end(), sw::string( pDefine ) ) != request._listPermutation.end();
+    }
 } // namespace
 
 /**
@@ -492,10 +498,14 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
                 if ( sw::FrameRendererUtil::drawsSceneMeshes( passType ) == false ||
                      sw::FrameRendererUtil::drawsMaterialInPass( passType, &listMaterialDefine ) == false )
                     continue;
-                const sw::RenderPassShaderSelection passShader = sw::selectRenderPassShader( passType, nullptr, engineDefaultAssets );
-                const sw::string&                   shaderPath = sw::FrameRendererUtil::usesMaterialShader( passType ) ? material->getShaderPath()
-                                                                                                                       : passShader._shaderPath;
-                sw::vector<sw::string>              listDefine = passShader._listDefine;
+                // 깊이 패스도 알파 컷오프 · 정점 변형 머티리얼은 머티리얼 셰이더로 그린다(그때 픽셀 스테이지는 컷오프만).
+                const bool                          bMaterialDepthShader = sw::FrameRendererUtil::drawsDepthWithMaterialShader( passType, &listMaterialDefine );
+                const sw::RenderPassShaderSelection passShader           = sw::selectRenderPassShader( passType, nullptr, engineDefaultAssets );
+                const sw::string&                   shaderPath           = ( sw::FrameRendererUtil::usesMaterialShader( passType ) || bMaterialDepthShader ) ? material->getShaderPath()
+                                                                                                                                                             : passShader._shaderPath;
+                const bool                          bHasPixelStage       = bMaterialDepthShader ? sw::FrameRendererUtil::hasMaterialDepthPixelStage( passType, &listMaterialDefine )
+                                                                                                : sw::FrameRendererUtil::hasPixelStage( passType );
+                sw::vector<sw::string>              listDefine           = passShader._listDefine;
                 for ( const sw::string& define : listMaterialDefine )
                 {
                     if ( std::find( listDefine.begin(), listDefine.end(), define ) == listDefine.end() )
@@ -505,7 +515,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
                 const sw::string passLabel       = label + "pass type " + sw::to_string( typeIndex );
                 SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, shaderPath, "VSMain", sw::ShaderStage::Vertex, permutationHash ),
                                     ( passLabel + " — 런타임이 만드는 VS 변형을 쿠킹하지 않는다" ).c_str() );
-                if ( sw::FrameRendererUtil::hasPixelStage( passType ) )
+                if ( bHasPixelStage )
                     SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, shaderPath, "PSMain", sw::ShaderStage::Pixel, permutationHash ),
                                         ( passLabel + " — 런타임이 만드는 PS 변형을 쿠킹하지 않는다" ).c_str() );
             }
@@ -513,4 +523,61 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
     }
     // 툰 머티리얼(engine/materials/toon.material)의 Outline · TwoSided 가 런타임 스위치다 — 하나도 없으면 이 테스트는 눈이 멀었다.
     SW_EXPECT_TRUE_MSG( runtimeComboCount >= 4, "런타임 정적 스위치를 가진 머티리얼이 없다 — 이 시험이 아무것도 보지 않는다" );
+}
+
+/**
+ * @brief [ShaderCookRequestTest] 깊이 패스는 모양을 머티리얼 코드가 정하는 배치만 머티리얼 셰이더로 그리고, 쿠커가 그 변형을 요청한다
+ * @details 알파 컷오프는 그림자 · 깊이 프리패스 모두 머티리얼 셰이더 + 픽셀 스테이지(clip), 정점 변형은 그림자만 정점 스테이지로,
+ *          그림자를 끈 머티리얼은 갈아타지 않는다(shadowdepth.hlsl 이 정점을 모은다). 툰의 컷오프 그림자 PS · 식생의 그림자 VS 가 실제 요청에 있어야
+ *          머리카락 카드가 사각형 그림자를, 흔드는 나무가 서 있는 그림자를 드리우지 않는다.
+ */
+SW_TEST_CASE( ShaderCookRequestTest, DepthPassesUseMaterialShaderForCutoffAndVertexDeform )
+{
+    using Util                             = sw::FrameRendererUtil;
+    const sw::vector<sw::string> cutoff    = { "MATERIAL_DOMAIN_SURFACE", sw::kMaterialAlphaCutoffDefine };
+    const sw::vector<sw::string> deform    = { sw::kMaterialVertexDeformDefine };
+    const sw::vector<sw::string> deformOff = { sw::kMaterialVertexDeformDefine, sw::kMaterialShadowCastOffDefine };
+    const sw::vector<sw::string> plain     = { "MATERIAL_DOMAIN_SURFACE" };
+
+    SW_EXPECT_TRUE( Util::drawsDepthWithMaterialShader( sw::RenderPassType::Shadow, &cutoff ) );
+    SW_EXPECT_TRUE( Util::hasMaterialDepthPixelStage( sw::RenderPassType::Shadow, &cutoff ) );
+    SW_EXPECT_TRUE( Util::drawsDepthWithMaterialShader( sw::RenderPassType::DepthPrepass, &cutoff ) );
+    SW_EXPECT_TRUE( Util::hasMaterialDepthPixelStage( sw::RenderPassType::DepthPrepass, &cutoff ) );
+    SW_EXPECT_TRUE( Util::drawsDepthWithMaterialShader( sw::RenderPassType::Shadow, &deform ) );
+    SW_EXPECT_FALSE( Util::hasMaterialDepthPixelStage( sw::RenderPassType::Shadow, &deform ) );
+    SW_EXPECT_FALSE( Util::drawsDepthWithMaterialShader( sw::RenderPassType::DepthPrepass, &deform ) );
+    SW_EXPECT_FALSE( Util::drawsDepthWithMaterialShader( sw::RenderPassType::Shadow, &deformOff ) );
+    SW_EXPECT_FALSE( Util::drawsDepthWithMaterialShader( sw::RenderPassType::Shadow, &plain ) );
+    SW_EXPECT_FALSE( Util::drawsDepthWithMaterialShader( sw::RenderPassType::Shadow, nullptr ) );
+    SW_EXPECT_FALSE( Util::drawsDepthWithMaterialShader( sw::RenderPassType::ForwardOpaque, &cutoff ) );
+
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::vector<sw::ShaderCookRequest> listRequest;
+    SW_ASSERT_TRUE( sw::ShaderCookDriver::collectAllRequests( sw::ResourcePaths::getRootFolderPath(), listRequest ) );
+    bool bToonShadowPixel   = false;
+    bool bFoliageShadowVS   = false;
+    bool bFoliageShadowPS   = false;
+    bool bShadowDepthCutoff = false;
+    for ( const sw::ShaderCookRequest& request : listRequest )
+    {
+        const sw::string stem          = sw::ShaderCooker::getStemLower( request._shaderPath );
+        const bool       bShadow       = hasPermutationDefineInternal( request, sw::kPassShadowDefine );
+        const bool       bCutoff       = hasPermutationDefineInternal( request, sw::kMaterialAlphaCutoffDefine );
+        const bool       bPixel        = request._stage == sw::ShaderStage::Pixel;
+        const bool       bToonShadow   = stem == "toon" && bShadow;
+        const bool       bFoliageShade = stem == "foliage" && bShadow;
+        const bool       bToonClip     = bCutoff && bPixel;
+        if ( bToonShadow && bToonClip )
+            bToonShadowPixel = true;
+        if ( bFoliageShade && bPixel == false )
+            bFoliageShadowVS = true;
+        if ( bFoliageShade && bPixel )
+            bFoliageShadowPS = true;
+        if ( stem == "shadowdepth" && bCutoff )
+            bShadowDepthCutoff = true;
+    }
+    SW_EXPECT_TRUE_MSG( bToonShadowPixel, "툰 컷오프 머티리얼의 그림자 PS 를 쿠킹하지 않는다" );
+    SW_EXPECT_TRUE_MSG( bFoliageShadowVS, "흔드는 식생의 그림자 VS 를 쿠킹하지 않는다" );
+    SW_EXPECT_FALSE_MSG( bFoliageShadowPS, "식생 그림자는 정점 스테이지뿐이다" );
+    SW_EXPECT_FALSE_MSG( bShadowDepthCutoff, "컷오프 머티리얼을 shadowdepth.hlsl 로 쿠킹한다 — 런타임은 머티리얼 셰이더로 그린다" );
 }

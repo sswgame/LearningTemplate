@@ -14,6 +14,10 @@
  *          **머티리얼은 한 스테이지에서만 읽는다**(GL 은 구조버퍼를 두 단계가 읽으면 링크를 거절한다). 기본 퍼뮤테이션은 픽셀이,
  *          외곽선 퍼뮤테이션은 정점이 읽어(두께가 정점에 필요하다) 픽셀이 쓸 값을 보간 칸으로 넘긴다.
  *
+ *          **알파 컷오프 머티리얼은 깊이 패스도 이 파일로 그린다**(`SW_PASS_SHADOW` · `SW_PASS_DEPTH_PREPASS` — `FrameRendererUtil::drawsDepthWithMaterialShader`).
+ *          shadowdepth.hlsl 은 머티리얼을 몰라 머리카락 카드가 사각형 그림자를 드리우므로, 같은 정점 경로(swLoadMorphedVertex)로 투영하고 픽셀에서 같은 알파로 버린다.
+ *          컬러 출력이 없어 픽셀 셰이더는 `clip` 만 한다.
+ *
  *          머티리얼 define: `MATERIAL_OUTLINE`(외곽선 패스에 들어간다) · `MATERIAL_ALPHA_CUTOFF`(알파 컷오프) · `MATERIAL_TWO_SIDED`(양면 —
  *          컬링을 끄는 것은 PSO 변형이 하고, 셰이더는 뒷면의 노멀을 뒤집는다) · `MATERIAL_BLEND_TRANSLUCENT`(반투명, 머티리얼 blendMode 와 짝).
  */
@@ -47,7 +51,19 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-#if defined( SW_PASS_MESH_OUTLINE )
+#if defined( SW_PASS_SHADOW ) || defined( SW_PASS_DEPTH_PREPASS )
+#define SW_TOON_DEPTH_PASS 1
+#endif
+
+#if defined( SW_TOON_DEPTH_PASS )
+struct PSInput
+{
+	float4 position                    : SV_POSITION;
+	float4 color                       : COLOR;
+	float2 uv                          : TEXCOORD0;
+	nointerpolation uint materialIndex : TEXCOORD1;
+};
+#elif defined( SW_PASS_MESH_OUTLINE )
 struct PSInput
 {
 	float4 position                       : SV_POSITION;
@@ -178,6 +194,38 @@ float2 computeMatcapUv( float3 normal, float3 viewDirection )
 	return float2( matcapUv.x, 1.0f - matcapUv.y );
 }
 
+#if defined( SW_TOON_DEPTH_PASS )
+
+PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+{
+	PSInput output;
+	SwInstanceData instance = swLoadInstance( input.instanceSlot );
+	float3 localPosition;
+	float3 localNormal;
+	swLoadMorphedVertex( instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal );
+	const float4 worldPosition = swComputeWorldPosition( localPosition, instance.world );
+	// 깊이 프리패스는 카메라 깊이, 그림자는 빛 깊이다 — 기본 패스와 같은 정점 경로라 프리패스 깊이가 기본 패스의 LessEqual 을 통과한다.
+#if defined( SW_PASS_DEPTH_PREPASS )
+	output.position = swComputeClipPosition( worldPosition, g_ViewProj );
+#else
+	output.position = swComputeClipPosition( worldPosition, g_LightViewProj );
+#endif
+	output.color         = input.color;
+	output.uv            = input.uv;
+	output.materialIndex = instance.materialIndex;
+	return output;
+}
+
+void PSMain( PSInput input )
+{
+	// 기본 패스와 같은 알파(정점 색 × 기본색 × 기본 텍스처)로 같은 자리를 버린다.
+	const SwMaterialData material = SW_MATERIAL( input.materialIndex );
+	const float alpha = input.color.a * material.baseColor.a * swSampleMaterialTexture( material.baseColorMap, input.uv ).a;
+	clip( alpha - material.alphaCutoff );
+}
+
+#else
+
 PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
 	PSInput output;
@@ -294,3 +342,5 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 }
 
 #endif
+
+#endif // SW_TOON_DEPTH_PASS

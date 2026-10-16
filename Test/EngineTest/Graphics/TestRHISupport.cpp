@@ -184,7 +184,7 @@ SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
 
 /**
  * @brief [RHIShaderRequestTest] 파이프라인 서술체를 컴파일 요청으로 해석하는 규칙 — 네 백엔드가 같이 쓴다.
- * @details 진입점 기본값, define 은 두 스테이지에, RT 0 개 + 뎁스 테스트면 픽셀 스테이지 없음(경로가 있어도),
+ * @details 진입점 기본값, define 은 두 스테이지에, 픽셀 스테이지는 PS 경로가 있을 때만(뎁스 전용도 — 알파 컷오프),
  *          RT 수는 뎁스 전용 0 / 그 밖 1 이상. 백엔드마다 규칙을 복사하면 어느 하나가 define 이나 뎁스 전용 판정을
  *          빠뜨린다 — 규칙이 한 곳이면 빠질 자리가 없다. GPU 가 필요 없다(nogpu).
  */
@@ -216,12 +216,12 @@ SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
     SW_EXPECT_STREQ( "MyVS", named._vertex._entryPoint.c_str() );
     SW_EXPECT_STREQ( "MyPS", named._pixel._entryPoint.c_str() );
 
-    // 3) 뎁스 전용(RT 0 + 뎁스 테스트): 경로가 있어도 PS 없음, RT 0.
+    // 3) 뎁스 전용(RT 0 + 뎁스 테스트): RT 0. PS 경로가 있으면 PS 를 둔다(알파 컷오프의 버리기) — 패스 PSO 는 FrameRenderer 가 경로를 비운다.
     desc._numRenderTargets                       = 0;
     desc._bEnableDepthTest                       = SW_TRUE;
     const sw::RHIGraphicsShaderRequest depthOnly = sw::RHIShaderRequest::resolveGraphics( desc, sw::ShaderTargetFormat::DXBC_D3D11 );
     SW_EXPECT_TRUE( depthOnly._bDepthOnly != SW_FALSE );
-    SW_EXPECT_TRUE( depthOnly._bHasPixelShader == SW_FALSE );
+    SW_EXPECT_TRUE( depthOnly._bHasPixelShader != SW_FALSE );
     SW_EXPECT_EQUAL( 0u, depthOnly._numRenderTargets );
 
     // 4) RT 0 인데 뎁스 테스트가 없으면 뎁스 전용이 아니다 — RT 는 1 로 올리고 PS 는 붙는다.

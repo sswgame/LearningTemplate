@@ -72,13 +72,21 @@ namespace sw
                 bool           _bHasPixelStage{ false };
             };
 
-            /** @brief 메시 패스 하나가 이 셰이더 · define 으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS) 요청을 더합니다. */
-            static void appendMeshPassRequest( vector<ShaderCookRequest>& outListRequest, const MeshPassInfo& passInfo, string_view shaderPath,
+            /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다). */
+            struct MeshDrawVariant
+            {
+                string         _shaderPath;
+                vector<string> _listDefine;
+                bool           _bHasPixelStage{ false };
+            };
+
+            /** @brief 메시 패스 하나가 이 변형으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS) 요청을 더합니다. */
+            static void appendMeshPassRequest( vector<ShaderCookRequest>& outListRequest, const MeshPassInfo& passInfo, const MeshDrawVariant& drawVariant,
                                                const vector<string>& listDefine )
             {
-                appendRequestUnique( outListRequest, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listDefine );
-                if ( passInfo._bHasPixelStage )
-                    appendRequestUnique( outListRequest, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listDefine );
+                appendRequestUnique( outListRequest, drawVariant._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listDefine );
+                if ( drawVariant._bHasPixelStage )
+                    appendRequestUnique( outListRequest, drawVariant._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listDefine );
             }
 
             /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 **런타임과 같은** define 목록입니다. */
@@ -344,24 +352,27 @@ namespace sw
                 // 바꾸는 모드는 define 이 없어 새 바이트코드가 필요 없다.
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
-                    vector<MaterialVariantInfo> listDrawVariant;
-                    listDrawVariant.push_back( MaterialVariantInfo{ passInfo._shaderPath, passInfo._listPermutation } );
+                    vector<MeshDrawVariant> listDrawVariant;
+                    listDrawVariant.push_back( MeshDrawVariant{ passInfo._shaderPath, passInfo._listPermutation, passInfo._bHasPixelStage } );
                     for ( const MaterialVariantInfo& variant : listMaterialVariant )
                     {
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
                         if ( FrameRendererUtil::drawsMaterialInPass( passInfo._passType, &variant._listDefine ) == false )
                             continue;
-                        // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에
-                        // define 만 얹는다(usesMaterialShader 와 같은 규칙).
-                        const string& shaderPath = passInfo._bUsesMaterialShader ? variant._shaderPath : passInfo._shaderPath;
-                        listDrawVariant.push_back( MaterialVariantInfo{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ) } );
+                        // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에 define 만 얹고, 모양을 머티리얼이 정하는
+                        // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더로 그린다(createMaterialPSOVariant 와 같은 판정).
+                        const bool    bMaterialDepthShader = FrameRendererUtil::drawsDepthWithMaterialShader( passInfo._passType, &variant._listDefine );
+                        const string& shaderPath           = ( passInfo._bUsesMaterialShader || bMaterialDepthShader ) ? variant._shaderPath : passInfo._shaderPath;
+                        const bool    bHasPixelStage =
+                            bMaterialDepthShader ? FrameRendererUtil::hasMaterialDepthPixelStage( passInfo._passType, &variant._listDefine ) : passInfo._bHasPixelStage;
+                        listDrawVariant.push_back( MeshDrawVariant{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ), bHasPixelStage } );
                     }
 
-                    for ( const MaterialVariantInfo& drawVariant : listDrawVariant )
+                    for ( const MeshDrawVariant& drawVariant : listDrawVariant )
                     {
                         if ( drawVariant._shaderPath.empty() )
                             continue;
-                        appendMeshPassRequest( outListRequest, passInfo, drawVariant._shaderPath, drawVariant._listDefine );
+                        appendMeshPassRequest( outListRequest, passInfo, drawVariant, drawVariant._listDefine );
                         if ( passInfo._bAppliesViewMode == false )
                             continue;
                         for ( uint32 viewModeIndex = 0; viewModeIndex < static_cast<uint32>( RenderViewMode::Count ); ++viewModeIndex )
@@ -369,8 +380,7 @@ namespace sw
                             const utf8* pViewModeDefine = FrameRendererUtil::findViewModeDefine( static_cast<RenderViewMode>( viewModeIndex ) );
                             if ( pViewModeDefine == nullptr )
                                 continue;
-                            appendMeshPassRequest( outListRequest, passInfo, drawVariant._shaderPath,
-                                                   mergeDefines( drawVariant._listDefine, { string( pViewModeDefine ) } ) );
+                            appendMeshPassRequest( outListRequest, passInfo, drawVariant, mergeDefines( drawVariant._listDefine, { string( pViewModeDefine ) } ) );
                         }
                     }
                 }

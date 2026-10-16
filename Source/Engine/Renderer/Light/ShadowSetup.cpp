@@ -78,6 +78,16 @@ namespace sw
             /** @brief 원소의 빛 종류입니다(`_directionType.w`). */
             static uint32 getLightType( const GPULight& light ) { return static_cast<uint32>( light._directionType._w + 0.5f ); }
 
+            /** @brief 칸을 나눠 줄 차례 하나 — 우선순위와 빛 원소 번호입니다. */
+            struct PriorityEntry
+            {
+                float32 _priority{ 0.0f };
+                uint32  _lightIndex{ 0 };
+            };
+
+            /** @brief 우선순위가 높은 쪽이 앞입니다(정렬 비교). */
+            static bool isHigherPriority( const PriorityEntry& first, const PriorityEntry& second ) { return first._priority > second._priority; }
+
             /** @brief 빛 공간 상자에 경계 구들을 더한 상자의 직교 뷰-투영입니다 — 그림자 패스 컬링이 쓴다. */
             static float4x4 makeUnionCullViewProj( const float4x4& lightView, const float3& boxMin, const float3& boxMax, const vector<float4>& listBound )
             {
@@ -147,20 +157,42 @@ namespace sw
         return tileCount;
     }
 
-    void ShadowSetupUtil::populateLocalShadows( const ShadowAtlasLayout& layout, const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight,
-                                                FrameShadowData& outFrame )
+    float32 ShadowSetupUtil::computeLocalShadowPriority( const GPULight& light, const float4x4& viewProj )
+    {
+        const float4  clip   = float4::transform( float4{ light._positionRadius._x, light._positionRadius._y, light._positionRadius._z, 1.0f }, viewProj );
+        const float32 radius = MathUtil::max( light._positionRadius._w, 0.0f );
+        // 구 전체가 카메라 뒤 — 그 빛이 닿는 곳은 화면에 없다.
+        if ( clip._w + radius <= 0.0f )
+            return 0.0f;
+        return radius / MathUtil::max( clip._w, MathUtil::max( radius * kLocalPriorityMinDepthFraction, MathUtil::kEpsilon ) );
+    }
+
+    void ShadowSetupUtil::populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const vector<uint32>& listShadowLightIndex,
+                                                vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         using Internal               = ShadowSetupInternal;
         const uint32 atlasResolution = layout.getAtlasResolution();
         uint32       usedTileCount   = 0;
+
+        // 칸이 모자랄 때 화면에 크게 보이는 빛이 먼저 받는다. 같은 값은 목록 순서를 지킨다(stable).
+        vector<Internal::PriorityEntry> listOrder;
+        listOrder.reserve( listShadowLightIndex.size() );
         for ( const uint32 lightIndex : listShadowLightIndex )
         {
             if ( lightIndex >= inoutListLight.size() )
                 continue;
-            GPULight&    light     = inoutListLight[lightIndex];
-            const uint32 lightType = Internal::getLightType( light );
-            const bool   bPoint    = lightType == shaderslot::kLightTypePoint;
-            const bool   bSpot     = lightType == shaderslot::kLightTypeSpot;
+            const float32 priority = pPriorityViewProj != nullptr ? computeLocalShadowPriority( inoutListLight[lightIndex], *pPriorityViewProj ) : 0.0f;
+            listOrder.push_back( Internal::PriorityEntry{ priority, lightIndex } );
+        }
+        std::stable_sort( listOrder.begin(), listOrder.end(), Internal::isHigherPriority );
+
+        for ( const Internal::PriorityEntry& entry : listOrder )
+        {
+            const uint32 lightIndex = entry._lightIndex;
+            GPULight&    light      = inoutListLight[lightIndex];
+            const uint32 lightType  = Internal::getLightType( light );
+            const bool   bPoint     = lightType == shaderslot::kLightTypePoint;
+            const bool   bSpot      = lightType == shaderslot::kLightTypeSpot;
             if ( bPoint == false && bSpot == false )
                 continue;
             const uint32 tileCount = bPoint ? shaderslot::kPointShadowFaceCount : 1u;
@@ -264,7 +296,7 @@ namespace sw
         outFrame.clear();
         const uint32 cascadeCount = pShadowLight != nullptr ? pShadowLight->getShadowCascadeCount() : 1u;
         outFrame._layout          = ShadowAtlasLayout::make( atlasResolution, cascadeCount, countLocalTiles( inoutListLight, listShadowLightIndex ) );
-        populateLocalShadows( outFrame._layout, listShadowLightIndex, inoutListLight, outFrame );
+        populateLocalShadows( outFrame._layout, pMainViewProj, listShadowLightIndex, inoutListLight, outFrame );
 
         if ( pShadowLight != nullptr )
         {

@@ -50,7 +50,9 @@ namespace sw
                     }
                     case RenderPassType::Shadow:
                     {
+                        // 패스 define 은 머티리얼 셰이더로 그리는 배치(알파 컷오프 · 정점 변형)가 빛 행렬 퍼뮤테이션을 고르는 데 쓴다.
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderShadowDepth;
+                        info._pPassDefine      = kPassShadowDefine;
                         info._colorTargetCount = 0;
                         info._flags            = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDepthOnly | Flag::kDrawsSceneMeshes;
                         break;
