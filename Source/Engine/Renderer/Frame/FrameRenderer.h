@@ -311,7 +311,7 @@ namespace sw
             hashed_string _passName;
             /// @brief 이 드로우 그룹의 루트 상수 값(머티리얼 원소 수)입니다. 배치마다 다른 값(인스턴스 시작, 모프 풀, 정점 풀)은
             ///        배치 테이블(g_SwBatches)과 인스턴스 슬롯 스트림이 제공하므로 그룹 안에서 루트 상수를 다시 바인딩하지 않습니다.
-            ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어씁니다(binding.hlsli 1-0 참고).
+            ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어씁니다(binding.hlsli "드로우별 루트 상수" 절 참고).
             uint32 _drawMaterialCount{ 0 };
             /// @brief bindForDraw 가 마지막으로 조회한 PSO 와 그 레이아웃입니다. 같은 PSO 로 연속해서 드로우할 때
             ///        layoutForPSO() 의 뮤텍스와 해시맵 조회를 건너뛰는 패스 로컬 캐시입니다(1항목).

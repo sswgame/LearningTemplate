@@ -540,7 +540,7 @@ namespace sw
                         listArgument.push_back( L"DX11=1" );
                     if ( desc._stage == ShaderStage::Compute )
                     {
-                        // 컴퓨트에서만 선언되는 자원(RW 텍스처 배열 · 슬롯, binding.hlsli 3)의 스위치.
+                        // 컴퓨트에서만 선언되는 자원(RW 텍스처 배열 · 슬롯, binding.hlsli "텍스처 읽기" 절)의 스위치.
                         listArgument.push_back( L"-D" );
                         listArgument.push_back( L"SW_STAGE_COMPUTE=1" );
                     }
