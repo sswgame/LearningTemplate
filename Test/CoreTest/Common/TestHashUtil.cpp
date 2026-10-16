@@ -1,8 +1,22 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 
 #include "TestFramework/TestFramework.h"
+
+namespace
+{
+    struct HashedKey
+    {
+        int32 _a;
+        int32 _b;
+
+        bool   operator==( const HashedKey& other ) const { return _a == other._a && _b == other._b; }
+        uint64 computeHash() const { return sw::HashUtil::makeHash( _a, _b ); }
+    };
+} // namespace
 
 // splitmix64 · boost 결합 · FNV 는 파일마다 복사돼 있던 식이다 — 모은 함수가 옛 식과 같은 값을 내야 네트워크 비교 · 결정적 시뮬레이션이 그대로다.
 
@@ -37,4 +51,38 @@ SW_TEST_CASE( HashUtilTest, FnvConstantsAreTheSpecValues )
     SW_EXPECT_EQUAL( uint32{ 16777619u }, sw::HashUtil::kFnvPrime32 );
     SW_EXPECT_EQUAL( uint64{ 14695981039346656037ull }, sw::HashUtil::kFnvOffset64 );
     SW_EXPECT_EQUAL( uint64{ 1099511628211ull }, sw::HashUtil::kFnvPrime64 );
+}
+
+/**
+ * @brief [HashUtilTest] makeHash 는 값마다 DefaultHash 를 차례로 combine 한 값이고, 순서가 바뀌면 값도 바뀐다
+ */
+SW_TEST_CASE( HashUtilTest, MakeHashCombinesInOrder )
+{
+    const uint64 first    = static_cast<uint64>( std::hash<int32>{}( 3 ) );
+    const uint64 second   = static_cast<uint64>( std::hash<int32>{}( 4 ) );
+    const uint64 expected = sw::HashUtil::combine( sw::HashUtil::combine( 0, first ), second );
+    SW_EXPECT_EQUAL( expected, sw::HashUtil::makeHash( int32{ 3 }, int32{ 4 } ) );
+    SW_EXPECT_TRUE( sw::HashUtil::makeHash( int32{ 3 }, int32{ 4 } ) != sw::HashUtil::makeHash( int32{ 4 }, int32{ 3 } ) );
+}
+
+/**
+ * @brief [HashUtilTest] DefaultHash 는 computeHash() 가 있는 키에 그것을 쓰고, 없으면 std::hash 를 쓰며 이종 키 오버로드를 남긴다
+ * @details 키 구조체마다 해시 구조체를 두지 않아도 `sw::unordered_map<HashedKey, …>` 가 컴파일되고 찾아야 한다. 문자열 키의 `string_view`
+ *          조회(할당 없는 이종 조회)가 기본 해시가 바뀐 뒤에도 같은 해시를 내야 한다.
+ */
+SW_TEST_CASE( HashUtilTest, DefaultHashUsesComputeHash )
+{
+    const HashedKey key{ 1, 2 };
+    SW_EXPECT_EQUAL( static_cast<size_t>( key.computeHash() ), sw::DefaultHash<HashedKey>{}( key ) );
+    SW_EXPECT_EQUAL( std::hash<int32>{}( 7 ), sw::DefaultHash<int32>{}( 7 ) );
+
+    const HashedKey                     swapped{ 2, 1 };
+    sw::unordered_map<HashedKey, int32> mapValue;
+    mapValue[key]     = 10;
+    mapValue[swapped] = 20;
+    SW_EXPECT_EQUAL( 10, mapValue[key] );
+    SW_EXPECT_EQUAL( 20, mapValue[swapped] );
+
+    const sw::string text( "name" );
+    SW_EXPECT_EQUAL( sw::DefaultHash<sw::string>{}( text ), sw::DefaultHash<sw::string>{}( sw::string_view( "name" ) ) );
 }
