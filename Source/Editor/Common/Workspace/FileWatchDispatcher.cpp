@@ -18,52 +18,49 @@ namespace sw
 {
     namespace
     {
-        struct FileWatchDispatcherInternal
+        void pollFileChange( unordered_map<string, uint64>& mapPollMtime, vector<FileChangeEvent>& outListEvent, const vector<string>& listExtension, const string& filePath )
         {
-            static void pollFileChange( unordered_map<string, uint64>& mapPollMtime, vector<FileChangeEvent>& outListEvent, const vector<string>& listExtension, const string& filePath )
-            {
-                if ( FileUtil::exists( filePath ) == false )
-                    return;
+            if ( FileUtil::exists( filePath ) == false )
+                return;
 
-                const string filename           = FileUtil::getFileNamePart( filePath );
-                bool         isExtensionAllowed = listExtension.empty();
-                if ( isExtensionAllowed == false )
+            const string filename           = FileUtil::getFileNamePart( filePath );
+            bool         isExtensionAllowed = listExtension.empty();
+            if ( isExtensionAllowed == false )
+            {
+                for ( const string& allowed : listExtension )
                 {
-                    for ( const string& allowed : listExtension )
+                    if ( FileUtil::hasExtension( filename, allowed ) )
                     {
-                        if ( FileUtil::hasExtension( filename, allowed ) )
-                        {
-                            isExtensionAllowed = true;
-                            break;
-                        }
+                        isExtensionAllowed = true;
+                        break;
                     }
                 }
-                if ( isExtensionAllowed == false )
-                    return;
-
-                const uint64 mtime = FileUtil::getFileTimestamp( filePath );
-                if ( mtime == 0 )
-                    return;
-
-                const string                                  normalized = FileUtil::normalizePath( filePath );
-                const unordered_map<string, uint64>::iterator it         = mapPollMtime.find( normalized );
-                if ( it == mapPollMtime.end() )
-                {
-                    mapPollMtime.emplace( normalized, mtime );
-                    return;
-                }
-
-                if ( it->second != mtime )
-                {
-                    it->second = mtime;
-                    FileChangeEvent changeEvent{};
-                    changeEvent._action    = FileWatcherAction::Modified;
-                    changeEvent._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
-                    changeEvent._filename  = filename;
-                    outListEvent.push_back( std::move( changeEvent ) );
-                }
             }
-        };
+            if ( isExtensionAllowed == false )
+                return;
+
+            const uint64 mtime = FileUtil::getFileTimestamp( filePath );
+            if ( mtime == 0 )
+                return;
+
+            const string                                  normalized = FileUtil::normalizePath( filePath );
+            const unordered_map<string, uint64>::iterator it         = mapPollMtime.find( normalized );
+            if ( it == mapPollMtime.end() )
+            {
+                mapPollMtime.emplace( normalized, mtime );
+                return;
+            }
+
+            if ( it->second != mtime )
+            {
+                it->second = mtime;
+                FileChangeEvent changeEvent{};
+                changeEvent._action    = FileWatcherAction::Modified;
+                changeEvent._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
+                changeEvent._filename  = filename;
+                outListEvent.push_back( std::move( changeEvent ) );
+            }
+        }
     } // namespace
 } // namespace sw
 
@@ -330,14 +327,14 @@ namespace sw
                 continue;
 
             if ( FileUtil::exists( entry._pathPrefix ) )
-                FileWatchDispatcherInternal::pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
+                pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
             else
             {
                 vector<string> listFile;
                 FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true );
                 for ( const string& filePath : listFile )
                 {
-                    FileWatchDispatcherInternal::pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );
+                    pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );
                 }
             }
         }

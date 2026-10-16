@@ -79,19 +79,13 @@ namespace sw
         }
 
         /** @brief 포인터 이탈 알림(WM_MOUSELEAVE)을 요청해 둔 상태인지 나타냅니다. TrackMouseEvent 는 이탈을 한 번 알리고 해제됩니다. */
-        struct PointerTrackingInternal
-        {
-            static inline bool s_bTrackingLeave{ false };
-        };
+        bool s_bTrackingLeave{ false };
 
         /** @brief SPI_xxxKEYS 접근성 단축키(고정 키, 토글 키, 필터 키)의 이전 상태를 보관합니다(disable/restoreAccessibilityShortcuts 용). */
-        struct AccessibilityInternal
-        {
-            static inline STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
-            static inline TOGGLEKEYS s_prevToggleKeys{ sizeof( TOGGLEKEYS ), 0 };
-            static inline FILTERKEYS s_prevFilterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
-            static inline bool       s_bDisabled{ false };
-        };
+        STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
+        TOGGLEKEYS s_prevToggleKeys{ sizeof( TOGGLEKEYS ), 0 };
+        FILTERKEYS s_prevFilterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
+        bool       s_bDisabled{ false };
     } // namespace
 } // namespace sw
 
@@ -222,14 +216,14 @@ namespace sw
 
                 // 포인터가 창 안으로 들어온 첫 이동이다. 이탈 알림을 요청해 둬야 WM_MOUSELEAVE 가 온다. 요청하지 않으면
                 // `isPointerInside()` 와 `isPointerOverRect()` 가 늘 false 다.
-                if ( PointerTrackingInternal::s_bTrackingLeave == false && event._pNativeWindow != nullptr )
+                if ( s_bTrackingLeave == false && event._pNativeWindow != nullptr )
                 {
                     TRACKMOUSEEVENT trackEvent{};
                     trackEvent.cbSize    = sizeof( TRACKMOUSEEVENT );
                     trackEvent.dwFlags   = TME_LEAVE;
                     trackEvent.hwndTrack = static_cast<HWND>( event._pNativeWindow );
                     if ( TrackMouseEvent( &trackEvent ) != FALSE )
-                        PointerTrackingInternal::s_bTrackingLeave = true;
+                        s_bTrackingLeave = true;
                     postWindowStateEvent( RawInputEvent::makePointerCrossing( true ) );
                 }
                 postRawEvent( RawInputEvent::makeMouseMove( mouseX, mouseY ) );
@@ -237,7 +231,7 @@ namespace sw
             }
             case WM_MOUSELEAVE:
             {
-                PointerTrackingInternal::s_bTrackingLeave = false;
+                s_bTrackingLeave = false;
                 postWindowStateEvent( RawInputEvent::makePointerCrossing( false ) );
                 break;
             }
@@ -479,36 +473,36 @@ namespace sw
 
     void InputManager::disableWindowsAccessibilityShortcuts()
     {
-        if ( AccessibilityInternal::s_bDisabled == false )
+        if ( s_bDisabled == false )
         {
-            SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
-            SystemParametersInfoW( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
-            SystemParametersInfoW( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
+            SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &s_prevStickyKeys, 0 );
+            SystemParametersInfoW( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &s_prevToggleKeys, 0 );
+            SystemParametersInfoW( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &s_prevFilterKeys, 0 );
 
-            STICKYKEYS stickyKeys = AccessibilityInternal::s_prevStickyKeys;
+            STICKYKEYS stickyKeys = s_prevStickyKeys;
             stickyKeys.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
             SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
 
-            TOGGLEKEYS toggleKeys = AccessibilityInternal::s_prevToggleKeys;
+            TOGGLEKEYS toggleKeys = s_prevToggleKeys;
             toggleKeys.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
             SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
 
-            FILTERKEYS filterKeys = AccessibilityInternal::s_prevFilterKeys;
+            FILTERKEYS filterKeys = s_prevFilterKeys;
             filterKeys.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
             SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
 
-            AccessibilityInternal::s_bDisabled = true;
+            s_bDisabled = true;
         }
     }
 
     void InputManager::restoreWindowsAccessibilityShortcuts()
     {
-        if ( AccessibilityInternal::s_bDisabled == true )
+        if ( s_bDisabled )
         {
-            SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
-            SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
-            SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
-            AccessibilityInternal::s_bDisabled = false;
+            SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &s_prevStickyKeys, 0 );
+            SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &s_prevToggleKeys, 0 );
+            SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &s_prevFilterKeys, 0 );
+            s_bDisabled = false;
         }
     }
 } // namespace sw

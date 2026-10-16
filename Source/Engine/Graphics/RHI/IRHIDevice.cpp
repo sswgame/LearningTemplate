@@ -19,36 +19,33 @@ namespace sw
 {
     namespace
     {
-        struct IRHIDeviceInternal
+        /** @brief 핸들 하나를 그 종류의 팩터리 함수로 내립니다. */
+        void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 handle )
         {
-            /** @brief 핸들 하나를 그 종류의 팩터리 함수로 내립니다. */
-            static void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 handle )
+            switch ( kind )
             {
-                switch ( kind )
+                case RHIHandleKind::BindlessResource:
                 {
-                    case RHIHandleKind::BindlessResource:
-                    {
-                        factory.unregisterBindlessResource( static_cast<RHIDescriptorIndex>( handle ) );
-                        return;
-                    }
-                    case RHIHandleKind::BindlessTexture:
-                    {
-                        factory.unregisterBindlessTexture( static_cast<RHIDescriptorIndex>( handle ) );
-                        return;
-                    }
-                    case RHIHandleKind::Buffer:
-                    {
-                        factory.destroyBuffer( static_cast<RHIBufferHandle>( handle ) );
-                        return;
-                    }
-                    case RHIHandleKind::Texture:
-                    {
-                        factory.destroyTexture( static_cast<RHITextureHandle>( handle ) );
-                        return;
-                    }
+                    factory.unregisterBindlessResource( static_cast<RHIDescriptorIndex>( handle ) );
+                    return;
+                }
+                case RHIHandleKind::BindlessTexture:
+                {
+                    factory.unregisterBindlessTexture( static_cast<RHIDescriptorIndex>( handle ) );
+                    return;
+                }
+                case RHIHandleKind::Buffer:
+                {
+                    factory.destroyBuffer( static_cast<RHIBufferHandle>( handle ) );
+                    return;
+                }
+                case RHIHandleKind::Texture:
+                {
+                    factory.destroyTexture( static_cast<RHITextureHandle>( handle ) );
+                    return;
                 }
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -181,7 +178,7 @@ namespace sw
         }
         IRHIResourceFactory* pFactory = getResourceFactory();
         if ( pFactory != nullptr )
-            IRHIDeviceInternal::releaseNow( *pFactory, kind, handle );
+            releaseNow( *pFactory, kind, handle );
     }
 
     void IRHIDevice::flushDeferredHandleReleases()
@@ -198,7 +195,7 @@ namespace sw
             return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
         for ( const RHIDeferredHandleQueue::Entry& entry : listHandle )
         {
-            IRHIDeviceInternal::releaseNow( *pFactory, entry._kind, entry._handle );
+            releaseNow( *pFactory, entry._kind, entry._handle );
         }
     }
 

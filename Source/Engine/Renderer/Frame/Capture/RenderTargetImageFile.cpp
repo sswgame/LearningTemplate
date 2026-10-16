@@ -16,27 +16,24 @@ namespace sw
 
     namespace
     {
-        struct RenderTargetImageFileInternal
+        /** @brief RGBA8 을 PPM(P6 — 아스키 머리말 + RGB 8bit)으로 씁니다. */
+        [[nodiscard]] bool writePpm( string_view outFilePath, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
         {
-            /** @brief RGBA8 을 PPM(P6 — 아스키 머리말 + RGB 8bit)으로 씁니다. */
-            [[nodiscard]] static bool writePpm( string_view outFilePath, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
+            StringBuilder<constant::kMaxBuffer64> header;
+            // PPM 헤더의 구분자는 아무 공백이면 된다. 공백만 써서 이스케이프 없이 적는다.
+            header.appendFormat( "P6 %# %# 255 ", width, height );
+            const size_t  pixelCount = static_cast<size_t>( width ) * height;
+            vector<uint8> outBytes;
+            outBytes.reserve( header.size() + pixelCount * 3 );
+            outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( header.c_str() ), reinterpret_cast<const uint8*>( header.c_str() ) + header.size() );
+            for ( size_t pixel = 0; pixel < pixelCount; ++pixel )
             {
-                StringBuilder<constant::kMaxBuffer64> header;
-                // PPM 헤더의 구분자는 아무 공백이면 된다. 공백만 써서 이스케이프 없이 적는다.
-                header.appendFormat( "P6 %# %# 255 ", width, height );
-                const size_t  pixelCount = static_cast<size_t>( width ) * height;
-                vector<uint8> outBytes;
-                outBytes.reserve( header.size() + pixelCount * 3 );
-                outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( header.c_str() ), reinterpret_cast<const uint8*>( header.c_str() ) + header.size() );
-                for ( size_t pixel = 0; pixel < pixelCount; ++pixel )
-                {
-                    outBytes.push_back( rgbaBytes[pixel * 4 + 0] );
-                    outBytes.push_back( rgbaBytes[pixel * 4 + 1] );
-                    outBytes.push_back( rgbaBytes[pixel * 4 + 2] );
-                }
-                return FileUtil::writeFile( outFilePath, outBytes.data(), outBytes.size() );
+                outBytes.push_back( rgbaBytes[pixel * 4 + 0] );
+                outBytes.push_back( rgbaBytes[pixel * 4 + 1] );
+                outBytes.push_back( rgbaBytes[pixel * 4 + 2] );
             }
-        };
+            return FileUtil::writeFile( outFilePath, outBytes.data(), outBytes.size() );
+        }
     } // namespace
 } // namespace sw
 
@@ -118,7 +115,7 @@ namespace sw
         if ( StringUtil::endsWith( outFilePath, ".png", true ) )
             bWritten = ImageFileWriter::writePngRgba8( outFilePath, rgbaBytes, layout._width, layout._height );
         else
-            bWritten = RenderTargetImageFileInternal::writePpm( outFilePath, rgbaBytes, layout._width, layout._height );
+            bWritten = writePpm( outFilePath, rgbaBytes, layout._width, layout._height );
         if ( bWritten == false )
         {
             SW_LOG_ERROR( "writeImageFile: could not write %#.", string( outFilePath ).c_str() );

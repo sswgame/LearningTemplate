@@ -9,23 +9,20 @@ namespace sw
 {
     namespace
     {
-        struct UIDocumentCacheInternal
+        shared_ptr<const void> parseDocument( string_view text, string_view path, string& outError )
         {
-            static shared_ptr<const void> parseDocument( string_view text, string_view path, string& outError )
-            {
-                shared_ptr<UIDocumentAsset> document = make_shared<UIDocumentAsset>();
-                if ( UIDocumentLoader::parse( text, path, *document, outError ) == false )
-                    return {};
-                return document;
-            }
-        };
+            shared_ptr<UIDocumentAsset> document = make_shared<UIDocumentAsset>();
+            if ( UIDocumentLoader::parse( text, path, *document, outError ) == false )
+                return {};
+            return document;
+        }
     } // namespace
 } // namespace sw
 
 namespace sw
 {
     UIDocumentCache::UIDocumentCache()
-        : UITextAssetCache{ "UIDocument", "UI document", &UIDocumentCacheInternal::parseDocument }
+        : UITextAssetCache{ "UIDocument", "UI document", &parseDocument }
     {
     }
 

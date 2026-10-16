@@ -89,11 +89,8 @@ namespace sw
                 }
                 return hashed_string{};
             }
-        };
 
-        /** @brief 시나리오 프로브가 보는 첫 슈터 플레이어입니다(드물게 불리므로 씬을 훑습니다). */
-        struct ShooterPlayerProbeInternal
-        {
+            /** @brief 시나리오 프로브가 보는 첫 슈터 플레이어입니다(드물게 불리므로 씬을 훑습니다). */
             static const ShooterPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
             {
                 const ShooterPlayerComponent* pFound = nullptr;
@@ -808,10 +805,10 @@ namespace sw
 namespace sw
 {
     SW_AUTOMATION_PROBE( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)",
-                         &ShooterPlayerProbeInternal::readWeaponIndex );
-    SW_AUTOMATION_PROBE( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", &ShooterPlayerProbeInternal::readAlive );
-    SW_AUTOMATION_PROBE( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", &ShooterPlayerProbeInternal::readShotCount );
-    SW_AUTOMATION_PROBE( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", &ShooterPlayerProbeInternal::readEnemyHitCount );
+                         &ShooterPlayerComponentInternal::readWeaponIndex );
+    SW_AUTOMATION_PROBE( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", &ShooterPlayerComponentInternal::readAlive );
+    SW_AUTOMATION_PROBE( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", &ShooterPlayerComponentInternal::readShotCount );
+    SW_AUTOMATION_PROBE( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", &ShooterPlayerComponentInternal::readEnemyHitCount );
     SW_AUTOMATION_PROBE( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none",
-                         &ShooterPlayerProbeInternal::readControllerKind );
+                         &ShooterPlayerComponentInternal::readControllerKind );
 } // namespace sw

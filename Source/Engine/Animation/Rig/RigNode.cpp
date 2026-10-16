@@ -17,18 +17,15 @@ namespace sw
 
     namespace
     {
-        struct RigNodeInternal
+        /** @brief "key '<키>' <설명>" 형태의 오류 문장입니다. */
+        string makeKeyMessage( string_view key, string_view what )
         {
-            /** @brief "key '<키>' <설명>" 형태의 오류 문장입니다. */
-            static string makeKeyMessage( string_view key, string_view what )
-            {
-                string message = "key '";
-                message += key;
-                message += "' ";
-                message += what;
-                return message;
-            }
-        };
+            string message = "key '";
+            message += key;
+            message += "' ";
+            message += what;
+            return message;
+        }
     } // namespace
 
     RigJSONReader::RigJSONReader( const JSONValue& object, string_view context )
@@ -70,7 +67,7 @@ namespace sw
             return bRequired == false;
         if ( value.isString() == false || value.asString().empty() )
         {
-            fail( RigNodeInternal::makeKeyMessage( key, "must be a non-empty string" ) );
+            fail( makeKeyMessage( key, "must be a non-empty string" ) );
             return false;
         }
         outValue = hashed_string( value.asString() );
@@ -84,7 +81,7 @@ namespace sw
             return bRequired == false;
         if ( value.isNumber() == false )
         {
-            fail( RigNodeInternal::makeKeyMessage( key, "must be a number" ) );
+            fail( makeKeyMessage( key, "must be a number" ) );
             return false;
         }
         outValue = static_cast<float32>( value.asFloat() );
@@ -100,7 +97,7 @@ namespace sw
             return true;
         if ( number < 0.0f || MathUtil::floor( number ) != number )
         {
-            fail( RigNodeInternal::makeKeyMessage( key, "must be a non-negative integer" ) );
+            fail( makeKeyMessage( key, "must be a non-negative integer" ) );
             return false;
         }
         outValue = static_cast<uint32>( number );
@@ -114,7 +111,7 @@ namespace sw
             return bRequired == false;
         if ( value.isBool() == false )
         {
-            fail( RigNodeInternal::makeKeyMessage( key, "must be true or false" ) );
+            fail( makeKeyMessage( key, "must be true or false" ) );
             return false;
         }
         outValue = value.asBool();
@@ -129,7 +126,7 @@ namespace sw
         float32 arrValue[3]{};
         if ( AnimationJSONUtil::readFloats( value, arrValue, 3 ) == false )
         {
-            fail( RigNodeInternal::makeKeyMessage( key, "must be an array of 3 numbers" ) );
+            fail( makeKeyMessage( key, "must be an array of 3 numbers" ) );
             return false;
         }
         outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
@@ -152,7 +149,7 @@ namespace sw
             return bRequired == false;
         if ( value.isArray() == false || value.size() == 0 )
         {
-            fail( RigNodeInternal::makeKeyMessage( key, "must be a non-empty array of names" ) );
+            fail( makeKeyMessage( key, "must be a non-empty array of names" ) );
             return false;
         }
         outListValue.clear();
@@ -161,7 +158,7 @@ namespace sw
             const JSONValue element = value.at( index );
             if ( element.isString() == false || element.asString().empty() )
             {
-                fail( RigNodeInternal::makeKeyMessage( key, "must hold only non-empty strings" ) );
+                fail( makeKeyMessage( key, "must hold only non-empty strings" ) );
                 return false;
             }
             outListValue.push_back( hashed_string( element.asString() ) );
@@ -174,7 +171,7 @@ namespace sw
         JSONValue value = readMember( key, bRequired );
         if ( value.isValid() && value.isArray() == false )
         {
-            fail( RigNodeInternal::makeKeyMessage( key, "must be an array" ) );
+            fail( makeKeyMessage( key, "must be an array" ) );
             value = JSONValue{};
         }
         return value;
@@ -185,7 +182,7 @@ namespace sw
         JSONValue value = readMember( key, bRequired );
         if ( value.isValid() && value.isObject() == false )
         {
-            fail( RigNodeInternal::makeKeyMessage( key, "must be an object" ) );
+            fail( makeKeyMessage( key, "must be an object" ) );
             value = JSONValue{};
         }
         return value;
@@ -205,7 +202,7 @@ namespace sw
                 return true;
             }
         }
-        fail( RigNodeInternal::makeKeyMessage( key, "has unknown value '" ) + text + "'" );
+        fail( makeKeyMessage( key, "has unknown value '" ) + text + "'" );
         return false;
     }
 

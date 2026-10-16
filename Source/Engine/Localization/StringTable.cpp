@@ -69,15 +69,12 @@ namespace sw
         /** @brief 모든 테이블이 함께 쓰는 저장소입니다. 엔진 수명 범위가 닫히면(엔진 종료) 소멸하고, 그 뒤로 앞서 돌려준 문자열 포인터는 모두 무효입니다. */
         ScopeOwned<LocalizedTextArena> s_localizedTextArena;
 
-        struct StringTableInternal
+        /** @brief @p text 를 저장소에 둡니다. 엔진 수명이 끝난 뒤면 nullptr 입니다(테이블을 바꾸지 않는다). */
+        const utf8* store( string_view text )
         {
-            /** @brief @p text 를 저장소에 둡니다. 엔진 수명이 끝난 뒤면 nullptr 입니다(테이블을 바꾸지 않는다). */
-            static const utf8* store( string_view text )
-            {
-                LocalizedTextArena* const pArena = s_localizedTextArena.getOrCreate();
-                return pArena != nullptr ? pArena->store( text ) : nullptr;
-            }
-        };
+            LocalizedTextArena* const pArena = s_localizedTextArena.getOrCreate();
+            return pArena != nullptr ? pArena->store( text ) : nullptr;
+        }
     } // namespace
 } // namespace sw
 
@@ -124,7 +121,7 @@ namespace sw
 
     void StringTable::setStringByHash( uint64 keyHash, string_view value )
     {
-        const utf8* const pStored = StringTableInternal::store( value );
+        const utf8* const pStored = store( value );
         if ( pStored == nullptr )
             return;
         std::unique_lock<std::shared_mutex> lock( _mutex );

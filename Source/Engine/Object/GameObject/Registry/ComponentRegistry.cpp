@@ -13,15 +13,12 @@ namespace sw
 {
     namespace
     {
-        struct ComponentRegistryInternal
+        /** @brief 등록이 없는 칸을 물으면 돌려주는 빈 목록입니다. */
+        const vector<ComponentRegistry::Entry>& getEmptyList()
         {
-            /** @brief 등록이 없는 칸을 물으면 돌려주는 빈 목록입니다. */
-            static const vector<ComponentRegistry::Entry>& getEmptyList()
-            {
-                static const vector<ComponentRegistry::Entry> s_listEmpty;
-                return s_listEmpty;
-            }
-        };
+            static const vector<ComponentRegistry::Entry> s_listEmpty;
+            return s_listEmpty;
+        }
     } // namespace
 
     ComponentRegistry::ComponentRegistry()
@@ -88,7 +85,7 @@ namespace sw
     const vector<ComponentRegistry::Entry>& ComponentRegistry::findEntries( uint32 typeKey, uint32 channel ) const
     {
         const Bucket* pBucket = findBucket( typeKey, channel );
-        return pBucket != nullptr ? pBucket->_listEntry : ComponentRegistryInternal::getEmptyList();
+        return pBucket != nullptr ? pBucket->_listEntry : getEmptyList();
     }
 
     bool ComponentRegistry::containsHandle( uint32 typeKey, uint32 channel, ComponentHandle handle ) const

@@ -24,14 +24,11 @@ namespace sw
 
     namespace
     {
-        struct AssetManagerInternal
+        /** @brief 내장 캐시 정렬 — 종류 이름 순(비우기 순서를 링크 순서와 떼어 고정한다). */
+        bool isKindNameLess( const IAssetCache* pLeft, const IAssetCache* pRight )
         {
-            /** @brief 내장 캐시 정렬 — 종류 이름 순(비우기 순서를 링크 순서와 떼어 고정한다). */
-            static bool isKindNameLess( const IAssetCache* pLeft, const IAssetCache* pRight )
-            {
-                return string_view{ pLeft->getAssetKindName() } < string_view{ pRight->getAssetKindName() };
-            }
-        };
+            return string_view{ pLeft->getAssetKindName() } < string_view{ pRight->getAssetKindName() };
+        }
     } // namespace
 } // namespace sw
 
@@ -60,7 +57,7 @@ namespace sw
                 _listBuiltInAssetCache.push_back( &pRegistration->_pGetShared() );
             }
         }
-        std::sort( _listBuiltInAssetCache.begin(), _listBuiltInAssetCache.end(), AssetManagerInternal::isKindNameLess );
+        std::sort( _listBuiltInAssetCache.begin(), _listBuiltInAssetCache.end(), isKindNameLess );
         for ( IAssetCache* pCache : _listBuiltInAssetCache )
         {
             registerAssetCache( pCache );

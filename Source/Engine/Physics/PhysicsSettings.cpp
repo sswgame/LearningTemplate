@@ -10,14 +10,11 @@ namespace sw
 
     namespace
     {
-        struct PhysicsSettingsInternal
+        const hashed_string& getDefaultName()
         {
-            static const hashed_string& getDefaultName()
-            {
-                static const hashed_string s_defaultName{ "Default" };
-                return s_defaultName;
-            }
-        };
+            static const hashed_string s_defaultName{ "Default" };
+            return s_defaultName;
+        }
     } // namespace
 } // namespace sw
 
@@ -116,14 +113,14 @@ namespace sw
         if ( _listLayer.empty() )
         {
             PhysicsLayerDef layer;
-            layer._name = PhysicsSettingsInternal::getDefaultName();
-            layer._listCollidesWith.push_back( PhysicsSettingsInternal::getDefaultName() );
+            layer._name = getDefaultName();
+            layer._listCollidesWith.push_back( getDefaultName() );
             _listLayer.push_back( layer );
         }
         if ( _listMaterial.empty() )
         {
             PhysicsMaterialDef material;
-            material._name = PhysicsSettingsInternal::getDefaultName();
+            material._name = getDefaultName();
             _listMaterial.push_back( material );
         }
     }

@@ -23,17 +23,14 @@ namespace sw
 
     namespace
     {
-        struct VertexAnimationCookerInternal
+        /** @brief 상대 경로가 활성 게임이 아닌 게임 팩 아래인지입니다(SceneCooker 와 같은 규칙). */
+        bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
         {
-            /** @brief 상대 경로가 활성 게임이 아닌 게임 팩 아래인지입니다(SceneCooker 와 같은 규칙). */
-            static bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
-            {
-                if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
-                    return false;
-                const string activePrefix = string( activePackRoot ) + "/";
-                return StringUtil::startsWith( relativePath, activePrefix, true ) == false;
-            }
-        };
+            if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
+                return false;
+            const string activePrefix = string( activePackRoot ) + "/";
+            return StringUtil::startsWith( relativePath, activePrefix, true ) == false;
+        }
     } // namespace
 } // namespace sw
 
@@ -160,7 +157,7 @@ namespace sw
                 continue;
             const string normalizedFile = FileUtil::normalizeSeparators( filePath );
             const string relativePath   = normalizedFile.substr( std::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
-            if ( VertexAnimationCookerInternal::isInInactiveGamePack( relativePath, activePackRoot ) )
+            if ( isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
             VertexAnimationCookList list;
             if ( list.loadFromResource( relativePath ) == false )

@@ -66,7 +66,7 @@ namespace sw::editor
         std::atomic<int32> s_catalogRowCount{ 0 };
         std::atomic<int32> s_catalogValidation{ 0 }; ///< 0 아직, 1 통과, 2 실패
 
-        struct CatalogProbeInternal
+        struct CatalogPanelInternal
         {
             [[nodiscard]] static bool readFileCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -85,10 +85,7 @@ namespace sw::editor
                 outValue = static_cast<float64>( s_catalogValidation.load() );
                 return true;
             }
-        };
 
-        struct CatalogPanelInternal
-        {
             static constexpr float32 kFileListWidth = 300.0f; ///< 96 DPI 기준입니다
 
             static string makeAbsolutePath( const string& resourceID ) { return FileUtil::joinPath( ResourcePaths::getRootFolderPath(), resourceID ); }
@@ -464,9 +461,9 @@ namespace sw::editor
 namespace sw
 {
     SW_AUTOMATION_PROBE( catalogFileCount, "Editor.CatalogFileCount", "Catalog files the Catalog Editor lists (0 until its scan finishes)",
-                         &editor::CatalogProbeInternal::readFileCount );
+                         &editor::CatalogPanelInternal::readFileCount );
     SW_AUTOMATION_PROBE( catalogRowCount, "Editor.CatalogRowCount", "Rows (elements under the root) of the catalog file open in the Catalog Editor",
-                         &editor::CatalogProbeInternal::readRowCount );
+                         &editor::CatalogPanelInternal::readRowCount );
     SW_AUTOMATION_PROBE( catalogValidation, "Editor.CatalogValidation", "Last validation of the open catalog file: 0 not run, 1 passed, 2 failed",
-                         &editor::CatalogProbeInternal::readValidation );
+                         &editor::CatalogPanelInternal::readValidation );
 } // namespace sw

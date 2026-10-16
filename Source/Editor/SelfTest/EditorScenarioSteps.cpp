@@ -1665,10 +1665,7 @@ namespace sw::editor
                 outValue = static_cast<float64>( pProfiler->getTimeline().countActiveThreads( kRecentFrameCount ) );
                 return true;
             }
-        };
 
-        struct EditorSequencerProbeInternal
-        {
             /** @brief `-gv_editorProbeObject` 오브젝트의 로컬 위치 X 입니다. 시퀀서 키 트랙 미리보기가 옮긴 값입니다. */
             [[nodiscard]] static bool readObjectPositionX( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1865,7 +1862,7 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readProfilerTimelineThreadCount );
 
     SW_AUTOMATION_PROBE( editorObjectPositionX, "Editor.ObjectPositionX", "Local position X of the object named by gv_editorProbeObject",
-                         &EditorSequencerProbeInternal::readObjectPositionX );
+                         &EditorScenarioStepsInternal::readObjectPositionX );
     SW_AUTOMATION_PROBE( editorSequencerKeyFrameCount, "Editor.SequencerKeyFrameCount", "Key frames of the key track selected in the Sequencer panel",
-                         &EditorSequencerProbeInternal::readSequencerKeyFrameCount );
+                         &EditorScenarioStepsInternal::readSequencerKeyFrameCount );
 } // namespace sw::editor

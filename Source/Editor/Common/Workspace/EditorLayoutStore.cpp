@@ -12,13 +12,10 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorLayoutStoreInternal
+        bool isAllowedChar( utf8 ch )
         {
-            static bool isAllowedChar( utf8 ch )
-            {
-                return ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' ) || ( '0' <= ch && ch <= '9' ) || ch == ' ' || ch == '_' || ch == '-';
-            }
-        };
+            return ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' ) || ( '0' <= ch && ch <= '9' ) || ch == ' ' || ch == '_' || ch == '-';
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -33,7 +30,7 @@ namespace sw::editor
             return false;
         for ( const utf8 ch : trimmed )
         {
-            if ( EditorLayoutStoreInternal::isAllowedChar( ch ) == false )
+            if ( isAllowedChar( ch ) == false )
                 return false;
         }
         outName = string( trimmed );

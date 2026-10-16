@@ -13,32 +13,29 @@ namespace sw
 {
     namespace
     {
-        struct PhysicsOverlapWorldInternal
+        /**
+         * @brief 부동소수점 월드 좌표를 정수 그리드 셀 번호로 바꿉니다.
+         * @details float 을 int 로 캐스팅할 때 값이 int32 범위 밖이면 **정의되지 않은 동작**이고,
+         *          NaN 도 마찬가지다. x86 에서 그 캐스팅은 넘치든 모자라든 똑같이 int32
+         *          최솟값이 되므로, `±FLT_MAX` 처럼 아주 넓은 AABB 의 최소와 최대가 **같은
+         *          셀 번호**가 된다. 폭이 1 로 읽혀서 "너무 크다" 판정을 통과하고, 그 바디가
+         *          원점 근처가 아닌 엉뚱한 셀 **하나**에만 등록된다. 그러면 그 바디가 겹치는
+         *          셀을 보는 질의가 바디를 찾지 못한다(조용한 충돌 누락).
+         *
+         *          범위 안으로 접어 넣으면 넓은 AABB 는 넓은 셀 범위가 되고, 셀 수 상한에 걸려
+         *          `_listOversizedBody` 로 간다. 질의가 항상 함께 보는 목록이다. 나눗셈을
+         *          float64 로 하는 이유는 float64 가 모든 int32 를 정확히 담아서 경계 비교가
+         *          어긋나지 않기 때문이다.
+         */
+        int32 toCellCoord( float32 val, float32 cellSize )
         {
-            /**
-             * @brief 부동소수점 월드 좌표를 정수 그리드 셀 번호로 바꿉니다.
-             * @details float 을 int 로 캐스팅할 때 값이 int32 범위 밖이면 **정의되지 않은 동작**이고,
-             *          NaN 도 마찬가지다. x86 에서 그 캐스팅은 넘치든 모자라든 똑같이 int32
-             *          최솟값이 되므로, `±FLT_MAX` 처럼 아주 넓은 AABB 의 최소와 최대가 **같은
-             *          셀 번호**가 된다. 폭이 1 로 읽혀서 "너무 크다" 판정을 통과하고, 그 바디가
-             *          원점 근처가 아닌 엉뚱한 셀 **하나**에만 등록된다. 그러면 그 바디가 겹치는
-             *          셀을 보는 질의가 바디를 찾지 못한다(조용한 충돌 누락).
-             *
-             *          범위 안으로 접어 넣으면 넓은 AABB 는 넓은 셀 범위가 되고, 셀 수 상한에 걸려
-             *          `_listOversizedBody` 로 간다. 질의가 항상 함께 보는 목록이다. 나눗셈을
-             *          float64 로 하는 이유는 float64 가 모든 int32 를 정확히 담아서 경계 비교가
-             *          어긋나지 않기 때문이다.
-             */
-            static int32 toCellCoord( float32 val, float32 cellSize )
-            {
-                const float64 scaled = MathUtil::floor( static_cast<float64>( val ) / static_cast<float64>( cellSize ) );
-                if ( ( scaled >= static_cast<float64>( MathUtil::kMinInt32 ) ) == false ) // NaN 도 이쪽으로 온다
-                    return MathUtil::kMinInt32;
-                if ( scaled > static_cast<float64>( MathUtil::kMaxInt32 ) )
-                    return MathUtil::kMaxInt32;
-                return static_cast<int32>( scaled );
-            }
-        };
+            const float64 scaled = MathUtil::floor( static_cast<float64>( val ) / static_cast<float64>( cellSize ) );
+            if ( ( scaled >= static_cast<float64>( MathUtil::kMinInt32 ) ) == false ) // NaN 도 이쪽으로 온다
+                return MathUtil::kMinInt32;
+            if ( scaled > static_cast<float64>( MathUtil::kMaxInt32 ) )
+                return MathUtil::kMaxInt32;
+            return static_cast<int32>( scaled );
+        }
     } // namespace
 } // namespace sw
 
@@ -69,12 +66,12 @@ namespace sw
         const float3 normMax = float3::max( aabb._min, aabb._max );
 
         CellRange range{};
-        range._minX = PhysicsOverlapWorldInternal::toCellCoord( normMin._x, cellSize );
-        range._maxX = PhysicsOverlapWorldInternal::toCellCoord( normMax._x, cellSize );
-        range._minY = PhysicsOverlapWorldInternal::toCellCoord( normMin._y, cellSize );
-        range._maxY = PhysicsOverlapWorldInternal::toCellCoord( normMax._y, cellSize );
-        range._minZ = PhysicsOverlapWorldInternal::toCellCoord( normMin._z, cellSize );
-        range._maxZ = PhysicsOverlapWorldInternal::toCellCoord( normMax._z, cellSize );
+        range._minX = toCellCoord( normMin._x, cellSize );
+        range._maxX = toCellCoord( normMax._x, cellSize );
+        range._minY = toCellCoord( normMin._y, cellSize );
+        range._maxY = toCellCoord( normMax._y, cellSize );
+        range._minZ = toCellCoord( normMin._z, cellSize );
+        range._maxZ = toCellCoord( normMax._z, cellSize );
         return range;
     }
 

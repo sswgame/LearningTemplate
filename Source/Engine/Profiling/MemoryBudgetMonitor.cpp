@@ -23,11 +23,11 @@ namespace sw
     {
         SW_LOG_CALLER( "MemoryBudget" );
 
-        struct MemoryBudgetMonitorInternal
+        /** @brief 바이트를 KB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
+        [[maybe_unused]] constexpr uint64 toKilobytesX10( uint64 bytes )
         {
-            /** @brief 바이트를 KB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
-            [[maybe_unused]] static constexpr uint64 toKilobytesX10( uint64 bytes ) { return ( bytes * 10 ) / constant::kBytesPerKilobyte; }
-        };
+            return ( bytes * 10 ) / constant::kBytesPerKilobyte;
+        }
     } // namespace
 } // namespace sw
 
@@ -183,7 +183,7 @@ namespace sw
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         const uint64 liveBytes = profiler.getLiveAllocatedBytes();
         const uint64 liveCount = profiler.getLiveAllocationCount();
-        const uint64 totalX10  = MemoryBudgetMonitorInternal::toKilobytesX10( liveBytes );
+        const uint64 totalX10  = toKilobytesX10( liveBytes );
         SW_LOG_INFO( "[Memory] %# — by tag (live, sw allocator)  %#.%# KB in %# blocks   [live KB  share  blocks | peak KB  peak blocks | budget KB  use%%]", pTitle,
                      totalX10 / 10, totalX10 % 10, liveCount );
         for ( const MemoryTag tag : profiler.makeTagOrderByLiveBytes() )
@@ -193,8 +193,8 @@ namespace sw
             const uint64              budget = stats._budgetBytes.load( std::memory_order_relaxed );
             if ( bytes == 0 && budget == 0 )
                 continue;
-            const uint64 kbX10        = MemoryBudgetMonitorInternal::toKilobytesX10( bytes );
-            const uint64 peakX10      = MemoryBudgetMonitorInternal::toKilobytesX10( stats._peakAllocatedBytes.load( std::memory_order_relaxed ) );
+            const uint64 kbX10        = toKilobytesX10( bytes );
+            const uint64 peakX10      = toKilobytesX10( stats._peakAllocatedBytes.load( std::memory_order_relaxed ) );
             const uint64 sharePermill = liveBytes == 0 ? 0 : ( bytes * 1000 ) / liveBytes;
             if ( budget == 0 )
             {
@@ -214,7 +214,7 @@ namespace sw
         const uint64 swBlockBytes  = liveBytes + liveCount * Memory::getAllocationHeaderSize();
         if ( platformBytes > swBlockBytes )
         {
-            const uint64 outsideX10 = MemoryBudgetMonitorInternal::toKilobytesX10( platformBytes - swBlockBytes );
+            const uint64 outsideX10 = toKilobytesX10( platformBytes - swBlockBytes );
             SW_LOG_INFO( "[Memory]   (outside the sw allocator — std::allocator · third-party · static init)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
         }
 
@@ -226,7 +226,7 @@ namespace sw
             const uint64 swCount      = profiler.getTotalAllocationCount();
             const uint64 swBytes      = profiler.getTotalAllocatedBytes() + swCount * Memory::getAllocationHeaderSize();
             const uint64 outsideCount = platformRequestCount > swCount ? platformRequestCount - swCount : 0;
-            const uint64 outsideX10   = MemoryBudgetMonitorInternal::toKilobytesX10( platformTotalBytes > swBytes ? platformTotalBytes - swBytes : 0 );
+            const uint64 outsideX10   = toKilobytesX10( platformTotalBytes > swBytes ? platformTotalBytes - swBytes : 0 );
             SW_LOG_INFO( "[Memory]   (outside the sw allocator, cumulative since start)  %#.%# KB in %# allocations", outsideX10 / 10, outsideX10 % 10, outsideCount );
         }
 #endif

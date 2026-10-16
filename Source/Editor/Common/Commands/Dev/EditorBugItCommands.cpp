@@ -17,26 +17,23 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorBugItCommandsInternal
+        /** @brief 지금 상태를 BugIt 폴더에 모으고 그 폴더를 알립니다. */
+        void runReportBug()
         {
-            /** @brief 지금 상태를 BugIt 폴더에 모으고 그 폴더를 알립니다. */
-            static void runReportBug()
-            {
-                string         directory;
-                const bool     bCaptured = BugItReport::capture( BugItReport::makeInputs( "editor" ), directory );
-                EditorContext* pContext  = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
-                if ( bCaptured )
-                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
-                else
-                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
-            }
-        };
+            string         directory;
+            const bool     bCaptured = BugItReport::capture( BugItReport::makeInputs( "editor" ), directory );
+            EditorContext* pContext  = EditorContext::get();
+            if ( pContext == nullptr )
+                return;
+            if ( bCaptured )
+                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
+            else
+                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
+        }
     } // namespace
 
     SW_EDITOR_COMMAND( ReportBug, "help.reportBug", 2900, "Report Bug (BugIt)", editoricon::kBug, "Editor",
                        "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 Saved/BugIt/<시각>/ 에 모읍니다(bugitgo 로 그 자리에 돌아간다)",
                        "Collect a bug report folder", ( EditorCommandShortcut{ EditorCommandKey::F12, static_cast<uint8>( commandmodifier::kCtrl | commandmodifier::kShift ) } ),
-                       &EditorBugItCommandsInternal::runReportBug, nullptr, "MainMenu/Edit" );
+                       &runReportBug, nullptr, "MainMenu/Edit" );
 } // namespace sw::editor

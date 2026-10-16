@@ -27,19 +27,16 @@ namespace sw
 
     namespace
     {
-        struct UserSettingsManagerInternal
+        /** @brief 열거형 선택지의 순번입니다(전역 변수에 넘길 기본 글). */
+        uint32 findOptionIndex( const UserSettingDef& def, string_view value )
         {
-            /** @brief 열거형 선택지의 순번입니다(전역 변수에 넘길 기본 글). */
-            static uint32 findOptionIndex( const UserSettingDef& def, string_view value )
+            for ( uint32 optionIndex = 0; optionIndex < static_cast<uint32>( def._listOption.size() ); ++optionIndex )
             {
-                for ( uint32 optionIndex = 0; optionIndex < static_cast<uint32>( def._listOption.size() ); ++optionIndex )
-                {
-                    if ( StringUtil::equals( def._listOption[optionIndex]._value, value, true ) )
-                        return optionIndex;
-                }
-                return invalid_index::kUint32;
+                if ( StringUtil::equals( def._listOption[optionIndex]._value, value, true ) )
+                    return optionIndex;
             }
-        };
+            return invalid_index::kUint32;
+        }
     } // namespace
 } // namespace sw
 
@@ -816,7 +813,7 @@ namespace sw
                     return pVariable->setValueFromString( value );
 
                 // 열거형은 선택지의 `targetValue`, 없으면 선택지 순번을 넘긴다. 문자열 변수면 선택지 이름 그대로다.
-                const uint32 optionIndex = UserSettingsManagerInternal::findOptionIndex( def, value );
+                const uint32 optionIndex = findOptionIndex( def, value );
                 if ( pVariable->_type == GlobalVariableType::String || optionIndex == invalid_index::kUint32 )
                     return pVariable->setValueFromString( value );
                 const UserSettingOption& option = def._listOption[optionIndex];

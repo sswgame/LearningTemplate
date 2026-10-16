@@ -65,14 +65,14 @@ namespace sw::editor
         }
 
         /**
-         * @struct BandCompressJobInternal
+         * @struct BandCompressJob
          * @brief 밉 체인을 BC 형식으로 압축하는 일을 가로 띠로 나눠 작업 시스템에 넘깁니다.
          * @details BC 블록은 4×4 화소마다 독립이므로, 높이가 4 의 배수인 띠로 잘라 따로 압축해 이어 붙이면 통째로 압축한 것과 같은 바이트가 나온다.
          *          `TEX_COMPRESS_DEFAULT` 를 쓸 때만 그렇다. 디더링이나 오차 확산을 켜면 블록 사이가 이어져 이 성질이 깨진다. DirectXTex 의 `TEX_COMPRESS_PARALLEL` 은
          *          OpenMP 로만 동작하고 vcpkg 빌드는 OpenMP 없이(`BC_USE_OPENMP` 꺼짐) 빌드되어 효과가 없으므로 엔진 작업 시스템으로 나눈다.
          *          띠 높이(`kBandRows`)보다 낮은 밉은 띠가 하나뿐이라 나누지 않고, 모든 밉의 띠를 한 목록으로 펼쳐 한 번에 나눈다.
          */
-        struct BandCompressJobInternal
+        struct BandCompressJob
         {
             /** @brief 띠 하나의 화소 행 수입니다. BC 블록 높이이므로 4 의 배수여야 합니다. */
             static constexpr uint32 kBandRows = 64;
@@ -151,14 +151,14 @@ namespace sw::editor
                     }
                 }
 
-                const Stopwatch         stopwatch;
-                BandCompressJobInternal job;
+                const Stopwatch stopwatch;
+                BandCompressJob job;
                 job._pBand  = listBand.data();
                 job._format = format;
                 // 작업 시스템이 없으면(테스트 하니스, 서비스 연결 전) 현재 스레드가 띠를 차례로 압축한다. 결과 바이트는 같다.
                 const uint32                bandCount    = static_cast<uint32>( listBand.size() );
                 TaskManager*                pTaskManager = editor::findSubsystem<TaskManager>();
-                const ParallelBlockDelegate body         = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJobInternal::run, &job );
+                const ParallelBlockDelegate body         = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJob::run, &job );
                 if ( pTaskManager != nullptr )
                     pTaskManager->runParallel( bandCount, 2, body );
                 else
@@ -241,7 +241,7 @@ namespace sw::editor
             if ( SUCCEEDED( hr ) )
             {
                 hr = ( targetFormat == DXGI_FORMAT_BC6H_UF16 )
-                       ? BandCompressJobInternal::compress( mipChain, targetFormat, finalImage )
+                       ? BandCompressJob::compress( mipChain, targetFormat, finalImage )
                        : DirectX::Convert( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, kFilterFlags,
                                            DirectX::TEX_THRESHOLD_DEFAULT, finalImage );
             }
@@ -255,12 +255,12 @@ namespace sw::editor
         }
 
         /**
-         * @struct SwizzleLayoutInternal
+         * @struct SwizzleLayout
          * @brief 스위즐 하나가 정하는 두 가지, 바이트를 어떻게 놓는지와 그것을 무슨 이름으로 부르는지입니다.
          * @details 이 둘을 따로 두면 반드시 어긋난다. 섞기 쪽만 아는 스위즐은 바이트는 옮겨지는데 결과물에 "RGBA" 라고
          *          기록되어 색이 깨진다. 스위즐을 추가하려면 이 테이블에 항목 하나만 추가하면 된다.
          */
-        struct SwizzleLayoutInternal
+        struct SwizzleLayout
         {
             /** @brief 결과의 n 번째 바이트를 원본(항상 RGBA)의 몇 번째 바이트에서 가져올지 정합니다. */
             uint8 _arrSourceChannel[4];
@@ -270,22 +270,22 @@ namespace sw::editor
             DXGI_FORMAT _format;
         };
 
-        const SwizzleLayoutInternal& swizzleLayoutInternal( TextureSwizzle swizzle )
+        const SwizzleLayout& swizzleLayoutInternal( TextureSwizzle swizzle )
         {
             // BGRA 와 ARGB 는 같은 것이다. D3D9 의 `D3DFMT_A8R8G8B8` 은 메모리에서 B, G, R, A 순서이고 DXGI 는 그것을 `B8G8R8A8`
             // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. RGBA 를 왼쪽으로 한 칸 돌린 GBAR 은 어떻게 읽어도
             // ARGB 가 아니므로 주의한다.
-            static constexpr SwizzleLayoutInternal kRgba{
+            static constexpr SwizzleLayout kRgba{
                 { 0, 1, 2, 3 },
                 SW_FALSE,
                 DXGI_FORMAT_R8G8B8A8_UNORM
             };
-            static constexpr SwizzleLayoutInternal kBgra{
+            static constexpr SwizzleLayout kBgra{
                 { 2, 1, 0, 3 },
                 SW_FALSE,
                 DXGI_FORMAT_B8G8R8A8_UNORM
             };
-            static constexpr SwizzleLayoutInternal kRgb1{
+            static constexpr SwizzleLayout kRgb1{
                 { 0, 1, 2, 3 },
                 SW_TRUE,
                 DXGI_FORMAT_R8G8B8A8_UNORM
@@ -446,7 +446,7 @@ namespace sw::editor
 
         if ( DirectX::IsCompressed( targetFormat ) )
         {
-            const HRESULT hr = BandCompressJobInternal::compress( mipChain, targetFormat, finalImage );
+            const HRESULT hr = BandCompressJob::compress( mipChain, targetFormat, finalImage );
             if ( FAILED( hr ) )
             {
                 SW_LOG_ERROR(
@@ -489,8 +489,8 @@ namespace sw::editor
         if ( rawImage._bytes.size() < totalPixels * 4 )
             return;
 
-        uint8*                       pData  = rawImage._bytes.data();
-        const SwizzleLayoutInternal& layout = swizzleLayoutInternal( rule._swizzle );
+        uint8*               pData  = rawImage._bytes.data();
+        const SwizzleLayout& layout = swizzleLayoutInternal( rule._swizzle );
 
         // 그린 반전을 먼저 한다. 입력은 항상 RGBA 이므로 이 시점의 초록 채널 위치는 1번으로 정해져 있다. 섞은 뒤에 뒤집으려면
         // "결과의 1번이 초록" 이라는 가정이 필요한데, 이는 현재 스위즐에서 우연히 맞을 뿐이고 새 스위즐을 추가하는 순간 조용히 틀린다.
@@ -564,7 +564,7 @@ namespace sw::editor
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
-        const SwizzleLayoutInternal&           layout = swizzleLayoutInternal( rule._swizzle );
+        const SwizzleLayout&                   layout = swizzleLayoutInternal( rule._swizzle );
         StringBuilder<constant::kMaxBuffer256> ruleText;
         ruleText.appendFormat( "importer=%#;format=%#;channel=%#%#%#%#;opaque=%#;mips=%#;srgb=%#;invertGreen=%#",
                                TextureImporterInternal::kImporterVersion,

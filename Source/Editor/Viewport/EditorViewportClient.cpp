@@ -36,17 +36,14 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorViewportClientInternal
+        /**
+         * @brief 씬 뷰 이미지를 그린 카메라(에디터 카메라)입니다. 호스트가 씬 뷰를 그리는 카메라와 같습니다(`ImGuiEditor::getSceneViewCamera`).
+         * @details 오버레이(격자, 시각화, 디버그 드로우, 피킹, 기즈모)는 이 카메라로 투영해야 이미지와 겹친다. Play 중에도 씬 뷰는 이 카메라를 쓴다.
+         */
+        CameraComponent* getSceneViewCamera()
         {
-            /**
-             * @brief 씬 뷰 이미지를 그린 카메라(에디터 카메라)입니다. 호스트가 씬 뷰를 그리는 카메라와 같습니다(`ImGuiEditor::getSceneViewCamera`).
-             * @details 오버레이(격자, 시각화, 디버그 드로우, 피킹, 기즈모)는 이 카메라로 투영해야 이미지와 겹친다. Play 중에도 씬 뷰는 이 카메라를 쓴다.
-             */
-            static CameraComponent* getSceneViewCamera()
-            {
-                return EditorCamera::ensure( editor::getActiveScene() );
-            }
-        };
+            return EditorCamera::ensure( editor::getActiveScene() );
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -112,7 +109,7 @@ namespace sw::editor
                 _camera.zoomOrthographic( io.MouseWheel );
         }
 
-        _camera.applyToCamera( EditorViewportClientInternal::getSceneViewCamera() );
+        _camera.applyToCamera( getSceneViewCamera() );
     }
 
     void EditorViewportClient::processShortcutKeys()
@@ -186,7 +183,7 @@ namespace sw::editor
         const bool bCanvasHovered = ImGui::IsItemHovered();
         const bool bCanvasClicked = ImGui::IsItemClicked( ImGuiMouseButton_Left );
 
-        CameraComponent* pCamera = EditorViewportClientInternal::getSceneViewCamera();
+        CameraComponent* pCamera = getSceneViewCamera();
         const float2     canvasPos{ imagePos.x, imagePos.y };
 
         if ( pCamera != nullptr )

@@ -19,26 +19,23 @@ namespace sw::editor
 
     namespace
     {
-        struct LocalizationToolEntryInternal
+        /** @brief 작업 하나를 돌립니다. 성공하면 true 입니다(모르는 작업은 false). */
+        bool runTask( EditorLocalizationTask task, string_view poPath, string_view projectArgument )
         {
-            /** @brief 작업 하나를 돌립니다. 성공하면 true 입니다(모르는 작업은 false). */
-            static bool runTask( EditorLocalizationTask task, string_view poPath, string_view projectArgument )
+            switch ( task )
             {
-                switch ( task )
-                {
-                    case EditorLocalizationTask::GatherText:
-                        return LocalizationTools::runGatherCommand( false, projectArgument );
-                    case EditorLocalizationTask::CheckText:
-                        return LocalizationTools::runGatherCommand( true, projectArgument );
-                    case EditorLocalizationTask::ImportPo:
-                        return LocalizationTools::runImportCommand( poPath, projectArgument );
-                    case EditorLocalizationTask::ExportPo:
-                        return LocalizationTools::runExportCommand( projectArgument );
-                }
-                SW_LOG_ERROR( "Unknown localization task %#", static_cast<uint32>( task ) );
-                return false;
+                case EditorLocalizationTask::GatherText:
+                    return LocalizationTools::runGatherCommand( false, projectArgument );
+                case EditorLocalizationTask::CheckText:
+                    return LocalizationTools::runGatherCommand( true, projectArgument );
+                case EditorLocalizationTask::ImportPo:
+                    return LocalizationTools::runImportCommand( poPath, projectArgument );
+                case EditorLocalizationTask::ExportPo:
+                    return LocalizationTools::runExportCommand( projectArgument );
             }
-        };
+            SW_LOG_ERROR( "Unknown localization task %#", static_cast<uint32>( task ) );
+            return false;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -47,8 +44,8 @@ extern "C" SW_MODULE_API int32 runEditorLocalizationTask( uint32 task, const utf
     // 인스턴스가 없는 헤드리스 호출이라 서비스 범위를 이 호출 동안만 묶는다(`importEditorAssets` 와 같은 길).
     if ( pService != nullptr )
         sw::editor::bindEditorService( *pService );
-    const bool bSucceeded = sw::editor::LocalizationToolEntryInternal::runTask( static_cast<sw::EditorLocalizationTask>( task ), pPoPath != nullptr ? pPoPath : "",
-                                                                                pProjectArgument != nullptr ? pProjectArgument : "" );
+    const bool bSucceeded = sw::editor::runTask( static_cast<sw::EditorLocalizationTask>( task ), pPoPath != nullptr ? pPoPath : "",
+                                                 pProjectArgument != nullptr ? pProjectArgument : "" );
     if ( pService != nullptr )
         sw::editor::unbindEditorService();
     return bSucceeded ? 0 : 1;

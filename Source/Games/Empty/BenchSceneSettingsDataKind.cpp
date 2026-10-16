@@ -9,16 +9,13 @@ namespace sw
 {
     namespace
     {
-        struct BenchSceneSettingsDataKindInternal
+        [[nodiscard]] bool loadBenchSceneSettings( const string& resourceID )
         {
-            [[nodiscard]] static bool loadBenchSceneSettings( const string& resourceID )
-            {
-                BenchSceneSettings settings;
-                return ReflectedXMLFile::loadDesc( resourceID, settings );
-            }
-        };
+            BenchSceneSettings settings;
+            return ReflectedXMLFile::loadDesc( resourceID, settings );
+        }
     } // namespace
 
     /** @brief 벤치 장면 설정(`BenchSceneSettings`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( BenchSceneSettings, "benchscene", "game/", nullptr, "/data/benchscene.xml", &BenchSceneSettingsDataKindInternal::loadBenchSceneSettings );
+    SW_RESOURCE_DATA_KIND( BenchSceneSettings, "benchscene", "game/", nullptr, "/data/benchscene.xml", &loadBenchSceneSettings );
 } // namespace sw

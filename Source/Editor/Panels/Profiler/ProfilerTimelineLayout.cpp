@@ -8,31 +8,28 @@ namespace sw::editor
 {
     namespace
     {
-        struct ProfilerTimelineLayoutInternal
+        /** @brief 범위를 한도 안으로 옮깁니다. 범위가 한도보다 넓으면 한도 전체입니다. */
+        void clampRange( uint64& inoutBegin, uint64& inoutEnd, uint64 limitBegin, uint64 limitEnd )
         {
-            /** @brief 범위를 한도 안으로 옮깁니다. 범위가 한도보다 넓으면 한도 전체입니다. */
-            static void clampRange( uint64& inoutBegin, uint64& inoutEnd, uint64 limitBegin, uint64 limitEnd )
+            const uint64 limitSpan = limitEnd > limitBegin ? limitEnd - limitBegin : 0;
+            const uint64 span      = inoutEnd > inoutBegin ? inoutEnd - inoutBegin : 0;
+            if ( span >= limitSpan )
             {
-                const uint64 limitSpan = limitEnd > limitBegin ? limitEnd - limitBegin : 0;
-                const uint64 span      = inoutEnd > inoutBegin ? inoutEnd - inoutBegin : 0;
-                if ( span >= limitSpan )
-                {
-                    inoutBegin = limitBegin;
-                    inoutEnd   = limitEnd;
-                    return;
-                }
-                if ( inoutBegin < limitBegin )
-                {
-                    inoutBegin = limitBegin;
-                    inoutEnd   = limitBegin + span;
-                }
-                if ( inoutEnd > limitEnd )
-                {
-                    inoutEnd   = limitEnd;
-                    inoutBegin = limitEnd - span;
-                }
+                inoutBegin = limitBegin;
+                inoutEnd   = limitEnd;
+                return;
             }
-        };
+            if ( inoutBegin < limitBegin )
+            {
+                inoutBegin = limitBegin;
+                inoutEnd   = limitBegin + span;
+            }
+            if ( inoutEnd > limitEnd )
+            {
+                inoutEnd   = limitEnd;
+                inoutBegin = limitEnd - span;
+            }
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -90,7 +87,7 @@ namespace sw::editor
         const float64 newBegin  = MathUtil::max( 0.0, pivotTime - newSpan * pivotT );
         inoutBegin              = static_cast<uint64>( newBegin );
         inoutEnd                = static_cast<uint64>( newBegin + newSpan );
-        ProfilerTimelineLayoutInternal::clampRange( inoutBegin, inoutEnd, limitBegin, limitEnd );
+        clampRange( inoutBegin, inoutEnd, limitBegin, limitEnd );
     }
 
     void ProfilerTimelineLayout::pan( uint64& inoutBegin, uint64& inoutEnd, float32 deltaPixels, float32 width, uint64 limitBegin, uint64 limitEnd )
@@ -102,6 +99,6 @@ namespace sw::editor
         const float64 newBegin   = MathUtil::max( 0.0, static_cast<float64>( inoutBegin ) + deltaNanos );
         inoutBegin               = static_cast<uint64>( newBegin );
         inoutEnd                 = static_cast<uint64>( newBegin + span );
-        ProfilerTimelineLayoutInternal::clampRange( inoutBegin, inoutEnd, limitBegin, limitEnd );
+        clampRange( inoutBegin, inoutEnd, limitBegin, limitEnd );
     }
 } // namespace sw::editor

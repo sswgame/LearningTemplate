@@ -14,29 +14,26 @@ namespace sw
 
     namespace
     {
-        struct FacialRigInternal
+        /** @brief 포즈 이름이 모두 비지 않았고 겹치지 않는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
+        bool hasUniquePoseNames( const vector<FacialPose>& listPose, const utf8* pListName, string_view sourceLabel )
         {
-            /** @brief 포즈 이름이 모두 비지 않았고 겹치지 않는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
-            static bool hasUniquePoseNames( const vector<FacialPose>& listPose, const utf8* pListName, string_view sourceLabel )
+            bool bValid = true;
+            for ( size_t poseIndex = 0; poseIndex < listPose.size(); ++poseIndex )
             {
-                bool bValid = true;
-                for ( size_t poseIndex = 0; poseIndex < listPose.size(); ++poseIndex )
+                const FacialPose& pose       = listPose[poseIndex];
+                bool              bDuplicate = false;
+                for ( size_t previousIndex = 0; previousIndex < poseIndex; ++previousIndex )
                 {
-                    const FacialPose& pose       = listPose[poseIndex];
-                    bool              bDuplicate = false;
-                    for ( size_t previousIndex = 0; previousIndex < poseIndex; ++previousIndex )
-                    {
-                        if ( listPose[previousIndex]._name == pose._name )
-                            bDuplicate = true;
-                    }
-                    if ( pose._name.empty() == false && bDuplicate == false )
-                        continue;
-                    SW_LOG_ERROR( "Facial rig '%#': %# entry %# needs a unique, non-empty _name", sourceLabel, pListName, poseIndex );
-                    bValid = false;
+                    if ( listPose[previousIndex]._name == pose._name )
+                        bDuplicate = true;
                 }
-                return bValid;
+                if ( pose._name.empty() == false && bDuplicate == false )
+                    continue;
+                SW_LOG_ERROR( "Facial rig '%#': %# entry %# needs a unique, non-empty _name", sourceLabel, pListName, poseIndex );
+                bValid = false;
             }
-        };
+            return bValid;
+        }
     } // namespace
 } // namespace sw
 
@@ -70,8 +67,8 @@ namespace sw
 
     bool FacialRig::validateFile( string_view sourceLabel ) const
     {
-        bool bValid = FacialRigInternal::hasUniquePoseNames( _listExpression, "_listExpression", sourceLabel );
-        if ( FacialRigInternal::hasUniquePoseNames( _listViseme, "_listViseme", sourceLabel ) == false )
+        bool bValid = hasUniquePoseNames( _listExpression, "_listExpression", sourceLabel );
+        if ( hasUniquePoseNames( _listViseme, "_listViseme", sourceLabel ) == false )
             bValid = false;
         const bool bInvalidBlinkSettings = _blink._minInterval <= 0.0f || _blink._maxInterval < _blink._minInterval || _blink._duration <= 0.0f;
         if ( bInvalidBlinkSettings )

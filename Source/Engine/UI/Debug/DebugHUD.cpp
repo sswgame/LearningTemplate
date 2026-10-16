@@ -130,6 +130,141 @@ namespace sw
                 formatstring( text.data(), text.capacity(), "%.2f", value );
                 return string( text.c_str() );
             }
+
+            static void appendSectionList( string& outReply )
+            {
+                for ( const DebugHUDSectionRegistration* pRegistration : DebugHUDRegistry::get().getSections() )
+                {
+                    if ( outReply.empty() == false )
+                        outReply += ", ";
+                    outReply += pRegistration->_pName;
+                    outReply += DebugHUD::isSectionShown( *pRegistration ) ? " on" : " off";
+                }
+            }
+
+            [[nodiscard]] static bool readOnOff( const string& word, bool& outValue )
+            {
+                if ( StringUtil::equals( word, "on", true ) )
+                {
+                    outValue = true;
+                    return true;
+                }
+                if ( StringUtil::equals( word, "off", true ) )
+                {
+                    outValue = false;
+                    return true;
+                }
+                return false;
+            }
+
+            static bool runSectionCommand( DebugHUD& hud, const vector<string>& listArgument, string& outReply )
+            {
+                const DebugHUDSectionRegistration* pRegistration = DebugHUDRegistry::get().findSection( listArgument[0] );
+                if ( pRegistration == nullptr )
+                {
+                    outReply = "unknown section '" + listArgument[0] + "' - sections: ";
+                    appendSectionList( outReply );
+                    return false;
+                }
+                bool bShown = DebugHUD::isSectionShown( *pRegistration ) == false;
+                if ( listArgument.size() >= 2 && readOnOff( listArgument[1], bShown ) == false )
+                    return false;
+                (void)hud.setSectionShown( pRegistration->_pName, bShown ); // 방금 레지스트리에서 찾은 이름이다
+                if ( bShown )
+                    hud.setShown( true ); // 섹션을 켜면 HUD 도 보인다(언리얼 `stat fps` 와 같다)
+                outReply = string( "debug HUD section " ) + pRegistration->_pName + ( bShown ? " on" : " off" );
+                return true;
+            }
+
+            static bool runCommand( const vector<string>& listArgument, string& outReply )
+            {
+                DebugHUD* pHUD = DebugHUD::findActive();
+                if ( pHUD == nullptr )
+                {
+                    outReply = "no debug HUD in this run (no runtime UI)";
+                    return false;
+                }
+                bool bShown = pHUD->isShown() == false;
+                if ( listArgument.empty() || readOnOff( listArgument[0], bShown ) )
+                {
+                    pHUD->setShown( bShown );
+                    outReply = bShown ? "debug HUD on" : "debug HUD off";
+                    return true;
+                }
+                const string& word = listArgument[0];
+                if ( StringUtil::equals( word, "list", true ) )
+                {
+                    appendSectionList( outReply );
+                    return true;
+                }
+                if ( StringUtil::equals( word, "window", true ) )
+                {
+                    outReply = "debug HUD window";
+                    return pHUD->openWindow();
+                }
+                if ( StringUtil::equals( word, "corner", true ) )
+                {
+                    DebugHUDCorner corner = DebugHUDCorner::TopLeft;
+                    if ( listArgument.size() < 2 || DebugHUD::tryParseCorner( listArgument[1], corner ) == false )
+                        return false;
+                    pHUD->setCorner( corner );
+                    outReply = string( "debug HUD corner " ) + DebugHUD::getCornerName( corner );
+                    return true;
+                }
+                if ( StringUtil::equals( word, "opacity", true ) )
+                {
+                    float32 opacity = 0.0f;
+                    if ( listArgument.size() < 2 || StringUtil::parseFloat( listArgument[1], opacity ) == false )
+                        return false;
+                    pHUD->setOpacity( opacity );
+                    outReply = "debug HUD opacity " + DebugHUDInternal::makeFloatText( DebugHUD::getOpacity() );
+                    return true;
+                }
+                return runSectionCommand( *pHUD, listArgument, outReply );
+            }
+
+            [[nodiscard]] static bool readShown( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const DebugHUD* pHUD = DebugHUD::findActive();
+                outValue             = pHUD != nullptr && pHUD->isScreenOpen() ? 1.0 : 0.0;
+                return pHUD != nullptr;
+            }
+
+            [[nodiscard]] static bool readWindowOpen( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const DebugHUD* pHUD = DebugHUD::findActive();
+                outValue             = pHUD != nullptr && pHUD->isWindowOpen() ? 1.0 : 0.0;
+                return pHUD != nullptr;
+            }
+
+            [[nodiscard]] static bool readCorner( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const DebugHUD* pHUD   = DebugHUD::findActive();
+                DebugHUDCorner  corner = DebugHUDCorner::TopLeft;
+                if ( pHUD == nullptr || pHUD->tryGetArrangedCorner( corner ) == false )
+                    return false;
+                outValue = static_cast<float64>( corner );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSectionCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const DebugHUD* pHUD = DebugHUD::findActive();
+                outValue             = pHUD != nullptr ? static_cast<float64>( pHUD->getDrawnSectionCount() ) : 0.0;
+                return pHUD != nullptr;
+            }
+
+            [[nodiscard]] static bool readSectionShown( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                const DebugHUD* pHUD = DebugHUD::findActive();
+                outValue             = pHUD != nullptr && pHUD->isSectionDrawn( gv_debugHUDProbeSection ) ? 1.0 : 0.0;
+                return pHUD != nullptr;
+            }
         };
 
         /**
@@ -495,162 +630,21 @@ namespace sw
 
         /** @brief 지금 동작 중인 컨트롤러입니다(Engine 이미지에 있으므로 핫 리로드와 무관합니다). */
         DebugHUD* s_pActiveHUD = nullptr;
-
-        struct DebugHUDCommandInternal
-        {
-            static void appendSectionList( string& outReply )
-            {
-                for ( const DebugHUDSectionRegistration* pRegistration : DebugHUDRegistry::get().getSections() )
-                {
-                    if ( outReply.empty() == false )
-                        outReply += ", ";
-                    outReply += pRegistration->_pName;
-                    outReply += DebugHUD::isSectionShown( *pRegistration ) ? " on" : " off";
-                }
-            }
-
-            [[nodiscard]] static bool readOnOff( const string& word, bool& outValue )
-            {
-                if ( StringUtil::equals( word, "on", true ) )
-                {
-                    outValue = true;
-                    return true;
-                }
-                if ( StringUtil::equals( word, "off", true ) )
-                {
-                    outValue = false;
-                    return true;
-                }
-                return false;
-            }
-
-            static bool runSectionCommand( DebugHUD& hud, const vector<string>& listArgument, string& outReply )
-            {
-                const DebugHUDSectionRegistration* pRegistration = DebugHUDRegistry::get().findSection( listArgument[0] );
-                if ( pRegistration == nullptr )
-                {
-                    outReply = "unknown section '" + listArgument[0] + "' - sections: ";
-                    appendSectionList( outReply );
-                    return false;
-                }
-                bool bShown = DebugHUD::isSectionShown( *pRegistration ) == false;
-                if ( listArgument.size() >= 2 && readOnOff( listArgument[1], bShown ) == false )
-                    return false;
-                (void)hud.setSectionShown( pRegistration->_pName, bShown ); // 방금 레지스트리에서 찾은 이름이다
-                if ( bShown )
-                    hud.setShown( true ); // 섹션을 켜면 HUD 도 보인다(언리얼 `stat fps` 와 같다)
-                outReply = string( "debug HUD section " ) + pRegistration->_pName + ( bShown ? " on" : " off" );
-                return true;
-            }
-
-            static bool runCommand( const vector<string>& listArgument, string& outReply )
-            {
-                DebugHUD* pHUD = DebugHUD::findActive();
-                if ( pHUD == nullptr )
-                {
-                    outReply = "no debug HUD in this run (no runtime UI)";
-                    return false;
-                }
-                bool bShown = pHUD->isShown() == false;
-                if ( listArgument.empty() || readOnOff( listArgument[0], bShown ) )
-                {
-                    pHUD->setShown( bShown );
-                    outReply = bShown ? "debug HUD on" : "debug HUD off";
-                    return true;
-                }
-                const string& word = listArgument[0];
-                if ( StringUtil::equals( word, "list", true ) )
-                {
-                    appendSectionList( outReply );
-                    return true;
-                }
-                if ( StringUtil::equals( word, "window", true ) )
-                {
-                    outReply = "debug HUD window";
-                    return pHUD->openWindow();
-                }
-                if ( StringUtil::equals( word, "corner", true ) )
-                {
-                    DebugHUDCorner corner = DebugHUDCorner::TopLeft;
-                    if ( listArgument.size() < 2 || DebugHUD::tryParseCorner( listArgument[1], corner ) == false )
-                        return false;
-                    pHUD->setCorner( corner );
-                    outReply = string( "debug HUD corner " ) + DebugHUD::getCornerName( corner );
-                    return true;
-                }
-                if ( StringUtil::equals( word, "opacity", true ) )
-                {
-                    float32 opacity = 0.0f;
-                    if ( listArgument.size() < 2 || StringUtil::parseFloat( listArgument[1], opacity ) == false )
-                        return false;
-                    pHUD->setOpacity( opacity );
-                    outReply = "debug HUD opacity " + DebugHUDInternal::makeFloatText( DebugHUD::getOpacity() );
-                    return true;
-                }
-                return runSectionCommand( *pHUD, listArgument, outReply );
-            }
-        };
-
-        struct DebugHUDProbeInternal
-        {
-            [[nodiscard]] static bool readShown( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                const DebugHUD* pHUD = DebugHUD::findActive();
-                outValue             = pHUD != nullptr && pHUD->isScreenOpen() ? 1.0 : 0.0;
-                return pHUD != nullptr;
-            }
-
-            [[nodiscard]] static bool readWindowOpen( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                const DebugHUD* pHUD = DebugHUD::findActive();
-                outValue             = pHUD != nullptr && pHUD->isWindowOpen() ? 1.0 : 0.0;
-                return pHUD != nullptr;
-            }
-
-            [[nodiscard]] static bool readCorner( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                const DebugHUD* pHUD   = DebugHUD::findActive();
-                DebugHUDCorner  corner = DebugHUDCorner::TopLeft;
-                if ( pHUD == nullptr || pHUD->tryGetArrangedCorner( corner ) == false )
-                    return false;
-                outValue = static_cast<float64>( corner );
-                return true;
-            }
-
-            [[nodiscard]] static bool readSectionCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                const DebugHUD* pHUD = DebugHUD::findActive();
-                outValue             = pHUD != nullptr ? static_cast<float64>( pHUD->getDrawnSectionCount() ) : 0.0;
-                return pHUD != nullptr;
-            }
-
-            [[nodiscard]] static bool readSectionShown( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                const DebugHUD* pHUD = DebugHUD::findActive();
-                outValue             = pHUD != nullptr && pHUD->isSectionDrawn( gv_debugHUDProbeSection ) ? 1.0 : 0.0;
-                return pHUD != nullptr;
-            }
-        };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
     SW_DEV_COMMAND( debugHUD, "hud", "hud [on|off|list|window] | hud <section> [on|off] | hud corner <topLeft|topRight|bottomLeft|bottomRight> | hud opacity <0.2..1>",
-                    "Show or hide the debug HUD and its sections (Ctrl+F3 toggles it)", &DebugHUDCommandInternal::runCommand );
+                    "Show or hide the debug HUD and its sections (Ctrl+F3 toggles it)", &DebugHUDInternal::runCommand );
 
-    SW_AUTOMATION_PROBE( debugHUDShown, "DebugHUD.Shown", "1 while the debug HUD screen is open", &DebugHUDProbeInternal::readShown );
-    SW_AUTOMATION_PROBE( debugHUDWindowOpen, "DebugHUD.WindowOpen", "1 while the debug HUD settings window is open", &DebugHUDProbeInternal::readWindowOpen );
+    SW_AUTOMATION_PROBE( debugHUDShown, "DebugHUD.Shown", "1 while the debug HUD screen is open", &DebugHUDInternal::readShown );
+    SW_AUTOMATION_PROBE( debugHUDWindowOpen, "DebugHUD.WindowOpen", "1 while the debug HUD settings window is open", &DebugHUDInternal::readWindowOpen );
     SW_AUTOMATION_PROBE( debugHUDCorner, "DebugHUD.Corner", "Corner the HUD panel was laid out in (0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right)",
-                         &DebugHUDProbeInternal::readCorner );
-    SW_AUTOMATION_PROBE( debugHUDSectionCount, "DebugHUD.SectionCount", "Sections the debug HUD screen draws right now", &DebugHUDProbeInternal::readSectionCount );
+                         &DebugHUDInternal::readCorner );
+    SW_AUTOMATION_PROBE( debugHUDSectionCount, "DebugHUD.SectionCount", "Sections the debug HUD screen draws right now", &DebugHUDInternal::readSectionCount );
     SW_AUTOMATION_PROBE( debugHUDSectionShown, "DebugHUD.SectionShown", "1 while the debug HUD draws the section named by gv_debugHUDProbeSection",
-                         &DebugHUDProbeInternal::readSectionShown );
+                         &DebugHUDInternal::readSectionShown );
 } // namespace sw
 
 namespace sw

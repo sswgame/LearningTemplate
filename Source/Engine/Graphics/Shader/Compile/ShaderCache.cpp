@@ -20,18 +20,15 @@ namespace sw
 
     namespace
     {
-        struct ShaderCacheInternal
+        /** @brief 쿠커가 쓰는 파일 이름 그대로입니다(스템 · 스테이지 · 진입점 · 퍼뮤테이션 해시). 규칙은 한 곳(ShaderCooker)뿐입니다. */
+        string makeBinaryFileName( const ShaderCompileDesc& desc )
         {
-            /** @brief 쿠커가 쓰는 파일 이름 그대로입니다(스템 · 스테이지 · 진입점 · 퍼뮤테이션 해시). 규칙은 한 곳(ShaderCooker)뿐입니다. */
-            static string makeBinaryFileName( const ShaderCompileDesc& desc )
-            {
-                const string fileName = FileUtil::getFileNamePart( desc._filePath );
-                const string stem     = StringUtil::toLower( FileUtil::removeExtension( fileName ).c_str() );
-                return ShaderCooker::computeBinaryFileName( stem, desc._stage, desc._entryPoint,
-                                                            ShaderCooker::computePermutationHash( desc._listDefine ),
-                                                            ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
-            }
-        };
+            const string fileName = FileUtil::getFileNamePart( desc._filePath );
+            const string stem     = StringUtil::toLower( FileUtil::removeExtension( fileName ).c_str() );
+            return ShaderCooker::computeBinaryFileName( stem, desc._stage, desc._entryPoint,
+                                                        ShaderCooker::computePermutationHash( desc._listDefine ),
+                                                        ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
+        }
     } // namespace
 } // namespace sw
 
@@ -41,7 +38,7 @@ namespace sw
     {
         const string      norm      = FileUtil::normalizeSeparators( desc._filePath );
         const string_view rhiFolder = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const string      fileName  = ShaderCacheInternal::makeBinaryFileName( desc );
+        const string      fileName  = makeBinaryFileName( desc );
 
         const size_t pos = norm.find( "shaders/" );
         if ( pos != string::npos )
@@ -71,7 +68,7 @@ namespace sw
 
         const string rhiDir    = FileUtil::joinPath( "Saved/ShaderCache", rhiFolder );
         const string sourceDir = FileUtil::joinPath( rhiDir, string( sb.c_str(), sb.size() ) );
-        return FileUtil::joinPath( sourceDir, ShaderCacheInternal::makeBinaryFileName( desc ) );
+        return FileUtil::joinPath( sourceDir, makeBinaryFileName( desc ) );
     }
 
     ShaderCompileDesc ShaderCache::makeLiveCompileDesc( const ShaderCompileDesc& desc )

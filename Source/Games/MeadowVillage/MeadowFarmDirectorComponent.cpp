@@ -27,18 +27,15 @@ namespace sw
 
     namespace
     {
-        struct MeadowFarmDirectorComponentInternal
+        /** @brief 칸 상태의 색입니다 — 다 자람 · 물 줌 · 갈았음 · 갈지 않음 순서로 먼저 맞는 것(값은 디렉터의 PROPERTY). */
+        const float4& findTileColor( const FarmTile& tile, const float4& readyColor, const float4& wateredColor, const float4& tilledColor, const float4& grassColor )
         {
-            /** @brief 칸 상태의 색입니다 — 다 자람 · 물 줌 · 갈았음 · 갈지 않음 순서로 먼저 맞는 것(값은 디렉터의 PROPERTY). */
-            static const float4& findTileColor( const FarmTile& tile, const float4& readyColor, const float4& wateredColor, const float4& tilledColor, const float4& grassColor )
-            {
-                if ( tile._bReady != SW_FALSE )
-                    return readyColor;
-                if ( tile._bWatered != SW_FALSE )
-                    return wateredColor;
-                return tile._bTilled != SW_FALSE ? tilledColor : grassColor;
-            }
-        };
+            if ( tile._bReady != SW_FALSE )
+                return readyColor;
+            if ( tile._bWatered != SW_FALSE )
+                return wateredColor;
+            return tile._bTilled != SW_FALSE ? tilledColor : grassColor;
+        }
     } // namespace
 
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_meadowAutoPlay, 0, "MeadowVillage: 시계를 8 배로 흘려 날을 넘긴다 (1=켜기)" );
@@ -215,7 +212,7 @@ namespace sw
                 if ( pMesh == nullptr )
                     continue;
                 pMesh->setLocalPosition( float3{ ( static_cast<float32>( x ) + 0.5f ) * _tileSpacing, 0.05f, ( static_cast<float32>( y ) + 0.5f ) * _tileSpacing } );
-                _tintCache.apply( *pMesh, MeadowFarmDirectorComponentInternal::findTileColor( *pTile, _readyColor, _wateredColor, _tilledColor, _grassColor ) );
+                _tintCache.apply( *pMesh, findTileColor( *pTile, _readyColor, _wateredColor, _tilledColor, _grassColor ) );
                 _listTileView.push_back( pView->getHandle() );
             }
         }

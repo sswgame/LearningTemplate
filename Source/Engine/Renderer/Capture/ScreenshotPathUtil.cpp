@@ -15,23 +15,20 @@ namespace sw
 {
     namespace
     {
-        struct ScreenshotPathUtilInternal
+        /** @brief `screenshot [file]` — 다음 프레임의 화면을 PNG 로(파일을 주지 않으면 `Saved/Screenshots/<시각>.png`). */
+        bool runScreenshot( const vector<string>& listArgument, string& outReply )
         {
-            /** @brief `screenshot [file]` — 다음 프레임의 화면을 PNG 로(파일을 주지 않으면 `Saved/Screenshots/<시각>.png`). */
-            static bool runScreenshot( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() > 1 )
-                    return false;
-                const string path = listArgument.empty() ? ScreenshotPathUtil::makeDefaultPathNow() : listArgument[0];
-                RenderThread::requestScreenshot( path );
-                outReply = "screenshot requested: " + path;
-                return true;
-            }
-        };
+            if ( listArgument.size() > 1 )
+                return false;
+            const string path = listArgument.empty() ? ScreenshotPathUtil::makeDefaultPathNow() : listArgument[0];
+            RenderThread::requestScreenshot( path );
+            outReply = "screenshot requested: " + path;
+            return true;
+        }
     } // namespace
 
     SW_DEV_COMMAND( Screenshot, "screenshot", "screenshot [file]", "Save the next frame as PNG (default Saved/Screenshots/<time>.png)",
-                    &ScreenshotPathUtilInternal::runScreenshot );
+                    &runScreenshot );
 } // namespace sw
 #endif
 

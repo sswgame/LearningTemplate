@@ -39,26 +39,19 @@ namespace sw
 {
     namespace
     {
-        /** @brief 이 TU 의 창 크기 상수입니다. */
-        struct AppWindowInternal
+        struct AppInternal
         {
             /** @brief 에디터 창의 최소 클라이언트 크기입니다. 메뉴바, 도크 다섯 개, 게임 뷰 툴바가 겹치지 않는 하한입니다. */
             static constexpr uint32 kEditorMinClientWidth  = 960;
             static constexpr uint32 kEditorMinClientHeight = 540;
-        };
 
-        struct AppExitInternal
-        {
             /** @brief 이 기계 · 빌드가 그 백엔드를 못 돌린다는(환경) 결과면 true 입니다. 결함일 수 있는 `Failed` 는 false 입니다. */
             static constexpr bool isRHIUnusableHere( RHIInitResult result )
             {
                 return result == RHIInitResult::BackendNotBuilt || result == RHIInitResult::DriverUnsupported;
             }
-        };
 
-        /** @brief 엔진 설정에서 프레임 시간 정책 값을 꺼냅니다(값의 출처는 `Config/Engine/EngineConfig.json` 하나다). */
-        struct AppTimeInternal
-        {
+            /** @brief 엔진 설정에서 프레임 시간 정책 값을 꺼냅니다(값의 출처는 `Config/Engine/EngineConfig.json` 하나다). */
             static FixedTimestepParams makeFixedTimestepParams( const EngineConfig& config )
             {
                 FixedTimestepParams params;
@@ -157,7 +150,7 @@ namespace sw
         // 자동화 시나리오는 엔진 기동이 끝난 지금, 모듈을 올리기 전에 시작한다(첫 단계의 시작 조건이 모듈 · 씬이 설 때까지 기다린다).
         startAutomationSession( *pCommandLineManager );
 
-        _fixedTimestep.configure( AppTimeInternal::makeFixedTimestepParams( *pEngineConfig ) );
+        _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
         // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.
         pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &App::onConfigReloaded, this ) );
 
@@ -341,7 +334,7 @@ namespace sw
         {
             _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getSceneViewCamera, this );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
-            _window->setMinimumClientSize( AppWindowInternal::kEditorMinClientWidth, AppWindowInternal::kEditorMinClientHeight );
+            _window->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
             // 대화형 에디터 실행에서만 단언을 묻는다(Windows Debug). 자동 실행과 테스트는 기존처럼 멈춘다.
             const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
             if ( pCommandLine != nullptr )
@@ -487,7 +480,7 @@ namespace sw
     int32 App::getInitFailureExitCode() const
     {
         // 환경 탓(백엔드가 이 빌드에 없거나 드라이버가 기능을 주지 않음)은 테스트와 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
-        return AppExitInternal::isRHIUnusableHere( _engine.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
+        return AppInternal::isRHIUnusableHere( _engine.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
     }
 
     int32 App::getExitCode() const
@@ -518,7 +511,7 @@ namespace sw
         const ConfigManager* pConfigManager = _engine.getConfigManager();
         const EngineConfig*  pEngineConfig  = pConfigManager != nullptr ? pConfigManager->getConfig<EngineConfig>() : nullptr;
         if ( pEngineConfig != nullptr )
-            _fixedTimestep.configure( AppTimeInternal::makeFixedTimestepParams( *pEngineConfig ) );
+            _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
     }
 
     bool App::onWindowMessage( const NativeWindowEvent& event )

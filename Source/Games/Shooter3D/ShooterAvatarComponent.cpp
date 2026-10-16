@@ -21,29 +21,26 @@ namespace sw
 {
     namespace
     {
-        struct ShooterAvatarComponentInternal
+        /** @brief 이동 방향 · 앞 속도를 그래프의 `Move` 코드로 바꿉니다(앞은 빠르면 달리기). */
+        float32 computeMoveCode( LocomotionDirection direction, float32 forwardSpeed, float32 runThreshold )
         {
-            /** @brief 이동 방향 · 앞 속도를 그래프의 `Move` 코드로 바꿉니다(앞은 빠르면 달리기). */
-            static float32 computeMoveCode( LocomotionDirection direction, float32 forwardSpeed, float32 runThreshold )
+            switch ( direction )
             {
-                switch ( direction )
-                {
-                    case LocomotionDirection::Idle:
-                        return ShooterAnimationParameter::kMoveIdle;
-                    case LocomotionDirection::Forward:
-                        return forwardSpeed >= runThreshold ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
-                    case LocomotionDirection::Backward:
-                        return ShooterAnimationParameter::kMoveBackward;
-                    case LocomotionDirection::Left:
-                        return ShooterAnimationParameter::kMoveLeft;
-                    case LocomotionDirection::Right:
-                        return ShooterAnimationParameter::kMoveRight;
-                    case LocomotionDirection::Airborne:
-                        return ShooterAnimationParameter::kMoveAir;
-                }
-                return ShooterAnimationParameter::kMoveIdle;
+                case LocomotionDirection::Idle:
+                    return ShooterAnimationParameter::kMoveIdle;
+                case LocomotionDirection::Forward:
+                    return forwardSpeed >= runThreshold ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
+                case LocomotionDirection::Backward:
+                    return ShooterAnimationParameter::kMoveBackward;
+                case LocomotionDirection::Left:
+                    return ShooterAnimationParameter::kMoveLeft;
+                case LocomotionDirection::Right:
+                    return ShooterAnimationParameter::kMoveRight;
+                case LocomotionDirection::Airborne:
+                    return ShooterAnimationParameter::kMoveAir;
             }
-        };
+            return ShooterAnimationParameter::kMoveIdle;
+        }
     } // namespace
 } // namespace sw
 
@@ -133,7 +130,6 @@ namespace sw
 
     void ShooterAvatarComponent::onTick( float32 deltaTime )
     {
-        using Internal = ShooterAvatarComponentInternal;
         Component::onTick( deltaTime );
         GameObject*                   pOwner              = getOwner();
         GameObjectManager*            pManager            = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -173,7 +169,7 @@ namespace sw
                                                                             pPlayer->isOnGround(), _walkThreshold );
         const LocomotionDirection direction = _locomotion.update( candidate, step );
         const float32             forward   = LocomotionMath::computeLocalVelocity( pPlayer->getMoveVelocity(), _bodyYaw )._x;
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kMove ), Internal::computeMoveCode( direction, forward, _runThreshold ) );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kMove ), computeMoveCode( direction, forward, _runThreshold ) );
         parameters.setBool( hashed_string( ShooterAnimationParameter::kDead ), bAlive == false );
         // 발 미끄러짐 — 이동 클립의 발 속도에 실제 수평 속도를 맞춘다(언리얼 재생 속도 매칭). 쓰러지면 클립 속도 그대로.
         const float3& velocity  = pPlayer->getMoveVelocity();

@@ -14,20 +14,17 @@ namespace sw
 {
     namespace
     {
-        struct ParallaxLayerComponentInternal
+        /**
+         * @brief 한 축의 레이어 자리입니다. 카메라에 대한 상대 자리 `(O − R) − (C − R)·s` 에서 흐르는 몫 `(C − R)·s` 를 되풀이 길이로 감습니다.
+         * @details 감은 값은 [−M/2, M/2) 라 레이어가 카메라에서 반 칸 넘게 벗어나지 않습니다. 내용이 M 마다 같으므로 M 만큼 튀는 것은 보이지 않습니다.
+         */
+        float32 computeAxis( float32 origin, float32 camera, float32 reference, float32 scroll, float32 repeatSize )
         {
-            /**
-             * @brief 한 축의 레이어 자리입니다. 카메라에 대한 상대 자리 `(O − R) − (C − R)·s` 에서 흐르는 몫 `(C − R)·s` 를 되풀이 길이로 감습니다.
-             * @details 감은 값은 [−M/2, M/2) 라 레이어가 카메라에서 반 칸 넘게 벗어나지 않습니다. 내용이 M 마다 같으므로 M 만큼 튀는 것은 보이지 않습니다.
-             */
-            static float32 computeAxis( float32 origin, float32 camera, float32 reference, float32 scroll, float32 repeatSize )
-            {
-                float32 flow = ( camera - reference ) * scroll;
-                if ( repeatSize > 0.0f )
-                    flow -= repeatSize * MathUtil::floor( flow / repeatSize + 0.5f );
-                return camera + ( origin - reference ) - flow;
-            }
-        };
+            float32 flow = ( camera - reference ) * scroll;
+            if ( repeatSize > 0.0f )
+                flow -= repeatSize * MathUtil::floor( flow / repeatSize + 0.5f );
+            return camera + ( origin - reference ) - flow;
+        }
     } // namespace
 
     ParallaxLayerComponent::ParallaxLayerComponent()
@@ -74,9 +71,8 @@ namespace sw
     float2 ParallaxLayerComponent::computeLayerPosition( const float2& origin, const float2& camera, const float2& reference, const float2& scroll,
                                                          const float2& repeatSize )
     {
-        using Internal = ParallaxLayerComponentInternal;
-        return float2{ Internal::computeAxis( origin._x, camera._x, reference._x, scroll._x, repeatSize._x ),
-                       Internal::computeAxis( origin._y, camera._y, reference._y, scroll._y, repeatSize._y ) };
+        return float2{ computeAxis( origin._x, camera._x, reference._x, scroll._x, repeatSize._x ),
+                       computeAxis( origin._y, camera._y, reference._y, scroll._y, repeatSize._y ) };
     }
 
     void ParallaxLayerComponent::applyCamera( const float2& camera )

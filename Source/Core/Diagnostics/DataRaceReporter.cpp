@@ -14,27 +14,24 @@ namespace sw
 
     namespace
     {
-        struct DataRaceReporterInternal
+        /**
+         * @brief 경합 한 건을 Error 로그와 호출 스택 줄로 남깁니다.
+         * @details 호출 스택은 검출기의 `triggerDataRace` 와 이 함수 두 프레임을 건너뛰어, 경합을 일으킨 컨테이너 호출부터 보입니다.
+         */
+        void report( const utf8* pMessage, const void* pContext, uint32 readerCount, uint32 writerCount )
         {
-            /**
-             * @brief 경합 한 건을 Error 로그와 호출 스택 줄로 남깁니다.
-             * @details 호출 스택은 검출기의 `triggerDataRace` 와 이 함수 두 프레임을 건너뛰어, 경합을 일으킨 컨테이너 호출부터 보입니다.
-             */
-            static void report( const utf8* pMessage, const void* pContext, uint32 readerCount, uint32 writerCount )
+            CallStack callStack;
+            CallStackCapture::capture( callStack, 2 );
+            string stackTrace = CallStackCapture::symbolize( callStack );
+
+            SW_LOG_ERROR( "%s (context: %p, readers: %u, writers: %u)", pMessage, pContext, readerCount, writerCount );
+
+            StringUtil::forEachLine( stackTrace, []( string_view line )
             {
-                CallStack callStack;
-                CallStackCapture::capture( callStack, 2 );
-                string stackTrace = CallStackCapture::symbolize( callStack );
-
-                SW_LOG_ERROR( "%s (context: %p, readers: %u, writers: %u)", pMessage, pContext, readerCount, writerCount );
-
-                StringUtil::forEachLine( stackTrace, []( string_view line )
-                {
-                    if ( line.empty() == false )
-                        SW_LOG_ERROR( "  %s", string( line ).c_str() );
-                } );
-            }
-        };
+                if ( line.empty() == false )
+                    SW_LOG_ERROR( "  %s", string( line ).c_str() );
+            } );
+        }
 
         /** @brief 프로그램 시작 때 보고기를 겁니다. `Core` 목적 파일을 통째로 넣는 실행 파일(Engine.dll)은 이것으로 충분합니다. */
         [[maybe_unused]] const bool s_bDataRaceReporterInstalled = []() noexcept
@@ -49,6 +46,6 @@ namespace sw
 {
     void DataRaceReporter::install()
     {
-        RaceDetectContext::setReportFunction( &DataRaceReporterInternal::report );
+        RaceDetectContext::setReportFunction( &report );
     }
 } // namespace sw

@@ -28,31 +28,28 @@ namespace sw
         };
         thread_local ComponentIDRestoreState t_componentIDRestore{};
 
-        struct GameObjectInternal
+        /**
+         * @brief @p pOwner 에 붙는 @p typeName 컴포넌트가 복원할 원래 ID 를 가져갑니다. 복원 중이 아니거나 목록에 없으면 false 를 반환합니다.
+         * @details 커서부터 앞으로 찾아 타입이 같은 첫 항목을 가져간다. 목록과 다른 컴포넌트가 끼어들어도(생성 중에 다른
+         *          컴포넌트를 스스로 붙이는 타입 등) 그 하나만 새 ID 를 받고 나머지 순서는 어긋나지 않는다.
+         */
+        bool takeRestoredComponentID( const GameObject* pOwner, hashed_string typeName, uint64& outComponentID )
         {
-            /**
-             * @brief @p pOwner 에 붙는 @p typeName 컴포넌트가 복원할 원래 ID 를 가져갑니다. 복원 중이 아니거나 목록에 없으면 false 를 반환합니다.
-             * @details 커서부터 앞으로 찾아 타입이 같은 첫 항목을 가져간다. 목록과 다른 컴포넌트가 끼어들어도(생성 중에 다른
-             *          컴포넌트를 스스로 붙이는 타입 등) 그 하나만 새 ID 를 받고 나머지 순서는 어긋나지 않는다.
-             */
-            static bool takeRestoredComponentID( const GameObject* pOwner, hashed_string typeName, uint64& outComponentID )
-            {
-                ComponentIDRestoreState& state = t_componentIDRestore;
-                if ( state._pIdentity == nullptr || state._pTarget != pOwner )
-                    return false;
-
-                const vector<ObjectIdentity::ComponentEntry>& listEntry = state._pIdentity->_listComponent;
-                for ( size_t entryIndex = state._cursor; entryIndex < listEntry.size(); ++entryIndex )
-                {
-                    if ( listEntry[entryIndex]._typeName != typeName )
-                        continue;
-                    state._cursor  = entryIndex + 1;
-                    outComponentID = listEntry[entryIndex]._componentID;
-                    return outComponentID != 0;
-                }
+            ComponentIDRestoreState& state = t_componentIDRestore;
+            if ( state._pIdentity == nullptr || state._pTarget != pOwner )
                 return false;
+
+            const vector<ObjectIdentity::ComponentEntry>& listEntry = state._pIdentity->_listComponent;
+            for ( size_t entryIndex = state._cursor; entryIndex < listEntry.size(); ++entryIndex )
+            {
+                if ( listEntry[entryIndex]._typeName != typeName )
+                    continue;
+                state._cursor  = entryIndex + 1;
+                outComponentID = listEntry[entryIndex]._componentID;
+                return outComponentID != 0;
             }
-        };
+            return false;
+        }
     } // namespace
 } // namespace sw
 
@@ -598,7 +595,7 @@ namespace sw
         // 상태를 되돌리는 로드 중이면 원래 ID 를 복원한다. 등록보다 먼저여야 서브틱 핸들도 원래 ID 로 잡힌다.
         // 같은 프로세스에서 발급된 ID 라 카운터는 보통 이미 그 뒤지만, 아니면 뒤로 밀어 앞으로의 발급과 겹치지 않게 한다.
         uint64 restoredComponentID = 0;
-        if ( GameObjectInternal::takeRestoredComponentID( this, typeKey, restoredComponentID ) )
+        if ( takeRestoredComponentID( this, typeKey, restoredComponentID ) )
         {
             pComp->_componentID = restoredComponentID;
             Component::_s_nextComponentID.fetch_max( restoredComponentID + 1, std::memory_order_relaxed );

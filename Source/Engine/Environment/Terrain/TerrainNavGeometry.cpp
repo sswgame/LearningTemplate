@@ -12,22 +12,19 @@ namespace sw
 {
     namespace
     {
-        struct TerrainNavGeometryInternal
+        void contribute( const Component& component, uint8 area, NavMeshGeometry& outGeometry )
         {
-            static void contribute( const Component& component, uint8 area, NavMeshGeometry& outGeometry )
-            {
-                const TerrainHeightfield& heightfield = static_cast<const TerrainComponent&>( component ).getHeightfield();
-                if ( heightfield.isValid() == false )
-                    return;
-                const vector<uint8>& listHoleCell = heightfield.getHoleCells();
-                outGeometry.addHeightfield( heightfield.getHeightSamples().data(), heightfield.getResolution(), heightfield.getOrigin(), heightfield.getCellSize(),
-                                            listHoleCell.empty() ? nullptr : listHoleCell.data(), area );
-            }
-        };
+            const TerrainHeightfield& heightfield = static_cast<const TerrainComponent&>( component ).getHeightfield();
+            if ( heightfield.isValid() == false )
+                return;
+            const vector<uint8>& listHoleCell = heightfield.getHoleCells();
+            outGeometry.addHeightfield( heightfield.getHeightSamples().data(), heightfield.getResolution(), heightfield.getOrigin(), heightfield.getCellSize(),
+                                        listHoleCell.empty() ? nullptr : listHoleCell.data(), area );
+        }
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_NAV_GEOMETRY_CONTRIBUTOR( TerrainComponent, &TerrainNavGeometryInternal::contribute )
+    SW_NAV_GEOMETRY_CONTRIBUTOR( TerrainComponent, &contribute )
 } // namespace sw

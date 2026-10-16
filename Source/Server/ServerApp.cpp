@@ -86,15 +86,15 @@ namespace sw
         };
 
         /** @brief 링커가 표식 문자열을 버리지 못하게 정적 초기화에서 한 번 읽습니다(서버 전용 모듈의 생성 표식과 같은 방식입니다). */
-        struct ServerImageMarkerInternal
+        struct ServerImageMarker
         {
-            ServerImageMarkerInternal()
+            ServerImageMarker()
             {
                 const volatile utf8* pMarker = ServerAppInternal::kArrServerImageMarker;
                 (void)pMarker[0];
             }
         };
-        const ServerImageMarkerInternal s_serverImageMarker{};
+        const ServerImageMarker s_serverImageMarker{};
     } // namespace
 
     ServerApp::ServerApp()

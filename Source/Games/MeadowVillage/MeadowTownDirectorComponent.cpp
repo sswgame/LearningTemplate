@@ -25,14 +25,11 @@ namespace sw
 
     namespace
     {
-        struct MeadowTownDirectorComponentInternal
+        /** @brief 마을 오브젝트의 색 — 나무 짙은 초록, 그 밖(풀) 초록. */
+        float4 findObjectColor( const hashed_string& object )
         {
-            /** @brief 마을 오브젝트의 색 — 나무 짙은 초록, 그 밖(풀) 초록. */
-            static float4 findObjectColor( const hashed_string& object )
-            {
-                return object == hashed_string( "tree" ) ? float4{ 0.10f, 0.40f, 0.15f, 1.0f } : float4{ 0.30f, 0.70f, 0.30f, 1.0f };
-            }
-        };
+            return object == hashed_string( "tree" ) ? float4{ 0.10f, 0.40f, 0.15f, 1.0f } : float4{ 0.30f, 0.70f, 0.30f, 1.0f };
+        }
     } // namespace
 } // namespace sw
 
@@ -191,7 +188,7 @@ namespace sw
                 if ( pObject == nullptr || pObject->empty() )
                     continue;
                 const float3 position{ _townOffsetX + static_cast<float32>( x ) + 0.5f, 0.3f, static_cast<float32>( y ) + 0.5f };
-                spawnCube( manager, position, MeadowTownDirectorComponentInternal::findObjectColor( *pObject ) );
+                spawnCube( manager, position, findObjectColor( *pObject ) );
             }
         }
         for ( const TownCreature& creature : _town.getCreatures() )

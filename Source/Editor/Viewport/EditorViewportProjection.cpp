@@ -14,21 +14,18 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorViewportProjectionInternal
+        /** @brief clip 좌표를 w 로 나눠 캔버스 좌표로 옮깁니다. */
+        ImVec2 toScreen( const float4& clip, const float2& canvasPos, const float2& canvasSize )
         {
-            /** @brief clip 좌표를 w 로 나눠 캔버스 좌표로 옮깁니다. */
-            static ImVec2 toScreen( const float4& clip, const float2& canvasPos, const float2& canvasSize )
-            {
-                const float32 invW = 1.0f / clip._w;
-                const float32 x    = clip._x * invW;
-                const float32 y    = clip._y * invW;
+            const float32 invW = 1.0f / clip._w;
+            const float32 x    = clip._x * invW;
+            const float32 y    = clip._y * invW;
 
-                ImVec2 screenPt;
-                screenPt.x = canvasPos._x + ( x * 0.5f + 0.5f ) * canvasSize._x;
-                screenPt.y = canvasPos._y + ( 1.0f - ( y * 0.5f + 0.5f ) ) * canvasSize._y;
-                return screenPt;
-            }
-        };
+            ImVec2 screenPt;
+            screenPt.x = canvasPos._x + ( x * 0.5f + 0.5f ) * canvasSize._x;
+            screenPt.y = canvasPos._y + ( 1.0f - ( y * 0.5f + 0.5f ) ) * canvasSize._y;
+            return screenPt;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -75,7 +72,7 @@ namespace sw::editor
         if ( clip._w <= 0.001f )
             return false;
 
-        outScreenPt = EditorViewportProjectionInternal::toScreen( clip, canvasPos, canvasSize );
+        outScreenPt = toScreen( clip, canvasPos, canvasSize );
         return true;
     }
 
@@ -103,8 +100,8 @@ namespace sw::editor
             clipB           = clipB + ( clipA - clipB ) * t;
         }
 
-        outScreenA = EditorViewportProjectionInternal::toScreen( clipA, canvasPos, canvasSize );
-        outScreenB = EditorViewportProjectionInternal::toScreen( clipB, canvasPos, canvasSize );
+        outScreenA = toScreen( clipA, canvasPos, canvasSize );
+        outScreenB = toScreen( clipB, canvasPos, canvasSize );
         return true;
     }
 } // namespace sw::editor

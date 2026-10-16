@@ -56,11 +56,8 @@ namespace sw
                 pMesh->setLocalRotation( rotation );
                 return pMesh;
             }
-        };
 
-        /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
-        struct ParkDirectorProbeInternal
-        {
+            /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
             [[nodiscard]] static bool readGuestCount( const GameObjectManager* pManager, float64& outValue )
             {
                 const ParkDirectorComponent* pFound = nullptr;
@@ -723,5 +720,5 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_PROBE( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", &ParkDirectorProbeInternal::readGuestCount );
+    SW_AUTOMATION_PROBE( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", &ParkDirectorComponentInternal::readGuestCount );
 } // namespace sw

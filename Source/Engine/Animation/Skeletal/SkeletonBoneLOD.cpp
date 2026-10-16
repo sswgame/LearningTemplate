@@ -19,15 +19,12 @@ namespace sw
 
     namespace
     {
-        struct SkeletonBoneLODInternal
+        /** @brief 프로세스 전역 내용 번호입니다(0 은 쓰지 않는다). */
+        uint64 allocateRevision()
         {
-            /** @brief 프로세스 전역 내용 번호입니다(0 은 쓰지 않는다). */
-            static uint64 allocateRevision()
-            {
-                static atomic<uint64> s_nextRevision{ 1 };
-                return s_nextRevision.fetch_add( 1, std::memory_order_relaxed );
-            }
-        };
+            static atomic<uint64> s_nextRevision{ 1 };
+            return s_nextRevision.fetch_add( 1, std::memory_order_relaxed );
+        }
     } // namespace
 } // namespace sw
 
@@ -45,7 +42,7 @@ namespace sw
         }
         if ( parseRoot( document.getRoot(), sourceLabel ) )
         {
-            _revision = SkeletonBoneLODInternal::allocateRevision();
+            _revision = allocateRevision();
             return true;
         }
         _listLevel.clear();
