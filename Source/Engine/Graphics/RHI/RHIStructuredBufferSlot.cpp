@@ -34,7 +34,7 @@ namespace sw
         _buffer = pDevice->getResourceFactory()->createBuffer( desc );
         if ( _buffer == 0 && bNeedsUav )
         {
-            // UAV 를 거절하는 백엔드·드라이버가 있다. 그리기는 살리고 컴퓨트 경로만 포기한다.
+            // UAV 를 거절하는 백엔드나 드라이버가 있다. 그리기는 살리고 컴퓨트 경로만 포기한다.
             desc._usage = EnumUtil::clearFlag( usage, RHIBufferUsage::UnorderedAccess );
             _buffer     = pDevice->getResourceFactory()->createBuffer( desc );
             bNeedsUav   = false;

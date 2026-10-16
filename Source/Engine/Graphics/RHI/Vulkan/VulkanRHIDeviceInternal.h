@@ -1,7 +1,7 @@
 /**
  * @file VulkanRHIDeviceInternal.h
- * @brief Vulkan 백엔드의 여러 TU 가 함께 쓰는 내부 도우미와 플랫폼 헤더 묶음입니다.
- * @details `VulkanRHIDevice.cpp` 하나가 2,700 줄이라 초기화 · 디스크립터 · 렌더패스로 나눴는데,
+ * @brief Vulkan 백엔드의 여러 TU 가 함께 쓰는 내부 도우미와 플랫폼 헤더 모음입니다.
+ * @details `VulkanRHIDevice.cpp` 하나가 2,700 줄이라 초기화, 디스크립터, 렌더패스로 나눴는데,
  *          그 조각들과 `VulkanRHIResourceFactory.cpp` 가 같은 도우미(`toVulkanTextureFormat`)와 같은 플랫폼 헤더 묶음을 씁니다.
  *          익명 네임스페이스에 두면 TU 마다 사본이 생겨 포맷을 더할 때 한쪽만 고치게 됩니다.
  * @note 백엔드 내부 전용입니다. RHI 경계 밖으로 나가면 안 됩니다.
@@ -26,7 +26,7 @@
 
 namespace sw
 {
-    /** @brief Vulkan 백엔드 조각들이 함께 쓰는 순수 변환 · 조회 도우미입니다. */
+    /** @brief Vulkan 백엔드 조각들이 함께 쓰는 순수 변환과 조회 도우미입니다. */
     struct VulkanRHIDeviceInternal
     {
         static inline VkFormat toVulkanTextureFormat( RHIFormat format )
@@ -79,7 +79,7 @@ namespace sw
             return false;
         }
     };
-    /** @brief 확장 함수 포인터를 조회해 디버그 메신저를 만듭니다 (없으면 EXTENSION_NOT_PRESENT). */
+    /** @brief 확장 함수 포인터를 조회해 디버그 메신저를 만듭니다(없으면 EXTENSION_NOT_PRESENT). */
     inline VkResult CreateDebugUtilsMessengerEXT(
         VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger )

@@ -1,11 +1,11 @@
 /**
  * @file GPUSpriteInstanceData.h
- * @brief 인스턴스마다 다른 스프라이트 값(UV 사각형 · 색 · 픽셀 스냅)을 셰이더가 읽는 꼴 그대로 묶은 16 바이트입니다.
- * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `uvStart` · `uvEnd` · `tint` · `pixelSnap` 이고, 푸는 함수는
- *          `swComputeInstanceUvRect` · `swComputeInstanceTint` 입니다. 이 값은 `GPUInstance` 에 그대로 실리고(오프셋은
- *          ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 가 쿠킹된 바이너리로 대조합니다), 메시 컴포넌트 ·
- *          인스턴스 배치 항목이 들고 있다가 빌더가 옮깁니다. 컴포넌트 층(Object)이 렌더러(Renderer)를 include 할 수 없어
- *          이 묶음만 렌더러 아래의 계약 폴더에 둡니다.
+ * @brief 인스턴스마다 다른 스프라이트 값(UV 사각형, 색, 픽셀 스냅)을 셰이더 레이아웃 그대로 묶은 16바이트입니다.
+ * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `uvStart`, `uvEnd`, `tint`, `pixelSnap` 이고, 해석하는 함수는
+ *          `swComputeInstanceUvRect` 와 `swComputeInstanceTint` 입니다. 이 값은 `GPUInstance` 에 그대로 실리고(오프셋은
+ *          ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 가 쿠킹된 바이너리로 대조합니다), 메시 컴포넌트와
+ *          인스턴스 배치 항목이 보관하고 있다가 빌더가 옮깁니다. 컴포넌트 층(Object)이 렌더러(Renderer)를 include 할 수 없어
+ *          이 구조체만 렌더러 아래의 계약 폴더에 둡니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,31 +17,31 @@ namespace sw
 {
     /**
      * @struct GPUSpriteInstanceData
-     * @brief 인스턴스 하나의 아틀라스 프레임(UV 사각형)과 색입니다. 기본값은 텍스처 전체 · 흰색 불투명입니다.
-     * @details **머티리얼 인스턴스가 아니라 인스턴스에 싣는 이유:** 배치 키는 머티리얼 인스턴스입니다. 프레임마다 바뀌는 아틀라스 프레임 ·
+     * @brief 인스턴스 하나의 아틀라스 프레임(UV 사각형)과 색입니다. 기본값은 텍스처 전체, 흰색 불투명입니다.
+     * @details **머티리얼 인스턴스가 아니라 인스턴스에 싣는 이유:** 배치 키는 머티리얼 인스턴스입니다. 프레임마다 바뀌는 아틀라스 프레임과
      *          페이드 알파를 인스턴스 파라미터로 바꾸면 스프라이트마다 인스턴스가 생겨 배치가 하나씩 갈립니다. 여기 실으면 같은 텍스처의
-     *          스프라이트는 프레임 · 색이 달라도 한 드로우입니다(언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock 의 자리).
+     *          스프라이트는 프레임과 색이 달라도 한 드로우입니다(언리얼의 Custom Primitive Data, 유니티의 MaterialPropertyBlock 에 해당합니다).
      *
      *          UV 사각형은 꼭짓점 둘로 담습니다: 사각형의 왼쪽 위가 읽는 `_uvStart` 와 오른쪽 아래가 읽는 `_uvEnd`(각각 unorm16 둘).
-     *          (u, v, 폭, 높이) 그대로가 아니라 꼭짓점으로 담는 것은 **뒤집기** 때문입니다 — 폭이 음수인 프레임(좌우 반전)이 그대로 들어갑니다.
-     *          대신 꼭짓점은 [0, 1] 로 묶입니다(아틀라스 안의 사각형이 이 칸의 일입니다. 반복 타일링은 머티리얼 uvRect 의 일입니다).
-     *          unorm16 은 4096 텍셀 아틀라스에서 텍셀의 1/16 보다 곱습니다. 색은 RGBA8 입니다.
+     *          (u, v, 폭, 높이) 그대로가 아니라 꼭짓점으로 담는 것은 **뒤집기** 때문입니다. 폭이 음수인 프레임(좌우 반전)이 그대로 들어갑니다.
+     *          대신 꼭짓점은 [0, 1] 로 제한됩니다(아틀라스 안의 사각형이 이 값의 역할이고, 반복 타일링은 머티리얼 uvRect 의 역할입니다).
+     *          unorm16 은 4096 텍셀 아틀라스에서 텍셀의 1/16 보다 촘촘합니다. 색은 RGBA8 입니다.
      */
     struct GPUSpriteInstanceData
     {
-        uint32 _uvStart{ 0u };        ///< (u, v) — unorm16 둘, u 가 하위 16비트
-        uint32 _uvEnd{ 0xFFFFFFFFu }; ///< (u, v) — unorm16 둘. 기본은 (1, 1)
+        uint32 _uvStart{ 0u };        ///< (u, v) unorm16 둘, u 가 하위 16비트
+        uint32 _uvEnd{ 0xFFFFFFFFu }; ///< (u, v) unorm16 둘. 기본은 (1, 1)
         uint32 _tint{ 0xFFFFFFFFu };  ///< RGBA8 unorm, r 이 하위 바이트. 기본은 흰색 불투명
         /**
-         * @brief 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU)입니다. 0 이면 끕니다. sprite2d.hlsl 이 인스턴스 원점의 X · Y 를 이 격자에 붙입니다.
-         * @details 값은 픽셀 퍼펙트 카메라(`PixelPerfectCameraComponent`)가 정하고 메시 컴포넌트가 들고 있습니다 — 프레임 · 색을 바꾸는 쪽(`make`)은
-         *          이 칸을 모릅니다(`MeshComponent::setSpriteInstanceData` 가 지금 값을 지킵니다). 유니티 Pixel Perfect Camera 의 Pixel Snapping 자리입니다.
+         * @brief 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU)입니다. 0 이면 끕니다. sprite2d.hlsl 이 인스턴스 원점의 X, Y 를 이 격자에 붙입니다.
+         * @details 값은 픽셀 퍼펙트 카메라(`PixelPerfectCameraComponent`)가 정하고 메시 컴포넌트가 보관합니다. 프레임과 색을 바꾸는 쪽(`make`)은
+         *          이 필드를 모릅니다(`MeshComponent::setSpriteInstanceData` 가 지금 값을 유지합니다). 유니티 Pixel Perfect Camera 의 Pixel Snapping 에 해당합니다.
          */
         float32 _pixelSnap{ 0.0f };
 
         /**
-         * @brief (u, v, 폭, 높이) 사각형과 색으로 만듭니다. 머티리얼 uvRect 와 같은 꼴입니다.
-         * @details 꼭짓점 (u, v) 와 (u + 폭, v + 높이) 를 [0, 1] 로 묶어 담고, 색은 [0, 1] 로 묶어 8비트로 담습니다.
+         * @brief (u, v, 폭, 높이) 사각형과 색으로 만듭니다. 머티리얼 uvRect 와 같은 형식입니다.
+         * @details 꼭짓점 (u, v) 와 (u + 폭, v + 높이) 를 [0, 1] 로 제한해 담고, 색은 [0, 1] 로 제한해 8비트로 담습니다.
          */
         static GPUSpriteInstanceData make( const float4& uvRect, const float4& tint )
         {
@@ -52,7 +52,7 @@ namespace sw
             return data;
         }
 
-        /** @brief 실수 둘을 [0, 1] 로 묶어 unorm16 둘로 담습니다(x 가 하위 16비트). HLSL `swUnpackUnorm16x2` 의 역입니다. */
+        /** @brief 실수 둘을 [0, 1] 로 제한해 unorm16 둘로 담습니다(x 가 하위 16비트). HLSL `swUnpackUnorm16x2` 의 역입니다. */
         static uint32 makeUnorm16x2( float32 x, float32 y )
         {
             const uint32 low  = static_cast<uint32>( MathUtil::saturate( x ) * 65535.0f + 0.5f );
@@ -60,7 +60,7 @@ namespace sw
             return low | ( high << 16 );
         }
 
-        /** @brief 색을 [0, 1] 로 묶어 RGBA8 로 담습니다(r 이 하위 바이트). */
+        /** @brief 색을 [0, 1] 로 제한해 RGBA8 로 담습니다(r 이 하위 바이트). */
         static uint32 makeRgba8( const float4& color )
         {
             const uint32 red   = static_cast<uint32>( MathUtil::saturate( color._x ) * 255.0f + 0.5f );
@@ -87,7 +87,7 @@ namespace sw
                            static_cast<float32>( ( _tint >> 16 ) & 0xFFu ) / 255.0f, static_cast<float32>( _tint >> 24 ) / 255.0f };
         }
 
-        /** @brief 네 칸이 모두 같으면 true 입니다(스냅 단위는 비트로 견줍니다). */
+        /** @brief 필드가 모두 같으면 true 입니다(스냅 단위는 비트로 비교합니다). */
         bool operator==( const GPUSpriteInstanceData& other ) const
         {
             return _uvStart == other._uvStart && _uvEnd == other._uvEnd && _tint == other._tint &&

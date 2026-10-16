@@ -17,13 +17,13 @@ namespace sw
     {
     public:
         /**
-         * @brief 디바이스의 기록 상태 · 버퍼를 쓰는 프레임 스트림 컨텍스트를 만듭니다.
-         * @details 백버퍼 패스 · Present 처럼 "디바이스가 직접 여는 버퍼"(프레임 세그먼트)에 기록하는 경로용입니다.
+         * @brief 디바이스의 기록 상태와 버퍼를 쓰는 프레임 스트림 컨텍스트를 만듭니다.
+         * @details 백버퍼 패스와 Present 처럼 "디바이스가 직접 여는 버퍼"(프레임 세그먼트)에 기록하는 경로용입니다.
          */
         explicit VulkanRHICommandContext( VulkanRHIDevice* pDevice );
         /**
          * @brief 지정한 커맨드 버퍼와 기록 상태에 기록하는 컨텍스트를 만듭니다.
-         * @details `VulkanRHICommandList` 처럼 자기 버퍼 · 상태를 소유하는 쪽이 씁니다. 여러 리스트가
+         * @details `VulkanRHICommandList` 처럼 자기 버퍼와 상태를 소유하는 쪽이 씁니다. 여러 리스트가
          *          동시에 기록해도 서로의 바인딩 캐시를 건드리지 않습니다.
          */
         VulkanRHICommandContext( VulkanRHIDevice* pDevice, VkCommandBuffer targetBuffer, VulkanRecordingState* pState,
@@ -40,7 +40,7 @@ namespace sw
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        /** @brief 버퍼의 이번 프레임 칸에 씁니다(`IRHIResourceFactory::updateConstantBuffer` 와 같은 일 — 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다). */
+        /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. `IRHIResourceFactory::updateConstantBuffer` 와 같은 일이며, 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
@@ -66,27 +66,27 @@ namespace sw
 
     private:
         /**
-         * @brief 바뀐 슬롯 상태를 슬롯 세트(set 0)로 굳혀 그 바인드 포인트(bCompute)에 걸고, 텍스처 세트(set 1)는 커맨드버퍼마다 한 번 두 바인드 포인트에 겁니다.
-         * @details 언리얼 Vulkan RHI 처럼 드로우 · 디스패치 직전에 부릅니다. 상태가 그대로면 아무것도 하지 않습니다.
+         * @brief 바뀐 슬롯 상태를 슬롯 세트(set 0)로 확정해 그 바인드 포인트(bCompute)에 바인딩하고, 텍스처 세트(set 1)는 커맨드 버퍼마다 한 번 두 바인드 포인트에 바인딩합니다.
+         * @details 언리얼 Vulkan RHI 처럼 드로우와 디스패치 직전에 부릅니다. 상태가 그대로면 아무것도 하지 않습니다.
          */
         void flushSlotSet( bool bCompute );
         /**
-         * @brief 슬롯 하나에 bindless 인덱스의 버퍼를 겁니다(세트는 flushSlotSet 이 굳힙니다).
-         * @param bCompute true 면 컴퓨트 바인드 포인트의 상태, false 면 그래픽스. 둘은 독립이다.
+         * @brief 슬롯 하나에 bindless 인덱스의 버퍼를 설정합니다(세트는 flushSlotSet 이 확정합니다).
+         * @param bCompute true 면 컴퓨트 바인드 포인트의 상태, false 면 그래픽스입니다. 둘은 독립입니다.
          * @param bindingIndex 세트 0 의 binding (종류별 시프트 + 레지스터 번호).
-         * @param bUav true 면 UAV 레지스트리, false 면 SRV/CB 레지스트리.
-         * @param bConstantBuffer true 면 링 상수버퍼의 이번 프레임 슬롯 오프셋 · 크기를 쓴다.
+         * @param bUav true 면 UAV 레지스트리, false 면 SRV/CB 레지스트리입니다.
+         * @param bConstantBuffer true 면 링 상수 버퍼의 이번 프레임 슬롯 오프셋과 크기를 씁니다.
          */
         void setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUav, bool bConstantBuffer );
 
         /**
          * @brief 현재 활성 그래픽스 PSO(없으면 오프스크린/기본 파이프라인)를 바인딩합니다.
-         * @details 모든 draw 계열이 직전 상태에 의존하지 않고 스스로 파이프라인을 세우도록 합니다. 슬롯 세트(set 0)도 여기서 굳힙니다(flushSlotSet).
-         * @return 바인딩할 파이프라인이 있으면 true, 없으면 false(드로우를 건너뛰어야 함).
+         * @details 모든 draw 계열이 직전 상태에 의존하지 않고 스스로 파이프라인을 바인딩하도록 합니다. 슬롯 세트(set 0)도 여기서 확정합니다(flushSlotSet).
+         * @return 바인딩할 파이프라인이 있으면 true, 없으면 false 입니다(드로우를 건너뛰어야 함).
          */
         bool bindActiveGraphicsPipeline();
 
-        /** @brief 메시 VB(없으면 풀스크린 정점버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 겁니다. 모든 드로우 진입점이 이것을 쓰고, false(건 메시 VB 가 부서졌다 · 커맨드 버퍼 없음)면 드로우를 버립니다. */
+        /** @brief 메시 VB(없으면 풀스크린 정점 버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 설정합니다. 모든 드로우 진입점이 이것을 쓰고, false(설정한 메시 VB 가 파괴됨, 또는 커맨드 버퍼 없음)면 드로우를 버립니다. */
         [[nodiscard]] bool bindMeshVertexBufferForDraw();
 
         VulkanRHIDevice* _pDevice;
@@ -94,7 +94,7 @@ namespace sw
         VkCommandBuffer _targetBuffer;
         /// @brief 이 컨텍스트가 갱신하는 기록 상태입니다. 리스트가 자기 것을 넘기면 서로 간섭하지 않습니다.
         VulkanRecordingState* _pState;
-        /// @brief 슬롯 세트를 할당받는 풀 묶음입니다. nullptr 이면 디바이스 프레임 스트림의 이번 링 슬롯 묶음을 씁니다.
+        /// @brief 슬롯 세트를 할당받는 풀 그룹입니다. nullptr 이면 디바이스 프레임 스트림의 이번 링 슬롯 그룹을 씁니다.
         VulkanDescriptorPoolSet* _pDescriptorPoolSet;
         /// @brief 마지막으로 연 이벤트 마커(패스 이름)입니다. 디바이스를 잃었을 때 "마지막으로 제출한 패스" 를 로그에 적는 데 씁니다.
         fixed_string<constant::kMaxBuffer64> _lastEventMarker;
@@ -106,7 +106,7 @@ namespace sw
         /** @brief 마지막으로 연 이벤트 마커입니다(없으면 빈 문자열). 기록이 끝난 뒤 제출하는 스레드가 읽습니다. */
         const utf8* getLastEventMarker() const { return _lastEventMarker.c_str(); }
 
-        /** @brief 기록 대상 버퍼와 풀 묶음을 교체합니다(소유자가 버퍼+풀 쌍을 바꿔 낄 때). */
+        /** @brief 기록 대상 버퍼와 풀 그룹을 교체합니다(소유자가 버퍼와 풀 쌍을 바꿀 때). */
         void rebindCommandBuffer( VkCommandBuffer targetBuffer, VulkanDescriptorPoolSet* pDescriptorPoolSet )
         {
             _targetBuffer       = targetBuffer;

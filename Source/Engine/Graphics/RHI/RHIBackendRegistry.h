@@ -2,7 +2,7 @@
  * @file RHIBackendRegistry.h
  * @brief 플러그형 RHI 백엔드 팩토리 레지스트리입니다(Shipping 은 백엔드 하나를 정적 링크, Dev 는 RHI_* MODULE DLL 을 로드).
  *
- * @note 수명: create() 로 만든 디바이스는 unloadModules() · 레지스트리 해체 전에 파괴해야 합니다.
+ * @note 수명: create() 로 만든 디바이스는 unloadModules() 와 레지스트리 해체 전에 파괴해야 합니다.
  *       RHI::shutdown() 이 활성 디바이스를 놓은 뒤 unloadModules 를 부릅니다.
  */
 #pragma once
@@ -24,7 +24,7 @@ namespace sw
     using RHIDeviceFactoryDelegate = Delegate<unique_ptr<IRHIDevice>()>;
 
     // ------------------------------------------------------------------------------
-    // 1) RHIBackendEntry — 백엔드 + 팩토리 + capability
+    // 1) RHIBackendEntry: 백엔드 + 팩토리 + capability
     // ------------------------------------------------------------------------------
     struct RHIBackendEntry
     {
@@ -38,12 +38,12 @@ namespace sw
 {
     /**
      * @class RHIBackendRegistry
-     * @brief 백엔드 팩토리의 등록 · 조회와 MODULE 로드를 맡습니다.
+     * @brief 백엔드 팩토리의 등록, 조회와 MODULE 로드를 맡습니다.
      */
     class SW_API RHIBackendRegistry : public ISubsystem
     {
     public:
-        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */
         static constexpr const utf8* kSubsystemName = "RHIBackendRegistry";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
@@ -53,7 +53,7 @@ namespace sw
 
     public:
         // ------------------------------------------------------------------------------
-        // 2) 등록 · 조회 · 생성
+        // 2) 등록, 조회, 생성
         // ------------------------------------------------------------------------------
         /** @brief 백엔드 팩토리와 능력을 등록합니다. */
         void registerBackend( RHIBackend backend, const RHIDeviceFactoryDelegate& factory, const RHICapabilities& caps );
@@ -71,7 +71,7 @@ namespace sw
         unique_ptr<IRHIDevice> createDevice( RHIBackend backend ) const;
 
         // ------------------------------------------------------------------------------
-        // 3) MODULE — createRHIDevice export DLL, 언로드 전 디바이스 파괴 필수
+        // 3) MODULE: createRHIDevice export DLL, 언로드 전 디바이스 파괴 필수
         // ------------------------------------------------------------------------------
         /** @brief createRHIDevice 를 export 하는 DLL 을 골라 로드합니다. */
         [[nodiscard]] bool tryLoadModule( RHIBackend backend, string_view modulePath );
@@ -98,7 +98,7 @@ namespace sw
         {
             RHIBackend _backend{};
             void*      _pHandle{ nullptr };
-            string     _modulePath; ///< 내릴 때 로그 이름 — 종료 중에는 리플렉션 조회(`RHI::getBackendTypeName`)를 쓸 수 없다
+            string     _modulePath; ///< 언로드할 때 로그에 쓰는 이름. 종료 중에는 리플렉션 조회(`RHI::getBackendTypeName`)를 쓸 수 없다
         };
 
         vector<RHIBackendEntry> _listEntry;

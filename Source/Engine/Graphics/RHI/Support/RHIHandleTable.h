@@ -1,6 +1,6 @@
 /**
  * @file RHIHandleTable.h
- * @brief index|generation 불투명 핸들 표입니다. COM · Vk 포인터를 uint64 로 캐스팅하지 않습니다.
+ * @brief index|generation 불투명 핸들 테이블입니다. COM, Vk 포인터를 uint64 로 캐스팅하지 않습니다.
  */
 #pragma once
 #include "Core/Container/SlotHandle.h"
@@ -25,7 +25,7 @@ namespace sw
         /** @brief 핸들이 유효하면 슬롯 포인터를, 아니면 nullptr 를 반환합니다. */
         const T* get( uint64 handle ) const { return _table.get( SlotHandle::fromPacked( handle ) ); }
 
-        /** @brief 슬롯을 비우고 세대를 올립니다. 꺼낸 값은 outValue 로 받고, 핸들이 유효했으면 true 를 반환합니다. */
+        /** @brief 슬롯을 비우고 세대를 증가시킵니다. 꺼낸 값은 outValue 로 받고, 핸들이 유효했으면 true 를 반환합니다. */
         bool take( uint64 handle, T& outValue ) { return _table.take( SlotHandle::fromPacked( handle ), outValue ); }
 
         /** @brief 핸들을 무효화합니다. */

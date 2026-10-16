@@ -23,9 +23,9 @@ namespace sw
     {
         RHIGraphicsShaderRequest request;
 
-        // 뎁스만 쓰는 파이프라인(RT 0 개)도 PS 경로가 있으면 픽셀 스테이지를 둔다 — 알파 컷오프 머티리얼이 그림자 · 깊이 프리패스에서
-        // 같은 모양으로 오리려면 픽셀에서 버려야 한다(`FrameRendererUtil::hasMaterialDepthPixelStage`). 컬러 출력이 없는 패스 PSO 는
-        // FrameRenderer 가 PS 경로를 비운다(createPSOForPassType). 어느 쪽이든 서술체의 경로가 답이다.
+        // 뎁스만 쓰는 파이프라인(RT 0 개)도 PS 경로가 있으면 픽셀 스테이지를 둔다. 알파 컷오프 머티리얼이 그림자와 깊이 프리패스에서
+        // 같은 형태로 오려지려면 픽셀에서 버려야 한다(`FrameRendererUtil::hasMaterialDepthPixelStage`). 컬러 출력이 없는 패스 PSO 는
+        // FrameRenderer 가 PS 경로를 비운다(createPSOForPassType). 어느 쪽이든 디스크립터의 경로가 답이다.
         request._bDepthOnly      = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 ) ? SW_TRUE : SW_FALSE;
         request._bHasPixelShader = desc._pixelShaderPath.empty() == false ? SW_TRUE : SW_FALSE;
         request._numRenderTargets =

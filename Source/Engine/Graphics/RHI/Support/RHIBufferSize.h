@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class RHIBufferSize
-     * @brief 원소 크기 × 개수를 64비트로 곱해 32비트에 담기는지 봅니다.
+     * @brief 원소 크기 × 개수를 64비트로 곱해 32비트에 담기는지 확인합니다.
      */
     class SW_API RHIBufferSize
     {

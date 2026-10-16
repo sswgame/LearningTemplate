@@ -1,9 +1,9 @@
 /**
  * @file RHIConstantBufferSlot.h
- * @brief 상수버퍼 하나와 그 bindless 인덱스를 함께 들고 다니는 자리입니다. `RHIStructuredBufferSlot` 의 형제입니다.
- * @details 렌더러가 만드는 상수버퍼는 언제나 같은 모양입니다: **만들고 → bindless 에 등록하고 → 쓸 때 갱신하고 →
+ * @brief 상수 버퍼 하나와 그 bindless 인덱스를 함께 보관하는 슬롯입니다. `RHIStructuredBufferSlot` 의 형제입니다.
+ * @details 렌더러가 만드는 상수 버퍼는 언제나 같은 흐름을 거칩니다: **만들고 → bindless 에 등록하고 → 쓸 때 갱신하고 →
  *          등록 해제한 뒤 지웁니다.** 이 네 단계가 타입 없이 흩어져 있으면 두 가지가 생깁니다.
- *          (1) `{RHIBufferHandle, RHIDescriptorIndex}` 멤버 쌍이 클래스마다 따로 자랍니다(컴퓨트 디스패치 넷이 그랬습니다),
+ *          (1) `{RHIBufferHandle, RHIDescriptorIndex}` 멤버 쌍이 클래스마다 따로 자랍니다(컴퓨트 디스패치 네 곳이 그랬습니다),
  *          (2) 해제 순서를 아는 코드가 부르는 쪽마다 복사됩니다. 실제로 `FrameRenderer` 는 그 순서를 아는 람다를
  *          함수 안에 두고 다섯 번 불렀습니다.
  *
@@ -25,7 +25,7 @@ namespace sw
 
     /**
      * @struct RHIConstantBufferSlot
-     * @brief 상수버퍼 + bindless 인덱스. 만들기·갱신·해제를 한 자리에 모읍니다.
+     * @brief 상수 버퍼와 bindless 인덱스입니다. 생성, 갱신, 해제를 한 곳에 모읍니다.
      */
     struct RHIConstantBufferSlot
     {
@@ -39,11 +39,11 @@ namespace sw
          * @brief 상수버퍼를 만들고 bindless 에 등록합니다. 이미 있으면 그대로 둡니다.
          * @details 버퍼는 만들어졌는데 등록이 실패하면 `_index` 만 무효로 남습니다. 그 상태를 `isValid()` 가
          *          거릅니다(그리기는 살고 그 디스패치만 꺼집니다).
-         * @return 바인딩할 수 있는 상태면 true.
+         * @return 바인딩할 수 있는 상태면 true 입니다.
          */
         [[nodiscard]] bool create( IRHIDevice* pDevice, uint32 byteSize );
 
-        /** @brief 기록 중에 내용을 갱신합니다 — `cmd` 의 디스패치 · 드로우가 이 값을 봅니다(버퍼가 없으면 아무것도 하지 않습니다). */
+        /** @brief 기록 중에 내용을 갱신합니다. `cmd` 의 디스패치와 드로우가 이 값을 봅니다(버퍼가 없으면 아무것도 하지 않습니다). */
         void update( IRHICommandList& cmd, const void* pData, uint32 byteSize ) const;
 
         /** @brief 인덱스를 등록 해제하고 버퍼를 지웁니다. 여러 번 불러도 안전합니다. */

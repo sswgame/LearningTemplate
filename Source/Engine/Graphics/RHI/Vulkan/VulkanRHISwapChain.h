@@ -30,7 +30,7 @@ namespace sw
 
     /**
      * @class VulkanRHISwapChain
-     * @brief 창 하나의 서피스 · 스왑체인 · 백버퍼 이미지입니다. **만들고 · 다시 만들고 · 다음 이미지를 받고 · 표시합니다.**
+     * @brief 창 하나의 서피스, 스왑체인, 백버퍼 이미지입니다. **만들고, 다시 만들고, 다음 이미지를 받고, 표시합니다.**
      * @details Vulkan 은 다른 API 와 달리 백버퍼에 딸린 것이 많습니다. 이미지, 이미지 뷰, 프레임버퍼,
      *          그리고 "이 이미지를 써도 된다"(acquire)와 "이 이미지를 다 그렸다"(renderFinished)를
      *          알리는 세마포어 두 종류입니다. 모두 스왑체인의 수명과 같이 가므로 여기 모아 둡니다.
@@ -38,8 +38,8 @@ namespace sw
      *          세마포어 두 종류는 **인덱스가 다릅니다.** acquire 세마포어는 인플라이트 프레임 슬롯
      *          (`frameSlot`)으로, renderFinished 세마포어는 스왑체인 이미지 인덱스로 셉니다. 드라이버가
      *          인플라이트 프레임 수보다 적은 이미지를 줄 수 있어서 두 개수가 같다는 보장이 없습니다.
-     * @note 프레임 슬롯(펜스 · 커맨드버퍼 · 디스크립터 링)은 스왑체인의 것이 아니라 디바이스의 것입니다.
-     *       그래서 `frameSlot` 을 인자로 받습니다. 스왑체인은 그 값을 들고 있지 않습니다.
+     * @note 프레임 슬롯(펜스, 커맨드 버퍼, 디스크립터 링)은 스왑체인의 것이 아니라 디바이스의 것입니다.
+     *       그래서 `frameSlot` 을 인자로 받습니다. 스왑체인은 그 값을 보관하지 않습니다.
      */
     class VulkanRHISwapChain
     {
@@ -61,10 +61,10 @@ namespace sw
         void destroySurface( VkInstance instance );
 
         /**
-         * @brief 백버퍼 포맷 · 개수 · VSync 요청값을 기억합니다. 서피스 능력으로 클램프될 수 있습니다.
+         * @brief 백버퍼 포맷, 개수, VSync 요청값을 기억합니다. 서피스 능력으로 제한될 수 있습니다.
          * @details VSync 가 여기 있는 이유: Vulkan 은 다른 셋과 달리 present 호출에 동기화 인자가 없고
          *          **스왑체인의 present 모드**가 그 역할을 합니다. 그래서 스왑체인을 다시 만들 때도 같은
-         *          요청을 다시 써야 합니다. 백버퍼 포맷 · 개수를 여기 두는 것과 같은 이유입니다.
+         *          요청을 다시 써야 합니다. 백버퍼 포맷과 개수를 여기 두는 것과 같은 이유입니다.
          */
         void setRequested( RHIFormat format, uint32 bufferCount, bool bVSync );
         /** @brief VSync 요청값만 바꿉니다. 다음 `create` 가 present 모드를 다시 고릅니다. */
@@ -73,7 +73,7 @@ namespace sw
         /**
          * @brief 스왑체인과 이미지 뷰를 만듭니다.
          * @details 요청 크기는 서피스가 고정 크기를 보고하면 무시됩니다(스펙 요구).
-         * @return 서피스가 0 크기를 보고하면(창 최소화 · 종료 중) false. 오류가 아니라 "지금은 못 만든다" 입니다.
+         * @return 서피스가 0 크기를 보고하면(창 최소화나 종료 중) false. 오류가 아니라 "지금은 못 만든다" 입니다.
          */
         [[nodiscard]] bool create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height );
 
@@ -86,7 +86,7 @@ namespace sw
         /** @brief 세마포어를 파괴합니다. 스왑체인을 다시 만들 때 이미지 수가 바뀔 수 있어 함께 갱신합니다. */
         void destroySemaphores( VkDevice device );
 
-        /** @brief 프레임버퍼·이미지 뷰·스왑체인을 파괴합니다(서피스는 남습니다). */
+        /** @brief 프레임버퍼, 이미지 뷰, 스왑체인을 파괴합니다(서피스는 남습니다). */
         void destroy( VkDevice device );
 
         /**
@@ -99,14 +99,14 @@ namespace sw
         VulkanSwapChainStatus present( VkQueue queue );
 
         bool isValid() const { return _swapChain != nullptr; }
-        /** @brief 마지막 `create` 가 서피스 크기 0(최소화 · 종료 중)이라 물러났는지입니다. 오류가 아니라 기다릴 상태입니다. */
+        /** @brief 마지막 `create` 가 서피스 크기 0(최소화나 종료 중)이라 물러났는지입니다. 오류가 아니라 기다릴 상태입니다. */
         bool isSurfaceEmpty() const { return _bSurfaceEmpty; }
 
         uint32 getImageIndex() const { return _imageIndex; }
         uint32 getImageCount() const { return static_cast<uint32>( _listImage.size() ); }
         uint32 getExtentWidth() const { return _extentWidth; }
         uint32 getExtentHeight() const { return _extentHeight; }
-        /** @brief VkFormat 값입니다. 헤더에서 Vulkan 열거형을 쓰지 않으려고 uint32 로 들고 있습니다. */
+        /** @brief VkFormat 값입니다. 헤더에서 Vulkan 열거형을 쓰지 않으려고 uint32 로 보관합니다. */
         uint32 getImageFormat() const { return _imageFormat; }
         /** @brief 실제로 채택된 백버퍼 포맷입니다. 요청과 다를 수 있습니다. */
         RHIFormat getActualBackBufferFormat() const { return _actualBackBufferFormat; }
