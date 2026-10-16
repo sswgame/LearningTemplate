@@ -893,6 +893,17 @@
   다른 키트는 키트 표보다 먼저 `OnlineReplyUtil::markError` 가 결과를 `UpdateRequired` 로 바꿉니다(키트 표의 기본값 `Unavailable` 은 재시도를 부르므로). Hello 에 다른 답이 오면 클라이언트는 `HandshakeFailed` 로 멈춥니다.
   한쪽만 키트 모듈을 끄거나(`EditorModuleOverrides`) 핫 리로드로 키트 프로토콜을 바꾸면 그쪽 해시만 달라져 접속이 거절됩니다. 같은 빌드끼리만 잇는다는 규칙대로의 동작이라 따로 맞추지 않습니다.
   언리얼 `FNetworkVersion::GetLocalNetworkVersion`(빌드 값 하나를 접속 때 비교), Unity Netcode `ProtocolVersion` 과 같은 자리입니다(기억에 의존). 옛 클라이언트를 받는 탈출구는 열지 않았습니다.
+- **온라인 키트 메시지는 고정 배치형(B)이고, 키트의 메시지 타입 목록 하나가 쓰기 · 읽기와 스키마 해시를 함께 정합니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 5-b).
+  11 키트의 손 코덱(필드를 하나씩 적던 `BitWriter` 코드)과 손 `kVersion` 을 지웠습니다. 키트는 `XxxProtocol::MessageTypes = OnlineMessageTypes<...>` 하나를 두고, 그 `write` · `read` 는 목록에 없는 타입이면 컴파일이 멈춥니다.
+  같은 목록을 `OnlineProtocolEntry` 에 넘기므로 타입마다의 `FixedLayout::getSchemaHash` 가 온라인 스키마 해시에 섞이고, 해시용 목록을 따로 적어 빠뜨릴 곳이 없습니다.
+  언리얼 Iris 가 복제 디스크립터에서 프로토콜 해시를 만드는 것과 같은 방향입니다(기억에 의존). 정한 세부는 아래와 같습니다.
+  - 메시지 머리에 그 타입의 해시(64 비트)를 그대로 싣습니다(계획 초안은 본문만 쓰기). 메서드 번호는 해시에 들어가지 않으므로, 번호가 어긋난 빌드끼리 다른 타입을 읽으면 이 해시가 `SchemaMismatch` 로 거절합니다. 같은 타입을 받는 두 메서드의 번호를 맞바꾸는 변경만 이 확인을 지나므로 하지 않습니다.
+  - 저장소에 남는 값(채팅 기록, 라이브 운영 이벤트 · 기기, 서버 디렉터리 점검 · 공지, 거래 레코드)과 캐시 값(파티 · 로비, 접속 상태)은 A(`ServiceRecordUtil`, 판 머리)입니다. 캐시도 배포 중에 다른 빌드의 서버가 읽기 때문입니다.
+    옛 손 형식 레코드를 바꾸는 변환 코드는 두지 않았습니다. 읽지 못한 레코드는 경고를 남기고 건너뜁니다. A 는 `MaxCount` 를 보지 않으므로 B 코덱이 있는 레코드 타입은 읽은 뒤 B 쓰기 검사로 선언된 범위를 다시 보고(`decodeWithinRange`), 없는 타입은 쓰기 때의 규칙 함수(`LiveEventRules::isValid`, 서버 디렉터리 `isValidWindow` · `isValidNotice`)를 다시 지납니다.
+  - 범위 밖 요청은 클라이언트가 보내지 않고 `kInvalidRequest` 와 같은 결과로 바로 끝냅니다(서버가 같은 본문을 거절한 것과 같은 결과). 서버 응답 · 알림이 범위 밖이면 오류 로그를 남기고 `kInternal` 로 답하거나 알림을 보내지 않습니다.
+  - 가변 길이가 두 겹인 칸(`vector<string>`, `vector<vector<T>>`)은 원소를 구조체로 감쌌습니다(`AccountLinkedProvider`, `MatchFormedTeam`). 클라이언트에 보내지 않는 값은 형식으로 막았습니다. 점검 허용 목록은 상태 응답의 타입(`MaintenanceView`)에 없고, 서버 안에서만 쓰는 칸(`AdminReply::_bRevokeSessions`, 레코드 판 `_version`)은 `PROPERTY` 가 아닙니다.
+  - 의미만 바뀌고 배치는 그대로인 변경(단위 변경 같은 것)은 해시가 잡지 못하므로 `OnlineProtocolConstant::kBaseVersion` 하나를 올립니다.
+  - 남은 손 코덱(기반 계층의 제재 버스, 접속 상태 전달 봉투와 캐시 값, 원장 · 우편 · 감사 · 원격 설정 레코드, 계정 · 길드 · 거래의 id 레코드)은 키트 프로토콜이 아니어서 이 단계에서 옮기지 않았습니다.
 
 ### 5-10. 전용 서버
 

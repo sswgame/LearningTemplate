@@ -42,7 +42,7 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 | `GimmickCircuit.cpp:461-515` 상태 | `memcpy` 바이트 | `kStateTag`, `kStateVersion`, 회로 구조 해시 | 기대 크기를 손으로 계산(노드당 `16`, `:492`) |
 | Mech 스냅샷(옛 `MechArenaSnapshot.cpp`, 단계 4-a 에서 지움) | `BitWriter`, 양자화 | `kMagic` 만 | 개수를 255 로 잘라 조용히 버림 |
 | Horror 스냅샷(옛 `HorrorSnapshot.cpp`, 단계 4-a 에서 지움) | `BitWriter`, 양자화 | `kMagic = "DBD1"` | 같은 개수 자르기 |
-| 온라인 `*Protocol.cpp` 12 파일, 2,046 줄 | `BitWriter` | 키트마다 손 `kVersion`(`ChatProtocol.h:69` 등) | 와이어를 바꾸면 버전을 높이라는 주석(`ChatProtocol.h:23`)이 유일한 장치 |
+| 온라인 `*Protocol.cpp` 12 파일, 2,046 줄(단계 5-b 에서 B 로 옮김) | `BitWriter` | 키트마다 손 `kVersion`(`ChatProtocol.h:69` 등) | 와이어를 바꾸면 버전을 높이라는 주석(`ChatProtocol.h:23`)이 유일한 장치 |
 
 `BitWriter::writeInt` 는 범위 밖 정수를 경고 없이 잘라 씁니다(`Source/Core/Network/BitStream.cpp:70-74`). 범위를 잘못 정하면 값이 조용히 바뀝니다.
 `FighterRuntime`(`FightingMatch.h:117`)에는 `REFLECT` · `PROPERTY` 가 없습니다. Mech · Horror 스냅샷 구조체는 단계 4-a 에서 `REFLECT` · `PROPERTY` 를 받았습니다.
@@ -69,7 +69,7 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 
 모두 "형식이 바뀌었는지를 사람이 기억해야 하는" 구조입니다. 뿌리는 **바이트 배치의 원본이 선언과 따로 손 코드에 있다**는 점입니다.
 
-- 손 버전 상수: `FightingMatch` `kStateVersion`, `GimmickCircuit` `kStateVersion`, 온라인 키트 `kVersion` 12 개, `NetWireVersion::kCore`(`Source/Core/Network/NetTypes.h:42`).
+- 손 버전 상수: `FightingMatch` `kStateVersion`, `GimmickCircuit` `kStateVersion`, 온라인 키트 `kVersion` 12 개(단계 5-b 에서 지움), `NetWireVersion::kCore`(`Source/Core/Network/NetTypes.h:42`).
 - 손으로 계산한 크기: `GimmickCircuit.cpp:465,492` 의 `_listNode.size() * 16`.
 - 조용히 버리는 값: `writeInt` 의 범위 자르기. Mech · Horror 의 개수 255 자르기와 Mech 의 `max( 1.0f, halfSize )` 는 단계 4-a 에서 쓰기 실패로 바뀌었습니다.
 - 스키마 확인 없는 순서 기반 형식: 컴팩트 모드(1.1).
@@ -267,7 +267,8 @@ struct MechArenaSnapshot
 ```
 
 - 해시는 최상위 한 번만 씁니다. 중첩 타입과 컨테이너 원소는 해시 없이 바로 필드입니다.
-- 넷 채널과 온라인 연결은 핸드셰이크가 해시를 이미 확인했으므로 메시지마다 해시를 싣지 않습니다(5절). 본문만 쓰는 경로는 확인을 마친 채널 · 연결 객체 안에만 있고 공개 API 로 내보내지 않습니다.
+- 넷 채널은 핸드셰이크가 해시를 이미 확인했으므로 메시지마다 해시를 싣지 않습니다(5절). 본문만 쓰는 경로는 확인을 마친 채널 객체 안에만 있고 공개 API 로 내보내지 않습니다.
+  온라인 연결은 메시지마다 타입 해시를 그대로 싣습니다(단계 5-b). 메서드 번호가 핸드셰이크 해시에 들어가지 않으므로, 번호가 어긋난 빌드끼리 다른 타입을 읽으면 이 해시가 `SchemaMismatch` 로 거절합니다.
 - **원자성**: 읽기는 대상 객체를 복사한 임시 객체에 읽고, 끝까지 성공했을 때만 옮깁니다. 실패하면 대상은 그대로입니다.
   복사본에서 시작하는 이유는 B 에 없는 필드(`FighterRuntime::_pDef` 같은 정의 포인터)를 보존하기 위해서입니다. `FightingMatch::loadState` 의 `arrLoaded` 복사(`:1147`)를 생성 코드가 대신합니다.
 - **결과 형식**: `FixedReadResult` 는 `[[nodiscard]]` 열거형입니다. 값은 `Ok`, `SchemaMismatch`, `Truncated`, `OutOfRange`, `ValidateFailed`, `TrailingData` 입니다. 호출부가 이유를 로그에 남길 수 있습니다.
@@ -353,9 +354,11 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
   손 버전을 높이지 않아도 바이트 배치가 바뀌면 핸드셰이크가 `VersionMismatch` 로 거절합니다. 손 버전은 의미만 바뀌고 배치는 그대로인 경우에만 높입니다.
 - **온라인 서비스(사용자 결정: B 로 옮김)**: 서버와 클라이언트는 같은 빌드로 배포합니다. 단계 5-a 에서 키트마다 `getProtocolVersion()` 을 대조하던 협상을 아래 해시 비교로 바꿨습니다(2026-10-17).
   - 접속 핸드셰이크의 **첫 필드**를 "온라인 스키마 해시"로 바꿉니다. 서버는 다른 어떤 바이트보다 먼저 이것을 비교합니다.
-    5-a 의 해시는 빌드에 올라온 키트 프로토콜 항목(`OnlineProtocolEntry`, 키트 Shared `.cpp` 의 `XxxProtocol::kOnlineEntry`) 전부의 영역과 손 버전, `kBaseVersion` 을 섞습니다(`OnlineProtocolRegistry::computeSchemaHash`).
+    해시는 빌드에 올라온 키트 프로토콜 항목(`OnlineProtocolEntry`, 키트 Shared `.cpp` 의 `XxxProtocol::kOnlineEntry`) 전부의 영역과 메시지 스키마 해시, `kBaseVersion` 을 섞습니다(`OnlineProtocolRegistry::computeSchemaHash`).
     키트 서비스는 `getProtocol` 로 그 항목을 돌려줘야 하므로 항목 없는 키트는 서비스를 만들 수 없습니다. 클라이언트가 올린 키트만 섞으면 키트 일부만 쓰는 클라이언트가 어긋나므로 빌드 전체를 섞습니다.
-    5-b 는 메서드 · 타입 목록(`*Protocol::describe`)의 해시를 이 항목에 더해 같은 자리에서 섞습니다.
+    메시지 스키마 해시는 키트의 메시지 타입 목록(`XxxProtocol::MessageTypes`, `OnlineMessageTypes<...>`)이 항목을 만들 때 넘겨져 타입마다의 `FixedLayout::getSchemaHash` 를 섞은 값입니다(단계 5-b).
+    키트는 이 목록으로만 메시지를 쓰고 읽으므로(목록에 없는 타입은 컴파일이 멈춥니다) 해시용 목록을 따로 적는 곳이 없습니다.
+    의미만 바뀌고 배치가 그대로인 변경(8.1 위험 6)은 손 버전이 아니라 `OnlineProtocolConstant::kBaseVersion` 하나를 올립니다.
   - 다르면 연결을 `kVersionMismatch` 로 거절하고 응답에 서버 해시를 실어 보냅니다. 클라이언트는 이 오류를 "업데이트 필요" 화면으로 보이고 다시 접속하지 않습니다. 메시지를 하나라도 B 로 해석하기 전에 멈추므로 조용히 잘못 읽는 경로가 없습니다.
     확인한 결과(단계 5-a): 이 오류를 화면으로 보이는 게임 UI 는 아직 없습니다. 신호는 `OnlineServiceClient::getState() == VersionMismatch` 와 응답의 `_errorCode` 이고,
     계정 키트는 이것을 `LoginResult::UpdateRequired` 로 바꿉니다(전에는 표에 없어 `StoreUnavailable` 이 되어 재시도를 불렀습니다). 서버는 거절한 뒤 연결을 닫습니다.
@@ -501,7 +504,6 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 2 | (보류) `GimmickCircuit` 을 B 로. 상태 바이트 `_stateBytes` 가 씬 · 프리팹 XML 과 레벨 세이브에 남아 B 대상이 아님. 아래 문단 | `GimmickCircuit.*`, `GimmickCircuitComponent.*` | 세이브 형식 결정이 먼저 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게 | 인스펙터 범위 코드(미확인 위치) | 단계 1 뒤 | `worker`(sonnet) |
-| 5-b | 온라인 프로토콜 11 키트를 B 로, `*Protocol::describe` 의 해시를 `OnlineProtocolEntry` 에 더해 섞기 | `*Protocol.*`, `OnlineProtocolRegistry.*` | 11 키트 한 손 | `worker`(opus) |
 | 6 | 컴팩트 모드 삭제, `cloneObject` B | `BinarySerializer.*`, `Archive.*` | 다른 직렬화 작업과 겹침 | `worker`(sonnet) |
 | 7-a | `GameObject` 타입 캐시, 열거형 이름 배열 | `GameObject.*`, `EnumName.cpp`, 생성기 열거형 등록 | 생성기는 단계 1 뒤 | `worker`(sonnet) |
 | 7-b | `REFLECT` 다중 상속 생성 오류 | `AstVisitor.cpp` | 단계 1 과 같은 파일, 순서대로 | `worker`(sonnet) |
@@ -513,6 +515,10 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 `ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` 입니다. 단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다.
 단계 5-a(Hello 첫 필드 스키마 해시, `OnlineProtocolRegistry`, "업데이트 필요" 거절 뒤 재접속 없음)는 끝났습니다(2026-10-17). 테스트는 `OnlineServiceHostTest` 의 `RequestsBeforeHelloAreRefusedAndSchemaHashIsComparedFirst` · `HelloRefusalsReadOnlyTheFixedHashFieldFirst` · `SameSchemaHashConnects` · `SchemaHashMismatchStopsTheClientWithoutReconnecting`, `OnlineProtocolTest.VersionMismatchBecomesUpdateRequiredBeforeTheKitTable` 입니다.
 키트 결과 열거형은 모두 `UpdateRequired` 를 가지며, 공통 처리(`OnlineReplyUtil::markError`)가 키트 표보다 먼저 `kVersionMismatch` 를 그 값으로 바꿉니다.
+
+단계 5-b(온라인 11 키트를 B 로)는 끝났습니다(2026-10-17). 키트마다 요청 · 응답 · 알림 · 서버 버스 본문이 `REFLECT` 구조체이고 `XxxProtocol::MessageTypes` 로만 쓰고 읽으며,
+손 코덱(`AccountWire`, `TradeWire`, 키트 `writeX` · `readX`)과 손 `kVersion` 은 지웠습니다. 저장소(영속, 캐시)에 남는 값은 A(`ServiceRecordUtil`)입니다. 결정은 [결정 기록](../09_Decisions.md) 5-9 에 있습니다.
+테스트는 키트마다 `<Kit>ProtocolTest`(왕복, 모든 앞부분 거절, 다른 타입 거절, 범위 밖 쓰기 실패)와 `OnlineProtocolTest.MessageTypesHashFollowsTheTypes` 입니다.
 
 단계 3 은 끝났습니다(2026-10-17). `FightingMatch` 가 `REFLECT` 타입이고 상태 필드(`FighterRuntime`, `MoveTimeline`, `InputCommandBuffer`, `RoundSeries`)가 `PROPERTY` 입니다.
 롤백은 `FixedLayout`, 세이브는 `BinarySerializer::serializeVersioned` 이고, 두 읽기가 같은 `validateState` 를 씁니다. 손 코덱과 손 버전 상수는 지웠습니다.
