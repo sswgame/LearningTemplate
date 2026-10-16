@@ -36,6 +36,20 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief `IFileWatcher::pollEvents` 의 결과입니다. 형식에 `[[nodiscard]]` 를 달아 받는 쪽이 감시가 끊긴 것을 버리지 못하게 합니다.
+     * @details 감시 워커는 OS 오류(디렉터리 삭제 · 핸들 오류 · inotify 읽기 실패)로 멈출 수 있습니다. 그때 이벤트가 오지 않을 뿐이면
+     *          받는 쪽은 "변경이 없다" 와 구별하지 못해 핫 리로드가 조용히 꺼집니다. 그래서 끊김을 결과에 실어 한 번 알립니다.
+     */
+    struct [[nodiscard]] FileWatchPollResult
+    {
+        uint32 _eventCount{ 0 };     ///< 꺼낸 이벤트 수(합성 리스캔 포함)
+        bool   _bWatchLost{ false }; ///< 워커가 오류로 멈췄다 — 이 뒤로는 변경이 오지 않는다. 받는 쪽이 감시를 내리고 오류로 알린다
+    };
+} // namespace sw
+
+namespace sw
+{
     SW_DECLARE_DELEGATE( void, FileChangeDelegate, const FileChangeEvent& );
 
     // ------------------------------------------------------------------------------
@@ -60,18 +74,18 @@ namespace sw
          * @brief 디렉터리 감시를 시작합니다.
          * @param directoryPath 감시할 디렉터리의 절대 · 상대 경로
          * @param bRecursive 하위 폴더까지 감시할지 여부
-         * @return 감시를 시작했으면 true
+         * @return 감시를 시작했으면 true. 실패하면 이유를 오류 로그로 남깁니다
          */
-        virtual bool startWatching( string_view directoryPath, bool bRecursive = true ) = 0;
+        [[nodiscard]] virtual bool startWatching( string_view directoryPath, bool bRecursive = true ) = 0;
 
         /**
          * @brief 큐에 쌓인 파일 변경 이벤트를 꺼냅니다(메인 스레드의 업데이트 루프에서 부르십시오).
          * @param outListEvent 꺼낸 파일 변경 이벤트 목록
-         * @return 꺼낸 이벤트 수
-         * @details **여기서 한 번만 구현합니다**(세 플랫폼이 함께 씁니다). 큐를 비우고, 넘쳤으면 합성 리스캔 하나를 덧붙이고,
-         *          넘침 표시를 내리는 일입니다. 같은 코드를 세 벌 두면 하나가 조용히 어긋납니다.
+         * @return 꺼낸 이벤트 수와 감시 끊김 여부
+         * @details **여기서 한 번만 구현합니다**(세 플랫폼이 함께 씁니다). 큐를 비우고, 넘쳤거나 감시가 끊겼으면 합성 리스캔 하나를
+         *          덧붙이고, 표시를 내리는 일입니다. 같은 코드를 세 벌 두면 하나가 조용히 어긋납니다. 끊김은 한 번만 알립니다.
          */
-        uint32 pollEvents( vector<FileChangeEvent>& outListEvent );
+        FileWatchPollResult pollEvents( vector<FileChangeEvent>& outListEvent );
 
         /**
          * @brief 감시를 끝내고 자원을 해제합니다.
@@ -96,6 +110,14 @@ namespace sw
         void pushChange( FileWatcherAction action, string_view directory, string_view filename );
 
         /**
+         * @brief 워커가 OS 오류로 감시를 잃었다고 알립니다. 플랫폼 워커 스레드에서 부르고, 부른 뒤 워커는 끝납니다.
+         * @details 오류 로그를 남기고 다음 `pollEvents` 가 `_bWatchLost` 와 합성 리스캔으로 받는 쪽에 전합니다. 워커가 조용히 끝나면
+         *          받는 쪽은 변경이 없는 것과 구별하지 못합니다.
+         * @param reason 감시를 잃은 이유(OS 오류 문구)
+         */
+        void reportWatchLost( string_view reason );
+
+        /**
          * @brief 폴링하기 전까지 쌓아 둘 변경 이벤트의 상한입니다.
          * @details `pollEvents` 를 부르는 쪽이 없거나 밀리는 동안(대량 임포트 · 브랜치 전환) 큐가 끝없이 커지지 않게 합니다.
          *          상한에 걸리면 개별 이벤트 대신 **합성 리스캔 하나**로 합칩니다. `_filename` 이 빈 `Modified` 가 그 약속이고,
@@ -115,5 +137,8 @@ namespace sw
 
         /** @brief 상한에 걸려 개별 이벤트를 버렸다는 표시입니다. 다음 폴링이 합성 리스캔으로 바꿔 전달합니다. */
         bool _bEventQueueOverflowed{ false };
+
+        /** @brief 워커가 감시를 잃었다는 표시입니다(`reportWatchLost`). 다음 폴링이 한 번 알리고 내립니다. */
+        bool _bWatchLost{ false };
     };
 } // namespace sw

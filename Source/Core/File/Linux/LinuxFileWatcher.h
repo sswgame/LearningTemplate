@@ -35,7 +35,7 @@ namespace sw
         ~LinuxFileWatcher() override;
 
         /** @brief inotify · eventfd 를 열고 워커를 띄웁니다. */
-        bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
+        [[nodiscard]] bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
         /** @brief eventfd 로 워커를 깨운 뒤 모든 watch 를 뗍니다. */
         void stopWatching() override;
         /** @brief 워커가 돌고 있으면 true 입니다. */

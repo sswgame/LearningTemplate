@@ -44,8 +44,9 @@ namespace sw
         /**
          * @brief 초기화합니다. 네이티브 감시자는 @p watchRootPath 아래를 감시하며, 비우면 리소스 루트를 감시합니다.
          * @details 감시(`registerWatch`)의 접두사가 이 루트 아래에 있어야 이벤트가 온다. 다른 루트(`Config/`)를 보려면 디스패처를 하나 더 둔다.
+         *          Windows · Linux 에서 네이티브 감시를 걸지 못하면 mtime 폴링으로 바꾸지 않고 false 를 돌려준다.
          */
-        bool initialize( string_view watchRootPath = {} );
+        [[nodiscard]] bool initialize( string_view watchRootPath = {} );
         /** @brief 종료합니다. */
         void shutdown();
 

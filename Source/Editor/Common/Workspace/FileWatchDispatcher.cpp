@@ -85,20 +85,19 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
         const string rootPath = watchRootPath.empty() ? ResourcePaths::getRootFolderPath() : string( watchRootPath );
-        if ( rootPath.empty() == false )
+        // 네이티브 감시를 걸지 못하면 mtime 폴링으로 몰래 바꾸지 않고 실패로 돌려준다 — 부른 쪽이 핫 리로드를 끈 채로 둔다.
+        // 루트가 없는 것은 팩만 실린 실행의 정상 상태라 경고이고, 있는 루트를 걸지 못한 것은 오류다.
+        if ( rootPath.empty() )
         {
-            if ( _fileWatcher->startWatching( rootPath, true ) == false )
-            {
-                SW_LOG_ERROR( "Failed to start watching: %#", rootPath );
-                _fileWatcher.reset();
-                _bUseMtimePoll = true;
-                SW_LOG_WARNING( "Falling back to mtime poll." );
-            }
+            SW_LOG_WARNING( "FileWatchDispatcher: the watch root is empty (no resource root folder) - hot reload is off" );
+            _fileWatcher.reset();
+            return false;
         }
-        else
+        if ( _fileWatcher->startWatching( rootPath, true ) == false )
         {
-            SW_LOG_WARNING( "FileWatchDispatcher: Root resource path is empty." );
-            _bUseMtimePoll = true;
+            SW_LOG_ERROR( "FileWatchDispatcher: failed to start watching %#", rootPath );
+            _fileWatcher.reset();
+            return false;
         }
 #else
         _bUseMtimePoll = true;
@@ -129,7 +128,16 @@ namespace sw
         _lastDrainTimestamp         = FileUtil::getCurrentFileTimestamp();
 
         if ( _fileWatcher )
-            _fileWatcher->pollEvents( listEvent );
+        {
+            const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
+            if ( poll._bWatchLost )
+            {
+                // 워커가 이유를 이미 오류로 남겼다. 다시 걸어도 같은 실패가 되풀이되므로 감시를 내리고, 마지막 리스캔은 아래에서 처리한다.
+                SW_LOG_ERROR( "FileWatchDispatcher: file watching stopped - changes under the watch root are no longer reloaded" );
+                _fileWatcher->stopWatching();
+                _fileWatcher.reset();
+            }
+        }
         else if ( _bUseMtimePoll )
             pollMtimeFallback( listEvent );
         else

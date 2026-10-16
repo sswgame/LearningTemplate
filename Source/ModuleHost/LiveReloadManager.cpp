@@ -362,7 +362,11 @@ namespace sw
         BLOCK( "Poll File Events" )
         {
             if ( _fileWatcher != nullptr )
-                _fileWatcher->pollEvents( listEvent );
+            {
+                const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
+                if ( poll._bWatchLost )
+                    SW_LOG_ERROR( "Module directory watching stopped - outside builds are not reloaded until the process restarts" );
+            }
         }
 
         // 바깥 빌드는 모듈 DLL 의 쓰기가 아니라 성공 스탬프로 본다 — 연쇄 빌드가 모듈을 하나씩 다시 쓰는 도중의 반쯤 링크된 집합을 올리지 않는다.
