@@ -100,8 +100,8 @@ namespace sw::editor
 
     GameObjectManager* getActiveObjectManager()
     {
-        Scene* pScene = getActiveScene();
-        return pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        const SceneManager* pSceneManager = findSubsystem<SceneManager>();
+        return pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
     }
 
     GameObject* findGameObject( GameObjectHandle handle )

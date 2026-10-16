@@ -19,9 +19,9 @@ namespace
         /** @brief 감시 루트를 정해 둡니다. 합성 리스캔 이벤트가 이 값을 답니다. */
         explicit StubFileWatcher( sw::string_view watchRoot ) { _directoryPath = sw::string{ watchRoot }; }
 
-        bool startWatching( sw::string_view, bool ) override { return true; }
-        void stopWatching() override {}
-        bool isWatching() const override { return true; }
+        [[nodiscard]] bool startWatching( sw::string_view, bool ) override { return true; }
+        void               stopWatching() override {}
+        bool               isWatching() const override { return true; }
 
         /** @brief 보호된 `pushChange` 를 테스트에서 부를 수 있게 엽니다. */
         void push( sw::FileWatcherAction action, sw::string_view filename )
@@ -34,6 +34,9 @@ namespace
         {
             pushChange( action, directory, filename );
         }
+
+        /** @brief 보호된 `reportWatchLost` 를 엽니다 — 워커가 OS 오류로 멈춘 모양입니다. */
+        void loseWatch() { reportWatchLost( "stub failure" ); }
     };
 } // namespace
 
@@ -51,7 +54,7 @@ SW_TEST_CASE( FileWatcherTest, ConsecutiveDuplicatesCollapse )
     watcher.push( sw::FileWatcherAction::Modified, "a.txt" );
 
     sw::vector<sw::FileChangeEvent> listEvent;
-    SW_EXPECT_EQUAL( 1u, watcher.pollEvents( listEvent ) );
+    SW_EXPECT_EQUAL( 1u, watcher.pollEvents( listEvent )._eventCount );
     SW_EXPECT_EQUAL( size_t{ 1 }, listEvent.size() );
 }
 
@@ -69,7 +72,7 @@ SW_TEST_CASE( FileWatcherTest, NonConsecutiveDuplicatesAreKept )
     watcher.push( sw::FileWatcherAction::Modified, "a.txt" );
 
     sw::vector<sw::FileChangeEvent> listEvent;
-    SW_EXPECT_EQUAL( 3u, watcher.pollEvents( listEvent ) );
+    SW_EXPECT_EQUAL( 3u, watcher.pollEvents( listEvent )._eventCount );
     SW_EXPECT_EQUAL( size_t{ 3 }, listEvent.size() );
 
     // 같은 파일이라도 동작이 다르면 접지 않는다.
@@ -77,7 +80,7 @@ SW_TEST_CASE( FileWatcherTest, NonConsecutiveDuplicatesAreKept )
     watcher.push( sw::FileWatcherAction::Removed, "c.txt" );
 
     listEvent.clear();
-    SW_EXPECT_EQUAL( 2u, watcher.pollEvents( listEvent ) );
+    SW_EXPECT_EQUAL( 2u, watcher.pollEvents( listEvent )._eventCount );
 }
 
 /**
@@ -98,7 +101,7 @@ SW_TEST_CASE( FileWatcherTest, QueueCapCollapsesIntoSingleRescan )
     }
 
     sw::vector<sw::FileChangeEvent> listEvent;
-    const uint32                    polled = watcher.pollEvents( listEvent );
+    const uint32                    polled = watcher.pollEvents( listEvent )._eventCount;
 
     // 상한만큼 담기고, 버린 것을 알리는 합성 리스캔 하나가 더 붙는다.
     SW_EXPECT_TRUE_MSG( polled < kPushCount, "상한이 걸리지 않아 큐가 끝없이 자랐다" );
@@ -111,7 +114,7 @@ SW_TEST_CASE( FileWatcherTest, QueueCapCollapsesIntoSingleRescan )
 
     // 리스캔은 한 번만 알린다 — 다음 폴링에는 남아 있지 않다.
     listEvent.clear();
-    SW_EXPECT_EQUAL( 0u, watcher.pollEvents( listEvent ) );
+    SW_EXPECT_EQUAL( 0u, watcher.pollEvents( listEvent )._eventCount );
 }
 
 /**
@@ -128,7 +131,7 @@ SW_TEST_CASE( FileWatcherTest, SameNameInDifferentDirectoriesIsNotCollapsed )
     watcher.pushFrom( sw::FileWatcherAction::Modified, "assets/audio", "config.json" );
 
     sw::vector<sw::FileChangeEvent> listEvent;
-    const uint32                    count = watcher.pollEvents( listEvent );
+    const uint32                    count = watcher.pollEvents( listEvent )._eventCount;
 
     SW_ASSERT_EQUAL( 2u, count );
     SW_ASSERT_EQUAL( size_t( 2 ), listEvent.size() );
@@ -139,5 +142,31 @@ SW_TEST_CASE( FileWatcherTest, SameNameInDifferentDirectoriesIsNotCollapsed )
     sw::vector<sw::FileChangeEvent> listSecond;
     watcher.pushFrom( sw::FileWatcherAction::Modified, "assets/ui", "config.json" );
     watcher.pushFrom( sw::FileWatcherAction::Modified, "assets/ui", "config.json" );
-    SW_EXPECT_EQUAL( 1u, watcher.pollEvents( listSecond ) );
+    SW_EXPECT_EQUAL( 1u, watcher.pollEvents( listSecond )._eventCount );
+}
+
+/**
+ * @brief [FileWatcherTest] 워커가 감시를 잃으면 다음 폴링이 **한 번** 알리고 합성 리스캔을 덧붙인다
+ * @details 워커가 조용히 끝나면 받는 쪽은 "변경이 없다" 와 구별하지 못해 핫 리로드가 소리 없이 꺼진다.
+ *          끊김은 `FileWatchPollResult::_bWatchLost` 로 오고, 멈추기 전 잃었을 변경은 리스캔으로 다시 훑게 한다.
+ */
+SW_TEST_CASE( FileWatcherTest, WatchLostIsReportedOnceWithRescan )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "a lost watch reports an error" );
+    StubFileWatcher watcher{ "root" };
+
+    watcher.push( sw::FileWatcherAction::Modified, "a.txt" );
+    watcher.loseWatch();
+
+    sw::vector<sw::FileChangeEvent> listEvent;
+    const sw::FileWatchPollResult   lost = watcher.pollEvents( listEvent );
+    SW_EXPECT_TRUE_MSG( lost._bWatchLost, "감시 끊김이 폴링 결과에 실리지 않았다" );
+    SW_ASSERT_EQUAL( 2u, lost._eventCount );
+    SW_ASSERT_EQUAL( size_t{ 2 }, listEvent.size() );
+    SW_EXPECT_TRUE_MSG( listEvent.back()._filename.empty(), "끊김 뒤 합성 리스캔이 붙지 않았다" );
+
+    listEvent.clear();
+    const sw::FileWatchPollResult after = watcher.pollEvents( listEvent );
+    SW_EXPECT_TRUE_MSG( after._bWatchLost == false, "끊김을 두 번 알렸다" );
+    SW_EXPECT_EQUAL( 0u, after._eventCount );
 }

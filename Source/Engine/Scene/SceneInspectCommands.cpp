@@ -16,14 +16,12 @@
 
     #include "Core/Container/StringUtil.h"
 
-    #include "Engine/Common/EngineServices.h"
     #include "Engine/Object/Component/Component.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
     #include "Engine/Reflection/ReflectionTypes.h"
     #include "Engine/Scene/AuthorityGhost.h"
-    #include "Engine/Scene/Scene.h"
     #include "Engine/Scene/SceneManager.h"
     #include "Engine/Scene/SceneStateHash.h"
     #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -38,12 +36,6 @@ namespace sw
         struct SceneInspectCommandsInternal
         {
             static constexpr uint32 kDefaultTreeLimit = 200;
-
-            static GameObjectManager* findActiveObjectManager()
-            {
-                Scene* pScene = engine::areEngineServicesBound() ? engine::getSubsystem<SceneManager>().getActiveScene() : nullptr;
-                return pScene != nullptr ? pScene->getObjectManager() : nullptr;
-            }
 
             static void appendNumber( string& outText, uint64 value )
             {
@@ -64,7 +56,7 @@ namespace sw
                 uint64 limit = kDefaultTreeLimit;
                 if ( listArgument.size() > 1 || ( listArgument.size() == 1 && StringUtil::parseUint64( listArgument[0], limit ) == false ) )
                     return false;
-                GameObjectManager* pManager = findActiveObjectManager();
+                GameObjectManager* pManager = engine::findActiveObjectManager();
                 if ( pManager == nullptr )
                 {
                     outReply = "no active scene";
@@ -113,8 +105,7 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                GameObjectManager* pManager = findActiveObjectManager();
-                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( listArgument[0] ) ) : nullptr;
+                GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
                 if ( pObject == nullptr )
                 {
                     outReply = "no object named '" + listArgument[0] + "' in the active scene";
@@ -150,7 +141,7 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                GameObjectManager* pManager = findActiveObjectManager();
+                GameObjectManager* pManager = engine::findActiveObjectManager();
                 if ( pManager == nullptr )
                 {
                     outReply = "no active scene";
@@ -177,7 +168,7 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                GameObjectManager* pManager = findActiveObjectManager();
+                GameObjectManager* pManager = engine::findActiveObjectManager();
                 if ( pManager == nullptr )
                 {
                     outReply = "no active scene";

@@ -23,7 +23,8 @@ namespace sw
         struct LinuxFileWatcherInternal
         {
             static constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
-            static constexpr uint32 kInotifyMask            = IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
+            // IN_ATTRIB 는 mtime 만 바뀐 변경(`touch`, 시각을 지키는 복사)을 알린다. Windows 의 FILE_NOTIFY_CHANGE_ATTRIBUTES 와 같은 자리다.
+            static constexpr uint32 kInotifyMask = IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
 
             static string makeRelativePath( string_view root, string_view absolutePath )
             {
@@ -60,7 +61,11 @@ namespace sw
     bool LinuxFileWatcher::startWatching( string_view directoryPath, bool bRecursive )
     {
         if ( _bIsWatching.load( std::memory_order_relaxed ) == true )
+        {
+            SW_LOG_ERROR( "Already watching %# - stop it before watching %#", _directoryPath.c_str(), string{ directoryPath }.c_str() );
             return false;
+        }
+        stopWatching(); // 워커가 오류로 끝났으면 남은 fd · 스레드를 거둔다
 
         if ( FileUtil::isDirectory( directoryPath ) == false )
         {
@@ -163,8 +168,9 @@ namespace sw
             {
                 if ( errno == EINTR )
                     continue;
-                SW_LOG_ERROR( "select failed: %#", strerror( errno ) );
-                break;
+                reportWatchLost( string( "select failed: " ) + strerror( errno ) );
+                _bIsWatching = false;
+                return;
             }
 
             if ( FD_ISSET( _wakeFd, &readSet ) )
@@ -187,7 +193,7 @@ namespace sw
                         break;
                     if ( errno == EINTR )
                         continue;
-                    SW_LOG_ERROR( "read failed: %#", strerror( errno ) );
+                    reportWatchLost( string( "inotify read failed: " ) + strerror( errno ) );
                     _bIsWatching = false;
                     return;
                 }
@@ -219,6 +225,13 @@ namespace sw
                     if ( pEvent->mask & ( IN_DELETE_SELF | IN_MOVE_SELF | IN_IGNORED ) )
                     {
                         removeWatch( pEvent->wd );
+                        // 하위 폴더가 사라지는 것은 평범한 변경이지만, 루트가 사라지면 이 뒤로 아무 변경도 오지 않는다.
+                        if ( watchedDir == _directoryPath )
+                        {
+                            reportWatchLost( "the watched root directory was deleted or moved" );
+                            _bIsWatching = false;
+                            return;
+                        }
                         continue;
                     }
 
@@ -246,7 +259,7 @@ namespace sw
                         pushRelativeChange( FileWatcherAction::RenamedOldName, watchedDir, name );
                     else if ( pEvent->mask & IN_MOVED_TO )
                         pushRelativeChange( FileWatcherAction::RenamedNewName, watchedDir, name );
-                    else if ( pEvent->mask & ( IN_MODIFY | IN_CLOSE_WRITE ) )
+                    else if ( pEvent->mask & ( IN_MODIFY | IN_CLOSE_WRITE | IN_ATTRIB ) )
                         pushRelativeChange( FileWatcherAction::Modified, watchedDir, name );
                 }
             }

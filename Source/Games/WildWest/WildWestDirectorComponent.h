@@ -26,7 +26,7 @@ namespace sw
      *          이 디렉터가 하는 일은 넷이다. 판을 열 때 서부극 카탈로그를 읽는다(경로는 PROPERTY, 없으면 판을 열지 않는다). 매 프레임 카메라 리그 초점을 기수에 둔다.
      *          기수가 걷는 동안 휘파람 버튼이 발동하면 그 기수를 주인으로 둔 말 AI(`HorseFollowAIController`)를 모두 부른다. 틱 뒤에 같은 오브젝트의 HUD 에 한 줄을 쓴다.
      *          판 상태는 없다(말 상태는 말 컴포넌트가 스냅숏에 싣는다). 자동 플레이(`-gv_wildWestAutoPlay=1`)는 기수를 가장 가까운 말에 태운다.
-     *          HUD 는 기반 `HUDViewModel` 을 쓴다 — 탑승 상태 글은 무기 이름 칸(`_weaponName`), 말 스태미나는 체력 칸(`_health` · `_healthRatio`)이고 문서(`ui/hud.ui.xml`)가 그렇게 잇는다.
+     *          HUD 는 게임의 `WildWestHUDViewModel` 을 HUD 컨트롤러에 건다 — 탑승 상태 글(`_rideStatus`), 말 스태미나(`_stamina` · `_staminaRatio`)이고 문서(`ui/hud.ui.xml`)가 그렇게 잇는다.
      */
     REFLECT( Category = "WildWest", DisplayName = "Wild West Director", Tooltip = "Opens the western catalog, follows the rider with the camera, whistles horses and writes the HUD line" )
     class WildWestDirectorComponent : public GameDirectorComponent

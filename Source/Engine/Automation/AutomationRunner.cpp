@@ -999,10 +999,7 @@ namespace sw
     {
         if ( _pObjectManagerOverride != nullptr )
             return _pObjectManagerOverride;
-        if ( engine::areEngineServicesBound() == false )
-            return nullptr;
-        Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
-        return pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        return engine::findActiveObjectManager();
     }
 
     void AutomationRunner::onFrameBegin( InputManager& input )

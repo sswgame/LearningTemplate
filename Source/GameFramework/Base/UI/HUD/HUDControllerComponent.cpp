@@ -15,7 +15,7 @@ namespace sw
         : Component{}
         , _pUISystem{ nullptr }
         , _screen{ kInvalidUIScreenHandle }
-        , _viewModel{ make_unique<HUDViewModel>() }
+        , _viewModel{}
         , _documentPath{}
     {
     }
@@ -92,5 +92,20 @@ namespace sw
         if ( _pUISystem != nullptr && _screen != kInvalidUIScreenHandle )
             _pUISystem->closeScreen( _screen );
         _screen = kInvalidUIScreenHandle;
+    }
+
+    void HUDControllerComponent::installViewModel( unique_ptr<UIViewModel> viewModel )
+    {
+        _viewModel        = std::move( viewModel );
+        UIScreen* pScreen = getScreen();
+        if ( pScreen != nullptr )
+            pScreen->setViewModel( _viewModel.get() );
+    }
+
+    void HUDControllerComponent::reportViewModelTypeMismatch( const TypeInfo* pRequestedType ) const
+    {
+        const TypeInfo* pInstalledType = _viewModel != nullptr ? _viewModel->getTypeInfo() : nullptr;
+        SW_LOG_ERROR( "HUD '%#' already holds view model %# - %# was requested; one HUD serves one game view model", _documentPath.c_str(),
+                      pInstalledType != nullptr ? pInstalledType->_name.c_str() : "<unreflected>", pRequestedType != nullptr ? pRequestedType->_name.c_str() : "<unreflected>" );
     }
 } // namespace sw

@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
@@ -181,6 +182,14 @@ namespace sw
         /** @brief 현재 활성 씬을 반환합니다. */
         Scene* getActiveScene() const { return _pActiveScene; }
         /**
+         * @brief 활성 씬의 오브젝트 매니저입니다. 활성 씬이 없으면 nullptr 입니다.
+         * @details 활성 씬을 다루는 개발 명령 · 자동화 · 디버그 HUD · 게임 인스턴스 · 에디터가 모두 이 한 곳으로 찾는다 —
+         *          "활성 씬 → 오브젝트 매니저" 를 파일마다 다시 쓰지 않는다.
+         */
+        GameObjectManager* findActiveObjectManager() const;
+        /** @brief 활성 씬에서 이름이 @p name 인 오브젝트입니다. 활성 씬이 없거나 그 이름이 없으면 nullptr 입니다. */
+        GameObject* findActiveObject( const hashed_string& name ) const;
+        /**
          * @brief 월드가 플레이 중인지 정합니다. 바뀌면 활성 씬의 오브젝트 매니저에 `beginPlay` · `endPlay` 를 부릅니다.
          * @details 플레이 중에 활성 씬이 바뀌면 나가는 씬은 끝나고 들어오는 씬이 시작합니다. 에디터가 없으면 App 이 켜고(`ModuleHost`),
          *          에디터가 있으면 Play · Stop 이 켜고 끕니다. App · Shipping 에서도 켜야 onBeginPlay 가 불립니다(시퀀스 자동 재생 ·
@@ -276,4 +285,19 @@ namespace sw
         DelegateHandle                  _commandStackClearHandle;   ///< 기동 순서가 건 되돌리기 기록 비우기 구독(`initializeSubsystem`)
         bool                            _bInitialized;
     };
+} // namespace sw
+
+namespace sw
+{
+    namespace engine
+    {
+        /**
+         * @brief 엔진 범위 씬 매니저의 활성 씬 오브젝트 매니저입니다. 엔진 서비스 바인딩 전이거나 활성 씬이 없으면 nullptr 입니다.
+         * @details 엔진 서비스 창구로 씬을 찾는 쪽(개발 명령 · 자동화 · 디버그 HUD)의 한 창구입니다. 게임 · 에디터 범위는 자기 창구로
+         *          `SceneManager` 를 찾은 뒤 멤버 `findActiveObjectManager()` 를 부릅니다.
+         */
+        SW_API GameObjectManager* findActiveObjectManager();
+        /** @brief 엔진 범위 활성 씬에서 이름이 @p name 인 오브젝트입니다. 바인딩 전 · 활성 씬 없음 · 그 이름 없음이면 nullptr 입니다. */
+        SW_API GameObject* findActiveObject( const hashed_string& name );
+    } // namespace engine
 } // namespace sw

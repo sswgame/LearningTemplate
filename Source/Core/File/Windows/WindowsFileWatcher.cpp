@@ -35,7 +35,11 @@ namespace sw
     bool WindowsFileWatcher::startWatching( string_view directoryPath, bool bRecursive )
     {
         if ( _bIsWatching )
+        {
+            SW_LOG_ERROR( "Already watching %# - stop it before watching %#", _directoryPath, directoryPath );
             return false;
+        }
+        stopWatching(); // 워커가 오류로 끝났으면 남은 핸들 · 스레드를 거둔다
 
         const string dirNt( directoryPath );
         wstring      wDir = StringUtil::utf8ToUtf16( dirNt.c_str() );
@@ -50,7 +54,8 @@ namespace sw
 
         if ( _hDirectory == INVALID_HANDLE_VALUE )
         {
-            SW_LOG_ERROR( "Failed to open directory for watching: %#", directoryPath );
+            _hDirectory = nullptr; // stopWatching 은 nullptr 로 "연 핸들 없음" 을 본다
+            SW_LOG_ERROR( "Failed to open directory for watching (error %#): %#", static_cast<uint32>( GetLastError() ), directoryPath );
             return false;
         }
 
@@ -75,7 +80,9 @@ namespace sw
 
     void WindowsFileWatcher::stopWatching()
     {
-        if ( _bIsWatching == false )
+        // 워커가 오류로 먼저 끝났으면(`reportWatchLost`) `_bIsWatching` 은 이미 false 지만 핸들과 스레드는 남아 있다 — 그것까지 본다.
+        const bool bAlreadyStopped = _bIsWatching == false && _workerThread.joinable() == false && _hDirectory == nullptr && _hCompletionPort == nullptr;
+        if ( bAlreadyStopped )
             return;
 
         _bIsWatching = false;
@@ -135,7 +142,12 @@ namespace sw
                 nullptr );
 
             if ( bResult == false )
-                break;
+            {
+                if ( _bIsWatching )
+                    reportWatchLost( string( "ReadDirectoryChangesW failed, error " ) + to_string( static_cast<uint32>( GetLastError() ) ) );
+                _bIsWatching = false;
+                return;
+            }
 
             DWORD        bytesTransferred{ 0 };
             ULONG_PTR    completionKey{ 0 };
@@ -151,7 +163,15 @@ namespace sw
             if ( _bIsWatching == false )
                 break;
 
-            if ( bWait && pOverlapped )
+            // 멈추는 중이 아닌데 완료가 실패했다 — 감시 디렉터리가 지워졌거나 핸들이 무효다. 다시 걸어도 같은 실패가 되풀이된다.
+            if ( bWait == false )
+            {
+                reportWatchLost( string( "directory change completion failed, error " ) + to_string( static_cast<uint32>( GetLastError() ) ) );
+                _bIsWatching = false;
+                return;
+            }
+
+            if ( pOverlapped )
             {
                 if ( bytesTransferred == 0 )
                 {

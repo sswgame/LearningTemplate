@@ -8,8 +8,12 @@
 
 #include "Core/File/IFileWatcher.h"
 
+#include "Core/Log/Logger.h"
+
 namespace sw
 {
+    SW_LOG_CALLER( "IFileWatcher" );
+
     void IFileWatcher::pushChange( FileWatcherAction action, string_view directory, string_view filename )
     {
         std::scoped_lock<mutex> lock{ _eventMutex };
@@ -41,29 +45,38 @@ namespace sw
         _listEventQueue.push_back( std::move( changeEvent ) );
     }
 
-    uint32 IFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
+    void IFileWatcher::reportWatchLost( string_view reason )
+    {
+        SW_LOG_ERROR( "File watching of %# stopped: %#", _directoryPath, reason );
+        std::scoped_lock<mutex> lock{ _eventMutex };
+        _bWatchLost = true;
+    }
+
+    FileWatchPollResult IFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
     {
         std::scoped_lock<mutex> lock{ _eventMutex };
 
-        const uint32 count = static_cast<uint32>( _listEventQueue.size() );
-        if ( count > 0 )
+        FileWatchPollResult result{};
+        result._eventCount = static_cast<uint32>( _listEventQueue.size() );
+        if ( result._eventCount > 0 )
         {
             outListEvent.insert( outListEvent.end(), _listEventQueue.begin(), _listEventQueue.end() );
             _listEventQueue.clear();
         }
 
-        if ( _bEventQueueOverflowed )
+        if ( _bEventQueueOverflowed || _bWatchLost )
         {
-            // 버린 것이 있었다. 개별 변경은 이미 잃었으므로 "전부 다시 훑어라" 하나로 알린다.
+            // 버린 것이 있었거나 워커가 멈추기 전 변경을 잃었을 수 있다. 개별 변경은 이미 잃었으므로 "전부 다시 훑어라" 하나로 알린다.
             // 파일 이름이 빈 Modified 가 그 약속이다.
             FileChangeEvent rescanEvent{};
             rescanEvent._action    = FileWatcherAction::Modified;
             rescanEvent._directory = _directoryPath;
             outListEvent.push_back( std::move( rescanEvent ) );
-            _bEventQueueOverflowed = false;
-            return count + 1;
+            ++result._eventCount;
         }
-
-        return count;
+        result._bWatchLost     = _bWatchLost;
+        _bEventQueueOverflowed = false;
+        _bWatchLost            = false;
+        return result;
     }
 } // namespace sw
