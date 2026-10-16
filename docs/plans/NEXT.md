@@ -11,8 +11,8 @@ main 은 push 되지 않았다(원격 `main` 하나). 이 세션이 main 에 병
 |---|---|---|
 | `editorscn2` | `D3-11` 에디터 시나리오: (1)(3)(4) 끝(커밋 3개), (2) 캐릭터 편집 → 씬 · 미검증 항목 · 프리팹 판정 한 함수로 모으기는 진행 중. main 의 `AutomationTarget` 규칙을 받아 `flowprefab target="Lantern"` 이 통과하는지 확인하라고 전했다 | 진행 중 |
 | `terrainserver` | `F-1` 서버 지형 레이어 질의(가중치를 CPU 형식으로 서버 패키지에) | 진행 중 |
-| `qualitycleanup` | quality `C-14` `C-15` `C-28` `C-33` `C-29` 와 이 PC 에서 되는 검증 | 진행 중 |
 | `uifollow` | `C-8` `C-9` 측정 후 결정, `B-8` | 진행 중 |
+| `corefuzz` | 결함 `B-5`: 퍼저 `Compression` 입력의 10 초 타임아웃(`CompressionStream::decompressBuffer` · `vector::clearInternal`) | 진행 중 |
 | (워크트리 없음) 읽기 전용 조사 | 같은 모양의 함수 객체 · 람다 목록 → scratchpad `dup-shapes.md` | 진행 중 |
 
 그 밖의 워크트리: `editordata` · `enginefallback` · `toolfollowup` 은 병합 안 된 커밋이 있다(다른 세션의 일 — 건드리지 않는다). `gamesdata` · `testisolation` 은 병합됐지만 변경이 남아 있다(132 · 10 개). `perfbase` · `perfbase2` 는 성능 기준선이다.
