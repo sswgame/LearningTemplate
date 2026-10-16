@@ -79,6 +79,8 @@ namespace sw
             static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
             /** @brief 프로세스 지표를 다시 읽는 간격입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽으므로 초에 한 번이면 된다. */
             static constexpr int64 kProcessSampleIntervalMs = 1000;
+            /** @brief Dev 서버 루프의 명령(`executePauseCommand`)입니다. 표준 입력 `help` 와 디버그 채널 `help` 가 같은 줄을 보입니다. */
+            static constexpr const utf8* kLoopCommandHelp = "pause | resume | step [N]";
 
             static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
         };
@@ -535,8 +537,11 @@ namespace sw
         }
         if ( command == "help" )
         {
-            SW_LOG_INFO( "Server commands: quit | stop | status | help%#",
-                         SW_DEV_COMMANDS_ENABLED ? " (Dev: pause | resume | step [N], dev commands and gv_* variables too)" : "" );
+#if SW_DEV_COMMANDS_ENABLED
+            SW_LOG_INFO( "Server commands: quit | stop | status | help (Dev: %#, dev commands and gv_* variables too)", ServerAppInternal::kLoopCommandHelp );
+#else
+            SW_LOG_INFO( "Server commands: quit | stop | status | help" );
+#endif
             return;
         }
         if ( executePauseCommand( command ) )
@@ -631,7 +636,16 @@ namespace sw
                 outReply = ( _bPaused == SW_TRUE ? "paused tick " : "running tick " ) + to_string( _tickCount );
                 return true;
             }
-            return _devConsole->execute( line, outReply ) == DevConsoleResult::Ok;
+            const bool bOk = _devConsole->execute( line, outReply ) == DevConsoleResult::Ok;
+            // 채널 `help` 는 채널이 받는 줄 전부를 알린다 — 개발 콘솔의 목록(변수 · 개발 명령, 에디터 자동완성의 원천) 앞에 서버 루프 명령 한 줄.
+            const string_view trimmed = StringUtil::trim( line );
+            if ( bOk && StringUtil::equals( trimmed.substr( 0, trimmed.find( ' ' ) ), "help", true ) )
+            {
+                string reply{ "server loop: " };
+                reply.append( ServerAppInternal::kLoopCommandHelp ).append( "\n" ).append( outReply );
+                outReply = std::move( reply );
+            }
+            return bOk;
         } ) );
         if ( bStarted == false )
         {

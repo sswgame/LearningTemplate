@@ -428,7 +428,7 @@ namespace
 
 /**
  * @brief [ServerBootTest] 디버그 채널로 붙어 서버의 오브젝트 트리 · 컴포넌트 값을 읽고, 서버에서 바꾼 값이 검사기에 보이고, 잘못된 토큰은 거절된다(서버 디버깅 S3)
- * @details 확인 시나리오: 서버를 띄움 -> 채널에 연결 -> `scene.tree` · `object.dump` 로 읽음 -> 멈춘(`pause`) 서버에서 `teleport` 로 값을 바꿈 -> `scene.poses` · `object.dump` 에 새 값이 보임.
+ * @details 확인 시나리오: 서버를 띄움 -> 채널에 연결 -> `scene.tree` · `object.dump` 로 읽음 -> 멈춘(`pause`) 서버에서 `teleport` 로 값을 바꿈 -> `scene.poses` · `object.dump` 에 새 값이 보임 -> `help` 가 받는 줄을 알림.
  *          채널의 `pause` 는 서버 루프의 일시정지 명령이라 멈춘 동안에도 요청을 받는다(중단점에서 값을 보는 쓰임).
  */
 SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken )
@@ -476,6 +476,7 @@ SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken
     } );
     expectCleanExit( run, "ConsoleCommand" );
     SW_ASSERT_TRUE_MSG( bConnected, "the debug channel did not accept the client" );
+    string          helpBody;
     SW_EXPECT_TRUE_MSG( run._output.find( "Debug channel listening on 127.0.0.1:" + to_string( port ) ) != string::npos, "the server did not log the debug channel" );
     SW_EXPECT_TRUE_MSG( treeBody.find( "objects 8" ) == 0 && treeBody.find( "components=" ) != string::npos, treeBody.c_str() );
     SW_ASSERT_TRUE_MSG( objectName.empty() == false, "scene.poses named no object" );
@@ -496,6 +497,7 @@ SW_TEST_CASE( ServerBootTest, DebugChannelRefusesToStartWithoutAToken )
 {
 #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "the debug channel is a development-build feature" );
+            (void)client.request( "help", 5000, helpBody );
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -512,6 +514,8 @@ SW_TEST_CASE( ServerBootTest, DebugChannelRefusesToStartWithoutAToken )
 
 /**
  * @brief [ServerBootTest] 두 서버의 틱별 상태 해시를 비교해 처음 어긋난 틱을 맞게 짚는다(서버 디버깅 S7)
+    // 채널 help 는 채널이 받는 줄 전부 — 서버 루프 명령과 개발 명령 이름(에디터 Inspector 탭의 자동완성 원천)을 함께 답한다.
+    SW_EXPECT_TRUE_MSG( helpBody.find( "server loop: pause | resume | step [N]" ) == 0 && helpBody.find( "scene.tree" ) != string::npos, helpBody.c_str() );
  * @details 서버 A 는 그대로 두고, 서버 B 는 멈춘 틱 T 에서 4 틱 진행한 뒤 오브젝트를 옮기고 6 틱을 더 돈다. 어긋난 첫 틱은 T + 5 여야 하고, 그 앞 틱들은 두 서버가 같아야 한다
  *          (씬은 결정적이다). 채널의 `pause` · `step` 으로 틱을 정확히 세므로 시간에 기대지 않는다.
  */

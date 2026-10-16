@@ -39,12 +39,11 @@ S1 에서 남은 것(프리셋 저장, 리슨 호스트 줄의 틱, 합친 트�
 
 디버그 채널(`DebugChannel` · `DebugChannelClient`, `Source/Engine/Observability`)과 읽기 전용 개발 명령(`scene.tree` · `object.dump` · `scene.poses` · `state.hash(es)`)은 들어갔습니다.
 서버는 `-gv_debugChannelPort=N -gv_debugChannelToken=T` 로 열고, 루프백이 아닌 주소 · 빈 토큰은 기동이 멈춥니다. 채널이 받는 줄은 개발 명령과 `pause` · `resume` · `step N` 뿐입니다(결정 기록 5-10).
-확인은 ServerTest `DebugChannelReadsObjectValuesAndRejectsAWrongToken` 입니다(서버에서 오브젝트를 옮기고 검사기가 그 값을 읽음).
+채널 `help` 는 받는 줄 전부를 답합니다 — 첫 줄 `server loop: pause | resume | step [N]` 뒤에 개발 콘솔의 목록(변수 문법 · 개발 명령 사용법)이 옵니다. Inspector 탭의 이름 자동완성은 이 답을 원천으로 씁니다.
+확인은 ServerTest `DebugChannelReadsObjectValuesAndRejectsAWrongToken` 입니다(서버에서 오브젝트를 옮기고 검사기가 그 값을 읽음, `help` 의 두 부분).
 
 - Inspector 탭: 세션이 띄운 서버에 포트 · 토큰을 주고(`EditorNetPlaySession`) 채널로 붙어 하이어라키(`scene.tree`) · 컴포넌트 값(`object.dump`)을 표로 보이고, 개발 콘솔 입력줄을 채널로 보낸다.
-  "주소로 붙기"(이미 떠 있는 서버)도 이 탭에서 더한다.
-- 원격 개발 명령의 이름 자동완성: 채널에 명령 목록을 묻는 읽기 명령(`help` 류)이 없다.
-- 채널 `help`: 서버 쪽에서 받는 줄(개발 명령 · `pause` · `resume` · `step`)을 알려 주는 응답이 없다.
+  "주소로 붙기"(이미 떠 있는 서버)도 이 탭에서 더한다. 입력줄의 이름 자동완성은 연결 때 `help` 를 한 번 물어 채운다.
 
 ### S5 네트워크 프로파일러 — 남은 것
 
