@@ -126,6 +126,7 @@ namespace sw
         , _startCondition{ AutomationStartCondition::ScenePlaying }
         , _inputMode{ VirtualInputMode::Exclusive }
         , _bIsolated{ false }
+        , _bRequiresEditor{ false }
     {
     }
 
@@ -208,6 +209,14 @@ namespace sw
                 _bIsolated              = value == "true";
                 if ( bOk == false )
                     reason = string( "isolated must be true or false, got '" ) + pText + "'";
+            }
+            else if ( name == "editor" )
+            {
+                const string_view value = pText;
+                bOk                     = value == "true" || value == "false";
+                _bRequiresEditor        = value == "true";
+                if ( bOk == false )
+                    reason = string( "editor must be true or false, got '" ) + pText + "'";
             }
             else if ( name == "input" )
             {

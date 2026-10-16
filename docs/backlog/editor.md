@@ -87,13 +87,12 @@
     - **남은 한계**: 기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
   - **정리**: 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id). 값 노이즈는 `Stack/MeshModifierNoise.h` 한 곳으로 모았다(들어감).
 
-- `D3-11` [기능] **에디터 흐름 시나리오로 못 한 것(2026-10-15, `wt/editorscn`).** 기능 × 시나리오 표와 이유는 [에디터 시나리오 표](../plans/EditorScenarios.md).
-  (1) **에셋 임포트** — Import 는 OS 파일 대화상자 + 리소스 트리로 복사라 무인 실행 · 임시 경로로 못 돌린다. 원본 경로를 받는 임포트 명령(`asset.import <원본> <리소스 폴더>`)과
-  시나리오가 끝나면 지우는 임시 리소스 폴더(무시 목록) 규칙을 정하면 흐름에 넣는다. (2) **캐릭터 편집 → 씬 사용** — 창의 프리셋은 세이브 형식(`UserAppearancePresetStore`)이고
-  `CharacterAppearanceComponent` 는 데이터 프리셋 id 만 가리켜 잇는 길이 없다(언리얼 · 유니티는 프리셋이 에셋이라 씬이 참조한다). 창이 데이터 프리셋(`presets.xml`)으로 내보내거나
-  컴포넌트가 프리셋 에셋 경로를 받게 정한 뒤 시나리오를 단다. (3) **스케줄 편집 창** — 에디터 체인은 Empty 로 돌아 일정 시스템이 없다. 게임 팩 시나리오에 `-EnableEditor` 실행을 더하는
-  길(시나리오 루트 속성)이 필요하다. (4) `prefab.applyOverrides` 는 중첩 프리팹 부품(`PrefabInstanceRegistry`)의 다른 인스턴스와 다른 씬에 놓인 인스턴스는 갱신하지 않는다
-  (다른 씬은 다시 열 때 퍼진다). (5) 에디터 UI 화면 확인은 `CaptureWindow` 로 DX12 에서만 봤다 — 흐름 시나리오의 스크린샷은 게임 · 씬 뷰 렌더 출력만 담는다.
+- `D3-11` [기능] **캐릭터 편집 → 씬 사용 흐름(2026-10-16 남김, `wt/editorscn2`).** 창의 프리셋은 세이브 형식(`UserAppearancePresetStore`)이고 `CharacterAppearanceComponent` 는
+  데이터 프리셋 id 만 가리켜 잇는 길이 없다. 방향은 정했다([결정 기록](../09_Decisions.md) 5-11 — 창이 데이터 프리셋 `CharacterAppearance` 로 내보내고 씬은 id 로 참조).
+  남은 일: ① `CharacterAppearanceCatalog` 에 읽기(`loadFromNode`) 옆 쓰기를 두고(`GameFramework/Base` — 읽기 · 쓰기 형식이 한 자리), ② 창의 `AppearanceSelection` 을 `CharacterAppearanceDef`
+  (부모 = 기준 프리셋, 바뀐 칸 · 꾸미기 값만)로 바꿔 게임의 `data/appearance/presets.xml` 에 id 로 넣거나 바꾸고(`AppearanceDatabase` 다시 읽기), ③ 외형 데이터가 있는 게임 팩(Shooter3D)의
+  `editor="true"` 시나리오로 내보내기 → 씬의 컴포넌트에 그 id → 조립 결과를 확인한다. 저장소 데이터를 바꾸지 않게 시나리오용 임시 카탈로그 자리가 먼저 필요하다.
+  못 한 이유: 쓰기 형식이 이 작업자의 파일 범위(에디터) 밖인 `GameFramework/Base` 에 있어야 하고(에디터 쪽에 따로 쓰면 읽기와 어긋난다), 시나리오가 게임 데이터 파일을 바꾸지 않을 자리가 없다.
 
 - `D3-12` [기능] **첫 UX 감사에서 남은 결함(2026-10-15).** 목록 · 우선순위 · 캡처 번호는 [에디터 UX 기반](../plans/EditorUX.md) 8-1 절이 원본이다. 큰 것부터:
   ① 기본 배치의 아래 도크(Output Log · Content Browser)가 낮아 내용이 거의 안 보인다(도크 최소 높이 · 기본 비율). ② 씬 뷰 통계 오버레이가 뷰포트 절반을 덮는다(접기 · 앵커).

@@ -75,7 +75,28 @@ namespace
 #endif
         }
 
-        /** @brief 시나리오를 백엔드마다 돌려 종료 코드 0 을 단언합니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
+        /** @brief 시나리오가 루트에 `editor="true"` 를 적었으면 true 입니다. 못 읽으면 false — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
+        static bool requiresEditor( const sw::string& scenarioPath )
+        {
+            sw::AutomationScenario scenario;
+            sw::string             error;
+            return scenario.loadFromPath( scenarioPath, error ) && scenario.requiresEditor();
+        }
+
+        /**
+         * @brief 에디터를 켠 실행의 인자 — `-EnableEditor` 와 시나리오 · 백엔드마다 비운 에디터 상태 폴더입니다(에디터 시나리오 체인과 같은 규칙).
+         * @details 사용자의 `Saved/Editor`(레이아웃 · 최근 씬)를 읽으면 실행마다 시작 화면이 달라진다.
+         */
+        static sw::string makeEditorArguments( const sw::string& scenarioPath, const utf8* pSwitch )
+        {
+            const sw::string backend = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
+            sw::string       stateFolder;
+            SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/" + sw::FileUtil::getFileNamePart( scenarioPath ) + "_" + backend, stateFolder ) );
+            SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
+            return "-EnableEditor -gv_editorStateDir=" + stateFolder;
+        }
+
+        /** @brief 시나리오를 백엔드마다 돌려 종료 코드 0 을 단언합니다. 루트에 `editor="true"` 를 적은 시나리오는 에디터를 켜고 돕니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
         static uint32 runEveryBackend( const sw::vector<sw::string>& listScenario, sw::string_view extraArguments )
         {
             const sw::vector<const utf8*> listBackendSwitch = collectBackendSwitches();
@@ -83,11 +104,15 @@ namespace
             for ( const sw::string& scenarioPath : listScenario )
             {
                 sw::vector<sw::string> listFirstRecord;
-                const utf8*            pFirstSwitch = nullptr;
+                const utf8*            pFirstSwitch    = nullptr;
+                const bool             bRequiresEditor = requiresEditor( scenarioPath );
                 for ( const utf8* pSwitch : listBackendSwitch )
                 {
+                    sw::string scenarioArguments{ extraArguments };
+                    if ( bRequiresEditor )
+                        scenarioArguments += " " + makeEditorArguments( scenarioPath, pSwitch );
                     sw::string       scenarioLines;
-                    const int32      exitCode = test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, extraArguments );
+                    const int32      exitCode = test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, scenarioArguments );
                     const sw::string label    = scenarioPath + " " + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
                     SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
                     if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
