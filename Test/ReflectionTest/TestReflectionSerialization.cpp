@@ -6,6 +6,7 @@
 #include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -1705,11 +1706,11 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryVersionHeaderTest )
         static_cast<VersionedActor*>( context._pInstance )->_fieldA += 1;
         return true;
     };
+    const sw::SchemaMigrationRegistrar migration{ "sw::VersionedActor", 102u, +migrateFn };
     restored._fieldA = 0;
     restored._fieldB = 0;
     readVersion      = 0;
-    ok               = sw::BinarySerializer::deserializeVersioned( readVersion, &restored, info, buffer.data(), buffer.size(), 103u,
-                                                                   +migrateFn );
+    ok               = sw::BinarySerializer::deserializeVersioned( readVersion, &restored, info, buffer.data(), buffer.size(), 103u );
     SW_EXPECT_TRUE( ok );
     SW_EXPECT_TRUE( s_migrateCalled );
     SW_EXPECT_EQUAL( 778, restored._fieldA );
@@ -1929,7 +1930,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ScalarFieldTypeChangeMovesTheValue )
     {
         return true;
     };
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &intDst, intInfo, floatBin.data(), floatBin.size(), 1u, +acceptOrphans ) );
+    const sw::SchemaMigrationRegistrar acceptOrphanMigration{ "sw::ProbeIntValue", 1u, +acceptOrphans };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &intDst, intInfo, floatBin.data(), floatBin.size(), 1u ) );
     SW_EXPECT_TRUE_MSG( intDst._value == -1, "float32 1.5 의 비트가 int32 로 재해석됐습니다" );
 }
 
@@ -2041,6 +2043,172 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
     sw::string xml = sw::XMLSerializer::serializeVersioned( 1, &actor, info );
     ver            = 0;
     SW_EXPECT_FALSE( sw::XMLSerializer::deserializeVersioned( ver, &restored, info, xml, 2u ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 이관은 (타입, 기록된 버전)으로 찾는다 — 부모의 이관을 물려받고, 같은 자리는 한 번만, 등록자가 사라지면 빠진다
+ * @details 호출부는 이관 함수를 넘기지 않는다(`SchemaMigrationRegistry`). 모듈을 언로드하면 그 모듈의 정적 등록자가 소멸하며 빠지는데,
+ *          함수 범위의 등록자가 범위를 벗어나는 것과 같은 길이다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, SchemaMigrationIsFoundByTypeAndWrittenVersion )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "Testing a duplicate schema migration registration" );
+    static constexpr const utf8* kModuleName = "SchemaMigrationRegistryTest";
+
+    sw::TypeInfo parentInfo;
+    parentInfo._name               = sw::hashed_string( "MigrationParentActor" );
+    parentInfo._fullyQualifiedName = sw::hashed_string( "sw::MigrationParentActor" );
+    parentInfo._moduleName         = sw::hashed_string( kModuleName );
+    parentInfo._size               = sizeof( int32 );
+    sw::TypeInfo childInfo;
+    childInfo._name               = sw::hashed_string( "MigrationChildActor" );
+    childInfo._fullyQualifiedName = sw::hashed_string( "sw::MigrationChildActor" );
+    childInfo._parentFQN          = parentInfo._fullyQualifiedName;
+    childInfo._moduleName         = sw::hashed_string( kModuleName );
+    childInfo._size               = sizeof( int32 );
+    sw::TypeRegistry& registry    = sw::engine::getSubsystem<sw::TypeRegistry>();
+    registry.registerClass( parentInfo );
+    registry.registerClass( childInfo );
+    const sw::TypeInfo* pChild = registry.findType( childInfo._fullyQualifiedName );
+    SW_ASSERT_NOT_NULL( pChild );
+
+    struct Migrations
+    {
+        static bool parent( const sw::SchemaMigrateContext& ) { return true; }
+        static bool child( const sw::SchemaMigrateContext& ) { return true; }
+    };
+
+    {
+        const sw::SchemaMigrationRegistrar parentMigration{ "sw::MigrationParentActor", 1u, &Migrations::parent };
+        SW_EXPECT_TRUE( parentMigration._bRegistered );
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 1u ) == &Migrations::parent );
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 2u ) == nullptr );
+
+        // 파생이 자기 이관을 등록하면 그것이 먼저다.
+        const sw::SchemaMigrationRegistrar childMigration{ "sw::MigrationChildActor", 1u, &Migrations::child };
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 1u ) == &Migrations::child );
+
+        // 같은 (타입, 버전)은 두 번 오르지 않는다. 먼저 것을 둔다.
+        const sw::SchemaMigrationRegistrar duplicate{ "sw::MigrationChildActor", 1u, &Migrations::parent };
+        SW_EXPECT_FALSE( duplicate._bRegistered );
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 1u ) == &Migrations::child );
+    }
+    SW_EXPECT_TRUE_MSG( sw::SchemaMigrationRegistry::find( *pChild, 1u ) == nullptr, "등록자가 사라진 뒤에도 이관이 남았습니다(모듈 언로드 뒤 해제된 코드를 부릅니다)" );
+
+    registry.unregisterTypesByModule( kModuleName );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 바이너리 필드 추가 · 삭제 · 이름 변경 왕복 — 추가는 그대로 읽히고, 삭제와 이름 변경은 등록된 이관으로만 읽힌다
+ * @details 세 경우 모두 같은 타입(FQN)의 앞뒤 빌드를 흉내 낸다. 이름 변경에 별칭을 두지 않는다(결정 기록 5-4). 버전을 올리고
+ *          옛 TypeInfo 로 스테이징한 값을 이관 함수가 새 이름으로 옮긴다(`moveProperty`).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, BinaryFieldAddRemoveRenameRoundTrip )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "Testing binary schema changes that need a registered migration" );
+    struct BeforeActor
+    {
+        int32 _hp{ 0 };
+        int32 _mp{ 0 };
+    };
+    struct AddedActor
+    {
+        int32 _hp{ 0 };
+        int32 _mp{ 0 };
+        int32 _level{ 3 };
+    };
+    struct RemovedActor
+    {
+        int32 _hp{ 0 };
+    };
+    struct RenamedActor
+    {
+        int32 _hitPoints{ 0 };
+        int32 _mp{ 0 };
+    };
+
+    const sw::hashed_string kFqn( "sw::FieldShiftActor" );
+    sw::TypeInfo            beforeInfo;
+    beforeInfo._name               = sw::hashed_string( "FieldShiftActor" );
+    beforeInfo._fullyQualifiedName = kFqn;
+    beforeInfo._size               = sizeof( BeforeActor );
+    beforeInfo._listProperty       = {
+        {sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( BeforeActor, _hp )},
+        {sw::hashed_string( "_mp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( BeforeActor, _mp )}
+    };
+
+    sw::TypeInfo addedInfo = beforeInfo;
+    addedInfo._size        = sizeof( AddedActor );
+    addedInfo._listProperty.push_back( sw::PropertyInfo( sw::hashed_string( "_level" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( AddedActor, _level ) ) );
+
+    sw::TypeInfo removedInfo  = beforeInfo;
+    removedInfo._size         = sizeof( RemovedActor );
+    removedInfo._listProperty = {
+        { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( RemovedActor, _hp ) }
+    };
+
+    sw::TypeInfo renamedInfo  = beforeInfo;
+    renamedInfo._size         = sizeof( RenamedActor );
+    renamedInfo._listProperty = {
+        {sw::hashed_string( "_hitPoints" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( RenamedActor, _hitPoints )},
+        {       sw::hashed_string( "_mp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( RenamedActor,        _mp )}
+    };
+
+    const BeforeActor source{ 40, 12 };
+    sw::vector<uint8> bin;
+    sw::BinarySerializer::serializeVersioned( 1, &source, beforeInfo, bin );
+    uint32 ver{ 0 };
+
+    // ① 필드 추가: 같은 버전에서 읽힌다. 새 필드는 생성자 기본값으로 남는다.
+    AddedActor added;
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &added, addedInfo, bin.data(), bin.size(), 1u ) );
+    SW_EXPECT_EQUAL( 40, added._hp );
+    SW_EXPECT_EQUAL( 12, added._mp );
+    SW_EXPECT_EQUAL( 3, added._level );
+
+    // ② 필드 삭제: 이관이 없으면 같은 버전이든 올린 버전이든 거절한다.
+    RemovedActor removed;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &removed, removedInfo, bin.data(), bin.size(), 1u ) );
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &removed, removedInfo, bin.data(), bin.size(), 2u ) );
+    {
+        struct DropMana
+        {
+            static bool migrate( const sw::SchemaMigrateContext& context ) { return context.findOrphanHash( sw::hashed_string( "_mp" ).getHash() ) != nullptr; }
+        };
+        const sw::SchemaMigrationRegistrar dropMana{ kFqn.c_str(), 1u, &DropMana::migrate };
+        removed = RemovedActor{};
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &removed, removedInfo, bin.data(), bin.size(), 2u ) );
+        SW_EXPECT_EQUAL( 1u, ver );
+        SW_EXPECT_EQUAL( 40, removed._hp );
+    }
+
+    // ③ 이름 변경: 별칭 없이 버전을 올리고, 옛 TypeInfo 로 스테이징한 값을 이관이 새 이름으로 옮긴다.
+    RenamedActor renamed;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &renamed, renamedInfo, bin.data(), bin.size(), 2u, &beforeInfo ) );
+    {
+        struct RenameHealth
+        {
+            static bool migrate( const sw::SchemaMigrateContext& context )
+            {
+                const bool bFromFirstVersion = context._fromVersion == 1u && context._toVersion == 2u;
+                return bFromFirstVersion && context.moveProperty( sw::hashed_string( "_hp" ), sw::hashed_string( "_hitPoints" ) );
+            }
+        };
+        const sw::SchemaMigrationRegistrar renameHealth{ kFqn.c_str(), 1u, &RenameHealth::migrate };
+        renamed = RenamedActor{};
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &renamed, renamedInfo, bin.data(), bin.size(), 2u, &beforeInfo ) );
+        SW_EXPECT_EQUAL( 40, renamed._hitPoints );
+        SW_EXPECT_EQUAL( 12, renamed._mp );
+
+        // 옮긴 값을 새 버전으로 다시 쓰고 읽으면 이관 없이 그대로다.
+        sw::vector<uint8> rewritten;
+        sw::BinarySerializer::serializeVersioned( 2, &renamed, renamedInfo, rewritten );
+        RenamedActor reread;
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &reread, renamedInfo, rewritten.data(), rewritten.size(), 2u ) );
+        SW_EXPECT_EQUAL( 2u, ver );
+        SW_EXPECT_EQUAL( 40, reread._hitPoints );
+        SW_EXPECT_EQUAL( 12, reread._mp );
+    }
 }
 
 /**
@@ -2165,10 +2333,10 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
         const sw::SchemaOrphanValue* pHealth = context.findOrphan( sw::hashed_string( "_dropProbeHealth" ) );
         return pHealth != nullptr && context.setPropertyFromText( sw::hashed_string( "_hp" ), pHealth->_text );
     };
-    DropProbe migrated;
+    const sw::SchemaMigrationRegistrar moveHealthMigration{ "sw::DropProbeActor", 1u, +moveHealth };
+    DropProbe                          migrated;
     ver = 0;
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &migrated, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})",
-                                                              2u, +moveHealth ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &migrated, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})", 2u ) );
     SW_EXPECT_EQUAL( 42, migrated._hp );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 1 saved field(s) that the type does not have or could not read: _dropProbeJunk" ) == 1,
                         logs.joined().c_str() );
@@ -2223,8 +2391,8 @@ SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )
     {
         return context.applyOrphanToPath( "_stats._hp" );
     };
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &nested, nestedActorInfo, R"({"_schemaVersion":1,"_hp":77})",
-                                                              2u, +moveOrphan ) );
+    const sw::SchemaMigrationRegistrar moveOrphanMigration{ "sw::NestedActor", 1u, +moveOrphan };
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &nested, nestedActorInfo, R"({"_schemaVersion":1,"_hp":77})", 2u ) );
     SW_EXPECT_EQUAL( 77, nested._stats._hp );
 
     // 필드 개명: Alias 로 옛 키 로드 (legacyTypeInfo 스테이징 불필요)

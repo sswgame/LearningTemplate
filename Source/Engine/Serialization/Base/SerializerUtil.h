@@ -128,7 +128,7 @@ namespace sw
      *          현재 타입으로 soft 역직렬화하고, 버전을 확정한 다음 `runSchemaMigrateStep` 을 부른다.
      */
     SW_API bool runVersionedDeserialize( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                         uint32 currentVersion, SchemaMigrateFn migrate,
+                                         uint32          currentVersion,
                                          const TypeInfo* pLegacyTypeInfo, const SerializeContext& context,
                                          SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
                                          const SoftDeserializeFn& softDeserialize );

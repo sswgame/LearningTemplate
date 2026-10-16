@@ -20,6 +20,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 #include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -189,8 +190,10 @@ namespace sw
 
             /**
              * @brief 오브젝트 자기 필드 가운데 현재 타입에 없는 것(지운 필드)을 넘깁니다. 스키마 버전이 같을 때만 받습니다.
-             * @details 바이너리의 버전 붙은 읽기는 남는 필드가 있으면 이관 함수를 부르고, 없으면 실패한다. 오브젝트 상태에는 이관할 것이 없다.
-             *          지운 필드는 버리고 나머지를 읽는 것이 XML, JSON 과 같은 규칙이다. 버전이 다르면 받지 않는다(진짜 이관이 필요하기 때문이다).
+             * @details 바이너리의 버전 붙은 읽기는 남는 필드가 있으면 등록된 이관 함수를 부르고, 없으면 실패한다. 오브젝트 상태에는 이관할 것이 없다.
+             *          지운 필드는 버리고 나머지를 읽는 것이 XML, JSON 과 같은 규칙이다. 지금 버전(`kObjectReflectedSchemaVersion`)에만 등록하므로
+             *          버전이 다른 상태는 이 함수를 찾지 못해 실패한다(진짜 이관이 필요하기 때문이다). 버전을 올리면 옛 버전용 이관을 따로 등록한다.
+             *          읽는 쪽이 다른 지금 버전을 주어도 받지 않도록 두 버전이 같은지도 본다.
              *          버린 필드는 여기서 알리지 않는다. 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이관이 찾아 보지 않은 필드를
              *          이름과 함께 로드마다 한 번 알린다(여기서도 알리면 같은 경고가 두 번 나온다).
              */
@@ -289,6 +292,8 @@ namespace sw
 
 namespace sw
 {
+    SW_SCHEMA_MIGRATION( ObjectStateDroppedFields, sw::GameObject, kObjectReflectedSchemaVersion, &ObjectStateSerializerInternal::skipFieldsTheTypeNoLongerHas );
+
     template <typename TSerializer>
     string ObjectStateSerializer::saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
@@ -384,7 +389,7 @@ namespace sw
 
         return loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
         {
-            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, nullptr, nullptr, serializeContext );
+            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, nullptr, serializeContext );
         } );
     }
 
@@ -448,7 +453,7 @@ namespace sw
         const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
         {
             return BinarySerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
-                                                           kObjectReflectedSchemaVersion, &ObjectStateSerializerInternal::skipFieldsTheTypeNoLongerHas, nullptr, serializeContext );
+                                                           kObjectReflectedSchemaVersion, nullptr, serializeContext );
         } );
         return bLoaded ? bodyStart + bodySize : 0;
     }

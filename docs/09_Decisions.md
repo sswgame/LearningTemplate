@@ -544,6 +544,7 @@
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.
+- **스키마 이관 함수는 (타입, 기록된 버전)마다 타입 옆에 한 번 등록하고 읽기가 찾습니다**(2026-10-17). `SW_SCHEMA_MIGRATION` 이 `SchemaMigrationRegistry` 에 올리고, 세 형식의 버전 붙은 읽기가 타입과 그 부모로 찾으므로 `deserializeVersioned` · `Archive` 는 이관 함수를 받지 않습니다. 언리얼 `FCustomVersionRegistration` 처럼 정적 등록자이고 모듈 언로드 때 빠집니다. 이관은 값 계산이 필요한 구조 변환용이며 이름 별칭 표가 아닙니다(위 결정). 필요한데 없으면 오류로 멈춥니다.
 - **설정 파일에는 기본값과 다른 값만 적습니다**(2026-10-06). 언리얼의 `Default*.ini` 와 같은 규칙이고, `ConfigFileSchemaTest` 가 기본값을 다시 적은 키를 막습니다.
 - **설정 값의 출처는 하나씩입니다**(2026-10-06). 시작 씬은 팩의 `gamesettings.xml`, 창 제목은 게임 프리셋의 `GameConfig::_windowTitle`(언리얼 ProjectName), 고정 스텝은 `EngineConfig::_fixedDeltaTime` 입니다.
   물리는 고정 스텝 위에 서브스텝 수(`_subStepCount`)만 둡니다. 유니티의 `Time.fixedDeltaTime` 이 하나인 것과 같습니다. 기본 RHI 도 한 곳에만 적습니다.

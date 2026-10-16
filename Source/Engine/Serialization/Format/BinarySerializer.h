@@ -67,20 +67,18 @@ namespace sw
                                         const SerializeContext& context = SerializeContext::getDefault() );
 
         /**
-         * @brief 버전 헤더를 읽고 soft 역직렬화한 뒤, 필요하면 migrate 를 부릅니다.
+         * @brief 버전 헤더를 읽고 soft 역직렬화한 뒤, 필요하면 등록된 이관(`SchemaMigrationRegistry`, (타입, 기록된 버전)으로 찾는다)을 부릅니다.
          * @param pLegacyTypeInfo 주면 그 스키마로도 스테이징 로드해 migrate 컨텍스트의 `_pLegacyInstance` 로 넘깁니다.
-         * @return migrate 없이 버전이 다르거나 orphan 이 있으면 false 입니다.
+         * @return 등록된 이관 없이 버전이 다르거나 orphan 이 있으면 false 입니다.
          */
         [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                         uint32                  currentVersion  = 0,
-                                                        SchemaMigrateFn         migrate         = nullptr,
                                                         const TypeInfo*         pLegacyTypeInfo = nullptr,
                                                         const SerializeContext& context         = SerializeContext::getDefault() );
 
         /** @brief Archive 에서 버전 바이너리를 역직렬화합니다. */
         [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                                         uint32                  currentVersion  = 0,
-                                                        SchemaMigrateFn         migrate         = nullptr,
                                                         const TypeInfo*         pLegacyTypeInfo = nullptr,
                                                         const SerializeContext& context         = SerializeContext::getDefault() );
 

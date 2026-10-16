@@ -581,7 +581,7 @@ namespace sw
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                                 uint32 currentVersion, SchemaMigrateFn migrate, const TypeInfo* pLegacyTypeInfo,
+                                                 uint32 currentVersion, const TypeInfo* pLegacyTypeInfo,
                                                  const SerializeContext& context )
     {
         BinaryStreamReader reader( pData, dataSize );
@@ -593,10 +593,10 @@ namespace sw
 
         // 절차는 JSON, XML 과 공통이다(`runVersionedDeserialize`). 바이너리만 다른 것은 두 가지다.
         // 버전을 **본문 앞에서 이미 읽었고**(위 `reader.read`), orphan 이 하나라도 있으면 migrate 없이는
-        // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가
+        // 거절한다(이관은 `SchemaMigrationRegistry` 에서 찾는다). 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가
         // 바뀌었다는 뜻이기 때문이다.
         return runVersionedDeserialize(
-            outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, context,
+            outVersion, pInstance, typeInfo, currentVersion, pLegacyTypeInfo, context,
             SchemaVersionSource::Stream, SchemaOrphanPolicy::Reject,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
@@ -656,13 +656,13 @@ namespace sw
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
-                                                 uint32 currentVersion, SchemaMigrateFn migrate,
+                                                 uint32          currentVersion,
                                                  const TypeInfo* pLegacyTypeInfo, const SerializeContext& context )
     {
         return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureVersionedStream,
                                                                    [&]( const uint8* pData, size_t dataSize )
         {
-            return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, migrate, pLegacyTypeInfo, context );
+            return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, pLegacyTypeInfo, context );
         } );
     }
 

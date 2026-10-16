@@ -80,7 +80,7 @@ namespace sw
      *            건너뛴 필드는 조용히 넘어가지 않는다. `runSchemaMigrateStep` 이 타입과 필드 이름을 담아 로드마다 한 번 경고한다.
      *          - **바이너리는 `Reject`** 다. 쿠커나 같은 빌드가 쓴 산출물이라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이다. 이관
      *            함수(`SchemaMigrateFn`)가 받아 주지 않으면 실패한다. 언리얼 쿠킹 패키지가 버전(`FPackageFileSummary` 의 버전)이 다르면 로드를
-     *            거절하는 것과 같다. 오브젝트 상태처럼 지운 필드를 버려도 되는 곳은 이관 함수가 그렇게 선언한다
+     *            거절하는 것과 같다. 오브젝트 상태처럼 지운 필드를 버려도 되는 곳은 지금 버전에 등록한 이관 함수가 그렇게 선언한다
      *            (`ObjectStateSerializer` 의 `skipFieldsTheTypeNoLongerHas`).
      *          고정하는 테스트: `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`.
      */
@@ -92,8 +92,9 @@ namespace sw
 
     /**
      * @brief deserializeVersioned 가 migrate 를 부를 때 넘기는 컨텍스트입니다.
-     * @details migrate 를 부르는 조건은 migrate != nullptr 이고 (버전이 다름, orphan 이 있음, legacyTypeInfo 가 있음 중 하나)다.
-     *          migrate 가 nullptr 이면 버전이 다를 때 deserializeVersioned 는 false 를 반환한다. 버전이 같고
+     * @details migrate 는 호출부가 넘기지 않는다. (타입, 기록된 버전)으로 `SchemaMigrationRegistry` 에서 찾는다. 부르는 조건은
+     *          (버전이 다름, orphan 이 있음, legacyTypeInfo 가 있음 중 하나)이고 등록된 이관이 있는 것이다.
+     *          등록된 이관이 없으면 버전이 다를 때 deserializeVersioned 는 오류를 알리고 false 를 반환한다. 버전이 같고
      *          orphan 만 있을 때는 포맷마다 다르다. Binary 는 false, JSON 과 XML 은 orphan 을 버리고 성공한다
      *          (`SchemaOrphanPolicy`). legacyTypeInfo 를 주면 같은 데이터를 옛 TypeInfo 로도 읽어
      *          `_pLegacyInstance` 에 스테이징한다. 현재 instance 로 옮기는 것은 migrate 의 일이다(`moveProperty` 등).
@@ -140,23 +141,27 @@ namespace sw
         bool setPropertyFromText( hashed_string propName, string_view text ) const;
     };
 
-    /** @brief fromVersion 에서 toVersion 으로 옮기는 이관 함수입니다. false 를 반환하면 deserializeVersioned 가 실패합니다. */
+    /**
+     * @brief fromVersion 에서 toVersion 으로 옮기는 이관 함수입니다. false 를 반환하면 deserializeVersioned 가 실패합니다.
+     * @details 타입 옆 .cpp 에 `SW_SCHEMA_MIGRATION` 으로 (타입, 기록된 버전)마다 등록한다(`SchemaMigrationRegistry.h`).
+     */
     using SchemaMigrateFn = bool ( * )( const SchemaMigrateContext& context );
 
     /**
-     * @brief deserializeVersioned 의 마지막 단계입니다. migrate 를 부를 조건을 판정해 부르거나, migrate 가 없으면 경고합니다.
+     * @brief deserializeVersioned 의 마지막 단계입니다. migrate 를 부를 조건을 판정해 등록된 이관을 찾아 부르거나, 이관이 필요한데 없으면 오류를 알립니다.
      * @details soft 역직렬화가 끝난 뒤의 공통 로직이다. 세 포맷 모두 `runVersionedDeserialize` 를 거쳐 여기로 온다.
+     *          이관은 (typeInfo 와 그 부모, fromVersion)으로 `SchemaMigrationRegistry::find` 가 찾는다.
      *          스크래치 인스턴스 파괴는 부르는 쪽 책임이다.
      *          **orphan 의 운명이 정해지는 유일한 곳**이기도 하다. 로드가 성공으로 끝나는데 migrate 가 찾아 보지 않은 orphan
      *          (읽지 못한 값, 타입에 없는 필드)이 남으면 그 값은 버려진 것이므로, 타입 이름과 필드 이름을 담아 **로드마다 한 번** 경고한다.
      *          JSON 과 XML 의 Ignore 정책도 여기서 알린다(숫자 필드의 "abc" 가 말없이 기본값으로 남지 않게 하려는 것이다).
      *          옛 TypeInfo 를 스테이징했으면 두 타입 중 하나라도 아는 이름은 스테이징된 쪽이 처리했다고 보고 빼고 센다.
-     * @param bWarnWhenNoMigrate migrate 가 없고 이 값이 true 이면 경고한 뒤 false 를 반환합니다(버전과 orphan 정책은 부르는 쪽이 계산합니다).
+     * @param bMigrateRequired 등록된 이관이 없고 이 값이 true 이면 오류를 알린 뒤 false 를 반환합니다(버전과 orphan 정책은 부르는 쪽이 계산합니다).
      */
     SW_API bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
                                       void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
-                                      const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
-                                      bool bWarnWhenNoMigrate, const SerializeContext& context );
+                                      const vector<SchemaOrphanValue>& listOrphan,
+                                      bool bMigrateRequired, const SerializeContext& context );
 
     /** @brief JSON/XML 루트에 기록하는 스키마 버전 키입니다. */
     inline constexpr auto kSchemaVersionKey = "_schemaVersion";

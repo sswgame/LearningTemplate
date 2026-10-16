@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
@@ -681,12 +682,13 @@ namespace sw
 
     bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
                                void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
-                               const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
-                               bool bWarnWhenNoMigrate, const SerializeContext& context )
+                               const vector<SchemaOrphanValue>& listOrphan,
+                               bool bMigrateRequired, const SerializeContext& context )
     {
-        const bool needsMigrate =
-            migrate != nullptr && ( fromVersion != currentVersion || listOrphan.empty() == false || pLegacyInstance != nullptr );
-        if ( needsMigrate )
+        const bool bMigrateApplies = fromVersion != currentVersion || listOrphan.empty() == false || pLegacyInstance != nullptr;
+        // 찾기는 이관이 쓰일 수 있을 때만 한다. 버전이 같고 남은 값이 없는 읽기(거의 모든 읽기)는 표를 보지 않는다.
+        const SchemaMigrateFn migrate = bMigrateApplies ? SchemaMigrationRegistry::find( typeInfo, fromVersion ) : nullptr;
+        if ( migrate != nullptr )
         {
             SchemaMigrateContext migrateContext;
             migrateContext._fromVersion       = fromVersion;
@@ -704,11 +706,11 @@ namespace sw
             return true;
         }
 
-        if ( migrate == nullptr && bWarnWhenNoMigrate )
+        if ( bMigrateRequired )
         {
-            SW_LOG_WARNING( "(%#) schema version %# -> %# with no migrate callback (%# orphans: %#)",
-                            typeInfo._name.c_str(), fromVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
-                            listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
+            SW_LOG_ERROR( "(%#) schema version %# -> %# needs a migration and none is registered for (%#, %#) - add SW_SCHEMA_MIGRATION next to the type (%# orphans: %#)",
+                          typeInfo._name.c_str(), fromVersion, currentVersion, typeInfo._fullyQualifiedName.c_str(), fromVersion,
+                          static_cast<uint32>( listOrphan.size() ), listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
             return false;
         }
         // 이관 없이 받아 주는 로드다(JSON, XML 의 Ignore 정책). orphan 은 모두 버려진다.
