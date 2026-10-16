@@ -32,10 +32,6 @@
   씬 서비스(`ISceneService`)로 옮겨 코어 헤더가 Physics · Audio · Navigation 을 퍼뜨리지 않는다(엔진 분할 2 단계).
 
 - `C-19` [정리] **구조 리팩토링의 남은 후보.**
-  - **자체 포맷 로더를 리플렉션으로(R4)**: `SpriteClipAsset` · `SequenceAsset` · `Skeleton` · `DialogueGraphAsset`. 파일 하나가 한 단위라 서로 충돌하지 않는다.
-    먼저 판정한다 — 적지 않은 값의 의미가 필요한가(부모 상속, "없음" 과 "0" 구분)? 그렇다면 옮기지 않는다(기준은 [결정 기록](../09_Decisions.md) 5-4). 옮긴다면 구조체에 `REFLECT` · `PROPERTY`,
-    `ConfigManager::readConfigJSON` 으로 읽기(모르는 키 · 읽지 못한 값 · 범위는 거기서 오류), 의미 검사만 직접. 데이터 파일은 키를 `_이름` 규약으로 다시 쓰고(옛 이름 별칭 없음) 설정 카탈로그를 `typeName` 방식으로 바꿔 문서를 생성한다.
-    검증: 그 로더의 기존 테스트, `ResourceDataSchemaTest`, 설정 · 리소스 스키마 게이트.
   - **씬 · UI 쪽의 엔진 창구 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `WidgetComponent`(`engine::findSubsystem<UISystem>()`) · `UISystem` · `FontService`,
     `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성. 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
 

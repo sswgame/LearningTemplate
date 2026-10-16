@@ -554,6 +554,11 @@
   `CrashReportService` 는 동적 JSON 문서이고, JWT · Chrome 트레이스 · VRM 은 외부 형식입니다.
   `CultureInfo` 는 적지 않은 필드가 부모 문화권을 따르고(`parent`), `LocalizationDocuments` 는 키가 데이터인 문자열 표이며, `AnimationGraphAsset` 은 노드 종류마다 필드가 다른 그래프라
   고정 구조체 하나로 읽을 수 없습니다(2026-10-14 R4 판정).
+- **자체 포맷 에셋 로더 넷도 리플렉션으로 읽고 씁니다**(2026-10-17, C-19 R4). `SpriteClipAsset` · `SequenceAsset` · `DialogueGraphAsset` · `Skeleton` 은 키가 PROPERTY 이름이고,
+  저장소 데이터는 새 키로 다시 썼습니다(옛 키 별칭 없음, 임포트 결과 스켈레톤은 `--import-models` 로 다시 만듦). "적지 않음" 을 초기값으로 읽으면 안 되는 칸(스켈레톤 전부,
+  대화 노드 · 링크 id 와 핀)은 `PROPERTY( Required )` 로 두어 빠지면 오류입니다 — `ConfigManager::readConfigJSON` 이 구조체 칸과 구조체 목록 원소 안까지 봅니다.
+  종류(시퀀스 항목 · 트랙, 대화 노드)는 정수 대신 열거자 이름이고, 모르는 종류를 읽어 두고 적용만 않던 규칙과 모르는 노드 종류를 Dialogue 로 읽던 폴백은 없앴습니다.
+  범위 밖 프레임 번호도 자르지 않고 오류입니다. 스프라이트 구간이 프레임 밖이면 자르고 알리는 것만 남겼습니다(에디터가 프레임을 지운 뒤 저장할 수 있다).
 - **열거자 이름의 정본은 리플렉션 `ENUM()` 입니다**(2026-10-15, 같은 해 10-12 의 "enum 이름 테이블 45 곳 유지" 를 뒤집음). 철자가 열거자 이름과 같은 손 이름 표 · `toString( Enum )` 은 지우고
   `getEnumName( value )`(`Engine/Reflection/EnumName.h`)로 읽습니다. 언리얼은 `UENUM` + `UEnum::GetValueAsString`, Godot 은 ClassDB 열거 상수가 이름의 유일한 출처로 알고 있습니다(기억에 의존).
   손 표는 `static_assert` 가 개수만 지키고 순서 · 철자의 어긋남은 못 막았고, 쓰는 곳이 거의 로그였으므로 "배열 인덱스가 빠르다" 는 이득이 없습니다.

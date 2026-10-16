@@ -7,6 +7,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
@@ -147,8 +148,9 @@ namespace sw
                     typeName,
                     []( const void* pPtr )
                 {
-                    const auto*                           pElem = reinterpret_cast<const TElem*>( pPtr );
-                    StringBuilder<constant::kMaxBuffer64> sb;
+                    // 행렬(16 칸)은 64 바이트에 담기지 않는다 — 칸 수에 맞는 버퍼를 고른다.
+                    const auto*                                                                      pElem = reinterpret_cast<const TElem*>( pPtr );
+                    StringBuilder<( kCount > 4 ) ? constant::kMaxBuffer512 : constant::kMaxBuffer64> sb;
                     for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
                     {
                         if ( axisIndex > 0 )
@@ -179,11 +181,15 @@ namespace sw
                 } );
             }
 
+            /** @brief 실수 칸을 쉼표로 잇는 글 처리기를 둡니다. 쿼터니언은 (x, y, z, w), 행렬은 행 우선 16 개입니다(스켈레톤 파일이 쓴다). */
             static void registerFloatVectorTextHandlers( SerializeContext& context )
             {
+                static_assert( sizeof( quaternion ) == 4 * sizeof( float32 ) && sizeof( float4x4 ) == 16 * sizeof( float32 ), "칸이 빈틈 없이 이어져야 배열로 읽는다" );
                 registerVectorTextHandler<float2, float32, 2>( context, hashed_string( PredefinedNameType::NameType_float2 ) );
                 registerVectorTextHandler<float3, float32, 3>( context, hashed_string( PredefinedNameType::NameType_float3 ) );
                 registerVectorTextHandler<float4, float32, 4>( context, hashed_string( PredefinedNameType::NameType_float4 ) );
+                registerVectorTextHandler<quaternion, float32, 4>( context, hashed_string( PredefinedNameType::NameType_quaternion ) );
+                registerVectorTextHandler<float4x4, float32, 16>( context, hashed_string( PredefinedNameType::NameType_float4x4 ) );
             }
         };
     } // namespace

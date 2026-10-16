@@ -6,9 +6,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimationJSONUtil.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 namespace sw
 {
@@ -66,13 +66,9 @@ namespace sw
     bool Skeleton::parseJSON( string_view json, string_view sourceLabel )
     {
         clear();
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
-        {
-            SW_LOG_ERROR( "Skeleton '%#': malformed JSON", sourceLabel );
-            return false;
-        }
-        if ( parseRoot( document.getRoot(), sourceLabel ) )
+        const string label{ sourceLabel };
+        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 빠진 키 · 읽지 못한 값은 오류다(`readConfigJSON` 이 로그로 알린다).
+        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) && rebuildFromLoaded( sourceLabel ) )
             return true;
         clear();
         return false;
@@ -91,99 +87,40 @@ namespace sw
         return parseJSON( text, path );
     }
 
-    bool Skeleton::parseRoot( const JSONValue& root, string_view sourceLabel )
+    bool Skeleton::rebuildFromLoaded( string_view sourceLabel )
     {
-        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "bones", "attachments" }, sourceLabel ) == false )
-            return false;
-        const JSONValue bones = root.get( "bones" );
-        if ( bones.isArray() == false || bones.size() == 0 )
+        if ( _listBone.empty() )
         {
-            SW_LOG_ERROR( "Skeleton '%#': 'bones' must be a non-empty array", sourceLabel );
+            SW_LOG_ERROR( "Skeleton '%#': _listBone must not be empty", sourceLabel );
             return false;
         }
-        for ( size_t boneIndex = 0; boneIndex < bones.size(); ++boneIndex )
+        // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. `addBone` 이 거르므로 그 길로 다시 쌓는다.
+        const vector<SkeletonBone>       listLoadedBone       = std::move( _listBone );
+        const vector<SkeletonAttachment> listLoadedAttachment = std::move( _listAttachment );
+        clear();
+        for ( const SkeletonBone& bone : listLoadedBone )
         {
-            const JSONValue bone = bones.at( boneIndex );
-            if ( AnimationJSONUtil::hasOnlyKnownKeys( bone, { "name", "parent", "translation", "rotation", "scale", "inverse_bind" }, sourceLabel ) == false )
-                return false;
-            BoneTransform referencePose{};
-            float32       arrInverseBind[16]{};
-            const bool    bComplete = bone.get( "name" ).isString() && bone.get( "parent" ).isNumber() && AnimationJSONUtil::readBoneTransform( bone, referencePose ) &&
-                                   AnimationJSONUtil::readFloats( bone.get( "inverse_bind" ), arrInverseBind, 16 );
-            if ( bComplete == false )
+            if ( addBone( bone._name, bone._parentIndex, bone._referencePose, bone._inverseBind ) < 0 )
             {
-                SW_LOG_ERROR( "Skeleton '%#': bone %# is missing a field or has a malformed one", sourceLabel, boneIndex );
+                SW_LOG_ERROR( "Skeleton '%#': bone '%#' must name an earlier bone as its parent", sourceLabel, bone._name.c_str() );
                 return false;
             }
-            const string name        = bone.get( "name" ).asString();
-            const int32  parentIndex = static_cast<int32>( bone.get( "parent" ).asInt( -2 ) );
-            if ( addBone( hashed_string( name ), parentIndex, referencePose, float4x4{ arrInverseBind } ) < 0 )
-                return false;
         }
-
-        const JSONValue attachments = root.get( "attachments" );
-        if ( attachments.isArray() == false )
+        for ( const SkeletonAttachment& attachment : listLoadedAttachment )
         {
-            SW_LOG_ERROR( "Skeleton '%#': 'attachments' must be an array", sourceLabel );
-            return false;
-        }
-        for ( size_t attachmentIndex = 0; attachmentIndex < attachments.size(); ++attachmentIndex )
-        {
-            const JSONValue attachment = attachments.at( attachmentIndex );
-            if ( AnimationJSONUtil::hasOnlyKnownKeys( attachment, { "name", "mesh", "bone", "translation", "rotation", "scale" }, sourceLabel ) == false )
-                return false;
-            SkeletonAttachment entry{};
-            const bool         bComplete = attachment.get( "name" ).isString() && attachment.get( "mesh" ).isString() && attachment.get( "bone" ).isString() &&
-                                   AnimationJSONUtil::readBoneTransform( attachment, entry._localTransform );
-            if ( bComplete == false )
+            if ( findBoneIndex( attachment._parentBone ) < 0 )
             {
-                SW_LOG_ERROR( "Skeleton '%#': attachment %# is missing a field or has a malformed one", sourceLabel, attachmentIndex );
+                SW_LOG_ERROR( "Skeleton '%#': attachment '%#' names unknown bone '%#'", sourceLabel, attachment._name.c_str(), attachment._parentBone.c_str() );
                 return false;
             }
-            entry._name       = attachment.get( "name" ).asString();
-            entry._meshPath   = attachment.get( "mesh" ).asString();
-            entry._parentBone = hashed_string( attachment.get( "bone" ).asString() );
-            if ( findBoneIndex( entry._parentBone ) < 0 )
-            {
-                SW_LOG_ERROR( "Skeleton '%#': attachment '%#' names unknown bone '%#'", sourceLabel, entry._name.c_str(), entry._parentBone.c_str() );
-                return false;
-            }
-            _listAttachment.push_back( entry );
+            _listAttachment.push_back( attachment );
         }
         return true;
     }
 
     string Skeleton::toJSON() const
     {
-        JSONDocument    document;
-        const JSONValue root = document.makeObject();
-        {
-            const JSONValue bones = root.set( "bones" );
-            bones.setArray();
-            for ( const SkeletonBone& bone : _listBone )
-            {
-                const JSONValue entry = bones.pushBack();
-                entry.setObject();
-                entry.set( "name" ).setString( bone._name.c_str() );
-                entry.set( "parent" ).setInt( bone._parentIndex );
-                AnimationJSONUtil::writeBoneTransform( entry, bone._referencePose );
-                AnimationJSONUtil::writeFloats( entry.set( "inverse_bind" ), &bone._inverseBind._11, 16 );
-            }
-        }
-        {
-            const JSONValue attachments = root.set( "attachments" );
-            attachments.setArray();
-            for ( const SkeletonAttachment& attachment : _listAttachment )
-            {
-                const JSONValue entry = attachments.pushBack();
-                entry.setObject();
-                entry.set( "name" ).setString( attachment._name );
-                entry.set( "mesh" ).setString( attachment._meshPath );
-                entry.set( "bone" ).setString( attachment._parentBone.c_str() );
-                AnimationJSONUtil::writeBoneTransform( entry, attachment._localTransform );
-            }
-        }
-        return document.dump( 2 );
+        return JSONSerializer::serializePretty( this, *StaticType(), 2 );
     }
 
     bool Skeleton::saveToFile( string_view path ) const

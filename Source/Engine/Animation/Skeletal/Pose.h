@@ -9,6 +9,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class Skeleton;
@@ -16,12 +18,19 @@ namespace sw
     /**
      * @struct BoneTransform
      * @brief 본 하나의 로컬 변환(부모 기준)입니다. 행벡터 규약의 S * R * T 순서로 합성합니다(`toMatrix`).
+     * @details 스켈레톤 파일(`Skeleton`)이 리플렉션으로 읽고 쓰며, 세 칸 모두 파일에 반드시 적는다(`PROPERTY( Required )`).
      */
+    REFLECT()
     struct SW_API BoneTransform
     {
-        float3     _translation{};
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Translation from the parent bone" )
+        float3 _translation{};
+        PROPERTY( Required, Tooltip = "Rotation (x, y, z, w)" )
         quaternion _rotation{};
-        float3     _scale{ 1.0f, 1.0f, 1.0f };
+        PROPERTY( Required, Tooltip = "Scale" )
+        float3 _scale{ 1.0f, 1.0f, 1.0f };
 
         /** @brief 행렬로 합성합니다(`float4x4::makeTrs`). */
         float4x4 toMatrix() const { return float4x4::makeTrs( _translation, _rotation, _scale ); }
