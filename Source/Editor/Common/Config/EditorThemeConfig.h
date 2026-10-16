@@ -42,6 +42,9 @@ namespace sw::editor
         Color _axisX{};
         Color _axisY{};
         Color _axisZ{};
+        Color _colliderWire{};
+        Color _cameraWire{};
+        Color _viewportLabel{};
 
         EditorThemeRadiusDef     _radius{};
         EditorThemeSpacingDef    _spacing{};

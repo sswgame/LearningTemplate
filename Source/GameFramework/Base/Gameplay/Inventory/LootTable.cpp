@@ -16,22 +16,29 @@ namespace sw
 
     namespace
     {
-        struct LootTableInternal
+        /**
+         * @brief `<Entry>` · `<Always>` 하나를 스키마(`LootEntryRowDef`)로 읽어 @p outEntry 를 채웁니다.
+         * @return 모르는 속성 · 범위 밖 값 · `max` < `min` 이면 false 입니다(오류는 이름과 함께 남긴다).
+         */
+        [[nodiscard]] bool readLootEntry( const XMLNode& node, string_view sourceName, LootEntry& outEntry )
         {
-            static LootEntry readEntry( const XMLNode& node )
+            LootEntryRowDef row;
+            if ( GameDataXML::readFields( node, row, sourceName ) == false )
+                return false;
+            const bool bHasMax = node.findAttribute( "max" ) != nullptr;
+            if ( bHasMax && row._max < row._min )
             {
-                LootEntry   entry;
-                const utf8* pItem  = node.findAttribute( "item" );
-                const utf8* pTable = node.findAttribute( "table" );
-                entry._itemID      = pItem != nullptr ? hashed_string( pItem ) : hashed_string{};
-                entry._tableID     = pTable != nullptr ? hashed_string( pTable ) : hashed_string{};
-                entry._weight      = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", entry._weight ) );
-                entry._chance      = MathUtil::saturate( node.getAttributeFloat( "chance", entry._chance ) );
-                entry._minCount    = MathUtil::max( 0, node.getAttributeInt( "min", node.getAttributeInt( "count", entry._minCount ) ) );
-                entry._maxCount    = MathUtil::max( entry._minCount, node.getAttributeInt( "max", entry._minCount ) );
-                return entry;
+                SW_LOG_ERROR( "%#: <%# max=\"%#\"> is less than min=\"%#\"", sourceName, node.getName(), row._max, row._min );
+                return false;
             }
-        };
+            outEntry._itemID   = row._item.empty() ? hashed_string{} : hashed_string( row._item );
+            outEntry._tableID  = row._table.empty() ? hashed_string{} : hashed_string( row._table );
+            outEntry._weight   = row._weight;
+            outEntry._chance   = row._chance;
+            outEntry._minCount = row._min;
+            outEntry._maxCount = bHasMax ? row._max : row._min;
+            return true;
+        }
     } // namespace
 } // namespace sw
 
@@ -45,18 +52,32 @@ namespace sw
             const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
+            // 기본값 · 범위는 스키마(LootTableRowDef · LootEntryRowDef)가 정한다. 오류가 있는 테이블 · 항목은 넣지 않는다(오류는 readFields 가 남긴다).
+            LootTableRowDef row;
+            if ( GameDataXML::readFields( node, row, sourceName, { "id" } ) == false )
+                continue;
+            const bool bHasRollsMax = node.findAttribute( "rollsMax" ) != nullptr;
+            if ( bHasRollsMax && row._rollsMax < row._rolls )
+            {
+                SW_LOG_ERROR( "%#: table '%#' rollsMax=\"%#\" is less than rolls=\"%#\"", sourceName, pID, row._rollsMax, row._rolls );
+                continue;
+            }
             LootTableDef table;
             table._id         = hashed_string( pID );
-            table._minRolls   = MathUtil::max( 0, node.getAttributeInt( "rolls", table._minRolls ) );
-            table._maxRolls   = MathUtil::max( table._minRolls, node.getAttributeInt( "rollsMax", table._minRolls ) );
-            table._noneWeight = MathUtil::max( 0.0f, node.getAttributeFloat( "none", table._noneWeight ) );
+            table._minRolls   = row._rolls;
+            table._maxRolls   = bHasRollsMax ? row._rollsMax : row._rolls;
+            table._noneWeight = row._none;
             for ( XMLNode child = node.findChild( "Entry" ); child; child = child.findNextSibling( "Entry" ) )
             {
-                table._listEntry.push_back( LootTableInternal::readEntry( child ) );
+                LootEntry entry;
+                if ( readLootEntry( child, sourceName, entry ) )
+                    table._listEntry.push_back( entry );
             }
             for ( XMLNode child = node.findChild( "Always" ); child; child = child.findNextSibling( "Always" ) )
             {
-                table._listAlways.push_back( LootTableInternal::readEntry( child ) );
+                LootEntry entry;
+                if ( readLootEntry( child, sourceName, entry ) )
+                    table._listAlways.push_back( entry );
             }
             add( table );
             ++loadedCount;

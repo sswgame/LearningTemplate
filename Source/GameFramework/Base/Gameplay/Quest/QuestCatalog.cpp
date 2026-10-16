@@ -2,8 +2,6 @@
 
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
@@ -14,22 +12,29 @@ namespace sw
 
     namespace
     {
-        struct QuestCatalogInternal
+        /**
+         * @brief 단계 원소 @p node 의 `<Reward>` 를 @p outReward 에 읽습니다. 보상이 없으면 아무것도 하지 않습니다.
+         * @return 보상 `<Item>` 에 스키마(`QuestRewardItemRowDef`) 오류가 있으면 false 입니다(오류는 readFields 가 남긴다).
+         */
+        [[nodiscard]] bool readQuestReward( const XMLNode& node, string_view sourceName, QuestReward& outReward )
         {
-            static void readReward( const XMLNode& node, QuestReward& outReward )
+            const XMLNode rewardNode = node.findChild( "Reward" );
+            if ( rewardNode.isValid() == false )
+                return true;
+            (void)outReward._values.loadFromAttributes( rewardNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 값 보상이 없다
+            bool bValid = true;
+            for ( XMLNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
             {
-                const XMLNode rewardNode = node.findChild( "Reward" );
-                if ( rewardNode.isValid() == false )
-                    return;
-                (void)outReward._values.loadFromAttributes( rewardNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 값 보상이 없다
-                for ( XMLNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
+                QuestRewardItemRowDef row;
+                if ( GameDataXML::readFields( item, row, sourceName ) == false )
                 {
-                    const utf8* pItem = item.findAttribute( "item" );
-                    if ( pItem != nullptr )
-                        outReward._items.addItem( hashed_string( pItem ), MathUtil::max( 1, item.getAttributeInt( "count", 1 ) ) );
+                    bValid = false;
+                    continue;
                 }
+                outReward._items.addItem( hashed_string( row._item ), row._count );
             }
-        };
+            return bValid;
+        }
     } // namespace
 
     const QuestStage* QuestDef::findStage( const hashed_string& stageID ) const
@@ -50,40 +55,45 @@ namespace sw
             const utf8* pID = GameDataXML::findRequiredID( questNode, sourceName );
             if ( pID == nullptr )
                 continue;
-            QuestDef quest;
+            // 기본값 · 범위는 스키마(Quest*RowDef)가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
+            QuestRowDef questRow;
+            bool        bValid = GameDataXML::readFields( questNode, questRow, sourceName, { "id", "name", "requires" } );
+            QuestDef    quest;
             quest._id            = hashed_string( pID );
             const utf8* pName    = questNode.findAttribute( "name" );
             quest._name          = pName != nullptr ? pName : pID;
-            quest._requiredLevel = questNode.getAttributeInt( "level", 0 );
-            quest._bRepeatable   = questNode.getAttributeBool( "repeatable", false ) ? SW_TRUE : SW_FALSE;
+            quest._requiredLevel = questRow._level;
+            quest._bRepeatable   = questRow._bRepeatable ? SW_TRUE : SW_FALSE;
             StringUtil::forEachToken( questNode.getAttributeText( "requires" ), ", ", [&]( string_view token )
             { quest._listRequiredQuest.push_back( hashed_string( token ) ); } );
             for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
             {
+                QuestStageRowDef stageRow;
+                bValid = GameDataXML::readFields( stageNode, stageRow, sourceName, { "id", "next" } ) && bValid;
                 QuestStage stage;
-                stage._id         = GameDataXML::readName( stageNode, "id" );
-                stage._nextStage  = GameDataXML::readName( stageNode, "next" );
-                const utf8* pText = stageNode.findAttribute( "text" );
-                stage._text       = pText != nullptr ? pText : "";
-                stage._timeLimit  = MathUtil::max( 0.0f, stageNode.getAttributeFloat( "time", 0.0f ) );
-                stage._bComplete  = stageNode.getAttributeBool( "complete", false ) ? SW_TRUE : SW_FALSE;
-                stage._bFail      = stageNode.getAttributeBool( "fail", false ) ? SW_TRUE : SW_FALSE;
+                stage._id        = GameDataXML::readName( stageNode, "id" );
+                stage._nextStage = GameDataXML::readName( stageNode, "next" );
+                stage._text      = stageRow._text;
+                stage._timeLimit = stageRow._time;
+                stage._bComplete = stageRow._bComplete ? SW_TRUE : SW_FALSE;
+                stage._bFail     = stageRow._bFail ? SW_TRUE : SW_FALSE;
                 for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
                 {
+                    QuestObjectiveRowDef objectiveRow;
+                    bValid = GameDataXML::readFields( node, objectiveRow, sourceName, { "kind", "target" } ) && bValid;
                     QuestObjective objective;
                     objective._kind      = GameDataXML::readName( node, "kind" );
                     objective._target    = GameDataXML::readName( node, "target" );
-                    const utf8* pObjText = node.findAttribute( "text" );
-                    objective._text      = pObjText != nullptr ? pObjText : "";
-                    objective._count     = MathUtil::max( 1, node.getAttributeInt( "count", 1 ) );
-                    objective._bOptional = node.getAttributeBool( "optional", false ) ? SW_TRUE : SW_FALSE;
+                    objective._text      = objectiveRow._text;
+                    objective._count     = objectiveRow._count;
+                    objective._bOptional = objectiveRow._bOptional ? SW_TRUE : SW_FALSE;
                     stage._listObjective.push_back( objective );
                 }
                 for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
                 {
                     stage._listBranch.push_back( QuestBranch{ GameDataXML::readName( node, "choice" ), GameDataXML::readName( node, "next" ) } );
                 }
-                QuestCatalogInternal::readReward( stageNode, stage._reward );
+                bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;
                 if ( stage._id.empty() )
                     SW_LOG_WARNING( "%#: quest '%#' has a stage without id", sourceName, pID );
                 quest._listStage.push_back( stage );
@@ -102,6 +112,11 @@ namespace sw
             if ( quest._listStage.empty() )
             {
                 SW_LOG_WARNING( "%#: quest '%#' has no stages", sourceName, pID );
+                continue;
+            }
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: quest '%#' has invalid fields - skipped", sourceName, pID );
                 continue;
             }
             (void)add( quest );

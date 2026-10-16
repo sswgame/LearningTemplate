@@ -5,12 +5,61 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+
+namespace sw
+{
+    /**
+     * @brief `<Entry>` · `<Always>` 속성의 스키마입니다(`GameDataXML::readFields` — 속성 이름은 칸 이름에서 `_` 를 뗀 것).
+     * @details 적지 않은 칸은 여기 초기값이고, 범위 밖 값은 로드 오류입니다(자르지 않는다). `max` 를 적지 않으면 `min` 과 같습니다(정해진 개수).
+     */
+    REFLECT()
+    struct LootEntryRowDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _item{}; ///< 줄 아이템 ID
+        PROPERTY()
+        string _table{}; ///< 비어 있지 않으면 이 테이블을 굴린다
+        PROPERTY( Min = 0 )
+        float32 _weight{ 1.0f };
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _chance{ 1.0f }; ///< 항상 주는 항목의 확률
+        PROPERTY( Min = 0 )
+        int32 _min{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _max{ 0 }; ///< 적었을 때만 읽는다. `min` 보다 작으면 오류다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief `<Table>` 속성의 스키마입니다(`id` 는 `GameDataXML::findRequiredID` 가 따로 읽는다).
+     * @details `rollsMax` 를 적지 않으면 `rolls` 와 같습니다.
+     */
+    REFLECT()
+    struct LootTableRowDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0 )
+        int32 _rolls{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _rollsMax{ 0 }; ///< 적었을 때만 읽는다. `rolls` 보다 작으면 오류다
+        PROPERTY( Min = 0 )
+        float32 _none{ 0.0f }; ///< "아무것도 없음" 가중치
+    };
+} // namespace sw
 
 namespace sw
 {
