@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -40,6 +41,30 @@ namespace sw
                 {       "goliath",   "craft_speeder_b", 2.03f},
                 {        "wraith",       "craft_racer", 2.03f},
             };
+
+            /**
+             * @brief 탐침 `Skirmish.ViewLagMax` 입니다. 모든 유닛 뷰 가운데 메시가 디렉터의 유닛 자리에서 가장 멀리 벗어난 거리입니다.
+             *        잰 뷰가 하나도 없으면(뷰가 없거나 모두 비교 불가) false 를 돌려 시나리오가 빈 측정으로 통과하지 못하게 합니다.
+             */
+            [[nodiscard]] static bool readViewLagMax( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                float32 lagMax        = 0.0f;
+                uint32  measuredCount = 0;
+                pManager->forEachComponentOfType<SkirmishUnitComponent>( [&lagMax, &measuredCount]( const SkirmishUnitComponent* pView )
+                {
+                    const float32 lag = pView->measureViewLag();
+                    if ( lag < 0.0f )
+                        return;
+                    lagMax = MathUtil::max( lagMax, lag );
+                    ++measuredCount;
+                } );
+                if ( measuredCount == 0 )
+                    return false;
+                outValue = static_cast<float64>( lagMax );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -106,6 +131,24 @@ namespace sw
         return listPath;
     }
 
+    float32 SkirmishUnitComponent::measureViewLag() const
+    {
+        const GameObject*        pOwner         = getOwner();
+        const GameObjectManager* pManager       = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const MeshComponent*     pMesh          = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        const bool               bNotMeasurable = pManager == nullptr || pMesh == nullptr || _bPlaced == SW_FALSE;
+        if ( bNotMeasurable )
+            return -1.0f;
+        const SkirmishDirectorComponent* pDirector = GameDirectorComponent::resolve<SkirmishDirectorComponent>( *pManager, _director );
+        const RTSUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitID ) : nullptr;
+        if ( pUnit == nullptr )
+            return -1.0f;
+        const float3  shown = pMesh->getLocalPosition();
+        const float32 dx    = shown._x - pUnit->_position._x;
+        const float32 dz    = shown._z - pUnit->_position._z;
+        return MathUtil::sqrt( dx * dx + dz * dz );
+    }
+
     void SkirmishUnitComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
@@ -162,4 +205,9 @@ namespace sw
             _bPlaced = SW_TRUE;
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_PROBE( skirmishViewLagMax, "Skirmish.ViewLagMax", "Largest distance between a unit view mesh and the director's unit position", &SkirmishUnitComponentInternal::readViewLagMax );
 } // namespace sw

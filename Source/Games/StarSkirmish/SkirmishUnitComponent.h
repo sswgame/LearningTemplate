@@ -48,6 +48,12 @@ namespace sw
         /** @brief 따라갈 디렉터 · 유닛 · 모델 폭을 정합니다(디렉터가 스폰한 뒤 부른다). */
         void assignUnit( GameObjectHandle director, SlotHandle unitID, float32 modelWidth );
 
+        /**
+         * @brief 이 뷰의 메시 자리와 디렉터가 지금 가진 유닛 자리의 수평 거리입니다(탐침 `Skirmish.ViewLagMax` 가 쓴다). 비교할 수 없으면(유닛이 없거나 아직 자리를 맞추기 전) -1 입니다.
+         * @details 뷰가 디렉터보다 뒤 그룹에서 돌면 한 프레임이 끝났을 때 0 이다. 앞 그룹에서 돌면 유닛이 움직인 만큼 뒤처진다 — 그룹 순서를 지키는지 시나리오가 본다.
+         */
+        float32 measureViewLag() const;
+
         /** @brief 유닛 정의의 모델입니다. 그리지 않는 유닛이면 nullptr 입니다. */
         static const SkirmishUnitModel* findUnitModel( const hashed_string& unitID );
         static string                   makeModelPath( const utf8* pName );
