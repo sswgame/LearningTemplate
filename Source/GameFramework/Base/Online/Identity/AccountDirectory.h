@@ -11,6 +11,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -23,12 +25,17 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정 하나의 공개 정보입니다. */
+    /** @brief 계정 하나의 공개 정보입니다. 온라인 메시지(계정 발급 응답, 관리자 조회 응답)에 고정 배치형으로 실립니다. 이름 상한은 `RequestLimits::kMaxDisplayNameSize` 와 같은 값입니다. */
+    REFLECT()
     struct AccountIdentity
     {
-        string    _displayName{};
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 32 )
+        string _displayName{};
+        PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
-        uint8     _bGuest{ SW_FALSE }; ///< 게스트 계정(연동 전)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bGuest{ SW_FALSE }; ///< 게스트 계정(연동 전)
     };
 } // namespace sw
 

@@ -64,24 +64,36 @@ namespace sw
 namespace sw
 {
     /** @brief 티켓에 든 한 사람입니다. */
+    REFLECT()
     struct MatchMember
     {
+        REFLECT_BODY();
+        PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
-        int32     _rating{ 1500 };
+        PROPERTY()
+        int32 _rating{ 1500 };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 대기열 티켓 하나입니다. 혼자이거나 파티이며, 파티는 같은 팀에 함께 배정합니다. */
+    /** @brief 대기열 티켓 하나입니다. 혼자이거나 파티이며, 파티는 같은 팀에 함께 배정합니다. 서버 버스(대기열 주제)의 본문입니다. */
+    REFLECT()
     struct MatchTicket
     {
-        vector<MatchMember> _listMember{};
-        string              _region{};
-        uint64              _ticketID{ 0 };
-        uint64              _partyID{ 0 };        ///< 0이면 혼자이다
-        uint64              _originServerID{ 0 }; ///< 티켓을 낸 서버이다. 결과를 그 서버로 돌려보낸다
-        int64               _enqueuedMs{ 0 };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 256 )
+        vector<MatchMember> _listMember{}; ///< 상한은 팀 수 상한 곱하기 팀 인원 상한(`MatchmakingLimit`)이다
+        PROPERTY( MaxCount = 16 )
+        string _region{}; ///< 상한은 `ServerRecord::kMaxNameSize` 와 같다
+        PROPERTY()
+        uint64 _ticketID{ 0 };
+        PROPERTY()
+        uint64 _partyID{ 0 }; ///< 0이면 혼자이다
+        PROPERTY()
+        uint64 _originServerID{ 0 }; ///< 티켓을 낸 서버이다. 결과를 그 서버로 돌려보낸다
+        PROPERTY()
+        int64 _enqueuedMs{ 0 };
 
         /** @brief 멤버 실력의 평균입니다. 멤버가 없으면 0입니다. */
         SW_KIT_API int32 computeAverageRating() const;
@@ -90,15 +102,35 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 만들어진 경기 하나입니다. */
+    /** @brief 만들어진 경기의 팀 하나입니다. */
+    REFLECT()
+    struct MatchFormedTeam
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 16 )
+        vector<MatchMember> _listMember{}; ///< 상한은 `MatchmakingLimit::kMaxTeamSize` 와 같다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 만들어진 경기 하나입니다. 서버 버스(배정 주제)로 전용 서버에 보내는 본문입니다. */
+    REFLECT()
     struct MatchFormed
     {
-        vector<vector<MatchMember>> _listTeam{};
-        vector<MatchTicket>         _listTicket{};
-        string                      _modeID{};
-        string                      _region{}; ///< 앵커(가장 오래 기다린 티켓)의 지역이다. 전용 서버 배정이 먼저 확인한다
-        uint64                      _matchID{ 0 };
-        int32                       _averageRating{ 0 };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 16 )
+        vector<MatchFormedTeam> _listTeam{}; ///< 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
+        PROPERTY( MaxCount = 256 )
+        vector<MatchTicket> _listTicket{};
+        PROPERTY( MaxCount = 32 )
+        string _modeID{}; ///< 상한은 `MatchmakingLimit::kMaxIDSize` 와 같다
+        PROPERTY( MaxCount = 16 )
+        string _region{}; ///< 앵커(가장 오래 기다린 티켓)의 지역이다. 전용 서버 배정이 먼저 확인한다
+        PROPERTY()
+        uint64 _matchID{ 0 };
+        PROPERTY()
+        int32 _averageRating{ 0 };
     };
 } // namespace sw
 
@@ -121,13 +153,24 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 `IMatchRatingSource` 가 모드마다 줍니다. */
+    /**
+     * @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 `IMatchRatingSource` 가 모드마다 줍니다.
+     * @details 알림과 응답은 고정 배치형(B)이고, 캐시 기록은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `MatchmakingProtocol::encodeParty`)입니다.
+     */
+    REFLECT()
     struct PartySnapshot
     {
-        vector<AccountID> _listMemberID{}; ///< 첫 항목이 파티장이다
-        uint64            _partyID{ 0 };
-        uint64            _queuedTicketID{ 0 }; ///< 줄을 서 있으면 그 티켓이다. 낸 서버 id 를 32비트 왼쪽으로 민 값에 순번을 합친 것이다
-        int32             _maxMemberCount{ 4 };
+        REFLECT_BODY();
+        /// 첫 항목이 파티장이다. 상한은 `PartyLobbyLimit::kMaxPartySize` 와 같다.
+        /// 원소를 `AccountID` 별칭으로 적으면 리플렉션이 모르는 원소 이름으로 등록해 자기 기술형 캐시 기록에서 원소가 빠지므로 같은 타입 `uint64` 로 적는다(백로그 `A-13`).
+        PROPERTY( MaxCount = 8 )
+        vector<uint64> _listMemberID{};
+        PROPERTY()
+        uint64 _partyID{ 0 };
+        PROPERTY()
+        uint64 _queuedTicketID{ 0 }; ///< 줄을 서 있으면 그 티켓이다. 낸 서버 id 를 32비트 왼쪽으로 민 값에 순번을 합친 것이다
+        PROPERTY( Min = 0, Max = 8 )
+        int32 _maxMemberCount{ 4 };
 
         AccountID       getLeaderID() const { return _listMemberID.empty() ? kInvalidAccountID : _listMemberID.front(); }
         SW_KIT_API bool hasMember( AccountID accountID ) const;
@@ -137,20 +180,29 @@ namespace sw
 namespace sw
 {
     /** @brief 로비 멤버 한 명입니다. */
+    REFLECT()
     struct LobbyMember
     {
+        REFLECT_BODY();
+        PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
-        int32     _team{ 0 };
-        uint8     _bReady{ SW_FALSE };
+        PROPERTY()
+        int32 _team{ 0 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bReady{ SW_FALSE };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 로비 설정 한 줄입니다. 맵이나 규칙을 담습니다. */
+    /** @brief 로비 설정 한 줄입니다. 맵이나 규칙을 담습니다. 상한은 `PartyLobbyLimit` 와 같은 값입니다. */
+    REFLECT()
     struct LobbySetting
     {
-        string _key{};   ///< `[0-9a-z_.]` 형식이며 16바이트 이하이다
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 16 )
+        string _key{}; ///< `[0-9a-z_.]` 형식이며 16바이트 이하이다
+        PROPERTY( MaxCount = 64 )
         string _value{}; ///< 64바이트 이하이다
     };
 } // namespace sw
@@ -158,6 +210,7 @@ namespace sw
 namespace sw
 {
     /** @brief 로비 상태입니다. 와이어 값입니다. */
+    ENUM( Count = Count )
     enum class LobbyState : uint8
     {
         Open = 0,
@@ -168,17 +221,30 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 로비 하나의 스냅샷입니다. */
+    /**
+     * @brief 로비 하나의 스냅샷입니다. 알림, 응답, 만들기 요청은 고정 배치형(B)이고 캐시 기록은 자기 기술형(A)입니다.
+     * @details 상한은 `PartyLobbyLimit` 와 `MatchmakingLimit` 와 같은 값입니다.
+     */
+    REFLECT()
     struct LobbySnapshot
     {
-        vector<LobbyMember>  _listMember{}; ///< 첫 항목이 방장이다
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 32 )
+        vector<LobbyMember> _listMember{}; ///< 첫 항목이 방장이다
+        PROPERTY( MaxCount = 8 )
         vector<LobbySetting> _listSetting{};
-        string               _name{};
-        string               _modeID{};
-        uint64               _lobbyID{ 0 };
-        int64                _createdMs{ 0 };
-        int32                _maxMemberCount{ 8 };
-        LobbyState           _state{ LobbyState::Open };
+        PROPERTY( MaxCount = 48 )
+        string _name{};
+        PROPERTY( MaxCount = 32 )
+        string _modeID{};
+        PROPERTY()
+        uint64 _lobbyID{ 0 };
+        PROPERTY()
+        int64 _createdMs{ 0 };
+        PROPERTY( Min = 0, Max = 32 )
+        int32 _maxMemberCount{ 8 };
+        PROPERTY()
+        LobbyState _state{ LobbyState::Open };
 
         AccountID       getOwnerID() const { return _listMember.empty() ? kInvalidAccountID : _listMember.front()._accountID; }
         SW_KIT_API bool hasMember( AccountID accountID ) const;
@@ -210,6 +276,7 @@ namespace sw
 namespace sw
 {
     /** @brief 줄을 선 티켓이 끝난 이유입니다. 와이어 값입니다. */
+    ENUM( Count = Count )
     enum class MatchQueueOutcome : uint8
     {
         Found = 0,
@@ -222,17 +289,28 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 클라이언트가 받는 매칭 결과입니다. `Found` 이면 게임이 계정 클라이언트로 접속 티켓을 받아 그 서버에 UDP 로 접속합니다. */
+    /** @brief 클라이언트가 받는 매칭 결과입니다. `Found` 이면 게임이 계정 클라이언트로 접속 티켓을 받아 그 서버에 UDP 로 접속합니다. 매칭 알림과 서버 버스(결과 주제)의 본문입니다. */
+    REFLECT()
     struct MatchAssignment
     {
-        vector<AccountID> _listTeammate{};
-        string            _address{};
-        string            _modeID{};
-        uint64            _matchID{ 0 };
-        uint64            _serverID{ 0 }; ///< 계정 키트 접속 티켓의 서버 id 이다. 16진 문자열로 쓴다
-        uint64            _ticketID{ 0 }; ///< 로비 시작이면 0이다
-        int32             _team{ 0 };
-        uint16            _port{ 0 };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 16 )
+        vector<AccountID> _listTeammate{}; ///< 상한은 `MatchmakingLimit::kMaxTeamSize` 와 같다
+        PROPERTY( MaxCount = 128 )
+        string _address{}; ///< 상한은 `ServerRecord::kMaxAddressSize` 와 같다
+        PROPERTY( MaxCount = 32 )
+        string _modeID{};
+        PROPERTY()
+        uint64 _matchID{ 0 };
+        PROPERTY()
+        uint64 _serverID{ 0 }; ///< 계정 키트 접속 티켓의 서버 id 이다. 16진 문자열로 쓴다
+        PROPERTY()
+        uint64 _ticketID{ 0 }; ///< 로비 시작이면 0이다
+        PROPERTY()
+        int32 _team{ 0 };
+        PROPERTY()
+        uint16 _port{ 0 };
+        PROPERTY()
         MatchQueueOutcome _outcome{ MatchQueueOutcome::Found };
     };
 } // namespace sw

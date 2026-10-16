@@ -579,8 +579,8 @@ namespace sw
         if ( _dependencies._pBus == nullptr )
             return;
         BitWriter body;
-        ChatProtocol::writeMessage( body, message );
-        _dependencies._pBus->publish( topic, body.getBytes().data(), body.getByteCount() );
+        if ( ChatProtocol::MessageTypes::write( body, message ) )
+            _dependencies._pBus->publish( topic, body.getBytes().data(), body.getByteCount() );
     }
 
     void ChatService::deliverToChannel( const ChatMessage& message )
@@ -615,7 +615,7 @@ namespace sw
             return;
         }
         ChatMessage message;
-        if ( ChatProtocol::readMessage( reader, message ) == false || message._serverID == _dependencies._serverID )
+        if ( ChatProtocol::MessageTypes::read( reader, message ) != FixedReadResult::Ok || message._serverID == _dependencies._serverID )
             return;
         if ( message._kind == ChatChannelKind::Whisper )
         {

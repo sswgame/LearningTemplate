@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeProtocol.h"
 
 namespace sw
 {
@@ -18,26 +19,22 @@ namespace sw
     {
         struct TradeStoreLogicInternal
         {
-            static constexpr uint8  kRecordFormat      = 1;
             static constexpr uint64 kSettleAuditUnique = 0x5E771Eull; ///< 정산 감사 기록은 거래당 하나이다. 재시도가 둘을 만들지 않게 한다
             static constexpr int32  kMaxRecoverCount   = 256;
 
             static vector<uint8> encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerID )
             {
-                BitWriter writer;
-                writer.writeBits( kRecordFormat, 8 );
-                writer.writeVarUint( ownerServerID );
-                TradeWire::writeSnapshot( writer, snapshot );
-                return writer.releaseBytes();
+                return TradeProtocol::encodeSession( TradeSessionRecord{ snapshot, ownerServerID } );
             }
 
             [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
             {
-                BitReader reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
-                if ( reader.readBits( 8 ) != kRecordFormat )
+                TradeSessionRecord record;
+                if ( TradeProtocol::decodeSession( bytes, record ) == false )
                     return false;
-                outOwnerServerID = reader.readVarUint();
-                return TradeWire::readSnapshot( reader, outSnapshot );
+                outSnapshot      = std::move( record._snapshot );
+                outOwnerServerID = record._ownerServerID;
+                return true;
             }
 
             /** @brief 정산 분개 키를 만듭니다. */

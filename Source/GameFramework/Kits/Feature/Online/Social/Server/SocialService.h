@@ -63,8 +63,8 @@ namespace sw
     /** @brief 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다. 지연 로드 모듈에서는 데이터를 가져올 수 없기 때문입니다. */
     struct SocialBus
     {
-        static constexpr const utf8* kLinksTopic    = "social.links";    ///< 본문은 varuint 계정 둘이다. 관계가 바뀐 두 사람이다
-        static constexpr const utf8* kPresenceTopic = "social.presence"; ///< 본문은 접속 상태(`SocialProtocol::writePresence`)이다
+        static constexpr const utf8* kLinksTopic    = "social.links";    ///< 본문은 관계가 바뀐 두 사람(`SocialLinkChanged`)이다
+        static constexpr const utf8* kPresenceTopic = "social.presence"; ///< 본문은 접속 상태(`SocialPresence`)이다
     };
 } // namespace sw
 

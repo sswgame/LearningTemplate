@@ -3,6 +3,8 @@
 // 안 남기고 다시 확정하면 정산, 재시작한 서버는 자기 열린 거래를 닫는다, 떠남 · 시한 취소, 거래 불가 · 다리 초과, 같은 확정 두 번, 상태 기계 표.
 #include "pch.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
@@ -10,6 +12,7 @@
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -424,5 +427,44 @@ SW_TEST_CASE( TradeServiceTest, StateMachineTable )
                 SW_EXPECT_EQUAL( bAllowed ? int32( TradeResult::Ok ) : int32( TradeResult::WrongState ), int32( result ) );
             }
         }
+    }
+}
+
+/**
+ * @brief [TradeProtocolTest] 거래 메시지는 상한까지 왕복하고, 거래 레코드는 자기 기술형으로 왕복하며, 한쪽 상한을 넘는 스냅샷은 쓰지 않는다
+ */
+SW_TEST_CASE( TradeProtocolTest, MessagesAndRecordsRoundTrip )
+{
+    using Messages = TradeProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    TradeReply reply;
+    reply._result                = TradeResult::StaleOffer;
+    reply._snapshot._tradeID     = 0x1234;
+    reply._snapshot._state       = TradeState::Settled;
+    reply._snapshot._closeReason = TradeCloseReason::CapExceeded;
+    for ( TradeSide& side : reply._snapshot._arrSide )
+    {
+        side._listLeg.assign( 8, TradeLeg{ string( 48, 'a' ), 3 } );
+        side._offerRevision = ~0u;
+        side._bLocked       = SW_TRUE;
+    }
+    reply._listBalance.assign( 16, TradeBalance{ "cur.gold", -1 } );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( reply ) );
+    TradeOfferRequest offer;
+    offer._tradeID = 5;
+    offer._listLeg.assign( 16, TradeLeg{ "item.sword", 1 } ); // 와이어는 받고 서비스가 TooManyLegs 로 끝낸다
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( offer ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( TradeConfirmRequest{ 5, 1, 2 } ) );
+    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, TradeIDRequest>( TradeConfirmRequest{ 5, 1, 2 } ) ) );
+
+    TradeSessionRecord decoded;
+    SW_ASSERT_TRUE( TradeProtocol::decodeSession( TradeProtocol::encodeSession( TradeSessionRecord{ reply._snapshot, 42 } ), decoded ) );
+    SW_EXPECT_TRUE( decoded._ownerServerID == 42 && FixedLayout::equals( decoded._snapshot, reply._snapshot ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        TradeReply tooMany = reply;
+        tooMany._snapshot._arrSide[0]._listLeg.resize( 9 );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( tooMany ) );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( TradeInviteRequest{ string( 65, 'n' ) } ) );
     }
 }

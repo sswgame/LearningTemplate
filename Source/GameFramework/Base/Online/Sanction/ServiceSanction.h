@@ -29,12 +29,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정 하나의 제재 상태입니다. */
+    /** @brief 계정 하나의 제재 상태입니다. 관리자 조회 응답에 고정 배치형으로 실립니다. `_version` 은 레코드 판이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다. */
+    REFLECT()
     struct ServiceSanctionState
     {
+        REFLECT_BODY();
         static constexpr int64 kPermanentMs = 0x7FFFFFFFFFFFFFFFll;
 
-        string _reasonCode{};                                                   ///< 표시용 사유 코드(로컬라이제이션 키) — 가장 최근 것
+        PROPERTY( MaxCount = 256 )
+        string _reasonCode{}; ///< 표시용 사유 코드(로컬라이제이션 키) — 가장 최근 것
+        PROPERTY()
         int64  _arrUntilMs[static_cast<int32>( ServiceSanctionKind::Count )]{}; ///< 0 = 없음
         uint64 _version{ 0 };                                                   ///< 레코드 판(0 = 레코드 없음)
     };

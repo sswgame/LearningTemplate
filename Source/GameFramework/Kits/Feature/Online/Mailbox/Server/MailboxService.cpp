@@ -233,7 +233,7 @@ namespace sw
         call._accountID      = context._accountID;
         call._idempotencyKey = context._idempotencyKey;
         call._nowMs          = context._nowMs;
-        if ( MailboxProtocol::readRequest( body, call._request ) == false )
+        if ( MailboxProtocol::MessageTypes::read( body, call._request ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -328,8 +328,10 @@ namespace sw
         if ( pending._pHost != nullptr )
         {
             BitWriter writer;
-            MailboxProtocol::writeReply( writer, reply );
-            (void)pending._pHost->respondOk( pending._token, writer );
+            if ( MailboxProtocol::MessageTypes::write( writer, reply ) )
+                (void)pending._pHost->respondOk( pending._token, writer );
+            else
+                (void)pending._pHost->respondError( pending._token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
         }
         else if ( pending._onReply.isBound() )
         {

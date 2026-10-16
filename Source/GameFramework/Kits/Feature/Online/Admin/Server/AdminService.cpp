@@ -184,7 +184,7 @@ namespace sw
     void AdminService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
         AdminRequest request;
-        if ( AdminProtocol::readRequest( body, request ) == false )
+        if ( AdminProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -250,8 +250,10 @@ namespace sw
         if ( pending._pHost != nullptr )
         {
             BitWriter writer;
-            AdminProtocol::writeReply( writer, reply );
-            (void)pending._pHost->respondOk( pending._token, writer );
+            if ( AdminProtocol::MessageTypes::write( writer, reply ) )
+                (void)pending._pHost->respondOk( pending._token, writer );
+            else
+                (void)pending._pHost->respondError( pending._token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
         }
         else if ( pending._onReply.isBound() )
         {

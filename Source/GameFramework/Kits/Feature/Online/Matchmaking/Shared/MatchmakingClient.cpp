@@ -4,8 +4,6 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-
 namespace sw
 {
     MatchmakingClient::MatchmakingClient()
@@ -24,16 +22,12 @@ namespace sw
 
     uint64 MatchmakingClient::inviteToParty( AccountID targetID, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        body.writeVarUint( targetID );
-        return sendCall( MatchmakingMethod::kPartyInvite, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( MatchmakingMethod::kPartyInvite, MatchmakingIDRequest{ targetID }, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::acceptPartyInvite( uint64 partyID, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        body.writeVarUint( partyID );
-        return sendCall( MatchmakingMethod::kPartyAccept, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( MatchmakingMethod::kPartyAccept, MatchmakingIDRequest{ partyID }, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::leaveParty( const ReplyDelegate& onReply )
@@ -43,60 +37,50 @@ namespace sw
 
     uint64 MatchmakingClient::kickFromParty( AccountID targetID, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        body.writeVarUint( targetID );
-        return sendCall( MatchmakingMethod::kPartyKick, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( MatchmakingMethod::kPartyKick, MatchmakingIDRequest{ targetID }, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::createLobby( const LobbySnapshot& request, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        MatchmakingProtocol::writeLobby( body, request );
-        return sendCall( MatchmakingMethod::kLobbyCreate, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( MatchmakingMethod::kLobbyCreate, request, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::listLobbies( string_view modeID, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        ServiceKeyUtil::writeString( body, modeID );
-        return sendCall( MatchmakingMethod::kLobbyList, body, NetIdempotencyKey{}, onReply );
+        MatchmakingModeRequest request;
+        request._modeID = string( modeID );
+        return sendRequest( MatchmakingMethod::kLobbyList, request, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::joinLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        body.writeVarUint( lobbyID );
-        return sendCall( MatchmakingMethod::kLobbyJoin, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( MatchmakingMethod::kLobbyJoin, MatchmakingIDRequest{ lobbyID }, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::leaveLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        body.writeVarUint( lobbyID );
-        return sendCall( MatchmakingMethod::kLobbyLeave, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( MatchmakingMethod::kLobbyLeave, MatchmakingIDRequest{ lobbyID }, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::setLobbyReady( uint64 lobbyID, bool bReady, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        body.writeVarUint( lobbyID );
-        body.writeBool( bReady );
-        return sendCall( MatchmakingMethod::kLobbyReady, body, NetIdempotencyKey{}, onReply );
+        MatchmakingReadyRequest request;
+        request._lobbyID = lobbyID;
+        request._bReady  = bReady ? SW_TRUE : SW_FALSE;
+        return sendRequest( MatchmakingMethod::kLobbyReady, request, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::startLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        body.writeVarUint( lobbyID );
-        return sendCall( MatchmakingMethod::kLobbyStart, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( MatchmakingMethod::kLobbyStart, MatchmakingIDRequest{ lobbyID }, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::joinQueue( string_view modeID, string_view region, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        ServiceKeyUtil::writeString( body, modeID );
-        ServiceKeyUtil::writeString( body, region );
-        return sendCall( MatchmakingMethod::kQueueJoin, body, NetIdempotencyKey{}, onReply );
+        MatchmakingModeRequest request;
+        request._modeID = string( modeID );
+        request._region = string( region );
+        return sendRequest( MatchmakingMethod::kQueueJoin, request, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::leaveQueue( const ReplyDelegate& onReply )
@@ -111,7 +95,7 @@ namespace sw
             case MatchmakingMethod::kPushParty:
             {
                 PartySnapshot party;
-                if ( MatchmakingProtocol::readParty( body, party ) == false )
+                if ( MatchmakingProtocol::MessageTypes::read( body, party ) != FixedReadResult::Ok )
                     return;
                 _party = party;
                 _partyBuffer.push( std::move( party ) );
@@ -120,21 +104,21 @@ namespace sw
             case MatchmakingMethod::kPushPartyInvite:
             {
                 PartyInvite invite;
-                if ( MatchmakingProtocol::readInvite( body, invite ) )
+                if ( MatchmakingProtocol::MessageTypes::read( body, invite ) == FixedReadResult::Ok )
                     _inviteBuffer.push( invite );
                 break;
             }
             case MatchmakingMethod::kPushLobby:
             {
                 LobbySnapshot lobby;
-                if ( MatchmakingProtocol::readLobby( body, lobby ) )
+                if ( MatchmakingProtocol::MessageTypes::read( body, lobby ) == FixedReadResult::Ok )
                     _lobbyBuffer.push( std::move( lobby ) );
                 break;
             }
             case MatchmakingMethod::kPushMatch:
             {
                 MatchAssignment assignment;
-                if ( MatchmakingProtocol::readAssignment( body, assignment ) )
+                if ( MatchmakingProtocol::MessageTypes::read( body, assignment ) == FixedReadResult::Ok )
                     _matchBuffer.push( std::move( assignment ) );
                 break;
             }

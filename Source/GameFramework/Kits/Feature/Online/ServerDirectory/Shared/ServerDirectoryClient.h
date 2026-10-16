@@ -35,7 +35,9 @@ namespace sw
         void initialize( OnlineServiceClient* pClient );
 
         uint64 requestStatus( const StatusDelegate& onStatus );
+        /** @brief 요청에 범위 밖 값(`ServerAssignmentRequest` 의 `PROPERTY` 키)이 있으면 보내지 않고 바로 `kInvalidRequest` 로 콜백하며 0 을 반환합니다. */
         uint64 requestAssignment( const ServerAssignmentRequest& request, const AssignmentDelegate& onAssignment );
+        /** @brief 종류가 상한보다 길면 보내지 않고 바로 `kInvalidRequest` 로 콜백하며 0 을 반환합니다. */
         uint64 requestServerList( string_view kind, const ServerListDelegate& onServerList );
 
         /** @brief 마지막으로 받은 상태입니다. 응답이나 알림으로 받은 것입니다. */

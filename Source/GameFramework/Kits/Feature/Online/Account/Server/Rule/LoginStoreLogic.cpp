@@ -1051,7 +1051,7 @@ namespace sw
         const size_t prefixSize = ServiceKeyUtil::makeHex64( identity._accountID ).size() + 1;
         for ( const ServiceRecord& link : listLink )
         {
-            outSummary._listProvider.push_back( link._key.substr( prefixSize ) );
+            outSummary._listProvider.push_back( AccountLinkedProvider{ string( link._key.substr( prefixSize ) ) } );
         }
         outSummary._bHasCredential = profile._nameKey.empty() ? SW_FALSE : SW_TRUE;
         outSummary._bGuest         = profile._bGuest;

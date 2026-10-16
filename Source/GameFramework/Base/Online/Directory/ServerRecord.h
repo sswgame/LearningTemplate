@@ -10,6 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -17,7 +19,8 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 서버의 열림 상태입니다. 배정은 Open 만 받는다(점검 허용 계정은 Maintenance 도). */
+    /** @brief 서버의 열림 상태입니다. 배정은 Open 만 받는다(점검 허용 계정은 Maintenance 도). 서버 목록 응답에 실린다. */
+    ENUM( Count = Count )
     enum class ServerState : uint8
     {
         Starting = 0, ///< 띄우는 중 — 아직 받지 않는다

@@ -60,34 +60,25 @@ namespace sw
 
     uint64 AccountClient::registerAccount( string_view loginName, string_view password )
     {
-        BitWriter body;
-        AccountWire::writeCredential( body, loginName, password );
-        return send( AccountClientOperation::Register, AccountMethod::kRegister, body, false );
+        return sendRequest( AccountClientOperation::Register, AccountMethod::kRegister, AccountCredentialRequest{ string( loginName ), string( password ) }, false );
     }
 
     uint64 AccountClient::login( string_view loginName, string_view password )
     {
-        BitWriter body;
-        AccountWire::writeCredential( body, loginName, password );
-        AccountWire::writeClientInfo( body, _clientInfo );
-        return send( AccountClientOperation::Login, AccountMethod::kLogin, body, false );
+        return sendRequest( AccountClientOperation::Login, AccountMethod::kLogin, AccountLoginRequest{ string( loginName ), string( password ), _clientInfo }, false );
     }
 
     uint64 AccountClient::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize] )
     {
-        BitWriter body;
-        body.writeBytes( arrDeviceSecret, LoginConstant::kDeviceSecretSize );
-        AccountWire::writeClientInfo( body, _clientInfo );
-        return send( AccountClientOperation::GuestLogin, AccountMethod::kGuestLogin, body, false );
+        AccountGuestLoginRequest request;
+        Memory::copy( request._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
+        request._clientInfo = _clientInfo;
+        return sendRequest( AccountClientOperation::GuestLogin, AccountMethod::kGuestLogin, request, false );
     }
 
     uint64 AccountClient::platformLogin( string_view provider, const vector<uint8>& ticketBytes )
     {
-        BitWriter body;
-        AccountWire::writeText( body, provider );
-        AccountWire::writeBlob( body, ticketBytes );
-        AccountWire::writeClientInfo( body, _clientInfo );
-        return send( AccountClientOperation::PlatformLogin, AccountMethod::kPlatformLogin, body, false );
+        return sendRequest( AccountClientOperation::PlatformLogin, AccountMethod::kPlatformLogin, AccountPlatformRequest{ string( provider ), ticketBytes, _clientInfo }, false );
     }
 
     uint64 AccountClient::resume()
@@ -100,11 +91,8 @@ namespace sw
             reply._result             = LoginResult::InvalidToken;
             return reply._requestID;
         }
-        BitWriter body;
-        AccountWire::writeToken( body, _token );
-        AccountWire::writeClientInfo( body, _clientInfo );
         _bResuming = SW_TRUE;
-        return send( AccountClientOperation::Resume, AccountMethod::kResume, body, false );
+        return sendRequest( AccountClientOperation::Resume, AccountMethod::kResume, AccountResumeRequest{ _token, _clientInfo }, false );
     }
 
     uint64 AccountClient::logout()
@@ -114,31 +102,22 @@ namespace sw
 
     uint64 AccountClient::linkCredential( string_view loginName, string_view password )
     {
-        BitWriter body;
-        AccountWire::writeCredential( body, loginName, password );
-        return send( AccountClientOperation::LinkCredential, AccountMethod::kLinkCredential, body, true );
+        return sendRequest( AccountClientOperation::LinkCredential, AccountMethod::kLinkCredential, AccountCredentialRequest{ string( loginName ), string( password ) }, true );
     }
 
     uint64 AccountClient::linkPlatform( string_view provider, const vector<uint8>& ticketBytes )
     {
-        BitWriter body;
-        AccountWire::writeText( body, provider );
-        AccountWire::writeBlob( body, ticketBytes );
-        return send( AccountClientOperation::LinkPlatform, AccountMethod::kLinkPlatform, body, true );
+        return sendRequest( AccountClientOperation::LinkPlatform, AccountMethod::kLinkPlatform, AccountPlatformRequest{ string( provider ), ticketBytes, AccountClientInfo{} }, true );
     }
 
     uint64 AccountClient::issueGameTicket( string_view serverID )
     {
-        BitWriter body;
-        AccountWire::writeText( body, serverID );
-        return send( AccountClientOperation::IssueGameTicket, AccountMethod::kIssueGameTicket, body, true );
+        return sendRequest( AccountClientOperation::IssueGameTicket, AccountMethod::kIssueGameTicket, AccountGameTicketRequest{ string( serverID ) }, true );
     }
 
     uint64 AccountClient::unlinkPlatform( string_view provider )
     {
-        BitWriter body;
-        AccountWire::writeText( body, provider );
-        return send( AccountClientOperation::UnlinkPlatform, AccountMethod::kUnlinkPlatform, body, true );
+        return sendRequest( AccountClientOperation::UnlinkPlatform, AccountMethod::kUnlinkPlatform, AccountProviderRequest{ string( provider ) }, true );
     }
 
     uint64 AccountClient::listLinks()
@@ -196,11 +175,14 @@ namespace sw
     {
         if ( kind != AccountMethod::kPushRevoked )
             return;
-        AccountClientEvent event;
-        if ( AccountWire::readRevokedPush( body, event._reason, event._reasonCode ) == false )
+        AccountRevokedPush push;
+        if ( AccountProtocol::MessageTypes::read( body, push ) != FixedReadResult::Ok )
             return;
-        _bLoggedIn = SW_FALSE;
-        _token     = LoginSessionToken{}; // 밀려난 세션은 돌아올 수 없으므로 다시 로그인해야 한다
+        AccountClientEvent event;
+        event._reason     = push._reason;
+        event._reasonCode = std::move( push._reasonCode );
+        _bLoggedIn        = SW_FALSE;
+        _token            = LoginSessionToken{}; // 밀려난 세션은 돌아올 수 없으므로 다시 로그인해야 한다
         _listEvent.push_back( std::move( event ) );
     }
 
@@ -210,11 +192,8 @@ namespace sw
         if ( _token.isEmpty() == false && _bResuming == SW_FALSE )
         {
             client.setRequestGate( OnlineMethodRange::kAccount, true ); // 다른 키트의 요청은 재접속 응답 뒤에 보낸다
-            BitWriter body;
-            AccountWire::writeToken( body, _token );
-            AccountWire::writeClientInfo( body, _clientInfo );
             _bResuming = SW_TRUE;
-            (void)send( AccountClientOperation::Resume, AccountMethod::kResume, body, false, true );
+            (void)sendRequest( AccountClientOperation::Resume, AccountMethod::kResume, AccountResumeRequest{ _token, _clientInfo }, false, true );
         }
     }
 
@@ -222,6 +201,29 @@ namespace sw
     {
         (void)client;
         _bLoggedIn = SW_FALSE;
+    }
+
+    template <typename TRequest>
+    uint64 AccountClient::sendRequest( AccountClientOperation operation, uint16 method, const TRequest& request, bool bNeedsSession, bool bAutomatic )
+    {
+        BitWriter body;
+        if ( AccountProtocol::MessageTypes::write( body, request ) )
+            return send( operation, method, body, bNeedsSession, bAutomatic );
+        // 범위 밖 값이라 보내지 않았다. 서버가 같은 본문을 거절한 것과 같은 응답을 남긴다
+        AccountClientReply& reply = _listReply.emplace_back();
+        reply._requestID          = _nextRequestID++;
+        reply._operation          = operation;
+        reply._bAutomatic         = static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE );
+        reply._errorCode          = OnlineError::kInvalidRequest;
+        reply._result             = AccountClientInternal::toResult( OnlineError::kInvalidRequest );
+        if ( operation == AccountClientOperation::Resume )
+        {
+            _bResuming = SW_FALSE;
+            finishDeferred( LoginResult::InvalidToken );
+            if ( _pClient != nullptr && _pClient->isRequestGateClosed() )
+                _pClient->setRequestGate( OnlineMethodRange::kAccount, false );
+        }
+        return reply._requestID;
     }
 
     uint64 AccountClient::send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic )
@@ -261,9 +263,10 @@ namespace sw
         if ( response.isOk() == false )
         {
             reply._result = AccountClientInternal::toResult( response._errorCode );
-            BitReader detail( response._pBody, response._bodySize );
-            if ( response._errorCode == OnlineError::kUpdateRequired )
-                (void)AccountWire::readText( detail, 512, reply._grant._storeURL ); // 상세가 깨졌으면 상점 주소만 빈다. 결과 코드는 위에서 이미 정했다
+            BitReader           detail( response._pBody, response._bodySize );
+            AccountUpdateDetail updateDetail;
+            if ( response._errorCode == OnlineError::kUpdateRequired && AccountProtocol::MessageTypes::read( detail, updateDetail ) == FixedReadResult::Ok )
+                reply._grant._storeURL = std::move( updateDetail._storeURL ); // 상세가 없거나 깨졌으면 상점 주소만 빈다. 결과 코드는 위에서 이미 정했다
             else if ( response._errorCode == OnlineError::kRateLimited )
                 reply._grant._retryAfterMs = static_cast<int64>( detail.readVarUint() );
         }
@@ -272,11 +275,26 @@ namespace sw
             BitReader body( response._pBody, response._bodySize );
             bool      bRead = false;
             if ( call._operation == AccountClientOperation::IssueGameTicket )
-                bRead = AccountWire::readTicketReply( body, reply._result, reply._ticket );
+            {
+                AccountTicketReply received;
+                bRead         = AccountProtocol::MessageTypes::read( body, received ) == FixedReadResult::Ok;
+                reply._result = received._result;
+                reply._ticket = received._ticket;
+            }
             else if ( call._operation == AccountClientOperation::ListLinks )
-                bRead = AccountWire::readLinkReply( body, reply._result, reply._linkSummary );
+            {
+                AccountLinkReply received;
+                bRead              = AccountProtocol::MessageTypes::read( body, received ) == FixedReadResult::Ok;
+                reply._result      = received._result;
+                reply._linkSummary = std::move( received._summary );
+            }
             else
-                bRead = AccountWire::readGrantReply( body, reply._result, reply._grant );
+            {
+                AccountGrantReply received;
+                bRead         = AccountProtocol::MessageTypes::read( body, received ) == FixedReadResult::Ok;
+                reply._result = received._result;
+                reply._grant  = std::move( received._grant );
+            }
             if ( bRead == false )
                 reply._result = LoginResult::InvalidRequest;
         }

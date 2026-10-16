@@ -9,6 +9,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/GameFramework/Online/OnlineHostTestUtil.h"
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
 
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
@@ -489,21 +490,22 @@ SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
     reply._listHistory.push_back( message );
     reply._nextCursor = "world.kr/0000000000000001.0000000000000001.0000000000000001";
     BitWriter writer;
-    ChatProtocol::writeReply( writer, ChatMethod::kHistory, reply );
+    SW_ASSERT_TRUE( ChatProtocol::MessageTypes::write( writer, reply ) );
     BitReader reader( writer.getBytes().data(), writer.getByteCount() );
     ChatReply readBack;
-    SW_ASSERT_TRUE( ChatProtocol::readReply( reader, ChatMethod::kHistory, readBack ) );
+    SW_ASSERT_TRUE( ChatProtocol::MessageTypes::read( reader, readBack ) == FixedReadResult::Ok );
     SW_ASSERT_EQUAL( readBack._listHistory.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( readBack._nextCursor.c_str(), reply._nextCursor.c_str() );
+    SW_EXPECT_TRUE( FixedLayout::equals( readBack, reply ) );
 
     ChatReply muted;
     muted._result       = ChatResult::Muted;
     muted._retryAfterMs = 4900;
     BitWriter mutedWriter;
-    ChatProtocol::writeReply( mutedWriter, ChatMethod::kSend, muted );
+    SW_ASSERT_TRUE( ChatProtocol::MessageTypes::write( mutedWriter, muted ) );
     BitReader mutedReader( mutedWriter.getBytes().data(), mutedWriter.getByteCount() );
     ChatReply mutedBack;
-    SW_ASSERT_TRUE( ChatProtocol::readReply( mutedReader, ChatMethod::kSend, mutedBack ) );
+    SW_ASSERT_TRUE( ChatProtocol::MessageTypes::read( mutedReader, mutedBack ) == FixedReadResult::Ok );
     SW_EXPECT_TRUE( mutedBack._result == ChatResult::Muted );
     SW_EXPECT_EQUAL( mutedBack._retryAfterMs, int64( 4900 ) );
 
@@ -512,4 +514,26 @@ SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
     SW_EXPECT_FALSE( ChatProtocol::decodeRecord( otherVersion, decoded ) ); // 다른 판은 읽지 않는다
     SW_EXPECT_TRUE( ChatProtocol::fromErrorCode( OnlineError::kUnauthenticated ) == ChatResult::NotSignedIn );
     SW_EXPECT_TRUE( ChatProtocol::fromErrorCode( OnlineError::kInternal ) == ChatResult::Unavailable );
+}
+
+/**
+ * @brief [ChatProtocolTest] 채팅 요청은 상한까지 왕복하고, 상한을 넘는 글과 개수는 쓰지 않으며, 다른 요청 타입의 바이트는 거절한다
+ */
+SW_TEST_CASE( ChatProtocolTest, RequestsRoundTripAndRefuseOutOfRange )
+{
+    using Messages = ChatProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( ChatSendRequest{ string( 48, 'c' ), string( 512, 't' ) } ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( ChatWhisperRequest{ ~0ull, "hi" } ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( ChatHistoryRequest{ "world.kr", string( 128, 'k' ), 50 } ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( ChatSendRequest{ "world.kr", "hello" } ) );
+    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, ChatChannelRequest>( ChatSendRequest{ "world.kr", "hello" } ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( ChatSendRequest{ "world.kr", string( 513, 't' ) } ) );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( ChatHistoryRequest{ "world.kr", "", 51 } ) );
+        ChatMessage badKind;
+        badKind._kind = ChatChannelKind::Count;
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( badKind ) );
+    }
 }

@@ -67,8 +67,8 @@ namespace
     };
 
     // 키트 항목이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
-    const OnlineProtocolEntry kKillerProtocol{ "ServiceClientCallTableTest.Killer", OnlineMethodRange::kGame + OnlineMethodRange::kSize, 1 };
-    const OnlineProtocolEntry kVictimProtocol{ "ServiceClientCallTableTest.Victim", OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize, 1 };
+    const OnlineProtocolEntry kKillerProtocol{ "ServiceClientCallTableTest.Killer", OnlineMethodRange::kGame + OnlineMethodRange::kSize, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kVictimProtocol{ "ServiceClientCallTableTest.Victim", OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize, OnlineMessageTypes<>{} };
 
     /** @brief 수명 순서만 보는 빈 키트(테스트 로그인과 같은 영역). */
     class LifetimeClientService final : public IOnlineClientService

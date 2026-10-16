@@ -5,9 +5,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
-#include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 
 #include <algorithm>
@@ -73,13 +71,12 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnavailable );
             return;
         }
-        const AccountID accountID = context._accountID;
-        uint64          id        = 0;
-        string          modeID;
-        string          region;
-        LobbySnapshot   lobby;
-        bool            bReady  = false;
-        bool            bBodyOk = true;
+        const AccountID         accountID = context._accountID;
+        MatchmakingIDRequest    idRequest;
+        MatchmakingReadyRequest readyRequest;
+        MatchmakingModeRequest  modeRequest;
+        LobbySnapshot           lobby;
+        FixedReadResult         readResult = FixedReadResult::Ok;
         switch ( context._method )
         {
             case MatchmakingMethod::kPartyInvite:
@@ -89,29 +86,23 @@ namespace sw
             case MatchmakingMethod::kLobbyLeave:
             case MatchmakingMethod::kLobbyStart:
             {
-                id = body.readVarUint();
+                readResult = MatchmakingProtocol::MessageTypes::read( body, idRequest );
                 break;
             }
             case MatchmakingMethod::kLobbyReady:
             {
-                id     = body.readVarUint();
-                bReady = body.readBool();
+                readResult = MatchmakingProtocol::MessageTypes::read( body, readyRequest );
                 break;
             }
             case MatchmakingMethod::kLobbyCreate:
             {
-                bBodyOk = MatchmakingProtocol::readLobby( body, lobby );
+                readResult = MatchmakingProtocol::MessageTypes::read( body, lobby );
                 break;
             }
             case MatchmakingMethod::kLobbyList:
-            {
-                bBodyOk = ServiceKeyUtil::readString( body, MatchmakingLimit::kMaxIDSize, modeID );
-                break;
-            }
             case MatchmakingMethod::kQueueJoin:
             {
-                bBodyOk = ServiceKeyUtil::readString( body, MatchmakingLimit::kMaxIDSize, modeID ) &&
-                          ServiceKeyUtil::readString( body, ServerRecord::kMaxNameSize, region );
+                readResult = MatchmakingProtocol::MessageTypes::read( body, modeRequest );
                 break;
             }
             case MatchmakingMethod::kPartyCreate:
@@ -126,7 +117,7 @@ namespace sw
                 return;
             }
         }
-        if ( bBodyOk == false || body.hasOverflowed() )
+        if ( readResult != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -141,12 +132,12 @@ namespace sw
             }
             case MatchmakingMethod::kPartyInvite:
             {
-                _pPartyLobby->inviteToParty( accountID, id, tag );
+                _pPartyLobby->inviteToParty( accountID, idRequest._id, tag );
                 break;
             }
             case MatchmakingMethod::kPartyAccept:
             {
-                _pPartyLobby->acceptPartyInvite( accountID, id, tag );
+                _pPartyLobby->acceptPartyInvite( accountID, idRequest._id, tag );
                 break;
             }
             case MatchmakingMethod::kPartyLeave:
@@ -156,7 +147,7 @@ namespace sw
             }
             case MatchmakingMethod::kPartyKick:
             {
-                _pPartyLobby->kickFromParty( accountID, id, tag );
+                _pPartyLobby->kickFromParty( accountID, idRequest._id, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyCreate:
@@ -166,32 +157,32 @@ namespace sw
             }
             case MatchmakingMethod::kLobbyList:
             {
-                _pPartyLobby->listLobbies( modeID, tag );
+                _pPartyLobby->listLobbies( modeRequest._modeID, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyJoin:
             {
-                _pPartyLobby->joinLobby( accountID, id, tag );
+                _pPartyLobby->joinLobby( accountID, idRequest._id, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyLeave:
             {
-                _pPartyLobby->leaveLobby( accountID, id, tag );
+                _pPartyLobby->leaveLobby( accountID, idRequest._id, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyReady:
             {
-                _pPartyLobby->setLobbyReady( accountID, id, bReady, tag );
+                _pPartyLobby->setLobbyReady( accountID, readyRequest._lobbyID, readyRequest._bReady == SW_TRUE, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyStart:
             {
-                _pPartyLobby->startLobby( accountID, id, tag );
+                _pPartyLobby->startLobby( accountID, idRequest._id, tag );
                 break;
             }
             case MatchmakingMethod::kQueueJoin:
             {
-                _pQueue->joinQueue( accountID, modeID, region, context._nowMs, tag );
+                _pQueue->joinQueue( accountID, modeRequest._modeID, modeRequest._region, context._nowMs, tag );
                 break;
             }
             case MatchmakingMethod::kQueueLeave:
@@ -256,21 +247,23 @@ namespace sw
         for ( const PartyLobbyNotification& notification : _listPartyNotificationScratch )
         {
             BitWriter body;
+            bool      bWritten = false;
             if ( notification._pushKind == MatchmakingMethod::kPushPartyInvite )
-                MatchmakingProtocol::writeInvite( body, notification._invite );
+                bWritten = MatchmakingProtocol::MessageTypes::write( body, notification._invite );
             else if ( notification._pushKind == MatchmakingMethod::kPushLobby )
-                MatchmakingProtocol::writeLobby( body, notification._lobby );
+                bWritten = MatchmakingProtocol::MessageTypes::write( body, notification._lobby );
             else
-                MatchmakingProtocol::writeParty( body, notification._party );
-            push( host, notification._recipientID, notification._pushKind, body );
+                bWritten = MatchmakingProtocol::MessageTypes::write( body, notification._party );
+            if ( bWritten ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
+                push( host, notification._recipientID, notification._pushKind, body );
         }
         _listQueueNotificationScratch.clear();
         _pQueue->drainNotifications( _listQueueNotificationScratch );
         for ( const MatchQueueNotification& notification : _listQueueNotificationScratch )
         {
             BitWriter body;
-            MatchmakingProtocol::writeAssignment( body, notification._assignment );
-            push( host, notification._recipientID, MatchmakingMethod::kPushMatch, body );
+            if ( MatchmakingProtocol::MessageTypes::write( body, notification._assignment ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
+                push( host, notification._recipientID, MatchmakingMethod::kPushMatch, body );
         }
 
         _listTopicChangeScratch.clear();
@@ -328,8 +321,10 @@ namespace sw
         if ( requestTag == 0 || _pendingTable.take( requestTag, token ) == false )
             return; // 서버가 낸 요청이다. 계정이 떠난 경우이다
         BitWriter body;
-        MatchmakingProtocol::writeReply( body, reply );
-        (void)host.respondOk( token, body );
+        if ( MatchmakingProtocol::MessageTypes::write( body, reply ) )
+            (void)host.respondOk( token, body );
+        else
+            (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
     }
 
     void MatchmakingServer::push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const BitWriter& body )

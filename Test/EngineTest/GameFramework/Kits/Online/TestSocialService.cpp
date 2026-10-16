@@ -2,6 +2,8 @@
 // 막기는 차단 조회에 바로 보이고 막힌 사람의 신청은 알림 없는 Ok, 접속 상태가 다른 서버의 친구에게 알려지고 질의는 캐시를 읽는다, 저장소 실패는 Unavailable 이고 아무것도 쓰지 않음.
 #include "pch.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
@@ -9,6 +11,7 @@
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Shared/SocialProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -375,4 +378,41 @@ SW_TEST_CASE( SocialServiceTest, StoreFailureWritesNothing )
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Unavailable );
     SW_EXPECT_EQUAL( database.computeContentHash(), hashBefore );
     SW_EXPECT_EQUAL( node._listNotification.size(), size_t( 0 ) );
+}
+
+/**
+ * @brief [SocialProtocolTest] 친구 메시지, 알림, 버스 본문은 상한까지 왕복하고, 접속 상태 캐시 값은 자기 기술형으로 왕복하며, 범위 밖 값은 쓰지 않는다
+ */
+SW_TEST_CASE( SocialProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
+{
+    using Messages = SocialProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    SocialReply reply;
+    reply._result = SocialResult::StorageNotEmpty;
+    reply._listLink.assign( 1000, SocialLink{ 9, 123, SocialLinkState::Blocked } );
+    reply._listPresence.assign( 200, SocialPresence{ string( 64, 'x' ), 9, SocialPresenceStatus::InGame } );
+    reply._listStorage.assign( 128, GuildStorageItem{ string( 48, 'g' ), -3 } );
+    reply._guild._name   = string( 24, 'n' );
+    reply._guild._notice = string( 256, 'o' );
+    reply._guild._listMember.assign( 100, GuildMember{ 5, 6, GuildRole::Master } );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( reply ) );
+    SocialNotification notification;
+    notification._kind     = SocialNotificationKind::PresenceChanged;
+    notification._presence = SocialPresence{ "dungeon", 4, SocialPresenceStatus::Away };
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( notification ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( SocialLinkChanged{ 1, 2 } ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( SocialLinkChanged{ 1, 2 } ) );
+    SocialPresence decoded;
+    SW_ASSERT_TRUE( SocialProtocol::decodePresenceRecord( SocialProtocol::encodePresenceRecord( SocialPresence{ "lobby", 8, SocialPresenceStatus::Busy } ), decoded ) );
+    SW_EXPECT_TRUE( decoded._activity == "lobby" && decoded._accountID == 8 && decoded._status == SocialPresenceStatus::Busy );
+    SW_EXPECT_FALSE( SocialProtocol::decodePresenceRecord( SocialProtocol::encodePresenceRecord( SocialPresence{ string( 65, 'x' ), 8, SocialPresenceStatus::Busy } ), decoded ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SocialRequest request;
+        request._text = string( 257, 't' );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( request ) );
+        SocialRequest badRole;
+        badRole._role = GuildRole::Count;
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( badRole ) );
+    }
 }

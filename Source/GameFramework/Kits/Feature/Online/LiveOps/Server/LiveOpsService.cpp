@@ -56,9 +56,13 @@ namespace sw
                 return;
             for ( const ServiceRecord& record : listRecord )
             {
+                // 레코드는 자기 기술형이라 상한을 보지 않으므로, 운영 쓰기와 같은 규칙으로 다시 확인한다
                 LiveEventDefinition definition;
-                if ( LiveOpsProtocol::decodeEvent( record._bytes, definition ) )
+                const bool          bDecoded = LiveOpsProtocol::decodeEvent( record._bytes, definition ) && LiveEventRules::isValid( definition );
+                if ( bDecoded )
                     _listEvent.push_back( std::move( definition ) );
+                else
+                    SW_LOG_WARNING( "LiveOps event record '%#' could not be read - it is skipped", record._key );
             }
             _bReadOk = SW_TRUE;
         }

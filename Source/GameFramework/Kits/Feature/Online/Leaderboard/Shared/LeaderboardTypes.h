@@ -108,23 +108,33 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 순위 한 줄입니다. */
+    /** @brief 순위 한 줄입니다. 응답(`LeaderboardReply`)에 고정 배치형으로 실립니다. 이름 상한은 `RequestLimits::kMaxDisplayNameSize` 와 같은 값입니다. */
+    REFLECT()
     struct LeaderboardEntry
     {
-        string    _displayName{};
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 32 )
+        string _displayName{};
+        PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
-        int64     _score{ 0 };
-        int32     _rank{ 0 }; ///< 1부터 시작한다. 같은 점수도 다른 순위를 받으며 정렬 순서를 따른다
+        PROPERTY()
+        int64 _score{ 0 };
+        PROPERTY()
+        int32 _rank{ 0 }; ///< 1부터 시작한다. 같은 점수도 다른 순위를 받으며 정렬 순서를 따른다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 통계 하나입니다. */
+    /** @brief 통계 하나입니다. 이름 상한은 `LeaderboardLimit::kMaxIDSize` 와 같은 값입니다. */
+    REFLECT()
     struct LeaderboardStat
     {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 32 )
         string _name{};
-        int64  _value{ 0 };
+        PROPERTY()
+        int64 _value{ 0 };
     };
 } // namespace sw
 
@@ -169,10 +179,14 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 달성한 업적 하나입니다. */
+    /** @brief 달성한 업적 하나입니다. 업적 알림(`kPushAchievement`)의 본문이며 응답 목록의 원소입니다. id 상한은 `LeaderboardLimit::kMaxIDSize` 와 같은 값입니다. */
+    REFLECT()
     struct AchievementState
     {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 32 )
         string _achievementID{};
-        int64  _unlockedMs{ 0 };
+        PROPERTY()
+        int64 _unlockedMs{ 0 };
     };
 } // namespace sw

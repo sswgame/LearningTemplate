@@ -397,9 +397,8 @@ namespace sw
         return codec._pWrite( writer, pObject );
     }
 
-    FixedReadResult FixedLayout::readWithCodec( const FixedCodec& codec, const uint8* pData, const int32 byteCount, void* pObject )
+    FixedReadResult FixedLayout::readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject )
     {
-        BitReader    reader( pData, byteCount );
         const uint64 schemaHash = FixedCodecUtil::readRawBits( reader, 64 );
         if ( reader.hasOverflowed() )
             return FixedReadResult::Truncated;

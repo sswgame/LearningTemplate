@@ -204,9 +204,9 @@ namespace sw
         outMatch._modeID = _definition._modeID;
         outMatch._region = anchor._region;
         int64 ratingSum  = 0;
-        for ( const vector<MatchMember>& team : outMatch._listTeam )
+        for ( const MatchFormedTeam& team : outMatch._listTeam )
         {
-            for ( const MatchMember& member : team )
+            for ( const MatchMember& member : team._listMember )
             {
                 ratingSum += member._rating;
             }
@@ -220,7 +220,7 @@ namespace sw
         // 큰 티켓부터 넣는다. 작은 티켓이 먼저 자리를 나눠 가지면 파티가 들어갈 팀이 남지 않기 때문이다.
         vector<int32> listOrder = listTicketIndex;
         std::stable_sort( listOrder.begin(), listOrder.end(), MatchMakerInternal::TicketSizeOrder{ &_listTicket } );
-        outMatch._listTeam.assign( static_cast<size_t>( _definition._teamCount ), vector<MatchMember>{} );
+        outMatch._listTeam.assign( static_cast<size_t>( _definition._teamCount ), MatchFormedTeam{} );
         vector<int64> listTeamRating( static_cast<size_t>( _definition._teamCount ), 0 );
         for ( const int32 ticketIndex : listOrder )
         {
@@ -229,7 +229,7 @@ namespace sw
             int32              bestTeam = -1;
             for ( int32 team = 0; team < _definition._teamCount; ++team )
             {
-                const bool bRoom  = static_cast<int32>( outMatch._listTeam[static_cast<size_t>( team )].size() ) + size <= _definition._teamSize;
+                const bool bRoom  = static_cast<int32>( outMatch._listTeam[static_cast<size_t>( team )]._listMember.size() ) + size <= _definition._teamSize;
                 const bool bLower = bestTeam < 0 || listTeamRating[static_cast<size_t>( team )] < listTeamRating[static_cast<size_t>( bestTeam )];
                 if ( bRoom && bLower )
                     bestTeam = team;
@@ -238,7 +238,7 @@ namespace sw
                 return false; // 파티를 쪼개지 않고는 나눌 수 없다
             for ( const MatchMember& member : ticket._listMember )
             {
-                outMatch._listTeam[static_cast<size_t>( bestTeam )].push_back( member );
+                outMatch._listTeam[static_cast<size_t>( bestTeam )]._listMember.push_back( member );
                 listTeamRating[static_cast<size_t>( bestTeam )] += member._rating;
             }
         }

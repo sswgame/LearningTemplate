@@ -54,7 +54,7 @@ namespace sw
             return;
         }
         LeaderboardRequest request;
-        if ( LeaderboardProtocol::readRequest( body, request ) == false )
+        if ( LeaderboardProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -67,8 +67,10 @@ namespace sw
                 LeaderboardReply reply;
                 reply._result = pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::NotAllowed; // 점수는 서버가 낸다. 클라이언트가 낼 수 있는 보드가 아니면 거절한다
                 BitWriter replyBody;
-                LeaderboardProtocol::writeReply( replyBody, reply );
-                (void)host.respondOk( context._token, replyBody );
+                if ( LeaderboardProtocol::MessageTypes::write( replyBody, reply ) )
+                    (void)host.respondOk( context._token, replyBody );
+                else
+                    (void)host.respondError( context._token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
                 return;
             }
         }
@@ -132,8 +134,10 @@ namespace sw
             reply._listStat        = std::move( completion._listStat );
             reply._listAchievement = std::move( completion._listAchievement );
             BitWriter body;
-            LeaderboardProtocol::writeReply( body, reply );
-            (void)host.respondOk( token, body ); // 연결이 닫혔으면 호스트가 버린다
+            if ( LeaderboardProtocol::MessageTypes::write( body, reply ) )
+                (void)host.respondOk( token, body ); // 연결이 닫혔으면 호스트가 버린다
+            else
+                (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
         }
 
         _listUnlockScratch.clear();
@@ -141,7 +145,8 @@ namespace sw
         for ( const AchievementUnlock& unlock : _listUnlockScratch )
         {
             BitWriter body;
-            LeaderboardProtocol::writeAchievement( body, unlock._state );
+            if ( LeaderboardProtocol::MessageTypes::write( body, unlock._state ) == false )
+                continue; // write 가 범위 밖 값을 로그에 남겼다. 알림은 다음 조회로 대신한다
             if ( host.sendPush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ) == false && _pPresence != nullptr )
                 (void)_pPresence->sendRemotePush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ); // 다른 서버에 접속해 있다
         }

@@ -4,6 +4,8 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
@@ -11,6 +13,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Shared/Protocol/EconomyProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -202,4 +205,35 @@ SW_TEST_CASE( EconomyServiceTest, ShippingRefusesDevelopmentValidator )
 #endif
     service.shutdown();
     store.shutdown();
+}
+
+/**
+ * @brief [EconomyProtocolTest] 경제 메시지는 상한까지 왕복하고, 범위 밖 값은 쓰지 않으며, 잘린 바이트와 다른 타입의 바이트는 거절한다
+ */
+SW_TEST_CASE( EconomyProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
+{
+    using Messages = EconomyProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    EconomyReply reply;
+    reply._result     = EconomyResult::UpdateRequired;
+    reply._bReplayed  = SW_TRUE;
+    reply._nextCursor = string( 512, 'c' );
+    reply._productID  = string( 64, 'p' );
+    for ( int32 index = 0; index < 100; ++index )
+    {
+        EconomyHistoryEntry& entry = reply._listHistory.emplace_back();
+        entry._reason              = string( 32, 'r' );
+        entry._timeMs              = -index;
+        entry._listChange.push_back( LedgerBalance{ "cur.gold", -5 } );
+    }
+    reply._listBalance.push_back( LedgerBalance{ string( 48, 'a' ), std::numeric_limits<int64>::min() } );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( reply ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( EconomyPurchaseRequest{ "potion", 1000 } ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( EconomyPurchaseRequest{ "potion", 1000 } ) );
+    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, EconomyRedeemRequest>( EconomyPurchaseRequest{ "potion", 3 } ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( EconomyPurchaseRequest{ "potion", 0 } ) );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( EconomyHistoryRequest{ string( 513, 'c' ), 20 } ) );
+    }
 }

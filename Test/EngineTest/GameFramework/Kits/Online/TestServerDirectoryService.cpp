@@ -2,12 +2,15 @@
 // 저장소 실패는 아무것도 남기지 않음, 없는 공지 지우기는 NotFound, 규칙 밖 바꾸기는 Invalid.
 #include "pch.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistration.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Shared/ServerDirectoryProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -172,7 +175,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceSetOnOneServerReachesTheOth
     SW_EXPECT_EQUAL( second._statusChangeCount, changesBefore + 1 );
     const ServerDirectoryStatus status = second._service.makeStatus( 20 );
     SW_ASSERT_EQUAL( status._listMaintenance.size(), size_t( 1 ) );
-    SW_EXPECT_TRUE( status._listMaintenance[0]._listAllowedAccount.empty() ); // 허용 목록은 클라이언트에 보내지 않는다
+    SW_EXPECT_TRUE( status._listMaintenance[0]._scope == "game" ); // 보이는 타입(`MaintenanceView`)에는 허용 목록 필드가 없다
 
     second._service.clearMaintenance( "game", 1, "done", 30, 2 );
     second.step( 30 );
@@ -251,4 +254,36 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailureLeavesNothingAndBadInputIs
             SW_EXPECT_TRUE( completion._result == ServerDirectoryResult::Invalid );
     }
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
+}
+
+/**
+ * @brief [ServerDirectoryProtocolTest] 서버 디렉터리 메시지는 상한까지 왕복하고, 점검 창과 공지 레코드는 자기 기술형으로 왕복하며, 범위 밖 인원은 쓰지 않는다
+ */
+SW_TEST_CASE( ServerDirectoryProtocolTest, MessagesAndRecordsRoundTrip )
+{
+    using Messages = ServerDirectoryProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    ServerDirectoryStatus status;
+    status._listMaintenance.assign( 16, MaintenanceView{ "all", string( 64, 'm' ), 1, 0 } );
+    status._listNotice.assign( 32, ServiceNotice{ string( 1024, 'n' ), 3, 0, 9, -2, SW_TRUE } );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( status ) );
+    ServerListReply list;
+    list._listEntry.assign( 256, ServerListEntry{ "kr", string( 128, 'a' ), 5, 65535, 100, ServerState::Maintenance } );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( list ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( ServerAssignment{ "127.0.0.1", "notice.maintenance", 4, 99, 7777, ServerDirectoryResult::Maintenance } ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( ServerAssignmentRequest{ "game", "kr", 3, 64 } ) );
+
+    MaintenanceWindow window;
+    window._scope      = "game";
+    window._messageKey = "notice.maintenance";
+    window._listAllowedAccount.push_back( 900 );
+    MaintenanceWindow decodedWindow;
+    SW_ASSERT_TRUE( ServerDirectoryProtocol::decodeMaintenance( ServerDirectoryProtocol::encodeMaintenance( window ), decodedWindow ) );
+    SW_EXPECT_TRUE( decodedWindow.allowsAccount( 900 ) && decodedWindow._scope == "game" );
+    SW_EXPECT_TRUE( window.makeView()._messageKey == "notice.maintenance" );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( ServerAssignmentRequest{ "game", "kr", 0, 0 } ) );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( ServerAssignmentRequest{ "game", "kr", 0, 65 } ) );
+    }
 }

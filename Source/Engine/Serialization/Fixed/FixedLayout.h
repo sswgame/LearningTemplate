@@ -292,9 +292,17 @@ namespace sw
         template <typename T>
         [[nodiscard]] static FixedReadResult read( const uint8* pData, const int32 byteCount, T& inoutObject )
         {
+            BitReader reader( pData, byteCount );
+            return read( reader, inoutObject );
+        }
+
+        /** @brief @p reader 에 남은 비트 전체를 한 객체로 읽습니다. 받은 메시지 본문처럼 읽기 객체를 넘겨받는 쪽이 씁니다. `Ok` 일 때만 @p inoutObject 를 바꿉니다. */
+        template <typename T>
+        [[nodiscard]] static FixedReadResult read( BitReader& reader, T& inoutObject )
+        {
             const FixedCodec&     codec     = requireCodec<T>();
             T                     temporary = inoutObject; // 코덱에 없는 필드는 이 복사본에서 이어집니다
-            const FixedReadResult result    = readWithCodec( codec, pData, byteCount, &temporary );
+            const FixedReadResult result    = readWithCodec( codec, reader, &temporary );
             if ( result == FixedReadResult::Ok )
                 inoutObject = std::move( temporary );
             return result;
@@ -360,6 +368,6 @@ namespace sw
         /** @brief 코덱이 없다는 오류를 남기고 프로세스를 멈춥니다. 모든 구성에서 돌아오지 않습니다. */
         [[noreturn]] static void             stopForMissingCodec( const hashed_string& fqn, const string& reason );
         [[nodiscard]] static bool            writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
-        [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, const uint8* pData, int32 byteCount, void* pObject );
+        [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
     };
 } // namespace sw

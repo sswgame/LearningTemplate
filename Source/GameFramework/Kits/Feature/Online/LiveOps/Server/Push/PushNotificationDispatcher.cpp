@@ -23,20 +23,6 @@ namespace sw
                 return s_table;
             }
 
-            static vector<uint8> encodeDevice( const PushDeviceRegistration& registration )
-            {
-                BitWriter writer;
-                writer.writeBits( LiveOpsProtocol::kRecordFormat, 8 );
-                LiveOpsProtocol::writeDevice( writer, registration );
-                return writer.releaseBytes();
-            }
-
-            [[nodiscard]] static bool decodeDevice( const vector<uint8>& bytes, PushDeviceRegistration& outRegistration )
-            {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                return reader.readBits( 8 ) == LiveOpsProtocol::kRecordFormat && LiveOpsProtocol::readDevice( reader, outRegistration );
-            }
-
             /** @brief 계정의 기기 레코드를 모두 읽습니다. 한도보다 하나 더 읽어서 넘친 것도 보이게 합니다. */
             static ServiceStoreResult listDevices( IServiceStoreConnection& connection, AccountID accountID, vector<ServiceRecord>& outListRecord )
             {
@@ -70,7 +56,7 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 PushDeviceRegistration registration;
-                if ( PushNotificationDispatcherInternal::decodeDevice( record._bytes, registration ) )
+                if ( LiveOpsProtocol::decodeDevice( record._bytes, registration ) )
                     _listDevice.push_back( std::move( registration ) );
             }
         }
@@ -143,7 +129,7 @@ namespace sw
                     ++deviceCount;
                     bReplacing = bReplacing || record._key == _key;
                     PushDeviceRegistration registration;
-                    if ( Internal::decodeDevice( record._bytes, registration ) == false )
+                    if ( LiveOpsProtocol::decodeDevice( record._bytes, registration ) == false )
                         continue;
                     if ( record._key != _key && ( pOldestKey == nullptr || registration._registeredMs < oldestMs ) )
                     {
@@ -154,7 +140,7 @@ namespace sw
                 const bool bEvictOldestDevice = bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr;
                 if ( bEvictOldestDevice )
                     transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
-                transaction.put( table, _key, Internal::encodeDevice( _registration ) );
+                transaction.put( table, _key, LiveOpsProtocol::encodeDevice( _registration ) );
             }
             _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsResult::Unavailable;
         }

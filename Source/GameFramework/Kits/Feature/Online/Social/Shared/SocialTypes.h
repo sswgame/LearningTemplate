@@ -51,6 +51,7 @@ namespace sw
 namespace sw
 {
     /** @brief "나에서 상대로" 가는 한 줄의 상태입니다. 와이어와 레코드에 쓰는 값입니다. */
+    ENUM( Count = Count )
     enum class SocialLinkState : uint8
     {
         None = 0,
@@ -64,11 +65,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 관계 한 줄입니다. */
+    /** @brief 관계 한 줄입니다. 응답(`SocialReply`)에 고정 배치형으로 실립니다. */
+    REFLECT()
     struct SocialLink
     {
-        AccountID       _otherID{ kInvalidAccountID };
-        int64           _sinceMs{ 0 };
+        REFLECT_BODY();
+        PROPERTY()
+        AccountID _otherID{ kInvalidAccountID };
+        PROPERTY()
+        int64 _sinceMs{ 0 };
+        PROPERTY()
         SocialLinkState _state{ SocialLinkState::None };
     };
 } // namespace sw
@@ -76,6 +82,7 @@ namespace sw
 namespace sw
 {
     /** @brief 접속 상태입니다. 와이어 값입니다. */
+    ENUM( Count = Count )
     enum class SocialPresenceStatus : uint8
     {
         Offline = 0,
@@ -89,11 +96,20 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 한 계정의 접속 상태입니다. 친구에게 보이는 값입니다. */
+    /**
+     * @brief 한 계정의 접속 상태입니다. 친구에게 보이는 값입니다.
+     * @details 응답과 알림, 서버 버스(`SocialBus::kPresenceTopic`)에는 고정 배치형(B)으로 실립니다.
+     *          캐시 값(시한 있는 접속 상태)은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `SocialProtocol::encodePresenceRecord`)입니다.
+     */
+    REFLECT()
     struct SocialPresence
     {
-        string               _activity{}; ///< 활동 문구이다(예: "던전 3층"). `SocialLimit::kMaxActivitySize` 바이트 이하여야 한다
-        AccountID            _accountID{ kInvalidAccountID };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 64 )
+        string _activity{}; ///< 활동 문구이다(예: "던전 3층"). 상한은 `SocialLimit::kMaxActivitySize` 와 같다
+        PROPERTY()
+        AccountID _accountID{ kInvalidAccountID };
+        PROPERTY()
         SocialPresenceStatus _status{ SocialPresenceStatus::Offline };
     };
 } // namespace sw
@@ -101,6 +117,7 @@ namespace sw
 namespace sw
 {
     /** @brief 알림 종류입니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
+    ENUM( Count = Count )
     enum class SocialNotificationKind : uint8
     {
         FriendRequested = 0, ///< 받은 신청이다. 상대는 신청한 사람이다
@@ -115,13 +132,19 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 알림 하나입니다. 받는 사람(`_recipientID`)은 와이어에 싣지 않으며, 서버가 고른 연결로 전달됩니다. */
+    /** @brief 알림 하나입니다. 알림(`kPushNotification`)의 본문입니다. 받는 사람(`_recipientID`)은 `PROPERTY` 가 아니어서 와이어에 싣지 않으며, 서버가 고른 연결로 전달됩니다. */
+    REFLECT()
     struct SocialNotification
     {
-        SocialPresence         _presence{}; ///< PresenceChanged
-        AccountID              _recipientID{ kInvalidAccountID };
-        AccountID              _otherID{ kInvalidAccountID };
-        uint64                 _guildID{ 0 }; ///< 길드 알림의 길드 id 이다
+        REFLECT_BODY();
+        PROPERTY()
+        SocialPresence _presence{}; ///< PresenceChanged
+        AccountID      _recipientID{ kInvalidAccountID };
+        PROPERTY()
+        AccountID _otherID{ kInvalidAccountID };
+        PROPERTY()
+        uint64 _guildID{ 0 }; ///< 길드 알림의 길드 id 이다
+        PROPERTY()
         SocialNotificationKind _kind{ SocialNotificationKind::FriendRequested };
     };
 } // namespace sw
@@ -143,6 +166,7 @@ namespace sw
 namespace sw
 {
     /** @brief 길드 역할입니다. 와이어와 레코드에 쓰는 값입니다. */
+    ENUM( Count = Count )
     enum class GuildRole : uint8
     {
         Member = 0,
@@ -155,36 +179,54 @@ namespace sw
 namespace sw
 {
     /** @brief 길드 멤버 하나입니다. */
+    REFLECT()
     struct GuildMember
     {
+        REFLECT_BODY();
+        PROPERTY()
         AccountID _accountID{ kInvalidAccountID };
-        int64     _joinedMs{ 0 };
+        PROPERTY()
+        int64 _joinedMs{ 0 };
+        PROPERTY()
         GuildRole _role{ GuildRole::Member };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 길드 정보입니다. 조회는 멤버 목록까지 담고, 만들기 응답은 id 와 이름만 담습니다. */
+    /** @brief 길드 정보입니다. 조회는 멤버 목록까지 담고, 만들기 응답은 id 와 이름만 담습니다. 응답(`SocialReply`)에 고정 배치형으로 실립니다. */
+    REFLECT()
     struct GuildInfo
     {
-        vector<GuildMember> _listMember{};
-        string              _name{};
-        string              _notice{};
-        uint64              _guildID{ 0 };
-        AccountID           _masterID{ kInvalidAccountID };
-        int64               _createdMs{ 0 };
-        int32               _memberCount{ 0 };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 100 )
+        vector<GuildMember> _listMember{}; ///< 상한은 `GuildLimit::kMaxMember` 와 같다
+        PROPERTY( MaxCount = 24 )
+        string _name{}; ///< 상한은 `GuildLimit::kMaxNameSize` 와 같다
+        PROPERTY( MaxCount = 256 )
+        string _notice{}; ///< 상한은 `GuildLimit::kMaxNoticeSize` 와 같다
+        PROPERTY()
+        uint64 _guildID{ 0 };
+        PROPERTY()
+        AccountID _masterID{ kInvalidAccountID };
+        PROPERTY()
+        int64 _createdMs{ 0 };
+        PROPERTY()
+        int32 _memberCount{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 길드 창고의 자산 하나입니다. 원장의 맡김(`esc/guild/<길드 16진>`) 잔액입니다. */
+    /** @brief 길드 창고의 자산 하나입니다. 원장의 맡김(`esc/guild/<길드 16진>`) 잔액입니다. 자산 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다. */
+    REFLECT()
     struct GuildStorageItem
     {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 48 )
         string _assetID{};
-        int64  _amount{ 0 };
+        PROPERTY()
+        int64 _amount{ 0 };
     };
 } // namespace sw
 

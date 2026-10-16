@@ -3,6 +3,8 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
@@ -12,6 +14,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/FakePlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -385,12 +388,16 @@ SW_TEST_CASE( LoginServiceTest, RegisterLoginAndValidate )
     unknown._sessionID ^= 0x10;
     SW_EXPECT_TRUE( fixture->validateSession( unknown, 2000, identity ) == LoginResult::InvalidToken );
 
-    uint8 arrWire[LoginConstant::kTokenWireSize];
-    grant._token.writeBytes( arrWire );
-    LoginSessionToken readBack;
-    SW_ASSERT_TRUE( readBack.readBytes( arrWire, LoginConstant::kTokenWireSize ) );
-    SW_EXPECT_TRUE( fixture->validateSession( readBack, 2000, identity ) == LoginResult::Ok );
-    SW_EXPECT_FALSE( readBack.readBytes( arrWire, LoginConstant::kTokenWireSize - 1 ) );
+    AccountResumeRequest resume; // 재접속 요청에 실어 와이어로 왕복한 토큰도 그대로 통한다
+    resume._token = grant._token;
+    BitWriter writer;
+    SW_ASSERT_TRUE( AccountProtocol::MessageTypes::write( writer, resume ) );
+    BitReader            reader( writer.getBytes().data(), writer.getByteCount() );
+    AccountResumeRequest readBack;
+    SW_ASSERT_TRUE( AccountProtocol::MessageTypes::read( reader, readBack ) == FixedReadResult::Ok );
+    SW_EXPECT_TRUE( fixture->validateSession( readBack._token, 2000, identity ) == LoginResult::Ok );
+    BitReader truncated( writer.getBytes().data(), writer.getByteCount() - 1 );
+    SW_EXPECT_TRUE( AccountProtocol::MessageTypes::read( truncated, readBack ) == FixedReadResult::Truncated );
 
     SW_EXPECT_TRUE( fixture->logout( grant._token, 3000 ) == LoginResult::Ok );
     SW_EXPECT_FALSE( fixture->isAccountOnline( accountID ) );
@@ -825,8 +832,8 @@ SW_TEST_CASE( LoginServiceTest, MultipleLinksAndTheLastMethodCannotBeUnlinked )
     AccountLinkSummary summary;
     SW_ASSERT_TRUE( fixture->listLinks( grant._token, 20, summary ) == LoginResult::Ok );
     SW_ASSERT_EQUAL( size_t( 2 ), summary._listProvider.size() );
-    SW_EXPECT_EQUAL( string( "google" ), summary._listProvider[0] );
-    SW_EXPECT_EQUAL( string( "kakao" ), summary._listProvider[1] );
+    SW_EXPECT_EQUAL( string( "google" ), summary._listProvider[0]._name );
+    SW_EXPECT_EQUAL( string( "kakao" ), summary._listProvider[1]._name );
     SW_EXPECT_EQUAL( 2, summary.getLoginMethodCount() );
 
     LoginGrant viaKakao; // 둘 다 같은 계정으로 들어온다
@@ -956,4 +963,49 @@ SW_TEST_CASE( LoginServiceTest, DeletionWaitsForTheGraceThenErasesTheAccountButK
     SW_ASSERT_TRUE( fixture->guestLogin( 6, secondDueMs + 1, gone ) == LoginResult::Ok );
     SW_EXPECT_TRUE( gone._bCreated == SW_TRUE );
     SW_EXPECT_EQUAL( 0, fixture._database.countRecords( hashed_string( "account_deletion" ) ) );
+}
+
+/**
+ * @brief [AccountProtocolTest] 계정 메시지는 상한까지 왕복하고, 게임 티켓과 비밀 바이트가 그대로 돌아오며, 범위 밖 값은 쓰지 않는다
+ */
+SW_TEST_CASE( AccountProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
+{
+    using Messages = AccountProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    AccountGrantReply grant;
+    grant._result                     = LoginResult::AccountSuspended;
+    grant._grant._identity            = AccountIdentity{ string( 32, 'n' ), 7, SW_TRUE };
+    grant._grant._token._sessionID    = ~0ull;
+    grant._grant._token._arrSecret[0] = 255;
+    grant._grant._sanctionReasonCode  = string( 64, 'r' );
+    grant._grant._storeURL            = string( 512, 'u' );
+    grant._grant._revokeReason        = LoginRevokeReason::AccountDeleted;
+    grant._grant._sanctionUntilMs     = ServiceSanctionState::kPermanentMs;
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( grant ) );
+    AccountTicketReply ticket;
+    for ( int32 index = 0; index < NetGameTicket::kTokenSize; ++index )
+    {
+        ticket._ticket._arrToken[index] = static_cast<uint8>( 255 - index );
+    }
+    ticket._ticket._expiresAtMs = 12345;
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( ticket ) );
+    AccountLinkReply links;
+    links._summary._listProvider.assign( 32, AccountLinkedProvider{ string( 16, 'p' ) } );
+    links._summary._bHasCredential = SW_TRUE;
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( links ) );
+    AccountPlatformRequest platform;
+    platform._provider = "google";
+    platform._ticketBytes.assign( 8192, uint8( 0xAB ) );
+    platform._clientInfo = AccountClientInfo{ "1.4.2", "windows" };
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( platform ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( AccountRevokeNotice{ "sanction.suspended", 3, 4, LoginRevokeReason::Sanctioned } ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( AccountCredentialRequest{ "alice", "password123" } ) );
+    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, AccountProviderRequest>( AccountCredentialRequest{ "alice", "password123" } ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( AccountCredentialRequest{ "alice", string( 129, 'p' ) } ) );
+        AccountPlatformRequest hugeTicket;
+        hugeTicket._ticketBytes.resize( 8193 );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( hugeTicket ) );
+    }
 }

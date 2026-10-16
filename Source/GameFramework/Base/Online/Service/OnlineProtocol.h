@@ -128,7 +128,7 @@ namespace sw
 {
     struct OnlineProtocolConstant
     {
-        static constexpr uint32 kBaseVersion      = 2; ///< 이 표 · Hello 몸 · 알림 프레임 형식의 판. 온라인 스키마 해시에 섞인다(2: Hello 첫 필드가 스키마 해시)
+        static constexpr uint32 kBaseVersion      = 2; ///< 이 표 · Hello 몸 · 알림 프레임 형식의 판. 온라인 스키마 해시에 섞인다(2: Hello 첫 필드가 스키마 해시). 키트 메시지의 배치는 타입 해시가 잡으므로, 배치는 그대로이고 뜻만 바뀐 변경일 때 이 판을 올린다
         static constexpr int32  kSchemaHashSize   = 8; ///< Hello 첫 필드와 `kVersionMismatch` 자세한 몸의 바이트 수(해시 u64 리틀 엔디언)
         static constexpr int32  kMaxBuildTextSize = 64;
     };

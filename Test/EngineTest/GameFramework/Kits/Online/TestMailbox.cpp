@@ -2,6 +2,8 @@
 // 캠페인 한 계정 한 번, 모두 받기, 거래 반환 우편, 서비스(submitCall · 주기 쓸기 · 멱등 키 필수).
 #include "pch.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
@@ -9,6 +11,7 @@
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Mailbox/Shared/MailboxProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -324,4 +327,38 @@ SW_TEST_CASE( MailboxTest, ServiceClaimNeedsAKeyAndSweepsOnItsPeriod )
     service.shutdown();
     store.shutdown();
     (void)store.pollCompletions();
+}
+
+/**
+ * @brief [MailboxProtocolTest] 우편함 메시지는 상한까지 왕복하고, 범위 밖 개수와 상태는 쓰지 않으며, 잘린 바이트는 거절한다
+ */
+SW_TEST_CASE( MailboxProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
+{
+    using Messages = MailboxProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    MailboxReply reply;
+    reply._result       = MailboxResult::Busy;
+    reply._claimedCount = 3;
+    reply._nextCursor   = string( 256, 'k' );
+    for ( int32 index = 0; index < 100; ++index )
+    {
+        MailView& mail     = reply._listMail.emplace_back();
+        mail._mailKey      = "0000000000000001/0000000000000002.0000000000000003";
+        mail._state        = ServiceMailState::Claimed;
+        mail._bCampaign    = SW_TRUE;
+        mail._bLiteralText = static_cast<uint8>( index % 2 );
+        mail._listAttachment.assign( 8, ServiceMailAttachment{ "item.potion", 2 } );
+    }
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( reply ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( MailboxRequest{ "key", "cursor", 50 } ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( MailboxRequest{ "key", "", 51 } ) );
+        MailboxReply tooMany;
+        tooMany._listMail.resize( 101 );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( tooMany ) );
+        MailboxReply badState;
+        badState._listMail.emplace_back()._state = ServiceMailState::Count;
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( badState ) );
+    }
 }

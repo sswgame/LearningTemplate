@@ -4,7 +4,6 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
@@ -21,7 +20,6 @@ namespace sw
     {
         struct ServerDirectoryServiceInternal
         {
-            static constexpr uint8 kRecordFormat      = 1;
             static constexpr int32 kMaxMaintenanceRow = 64;
             static constexpr int32 kPercentScale      = 100;
 
@@ -37,20 +35,22 @@ namespace sw
                 return s_table;
             }
 
-            static vector<uint8> encodeMaintenance( const MaintenanceWindow& window )
+            /** @brief 점검 창 규칙입니다. 운영 쓰기와 저장소에서 읽은 레코드(A 는 상한을 보지 않는다)가 같은 규칙을 지납니다. */
+            static bool isValidWindow( const MaintenanceWindow& window )
             {
-                BitWriter writer;
-                writer.writeBits( kRecordFormat, 8 );
-                ServerDirectoryProtocol::writeMaintenance( writer, window, true );
-                return writer.releaseBytes();
+                const bool bScopeOk = window._scope == MaintenanceWindow::kScopeAll || ServerRecord::isValidName( window._scope );
+                const bool bSizesOk = static_cast<int32>( window._listAllowedAccount.size() ) <= ServerDirectoryLimit::kMaxAllowedAccountCount &&
+                                      static_cast<int32>( window._messageKey.size() ) <= ServerDirectoryLimit::kMaxMessageKeySize;
+                const bool bWindowOk = window._endMs == 0 || window._startMs < window._endMs;
+                return bScopeOk && bSizesOk && bWindowOk;
             }
 
-            static vector<uint8> encodeNotice( const ServiceNotice& notice )
+            /** @brief 공지 규칙입니다. 운영 쓰기와 저장소에서 읽은 레코드가 같은 규칙을 지납니다. */
+            static bool isValidNotice( const ServiceNotice& notice )
             {
-                BitWriter writer;
-                writer.writeBits( kRecordFormat, 8 );
-                ServerDirectoryProtocol::writeNotice( writer, notice );
-                return writer.releaseBytes();
+                const bool bTextOk   = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxNoticeTextSize;
+                const bool bWindowOk = notice._endMs == 0 || notice._startMs < notice._endMs;
+                return notice._noticeID != 0 && bTextOk && bWindowOk;
             }
 
             static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, StringUtil::computeHash64( text.data(), text.size(), false ) ); }
@@ -96,20 +96,22 @@ namespace sw
                 return;
             for ( const ServiceRecord& record : listRecord )
             {
-                BitReader         reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
                 MaintenanceWindow window;
-                if ( reader.readBits( 8 ) == Internal::kRecordFormat && ServerDirectoryProtocol::readMaintenance( reader, true, window ) )
+                if ( ServerDirectoryProtocol::decodeMaintenance( record._bytes, window ) && Internal::isValidWindow( window ) )
                     _listMaintenance.push_back( std::move( window ) );
+                else
+                    SW_LOG_WARNING( "Server directory maintenance record '%#' could not be read - it is skipped", record._key );
             }
             listRecord.clear();
             if ( connection.listRecords( Internal::getNoticeTable(), "", "", ServerDirectoryLimit::kMaxNoticeCount * 4, false, listRecord ) != ServiceStoreResult::Ok )
                 return;
             for ( const ServiceRecord& record : listRecord )
             {
-                BitReader     reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
                 ServiceNotice notice;
-                if ( reader.readBits( 8 ) == Internal::kRecordFormat && ServerDirectoryProtocol::readNotice( reader, notice ) )
+                if ( ServerDirectoryProtocol::decodeNotice( record._bytes, notice ) && Internal::isValidNotice( notice ) )
                     _listNotice.push_back( std::move( notice ) );
+                else
+                    SW_LOG_WARNING( "Server directory notice record '%#' could not be read - it is skipped", record._key );
             }
             _bReadOk = SW_TRUE;
         }
@@ -313,8 +315,7 @@ namespace sw
         {
             if ( window.isActive( nowMs ) == false || static_cast<int32>( status._listMaintenance.size() ) >= ServerDirectoryLimit::kMaxWindowCount )
                 continue;
-            MaintenanceWindow& visible = status._listMaintenance.emplace_back( window );
-            visible._listAllowedAccount.clear(); // 허용 목록은 클라이언트에 보내지 않는다
+            status._listMaintenance.push_back( window.makeView() ); // 보이는 타입에는 허용 목록이 없다
         }
         for ( const ServiceNotice& notice : _listNotice )
         {
@@ -418,13 +419,8 @@ namespace sw
 
     void ServerDirectoryService::setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
     {
-        using Internal      = ServerDirectoryServiceInternal;
-        const bool bScopeOk = window._scope == MaintenanceWindow::kScopeAll || ServerRecord::isValidName( window._scope );
-        const bool bSizesOk = static_cast<int32>( window._listAllowedAccount.size() ) <= ServerDirectoryLimit::kMaxAllowedAccountCount &&
-                              static_cast<int32>( window._messageKey.size() ) <= ServerDirectoryLimit::kMaxMessageKeySize;
-        const bool bWindowOk             = window._endMs == 0 || window._startMs < window._endMs;
-        const bool bInvalidWindowRequest = bScopeOk == false || bSizesOk == false || bWindowOk == false;
-        if ( bInvalidWindowRequest )
+        using Internal = ServerDirectoryServiceInternal;
+        if ( Internal::isValidWindow( window ) == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
             return;
@@ -432,7 +428,7 @@ namespace sw
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
         work->_table                              = Internal::getMaintenanceTable();
         work->_key                                = window._scope;
-        work->_bytes                              = Internal::encodeMaintenance( window );
+        work->_bytes                              = ServerDirectoryProtocol::encodeMaintenance( window );
         work->_auditEntry._actor                  = Internal::makeActor( actorID );
         work->_auditEntry._action                 = "sd.maintenance.set";
         work->_auditEntry._subject                = "sd/" + window._scope;
@@ -464,11 +460,8 @@ namespace sw
 
     void ServerDirectoryService::postNotice( const ServiceNotice& notice, AccountID actorID, int64 nowMs, uint64 requestTag )
     {
-        using Internal            = ServerDirectoryServiceInternal;
-        const bool bTextOk        = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxNoticeTextSize;
-        const bool bWindowOk      = notice._endMs == 0 || notice._startMs < notice._endMs;
-        const bool bInvalidNotice = notice._noticeID == 0 || bTextOk == false || bWindowOk == false;
-        if ( bInvalidNotice )
+        using Internal = ServerDirectoryServiceInternal;
+        if ( Internal::isValidNotice( notice ) == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
             return;
@@ -476,7 +469,7 @@ namespace sw
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
         work->_table                              = Internal::getNoticeTable();
         work->_key                                = ServiceKeyUtil::makeHex64( notice._noticeID );
-        work->_bytes                              = Internal::encodeNotice( notice );
+        work->_bytes                              = ServerDirectoryProtocol::encodeNotice( notice );
         work->_auditEntry._actor                  = Internal::makeActor( actorID );
         work->_auditEntry._action                 = "sd.notice.post";
         work->_auditEntry._subject                = "sd/notice/" + work->_key;

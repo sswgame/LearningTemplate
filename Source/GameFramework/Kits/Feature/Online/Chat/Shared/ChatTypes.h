@@ -37,6 +37,7 @@ namespace sw
     };
 
     /** @brief 채널 종류입니다. 채널 id 의 접두어가 정합니다. */
+    ENUM( Count = Count )
     enum class ChatChannelKind : uint8
     {
         World = 0,
@@ -62,17 +63,32 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 메시지 하나입니다. (보낸 시각, 서버, 서버 안 순번)이 같은 채널 안의 시간 순 정렬 키입니다. */
+    /**
+     * @brief 메시지 하나입니다. (보낸 시각, 서버, 서버 안 순번)이 같은 채널 안의 시간 순 정렬 키입니다.
+     * @details 알림, 응답, 서버 버스에는 고정 배치형(B)으로, 저장소의 기록 레코드에는 자기 기술형(A, `ChatProtocol::encodeRecord`)으로 실립니다.
+     *          문자열 상한은 `ChatLimit` 와 `RequestLimits::kMaxDisplayNameSize` 와 같은 값입니다. 가린 글은 코드 포인트마다 '*' 하나이므로 원문보다 길지 않습니다.
+     */
+    REFLECT()
     struct ChatMessage
     {
-        string          _channelID{}; ///< 귓속말이면 기록 키(`ChatChannelID::makeWhisper`)이다
-        string          _senderName{};
-        string          _text{}; ///< 필터를 거친 글이다
-        AccountID       _senderID{ kInvalidAccountID };
-        AccountID       _recipientID{ kInvalidAccountID }; ///< 귓속말일 때만 쓴다
-        int64           _sentMs{ 0 };
-        uint64          _serverID{ 0 };
-        uint32          _sequence{ 0 };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 48 )
+        string _channelID{}; ///< 귓속말이면 기록 키(`ChatChannelID::makeWhisper`)이다
+        PROPERTY( MaxCount = 32 )
+        string _senderName{};
+        PROPERTY( MaxCount = 512 )
+        string _text{}; ///< 필터를 거친 글이다
+        PROPERTY()
+        AccountID _senderID{ kInvalidAccountID };
+        PROPERTY()
+        AccountID _recipientID{ kInvalidAccountID }; ///< 귓속말일 때만 쓴다
+        PROPERTY()
+        int64 _sentMs{ 0 };
+        PROPERTY()
+        uint64 _serverID{ 0 };
+        PROPERTY()
+        uint32 _sequence{ 0 };
+        PROPERTY()
         ChatChannelKind _kind{ ChatChannelKind::World };
     };
 } // namespace sw

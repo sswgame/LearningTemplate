@@ -29,9 +29,9 @@ namespace sw
 
 namespace sw
 {
-    OnlineProtocolEntry::OnlineProtocolEntry( const utf8* pName, uint16 methodRange, uint32 version )
+    OnlineProtocolEntry::OnlineProtocolEntry( const utf8* pName, uint16 methodRange, SchemaHashFunction pComputeMessageHash )
         : ServiceFactoryNode{}
-        , _version{ version }
+        , _pComputeMessageHash{ pComputeMessageHash }
         , _methodRange{ methodRange }
     {
         _pName = pName;
@@ -71,7 +71,7 @@ namespace sw
         {
             const OnlineProtocolEntry* pEntry = static_cast<const OnlineProtocolEntry*>( pNode );
             hash                              = HashUtil::combine( hash, pEntry->_methodRange );
-            hash                              = HashUtil::combine( hash, pEntry->_version );
+            hash                              = HashUtil::combine( hash, pEntry->_pComputeMessageHash() );
         }
         return hash;
     }

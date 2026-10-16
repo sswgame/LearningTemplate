@@ -8,17 +8,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct TradeServerInternal
-        {
-            static constexpr int32 kMaxDisplayNameSize = 64;
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     TradeServer::TradeServer()
         : _mapTagToCall{}
         , _mapLookupToCall{}
@@ -69,15 +58,14 @@ namespace sw
         const uint64 tag = _nextTag++;
         if ( context._method == TradeMethod::kInvite )
         {
-            vector<uint8> nameBytes;
-            if ( body.readBlob( nameBytes, TradeServerInternal::kMaxDisplayNameSize ) == false )
+            TradeInviteRequest request;
+            if ( TradeProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
             {
                 (void)host.respondError( context._token, OnlineError::kInvalidRequest );
                 return;
             }
-            const string_view name( reinterpret_cast<const utf8*>( nameBytes.data() ), nameBytes.size() );
-            AccountIdentity   peer;
-            if ( _pDirectory != nullptr && _pDirectory->findIdentityByDisplayName( name, peer ) )
+            AccountIdentity peer;
+            if ( _pDirectory != nullptr && _pDirectory->findIdentityByDisplayName( request._peerDisplayName, peer ) )
             {
                 _mapTagToCall[tag] = PendingCall{ context._token, context._accountID };
                 _pTradeService->invite( context._accountID, peer._accountID, context._nowMs, tag );
@@ -88,49 +76,52 @@ namespace sw
                 respondImmediately( host, context._token, TradeResult::PeerOffline );
                 return;
             }
-            const uint64 lookupID      = _pPresence->submitFindByDisplayName( name, AccountPresenceDelegate::create<&TradeServer::onPresenceFound>( this ) );
+            const uint64 lookupID      = _pPresence->submitFindByDisplayName( request._peerDisplayName, AccountPresenceDelegate::create<&TradeServer::onPresenceFound>( this ) );
             _mapLookupToCall[lookupID] = PendingLookup{ context._token, context._accountID, context._nowMs };
             return;
         }
 
-        const uint64 tradeID  = body.readVarUint();
-        bool         bDecoded = body.hasOverflowed() == false;
+        FixedReadResult readResult = FixedReadResult::Ok;
         switch ( context._method )
         {
             case TradeMethod::kRespond:
             {
-                const bool bAccept = body.readBool();
-                if ( bDecoded )
-                    _pTradeService->respondInvite( context._accountID, tradeID, bAccept, context._nowMs, tag );
+                TradeRespondRequest request;
+                readResult = TradeProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pTradeService->respondInvite( context._accountID, request._tradeID, request._bAccept == SW_TRUE, context._nowMs, tag );
                 break;
             }
             case TradeMethod::kSetOffer:
             {
-                vector<TradeLeg> listLeg;
-                bDecoded = bDecoded && TradeWire::readLegs( body, listLeg );
-                if ( bDecoded )
-                    _pTradeService->setOffer( context._accountID, tradeID, listLeg, context._nowMs, tag );
+                TradeOfferRequest request;
+                readResult = TradeProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pTradeService->setOffer( context._accountID, request._tradeID, request._listLeg, context._nowMs, tag );
                 break;
             }
             case TradeMethod::kLock:
             {
-                if ( bDecoded )
-                    _pTradeService->lock( context._accountID, tradeID, context._nowMs, tag );
+                TradeIDRequest request;
+                readResult = TradeProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pTradeService->lock( context._accountID, request._tradeID, context._nowMs, tag );
                 break;
             }
             case TradeMethod::kConfirm:
             {
-                const uint32 ownRevision  = static_cast<uint32>( body.readVarUint() );
-                const uint32 peerRevision = static_cast<uint32>( body.readVarUint() );
-                bDecoded                  = bDecoded && body.hasOverflowed() == false;
-                if ( bDecoded )
-                    _pTradeService->confirm( context._accountID, tradeID, ownRevision, peerRevision, context._nowMs, tag );
+                TradeConfirmRequest request;
+                readResult = TradeProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pTradeService->confirm( context._accountID, request._tradeID, request._seenOwnRevision, request._seenPeerRevision, context._nowMs, tag );
                 break;
             }
             case TradeMethod::kCancel:
             {
-                if ( bDecoded )
-                    _pTradeService->cancel( context._accountID, tradeID, context._nowMs, tag );
+                TradeIDRequest request;
+                readResult = TradeProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pTradeService->cancel( context._accountID, request._tradeID, context._nowMs, tag );
                 break;
             }
             default:
@@ -139,7 +130,7 @@ namespace sw
                 return;
             }
         }
-        if ( bDecoded == false || body.hasOverflowed() )
+        if ( readResult != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -189,11 +180,11 @@ namespace sw
                 (void)host.respondError( call._token, OnlineError::kUnavailable );
                 continue;
             }
-            vector<TradeBalance> listBalance;
-            collectBalances( completion._ledger, call._accountID, listBalance );
-            BitWriter reply;
-            TradeReplyWire::writeReply( reply, completion._result, completion._snapshot, listBalance );
-            (void)host.respondOk( call._token, reply );
+            TradeReply reply;
+            reply._result   = completion._result;
+            reply._snapshot = completion._snapshot;
+            collectBalances( completion._ledger, call._accountID, reply._listBalance );
+            respond( host, call._token, reply );
         }
         _listUpdateScratch.clear();
         _pTradeService->drainUpdates( _listUpdateScratch );
@@ -221,12 +212,14 @@ namespace sw
         {
             if ( kind == TradeMethod::kPushInvited && sideIndex == 0 )
                 continue; // 신청한 쪽은 응답으로 알게 된다
-            const AccountID      accountID = snapshot._arrSide[sideIndex]._accountID;
-            vector<TradeBalance> listBalance;
+            const AccountID accountID = snapshot._arrSide[sideIndex]._accountID;
+            TradeReply      push;
+            push._snapshot = snapshot;
             if ( ledgerIt != _mapTradeToLedger.end() )
-                collectBalances( ledgerIt->second, accountID, listBalance );
+                collectBalances( ledgerIt->second, accountID, push._listBalance );
             BitWriter body;
-            TradeReplyWire::writeReply( body, TradeResult::Ok, snapshot, listBalance );
+            if ( TradeProtocol::MessageTypes::write( body, push ) == false )
+                continue; // write 가 범위 밖 값을 로그에 남겼다
             if ( host.sendPush( accountID, kind, body ) == false && _pPresence != nullptr )
                 (void)_pPresence->sendRemotePush( accountID, kind, body ); // 상대가 다른 서버에 접속해 있다
         }
@@ -239,9 +232,18 @@ namespace sw
 
     void TradeServer::respondImmediately( OnlineServiceHost& host, const NetRequestToken& token, TradeResult result )
     {
-        BitWriter reply;
-        TradeReplyWire::writeReply( reply, result, TradeSnapshot{}, vector<TradeBalance>{} );
-        (void)host.respondOk( token, reply );
+        TradeReply reply;
+        reply._result = result;
+        respond( host, token, reply );
+    }
+
+    void TradeServer::respond( OnlineServiceHost& host, const NetRequestToken& token, const TradeReply& reply )
+    {
+        BitWriter body;
+        if ( TradeProtocol::MessageTypes::write( body, reply ) )
+            (void)host.respondOk( token, body );
+        else
+            (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
     }
 
     void TradeServer::collectBalances( const LedgerTransferOutcome& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )

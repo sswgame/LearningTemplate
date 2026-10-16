@@ -2,8 +2,6 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountTypes.h"
 
-#include "Core/Memory/Memory.h"
-
 namespace sw
 {
     namespace
@@ -32,29 +30,6 @@ namespace sw
 
 namespace sw
 {
-    void LoginSessionToken::writeBytes( uint8 ( &outBytes )[LoginConstant::kTokenWireSize] ) const
-    {
-        for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
-        {
-            outBytes[byteIndex] = static_cast<uint8>( _sessionID >> ( byteIndex * 8 ) );
-        }
-        Memory::copy( outBytes + 8, _arrSecret, LoginConstant::kTokenSecretSize );
-    }
-
-    bool LoginSessionToken::readBytes( const uint8* pData, int32 size )
-    {
-        if ( pData == nullptr || size != LoginConstant::kTokenWireSize )
-            return false;
-        uint64 sessionID = 0;
-        for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
-        {
-            sessionID |= static_cast<uint64>( pData[byteIndex] ) << ( byteIndex * 8 );
-        }
-        _sessionID = sessionID;
-        Memory::copy( _arrSecret, pData + 8, LoginConstant::kTokenSecretSize );
-        return true;
-    }
-
     int32 AccountUtil::compareBuild( string_view left, string_view right )
     {
         size_t leftCursor  = 0;

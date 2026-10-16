@@ -5,8 +5,6 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
-#include "GameFramework/Base/Online/Directory/ServerRecord.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsProtocol.h"
 
@@ -65,19 +63,24 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kNotFound );
             return;
         }
-        string       region;
-        const bool   bRegionOk    = ServiceKeyUtil::readString( body, ServerRecord::kMaxNameSize, region );
-        const uint32 buildVersion = static_cast<uint32>( body.readVarUint() );
-        if ( bRegionOk == false || body.hasOverflowed() )
+        LiveOpsStateRequest request;
+        if ( LiveOpsProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
         LiveOpsReply reply;
-        _pService->computeActiveEvents( context._accountID, region, buildVersion, context._nowMs, true, reply._listEvent );
+        _pService->computeActiveEvents( context._accountID, request._region, request._buildVersion, context._nowMs, true, reply._listEvent );
+        respond( host, context._token, reply );
+    }
+
+    void LiveOpsServer::respond( OnlineServiceHost& host, const NetRequestToken& token, const LiveOpsReply& reply )
+    {
         BitWriter replyBody;
-        LiveOpsProtocol::writeReply( replyBody, reply );
-        (void)host.respondOk( context._token, replyBody );
+        if ( LiveOpsProtocol::MessageTypes::write( replyBody, reply ) )
+            (void)host.respondOk( token, replyBody );
+        else
+            (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
     }
 
     void LiveOpsServer::handleDeviceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
@@ -87,32 +90,25 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnavailable );
             return;
         }
-        PushDeviceRegistration registration;
-        bool                   bBodyOk = false;
         if ( context._method == LiveOpsMethod::kRegisterDevice )
         {
-            bBodyOk = LiveOpsProtocol::readDevice( body, registration );
+            PushDeviceRegistration registration;
+            if ( LiveOpsProtocol::MessageTypes::read( body, registration ) != FixedReadResult::Ok )
+            {
+                (void)host.respondError( context._token, OnlineError::kInvalidRequest );
+                return;
+            }
+            registration._registeredMs = context._nowMs; // 등록 시각은 서버 시계로 정한다. 한도를 넘으면 가장 오래된 것을 밀어낸다
+            _pDispatcher->registerDevice( context._accountID, registration, _pendingTable.add( context._token ) );
+            return;
         }
-        else
-        {
-            bBodyOk = ServiceKeyUtil::readString( body, PushLimit::kMaxProviderIDSize, registration._providerID ) &&
-                      ServiceKeyUtil::readString( body, PushLimit::kMaxTokenSize, registration._token );
-        }
-        if ( bBodyOk == false || body.hasOverflowed() )
+        LiveOpsDeviceKey key;
+        if ( LiveOpsProtocol::MessageTypes::read( body, key ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
-        const uint64 tag = _pendingTable.add( context._token );
-        if ( context._method == LiveOpsMethod::kRegisterDevice )
-        {
-            registration._registeredMs = context._nowMs; // 등록 시각은 서버 시계로 정한다. 한도를 넘으면 가장 오래된 것을 밀어낸다
-            _pDispatcher->registerDevice( context._accountID, registration, tag );
-        }
-        else
-        {
-            _pDispatcher->unregisterDevice( context._accountID, registration._providerID, registration._token, tag );
-        }
+        _pDispatcher->unregisterDevice( context._accountID, key._providerID, key._token, _pendingTable.add( context._token ) );
     }
 
     void LiveOpsServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
@@ -131,9 +127,7 @@ namespace sw
                     continue;
                 LiveOpsReply reply;
                 reply._result = completion._result;
-                BitWriter replyBody;
-                LiveOpsProtocol::writeReply( replyBody, reply );
-                (void)host.respondOk( token, replyBody );
+                respond( host, token, reply );
             }
         }
         if ( _pService == nullptr )

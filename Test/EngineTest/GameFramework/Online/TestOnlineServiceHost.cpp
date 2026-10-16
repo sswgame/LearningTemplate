@@ -38,8 +38,8 @@ namespace
     };
 
     // 가짜 키트의 프로토콜 항목이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
-    const OnlineProtocolEntry kProtocolA{ "OnlineServiceHostTest.A", OnlineServiceHostTestInternal::kRangeA, 1 };
-    const OnlineProtocolEntry kProtocolB{ "OnlineServiceHostTest.B", OnlineServiceHostTestInternal::kRangeB, 1 };
+    const OnlineProtocolEntry kProtocolA{ "OnlineServiceHostTest.A", OnlineServiceHostTestInternal::kRangeA, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kProtocolB{ "OnlineServiceHostTest.B", OnlineServiceHostTestInternal::kRangeB, OnlineMessageTypes<>{} };
 
     /** @brief 가짜 서비스 — 받은 것을 모두 적는다. */
     class FakeOnlineService final : public IOnlineHostService
@@ -601,7 +601,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SameSchemaHashConnects )
 SW_TEST_CASE( OnlineServiceHostTest, SchemaHashMismatchStopsTheClientWithoutReconnecting )
 {
     HostRig                   rig;
-    const OnlineProtocolEntry clientOnlyProtocol{ "OnlineServiceHostTest.ClientOnly", OnlineServiceHostTestInternal::kRangeB + OnlineMethodRange::kSize, 1 };
+    const OnlineProtocolEntry clientOnlyProtocol{ "OnlineServiceHostTest.ClientOnly", OnlineServiceHostTestInternal::kRangeB + OnlineMethodRange::kSize, OnlineMessageTypes<>{} };
     ClientSide                client( rig._network, rig.getPort() ); // 이 클라이언트의 해시에는 위 항목이 섞인다
     rig._listClient.push_back( &client );
     {

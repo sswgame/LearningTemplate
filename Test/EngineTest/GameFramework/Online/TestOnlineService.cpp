@@ -1,9 +1,14 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 
@@ -69,10 +74,10 @@ namespace
     };
 
     // 영역 확인용 항목들이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
-    const OnlineProtocolEntry kAccountRangeProtocol{ "OnlineServiceTest.Account", OnlineMethodRange::kAccount, 1 };
-    const OnlineProtocolEntry kSameRangeProtocol{ "OnlineServiceTest.SameRange", OnlineMethodRange::kAccount, 1 };
-    const OnlineProtocolEntry kNotABaseProtocol{ "OnlineServiceTest.NotABase", 0x0910, 1 };
-    const OnlineProtocolEntry kHostRangeProtocol{ "OnlineServiceTest.HostRange", OnlineMethodRange::kHost, 1 };
+    const OnlineProtocolEntry kAccountRangeProtocol{ "OnlineServiceTest.Account", OnlineMethodRange::kAccount, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kSameRangeProtocol{ "OnlineServiceTest.SameRange", OnlineMethodRange::kAccount, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kNotABaseProtocol{ "OnlineServiceTest.NotABase", 0x0910, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kHostRangeProtocol{ "OnlineServiceTest.HostRange", OnlineMethodRange::kHost, OnlineMessageTypes<>{} };
 
     static_assert( OnlineMethodRange::isInRange( OnlineMethodRange::kAccount + 0x7F, OnlineMethodRange::kAccount ), "last method of a range" );
     static_assert( OnlineMethodRange::isInRange( OnlineMethodRange::kTrade, OnlineMethodRange::kAccount ) == false, "ranges do not overlap" );
@@ -156,21 +161,20 @@ SW_TEST_CASE( OnlineProtocolTest, VersionMismatchBecomesUpdateRequiredBeforeTheK
 }
 
 /**
- * @brief [OnlineProtocolTest] 응답 첫 칸의 결과(varuint)는 Count 미만만 읽고, 넘거나 몸이 모자라면 거절한다
+ * @brief [OnlineProtocolTest] 메시지 타입 목록의 해시는 타입마다의 스키마 해시를 목록 순서대로 섞은 값이고, 타입이나 순서가 다르면 달라진다
+ * @details 키트는 이 목록 하나로 메시지를 쓰고 읽으며 같은 목록이 등록 항목에 섞이므로, 와이어에 오르는 타입의 배치가 바뀌면 온라인 스키마 해시가 바뀐다.
  */
-SW_TEST_CASE( OnlineProtocolTest, ReadEnumRejectsOutOfRangeAndShortBody )
+SW_TEST_CASE( OnlineProtocolTest, MessageTypesHashFollowsTheTypes )
 {
-    BitWriter writer;
-    writer.writeVarUint( static_cast<uint64>( SampleOnlineResult::NotSignedIn ) );
-    writer.writeVarUint( static_cast<uint64>( SampleOnlineResult::Count ) );
-
-    BitReader          reader( writer.getBytes().data(), writer.getByteCount() );
-    SampleOnlineResult result = SampleOnlineResult::Ok;
-    SW_EXPECT_TRUE( OnlineReplyUtil::readEnum( reader, SampleOnlineResult::Count, result ) );
-    SW_EXPECT_TRUE( result == SampleOnlineResult::NotSignedIn );
-    SW_EXPECT_FALSE( OnlineReplyUtil::readEnum( reader, SampleOnlineResult::Count, result ) );
-    SW_EXPECT_TRUE( result == SampleOnlineResult::NotSignedIn );
-
-    BitReader empty( nullptr, 0 );
-    SW_EXPECT_FALSE( OnlineReplyUtil::readEnum( empty, SampleOnlineResult::Count, result ) );
+    using Balance      = OnlineMessageTypes<LedgerBalance>;
+    using Attachment   = OnlineMessageTypes<ServiceMailAttachment>;
+    using Both         = OnlineMessageTypes<LedgerBalance, ServiceMailAttachment>;
+    using BothReversed = OnlineMessageTypes<ServiceMailAttachment, LedgerBalance>;
+    SW_EXPECT_TRUE( Balance::computeSchemaHash() == HashUtil::combine( 0, FixedLayout::getSchemaHash<LedgerBalance>() ) );
+    SW_EXPECT_TRUE( Balance::computeSchemaHash() != Attachment::computeSchemaHash() ); // 필드가 같아도 타입 이름이 정규 문자열에 들어간다
+    SW_EXPECT_TRUE( Both::computeSchemaHash() != BothReversed::computeSchemaHash() );
+    SW_EXPECT_TRUE( OnlineMessageTypes<>::computeSchemaHash() == 0 );
+    SW_EXPECT_TRUE( Both::kContains<LedgerBalance> );
+    SW_EXPECT_FALSE( Both::kContains<AccountIdentity> );
+    SW_EXPECT_TRUE( OnlineProtocolRegistry::computeSchemaHash() == OnlineProtocolRegistry::computeSchemaHash() );
 }

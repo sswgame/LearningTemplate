@@ -4,6 +4,8 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
@@ -14,6 +16,7 @@
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Shared/AdminProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -226,10 +229,11 @@ SW_TEST_CASE( AdminServiceTest, LookupShowsBalancesSanctionHistoryAndAudit )
     SW_EXPECT_EQUAL( reply._listAudit[0]._after, string( "cur.gold=40" ) );
 
     BitWriter writer; // 와이어 왕복 — 운영 도구가 받는 그대로
-    AdminProtocol::writeReply( writer, reply );
-    BitReader  reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
+    SW_ASSERT_TRUE( AdminProtocol::MessageTypes::write( writer, reply ) );
+    BitReader  reader( writer.getBytes().data(), writer.getByteCount() );
     AdminReply decoded;
-    SW_ASSERT_TRUE( AdminProtocol::readReply( reader, decoded ) );
+    SW_ASSERT_TRUE( AdminProtocol::MessageTypes::read( reader, decoded ) == FixedReadResult::Ok );
+    SW_EXPECT_TRUE( FixedLayout::equals( decoded, reply ) );
     SW_EXPECT_EQUAL( decoded._listAudit.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( decoded._listJournal[0]._listChange[0]._amount, int64( 40 ) );
 }
@@ -352,4 +356,47 @@ SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
     service.shutdown();
     store.shutdown();
     (void)store.pollCompletions();
+}
+
+/**
+ * @brief [AdminProtocolTest] GM 메시지는 상한까지 왕복하고, 목록 개수 범위와 누구도 가질 수 없는 등급은 쓰지 않는다
+ */
+SW_TEST_CASE( AdminProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
+{
+    using Messages = AdminProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    AdminRequest request;
+    request._listAttachment.assign( 8, ServiceMailAttachment{ "cur.gold", 10 } );
+    request._listAccountID.assign( 16, AccountID( 0x201 ) );
+    request._memo         = string( 1024, 'm' );
+    request._body         = string( 2048, 'b' );
+    request._maxCount     = 100;
+    request._sanctionKind = ServiceSanctionKind::Ban;
+    request._role         = AdminRole::Super;
+    request._bRefund      = SW_TRUE;
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( request ) );
+    AdminReply reply;
+    reply._sanction._arrUntilMs[2] = ServiceSanctionState::kPermanentMs;
+    reply._sanction._reasonCode    = "sanction.suspended";
+    reply._identity                = AccountIdentity{ string( 32, 'i' ), 5, SW_TRUE };
+    reply._listAudit.assign( 100, ServiceAuditEntry{ "gm.1", "admin.grant", "acct.2/", string( 2048, 'b' ), "", "", 7 } );
+    reply._bRevokeSessions = SW_TRUE; // 서버 안에서만 쓰는 값은 와이어에 싣지 않는다
+    BitWriter writer;
+    SW_ASSERT_TRUE( Messages::write( writer, reply ) );
+    BitReader  reader( writer.getBytes().data(), writer.getByteCount() );
+    AdminReply decoded;
+    SW_ASSERT_TRUE( Messages::read( reader, decoded ) == FixedReadResult::Ok );
+    SW_EXPECT_TRUE( FixedLayout::equals( decoded, reply ) );
+    SW_EXPECT_TRUE( decoded._bRevokeSessions == SW_FALSE );
+    SW_EXPECT_TRUE( decoded._sanction._arrUntilMs[2] == ServiceSanctionState::kPermanentMs );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( request ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        AdminRequest zeroCount;
+        zeroCount._maxCount = 0;
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( zeroCount ) );
+        AdminRequest nobodyRole;
+        nobodyRole._role = AdminRole::Count;
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( nobodyRole ) );
+    }
 }

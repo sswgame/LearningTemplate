@@ -32,6 +32,7 @@ namespace sw
 namespace sw
 {
     /** @brief 이벤트의 반복 방식입니다. 와이어 값입니다. */
+    ENUM( Count = Count )
     enum class LiveEventRecurrence : uint8
     {
         Once = 0,
@@ -43,44 +44,73 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이벤트 매개변수 한 줄입니다. 값이 '@' 로 시작하면 원격 설정 키이며 서버가 해석해 줍니다. */
+    /** @brief 이벤트 매개변수 한 줄입니다. 값이 '@' 로 시작하면 원격 설정 키이며 서버가 해석해 줍니다. 상한은 `LiveOpsLimit` 와 같은 값입니다. */
+    REFLECT()
     struct LiveEventParameter
     {
-        string _key{};   ///< `[0-9a-z_.]` 형식이며 32바이트 이하이다
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 32 )
+        string _key{}; ///< `[0-9a-z_.]` 형식이며 32바이트 이하이다
+        PROPERTY( MaxCount = 128 )
         string _value{}; ///< 128바이트 이하이다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 이벤트 정의 하나입니다. 운영이 쓰며 영속합니다. */
+    /**
+     * @brief 이벤트 정의 하나입니다. 운영이 쓰며 영속합니다.
+     * @details 저장소 레코드(`LiveOpsProtocol::encodeEvent`)는 자기 기술형(A)이라 이 `PROPERTY` 목록이 레코드 형식입니다. 와이어에는 싣지 않습니다.
+     *          지역 목록(`vector<string>`)이 있어 고정 배치형 코덱은 없습니다.
+     */
+    REFLECT()
     struct LiveEventDefinition
     {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 16 )
         vector<LiveEventParameter> _listParameter{}; ///< 16개 이하이다
-        vector<string>             _listRegion{};    ///< 비면 모든 지역에 열린다
-        string                     _eventID{};       ///< `[0-9a-z_.]` 형식이며 48바이트 이하이다. 저장소 키로 쓴다
-        string                     _kind{};          ///< 게임이 해석하는 종류 코드이다(예: "xp_boost", "shop_sale")
-        int64                      _startMs{ 0 };
-        int64                      _endMs{ 0 };             ///< 구간은 반열림 [시작, 끝)이다
-        int64                      _activeDurationMs{ 0 };  ///< 반복 회차 하나의 길이이다. Once 는 쓰지 않는다
-        int32                      _activeMinuteOfDay{ 0 }; ///< 반복 회차의 시작 시각이다. UTC 기준 0~1439분이다
-        int32                      _activeDayOfWeek{ 0 };   ///< Weekly 일 때의 요일이다. 0이 월요일이다
-        int32                      _rolloutBasisPoints{ 10000 };
-        uint32                     _minBuildVersion{ 0 };
-        LiveEventRecurrence        _recurrence{ LiveEventRecurrence::Once };
-        uint8                      _bClientVisible{ SW_TRUE };
+        PROPERTY()
+        vector<string> _listRegion{}; ///< 비면 모든 지역에 열린다. 16개 이하이며 이름은 `ServerRecord::kMaxNameSize` 바이트 이하이다
+        PROPERTY( MaxCount = 48 )
+        string _eventID{}; ///< `[0-9a-z_.]` 형식이며 48바이트 이하이다. 저장소 키로 쓴다
+        PROPERTY( MaxCount = 32 )
+        string _kind{}; ///< 게임이 해석하는 종류 코드이다(예: "xp_boost", "shop_sale")
+        PROPERTY()
+        int64 _startMs{ 0 };
+        PROPERTY()
+        int64 _endMs{ 0 }; ///< 구간은 반열림 [시작, 끝)이다
+        PROPERTY()
+        int64 _activeDurationMs{ 0 }; ///< 반복 회차 하나의 길이이다. Once 는 쓰지 않는다
+        PROPERTY()
+        int32 _activeMinuteOfDay{ 0 }; ///< 반복 회차의 시작 시각이다. UTC 기준 0~1439분이다
+        PROPERTY()
+        int32 _activeDayOfWeek{ 0 }; ///< Weekly 일 때의 요일이다. 0이 월요일이다
+        PROPERTY()
+        int32 _rolloutBasisPoints{ 10000 };
+        PROPERTY()
+        uint32 _minBuildVersion{ 0 };
+        PROPERTY()
+        LiveEventRecurrence _recurrence{ LiveEventRecurrence::Once };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bClientVisible{ SW_TRUE };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 클라이언트가 받는 열린 이벤트입니다. 매개변수는 원격 설정까지 해석한 값입니다. */
+    /** @brief 클라이언트가 받는 열린 이벤트입니다. 매개변수는 원격 설정까지 해석한 값입니다. 응답(`LiveOpsReply`)에 고정 배치형으로 실립니다. */
+    REFLECT()
     struct LiveEventState
     {
-        vector<LiveEventParameter> _listParameter{};
-        string                     _eventID{};
-        string                     _kind{};
-        int64                      _windowEndMs{ 0 }; ///< 이번 회차(또는 기간)의 끝이다. 화면의 "남은 시간" 에 쓴다
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 16 )
+        vector<LiveEventParameter> _listParameter{}; ///< 상한은 `LiveOpsLimit::kMaxParameterCount` 와 같다
+        PROPERTY( MaxCount = 48 )
+        string _eventID{}; ///< 상한은 `LiveOpsLimit::kMaxIDSize` 와 같다
+        PROPERTY( MaxCount = 32 )
+        string _kind{}; ///< 상한은 `LiveOpsLimit::kMaxKindSize` 와 같다
+        PROPERTY()
+        int64 _windowEndMs{ 0 }; ///< 이번 회차(또는 기간)의 끝이다. 화면의 "남은 시간" 에 쓴다
     };
 } // namespace sw
 
@@ -101,13 +131,22 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 기기 등록 하나입니다. 클라이언트가 OS 에서 받은 토큰을 담습니다. */
+    /**
+     * @brief 기기 등록 하나입니다. 클라이언트가 OS 에서 받은 토큰을 담습니다.
+     * @details 등록 요청 본문(B)과 저장소의 기기 레코드(A, `LiveOpsProtocol::encodeDevice`)가 같은 선언을 씁니다. 상한은 `PushLimit` 와 같은 값입니다.
+     */
+    REFLECT()
     struct PushDeviceRegistration
     {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 16 )
         string _providerID{}; ///< `[0-9a-z_]` 형식이며 16바이트 이하이다(예: "fake", "apns", "fcm")
-        string _token{};      ///< 256바이트 이하이다. 값으로만 두며 저장소 키는 토큰 해시를 쓴다
-        string _locale{};     ///< 언어 코드이다(예: "ko-KR")
-        int64  _registeredMs{ 0 };
+        PROPERTY( MaxCount = 256 )
+        string _token{}; ///< 256바이트 이하이다. 값으로만 두며 저장소 키는 토큰 해시를 쓴다
+        PROPERTY( MaxCount = 16 )
+        string _locale{}; ///< 언어 코드이다(예: "ko-KR")
+        PROPERTY()
+        int64 _registeredMs{ 0 }; ///< 서버가 등록 시각으로 덮어쓴다
     };
 } // namespace sw
 

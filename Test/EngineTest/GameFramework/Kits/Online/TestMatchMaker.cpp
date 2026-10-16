@@ -39,7 +39,7 @@ namespace
     {
         for ( int32 team = 0; team < static_cast<int32>( match._listTeam.size() ); ++team )
         {
-            for ( const MatchMember& member : match._listTeam[static_cast<size_t>( team )] )
+            for ( const MatchMember& member : match._listTeam[static_cast<size_t>( team )]._listMember )
             {
                 if ( member._accountID == accountID )
                     return team;
@@ -62,10 +62,10 @@ SW_TEST_CASE( MatchMakerTest, FourSolosMakeABalancedTwoVersusTwo )
     maker.process( 0, listMatch, listTimedOut );
     SW_ASSERT_EQUAL( listMatch.size(), size_t( 1 ) );
     SW_ASSERT_EQUAL( listMatch[0]._listTeam.size(), size_t( 2 ) );
-    SW_ASSERT_EQUAL( listMatch[0]._listTeam[0].size(), size_t( 2 ) );
-    SW_ASSERT_EQUAL( listMatch[0]._listTeam[1].size(), size_t( 2 ) );
-    const int32 teamA = listMatch[0]._listTeam[0][0]._rating + listMatch[0]._listTeam[0][1]._rating;
-    const int32 teamB = listMatch[0]._listTeam[1][0]._rating + listMatch[0]._listTeam[1][1]._rating;
+    SW_ASSERT_EQUAL( listMatch[0]._listTeam[0]._listMember.size(), size_t( 2 ) );
+    SW_ASSERT_EQUAL( listMatch[0]._listTeam[1]._listMember.size(), size_t( 2 ) );
+    const int32 teamA = listMatch[0]._listTeam[0]._listMember[0]._rating + listMatch[0]._listTeam[0]._listMember[1]._rating;
+    const int32 teamB = listMatch[0]._listTeam[1]._listMember[0]._rating + listMatch[0]._listTeam[1]._listMember[1]._rating;
     SW_EXPECT_TRUE( std::abs( teamA - teamB ) <= 40 );
     SW_EXPECT_EQUAL( listMatch[0]._matchID >> 32, uint64( 7 ) );
     SW_EXPECT_EQUAL( listMatch[0]._averageRating, 1500 );
@@ -178,8 +178,8 @@ SW_TEST_CASE( MatchMakerTest, TimeoutAndDeterminism )
     for ( size_t index = 0; index < firstRun.size(); ++index )
     {
         SW_EXPECT_EQUAL( firstRun[index]._matchID, secondRun[index]._matchID );
-        SW_EXPECT_EQUAL( firstRun[index]._listTeam[0][0]._accountID, secondRun[index]._listTeam[0][0]._accountID );
-        SW_EXPECT_EQUAL( firstRun[index]._listTeam[1][1]._accountID, secondRun[index]._listTeam[1][1]._accountID );
+        SW_EXPECT_EQUAL( firstRun[index]._listTeam[0]._listMember[0]._accountID, secondRun[index]._listTeam[0]._listMember[0]._accountID );
+        SW_EXPECT_EQUAL( firstRun[index]._listTeam[1]._listMember[1]._accountID, secondRun[index]._listTeam[1]._listMember[1]._accountID );
     }
 
     MatchMaker maker;
