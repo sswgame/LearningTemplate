@@ -9,6 +9,7 @@
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
+#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
@@ -235,6 +236,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<Scenario name="t" fixedDelta="0"/>)",
         R"(<Scenario name="t" input="sometimes"/>)",
         R"(<Scenario name="t" timeOut="3"/>)",
+        R"(<Scenario name="t" editor="yes"/>)",
         R"(<Scenario name="t"><Tap slot="Key.E"/></Scenario>)",
         R"(<Scenario name="t"><At><Pass/></At></Scenario>)",
         R"(<Scenario><At frame="0"><Pass/></At></Scenario>)",
@@ -254,6 +256,22 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( "no window to place the pointer" ) != sw::string::npos, runner.getFinishReason().c_str() );
     }
     input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 루트 editor 속성은 에디터 실행이 필요한 시나리오를 표시한다 — 적지 않으면 false, true · false 만 받는다
+ * @details AppScenarioTest 가 이 값으로 게임 팩 시나리오에 -EnableEditor 를 붙인다. 틀린 값("yes")은 위 읽기 오류 목록이 본다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, EditorRootAttributeMarksEditorScenarios )
+{
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_FALSE( scenario.requiresEditor() );
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" editor="true"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_TRUE( scenario.requiresEditor() );
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" editor="false"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_FALSE( scenario.requiresEditor() );
 }
 
 /**

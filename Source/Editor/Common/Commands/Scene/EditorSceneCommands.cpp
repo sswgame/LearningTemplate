@@ -158,10 +158,10 @@ namespace sw::editor
         EditorTransaction::beginTransaction( "Duplicate GameObject" );
         for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
         {
-            const string prefabPath{ ( pContext != nullptr ) ? pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( listSource[copyIndex]->getObjectID() )
+            const string prefabPath{ ( pContext != nullptr ) ? pContext->getSubsystem<EditorWorkspace>().getPlacedPrefabPath( listSource[copyIndex]->getObjectID() )
                                                              : string_view{} };
             if ( prefabPath.empty() == false && pContext != nullptr )
-                pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( listCopy[copyIndex]->getObjectID(), prefabPath );
+                pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( listCopy[copyIndex]->getObjectID(), prefabPath );
             EditorTransaction::recordCreation( listCopy[copyIndex], "Duplicate GameObject" );
         }
         EditorTransaction::endTransaction();
@@ -647,7 +647,7 @@ namespace sw::editor
                 if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, copied._stateBytes ) == false )
                     return 0;
                 if ( pContext != nullptr )
-                    copied._prefabPath = pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( pObj->getObjectID() );
+                    copied._prefabPath = pContext->getSubsystem<EditorWorkspace>().getPlacedPrefabPath( pObj->getObjectID() );
                 listCopied.push_back( std::move( copied ) );
             }
             ++rootCount;
@@ -714,7 +714,7 @@ namespace sw::editor
                 outListCreated.push_back( pCopy );
             }
             if ( listCopied[copyIndex]._prefabPath.empty() == false && pContext != nullptr )
-                pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( pCopy->getObjectID(), listCopied[copyIndex]._prefabPath );
+                pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( pCopy->getObjectID(), listCopied[copyIndex]._prefabPath );
             EditorTransaction::recordCreation( pCopy, label );
         }
         EditorTransaction::endTransaction();

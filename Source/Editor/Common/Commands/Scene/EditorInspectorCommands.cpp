@@ -70,14 +70,12 @@ namespace sw::editor
         vector<GameObject*> listInstance;
         if ( pManager != nullptr && oldBaseState.empty() == false )
         {
-            const PrefabInstanceRegistry& nestedParts = pManager->getSubsystem<PrefabInstanceRegistry>();
             pManager->forEachGameObject( [&]( GameObject* pOther )
             {
                 const bool bNotOtherLiveObject = pOther == nullptr || pOther == pObj || pOther->isPendingDestroy();
                 if ( bNotOtherLiveObject )
                     return;
-                const PrefabNestedPart* pPart       = nestedParts.isAttachedNestedPart( pOther ) ? nestedParts.findNestedPart( pOther->getObjectID() ) : nullptr;
-                const string_view       otherPrefab = pPart != nullptr ? string_view{ pPart->_prefabPath } : workspace.getGameObjectPrefabPath( pOther->getObjectID() );
+                const string_view otherPrefab = workspace.findPrefabPath( pOther );
                 if ( otherPrefab.empty() == false && FileUtil::pathsEqualNormalized( otherPrefab, prefabPath ) )
                     listInstance.push_back( pOther );
             } );
@@ -148,8 +146,15 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( pObj->getObjectID(), "" );
-        pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
+        EditorWorkspace& workspace = pContext->getSubsystem<EditorWorkspace>();
+        if ( workspace.isNestedPrefabPart( pObj ) )
+        {
+            // 부품은 바깥 프리팹 인스턴스가 다시 스폰한다 — 끊으면 다음 로드에 같은 부품이 하나 더 생긴다(유니티도 중첩 자식만 따로 풀지 못한다).
+            SW_LOG_WARNING( "'%#' is a nested prefab part - unlink its outer prefab instance instead", pObj->getName().c_str() );
+            return;
+        }
+        workspace.setPlacedPrefabPath( pObj->getObjectID(), "" );
+        workspace.markSceneDirty();
     }
 
     uint32 EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )
@@ -174,11 +179,11 @@ namespace sw::editor
             {
                 if ( pChild == nullptr || pChild->isPendingDestroy() )
                     continue;
-                const string childPrefab{ workspace.getGameObjectPrefabPath( pChild->getObjectID() ) };
+                const string childPrefab{ workspace.getPlacedPrefabPath( pChild->getObjectID() ) };
                 if ( childPrefab.empty() )
                     continue; // 프리팹 인스턴스가 아니다 — 프리팹 본문에 들지 않는다
                 registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab );
-                workspace.setGameObjectPrefabPath( pChild->getObjectID(), "" );
+                workspace.setPlacedPrefabPath( pChild->getObjectID(), "" );
                 listPending.push_back( pChild );
                 ++adoptedCount;
             }

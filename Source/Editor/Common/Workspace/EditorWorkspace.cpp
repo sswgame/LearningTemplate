@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -203,7 +204,7 @@ namespace sw::editor
         _pendingSceneActionPath.clear();
     }
 
-    void EditorWorkspace::setGameObjectPrefabPath( uint64 objectID, string_view prefabPath )
+    void EditorWorkspace::setPlacedPrefabPath( uint64 objectID, string_view prefabPath )
     {
         Scene* pScene = editor::getActiveScene();
         if ( objectID == 0 || pScene == nullptr )
@@ -211,12 +212,27 @@ namespace sw::editor
         pScene->setEntityPrefabPath( objectID, prefabPath );
     }
 
-    string_view EditorWorkspace::getGameObjectPrefabPath( uint64 objectID ) const
+    string_view EditorWorkspace::getPlacedPrefabPath( uint64 objectID ) const
     {
         const Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr )
             return {};
         return pScene->getEntityPrefabPath( objectID );
+    }
+
+    string_view EditorWorkspace::findPrefabPath( const GameObject* pObject ) const
+    {
+        if ( pObject == nullptr )
+            return {};
+        if ( isNestedPrefabPart( pObject ) )
+            return pObject->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( pObject->getObjectID() )->_prefabPath; // 붙은 부품이면 기록이 있다
+        return getPlacedPrefabPath( pObject->getObjectID() );
+    }
+
+    bool EditorWorkspace::isNestedPrefabPart( const GameObject* pObject ) const
+    {
+        GameObjectManager* pManager = pObject != nullptr ? pObject->getManager() : nullptr;
+        return pManager != nullptr && pManager->getSubsystem<PrefabInstanceRegistry>().isAttachedNestedPart( pObject );
     }
 
     void EditorWorkspace::setCameraBookmark( uint32 slot, const CameraBookmark& bookmark )
