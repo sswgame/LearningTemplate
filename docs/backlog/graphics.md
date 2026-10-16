@@ -3,10 +3,12 @@
 렌더러, RHI 백엔드, 셰이더, 머티리얼, 환경 렌더링의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
 - `D2-1` [기능] **2D 의 남은 것** — 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일.
+  넷 모두 빛 컴포넌트(`Source/Engine/Object/Component/2D/Light2DComponent`)의 데이터부터 바꿔야 해 렌더러만 맡은 작업자는 시작하지 못했다(2026-10-17).
 
 - `D2-2` [기능] **방향광 그림자의 남은 것** — 그림자 아틀라스(캐스케이드 · 뷰별 볼륨 · 점광 · 스폿 · 경계 구 맞춤)는 들어갔다(Renderer README "다중 뷰").
-  (1) 그림자 컬링 상자가 하나(방향광 볼륨 + 로컬 경계 구)라 캐스케이드마다 따로 거르지 않는다.
-  (3) 바이어스가 텍셀 단위로 줄어 여섯 게임의 여드름을 아직 눈으로 안 봤다 — 경계 구 맞춤 · envshowcase CSM 은 새 빌드로 게임별 스크린샷 전후를 다시 찍는다.
+  (1) 그림자 컬링 상자가 하나(방향광 볼륨 + 로컬 경계 구)라 캐스케이드마다 따로 거르지 않는다 — 뷰마다 그림자 컬링 칸이 하나(`_shadowCullSlot`)라 타일마다 칸을 늘리는
+  GPU 컬링 구조 변경이고, 이득은 그림자 패스 드로우 수를 재 본 뒤에 판단한다(`GPU.Shadow`, 측정 전).
+  (3) 바이어스가 텍셀 단위로 줄어 여섯 게임의 여드름을 아직 눈으로 안 봤다 — 경계 구 맞춤 · envshowcase CSM 은 새 빌드로 게임별 스크린샷 전후를 다시 찍는다(게임마다 `SW_ACTIVE_GAME` 빌드가 따로 필요해 통합 담당의 게임별 빌드 때).
 
 - `D2-5` [기능] **환경(지형 · 식생 · 물, `Engine/Environment`)의 남은 것** — 들어간 것과 계약(지형 충돌 · 부력 포함)은 `Source/Engine/Environment` 각 헤더 주석.
   (2) 강 경로가 점 목록이다 — 스플라인 컴포넌트가 Engine 에 들어오면 그것을 경로로 받는다. (3) 하늘 · 시간 · 높이 안개 + 물속 안개 패스(값은
@@ -24,14 +26,15 @@
   UV 스크롤 · 텍스처 칸 늘리기는 VRM 머티리얼 임포터(`Source/Editor`)의 매핑과 같이 바꿔야 해 그래픽 작업자 혼자 끝낼 수 없다.
 
 - `D2-7` [기능] **VRM 임포트의 남은 것** — humanoid 본 표 · 표정 · 스프링 본 · 1인칭은 `<이름>.avatar.json` 으로 나오지만 데이터뿐이다. 런타임이 읽는 타입이 없다: 표정 → 모프 가중치, 스프링 본 시뮬레이션,
-  1인칭 메시 숨김(스키마 테스트는 JSON 객체와 `_version` · `_mapHumanBone` 만 본다). 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2) — 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다.
+  1인칭 메시 숨김(스키마 테스트는 JSON 객체와 `_version` · `_mapHumanBone` 만 본다). 런타임 타입은 `Engine/Character` · `Engine/Animation` 에, BC7 재임포트는 Editor 임포터에 있어 그래픽 작업자의 파일 밖이다. 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2) — 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다.
   VRoid 텍스처는 BC3 이다(Debug DirectXTex 의 BC7 은 512×256 한 장도 10 분이 넘는다 — Release 로 BC7 임포트를 다시 할 것). `ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments` 는 Debug 에서 혼자 31 초라 EditorTest 한도를 30 → 120 초로 올려 두었다 — 임포트를 줄이면 되돌린다.
 
 - `D2-9` [기능] **반해상도 블룸의 Release 측정** — `deferredpipeline.xml` 블룸의 밝은 부분을 반해상도 패스(`BloomDownsample`)로 나눴다. p50 · p99 를 `GPU.PostBloom`(전) 대
   `GPU.BloomDownsample` + `GPU.PostBloom`(후)로 잰다. 지면 되돌린다.
 
 - `D2-10` [기능] **뷰포트 보기 모드의 남은 것**(2026-10-14, `RenderViewMode` — 언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다). `LightingOnly` 는 들어갔다 —
-  `toon` · `sprite2dlit` 포워드 경로까지 회색으로 바꾸지만 4 백엔드 그림(`RenderPassGPUTest.ViewModesProduceDistinctPictures`)과 Shipping 베이크는 아직 돌려 보지 않았다.
+  `toon` · `sprite2dlit` 포워드 경로까지 회색으로 바꾸고 4 백엔드 그림(`RenderPassGPUTest.ViewModesProduceDistinctPictures`, 포워드 · 디퍼드)은 2026-10-17 Debug 로 통과했다.
+  Shipping 베이크(쿠킹한 LightingOnly 변형으로 Shipping hostgpu)는 Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
   안 한 것: Roughness / Metallic 버퍼 보기(G버퍼에 그 칸이 없다 — 칸을 늘리거나 패스를 새로 만들어야 한다), Shaded Wireframe(패스가 둘 필요), Light Complexity · Mipmaps(그리는 경로가 새로 필요).
 
 - `E-3` [관찰] **Vulkan(FIFO) + VSync 에서 가끔 한 프레임이 여러 주기를 놓친다**(Release 큐브 100, 165 Hz — 조사 결과는 [검증과 측정](../08_Verification.md) 2절 "Vulkan VSync 프레임 놓침",
