@@ -261,6 +261,17 @@ class CheckTest(AssetValidationFixture):
         self.assertEqual(2, len(messages), messages)  # 2 번 엔티티(다른 프리팹의 guid) · b 의 sourcePath
         stale = self.findMessages({**rule, "stale_path_only": True})
         self.assertEqual(1, len(stale), stale)  # 3 번 엔티티(guid 로는 열리지만 경로가 낡았다)
+        # 프리팹 안의 중첩 인스턴스도 같은 규칙이다(씬 엔티티와 같은 두 속성).
+        self.put("Resource/game/p/prefabs/outer.prefab.xml",
+                 f'<Prefab><GameObject/><PrefabInstance name="Ok" prefab="game/p/prefabs/a.prefab.xml" prefabGuid="{guidA}"/>'
+                 f'<PrefabInstance name="Wrong" prefab="game/p/prefabs/a.prefab.xml" prefabGuid="{guidB}">'
+                 f'<PrefabInstance name="Moved" prefab="game/p/prefabs/moved/b.prefab.xml" prefabGuid="{guidB}"/></PrefabInstance></Prefab>')
+        nested = self.findMessages({**rule, "include_patterns": ["*.prefab.xml"]})
+        self.assertEqual(1, len(nested), nested)
+        self.assertIn("PrefabInstance 'Wrong'", nested[0])
+        nestedStale = self.findMessages({**rule, "include_patterns": ["*.prefab.xml"], "stale_path_only": True})
+        self.assertEqual(1, len(nestedStale), nestedStale)
+        self.assertIn("PrefabInstance 'Moved'", nestedStale[0])
 
     def testCatalogReference(self) -> None:
         self.put("Resource/game/p/data/units.xml",

@@ -23,7 +23,7 @@
   material_keywords    정적 스위치 키워드가 어느 셰이더 소스에라도 나오는가(안 나오면 죽은 퍼뮤테이션)
   component_type       씬 · 프리팹 컴포넌트가 소스의 `REFLECT` 타입인가(일곱 게임 팩 전부)
   entity_id            씬 엔티티 id 가 0 이 아니고 겹치지 않으며 `_attachOwnerID` 가 있는 엔티티를 가리키는가
-  prefab_guid          프리팹 인스턴스의 `prefabGuid` 가 그 프리팹 `.meta` 의 guid 인가 · `.meta` 의 sourcePath · guid 중복
+  prefab_guid          프리팹 인스턴스(씬 엔티티 · 프리팹 안 중첩 `<PrefabInstance>`)의 `prefabGuid` 가 그 프리팹 `.meta` 의 guid 인가 · `.meta` 의 sourcePath · guid 중복
                        (`stale_path_only` 면 guid 로는 열리지만 경로가 낡은 인스턴스만 알린다)
   component_reference  씬 · 프리팹 컴포넌트(기반 타입과 그 파생)의 이름 속성이 다른 표의 id 인가 — 물리 레이어 · 재질, 정렬 레이어,
                        내비 영역, 입력 액션, 카탈로그 id. 표는 리소스 패턴(`{pack}` = 이 파일의 팩)이나 같은 원소의 카탈로그 경로 속성이 고른다.
@@ -619,23 +619,24 @@ def checkPrefabGuidInternal(rule: Rule, relPath: str, context: ValidationContext
     root = context.readXml(relPath)
     if root is None:
         return listMessage
-    for entity in root.iter("entity"):
-        prefab, guid = entity.get("prefab"), entity.get("prefabGuid")
-        if not prefab:
+    # 씬의 `<entity prefab prefabGuid>` 와 프리팹 안 중첩 인스턴스 `<PrefabInstance prefab prefabGuid>` 는 같은 두 속성을 쓴다 — 한 순회로 본다.
+    for element in root.iter():
+        prefab, guid = element.get("prefab"), element.get("prefabGuid")
+        if not prefab or element.tag not in ("entity", "PrefabInstance"):
             continue
+        label = f"entity {element.get('id')}" if element.tag == "entity" else f"PrefabInstance '{element.get('name') or prefab}'"
         owner = next((path for path, otherGuid in mapGuid.items() if otherGuid == guid), None) if guid else None
         if bStalePathOnly:
             # guid 가 원본이라 낡은 경로로도 열린다 — 다시 저장하면 경로가 고쳐진다는 알림이다.
             if owner is not None and not context.hasResource(prefab):
-                listMessage.append(f"entity {entity.get('id')} names '{prefab}' but its guid resolves to '{owner}' (resave to update the path)")
+                listMessage.append(f"{label} names '{prefab}' but its guid resolves to '{owner}' (resave to update the path)")
             continue
         expected = mapGuid.get(prefab.lower())
         if guid and expected is None and owner is None:
-            listMessage.append(f"entity {entity.get('id')} uses prefab '{prefab}' and guid {guid}, and neither is known")
+            listMessage.append(f"{label} uses prefab '{prefab}' and guid {guid}, and neither is known")
         elif guid and expected is not None and expected != guid:
-            owner = next((path for path, otherGuid in mapGuid.items() if otherGuid == guid), None)
             hint = f" (that guid belongs to {owner})" if owner else ""
-            listMessage.append(f"entity {entity.get('id')} prefabGuid {guid} does not match {prefab} ({expected}){hint}")
+            listMessage.append(f"{label} prefabGuid {guid} does not match {prefab} ({expected}){hint}")
     return listMessage
 
 

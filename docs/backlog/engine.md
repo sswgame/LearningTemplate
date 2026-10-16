@@ -71,7 +71,7 @@
 
 - `D1-5` [기능] **중첩 프리팹 뒤에 남은 것**(형식 · 스폰 · 순환 오류 · 쿠킹 펼치기는 Object README "중첩 프리팹"). 씬에서 부품을 직접 고친 값은 저장되지 않는다 —
   씬 인스턴스에 부품 오버라이드를 싣는 길(유니티 nested override). 에디터 쪽 연결(부품 고르기 · 연결 끊기 · 바깥 프리팹에 적용). `PrefabInstanceRegistry` 의 기록은 오브젝트가 없어져도
-  씬을 비울 때까지 남는다(되돌리기 · 플레이 종료 복원 때문) — 오래 도는 씬의 정리 시점을 정한다. `Scripts/common/AssetValidation.py` 의 `prefab_guid` 규칙은 씬의 `entity` 만 보고 프리팹 안 `<PrefabInstance prefabGuid>` 는 보지 않는다.
+  씬을 비울 때까지 남는다(되돌리기 · 플레이 종료 복원 때문) — 오래 도는 씬의 정리 시점을 정한다.
 
 - `D8-1` [기능] **바깥 빌드(터미널 · IDE)의 리로드 트리거는 여전히 mtime 디바운스뿐이다** — 에디터가 시킨 빌드는 성공 뒤에만 올린다(`LiveReloadManager::notifyBuildStarted/Finished`).
   바깥 빌드도 "빌드 성공" 신호(ninja 종료 · 스탬프 파일)를 받으려면 빌드 쪽 협조가 필요하다.

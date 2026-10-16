@@ -154,7 +154,7 @@
       "name": "prefab-guids",
       "check": "prefab_guid",
       "severity": "error",
-      "include_patterns": ["*.scene.xml", "*.meta"],
+      "include_patterns": ["*.scene.xml", "*.prefab.xml", "*.meta"],
       "stale_path_only": false
     },
     {
@@ -162,7 +162,7 @@
       "check": "prefab_guid",
       "description": "The guid wins at load time; a stale path still opens but misleads readers.",
       "severity": "info",
-      "include_patterns": ["*.scene.xml"],
+      "include_patterns": ["*.scene.xml", "*.prefab.xml"],
       "stale_path_only": true
     },
     {
