@@ -445,6 +445,14 @@ namespace sw
   two `.cpp` files with the same bare name collide in a unity build. Put it inside the TU's `XxxInternal`
   struct as `static constexpr`, or give it a name no other `.cpp` uses. Enforced by `CheckCodeConventions.py`
   (`Naming/DuplicateAnonymousConstant`, full-scan only); constants inside a struct or a function are not affected.
+- Gather a `.cpp`'s translation-unit-only helpers by **how many functions they have**:
+  - **No functions** (constants only): no struct, the constants stay in the anonymous namespace.
+  - **One function** (no constants, nested types, or other members): no struct either — a free function directly in the anonymous namespace.
+    Give it a name unique to this file, because a bare function name has no struct to hide behind and two `.cpp` files with the same name collide in a unity build.
+  - **Two or more functions, or a function together with constants**: exactly **one** `XxxInternal` struct per file, never several.
+  Enforced by `CheckCodeConventions.py` (`Naming/MultipleInternalHelper`, `Naming/LoneFunctionInternalHelper`; `Naming/DuplicateAnonymousFunction`, full-scan only,
+  `Source/` only). Files that already broke the first two when the rules were added are listed in `Scripts/lint/rules/CheckCodeConventions.toml`
+  (`internalHelperBaseline`); delete a file's line when you fix it, and do not add new files to the list.
 
 ### One anonymous namespace per file, at the top of its scope
 

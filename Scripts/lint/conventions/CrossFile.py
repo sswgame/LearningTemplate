@@ -15,6 +15,7 @@ from common import kCppAllExtensions, normalizePath
 from .Model import ConventionViolation
 from .Patterns import _kAnonHelperStructRe, _kBareConstantDeclRe, _kCommentStripRe, _kConstructorDefinitionLineRe, _kStringLiteralStripRe
 from .FileScan import checkFileConventionsInternal, readSourceTextInternal, scopedTextCache
+from .InternalHelperScan import findBareAnonymousFunctionsInternal, readAnonymousFunctionBaselineInternal
 
 
 # --- 5. 공개 API 및 진입점 ---------------------------------------------------
@@ -122,6 +123,36 @@ def reportDuplicateAnonymousConstantsInternal(listFacts: list[CrossFileFacts]) -
         )
 
     return reportDuplicateSitesInternal(mapNameToSite, makeViolationInternal)
+
+
+def reportDuplicateAnonymousFunctionsInternal(listFacts: list[CrossFileFacts]) -> list[ConventionViolation]:
+    """
+    여러 .cpp 가 익명 네임스페이스 바로 안에 같은 이름의 자유 함수를 두는지 검사합니다 (유니티 빌드 재정의 충돌 예방).
+
+    **게이트의 틈이다.** `Naming/LoneFunctionInternalHelper` 가 함수 하나짜리 `XxxInternal` 구조체를 익명 네임스페이스의 자유 함수로 풀라고 시키는데,
+    구조체 이름은 `Naming/DuplicateInternalHelper` 가 파일마다 유일하게 지키게 했지만 자유 함수는 이름을 가리는 층이 없다. 그래서 풀린 함수끼리 이름이 겹치면
+    유니티 빌드(`CI-*`)가 .cpp 를 한 TU 로 묶는 순간 재정의로 깨진다. 형식(구조체 이름)으로 막을 수 없는 자리라 이름 표를 모아 보는 게이트로 막는다.
+    파일 짝이 필요해 전체 스캔에서만 돈다. 시그니처가 달라 오버로드로 공존할 수 있어도 이름이 겹치면 알린다(같은 이름은 어차피 헷갈린다).
+    """
+    mapNameToSite: dict[str, list[tuple[str, int]]] = {}
+    for facts in listFacts:
+        for functionName, lineNum in facts.listAnonymousFunctionSite:
+            mapNameToSite.setdefault(functionName, []).append((facts.relPath, lineNum))
+
+    def makeViolationInternal(functionName: str, relPath: str, lineNum: int, others: list[str]) -> ConventionViolation:
+        return ConventionViolation(
+            file_path=relPath,
+            line_number=lineNum,
+            rule_category="Naming/DuplicateAnonymousFunction",
+            message=(f"익명 네임스페이스의 함수 '{functionName}' 이 다른 .cpp 와 이름이 겹칩니다 ({', '.join(others)}). "
+                     "유니티 빌드는 .cpp 를 한 TU 로 묶으므로 재정의로 충돌합니다."),
+            snippet=functionName,
+            suggested_fix="함수 이름을 이 파일에 맞게 유일하게 바꾸세요(예: 파일 이름을 앞에 붙인다), 또는 함수가 둘 이상이면 `XxxInternal` 구조체로 모읍니다.",
+        )
+
+    # 기준선 파일은 자리로는 세되(새 파일이 기준선 파일과 겹치면 새 파일 쪽이 걸린다) 그 파일의 위반은 알리지 않는다.
+    baseline = readAnonymousFunctionBaselineInternal()
+    return [violation for violation in reportDuplicateSitesInternal(mapNameToSite, makeViolationInternal) if violation.file_path not in baseline]
 
 
 _kHeaderTypeHeadRe = re.compile(r"^(\s*)(class|struct)\s+(?:SW_\w+\s+|[A-Z]\w*_API\s+)?([A-Z]\w*)\b")
@@ -494,6 +525,7 @@ class CrossFileFacts:
     relPath: str
     listHelperSite: list[tuple[str, int]] = field(default_factory=list)
     listAnonymousConstantSite: list[tuple[str, int]] = field(default_factory=list)
+    listAnonymousFunctionSite: list[tuple[str, int]] = field(default_factory=list)
     listHeaderInitializerViolation: list[ConventionViolation] = field(default_factory=list)
     uniqueU8BoolName: set[str] = field(default_factory=set)
     uniqueBoolName: set[str] = field(default_factory=set)
@@ -529,6 +561,9 @@ def collectCrossFileFactsInternal(filePath: Path, projectRoot: Path) -> CrossFil
             facts.listHelperSite.append((match.group(1), content.count("\n", 0, match.start()) + 1))
         if "namespace" in content:
             facts.listAnonymousConstantSite = findBareAnonymousConstantsInternal(content)
+            # 유니티 빌드는 `Source/` 의 라이브러리 타겟만 묶는다 — 테스트 실행 파일은 묶지 않아 같은 이름이 충돌하지 않는다.
+            if facts.relPath.startswith("Source/"):
+                facts.listAnonymousFunctionSite = findBareAnonymousFunctionsInternal(content)
 
     # 헤더와 짝 .cpp 둘만 보는 검사라 파일 하나 안에서 끝난다.
     if suffix == ".h":

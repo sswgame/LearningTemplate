@@ -101,6 +101,14 @@ _kWholeScanCases: list[tuple[str, dict[str, str | bytes]]] = [
         },
     ),
     (
+        # 함수 하나짜리 구조체를 풀면 자유 함수 이름이 익명 네임스페이스에 늘어난다 — 유니티 빌드(`Source/`)에서 겹치면 재정의다.
+        "Naming/DuplicateAnonymousFunction",
+        {
+            "Source/Probe/AlphaFunc.cpp": '#include "pch.h"\n\nnamespace\n{\n    int32 computeProbeValue( int32 value )\n    {\n        return value;\n    }\n} // namespace\n',
+            "Source/Probe/BetaFunc.cpp": '#include "pch.h"\n\nnamespace sw\n{\n    namespace\n    {\n        int32 computeProbeValue( int32 value )\n        {\n            return value + 1;\n        }\n    } // namespace\n} // namespace sw\n',
+        },
+    ),
+    (
         "Naming/DuplicateInternalHelper",
         {
             "Source/Probe/AlphaThing.cpp": '#include "pch.h"\n\nnamespace\n{\n    struct SharedInternal\n    {\n        int32 _value{ 0 };\n    };\n} // namespace\n',
@@ -236,6 +244,46 @@ _kWholeScanCleanCase: dict[str, str] = {
         '#include "pch.h"\n\nnamespace\n{\n    struct EpsilonLimitInternal\n    {\n'
         "        static constexpr int32 kProbeLimit = 16;\n    };\n} // namespace\n"
     ),
+    # 도우미 구조체 규칙의 오탐 — 상수가 함께 있는 구조체 · 함수가 둘인 구조체 · 템플릿 함수 · 연산자 · 분기마다 하나씩인 구조체 · 지역 람다는 정상이다.
+    "Source/Probe/HelperWithConstant.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    struct HelperWithConstantInternal\n    {\n        static constexpr int32 kProbeBase = 4;\n\n'
+        "        static int32 scaleHelperWithConstant( int32 value )\n        {\n            return value * kProbeBase;\n        }\n    };\n} // namespace\n"
+    ),
+    "Source/Probe/HelperWithTwoFunctions.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    struct HelperWithTwoFunctionsInternal\n    {\n'
+        "        static int32 firstTwoFunctions()\n        {\n            return 1;\n        }\n\n"
+        "        static int32 secondTwoFunctions()\n        {\n            return 2;\n        }\n    };\n} // namespace\n"
+    ),
+    "Source/Probe/HelperTemplate.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    struct HelperTemplateInternal\n    {\n        template <typename T>\n'
+        "        static T identityHelperTemplate( T value )\n        {\n            return value;\n        }\n    };\n} // namespace\n"
+    ),
+    "Source/Probe/HelperFunctor.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    struct HelperFunctorInternal\n    {\n'
+        "        bool operator()( int32 lhs, int32 rhs ) const\n        {\n            return lhs < rhs;\n        }\n    };\n} // namespace\n"
+    ),
+    "Source/Probe/HelperBranches.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n#if SW_PROBE_FLAG\n    struct HelperBranchesInternal\n    {\n'
+        "        static int32 pickHelperBranches()\n        {\n            return 1;\n        }\n        static constexpr int32 kProbeBranch = 1;\n    };\n"
+        "#else\n    struct HelperBranchesFallbackInternal\n    {\n        static int32 pickHelperBranches()\n        {\n            return 2;\n        }\n"
+        "        static constexpr int32 kProbeBranch = 2;\n    };\n#endif\n} // namespace\n"
+    ),
+    # 익명 네임스페이스 자유 함수 — 이름이 파일마다 다르거나 `Test/`(유니티로 묶지 않는다)에 있으면 정상이다. 함수 지역 람다 · 구조체 안 함수는 층이 한 단 깊다.
+    "Source/Probe/FreeFunctionOne.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    int32 sumFreeFunctionOne( int32 value )\n    {\n        const auto doubled = [value]() { return value * 2; };\n'
+        "        return doubled();\n    }\n} // namespace\n"
+    ),
+    "Source/Probe/FreeFunctionTwo.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    int32 sumFreeFunctionTwo( int32 value )\n    {\n        return value;\n    }\n\n'
+        "    struct FreeFunctionTwoInternal\n    {\n        static int32 sharedName()\n        {\n            return 1;\n        }\n"
+        "        static constexpr int32 kProbeTwo = 2;\n    };\n} // namespace\n"
+    ),
+    "Source/Probe/FreeFunctionThree.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    struct FreeFunctionThreeInternal\n    {\n        static int32 sharedName()\n        {\n            return 3;\n        }\n'
+        "        static constexpr int32 kProbeThree = 3;\n    };\n} // namespace\n"
+    ),
+    "Test/Probe/TestFreeFunctionA.cpp": '#include "pch.h"\n\nnamespace\n{\n    int32 sharedTestName()\n    {\n        return 1;\n    }\n} // namespace\n',
+    "Test/Probe/TestFreeFunctionB.cpp": '#include "pch.h"\n\nnamespace\n{\n    int32 sharedTestName()\n    {\n        return 2;\n    }\n} // namespace\n',
     "Source/Probe/MaskDevice.h": (
         "#pragma once\n\nclass MaskDevice\n{\nprivate:\n"
         "    uint8 _buttonMask{ 0 };   ///< 8비트 비트마스크 — 불리언이 아니다\n};\n"

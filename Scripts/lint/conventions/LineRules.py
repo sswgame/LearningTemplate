@@ -7,6 +7,12 @@ from __future__ import annotations
 
 import re
 
+from .InternalHelperScan import (
+    countCoexistingStructsInternal,
+    isLoneFunctionStructInternal,
+    readInternalHelperBaselineInternal,
+    readInternalStructsInternal,
+)
 from .Model import ConventionRule, ConventionViolation, LineScanContext
 from .NamingVocabulary import kMapNamingSubject
 from .Patterns import (
@@ -758,3 +764,71 @@ class ClassMemberNamingRule( ConventionRule ):
             )
 
         return violations
+
+
+class MultipleInternalHelperRule( ConventionRule ):
+    """
+    Naming/MultipleInternalHelper — 한 .cpp 에 `XxxInternal` 구조체가 둘 이상.
+
+    번역 단위 전용 도우미는 파일마다 구조체 **하나**에 모은다(AGENTS.md "Helpers: Util vs Internal"). 구조체가 여럿이면 도우미를 어디서 찾을지
+    정할 수 없고 이름만 늘어 유니티 빌드 충돌 면(`Naming/DuplicateInternalHelper`)도 는다. 규칙이 생길 때 이미 어기던 파일은
+    `rules/CheckCodeConventions.toml` 의 `internalHelperBaseline` 에 있다 — 그 파일을 고치면 목록에서 지운다.
+    """
+    category = "Naming/MultipleInternalHelper"
+    scope = "file"
+    badSampleFile = "Source/Probe/TwoHelpers.cpp"
+    badSample = ('#include "pch.h"\n\nnamespace\n{\n    struct FirstInternal\n    {\n        static int32 one() { return 1; }\n'
+                 '        static int32 two() { return 2; }\n    };\n\n    struct SecondInternal\n    {\n        static int32 three() { return 3; }\n'
+                 '        static int32 four() { return 4; }\n    };\n} // namespace\n')
+
+    def onFile(self, ctx: LineScanContext, listLine: list[str]) -> list[ConventionViolation]:
+        if ctx.isSource is False or ctx.relPath in readInternalHelperBaselineInternal():
+            return []
+        content = "\n".join(listLine)
+        listFound = countCoexistingStructsInternal(content, readInternalStructsInternal(content))
+        if len(listFound) < 2:
+            return []
+        candidate = ctx.relPath.rsplit("/", 1)[-1].rsplit(".", 1)[0] + "Internal"
+        return [
+            ConventionViolation(
+                file_path=ctx.relPath,
+                line_number=found.lineNum,
+                rule_category=self.category,
+                message=(f"'{found.name}' 말고도 이 .cpp 에 'XxxInternal' 구조체가 {len(listFound)} 개 있습니다. 번역 단위 전용 도우미는 구조체 하나에 모읍니다 "
+                         f"(함수가 하나뿐이면 구조체 없이 익명 네임스페이스의 자유 함수로)."),
+                snippet=f"struct {found.name}",
+                suggested_fix=f"한 구조체에 모으세요 — 이름 후보 '{candidate}' (파일 이름 기준)",
+            )
+            for found in listFound[1:]
+        ]
+
+
+class LoneFunctionInternalHelperRule( ConventionRule ):
+    """
+    Naming/LoneFunctionInternalHelper — 함수가 하나뿐인 `XxxInternal` 구조체.
+
+    `static` 함수 하나(상수 · 데이터 · 중첩 타입 · 다른 함수 없음)를 감싼 구조체는 이름 층만 늘린다 — 익명 네임스페이스의 자유 함수로 둔다.
+    그러면 이름이 익명 네임스페이스 바로 안에 늘어 유니티 빌드에서 겹칠 수 있다 — 그 틈은 `Naming/DuplicateAnonymousFunction`(전체 스캔)이 막는다.
+    구조체에 상수가 함께 있거나 함수가 둘 이상이면 정상이다. 템플릿 · 연산자 · `#if` 분기가 든 것은 형식이 달라 보지 않는다.
+    """
+    category = "Naming/LoneFunctionInternalHelper"
+    scope = "file"
+    badSampleFile = "Source/Probe/LoneHelper.cpp"
+    badSample = ('#include "pch.h"\n\nnamespace\n{\n    struct LoneHelperInternal\n    {\n        static int32 compute( int32 value )\n'
+                 '        {\n            return value * 2;\n        }\n    };\n} // namespace\n')
+
+    def onFile(self, ctx: LineScanContext, listLine: list[str]) -> list[ConventionViolation]:
+        if ctx.isSource is False or ctx.relPath in readInternalHelperBaselineInternal():
+            return []
+        return [
+            ConventionViolation(
+                file_path=ctx.relPath,
+                line_number=found.lineNum,
+                rule_category=self.category,
+                message=f"'{found.name}' 에 함수가 하나뿐입니다. 구조체로 감싸지 말고 익명 네임스페이스의 자유 함수로 두세요.",
+                snippet=f"struct {found.name}",
+                suggested_fix="구조체를 풀어 함수를 익명 네임스페이스 바로 안에 둡니다(이름은 이 파일에 맞춰 다른 .cpp 와 겹치지 않게).",
+            )
+            for found in readInternalStructsInternal("\n".join(listLine))
+            if isLoneFunctionStructInternal(found)
+        ]
