@@ -674,13 +674,23 @@ namespace sw
                     stageIndex     = insertAt;
                     _listStage.insert( _listStage.begin() + static_cast<ptrdiff_t>( insertAt ), std::move( created ) );
                 }
-                TickStage&      stage    = _listStage[stageIndex];
-                const auto      position = std::upper_bound( stage._listItem.begin(), stage._listItem.end(), entry._item._orderKey,
-                                                             []( uint8 key, const TickItem& other )
-                     { return key < other._orderKey; } );
-                const ptrdiff_t offset   = position - stage._listItem.begin();
-                stage._listItem.insert( position, entry._item );
-                stage._listItemObjectID.insert( stage._listItemObjectID.begin() + offset, objectID );
+                TickStage& stage = _listStage[stageIndex];
+                // 전체 재구축은 스테이지 안을 (순서 키, 오브젝트 id) 순으로 둔다(후보를 id 순으로 모으고 `isBefore` 로 정렬) — 같은 키로 끼워 두 길의 순서를 맞춘다.
+                size_t low  = 0;
+                size_t high = stage._listItem.size();
+                while ( low < high )
+                {
+                    const size_t middle   = low + ( high - low ) / 2;
+                    const uint8  otherKey = stage._listItem[middle]._orderKey;
+                    const bool   bAfter   = otherKey > entry._item._orderKey || ( otherKey == entry._item._orderKey && stage._listItemObjectID[middle] > objectID );
+                    if ( bAfter )
+                        high = middle;
+                    else
+                        low = middle + 1;
+                }
+                const size_t position = low;
+                stage._listItem.insert( stage._listItem.begin() + static_cast<ptrdiff_t>( position ), entry._item );
+                stage._listItemObjectID.insert( stage._listItemObjectID.begin() + static_cast<ptrdiff_t>( position ), objectID );
                 ++_stageItemCount;
             }
             if ( bWaits )
