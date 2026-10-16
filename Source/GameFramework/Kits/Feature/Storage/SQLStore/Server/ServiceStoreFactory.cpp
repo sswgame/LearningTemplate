@@ -48,3 +48,9 @@ namespace sw
         SQLDriverRegistry::unregisterDriver( &PostgresDriver::getInstance() );
     }
 } // namespace sw
+
+namespace sw
+{
+    // 모듈이 로드되면 서버 조립의 저장소 만들기를 이 팩토리에 묶고, 언로드되면 풀고 PostgreSQL 드라이버를 레지스트리에서 내린다.
+    const OnlineStoreDriverBinding s_serviceStoreDriverBinding{ &ServiceStoreFactory::createServiceStore, &ServiceStoreFactory::shutdown };
+} // namespace sw

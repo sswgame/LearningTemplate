@@ -155,6 +155,12 @@ namespace sw
             if ( CacheStoreFactoryInternal::applyQueryArgument( argument.substr( 0, equals ), argument.substr( equals + 1 ), outEndpoint, outError ) == false )
                 return false;
         }
+
+namespace sw
+{
+    // 모듈이 로드되면 서버 조립의 캐시 만들기를 이 팩토리에 묶고, 언로드되면 푼다.
+    const OnlineStoreDriverBinding s_ephemeralStoreDriverBinding{ &CacheStoreFactory::createEphemeralStore, nullptr };
+} // namespace sw
         return true;
     }
 } // namespace sw

@@ -1,13 +1,16 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Network/Transport/LoopbackStreamTransport.h"
 
 #include "EngineTest/GameFramework/Online/ServiceStoreContract.h"
 
+#include "GameFramework/Base/Online/Server/OnlineServerRuntime.h"
+#include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/SQLServiceStore.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/ServiceStoreFactory.h"
 
-// SQL 서비스 저장소(SQLite) — IServiceStore 계약 일곱(메모리 · PostgreSQL 과 같은 케이스), 다시 띄워도 데이터 · 판이 이어진다, 저장소 공장(memory · sqlite · 없는 드라이버).
+// SQL 서비스 저장소(SQLite) — IServiceStore 계약 일곱(메모리 · PostgreSQL 과 같은 케이스), 다시 띄워도 데이터 · 판이 이어진다, 저장소 공장(memory · sqlite · 없는 드라이버), 서버 조립이 묶인 공장으로 sqlite 저장소를 연다.
 
 using namespace sw;
 
@@ -142,4 +145,25 @@ SW_TEST_CASE( ServiceStoreSQLiteTest, FactoryPicksTheDriverByNameAndFailsLoudly 
     unique_ptr<IServiceStore> unknown = ServiceStoreFactory::createServiceStore( "mysql", "x", "", 1, 0, error );
     SW_EXPECT_NULL( unknown );
     SW_EXPECT_TRUE( error.find( "no SQL driver 'mysql'" ) != string::npos );
+}
+
+SW_TEST_CASE( ServiceStoreSQLiteTest, ServerRuntimeOpensTheSQLiteStoreThroughTheBoundFactory )
+{
+    // 키트가 실리면 서버 조립의 저장소 만들기가 이 팩토리에 묶여 있다(`OnlineStoreDriverBinding`) — memory 밖의 드라이버로도 서버가 선다.
+    SW_EXPECT_TRUE( OnlineStoreDriverTable::findServiceStoreFactory() == &ServiceStoreFactory::createServiceStore );
+    LoopbackStreamNetwork        network;
+    unique_ptr<IStreamTransport> transport = network.createTransport();
+    OnlineServerRuntimeConfig    settings;
+    settings._bTLS                                 = SW_FALSE;
+    settings._bManualCacheTime                     = SW_TRUE;
+    settings._config._ioThreadCount                = 0;
+    settings._store._driver                        = "sqlite";
+    settings._store._connection                    = test::makeTempPath( "runtime.db" );
+    settings._config._listKit.emplace_back()._name = "directory"; // 키트 하나는 있어야 서버가 선다 — 저장소에 레코드를 쓰는 기능 키트
+    settings._pTransport                           = transport.get();
+    settings._listenAddress                        = NetAddress::makeLoopback( 7453 );
+    OnlineServerRuntime runtime;
+    string              error;
+    SW_EXPECT_TRUE_MSG( runtime.initialize( settings, 1000, error ), error.c_str() );
+    runtime.shutdown();
 }

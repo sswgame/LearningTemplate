@@ -825,6 +825,8 @@
   메서드는 `ENUM( Count = Count )` 메서드 이름 열거형 하나가 와이어 번호(`OnlineMethodTable`, 영역 + 1 부터)와 지표 라벨(snake_case)을 함께 정합니다. 언리얼의 `UPROPERTY(Config)` 가 필드 표 하나로 읽고 쓰는 것과 같은 방향입니다(기억에 의존).
   `_bStarted` 류 플래그는 키트에 남깁니다 — 지키는 대상이 키트마다 다릅니다(경제 · 계정은 `initialize` 단계 서비스, 나머지는 `start` 단계 서비스).
   옵션을 리플렉션 구조체로 옮기는 안은 기각했습니다. 키트 옵션은 같은 키를 여러 번 적는 목록이 있고 키트마다 타입이 달라, 설정 파일 하나의 고정 스키마로 읽을 수 없습니다.
+- **저장 드라이버는 키트 `.cpp` 의 정적 묶기 객체(`OnlineStoreDriverBinding`)로 서버 조립에 붙습니다**(2026-10-17, D7-5). 묶기 함수만 있고 부르는 곳이 없어 SQLite · PostgreSQL · RESP 를 고른 서버가 늘 기동을 멈췄고, 언로드 정리(`ServiceStoreFactory::shutdown`)도 불리지 않았습니다.
+  모듈 수명과 같은 정적 객체가 묶고 풀어서 "실렸는데 안 묶임" · "풀지 않은 함수" 를 쓸 수 없게 했습니다. 키트 조립의 `SW_REGISTER_ONLINE_SERVER_KIT`, 언리얼 모듈의 `IModularFeatures` 등록과 같은 모양입니다.
 
 ### 5-10. 전용 서버
 

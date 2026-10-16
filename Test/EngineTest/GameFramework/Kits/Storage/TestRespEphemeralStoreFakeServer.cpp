@@ -290,4 +290,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, FactoryReadsTheEndpointAndRefuse
     SW_EXPECT_TRUE( memory != nullptr );
     SW_EXPECT_TRUE( CacheStoreFactory::createEphemeralStore( "redis-cluster", "127.0.0.1:6379", "", error ) == nullptr );
     SW_EXPECT_TRUE( error.find( "redis-cluster" ) != string::npos );
+
+    // 키트가 실리면 서버 조립의 캐시 만들기가 이 팩토리에 묶여 있다(`OnlineStoreDriverBinding`) — resp 를 고른 서버가 기동을 멈추지 않는다.
+    SW_EXPECT_TRUE( OnlineStoreDriverTable::findEphemeralStoreFactory() == &CacheStoreFactory::createEphemeralStore );
 }
