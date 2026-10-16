@@ -121,6 +121,9 @@ ctest --preset Ninja-Debug-lint                              # 린트만
 
 Ninja는 구성이 하나뿐인 생성기라서 `ctest -C Debug` 의 `-C` 는 아무 일도 하지 않습니다. 구성은 프리셋, 곧 빌드 폴더가 정합니다.
 
+다른 빌드나 실행이 함께 도는 PC 에서는 `ctest -j <N> --test-load <코어 수>` 로 시작을 늦춥니다. Windows 에서도 적용됩니다(2026-10-16, 1 초짜리 테스트 셋을 `-j3` 로 돌려 `--test-load 1` 은 3.4 s, 없으면 1.3 s).
+프리셋에 고정하지 않는 것은 코어 수가 PC 마다 달라서입니다.
+
 **테스트 실행 파일은 모든 구성에서 `TestBin` 에 있지만, 작업 폴더는 여전히 `Bin` 입니다.** `Bin` 에 테스트 바이너리와 DXC가 섞이지 않게 출력 폴더만 나눈 것입니다.
 `TestBin` 에서 그대로 돌리면 리소스 루트를 찾지 못하고, Dev 는 `Engine.dll` 도 찾지 못합니다(Windows 로더가 작업 폴더 `Bin` 에서 찾는다).
 모듈 DLL 은 `Bin/Modules` 에 있고, 테스트는 그것을 `FileUtil::getBinaryDirectory`(TestBin → Bin) 기준으로 찾습니다.

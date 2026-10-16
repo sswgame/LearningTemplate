@@ -46,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 import AcronymRegistry as registry  # noqa: E402
-from common import kLintTargetRelDirs, mapConcurrent  # noqa: E402
+from common import blankComments, kLintTargetRelDirs, mapConcurrent  # noqa: E402
 from common.RuleData import kKindText  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
@@ -113,15 +113,14 @@ def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
         return [f"{relativePath}: 읽기 실패: {exception}"]
     stem = filePath.stem
 
-    # 주석의 줄바꿈은 남긴다 — 지우면 보고하는 줄 번호가 주석 줄 수만큼 앞당겨진다.
-    text = re.sub(r"/\*.*?\*/", lambda comment: "\n" * comment.group(0).count("\n"), text, flags=re.S)
+    # 주석은 같은 길이 공백으로 가려 줄 번호를 지킨다(`//` · `/* */` 를 한 번 훑어 문자열 안의 `//` 도 안전).
+    text = blankComments(text)
     violations: list[str] = []
     seenName: set[str] = set()
     mapNameToFirstParam: dict[str, set[str]] = {}
     mapNameToLine: dict[str, int] = {}
 
-    for lineIndex, rawLine in enumerate(text.split("\n"), 1):
-        line = re.sub(r"//.*$", "", rawLine)
+    for lineIndex, line in enumerate(text.split("\n"), 1):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         if "=" in line.split("(", 1)[0]:

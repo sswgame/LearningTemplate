@@ -36,8 +36,8 @@ from LintCatalog import LintTarget, discoverLintTargets  # noqa: E402
 
 #: 경고 임계값 — CTest TIMEOUT 의 이 비율을 넘기면 경고한다.
 kWarnTimeoutRatio = 0.5
-#: 훅 시간 경고 임계값(초) — staged 파일 수 → 상한. 8 코어 개발 PC 에서 측정한 값의 두 배쯤이다. CI 첫 기록을 보고 고친다.
-kHookBudgetSeconds: dict[int, float] = {1: 8.0, 10: 12.0, 100: 20.0}
+#: 훅 시간 경고 임계값(초) — staged 파일 수 → 상한. CI 리눅스 러너 기록(실행 38893227125: 1개 5.81 s · 10개 6.35 s)의 1.5 배다.
+kHookBudgetSeconds: dict[int, float] = {1: 9.0, 10: 10.0}
 #: 훅 표본 — 이 폴더의 C++ 파일을 이름순으로 앞에서부터 고른다(결정적이다. 셰이더는 고르지 않는다 — 훅이 쿠킹을 부른다).
 _kHookSampleRoot = "Source/Engine"
 #: git 의 빈 blob — staged 파일의 인덱스 내용으로 쓴다(HEAD 와 다르기만 하면 된다. 게이트는 작업 트리를 읽는다).
