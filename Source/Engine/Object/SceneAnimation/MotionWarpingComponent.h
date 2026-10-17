@@ -102,9 +102,9 @@ namespace sw
         void bindToAnimator();
         void unbindFromAnimator();
 
-        MotionWarpingBinding     _binding;
-        vector<MotionWarpTarget> _listTarget;
-        vector<MotionWarpWindow> _listWindow;
-        ComponentHandle          _animator;
+        MotionWarpingBinding                        _binding;
+        vector<MotionWarpTarget>                    _listTarget;
+        vector<MotionWarpWindow>                    _listWindow;
+        TComponentHandle<SkeletalAnimatorComponent> _animator; ///< 등록한 애니메이터(해제할 때 찾는다)
     };
 } // namespace sw

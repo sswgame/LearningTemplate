@@ -255,7 +255,7 @@ namespace sw
         UnitBinding binding{};
         binding._name    = unitName;
         binding._sockets = std::move( sockets );
-        binding._unit    = ( pUnit != nullptr ) ? pUnit->getHandle() : ComponentHandle{};
+        binding._unit    = TComponentHandle<SkeletalMeshComponent>{ pUnit };
         for ( UnitBinding& existing : _listUnitBinding )
         {
             if ( existing._name == unitName )
@@ -291,7 +291,7 @@ namespace sw
         _listTableUnit.clear();
         for ( SkeletalMeshComponent* pUnit : listUnitByIndex )
         {
-            _listTableUnit.push_back( pUnit != nullptr ? pUnit->getHandle() : ComponentHandle{} );
+            _listTableUnit.push_back( TComponentHandle<SkeletalMeshComponent>{ pUnit } );
         }
         bindRig();
     }
@@ -321,9 +321,9 @@ namespace sw
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( _pUnit != nullptr && pManager != nullptr )
         {
-            for ( const ComponentHandle handle : _listDependency )
+            for ( const TComponentHandle<SkeletalMeshComponent> handle : _listDependency )
             {
-                _pUnit->removeAnimationDependency( castTo<SkeletalMeshComponent>( pManager->resolveComponent( handle ) ) );
+                _pUnit->removeAnimationDependency( pManager->resolveComponent( handle ) );
             }
         }
         _listDependency.clear();
@@ -378,7 +378,7 @@ namespace sw
             {
                 if ( pOutSockets != nullptr )
                     *pOutSockets = binding._sockets;
-                return castTo<SkeletalMeshComponent>( pManager->resolveComponent( binding._unit ) );
+                return pManager->resolveComponent( binding._unit );
             }
         }
         // 이름으로 찾는다. 자식(장비 부품)부터 찾고, 없으면 매니저 전체에서 찾는다.
@@ -424,9 +424,9 @@ namespace sw
             if ( std::find( listVisited.begin(), listVisited.end(), pCurrent ) != listVisited.end() )
                 continue;
             listVisited.push_back( pCurrent );
-            for ( const ComponentHandle handle : pCurrent->getAnimationDependencies() )
+            for ( const TComponentHandle<SkeletalMeshComponent> handle : pCurrent->getAnimationDependencies() )
             {
-                const SkeletalMeshComponent* pNext = castTo<SkeletalMeshComponent>( pManager->resolveComponent( handle ) );
+                const SkeletalMeshComponent* pNext = pManager->resolveComponent( handle );
                 if ( pNext != nullptr )
                     listPending.push_back( pNext );
             }
@@ -499,7 +499,7 @@ namespace sw
                 const SocketDef* pDef      = ( socketID != kInvalidSocketID ) ? _pSocketTable->findSocketDef( socketID ) : nullptr;
                 const uint32     unitIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketID ) : MathUtil::kMaxUInt32;
                 if ( unitIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
-                    pTargetUnit = castTo<SkeletalMeshComponent>( getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] ) );
+                    pTargetUnit = getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] );
                 if ( pDef != nullptr )
                 {
                     float4x4 local = pDef->makeLocalTransform();
@@ -520,7 +520,7 @@ namespace sw
             }
             // 데이터 오프셋은 소켓 공간에서 먼저 적용된다(행 벡터: 오프셋 × 소켓 로컬).
             external._socketLocal = BoneTransform::makeFromMatrix( def._offset.toMatrix() * socketLocal.toMatrix() );
-            external._unit        = pTargetUnit->getHandle();
+            external._unit        = TComponentHandle<SkeletalMeshComponent>{ pTargetUnit };
             if ( external._spaceBone >= 0 )
             {
                 external._bBound = SW_TRUE; // 프레임 시작에 기록해 자기 본에 적용한다. 의존은 등록하지 않는다.
@@ -533,7 +533,7 @@ namespace sw
                 continue;
             }
             _pUnit->addAnimationDependency( pTargetUnit );
-            _listDependency.push_back( pTargetUnit->getHandle() );
+            _listDependency.push_back( TComponentHandle<SkeletalMeshComponent>{ pTargetUnit } );
             external._bLive  = SW_TRUE;
             external._bBound = SW_TRUE;
         }
@@ -614,7 +614,7 @@ namespace sw
             }
             else
             {
-                const SkeletalMeshComponent* pTargetUnit = castTo<SkeletalMeshComponent>( pManager->resolveComponent( external._unit ) );
+                const SkeletalMeshComponent* pTargetUnit = pManager->resolveComponent( external._unit );
                 external._pFrameUnit                     = pTargetUnit;
                 if ( pTargetUnit == nullptr )
                 {

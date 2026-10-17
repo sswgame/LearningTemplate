@@ -82,14 +82,14 @@ namespace sw
         PROPERTY( Category = "Retarget", DisplayName = "Profile", AssetPath, AssetType = "RetargetProfile", Tooltip = "Retarget profile (*.retarget.json)" )
         string _profilePath;
 
-        PoseRetargetBinding    _binding;
-        RetargetProfile        _profile;
-        PoseRetargeter         _retargeter;
-        Pose                   _targetReference;
-        ComponentHandle        _source;
-        SkeletalMeshComponent* _pUnit;
-        const Skeleton*        _pBoundSourceSkeleton; ///< 리타기터를 묶은 원본 스켈레톤(정체성만 본다)
-        const Skeleton*        _pBoundTargetSkeleton;
+        PoseRetargetBinding                     _binding;
+        RetargetProfile                         _profile;
+        PoseRetargeter                          _retargeter;
+        Pose                                    _targetReference;
+        TComponentHandle<SkeletalMeshComponent> _source;
+        SkeletalMeshComponent*                  _pUnit;
+        const Skeleton*                         _pBoundSourceSkeleton; ///< 리타기터를 묶은 원본 스켈레톤(정체성만 본다)
+        const Skeleton*                         _pBoundTargetSkeleton;
         PROPERTY( Category = "Retarget", DisplayName = "Source From Parent", Tooltip = "Use the parent object's skeletal mesh as the source" )
         uint8                  _bSourceFromParent  : 1;
         uint8                  _bProfileReady      : 1;

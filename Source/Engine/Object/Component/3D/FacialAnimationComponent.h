@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
@@ -20,6 +21,7 @@ namespace sw
 {
     class FacialAnimationComponent;
     class Mesh;
+    class SkeletalAnimatorComponent;
     class Skeleton;
 
     /**
@@ -132,32 +134,32 @@ namespace sw
         PROPERTY( Category = "Facial", DisplayName = "Facial Rig", AssetPath, AssetType = "FacialRig", Tooltip = "Facial rig (.facial.json): expressions, visemes, blink, gaze" )
         string _facialRigPath;
 
-        FacialAnimationBinding _binding;
-        FacialRig              _rig;
-        LipSyncSettings        _lipSync;
-        VisemeTrack            _speechTrack;
-        vector<float32>        _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
-        vector<float32>        _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
-        vector<vector<int32>>  _listExpressionTarget; ///< 표정마다 타깃 → 메시 타깃 번호
-        vector<vector<int32>>  _listVisemeTarget;     ///< 비즘마다 타깃 → 메시 타깃 번호
-        vector<int32>          _listBlinkTarget;      ///< 깜빡임 타깃 → 메시 타깃 번호
-        vector<int32>          _listEyeBone;          ///< 눈 본 번호
-        vector<int32>          _listTrackToRigViseme; ///< 립싱크 비즘 순서 → 리그 비즘 번호
-        vector<float32>        _listScratchVisemeWeight;
-        ComponentHandle        _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
-        SkeletalMeshComponent* _pUnit;
-        const Mesh*            _pBoundMesh;     ///< 번호를 지은 메시(정체성만)
-        const Skeleton*        _pBoundSkeleton; ///< 번호를 지은 스켈레톤(정체성만)
-        float3                 _lookAtWorld;
-        float3                 _lookAtModel; ///< 게임 스레드가 옮겨 둔 모델 공간 목표
-        float2                 _saccadeOffset;
-        float32                _speechTime;
-        uint32                 _speechSampleRate;
-        float32                _blinkTimer;   ///< 다음 깜빡임까지 남은 시간
-        float32                _blinkElapsed; ///< 깜빡이는 중 지난 시간(음수 = 깜빡이지 않음)
-        float32                _blinkAmount;
-        float32                _saccadeTimer;
-        uint32                 _randomState;
+        FacialAnimationBinding                      _binding;
+        FacialRig                                   _rig;
+        LipSyncSettings                             _lipSync;
+        VisemeTrack                                 _speechTrack;
+        vector<float32>                             _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
+        vector<float32>                             _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
+        vector<vector<int32>>                       _listExpressionTarget; ///< 표정마다 타깃 → 메시 타깃 번호
+        vector<vector<int32>>                       _listVisemeTarget;     ///< 비즘마다 타깃 → 메시 타깃 번호
+        vector<int32>                               _listBlinkTarget;      ///< 깜빡임 타깃 → 메시 타깃 번호
+        vector<int32>                               _listEyeBone;          ///< 눈 본 번호
+        vector<int32>                               _listTrackToRigViseme; ///< 립싱크 비즘 순서 → 리그 비즘 번호
+        vector<float32>                             _listScratchVisemeWeight;
+        TComponentHandle<SkeletalAnimatorComponent> _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
+        SkeletalMeshComponent*                      _pUnit;
+        const Mesh*                                 _pBoundMesh;     ///< 번호를 지은 메시(정체성만)
+        const Skeleton*                             _pBoundSkeleton; ///< 번호를 지은 스켈레톤(정체성만)
+        float3                                      _lookAtWorld;
+        float3                                      _lookAtModel; ///< 게임 스레드가 옮겨 둔 모델 공간 목표
+        float2                                      _saccadeOffset;
+        float32                                     _speechTime;
+        uint32                                      _speechSampleRate;
+        float32                                     _blinkTimer;   ///< 다음 깜빡임까지 남은 시간
+        float32                                     _blinkElapsed; ///< 깜빡이는 중 지난 시간(음수 = 깜빡이지 않음)
+        float32                                     _blinkAmount;
+        float32                                     _saccadeTimer;
+        uint32                                      _randomState;
         PROPERTY( Category = "Facial", DisplayName = "Blink", Tooltip = "Blink automatically with the rig's interval and duration" )
         uint8 _bBlink : 1;
         PROPERTY( Category = "Facial", DisplayName = "Saccades", Tooltip = "Add small random eye jumps while looking at a target" )

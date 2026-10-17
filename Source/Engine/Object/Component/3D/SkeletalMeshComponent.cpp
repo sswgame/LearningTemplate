@@ -359,7 +359,7 @@ namespace sw
             return;
         if ( pOld != nullptr )
             removeAnimationDependency( pOld );
-        _leader                = ( pLeader != nullptr && pLeader != this ) ? pLeader->getHandle() : ComponentHandle{};
+        _leader                = ( pLeader != nullptr && pLeader != this ) ? TComponentHandle<SkeletalMeshComponent>{ pLeader } : TComponentHandle<SkeletalMeshComponent>{};
         _pLeaderSkeletonForMap = nullptr;
         if ( pLeader != nullptr && pLeader != this )
             addAnimationDependency( pLeader );
@@ -372,14 +372,14 @@ namespace sw
         const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getManager() == nullptr;
         if ( bNoLeader )
             return nullptr;
-        return castTo<SkeletalMeshComponent>( getOwner()->getManager()->resolveComponent( _leader ) );
+        return getOwner()->getManager()->resolveComponent( _leader );
     }
 
     void SkeletalMeshComponent::addAnimationDependency( SkeletalMeshComponent* pUpstream )
     {
         if ( pUpstream == nullptr || pUpstream == this )
             return;
-        const ComponentHandle handle = pUpstream->getHandle();
+        const TComponentHandle<SkeletalMeshComponent> handle{ pUpstream };
         if ( std::find( _listDependency.begin(), _listDependency.end(), handle ) != _listDependency.end() )
             return;
         _listDependency.push_back( handle );
@@ -390,7 +390,7 @@ namespace sw
     {
         if ( pUpstream == nullptr )
             return;
-        const auto it = std::find( _listDependency.begin(), _listDependency.end(), pUpstream->getHandle() );
+        const auto it = std::find( _listDependency.begin(), _listDependency.end(), TComponentHandle<SkeletalMeshComponent>{ pUpstream } );
         if ( it == _listDependency.end() )
             return;
         _listDependency.erase( it );
