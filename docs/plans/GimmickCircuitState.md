@@ -287,3 +287,19 @@ B 는 개수 상한이 정적이어야 합니다(3.5). 지금 `populate` 에는 
 ## 7. 같은 결함이 다른 곳에 있을 수 있는가
 
 손으로 계산한 바이트 크기를 쓰는 쪽과 읽는 쪽이 따로 가진 구조가 뿌리입니다. 기믹 안에서는 `ElementGrid` 의 상태 크기 계산(`ElementGrid.cpp:380`, `cellBytes`)이 같은 구조로 보이며, 이 단계 범위 밖이라 따로 조사합니다.
+
+## 8. 구현에서 바꾼 것(2026-10-18, `design-reviewer` 검토 반영)
+
+위 2 절과 다르게 구현한 것만 적습니다. 커밋은 `wt/feat10` 의 2-a · 2-b · 2-c 입니다. 빌드와 테스트는 통합 때 한 번에 돌립니다.
+
+- **노드 id 로 짝짓는 상태.** `GimmickNodeState` 가 `_id`(id 해시) · `_kind`(종류 이름 해시) · `_stateVersion` · 노드별 실수 · 정수 슬롯 목록을 갖고, 회로 전체의 `_layoutHash` 와 평평한 슬롯 목록은 없앴습니다.
+  회로 해시 하나에 읽기를 걸면 노드 하나만 고쳐도 그 회로(와 그 프리팹을 쓰는 모든 씬)의 옛 세이브가 실패하기 때문입니다. `GimmickCircuit::loadState` 는 `GimmickStateMatch`(`Exact` · `NodeSetChanged` · `Mismatch`)와 받아들이는 한계를 받습니다.
+  `Mismatch` 는 같은 id 인데 종류 · 상태 버전 · 슬롯 수가 다르거나 같은 id 가 둘일 때뿐입니다. 새 노드는 처음 상태, 저장에만 있는 노드는 버립니다.
+- **종류의 상태 버전.** `GimmickNodeKind::_stateVersion`(기본 1). 슬롯 수만 대조하면 같은 수 안에서 뜻이 바뀐 변경을 잡지 못합니다.
+- **상한.** 노드 수 1,024(`GimmickCircuitState::kMaxNodeCount`, `populate` 가 오류), 종류마다 슬롯 32(`GimmickNodeState::kMaxSlotCount`, `registerKind` 가 거절). 2.1 의 회로 전체 8,192 슬롯 상한은 Delay 하나가 정수 20 개라 근거가 없어 버렸습니다.
+  `PropertyInfo` 에 `MaxCount` 메타데이터가 없어(6.2 확인) C++ 상수를 함께 두고, 상한에서 B 쓰기가 성공하고 하나 넘으면 실패하는지를 `GimmickTest.StateLimitsMatchDeclaredMaxCount` 가 대조합니다.
+- **저장 상태 적용은 한 함수.** `GimmickCircuitComponent::applySavedState` 를 `onPostLoad` · `onBeginPlay` · `restoreCheckpoint` 가 지납니다. `NodeSetChanged` 는 경고 뒤 이어 가고, `Mismatch` 는 오류를 남기고 회로를 비워 돌지 않습니다(6.3 의 두 번째 결정: 조용한 처음 상태 시작을 없앰).
+  롤백 · 넷은 `restoreState`(`Exact` 만, 아니면 바꾸지 않고 false)이고 `GimmickStateBundle::apply` 는 건너뛴 수를 돌려 의미를 부르는 쪽이 정합니다. 체크포인트는 값입니다(6.3 의 첫 결정).
+- **저작 저장 문맥(검토 ⓕ)은 백로그 `C-52`.** 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 하고 리플렉션 작업과 파일이 겹쳐 이 단계에서 하지 않았습니다.
+- **측정 방법(통합 때, Release).** 쇼케이스 씬 회로 5 개와 프리팹 13 개를 0 · 600 · 36,000 스텝 돌린 뒤 `FixedLayout::write( state )` 바이트 수와 조각 수(`kChunkPayloadBytes` 로 나눔)를 기록하고 가장 큰 값이 `kMaxCircuitBytes` 안인지 봅니다
+  (Delay 의 절대 스텝 번호가 varuint 길이를 늘립니다). `storeState` 는 스텝을 돈 틱마다 부르므로 같은 판에서 `saveState` 의 시간 · 할당을 3~5 회 중앙값으로 잽니다(목록 용량을 이어 쓰므로 첫 틱 뒤 할당 0 이 기대값).

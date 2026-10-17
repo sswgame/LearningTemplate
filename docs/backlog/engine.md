@@ -82,6 +82,10 @@
   저장 순서만 바꿔서는 막히지 않으므로 쌍을 한 원자 값(세대를 담은 불변 항목 포인터 하나)으로 바꾼다. ② `EnumInfo::_pArrDenseName` 이 원자가 아닌 포인터라 핫 리로드 해제 중 렌더 · 오디오 · 로거 스레드가 `getEnumName` 을 부르면 위험하다.
   같은 뿌리로 `TypeLookupCache` 도 세대를 보지 않아 엔진을 다시 만들면 해제된 `TypeInfo` 를 가리킨다 — 타입 캐시 전부가 세대 하나를 보게 한다.
 
+- `C-52` [정리] **씬 · 프리팹 저작 저장에 런타임 상태가 들어간다**(2026-10-17 `GimmickCircuitState` 검토 ⓕ). 씬 저장과 레벨 세이브가 같은 `ObjectStateSerializer` 문맥이라 `Transient` 만 빠지고,
+  `GimmickCircuitComponent::_state` 같은 플레이 상태가 에디터가 다음에 저장하는 씬 XML 로 들어갈 수 있다(지금 빈 요소는 우연). 언리얼 `SaveGame` 처럼 저장 문맥에 "저작 저장"을 표시하고
+  런타임 상태 필드(예: `PROPERTY( RuntimeState )`)를 그 문맥에서 빼는 형식을 둔다. 리플렉션 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 해 이 단계 범위 밖으로 남겼다.
+  `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
 - `D1-2` [기능] **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다
