@@ -15,9 +15,9 @@ namespace sw
 
 namespace sw
 {
-    vector<uint8> ChatProtocol::encodeRecord( const ChatMessage& message )
+    bool ChatProtocol::encodeRecord( const ChatMessage& message, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kChatRecordVersion, message );
+        return ServiceRecordUtil::encode( kChatRecordVersion, message, outBytes );
     }
 
     bool ChatProtocol::decodeRecord( const string_view key, const vector<uint8>& bytes, ChatMessage& outMessage )

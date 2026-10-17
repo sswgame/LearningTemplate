@@ -7,7 +7,7 @@
  *          데이터를 다시 씁니다. 값 계산이 불가피한 예외만 그 판의 이관을 `SW_SCHEMA_MIGRATION` 으로 등록합니다(결정 기록 5-4).
  *          못 읽은 레코드를 어떻게 할지는 레코드마다 손으로 정하지 않고 읽기 함수가 정합니다. 영속 레코드는 `readDurable` 로 읽어 손상이면
  *          오류 로그를 남기고 호출부가 실패를 돌려줍니다. 다시 만들 수 있는 캐시는 `readCache` 로 읽어 없는 것으로 봅니다.
- *          A 는 `MaxCount` 를 보지 않으므로 두 읽기는 고정 배치형 코덱이 있는 타입이면 언제나 선언된 범위(`Min` · `Max` · `MaxCount`)도 확인합니다.
+ *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 고정 배치형 코덱이 있는 타입이면 언제나 선언된 범위(`Min` · `Max` · `MaxCount`)도 확인합니다.
  *          코덱이 없는 타입(지역 목록 같은 문자열 목록)은 서비스가 쓰기 때와 같은 규칙으로 확인합니다.
  */
 #pragma once
@@ -26,16 +26,23 @@ namespace sw
     struct ServiceRecordUtil
     {
         /**
-         * @brief @p version 판 머리와 @p record 를 씁니다.
-         * @details 쓰기 실패를 아직 돌려주지 못합니다(백로그 `A-17`). 레코드 타입은 모두 실을 수 있는 필드만 가지므로 실패는 코드 결함이고, Debug 에서 단언으로 멈춥니다.
+         * @brief @p version 버전 머리와 @p record 를 @p outBytes 에 씁니다. 못 쓰면 오류 로그를 남기고 false 이며 @p outBytes 는 비어 있습니다.
+         * @details 읽기(`read`)가 거절할 레코드는 쓰지 않습니다. 실을 수 없는 필드가 있거나, 코덱이 있는 타입인데 선언된 범위를 벗어나면 실패입니다.
+         *          쓰고 나서 읽지 못하는 영속 레코드는 손상과 구별되지 않기 때문입니다. false 를 받은 호출부는 저장소 작업을 하지 않고 요청을 실패로 돌려줍니다.
          */
         template <typename T>
-        static vector<uint8> encode( const uint32 version, const T& record )
+        [[nodiscard]] static bool encode( const uint32 version, const T& record, vector<uint8>& outBytes )
         {
-            vector<uint8>               bytes;
-            [[maybe_unused]] const bool bWritten = BinarySerializer::serializeVersioned( version, &record, *T::StaticType(), bytes );
-            SW_ASSERT( bWritten );
-            return bytes;
+            outBytes.clear();
+            string     reason;
+            BitWriter  scratch;
+            const bool bInRange = FixedLayout::findCodec<T>( reason ) == nullptr || FixedLayout::write( record, scratch );
+            if ( bInRange && BinarySerializer::serializeVersioned( version, &record, *T::StaticType(), outBytes ) )
+                return true;
+            outBytes.clear();
+            SW_LOG_ERROR( "record %# (version %#) is not written: %#", T::StaticType()->_fullyQualifiedName.c_str(), version,
+                          bInRange ? "a field has no binary handler" : "a value is out of its declared range" );
+            return false;
         }
 
         /**

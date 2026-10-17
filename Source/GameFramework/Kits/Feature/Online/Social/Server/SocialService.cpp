@@ -341,7 +341,8 @@ namespace sw
             if ( local._status == SocialPresenceStatus::Offline || nowMs - local._presenceWrittenMs < SocialServiceInternal::kPresenceRefreshMs )
                 continue;
             local._presenceWrittenMs = nowMs;
-            writePresenceRecord( accountID, local );
+            if ( writePresenceRecord( SocialPresence{ local._activity, accountID, local._status } ) == false )
+                SW_LOG_WARNING( "SocialService: presence of account %# was not refreshed - it expires from the cache", accountID );
         }
     }
 
@@ -454,11 +455,15 @@ namespace sw
             pushCompletion( requestTag, SocialResult::Invalid );
             return;
         }
+        if ( writePresenceRecord( SocialPresence{ string( activity ), accountID, status } ) == false )
+        {
+            pushCompletion( requestTag, SocialResult::Invalid ); // 캐시 값을 못 쓰면 이 서버의 상태도 바꾸지 않는다
+            return;
+        }
         LocalAccount& local      = ensureLocal( accountID );
         local._status            = status;
         local._activity          = string( activity );
         local._presenceWrittenMs = nowMs;
-        writePresenceRecord( accountID, local );
         publishPresence( accountID, local );
         pushCompletion( requestTag, SocialResult::Ok );
     }
@@ -558,14 +563,17 @@ namespace sw
             startLoad( accountID, 0 );
     }
 
-    void SocialService::writePresenceRecord( AccountID accountID, const LocalAccount& local )
+    bool SocialService::writePresenceRecord( const SocialPresence& presence )
     {
+        vector<uint8> bytes;
+        if ( SocialProtocol::encodePresenceRecord( presence, bytes ) == false )
+            return false;
         if ( _dependencies._pRouter == nullptr )
-            return;
-        const SocialPresence presence{ local._activity, accountID, local._status };
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( accountID ), SocialProtocol::encodePresenceRecord( presence ),
+            return true;
+        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( bytes ),
                                                                          SocialServiceInternal::kPresenceTtlMs ),
                                               EphemeralStoreRouter::ReplyDelegate{} );
+        return true;
     }
 
     void SocialService::publishPresence( AccountID accountID, const LocalAccount& local )

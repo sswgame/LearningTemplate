@@ -165,7 +165,7 @@ namespace sw
          * @details 다른 판이거나 모르는 필드가 있거나 `ChatMessage` 에 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
          *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 판을 올리고 데이터를 다시 씁니다.
          */
-        static vector<uint8>      encodeRecord( const ChatMessage& message );
+        [[nodiscard]] static bool encodeRecord( const ChatMessage& message, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeRecord( string_view key, const vector<uint8>& bytes, ChatMessage& outMessage );
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 도배 제한은 각각 대응하는 결과로, 나머지(전송, 저장소, 시한)는 Unavailable 로 바꿉니다. */

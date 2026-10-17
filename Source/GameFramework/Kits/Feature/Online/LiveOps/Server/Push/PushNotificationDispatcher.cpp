@@ -82,7 +82,7 @@ namespace sw
     class PushDeviceWriteWork final : public IServiceStoreWork
     {
     public:
-        PushDeviceRegistration      _registration;
+        vector<uint8>               _bytes; ///< 등록할 기기 레코드이다. 해지일 때는 비어 있다
         string                      _key;
         PushNotificationDispatcher* _pDispatcher;
         AccountID                   _accountID;
@@ -91,7 +91,7 @@ namespace sw
         uint8                       _bErase;
 
         PushDeviceWriteWork()
-            : _registration{}
+            : _bytes{}
             , _key{}
             , _pDispatcher{ nullptr }
             , _accountID{ kInvalidAccountID }
@@ -144,7 +144,7 @@ namespace sw
                 const bool bEvictOldestDevice = bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr;
                 if ( bEvictOldestDevice )
                     transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
-                transaction.put( table, _key, LiveOpsProtocol::encodeDevice( _registration ) );
+                transaction.put( table, _key, _bytes );
             }
             _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsResult::Unavailable;
         }
@@ -313,11 +313,16 @@ namespace sw
             return;
         }
         unique_ptr<PushDeviceWriteWork> work = make_unique<PushDeviceWriteWork>();
-        work->_registration                  = registration;
-        work->_key                           = makeDeviceKey( accountID, registration._providerID, registration._token );
-        work->_pDispatcher                   = this;
-        work->_accountID                     = accountID;
-        work->_requestTag                    = requestTag;
+        if ( LiveOpsProtocol::encodeDevice( registration, work->_bytes ) == false )
+        {
+            if ( requestTag != 0 )
+                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
+            return;
+        }
+        work->_key         = makeDeviceKey( accountID, registration._providerID, registration._token );
+        work->_pDispatcher = this;
+        work->_accountID   = accountID;
+        work->_requestTag  = requestTag;
         ++_pendingWorkCount;
         _pStore->submit( std::move( work ) );
     }

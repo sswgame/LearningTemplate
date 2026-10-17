@@ -70,8 +70,8 @@ namespace sw
         };
 
         TradeResult readSession( uint64 tradeID, SessionRead& outSession );
-        /** @brief 닫힌 레코드, 활성 링크 지우기, 주인 인덱스 지우기를 트랜잭션에 붙입니다. */
-        void stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction );
+        /** @brief 닫힌 레코드, 활성 링크 지우기, 주인 인덱스 지우기를 트랜잭션에 붙입니다. 레코드를 못 쓰면 false 이며 호출부는 요청을 Invalid 로 끝냅니다. */
+        [[nodiscard]] bool stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction );
         /** @brief 잠그는 쪽의 항목을 원장 잔액과 비교합니다. 미리 확인하는 것이며 정산할 때 다시 확인합니다. */
         TradeResult evaluateFunds( const TradeSide& side );
 

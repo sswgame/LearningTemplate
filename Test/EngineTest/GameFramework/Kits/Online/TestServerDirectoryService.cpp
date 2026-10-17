@@ -280,8 +280,9 @@ SW_TEST_CASE( ServerDirectoryProtocolTest, MaintenanceRecordBytesStayTheSameWith
     window._messageKey = "notice.maintenance";
     window._listAllowedAccount.push_back( 900 );
     window._listAllowedAccount.push_back( 0x0102030405060708ull );
-    const vector<uint8> bytes = ServerDirectoryProtocol::encodeMaintenance( window );
-    const string        hex   = test::OnlineMessageTestUtil::toHexString( bytes );
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( ServerDirectoryProtocol::encodeMaintenance( window, bytes ) );
+    const string hex = test::OnlineMessageTestUtil::toHexString( bytes );
     SW_EXPECT_TRUE_MSG( hex == "0100000005000001f94ba75516ce124f140000000200000084030000000000000807060504030201aae70c7a3865c117080000000400000067616d65c4854d94"
                                "3865c11716000000120000006e6f746963652e6d61696e74656e616e6365ce98ab1d6423d20308000000000000000000000013507a986423d203080000000000000000000000",
                         hex.c_str() );
@@ -312,7 +313,9 @@ SW_TEST_CASE( ServerDirectoryProtocolTest, MessagesAndRecordsRoundTrip )
     window._messageKey = "notice.maintenance";
     window._listAllowedAccount.push_back( 900 );
     MaintenanceWindow decodedWindow;
-    SW_ASSERT_TRUE( ServerDirectoryProtocol::decodeMaintenance( "game", ServerDirectoryProtocol::encodeMaintenance( window ), decodedWindow ) );
+    vector<uint8>     windowBytes;
+    SW_ASSERT_TRUE( ServerDirectoryProtocol::encodeMaintenance( window, windowBytes ) );
+    SW_ASSERT_TRUE( ServerDirectoryProtocol::decodeMaintenance( "game", windowBytes, decodedWindow ) );
     SW_EXPECT_TRUE( decodedWindow.allowsAccount( 900 ) && decodedWindow._scope == "game" );
     SW_EXPECT_TRUE( window.makeView()._messageKey == "notice.maintenance" );
     {

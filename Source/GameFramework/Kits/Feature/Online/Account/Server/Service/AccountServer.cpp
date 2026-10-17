@@ -328,15 +328,18 @@ namespace sw
                 break;
             }
         }
+        const bool bOk = completion._result == LoginResult::Ok;
         if ( bWritten == false )
         {
             // 응답은 계정을 연결에 묶은 뒤에 보내야 하므로 respondMessage 를 쓰지 않고 먼저 써 둔다. 쓰지 못하면 같은 약속(kInternal)으로 응답한다.
-            // 저장소에 이미 만든 세션은 그대로 남는다(백로그 `A-16` "계정")
+            // 응답 몸은 저장소 작업이 만든 세션 토큰을 실으므로 작업 전에 쓸 수 없다. 클라이언트가 받지 못한 세션은 로그아웃 작업으로 지운다.
+            // 그 작업의 완료는 짝이 되는 요청이 없어 버려진다.
+            if ( bOk && AccountServerInternal::isGrantOperation( completion._operation ) )
+                _pLoginService->logout( completion._grant._token, _nowMs, _nextTag++ );
             (void)host.respondError( call._token, OnlineError::kInternal );
             return;
         }
 
-        const bool bOk = completion._result == LoginResult::Ok;
         if ( bOk && AccountServerInternal::isGrantOperation( completion._operation ) )
         {
             const AccountID accountID = completion._grant._identity._accountID;

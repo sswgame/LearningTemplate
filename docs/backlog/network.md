@@ -2,14 +2,6 @@
 
 Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `A-16` [결함] **계정 서버가 로그인 응답을 쓰지 못해도 세션은 이미 저장소에 있다.** `AccountServer::handleCompletion` 은 응답 몸(`AccountGrantReply` 같은 것)을 쓰지 못하면
-  `kInternal` 로 답하고 돌아오지만, 그때는 로그인 저장소 작업(`LoginStoreLogic`)이 세션 레코드를 이미 만든 뒤다. 클라이언트는 실패로 알고 세션은 시한까지 남는다.
-  응답 몸을 저장소 작업 전에 쓸 수 있는지 확인하거나, 실패하면 그 세션을 지우는 작업을 걸어 둔다. 쓰기 실패는 서버 코드가 범위 밖 값을 만든 결함일 때만 난다.
-
-- `A-17` [결함] **저장소 레코드 쓰기(`ServiceRecordUtil::encode`)가 실패를 돌려주지 못한다.** `BinarySerializer::serialize` 는 실을 수 없는 값에서 `false` 를 돌려주지만(2026-10-17),
-  `encode` 는 바이트를 돌려주는 모양이라 Debug 단언으로만 멈춘다. Release 에서는 중간에 끊긴 레코드가 저장소에 들어간다. 호출은 키트 `encodeRecord` 9 곳과 그 호출 14 곳이며,
-  저장소 작업마다 실패 응답을 정해야 해서 따로 뗐다. `[[nodiscard]] bool encode( version, record, outBytes )` 로 바꾸고 호출부가 요청을 실패로 돌려준다.
-
 - `B-9` [검증대기] **패킷 압축의 남은 것**(UDP 압축을 끈 결정과 측정값은 [결정 기록](../09_Decisions.md) 5-9). WSL Release 로 `NetCompressionBenchTest` 를 한 번 돌린다(압축 시간은
   컴파일러 · libc 에 따라 다르다). 채팅 수치는 채팅 키트가 실제 기록을 내면 다시 잰다. 스트림 프레임 압축은 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
 

@@ -14,9 +14,9 @@ namespace sw
 
 namespace sw
 {
-    vector<uint8> ServerDirectoryProtocol::encodeMaintenance( const MaintenanceWindow& window )
+    bool ServerDirectoryProtocol::encodeMaintenance( const MaintenanceWindow& window, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, window );
+        return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, window, outBytes );
     }
 
     bool ServerDirectoryProtocol::decodeMaintenance( const string_view key, const vector<uint8>& bytes, MaintenanceWindow& outWindow )
@@ -24,9 +24,9 @@ namespace sw
         return ServiceRecordUtil::readDurable( key, bytes, kServerDirectoryRecordVersion, outWindow );
     }
 
-    vector<uint8> ServerDirectoryProtocol::encodeNotice( const ServiceNotice& notice )
+    bool ServerDirectoryProtocol::encodeNotice( const ServiceNotice& notice, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, notice );
+        return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, notice, outBytes );
     }
 
     bool ServerDirectoryProtocol::decodeNotice( const string_view key, const vector<uint8>& bytes, ServiceNotice& outNotice )

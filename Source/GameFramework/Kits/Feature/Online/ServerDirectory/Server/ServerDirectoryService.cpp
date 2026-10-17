@@ -435,15 +435,19 @@ namespace sw
             return;
         }
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
-        work->_table                              = Internal::getMaintenanceTable();
-        work->_key                                = window._scope;
-        work->_bytes                              = ServerDirectoryProtocol::encodeMaintenance( window );
-        work->_auditEntry._actor                  = Internal::makeActor( actorID );
-        work->_auditEntry._action                 = "sd.maintenance.set";
-        work->_auditEntry._subject                = "sd/" + window._scope;
-        work->_auditEntry._memo                   = string( memo );
-        work->_auditEntry._timeMs                 = nowMs;
-        work->_requestTag                         = requestTag;
+        if ( ServerDirectoryProtocol::encodeMaintenance( window, work->_bytes ) == false )
+        {
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
+            return;
+        }
+        work->_table               = Internal::getMaintenanceTable();
+        work->_key                 = window._scope;
+        work->_auditEntry._actor   = Internal::makeActor( actorID );
+        work->_auditEntry._action  = "sd.maintenance.set";
+        work->_auditEntry._subject = "sd/" + window._scope;
+        work->_auditEntry._memo    = string( memo );
+        work->_auditEntry._timeMs  = nowMs;
+        work->_requestTag          = requestTag;
         submitWrite( std::move( work ) );
     }
 
@@ -476,15 +480,19 @@ namespace sw
             return;
         }
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
-        work->_table                              = Internal::getNoticeTable();
-        work->_key                                = ServiceKeyUtil::makeHex64( notice._noticeID );
-        work->_bytes                              = ServerDirectoryProtocol::encodeNotice( notice );
-        work->_auditEntry._actor                  = Internal::makeActor( actorID );
-        work->_auditEntry._action                 = "sd.notice.post";
-        work->_auditEntry._subject                = "sd/notice/" + work->_key;
-        work->_auditEntry._after                  = notice._text;
-        work->_auditEntry._timeMs                 = nowMs;
-        work->_requestTag                         = requestTag;
+        if ( ServerDirectoryProtocol::encodeNotice( notice, work->_bytes ) == false )
+        {
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
+            return;
+        }
+        work->_table               = Internal::getNoticeTable();
+        work->_key                 = ServiceKeyUtil::makeHex64( notice._noticeID );
+        work->_auditEntry._actor   = Internal::makeActor( actorID );
+        work->_auditEntry._action  = "sd.notice.post";
+        work->_auditEntry._subject = "sd/notice/" + work->_key;
+        work->_auditEntry._after   = notice._text;
+        work->_auditEntry._timeMs  = nowMs;
+        work->_requestTag          = requestTag;
         submitWrite( std::move( work ) );
     }
 

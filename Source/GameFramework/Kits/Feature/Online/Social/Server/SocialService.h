@@ -145,9 +145,10 @@ namespace sw
         void          submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, int64 nowMs, uint64 requestTag );
         void          publishPresence( AccountID accountID, const LocalAccount& local );
         void          notifyFriendsOfPresence( const SocialPresence& presence );
-        void          writePresenceRecord( AccountID accountID, const LocalAccount& local );
-        void          onPresenceReply( const EphemeralReply& reply );
-        void          pushCompletion( uint64 requestTag, SocialResult result );
+        /** @brief 접속 상태 캐시 값을 씁니다. 값을 못 쓰면 오류 로그를 남기고 false 이며 캐시에 아무것도 보내지 않습니다. */
+        [[nodiscard]] bool writePresenceRecord( const SocialPresence& presence );
+        void               onPresenceReply( const EphemeralReply& reply );
+        void               pushCompletion( uint64 requestTag, SocialResult result );
 
         unordered_map<AccountID, LocalAccount> _mapAccountToLocal;
         unordered_map<uint64, PresenceRead>    _mapCacheRequestToRead;

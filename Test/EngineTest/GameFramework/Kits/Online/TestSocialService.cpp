@@ -416,9 +416,17 @@ SW_TEST_CASE( SocialProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
     SW_EXPECT_TRUE( Util::roundTrips<Messages>( SocialLinkChanged{ 1, 2 } ) );
     SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( SocialLinkChanged{ 1, 2 } ) );
     SocialPresence decoded;
-    SW_ASSERT_TRUE( SocialProtocol::decodePresenceRecord( SocialProtocol::encodePresenceRecord( SocialPresence{ "lobby", 8, SocialPresenceStatus::Busy } ), decoded ) );
+    vector<uint8>  presenceBytes;
+    SW_ASSERT_TRUE( SocialProtocol::encodePresenceRecord( SocialPresence{ "lobby", 8, SocialPresenceStatus::Busy }, presenceBytes ) );
+    SW_ASSERT_TRUE( SocialProtocol::decodePresenceRecord( presenceBytes, decoded ) );
     SW_EXPECT_TRUE( decoded._activity == "lobby" && decoded._accountID == 8 && decoded._status == SocialPresenceStatus::Busy );
-    SW_EXPECT_FALSE( SocialProtocol::decodePresenceRecord( SocialProtocol::encodePresenceRecord( SocialPresence{ string( 65, 'x' ), 8, SocialPresenceStatus::Busy } ), decoded ) );
+    const SocialPresence tooLong{ string( 65, 'x' ), 8, SocialPresenceStatus::Busy };
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an out-of-range presence is not written" );
+        SW_EXPECT_FALSE( SocialProtocol::encodePresenceRecord( tooLong, presenceBytes ) );
+    }
+    SW_ASSERT_TRUE( test::OnlineMessageTestUtil::writeUncheckedRecord( 1, "sw::SocialPresence", tooLong, presenceBytes ) ); // 다른 빌드가 쓴 값을 흉내 낸다
+    SW_EXPECT_FALSE( SocialProtocol::decodePresenceRecord( presenceBytes, decoded ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
         SocialRequest request;
