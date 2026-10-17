@@ -10,6 +10,7 @@
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitState.h"
 
 namespace sw
 {
@@ -714,7 +715,10 @@ namespace sw
     {
         const bool bTooManyPorts = kind._listInput.size() > GimmickNodeRegistryInternal::kMaxPortCount ||
                                    kind._listOutput.size() > GimmickNodeRegistryInternal::kMaxPortCount;
-        if ( bTooManyPorts || kind._pStep == nullptr )
+        // 상태 슬롯 상한은 회로 상태의 고정 배치형 상한이다. 여기서 막아 두면 만들어진 회로의 상태는 늘 쓸 수 있다.
+        const bool bTooManySlots = kind._floatStateCount > GimmickNodeState::kMaxSlotCount || kind._intStateCount > GimmickNodeState::kMaxSlotCount;
+        const bool bInvalidKind  = bTooManyPorts || bTooManySlots || kind._pStep == nullptr;
+        if ( bInvalidKind )
             return false;
         return _registry.add( kind._name, kind );
     }

@@ -1,8 +1,9 @@
 /**
  * @file GimmickCircuit.h
- * @brief 기믹 회로 실행입니다. 정의를 레지스트리로 검증해서 회로를 만들고, 고정 스텝으로 센서, 연산자, 액추에이터 순서로 평가합니다. 상태는 바이트로 저장하고 복원하고 해시합니다.
+ * @brief 기믹 회로 실행입니다. 정의를 레지스트리로 검증해서 회로를 만들고, 고정 스텝으로 센서, 연산자, 액추에이터 순서로 평가합니다. 상태는 `GimmickCircuitState` 로 저장하고 복원하고 해시합니다.
  * @details 결정적이다. 시간은 `step()`(고정 스텝)으로만 흐르고 벽시계를 읽지 않으며, 평가 순서는 회로를 만들 때 정한 위상 순서 하나뿐이다. 같은 정의와
- *          같은 센서 입력이면 같은 상태 해시가 나온다. 그래서 롤백 넷코드가 되감아서 다시 돌릴 수 있고, 레벨 세이브, 체크포인트, 네트워크 스냅샷이 같은 바이트를 쓴다.
+ *          같은 센서 입력이면 같은 상태 해시가 나온다. 그래서 롤백 넷코드가 되감아서 다시 돌릴 수 있다. 상태 값 하나를 레벨 세이브(A)와 롤백 · 넷 스냅샷(B)이 함께 쓰고,
+ *          바이트로 바꾸는 일은 이 클래스가 하지 않는다(`GimmickCircuitState.h`). 실행 중에는 슬롯을 회로 전체의 평평한 목록에 두고, 저장할 때만 노드별로 나눈다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,8 +14,28 @@
 
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitDef.h"
+#include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitState.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickNodeRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
+
+namespace sw
+{
+    /** @brief 저장 상태가 이 회로와 맞는 정도입니다. 값이 클수록 약하게 맞습니다(`GimmickCircuit::loadState` 의 받아들이는 한계로 씁니다). */
+    enum class GimmickStateMatch : uint8
+    {
+        Exact = 0,      ///< 회로의 모든 노드가 저장 상태에 있고 남는 저장 노드도 없다
+        NodeSetChanged, ///< 노드가 늘거나 줄었다. 짝이 맞는 노드만 옮기고, 새 노드는 처음 상태, 저장에만 있는 노드는 버린다
+        Mismatch        ///< 같은 id 인데 종류 · 상태 버전 · 슬롯 수가 다른 노드가 있거나, 저장 상태에 같은 id 가 둘이다. 아무것도 옮기지 않는다
+    };
+
+    /** @brief `GimmickCircuit::loadState` 의 결과입니다. */
+    struct [[nodiscard]] GimmickStateLoad
+    {
+        GimmickStateMatch _match{ GimmickStateMatch::Mismatch };
+        int32             _changedNode{ -1 }; ///< `Mismatch` 일 때 종류나 상태 뜻이 바뀐 이 회로의 노드 번호. 저장 상태 자체가 깨졌으면(같은 id 둘) -1
+        bool              _bApplied{ false }; ///< 상태를 옮겼는지. 받아들이는 한계보다 약하게 맞으면 false 이고 회로는 그대로다
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -30,7 +51,8 @@ namespace sw
         /**
          * @brief 정의를 검증하고 회로를 만듭니다. 문제는 하나에서 멈추지 않고 모두 @p outListError 에 한 줄씩 모읍니다. 문제가 하나라도 있으면 false 를 반환하고 회로는 비어 있습니다.
          * @details 검증 항목은 다음과 같다. 비어 있거나 겹치는 노드 id, 알 수 없는 종류, 알 수 없는 매개변수, 숫자가 아닌 숫자 매개변수, 배선의 알 수 없는 노드와 포트(출력에서 입력 방향),
-         *          종류의 초기화가 거절한 매개변수, 지연(Delay)을 지나지 않는 고리이다. 레지스트리는 소유하지 않고 참조만 하므로 회로보다 오래 살아 있어야 한다.
+         *          종류의 초기화가 거절한 매개변수, 지연(Delay)을 지나지 않는 고리, 상태가 담을 수 있는 노드 수(`GimmickCircuitState::kMaxNodeCount`)를 넘는 회로이다.
+         *          슬롯 수 상한은 종류를 등록할 때 이미 막았다(`GimmickNodeRegistry::registerKind`). 레지스트리는 소유하지 않고 참조만 하므로 회로보다 오래 살아 있어야 한다.
          */
         [[nodiscard]] bool populate( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError );
         /** @brief 회로를 만들지 않고 검증만 합니다. 로드할 때와 에디터에서 저장할 때 씁니다. */
@@ -68,18 +90,23 @@ namespace sw
         /** @brief 해석된 매개변수입니다. 종류에 없는 이름이면 nullptr 입니다. */
         const GimmickParamValue* findParam( int32 node, const hashed_string& name ) const;
 
-        /** @brief 상태 전체를 바이트로 씁니다. 스텝 번호, 누적 시간, 노드 출력, 지난 입력, 센서 값, 상태 슬롯이 들어 있습니다. */
-        void saveState( vector<uint8>& outBytes ) const;
-        /** @brief `saveState` 가 쓴 바이트를 읽습니다. 헤더, 회로 구조(`getLayoutHash`), 크기가 맞지 않으면 아무것도 바꾸지 않고 false 를 반환합니다. */
-        [[nodiscard]] bool loadState( const vector<uint8>& bytes );
-        /** @brief 상태의 64 비트 해시입니다. 같은 입력이면 같은 값이 나오므로 결정성 검증과 비동기 감지에 씁니다. */
+        /**
+         * @brief 상태 전체를 씁니다. 스텝 번호, 누적 시간, 노드마다 id · 종류 · 상태 버전 · 출력 · 지난 입력 · 센서 값 · 상태 슬롯이 들어 있습니다.
+         * @details @p outState 의 목록 용량을 이어 쓰므로, 틱마다 같은 값에 쓰면 새로 할당하지 않는다.
+         */
+        void saveState( GimmickCircuitState& outState ) const;
+        /**
+         * @brief 저장 상태를 노드 id 로 짝지어 옮깁니다. 짝이 맞는 정도(`GimmickStateMatch`)가 @p weakestAccepted 보다 약하면 아무것도 바꾸지 않습니다.
+         * @details 롤백 · 넷 스냅샷(같은 빌드, 같은 회로)은 `Exact` 만, 레벨 세이브 · 씬처럼 회로 데이터가 그 뒤에 바뀌었을 수 있는 것은 `NodeSetChanged` 까지 받는다.
+         *          `Mismatch` 는 어떤 한계로도 받지 않는다. 받지 않은 결과를 무엇으로 볼지는 부르는 쪽이 정한다(`GimmickCircuitComponent::applySavedState`).
+         */
+        GimmickStateLoad loadState( const GimmickCircuitState& state, GimmickStateMatch weakestAccepted );
+        /** @brief 상태의 64 비트 해시입니다. 고정 배치형 바이트(`FixedLayout::write`)의 FNV-1a 입니다. 같은 입력이면 같은 값이 나오므로 결정성 검증과 비동기 감지에 씁니다. */
         uint64 computeStateHash() const;
 
         bool    isBuilt() const { return _listNode.empty() == false; }
         uint32  getStepIndex() const { return _stepIndex; }
         float32 getStepTime() const { return _stepTime; }
-        /** @brief 노드 종류, id, 상태 크기로 계산한 회로 구조의 해시입니다. 저장된 상태가 이 회로의 것인지 구분하는 데 씁니다. */
-        uint64 getLayoutHash() const { return _layoutHash; }
 
     private:
         /** @brief 노드 하나의 실행 정보입니다. */
@@ -111,7 +138,10 @@ namespace sw
 
         uint32             gatherInputs( const NodeRuntime& node ) const;
         GimmickNodeContext makeContext( NodeRuntime& node );
-        void               computeLayoutHash();
+        /** @brief 저장 노드 하나를 이 회로의 @p nodeIndex 노드에 옮깁니다. 종류와 슬롯 수는 부르는 쪽이 이미 대조했습니다. */
+        void writeNode( size_t nodeIndex, const GimmickNodeState& state );
+        /** @brief 같은 회로가 쓴 상태(노드 순서가 같음)를 그대로 옮깁니다. `resetToInitial` 과 `loadState` 가 씁니다. */
+        void copyState( const GimmickCircuitState& state );
 
         vector<NodeRuntime>       _listNode;
         vector<InputWire>         _listInputWire;
@@ -119,9 +149,8 @@ namespace sw
         vector<float32>           _listFloatState;
         vector<int32>             _listIntState;
         vector<uint32>            _listOrder; ///< 평가 순서. 고리를 끊는 노드가 먼저 온다
-        vector<uint8>             _initialStateBytes;
+        GimmickCircuitState       _initialState;
         FixedStepTimer            _timer;
-        uint64                    _layoutHash;
         uint32                    _stepIndex;
         float32                   _stepTime;
     };
