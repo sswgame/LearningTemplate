@@ -25,8 +25,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
 
-from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from common import findFast  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kListScanRoot = ("Source",)
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
@@ -34,30 +35,24 @@ _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 _kStdThreadRe = re.compile(r"(?<![\w$])std::(?:j)?thread(?![\w$:])")
 
 
-def findStdThreadUses(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
+def findStdThreadUses(source: SourceFile) -> list[str]:
     """예외 밖에서 `std::thread` 를 쓰는 줄을 위반 문자열로 돌려줍니다. 예외 파일은 보면 `see`, 쓰면 `use` 로 적습니다."""
     gate = CheckStdThreadGate
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
-    listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if relative.startswith("Source/") == False:
-            continue
-        bExempt = relative in gate.mapExemption
-        listCodeMatch: list[tuple[int, str]] = []
-        if _kStdThreadRe.search(text) is not None:
-            listCodeMatch = [(lineIndex, match.group(0))
-                             for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1)
-                             for match in _kStdThreadRe.finditer(line)]
-        if bExempt:
-            gate.seeExemption(relative)
-            if listCodeMatch:
-                gate.useExemption(relative)
-            continue
-        listOriginalLine = text.splitlines()
-        for lineIndex, name in listCodeMatch:
-            listViolation.append(f"{relative}:{lineIndex}: {name}  | {listOriginalLine[lineIndex - 1].strip()}")
-    return listViolation
+    relative = source.relative
+    if relative.startswith("Source/") == False:
+        return []
+    bExempt = relative in gate.mapExemption
+    listCodeMatch: list[tuple[int, str]] = []
+    if findFast(_kStdThreadRe, source.text) is not None:
+        listCodeMatch = [(lineIndex, match.group(0))
+                         for lineIndex, line in enumerate(source.listMaskedLine, start=1)
+                         for match in _kStdThreadRe.finditer(line)]
+    if bExempt:
+        gate.seeExemption(relative)
+        if listCodeMatch:
+            gate.useExemption(relative)
+        return []
+    return [f"{relative}:{lineIndex}: {name}  | {source.listLine[lineIndex - 1].strip()}" for lineIndex, name in listCodeMatch]
 
 
 class CheckStdThreadGate(LintGate):
@@ -68,6 +63,9 @@ class CheckStdThreadGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = _kSuffixes
+    sourceSummary = f"{' · '.join(_kListScanRoot)} 의 std::thread 직접 사용"
     violationHeader = "std::thread 직접 사용"
     hint = (
         "  스레드는 Source/Core/Concurrency/thread.h 의 sw::thread 입니다(std::thread 와 같은 모양):\n"
@@ -111,9 +109,8 @@ class CheckStdThreadGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = findStdThreadUses(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 std::thread 직접 사용")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findStdThreadUses(source))
 
 
 main = CheckStdThreadGate.run

@@ -26,7 +26,7 @@ GameFramework 층 검사 — 기반의 층 · 폴더 순서(DAG)와 키트의 �
 
 규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckGameFrameworkLayers.toml` 에 있다.
 
-  python Scripts/lint/gate/CheckGameFrameworkLayers.py [--root <repo>]
+  python Scripts/lint/gate/CheckGameFrameworkLayers.py [--root <repo>] [--files a.h b.cpp]
 """
 
 from __future__ import annotations
@@ -38,9 +38,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, iterIncludes, kDirSourceGameFramework  # noqa: E402
+from common import iterIncludes, kCppAllExtensions, kDirSourceGameFramework  # noqa: E402
 from common.RuleData import kKindInteger  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kKitsFolderName = "Kits"
 _kBaseFolderName = "Base"
@@ -219,6 +220,11 @@ class CheckGameFrameworkLayersGate(LintGate):
     buildComment = "Checking GameFramework layer include rules..."
     timeoutSeconds = 15
     preCommitPattern = ("Source/GameFramework/*",)
+    preCommitFileArgument = "--files"
+    sourceScanRoots = (kDirSourceGameFramework,)
+    sourceSuffixes = tuple(sorted(kCppAllExtensions))
+    # 옛 걷기(`collectSourceFiles`)처럼 폴더를 빼지 않는다.
+    sourceExcludedDirNames = frozenset()
     violationHeader = "층 위반"
     hint = "기반 폴더의 층은 Scripts/lint/rules/CheckGameFrameworkLayers.toml 의 [base_layer] · [base_folder_order] — 위층이 쓰는 것을 아래로 내리거나 신호(이벤트 · 끌어 읽기)로 뒤집는다"
     selfTestCases = [
@@ -369,15 +375,23 @@ class CheckGameFrameworkLayersGate(LintGate):
         },
     ]
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        self.addFilesArgument(parser)
+
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
         gameFrameworkDir = repositoryRoot / kDirSourceGameFramework
         if not gameFrameworkDir.is_dir():
             raise GateError(f"GameFramework 경로 없음: {gameFrameworkDir}")
-        listPath = collectSourceFiles([gameFrameworkDir])
-        listViolation: list[str] = []
-        for path, text in LintGate.readFiles(listPath, errors="strict"):
-            listViolation.extend(checkFileInternal(path.relative_to(repositoryRoot).as_posix(), text))
-        return GateResult(listViolation=listViolation, summary=f"{len(listPath)} files, {len(_kBaseLayer)} base layers, {len(_kBaseFolderOrder)} base folders")
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if source.decodeError:
+            return FileFindings(error=source.decodeError)
+        return FileFindings(listViolation=checkFileInternal(source.relative, source.text))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, _ = joinFindings(result.listFindings)
+        return GateResult(listViolation=listViolation,
+                          summary=f"{result.fileCount} files, {len(_kBaseLayer)} base layers, {len(_kBaseFolderOrder)} base folders")
 
 
 main = CheckGameFrameworkLayersGate.run

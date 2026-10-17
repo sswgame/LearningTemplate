@@ -22,7 +22,7 @@ Engine 레이어 금지 include 검사.
 티어는 **include 그래프에서 계산한 것**이다 — 손으로 고른 금지 쌍은 늘릴 기준이 없다. 전체 그래프를
 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 아니라 실패다.
 
-  python Scripts/lint/gate/CheckEngineLayers.py [--root <repo>]
+  python Scripts/lint/gate/CheckEngineLayers.py [--root <repo>] [--files a.h b.cpp]
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import (  # noqa: E402
-    collectSourceFiles,
+    kCppAllExtensions,
     kDirSourceApp,
     kDirSourceModuleHost,
     kDirSourceCore,
@@ -48,12 +48,16 @@ from common import (  # noqa: E402
     kDirSourceServer,
     kFileEngineServices,
     iterIncludes,
-    mapConcurrent,
     normalizePath,
     startsWithPathComponent,
 )
 from common.RuleData import kKindInteger, kKindTextList  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+
+#: 층 규칙이 보는 뿌리 — 걷는 뿌리이자 커밋 훅이 이 게이트를 부르는 자리다.
+_kListScanRoot = (kDirSourceEngine, kDirSourceGames, kDirSourceGameFramework, kDirSourceRuntimeAPI, kDirSourceCore, kDirSourceApp,
+                  kDirSourceModuleHost, kDirSourceEditor, kDirSourceServer)
 
 
 @functools.lru_cache(maxsize=None)
@@ -231,16 +235,8 @@ def findCoreViolationsInternal(relativeFilePath: str, engineRelativePath: str, l
     return listViolation
 
 
-def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
-    """파일 하나의 금지 include 와 티어 위반을 돌려줍니다. 읽지 못하면 `GateError` 입니다."""
-    relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
-    try:
-        text = filePath.read_text(encoding="utf-8", errors="strict")
-    except UnicodeDecodeError as exception:
-        raise GateError(f"UTF-8 인코딩 오류: {relativeFilePath}: {exception}") from exception
-    except OSError as exception:
-        raise GateError(f"읽기 실패: {relativeFilePath}: {exception}") from exception
-
+def processFile(relativeFilePath: str, text: str) -> list[str]:
+    """파일 하나의 금지 include 와 티어 위반을 돌려줍니다."""
     fileViolations: list[str] = []
     listRawInclude = [rawInclude for _, rawInclude in iterIncludes(text)]
 
@@ -327,7 +323,12 @@ class CheckEngineLayersGate(LintGate):
     description = "Engine 레이어 금지 include 검사"
     buildComment = "Checking Engine layer include rules..."
     timeoutSeconds = 15
-    preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
+    preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
+    preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = tuple(sorted(kCppAllExtensions))
+    # 옛 걷기(`collectSourceFiles`)처럼 폴더를 빼지 않는다 — 층 규칙은 뿌리 아래 모든 C++ 를 본다.
+    sourceExcludedDirNames = frozenset()
     violationHeader = "레이어 위반"
     selfTestCases = [
         {
@@ -415,29 +416,22 @@ class CheckEngineLayersGate(LintGate):
         },
     ]
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        self.addFilesArgument(parser)
+
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
         engineDir = repositoryRoot / kDirSourceEngine
         if not engineDir.is_dir():
             raise GateError(f"Engine 경로 없음: {engineDir}")
 
-        scanRoots = [
-            engineDir,
-            repositoryRoot / kDirSourceGames,
-            repositoryRoot / kDirSourceGameFramework,
-            repositoryRoot / kDirSourceRuntimeAPI,
-            repositoryRoot / kDirSourceCore,
-            repositoryRoot / kDirSourceApp,
-            repositoryRoot / kDirSourceModuleHost,
-            repositoryRoot / kDirSourceEditor,
-            repositoryRoot / kDirSourceServer,
-        ]
-        scanRoots = [root for root in scanRoots if root.is_dir()]
-        allFiles = collectSourceFiles(scanRoots)
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if source.decodeError:
+            return FileFindings(error=source.decodeError)
+        return FileFindings(listViolation=processFile(source.relative, source.text))
 
-        violations: list[str] = []
-        for fileViolations in mapConcurrent(lambda path: processFile(path, repositoryRoot), allFiles):
-            violations.extend(fileViolations)
-        return GateResult(listViolation=violations, summary=f"{len(allFiles)} files scanned in parallel")
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        violations, _ = joinFindings(result.listFindings)
+        return GateResult(listViolation=violations, summary=f"{result.fileCount} files scanned in parallel")
 
 
 main = CheckEngineLayersGate.run

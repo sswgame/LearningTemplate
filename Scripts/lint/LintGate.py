@@ -33,8 +33,21 @@ class CheckSomethingGate(LintGate):
 main = CheckSomethingGate.run
 ```
 
-파일마다 파이썬 정규식을 오래 돌리는 게이트라면 파일별 일을 `common.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) —
-스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면 `mapConcurrent` · `readTextFiles` 로 충분하다(`common/Parallel.py` 머리말).
+**파일마다 따로 보는 C++ · 셰이더 게이트는 `scan()` 대신 소스 게이트로 쓴다** — 트리 걷기 · 읽기 · 주석 가리기를 게이트마다 되풀이하지
+않고 함께 도는 게이트들과 나눠 쓴다(`SourceScan.py`, 아래 "소스 게이트"):
+
+```python
+class CheckSomethingGate(LintGate):
+    sourceScanRoots = kLintTargetRelDirs          # 이것을 채우면 소스 게이트다 — CTest · CI 는 `RunSourceGates.py` 한 프로세스로 돌린다
+    sourceSuffixes = (".h", ".cpp")
+
+    def checkSourceFile(self, source, args):      # source.text · source.masked · source.listLine · source.relative
+        return FileFindings(listViolation=[f"{source.relative}: ..." for ... in ...])
+```
+
+파일 사이의 관계를 보거나 파일마다가 아닌 일을 하는 게이트는 `scan()` 을 쓴다. 그런 게이트가 파일마다 파이썬 정규식을 오래 돌린다면
+파일별 일을 `common.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) — 스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면
+`mapConcurrent` · `readTextFiles` 로 충분하다(`common/Parallel.py` 머리말).
 
 `gate/` 에 놓으면 `CheckLintsAreAlive` 가 알아서 집어 가고(목록이 아니라 자리가 규칙이다),
 증거(`selfTestCases`)를 들고 있지 않으면 그 자리에서 실패한다.
@@ -50,10 +63,12 @@ from pathlib import Path
 from types import ModuleType
 from typing import Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parent))       # Scripts/lint — SourceScan
 
 from common import collectRepositoryFiles, getProjectRoot, kNotOurDirNames, readTextFiles, resolveFileArguments  # noqa: E402
 from common.RuleData import RuleDataError, kExemptionKey, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings, scanSourceGates  # noqa: E402
 
 
 class GateError(Exception):
@@ -159,6 +174,39 @@ class LintGate:
     _setSeenExemption: set[str] = set()
     _setUsedExemption: set[str] = set()
 
+    # --- 소스 게이트 -------------------------------------------------------------
+    #
+    # 파일마다 따로 보는 게이트는 `scan()` 을 쓰지 않고 아래를 채운다. 그러면 걷기 · 읽기 · 주석 가리기를 함께 도는 게이트들과 나눠 쓰고
+    # (`SourceScan.scanSourceGates`), CTest · CI 린트 잡은 소스 게이트 전부를 `RunSourceGates.py` 한 프로세스로 돌린다(`LintCatalog`).
+    # 혼자 돌릴 때(`main = XxxGate.run` · 커밋 훅 `--files`)도 같은 함수를 게이트 하나로 부른다.
+    #
+    # - `sourceScanRoots`      : 걸을 뿌리(저장소 기준). **채우면 소스 게이트다.** 확장자(`sourceSuffixes`)도 반드시 함께 적는다.
+    # - `sourceExcludedDirNames`: 내려가지 않을 폴더 이름(기본 `kNotOurDirNames`)
+    # - `prepareSourceScan`    : 훑기 전에 한 번 — 저장소 전체를 묻는 확인(집 파일이 있는가)이나 규칙 준비. 성립하지 않으면 `GateError`.
+    # - `checkSourceFile`      : 파일 하나 → `FileFindings`(없으면 None). **자식 프로세스에서도 돈다** — 인스턴스에 상태를 쌓지 말고,
+    #                            파일 사이에 모을 것은 `FileFindings.value` 로 돌려 `finishSourceScan` 에서 모은다.
+    # - `finishSourceScan`     : 파일마다의 결과 → `GateResult`. 기본은 위반 · 참고를 파일 순서대로 잇고 요약은 `sourceSummary`(비우면 본 파일 수)다.
+    sourceScanRoots: tuple[str, ...] = ()
+    sourceSuffixes: tuple[str, ...] = ()
+    sourceExcludedDirNames: frozenset[str] = kNotOurDirNames
+    sourceSummary: str = ""
+
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
+        """소스 게이트가 훑기 전에 한 번 확인할 것. 성립하지 않으면 `GateError`."""
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        """소스 게이트가 파일 하나를 봅니다."""
+        raise NotImplementedError
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        """파일마다의 결과를 게이트 결과로 모읍니다."""
+        listViolation, listNote = joinFindings(result.listFindings)
+        return GateResult(listViolation=listViolation, listNote=listNote, summary=self.sourceSummary or f"{result.fileCount} files")
+
+    @classmethod
+    def isSourceGate(cls) -> bool:
+        return bool(cls.sourceScanRoots)
+
     @classmethod
     def seeExemption(cls, key: str) -> None:
         """예외 `key` 의 대상을 이번 훑기에서 보았다고 적습니다."""
@@ -185,6 +233,10 @@ class LintGate:
             # 클래스 이름에서 `Gate` 를 뗀 것이 로그 태그다 — `CheckEngineLayersGate` -> `CheckEngineLayers`.
             # 모듈 이름을 쓰지 않는 이유: 스크립트로 직접 돌리면 `__main__` 이 된다.
             cls.name = cls.__name__.removesuffix("Gate")
+        if cls.sourceScanRoots and not cls.sourceSuffixes:
+            raise TypeError(f"{cls.__name__}: sourceScanRoots 를 채운 소스 게이트는 sourceSuffixes 도 적는다")
+        if cls.sourceScanRoots and "scan" in cls.__dict__:
+            raise TypeError(f"{cls.__name__}: 소스 게이트(sourceScanRoots)는 scan() 이 아니라 checkSourceFile() 을 쓴다")
         if "mapExemption" not in cls.__dict__:
             # 예외 표는 rules/<이름>.toml 에서 온다. 읽기 오류는 import 를 깨지 않고 main() 이 종료 2 로 알린다(CheckLintsAreAlive 도 본다).
             try:
@@ -209,8 +261,25 @@ class LintGate:
         """`--root` 말고 더 받을 인자가 있으면 여기서 더합니다."""
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        """저장소를 한 번 훑고 결과를 돌려줍니다. 검사가 성립하지 않으면 `GateError` 를 던집니다."""
-        raise NotImplementedError
+        """
+        저장소를 한 번 훑고 결과를 돌려줍니다. 검사가 성립하지 않으면 `GateError` 를 던집니다.
+        소스 게이트는 이것을 쓰지 않는다 — 기반이 공유 훑기를 게이트 하나로 부른다.
+        """
+        if not self.isSourceGate():
+            raise NotImplementedError
+        self.prepareSourceScan(repositoryRoot, args)
+        try:
+            listResult = scanSourceGates(repositoryRoot, [(self, args)])
+        except OSError as exception:
+            raise GateError(str(exception)) from exception
+        return self.finishSourceScanChecked(repositoryRoot, args, listResult[0])
+
+    def finishSourceScanChecked(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        """파일에서 검사가 서지 않았으면(`FileFindings.error`) `GateError`, 아니면 `finishSourceScan`."""
+        listError = [findings.error for findings in result.listFindings if findings.error]
+        if listError:
+            raise GateError(" · ".join(listError))
+        return self.finishSourceScan(repositoryRoot, args, result)
 
     # --- 기반이 주는 것 --------------------------------------------------------
 
@@ -219,13 +288,16 @@ class LintGate:
         """진입점. 각 게이트 모듈은 `main = XxxGate.run` 한 줄로 이것을 내보냅니다."""
         return cls().main(argv)
 
-    def main(self, argv: list[str] | None = None) -> int:
+    def parseArguments(self, argv: list[str] | None) -> tuple[argparse.Namespace, Path]:
+        """명령줄 → (인자, 저장소 루트)."""
         parser = argparse.ArgumentParser(description=self.description)
         parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
         self.addArguments(parser)
         args = parser.parse_args(argv)
+        return args, (args.root or getProjectRoot()).resolve()
 
-        repositoryRoot = (args.root or getProjectRoot()).resolve()
+    def beginRun(self) -> int:
+        """훑기 전 — 예외 기록을 비우고 규칙 데이터 · 예외 표를 확인합니다. 검사가 서지 않으면 2, 아니면 0."""
         cls = type(self)
         cls._setSeenExemption = set()
         cls._setUsedExemption = set()
@@ -236,11 +308,22 @@ class LintGate:
         if listNoReason:
             print(f"[{self.name}] 이유 없는 예외: {', '.join(listNoReason)} — 이유 없는 예외는 없다", file=sys.stderr)
             return 2
+        return 0
+
+    def main(self, argv: list[str] | None = None) -> int:
+        args, repositoryRoot = self.parseArguments(argv)
+        returnCode = self.beginRun()
+        if returnCode != 0:
+            return returnCode
         try:
             result = self.scan(repositoryRoot, args)
         except (GateError, RuleDataError) as exception:
             print(f"[{self.name}] {exception}", file=sys.stderr)
             return 2
+        return self.endRun(repositoryRoot, args, result)
+
+    def endRun(self, repositoryRoot: Path, args: argparse.Namespace, result: GateResult) -> int:
+        """훑은 뒤 — 낡은 예외를 더하고, 표 크기를 요약에 붙여 찍고, 종료 코드를 돌려줍니다."""
         if not getattr(args, "files", None):
             result.listViolation += self.findStaleExemptionsInternal(repositoryRoot)
         if self.mapExemption:

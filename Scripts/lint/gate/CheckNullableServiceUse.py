@@ -29,8 +29,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 # 곧바로 화살표가 붙는 모양만 잡는다 — 포인터를 받아 두고 확인한 뒤 쓰는 형태
 # (`T* p = findSubsystem<T>();`)는 걸리지 않는다.
@@ -90,23 +90,15 @@ def findUncheckedStores(relative: str, lines: list[str]) -> list[str]:
 _kListScanRoot = ( "Source/Engine", "Source/Editor", "Source/GameFramework", "Source/Games" )
 
 
-def findDirectDereferences(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    """`findSubsystem<T>()->` 꼴을 모아 위반 문자열로 돌려줍니다."""
+def findDirectDereferences(source: SourceFile) -> list[str]:
+    """파일 하나에서 `findSubsystem<T>()->` 꼴을 모아 위반 문자열로 돌려줍니다."""
     violations: list[str] = []
-    for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".cpp", ".h")):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace")
-        except FileNotFoundError:
-            continue
-        except OSError as exception:
-            raise GateError(f"읽기 실패: {relative}: {exception}") from exception
-
-        lines = text.splitlines()
-        for lineIndex, line in enumerate(lines, start=1):
-            if any(regex.search(line) for regex in _kListNullableCallRe):
-                violations.append(f"[Nullable Service] {relative}:{lineIndex}: {line.strip()}")
-        violations.extend(findUncheckedStores(relative, lines))
+    relative = source.relative
+    lines = source.listLine
+    for lineIndex, line in enumerate(lines, start=1):
+        if any(regex.search(line) for regex in _kListNullableCallRe):
+            violations.append(f"[Nullable Service] {relative}:{lineIndex}: {line.strip()}")
+    violations.extend(findUncheckedStores(relative, lines))
     return violations
 
 
@@ -118,6 +110,9 @@ class CheckNullableServiceUseGate(LintGate):
     timeoutSeconds = 15
     preCommitPattern = ("Source/Engine/*", "Source/Editor/*", "Source/GameFramework/*", "Source/Games/*")
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = (".cpp", ".h")
+    sourceSummary = "Engine · Editor · GameFramework · Games 의 서비스 조회 역참조"
     violationHeader = "확인 없이 역참조한 서비스 조회"
     hint = (
         "  findSubsystem<T>() 와 EditorContext::get() 은 nullptr 을 돌려줄 수 있습니다.\n"
@@ -191,9 +186,8 @@ class CheckNullableServiceUseGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Engine · Editor · GameFramework · Games 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = findDirectDereferences(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Engine · Editor · GameFramework · Games 의 서비스 조회 역참조")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findDirectDereferences(source))
 
 
 main = CheckNullableServiceUseGate.run

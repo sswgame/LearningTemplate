@@ -33,9 +33,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kListScanRoot = ("Source/GameFramework", "Source/Games")
 
@@ -70,28 +70,26 @@ def checkTableInternal() -> list[str]:
     return violations
 
 
-def findViolations(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
+def findViolationsInFile(source: SourceFile) -> list[str]:
     gate = CheckControlBoundaryGate
-    violations = checkTableInternal()
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".cpp", ".h", ".inl"))
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        allowKey = None if isPawnSideInternal(relative) else gate.findExemptionKey(relative)
+    violations: list[str] = []
+    relative = source.relative
+    allowKey = None if isPawnSideInternal(relative) else gate.findExemptionKey(relative)
+    if allowKey is not None:
+        gate.seeExemption(allowKey)
+    for lineIndex, line in enumerate(source.listLine, start=1):
+        rawMatch = _kRawInputQueryRe.search(line)
+        if rawMatch:
+            violations.append(f"[Control Boundary] {relative}:{lineIndex}: reads the input device ({rawMatch.group(1)}) — read an InputMap action "
+                              f"instead (only the cursor position, getMousePositionNormalized, is a device query): {line.strip()}")
+            continue
+        if not _kInputReadRe.search(line):
+            continue
         if allowKey is not None:
-            gate.seeExemption(allowKey)
-        for lineIndex, line in enumerate(text.splitlines(), start=1):
-            rawMatch = _kRawInputQueryRe.search(line)
-            if rawMatch:
-                violations.append(f"[Control Boundary] {relative}:{lineIndex}: reads the input device ({rawMatch.group(1)}) — read an InputMap action "
-                                  f"instead (only the cursor position, getMousePositionNormalized, is a device query): {line.strip()}")
-                continue
-            if not _kInputReadRe.search(line):
-                continue
-            if allowKey is not None:
-                gate.useExemption(allowKey)
-                continue
-            violations.append(f"[Control Boundary] {relative}:{lineIndex}: pawn-side code reads input — produce a ControlIntent in a controller "
-                              f"instead: {line.strip()}")
+            gate.useExemption(allowKey)
+            continue
+        violations.append(f"[Control Boundary] {relative}:{lineIndex}: pawn-side code reads input — produce a ControlIntent in a controller "
+                          f"instead: {line.strip()}")
     return violations
 
 
@@ -106,6 +104,8 @@ class CheckControlBoundaryGate(LintGate):
     timeoutSeconds = 15
     preCommitPattern = ("Source/GameFramework/*", "Source/Games/*")
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = (".cpp", ".h", ".inl")
     violationHeader = "폰 쪽 코드가 입력을 읽는다"
     hint = (
         "  폰(몸 · 이동 · 탈것)은 PawnComponent::getIntent() 의 ControlIntent 만 읽습니다.\n"
@@ -168,9 +168,12 @@ class CheckControlBoundaryGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 GameFramework · Games 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = findViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="GameFramework · Games 의 입력 읽기")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findViolationsInFile(source))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        violations, _ = joinFindings(result.listFindings)
+        return GateResult(listViolation=checkTableInternal() + violations, summary="GameFramework · Games 의 입력 읽기")
 
 
 main = CheckControlBoundaryGate.run

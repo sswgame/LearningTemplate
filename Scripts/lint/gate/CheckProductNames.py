@@ -31,10 +31,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
 
-from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import findFast, kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText, kKindTextList  # noqa: E402
 from gate.CheckThirdPartyIsolation import _kListLibraryRule  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 #: `rules/CheckProductNames.toml` 에서 예외 표 말고 읽는 것 — 제품 낱말 → 라이브러리 규칙 이름, 뒤에 대문자가 와야 하는 낱말.
@@ -66,6 +67,9 @@ class CheckProductNamesGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in kLintTargetRelDirs)
     preCommitFileArgument = "--files"
+    sourceScanRoots = kLintTargetRelDirs
+    sourceSuffixes = _kSuffixes
+    sourceSummary = "린트 대상(시험 제외)의 제품 이름 식별자"
     violationHeader = "드라이버 · 백엔드 폴더 밖의 제품 이름"
     hint = ("  인터페이스(ISQLDriver · INetSecurityProvider · IAudioService …)와 등록부(SQLDriverRegistry::findDriver 등)로 고릅니다.\n"
             "  제품을 골라 올리는 조립점이면 Scripts/lint/rules/CheckProductNames.toml 의 [exemption] 에 이유와 함께 한 줄.")
@@ -83,28 +87,25 @@ class CheckProductNamesGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=_kSuffixes)
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        relative = source.relative
+        if relative.startswith("Test/"):
+            return None
+        exemptKey = self.findExemptionKey(relative)
+        if exemptKey is not None:
+            self.seeExemption(exemptKey)
+        if findFast(_kProductNameRe, source.text) is None:
+            return None
         listViolation: list[str] = []
-        for path, text in self.readFiles(listPath):
-            relative = normalizePath(str(path.relative_to(repositoryRoot)))
-            if relative.startswith("Test/"):
+        for lineIndex, line in enumerate(source.listMaskedLine, start=1):
+            listWord = [match.group(1) for match in _kProductNameRe.finditer(line) if not isProductAllowedInternal(relative, match.group(1))]
+            if not listWord:
                 continue
-            exemptKey = self.findExemptionKey(relative)
             if exemptKey is not None:
-                self.seeExemption(exemptKey)
-            if _kProductNameRe.search(text) is None:
+                self.useExemption(exemptKey)
                 continue
-            listOriginalLine = text.splitlines()
-            for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1):
-                listWord = [match.group(1) for match in _kProductNameRe.finditer(line) if not isProductAllowedInternal(relative, match.group(1))]
-                if not listWord:
-                    continue
-                if exemptKey is not None:
-                    self.useExemption(exemptKey)
-                    continue
-                listViolation.append(f"{relative}:{lineIndex}: 제품 이름 '{listWord[0]}' | {listOriginalLine[lineIndex - 1].strip()}")
-        return GateResult(listViolation=listViolation, summary="린트 대상(시험 제외)의 제품 이름 식별자")
+            listViolation.append(f"{relative}:{lineIndex}: 제품 이름 '{listWord[0]}' | {source.listLine[lineIndex - 1].strip()}")
+        return FileFindings(listViolation=listViolation)
 
 
 main = CheckProductNamesGate.run

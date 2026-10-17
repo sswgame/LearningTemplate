@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # Scripts/lint — LintGate
 
-from common import kNotOurDirNames, runProcess  # noqa: E402
+from common import kNotOurDirNames, mapConcurrent, runProcess  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 kExecutableMode = "100755"
@@ -99,8 +99,7 @@ class CheckExecutableBitsGate(LintGate):
         else:
             listRelative = [relativePath for relativePath in mapMode if isOurPathInternal(relativePath)]
 
-        listViolation: list[str] = []
-        scriptCount = 0
+        listCandidate: list[tuple[str, str]] = []
         for relativePath in sorted(listRelative):
             path = repositoryRoot / relativePath
             if mapMode is not None:
@@ -111,7 +110,15 @@ class CheckExecutableBitsGate(LintGate):
                 continue
             else:
                 mode = readFileModeInternal(path)
-            if not isScriptInternal(path):
+            listCandidate.append((relativePath, mode))
+
+        # 추적 파일 전부(수만 개)의 머리 두 바이트를 연다 — 차례로 열면 다른 린트와 함께 돌 때 파일 열기가 밀려 수십 초가 된다(스레드는 입출력이라 겹친다).
+        setScript = {relativePath for relativePath, bScript in mapConcurrent(
+            lambda candidate: (candidate[0], isScriptInternal(repositoryRoot / candidate[0])), listCandidate) if bScript}
+        listViolation: list[str] = []
+        scriptCount = 0
+        for relativePath, mode in listCandidate:
+            if relativePath not in setScript:
                 continue
             scriptCount += 1
             if mode != kExecutableMode:

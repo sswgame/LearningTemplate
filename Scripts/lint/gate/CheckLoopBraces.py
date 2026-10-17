@@ -25,8 +25,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 _kLoopHeadRe = re.compile(r"\b(for|while)\s*\(")
@@ -177,10 +178,13 @@ def _isStatementStartInternal(masked: str, index: int) -> bool:
     return masked[cursor + 1:wordEnd] in ("else", "do")
 
 
-def findUnbracedLoops(text: str) -> list[UnbracedLoop]:
-    """파일 하나에서 본문에 중괄호가 없는 `for` · `while` 반복문을 찾습니다(픽서와 게이트가 같이 쓴다)."""
-    masked = blankCommentsAndLiterals(text)
-    noComment = blankComments(text)
+def findUnbracedLoops(text: str, masked: str | None = None, noComment: str | None = None) -> list[UnbracedLoop]:
+    """
+    파일 하나에서 본문에 중괄호가 없는 `for` · `while` 반복문을 찾습니다(픽서와 게이트가 같이 쓴다).
+    `masked` · `noComment` 는 이미 가린 글(`blankCommentsAndLiterals` · `blankComments`) — 게이트는 함께 도는 게이트와 나눠 쓴다.
+    """
+    masked = blankCommentsAndLiterals(text) if masked is None else masked
+    noComment = blankComments(text) if noComment is None else noComment
     if len(masked) != len(text) or len(noComment) != len(text):
         return []
     scanner = _Scanner(masked)
@@ -257,6 +261,8 @@ class CheckLoopBracesGate(LintGate):
     timeoutSeconds = 60
     preCommitPattern = tuple(f"{root}/*" for root in kLintTargetRelDirs)
     preCommitFileArgument = "--files"
+    sourceScanRoots = kLintTargetRelDirs
+    sourceSuffixes = _kSuffixes
     violationHeader = "중괄호 없는 반복문"
     hint = ("  for ( int32 index = 0; index < count; ++index )\n  {\n      doThing( index );\n  }\n"
             "  고치기: py -3 Scripts/lint/fixer/FormatBranchBraces.py --files <파일>(주석 · 전처리기가 낀 본문은 손으로)")
@@ -269,18 +275,16 @@ class CheckLoopBracesGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=_kSuffixes)
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        listLoop = findUnbracedLoops(source.text, source.masked, source.noComment)
+        if not listLoop:
+            return None
+        listLine = source.text.split("\n")
         listViolation: list[str] = []
-        fileCount = 0
-        for path, text in self.readFiles(listPath):
-            fileCount += 1
-            relative = normalizePath(str(path.relative_to(repositoryRoot)))
-            listLine = text.split("\n")
-            for loop in findUnbracedLoops(text):
-                manual = "" if loop.bFixable else " (픽서가 고치지 않는다 — 손으로)"
-                listViolation.append(f"{relative}:{loop.lineNumber}: {loop.keyword} 본문에 중괄호가 없습니다{manual} | {listLine[loop.lineNumber - 1].strip()}")
-        return GateResult(listViolation=listViolation, summary=f"{fileCount} files")
+        for loop in listLoop:
+            manual = "" if loop.bFixable else " (픽서가 고치지 않는다 — 손으로)"
+            listViolation.append(f"{source.relative}:{loop.lineNumber}: {loop.keyword} 본문에 중괄호가 없습니다{manual} | {listLine[loop.lineNumber - 1].strip()}")
+        return FileFindings(listViolation=listViolation)
 
 
 main = CheckLoopBracesGate.run

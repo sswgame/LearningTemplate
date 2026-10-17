@@ -26,9 +26,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import findFast, kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
@@ -46,39 +47,38 @@ _kWideCallRe = re.compile(r"(?<![\w$>.:])([A-Z][A-Za-z0-9]+)W\s*\(")
 _kGenericCallRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kListGenericName) + r")(A?)\s*\(")
 
 
-def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
+def findGenericWin32Calls(source: SourceFile) -> list[str]:
     """Win32 일반 이름 · `A` 판을 부르는 줄을 위반 문자열로 돌려줍니다."""
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
     gate = CheckWin32WideCallsGate
-    for path, text in LintGate.readFiles(listPath):
-        if _kGenericCallRe.search(text) is None and _kWideCallRe.search(text) is None:
-            continue
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        listOriginalLine = text.splitlines()
-        for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1):
-            for match in _kWideCallRe.finditer(line):
-                baseName = match.group(1)
-                if baseName in _kSetGenericName:
-                    continue
-                if baseName + "W" in gate.mapExemption:
-                    gate.useExemption(baseName + "W")
-                    continue
-                listViolation.append(f"{relative}:{lineIndex}: {baseName}W 의 일반 이름 '{baseName}' 이 rules/CheckWin32WideCalls.toml 의 generic_name 에 없습니다 — 거기 더합니다"
-                                     f"  | {listOriginalLine[lineIndex - 1].strip()}")
-            for match in _kGenericCallRe.finditer(line):
-                # 멤버 호출(`queue->GetMessage(` · `x.GetObject(`)은 COM · 클래스 메서드다 — 매크로가 바꿔도 선언과 함께 바뀐다.
-                prefix = line[:match.start()].rstrip()
-                if prefix.endswith("->") or prefix.endswith("."):
-                    continue
-                name = match.group(1)
-                bAnsi = match.group(2) == "A"
-                if bAnsi and name + "A" in CheckWin32WideCallsGate.mapExemption:
-                    CheckWin32WideCallsGate.useExemption(name + "A")
-                    continue
-                originalLine = listOriginalLine[lineIndex - 1].strip()
-                called = name + match.group(2)
-                listViolation.append(f"{relative}:{lineIndex}: {called} -> {name}W  | {originalLine}")
+    text = source.text
+    if findFast(_kGenericCallRe, text) is None and findFast(_kWideCallRe, text) is None:
+        return listViolation
+    relative = source.relative
+    listOriginalLine = source.listLine
+    for lineIndex, line in enumerate(source.listMaskedLine, start=1):
+        for match in _kWideCallRe.finditer(line):
+            baseName = match.group(1)
+            if baseName in _kSetGenericName:
+                continue
+            if baseName + "W" in gate.mapExemption:
+                gate.useExemption(baseName + "W")
+                continue
+            listViolation.append(f"{relative}:{lineIndex}: {baseName}W 의 일반 이름 '{baseName}' 이 rules/CheckWin32WideCalls.toml 의 generic_name 에 없습니다 — 거기 더합니다"
+                                 f"  | {listOriginalLine[lineIndex - 1].strip()}")
+        for match in _kGenericCallRe.finditer(line):
+            # 멤버 호출(`queue->GetMessage(` · `x.GetObject(`)은 COM · 클래스 메서드다 — 매크로가 바꿔도 선언과 함께 바뀐다.
+            prefix = line[:match.start()].rstrip()
+            if prefix.endswith("->") or prefix.endswith("."):
+                continue
+            name = match.group(1)
+            bAnsi = match.group(2) == "A"
+            if bAnsi and name + "A" in CheckWin32WideCallsGate.mapExemption:
+                CheckWin32WideCallsGate.useExemption(name + "A")
+                continue
+            originalLine = listOriginalLine[lineIndex - 1].strip()
+            called = name + match.group(2)
+            listViolation.append(f"{relative}:{lineIndex}: {called} -> {name}W  | {originalLine}")
     return listViolation
 
 
@@ -92,6 +92,9 @@ class CheckWin32WideCallsGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = _kSuffixes
+    sourceSummary = f"{' · '.join(_kListScanRoot)} 의 Win32 일반 이름(A/W 매크로) · A 판 호출"
     violationHeader = "Win32 문자 집합 일반 이름 · A 판 호출"
     hint = (
         "  이 저장소는 UNICODE 를 정의하지 않습니다 — 일반 이름(DefWindowProc · LoadCursor · CreateFile …)은 ANSI(A) 판입니다.\n"
@@ -136,9 +139,8 @@ class CheckWin32WideCallsGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = findGenericWin32Calls(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 Win32 일반 이름(A/W 매크로) · A 판 호출")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findGenericWin32Calls(source))
 
 
 main = CheckWin32WideCallsGate.run

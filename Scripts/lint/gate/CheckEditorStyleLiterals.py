@@ -34,9 +34,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, normalizePath, runGit  # noqa: E402
+from common import blankCommentsAndLiterals, runGit  # noqa: E402
 from common.RuleData import kKindInteger  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 _kScanRoot = ("Source/Editor", "Source/GameFramework/PlugIn/Editor")
 _kSuffixes = (".h", ".hpp", ".inl", ".cc", ".cpp", ".cxx")
@@ -95,9 +96,9 @@ def splitArgumentsInternal(inner: str) -> list[str]:
     return listArg
 
 
-def findStyleLiterals(text: str) -> list[StyleLiteral]:
-    """파일 하나에서 숫자 리터럴로 색 · 스타일 값을 만든 위치. 같은 줄은 하나로 센다."""
-    masked = blankCommentsAndLiterals(text)
+def findStyleLiterals(text: str, masked: str | None = None) -> list[StyleLiteral]:
+    """파일 하나에서 숫자 리터럴로 색 · 스타일 값을 만든 위치. 같은 줄은 하나로 센다(`masked` 는 이미 만든 `blankCommentsAndLiterals(text)`)."""
+    masked = blankCommentsAndLiterals(text) if masked is None else masked
     if len(masked) != len(text):
         return []
     listFound: list[StyleLiteral] = []
@@ -151,6 +152,8 @@ class CheckEditorStyleLiteralsGate(LintGate):
     timeoutSeconds = 120
     preCommitPattern = tuple(f"{root}/*" for root in _kScanRoot)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kScanRoot
+    sourceSuffixes = _kSuffixes
     violationHeader = "에디터 코드의 숫자 리터럴 색 · 스타일 값"
     ruleSchema = _kBaselineSchema
     maxNoteShown = 12
@@ -171,29 +174,36 @@ class CheckEditorStyleLiteralsGate(LintGate):
         parser.add_argument("--baseline", type=int, default=None, help="전체 훑기의 기준선을 이 값으로(기본은 rules 의 [baseline] total)")
         parser.add_argument("--list", action="store_true", help="전체 훑기에서 위반을 전부 찍는다")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        bFiles = bool(args.files)
-        mapAdded: dict[str, set[int]] | None = None
-        if bFiles and not args.whole_files:
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
+        args.bMergeSkip = False
+        args.mapAdded = None
+        if bool(args.files) and not args.whole_files:
             if (repositoryRoot / ".git" / "MERGE_HEAD").exists():
-                return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
+                args.bMergeSkip = True
+                return
             result = runGit(["diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--no-renames", "--diff-filter=ACM"], cwd=repositoryRoot)
-            mapAdded = parseAddedLines(result.stdout) if result.returnCode == 0 else None   # git 이 답하지 못하면 파일 전체로 본다(놓치지 않는 쪽)
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=_kScanRoot, suffixes=_kSuffixes)
-        listAll: list[tuple[str, StyleLiteral, str]] = []
-        fileCount = 0
-        for path, text in self.readFiles(listPath):
-            relative = normalizePath(str(path.relative_to(repositoryRoot)))
-            if relative.startswith(_kThemeSourcePrefix):
-                continue
-            fileCount += 1
-            listLine = text.split("\n")
-            for literal in findStyleLiterals(text):
-                if mapAdded is not None:
-                    setAdded = mapAdded.get(relative, set())
-                    if not any(literal.firstLine <= number <= literal.lastLine for number in setAdded):
-                        continue
-                listAll.append((relative, literal, listLine[literal.firstLine - 1].strip()))
+            args.mapAdded = parseAddedLines(result.stdout) if result.returnCode == 0 else None   # git 이 답하지 못하면 파일 전체로 본다(놓치지 않는 쪽)
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        relative = source.relative
+        if args.bMergeSkip or relative.startswith(_kThemeSourcePrefix):
+            return None
+        listLine = source.text.split("\n")
+        listFound: list[tuple[str, StyleLiteral, str]] = []
+        for literal in findStyleLiterals(source.text, source.masked):
+            if args.mapAdded is not None:
+                setAdded = args.mapAdded.get(relative, set())
+                if not any(literal.firstLine <= number <= literal.lastLine for number in setAdded):
+                    continue
+            listFound.append((relative, literal, listLine[literal.firstLine - 1].strip()))
+        return FileFindings(value=listFound)      # 테마 파일이 아닌 파일은 결과가 없어도 센다(요약의 파일 수)
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        if args.bMergeSkip:
+            return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
+        bFiles = bool(args.files)
+        fileCount = sum(1 for findings in result.listFindings if findings.value is not None)
+        listAll: list[tuple[str, StyleLiteral, str]] = [item for findings in result.listFindings for item in (findings.value or ())]
 
         def describe(item: tuple[str, StyleLiteral, str]) -> str:
             relative, literal, line = item

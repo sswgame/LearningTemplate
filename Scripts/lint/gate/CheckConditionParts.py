@@ -37,9 +37,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath, runGit  # noqa: E402
+from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs, runGit  # noqa: E402
 from common.RuleData import kKindInteger  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 _kConditionHeadRe = re.compile(r"\b(if|while)\b\s*(?:constexpr\b\s*)?\(")
@@ -94,10 +95,10 @@ def countConditionParts(masked: str, noComment: str, open_: int, close: int) -> 
     return operatorCount + 1
 
 
-def findLongConditions(text: str) -> list[LongCondition]:
-    """파일 하나에서 부분이 세 개 이상인 `if` · `while` 조건을 찾습니다."""
-    masked = blankCommentsAndLiterals(text)
-    noComment = blankComments(text)
+def findLongConditions(text: str, masked: str | None = None, noComment: str | None = None) -> list[LongCondition]:
+    """파일 하나에서 부분이 세 개 이상인 `if` · `while` 조건을 찾습니다. `masked` · `noComment` 는 이미 가린 글(함께 도는 게이트와 나눠 쓴다)."""
+    masked = blankCommentsAndLiterals(text) if masked is None else masked
+    noComment = blankComments(text) if noComment is None else noComment
     if len(masked) != len(text) or len(noComment) != len(text):
         return []
     listFound: list[LongCondition] = []
@@ -151,6 +152,8 @@ class CheckConditionPartsGate(LintGate):
     timeoutSeconds = 120
     preCommitPattern = tuple(f"{root}/*" for root in kLintTargetRelDirs)
     preCommitFileArgument = "--files"
+    sourceScanRoots = kLintTargetRelDirs
+    sourceSuffixes = _kSuffixes
     violationHeader = "조건 부분이 3 개 이상인 if / while"
     ruleSchema = _kBaselineSchema
     maxNoteShown = 12
@@ -170,27 +173,35 @@ class CheckConditionPartsGate(LintGate):
         parser.add_argument("--baseline", type=int, default=None, help="전체 훑기의 기준선을 이 값으로(기본은 rules 의 [baseline] total)")
         parser.add_argument("--list", action="store_true", help="전체 훑기에서 위반을 전부 찍는다")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        bFiles = bool(args.files)
-        mapAdded: dict[str, set[int]] | None = None
-        if bFiles and not args.whole_files:
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
+        args.bMergeSkip = False
+        args.mapAdded = None
+        if bool(args.files) and not args.whole_files:
             if (repositoryRoot / ".git" / "MERGE_HEAD").exists():
-                return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
+                args.bMergeSkip = True
+                return
             result = runGit(["diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--no-renames", "--diff-filter=ACM"], cwd=repositoryRoot)
-            mapAdded = parseAddedLines(result.stdout) if result.returnCode == 0 else None   # git 이 답하지 못하면 파일 전체로 본다(놓치지 않는 쪽)
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=_kSuffixes)
-        listAll: list[tuple[str, LongCondition, str]] = []
-        fileCount = 0
-        for path, text in self.readFiles(listPath):
-            fileCount += 1
-            relative = normalizePath(str(path.relative_to(repositoryRoot)))
-            listLine = text.split("\n")
-            for condition in findLongConditions(text):
-                if mapAdded is not None:
-                    setAdded = mapAdded.get(relative, set())
-                    if not any(condition.firstLine <= number <= condition.lastLine for number in setAdded):
-                        continue
-                listAll.append((relative, condition, listLine[condition.firstLine - 1].strip()))
+            args.mapAdded = parseAddedLines(result.stdout) if result.returnCode == 0 else None   # git 이 답하지 못하면 파일 전체로 본다(놓치지 않는 쪽)
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if args.bMergeSkip:
+            return None
+        listLine = source.text.split("\n")
+        listFound: list[tuple[str, LongCondition, str]] = []
+        for condition in findLongConditions(source.text, source.masked, source.noComment):
+            if args.mapAdded is not None:
+                setAdded = args.mapAdded.get(source.relative, set())
+                if not any(condition.firstLine <= number <= condition.lastLine for number in setAdded):
+                    continue
+            listFound.append((source.relative, condition, listLine[condition.firstLine - 1].strip()))
+        return FileFindings(value=listFound) if listFound else None
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        if args.bMergeSkip:
+            return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
+        bFiles = bool(args.files)
+        fileCount = result.fileCount
+        listAll: list[tuple[str, LongCondition, str]] = [item for findings in result.listFindings for item in (findings.value or ())]
 
         def describe(item: tuple[str, LongCondition, str]) -> str:
             relative, condition, line = item

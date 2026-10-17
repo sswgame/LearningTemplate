@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import iterIncludes, kDirSourceEditor, normalizePath  # noqa: E402
 from common.RuleData import kKindInteger  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kEditorIncludePrefix = "Editor/"
 _kSourceEditorPrefix = kDirSourceEditor + "/"
@@ -104,26 +105,14 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
     return listViolation
 
 
-def markExemptionTargetsSeen(listPath: list[Path], repositoryRoot: Path) -> None:
+def markExemptionTargetsSeen(relative: str) -> None:
     """`violation:` 키의 파일을 이번 훑기가 읽었으면 본 것으로 적습니다(그 include 가 사라진 줄은 낡은 예외가 된다)."""
-    setRelative = {normalizePath(str(path.relative_to(repositoryRoot))) for path in listPath}
     for key in CheckEditorLayersGate.mapExemption:
         if key.startswith(_kViolationPrefix) is False:
             continue
         fileText = key[len(_kViolationPrefix):].split(" -> ", 1)[0]
-        if fileText in setRelative:
+        if fileText == relative:
             CheckEditorLayersGate.seeExemption(key)
-
-
-def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> tuple[list[str], int]:
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=(kDirSourceEditor,), suffixes=_kSourceSuffixes)
-    listPath = [path for path in listPath if normalizePath(str(path.relative_to(repositoryRoot))).startswith(_kSourceEditorPrefix)]
-    markExemptionTargetsSeen(listPath, repositoryRoot)
-    listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        listViolation.extend(findViolationsInFile(relative, text))
-    return listViolation, len(listPath)
 
 
 class CheckEditorLayersGate(LintGate):
@@ -135,6 +124,8 @@ class CheckEditorLayersGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = ("Source/Editor/*",)
     preCommitFileArgument = "--files"
+    sourceScanRoots = (kDirSourceEditor,)
+    sourceSuffixes = _kSourceSuffixes
     violationHeader = "Editor 층 위반"
     hint = (
         "  아래 층이 위 층을 알아야 하면 틀(인터페이스 · 등록부)을 아래로 내리거나, 아래 층에 작은 창구 인터페이스를 두고 위 층이 구현한다(IEditorPanelHost 처럼).\n"
@@ -163,9 +154,13 @@ class CheckEditorLayersGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listViolation, fileCount = findViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=listViolation, summary=f"Editor 파일 {fileCount} 개가 폴더 층을 지킨다")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        markExemptionTargetsSeen(source.relative)
+        return FileFindings(listViolation=findViolationsInFile(source.relative, source.text))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, _ = joinFindings(result.listFindings)
+        return GateResult(listViolation=listViolation, summary=f"Editor 파일 {result.fileCount} 개가 폴더 층을 지킨다")
 
 
 main = CheckEditorLayersGate.run

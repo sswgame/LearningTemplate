@@ -45,6 +45,29 @@ def blankComments(text: str) -> str:
     return _kCommentOrLiteralRe.sub(replace, text)
 
 
+#: 식 머리의 lookbehind · `\b`(앞에 인라인 플래그 `(?i)` 가 있어도 된다) — `findFast` 가 떼어 낸다.
+_kLeadingLookbehindRe = re.compile(r"^((?:\(\?[a-zA-Z]+\))?)(?:\(\?<[!=](?:\[[^\]]*\]|[^()\[\]])*\)|\\b)")
+#: 식 → 머리 lookbehind 를 뗀 식(없으면 None). 프로세스마다 한 번 만든다.
+_kMapPrefilter: dict[re.Pattern, re.Pattern | None] = {}
+
+
+def findFast(pattern: re.Pattern, text: str) -> re.Match | None:
+    """
+    `pattern.search(text)` 와 같은 답을 더 빨리 냅니다 — 파일 전체에 대는 "이 파일에 있기나 한가" 앞 거르기용.
+
+    파이썬 `re` 는 lookbehind · `\\b` 로 시작하는 식(`(?<![\\w$])이름`)에는 첫 글자 · 접두 훑기를 쓰지 못해 글자마다 단언을 돌린다 —
+    트리 전체(39 MB)에 식 하나가 1 s 남짓이다. 머리 단언을 뗀 식은 원래 식이 맞는 곳에서 반드시 맞으므로(필요조건) 먼저 그것으로
+    걸러, 맞는 파일에만 원래 식을 돌린다. 답은 원래 식의 것이다. `finditer` 앞에서도 "없으면 건너뛴다" 로 쓴다.
+    """
+    if pattern not in _kMapPrefilter:
+        stripped = _kLeadingLookbehindRe.sub(r"\1", pattern.pattern, count=1)
+        _kMapPrefilter[pattern] = re.compile(stripped, pattern.flags) if stripped != pattern.pattern else None
+    prefilter = _kMapPrefilter[pattern]
+    if prefilter is not None and prefilter.search(text) is None:
+        return None
+    return pattern.search(text)
+
+
 def lineOf(text: str, offset: int) -> int:
     """글 안의 오프셋 → 1 부터 세는 줄 번호입니다."""
     return text.count("\n", 0, offset) + 1
@@ -119,5 +142,5 @@ class IncludeResolver:
         return found
 
 
-__all__ = ["IncludeResolver", "blankComments", "blankCommentsAndLiterals", "blankMatch", "blankText", "firstFolderAfter", "iterIncludes",
+__all__ = ["IncludeResolver", "blankComments", "blankCommentsAndLiterals", "blankMatch", "blankText", "findFast", "firstFolderAfter", "iterIncludes",
            "kIncludeLineRe", "kQuotedIncludeLineRe", "lineOf"]

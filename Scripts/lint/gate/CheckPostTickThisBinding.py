@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 from common import kLintTargetRelDirs  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kQueueCall = r"\b(?:deferPostTick|executeOrDeferPostTick)\s*\(\s*"
 #: `this` 토큰(`*this` 는 값 복사라 뺀다). 인스턴스 인자가 `static_cast<Base*>( this )` 처럼 감싸여도 잡는다.
@@ -50,6 +51,8 @@ class CheckPostTickThisBindingGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = ("*.cpp", "*.h", "*.inl")
     preCommitFileArgument = "--files"
+    sourceScanRoots = kLintTargetRelDirs
+    sourceSuffixes = (".cpp", ".h", ".inl")
     violationHeader = "틱 뒤 실행에 this 를 묶은 델리게이트"
     hint = ("  미룬 사이에 컴포넌트가 지워질 수 있습니다. executeOrDeferPostTickOnComponent<T>( getHandle(), []( T& component ) { ... } ) 로\n"
             "  넘기면 실행할 때 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다(Source/Engine/Object/ 의 헤더 주석).")
@@ -101,23 +104,21 @@ class CheckPostTickThisBindingGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=(".cpp", ".h", ".inl"))
-        listViolation: list[str] = []
-        for path in listPath:
-            text = path.read_text(encoding="utf-8", errors="replace")
-            if "PostTick" not in text:
-                continue
-            relativePath = path.relative_to(repositoryRoot).as_posix()
-            listMatch = list(_kThisBindingRe.finditer(text))
-            listMatch += [match for match in _kLambdaCaptureRe.finditer(text) if _isUnsafeCapture(match.group(1))]
-            for nameMatch in _kThisDelegateVariableRe.finditer(text):
-                useRe = re.compile(_kQueueCall + r"(?:std::move\s*\(\s*)?" + re.escape(nameMatch.group(1)) + r"\s*\)")
-                listMatch += list(useRe.finditer(text, nameMatch.end()))
-            for match in sorted(listMatch, key=lambda m: m.start()):
-                lineNumber = text.count("\n", 0, match.start()) + 1
-                listViolation.append(f"{relativePath}:{lineNumber}: {' '.join(match.group(0).split())}")
-        return GateResult(listViolation=listViolation, summary=f"C++ 파일 {len(listPath)}개")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        text = source.text
+        if "PostTick" not in text:
+            return None
+        listMatch = list(_kThisBindingRe.finditer(text))
+        listMatch += [match for match in _kLambdaCaptureRe.finditer(text) if _isUnsafeCapture(match.group(1))]
+        for nameMatch in _kThisDelegateVariableRe.finditer(text):
+            useRe = re.compile(_kQueueCall + r"(?:std::move\s*\(\s*)?" + re.escape(nameMatch.group(1)) + r"\s*\)")
+            listMatch += list(useRe.finditer(text, nameMatch.end()))
+        return FileFindings(listViolation=[f"{source.relative}:{text.count(chr(10), 0, match.start()) + 1}: {' '.join(match.group(0).split())}"
+                                           for match in sorted(listMatch, key=lambda m: m.start())])
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, _ = joinFindings(result.listFindings)
+        return GateResult(listViolation=listViolation, summary=f"C++ 파일 {result.fileCount}개")
 
 
 main = CheckPostTickThisBindingGate.run

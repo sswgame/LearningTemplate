@@ -46,9 +46,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 import AcronymRegistry as registry  # noqa: E402
-from common import blankComments, kLintTargetRelDirs, mapConcurrent  # noqa: E402
+from common import kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 # 훑을 곳 — 우리가 이름을 정하는 코드만.
 _kScanRoots = kLintTargetRelDirs
@@ -105,16 +106,12 @@ def isExemptInternal(rule: str, stem: str, name: str) -> bool:
     return True
 
 
-def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
-    relativePath = filePath.relative_to(repositoryRoot).as_posix()
-    try:
-        text = filePath.read_text(encoding="utf-8", errors="replace")
-    except OSError as exception:
-        return [f"{relativePath}: 읽기 실패: {exception}"]
-    stem = filePath.stem
+def scanFileInternal(source: SourceFile) -> list[str]:
+    relativePath = source.relative
+    stem = source.path.stem
 
     # 주석은 같은 길이 공백으로 가려 줄 번호를 지킨다(`//` · `/* */` 를 한 번 훑어 문자열 안의 `//` 도 안전).
-    text = blankComments(text)
+    text = source.noComment
     violations: list[str] = []
     seenName: set[str] = set()
     mapNameToFirstParam: dict[str, set[str]] = {}
@@ -199,6 +196,8 @@ class CheckFunctionVocabularyGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kScanRoots
+    sourceSuffixes = _kHeaderSuffix
     violationHeader = "이름 규칙 위반"
     hint = "\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다."
     ruleSchema = _kRuleSchema
@@ -248,17 +247,14 @@ class CheckFunctionVocabularyGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--files", nargs="*", default=None, help="이 파일들만 검사 (pre-commit 용)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        # `--files` 를 빈 목록으로 준 것(= staged 헤더 없음)과 아예 주지 않은 것(= 전수 검사)은 다르다.
-        headers = [] if args.files == [] else self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=_kScanRoots,
-                                                                     suffixes=_kHeaderSuffix)
-        if not headers:
-            return GateResult(summary="검사할 헤더가 없습니다")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=scanFileInternal(source))
 
-        violations: list[str] = []
-        for fileViolations in mapConcurrent(lambda path: scanFileInternal(path, repositoryRoot), headers):
-            violations.extend(fileViolations)
-        return GateResult(listViolation=violations, summary=f"{len(headers)} headers scanned")
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        if result.fileCount == 0:
+            return GateResult(summary="검사할 헤더가 없습니다")
+        violations, _ = joinFindings(result.listFindings)
+        return GateResult(listViolation=violations, summary=f"{result.fileCount} headers scanned")
 
 
 main = CheckFunctionVocabularyGate.run
