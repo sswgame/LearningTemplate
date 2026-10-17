@@ -17,8 +17,12 @@
 
 namespace sw
 {
-    /** @brief 태그별 할당 · 해제 누적 통계입니다. */
-    struct MemoryProfileStats
+    /**
+     * @brief 태그별 할당 · 해제 누적 통계입니다.
+     * @details 태그마다 캐시 라인 경계에서 시작합니다. 할당마다 바뀌는 앞의 일곱 값(56 B)이 한 줄에 들고, 이웃 태그의 통계와 줄을 나눠 쓰지 않습니다
+     *          (다른 태그를 할당하는 스레드끼리 false sharing 이 없다). 예산 두 값은 프레임마다 한 번 읽으므로 다음 줄로 넘어가도 됩니다.
+     */
+    struct alignas( 64 ) MemoryProfileStats
     {
         atomic<uint64> _totalAllocatedBytes{ 0 };
         atomic<uint64> _totalFreedBytes{ 0 };
