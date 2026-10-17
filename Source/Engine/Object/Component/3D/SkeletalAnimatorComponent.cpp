@@ -218,6 +218,12 @@ namespace sw
         // 워커의 전이는 읽어 둔 클립만 찾으므로 노드의 클립은 지금(게임 스레드) 읽는다.
         for ( const AnimationGraphNode& node : _graph._listNode )
         {
+            // 포즈 노드(`AnimationPoseNodeSet`)는 아직 이 애니메이터가 평가하지 않는다 — 클립으로 잘못 재생하지 않고 오류로 알린다.
+            if ( node.hasPoseNode() )
+            {
+                SW_LOG_ERROR( "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", _animationGraphPath.c_str(), node._name.c_str() );
+                continue;
+            }
             (void)preloadClip( hashed_string( node._name ) );
         }
     }

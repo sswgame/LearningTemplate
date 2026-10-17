@@ -32,6 +32,36 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @enum AnimationPoseNodeType
+     * @brief 포즈를 직접 평가해 내는 노드의 종류입니다(JSON 노드의 "pose_node"."type"). 모르는 표기는 로드 오류입니다.
+     * @details 종류마다 런타임 구현(`IAnimationPoseNode`)이 하나다. 모션 매칭 같은 새 노드는 여기에 종류를 더하고 `AnimationPoseNodeSet` 이 만든다.
+     */
+    enum class AnimationPoseNodeType : uint8
+    {
+        None = 0,   ///< 포즈 노드가 아닙니다(이름이 곧 클립이거나 블렌드 스페이스인 보통 상태).
+        BlendPoses, ///< "blend_poses" — 입력 클립 둘을 파라미터 가중치로 섞습니다(`BlendPosesNode`).
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AnimationGraphPoseNodeDef
+     * @brief 포즈 노드 상태의 데이터입니다(JSON 노드의 "pose_node").
+     * @details JSON 형식은 `{ "type": "blend_poses", "inputs": [ "Idle", "Wave" ], "weight": "WaveWeight" }` 이다.
+     *          "blend_poses" 는 입력이 정확히 둘이고 "weight" 파라미터 이름이 있어야 한다. 어기면 로드 오류다(기본값으로 채우지 않는다).
+     */
+    struct AnimationGraphPoseNodeDef
+    {
+        AnimationPoseNodeType _type{ AnimationPoseNodeType::None }; /**< 노드 종류입니다. None 이면 포즈 노드 상태가 아닙니다. */
+        vector<hashed_string> _listInput;                           /**< 입력 클립 이름입니다(그래프 플레이어의 클립 풀이로 찾습니다). */
+        hashed_string         _weightParameter;                     /**< 섞기 가중치 파라미터 이름(`AnimationParameterSet`)입니다. */
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 애니메이션 그래프 노드입니다. */
     struct AnimationGraphNode
     {
@@ -46,6 +76,8 @@ namespace sw
         hashed_string _syncGroup{};
         /** @brief 블렌드 스페이스 상태의 데이터입니다(JSON "blend_space", 선택). 표본이 없으면 이름이 곧 클립인 보통 상태입니다. */
         AnimationGraphBlendSpaceDef _blendSpace{};
+        /** @brief 포즈 노드 상태의 데이터입니다(JSON "pose_node", 선택). 블렌드 스페이스와 함께 적으면 로드 오류입니다. */
+        AnimationGraphPoseNodeDef _poseNode{};
         /**
          * @brief 이 상태의 반복 여부입니다(JSON "loop", 선택). -1 은 적지 않았다는 뜻입니다. 직접 재생은 호출한 쪽이 정하고, "끝나면 다음"으로 들어오면 반복하지 않습니다.
          */
@@ -53,6 +85,8 @@ namespace sw
 
         /** @brief 블렌드 스페이스 상태인지 반환합니다. */
         bool hasBlendSpace() const { return _blendSpace._space.getSampleCount() > 0; }
+        /** @brief 포즈 노드 상태인지 반환합니다. */
+        bool hasPoseNode() const { return _poseNode._type != AnimationPoseNodeType::None; }
     };
 } // namespace sw
 
@@ -162,5 +196,7 @@ namespace sw
         [[nodiscard]] bool parseRoot( const JSONValue& root );
         /** @brief 노드의 "blend_space" 객체를 읽습니다. 잘못되었으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool parseBlendSpace( const JSONValue& blendSpaceJSON, AnimationGraphNode& inoutNode );
+        /** @brief 노드의 "pose_node" 객체를 읽습니다. 모르는 종류이거나 종류가 요구하는 값이 없으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool parsePoseNode( const JSONValue& poseNodeJSON, AnimationGraphNode& inoutNode );
     };
 } // namespace sw

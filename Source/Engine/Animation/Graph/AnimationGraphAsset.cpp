@@ -20,6 +20,8 @@ namespace sw
             static constexpr const utf8* kArrOpText[] = { "", ">", "<", ">=", "<=", "==", "!=", "trigger" };
             /** @brief 전이 방식 표기 표입니다. 순서는 `AnimationBlendMode` 와 같습니다. */
             static constexpr const utf8* kArrBlendModeText[] = { "crossfade", "inertialization" };
+            /** @brief 포즈 노드 종류 표기 표입니다. 순서는 `AnimationPoseNodeType` 과 같습니다(None 은 표기가 없습니다). */
+            static constexpr const utf8* kArrPoseNodeTypeText[] = { "", "blend_poses" };
         };
     } // namespace
 } // namespace sw
@@ -120,6 +122,40 @@ namespace sw
         return bValid;
     }
 
+    bool AnimationGraphAsset::parsePoseNode( const JSONValue& poseNodeJSON, AnimationGraphNode& inoutNode )
+    {
+        AnimationGraphPoseNodeDef& def      = inoutNode._poseNode;
+        const string               typeText = poseNodeJSON.get( "type" ).asString();
+        def                                 = AnimationGraphPoseNodeDef{};
+        for ( uint32 index = 1; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrPoseNodeTypeText ) ); ++index )
+        {
+            if ( typeText == AnimationGraphAssetInternal::kArrPoseNodeTypeText[index] )
+                def._type = static_cast<AnimationPoseNodeType>( index );
+        }
+        if ( def._type == AnimationPoseNodeType::None )
+        {
+            SW_LOG_ERROR( "Animation graph node '%#' has unknown pose_node type '%#'", inoutNode._name.c_str(), typeText.c_str() );
+            return false;
+        }
+        const JSONValue inputsJSON = poseNodeJSON.get( "inputs" );
+        for ( size_t inputIndex = 0; inputsJSON.isArray() && inputIndex < inputsJSON.size(); ++inputIndex )
+        {
+            def._listInput.push_back( hashed_string( inputsJSON.at( inputIndex ).asString() ) );
+        }
+        if ( poseNodeJSON.has( "weight" ) )
+            def._weightParameter = hashed_string( poseNodeJSON.get( "weight" ).asString() );
+
+        // 종류마다 요구하는 값 — 지금은 blend_poses 하나다.
+        const bool bHasEmptyInput     = std::find( def._listInput.begin(), def._listInput.end(), hashed_string{} ) != def._listInput.end();
+        const bool bHasRequiredValues = def._listInput.size() == 2 && bHasEmptyInput == false && def._weightParameter.empty() == false;
+        if ( bHasRequiredValues == false )
+        {
+            SW_LOG_ERROR( "Animation graph node '%#' blend_poses needs two named 'inputs' and a 'weight' parameter", inoutNode._name.c_str() );
+            return false;
+        }
+        return true;
+    }
+
     bool AnimationGraphAsset::parseRoot( const JSONValue& root )
     {
         bool bValid = true;
@@ -137,6 +173,14 @@ namespace sw
             const JSONValue blendSpaceJSON = nodeJSON.get( "blend_space" );
             if ( blendSpaceJSON.isObject() && parseBlendSpace( blendSpaceJSON, node ) == false )
                 bValid = false;
+            const JSONValue poseNodeJSON = nodeJSON.get( "pose_node" );
+            if ( poseNodeJSON.isObject() && parsePoseNode( poseNodeJSON, node ) == false )
+                bValid = false;
+            if ( node.hasBlendSpace() && node.hasPoseNode() )
+            {
+                SW_LOG_ERROR( "Animation graph node '%#' has both blend_space and pose_node", node._name.c_str() );
+                bValid = false;
+            }
             if ( node._id > 0 )
                 _listNode.push_back( std::move( node ) );
         } );
@@ -226,6 +270,21 @@ namespace sw
                     if ( def._space.getAxisCount() == 2 )
                         sampleJSON.set( "y" ).setFloat( static_cast<float64>( sample._position._y ) );
                 }
+            }
+            if ( node.hasPoseNode() )
+            {
+                const AnimationGraphPoseNodeDef& def          = node._poseNode;
+                const JSONValue                  poseNodeJSON = nodeJSON.set( "pose_node" );
+                poseNodeJSON.setObject();
+                poseNodeJSON.set( "type" ).setString( AnimationGraphAssetInternal::kArrPoseNodeTypeText[static_cast<uint32>( def._type )] );
+                const JSONValue inputsJSON = poseNodeJSON.set( "inputs" );
+                inputsJSON.setArray();
+                for ( const hashed_string& input : def._listInput )
+                {
+                    inputsJSON.pushBack().setString( input.c_str() );
+                }
+                if ( def._weightParameter.empty() == false )
+                    poseNodeJSON.set( "weight" ).setString( def._weightParameter.c_str() );
             }
         }
 
