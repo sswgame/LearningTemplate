@@ -1107,6 +1107,7 @@
 | D2-6.1 | 정점에 탄젠트를 넣고 임포트에서 MikkTSpace로 만든다. 옛 형식 리더는 두지 않고 에셋을 다시 쓴다. | 언리얼 · 유니티 · MToon 모두 정점 탄젠트를 쓴다. | 추 |
 | D2-10.3 | Shaded Wireframe · Light Complexity · Mipmaps 보기 모드를 만든다. | 언리얼 · 유니티에 있는 디버그 보기다. | 사 |
 | D3-7.4 | 엔진에 스카이 컴포넌트를 추가한다(하늘 그리기 + 환경광). 안개 · 시간대(D2-5.2)는 따로 둔다. | 언리얼 SkyAtmosphere · SkyLight, 유니티 Skybox, Godot Sky. | 사 |
+| D2-11 | 파티클 · VFX 시뮬레이션은 CPU 와 GPU 를 둘 다 만들고 개발 빌드에서 `gv` 변수로 고른다. Shipping 은 GPU 로 고정하며 CPU 경로와 변수를 두지 않는다. | 학습용 엔진이라 두 방식을 비교해 보게 한다. 언리얼 Niagara 도 CPU · GPU 시뮬을 둔다. | 사 |
 | D1-2.1 | 키트 투사체 · 근접 판정을 Box2D 센서로 옮기고 겹침 월드를 없앤다(뒤 순서). | 유니티 트리거 · Godot Area2D처럼 물리 월드 센서 하나로 통일한다. | 추 |
 | D1-3.3 | 적이 `MoveTo`로 쫓는 게임을 내비메시로 옮긴다. `AbilityArena`부터. | 유니티 NavMeshAgent가 표준 경로다. | 추 |
 | D1-5.3 | `PrefabInstanceRegistry` 기록은 되돌리기 이력의 수명에 맞춰 비운다. | 언리얼 · 유니티는 오버라이드 기록을 오브젝트 수명에 묶는다. | 추 |
