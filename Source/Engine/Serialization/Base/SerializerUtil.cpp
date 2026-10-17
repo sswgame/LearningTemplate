@@ -2,9 +2,9 @@
 
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
@@ -258,14 +258,10 @@ namespace sw
             /** @brief 모르는 열거자 이름을 알립니다. enum 과 이름마다 한 번만 알립니다(같은 세이브의 오브젝트 천 개가 천 줄을 쓰지 않게 하려는 것입니다). */
             static void warnUnknownEnumeratorOnce( const EnumInfo& enumInfo, uint32 nameHash )
             {
-                static mutex                 s_mutex;
-                static unordered_set<uint64> s_uniqueWarnedKeys;
-                const uint64                 key = ( static_cast<uint64>( enumInfo._fullyQualifiedName.getHash() ) << 32 ) | nameHash;
-                {
-                    std::lock_guard<mutex> lock( s_mutex );
-                    if ( s_uniqueWarnedKeys.insert( key ).second == false )
-                        return;
-                }
+                // "한 번만"의 상태는 범위(테스트 케이스 · 프로세스)에 속한다(`LogOnce`). 함수 안 정적 집합이면 테스트 순서가 로그 판정을 바꾼다.
+                const uint64 key = ( static_cast<uint64>( enumInfo._fullyQualifiedName.getHash() ) << 32 ) | nameHash;
+                if ( LogOnce::tryClaim( LogOnceKind::UnknownEnumerator, key ) == false )
+                    return;
                 SW_LOG_WARNING( "%#: a saved enumerator (name hash %#) is not a value of it any more - the field keeps its current value (once per enumerator)",
                                 enumInfo._fullyQualifiedName.c_str(), nameHash );
             }

@@ -3,6 +3,7 @@
 #include "TestFramework/TestJudge.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/LogOnce.h"
 
 #include "TestFramework/TestRegistry.h"
 
@@ -52,6 +53,8 @@ namespace test
         state._listMessage.clear();
         state._listKnownLog.clear();
         state._count = 0;
+        // "한 번만" 경고의 범위를 이 케이스로 연다 — 앞 케이스가 낸 경고 때문에 이 케이스의 경고가 사라지면 판정이 테스트 순서에 따라 바뀐다.
+        sw::LogOnce::beginScope();
         if ( _pCatalog->isSuiteOfKind( testInfo._groupName, SuiteKind::Host ) == false )
             return;
 
