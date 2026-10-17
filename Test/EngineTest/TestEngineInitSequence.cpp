@@ -33,6 +33,7 @@
 #include "Engine/Module/ModuleImagesSubsystem.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -166,6 +167,7 @@ namespace
         engineScope.addSubsystem( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, renderThreadSubsystem ) );
         engineScope.addSubsystem( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
         engineScope.addSubsystem( make_unique<PhysicsSystem>() );
+        engineScope.addSubsystem( make_unique<GameNetSession>() );
         engineScope.addSubsystem( make_unique<FontService>() );
         engineScope.addSubsystem( make_unique<TelemetryService>() );
         engineScope.addSubsystem( make_unique<UISystem>() );

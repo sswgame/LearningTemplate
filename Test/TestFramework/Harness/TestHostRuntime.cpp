@@ -39,6 +39,7 @@
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -297,6 +298,7 @@ namespace test
             startup.addSubsystem( sw::make_unique<sw::ShaderCache>() );
         }
         startup.addSubsystem( sw::make_unique<sw::PhysicsSystem>() );
+        startup.addSubsystem( sw::make_unique<sw::GameNetSession>() );
         startup.addSubsystem( sw::make_unique<sw::UserSettingsManager>() );
         startup.addSubsystem( sw::make_unique<sw::FontService>() );
         startup.addSubsystem( sw::make_unique<sw::TelemetryService>() );

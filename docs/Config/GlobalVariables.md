@@ -116,6 +116,15 @@
 | `gv_rhiSoftwareAdapter` | `int32` | `0` | 시험 | 소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_validateBindlessIndex` | `int32` | `kDefaultLevel` | 시험 | 셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지 | [BindlessIndexValidator.cpp](../../Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp) |
 
+## `Source/Engine/Net`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_netConnectAddress` | `string` | — | 시험 | 클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기) | [GameNetSession.cpp](../../Source/Engine/Net/GameNetSession.cpp) |
+| `gv_netEmuPreset` | `string` | — | 시험 | 네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmu* 낱값) | [GameNetSession.cpp](../../Source/Engine/Net/GameNetSession.cpp) |
+| `gv_netListenPort` | `int32` | `0` | 시험 | 게임 네트워크 서버로 열 UDP 포트 (0=끄기) | [GameNetSession.cpp](../../Source/Engine/Net/GameNetSession.cpp) |
+| `gv_netLoopbackOnly` | `bool` | `true` | 시험 | 게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때) | [GameNetSession.cpp](../../Source/Engine/Net/GameNetSession.cpp) |
+
 ## `Source/Engine/Object`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
@@ -245,10 +254,6 @@
 | `gv_aiDirectorTrace` | `int32` | `0` | 시험 | AIDirector: log every phase change, spawn, encounter and reward (1=on) | [AIDirector.cpp](../../Source/GameFramework/Base/Actor/AI/Director/AIDirector.cpp) |
 | `gv_cameraPreset` | `string` | — | 시험 · 배포본에도 | 카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로) | [CameraDirectorComponent.cpp](../../Source/GameFramework/Base/Actor/Camera/CameraDirectorComponent.cpp) |
 | `gv_firstScene` | `string` | — | 시험 | 팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함) | [GameInstanceBase.cpp](../../Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp) |
-| `gv_netConnectAddress` | `string` | — | 시험 | 클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
-| `gv_netEmuPreset` | `string` | — | 시험 | 네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmu* 낱값) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
-| `gv_netListenPort` | `int32` | `0` | 시험 | 게임 네트워크 서버로 열 UDP 포트 (0=끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
-| `gv_netLoopbackOnly` | `bool` | `true` | 시험 | 게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_scheduleTrace` | `string` | — | 시험 | Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes | [ScheduleSystemDebug.cpp](../../Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystemDebug.cpp) |
 
 ## `Source/Games/AbilityArena`

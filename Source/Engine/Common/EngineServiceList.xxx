@@ -63,6 +63,7 @@ SW_ENGINE_SERVICE( class, PhysicsSystem, Required, GameVisible )
 SW_ENGINE_SERVICE( class, TelemetryService, Required, GameVisible )
 // 크래시 보고 — 다음 실행이 지난 크래시를 묶는다. 게임 UI 는 "보낼까요?" 를 `collectReports` · `decide` 로 묻는다(동의가 ask 일 때).
 SW_ENGINE_SERVICE( class, CrashReportService, Required, GameVisible )
+SW_ENGINE_SERVICE( class, GameNetSession, Required, GameVisible )
 
 
 SW_ENGINE_SERVICE_CONST( struct, EngineDefaultAssets, Required, HostOnly )

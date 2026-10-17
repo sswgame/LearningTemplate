@@ -25,7 +25,11 @@
  *          `net.emulation` · `net.disconnect` · `net.reconnect` · `net.traffic` 이 바꾼다(에디터 Multiplayer 창 Conditions 탭이 표준 입력으로 보낸다).
  *          `net.stats` 는 연결 · 트래픽 수치 한 줄(`NetStatsReport`)을 답한다(Profiler 탭이 0.5 초마다 묻는다).
  *          조건이 꺼져 있으면 흉내는 패킷을 그대로 넘긴다. Shipping 에는 흉내가 없다.
- * @warning 게임 모듈 핫 리로드는 게임 인스턴스를 새로 만든다. 세션도 닫고 다시 열므로 클라이언트는 끊겼다가(시간 초과) 다시 붙어야 한다.
+ *
+ *          수명: 엔진 서브시스템이다(엔진 서비스 표의 `GameNetSession`). 게임 인스턴스가 처음 설 때 `openFromLaunch` 로 열고, 게임 모듈 핫 리로드로
+ *          인스턴스가 다시 서도 닫지 않는다 — 세션 코드와 소켓이 게임 모듈 밖(엔진)에 있어 연결이 리로드를 넘어간다(언리얼 넷 드라이버가 게임 코드가 아닌
+ *          월드 소유인 것과 같은 자리). 엔진이 내려갈 때 닫는다.
+ * @warning 리로드로 다시 선 키트는 이미 붙은 연결의 `Connected` 사건을 받지 못한다 — 처리기를 단 뒤 `getHost().collectConnected` 로 받는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -36,12 +40,10 @@
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-
-#include "GameFramework/Base/Foundation/Framework/GameInstanceSubsystem.h"
-#include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
@@ -77,28 +79,30 @@ namespace sw
 {
     /**
      * @class GameNetSession
-     * @brief 게임 인스턴스 하나의 네트워크 호스트, 스레드, 메시지 라우터를 들고 있습니다. `GameInstanceBase` 가 소유합니다.
+     * @brief 게임의 네트워크 호스트, 스레드, 메시지 라우터를 들고 있습니다. 엔진이 소유하고 게임 인스턴스가 열고 프레임마다 `update` 합니다.
      * @code
      *     GameNetSessionParams params;
-     *     if ( GameNetSession::makeLaunchParams( params ) )
-     *         (void)session.initialize( params );
+     *     session.openFromLaunch();                              // 게임 인스턴스 initialize(이미 열렸으면 그대로)
      *     session.getRouter().registerHandler( &replicationServer ); // 키트
      *     session.update();                                     // 프레임마다(게임 스레드)
      *     session.shutdown();
      * @endcode
      */
-    class SW_GF_API GameNetSession final : public GameInstanceSubsystem
+    class SW_API GameNetSession final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "GameNetSession";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 엔진 기동 때는 열지 않습니다 — 전용 서버의 서버 문맥은 게임 인스턴스 앞에 걸리므로 `openFromLaunch` 가 엽니다. */
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        /** @brief 세션을 닫습니다(엔진 종료). */
+        void      shutdownSubsystem() override { shutdown(); }
+        MemoryTag getSubsystemMemoryTag() const override { return MemoryTag::EngineMisc; }
         /**
-         * @brief `makeLaunchParams` 가 정한 역할(실행 인자, 없으면 전용 서버 설정)로 세션을 엽니다. 둘 다 없으면 열지 않습니다.
-         * @details 포트가 사용 중이라 열지 못해도 게임은 혼자 뜬다 — 늘 성공으로 답하고 실패는 `initialize` 가 로그에 남긴다.
+         * @brief `makeLaunchParams` 가 정한 역할(실행 인자, 없으면 전용 서버 설정)로 세션을 엽니다. 이미 열려 있으면 그대로 둡니다(리로드로 다시 선 게임 인스턴스).
+         * @details 둘 다 없으면 열지 않는다. 포트가 사용 중이라 열지 못해도 게임은 혼자 뜬다 — 실패는 `initialize` 가 로그에 남기고 다음 인스턴스가 다시 시도한다.
          */
-        SubsystemInitResult initializeSubsystem() override;
-        /** @brief 세션을 닫습니다. 게임 인스턴스가 `onShutdown`(키트 처리기가 내려간 뒤) 다음에 부른다. */
-        void shutdownSubsystem() override { shutdown(); }
+        void openFromLaunch();
 
         /** @brief 주소에 포트가 없을 때의 기본 게임 포트입니다. 언리얼 기본 포트와 같으며 `ServerConfig::_gamePort` 기본값도 같습니다. */
         static constexpr uint16 kDefaultPort = 7777;
