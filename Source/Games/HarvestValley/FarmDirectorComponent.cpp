@@ -164,7 +164,7 @@ namespace sw
 namespace sw
 {
     FarmDirectorComponent::FarmDirectorComponent()
-        : _cropDataPath{ "game/harvestvalley/data/crops.xml" }
+        : _cropDataPath{}
         , _soilPrefab{}
         , _cropPrefab{}
         , _grassSoilColor{ 0.40f, 0.62f, 0.28f, 1.0f }
@@ -188,8 +188,6 @@ namespace sw
         , _daysPerSeason{ 28 }
         , _wakeHour{ 6.0f }
         , _passOutHour{ 2.0f }
-        , _shippingBinFallback{ 13.4f, 0.0f, 1.0f }
-        , _shopFallback{ -1.6f, 0.0f, 5.0f }
         , _hoeStaminaCost{ 4 }
         , _wateringStaminaCost{ 2 }
         , _handStaminaCost{ 1 }
@@ -208,8 +206,8 @@ namespace sw
         , _witheredCropLook{}
         , _playerPosition{ _playerStart }
         , _facing{ 0.0f, 0.0f, 1.0f }
-        , _shippingBinPosition{ _shippingBinFallback }
-        , _shopPosition{ _shopFallback }
+        , _shippingBinPosition{}
+        , _shopPosition{}
         , _random{ 0x2545f491u }
         , _autoFarmerObject{}
         , _stamina{ _maxStamina }
@@ -396,6 +394,12 @@ namespace sw
             SW_LOG_WARNING( "[Farm] no SessionStateComponent before the director on this object - the farm cannot start" );
             return false;
         }
+        // 출하함과 가게는 씬에 놓인 오브젝트다(필수 참조). 에디터에서 옮기면 농부가 서는 위치가 따라온다.
+        if ( tryGetObjectPosition( _shippingBin, _shippingBinPosition ) == false || tryGetObjectPosition( _shop, _shopPosition ) == false )
+        {
+            SW_LOG_ERROR( "[Farm] the director's Shipping Bin and Shop must point at objects in the scene - the farm cannot start" );
+            return false;
+        }
         _itemCatalog = ItemCatalog{};
         _cropCatalog.fillItemCatalog( _itemCatalog, _itemStackSize );
         SessionStateSettings settings;
@@ -419,15 +423,12 @@ namespace sw
             pState->getWallet().add( _shipment.getCurrency(), _startingGold );
             (void)pState->getInventory().addItem( _cropCatalog.getCrops().front()._seedItem, _startingSeedCount );
         }
-        _dayStarted = pState->getClock().getDay();
-        _hourOfDay  = pState->getClock().getHour();
-        // 씬에 놓인 출하함과 가게가 있으면 그 위치를 쓴다. 에디터에서 옮기면 농부가 서는 위치가 따라온다.
-        _shippingBinPosition = findObjectPosition( _shippingBin, _shippingBinFallback );
-        _shopPosition        = findObjectPosition( _shop, _shopFallback );
-        _playerPosition      = _playerStart;
-        _facing              = float3{ 0.0f, 0.0f, 1.0f };
-        _stamina             = _maxStamina;
-        _tool                = FarmTool::Hoe;
+        _dayStarted     = pState->getClock().getDay();
+        _hourOfDay      = pState->getClock().getHour();
+        _playerPosition = _playerStart;
+        _facing         = float3{ 0.0f, 0.0f, 1.0f };
+        _stamina        = _maxStamina;
+        _tool           = FarmTool::Hoe;
         return true;
     }
 
@@ -863,11 +864,14 @@ namespace sw
         return _handStaminaCost;
     }
 
-    float3 FarmDirectorComponent::findObjectPosition( GameObjectHandle handle, const float3& fallback ) const
+    bool FarmDirectorComponent::tryGetObjectPosition( GameObjectHandle handle, float3& outPosition ) const
     {
         GameObjectManager*    pManager = getObjectManager();
         const GameObject*     pObject  = pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
         const SceneComponent* pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-        return pScene != nullptr ? pScene->getWorldPosition() : fallback;
+        if ( pScene == nullptr )
+            return false;
+        outPosition = pScene->getWorldPosition();
+        return true;
     }
 } // namespace sw

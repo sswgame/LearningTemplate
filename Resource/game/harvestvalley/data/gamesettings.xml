@@ -3,4 +3,6 @@
 <GameSettings>
   <startMap>game/harvestvalley/maps/farm.scene.xml</startMap>
   <inputMap>game/harvestvalley/data/farm.input.xml</inputMap>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <audioEvents>game/harvestvalley/audio/harvestvalley.audioevents.xml</audioEvents>
 </GameSettings>

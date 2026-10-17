@@ -3,4 +3,6 @@
 <GameSettings>
   <startMap>game/abilityarena/maps/arena.scene.xml</startMap>
   <inputMap>game/abilityarena/data/arena.input.xml</inputMap>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <audioEvents>game/abilityarena/audio/abilityarena.audioevents.xml</audioEvents>
 </GameSettings>

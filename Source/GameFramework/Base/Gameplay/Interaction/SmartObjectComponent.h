@@ -107,7 +107,7 @@ namespace sw
     private:
         PROPERTY( Category = "Smart Object", DisplayName = "Smart Object", Tooltip = "Smart object id in the interaction catalog" )
         hashed_string _smartObjectID;
-        PROPERTY( Category = "Smart Object", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table; empty uses the common default" )
+        PROPERTY( Category = "Smart Object", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table (required)" )
         string _catalogPath;
         PROPERTY( Category = "Smart Object", DisplayName = "Claimants", Tooltip = "Who holds each slot (runtime)" )
         vector<GameObjectHandle> _listClaimant;

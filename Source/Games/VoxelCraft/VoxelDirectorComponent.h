@@ -15,6 +15,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -58,7 +59,7 @@ namespace sw
         float3 findSpawnPosition() const;
 
     protected:
-        /** @brief 씨앗으로 지형을 생성합니다. 블록 카탈로그가 없으면 false 입니다. */
+        /** @brief 씨앗으로 지형을 생성합니다. 블록 카탈로그가 없거나 블록 이름 PROPERTY 가 카탈로그에 없으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool startGame() override;
         [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
@@ -88,6 +89,19 @@ namespace sw
         int32 _chunkBuildsPerFrame;
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
+        // ---- 블록 이름 — 블록 카탈로그(data/blocks.xml)의 id 다. 판을 열 때 모두 있는지 본다 ----
+        PROPERTY( Category = "Blocks", DisplayName = "Water", Tooltip = "Spawn spots on this block are skipped" )
+        hashed_string _waterBlock;
+        PROPERTY( Category = "Blocks", DisplayName = "Stone", Tooltip = "Ore replaces this block underground" )
+        hashed_string _stoneBlock;
+        PROPERTY( Category = "Blocks", DisplayName = "Grass", Tooltip = "High peaks of this block get a snow cap" )
+        hashed_string _grassBlock;
+        PROPERTY( Category = "Blocks", DisplayName = "Snow" )
+        hashed_string _snowBlock;
+        PROPERTY( Category = "Blocks", DisplayName = "Coal Ore" )
+        hashed_string _coalOreBlock;
+        PROPERTY( Category = "Blocks", DisplayName = "Iron Ore" )
+        hashed_string _ironOreBlock;
 
         VoxelWorld               _world;
         vector<GameObjectHandle> _listChunk;          ///< 청크 번호(z × 청크 수 X + x) 순

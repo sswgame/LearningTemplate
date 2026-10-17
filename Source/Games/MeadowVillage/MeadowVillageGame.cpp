@@ -14,8 +14,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "MeadowVillageGame" );
-
     MeadowVillageGame::MeadowVillageGame()
         : _cropCatalog{}
         , _creatureCatalog{}
@@ -33,20 +31,11 @@ namespace sw
     bool MeadowVillageGame::onInitialize()
     {
         _cropCatalog.setKnownSeasons( { "Spring", "Summer", "Fall", "Winter" } );
-        const bool bLoaded = _cropCatalog.loadFromResource( "game/meadowvillage/data/crops.xml" ) &&
-                             _creatureCatalog.loadFromResource( "game/meadowvillage/data/creatures.xml" ) &&
-                             _friendshipCatalog.loadFromResource( "game/meadowvillage/data/friendship.xml" ) &&
-                             _questCatalog.loadFromResource( "game/meadowvillage/data/quests.xml" );
+        // 마을 데이터 넷은 필수다 — 하나라도 못 읽으면 게임을 띄우지 않는다. 읽은 것은 디렉터가 찾는 게임 범위에 걸린다.
+        const bool bLoaded = loadRequiredCatalog( _cropCatalog ) && loadRequiredCatalog( _creatureCatalog ) && loadRequiredCatalog( _friendshipCatalog ) &&
+                             loadRequiredCatalog( _questCatalog );
         if ( bLoaded == false )
-        {
-            SW_LOG_WARNING( "[Meadow] the village data could not be loaded - the village cannot start" );
-            return true; // 모듈은 뜬다(에디터에서 데이터를 고칠 수 있게) — 디렉터만 서지 않는다
-        }
-        // 디렉터가 찾는 자리. 게임 범위는 이 인스턴스가 소유하므로 모듈이 다시 올라오면 옛 범위와 함께 풀린다.
-        bindScopedService( &_cropCatalog );
-        bindScopedService( &_creatureCatalog );
-        bindScopedService( &_friendshipCatalog );
-        bindScopedService( &_questCatalog );
+            return false;
         (void)requestFirstScene();
         return true;
     }

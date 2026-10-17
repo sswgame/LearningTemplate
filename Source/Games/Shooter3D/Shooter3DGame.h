@@ -23,7 +23,6 @@ namespace sw
 
     protected:
         bool onInitialize() override;
-        void onShutdown() override;
 
     private:
         WeaponCatalog      _weaponCatalog;

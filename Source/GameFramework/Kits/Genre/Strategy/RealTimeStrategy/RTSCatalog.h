@@ -82,6 +82,9 @@ namespace sw
         friend class XMLCatalog<RTSCatalog>;
 
     public:
+        /** @brief 데이터 종류 이름입니다(`SW_RESOURCE_DATA_KIND` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
+        static constexpr const utf8* kDataKind = "rtsunits";
+
         RTSCatalog();
 
         /** @brief @p producerID 가 만드는(짓는) 정의를 읽은 순서대로 모읍니다. */

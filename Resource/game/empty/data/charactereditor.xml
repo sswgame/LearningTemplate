@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 캐릭터 편집 창(GF_EditorPlugIn_CharacterEditor)이 템플릿 게임에서 여는 데이터 — 에디터 시나리오(engine/automation/editor/charactereditor)가 기본 게임으로 돈다.
+     Empty 팩에는 캐릭터가 없어 Shooter3D 팩의 KayKit 데이터를 가리킨다(다른 팩을 쓰는 의존이 코드가 아니라 이 데이터에 보인다). 네 칸 모두 필수다.
+     레퍼런스 포즈는 스켈레톤 이름에서 만든다(knight.refpose.xml). -->
+<CharacterEditor sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"
+                 skeleton="game/shooter3d/models/kaykit/knight/knight.skeleton.json"
+                 items="game/shooter3d/data/items.xml"
+                 appearance="game/shooter3d/data/appearance"/>

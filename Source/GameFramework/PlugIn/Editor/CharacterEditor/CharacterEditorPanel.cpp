@@ -6,19 +6,24 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Data/GamePackDataUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
+#include "GameFramework/PlugIn/Editor/CharacterEditor/Model/CharacterEditorPackData.h"
 
 #include <imgui.h>
 
@@ -28,11 +33,6 @@ namespace sw::editor
     {
         struct CharacterEditorPanelInternal
         {
-            static constexpr const utf8* kDefaultSocketPath     = "game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml";
-            static constexpr const utf8* kDefaultSkeletonPath   = "game/shooter3d/models/kaykit/knight/knight.skeleton.json";
-            static constexpr const utf8* kDefaultRefPosePath    = "game/shooter3d/models/kaykit/knight/knight.refpose.xml";
-            static constexpr const utf8* kDefaultItemsPath      = "game/shooter3d/data/items.xml";
-            static constexpr const utf8* kDefaultAppearancePath = "game/shooter3d/data/appearance";
             static constexpr const utf8* kDefaultPresetPath     = "editor/characterpresets.txt";
             static constexpr const utf8* kDefaultExportID       = "MyCharacter";
             static constexpr float32     kDragSpeed             = 0.005f;
@@ -153,11 +153,11 @@ namespace sw::editor
         , _pItems{}
         , _database{}
         , _presetStore{}
-        , _path{ CharacterEditorPanelInternal::kDefaultSocketPath }
-        , _skeletonPath{ CharacterEditorPanelInternal::kDefaultSkeletonPath }
-        , _refPosePath{ CharacterEditorPanelInternal::kDefaultRefPosePath }
-        , _itemsPath{ CharacterEditorPanelInternal::kDefaultItemsPath }
-        , _appearanceFolder{ CharacterEditorPanelInternal::kDefaultAppearancePath }
+        , _path{}
+        , _skeletonPath{}
+        , _refPosePath{}
+        , _itemsPath{}
+        , _appearanceFolder{}
         , _presetPath{ CharacterEditorPanelInternal::kDefaultPresetPath }
         , _presetName{ "MyLook" }
         , _exportFolder{}
@@ -175,14 +175,28 @@ namespace sw::editor
         , _previewReport{}
         , _previewRevision{ 0 }
         , _bPreviewValid{ false }
+        , _packRoot{}
+        , _packDataPath{}
+        , _packDataMessage{}
+        , _packDataState{ PackDataState::Unread }
     {
         _presetStore.setDatabase( &_database );
-        const string exportFolder = FileUtil::joinPath( CharacterEditorPanelInternal::kDefaultAppearancePath, AppearanceDatabase::kPresetFolder );
-        std::snprintf( _exportFolder.data(), _exportFolder.max_size(), "%s", exportFolder.c_str() );
     }
 
     void CharacterEditorPanel::drawContent()
     {
+        ensurePackData();
+        if ( _packDataState == PackDataState::Missing )
+        {
+            const string hint = "This game has no character editor data (" + _packDataPath + ")";
+            EditorWidgets::drawEmptyHint( hint.c_str() );
+            return;
+        }
+        if ( _packDataState == PackDataState::Invalid )
+        {
+            EditorWidgets::drawEmptyHint( _packDataMessage.c_str() );
+            return;
+        }
         ensureKindTable();
         if ( _reloadGuard.pollExternalChange( SocketSetCache::getReloadCount(), ImGui::GetTime() ) )
             _bExternalChange = true;
@@ -951,6 +965,43 @@ namespace sw::editor
         }
         _status.clear();
         _bDatabaseLoaded = true;
+    }
+
+    void CharacterEditorPanel::ensurePackData()
+    {
+        const string& packRoot = GameConfig::getActive()._packRoot;
+        if ( _packDataState != PackDataState::Unread && packRoot == _packRoot )
+            return;
+        _packRoot = packRoot;
+        _packDataMessage.clear();
+        string error;
+        if ( GamePackDataUtil::tryMakeKindPath( packRoot, CharacterEditorPackData::kDataKind, _packDataPath, error ) == false )
+        {
+            _packDataState   = PackDataState::Invalid;
+            _packDataMessage = "Character editor data has no path: " + error;
+            return;
+        }
+        if ( ResourceIO::hasResource( _packDataPath ) == false )
+        {
+            _packDataState = PackDataState::Missing;
+            return;
+        }
+        CharacterEditorPackData data;
+        if ( data.loadFromResource( _packDataPath ) == false )
+        {
+            _packDataState   = PackDataState::Invalid;
+            _packDataMessage = _packDataPath + " could not be read (see log)";
+            return;
+        }
+        _path             = data._socketPath;
+        _skeletonPath     = data._skeletonPath;
+        _refPosePath      = data._refPosePath;
+        _itemsPath        = data._itemsPath;
+        _appearanceFolder = data._appearanceFolder;
+        // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(정본은 팩 데이터의 외형 폴더 하나).
+        const string exportFolder = FileUtil::joinPath( data._appearanceFolder, AppearanceDatabase::kPresetFolder );
+        std::snprintf( _exportFolder.data(), _exportFolder.max_size(), "%s", exportFolder.c_str() );
+        _packDataState = PackDataState::Ready;
     }
 
     void CharacterEditorPanel::ensureKindTable()

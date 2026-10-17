@@ -221,7 +221,11 @@ namespace sw
         }
         SurfaceChannelTable channels;
         if ( channels.loadFromResource( DismembermentComponentInternal::kDefaultSurfaceChannels ) == false )
-            SW_LOG_ERROR( "Default surface channels '%#' could not be loaded", DismembermentComponentInternal::kDefaultSurfaceChannels );
+        {
+            // 채널 없는 표면 상태로 자르면 상처 · 피가 조용히 빠진다 — 표를 읽지 않은 것으로 두고 멈춘다.
+            SW_LOG_ERROR( "Default surface channels '%#' could not be loaded - dismemberment stays off", DismembermentComponentInternal::kDefaultSurfaceChannels );
+            return;
+        }
         _surfaceState.initialize( channels, static_cast<uint32>( _regionTable.getRegions().size() ), 0 );
         _bTableLoaded = true;
     }

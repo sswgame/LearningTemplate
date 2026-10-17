@@ -1250,11 +1250,20 @@
       {
        "name": "_loadingScreen",
        "type": "string",
-       "default": "engine/ui/loading.ui.xml",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 비우면 로딩 화면 없음"
+       "description": "씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 정본은 팩의 gamesettings 이고 적지 않으면 로딩 화면 없음"
+      },
+      {
+       "name": "_audioEvents",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstanceBase` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음"
       },
       {
        "name": "_mapCustomProperty",

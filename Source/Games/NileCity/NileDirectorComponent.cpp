@@ -123,7 +123,7 @@ namespace sw
 namespace sw
 {
     NileDirectorComponent::NileDirectorComponent()
-        : _cityDataPath{ "game/nilecity/data/city.xml" }
+        : _cityDataPath{}
         , _groundPrefab{}
         , _roadPrefab{}
         , _modelBuildingPrefab{}

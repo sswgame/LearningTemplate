@@ -129,6 +129,9 @@ namespace sw
         friend class XMLCatalog<CityCatalog>;
 
     public:
+        /** @brief 데이터 종류 이름입니다(`SW_RESOURCE_DATA_KIND` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
+        static constexpr const utf8* kDataKind = "city";
+
         CityCatalog();
 
         const CityBuildingDef* findBuilding( const hashed_string& id ) const { return _buildingCatalog.find( id ); }

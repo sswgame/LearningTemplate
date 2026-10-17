@@ -36,7 +36,7 @@ namespace sw
 namespace sw
 {
     MeadowTownDirectorComponent::MeadowTownDirectorComponent()
-        : _tilePrefab{ "game/meadowvillage/prefabs/tile.prefab.xml" }
+        : _tilePrefab{}
         , _orchardPrice{ 50 }
         , _townOffsetX{ 6.0f }
         , _town{}

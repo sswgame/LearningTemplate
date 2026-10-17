@@ -73,6 +73,7 @@ namespace sw
         uint8           _bSolid{ SW_TRUE };  ///< 몸이 통과하지 못한다
         uint8           _bOpaque{ SW_TRUE }; ///< 이웃 면을 가린다
         uint8           _bBreakable{ SW_TRUE };
+        hashed_string   _dropID{}; ///< 부수면 얻는 블록 id(`drop`). 비면 자기 자신이다. 같은 카탈로그의 블록이어야 한다(읽을 때 본다)
     };
 } // namespace sw
 
@@ -82,7 +83,7 @@ namespace sw
      * @class VoxelBlockCatalog
      * @brief 블록 카탈로그입니다. 아래 형식의 XML 을 읽습니다.
      *        `<BlockCatalog atlasColumns="8" atlasRows="8"><Block id="grass" name="Grass" tile="2" top="0" bottom="2" side="1" hardness="0.6"
-     *        color="1 1 1 1" solid="true" opaque="true" breakable="true"/></BlockCatalog>`
+     *        color="1 1 1 1" solid="true" opaque="true" breakable="true" drop="dirt"/></BlockCatalog>`
      * @details 블록 번호는 읽은 순서대로 1부터 붙으며 최대 255입니다. `tile` 은 여섯 면의 기본값이고, `top`, `bottom`, `side` 가 해당 면의 값을 덮어씁니다.
      */
     class SW_KIT_API VoxelBlockCatalog : public XMLCatalog<VoxelBlockCatalog>
@@ -90,6 +91,9 @@ namespace sw
         friend class XMLCatalog<VoxelBlockCatalog>;
 
     public:
+        /** @brief 데이터 종류 이름입니다(`SW_RESOURCE_DATA_KIND` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
+        static constexpr const utf8* kDataKind = "voxelblocks";
+
         VoxelBlockCatalog();
 
         /** @brief 블록을 추가하고 번호를 반환합니다. 같은 id 는 내용을 바꾸고 번호를 유지합니다. 255개를 넘으면 공기(0)를 반환합니다. */

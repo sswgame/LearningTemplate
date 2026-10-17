@@ -4,7 +4,6 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/HarvestValley/FarmDirectorComponent.h"
@@ -14,16 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "HarvestValleyGame" );
-
-    namespace
-    {
-        struct HarvestValleyGameInternal
-        {
-            static constexpr const utf8* kAudioEvents = "game/harvestvalley/audio/harvestvalley.audioevents.xml";
-        };
-    } // namespace
-
     HarvestValleyGame::HarvestValleyGame()
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
@@ -36,19 +25,11 @@ namespace sw
 
     bool HarvestValleyGame::onInitialize()
     {
-        // 사운드 이벤트 — 모두 2D 다(위에서 내려다보는 농장).
-        if ( GameSound::loadEvents( HarvestValleyGameInternal::kAudioEvents ) == false )
-            SW_LOG_WARNING( "[Farm] %# could not be loaded - sounds stay silent", HarvestValleyGameInternal::kAudioEvents );
+        // 사운드 이벤트(모두 2D — 위에서 내려다보는 농장)는 베이스가 gamesettings 의 audioEvents 로 올렸다.
         // 농장 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)requestFirstScene();
         return true;
     }
-
-    void HarvestValleyGame::onShutdown()
-    {
-        GameSound::unloadEvents( HarvestValleyGameInternal::kAudioEvents );
-    }
-
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::HarvestValleyGame );

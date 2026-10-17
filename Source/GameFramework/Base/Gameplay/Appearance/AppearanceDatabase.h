@@ -39,6 +39,9 @@ namespace sw
         static constexpr const utf8* kPresetFolder    = "presets";
         static constexpr const utf8* kPresetExtension = ".appearance.xml";
 
+        /** @brief 데이터 종류 이름입니다(`SW_RESOURCE_DATA_KIND` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
+        static constexpr const utf8* kDataKind = "appearance";
+
         AppearanceDatabase();
 
         /** @brief 폴더의 데이터를 모두 읽고 검사합니다. 오류가 없으면 true 입니다. @p pItemCatalog 는 소유하지 않고 참조만 하므로 데이터보다 오래 살아 있어야 합니다. */

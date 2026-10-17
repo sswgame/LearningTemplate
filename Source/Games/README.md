@@ -32,6 +32,12 @@ Resource/game/<게임 소문자>/               → 팩: data/gamesettings.xml, 
 
 **게임 인스턴스.** `GameInstanceBase` 를 상속한 클래스 하나가 첫 씬을 요청하고, 게임 서비스(카탈로그 등)를 등록하고, 디렉터를 상태 스냅샷에 올립니다.
 
+**게임 데이터는 데이터가 정본입니다.** 게임 코드에 경로 · 이름 문자열을 적지 않습니다.
+
+- 카탈로그는 `onInitialize` 에서 `loadRequiredCatalog( _catalog )` 한 줄로 읽습니다. 경로는 카탈로그 타입의 `kDataKind` 등록 줄(`SW_RESOURCE_DATA_KIND`)과 팩 루트로 만들어지고(`GamePackDataUtil`), 못 읽으면 파일과 이유를 오류로 남기고 게임 초기화가 실패합니다(모듈만 띄우지 않습니다). 다른 읽기 함수가 필요하면 `loadRequiredData( kDataKind, 읽기 )` 입니다.
+- 사운드 이벤트 · 로딩 화면은 팩의 `data/gamesettings.xml` 의 `audioEvents` · `loadingScreen` 이고, 베이스가 올리고 내립니다. 적었는데 못 읽으면 게임이 뜨지 않고, 적지 않으면 없습니다.
+- 디렉터 · 컴포넌트가 쓰는 데이터 경로 · 프리팹 · 입력 액션 · 카탈로그 id 는 생성자 초기값이 아니라 씬의 PROPERTY 값입니다. 액션 이름은 판을 열 때 `InputActionCheckUtil::hasAllActions` 로, id 는 카탈로그로 확인하고 빠지면 오류로 멈춥니다(본보기 `SkirmishDirectorComponent`).
+
 **씬과 프리팹과 디렉터.** 고정 배치는 씬, 런타임에 생기는 것은 프리팹, 규칙은 키트의 보통 클래스, 그것을 돌리는 것은 디렉터 컴포넌트입니다. 아래 "새 게임 = 씬 + 프리팹 + 디렉터와 뷰 컴포넌트" 절에서 설명합니다.
 
 ## 들어 있는 게임

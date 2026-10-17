@@ -22,7 +22,6 @@ namespace sw
 
     protected:
         bool onInitialize() override;
-        void onShutdown() override;
 
     private:
         VoxelBlockCatalog _blockCatalog;

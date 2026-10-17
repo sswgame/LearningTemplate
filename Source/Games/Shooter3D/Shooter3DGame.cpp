@@ -5,7 +5,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -15,14 +14,6 @@
 namespace sw
 {
     SW_LOG_CALLER( "Shooter3DGame" );
-
-    namespace
-    {
-        struct Shooter3DGameInternal
-        {
-            static constexpr const utf8* kAudioEvents = "game/shooter3d/audio/shooter3d.audioevents.xml";
-        };
-    } // namespace
 
     Shooter3DGame::Shooter3DGame()
         : _weaponCatalog{}
@@ -38,32 +29,25 @@ namespace sw
 
     bool Shooter3DGame::onInitialize()
     {
-        // 사운드 이벤트 — 게임 코드는 이름만 안다(무슨 클립을 어떻게 낼지는 데이터).
-        if ( GameSound::loadEvents( Shooter3DGameInternal::kAudioEvents ) == false )
-            SW_LOG_WARNING( "[Shooter] %# could not be loaded - sounds stay silent", Shooter3DGameInternal::kAudioEvents );
-        if ( _weaponCatalog.loadFromResource( "game/shooter3d/data/weapons.xml" ) == false )
+        // 무기 · 장비 아이템 · 외형은 필수다 — 하나라도 못 읽으면 게임을 띄우지 않는다.
+        // 무기는 플레이어 컴포넌트가, 외형은 플레이어 몸 · 스켈레톤의 외형 컴포넌트가 게임 범위에서 찾는다. 외형은 아이템을 참조하므로 아이템 뒤에 읽는다.
+        if ( loadRequiredCatalog( _weaponCatalog ) == false || loadRequiredCatalog( _itemCatalog ) == false )
+            return false;
+        const bool bAppearanceLoaded = loadRequiredData( AppearanceDatabase::kDataKind,
+                                                         [this]( const string& folder )
         {
-            SW_LOG_WARNING( "[Shooter] weapons.xml could not be loaded - the arena cannot start" );
-            return true;
-        }
-        // 플레이어 컴포넌트가 찾는 자리. 모듈이 다시 올라오면 새 인스턴스가 다시 건다.
-        bindScopedService( &_weaponCatalog );
-        // 외형 — 플레이어 몸 · 스켈레톤의 외형 컴포넌트가 프리셋을 여기서 푼다.
-        if ( _itemCatalog.loadFromResource( "game/shooter3d/data/items.xml" ) == false ||
-             _appearanceDatabase.loadFromFolder( "game/shooter3d/data/appearance", &_itemCatalog ) == false )
-            SW_LOG_ERROR( "[Shooter] appearance data could not be loaded - %#", _appearanceDatabase.getReport().joined().c_str() );
-        else
-            bindScopedService( &_appearanceDatabase );
+            if ( _appearanceDatabase.loadFromFolder( folder, &_itemCatalog ) )
+                return true;
+            SW_LOG_ERROR( "[Shooter] appearance data report - %#", _appearanceDatabase.getReport().joined().c_str() );
+            return false;
+        } );
+        if ( bAppearanceLoaded == false )
+            return false;
+        bindScopedService( &_appearanceDatabase );
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)requestFirstScene();
         return true;
     }
-
-    void Shooter3DGame::onShutdown()
-    {
-        GameSound::unloadEvents( Shooter3DGameInternal::kAudioEvents );
-    }
-
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::Shooter3DGame );

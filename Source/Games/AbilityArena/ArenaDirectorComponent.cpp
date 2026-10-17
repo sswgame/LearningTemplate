@@ -43,21 +43,6 @@ namespace sw
             static constexpr const utf8* kEventPlayerFell = "PlayerFell";
             static constexpr const utf8* kEventEnemyFell  = "EnemyFell";
 
-            /** @brief 종류별 어빌리티 세트 ID 입니다. */
-            static hashed_string findAbilitySetID( ArenaUnitKind kind )
-            {
-                switch ( kind )
-                {
-                    case ArenaUnitKind::Player:
-                        return hashed_string( "Player" );
-                    case ArenaUnitKind::Grunt:
-                        return hashed_string( "Grunt" );
-                    case ArenaUnitKind::Caster:
-                        return hashed_string( "Caster" );
-                }
-                return hashed_string{};
-            }
-
             /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 아레나 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
             static const ArenaDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
             {
@@ -140,7 +125,10 @@ namespace sw
 namespace sw
 {
     ArenaDirectorComponent::ArenaDirectorComponent()
-        : _playerPrefab{}
+        : _playerAbilitySet{}
+        , _gruntAbilitySet{}
+        , _casterAbilitySet{}
+        , _playerPrefab{}
         , _gruntPrefab{}
         , _casterPrefab{}
         , _projectilePrefab{}
@@ -190,8 +178,32 @@ namespace sw
             SW_LOG_WARNING( "[Arena] the ability catalog is not loaded - the arena cannot start" );
             return false;
         }
+        bool bSetsKnown = true;
+        for ( const hashed_string* pSetID : { &_playerAbilitySet, &_gruntAbilitySet, &_casterAbilitySet } )
+        {
+            if ( pCatalog->findAbilitySet( *pSetID ) != nullptr )
+                continue;
+            SW_LOG_ERROR( "[Arena] the director's ability set '%#' is not in the ability catalog - the arena cannot start", pSetID->c_str() );
+            bSetsKnown = false;
+        }
+        if ( bSetsKnown == false )
+            return false;
         _wave = 0;
         return true;
+    }
+
+    const hashed_string& ArenaDirectorComponent::findAbilitySetID( ArenaUnitKind kind ) const
+    {
+        switch ( kind )
+        {
+            case ArenaUnitKind::Player:
+                return _playerAbilitySet;
+            case ArenaUnitKind::Grunt:
+                return _gruntAbilitySet;
+            case ArenaUnitKind::Caster:
+                return _casterAbilitySet;
+        }
+        return _playerAbilitySet; // 열거자는 셋뿐이다(covered-switch) — 닿지 않는다
     }
 
     void ArenaDirectorComponent::onGameStarted()
@@ -459,7 +471,7 @@ namespace sw
         }
 
         // 카탈로그는 이 컴포넌트가 정하지 않는다. 게임 서비스(`AbilityCatalog`)를 쓴다. 포인터를 박아 두면 모듈이 다시 로드된 뒤 옛 카탈로그를 가리킨다.
-        const hashed_string setID = ArenaDirectorComponentInternal::findAbilitySetID( request._kind );
+        const hashed_string& setID = findAbilitySetID( request._kind );
         if ( pAbilitySystem->grantAbilitySet( setID ) == false )
         {
             SW_LOG_WARNING( "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setID.c_str() );

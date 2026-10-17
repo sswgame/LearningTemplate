@@ -17,6 +17,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -179,8 +180,16 @@ namespace sw
         void logStatus( float32 deltaTime );
         void pruneProjectiles();
         bool hasPendingUnit( ArenaUnitKind kind ) const;
+        /** @brief 종류별 어빌리티 세트 id(PROPERTY — 씬 데이터)입니다. */
+        const hashed_string& findAbilitySetID( ArenaUnitKind kind ) const;
 
     private:
+        PROPERTY( Category = "Abilities", DisplayName = "Player Ability Set", Tooltip = "Ability set id in abilities.xml granted to the player" )
+        hashed_string _playerAbilitySet;
+        PROPERTY( Category = "Abilities", DisplayName = "Grunt Ability Set" )
+        hashed_string _gruntAbilitySet;
+        PROPERTY( Category = "Abilities", DisplayName = "Caster Ability Set" )
+        hashed_string _casterAbilitySet;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
         string _playerPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )

@@ -38,17 +38,13 @@ namespace sw
             static constexpr const utf8* kEventBreak = "BlockBreak";
             static constexpr const utf8* kEventPlace = "BlockPlace";
 
-            /** @brief 부순 블록에서 얻는 블록입니다(풀 → 흙, 돌 → 조약돌, 기반암 · 물은 없음). */
+            /** @brief 부순 블록에서 얻는 블록입니다. 블록 데이터의 `drop` 이고(풀 → 흙, 돌 → 조약돌), 없으면 자기 자신, 부수지 못하는 블록이면 없음입니다. */
             static VoxelBlockIndex findDrop( const VoxelBlockCatalog& catalog, VoxelBlockIndex block )
             {
                 const VoxelBlockDef* pBlock = catalog.findBlock( block );
                 if ( pBlock == nullptr || pBlock->_bBreakable == SW_FALSE )
                     return kVoxelAirBlock;
-                if ( pBlock->_id == hashed_string( "grass" ) )
-                    return catalog.findBlockIndex( hashed_string( "dirt" ) );
-                if ( pBlock->_id == hashed_string( "stone" ) )
-                    return catalog.findBlockIndex( hashed_string( "cobblestone" ) );
-                return block;
+                return pBlock->_dropID.empty() ? block : catalog.findBlockIndex( pBlock->_dropID );
             }
 
             /** @brief 씬의 첫 복셀 플레이어입니다(탐침 — 프레임 경로가 아니다). */
@@ -144,6 +140,14 @@ namespace sw
         , _placeInterval{ 0.25f }
         , _startYaw{ 0.6f }
         , _startPitch{ -0.2f }
+        , _jumpButton{}
+        , _sprintButton{}
+        , _breakButton{}
+        , _placeButton{}
+        , _hotbarScrollAnalog{}
+        , _listSlotButton{}
+        , _waterBlock{}
+        , _listStartBlock{}
         , _body{}
         , _hotbar{}
         , _target{}
@@ -171,16 +175,18 @@ namespace sw
         Component::onBeginPlay();
         _bBodyPlaced = SW_FALSE;
         _hotbar      = VoxelHotbar{};
-        // 처음 핫바 — 짓는 블록 몇 가지.
+        // 물 블록과 처음 핫바는 씬 데이터의 블록 이름이다. 카탈로그나 이름이 틀리면 플레이어가 서지 않는다(이유는 오류 로그).
         const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
-        if ( pCatalog != nullptr )
+        if ( pCatalog == nullptr )
         {
-            _body.setWaterBlock( pCatalog->findBlockIndex( hashed_string( "water" ) ) );
-            const utf8* arrStartBlock[] = { "planks", "cobblestone", "brick", "log", "sand", "leaves" };
-            for ( const utf8* pID : arrStartBlock )
-            {
-                (void)_hotbar.addBlock( pCatalog->findBlockIndex( hashed_string( pID ) ), 64 );
-            }
+            SW_LOG_ERROR( "[Voxel] no VoxelBlockCatalog game service - the player cannot start" );
+            setCanEverTick( false );
+            return;
+        }
+        if ( applyBlockNames( *pCatalog ) == false )
+        {
+            setCanEverTick( false );
+            return;
         }
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -190,7 +196,11 @@ namespace sw
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
         {
-            resolveIntentSlots( *pPawn );
+            if ( resolveIntentSlots( *pPawn ) == false )
+            {
+                setCanEverTick( false );
+                return;
+            }
             // 자동 플레이면 플레이어 조종자가 먼저 쥐지 않게 한다(잠금이 한 프레임 걸렸다 풀리지 않게) — 디렉터가 AI 를 빙의시킨다.
             if ( pDirector != nullptr && pDirector->isAutoPlayOn() )
                 pPawn->setAutoPossess( PawnAutoPossess::None );
@@ -315,19 +325,62 @@ namespace sw
             pCamera->setEyePosition( _body.getEyePosition() );
     }
 
-    void VoxelPlayerComponent::resolveIntentSlots( const PawnComponent& pawn )
+    bool VoxelPlayerComponent::resolveIntentSlots( const PawnComponent& pawn )
     {
-        constexpr const utf8* kArrSlotName[VoxelHotbar::kSlotCount] = { "Voxel.Slot1", "Voxel.Slot2", "Voxel.Slot3", "Voxel.Slot4", "Voxel.Slot5",
-                                                                        "Voxel.Slot6", "Voxel.Slot7", "Voxel.Slot8", "Voxel.Slot9" };
-        _intentSlots._jump                                          = pawn.findButton( hashed_string( "Voxel.Jump" ) );
-        _intentSlots._sprint                                        = pawn.findButton( hashed_string( "Voxel.Sprint" ) );
-        _intentSlots._break                                         = pawn.findButton( hashed_string( "Voxel.Break" ) );
-        _intentSlots._place                                         = pawn.findButton( hashed_string( "Voxel.Place" ) );
-        _intentSlots._hotbarScroll                                  = pawn.findAnalog( hashed_string( "Voxel.HotbarScroll" ) );
+        bool bResolved     = true;
+        auto resolveButton = [&pawn, &bResolved]( const hashed_string& name, const utf8* pRole ) -> int32
+        {
+            const int32 slot = pawn.findButton( name );
+            if ( slot < 0 )
+            {
+                SW_LOG_ERROR( "[Voxel] %# button '%#' is not in the pawn's button list", pRole, name.c_str() );
+                bResolved = false;
+            }
+            return slot;
+        };
+        _intentSlots._jump         = resolveButton( _jumpButton, "jump" );
+        _intentSlots._sprint       = resolveButton( _sprintButton, "sprint" );
+        _intentSlots._break        = resolveButton( _breakButton, "break" );
+        _intentSlots._place        = resolveButton( _placeButton, "place" );
+        _intentSlots._hotbarScroll = pawn.findAnalog( _hotbarScrollAnalog );
+        if ( _intentSlots._hotbarScroll < 0 )
+        {
+            SW_LOG_ERROR( "[Voxel] hotbar scroll analog '%#' is not in the pawn's analog list", _hotbarScrollAnalog.c_str() );
+            bResolved = false;
+        }
+        if ( _listSlotButton.size() != static_cast<size_t>( VoxelHotbar::kSlotCount ) )
+        {
+            SW_LOG_ERROR( "[Voxel] the player needs %# slot buttons, has %#", VoxelHotbar::kSlotCount, static_cast<uint32>( _listSlotButton.size() ) );
+            return false;
+        }
         for ( int32 slotIndex = 0; slotIndex < VoxelHotbar::kSlotCount; ++slotIndex )
         {
-            _intentSlots._arrSlot[slotIndex] = pawn.findButton( hashed_string( kArrSlotName[slotIndex] ) );
+            _intentSlots._arrSlot[slotIndex] = resolveButton( _listSlotButton[static_cast<size_t>( slotIndex )], "hotbar slot" );
         }
+        return bResolved;
+    }
+
+    bool VoxelPlayerComponent::applyBlockNames( const VoxelBlockCatalog& catalog )
+    {
+        bool bKnown = true;
+        auto find   = [&catalog, &bKnown]( const hashed_string& blockID ) -> VoxelBlockIndex
+        {
+            const VoxelBlockIndex index = catalog.findBlockIndex( blockID );
+            if ( index == kVoxelAirBlock )
+            {
+                SW_LOG_ERROR( "[Voxel] block '%#' is not in the block catalog", blockID.c_str() );
+                bKnown = false;
+            }
+            return index;
+        };
+        _body.setWaterBlock( find( _waterBlock ) );
+        for ( const hashed_string& blockID : _listStartBlock )
+        {
+            const VoxelBlockIndex index = find( blockID );
+            if ( index != kVoxelAirBlock )
+                (void)_hotbar.addBlock( index, 64 ); // 핫바 칸보다 많으면 넘친 것은 버린다(칸 수는 핫바가 정한다)
+        }
+        return bKnown;
     }
 
     void VoxelPlayerComponent::readIntent( const PawnComponent& pawn, const VoxelBlockCatalog& catalog, float3& outWish, bool& outJump, bool& outSprint,

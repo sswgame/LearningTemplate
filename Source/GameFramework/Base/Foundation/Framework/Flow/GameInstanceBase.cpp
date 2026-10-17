@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -22,10 +23,12 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Utility/GameTimeScale.h"
 
+#include "GameFramework/Base/Foundation/Data/GamePackDataUtil.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/LoadingScreenController.h"
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Net/GameNetSession.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 
@@ -60,6 +63,7 @@ namespace sw
         , _listStatefulType{}
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
         , _gameScope{}
+        , _loadedAudioEvents{}
         , _bResumingWorld{ SW_FALSE }
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
@@ -130,7 +134,8 @@ namespace sw
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다 — 첫 씬 요청(onInitialize 안)이 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다.
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
-        const bool bInitialized = onInitialize();
+        // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다).
+        const bool bInitialized = loadAudioEvents() && onInitialize();
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
         // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다.
@@ -143,6 +148,11 @@ namespace sw
     void GameInstanceBase::shutdown()
     {
         onShutdown();
+        if ( _loadedAudioEvents.empty() == false )
+        {
+            GameSound::unloadEvents( _loadedAudioEvents );
+            _loadedAudioEvents.clear();
+        }
         // 키트 처리기는 onShutdown 에서 내려갔다. 연결은 그 뒤에 끊어야 끊김 이벤트가 이미 내려간 처리기에 가지 않는다(세션 · 로딩 화면 · 전환 종료).
         _gameScope.getCollection().shutdownAll();
         detachGameScope();
@@ -168,6 +178,35 @@ namespace sw
             else if ( pInput->getInputMap().loadFromResource( settings._inputMap ) == false )
                 SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
         }
+    }
+
+    bool GameInstanceBase::loadAudioEvents()
+    {
+        const string& path = _bootstrap._data._audioEvents;
+        if ( path.empty() )
+            return true; // 적지 않은 게임은 사운드 이벤트가 없다
+        if ( GameSound::loadEvents( path ) == false )
+        {
+            SW_LOG_ERROR( "GameSettings audioEvents '%#' could not be loaded (missing or invalid - see the messages above) - the game does not start", path.c_str() );
+            return false;
+        }
+        _loadedAudioEvents = path;
+        return true;
+    }
+
+    bool GameInstanceBase::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
+    {
+        string error;
+        if ( GamePackDataUtil::tryMakeKindPath( _bootstrap._packRoot, kindLabel, outPath, error ) )
+            return true;
+        SW_LOG_ERROR( "Required game data '%#' has no path in pack '%#': %# - the game does not start", kindLabel, _bootstrap._packRoot.c_str(), error.c_str() );
+        return false;
+    }
+
+    void GameInstanceBase::reportRequiredDataFailure( string_view kindLabel, const string& path ) const
+    {
+        const utf8* pReason = ResourceIO::hasResource( path ) ? "the loader rejected it (see the messages above)" : "it is not in the pack or the loader rejected it (see the messages above)";
+        SW_LOG_ERROR( "Required game data '%#' (%#) could not be loaded: %# - the game does not start", kindLabel, path.c_str(), pReason );
     }
 
     /**

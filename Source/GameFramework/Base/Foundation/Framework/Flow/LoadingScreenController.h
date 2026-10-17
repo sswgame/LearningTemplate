@@ -25,11 +25,11 @@ namespace sw
     /** @brief 로딩 화면의 겉모습과 시간 설정입니다. `GameInstanceBase` 가 gamesettings 로 채웁니다. */
     struct LoadingScreenSettings
     {
-        string         _documentPath{ "engine/ui/loading.ui.xml" }; ///< 로딩 화면 문서(Loading 층 — 문서의 `UIScreenDesc`)
-        vector<string> _listTip{};                                  ///< 팁 글의 현지화 키(원문) — 열 때마다 하나를 고른다. 비면 팁 칸을 접는다
-        float32        _minimumSeconds{ 0.5f };                     ///< 최소 표시 시간(초) — 빠른 로드에서 한 프레임 깜박이지 않게
-        float32        _fadeInSeconds{ 0.35f };                     ///< 닫은 뒤 검은 화면에서 씬으로 돌아오는 페이드 인(초)
-        uint32         _tipSeed{ GameRandom::kDefaultSeed };        ///< 팁 고르기 시드 — 같은 시드면 같은 순서
+        string         _documentPath{};                      ///< 로딩 화면 문서(Loading 층 — 문서의 `UIScreenDesc`). 정본은 gamesettings 의 `_loadingScreen` 이고, 비면 로딩 화면을 띄우지 않는다
+        vector<string> _listTip{};                           ///< 팁 글의 현지화 키(원문) — 열 때마다 하나를 고른다. 비면 팁 칸을 접는다
+        float32        _minimumSeconds{ 0.5f };              ///< 최소 표시 시간(초) — 빠른 로드에서 한 프레임 깜박이지 않게
+        float32        _fadeInSeconds{ 0.35f };              ///< 닫은 뒤 검은 화면에서 씬으로 돌아오는 페이드 인(초)
+        uint32         _tipSeed{ GameRandom::kDefaultSeed }; ///< 팁 고르기 시드 — 같은 시드면 같은 순서
     };
 } // namespace sw
 

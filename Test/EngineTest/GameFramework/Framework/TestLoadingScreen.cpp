@@ -61,6 +61,18 @@ namespace
 } // namespace
 
 /**
+ * @brief [LoadingScreenTest] 로딩 화면 문서를 적지 않은 게임(gamesettings 에 loadingScreen 없음)은 로딩 화면을 띄우지 않는다 — 엔진 문서로 대체하지 않는다
+ */
+SW_TEST_CASE( LoadingScreenTest, NoDocumentMeansNoLoadingScreen )
+{
+    LoadingScreenFixture fixture;
+    SW_EXPECT_FALSE( fixture._loading.beginLoading() );
+    fixture.runFrame( true );
+    SW_EXPECT_TRUE( fixture._loading.findLoadingScreen() == nullptr );
+    SW_EXPECT_FALSE( fixture._ui.isLoadingScreenShown() );
+}
+
+/**
  * @brief [LoadingScreenTest] 로딩 화면은 로드가 0.1 초에 끝나도 최소 표시 시간(0.5 초)까지 떠 있고, 그 뒤 닫히며 페이드 인을 건다 · 떠 있는 동안 게임 입력을 막는다
  * @details 빠른 로드에서 로딩 화면이 한 프레임만 깜박이지 않게(Lyra `ULoadingScreenManager` 의 최소 표시 시간). 변이: `update` 의 최소 시간 조건을 빼면 로드가
  *          끝난 첫 프레임에 닫혀 진다.
@@ -69,6 +81,7 @@ SW_TEST_CASE( LoadingScreenTest, LoadingScreenStaysForMinimumTime )
 {
     LoadingScreenFixture      fixture;
     sw::LoadingScreenSettings settings{};
+    settings._documentPath = "engine/ui/loading.ui.xml"; // 게임에서는 gamesettings 의 loadingScreen 이 채운다
     settings._listTip.push_back( "Tip one" );
     fixture._loading.setSettings( settings );
     SW_ASSERT_TRUE( fixture._loading.beginLoading() );

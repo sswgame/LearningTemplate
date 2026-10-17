@@ -46,7 +46,7 @@
 			<SmartObjectComponent _componentName="SmartObjectComponent"
 			                      _bActive="true"
 			                      _smartObjectID="LowCover"
-			                      _catalogPath="">
+			                      _catalogPath="common/data/interactions/default.interactions.xml">
 				<_listClaimant />
 			</SmartObjectComponent>
 		</_listComponent>

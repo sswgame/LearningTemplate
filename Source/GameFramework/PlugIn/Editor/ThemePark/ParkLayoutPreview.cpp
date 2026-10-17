@@ -7,8 +7,10 @@
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceIO.h"
 
+#include "GameFramework/Base/Foundation/Data/GamePackDataUtil.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 
@@ -55,23 +57,49 @@ namespace sw::editor
         : _listRide{}
         , _listTrackPoint{}
         , _gatePosition{}
+        , _layoutPath{}
         , _contentHash{ 0 }
         , _bLoaded{ false }
+        , _bMissing{ false }
         , _bWarned{ false }
     {
     }
 
+    void ParkLayoutPreview::clearPreview( bool bMissing )
+    {
+        _bLoaded  = false;
+        _bMissing = bMissing;
+        _listRide.clear();
+        _listTrackPoint.clear();
+    }
+
     bool ParkLayoutPreview::refresh( bool bForce )
     {
-        string text;
-        if ( ResourceIO::readTextResource( kLayoutPath, text ) == false )
+        const string& packRoot = GameConfig::getActive()._packRoot;
+        string        coasterPath;
+        string        error;
+        if ( GamePackDataUtil::tryMakeKindPath( packRoot, ParkLayout::kDataKind, _layoutPath, error ) == false ||
+             GamePackDataUtil::tryMakeKindPath( packRoot, CoasterLayoutCatalog::kDataKind, coasterPath, error ) == false )
         {
             if ( _bWarned == false )
-                SW_LOG_WARNING( "%# could not be read - the park layout preview is empty", kLayoutPath );
+                SW_LOG_ERROR( "The park layout preview has no path in pack '%#': %#", packRoot.c_str(), error.c_str() );
+            _bWarned    = true;
+            _layoutPath = error;
+            clearPreview( false );
+            return false;
+        }
+        if ( ResourceIO::hasResource( _layoutPath ) == false )
+        {
+            clearPreview( true ); // 이 게임 팩에는 공원 배치가 없다 — 패널이 그 상태를 보인다
+            return false;
+        }
+        string text;
+        if ( ResourceIO::readTextResource( _layoutPath, text ) == false )
+        {
+            if ( _bWarned == false )
+                SW_LOG_WARNING( "%# could not be read - the park layout preview is empty", _layoutPath.c_str() );
             _bWarned = true;
-            _bLoaded = false;
-            _listRide.clear();
-            _listTrackPoint.clear();
+            clearPreview( false );
             return false;
         }
         const uint64 contentHash       = StringUtil::computeHash64( text.data(), text.size(), false );
@@ -82,12 +110,10 @@ namespace sw::editor
 
         CoasterLayoutCatalog catalog;
         ParkLayout           layout;
-        if ( catalog.loadFromResource( kCoasterPath ) == false || layout.loadFromXMLText( text, catalog, kLayoutPath ) == false )
+        if ( catalog.loadFromResource( coasterPath ) == false || layout.loadFromXMLText( text, catalog, _layoutPath ) == false )
         {
-            SW_LOG_WARNING( "%# did not load through the ThemePark kit - the park layout preview is empty", kLayoutPath );
-            _bLoaded = false;
-            _listRide.clear();
-            _listTrackPoint.clear();
+            SW_LOG_WARNING( "%# did not load through the ThemePark kit - the park layout preview is empty", _layoutPath.c_str() );
+            clearPreview( false );
             return true;
         }
 
@@ -122,9 +148,10 @@ namespace sw::editor
             }
             _listTrackPoint.push_back( std::move( listPoint ) );
         }
-        _bLoaded = true;
-        _bWarned = false;
-        SW_LOG_INFO( "Park layout preview loaded %# rides from %#", static_cast<uint32>( _listRide.size() ), kLayoutPath );
+        _bLoaded  = true;
+        _bMissing = false;
+        _bWarned  = false;
+        SW_LOG_INFO( "Park layout preview loaded %# rides from %#", static_cast<uint32>( _listRide.size() ), _layoutPath.c_str() );
         return true;
     }
 

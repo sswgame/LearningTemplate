@@ -31,7 +31,7 @@
 			<InteractableComponent _componentName="InteractableComponent"
 			                       _bActive="true"
 			                       _interactionID="Use"
-			                       _catalogPath=""
+			                       _catalogPath="common/data/interactions/default.interactions.xml"
 			                       _lastInteractor="0"
 			                       _cooldownRemaining="0"
 			                       _priority="0"

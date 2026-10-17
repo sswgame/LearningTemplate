@@ -957,7 +957,23 @@
 					                        _eyeHeight="1.6"
 					                        _maxHealth="100"
 					                        _regenDelay="4"
-					                        _regenPerSecond="6" />
+					                        _regenPerSecond="6">
+						<_listWeaponID>
+							<item>rifle</item>
+							<item>shotgun</item>
+							<item>pistol</item>
+						</_listWeaponID>
+						<_listWeaponModel>
+							<item>game/shooter3d/models/blaster_d.mesh</item>
+							<item>game/shooter3d/models/blaster_h.mesh</item>
+							<item>game/shooter3d/models/blaster_a.mesh</item>
+						</_listWeaponModel>
+						<_listWeaponItem>
+							<item>blaster_rifle</item>
+							<item>blaster_shotgun</item>
+							<item>blaster_pistol</item>
+						</_listWeaponItem>
+					</ShooterPlayerComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

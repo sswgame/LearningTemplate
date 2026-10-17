@@ -172,8 +172,8 @@ namespace sw
         void logStatus( bool bForce );
 
         const hashed_string& getSelectedSeed() const;
-        /** @brief 핸들의 오브젝트 위치를 반환합니다. 대상을 찾지 못하면 @p fallback 을 반환합니다. */
-        float3 findObjectPosition( GameObjectHandle handle, const float3& fallback ) const;
+        /** @brief 핸들의 오브젝트 위치를 @p outPosition 에 담습니다. 대상을 찾지 못하면 false 이고 @p outPosition 은 그대로입니다. */
+        [[nodiscard]] bool tryGetObjectPosition( GameObjectHandle handle, float3& outPosition ) const;
         /** @brief 도구를 한 번 쓸 때 드는 기력입니다(PROPERTY). */
         int32 getToolStaminaCost( FarmTool tool ) const;
 
@@ -194,9 +194,9 @@ namespace sw
         float4 _witheredCropColor;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the OrthoCameraRigComponent that follows the farmer" )
         GameObjectHandle _cameraRig;
-        PROPERTY( Category = "Scene", DisplayName = "Shipping Bin", Tooltip = "Object whose position is the shipping bin" )
+        PROPERTY( Category = "Scene", DisplayName = "Shipping Bin", Tooltip = "Object whose position is the shipping bin (required - the farm does not start without it)" )
         GameObjectHandle _shippingBin;
-        PROPERTY( Category = "Scene", DisplayName = "Shop", Tooltip = "Object whose position is the seed shop" )
+        PROPERTY( Category = "Scene", DisplayName = "Shop", Tooltip = "Object whose position is the seed shop (required - the farm does not start without it)" )
         GameObjectHandle _shop;
         PROPERTY( Category = "Scene", DisplayName = "Farmer", Tooltip = "Object with the farmer pawn whose intent drives the farmer" )
         GameObjectHandle _farmer;
@@ -226,10 +226,6 @@ namespace sw
         float32 _wakeHour;
         PROPERTY( Category = "Time", DisplayName = "Pass Out Hour", Tooltip = "Hour past midnight at which a farmer still awake passes out", Min = 0.0, Max = 24.0 )
         float32 _passOutHour;
-        PROPERTY( Category = "Scene", DisplayName = "Shipping Bin Fallback", Tooltip = "Shipping bin position when no Shipping Bin object is set", Units = m )
-        float3 _shippingBinFallback;
-        PROPERTY( Category = "Scene", DisplayName = "Shop Fallback", Tooltip = "Seed shop position when no Shop object is set", Units = m )
-        float3 _shopFallback;
         PROPERTY( Category = "Farmer", DisplayName = "Hoe Stamina Cost", Min = 0 )
         int32 _hoeStaminaCost;
         PROPERTY( Category = "Farmer", DisplayName = "Watering Stamina Cost", Min = 0 )

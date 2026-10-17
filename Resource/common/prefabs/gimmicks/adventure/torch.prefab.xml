@@ -34,7 +34,7 @@
 			</GimmickSensorComponent>
 			<ElementStatusComponent _componentName="ElementStatusComponent"
 			                        _bActive="true"
-			                        _tablePath=""
+			                        _tablePath="common/data/elements/default.elements.xml"
 			                        _material="Torch"
 			                        _signalStatus="Burning"
 			                        _startStimulus="None" />

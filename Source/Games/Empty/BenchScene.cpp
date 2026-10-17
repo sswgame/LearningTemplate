@@ -639,7 +639,7 @@ namespace sw
             return;
         pScene->ensureDefaultCameras();
         vector<GameObjectHandle> listObject;
-        BenchCombatComponent::spawnScene( *pScene, listObject );
+        BenchCombatComponent::spawnScene( *pScene, _settings, listObject );
         for ( const GameObjectHandle& handle : listObject )
         {
             GameObject* pObject = pScene->getObjectManager()->resolveGameObject( handle );
@@ -693,7 +693,7 @@ namespace sw
             StringBuilder<constant::kMaxBuffer64> nameBuilder;
             nameBuilder.append( "BenchRagdoll_" ).append( index );
             const float3 position{ originX + static_cast<float32>( index % columns ) * spacing, 0.0f, static_cast<float32>( index / columns ) * spacing };
-            GameObject*  pEnemy = BenchCombatComponent::spawnEnemy( *pObjects, hashed_string( nameBuilder.c_str(), nameBuilder.size() ), position );
+            GameObject*  pEnemy = BenchCombatComponent::spawnEnemy( *pObjects, _settings, hashed_string( nameBuilder.c_str(), nameBuilder.size() ), position );
             if ( RagdollComponent* pRagdoll = pEnemy != nullptr ? pEnemy->getComponent<RagdollComponent>() : nullptr )
             {
                 _listRagdoll.push_back( pRagdoll->getHandle() );

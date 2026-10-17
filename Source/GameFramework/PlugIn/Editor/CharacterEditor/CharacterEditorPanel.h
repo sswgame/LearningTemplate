@@ -79,10 +79,24 @@ namespace sw::editor
         void exportDataPreset();
         void drawHistoryRow();
         void ensureKindTable();
+        /**
+         * @brief 활성 게임 팩의 캐릭터 편집 데이터(`CharacterEditorPackData`)를 경로 칸에 채웁니다. 활성 팩이 바뀌었을 때만 다시 읽습니다.
+         * @details 팩에 파일이 없으면 `Missing`, 못 읽으면 `Invalid` 이고, 창은 탭 대신 그 상태를 보인다(다른 게임의 경로로 대체하지 않는다).
+         */
+        void ensurePackData();
         void loadSkeleton();
         void loadAppearanceData();
         /** @brief 모델 편집 결과를 상태 줄에 보입니다. 실패하면 이유를, 성공하면 빈 줄을 둡니다. */
         void reportEdit( bool bSucceeded );
+
+        /** @brief 활성 게임 팩의 캐릭터 편집 데이터 상태입니다. */
+        enum class PackDataState : uint8
+        {
+            Unread,  ///< 아직 읽지 않았다
+            Missing, ///< 이 게임 팩에는 캐릭터 편집 데이터가 없다
+            Invalid, ///< 경로를 만들 수 없거나 파일을 읽지 못했다(`_packDataMessage`)
+            Ready,   ///< 경로 칸을 채웠다
+        };
 
         SocketEditModel                       _sockets;
         BonePoseEditModel                     _pose;
@@ -114,5 +128,9 @@ namespace sw::editor
         AppearanceSelectionReport             _previewReport; ///< `_preview` 와 같이 푼 보고
         uint32                                _previewRevision;
         bool                                  _bPreviewValid;
+        string                                _packRoot;        ///< 경로 칸을 채운 활성 게임 팩 루트 — 바뀌면 다시 읽는다
+        string                                _packDataPath;    ///< 활성 팩의 캐릭터 편집 데이터 파일
+        string                                _packDataMessage; ///< `Invalid` 의 이유
+        PackDataState                         _packDataState;
     };
 } // namespace sw::editor

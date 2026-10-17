@@ -45,6 +45,8 @@ namespace sw
          *          읽은 `GameSettings` 는 게임 서비스(`game::findSubsystem<GameSettings>()`)로 등록하고, 다국어(`_localizationProject`)와
          *          게임플레이 입력 맵(`_inputMap`)도 여기서 적용한다.
          *          커스텀 칸을 읽는 킷 코드는 이 서비스로 읽는다. 서비스로 등록하지 않으면 제품에서 늘 기본값을 쓴다.
+         *          사운드 이벤트 라이브러리(`_audioEvents`)도 `onInitialize` 앞에 올리고 `shutdown` 이 내린다. 적었는데 못 읽거나 `onInitialize` 가 false 면 false 다
+         *          (필수 데이터 — `loadRequiredData` — 를 못 읽은 게임은 뜨지 않는다).
          */
         bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) final;
         /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
@@ -207,6 +209,34 @@ namespace sw
         /** @brief 이 인스턴스의 게임 범위입니다(기동 뒤 `game::findGameScope()` 와 같다). */
         SubsystemScope& getGameScope() { return _gameScope; }
 
+        /**
+         * @brief 필수 데이터 하나를 이 게임 팩에서 읽습니다. 경로는 데이터 종류 등록 줄(@p kindLabel)과 팩 루트로 만든다(`GamePackDataUtil::tryMakeKindPath`).
+         * @details 게임 코드는 경로를 적지 않는다 — 카탈로그 경로의 정본은 등록 줄 하나다.
+         *          경로를 만들 수 없거나 @p load( path ) 가 false 면 종류 · 파일 · 이유를 오류로 남기고 false 를 돌려준다.
+         *          `onInitialize` 는 그 false 를 그대로 돌려준다. 필수 데이터 없이 게임을 띄우지 않는다(모듈 초기화 실패로 기동이 멈춘다).
+         */
+        template <typename TLoad>
+        [[nodiscard]] bool loadRequiredData( string_view kindLabel, TLoad&& load )
+        {
+            string path;
+            if ( makeRequiredDataPath( kindLabel, path ) == false )
+                return false;
+            if ( load( static_cast<const string&>( path ) ) )
+                return true;
+            reportRequiredDataFailure( kindLabel, path );
+            return false;
+        }
+        /** @brief 카탈로그(종류 `TCatalog::kDataKind`)를 `loadFromResource` 로 읽고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다. */
+        template <class TCatalog>
+        [[nodiscard]] bool loadRequiredCatalog( TCatalog& catalog )
+        {
+            if ( loadRequiredData( TCatalog::kDataKind, [&catalog]( const string& path )
+            { return catalog.loadFromResource( path ); } ) == false )
+                return false;
+            bindScopedService( &catalog );
+            return true;
+        }
+
         /** @brief `deserializeSceneObjects` 가 읽는 씬 오브젝트 데이터의 형식입니다. */
         enum class SceneObjectFormat : uint8
         {
@@ -245,6 +275,12 @@ namespace sw
 
         /** @brief `GameSettings` 의 다국어 · 입력 맵 칸을 적용합니다. 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다). */
         void applyBootstrap();
+        /** @brief gamesettings 의 사운드 이벤트 라이브러리(`_audioEvents`)를 올립니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true). */
+        [[nodiscard]] bool loadAudioEvents();
+        /** @brief `loadRequiredData` 의 경로를 만듭니다. 못 만들면 이유를 오류로 남기고 false 입니다. */
+        [[nodiscard]] bool makeRequiredDataPath( string_view kindLabel, string& outPath ) const;
+        /** @brief 필수 데이터 @p path 를 읽지 못했음을 파일과 이유로 알립니다. */
+        void reportRequiredDataFailure( string_view kindLabel, const string& path ) const;
         /** @brief 이 인스턴스의 게임 범위를 지금 범위 사슬에서 뗍니다(지금 범위면 앞 범위로 되돌리고, 다른 범위가 이 범위를 상위로 이었으면 그 위를 잇게 한다). */
         void detachGameScope();
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
@@ -291,6 +327,7 @@ namespace sw
         vector<StatefulComponentType>   _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
         unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
         SubsystemScope                  _gameScope;            ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면 · 네트워크 세션)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
+        string                          _loadedAudioEvents;    ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
         uint8                           _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

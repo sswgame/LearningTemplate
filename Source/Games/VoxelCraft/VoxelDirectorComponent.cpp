@@ -59,6 +59,12 @@ namespace sw
         , _terrainSeed{ 20261003 }
         , _chunkBuildsPerFrame{ 4 }
         , _statusLogInterval{ 5.0f }
+        , _waterBlock{}
+        , _stoneBlock{}
+        , _grassBlock{}
+        , _snowBlock{}
+        , _coalOreBlock{}
+        , _ironOreBlock{}
         , _world{}
         , _listChunk{}
         , _autoPlayController{}
@@ -142,10 +148,10 @@ namespace sw
     float3 VoxelDirectorComponent::findSpawnPosition() const
     {
         // 가운데부터 나선으로 — 물 위가 아닌 첫 땅.
-        const VoxelBlockCatalog* pCatalog = _world.getCatalog();
-        const VoxelBlockIndex    water    = pCatalog != nullptr ? pCatalog->findBlockIndex( hashed_string( "water" ) ) : kVoxelAirBlock;
-        const int32              centerX  = _world.getSizeX() / 2;
-        const int32              centerZ  = _world.getSizeZ() / 2;
+        // 판이 열렸으면 카탈로그와 블록 이름은 startGame 이 확인했다.
+        const VoxelBlockIndex water   = _world.getCatalog()->findBlockIndex( _waterBlock );
+        const int32           centerX = _world.getSizeX() / 2;
+        const int32           centerZ = _world.getSizeZ() / 2;
         for ( int32 radius = 0; radius < _world.getSizeX() / 2; ++radius )
         {
             for ( int32 dz = -radius; dz <= radius; ++dz )
@@ -198,6 +204,16 @@ namespace sw
             SW_LOG_WARNING( "[Voxel] the block catalog is not loaded - the world cannot start" );
             return false;
         }
+        bool bBlocksKnown = true;
+        for ( const hashed_string* pBlockID : { &_waterBlock, &_stoneBlock, &_grassBlock, &_snowBlock, &_coalOreBlock, &_ironOreBlock } )
+        {
+            if ( pCatalog->findBlockIndex( *pBlockID ) != kVoxelAirBlock )
+                continue;
+            SW_LOG_ERROR( "[Voxel] the director's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
+            bBlocksKnown = false;
+        }
+        if ( bBlocksKnown == false )
+            return false;
         _world.initialize( kChunkCountX, kChunkCountZ, pCatalog );
         VoxelTerrainSettings settings;
         settings._seed                                   = static_cast<uint32>( _terrainSeed );
@@ -212,11 +228,11 @@ namespace sw
     {
         // 돌 속 광석(깊을수록 철) · 높은 봉우리의 눈. 지형 생성기는 장르 공통이라 이런 꾸밈은 게임이 얹는다.
         const VoxelBlockCatalog& catalog = *_world.getCatalog();
-        const VoxelBlockIndex    stone   = catalog.findBlockIndex( hashed_string( "stone" ) );
-        const VoxelBlockIndex    coal    = catalog.findBlockIndex( hashed_string( "coal_ore" ) );
-        const VoxelBlockIndex    iron    = catalog.findBlockIndex( hashed_string( "iron_ore" ) );
-        const VoxelBlockIndex    grass   = catalog.findBlockIndex( hashed_string( "grass" ) );
-        const VoxelBlockIndex    snow    = catalog.findBlockIndex( hashed_string( "snow" ) );
+        const VoxelBlockIndex    stone   = catalog.findBlockIndex( _stoneBlock );
+        const VoxelBlockIndex    coal    = catalog.findBlockIndex( _coalOreBlock );
+        const VoxelBlockIndex    iron    = catalog.findBlockIndex( _ironOreBlock );
+        const VoxelBlockIndex    grass   = catalog.findBlockIndex( _grassBlock );
+        const VoxelBlockIndex    snow    = catalog.findBlockIndex( _snowBlock );
         for ( int32 z = 0; z < _world.getSizeZ(); ++z )
         {
             for ( int32 x = 0; x < _world.getSizeX(); ++x )

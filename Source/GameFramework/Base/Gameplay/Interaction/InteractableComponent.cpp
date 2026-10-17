@@ -48,10 +48,15 @@ namespace sw
         _seenCatalogReloadCount = InteractionCatalog::getSharedReloadCount();
         if ( _interactionID.empty() )
             return;
-        const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath.empty() ? string_view( InteractionCatalog::kDefaultPath ) : string_view( _catalogPath ) );
+        if ( _catalogPath.empty() )
+        {
+            SW_LOG_ERROR( "Interaction '%#' has no catalog path - set Catalog", _interactionID.c_str() );
+            return;
+        }
+        const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath );
         _pDef                              = pCatalog != nullptr ? pCatalog->findInteraction( _interactionID ) : nullptr;
         if ( _pDef == nullptr )
-            SW_LOG_ERROR( "Interaction '%#' is not in %#", _interactionID.c_str(), _catalogPath.empty() ? InteractionCatalog::kDefaultPath : _catalogPath.c_str() );
+            SW_LOG_ERROR( "Interaction '%#' is not in %#", _interactionID.c_str(), _catalogPath.c_str() );
     }
 
     void InteractableComponent::onRegister( GameObjectManager& manager )

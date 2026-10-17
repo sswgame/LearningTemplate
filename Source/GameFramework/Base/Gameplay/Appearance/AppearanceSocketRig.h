@@ -62,8 +62,9 @@ namespace sw
     private:
         unordered_map<hashed_string, unique_ptr<SocketSet>> _mapSocketSet; ///< 값이 null 이면 읽지 못한 경로이다
         SocketKindTable                                     _kinds;
-        uint8                                               _bKindsLoaded : 1;
-        [[maybe_unused]] uint8                              _reserved     : 7;
+        uint8                                               _bKindsLoaded : 1; ///< 소켓 종류 표를 읽어 봤다
+        uint8                                               _bKindsValid  : 1; ///< 그 읽기가 성공했다 — 실패했으면 소켓 자산을 하나도 내주지 않는다
+        [[maybe_unused]] uint8                              _reserved     : 6;
     };
 } // namespace sw
 

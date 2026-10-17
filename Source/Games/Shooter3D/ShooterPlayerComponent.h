@@ -129,7 +129,11 @@ namespace sw
         };
 
     private:
-        void equipWeapons();
+        /**
+         * @brief 무기 슬롯 셋을 씬 데이터(`_listWeaponID` · `_listWeaponModel` · `_listWeaponItem`)대로 채웁니다.
+         * @details 목록 길이가 슬롯 수와 다르거나 id 가 무기 카탈로그에 없으면 오류를 남기고 false 다. 다른 무기로 대체하지 않는다.
+         */
+        [[nodiscard]] bool equipWeapons();
         /** @brief 의도의 무기 버튼(Weapon1..3, SwitchWeapon 과 그 아날로그의 부호로 다음과 이전을 구분)과 Reload 를 무기에 반영합니다. */
         void applyWeaponIntent( const PawnComponent& pawn );
         /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
@@ -160,7 +164,11 @@ namespace sw
         float3 _spawnPosition;
         PROPERTY( Category = "Player", AssetPath, AssetType = "Prefab", DisplayName = "Body Prefab", Tooltip = "Visible body (skeletal mesh, animator, appearance, ShooterAvatarComponent)" )
         string _bodyPrefab;
-        PROPERTY( Category = "Player", DisplayName = "Weapon Items", Tooltip = "Appearance item of each weapon (rifle, shotgun, pistol) worn in the MainHand slot" )
+        PROPERTY( Category = "Player", DisplayName = "Weapon IDs", Tooltip = "Weapon catalog id of each slot (keys Weapon1..Weapon3) - every id must be in weapons.xml" )
+        vector<string> _listWeaponID;
+        PROPERTY( Category = "Player", DisplayName = "Weapon Models", Tooltip = "First-person mesh of each weapon slot" )
+        vector<string> _listWeaponModel;
+        PROPERTY( Category = "Player", DisplayName = "Weapon Items", Tooltip = "Appearance item of each weapon slot worn in the MainHand slot" )
         vector<string> _listWeaponItem;
         PROPERTY( Category = "View", DisplayName = "Eye Height", Tooltip = "Used until the body's Eyes socket is known", Min = 0.0, Units = m )
         float32 _eyeHeight;
