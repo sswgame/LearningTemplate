@@ -2,49 +2,22 @@
 
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuit.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/BitStream.h"
+
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "GimmickCircuit" );
+
     namespace
     {
         struct GimmickCircuitInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "GMKC" );
-            static constexpr uint32 kStateVersion = 1u;
-
-            static uint64 hashBytes( uint64 hash, const void* pData, size_t size )
-            {
-                const uint8* pByte = static_cast<const uint8*>( pData );
-                for ( size_t index = 0; index < size; ++index )
-                {
-                    hash = ( hash ^ pByte[index] ) * HashUtil::kFnvPrime64;
-                }
-                return hash;
-            }
-
-            template <typename T>
-            static void writeValue( vector<uint8>& outBytes, const T& value )
-            {
-                const size_t offset = outBytes.size();
-                outBytes.resize( offset + sizeof( T ) );
-                std::memcpy( outBytes.data() + offset, &value, sizeof( T ) );
-            }
-
-            template <typename T>
-            [[nodiscard]] static bool readValue( const vector<uint8>& bytes, size_t& inoutOffset, T& outValue )
-            {
-                if ( inoutOffset + sizeof( T ) > bytes.size() )
-                    return false;
-                std::memcpy( &outValue, bytes.data() + inoutOffset, sizeof( T ) );
-                inoutOffset += sizeof( T );
-                return true;
-            }
-
             static string describeSource( const GimmickCircuitDef& def ) { return def.getSourceName().empty() ? string( "<gimmick>" ) : def.getSourceName(); }
 
             static string joinNames( const vector<hashed_string>& listName )
@@ -90,9 +63,8 @@ namespace sw
         , _listFloatState{}
         , _listIntState{}
         , _listOrder{}
-        , _initialStateBytes{}
+        , _initialState{}
         , _timer{}
-        , _layoutHash{ 0 }
         , _stepIndex{ 0 }
         , _stepTime{ GimmickCircuitDef::kDefaultStepTime }
     {
@@ -106,10 +78,9 @@ namespace sw
         _listFloatState.clear();
         _listIntState.clear();
         _listOrder.clear();
-        _initialStateBytes.clear();
+        _initialState = GimmickCircuitState{};
         _timer.reset();
-        _layoutHash = 0;
-        _stepIndex  = 0;
+        _stepIndex = 0;
     }
 
     bool GimmickCircuit::validate( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError )
@@ -126,8 +97,16 @@ namespace sw
         _stepTime = def.getStepTime() > 0.0f ? def.getStepTime() : GimmickCircuitDef::kDefaultStepTime;
         _timer    = FixedStepTimer( _stepTime, 0.25f );
 
-        // 1) 노드: id, 종류, 매개변수
+        // 1) 노드: id, 종류, 매개변수. 상태가 담을 수 있는 노드 수를 넘으면 다른 검증 전에 멈춘다(노드마다 할당하지 않는다).
         const vector<GimmickNodeDef>& listNodeDef = def.getNodes();
+        if ( listNodeDef.size() > GimmickCircuitState::kMaxNodeCount )
+        {
+            utf8 arrBuffer[constant::kMaxBuffer256]{};
+            formatstring( arrBuffer, constant::kMaxBuffer256, "%#: %# nodes, more than the %# a circuit state holds", Internal::describeSource( def ).c_str(),
+                          static_cast<uint64>( listNodeDef.size() ), GimmickCircuitState::kMaxNodeCount );
+            outListError.push_back( string( arrBuffer ) );
+            return false;
+        }
         _listNode.resize( listNodeDef.size() );
         for ( size_t nodeIndex = 0; nodeIndex < listNodeDef.size(); ++nodeIndex )
         {
@@ -298,24 +277,8 @@ namespace sw
             clear();
             return false;
         }
-        computeLayoutHash();
-        saveState( _initialStateBytes );
+        saveState( _initialState );
         return true;
-    }
-
-    void GimmickCircuit::computeLayoutHash()
-    {
-        using Internal = GimmickCircuitInternal;
-        uint64 hash    = HashUtil::kFnvOffset64;
-        for ( const NodeRuntime& node : _listNode )
-        {
-            const uint64 kindHash = static_cast<uint64>( node._pKind->_name.getHash() );
-            const uint64 idHash   = static_cast<uint64>( node._id.getHash() );
-            hash                  = Internal::hashBytes( hash, &kindHash, sizeof( kindHash ) );
-            hash                  = Internal::hashBytes( hash, &idHash, sizeof( idHash ) );
-        }
-        const uint64 arrCount[] = { _listNode.size(), _listFloatState.size(), _listIntState.size() };
-        _layoutHash             = Internal::hashBytes( hash, arrCount, sizeof( arrCount ) );
     }
 
     GimmickNodeContext GimmickCircuit::makeContext( NodeRuntime& node )
@@ -398,8 +361,8 @@ namespace sw
 
     void GimmickCircuit::resetToInitial()
     {
-        if ( _initialStateBytes.empty() == false )
-            (void)loadState( _initialStateBytes ); // 같은 회로가 저장한 바이트이므로 구조가 항상 맞는다
+        if ( isBuilt() )
+            copyState( _initialState ); // 같은 회로가 만든 상태라 노드 순서가 같다
     }
 
     void GimmickCircuit::setSensorValue( int32 node, float32 value )
@@ -458,74 +421,137 @@ namespace sw
         return paramIndex >= 0 ? &_listParam[runtime._paramStart + static_cast<uint32>( paramIndex )] : nullptr;
     }
 
-    void GimmickCircuit::saveState( vector<uint8>& outBytes ) const
+    void GimmickCircuit::saveState( GimmickCircuitState& outState ) const
     {
-        using Internal = GimmickCircuitInternal;
-        outBytes.clear();
-        outBytes.reserve( 32 + _listNode.size() * 16 + _listFloatState.size() * 4 + _listIntState.size() * 4 );
-        Internal::writeValue( outBytes, Internal::kStateTag );
-        Internal::writeValue( outBytes, Internal::kStateVersion );
-        Internal::writeValue( outBytes, _layoutHash );
-        Internal::writeValue( outBytes, _stepIndex );
-        Internal::writeValue( outBytes, _timer._accumulator );
-        for ( const NodeRuntime& node : _listNode )
+        outState._stepIndex   = _stepIndex;
+        outState._accumulator = _timer._accumulator;
+        outState._listNode.resize( _listNode.size() );
+        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
-            Internal::writeValue( outBytes, node._outputBits );
-            Internal::writeValue( outBytes, node._previousInputBits );
-            Internal::writeValue( outBytes, node._sensorValue );
-            Internal::writeValue( outBytes, node._sensorImpulse );
-        }
-        for ( const float32 value : _listFloatState )
-        {
-            Internal::writeValue( outBytes, value );
-        }
-        for ( const int32 value : _listIntState )
-        {
-            Internal::writeValue( outBytes, value );
+            const NodeRuntime&     node  = _listNode[nodeIndex];
+            const GimmickNodeKind& kind  = *node._pKind;
+            GimmickNodeState&      state = outState._listNode[nodeIndex];
+            state._id                    = node._id.getHash();
+            state._kind                  = kind._name.getHash();
+            state._outputBits            = node._outputBits;
+            state._previousInputBits     = node._previousInputBits;
+            state._sensorValue           = node._sensorValue;
+            state._sensorImpulse         = node._sensorImpulse;
+            state._stateVersion          = kind._stateVersion;
+            state._listFloatState.assign( _listFloatState.begin() + node._floatStart, _listFloatState.begin() + node._floatStart + kind._floatStateCount );
+            state._listIntState.assign( _listIntState.begin() + node._intStart, _listIntState.begin() + node._intStart + kind._intStateCount );
         }
     }
 
-    bool GimmickCircuit::loadState( const vector<uint8>& bytes )
+    void GimmickCircuit::writeNode( size_t nodeIndex, const GimmickNodeState& state )
     {
-        using Internal = GimmickCircuitInternal;
-        const size_t expectedSize =
-            sizeof( uint32 ) * 3 + sizeof( uint64 ) + sizeof( float32 ) + _listNode.size() * 16 + _listFloatState.size() * 4 + _listIntState.size() * 4;
-        size_t     offset{ 0 };
-        uint32     magic{ 0 };
-        uint32     version{ 0 };
-        uint64     layoutHash{ 0 };
-        uint32     stepIndex{ 0 };
-        float32    accumulator{ 0.0f };
-        const bool bHeader = bytes.size() == expectedSize && Internal::readValue( bytes, offset, magic ) && Internal::readValue( bytes, offset, version ) &&
-                             Internal::readValue( bytes, offset, layoutHash ) && Internal::readValue( bytes, offset, stepIndex ) &&
-                             Internal::readValue( bytes, offset, accumulator );
-        const bool bInvalidState = bHeader == false || magic != Internal::kStateTag || version != Internal::kStateVersion || layoutHash != _layoutHash;
-        if ( bInvalidState )
-            return false;
-        _stepIndex          = stepIndex;
-        _timer._accumulator = accumulator;
-        for ( NodeRuntime& node : _listNode )
+        NodeRuntime& node       = _listNode[nodeIndex];
+        node._outputBits        = state._outputBits;
+        node._previousInputBits = state._previousInputBits;
+        node._sensorValue       = state._sensorValue;
+        node._sensorImpulse     = state._sensorImpulse;
+        std::copy( state._listFloatState.begin(), state._listFloatState.end(), _listFloatState.begin() + node._floatStart );
+        std::copy( state._listIntState.begin(), state._listIntState.end(), _listIntState.begin() + node._intStart );
+    }
+
+    void GimmickCircuit::copyState( const GimmickCircuitState& state )
+    {
+        SW_ASSERT( state._listNode.size() == _listNode.size() );
+        _stepIndex          = state._stepIndex;
+        _timer._accumulator = state._accumulator;
+        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
-            (void)Internal::readValue( bytes, offset, node._outputBits );        // 크기는 위에서 expectedSize 로 확인했다
-            (void)Internal::readValue( bytes, offset, node._previousInputBits ); // 크기는 위에서 expectedSize 로 확인했다
-            (void)Internal::readValue( bytes, offset, node._sensorValue );       // 크기는 위에서 expectedSize 로 확인했다
-            (void)Internal::readValue( bytes, offset, node._sensorImpulse );     // 크기는 위에서 expectedSize 로 확인했다
+            writeNode( nodeIndex, state._listNode[nodeIndex] );
         }
-        for ( float32& value : _listFloatState )
+    }
+
+    GimmickStateLoad GimmickCircuit::loadState( const GimmickCircuitState& state, GimmickStateMatch weakestAccepted )
+    {
+        // 1) 짝짓기: 저장 노드마다 같은 id 의 회로 노드를 찾는다. 노드 순서가 그대로인 흔한 경우는 같은 번호를 먼저 본다.
+        GimmickStateLoad result;
+        vector<int32>    listSavedIndex( _listNode.size(), -1 ); // 회로 노드마다 짝인 저장 노드 번호
+        uint32           droppedCount = 0;
+        for ( size_t savedIndex = 0; savedIndex < state._listNode.size(); ++savedIndex )
         {
-            (void)Internal::readValue( bytes, offset, value ); // 크기는 위에서 expectedSize 로 확인했다
+            const GimmickNodeState& saved     = state._listNode[savedIndex];
+            int32                   nodeIndex = -1;
+            const bool              bSameSlot = savedIndex < _listNode.size() && _listNode[savedIndex]._id.getHash() == saved._id;
+            if ( bSameSlot )
+            {
+                nodeIndex = static_cast<int32>( savedIndex );
+            }
+            else
+            {
+                for ( size_t candidate = 0; candidate < _listNode.size(); ++candidate )
+                {
+                    if ( _listNode[candidate]._id.getHash() == saved._id )
+                    {
+                        nodeIndex = static_cast<int32>( candidate );
+                        break;
+                    }
+                }
+            }
+            if ( nodeIndex < 0 )
+            {
+                ++droppedCount; // 회로에서 지운 노드
+                continue;
+            }
+            const size_t           node     = static_cast<size_t>( nodeIndex );
+            const GimmickNodeKind& kind     = *_listNode[node]._pKind;
+            const bool             bChanged = saved._kind != kind._name.getHash() || saved._stateVersion != kind._stateVersion ||
+                                  saved._listFloatState.size() != kind._floatStateCount || saved._listIntState.size() != kind._intStateCount;
+            if ( bChanged )
+            {
+                result._changedNode = nodeIndex;
+                return result; // Mismatch
+            }
+            if ( listSavedIndex[node] >= 0 )
+                return result; // 같은 id 가 둘인 저장 상태 — Mismatch, 바뀐 노드 없음
+            listSavedIndex[node] = static_cast<int32>( savedIndex );
         }
-        for ( int32& value : _listIntState )
+
+        // 2) 맞는 정도와 받아들이는 한계
+        bool bEveryNodeSaved = droppedCount == 0;
+        for ( const int32 savedIndex : listSavedIndex )
         {
-            (void)Internal::readValue( bytes, offset, value ); // 크기는 위에서 expectedSize 로 확인했다
+            bEveryNodeSaved = bEveryNodeSaved && savedIndex >= 0;
         }
-        return true;
+        result._match = bEveryNodeSaved ? GimmickStateMatch::Exact : GimmickStateMatch::NodeSetChanged;
+        if ( static_cast<uint8>( result._match ) > static_cast<uint8>( weakestAccepted ) )
+            return result;
+
+        // 3) 옮기기: 짝이 없는 회로 노드(새로 더한 노드)는 처음 상태다.
+        if ( result._match != GimmickStateMatch::Exact )
+            copyState( _initialState );
+        _stepIndex          = state._stepIndex;
+        _timer._accumulator = state._accumulator;
+        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
+        {
+            if ( listSavedIndex[nodeIndex] >= 0 )
+                writeNode( nodeIndex, state._listNode[static_cast<size_t>( listSavedIndex[nodeIndex] )] );
+        }
+        result._bApplied = true;
+        return result;
     }
 
     uint64 GimmickCircuit::computeStateHash() const
     {
-        vector<uint8> bytes;
-        saveState( bytes );
-        return GimmickCircuitInternal::hashBytes( HashUtil::kFnvOffset64, bytes.data(), bytes.size() );
+        GimmickCircuitState state;
+        saveState( state );
+        BitWriter  writer;
+        const bool bWritten = FixedLayout::write( state, writer );
+        if ( bWritten == false )
+        {
+            // 개수는 populate 와 registerKind 가 막았고 누적 시간은 음수가 될 수 없다. 남는 것은 실행의 결함이다.
+            SW_LOG_ERROR( "Gimmick circuit state has a value outside its declared range at step %#", _stepIndex );
+            SW_ASSERT( bWritten );
+        }
+        uint64       hash  = HashUtil::kFnvOffset64;
+        const uint8* pByte = writer.getBytes().data();
+        for ( int32 index = 0; index < writer.getByteCount(); ++index )
+        {
+            hash = ( hash ^ pByte[index] ) * HashUtil::kFnvPrime64;
+        }
+        return hash;
     }
 } // namespace sw

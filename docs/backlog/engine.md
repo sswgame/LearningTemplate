@@ -82,6 +82,10 @@
   ④ 측정(Release, VSync 끔, 3~5판, p50 · p99): 오브젝트 1만 · 10만 × 타입 수 50 · 200 · 500 의 `forEachComponentOfType`, 추가 · 제거 잠금, `sizeof( Component )` 전후와 큐브 20,000 개 `GT.Frame`,
   개발 빌드의 `resolveComponent<T>` 확인 비용.
 
+- `C-52` [정리] **씬 · 프리팹 저작 저장에 런타임 상태가 들어간다**(2026-10-17 `GimmickCircuitState` 검토 ⓕ). 씬 저장과 레벨 세이브가 같은 `ObjectStateSerializer` 문맥이라 `Transient` 만 빠지고,
+  `GimmickCircuitComponent::_state` 같은 플레이 상태가 에디터가 다음에 저장하는 씬 XML 로 들어갈 수 있다(지금 빈 요소는 우연). 언리얼 `SaveGame` 처럼 저장 문맥에 "저작 저장"을 표시하고
+  런타임 상태 필드(예: `PROPERTY( RuntimeState )`)를 그 문맥에서 빼는 형식을 둔다. 리플렉션 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 해 이 단계 범위 밖으로 남겼다.
+  `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
 - `D1-2` [기능] **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다

@@ -378,7 +378,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
 순서는 바이트가 프로세스 안에만 머무는 것부터입니다. 롤백과 회로 상태가 먼저이고, 와이어를 바꾸는 스냅샷과 프로토콜이 나중입니다. 단계 번호는 9절과 같습니다.
 
 1. 생성기와 런타임(단계 1). 손 코덱은 건드리지 않습니다.
-2. `GimmickCircuit` 상태(단계 2). 손 크기 계산을 없애는 효과가 가장 분명합니다. `_layoutHash` 대조는 검증 훅으로 둡니다.
+2. `GimmickCircuit` 상태(단계 2). 손 크기 계산을 없애는 효과가 가장 분명합니다. 회로 구조 해시(`_layoutHash`)는 없앴고, 저장 상태는 노드 id 로 짝지어 같은 id 의 종류 · 상태 버전이 바뀐 노드만 거절합니다([기믹 회로 상태 구조 계획](GimmickCircuitState.md) 8절).
 3. `FightingMatch` 롤백 B, 세이브 A(단계 3).
 4. Mech · Horror 스냅샷과 게임 넷 채널 등록(단계 4). 핸드셰이크에 해시를 섞습니다.
 5. 온라인: 핸드셰이크 첫 필드 해시와 "업데이트 필요" 거절을 먼저(단계 5-a), 그다음 프로토콜 12 파일(단계 5-b).
@@ -506,7 +506,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 단계 | 내용 | 건드릴 파일 | 겹침 주의 | 에이전트(모델) |
 |---|---|---|---|---|
 | 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록 | 없음(읽기) | 없음 | `scout`(haiku) |
-| 2 | (보류) `GimmickCircuit` 을 B 로. 상태 바이트 `_stateBytes` 가 씬 · 프리팹 XML 과 레벨 세이브에 남아 B 대상이 아님. 아래 문단 | `GimmickCircuit.*`, `GimmickCircuitComponent.*` | 세이브 형식 결정이 먼저 | `worker`(opus) |
+| 2 | (구현, 빌드 검증 대기) `GimmickCircuitState` 하나에서 컴포넌트는 A, 묶음 · 넷 조각은 B. 아래 문단 | `GimmickCircuit*`, `GimmickStateBundle.*`, `GimmickSnapshotUtil.*`, 기믹 XML 14 개 | 없음 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게(끝남, 3.8 끝 문단). 같은 타입의 필드 하나만 읽고, 바깥 타입 · 성분 목록은 코덱만 쓴다 | `ReflectionTypes.h`, `CodeGenerator.cpp`, `InspectorPropertyLayout.*` | 없음 | `worker`(opus) |
 | 7-c | 매니저의 타입별 컴포넌트 목록 | `GameObjectManager.*`, `GameObjectStore.*` | 7-d 와 같은 파일, 7-c 먼저 | `integrator`(opus) |
@@ -532,8 +532,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 
 단계 6 은 끝났습니다(2026-10-17). 컴팩트 모드와 호출부 없는 `cloneObject` 를 지웠고(1.1), 같은 묶음으로 `A-13` · `A-14` 를 고쳤습니다(1.2, 1.4).
 
-단계 2 는 보류합니다. `GimmickCircuit` 상태 바이트는 `GimmickCircuitComponent::_stateBytes`(`PROPERTY`)로 씬 · 프리팹 · 레벨 세이브에 남으므로 B 의 조건(같은 빌드끼리만 읽는다)에 맞지 않습니다.
-옮긴다면 상태를 `REFLECT` 구조체로 꺼내 컴포넌트에는 A 로, 체크포인트 · 넷 스냅샷에는 B 로 싣는 구조가 됩니다. 이 결정은 단계 3 처럼 세이브 형식을 바꾸므로 따로 정합니다.
+단계 2 는 구현했고 빌드 검증을 기다립니다(2026-10-18, 브랜치 `wt/feat10`). 상태를 `REFLECT` 구조체 `GimmickCircuitState` 로 꺼내 컴포넌트에는 A(씬 · 프리팹 · 레벨 세이브)로,
+롤백 묶음 · 넷 스냅샷에는 B 로 싣고, 체크포인트는 프로세스 안 값입니다. 설계와 `design-reviewer` 검토 반영은 [기믹 회로 상태 구조 계획](GimmickCircuitState.md) 8절입니다.
 
 단계 4-a 가운데 스냅샷을 B 로 옮기는 일은 끝났습니다(2026-10-17). Mech · Horror 스냅샷은 `PROPERTY` 범위 키만 갖고 손 코덱 · `kMagic` 이 없습니다.
 두 스냅샷은 디스크에 남지 않습니다(세이브는 `Archive` 의 `writeState` 가 따로 씁니다). Horror 발전기의 진행 · 표시 두 목록은 원소 하나(`HorrorGeneratorSnapshot`)로 합쳤고, 위치는 높이까지 싣습니다.

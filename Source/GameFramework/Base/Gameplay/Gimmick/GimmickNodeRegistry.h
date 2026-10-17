@@ -110,9 +110,15 @@ namespace sw
          * @brief 고리를 끊는 노드(지연)만 씁니다. 스텝이 끝날 때 이번 스텝의 입력을 받아 둡니다. 이 노드의 스텝 함수는 입력을 보지 않고 저장된 값으로
          *        출력을 내므로 다른 노드보다 먼저 실행됩니다. 이 노드로 들어가는 배선은 평가 순서를 제약하지 않으므로, 이 노드를 지나는 고리는 허용됩니다.
          */
-        StepFunc            _pCommit{ nullptr };
-        uint16              _floatStateCount{ 0 };
-        uint16              _intStateCount{ 0 };
+        StepFunc _pCommit{ nullptr };
+        uint16   _floatStateCount{ 0 }; ///< 실수 상태 슬롯 수. `GimmickNodeState::kMaxSlotCount` 이하(`registerKind` 가 막는다)
+        uint16   _intStateCount{ 0 };   ///< 정수 상태 슬롯 수. 같은 상한이다
+        /**
+         * @brief 상태 슬롯의 뜻 버전입니다. 슬롯의 배치나 뜻을 바꾸면 올립니다.
+         * @details 저장된 상태(`GimmickNodeState::_stateVersion`)와 다르면 그 노드의 상태는 읽지 않고 컴포넌트가 오류로 멈춘다(`GimmickStateMatch::Mismatch`).
+         *          슬롯 수만 대조하면 같은 수 안에서 뜻이 바뀐 변경(슬롯 둘의 순서를 바꿈)을 잡지 못한다.
+         */
+        uint16              _stateVersion{ 1 };
         GimmickNodeCategory _category{ GimmickNodeCategory::Operator };
 
         int32 findInput( const hashed_string& name ) const;
@@ -135,7 +141,7 @@ namespace sw
         /** @brief 내장 종류를 모두 가진 레지스트리입니다. 처음 부를 때 만들고 이후에는 바꾸지 않습니다. */
         static const GimmickNodeRegistry& getDefault();
 
-        /** @brief 종류를 추가합니다. 이름이 이미 있거나 포트가 32 개를 넘으면 false 입니다. */
+        /** @brief 종류를 추가합니다. 이름이 이미 있거나, 포트가 32 개를 넘거나, 상태 슬롯이 `GimmickNodeState::kMaxSlotCount` 를 넘으면 false 입니다. */
         [[nodiscard]] bool registerKind( const GimmickNodeKind& kind );
         /** @brief 이름에 해당하는 종류입니다. 없으면 nullptr 입니다. */
         const GimmickNodeKind*         findKind( const hashed_string& name ) const;

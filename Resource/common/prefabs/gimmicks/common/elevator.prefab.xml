@@ -59,7 +59,6 @@
 					<GimmickWireDesc _from="call.Toggled" _to="lift.Call0" _bInvert="true" />
 				</_listWire>
 				<_listRestPose />
-				<_stateBytes />
 			</GimmickCircuitComponent>
 		</_listComponent>
 	</GameObject>

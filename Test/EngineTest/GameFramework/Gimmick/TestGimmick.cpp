@@ -1,7 +1,10 @@
-// 기믹 회로 — 센서 → 연산자 → 액추에이터 배선, 검증, 고정 스텝 타이밍, 상태 저장 · 복원 · 결정성, 스플라인 무버.
+// 기믹 회로 — 센서 → 연산자 → 액추에이터 배선, 검증, 고정 스텝 타이밍, 상태 저장 · 복원(노드 id 짝짓기) · 결정성, 상태 상한, 스플라인 무버.
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/BitStream.h"
+
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuit.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitDef.h"
@@ -84,6 +87,24 @@ namespace
             {
                 circuit.step();
             }
+        }
+
+        /** @brief 고정 배치형으로 써 봅니다. 쓰기가 성공하면 true 입니다. */
+        template <typename T>
+        static bool canWriteFixed( const T& value )
+        {
+            BitWriter writer;
+            return FixedLayout::write( value, writer );
+        }
+
+        /** @brief id 하나 · 종류 하나의 노드 상태를 슬롯 수만큼 채워 만듭니다. */
+        static GimmickNodeState makeNodeState( uint32 id, uint32 floatCount, uint32 intCount )
+        {
+            GimmickNodeState state;
+            state._id = id;
+            state._listFloatState.assign( floatCount, 0.5f );
+            state._listIntState.assign( intCount, 7 );
+            return state;
         }
     };
 } // namespace
@@ -422,7 +443,7 @@ SW_TEST_CASE( GimmickTest, StateSaveLoadResetRoundTrip )
     GimmickTestInternal::stepTimes( circuit, 3 );
     circuit.addSensorImpulse( use, 1.0f );
     GimmickTestInternal::stepTimes( circuit, 4 ); // 지연 큐 안에 바뀜이 남아 있는 때
-    vector<uint8> checkpoint;
+    GimmickCircuitState checkpoint;
     circuit.saveState( checkpoint );
     const uint64 checkpointHash = circuit.computeStateHash();
     GimmickTestInternal::stepTimes( circuit, 40 );
@@ -431,7 +452,9 @@ SW_TEST_CASE( GimmickTest, StateSaveLoadResetRoundTrip )
     SW_EXPECT_NEAR_EQUAL( 1.0f, finalValue, 1.0e-4f );
 
     // 체크포인트로 돌아가 같은 걸음을 다시 — 같은 끝 해시.
-    SW_ASSERT_TRUE( circuit.loadState( checkpoint ) );
+    const GimmickStateLoad back = circuit.loadState( checkpoint, GimmickStateMatch::Exact );
+    SW_ASSERT_TRUE( back._bApplied );
+    SW_EXPECT_TRUE( back._match == GimmickStateMatch::Exact );
     SW_EXPECT_EQUAL( checkpointHash, circuit.computeStateHash() );
     GimmickTestInternal::stepTimes( circuit, 40 );
     SW_EXPECT_EQUAL( finalHash, circuit.computeStateHash() );
@@ -439,18 +462,29 @@ SW_TEST_CASE( GimmickTest, StateSaveLoadResetRoundTrip )
     // 새로 지은 회로에 읽어도 같다(레벨 세이브 → 다시 로드).
     GimmickCircuit reloaded;
     SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( reloaded, pXML ) );
-    SW_ASSERT_TRUE( reloaded.loadState( checkpoint ) );
+    SW_ASSERT_TRUE( reloaded.loadState( checkpoint, GimmickStateMatch::Exact )._bApplied );
     GimmickTestInternal::stepTimes( reloaded, 40 );
     SW_EXPECT_EQUAL( finalHash, reloaded.computeStateHash() );
 
-    // 모양이 다른 회로 · 깨진 바이트는 거절하고 그대로 둔다.
+    // 노드가 줄어든 회로 — 같은 빌드끼리 쓰는 한계(Exact)로는 거절하고 그대로 둔다.
     GimmickCircuit other;
     SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( other, "<GimmickCircuit><Node id=\"use\" kind=\"Interaction\"/></GimmickCircuit>" ) );
-    const uint64 otherHash = other.computeStateHash();
-    SW_EXPECT_FALSE( other.loadState( checkpoint ) );
+    const uint64           otherHash = other.computeStateHash();
+    const GimmickStateLoad refused   = other.loadState( checkpoint, GimmickStateMatch::Exact );
+    SW_EXPECT_FALSE( refused._bApplied );
+    SW_EXPECT_TRUE( refused._match == GimmickStateMatch::NodeSetChanged );
     SW_EXPECT_EQUAL( otherHash, other.computeStateHash() );
-    vector<uint8> truncated( checkpoint.begin(), checkpoint.begin() + 10 );
-    SW_EXPECT_FALSE( circuit.loadState( truncated ) );
+
+    // 슬롯 하나가 모자란 상태(종류가 슬롯을 바꿨는데 버전을 올리지 않은 것과 같은 모양)는 어느 한계로도 받지 않는다.
+    GimmickCircuitState shortSlot = checkpoint;
+    const int32         delay     = circuit.findNode( "delay" );
+    shortSlot._listNode[static_cast<size_t>( delay )]._listIntState.pop_back();
+    const uint64           beforeHash = circuit.computeStateHash();
+    const GimmickStateLoad broken     = circuit.loadState( shortSlot, GimmickStateMatch::NodeSetChanged );
+    SW_EXPECT_FALSE( broken._bApplied );
+    SW_EXPECT_TRUE( broken._match == GimmickStateMatch::Mismatch );
+    SW_EXPECT_EQUAL( delay, broken._changedNode );
+    SW_EXPECT_EQUAL( beforeHash, circuit.computeStateHash() );
 
     circuit.resetToInitial();
     SW_EXPECT_EQUAL( initialHash, circuit.computeStateHash() );
@@ -504,17 +538,135 @@ SW_TEST_CASE( GimmickTest, SameInputsSameStateHash )
     }
     SW_EXPECT_EQUAL( 600u, runA.getStepIndex() );
     SW_EXPECT_EQUAL( runA.getStepIndex(), runB.getStepIndex() );
-    vector<uint8> bytesA;
-    vector<uint8> bytesB;
-    runA.saveState( bytesA );
-    runB.saveState( bytesB );
+    GimmickCircuitState stateA;
+    GimmickCircuitState stateB;
+    runA.saveState( stateA );
+    runB.saveState( stateB );
     // 누적 시간(프레임 분할의 흔적)만 다를 수 있다 — 그것을 빼고 같은 상태다.
-    SW_EXPECT_TRUE( bytesA.size() == bytesB.size() );
-    const size_t accumulatorOffset = sizeof( uint32 ) * 3 + sizeof( uint64 );
-    for ( size_t byteIndex = accumulatorOffset; byteIndex < accumulatorOffset + sizeof( float32 ); ++byteIndex )
-    {
-        bytesB[byteIndex] = bytesA[byteIndex];
-    }
-    SW_EXPECT_TRUE( bytesA == bytesB );
+    stateB._accumulator = stateA._accumulator;
+    SW_EXPECT_TRUE( FixedLayout::equals( stateA, stateB ) );
     SW_EXPECT_NOT_EQUAL( runA.computeStateHash(), runC.computeStateHash() );
+}
+
+/**
+ * @brief [GimmickTest] 노드 id 짝짓기 — 디자이너가 노드를 더하고 지운 회로에 옛 상태를 읽으면 남은 노드는 이어 가고, 새 노드는 처음 상태, 지운 노드는 버린다
+ * @details 회로 전체 해시 하나로 거절하면 노드 하나만 고쳐도 그 회로의 옛 세이브가 모두 실패한다. 실패는 "같은 id 인데 종류가 바뀐 노드" 로 좁힌다.
+ */
+SW_TEST_CASE( GimmickTest, StateMatchesNodesByID )
+{
+    const utf8*    pOldXML = R"(
+<GimmickCircuit>
+  <Node id="use" kind="Interaction"/>
+  <Node id="counter" kind="Counter" target="5"/>
+  <Node id="gone" kind="Latch"/>
+  <Wire from="use.OnUsed" to="counter.Count"/>
+</GimmickCircuit>)";
+    GimmickCircuit oldCircuit;
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( oldCircuit, pOldXML ) );
+    const int32 use = oldCircuit.findNode( "use" );
+    for ( int32 press = 0; press < 3; ++press )
+    {
+        oldCircuit.addSensorImpulse( use, 1.0f );
+        GimmickTestInternal::stepTimes( oldCircuit, 2 );
+    }
+    GimmickCircuitState saved;
+    oldCircuit.saveState( saved );
+    const int32 oldCount = oldCircuit.getIntState( oldCircuit.findNode( "counter" ), 0 );
+    SW_EXPECT_EQUAL( 3, oldCount );
+
+    // 순서를 바꾸고(counter 가 먼저), 노드 하나를 지우고(gone), 하나를 더한(door) 회로.
+    const utf8*    pNewXML = R"(
+<GimmickCircuit>
+  <Node id="counter" kind="Counter" target="5"/>
+  <Node id="use" kind="Interaction"/>
+  <Node id="door" kind="Door" startOpen="1"/>
+  <Wire from="use.OnUsed" to="counter.Count"/>
+</GimmickCircuit>)";
+    GimmickCircuit newCircuit;
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( newCircuit, pNewXML ) );
+    GimmickCircuit fresh;
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( fresh, pNewXML ) );
+    const int32 door = newCircuit.findNode( "door" );
+
+    const GimmickStateLoad sameBuild = newCircuit.loadState( saved, GimmickStateMatch::Exact );
+    SW_EXPECT_FALSE( sameBuild._bApplied ); // 롤백 · 넷은 같은 회로만 받는다
+
+    const GimmickStateLoad edited = newCircuit.loadState( saved, GimmickStateMatch::NodeSetChanged );
+    SW_ASSERT_TRUE( edited._bApplied );
+    SW_EXPECT_TRUE( edited._match == GimmickStateMatch::NodeSetChanged );
+    SW_EXPECT_EQUAL( oldCount, newCircuit.getIntState( newCircuit.findNode( "counter" ), 0 ) );
+    SW_EXPECT_EQUAL( oldCircuit.getStepIndex(), newCircuit.getStepIndex() );
+    SW_EXPECT_NEAR_EQUAL( fresh.getActuatorValue( door ), newCircuit.getActuatorValue( door ), 1.0e-6f ); // 새 노드는 처음 상태(startOpen)
+    SW_EXPECT_NEAR_EQUAL( 1.0f, newCircuit.getActuatorValue( door ), 1.0e-6f );
+
+    // 같은 id 의 종류를 바꾸면(Counter → Toggle) 어느 한계로도 읽지 않고 그 노드를 알린다.
+    GimmickCircuit retyped;
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( retyped, "<GimmickCircuit><Node id=\"use\" kind=\"Interaction\"/><Node id=\"counter\" kind=\"Toggle\"/></GimmickCircuit>" ) );
+    const uint64           retypedHash = retyped.computeStateHash();
+    const GimmickStateLoad changed     = retyped.loadState( saved, GimmickStateMatch::NodeSetChanged );
+    SW_EXPECT_FALSE( changed._bApplied );
+    SW_EXPECT_TRUE( changed._match == GimmickStateMatch::Mismatch );
+    SW_EXPECT_EQUAL( retyped.findNode( "counter" ), changed._changedNode );
+    SW_EXPECT_EQUAL( retypedHash, retyped.computeStateHash() );
+
+    // 종류의 상태 버전이 다른 저장(슬롯 수는 같다)도 같다.
+    GimmickCircuitState oldVersion = saved;
+    for ( GimmickNodeState& node : oldVersion._listNode )
+    {
+        if ( node._id == hashed_string( "counter" ).getHash() )
+            ++node._stateVersion;
+    }
+    SW_EXPECT_TRUE( oldCircuit.loadState( oldVersion, GimmickStateMatch::NodeSetChanged )._match == GimmickStateMatch::Mismatch );
+
+    // 같은 id 가 둘인 저장 상태는 깨진 것이다.
+    GimmickCircuitState duplicated = saved;
+    duplicated._listNode.push_back( duplicated._listNode[0] );
+    const GimmickStateLoad twice = oldCircuit.loadState( duplicated, GimmickStateMatch::NodeSetChanged );
+    SW_EXPECT_TRUE( twice._match == GimmickStateMatch::Mismatch );
+    SW_EXPECT_EQUAL( -1, twice._changedNode );
+}
+
+/**
+ * @brief [GimmickTest] 상태 상한 — C++ 상수(`kMaxNodeCount` · `kMaxSlotCount`)가 `PROPERTY( MaxCount )` 와 같고, 회로 · 종류 등록이 그 상한을 넘는 것을 오류로 막는다
+ * @details 생성기는 C++ 상수를 키로 받지 않고 `PropertyInfo` 에는 `MaxCount` 가 없어 같은 수가 두 곳에 있다. 둘이 갈라지면 여기서 멈춘다: 상한에서 B 쓰기가 성공하고 하나 넘으면 실패해야 한다.
+ */
+SW_TEST_CASE( GimmickTest, StateLimitsMatchDeclaredMaxCount )
+{
+    constexpr uint32 kSlot = GimmickNodeState::kMaxSlotCount;
+    SW_EXPECT_TRUE( GimmickTestInternal::canWriteFixed( GimmickTestInternal::makeNodeState( 1, kSlot, kSlot ) ) );
+    SW_EXPECT_FALSE( GimmickTestInternal::canWriteFixed( GimmickTestInternal::makeNodeState( 1, kSlot + 1, 0 ) ) );
+    SW_EXPECT_FALSE( GimmickTestInternal::canWriteFixed( GimmickTestInternal::makeNodeState( 1, 0, kSlot + 1 ) ) );
+
+    GimmickCircuitState full;
+    full._listNode.assign( GimmickCircuitState::kMaxNodeCount, GimmickTestInternal::makeNodeState( 1, 0, 0 ) );
+    SW_EXPECT_TRUE( GimmickTestInternal::canWriteFixed( full ) );
+    full._listNode.push_back( GimmickTestInternal::makeNodeState( 2, 0, 0 ) );
+    SW_EXPECT_FALSE( GimmickTestInternal::canWriteFixed( full ) );
+
+    // 기본 종류는 모두 상한 안이다(Delay 의 정수 슬롯 20 개가 가장 크다).
+    for ( const GimmickNodeKind& kind : GimmickNodeRegistry::getDefault().getKinds() )
+    {
+        SW_EXPECT_TRUE( kind._floatStateCount <= kSlot && kind._intStateCount <= kSlot );
+    }
+    GimmickNodeRegistry registry = GimmickNodeRegistry::getDefault();
+    GimmickNodeKind     wide     = *registry.findKind( hashed_string( "Delay" ) );
+    wide._name                   = hashed_string( "WideDelay" );
+    wide._intStateCount          = static_cast<uint16>( kSlot + 1 );
+    SW_EXPECT_FALSE( registry.registerKind( wide ) );
+    wide._intStateCount = static_cast<uint16>( kSlot );
+    SW_EXPECT_TRUE( registry.registerKind( wide ) );
+
+    // 노드 수가 상한을 넘는 회로는 populate 가 한 줄 오류로 멈춘다.
+    string xml = "<GimmickCircuit>";
+    for ( uint32 node = 0; node <= GimmickCircuitState::kMaxNodeCount; ++node )
+    {
+        xml += "<Node id=\"n" + string( std::to_string( node ).c_str() ) + "\" kind=\"Signal\"/>";
+    }
+    xml += "</GimmickCircuit>";
+    GimmickCircuit tooBig;
+    vector<string> listError;
+    SW_EXPECT_FALSE( GimmickTestInternal::buildFromXML( tooBig, xml.c_str(), listError ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), listError.size() );
+    SW_EXPECT_TRUE( GimmickTestInternal::hasErrorContaining( listError, "a circuit state holds" ) );
+    SW_EXPECT_FALSE( tooBig.isBuilt() );
 }
