@@ -14,7 +14,7 @@ namespace
     {
         /** @brief 필수 칸(`Required`)을 모두 적은 가장 작은 파일 본문입니다. */
         static constexpr const utf8* kCompleteJSON =
-            "{ \"_uiPreviewDocument\": \"engine/ui/pause.ui.xml\", \"_clearColor\": \"0.1 0.2 0.3 1.0\", \"_listBaseFont\": [ \"a.ttf\" ], \"_listKoreanFont\": [ \"b.ttf\" ] }";
+            "{ \"_uiPreviewDocument\": \"engine/ui/pause.ui.xml\", \"_clearColor\": \"0.1,0.2,0.3,1.0\", \"_listBaseFont\": [ \"a.ttf\" ], \"_listKoreanFont\": [ \"b.ttf\" ] }";
     };
 } // namespace
 

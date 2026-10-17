@@ -1,6 +1,6 @@
 {
     "_uiPreviewDocument": "engine/ui/pause.ui.xml",
-    "_clearColor": "0.12 0.15 0.18 1.0",
+    "_clearColor": "0.12,0.15,0.18,1.0",
     "_listBaseFont": [
         "consola.ttf",
         "Consolas.ttf",
