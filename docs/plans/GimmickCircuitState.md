@@ -300,6 +300,6 @@ B 는 개수 상한이 정적이어야 합니다(3.5). 지금 `populate` 에는 
   `PropertyInfo` 에 `MaxCount` 메타데이터가 없어(6.2 확인) C++ 상수를 함께 두고, 상한에서 B 쓰기가 성공하고 하나 넘으면 실패하는지를 `GimmickTest.StateLimitsMatchDeclaredMaxCount` 가 대조합니다.
 - **저장 상태 적용은 한 함수.** `GimmickCircuitComponent::applySavedState` 를 `onPostLoad` · `onBeginPlay` · `restoreCheckpoint` 가 지납니다. `NodeSetChanged` 는 경고 뒤 이어 가고, `Mismatch` 는 오류를 남기고 회로를 비워 돌지 않습니다(6.3 의 두 번째 결정: 조용한 처음 상태 시작을 없앰).
   롤백 · 넷은 `restoreState`(`Exact` 만, 아니면 바꾸지 않고 false)이고 `GimmickStateBundle::apply` 는 건너뛴 수를 돌려 의미를 부르는 쪽이 정합니다. 체크포인트는 값입니다(6.3 의 첫 결정).
-- **저작 저장 문맥(검토 ⓕ)은 백로그 `C-52`.** 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 하고 리플렉션 작업과 파일이 겹쳐 이 단계에서 하지 않았습니다.
+- **저작 저장 문맥(검토 ⓕ)은 백로그 `C-53`.** 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 하고 리플렉션 작업과 파일이 겹쳐 이 단계에서 하지 않았습니다.
 - **측정 방법(통합 때, Release).** 쇼케이스 씬 회로 5 개와 프리팹 13 개를 0 · 600 · 36,000 스텝 돌린 뒤 `FixedLayout::write( state )` 바이트 수와 조각 수(`kChunkPayloadBytes` 로 나눔)를 기록하고 가장 큰 값이 `kMaxCircuitBytes` 안인지 봅니다
   (Delay 의 절대 스텝 번호가 varuint 길이를 늘립니다). `storeState` 는 스텝을 돈 틱마다 부르므로 같은 판에서 `saveState` 의 시간 · 할당을 3~5 회 중앙값으로 잽니다(목록 용량을 이어 쓰므로 첫 틱 뒤 할당 0 이 기대값).
