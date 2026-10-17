@@ -23,14 +23,18 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  runners:
+    uses: ./.github/workflows/runners.yml
+
   header-self-contained:
     name: Compile guards (Windows clang-cl)
-    runs-on: windows-2022
+    needs: runners
+    runs-on: ${{ fromJSON(needs.runners.outputs.map).windows }}
     timeout-minutes: 120
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
       with:
         fetch-depth: 1
 

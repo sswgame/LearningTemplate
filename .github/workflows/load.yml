@@ -14,14 +14,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  runners:
+    uses: ./.github/workflows/runners.yml
+
   load:
     name: Load suites (Linux Clang Release)
-    runs-on: ubuntu-22.04
+    needs: runners
+    runs-on: ${{ fromJSON(needs.runners.outputs.map).linux }}
     timeout-minutes: 150
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
       with:
         fetch-depth: 1
 
@@ -91,7 +95,7 @@ jobs:
 
     - name: Upload load results
       if: always() && steps.build.outcome == 'success'
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: load-results
         path: |

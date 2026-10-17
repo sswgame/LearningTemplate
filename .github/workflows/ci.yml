@@ -23,16 +23,20 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  runners:
+    uses: ./.github/workflows/runners.yml
+
   lint:
     name: Lints (gates + self-tests)
-    runs-on: ubuntu-22.04
+    needs: runners
+    runs-on: ${{ fromJSON(needs.runners.outputs.map).linux }}
     timeout-minutes: 30
     outputs:
       code: ${{ steps.changes.outputs.code }}
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
       with:
         fetch-depth: 1
 
@@ -63,16 +67,16 @@ jobs:
 
     - name: Upload lint timings
       if: always()
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: lint-timing
         path: lint-timing.json
 
   build:
     name: ${{ matrix.name }}
-    needs: lint
+    needs: [ runners, lint ]
     if: needs.lint.outputs.code == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ fromJSON(needs.runners.outputs.map)[matrix.os] }}
     # vcpkg 를 처음부터 지으면 Windows 에서 한 시간이 넘으므로 한도는 그보다 길게 둔다.
     timeout-minutes: 180
     # 매트릭스 항목에 `reportOnly: true` 를 주면 그 잡은 보고만 한다(실패해도 CI 를 붉게 하지 않는다). 새 검사(새니타이저 등)를 처음 켜고
@@ -83,50 +87,50 @@ jobs:
       matrix:
         include:
           - name: Build Windows Debug (clang-cl)
-            os: windows-2022
+            os: windows
             preset: CI-Debug
 
           - name: Build Linux Debug (Clang)
-            os: ubuntu-22.04
+            os: linux
             preset: CI-Debug
 
           - name: Build Linux ASan (Clang)
-            os: ubuntu-22.04
+            os: linux
             preset: CI-Debug-ASAN
 
           # 프리셋이 트리플릿 `x64-linux-tsan`(cmake/Modules/Toolchain/VcpkgTsan — Jolt · Box2D 를 -fsanitize=thread 로 짓는다)을 쓴다.
           # 포트가 다른 리눅스 잡과 겹치지 않아 vcpkg 캐시를 따로 둔다(`vcpkgCache`, 아래 Restore 단계 주석).
           - name: Build Linux TSan (Clang)
-            os: ubuntu-22.04
+            os: linux
             preset: CI-Debug-TSAN
             vcpkgCache: vcpkg-bin-tsan
 
           # `SW_ENABLE_STL_CONTAINER` 구성(표준 컨테이너 · 할당자)이 컴파일되는지 지킨다. 기본 빌드가 쓰지 않는 옵션이라 돌리지 않으면 썩는다.
           - name: Build Windows STL containers (clang-cl)
-            os: windows-2022
+            os: windows
             preset: CI-Debug-STL
 
           - name: Build Windows Shipping (clang-cl)
-            os: windows-2022
+            os: windows
             preset: CI-Shipping
 
           - name: Build Linux Shipping (Clang)
-            os: ubuntu-22.04
+            os: linux
             preset: CI-Shipping
 
           # 전용 서버 배포본(SW_TARGET_TYPE=Server) — 에디터 · App · RHI 백엔드 없이 서는지, ServerTest(nogpu)가 실제 Server 를 띄운다.
           # 리눅스 러너에는 화면이 없어 서버가 X11 을 찾으면 여기서 진다.
           - name: Build Windows Dedicated Server Shipping (clang-cl)
-            os: windows-2022
+            os: windows
             preset: CI-Shipping-Server
 
           - name: Build Linux Dedicated Server Shipping (Clang)
-            os: ubuntu-22.04
+            os: linux
             preset: CI-Shipping-Server
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
       with:
         fetch-depth: 1
 
@@ -163,7 +167,7 @@ jobs:
     # 같은 키를 다른 잡이 먼저 저장했으면 경고만 남기고 넘어간다.
     - name: Save vcpkg binary cache
       if: always() && steps.configure.outcome == 'success' && steps.vcpkg-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         path: ${{ github.workspace }}/build/vcpkg_cache
         key: ${{ steps.vcpkg-cache.outputs.cache-primary-key }}
@@ -212,7 +216,7 @@ jobs:
     # 테스트 단계가 돌았을 때만 올린다 — 빌드에서 진 잡에는 LastTest.log 가 없어 "No files were found" 경고만 남았다.
     - name: Upload test logs on failure
       if: failure() && steps.test.outcome == 'failure'
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: test-logs-${{ runner.os }}-${{ matrix.preset }}
         path: |
@@ -225,7 +229,7 @@ jobs:
 
     - name: Upload Shipping Artifacts
       if: success() && matrix.preset == 'CI-Shipping' && github.ref == 'refs/heads/main'
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: game-${{ runner.os }}-shipping
         path: |

@@ -1,0 +1,31 @@
+name: Runner labels (reusable)
+
+# 러너 이미지 이름의 정본은 .github/runners.json 하나다 — 워크플로는 이 파일이 내는 `map` 을 `fromJSON(needs.runners.outputs.map)[<키>]` 로 쓴다.
+# 라벨을 워크플로에 적지 않으므로 이미지를 올릴 때 json 한 줄만 바꾼다. 없는 키는 빈 `runs-on` 이 되어 잡이 시작하지 않고 멈춘다(기본값으로 넘어가지 않는다).
+# 이 잡 자신만 라벨을 직접 적는다: 파일을 읽는 일이라 툴체인과 무관하다.
+on:
+  workflow_call:
+    outputs:
+      map:
+        description: 키(linux · windows) → 러너 라벨 JSON.
+        value: ${{ jobs.read.outputs.map }}
+
+jobs:
+  read:
+    name: Runner labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      map: ${{ steps.read.outputs.map }}
+    steps:
+    - name: Checkout runner labels
+      uses: actions/checkout@v7
+      with:
+        sparse-checkout: .github/runners.json
+        sparse-checkout-cone-mode: false
+        fetch-depth: 1
+
+    - name: Read runner labels
+      id: read
+      run: |
+        python3 -c "import json; print('map=' + json.dumps(json.load(open('.github/runners.json')), separators=(',', ':')))" >> "$GITHUB_OUTPUT"
