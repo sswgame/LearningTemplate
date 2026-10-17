@@ -81,7 +81,7 @@ namespace sw
             }
 
             /**
-             * @brief 엄격한 읽기가 타입에 없는 필드를 건너뛸 때(`allowsUnknownProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
+             * @brief 엄격한 읽기가 타입에 없는 필드를 건너뛸 때(`skipsUnknownProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
              * @details 바이너리는 필드 이름이 아니라 해시를 싣는다. 오브젝트마다 알리면 같은 타입 천 개가 천 줄을 쓴다.
              */
             static void warnSkippedFieldOnce( const TypeInfo& typeInfo, uint32 nameHash )
@@ -98,7 +98,7 @@ namespace sw
             }
 
             /**
-             * @brief 엄격한 읽기가 읽지 못한 필드를 건너뛸 때(`allowsUnknownProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
+             * @brief 엄격한 읽기가 읽지 못한 필드를 건너뛸 때(`skipsUnreadableProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
              * @details 현재 타입에 있는 필드인데 값을 읽지 못한 경우다(모르는 열거자 이름, 바뀐 타입). XML, JSON 과 같이 그 필드만 남기고 나머지를 읽는다.
              *          컴포넌트째 실패하면 소유 포인터 목록의 **뒤 컴포넌트까지** 버린다.
              */
@@ -133,13 +133,14 @@ namespace sw
             /**
              * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
              * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 세 가지뿐이다.
-             *          (1) 모르는 프로퍼티: 엄격은 `allowsUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
-             *          (2) 읽지 못한 프로퍼티: 엄격은 `allowsUnknownProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다) 아니면 실패하며, 소프트는 orphan 으로 담는다.
+             *          (1) 모르는 프로퍼티: 엄격은 `skipsUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
+             *          (2) 읽지 못한 프로퍼티: 엄격은 `skipsUnreadableProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다) 아니면 실패하며, 소프트는 orphan 으로 담는다.
              *          (3) 페이로드를 끝까지 읽었는지: 엄격만 확인한다.
+             *          두 플래그는 따로다. 혼합 빌드 사이의 메시지는 (1) 만 켜서 새 빌드가 더한 필드는 건너뛰고 모르는 열거자는 거절한다. 중첩 구조체도
+             *          같은 컨텍스트로 이 루프를 다시 지나므로(`SerializerUtil::deserializeValueBinary`) 모든 깊이에서 정책이 같다.
              *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 간다. 기록 타입을 아는 스칼라는 이관이 값으로
-             *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 본다. 소프트는 이관도 안 되면 끝까지 읽히지
-             *          않아도 읽힌 만큼은 받는다(레거시 관용은 남긴다). 다만 값으로만 옮기는 쌍(`isValueOnlyCoercion`: 스칼라와 다른 enum)은
-             *          예외다. 제 타입으로 다시 읽으면 비트가 재해석되므로(float32 1.5 → int32 1069547520, 열거자 이름 해시 → 수) orphan 으로 남긴다.
+             *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 본다. 이관이 안 되면 읽지 못한 프로퍼티다. 제 타입으로 "읽힌 만큼" 받지 않는다
+             *          (`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공해 값이 조용히 빈다).
              *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없다.
              */
             [[nodiscard]] static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -187,7 +188,7 @@ namespace sw
 
                     if ( pTargetProp == nullptr )
                     {
-                        if ( bStrict && context.allowsUnknownProperties() == false )
+                        if ( bStrict && context.skipsUnknownProperties() == false )
                             return false;
                         if ( bStrict == false )
                             pushOrphanVal( pOutListOrphan, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize, wireVersion );
@@ -221,12 +222,7 @@ namespace sw
                         // 기록 타입을 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
                         // 4 바이트가 int32 로 바뀐 필드에 그대로 읽히게 된다).
                         if ( wireTypeName.empty() == false )
-                        {
-                            bApplied                  = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
-                            const bool bFallbackApply = bApplied == false && bStrict == false && isValueOnlyCoercion( prop._typeName, wireTypeName ) == false;
-                            if ( bFallbackApply )
-                                bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, context, false, wireVersion );
-                        }
+                            bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
                     }
                     else
                     {
@@ -241,9 +237,9 @@ namespace sw
 
                     if ( bApplied == false )
                     {
-                        // 엄격한 읽기도 모르는 필드를 받는 컨텍스트(오브젝트 상태)이면 **이 필드만** 건너뛴다. 크기를 알아 다음 필드 위치는 맞다. 모르는 열거자 하나가
-                        // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다.
-                        if ( bStrict && context.allowsUnknownProperties() == false )
+                        // 엄격한 읽기도 읽지 못한 필드를 받는 컨텍스트(오브젝트 상태)이면 **이 필드만** 건너뛴다. 크기를 알아 다음 필드 위치는 맞다. 모르는 열거자 하나가
+                        // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다. 혼합 빌드 사이의 메시지는 받지 않는다(그 필드가 기본값으로 남는다).
+                        if ( bStrict && context.skipsUnreadableProperties() == false )
                             return false;
                         if ( bStrict )
                             warnUnreadableFieldOnce( typeInfo, prop );
@@ -500,7 +496,9 @@ namespace sw
         // 버전을 **본문 앞에서 이미 읽었고**(위 `reader.read`), orphan 이 하나라도 있으면 이관 없이는
         // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이기 때문이다.
         // 지운 필드를 버려도 되는 호출부는 컨텍스트로 그렇게 말한다(`setAllowUnknownProperties`, 오브젝트 상태). 버전이 다르면 그래도 거절한다.
-        const SchemaOrphanPolicy orphanPolicy = context.allowsUnknownProperties() ? SchemaOrphanPolicy::Ignore : SchemaOrphanPolicy::Reject;
+        // orphan 은 모르는 이름과 읽지 못한 아는 필드를 함께 담으므로 두 플래그가 모두 켜졌을 때만 버린다. 모르는 이름만 버리는 읽기는 `deserializeExactVersion` 이다.
+        const bool               bIgnoreOrphan = context.skipsUnknownProperties() && context.skipsUnreadableProperties();
+        const SchemaOrphanPolicy orphanPolicy  = bIgnoreOrphan ? SchemaOrphanPolicy::Ignore : SchemaOrphanPolicy::Reject;
         return runVersionedDeserialize(
             outVersion, pInstance, typeInfo, currentVersion, pLegacyTypeInfo, context,
             SchemaVersionSource::Stream, orphanPolicy,
@@ -509,6 +507,24 @@ namespace sw
         {
             return deserializeSoft( pTarget, targetType, pBody, bodySize, &listOrphan, context );
         } ) );
+    }
+
+    BinaryExactVersionResult BinarySerializer::deserializeExactVersion( uint32 expectedVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData,
+                                                                        size_t dataSize, uint32& outReadVersion, const SerializeContext& context )
+    {
+        outReadVersion           = 0;
+        const bool bInvalidInput = pInstance == nullptr || pData == nullptr;
+        if ( bInvalidInput )
+            return BinaryExactVersionResult::Unreadable;
+        BinaryStreamReader reader( pData, dataSize );
+        if ( reader.read( outReadVersion ) == false )
+            return BinaryExactVersionResult::Unreadable;
+        if ( outReadVersion != expectedVersion )
+            return BinaryExactVersionResult::VersionMismatch;
+        const size_t bodyOffset = reader.getOffset();
+        if ( deserialize( pInstance, typeInfo, pData + bodyOffset, dataSize - bodyOffset, context ) == false )
+            return BinaryExactVersionResult::Unreadable;
+        return BinaryExactVersionResult::Read;
     }
 
     bool BinarySerializer::serializeCompressed( const void*             pInstance,

@@ -69,7 +69,8 @@ namespace sw
             , _pOpaqueKeepFn{ nullptr }
             , _pOpaqueQueryFn{ nullptr }
             , _bIgnoreCaseKeys{ SW_TRUE }
-            , _bAllowUnknownProperties{ SW_FALSE }
+            , _bSkipUnknownProperties{ SW_FALSE }
+            , _bSkipUnreadableProperties{ SW_FALSE }
             , _bSaveGameOnly{ SW_FALSE }
             , _reservedFlags{ 0 } {}
 
@@ -99,13 +100,35 @@ namespace sw
         }
 
         /**
-         * @brief 바이너리/텍스트 역직렬화에서 스키마에 없는 프로퍼티를 건너뛰고 계속할지 설정합니다.
-         * @details 바이너리의 버전 붙은 읽기에서는 같은 버전의 orphan 정책이 됩니다(켜면 `SchemaOrphanPolicy::Ignore`). 버전이 다른 데이터는 켜도 거절합니다.
+         * @brief 바이너리 엄격 읽기가 **타입에 없는 이름**의 필드를 건너뛰고 계속할지 설정합니다. 켜면 (타입, 이름)마다 한 번 경고하고, 끄면(기본) 읽기가 실패합니다.
+         * @details 같은 컨텍스트가 중첩 구조체 · 컨테이너 원소 · 맵 키까지 내려가므로 모든 깊이에서 같은 정책입니다. 혼합 빌드 사이의 메시지와 캐시는 이것만 켭니다
+         *          (`MixedBuildCodec::getReadContext`, docs/plans/ServerBusFormat.md 3.3).
+         */
+        SerializeContext& setSkipUnknownProperties( bool bSkip )
+        {
+            _bSkipUnknownProperties = bSkip ? SW_TRUE : SW_FALSE;
+            return *this;
+        }
+
+        /**
+         * @brief 바이너리 엄격 읽기가 **타입에 있는데 값을 읽지 못한** 필드(모르는 열거자, 변환할 수 없게 바뀐 타입)를 건너뛰고 계속할지 설정합니다.
+         * @details 켜면 그 필드는 지금 값 그대로 두고 (타입, 필드)마다 한 번 경고합니다. 끄면(기본) 읽기가 실패합니다. 값이 기본값으로 조용히 남으므로
+         *          지운 필드를 버려도 되는 저장 상태(오브젝트 상태)만 켭니다. 혼합 빌드 사이의 메시지는 켜지 않습니다(모르는 열거자를 기본값으로 받게 됩니다).
+         */
+        SerializeContext& setSkipUnreadableProperties( bool bSkip )
+        {
+            _bSkipUnreadableProperties = bSkip ? SW_TRUE : SW_FALSE;
+            return *this;
+        }
+
+        /**
+         * @brief `setSkipUnknownProperties` 와 `setSkipUnreadableProperties` 를 함께 정하는 축약입니다(오브젝트 상태).
+         * @details 바이너리의 버전 붙은 읽기에서는 두 플래그가 모두 켜졌을 때만 같은 버전의 orphan 정책이 `SchemaOrphanPolicy::Ignore` 가 됩니다. 버전이 다른 데이터는 켜도 거절합니다.
          */
         SerializeContext& setAllowUnknownProperties( bool bAllow )
         {
-            _bAllowUnknownProperties = bAllow ? SW_TRUE : SW_FALSE;
-            return *this;
+            setSkipUnknownProperties( bAllow );
+            return setSkipUnreadableProperties( bAllow );
         }
 
         // ------------------------------------------------------------------------------
@@ -125,8 +148,10 @@ namespace sw
          *          끄려면: `SerializeContext context = SerializeContext::deriveFromDefault(); context.setIgnoreCaseKeys( false );`
          */
         bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
-        /** @brief 스키마에 없는 프로퍼티를 건너뛰고 계속하는지 반환합니다. */
-        bool allowsUnknownProperties() const { return _bAllowUnknownProperties == SW_TRUE; }
+        /** @brief 타입에 없는 이름의 필드를 건너뛰고 계속하는지(`setSkipUnknownProperties`) 반환합니다. */
+        bool skipsUnknownProperties() const { return _bSkipUnknownProperties == SW_TRUE; }
+        /** @brief 타입에 있는데 값을 읽지 못한 필드를 건너뛰고 계속하는지(`setSkipUnreadableProperties`) 반환합니다. */
+        bool skipsUnreadableProperties() const { return _bSkipUnreadableProperties == SW_TRUE; }
         /** @brief 세이브 직렬화인지(`setSaveGameOnly`) 반환합니다. */
         bool isSaveGameOnly() const { return _bSaveGameOnly == SW_TRUE; }
 
@@ -228,10 +253,11 @@ namespace sw
         RuntimeTypeInfoFn      _pRuntimeTypeInfoFn;
         OpaqueElementKeepFn    _pOpaqueKeepFn;
         OpaqueElementQueryFn   _pOpaqueQueryFn;
-        uint8                  _bIgnoreCaseKeys         : 1;
-        uint8                  _bAllowUnknownProperties : 1;
-        uint8                  _bSaveGameOnly           : 1;
-        [[maybe_unused]] uint8 _reservedFlags           : 5;
+        uint8                  _bIgnoreCaseKeys           : 1;
+        uint8                  _bSkipUnknownProperties    : 1;
+        uint8                  _bSkipUnreadableProperties : 1;
+        uint8                  _bSaveGameOnly             : 1;
+        [[maybe_unused]] uint8 _reservedFlags             : 4;
     };
 
 } // namespace sw

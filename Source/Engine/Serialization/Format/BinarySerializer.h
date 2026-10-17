@@ -15,6 +15,14 @@ namespace sw
 
     class Archive;
 
+    /** @brief `BinarySerializer::deserializeExactVersion` 의 결과입니다. */
+    enum class [[nodiscard]] BinaryExactVersionResult : uint8
+    {
+        Read,            ///< 버전이 같고 본문을 읽었습니다
+        VersionMismatch, ///< 버전 머리가 기대한 값과 다릅니다. 본문은 읽지 않았습니다
+        Unreadable       ///< 버전 머리가 없거나 본문을 컨텍스트의 정책으로 읽지 못했습니다
+    };
+
     /**
      * @class BinarySerializer
      * @brief TypeInfo 로 객체를 콤팩트 바이너리 버퍼에 쓰고 읽습니다(압축 직렬화도 함께 지원합니다).
@@ -87,6 +95,16 @@ namespace sw
                                                         uint32                  currentVersion  = 0,
                                                         const TypeInfo*         pLegacyTypeInfo = nullptr,
                                                         const SerializeContext& context         = SerializeContext::getDefault() );
+
+        /**
+         * @brief `serializeVersioned` 가 쓴 바이트를 버전 머리가 @p expectedVersion 과 같을 때만 **엄격하게** 읽습니다. 이관 레지스트리와 orphan 수집을 지나지 않습니다.
+         * @details 혼합 빌드 사이의 메시지와 캐시가 씁니다(docs/plans/ServerBusFormat.md 3.3). 모르는 이름 · 읽지 못한 필드의 처리는 @p context 의 두 플래그
+         *          (`setSkipUnknownProperties` · `setSkipUnreadableProperties`)가 정하고, 중첩 구조체까지 같은 정책입니다. 기본 컨텍스트를 받지 않습니다 —
+         *          부르는 쪽이 정책을 고릅니다. 실패해도 이미 쓴 프로퍼티는 되돌리지 않으므로 임시 객체에 읽습니다.
+         * @param outReadVersion 읽은 버전 머리입니다. 머리가 없으면 0 입니다.
+         */
+        static BinaryExactVersionResult deserializeExactVersion( uint32 expectedVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData,
+                                                                 size_t dataSize, uint32& outReadVersion, const SerializeContext& context );
 
         // ------------------------------------------------------------------------------
         // 4) 압축 바이너리 직렬화 (CompressionStream 통합)
