@@ -223,7 +223,7 @@ namespace sw
         }
 #endif
 
-        // 머티리얼 텍스처: 에뮬 백엔드(DX11 · GL)만. 셰이더가 서수로 t5..t8 을 고르므로 그 순서대로 건다.
+        // 머티리얼 텍스처: 에뮬 백엔드(DX11 · GL)만. 셰이더가 서수로 t12..t27 을 고르므로 그 순서대로 건다.
         // 네이티브 bindless 백엔드는 인덱스가 이미 MaterialCB 에 있어 아무것도 걸 필요가 없다.
         if ( bNativeBindless == false && pMaterialTexSrv != nullptr )
         {
@@ -259,7 +259,7 @@ namespace sw
                 continue;
             }
 
-            // 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …): 리플렉션이 준 슬롯에 네 백엔드가 각자의 방식으로 건다.
+            // 구조버퍼(인스턴스 t4, 머티리얼 데이터 t5 …): 리플렉션이 준 슬롯에 네 백엔드가 각자의 방식으로 건다.
             // DX12 디스크립터 테이블, Vulkan 슬롯 세트, DX11 SRV 슬롯, GL SSBO. 드로우별로 바뀌는 데이터는 이 버퍼 안의 원소라
             // 바인딩 자체는 패스 · 배치마다 한 번이다.
             const RegisteredBuffer* pBuffer = registry.findBuffer( bind._lookupKey );

@@ -28,7 +28,7 @@ namespace sw
             /** @brief 루트 상수 칸입니다 — canvas.hlsl 의 SwRootConstants 순서(시작 · 텍스처 넷 · 대상 너비 · 높이 · 색각 보정). */
             static constexpr uint32 kRootQuadBase      = 0;
             static constexpr uint32 kRootTexture0      = 1;
-            static constexpr uint32 kRootTargetWidth   = kRootTexture0 + shaderslot::kMaterialTextureCount;
+            static constexpr uint32 kRootTargetWidth   = kRootTexture0 + shaderslot::kCanvasTextureCount;
             static constexpr uint32 kRootTargetHeight  = kRootTargetWidth + 1;
             static constexpr uint32 kRootColorVision   = kRootTargetHeight + 1;
             static constexpr uint32 kRootConstantCount = kRootColorVision + 1;
@@ -198,7 +198,7 @@ namespace sw
             arrRoot[CanvasRendererInternal::kRootTargetWidth]  = CanvasRendererInternal::toBits( static_cast<float32>( targetWidth ) );
             arrRoot[CanvasRendererInternal::kRootTargetHeight] = CanvasRendererInternal::toBits( static_cast<float32>( targetHeight ) );
             arrRoot[CanvasRendererInternal::kRootColorVision]  = colorVisionMode;
-            for ( uint32 slot = 0; slot < shaderslot::kMaterialTextureCount; ++slot )
+            for ( uint32 slot = 0; slot < shaderslot::kCanvasTextureCount; ++slot )
             {
                 RHIDescriptorIndex srv = kInvalidDescriptorIndex;
                 if ( slot < batch._textureCount )
@@ -214,7 +214,7 @@ namespace sw
                 }
                 else
                 {
-                    // 에뮬 백엔드(DX11 · GL)는 머티리얼 텍스처 슬롯 t5..t8 에 서수로 건다 — swSampleMaterialTexture 가 서수로 고른다.
+                    // 에뮬 백엔드(DX11 · GL)는 머티리얼 텍스처 슬롯 t12..t15 에 서수로 건다 — swSampleMaterialTexture 가 서수로 고른다.
                     cmd.bindShaderResource( srv, shaderslot::kMaterialTexture0 + slot );
                     arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = slot;
                 }

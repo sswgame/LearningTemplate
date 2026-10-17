@@ -272,16 +272,20 @@ namespace sw
         if ( pTexture != nullptr )
             pSrv = pTexture->_srv.Get();
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
+        // 머티리얼 텍스처는 정점 셰이더도 읽는다(툰 외곽선 두께 텍스처 — MToon 이 정점에서 읽는다). 다른 세 백엔드는 모든 스테이지가 본다.
+        const bool bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
+        if ( bMaterialSlot )
+            _pContext->VSSetShaderResources( slot, 1, &pSrv );
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSrvTexture[slot] = ( pSrv != nullptr ) ? texture : 0;
-        // 샘플러는 **텍스처와 같은 번호**에 건다. 셰이더가 t#/s# 짝으로 선언하기 때문이다(common.hlsli 의 SW_DECLARE_TEXTURE2D_SAMPLER).
-        // 슬롯이 정하는 샘플러는 네이티브 bindless 가 고르는 것과 같다: 머티리얼 슬롯은 shaderslot::kMaterialTextureSampler(선형 · 랩),
-        // 그 밖(엔진 슬롯 t0..t3 — 풀스크린 입력 · 그림자 맵)은 shaderslot::kEngineTextureSampler(선형 · 클램프). 둘 다 정적 샘플러 세트의 객체다.
-        const bool   bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
-        const uint32 samplerID     = bMaterialSlot ? shaderslot::kMaterialTextureSampler : shaderslot::kEngineTextureSampler;
-        if ( _pDevice->_arrStaticSampler[samplerID] != nullptr )
+        // 엔진 슬롯(t0..t3 — 풀스크린 입력 · 그림자 맵)만 샘플러를 **텍스처와 같은 번호**에 건다. 셰이더가 t#/s# 짝으로 선언하기 때문이다
+        // (common.hlsli 의 SW_DECLARE_TEXTURE2D_SAMPLER). 샘플러는 shaderslot::kEngineTextureSampler(선형 · 클램프) — 네이티브 bindless 가 고르는 것과 같다.
+        // 머티리얼 슬롯(t12..t27)은 짝 샘플러가 없다 — DX11 샘플러 슬롯은 16 개뿐이라 셰이더가 정적 세트의 머티리얼 샘플러(s9 + kMaterialTextureSampler)로 읽는다.
+        const bool bEngineSlot = ( shaderslot::kEngineTexture0 <= slot && slot < shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount );
+        if ( _pDevice->_arrStaticSampler[shaderslot::kEngineTextureSampler] != nullptr )
         {
-            _pContext->PSSetSamplers( slot, 1, _pDevice->_arrStaticSampler[samplerID].GetAddressOf() );
+            if ( bEngineSlot )
+                _pContext->PSSetSamplers( slot, 1, _pDevice->_arrStaticSampler[shaderslot::kEngineTextureSampler].GetAddressOf() );
             if ( slot != 0 )
                 _pContext->PSSetSamplers( 0, 1, _pDevice->_arrStaticSampler[shaderslot::kEngineTextureSampler].GetAddressOf() );
         }
@@ -618,6 +622,8 @@ namespace sw
 
         ID3D11ShaderResourceView* arrNullSrv[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
         _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, arrNullSrv );
+        // 머티리얼 슬롯은 정점 셰이더에도 걸린다(bindShaderResource) — 같은 범위만 뗀다(정점 셰이더의 구조버퍼 t4..t11 은 그대로 둔다).
+        _pContext->VSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSrv );
         if ( _pState != nullptr )
             Memory::set( _pState->_arrPixelSrvTexture, 0, sizeof( _pState->_arrPixelSrvTexture ) );
     }
@@ -635,6 +641,9 @@ namespace sw
             if ( _pState->_arrPixelSrvTexture[slot] != texture )
                 continue;
             _pContext->PSSetShaderResources( slot, 1, &pNull );
+            const bool bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
+            if ( bMaterialSlot )
+                _pContext->VSSetShaderResources( slot, 1, &pNull );
             _pState->_arrPixelSrvTexture[slot] = 0;
         }
     }

@@ -10,17 +10,17 @@
  *
  * 번호 지도 (그래픽스 셰이더, space0 — 절 번호는 이 파일의 1~10 절):
  *   b0 PassCB · b1 MaterialCB(픽스처) · b2 루트 상수 에뮬(DX11/GL) | b0 space2 루트 상수(DX12 · Vulkan 푸시 상수) — 1 절
- *   t0..t3 엔진 텍스처(에뮬) · t4 인스턴스 · t5..t8 머티리얼 텍스처(에뮬) · t9 머티리얼 데이터 · t10 가시 인스턴스 ID ·
- *   t11 모프 정점 · t12 라이트 · t13 배치 테이블 · t14 VAT · t15 캔버스 사각형 — 2 절
+ *   t0..t3 엔진 텍스처(에뮬) · t4 인스턴스 · t5 머티리얼 데이터 · t6 가시 인스턴스 ID · t7 모프 정점 · t8 라이트 ·
+ *   t9 배치 테이블 · t10 VAT · t11 캔버스 사각형 | t12..t27 머티리얼 텍스처(에뮬 — DX11 · GL 만, 띠 밖) — 2 절
  *   컴퓨트는 따로: b0 · t0..t3 읽기 버퍼 · u0..u3 쓰기 버퍼 · u4..u7 RW 텍스처(에뮬) — 3 절
- *   s0..s6 정적 샘플러 · s7 그림자 비교(DX12 · Vulkan) | DX11 은 s0..s8 슬롯 결합 샘플러 + s9..s15 정적 세트 — 4 절
+ *   s0..s6 정적 샘플러 · s7 그림자 비교(DX12 · Vulkan) | DX11 은 s0..s3 엔진 슬롯 결합 샘플러 + s9..s15 정적 세트 — 4 절
  *   t0 space1 / u0 space1 bindless 텍스처 배열(DX12), Vulkan 은 set 1 binding 0..3 — 5 절
  *   그 밖: Vulkan set 0 시프트(6) · GL SSBO · 이미지 유닛(7) · 라이트 타입(8) · 패스 플래그(9) · 버퍼 배치 상수(10).
- *   에뮬 슬롯(t0..t3 · t5..t8)이 bindless 를 어떻게 흉내 내는지는 binding.hlsli 0 절(bindless 입문).
+ *   에뮬 슬롯(t0..t3 · t12..t27)이 bindless 를 어떻게 흉내 내는지는 binding.hlsli 0 절(bindless 입문).
  *
  * 모델 (언리얼 GPUScene 식): 셰이더 선언은 네 백엔드에서 **같다** — register(b#/t#/u#) 하나로 쓰고, 백엔드는
  * 그 번호를 각자의 방식으로 건다. 드로우마다 바뀌는 데이터는 바인딩을 갈아 끼우지 않고 **큰 버퍼에서 인덱스로 읽는다**
- * (인스턴스 g_SwInstances[t4], 머티리얼 g_SwMaterials[t9]) — 그래서 드로우 사이에 바뀌는 바인딩이 없고 슬롯 번호는
+ * (인스턴스 g_SwInstances[t4], 머티리얼 g_SwMaterials[t5]) — 그래서 드로우 사이에 바뀌는 바인딩이 없고 슬롯 번호는
  * 리플렉션이 준다. 텍스처만 백엔드가 갈린다: DX12/Vulkan 은 무제한 배열(g_SwBindlessTex2D[]), DX11/GL 은 고정 슬롯.
  *
  *   레지스터 → 백엔드 바인딩 자리
@@ -31,12 +31,12 @@
  *   │ MaterialCB (픽스처)│ b1           │ 루트 CBV            │ UBO  binding 1      │ UBO 1            │
  *   │ 엔진 텍스처 슬롯   │ t0..t3 (에뮬)│ (없음)              │ (없음)              │ 텍스처 유닛 0..3 │
  *   │ 인스턴스 구조버퍼  │ t4           │ t 테이블            │ SSBO binding 16+4   │ SSBO 4           │
- *   │ 머티리얼 텍스처    │ t5..t8 (에뮬)│ (없음)              │ (없음)              │ 텍스처 유닛 5..8 │
- *   │ 머티리얼 데이터    │ t9           │ t 테이블            │ SSBO binding 16+9   │ SSBO 9           │
+ *   │ 머티리얼 데이터    │ t5           │ t 테이블            │ SSBO binding 16+5   │ SSBO 5           │
+ *   │ 머티리얼 텍스처    │ t12..t27(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 12..27│
  *   │ 컴퓨트 읽기 버퍼   │ t0..t3       │ t 테이블            │ SSBO binding 16+#   │ SSBO #           │
  *   │ 컴퓨트 쓰기 버퍼   │ u0..u3       │ u 테이블            │ SSBO binding 32+#   │ SSBO 16+#        │
  *   │ bindless 텍스처    │ t0 space1    │ 테이블 (힙 전체)    │ set 1 binding 0     │ (없음)           │
- *   │ 정적 샘플러        │ s0           │ 정적 샘플러         │ set 1 binding 1     │ (결합 샘플러)    │  DX11: s9..s15 샘플러 상태
+ *   │ 정적 샘플러        │ s0           │ 정적 샘플러         │ set 1 binding 1     │ (결합 샘플러)    │  DX11: s9..s15 샘플러 상태(머티리얼 텍스처도 이것으로 읽는다)
  *   │ 루트 상수          │ b0 space2    │ 32비트 루트 상수    │ 푸시 상수           │ (UBO 에뮬)       │
  *   └────────────────────┴──────────────┴─────────────────────┴─────────────────────┴──────────────────┘
  *   - DX12: b# 는 루트 CBV(GPU 주소), t#/u# 슬롯은 디스크립터 테이블(오프라인 힙의 뷰를 드로우 직전 온라인 블록에 복사 — 언리얼
@@ -45,6 +45,10 @@
  *     직전에 바인딩 상태가 바뀌었으면 세트를 새로 할당해 쓴다(언리얼 Vulkan RHI 와 같은 방식). set 1 은 텍스처 배열.
  *   - OpenGL: DescriptorSet 을 무시하고 binding 만 본다 — b# 가 곧 UBO #, t# 가 곧 텍스처 유닛/SSBO #, u# 는 SSBO 16+#.
  *   - DX11(SM5.0): space 를 모르고 리소스 배열 동적 인덱싱이 없다 — 텍스처는 고정 슬롯이다.
+ *   - 머티리얼 텍스처 칸은 16 개다(언리얼 머티리얼 샘플러 한도와 같다 — 결정 기록 5-12). 네 백엔드가 같은 수를 받는다: DX12 · Vulkan 은 bindless 라
+ *     칸이 머티리얼 데이터의 인덱스일 뿐이고, DX11 · GL 은 t12..t27 고정 슬롯이다. 그 슬롯은 DX12 테이블 · Vulkan t 밴드(t0..t11) **밖**이라 두 백엔드의
+ *     자리를 쓰지 않는다. DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 샘플러를 짝으로 두지 않고 정적 세트의 머티리얼 샘플러(s9 + 0)로 읽는다.
+ *     GL 은 텍스처 유닛 12..27 의 결합 샘플러라 프래그먼트 텍스처 유닛이 28 개 이상이어야 한다(디바이스 초기화가 확인한다 — 데스크톱 드라이버는 32).
  */
 
 #ifndef SW_ENGINE_BINDINGSLOTS_HLSLI
@@ -64,7 +68,8 @@
 #define SW_ROOT_DWORD_COUNT      16
 #define SW_SLOT_ROOT_CB_EMUL     2   // DX11/GL: 루트 상수를 담는 상수버퍼 슬롯 (SW_DECLARE_ROOT_CONSTANTS)
 // ------------------------------------------------------------------------------
-// 2) SRV (t#, space0). t0..t15 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 텍스처(에뮬)·머티리얼 데이터·씬 표들·캔버스 사각형.
+// 2) SRV (t#, space0). t0..t11 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 데이터·씬 표들·캔버스 사각형(네 백엔드의 띠).
+//    t12..t27 — 머티리얼 텍스처(에뮬, DX11 · GL 만). 띠 밖이라 DX12 테이블 · Vulkan t 밴드에 들지 않는다.
 // ------------------------------------------------------------------------------
 #define SW_SLOT_ENGINE_TEX0            0
 #define SW_SLOT_ENGINE_TEX1            1
@@ -75,23 +80,15 @@
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 엔진 텍스처 슬롯 바로 다음. 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV           4
 
-// 머티리얼 텍스처 고정 슬롯. DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
-// 엔진이 텍스처를 이 슬롯에 걸고 머티리얼 데이터에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스.
-#define SW_SLOT_MATERIAL_TEX0          5
-#define SW_SLOT_MATERIAL_TEX1          6
-#define SW_SLOT_MATERIAL_TEX2          7
-#define SW_SLOT_MATERIAL_TEX3          8
-#define SW_MATERIAL_TEXTURE_SLOT_COUNT 4
-
 // GPUScene 머티리얼 데이터 구조버퍼 (StructuredBuffer<SwMaterialData> g_SwMaterials) — 인스턴스의 materialIndex 로 읽는다.
 // 머티리얼 셰이더 타입마다 버퍼 하나(원소 = 그 셰이더의 머티리얼 구조체). 네 백엔드 공통.
-#define SW_SLOT_MATERIAL_BUFFER        9
+#define SW_SLOT_MATERIAL_BUFFER        5
 
 // GPU 컬링이 만든 **가시 인스턴스 ID 목록** (StructuredBuffer<uint> g_SwVisibleInstanceIDs).
 // 정점 셰이더가 g_SwVisibleInstanceIDs[인스턴스 슬롯] 으로 자기 인스턴스 번호를 찾는다(슬롯은 입력 어셈블러가 주는 SW_INSTANCESLOT —
 // 간접 인자의 startInstance + 서수) — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(kInvalidIndex)
 // 슬롯이 곧 인스턴스 번호다(컬링 없음 경로).
-#define SW_SLOT_VISIBLE_INSTANCE_SRV   10
+#define SW_SLOT_VISIBLE_INSTANCE_SRV   6
 
 // GPU 가 변형한 정점 (StructuredBuffer<float4> g_SwMorphVertices — 정점당 float4 둘). 정점 셰이더가
 // g_SwMorphVertices[(배치.morphVertexBase + 로컬 정점 번호) * 2] 로 **입력 스트림 대신** 위치를 읽는다 —
@@ -99,30 +96,55 @@
 // 정점 풀링이다(이 엔진은 인스턴스·머티리얼·가시 목록이 이미 전부 구조버퍼라 그 결이 맞고,
 // DX11 의 "구조버퍼는 정점 버퍼가 될 수 없다" 제약과 DX12 의 UPLOAD 힙 제약을 아예 비켜 간다).
 // 안 걸려 있으면(kInvalidIndex) 입력 스트림을 그대로 쓴다.
-#define SW_SLOT_MORPH_VERTEX_SRV       11
+#define SW_SLOT_MORPH_VERTEX_SRV       7
 
 // 씬의 라이트 목록 (StructuredBuffer<SwLightData> g_SwLights). 방향광·점광이 한 버퍼에 섞여 들어가고,
 // 포워드와 디퍼드가 **같은 버퍼를 같은 루프로** 읽는다 — 조명 식이 두 벌이면 둘은 반드시 갈라진다.
 // 인스턴스·머티리얼과 같은 이유로 상수버퍼가 아니라 구조버퍼다: 개수가 씬마다 다르고, 패스당 한 번
 // 걸면 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약). 언리얼의 라이트 데이터 버퍼와 같은 자리.
-#define SW_SLOT_LIGHT_SRV              12
+#define SW_SLOT_LIGHT_SRV              8
 
 // 씬 배치 표 (StructuredBuffer<SwBatchData> g_SwBatches). 배치마다 인스턴스 시작·모프 풀 시작·정점 풀 시작.
 // 정점 셰이더가 **자기 배치 번호**로 읽는다 — DX12 는 커맨드 시그니처가 루트 상수로 주입, Vulkan·GL 은 DrawIndex 내장
 // 변수 + 그룹 첫 번호, DX11 은 배치마다 루트 상수. 배치마다 바뀌는 값이 전부 이 표에 있으므로 같은 PSO·머티리얼의
 // 배치들을 멀티 드로우 하나로 낼 수 있다(언리얼 GPUScene 의 프리미티브/인스턴스 데이터 버퍼와 같은 자리).
 // 컬링 컴퓨트도 같은 버퍼를 t1 로 읽는다 — gpucull.hlsl 의 GPUBatchInfo 와 레이아웃이 같다.
-#define SW_SLOT_BATCH_SRV              13
+#define SW_SLOT_BATCH_SRV              9
 
 // 정점 애니메이션(VAT) 표 (StructuredBuffer<float4> g_SwVertexAnimation). 먼 군중의 메시마다 머리 원소 + 프레임 × 정점.
 // 정점 셰이더가 배치 표의 vertexAnimationBase 와 인스턴스의 시각 오프셋으로 읽는다(binding.hlsli swLoadAnimatedVertex).
-#define SW_SLOT_VERTEX_ANIMATION_SRV   14
+#define SW_SLOT_VERTEX_ANIMATION_SRV   10
 
 // 캔버스(화면 2D — UI · 월드 글자) 사각형 구조버퍼 (StructuredBuffer<SwCanvasQuad> g_SwCanvasQuads). 캔버스 패스만 건다 —
 // 정점 셰이더가 (루트 상수의 시작 + SV_InstanceID) 번째 사각형을 읽고 SV_VertexID 로 모서리를 만든다(동적 정점 버퍼 없음).
-#define SW_SLOT_CANVAS_QUAD_SRV        15
+#define SW_SLOT_CANVAS_QUAD_SRV        11
 
-#define SW_SRV_SLOT_COUNT              16  // t0..t15 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)을 꽉 채운다 — 더 늘리려면 밴드부터 넓힌다
+#define SW_SRV_SLOT_COUNT              12  // t0..t11 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16) 안이다 — 더 늘리려면 밴드부터 넓힌다
+
+// 머티리얼 텍스처 고정 슬롯 t12..t27(16 칸). DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
+// 엔진이 텍스처를 이 슬롯에 걸고 머티리얼 데이터에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스라 이 슬롯을 선언하지 않는다.
+// 레지스터는 리터럴이어야 해서(register( SW_CAT( t, slot ) )) 칸마다 번호를 적는다 — 연속인지는 ShaderBindingSlots.h 가 확인한다.
+#define SW_SLOT_MATERIAL_TEX0          12
+#define SW_SLOT_MATERIAL_TEX1          13
+#define SW_SLOT_MATERIAL_TEX2          14
+#define SW_SLOT_MATERIAL_TEX3          15
+#define SW_SLOT_MATERIAL_TEX4          16
+#define SW_SLOT_MATERIAL_TEX5          17
+#define SW_SLOT_MATERIAL_TEX6          18
+#define SW_SLOT_MATERIAL_TEX7          19
+#define SW_SLOT_MATERIAL_TEX8          20
+#define SW_SLOT_MATERIAL_TEX9          21
+#define SW_SLOT_MATERIAL_TEX10         22
+#define SW_SLOT_MATERIAL_TEX11         23
+#define SW_SLOT_MATERIAL_TEX12         24
+#define SW_SLOT_MATERIAL_TEX13         25
+#define SW_SLOT_MATERIAL_TEX14         26
+#define SW_SLOT_MATERIAL_TEX15         27
+#define SW_MATERIAL_TEXTURE_SLOT_COUNT 16
+
+// 캔버스(UI) 배치 하나가 쓰는 텍스처 수 — 머티리얼 텍스처 슬롯의 앞 넷을 빌려 쓴다(에뮬 백엔드). 루트 상수 16 dword 안에 들어야 해서
+// 머티리얼 칸 수와 따로 둔다(canvas.hlsl 의 SwRootConstants: 시작 · 텍스처 넷 · 대상 너비 · 높이 · 색각 보정).
+#define SW_CANVAS_TEXTURE_COUNT        4
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)
@@ -159,11 +181,11 @@
 // 슬롯 종류마다 읽는 샘플러(위 SW_SAMPLER_* 번호) — 네 백엔드가 같은 값을 쓴다. 네이티브 bindless(DX12/Vulkan)는 셰이더가 이 번호로
 // 고르고, 슬롯 결합 샘플러(DX11/GL)는 엔진이 그 슬롯에 같은 샘플러를 건다.
 //   엔진 텍스처 슬롯 t0..t3 (풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵): 선형 · 클램프(1) — 화면 가장자리의 탭이 반대편을 읽지 않는다.
-//   머티리얼 텍스처 t5..t8: 선형 · 랩(0).
+//   머티리얼 텍스처 t12..t27: 선형 · 랩(0). DX11 은 슬롯에 걸지 않고 셰이더가 정적 세트의 이 번호로 읽는다(샘플러 슬롯이 16 개뿐이다).
 #define SW_ENGINE_TEXTURE_SAMPLER   1
 #define SW_MATERIAL_TEXTURE_SAMPLER 0
 
-// DX11(SM5.0) 정적 샘플러 세트 자리 s9..s15 — 슬롯 결합 샘플러(s0..s8, t# 와 같은 번호)와 겹치지 않는다. 엔진이 디바이스
+// DX11(SM5.0) 정적 샘플러 세트 자리 s9..s15 — 엔진 슬롯 결합 샘플러(s0..s3, t# 와 같은 번호)와 겹치지 않는다. 엔진이 디바이스
 // 초기화 때 한 번 걸어 두고 셰이더는 swSampleIndexWith 의 samplerId 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
 // 언리얼 D3D11 RHI 는 슬롯마다 엔진이 고른 샘플러를 걸 뿐 셰이더가 고르는 세트가 없다 — 여기서는 DX12/Vulkan 과 같은
 // SW_SAMPLER_* 를 DX11 도 존중하게 한 것이다. GL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 세트가 없다.

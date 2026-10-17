@@ -105,7 +105,7 @@ namespace sw
          * @brief 불투명 배치를 머티리얼이 아니라 **셰이더 퍼뮤테이션**(셰이더 경로 + 정적 define)으로 묶을지 정합니다(언리얼 GPUScene 방식).
          * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽는다. 그래서 텍스처를 인덱스로 고를 수 있는 백엔드
          *          (DX12, Vulkan 의 네이티브 bindless)에서는 같은 메시와 같은 퍼뮤테이션이면 머티리얼이 달라도 드로우 하나로 그린다.
-         *          DX11 과 GL 은 머티리얼 텍스처를 t5..t8 슬롯에 바인딩해야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer 와 Engine 가
+         *          DX11 과 GL 은 머티리얼 텍스처를 t12..t27 슬롯에 바인딩해야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer 와 Engine 가
          *          디바이스 caps(supportsNativeBindlessSampling)로 값을 정한다. 값이 바뀌면 다음 populateFromScene 이 다시 묶는다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );

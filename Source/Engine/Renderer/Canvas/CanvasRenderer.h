@@ -58,7 +58,7 @@ namespace sw
          * @param quadBase       사각형 버퍼에서 이 목록이 시작하는 위치(주 출력 0, 대상은 `getTargetQuadBase`)
          * @param pso            대상 포맷의 캔버스 PSO
          * @param targetWidth    대상 픽셀 크기(가위가 없는 일괄의 가위와 셰이더의 NDC 변환에 씁니다)
-         * @param bNativeBindless DX12 와 Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 t5..t8 에 서수로 바인딩합니다
+         * @param bNativeBindless DX12 와 Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 t12..t15 에 서수로 바인딩합니다
          * @param colorVisionMode 색각 보정 방식(`CanvasFrameData::_colorVisionMode`, 주 출력만 쓰고 렌더 텍스처 대상은 0)
          * @return 그린 일괄 수입니다
          */

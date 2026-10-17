@@ -422,7 +422,7 @@ namespace sw
         //
         // 주의: 텍스처 레지스트리에 없다고 버퍼 레지스트리로 흘러내리면 안 된다. 텍스처 · 버퍼 · UAV 는 **각자 0 부터
         // 시작하는 별개의 프리리스트**라 같은 번호가 셋 다 유효할 수 있고, 그러면 버퍼 인덱스가 그 번호의
-        // **텍스처**로 걸린다(모프 정점 버퍼 t11 이 텍스처로 걸리면 정점 셰이더가 SSBO 11 에서 0 을 읽어
+        // **텍스처**로 걸린다(모프 정점 버퍼 t7 이 텍스처로 걸리면 정점 셰이더가 SSBO 7 에서 0 을 읽어
         // **OpenGL 에서만** 기하가 사라진다). 부르는 쪽은 종류를 이미 알고 그에 맞는 함수를 부른다.
         // 다른 세 백엔드도 추측하지 않는다(DX11 은 텍스처 레지스트리만 본다).
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
@@ -441,6 +441,7 @@ namespace sw
             return;
 
         glBindTextureUnit( slot, tex );
+        static_assert( shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount <= 32, "텍스처 유닛 마스크(uint32)가 머티리얼 텍스처 유닛을 다 담지 못한다" );
         if ( slot < 32 )
             _pDevice->_recordingState._boundTextureUnitMask |= ( 1u << slot );
     }

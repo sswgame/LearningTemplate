@@ -138,7 +138,7 @@ namespace sw
 
             // **정점 스테이지의 SSBO 한도를 실제로 물어본다.** GL 4.3 스펙이 요구하는 최소값은 0 이다.
             // 정점 셰이더에서 구조버퍼를 읽는 것이 보장된 기능이 아니다. 이 엔진은 정점 셰이더에서
-            // 인스턴스(t4) · 가시 목록(t10) · 모프 정점(t11)을 읽으므로, 한도가 그보다 작으면 링크는
+            // 인스턴스(t4) · 가시 목록(t6) · 모프 정점(t7)을 읽으므로, 한도가 그보다 작으면 링크는
             // 통과해도 읽기가 어긋난다. 화면으로는 "기하가 무너진다" 로만 보여서 원인을 짚기 어렵다.
             GLint maxVertexSsbo{ 0 };
             GLint maxComputeSsbo{ 0 };
@@ -152,6 +152,17 @@ namespace sw
             {
                 SW_LOG_WARNING( "정점 스테이지 SSBO 한도(%#)가 SRV 슬롯 수(%#)보다 작습니다 — 큰 번호의 슬롯은 읽기가 어긋날 수 있습니다.",
                                 static_cast<int32>( maxVertexSsbo ), shaderslot::kSrvSlotCount );
+            }
+            // 머티리얼 텍스처는 텍스처 유닛 12..27 이다(bindingslots.hlsli 2). 프래그먼트 유닛이 모자라면 큰 번호의 머티리얼 텍스처가 조용히 흰색이 되므로 이 백엔드를 쓰지 않는다.
+            GLint       maxFragmentTextureUnit{ 0 };
+            const GLint requiredTextureUnit = static_cast<GLint>( shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
+            glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
+            if ( maxFragmentTextureUnit < requiredTextureUnit )
+            {
+                SW_LOG_WARNING( "OpenGL 백엔드를 쓸 수 없습니다 — 프래그먼트 텍스처 유닛 %# 개, 머티리얼 텍스처 슬롯은 %# 개가 필요합니다.",
+                                static_cast<int32>( maxFragmentTextureUnit ), static_cast<int32>( requiredTextureUnit ) );
+                _initResult = RHIInitResult::DriverUnsupported;
+                return false;
             }
         }
         else
@@ -219,7 +230,7 @@ namespace sw
             glSamplerParameteri( defaultSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
             glSamplerParameteri( defaultSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
             glSamplerParameteri( defaultSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
-            // 머티리얼 텍스처 유닛(t5..t8)은 머티리얼 샘플러(선형 · 랩, shaderslot::kMaterialTextureSampler)다. 다른 세 백엔드가 머티리얼을
+            // 머티리얼 텍스처 유닛(t12..t27)은 머티리얼 샘플러(선형 · 랩, shaderslot::kMaterialTextureSampler)다. 다른 세 백엔드가 머티리얼을
             // 그 샘플러로 읽는다(DX12 · Vulkan 정적 샘플러, DX11 슬롯 결합 샘플러). 기본 샘플러로 두면 최근접 · 클램프라 확대한 텍스처가
             // 계단이 된다. 밉 필터는 텍스처의 밉 수가 정한다(glTexStorage2D 가 할당한 수 = 완전한 텍스처).
             static_assert( shaderslot::kMaterialTextureSampler == SW_SAMPLER_LINEAR_WRAP, "GL 머티리얼 샘플러의 필터 · 주소가 계약과 다르다" );

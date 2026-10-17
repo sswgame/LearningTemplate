@@ -126,6 +126,8 @@ namespace sw
             arrSampler[samplerIndex] = _arrStaticSampler[samplerIndex].Get();
         }
         pContext->PSSetSamplers( shaderslot::dx11::kStaticSampler0, shaderslot::kStaticSamplerArrayCount, arrSampler );
+        // 정점 셰이더도 머티리얼 텍스처를 읽는다(툰 외곽선 두께) — 같은 세트를 건다.
+        pContext->VSSetSamplers( shaderslot::dx11::kStaticSampler0, shaderslot::kStaticSamplerArrayCount, arrSampler );
     }
 
     void D3D11RHIDevice::flushDebugMessages( const utf8* pStage )

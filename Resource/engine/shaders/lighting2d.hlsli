@@ -1,7 +1,7 @@
 /**
  * lighting2d.hlsli — 2D 빛(점 · 스폿 · 전역)과 2D 그림자 가림막으로 빛 받는 스프라이트를 칠한다.
  *
- * 빛은 3D 와 **같은 목록**(g_SwLights, t12)에 산다 — 종류가 SW_LIGHT_TYPE_POINT2D · GLOBAL2D 인 원소이고, 그 뒤에 2D 그림자 가림막 토막
+ * 빛은 3D 와 **같은 목록**(g_SwLights, t8)에 산다 — 종류가 SW_LIGHT_TYPE_POINT2D · GLOBAL2D 인 원소이고, 그 뒤에 2D 그림자 가림막 토막
  * (SW_LIGHT_TYPE_SHADOW2D)이 붙는다. 새 슬롯 · 새 패스가 없어 네 백엔드가 이미 같은 버퍼를 같은 자리에 건다. 3D 조명 식은 2D 원소를 건너뛴다.
  *
  * 원소 칸의 뜻(C++ PointLight2DComponent · ShadowCaster2DComponent 가 쓴다):

@@ -375,7 +375,7 @@ namespace sw
             if ( current._arrTexture[slot].isEqual( *pTexture ) )
                 return slot;
         }
-        if ( current._textureCount < shaderslot::kMaterialTextureCount )
+        if ( current._textureCount < shaderslot::kCanvasTextureCount )
         {
             current._arrTexture[current._textureCount] = *pTexture;
             return current._textureCount++;

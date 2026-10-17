@@ -82,7 +82,7 @@ namespace sw
     {
         // 루트 시그니처(bindingslots.hlsli). 언리얼 FD3D12RootSignature 와 같은 배치: CB 는 루트 CBV, t/u 슬롯은 테이블, 텍스처는 배열 테이블.
         //  [0..2]  루트 CBV  b0..b2 (PassCB / MaterialCB · 컴퓨트 CB / 예비)
-        //  [3]     테이블: t0..t9 space0 (컴퓨트 읽기 t0..t3, 인스턴스 t4, 머티리얼 데이터 t9. 오프라인 뷰를 드로우 직전 온라인 블록에 복사)
+        //  [3]     테이블: t0..t11 space0 (컴퓨트 읽기 t0..t3, 인스턴스 t4, 머티리얼 데이터 t5. 오프라인 뷰를 드로우 직전 온라인 블록에 복사)
         //  [4]     테이블: u0..u3 space0 (컴퓨트 쓰기)
         //  [5]     테이블: t0 space1 무제한 텍스처 배열 + u0 space1 무제한 RW 텍스처 배열 (둘 다 힙 시작). SM6.6 ResourceDescriptorHeap 은 쓰지 않는다.
         //  [6]     32비트 루트 상수 b0 space2 (set*RootConstants)

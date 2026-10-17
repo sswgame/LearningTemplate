@@ -38,7 +38,7 @@
  *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
  *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
  *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
- *   │ DX11   │ 슬롯 에뮬        │ 엔진 텍스처 t0..t3 · 머티리얼 t5..t8    │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 텍스처 t0..t3 · 머티리얼 t12..t27    │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
  *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 0..3 · 5..8 (결합 샘플러)   │ 머티리얼: 서수 0..3 (DX11 과 같다)       │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
@@ -69,7 +69,7 @@
  *     VS: `SwInstanceData instance = swLoadInstance( input.instanceSlot )` → instance.world / instance.materialIndex
  *     PS: `SW_MATERIAL( materialIndex ).color`  — VS 가 materialIndex 를 nointerpolation 으로 넘긴다.
  *   머티리얼 구조체는 셰이더가 SW_MATERIAL_BEGIN/END 로 선언하고, 엔진이 그 셰이더 타입의 머티리얼 데이터를
- *   StructuredBuffer(g_SwMaterials, t9)에 원소로 쌓아 인스턴스에 materialIndex 를 매긴다.
+ *   StructuredBuffer(g_SwMaterials, t5)에 원소로 쌓아 인스턴스에 materialIndex 를 매긴다.
  */
 
 #ifndef SW_ENGINE_BINDING_HLSLI
@@ -461,7 +461,7 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 // 9) 머티리얼 데이터 — 셰이더가 구조체를 선언하면 엔진이 그 타입의 머티리얼들을 StructuredBuffer 원소로 쌓는다.
 //      SW_MATERIAL_BEGIN { float4 color; uint albedoMap; } SW_MATERIAL_END
 //      ... SW_MATERIAL( instance.materialIndex ).color
-//      리플렉션 이름 g_SwMaterials(t9) ↔ 레지스트리 "SwMaterials" (배치마다 그 셰이더 타입의 버퍼를 등록한다).
+//      리플렉션 이름 g_SwMaterials(t5) ↔ 레지스트리 "SwMaterials" (배치마다 그 셰이더 타입의 버퍼를 등록한다).
 //      원소 레이아웃은 네 백엔드가 같다 — SPIR-V 도 DX 패킹(-fvk-use-dx-layout, ShaderCompiler.cpp)으로 쿠킹하고
 //      ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 쿠킹된 바이너리로 확인한다.
 //      인덱스는 g_SwMaterialCount 로 클램프한다 — 잘못된 인덱스가 백엔드마다 다른 OOB 결과를 내지 않도록.
@@ -635,11 +635,44 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, SW_SLOT_ENGINE_TEX1 )
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, SW_SLOT_ENGINE_TEX2 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, SW_SLOT_ENGINE_TEX3 );
 
-// 머티리얼 텍스처 고정 슬롯 t5..t8 — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
+// 머티리얼 텍스처 고정 슬롯 t12..t27(16 칸) — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
+// DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 짝 샘플러를 두지 않는다 — 정적 세트의 머티리얼 샘플러(SW_MATERIAL_TEXTURE_SAMPLER)로 읽는다.
+// GL 은 결합 샘플러뿐이라 슬롯마다 짝을 두고, 엔진이 그 유닛에 머티리얼 샘플러를 건다(OpenGLRHIDevice 초기화).
+#if defined( DX11 )
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex0, SW_SLOT_MATERIAL_TEX0 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex1, SW_SLOT_MATERIAL_TEX1 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex2, SW_SLOT_MATERIAL_TEX2 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex3, SW_SLOT_MATERIAL_TEX3 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex4, SW_SLOT_MATERIAL_TEX4 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex5, SW_SLOT_MATERIAL_TEX5 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex6, SW_SLOT_MATERIAL_TEX6 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex7, SW_SLOT_MATERIAL_TEX7 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex8, SW_SLOT_MATERIAL_TEX8 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex9, SW_SLOT_MATERIAL_TEX9 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex10, SW_SLOT_MATERIAL_TEX10 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex11, SW_SLOT_MATERIAL_TEX11 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex12, SW_SLOT_MATERIAL_TEX12 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex13, SW_SLOT_MATERIAL_TEX13 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex14, SW_SLOT_MATERIAL_TEX14 );
+SW_DECLARE_TEXTURE2D( g_SwMaterialTex15, SW_SLOT_MATERIAL_TEX15 );
+#else
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex0, g_SwMaterialTex0Sampler, SW_SLOT_MATERIAL_TEX0 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex1, g_SwMaterialTex1Sampler, SW_SLOT_MATERIAL_TEX1 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex2, g_SwMaterialTex2Sampler, SW_SLOT_MATERIAL_TEX2 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex3, g_SwMaterialTex3Sampler, SW_SLOT_MATERIAL_TEX3 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex4, g_SwMaterialTex4Sampler, SW_SLOT_MATERIAL_TEX4 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex5, g_SwMaterialTex5Sampler, SW_SLOT_MATERIAL_TEX5 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex6, g_SwMaterialTex6Sampler, SW_SLOT_MATERIAL_TEX6 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex7, g_SwMaterialTex7Sampler, SW_SLOT_MATERIAL_TEX7 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex8, g_SwMaterialTex8Sampler, SW_SLOT_MATERIAL_TEX8 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex9, g_SwMaterialTex9Sampler, SW_SLOT_MATERIAL_TEX9 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex10, g_SwMaterialTex10Sampler, SW_SLOT_MATERIAL_TEX10 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex11, g_SwMaterialTex11Sampler, SW_SLOT_MATERIAL_TEX11 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex12, g_SwMaterialTex12Sampler, SW_SLOT_MATERIAL_TEX12 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex13, g_SwMaterialTex13Sampler, SW_SLOT_MATERIAL_TEX13 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex14, g_SwMaterialTex14Sampler, SW_SLOT_MATERIAL_TEX14 );
+SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex15, g_SwMaterialTex15Sampler, SW_SLOT_MATERIAL_TEX15 );
+#endif
 
 #if defined( DX11 )
 // DX11 정적 샘플러 세트 s9..s15 (bindingslots.hlsli 4) — 엔진이 디바이스 초기화 때 건다(D3D11RHIDevice::bindStaticSamplers).
@@ -794,7 +827,7 @@ float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
  * @details swSampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
  *          DX11/OpenGL 은 bindless 가 없어 t0..t3 에 걸린 엔진 텍스처를 인덱스 값 비교로 되짚는
  *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그래서 엔진이 머티리얼 텍스처를
- *          t5..t8 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
+ *          t12..t27 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
  */
 #if defined( SW_NATIVE_BINDLESS )
 float4 swSampleMaterialTexture( uint index, float2 uv )
@@ -807,14 +840,49 @@ float4 swSampleMaterialTexture( uint index, float2 uv )
 #else
 float4 swSampleMaterialTexture( uint index, float2 uv )
 {
-	// 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..N-1)다.
-	// 엔진이 그 서수 순서대로 t5..t8 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
-	// (그건 SM5.1 = D3D12) 리터럴 분기로 고른다 — 슬롯 수가 4 라 분기도 4 개다.
-	if ( index == 0 ) return g_SwMaterialTex0.Sample( g_SwMaterialTex0Sampler, uv );
-	if ( index == 1 ) return g_SwMaterialTex1.Sample( g_SwMaterialTex1Sampler, uv );
-	if ( index == 2 ) return g_SwMaterialTex2.Sample( g_SwMaterialTex2Sampler, uv );
-	if ( index == 3 ) return g_SwMaterialTex3.Sample( g_SwMaterialTex3Sampler, uv );
-	return float4( 1, 1, 1, 1 );
+	// 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
+	// 엔진이 그 서수 순서대로 t12..t27 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
+	// (그건 SM5.1 = D3D12) 리터럴 분기로 고른다 — 칸 수가 16 이라 분기도 16 개다.
+	// DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 슬롯의 결합 샘플러(엔진이 머티리얼 샘플러를 건다)로 읽는다.
+	switch ( index )
+	{
+#if defined( DX11 )
+		case 0u: return swSampleSlotWith( g_SwMaterialTex0, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 1u: return swSampleSlotWith( g_SwMaterialTex1, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 2u: return swSampleSlotWith( g_SwMaterialTex2, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 3u: return swSampleSlotWith( g_SwMaterialTex3, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 4u: return swSampleSlotWith( g_SwMaterialTex4, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 5u: return swSampleSlotWith( g_SwMaterialTex5, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 6u: return swSampleSlotWith( g_SwMaterialTex6, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 7u: return swSampleSlotWith( g_SwMaterialTex7, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 8u: return swSampleSlotWith( g_SwMaterialTex8, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 9u: return swSampleSlotWith( g_SwMaterialTex9, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 10u: return swSampleSlotWith( g_SwMaterialTex10, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 11u: return swSampleSlotWith( g_SwMaterialTex11, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 12u: return swSampleSlotWith( g_SwMaterialTex12, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 13u: return swSampleSlotWith( g_SwMaterialTex13, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 14u: return swSampleSlotWith( g_SwMaterialTex14, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+		case 15u: return swSampleSlotWith( g_SwMaterialTex15, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+#else
+		case 0u: return g_SwMaterialTex0.Sample( g_SwMaterialTex0Sampler, uv );
+		case 1u: return g_SwMaterialTex1.Sample( g_SwMaterialTex1Sampler, uv );
+		case 2u: return g_SwMaterialTex2.Sample( g_SwMaterialTex2Sampler, uv );
+		case 3u: return g_SwMaterialTex3.Sample( g_SwMaterialTex3Sampler, uv );
+		case 4u: return g_SwMaterialTex4.Sample( g_SwMaterialTex4Sampler, uv );
+		case 5u: return g_SwMaterialTex5.Sample( g_SwMaterialTex5Sampler, uv );
+		case 6u: return g_SwMaterialTex6.Sample( g_SwMaterialTex6Sampler, uv );
+		case 7u: return g_SwMaterialTex7.Sample( g_SwMaterialTex7Sampler, uv );
+		case 8u: return g_SwMaterialTex8.Sample( g_SwMaterialTex8Sampler, uv );
+		case 9u: return g_SwMaterialTex9.Sample( g_SwMaterialTex9Sampler, uv );
+		case 10u: return g_SwMaterialTex10.Sample( g_SwMaterialTex10Sampler, uv );
+		case 11u: return g_SwMaterialTex11.Sample( g_SwMaterialTex11Sampler, uv );
+		case 12u: return g_SwMaterialTex12.Sample( g_SwMaterialTex12Sampler, uv );
+		case 13u: return g_SwMaterialTex13.Sample( g_SwMaterialTex13Sampler, uv );
+		case 14u: return g_SwMaterialTex14.Sample( g_SwMaterialTex14Sampler, uv );
+		case 15u: return g_SwMaterialTex15.Sample( g_SwMaterialTex15Sampler, uv );
+#endif
+		default: return float4( 1, 1, 1, 1 );
+	}
 }
 #endif
 
@@ -827,10 +895,22 @@ float2 swComputeMaterialTextureSize( uint index )
 	if ( index != kInvalidIndex )
 		g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].GetDimensions( width, height );
 #else
-	if ( index == 0 ) g_SwMaterialTex0.GetDimensions( width, height );
-	if ( index == 1 ) g_SwMaterialTex1.GetDimensions( width, height );
-	if ( index == 2 ) g_SwMaterialTex2.GetDimensions( width, height );
-	if ( index == 3 ) g_SwMaterialTex3.GetDimensions( width, height );
+	if ( index == 0u ) g_SwMaterialTex0.GetDimensions( width, height );
+	if ( index == 1u ) g_SwMaterialTex1.GetDimensions( width, height );
+	if ( index == 2u ) g_SwMaterialTex2.GetDimensions( width, height );
+	if ( index == 3u ) g_SwMaterialTex3.GetDimensions( width, height );
+	if ( index == 4u ) g_SwMaterialTex4.GetDimensions( width, height );
+	if ( index == 5u ) g_SwMaterialTex5.GetDimensions( width, height );
+	if ( index == 6u ) g_SwMaterialTex6.GetDimensions( width, height );
+	if ( index == 7u ) g_SwMaterialTex7.GetDimensions( width, height );
+	if ( index == 8u ) g_SwMaterialTex8.GetDimensions( width, height );
+	if ( index == 9u ) g_SwMaterialTex9.GetDimensions( width, height );
+	if ( index == 10u ) g_SwMaterialTex10.GetDimensions( width, height );
+	if ( index == 11u ) g_SwMaterialTex11.GetDimensions( width, height );
+	if ( index == 12u ) g_SwMaterialTex12.GetDimensions( width, height );
+	if ( index == 13u ) g_SwMaterialTex13.GetDimensions( width, height );
+	if ( index == 14u ) g_SwMaterialTex14.GetDimensions( width, height );
+	if ( index == 15u ) g_SwMaterialTex15.GetDimensions( width, height );
 #endif
 	return float2( max( width, 1u ), max( height, 1u ) );
 }
