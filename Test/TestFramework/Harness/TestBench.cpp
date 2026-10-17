@@ -22,8 +22,10 @@ namespace test
         [[maybe_unused]] const int64 minValue = getPercentile( listSample, 0 );
         [[maybe_unused]] const int64 p50      = getPercentile( listSample, 50 );
         [[maybe_unused]] const int64 p90      = getPercentile( listSample, 90 );
+        [[maybe_unused]] const int64 p99      = getPercentile( listSample, 99 );
         [[maybe_unused]] const int64 maxValue = getPercentile( listSample, 100 );
-        SW_LOG_INFO( "[Bench] %#  min %# us  p50 %# us  p90 %# us  max %# us  (%# samples)", pLabel, minValue, p50, p90, maxValue, listSample.size() );
+        SW_LOG_INFO( "[Bench] %#  min %# us  p50 %# us  p90 %# us  p99 %# us  max %# us  (%# samples)", pLabel, minValue, p50, p90, p99, maxValue,
+                     listSample.size() );
     }
 
     void logBenchDeciNanos( [[maybe_unused]] const utf8* pLabel, [[maybe_unused]] int64 deciNanos )

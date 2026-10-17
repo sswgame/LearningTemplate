@@ -1,0 +1,121 @@
+{
+  "targets": [
+    {
+      "name": "foot_leg_l",
+      "bone": "root",
+      "translation": [
+        -0.1,
+        0.915,
+        0.0
+      ]
+    },
+    {
+      "name": "foot_leg_r",
+      "bone": "root",
+      "translation": [
+        0.1,
+        0.915,
+        0.0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "type": "SpringChain",
+      "name": "spring_head",
+      "bones": [
+        "head_00",
+        "head_01",
+        "head_02",
+        "head_03",
+        "head_04",
+        "head_05",
+        "head_06",
+        "head_07",
+        "head_08"
+      ]
+    },
+    {
+      "type": "TwoBoneIK",
+      "name": "ik_leg_l",
+      "root": "leg_l_00",
+      "mid": "leg_l_01",
+      "end": "leg_l_02",
+      "target": "foot_leg_l"
+    },
+    {
+      "type": "TwoBoneIK",
+      "name": "ik_leg_r",
+      "root": "leg_r_00",
+      "mid": "leg_r_01",
+      "end": "leg_r_02",
+      "target": "foot_leg_r"
+    },
+    {
+      "type": "SpringChain",
+      "name": "spring_finger_l0",
+      "bones": [
+        "finger_l0_00",
+        "finger_l0_01",
+        "finger_l0_02",
+        "finger_l0_03",
+        "finger_l0_04"
+      ]
+    },
+    {
+      "type": "SpringChain",
+      "name": "spring_finger_l1",
+      "bones": [
+        "finger_l1_00",
+        "finger_l1_01",
+        "finger_l1_02",
+        "finger_l1_03",
+        "finger_l1_04"
+      ]
+    },
+    {
+      "type": "SpringChain",
+      "name": "spring_finger_l2",
+      "bones": [
+        "finger_l2_00",
+        "finger_l2_01",
+        "finger_l2_02",
+        "finger_l2_03",
+        "finger_l2_04"
+      ]
+    },
+    {
+      "type": "SpringChain",
+      "name": "spring_finger_r0",
+      "bones": [
+        "finger_r0_00",
+        "finger_r0_01",
+        "finger_r0_02",
+        "finger_r0_03",
+        "finger_r0_04"
+      ]
+    },
+    {
+      "type": "SpringChain",
+      "name": "spring_finger_r1",
+      "bones": [
+        "finger_r1_00",
+        "finger_r1_01",
+        "finger_r1_02",
+        "finger_r1_03",
+        "finger_r1_04"
+      ]
+    },
+    {
+      "type": "SpringChain",
+      "name": "spring_finger_r2",
+      "bones": [
+        "finger_r2_00",
+        "finger_r2_01",
+        "finger_r2_02",
+        "finger_r2_03",
+        "finger_r2_04"
+      ]
+    }
+  ]
+}

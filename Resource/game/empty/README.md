@@ -58,3 +58,15 @@ build/Ninja-Debug/Bin/App.exe -dx12 "-gv_firstScene=game/empty/maps/twod.scene.x
 - **2D 라이트와 그림자.** 횃불, 스폿, 전역 라이트가 있고, 타일 외곽선과 상자가 그림자를 만듭니다.
 
 이 씬의 텍스처(`textures/twod/*.dds`)는 원본 이미지 없이 코드로 픽셀 아트를 그려 DDS로 쓴 것입니다. 엔진의 테스트 텍스처와 같은 방식입니다.
+
+## 합성 리그
+
+`rigs_raw/` 는 애니메이션 비용 측정용 합성 리그(`.glb` + 후처리 리그 `.rig.json`)의 대표 네 개입니다. 씬은 쓰지 않고, 임포트 테스트(`SyntheticRigImportTest`)와
+벤치(`SyntheticRigBenchTest`)가 임포터로 그 자리에서 읽습니다. `models_raw/` 가 아니라서 임포트 스탬프가 없고, 쿠킹에서 빠집니다.
+
+```powershell
+py -3 Scripts/dev/MakeSyntheticRig.py --representatives                                   # 대표 네 개를 다시 만든다
+py -3 Scripts/dev/MakeSyntheticRig.py --topology serpent --bones 500 --morphs 8 --clips 4 --out <폴더>/serpent_b500.glb
+```
+
+생성기를 고치면 대표 네 개를 다시 만들어 함께 커밋합니다. `PythonTest_TestMakeSyntheticRig` 가 커밋한 바이트와 생성기 출력을 견줍니다.

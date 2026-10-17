@@ -7,6 +7,7 @@
 | `voice/testline.wav` → `voice/testline.visemes.json` | 이 저장소에서 합성(120 Hz 배음 + 두 포먼트 봉우리 모음 넷 · 높은 대역 잡음, 16 kHz 모노) | 이 저장소 |
 | `models_raw/*.glb` | Kenney "Nature Kit" (<https://kenney.nl/assets/nature-kit>) — 나무 · 단풍 나무 · 덤불 · 꽃 둘 · 그루터기 · 통나무(환경 쇼케이스 식생) | CC0 1.0 |
 | `heightfields_raw/valley*.png` · `heightfields/valley.layerweights` | `Scripts/dev/MakeTerrainShowcase.py` 가 만든 절차 생성 데이터 | 이 저장소 |
+| `rigs_raw/*.glb` · `rigs_raw/*.rig.json` | `Scripts/dev/MakeSyntheticRig.py --representatives` 가 만든 애니메이션 비용 측정용 합성 리그 | 이 저장소 |
 | `models_raw/avatarsample_d.vrm` · `textures_raw/avatarsample_d/*.png` | VRoid Project "AvatarSample_D"(VRoid Studio 알파판 샘플, VRM 0.x) — <https://opengameart.org/content/vroid-studio-cc0-models> 에서 받음. 원 출처 · 조건: <https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use>. 텍스처 원본은 모델 임포트가 VRM 에 든 이미지를 그대로 꺼낸 것 | CC0 1.0 |
 | `models_raw/crate_medium.glb` | Kenney "Blaster Kit" (<https://kenney.nl/assets/blaster-kit>) — 나무 상자(shooter3d 의 것과 같은 파일, 파괴 쇼케이스) | CC0 1.0 |
 | `models_raw/brick_wall.gltf` · `models_raw/barrel.gltf` | 이 저장소에서 만든 상자 · 원기둥(파괴 쇼케이스) | 이 저장소 |

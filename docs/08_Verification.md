@@ -172,6 +172,20 @@ cd build/Ninja-Debug/Bin
 - **지형 높이 쓰기**(2026-10-15, **Debug** — Release 는 아직, 257 × 257 · 256 m · 청크 32 칸, 9 · 5 회 p50): 5 × 5 샘플을 쓴 뒤 물리 틱이 지형 전체 한 바디(청크 256 칸)면 1416 ms,
   청크마다 바디면 17.0 ms 입니다(`TerrainBenchTest.ColliderRebuildAfterBrushWrite`, 쓰지 않은 틱 0.1 ~ 0.16 ms). `writeHeights` 의 쓰기 프레임은 청크 메시를 넷까지만 다시 만들어
   한 변 9 샘플 2.6 ms · 257 샘플 25 ms 이고, 미룬 청크 전체는 257 샘플에서 262 ms 입니다(`WriteHeightsRectSizes` — 나누기 전에는 257 샘플 쓰기 한 번이 288 ms).
+- **애니메이션 갱신 — 본 수 × 캐릭터 수**(`SyntheticRigBenchTest.EvaluateByBonesCharactersAndMode`, 2026-10-17, Release, PC `SW` · Ryzen 7 6800H, 다섯 번의 중앙값, 단위 us):
+  `EditorTest.exe --load_suites=only --test_filter=SyntheticRigBenchTest.*` 를 `Bin` 에서 돌린다. 데이터는 대표 합성 리그(`game/empty/rigs_raw/`, 클립 둘 · 1 초 · 모프 둘),
+  캐릭터 절반씩 clip_00 · clip_01 을 엇갈린 시각에서 재생, `AnimationSystem::evaluate` 한 프레임(워커 병렬, 캐릭터 1000 은 60 프레임이라 p99 ≈ 최댓값).
+  own = 캐릭터마다 포즈, +rig = 다리 TwoBoneIK · 사슬 SpringChain, crowd = 군중 포즈 공유. GPU 스키닝(`GPU.Compute`)은 재지 않았다 — 런타임 .mesh 를 App 벤치 씬에 싣지 않았다.
+
+  | 리그(본) | x1 own | x100 own p50 · p99 | x1000 own p50 · p99 | x1000 +rig p50 · p99 | x1000 crowd p50 · p99 |
+  |---|---|---|---|---|---|
+  | biped 20 | 3 | 132 · 178 | 551 · 921 | 1251 · 1904 | 204 · 379 |
+  | quadruped 60 | 8 | 250 · 1797 | 1490 · 4575 | 4590 · 10243 | 218 · 336 |
+  | biped 150 | 20 | 326 · 449 | 3223 · 3969 | 7193 · 10434 | 225 · 285 |
+  | multileg 300 | 38 | 613 · 1932 | 8066 · 16659 | 13773 · 40555 | 257 · 922 |
+
+  캐릭터 하나 직렬은 본당 약 130 ns 로 본 수에 선형이다. 캐릭터 1000 own 은 본·캐릭터당 21 ~ 27 ns 인데 본 150 → 300 에서 2.5 배(선형이면 2 배)이고,
+  300 본 +rig 의 p99 가 p50 의 3 배(41 ms)다. quadruped 60 의 실행 사이 흔들림이 크다(x1000 own p50 1223 ~ 3162). crowd 는 버킷 수(클립 2 × 위상 4)에 묶여 본 · 캐릭터 수와 거의 무관하다.
 - **파괴 첫 프레임**(`FractureBenchTest.ShowcaseBeginPlay`, Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태와 잎 셰이프를 만든다): 잎 셰이프를 시작 때 모두 지으면(`-gv_fractureShapeWarmMicroseconds=-1`) p50 19.4 ms, 기본(틱마다 약 0.57 ms 예산으로 나눠 지음)은 p50 7.7 ms 입니다(`PerfCompare.py` fractureWarm, 3 회).
   대신 셰이프가 준비된 뒤 벽이 깨지는 프레임이 p50 2.4 → 3.2 ms 로 늘었다(`fractureDefer`, 7 회 재측정 1.33 배 — 첫 프레임 12 ms 절감과 맞바꾼 값으로 유지한다).
   쇼케이스 파괴물 여섯 · 잎 312 개이고, 200 조각 벽 하나의 볼록 껍질이 약 11 ms(잎당 약 55 us)입니다. 깨지는 프레임은 200 조각 벽에서 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms)입니다.

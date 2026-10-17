@@ -29,8 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common.AppRun import addAppRunArguments, kBackendSwitch, parseProfileTable, runApp  # noqa: E402
 
-#: `[Bench] <이름>  min N us  p50 N us  p90 N us  max N us  (N samples)`(`test::logBenchSamples`)
-_kBenchRowRe = re.compile(r"\[Bench\] (.+?)\s+min (-?\d+) us\s+p50 (-?\d+) us\s+p90 (-?\d+) us\s+max (-?\d+) us")
+#: `[Bench] <이름>  min N us  p50 N us  p90 N us  p99 N us  max N us  (N samples)`(`test::logBenchSamples`)
+_kBenchRowRe = re.compile(r"\[Bench\] (.+?)\s+min (-?\d+) us\s+p50 (-?\d+) us\s+p90 (-?\d+) us\s+p99 (-?\d+) us\s+max (-?\d+) us")
 
 
 @dataclass(frozen=True)
@@ -119,7 +119,8 @@ def collectInternal(case: PerfCase, listLine: list[str], sample: CaseSample) -> 
                 continue
             label = match.group(1).strip()
             sample.add(f"{label} | p50", float(match.group(3)))
-            sample.add(f"{label} | max", float(match.group(5)))
+            sample.add(f"{label} | p99", float(match.group(5)))
+            sample.add(f"{label} | max", float(match.group(6)))
         return
     mapProfile = parseProfileTable(listLine)
     for scope in case.listScope:
