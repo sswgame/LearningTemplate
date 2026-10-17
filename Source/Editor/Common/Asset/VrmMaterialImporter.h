@@ -60,10 +60,16 @@ namespace sw::editor
         float32         _outlineLightingMix{ 1.0f };
         float32         _outlineMaxDistance{ 1000.0f };
         float32         _alphaCutoff{ 0.5f };
+        float32         _normalScale{ 1.0f };              ///< glTF normalTexture.scale · 0.x _BumpScale
+        float32         _shadingShiftTextureScale{ 1.0f }; ///< MToon shadingShiftTexture.scale
         int32           _baseColorTexture{ -1 };
         int32           _shadeTexture{ -1 };
         int32           _emissiveTexture{ -1 };
         int32           _matcapTexture{ -1 };
+        int32           _normalTexture{ -1 };       ///< glTF normalTexture · 0.x _BumpMap
+        int32           _shadingShiftTexture{ -1 }; ///< MToon shadingShiftTexture
+        int32           _rimMultiplyTexture{ -1 };  ///< MToon rimMultiplyTexture · 0.x _RimTexture
+        int32           _outlineWidthTexture{ -1 }; ///< MToon outlineWidthMultiplyTexture · 0.x _OutlineWidthTexture
         ToonOutlineMode _outlineMode{ ToonOutlineMode::None };
         ToonAlphaMode   _alphaMode{ ToonAlphaMode::Opaque };
         uint8           _bTwoSided{ SW_FALSE };
@@ -75,7 +81,7 @@ namespace sw::editor
     /**
      * @struct VrmMaterialImporter
      * @brief VRM 머티리얼 읽기와 엔진 툰 머티리얼 쓰기를 담당합니다. 모든 함수가 static 입니다. 지원하는 키는 `Source/Editor/README.md` 의 "VRM 머티리얼" 표에 있습니다.
-     * @details 모르는 키는 오류다. 철자가 틀린 키가 조용히 기본값이 되지 않게 하는 이 저장소의 규칙이다. 아는데 지원하지 않는 키(노멀 맵, UV 애니메이션 등)는
+     * @details 모르는 키는 오류다. 철자가 틀린 키가 조용히 기본값이 되지 않게 하는 이 저장소의 규칙이다. 아는데 지원하지 않는 키(UV 애니메이션 등)는
      *          @p pOutListIgnored 에 이름을 모은다. 값이 효과 없는 기본값이면 모으지 않는다. 호출하는 쪽이 경고로 알린다.
      */
     struct VrmMaterialImporter

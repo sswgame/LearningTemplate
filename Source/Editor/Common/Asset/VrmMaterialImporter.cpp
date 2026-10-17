@@ -29,7 +29,7 @@ namespace sw::editor
                                                              "_ShadeShift", "_ShadeToony", "_ReceiveShadowRate",
                                                              "_RimFresnelPower", "_RimLift", "_RimLightingMix",
                                                              "_OutlineWidth", "_OutlineWidthMode", "_OutlineScaledMaxDistance",
-                                                             "_OutlineColorMode", "_OutlineLightingMix" };
+                                                             "_OutlineColorMode", "_OutlineLightingMix", "_BumpScale" };
             /**
              * @brief 0.x 에서 알지만 옮기지 않는 실수 키와, 그 키가 효과 없는 값입니다. 다른 값이면 무시 목록에 남깁니다.
              * @details 블렌드 상태(_SrcBlend, _DstBlend, _ZWrite, _AlphaToMask)는 _BlendMode 에서 정해지고, _DebugMode 와 _MToonVersion 은 렌더링과 무관하므로 항상 조용히 넘긴다.
@@ -41,7 +41,6 @@ namespace sw::editor
                 bool        _bAlwaysSilent;
             };
             static constexpr IgnoredFloat kArrVrm0IgnoredFloat[] = {
-                {             "_BumpScale", 1.0f, false}, // 노멀 맵이 없다
                 {      "_ShadingGradeRate", 1.0f,  true}, // 셰이딩 그레이드 텍스처가 없으면 효과가 없다
                 { "_LightColorAttenuation", 0.0f, false},
                 {"_IndirectLightIntensity", 0.1f,  true}, // 환경광이 균일하므로 섞을 것이 없다
@@ -58,10 +57,10 @@ namespace sw::editor
             };
             /** @brief 0.x 에서 옮기는 색 키입니다. */
             static constexpr string_view kArrVrm0Color[] = { "_Color", "_ShadeColor", "_EmissionColor", "_RimColor", "_OutlineColor" };
-            /** @brief 0.x 텍스처 키입니다. 옮기는 네 개와 알지만 옮기지 않는 것들이 있습니다. 같은 이름의 벡터 키는 텍스처 타일링([x, y, 크기 x, 크기 y])입니다. */
-            static constexpr string_view kArrVrm0Texture[]        = { "_MainTex", "_ShadeTexture", "_EmissionMap", "_SphereAdd" };
-            static constexpr string_view kArrVrm0IgnoredTexture[] = { "_BumpMap", "_ReceiveShadowTexture", "_ShadingGradeTexture", "_RimTexture", "_OutlineWidthTexture",
-                                                                      "_UvAnimMaskTexture" };
+            /** @brief 0.x 텍스처 키입니다. 옮기는 일곱 개와 알지만 옮기지 않는 것들이 있습니다. 같은 이름의 벡터 키는 텍스처 타일링([x, y, 크기 x, 크기 y])입니다. */
+            static constexpr string_view kArrVrm0Texture[]        = { "_MainTex", "_ShadeTexture", "_EmissionMap", "_SphereAdd", "_BumpMap", "_RimTexture", "_OutlineWidthTexture" };
+            static constexpr size_t      kVrm0TextureCount        = sizeof( kArrVrm0Texture ) / sizeof( kArrVrm0Texture[0] );
+            static constexpr string_view kArrVrm0IgnoredTexture[] = { "_ReceiveShadowTexture", "_ShadingGradeTexture", "_UvAnimMaskTexture" };
             /** @brief 0.x 의 MToon 이 아닌 셰이더입니다. glTF 기본 머티리얼을 평면 툰으로 옮깁니다. */
             static constexpr string_view kArrVrm0FlatShader[] = { "VRM_USE_GLTFSHADER", "VRM/UnlitTexture", "VRM/UnlitCutout", "VRM/UnlitTransparent",
                                                                   "VRM/UnlitTransparentZWrite" };
@@ -85,12 +84,12 @@ namespace sw::editor
                                                                     "outlineWidthFactor",
                                                                     "outlineColorFactor",
                                                                     "outlineLightingMixFactor",
-                                                                    "extensions",
-                                                                    "extras" };
-            static constexpr string_view kArrMtoon1IgnoredKey[] = { "shadingShiftTexture",
+                                                                    "shadingShiftTexture",
                                                                     "rimMultiplyTexture",
                                                                     "outlineWidthMultiplyTexture",
-                                                                    "uvAnimationMaskTexture",
+                                                                    "extensions",
+                                                                    "extras" };
+            static constexpr string_view kArrMtoon1IgnoredKey[] = { "uvAnimationMaskTexture",
                                                                     "uvAnimationScrollXSpeedFactor",
                                                                     "uvAnimationScrollYSpeedFactor",
                                                                     "uvAnimationRotationSpeedFactor" };
@@ -228,8 +227,11 @@ namespace sw::editor
                     return false;
                 }
                 inoutDesc._emissiveTexture = readTextureIndex( gltfMaterial.get( "emissiveTexture", false ), pOutListIgnored );
-                if ( gltfMaterial.has( "normalTexture", false ) )
-                    appendIgnored( pOutListIgnored, "normalTexture" );
+                // 노멀 맵(glTF normalTextureInfo) — 배율은 xy 에 곱한다(셰이더 applyNormalMap).
+                const JSONValue normalTexture = gltfMaterial.get( "normalTexture", false );
+                inoutDesc._normalTexture      = readTextureIndex( normalTexture, pOutListIgnored );
+                if ( normalTexture.isObject() )
+                    inoutDesc._normalScale = static_cast<float32>( normalTexture.get( "scale", false ).asFloat( 1.0 ) );
                 const JSONValue extensions = gltfMaterial.get( "extensions", false );
                 const JSONValue strength   = extensions.isObject() ? extensions.get( "KHR_materials_emissive_strength", false ) : JSONValue{};
                 if ( strength.isObject() )
@@ -405,7 +407,8 @@ namespace sw::editor
 
         // 텍스처(glTF 텍스처 번호)
         const JSONValue textures = materialProperty.get( "textureProperties", false );
-        int32           arrTexture[4]{ -1, -1, -1, -1 };
+        int32           arrTexture[Internal::kVrm0TextureCount]{ -1, -1, -1, -1, -1, -1, -1 };
+        static_assert( Internal::kVrm0TextureCount == 7, "arrTexture 초기값을 텍스처 키 수만큼 적는다" );
         for ( const string& key : textures.isObject() ? textures.getMemberNames() : vector<string>{} )
         {
             const JSONValue value = textures.get( key, false );
@@ -415,7 +418,7 @@ namespace sw::editor
                 return false;
             }
             bool bKnown = false;
-            for ( size_t index = 0; index < 4; ++index )
+            for ( size_t index = 0; index < Internal::kVrm0TextureCount; ++index )
             {
                 if ( Internal::kArrVrm0Texture[index] != key )
                     continue;
@@ -432,15 +435,19 @@ namespace sw::editor
             Internal::appendIgnored( pOutListIgnored, key );
         }
 
-        outDesc._baseColor        = arrColor[0];
-        outDesc._shadeColor       = arrColor[1];
-        outDesc._emissiveColor    = arrColor[2];
-        outDesc._rimColor         = arrColor[3];
-        outDesc._outlineColor     = arrColor[4];
-        outDesc._baseColorTexture = arrTexture[0];
-        outDesc._shadeTexture     = arrTexture[1];
-        outDesc._emissiveTexture  = arrTexture[2];
-        outDesc._matcapTexture    = arrTexture[3];
+        outDesc._baseColor           = arrColor[0];
+        outDesc._shadeColor          = arrColor[1];
+        outDesc._emissiveColor       = arrColor[2];
+        outDesc._rimColor            = arrColor[3];
+        outDesc._outlineColor        = arrColor[4];
+        outDesc._baseColorTexture    = arrTexture[0];
+        outDesc._shadeTexture        = arrTexture[1];
+        outDesc._emissiveTexture     = arrTexture[2];
+        outDesc._matcapTexture       = arrTexture[3];
+        outDesc._normalTexture       = arrTexture[4];
+        outDesc._rimMultiplyTexture  = arrTexture[5];
+        outDesc._outlineWidthTexture = arrTexture[6];
+        outDesc._normalScale         = findFloat( "_BumpScale", 1.0f );
 
         // 블렌드 · 컬
         const int32 blendMode = static_cast<int32>( findFloat( "_BlendMode", 0.0f ) + 0.5f );
@@ -550,8 +557,15 @@ namespace sw::editor
             outError = context + ": a color factor is not three or four numbers";
             return false;
         }
-        outDesc._shadeTexture       = Internal::readTextureIndex( mtoon.get( "shadeMultiplyTexture", false ), pOutListIgnored );
-        outDesc._matcapTexture      = Internal::readTextureIndex( mtoon.get( "matcapTexture", false ), pOutListIgnored );
+        outDesc._shadeTexture        = Internal::readTextureIndex( mtoon.get( "shadeMultiplyTexture", false ), pOutListIgnored );
+        outDesc._matcapTexture       = Internal::readTextureIndex( mtoon.get( "matcapTexture", false ), pOutListIgnored );
+        outDesc._rimMultiplyTexture  = Internal::readTextureIndex( mtoon.get( "rimMultiplyTexture", false ), pOutListIgnored );
+        outDesc._outlineWidthTexture = Internal::readTextureIndex( mtoon.get( "outlineWidthMultiplyTexture", false ), pOutListIgnored );
+        // 셰이딩 시프트 텍스처는 shadingShiftTextureInfo(index · texCoord · scale)다.
+        const JSONValue shiftTexture = mtoon.get( "shadingShiftTexture", false );
+        outDesc._shadingShiftTexture = Internal::readTextureIndex( shiftTexture, pOutListIgnored );
+        if ( shiftTexture.isObject() )
+            outDesc._shadingShiftTextureScale = static_cast<float32>( shiftTexture.get( "scale", false ).asFloat( 1.0 ) );
         outDesc._shadingShift       = readFloat( "shadingShiftFactor", 0.0f );
         outDesc._shadingToony       = readFloat( "shadingToonyFactor", 0.9f );
         outDesc._rimLightingMix     = readFloat( "rimLightingMixFactor", 1.0f );
@@ -624,10 +638,16 @@ namespace sw::editor
         setValue( "outlineLightingMix", Internal::formatNumber( desc._outlineLightingMix ) );
         setValue( "outlineMaxDistance", Internal::formatNumber( desc._outlineMaxDistance ) );
         setValue( "alphaCutoff", Internal::formatNumber( desc._alphaCutoff ) );
+        setValue( "normalScale", Internal::formatNumber( desc._normalScale ) );
+        setValue( "shadingShiftTextureScale", Internal::formatNumber( desc._shadingShiftTextureScale ) );
         setTexture( "baseColorMap", desc._baseColorTexture );
         setTexture( "shadeMap", desc._shadeTexture );
         setTexture( "emissiveMap", desc._emissiveTexture );
         setTexture( "matcapMap", desc._matcapTexture );
+        setTexture( "normalMap", desc._normalTexture );
+        setTexture( "shadingShiftMap", desc._shadingShiftTexture );
+        setTexture( "rimMultiplyMap", desc._rimMultiplyTexture );
+        setTexture( "outlineWidthMap", desc._outlineWidthTexture );
 
         const XMLNode permutations = root.findChild( "_permutations" );
         const XMLNode switches     = permutations.findChild( "_staticSwitches" );

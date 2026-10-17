@@ -91,10 +91,12 @@ SW_TEST_CASE( VrmMaterialImporterTest, Vrm0MToonValuesMapToToonParameters )
     SW_EXPECT_EQUAL( 3, desc._shadeTexture );
     SW_EXPECT_EQUAL( 4, desc._emissiveTexture );
     SW_EXPECT_EQUAL( 5, desc._matcapTexture );
+    // 노멀 맵(_BumpMap · _BumpScale)도 옮긴다.
+    SW_EXPECT_EQUAL( 1, desc._normalTexture );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, desc._normalScale, 1e-6f );
 
-    // 아는데 옮기지 않는 키는 목록에 남는다(노멀 맵). 효과 없는 값(_BumpScale 1 · 블렌드 상태 · _OutlineCullMode 1)은 남지 않는다.
-    SW_EXPECT_EQUAL( size_t( 1 ), listIgnored.size() );
-    SW_EXPECT_TRUE( listIgnored.empty() == false && listIgnored[0] == "_BumpMap" );
+    // 효과 없는 값(블렌드 상태 · _OutlineCullMode 1 · _ShadingGradeRate 1)은 무시 목록에 남지 않는다.
+    SW_EXPECT_TRUE( listIgnored.empty() );
 }
 
 /**

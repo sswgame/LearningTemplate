@@ -886,6 +886,67 @@ float4 swSampleMaterialTexture( uint index, float2 uv )
 }
 #endif
 
+/**
+ * @brief 머티리얼 텍스처를 밉 0 으로 읽습니다 — 정점 셰이더용이다(암시 미분이 없다). 인덱스의 뜻은 `swSampleMaterialTexture` 와 같고 텍스처가 없으면 흰색입니다.
+ * @details 툰 외곽선 두께 텍스처(MToon outlineWidthMultiplyTexture)가 정점을 밀 때 쓴다. DX11 은 엔진이 머티리얼 슬롯과 정적 샘플러를 정점 셰이더에도 건다.
+ */
+#if SW_MATERIAL_TEXTURE_SAMPLER != 0
+#error swSampleMaterialTextureLevelZero 는 머티리얼 샘플러가 정적 샘플러 0 번(g_SwSampler0)이라고 가정한다
+#endif
+float4 swSampleMaterialTextureLevelZero( uint index, float2 uv )
+{
+#if defined( SW_NATIVE_BINDLESS )
+	if ( index == kInvalidIndex )
+		return float4( 1, 1, 1, 1 );
+	const uint slot = swBindlessTextureSlot( index );
+#if defined( __spirv__ )
+	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, 0.0f );
+#else
+	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler0, uv, 0.0f );
+#endif
+#else
+	switch ( index )
+	{
+#if defined( DX11 )
+		case 0u: return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 1u: return g_SwMaterialTex1.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 2u: return g_SwMaterialTex2.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 3u: return g_SwMaterialTex3.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 4u: return g_SwMaterialTex4.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 5u: return g_SwMaterialTex5.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 6u: return g_SwMaterialTex6.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 7u: return g_SwMaterialTex7.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 8u: return g_SwMaterialTex8.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 9u: return g_SwMaterialTex9.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 10u: return g_SwMaterialTex10.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 11u: return g_SwMaterialTex11.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 12u: return g_SwMaterialTex12.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 13u: return g_SwMaterialTex13.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 14u: return g_SwMaterialTex14.SampleLevel( g_SwSampler0, uv, 0.0f );
+		case 15u: return g_SwMaterialTex15.SampleLevel( g_SwSampler0, uv, 0.0f );
+#else
+		case 0u: return g_SwMaterialTex0.SampleLevel( g_SwMaterialTex0Sampler, uv, 0.0f );
+		case 1u: return g_SwMaterialTex1.SampleLevel( g_SwMaterialTex1Sampler, uv, 0.0f );
+		case 2u: return g_SwMaterialTex2.SampleLevel( g_SwMaterialTex2Sampler, uv, 0.0f );
+		case 3u: return g_SwMaterialTex3.SampleLevel( g_SwMaterialTex3Sampler, uv, 0.0f );
+		case 4u: return g_SwMaterialTex4.SampleLevel( g_SwMaterialTex4Sampler, uv, 0.0f );
+		case 5u: return g_SwMaterialTex5.SampleLevel( g_SwMaterialTex5Sampler, uv, 0.0f );
+		case 6u: return g_SwMaterialTex6.SampleLevel( g_SwMaterialTex6Sampler, uv, 0.0f );
+		case 7u: return g_SwMaterialTex7.SampleLevel( g_SwMaterialTex7Sampler, uv, 0.0f );
+		case 8u: return g_SwMaterialTex8.SampleLevel( g_SwMaterialTex8Sampler, uv, 0.0f );
+		case 9u: return g_SwMaterialTex9.SampleLevel( g_SwMaterialTex9Sampler, uv, 0.0f );
+		case 10u: return g_SwMaterialTex10.SampleLevel( g_SwMaterialTex10Sampler, uv, 0.0f );
+		case 11u: return g_SwMaterialTex11.SampleLevel( g_SwMaterialTex11Sampler, uv, 0.0f );
+		case 12u: return g_SwMaterialTex12.SampleLevel( g_SwMaterialTex12Sampler, uv, 0.0f );
+		case 13u: return g_SwMaterialTex13.SampleLevel( g_SwMaterialTex13Sampler, uv, 0.0f );
+		case 14u: return g_SwMaterialTex14.SampleLevel( g_SwMaterialTex14Sampler, uv, 0.0f );
+		case 15u: return g_SwMaterialTex15.SampleLevel( g_SwMaterialTex15Sampler, uv, 0.0f );
+#endif
+		default: return float4( 1, 1, 1, 1 );
+	}
+#endif
+}
+
 /** @brief 머티리얼 텍스처의 크기(텍셀)입니다. 텍스처가 없으면 (1, 1) 입니다. 인덱스의 뜻은 `swSampleMaterialTexture` 와 같습니다. */
 float2 swComputeMaterialTextureSize( uint index )
 {
