@@ -148,7 +148,7 @@ namespace sw
          * @brief 바이너리에서 값을 역직렬화합니다.
          * @param wireVersion 바이트가 적힌 버전입니다(스트림 머리가 알려 줍니다). 지금은 버전이 하나라 분기가 없고, 버전을 올리면 여기서 분기합니다.
          *                    기본값은 이 빌드가 방금 쓴 바이트(복사, 비교, diff)에만 맞습니다.
-         * @details 모르는 열거자 이름(지웠거나 ValueAlias 없이 이름을 바꾼 경우)이면 그 필드는 현재 값을 유지하고 false 를 반환한다. XML 의 모르는 이름과 같다.
+         * @details 모르는 열거자 이름(`Removed` 없이 지웠거나 `ValueAlias` 없이 이름을 바꾼 경우)이면 그 필드는 현재 값을 유지하고 false 를 반환한다. XML 의 모르는 이름과 같다.
          *          바이트는 끝까지 읽었으므로 부른 쪽이 다음 필드로 갈 수 있다(경고는 enum 과 이름마다 한 번이다).
          */
         [[nodiscard]] SW_API static bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
@@ -241,6 +241,13 @@ namespace sw
         /** @brief 프로퍼티 목록에서 키에 맞는 프로퍼티 메타데이터를 찾습니다. */
         static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
                                                   bool bIgnoreCaseKeys, bool& bCaseVariant );
+
+        /**
+         * @brief 이름 해시(바이너리 태그 · diff 항목)에 맞는 프로퍼티의 인덱스입니다. 없으면 `listProp.size()` 입니다.
+         * @details 모든 프로퍼티의 지금 이름을 먼저 보고, 없을 때만 옛 이름(`PROPERTY( Alias = … )`)을 봅니다. 그래서 정상 경로는 옛 이름을 보지 않고,
+         *          지금 이름이 늘 옛 이름보다 먼저입니다. 바이너리 태그 스트림과 오브젝트 diff 가 함께 씁니다.
+         */
+        static size_t findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash );
 
         /** @brief 프로퍼티가 직렬화 대상인지 검사합니다(Transient 제외). */
         static bool shouldSerializeProperty( const PropertyInfo& prop )

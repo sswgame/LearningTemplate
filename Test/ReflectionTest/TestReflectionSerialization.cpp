@@ -118,7 +118,7 @@ namespace
         int32                          _after{ 0 };
     };
 
-    /** @brief 손으로 올리는 EnumInfo 의 열거자 하나입니다. `_bAlias` 면 ValueAlias 입니다(그 이름도 값으로 읽히지만 쓰는 이름은 아니다). */
+    /** @brief 손으로 올리는 EnumInfo 의 열거자 하나입니다. `_bAlias` 면 옛 이름(ValueAlias · Removed)입니다. 리다이렉트 표에 들어가 읽히지만 쓰는 이름은 아닙니다. */
     struct WireShiftEnumerator
     {
         const utf8* _pName;
@@ -138,9 +138,13 @@ namespace
         for ( const WireShiftEnumerator& enumerator : listEnumerator )
         {
             const sw::hashed_string name( enumerator._pName );
-            info._mapNameToValue[name] = enumerator._value;
-            if ( enumerator._bAlias == false )
-                info._mapValueToName[enumerator._value] = name;
+            if ( enumerator._bAlias )
+            {
+                info._mapRedirectNameToValue[name] = enumerator._value;
+                continue;
+            }
+            info._mapNameToValue[name]              = enumerator._value;
+            info._mapValueToName[enumerator._value] = name;
         }
         sw::engine::getSubsystem<sw::TypeRegistry>().registerEnum( info );
     }
@@ -268,6 +272,49 @@ namespace
             info._listProperty.push_back( { sw::hashed_string( "_color" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WireShiftRetypedHost, _colorNumber ) } );
         info._listProperty.push_back( { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WireShiftRetypedHost, _after ) } );
         return info;
+    }
+
+    /** @brief 필드를 더하고 지우고 이름을 바꾼 두 빌드가 함께 쓰는 저장 칸입니다. 빌드마다 다른 TypeInfo 로 같은 칸을 가리킵니다. */
+    struct FieldEvolutionHost
+    {
+        int32 _kept{ -1 };
+        int32 _renamed{ -1 };
+        int32 _added{ -1 };
+        int32 _gone{ -1 };
+    };
+
+    sw::PropertyInfo makeEvolutionField( const utf8* pName, size_t offset )
+    {
+        return sw::PropertyInfo( sw::hashed_string( pName ), sw::hashed_string( "int32" ), offset );
+    }
+
+    sw::TypeInfo makeEvolutionType( sw::vector<sw::PropertyInfo> listProperty )
+    {
+        sw::TypeInfo info;
+        info._name               = sw::hashed_string( "FieldEvolutionHost" );
+        info._fullyQualifiedName = sw::hashed_string( "sw::FieldEvolutionHost" );
+        info._size               = sizeof( FieldEvolutionHost );
+        info._listProperty       = std::move( listProperty );
+        return info;
+    }
+
+    /** @brief 저장한 빌드: `_kept` · `_oldName` · `_gone` 입니다. */
+    sw::TypeInfo makeSavedEvolutionType()
+    {
+        return makeEvolutionType( { makeEvolutionField( "_kept", SW_OFFSET_OF( FieldEvolutionHost, _kept ) ),
+                                    makeEvolutionField( "_oldName", SW_OFFSET_OF( FieldEvolutionHost, _renamed ) ),
+                                    makeEvolutionField( "_gone", SW_OFFSET_OF( FieldEvolutionHost, _gone ) ) } );
+    }
+
+    /** @brief 다음 빌드: `_oldName` 은 `_renamed` 가 됐고(옛 이름 선언은 @p bDeclareOldName), `_gone` 은 지워졌고, `_added`(기본값 7)가 생겼습니다. */
+    sw::TypeInfo makeNextEvolutionType( bool bDeclareOldName )
+    {
+        sw::PropertyInfo renamed = makeEvolutionField( "_renamed", SW_OFFSET_OF( FieldEvolutionHost, _renamed ) );
+        if ( bDeclareOldName )
+            renamed._listAlias = { sw::hashed_string( "_oldName" ) };
+        sw::PropertyInfo added        = makeEvolutionField( "_added", SW_OFFSET_OF( FieldEvolutionHost, _added ) );
+        added._metadata._defaultValue = "7";
+        return makeEvolutionType( { makeEvolutionField( "_kept", SW_OFFSET_OF( FieldEvolutionHost, _kept ) ), renamed, added } );
     }
 } // namespace
 
@@ -989,6 +1036,262 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorFailsOnlyItsField )
     WireShiftHost viaAlias;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &viaAlias, info, bytes.data(), bytes.size() ) );
     expectWireShiftEnumerators( "value alias", viaAlias, 1, 5, 2, 0 );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 이름을 바꾼 열거자는 텍스트(XML · JSON)도 바이너리와 같은 리다이렉트 표로 읽는다
+ * @details 옛 빌드가 쓴 글에는 옛 이름(`Green`, 플래그 `C`)이 있다. 다음 빌드가 `ValueAlias` 로 옛 이름을 남겼으면 새 열거자로 읽는다(docs/plans/RenameRedirects.md 4 절).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, RenamedEnumeratorReadsFromTextThroughTheSameRedirect )
+{
+    registerWireShiftEnumsAsDeclared();
+    const RestoreWireShiftEnumsOnExit restoreEnums{};
+    const sw::TypeInfo                info  = makeWireShiftHostType();
+    const WireShiftHost               saved = makeSavedWireShiftHost();
+    const sw::string                  xml   = sw::XMLSerializer::serialize( &saved, info );
+    const sw::string                  json  = sw::JSONSerializer::serialize( &saved, info );
+
+    // 다음 빌드: Green 이 Lime 이 됐고 플래그 C 는 Gamma 가 됐다. 옛 이름은 리다이렉트로만 남는다.
+    registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
+                           {
+                               {  "Red", 0, false},
+                               { "Lime", 1, false},
+                               { "Blue", 2, false},
+                               {"Green", 1,  true}
+    } );
+    registerWireShiftEnum( "WireShiftFlags", "sw::WireShiftFlags", static_cast<uint8>( sizeof( WireShiftFlags ) ), true,
+                           {
+                               { "None", 0, false},
+                               {    "A", 1, false},
+                               {    "B", 2, false},
+                               {"Gamma", 4, false},
+                               {    "C", 4,  true}
+    } );
+    WireShiftHost fromXML;
+    SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, info, xml ), xml.c_str() );
+    expectWireShiftEnumerators( "xml redirect", fromXML, 1, 5, 2, 0 );
+    WireShiftHost fromJSON;
+    SW_EXPECT_TRUE_MSG( sw::JSONSerializer::deserialize( &fromJSON, info, json ), json.c_str() );
+    expectWireShiftEnumerators( "json redirect", fromJSON, 1, 5, 2, 0 );
+
+    // 쓰는 쪽은 지금 이름만 쓴다.
+    const sw::string rewritten = sw::XMLSerializer::serialize( &fromXML, info );
+    SW_EXPECT_TRUE_MSG( rewritten.find( "Lime" ) != sw::string::npos && rewritten.find( "Green" ) == sw::string::npos, rewritten.c_str() );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 지운 열거자는 `Removed` 에 적은 대체 열거자로 읽는다 — 선언이 없으면 지금처럼 그 칸이 실패한다
+ * @details 다음 빌드가 Green 과 플래그 C 를 지웠다. `Removed = "Green:Red, C:None"` 이 있으면 저장된 Green 은 Red, C 비트는 없음으로 읽힌다(바이너리 · XML).
+ *          선언이 없으면 조용히 기본값으로 읽지 않고 엄격한 읽기가 실패한다(`UnknownEnumeratorFailsOnlyItsField`).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, RemovedEnumeratorReadsItsDeclaredReplacement )
+{
+    registerWireShiftEnumsAsDeclared();
+    const RestoreWireShiftEnumsOnExit restoreEnums{};
+    const sw::TypeInfo                info  = makeWireShiftHostType();
+    const WireShiftHost               saved = makeSavedWireShiftHost();
+    sw::vector<uint8>                 bytes;
+    sw::BinarySerializer::serialize( &saved, info, bytes );
+    const sw::string xml = sw::XMLSerializer::serialize( &saved, info );
+
+    const auto registerWithoutGreenAndC = []( bool bDeclareRemoved )
+    {
+        sw::vector<WireShiftEnumerator> listColor = {
+            { "Red", 0, false},
+            {"Blue", 2, false}
+        };
+        sw::vector<WireShiftEnumerator> listFlag = {
+            {"None", 0, false},
+            {   "A", 1, false},
+            {   "B", 2, false}
+        };
+        if ( bDeclareRemoved )
+        {
+            listColor.push_back( { "Green", 0, true } );
+            listFlag.push_back( { "C", 0, true } );
+        }
+        registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false, listColor );
+        registerWireShiftEnum( "WireShiftFlags", "sw::WireShiftFlags", static_cast<uint8>( sizeof( WireShiftFlags ) ), true, listFlag );
+    };
+
+    registerWithoutGreenAndC( false );
+    WireShiftHost undeclared;
+    undeclared._color = WireShiftColor::Blue;
+    {
+        test::ScopedDefensiveTestLog expected( "an enumerator removed without Removed = ... stops the strict read" );
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &undeclared, info, bytes.data(), bytes.size() ) );
+    }
+    SW_EXPECT_TRUE( undeclared._color == WireShiftColor::Blue );
+
+    registerWithoutGreenAndC( true );
+    WireShiftHost fromBinary;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, info, bytes.data(), bytes.size() ) );
+    expectWireShiftEnumerators( "removed binary", fromBinary, 0, 1, 2, 0 );
+    WireShiftHost fromXML;
+    SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, info, xml ), xml.c_str() );
+    expectWireShiftEnumerators( "removed xml", fromXML, 0, 1, 2, 0 );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 열거형 타입 이름을 바꾸면 옛 FQN 을 `ENUM( Alias = … )` 로 남겨야 저장된 칸을 읽는다
+ * @details 바이너리 태그는 칸의 기록 타입(enum FQN 의 해시)을 싣는다. 다음 빌드의 레지스트리에 그 이름이 없으면 바이트의 뜻을 모르므로 엄격한 읽기가 실패한다.
+ *          옛 FQN 을 별칭으로 등록하면(`registerEnumAlias`, 생성기가 `ENUM( Alias = … )` 에서 만든다) 같은 열거형으로 읽는다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, RenamedEnumTypeReadsThroughItsOldName )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "unregisterTypesByModule is not compiled into Shipping" );
+#else
+    sw::TypeRegistry& registry   = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const auto        makeColors = []( const utf8* pFqn, const utf8* pModule )
+    {
+        sw::EnumInfo enumInfo;
+        enumInfo._name               = sw::hashed_string( pFqn );
+        enumInfo._fullyQualifiedName = sw::hashed_string( pFqn );
+        enumInfo._moduleName         = sw::hashed_string( pModule );
+        enumInfo._size               = static_cast<uint8>( sizeof( WireShiftColor ) );
+        enumInfo._bIsSigned          = SW_TRUE;
+        for ( const auto& [pName, value] : {
+                  std::pair<const utf8*, int64>{  "Red", 0},
+                  {"Green", 1},
+                  { "Blue", 2}
+        } )
+        {
+            enumInfo._mapNameToValue[sw::hashed_string( pName )] = value;
+            enumInfo._mapValueToName[value]                      = sw::hashed_string( pName );
+        }
+        return enumInfo;
+    };
+    const auto makeHost = []( const utf8* pEnumFqn )
+    {
+        sw::TypeInfo hostType;
+        hostType._name               = sw::hashed_string( "WireShiftHost" );
+        hostType._fullyQualifiedName = sw::hashed_string( "sw::WireShiftHost" );
+        hostType._size               = sizeof( WireShiftHost );
+        hostType._listProperty.push_back( { sw::hashed_string( "_color" ), sw::hashed_string( pEnumFqn ), SW_OFFSET_OF( WireShiftHost, _color ) } );
+        hostType._listProperty.push_back( { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( WireShiftHost, _after ) } );
+        return hostType;
+    };
+
+    // 이번 빌드: 칸은 swtest::OldShiftColor 다.
+    registry.registerEnum( makeColors( "swtest::OldShiftColor", "TestRenamedEnumOld" ) );
+    WireShiftHost saved;
+    saved._color = WireShiftColor::Green;
+    saved._after = 9;
+    sw::vector<uint8> bytes;
+    sw::BinarySerializer::serialize( &saved, makeHost( "swtest::OldShiftColor" ), bytes );
+
+    // 다음 빌드: 열거형 이름이 swtest::NewShiftColor 다.
+    registry.unregisterTypesByModule( "TestRenamedEnumOld" );
+    registry.registerEnum( makeColors( "swtest::NewShiftColor", "TestRenamedEnumNew" ) );
+    const sw::TypeInfo newHost = makeHost( "swtest::NewShiftColor" );
+
+    WireShiftHost undeclared;
+    {
+        test::ScopedDefensiveTestLog expected( "a renamed enum type without Alias = ... stops the strict read" );
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &undeclared, newHost, bytes.data(), bytes.size() ) );
+    }
+    SW_EXPECT_TRUE( undeclared._color == WireShiftColor::Red );
+
+    registry.registerEnumAlias( "swtest::OldShiftColor", "swtest::NewShiftColor" );
+    WireShiftHost declared;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &declared, newHost, bytes.data(), bytes.size() ) );
+    SW_EXPECT_TRUE( declared._color == WireShiftColor::Green );
+    SW_EXPECT_EQUAL( 9, declared._after );
+    registry.unregisterTypesByModule( "TestRenamedEnumNew" );
+#endif
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 필드 추가 · 삭제 · 이름 변경을 바이너리로 왕복한다
+ * @details 추가한 필드는 선언한 기본값으로 채운다. 이름을 바꾼 필드는 옛 이름(`PROPERTY( Alias = … )`)을 선언하면 읽힌다. 지운 필드와 선언 없이 이름을 바꾼 필드는
+ *          엄격한 읽기를 실패로 멈춘다. 모르는 칸을 받는 문맥(오브젝트 상태)은 그 칸만 건너뛰고, soft 읽기는 orphan 으로 남겨 이관 함수에 넘긴다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, FieldAddRemoveRenameBinaryRoundTrip )
+{
+    FieldEvolutionHost saved;
+    saved._kept    = 1;
+    saved._renamed = 2;
+    saved._gone    = 3;
+    sw::vector<uint8> bytes;
+    sw::BinarySerializer::serialize( &saved, makeSavedEvolutionType(), bytes );
+
+    const sw::TypeInfo declared = makeNextEvolutionType( true );
+    FieldEvolutionHost strict;
+    {
+        test::ScopedDefensiveTestLog expected( "a removed field stops the strict read" );
+        SW_EXPECT_FALSE_MSG( sw::BinarySerializer::deserialize( &strict, declared, bytes.data(), bytes.size() ), "지운 필드(_gone)를 선언 없이 건너뛰었습니다" );
+    }
+
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    lenient.setAllowUnknownProperties( true );
+    FieldEvolutionHost fromLenient;
+    {
+        test::ScopedDefensiveTestLog expected( "a removed field is skipped once with a warning" );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromLenient, declared, bytes.data(), bytes.size(), lenient ) );
+    }
+    SW_EXPECT_EQUAL( 1, fromLenient._kept );
+    SW_EXPECT_EQUAL( 2, fromLenient._renamed );
+    SW_EXPECT_EQUAL( 7, fromLenient._added );
+    SW_EXPECT_EQUAL( -1, fromLenient._gone );
+
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    FieldEvolutionHost                fromSoft;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromSoft, declared, bytes.data(), bytes.size(), &listOrphan ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
+    SW_EXPECT_TRUE( listOrphan.empty() == false && listOrphan[0]._nameHash == sw::hashed_string( "_gone" ).getHash() );
+    SW_EXPECT_EQUAL( 2, fromSoft._renamed );
+    SW_EXPECT_EQUAL( 7, fromSoft._added );
+
+    // 옛 이름을 선언하지 않은 빌드: 이름을 바꾼 필드는 읽히지 않고 orphan 이 둘이다.
+    const sw::TypeInfo undeclared = makeNextEvolutionType( false );
+    FieldEvolutionHost fromUndeclared;
+    {
+        test::ScopedDefensiveTestLog expected( "a renamed field without Alias = ... is skipped" );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromUndeclared, undeclared, bytes.data(), bytes.size(), lenient ) );
+    }
+    SW_EXPECT_EQUAL( -1, fromUndeclared._renamed );
+    sw::vector<sw::SchemaOrphanValue> listUndeclaredOrphan;
+    FieldEvolutionHost                fromUndeclaredSoft;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromUndeclaredSoft, undeclared, bytes.data(), bytes.size(), &listUndeclaredOrphan ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), listUndeclaredOrphan.size() );
+
+    // 같은 빌드끼리는 그대로 왕복한다.
+    FieldEvolutionHost next;
+    next._kept    = 4;
+    next._renamed = 5;
+    next._added   = 6;
+    sw::vector<uint8> nextBytes;
+    sw::BinarySerializer::serialize( &next, declared, nextBytes );
+    FieldEvolutionHost nextRead;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &nextRead, declared, nextBytes.data(), nextBytes.size() ) );
+    SW_EXPECT_EQUAL( 4, nextRead._kept );
+    SW_EXPECT_EQUAL( 5, nextRead._renamed );
+    SW_EXPECT_EQUAL( 6, nextRead._added );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 태그는 모든 필드의 지금 이름을 먼저 본다 — 앞 필드의 옛 이름이 뒤 필드의 지금 이름을 가로채지 않는다
+ * @details `_first` 의 옛 이름이 `_second` 인데 `_second` 가 지금 필드로 있으면 `_second` 태그는 `_second` 로 읽혀야 한다. 생성기는 같은 타입 안의 이런 선언을 막지만,
+ *          기반 클래스의 필드와는 겹칠 수 있다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, CurrentFieldNameWinsOverAnOldName )
+{
+    FieldEvolutionHost saved;
+    saved._kept               = 1;
+    saved._renamed            = 2;
+    const sw::TypeInfo writer = makeEvolutionType( { makeEvolutionField( "_first", SW_OFFSET_OF( FieldEvolutionHost, _kept ) ),
+                                                     makeEvolutionField( "_second", SW_OFFSET_OF( FieldEvolutionHost, _renamed ) ) } );
+    sw::vector<uint8>  bytes;
+    sw::BinarySerializer::serialize( &saved, writer, bytes );
+
+    sw::PropertyInfo first    = makeEvolutionField( "_first", SW_OFFSET_OF( FieldEvolutionHost, _kept ) );
+    first._listAlias          = { sw::hashed_string( "_second" ) };
+    const sw::TypeInfo reader = makeEvolutionType( { first, makeEvolutionField( "_second", SW_OFFSET_OF( FieldEvolutionHost, _renamed ) ) } );
+    FieldEvolutionHost loaded;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &loaded, reader, bytes.data(), bytes.size() ) );
+    SW_EXPECT_EQUAL( 1, loaded._kept );
+    SW_EXPECT_EQUAL( 2, loaded._renamed );
 }
 
 /**

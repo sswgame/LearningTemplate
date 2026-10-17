@@ -81,17 +81,10 @@ namespace sw
             if ( offset + payload > diffSize )
                 return false;
 
-            const PropertyInfo* pProp = nullptr;
-            for ( const PropertyInfo& propInfo : typeInfo.getPropertiesWithBase() )
-            {
-                if ( propInfo.matchesNameHash( nameHash ) )
-                {
-                    if ( propInfo._metadata._bTransient == SW_TRUE )
-                        break;
-                    pProp = &propInfo;
-                    break;
-                }
-            }
+            const vector<PropertyInfo>& listProp     = typeInfo.getPropertiesWithBase();
+            const size_t                matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, nameHash );
+            const bool                  bMatched     = matchedIndex < listProp.size() && listProp[matchedIndex]._metadata._bTransient == SW_FALSE;
+            const PropertyInfo*         pProp        = bMatched ? &listProp[matchedIndex] : nullptr;
             if ( pProp != nullptr )
             {
                 void*  pDest = pProp->getRawPtr( pTargetInstance );

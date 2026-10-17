@@ -183,19 +183,10 @@ namespace sw
                     if ( payloadStart + payloadSize > dataSize )
                         return false;
 
-                    const PropertyInfo* pTargetProp  = nullptr;
-                    size_t              matchedIndex = 0;
-                    for ( size_t propSearchIdx = 0; propSearchIdx < numProps; ++propSearchIdx )
-                    {
-                        if ( listProp[propSearchIdx].matchesNameHash( tagHash ) )
-                        {
-                            if ( listProp[propSearchIdx]._metadata._bTransient == SW_TRUE )
-                                break;
-                            pTargetProp  = &listProp[propSearchIdx];
-                            matchedIndex = propSearchIdx;
-                            break;
-                        }
-                    }
+                    // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
+                    const size_t        matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash );
+                    const bool          bMatched     = matchedIndex < numProps && listProp[matchedIndex]._metadata._bTransient == SW_FALSE;
+                    const PropertyInfo* pTargetProp  = bMatched ? &listProp[matchedIndex] : nullptr;
 
                     if ( pTargetProp == nullptr )
                     {

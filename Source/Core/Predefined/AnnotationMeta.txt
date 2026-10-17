@@ -36,6 +36,8 @@ string.Validate = Validate
 string.Alias = Alias
 # 열거자 이름 변경: ValueAlias="OldIdle:Idle, OldMoving:Moving"
 string.ValueAlias = ValueAlias, EnumeratorAlias
+# 지운 열거자를 대신 읽을 열거자: Removed="OldRunning:Moving". 선언 없이 지운 열거자를 저장된 데이터에서 읽으면 그 칸은 실패한다
+string.Removed = Removed
 string.Meta = Meta, meta, CustomMeta
 # 비트 플래그 연산자(|, &, ^, ~)를 만든다. 직렬화용 EnumInfo::_bIsBitFlag 도 켠다.
 flag.Flags = Flags, BitFlag, FLAG, Bitwise

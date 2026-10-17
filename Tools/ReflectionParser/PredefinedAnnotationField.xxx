@@ -49,6 +49,7 @@ REGISTER_ANNOTATION_FIELD( Enum, Count, _countEnumerator, Manual )
 REGISTER_ANNOTATION_FIELD( Enum, Flags, _bIsBitFlag, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Enum, Alias, _listAlias, appendAlias, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Enum, ValueAlias, _listValueAlias, appendValueAlias, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Enum, Removed, _listRemovedEnumerator, appendRemovedEnumerator, Manual )
 
 // ── PROPERTY ─────────────────────────────────────────────────────
 REGISTER_ANNOTATION_FIELD( Property, Category, _category, Display )

@@ -583,6 +583,14 @@
 
   실행 파일 크기(Debug, 단계 전후)는 `Engine.dll` +153,088 B(+0.7 %), `GameFramework.dll` +81,408 B(+1.0 %)입니다. 이때 `REFLECT` 타입 454 개 가운데 적격은 173 개,
   적격이 아닌 것은 281 개였습니다(대부분 `MaxCount` 없는 가변 길이와 표 밖 타입입니다). 기존 `.gen.cpp` · `.gen.h` 1069 개는 덧붙은 줄만 있고, 바뀐 줄은 ABI 스탬프 하나였습니다.
+- **이름 변경 리다이렉트는 선언 옆에 적고, 리다이렉트 표는 그 이름의 주인이 듭니다**(2026-10-17, [이름 변경 리다이렉트 계획](plans/RenameRedirects.md) R1~R4). 선언은 기존 키를 그대로 씁니다.
+  타입 · 열거형의 옛 FQN 은 `REFLECT( Alias )` · `ENUM( Alias )`, 열거자의 옛 이름은 `ENUM( ValueAlias = "Old:New" )`, 지운 열거자의 대체는 새 키 `ENUM( Removed = "Old:Replacement" )`, 필드의 옛 이름은 `PROPERTY( Alias )` 입니다.
+  유니티 `FormerlySerializedAs` 처럼 이력이 선언 옆에 있고, 언리얼 `CoreRedirects` 처럼 호출부는 모릅니다. 다만 표를 전역 하나로 모으지 않고 `EnumInfo::_mapRedirectNameToValue`, `PropertyInfo::_listAlias`,
+  `TypeRegistry` 별칭 표에 둡니다. 언리얼이 전역 표인 것은 리다이렉트가 ini 에서 오기 때문이고, 여기서는 선언이 등록과 함께 오므로 주인에 붙여야 상속 필드 복사 · 핫 리로드 재등록 · 모듈 해제 묘비를 그대로 따릅니다.
+  읽기는 지금 이름을 모두 본 뒤에만 옛 이름을 봅니다(`EnumInfo::findValueByNameHash` · `findValueByText`, `SerializerUtil::findPropertyIndexByNameHash` · `matchProperty`). 텍스트 읽기도 같은 표를 씁니다.
+  옛 이름은 `_mapNameToValue` 에서 빠져 인스펙터 목록과 쓰기에 나오지 않습니다. 대상이 없거나, 옛 이름이 지금 열거자 · 필드이거나, 같은 옛 이름을 두 번 적으면 생성 오류입니다(예전에는 경고만 하고 버렸습니다).
+  선언 없이 지우거나 바꾼 이름은 지금처럼 엄격한 읽기가 실패합니다. 리다이렉트는 바이트 배치와 무관하므로 고정 배치형 정규 문자열에 넣지 않습니다(`FixedLayoutTest.RenameRedirectsDoNotChangeTheSchemaHash`).
+  `.gen` 1108 개를 전후 생성기로 비교해 바뀐 파일은 `ValueAlias` 를 쓰는 `TestSampleActor.gen.cpp` 하나였습니다.
 - **테스트만 쓰는 공개 타입은 상용 엔진 대응으로 가릅니다**(2026-10-15). 조사에서 제품 코드 참조 0 인 공개 타입이 654 개였습니다. "사용처 0 이어도 상용 엔진에 대응이 있는 공개 API 는 남긴다" 를 그대로 적용합니다.
   대응이 있는 것(언리얼 · 유니티 · Godot 에 같은 기능이 있는 키트 규칙 · 엔진 API)은 남기고 테스트를 붙여 둡니다. 대응이 없고 테스트를 돕기만 하는 타입(테스트용 목 · 고정값 · 한 테스트만 부르는 `Util`)은
   `Test/` 로 옮기거나 그 테스트 파일 안으로 넣습니다. 언리얼도 `Developer` · 테스트 모듈을 런타임 모듈과 가릅니다. 일괄 삭제는 하지 않고 영역을 고칠 때 그 영역의 목록을 정리합니다.

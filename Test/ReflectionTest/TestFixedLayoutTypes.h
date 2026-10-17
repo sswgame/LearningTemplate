@@ -304,6 +304,49 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
+    // 4-1) 이름 변경 리다이렉트만 다른 짝입니다. 리다이렉트는 읽기 호환용이라 스키마 해시에 들어가지 않습니다
+    // ------------------------------------------------------------------------------
+    ENUM()
+    enum class EFixedRedirectPlain : uint8
+    {
+        Idle,
+        Moving,
+    };
+
+    ENUM( Alias = EFixedRedirectLegacy, ValueAlias = "Standing:Idle", Removed = "Running:Moving" )
+    enum class EFixedRedirectDeclared : uint8
+    {
+        Idle,
+        Moving,
+    };
+
+    REFLECT()
+    struct FixedRedirectPlainSample
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        int32 _hp = 0;
+        PROPERTY()
+        EFixedRedirectPlain _state = EFixedRedirectPlain::Idle;
+    };
+} // namespace sw
+
+namespace sw
+{
+    REFLECT( Alias = FixedRedirectLegacySample )
+    struct FixedRedirectDeclaredSample
+    {
+        REFLECT_BODY();
+        PROPERTY( Alias = "hitPoints, health" )
+        int32 _hp = 0;
+        PROPERTY()
+        EFixedRedirectDeclared _state = EFixedRedirectDeclared::Idle;
+    };
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
     // 5) 적격이 아닌 타입. 코덱 대신 이유가 등록됩니다
     // ------------------------------------------------------------------------------
     REFLECT()

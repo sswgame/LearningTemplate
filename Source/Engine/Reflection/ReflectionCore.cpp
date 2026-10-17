@@ -42,7 +42,7 @@ namespace sw
              * @brief 이름 해시가 같은데 값이 다른 열거자 둘을 찾습니다. 없으면 false 입니다.
              * @details 바이너리는 enum 을 열거자 **이름 해시**로 싣는다(대소문자 무시). 같은 해시의 두 이름(`Red` 와 `RED`, 드물게 FNV 충돌)이 다른 값을
              *          가리키면 저장된 데이터가 어느 쪽으로 읽힐지 정해지지 않는다. 텍스트 읽기도 대소문자를 무시하므로 같은 모호함이다.
-             *          같은 값을 가리키는 별칭은 괜찮다. 두 테이블을 모두 본다. 대소문자만 다른 두 이름은 intern 에서 한 이름이 되어 이름 → 값 테이블에는
+             *          같은 값을 가리키는 별칭은 괜찮다. 세 테이블(값 → 이름, 이름 → 값, 옛 이름 리다이렉트)을 모두 본다. 대소문자만 다른 두 이름은 intern 에서 한 이름이 되어 이름 → 값 테이블에는
              *          하나만 남고(뒤의 값이 이긴다), 값 → 이름 테이블에서만 두 값이 같은 이름을 가리킨다.
              */
             [[nodiscard]] static bool tryFindNameHashClash( const EnumInfo& info, hashed_string& outFirstName, int64& outFirstValue, hashed_string& outSecondName,
@@ -66,6 +66,12 @@ namespace sw
                         return true;
                 }
                 for ( const auto& [name, value] : info._mapNameToValue )
+                {
+                    if ( isClash( name, value ) )
+                        return true;
+                }
+                // 옛 이름도 같은 해시 공간이다. 옛 이름이 지금 이름과 해시가 같은데 다른 값이면 저장된 바이트가 어느 쪽으로 읽힐지 정해지지 않는다.
+                for ( const auto& [name, value] : info._mapRedirectNameToValue )
                 {
                     if ( isClash( name, value ) )
                         return true;
@@ -348,6 +354,7 @@ namespace sw
     EnumInfo::EnumInfo() noexcept
         : _mapNameToValue{}
         , _mapValueToName{}
+        , _mapRedirectNameToValue{}
 #if !defined( SW_SHIPPING )
         , _mapCustomMeta{}
 #endif

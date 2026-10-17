@@ -683,17 +683,23 @@ namespace sw
             emit.line( "};" );
         }
 
-        for ( const auto& [alias, canonical] : enumInfo._listValueAlias )
+        // 옛 열거자 이름(이름 변경 · 지운 열거자의 대체)은 지금 이름과 따로 둔다. 읽기는 지금 이름에 없을 때만 이 표를 본다. 대상은 `AstVisitor` 가 이미 확인했다.
+        const bool bHasRedirect = enumInfo._listValueAlias.empty() == false || enumInfo._listRemovedEnumerator.empty() == false;
+        if ( bHasRedirect )
         {
+            emit.line( "info._mapRedirectNameToValue =" );
             emit.line( "{" );
             emit.push();
-            emit.linef( "const auto it = info._mapNameToValue.find( %# );", CodeEmit::hs( canonical ) );
-            emit.line( "if ( it != info._mapNameToValue.end() )" );
-            emit.push();
-            emit.linef( "info._mapNameToValue.insert_or_assign( %#, it->second );", CodeEmit::hs( alias ) );
+            for ( const vector<pair<string, string>>* pListRedirect : { &enumInfo._listValueAlias, &enumInfo._listRemovedEnumerator } )
+            {
+                for ( const auto& [oldName, targetName] : *pListRedirect )
+                {
+                    const ParsedEnumeratorInfo* pTarget = findEnumerator( enumInfo, targetName );
+                    emit.linef( "{ %#, %# },", CodeEmit::hs( oldName ), valueExpr( *pTarget ) );
+                }
+            }
             emit.pop();
-            emit.pop();
-            emit.line( "}" );
+            emit.line( "};" );
         }
 
         appendTemplate( outBuffer, templatefile::kEnumRegistrarEnd,

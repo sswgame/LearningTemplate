@@ -88,6 +88,8 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey ValueAlias{};
         /** @brief string.ValueAlias — `EnumeratorAlias = "…"`. 같은 필드의 철자: ValueAlias, EnumeratorAlias. 열거자 이름 변경: ValueAlias="OldIdle:Idle, OldMoving:Moving" */
         static constexpr AnnotationKey EnumeratorAlias{};
+        /** @brief string.Removed — `Removed = "…"`. 지운 열거자를 대신 읽을 열거자: Removed="OldRunning:Moving". 선언 없이 지운 열거자를 저장된 데이터에서 읽으면 그 칸은 실패한다 */
+        static constexpr AnnotationKey Removed{};
         /** @brief string.Meta — `Meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
         static constexpr AnnotationKey Meta{};
         /** @brief string.Meta — `meta = "…"`. 같은 필드의 철자: Meta, meta, CustomMeta. */
@@ -116,6 +118,7 @@ namespace sw::reflect::attr
         "Alias",
         "ValueAlias",
         "EnumeratorAlias",
+        "Removed",
         "Meta",
         "meta",
         "CustomMeta",

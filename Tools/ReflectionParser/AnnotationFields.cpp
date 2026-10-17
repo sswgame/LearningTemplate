@@ -142,8 +142,11 @@ namespace sw
                 }
             }
 
-            /** @brief `Old:Current` 목록을 열거자 별칭으로 붙입니다. `ValueAlias = "OldIdle:Idle"`. */
-            static void appendValueAlias( ParsedEnumInfo& target, const string_view value )
+            /**
+             * @brief `Old:Target` 목록을 (옛 이름, 대상 열거자) 쌍으로 붙입니다. 꼴이 틀린 항목도 빈 칸을 남겨 그대로 붙입니다.
+             * @details 여기서 버리면 선언한 리다이렉트가 말없이 사라집니다. 꼴과 대상은 `AstVisitor` 가 열거자 목록과 함께 검사해 그 헤더를 실패로 끝냅니다.
+             */
+            static void appendEnumeratorRedirect( vector<pair<string, string>>& outListRedirect, const string_view value )
             {
                 const string_splitter parts( value, { ",", ";" } );
                 for ( const string_view tokenView : parts.getSplitList() )
@@ -151,18 +154,26 @@ namespace sw
                     const string_view token = StringUtil::trim( tokenView );
                     if ( token.empty() )
                         continue;
-                    const size_t colon           = token.find( ':' );
-                    const bool   bMalformedAlias = colon == string_view::npos || colon == 0 || colon + 1 >= token.size();
-                    if ( bMalformedAlias )
+                    const size_t colon = token.find( ':' );
+                    if ( colon == string_view::npos )
                     {
-                        SW_LOG_WARNING( "ENUM ValueAlias expected Old:Current, got '%#'", token );
+                        outListRedirect.emplace_back( string( token ), string() );
                         continue;
                     }
-                    const string_view alias     = StringUtil::trim( token.substr( 0, colon ) );
-                    const string_view canonical = StringUtil::trim( token.substr( colon + 1 ) );
-                    if ( alias.empty() == false && canonical.empty() == false )
-                        target._listValueAlias.emplace_back( string( alias ), string( canonical ) );
+                    outListRedirect.emplace_back( string( StringUtil::trim( token.substr( 0, colon ) ) ), string( StringUtil::trim( token.substr( colon + 1 ) ) ) );
                 }
+            }
+
+            /** @brief 이름을 바꾼 열거자입니다. `ValueAlias = "OldIdle:Idle"`. */
+            static void appendValueAlias( ParsedEnumInfo& target, const string_view value )
+            {
+                appendEnumeratorRedirect( target._listValueAlias, value );
+            }
+
+            /** @brief 지운 열거자와 대신 읽을 열거자입니다. `Removed = "OldRunning:Moving"`. */
+            static void appendRemovedEnumerator( ParsedEnumInfo& target, const string_view value )
+            {
+                appendEnumeratorRedirect( target._listRemovedEnumerator, value );
             }
 
             /** @brief 에셋 타입을 적으면 그 프로퍼티는 에셋 경로이기도 합니다. */

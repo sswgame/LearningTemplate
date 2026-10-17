@@ -702,6 +702,68 @@ SW_TEST_CASE( ReflectionParserTest, FixedLayoutAnnotationMistakesStopTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] 이름 변경 리다이렉트를 잘못 적으면 생성이 멈춥니다 — 대상 없는 리다이렉트를 말없이 버리지 않습니다
+ * @details 열거자 리다이렉트(`ValueAlias` · `Removed`)는 `옛 이름:대상` 꼴이고, 대상은 지금 열거자, 옛 이름은 지금 없는 이름이며 한 번만 적습니다.
+ *          프로퍼티의 옛 이름(`Alias`)은 같은 타입의 지금 필드 이름이나 다른 옛 이름과 겹치지 않습니다. 맞게 적은 리다이렉트는 `_mapRedirectNameToValue` 로 나갑니다.
+ */
+SW_TEST_CASE( ReflectionParserTest, RenameRedirectMistakesStopTheBuild )
+{
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "RedirectMistakeSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tENUM( ValueAlias = \"Walking:Missing, Broken\" )\n"
+                                                       "\tenum class RedirectMistakeA : uint8 { Idle, Moving };\n"
+                                                       "\tENUM( Removed = \"Moving:Idle, Gone:Idle, gone:Moving\" )\n"
+                                                       "\tenum class RedirectMistakeB : uint8 { Idle, Moving };\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct RedirectMistakeActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( Alias = \"_other\" )\n"
+                                                       "\t\tint32 _first{ 0 };\n"
+                                                       "\t\tPROPERTY( Alias = \"legacy\" )\n"
+                                                       "\t\tint32 _other{ 0 };\n"
+                                                       "\t\tPROPERTY( Alias = \"Legacy\" )\n"
+                                                       "\t\tint32 _third{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "'Missing' is not an enumerator" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "expects \"Old:Target\", got 'Broken:'" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "'Moving' is still an enumerator" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "old enumerator name 'gone' twice" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "is the current name of '_other'" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "Alias = Legacy ) on 'sw::RedirectMistakeActor::_third' is declared twice" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp.empty() || run._listGeneratedCpp[0].empty(), "an errored header must not emit code" );
+
+    const ParserRunResult goodRun = runParserOnTempHeader( parserExe, "RedirectGoodSample",
+                                                           "#pragma once\n"
+                                                           "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                           "namespace sw\n"
+                                                           "{\n"
+                                                           "\tENUM( ValueAlias = \"Standing:Idle\", Removed = \"Running:Moving\" )\n"
+                                                           "\tenum class RedirectGood : uint8 { Idle, Moving };\n"
+                                                           "}\n" );
+    SW_ASSERT_TRUE_MSG( goodRun._exitCode == 0, goodRun._log.c_str() );
+    SW_ASSERT_TRUE( goodRun._listGeneratedCpp.empty() == false );
+    const sw::string& generated = goodRun._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "info._mapRedirectNameToValue =" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "{ ::sw::hashed_string( \"Standing\" ), static_cast<int64>( ::sw::RedirectGood::Idle ) }," ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "{ ::sw::hashed_string( \"Running\" ), static_cast<int64>( ::sw::RedirectGood::Moving ) }," ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "\"Standing\" )" ) == generated.rfind( "\"Standing\" )" ), "an old name is not in the current-name table" );
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] 생성자 호출기는 받은 저장소에 `sw_placement_new` 로 만든다 — 맨 `new ( p )` 를 내지 않는다
  * @details 손으로 쓴 코드는 `Style/PlacementNew` 가 막지만 생성 코드는 그 린트 밖이다. 생성기가 같은 모양을 낸다.
  */
