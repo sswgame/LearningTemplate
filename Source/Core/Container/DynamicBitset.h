@@ -78,8 +78,17 @@ namespace sw
          */
         void push_back( bool value );
 
-        /** @brief bitPosition 비트를 읽습니다. */
-        bool operator[]( uint32 bitPosition ) const;
+        /**
+         * @brief bitPosition 비트를 읽습니다.
+         * @details 비트 하나씩 도는 호출(직렬화의 `test` · `set` 루프)이 함수 호출 비용을 내지 않도록 헤더에 둡니다. 범위 검사의
+         *          실패 쪽(로그)만 .cpp 의 `reportOutOfRange` 로 뺍니다 — 단언 매크로의 8 KB 버퍼가 호출하는 쪽 스택에 들어오지 않게.
+         */
+        bool operator[]( const uint32 bitPosition ) const
+        {
+            if ( bitPosition >= _bitCount )
+                reportOutOfRange( bitPosition, _bitCount );
+            return ( _listBlock[getBlockIndex( bitPosition )] & bitMask( bitPosition ) ) != 0;
+        }
 
         /** @brief bitPosition 비트가 켜져 있으면 true 입니다. */
         bool test( const uint32 bitPosition ) const { return ( *this )[bitPosition]; }
@@ -91,7 +100,15 @@ namespace sw
         /**
          * @brief bitPosition 비트를 value 로 둡니다.
          */
-        DynamicBitset& set( uint32 bitPosition, bool value = true );
+        DynamicBitset& set( const uint32 bitPosition, const bool value = true )
+        {
+            if ( bitPosition >= _bitCount )
+                reportOutOfRange( bitPosition, _bitCount );
+            BlockType&      block = _listBlock[getBlockIndex( bitPosition )];
+            const BlockType mask  = bitMask( bitPosition );
+            block                 = value ? ( block | mask ) : ( block & ~mask );
+            return *this;
+        }
 
         /**
          * @brief 모든 비트를 끕니다.
@@ -108,7 +125,13 @@ namespace sw
         /**
          * @brief bitPosition 비트를 뒤집습니다.
          */
-        DynamicBitset& flip( uint32 bitPosition );
+        DynamicBitset& flip( const uint32 bitPosition )
+        {
+            if ( bitPosition >= _bitCount )
+                reportOutOfRange( bitPosition, _bitCount );
+            _listBlock[getBlockIndex( bitPosition )] ^= bitMask( bitPosition );
+            return *this;
+        }
 
         /**
          * @brief 모든 비트가 켜져 있으면 true 입니다.
@@ -184,6 +207,11 @@ namespace sw
         static uint32 computeBlockCount( const uint32 bitCount ) { return bitCount == 0 ? 0 : ( bitCount + kBitsPerBlock - 1 ) >> kBlockShift; }
         /** @brief 해당 위치의 비트 마스크를 반환합니다. */
         static BlockType bitMask( const uint32 bitPosition ) { return static_cast<BlockType>( 1 ) << getBitIndexInBlock( bitPosition ); }
+
+        /**
+         * @brief 비트 위치가 범위 밖이라고 단언합니다(Debug 는 멈추고, 그 밖은 Error 로그). 헤더의 비트 접근이 부르는 차가운 쪽입니다.
+         */
+        static void reportOutOfRange( uint32 bitPosition, uint32 bitCount );
 
         /**
          * @brief 마지막 블록에서 쓰지 않는 비트를 0 으로 지웁니다.

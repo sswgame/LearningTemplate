@@ -78,6 +78,33 @@ namespace
         SW_EXPECT_TRUE_MSG( sw::DynamicBitset::parse( text, value ), sw::string( text ) );
         return value;
     }
+
+    /** @brief 비트 하나에 바이트 하나인 비교 모델(인덱스 0 이 가장 낮은 비트)을 '0' · '1' 문자열로 씁니다(맨 왼쪽이 가장 높은 비트). */
+    sw::string modelBitsToString( const sw::vector<uint8>& listBit )
+    {
+        sw::string text;
+        for ( size_t bitIndex = listBit.size(); bitIndex > 0; --bitIndex )
+        {
+            text += listBit[bitIndex - 1] != 0 ? '1' : '0';
+        }
+        return text;
+    }
+
+    /** @brief 비트셋이 모델과 같은지 봅니다 — 비트마다 test, 문자열, 개수(마지막 블록의 남는 비트가 0 인지까지). */
+    void expectBitsetMatchesModel( const sw::DynamicBitset& bitset, const sw::vector<uint8>& listBit, const utf8* pWhat )
+    {
+        SW_ASSERT_TRUE_MSG( static_cast<uint32>( listBit.size() ) == bitset.size(), pWhat );
+        uint32 setCount = 0;
+        bool   bSame    = true;
+        for ( uint32 bitIndex = 0; bitIndex < bitset.size(); ++bitIndex )
+        {
+            setCount += listBit[bitIndex];
+            bSame = bSame && ( bitset.test( bitIndex ) == ( listBit[bitIndex] != 0 ) );
+        }
+        SW_EXPECT_TRUE_MSG( bSame, pWhat );
+        SW_EXPECT_TRUE_MSG( setCount == bitset.count(), pWhat );
+        SW_EXPECT_TRUE_MSG( modelBitsToString( listBit ) == bitset.to_string(), pWhat );
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -1210,6 +1237,100 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetGrowKeepsTailBitsClear )
         grown.resize( startSize + 1 );
         grown.resize( startSize + 70, false );
         SW_EXPECT_EQUAL( 1u, grown.count() );
+    }
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset 의 블록 단위 연산이 비트 하나씩 계산한 모델과 같은 답을 낸다(무작위 입력)
+ * @details 블록 루프(&= · |= · ^= · ~ · << · >> · == · < · to_string · parse)는 블록 경계와 마지막 블록의 남는 비트에서 틀리기 쉽다.
+ *          크기 0 · 1 · 63 · 64 · 65 · 128 · 129 · 1000 과 시프트 양 0 · 1 · 63 · 64 · 65 · n-1 · n · n+5 를 비트 하나씩 계산한 값과 견준다.
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetBlockOperationsMatchBitModel )
+{
+    uint64 seed = 0x5eed;
+    for ( const uint32 bitCount : { 0u, 1u, 8u, 63u, 64u, 65u, 127u, 128u, 129u, 1000u } )
+    {
+        for ( uint32 trial = 0; trial < 4; ++trial )
+        {
+            sw::vector<uint8> listA( bitCount, 0 );
+            sw::vector<uint8> listB( bitCount, 0 );
+            sw::DynamicBitset bitsetA( bitCount );
+            sw::DynamicBitset bitsetB( bitCount );
+            for ( uint32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
+            {
+                seed            = sw::HashUtil::mix64( seed + sw::HashUtil::kGoldenRatio64 );
+                listA[bitIndex] = static_cast<uint8>( seed & 1 );
+                listB[bitIndex] = static_cast<uint8>( ( seed >> 1 ) & 1 );
+                bitsetA.set( bitIndex, listA[bitIndex] != 0 );
+                bitsetB.set( bitIndex, listB[bitIndex] != 0 );
+            }
+            expectBitsetMatchesModel( bitsetA, listA, "set" );
+
+            sw::vector<uint8> listAnd( bitCount, 0 );
+            sw::vector<uint8> listOr( bitCount, 0 );
+            sw::vector<uint8> listXor( bitCount, 0 );
+            sw::vector<uint8> listNot( bitCount, 0 );
+            for ( uint32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
+            {
+                listAnd[bitIndex] = static_cast<uint8>( listA[bitIndex] & listB[bitIndex] );
+                listOr[bitIndex]  = static_cast<uint8>( listA[bitIndex] | listB[bitIndex] );
+                listXor[bitIndex] = static_cast<uint8>( listA[bitIndex] ^ listB[bitIndex] );
+                listNot[bitIndex] = static_cast<uint8>( listA[bitIndex] ^ 1 );
+            }
+            expectBitsetMatchesModel( bitsetA & bitsetB, listAnd, "&" );
+            expectBitsetMatchesModel( bitsetA | bitsetB, listOr, "|" );
+            expectBitsetMatchesModel( bitsetA ^ bitsetB, listXor, "^" );
+            expectBitsetMatchesModel( ~bitsetA, listNot, "~" );
+
+            for ( const uint32 shift : { 0u, 1u, 3u, 63u, 64u, 65u, bitCount == 0 ? 0u : bitCount - 1, bitCount, bitCount + 5 } )
+            {
+                sw::vector<uint8> listLeft( bitCount, 0 );
+                sw::vector<uint8> listRight( bitCount, 0 );
+                for ( uint32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
+                {
+                    listLeft[bitIndex]  = bitIndex >= shift ? listA[bitIndex - shift] : uint8{ 0 };
+                    listRight[bitIndex] = static_cast<uint64>( bitIndex ) + shift < bitCount ? listA[bitIndex + shift] : uint8{ 0 };
+                }
+                expectBitsetMatchesModel( bitsetA << shift, listLeft, "<<" );
+                expectBitsetMatchesModel( bitsetA >> shift, listRight, ">>" );
+            }
+
+            // == · < 는 맨 위 비트부터 처음 다른 비트로 정한다
+            bool bModelLess = false;
+            bool bModelSame = true;
+            for ( uint32 bitIndex = bitCount; bitIndex > 0; --bitIndex )
+            {
+                if ( listA[bitIndex - 1] != listB[bitIndex - 1] )
+                {
+                    bModelLess = listA[bitIndex - 1] < listB[bitIndex - 1];
+                    bModelSame = false;
+                    break;
+                }
+            }
+            SW_EXPECT_EQUAL( bModelSame, bitsetA == bitsetB );
+            SW_EXPECT_EQUAL( bModelLess, bitsetA < bitsetB );
+            SW_EXPECT_TRUE( bitsetA == sw::DynamicBitset( bitsetA ) );
+            SW_EXPECT_FALSE( bitsetA < bitsetA );
+
+            // parse 는 to_string 의 역이고, 잘못된 글자가 어느 블록에 있든 실패하며 값을 바꾸지 않는다
+            const sw::string  text = modelBitsToString( listA );
+            sw::DynamicBitset parsed;
+            SW_ASSERT_TRUE( sw::DynamicBitset::parse( text, parsed ) );
+            expectBitsetMatchesModel( parsed, listA, "parse" );
+            SW_EXPECT_TRUE( parsed == bitsetA );
+            for ( const uint32 badIndex : { 0u, 63u, 64u, bitCount / 2, bitCount == 0 ? 0u : bitCount - 1 } )
+            {
+                if ( badIndex >= bitCount )
+                    continue;
+                for ( const utf8 badDigit : { '2', '/', 'a', ' ' } )
+                {
+                    sw::string badText = text;
+                    badText[badIndex]  = badDigit;
+                    SW_EXPECT_FALSE( sw::DynamicBitset::parse( badText, parsed ) );
+                    SW_EXPECT_TRUE( parsed == bitsetA );
+                }
+            }
+        }
     }
 }
 
