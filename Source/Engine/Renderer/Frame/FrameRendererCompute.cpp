@@ -154,7 +154,7 @@ namespace sw
         // 아래 세 구간이 preparePool 안의 무거운 단계다 — 목록이 바뀐 프레임의 풀 재구성(GPU 업로드 포함), 매 프레임의 팔레트 업로드, VAT 테이블 풀.
         {
             SW_PROFILE_SCOPE( "RT.Deform.rebuildMorphPool" );
-            _deform._meshMorphPool.rebuild( _pDevice, _deform._listScratchMorphMesh, _deform._listScratchSkinMesh );
+            _deform._meshMorphPool.update( _pDevice, _deform._listScratchMorphMesh, _deform._listScratchSkinMesh );
             // 변형 프로그램(에디터 모디파이어 미리보기)은 레스트와 따로 바뀐다 - 번호가 바뀐 프레임에만 올린다
             _deform._meshMorphPool.updateDeformPrograms( _pDevice );
         }
@@ -198,13 +198,14 @@ namespace sw
         //         위치가 정점 스트림과 같은가" 를 **따로** 볼 수 있다. 값만 비교해서는 둘을 가를 수 없다.
         if ( morphDiag == 3 )
         {
-            _deform._listScratchMorphTag.clear();
-            _deform._listScratchMorphTag.reserve( _deform._meshMorphPool.getVertexCount() );
-            uint32 element = 0;
+            // 메시마다 풀 구간(baseOf)에 쓴다 — 구간은 목록 순서로 이어져 있지 않다(C-43 부분 갱신).
             for ( const Mesh* pMesh : _deform._listScratchMorphMesh )
             {
-                if ( pMesh == nullptr )
+                const uint32 base = ( pMesh != nullptr ) ? _deform._meshMorphPool.baseOf( pMesh ) : GPUMeshMorphPool::kInvalidBase;
+                if ( base == GPUMeshMorphPool::kInvalidBase )
                     continue;
+                _deform._listScratchMorphTag.clear();
+                uint32 element = base;
                 for ( const RHIVertex& vertex : pMesh->getVertices() )
                 {
                     GPUMorphVertex tagged{};
@@ -213,10 +214,11 @@ namespace sw
                     _deform._listScratchMorphTag.push_back( tagged );
                     ++element;
                 }
+                _deform._meshMorphPool.getRestBuffer().upload( _pDevice, _deform._listScratchMorphTag.data(),
+                                                               static_cast<uint32>( _deform._listScratchMorphTag.size() * sizeof( GPUMorphVertex ) ),
+                                                               base * static_cast<uint32>( sizeof( GPUMorphVertex ) ) );
             }
             _deform._bMorphBindsRest = SW_TRUE;
-            _deform._meshMorphPool.getRestBuffer().upload( _pDevice, _deform._listScratchMorphTag.data(),
-                                                           static_cast<uint32>( _deform._listScratchMorphTag.size() * sizeof( GPUMorphVertex ) ) );
             return;
         }
 

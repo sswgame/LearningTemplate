@@ -2691,3 +2691,110 @@ SW_TEST_CASE( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget )
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for the load-op test" );
 }
+
+/**
+ * @brief [RHIDeviceTest] 정점 버퍼의 한 조각만 고친 것이 그 조각을 그리는 드로우에 닿고, 나머지 조각은 그대로다 — 4백엔드
+ * @details 정점 풀(GPUMeshVertexPool)은 메시 집합이 바뀌면 들어온 메시의 구간만 `updateVertexBufferRegions` 로 쓴다(C-43). 백엔드마다 쓰는 길이
+ *          다르다 — DX12 는 업로드 힙을 매핑해 쓰고(복사 목적지가 될 수 없다), Vulkan 은 HOST_VISIBLE 메모리를 매핑하고, DX11 · GL 은 즉시 컨텍스트로 쓴다.
+ *          정점 여섯 개를 모두 0(퇴화 삼각형)으로 만들고 뒤 셋에만 화면 가득 삼각형을 쓴다. 뒤 셋을 그리면 빨강이 가득해야 하고(조각이 닿았다),
+ *          앞 셋을 그리면 클리어 색만 남아야 한다(조각이 다른 자리를 덮지 않았다). 버퍼를 넘는 조각은 버리고 알린다.
+ */
+SW_TEST_CASE( RHIDeviceTest, VertexBufferRegionUpdateReachesItsDraws )
+{
+    constexpr uint32 kStride = static_cast<uint32>( sizeof( sw::RHIVertex ) );
+    sw::RHIVertex    arrZero[6]{};
+    sw::RHIVertex    arrTriangle[3]{};
+    const float32    arrPosition[3][2] = {
+        {-1.0f, -1.0f},
+        { 3.0f, -1.0f},
+        {-1.0f,  3.0f}
+    };
+    for ( uint32 vertexIndex = 0; vertexIndex < 3; ++vertexIndex )
+    {
+        arrTriangle[vertexIndex]._arrPosition[0] = arrPosition[vertexIndex][0];
+        arrTriangle[vertexIndex]._arrPosition[1] = arrPosition[vertexIndex][1];
+        for ( uint32 channel = 0; channel < 4; ++channel )
+        {
+            arrTriangle[vertexIndex]._arrColor[channel] = 1.0f;
+        }
+    }
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+
+        const float32             arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+        const sw::RHIBufferHandle cb        = pResource->createConstantBuffer( sizeof( arrRed ) );
+        SW_ASSERT_TRUE( cb != 0 );
+        pResource->updateConstantBuffer( cb, arrRed, sizeof( arrRed ) );
+        const sw::RHIDescriptorIndex     cbIndex = pResource->registerBindlessBufferSrv( cb );
+        const sw::RHIBufferHandle        vb      = pResource->createVertexBuffer( arrZero, static_cast<uint32>( sizeof( arrZero ) ) );
+        const sw::RHIPipelineStateHandle pso     = pResource->createPipelineState( makeSingleTargetPSODesc( test::getEngineDefaultAssets()._shaderFullscreenTriangle.get() ) );
+        SW_EXPECT_TRUE_MSG( pso != 0 && cbIndex != sw::kInvalidDescriptorIndex && vb != 0, ( label + "PSO · 버퍼를 만들지 못했다" ).c_str() );
+
+        // 뒤 셋(정점 3..5)에만 삼각형을 쓴다. 버퍼 끝을 넘는 조각(정점 6)은 버리고 알린다 — 같은 호출의 앞 조각은 그대로 쓴다.
+        const sw::RHIBufferCopyRegion arrRegion[2] = {
+            {0, 3 * kStride, 3 * kStride},
+            {0, 6 * kStride,     kStride}
+        };
+        {
+            SW_TEST_SUPPRESS_LOGS();
+            pResource->updateVertexBufferRegions( vb, arrTriangle, arrRegion, 2 );
+        }
+
+        const bool bResourcesReady = pso != 0 && cbIndex != sw::kInvalidDescriptorIndex && vb != 0;
+        for ( uint32 startVertex = 0; bResourcesReady && startVertex <= 3; startVertex += 3 )
+        {
+            const sw::RHITextureDesc            desc = makeOffscreenTargetDesc( 64, 64 );
+            const sw::RHITextureHandle          rt   = pResource->createTexture2D( desc );
+            sw::unique_ptr<sw::IRHICommandList> cmd  = device->createCommandList();
+            SW_EXPECT_TRUE_MSG( rt != 0 && cmd != nullptr, ( label + "렌더 타깃 · 커맨드 리스트를 만들지 못했다" ).c_str() );
+            if ( rt != 0 && cmd != nullptr )
+            {
+                cmd->beginCommandList();
+                beginOffscreenRenderPass( *cmd, rt, desc );
+                cmd->setPipelineState( pso );
+                cmd->bindConstantBuffer( cbIndex, sw::shaderslot::kMaterialConstantBuffer );
+                cmd->setVertexBuffer( 0, vb, kStride, 0 );
+                cmd->draw( 3, startVertex );
+                cmd->endRenderPass();
+                cmd->endCommandList();
+                device->executeCommandListImmediate( cmd.get() );
+                device->waitIdle();
+
+                sw::vector<uint8>     pixels;
+                sw::RHITextureMipSpan layout{};
+                if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
+                {
+                    const PrimaryColorCount count = countPrimaryColorPixels( pixels, layout );
+                    if ( startVertex == 3 )
+                    {
+                        SW_EXPECT_TRUE_MSG( count._red == count._total, ( label + "고친 조각이 드로우에 닿지 않았다 (빨강 " + sw::to_string( count._red ) + " / " +
+                                                                          sw::to_string( count._total ) + ")" )
+                                                                            .c_str() );
+                    }
+                    else
+                    {
+                        SW_EXPECT_TRUE_MSG( count._red == 0, ( label + "고치지 않은 조각까지 덮였다 (빨강 " + sw::to_string( count._red ) + ")" ).c_str() );
+                    }
+                }
+                else
+                    SW_EXPECT_TRUE_MSG( false, ( label + "readbackTexture2D 실패" ).c_str() );
+            }
+            if ( rt != 0 )
+                pResource->destroyTexture( rt );
+        }
+
+        if ( vb != 0 )
+            pResource->destroyBuffer( vb );
+        if ( pso != 0 )
+            pResource->destroyPipelineState( pso );
+        pResource->unregisterBindlessResource( cbIndex );
+        pResource->destroyBuffer( cb );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the vertex buffer region update test" );
+}

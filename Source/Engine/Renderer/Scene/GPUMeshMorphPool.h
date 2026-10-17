@@ -29,11 +29,20 @@
  * 컴퓨트는 디스패치 하나로 스킨 구간 전체를 돌며 정점마다 인스턴스를 이분 탐색해 찾는다. 그래서 같은 캐릭터의 사본이 여럿이어도 레스트와
  * 가중치는 한 벌이고, 인스턴스가 늘거나 줄어도 다시 올리는 것은 인스턴스 테이블뿐이다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 데이터를 나누는
  * 것과 같은 방식이다). 결과를 읽는 쪽(정점 셰이더)은 모프와 똑같아 새 그리기 코드가 없다.
+ *
+ * [모프 구간의 부분 갱신 — C-43]
+ * 모프 메시는 정점 풀(`GPUMeshVertexPool`)과 같은 구조다. 메시마다 `SpanAllocator` 구간과 칸 번호를 받고, 집합이 바뀌면 **들어온 메시의 레스트만**
+ * 그 구간에 올린다(`updateStructuredBufferRegions`). 나간 메시의 구간은 `kMaxFrameCountInFlight` 프레임 뒤에 돌려받는다. 칸 번호(레스트 노멀의 w)는
+ * 메시가 풀에 있는 동안 바뀌지 않는다. 모프 구간의 길이는 **용량**이라 빈 자리가 섞인다 — 컴퓨트는 빈 자리도 돌지만 아무도 그 결과를 읽지 않는다.
+ * 스킨 구간은 모프 용량 뒤에서 시작하므로 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 바뀌지 않는다.
+ * 남은 것: 스킨 **원본**(레스트 · 가중치 · 모프 차이)은 원본 집합이 바뀌면 통째로 다시 올린다. 원본은 캐릭터 종류마다 하나라 같은 캐릭터의 사본이
+ * 들고 나는 것으로는 다시 올리지 않는다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/SpanAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -107,19 +116,20 @@ namespace sw
         GPUMeshMorphPool& operator=( const GPUMeshMorphPool& ) = delete;
 
         /**
-         * @brief 이번 프레임에 모프할 메시 목록을 받아 풀을 맞춥니다.
-         * @details 목록이 지난 프레임과 같으면 아무것도 하지 않는다(레스트는 한 번만 올린다).
+         * @brief 이번 프레임에 모프할 메시 목록을 받아 풀을 맞춥니다(스킨드 메시 없음). 프레임마다 **한 번** 부릅니다.
+         * @details 목록이 지난 프레임과 같으면 아무것도 하지 않는다. 바뀌면 들어온 메시의 레스트만 올린다.
          *          예산(`kMaxPoolVertices`)을 넘는 메시는 **들어가지 못하고** 레스트 포즈로 그려진다.
          *          언리얼 스킨 캐시가 가득 차면 일반 경로로 되돌리는 것과 같다.
          * @param listMesh 소유하지 않는 포인터들입니다. 스냅샷 배치가 소유권을 가지고 있는 동안에만 유효합니다.
          */
-        void rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
+        void update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
         /**
-         * @brief 모프 메시와 스킨드 메시를 함께 받아 풀을 맞춥니다. 모프가 앞 구간, 스킨 인스턴스가 뒤 구간입니다.
-         * @details 세 가지를 따로 본다. 모프 집합이 바뀌면 모프 레스트를, 스킨 원본(스킨 데이터 번호) 집합이 바뀌면 원본 레스트와 가중치를,
+         * @brief 모프 메시와 스킨드 메시를 함께 받아 풀을 맞춥니다. 모프가 앞 구간, 스킨 인스턴스가 뒤 구간입니다. 프레임마다 **한 번** 부릅니다
+         *        (돌려받은 모프 구간의 대기 번호가 이 호출 수입니다).
+         * @details 세 가지를 따로 본다. 모프 집합이 바뀌면 들어온 모프 메시의 레스트만, 스킨 원본(스킨 데이터 번호) 집합이 바뀌면 원본 레스트와 가중치를,
          *          스킨 인스턴스 목록이 바뀌면 인스턴스 테이블만 다시 올린다. 결과 버퍼는 컴퓨트가 프레임마다 채우므로 배치가 바뀌어도 올릴 것이 없다.
          */
-        void rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh );
+        void update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh );
         /**
          * @brief 모프 메시의 변형 프로그램(`Mesh::setGPUDeformProgram`)을 프로그램 버퍼에 맞춥니다. 어느 메시의 프로그램 번호도 그대로면 아무것도 하지 않습니다.
          * @details 버퍼 = [모프 메시 칸마다 float4 하나(x = 그 메시 프로그램의 시작 원소, 없으면 -1)][프로그램들]. 레스트 노멀의 w 가 칸 번호 + 1 이라
@@ -144,8 +154,14 @@ namespace sw
         const RHIStructuredBufferSlot& getDeformProgramBuffer() const { return _deformProgram; }
         /** @brief 풀에 든 결과 정점 수(모프와 스킨 인스턴스)입니다. 정점 셰이더의 범위 검사 값입니다. */
         uint32 getVertexCount() const { return _vertexCount; }
-        /** @brief 모프 구간(앞)의 정점 수입니다. 모프 컴퓨트가 이만큼 돕니다. */
+        /** @brief 모프 구간(앞)의 길이(용량, 빈 자리 포함)입니다. 모프 컴퓨트가 이만큼 돕니다. */
         uint32 getMorphVertexCount() const { return _skinVertexBase; }
+        /** @brief 모프 구간에 든(구간을 받은) 모프 메시의 정점 수 합입니다. */
+        uint32 getMorphLiveVertexCount() const { return _morphLiveVertexCount; }
+        /** @brief 모프 구간을 새 버퍼로 다시 채운 횟수입니다. 부분 갱신이 통째로 올리기로 새지 않는지 테스트가 봅니다. */
+        uint32 getMorphRepackCount() const { return _morphRepackCount; }
+        /** @brief 지난 `update` 가 모프 레스트에 올린 바이트 수입니다(다시 채웠으면 레스트 전체입니다). */
+        uint32 getLastMorphUploadBytes() const { return _lastMorphUploadBytes; }
         /** @brief 스킨 구간이 시작하는 정점입니다. */
         uint32 getSkinVertexBase() const { return _skinVertexBase; }
         /** @brief 스킨 구간의 정점 수(모든 인스턴스의 합)입니다. */
@@ -177,13 +193,33 @@ namespace sw
         void release( IRHIDevice* pDevice );
 
     private:
+        /** @brief 모프 구간에 든 메시 하나의 기록입니다. */
+        struct MorphEntry
+        {
+            uint64 _contentID{ 0 };
+            uint64 _seenStamp{ 0 };       ///< 이 메시를 마지막으로 본 `update` 의 번호
+            uint32 _base{ kInvalidBase }; ///< 구간 시작. 못 들어갔으면 kInvalidBase
+            uint32 _count{ 0 };
+            uint32 _slot{ kInvalidBase }; ///< 칸 번호(`_listPoolMorph` 의 자리). 레스트 노멀의 w 가 이 번호 + 1 이다
+        };
+
         /// @brief 풀 상한(결과 정점 수)입니다. 언리얼의 `r.SkinCache.SceneMemoryLimitInMB` 에 해당하며, 여기서는 고정값입니다.
         static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;
+        /// @brief 모프 구간의 최소 용량(정점 수)입니다. 미리보기 메시 하나가 들어올 때마다 다시 채우지 않게 합니다.
+        static constexpr uint32 kMinMorphVertices = 4u * 1024u;
 
-        /** @brief 목록이 지난 rebuild 와 같은지(포인터와 내용 번호) 확인합니다. */
+        /** @brief 목록이 지난 update 와 같은지(포인터와 내용 번호) 확인합니다. */
         static bool isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID );
         /** @brief 스킨 원본 집합을 맞춥니다. 바뀌었으면 레스트와 가중치를 다시 올립니다. */
         void rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
+        /** @brief 모프 메시 집합을 맞춥니다. 들어온 메시의 레스트만 올립니다. @return 어느 모프 메시의 구간이라도 바뀌었으면 true 입니다. */
+        bool updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh );
+        /** @brief 모프 구간을 더 큰 새 레스트 버퍼로 다시 채웁니다. 살아 있는 모프 메시를 앞에서부터 다시 잇습니다. */
+        void repackMorph( IRHIDevice* pDevice );
+        /** @brief 메시의 모프 구간과 칸을 돌려줍니다(구간은 `retireStamp` 뒤에 다시 나갑니다). */
+        void releaseMorphEntry( MorphEntry& inoutEntry, uint64 retireStamp );
+        /** @brief 메시의 레스트 정점을 칸 번호를 실어 `_listScratchRest` 에 덧붙입니다. */
+        void appendRestVertices( const Mesh& mesh, uint32 slot );
 
         RHIStructuredBufferSlot _rest;
         RHIStructuredBufferSlot _morph;
@@ -192,18 +228,26 @@ namespace sw
         RHIStructuredBufferSlot _skinInstance;
         RHIStructuredBufferSlot _skinPalette;
         RHIStructuredBufferSlot _deformProgram;
-        /// @brief 풀에 든 모프 메시(칸 순서)입니다. 레스트 노멀의 w 가 이 번호 + 1 입니다.
+        /// @brief 풀에 든 모프 메시(칸 순서)입니다. 레스트 노멀의 w 가 이 번호 + 1 입니다. 나간 메시의 칸은 nullptr 이고 `_listFreeMorphSlot` 에 있습니다.
         vector<const Mesh*> _listPoolMorph;
+        vector<uint32>      _listFreeMorphSlot;
+        /// @brief 모프 메시 → 기록입니다. 포인터는 키로만 쓰며 따라가지 않습니다(이미 지워졌을 수 있습니다).
+        unordered_map<const Mesh*, MorphEntry> _mapMorphEntry;
+        SpanAllocator                          _morphAllocator;
+        /// @brief 이번 update 에 구간이 필요한 모프 메시, 예산 때문에 못 들어간 채 남은 메시, 나간 메시입니다(프레임마다 할당하지 않습니다).
+        vector<const Mesh*> _listScratchAdded;
+        vector<const Mesh*> _listScratchRetry;
+        vector<const Mesh*> _listScratchRemoved;
+        /// @brief 올릴 레스트와 조각입니다.
+        vector<GPUMorphVertex>      _listScratchRest;
+        vector<RHIBufferCopyRegion> _listScratchRegion;
         /// @brief 지난 `updateDeformPrograms` 가 본 칸마다의 프로그램 번호입니다.
         vector<uint64> _listDeformProgramGeneration;
         /// @brief 프로그램 버퍼를 모으는 버퍼입니다(바뀐 프레임에만 쓴다).
         vector<float4> _listScratchDeformProgram;
-        /// @brief 메시에서 결과 시작 오프셋(정점 단위)을 찾는 맵입니다.
-        unordered_map<const Mesh*, uint32> _mapBase;
-        /// @brief 지난 rebuild 의 모프 메시 목록과 내용 번호입니다. 포인터가 같아도 내용 번호가 다르면 다른 메시입니다.
-        vector<const Mesh*> _listBuiltMorph;
-        vector<uint64>      _listBuiltMorphContentID;
-        /// @brief 지난 rebuild 의 스킨 메시 목록과 내용 번호입니다(받은 그대로이며 풀에 들어가지 못한 것도 포함합니다).
+        /// @brief 스킨드 메시에서 결과 시작 오프셋(정점 단위)을 찾는 맵입니다. 모프 메시는 `_mapMorphEntry` 에 있습니다.
+        unordered_map<const Mesh*, uint32> _mapSkinBase;
+        /// @brief 지난 update 의 스킨 메시 목록과 내용 번호입니다(받은 그대로이며 풀에 들어가지 못한 것도 포함합니다).
         vector<const Mesh*> _listBuiltSkin;
         vector<uint64>      _listBuiltSkinContentID;
         /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서)와 그 테이블 줄입니다.
@@ -222,5 +266,9 @@ namespace sw
         uint32         _skinSourceVertexCount{ 0 };
         uint32         _skinDeltaBase{ 0 };
         uint32         _skinMorphWeightCount{ 0 }; ///< 인스턴스 모프 가중치의 합(팔레트 뒤에 float4 로 싣는다)
+        uint64         _updateCount{ 0 };          ///< update 를 부른 수(= 제출한 프레임 수). 돌려받은 모프 구간의 대기 번호다
+        uint32         _morphLiveVertexCount{ 0 };
+        uint32         _morphRepackCount{ 0 };
+        uint32         _lastMorphUploadBytes{ 0 };
     };
 } // namespace sw

@@ -3759,11 +3759,11 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
 
             sw::GPUMeshVertexPool vertexPool;
             sw::GPUMeshMorphPool  morphPool;
-            SW_EXPECT_TRUE( vertexPool.rebuild( device.get(), listMesh ) );
-            SW_EXPECT_FALSE( vertexPool.rebuild( device.get(), listMesh ) ); // 그대로면 다시 만들지 않는다
-            morphPool.rebuild( device.get(), listMesh );
+            SW_EXPECT_TRUE( vertexPool.update( device.get(), listMesh ) );
+            SW_EXPECT_FALSE( vertexPool.update( device.get(), listMesh ) ); // 그대로면 다시 만들지 않는다
+            morphPool.update( device.get(), listMesh );
             SW_EXPECT_EQUAL( cubeVertexCount, vertexPool.getVertexCount() );
-            SW_EXPECT_EQUAL( cubeVertexCount, morphPool.getVertexCount() );
+            SW_EXPECT_EQUAL( cubeVertexCount, morphPool.getMorphLiveVertexCount() );
 
             // 같은 메시, 다른 내용 — 삼각형 하나.
             sw::vector<sw::RHIVertex> listTriangle;
@@ -3773,10 +3773,10 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
             }
             mesh->setVertices( listTriangle );
 
-            SW_EXPECT_TRUE_MSG( vertexPool.rebuild( device.get(), listMesh ), "정점 풀이 바뀐 내용을 같은 집합으로 봤습니다" );
-            morphPool.rebuild( device.get(), listMesh );
+            SW_EXPECT_TRUE_MSG( vertexPool.update( device.get(), listMesh ), "정점 풀이 바뀐 내용을 같은 집합으로 봤습니다" );
+            morphPool.update( device.get(), listMesh );
             SW_EXPECT_EQUAL( 3u, vertexPool.getVertexCount() );
-            SW_EXPECT_EQUAL( 3u, morphPool.getVertexCount() );
+            SW_EXPECT_EQUAL( 3u, morphPool.getMorphLiveVertexCount() );
 
             vertexPool.release( device.get() );
             morphPool.release( device.get() );
@@ -3785,6 +3785,114 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the mesh pool content test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 정점 풀은 메시 집합이 바뀌면 바뀐 메시의 구간만 올린다 — 남은 메시의 시작 오프셋은 그대로다(C-43)
+ * @details 예전에는 집합이 바뀔 때마다 모든 메시를 다시 이어 붙여 버퍼 전체를 올렸다. 월드 스트리밍의 셀 하나가 월드 전체 업로드였다.
+ *          (1) 메시를 더하면 그 메시의 바이트만 올라가고 다시 채우기(repack)는 일어나지 않는다. (2) 메시를 빼면 아무것도 올리지 않는다.
+ *          (3) 방금 뺀 메시의 구간은 곧바로 다시 주지 않는다 — DX12 · Vulkan 의 정점 버퍼는 CPU 가 직접 쓰는 메모리라, 아직 끝나지 않은 앞 프레임이
+ *          읽는 자리를 덮어쓴다. `kMaxFrameCountInFlight` 프레임이 지나면 같은 크기의 메시가 그 자리를 받는다(가장 잘 맞는 구간).
+ */
+SW_TEST_CASE( RenderPassGPUTest, VertexPoolUploadsOnlyChangedMeshes )
+{
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::shared_ptr<sw::Mesh> meshA = sw::MeshUtil::createUnitCube();
+        const sw::shared_ptr<sw::Mesh> meshB = sw::MeshUtil::createUnitCube();
+        const sw::shared_ptr<sw::Mesh> meshC = sw::MeshUtil::createUnitCube();
+        const sw::shared_ptr<sw::Mesh> meshD = sw::MeshUtil::createUnitCube();
+        const sw::shared_ptr<sw::Mesh> meshE = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( meshA.get() );
+        const uint32 cubeVertexCount = meshA->getVertexCount();
+        const uint32 cubeBytes       = cubeVertexCount * static_cast<uint32>( sizeof( sw::RHIVertex ) );
+
+        sw::GPUMeshVertexPool pool;
+        sw::vector<sw::Mesh*> listMesh{ meshA.get(), meshB.get() };
+        SW_EXPECT_TRUE( pool.update( device.get(), listMesh ) );
+        SW_EXPECT_EQUAL( 1u, pool.getRepackCount() );
+        const uint32 baseA = pool.baseOf( meshA.get() );
+        const uint32 baseB = pool.baseOf( meshB.get() );
+        SW_ASSERT_TRUE( baseA != sw::GPUMeshVertexPool::kInvalidBase && baseB != sw::GPUMeshVertexPool::kInvalidBase );
+
+        // (1) 더하기 — C 의 바이트만 올라가고 A · B 는 제자리다.
+        listMesh.push_back( meshC.get() );
+        SW_EXPECT_TRUE( pool.update( device.get(), listMesh ) );
+        SW_EXPECT_EQUAL( 1u, pool.getRepackCount() );
+        SW_EXPECT_EQUAL( cubeBytes, pool.getLastUploadBytes() );
+        SW_EXPECT_EQUAL( baseA, pool.baseOf( meshA.get() ) );
+        SW_EXPECT_EQUAL( baseB, pool.baseOf( meshB.get() ) );
+
+        // (2) 빼기 — 올릴 것이 없고, B 는 풀에서 빠진다.
+        listMesh = sw::vector<sw::Mesh*>{ meshA.get(), meshC.get() };
+        SW_EXPECT_TRUE( pool.update( device.get(), listMesh ) );
+        SW_EXPECT_EQUAL( 0u, pool.getLastUploadBytes() );
+        SW_EXPECT_EQUAL( sw::GPUMeshVertexPool::kInvalidBase, pool.baseOf( meshB.get() ) );
+        SW_EXPECT_EQUAL( 2u * cubeVertexCount, pool.getVertexCount() );
+
+        // (3) 방금 뺀 B 의 구간은 곧바로 다시 나가지 않는다.
+        listMesh.push_back( meshD.get() );
+        SW_EXPECT_TRUE( pool.update( device.get(), listMesh ) );
+        SW_EXPECT_TRUE_MSG( pool.baseOf( meshD.get() ) != baseB, "앞 프레임이 읽을 수 있는 구간을 곧바로 다시 줬습니다" );
+        for ( uint32 frame = 0; frame < sw::constant::kMaxFrameCountInFlight; ++frame )
+        {
+            SW_EXPECT_FALSE( pool.update( device.get(), listMesh ) ); // 그대로면 아무것도 하지 않는다
+        }
+        listMesh.push_back( meshE.get() );
+        SW_EXPECT_TRUE( pool.update( device.get(), listMesh ) );
+        SW_EXPECT_EQUAL( baseB, pool.baseOf( meshE.get() ) );
+        SW_EXPECT_EQUAL( 1u, pool.getRepackCount() );
+
+        pool.release( device.get() );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the vertex pool partial update test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 모프 풀도 바뀐 모프 메시의 레스트만 올리고, 남은 메시의 시작 오프셋과 칸은 그대로다(C-43)
+ * @details 더하면 그 메시의 레스트 바이트만 올라가고 다시 채우기(repack)가 없다. 빼면 아무것도 올리지 않는다. 스킨 구간은 모프 **용량** 뒤에서
+ *          시작하므로 용량이 그대로면 바뀌지 않는다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, MorphPoolUploadsOnlyChangedMeshes )
+{
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::shared_ptr<sw::Mesh> meshA = sw::MeshUtil::createUnitCube();
+        const sw::shared_ptr<sw::Mesh> meshB = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( meshA.get() );
+        const uint32 cubeVertexCount = meshA->getVertexCount();
+
+        sw::GPUMeshMorphPool  pool;
+        sw::vector<sw::Mesh*> listMesh{ meshA.get() };
+        pool.update( device.get(), listMesh );
+        SW_EXPECT_EQUAL( 1u, pool.getMorphRepackCount() );
+        const uint32 baseA          = pool.baseOf( meshA.get() );
+        const uint32 skinVertexBase = pool.getSkinVertexBase();
+        SW_ASSERT_TRUE( baseA != sw::GPUMeshMorphPool::kInvalidBase );
+
+        listMesh.push_back( meshB.get() );
+        pool.update( device.get(), listMesh );
+        SW_EXPECT_EQUAL( 1u, pool.getMorphRepackCount() );
+        SW_EXPECT_EQUAL( cubeVertexCount * static_cast<uint32>( sizeof( sw::GPUMorphVertex ) ), pool.getLastMorphUploadBytes() );
+        SW_EXPECT_EQUAL( baseA, pool.baseOf( meshA.get() ) );
+        SW_EXPECT_EQUAL( skinVertexBase, pool.getSkinVertexBase() );
+        SW_EXPECT_EQUAL( 2u * cubeVertexCount, pool.getMorphLiveVertexCount() );
+
+        listMesh = sw::vector<sw::Mesh*>{ meshA.get() };
+        pool.update( device.get(), listMesh );
+        SW_EXPECT_EQUAL( 0u, pool.getLastMorphUploadBytes() );
+        SW_EXPECT_EQUAL( sw::GPUMeshMorphPool::kInvalidBase, pool.baseOf( meshB.get() ) );
+        SW_EXPECT_EQUAL( baseA, pool.baseOf( meshA.get() ) );
+
+        pool.release( device.get() );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the morph pool partial update test" );
 }
 
 /**

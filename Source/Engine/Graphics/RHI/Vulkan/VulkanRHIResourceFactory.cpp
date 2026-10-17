@@ -328,6 +328,41 @@ namespace sw
         return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pData );
     }
 
+    void VulkanRHIResourceFactory::updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    {
+        const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_device == VK_NULL_HANDLE;
+        if ( bInvalidVertexRegionUpdate )
+            return;
+        // 정점 버퍼는 HOST_VISIBLE | HOST_COHERENT 메모리다(createVulkanBuffer). 매핑해 CPU 가 직접 쓴다 — 앞 프레임이 읽는 조각이 아님은
+        // 부르는 쪽이 지킨다(IRHIResourceFactory::updateVertexBufferRegions). 정점 버퍼만 받는다: 링 상수 버퍼처럼 늘 매핑해 둔 메모리를
+        // 다시 매핑하면 검증 레이어 오류다.
+        VulkanRHIDevice::VulkanBufferRecord* pRecord       = _pDevice->resolveAllocatedBuffer( buffer );
+        const bool                           bVertexBuffer = pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE && ( pRecord->_usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT ) != 0;
+        if ( bVertexBuffer == false )
+        {
+            SW_LOG_ERROR( "updateVertexBufferRegions: the handle is not a vertex buffer" );
+            return;
+        }
+        void* pMapped{ nullptr };
+        if ( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, VK_WHOLE_SIZE, 0, &pMapped ) != VK_SUCCESS || pMapped == nullptr )
+        {
+            SW_LOG_ERROR( "updateVertexBufferRegions: failed to map the vertex buffer memory" );
+            return;
+        }
+        const uint8* pBase = static_cast<const uint8*>( pBaseSource );
+        for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+        {
+            const RHIBufferCopyRegion& region = pRegions[regionIndex];
+            if ( static_cast<uint64>( region._dstOffset ) + region._sizeBytes > pRecord->_sizeBytes )
+            {
+                SW_LOG_ERROR( "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, pRecord->_sizeBytes );
+                continue;
+            }
+            Memory::copy( static_cast<uint8*>( pMapped ) + region._dstOffset, pBase + region._srcOffset, region._sizeBytes );
+        }
+        vkUnmapMemory( _pDevice->_device, pRecord->_memory );
+    }
+
     void VulkanRHIResourceFactory::destroyBuffer( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )

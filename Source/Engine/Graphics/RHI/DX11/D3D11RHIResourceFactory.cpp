@@ -197,6 +197,27 @@ namespace sw
         return createFilledBuffer( pData, sizeBytes, D3D11_BIND_VERTEX_BUFFER );
     }
 
+    void D3D11RHIResourceFactory::updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    {
+        // 정점 버퍼도 DEFAULT 사용 버퍼다(createFilledBuffer) — 즉시 컨텍스트의 UpdateSubresource 상자 갱신이 그대로 맞고, 순서는 드라이버가 맞춘다.
+        // 범위는 여기서 본다. 상자가 버퍼를 넘으면 D3D11 은 호출을 조용히 버린다.
+        ID3D11Buffer* pResource = ( buffer != 0 && _pDevice->_deviceContext != nullptr ) ? _pDevice->resolveBuffer( buffer ) : nullptr;
+        if ( pResource == nullptr || pRegions == nullptr )
+            return;
+        D3D11_BUFFER_DESC desc{};
+        pResource->GetDesc( &desc );
+        for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+        {
+            const RHIBufferCopyRegion& region = pRegions[regionIndex];
+            if ( static_cast<uint64>( region._dstOffset ) + region._sizeBytes > desc.ByteWidth )
+            {
+                SW_LOG_ERROR( "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes, desc.ByteWidth );
+                continue;
+            }
+            updateStructuredBufferRegions( buffer, pBaseSource, &region, 1 );
+        }
+    }
+
     RHIBufferHandle D3D11RHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
     {
         // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. D3D11 규칙상 인덱스 버퍼는 BIND_INDEX_BUFFER 로 만들어야 하고
