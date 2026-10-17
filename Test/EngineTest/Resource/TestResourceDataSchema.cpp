@@ -29,6 +29,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Destruction/DestructionProfile.h"
+#include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -101,6 +102,7 @@ namespace
         static bool isAutomationAllowList( sw::string_view resourceID ) { return resourceID == sw::AutomationLogPolicy::kAllowListPath; }
         static bool isMaterial( sw::string_view resourceID ) { return endsWith( resourceID, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceID ) { return endsWith( resourceID, ".sprite.json" ); }
+        static bool isDialogueGraph( sw::string_view resourceID ) { return endsWith( resourceID, sw::DialogueGraphAsset::kExtension ); }
         static bool isTelemetrySchema( sw::string_view resourceID ) { return endsWith( resourceID, ".telemetry.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceID ) { return endsWith( resourceID, ".settings.xml" ); }
         static bool isPhysicsSettings( sw::string_view resourceID ) { return endsWith( resourceID, "physicssettings.xml" ); }
@@ -319,6 +321,12 @@ namespace
             return clip.loadFromFile( resourceID );
         }
 
+        [[nodiscard]] static bool loadDialogueGraph( const sw::string& resourceID )
+        {
+            sw::DialogueGraphAsset graph;
+            return graph.loadFromFile( resourceID );
+        }
+
         // 캐릭터 데이터 — 소켓은 엔진 기본 종류 표에, 부품 피팅은 엔진 기본 피팅 표에 대조한다(모르는 이름은 로드 오류).
         static constexpr const utf8* kDefaultSocketKinds = "engine/character/default.socketkinds.xml";
         static constexpr const utf8* kDefaultFitTables   = "engine/character/default.fit.xml";
@@ -510,6 +518,7 @@ namespace
             {     "automationlogs", &isAutomationAllowList,                           &loadAutomationAllowList},
             {           "material",            &isMaterial,                                      &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
+            {      "dialoguegraph",       &isDialogueGraph,                                 &loadDialogueGraph},
             {           "sequence",            &isSequence,                                      &loadSequence},
             {           "render2d",    &isRender2DSettings,                              &loadRender2DSettings},
             {            "tileset",             &isTileSet,                                       &loadTileSet},

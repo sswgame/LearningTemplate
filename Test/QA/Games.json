@@ -25,6 +25,10 @@
       "arguments": ["-gv_nileAutoPlay=1"],
       "screenshot_frame": 180
     },
+    "PixelTown": {
+      "arguments": [],
+      "screenshot_frame": 30
+    },
     "Shooter3D": {
       "arguments": ["-gv_shooterAutoPlay=1", "-gv_cameraPreset=cctv"],
       "screenshot_frame": 180

@@ -2,12 +2,16 @@
 
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
 
+#include "Engine/TileMap/TileGridUtil.h"
+#include "Engine/TileMap/TileSetAsset.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "TileMap" );
 
     TileMap::TileMap()
         : _data{}
+        , _listTileSolid{}
         , _mapWarpIndex{}
     {
     }
@@ -20,9 +24,56 @@ namespace sw
         TileMapXMLData xmlData{};
         if ( xmlData.load( assetRelativePath ) == false )
             return false;
+        if ( xmlData._tileSetPath.empty() )
+        {
+            _data = std::move( xmlData );
+            _listTileSolid.assign( _data.getFlagLayer( TileFlagLayer::Walkable ).size(), 0 );
+            rebuildWarpIndex();
+            return true;
+        }
+        TileSetAsset tileSet;
+        if ( tileSet.loadFromResource( xmlData._tileSetPath ) == false )
+            return false;
+        return assign( xmlData, tileSet );
+    }
 
-        _data = std::move( xmlData );
+    bool TileMap::assign( const TileMapXMLData& data, const TileSetAsset& tileSet )
+    {
+        clear();
+        _data = data;
+        _listTileSolid.assign( _data.getFlagLayer( TileFlagLayer::Walkable ).size(), 0 );
         rebuildWarpIndex();
+        if ( _data._tileSetPath.empty() )
+            return true;
+        if ( addSolidLayer( _data, tileSet ) )
+            return true;
+        clear();
+        return false;
+    }
+
+    bool TileMap::addSolidLayer( const TileMapXMLData& layer, const TileSetAsset& tileSet )
+    {
+        if ( layer._width != _data._width || layer._height != _data._height )
+        {
+            SW_LOG_ERROR( "Tile layer '%#' is %#x%# but the map '%#' is %#x%#", layer._sourcePath, layer._width, layer._height, _data._sourcePath,
+                          _data._width, _data._height );
+            return false;
+        }
+        vector<uint16> listBrushIndex;
+        if ( layer.mapTileCells( tileSet, listBrushIndex ) == false )
+            return false;
+        vector<uint8> listSolid;
+        TileGridUtil::makeSolidMask( tileSet, listBrushIndex, listSolid );
+        if ( listSolid.size() != _listTileSolid.size() )
+        {
+            SW_LOG_ERROR( "Tile layer '%#' has %# cells but the map '%#' has %#", layer._sourcePath, static_cast<uint32>( listSolid.size() ), _data._sourcePath,
+                          static_cast<uint32>( _listTileSolid.size() ) );
+            return false;
+        }
+        for ( size_t cellIndex = 0; cellIndex < listSolid.size(); ++cellIndex )
+        {
+            _listTileSolid[cellIndex] = static_cast<uint8>( _listTileSolid[cellIndex] | listSolid[cellIndex] );
+        }
         return true;
     }
 
@@ -34,6 +85,7 @@ namespace sw
     void TileMap::clear()
     {
         _data = TileMapXMLData{};
+        _listTileSolid.clear();
         rebuildWarpIndex();
     }
 
@@ -46,6 +98,7 @@ namespace sw
                             width, height, TileMapXMLData::kMaxTileCount );
             return;
         }
+        _listTileSolid.assign( _data.getFlagLayer( TileFlagLayer::Walkable ).size(), 0 );
         rebuildWarpIndex();
     }
 
@@ -58,7 +111,7 @@ namespace sw
 
     bool TileMap::isWalkable( int32 x, int32 y ) const
     {
-        return isFlagSet( TileFlagLayer::Walkable, x, y );
+        return isFlagSet( TileFlagLayer::Walkable, x, y ) && _listTileSolid[indexOf( x, y )] == 0;
     }
 
     bool TileMap::isEncounterTile( int32 x, int32 y ) const

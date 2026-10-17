@@ -1,0 +1,37 @@
+<!--
+	PixelTown 소품 타일셋 — ArMM1998 "Zelda-like" 지상 아틀라스(engine/textures/pixel/zelda_like/overworld.dds, 40 x 36 칸, 16 px). 타일 한 변 = 월드 1.
+	소품은 땅 위 둘째 레이어(townprops.tilemap.xml)에 칠한다 — 칸 바탕이 투명이라 아래 땅이 비친다. 모두 단단하다(걸어 들어갈 수 없다).
+	집은 아틀라스의 5 x 5 칸(열 6 ~ 10, 행 0 ~ 4)을 칸마다 브러시 하나로(house_<열><행>), 큰 나무는 2 x 2 칸(열 5 ~ 6, 행 16 ~ 17)을 나눈다.
+-->
+<TileSet atlas="engine/textures/pixel/zelda_like/overworld.dds" columns="40" rows="36" tileSize="1">
+	<Tile name="bush" cell="562" solid="true" />
+	<Tile name="house_00" cell="6" solid="true" />
+	<Tile name="house_10" cell="7" solid="true" />
+	<Tile name="house_20" cell="8" solid="true" />
+	<Tile name="house_30" cell="9" solid="true" />
+	<Tile name="house_40" cell="10" solid="true" />
+	<Tile name="house_01" cell="46" solid="true" />
+	<Tile name="house_11" cell="47" solid="true" />
+	<Tile name="house_21" cell="48" solid="true" />
+	<Tile name="house_31" cell="49" solid="true" />
+	<Tile name="house_41" cell="50" solid="true" />
+	<Tile name="house_02" cell="86" solid="true" />
+	<Tile name="house_12" cell="87" solid="true" />
+	<Tile name="house_22" cell="88" solid="true" />
+	<Tile name="house_32" cell="89" solid="true" />
+	<Tile name="house_42" cell="90" solid="true" />
+	<Tile name="house_03" cell="126" solid="true" />
+	<Tile name="house_13" cell="127" solid="true" />
+	<Tile name="house_23" cell="128" solid="true" />
+	<Tile name="house_33" cell="129" solid="true" />
+	<Tile name="house_43" cell="130" solid="true" />
+	<Tile name="house_04" cell="166" solid="true" />
+	<Tile name="house_14" cell="167" solid="true" />
+	<Tile name="house_24" cell="168" solid="true" />
+	<Tile name="house_34" cell="169" solid="true" />
+	<Tile name="house_44" cell="170" solid="true" />
+	<Tile name="tree_00" cell="645" solid="true" />
+	<Tile name="tree_10" cell="646" solid="true" />
+	<Tile name="tree_01" cell="685" solid="true" />
+	<Tile name="tree_11" cell="686" solid="true" />
+</TileSet>

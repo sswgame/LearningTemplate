@@ -38,8 +38,23 @@ namespace sw
     public:
         TileMap();
 
-        /** @brief Resource 상대 XML 에서 타일맵을 불러옵니다. */
+        /**
+         * @brief Resource 상대 XML 에서 타일맵을 불러옵니다. 타일 레이어가 있으면 그 타일셋도 읽어 단단한 브러시 칸을 막습니다(`addSolidLayer`).
+         * @return 맵이나 타일셋을 읽지 못하면 false 입니다(타일셋을 못 읽은 맵을 "어디든 걸을 수 있는 맵"으로 두지 않는다).
+         */
         [[nodiscard]] bool loadFromXML( string_view assetRelativePath );
+        /**
+         * @brief 이미 읽은 맵 데이터와 그 타일셋으로 채웁니다. 씬의 `TileMapRendererComponent` 가 읽은 것을 그대로 받아, 그리는 맵과 걷는 맵이 한 데이터가 되게 합니다.
+         * @return 타일셋에 없는 브러시를 칠한 맵이면 false 입니다.
+         */
+        [[nodiscard]] bool assign( const TileMapXMLData& data, const TileSetAsset& tileSet );
+        /**
+         * @brief 같은 크기의 다른 타일 레이어(집 · 나무 같은 소품 레이어)에서 단단한(`solid`) 브러시 칸을 막습니다.
+         * @details 막힘은 플래그 레이어(`Walkable`, 파일에 저장되는 값)가 아니라 따로 든 표에 쌓는다 — 저장하면 손으로 칠한 플래그만 남는다.
+         *          충돌의 정본은 타일셋의 `solid` 하나다(렌더러의 물리 충돌체와 같은 값). 유니티의 TilemapCollider2D, Godot TileSet physics layer 와 같다.
+         * @return 크기가 다르거나 타일셋에 없는 브러시를 칠한 레이어면 false 이고, 막힘은 바뀌지 않습니다.
+         */
+        [[nodiscard]] bool addSolidLayer( const TileMapXMLData& layer, const TileSetAsset& tileSet );
 
         /** @brief Resource 상대 XML 로 타일맵을 저장합니다. */
         [[nodiscard]] bool saveToXML( string_view assetRelativePath ) const;
@@ -79,7 +94,7 @@ namespace sw
 
         /** @brief 그 칸에서 레이어가 켜져 있는지 반환합니다. 맵 밖이면 false 입니다. */
         bool isFlagSet( TileFlagLayer layer, int32 x, int32 y ) const;
-        /** @brief 보행 가능 여부를 반환합니다. */
+        /** @brief 보행 가능 여부를 반환합니다. `Walkable` 플래그가 켜져 있고 어느 타일 레이어의 단단한 브러시도 칠해지지 않은 칸입니다. */
         bool isWalkable( int32 x, int32 y ) const;
         /** @brief 조우 타일 여부를 반환합니다. */
         bool isEncounterTile( int32 x, int32 y ) const;
@@ -125,7 +140,8 @@ namespace sw
         uint64 getWarpKey( int32 x, int32 y ) const { return ( static_cast<uint64>( static_cast<uint32>( x ) ) << 32 ) | static_cast<uint32>( y ); }
         void   rebuildWarpIndex();
 
-        TileMapXMLData                        _data; ///< 맵 데이터. 파일 스키마 그대로 보관한다
+        TileMapXMLData                        _data;          ///< 맵 데이터. 파일 스키마 그대로 보관한다
+        vector<uint8>                         _listTileSolid; ///< 셀마다 단단한 브러시가 칠해졌으면 1 이다(`addSolidLayer`). 저장하지 않는다
         mutable unordered_map<uint64, size_t> _mapWarpIndex;
     };
 

@@ -1,0 +1,13 @@
+{
+  "_listNode": [
+    { "_id": 1, "_type": "Start", "_position": "40,40" },
+    { "_id": 2, "_type": "Dialogue", "_speaker": "Elder", "_text": "Welcome to Pixel Town, traveller.", "_position": "240,40" },
+    { "_id": 3, "_type": "Dialogue", "_speaker": "Elder", "_text": "Mind the pond - nobody swims in it.", "_position": "440,40" },
+    { "_id": 4, "_type": "End", "_position": "640,40" }
+  ],
+  "_listLink": [
+    { "_id": 1, "_fromPin": 102, "_toPin": 201 },
+    { "_id": 2, "_fromPin": 202, "_toPin": 301 },
+    { "_id": 3, "_fromPin": 302, "_toPin": 401 }
+  ]
+}

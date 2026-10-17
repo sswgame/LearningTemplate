@@ -24,6 +24,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/TileMap/TileSetAsset.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -1408,6 +1409,49 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_EveryFlagLayerIsSetPerCell )
     tileMap.resize( 1, 1 );
     tileMap.setWalkable( 0, 0, false );
     SW_EXPECT_TRUE( tileMap.isSolid( 0, 0 ) );
+}
+
+/**
+ * @brief [GameFrameworkTest] 걷는 맵의 막힘이 타일셋 브러시의 solid 를 따르는지 검증 — 땅 레이어와 같은 크기의 소품 레이어 모두
+ * @details 그리는 맵(렌더러 충돌체)과 걷는 맵이 같은 solid 하나를 읽어야 한다. 막힘은 저장되는 Walkable 플래그에 섞지 않는다.
+ *          크기가 다른 레이어는 막힘을 바꾸지 않고 거절한다.
+ */
+SW_TEST_CASE( GameFrameworkTest, TileMap_SolidBrushesOfEveryTileLayerBlockWalking )
+{
+    TileSetAsset tileSet;
+    SW_ASSERT_TRUE( tileSet.loadFromXMLText( R"(<TileSet atlas="engine/textures/missing.dds" columns="2" rows="1" tileSize="1">
+		<Tile name="grass" cell="0" />
+		<Tile name="rock" cell="1" solid="true" />
+	</TileSet>)",
+                                             "SolidBrushTest" ) );
+    TileMapXMLData ground;
+    SW_ASSERT_TRUE( ground.resetTiles( 3, 1 ) );
+    ground._tileSetPath = "SolidBrushTest";
+    SW_ASSERT_TRUE( ground.setTileBrush( 0, 0, "grass" ) );
+    SW_ASSERT_TRUE( ground.setTileBrush( 1, 0, "rock" ) );
+    SW_ASSERT_TRUE( ground.setTileBrush( 2, 0, "grass" ) );
+
+    TileMap tileMap;
+    SW_ASSERT_TRUE( tileMap.assign( ground, tileSet ) );
+    SW_EXPECT_TRUE( tileMap.isWalkable( 0, 0 ) );
+    SW_EXPECT_TRUE( tileMap.isSolid( 1, 0 ) );
+    SW_EXPECT_TRUE( tileMap.isFlagSet( TileFlagLayer::Walkable, 1, 0 ) ); // 저장되는 플래그는 그대로다
+    SW_EXPECT_TRUE( tileMap.isWalkable( 2, 0 ) );
+
+    TileMapXMLData props;
+    SW_ASSERT_TRUE( props.resetTiles( 3, 1 ) );
+    props._tileSetPath = "SolidBrushTest";
+    SW_ASSERT_TRUE( props.setTileBrush( 2, 0, "rock" ) );
+    SW_EXPECT_TRUE( tileMap.addSolidLayer( props, tileSet ) );
+    SW_EXPECT_TRUE( tileMap.isSolid( 2, 0 ) );
+    SW_EXPECT_TRUE( tileMap.isWalkable( 0, 0 ) );
+
+    test::ScopedDefensiveTestLog expected( "a tile layer of another size is rejected" );
+    TileMapXMLData               wrongSize;
+    SW_ASSERT_TRUE( wrongSize.resetTiles( 2, 2 ) );
+    SW_ASSERT_TRUE( wrongSize.setTileBrush( 0, 0, "rock" ) );
+    SW_EXPECT_FALSE( tileMap.addSolidLayer( wrongSize, tileSet ) );
+    SW_EXPECT_TRUE( tileMap.isWalkable( 0, 0 ) );
 }
 
 /**
