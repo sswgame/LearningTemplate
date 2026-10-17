@@ -220,8 +220,12 @@ namespace sw
          *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
          */
         [[nodiscard]] bool serializeSceneObjects( vector<uint8>& outBytes );
-        /** @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다. */
-        [[nodiscard]] bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format );
+        /**
+         * @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
+         * @param outListRemap id 를 복원하지 않을 때(`WithIdentity`) 저장된 컴포넌트 id → 다시 만든 컴포넌트 id 표를 채웁니다(`ComponentStateStore::remapComponentIDs`).
+         */
+        [[nodiscard]] bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format,
+                                                    vector<ComponentStateStore::SavedComponentID>& outListRemap );
 
         BootstrapConfig _bootstrap;  ///< 팩 루트와 gamesettings
         IWindow*        _pWindow;    ///< 호스트 윈도우 (App 이 소유)

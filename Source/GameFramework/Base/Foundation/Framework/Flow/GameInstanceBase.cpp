@@ -44,6 +44,33 @@ namespace sw
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              */
             static constexpr uint32 kVersion = 3;
+
+            /**
+             * @brief 다른 실행의 세이브에서 오브젝트 하나의 저장된 컴포넌트 id 를 다시 만든 컴포넌트 id 에 잇습니다.
+             * @details 같은 오브젝트 안에서 타입이 같은 것끼리 차례대로 잇는다(`takeRestoredComponentID` 와 같은 규칙). 차례는 스트림 하나가 정하므로
+             *          실행마다 같다 — 매니저의 전역 순회 순서(실행마다 다르다)에 기대지 않는다.
+             */
+            static void appendComponentIDRemap( const ObjectIdentity& identity, const GameObject& object, vector<ComponentStateStore::SavedComponentID>& outListRemap )
+            {
+                const vector<ObjectIdentity::ComponentEntry>& listSaved = identity._listComponent;
+                size_t                                        cursor    = 0;
+                for ( const Component* pComponent : object.getComponents() )
+                {
+                    if ( pComponent == nullptr || pComponent->isPendingDestroy() )
+                        continue;
+                    for ( size_t savedIndex = cursor; savedIndex < listSaved.size(); ++savedIndex )
+                    {
+                        if ( listSaved[savedIndex]._typeName != pComponent->getTypeName() )
+                            continue;
+                        cursor = savedIndex + 1;
+                        ComponentStateStore::SavedComponentID remap;
+                        remap._savedID = listSaved[savedIndex]._componentID;
+                        remap._liveID  = pComponent->getComponentID();
+                        outListRemap.push_back( remap );
+                        break;
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -303,8 +330,10 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format )
+    bool GameInstanceBase::deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format,
+                                                    vector<ComponentStateStore::SavedComponentID>& outListRemap )
     {
+        outListRemap.clear();
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
 
@@ -369,6 +398,8 @@ namespace sw
             }
             listRestoredObject.push_back( pObj );
             offset += readBytes;
+            if ( bRestoreIdentity == false )
+                StateEnvelopeInternal::appendComponentIDRemap( identity, *pObj, outListRemap );
         }
 
         // 씬 계층 구조(부모와 소켓)를 한 번에 잇는다. 자식이 부모보다 먼저 읽혔어도 부모를 찾을 수 있다.
@@ -519,7 +550,8 @@ namespace sw
         if ( arch.readSection( bytesScene ) == false )
             return false;
 
-        if ( bytesScene.empty() == false && deserializeSceneObjects( bytesScene.data(), bytesScene.size(), format ) == false )
+        vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
+        if ( bytesScene.empty() == false && deserializeSceneObjects( bytesScene.data(), bytesScene.size(), format, listComponentIDRemap ) == false )
             return false;
 
         // 2) 파생 클래스 커스텀 리플렉션 상태 복원
@@ -548,6 +580,9 @@ namespace sw
             Archive componentArch( bytesComponent.data(), bytesComponent.size() );
             if ( _pComponentStateStore->read( componentArch ) == false )
                 SW_LOG_WARNING( "Component state section could not be read - components start fresh" );
+            // 다른 실행의 세이브는 컴포넌트 id 가 새로 나갔다. 씬 섹션이 만든 표로 저장된 id 를 이번 id 로 바꿔 id 로만 짝짓는다.
+            if ( format == SceneObjectFormat::WithIdentity )
+                _pComponentStateStore->remapComponentIDs( listComponentIDRemap );
         }
 
         if ( arch.isError() )

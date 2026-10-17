@@ -25,8 +25,10 @@ namespace sw
      *          - `void restoreState( vector<uint8>&& bytes )`: 다시 만든 컴포넌트가 받는다. 아직 `onBeginPlay` 전이면 들고 있다가 시작할 때 적용한다.
      *            읽지 못하면(버전이나 길이가 맞지 않음) 알리고 새 판으로 시작한다.
      *
-     *          짝짓기: 같은 프로세스(핫 리로드)는 컴포넌트 id 가 되살아나므로 id 로 찾는다.
-     *          다른 실행의 세이브는 id 가 새로 나가므로 같은 타입 안의 순서로 찾는다.
+     *          짝짓기는 언제나 컴포넌트 id 다. 같은 프로세스(핫 리로드)는 컴포넌트 id 가 되살아난다.
+     *          다른 실행의 세이브는 id 가 새로 나가므로, 씬 섹션을 읽은 쪽이 "저장된 id → 새 id" 표를 만들어 `remapComponentIDs` 로 바꾼다
+     *          (오브젝트마다 저장된 컴포넌트 목록과 다시 만든 목록을 타입 차례로 잇는다 — 스트림이 정한 순서라 실행마다 같다).
+     *          예전에는 같은 타입 안의 전역 순회 순서로 맞췄는데, 그 순서는 실행마다 달라 두 디렉터의 상태가 서로 바뀔 수 있었다.
      */
     class SW_GF_API ComponentStateStore
     {
@@ -39,6 +41,13 @@ namespace sw
             vector<uint8> _bytes{};
         };
 
+        /** @brief 다른 실행의 세이브에서 컴포넌트 하나의 저장된 id 와 이번 실행에서 다시 만든 컴포넌트의 id 입니다. */
+        struct SavedComponentID
+        {
+            uint64 _savedID{ 0 };
+            uint64 _liveID{ 0 };
+        };
+
         static constexpr uint32 kVersion = 1;
 
         ComponentStateStore();
@@ -47,11 +56,13 @@ namespace sw
         bool isEmpty() const { return _listEntry.empty(); }
         /** @brief 상태 하나를 더합니다. 같은 (타입, id) 가 이미 있으면 바꿉니다. */
         void add( const hashed_string& typeName, uint64 componentID, vector<uint8>&& bytes );
+        /** @brief 컴포넌트 하나의 상태를 (타입, id) 로 찾습니다. 없으면 nullptr 입니다. */
+        const Entry* findEntry( const hashed_string& typeName, uint64 componentID ) const;
         /**
-         * @brief 컴포넌트 하나의 상태를 찾습니다. 없으면 nullptr 입니다.
-         * @param orderInType 같은 타입 안에서 이 컴포넌트의 차례이다. id 가 맞는 것이 없을 때(다른 실행의 세이브) 그 차례의 항목을 쓴다.
+         * @brief 다른 실행의 세이브를 읽은 뒤 항목의 저장된 id 를 이번 실행의 id 로 바꿉니다. 표에 없는 항목은 지웁니다(그 컴포넌트는 다시 만들어지지 않았다).
+         * @details 표에 없는 항목을 남기면 저장된 id 가 우연히 이번 실행의 다른 컴포넌트 id 와 같을 때 그 컴포넌트가 남의 상태를 받는다.
          */
-        const Entry*         findEntry( const hashed_string& typeName, uint64 componentID, uint32 orderInType ) const;
+        void                 remapComponentIDs( const vector<SavedComponentID>& listRemap );
         const vector<Entry>& getEntries() const { return _listEntry; }
 
         void write( Archive& outArchive ) const;
@@ -91,10 +102,9 @@ namespace sw
             { listComponent.push_back( pComponent ); } );
             const hashed_string& typeName = TComponent::StaticType()->_name;
             uint32               count    = 0;
-            for ( uint32 order = 0; order < static_cast<uint32>( listComponent.size() ); ++order )
+            for ( TComponent* pComponent : listComponent )
             {
-                TComponent*  pComponent = listComponent[order];
-                const Entry* pEntry     = findEntry( typeName, pComponent->getComponentID(), order );
+                const Entry* pEntry = findEntry( typeName, pComponent->getComponentID() );
                 if ( pEntry == nullptr )
                     continue;
                 vector<uint8> bytes = pEntry->_bytes;

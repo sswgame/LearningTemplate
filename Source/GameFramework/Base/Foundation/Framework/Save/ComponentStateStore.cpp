@@ -38,21 +38,32 @@ namespace sw
         _listEntry.push_back( std::move( entry ) );
     }
 
-    const ComponentStateStore::Entry* ComponentStateStore::findEntry( const hashed_string& typeName, uint64 componentID, uint32 orderInType ) const
+    const ComponentStateStore::Entry* ComponentStateStore::findEntry( const hashed_string& typeName, uint64 componentID ) const
     {
-        const Entry* pByOrder = nullptr;
-        uint32       order    = 0;
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._typeName != typeName )
-                continue;
-            if ( entry._componentID == componentID )
+            if ( entry._typeName == typeName && entry._componentID == componentID )
                 return &entry;
-            if ( order == orderInType )
-                pByOrder = &entry;
-            ++order;
         }
-        return pByOrder;
+        return nullptr;
+    }
+
+    void ComponentStateStore::remapComponentIDs( const vector<SavedComponentID>& listRemap )
+    {
+        vector<Entry> listRemapped;
+        listRemapped.reserve( _listEntry.size() );
+        for ( Entry& entry : _listEntry )
+        {
+            for ( const SavedComponentID& remap : listRemap )
+            {
+                if ( remap._savedID != entry._componentID )
+                    continue;
+                entry._componentID = remap._liveID;
+                listRemapped.push_back( std::move( entry ) );
+                break;
+            }
+        }
+        _listEntry = std::move( listRemapped );
     }
 
     void ComponentStateStore::write( Archive& outArchive ) const
