@@ -20,6 +20,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 
 namespace sw
@@ -60,6 +61,9 @@ namespace sw
                 return true;
             }
         };
+
+        /** @brief 켠 프리셋과 블렌드 스택을 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다). */
+        const StatefulComponentRegistrar<CameraDirectorComponent> s_stateRegistration{ "CameraDirectorComponent" };
     } // namespace
 } // namespace sw
 

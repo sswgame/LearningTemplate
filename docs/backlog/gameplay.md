@@ -23,8 +23,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   - 컷 프레임 신호(`RenderViewSettings::_bCut`)는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다.
     대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽(컷 준비)은 `D4-7`.
   - 렌더러 쪽: 피사계 심도 패스, 카메라별 후처리 값(`CameraPostProcessValues` — 포즈가 나르기만 한다)을 렌더러가 읽기.
-  - 게임이 디렉터 컴포넌트를 `registerStatefulComponent` 로 올려 세이브 · 핫 리로드가 켠 프리셋과 블렌드를 싣게 하는 일. 게임마다 한 줄씩 넣지 말고 `GameInstanceBase` 생성자가
-    `TerrainComponent` 처럼 올리면 모든 게임에 걸린다(`Base/Foundation` 몫).
 
 - `D4-6` [기능] **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/`(임포트 · 코덱 · 재생 · 상태 기계 · 블렌드 스페이스 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생),
   알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/`. 남은 것 —

@@ -42,7 +42,7 @@ namespace sw
      *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.
      *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateStore` 계약(`writeState` / `restoreState`)으로 저장한다.
-     *          게임 인스턴스가 `registerStatefulComponent<CameraDirectorComponent>()` 로 올리면 핫 리로드와 세이브를 넘긴다.
+     *          이 타입은 정의한 .cpp 가 `StatefulComponentRegistrar` 로 등록해 모든 게임의 스냅샷에 실린다 — 게임 인스턴스가 따로 올리지 않는다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Director", Tooltip = "Drives the camera on this object from data presets with blends, damping, framing and shake" )
     class SW_GF_API CameraDirectorComponent : public Component
