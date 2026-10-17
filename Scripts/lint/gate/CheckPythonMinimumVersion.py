@@ -124,6 +124,7 @@ class CheckPythonMinimumVersionGate(LintGate):
     selfTestCases = [
         {
             "name": "f-string 식 안의 백슬래시",
+            "expectedViolation": "Scripts/Probe/BadFString.py:2 -> f-string 식 안의 백슬래시는 Python 3.10 에서 SyntaxError 입니다 (식을 변수로 먼저 뽑으세요): '>' if includeType == '<' else '\\\\\"'",
             "files": {
                 "Scripts/Probe/BadFString.py": (
                     'def buildInclude(includeType, includeName):\n'

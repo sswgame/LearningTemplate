@@ -59,6 +59,7 @@ class CheckResourceCasingGate(LintGate):
     selfTestCases = [
         {
             "name": "대문자 리소스 경로",
+            "expectedViolation": "[Resource Casing] 대문자가 포함된 리소스 경로: Resource/engine/Textures/Splash.png",
             "files": {
                 "Resource/engine/Textures/Splash.png": "probe",
             },

@@ -86,10 +86,10 @@ class CheckDiscardReasonGate(LintGate):
     hint = ("  (void)FileUtil::removeFile( path ); // 없으면 할 일이 없고, 실패는 removeFile 이 경고로 남긴다\n"
             "  이유를 댈 수 없으면 버리지 말고 처리하거나(되돌리기 · 오류 로그 · 단언) 위로 돌려줍니다.")
     selfTestCases = [
-        {"name": "이유 없이 버린 읽기", "files": {"Source/Probe/A.cpp": "void f()\n{\n    (void)readBytes( pData, size );\n}\n"}},
-        {"name": "이유 없이 버린 멤버 적용(여러 줄 호출)",
+        {"name": "이유 없이 버린 읽기", "expectedViolation": "Source/Probe/A.cpp:3: (void)readBytes(…) 에 이유가 없습니다", "files": {"Source/Probe/A.cpp": "void f()\n{\n    (void)readBytes( pData, size );\n}\n"}},
+        {"name": "이유 없이 버린 멤버 적용(여러 줄 호출)", "expectedViolation": "Source/Probe/B.cpp:3: (void)applyOverrides(…) 에 이유가 없습니다",
          "files": {"Source/Probe/B.cpp": "void f()\n{\n    (void)pAsset->applyOverrides(\n        listOverride );\n}\n"}},
-        {"name": "re + 동사 · 이름공간 호출", "files": {"Test/Probe/C.cpp": "void f()\n{\n    (void)sw::FileUtil::removeFile( path );\n}\n"}},
+        {"name": "re + 동사 · 이름공간 호출", "expectedViolation": "Test/Probe/C.cpp:3: (void)removeFile(…) 에 이유가 없습니다", "files": {"Test/Probe/C.cpp": "void f()\n{\n    (void)sw::FileUtil::removeFile( path );\n}\n"}},
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:

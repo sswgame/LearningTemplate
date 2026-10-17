@@ -59,42 +59,49 @@ class CheckPostTickThisBindingGate(LintGate):
     selfTestCases = [
         {
             "name": "executeOrDeferPostTick 에 this 메서드",
+            "expectedViolation": "Source/Probe/Probe.cpp:1: executeOrDeferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Probe::g, this",
             "files": {
                 "Source/Probe/Probe.cpp": "void Probe::f() { pManager->executeOrDeferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Probe::g, this ) ); }\n",
             },
         },
         {
             "name": "줄을 넘긴 deferPostTick",
+            "expectedViolation": "Source/Probe/Probe.cpp:3: deferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Probe::g, this",
             "files": {
                 "Source/Probe/Probe.cpp": "void Probe::f()\n{\n    pManager->deferPostTick(\n        SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Probe::g,\n                            this ) );\n}\n",
             },
         },
         {
             "name": "감싼 this 인스턴스",
+            "expectedViolation": "Source/Probe/Probe.cpp:1: deferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Base::g, static_cast<Base*>( this",
             "files": {
                 "Source/Probe/Probe.cpp": "void Probe::f() { pManager->deferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Base::g, static_cast<Base*>( this ) ) ); }\n",
             },
         },
         {
             "name": "SW_DELEGATE_LAMBDA 가 this 캡처",
+            "expectedViolation": "Source/Probe/Probe.cpp:1: executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, this]",
             "files": {
                 "Source/Probe/Probe.cpp": "void Probe::f() { pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, this]() { g(); } ) ); }\n",
             },
         },
         {
             "name": "맨 람다 기본 캡처 =",
+            "expectedViolation": "Source/Probe/Probe.cpp:1: deferPostTick( [=]",
             "files": {
                 "Source/Probe/Probe.cpp": "void Probe::f() { pManager->deferPostTick( [=]() { g(); } ); }\n",
             },
         },
         {
             "name": "맨 람다 기본 캡처 &",
+            "expectedViolation": "Source/Probe/Probe.cpp:1: executeOrDeferPostTick( [&, value]",
             "files": {
                 "Source/Probe/Probe.cpp": "void Probe::f() { pManager->executeOrDeferPostTick( [&, value]() { g( value ); } ); }\n",
             },
         },
         {
             "name": "미리 만든 델리게이트 변수",
+            "expectedViolation": "Source/Probe/Probe.cpp:4: deferPostTick( std::move( func )",
             "files": {
                 "Source/Probe/Probe.cpp": "void Probe::f()\n{\n    auto func = SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Probe::g, this );\n    pManager->deferPostTick( std::move( func ) );\n}\n",
             },

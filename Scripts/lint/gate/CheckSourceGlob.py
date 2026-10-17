@@ -77,6 +77,7 @@ class CheckSourceGlobGate(LintGate):
     selfTestCases = [
         {
             "name": "짓지 않는 소스 목록에 없는데 compile_commands 에도 없는 소스",
+            "expectedViolation": "compile_commands 에 없음: Source/Engine/Graphics/RHI/Vulkan/Probe.cpp",
             "files": {
                 "Source/Engine/Graphics/RHI/Vulkan/Probe.cpp": "// 아무도 짓지 않는다\n",
                 "Source/Editor/Declared.cpp": "// 이 구성이 짓지 않는다고 적혀 있다\n",
@@ -88,6 +89,7 @@ class CheckSourceGlobGate(LintGate):
         {
             # 게이트에 플랫폼 · 게임 무시 목록이 없다 — 다른 OS 폴더 · 다른 게임 팩도 목록에 없으면 위반이다.
             "name": "다른 OS 폴더 · 다른 게임 팩의 소스도 목록에 없으면 위반",
+            "expectedViolation": "compile_commands 에 없음: Source/Core/File/Linux/ProbeLinux.cpp",
             "files": {
                 # 짓지 않는 소스로 적혀 있어 위반이 아니다. 남는 위반은 아래 둘뿐이다.
                 "Source/Engine/Graphics/RHI/Vulkan/Built.cpp": "// 짓지 않는 소스로 적혀 있다\n",

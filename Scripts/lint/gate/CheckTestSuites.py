@@ -468,18 +468,22 @@ class CheckTestSuitesGate(LintGate):
     selfTestCases = [
         {
             "name": "doc 블록과 케이스 사이에 빈 줄",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp:1: `[ProbeTest]` doc 블록이 자기 SW_TEST_CASE 바로 위에 있지 않습니다 (사이의 빈 줄 · 다른 블록을 지우거나, 설명할 케이스가 없으면 블록을 지우세요)",
             "files": {**_kCleanFixture, "Test/EngineTest/TestProbe.cpp": "/**\n * @brief [ProbeTest] 설명\n */\n\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n"},
         },
         {
             "name": "doc 블록 태그가 다른 스위트",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp:1: doc 블록 태그 `[OtherTest]` 가 케이스의 스위트 `ProbeTest` 와 다릅니다",
             "files": {**_kCleanFixture, "Test/EngineTest/TestProbe.cpp": "/**\n * @brief [OtherTest] 설명\n */\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n"},
         },
         {
             "name": "스위트 이름이 XxxTest 가 아님",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp: 스위트 `Probe_Bad`",
             "files": {**_kCleanFixture, "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( Probe_Bad, Something )\n{\n}\n"},
         },
         {
             "name": "한 스위트가 두 파일에",
+            "expectedViolation": "스위트 `ProbeTest` 가 파일 2개에 걸쳐 있습니다 (Test/EngineTest/TestProbe.cpp · Test/EngineTest/TestProbeB.cpp)",
             "files": {
                 **_kCleanFixture,
                 "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( ProbeTest, One )\n{\n}\n",
@@ -489,6 +493,7 @@ class CheckTestSuitesGate(LintGate):
         {
             # 선언을 읽는 것은 정책에서 `hostSplit` 인 실행 파일뿐이다 — 아니면 그 스위트는 CI 에서 돈다.
             "name": "호스트 선언이 있는데 hostSplit 이 아님",
+            "expectedViolation": "Test/GpuTest/TestGpuProbe.cpp: `GpuProbeTest` 는 호스트가 필요하다고 선언했는데 Test/TestPolicy.json 의 `GpuTest` 줄이 `hostSplit` 이 아닙니다",
             "files": {
                 **_kCleanFixture,
                 "Test/TestPolicy.json": _kCleanPolicy.replace('"EditorTest"', '"GpuTest": {"area": "engine", "seconds": 1}, "EditorTest"'),
@@ -501,6 +506,7 @@ class CheckTestSuitesGate(LintGate):
         {
             # 이름을 바꾸고 선언을 놓치면 선언은 아무것도 빼지 않고, 바뀐 스위트가 CI 로 들어간다.
             "name": "호스트 선언이 없는 스위트를 가리킴",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp: `SW_TEST_REQUIRES_HOST( OldNameTest )`",
             "files": {
                 **_kCleanFixture,
                 "Test/EngineTest/TestProbe.cpp": (
@@ -510,6 +516,7 @@ class CheckTestSuitesGate(LintGate):
         },
         {
             "name": "호스트 스위트 파일에 다른 스위트가 섞임",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp: `ProbeTest` 는 CI 가 못 돌리는데 같은 파일에 NeighbourTest 가 있습니다",
             "files": {
                 **_kCleanFixture,
                 "Test/EngineTest/TestProbe.cpp": (
@@ -520,6 +527,7 @@ class CheckTestSuitesGate(LintGate):
         },
         {
             "name": "CoreTest 가 Engine 헤더를 include",
+            "expectedViolation": "Test/CoreTest/TestProbe.cpp:1: CoreTest 가 `Engine/Physics/Collision/CollisionLayers.h` 를 include 합니다",
             "files": {
                 **_kCleanFixture,
                 "Test/CoreTest/TestProbe.cpp": '#include "Engine/Physics/Collision/CollisionLayers.h"\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n',
@@ -528,6 +536,7 @@ class CheckTestSuitesGate(LintGate):
         {
             # 주석의 `engine::` 는 세지 않는다 — 걸리는 것은 본문의 호출이다.
             "name": "CoreTest 가 engine:: 서비스를 부름",
+            "expectedViolation": "Test/CoreTest/TestProbe.cpp:4: CoreTest 가 `engine::getSubsystem` 를 부릅니다",
             "files": {
                 **_kCleanFixture,
                 "Test/CoreTest/TestProbe.cpp": (
@@ -538,6 +547,7 @@ class CheckTestSuitesGate(LintGate):
         },
         {
             "name": "환경 스위트 파일에 다른 스위트가 섞임",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp: `ProbeTest` 는 바깥 환경이 있어야 도는데 같은 파일에 NeighbourTest 가 있습니다",
             "files": {
                 **_kCleanFixture,
                 "Test/EngineTest/TestProbe.cpp": (
@@ -548,6 +558,7 @@ class CheckTestSuitesGate(LintGate):
         },
         {
             "name": "정책에 줄이 없는 실행 파일",
+            "expectedViolation": "Test/ToolTest/CMakeLists.txt: `ToolTest` 의 줄이 Test/TestPolicy.json 에 없습니다",
             "files": {
                 **_kCleanFixture,
                 "Test/ToolTest/CMakeLists.txt": "sw_addTestExecutable(ToolTest)\n",
@@ -556,15 +567,18 @@ class CheckTestSuitesGate(LintGate):
         },
         {
             "name": "폴더 이름과 다른 실행 파일",
+            "expectedViolation": "폴더 이름(`EditorTest`)과 실행 파일 이름이 같아야 합니다",
             "files": {**_kCleanFixture, "Test/EditorTest/CMakeLists.txt": _kCleanFixture["Test/EditorTest/CMakeLists.txt"].replace("(EditorTest", "(EditorToolTest")},
         },
         {
             "name": "모르는 라벨",
+            "expectedViolation": "Test/EngineTest/CMakeLists.txt: 라벨 `gpuu` 이 Test/TestPolicy.json 의 labels 표에 없습니다",
             "files": {**_kCleanFixture, "Test/EngineTest/CMakeLists.txt": 'sw_addTestExecutable(EngineTest)\nsw_registerScriptTest(Probe LABELS "nogpu;gpuu")\n'},
         },
         {
             # 이름을 바꾸면 비용이 조용히 사라져 샤드가 기운다.
             "name": "비용표가 없는 케이스를 가리킴",
+            "expectedViolation": "Test/TestPolicy.json: `EngineTest` 의 비용표가 없는 케이스 `PlainProbeTest.Renamed` 을 가리킵니다",
             "files": {
                 **_kCleanFixture,
                 "Test/TestPolicy.json": _kCleanPolicy.replace('"hostSplit": true}', '"hostSplit": true, "caseCosts": {"PlainProbeTest.Renamed": 9}}'),
@@ -573,6 +587,7 @@ class CheckTestSuitesGate(LintGate):
         {
             # 레이스 묶음도 이름을 바꾸면 그 케이스가 Debug 레이스 검사에서 조용히 빠진다.
             "name": "레이스 묶음이 없는 스위트를 가리킴",
+            "expectedViolation": "Test/TestPolicy.json: `EngineTest` 의 레이스 묶음(raceCases)이 없는 케이스 `RenamedProbeTest.*` 을 가리킵니다",
             "files": {
                 **_kCleanFixture,
                 "Test/TestPolicy.json": _kCleanPolicy.replace('"hostSplit": true}', '"hostSplit": true, "raceCases": ["RenamedProbeTest.*"]}'),
@@ -580,6 +595,7 @@ class CheckTestSuitesGate(LintGate):
         },
         {
             "name": "부하 스위트인데 loadSeconds 가 없음",
+            "expectedViolation": "Test/EngineTest/TestLoadProbe.cpp: 부하 스위트 `LoadProbeTest` 가 있는데 Test/TestPolicy.json 의 `EngineTest` 줄에 `loadSeconds` 가 없습니다",
             "files": {
                 **_kCleanFixture,
                 "Test/EngineTest/TestLoadProbe.cpp": 'SW_TEST_LOAD_SUITE( LoadProbeTest, "measures throughput" );\nSW_TEST_CASE( LoadProbeTest, One )\n{\n}\n',
@@ -587,6 +603,7 @@ class CheckTestSuitesGate(LintGate):
         },
         {
             "name": "옛 주석 마커",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp: 옛 주석 마커 `// SW_TEST_REQUIRES_HOST( ProbeTest ): ...` 는 아무 효력이 없습니다",
             "files": {
                 **_kCleanFixture,
                 "Test/EngineTest/TestProbe.cpp": (

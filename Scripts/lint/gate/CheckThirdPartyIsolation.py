@@ -192,70 +192,87 @@ class CheckThirdPartyIsolationGate(LintGate):
     selfTestCases = [
         {
             "name": "pugixml 헤더를 씬에서 include 한다(XMLDocument 를 비켜 감)",
+            "expectedViolation": "Source/Engine/Scene/Probe.cpp:1: <pugixml.hpp> -> pugixml 헤더는 Source/Engine/Serialization/XML/ 안에서만 include 합니다",
             "files": {"Source/Engine/Scene/Probe.cpp": "#include <pugixml.hpp>\nint probe() { return 0; }\n"},
         },
         {
             "name": "ImGui 헤더를 엔진에서 include 한다",
+            "expectedViolation": "Source/Engine/Scene/ProbeGui.cpp:1: <imgui.h> -> ImGui 헤더는 Source/Editor/ · Test/EditorUITest/ 안에서만 include 합니다",
             "files": {"Source/Engine/Scene/ProbeGui.cpp": '#include "imgui.h"\nint probe() { return 0; }\n'},
         },
         {
             "name": "Jolt 헤더를 오브젝트 층에서 include 한다",
+            "expectedViolation": "Source/Engine/Object/Component/Probe.cpp:1: <Jolt/Jolt.h> -> Jolt 헤더는 Source/Engine/Physics/Jolt/ 안에서만 include 합니다",
             "files": {"Source/Engine/Object/Component/Probe.cpp": "#include <Jolt/Jolt.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "Box2D 헤더를 시험에서 include 한다",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp:1: <box2d/box2d.h> -> Box2D 헤더는 Source/Engine/Physics/Box2D/ 안에서만 include 합니다",
             "files": {"Test/EngineTest/TestProbe.cpp": '#include "box2d/box2d.h"\nint probe() { return 0; }\n'},
         },
         {
             "name": "RTM 헤더를 애니메이션 코덱 폴더 밖에서 include 한다",
+            "expectedViolation": "Source/Engine/Animation/Probe.h:2: <rtm/quatf.h> -> ACL 헤더는 Source/Engine/Animation/Codec/ACL/ 안에서만 include 합니다",
             "files": {"Source/Engine/Animation/Probe.h": "#pragma once\n#include <rtm/quatf.h>\n"},
         },
         {
             "name": "Tracy 헤더를 렌더러에서 include 한다",
+            "expectedViolation": "Source/Engine/Renderer/Probe.cpp:1: <tracy/TracyC.h> -> Tracy 헤더는 Source/Engine/Profiling/Tracy/ 안에서만 include 합니다",
             "files": {"Source/Engine/Renderer/Probe.cpp": "#include <tracy/TracyC.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "Tracy 클라이언트를 RHI 백엔드 모듈에서 링크한다",
+            "expectedViolation": "Source/Engine/Graphics/RHI/Modules/Probe/CMakeLists.txt:1: target_link_libraries(... Tracy::TracyClient ...) -> Tracy 는 Source/Engine/CMakeL",
             "files": {"Source/Engine/Graphics/RHI/Modules/Probe/CMakeLists.txt": "target_link_libraries(RHI_Probe PRIVATE Tracy::TracyClient)\n"},
         },
         {
             "name": "Detour 헤더를 게임 프레임워크에서 include 한다",
+            "expectedViolation": "Source/GameFramework/Base/Actor/AI/Probe.cpp:1: <recastnavigation/DetourNavMeshQuery.h> -> Recast 헤더는 Source/Engine/Navigation/Recast/ 안에서만",
             "files": {"Source/GameFramework/Base/Actor/AI/Probe.cpp": "#include <recastnavigation/DetourNavMeshQuery.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "Recast 헤더를 경로 없이 내비게이션 인터페이스 폴더에서 include 한다",
+            "expectedViolation": "Source/Engine/Navigation/Probe.h:2: <Recast.h> -> Recast 헤더는 Source/Engine/Navigation/Recast/ 안에서만 include 합니다",
             "files": {"Source/Engine/Navigation/Probe.h": "#pragma once\n#include <Recast.h>\n"},
         },
         {
             "name": "Jolt 를 게임 모듈의 CMakeLists 에서 링크한다",
+            "expectedViolation": "Source/Games/Probe/CMakeLists.txt:2: target_link_libraries(... joltphysics ...) -> Jolt 는 Source/Engine/CMakeLists.txt 에서만 링크합니다",
             "files": {"Source/Games/Probe/CMakeLists.txt": "add_library(Probe MODULE probe.cpp)\ntarget_link_libraries(Probe\n    PRIVATE\n    joltphysics\n)\n"},
         },
         {
             "name": "OpenSSL 헤더를 Core 네트워크에서 include 한다",
+            "expectedViolation": "Source/Core/Network/Security/Probe.cpp:1: <openssl/evp.h> -> OpenSSL 헤더는 Source/GameFramework/Base/Online/Security/OpenSSL/ 안에서만 include 합니다",
             "files": {"Source/Core/Network/Security/Probe.cpp": "#include <openssl/evp.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "OpenSSL 을 키트 CMakeLists 에서 링크한다",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Online/Account/Shared/CMakeLists.txt:1: target_link_libraries(... OpenSSL::SSL ...) -> OpenSSL 는 Source/Ga",
             "files": {"Source/GameFramework/Kits/Feature/Online/Account/Shared/CMakeLists.txt": "target_link_libraries(GF_Account PRIVATE OpenSSL::SSL)\n"},
         },
         {
             "name": "FreeType 헤더를 글자 백엔드 폴더 밖(UI)에서 include 한다",
+            "expectedViolation": "Source/Engine/UI/Probe.cpp:1: <freetype/freetype.h> -> FreeType 헤더는 Source/Engine/Text/FreeType/ 안에서만 include 합니다",
             "files": {"Source/Engine/UI/Probe.cpp": "#include <freetype/freetype.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "FreeType 를 에디터 CMakeLists 에서 링크한다",
+            "expectedViolation": "Source/Editor/Probe/CMakeLists.txt:1: target_link_libraries(... Freetype::Freetype ...) -> FreeType 는 Source/Engine/CMakeLists.txt 에서만 링크합니다",
             "files": {"Source/Editor/Probe/CMakeLists.txt": "target_link_libraries(EditorProbe PRIVATE Freetype::Freetype)\n"},
         },
         {
             "name": "SQLite 헤더를 SQL 키트의 드라이버 폴더 밖에서 include 한다",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/Probe.cpp:1: <sqlite3.h> -> SQLite 헤더는 Source/GameFramework/Kits/Feature/Stora",
             "files": {"Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/Probe.cpp": "#include <sqlite3.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "libpq 헤더를 서버 SQL 키트의 드라이버 폴더 밖에서 include 한다",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Probe.cpp:1: <libpq-fe.h> -> PostgreSQL 헤더는 Source/GameFramework/Kits/Feature/Stor",
             "files": {"Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Probe.cpp": "#include <libpq-fe.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "SQLite 를 서버 키트의 CMakeLists 에서 링크한다",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/CMakeLists.txt:1: target_link_libraries(... unofficial::sqlite3::sqlite3 ...) -> S",
             "files": {"Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/CMakeLists.txt": "target_link_libraries(GF_Server_SQLStore PRIVATE unofficial::sqlite3::sqlite3)\n"},
         },
     ]

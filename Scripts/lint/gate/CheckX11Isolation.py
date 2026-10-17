@@ -99,18 +99,22 @@ class CheckX11IsolationGate(LintGate):
     selfTestCases = [
         {
             "name": "공용 OS 헤더가 Xlib 을 include 한다",
+            "expectedViolation": "Source/Core/Common/PlatformOsHeaders.h:2: <X11/Xlib.h> -> X11 헤더는 .cpp 에서만 include 합니다(헤더면 그 헤더를 쓰는 모든 TU 로 매크로가 번집니다)",
             "files": {"Source/Core/Common/PlatformOsHeaders.h": "#pragma once\n#include <X11/Xlib.h>\n#include \"Core/Common/X11MacroUndef.h\"\n"},
         },
         {
             "name": "백엔드 내부 헤더가 X11 묶음을 include 한다",
+            "expectedViolation": "Source/Engine/Graphics/RHI/Vulkan/ProbeInternal.h:2: <Core/Common/X11Headers.h> -> X11 헤더는 .cpp 에서만 include 합니다(헤더면 그 헤더를 쓰는 모든 TU 로 매크로가 번집",
             "files": {"Source/Engine/Graphics/RHI/Vulkan/ProbeInternal.h": "#pragma once\n#include \"Core/Common/X11Headers.h\"\n"},
         },
         {
             "name": "Xlib-xcb 뒤에 매크로를 지우지 않는다",
+            "expectedViolation": "Source/Engine/Graphics/RHI/Vulkan/Probe.cpp:2: X11 헤더 뒤에 \"Core/Common/X11MacroUndef.h\" 를 다시 include 하지 않았습니다",
             "files": {"Source/Engine/Graphics/RHI/Vulkan/Probe.cpp": "#include \"Core/Common/X11Headers.h\"\n#include <X11/Xlib-xcb.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "X11 TU 가 Jolt 헤더를 함께 include 한다",
+            "expectedViolation": "Source/Engine/Window/Linux/Probe.cpp:2: <Jolt/Jolt.h> -> X11 을 include 하는 파일(줄 1)은 서드파티 헤더를 함께 include 하지 않습니다",
             "files": {"Source/Engine/Window/Linux/Probe.cpp": "#include \"Core/Common/X11Headers.h\"\n#include <Jolt/Jolt.h>\nint probe() { return 0; }\n"},
         },
     ]

@@ -333,6 +333,7 @@ class CheckEngineLayersGate(LintGate):
     selfTestCases = [
         {
             "name": "Engine 이 Editor 를 include",
+            "expectedViolation": "Source/Engine/Scene/Probe.cpp: #include \"Editor/Common/Workspace/EditorContext.h\"  (금지: Editor/)",
             "files": {
                 "Source/Engine/Scene/Probe.cpp": '#include "pch.h"\n\n#include "Editor/Common/Workspace/EditorContext.h"\n',
             },
@@ -340,6 +341,7 @@ class CheckEngineLayersGate(LintGate):
         {
             # 액터 층이 월드 관리자를 아는 방향 — 가장 되돌아오기 쉬운 엣지다.
             "name": "Object 가 Scene 을 include (아래층이 위층을)",
+            "expectedViolation": "Source/Engine/Object/Probe.cpp: #include \"Engine/Scene/SceneManager.h\"  (티어 Object(T9) -> Scene(T10))",
             "files": {
                 "Source/Engine/Object/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Scene/SceneManager.h"\n',
             },
@@ -347,6 +349,7 @@ class CheckEngineLayersGate(LintGate):
         {
             # 디바이스 · 셰이더가 그리는 쪽을 알면 안 된다.
             "name": "Graphics(RHI)가 Renderer 를 include",
+            "expectedViolation": "Source/Engine/Graphics/RHI/Probe.cpp: #include \"Engine/Renderer/Frame/FrameRenderer.h\"  (티어 Graphics(T8) -> Renderer(T13))",
             "files": {
                 "Source/Engine/Graphics/RHI/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Renderer/Frame/FrameRenderer.h"\n',
             },
@@ -354,6 +357,7 @@ class CheckEngineLayersGate(LintGate):
         {
             # 같은 Graphics 안의 고리 — RHI 백엔드가 셰이더 캐시를 쓰므로 셰이더가 RHI 를 알면 순환이다(최상위 티어로는 안 보인다).
             "name": "Graphics/Shader 가 Graphics/RHI 를 include (하위 티어)",
+            "expectedViolation": "Source/Engine/Graphics/Shader/Compile/Probe.cpp: #include \"Engine/Graphics/RHI/RHI.h\"  (하위 티어 Graphics/Shader(T0) -> Graphics/RHI(T1))",
             "files": {
                 "Source/Engine/Graphics/Shader/Compile/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Graphics/RHI/RHI.h"\n',
             },
@@ -361,6 +365,7 @@ class CheckEngineLayersGate(LintGate):
         {
             # 하위 폴더를 새로 만들면 표에 자리를 정해야 한다.
             "name": "하위 티어 표에 없는 Graphics 하위 폴더",
+            "expectedViolation": "Source/Engine/Graphics/ProbeFolder/Probe.cpp: 하위 폴더 'Graphics/ProbeFolder' 가 하위 티어 표(rules/CheckEngineLayers.toml 의 [subtier])에 없습니다.",
             "files": {
                 "Source/Engine/Graphics/ProbeFolder/Probe.cpp": '#include "pch.h"\n',
             },
@@ -368,18 +373,21 @@ class CheckEngineLayersGate(LintGate):
         {
             # 컴포넌트 모델 코어가 기능을 아는 방향 — Object 는 Graphics 보다 티어가 위라 티어 검사로는 안 잡힌다.
             "name": "Object/GameObject 가 Graphics 를 include (코어 -> 기능)",
+            "expectedViolation": "Source/Engine/Object/GameObject/Probe.cpp: #include \"Engine/Graphics/Mesh/Mesh.h\"  (컴포넌트 모델 코어 Object/GameObject -> 기능 폴더 Graphics)",
             "files": {
                 "Source/Engine/Object/GameObject/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Graphics/Mesh/Mesh.h"\n',
             },
         },
         {
             "name": "Object/GameObject 하위 폴더가 Physics 를 include (코어 트리 -> 기능)",
+            "expectedViolation": "Source/Engine/Object/GameObject/Tick/Probe.cpp: #include \"Engine/Physics/PhysicsTypes.h\"  (컴포넌트 모델 코어 Object/GameObject/Tick -> 기능 폴더 Physic",
             "files": {
                 "Source/Engine/Object/GameObject/Tick/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Physics/PhysicsTypes.h"\n',
             },
         },
         {
             "name": "Object/Component 바로 아래가 Physics 를 include (코어 -> 기능)",
+            "expectedViolation": "Source/Engine/Object/Component/Probe.h: #include \"Engine/Physics/PhysicsTypes.h\"  (컴포넌트 모델 코어 Object/Component -> 기능 폴더 Physics)",
             "files": {
                 "Source/Engine/Object/Component/Probe.h": '#pragma once\n\n#include "Engine/Physics/PhysicsTypes.h"\n',
             },
@@ -387,6 +395,7 @@ class CheckEngineLayersGate(LintGate):
         {
             # 계약이 구현을 아는 방향 — 서비스 표를 Engine 에 두면 이 모양이 된다.
             "name": "RuntimeAPI 가 Engine 을 include",
+            "expectedViolation": "Source/RuntimeAPI/Service/Probe.h: #include \"Engine/Common/EngineServices.h\"  (금지: Engine/)",
             "files": {
                 "Source/Engine/Common/Probe.h": "#pragma once\n",
                 "Source/RuntimeAPI/Service/Probe.h": '#pragma once\n\n#include "Engine/Common/EngineServices.h"\n',
@@ -394,6 +403,7 @@ class CheckEngineLayersGate(LintGate):
         },
         {
             "name": "Core 가 Engine 을 include",
+            "expectedViolation": "Source/Core/Probe/Probe.cpp: #include \"Engine/Scene/SceneManager.h\"  (금지: Source/Core 는 Engine/ 를 모른다)",
             "files": {
                 "Source/Engine/Common/Probe.h": "#pragma once\n",
                 "Source/Core/Probe/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Scene/SceneManager.h"\n',
@@ -402,6 +412,7 @@ class CheckEngineLayersGate(LintGate):
         {
             # App 은 게임 · 에디터를 C-ABI 로만 안다.
             "name": "App 이 게임을 include",
+            "expectedViolation": "Source/App/Probe.cpp: #include \"Games/Alpha/AlphaGame.h\"  (금지: Source/App 는 Games/ 를 모른다)",
             "files": {
                 "Source/Engine/Common/Probe.h": "#pragma once\n",
                 "Source/App/Probe.cpp": '#include "pch.h"\n\n#include "Games/Alpha/AlphaGame.h"\n',
@@ -409,6 +420,7 @@ class CheckEngineLayersGate(LintGate):
         },
         {
             "name": "게임이 다른 게임을 include",
+            "expectedViolation": "Source/Games/Alpha/AlphaProbe.cpp: #include \"Games/Beta/BetaProbe.h\"  (게임 Alpha -> 다른 게임 Beta)",
             "files": {
                 "Source/Engine/Common/Probe.h": "#pragma once\n",
                 "Source/Games/Alpha/AlphaProbe.cpp": '#include "pch.h"\n\n#include "Games/Beta/BetaProbe.h"\n',

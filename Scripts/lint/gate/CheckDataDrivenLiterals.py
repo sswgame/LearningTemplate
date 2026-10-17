@@ -114,11 +114,11 @@ class CheckDataDrivenLiteralsGate(LintGate):
             "  게임플레이 튜닝값은 컴포넌트 PROPERTY(기본값은 생성자) 나 키트 설정 · 카탈로그 칸이다. 불변식이면 rules 의 [exemption] 에\n"
             "  \"<규칙>:<경로>:<이름>\" = \"이유\" 로 적는다.")
     selfTestCases = [
-        {"name": "속성 리터럴 기본값", "files": {"Source/Probe/A.cpp": "void f( const XMLNode& node )\n{\n    float s = node.getAttributeFloat( \"speed\", 3.0f );\n}\n"},
+        {"name": "속성 리터럴 기본값", "expectedViolation": "Source/Probe/A.cpp:3: AttributeFallback 'speed'", "files": {"Source/Probe/A.cpp": "void f( const XMLNode& node )\n{\n    float s = node.getAttributeFloat( \"speed\", 3.0f );\n}\n"},
          "args": ["--files", "Source/Probe/A.cpp", "--whole-files"]},
-        {"name": "속성 조용한 자르기", "files": {"Source/Probe/B.cpp": "void f( const XMLNode& node )\n{\n    int c = MathUtil::max( 1, node.getAttributeInt( \"capacity\", c ) );\n}\n"},
+        {"name": "속성 조용한 자르기", "expectedViolation": "Source/Probe/B.cpp:3: AttributeFallback 'capacity'", "files": {"Source/Probe/B.cpp": "void f( const XMLNode& node )\n{\n    int c = MathUtil::max( 1, node.getAttributeInt( \"capacity\", c ) );\n}\n"},
          "args": ["--files", "Source/Probe/B.cpp", "--whole-files"]},
-        {"name": "게임 실수 튜닝 상수", "files": {"Source/Games/Probe/C.cpp": "struct X\n{\n    static constexpr float32 kWalkSpeed = 3.5f;\n};\n"},
+        {"name": "게임 실수 튜닝 상수", "expectedViolation": "Source/Games/Probe/C.cpp:3: TuningConstexpr 'kWalkSpeed'", "files": {"Source/Games/Probe/C.cpp": "struct X\n{\n    static constexpr float32 kWalkSpeed = 3.5f;\n};\n"},
          "args": ["--files", "Source/Games/Probe/C.cpp", "--whole-files"]},
     ]
 

@@ -122,11 +122,13 @@ class CheckDocPathsGate(LintGate):
     selfTestCases = [
         {
             "name": "없는 파일로 가는 상대 링크",
+            "expectedViolation": "docs/Guide.md:3 '../Source/Engine/README.md' 가 없습니다",
             "git": True,
             "files": {"docs/Guide.md": "# 안내\n\n[엔진](../Source/Engine/README.md)\n"},
         },
         {
             "name": "없는 제목으로 가는 앵커",
+            "expectedViolation": "docs/Guide.md:3 링크 'Other.md#없는-절' 의 제목 '#없는-절' 이 Other.md 에 없습니다",
             "git": True,
             "files": {
                 "docs/Guide.md": "# 안내\n\n[절](Other.md#없는-절)\n",
@@ -135,18 +137,21 @@ class CheckDocPathsGate(LintGate):
         },
         {
             "name": "백틱 안의 없는 저장소 경로",
+            "expectedViolation": "README.md:3 'Source/Engine/Missing/Thing.h' 가 없습니다",
             "git": True,
             "files": {"README.md": "# 저장소\n\n정본은 `Source/Engine/Missing/Thing.h` 다.\n",
                       "Source/Engine/Real.h": "#pragma once\n"},
         },
         {
             "name": "문서 폴더 기준의 없는 하위 경로",
+            "expectedViolation": "Source/Engine/README.md:3 'Common/Gone' 가 없습니다",
             "git": True,
             "files": {"Source/Engine/README.md": "# 엔진\n\n`Common/Gone` 을 본다.\n",
                       "Source/Engine/Common/Here.h": "#pragma once\n"},
         },
         {
             "name": "문서 지도에 없는 README",
+            "expectedViolation": "Source/Core/README.md 가 문서 지도(docs/02_DocumentMap.md)에 없습니다",
             "git": True,
             "files": {"docs/02_DocumentMap.md": "# 문서 지도\n\n- [엔진](../Source/Engine/README.md)\n",
                       "Source/Engine/README.md": "# 엔진\n",
@@ -154,6 +159,7 @@ class CheckDocPathsGate(LintGate):
         },
         {
             "name": "코드 블록 안의 없는 include",
+            "expectedViolation": "README.md:4 'Engine/Nowhere/Gone.h' 가 없습니다",
             "git": True,
             "files": {"README.md": "# 저장소\n\n```cpp\n#include \"Engine/Nowhere/Gone.h\"\n```\n",
                       "Source/Engine/Real.h": "#pragma once\n"},

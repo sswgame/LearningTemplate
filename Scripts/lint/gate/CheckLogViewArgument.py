@@ -72,6 +72,7 @@ class CheckLogViewArgumentGate(LintGate):
     selfTestCases = [
         {
             "name": "로그 인자에 .data()",
+            "expectedViolation": "[Log View Argument] Source/Probe/ProbeLog.cpp:3: SW_LOG_ERROR( \"failed: %#\", path.data() );",
             "files": {
                 "Source/Probe/ProbeLog.cpp": (
                     "void probe( string_view path )\n"

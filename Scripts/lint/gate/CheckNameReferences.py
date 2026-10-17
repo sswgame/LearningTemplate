@@ -282,6 +282,7 @@ class CheckNameReferencesGate(LintGate):
     selfTestCases = [
         {
             "name": "스크립트가 지운 전역 변수를 넘긴다",
+            "expectedViolation": "[NameReference/GlobalVariable] Scripts/qa/Probe.py: 전역 변수 'gv_probeCounts' 의 정의가 없습니다",
             "files": {
                 "Source/Probe/Probe.cpp": "SW_TEST_GLOBAL_VARIABLE( int32, gv_probeCount, 0, \"probe\" );\n",
                 "Scripts/qa/Probe.py": "listArgument = [\"-gv_probeCount=3\", \"-gv_probeCounts=4\"]\n",
@@ -289,6 +290,7 @@ class CheckNameReferencesGate(LintGate):
         },
         {
             "name": "시나리오가 없는 전역 변수를 바꾼다",
+            "expectedViolation": "[NameReference/GlobalVariable] Resource/engine/automation/probe.scenario.xml: 전역 변수 'gv_probeOff' 의 정의가 없습니다",
             "files": {
                 "Source/Probe/Probe.cpp": "SW_GLOBAL_VARIABLE( bool, gv_probeOn, false, \"probe\" );\n",
                 "Resource/engine/automation/probe.scenario.xml": "<Scenario><Variable name=\"gv_probeOff\" value=\"1\"/></Scenario>\n",
@@ -296,6 +298,7 @@ class CheckNameReferencesGate(LintGate):
         },
         {
             "name": "게임 코드가 팩 입력 맵에 없는 액션을 묻는다",
+            "expectedViolation": "[NameReference/InputAction] Source/Games/Probe/ProbeDirector.cpp: 입력 맵 액션 'Probe.Jmup' 이(가) 팩 밖과 game/probe 의 *.input.xml에 없습니다",
             "files": {
                 "Resource/game/probe/data/probe.input.xml": "<InputMap><action name=\"Probe.Jump\"/></InputMap>\n",
                 "Source/Games/Probe/ProbeDirector.cpp": (
@@ -305,6 +308,7 @@ class CheckNameReferencesGate(LintGate):
         },
         {
             "name": "액션 상수 배열의 이름 하나가 맵에 없다",
+            "expectedViolation": "[NameReference/InputAction] Source/Engine/Probe.cpp: 입력 맵 액션 'Group1' 이(가) 어느 *.input.xml에 없습니다",
             "files": {
                 "Resource/engine/input/default.input.xml": "<InputMap><action name=\"Group0\"/></InputMap>\n",
                 "Source/Engine/Probe.cpp": "constexpr const char* kArrGroupAction[] = { \"Group0\", \"Group1\" };\n",
@@ -312,6 +316,7 @@ class CheckNameReferencesGate(LintGate):
         },
         {
             "name": "코드가 라이브러리에 없는 오디오 이벤트를 올린다",
+            "expectedViolation": "[NameReference/AudioEvent] Source/Engine/Probe.cpp: 오디오 이벤트 'Hti' 이(가) 어느 *.audioevents.xml에 없습니다",
             "files": {
                 "Resource/engine/audio/probe.audioevents.xml": "<AudioEventLibrary><AudioEventDesc _name=\"Hit\"/></AudioEventLibrary>\n",
                 "Source/Engine/Probe.cpp": "// postEvent( \"Commented\" ) 는 보지 않는다\nvoid f() { (void)GameSound::postEvent( \"Hti\" ); }\n",
@@ -319,6 +324,7 @@ class CheckNameReferencesGate(LintGate):
         },
         {
             "name": "시나리오가 등록되지 않은 개발 명령을 부른다",
+            "expectedViolation": "[NameReference/DevCommand] Resource/engine/automation/probe.scenario.xml: 개발 명령 'bugitt' 이(가) 등록돼 있지 않습니다(SW_DEV_COMMAND)",
             "files": {
                 "Source/Engine/ProbeSteps.cpp": ("SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &run, &validate, false );\n"
                                                  "SW_DEV_COMMAND( Bugit, \"bugit\", \"\", \"\", &run );\n"),
@@ -328,6 +334,7 @@ class CheckNameReferencesGate(LintGate):
         },
         {
             "name": "시나리오가 등록되지 않은 탐침을 본다",
+            "expectedViolation": "[NameReference/ScenarioProbe] Resource/engine/automation/probe.scenario.xml: 탐침 'Probe.Cuont' 가 등록돼 있지 않습니다(SW_AUTOMATION_PROBE)",
             "files": {
                 "Source/Engine/ProbeSteps.cpp": ("SW_AUTOMATION_STEP( expect, \"Expect\", &run, &validate, false );\n"
                                                  "SW_AUTOMATION_PROBE( count, \"Probe.Count\", \"\", &count );\n"),

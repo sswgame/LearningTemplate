@@ -126,6 +126,7 @@ class CheckNullableServiceUseGate(LintGate):
     selfTestCases = [
         {
             "name": "서비스 조회를 바로 역참조",
+            "expectedViolation": "[Nullable Service] Source/Editor/Probe/ProbeService.cpp:3: editor::findSubsystem<CommandStack>()->undo();",
             "files": {
                 "Source/Editor/Probe/ProbeService.cpp": (
                     "void probe()\n"
@@ -137,6 +138,7 @@ class CheckNullableServiceUseGate(LintGate):
         },
         {
             "name": "범위 객체 멤버 조회를 바로 역참조",
+            "expectedViolation": "[Nullable Service] Source/Editor/Probe/ProbeMember.cpp:3: pContext->findSubsystem<CommandStack>()->undo();",
             "files": {
                 "Source/Editor/Probe/ProbeMember.cpp": (
                     "void probe( EditorContext* pContext )\n"
@@ -148,6 +150,7 @@ class CheckNullableServiceUseGate(LintGate):
         },
         {
             "name": "EditorContext::get() 을 바로 역참조",
+            "expectedViolation": "[Nullable Service] Source/Editor/Probe/ProbeContext.cpp:3: EditorContext::get()->getWorkspace().clearSelection();",
             "files": {
                 "Source/Editor/Probe/ProbeContext.cpp": (
                     "void probe()\n"
@@ -159,6 +162,7 @@ class CheckNullableServiceUseGate(LintGate):
         },
         {
             "name": "받아 두고 확인 없이 역참조",
+            "expectedViolation": "[Nullable Service] Source/Editor/Probe/ProbeStored.cpp:3: InputManager* pInput = findSubsystem<InputManager>();",
             "files": {
                 "Source/Editor/Probe/ProbeStored.cpp": (
                     "void probe()\n"
@@ -171,6 +175,7 @@ class CheckNullableServiceUseGate(LintGate):
         },
         {
             "name": "범위 객체 멤버로 받아 두고 확인 없이 역참조",
+            "expectedViolation": "[Nullable Service] Source/Editor/Probe/ProbeStoredMember.cpp:3: CommandStack* pStack = context.findSubsystem<CommandStack>();",
             "files": {
                 "Source/Editor/Probe/ProbeStoredMember.cpp": (
                     "void probe( EditorContext& context )\n"

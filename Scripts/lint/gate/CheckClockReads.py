@@ -78,6 +78,7 @@ class CheckClockReadsGate(LintGate):
     selfTestCases = [
         {
             "name": "기다림 루프가 steady_clock::now 를 읽는다(Test 폴더)",
+            "expectedViolation": "ProbeWait.cpp:5: std::chrono::steady_clock",
             "files": {
                 "Test/Probe/ProbeWait.cpp": (
                     "#include <chrono>\n"
@@ -91,6 +92,7 @@ class CheckClockReadsGate(LintGate):
         },
         {
             "name": "별칭 뒤에 숨은 high_resolution_clock(Source 폴더)",
+            "expectedViolation": "Source/Probe/ProbeTimer.cpp:2: std::chrono::high_resolution_clock",
             "files": {
                 "Source/Probe/ProbeTimer.cpp": (
                     "#include <chrono>\n"
@@ -101,6 +103,7 @@ class CheckClockReadsGate(LintGate):
         },
         {
             "name": "using namespace 뒤의 system_clock(ReflectionParser)",
+            "expectedViolation": "Tools/ReflectionParser/ProbeStamp.cpp:3: std::chrono::system_clock",
             "files": {
                 "Tools/ReflectionParser/ProbeStamp.cpp": (
                     "#include <chrono>\n"
@@ -111,6 +114,7 @@ class CheckClockReadsGate(LintGate):
         },
         {
             "name": "std 시계를 더는 읽지 않는 예외 파일(낡은 예외)",
+            "expectedViolation": "[낡은 예외] 'Source/Core/Time/WallClock.cpp' 의 대상은 그대로인데 규칙을 어기지 않습니다",
             "files": {
                 "Source/Core/Time/WallClock.cpp": "// steady_clock 은 주석 안이라 읽기가 아니다\nint probe() { return 0; }\n",
             },

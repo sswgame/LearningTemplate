@@ -76,10 +76,12 @@ class CheckProductNamesGate(LintGate):
     selfTestCases = [
         {
             "name": "키트 저장소가 SQLite 드라이버를 직접 부른다",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Storage/Probe/ProbeStorage.cpp:3: 제품 이름 'SQLite'",
             "files": {"Source/GameFramework/Kits/Feature/Storage/Probe/ProbeStorage.cpp": "void probe()\n{\n    SQLiteDriver& driver = SQLiteDriver::getInstance();\n}\n"},
         },
         {
             "name": "엔진 씬이 Jolt 형식을 든다",
+            "expectedViolation": "Source/Engine/Scene/Probe.h:4: 제품 이름 'Jolt'",
             "files": {"Source/Engine/Scene/Probe.h": "#pragma once\nstruct Probe\n{\n    JoltBodyHandle _body;\n};\n"},
         },
     ]

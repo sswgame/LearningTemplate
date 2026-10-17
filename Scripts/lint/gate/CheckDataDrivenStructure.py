@@ -209,17 +209,17 @@ class CheckDataDrivenStructureGate(LintGate):
     hint = ("  경로 · 값은 데이터 파일(XML · JSON · TOML)에 두고 코드는 형식만 가진다. 필수 값이 없으면 기본값으로 가지 말고 오류로 멈춘다\n"
             "  (AGENTS.md Constants 절, 결정 기록 5-4). 의도된 설계면 rules/CheckDataDrivenStructure.toml 의 [exemption] 에 \"<종류>:<경로>\" = \"이유\".")
     selfTestCases = [
-        {"name": "코드에 박힌 에셋 경로", "files": {"Source/Probe/A.cpp": "static const char* kPath = \"engine/shaders/probe.hlsl\";\n"},
+        {"name": "코드에 박힌 에셋 경로", "expectedViolation": "AssetPathLiteral:Source/Probe/A.cpp: 1줄이 기준선 0 을 넘었다", "files": {"Source/Probe/A.cpp": "static const char* kPath = \"engine/shaders/probe.hlsl\";\n"},
          "args": ["--files", "Source/Probe/A.cpp"]},
-        {"name": "OrDefault 조용한 대체", "files": {"Source/Probe/B.cpp": "void f()\n{\n    float c = readOrDefault( key, 1.0f );\n}\n"},
+        {"name": "OrDefault 조용한 대체", "expectedViolation": "SilentFallback:Source/Probe/B.cpp: 1줄이 기준선 0 을 넘었다", "files": {"Source/Probe/B.cpp": "void f()\n{\n    float c = readOrDefault( key, 1.0f );\n}\n"},
          "args": ["--files", "Source/Probe/B.cpp"]},
-        {"name": "기본값으로 가는 로그", "files": {"Source/Probe/C.cpp": "void f()\n{\n    SW_LOG_WARNING( \"settings broken - using defaults\" );\n}\n"},
+        {"name": "기본값으로 가는 로그", "expectedViolation": "SilentFallback:Source/Probe/C.cpp: 1줄이 기준선 0 을 넘었다", "files": {"Source/Probe/C.cpp": "void f()\n{\n    SW_LOG_WARNING( \"settings broken - using defaults\" );\n}\n"},
          "args": ["--files", "Source/Probe/C.cpp"]},
-        {"name": "버린 읽기 결과", "files": {"Source/Probe/D.cpp": "void f()\n{\n    (void)_table.loadFromResource();\n}\n"},
+        {"name": "버린 읽기 결과", "expectedViolation": "DiscardedLoadResult:Source/Probe/D.cpp: 1줄이 기준선 0 을 넘었다", "files": {"Source/Probe/D.cpp": "void f()\n{\n    (void)_table.loadFromResource();\n}\n"},
          "args": ["--files", "Source/Probe/D.cpp"]},
-        {"name": "삼킨 파이썬 예외", "files": {"Scripts/probe/Probe.py": "def f() -> None:\n    try:\n        g()\n    except Exception:\n        pass\n"},
+        {"name": "삼킨 파이썬 예외", "expectedViolation": "SilentFallback:Scripts/probe/Probe.py: 1줄이 기준선 0 을 넘었다", "files": {"Scripts/probe/Probe.py": "def f() -> None:\n    try:\n        g()\n    except Exception:\n        pass\n"},
          "args": ["--files", "Scripts/probe/Probe.py"]},
-        {"name": "CMake 기본값 인자", "files": {"cmake/Probe.cmake": "function(sw_probe OUT_VAR DEFAULT_VALUE)\nendfunction()\n"},
+        {"name": "CMake 기본값 인자", "expectedViolation": "SilentFallback:cmake/Probe.cmake: 1줄이 기준선 0 을 넘었다", "files": {"cmake/Probe.cmake": "function(sw_probe OUT_VAR DEFAULT_VALUE)\nendfunction()\n"},
          "args": ["--files", "cmake/Probe.cmake"]},
     ]
 

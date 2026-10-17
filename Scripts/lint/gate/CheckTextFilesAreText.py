@@ -119,6 +119,7 @@ class CheckTextFilesAreTextGate(LintGate):
     selfTestCases = [
         {
             "name": "주석 안에 박힌 널 바이트",
+            "expectedViolation": "Source/Probe/NulInComment.h:2 -> 널 바이트(0x00) 1개",
             "files": {
                 "Source/Probe/NulInComment.h": "#pragma once\n// 널 종단은 '\x00' 입니다\n",
             },

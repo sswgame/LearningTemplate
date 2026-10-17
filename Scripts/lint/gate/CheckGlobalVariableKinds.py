@@ -167,6 +167,7 @@ class CheckGlobalVariableKindsGate(LintGate):
     selfTestCases = [
         {
             "name": "int32 정의를 float32 로 참조",
+            "expectedViolation": "[Global Variable Kind] Source/Probe/ProbeGlobalVariable.h:1: gv_probe 을(를) float32 로 참조하지만 정의(Source/Probe/ProbeGlobalVariable.cpp:1, SW_TES",
             "files": {
                 "Source/Probe/ProbeGlobalVariable.cpp": "SW_TEST_GLOBAL_VARIABLE( int32, gv_probe, 0, \"probe\" );\n",
                 "Source/Probe/ProbeGlobalVariable.h": "SW_EXTERN_GLOBAL_VARIABLE( float32, gv_probe );\n",
@@ -174,6 +175,7 @@ class CheckGlobalVariableKindsGate(LintGate):
         },
         {
             "name": "Shipping 에 남는 enum 정의를 다른 enum 으로 참조",
+            "expectedViolation": "[Global Variable Kind] Source/Probe/ProbeKeep.h:1: gv_probeKeep 을(를) ProbeOtherMode 로 참조하지만 정의(Source/Probe/ProbeKeep.cpp:1, SW_TEST_GLOBAL_",
             "files": {
                 "Source/Probe/ProbeKeep.cpp": "SW_TEST_GLOBAL_VARIABLE_SHIPPED( ProbeMode, gv_probeKeep, ProbeMode::A, \"probe, kept\" );\n",
                 "Source/Probe/ProbeKeep.h": "SW_EXTERN_GLOBAL_VARIABLE( ProbeOtherMode, gv_probeKeep );\n",

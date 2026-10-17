@@ -65,9 +65,9 @@ class CheckScriptCommonHelpersGate(LintGate):
     preCommitFileArgument = "--files"
     hint = "  common 의 한 자리를 쓰십시오. 정말 예외면 Scripts/lint/rules/CheckScriptCommonHelpers.toml 의 [exemption] 에 '<규칙 이름>:<경로>' 와 이유를 적습니다."
     selfTestCases = [
-        {"name": "subprocess 직접", "files": {"Scripts/dev/Probe.py": "import subprocess\nsubprocess.run(['x'])\n"}},
-        {"name": "build/<preset> 조립", "files": {"Scripts/dev/Probe.py": "path = root / \"build\" / preset\n"}},
-        {"name": "쓰기 비교", "files": {"Scripts/generate/Probe.py": "if previous != content:\n    pass\n"}},
+        {"name": "subprocess 직접", "expectedViolation": "Scripts/dev/Probe.py:2: subprocess", "files": {"Scripts/dev/Probe.py": "import subprocess\nsubprocess.run(['x'])\n"}},
+        {"name": "build/<preset> 조립", "expectedViolation": "Scripts/dev/Probe.py:1: 빌드 폴더 조립", "files": {"Scripts/dev/Probe.py": "path = root / \"build\" / preset\n"}},
+        {"name": "쓰기 비교", "expectedViolation": "Scripts/generate/Probe.py:1: 바뀌었을 때만 쓰기", "files": {"Scripts/generate/Probe.py": "if previous != content:\n    pass\n"}},
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:

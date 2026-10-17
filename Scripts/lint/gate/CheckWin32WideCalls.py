@@ -105,10 +105,12 @@ class CheckWin32WideCallsGate(LintGate):
     selfTestCases = [
         {
             "name": "일반 이름 표에 없는 W 판을 부른다(표가 닫혀 있으면 그 A 판 · 일반 이름을 못 잡는다)",
+            "expectedViolation": "Source/Probe/ProbeWide.cpp:3: ProbeThingW 의 일반 이름 'ProbeThing' 이 rules/CheckWin32WideCalls.toml 의 generic_name 에 없습니다",
             "files": {"Source/Probe/ProbeWide.cpp": "void probe()\n{\n    ProbeThingW( L\"x\" );\n}\n"},
         },
         {
             "name": "창 프로시저가 DefWindowProc 로 끝난다",
+            "expectedViolation": "Source/Probe/ProbeWindow.cpp:3: DefWindowProc -> DefWindowProcW",
             "files": {
                 "Source/Probe/ProbeWindow.cpp": (
                     "LRESULT CALLBACK probeProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )\n"
@@ -120,10 +122,12 @@ class CheckWin32WideCallsGate(LintGate):
         },
         {
             "name": "전역 한정자를 붙인 ::LoadCursor(Test 폴더)",
+            "expectedViolation": "Test/Probe/ProbeCursor.cpp:1: LoadCursor -> LoadCursorW",
             "files": {"Test/Probe/ProbeCursor.cpp": "void probe() { HCURSOR hCursor = ::LoadCursor( nullptr, IDC_ARROW ); }\n"},
         },
         {
             "name": "UTF-8 경로를 A 판에 넘긴다(LoadLibraryExA)",
+            "expectedViolation": "Source/Probe/ProbeLoad.cpp:1: LoadLibraryExA -> LoadLibraryExW",
             "files": {
                 "Source/Probe/ProbeLoad.cpp": (
                     "void* probe( const sw::string& path ) { return LoadLibraryExA( path.c_str(), nullptr, 0 ); }\n"
@@ -132,6 +136,7 @@ class CheckWin32WideCallsGate(LintGate):
         },
         {
             "name": "비교 연산자 뒤의 GetModuleHandle(ReflectionParser)",
+            "expectedViolation": "Tools/ReflectionParser/ProbeModule.cpp:1: GetModuleHandle -> GetModuleHandleW",
             "files": {"Tools/ReflectionParser/ProbeModule.cpp": "bool probe( void* p ) { return p > GetModuleHandle( nullptr ); }\n"},
         },
     ]

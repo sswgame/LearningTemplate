@@ -160,11 +160,11 @@ class CheckEditorStyleLiteralsGate(LintGate):
     hint = ("  테마 토큰(EditorThemeUtil 접근자)을 쓴다 — 색 · 간격 · 모서리의 원본은 Resource/editor/theme/*.tokens.json 이다.\n"
             "  없는 값이면 토큰을 더한다(docs/plans/EditorUX.md). 전체를 보려면 --whole-files 또는 --list.")
     selfTestCases = [
-        {"name": "IM_COL32 와 숫자 ImVec4", "files": {"Source/Editor/Panels/A.cpp": "void f()\n{\n    auto c = IM_COL32(1, 2, 3, 255);\n    ImVec4 v = ImVec4(1.0f, 0.5f, 0, 1);\n}\n"},
+        {"name": "IM_COL32 와 숫자 ImVec4", "expectedViolation": "2  Source/Editor/Panels/A.cpp", "files": {"Source/Editor/Panels/A.cpp": "void f()\n{\n    auto c = IM_COL32(1, 2, 3, 255);\n    ImVec4 v = ImVec4(1.0f, 0.5f, 0, 1);\n}\n"},
          "args": ["--baseline", "0"]},
-        {"name": "PushStyleColor 숫자 · PushStyleVar ImVec2", "files": {"Source/Editor/Panels/B.cpp": "void f()\n{\n    ImGui::PushStyleColor(ImGuiCol_Text,\n                          0xFF0000FFu);\n    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));\n}\n"},
+        {"name": "PushStyleColor 숫자 · PushStyleVar ImVec2", "expectedViolation": "1  Source/Editor/Panels/B.cpp", "files": {"Source/Editor/Panels/B.cpp": "void f()\n{\n    ImGui::PushStyleColor(ImGuiCol_Text,\n                          0xFF0000FFu);\n    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));\n}\n"},
          "args": ["--baseline", "0"]},
-        {"name": "--files + --whole-files (플러그인 쪽)", "files": {"Source/GameFramework/PlugIn/Editor/C.cpp": "void f()\n{\n    Color c = Color{ 255, 0, 0, 255 };\n}\n"},
+        {"name": "--files + --whole-files (플러그인 쪽)", "expectedViolation": "Source/GameFramework/PlugIn/Editor/C.cpp:3: Color 에 숫자 리터럴", "files": {"Source/GameFramework/PlugIn/Editor/C.cpp": "void f()\n{\n    Color c = Color{ 255, 0, 0, 255 };\n}\n"},
          "args": ["--files", "Source/GameFramework/PlugIn/Editor/C.cpp", "--whole-files"]},
     ]
 

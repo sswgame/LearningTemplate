@@ -110,22 +110,27 @@ class CheckCoreLayersGate(LintGate):
     selfTestCases = [
         {
             "name": "컨테이너가 로그 헤더를 include 한다",
+            "expectedViolation": "Source/Core/Container/Probe.h:2: <Core/Log/Logger.h> -> 티어 3('Container')가 티어 5('Log')를 include 합니다",
             "files": {"Source/Core/Container/Probe.h": "#pragma once\n#include \"Core/Log/Logger.h\"\n"},
         },
         {
             "name": "같은 티어의 다른 폴더를 include 한다",
+            "expectedViolation": "Source/Core/String/Probe.cpp:2: <Core/Time/MonotonicClock.h> -> 티어 6('String')가 티어 6('Time')를 include 합니다",
             "files": {"Source/Core/String/Probe.cpp": "#include \"pch.h\"\n#include \"Core/Time/MonotonicClock.h\"\n"},
         },
         {
             "name": "폴더 파일이 루트 모음 헤더를 include 한다",
+            "expectedViolation": "Source/Core/Memory/Probe.cpp:2: <Core/CoreMinimal.h> -> 폴더 파일이 루트 모음 헤더를 include 합니다",
             "files": {"Source/Core/Memory/Probe.cpp": "#include \"pch.h\"\n#include \"Core/CoreMinimal.h\"\n"},
         },
         {
             "name": "표에 없는 폴더",
+            "expectedViolation": "Source/Core/Scratch/Probe.h: 'Core/Scratch/' 는 티어 표(rules/CheckCoreLayers.toml 의 [tier])에 없는 폴더입니다",
             "files": {"Source/Core/Scratch/Probe.h": "#pragma once\n"},
         },
         {
             "name": "Log 아래 층이 pch 로 로그 매크로를 쓴다",
+            "expectedViolation": "Source/Core/Memory/Probe.cpp: 티어 2('Memory')가 로그 매크로를 씁니다",
             "files": {"Source/Core/Memory/Probe.cpp": "#include \"pch.h\"\nvoid probe() { SW_LOG_ERROR( \"x\" ); }\n"},
         },
     ]

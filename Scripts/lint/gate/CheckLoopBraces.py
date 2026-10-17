@@ -267,9 +267,9 @@ class CheckLoopBracesGate(LintGate):
     hint = ("  for ( int32 index = 0; index < count; ++index )\n  {\n      doThing( index );\n  }\n"
             "  고치기: py -3 Scripts/lint/fixer/FormatBranchBraces.py --files <파일>(주석 · 전처리기가 낀 본문은 손으로)")
     selfTestCases = [
-        {"name": "한 문장 본문의 for", "files": {"Source/Probe/A.cpp": "void f()\n{\n    for ( int i = 0; i < 3; ++i )\n        g( i );\n}\n"}},
-        {"name": "같은 줄 본문의 범위 for", "files": {"Source/Probe/B.cpp": "void f()\n{\n    for ( int value : list ) g( value );\n}\n"}},
-        {"name": "빈 본문의 while", "files": {"Test/Probe/C.cpp": "void f()\n{\n    while ( poll() );\n}\n"}},
+        {"name": "한 문장 본문의 for", "expectedViolation": "Source/Probe/A.cpp:3: for 본문에 중괄호가 없습니다", "files": {"Source/Probe/A.cpp": "void f()\n{\n    for ( int i = 0; i < 3; ++i )\n        g( i );\n}\n"}},
+        {"name": "같은 줄 본문의 범위 for", "expectedViolation": "Source/Probe/B.cpp:3: for 본문에 중괄호가 없습니다", "files": {"Source/Probe/B.cpp": "void f()\n{\n    for ( int value : list ) g( value );\n}\n"}},
+        {"name": "빈 본문의 while", "expectedViolation": "Test/Probe/C.cpp:3: while 본문에 중괄호가 없습니다", "files": {"Test/Probe/C.cpp": "void f()\n{\n    while ( poll() );\n}\n"}},
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:

@@ -76,6 +76,7 @@ class CheckStdThreadGate(LintGate):
     selfTestCases = [
         {
             "name": "멤버로 std::thread 를 든다",
+            "expectedViolation": "Source/Probe/ProbeWorker.h:4: std::thread",
             "files": {
                 "Source/Probe/ProbeWorker.h": (
                     "#include <thread>\n"
@@ -88,6 +89,7 @@ class CheckStdThreadGate(LintGate):
         },
         {
             "name": "스레드 벡터와 대입(Source 폴더)",
+            "expectedViolation": "ProbePool.cpp:4: std::thread",
             "files": {
                 "Source/Probe/ProbePool.cpp": (
                     "#include <thread>\n"
@@ -100,6 +102,7 @@ class CheckStdThreadGate(LintGate):
         },
         {
             "name": "std::thread 를 더는 쓰지 않는 예외 파일(낡은 예외)",
+            "expectedViolation": "[낡은 예외] 'Source/Core/Diagnostics/CrashContext.cpp' 의 대상은 그대로인데 규칙을 어기지 않습니다",
             "files": {
                 "Source/Core/Diagnostics/CrashContext.cpp": "// std::thread 는 주석 안이라 쓰임이 아니다\nint probe() { return 0; }\n",
             },

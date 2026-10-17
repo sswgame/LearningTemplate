@@ -168,6 +168,7 @@ class CheckFallibleNodiscardGate(LintGate):
     selfTestCases = [
         {
             "name": "실패 가능 동사의 bool 선언에 [[nodiscard]] 없음",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeLoader.h:4: loadFromFile",
             "files": {
                 "Source/Probe/ProbeLoader.h": (
                     "class ProbeLoader\n"
@@ -180,6 +181,7 @@ class CheckFallibleNodiscardGate(LintGate):
         },
         {
             "name": "내보내기 매크로 · virtual 이 붙은 선언",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeWriter.h:4: saveDocument",
             "files": {
                 "Source/Probe/ProbeWriter.h": (
                     "class SW_API ProbeWriter\n"
@@ -194,23 +196,26 @@ class CheckFallibleNodiscardGate(LintGate):
         *(
             {
                 "name": f"만들기 · 지우기 · 옮기기 동사 — {declaration.strip()}",
+                "expectedViolation": f"[Fallible Nodiscard] Source/Probe/ProbeFileOps.h:3: {functionName}",
                 "files": {"Source/Probe/ProbeFileOps.h": "struct ProbeFileOps\n{\n" + declaration + "};\n"},
             }
-            for declaration in (
-                "    static bool removeFile( string_view path );\n",
-                "    static bool copyFile( string_view source, string_view destination );\n",
-                "    bool createSurface( void* pWindowHandle );\n",
-                "    static bool deleteAssetFile( string_view absolutePath );\n",
-                "    bool moveProperty( hashed_string fromProp, hashed_string toProp ) const;\n",
-                "    static bool rename( GameObject* pObj, const utf8* pNewName );\n",
+            for functionName, declaration in (
+                ("removeFile", "    static bool removeFile( string_view path );\n"),
+                ("copyFile", "    static bool copyFile( string_view source, string_view destination );\n"),
+                ("createSurface", "    bool createSurface( void* pWindowHandle );\n"),
+                ("deleteAssetFile", "    static bool deleteAssetFile( string_view absolutePath );\n"),
+                ("moveProperty", "    bool moveProperty( hashed_string fromProp, hashed_string toProp ) const;\n"),
+                ("rename", "    static bool rename( GameObject* pObj, const utf8* pNewName );\n"),
             )
         ),
         {
             "name": "re + 동사 — recreate",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeSurface.h:3: recreateSurface",
             "files": {"Source/Probe/ProbeSurface.h": "struct ProbeSurface\n{\n    virtual bool recreateSurface() = 0;\n};\n"},
         },
         {
             "name": ".cpp 의 번역 단위 지역 함수",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeLocal.cpp:5: readHeader",
             "files": {
                 "Source/Probe/ProbeLocal.cpp": (
                     "namespace\n{\n    struct ProbeLocalInternal\n    {\n"
@@ -220,6 +225,7 @@ class CheckFallibleNodiscardGate(LintGate):
         },
         {
             "name": ".cpp 의 익명 네임스페이스 안 자유 함수(static 없이)",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeAnonymous.cpp:5: parseToken",
             "files": {
                 "Source/Probe/ProbeAnonymous.cpp": (
                     "namespace sw\n{\n    namespace\n    {\n        bool parseToken( string_view token )\n        {\n"
@@ -229,10 +235,12 @@ class CheckFallibleNodiscardGate(LintGate):
         },
         {
             "name": "반환 타입과 이름을 두 줄로 쪼갠 선언",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeSplit.h:3: parseLine",
             "files": {"Source/Probe/ProbeSplit.h": "struct ProbeSplit\n{\n    static bool\n    parseLine( string_view line );\n};\n"},
         },
         {
             "name": "주석을 사이에 둔 [[nodiscard]] 는 인정하지만, 주석 너머 다른 선언의 것은 아니다",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeAbove.h:5: loadData",
             "files": {
                 "Source/Probe/ProbeAbove.h": (
                     "struct ProbeAbove\n{\n    [[nodiscard]] bool isReady() const;\n"

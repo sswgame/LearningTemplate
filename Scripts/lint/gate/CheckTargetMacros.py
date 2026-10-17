@@ -100,6 +100,7 @@ class CheckTargetMacrosGate(LintGate):
     selfTestCases = [
         {
             "name": "_MSC_VER 로 컴파일러를 묻는다",
+            "expectedViolation": "Source/Probe/ProbeCompiler.h:2: _MSC_VER -> MSVC 확장(intrinsic · __declspec · __FUNCSIG__)이면 SW_PLATFORM_WINDOWS, cl.exe 만이면 SW_COMPILER_MSVC",
             "files": {
                 _kCheckHeader: "#pragma once\n",
                 "Source/Probe/ProbeCompiler.h": (
@@ -112,6 +113,7 @@ class CheckTargetMacrosGate(LintGate):
         },
         {
             "name": "__x86_64__ 로 아키텍처를 묻는다(Test 폴더)",
+            "expectedViolation": "Test/Probe/ProbeArch.cpp:1: __x86_64__ -> SW_X64",
             "files": {
                 _kCheckHeader: "#pragma once\n",
                 "Test/Probe/ProbeArch.cpp": (
@@ -123,6 +125,7 @@ class CheckTargetMacrosGate(LintGate):
         },
         {
             "name": "지원하지 않는 SW_PLATFORM_MACOS 갈래(Test 폴더)",
+            "expectedViolation": "Test/Probe/ProbeWindow.cpp:3: SW_PLATFORM_MACOS -> 지원하지 않는 플랫폼(Windows · Linux 만 짓는다)",
             "files": {
                 _kCheckHeader: "#pragma once\n",
                 "Test/Probe/ProbeWindow.cpp": (
@@ -136,12 +139,14 @@ class CheckTargetMacrosGate(LintGate):
         },
         {
             "name": "검사 헤더 안의 SW_PLATFORM_MACOS 도 예외가 아니다",
+            "expectedViolation": "Source/Core/Common/TargetMacroCheck.h:2: SW_PLATFORM_MACOS -> 지원하지 않는 플랫폼(Windows · Linux 만 짓는다)",
             "files": {
                 _kCheckHeader: "#pragma once\n#if defined( SW_PLATFORM_MACOS )\n    #error unsupported\n#endif\n",
             },
         },
         {
             "name": "_WIN32 로 플랫폼을 묻는다(ReflectionParser)",
+            "expectedViolation": "_WIN32 -> SW_PLATFORM_WINDOWS",
             "files": {
                 _kCheckHeader: "#pragma once\n",
                 "Tools/ReflectionParser/ProbePlatform.cpp": "#if !defined(_WIN32) && defined(__clang__)\n#endif\n",

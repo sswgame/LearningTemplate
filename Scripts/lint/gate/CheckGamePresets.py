@@ -107,6 +107,7 @@ class CheckGamePresetsGate(LintGate):
     selfTestCases = [
         {
             "name": "프리셋 없는 게임",
+            "expectedViolation": "Source/Games/Probe 의 프리셋이 없습니다: Config/Game/Probe.json",
             "files": {
                 "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
                 "Resource/game/probe/readme.md": "probe",
@@ -114,6 +115,7 @@ class CheckGamePresetsGate(LintGate):
         },
         {
             "name": "없는 팩을 가리키는 프리셋",
+            "expectedViolation": "`_packRoot` 의 폴더가 없습니다: Config/Game/Probe.json",
             "files": {
                 "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
                 "Config/Game/Probe.json": '{ "_packRoot": "game/nowhere" }',
@@ -121,6 +123,7 @@ class CheckGamePresetsGate(LintGate):
         },
         {
             "name": "매니페스트 없는 게임",
+            "expectedViolation": "Source/Games/Probe 의 게임 매니페스트가 없습니다",
             "files": {
                 "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
                 "Config/Game/Probe.json": '{ "_packRoot": "game/probe" }',
@@ -129,6 +132,7 @@ class CheckGamePresetsGate(LintGate):
         },
         {
             "name": "없는 게임을 고르는 CMake 프리셋",
+            "expectedViolation": "[Game Preset] CMake 프리셋 Ninja-Debug 이 없는 게임 `Gone` 을 고릅니다",
             "files": {
                 "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
                 "Source/Games/Probe/SWGame.module.json": "{}",
@@ -139,6 +143,7 @@ class CheckGamePresetsGate(LintGate):
         },
         {
             "name": "없는 사용자 설정 스키마를 가리키는 프리셋",
+            "expectedViolation": "`_userSettingsSchema` 파일이 없습니다: Config/Game/Probe.json",
             "files": {
                 "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
                 "Config/Game/Probe.json": '{ "_packRoot": "game/probe", "_userSettingsSchema": "data/missing.settings.xml" }',
@@ -147,6 +152,7 @@ class CheckGamePresetsGate(LintGate):
         },
         {
             "name": "게임 폴더가 없는 프리셋",
+            "expectedViolation": "게임 폴더가 없는 프리셋입니다: Config/Game/Gone.json",
             "files": {
                 "Config/Game/Gone.json": '{ "_packRoot": "game/gone" }',
                 "Resource/game/gone/readme.md": "probe",

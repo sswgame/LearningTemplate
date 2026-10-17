@@ -109,6 +109,7 @@ class CheckCmakeReadmeGate(LintGate):
     selfTestCases = [
         {
             "name": "없는 함수를 가리키는 표",
+            "expectedViolation": "cmake/README.md:5 'sw_thisNeverExisted' 는 어디에도 정의되어 있지 않습니다",
             "files": {
                 "cmake/README.md": "# cmake\n\n| 함수 | 용도 |\n|---|---|\n| `sw_thisNeverExisted` | 없는 것 |\n",
                 "cmake/Engine/Probe.cmake": "function(sw_doProbe)\nendfunction()\n",
@@ -116,6 +117,7 @@ class CheckCmakeReadmeGate(LintGate):
         },
         {
             "name": "없는 파일을 가리키는 트리",
+            "expectedViolation": "cmake/README.md:6 트리에 적힌 'Missing.cmake' 가 cmake/ 에 없습니다",
             "files": {
                 "cmake/README.md": "# cmake\n\n```\ncmake/\n├── Probe/\n│   ├── Missing.cmake  — 없는 파일\n```\n",
                 "cmake/Engine/Probe.cmake": "function(sw_doProbe)\nendfunction()\n",

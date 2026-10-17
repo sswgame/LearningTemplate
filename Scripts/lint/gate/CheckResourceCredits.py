@@ -88,6 +88,7 @@ class CheckResourceCreditsGate(LintGate):
     selfTestCases = [
         {
             "name": "크레딧 표에 없는 소리",
+            "expectedViolation": "Resource/game/probe/sounds/a.ogg: Resource/game/probe/credits.md 표에 없습니다",
             "files": {
                 "Resource/game/probe/credits.md": "| 파일 | 원본 | 라이선스 |\n|---|---|---|\n| `sounds/b.ogg` | 저장소 | 이 저장소 |\n",
                 "Resource/game/probe/sounds/a.ogg": "probe",
@@ -95,6 +96,7 @@ class CheckResourceCreditsGate(LintGate):
         },
         {
             "name": "라이선스가 CC BY 인 줄",
+            "expectedViolation": "Resource/game/probe/sounds/a.ogg: 라이선스 'CC BY 4.0' 는 CC0 1.0 · 이 저장소 가 아닙니다",
             "files": {
                 "Resource/game/probe/credits.md": "| 파일 | 원본 | 라이선스 |\n|---|---|---|\n| `sounds/a.ogg` | 어딘가 | CC BY 4.0 |\n",
                 "Resource/game/probe/sounds/a.ogg": "probe",
@@ -102,6 +104,7 @@ class CheckResourceCreditsGate(LintGate):
         },
         {
             "name": "원본이 있는데 credits.md 가 없는 도메인",
+            "expectedViolation": "Resource/common/models_raw/rock.glb: 도메인 Resource/common 에 credits.md 가 없습니다",
             "files": {"Resource/common/models_raw/rock.glb": "probe"},
         },
     ]

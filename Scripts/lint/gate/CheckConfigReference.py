@@ -62,11 +62,13 @@ class CheckConfigReferenceGate(LintGate):
     selfTestCases = [
         {
             "name": "목록에 없는 설정 파일",
+            "expectedViolation": "표에 없는 설정 파일입니다: Config/Engine/OrphanSettings.json",
             "repoFiles": _kSelfTestRepoFiles,
             "files": {"Config/Engine/OrphanSettings.json": "{}\n"},
         },
         {
             "name": "손으로 고친 생성 문서",
+            "expectedViolation": "생성 문서가 코드와 다릅니다: docs/Config/README.md",
             "repoFiles": _kSelfTestRepoFiles,
             "files": {"docs/Config/README.md": "손으로 적은 색인\n"},
         },

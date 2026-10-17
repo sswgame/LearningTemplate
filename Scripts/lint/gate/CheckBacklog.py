@@ -62,24 +62,29 @@ class CheckBacklogGate(LintGate):
     selfTestCases = [
         {
             "name": "두 파일에 같은 번호",
+            "expectedViolation": "docs/backlog/b.md:3: `C-1` 번호가 docs/backlog/a.md:3 에도 있습니다",
             "files": {"docs/backlog/a.md": "# A\n\n- `C-1` [정리] **하나.**\n",
                       "docs/backlog/b.md": "# B\n\n- `C-1` [기능] **둘.**\n"},
         },
         {
             "name": "허용되지 않은 상태 태그",
+            "expectedViolation": "docs/backlog/a.md:3: `C-1` 상태 '완료' 는 허용값(결함 · 검증대기 · 정리 · 기능 · 관찰 · 결정대기 · 조건부 · 보류)이 아닙니다",
             "files": {"docs/backlog/a.md": "# A\n\n- `C-1` [완료] **하나.**\n"},
         },
         {
             "name": "상태 태그가 없는 항목",
+            "expectedViolation": "docs/backlog/a.md:3: `C-1` 첫 줄에 [상태] 태그가 없습니다",
             "files": {"docs/backlog/a.md": "# A\n\n- `C-1` **하나.**\n"},
         },
         {
             "name": "없는 백로그 파일을 가리키는 주석",
+            "expectedViolation": "Source/Engine/X.h:1: 'backlog/gone.md' 가 없습니다",
             "files": {"docs/backlog/a.md": "# A\n\n- `C-1` [정리] **하나.**\n",
                       "Source/Engine/X.h": "// 남은 일은 docs/backlog/gone.md 에 있다\n"},
         },
         {
             "name": "다른 파일로 옮긴 항목을 옛 파일로 가리키는 글",
+            "expectedViolation": "docs/Guide.md:3: `D3-1` 는 backlog/a.md 이 아니라 backlog/b.md 에 있습니다",
             "files": {"docs/backlog/a.md": "# A\n\n- `C-1` [정리] **하나.**\n",
                       "docs/backlog/b.md": "# B\n\n- `D3-1` [기능] **둘.**\n",
                       "docs/Guide.md": "# 안내\n\n남은 일은 [백로그](backlog/a.md) `D3-1` 입니다.\n"},

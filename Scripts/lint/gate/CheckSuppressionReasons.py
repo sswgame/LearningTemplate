@@ -99,11 +99,11 @@ class CheckSuppressionReasonsGate(LintGate):
             "  -Wno-padded # 64비트 정렬 패딩 허용\n"
             "  이유가 더는 맞지 않으면 억제를 지웁니다.")
     selfTestCases = [
-        {"name": "검사 이름 없는 NOLINT", "files": {"Source/Probe/A.cpp": "int a = 0; // NOLINT\n"}},
-        {"name": "이유 없는 NOLINTNEXTLINE",
+        {"name": "검사 이름 없는 NOLINT", "expectedViolation": "Source/Probe/A.cpp:1: NOLINT 에 검사 이름이 없습니다", "files": {"Source/Probe/A.cpp": "int a = 0; // NOLINT\n"}},
+        {"name": "이유 없는 NOLINTNEXTLINE", "expectedViolation": "Source/Probe/B.cpp:3: NOLINTNEXTLINE 에 이유가 없습니다",
          "files": {"Source/Probe/B.cpp": "int f()\n{\n    // NOLINTNEXTLINE(bugprone-branch-clone)\n    return 0;\n}\n"}},
-        {"name": "이유 없는 pragma", "files": {"Source/Probe/C.h": "#pragma once\nint x;\n#pragma clang diagnostic ignored \"-Wswitch-enum\"\n"}},
-        {"name": "이유 없는 CMake 경고 끄기", "files": {"cmake/Modules/Compiler/Probe.cmake": "target_compile_options(x INTERFACE\n\t-Wno-padded\n)\n"}},
+        {"name": "이유 없는 pragma", "expectedViolation": "Source/Probe/C.h:3: 경고를 끄는 pragma 에 이유가 없습니다", "files": {"Source/Probe/C.h": "#pragma once\nint x;\n#pragma clang diagnostic ignored \"-Wswitch-enum\"\n"}},
+        {"name": "이유 없는 CMake 경고 끄기", "expectedViolation": "cmake/Modules/Compiler/Probe.cmake:2: 경고 끄기에 이유가 없습니다", "files": {"cmake/Modules/Compiler/Probe.cmake": "target_compile_options(x INTERFACE\n\t-Wno-padded\n)\n"}},
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
