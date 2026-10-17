@@ -9,6 +9,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/EditorPreviewViewport.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 
 #include "Engine/Utility/CommandStack.h"
 
@@ -33,7 +34,8 @@ namespace sw::editor
      *          - 미리보기 씬의 오브젝트 편집은 `recordPreviewModify` · `getPreviewCommandStack` 으로 **창의 스택**에 남긴다. Ctrl+Z 는 창이 포커스일 때
      *            이 스택만 되돌린다(`editor::getFocusedCommandStack`) — 메인 씬 기록은 그대로다. 창을 닫으면 스택도 사라진다(되돌리기 어려운 결정 4).
      *            문서 텍스트 편집(`notifyDocumentEdited`)은 지금처럼 에디터 전역 스택이다.
-     *          - 선택은 창마다다(`getPreviewSelection`). 인스펙터 · 전역 `EditorSelection` 과 잇는 일은 아직 하지 않았다(백로그 `D3-7`).
+     *          - 선택은 창마다다(`getPreviewSelection`, 이 창의 씬 · 스택에 묶인 `EditorSelection`). 창이 포커스를 얻거나 선택이 바뀌면 인스펙터가
+     *            그것을 겨눈다(`editor::getFocusedSelection`). 인스펙터의 값 편집은 이 창의 스택에 남는다.
      *          - 창을 내릴 때(`shutdown`) 씬 · 타깃 · 초점을 놓는다. 파생이 `shutdown` 을 재정의하면 기반의 것을 부른다.
      */
     class SW_EDITOR_API EditorPreviewPanel : public EditorDocumentPanel
@@ -50,9 +52,9 @@ namespace sw::editor
         const EditorPreviewViewport& getPreviewViewport() const { return _viewport; }
         /** @brief 창 범위 Undo 스택입니다. */
         CommandStack& getPreviewCommandStack() { return _commandStack; }
-        /** @brief 창 범위 선택입니다(미리보기 씬의 오브젝트 핸들). */
-        const vector<GameObjectHandle>& getPreviewSelection() const { return _listSelection; }
-        void                            setPreviewSelection( const vector<GameObjectHandle>& listSelection ) { _listSelection = listSelection; }
+        /** @brief 창 범위 선택입니다(미리보기 씬 · 창의 스택에 묶임). 씬을 만들기 전에는 묶이지 않은 빈 선택입니다. */
+        EditorSelection&       getPreviewSelection() { return _selection; }
+        const EditorSelection& getPreviewSelection() const { return _selection; }
 
         /**
          * @brief 미리보기 씬 오브젝트 @p obj 의 수정 전후 상태를 **창의 스택**에 남깁니다. 명령은 그 씬의 키를 기억하므로 활성 씬이 바뀌어도 이 씬에서 되돌린다.
@@ -79,9 +81,9 @@ namespace sw::editor
         /** @brief 초점 씬 · 창 스택을 이 창의 것으로 걸거나(@p bFocused) 이 창이 걸어 둔 것이면 풉니다. */
         void applyWindowFocus( bool bFocused );
 
-        EditorPreviewViewport    _viewport;
-        CommandStack             _commandStack;
-        vector<GameObjectHandle> _listSelection;
-        bool                     _bFocusApplied; ///< 이 창이 초점 씬 · 스택을 걸어 두었다
+        EditorPreviewViewport _viewport;
+        CommandStack          _commandStack;
+        EditorSelection       _selection;
+        bool                  _bFocusApplied; ///< 이 창이 초점 씬 · 스택을 걸어 두었다
     };
 } // namespace sw::editor

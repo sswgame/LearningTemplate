@@ -24,6 +24,7 @@ namespace sw::editor
             vector<ObjectSnapshot>   _listBefore;
             vector<GameObjectHandle> _listTarget; ///< 선택한 오브젝트 전부(다중 선택이면 인스펙터가 같은 값을 나머지에 입힌다)
             string                   _label;
+            EditorSelection*         _pPreviewSelection{ nullptr }; ///< 미리보기 창의 선택을 고쳤으면 그 선택(기록은 그 창의 스택). 메인이면 nullptr
         };
 
         /** @brief 편집 중인 위젯 표입니다. trackPod 와 trackString 이 **같은 표를 씁니다**(각자 맵을 들면 한쪽만 고칠 때 갈라집니다). */
@@ -43,9 +44,12 @@ namespace sw::editor
         /** @brief 선택한 오브젝트 전부의 "편집 전" 스냅샷을 찍습니다. @p pLabel 이 널이면 "Property" 입니다. */
         PendingEdit captureSelectionBeforeEdit( EditorContext& context, const utf8* pLabel )
         {
+            // 인스펙터가 겨누는 선택이다 — 미리보기 창의 선택이면 그 씬의 오브젝트다.
+            EditorSelection*    pFocused  = editor::getFocusedSelection();
+            EditorSelection&    selection = pFocused != nullptr ? *pFocused : context.getSubsystem<EditorSelection>();
             vector<GameObject*> listSelected;
-            context.getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
-            if ( listSelected.empty() )
+            selection.getSelectedObjects( listSelected );
+            if ( listSelected.empty() && selection.isPreviewScope() == false )
             {
                 GameObject* pSelected = context.getSubsystem<EditorWorkspace>().getSelectedObject();
                 if ( pSelected != nullptr )
@@ -57,7 +61,8 @@ namespace sw::editor
                 pending._listTarget.push_back( pSelected->getHandle() );
                 pending._listBefore.push_back( EditorTransaction::captureSnapshot( pSelected ) );
             }
-            pending._label = ( pLabel != nullptr ) ? pLabel : "Property";
+            pending._label             = ( pLabel != nullptr ) ? pLabel : "Property";
+            pending._pPreviewSelection = selection.isPreviewScope() ? &selection : nullptr;
             return pending;
         }
 
@@ -129,8 +134,21 @@ namespace sw::editor
         }
         for ( const PendingEdit& edit : listFinished )
         {
-            const string label     = InspectorPropertyLayout::makeUndoLabel( edit._label.c_str() );
-            const bool   bCompound = edit._listTarget.size() > 1;
+            const string label = InspectorPropertyLayout::makeUndoLabel( edit._label.c_str() );
+            if ( edit._pPreviewSelection != nullptr )
+            {
+                // 미리보기 창의 편집은 그 창의 스택에 남긴다. 그 사이 창이 내려갔거나 다른 선택을 겨누면 선택이 없을 수 있어 남기지 않는다.
+                if ( editor::getFocusedSelection() != edit._pPreviewSelection )
+                    continue;
+                for ( size_t index = 0; index < edit._listTarget.size(); ++index )
+                {
+                    GameObject* pTarget = edit._pPreviewSelection->findObject( edit._listTarget[index] );
+                    if ( pTarget != nullptr )
+                        edit._pPreviewSelection->recordModify( *pTarget, edit._listBefore[index], EditorTransaction::captureSnapshot( pTarget ), label );
+                }
+                continue;
+            }
+            const bool bCompound = edit._listTarget.size() > 1;
             if ( bCompound )
                 EditorTransaction::beginTransaction( label ); // 여러 오브젝트의 같은 편집은 되돌리기 한 번이다
             for ( size_t index = 0; index < edit._listTarget.size(); ++index )

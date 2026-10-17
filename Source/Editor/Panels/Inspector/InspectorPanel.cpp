@@ -144,6 +144,15 @@ namespace sw::editor
             _lockedObjectID = bLocked ? 0 : pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID();
         EditorSelfTestMarks::note( "inspector.lock" );
 
+        // 미리보기 창의 선택을 겨누면 그 창 씬의 오브젝트를 보인다. 잠금은 메인 선택의 오브젝트에만 쓴다.
+        const EditorSelection* pFocusedSelection = editor::getFocusedSelection();
+        const bool             bShowPreview      = _lockedObjectID == 0 && pFocusedSelection != nullptr && pFocusedSelection->isPreviewScope();
+        if ( bShowPreview )
+        {
+            drawPreviewSelection( *pFocusedSelection );
+            return;
+        }
+
         EditorWorkspace&    ws = pContext->getSubsystem<EditorWorkspace>();
         vector<GameObject*> listSelected;
         pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
@@ -329,6 +338,35 @@ namespace sw::editor
             ImGui::PopID();
         }
         ImGui::Spacing();
+    }
+
+    void InspectorPanel::drawPreviewSelection( const EditorSelection& selection )
+    {
+        const Scene* pScene = selection.getScene();
+        EditorWidgets::drawChip( "Preview", EditorThemeUtil::getAccentColor() );
+        ImGui::SameLine();
+        ImGui::TextDisabled( "%s", pScene != nullptr ? pScene->getName().c_str() : "?" );
+        GameObject* pObj = selection.getPrimaryObject();
+        if ( pObj == nullptr )
+        {
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInspector", "NothingSelected" ) );
+            return;
+        }
+        ImGui::TextUnformatted( pObj->getName().c_str() );
+        ImGui::Separator();
+        _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
+        for ( Component* pComp : pObj->getComponents() )
+        {
+            if ( pComp == nullptr || pComp->getTypeInfo() == nullptr )
+                continue;
+            ImGui::PushID( pComp );
+            if ( ImGui::CollapsingHeader( pComp->getTypeInfo()->getDisplayName(), ImGuiTreeNodeFlags_DefaultOpen ) )
+            {
+                const EditorPropertyGridTarget target{ pComp, pComp->getTypeInfo(), pComp, pObj, {}, {} };
+                _propertyGrid.drawProperties( target, nullptr, {} );
+            }
+            ImGui::PopID();
+        }
     }
 
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, string_view prefabPath )

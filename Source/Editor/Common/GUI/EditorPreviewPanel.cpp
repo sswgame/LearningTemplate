@@ -17,7 +17,7 @@ namespace sw::editor
         : EditorDocumentPanel{ kind, bLoadOnOpen }
         , _viewport{}
         , _commandStack{}
-        , _listSelection{}
+        , _selection{}
         , _bFocusApplied{ false }
     {
     }
@@ -25,6 +25,7 @@ namespace sw::editor
     EditorPreviewPanel::~EditorPreviewPanel()
     {
         applyWindowFocus( false );
+        _selection.unbindPreviewScope();
         _viewport.shutdown();
     }
 
@@ -32,7 +33,7 @@ namespace sw::editor
     {
         applyWindowFocus( false );
         _commandStack.clear();
-        _listSelection.clear();
+        _selection.unbindPreviewScope();
         _viewport.shutdown();
     }
 
@@ -52,7 +53,10 @@ namespace sw::editor
         {
             Scene* pScene = _viewport.getScene();
             if ( pScene != nullptr )
+            {
+                _selection.bindPreviewScope( *pScene, _commandStack );
                 populatePreviewScene( *pScene );
+            }
         }
         applyWindowFocus( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
     }
@@ -69,7 +73,7 @@ namespace sw::editor
         SceneManager* pSceneManager = findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;
-        _commandStack.push( ObjectUndoUtil::makeModify( _commandStack, *pSceneManager, obj, before, after, label ) );
+        _commandStack.push( ObjectUndoUtil::makeModify( _commandStack, *pSceneManager, obj, before, after, label ) ); // 인스펙터 편집은 `_selection.recordModify` 로 같은 스택
         return true;
     }
 
@@ -84,6 +88,8 @@ namespace sw::editor
             if ( pSceneManager != nullptr )
                 (void)pSceneManager->focusScene( pScene ); // 이 창의 씬이라 늘 알려진 씬이다
             setFocusedCommandStack( &_commandStack );
+            if ( _selection.isPreviewScope() )
+                setFocusedSelection( &_selection ); // 포커스를 잃어도 남는다 — 인스펙터가 이 선택을 고친다(`getFocusedSelection`)
             _bFocusApplied = true;
             return;
         }

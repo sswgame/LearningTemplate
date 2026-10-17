@@ -5,6 +5,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -20,6 +22,7 @@ namespace sw::editor
         SubsystemScope*          s_pEditorScope{ nullptr };  ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
         EditorToolDefaults*      s_pEditorToolDefaults{ nullptr };
         CommandStack*            s_pFocusedCommandStack{ nullptr }; ///< 포커스된 툴 창의 Undo 스택(`setFocusedCommandStack`)
+        EditorSelection*         s_pFocusedSelection{ nullptr };    ///< 겨누는 미리보기 선택(`setFocusedSelection`). nullptr 이면 메인 선택
     } // namespace
 
     void bindEditorService( const ISubsystemLocator& hostServices )
@@ -89,6 +92,19 @@ namespace sw::editor
     void setFocusedCommandStack( CommandStack* pStack )
     {
         s_pFocusedCommandStack = pStack;
+    }
+
+    EditorSelection* getFocusedSelection()
+    {
+        if ( s_pFocusedSelection != nullptr )
+            return s_pFocusedSelection;
+        EditorContext* pContext = EditorContext::get();
+        return pContext != nullptr ? &pContext->getSubsystem<EditorSelection>() : findSubsystem<EditorSelection>();
+    }
+
+    void setFocusedSelection( EditorSelection* pSelection )
+    {
+        s_pFocusedSelection = pSelection;
     }
 
     GameObjectManager* getActiveObjectManager()

@@ -24,6 +24,8 @@ namespace sw::editor
 {
     struct EditorToolDefaults;
 
+    class EditorSelection;
+
     namespace internal
     {
         /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindEditorService`). 없으면 nullptr 입니다. */
@@ -119,4 +121,12 @@ namespace sw::editor
     SW_EDITOR_API CommandStack* getFocusedCommandStack();
     /** @brief 포커스된 툴 창의 Undo 스택을 겁니다(nullptr 이면 풉니다). 스택을 가진 창이 내려가기 전에 반드시 풉니다. */
     SW_EDITOR_API void setFocusedCommandStack( CommandStack* pStack );
+    /**
+     * @brief 인스펙터 · 기즈모가 겨누는 선택입니다 — 가장 최근에 바뀌거나 포커스를 얻은 미리보기 창의 선택, 없으면 메인 선택(에디터 컨텍스트의 `EditorSelection`).
+     * @details 창 포커스가 인스펙터로 옮겨 가도 유지된다(인스펙터를 누르면 창 포커스를 잃으므로 스택처럼 포커스 동안만 걸면 인스펙터가 쓸 수 없다).
+     *          메인 선택이 바뀌거나 창이 내려가면 메인으로 돌아온다(`EditorSelection::notifyChanged` · `unbindPreviewScope`). 둘 다 없으면 nullptr 입니다.
+     */
+    SW_EDITOR_API EditorSelection* getFocusedSelection();
+    /** @brief 겨누는 선택을 겁니다(nullptr 이면 메인 선택). 미리보기 선택만 겁니다. */
+    SW_EDITOR_API void setFocusedSelection( EditorSelection* pSelection );
 } // namespace sw::editor
