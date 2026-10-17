@@ -68,7 +68,7 @@ namespace
             _directory._pHost = &server._host;
             ChatServiceDependencies dependencies;
             dependencies._pStore     = &server._store;
-            dependencies._pBus       = &server._bus;
+            dependencies._pBus       = server._host.getServerBus();
             dependencies._pPresence  = &server._presence;
             dependencies._pDirectory = &_directory;
             dependencies._serverID   = server.getServerID();
@@ -212,10 +212,9 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
         ServiceTransaction transaction;
         ServiceSanction::stageWrite( transaction, 1, state );
         SW_ASSERT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
-        LocalServerBus gmBus( &hub, 99 );
-        BitWriter      body;
-        body.writeVarUint( AccountID( 1 ) );
-        gmBus.publish( ServiceSanctionBus::kChangedTopic, body.getBytes().data(), body.getByteCount() );
+        LocalServerBus gmTransport( &hub, 99 );
+        ServerBus      gmBus( gmTransport );
+        SW_EXPECT_TRUE( ServiceSanctionBus::kChangedTopic.publish( gmBus, ServiceSanctionChanged{ 1 } ) );
     }
     test::updateAll( { &first, &second }, clients, 30 ); // 첫 서버가 버스로 받아 묵힌 제재를 버린다(60 초 안이다)
     (void)aliceChat.whisper( 2, "can you hear me", aliceRecorder.makeDelegate() );

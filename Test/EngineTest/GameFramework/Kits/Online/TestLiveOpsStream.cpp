@@ -52,7 +52,7 @@ namespace
             server.addKit( this );
             LiveOpsDependencies dependencies;
             dependencies._pStore = &server._store;
-            dependencies._pBus   = &server._bus;
+            dependencies._pBus   = server._host.getServerBus();
             _service.initialize( dependencies );
             _binding.initialize( &_service );
         }

@@ -20,7 +20,9 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Social/Shared/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialTypes.h"
 
 namespace sw
@@ -32,15 +34,16 @@ namespace sw
 
     class EphemeralStoreRouter;
     class IAccountNameIndex;
-    class IServerBus;
     class IServiceStore;
+    class ServerBus;
+    class ServerBusMessage;
 
     /** @brief 빌려 쓰는 객체들입니다. */
     struct SocialServiceDependencies
     {
         IServiceStore*           _pStore{ nullptr };     ///< 필수이다
         EphemeralStoreRouter*    _pRouter{ nullptr };    ///< 접속 상태에 쓴다. null 이면 이 서버의 계정만 다룬다
-        IServerBus*              _pBus{ nullptr };       ///< null 이면 서버가 한 대이다
+        ServerBus*               _pBus{ nullptr };       ///< null 이면 서버가 한 대이다
         const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름으로 친구 신청할 때 쓴다. null 이면 NotFound 로 끝낸다
     };
 } // namespace sw
@@ -63,8 +66,8 @@ namespace sw
     /** @brief 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다. 지연 로드 모듈에서는 데이터를 가져올 수 없기 때문입니다. */
     struct SocialBus
     {
-        static constexpr const utf8* kLinksTopic    = "social.links";    ///< 본문은 관계가 바뀐 두 사람(`SocialLinkChanged`)이다
-        static constexpr const utf8* kPresenceTopic = "social.presence"; ///< 본문은 접속 상태(`SocialPresence`)이다
+        static constexpr ServerBusTopic<SocialLinkChanged> kLinksTopic{ "social.links" };       ///< 관계가 바뀐 두 사람이다
+        static constexpr ServerBusTopic<SocialPresence>    kPresenceTopic{ "social.presence" }; ///< 접속 상태이다
     };
 } // namespace sw
 
@@ -105,7 +108,7 @@ namespace sw
         /** @brief 이 서버에 접속한 @p ownerID 가 @p otherID 를 막았으면 true 입니다. 관계를 아직 읽지 않았으면 false 입니다. */
         bool isBlockedLocal( AccountID ownerID, AccountID otherID ) const;
         /** @brief 다른 서버가 낸 버스 메시지를 처리합니다. `SocialBus` 주제이며 자기 서버가 낸 것은 호출하는 쪽이 거릅니다. */
-        void handleBusMessage( string_view topic, const vector<uint8>& bytes );
+        void handleBusMessage( const ServerBusMessage& message );
 
         void  drainCompletions( vector<SocialCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void  drainNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }

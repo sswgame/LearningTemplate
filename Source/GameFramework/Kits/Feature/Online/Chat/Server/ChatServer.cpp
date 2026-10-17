@@ -164,6 +164,6 @@ namespace sw
     {
         (void)host;
         if ( _pService != nullptr )
-            _pService->handleBusMessage( message._topic, message._bytes );
+            _pService->handleBusMessage( message );
     }
 } // namespace sw

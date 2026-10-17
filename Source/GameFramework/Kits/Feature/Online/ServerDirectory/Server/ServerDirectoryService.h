@@ -17,6 +17,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistryReader.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Shared/ServerDirectoryTypes.h"
@@ -24,8 +27,8 @@
 namespace sw
 {
     class EphemeralStoreRouter;
-    class IServerBus;
     class IServiceStore;
+    class ServerBus;
     class ServerDirectoryWriteWork;
 
     /** @brief 서버 디렉터리 설정입니다. */
@@ -45,7 +48,7 @@ namespace sw
     {
         IServiceStore*        _pStore{ nullptr };  ///< 필수
         EphemeralStoreRouter* _pRouter{ nullptr }; ///< 필수이다. 서버 목록에 쓴다
-        IServerBus*           _pBus{ nullptr };    ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며 받기는 바인딩이 구독한다
+        ServerBus*            _pBus{ nullptr };    ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며 받기는 바인딩이 구독한다
     };
 } // namespace sw
 
@@ -61,10 +64,21 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 점검이나 공지를 바꿨다는 버스 신호의 본문입니다. 필드가 없고 받는 서버가 다시 읽습니다. */
+    REFLECT()
+    struct ServerDirectoryChanged
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 서버 간 버스 주제입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
     struct ServerDirectoryBus
     {
-        static constexpr const utf8* kChangedTopic = "sd.changed"; ///< 점검이나 공지를 바꿨다는 알림이다. 본문은 없고 받는 서버가 다시 읽는다
+        static constexpr ServerBusTopic<ServerDirectoryChanged> kChangedTopic{ "sd.changed" }; ///< 점검이나 공지를 바꿨다는 알림이다. 받는 서버가 다시 읽는다
     };
 } // namespace sw
 

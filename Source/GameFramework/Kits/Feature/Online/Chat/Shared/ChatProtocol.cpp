@@ -38,16 +38,12 @@ namespace sw
 
     string ChatProtocol::makeChannelTopic( string_view channelID )
     {
-        string topic( ChatBus::kChannelTopicPrefix );
-        topic += channelID;
-        return topic;
+        return ChatBus::kChannelTopic.makeTopic( channelID );
     }
 
     string ChatProtocol::makeServerTopic( uint64 serverID )
     {
-        string topic( ChatBus::kServerTopicPrefix );
-        ServiceKeyUtil::appendHex64( topic, serverID );
-        return topic;
+        return ChatBus::kServerTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
     }
 } // namespace sw
 

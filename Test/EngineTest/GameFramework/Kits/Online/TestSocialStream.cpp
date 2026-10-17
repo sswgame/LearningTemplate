@@ -58,7 +58,7 @@ namespace
             SocialServiceDependencies dependencies;
             dependencies._pStore  = &server._store;
             dependencies._pRouter = server._host.getEphemeralRouter();
-            dependencies._pBus    = &server._bus;
+            dependencies._pBus    = server._host.getServerBus();
             _socialService.initialize( dependencies );
             _guildService.initialize( &server._store );
             _binding.initialize( &_socialService, &_guildService, &server._presence );

@@ -139,6 +139,7 @@ namespace sw
     struct MatchTicketCancel
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 버스에만 쓰므로 `MessageTypes` 에 없다
         PROPERTY()
         uint64 _ticketID{ 0 };
     };
@@ -169,12 +170,13 @@ namespace sw
     /**
      * @struct MatchmakingProtocol
      * @brief 매칭의 메시지 타입 목록, 등록 항목, 캐시 기록 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
-     * @details 알림 본문은 `PartySnapshot`, `PartyInvite`, `LobbySnapshot`, `MatchAssignment` 이고, 서버 버스 본문은 `MatchTicket`, `MatchTicketCancel`, `MatchFormed`, `MatchAssignment` 입니다.
+     * @details 알림 본문은 `PartySnapshot`, `PartyInvite`, `LobbySnapshot`, `MatchAssignment` 입니다. 서버 버스 본문(`MatchTicket`, `MatchTicketCancel`, `MatchFormed`, `MatchAssignment`)은
+     *          B 가 아니라 주제 정의(`MatchQueueBus`)로 쓰며, 버스에만 쓰는 타입은 이 목록에 없습니다.
      */
     struct SW_KIT_API MatchmakingProtocol
     {
         using MessageTypes = OnlineMessageTypes<MatchmakingIDRequest, MatchmakingReadyRequest, MatchmakingModeRequest, LobbySnapshot, MatchmakingReply, PartySnapshot, PartyInvite,
-                                                MatchAssignment, MatchTicket, MatchTicketCancel, MatchFormed>;
+                                                MatchAssignment>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 

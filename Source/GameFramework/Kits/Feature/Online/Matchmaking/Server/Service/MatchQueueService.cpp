@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
@@ -17,19 +17,7 @@ namespace sw
 {
     namespace
     {
-        struct MatchQueueServiceInternal
-        {
-            static constexpr const utf8* kQueuePrefix  = "mm.queue.";
-            static constexpr const utf8* kCancelPrefix = "mm.cancel.";
-            static constexpr int32       kIDShift      = 32;
-
-            static bool hasPrefix( string_view text, string_view prefix ) { return text.size() > prefix.size() && StringUtil::startsWith( text, prefix ); }
-
-            static void publish( IServerBus* pBus, const string& topic, const BitWriter& body )
-            {
-                pBus->publish( topic, body.getBytes().data(), body.getByteCount() );
-            }
-        };
+        constexpr int32 kMatchQueueIDShift = 32; ///< 티켓 · 경기 id 의 위 32 비트가 낸 서버 id 이다
     } // namespace
 } // namespace sw
 
@@ -64,22 +52,22 @@ namespace sw
 
     string MatchQueueService::makeQueueTopic( string_view modeID )
     {
-        return MatchQueueServiceInternal::kQueuePrefix + string( modeID );
+        return MatchQueueBus::kQueueTopic.makeTopic( modeID );
     }
 
     string MatchQueueService::makeCancelTopic( string_view modeID )
     {
-        return MatchQueueServiceInternal::kCancelPrefix + string( modeID );
+        return MatchQueueBus::kCancelTopic.makeTopic( modeID );
     }
 
     string MatchQueueService::makeResultTopic( uint64 serverID )
     {
-        return "mm.result." + ServiceKeyUtil::makeHex64( serverID );
+        return MatchQueueBus::kResultTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
     }
 
     string MatchQueueService::makeAssignTopic( uint64 serverID )
     {
-        return "mm.assign." + ServiceKeyUtil::makeHex64( serverID );
+        return MatchQueueBus::kAssignTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
     }
 
     void MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode )
@@ -300,7 +288,7 @@ namespace sw
     {
         const MatchModeDefinition& mode = _mapMode[join._modeID];
         MatchTicket                ticket;
-        ticket._ticketID       = ( _dependencies._serverID << MatchQueueServiceInternal::kIDShift ) | ++_sequence;
+        ticket._ticketID       = ( _dependencies._serverID << kMatchQueueIDShift ) | ++_sequence;
         ticket._region         = join._region;
         ticket._partyID        = partyID;
         ticket._originServerID = _dependencies._serverID;
@@ -337,9 +325,7 @@ namespace sw
         }
         if ( _dependencies._pBus == nullptr )
             return;
-        BitWriter body;
-        if ( MatchmakingProtocol::MessageTypes::write( body, ticket ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼고, 티켓은 시한으로 끝난다
-            MatchQueueServiceInternal::publish( _dependencies._pBus, makeQueueTopic( join._modeID ), body );
+        (void)MatchQueueBus::kQueueTopic.publish( *_dependencies._pBus, join._modeID, ticket ); // 쓰지 못했으면 발행이 로그에 남겼고, 티켓은 시한으로 끝난다
     }
 
     void MatchQueueService::placeMatches( ModeState& state, int64 nowMs )
@@ -409,12 +395,8 @@ namespace sw
         if ( bPlaced == false && failOutcome == MatchQueueOutcome::Count )
             return false;
 
-        if ( bPlaced && _dependencies._pBus != nullptr ) // 게임 서버에 접속할 사람을 먼저 알린다
-        {
-            BitWriter body;
-            if ( MatchmakingProtocol::MessageTypes::write( body, match ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
-                MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverID ), body );
-        }
+        if ( bPlaced && _dependencies._pBus != nullptr )                                                                                         // 게임 서버에 접속할 사람을 먼저 알린다
+            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( picked._descriptor._serverID ), match ); // 실패는 발행이 로그에 남겼다
         for ( const MatchTicket& ticket : match._listTicket )
         {
             MatchAssignment assignment;
@@ -442,7 +424,7 @@ namespace sw
         ModeState*  pState = findModeState( lobby._modeID );
         MatchFormed match;
         match._modeID  = lobby._modeID;
-        match._matchID = ( _dependencies._serverID << MatchQueueServiceInternal::kIDShift ) | MatchQueueLimit::kLobbyMatchBit | ++_lobbySequence;
+        match._matchID = ( _dependencies._serverID << kMatchQueueIDShift ) | MatchQueueLimit::kLobbyMatchBit | ++_lobbySequence;
         match._listTeam.resize( static_cast<size_t>( PartyLobbyLimit::kLobbyTeamCount ) );
         for ( const LobbyMember& member : lobby._listMember )
         {
@@ -462,11 +444,7 @@ namespace sw
             bPlaced                  = pState->_reader->pickServer( query, nowMs, picked );
         }
         if ( bPlaced && _dependencies._pBus != nullptr )
-        {
-            BitWriter body;
-            if ( MatchmakingProtocol::MessageTypes::write( body, match ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
-                MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverID ), body );
-        }
+            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( picked._descriptor._serverID ), match ); // 실패는 발행이 로그에 남겼다
         for ( const LobbyMember& member : lobby._listMember )
         {
             MatchAssignment assignment;
@@ -493,9 +471,7 @@ namespace sw
             notifyLocalTicket( assignment._ticketID, assignment );
             return;
         }
-        BitWriter body;
-        if ( MatchmakingProtocol::MessageTypes::write( body, assignment ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
-            MatchQueueServiceInternal::publish( _dependencies._pBus, makeResultTopic( originServerID ), body );
+        (void)MatchQueueBus::kResultTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( originServerID ), assignment ); // 실패는 발행이 로그에 남겼고, 티켓은 시한으로 끝난다
     }
 
     void MatchQueueService::notifyLocalTicket( uint64 ticketID, const MatchAssignment& assignment )
@@ -525,38 +501,34 @@ namespace sw
         }
         if ( _dependencies._pBus == nullptr )
             return;
-        BitWriter body;
-        if ( MatchmakingProtocol::MessageTypes::write( body, MatchTicketCancel{ ticketID } ) )
-            MatchQueueServiceInternal::publish( _dependencies._pBus, makeCancelTopic( modeID ), body );
+        (void)MatchQueueBus::kCancelTopic.publish( *_dependencies._pBus, modeID, MatchTicketCancel{ ticketID } ); // 실패는 발행이 로그에 남겼다
     }
 
-    void MatchQueueService::handleBusMessage( string_view topic, const vector<uint8>& bytes, int64 nowMs )
+    void MatchQueueService::handleBusMessage( const ServerBusMessage& message, int64 nowMs )
     {
-        using Internal = MatchQueueServiceInternal;
         (void)nowMs;
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( Internal::hasPrefix( topic, Internal::kQueuePrefix ) )
+        if ( MatchQueueBus::kQueueTopic.matches( message ) )
         {
             MatchTicket ticket;
-            ModeState*  pState        = findModeState( topic.substr( string_view( Internal::kQueuePrefix ).size() ) );
-            const bool  bAcceptTicket = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchmakingProtocol::MessageTypes::read( reader, ticket ) == FixedReadResult::Ok;
+            ModeState*  pState        = findModeState( MatchQueueBus::kQueueTopic.findSuffix( message ) );
+            const bool  bAcceptTicket = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchQueueBus::kQueueTopic.read( message, ticket ) == ServerBusReadResult::Read;
             if ( bAcceptTicket )
                 (void)pState->_maker.addTicket( ticket );
             return;
         }
-        if ( Internal::hasPrefix( topic, Internal::kCancelPrefix ) )
+        if ( MatchQueueBus::kCancelTopic.matches( message ) )
         {
             MatchTicketCancel cancel;
-            ModeState*        pState        = findModeState( topic.substr( string_view( Internal::kCancelPrefix ).size() ) );
-            const bool        bAcceptCancel = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchmakingProtocol::MessageTypes::read( reader, cancel ) == FixedReadResult::Ok;
+            ModeState*        pState        = findModeState( MatchQueueBus::kCancelTopic.findSuffix( message ) );
+            const bool        bAcceptCancel = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchQueueBus::kCancelTopic.read( message, cancel ) == ServerBusReadResult::Read;
             if ( bAcceptCancel )
                 (void)pState->_maker.removeTicket( cancel._ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
             return;
         }
-        if ( topic == makeResultTopic( _dependencies._serverID ) )
+        if ( message.getTopic() == makeResultTopic( _dependencies._serverID ) )
         {
             MatchAssignment assignment;
-            if ( MatchmakingProtocol::MessageTypes::read( reader, assignment ) == FixedReadResult::Ok )
+            if ( MatchQueueBus::kResultTopic.read( message, assignment ) == ServerBusReadResult::Read )
                 notifyLocalTicket( assignment._ticketID, assignment );
         }
     }
@@ -593,7 +565,7 @@ namespace sw
         {
             removeFromQueue( modeID, ticketID );
         }
-        deliverToTicket( ticketID >> MatchQueueServiceInternal::kIDShift, cancelled );
+        deliverToTicket( ticketID >> kMatchQueueIDShift, cancelled );
     }
 
     void MatchQueueService::removeAccount( AccountID accountID )

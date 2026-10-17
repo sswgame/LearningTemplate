@@ -5,7 +5,7 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
@@ -238,8 +238,8 @@ namespace sw
             SW_LOG_WARNING( "ChatService: banned word file '%#' not found - chat is not filtered", settings._bannedWordsPath );
         if ( dependencies._pBus != nullptr )
         {
-            _busTopicBuffer.push( ChatBusTopicChange{ _serverTopic, SW_TRUE } );                                // 다른 서버가 보낸 귓속말을 받는다
-            _busTopicBuffer.push( ChatBusTopicChange{ string( ServiceSanctionBus::kChangedTopic ), SW_TRUE } ); // GM 이 제재를 바꿨을 때 받는다. 자기 서버가 낸 것도 포함한다
+            _busTopicBuffer.push( ChatBusTopicChange{ _serverTopic, SW_TRUE } );                                          // 다른 서버가 보낸 귓속말을 받는다
+            _busTopicBuffer.push( ChatBusTopicChange{ string( ServiceSanctionBus::kChangedTopic.getName() ), SW_TRUE } ); // GM 이 제재를 바꿨을 때 받는다. 자기 서버가 낸 것도 포함한다
         }
         return true;
     }
@@ -548,7 +548,7 @@ namespace sw
         if ( bWhisper == false )
         {
             deliverToChannel( message ); // 보낸 사람도 알림으로 받는다. 되울림과는 별개이며 다른 창이 같은 채널을 보고 있을 수 있기 때문이다
-            publishMessage( ChatProtocol::makeChannelTopic( message._channelID ), message );
+            publishMessage( ChatBus::kChannelTopic, message._channelID, message );
             queueHistory( message );
             completeMessage( method, send._requestTag, std::move( message ) );
             return;
@@ -582,18 +582,16 @@ namespace sw
             completeSimple( ChatMethod::kWhisper, pending._requestTag, ChatResult::TargetOffline ); // 이 서버였다면 그사이 떠난 것이다
             return;
         }
-        publishMessage( ChatProtocol::makeServerTopic( result._serverID ), pending._message );
+        publishMessage( ChatBus::kServerTopic, ServiceKeyUtil::makeHex64( result._serverID ), pending._message );
         queueHistory( pending._message );
         completeMessage( ChatMethod::kWhisper, pending._requestTag, std::move( pending._message ) ); // 받는 서버가 차단으로 버려도 보낸 사람에게는 보낸 것으로 보인다
     }
 
-    void ChatService::publishMessage( const string& topic, const ChatMessage& message )
+    void ChatService::publishMessage( const ServerBusTopicFamily<ChatMessage>& family, string_view suffix, const ChatMessage& message )
     {
         if ( _dependencies._pBus == nullptr )
             return;
-        BitWriter body;
-        if ( ChatProtocol::MessageTypes::write( body, message ) )
-            _dependencies._pBus->publish( topic, body.getBytes().data(), body.getByteCount() );
+        (void)family.publish( *_dependencies._pBus, suffix, message ); // 실패는 발행이 오류 로그로 남겼다. 기록 레코드가 원본이다
     }
 
     void ChatService::deliverToChannel( const ChatMessage& message )
@@ -617,27 +615,28 @@ namespace sw
         _deliveryBuffer.push( ChatDelivery{ message, message._recipientID } );
     }
 
-    void ChatService::handleBusMessage( string_view topic, const vector<uint8>& bytes )
+    void ChatService::handleBusMessage( const ServerBusMessage& busMessage )
     {
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( topic == ServiceSanctionBus::kChangedTopic )
+        if ( ServiceSanctionBus::kChangedTopic.matches( busMessage ) )
         {
-            const AccountID accountID = reader.readVarUint();
-            if ( reader.hasOverflowed() == false )
-                refreshSanction( accountID );
+            ServiceSanctionChanged changed;
+            if ( ServiceSanctionBus::kChangedTopic.read( busMessage, changed ) == ServerBusReadResult::Read )
+                refreshSanction( changed._accountID ); // 못 읽으면 묵힘 시한 안에 다시 읽는다
             return;
         }
-        ChatMessage message;
-        if ( ChatProtocol::MessageTypes::read( reader, message ) != FixedReadResult::Ok || message._serverID == _dependencies._serverID )
+        ChatMessage               message;
+        const bool                bChannelTopic = ChatBus::kChannelTopic.matches( busMessage );
+        const ServerBusReadResult result        = bChannelTopic ? ChatBus::kChannelTopic.read( busMessage, message ) : ChatBus::kServerTopic.read( busMessage, message );
+        if ( result != ServerBusReadResult::Read || message._serverID == _dependencies._serverID )
             return;
         if ( message._kind == ChatChannelKind::Whisper )
         {
-            const bool bDeliverWhisper = topic == _serverTopic && _dependencies._pDirectory != nullptr && _dependencies._pDirectory->isAccountOnline( message._recipientID );
+            const bool bDeliverWhisper = busMessage.getTopic() == _serverTopic && _dependencies._pDirectory != nullptr && _dependencies._pDirectory->isAccountOnline( message._recipientID );
             if ( bDeliverWhisper )
                 deliverWhisperLocally( message );
             return;
         }
-        if ( topic == ChatProtocol::makeChannelTopic( message._channelID ) )
+        if ( busMessage.getTopic() == ChatProtocol::makeChannelTopic( message._channelID ) )
             deliverToChannel( message );
     }
 

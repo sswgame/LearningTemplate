@@ -25,6 +25,7 @@ namespace
         MemoryEphemeralStore              _cache;
         EphemeralStoreRouter              _router;
         LocalServerBus                    _bus;
+        ServerBus                         _busFront;
         ServerDirectoryService            _service;
         vector<ServerDirectoryCompletion> _listCompletion;
         int32                             _statusChangeCount;
@@ -34,16 +35,17 @@ namespace
             , _cache{ pCacheDatabase }
             , _router{}
             , _bus{ pHub, serverID }
+            , _busFront{ _bus }
             , _service{}
             , _listCompletion{}
             , _statusChangeCount{ 0 }
         {
             _router.initialize( &_cache );
-            _bus.subscribe( ServerDirectoryBus::kChangedTopic );
+            _bus.subscribe( ServerDirectoryBus::kChangedTopic.getName() );
             ServerDirectoryDependencies dependencies;
             dependencies._pStore  = &_store;
             dependencies._pRouter = &_router;
-            dependencies._pBus    = &_bus;
+            dependencies._pBus    = &_busFront;
             ServerDirectoryServiceConfig settings;
             settings._listServerKind.push_back( "game" );
             _service.initialize( dependencies, settings );
@@ -66,7 +68,9 @@ namespace
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
                 {
-                    if ( message._originServerID != _bus.getServerID() )
+                    ServerDirectoryChanged changed;
+                    const bool             bFromOtherServer = message.getOriginServerID() != _bus.getServerID();
+                    if ( bFromOtherServer && ServerDirectoryBus::kChangedTopic.read( message, changed ) == ServerBusReadResult::Read )
                         _service.notifyChanged();
                 }
                 _service.update( nowMs );

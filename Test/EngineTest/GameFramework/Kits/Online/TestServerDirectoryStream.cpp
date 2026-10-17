@@ -73,7 +73,7 @@ namespace
             ServerDirectoryDependencies dependencies;
             dependencies._pStore  = &server._store;
             dependencies._pRouter = server._host.getEphemeralRouter();
-            dependencies._pBus    = &server._bus;
+            dependencies._pBus    = server._host.getServerBus();
             ServerDirectoryServiceConfig settings;
             settings._listServerKind.push_back( "game" );
             _service.initialize( dependencies, settings );

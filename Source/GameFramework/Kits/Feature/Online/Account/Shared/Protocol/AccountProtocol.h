@@ -240,11 +240,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버 버스(`AccountServer::kRevokeTopic`)의 본문입니다. 다른 서버에서 끊긴 세션을 알립니다. */
+    /** @brief 서버 버스(`AccountBus::kRevokeTopic`)의 본문입니다. 다른 서버에서 끊긴 세션을 알립니다. 버스에만 쓰므로 `MessageTypes` 에 없습니다(A). */
     REFLECT()
     struct AccountRevokeNotice
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY( MaxCount = 64 )
         string _reasonCode{};
         PROPERTY()
@@ -266,7 +267,7 @@ namespace sw
     {
         using MessageTypes = OnlineMessageTypes<AccountCredentialRequest, AccountLoginRequest, AccountGuestLoginRequest, AccountPlatformRequest, AccountResumeRequest,
                                                 AccountGameTicketRequest, AccountProviderRequest, AccountGrantReply, AccountTicketReply, AccountLinkReply,
-                                                AccountRevokedPush, AccountUpdateDetail, AccountRevokeNotice>;
+                                                AccountRevokedPush, AccountUpdateDetail>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
     };

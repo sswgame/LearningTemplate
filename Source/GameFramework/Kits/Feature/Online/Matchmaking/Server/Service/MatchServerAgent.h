@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    class ServerBusMessage;
+
     /**
      * @class MatchServerAgent
      * @brief 게임 서버 쪽에서 배정을 받는 객체입니다. 서버 루프 스레드 하나에서 씁니다.
@@ -30,8 +32,8 @@ namespace sw
 
         void   initialize( uint64 serverID );
         string getAssignTopic() const;
-        /** @brief 버스 메시지 본문(`MatchFormed`)을 처리합니다. 손상됐으면 false 를 반환합니다. */
-        [[nodiscard]] bool handleAssign( const vector<uint8>& bytes, int64 nowMs );
+        /** @brief 배정 주제(`MatchQueueBus::kAssignTopic`)의 메시지를 처리합니다. 읽지 못했으면(읽기가 로그와 카운터를 남겼다) false 를 반환합니다. */
+        [[nodiscard]] bool handleAssign( const ServerBusMessage& message, int64 nowMs );
         /** @brief 시한이 지난 접속 예정자를 지웁니다. */
         void update( int64 nowMs );
 

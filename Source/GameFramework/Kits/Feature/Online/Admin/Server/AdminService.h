@@ -22,16 +22,16 @@ namespace sw
     class IAccountDirectory;
     class IAccountSessionControl;
     class ILedgerPolicy;
-    class IServerBus;
     class IServiceStore;
     class MetricRegistry;
+    class ServerBus;
 
     /** @brief GM 서비스 설정입니다. 포인터는 빌려 씁니다. */
     struct AdminServiceConfig
     {
         const IAccountDirectory* _pDirectory{ nullptr };      ///< 이름으로 찾기, 표시 이름, 접속 여부에 쓴다. 없으면 id 로만 찾는다
         IAccountSessionControl*  _pSessionControl{ nullptr }; ///< 정지나 영구 정지 뒤에 세션을 끊는다. 계정 키트가 구현한다
-        IServerBus*              _pBus{ nullptr };            ///< 제재를 쓴 뒤 `ServiceSanctionBus::kChangedTopic` 을 낸다. 없으면 채팅은 캐시 시한이 지난 뒤에 제재를 본다
+        ServerBus*               _pBus{ nullptr };            ///< 제재를 쓴 뒤 `ServiceSanctionBus::kChangedTopic` 을 낸다. 없으면 채팅은 캐시 시한이 지난 뒤에 제재를 본다
         const ILedgerPolicy*     _pPolicy{ nullptr };         ///< 지급 상한이다. 게임이 CurrencyCatalog 를 넘긴다
         MetricRegistry*          _pMetricRegistry{ nullptr };
     };

@@ -82,6 +82,7 @@ namespace sw
     struct MatchTicket
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 새 필드는 옛 빌드 매처를 지나면 기본값이 된다(3.6)
         PROPERTY( MaxCount = 256 )
         vector<MatchMember> _listMember{}; ///< 상한은 팀 수 상한 곱하기 팀 인원 상한(`MatchmakingLimit`)이다
         PROPERTY( MaxCount = 16 )
@@ -119,6 +120,7 @@ namespace sw
     struct MatchFormed
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY( MaxCount = 16 )
         vector<MatchFormedTeam> _listTeam{}; ///< 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
         PROPERTY( MaxCount = 256 )
@@ -293,6 +295,7 @@ namespace sw
     struct MatchAssignment
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스와 push 중계의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY( MaxCount = 16 )
         vector<AccountID> _listTeammate{}; ///< 상한은 `MatchmakingLimit::kMaxTeamSize` 와 같다
         PROPERTY( MaxCount = 128 )

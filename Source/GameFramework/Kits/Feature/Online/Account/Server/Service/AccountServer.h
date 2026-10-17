@@ -19,12 +19,14 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Transport/StreamTypes.h"
 
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/OnlinePresence.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountProtocol.h"
 
 namespace sw
 {
@@ -36,6 +38,15 @@ namespace sw
         int32                _refreshCount{ 64 };
         int32                _purgeCount{ 32 };
         OnlinePresenceConfig _presence{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 계정 키트의 서버 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다(지연 로드 모듈은 데이터를 가져올 수 없습니다). */
+    struct AccountBus
+    {
+        static constexpr ServerBusTopic<AccountRevokeNotice> kRevokeTopic{ "account.revoke" }; ///< 다른 서버에서 끊긴 세션이다
     };
 } // namespace sw
 
@@ -70,8 +81,6 @@ namespace sw
         uint64 findSessionID( AccountID accountID ) const;
         /** @brief 접속 상태 관리자입니다. 거래와 채팅이 빌려 쓰며, 서버 한 대이면 찾기는 "없음" 으로 끝납니다. 이 객체와 수명이 같습니다. */
         IAccountPresence* getPresence() { return &_presence; }
-
-        static constexpr const utf8* kRevokeTopic = "account.revoke";
 
     private:
         struct PendingCall

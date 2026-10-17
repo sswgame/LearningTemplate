@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+#include "EngineTest/GameFramework/Online/ServerBusTestUtil.h"
 
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
@@ -70,6 +71,7 @@ namespace
         MemoryEphemeralStore       _cache;
         EphemeralStoreRouter       _router;
         LocalServerBus             _bus;
+        ServerBus                  _busFront;
         SocialService              _service;
         vector<SocialCompletion>   _listCompletion;
         vector<SocialNotification> _listNotification;
@@ -81,18 +83,19 @@ namespace
             , _cache{ pCacheDatabase }
             , _router{}
             , _bus{ pHub, serverID }
+            , _busFront{ _bus }
             , _service{}
             , _listCompletion{}
             , _listNotification{}
             , _pFront{ pStore != nullptr ? pStore : &_store }
         {
             _router.initialize( &_cache );
-            _bus.subscribe( SocialBus::kLinksTopic );
-            _bus.subscribe( SocialBus::kPresenceTopic );
+            _bus.subscribe( SocialBus::kLinksTopic.getName() );
+            _bus.subscribe( SocialBus::kPresenceTopic.getName() );
             SocialServiceDependencies dependencies;
             dependencies._pStore     = _pFront;
             dependencies._pRouter    = &_router;
-            dependencies._pBus       = &_bus;
+            dependencies._pBus       = &_busFront;
             dependencies._pNameIndex = pNameIndex;
             _service.initialize( dependencies );
         }
@@ -106,7 +109,7 @@ namespace
                 for ( const ServerBusMessage& message : listMessage )
                 {
                     if ( message._originServerID != _bus.getServerID() )
-                        _service.handleBusMessage( message._topic, message._bytes );
+                        _service.handleBusMessage( message );
                 }
                 _service.update( nowMs );
                 (void)_pFront->pollCompletions();
@@ -413,8 +416,7 @@ SW_TEST_CASE( SocialProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
     notification._kind     = SocialNotificationKind::PresenceChanged;
     notification._presence = SocialPresence{ "dungeon", 4, SocialPresenceStatus::Away };
     SW_EXPECT_TRUE( Util::roundTrips<Messages>( notification ) );
-    SW_EXPECT_TRUE( Util::roundTrips<Messages>( SocialLinkChanged{ 1, 2 } ) );
-    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( SocialLinkChanged{ 1, 2 } ) );
+    SW_EXPECT_TRUE( test::ServerBusTestUtil::roundTrips( SocialBus::kLinksTopic, SocialLinkChanged{ 1, 2 } ) );
     SocialPresence decoded;
     vector<uint8>  presenceBytes;
     SW_ASSERT_TRUE( SocialProtocol::encodePresenceRecord( SocialPresence{ "lobby", 8, SocialPresenceStatus::Busy }, presenceBytes ) );

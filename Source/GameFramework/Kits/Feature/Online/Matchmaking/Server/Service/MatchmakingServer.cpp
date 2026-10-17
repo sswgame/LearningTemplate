@@ -296,13 +296,13 @@ namespace sw
     void MatchmakingServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
     {
         (void)host;
-        if ( _pAgent != nullptr && message._topic == _pAgent->getAssignTopic() )
+        if ( _pAgent != nullptr && message.getTopic() == _pAgent->getAssignTopic() )
         {
-            (void)_pAgent->handleAssign( message._bytes, _nowMs );
+            (void)_pAgent->handleAssign( message, _nowMs ); // 읽지 못한 배정은 읽기가 로그와 카운터를 남겼다
             return;
         }
         if ( _pQueue != nullptr )
-            _pQueue->handleBusMessage( message._topic, message._bytes, _nowMs );
+            _pQueue->handleBusMessage( message, _nowMs );
     }
 
     void MatchmakingServer::attachHost( OnlineServiceHost& host )

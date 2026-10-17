@@ -49,6 +49,7 @@ namespace
     {
         MemoryServiceStore        _store;
         LocalServerBus            _bus;
+        ServerBus                 _busFront;
         LiveOpsService            _service;
         vector<LiveOpsCompletion> _listCompletion;
         int32                     _stateChangeCount;
@@ -56,14 +57,15 @@ namespace
         LiveOpsNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverID, const RemoteConfig* pRemoteConfig = nullptr )
             : _store{ pDatabase }
             , _bus{ pHub, serverID }
+            , _busFront{ _bus }
             , _service{}
             , _listCompletion{}
             , _stateChangeCount{ 0 }
         {
-            _bus.subscribe( LiveOpsBus::kChangedTopic );
+            _bus.subscribe( LiveOpsBus::kChangedTopic.getName() );
             LiveOpsDependencies dependencies;
             dependencies._pStore        = &_store;
-            dependencies._pBus          = &_bus;
+            dependencies._pBus          = &_busFront;
             dependencies._pRemoteConfig = pRemoteConfig;
             _service.initialize( dependencies );
         }
@@ -83,7 +85,9 @@ namespace
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
                 {
-                    if ( message._originServerID != _bus.getServerID() )
+                    LiveOpsChanged changed;
+                    const bool     bFromOtherServer = message.getOriginServerID() != _bus.getServerID();
+                    if ( bFromOtherServer && LiveOpsBus::kChangedTopic.read( message, changed ) == ServerBusReadResult::Read )
                         _service.notifyChanged();
                 }
                 _service.update( nowMs );

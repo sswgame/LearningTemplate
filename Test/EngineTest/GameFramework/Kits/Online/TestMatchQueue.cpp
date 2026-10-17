@@ -4,6 +4,7 @@
 #include "pch.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+#include "EngineTest/GameFramework/Online/ServerBusTestUtil.h"
 
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
@@ -54,6 +55,7 @@ namespace
         MemoryEphemeralStore           _cache;
         EphemeralStoreRouter           _router;
         unique_ptr<LocalServerBus>     _bus;
+        unique_ptr<ServerBus>          _busFront;
         PartyLobbyService              _partyLobby;
         MatchQueueService              _service;
         vector<MatchQueueNotification> _listNotification;
@@ -63,6 +65,7 @@ namespace
             : _cache{ pCacheDatabase }
             , _router{}
             , _bus{}
+            , _busFront{}
             , _partyLobby{}
             , _service{}
             , _listNotification{}
@@ -70,11 +73,14 @@ namespace
         {
             _router.initialize( &_cache );
             if ( pHub != nullptr )
-                _bus = make_unique<LocalServerBus>( pHub, serverID );
+            {
+                _bus      = make_unique<LocalServerBus>( pHub, serverID );
+                _busFront = make_unique<ServerBus>( *_bus );
+            }
             _partyLobby.initialize( &_router, serverID );
             MatchQueueDependencies dependencies;
             dependencies._pRouter     = &_router;
-            dependencies._pBus        = _bus.get();
+            dependencies._pBus        = _busFront.get();
             dependencies._pPartyLobby = &_partyLobby;
             dependencies._serverID    = serverID;
             _service.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestInternal::makeDuoMode( maxWaitMs ) } );
@@ -106,7 +112,7 @@ namespace
                     (void)_bus->pollMessages( listMessage );
                     for ( const ServerBusMessage& message : listMessage )
                     {
-                        _service.handleBusMessage( message._topic, message._bytes, nowMs );
+                        _service.handleBusMessage( message, nowMs );
                     }
                 }
                 _service.update( nowMs );
@@ -147,7 +153,7 @@ namespace
             (void)_bus.pollMessages( listMessage );
             for ( const ServerBusMessage& message : listMessage )
             {
-                SW_EXPECT_TRUE( _agent.handleAssign( message._bytes, nowMs ) );
+                SW_EXPECT_TRUE( _agent.handleAssign( message, nowMs ) );
             }
             _agent.update( nowMs );
         }
@@ -452,8 +458,8 @@ SW_TEST_CASE( MatchmakingProtocolTest, MessagesAndRecordsRoundTrip )
     MatchTicket ticket;
     ticket._listMember.assign( 256, MatchMember{ 4, -1 } );
     match._listTicket.push_back( ticket );
-    SW_EXPECT_TRUE( Util::roundTrips<Messages>( match ) );
-    SW_EXPECT_TRUE( Util::roundTrips<Messages>( MatchTicketCancel{ 77 } ) );
+    SW_EXPECT_TRUE( test::ServerBusTestUtil::roundTrips( MatchQueueBus::kAssignTopic, "0000000000000007", match ) );
+    SW_EXPECT_TRUE( test::ServerBusTestUtil::roundTrips( MatchQueueBus::kCancelTopic, "duo", MatchTicketCancel{ 77 } ) );
     LobbySnapshot lobby;
     lobby._name           = string( 48, 'l' );
     lobby._maxMemberCount = 32;
@@ -466,7 +472,7 @@ SW_TEST_CASE( MatchmakingProtocolTest, MessagesAndRecordsRoundTrip )
     reply._party._maxMemberCount = 8;
     SW_EXPECT_TRUE( Util::roundTrips<Messages>( reply ) );
     SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( MatchmakingReadyRequest{ 5, SW_TRUE } ) );
-    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, MatchmakingIDRequest>( MatchTicketCancel{ 77 } ) ) );
+    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, MatchmakingIDRequest>( MatchmakingReadyRequest{ 5, SW_TRUE } ) ) );
 
     // 파티 구성원을 `AccountID` 별칭으로 적어도 캐시 기록의 바이트는 `uint64` 로 적던 빌드와 같다(골든).
     PartySnapshot memberParty;
