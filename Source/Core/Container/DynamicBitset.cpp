@@ -16,21 +16,23 @@ namespace sw
         _listBlock.resize( blockCount, 0 );
     }
 
-    DynamicBitset::DynamicBitset( string_view str )
-        : _listBlock{}
-        , _bitCount{ static_cast<uint32>( str.length() ) }
+    bool DynamicBitset::parse( const string_view text, DynamicBitset& outValue )
     {
-        const uint32 blockCount = computeBlockCount( _bitCount );
-        _listBlock.resize( blockCount, 0 );
+        if ( text.length() > std::numeric_limits<uint32>::max() )
+            return false;
 
-        for ( uint32 bitIndex = 0; bitIndex < _bitCount; ++bitIndex )
+        const uint32  bitCount = static_cast<uint32>( text.length() );
+        DynamicBitset value( bitCount );
+        for ( uint32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
         {
-            const utf8 digit = str[_bitCount - 1 - bitIndex];
+            const utf8 digit = text[bitCount - 1 - bitIndex];
             if ( digit == '1' )
-                _listBlock[bitIndex / kBitsPerBlock] |= ( 1ULL << ( bitIndex % kBitsPerBlock ) );
+                value._listBlock[getBlockIndex( bitIndex )] |= bitMask( bitIndex );
             else if ( digit != '0' )
-                SW_LOG_ERROR( "DynamicBitset: Invalid character %# in bitset string", digit );
+                return false;
         }
+        outValue = std::move( value );
+        return true;
     }
 
     DynamicBitset::DynamicBitset( const uint32 size, const uint64 value )
@@ -52,15 +54,29 @@ namespace sw
         _bitCount = newSize;
         _listBlock.resize( newBlockCount, value ? ~static_cast<BlockType>( 0 ) : 0 );
 
-        if ( newSize > oldBitCount && value )
-        {
-            for ( uint32 bitIndex = oldBitCount; bitIndex < newSize; ++bitIndex )
-            {
-                set( bitIndex, true );
-            }
-        }
+        // 새 블록은 위에서 채웠다. 옛 마지막 블록의 남는 비트(불변식으로 0)만 켜고, 새 크기 밖은 sanitize 가 지운다.
+        const uint32 oldRestBits = oldBitCount & kBlockMask;
+        const bool   bGrowOn     = value && newSize > oldBitCount;
+        if ( bGrowOn && oldRestBits != 0 )
+            _listBlock[getBlockIndex( oldBitCount )] |= ~( ( static_cast<BlockType>( 1 ) << oldRestBits ) - 1 );
 
         sanitize();
+    }
+
+    void DynamicBitset::push_back( const bool value )
+    {
+        if ( _bitCount == std::numeric_limits<uint32>::max() )
+        {
+            SW_LOG_ASSERT( false, "Bitset size overflow" );
+            return;
+        }
+
+        const uint32 bitPosition = _bitCount;
+        if ( getBlockIndex( bitPosition ) == _listBlock.size() )
+            _listBlock.push_back( 0 );
+        ++_bitCount;
+        if ( value )
+            _listBlock[getBlockIndex( bitPosition )] |= bitMask( bitPosition );
     }
 
     bool DynamicBitset::operator[]( const uint32 bitPosition ) const

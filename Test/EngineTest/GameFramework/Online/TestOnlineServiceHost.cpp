@@ -119,7 +119,7 @@ namespace
                 return;
             for ( const NetRequestToken& token : _listLateToken )
             {
-                _listLateAnswer.resize( _listLateAnswer.size() + 1, host.respondOk( token, BitWriter{} ) );
+                _listLateAnswer.push_back( host.respondOk( token, BitWriter{} ) );
             }
             _listLateToken.clear();
             if ( _bReadCacheOnTick && host.getEphemeralRouter() != nullptr )

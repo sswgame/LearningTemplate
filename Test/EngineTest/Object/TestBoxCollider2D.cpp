@@ -29,7 +29,7 @@ namespace sw
         void            onOverlapBegin( const OverlapInfo& overlap ) override
         {
             _listBeginOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectID() : 0 );
-            _listBeginOtherTrigger.resize( _listBeginOtherTrigger.size() + 1, overlap._bOtherTrigger == SW_TRUE );
+            _listBeginOtherTrigger.push_back( overlap._bOtherTrigger == SW_TRUE );
         }
         void onOverlapEnd( const OverlapInfo& overlap ) override { _listEndOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectID() : 0 ); }
     };

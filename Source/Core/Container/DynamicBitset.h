@@ -34,10 +34,6 @@ namespace sw
          */
         explicit DynamicBitset( uint32 size );
         /**
-         * @brief '0' · '1' 문자열로 비트를 채웁니다.
-         */
-        explicit DynamicBitset( string_view str );
-        /**
          * @brief size 비트를 잡고, 하위 비트를 value 로 채웁니다.
          */
         explicit DynamicBitset( uint32 size, uint64 value );
@@ -51,6 +47,13 @@ namespace sw
         DynamicBitset& operator=( const DynamicBitset& other ) = default;
         /** @brief 이동 대입합니다. */
         DynamicBitset& operator=( DynamicBitset&& other ) noexcept = default;
+
+        /**
+         * @brief '0' · '1' 문자열(맨 왼쪽이 가장 높은 비트, `to_string` 의 역)을 읽습니다.
+         * @details 다른 글자가 하나라도 있으면 false 이고 outValue 는 그대로입니다. 문자열 생성자를 두지 않는 이유:
+         *          생성자는 실패를 돌려줄 수 없어, 잘못된 글자를 로그만 남기고 0 으로 읽는 폴백이 됐습니다.
+         */
+        [[nodiscard]] static bool parse( string_view text, DynamicBitset& outValue );
 
         /** @brief 비트 수를 반환합니다. */
         uint32 size() const { return _bitCount; }
@@ -70,6 +73,10 @@ namespace sw
          * @brief 크기를 바꿉니다. 새로 생긴 비트는 value 로 채웁니다.
          */
         void resize( uint32 newSize, bool value = false );
+        /**
+         * @brief 맨 끝(가장 높은 위치)에 비트 하나를 덧붙입니다.
+         */
+        void push_back( bool value );
 
         /** @brief bitPosition 비트를 읽습니다. */
         bool operator[]( uint32 bitPosition ) const;

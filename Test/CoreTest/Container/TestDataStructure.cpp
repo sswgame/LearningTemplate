@@ -70,6 +70,14 @@ namespace
     {
         size_t operator()( int32 ) const noexcept { return 0; }
     };
+
+    /** @brief '0' · '1' 리터럴을 비트셋으로 읽습니다. 읽기 실패는 테스트 실패입니다. */
+    sw::DynamicBitset parseBits( const sw::string_view text )
+    {
+        sw::DynamicBitset value;
+        SW_EXPECT_TRUE_MSG( sw::DynamicBitset::parse( text, value ), sw::string( text ) );
+        return value;
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -108,8 +116,8 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetBasic )
  */
 SW_TEST_CASE( DataStructureTest, DynamicBitsetOperations )
 {
-    sw::DynamicBitset bs1( "1010" );
-    sw::DynamicBitset bs2( "0110" );
+    const sw::DynamicBitset bs1 = parseBits( "1010" );
+    const sw::DynamicBitset bs2 = parseBits( "0110" );
 
     sw::DynamicBitset andResult = bs1 & bs2;
     SW_EXPECT_EQUAL( sw::string( "0010" ), andResult.to_string() );
@@ -233,9 +241,9 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetFullCoverage )
     sw::DynamicBitset bs( 8, 0xFFu );
     SW_EXPECT_EQUAL( static_cast<uint32>( 0xFFu ), bs.to_ulong() );
 
-    sw::DynamicBitset bsEqual1( "1100" );
-    sw::DynamicBitset bsEqual2( "1100" );
-    sw::DynamicBitset bsDifferent( "1010" );
+    const sw::DynamicBitset bsEqual1    = parseBits( "1100" );
+    const sw::DynamicBitset bsEqual2    = parseBits( "1100" );
+    const sw::DynamicBitset bsDifferent = parseBits( "1010" );
 
     SW_EXPECT_TRUE( bsEqual1 == bsEqual2 );
     SW_EXPECT_FALSE( bsEqual1 != bsEqual2 );
@@ -1137,18 +1145,72 @@ SW_TEST_CASE( DataStructureTest, HandleTableInsertEraseAndGenerationIncrement )
 }
 
 /**
- * @brief [DataStructureTest] DynamicBitset 잘못된 입력 문자 파싱 안전성 검증
+ * @brief [DataStructureTest] DynamicBitset::parse 는 '0' · '1' 이 아닌 글자가 있으면 실패하고 값을 바꾸지 않는다
+ * @details 예전 문자열 생성자는 잘못된 글자를 로그만 남기고 0 으로 읽었다(폴백). 맨 왼쪽 글자가 가장 높은 비트다.
  */
-SW_TEST_CASE( DataStructureTest, DynamicBitsetInvalidStringParsingSafety )
+SW_TEST_CASE( DataStructureTest, DynamicBitsetParseRejectsInvalidCharacters )
 {
-    sw::DynamicBitset bitset( "10A1B0" );
-    SW_EXPECT_EQUAL( 6u, bitset.size() );
+    sw::DynamicBitset bitset = parseBits( "11" );
+    SW_EXPECT_FALSE( sw::DynamicBitset::parse( "10A1B0", bitset ) );
+    SW_EXPECT_FALSE( sw::DynamicBitset::parse( " 1", bitset ) );
+    SW_EXPECT_TRUE( bitset == parseBits( "11" ) );
 
-    // '1' 위치는 bitIndex 5와 2
+    SW_ASSERT_TRUE( sw::DynamicBitset::parse( "100100", bitset ) );
+    SW_EXPECT_EQUAL( 6u, bitset.size() );
     SW_EXPECT_TRUE( bitset.test( 5 ) );
     SW_EXPECT_TRUE( bitset.test( 2 ) );
-    SW_EXPECT_FALSE( bitset.test( 4 ) );
     SW_EXPECT_FALSE( bitset.test( 0 ) );
+
+    SW_ASSERT_TRUE( sw::DynamicBitset::parse( "", bitset ) );
+    SW_EXPECT_TRUE( bitset.empty() );
+
+    // 블록 경계(64 · 65 비트): to_string 과 왕복하고 남는 비트는 0 이다
+    for ( const uint32 bitCount : { 63u, 64u, 65u, 128u } )
+    {
+        sw::string text( bitCount, '1' );
+        text[0] = '0';
+        SW_ASSERT_TRUE( sw::DynamicBitset::parse( text, bitset ) );
+        SW_EXPECT_EQUAL( bitCount, bitset.size() );
+        SW_EXPECT_EQUAL( bitCount - 1, bitset.count() );
+        SW_EXPECT_EQUAL( text, bitset.to_string() );
+    }
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset::push_back 과 resize( n, true ) 는 블록 경계를 넘어도 마지막 블록의 남는 비트를 0 으로 둔다
+ * @details 남는 비트가 켜지면 count · == · any 가 틀린다. 0 비트 · 64 배수 · 경계 하나 넘김을 본다.
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetGrowKeepsTailBitsClear )
+{
+    sw::DynamicBitset pushed;
+    sw::DynamicBitset reference( 130 );
+    for ( uint32 bitIndex = 0; bitIndex < 130; ++bitIndex )
+    {
+        const bool bValue = ( bitIndex % 3 ) == 0;
+        pushed.push_back( bValue );
+        reference.set( bitIndex, bValue );
+    }
+    SW_EXPECT_EQUAL( 130u, pushed.size() );
+    SW_EXPECT_TRUE( pushed == reference );
+    SW_EXPECT_EQUAL( reference.count(), pushed.count() );
+
+    // 남는 비트가 0 이어야 ~ 뒤의 개수가 맞다
+    SW_EXPECT_EQUAL( 130u - reference.count(), ( ~pushed ).count() );
+
+    for ( const uint32 startSize : { 0u, 1u, 63u, 64u, 65u } )
+    {
+        sw::DynamicBitset grown( startSize );
+        grown.resize( startSize + 70, true );
+        SW_EXPECT_EQUAL( startSize + 70, grown.size() );
+        SW_EXPECT_EQUAL( 70u, grown.count() );
+        SW_EXPECT_TRUE( startSize == 0u || grown.test( startSize - 1 ) == false );
+        SW_EXPECT_TRUE( grown.test( startSize ) );
+
+        // 줄였다가 0 으로 다시 늘리면 지운 자리는 0 이다
+        grown.resize( startSize + 1 );
+        grown.resize( startSize + 70, false );
+        SW_EXPECT_EQUAL( 1u, grown.count() );
+    }
 }
 
 /**
