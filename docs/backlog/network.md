@@ -71,9 +71,9 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다 ·
   ② 에디터 에셋 종류(`EditorAssetType`)에 `.layerweights` 를 더해 콘텐츠 브라우저 · 속성 칸이 고르게 한다 · ③ 바깥 도구가 만든 스플랫 PNG 를 `.layerweights` 로 가져오는 임포트(높이장 임포터와 같은 길).
 
-- `F-2` [결정대기] **서버 버스 메시지의 빌드 확인.** 서버끼리 주고받는 버스 메시지(`ChatService` 의 채널 전달, `SocialService` 의 관계 바뀜, `AccountServer` 의 해지 알림)는
-  고정 배치형(B)이라 머리 해시가 다르면 받는 쪽이 `SchemaMismatch` 로 버린다. 클라이언트와 달리 서버 사이에는 핸드셰이크가 없어, 배포 중에 빌드가 섞이면 메시지가 조용히 사라진다.
-  "서버 클러스터는 한 빌드로만 돈다" 를 정책으로 정할지, 버스 구독 때 빌드 해시를 확인하고 다르면 오류로 멈출지 사용자가 정한다([결정 기록](../09_Decisions.md) 5-9 열린 질문).
+- `F-3` [기능] **영속 레코드의 모르는 필드 보관.** 영속 레코드(`ServiceRecordUtil::readDurable`)는 배포 중 옛 빌드가 새 빌드의 레코드를 읽으면 모르는 필드 때문에 거절한다(조용히 지우지 않고 요청 실패).
+  모르는 필드를 버리고 읽게 하면 옛 빌드가 고쳐 다시 쓸 때 새 빌드의 값이 지워지므로, 레코드가 orphan 바이트를 가지고 쓰기 때 그대로 다시 싣는 구조가 먼저다(언리얼 `FPropertyTag` 보관, protobuf unknown fields 보존과 같은 것).
+  캐시 레코드(`readCache`)는 이미 서버 버스와 같은 혼합 빌드 읽기다([서버 버스 계획](../plans/ServerBusFormat.md) 4절).
 
 - `G-2` [조건부] **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 테스트 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사
