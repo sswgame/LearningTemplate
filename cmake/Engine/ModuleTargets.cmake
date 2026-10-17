@@ -189,7 +189,15 @@ function(sw_addModulePart PART_NAME)
 	endif()
 	add_library(${PART_NAME} OBJECT ${ARG_SOURCES})
 	get_target_property(ownerFolder ${ARG_OWNER} FOLDER)
-	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${ownerFolder}")
+	# 부분의 오브젝트는 모듈 이미지에 들어가므로 이미지와 같은 코드 모델로 짓는다. CMake 는 SHARED · MODULE 자신에게만 PIC 를 붙이고
+	# 거기 넣는 OBJECT 라이브러리에는 붙이지 않는다 — 빠지면 ELF 링크가 `R_X86_64_PC32 ... recompile with -fPIC` 로 멈춘다(COFF 인 Windows 는 무관).
+	get_target_property(ownerType ${ARG_OWNER} TYPE)
+	if(ownerType MATCHES "^(SHARED|MODULE)_LIBRARY$")
+		set(bPartPic ON)
+	else()
+		set(bPartPic OFF)
+	endif()
+	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${ownerFolder}" POSITION_INDEPENDENT_CODE ${bPartPic})
 	target_link_libraries(${PART_NAME} PRIVATE ${ARG_LINK} sw_global_options)
 	# 생성식(`$<TARGET_PROPERTY:…>`)으로 받으면 모듈이 링크한 라이브러리의 사용 요구까지 따라와(imgui include 자리) 경계가 사라진다.
 	# 구성 때 모듈 자신의 값만 읽는다.
