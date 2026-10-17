@@ -216,11 +216,11 @@ namespace sw
         void releaseCPUSplat();
 
     private:
-        PROPERTY( Category = "Terrain", DisplayName = "Heightfield", AssetPath, Tooltip = "Imported .heightfield asset" )
+        PROPERTY( Category = "Terrain", DisplayName = "Heightfield", AssetPath, FileFilter = "*.heightfield", Tooltip = "Imported .heightfield asset" )
         string _heightfieldPath;
         PROPERTY( Category = "Terrain", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Terrain material (terrain.hlsl)" )
         string _materialPath;
-        PROPERTY( Category = "Terrain", DisplayName = "Splat Map", AssetPath, Tooltip = "Layer weights asset (.layerweights, layers 0..3); read by client and dedicated server" )
+        PROPERTY( Category = "Terrain", DisplayName = "Splat Map", AssetPath, FileFilter = "*.layerweights", Tooltip = "Layer weights asset (.layerweights, layers 0..3); read by client and dedicated server" )
         string _splatTexturePath;
         PROPERTY( Category = "Terrain", DisplayName = "Detail Map", AssetPath, AssetType = "Texture", Tooltip = "Tileable detail, one channel per layer" )
         string _detailTexturePath;

@@ -21,6 +21,7 @@
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Environment/Terrain/LayerWeightsData.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocalizationDocuments.h"
@@ -73,6 +74,7 @@ namespace sw::editor
         constexpr string_view kArrModelSourceExt[]     = { ".glb", ".gltf", ".vrm" }; ///< `models_raw/` 의 원본이다. 임포트하는 것이 리로드다
         constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };          ///< `heightfields_raw/` 의 원본과 구멍 마스크다. 임포트하는 것이 리로드다
         constexpr string_view kArrHeightfieldExt[]     = { HeightfieldData::kExtension };
+        constexpr string_view kArrLayerWeightsExt[]    = { LayerWeightsData::kExtension };                                                                 ///< 지형이 읽을 때만 읽는다 — 엔진 캐시가 없어 핫 리로드 대상이 아니다(`TerrainComponent::reloadTerrain`)
         constexpr string_view kArrLocalizationSuffix[] = { SourceStringTable::kExtension, TranslationTable::kExtension, LocalizationProject::kExtension }; ///< 로드한 프로젝트를 다시 읽는다(`LocalizationManager`)
         constexpr string_view kArrUIDocumentSuffix[]   = { UIDocumentAsset::kExtension };                                                                  ///< UI 문서다. 그 문서로 연 화면을 다시 만든다(`UISystem`)
         constexpr string_view kArrUIStyleSuffix[]      = { UIStyleSheetAsset::kExtension };                                                                ///< UI 스타일 시트다. 쓰는 화면을 다시 맞춘다
@@ -116,6 +118,7 @@ namespace sw::editor
             { EditorAssetType::AnimationClip,      MatchMode::Extension,   kArrAnimationClipExt,   SW_COUNT_OF( kArrAnimationClipExt ),                        "AnimationClip",                                              nullptr},
             {      EditorAssetType::Fracture,      MatchMode::Extension,        kArrFractureExt,        SW_COUNT_OF( kArrFractureExt ),                             "Fracture",                                              nullptr},
             {   EditorAssetType::Heightfield,      MatchMode::Extension,     kArrHeightfieldExt,     SW_COUNT_OF( kArrHeightfieldExt ),                                nullptr,                                              nullptr},
+            {  EditorAssetType::LayerWeights,      MatchMode::Extension,    kArrLayerWeightsExt,    SW_COUNT_OF( kArrLayerWeightsExt ),                                nullptr,                                              nullptr},
             {          EditorAssetType::Data,       MatchMode::EndsWith,   kArrThemeTokenSuffix,   SW_COUNT_OF( kArrThemeTokenSuffix ),                                nullptr,                 &EditorTheme::importChangedTokenFile},
             {          EditorAssetType::Data,       MatchMode::EndsWith, kArrLocalizationSuffix, SW_COUNT_OF( kArrLocalizationSuffix ),                          "StringTable",                                              nullptr},
             {    EditorAssetType::UIDocument,       MatchMode::EndsWith,   kArrUIDocumentSuffix,   SW_COUNT_OF( kArrUIDocumentSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
@@ -128,25 +131,26 @@ namespace sw::editor
         // 종류마다 항목 하나다. 항목 순서가 곧 브라우저 필터, 도구 패널, 리소스 카탈로그의 표시 순서다.
         // 필드는 종류, 이름(단수), 브라우저 라벨, 패널 제목, 아이콘, 색, 액센트 색, Other 제외, 임포트 순서다
         constexpr EditorAssetTypeInfo kArrKindInfo[] = {
-            {         EditorAssetType::Scene,          "Scene",       "Scenes",           nullptr,          editoricon::kScene,                       Color{},  true,  true, false},
-            {        EditorAssetType::Prefab,         "Prefab",      "Prefabs",   "Prefab Editor",         editoricon::kPrefab, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
-            {       EditorAssetType::Texture,        "Texture",     "Textures",           nullptr,        editoricon::kTexture, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
-            {        EditorAssetType::Shader,         "Shader",      "Shaders",           nullptr,         editoricon::kShader, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
-            {      EditorAssetType::Material,       "Material",    "Materials",        "Material",       editoricon::kMaterial, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},
-            {         EditorAssetType::Audio,          "Audio",        "Audio",           nullptr,          editoricon::kAudio, { 0.95f, 0.85f, 0.25f, 1.0f }, false,  true,  true},
-            {EditorAssetType::AnimationGraph, "AnimationGraph",    "Animation", "Animation Graph", editoricon::kAnimationGraph, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
-            { EditorAssetType::DialogueGraph,       "Dialogue",     "Dialogue",  "Dialogue Graph",       editoricon::kDialogue, { 0.40f, 0.75f, 1.00f, 1.0f }, false,  true,  true},
-            {    EditorAssetType::SpriteClip,     "SpriteClip",       "Sprite",     "Sprite Clip",         editoricon::kSprite, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
-            {       EditorAssetType::TileMap,        "TileMap",     "Tile Map",   "Tile Map Tool",        editoricon::kTileMap, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
-            {      EditorAssetType::Sequence,       "Sequence",          "Seq",       "Sequencer",       editoricon::kSequence, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
-            {          EditorAssetType::Mesh,           "Mesh",       "Meshes",           nullptr,           editoricon::kCube, { 0.55f, 0.80f, 0.80f, 1.0f }, false,  true,  true},
-            {      EditorAssetType::Skeleton,       "Skeleton",    "Skeletons",           nullptr,       editoricon::kSkeleton, { 0.90f, 0.85f, 0.70f, 1.0f }, false,  true,  true},
-            { EditorAssetType::AnimationClip,  "AnimationClip",        "Clips",           nullptr,  editoricon::kAnimationClip, { 1.00f, 0.70f, 0.35f, 1.0f }, false,  true,  true},
-            {           EditorAssetType::Rig,            "Rig",         "Rigs",           nullptr,            editoricon::kRig, { 0.95f, 0.75f, 0.55f, 1.0f }, false,  true,  true},
-            {   EditorAssetType::Heightfield,    "Heightfield", "Heightfields",           nullptr,    editoricon::kHeightfield, { 0.65f, 0.60f, 0.45f, 1.0f }, false,  true, false},
-            {      EditorAssetType::Fracture,       "Fracture",    "Fractures",           nullptr,       editoricon::kFracture, { 0.85f, 0.50f, 0.40f, 1.0f }, false,  true,  true},
-            {    EditorAssetType::UIDocument,     "UIDocument", "UI Documents",      "UI Preview",         editoricon::kWidget, { 0.95f, 0.55f, 0.75f, 1.0f }, false,  true, false},
-            {          EditorAssetType::Data,           "Data",         "Data",           nullptr,          editoricon::kTable, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
+            {         EditorAssetType::Scene,          "Scene",        "Scenes",           nullptr,          editoricon::kScene,                       Color{},  true,  true, false},
+            {        EditorAssetType::Prefab,         "Prefab",       "Prefabs",   "Prefab Editor",         editoricon::kPrefab, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
+            {       EditorAssetType::Texture,        "Texture",      "Textures",           nullptr,        editoricon::kTexture, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
+            {        EditorAssetType::Shader,         "Shader",       "Shaders",           nullptr,         editoricon::kShader, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::Material,       "Material",     "Materials",        "Material",       editoricon::kMaterial, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},
+            {         EditorAssetType::Audio,          "Audio",         "Audio",           nullptr,          editoricon::kAudio, { 0.95f, 0.85f, 0.25f, 1.0f }, false,  true,  true},
+            {EditorAssetType::AnimationGraph, "AnimationGraph",     "Animation", "Animation Graph", editoricon::kAnimationGraph, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
+            { EditorAssetType::DialogueGraph,       "Dialogue",      "Dialogue",  "Dialogue Graph",       editoricon::kDialogue, { 0.40f, 0.75f, 1.00f, 1.0f }, false,  true,  true},
+            {    EditorAssetType::SpriteClip,     "SpriteClip",        "Sprite",     "Sprite Clip",         editoricon::kSprite, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
+            {       EditorAssetType::TileMap,        "TileMap",      "Tile Map",   "Tile Map Tool",        editoricon::kTileMap, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::Sequence,       "Sequence",           "Seq",       "Sequencer",       editoricon::kSequence, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
+            {          EditorAssetType::Mesh,           "Mesh",        "Meshes",           nullptr,           editoricon::kCube, { 0.55f, 0.80f, 0.80f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::Skeleton,       "Skeleton",     "Skeletons",           nullptr,       editoricon::kSkeleton, { 0.90f, 0.85f, 0.70f, 1.0f }, false,  true,  true},
+            { EditorAssetType::AnimationClip,  "AnimationClip",         "Clips",           nullptr,  editoricon::kAnimationClip, { 1.00f, 0.70f, 0.35f, 1.0f }, false,  true,  true},
+            {           EditorAssetType::Rig,            "Rig",          "Rigs",           nullptr,            editoricon::kRig, { 0.95f, 0.75f, 0.55f, 1.0f }, false,  true,  true},
+            {   EditorAssetType::Heightfield,    "Heightfield",  "Heightfields",           nullptr,    editoricon::kHeightfield, { 0.65f, 0.60f, 0.45f, 1.0f }, false,  true, false},
+            {  EditorAssetType::LayerWeights,   "LayerWeights", "Layer Weights",           nullptr,        editoricon::kPalette, { 0.55f, 0.75f, 0.40f, 1.0f }, false,  true, false},
+            {      EditorAssetType::Fracture,       "Fracture",     "Fractures",           nullptr,       editoricon::kFracture, { 0.85f, 0.50f, 0.40f, 1.0f }, false,  true,  true},
+            {    EditorAssetType::UIDocument,     "UIDocument",  "UI Documents",      "UI Preview",         editoricon::kWidget, { 0.95f, 0.55f, 0.75f, 1.0f }, false,  true, false},
+            {          EditorAssetType::Data,           "Data",          "Data",           nullptr,          editoricon::kTable, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 
         /** @brief 종류 테이블이 `Unknown` 을 뺀 모든 종류를 한 번씩 담고, 이름, 라벨, 아이콘 필드가 비어 있지 않은지 검사합니다. */

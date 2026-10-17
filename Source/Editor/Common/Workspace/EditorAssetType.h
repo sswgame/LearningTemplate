@@ -44,6 +44,7 @@ namespace sw::editor
         Skeleton,      ///< 임포트가 만든 스켈레톤(`.skeleton.json`). 스켈레톤 캐시가 핫 리로드한다
         AnimationClip, ///< 임포트가 만든 애니메이션 클립(`.animclip`). 클립 캐시가 핫 리로드한다
         Heightfield,   ///< 높이장. 원본(`heightfields_raw/` 의 `.png`, `.r16`)이 바뀌면 임포트하고, 결과는 `.heightfield` 이다
+        LayerWeights,  ///< 지형 레이어 가중치(`.layerweights`). 원본 스플랫(`heightfields_raw/` 의 `.splat.png`)을 임포트한 결과이고, 지형 브러시가 칠해 저장한다
         Rig,           ///< 후처리 리그(`.rig.json`). 리그 캐시가 핫 리로드하고 PoseModifierComponent 가 다시 바인딩한다
         Fracture,      ///< 임포트가 만든 파쇄 에셋(`.fracture`). 파쇄 캐시가 핫 리로드한다
         UIDocument,    ///< 런타임 UI 문서(`.ui.xml`). 열면 UI Preview 패널이 그 문서를 보여 주고, 문서 캐시가 핫 리로드한다

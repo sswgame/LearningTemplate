@@ -12,6 +12,7 @@
 #include "Editor/Common/Asset/ImageUtil.h"
 
 #include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Environment/Terrain/LayerWeightsData.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 namespace sw::editor
@@ -26,11 +27,31 @@ namespace sw::editor
             static constexpr string_view kImportedFolder    = "heightfields";
             static constexpr string_view kImportStampHeader = "SWHEIGHTFIELDIMPORT 1";
             static constexpr string_view kHoleSuffix        = "_holes";
+            static constexpr string_view kSplatSuffix       = "_splat";
             /** @brief 임포트 동작을 바꾸면 올린다 — 모든 스탬프가 어긋남이 되어 한 번 다시 임포트한다. */
             static constexpr uint32 kImporterVersion = 1;
+            /** @brief 스플랫 임포트 동작을 바꾸면 올린다(스플랫 원본의 스탬프만 어긋난다). */
+            static constexpr uint32 kSplatImporterVersion = 1;
+            /** @brief PNG 머리(IHDR)의 색 형식 바이트 위치와 RGBA 값입니다(PNG 명세 11.2.2). */
+            static constexpr size_t kPngColorTypeOffset = 25;
+            static constexpr uint8  kPngColorTypeRgba   = 6;
 
             /** @brief 원본 옆의 구멍 마스크 경로(`x.png` → `x_holes.png`)입니다. */
             static string makeHolePath( string_view sourcePath ) { return FileUtil::removeExtension( sourcePath ) + string( kHoleSuffix ) + ".png"; }
+
+            /** @brief PNG 이고 알파 채널을 가졌으면 true 입니다. 디코더는 알파가 없으면 255 로 채우므로 디코딩 전에 머리로 가린다. */
+            static bool isRgbaPng( const vector<uint8>& bytes )
+            {
+                constexpr uint8 kArrPngSignature[] = { 0x89, 'P', 'N', 'G' };
+                if ( bytes.size() <= kPngColorTypeOffset )
+                    return false;
+                for ( size_t index = 0; index < SW_COUNT_OF( kArrPngSignature ); ++index )
+                {
+                    if ( bytes[index] != kArrPngSignature[index] )
+                        return false;
+                }
+                return bytes[kPngColorTypeOffset] == kPngColorTypeRgba;
+            }
 
             [[nodiscard]] static bool readRaw16( const vector<uint8>& bytes, string_view sourcePath, HeightfieldData& outData )
             {
@@ -102,10 +123,18 @@ namespace sw::editor
         public:
             string_view getRawFolderName() const override { return HeightfieldImporterInternal::kRawFolder; }
             string_view getStampHeader() const override { return HeightfieldImporterInternal::kImportStampHeader; }
-            string_view getImportedLabel() const override { return "높이장"; }
-            bool        isSourceFile( string_view path ) const override { return HeightfieldImporter::isSourceHeightfield( path ); }
-            string      makeImportedPath( string_view sourcePath ) const override { return HeightfieldImporter::makeImportedHeightfieldPath( sourcePath ); }
-            uint64      computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
+            string_view getImportedLabel() const override { return "지형 에셋"; }
+            bool        isSourceFile( string_view path ) const override
+            {
+                return HeightfieldImporter::isSourceHeightfield( path ) || HeightfieldImporter::isSourceLayerWeights( path );
+            }
+            string makeImportedPath( string_view sourcePath ) const override
+            {
+                if ( HeightfieldImporter::isSourceLayerWeights( sourcePath ) )
+                    return HeightfieldImporter::makeImportedLayerWeightsPath( sourcePath );
+                return HeightfieldImporter::makeImportedHeightfieldPath( sourcePath );
+            }
+            uint64 computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
             {
                 (void)resourcePath;
                 return HeightfieldImporter::computeSourceHash( sourcePath );
@@ -118,6 +147,13 @@ namespace sw::editor
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
             {
                 (void)resourcePath;
+                if ( HeightfieldImporter::isSourceLayerWeights( sourcePath ) )
+                {
+                    LayerWeightsData data;
+                    if ( HeightfieldImporter::readLayerWeights( sourcePath, data ) == false )
+                        return false;
+                    return FileUtil::ensureParentDirectoryExists( importedPath ) && data.saveToFile( importedPath );
+                }
                 return HeightfieldImporter::importHeightfield( sourcePath, importedPath );
             }
         };
@@ -131,7 +167,55 @@ namespace sw::editor
         using Internal = HeightfieldImporterInternal;
         if ( FileUtil::hasAnyExtension( path, { ".png", ".r16" } ) == false )
             return false;
-        return StringUtil::endsWith( FileUtil::removeExtension( path ), Internal::kHoleSuffix, true ) == false;
+        const string stem = FileUtil::removeExtension( path );
+        return StringUtil::endsWith( stem, Internal::kHoleSuffix, true ) == false && StringUtil::endsWith( stem, Internal::kSplatSuffix, true ) == false;
+    }
+
+    bool HeightfieldImporter::isSourceLayerWeights( string_view path )
+    {
+        using Internal = HeightfieldImporterInternal;
+        return FileUtil::hasExtension( path, ".png" ) && StringUtil::endsWith( FileUtil::removeExtension( path ), Internal::kSplatSuffix, true );
+    }
+
+    string HeightfieldImporter::makeImportedLayerWeightsPath( string_view rawPath )
+    {
+        using Internal = HeightfieldImporterInternal;
+        if ( isSourceLayerWeights( rawPath ) == false )
+            return {};
+        // `x_splat.png` 의 결과는 높이장과 같은 이름 `x.layerweights` 다 — 접미사를 떼고 같은 길로 바꾼다.
+        const string stem = FileUtil::removeExtension( rawPath );
+        const string name = stem.substr( 0, stem.size() - Internal::kSplatSuffix.size() ) + ".png";
+        return AssetImportStampUtil::makeImportedPath( name, Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsData::kExtension );
+    }
+
+    bool HeightfieldImporter::readLayerWeights( string_view sourcePath, LayerWeightsData& outData )
+    {
+        using Internal = HeightfieldImporterInternal;
+        outData        = LayerWeightsData{};
+        vector<uint8> bytes;
+        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
+        {
+            SW_LOG_ERROR( "Failed to read splat source '%#'", sourcePath );
+            return false;
+        }
+        if ( Internal::isRgbaPng( bytes ) == false )
+        {
+            SW_LOG_ERROR( "Splat source '%#' is not an RGBA PNG - each channel is one layer weight, so the alpha channel (layer 3) is required", sourcePath );
+            return false;
+        }
+        RawImageData image;
+        if ( ImageUtil::loadImageFromMemory( bytes.data(), bytes.size(), image ) == false )
+            return false;
+        outData._width  = static_cast<uint32>( image._width );
+        outData._height = static_cast<uint32>( image._height );
+        outData._bytes  = std::move( image._bytes );
+        if ( outData.isValid() == false )
+        {
+            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, image._width, image._height, LayerWeightsData::kMaxResolution );
+            outData = LayerWeightsData{};
+            return false;
+        }
+        return true;
     }
 
     bool HeightfieldImporter::isRawHeightfieldPath( string_view path )
@@ -168,9 +252,14 @@ namespace sw::editor
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
             return 0;
         StringBuilder<constant::kMaxBuffer64> versionText;
+        uint64                                hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
+        if ( isSourceLayerWeights( sourcePath ) )
+        {
+            versionText.appendFormat( "splat=%#;format=%#", Internal::kSplatImporterVersion, LayerWeightsData::kVersion );
+            return StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
+        }
         versionText.appendFormat( "importer=%#;format=%#", Internal::kImporterVersion, HeightfieldData::kVersion );
-        uint64 hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
-        hash        = StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
+        hash = StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
         // 곁 구멍 마스크도 원본이다 — 그것만 고쳐도 어긋남이어야 한다.
         vector<uint8> holeBytes;
         if ( FileUtil::readFile( Internal::makeHolePath( sourcePath ), holeBytes ) && holeBytes.empty() == false )

@@ -6,11 +6,12 @@
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 
 #include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Environment/Terrain/LayerWeightsData.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
-// HeightfieldImporterTest — 16 비트 PNG · `.r16` 원본과 곁 구멍 마스크를 `.heightfield` 로 임포트한다(값 · 구멍 · 스탬프).
+// HeightfieldImporterTest — 16 비트 PNG · `.r16` 원본과 곁 구멍 마스크를 `.heightfield` 로, RGBA 스플랫을 `.layerweights` 로 임포트한다(값 · 구멍 · 스탬프).
 
 namespace
 {
@@ -26,6 +27,16 @@ namespace
                                                  0x00, 0x00, 0x00, 0x02, 0x08, 0x00, 0x00, 0x00, 0x00, 0x57, 0xDD, 0x52, 0xF8, 0x00, 0x00, 0x00, 0x0E, 0x49, 0x44, 0x41,
                                                  0x54, 0x78, 0xDA, 0x63, 0xF8, 0xCF, 0xC0, 0xF0, 0xFF, 0x3F, 0x00, 0x07, 0xFE, 0x02, 0xFE, 0x4A, 0xD1, 0x84, 0xBF, 0x00,
                                                  0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
+        /** @brief 2 × 2, 8 비트 RGBA 스플랫 — 행: (255, 0, 0, 0) (0, 255, 0, 0) / (0, 0, 255, 0) (10, 20, 30, 195). */
+        static constexpr uint8 kArrSplatRgbaPng[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x02,
+                                                      0x00, 0x00, 0x00, 0x02, 0x08, 0x06, 0x00, 0x00, 0x00, 0x72, 0xB6, 0x0D, 0x24, 0x00, 0x00, 0x00, 0x14, 0x49, 0x44, 0x41,
+                                                      0x54, 0x78, 0xDA, 0x63, 0xF8, 0xCF, 0x00, 0x04, 0x60, 0x02, 0x48, 0x72, 0x89, 0xC8, 0x1D, 0x06, 0x00, 0x24, 0x52, 0x03,
+                                                      0xFD, 0xFF, 0x9D, 0xFA, 0x04, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
+        /** @brief 같은 그림의 RGB(알파 없음) PNG — 스플랫 원본으로 받지 않는다. */
+        static constexpr uint8 kArrSplatRgbPng[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x02,
+                                                     0x00, 0x00, 0x00, 0x02, 0x08, 0x02, 0x00, 0x00, 0x00, 0xFD, 0xD4, 0x9A, 0x73, 0x00, 0x00, 0x00, 0x13, 0x49, 0x44, 0x41,
+                                                     0x54, 0x78, 0xDA, 0x63, 0xF8, 0xCF, 0xC0, 0xC0, 0x00, 0xC2, 0x0C, 0xFF, 0xB9, 0x44, 0xE4, 0x00, 0x1A, 0x58, 0x03, 0x3A,
+                                                     0xE2, 0x92, 0x6E, 0xD9, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
 
         [[nodiscard]] static bool writeBytes( const sw::string& path, const uint8* pData, size_t size )
         {
@@ -96,6 +107,53 @@ SW_TEST_CASE( HeightfieldImporterTest, StampTracksSourceAndHoleMask )
     SW_ASSERT_TRUE( sw::FileUtil::readFile( imported, bytes ) );
     SW_ASSERT_TRUE( data.loadFromMemory( bytes, imported ) );
     SW_EXPECT_TRUE( data.isHoleCell( 1, 0 ) );
+}
+
+/**
+ * @brief [HeightfieldImporterTest] 바깥 도구의 스플랫(`x_splat.png`, RGBA)은 `heightfields/x.layerweights` 로 바이트 그대로 임포트한다 · 알파 없는 PNG 는 거절한다
+ * @details 스플랫은 높이장의 곁 파일이 아니라 스탬프 줄을 따로 갖는 원본이다 — 높이장 원본이 아니고(`isSourceHeightfield`), 스플랫만 바꿔도 어긋남이다.
+ */
+SW_TEST_CASE( HeightfieldImporterTest, ImportsSplatSourceAsLayerWeights )
+{
+    using Internal                = TestHeightfieldImporterInternal;
+    const sw::string resourceRoot = test::makeTempDirectory( "heightfield_import_splat" );
+    const sw::string rawFolder    = sw::FileUtil::joinPath( resourceRoot, "game/test/heightfields_raw" );
+    const sw::string splatSource  = sw::FileUtil::joinPath( rawFolder, "hill_splat.png" );
+    SW_ASSERT_TRUE( Internal::writeBytes( sw::FileUtil::joinPath( rawFolder, "hill.png" ), Internal::kArrGray16Png, sizeof( Internal::kArrGray16Png ) ) );
+    SW_ASSERT_TRUE( Internal::writeBytes( splatSource, Internal::kArrSplatRgbaPng, sizeof( Internal::kArrSplatRgbaPng ) ) );
+
+    SW_EXPECT_TRUE( sw::editor::HeightfieldImporter::isSourceLayerWeights( splatSource ) );
+    SW_EXPECT_FALSE( sw::editor::HeightfieldImporter::isSourceHeightfield( splatSource ) );
+    SW_EXPECT_TRUE( sw::editor::HeightfieldImporter::isRawHeightfieldPath( splatSource ) );
+
+    sw::editor::AssetImportSummary summary = sw::editor::HeightfieldImporter::importAllHeightfields( resourceRoot, sw::editor::AssetImportMode::ImportStale );
+    SW_EXPECT_TRUE( summary.isClean() );
+    SW_EXPECT_EQUAL( 2u, summary._importedCount );
+    const sw::string imported = sw::FileUtil::joinPath( resourceRoot, "game/test/heightfields/hill.layerweights" );
+    SW_EXPECT_TRUE( sw::FileUtil::normalizeSeparators( imported ) ==
+                    sw::FileUtil::normalizeSeparators( sw::editor::HeightfieldImporter::makeImportedLayerWeightsPath( splatSource ) ) );
+
+    sw::LayerWeightsData data;
+    sw::vector<uint8>    bytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( imported, bytes ) );
+    SW_ASSERT_TRUE( data.loadFromMemory( bytes, imported ) );
+    SW_EXPECT_EQUAL( 2u, data._width );
+    SW_EXPECT_EQUAL( 2u, data._height );
+    const uint8 arrExpected[] = { 255, 0, 0, 0, 0, 255, 0, 0, 0, 0, 255, 0, 10, 20, 30, 195 };
+    SW_ASSERT_EQUAL( sizeof( arrExpected ), data._bytes.size() );
+    for ( size_t index = 0; index < sizeof( arrExpected ); ++index )
+    {
+        SW_EXPECT_EQUAL( arrExpected[index], data._bytes[index] );
+    }
+    SW_EXPECT_TRUE( sw::editor::HeightfieldImporter::importAllHeightfields( resourceRoot, sw::editor::AssetImportMode::CheckOnly ).isClean() );
+
+    // 알파 없는 스플랫은 읽지 않는다(디코더가 알파를 255 로 채우면 레이어 3 이 말없이 가득 찬다). 원본이 바뀌었으니 어긋남이고 임포트는 실패한다.
+    SW_ASSERT_TRUE( Internal::writeBytes( splatSource, Internal::kArrSplatRgbPng, sizeof( Internal::kArrSplatRgbPng ) ) );
+    sw::LayerWeightsData rejected;
+    SW_EXPECT_FALSE( sw::editor::HeightfieldImporter::readLayerWeights( splatSource, rejected ) );
+    summary = sw::editor::HeightfieldImporter::importAllHeightfields( resourceRoot, sw::editor::AssetImportMode::ImportStale );
+    SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
+    SW_EXPECT_EQUAL( 0u, summary._importedCount );
 }
 
 /**

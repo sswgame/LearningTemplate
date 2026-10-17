@@ -19,6 +19,7 @@
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Environment/Terrain/LayerWeightsData.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocalizationDocuments.h"
@@ -439,9 +440,13 @@ SW_TEST_CASE( EditorAssetTypeTest, RawHeightfieldRoutesToTheHeightfieldImporter 
     SW_EXPECT_TRUE( EditorAssetType::Heightfield == EditorAssetTypeRegistry::findKind( "game/empty/heightfields_raw/valley_holes.png" ) );
     SW_EXPECT_TRUE( EditorAssetType::Heightfield == EditorAssetTypeRegistry::findKind( "game/empty/heightfields_raw/valley.r16" ) );
     SW_EXPECT_TRUE( EditorAssetType::Heightfield == EditorAssetTypeRegistry::findKind( "game/empty/heightfields/valley.heightfield" ) );
+    SW_EXPECT_TRUE( EditorAssetType::LayerWeights == EditorAssetTypeRegistry::findKind( "game/empty/heightfields/valley.layerweights" ) );
     SW_EXPECT_TRUE( EditorAssetType::Texture == EditorAssetTypeRegistry::findKind( "game/empty/textures_raw/terrain/grass.png" ) );
 
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/empty/heightfields_raw/valley.png" )._pfnImportSource ==
+                    &sw::editor::HeightfieldImporter::importChangedSourceHeightfield );
+    // 바깥 도구의 스플랫 원본도 같은 일괄 임포트로 간다(`.layerweights` 를 만든다).
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/empty/heightfields_raw/valley_splat.png" )._pfnImportSource ==
                     &sw::editor::HeightfieldImporter::importChangedSourceHeightfield );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/empty/textures_raw/terrain/grass.png" )._pfnImportSource ==
                     &sw::editor::TextureImporter::importChangedSourceImage );
@@ -510,6 +515,7 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryEngineFormatMapsToItsKind )
         {      AnimationClip::kExtension,  EditorAssetType::AnimationClip},
         {      FractureAsset::kExtension,       EditorAssetType::Fracture},
         {    HeightfieldData::kExtension,    EditorAssetType::Heightfield},
+        {   LayerWeightsData::kExtension,   EditorAssetType::LayerWeights},
         {           Material::kExtension,       EditorAssetType::Material},
         {AnimationGraphAsset::kExtension, EditorAssetType::AnimationGraph},
         { DialogueGraphAsset::kExtension,  EditorAssetType::DialogueGraph},

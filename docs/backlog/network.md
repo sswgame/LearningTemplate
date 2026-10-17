@@ -68,8 +68,8 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 - `D7-9` [기능] **네트워크 확장 후보.** 물리 객체 예측(`D7-8` 5단계), 음성 채팅, 치팅 방어 체계(서버 검증 규칙 목록 · 이상 탐지), 서버 오케스트레이션(매칭 뒤 인스턴스 할당 · 확장). 쓰는 게임이 생기면 설계한다.
 
 - `F-1` [기능] **지형 가중치 에셋의 에디터 쪽 마무리** — 가중치는 `.layerweights` 데이터 에셋이 됐다([결정 기록](../09_Decisions.md) 5-10, 서버도 레이어 질의에 답한다).
-  남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다 ·
-  ② 에디터 에셋 종류(`EditorAssetType`)에 `.layerweights` 를 더해 콘텐츠 브라우저 · 속성 칸이 고르게 한다 · ③ 바깥 도구가 만든 스플랫 PNG 를 `.layerweights` 로 가져오는 임포트(높이장 임포터와 같은 길).
+  남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다.
+  (에셋 종류 `EditorAssetType::LayerWeights` · 속성 칸 `FileFilter` 와 스플랫 PNG 임포트 `heightfields_raw/<이름>_splat.png` 는 들어갔다 — `HeightfieldImporter.h` 머리 주석.)
 
 - `F-2` [결정대기] **서버 버스 메시지의 빌드 확인.** 서버끼리 주고받는 버스 메시지(`ChatService` 의 채널 전달, `SocialService` 의 관계 바뀜, `AccountServer` 의 해지 알림)는
   고정 배치형(B)이라 머리 해시가 다르면 받는 쪽이 `SchemaMismatch` 로 버린다. 클라이언트와 달리 서버 사이에는 핸드셰이크가 없어, 배포 중에 빌드가 섞이면 메시지가 조용히 사라진다.
