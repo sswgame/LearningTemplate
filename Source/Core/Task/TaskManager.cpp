@@ -185,7 +185,7 @@ namespace sw
         , _globalLowQueue{}
         , _queueMainThread{}
         , _arrHelperWaiter{}
-        , _activeTaskCount{}
+        , _activeTaskCount{ 0 }
         , _clearEpoch{ 0 }
         , _nodePool{ sw::make_unique<TaskNodePool>( this ) }
     {
@@ -306,7 +306,7 @@ namespace sw
                 drainQueueItem( item );
             }
         }
-        _activeTaskCount.reset();
+        _activeTaskCount.store( 0, std::memory_order_release );
         _clearEpoch.fetch_add( 1, std::memory_order_acq_rel );
         // 큐를 모두 비웠으니 실행 중인 태스크가 없다. 살아 있는 스테이지를 모두 돌려준다.
         _nodePool->resetAllStages();
@@ -454,9 +454,7 @@ namespace sw
             t_pCurrentRunningTask->retain();
         }
 
-        const uint32 activeShard = ShardedCounterUtil::getCurrentThreadShard();
-        pNode->_activeShard      = static_cast<uint8>( activeShard );
-        _activeTaskCount.addToShard( activeShard, 1 );
+        _activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
         return pNode;
     }
 
@@ -722,8 +720,7 @@ namespace sw
         group._join.addPending( split._ticketCount );
 
         // `waitAll` 에게는 그룹 하나가 태스크 하나다. 티켓마다 활성 수를 올리고 내리지 않는다.
-        const uint32 activeShard = ShardedCounterUtil::getCurrentThreadShard();
-        _activeTaskCount.addToShard( activeShard, 1 );
+        _activeTaskCount.fetch_add( 1, std::memory_order_relaxed );
         pushGroupTickets( &group, split._ticketCount );
 
         // 워커가 깨어나기를 기다리지 않는다. 이 스레드가 첫 청크부터 가져간다. 남은 티켓은 이 스레드가 닿을 수 있는 큐(자기
@@ -732,8 +729,8 @@ namespace sw
         // Low 줄(백그라운드 I/O)은 돕지 않는다 — 합류는 Normal 의 자기 티켓과 남이 도는 청크만 기다린다. Low 하나를 집으면 그 태스크만큼 합류가 늦어진다.
         waitForJoin( group._join, false );
 
-        _activeTaskCount.addToShard( activeShard, -1, std::memory_order_seq_cst );
-        notifyBroadcastIfNoActiveTask();
+        if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+            notifyBroadcast();
     }
 
     void TaskManager::pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount )
@@ -939,7 +936,7 @@ namespace sw
     {
         const Stopwatch stopwatch;
         WaitSpinState   spinState{};
-        while ( _activeTaskCount.sum( std::memory_order_acquire ) > 0 )
+        while ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
         {
             if ( helpOrSpin( spinState, true ) )
                 continue;
@@ -949,13 +946,13 @@ namespace sw
             {
                 const int64 elapsed = stopwatch.getElapsedMilliseconds();
                 if ( elapsed >= static_cast<int64>( timeoutMs ) )
-                    return _activeTaskCount.sum( std::memory_order_acquire ) <= 0;
+                    return _activeTaskCount.load( std::memory_order_acquire ) == 0;
                 waitMilli = static_cast<uint32>( static_cast<int64>( timeoutMs ) - elapsed );
             }
 
             // 대상이 전체라 대기자 하나를 적어 둘 곳이 없다. 브로드캐스트를 기다리며 잠든다(활성 수 0 · 메인 작업 · clear 가 알린다).
             const uint32 epoch = prepareBroadcastWait();
-            if ( _activeTaskCount.sum( std::memory_order_seq_cst ) > 0 )
+            if ( _activeTaskCount.load( std::memory_order_seq_cst ) > 0 )
                 commitBroadcastWait( epoch, waitMilli );
             else
                 cancelBroadcastWait();
@@ -1043,14 +1040,6 @@ namespace sw
         Futex::wakeAll( _completionEpoch );
     }
 
-    void TaskManager::notifyBroadcastIfNoActiveTask()
-    {
-        if ( _broadcastWaiterCount.load( std::memory_order_seq_cst ) == 0 )
-            return;
-        if ( _activeTaskCount.sum( std::memory_order_seq_cst ) <= 0 )
-            notifyBroadcast();
-    }
-
     void TaskManager::wakeParkedMainThread()
     {
         std::atomic_thread_fence( std::memory_order_seq_cst );
@@ -1134,8 +1123,8 @@ namespace sw
         // 돌아온 순간에도 이 태스크는 아직 활성으로 세어져 있다. 그 직후 `clear()` 가 수를 0 으로 놓으면 뒤늦은 fetch_sub 가
         // 0xFFFFFFFF 로 돌아가 이후의 `waitAll` 이 영원히 기다린다(스케줄링에 따라 CTest 아래에서만 드러난다). 후속 태스크는 만들 때
         // 이미 세어져 있으므로 여기서 내려도 `waitAll` 이 일찍 돌아오지 않는다.
-        _activeTaskCount.addToShard( pNode->_activeShard, -1, std::memory_order_seq_cst );
-        notifyBroadcastIfNoActiveTask();
+        if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+            notifyBroadcast();
 
         BLOCK( "Update Parent Task" )
         {
