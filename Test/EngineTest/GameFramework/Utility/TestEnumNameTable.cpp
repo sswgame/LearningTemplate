@@ -1,8 +1,9 @@
 // 열거자 이름 표 — 이름(대소문자 무시) → 열거자, 열거자 → 이름, 범위 밖, 이름 목록 글. 그리고 표를 쓰는 카탈로그가 옛 철자를 그대로 읽는지.
 #include "pch.h"
 
+#include "Core/String/EnumNameTable.h"
+
 #include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
-#include "GameFramework/Base/Foundation/Data/EnumNameTable.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 

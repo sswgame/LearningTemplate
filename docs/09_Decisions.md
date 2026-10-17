@@ -1082,7 +1082,7 @@
     "층 규칙 때문에 못 올린다" 는 걸림돌이 아닙니다. 미루는 까닭은 셋입니다. (1) `ResourceDataSchemaTest` 표(`kArrDataKind`)의 로더 상당수가 테스트 전용 판단(씬 만들기 · 위젯 트리 짓기 · 빈 그래프 거절)을 담고 있어,
     엔진 .cpp 로 옮기면 그 판단이 제품 코드로 새거나 테스트에 둘로 갈립니다. 옮기려면 약 40 개 엔진 .cpp 에 등록 줄과 로더를 나눠 넣어야 합니다. (2) 테스트 표는 앞 줄이 먼저 맞는 함수 판정(`isPrefab` 은 접미 둘)이고,
     레지스트리는 접두 · 포함 · 접미 하나씩에 "정확히 한 종류만 맞아야 한다" 는 규칙이라, 옮기면 두 종류가 한 파일에 맞는 겹침을 하나씩 다시 따져야 합니다. (3) `EnumNameTable` 은
-    `Source/GameFramework/Base/Foundation/Data/EnumNameTable.h` 에 있어 아래 층인 Engine 이 쓸 수 없습니다 — 먼저 Core(예: `Core/String`)로 옮기고 GameFramework 사용처 약 10 곳의 include 를 고쳐야 합니다
+    GameFramework(`Base/Foundation/Data`)에 있어 아래 층인 Engine 이 쓸 수 없었습니다(2026-10-18 `Source/Core/String/EnumNameTable.h` 로 옮겼다) — 먼저 Core(예: `Core/String`)로 옮기고 GameFramework 사용처 약 10 곳의 include 를 고쳐야 합니다
     (손으로 둔 Engine 이름 배열은 14 개 파일: Telemetry 5 · `Localization/CultureInfo` · `Reflection/ReflectValue` · `UI/Debug/DebugHUD` 등). 사용처 개수는 grep 근사치입니다.
     대안은 영역 하나씩 단계로 옮기는 것입니다: 먼저 `EnumNameTable` 을 Core 로 옮기고 include 만 바꾼 뒤(동작 불변), 로더가 `ResourceDataKindUtil::loadCatalog` 인 줄(예: Audio)부터 `SW_RESOURCE_DATA_KIND` 로 옮기면서
     같은 커밋에서 테스트 표의 해당 줄을 지웁니다. 테스트 전용 로더가 필요한 종류(scene · prefab · uidocument · animgraph …)는 테스트 표에 남깁니다.

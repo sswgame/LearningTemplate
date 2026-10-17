@@ -5,11 +5,11 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/EnumNameTable.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
-#include "GameFramework/Base/Foundation/Data/EnumNameTable.h"
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
