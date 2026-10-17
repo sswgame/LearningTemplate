@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Utility/GameTimeScale.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
@@ -816,6 +817,8 @@ SW_TEST_CASE( CameraPresetTest, PhotoModeReadsTheEnginePhotoModeMap )
     </CameraPresets>)",
                                                              "photo-mode-map-test" ) );
     manager.beginPlay();
+    // 엔진 프레임 없이 돈다 — 포토 모드는 실제 경과(`GameTimeScale::getUnscaledDeltaTime`)로 움직이므로 테스트가 적는다.
+    GameTimeScale::setUnscaledDeltaTime( 0.5f );
     SW_ASSERT_TRUE( pDirector->enterPhotoMode() );
     const float3 start = pDirector->getPhotoMode().getPosition();
 
