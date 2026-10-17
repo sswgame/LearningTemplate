@@ -11,6 +11,10 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
   ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUDPBenchTest` 숫자로 전후를 측정한다.
 
+- `C-39` [정리] **범위를 `PROPERTY` 선언과 서비스 손 규칙에 두 번 적는다.** `isValidLobbyRequest` · `registerDevice` 확인 같은 손 검사가 `PROPERTY( Min · Max )` 와 같은 범위를 따로 적고,
+  `PartyLobbyService::initialize` 는 파티 크기를 `std::clamp` 로 조용히 맞춘다(폴백). 뿌리: 범위의 원본이 `PROPERTY` 하나가 아니다.
+  손 규칙을 지우고 메시지 읽기의 범위 검사(`A-19`)에 맡기며, 설정 범위 밖 값은 오류로 멈춘다.
+
 - `D7-1` [기능] **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
   받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 전용 서버 프로세스(`Server`, 타깃 Game · Server)는 섰다 — 남은 것은 그 위에 파괴 시뮬레이션을 UDP 서버로

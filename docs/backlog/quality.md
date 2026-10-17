@@ -2,6 +2,10 @@
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 빌드 속도, 간헐 실패 관찰의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
+- `A-21` [결함] **키트 DLL 만 바뀌고 `EngineTest.exe` 가 다시 링크되지 않으면 `TestBin` 의 키트 DLL 복사본이 낡는다.** 키트 소스만 고친 증분 빌드에서
+  테스트가 옛 코드로 돈다(고친 결함이 안 고쳐진 것처럼 보이거나 그 반대). 복사가 테스트 실행 파일의 링크 뒤 단계에 걸린 것으로 보인다(미확인).
+  복사를 DLL 타깃 자체의 산출물 의존으로 옮겨, 바뀐 DLL 은 늘 `TestBin` 에 다시 놓이게 한다.
+
 - `B-5` [검증대기] **`LoaderFuzzer` `Compression` 타임아웃은 고쳤고 퍼저 재확인과 씨앗이 남았다**(실행 38806424034). 원인은 헤더의 원본 크기(620 MB)를 압축 크기(0)와 견주지 않고 할당한 것이었다 —
   코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 `vector` 소멸 루프 생략으로 고쳤다(결정 기록 5-3, 2026-10-17). 퍼저는 리눅스 전용이라 로컬에서는 `CompressionTest.FuzzTimeoutInputIsRejectedBeforeAllocating` 이
   그 입력을 그대로 재현해 할당 전에 끊기는지(용량 0)만 본다. 남은 일: ① 다음 야간 퍼징에서 `Compression` 이 통과하는지 확인 ② 그 입력을 `Test/EngineTest/LoaderFuzzTargets.cpp` `seedCompression` 씨앗에 더하기
