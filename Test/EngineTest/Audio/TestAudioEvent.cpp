@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixer.h"
@@ -8,6 +10,7 @@
 #include "EngineTest/AudioTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTempPath.h"
 
 // ------------------------------------------------------------------------------
 // AudioEventTest — 사운드 이벤트(컨테이너 · 범위 · 쿨다운 · 동시 재생 상한과 뺏기 · 우선순위 · 가상화 · 파라미터) · 스냅샷
@@ -445,4 +448,38 @@ SW_TEST_CASE( AudioEventTest, VoiceClipsPostSubtitleCues )
     SW_TEST_DEFENSIVE_SCOPE( "A speaker key without any clip subtitle key is a load error" );
     SW_EXPECT_FALSE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Mute" _bus="sfx" _subtitleSpeakerKey="Voice.Hero">
         <_listClip><AudioClipEntry _path="test/a" /></_listClip></AudioEventDesc></_listEvent></AudioEventLibrary>)" ) );
+}
+
+/**
+ * @brief [AudioEventTest] 라이브러리 저장 — 쓴 파일을 다시 읽으면 고친 값이 그대로이고, 검사를 통과하지 못한 라이브러리는 쓰지 않는다
+ * @details 에디터 오디오 이벤트 창의 저장 길(`saveToResource`)이다. 변이: 저장 전 `validate` 를 빼면 클립 없는 이벤트 파일이 남아 진다.
+ */
+SW_TEST_CASE( AudioEventTest, LibrarySavesAndRefusesInvalid )
+{
+    sw::AudioEventLibrary library;
+    SW_ASSERT_TRUE( library.loadFromXMLText( AudioEventTestInternal::kLibraryXML ) );
+    sw::AudioEventDesc* pEvent = library.findEvent( sw::hashed_string( "Ranged" ) );
+    SW_ASSERT_NOT_NULL( pEvent );
+    pEvent->_volumeDbMin              = -9.0f;
+    pEvent->_listClip[0]._subtitleKey = sw::hashed_string( "Voice.Ranged" );
+    pEvent->_subtitleSpeakerKey       = sw::hashed_string( "Voice.Hero" );
+    const sw::string path             = test::makeTempPath( "saved.audioevents.xml" );
+    SW_ASSERT_TRUE( library.saveToResource( path ) );
+
+    sw::string text;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+    sw::AudioEventLibrary reloaded;
+    SW_ASSERT_TRUE( reloaded.loadFromXMLText( text, path ) );
+    SW_EXPECT_EQUAL( library._listEvent.size(), reloaded._listEvent.size() );
+    const sw::AudioEventDesc* pReloaded = reloaded.findEvent( sw::hashed_string( "Ranged" ) );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_EXPECT_NEAR_EQUAL( -9.0f, pReloaded->_volumeDbMin, 1e-5f );
+    SW_EXPECT_STREQ( "Voice.Ranged", pReloaded->_listClip[0]._subtitleKey.c_str() );
+    SW_EXPECT_STREQ( "Voice.Hero", pReloaded->_subtitleSpeakerKey.c_str() );
+
+    SW_TEST_DEFENSIVE_SCOPE( "An event library that fails validation is not written" );
+    pEvent->_listClip.clear();
+    const sw::string invalidPath = test::makeTempPath( "invalid.audioevents.xml" );
+    SW_EXPECT_FALSE( library.saveToResource( invalidPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( invalidPath ) );
 }

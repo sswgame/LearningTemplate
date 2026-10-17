@@ -202,9 +202,19 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
+        /** @brief 라이브러리를 읽기와 같은 XML 형식으로 씁니다(`loadFromXMLText` 가 다시 읽는다). */
+        string toXMLText() const;
+        /**
+         * @brief 검사(`validate`)를 통과한 라이브러리를 리소스 경로의 파일에 씁니다. 에디터의 오디오 이벤트 창이 고친 데이터를 저장하는 길입니다.
+         * @details 검사를 통과하지 못하면 쓰지 않는다 — 읽을 수 없는 파일을 남기지 않는다. 저장한 파일은 에셋 핫 리로드가 엔진에 다시 올린다.
+         * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool saveToResource( string_view resourcePath ) const;
 
         /** @brief 이벤트입니다. 없으면 nullptr 입니다. */
         const AudioEventDesc* findEvent( const hashed_string& name ) const;
+        /** @brief 고칠 이벤트입니다(에디터가 사본 라이브러리를 고칠 때). 없으면 nullptr 입니다. */
+        AudioEventDesc* findEvent( const hashed_string& name );
         /** @brief 파라미터입니다. 없으면 nullptr 입니다. */
         const AudioParameterDesc* findParameter( const hashed_string& name ) const;
     };

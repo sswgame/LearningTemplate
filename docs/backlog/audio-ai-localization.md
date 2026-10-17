@@ -2,9 +2,8 @@
 
 오디오 엔진, 현지화, NPC AI, 게임 로직 자동화의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `D5-1` [기능] **오디오 엔진(`Engine/Audio/README.md`)의 남은 것.** (2) 에디터 — 이벤트 창(`AudioEventBrowserPanel`, `audioevents`: 이벤트 속성 · 재생 중 인스턴스 · 보이스 프로파일)은 들어갔다.
-  남은 것: 이벤트 데이터를 창에서 고쳐 저장하기(엔진에 `AudioEventLibrary` 를 쓰는 길이 없어 지금은 "데이터 파일 열기" 뿐), `Source/Engine/Audio` · Editor README 에 새 창과 읽기 API(`findEventDesc` ·
-  `getInstanceStatuses`)를 적기, 게시 상태가 블록마다 인스턴스 × 보이스를 훑는 비용 측정.
+- `D5-1` [기능] **오디오 엔진(`Source/Engine/Audio`)의 남은 것.** (2) 에디터 — 이벤트 창(`AudioEventBrowserPanel`, `audioevents`: 이벤트 속성 · 고쳐 저장하기 · 재생 중 인스턴스 · 보이스 프로파일)은 들어갔다.
+  남은 것: 창에서 이벤트 추가 · 지우기와 파라미터 · 감쇠 프리셋 고치기(지금 그리드는 고른 이벤트 하나), 게시 상태가 블록마다 인스턴스 × 보이스를 훑는 비용 측정.
   (4) 출력: HRTF(바이노럴) · 5.1/7.1(지금 출력은 스테레오), 리눅스 출력 백엔드(지금 Null — 후보는 `G-11`). (5) 회절. (6) 컨볼루션 리버브, 그래뉼러 · 절차 소리
   그래프(MetaSounds 급).
 
