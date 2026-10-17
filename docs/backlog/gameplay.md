@@ -39,6 +39,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   ⑤ 파워드 래그돌(관절 모터가 애니메이션 포즈를 쫓음 — 전신 · 부분 래그돌 · 맞음 반응 · 기상 섞기는 `RagdollComponent`), 헤어 카드 · 천(Jolt 소프트 바디 — `D1-4`), 가닥 헤어(TressFX)는 나중
   ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로 옮겨 머티리얼을 만들 것 — 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다. Shooter3D 팩에는 이미 꺼낸 아틀라스(`textures_raw/kaykit_*.png`) · `materials/kaykit_*.material` 이 있다.
   ⑦ Shooter3D 발 미끄러짐 — 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞췄다. 범위를 넘는 뒷걸음 · 옆걸음은 남는다(보폭 워핑은 리그 노드가 필요하다).
+  ⑧ 페어드 애니메이션(`docs/plans/PairedAnimation.md`, feat22 — 에셋 `*.pairedanim.xml` · 세션 · 정렬 snap/warp · 공유 알림은 들어갔다, 빌드 전). 후속:
+    에디터 미리보기(역할마다 메시를 놓고 한 시계로 스크럽 · 오프셋 기즈모 · 알림 시각 편집 — M3), 네트워크 재현(서버가 세션 id · 시작 틱 · 역할 → 오브젝트를 복제, 클라이언트 따라잡기에는 애니메이터 시각 지정 훅이 필요 — feat20 · feat21 병합 뒤, 롤백은 feat17 `setOwnerState` 에 세션 상태를 소유 상태로), 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립과 활 메시 — `data/anim/bow_shoot.pairedanim.xml` 은 형식 검사만 돈다), 상호작용(`InteractableComponent`)에서 세션 시작, 에셋 캐시(핫 리로드), 상대 위치로 처형 세트 고르기, 세션 중 `LocomotionWarpingComponent` 가 재생 속도를 쓰지 않게(`PairedAnimationSystem::isParticipant`)
 
 - `D4-7` [기능] **프리로딩 · LOD · 사전 준비(로드맵).** ① 프리로드 세트(미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집 —
   `collectReferencedPrefabPaths` 가 있다), `requestPreload` 가 진행률 · 완료를 준다, 프레임 예산(IO · 업로드 · PSO · 인스턴스 수), 참조 수 · LRU 로 내림(지금 캐시는
