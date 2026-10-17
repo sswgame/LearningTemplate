@@ -889,34 +889,45 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 6) 기다리기 — 다른 일을 돕다가 자기 워드에서 잠들기, 브로드캐스트, 메인 스레드 깨우기
     // ------------------------------------------------------------------------------
-    bool TaskManager::helpOrSpin( uint32& inoutSpinCount, const bool bHelpLowQueue )
+    bool TaskManager::helpOrSpin( WaitSpinState& inoutState, const bool bHelpLowQueue )
     {
         if ( isMainThread() )
             dispatchMainThreadTasks();
 
-        if ( tryHelpAndExecute( bHelpLowQueue ) )
+        // **세대를 먼저 읽고 큐를 본다**(워커 루프와 같은 순서). 읽은 뒤에 들어온 일은 세대를 바꿔 다음 걸음이 보고, 읽기 전에 들어온 일은 바로 아래에서 본다.
+        const uint32 workEpoch     = _workEpoch.load( std::memory_order_acquire );
+        const bool   bQueueChanged = inoutState._bQueueCheckDue || workEpoch != inoutState._observedWorkEpoch;
+        if ( bQueueChanged )
         {
-            inoutSpinCount = 0;
-            return true;
+            inoutState._observedWorkEpoch = workEpoch;
+            inoutState._bQueueCheckDue    = false;
+            if ( tryHelpAndExecute( bHelpLowQueue ) )
+            {
+                // 같은 세대에 일이 더 남았을 수 있다(묶음 하나에 세대는 한 번 오른다). 다음 걸음도 큐를 본다.
+                inoutState._spinCount      = 0;
+                inoutState._bQueueCheckDue = true;
+                return true;
+            }
         }
 
-        if ( inoutSpinCount < kIdleSpinCount )
+        if ( inoutState._spinCount < kIdleSpinCount )
         {
             sw::cpuPause();
-            ++inoutSpinCount;
+            ++inoutState._spinCount;
             return true;
         }
 
-        inoutSpinCount = 0;
+        inoutState._spinCount      = 0;
+        inoutState._bQueueCheckDue = true; // 잠들었다 깨면 무엇이 바뀌었는지 모른다 — 첫 걸음에 큐를 본다
         return false;
     }
 
     void TaskManager::waitForJoin( JoinCounter& join, const bool bHelpLowQueue )
     {
-        uint32 spinCount = 0;
+        WaitSpinState spinState{};
         while ( join.getPending() > 0 )
         {
-            if ( helpOrSpin( spinCount, bHelpLowQueue ) == false )
+            if ( helpOrSpin( spinState, bHelpLowQueue ) == false )
                 parkOnJoin( join );
         }
     }
@@ -924,10 +935,10 @@ namespace sw
     bool TaskManager::waitAll( uint32 timeoutMs )
     {
         const Stopwatch stopwatch;
-        uint32          spinCount = 0;
+        WaitSpinState   spinState{};
         while ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
         {
-            if ( helpOrSpin( spinCount, true ) )
+            if ( helpOrSpin( spinState, true ) )
                 continue;
 
             uint32 waitMilli = 0;

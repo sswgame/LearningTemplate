@@ -331,12 +331,24 @@ namespace sw
 
         // --- 기다리기 ---
         /**
-         * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 작업을 돌리고, 준비된 일을 하나 돕거나, 잠깐 스핀합니다.
-         * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
-         * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채워 둡니다)
-         * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다.
+         * @brief 기다리는 스레드 하나의 스핀 상태입니다(`helpOrSpin` 이 고친다). 대기 함수의 스택에 둡니다.
+         * @details 큐는 `_workEpoch` 가 바뀌었을 때만 다시 봅니다 — 워커의 유휴 스핀과 같은 규칙입니다. 스핀마다 큐를 뒤지면 High · Normal 전역 큐의
+         *          읽기와 데크마다의 steal 을 대기자(게임 · 렌더 · 로더 스레드)가 64 번씩 반복해 워커와 같은 캐시 라인을 두드립니다.
          */
-        bool helpOrSpin( uint32& inoutSpinCount, bool bHelpLowQueue );
+        struct WaitSpinState
+        {
+            uint32 _spinCount{ 0 };         ///< 이번 스핀 예산에서 쓴 `cpuPause` 수
+            uint32 _observedWorkEpoch{ 0 }; ///< 마지막으로 큐를 볼 때 읽은 `_workEpoch`
+            bool   _bQueueCheckDue{ true }; ///< 세대와 상관없이 다음 걸음에 큐를 봐야 하면 true(처음 · 일을 하나 한 뒤 · 잠들었다 깬 뒤)
+        };
+        /**
+         * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 작업을 돌리고, 세대가 바뀌었으면 준비된 일을 하나 돕고, 아니면 잠깐 스핀합니다.
+         * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
+         * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채우고, 깬 뒤 첫 걸음에 큐를 보게 해 둡니다)
+         * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다. 큐에 넣는 쪽은 모두 세대를 올립니다(`submit` ·
+         *          티켓 · 묶음 끝의 `wakeSleepingWorkers`). `submitWithoutWake` 만 하고 깨우지 않은 묶음은 대기자도 깨우기 전까지 보지 않습니다 — 워커와 같습니다.
+         */
+        bool helpOrSpin( WaitSpinState& inoutState, bool bHelpLowQueue );
         /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 작업을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
         void waitForJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
