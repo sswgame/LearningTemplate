@@ -65,9 +65,9 @@ namespace sw
         if ( pSystem == nullptr )
             return;
         if ( _returnController.isValid() )
-            pSystem->queuePossess( _returnController, pawn.getHandle() );
+            pSystem->queuePossess( _returnController, TComponentHandle<PawnComponent>{ &pawn } );
         else
-            pSystem->queuePossess( getHandle(), ComponentHandle{} );
+            pSystem->queuePossess( TComponentHandle<ControllerComponent>{ this }, TComponentHandle<PawnComponent>{} );
     }
 
     void IntentTrackControllerComponent::play( PawnComponent& pawn, const vector<ControlIntent>& listIntent, bool bReturnWhenDone )

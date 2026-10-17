@@ -16,8 +16,10 @@
 
 namespace sw
 {
+    class ControllerComponent;
     class GameObjectManager;
     class InputManager;
+    class PawnComponent;
     class PlayerControllerComponent;
     class UISystem;
 
@@ -76,7 +78,7 @@ namespace sw
          * @details 조종자가 의도를 내는 중(`produceIntent`)에 빙의를 옮길 때 쓴다.
          *          그 자리에서 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 같은 폰을 몰거나 아무도 몰지 않게 된다.
          */
-        void queuePossess( const ComponentHandle& controller, const ComponentHandle& pawn );
+        void queuePossess( const TComponentHandle<ControllerComponent>& controller, const TComponentHandle<PawnComponent>& pawn );
 
     private:
         /** @brief 자동 빙의가 걸린 채 쥔 이가 없는 폰을 플레이어 0 이나 AI 조종자에게 쥐어 줍니다. */
@@ -89,17 +91,17 @@ namespace sw
         /** @struct QueuedPossess @brief 다음 틱 첫머리로 미룬 빙의 하나입니다. */
         struct QueuedPossess
         {
-            ComponentHandle _controller{};
-            ComponentHandle _pawn{}; ///< 무효면 놓는다
+            TComponentHandle<ControllerComponent> _controller{};
+            TComponentHandle<PawnComponent>       _pawn{}; ///< 무효면 놓는다
         };
 
-        ControlIntentHistory    _history;
-        vector<ComponentHandle> _listAutoPossessPawn; ///< 이번 프레임에 자동 빙의할 폰(레지스트리를 도는 동안 오브젝트를 만들지 않게 모은다)
-        vector<QueuedPossess>   _listQueuedPossess;
-        InputManager*           _pInputOverride;
-        const UISystem*         _pUISystemOverride;
-        uint32                  _tick;
-        uint8                   _bRecording : 1;
-        [[maybe_unused]] uint8  _reserved   : 7;
+        ControlIntentHistory                    _history;
+        vector<TComponentHandle<PawnComponent>> _listAutoPossessPawn; ///< 이번 프레임에 자동 빙의할 폰(레지스트리를 도는 동안 오브젝트를 만들지 않게 모은다)
+        vector<QueuedPossess>                   _listQueuedPossess;
+        InputManager*                           _pInputOverride;
+        const UISystem*                         _pUISystemOverride;
+        uint32                                  _tick;
+        uint8                                   _bRecording : 1;
+        [[maybe_unused]] uint8                  _reserved   : 7;
     };
 } // namespace sw

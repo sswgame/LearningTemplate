@@ -31,7 +31,7 @@ namespace sw
         _mapComponentIDToTrack.clear();
     }
 
-    void ControlIntentHistory::record( uint32 tick, const ComponentHandle& pawn, const hashed_string& pawnName, const ControlIntent& intent )
+    void ControlIntentHistory::record( uint32 tick, const TComponentHandle<PawnComponent>& pawn, const hashed_string& pawnName, const ControlIntent& intent )
     {
         int32                                              trackIndex = -1;
         const unordered_map<uint64, int32>::const_iterator found      = _mapComponentIDToTrack.find( pawn.componentID() );

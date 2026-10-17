@@ -40,8 +40,8 @@ namespace sw
         if ( pRider != nullptr )
             (void)MountUtil::dismount( *pRider, true );
         _occupant                  = GameObjectHandle{};
-        _occupantController        = ComponentHandle{};
-        _previousVehicleController = ComponentHandle{};
+        _occupantController        = TComponentHandle<ControllerComponent>{};
+        _previousVehicleController = TComponentHandle<ControllerComponent>{};
         manager.getComponentRegistry().remove<VehicleSeatComponent>( this );
         Component::onUnregister( manager );
     }

@@ -21,15 +21,16 @@ namespace sw
 {
     class BitReader;
     class BitWriter;
+    class PawnComponent;
 
     /** @struct ControlIntentTrack @brief 폰 하나의 기록입니다. 틱 [_firstTick, _lastTick] 이 고리에 들어 있으며, 고리가 돌면 오래된 틱부터 잊습니다. */
     struct ControlIntentTrack
     {
-        TickRingBuffer<ControlIntent> _ring{};
-        hashed_string                 _pawnName{}; ///< 폰 오브젝트 이름 — 재생은 이 이름으로 폰을 찾는다
-        ComponentHandle               _pawn{};     ///< 기록한 폰(읽은 기록이면 무효)
-        uint32                        _firstTick{ 0 };
-        uint32                        _lastTick{ 0 };
+        TickRingBuffer<ControlIntent>   _ring{};
+        hashed_string                   _pawnName{}; ///< 폰 오브젝트 이름 — 재생은 이 이름으로 폰을 찾는다
+        TComponentHandle<PawnComponent> _pawn{};     ///< 기록한 폰(읽은 기록이면 무효)
+        uint32                          _firstTick{ 0 };
+        uint32                          _lastTick{ 0 };
     };
 } // namespace sw
 
@@ -64,7 +65,7 @@ namespace sw
         void reset();
 
         /** @brief @p pawn 의 @p tick 의도를 넣습니다. 처음 보는 폰이면 트랙을 엽니다. 틱은 폰마다 하나씩 늘어야 하며, 건너뛰면 그 틱부터 다시 시작합니다. */
-        void record( uint32 tick, const ComponentHandle& pawn, const hashed_string& pawnName, const ControlIntent& intent );
+        void record( uint32 tick, const TComponentHandle<PawnComponent>& pawn, const hashed_string& pawnName, const ControlIntent& intent );
 
         /**
          * @brief 파일 형식으로 씁니다. 틱은 가장 이른 트랙 시작을 0 으로 센다.

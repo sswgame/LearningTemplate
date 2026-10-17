@@ -64,8 +64,8 @@ namespace sw
         /** @brief 쥔 폰을 놓습니다. 놓인 폰의 의도는 0 이 됩니다. */
         void unpossess();
         /** @brief 쥔 폰을 반환합니다. 없거나 지워졌으면 nullptr 입니다. */
-        PawnComponent*         findPawn() const;
-        const ComponentHandle& getPawn() const { return _pawn; }
+        PawnComponent*                         findPawn() const;
+        const TComponentHandle<PawnComponent>& getPawn() const { return _pawn; }
 
         /** @brief 이 조종자의 의도가 오는 네트워크 연결입니다. 0 이면 로컬이며, 쥔 폰의 `getInputPeer` 가 이것을 따라갑니다. 탈것은 운전석 조종자의 연결이 됩니다. */
         uint32 getInputPeer() const { return _inputPeer; }
@@ -101,12 +101,12 @@ namespace sw
         PROPERTY( Category = "Control", DisplayName = "Possess At Start", Tooltip = "Object whose pawn this controller takes when play starts" )
         GameObjectHandle _possessAtStart;
 
-        ComponentHandle        _pawn; ///< 쥔 폰 컴포넌트
-        float32                _controlYaw;
-        float32                _controlPitch;
-        uint32                 _inputPeer; ///< 의도가 오는 연결(0 = 로컬)
-        uint8                  _bSwitchingPawn  : 1;
-        uint8                  _bSpawnedForPawn : 1; ///< 자동 빙의가 폰 하나를 위해 세웠다(폰과 함께 지운다)
-        [[maybe_unused]] uint8 _reserved        : 6;
+        TComponentHandle<PawnComponent> _pawn; ///< 쥔 폰 컴포넌트
+        float32                         _controlYaw;
+        float32                         _controlPitch;
+        uint32                          _inputPeer; ///< 의도가 오는 연결(0 = 로컬)
+        uint8                           _bSwitchingPawn  : 1;
+        uint8                           _bSpawnedForPawn : 1; ///< 자동 빙의가 폰 하나를 위해 세웠다(폰과 함께 지운다)
+        [[maybe_unused]] uint8          _reserved        : 6;
     };
 } // namespace sw

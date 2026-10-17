@@ -142,7 +142,7 @@ namespace sw
             }
             if ( _warnedPawn != pawn.getHandle() )
             {
-                _warnedPawn = pawn.getHandle();
+                _warnedPawn = TComponentHandle<PawnComponent>{ &pawn };
                 warnMissingActions( pawn, *pInput );
             }
             _bMouseLockRequested = pawn.wantsMouseLock() ? SW_TRUE : SW_FALSE;
