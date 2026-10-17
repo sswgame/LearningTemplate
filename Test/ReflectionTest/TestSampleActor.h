@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/array.h"
 #include "Core/Container/map.h"
@@ -555,9 +554,19 @@ namespace sw
 
         PROPERTY()
         map<string, vector<GameObjectHandle>> _mapGroupToTarget; ///< 옮긴다(맵 값의 시퀀스)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 묶음이 옮기지 못하는 모양(원소가 컨테이너인 set)의 핸들을 든 샘플입니다. 파일 상태면 로드 오류여야 합니다(`ObjectStateBatch::finish`). */
+    REFLECT()
+    struct TestUnremappableHandleHolderComponent : public Component
+    {
+        REFLECT_BODY();
 
         PROPERTY()
-        ComponentHandle _targetComponent; ///< 옮기지 못한다 — 파일 상태면 비운다
+        set<vector<GameObjectHandle>> _uniqueRow; ///< 원소가 정렬 키라 제자리에서 고칠 수 없다
     };
 } // namespace sw
 

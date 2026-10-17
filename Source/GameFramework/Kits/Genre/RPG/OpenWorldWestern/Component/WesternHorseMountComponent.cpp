@@ -58,7 +58,7 @@ namespace sw
         GameObject*                pOwner   = getOwner();
         GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( reaction == WesternHorseReaction::Bucked && pManager != nullptr )
-            pManager->executeOrDeferPostTickOnComponent<WesternHorseMountComponent>( getHandle(), []( WesternHorseMountComponent& component )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WesternHorseMountComponent& component )
             { component.throwRiders(); } );
         return reaction;
     }

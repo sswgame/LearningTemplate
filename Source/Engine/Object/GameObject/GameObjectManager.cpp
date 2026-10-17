@@ -243,4 +243,35 @@ namespace sw
         } );
         return listName;
     }
+
+    TypedHandleResult GameObjectManager::resolveTypedHandleResult( ComponentHandle handle, const TypeInfo* pToType ) const
+    {
+        if ( handle.isValid() == false )
+            return TypedHandleResult::Success;
+        const utf8*      pExpected  = pToType != nullptr ? pToType->_fullyQualifiedName.c_str() : "(no type)";
+        const Component* pComponent = _store.resolveComponent( handle );
+        if ( pComponent == nullptr )
+        {
+            SW_LOG_ERROR( "Typed handle to '%#' could not be made: component %#:%# does not exist (destroyed or pending destroy)", pExpected, handle.objectID(),
+                          handle.componentID() );
+            return TypedHandleResult::TargetMissing;
+        }
+        if ( isComponentOfType( *pComponent, pToType ) == false )
+        {
+            const TypeInfo* pActual = pComponent->findCachedTypeInfo();
+            SW_LOG_ERROR( "Typed handle to '%#' could not be made: component %#:%# is a '%#'", pExpected, handle.objectID(), handle.componentID(),
+                          pActual != nullptr ? pActual->_fullyQualifiedName.c_str() : "(type unloaded)" );
+            return TypedHandleResult::TypeMismatch;
+        }
+        return TypedHandleResult::Success;
+    }
+
+    void GameObjectManager::reportTypedResolveMismatch( ComponentHandle handle, const Component& found, const TypeInfo* pToType ) const
+    {
+        // 핸들이 가리키던 id 를 다른 타입이 받았다. 타입 핸들의 전제(한 핸들의 대상 타입은 바뀌지 않는다)가 깨졌으므로 결함이다.
+        const TypeInfo* pActual = found.findCachedTypeInfo();
+        SW_LOG_ERROR( "Typed handle %#:%# expected '%#' but resolved to a '%#' - returning nothing", handle.objectID(), handle.componentID(),
+                      pToType != nullptr ? pToType->_fullyQualifiedName.c_str() : "(no type)", pActual != nullptr ? pActual->_fullyQualifiedName.c_str() : "(type unloaded)" );
+        SW_ASSERT( false && "typed component handle resolved to another type" );
+    }
 } // namespace sw

@@ -791,7 +791,9 @@ namespace sw
                      ObjectStateSerializer::loadFromBinaryBuffer( carried._pTarget, carried._bytes.data(), carried._bytes.size(), context ) == 0 )
                     SW_LOG_WARNING( "Persistent object '%#' could not be carried into '%#'", carried._pSource->getName().c_str(), pTo->getName() );
             }
-            batch.finish();
+            // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
+            [[maybe_unused]] const bool bLinked = batch.finish();
+            SW_ASSERT( bLinked );
             // 중첩 프리팹 부품 표시도 같은 id 로 옮긴다 — 없으면 들어온 씬을 저장할 때 부품이 따로 엔티티로 적혀 다음 로드에서 두 벌이 된다.
             const PrefabInstanceRegistry& sourceParts = pSource->getSubsystem<PrefabInstanceRegistry>();
             PrefabInstanceRegistry&       targetParts = pTarget->getSubsystem<PrefabInstanceRegistry>();

@@ -100,7 +100,7 @@ namespace sw
         _bRebuildRequested = SW_FALSE;
         VoxelMesher::fillChunkMesh( pDirector->getWorld(), _chunkX, _chunkZ, _scratchMesh );
         _bApplyScheduled = SW_TRUE;
-        pManager->executeOrDeferPostTickOnComponent<VoxelChunkComponent>( getHandle(), []( VoxelChunkComponent& chunk )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( VoxelChunkComponent& chunk )
         { chunk.applyMeshes(); } );
     }
 

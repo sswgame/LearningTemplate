@@ -425,7 +425,7 @@ namespace sw
         if ( pManager == nullptr || _bFlushScheduled == SW_TRUE )
             return;
         _bFlushScheduled = SW_TRUE;
-        pManager->executeOrDeferPostTickOnComponent<VoxelPlayerComponent>( getHandle(), []( VoxelPlayerComponent& player )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( VoxelPlayerComponent& player )
         { player.flushPending(); } );
     }
 

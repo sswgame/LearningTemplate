@@ -108,10 +108,15 @@ namespace sw
      */
     struct ObjectIdentity
     {
-        /** @brief 컴포넌트 하나의 타입 이름과 ID 입니다. 오브젝트의 컴포넌트 목록 순서대로 적습니다. */
+        /**
+         * @brief 컴포넌트 하나의 타입 FQN 과 ID 입니다. 오브젝트의 컴포넌트 목록 순서대로 적습니다.
+         * @details **짧은 이름이 아니라 FQN 이다.** 복원(`takeRestoredComponentID`)이 이 값으로 원래 id 를 돌려준다. 짧은 이름이면 이름이 같은
+         *          다른 네임스페이스의 타입이 그 id 를 가져가, 그 id 를 가리키던 타입 핸들(`TComponentHandle<T>`)이 다른 타입의 칸을 가리킨다.
+         *          같은 프로세스에서만 읽으므로(프로세스 토큰) 이전 실행이 적은 짧은 이름과의 호환은 필요 없다.
+         */
         struct ComponentEntry
         {
-            hashed_string _typeName;
+            hashed_string _typeFqn;
             uint64        _componentID{ 0 };
         };
 
@@ -137,8 +142,9 @@ namespace sw
      *
      *          컴포넌트의 `GameObjectHandle` PROPERTY(단일 값, 순서 컨테이너의 원소)도 같은 규칙으로 바꾼다(`resolveObjectReference`).
      *          배치의 저장된 id 면 그 오브젝트로, `Live` 면 런타임 id 를 그대로(핫 리로드와 되돌리기에서는 id 가 다시 쓰이지 않는다), `Saved` 인데 배치에 없으면 없음으로 처리한다.
-     *          바꾸지 못하는 위치(`ComponentHandle`, 맵과 set 의 키와 값, 중첩 컨테이너의 원소)는 `Saved` 면 비우고 경고한다. 파일 id 를 그대로 두면
-     *          이 실행에서 같은 값을 받은 다른 오브젝트를 가리키기 때문이다. `Live` 면 런타임 id 를 그대로 둔다.
+     *          컨테이너(시퀀스, set, 맵의 키와 값, 중첩)의 핸들도 옮긴다. 옮기지 못하는 모양(원소가 컨테이너인 set)이나 옮기다 실패한 것은 `Saved` 면
+     *          **로드 오류**다(`finish` 가 false). 파일 id 를 그대로 두면 이 실행에서 같은 값을 받은 다른 오브젝트를 가리키고, 비우면 값이 조용히 사라진다.
+     *          `Live` 면 런타임 id 가 맞으므로 그대로 둔다. `ComponentHandle` 은 PROPERTY 에 둘 수 없다(리플렉션 파서 생성 오류).
      */
     class SW_API ObjectStateBatch
     {
@@ -166,8 +172,10 @@ namespace sw
          * @brief 기록한 오브젝트들의 부착과 핸들 PROPERTY 를 연결하고, 상태를 읽은 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 모두 읽은 뒤 한 번 부릅니다.
          * @details 그 앞에, 읽는 동안 이름이 겹쳐 번호를 받은 오브젝트는 그 이름이 비었으면 저장된 이름으로 되돌린다(플레이 중 이름을 바꾼
          *          오브젝트를 되돌릴 때 앞의 것이 뒤의 것 이름을 잠시 차지하고 있을 수 있다).
+         * @return 모든 핸들 PROPERTY 를 옮겼으면 true 입니다. `Saved` 배치에서 옮기지 못한 핸들이 있으면 오류 로그와 함께 false 이고, 부르는 쪽은 로드 실패로 처리합니다.
+         *         두 번째 호출은 첫 호출의 결과를 그대로 돌려줍니다.
          */
-        void finish();
+        [[nodiscard]] bool finish();
 
         /** @brief 저장된 id 로 이 배치의 오브젝트를 찾습니다. 없으면 nullptr 입니다. */
         GameObject* findBySavedID( uint64 savedID ) const;
@@ -193,14 +201,17 @@ namespace sw
         void resolveEntry( const Entry& entry ) const;
         /** @brief 부착 참조의 소유자 필드가 가리키는 오브젝트를 반환합니다. 자기 자신이면 항목의 오브젝트이고, 못 찾으면 nullptr 입니다. */
         GameObject* findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerID ) const;
-        /** @brief 항목 하나의 컴포넌트마다 `GameObjectHandle` PROPERTY 를 이 실행의 오브젝트로 바꿉니다. `Transient` 는 읽지 않았으므로 건드리지 않습니다. */
-        void resolveObjectReferences( const Entry& entry ) const;
+        /**
+         * @brief 항목 하나의 컴포넌트마다 `GameObjectHandle` PROPERTY 를 이 실행의 오브젝트로 바꿉니다. `Transient` 는 읽지 않았으므로 건드리지 않습니다.
+         * @return `Saved` 배치에서 옮기지 못한 컨테이너가 있으면 오류 로그와 함께 false 입니다.
+         */
+        [[nodiscard]] bool resolveObjectReferences( const Entry& entry ) const;
         /** @brief 저장된 핸들 하나가 이 실행에서 가리키는 오브젝트를 반환합니다(클래스 설명의 규칙). */
         GameObjectHandle resolveObjectReference( GameObjectHandle savedHandle ) const;
         /**
          * @brief 컨테이너 안의 `GameObjectHandle` 을 모두 바꿉니다. 시퀀스 원소(제자리), set 원소(빼고 다시 넣기), 맵 값(제자리), 맵 키(빼고 다시 넣기),
          *        중첩 컨테이너(재귀)를 처리합니다.
-         * @return 바꿀 수 없는 구조(값을 복사할 줄 모르는 맵 래퍼, 컨테이너를 원소로 가진 set)이면 false 입니다. 이때 부르는 쪽이 비우고 알립니다.
+         * @return 바꿀 수 없는 구조(값을 복사할 줄 모르는 맵 래퍼, 컨테이너를 원소로 가진 set)이면 false 입니다. 이때 부르는 쪽이 로드 오류로 알립니다.
          */
         [[nodiscard]] bool remapContainerHandles( void* pContainer, const NestedContainerInfo& shape ) const;
 
@@ -209,6 +220,7 @@ namespace sw
         unordered_map<hashed_string, uint32> _mapSavedNameToEntry;
         ObjectIDSpace                        _idSpace;
         bool                                 _bFinished;
+        bool                                 _bReferencesResolved; ///< `finish` 의 결과다. 두 번째 호출이 그대로 돌려준다
     };
 } // namespace sw
 

@@ -193,7 +193,7 @@ namespace sw
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
         {
             // 다시 읽기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미루고, 그 사이 사라졌을 수 있으니 핸들로 다시 찾는다.
-            pManager->executeOrDeferPostTickOnComponent<TerrainComponent>( getHandle(), []( TerrainComponent& terrain )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( TerrainComponent& terrain )
             {
                 (void)terrain.reloadTerrainKeepingEdits(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldData 가 오류로 남긴다
             } );

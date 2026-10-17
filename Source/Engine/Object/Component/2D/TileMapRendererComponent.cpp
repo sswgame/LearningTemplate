@@ -381,7 +381,7 @@ namespace sw
             if ( pManager == nullptr )
                 return;
             _bChunkBuildQueued = SW_TRUE;
-            pManager->executeOrDeferPostTickOnComponent<TileMapRendererComponent>( getHandle(), []( TileMapRendererComponent& tiles )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( TileMapRendererComponent& tiles )
             {
                 tiles._bChunkBuildQueued = SW_FALSE;
                 for ( int32 index = 0; index < tiles._chunkGrid.getChunkCount(); ++index )

@@ -453,7 +453,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, NameOnlyParentReferenceIsNeverTheObjectI
     ObjectStateBatch  batch( ObjectIDSpace::Saved );
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pWorldRig, rigXML, { nullptr, &batch, 1 } ) );
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pWorldGun, sceneXML, { nullptr, &batch, 2 } ) );
-    batch.finish();
+    SW_EXPECT_TRUE( batch.finish() );
     SW_ASSERT_TRUE( pWorldRig->getPrimarySceneComponent() != nullptr && pWorldGun->getPrimarySceneComponent() != nullptr );
     SW_EXPECT_TRUE( pWorldGun->getPrimarySceneComponent()->getParent() == pWorldRig->getPrimarySceneComponent() );
 }
@@ -603,7 +603,7 @@ SW_TEST_CASE( ObjectStateXMLSerializerTest, ParentChildHierarchyRoundtrip )
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( grand, grandXML, { nullptr, &batch, grandSavedID } ) );
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( parent, parentXML, { nullptr, &batch, parentSavedID } ) );
     SW_EXPECT_NULL( child->getParent() );
-    batch.finish();
+    SW_EXPECT_TRUE( batch.finish() );
 
     parent = manager->findGameObjectByName( hashed_string( "ParentGO" ) );
     child  = manager->findGameObjectByName( hashed_string( "ChildGO" ) );

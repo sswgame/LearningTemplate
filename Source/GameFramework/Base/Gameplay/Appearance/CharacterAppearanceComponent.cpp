@@ -211,8 +211,8 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 메시 보임은 렌더 상태이므로, 틱 안이면 틱 뒤에 적용한다.
-        pManager->executeOrDeferPostTickOnComponent<CharacterAppearanceComponent>( getHandle(),
-                                                                                   []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
+        pManager->executeOrDeferPostTickOnComponent( *this,
+                                                     []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
         { appearance.applyVisibility( manager ); } );
     }
 
@@ -274,7 +274,7 @@ namespace sw
         if ( pManager == nullptr || _bAssembleScheduled == SW_TRUE )
             return;
         _bAssembleScheduled = SW_TRUE;
-        pManager->executeOrDeferPostTickOnComponent<CharacterAppearanceComponent>( getHandle(), []( CharacterAppearanceComponent& appearance )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance )
         {
             appearance._bAssembleScheduled = SW_FALSE;
             appearance.assemble();
