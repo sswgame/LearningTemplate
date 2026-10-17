@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 #include "Engine/Window/IWindow.h"
@@ -74,7 +75,12 @@ namespace sw
         /** @brief 대상을 잊습니다. */
         void shutdown();
 
-        const UserSettingsTargets&    getTargets() const { return _targets; }
+        const UserSettingsTargets& getTargets() const { return _targets; }
+        /** @brief 키 바인딩 대상 맵을 더하거나 뗍니다(`UserSettingsManager::addKeyBindingInputMap`). */
+        void addBindingInputMap( InputMap& inputMap );
+        void removeBindingInputMap( const InputMap& inputMap );
+        /** @brief 액션 @p action 을 가진 키 바인딩 대상 맵입니다 — 게임 맵(`_targets._pInputMap`)을 먼저, 그다음 더한 맵을 더한 순서로 봅니다. 없으면 nullptr 입니다. */
+        InputMap*                     findBindingInputMap( const hashed_string& action ) const;
         const DisplaySettingsRequest& getDisplayRequest() const { return _displayRequest; }
         /** @brief 실행 중에 바뀐 화면 요청이 있으면 꺼내고 true 입니다(한 번만). */
         bool consumeDisplayRequest( DisplaySettingsRequest& outRequest );
@@ -109,6 +115,7 @@ namespace sw
 
     private:
         UserSettingsTargets    _targets;
+        vector<InputMap*>      _listBindingInputMap; ///< 게임 맵 말고 키 바인딩 설정이 고칠 수 있는 맵(런타임 UI 맵 등)
         DisplaySettingsRequest _displayRequest;
         vector<int2>           _listDisplayResolution; ///< 모니터 모드의 해상도(`collectResolutions` 가 처음 한 번 읽는다)
         bool                   _bDisplayDirty;

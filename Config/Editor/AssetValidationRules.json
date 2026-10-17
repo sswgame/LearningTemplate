@@ -228,7 +228,7 @@
       "include_patterns": ["*.scene.xml", "*.prefab.xml"],
       "component_types": ["PawnComponent", "PlayerControllerComponent", "CameraDirectorComponent", "CameraManagerComponent", "OrthoCameraRigComponent"],
       "attributes": ["_moveAction", "_lookAction", "_upAction", "_mouseLockAction", "_cycleAction", "_panAction", "_rotateAction", "_lookHoldAction",
-                     "_zoomAction", "_photoRiseAction", "_photoExposureAction"],
+                     "_zoomAction"],
       "target_patterns": ["engine/input/*.input.xml", "{pack}/*.input.xml"],
       "target_elements": ["action"],
       "id_attribute": "name",

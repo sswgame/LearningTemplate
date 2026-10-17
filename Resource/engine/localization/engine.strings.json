@@ -543,6 +543,18 @@
                 "engine/ui/loading.ui.xml"
             ]
         },
+        "Notification.GameSaved": {
+            "source": "Game saved",
+            "origins": [
+                "Source/GameFramework/Base/Foundation/Framework/Save/Autosave.cpp"
+            ]
+        },
+        "Notification.RestartRequired": {
+            "source": "Some changes take effect after a restart.",
+            "origins": [
+                "Source/Engine/UI/Screen/OptionsMenuScreen.cpp"
+            ]
+        },
         "Opacity": {
             "source": "Opacity",
             "context": "TextWidget._text",
@@ -937,6 +949,14 @@
         },
         "settings.controls.mouseSensitivity": {
             "source": "Mouse Sensitivity",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.controls.pauseMenu": {
+            "source": "Pause Menu",
             "context": "Options menu label",
             "maxLength": 32,
             "origins": [

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 확인이 필요한 화면 설정(창 방식 · 해상도, confirmSeconds="15")은 확인하지 않으면 15 초 뒤 되돌아간다.
+  개발 명령 settings.apply 가 옵션 메뉴와 같은 길(보류 → 적용 → 확인 카운트다운)로 창 방식을 바꾸고, settings.confirm 을 하지 않는다.
+  카운트다운은 호스트가 프레임마다 넘기는 시간(고정 1/60 초)으로 줄어서 900 프레임째에 되돌린다 — 880 프레임째에는 아직, 930 프레임째에는 되돌렸다.
+  창 방식 선택지는 스키마에 고정이라(해상도는 모니터마다 다르다) 기계와 상관없이 돈다. 개발 명령이 없는 구성(Shipping)은 건너뛴다.
+  실행: App.exe -scenario=engine/automation/displayrevert.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+-->
+<Scenario name="engine.displayrevert" fixedDelta="0.0166667" timeoutFrames="1000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<At frame="0"><DevCommand line="settings.apply display.windowMode=borderless"/></At>
+	<At frame="2"><ExpectLog contains="settings: applied 1, failed 0, confirm pending" atLeast="1"/></At>
+	<At frame="880"><ExpectLog contains="Display change was not confirmed - reverted" count="0"/></At>
+	<At frame="930">
+		<ExpectLog contains="Display change was not confirmed - reverted" count="1"/>
+		<Pass/>
+	</At>
+</Scenario>

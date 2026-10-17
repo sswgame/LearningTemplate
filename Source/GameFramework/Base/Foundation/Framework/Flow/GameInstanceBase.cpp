@@ -131,6 +131,7 @@ namespace sw
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
         const bool bInitialized = onInitialize();
+        registerSessionCommands();
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
         // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다.
@@ -142,6 +143,7 @@ namespace sw
 
     void GameInstanceBase::shutdown()
     {
+        unregisterSessionCommands();
         onShutdown();
         // 키트 처리기는 onShutdown 에서 내려갔다. 연결은 그 뒤에 끊어야 끊김 이벤트가 이미 내려간 처리기에 가지 않는다(세션 · 로딩 화면 · 전환 종료).
         _gameScope.getCollection().shutdownAll();
@@ -202,6 +204,34 @@ namespace sw
     bool GameInstanceBase::requestEntranceScene()
     {
         return requestLoadScene( getEntranceScene(), "entrance" );
+    }
+
+    bool GameInstanceBase::requestTitleScene()
+    {
+        return requestLoadScene( _bootstrap._data._titleScene, "title" );
+    }
+
+    void GameInstanceBase::registerSessionCommands()
+    {
+        UISystem* pUI = game::findSubsystem<UISystem>();
+        if ( pUI == nullptr || _bootstrap._data._titleScene.empty() )
+            return;
+        pUI->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                  SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+    }
+
+    void GameInstanceBase::unregisterSessionCommands()
+    {
+        UISystem* pUI = game::findSubsystem<UISystem>();
+        if ( pUI != nullptr )
+            pUI->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                        SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+    }
+
+    void GameInstanceBase::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
+    {
+        if ( requestTitleScene() == false )
+            SW_LOG_ERROR( "Return to title: the title scene '%#' was not requested", _bootstrap._data._titleScene.c_str() );
     }
 
     bool GameInstanceBase::requestLoadScene( const string& scenePath, const utf8* pWhich )

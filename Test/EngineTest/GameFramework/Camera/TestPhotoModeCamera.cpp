@@ -98,3 +98,36 @@ SW_TEST_CASE( PhotoModeCameraTest, OrthographicMovesOnTheScreenPlaneAndZoomsHeig
     photoMode.applyInput( zoom, 0.0f );
     SW_EXPECT_NEAR_EQUAL( 10.0f * photoMode.getSettings()._zoomStep, photoMode.getOrthoHeight(), 1.0e-4f );
 }
+
+/**
+ * @brief [PhotoModeCameraTest] 롤이 있던 시점은 둘러보기를 시작해도 롤이 남고, 기울이기 입력이 롤을 바꾼다
+ * @details 변이: `begin` 이 롤을 읽지 않거나 둘러볼 때 롤을 0 으로 다시 만들면 첫 둘러보기에서 화면이 수평으로 튄다.
+ */
+SW_TEST_CASE( PhotoModeCameraTest, LookKeepsTheRollAndRollInputTilts )
+{
+    constexpr float32 kRoll = 0.3f;
+    CameraPose        base;
+    base._rotation     = quaternion::makeFromYawPitchRoll( 0.5f, 0.2f, kRoll );
+    base._fieldOfViewY = 0.8f;
+
+    PhotoModeCamera photoMode;
+    photoMode.begin( base );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, photoMode.getYaw(), 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, photoMode.getPitch(), 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( kRoll, photoMode.getRoll(), 1.0e-4f );
+
+    PhotoModeInput look;
+    look._look = float2{ 10.0f, 0.0f };
+    photoMode.applyInput( look, 0.016f );
+    const float32 lookedYaw = 0.5f + 10.0f * photoMode.getSettings()._lookSensitivity;
+    const float3  euler     = photoMode.makePose( base )._rotation.getEulerAngles();
+    SW_EXPECT_NEAR_EQUAL( lookedYaw, euler._y, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( kRoll, euler._z, 1.0e-4f ); // 둘러봐도 롤이 남는다
+
+    PhotoModeInput tilt;
+    tilt._roll = 1.0f;
+    photoMode.applyInput( tilt, 0.5f );
+    const float32 tiltedRoll = kRoll + 0.5f * photoMode.getSettings()._rollSpeed;
+    SW_EXPECT_NEAR_EQUAL( tiltedRoll, photoMode.getRoll(), 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( tiltedRoll, photoMode.makePose( base )._rotation.getEulerAngles()._z, 1.0e-4f );
+}

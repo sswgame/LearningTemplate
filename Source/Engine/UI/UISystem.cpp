@@ -199,6 +199,9 @@ namespace sw
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
         if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontService>(), defaultAssets._uiInputMap.get() ) == false )
             return SubsystemInitResult::Failed;
+        // UI 행동(일시정지 · 확인 · 뒤로 …)도 키 바인딩 설정의 대상이다 — 사용자 파일의 UI 키를 지금 넣고, 옵션 메뉴가 바꿀 수 있게 한다.
+        if ( InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr )
+            engine::getSubsystem<UserSettingsManager>().addKeyBindingInputMap( *pUIInputMap );
         // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
         AssetManager& assetManager = engine::getSubsystem<AssetManager>();
         assetManager.registerAssetCache( &_documentCache );
@@ -230,6 +233,8 @@ namespace sw
         AssetManager& assetManager = engine::getSubsystem<AssetManager>();
         assetManager.unregisterAssetCache( &_styleSheetCache );
         assetManager.unregisterAssetCache( &_documentCache );
+        if ( const InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr )
+            engine::getSubsystem<UserSettingsManager>().removeKeyBindingInputMap( *pUIInputMap );
         shutdown();
     }
 

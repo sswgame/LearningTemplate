@@ -116,6 +116,14 @@ namespace sw
         void initialize( const UserSettingsTargets& targets );
         /** @brief 값, 스키마, 통보, 핸들러를 모두 비웁니다. */
         void shutdown();
+        /**
+         * @brief 키 바인딩 설정의 대상 맵을 더합니다(런타임 UI 의 행동 맵 등). 그 맵에 액션이 있는 키 바인딩 설정의 확정 값을 바로 넣습니다.
+         * @details 키 바인딩 설정의 대상은 그 액션을 가진 맵이다 — 게임 맵(`UserSettingsTargets::_pInputMap`)을 먼저 보고, 없으면 더한 맵을 차례로 본다.
+         *          겹침 검사의 문맥(레이어)도 그 맵에서 읽는다. 언리얼 Enhanced Input 의 사용자 설정이 등록된 모든 매핑 컨텍스트의 키를 바꾸는 것과 같다.
+         *          맵의 주인이 내려가기 전에 `removeKeyBindingInputMap` 으로 뗀다.
+         */
+        void addKeyBindingInputMap( InputMap& inputMap );
+        void removeKeyBindingInputMap( const InputMap& inputMap );
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "UserSettings";

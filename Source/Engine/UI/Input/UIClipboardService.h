@@ -27,7 +27,8 @@ namespace sw
      * @brief UI 가 쓰는 글 클립보드입니다(`UISystem::getClipboard`). 언리얼의 `FPlatformApplicationMisc::ClipboardCopy/Paste`, 유니티의 `GUIUtility.systemCopyBuffer`,
      *        Godot 의 `DisplayServer.clipboard_get/set` 에 해당합니다.
      * @details 운영체제 연결(`setAPI`)이 없으면 쓴 글을 그대로 보관했다가 돌려줍니다. 그래서 헤드리스 테스트와 전용 서버에서도 복사 붙여넣기가 한 바퀴 돕니다.
-     *          연결이 있으면 쓸 때 보관본도 같이 갱신하고, 읽을 때 운영체제 쪽을 먼저 봅니다(다른 프로그램에서 복사한 글).
+     *          연결이 있으면 읽기와 쓰기 모두 운영체제 쪽만 본다(다른 프로그램에서 복사한 글이 오고, 그쪽이 비었으면 비었다). 게임 창 호스트(`App`)가
+     *          `PlatformClipboard` 를 끼운다.
      */
     class SW_API UIClipboardService
     {
@@ -43,6 +44,6 @@ namespace sw
 
     private:
         UIClipboardAPI _api;
-        string         _text; ///< 엔진 안 보관본입니다(운영체제 연결이 없을 때의 클립보드이자 운영체제 쪽이 비었을 때의 대체입니다).
+        string         _text; ///< 엔진 안 클립보드입니다(운영체제 연결이 없을 때만 씁니다).
     };
 } // namespace sw

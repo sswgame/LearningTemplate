@@ -17,21 +17,24 @@ namespace sw
 
     void UIClipboardService::setText( string_view text )
     {
-        _text = string{ text };
         if ( _api._pWrite != nullptr )
+        {
             _api._pWrite( text );
+            return;
+        }
+        _text = string{ text };
     }
 
     bool UIClipboardService::tryGetText( string& outText ) const
     {
+        // 운영체제 연결이 있으면 그쪽이 정본이다 — 비었으면(다른 프로그램이 비웠다) 엔진 안의 옛 글을 대신 내지 않는다.
         if ( _api._pRead != nullptr )
         {
             string fromSystem{};
-            if ( _api._pRead( fromSystem ) && fromSystem.empty() == false )
-            {
-                outText = std::move( fromSystem );
-                return true;
-            }
+            if ( _api._pRead( fromSystem ) == false || fromSystem.empty() )
+                return false;
+            outText = std::move( fromSystem );
+            return true;
         }
         if ( _text.empty() )
             return false;

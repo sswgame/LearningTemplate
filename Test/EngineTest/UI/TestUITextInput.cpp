@@ -415,8 +415,8 @@ SW_TEST_CASE( UITextInputTest, PointerPlacesCaretAndSelectionIsPainted )
 }
 
 /**
- * @brief [UITextInputTest] 클립보드 창구: 연결이 없으면 쓴 글이 그대로 돌아오고, 운영체제 연결이 있으면 쓸 때 거기에도 쓰고 읽을 때 운영체제 쪽 글을 먼저 본다
- * @details 변이: `tryGetText` 가 연결을 보지 않으면 다른 프로그램에서 복사한 글이 아니라 엔진 안 보관본이 나와 진다.
+ * @brief [UITextInputTest] 클립보드 창구: 연결이 없으면 쓴 글이 그대로 돌아오고, 운영체제 연결이 있으면 읽기 · 쓰기 모두 운영체제 쪽만 본다(비었으면 비었다)
+ * @details 변이: `tryGetText` 가 연결을 보지 않으면 다른 프로그램에서 복사한 글이 아니라 엔진 안 글이 나오고, 운영체제 쪽이 빌 때 엔진 안 글로 대신하면 마지막 단언이 진다.
  */
 SW_TEST_CASE( UITextInputTest, ClipboardServiceUsesSystemHooksWhenSet )
 {
@@ -444,6 +444,5 @@ SW_TEST_CASE( UITextInputTest, ClipboardServiceUsesSystemHooksWhenSet )
     SW_ASSERT_TRUE( clipboard.tryGetText( out ) );
     SW_EXPECT_STREQ( "from another app", out.c_str() );
     s_systemText.clear();
-    SW_ASSERT_TRUE( clipboard.tryGetText( out ) ); // 운영체제 쪽이 비면 보관본
-    SW_EXPECT_STREQ( "sent", out.c_str() );
+    SW_EXPECT_FALSE( clipboard.tryGetText( out ) ); // 운영체제 쪽이 비면 비었다 — 엔진 안의 옛 글을 내지 않는다
 }

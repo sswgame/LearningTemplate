@@ -87,6 +87,7 @@ namespace sw
         , _fixedTimestep{}
         , _backendSwap{}
         , _userSettingsHost{}
+        , _runtimeUIHost{}
         , _sceneViewCameraProvider{}
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
@@ -343,6 +344,7 @@ namespace sw
 
         _backendSwap.initialize( &_engine, _moduleHost.get(), _bEnableEditor == SW_TRUE );
         _userSettingsHost.initialize( &_engine, _window.get() );
+        _runtimeUIHost.initialize( &_engine, _bEnableEditor == SW_TRUE );
 
         _engine.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
         _engine.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
@@ -354,6 +356,7 @@ namespace sw
         // 연결되지 않은 경우에는 아무것도 하지 않는다.
         _backendSwap.shutdown();
         _userSettingsHost.shutdown();
+        _runtimeUIHost.shutdown();
 
         // 헤드리스 부팅은 창도 ModuleHost 도 만들지 않는다. 아래 경로가 그대로 아무 일도 하지 않으므로 모드 분기를 따로 두지 않는다.
         // 주의: ModuleHost 를 Engine 보다 먼저 종료해야 한다. 에디터 shutdown 이 씬 뷰와 게임 뷰 RT 를 해제할 때 RenderThread 와

@@ -424,7 +424,7 @@ namespace sw
         return false;
     }
 
-    void UIStyleTransition::onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedFields )
+    void UIStyleTransition::onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedFields, uint32 oldStates, uint32 newStates )
     {
         using Internal = UIStyleTransitionInternal;
         // 처음 맞추는 위젯, 스타일이 사라진 경우, 움직임 줄이기는 전환 없이 바로 바꾼다.
@@ -470,7 +470,7 @@ namespace sw
             UIStyleTransitionState::Channel channel{};
             if ( pNew->has( field ) )
                 Internal::readField( pNew->_value, field, channel._arrTo );
-            else if ( widget.tryGetOwnStyleField( field, channel._arrTo ) == false )
+            else if ( widget.tryGetOwnStyleField( field, newStates, channel._arrTo ) == false )
                 continue;
             UIStyleTransitionState::Channel mirrored{};
             const bool                      bMirror = bOwnSpec == false && pNew->has( field ) && ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) != 0 &&
@@ -490,7 +490,7 @@ namespace sw
                 // 옛 값: 옛 스타일이 정했으면 그 값, 아니면 위젯이 자기 필드로 그리던 값이다. 진행 중이던 채널의 지금 값이 있으면 그것이 우선이다.
                 if ( bHaveFrom == false && pOld->has( field ) )
                     Internal::readField( pOld->_value, field, arrFrom );
-                else if ( bHaveFrom == false && widget.tryGetOwnStyleField( field, arrFrom ) == false )
+                else if ( bHaveFrom == false && widget.tryGetOwnStyleField( field, oldStates, arrFrom ) == false )
                     continue;
                 channel._field    = field;
                 channel._duration = pEntry->_duration;

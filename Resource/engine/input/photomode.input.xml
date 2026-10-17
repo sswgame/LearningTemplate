@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Photo mode InputMap (EngineDefaultAssets::_photoModeInputMap) - CameraDirectorComponent loads it when photo mode starts and drops it when it ends.
+  Every game gets the same free-camera controls without adding actions to its own map; the game is paused, so keys shared with gameplay do not clash.
+  The action names are a contract with CameraDirectorComponent (Photo.Move / Rise / Look / Roll / Zoom / Exposure) - a missing action stops photo mode from starting.
+-->
+<InputMap defaultLayer="PhotoMode" holdThreshold="0.4">
+	<layers>
+		<layer name="PhotoMode" enabled="1" blockLower="0"/>
+	</layers>
+
+	<!-- Move on the ground plane (x right, y forward). -->
+	<action name="Photo.Move" layer="PhotoMode">
+		<vector2d up="W" down="S" left="A" right="D"/>
+		<stick stick="Left" deadzone="0.15"/>
+	</action>
+	<!-- Up and down while held. -->
+	<action name="Photo.Rise" layer="PhotoMode">
+		<axis1d negative="Q" positive="E"/>
+		<axis1d source="gamepad" negative="LeftShoulder" positive="RightShoulder"/>
+	</action>
+	<!-- Look around: mouse movement, right stick. -->
+	<action name="Photo.Look" layer="PhotoMode">
+		<mouseDelta scale="1"/>
+		<stick stick="Right" deadzone="0.15" scaleX="700" scaleY="-700" scaleByDelta="true"/>
+	</action>
+	<!-- Tilt (Dutch angle) while held. -->
+	<action name="Photo.Roll" layer="PhotoMode">
+		<axis1d negative="X" positive="Z"/>
+	</action>
+	<!-- Zoom (field of view or ortho height): wheel notches, D-pad up and down per press or repeat. -->
+	<action name="Photo.Zoom" layer="PhotoMode">
+		<mouseWheel scale="1"/>
+		<axis1d source="gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
+	</action>
+	<!-- Exposure compensation: one step per press. -->
+	<action name="Photo.Exposure" layer="PhotoMode" trigger="Pressed">
+		<axis1d negative="Minus" positive="Equal"/>
+		<axis1d source="gamepad" negative="DPadLeft" positive="DPadRight"/>
+	</action>
+</InputMap>

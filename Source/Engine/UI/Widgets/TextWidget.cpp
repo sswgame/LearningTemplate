@@ -103,7 +103,7 @@ namespace sw
         invalidateText();
     }
 
-    bool TextWidget::tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const
+    bool TextWidget::tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const
     {
         const auto readFloat4 = [&outArr]( const float4& value )
         {
@@ -135,7 +135,7 @@ namespace sw
             }
             default:
             {
-                return Widget::tryGetOwnStyleField( field, outArr );
+                return Widget::tryGetOwnStyleField( field, styleStates, outArr );
             }
         }
     }

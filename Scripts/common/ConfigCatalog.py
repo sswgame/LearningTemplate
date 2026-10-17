@@ -128,6 +128,10 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UISystem::initialize`)", readWhen="기동(UI 단계)",
         shipping="엔진 팩에 실림", bCommitted=True),
     ConfigFileEntry(
+        page="", pathPattern="Resource/engine/input/photomode.input.xml", layer=kLayerEngineDefault, fileFormat="xml",
+        reader="`InputMap::loadFromResource` (포토 모드 행동 맵 — `EngineDefaultAssets::_photoModeInputMap`, `CameraDirectorComponent::enterPhotoMode`)",
+        readWhen="포토 모드를 켤 때", shipping="엔진 팩에 실림", bCommitted=True),
+    ConfigFileEntry(
         page="UserSettings", pathPattern="Resource/engine/settings/engine.settings.xml", layer=kLayerEngineDefault, fileFormat="xml",
         reader="`UserSettingsManager::loadSchema` (`Engine` UserSettings 단계)", readWhen="기동",
         shipping="엔진 팩에 실림", bCommitted=True,

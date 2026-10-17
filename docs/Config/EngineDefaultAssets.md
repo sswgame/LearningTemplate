@@ -28,6 +28,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_missingTexture` | `DataPath` | — |  |  | 못 읽은 텍스처 대신 샘플하는 마젠타 체커 |
 | `_shellInputMap` | `DataPath` | — |  |  | App 셸 InputMap |
 | `_uiInputMap` | `DataPath` | — |  |  | 런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UISystem`, Shipping 에도 있다) |
+| `_photoModeInputMap` | `DataPath` | — |  |  | 포토 모드 자유 카메라의 행동 맵 — 이동 · 오르내림 · 둘러보기 · 기울이기 · 줌 · 노출(`CameraDirectorComponent`, 포토 모드 동안만 읽는다) |
 | `_userSettingsSchema` | `DataPath` | — |  |  | 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`) |
 | `_telemetrySchema` | `DataPath` | — |  |  | 엔진 텔레메트리 사건 스키마(`TelemetryService`) |
 | `_cultureTable` | `DataPath` | — |  |  | 문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`) |

@@ -75,6 +75,24 @@ namespace sw
         _bStartupApplied    = false;
     }
 
+    void UserSettingsManager::addKeyBindingInputMap( InputMap& inputMap )
+    {
+        _engineHandlers.addBindingInputMap( inputMap );
+        // 이 맵의 액션을 고치는 설정은 맵이 없던 기동 적용에서 건너뛰었다 — 지금 확정 값을 넣는다.
+        const vector<UserSettingDef>& listSetting = _schema.getSettings();
+        for ( uint32 settingIndex = 0; settingIndex < static_cast<uint32>( _listState.size() ); ++settingIndex )
+        {
+            const UserSettingDef& def = listSetting[settingIndex];
+            if ( def._type == UserSettingType::KeyBinding && inputMap.hasAction( def._action ) )
+                (void)applyToTarget( settingIndex, _listState[settingIndex]._committedValue, true ); // 못 넣은 키는 핸들러가 경고한다 — 값은 저장된 그대로다
+        }
+    }
+
+    void UserSettingsManager::removeKeyBindingInputMap( const InputMap& inputMap )
+    {
+        _engineHandlers.removeBindingInputMap( inputMap );
+    }
+
     // ------------------------------------------------------------------------------
     // 1) 스키마
     // ------------------------------------------------------------------------------
@@ -658,7 +676,7 @@ namespace sw
             return false;
 
         InputSlot  slot;
-        InputMap*  pInputMap = getTargets()._pInputMap;
+        InputMap*  pInputMap = _engineHandlers.findBindingInputMap( def._action );
         const bool bHasSlot  = slotText.empty() ? ( pInputMap != nullptr && pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, slot ) )
                                                 : InputSlotUtil::tryParse( slotText, slot );
         if ( bHasSlot == false )
@@ -931,7 +949,7 @@ namespace sw
         const string&         value = getEffectiveValue( settingIndex );
         if ( value.empty() == false )
             return InputSlotUtil::tryParse( value, outSlot );
-        const InputMap* pInputMap = getTargets()._pInputMap;
+        const InputMap* pInputMap = _engineHandlers.findBindingInputMap( def._action );
         return pInputMap != nullptr && pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, outSlot );
     }
 
@@ -940,7 +958,7 @@ namespace sw
         const UserSettingDef& def = _schema.getSettings()[settingIndex];
         if ( def._context.empty() == false )
             return def._context;
-        const InputMap* pInputMap = getTargets()._pInputMap;
+        const InputMap* pInputMap = _engineHandlers.findBindingInputMap( def._action );
         if ( pInputMap == nullptr )
             return {};
         const hashed_string layer = pInputMap->findBindingLayer( def._action, def._bindIndex );

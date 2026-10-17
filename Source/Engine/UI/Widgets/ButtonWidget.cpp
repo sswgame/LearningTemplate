@@ -56,15 +56,15 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    const UIBrush& ButtonWidget::getBackgroundBrush() const
+    const UIBrush& ButtonWidget::selectBackgroundBrush( uint32 styleStates ) const
     {
-        if ( isEnabledInHierarchy() == false )
+        if ( ( styleStates & UIStyleState::kDisabled ) != 0 )
             return _disabledBrush;
-        if ( _bPressed )
+        if ( ( styleStates & UIStyleState::kPressed ) != 0 )
             return _pressedBrush;
-        if ( isHovered() )
+        if ( ( styleStates & UIStyleState::kHover ) != 0 )
             return _hoveredBrush;
-        return BorderPanel::getBackgroundBrush();
+        return BorderPanel::selectBackgroundBrush( styleStates );
     }
 
     UIReply ButtonWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )

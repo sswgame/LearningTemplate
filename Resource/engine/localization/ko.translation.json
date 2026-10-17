@@ -353,6 +353,14 @@
             "text": "로딩 중",
             "sourceHash": "b59d68ed12d46377"
         },
+        "Notification.GameSaved": {
+            "text": "게임을 저장했습니다",
+            "sourceHash": "820b2b70b4c9f0c4"
+        },
+        "Notification.RestartRequired": {
+            "text": "일부 변경은 다시 시작한 뒤 적용됩니다.",
+            "sourceHash": "14441b823018dda4"
+        },
         "Opacity": {
             "text": "불투명도",
             "sourceHash": "ba64d8954d027206"
@@ -560,6 +568,10 @@
         "settings.controls.mouseSensitivity": {
             "text": "마우스 감도",
             "sourceHash": "67b03bcb89cd52cf"
+        },
+        "settings.controls.pauseMenu": {
+            "text": "일시정지 메뉴",
+            "sourceHash": "2889ddc771329148"
         },
         "settings.controls.sprintMode": {
             "text": "달리기",

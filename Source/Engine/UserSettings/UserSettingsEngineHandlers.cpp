@@ -43,6 +43,7 @@ namespace sw
 {
     UserSettingsEngineHandlers::UserSettingsEngineHandlers()
         : _targets{}
+        , _listBindingInputMap{}
         , _displayRequest{}
         , _listDisplayResolution{}
         , _bDisplayDirty{ false }
@@ -77,8 +78,42 @@ namespace sw
 
     void UserSettingsEngineHandlers::shutdown()
     {
-        _targets       = UserSettingsTargets{};
+        _targets = UserSettingsTargets{};
+        _listBindingInputMap.clear();
         _bDisplayDirty = false;
+    }
+
+    void UserSettingsEngineHandlers::addBindingInputMap( InputMap& inputMap )
+    {
+        for ( const InputMap* pInputMap : _listBindingInputMap )
+        {
+            if ( pInputMap == &inputMap )
+                return;
+        }
+        _listBindingInputMap.push_back( &inputMap );
+    }
+
+    void UserSettingsEngineHandlers::removeBindingInputMap( const InputMap& inputMap )
+    {
+        for ( size_t index = 0; index < _listBindingInputMap.size(); ++index )
+        {
+            if ( _listBindingInputMap[index] != &inputMap )
+                continue;
+            _listBindingInputMap.erase( _listBindingInputMap.begin() + static_cast<ptrdiff_t>( index ) );
+            return;
+        }
+    }
+
+    InputMap* UserSettingsEngineHandlers::findBindingInputMap( const hashed_string& action ) const
+    {
+        if ( _targets._pInputMap != nullptr && _targets._pInputMap->hasAction( action ) )
+            return _targets._pInputMap;
+        for ( InputMap* pInputMap : _listBindingInputMap )
+        {
+            if ( pInputMap->hasAction( action ) )
+                return pInputMap;
+        }
+        return nullptr;
     }
 
     bool UserSettingsEngineHandlers::consumeDisplayRequest( DisplaySettingsRequest& outRequest )
@@ -188,22 +223,23 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyKeyBinding( const UserSettingApplyParams& context )
     {
-        if ( _targets._pInputMap == nullptr || context._pDef == nullptr )
+        if ( context._pDef == nullptr )
             return true;
         const UserSettingDef& def = *context._pDef;
-        if ( _targets._pInputMap->hasAction( def._action ) == false )
+        // 액션은 게임 · UI 가 입력 맵을 만든 뒤에야 있다. 없으면 건너뛰고, 맵이 생긴 뒤의 다시 적용(`reapplyAll` · `addKeyBindingInputMap`)에서 적용된다.
+        InputMap* pInputMap = findBindingInputMap( def._action );
+        if ( pInputMap == nullptr )
             return true;
 
         // 빈 값은 "입력 맵의 기본 바인딩" 이다. 기본으로 되돌린 설정이 지난번 리바인딩을 그대로 남기면 안 된다.
         InputSlot  slot;
-        const bool bHasSlot = context._value.empty() ? _targets._pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, slot )
-                                                     : InputSlotUtil::tryParse( context._value, slot );
+        const bool bHasSlot = context._value.empty() ? pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, slot ) : InputSlotUtil::tryParse( context._value, slot );
         if ( bHasSlot == false )
         {
             SW_LOG_WARNING( "key binding '%#': action '%#' binding %# cannot take '%#'", def._id.c_str(), def._action.c_str(), def._bindIndex, context._value );
             return false;
         }
-        return _targets._pInputMap->rebindSlot( def._action, slot, def._bindIndex );
+        return pInputMap->rebindSlot( def._action, slot, def._bindIndex );
     }
 
     bool UserSettingsEngineHandlers::applyLanguage( const UserSettingApplyParams& context )

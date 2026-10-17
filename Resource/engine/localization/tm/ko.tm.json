@@ -234,6 +234,10 @@
             "text": "게임 시계 따라가기"
         },
         {
+            "source": "Game saved",
+            "text": "게임을 저장했습니다"
+        },
+        {
             "source": "Game time",
             "text": "게임 시각"
         },
@@ -404,6 +408,10 @@
         {
             "source": "Owned Tags",
             "text": "소유 태그"
+        },
+        {
+            "source": "Pause Menu",
+            "text": "일시정지 메뉴"
         },
         {
             "source": "Paused",

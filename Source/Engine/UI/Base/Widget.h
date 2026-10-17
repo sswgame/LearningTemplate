@@ -178,11 +178,13 @@ namespace sw
          */
         const UIComputedStyle* getComputedStyle() const;
         /**
-         * @brief 계산된 스타일이 필드 @p field 를 정하지 않았을 때 이 위젯이 자기 필드로 그리는 값을 @p outArr 에 읽습니다(성분 수는 필드가 정합니다). 그런 값이 없으면 false 입니다.
+         * @brief 계산된 스타일이 필드 @p field 를 정하지 않았을 때 이 위젯이 상태 @p styleStates(`UIStyleState` 비트)에서 자기 필드로 그리는 값을 @p outArr 에 읽습니다
+         *        (성분 수는 필드가 정합니다). 그런 값이 없으면 false 입니다.
          * @details 스타일 전환이 "한쪽만 정한 필드"(위젯 자기 겉모습 ↔ 시트 값)를 옮기려고 묻습니다. 기본은 불투명도(스타일 값이 곱해지는 값이라 1)만 답합니다.
-         *          위젯 타입마다 자기가 그리는 필드(`BorderPanel` 의 배경 브러시, `TextWidget` 의 색 등)를 재정의합니다. 상태별로 달라지는 값은 기본 상태(상태 브러시가 아닌 것)를 답합니다.
+         *          위젯 타입마다 자기가 그리는 필드(`BorderPanel` 의 배경 브러시, `TextWidget` 의 색 등)를 재정의합니다. 상태별로 달라지는 값(버튼의 호버 · 누름 · 꺼짐 브러시)은
+         *          @p styleStates 의 것을 답한다 — 전환은 옛 쪽을 옛 스타일의 상태로, 새 쪽을 새 상태로 묻는다(`_styleStates`).
          */
-        [[nodiscard]] virtual bool tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const;
+        [[nodiscard]] virtual bool tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const;
         /** @brief 불투명도에 계산된 스타일의 `_opacity` 를 곱한 값입니다(그리기 순회가 씁니다). */
         float32 computeEffectiveOpacity() const;
 
@@ -240,6 +242,7 @@ namespace sw
         shared_ptr<const UIComputedStyle>  _computedStyle;    ///< 계산된 스타일입니다(같은 조건의 위젯이 공유하며, `UIStylePass` 가 정합니다).
         unique_ptr<UIStyleTransitionState> _styleTransition;  ///< 스타일 전환 중의 보이는 값입니다(전환이 없으면 비어 있으며, `UIStyleTransition` 이 정합니다).
         uint64                             _styleAncestorKey; ///< 이 위젯에 맞는 "조상 쪽" 선택자 조각의 해시입니다. 바뀌면 자손을 다시 맞춥니다(`UIStylePass`).
+        uint32                             _styleStates;      ///< `_computedStyle` 을 맞출 때의 상태(`computeStyleStates`)입니다. 스타일 전환이 옛 쪽 자기 값을 묻는 데 씁니다(`UIStylePass`).
 
         WidgetGeometry _geometry;          ///< 마지막 arrange 결과입니다.
         float2         _desiredSize;       ///< 마지막 measure 결과입니다.

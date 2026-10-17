@@ -67,10 +67,12 @@ namespace sw
         const shared_ptr<const UIComputedStyle> style         = styleSet.computeStyle( widget, pParentStyle, bNavigationMode, ancestorKey );
         const uint32                            changedFields = UIComputedStyle::computeChangedFields( widget._computedStyle.get(), style.get() );
         const bool                              bPropagate    = style != widget._computedStyle || ancestorKey != widget._styleAncestorKey;
+        const uint32                            styleStates   = widget.computeStyleStates();
         if ( changedFields != 0 )
-            UIStyleTransition::onStyleChanged( widget, widget._computedStyle.get(), style.get(), changedFields );
+            UIStyleTransition::onStyleChanged( widget, widget._computedStyle.get(), style.get(), changedFields, widget._styleStates, styleStates );
         widget._computedStyle    = style;
         widget._styleAncestorKey = ancestorKey;
+        widget._styleStates      = styleStates;
         widget._dirtyFlags &= ~WidgetDirty::kStyle;
 
         uint32 reason = makeDirtyReason( changedFields );

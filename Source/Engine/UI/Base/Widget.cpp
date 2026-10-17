@@ -35,6 +35,7 @@ namespace sw
         , _computedStyle{}
         , _styleTransition{}
         , _styleAncestorKey{ 0 }
+        , _styleStates{ UIStyleState::kNone }
         , _geometry{}
         , _desiredSize{}
         , _lastAvailableSize{}
@@ -196,7 +197,7 @@ namespace sw
         return _computedStyle.get();
     }
 
-    bool Widget::tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const
+    bool Widget::tryGetOwnStyleField( UIStyleField field, [[maybe_unused]] uint32 styleStates, float32 ( &outArr )[4] ) const
     {
         if ( field != UIStyleField::Opacity )
             return false;

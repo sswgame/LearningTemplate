@@ -74,7 +74,7 @@ namespace sw
 
         bool usesGlyphAtlas() const override { return true; }
         /** @brief 글 색 · 외곽선 · 글자 크기를 자기 값으로 답합니다(스타일 전환의 "한쪽만 정한 필드"). */
-        [[nodiscard]] bool tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const override;
+        [[nodiscard]] bool tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const override;
 
         /** @brief 마지막 칠하기의 배치 결과입니다(테스트와 커서 위치용). */
         const TextLayoutResult& getLastLayout() const { return _layoutCache; }

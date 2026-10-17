@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskFuture.h"
 
@@ -25,6 +26,7 @@ namespace sw
     class GameObjectManager;
     class LoadingScreenController;
     class Scene;
+    class Widget;
 
     // ------------------------------------------------------------------------------
     // 1) GameInstanceBase — 수명주기는 여기, 파생은 훅만
@@ -100,6 +102,12 @@ namespace sw
         [[nodiscard]] bool requestFirstScene();
         /** @brief `getEntranceScene()` 의 로드를 요청합니다. 타이틀 화면이 "시작" 에서 부릅니다. 레벨 이벤트는 `requestFirstScene` 과 같습니다. */
         [[nodiscard]] bool requestEntranceScene();
+        /**
+         * @brief gamesettings 의 타이틀 씬(`titleScene`) 로드를 요청합니다. 타이틀 씬이 없거나 요청이 실패하면 false 입니다. 레벨 이벤트는 `requestFirstScene` 과 같습니다.
+         * @details 타이틀 씬이 있는 게임이면 `initialize` 가 UI 전역 명령 `ReturnToTitle` 로 이 함수를 등록해 일시정지 메뉴에 "타이틀로" 가 보인다
+         *          (언리얼 Lyra 의 "Quit to Main Menu", 유니티 템플릿의 메뉴 씬 로드). 없는 게임은 등록하지 않아 단추가 접힌 채다.
+         */
+        [[nodiscard]] bool requestTitleScene();
 
         // --------------------------------------------------------------------------
         // 게임 인스턴스 서브시스템
@@ -256,6 +264,11 @@ namespace sw
         [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
         void publishFinishedSceneLoads();
+        /** @brief 타이틀 씬이 있으면 UI 전역 명령 `ReturnToTitle` 을 등록합니다(`initialize`). `shutdown` 이 거둡니다. */
+        void registerSessionCommands();
+        void unregisterSessionCommands();
+        /** @brief UI 전역 명령 `ReturnToTitle` 의 처리 함수입니다(일시정지 메뉴의 "타이틀로"). */
+        void onReturnToTitleCommand( const hashed_string& command, Widget& source );
         /** @brief 올린 타입의 상태를 모두 싣고, 그다음 세운 것을 모두 걷습니다(`onBeforeStateSerialize` 앞). */
         void captureStatefulComponents();
         /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(`onAfterStateDeserialize` 앞). */

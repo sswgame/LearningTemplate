@@ -669,6 +669,46 @@ SW_TEST_CASE( CameraPresetTest, CycleActionSwitchesToTheNextPreset )
 }
 
 /**
+ * @brief [CameraPresetTest] 포토 모드는 게임 입력 맵이 아니라 엔진 포토 모드 맵(`Photo.Move`)을 읽는다 — 게임 맵에 카메라 액션이 하나도 없어도 움직인다
+ * @details 변이: 포토 모드가 게임 맵의 `Camera.Pan` 을 읽으면(옛 방식) 이 게임 맵에는 그 액션이 없어 자리가 그대로라 진다.
+ */
+SW_TEST_CASE( CameraPresetTest, PhotoModeReadsTheEnginePhotoModeMap )
+{
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    SubsystemScope        scope; // input 보다 먼저 사라진다(뒤에 선언)
+    game::ScopedGameScope activeScope( scope );
+    SW_EXPECT_TRUE( scope.bind( &input ) );
+
+    GameObjectManager manager;
+    GameObject*       pCameraObject = manager.createGameObject( hashed_string( "PhotoCamera" ) );
+    SW_ASSERT_NOT_NULL( pCameraObject );
+    SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
+    CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_NOT_NULL( pDirector );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
+        <Preset id="orbit"><View mode="Orbit" distance="5"/></Preset>
+    </CameraPresets>)",
+                                                             "photo-mode-map-test" ) );
+    manager.beginPlay();
+    SW_ASSERT_TRUE( pDirector->enterPhotoMode() );
+    const float3 start = pDirector->getPhotoMode().getPosition();
+
+    input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
+    input.beginFrame( 0.5f );
+    pDirector->onTick( 0.5f );
+    const float3  moved    = pDirector->getPhotoMode().getPosition();
+    const float32 expected = pDirector->getPhotoMode().getSettings()._moveSpeed * 0.5f;
+    SW_EXPECT_NEAR_EQUAL( expected * expected, ( moved - start ).getLengthSquared(), 1.0e-3f );
+
+    pDirector->exitPhotoMode();
+    SW_EXPECT_FALSE( pDirector->isInPhotoMode() );
+    manager.endPlay();
+    scope.unbind<InputManager>();
+    input.shutdown();
+}
+
+/**
  * @brief [CameraPresetTest] 켠 프리셋이 받는 조작의 액션이 입력 맵에 없으면 프리셋마다 한 번 알리고, 받지 않는 조작의 액션은 없어도 조용하다
  * @details 맵에 없는 액션 질의는 로그 없이 0 이다 — 액션 이름을 바꾸면 그 프리셋의 줌 · 둘러보기가 조용히 죽는다.
  */

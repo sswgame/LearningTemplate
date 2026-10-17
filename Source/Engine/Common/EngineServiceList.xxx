@@ -65,7 +65,8 @@ SW_ENGINE_SERVICE( class, TelemetryService, Required, GameVisible )
 SW_ENGINE_SERVICE( class, CrashReportService, Required, GameVisible )
 
 
-SW_ENGINE_SERVICE_CONST( struct, EngineDefaultAssets, Required, HostOnly )
+// 엔진 기본 에셋 경로 표(읽기 전용). 게임 프레임워크도 엔진 데이터(포토 모드 입력 맵 등)의 경로를 여기서 읽는다.
+SW_ENGINE_SERVICE_CONST( struct, EngineDefaultAssets, Required, GameVisible )
 
 SW_ENGINE_SERVICE_OPT( class, MemoryProfiler, HostOnly )
 // 렌더 타깃 목록. 렌더러가 공개하고 에디터 패널이 읽는다(패널은 렌더러 내부 상태 대신 이 목록만 본다).

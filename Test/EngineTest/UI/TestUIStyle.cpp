@@ -98,6 +98,15 @@ namespace
                                       "\t\t<BorderPanel _name=\"Box\" />\n"
                                       "\t</CanvasPanel>\n";
 
+    /** @brief 상태 브러시 전환의 시트 — 버튼은 배경색 전환을 적고, 클래스 b 만 배경색을 정한다(꺼짐은 시트가 정하지 않아 버튼의 꺼짐 브러시다). */
+    constexpr utf8 kStateBrushSheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"
+                                        "\t<Rule _selector=\"ButtonWidget\" _transition=\"_backgroundColor 1 Linear\" />\n"
+                                        "\t<Rule _selector=\".b\" _backgroundColor=\"0,0,1,1\" />\n"
+                                        "</UIStyleSheet>\n";
+    constexpr utf8 kStateBrushBody[]  = "\t<CanvasPanel>\n"
+                                        "\t\t<ButtonWidget _name=\"Button\" />\n"
+                                        "\t</CanvasPanel>\n";
+
     /** @brief 물려받는 글 색 전환의 시트 — 부모(BorderPanel)만 글 색 전환을 적고, 자식 글은 적지 않는다. */
     constexpr utf8 kInheritSheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"
                                      "\t<Rule _selector=\"BorderPanel\" _transition=\"_textColor 1 Linear\" />\n"
@@ -682,6 +691,35 @@ SW_TEST_CASE( UIStyleTest, OwnValueTransitionsToAndFromSheetValue )
     SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 0.0f, 0.5f, 1.0f }, Util::findBackground( pBox ) ) );
     Util::runFrame( fixture._input, fixture._ui, 0.6f );
     SW_EXPECT_TRUE( Util::findBackground( pBox ) == sw::float4( -1.0f, -1.0f, -1.0f, -1.0f ) ); // 끝나면 다시 위젯 자기 브러시
+}
+
+/**
+ * @brief [UIStyleTest] 한쪽만 정한 칸의 자기 값은 그 상태의 브러시다 — 시트 색에서 꺼진 버튼으로 바뀌면 기본 브러시가 아니라 꺼짐 브러시로 옮겨 간다
+ * @details 변이: `BorderPanel::tryGetOwnStyleField` 가 상태를 보지 않고 기본 브러시(빨강)를 읽으면 중간값이 파랑 · 빨강 사이라 진다(끝나면 꺼짐 브러시로 튄다).
+ */
+SW_TEST_CASE( UIStyleTest, OwnValueTransitionUsesTheStateBrush )
+{
+    using Util = UIStyleTestUtil;
+    UIStyleFixture fixture;
+    sw::UIScreen*  pScreen = fixture.open( kStateBrushSheet, kStateBrushBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::ButtonWidget* pButton = pScreen->getTree().findWidget<sw::ButtonWidget>( "Button" );
+    SW_ASSERT_NOT_NULL( pButton );
+    pButton->setBackground( sw::UIBrush::makeSolid( Util::kRed, 0.0f ) );
+    pButton->setStateBrushes( sw::UIBrush::makeSolid( Util::kRed, 0.0f ), sw::UIBrush::makeSolid( Util::kRed, 0.0f ), sw::UIBrush::makeSolid( Util::kGreen, 0.0f ) );
+    pButton->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    Util::runFrame( fixture._input, fixture._ui, 1.1f );
+    SW_ASSERT_TRUE( Util::findBackground( pButton ) == Util::kBlue );
+
+    pButton->setStyleClass( "" );
+    pButton->setEnabled( false );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    SW_EXPECT_TRUE( Util::isNear( Util::kBlue, Util::findBackground( pButton ) ) ); // 시트 색에서 출발
+    Util::runFrame( fixture._input, fixture._ui, 0.5f );
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.0f, 0.5f, 0.5f, 1.0f }, Util::findBackground( pButton ) ) ); // 파랑 → 초록(꺼짐 브러시)의 중간
+    Util::runFrame( fixture._input, fixture._ui, 0.6f );
+    SW_EXPECT_TRUE( Util::findBackground( pButton ) == sw::float4( -1.0f, -1.0f, -1.0f, -1.0f ) ); // 끝나면 다시 버튼 자기 브러시
 }
 
 /**

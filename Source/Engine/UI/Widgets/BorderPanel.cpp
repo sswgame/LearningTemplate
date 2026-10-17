@@ -49,9 +49,11 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    bool BorderPanel::tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const
+    bool BorderPanel::tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const
     {
-        const auto readFloat4 = [&outArr]( const float4& value )
+        // 칠하는 쪽(`computeEffectiveBrush`)과 같은 상태 브러시를 읽는다 — 기본 브러시를 읽으면 버튼의 호버 · 누름 · 꺼짐 색으로 옮겨 가지 않고 끝에 튄다.
+        const UIBrush& background = selectBackgroundBrush( styleStates );
+        const auto     readFloat4 = [&outArr]( const float4& value )
         {
             outArr[0] = value._x;
             outArr[1] = value._y;
@@ -63,19 +65,19 @@ namespace sw
         {
             case UIStyleField::BackgroundColor:
             {
-                return readFloat4( _background._color );
+                return readFloat4( background._color );
             }
             case UIStyleField::CornerRadius:
             {
-                return readFloat4( _background._cornerRadius );
+                return readFloat4( background._cornerRadius );
             }
             case UIStyleField::BorderColor:
             {
-                return readFloat4( _background._borderColor );
+                return readFloat4( background._borderColor );
             }
             case UIStyleField::BorderWidth:
             {
-                outArr[0] = _background._borderWidth;
+                outArr[0] = background._borderWidth;
                 return true;
             }
             case UIStyleField::Padding:
@@ -99,7 +101,7 @@ namespace sw
             }
             default:
             {
-                return Widget::tryGetOwnStyleField( field, outArr );
+                return Widget::tryGetOwnStyleField( field, styleStates, outArr );
             }
         }
     }

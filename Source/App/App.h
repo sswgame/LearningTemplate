@@ -12,6 +12,7 @@
 #include "App/DevConsoleHost.h"
 #include "App/ModuleReloadDriver.h"
 #include "App/RHIBackendSwitcher.h"
+#include "App/RuntimeUIHost.h"
 #include "App/UserSettingsHost.h"
 
 #include "Core/Common/Types.h"
@@ -121,6 +122,7 @@ namespace sw
         FixedTimestep      _fixedTimestep;
         RHIBackendSwitcher _backendSwap;
         UserSettingsHost   _userSettingsHost;
+        RuntimeUIHost      _runtimeUIHost;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.
         /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 Engine 가 씬 카메라를 씁니다. */

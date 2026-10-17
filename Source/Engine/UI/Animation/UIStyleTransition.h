@@ -89,8 +89,9 @@ namespace sw
         /**
          * @brief 위젯의 계산된 스타일이 @p pOld 에서 @p pNew 로 바뀌었을 때 부릅니다(바뀐 필드 @p changedFields). 전환을 시작하거나 새 목표로 바꾸거나 지웁니다.
          * @details 스타일 순회(`UIStylePass`)가 새 스타일을 적기 전에 부른다. 지금 보이는 값은 위젯의 전환 상태에서 읽는다.
+         *          @p oldStates · @p newStates 는 두 스타일을 맞춘 위젯 상태(`UIStyleState`)다 — 한쪽만 정한 필드의 자기 값을 그 상태로 묻는다(버튼의 상태 브러시).
          */
-        static void onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedFields );
+        static void onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedFields, uint32 oldStates, uint32 newStates );
         /** @brief 트리의 전환을 @p deltaSeconds 만큼 진행해 보이는 값을 쓰고 필드 종류에 맞게 무효화합니다. 끝난 위젯은 상태를 지웁니다. 진행한 위젯 수를 반환합니다. */
         static uint32 update( WidgetTree& tree, float32 deltaSeconds );
 

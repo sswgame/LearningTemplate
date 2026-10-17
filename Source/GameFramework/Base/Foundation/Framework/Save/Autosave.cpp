@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -346,7 +347,7 @@ namespace sw
         if ( UISystem* pUI = game::findSubsystem<UISystem>(); pUI != nullptr )
         {
             UINotificationDesc notice{};
-            notice._text            = "Game saved";
+            notice._text            = SW_LOCTEXT( "Notification", "GameSaved", "Game saved" );
             notice._durationSeconds = 3.0f;
             pUI->getNotifications().post( notice );
         }

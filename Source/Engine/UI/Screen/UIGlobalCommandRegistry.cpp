@@ -35,10 +35,12 @@ namespace sw
         _registry.addOrReplace( command, handler );
     }
 
-    void UIGlobalCommandRegistry::unregisterCommand( const hashed_string& command )
+    void UIGlobalCommandRegistry::unregisterCommand( const hashed_string& command, const UICommandDelegate& handler )
     {
+        // 다른 쪽이 그 사이 교체했으면(핫 리로드의 새 인스턴스) 그 등록을 지우지 않는다.
         // 이름 표에는 이름으로 빼는 길이 없어 빈 처리 함수로 바꾼다(`hasCommand` · `tryExecute` 는 묶이지 않은 함수를 없는 것으로 본다).
-        if ( _registry.find( command ) != nullptr )
+        const UICommandDelegate* pHandler = _registry.find( command );
+        if ( pHandler != nullptr && *pHandler == handler )
             _registry.addOrReplace( command, UICommandDelegate{} );
     }
 

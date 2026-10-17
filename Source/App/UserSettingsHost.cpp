@@ -25,6 +25,7 @@ namespace sw
         : _pEngine{ nullptr }
         , _pWindow{ nullptr }
         , _frameIndex{ 0 }
+        , _appliedText{}
     {
     }
 
@@ -33,6 +34,7 @@ namespace sw
         _pEngine    = pEngine;
         _pWindow    = pWindow;
         _frameIndex = 0;
+        _appliedText.clear();
     }
 
     void UserSettingsHost::shutdown()
@@ -46,8 +48,13 @@ namespace sw
         if ( _pEngine == nullptr || engine::areEngineServicesBound() == false )
             return;
         ++_frameIndex;
-        if ( gv_userSettingsApply.empty() == false && _frameIndex == static_cast<uint32>( gv_userSettingsApplyFrame ) )
+        // 값마다 한 번 적용한다 — 명령줄 값은 그 프레임에, 시나리오가 실행 중에 바꾼 값은 바뀐 프레임에 들어간다.
+        const bool bNewApplyText = gv_userSettingsApply.empty() == false && gv_userSettingsApply != _appliedText;
+        if ( bNewApplyText && _frameIndex >= static_cast<uint32>( gv_userSettingsApplyFrame ) )
+        {
+            _appliedText = gv_userSettingsApply;
             applyCommandLineSettings();
+        }
 
         UserSettingsManager& settings = engine::getSubsystem<UserSettingsManager>();
         settings.update( deltaSeconds );

@@ -105,9 +105,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   `ControlIntent::write` 로, 서버 폰은 `RemoteControllerComponent` 로 — 폰을 쓰는 넷 테스트 게임이 생기면(지금 0). 재생 진입점(`IntentPlayback::start` · `startFromFile`)은 있다.
   의도 기록을 켜고 `.swintent` 를 쓰는 명령줄 · 에디터 단추와 재생 UI · 킬캠 카메라 · 되감기는 아직 없다(호출하는 쪽의 일).
 
-- `D4-14` [기능] **포토 모드의 남은 것**(2026-10-14, `Source/GameFramework/Base/Actor/Camera/PhotoModeCamera` · `CameraDirectorComponent`). Shooter3D 입력 맵(`Resource/game/shooter3d/data/shooter.input.xml`)에
-  `Camera.Pan` 이 없어 포토 모드의 이동 입력이 0 이다 — 맵에 액션을 더하고(오르내림 `Camera.PhotoRise` · 노출 `Camera.PhotoExposure` 는 들어갔다) 다른 게임 맵에도 같은 액션을 단다.
-  Simulate 중 Pause 는 씬 틱이 멈춰 포토 모드가 갱신되지 않는다(게임 카메라가 없는 상황이라 고치지 않았다). 롤이 있던 시점은 둘러보기를 시작하면 롤이 사라진다.
+- `D4-14` [기능] **포토 모드의 남은 것**(2026-10-14, `Source/GameFramework/Base/Actor/Camera/PhotoModeCamera` · `CameraDirectorComponent`).
+  에디터 Simulate 중 Pause 는 씬 틱이 멈춰 포토 모드가 갱신되지 않는다(게임 카메라가 없는 상황이라 고치지 않았다 — 포토 모드 갱신을 씬 틱 밖으로 옮길지는 에디터 쪽 요구가 생기면).
 
 - `D4-15` [기능] **WildWest 승마의 남은 것**(2026-10-16, `Source/Games/WildWest`). 말 모델이 저장소에 없어 말과 기수가 큐브 · 캡슐 자리 표시다 — 네발 말 glTF(걸음새 클립 넷:
   걷기 · 속보 · 구보 · 질주, 안장 소켓)를 `Resource/game/wildwest/models_raw/` 에 들이고 `MountMovementComponent` 의 `_gaitParameter` · 좌석 `_socketName` 을 잇는다(KayKit · Kenney 에 말이 없다).

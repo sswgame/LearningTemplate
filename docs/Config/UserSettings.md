@@ -39,6 +39,7 @@
 | `audio.ambientVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
 | `audio.uiVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
 | `audio.mute` | bool | `false` |  | immediate | `handler:audio.mute` |
+| `controls.pauseMenu` | keyBinding | `` |  | confirm | `input.keyBinding` |
 | `controls.mouseSensitivity` | float | `1` | 0.1 ~ 5 (눈금 0.05) | confirm | `handler:input.mouseSensitivity` |
 | `controls.gamepadSensitivity` | float | `1` | 0.1 ~ 5 (눈금 0.05) | confirm | `handler:input.gamepadSensitivity` |
 | `controls.invertY` | bool | `false` |  | confirm | `handler:input.invertY` |

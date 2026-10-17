@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -277,7 +278,7 @@ namespace sw
         if ( result._bNeedsRestart && pUI != nullptr )
         {
             UINotificationDesc notice{};
-            notice._text            = "Some changes take effect after a restart.";
+            notice._text            = SW_LOCTEXT( "Notification", "RestartRequired", "Some changes take effect after a restart." );
             notice._durationSeconds = 6.0f;
             notice._kind            = UINotificationKind::Warning;
             pUI->getNotifications().post( notice );

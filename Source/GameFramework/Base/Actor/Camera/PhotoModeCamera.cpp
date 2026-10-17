@@ -12,6 +12,7 @@ namespace sw
         , _position{}
         , _yaw{ 0.0f }
         , _pitch{ 0.0f }
+        , _roll{ 0.0f }
         , _fieldOfViewY{ 0.0f }
         , _orthoHeight{ 0.0f }
         , _exposureOffset{ 0.0f }
@@ -27,12 +28,13 @@ namespace sw
         _fieldOfViewY  = from._fieldOfViewY;
         _orthoHeight   = from._orthoHeight;
         _bOrthographic = from._bOrthographic == SW_TRUE;
-        // 앞(+Z)을 돌려 요 · 피치를 구한다 — `CameraDirectorComponent` 가 대상의 보는 쪽을 읽는 규약과 같다.
-        const float3 forward = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, from._rotation );
-        _yaw                 = MathUtil::atan2( forward._x, forward._z );
-        _pitch               = -MathUtil::asin( MathUtil::clamp( forward._y, -1.0f, 1.0f ) );
-        _exposureOffset      = 0.0f;
-        _bActive             = true;
+        // 요 · 피치 · 롤은 `makeFromYawPitchRoll` 의 역(`getEulerAngles`)이다 — 롤도 읽어야 둘러보기를 시작해도 기울기가 남는다.
+        const float3 euler = from._rotation.getEulerAngles();
+        _pitch             = euler._x;
+        _yaw               = euler._y;
+        _roll              = euler._z;
+        _exposureOffset    = 0.0f;
+        _bActive           = true;
     }
 
     void PhotoModeCamera::end()
@@ -60,10 +62,14 @@ namespace sw
             const bool bLooked = input._look._x != 0.0f || input._look._y != 0.0f;
             if ( bLooked )
             {
-                _yaw      = MathUtil::wrapAngle( _yaw + input._look._x * _settings._lookSensitivity );
-                _pitch    = MathUtil::clamp( _pitch + input._look._y * _settings._lookSensitivity, -_settings._pitchLimit, _settings._pitchLimit );
-                _rotation = quaternion::makeFromYawPitchRoll( _yaw, _pitch, 0.0f );
+                _yaw   = MathUtil::wrapAngle( _yaw + input._look._x * _settings._lookSensitivity );
+                _pitch = MathUtil::clamp( _pitch + input._look._y * _settings._lookSensitivity, -_settings._pitchLimit, _settings._pitchLimit );
             }
+            if ( input._roll != 0.0f )
+                _roll = MathUtil::wrapAngle( _roll + input._roll * _settings._rollSpeed * elapsed );
+            // 입력이 없으면 켤 때의 방향을 그대로 둔다(피치 한계 밖이던 시점도 건드리기 전까지는 그대로).
+            if ( bLooked || input._roll != 0.0f )
+                _rotation = quaternion::makeFromYawPitchRoll( _yaw, _pitch, _roll );
             // 수평 이동은 요 기준(앞 +Z, 오른쪽 +X 에서 돈다), 오르내림은 월드 위다.
             const float3  forward  = float3{ MathUtil::sin( _yaw ), 0.0f, MathUtil::cos( _yaw ) };
             const float3  right    = float3{ MathUtil::cos( _yaw ), 0.0f, -MathUtil::sin( _yaw ) };

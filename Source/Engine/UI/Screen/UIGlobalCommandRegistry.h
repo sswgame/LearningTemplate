@@ -35,7 +35,11 @@ namespace sw
 
         /** @brief 명령 @p command 의 처리 함수를 등록합니다. 같은 이름이 있으면 교체합니다. 호출한 쪽이 끝날 때 `unregisterCommand` 로 거둡니다. */
         void registerCommand( const hashed_string& command, const UICommandDelegate& handler );
-        void unregisterCommand( const hashed_string& command );
+        /**
+         * @brief 등록한 처리 함수 @p handler 를 거둡니다. 지금 등록된 함수가 @p handler 가 아니면(다른 쪽이 교체했으면) 그대로 둡니다.
+         * @details 핫 리로드는 새 게임 인스턴스를 먼저 세우고 옛 인스턴스를 내린다 — 이름만으로 거두면 옛 인스턴스가 새 인스턴스의 등록을 지운다.
+         */
+        void unregisterCommand( const hashed_string& command, const UICommandDelegate& handler );
         /** @brief 그 이름의 처리 함수가 있으면 true 입니다(일시정지 메뉴가 버튼을 보일지 정할 때 묻습니다). */
         bool hasCommand( const hashed_string& command ) const;
         /** @brief 처리 함수가 있으면 @p source 를 넘겨 부르고 true 입니다. 없으면 false 입니다. */

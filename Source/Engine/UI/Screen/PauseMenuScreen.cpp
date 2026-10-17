@@ -41,6 +41,17 @@ namespace sw
                 (void)OptionsMenuScreen::open( *pUI ); // 핸들은 쓰지 않는다. 열지 못하면 open 이 오류를 남긴다
             return true;
         }
+        // 세션을 떠나는 명령은 메뉴를 닫고 전역 명령 표에 넘긴다 — 타이틀 씬이나 종료 뒤에 정지 메뉴(와 그 게임 시간 정지)가 남지 않게 한다.
+        for ( const utf8* pSessionCommand : PauseMenuScreenInternal::kArrSessionButton )
+        {
+            if ( command != hashed_string( pSessionCommand ) )
+                continue;
+            UISystem* pUI = getUISystem();
+            if ( pUI == nullptr || pUI->getGlobalCommands().hasCommand( command ) == false )
+                return false; // 처리하는 쪽이 없다 — 화면 디스패치가 경고한다
+            close();
+            return pUI->getGlobalCommands().tryExecute( command, source );
+        }
         return UIScreen::onCommand( command, source );
     }
 

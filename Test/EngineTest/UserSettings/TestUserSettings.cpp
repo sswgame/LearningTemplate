@@ -621,6 +621,51 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingConflictDetectionAndSwap )
 }
 
 /**
+ * @brief [UserSettingsTest] 키 바인딩 설정은 게임 맵에 없는 액션이면 더한 맵(런타임 UI 맵)을 고친다 — 겹침은 그 맵의 레이어로 보고, 맵을 더할 때 확정 값을 넣는다
+ * @details 변이: `findBindingInputMap` 이 게임 맵만 보면(옛 동작 — UI 맵은 설정 대상이 아니었다) UI 키가 바뀌지 않고 겹침도 보지 못해 진다.
+ */
+SW_TEST_CASE( UserSettingsTest, KeyBindingReachesAnAddedInputMap )
+{
+    sw::InputMap gameMap;
+    gameMap.registerLayer( "Gameplay", 0, true, false, false );
+    gameMap.bind( "Jump", sw::Key::Space, sw::ActionTrigger::Pressed, "Gameplay" );
+    sw::InputMap uiMap;
+    uiMap.registerLayer( "UIGlobal", 0, true, false, false );
+    uiMap.bind( "UI.Pause", sw::Key::Escape, sw::ActionTrigger::Pressed, "UIGlobal" );
+    uiMap.bind( "UI.Back", sw::Key::Backspace, sw::ActionTrigger::Pressed, "UIGlobal" );
+
+    sw::UserSettingsManager settings;
+    sw::UserSettingsTargets targets;
+    targets._pInputMap = &gameMap;
+    settings.initialize( targets );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="controls"/>
+        <Setting id="controls.pause" category="controls" type="keyBinding" action="UI.Pause" default=""/></UserSettingsSchema>)",
+                                                    "uimap.settings.xml" ) );
+    settings.reapplyAll(); // UI 맵이 아직 없다 — 건너뛴다
+    settings.addKeyBindingInputMap( uiMap );
+
+    sw::UserSettingBindingConflict conflict;
+    SW_EXPECT_TRUE( settings.findBindingConflict( "controls.pause", "Key.Backspace", conflict ) ); // 같은 UI 레이어의 UI.Back
+    SW_EXPECT_STREQ( "UI.Back", conflict._action.c_str() );
+    SW_EXPECT_FALSE( settings.findBindingConflict( "controls.pause", "Key.Space", conflict ) ); // 게임 맵의 Jump 는 다른 맵이다
+    SW_EXPECT_TRUE( settings.setPendingBinding( "controls.pause", "Key.P", sw::UserSettingBindingPolicy::Reject ) == sw::UserSettingSetResult::Accepted );
+    (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
+    sw::InputSlot slot;
+    SW_ASSERT_TRUE( uiMap.findRebindSlot( "UI.Pause", 0, slot ) );
+    SW_EXPECT_TRUE( slot == sw::InputSlot::fromKey( sw::Key::P ) );
+
+    // 나중에 더한 맵(다시 만든 UI)에도 확정 값이 바로 들어간다.
+    settings.removeKeyBindingInputMap( uiMap );
+    sw::InputMap rebuiltMap;
+    rebuiltMap.registerLayer( "UIGlobal", 0, true, false, false );
+    rebuiltMap.bind( "UI.Pause", sw::Key::Escape, sw::ActionTrigger::Pressed, "UIGlobal" );
+    settings.addKeyBindingInputMap( rebuiltMap );
+    SW_ASSERT_TRUE( rebuiltMap.findRebindSlot( "UI.Pause", 0, slot ) );
+    SW_EXPECT_TRUE( slot == sw::InputSlot::fromKey( sw::Key::P ) );
+    settings.removeKeyBindingInputMap( rebuiltMap );
+}
+
+/**
  * @brief [UserSettingsTest] 입력 슬롯 글 표기는 왕복한다 — 키 · 마우스 · 패드 번호 · 모르는 이름
  */
 SW_TEST_CASE( UserSettingsTest, InputSlotTextRoundTrips )
@@ -738,6 +783,9 @@ SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
         SW_ASSERT_TRUE_MSG( settings.loadSchema( game._pSchema ), game._pSchema );
         sw::InputMap inputMap;
         SW_ASSERT_TRUE_MSG( inputMap.loadFromResource( game._pInputMap ), game._pInputMap );
+        // 엔진 스키마의 키 바인딩(일시정지 메뉴 키 등)은 런타임 UI 맵의 액션이다(`UISystem` 이 키 바인딩 대상으로 더한다).
+        sw::InputMap uiInputMap;
+        SW_ASSERT_TRUE( uiInputMap.loadFromResource( "engine/input/ui.input.xml" ) );
 
         sw::vector<const sw::UserSettingDef*> listSetting;
         settings.collectSettings( "controls", listSetting );
@@ -747,8 +795,9 @@ SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
             if ( pDef->_type != sw::UserSettingType::KeyBinding )
                 continue;
             ++keyBindingCount;
-            sw::InputSlot slot{};
-            SW_EXPECT_TRUE_MSG( inputMap.findRebindSlot( pDef->_action, pDef->_bindIndex, slot ), pDef->_id.c_str() );
+            sw::InputSlot       slot{};
+            const sw::InputMap& targetMap = inputMap.hasAction( pDef->_action ) ? inputMap : uiInputMap;
+            SW_EXPECT_TRUE_MSG( targetMap.findRebindSlot( pDef->_action, pDef->_bindIndex, slot ), pDef->_id.c_str() );
         }
         SW_EXPECT_TRUE_MSG( keyBindingCount > 0, game._pSchema );
     }

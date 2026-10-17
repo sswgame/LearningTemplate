@@ -70,7 +70,7 @@ namespace sw
                     outReply = "photo mode: already on";
                     return true;
                 }
-                outReply = pDirector->enterPhotoMode() ? "photo mode: on (game paused)" : "photo mode: the camera director has no pose yet";
+                outReply = pDirector->enterPhotoMode() ? "photo mode: on (game paused)" : "photo mode: not entered - no pose yet or the photo mode input map did not load (see the log)";
                 return true;
             }
 

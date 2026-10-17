@@ -52,7 +52,8 @@ namespace sw
         uint32 computeStyleStates() const override;
 
     protected:
-        const UIBrush& getBackgroundBrush() const override;
+        /** @brief 꺼짐 > 누름 > 호버 > 기본 순으로 상태 브러시를 고릅니다. */
+        const UIBrush& selectBackgroundBrush( uint32 styleStates ) const override;
         /** @brief 클릭됐을 때 부릅니다. 기본 구현은 알림을 부르고, 체크 상자는 값을 뒤집은 뒤 부릅니다. */
         virtual void handleClick();
 

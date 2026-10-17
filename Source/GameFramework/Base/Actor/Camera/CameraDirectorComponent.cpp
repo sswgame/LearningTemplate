@@ -5,6 +5,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -42,6 +43,27 @@ namespace sw
             static constexpr float32 kOverrideNearPlane = 0.1f;
             /** @brief 땅 고르기 광선의 길이를 먼 면의 몇 배까지 볼지입니다. 직교 시점은 카메라가 땅에서 멀리 떨어져 있어 먼 면보다 길게 본다. */
             static constexpr float32 kGroundRayFarPlaneScale = 3.0f;
+            /** @brief 포토 모드 입력 맵(`engine/input/photomode.input.xml`)의 액션 이름입니다. 맵 파일과 이 표가 계약이다. */
+            static constexpr const utf8* kPhotoMoveAction     = "Photo.Move";
+            static constexpr const utf8* kPhotoRiseAction     = "Photo.Rise";
+            static constexpr const utf8* kPhotoLookAction     = "Photo.Look";
+            static constexpr const utf8* kPhotoRollAction     = "Photo.Roll";
+            static constexpr const utf8* kPhotoZoomAction     = "Photo.Zoom";
+            static constexpr const utf8* kPhotoExposureAction = "Photo.Exposure";
+
+            /** @brief 맵에 포토 모드 액션이 모두 있으면 true 입니다. 없으면 빠진 이름마다 오류를 남긴다(맵에 없는 액션 질의는 로그 없이 0 이다). */
+            [[nodiscard]] static bool hasPhotoActions( const InputMap& inputMap, string_view mapPath )
+            {
+                bool bComplete = true;
+                for ( const utf8* pAction : { kPhotoMoveAction, kPhotoRiseAction, kPhotoLookAction, kPhotoRollAction, kPhotoZoomAction, kPhotoExposureAction } )
+                {
+                    if ( inputMap.getActionHandle( hashed_string( pAction ) ).isValid() )
+                        continue;
+                    SW_LOG_ERROR( "Photo mode input map '%#' has no action '%#'", mapPath, pAction );
+                    bComplete = false;
+                }
+                return bComplete;
+            }
 
             /** @brief 오브젝트의 월드 자리와 보는 쪽(요 · 피치)입니다. 씬 컴포넌트가 없으면 false 입니다. */
             [[nodiscard]] static bool readFacing( const GameObject& object, float3& outPosition, float32& outYaw, float32& outPitch )
@@ -76,8 +98,6 @@ namespace sw
         , _lookAction{ "Camera.Look" }
         , _lookHoldAction{ "Camera.LookHold" }
         , _zoomAction{ "Camera.Zoom" }
-        , _photoRiseAction{ "Camera.PhotoRise" }
-        , _photoExposureAction{ "Camera.PhotoExposure" }
         , _photoMoveSpeed{ PhotoModeSettings{}._moveSpeed }
         , _photoLookSensitivity{ PhotoModeSettings{}._lookSensitivity }
         , _photoZoomStep{ PhotoModeSettings{}._zoomStep }
@@ -91,6 +111,7 @@ namespace sw
         , _presetBeforeOverride{}
         , _bViewOverride{ false }
         , _photoMode{}
+        , _photoInputMap{}
         , _bPhotoModeCut{ false }
         , _catalog{}
         , _director{}
@@ -101,6 +122,8 @@ namespace sw
     {
         setCanEverTick( true );
     }
+
+    CameraDirectorComponent::~CameraDirectorComponent() = default;
 
     void CameraDirectorComponent::onRegister( GameObjectManager& manager )
     {
@@ -114,6 +137,7 @@ namespace sw
         if ( _photoMode.isActive() )
         {
             _photoMode.end();
+            _photoInputMap.reset();
             GameTimeScale::removePauseRequest();
         }
         manager.getComponentRegistry().remove<CameraDirectorComponent>( this );
@@ -179,6 +203,22 @@ namespace sw
     {
         if ( _photoMode.isActive() || _director.hasPose() == false )
             return false;
+        // 조작 맵은 엔진 데이터다. 읽지 못하면 움직이지 못하는 포토 모드를 켜지 않는다.
+        const EngineDefaultAssets* pDefaultAssets = game::findSubsystem<EngineDefaultAssets>();
+        if ( pDefaultAssets == nullptr )
+        {
+            SW_LOG_ERROR( "Photo mode needs the engine default assets for its input map - not entered" );
+            return false;
+        }
+        const string_view    mapPath       = pDefaultAssets->_photoModeInputMap.get();
+        unique_ptr<InputMap> photoInputMap = make_unique<InputMap>();
+        if ( photoInputMap->loadFromResource( mapPath ) == false || CameraDirectorComponentInternal::hasPhotoActions( *photoInputMap, mapPath ) == false )
+        {
+            SW_LOG_ERROR( "Photo mode input map '%#' did not load - not entered", mapPath );
+            return false;
+        }
+        photoInputMap->setInputManager( game::findSubsystem<InputManager>() );
+        _photoInputMap = std::move( photoInputMap );
         _photoMode.begin( _director.getPose() );
         GameTimeScale::addPauseRequest();
         _bPhotoModeCut = true;
@@ -191,6 +231,7 @@ namespace sw
         if ( _photoMode.isActive() == false )
             return;
         _photoMode.end();
+        _photoInputMap.reset();
         GameTimeScale::removePauseRequest();
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
@@ -365,19 +406,24 @@ namespace sw
 
     void CameraDirectorComponent::gatherPhotoModeInput( float32 unscaledDeltaTime )
     {
-        const InputManager* pInput = _bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput == nullptr )
+        using Internal      = CameraDirectorComponentInternal;
+        const bool bNoInput = _bReadInput == false || _photoInputMap == nullptr;
+        if ( bNoInput || game::findSubsystem<InputManager>() == nullptr )
             return;
-        const UIInputMapView inputMap( pInput->getInputMap(), game::findSubsystem<UISystem>() );
+        _photoInputMap->update( unscaledDeltaTime );
+        const UIInputMapView inputMap( *_photoInputMap, game::findSubsystem<UISystem>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 보지 않는다
+        const hashed_string  zoomAction( Internal::kPhotoZoomAction );
+        const hashed_string  exposureAction( Internal::kPhotoExposureAction );
         PhotoModeInput       input;
-        input._move = inputMap.getVector2D( _panAction );
-        input._rise = inputMap.getAxis1D( _photoRiseAction );
-        input._look = inputMap.getVector2D( _lookAction );
-        if ( inputMap.wasActionTriggered( _zoomAction ) )
-            input._zoomNotches = inputMap.getAxis1D( _zoomAction );
-        if ( inputMap.wasActionTriggered( _photoExposureAction ) )
+        input._move = inputMap.getVector2D( hashed_string( Internal::kPhotoMoveAction ) );
+        input._rise = inputMap.getAxis1D( hashed_string( Internal::kPhotoRiseAction ) );
+        input._look = inputMap.getVector2D( hashed_string( Internal::kPhotoLookAction ) );
+        input._roll = inputMap.getAxis1D( hashed_string( Internal::kPhotoRollAction ) );
+        if ( inputMap.wasActionTriggered( zoomAction ) ) // 휠은 굴린 프레임, 패드 버튼 축은 누름 · 반복마다 한 칸
+            input._zoomNotches = inputMap.getAxis1D( zoomAction );
+        if ( inputMap.wasActionTriggered( exposureAction ) )
         {
-            const float32 exposureInput = inputMap.getAxis1D( _photoExposureAction );
+            const float32 exposureInput = inputMap.getAxis1D( exposureAction );
             input._exposureSteps        = exposureInput > 0.0f ? 1.0f : ( exposureInput < 0.0f ? -1.0f : 0.0f );
         }
         // 조절 값은 PROPERTY 가 정본이다 — 에디터에서 바꾼 값이 다음 프레임부터 바로 듣도록 매 프레임 옮긴다.

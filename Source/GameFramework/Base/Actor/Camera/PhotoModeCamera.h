@@ -19,6 +19,7 @@ namespace sw
         float2  _move{};                ///< (x 오른쪽, y 앞) — 화면 기준 수평 이동
         float32 _rise{ 0.0f };          ///< 위(+) · 아래(−) 이동. 직교 시점은 무시한다
         float2  _look{};                ///< 둘러보기 이동량(마우스 델타). 직교 시점은 무시한다
+        float32 _roll{ 0.0f };          ///< 기울이기(+ 시계 반대 방향, 누른 동안). 직교 시점은 무시한다
         float32 _zoomNotches{ 0.0f };   ///< 휠 칸(위로 굴리면 +, 가까이)
         float32 _exposureSteps{ 0.0f }; ///< 노출 보정 칸(+ 밝게)
     };
@@ -32,6 +33,7 @@ namespace sw
         float32 _moveSpeed{ 5.0f };                ///< 원근 시점의 이동 속도(m/s)
         float32 _orthoPanScreensPerSecond{ 0.5f }; ///< 직교 시점의 이동 속도(초당 화면 높이의 몇 배)
         float32 _lookSensitivity{ 0.0025f };       ///< 둘러보기 감도(rad / 입력 단위)
+        float32 _rollSpeed{ 1.0f };                ///< 기울이기 속도(rad/s)
         float32 _zoomStep{ 0.9f };                 ///< 휠 한 칸의 배율(시야각 · 화면 높이에 곱한다, 1 보다 작으면 확대)
         float32 _minFieldOfViewY{ 0.17f };         ///< 최소 수직 시야각(rad, 약 10°)
         float32 _maxFieldOfViewY{ 1.75f };         ///< 최대 수직 시야각(rad, 약 100°)
@@ -50,7 +52,8 @@ namespace sw
      * @brief 켤 때의 포즈에서 시작해 입력으로 자리, 방향, 시야각(직교면 화면 높이), 노출 보정을 바꾸고, 바탕 포즈 위에 덮은 포즈를 냅니다.
      * @details 언리얼 포토 모드 플러그인 · 유니티 Cinemachine FreeLook 디버그 카메라와 같은 자유 시점이다.
      *          상태는 켬/끔 하나뿐이다. 끄면 값은 버리고, 바탕 포즈(디렉터가 낸 원래 포즈)는 건드리지 않았으므로 되돌릴 것이 없다.
-     *          방향은 요 · 피치(롤 없음)이며, 앞은 요 0 · 피치 0 에서 +Z 다(`CameraMode` 의 `makeFromYawPitchRoll` 과 같은 규약).
+     *          방향은 요 · 피치 · 롤이며, 앞은 요 0 · 피치 0 에서 +Z 다(`CameraMode` 의 `makeFromYawPitchRoll` 과 같은 규약). 켤 때의 롤은 이어받아
+     *          둘러보기가 지우지 않고, 기울이기 입력이 바꾼다(포토 모드의 더치 앵글).
      */
     class SW_GF_API PhotoModeCamera
     {
@@ -73,16 +76,19 @@ namespace sw
         const float3&            getPosition() const { return _position; }
         float32                  getYaw() const { return _yaw; }
         float32                  getPitch() const { return _pitch; }
+        float32                  getRoll() const { return _roll; }
+        const quaternion&        getRotation() const { return _rotation; }
         float32                  getFieldOfViewY() const { return _fieldOfViewY; }
         float32                  getOrthoHeight() const { return _orthoHeight; }
         float32                  getExposureOffset() const { return _exposureOffset; }
 
     private:
         PhotoModeSettings _settings;
-        quaternion        _rotation; ///< 켤 때의 방향 — 직교 시점은 그대로 쓰고, 원근 시점은 둘러보면 요 · 피치로 다시 만든다(롤이 있던 시점도 돌리기 전까지는 그대로)
+        quaternion        _rotation; ///< 지금 방향 — 직교 시점은 켤 때 그대로 쓰고, 원근 시점은 둘러보거나 기울이면 요 · 피치 · 롤로 다시 만든다
         float3            _position;
         float32           _yaw;
         float32           _pitch;
+        float32           _roll;
         float32           _fieldOfViewY;
         float32           _orthoHeight;
         float32           _exposureOffset;
