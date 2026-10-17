@@ -568,7 +568,12 @@ namespace sw
                     }
                     ObjectSaveOptions options{};
                     options._bOmitExternalParent = true; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
-                    if ( PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML ) == false )
+                    // 부품 아래 부품(원본이 스폰하는 것)을 고친 것은 노드의 `<Part>` 로 싣는다 — 노드로 담지 않으므로 싣지 않으면 Apply 가 버린다.
+                    vector<PrefabPartOverride> listDeepPart;
+                    const bool                 bOverridesMade =
+                        PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML ) &&
+                        pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
+                    if ( bOverridesMade == false )
                     {
                         SW_LOG_WARNING( "Overrides of nested prefab instance '%#' could not be computed - it is not written to the prefab", node._name );
                         continue;

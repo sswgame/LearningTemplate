@@ -147,14 +147,48 @@ namespace sw::editor
             return;
 
         EditorWorkspace& workspace = pContext->getSubsystem<EditorWorkspace>();
-        if ( workspace.isNestedPrefabPart( pObj ) )
+        // 부품은 바깥 프리팹 인스턴스가 다시 스폰한다 — 부품만 끊으면 다음 로드에 같은 부품이 하나 더 생긴다(유니티도 중첩 자식만 따로 풀지 못한다).
+        // 그래서 맨 바깥에 놓인 인스턴스를 한 겹 푼다(유니티 Unpack Prefab). 그 바로 아래 부품은 씬이 자기 프리팹의 인스턴스로 적는다.
+        GameObject* pTarget = pObj;
+        while ( workspace.isNestedPrefabPart( pTarget ) )
         {
-            // 부품은 바깥 프리팹 인스턴스가 다시 스폰한다 — 끊으면 다음 로드에 같은 부품이 하나 더 생긴다(유니티도 중첩 자식만 따로 풀지 못한다).
-            SW_LOG_WARNING( "'%#' is a nested prefab part - unlink its outer prefab instance instead", pObj->getName().c_str() );
+            pTarget = findOuterInstance( pTarget );
+        }
+        if ( pTarget == nullptr || workspace.getPlacedPrefabPath( pTarget->getObjectID() ).empty() )
+        {
+            SW_LOG_WARNING( "'%#' has no placed prefab instance to unlink", pObj->getName().c_str() );
             return;
         }
-        workspace.setPlacedPrefabPath( pObj->getObjectID(), "" );
+        if ( pTarget != pObj )
+            SW_LOG_INFO( "'%#' is a nested prefab part - its outermost instance '%#' is unpacked one level", pObj->getName().c_str(), pTarget->getName().c_str() );
+        workspace.setPlacedPrefabPath( pTarget->getObjectID(), "" );
         workspace.markSceneDirty();
+    }
+
+    GameObject* EditorInspectorCommands::findOuterInstance( const GameObject* pPart )
+    {
+        GameObjectManager* pManager = pPart != nullptr ? pPart->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return nullptr;
+        const PrefabInstanceRegistry& registry = pManager->getSubsystem<PrefabInstanceRegistry>();
+        if ( registry.isAttachedNestedPart( pPart ) == false )
+            return nullptr;
+        return pManager->findGameObjectByID( registry.findNestedPart( pPart->getObjectID() )->_ownerObjectID ); // 붙은 부품이면 기록이 있다
+    }
+
+    bool EditorInspectorCommands::applyToOuterPrefab( GameObject* pPart )
+    {
+        EditorContext* pContext = EditorContext::get();
+        GameObject*    pOuter   = findOuterInstance( pPart );
+        if ( pContext == nullptr || pOuter == nullptr )
+            return false;
+        const string outerPath{ pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pOuter ) };
+        if ( outerPath.empty() )
+        {
+            SW_LOG_WARNING( "The outer instance '%#' of '%#' has no prefab - nothing to apply to", pOuter->getName().c_str(), pPart->getName().c_str() );
+            return false;
+        }
+        return applyToPrefab( pOuter, outerPath );
     }
 
     uint32 EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )

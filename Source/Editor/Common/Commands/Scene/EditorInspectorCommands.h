@@ -24,7 +24,22 @@ namespace sw::editor
         [[nodiscard]] static bool applyToPrefab( GameObject* pObj, string_view prefabPath );
         /** @brief 프리팹 상태로 되돌리고 Undo에 기록합니다. */
         [[nodiscard]] static bool revertToPrefab( GameObject* pObj, string_view prefabPath );
-        /** @brief 오브젝트와 프리팹 연결을 끊습니다. */
+        /**
+         * @brief 중첩 부품 @p pPart 를 스폰한 바깥 인스턴스를 그 프리팹에 적용합니다(유니티 "Apply as Override in Prefab '바깥'").
+         * @details 부품의 수정은 바깥 프리팹의 노드 오버라이드가 되고, 부품 아래 부품의 수정은 노드의 `<Part>` 가 된다(`PrefabAsset::setFromGameObject`).
+         *          @p pPart 가 붙은 부품이 아니면 false 입니다.
+         */
+        [[nodiscard]] static bool applyToOuterPrefab( GameObject* pPart );
+        /**
+         * @brief 중첩 부품 @p pPart 를 스폰한 바깥 인스턴스입니다. 붙은 부품이 아니거나 바깥 인스턴스가 없으면 nullptr 입니다.
+         * @details 인스펙터가 "바깥 프리팹" 줄과 Apply 대상을 고를 때 쓴다.
+         */
+        static GameObject* findOuterInstance( const GameObject* pPart );
+        /**
+         * @brief 오브젝트와 프리팹 연결을 끊습니다.
+         * @details 중첩 부품이면 그 부품만 끊을 수 없다(바깥 인스턴스가 다시 스폰해 두 벌이 된다). 대신 맨 바깥에 놓인 인스턴스를 한 겹 푼다 —
+         *          그 바로 아래 부품은 저마다 자기 프리팹의 인스턴스로 씬에 남는다(유니티 Unpack Prefab). 어느 인스턴스를 풀었는지 로그로 알린다.
+         */
         static void unlinkPrefab( GameObject* pObj );
         /**
          * @brief @p pRoot 아래의 프리팹 인스턴스 자식을 @p pRoot 의 중첩 프리팹 부품(`PrefabInstanceRegistry`)으로 옮기고 옮긴 수를 반환합니다.

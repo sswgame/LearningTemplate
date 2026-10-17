@@ -986,6 +986,63 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAnInstanceKeepsItsNestedPartsAsOverrides
 }
 
 /**
+ * @brief [PrefabTest] 바깥 프리팹에 적용하면 부품 아래 부품의 수정이 그 노드의 `<Part>` 로 실리고, 스폰과 쿠킹 펼치기가 같은 자리에 얹는다
+ * @details 기차 → 수레(노드) → 바퀴(수레의 원본이 스폰하는 부품). 바퀴는 기차 프리팹의 노드가 아니므로 `<Part>` 가 없으면 기차에 적용할 때 바퀴를 옮긴 것이 사라진다.
+ */
+SW_TEST_CASE( PrefabTest, ApplyToOuterPrefabKeepsEditsOfPartsInsideParts )
+{
+    const sw::string wheelPath = test::makeTempPath( "nest_deep_wheel.prefab.xml" );
+    const sw::string cartPath  = test::makeTempPath( "nest_deep_cart.prefab.xml" );
+    const sw::string trainPath = test::makeTempPath( "nest_deep_train.prefab.xml" );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPath ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPath ), cartPath ) );
+    sw::PrefabAsset                    train = sw::makeWheelPrefab( 1.0f );
+    sw::vector<sw::PrefabInstanceNode> listCar( 1 );
+    listCar[0]._name       = "Car";
+    listCar[0]._prefabPath = cartPath;
+    SW_ASSERT_TRUE( train.setNestedInstances( listCar ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( train, trainPath ) );
+
+    sw::GameObjectManager objects;
+    sw::PrefabCache       prefabs;
+    sw::GameObject*       pTrain = prefabs.spawn( &objects, trainPath, "Train" );
+    SW_ASSERT_NOT_NULL( pTrain );
+    sw::GameObject* pCar = sw::findChildByNamePrefix( pTrain, "Car" );
+    SW_ASSERT_NOT_NULL( pCar );
+    sw::GameObject* pRight = sw::findChildByNamePrefix( pCar, "WheelR" );
+    SW_ASSERT_TRUE( pRight != nullptr && pRight->getPrimarySceneComponent() != nullptr );
+    pRight->getPrimarySceneComponent()->setLocalPosition( sw::float3( 0.0f, 0.0f, 5.0f ) );
+    objects.flushSceneTransforms();
+
+    sw::PrefabAsset applied;
+    applied.setFromGameObject( pTrain, &prefabs );
+    const sw::vector<sw::PrefabInstanceNode>& listNode = applied.getNestedInstances();
+    SW_ASSERT_EQUAL( size_t( 1 ), listNode.size() ); // 수레만 노드다 — 바퀴는 수레의 원본이 스폰한다
+    SW_EXPECT_TRUE_MSG( listNode[0]._overrideXML.find( "<Part path=\"1\">" ) != sw::string::npos, listNode[0]._overrideXML.c_str() );
+    SW_EXPECT_TRUE_MSG( listNode[0]._overrideXML.find( "<Part path=\"0\">" ) == sw::string::npos, listNode[0]._overrideXML.c_str() ); // 고치지 않은 왼쪽 바퀴
+
+    // 다시 쓴 프리팹을 스폰하면 오른쪽 바퀴가 옮긴 자리다.
+    const sw::string appliedPath = test::makeTempPath( "nest_deep_train_applied.prefab.xml" );
+    SW_ASSERT_TRUE( sw::writeWithCooked( applied, appliedPath ) );
+    sw::GameObjectManager check;
+    sw::GameObject*       pCheck = prefabs.spawn( &check, appliedPath, "Check" );
+    SW_ASSERT_NOT_NULL( pCheck );
+    sw::GameObject* pCheckCar = sw::findChildByNamePrefix( pCheck, "Car" );
+    SW_ASSERT_NOT_NULL( pCheckCar );
+    sw::GameObject* pCheckRight = sw::findChildByNamePrefix( pCheckCar, "WheelR" );
+    SW_ASSERT_TRUE( pCheckRight != nullptr && pCheckRight->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_TRUE( pCheckRight->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 0.0f, 0.0f, 5.0f ) );
+
+    // 쿠킹 펼치기도 같은 자리에 굽는다(바퀴 노드의 펼친 상태).
+    sw::PrefabAsset flattened = applied;
+    SW_ASSERT_TRUE( prefabs.flattenNestedInstances( flattened ) );
+    SW_ASSERT_EQUAL( size_t( 3 ), flattened.getNestedInstances().size() );
+    const sw::PrefabInstanceNode& flatRight = flattened.getNestedInstances()[2];
+    SW_EXPECT_STREQ( "0/1", flatRight._partPath.c_str() );
+    SW_EXPECT_TRUE_MSG( flatRight._resolvedStateXML.find( "_localPosition=\"0,0,5\"" ) != sw::string::npos, flatRight._resolvedStateXML.c_str() );
+}
+
+/**
  * @brief [PrefabTest] 프리로드할 프리팹 목록은 중첩 인스턴스의 원본을 한 번씩 담는다
  * @details 같은 바퀴를 두 번 놓은 수레의 목록에는 바퀴가 한 번 나온다. 프리로드 수집은 이 목록을 그대로 쓰고 목록의 프리팹마다 다시 부른다.
  */

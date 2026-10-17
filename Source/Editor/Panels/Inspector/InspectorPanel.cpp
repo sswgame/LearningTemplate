@@ -349,8 +349,21 @@ namespace sw::editor
 
         ImGui::SameLine();
         if ( ImGui::Button( "Unlink" ) )
-            EditorInspectorCommands::unlinkPrefab( pObj );
+            EditorInspectorCommands::unlinkPrefab( pObj ); // 부품이면 맨 바깥 인스턴스를 한 겹 푼다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "UnlinkPrefab" ) );
+
+        // 중첩 부품이면 바깥 인스턴스의 프리팹에도 적용할 수 있다 — 부품의 수정이 바깥 프리팹의 노드 오버라이드(`<Part>` 포함)가 된다.
+        const GameObject* pOuter = EditorInspectorCommands::findOuterInstance( pObj );
+        EditorContext*    pCtx   = EditorContext::get();
+        if ( pOuter != nullptr && pCtx != nullptr )
+        {
+            const string_view outerPath = pCtx->getSubsystem<EditorWorkspace>().findPrefabPath( pOuter );
+            if ( ImGui::Button( "Apply to Outer Prefab" ) )
+                (void)EditorInspectorCommands::applyToOuterPrefab( pObj ); // 실패는 프리팹 저장이 알린다
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ApplyToPrefab" ) );
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%s: %.*s", pOuter->getName().c_str(), static_cast<int32>( outerPath.size() ), outerPath.data() );
+        }
 
         ImGui::Separator();
     }
