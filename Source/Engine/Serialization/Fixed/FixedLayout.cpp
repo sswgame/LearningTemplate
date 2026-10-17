@@ -19,8 +19,6 @@ namespace sw
         {
             /** @brief 의존 확인이 따라 내려가는 깊이 상한입니다. 서로를 담는 타입이 끝없이 돌지 않게 합니다. */
             static constexpr int32 kMaxDependencyDepth = 32;
-            /** @brief `BitWriter::writeBits` · `BitReader::readBits` 한 번이 다루는 최대 비트 수입니다. */
-            static constexpr int32 kMaxBitsPerCall = 32;
 
             static uint64 appendHashBytes( uint64 hash, const void* pData, const size_t byteCount ) noexcept
             {
@@ -323,18 +321,18 @@ namespace sw
 
     void FixedCodecUtil::writeRawBits( BitWriter& writer, const uint64 value, const int32 bitCount )
     {
-        const int32 lowBits = MathUtil::min( bitCount, FixedLayoutInternal::kMaxBitsPerCall );
+        const int32 lowBits = MathUtil::min( bitCount, BitMath::kMaxBitsPerCall );
         writer.writeBits( static_cast<uint32>( value ), lowBits );
         if ( bitCount > lowBits )
-            writer.writeBits( static_cast<uint32>( value >> FixedLayoutInternal::kMaxBitsPerCall ), bitCount - lowBits );
+            writer.writeBits( static_cast<uint32>( value >> BitMath::kMaxBitsPerCall ), bitCount - lowBits );
     }
 
     uint64 FixedCodecUtil::readRawBits( BitReader& reader, const int32 bitCount )
     {
-        const int32 lowBits = MathUtil::min( bitCount, FixedLayoutInternal::kMaxBitsPerCall );
+        const int32 lowBits = MathUtil::min( bitCount, BitMath::kMaxBitsPerCall );
         uint64      value   = reader.readBits( lowBits );
         if ( bitCount > lowBits )
-            value |= static_cast<uint64>( reader.readBits( bitCount - lowBits ) ) << FixedLayoutInternal::kMaxBitsPerCall;
+            value |= static_cast<uint64>( reader.readBits( bitCount - lowBits ) ) << BitMath::kMaxBitsPerCall;
         return value;
     }
 } // namespace sw

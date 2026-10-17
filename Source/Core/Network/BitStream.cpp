@@ -51,12 +51,14 @@ namespace sw
     BitWriter::BitWriter()
         : _buffer{}
         , _bitCount{ 0 }
+        , _bFailed{ SW_FALSE }
     {
     }
 
     BitWriter::BitWriter( vector<uint8>&& reuseBuffer )
         : _buffer{ std::move( reuseBuffer ) }
         , _bitCount{ 0 }
+        , _bFailed{ SW_FALSE }
     {
         _buffer.clear();
     }
@@ -66,15 +68,22 @@ namespace sw
         vector<uint8> bytes = std::move( _buffer );
         _buffer.clear();
         _bitCount = 0;
+        _bFailed  = SW_FALSE;
         return bytes;
     }
 
     void BitWriter::writeBits( uint32 value, int32 bitCount )
     {
-        if ( bitCount <= 0 )
+        const bool bValidBitCount = 0 <= bitCount && bitCount <= BitMath::kMaxBitsPerCall;
+        SW_ASSERT( bValidBitCount );
+        if ( bValidBitCount == false )
+        {
+            _bFailed = SW_TRUE;
             return;
-        bitCount = MathUtil::min( bitCount, 32 );
-        if ( bitCount < 32 )
+        }
+        if ( bitCount == 0 )
+            return;
+        if ( bitCount < BitMath::kMaxBitsPerCall )
             value &= ( 1u << bitCount ) - 1u;
         // 낮은 비트부터 — 바이트 안에서도 낮은 비트부터 채운다. 한 번에 바이트의 남은 칸만큼씩(32 비트도 5 번 안).
         const int32 newBitCount = _bitCount + bitCount;
@@ -194,6 +203,7 @@ namespace sw
     {
         _buffer.clear();
         _bitCount = 0;
+        _bFailed  = SW_FALSE;
     }
 
     // ------------------------------------------------------------------------------
@@ -209,9 +219,15 @@ namespace sw
 
     uint32 BitReader::readBits( int32 bitCount )
     {
-        if ( bitCount <= 0 )
+        const bool bValidBitCount = 0 <= bitCount && bitCount <= BitMath::kMaxBitsPerCall;
+        SW_ASSERT( bValidBitCount );
+        if ( bValidBitCount == false )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽과 다른 비트 수를 읽으면 그 뒤가 모두 어긋난다 — 깨진 읽기로 멈춘다
             return 0;
-        bitCount = MathUtil::min( bitCount, 32 );
+        }
+        if ( bitCount == 0 )
+            return 0;
         if ( _bitPosition + bitCount > _bitCapacity )
         {
             _bOverflow   = SW_TRUE;

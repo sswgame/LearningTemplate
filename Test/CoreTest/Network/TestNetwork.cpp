@@ -202,6 +202,34 @@ SW_TEST_CASE( NetworkTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow )
 }
 
 /**
+ * @brief [NetworkTest] 한 번에 32 비트를 넘는 비트 수는 32 로 잘라 쓰거나 읽지 않고 실패로 남는다
+ * @details 예전에는 `writeBits( value, 40 )` 이 32 비트를 쓰고 조용히 넘어갔다. 쓰는 쪽이 센 비트 수와 스트림이 어긋나 뒤의 모든 필드가 밀린다.
+ */
+SW_TEST_CASE( NetworkTest, BitStreamRejectsBitCountsAboveOneCall )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "writeBits and readBits reject a bit count above BitMath::kMaxBitsPerCall" );
+    test::ScopedAssertCapture assertCapture;
+
+    BitWriter writer;
+    writer.writeBits( 0xFFu, BitMath::kMaxBitsPerCall + 8 );
+    SW_EXPECT_TRUE( writer.hasFailed() );
+    SW_EXPECT_EQUAL( 0, writer.getBitCount() ); // 아무 비트도 쓰지 않았다
+    writer.writeBits( 0xFFu, -1 );
+    SW_EXPECT_TRUE( writer.hasFailed() );
+    writer.clear();
+    SW_EXPECT_FALSE( writer.hasFailed() );
+    writer.writeBits( 0xFFFFFFFFu, BitMath::kMaxBitsPerCall ); // 상한은 받는다
+    SW_EXPECT_FALSE( writer.hasFailed() );
+    SW_EXPECT_EQUAL( BitMath::kMaxBitsPerCall, writer.getBitCount() );
+
+    BitReader reader( writer.getBytes().data(), writer.getByteCount() );
+    SW_EXPECT_EQUAL( 0u, reader.readBits( BitMath::kMaxBitsPerCall + 1 ) );
+    SW_EXPECT_TRUE( reader.hasOverflowed() );
+    if ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 3u, assertCapture.getCount() );
+}
+
+/**
  * @brief [NetworkTest] 범위가 있는 값은 범위 밖을 잘라 쓰거나 잘라 읽지 않고 실패를 돌려준다
  * @details 예전에는 `writeInt( 500, 0, 100 )` 이 100 을 쓰고, 범위 비트로 읽은 칸이 범위를 넘으면 최댓값으로 잘라 읽었다. 깨진 패킷이나 잘못 정한 범위가
  *          경고 없이 다른 값이 된다. 실패한 쓰기는 아무 비트도 쓰지 않는다.

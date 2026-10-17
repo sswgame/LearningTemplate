@@ -22,6 +22,9 @@ namespace sw
      */
     struct BitMath
     {
+        /** @brief `writeBits` · `readBits` 한 번에 다루는 비트 수의 상한입니다. 더 긴 값은 부르는 쪽이 나눠 씁니다(`FixedCodecUtil::writeRawBits`). */
+        static constexpr int32 kMaxBitsPerCall = 32;
+
         /** @brief [@p minValue, @p maxValue] 를 담는 데 드는 비트 수입니다. */
         static constexpr int32 computeBitsRequired( int64 minValue, int64 maxValue )
         {
@@ -68,6 +71,11 @@ namespace sw
          */
         explicit BitWriter( vector<uint8>&& reuseBuffer );
 
+        /**
+         * @brief @p value 의 낮은 @p bitCount 비트를 씁니다. @p bitCount 는 0 ~ `BitMath::kMaxBitsPerCall` 입니다.
+         * @details 범위 밖이면 32 로 잘라 쓰지 않습니다 — 잘라 쓰면 쓰는 쪽이 센 비트 수(예산 · 받는 쪽의 읽기)와 스트림이 조용히 어긋납니다.
+         *          단언으로 멈추고, 단언이 없는 구성에서는 아무것도 쓰지 않고 `hasFailed` 를 세웁니다.
+         */
         void writeBits( uint32 value, int32 bitCount );
         void writeBool( bool bValue ) { writeBits( bValue ? 1u : 0u, 1 ); }
         /**
@@ -101,6 +109,8 @@ namespace sw
 
         int32 getBitCount() const { return _bitCount; }
         int32 getByteCount() const { return ( _bitCount + 7 ) / 8; }
+        /** @brief 쓸 수 없는 비트 수를 받은 적이 있으면 true 입니다(`writeBits`). `clear` · `releaseBytes` 가 지웁니다. */
+        bool hasFailed() const { return _bFailed != SW_FALSE; }
         /** @brief 마지막 바이트의 남은 비트는 0 입니다. */
         const vector<uint8>& getBytes() const { return _buffer; }
         /** @brief 쓴 바이트를 복사 없이 넘겨주고 비웁니다(버퍼째 옮긴다). */
@@ -109,6 +119,7 @@ namespace sw
     private:
         vector<uint8> _buffer;
         int32         _bitCount;
+        uint8         _bFailed;
     };
 } // namespace sw
 
@@ -120,6 +131,10 @@ namespace sw
     public:
         BitReader( const uint8* pData, int32 byteCount );
 
+        /**
+         * @brief @p bitCount 비트를 읽습니다. @p bitCount 는 0 ~ `BitMath::kMaxBitsPerCall` 입니다.
+         * @details 범위 밖이면 32 로 잘라 읽지 않습니다 — 단언으로 멈추고, 단언이 없는 구성에서는 0 을 돌려주고 `hasOverflowed` 를 세웁니다.
+         */
         uint32             readBits( int32 bitCount );
         [[nodiscard]] bool readBool() { return readBits( 1 ) != 0; }
         /**
