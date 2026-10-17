@@ -2349,6 +2349,9 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
  */
 SW_TEST_CASE( ReflectionSerializationTest, SchemaMigrationIsFoundByTypeAndWrittenVersion )
 {
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "unregisterTypesByModule is not compiled into Shipping" );
+#else
     SW_TEST_DEFENSIVE_SCOPE( "Testing versioned reads that must stop without a registered migration" );
     static constexpr const utf8* kModuleName = "SchemaMigrationRegistryTest";
     struct ChildActor
@@ -2458,6 +2461,7 @@ SW_TEST_CASE( ReflectionSerializationTest, SchemaMigrationIsFoundByTypeAndWritte
     SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &narrowed, *pParent, bin.data(), bin.size(), 1u, nullptr, lenient ) );
     SW_EXPECT_EQUAL( 5, narrowed._base );
     SW_EXPECT_EQUAL( 0, narrowed._own );
+#endif
 }
 
 /**
