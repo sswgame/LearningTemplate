@@ -7,7 +7,7 @@
   지금은 `FightingMatch::readState` 만 `IncludeSequenceElements` 로 직접 부른다(2026-10-17). 뿌리는 범위 계약을 읽기 경로마다 따로 지킨다는 것이다.
   자기 기술형 읽기 공통 경로에서 원소까지 보게 하려면, 먼저 지금 에셋 · 세이브 가운데 범위 밖 값이 있는지 전수로 세고(쿠커나 테스트로), 고친 뒤 기본값을 바꾼다.
 
-- `A-17` [결함] **STL 구성(`CI-Debug-STL`)에서 `ReflectionTest` 가 컴파일되지 않는다.** 생성된 `TestFixedLayoutTypes.gen.cpp` 가 `VectorWrapper<vector<bool>>` 를 만들고,
+- `A-18` [결함] **STL 구성(`CI-Debug-STL`)에서 `ReflectionTest` 가 컴파일되지 않는다.** 생성된 `TestFixedLayoutTypes.gen.cpp` 가 `VectorWrapper<vector<bool>>` 를 만들고,
   `ReflectionContainers.h` 의 `getElement` · `getElementConst` 가 `&( container[index] )` 로 원소 주소를 잡는다. STL 구성에서는 `sw::vector<bool>` 이 비트 묶음인
   `std::vector<bool>` 이라 원소가 프록시 · `bool` 값으로 나와 주소를 잡을 수 없다(`-Waddress-of-temporary`, 2026-10-17 로컬 STL 빌드에서 확인, CI 에는 아직 안 나왔다).
   뿌리는 `sw::vector<bool>` 의 의미가 구성마다 다르다는 것이다. 두 구성에서 같은 원소 저장(바이트 하나)을 갖는 형식으로 맞추거나, 리플렉션이 `vector<bool>` 을
