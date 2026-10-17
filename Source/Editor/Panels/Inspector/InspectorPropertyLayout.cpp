@@ -141,7 +141,7 @@ namespace sw::editor
         const PropertyMetadata& meta = prop._metadata;
         InspectorNumericRange   range;
         // 경계 하나는 숫자이거나 필드다(둘이 함께 있지 않다). 필드 경계는 그 객체의 지금 값이다.
-        const bool bFieldBound = meta._pReadMinRange != nullptr || meta._pReadMaxRange != nullptr;
+        [[maybe_unused]] const bool bFieldBound = meta._pReadMinRange != nullptr || meta._pReadMaxRange != nullptr;
         SW_ASSERT( bFieldBound == false || pInstance != nullptr );
         range._bHasClampMin = meta._bHasMinRange != SW_FALSE || meta._pReadMinRange != nullptr;
         range._bHasClampMax = meta._bHasMaxRange != SW_FALSE || meta._pReadMaxRange != nullptr;

@@ -69,9 +69,9 @@ namespace sw
 
     bool GimmickStateBundle::write( vector<uint8>& outBytes ) const
     {
-        BitWriter  writer{ std::move( outBytes ) };
-        const bool bWritten = FixedLayout::write( *this, writer );
-        outBytes            = writer.releaseBytes();
+        BitWriter                   writer{ std::move( outBytes ) };
+        [[maybe_unused]] const bool bWritten = FixedLayout::write( *this, writer );
+        outBytes                             = writer.releaseBytes();
         if ( bWritten == false )
             outBytes.clear();
         return bWritten;
@@ -87,8 +87,8 @@ namespace sw
 
     uint64 GimmickStateBundle::computeHash() const
     {
-        BitWriter  writer;
-        const bool bWritten = FixedLayout::write( *this, writer );
+        BitWriter                   writer;
+        [[maybe_unused]] const bool bWritten = FixedLayout::write( *this, writer );
         SW_ASSERT( bWritten ); // 항목 수는 kMaxEntryCount, 회로 상태는 populate · registerKind 가 상한 안으로 막았다
         uint64       hash  = HashUtil::kFnvOffset64;
         const uint8* pByte = writer.getBytes().data();
