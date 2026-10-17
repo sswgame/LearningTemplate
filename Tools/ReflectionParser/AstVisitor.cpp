@@ -447,9 +447,53 @@ namespace sw
             }
 
             /**
-             * @brief 템플릿 인자 하나(원소 · 키)의 타입 이름입니다. 인자가 사용자 별칭이면 프로퍼티 타입과 같이 벗깁니다(`resolvePropertyAlias`).
+             * @brief 타입을 사용자 별칭을 벗긴 표기로 바꿉니다. 템플릿 인자 안의 별칭도 끝까지 벗깁니다(`vector<AccountID>` 는 `vector<uint64>`).
+             * @details 원소 이름만 벗기고 컨테이너 이름을 적힌 대로 두면 프로퍼티의 기록 타입 이름(`vector<AccountID>`)이 별칭을 쓰지 않던 빌드(`vector<uint64>`)와 달라
+             *          그 빌드가 쓴 레코드를 읽지 못합니다. 그래서 프로퍼티 이름, 원소 이름, 키 이름이 모두 이 함수를 거칩니다.
+             *          인자 중 하나라도 타입이 아니면(`std::array<int32, 4>` 의 4) 인자를 다시 짜지 않습니다.
+             * @return 별칭을 하나라도 벗겼으면 true 입니다. 거짓이면 @p outSpelling 은 clang 의 표기 그대로입니다.
+             */
+            [[nodiscard]] static bool tryResolveAliasSpelling( const CXType type, const ParserSession& session, string& outSpelling )
+            {
+                const CXType resolved = resolvePropertyAlias( type, session );
+                const bool   bChanged = clang_equalTypes( type, resolved ) == 0;
+                outSpelling           = takeString( clang_getTypeSpelling( resolved ) );
+                // 컨테이너의 인자만 다시 짠다. 알려진 이름(`string` 은 `basic_string<utf8>`)의 인자를 벗기면 `string<char>` 같은 모르는 이름이 된다.
+                ContainerKind kind = ContainerKind::None;
+                string        wrapperStem;
+                const bool    bContainer = session._containerTypeMap.match( outSpelling ) != nullptr || findReflectContainer( resolved, session._config, kind, wrapperStem );
+                const int32   argCount   = clang_Type_getNumTemplateArguments( resolved );
+                if ( bContainer == false || argCount <= 0 )
+                    return bChanged;
+
+                vector<string> listArgSpelling;
+                bool           bArgChanged = false;
+                for ( int32 argIndex = 0; argIndex < argCount; ++argIndex )
+                {
+                    const CXType argType = clang_Type_getTemplateArgumentAsType( resolved, static_cast<uint32>( argIndex ) );
+                    if ( argType.kind == CXType_Invalid )
+                        return bChanged;
+                    string argSpelling;
+                    if ( tryResolveAliasSpelling( argType, session, argSpelling ) )
+                        bArgChanged = true;
+                    listArgSpelling.push_back( argSpelling );
+                }
+                if ( bArgChanged == false )
+                    return bChanged;
+
+                string rebuilt = outSpelling.substr( 0, outSpelling.find( '<' ) ) + "<";
+                for ( size_t argIndex = 0; argIndex < listArgSpelling.size(); ++argIndex )
+                {
+                    rebuilt += ( argIndex == 0 ? "" : ", " ) + listArgSpelling[argIndex];
+                }
+                outSpelling = rebuilt + ">";
+                return true;
+            }
+
+            /**
+             * @brief 템플릿 인자 하나(원소 · 키)의 타입 이름입니다. 인자 안의 사용자 별칭을 벗깁니다(`tryResolveAliasSpelling`).
              * @details 적힌 이름만 쓰면 `vector<AccountID>` 의 원소가 모르는 이름 `AccountID` 로 등록되고, 자기 기술형 바이너리가 그 원소를 읽지 못합니다.
-             *          별칭이 아닌 인자는 적힌 이름 그대로입니다. clang 타입이 없으면(표기만으로 만든 노드) 적힌 이름을 씁니다.
+             *          별칭이 없는 인자는 적힌 이름 그대로입니다. clang 타입이 없으면(표기만으로 만든 노드) 적힌 이름을 씁니다.
              */
             static string resolveTemplateArgName( const CXType type, const int32 numClangArgs, const int32 index, const string& spelling,
                                                   const ParserSession& session )
@@ -457,12 +501,9 @@ namespace sw
                 if ( 0 <= index && index < numClangArgs )
                 {
                     const CXType argType = clang_Type_getTemplateArgumentAsType( type, static_cast<uint32>( index ) );
-                    if ( argType.kind != CXType_Invalid )
-                    {
-                        const CXType resolved = resolvePropertyAlias( argType, session );
-                        if ( clang_equalTypes( argType, resolved ) == 0 )
-                            return session._typeNameMap.normalize( takeString( clang_getTypeSpelling( resolved ) ) );
-                    }
+                    string       resolvedSpelling;
+                    if ( argType.kind != CXType_Invalid && tryResolveAliasSpelling( argType, session, resolvedSpelling ) )
+                        return session._typeNameMap.normalize( resolvedSpelling );
                 }
                 return session._typeNameMap.normalize( spelling );
             }
@@ -1115,7 +1156,10 @@ namespace sw
                 ParsedPropertyInfo   prop;
                 prop._memberName = getCursorSpelling( cursor );
                 prop._name       = prop._memberName;
-                prop._typeName   = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( fieldType ) ) );
+                // 템플릿 인자 안의 별칭까지 벗긴 이름이다. 별칭이 없으면 `fieldType` 의 표기 그대로다.
+                string resolvedSpelling;
+                (void)tryResolveAliasSpelling( clang_getCursorType( cursor ), session, resolvedSpelling ); // 벗겼든 아니든 표기를 쓴다
+                prop._typeName = session._typeNameMap.normalize( resolvedSpelling );
                 if ( clang_Cursor_isBitField( cursor ) != 0 )
                 {
                     const int32 bitWidth = clang_getFieldDeclBitWidth( cursor );

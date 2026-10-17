@@ -162,9 +162,8 @@ namespace sw
     {
         REFLECT_BODY();
         /// 첫 항목이 파티장이다. 상한은 `PartyLobbyLimit::kMaxPartySize` 와 같다.
-        /// 원소를 `AccountID` 별칭으로 적으면 리플렉션이 모르는 원소 이름으로 등록해 자기 기술형 캐시 기록에서 원소가 빠지므로 같은 타입 `uint64` 로 적는다(백로그 `A-13`).
         PROPERTY( MaxCount = 8 )
-        vector<uint64> _listMemberID{};
+        vector<AccountID> _listMemberID{};
         PROPERTY()
         uint64 _partyID{ 0 };
         PROPERTY()

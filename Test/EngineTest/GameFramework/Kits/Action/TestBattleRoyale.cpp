@@ -194,6 +194,19 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
     SW_EXPECT_NEAR_EQUAL( zone.getRadius(), copy.getRadius(), 0.0001f );
     SW_EXPECT_NEAR_EQUAL( zone.getNextCenter()._y, copy.getNextCenter()._y, 0.0001f );
 
+    // 단계 칸(0..2, 2 비트)에 3 이 오면 깨진 데이터다. 예전에는 2(Final)로 잘라 읽고 true 였다. 실패하면 상태는 그대로다.
+    BitWriter brokenWriter;
+    brokenWriter.writeBits( 0, BitMath::computeBitsRequired( 0, 1024 ) ); // 단계 번호
+    brokenWriter.writeBits( 3, 2 );                                       // 단계
+    for ( int32 floatIndex = 0; floatIndex < 10; ++floatIndex )
+    {
+        brokenWriter.writeFloat( 1.0f );
+    }
+    const float32 radiusBefore = copy.getRadius();
+    BitReader     brokenReader( brokenWriter.getBytes().data(), brokenWriter.getByteCount() );
+    SW_EXPECT_FALSE( copy.readState( brokenReader ) );
+    SW_EXPECT_NEAR_EQUAL( radiusBefore, copy.getRadius(), 0.0001f );
+
     // 끝까지 — 마지막 원.
     zone.update( 100.0f );
     SW_EXPECT_TRUE( zone.getStage() == BrZoneStage::Final );

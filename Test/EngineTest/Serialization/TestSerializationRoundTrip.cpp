@@ -118,11 +118,11 @@ namespace
                 return "json";
 
             sw::vector<uint8> firstBytes;
-            sw::BinarySerializer::serialize( pComponent, typeInfo, firstBytes );
+            SW_EXPECT_TRUE( sw::BinarySerializer::serialize( pComponent, typeInfo, firstBytes ) );
             if ( sw::BinarySerializer::deserialize( pComponent, typeInfo, firstBytes.data(), firstBytes.size() ) == false )
                 return "binary read";
             sw::vector<uint8> secondBytes;
-            sw::BinarySerializer::serialize( pComponent, typeInfo, secondBytes );
+            SW_EXPECT_TRUE( sw::BinarySerializer::serialize( pComponent, typeInfo, secondBytes ) );
             if ( secondBytes != firstBytes )
                 return "binary";
             return {};

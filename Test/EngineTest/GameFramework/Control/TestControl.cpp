@@ -238,6 +238,15 @@ SW_TEST_CASE( ControlTest, IntentRoundTripsThroughBits )
     broken._move = float2{ 1.0f, 1.0f };
     SW_EXPECT_FALSE( broken.read( shortReader ) );
     SW_EXPECT_TRUE( broken == ControlIntent{} );
+
+    // 바이트는 넉넉하지만 첫 칸이 범위 밖(8 비트 255 는 -127 에서 세어 128)이다. 예전에는 127 로 잘라 읽고 true 였다.
+    uint8 arrBrokenCell[64] = {};
+    arrBrokenCell[0]        = 0xFF;
+    BitReader     outOfRangeReader( arrBrokenCell, 64 );
+    ControlIntent outOfRange;
+    outOfRange._move = float2{ 1.0f, 1.0f };
+    SW_EXPECT_FALSE( outOfRange.read( outOfRangeReader ) );
+    SW_EXPECT_TRUE( outOfRange == ControlIntent{} );
 }
 
 /**

@@ -569,7 +569,7 @@ SW_TEST_CASE( CommandStackTest, ComponentBinaryClipboardValuePasting )
     vector<uint8>   clipBytes;
     const TypeInfo* pTypeInfo = pSourceSc->getTypeInfo();
     SW_ASSERT_NOT_NULL( pTypeInfo );
-    BinarySerializer::serializeVersioned( 0, pSourceSc, *pTypeInfo, clipBytes );
+    SW_EXPECT_TRUE( BinarySerializer::serializeVersioned( 0, pSourceSc, *pTypeInfo, clipBytes ) );
     SW_EXPECT_FALSE( clipBytes.empty() );
 
     // 대상 컴포넌트에 바이너리 붙여넣기

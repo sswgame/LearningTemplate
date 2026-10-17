@@ -25,12 +25,16 @@ namespace sw
     /** @brief 저장소 레코드 값의 A 코덱입니다. @p T 는 `REFLECT_BODY()` 를 가진 타입입니다. */
     struct ServiceRecordUtil
     {
-        /** @brief @p version 판 머리와 @p record 를 씁니다. */
+        /**
+         * @brief @p version 판 머리와 @p record 를 씁니다.
+         * @details 쓰기 실패를 아직 돌려주지 못합니다(백로그 `A-17`). 레코드 타입은 모두 실을 수 있는 필드만 가지므로 실패는 코드 결함이고, Debug 에서 단언으로 멈춥니다.
+         */
         template <typename T>
         static vector<uint8> encode( const uint32 version, const T& record )
         {
-            vector<uint8> bytes;
-            BinarySerializer::serializeVersioned( version, &record, *T::StaticType(), bytes );
+            vector<uint8>               bytes;
+            [[maybe_unused]] const bool bWritten = BinarySerializer::serializeVersioned( version, &record, *T::StaticType(), bytes );
+            SW_ASSERT( bWritten );
             return bytes;
         }
 

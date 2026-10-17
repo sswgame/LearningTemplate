@@ -75,9 +75,8 @@ namespace sw
         static constexpr const utf8* kScopeAll = "all";
 
         /// 점검 중에도 들어갈 수 있는 계정이다. GM 과 테스터가 해당하며 클라이언트에는 보내지 않는다.
-        /// 원소를 `AccountID` 별칭으로 적으면 리플렉션이 모르는 원소 이름으로 등록해 자기 기술형 레코드에서 원소가 빠지므로 같은 타입 `uint64` 로 적는다(백로그 `A-13`).
         PROPERTY()
-        vector<uint64> _listAllowedAccount{};
+        vector<AccountID> _listAllowedAccount{};
         PROPERTY()
         string _scope{};
         PROPERTY()

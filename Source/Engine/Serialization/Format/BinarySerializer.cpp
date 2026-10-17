@@ -283,8 +283,7 @@ namespace sw
                     return false;
 
                 vector<uint8> listRawBinary;
-                serializeRaw( listRawBinary );
-                if ( listRawBinary.empty() )
+                if ( serializeRaw( listRawBinary ) == false || listRawBinary.empty() )
                     return false;
 
                 return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), outListBuffer, codecType );
@@ -306,11 +305,20 @@ namespace sw
                 return deserializeRaw( listRawBinary.data(), listRawBinary.size() );
             }
 
-            /** @brief 비어 있지 않은 버퍼를 아카이브 끝에 씁니다. Archive 버전 직렬화는 모두 버퍼 버전으로 쓴 뒤 이 함수로 옮깁니다. */
-            static void writeBufferToArchive( const vector<uint8>& buffer, Archive& outArchive )
+            /**
+             * @brief 버퍼 버전으로 쓴 바이트를 아카이브 끝에 옮깁니다. Archive 버전 직렬화가 모두 씁니다.
+             * @return @p bWritten 이 거짓이면(버퍼 쓰기가 중간에 멈춤) 아무것도 옮기지 않고 아카이브를 오류 상태로 두며 false 입니다.
+             */
+            [[nodiscard]] static bool writeBufferToArchive( bool bWritten, const vector<uint8>& buffer, Archive& outArchive )
             {
+                if ( bWritten == false )
+                {
+                    outArchive.setError();
+                    return false;
+                }
                 if ( buffer.empty() == false )
                     outArchive.writeBytes( buffer.data(), buffer.size() );
+                return true;
             }
 
             /** @brief 스트림 하나의 바이트 수를 값을 읽지 않고 셉니다. 잘렸거나 구조가 틀리면 false 입니다. */
@@ -391,7 +399,7 @@ namespace sw
 {
     SW_LOG_CALLER( "BinarySerializer" );
 
-    void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
+    bool BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
                                       const SerializeContext& context )
     {
         BinaryStreamWriter          writer( outListBuffer );
@@ -426,19 +434,32 @@ namespace sw
 
             size_t payloadStart = writer.getOffset();
 
+            bool bWritten = false;
             if ( prop._bIsBitField == SW_TRUE )
             {
                 const bool bVal = prop.getValue<bool>( pInstance );
-                SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), outListBuffer, context );
+                bWritten        = SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), outListBuffer, context );
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), outListBuffer, context );
+            {
+                bWritten = SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), outListBuffer, context );
+            }
             else
-                SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, outListBuffer, context );
+            {
+                bWritten = SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, outListBuffer, context );
+            }
+            if ( bWritten == false )
+            {
+                // 쓰는 순간 멈춘다. 계속 쓰면 세이브는 써지고 로드에서 이 값이 빠진다. 알림은 호출마다 한다(타입마다 한 번이면 테스트 순서에 따라 결과가 달라진다).
+                SW_LOG_ERROR( "%#::%# (%#) cannot be written: it or a value inside it has no binary, enum, struct or text handler - the object is not written",
+                              typeInfo._name.c_str(), prop._name.c_str(), prop._typeName.c_str() );
+                return false;
+            }
 
             uint32 payloadSize = static_cast<uint32>( writer.getOffset() - payloadStart );
             writer.writeAt( sizeHeaderPos, payloadSize );
         }
+        return true;
     }
 
     bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -456,12 +477,12 @@ namespace sw
         return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false );
     }
 
-    void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
+    bool BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
                                                const SerializeContext& context )
     {
         BinaryStreamWriter writer( outListBuffer );
         writer.write( version );
-        serialize( pInstance, typeInfo, outListBuffer, context );
+        return serialize( pInstance, typeInfo, outListBuffer, context );
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -496,9 +517,9 @@ namespace sw
                                                 CompressionCodecType    codecType,
                                                 const SerializeContext& context )
     {
-        return BinarySerializerInternal::serializeThenCompress( pInstance, outListBuffer, codecType, [&]( vector<uint8>& outListRaw )
+        return BinarySerializerInternal::serializeThenCompress( pInstance, outListBuffer, codecType, [&]( vector<uint8>& outListRaw ) -> bool
         {
-            serialize( pInstance, typeInfo, outListRaw, context );
+            return serialize( pInstance, typeInfo, outListRaw, context );
         } );
     }
 
@@ -514,12 +535,12 @@ namespace sw
         } );
     }
 
-    void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+    bool BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
                                       const SerializeContext& context )
     {
         vector<uint8> buffer;
-        serialize( pInstance, typeInfo, buffer, context );
-        BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
+        const bool    bWritten = serialize( pInstance, typeInfo, buffer, context );
+        return BinarySerializerInternal::writeBufferToArchive( bWritten, buffer, outArchive );
     }
 
     bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
@@ -532,12 +553,12 @@ namespace sw
         } );
     }
 
-    void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+    bool BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
                                                const SerializeContext& context )
     {
         vector<uint8> buffer;
-        serializeVersioned( version, pInstance, typeInfo, buffer, context );
-        BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
+        const bool    bWritten = serializeVersioned( version, pInstance, typeInfo, buffer, context );
+        return BinarySerializerInternal::writeBufferToArchive( bWritten, buffer, outArchive );
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
@@ -558,11 +579,8 @@ namespace sw
                                                 const SerializeContext& context )
     {
         vector<uint8> buffer;
-        if ( serializeCompressed( pInstance, typeInfo, buffer, codecType, context ) == false )
-            return false;
-
-        BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
-        return true;
+        const bool    bWritten = serializeCompressed( pInstance, typeInfo, buffer, codecType, context );
+        return BinarySerializerInternal::writeBufferToArchive( bWritten, buffer, outArchive );
     }
 
     bool BinarySerializer::deserializeCompressed( void*                   pInstance,

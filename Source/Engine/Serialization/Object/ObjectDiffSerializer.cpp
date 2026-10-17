@@ -19,10 +19,11 @@ namespace sw
         const SerializeContext& context = SerializeContext::getDefault();
         vector<uint8>           cdoBytes;
         vector<uint8>           modifiedBytes;
+        bool                    bAllWritten = true;
 
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
-            if ( prop._metadata._bTransient == SW_TRUE )
+            if ( prop._metadata._bTransient == SW_TRUE || bAllWritten == false )
                 return;
             const void* pCdoPtr        = prop.getRawPtr( pCdoInstance );
             const void* pModifiedValue = prop.getRawPtr( pModifiedInstance );
@@ -31,22 +32,31 @@ namespace sw
 
             cdoBytes.clear();
             modifiedBytes.clear();
+            bool bWritten = false;
             if ( prop._bIsBitField == SW_TRUE )
             {
                 const bool bCdo      = prop.getValue<bool>( pCdoInstance );
                 const bool bModified = prop.getValue<bool>( pModifiedInstance );
-                SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), cdoBytes, context );
-                SerializerUtil::serializeValueBinary( &bModified, hashed_string( "bool" ), modifiedBytes, context );
+                bWritten             = SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), cdoBytes, context ) &&
+                           SerializerUtil::serializeValueBinary( &bModified, hashed_string( "bool" ), modifiedBytes, context );
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
             {
-                SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, context );
-                SerializerUtil::serializeNestedContainerBinary( pModifiedValue, prop.getContainerShape(), modifiedBytes, context );
+                bWritten = SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, context ) &&
+                           SerializerUtil::serializeNestedContainerBinary( pModifiedValue, prop.getContainerShape(), modifiedBytes, context );
             }
             else
             {
-                SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, context );
-                SerializerUtil::serializeValueBinary( pModifiedValue, prop._typeName, modifiedBytes, context );
+                bWritten = SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, context ) &&
+                           SerializerUtil::serializeValueBinary( pModifiedValue, prop._typeName, modifiedBytes, context );
+            }
+            // 바이트로 옮기지 못한 값이 있으면 diff 전체가 실패다. 그 값만 빼면 받는 쪽이 바뀐 값을 놓친다.
+            if ( bWritten == false )
+            {
+                SW_LOG_ERROR( "%#::%# (%#) cannot be written to a diff: it or a value inside it has no binary, enum, struct or text handler", typeInfo._name.c_str(),
+                              prop._name.c_str(), prop._typeName.c_str() );
+                bAllWritten = false;
+                return;
             }
             if ( cdoBytes == modifiedBytes )
                 return;
@@ -60,7 +70,9 @@ namespace sw
             outDiffBytes.insert( outDiffBytes.end(), modifiedBytes.begin(), modifiedBytes.end() );
         }, true /* 상속 PROPERTY 포함 */ );
 
-        return true;
+        if ( bAllWritten == false )
+            outDiffBytes.clear();
+        return bAllWritten;
     }
 
     bool ObjectDiffSerializer::deserializeDiff( void* pTargetInstance, const TypeInfo& typeInfo, const uint8* pDiffData, size_t diffSize )

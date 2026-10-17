@@ -446,13 +446,13 @@ namespace sw
         const void*     pStateInstance = getStateInstance();
         if ( pStateTypeInfo != nullptr && pStateInstance != nullptr )
         {
-            // serialize 는 void 라 성공 여부를 반환하지 않는다. 결과가 비어도 **단정하지 않고 로그만 남긴다.**
-            // 프로퍼티가 없는 상태 타입도 있을 수 있어서, 여기서 실패로 끊으면 멀쩡한 저장을 막는다.
-            // 나중에 "상태가 비어서 돌아왔다" 를 추적할 단서는 있어야 한다.
+            // 값 하나라도 싣지 못하면 세이브 전체를 실패로 돌려준다. 써 두면 로드에서 그 값이 빠진다. 이유는 직렬화기가 알린다.
             vector<uint8> bytesState;
-            BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState );
-            if ( bytesState.empty() )
-                SW_LOG_INFO( "'%#' 의 커스텀 상태가 빈 채로 직렬화되었습니다 — 로드하면 기본값이 됩니다.", pStateTypeInfo->_name.c_str() );
+            if ( BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState ) == false )
+            {
+                _pComponentStateStore->clear();
+                return false;
+            }
             arch.writeSection( bytesState.data(), static_cast<uint32>( bytesState.size() ) );
         }
         else

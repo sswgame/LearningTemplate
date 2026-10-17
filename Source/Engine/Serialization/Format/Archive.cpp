@@ -535,10 +535,17 @@ namespace sw
             return false;
         }
 
-        BinarySerializer::serialize( pInstance, typeInfo, _bytes, context );
+        // 실패하면 반쯤 쓴 바이트를 걷어 낸다. 남기면 뒤에 쓴 값이 그 바이트 뒤에 붙어 읽는 쪽이 어긋난다.
+        const size_t startSize = _bytes.size();
+        const bool   bWritten  = BinarySerializer::serialize( pInstance, typeInfo, _bytes, context );
+        if ( bWritten == false )
+        {
+            _bytes.resize( startSize );
+            _bError = SW_TRUE;
+        }
         _pData    = _bytes.data();
         _dataSize = _bytes.size();
-        return true;
+        return bWritten;
     }
 
     bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo )
@@ -614,7 +621,11 @@ namespace sw
         }
 
         vector<uint8> rawBytes;
-        BinarySerializer::serialize( pInstance, typeInfo, rawBytes );
+        if ( BinarySerializer::serialize( pInstance, typeInfo, rawBytes ) == false )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
         return writeCompressedSection( rawBytes.data(), static_cast<uint32>( rawBytes.size() ), codecType );
     }
 
@@ -642,7 +653,11 @@ namespace sw
         }
 
         vector<uint8> versionedBytes;
-        BinarySerializer::serializeVersioned( version, pInstance, typeInfo, versionedBytes );
+        if ( BinarySerializer::serializeVersioned( version, pInstance, typeInfo, versionedBytes ) == false )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
         writeSection( versionedBytes.data(), static_cast<uint32>( versionedBytes.size() ) );
         return true;
     }

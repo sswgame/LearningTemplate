@@ -556,6 +556,10 @@ namespace sw
             return parseTextValueCoerced( pPropPtr, targetTypeName, wireText, context );
         }
 
+        // 값 하나로 읽을 수 없는 대상(컨테이너 프로퍼티의 `map` · `vector` 같은 이름, 처리기 없는 타입)은 이관 대상이 아니다. 값 읽기를 시도하지 않는다.
+        if ( SerializerUtil::hasBinaryValueCodec( targetTypeName, context ) == false )
+            return false;
+
         size_t offset{ 0 };
         if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) &&
              offset == payloadSize )

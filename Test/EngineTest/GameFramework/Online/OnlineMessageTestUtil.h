@@ -95,5 +95,19 @@ namespace test
             sw::BitWriter writer;
             return TMessageTypes::write( writer, message ) == false;
         }
+
+        /** @brief 바이트를 소문자 16진 글로 씁니다. 저장소 레코드의 바이트가 바뀌지 않았는지 골든과 비교할 때 씁니다. */
+        static sw::string toHexString( const sw::vector<uint8>& bytes )
+        {
+            static constexpr const utf8* kDigits = "0123456789abcdef";
+            sw::string                   text;
+            text.reserve( bytes.size() * 2 );
+            for ( const uint8 byte : bytes )
+            {
+                text.push_back( kDigits[byte >> 4] );
+                text.push_back( kDigits[byte & 0x0F] );
+            }
+            return text;
+        }
     };
 } // namespace test

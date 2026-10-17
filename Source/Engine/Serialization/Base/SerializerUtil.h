@@ -104,26 +104,30 @@ namespace sw
          * @details enum 은 **열거자 정체성**으로 적는다. 값이 아니라 열거자 이름의 해시(uint32)를 적고, 비트플래그는 켜진 이름의 수(uint32)와 그 해시들을
          *          (해시 오름차순이므로 같은 값이면 같은 바이트다) 적는다. 이름이 없는 값이나 이름이 덮지 못한 비트는 해시 위치에 0 을 두고 int64 값을 이어 붙인다.
          *          XML 과 JSON 이 이름을 적는 것과 같은 규칙이라, 열거자 순서를 바꾸거나 사이에 넣어도 저장된 뜻이 그대로다.
+         * @return 바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면(`hasBinaryValueCodec` 이 거짓) 아무 바이트도 쓰지 않고 false 입니다.
+         *         예전에는 0 바이트 하나를 쓰고 성공해, 세이브는 써지고 로드에서 값이 빠졌습니다. 구조체 안의 값이 실패해도 false 입니다.
          */
-        SW_API static void serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
-                                                 vector<uint8>& listBuffer, const SerializeContext& context );
+        [[nodiscard]] SW_API static bool serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
+                                                               vector<uint8>& listBuffer, const SerializeContext& context );
+        /** @brief 값 하나를 바이너리로 쓰고 읽을 수 있는 타입인가입니다. `serializeValueBinary` · `deserializeValueBinary` 가 고르는 순서와 같습니다. */
+        [[nodiscard]] SW_API static bool hasBinaryValueCodec( const hashed_string& typeName, const SerializeContext& context );
         /**
          * @brief 바이너리에서 값을 역직렬화합니다.
          * @param wireVersion 바이트가 적힌 버전입니다(스트림 머리가 알려 줍니다). 지금은 버전이 하나라 분기가 없고, 버전을 올리면 여기서 분기합니다.
          *                    기본값은 이 빌드가 방금 쓴 바이트(복사, 비교, diff)에만 맞습니다.
          * @details 모르는 열거자 이름(`Removed` 없이 지웠거나 `ValueAlias` 없이 이름을 바꾼 경우)이면 그 필드는 현재 값을 유지하고 false 를 반환한다. XML 의 모르는 이름과 같다.
          *          바이트는 끝까지 읽었으므로 부른 쪽이 다음 필드로 갈 수 있다(경고는 enum 과 이름마다 한 번이다).
-         *          바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면 바이트를 건너뛰지 않고 false 를 반환한다(오류는 타입마다 한 번이다).
-         *          쓰기(`serializeValueBinary`)도 그런 타입에는 아무 바이트도 쓰지 않는다.
+         *          바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면 바이트를 건너뛰지 않고 false 를 반환한다.
+         *          여기서는 알리지 않는다. 엄격 읽기는 실패로, 소프트 읽기는 orphan 으로 부른 쪽이 다룬다(프로세스 정적 "한 번만" 로그는 테스트 순서에 따라 결과가 달라진다).
          */
         [[nodiscard]] SW_API static bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
                                                                  const uint8* pData, size_t dataSize, size_t& offset,
                                                                  const SerializeContext& context,
                                                                  BinaryWireVersion       wireVersion = kCurrentBinaryWireVersion );
 
-        /** @brief 중첩 컨테이너를 바이너리로 직렬화합니다. */
-        SW_API static void serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
-                                                           vector<uint8>& listBuffer, const SerializeContext& context );
+        /** @brief 중첩 컨테이너를 바이너리로 직렬화합니다. 원소 · 키 · 값 하나라도 쓰지 못하면(`serializeValueBinary`) false 이고 @p listBuffer 는 쓰면 안 됩니다. */
+        [[nodiscard]] SW_API static bool serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
+                                                                         vector<uint8>& listBuffer, const SerializeContext& context );
         /**
          * @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. 원소, 키, 값은 `wireVersion` 으로 읽습니다(`deserializeValueBinary`).
          * @details 원소와 항목이 실패했을 때의 규칙은 `ContainerVisitor` 를 따른다(모르는 열거자는 그 원소만 빼고 필드 전체는 실패로 처리한다).

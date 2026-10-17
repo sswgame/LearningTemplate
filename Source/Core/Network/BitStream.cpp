@@ -240,7 +240,7 @@ namespace sw
         const int64 value = static_cast<int64>( minValue ) + raw;
         if ( value > maxValue )
         {
-            _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖을 쓰지 않는다 — 깨진 데이터
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖을 쓰지 않으므로 깨진 데이터다
             return false;
         }
         outValue = static_cast<int32>( value );
@@ -264,7 +264,7 @@ namespace sw
             return false;
         if ( index > maxIndex )
         {
-            _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖의 칸을 쓰지 않는다 — 깨진 데이터
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖의 칸을 쓰지 않으므로 깨진 데이터다
             return false;
         }
         // 끝 칸은 간격이 범위를 나누어떨어지지 않을 때 최댓값을 조금 넘는다. 범위 안의 칸이므로 최댓값으로 둔다.

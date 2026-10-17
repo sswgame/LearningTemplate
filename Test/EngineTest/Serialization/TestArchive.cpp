@@ -594,10 +594,10 @@ SW_TEST_CASE( ArchiveTest, BinaryObjectsWrittenBackToBackReadInOrder )
     }
 
     sw::Archive writeArch;
-    sw::BinarySerializer::serialize( &arrSource[0], *pType, writeArch );
-    sw::BinarySerializer::serializeVersioned( 3, &arrSource[1], *pType, writeArch );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &arrSource[0], *pType, writeArch ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 3, &arrSource[1], *pType, writeArch ) );
     SW_ASSERT_TRUE( sw::BinarySerializer::serializeCompressed( &arrSource[2], *pType, writeArch ) );
-    sw::BinarySerializer::serialize( &arrSource[3], *pType, writeArch );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &arrSource[3], *pType, writeArch ) );
     SW_ASSERT_TRUE( writeArch.serializeObject( arrSource[4] ) );
     const int32 kTrailer = 0x5EED;
     writeArch << kTrailer;

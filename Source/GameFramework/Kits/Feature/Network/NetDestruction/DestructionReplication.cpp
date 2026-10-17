@@ -370,9 +370,18 @@ namespace sw
             {
                 state._bRestSent = SW_FALSE;
                 if ( bDue && Internal::canWriteQuantizedPose( pose._center, pose._rotation, _settings ) )
+                {
                     listMoving.push_back( &pose );
+                }
                 else if ( bDue )
+                {
+                    // 이 서버에서 처음 넘는 순간만 알린다. 넘은 덩어리는 틱마다 다시 걸리므로 매번 알리면 로그가 넘친다. 그 뒤는 `_outOfRangePoseCount` 가 센다.
+                    if ( _stats._outOfRangePoseCount == 0 )
+                        SW_LOG_WARNING( "DestructionReplication: chunk %# of object %# moved outside the position range +-%# m - its moving pose is not sent until it rests "
+                                        "(raise DestructionReplicationConfig::_positionRange)",
+                                        pose._groupID, entry._netID, _settings._positionRange );
                     ++_stats._outOfRangePoseCount;
+                }
             }
             listKeep.push_back( state );
         }

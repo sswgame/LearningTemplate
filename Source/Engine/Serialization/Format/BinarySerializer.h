@@ -28,13 +28,16 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) 기본 비압축: 엄격하게 읽는다. 실패해도 이미 쓴 프로퍼티는 되돌리지 않는다
         // ------------------------------------------------------------------------------
-        /** @brief 객체를 콤팩트 바이너리로 직렬화합니다. */
-        static void serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
-                               const SerializeContext& context = SerializeContext::getDefault() );
+        /**
+         * @brief 객체를 콤팩트 바이너리로 직렬화합니다.
+         * @return 프로퍼티 값 하나라도 실을 수 없으면(`SerializerUtil::serializeValueBinary`) 그 자리에서 멈추고 오류를 알리며 false 입니다. 그때 @p outListBuffer 는 쓰면 안 됩니다.
+         */
+        [[nodiscard]] static bool serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
+                                             const SerializeContext& context = SerializeContext::getDefault() );
 
-        /** @brief Archive 에 객체를 콤팩트 바이너리로 직렬화합니다. */
-        static void serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
-                               const SerializeContext& context = SerializeContext::getDefault() );
+        /** @brief Archive 에 객체를 콤팩트 바이너리로 직렬화합니다. 실패하면 아무것도 싣지 않고 @p outArchive 를 오류 상태로 두며 false 입니다. */
+        [[nodiscard]] static bool serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+                                             const SerializeContext& context = SerializeContext::getDefault() );
 
         /** @brief 바이너리에서 객체를 역직렬화합니다. **실패해도 되돌리지 않습니다.** 실패하기 전까지 읽은 프로퍼티는 이미 써진 채로 남습니다. */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
@@ -61,13 +64,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 버전: 헤더 + migrate
         // ------------------------------------------------------------------------------
-        /** @brief 버전 헤더를 붙여 바이너리로 직렬화합니다. */
-        static void serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
-                                        const SerializeContext& context = SerializeContext::getDefault() );
+        /** @brief 버전 헤더를 붙여 바이너리로 직렬화합니다. 실패 규칙은 `serialize` 와 같습니다. */
+        [[nodiscard]] static bool serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
+                                                      const SerializeContext& context = SerializeContext::getDefault() );
 
-        /** @brief Archive 에 버전 바이너리로 직렬화합니다. */
-        static void serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
-                                        const SerializeContext& context = SerializeContext::getDefault() );
+        /** @brief Archive 에 버전 바이너리로 직렬화합니다. 실패 규칙은 `serialize( ..., Archive& )` 와 같습니다. */
+        [[nodiscard]] static bool serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+                                                      const SerializeContext& context = SerializeContext::getDefault() );
 
         /**
          * @brief 버전 헤더를 읽고 soft 역직렬화한 뒤, 필요하면 등록된 이관(`SchemaMigrationRegistry`, (타입, 기록된 버전)으로 찾는다)을 부릅니다.

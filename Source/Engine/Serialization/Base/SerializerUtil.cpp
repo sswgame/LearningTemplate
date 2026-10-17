@@ -204,23 +204,6 @@ namespace sw
                                 enumInfo._fullyQualifiedName.c_str(), nameHash );
             }
 
-            /**
-             * @brief 바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입을 알립니다. 타입마다 한 번만 알립니다.
-             * @details 이런 타입은 바이너리로 쓰지도 읽지도 않습니다. 예전에는 쓰기가 0 바이트 하나를, 읽기가 1 바이트를 건너뛰고 성공을 돌려줘
-             *          값이 조용히 빠졌습니다(생성기가 컨테이너 원소의 별칭을 벗기지 않던 `vector<AccountID>`). 지금은 읽기가 실패를 돌려줍니다.
-             */
-            static void reportUncarriedTypeOnce( const hashed_string& typeName, const utf8* pDirection )
-            {
-                static mutex                 s_mutex;
-                static unordered_set<uint32> s_uniqueReportedTypes;
-                {
-                    std::lock_guard<mutex> lock( s_mutex );
-                    if ( s_uniqueReportedTypes.insert( typeName.getHash() ).second == false )
-                        return;
-                }
-                SW_LOG_ERROR( "type '%#' has no binary, enum, struct or text handler - the value cannot be %# (once per type)", typeName.c_str(), pDirection );
-            }
-
             /** @brief 열거자 항목 하나를 읽습니다. 이름을 모르면 `outKnown` 이 false 이고 바이트는 읽었습니다. 바이트가 모자라면 false 입니다. */
             [[nodiscard]] static bool readEnumEntry( const EnumInfo& enumInfo, const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue, bool& outKnown )
             {
@@ -301,7 +284,7 @@ namespace sw
              * 건너뛰기 위해서입니다.** 없으면 낯선 컴포넌트 하나가 그 뒤 스트림을 통째로 어긋나게 합니다.
              * 빈 이름은 빈 슬롯을 뜻합니다(원소 개수를 앞에서 이미 적었으므로 슬롯은 남겨야 합니다).
              */
-            static void writeOwnedPointerBinary( const void* pObject, vector<uint8>& buffer, const SerializeContext& context )
+            [[nodiscard]] static bool writeOwnedPointerBinary( const void* pObject, vector<uint8>& buffer, const SerializeContext& context )
             {
                 // 보관해 둔 원소(모르는 타입)는 읽은 이름과 본문 그대로 다시 쓴다.
                 SerializeContext::OpaqueElementView opaque{};
@@ -313,7 +296,7 @@ namespace sw
                     appendUint32( buffer, static_cast<uint32>( opaque._byteCount ) );
                     if ( opaque._pBytes != nullptr && opaque._byteCount > 0 )
                         buffer.insert( buffer.end(), opaque._pBytes, opaque._pBytes + opaque._byteCount );
-                    return;
+                    return true;
                 }
                 const TypeInfo* pRuntimeType = ( pObject != nullptr ) ? context.getRuntimeTypeInfo( pObject ) : nullptr;
 
@@ -321,7 +304,7 @@ namespace sw
                 {
                     appendUint32( buffer, 0 ); // 이름 길이 0 은 빈 슬롯을 뜻한다
                     appendUint32( buffer, 0 ); // 본문 길이 0
-                    return;
+                    return true;
                 }
 
                 const utf8*  pName   = pRuntimeType->_name.c_str();
@@ -337,9 +320,10 @@ namespace sw
                 appendUint32( buffer, 0 );
 
                 const size_t bodyStart = buffer.size();
-                BinarySerializer::serialize( pObject, *pRuntimeType, buffer, context );
-                const uint32 bodySize = static_cast<uint32>( buffer.size() - bodyStart );
+                const bool   bWritten  = BinarySerializer::serialize( pObject, *pRuntimeType, buffer, context );
+                const uint32 bodySize  = static_cast<uint32>( buffer.size() - bodyStart );
                 Memory::copy( buffer.data() + sizePos, &bodySize, sizeof( uint32 ) );
+                return bWritten;
             }
 
             /**
@@ -406,8 +390,7 @@ namespace sw
                 if ( scratch.isValid() == false || deserializeText( scratch.get() ) == false )
                     return false;
 
-                BinarySerializer::serialize( scratch.get(), typeInfo, outBinary, context );
-                return true;
+                return BinarySerializer::serialize( scratch.get(), typeInfo, outBinary, context );
             }
 
             /**
@@ -436,6 +419,7 @@ namespace sw
                 ContainerWriter( vector<uint8>& buffer, const SerializeContext& context )
                     : _listBuffer{ buffer }
                     , _context{ context }
+                    , _bAllWritten{ true }
                 {
                 }
 
@@ -443,26 +427,39 @@ namespace sw
                 void endSequence() override {}
                 void beginMap( const size_t entryCount ) override { appendUint32( _listBuffer, static_cast<uint32>( entryCount ) ); }
                 void endMap() override {}
-                void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override { SerializerUtil::serializeValueBinary( pKey, keyTypeName, _listBuffer, _context ); }
+                void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
+                {
+                    recordWritten( SerializerUtil::serializeValueBinary( pKey, keyTypeName, _listBuffer, _context ) );
+                }
                 void endMapEntry() override {}
                 void beginNestedContainer( ContainerSlot ) override {}
                 void endNestedContainer( ContainerSlot ) override {}
-                void writeOwnedPointer( const void* pObject ) override { writeOwnedPointerBinary( pObject, _listBuffer, _context ); }
+                void writeOwnedPointer( const void* pObject ) override { recordWritten( writeOwnedPointerBinary( pObject, _listBuffer, _context ) ); }
 
                 // 값 구조체도 값 하나를 적는 경로로 적는다. 등록된 바이너리 핸들러가 구조체보다 먼저다(`serializeValueBinary` 의 순서).
                 void writeValueObject( const void* pValue, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override
                 {
-                    SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _context );
+                    recordWritten( SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _context ) );
                 }
 
                 void writeScalar( const void* pValue, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _context );
+                    recordWritten( SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _context ) );
                 }
 
+                /** @brief 원소 · 키 · 값을 하나도 빠짐없이 썼는가입니다. 방문자의 콜백은 결과를 돌려주지 못하므로 여기에 모읍니다. */
+                bool isAllWritten() const { return _bAllWritten; }
+
             private:
+                void recordWritten( const bool bWritten )
+                {
+                    if ( bWritten == false )
+                        _bAllWritten = false;
+                }
+
                 vector<uint8>&          _listBuffer;
                 const SerializeContext& _context;
+                bool                    _bAllWritten;
             };
 
             /** @brief 바이너리 컨테이너를 읽습니다. 신뢰할 수 없는 바이트의 경계 검사가 이 안에 있습니다(원소 수, 값, 소유 포인터 본문). */
@@ -593,7 +590,21 @@ namespace sw
         return false;
     }
 
-    void SerializerUtil::serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
+    bool SerializerUtil::hasBinaryValueCodec( const hashed_string& typeName, const SerializeContext& context )
+    {
+        // `serializeValueBinary` · `deserializeValueBinary` 가 고르는 순서와 같다. 바이너리 처리기, 열거형, 구조체, 텍스트 처리기다.
+        const hashed_string resolved = SerializerUtil::resolveHandlerTypeName( typeName, context );
+        if ( context.findBinaryWriter( resolved ) != nullptr && context.findBinaryReader( resolved ) != nullptr )
+            return true;
+        if ( context.getTypeRegistry().findEnum( typeName ) != nullptr )
+            return true;
+        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
+        if ( pStructInfo != nullptr && pStructInfo->isPrimitive() == false )
+            return true;
+        return context.findTextWriter( resolved ) != nullptr && context.findTextReader( resolved ) != nullptr;
+    }
+
+    bool SerializerUtil::serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
                                                vector<uint8>& listBuffer, const SerializeContext& context )
     {
         const hashed_string                    resolved = SerializerUtil::resolveHandlerTypeName( typeName, context );
@@ -601,7 +612,7 @@ namespace sw
         if ( pWriter != nullptr )
         {
             ( *pWriter )( pValuePtr, listBuffer );
-            return;
+            return true;
         }
 
         const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
@@ -609,7 +620,7 @@ namespace sw
         {
             // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다. 값으로 실으면 열거자 순서가 바뀔 때 세이브와 스냅샷의 뜻이 바뀐다.
             SerializerUtilInternal::writeEnumBinary( *pEnumInfo, pValuePtr, listBuffer );
-            return;
+            return true;
         }
 
         const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
@@ -623,11 +634,11 @@ namespace sw
                 listBuffer.insert( listBuffer.end(), pDummy, pDummy + sizeof( uint32 ) );
 
                 const size_t structStart = listBuffer.size();
-                BinarySerializer::serialize( pValuePtr, *pStructInfo, listBuffer, context );
-                const uint32 structSize = static_cast<uint32>( listBuffer.size() - structStart );
+                const bool   bWritten    = BinarySerializer::serialize( pValuePtr, *pStructInfo, listBuffer, context );
+                const uint32 structSize  = static_cast<uint32>( listBuffer.size() - structStart );
 
                 Memory::copy( listBuffer.data() + sizePos, &structSize, sizeof( uint32 ) );
-                return;
+                return bWritten;
             }
         }
 
@@ -640,11 +651,11 @@ namespace sw
             listBuffer.insert( listBuffer.end(), pBytes, pBytes + sizeof( uint32 ) );
             const auto* pStrBytes = reinterpret_cast<const uint8*>( str.data() );
             listBuffer.insert( listBuffer.end(), pStrBytes, pStrBytes + str.size() );
-            return;
+            return true;
         }
 
-        // 실을 수 없는 타입은 아무 바이트도 쓰지 않는다. 읽기가 실패를 돌려주므로 자리 표시 바이트는 필요 없다.
-        SerializerUtilInternal::reportUncarriedTypeOnce( typeName, "written" );
+        // 실을 수 없는 타입은 아무 바이트도 쓰지 않고 실패를 돌려준다. 이유는 부른 쪽이 프로퍼티 이름과 함께 알린다(`BinarySerializer::serialize`).
+        return false;
     }
 
     bool SerializerUtil::deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
@@ -684,15 +695,16 @@ namespace sw
             return ( *pTextReader )( pValuePtr, text );
         }
 
-        SerializerUtilInternal::reportUncarriedTypeOnce( typeName, "read" );
+        // 실을 수 없는 타입이다. 바이트를 건너뛰지 않고 실패를 돌려준다. 알림은 부른 쪽의 규칙을 따른다(엄격 읽기는 실패, 소프트 읽기는 orphan).
         return false;
     }
 
-    void SerializerUtil::serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
+    bool SerializerUtil::serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
                                                          vector<uint8>& listBuffer, const SerializeContext& context )
     {
         SerializerUtilInternal::ContainerWriter writer( listBuffer, context );
         ContainerVisitor::write( pContainerPtr, nested, writer, context );
+        return writer.isAllWritten();
     }
 
     bool SerializerUtil::deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
@@ -814,10 +826,12 @@ namespace sw
         size_t        offset{ 0 };
         if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
         {
-            serializeNestedContainerBinary( pSrc, prop.getContainerShape(), bytes, context );
+            if ( serializeNestedContainerBinary( pSrc, prop.getContainerShape(), bytes, context ) == false )
+                return false;
             return deserializeNestedContainerBinary( pDst, prop.getContainerShape(), bytes.data(), bytes.size(), offset, context );
         }
-        serializeValueBinary( pSrc, prop._typeName, bytes, context );
+        if ( serializeValueBinary( pSrc, prop._typeName, bytes, context ) == false )
+            return false;
         return deserializeValueBinary( pDst, prop._typeName, bytes.data(), bytes.size(), offset, context );
     }
 
@@ -838,17 +852,18 @@ namespace sw
             return pA == pB;
         vector<uint8> bytesA;
         vector<uint8> bytesB;
+        bool          bWritten = false;
         if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
         {
-            serializeNestedContainerBinary( pA, prop.getContainerShape(), bytesA, context );
-            serializeNestedContainerBinary( pB, prop.getContainerShape(), bytesB, context );
+            bWritten = serializeNestedContainerBinary( pA, prop.getContainerShape(), bytesA, context ) &&
+                       serializeNestedContainerBinary( pB, prop.getContainerShape(), bytesB, context );
         }
         else
         {
-            serializeValueBinary( pA, prop._typeName, bytesA, context );
-            serializeValueBinary( pB, prop._typeName, bytesB, context );
+            bWritten = serializeValueBinary( pA, prop._typeName, bytesA, context ) && serializeValueBinary( pB, prop._typeName, bytesB, context );
         }
-        return bytesA == bytesB;
+        // 바이트로 옮기지 못한 값은 같은지 알 수 없다. 같다고 하면 바뀐 값을 놓치므로 다르다고 본다.
+        return bWritten && bytesA == bytesB;
     }
 
     bool SerializerUtil::applyPropertyText( const PropertyInfo& prop, void* pInstance, string_view text, const SerializeContext& context )
