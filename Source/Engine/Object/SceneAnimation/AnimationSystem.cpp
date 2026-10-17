@@ -222,7 +222,13 @@ namespace sw
             float32                    radius     = 0.0f;
             float32                    screenSize = 1.0f;
             bool                       bVisible   = true;
-            if ( pClient->findAnimationLODBounds( center, radius ) )
+            // 숨긴 유닛(1인칭에서 숨긴 몸)은 뷰에 들어도 화면 밖과 같다 — 그려지지 않는 포즈를 만들지 않는다.
+            if ( pClient->isRendered() == false )
+            {
+                screenSize = 0.0f;
+                bVisible   = false;
+            }
+            else if ( pClient->findAnimationLODBounds( center, radius ) )
             {
                 screenSize = 0.0f;
                 for ( const AnimationLODView& view : _listLODView )

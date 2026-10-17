@@ -11,6 +11,7 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -27,7 +28,6 @@
 #include "GameFramework/Base/Foundation/Framework/Flow/LoadingScreenController.h"
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Net/GameNetSession.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
@@ -96,7 +96,6 @@ namespace sw
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
         _gameScope.addSubsystem( make_unique<ScreenTransitionManager>() );
         _gameScope.addSubsystem( make_unique<LoadingScreenController>() );
-        _gameScope.addSubsystem( make_unique<GameNetSession>() );
         // 엔진 컴포넌트 중 PROPERTY 밖의 편집 상태를 가진 것 — 지형의 저장하지 않은 높이 · 스플랫이 모듈 리로드와 백엔드 교체를 넘어간다.
         registerStatefulComponent<TerrainComponent>();
     }
@@ -161,6 +160,10 @@ namespace sw
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다 — 첫 씬 요청(onInitialize 안)이 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다.
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
+        // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
+        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
+        if ( pNetSession != nullptr )
+            pNetSession->openFromLaunch();
         // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다).
         const bool bInitialized = loadAudioEvents() && onInitialize();
         registerSessionCommands();
@@ -182,7 +185,7 @@ namespace sw
             GameSound::unloadEvents( _loadedAudioEvents );
             _loadedAudioEvents.clear();
         }
-        // 키트 처리기는 onShutdown 에서 내려갔다. 연결은 그 뒤에 끊어야 끊김 이벤트가 이미 내려간 처리기에 가지 않는다(세션 · 로딩 화면 · 전환 종료).
+        // 인스턴스 서브시스템(로딩 화면 · 전환)을 onShutdown 뒤에 내린다. 네트워크 세션은 엔진 수명이라 닫지 않는다(리로드를 넘어 연결을 지킨다).
         _gameScope.getCollection().shutdownAll();
         detachGameScope();
         _listPendingSceneLoad.clear();
@@ -361,7 +364,10 @@ namespace sw
         getSubsystem<LoadingScreenController>().update( realDeltaTime, bLoading, screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
-        getSubsystem<GameNetSession>().update(); // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션이 없으면 바로 돌아온다.
+        // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다.
+        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
+        if ( pNetSession != nullptr )
+            pNetSession->update();
         onUpdate( deltaTime );
     }
 

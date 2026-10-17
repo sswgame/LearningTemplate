@@ -207,7 +207,8 @@ SW_TEST_CASE( RigAssetTest, NodeOrderChangesResult )
 }
 
 /**
- * @brief [RigAssetTest] 노드 가중치 — 기본값 × 클립 커브 × 시퀀서 칸. 커브 0.5 면 반만, 칸 0 이면 꺼지고, 칸을 놓으면 커브로 돌아오며, 커브가 없으면 0 이다
+ * @brief [RigAssetTest] 노드 가중치 — 기본값 × 클립 커브 × 시퀀서 칸. 커브 0.5 면 반만, 칸 0 이면 꺼지고, 칸을 놓으면 커브로 돌아오며, 커브가 없으면 0 이다.
+ *        칸 값은 읽을 수 있다(정하지 않은 · 놓은 칸은 1)
  */
 SW_TEST_CASE( RigAssetTest, WeightFollowsCurveAndSequencerSlot )
 {
@@ -227,7 +228,9 @@ SW_TEST_CASE( RigAssetTest, WeightFollowsCurveAndSequencerSlot )
     TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
     SW_EXPECT_TRUE( TestRigAssetInternal::isNear( float3{ 1.0f, 2.0f, 0.0f }, listModel[2].getTranslation(), 1e-4f ) );
 
+    SW_EXPECT_NEAR_EQUAL( 1.0f, instance.getSlotWeight( "Shot" ), 1e-6f ); // 정하지 않은 칸은 1
     instance.setSlotWeight( "Shot", 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, instance.getSlotWeight( "Shot" ), 1e-6f );
     TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
     SW_EXPECT_TRUE( TestRigAssetInternal::isNear( rest, listModel[2].getTranslation(), 1e-4f ) );
     instance.setSlotWeight( "Shot", 1.0f );
@@ -236,7 +239,8 @@ SW_TEST_CASE( RigAssetTest, WeightFollowsCurveAndSequencerSlot )
     SW_EXPECT_TRUE( TestRigAssetInternal::isNear( float3{ 2.0f, 2.0f, 0.0f }, listModel[2].getTranslation(), 1e-4f ) );
 
     instance.clearSlotWeight( "Shot" );
-    instance.setCurveSource( nullptr ); // 커브 없음 = 0
+    SW_EXPECT_NEAR_EQUAL( 1.0f, instance.getSlotWeight( "Shot" ), 1e-6f ); // 놓으면 다시 1
+    instance.setCurveSource( nullptr );                                    // 커브 없음 = 0
     TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
     SW_EXPECT_TRUE( TestRigAssetInternal::isNear( rest, listModel[2].getTranslation(), 1e-4f ) );
 }

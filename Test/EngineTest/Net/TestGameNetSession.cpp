@@ -4,9 +4,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
-
-#include "GameFramework/Base/Foundation/Framework/Net/GameNetSession.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -183,6 +182,49 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsRefuseAConfigTheyCannotOpen )
     config._gamePortShardCount = 2;
     SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
     SW_EXPECT_TRUE( params._role == GameNetRole::None );
+}
+
+/**
+ * @brief [GameNetSessionTest] 다시 선 게임 인스턴스(핫 리로드)의 `openFromLaunch` 는 열린 세션을 그대로 둔다 — 포트가 같고 붙은 클라이언트가 끊기지 않는다
+ * @details 세션이 게임 인스턴스 수명이던 때는 리로드가 세션을 닫고 다시 열어 클라이언트가 시간 초과로 끊겼다.
+ */
+SW_TEST_CASE( GameNetSessionTest, OpenFromLaunchKeepsAnOpenSessionAcrossInstances )
+{
+    ServerConfig config;
+    config._listenAddress = "127.0.0.1";
+    config._gamePort      = 0;
+    ServerServiceContext context;
+    context._pServerConfig = &config;
+    ServerServiceRegistry::bindHostContext( &context );
+    GameNetSession server;
+    server.openFromLaunch(); // 첫 게임 인스턴스
+    ServerServiceRegistry::bindHostContext( nullptr );
+    SW_ASSERT_TRUE( server.isActive() );
+    const uint16 port = server.getListenPort();
+
+    GameNetSessionParams clientParams;
+    clientParams._role          = GameNetRole::Client;
+    clientParams._serverAddress = NetAddress::makeLoopback( port );
+    GameNetSession client;
+    SW_ASSERT_TRUE( client.initialize( clientParams ) );
+    const Deadline deadline = Deadline::afterMilliseconds( kConnectWaitMilliseconds );
+    while ( ( client.getConnectedCount() == 0 || server.getConnectedCount() == 0 ) && deadline.isExpired() == false )
+    {
+        client.update();
+        server.update();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    }
+    SW_ASSERT_EQUAL( 1, server.getConnectedCount() );
+
+    server.openFromLaunch(); // 리로드로 다시 선 인스턴스 — 서버 문맥이 없어도 열린 세션을 이어받는다
+    SW_EXPECT_TRUE( server.isActive() );
+    SW_EXPECT_EQUAL( port, server.getListenPort() );
+    client.update();
+    server.update();
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
+    SW_EXPECT_EQUAL( 1, client.getConnectedCount() );
+    client.shutdown();
+    server.shutdown();
 }
 
 /**

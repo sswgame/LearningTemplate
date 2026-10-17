@@ -63,6 +63,7 @@ SW_ENGINE_SERVICE( class, PhysicsSystem, Required, GameVisible )
 SW_ENGINE_SERVICE( class, TelemetryService, Required, GameVisible )
 // 크래시 보고 — 다음 실행이 지난 크래시를 묶는다. 게임 UI 는 "보낼까요?" 를 `collectReports` · `decide` 로 묻는다(동의가 ask 일 때).
 SW_ENGINE_SERVICE( class, CrashReportService, Required, GameVisible )
+SW_ENGINE_SERVICE( class, GameNetSession, Required, GameVisible )
 
 
 // 엔진 기본 에셋 경로 표(읽기 전용). 게임 프레임워크도 엔진 데이터(포토 모드 입력 맵 등)의 경로를 여기서 읽는다.

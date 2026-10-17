@@ -50,6 +50,7 @@ namespace sw
         explicit SpriteAnimatorLODClient( SpriteAnimatorComponent& owner );
 
         bool             findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
+        bool             isRendered() const override;
         void             applyAnimationLOD( const AnimationLODState& state ) override;
         const Component* findRewindTarget() const override;
         void             collectDebugState( AnimationDebugState& inoutState ) const override;

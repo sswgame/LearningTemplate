@@ -8,6 +8,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Physics/ClothComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -148,5 +151,75 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedVerticesFollowTheObject )
     const sw::float3& bottomCenter = listVertex[listVertex.size() - columns / 2 - 1];
     // 아랫줄은 매달린 천의 진동이 남아 있어 감쇠 시점이 구성(Debug · Release)마다 다르다(Release 에서 0.38 떨어져 있었다). 끌려오지 않았다면 차이는 2 이므로 0.75 면 가른다.
     SW_EXPECT_NEAR_EQUAL( 2.0f, bottomCenter._x, 0.75f );
+    manager.endPlay();
+}
+
+/**
+ * @brief [PhysicsSoftBodyTest] 그릴 정점 — 격자 칸마다 앞뒤 삼각형 넷(정점 12), 메시 공간으로 옮기고, 감김의 면 노멀이 정점 노멀과 같은 쪽(앞면 +Z · 뒷면 −Z), UV 0..1
+ * @details 정점 수가 격자와 다르면 만들지 않는다(다른 격자로 짐작해 그리지 않는다).
+ */
+SW_TEST_CASE( PhysicsSoftBodyTest, RenderVerticesAreATwoSidedGridInMeshSpace )
+{
+    using Internal = PhysicsSoftBodyTestInternal;
+    sw::GameObjectManager        manager;
+    const sw::float3             origin{ 0.0f, 3.0f, 0.0f };
+    const sw::ClothComponent*    pCloth       = Internal::spawnCloth( manager, origin, sw::ClothPinMode::TopEdge );
+    const sw::vector<sw::float3> listWorld    = pCloth->makeSoftBodyDesc( origin, sw::quaternion{}, 0 )._listVertex;
+    const sw::float4x4           worldToLocal = sw::float4x4::makeTrs( origin, sw::quaternion{}, sw::float3{ 1.0f, 1.0f, 1.0f } ).invert();
+
+    sw::vector<sw::RHIVertex> listVertex;
+    SW_ASSERT_TRUE( pCloth->makeRenderVertices( listWorld, worldToLocal, listVertex ) );
+    const size_t cellCount = static_cast<size_t>( pCloth->getColumnCount() - 1 ) * ( pCloth->getRowCount() - 1 );
+    SW_ASSERT_EQUAL( cellCount * 12, listVertex.size() );
+    // 첫 정점은 윗줄 왼쪽 끝 — 메시 공간에서 (−폭/2, 0, 0).
+    SW_EXPECT_NEAR_EQUAL( -0.5f, listVertex[0]._arrPosition[0], 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listVertex[0]._arrPosition[1], 1.0e-5f );
+    for ( size_t first = 0; first < listVertex.size(); first += 3 )
+    {
+        const sw::RHIVertex& vertexA = listVertex[first];
+        const sw::float3     pointA{ vertexA._arrPosition[0], vertexA._arrPosition[1], vertexA._arrPosition[2] };
+        const sw::float3     pointB{ listVertex[first + 1]._arrPosition[0], listVertex[first + 1]._arrPosition[1], listVertex[first + 1]._arrPosition[2] };
+        const sw::float3     pointC{ listVertex[first + 2]._arrPosition[0], listVertex[first + 2]._arrPosition[1], listVertex[first + 2]._arrPosition[2] };
+        const sw::float3     face = ( pointB - pointA ).cross( pointC - pointA );
+        const sw::float3     normal{ vertexA._arrNormal[0], vertexA._arrNormal[1], vertexA._arrNormal[2] };
+        SW_EXPECT_TRUE( face.dot( normal ) > 0.0f );
+        // 칸 안의 앞 삼각형 둘(정점 0..5)은 +Z, 뒤 둘(6..11)은 −Z 다.
+        const bool bFront = ( first % 12 ) < 6;
+        SW_EXPECT_NEAR_EQUAL( bFront ? 1.0f : -1.0f, normal._z, 1.0e-5f );
+    }
+    for ( const sw::RHIVertex& vertex : listVertex )
+    {
+        SW_EXPECT_TRUE( vertex._arrUv[0] >= 0.0f && vertex._arrUv[0] <= 1.0f );
+        SW_EXPECT_TRUE( vertex._arrUv[1] >= 0.0f && vertex._arrUv[1] <= 1.0f );
+    }
+
+    sw::vector<sw::float3> listShort = listWorld;
+    listShort.pop_back();
+    SW_EXPECT_FALSE( pCloth->makeRenderVertices( listShort, worldToLocal, listVertex ) );
+    SW_EXPECT_TRUE( listVertex.empty() );
+}
+
+/**
+ * @brief [PhysicsSoftBodyTest] 같은 오브젝트에 메시 컴포넌트가 있으면 물리 프레임마다 천 정점으로 만든 동적 메시(씬 정점 풀 밖)가 걸린다
+ */
+SW_TEST_CASE( PhysicsSoftBodyTest, ClothDrivesADynamicMeshOnTheSameObject )
+{
+    using Internal = PhysicsSoftBodyTestInternal;
+    sw::GameObjectManager manager;
+    sw::ClothComponent*   pCloth = Internal::spawnCloth( manager, sw::float3{ 0.0f, 3.0f, 0.0f }, sw::ClothPinMode::TopEdge );
+    sw::MeshComponent*    pMesh  = pCloth->getOwner()->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    manager.beginPlay();
+    test::updateFrames( manager, 30 );
+    SW_ASSERT_TRUE( pCloth->isClothCreated() );
+    // 사본을 쥔다 — 렌더 스냅샷처럼 옛 메시를 붙든 채 다음 프레임이 새 메시를 거는지 본다(같은 주소의 재할당과 헷갈리지 않게).
+    const sw::shared_ptr<sw::Mesh> previous = pMesh->getMesh();
+    SW_ASSERT_NOT_NULL( previous.get() );
+    SW_EXPECT_TRUE( previous->isDynamic() );
+    const size_t cellCount = static_cast<size_t>( pCloth->getColumnCount() - 1 ) * ( pCloth->getRowCount() - 1 );
+    SW_EXPECT_EQUAL( cellCount * 12, static_cast<size_t>( previous->getVertexCount() ) );
+    test::updateFrames( manager, 4 );
+    SW_EXPECT_TRUE( pMesh->getMesh() != previous );
+    SW_EXPECT_EQUAL( cellCount * 12, static_cast<size_t>( previous->getVertexCount() ) ); // 옛 메시는 그대로다
     manager.endPlay();
 }

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Foundation/Framework/Net/GameNetSession.h"
+#include "Engine/Net/GameNetSession.h"
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
@@ -11,12 +11,11 @@
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
 #include "Engine/Reflection/EnumName.h"
-
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -39,8 +38,8 @@ namespace sw
              * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
              */
             [[maybe_unused]] static constexpr uint8 kTrafficMessageKind = NetMessageRange::kFramework - 1;
-            /** @brief 지금 게임 인스턴스의 세션입니다(게임 범위의 서브시스템) — 개발 명령 `net.*` 이 읽는다(게임 스레드). 없으면 nullptr 입니다. */
-            [[maybe_unused]] static GameNetSession* findActiveSession() { return game::findSubsystem<GameNetSession>(); } // 개발 명령만 쓴다(Shipping 에는 없다)
+            /** @brief 엔진의 세션입니다 — 개발 명령 `net.*` 이 읽는다(게임 스레드). 엔진 서비스가 묶이지 않았으면 nullptr 입니다. */
+            [[maybe_unused]] static GameNetSession* findActiveSession() { return engine::findSubsystem<GameNetSession>(); } // 개발 명령만 쓴다(Shipping 에는 없다)
 
 #if SW_DEV_COMMANDS_ENABLED
             /** @brief 명령을 받을 세션 — 없으면 답을 채우고 nullptr 입니다. */
@@ -414,12 +413,13 @@ namespace sw
         return true;
     }
 
-    SubsystemInitResult GameNetSession::initializeSubsystem()
+    void GameNetSession::openFromLaunch()
     {
+        if ( isActive() )
+            return; // 리로드로 다시 선 게임 인스턴스 — 열린 세션과 연결을 이어받는다
         GameNetSessionParams params;
         if ( makeLaunchParams( params ) )
             (void)initialize( params ); // 실패는 initialize 가 알린다 — 게임은 혼자 뜬다
-        return SubsystemInitResult::Succeeded;
     }
 
     void GameNetSession::shutdown()

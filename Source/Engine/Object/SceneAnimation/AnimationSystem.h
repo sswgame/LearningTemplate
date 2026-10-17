@@ -130,6 +130,12 @@ namespace sw
 
         /** @brief 월드 경계 구를 반환합니다. 없으면 false 이며, 이 경우 항상 보이고 가장 중요한 것으로 취급합니다. */
         virtual bool findAnimationLODBounds( float3& outCenter, float32& outRadius ) const = 0;
+        /**
+         * @brief 그려지는지 반환합니다. false 면 뷰에 들어도 화면 밖과 같게 판정합니다(포즈를 만들지 않는다 — 언리얼 `OnlyTickPoseWhenRendered`).
+         * @details 1인칭에서 숨긴 몸처럼 그리지 않는 유닛이 포즈 비용을 내지 않게 한다. 숨긴 채 포즈가 필요한 유닛은 `_bAnimateWhenOffscreen` 을 켠다(화면 밖과 같은 규칙).
+         *          모든 클라이언트가 정하도록 순수 가상이다 — 기본 "늘 그린다" 를 두면 새 클라이언트가 숨겨도 평가한다.
+         */
+        virtual bool isRendered() const = 0;
         /** @brief 본 LOD 테이블을 반환합니다(없으면 nullptr). */
         virtual const SkeletonBoneLOD* findBoneLOD() const { return nullptr; }
         /** @brief 이번 프레임의 판정을 받습니다(게임 스레드). */

@@ -149,7 +149,10 @@ namespace sw
                 _listScratchPoolMesh.reserve( _snapshot._listAllBatch.size() );
                 for ( const GPUMeshBatch& batch : _snapshot._listAllBatch )
                 {
-                    _listScratchPoolMesh.push_back( batch._mesh.get() );
+                    // 동적 메시(프레임마다 새 메시 — 천)는 풀 밖이다. 넣으면 집합이 매 프레임 바뀌어 씬 전체 정점을 다시 올린다. 자기 정점 버퍼로 그린다.
+                    const bool bDynamicMesh = batch._mesh != nullptr && batch._mesh->isDynamic();
+                    if ( bDynamicMesh == false )
+                        _listScratchPoolMesh.push_back( batch._mesh.get() );
                 }
             }
             // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 버퍼(오프셋 0)로 돌아간다.

@@ -148,6 +148,16 @@ namespace sw
         bool isGPUMorphEnabled() const { return _bGPUMorph != SW_FALSE; }
 
         /**
+         * @brief 프레임마다 새로 만드는 메시(천 같은 시뮬레이션 결과)라고 표시합니다(기본은 꺼짐). 내용 번호는 바뀌지 않습니다.
+         * @details 씬 정점 풀(`GPUMeshVertexPool`)은 메시 집합이 바뀌면 씬 전체 정점을 다시 올린다. 동적 메시를 넣으면 매 프레임 그렇게 되므로
+         *          풀에 넣지 않고 자기 정점 버퍼로 그린다(언리얼 동적 메시 요소의 자리). 정점은 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를 쥐고 있으므로
+         *          프레임마다 `create` 로 새 메시를 만들어 컴포넌트에 건다(`ClothComponent`).
+         */
+        void setDynamic( bool bDynamic ) { _bDynamic = bDynamic ? SW_TRUE : SW_FALSE; }
+        /** @brief 동적 메시로 표시했는지 반환합니다. */
+        bool isDynamic() const { return _bDynamic != SW_FALSE; }
+
+        /**
          * @brief 모프 컴퓨트가 기본 물결 대신 실행할 변형 프로그램(float4 목록)을 넣습니다. 빈 목록이면 프로그램을 뗍니다. 내용 번호는 바뀌지 않습니다.
          * @details 메시 모디파이어 미리보기(`GF_EditorPlugIn_MeshModifiers`)가 쓴다 — 모양은 `meshmodifier.hlsli` 머리 주석이 정본이다. GPU 모프(`setGPUMorphEnabled`)가 켜진 메시에만 걸린다.
          *          게임 스레드가 아무 때나 바꾸고 렌더 스레드는 프레임마다 사본을 잡아 읽으므로(잠금) 정점 버퍼를 다시 만들지 않고 매개변수만 바꿀 수 있다.
@@ -255,6 +265,8 @@ namespace sw
         uint64 _contentID{ allocateContentID() };
         /// @brief setGPUMorphEnabled 를 참고하세요. 이 메시가 모프 풀에 들어갈지 여부입니다.
         uint8 _bGPUMorph{ SW_FALSE };
+        /// @brief setDynamic 을 참고하세요. 씬 정점 풀에 넣지 않는 메시입니다.
+        uint8 _bDynamic{ SW_FALSE };
         /// @brief setGPUDeformProgram 을 참고하세요. 잠금(`_deformProgramMutex`) 안에서만 읽고 씁니다.
         shared_ptr<const vector<float4>> _deformProgram;
         mutable mutex                    _deformProgramMutex;

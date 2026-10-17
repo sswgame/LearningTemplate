@@ -51,6 +51,8 @@ Profiling = 4
 # 내비메시(인터페이스 · 베이크 입력 · 설정 표 · Recast 백엔드). 물리의 셰이프 서술자를 읽어 베이크하고, 씬의 내비게이션(Object)과
 # 컴포넌트가 쓴다 — 공간 분할과 같은 자리.
 Navigation = 4
+# 게임 네트워크 세션(엔진 수명 — 게임 모듈 리로드를 넘어 연결을 지킨다). 서버 설정(Config) · 서버 문맥(Observability)을 읽는다.
+Net = 4
 # 에셋 데이터베이스 · 팩 · 캐시 레지스트리(IAssetCache). 기능 캐시는 각 기능 폴더가 이것을 구현한다.
 Resource = 5
 # 애니메이션 데이터와 그 에셋 캐시(AnimationAssetCache · SpriteClipCache 가 Resource 의 IAssetCache 를 구현한다).

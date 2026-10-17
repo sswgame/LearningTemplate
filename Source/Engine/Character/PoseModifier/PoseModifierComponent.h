@@ -100,6 +100,8 @@ namespace sw
         void setSlotWeight( const hashed_string& slotName, float32 weight ) { _instance.setSlotWeight( slotName, weight ); }
         /** @brief 시퀀서 슬롯을 해제합니다. */
         void clearSlotWeight( const hashed_string& slotName ) { _instance.clearSlotWeight( slotName ); }
+        /** @brief 시퀀서 슬롯 가중치입니다. 정하지 않은 슬롯은 1 입니다(시퀀서가 키를 찍을 때 지금 값으로 읽는다). */
+        float32 getSlotWeight( const hashed_string& slotName ) const { return _instance.getSlotWeight( slotName ); }
         /** @brief 노드 조절 값(부모 바꾸기의 `parent` 등)을 정합니다. 노드나 조절이 없으면 false 를 반환합니다. */
         bool setNodeControl( const hashed_string& nodeName, const hashed_string& control, float32 value ) { return _instance.setNodeControl( nodeName, control, value ); }
         /** @brief 땅 질의를 바꿉니다(빌림, nullptr 이면 씬 물리). */

@@ -64,6 +64,7 @@
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -365,6 +366,7 @@ namespace sw
                 _startup.addSubsystem( sw::make_unique<ShaderCache>() );
             }
             _startup.addSubsystem( sw::make_unique<PhysicsSystem>() );
+            _startup.addSubsystem( sw::make_unique<GameNetSession>() ); // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다
             _pFontService     = &_startup.addSubsystem( sw::make_unique<FontService>() );
             pTelemetryService = &_startup.addSubsystem( sw::make_unique<TelemetryService>() );
             _pUISystem        = &_startup.addSubsystem( sw::make_unique<UISystem>() );

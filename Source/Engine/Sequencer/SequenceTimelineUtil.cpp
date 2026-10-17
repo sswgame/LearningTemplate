@@ -256,10 +256,10 @@ namespace sw
         }
         if ( track._kind == SequenceTrackKind::RigSlot )
         {
-            // 슬롯 가중치는 인스턴스 밖으로 읽어 오지 않는다 — 대상이 있으면 "정하지 않음" 값 1 을 키 기본값으로 준다.
-            if ( pTarget->getComponent<PoseModifierComponent>() == nullptr )
+            const PoseModifierComponent* pModifier = pTarget->getComponent<PoseModifierComponent>();
+            if ( pModifier == nullptr )
                 return false;
-            pOutArrValue[0] = 1.0f;
+            pOutArrValue[0] = pModifier->getSlotWeight( hashed_string( track._propertyPath.c_str() ) );
             return true;
         }
         if ( track._kind != SequenceTrackKind::Property )

@@ -33,6 +33,7 @@ namespace sw
         explicit SkeletalMeshLODClient( SkeletalMeshComponent& owner );
 
         bool                   findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
+        bool                   isRendered() const override;
         const SkeletonBoneLOD* findBoneLOD() const override;
         void                   applyAnimationLOD( const AnimationLODState& state ) override;
 
@@ -51,8 +52,8 @@ namespace sw
      *            리더는 의존이 되어 먼저 평가됩니다. `_bFollowParentPose` 가 true 이면 부모 오브젝트의 유닛이 리더입니다.
      *          - **메시**: `_meshID` 의 `.mesh` 가 스킨을 가지면 컴포넌트마다 메시 객체를 따로 둡니다. GPU 스키닝 결과(모프 풀 구간)가 메시마다
      *            하나라서, 포즈가 다른 캐릭터가 같은 메시 객체를 나누면 한 포즈로 그려집니다. 정점 데이터는 그 복사본입니다.
-     *          - **LOD**: `AnimationSystem` 이 프레임마다 뷰(카메라 절두체)로 판정해 넣습니다(`applyAnimationLOD`). 화면 밖이면 포즈를 건너뛰고
-     *            (`_bAnimateWhenOffscreen` 이 아닐 때), 화면 크기 단계와 예산이 정한 주기마다 포즈를 만듭니다(시간과 알림은 매 프레임 처리합니다). 건너뛴 프레임은
+     *          - **LOD**: `AnimationSystem` 이 프레임마다 뷰(카메라 절두체)로 판정해 넣습니다(`applyAnimationLOD`). 화면 밖이거나 숨겼으면(`setVisible( false )`) 포즈를 건너뛰고
+     *            (`_bAnimateWhenOffscreen` 이 아닐 때. 숨긴 리더가 보이는 따르는 유닛을 몰면 리더에 켠다), 화면 크기 단계와 예산이 정한 주기마다 포즈를 만듭니다(시간과 알림은 매 프레임 처리합니다). 건너뛴 프레임은
      *            직전 두 포즈 사이를 보간합니다(한 주기만큼 늦으며, 언리얼의 URO 보간과 같습니다). 본 LOD(`<스켈레톤>.bonelod.json`)는 작은 화면에서 끝 본을
      *            평가하지 않습니다. `_updateRateDivisor`(PROPERTY)는 하한이고 LOD 가 더 늘릴 수 있습니다. 같은 주기의 유닛은 위상(핸들 해시)이 달라 같은
      *            프레임에 몰리지 않습니다. 쉬는 유닛(재생 없음, 포즈 깨끗함)은 비용이 없습니다.
