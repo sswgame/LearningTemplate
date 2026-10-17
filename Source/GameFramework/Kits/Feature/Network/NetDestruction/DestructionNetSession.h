@@ -1,0 +1,108 @@
+/**
+ * @file DestructionNetSession.h
+ * @brief 실제 네트워크 세션(전용 서버 · 리슨 호스트 · 클라이언트) 위에서 씬의 파괴 오브젝트를 복제하고, 구조 해시를 로그 줄로 남깁니다.
+ * @details 가상 서버 하니스의 파괴 시나리오(`NetSimDestructionScenario.h`)가 월드마다 하던 일을 한 곳으로 모았다. 하니스는 루프백 망 위의
+ *          `NetSimWorld` 를, 실제 실행은 `GameNetSession`(`DestructionNetSessionComponent`)을 넘긴다 — 같은 코드가 두 길을 탄다.
+ *
+ *          - **번호**: 씬의 `FractureComponent` 를 오브젝트 이름순으로 1 부터 매긴다. 서버와 클라이언트가 같은 씬 문서를 읽으므로 번호가 같다.
+ *          - **권한**: 서버만 피해를 만든다. 클라이언트는 컴포넌트 권한을 끄고(`DestructionReplicationClient::registerObject`) 서버의 사건을 받는다.
+ *            폭발 드럼통(`ExplosiveBarrelComponent`)처럼 피해를 내는 기믹은 서버의 게임플레이라 클라이언트에서 끈다.
+ *          - **해시 로그**: 오브젝트의 사건 수가 바뀔 때마다 `[DestructionHash] side=<server|client> id=<번호> events=<사건 수> hash=<16 자리> name=<이름>` 한 줄을 남긴다.
+ *            같은 그래프에 같은 사건을 같은 순서로 적용하면 같은 해시다(`DestructionState::computeStateHash`) — 다른 컴파일러 · 플랫폼의 서버와 클라이언트
+ *            로그를 `Scripts/dev/CompareDestructionHashLogs.py` 가 (번호, 사건 수) 로 맞대어 본다. 클라이언트가 스냅숏으로 건너뛴 사건 수는 그 줄이 없다.
+ *            로그 매크로를 쓰므로 Shipping 에는 줄이 없다.
+ */
+#pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
+
+namespace sw
+{
+    class FractureComponent;
+    class GameObjectManager;
+    class NetHost;
+    class NetMessageRouter;
+
+    /** @brief 세션의 이쪽 역할입니다. */
+    enum class DestructionNetSide : uint8
+    {
+        Server = 0,
+        Client
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 해시 로그 한 줄의 값입니다. */
+    struct DestructionHashRecord
+    {
+        uint64 _hash{ 0 };
+        uint32 _netID{ 0 };
+        uint32 _eventCount{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class DestructionNetSession
+     * @brief 한 씬의 파괴 복제(서버 또는 클라이언트 한쪽)와 해시 기록입니다. 자세한 계약은 파일 머리말을 보세요.
+     * @code
+     *     session.initialize( host, router, manager, DestructionNetSide::Server, settings );
+     *     session.update( deltaTime ); // 서버는 월드 틱 뒤, 클라이언트는 받은 메시지를 나눈 뒤
+     *     session.shutdown();
+     * @endcode
+     */
+    class SW_KIT_API DestructionNetSession
+    {
+    public:
+        DestructionNetSession();
+        ~DestructionNetSession();
+
+        DestructionNetSession( const DestructionNetSession& )            = delete;
+        DestructionNetSession& operator=( const DestructionNetSession& ) = delete;
+
+        /**
+         * @brief @p manager 의 파괴 오브젝트를 이름순 번호로 등록하고 복제 처리기를 @p router 에 답니다. 클라이언트면 피해를 내는 기믹을 끕니다.
+         * @details 이미 시작했으면 먼저 `shutdown` 한다. @p router 와 @p host 는 `shutdown` 까지 살아 있어야 한다.
+         */
+        void initialize( NetHost& host, NetMessageRouter& router, GameObjectManager& manager, DestructionNetSide side, const DestructionReplicationConfig& settings );
+        /** @brief 처리기를 떼고 클라이언트면 해시 대조 요약 한 줄을 남깁니다. 두 번 불러도 됩니다. */
+        void shutdown();
+        /** @brief 서버는 새 사건 · 자세 · 해시를 보내고(틱 번호를 하나 올린다), 클라이언트는 받은 상태를 적용합니다. 그 뒤 사건 수가 바뀐 오브젝트의 해시를 남깁니다. */
+        void update( float32 deltaTime );
+
+        bool                                 isActive() const { return _pRouter != nullptr; }
+        DestructionNetSide                   getSide() const { return _side; }
+        uint32                               getObjectCount() const { return static_cast<uint32>( _listFracture.size() ); }
+        const vector<DestructionHashRecord>& getHashRecords() const { return _listRecord; }
+        const DestructionReplicationStats&   getStats() const;
+        /** @brief 번호(1 부터)의 오브젝트 이름입니다. 범위 밖이면 빈 문자열입니다. */
+        string_view findObjectName( uint32 netID ) const;
+        /** @brief 클라이언트 복제기입니다(테스트의 결함 주입 `skipNextEvent`). 서버면 쓰지 않습니다. */
+        DestructionReplicationClient& getClientReplication() { return _client; }
+
+        /** @brief 해시 로그 한 줄을 만듭니다(`[DestructionHash] side=… id=… events=… hash=… name=…`). 비교 스크립트가 이 형식을 읽습니다. */
+        static string formatHashLine( DestructionNetSide side, const DestructionHashRecord& record, string_view objectName );
+
+    private:
+        /** @brief 사건 수가 바뀐 오브젝트를 기록하고 로그에 남깁니다. */
+        void recordChangedHashes();
+
+    private:
+        DestructionReplicationServer  _server;
+        DestructionReplicationClient  _client;
+        vector<FractureComponent*>    _listFracture;    ///< 번호 - 1 순서(이름순). 오브젝트를 지우지 않는 씬이라 포인터를 든다 — 지우는 게임은 `shutdown` 먼저
+        vector<string>                _listName;        ///< `_listFracture` 와 같은 순서
+        vector<uint32>                _listLoggedCount; ///< 오브젝트마다 마지막으로 남긴 사건 수
+        vector<DestructionHashRecord> _listRecord;
+        NetMessageRouter*             _pRouter; ///< 처리기를 단 라우터(빌린 것). nullptr 이면 시작하지 않았다
+        uint32                        _serverTick;
+        DestructionNetSide            _side;
+    };
+} // namespace sw

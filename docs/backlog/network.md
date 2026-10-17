@@ -17,9 +17,11 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 
 - `D7-1` [기능] **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
-  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 전용 서버 프로세스(`Server`, 타깃 Game · Server)는 섰다 — 남은 것은 그 위에 파괴 시뮬레이션을 UDP 서버로
-  돌리고 Windows 클라이언트(App)가 붙어 파괴 해시가 컴파일러 · 플랫폼(WSL 리눅스 서버 ↔ Windows 클라이언트)을 넘어 같은지 보는 것(서버 쪽 `NetSimulation` 호스트 모드 ·
-  클라이언트 접속 인자 · 해시 로그 비교 스크립트). 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가
+  받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 실제 세션 위의 파괴 복제(`DestructionNetSessionComponent` · `DestructionNetSession`)와 해시 로그 비교
+  (`Scripts/dev/CompareDestructionHashLogs.py`)는 들어갔다(빌드 · 실행 확인 전). 남은 것: 그 컴포넌트를 둘 씬 — 쇼케이스 씬(`destructionshowcase.scene.xml`)은
+  키트 없는 Empty 의 것이고 여러 테스트 · 쿠커가 읽으므로, 키트 컴포넌트를 넣을지 · 네트워크용 씬을 따로 둘지 정하고(씬은 에디터로 저장한다), 서버
+  `Server -gv_firstScene=<씬> -gv_netListenPort=7777` ↔ 클라이언트 `App -gv_firstScene=<씬> -gv_netConnectAddress=127.0.0.1:7777` 로 두 로그를 견준다.
+  리눅스 서버 ↔ Windows 클라이언트는 CI 잡 몫이다(결정 기록 5-12). 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가
   지킨다(Windows Debug · Release · Shipping 같은 값 확인, 리눅스는 CI 잡 — 리눅스 clang 에서 다르면 그 잡이 진다).
 
 - `D7-2` [기능] **전용 서버 타깃에서 남은 것.** (게임별 기동 확인은 ServerTest `EveryBuiltGameStartsAsADedicatedServer` — Debug 9 게임 77 s.)
@@ -54,7 +56,8 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 
 - `D7-6` [기능] **네트워크 보안의 남은 것**(방향은 [결정 기록](../09_Decisions.md) 5-9). Core 창구(`Network/Security/`) · OpenSSL 3.6 구현 · 스트림 TLS 1.3 · UDP 보안 · 서버 설정의 TLS 인증서 배선은 있다.
-  남은 것: 암호화 켠 하니스로 서버 틱 시간을 재어 [결정 기록](../09_Decisions.md) 3절에 숫자 한 줄(N18a 벤치에 `_security` 를 켠 판).
+  남은 것: 암호화 켠 하니스로 서버 틱 시간을 재어 [결정 기록](../09_Decisions.md) 3절에 숫자 한 줄. 벤치 판은 있다
+  (`NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertzEncrypted` — 평문 판과 `[Bench]` 줄을 나란히 남긴다) — Release 로 세 번 돌려 두 줄의 차를 적는다.
 
 - `D7-7` [기능] **넷 채널 등록 API 로 B 메시지 타입의 스키마 해시를 핸드셰이크 버전에 저절로 섞는다.** 계획은 [리플렉션 형식](../plans/ReflectionFormats.md) 3.3 · 3.10 · 5절 "게임 넷 연결"이다.
   Mech · Horror 스냅샷은 B 로 옮겼다(단계 4-a). 지금은 메시지마다 스트림 머리의 64 비트 해시가 실려, 배치가 다른 빌드의 바이트는 읽기가 `SchemaMismatch` 로 거절한다.
@@ -70,8 +73,8 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 - `D7-9` [기능] **네트워크 확장 후보.** 물리 객체 예측(`D7-8` 5단계), 음성 채팅, 치팅 방어 체계(서버 검증 규칙 목록 · 이상 탐지), 서버 오케스트레이션(매칭 뒤 인스턴스 할당 · 확장). 쓰는 게임이 생기면 설계한다.
 
 - `F-1` [기능] **지형 가중치 에셋의 에디터 쪽 마무리** — 가중치는 `.layerweights` 데이터 에셋이 됐다([결정 기록](../09_Decisions.md) 5-10, 서버도 레이어 질의에 답한다).
-  남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다 ·
-  ② 에디터 에셋 종류(`EditorAssetType`)에 `.layerweights` 를 더해 콘텐츠 브라우저 · 속성 칸이 고르게 한다 · ③ 바깥 도구가 만든 스플랫 PNG 를 `.layerweights` 로 가져오는 임포트(높이장 임포터와 같은 길).
+  남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다.
+  (에셋 종류 `EditorAssetType::LayerWeights` · 속성 칸 `FileFilter` 와 스플랫 PNG 임포트 `heightfields_raw/<이름>_splat.png` 는 들어갔다 — `HeightfieldImporter.h` 머리 주석.)
 
 - `F-2` [결정대기] **서버 버스 메시지의 빌드 확인.** 서버끼리 주고받는 버스 메시지(`ChatService` 의 채널 전달, `SocialService` 의 관계 바뀜, `AccountServer` 의 해지 알림)는
   고정 배치형(B)이라 머리 해시가 다르면 받는 쪽이 `SchemaMismatch` 로 버린다. 클라이언트와 달리 서버 사이에는 핸드셰이크가 없어, 배포 중에 빌드가 섞이면 메시지가 조용히 사라진다.
