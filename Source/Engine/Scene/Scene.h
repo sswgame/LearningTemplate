@@ -135,9 +135,9 @@ namespace sw
         void releaseDefaultMaterial();
 
         /** @brief 컴포넌트 핸들로 카메라를 다시 찾습니다. */
-        CameraComponent* resolveCamera( sw::ComponentHandle handle ) const;
+        CameraComponent* resolveCamera( TComponentHandle<CameraComponent> handle ) const;
         /** @brief 카메라 핸들을 기록합니다. */
-        void storeCameraHandle( CameraComponent* pCamera, sw::ComponentHandle& handle );
+        void storeCameraHandle( CameraComponent* pCamera, TComponentHandle<CameraComponent>& outHandle );
 
         string                        _name;
         string                        _sourcePath;
@@ -152,8 +152,8 @@ namespace sw
          */
         mutable ObjectSavedIDMap               _mapObjectIDToFileID;
         vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity; ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
-        sw::ComponentHandle                    _activeGameCamera;     ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
-        sw::ComponentHandle                    _gameCameraOverride;   ///< `setActiveGameCamera` 로 직접 고른 카메라
+        TComponentHandle<CameraComponent>      _activeGameCamera;     ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        TComponentHandle<CameraComponent>      _gameCameraOverride;   ///< `setActiveGameCamera` 로 직접 고른 카메라
         bool                                   _bAudioUpdateEnabled;  ///< `setAudioUpdateEnabled`
     };
 } // namespace sw

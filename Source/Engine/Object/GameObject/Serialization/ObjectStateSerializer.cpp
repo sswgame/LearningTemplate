@@ -36,8 +36,8 @@ namespace sw
              */
             struct ChildLink
             {
-                ComponentHandle _child;
-                string          _parentKey;
+                TComponentHandle<SceneComponent> _child;
+                string                           _parentKey;
             };
 
             /**
@@ -59,7 +59,7 @@ namespace sw
                         const bool bForeignChild = pChild == nullptr || pChild->getOwner() == nullptr || pChild->getOwner() == pGameObject;
                         if ( bForeignChild )
                             continue;
-                        outListLink.push_back( ChildLink{ pChild->getHandle(), ComponentStableKey::makeKey( pScene ) } );
+                        outListLink.push_back( ChildLink{ TComponentHandle<SceneComponent>{ pChild }, ComponentStableKey::makeKey( pScene ) } );
                     }
                 }
             }
@@ -75,7 +75,7 @@ namespace sw
                     return;
                 for ( const ChildLink& link : listLink )
                 {
-                    SceneComponent* pChild = castTo<SceneComponent>( pManager->resolveComponent( link._child ) );
+                    SceneComponent* pChild = pManager->resolveComponent( link._child );
                     if ( pChild == nullptr )
                         continue;
                     SceneComponent* pParent = castTo<SceneComponent>( ComponentStableKey::findComponent( pGameObject, link._parentKey ) );

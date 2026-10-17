@@ -17,10 +17,10 @@ namespace sw
     struct BoneTransform;
     struct FractureAsset;
 
-    class Component;
     class GameObject;
     class Mesh;
     class MeshComponent;
+    class SkeletalMeshComponent;
 
     /**
      * @class FractureRenderUnits
@@ -43,12 +43,13 @@ namespace sw
         bool isBaked() const { return _bBaked == SW_TRUE; }
 
     private:
-        /** @brief @p owner 의 매니저로 핸들의 컴포넌트를 찾습니다. 사라졌으면 nullptr 입니다. */
-        static Component* findOwnedComponent( const GameObject& owner, const ComponentHandle& handle );
+        /** @brief @p owner 의 매니저로 핸들의 컴포넌트를 찾습니다. 사라졌으면 nullptr 입니다(이 .cpp 안에서만 부르므로 정의도 .cpp 에 둔다). */
+        template <typename T>
+        static T* findOwnedComponent( const GameObject& owner, TComponentHandle<T> handle );
 
-        shared_ptr<Mesh> _arrSkinnedMesh[2]; ///< 슬롯(겉면, 안쪽 면)마다 스킨드 메시 원본이다.
-        ComponentHandle  _arrSkinnedUnit[2];
-        ComponentHandle  _arrBakedUnit[2];
-        uint8            _bBaked;
+        shared_ptr<Mesh>                        _arrSkinnedMesh[2]; ///< 슬롯(겉면, 안쪽 면)마다 스킨드 메시 원본이다.
+        TComponentHandle<SkeletalMeshComponent> _arrSkinnedUnit[2];
+        TComponentHandle<MeshComponent>         _arrBakedUnit[2];
+        uint8                                   _bBaked;
     };
 } // namespace sw

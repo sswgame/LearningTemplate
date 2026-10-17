@@ -1104,7 +1104,7 @@ namespace sw
             MeshComponent* pMesh = pComp != nullptr ? castTo<MeshComponent>( pComp ) : nullptr;
             if ( pMesh != nullptr && _intactMesh.isValid() == false )
             {
-                _intactMesh = pMesh->getHandle();
+                _intactMesh = TComponentHandle<MeshComponent>{ pMesh };
                 pMesh->setVisible( false );
             }
         }
@@ -1138,7 +1138,7 @@ namespace sw
 
         // 배율이 상태를 시작할 때와 같으면 미리 지은 잎 셰이프를 그대로 쓴다. 남은 잎은 바디를 만들며 짓는다.
         prepareLeafPoints( _objectScale );
-        _renderUnits.create( *pOwner, *_asset, static_cast<const MeshComponent*>( resolveOwnedComponent( _intactMesh ) ), _interiorMaterialPath );
+        _renderUnits.create( *pOwner, *_asset, resolveIntactMesh(), _interiorMaterialPath );
         _bFractured = SW_TRUE;
         _bPoseDirty = SW_TRUE;
     }
@@ -1533,11 +1533,11 @@ namespace sw
         return count;
     }
 
-    Component* FractureComponentBase::resolveOwnedComponent( const ComponentHandle& handle ) const
+    MeshComponent* FractureComponentBase::resolveIntactMesh() const
     {
         const GameObject*  pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveComponent( handle ) : nullptr;
+        return ( pManager != nullptr && _intactMesh.isValid() ) ? pManager->resolveComponent( _intactMesh ) : nullptr;
     }
 
     bool FractureComponentBase::isReachedBy( const float3& worldCenter, float32 radius ) const

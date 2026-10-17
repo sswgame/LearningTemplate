@@ -571,16 +571,16 @@ namespace sw
         _defaultMaterialPath.clear();
     }
 
-    CameraComponent* Scene::resolveCamera( sw::ComponentHandle handle ) const
+    CameraComponent* Scene::resolveCamera( TComponentHandle<CameraComponent> handle ) const
     {
         if ( _objectManager == nullptr )
             return nullptr;
-        return static_cast<CameraComponent*>( _objectManager->resolveComponent( handle ) );
+        return _objectManager->resolveComponent( handle );
     }
 
-    void Scene::storeCameraHandle( CameraComponent* pCamera, sw::ComponentHandle& handle )
+    void Scene::storeCameraHandle( CameraComponent* pCamera, TComponentHandle<CameraComponent>& outHandle )
     {
-        handle = pCamera != nullptr ? pCamera->getHandle() : sw::ComponentHandle{};
+        outHandle = TComponentHandle<CameraComponent>{ pCamera };
     }
 
     void Scene::setEntityPrefabPath( uint64 objectID, string_view prefabPath )
