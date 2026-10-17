@@ -2,10 +2,39 @@
 
 #include "Engine/Object/Component/Physics/ClothComponent.h"
 
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 천 메시 정점 하나입니다. 칸 이름으로 채운다(정점 형식에 칸이 늘어도 그대로 맞는다). 색은 1 — 머티리얼 색이 그대로 보인다. */
+        RHIVertex makeClothRenderVertex( const float3& position, const float3& normal, float32 u, float32 v )
+        {
+            RHIVertex vertex{};
+            vertex._arrPosition[0] = position._x;
+            vertex._arrPosition[1] = position._y;
+            vertex._arrPosition[2] = position._z;
+            vertex._arrNormal[0]   = normal._x;
+            vertex._arrNormal[1]   = normal._y;
+            vertex._arrNormal[2]   = normal._z;
+            vertex._arrUv[0]       = u;
+            vertex._arrUv[1]       = v;
+            vertex._arrColor[0]    = 1.0f;
+            vertex._arrColor[1]    = 1.0f;
+            vertex._arrColor[2]    = 1.0f;
+            vertex._arrColor[3]    = 1.0f;
+            return vertex;
+        }
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -134,12 +163,106 @@ namespace sw
         pScene->setSoftBodyPinnedTransform( _softBody, position, rotation );
     }
 
+    bool ClothComponent::makeRenderVertices( const vector<float3>& listWorldVertex, const float4x4& worldToLocal, vector<RHIVertex>& outListVertex ) const
+    {
+        outListVertex.clear();
+        const size_t vertexCount   = static_cast<size_t>( _columnCount ) * _rowCount;
+        const bool   bGridMismatch = _columnCount < 2 || _rowCount < 2 || listWorldVertex.size() != vertexCount;
+        if ( bGridMismatch )
+            return false;
+
+        // 메시 공간 위치와, 격자 삼각형(`makeSoftBodyDesc` 와 같은 둘)의 면 노멀을 정점마다 더한 매끈한 노멀.
+        vector<float3> listPosition( vertexCount );
+        for ( size_t index = 0; index < vertexCount; ++index )
+        {
+            listPosition[index] = float3::transform( listWorldVertex[index], worldToLocal );
+        }
+        vector<float3> listNormal( vertexCount, float3{ 0.0f, 0.0f, 0.0f } );
+        for ( uint32 row = 0; row + 1 < _rowCount; ++row )
+        {
+            for ( uint32 column = 0; column + 1 < _columnCount; ++column )
+            {
+                const uint32 topLeft     = row * _columnCount + column;
+                const uint32 bottomLeft  = topLeft + _columnCount;
+                const uint32 topRight    = topLeft + 1;
+                const uint32 bottomRight = bottomLeft + 1;
+                const float3 firstFace   = ( listPosition[bottomLeft] - listPosition[topLeft] ).cross( listPosition[topRight] - listPosition[topLeft] );
+                const float3 secondFace  = ( listPosition[bottomLeft] - listPosition[topRight] ).cross( listPosition[bottomRight] - listPosition[topRight] );
+                listNormal[topLeft] += firstFace;
+                listNormal[bottomLeft] += firstFace + secondFace;
+                listNormal[topRight] += firstFace + secondFace;
+                listNormal[bottomRight] += secondFace;
+            }
+        }
+        for ( float3& normal : listNormal )
+        {
+            normal = normal.normalize(); // 넓이가 0 인 곳(접혀 겹친 정점)은 0 노멀이다
+        }
+
+        const float32 uStep = 1.0f / static_cast<float32>( _columnCount - 1 );
+        const float32 vStep = 1.0f / static_cast<float32>( _rowCount - 1 );
+        outListVertex.reserve( static_cast<size_t>( _columnCount - 1 ) * ( _rowCount - 1 ) * 12 );
+        for ( uint32 row = 0; row + 1 < _rowCount; ++row )
+        {
+            for ( uint32 column = 0; column + 1 < _columnCount; ++column )
+            {
+                const uint32 topLeft     = row * _columnCount + column;
+                const uint32 bottomLeft  = topLeft + _columnCount;
+                const uint32 topRight    = topLeft + 1;
+                const uint32 bottomRight = bottomLeft + 1;
+                const auto   pushVertex  = [&]( uint32 index, float32 normalSign )
+                {
+                    const float32 u = static_cast<float32>( index % _columnCount ) * uStep;
+                    const float32 v = static_cast<float32>( index / _columnCount ) * vStep;
+                    outListVertex.push_back( makeClothRenderVertex( listPosition[index], listNormal[index] * normalSign, u, v ) );
+                };
+                // 앞면 — 격자 삼각형 그대로(정면에서 바깥을 향한 감김).
+                pushVertex( topLeft, 1.0f );
+                pushVertex( bottomLeft, 1.0f );
+                pushVertex( topRight, 1.0f );
+                pushVertex( topRight, 1.0f );
+                pushVertex( bottomLeft, 1.0f );
+                pushVertex( bottomRight, 1.0f );
+                // 뒷면 — 감김과 노멀을 뒤집는다.
+                pushVertex( topLeft, -1.0f );
+                pushVertex( topRight, -1.0f );
+                pushVertex( bottomLeft, -1.0f );
+                pushVertex( topRight, -1.0f );
+                pushVertex( bottomRight, -1.0f );
+                pushVertex( bottomLeft, -1.0f );
+            }
+        }
+        return true;
+    }
+
     void ClothComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
         (void)alpha;
         const IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr && _softBody.isValid() )
+        {
             (void)pScene->getSoftBodyVertices( _softBody, _listVertex );
+            updateRenderMesh();
+        }
+    }
+
+    void ClothComponent::updateRenderMesh()
+    {
+        GameObject*    pOwner = getOwner();
+        MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr || _listVertex.empty() )
+            return;
+        vector<RHIVertex> listVertex;
+        if ( makeRenderVertices( _listVertex, pMesh->getWorldMatrix().invert(), listVertex ) == false )
+        {
+            SW_LOG_ERROR( "Cloth vertices (%#) do not match the %# x %# grid - the cloth mesh is not updated", static_cast<uint64>( _listVertex.size() ), _columnCount, _rowCount );
+            return;
+        }
+        // 렌더 스냅샷이 옛 메시를 쥐고 있으므로 정점을 제자리에서 바꾸지 않고 새 메시를 건다.
+        shared_ptr<Mesh> mesh = Mesh::create();
+        mesh->setDynamic( true );
+        mesh->setVertices( std::move( listVertex ) );
+        pMesh->setMesh( std::move( mesh ) );
     }
 
     void ClothComponent::releasePhysics( ScenePhysics& physics )

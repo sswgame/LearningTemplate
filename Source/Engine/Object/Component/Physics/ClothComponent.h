@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    struct RHIVertex;
+
     class ValidationContext;
 
     /** @brief 천 격자의 어느 정점을 오브젝트에 고정하는가입니다. */
@@ -36,7 +38,11 @@ namespace sw
      *        아래로 −Y), 고정 정점(`_pinMode`)은 프레임마다 오브젝트의 월드 자세를 따르며 나머지는 중력 · 충돌 · 구속으로 움직입니다.
      * @details 시작한 뒤 첫 물리 프레임에 소프트 바디를 만들고, 값이 바뀌거나 순간이동하면 다시 만듭니다. 정점 위치(`getVertices`)는 물리 프레임 끝의
      *          월드 위치이고 격자 순서(행 우선, 윗줄부터)입니다. 오브젝트 배율은 쓰지 않습니다(크기는 `_width` · `_height`). 2D 물리에는 없습니다.
-     *          정점을 그리는 동적 메시는 아직 없다 — 지금은 물리 디버그 그리기(`drawDebug`)로 보인다.
+     *
+     *          그리기: 같은 오브젝트에 `MeshComponent` 가 있으면 물리 프레임마다 정점으로 양면 삼각형 메시를 새로 만들어 건다(`makeRenderVertices` — 노멀은 격자
+     *          이웃 면의 합, UV 는 격자 0..1, 정점 색 1). 머티리얼은 그 메시 컴포넌트가 정한다. 메시는 동적(`Mesh::setDynamic`)이라 씬 정점 풀에 들지 않는다.
+     *          메시 컴포넌트가 없으면 그리지 않는다(물리만 — 물리 디버그 그리기로 보인다).
+     * @note 프레임마다 정점 (열 − 1) × (행 − 1) × 12 개를 새 정점 버퍼로 올린다(기본 11 × 11 은 1200 개). 제자리 갱신 버퍼는 정점 풀 부분 갱신(`C-43`)과 같이 본다.
      */
     REFLECT( Category = "Physics", DisplayName = "Cloth", Tooltip = "Grid soft body hanging from this object; pinned vertices follow the transform", Meta = "Icon=Physics" )
     class SW_API ClothComponent : public PhysicsComponent
@@ -62,6 +68,12 @@ namespace sw
          * @param position @p rotation 천을 걸 월드 자세(윗변 가운데)입니다.
          */
         PhysicsSoftBodyDesc makeSoftBodyDesc( const float3& position, const quaternion& rotation, uint8 layer ) const;
+        /**
+         * @brief 격자 정점(월드, `getVertices` 순서)으로 그릴 양면 삼각형 목록을 만듭니다. 위치와 노멀은 @p worldToLocal 로 메시 공간에 옮깁니다.
+         * @details 앞면은 격자 삼각형의 감김(윗줄이 위인 정면에서 +Z), 뒷면은 감김과 노멀을 뒤집는다 — 이 엔진의 앞면 규약(바깥을 향한 감김)이다.
+         * @return 정점 수가 열 × 행이 아니면 false 이고 @p outListVertex 는 비어 있습니다.
+         */
+        [[nodiscard]] bool makeRenderVertices( const vector<float3>& listWorldVertex, const float4x4& worldToLocal, vector<RHIVertex>& outListVertex ) const;
 
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;
@@ -70,6 +82,8 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
+        /** @brief 같은 오브젝트의 `MeshComponent` 에 이번 정점으로 만든 동적 메시를 겁니다. 메시 컴포넌트나 정점이 없으면 아무것도 하지 않습니다. */
+        void updateRenderMesh();
         /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
         void validateLayer( ValidationContext& context ) const;
 
