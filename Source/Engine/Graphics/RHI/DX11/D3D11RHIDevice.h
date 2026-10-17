@@ -148,9 +148,9 @@ namespace sw
         /** @brief 백엔드 종류(DirectX11)를 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX11; }
         /**
-         * @brief 정적 샘플러 세트를 컨텍스트의 PS 슬롯 s9..s15 에 바인딩합니다.
+         * @brief 정적 샘플러 세트를 컨텍스트의 VS · PS 슬롯 s9..s15 에 바인딩합니다.
          * @details 즉시 컨텍스트는 초기화, 리사이즈(ClearState 뒤), beginFrame 에서, 지연 컨텍스트는 beginCommandList 마다 부른다.
-         *          FinishCommandList 와 ClearState 가 컨텍스트 상태를 비우기 때문이다. 슬롯 결합 샘플러(s0..s8)는 bindShaderResource 가 바인딩한다.
+         *          FinishCommandList 와 ClearState 가 컨텍스트 상태를 비우기 때문이다. 엔진 슬롯 결합 샘플러(s0..s3)는 bindShaderResource 가 바인딩한다. 정점 · 픽셀 셰이더 둘 다에 건다.
          */
         void bindStaticSamplers( ID3D11DeviceContext* pContext ) const;
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷이 여기서 나옵니다. */

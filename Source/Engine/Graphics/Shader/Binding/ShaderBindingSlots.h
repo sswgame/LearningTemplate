@@ -6,7 +6,7 @@
  *          리플렉션을 이 값과 대조한다(런타임 로드 시와 테스트).
  *
  *          모델은 언리얼 GPUScene 방식이다. 셰이더 선언은 네 백엔드에서 같고(register b#/t#/u#), 드로우별 데이터는
- *          바인딩이 아니라 버퍼(인스턴스 t4, 머티리얼 t9)에서 인덱스로 읽는다. 백엔드는 리플렉션이 준 슬롯을
+ *          바인딩이 아니라 버퍼(인스턴스 t4, 머티리얼 t5)에서 인덱스로 읽는다. 백엔드는 리플렉션이 준 슬롯을
  *          각자의 방식으로 바인딩한다. DX12 는 루트 CBV 와 디스크립터 테이블, Vulkan 은 세트 0 의 시프트된 binding,
  *          DX11 과 GL 은 슬롯이다. 텍스처만 DX12 와 Vulkan 이 무제한 배열(`bindless::`)이고 DX11 과 GL 은 고정 슬롯이다.
  */
@@ -46,18 +46,22 @@ namespace sw
         inline constexpr uint32 kEngineTextureSampler = SW_ENGINE_TEXTURE_SAMPLER;
         inline constexpr uint32 kInstanceBuffer       = SW_SLOT_INSTANCE_SRV;
         /**
-         * @brief 네이티브 bindless 가 없는 백엔드(DX11, GL)의 머티리얼 텍스처 슬롯 t5..t8 입니다.
+         * @brief 네이티브 bindless 가 없는 백엔드(DX11, GL)의 머티리얼 텍스처 슬롯 t12..t27(16 칸)입니다. 머티리얼 하나가 받는 텍스처 수의 상한이기도 합니다(네 백엔드 공통).
          * @details 그 두 백엔드는 머티리얼이 준 전역 인덱스를 셰이더에서 해석할 수 없다. DX11 은 SM5.0 이라
          *          리소스 배열 동적 인덱싱이 없고(그건 SM5.1, 곧 D3D12), GL 은 SPIR-V 로 먹이므로
          *          ARB_bindless_texture 를 쓸 수 없다. 그래서 엔진이 머티리얼 텍스처를 이 고정 슬롯에
-         *          바인딩하고 머티리얼 데이터에는 서수를 넣는다.
+         *          바인딩하고 머티리얼 데이터에는 서수를 넣는다. 16 은 언리얼 머티리얼 샘플러 한도와 같다(결정 기록 5-12).
+         *          슬롯은 SRV 띠(`kSrvSlotCount`) **뒤**에 있다 — DX12 테이블과 Vulkan t 밴드는 이 슬롯을 모른다(선언도 에뮬 백엔드뿐이다).
          */
         inline constexpr uint32 kMaterialTexture0     = SW_SLOT_MATERIAL_TEX0;
         inline constexpr uint32 kMaterialTextureCount = SW_MATERIAL_TEXTURE_SLOT_COUNT;
+        /** @brief 캔버스(UI) 배치 하나가 쓰는 텍스처 수입니다. 머티리얼 텍스처 슬롯의 앞 칸을 빌려 쓰고, 루트 상수 예산 때문에 머티리얼 칸 수와 따로 둡니다. */
+        inline constexpr uint32 kCanvasTextureCount = SW_CANVAS_TEXTURE_COUNT;
         /**
          * @brief 머티리얼 텍스처를 읽는 샘플러(bindingslots.hlsli 4 의 SW_SAMPLER_*)입니다. 선형 필터와 랩 주소를 씁니다.
          * @details 네이티브 bindless(DX12, Vulkan)는 `swSampleMaterialTexture` 가 이 샘플러로 읽는다. 슬롯 결합 샘플러를 쓰는
-         *          DX11 과 GL 은 셰이더가 고르지 못하므로 엔진이 머티리얼 슬롯 t5..t8 에 같은 샘플러를 바인딩한다(언리얼 머티리얼 텍스처의 기본 Wrap 샘플러).
+         *          GL 은 셰이더가 고르지 못하므로 엔진이 머티리얼 유닛 12..27 에 같은 샘플러를 바인딩하고, DX11 은 셰이더가 정적 세트의 이 번호로 읽는다
+         *          (샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯마다 짝을 둘 수 없다). 언리얼 머티리얼 텍스처의 기본 Wrap 샘플러다.
          */
         inline constexpr uint32 kMaterialTextureSampler = SW_MATERIAL_TEXTURE_SAMPLER;
         /// @brief GPUScene 머티리얼 데이터 구조 버퍼(g_SwMaterials)입니다. 인스턴스의 materialIndex 로 읽습니다.
@@ -188,7 +192,7 @@ namespace sw
                                SW_DX11_STATIC_SAMPLER3 == SW_DX11_STATIC_SAMPLER0 + 3 && SW_DX11_STATIC_SAMPLER4 == SW_DX11_STATIC_SAMPLER0 + 4 &&
                                SW_DX11_STATIC_SAMPLER5 == SW_DX11_STATIC_SAMPLER0 + 5 && SW_DX11_STATIC_SAMPLER6 == SW_DX11_STATIC_SAMPLER0 + 6,
                            "DX11 정적 샘플러 슬롯은 연속이어야 한다 (PSSetSamplers 한 번에 건다)" );
-            static_assert( kStaticSampler0 >= kMaterialTexture0 + kMaterialTextureCount, "DX11 정적 샘플러가 슬롯 결합 샘플러(s0..s8)와 겹친다" );
+            static_assert( kStaticSampler0 >= kEngineTexture0 + kEngineTextureCount, "DX11 정적 샘플러가 엔진 슬롯 결합 샘플러(s0..s3)와 겹친다" );
             static_assert( kStaticSampler0 + kStaticSamplerArrayCount <= kMaxSamplerSlotCount, "DX11 정적 샘플러가 샘플러 슬롯 수(16)를 넘는다" );
         } // namespace dx11
 
@@ -234,19 +238,19 @@ namespace sw
             inline constexpr const utf8* kInstances            = "g_SwInstances";
             inline constexpr const utf8* kMaterials            = "g_SwMaterials";
             inline constexpr const utf8* kEngineTexture        = "g_SwSlot";        ///< 뒤에 0..3 이 붙는다.
-            inline constexpr const utf8* kMaterialTexture      = "g_SwMaterialTex"; ///< 뒤에 0..3 이 붙는다.
+            inline constexpr const utf8* kMaterialTexture      = "g_SwMaterialTex"; ///< 뒤에 0..15 가 붙는다.
             inline constexpr const utf8* kBindlessTextures     = "g_SwBindlessTex2D";
             inline constexpr const utf8* kBindlessRwTextures   = "g_SwBindlessRWTex2D";
             inline constexpr const utf8* kSamplers             = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
             inline constexpr const utf8* kSamplerSlot          = "g_SwSampler";            ///< 뒤에 0..6 이 붙는다. DX12 정적 샘플러 s#(배열은 정적 샘플러로 채울 수 없다).
             inline constexpr const utf8* kShadowSampler        = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
             inline constexpr const utf8* kRwTextureSlot        = "g_SwRWSlot";             ///< 뒤에 0..3 이 붙는다(DX11/GL 컴퓨트 RW 텍스처 슬롯).
-            inline constexpr const utf8* kVisibleInstances     = "g_SwVisibleInstanceIDs"; ///< t10(그래픽스). 컬링이 만든 가시 목록
-            inline constexpr const utf8* kMorphVertices        = "g_SwMorphVertices";      ///< t11(그래픽스). GPU 가 변형한 정점 풀
-            inline constexpr const utf8* kLights               = "g_SwLights";             ///< t12(그래픽스). 씬 라이트 목록
-            inline constexpr const utf8* kBatches              = "g_SwBatches";            ///< t13(그래픽스). 씬 배치 테이블
-            inline constexpr const utf8* kVertexAnimation      = "g_SwVertexAnimation";    ///< t14(그래픽스). 정점 애니메이션(VAT) 테이블
-            inline constexpr const utf8* kCanvasQuads          = "g_SwCanvasQuads";        ///< t15(캔버스 패스). 화면 2D 사각형
+            inline constexpr const utf8* kVisibleInstances     = "g_SwVisibleInstanceIDs"; ///< t6(그래픽스). 컬링이 만든 가시 목록
+            inline constexpr const utf8* kMorphVertices        = "g_SwMorphVertices";      ///< t7(그래픽스). GPU 가 변형한 정점 풀
+            inline constexpr const utf8* kLights               = "g_SwLights";             ///< t8(그래픽스). 씬 라이트 목록
+            inline constexpr const utf8* kBatches              = "g_SwBatches";            ///< t9(그래픽스). 씬 배치 테이블
+            inline constexpr const utf8* kVertexAnimation      = "g_SwVertexAnimation";    ///< t10(그래픽스). 정점 애니메이션(VAT) 테이블
+            inline constexpr const utf8* kCanvasQuads          = "g_SwCanvasQuads";        ///< t11(캔버스 패스). 화면 2D 사각형
             inline constexpr const utf8* kMorphRestVertices    = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
             inline constexpr const utf8* kMorphDeformPrograms  = "g_DeformPrograms";       ///< meshmorph t1. 메시 칸 표 + 변형 프로그램(meshmodifier.hlsli)
             inline constexpr const utf8* kMorphVerticesRw      = "g_MorphVerticesRW";      ///< meshmorph 와 meshskin 의 u0. 변형 결과
@@ -262,11 +266,18 @@ namespace sw
 
         // 계약의 내부 일관성을 검사한다. 값을 바꾸면 여기서 먼저 걸린다.
         static_assert( kInstanceBuffer == kEngineTexture0 + kEngineTextureCount, "인스턴스 버퍼는 엔진 텍스처 슬롯 바로 다음이어야 한다" );
-        static_assert( kMaterialTexture0 == kInstanceBuffer + 1, "머티리얼 텍스처 슬롯은 인스턴스 버퍼 바로 다음이어야 한다" );
+        static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
+        static_assert( kMaterialTexture0 == kSrvSlotCount, "머티리얼 텍스처 슬롯(에뮬)은 SRV 띠 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖" );
         static_assert( SW_SLOT_MATERIAL_TEX1 == SW_SLOT_MATERIAL_TEX0 + 1 && SW_SLOT_MATERIAL_TEX2 == SW_SLOT_MATERIAL_TEX0 + 2 &&
-                           SW_SLOT_MATERIAL_TEX3 == SW_SLOT_MATERIAL_TEX0 + 3,
-                       "머티리얼 텍스처 슬롯은 연속이어야 한다 (셰이더가 서수로 고른다)" );
-        static_assert( kMaterialBuffer == kMaterialTexture0 + kMaterialTextureCount, "머티리얼 데이터 버퍼는 머티리얼 텍스처 다음이어야 한다" );
+                           SW_SLOT_MATERIAL_TEX3 == SW_SLOT_MATERIAL_TEX0 + 3 && SW_SLOT_MATERIAL_TEX4 == SW_SLOT_MATERIAL_TEX0 + 4 &&
+                           SW_SLOT_MATERIAL_TEX5 == SW_SLOT_MATERIAL_TEX0 + 5 && SW_SLOT_MATERIAL_TEX6 == SW_SLOT_MATERIAL_TEX0 + 6 &&
+                           SW_SLOT_MATERIAL_TEX7 == SW_SLOT_MATERIAL_TEX0 + 7 && SW_SLOT_MATERIAL_TEX8 == SW_SLOT_MATERIAL_TEX0 + 8 &&
+                           SW_SLOT_MATERIAL_TEX9 == SW_SLOT_MATERIAL_TEX0 + 9 && SW_SLOT_MATERIAL_TEX10 == SW_SLOT_MATERIAL_TEX0 + 10 &&
+                           SW_SLOT_MATERIAL_TEX11 == SW_SLOT_MATERIAL_TEX0 + 11 && SW_SLOT_MATERIAL_TEX12 == SW_SLOT_MATERIAL_TEX0 + 12 &&
+                           SW_SLOT_MATERIAL_TEX13 == SW_SLOT_MATERIAL_TEX0 + 13 && SW_SLOT_MATERIAL_TEX14 == SW_SLOT_MATERIAL_TEX0 + 14 &&
+                           SW_SLOT_MATERIAL_TEX15 == SW_SLOT_MATERIAL_TEX0 + 15 && kMaterialTextureCount == 16,
+                       "머티리얼 텍스처 슬롯은 연속 16 칸이어야 한다 (셰이더가 서수로 고른다 — binding.hlsli 의 선언 16 줄과 같다)" );
+        static_assert( kCanvasTextureCount <= kMaterialTextureCount, "캔버스 텍스처는 머티리얼 텍스처 슬롯의 앞 칸을 빌려 쓴다" );
         static_assert( kVisibleInstanceBuffer == kMaterialBuffer + 1, "가시 인스턴스 ID 버퍼는 머티리얼 데이터 다음이어야 한다" );
         static_assert( kMorphVertexBuffer == kVisibleInstanceBuffer + 1, "모프 정점 버퍼는 가시 목록 다음이어야 한다" );
         static_assert( kLightBuffer == kMorphVertexBuffer + 1, "라이트 버퍼는 모프 정점 다음이다" );

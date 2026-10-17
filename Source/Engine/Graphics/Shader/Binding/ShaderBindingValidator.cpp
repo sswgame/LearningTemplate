@@ -319,27 +319,27 @@ namespace sw
                 // 루트/푸시 상수 블록: DX12 b0 space2, DX11 · GL b2 에뮬. Vulkan 은 푸시 상수라 바인딩 자리가 없다(리플렉션에 안 나온다).
                 add( shaderslot::cbname::kRootConstants, ShaderBindingKind::ConstantBuffer,
                      slotB( shaderslot::kRootConstantEmulationSlot ), at( shaderslot::kRootConstantSpace, shaderslot::kRootConstantRegister ), none(), slotB( shaderslot::kRootConstantEmulationSlot ) );
-                // GPUScene 버퍼: 인스턴스 t4, 머티리얼 데이터 t9 (네 백엔드 공통)
+                // GPUScene 버퍼: 인스턴스 t4, 머티리얼 데이터 t5 (네 백엔드 공통)
                 add( shaderslot::resname::kInstances, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kInstanceBuffer ), slotB( shaderslot::kInstanceBuffer ), vkT( shaderslot::kInstanceBuffer ), slotB( shaderslot::kInstanceBuffer ) );
                 add( shaderslot::resname::kMaterials, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kMaterialBuffer ), slotB( shaderslot::kMaterialBuffer ), vkT( shaderslot::kMaterialBuffer ), slotB( shaderslot::kMaterialBuffer ) );
-                // 컬링이 만든 가시 인스턴스 ID 목록: 그래픽스 t10 (네 백엔드 공통).
+                // 컬링이 만든 가시 인스턴스 ID 목록: 그래픽스 t6 (네 백엔드 공통).
                 add( shaderslot::resname::kVisibleInstances, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kVisibleInstanceBuffer ), slotB( shaderslot::kVisibleInstanceBuffer ),
                      vkT( shaderslot::kVisibleInstanceBuffer ), slotB( shaderslot::kVisibleInstanceBuffer ) );
-                // GPU 가 변형한 정점 풀 t11 · 씬 라이트 목록 t12 (네 백엔드 공통).
+                // GPU 가 변형한 정점 풀 t7 · 씬 라이트 목록 t8 (네 백엔드 공통).
                 add( shaderslot::resname::kMorphVertices, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kMorphVertexBuffer ), slotB( shaderslot::kMorphVertexBuffer ), vkT( shaderslot::kMorphVertexBuffer ), slotB( shaderslot::kMorphVertexBuffer ) );
                 add( shaderslot::resname::kLights, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kLightBuffer ), slotB( shaderslot::kLightBuffer ), vkT( shaderslot::kLightBuffer ), slotB( shaderslot::kLightBuffer ) );
-                // 씬 배치 표: 그래픽스 t13 (네 백엔드 공통). 정점 셰이더가 자기 배치 번호로 읽는다.
+                // 씬 배치 표: 그래픽스 t9 (네 백엔드 공통). 정점 셰이더가 자기 배치 번호로 읽는다.
                 add( shaderslot::resname::kBatches, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ), vkT( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ) );
-                // 정점 애니메이션(VAT) 표: 그래픽스 t14 (네 백엔드 공통). 먼 군중의 정점 셰이더가 인스턴스 시각으로 읽는다.
+                // 정점 애니메이션(VAT) 표: 그래픽스 t10 (네 백엔드 공통). 먼 군중의 정점 셰이더가 인스턴스 시각으로 읽는다.
                 add( shaderslot::resname::kVertexAnimation, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kVertexAnimationBuffer ),
                      slotB( shaderslot::kVertexAnimationBuffer ), vkT( shaderslot::kVertexAnimationBuffer ), slotB( shaderslot::kVertexAnimationBuffer ) );
-                // 캔버스 사각형: 캔버스 패스 t15 (네 백엔드 공통). 정점 · 픽셀 셰이더가 (루트 상수의 시작 + SV_InstanceID) 번째를 읽는다(canvas.hlsl).
+                // 캔버스 사각형: 캔버스 패스 t11 (네 백엔드 공통). 정점 · 픽셀 셰이더가 (루트 상수의 시작 + SV_InstanceID) 번째를 읽는다(canvas.hlsl).
                 add( shaderslot::resname::kCanvasQuads, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kCanvasQuadBuffer ),
                      slotB( shaderslot::kCanvasQuadBuffer ), vkT( shaderslot::kCanvasQuadBuffer ), slotB( shaderslot::kCanvasQuadBuffer ) );
                 // gpucull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
@@ -349,7 +349,7 @@ namespace sw
                 add( shaderslot::resname::kCullVisibleIDs, ShaderBindingKind::RwStructuredBuffer, slotB( 1 ), slotB( 1 ), vkU( 1 ), slotB( shaderslot::gl::kUavBinding0 + 1 ) );
                 // instanceanimation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
                 add( shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
-                // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t5..t8: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
+                // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t12..t27: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
                 static string s_arrEngineName[shaderslot::kEngineTextureCount];
                 static string s_arrEngineSamplerName[shaderslot::kEngineTextureCount];
                 static string s_arrMaterialName[shaderslot::kMaterialTextureCount];
@@ -368,7 +368,8 @@ namespace sw
                     s_arrMaterialSamplerName[slotIndex] = s_arrMaterialName[slotIndex] + "Sampler";
                     const uint32 reg                    = shaderslot::kMaterialTexture0 + slotIndex;
                     add( s_arrMaterialName[slotIndex].c_str(), ShaderBindingKind::Texture, slotB( reg ), none(), none(), slotB( reg ) );
-                    add( s_arrMaterialSamplerName[slotIndex].c_str(), ShaderBindingKind::Sampler, slotB( reg ), none(), none(), slotB( reg ) );
+                    // 짝 샘플러는 GL 만(결합 샘플러) — DX11 은 샘플러 슬롯이 16 개뿐이라 정적 세트로 읽는다(binding.hlsli 11-2).
+                    add( s_arrMaterialSamplerName[slotIndex].c_str(), ShaderBindingKind::Sampler, none(), none(), none(), slotB( reg ) );
                 }
                 // 컴퓨트 RW 텍스처 슬롯 u4..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
                 static string s_arrRwTextureName[shaderslot::kComputeTextureUavSlotCount];

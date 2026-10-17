@@ -1,5 +1,8 @@
 #include "lighting.hlsli"
 
+// 금속도 칸이 없다 — 모든 표면이 유전체다(보기 모드 Metallic 이 0 을 보인다).
+static const float kSurfaceMetallic = 0.0f;
+
 struct PSInput
 {
 	float4 position                    : SV_POSITION;
@@ -85,7 +88,7 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 #if defined( SW_PASS_GBUFFER )
 	// G버퍼 패스는 **조명을 계산하지 않는다** — 표면만 적어 두고 셰이딩은 디퍼드 조명 패스가 한다.
 	// 조명 코드가 통째로 컴파일 아웃되므로 런타임 분기가 아니다(언리얼의 베이스 패스와 같은 구성).
-	return swStoreSurface(float4(0, 0, 0, 0), albedo, normal, input.worldPosition);
+	return swStoreSurface(float4(0, 0, 0, 0), albedo, normal, input.worldPosition, material.roughness, kSurfaceMetallic);
 #else
 #if SW_VIEWMODE_SKIPS_LIGHTING
 	// 보기 모드 Unlit — 조명 · 그림자 · 림 없이 알베도 그대로.
@@ -102,9 +105,9 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 	// 으로 들고 있고(glassmaterial.material), 불투명 변형은 알파 경로가 아예 컴파일되지 않는다 — 불투명
 	// 패스에서 머티리얼 알파가 새어 나오는 일이 없다. 언리얼도 블렌드 모드가 머티리얼의 퍼뮤테이션이다.
 #if defined( MATERIAL_BLEND_TRANSLUCENT )
-	return swStoreSurface(float4(lit, albedo.a), albedo, normal, input.worldPosition);
+	return swStoreSurface(float4(lit, albedo.a), albedo, normal, input.worldPosition, material.roughness, kSurfaceMetallic);
 #else
-	return swStoreSurface(float4(lit, 1.0f), albedo, normal, input.worldPosition);
+	return swStoreSurface(float4(lit, 1.0f), albedo, normal, input.worldPosition, material.roughness, kSurfaceMetallic);
 #endif
 #endif
 }

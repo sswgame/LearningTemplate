@@ -88,12 +88,12 @@ namespace sw
 {
     /**
      * @brief 같은 텍스처 그룹(최대 4개)과 같은 가위로 그리는 연속 사각형입니다. 드로우 하나(`drawInstanced( 6, _quadCount )`)로 그립니다.
-     * @details 텍스처 수 한도는 에뮬레이션 백엔드(DX11, GL)가 머티리얼 텍스처 슬롯 t5..t8 에 서수로 바인딩하는 수와 같다(`shaderslot::kMaterialTextureCount`).
+     * @details 텍스처 수 한도는 에뮬레이션 백엔드(DX11, GL)가 머티리얼 텍스처 슬롯 t12..t15 에 서수로 바인딩하는 수와 같다(`shaderslot::kCanvasTextureCount`).
      *          가위가 바뀌는 지점에서 일괄이 끊긴다(Slate, Dear ImGui, Godot 의 사각 클리핑과 같다).
      */
     struct CanvasBatch
     {
-        CanvasTextureRef _arrTexture[shaderslot::kMaterialTextureCount]{};
+        CanvasTextureRef _arrTexture[shaderslot::kCanvasTextureCount]{};
         RHIScissorRect   _scissor{}; ///< `_bScissor` 일 때만 쓴다(렌더 타깃 픽셀).
         uint32           _firstQuad{ 0 };
         uint32           _quadCount{ 0 };

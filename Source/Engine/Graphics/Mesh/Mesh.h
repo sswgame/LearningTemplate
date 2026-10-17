@@ -114,9 +114,25 @@ namespace sw
          */
         static shared_ptr<Mesh> createSkinInstance( const Mesh& source );
 
-        /** @brief CPU 정점 배열을 설정합니다. */
+        /**
+         * @brief CPU 정점 배열을 설정합니다. 탄젠트는 받은 값을 버리고 `computeTangents` 로 다시 구합니다.
+         * @details 탄젠트는 위치 · 노멀 · UV 에서 나오는 값이라(경계 반지름처럼) 메시가 정한다. 정점을 만드는 쪽(도형 · 지형 · 물 · 잘린 조각 · 테스트)은
+         *          탄젠트를 채우지 않아도 되고, 채우지 않은 정점이 0 탄젠트로 그려지는 일이 없다. 이미 구한 탄젠트(`.mesh`)는 `setVerticesWithTangents` 로 넣는다.
+         */
         void setVertices( const vector<RHIVertex>& listVertex );
         void setVertices( vector<RHIVertex>&& listVertex );
+        /**
+         * @brief 탄젠트가 이미 들어 있는 정점 배열을 그대로 설정합니다(`.mesh` 를 읽은 값, 다른 메시의 사본).
+         * @details 임포트가 `computeTangents` 로 구해 파일에 실은 값이다. 런타임이 로드마다 다시 구하지 않는다(언리얼 · 유니티가 임포트 때 MikkTSpace 를 굽는 것과 같다).
+         */
+        void setVerticesWithTangents( vector<RHIVertex>&& listVertex );
+        /**
+         * @brief 삼각형 목록 정점의 탄젠트(`RHIVertex::_arrTangent`)를 위치 · 노멀 · UV 로 구합니다. 정본은 이 함수 하나입니다(런타임 · 임포트 · `.mesh` 쓰기).
+         * @details MikkTSpace 와 같은 규약이다 — 면마다 UV 기울기에서 탄젠트 · 바이탄젠트를 구해 모서리 각도로 가중하고, 위치 · 노멀 · UV 가 비트까지 같은 정점끼리
+         *          (손잡이가 같은 면끼리만) 모아 더한 뒤 노멀에 직교화한다. W 는 바이탄젠트 부호(cross( N, T ) 와 면의 바이탄젠트가 같은 쪽이면 +1)다.
+         *          UV 가 퇴화해(면적 0) 기울기가 없는 정점은 노멀에 수직이고 +X 에 가장 가까운 방향을 받는다(노멀이 X 축이면 +Z). 셰이더의 노멀 맵은 평평한 맵에서 노멀을 그대로 낸다.
+         */
+        static void computeTangents( vector<RHIVertex>& inoutListVertex );
         /** @brief CPU 정점 배열입니다. `setVertices` 와 짝을 이루며, GPU 업로드 뒤에도 원본은 여기 남습니다. */
         const vector<RHIVertex>& getVertices() const { return _listVertex; }
 

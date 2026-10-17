@@ -144,7 +144,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, SyntheticViolationsAreDetected )
     namespace bindless = sw::shaderslot::bindless;
     sw::vector<sw::ShaderBindingValidatorIssue> listIssue;
 
-    // 1) GL: 계약대로 — PassCB binding 0, MaterialCB binding 1, 인스턴스 SSBO 4, 머티리얼 SSBO 9, 텍스처 유닛 0..3/5..8
+    // 1) GL: 계약대로 — PassCB binding 0, MaterialCB binding 1, 인스턴스 SSBO 4, 머티리얼 SSBO 5, 텍스처 유닛 0..3/12..27
     {
         sw::ShaderReflectionData ok{};
         ok._listConstantBuffer.push_back( makeCb( "PassCB", 0, sw::shaderslot::kPassConstantBuffer ) );
@@ -218,7 +218,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, SyntheticViolationsAreDetected )
         SW_EXPECT_TRUE_MSG( hasIssueContaining( listIssue, "종류" ), "종류 불일치가 보고돼야 한다" );
     }
 
-    // 7) DX11: 계약대로 (텍스처+샘플러 짝, 인스턴스 t4, 머티리얼 t9)
+    // 7) DX11: 계약대로 (엔진 텍스처+샘플러 짝, 머티리얼 텍스처는 짝 없이 t12, 인스턴스 t4, 머티리얼 t5)
     {
         sw::ShaderReflectionData ok{};
         ok._listConstantBuffer.push_back( makeCb( "PassCB", 0, 0 ) );
@@ -227,6 +227,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, SyntheticViolationsAreDetected )
         ok._listResource.push_back( makeRes( "g_SwSlot0Sampler", "Sampler", 0, 0 ) );
         ok._listResource.push_back( makeRes( "g_SwInstances", "StructuredBuffer", 0, sw::shaderslot::kInstanceBuffer ) );
         ok._listResource.push_back( makeRes( "g_SwMaterials", "StructuredBuffer", 0, sw::shaderslot::kMaterialBuffer ) );
+        ok._listResource.push_back( makeRes( "g_SwMaterialTex15", "Texture", 0, sw::shaderslot::kMaterialTexture0 + 15 ) );
         listIssue.clear();
         SW_EXPECT_EQUAL( 0u, sw::ShaderBindingValidator::validate( ok, sw::ShaderTargetFormat::DXBC_D3D11, "ok.dx11", &listIssue ) );
     }
@@ -278,11 +279,13 @@ SW_TEST_CASE( ShaderBindingValidatorTest, SyntheticViolationsAreDetected )
         full._listVertexInput.push_back( makeVertexInput( "NORMAL", 1 ) );
         full._listVertexInput.push_back( makeVertexInput( "TEXCOORD", 2 ) );
         full._listVertexInput.push_back( makeVertexInput( "COLOR", 3 ) );
+        full._listVertexInput.push_back( makeVertexInput( "TANGENT", 4 ) );
         listIssue.clear();
         SW_EXPECT_EQUAL( 0u, sw::ShaderBindingValidator::validate( full, sw::ShaderTargetFormat::SPIRV_Vulkan, "full.vk", &listIssue ) );
 
+        // 표에 없는 시맨틱 — 바이탄젠트는 정점에 싣지 않는다(cross( N, T ) × w 로 만든다).
         sw::ShaderReflectionData unknown{};
-        unknown._listVertexInput.push_back( makeVertexInput( "TANGENT", 0 ) );
+        unknown._listVertexInput.push_back( makeVertexInput( "BINORMAL", 0 ) );
         unknown._listVertexInput.push_back( makeVertexInput( "TEXCOORD", 1, 1 ) );
         listIssue.clear();
         SW_EXPECT_EQUAL( 2u, sw::ShaderBindingValidator::validate( unknown, sw::ShaderTargetFormat::DXBC_D3D11, "unknown.dx11", &listIssue ) );
@@ -887,7 +890,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
 }
 
 /**
- * @brief [ShaderBindingValidatorTest] 씬 구조버퍼 슬롯(t4 · t9..t13)은 모두 계약 표에 있다
+ * @brief [ShaderBindingValidatorTest] 씬 구조버퍼 슬롯(t4..t9)은 모두 계약 표에 있다
  * @details validate 는 표에 없는 이름을 건너뛴다. 표에서 빠진 슬롯은 셰이더가 엉뚱한 레지스터에 선언해도 아무 검사도 지지 않는다.
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, EverySceneStructuredBufferSlotIsReserved )

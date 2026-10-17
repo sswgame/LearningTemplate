@@ -83,7 +83,7 @@ namespace sw
         /**
          * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위)입니다. 0xFFFFFFFF 이면 모프를 하지 않습니다.
          * @details RT 가 `GPUScene::assignMorphBases` 로 채운다. GT 는 GPU 풀을 모른다(스냅샷 소유 규칙). upload 가 이 값을
-         *          배치 테이블(`GPUBatchInfo`, g_SwBatches t13)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽는다(binding.hlsli swComputeMorphElement).
+         *          배치 테이블(`GPUBatchInfo`, g_SwBatches t9)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽는다(binding.hlsli swComputeMorphElement).
          */
         uint32 _morphVertexBase{ 0xFFFFFFFFu };
         /**
@@ -114,7 +114,7 @@ namespace sw
          */
         uint32 _shaderPermutation{ 0xFFFFFFFFu };
         /**
-         * @brief 그룹의 GPU 구조 버퍼(g_SwMaterials, t9)와 SRV 인덱스입니다. upload 가 채웁니다.
+         * @brief 그룹의 GPU 구조 버퍼(g_SwMaterials, t5)와 SRV 인덱스입니다. upload 가 채웁니다.
          * @details 인스턴스의 _materialIndex 가 이 버퍼의 원소를 고른다(언리얼 GPUScene 방식). 드로우마다 CB 를 바꿔
          *          끼우지 않고, 배치마다 이 버퍼를 리플렉션 슬롯에 한 번 바인딩한다.
          */
@@ -124,18 +124,23 @@ namespace sw
         uint32 _materialCount{ 0 };
         /**
          * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스(서수 순서)입니다. 네이티브 bindless 가 아닌 백엔드에서만 씁니다.
-         * @details DX11 과 GL 은 셰이더가 전역 인덱스를 해석하지 못해서 엔진이 t5..t8 에 직접 바인딩해야 한다.
+         * @details DX11 과 GL 은 셰이더가 전역 인덱스를 해석하지 못해서 엔진이 t12..t27 에 직접 바인딩해야 한다.
          *          렌더 스레드는 씬을 볼 수 없으므로(Material* 를 따라갈 수 없다) 값으로 실어 보낸다.
+         * @note 초기값은 칸마다 적는다 — 빠진 칸은 0(유효한 SRV 번호)이 되어 다른 텍스처를 건다. 칸 수가 바뀌면 아래 static_assert 가 먼저 멈춘다.
          */
         RHIDescriptorIndex _arrMaterialTexSrv[shaderslot::kMaterialTextureCount] = {
+            kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
+            kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
+            kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
+        static_assert( shaderslot::kMaterialTextureCount == 16, "_arrMaterialTexSrv 의 초기값을 칸 수만큼 적는다" );
         /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRHI 합니다. 이 shared_ptr 이 수명을 잡고 있어 패킷이 살아 있는 동안 유지됩니다. */
         shared_ptr<MaterialInstance> _materialInstance;
 
         /**
          * @brief 두 배치가 머티리얼 쪽에서 멀티 드로우 하나로 묶일 수 있는지 판단합니다. 버퍼, SRV, 원소 수, 텍스처가 같아야 하고, 머티리얼 CB 는
          *        셰이더가 그 슬롯을 바인딩할 때만(@p bShaderBindsMaterialCb) 비교합니다.
-         * @details GPUScene 경로의 셰이더는 머티리얼을 구조 버퍼(`g_SwMaterials`, t9)에서 인스턴스의 `_materialIndex` 로 읽으므로 CB 슬롯이 없다.
+         * @details GPUScene 경로의 셰이더는 머티리얼을 구조 버퍼(`g_SwMaterials`, t5)에서 인스턴스의 `_materialIndex` 로 읽으므로 CB 슬롯이 없다.
          *          그런 셰이더에서 `_materialCb` 를 키에 넣으면 깊이순으로 섞인 투명 배치들이 이미지에 영향이 없는 값 때문에 하나씩 따로 그려진다
          *          (큐브 8000개와 도형 8종 씬에서 배치 1795개가 드로우 1206회였고, 이 값을 빼면 3회이면서 화면은 같다).
          */

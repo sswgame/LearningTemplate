@@ -35,7 +35,7 @@ SW_DECLARE_STRUCTURED_BUFFER( CanvasQuad, g_SwCanvasQuads, SW_SLOT_CANVAS_QUAD_S
 
 SW_ROOT_CONSTANTS_BEGIN
 	uint  g_SwCanvasQuadBase;    // 이 일괄의 첫 사각형 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않아 시작을 여기로 받는다
-	uint  g_SwCanvasTexture0;    // 일괄 텍스처 넷 — DX12/Vulkan 은 bindless 전역 번호, DX11/GL 은 서수(t5..t8)
+	uint  g_SwCanvasTexture0;    // 일괄 텍스처 넷 — DX12/Vulkan 은 bindless 전역 번호, DX11/GL 은 서수(t12..t15)
 	uint  g_SwCanvasTexture1;
 	uint  g_SwCanvasTexture2;
 	uint  g_SwCanvasTexture3;

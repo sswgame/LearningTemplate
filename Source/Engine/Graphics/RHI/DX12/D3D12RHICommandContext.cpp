@@ -597,7 +597,7 @@ namespace sw
 
     void D3D12RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …)도 텍스처와 같은 슬롯 테이블 경로다(bindShaderResource).
+        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t5 …)도 텍스처와 같은 슬롯 테이블 경로다(bindShaderResource).
         bindShaderResource( index, slot );
     }
 

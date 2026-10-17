@@ -23,6 +23,10 @@
  */
 #include "lighting.hlsli"
 
+// 보기 모드 Roughness · Metallic 이 보이는 값 — 툰은 PBR 칸이 없는 거친 유전체로 본다.
+static const float kSurfaceRoughness = 1.0f;
+static const float kSurfaceMetallic  = 0.0f;
+
 // toon.material 의 프로퍼티와 이름 · 순서가 같다. 머티리얼 패커는 리플렉션 오프셋(이름)으로 채운다.
 SW_MATERIAL_BEGIN
 {
@@ -44,10 +48,16 @@ SW_MATERIAL_BEGIN
 	float  outlineLightingMix; // 외곽선 색에 빛을 곱하는 정도(outlineLightingMixFactor)
 	float  outlineMaxDistance; // 화면 모드 두께가 거리와 무관하게 유지되는 거리 상한(0.x _OutlineScaledMaxDistance). 넘으면 멀수록 가늘어진다
 	float  alphaCutoff;        // MATERIAL_ALPHA_CUTOFF 일 때 이 값보다 작은 알파를 버린다(alphaCutoff · 0.x _Cutoff)
+	float  normalScale;        // 노멀 맵 xy 배율(normalTexture.scale · 0.x _BumpScale)
+	float  shadingShiftTextureScale; // 셰이딩 시프트 텍스처 배율(shadingShiftTexture.scale) — 시프트 += r × 배율
 	uint   baseColorMap;       // 기본 텍스처(baseColorTexture · 0.x _MainTex)
 	uint   shadeMap;           // 그림자 텍스처(shadeMultiplyTexture · 0.x _ShadeTexture)
 	uint   emissiveMap;        // 발광 텍스처(emissiveTexture · 0.x _EmissionMap)
 	uint   matcapMap;          // 맷캡 텍스처(matcapTexture · 0.x _SphereAdd)
+	uint   normalMap;          // 탄젠트 공간 노멀 맵(normalTexture · 0.x _BumpMap) — glTF 규약(초록이 위). 없으면 정점 노멀 그대로
+	uint   shadingShiftMap;    // 셰이딩 시프트 텍스처(shadingShiftTexture) — r 을 쓴다. 없으면 0 을 더한다
+	uint   rimMultiplyMap;     // 림 곱 텍스처(rimMultiplyTexture · 0.x _RimTexture) — 림(프레넬 + 맷캡)에 rgb 를 곱한다
+	uint   outlineWidthMap;    // 외곽선 두께 곱 텍스처(outlineWidthMultiplyTexture · 0.x _OutlineWidthTexture) — 정점에서 g 를 두께에 곱한다
 }
 SW_MATERIAL_END
 
@@ -85,8 +95,37 @@ struct PSInput
 	float3 normal                      : TEXCOORD1;
 	nointerpolation uint materialIndex : TEXCOORD2;
 	float3 worldPosition               : TEXCOORD3;
+	float4 tangent                     : TEXCOORD4; // xyz 월드 탄젠트 · w 바이탄젠트 부호(정점 탄젠트 그대로)
 };
 #endif
+
+/**
+ * @brief 로컬 탄젠트를 월드로 옮깁니다. 탄젠트는 표면을 따라가는 방향이라 노멀(여인수 행렬)과 달리 월드 행렬 그대로 곱한다.
+ * @note 스킨 · 모프 메시는 레스트 탄젠트다(스키닝이 탄젠트를 돌리지 않는다) — 픽셀이 변형된 노멀에 다시 직교화한다.
+ */
+float3 computeWorldTangent( float3 localTangent, float4x4 world )
+{
+	return mul( float4( localTangent, 0.0f ), world ).xyz;
+}
+
+/**
+ * @brief 노멀 맵을 적용한 월드 노멀입니다. 맵이 없으면 @p normal 그대로입니다.
+ * @details 탄젠트를 노멀에 다시 직교화하고 바이탄젠트는 cross( N, T ) × w 다(glTF · MikkTSpace — C++ `Mesh::computeTangents`).
+ */
+float3 applyNormalMap( uint normalMap, float normalScale, float2 uv, float3 normal, float4 tangent )
+{
+	if ( normalMap == kInvalidIndex )
+		return normal;
+	float3 tangentNormal = swSampleMaterialTexture( normalMap, uv ).xyz * 2.0f - 1.0f;
+	tangentNormal.xy *= normalScale;
+	const float3 orthogonalTangent = tangent.xyz - normal * dot( normal, tangent.xyz );
+	const float  tangentLength     = length( orthogonalTangent );
+	if ( tangentLength < 1e-5f )
+		return normal;
+	const float3 unitTangent = orthogonalTangent / tangentLength;
+	const float3 bitangent   = cross( normal, unitTangent ) * ( tangent.w < 0.0f ? -1.0f : 1.0f );
+	return normalize( unitTangent * tangentNormal.x + bitangent * tangentNormal.y + normal * tangentNormal.z );
+}
 
 /**
  * @brief 월드 위치에서 카메라 쪽을 향한 단위 방향입니다. 원근 · 직교 모두 맞다.
@@ -245,8 +284,10 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 	// (outlineMaxDistance 를 넘으면 멀수록 가늘어진다). 화면 가로세로 비를 맞춰야 위아래 · 좌우 두께가 같다.
 	// 시선을 바로 보는 면(노멀이 카메라 쪽)은 밀어도 실루엣이 안 생기고 안쪽에 얼룩만 남으니 줄인다(MToon 과 같다).
 	const bool bScreenWidth = material.outlineWidthMode > 0.5f;
+	// 두께 곱 텍스처(MToon outlineWidthMultiplyTexture)는 g 를 쓴다. 정점이라 밉 0 으로 읽는다. 없으면 흰색이라 1 이다.
+	const float outlineWidth = material.outlineWidth * swSampleMaterialTextureLevelZero( material.outlineWidthMap, input.uv ).g;
 	if ( bScreenWidth == false )
-		worldPosition.xyz += worldNormal * material.outlineWidth;
+		worldPosition.xyz += worldNormal * outlineWidth;
 	float4 clipPosition = swComputeClipPosition( worldPosition, g_ViewProj );
 	if ( bScreenWidth )
 	{
@@ -255,7 +296,7 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 		const float2 direction  = ( normalLen > 1e-6f ) ? clipNormal / normalLen : float2( 0.0f, 0.0f );
 		const float  aspect     = g_OutlineParams.y / max( g_OutlineParams.z, 1e-6f ); // (1/W) / (1/H) = H / W
 		const float  facing     = saturate( 1.0f - abs( dot( worldNormal, computeViewDirection( worldPosition.xyz ) ) ) );
-		const float  scale      = material.outlineWidth * 2.0f * min( clipPosition.w, material.outlineMaxDistance ) * facing;
+		const float  scale      = outlineWidth * 2.0f * min( clipPosition.w, material.outlineMaxDistance ) * facing;
 		clipPosition.xy += direction * float2( aspect, 1.0f ) * scale;
 	}
 	output.position      = clipPosition;
@@ -267,6 +308,7 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 	output.position      = swComputeClipPosition( worldPosition, g_ViewProj );
 	output.worldPosition = worldPosition.xyz;
 	output.materialIndex = instance.materialIndex;
+	output.tangent       = float4( computeWorldTangent( input.tangent.xyz, instance.world ), input.tangent.w );
 #endif
 	return output;
 }
@@ -301,12 +343,15 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 	// 양면 머티리얼의 뒷면은 노멀이 반대다 — 뒤집지 않으면 머리카락 안쪽이 바깥 빛으로 칠해진다.
 	normal = bFrontFace ? normal : -normal;
 #endif
+	normal = applyNormalMap( material.normalMap, material.normalScale, input.uv, normal, input.tangent );
+	// 셰이딩 시프트 텍스처(MToon shadingShiftTexture) — 없으면 더하지 않는다(흰색을 더하면 배율만큼 밀린다).
+	const float shadingShift = material.shadingShift + ( ( material.shadingShiftMap == kInvalidIndex ) ? 0.0f : swSampleMaterialTexture( material.shadingShiftMap, input.uv ).r * material.shadingShiftTextureScale );
 
 #if defined( SW_PASS_GBUFFER )
 	// 디퍼드의 G버퍼는 표면만 적는다 — 계단 셰이딩은 포워드 경로의 것이다(디퍼드 조명은 램버트로 칠한다).
-	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), litColor, normal, input.worldPosition );
+	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #elif SW_VIEWMODE_SKIPS_LIGHTING
-	return swStoreSurface( float4( litColor.rgb, litColor.a ), litColor, normal, input.worldPosition );
+	return swStoreSurface( float4( litColor.rgb, litColor.a ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
 #if defined( SW_VIEWMODE_LIGHTINGONLY )
 	// 보기 모드 LightingOnly — 계단 셰이딩은 그대로 두고 기본색 · 그늘색만 회색으로 바꾼다(swShadeLights 를 쓰지 않으므로 여기서).
@@ -318,7 +363,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 	const float  shadow     = swSampleShadowAtWorld( input.worldPosition, normal );
 
 	float3 directLighting;
-	float3 color = shadeToonLights( litColor.rgb, shadeColor, input.worldPosition, normal, shadow, material.shadingShift, material.shadingToony,
+	float3 color = shadeToonLights( litColor.rgb, shadeColor, input.worldPosition, normal, shadow, shadingShift, material.shadingToony,
 	                                material.shadowReceive, directLighting );
 	const float3 ambient = computeAmbient();
 	color += litColor.rgb * ambient;
@@ -329,14 +374,15 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 	float3       rim           = pow( fresnelBase, max( material.rimFresnelPower, 1e-4f ) ) * material.rimColor.rgb;
 	if ( material.matcapMap != kInvalidIndex )
 		rim += material.matcapColor.rgb * swSampleMaterialTexture( material.matcapMap, computeMatcapUv( normal, viewDirection ) ).rgb;
+	rim *= swSampleMaterialTexture( material.rimMultiplyMap, input.uv ).rgb; // 림 곱 텍스처(rimMultiplyTexture) — 없으면 흰색이라 그대로
 	color += rim * lerp( float3( 1.0f, 1.0f, 1.0f ), directLighting + ambient, material.rimLightingMix );
 
 	color += material.emissiveColor.rgb * material.emissiveStrength * swSampleMaterialTexture( material.emissiveMap, input.uv ).rgb;
 
 #if defined( MATERIAL_BLEND_TRANSLUCENT )
-	return swStoreSurface( float4( color, litColor.a ), litColor, normal, input.worldPosition );
+	return swStoreSurface( float4( color, litColor.a ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
-	return swStoreSurface( float4( color, 1.0f ), litColor, normal, input.worldPosition );
+	return swStoreSurface( float4( color, 1.0f ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #endif
 #endif
 }

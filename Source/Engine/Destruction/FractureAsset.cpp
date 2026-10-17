@@ -102,6 +102,12 @@ namespace sw
                 }
             };
 
+            /**
+             * @brief 파일에 실린 정점 하나의 바이트 수입니다(위치 3 · 노멀 3 · UV 2 · 색 4 의 float32). `sizeof( RHIVertex )` 가 아니다.
+             * @details 탄젠트는 싣지 않는다 — 조각 메시는 `Mesh::setVertices` 가 위치 · 노멀 · UV 로 구한다(`FractureRenderUtil`).
+             */
+            static constexpr uint64 kStoredVertexBytes = 12 * sizeof( float32 );
+
             /** @brief 원소 수가 남은 바이트로 담길 수 있는지 확인합니다. 잘린 파일이 큰 할당을 일으키지 않게 하려는 것입니다. */
             static bool canHold( const Reader& reader, uint64 count, uint64 elementSize ) { return count * elementSize <= reader._size - reader._offset; }
         };
@@ -184,7 +190,7 @@ namespace sw
     void FractureAsset::makeBytes( vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        outBytes.reserve( 64 + _listVertex.size() * sizeof( RHIVertex ) + _graph._listNode.size() * 36 );
+        outBytes.reserve( 64 + _listVertex.size() * FractureAssetInternal::kStoredVertexBytes + _graph._listNode.size() * 36 );
         FractureAssetInternal::Writer writer{ outBytes };
         for ( const uint8 magic : FractureAssetInternal::kArrMagic )
         {
@@ -286,7 +292,7 @@ namespace sw
         _boundsMax               = reader.readFloat3();
         const bool bFits         = reader._bFailed == false && FractureAssetInternal::canHold( reader, nodeCount, 36 ) && FractureAssetInternal::canHold( reader, childCount, 4 ) &&
                            FractureAssetInternal::canHold( reader, linkCount, 12 ) && FractureAssetInternal::canHold( reader, leafCount, 40 ) &&
-                           FractureAssetInternal::canHold( reader, vertexCount, sizeof( RHIVertex ) ) && FractureAssetInternal::canHold( reader, hullCount, 12 );
+                           FractureAssetInternal::canHold( reader, vertexCount, FractureAssetInternal::kStoredVertexBytes ) && FractureAssetInternal::canHold( reader, hullCount, 12 );
         if ( bFits == false )
         {
             SW_LOG_ERROR( "Fracture asset is truncated" );

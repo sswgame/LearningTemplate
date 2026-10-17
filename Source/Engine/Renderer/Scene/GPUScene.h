@@ -56,7 +56,7 @@ namespace sw
     inline constexpr uint32 kGPUSortMaxElements = 512;
 
     /**
-     * @brief 배치 테이블의 원소 하나입니다. 컬링 컴퓨트(t1)와 정점 셰이더(`g_SwBatches`, t13)가 같은 테이블을 읽습니다.
+     * @brief 배치 테이블의 원소 하나입니다. 컬링 컴퓨트(t1)와 정점 셰이더(`g_SwBatches`, t9)가 같은 테이블을 읽습니다.
      * @details 컬링은 배치의 인스턴스 구간으로 "이 배치의 가시 목록은 어디서 시작하나" 를 알고, 정점 셰이더는
      *          모프와 정점 풀 오프셋을 읽는다. binding.hlsli 의 SwBatchData, gpucull.hlsl 의 GPUBatchInfo 와
      *          레이아웃이 같아야 한다(uint 8개, 32바이트).
@@ -72,7 +72,7 @@ namespace sw
         /**
          * @brief 모프 정점 풀에서 이 배치 메시의 시작 위치(정점 단위)입니다. 0xFFFFFFFF 이면 모프를 하지 않습니다.
          * @details 드로우마다 루트 상수로 싣지 않고 테이블에 둔다. 배치마다 다른 값이 테이블에 있어야 같은 PSO 의 배치들을 멀티 드로우
-         *          하나로 낼 수 있다. 정점 셰이더는 자기 배치 번호로 이 테이블(g_SwBatches, t13)을 읽는다.
+         *          하나로 낼 수 있다. 정점 셰이더는 자기 배치 번호로 이 테이블(g_SwBatches, t9)을 읽는다.
          */
         uint32 _morphVertexBase{ 0xFFFFFFFFu };
         /// @brief 정점 풀(GPUMeshVertexPool)에서 이 배치 메시의 시작 위치(정점 단위)입니다. 풀 밖의 메시는 0입니다.
@@ -195,7 +195,7 @@ namespace sw
          * @details 슬롯마다 간접 인자와 가시 목록이 따로 있어야 한다. 컬링은 개수를 0에서 세므로 두 뷰가 한 슬롯을 나눠 쓰면 앞 뷰의 개수 위에 뒤 뷰가 더한다.
          */
         void setCullViewCount( IRHIDevice* pDevice, uint32 count );
-        /** @brief 배치 테이블 버퍼의 SRV 를 반환합니다(컬링 컴퓨트 t1, 그래픽스 t13 g_SwBatches). */
+        /** @brief 배치 테이블 버퍼의 SRV 를 반환합니다(컬링 컴퓨트 t1, 그래픽스 t9 g_SwBatches). */
         RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfo._srv; }
         /** @brief 배치 테이블 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }

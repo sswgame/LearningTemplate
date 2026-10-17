@@ -3794,7 +3794,7 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
  *          목록에 **덧붙인다.**
  *
  *          그러면 `ordinal`(= `_listMaterialTextureSrv.size()`)이 0 이 아닌 값에서 시작한다.
- *          네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를 **t5..t8 고정 슬롯 번호**로
+ *          네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를 **t12..t27 고정 슬롯 번호**로
  *          쓰므로 엉뚱한 텍스처를 읽거나, 한도(`kMaterialTextureCount`)를 넘어 흰색으로 남는다 —
  *          "백엔드를 바꾸면 화면이 이상해진다" 로만 보이는 종류다.
  *
@@ -5255,7 +5255,7 @@ SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
 /**
  * @brief [RenderPassGPUTest] 머티리얼 텍스처는 네 백엔드 모두 선형 필터 · 랩 주소로 읽힌다 — 체커 칸 경계의 섞인 픽셀 수가 같다
  * @details 계약은 네이티브 bindless(DX12 · Vulkan)의 `swSampleMaterialTexture` → `swSampleIndex` = SW_SAMPLER_LINEAR_WRAP 이다. 슬롯 결합
- *          샘플러를 쓰는 백엔드는 엔진이 머티리얼 슬롯(t5..t8)에 샘플러를 직접 건다 — 걸지 않으면 GL 은 기본 샘플러(NEAREST · CLAMP)로 칸 경계가
+ *          샘플러를 쓰는 백엔드는 엔진이 머티리얼 슬롯(t12..t27)에 샘플러를 직접 건다 — 걸지 않으면 GL 은 기본 샘플러(NEAREST · CLAMP)로 칸 경계가
  *          계단이 되고, CLAMP 면 텍스처 가장자리에서 반대편 텍셀과 섞이지 않는다. 64x64 체커(8 텍셀 칸, 양 끝 열 색이 다르다)를
  *          화면에 크게 깔고 조명을 컴파일 아웃(Unlit)한 뒤, 쿼드 픽셀 가운데 두 색 사이(25~75%)인 픽셀을 센다 — 최근접은 0 이고, CLAMP 는
  *          가장자리의 랩 경계만큼 적다. 기준은 첫 네이티브 bindless 백엔드의 수다.

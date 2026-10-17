@@ -125,7 +125,7 @@ namespace sw
 
     void FrameRenderer::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
     {
-        // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼. 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t9).
+        // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼. 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t5).
         // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다(드로우별 CB 바인딩 없음).
         if ( batch._materialBuffer == 0 || batch._materialSrv == kInvalidDescriptorIndex )
         {
@@ -146,7 +146,7 @@ namespace sw
             }
             else if ( _bMaterialFallbackMissingLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
             {
-                // 여기서 조용히 나가면 t9 가 빈 채로 드로우가 나가고 Vulkan 은 디바이스를 잃는다.
+                // 여기서 조용히 나가면 t5 가 빈 채로 드로우가 나가고 Vulkan 은 디바이스를 잃는다.
                 // 막는 것은 ensureMaterialPSOs 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
                 SW_LOG_ERROR( "머티리얼 폴백 버퍼가 stride %# 에 없습니다 — 이 드로우는 g_SwMaterials 를 비운 채 나갑니다.",
                               pSlot->_elementStride );

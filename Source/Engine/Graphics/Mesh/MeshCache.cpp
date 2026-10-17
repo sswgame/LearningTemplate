@@ -105,7 +105,7 @@ namespace sw
         loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
         loadScope.setSucceeded();
         shared_ptr<Mesh> loaded = Mesh::create();
-        loaded->setVertices( std::move( data._listVertex ) );
+        loaded->setVerticesWithTangents( std::move( data._listVertex ) );
         if ( data._skinBoneCount > 0 )
             loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
         if ( data._listMorphTarget.empty() == false )
@@ -134,7 +134,7 @@ namespace sw
         // 지난 프레임이 아직 이전 정점 버퍼로 그리고 있을 수 있다. setVertices 는 버퍼를 곧바로 반환하므로 먼저 기다린다(TextureCache::reload 와 같은 이유).
         if ( pDevice != nullptr )
             pDevice->waitIdle();
-        live->setVertices( std::move( data._listVertex ) );
+        live->setVerticesWithTangents( std::move( data._listVertex ) );
         live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
         live->setMorphTargets( std::move( data._listMorphTarget ) );
         return true;

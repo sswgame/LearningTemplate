@@ -23,8 +23,10 @@ namespace sw
         {
             /** @brief 파일 머리의 매직(`SWMS`)입니다. */
             static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'M', 'S' };
-            /** @brief 정점 하나의 float32 개수입니다(위치 3 · 노멀 3 · UV 2 · 색 4). */
-            static constexpr uint32 kFloatPerVertex = 12;
+            /** @brief 정점 하나의 float32 개수입니다(위치 3 · 노멀 3 · UV 2 · 색 4 · 탄젠트 4). */
+            static constexpr uint32 kFloatPerVertex = 16;
+            /** @brief 읽은 탄젠트 길이가 1 에서 이만큼 벗어나면 깨진 파일로 봅니다(쓰기가 정규화한 값을 float32 로 실었다). */
+            static constexpr float32 kTangentLengthTolerance = 1e-3f;
             /** @brief 모프 타깃 덩어리의 이름입니다. */
             static constexpr uint8 kArrMorphChunk[4] = { 'M', 'R', 'P', 'H' };
             /** @brief 모프 차이 하나의 바이트 수입니다(정점 번호 uint32 + float32 여섯). */
@@ -61,6 +63,15 @@ namespace sw
                 }
                 return MathUtil::sqrt( maxLengthSquared );
             }
+
+            /** @brief 탄젠트가 쓰기가 낸 모양(길이 1, 부호 ±1)인지 확인합니다. */
+            static bool isValidTangent( const float32 ( &arrTangent )[4] )
+            {
+                const float32 lengthSquared = arrTangent[0] * arrTangent[0] + arrTangent[1] * arrTangent[1] + arrTangent[2] * arrTangent[2];
+                const bool    bUnitLength   = MathUtil::abs( lengthSquared - 1.0f ) <= kTangentLengthTolerance;
+                const bool    bSign         = arrTangent[3] == 1.0f || arrTangent[3] == -1.0f;
+                return bUnitLength && bSign;
+            }
         };
     } // namespace
 } // namespace sw
@@ -89,7 +100,10 @@ namespace sw
         MeshAssetFormatInternal::appendFloat32( outBytes, MeshAssetFormatInternal::computeBoundingRadius( data._listVertex ) );
         LittleEndianUtil::appendUint32( outBytes, skinBoneCount );
 
-        for ( const RHIVertex& vertex : data._listVertex )
+        // 탄젠트는 받은 값이 아니라 정본(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
+        vector<RHIVertex> listVertex = data._listVertex;
+        Mesh::computeTangents( listVertex );
+        for ( const RHIVertex& vertex : listVertex )
         {
             for ( const float32 value : vertex._arrPosition )
             {
@@ -104,6 +118,10 @@ namespace sw
                 MeshAssetFormatInternal::appendFloat32( outBytes, value );
             }
             for ( const float32 value : vertex._arrColor )
+            {
+                MeshAssetFormatInternal::appendFloat32( outBytes, value );
+            }
+            for ( const float32 value : vertex._arrTangent )
             {
                 MeshAssetFormatInternal::appendFloat32( outBytes, value );
             }
@@ -218,6 +236,13 @@ namespace sw
             Memory::copy( vertex._arrNormal, arrValue + 3, sizeof( vertex._arrNormal ) );
             Memory::copy( vertex._arrUv, arrValue + 6, sizeof( vertex._arrUv ) );
             Memory::copy( vertex._arrColor, arrValue + 8, sizeof( vertex._arrColor ) );
+            Memory::copy( vertex._arrTangent, arrValue + 12, sizeof( vertex._arrTangent ) );
+            if ( MeshAssetFormatInternal::isValidTangent( vertex._arrTangent ) == false )
+            {
+                SW_LOG_WARNING( "Mesh asset has a tangent that is not unit length with a +-1 sign - re-import the model" );
+                outData = MeshAssetData{};
+                return false;
+            }
         }
         if ( skinBoneCount > 0 )
         {

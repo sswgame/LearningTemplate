@@ -147,7 +147,7 @@ namespace sw
 
         // DX12 · Vulkan 은 셰이더가 전역 bindless 인덱스로 힙 · 배열을 직접 읽는다. DX11 · GL 은 그게 안 되므로
         // (SM5.0 은 리소스 배열 동적 인덱싱이 없고, GL 은 SPIR-V 라 ARB_bindless_texture 를 못 쓴다) 엔진이
-        // 머티리얼 텍스처를 t5..t8 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
+        // 머티리얼 텍스처를 t12..t27 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
         const bool    bNativeBindless = pRHI->supportsNativeBindlessSampling();
         TextureCache& textures        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         _textureReloadGeneration      = textures.getReloadGeneration();
@@ -295,7 +295,7 @@ namespace sw
         //
         // 주의: `releaseRHI` 와 이 함수는 같은 상태를 남겨야 한다. 목록이 남은 채 `initRHI` 가 오면 `resolveTextureAssets` 가
         // 목록에 **덧붙여** `ordinal` 이 0 이 아닌 값에서 시작하고, 네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를
-        // t5..t8 고정 슬롯 번호로 쓰므로 **엉뚱한 텍스처를 읽거나**, 한도를 넘어 흰색으로 남는다.
+        // t12..t27 고정 슬롯 번호로 쓰므로 **엉뚱한 텍스처를 읽거나**, 한도를 넘어 흰색으로 남는다.
         releaseTextureAssets( nullptr );
 
         // 디바이스가 이미 없다. GPU 자원은 그와 함께 갔다. 핸들만 비운다(destroy 를 부르면 해제 후 사용이다).

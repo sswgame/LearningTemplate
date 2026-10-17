@@ -1,5 +1,9 @@
 #include "lighting.hlsli"
 
+// 보기 모드 Roughness · Metallic 이 보이는 값 — 지형은 거친 유전체다(PBR 칸이 없다).
+static const float kSurfaceRoughness = 1.0f;
+static const float kSurfaceMetallic  = 0.0f;
+
 /**
  * terrain.hlsl — 지형(TerrainComponent). 스플랫 맵(RGBA = 레이어 0..3 가중치)으로 레이어 넷을 섞는다.
  *
@@ -94,12 +98,12 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	albedo *= lerp( 0.85f, 1.12f, macro );
 
 #if defined( SW_PASS_GBUFFER )
-	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), float4( albedo, 1.0f ), normal, input.worldPosition );
+	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), float4( albedo, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #elif SW_VIEWMODE_SKIPS_LIGHTING
-	return swStoreSurface( float4( albedo, 1.0f ), float4( albedo, 1.0f ), normal, input.worldPosition );
+	return swStoreSurface( float4( albedo, 1.0f ), float4( albedo, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
 	const float  shadow = swSampleShadowAtWorld( input.worldPosition, normal );
 	const float3 lit    = swShadeLights( albedo, input.worldPosition, normal, shadow );
-	return swStoreSurface( float4( lit, 1.0f ), float4( albedo, 1.0f ), normal, input.worldPosition );
+	return swStoreSurface( float4( lit, 1.0f ), float4( albedo, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #endif
 }

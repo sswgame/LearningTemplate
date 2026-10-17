@@ -298,6 +298,58 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
 }
 
 /**
+ * @brief [MeshPrimitiveTest] 정점 탄젠트는 길이 1 이고 노멀에 수직이며 부호가 ±1 이다. 평면의 탄젠트는 u 가 느는 쪽(dP/du)이다
+ * @details 탄젠트는 `Mesh::setVertices` 가 구한다 — 도형 생성기는 채우지 않는다. 0 탄젠트로 그려지면 노멀 맵이 노멀을 0 으로 만들어 그 면이 까맣다.
+ *          바이탄젠트(cross( N, T ) × w)는 v 가 **줄어드는** 쪽이다(v 는 위가 0 — glTF 노멀 맵의 초록이 위).
+ */
+SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
+{
+    const utf8* arrPrimitiveID[] = { "Cube", "Plane", "Sphere", "Cylinder", "Capsule", "Cone", "Sprite" };
+    for ( const utf8* pID : arrPrimitiveID )
+    {
+        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( pID );
+        SW_ASSERT_TRUE( mesh != nullptr );
+        uint32 badCount = 0;
+        for ( const sw::RHIVertex& vertex : mesh->getVertices() )
+        {
+            const sw::float3 normal{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] };
+            const sw::float3 tangent{ vertex._arrTangent[0], vertex._arrTangent[1], vertex._arrTangent[2] };
+            const bool       bUnit       = sw::MathUtil::abs( tangent.getLength() - 1.0f ) <= 0.001f;
+            const bool       bOrthogonal = sw::MathUtil::abs( tangent.dot( normal ) ) <= 0.001f;
+            const bool       bSign       = vertex._arrTangent[3] == 1.0f || vertex._arrTangent[3] == -1.0f;
+            const bool       bValid      = bUnit && bOrthogonal && bSign;
+            if ( bValid == false )
+                ++badCount;
+        }
+        SW_EXPECT_TRUE_MSG( badCount == 0, pID );
+    }
+
+    // 평면(XZ, 노멀 +Y): 탄젠트가 위치의 u 기울기 방향이고, 바이탄젠트가 v 가 줄어드는 쪽이다.
+    sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
+    SW_ASSERT_TRUE( plane != nullptr );
+    const sw::vector<sw::RHIVertex>& listVertex = plane->getVertices();
+    SW_ASSERT_TRUE( listVertex.size() >= 3 );
+    const sw::RHIVertex& vertex0 = listVertex[0];
+    const sw::RHIVertex& vertex1 = listVertex[1];
+    const sw::RHIVertex& vertex2 = listVertex[2];
+    const sw::float3     edge1{ vertex1._arrPosition[0] - vertex0._arrPosition[0], vertex1._arrPosition[1] - vertex0._arrPosition[1], vertex1._arrPosition[2] - vertex0._arrPosition[2] };
+    const sw::float3     edge2{ vertex2._arrPosition[0] - vertex0._arrPosition[0], vertex2._arrPosition[1] - vertex0._arrPosition[1], vertex2._arrPosition[2] - vertex0._arrPosition[2] };
+    const float32        du1         = vertex1._arrUv[0] - vertex0._arrUv[0];
+    const float32        dv1         = vertex1._arrUv[1] - vertex0._arrUv[1];
+    const float32        du2         = vertex2._arrUv[0] - vertex0._arrUv[0];
+    const float32        dv2         = vertex2._arrUv[1] - vertex0._arrUv[1];
+    const float32        determinant = du1 * dv2 - du2 * dv1;
+    SW_ASSERT_TRUE( determinant != 0.0f );
+    const sw::float3 expectedTangent   = ( ( edge1 * dv2 - edge2 * dv1 ) / determinant ).normalize();
+    const sw::float3 expectedBitangent = ( ( edge1 * du2 - edge2 * du1 ) / determinant ).normalize();
+    const sw::float3 normal{ vertex0._arrNormal[0], vertex0._arrNormal[1], vertex0._arrNormal[2] };
+    const sw::float3 tangent{ vertex0._arrTangent[0], vertex0._arrTangent[1], vertex0._arrTangent[2] };
+    const sw::float3 bitangent = normal.cross( tangent ) * vertex0._arrTangent[3];
+    SW_EXPECT_NEAR_EQUAL( 1.0f, tangent.dot( expectedTangent ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, bitangent.dot( expectedBitangent ), 1e-4f );
+}
+
+/**
  * @brief [MeshPrimitiveTest] 스프라이트 사각형은 양면이고, 어느 면이든 그 면을 보는 카메라의 화면 오른쪽으로 u 가 는다(글자가 뒤집히지 않는다)
  * @details 3D 쿼드(+Z 한 면, u 가 +X 로 는다)를 쓰면 그 면은 -Z 를 보는 카메라에서만 보이는데 그 카메라의 화면 오른쪽은 -X 라 모든 스프라이트가
  *          좌우로 뒤집히고(데미지 숫자 "123" 이 거울 글자가 된다), +Z 를 보는 2D 카메라에서는 후면 컬링으로 사라진다.

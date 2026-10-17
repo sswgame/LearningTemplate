@@ -500,7 +500,7 @@ namespace sw
         /// @brief 배치의 머티리얼 데이터 버퍼 원소 수입니다. 셰이더 SW_MATERIAL 이 클램프합니다.
         hashed_string _swMaterialCount{ "g_SwMaterialCount" };
         hashed_string _swInstances{ "SwInstances" };
-        /// @brief GPU 가 변형한 정점 풀입니다. binding.hlsli 의 g_SwMorphVertices(t11)와 PassCB g_SwMorphVerticesIndex 에 대응합니다.
+        /// @brief GPU 가 변형한 정점 풀입니다. binding.hlsli 의 g_SwMorphVertices(t7)와 PassCB g_SwMorphVerticesIndex 에 대응합니다.
         hashed_string _swMorphVertices{ "SwMorphVertices" };
         /// @brief 그 풀의 원소 수입니다. PassCB g_SwMorphVertexCount 에 대응합니다.
         hashed_string _swMorphVertexCount{ "g_SwMorphVertexCount" };

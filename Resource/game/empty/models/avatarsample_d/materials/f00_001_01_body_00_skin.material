@@ -168,6 +168,12 @@
 		      group="Rim"
 		      bSrgb="1"
 		      assetPath="game/empty/textures/avatarsample_d/matcap_rim.dds" />
+		<item name="normalScale" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="4.0" displayName="Normal Scale" group="Surface"/>
+		<item name="shadingShiftTextureScale" type="Range" shaderType="Float" defaultValue="1.0" min="-2.0" max="2.0" displayName="Shading Shift Texture Scale" group="Shading"/>
+		<item name="normalMap" type="Texture2D" displayName="Normal" group="Surface" bSrgb="0"/>
+		<item name="shadingShiftMap" type="Texture2D" displayName="Shading Shift" group="Shading" bSrgb="0"/>
+		<item name="rimMultiplyMap" type="Texture2D" displayName="Rim Multiply" group="Rim" bSrgb="1"/>
+		<item name="outlineWidthMap" type="Texture2D" displayName="Outline Width Multiply" group="Outline" bSrgb="0"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

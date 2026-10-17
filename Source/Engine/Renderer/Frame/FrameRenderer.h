@@ -294,7 +294,7 @@ namespace sw
              * @brief 마지막으로 리소스를 **실제로 바인딩한** PSO 입니다.
              * @details 슬롯 상태는 PSO 단위다. `setPipelineState` 는 이전 PSO 가 바인딩한 t/u 슬롯이 다음 PSO 로
              *          새지 않게 슬롯 상태를 통째로 비운다. 그래서 값과 레지스트리가 그대로여도 PSO 가 바뀌었으면
-             *          다시 바인딩해야 한다. 이를 빼먹으면 배치가 퍼뮤테이션 PSO 로 바뀐 순간 t9(g_SwMaterials)
+             *          다시 바인딩해야 한다. 이를 빼먹으면 배치가 퍼뮤테이션 PSO 로 바뀐 순간 t5(g_SwMaterials)
              *          가 **바인딩되지 않은 채** 드로우가 나가고, Vulkan 은 초기화되지 않은 디스크립터를 읽어
              *          디바이스를 잃는다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
              */
@@ -833,7 +833,7 @@ namespace sw
         bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView );
         /**
          * @brief 머티리얼이 없는 배치에 바인딩하는 원소 하나짜리 구조 버퍼입니다. **내용이 다른 원소마다 하나**씩 있습니다.
-         * @details DX12 에서 아무것도 바인딩하지 않은 t9 를 읽으면 GPU 폴트(디바이스 제거)가 난다. 어떤 드로우도 빈 슬롯으로
+         * @details DX12 에서 아무것도 바인딩하지 않은 t5 를 읽으면 GPU 폴트(디바이스 제거)가 난다. 어떤 드로우도 빈 슬롯으로
          *          나가지 않도록 항상 유효한 버퍼를 바인딩한다. 언리얼의 기본 머티리얼에 해당한다.
          *
          *          언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같은 방식이다.

@@ -1,6 +1,6 @@
 /**
  * @file GPUVertexAnimationPool.h
- * @brief 정점 애니메이션(VAT) 테이블들을 구조 버퍼 하나(g_SwVertexAnimation, t14)에 모으는 풀입니다. 렌더 스레드가 소유합니다.
+ * @brief 정점 애니메이션(VAT) 테이블들을 구조 버퍼 하나(g_SwVertexAnimation, t10)에 모으는 풀입니다. 렌더 스레드가 소유합니다.
  * @details 테이블은 베이크하고 나면 변하지 않아(`MeshVertexAnimation`) 집합이 바뀔 때만 한 번 업로드합니다. 메시마다 헤더 원소(프레임 수, 프레임율, 정점 수,
  *          반복) 하나와 프레임 × 정점 원소가 이어지고, 배치는 헤더 원소 번호를 배치 테이블에 싣습니다(`GPUMeshBatch::_vertexAnimationBase`).
  *          같은 테이블을 나누는 메시들은 한 구간을 씁니다.

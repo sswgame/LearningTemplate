@@ -35,8 +35,8 @@ namespace sw
      * @struct MeshAssetFormat
      * @brief `.mesh` 파일은 헤더(24바이트), 인덱스 없는 삼각형 목록 정점 배열, (스킨이 있으면) 정점별 스킨 가중치로 이루어집니다. 모든 값은 리틀 엔디언입니다.
      * @details 헤더는 다음 순서입니다. 매직 `SWMS`(4바이트), 버전(uint32), 정점 수(uint32, 3 의 배수이고 0 이 아님), 정점 크기(uint32, `RHIVertex` 의 바이트 수),
-     *          경계 반지름(float32, 원점에서 가장 먼 정점까지), 스킨 본 수(uint32, 0 이면 스킨 없음)입니다. 그 뒤에 정점마다 위치 3개, 노멀 3개, UV 2개, 색 4개의
-     *          float32 가 오고, 스킨 본 수가 0 이 아니면 정점마다 본 번호 4개(uint16)와 가중치 4개(float32)가 옵니다. 본 번호는 스켈레톤 본 순서이고 본 수보다 작습니다.
+     *          경계 반지름(float32, 원점에서 가장 먼 정점까지), 스킨 본 수(uint32, 0 이면 스킨 없음)입니다. 그 뒤에 정점마다 위치 3개, 노멀 3개, UV 2개, 색 4개,
+     *          탄젠트 4개(xyz 와 바이탄젠트 부호 w — 쓰기가 `Mesh::computeTangents` 로 구한다)의 float32 가 오고, 스킨 본 수가 0 이 아니면 정점마다 본 번호 4개(uint16)와 가중치 4개(float32)가 옵니다. 본 번호는 스켈레톤 본 순서이고 본 수보다 작습니다.
      *          그 뒤에 선택 청크가 0개 이상 옵니다. 청크는 이름(4바이트), 길이(uint32), 내용으로 이루어집니다. 지금 아는 청크는 `MRPH`(모프 타깃) 하나이고,
      *          모르는 청크는 거절합니다. `MRPH` 는 타깃 수, 타깃별 이름 길이와 이름, 차이 수, 차이 목록(정점 번호 uint32, 위치 차이 3개와 노멀 차이 3개의 float32)을 담습니다.
      *          모프 타깃이 없는 메시는 청크가 없어 이전 파일과 바이트까지 같으므로 버전을 올리지 않았습니다.
@@ -46,11 +46,11 @@ namespace sw
     struct SW_API MeshAssetFormat
     {
         /** @brief 지금 형식의 버전입니다. 레이아웃을 바꾸면 올리고 모델 원본을 다시 임포트합니다. */
-        static constexpr uint32 kVersion = 2;
+        static constexpr uint32 kVersion = 3;
         /** @brief 헤더의 바이트 수입니다. */
         static constexpr uint32 kHeaderSize = 24;
-        /** @brief 정점 하나의 바이트 수입니다(float32 12 개). */
-        static constexpr uint32 kVertexSize = 48;
+        /** @brief 정점 하나의 바이트 수입니다(float32 16 개). */
+        static constexpr uint32 kVertexSize = 64;
         /** @brief 스킨 정점 하나의 바이트 수입니다(uint16 4 개 + float32 4 개). */
         static constexpr uint32 kSkinVertexSize = 24;
         /** @brief 메시 에셋 확장자입니다. */
@@ -59,12 +59,12 @@ namespace sw
         /** @brief 경로가 메시 에셋(`.mesh`)을 가리키는지 확인합니다. 내장 도형 이름("Cube" 등)은 해당하지 않습니다. */
         static bool isMeshAssetPath( string_view path );
 
-        /** @brief 내용을 `.mesh` 바이트로 만듭니다. 경계 반지름은 정점에서 구합니다. */
+        /** @brief 내용을 `.mesh` 바이트로 만듭니다. 경계 반지름과 탄젠트는 정점에서 구합니다(받은 탄젠트는 쓰지 않습니다). */
         static void makeBytes( const MeshAssetData& data, vector<uint8>& outBytes );
         /** @brief 스킨 없는 정점 배열을 `.mesh` 바이트로 만듭니다. */
         static void makeBytes( const vector<RHIVertex>& listVertex, vector<uint8>& outBytes );
         /**
-         * @brief `.mesh` 바이트를 읽습니다. 형식이 맞지 않으면(본 번호가 본 수를 넘는 것 포함) false 이고 @p outData 는 비웁니다.
+         * @brief `.mesh` 바이트를 읽습니다. 형식이 맞지 않으면(본 번호가 본 수를 넘는 것, 길이 1 이 아니거나 부호가 ±1 이 아닌 탄젠트 포함) false 이고 @p outData 는 비웁니다.
          * @param pOutBoundingRadius 머리의 경계 반지름을 받습니다(선택).
          */
         [[nodiscard]] static bool readFromBytes( const uint8* pData, size_t size, MeshAssetData& outData, float32* pOutBoundingRadius = nullptr );

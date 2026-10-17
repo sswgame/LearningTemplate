@@ -216,7 +216,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 t# → 슬롯 세트의 t 범위. 텍스처 슬롯(엔진 t0..t3 · 머티리얼 t5..t8, 에뮬 전용)은 여기로 오지 않는다.
+        // 그래픽스 t# → 슬롯 세트의 t 범위. 텍스처 슬롯(엔진 t0..t3 · 머티리얼 t12..t27, 에뮬 전용)은 여기로 오지 않는다.
         // FrameRenderer 가 supportsNativeBindlessSampling() 이면 건너뛴다.
         slot = toRegister( slot, shaderslot::vk::kTShift );
         if ( slot >= shaderslot::kSrvSlotCount )
@@ -851,7 +851,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t9 …). 리플렉션이 준 슬롯의 t 범위에 건다.
+        // 그래픽스 구조버퍼(인스턴스 t4, 머티리얼 데이터 t5 …). 리플렉션이 준 슬롯의 t 범위에 건다.
         bindShaderResource( index, slot );
     }
 

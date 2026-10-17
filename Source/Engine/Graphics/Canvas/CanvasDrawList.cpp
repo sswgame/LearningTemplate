@@ -19,9 +19,9 @@ namespace sw
              * @brief @p source 의 텍스처를 @p target 에 넣을 슬롯을 정합니다. 모두 들어가면 true 를 반환하고 @p outArrSlot 에 원래 번호 → 새 번호가 담깁니다.
              * @details 들어가지 않으면 @p target 을 바꾸지 않는다. 배치를 복사하지 않는 이유는, 복사하면 위젯 캐시마다 텍스처 참조(shared_ptr)의 원자적 증감이 발생하기 때문이다.
              */
-            static bool mergeTextures( CanvasBatch& target, const CanvasBatch& source, uint32 ( &outArrSlot )[shaderslot::kMaterialTextureCount] )
+            static bool mergeTextures( CanvasBatch& target, const CanvasBatch& source, uint32 ( &outArrSlot )[shaderslot::kCanvasTextureCount] )
             {
-                const CanvasTextureRef* arrPending[shaderslot::kMaterialTextureCount]{};
+                const CanvasTextureRef* arrPending[shaderslot::kCanvasTextureCount]{};
                 uint32                  mergedCount = target._textureCount;
                 for ( uint32 index = 0; index < source._textureCount; ++index )
                 {
@@ -38,7 +38,7 @@ namespace sw
                     }
                     if ( slot == mergedCount )
                     {
-                        if ( mergedCount >= shaderslot::kMaterialTextureCount )
+                        if ( mergedCount >= shaderslot::kCanvasTextureCount )
                             return false;
                         arrPending[slot] = &texture;
                         ++mergedCount;
@@ -54,7 +54,7 @@ namespace sw
             }
 
             /** @brief 텍스처 번호를 바꾸지 않는 슬롯 매핑이면 true 입니다(사각형을 통째로 복사해도 됩니다). */
-            static bool isIdentitySlotMap( const uint32 ( &arrSlot )[shaderslot::kMaterialTextureCount], uint32 textureCount )
+            static bool isIdentitySlotMap( const uint32 ( &arrSlot )[shaderslot::kCanvasTextureCount], uint32 textureCount )
             {
                 for ( uint32 index = 0; index < textureCount; ++index )
                 {
@@ -87,7 +87,7 @@ namespace sw
         {
             if ( sourceBatch._quadCount == 0 )
                 continue;
-            uint32 arrSlot[shaderslot::kMaterialTextureCount]{};
+            uint32 arrSlot[shaderslot::kCanvasTextureCount]{};
             bool   bMerged = false;
             if ( _listBatch.empty() == false && CanvasDrawListInternal::isSameScissor( _listBatch.back(), sourceBatch ) )
                 bMerged = CanvasDrawListInternal::mergeTextures( _listBatch.back(), sourceBatch, arrSlot );
@@ -96,7 +96,7 @@ namespace sw
                 CanvasBatch& batch = _listBatch.emplace_back( sourceBatch );
                 batch._firstQuad   = static_cast<uint32>( _listQuad.size() );
                 batch._quadCount   = 0;
-                for ( uint32 index = 0; index < shaderslot::kMaterialTextureCount; ++index )
+                for ( uint32 index = 0; index < shaderslot::kCanvasTextureCount; ++index )
                 {
                     arrSlot[index] = index;
                 }

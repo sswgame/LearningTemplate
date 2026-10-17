@@ -1,4 +1,8 @@
 #include "lighting.hlsli"
+
+// 보기 모드 Roughness · Metallic 이 보이는 값 — 물은 매끈한 유전체다.
+static const float kSurfaceRoughness = 0.0f;
+static const float kSurfaceMetallic  = 0.0f;
 #include "gerstner.hlsli"
 
 /**
@@ -113,8 +117,8 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	alpha                   = max( alpha, foam );
 
 #if defined( MATERIAL_BLEND_TRANSLUCENT )
-	return swStoreSurface( float4( color, alpha ), float4( input.waterColor.rgb, 1.0f ), normal, input.worldPosition );
+	return swStoreSurface( float4( color, alpha ), float4( input.waterColor.rgb, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
-	return swStoreSurface( float4( color, 1.0f ), float4( input.waterColor.rgb, 1.0f ), normal, input.worldPosition );
+	return swStoreSurface( float4( color, 1.0f ), float4( input.waterColor.rgb, 1.0f ), normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #endif
 }

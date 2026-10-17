@@ -15,15 +15,16 @@
   `WaterBodyComponent::findUnderwaterFog` 가 이미 준다) — 다중 뷰 병합 뒤. (4) 물의 굴절 · 화면 공간 두께는 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는
   계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다).
   (6) 지형 LOD 교체 프레임의 최악 시간이 기준(GT 2 ms)을 넘는다(측정값은 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체"). 메시 집합이 바뀌어 RT 는 정점 풀을
-  통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다)이 없다.
+  통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸은 16 개로 늘었고 `.layerweights` · 스플랫 업로드 · 브러시 · 셰이더가 레이어 넷이다)이 없다.
   (7) 지형 쓰기(결정은 [결정 기록](../09_Decisions.md) 5-5 — GPU 스플랫 구간 업로드 · 청크별 충돌 바디 · 메시 재생성 나눔 · 식생 · 내비 연결 · 에디터 `TerrainBrushTool` 과 시나리오
   `editor.terrainbrush` 까지 들어갔다)의 남은 것 — ⓐ 측정이 Debug 뿐이다: `TerrainBenchTest.ColliderRebuildAfterBrushWrite` · `WriteHeightsRectSizes` 를 Release 로 다시 재고
   `TerrainComponent` 의 청크 재생성 예산(쓰기 · 틱마다 넷)을 GT 2 ms 에 맞춘다. ⓒ 식생은 드래그가 끝나면 숲 전체를 다시
   뿌린다(쇼케이스 Debug 약 0.86 s) — 바뀐 셀만 다시 계산한다. 내비는 런타임 내비메시 타일만 다시 굽는다(에디터가 구운 내비 에셋은 다시 굽기 명령으로). ⓓ 에디터 편집 모드에서도 틱이 남은 청크를
   만드는지 확인하지 않았다(브러시 한 번은 쓰기에서 끝난다). ⓔ 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로 지형을 훑는다(측정 안 함).
 
-- `D2-6` [기능] **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다).
-  UV 스크롤 · 텍스처 칸 늘리기는 VRM 머티리얼 임포터(`Source/Editor`)의 매핑과 같이 바꿔야 해 그래픽 작업자 혼자 끝낼 수 없다.
+- `D2-6` [기능] **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — UV 스크롤 애니메이션(`uvAnimation*`) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다 — 셋째 타깃(셰이딩 모델 ID · 그림자색 · 시프트 · 계단 · 그림자 받기)과 에뮬 백엔드의 엔진 텍스처 칸 다섯째 · 입력 역할 · G버퍼 PSO 의 타깃 셋이 필요해 빌드로 확인하는 단위로 남겼다) ·
+  스킨 · 모프 메시의 탄젠트(스키닝 · 모프 컴퓨트가 위치 · 노멀만 돌려 노멀 맵이 레스트 탄젠트를 쓴다 — `GPUMorphVertex` 에 탄젠트 칸이 필요하다).
+  UV 스크롤은 VRM 머티리얼 임포터(`Source/Editor`)의 매핑과 같이 바꾼다.
 
 - `D2-7` [기능] **VRM 임포트의 남은 것** — humanoid 본 표 · 표정 · 스프링 본 · 1인칭은 `<이름>.avatar.json` 으로 나오지만 데이터뿐이다. 런타임이 읽는 타입이 없다: 표정 → 모프 가중치, 스프링 본 시뮬레이션,
   1인칭 메시 숨김(스키마 테스트는 JSON 객체와 `_version` · `_mapHumanBone` 만 본다). 런타임 타입은 `Engine/Character` · `Engine/Animation` 에, BC7 재임포트는 Editor 임포터에 있어 그래픽 작업자의 파일 밖이다. 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2) — 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다.
@@ -35,7 +36,8 @@
 - `D2-10` [기능] **뷰포트 보기 모드의 남은 것**(2026-10-14, `RenderViewMode` — 언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다). `LightingOnly` 는 들어갔다 —
   `toon` · `sprite2dlit` 포워드 경로까지 회색으로 바꾸고 4 백엔드 그림(`RenderPassGPUTest.ViewModesProduceDistinctPictures`, 포워드 · 디퍼드)은 2026-10-17 Debug 로 통과했다.
   Shipping 베이크(쿠킹한 LightingOnly 변형으로 Shipping hostgpu)는 Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
-  안 한 것: Roughness / Metallic 버퍼 보기(G버퍼에 그 칸이 없다 — 칸을 늘리거나 패스를 새로 만들어야 한다), Shaded Wireframe(패스가 둘 필요), Light Complexity · Mipmaps(그리는 경로가 새로 필요).
+  Roughness · Metallic · Mipmaps 는 셰이더 보기 모드로 들어갔다(`swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다 — 금속도 칸은 PBR(`D2-12`)과 함께 생긴다).
+  안 한 것: Shaded Wireframe(패스가 둘 필요), Light Complexity(디퍼드는 G버퍼 패스가 빛 목록을 보지 않는다 — 조명 패스에 보기 모드 변형이 필요).
 
 - `D2-11` [기능] **파티클 · VFX 시스템이 없다.** 언리얼 Niagara · 유니티 VFX Graph · Godot GPUParticles 에 해당한다. 코드에서 파티클 시스템을 찾지 못했고, VFX 는 `D4-9` 의 큼 묶음 순위 목록에만 있다(설계 없음).
   먼저 설계 문서를 쓴다(`design-reviewer` 검토): 방출기 · 모듈 데이터 형식(데이터 주도, 에셋), CPU 대 GPU 시뮬레이션 경계, 렌더 경로(빌보드 · 메시 · 리본, 반투명 패스와 정렬), 물리 · 충돌 연동, 에디터 미리보기 창(`EditorPreviewPanel`) 재사용, 풀 · 예산. 스크립팅 층 없이 C++ 모듈과 핫리로드가 확장 경로다(결정 기록 2절).
