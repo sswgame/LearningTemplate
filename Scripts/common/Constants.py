@@ -70,6 +70,12 @@ kCppAllExtensions: set[str] = {".h", ".hpp", ".inl", ".c", ".cpp", ".cc", ".cxx"
 # --- 3. Tool Directories & Defaults (내부 도구 디렉터리 및 캐시 경로) ----------
 # =============================================================================
 
+#: 이 저장소의 파이썬 스크립트가 돌아야 하는 가장 낮은 버전입니다. 정본은 여기 한 곳입니다.
+#: CI 러너(ubuntu-22.04)의 `python3` 가 3.10 이라 이 값이 됩니다. `common` 을 import 하는 순간 검사해 낮으면 멈추고,
+#: `CheckPythonMinimumVersion` 게이트가 같은 값으로 구문을 봅니다. 표준 라이브러리 API(예: 3.11 의 `hashlib.file_digest`)는
+#: 게이트가 보지 않으므로, 이 버전에 없는 API 는 쓰지 않습니다.
+kMinimumPythonVersion: tuple[int, int] = (3, 10)
+
 kDirToolsCache = "Tools/_cache"
 kDirToolsLlvm = "Tools/LLVM"
 kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"

@@ -14,6 +14,9 @@ from .Config import loadSearchPaths
 from .Constants import kDirToolsCache
 from .Paths import getProjectRoot
 
+#: 해시를 계산할 때 한 번에 읽는 크기입니다. 수백 MB 압축 파일도 메모리에 통째로 올리지 않습니다.
+_kHashChunkBytes = 1 << 20
+
 
 def toolsCacheDir() -> Path:
     """
@@ -40,7 +43,7 @@ def resolveToolsSubdir(subdirKey: str,
 def fileSha256(path: Path) -> str:
     """
     파일의 무결성 검증을 위해 SHA-256 해시값을 계산하여 소문자 16진수 문자열로 반환합니다.
-    (Python 3.11+ hashlib.file_digest 사용)
+    `hashlib.file_digest` 는 3.11 에 생겨 최소 버전(`kMinimumPythonVersion`)에서 쓸 수 없으므로, 청크로 읽어 갱신합니다.
 
     Args:
         path: 해시를 계산할 파일 경로
@@ -48,8 +51,11 @@ def fileSha256(path: Path) -> str:
     Returns:
         64자리 16진수 SHA-256 해시 문자열
     """
+    digest = hashlib.new("sha256")
     with path.open("rb") as handle:
-        return hashlib.file_digest(handle, "sha256").hexdigest()
+        while chunk := handle.read(_kHashChunkBytes):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def downloadUrl(url: str, destPath: Path, *, label: str = "Download") -> None:

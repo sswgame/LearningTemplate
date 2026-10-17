@@ -57,6 +57,20 @@ for _stream in (_sys.stdout, _sys.stderr):
         except (ValueError, OSError):
             pass  # 리다이렉트된 파이프 등 — 그대로 둔다
 
+# ------------------------------------------------------------------------------
+# 파이썬 최소 버전 — 정본은 Constants.kMinimumPythonVersion
+#
+# 낮은 인터프리터에서는 스크립트가 엉뚱한 자리(없는 API 의 AttributeError, 구문 오류)에서 죽어 원인이 가려진다.
+# 진입점이 모두 common 을 import 하므로(CheckScriptEntryPoints) 여기서 한 번 검사하고 멈춘다.
+# ------------------------------------------------------------------------------
+from .Constants import kMinimumPythonVersion as _kMinimumPythonVersion
+
+if _sys.version_info[:2] < _kMinimumPythonVersion:
+    _sys.exit(
+        f"[Scripts] Python {_kMinimumPythonVersion[0]}.{_kMinimumPythonVersion[1]} 이상이 필요합니다. "
+        f"지금 인터프리터는 {_sys.version.split()[0]} 입니다 ({_sys.executable})."
+    )
+
 from . import (AppBinary, Archive, AssetPipeline, BuildTree, ClangFormat, CodeText, Config, Constants, CookContract, GeneratedFile, Host, PackFormat, Parallel,
                Paths, Process, Search, ToolLocator, TranslationUnits)
 from .AppBinary import *
