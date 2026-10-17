@@ -435,8 +435,8 @@ SW_TEST_CASE( AccountStreamTest, ServerRestartKeepsSessionsAndOldBuildsAreToldTo
     RemoteConfigValue storeURL;
     storeURL._type = RemoteConfigValueType::Text;
     storeURL._text = "https://store.example/app";
-    rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.minimum_build.windows", minimum, audit );
-    rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.store_url.windows", storeURL, audit );
+    rig._remoteConfig.submitSet( rig._server->_store, "account.minimum_build.windows", minimum, audit );
+    rig._remoteConfig.submitSet( rig._server->_store, "account.store_url.windows", storeURL, audit );
     (void)rig._server->_store.pollCompletions();
     AccountClientInfo oldBuild;
     oldBuild._build    = "1.9";
@@ -520,8 +520,8 @@ SW_TEST_CASE( AccountStreamTest, LoginReplyThatCannotBeWrittenLeavesNoSession )
     RemoteConfigValue storeURL;
     storeURL._type = RemoteConfigValueType::Text;
     storeURL._text = string( 513, 'u' );
-    rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.recommended_build.windows", recommended, audit );
-    rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.store_url.windows", storeURL, audit );
+    rig._remoteConfig.submitSet( rig._server->_store, "account.recommended_build.windows", recommended, audit );
+    rig._remoteConfig.submitSet( rig._server->_store, "account.store_url.windows", storeURL, audit );
     (void)rig._server->_store.pollCompletions();
     AccountClientInfo oldBuild;
     oldBuild._build    = "1.9";

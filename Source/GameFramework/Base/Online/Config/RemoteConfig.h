@@ -1,6 +1,6 @@
 /**
  * @file RemoteConfig.h
- * @brief 서버가 내려 주는 설정 값 · 기능 플래그 — 저장소 표 `remote_config`(키 → 값 + 판)가 원본입니다. 서버는 버스 "config.changed" 를 받거나 주기로 다시 읽고,
+ * @brief 서버가 내려 주는 설정 값 · 기능 플래그 — 저장소 표 `remote_config`(키 → 값 + 판)가 원본입니다. 서버는 주기로 다시 읽고(`OnlineServerRuntime`),
  *        클라이언트는 로그인 응답의 묶음 해시가 다르면 묶음을 받아 간다.
  * @details - 값 종류: 정수 · 실수 · 글 · 플래그. 플래그 = 켬/끔(`_integer` 0 이 아니면 켬) + 출시 비율(0..10000 만분율) — 계정마다
  *            `hash( 플래그 이름, 계정 id ) % 10000 < 비율` 이라 같은 계정은 늘 같은 쪽이다.
@@ -23,7 +23,6 @@ namespace sw
 
     class BitReader;
     class BitWriter;
-    class IServerBus;
 
     /** @brief 값 종류입니다. */
     enum class RemoteConfigValueType : uint8
@@ -69,8 +68,8 @@ namespace sw
 
         /** @brief 저장소에서 다시 읽는 일을 맡깁니다(완료되면 값과 묶음 해시가 바뀐다). */
         void requestReload( IServiceStore& store );
-        /** @brief 운영 · GM 이 값 하나를 바꿉니다 — 판 조건 + 감사 줄을 한 트랜잭션에, 성공하면 버스 "config.changed"(몸 = 키)로 알린다. */
-        void submitSet( IServiceStore& store, IServerBus* pBus, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit );
+        /** @brief 운영 · GM 이 값 하나를 바꿉니다 — 판 조건 + 감사 줄을 한 트랜잭션에. 다른 서버는 주기로 다시 읽어 봅니다. */
+        void submitSet( IServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit );
 
         bool findInteger( string_view key, int64& outValue ) const;
         bool findReal( string_view key, float64& outValue ) const;
@@ -108,7 +107,7 @@ namespace sw
         const Entry* findEntry( string_view key, RemoteConfigValueType type ) const;
         void         recomputeSnapshotHash();
         void         onReloadCompleted( ServiceStoreResult result, map<string, Entry>& inoutMapEntry );
-        void         onSetCompleted( ServiceStoreResult result, IServerBus* pBus, const string& key, const RemoteConfigValue& value, uint64 version );
+        void         onSetCompleted( ServiceStoreResult result, const string& key, const RemoteConfigValue& value, uint64 version );
 
         map<string, Entry> _mapEntry;
         uint64             _snapshotHash;

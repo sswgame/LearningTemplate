@@ -376,7 +376,7 @@ SW_TEST_CASE( TradeStreamTest, PartnerLeavingClosesTheTradeAndFeatureFlagCanTurn
     off._type               = RemoteConfigValueType::Flag;
     off._integer            = 1;
     off._rolloutBasisPoints = 0; // 아무 계정에도 켜지 않는다
-    rig._remoteConfig.submitSet( rig._server->_store, nullptr, TradeServer::kFeatureFlag, off, audit );
+    rig._remoteConfig.submitSet( rig._server->_store, TradeServer::kFeatureFlag, off, audit );
     (void)rig._server->_store.pollCompletions();
     const TradeClientReply disabled = rig.waitTrade( rig._alice, rig._alice._trade.invite( "bob" ) );
     SW_EXPECT_EQUAL( OnlineError::kFeatureDisabled, disabled._errorCode );

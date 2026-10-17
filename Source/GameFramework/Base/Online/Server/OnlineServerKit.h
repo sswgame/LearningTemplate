@@ -31,11 +31,11 @@ namespace sw
     class IEphemeralStore;
     class ILedgerPolicy;
     class IOnlineHostService;
-    class IServerBus;
     class IServiceStore;
     class MetricRegistry;
     class OnlineServiceHost;
     class RemoteConfig;
+    class ServerBus;
     class ServiceHealthRegistry;
     class ServiceScheduler;
 
@@ -65,7 +65,7 @@ namespace sw
         OnlineServiceHost*        _pHost{ nullptr };
         IServiceStore*            _pStore{ nullptr };
         IEphemeralStore*          _pCache{ nullptr };
-        IServerBus*               _pBus{ nullptr };
+        ServerBus*                _pBus{ nullptr };    ///< 버스의 타입 있는 앞이다. 발행은 주제 정의(`ServerBusTopic`)로만 한다
         EphemeralStoreRouter*     _pRouter{ nullptr }; ///< 호스트를 띄운 뒤(`start`)부터 있다
         ServiceScheduler*         _pScheduler{ nullptr };
         RemoteConfig*             _pRemoteConfig{ nullptr };

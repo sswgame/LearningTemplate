@@ -7,7 +7,6 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 #include <cstring>
@@ -26,7 +25,6 @@ namespace sw
             static constexpr int32  kListPageSize    = 256;
             static constexpr int32  kMaxKeySize      = 128;
             static constexpr int32  kMaxSnapshotKeys = 4096;
-            static constexpr utf8   kChangedTopic[]  = "config.changed";
 
             static void writeValue( BitWriter& outWriter, const RemoteConfigValue& value )
             {
@@ -143,12 +141,11 @@ namespace sw
     class RemoteConfig::SetWork final : public IServiceStoreWork
     {
     public:
-        SetWork( RemoteConfig* pConfig, IServerBus* pBus, string key, const RemoteConfigValue& value, const ServiceAuditEntry& audit, uint64 expectedVersion )
+        SetWork( RemoteConfig* pConfig, string key, const RemoteConfigValue& value, const ServiceAuditEntry& audit, uint64 expectedVersion )
             : _key{ std::move( key ) }
             , _value{ value }
             , _audit{ audit }
             , _pConfig{ pConfig }
-            , _pBus{ pBus }
             , _expectedVersion{ expectedVersion }
             , _commitVersion{ 0 }
             , _result{ ServiceStoreResult::Ok }
@@ -166,14 +163,13 @@ namespace sw
             _commitVersion = info._commitVersion;
         }
 
-        void complete() override { _pConfig->onSetCompleted( _result, _pBus, _key, _value, _commitVersion ); }
+        void complete() override { _pConfig->onSetCompleted( _result, _key, _value, _commitVersion ); }
 
     private:
         string             _key;
         RemoteConfigValue  _value;
         ServiceAuditEntry  _audit;
         RemoteConfig*      _pConfig;
-        IServerBus*        _pBus;
         uint64             _expectedVersion;
         uint64             _commitVersion;
         ServiceStoreResult _result;
@@ -200,7 +196,7 @@ namespace sw
         store.submit( sw::make_unique<ReloadWork>( this ) );
     }
 
-    void RemoteConfig::submitSet( IServiceStore& store, IServerBus* pBus, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit )
+    void RemoteConfig::submitSet( IServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit )
     {
         const bool bRejectedChange = isValidKey( key ) == false || RemoteConfigInternal::isValidValue( value ) == false || ServiceAuditLog::isValidEntry( audit ) == false;
         if ( bRejectedChange )
@@ -212,7 +208,7 @@ namespace sw
         const auto   entryIt         = _mapEntry.find( key );
         const uint64 expectedVersion = entryIt == _mapEntry.end() ? ServiceRecord::kAbsentVersion : entryIt->second._version;
         ++_pendingWorkCount;
-        store.submit( sw::make_unique<SetWork>( this, pBus, string{ key }, value, audit, expectedVersion ) );
+        store.submit( sw::make_unique<SetWork>( this, string{ key }, value, audit, expectedVersion ) );
     }
 
     bool RemoteConfig::findInteger( string_view key, int64& outValue ) const
@@ -357,7 +353,7 @@ namespace sw
         recomputeSnapshotHash();
     }
 
-    void RemoteConfig::onSetCompleted( ServiceStoreResult result, IServerBus* pBus, const string& key, const RemoteConfigValue& value, uint64 version )
+    void RemoteConfig::onSetCompleted( ServiceStoreResult result, const string& key, const RemoteConfigValue& value, uint64 version )
     {
         --_pendingWorkCount;
         _lastSetResult = result;
@@ -367,7 +363,5 @@ namespace sw
         entry._value   = value;
         entry._version = version;
         recomputeSnapshotHash();
-        if ( pBus != nullptr )
-            pBus->publish( RemoteConfigInternal::kChangedTopic, reinterpret_cast<const uint8*>( key.data() ), static_cast<int32>( key.size() ) );
     }
 } // namespace sw

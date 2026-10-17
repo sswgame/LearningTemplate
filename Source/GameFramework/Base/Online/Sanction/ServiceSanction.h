@@ -11,6 +11,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -63,13 +64,26 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 제재 버스(`ServiceSanctionBus::kChangedTopic`)의 본문입니다. 제재가 바뀐 계정입니다. */
+    REFLECT()
+    struct ServiceSanctionChanged
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        PROPERTY()
+        uint64 _accountID{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct ServiceSanctionBus
-     * @brief 제재가 바뀌었다는 서버 버스 주제입니다. 몸 = varuint 계정 id. GM 키트가 쓴 뒤 내고, 제재를 묵혀 보는 키트(채팅)는 그 계정의 묵힌 값을 버린다.
+     * @brief 제재가 바뀌었다는 서버 버스 주제입니다. GM 키트가 쓴 뒤 내고, 제재를 묵혀 보는 키트(채팅)는 그 계정의 묵힌 값을 버린다.
      * @details 버스는 최대 한 번이다 — 놓치면 읽는 쪽이 묵힘 시한(채팅 60 초) 안에 다시 읽는다.
      */
     struct ServiceSanctionBus
     {
-        static constexpr const utf8* kChangedTopic = "sanction.changed";
+        static constexpr ServerBusTopic<ServiceSanctionChanged> kChangedTopic{ "sanction.changed" };
     };
 } // namespace sw

@@ -174,11 +174,11 @@ SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHide
     RemoteConfigValue     rate;
     rate._type = RemoteConfigValueType::Text;
     rate._text = "2.5";
-    config.submitSet( configFront, nullptr, "event.xp_rate", rate, Internal::makeAudit() );
+    config.submitSet( configFront, "event.xp_rate", rate, Internal::makeAudit() );
     RemoteConfigValue bonus;
     bonus._type    = RemoteConfigValueType::Integer;
     bonus._integer = 3;
-    config.submitSet( configFront, nullptr, "event.bonus", bonus, Internal::makeAudit() );
+    config.submitSet( configFront, "event.bonus", bonus, Internal::makeAudit() );
     (void)configFront.pollCompletions();
     SW_ASSERT_TRUE( config.getLastSetResult() == ServiceStoreResult::Ok );
 
@@ -212,7 +212,7 @@ SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHide
     killSwitch._type               = RemoteConfigValueType::Flag;
     killSwitch._integer            = 1;
     killSwitch._rolloutBasisPoints = 0;
-    config.submitSet( configFront, nullptr, LiveOpsBus::kKillSwitchFlag, killSwitch, Internal::makeAudit() );
+    config.submitSet( configFront, LiveOpsBus::kKillSwitchFlag, killSwitch, Internal::makeAudit() );
     (void)configFront.pollCompletions();
     SW_EXPECT_EQUAL( node.countActive( nowMs ), 0 );
     SW_EXPECT_FALSE( node._service.isEventActive( "halloween", 1, "kr", 100, nowMs ) );

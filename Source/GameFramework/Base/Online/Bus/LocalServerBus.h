@@ -54,7 +54,7 @@ namespace sw
      * @class LocalServerBus
      * @brief 허브 위의 버스 하나(서버 하나)입니다.
      */
-    class SW_GF_API LocalServerBus final : public IServerBus
+    class SW_GF_API LocalServerBus final : public IServerBusTransport
     {
     public:
         /** @brief @p pHub 는 빌려 쓴다(버스보다 오래 산다). */

@@ -854,9 +854,9 @@ SW_TEST_CASE( LoginServiceTest, OldBuildIsToldToUpdate )
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     RemoteConfig config;
-    config.submitSet( fixture->_store, nullptr, "account.minimum_build.windows", Internal::makeText( "1.9.0" ), Internal::makeAudit() );
-    config.submitSet( fixture->_store, nullptr, "account.recommended_build.windows", Internal::makeText( "1.10.0" ), Internal::makeAudit() );
-    config.submitSet( fixture->_store, nullptr, "account.store_url.windows", Internal::makeText( "https://store.example/game" ), Internal::makeAudit() );
+    config.submitSet( fixture->_store, "account.minimum_build.windows", Internal::makeText( "1.9.0" ), Internal::makeAudit() );
+    config.submitSet( fixture->_store, "account.recommended_build.windows", Internal::makeText( "1.10.0" ), Internal::makeAudit() );
+    config.submitSet( fixture->_store, "account.store_url.windows", Internal::makeText( "https://store.example/game" ), Internal::makeAudit() );
     (void)fixture->_store.pollCompletions();
     fixture->_service->setRemoteConfig( &config );
 

@@ -263,7 +263,7 @@ namespace test
             settings._listenAddress                    = sw::NetAddress::makeLoopback( _port );
             settings._pServiceStore                    = &_store;
             settings._pEphemeralStore                  = &_cache;
-            settings._pServerBus                       = &_bus;
+            settings._pServerBusTransport              = &_bus;
             settings._requestBurstPerRemote            = 1000;
             settings._requestBurstPerAccount           = 1000;
             sw::string error;

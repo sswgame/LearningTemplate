@@ -68,6 +68,7 @@ namespace sw
         RemoteConfig                   _remoteConfig{};
         OnlineServiceHost              _host{};
         unique_ptr<EphemeralServerBus> _bus{};
+        unique_ptr<ServerBus>          _busFront{}; ///< 키트 문맥에 넘기는 타입 있는 앞이다. 전송(`_bus`)은 호스트만 받는다
         ServerRegistration             _registration{};
         vector<KitInstance>            _listKit{};
         ServiceHealthRegistry*         _pHealthRegistry{ nullptr };
@@ -182,6 +183,7 @@ namespace sw
 
         const uint64 serverID = static_cast<uint64>( parts._config._serverID );
         parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
+        parts._busFront       = make_unique<ServerBus>( *parts._bus );
         parts._scheduler.initialize( parts._store.get(), serverID );
         parts._remoteConfig.requestReload( *parts._store );
         parts._nextRemoteConfigReloadMs = nowMs + Internal::kRemoteConfigReloadMs;
@@ -190,7 +192,7 @@ namespace sw
         context._pHost                  = &parts._host;
         context._pStore                 = parts._store.get();
         context._pCache                 = parts._cache.get();
-        context._pBus                   = parts._bus.get();
+        context._pBus                   = parts._busFront.get();
         context._pScheduler             = &parts._scheduler;
         context._pRemoteConfig          = &parts._remoteConfig;
         context._pMetricRegistry        = settings._pMetricRegistry;
@@ -273,7 +275,7 @@ namespace sw
         hostSettings._listenAddress                     = settings._listenAddress;
         hostSettings._pServiceStore                     = parts._store.get();
         hostSettings._pEphemeralStore                   = parts._cache.get();
-        hostSettings._pServerBus                        = parts._bus.get();
+        hostSettings._pServerBusTransport               = parts._bus.get();
         hostSettings._pRemoteConfig                     = &parts._remoteConfig;
         hostSettings._requestBurstPerRemote             = parts._config._requestBurstPerRemote;
         hostSettings._requestBurstPerAccount            = parts._config._requestBurstPerAccount;

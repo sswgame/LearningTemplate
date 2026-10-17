@@ -75,7 +75,7 @@ namespace
             hostSettings._listenAddress                    = NetAddress::makeLoopback( static_cast<uint16>( kFirstPort + serverID ) );
             hostSettings._pServiceStore                    = &_store;
             hostSettings._pEphemeralStore                  = &_cache;
-            hostSettings._pServerBus                       = &_bus;
+            hostSettings._pServerBusTransport              = &_bus;
             hostSettings._requestBurstPerRemote            = 1000;
             hostSettings._requestBurstPerAccount           = 1000;
             string error;

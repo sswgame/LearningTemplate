@@ -3,7 +3,6 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 
@@ -66,11 +65,11 @@ SW_TEST_CASE( RemoteConfigTest, ReloadReadsValuesAndTheSnapshotHash )
     MemoryServiceStore    front{ &database };
     RemoteConfig          writer;
     const uint64          emptyHash = writer.getSnapshotHash();
-    writer.submitSet( front, nullptr, "account.minimum_build.windows", Internal::makeInteger( 42, true ), Internal::makeAudit( 1 ) );
+    writer.submitSet( front, "account.minimum_build.windows", Internal::makeInteger( 42, true ), Internal::makeAudit( 1 ) );
     RemoteConfigValue text;
     text._type = RemoteConfigValueType::Text;
     text._text = "maintenance at 10:00";
-    writer.submitSet( front, nullptr, "notice.banner", text, Internal::makeAudit( 2 ) );
+    writer.submitSet( front, "notice.banner", text, Internal::makeAudit( 2 ) );
     front.pollCompletions();
     SW_EXPECT_TRUE( writer.getLastSetResult() == ServiceStoreResult::Ok );
     SW_EXPECT_NOT_EQUAL( emptyHash, writer.getSnapshotHash() );
@@ -97,9 +96,9 @@ SW_TEST_CASE( RemoteConfigTest, RolloutIsDeterministicPerAccount )
     MemoryServiceDatabase database;
     MemoryServiceStore    front{ &database };
     RemoteConfig          config;
-    config.submitSet( front, nullptr, "feature.none", Internal::makeFlag( 0 ), Internal::makeAudit( 1 ) );
-    config.submitSet( front, nullptr, "feature.all", Internal::makeFlag( 10000 ), Internal::makeAudit( 2 ) );
-    config.submitSet( front, nullptr, "feature.half", Internal::makeFlag( 5000 ), Internal::makeAudit( 3 ) );
+    config.submitSet( front, "feature.none", Internal::makeFlag( 0 ), Internal::makeAudit( 1 ) );
+    config.submitSet( front, "feature.all", Internal::makeFlag( 10000 ), Internal::makeAudit( 2 ) );
+    config.submitSet( front, "feature.half", Internal::makeFlag( 5000 ), Internal::makeAudit( 3 ) );
     front.pollCompletions();
     SW_EXPECT_EQUAL( 0, Internal::countEnabled( config, "feature.none" ) );
     SW_EXPECT_EQUAL( 1000, Internal::countEnabled( config, "feature.all" ) );
@@ -119,8 +118,8 @@ SW_TEST_CASE( RemoteConfigTest, ClientSnapshotCarriesOnlyVisibleKeys )
     MemoryServiceDatabase database;
     MemoryServiceStore    front{ &database };
     RemoteConfig          server;
-    server.submitSet( front, nullptr, "client.max_party", Internal::makeInteger( 4, true ), Internal::makeAudit( 1 ) );
-    server.submitSet( front, nullptr, "server.secret_rate", Internal::makeInteger( 99, false ), Internal::makeAudit( 2 ) );
+    server.submitSet( front, "client.max_party", Internal::makeInteger( 4, true ), Internal::makeAudit( 1 ) );
+    server.submitSet( front, "server.secret_rate", Internal::makeInteger( 99, false ), Internal::makeAudit( 2 ) );
     front.pollCompletions();
     SW_ASSERT_EQUAL( 2, server.getValueCount() );
 
@@ -142,40 +141,31 @@ SW_TEST_CASE( RemoteConfigTest, ClientSnapshotCarriesOnlyVisibleKeys )
     SW_EXPECT_EQUAL( 0, broken.getValueCount() );
 }
 
-SW_TEST_CASE( RemoteConfigTest, StaleSetConflictsAndOnlyTheWinnerIsAnnounced )
+SW_TEST_CASE( RemoteConfigTest, StaleSetConflictsAndOnlyTheWinnerIsWritten )
 {
     using Internal = TestRemoteConfigInternal;
     MemoryServiceDatabase database;
     MemoryServiceStore    frontA{ &database };
     MemoryServiceStore    frontB{ &database };
-    LocalServerBusHub     hub;
-    LocalServerBus        busA{ &hub, 1 };
-    LocalServerBus        busB{ &hub, 2 };
-    busB.subscribe( "config.changed" );
-    RemoteConfig configA;
-    RemoteConfig configB;
+    RemoteConfig          configA;
+    RemoteConfig          configB;
     configA.requestReload( frontA );
     configB.requestReload( frontB );
     frontA.pollCompletions();
     frontB.pollCompletions();
 
-    configA.submitSet( frontA, &busA, "feature.trade_enabled", Internal::makeFlag( 10000 ), Internal::makeAudit( 1 ) );
+    configA.submitSet( frontA, "feature.trade_enabled", Internal::makeFlag( 10000 ), Internal::makeAudit( 1 ) );
     frontA.pollCompletions();
     SW_EXPECT_TRUE( configA.getLastSetResult() == ServiceStoreResult::Ok );
-    configB.submitSet( frontB, &busB, "feature.trade_enabled", Internal::makeFlag( 0 ), Internal::makeAudit( 2 ) ); // B 는 그새 바뀐 것을 모른다
+    configB.submitSet( frontB, "feature.trade_enabled", Internal::makeFlag( 0 ), Internal::makeAudit( 2 ) ); // B 는 그새 바뀐 것을 모른다
     frontB.pollCompletions();
     SW_EXPECT_TRUE( configB.getLastSetResult() == ServiceStoreResult::Conflict );
     SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getTable() ) ); // 진 쪽은 감사 줄도 없다
 
-    vector<ServerBusMessage> listMessage;
-    SW_ASSERT_EQUAL( 1, busB.pollMessages( listMessage ) );
-    const string key( reinterpret_cast<const utf8*>( listMessage[0]._bytes.data() ), listMessage[0]._bytes.size() );
-    SW_EXPECT_TRUE( key == "feature.trade_enabled" );
-
-    configB.requestReload( frontB ); // 알림을 받고 다시 읽으면 이긴 값이 보이고, 다시 바꿀 수 있다
+    configB.requestReload( frontB ); // 다시 읽으면(서버는 주기로 다시 읽는다) 이긴 값이 보이고, 다시 바꿀 수 있다
     frontB.pollCompletions();
     SW_EXPECT_TRUE( configB.isFeatureEnabled( "feature.trade_enabled", 7 ) );
-    configB.submitSet( frontB, &busB, "feature.trade_enabled", Internal::makeFlag( 0 ), Internal::makeAudit( 3 ) );
+    configB.submitSet( frontB, "feature.trade_enabled", Internal::makeFlag( 0 ), Internal::makeAudit( 3 ) );
     frontB.pollCompletions();
     SW_EXPECT_TRUE( configB.getLastSetResult() == ServiceStoreResult::Ok );
     SW_EXPECT_FALSE( configB.isFeatureEnabled( "feature.trade_enabled", 7 ) );

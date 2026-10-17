@@ -800,7 +800,7 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
     LocalServerBus          busOfHost( &hub, 1 );
     LocalServerBus          busOfOther( &hub, 2 );
     OnlineServiceHostConfig settings = HostRig::makeSettings();
-    settings._pServerBus             = &busOfHost;
+    settings._pServerBusTransport    = &busOfHost;
     HostRig rig( settings );
     rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     rig._host.subscribeServerBus( "sd.changed", &rig._serviceB );
@@ -810,7 +810,9 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
     rig.step( 1 );
     SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceA._listBusMessage.size() );
     SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceB._listBusMessage.size() );
-    SW_EXPECT_EQUAL( uint64( 2 ), rig._serviceA._listBusMessage[0]._originServerID );
+    SW_EXPECT_EQUAL( uint64( 2 ), rig._serviceA._listBusMessage[0].getOriginServerID() );
+    SW_ASSERT_TRUE( rig._host.getServerBus() != nullptr ); // 키트는 전송이 아니라 타입 있는 앞을 받는다
+    SW_EXPECT_EQUAL( uint64( 1 ), rig._host.getServerBus()->getServerID() );
 
     rig._host.unsubscribeServerBus( "sd.changed", &rig._serviceA );
     busOfOther.publish( "sd.changed", arrPayload, 1 );
@@ -829,7 +831,7 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
     LocalServerBus          busOfHost( &hub, 1 );
     OnlineServiceHostConfig settings = HostRig::makeSettings();
     settings._pEphemeralStore        = &hostCache;
-    settings._pServerBus             = &busOfHost;
+    settings._pServerBusTransport    = &busOfHost;
     HostRig rig( settings );
     rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),

@@ -60,7 +60,7 @@ namespace sw
         for ( auto& [inboxID, inbox] : _mapInbox )
         {
             (void)inboxID;
-            if ( std::find( inbox._listTopic.begin(), inbox._listTopic.end(), message._topic ) == inbox._listTopic.end() )
+            if ( std::find( inbox._listTopic.begin(), inbox._listTopic.end(), message.getTopic() ) == inbox._listTopic.end() )
                 continue;
             inbox._listMessage.push_back( message );
             ++receiverCount;
@@ -108,11 +108,7 @@ namespace sw
             SW_LOG_WARNING( "Dropped a bus message: topic '%#' size %#", topic, size );
             return;
         }
-        ServerBusMessage message;
-        message._bytes.assign( pData, pData + size );
-        message._topic          = string{ topic };
-        message._originServerID = _serverID;
-        message._sequence       = _nextSequence++;
+        const ServerBusMessage message( vector<uint8>( pData, pData + size ), string{ topic }, _serverID, _nextSequence++ );
         (void)_pHub->deliver( message );
     }
 

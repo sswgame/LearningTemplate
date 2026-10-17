@@ -283,7 +283,7 @@ SW_TEST_CASE( EconomyClientTest, FeatureFlagAndSignInGateRequests )
     off._type               = RemoteConfigValueType::Flag;
     off._integer            = 1;
     off._rolloutBasisPoints = 0; // 아무 계정에도 켜지 않는다
-    rig._remoteConfig.submitSet( rig._server._store, nullptr, EconomyService::kFeatureFlag, off, audit );
+    rig._remoteConfig.submitSet( rig._server._store, EconomyService::kFeatureFlag, off, audit );
     (void)rig._server._store.pollCompletions();
     EconomyPurchaseRequest request;
     request._offerID = "potion";
