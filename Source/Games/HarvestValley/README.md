@@ -60,7 +60,7 @@ cd build/Ninja-Debug/Bin
 | 달력, 돈, 가방 | 공유 상태 `SessionStateComponent`. 디렉터 오브젝트의 맨 앞 컴포넌트이고, 하루 144초, 계절 네 개, 가방 24슬롯입니다 |
 | 농부의 위치, 도구, 체력, 시간, 가게, 출하, 잠, 날씨, 빙의 바꾸기 | `FarmDirectorComponent` |
 | 모습 | 뷰 `FarmSoilComponent`, `FarmCropComponent`, `FarmerComponent`, `FarmSunComponent` |
-| 카메라 | GameFramework `OrthoCameraRigComponent`(입력 끔). 디렉터가 초점을 밭 가운데와 농부 사이에 넣습니다 |
+| 카메라 | GameFramework `CameraDirectorComponent` + 프리셋 `data/farm.cameras.xml`(입력 없음). 디렉터가 초점을 밭 가운데와 농부 사이에 넣습니다(`setFocusPoint`) |
 
 농부의 위치와 체력과 도구는 게임 상태(세이브 대상)라서 디렉터가 가지고, 무엇을 할지는 농부 폰의 의도로 받습니다.
 
@@ -68,7 +68,7 @@ cd build/Ninja-Debug/Bin
 그래서 플레이어와 자동 농부가 같은 경로를 탑니다. 자동 플레이 스위치(`-gv_farmAutoPlay`, 에디터 툴바)를 켜면 디렉터가 틱 뒤 플러시에서 자동 농부 AI 를 농부에 빙의시키고, 끄면 플레이어 조종자가 되찾습니다.
 자동 농부는 디렉터의 게임 상태를 읽기만 하고(판단은 틱 밖), 타일에 도구를 쓸 때는 타일 아래로 갔다가 위로 걸어 들어가 위를 보고 섭니다. 디렉터가 걷는 쪽으로 바라보는 쪽을 정하기 때문입니다.
 
-**틱.** 디렉터는 `PrePhysics` 에서 의도와 시간과 행동을 돌리고 카메라 리그에 초점을 넣습니다. 뷰와 리그는 `PostUpdate` 에서 결과를 읽습니다.
+**틱.** 디렉터는 `PrePhysics` 에서 의도와 시간과 행동을 돌리고 카메라 디렉터에 초점을 넣습니다. 카메라 디렉터는 `PostPhysics` 틱 뒤에, 뷰는 `PostUpdate` 에서 결과를 읽습니다.
 밭은 틱 안에서 만들 수 없으므로 디렉터가 틱 뒤에 만들고, 효과음도 그때 냅니다. 소리는 `HarvestValleyGame` 이 로드하는 사운드 이벤트(`audio/harvestvalley.audioevents.xml`)로 냅니다 — 도구 선택(`ToolSelect`), 심기(`Plant`), 수확(`Harvest`), 출하(`Ship`)이며 모두 2D 입니다. 작물 모델은 디렉터가 미리 로드해 두어, 단계가 바뀔 때 뷰가 워커에서 파일을 읽지 않습니다.
 
 **핫 리로드와 상태 저장.** 달력, 밭, 인벤토리, 농부의 위치와 체력과 도구, 날씨 난수가 디렉터의 `writeState`(상태 버전 3)로 실립니다.

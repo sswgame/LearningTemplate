@@ -29,12 +29,12 @@
 namespace sw
 {
     class Archive;
+    class CameraDirectorComponent;
     class GameObject;
     class GameObjectManager;
     class InputManager;
     class Material;
     class MaterialInstance;
-    class OrthoCameraRigComponent;
 
     /**
      * @class SkirmishDirectorComponent
@@ -107,7 +107,7 @@ namespace sw
         void handleEvents();
         /** @brief 포인터가 가리키는 땅(y = 0) 위치를 반환합니다(`getMousePositionNormalized`). 맵 밖이면 false 입니다. */
         [[nodiscard]] bool       findGroundPoint( const InputManager& input, float3& outPoint ) const;
-        OrthoCameraRigComponent* findCameraRig() const;
+        CameraDirectorComponent* findCameraRig() const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Unit Data", AssetPath, Tooltip = "Unit catalog XML" )
@@ -116,12 +116,10 @@ namespace sw
         string _cliffPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
         string _unitPrefab;
-        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the OrthoCameraRigComponent the mouse is picked through" )
+        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse is picked through" )
         GameObjectHandle _cameraRig;
-        PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map)", Units = m )
+        PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map); the height is the 'watch' camera preset", Units = m )
         float3 _watchFocus;
-        PROPERTY( Category = "Scene", DisplayName = "Watch Ortho Height", Tooltip = "Camera height when both players are AI", Min = 0.1, Units = m )
-        float32 _watchOrthoHeight;
         PROPERTY( Category = "Rules", DisplayName = "Hunt Interval", Tooltip = "Seconds between sending idle army at the enemy start to the nearest enemy building", Min = 0.1 )
         float32 _huntIntervalSeconds;
         PROPERTY( Category = "Rules", DisplayName = "Arrived Radius", Tooltip = "Army within this distance of the enemy start counts as arrived", Min = 0.0, Units = m )

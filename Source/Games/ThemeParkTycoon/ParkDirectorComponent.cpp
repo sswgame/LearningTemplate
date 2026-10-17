@@ -20,7 +20,7 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
@@ -658,13 +658,13 @@ namespace sw
 
     void ParkDirectorComponent::updateCameraOverride()
     {
-        // 리그는 PostUpdate 에서 돈다. 이 그룹(PrePhysics)에서 넣은 시점을 같은 프레임에 읽는다. 리그의 오브젝트에는 다른 쓰기가 없다.
+        // 카메라 디렉터는 PostPhysics 틱 뒤에 포즈를 쓴다. 이 그룹(PrePhysics)에서 넣은 시점을 같은 프레임에 읽는다. 카메라 오브젝트에는 다른 쓰기가 없다.
         const bool bRiding = 0 <= _ridingCoaster && _ridingCoaster < static_cast<int32>( _listCoaster.size() );
         if ( bRiding == false && _bWasRiding == SW_FALSE )
             return;
         GameObjectManager*       pManager   = getObjectManager();
         const GameObject*        pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        OrthoCameraRigComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<OrthoCameraRigComponent>() : nullptr;
+        CameraDirectorComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
         _bWasRiding                         = bRiding ? SW_TRUE : SW_FALSE;
         if ( pRig == nullptr )
             return;

@@ -103,9 +103,23 @@ namespace sw
         /** @brief `ComponentStateStore` 계약 — 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
         void restoreState( vector<uint8>&& bytes );
 
-        /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 원점이고 요와 피치는 0 입니다. */
+        /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 `_focusPoint` 이고 요와 피치는 0 입니다. */
         void                    setTarget( const GameObjectHandle& target ) { _target = target; }
         const GameObjectHandle& getTarget() const { return _target; }
+        /**
+         * @brief 대상 오브젝트가 없을 때의 초점(월드)을 정하고, 이동 키가 옮긴 팬을 비웁니다 — 화면 가운데가 @p point 가 됩니다.
+         * @details 직교 시점 게임의 디렉터가 앞 그룹(PrePhysics)에서 부른다(선택한 유닛으로 가기, 농부 따라가기). 디렉터는 PostPhysics 틱 뒤에 읽는다.
+         */
+        void          setFocusPoint( const float3& point );
+        const float3& getFocusPoint() const { return _focusPoint; }
+        /** @brief 초점을 미는 입력 맵 액션(2D 벡터)을 바꿉니다. 같은 게임에서 모드마다 다른 키로 밀 때 씁니다(관전은 WASD 도 받는다). */
+        void setPanAction( const hashed_string& action ) { _panAction = action; }
+        /**
+         * @brief 시작 프리셋을 @p id 로 정합니다. 이미 시작했으면 그 프리셋으로 끊어 바꿉니다(컷).
+         * @details 게임 디렉터가 `onGameStarted` 에서 부른다 — 오브젝트의 시작 순서가 어느 쪽이어도 같은 프리셋에서 시작한다.
+         *          시작 전에는 카탈로그가 없어 id 를 대어 보지 못하고, 시작할 때 없는 id 면 알린다(`onBeginPlay`).
+         */
+        void startWithPreset( const hashed_string& id );
         /** @brief 다음 프리셋으로 돌리는 입력 맵 액션입니다. 비우면 키로만 돌립니다. */
         void setCycleAction( const hashed_string& action ) { _cycleAction = action; }
         /** @brief 함께 담을 오브젝트 묶음입니다. 프레이밍의 그룹 맞추기에 쓰며, 비어 있지 않으면 대상(`_target`) 대신 묶음을 따라갑니다. */
@@ -158,6 +172,8 @@ namespace sw
         GameObjectHandle _target;
         PROPERTY( Category = "Camera", DisplayName = "Group Targets", Tooltip = "Objects framed together (group framing); empty follows Target" )
         vector<GameObjectHandle> _listGroupTarget;
+        PROPERTY( Category = "Camera", DisplayName = "Focus Point", Tooltip = "World focus used when there is no Target (top-down rigs: the panned ground point)", Units = m )
+        float3 _focusPoint;
         PROPERTY( Category = "Camera", DisplayName = "Cycle Preset Action", Tooltip = "InputMap action that switches to the next preset in catalog order (empty: none)" )
         hashed_string _cycleAction;
         PROPERTY( Category = "Camera", DisplayName = "Pan Action", Tooltip = "InputMap action (2D vector) that pans presets with a pan speed; missing from the map: no pan" )

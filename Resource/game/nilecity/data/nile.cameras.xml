@@ -1,0 +1,11 @@
+<!-- NileCity 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 도, 거리 · 높이는 m, 빠르기는 m/s 다.
+     비스듬히 내려다보는 직교 시점이다. 이동(Camera.Pan) · 휠 확대(Camera.Zoom)를 받고 회전은 없다. 초점은 맵 상자(boundsMin · boundsMax 의 X · Z) 안에 묶인다.
+     이동 빠르기는 처음 높이(orthoHeight)에서의 값이고 확대할수록 느려진다. 커서는 디렉터가 이 시점으로 땅을 골라 정한다(findGroundPoint). -->
+<CameraPresets>
+    <Preset id="city">
+        <View mode="OrthoTopDown" pitch="55" yaw="0" distance="120"/>
+        <Lens orthographic="true" orthoHeight="34" near="0.1" far="300"/>
+        <Input zoomStep="0.85" panSpeed="40.8"/>
+        <Confiner zoomMin="10" zoomMax="70" boundsMin="0 0 0" boundsMax="48 0 40"/>
+    </Preset>
+</CameraPresets>

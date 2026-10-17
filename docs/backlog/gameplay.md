@@ -17,7 +17,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
 - `D4-5` [기능] **카메라의 남은 것.** 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일은 들어갔다(`Source/GameFramework/` "카메라" 절, `Source/Engine/Renderer/` "다중 뷰").
-  - 직교 리그 네 게임(ThemePark · Harvest · Nile · StarSkirmish)을 디렉터 + 프리셋 XML 로 옮긴다 — 디렉터에 `setViewOverride` · `findGroundPoint` 가 생겼으니 게임 디렉터(.h/.cpp 네 개)와 씬 · 입력 데이터만 바꾸면 된다.
+  - 직교 리그(`OrthoCameraRigComponent`)를 쓰는 남은 둘(MeadowVillage 씬, WildWest 디렉터 · 씬)도 디렉터 + 프리셋 XML(`setFocusPoint`)로 옮기고 리그 컴포넌트와 `TestOrthoCameraRig` 를 지운다.
+    ThemePark · Harvest · Nile · StarSkirmish 는 옮겼다(`data/*.cameras.xml`).
   - 다중 뷰의 예산 · 보임 판정이 거칠다 — 보임은 "지정한 오브젝트가 주 카메라 절두체 안" 하나(가려짐 · 화면 크기 안 봄), 예산은 프레임당 뷰 수(`gv_renderViewBudget`)지 시간이 아니다.
     화면 사각형 뷰는 에디터 GameView(ImGui 이미지)에서 검증하지 않았다.
   - 컷 프레임 신호(`RenderViewSettings::_bCut`)는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다.

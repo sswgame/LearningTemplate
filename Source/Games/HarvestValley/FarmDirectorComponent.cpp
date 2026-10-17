@@ -19,7 +19,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
@@ -803,14 +803,14 @@ namespace sw
 
     void FarmDirectorComponent::updateCameraFocus()
     {
-        // 비스듬히 내려다보는 직교 시점으로, 밭 중심과 농부 사이를 본다. 리그는 PostUpdate 에서 이 초점을 읽고, 리그의 오브젝트에는 다른 쓰기가 없다.
+        // 비스듬히 내려다보는 직교 시점으로, 밭 중심과 농부 사이를 본다. 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽고, 카메라 오브젝트에는 다른 쓰기가 없다.
         GameObjectManager*       pManager   = getObjectManager();
         const GameObject*        pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        OrthoCameraRigComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<OrthoCameraRigComponent>() : nullptr;
+        CameraDirectorComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
         if ( pRig == nullptr )
             return;
         const float3 fieldCenter{ static_cast<float32>( kFieldWidth ) * 0.5f, 0.0f, static_cast<float32>( kFieldHeight ) * 0.5f };
-        pRig->setFocus( fieldCenter + ( _playerPosition - fieldCenter ) * _cameraFollow );
+        pRig->setFocusPoint( fieldCenter + ( _playerPosition - fieldCenter ) * _cameraFollow );
     }
 
     void FarmDirectorComponent::logStatus( bool bForce )

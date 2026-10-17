@@ -146,7 +146,7 @@ namespace sw
         string _blockBuildingPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
         string _walkerPrefab;
-        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the OrthoCameraRigComponent the mouse cursor is picked through" )
+        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse cursor is picked through" )
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "City", DisplayName = "Starting Money", Min = 0 )
         int32 _startingMoney;

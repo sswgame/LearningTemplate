@@ -6,7 +6,7 @@
 농장에서 수레와 창고와 시장과 상인을 거쳐 집으로 가는 물자 사슬, 집 진화와 퇴화, 이민, 월말 세금과 임금과 소비, 해마다의 범람이 있습니다.
 
 - 폰이 없는 **명령형 디렉터**가 입력 맵 액션(`Nile.Place`, `Nile.Demolish`)으로 짓고 허무는 방법
-- 커서 아래 땅을 고르는 방법(커서 화면 위치와 카메라 리그의 `findGroundPoint`)
+- 커서 아래 땅을 고르는 방법(커서 화면 위치와 카메라 디렉터의 `findGroundPoint`)
 - 절차 지형과 자동 계획을 화면을 모르는 순수 규칙(`NileCityPlanner`)으로 두는 방법
 - 시뮬레이션과 지금 만들어 둔 모습을 비교해 바뀐 것만 다시 만드는 방법
 
@@ -25,7 +25,7 @@ cd build/Ninja-Debug/Bin
 ./App.exe -game=NileCity -dx12 -scenario=game/nilecity/automation/control.scenario.xml
 ```
 
-`control.scenario.xml` 은 커서를 화면 가운데(`MousePosition`, 카메라 리그의 초점 셀)에 두고 패드 A(`Nile.Place`)로 도로를 깐 뒤 패드 B(`Nile.Demolish`)로 같은 셀을 허뭅니다.
+`control.scenario.xml` 은 커서를 화면 가운데(`MousePosition`, 카메라 디렉터의 초점 셀)에 두고 패드 A(`Nile.Place`)로 도로를 깐 뒤 패드 B(`Nile.Demolish`)로 같은 셀을 허뭅니다.
 로그에 `[Nile] demolished` 가 한 번 나오면 통과입니다. 마우스 버튼이 아니라 패드 버튼으로 누르는 것은, 디렉터가 장치가 아니라 액션을 읽는지 확인하기 위해서입니다.
 
 ## 조작
@@ -58,11 +58,11 @@ cd build/Ninja-Debug/Bin
 | 땅 모양과 자동 계획 | `NileCityPlanner` |
 | 시뮬레이션, 자동 계획, 짓기와 허물기, 속도, 달 로그, 스폰 | `NileDirectorComponent` |
 | 모습 | 뷰 `NileBuildingComponent`, `NileWalkerComponent`, `NileCursorComponent` |
-| 카메라 | GameFramework `OrthoCameraRigComponent`. 초점을 맵 안에 묶고, Q/E 회전은 끕니다(회전 단계 0) |
+| 카메라 | GameFramework `CameraDirectorComponent` + 프리셋 `data/nile.cameras.xml`. 초점을 맵 상자(`<Confiner>`) 안에 묶고, Q/E 회전은 받지 않습니다 |
 | 머티리얼 | 팔레트 `materials/palette.material`, 커서 `cursor.material`(반투명). 땅과 건물 종류와 일꾼 색은 디렉터가 만드는 머티리얼 인스턴스 |
 
 **입력.** 디렉터는 명령형 게임의 디렉터라서 입력 맵을 읽을 수 있는 몇 안 되는 파일입니다(`CheckControlBoundary` 의 허용 목록). 그래도 장치를 직접 묻지 않고 액션만 읽습니다.
-장치를 묻는 것은 커서 화면 위치(`getMousePositionNormalized`) 하나이고, 그 위치를 리그의 `findGroundPoint` 로 땅 위의 셀로 바꿉니다.
+장치를 묻는 것은 커서 화면 위치(`getMousePositionNormalized`) 하나이고, 그 위치를 카메라 디렉터의 `findGroundPoint` 로 땅 위의 셀로 바꿉니다.
 
 **틱.** 디렉터는 `PrePhysics` 에서 입력, 자동 계획, 시뮬레이션을 돌리고, 시뮬레이션과 지금 만들어 둔 모습을 비교해 바뀐 도로와 건물과 모자란 일꾼 수를 쌓습니다.
 틱 뒤에 그것을 만들고 지웁니다. 건물 셀이 다른 건물로 바뀌면 오브젝트를 바꿔 만들고, 집 단계에 따른 모델 교체는 뷰가 `PostUpdate` 에서 합니다.
@@ -82,7 +82,7 @@ cd build/Ninja-Debug/Bin
 ## 함정과 주의
 
 - **커서는 활성 창 크기로 화면 좌표를 땅으로 바꿉니다.** 에디터의 게임 뷰처럼 창의 일부에 그릴 때는 조금 어긋날 수 있습니다.
-- **커서는 카메라 리그의 시점으로 고르므로, 리그가 그 프레임에 움직인 만큼 한 프레임 늦습니다.**
+- **커서는 카메라 디렉터가 지난 프레임에 낸 포즈로 고르므로, 카메라가 그 프레임에 움직인 만큼 한 프레임 늦습니다.**
 
 ## 더 볼 곳
 

@@ -57,12 +57,12 @@ cd build/Ninja-Debug/Bin
 | 규칙과 상태(돈, 손님, 놀이기구, 코스터 물리) | 키트의 `ThemeParkSimulation`, `CoasterTrackBuilder`, `CoasterTrain` |
 | 규칙을 돌리고 스폰을 지시 | `ParkDirectorComponent` |
 | 엔티티의 모습 | 뷰 `ParkGuestComponent`, `CoasterCarComponent`, `FlatRideComponent` |
-| 카메라와 나무 | GameFramework `OrthoCameraRigComponent`, `PropScatterComponent` |
+| 카메라와 나무 | GameFramework `CameraDirectorComponent` + 프리셋 `data/park.cameras.xml`, `PropScatterComponent` |
 | 머티리얼 | 팔레트 `materials/palette.material`(키트 색 텍스처), 잔디 `grass.material`. 실행 중 바뀌는 색만 머티리얼 인스턴스 |
 
-**틱.** 디렉터는 `PrePhysics` 그룹에서 시뮬레이션과 입력과 자동 건설을 돌리고, 뷰와 카메라 리그는 `PostUpdate` 그룹에서 그 결과를 읽습니다. 그룹은 차례로 돕니다.
+**틱.** 디렉터는 `PrePhysics` 그룹에서 시뮬레이션과 입력과 자동 건설을 돌리고, 뷰는 `PostUpdate` 그룹에서, 카메라 디렉터는 `PostPhysics` 틱 뒤에 그 결과를 읽습니다. 그룹은 차례로 돕니다.
 같은 그룹의 오브젝트는 병렬이므로 뷰는 자기 오브젝트에만 쓰고, 디렉터의 목록은 첨자 대신 `data()` 로 읽습니다.
-코스터에 타면(V) 디렉터가 `PrePhysics` 에서 리그에 원근 시점을 넣고, 리그가 `PostUpdate` 에서 그것을 씁니다.
+코스터에 타면(V) 디렉터가 `PrePhysics` 에서 카메라 디렉터에 원근 시점을 넣고(`setViewOverride`), 카메라 디렉터가 `PostPhysics` 틱 뒤에 그것을 씁니다.
 틱 안에서는 오브젝트를 만들 수 없으므로 디렉터는 지을 것과 효과음을 쌓아 두고 틱 뒤에 만듭니다. 뷰는 디렉터를 `GameObjectHandle` 로 가지고 매 프레임 찾습니다.
 
 **핫 리로드와 상태 저장.** 놀이기구 운행, 손님, 돈, 평가, 난수, 입장료, 지은 배치, 코스터 열차의 위치와 속도는 디렉터의 `writeState` 로 상태 스냅샷에 실립니다.

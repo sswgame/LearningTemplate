@@ -1,0 +1,19 @@
+<!-- StarSkirmish 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각은 도, 거리 · 높이는 m, 빠르기는 m/s 다.
+     비스듬히 내려다보는 직교 시점이다. 이동(사람 쪽은 방향키 Camera.Pan, 구경은 WASD 도 받는 Skirmish.SpectatorPan) · 휠 확대(Camera.Zoom)를 받고 회전은 없다.
+     초점은 맵 상자(boundsMin · boundsMax 의 X · Z) 안에 묶인다. 이동 빠르기는 처음 높이(orthoHeight)에서의 값이고 확대할수록 느려진다.
+     play 는 사람이 할 때, watch 는 컴퓨터끼리 붙을 때(자동 플레이) 맵 전체가 보이게 물러선 시점이다 — 디렉터가 판을 열 때 고른다(startWithPreset). -->
+<CameraPresets>
+    <Preset id="play">
+        <View mode="OrthoTopDown" pitch="60" yaw="0" distance="150"/>
+        <Lens orthographic="true" orthoHeight="30" near="0.1" far="375"/>
+        <Input zoomStep="0.85" panSpeed="36"/>
+        <Confiner zoomMin="12" zoomMax="90" boundsMin="0 0 0" boundsMax="64 0 64"/>
+    </Preset>
+
+    <Preset id="watch">
+        <View mode="OrthoTopDown" pitch="60" yaw="0" distance="150"/>
+        <Lens orthographic="true" orthoHeight="70" near="0.1" far="375"/>
+        <Input zoomStep="0.85" panSpeed="84"/>
+        <Confiner zoomMin="12" zoomMax="90" boundsMin="0 0 0" boundsMax="64 0 64"/>
+    </Preset>
+</CameraPresets>

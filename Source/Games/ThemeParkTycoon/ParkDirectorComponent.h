@@ -35,7 +35,6 @@ namespace sw
     class InputManager;
     class MaterialInstance;
     class MeshComponent;
-    class OrthoCameraRigComponent;
 
     /**
      * @class ParkDirectorComponent
@@ -144,7 +143,7 @@ namespace sw
         float4 _contentColor;
         PROPERTY( Category = "Look", DisplayName = "Unhappy Guest", Tooltip = "Guest colour below happiness 0.35" )
         float4 _unhappyColor;
-        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the OrthoCameraRigComponent the coaster ride view overrides" )
+        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the coaster ride view overrides" )
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "Scene", DisplayName = "Gate", Tooltip = "Object whose position is the park gate; empty uses the park layout" )
         GameObjectHandle _gate;

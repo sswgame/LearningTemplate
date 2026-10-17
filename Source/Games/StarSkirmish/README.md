@@ -60,7 +60,7 @@ cd build/Ninja-Debug/Bin
 | 규칙과 상태 | 키트의 `RTSWorld`, `RTSCommanderAI`, `RTSSelection` 과 이 게임의 규칙 `SkirmishMatch` |
 | 고르기, 명령, 생산, 건설, 부대, 속도, 알림, 스폰 | `SkirmishDirectorComponent` |
 | 모습 | 뷰 `SkirmishUnitComponent`(유닛 하나), `SkirmishDragComponent`(끌기 상자) |
-| 카메라 | GameFramework `OrthoCameraRigComponent`. 사람 쪽은 글자 키가 명령이라 WASD 를 끄고, 자동 플레이는 맵 전체가 보이게 물러서며 WASD 를 켭니다 |
+| 카메라 | GameFramework `CameraDirectorComponent` + 프리셋 `data/skirmish.cameras.xml`. 사람 쪽은 글자 키가 명령이라 WASD 를 끄고(`play`), 자동 플레이는 맵 전체가 보이게 물러선 `watch` 프리셋으로 시작하며 WASD 를 켭니다 |
 | 머티리얼 | `materials/ground`, `cliff`, `drag`(반투명). 편 색, 자원 색, 고름 표시는 디렉터가 만드는 머티리얼 인스턴스 |
 
 `SkirmishMatch` 는 절차 맵, 시작 유닛, AI 성향 셋(러시, 운영, 사람 상대), 정리 사냥(적 시작 지점에 닿아 노는 병력을 남은 적 건물로 보냄), 승패 로그를 가진 순수 규칙입니다.
@@ -79,12 +79,12 @@ cd build/Ninja-Debug/Bin
 - `Resource/game/starskirmish/data/units.xml` 에 자원 셋, 건물 아홉, 유닛 일곱이 있습니다. 엔진 밖 하니스로 확인한 결과, AI 대 AI 는 422초에 1번(운영)이 이기고,
   사람이 아무것도 하지 않으면 284초에 집니다.
 - 유닛 종류와 모델의 대응 테이블은 `SkirmishUnitComponent` 에 있습니다.
-- 디렉터의 PROPERTY 로 유닛 데이터, 프리팹 경로, 카메라 리그, 구경 시점을 정합니다. 자동 플레이는 베이스의 `_bAutoPlay` 이고 `-gv_skirmishAutoPlay=1` 도 켭니다.
+- 디렉터의 PROPERTY 로 유닛 데이터, 프리팹 경로, 카메라 오브젝트, 구경 초점을 정합니다(구경 높이는 `watch` 프리셋). 자동 플레이는 베이스의 `_bAutoPlay` 이고 `-gv_skirmishAutoPlay=1` 도 켭니다.
 
 ## 함정과 주의
 
 - **커서는 활성 창 크기로 화면 좌표를 땅으로 바꿉니다.** 에디터의 게임 뷰처럼 창의 일부에 그릴 때는 조금 어긋날 수 있습니다.
-- **커서는 카메라 리그의 시점으로 고르므로, 리그가 그 프레임에 움직인 만큼 한 프레임 늦습니다.**
+- **커서는 카메라 디렉터가 지난 프레임에 낸 포즈로 고르므로, 카메라가 그 프레임에 움직인 만큼 한 프레임 늦습니다.**
 
 ## 더 볼 곳
 

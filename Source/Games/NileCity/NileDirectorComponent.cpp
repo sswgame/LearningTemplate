@@ -20,9 +20,8 @@
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Utility/GameAutoplay.h"
-#include "Engine/Window/IWindow.h"
 
-#include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
@@ -809,19 +808,15 @@ namespace sw
 
     void NileDirectorComponent::updateCursor( const InputManager& input )
     {
-        // 리그의 직교 시점으로 포인터 아래 땅 타일을 찾는다. 리그는 PostUpdate 에서 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
+        // 카메라 디렉터가 지금 낸 포즈로 포인터 아래 땅 타일을 찾는다. 디렉터는 PostPhysics 틱 뒤에 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
         _bCursorValid                             = SW_FALSE;
         GameObjectManager*             pManager   = getObjectManager();
         const GameObject*              pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        const OrthoCameraRigComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<OrthoCameraRigComponent>() : nullptr;
+        const CameraDirectorComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
         if ( pRig == nullptr )
             return;
-        const IWindow* pWindow = IWindow::getActiveWindow();
-        const float32  aspect  = pWindow != nullptr && pWindow->getHeight() > 0
-                                   ? static_cast<float32>( pWindow->getWidth() ) / static_cast<float32>( pWindow->getHeight() )
-                                   : 16.0f / 9.0f;
-        float3         point{};
-        if ( pRig->findGroundPoint( input.getMousePositionNormalized(), aspect, 0.0f, point ) == false )
+        float3 point{};
+        if ( pRig->findGroundPoint( input.getMousePositionNormalized(), 0.0f, point ) == false )
             return;
         _cursorTile   = int2{ static_cast<int32>( MathUtil::floor( point._x ) ), static_cast<int32>( MathUtil::floor( point._z ) ) };
         _bCursorValid = _city.findTile( _cursorTile._x, _cursorTile._y ) != nullptr ? SW_TRUE : SW_FALSE;

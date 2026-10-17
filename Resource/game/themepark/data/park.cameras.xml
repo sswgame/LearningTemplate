@@ -1,0 +1,11 @@
+<!-- ThemeParkTycoon 카메라 프리셋 — 카메라 오브젝트의 CameraDirectorComponent 가 읽는다. 각(pitch · yaw · rotateStep)은 도, 거리 · 높이는 m, 시간은 s 다.
+     비스듬히 내려다보는 직교 시점이다. 이동(Camera.Pan) · 휠 확대(Camera.Zoom) · Q/E 90° 회전(Camera.Rotate)을 받는다.
+     이동 빠르기는 처음 높이(orthoHeight)에서의 값이고 확대할수록 느려진다. 코스터 탑승 시점은 디렉터가 setViewOverride 로 덮는다. -->
+<CameraPresets>
+    <Preset id="park">
+        <View mode="OrthoTopDown" pitch="30" yaw="45" distance="250"/>
+        <Lens orthographic="true" orthoHeight="110" near="0.1" far="625"/>
+        <Input zoomStep="0.85" panSpeed="40" rotateStep="90" rotateTime="0.15"/>
+        <Confiner zoomMin="25" zoomMax="220"/>
+    </Preset>
+</CameraPresets>
