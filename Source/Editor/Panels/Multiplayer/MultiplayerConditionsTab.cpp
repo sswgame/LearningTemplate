@@ -4,6 +4,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -27,6 +28,8 @@ namespace sw::editor
         {
             /** @brief `netplay.stats` 의 기본 시한(초)입니다. */
             static constexpr int32 kDefaultStatsWaitSeconds = 30;
+            /** @brief `netplay.waitResent` 가 보고를 다시 묻는 간격(밀리초)입니다. 재전송은 벽시계 시한으로 일어나므로 시간 간격으로 묻습니다. */
+            static constexpr int64 kResentPollMilliseconds = 200;
             /** @brief 자식 프로세스에 보고를 묻는 명령입니다(`GameNetSession` 의 개발 명령). */
             static constexpr const utf8* kStatsCommand = "net.emulation stats";
 
@@ -111,6 +114,41 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 모든 프로세스에 보고를 한 번 묻고 모두 답하거나 @p timeoutMilliseconds 가 지날 때까지 기다립니다. 답한 수를 돌려줍니다. */
+            static int32 askStats( EditorNetPlaySession& session, int64 timeoutMilliseconds, int32& outAskedCount )
+            {
+                const int32    processCount = session.getProcessCount();
+                vector<uint32> listReportCount;
+                listReportCount.reserve( static_cast<size_t>( processCount ) );
+                outAskedCount = 0;
+                for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
+                {
+                    listReportCount.push_back( session.getProcessStatus( processIndex )._emulationReportCount );
+                    outAskedCount += session.sendProcessCommand( processIndex, kStatsCommand ) ? 1 : 0;
+                }
+                const int32 askedCount    = outAskedCount;
+                int32       answeredCount = 0;
+                session.updateUntil( timeoutMilliseconds, [&]()
+                {
+                    answeredCount = 0;
+                    for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
+                    {
+                        answeredCount += session.getProcessStatus( processIndex )._emulationReportCount != listReportCount[static_cast<size_t>( processIndex )] ? 1 : 0;
+                    }
+                    return answeredCount >= askedCount;
+                } );
+                return answeredCount;
+            }
+
+            /** @brief `netplay stats from <답한 수> of <물은 수> process(es): ...` 답 줄입니다. 시나리오가 이 앞머리를 로그에서 찾습니다. */
+            static string makeStatsReply( const EditorNetPlaySession& session, int32 answeredCount, int32 askedCount )
+            {
+                const NetEmulationReport total = sumReports( session );
+                return "netplay stats from " + to_string( answeredCount ) + " of " + to_string( askedCount ) + " process(es): resent " +
+                       to_string( total._resentMessageCount ) + ", dropped " + to_string( total._droppedPacketCount ) + ", measured loss " +
+                       to_string( static_cast<int32>( total._measuredLossPercent ) ) + "%";
+            }
+
             /**
              * @brief `netplay.stats [<초>]` — 돌고 있는 프로세스마다 `net.emulation stats` 를 묻고 모두 답할 때까지 이 프레임을 붙잡습니다.
              * @details 시나리오는 프레임 단위라 답이 언제 오는지 모른다(`netplay.wait` 와 같은 이유). 답은 탐침 `Editor.NetPlay*` 가 읽는다.
@@ -126,29 +164,50 @@ namespace sw::editor
                     outReply = "no multiplayer session is running";
                     return true;
                 }
-                const int32    processCount = pSession->getProcessCount();
-                vector<uint32> listReportCount;
-                listReportCount.reserve( static_cast<size_t>( processCount ) );
-                int32 askedCount = 0;
-                for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
+                int32       askedCount    = 0;
+                const int32 answeredCount = askStats( *pSession, static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, askedCount );
+                outReply                  = makeStatsReply( *pSession, answeredCount, askedCount );
+                return true;
+            }
+
+            /**
+             * @brief `netplay.waitResent <수> <초>`: 프로세스들이 다시 보낸 신뢰 메시지의 합이 <수> 이상이 될 때까지 보고를 거듭 물으며 이 프레임을 붙잡습니다.
+             * @details 재전송은 연결의 벽시계 시한으로 일어납니다. 프레임 수로 기다리면 프레임이 빠른 구성(Release)에서 시한이 오기 전에 묻습니다.
+             *          그래서 시간으로 기다립니다. 시한(<초>)을 넘기면 마지막 보고를 그대로 남기고, 뒤의 `Expect` 가 그 값으로 집니다. 기본 시한은 두지 않습니다.
+             */
+            static bool runWaitResent( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 )
+                    return false;
+                int32      wantedCount = 0;
+                int32      seconds     = 0;
+                const bool bParsed     = StringUtil::parseInt( listArgument[0], wantedCount ) && StringUtil::parseInt( listArgument[1], seconds );
+                if ( bParsed == false )
+                    return false;
+                EditorNetPlaySession* pSession = findSession();
+                if ( pSession == nullptr || pSession->isRunning() == false )
                 {
-                    listReportCount.push_back( pSession->getProcessStatus( processIndex )._emulationReportCount );
-                    askedCount += pSession->sendProcessCommand( processIndex, kStatsCommand ) ? 1 : 0;
+                    outReply = "no multiplayer session is running";
+                    return true;
                 }
-                int32 answeredCount = 0;
-                pSession->updateUntil( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, [&]()
+                const Deadline deadline      = Deadline::afterMilliseconds( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond );
+                int32          askedCount    = 0;
+                int32          answeredCount = 0;
+                bool           bReached      = false;
+                while ( true )
                 {
-                    answeredCount = 0;
-                    for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
-                    {
-                        answeredCount += pSession->getProcessStatus( processIndex )._emulationReportCount != listReportCount[static_cast<size_t>( processIndex )] ? 1 : 0;
-                    }
-                    return answeredCount >= askedCount;
-                } );
-                const NetEmulationReport total = sumReports( *pSession );
-                outReply                       = "netplay stats from " + to_string( answeredCount ) + " of " + to_string( askedCount ) + " process(es): resent " +
-                           to_string( total._resentMessageCount ) + ", dropped " + to_string( total._droppedPacketCount ) + ", measured loss " +
-                           to_string( static_cast<int32>( total._measuredLossPercent ) ) + "%";
+                    answeredCount = askStats( *pSession, deadline.getRemainingMilliseconds(), askedCount );
+                    bReached      = static_cast<int32>( sumReports( *pSession )._resentMessageCount ) >= wantedCount;
+                    if ( bReached || deadline.isExpired() )
+                        break;
+                    pSession->updateUntil( kResentPollMilliseconds, []()
+                    { return false; } );
+                }
+                outReply = makeStatsReply( *pSession, answeredCount, askedCount );
+                if ( bReached )
+                    outReply += " (resent reached " + to_string( wantedCount ) + ")";
+                else
+                    outReply += " (resent stayed below " + to_string( wantedCount ) + " for " + to_string( seconds ) + " s)";
                 return true;
             }
         };
@@ -165,6 +224,9 @@ namespace sw::editor
                     "Send a console line (net.emulation, net.disconnect, dev commands) to processes of the multiplayer session", &MultiplayerConditionsTabInternal::runCommand );
     SW_DEV_COMMAND( NetPlayStats, "netplay.stats", "netplay.stats [<seconds>]", "Ask every process of the multiplayer session for its net emulation stats and wait for the answers",
                     &MultiplayerConditionsTabInternal::runStats );
+    SW_DEV_COMMAND( NetPlayWaitResent, "netplay.waitResent", "netplay.waitResent <count> <seconds>",
+                    "Ask the multiplayer session's processes for stats again and again until they resent at least that many reliable messages or the seconds run out",
+                    &MultiplayerConditionsTabInternal::runWaitResent );
 } // namespace sw::editor
 
 namespace sw::editor

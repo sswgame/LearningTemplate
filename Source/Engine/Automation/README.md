@@ -26,6 +26,8 @@ scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► A
 
 **시나리오 프레임.** 프레임 0 은 시작 조건이 처음 참인 프레임입니다(`startAfter="ScenePlaying"` 이면 씬이 플레이를 시작하고 로딩 화면이 사라진 첫 프레임).
 `WaitUntil` 이 기다리는 동안은 시나리오 프레임을 세지 않으므로 뒤 단계가 그만큼 밀립니다. 시간은 늘 고정 프레임 시간(`fixedDelta`)으로 흐릅니다.
+고정 프레임 시간은 엔진 프레임만 묶습니다. 자식 프로세스의 네트워크 재전송 같은 벽시계 일은 프레임 수로 기다리지 않고, 시한을 받는 대기 명령(`netplay.waitResent`)으로 기다립니다.
+프레임 비용(`GT.Frame` 몇 ms)에도 기대지 않습니다. 구성마다 다르므로 스파이크가 필요하면 `profile.stall <ms>` 로 만듭니다. 에디터 코드의 양(브러시 세기 × 경과)은 ImGui 경과(벽시계)가 아니라 `GameTimeScale::getUnscaledDeltaTime` 을 씁니다.
 
 **에디터 실행.** 루트에 `editor="true"` 를 적은 시나리오는 `AppScenarioTest` 가 `-EnableEditor` 와 빈 에디터 상태 폴더로 돌립니다. 게임 팩 시나리오가 그 게임의 에디터 창(HarvestValley 의 NPC 일정 창)을 볼 때 씁니다.
 `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않습니다. 실행기는 이 값을 보지 않습니다(`isolated` 와 같다).

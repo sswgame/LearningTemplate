@@ -85,6 +85,17 @@ else()
 	message(STATUS "[BuildConfig] Dev: Engine SHARED, Editor/SWGame MODULE (type=${CMAKE_BUILD_TYPE})")
 endif()
 
+# Vulkan 검증 레이어를 켜는 구성의 정의는 여기 하나뿐이다. 세 곳이 이 정의만 읽는다.
+#   레이어 복사(sw_deployRuntimeDependencies) : 변수 sw_vulkan_validation
+#   켜기(VulkanRHIDevice 생성자) · 그것을 보는 테스트(AppSmokeTest) : 매크로 SW_VULKAN_VALIDATION
+# 세 곳이 조건을 따로 적으면 한쪽만 바뀐다. 그러면 레이어가 없는 구성에서 테스트가 돌아 꺼진 레이어를 실패로 본다.
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(sw_vulkan_validation ON)
+	target_compile_definitions(sw_global_options INTERFACE SW_VULKAN_VALIDATION)
+else()
+	set(sw_vulkan_validation OFF)
+endif()
+
 # 두 매크로 모두 헤더(Mutex.h)와 전역 연산자에 영향을 주므로 모든 타겟에 동일하게 적용해야 한다.
 if(SW_ENABLE_DEADLOCK_DETECTION)
 	target_compile_definitions(sw_global_options INTERFACE SW_ENABLE_DEADLOCK_DETECTION)
@@ -196,14 +207,14 @@ endfunction()
 
 # 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만(무조건 복사하면 배포 산출물에 셰이더 컴파일러 · 검증 레이어가 따라 들어간다).
 #   DXC        : 개발 빌드(런타임 HLSL 컴파일 · DXIL 리플렉션). ALWAYS_DXC 면 배포 구성에서도(테스트 — TestBin 이라 배포물과 섞이지 않는다)
-#   검증 레이어 : Debug 만(VulkanRHIDevice 가 SW_DEBUG 에서만 켠다 — 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
+#   검증 레이어 : sw_vulkan_validation 인 구성만(위의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다. 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
 #   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
 function(sw_deployRuntimeDependencies TARGET_NAME)
 	cmake_parse_arguments(ARG "ALWAYS_DXC" "" "" ${ARGN})
 	if(ARG_ALWAYS_DXC OR NOT SW_SHIPPING_BUILD)
 		sw_copyDxcDlls(${TARGET_NAME})
 	endif()
-	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	if(sw_vulkan_validation)
 		sw_copyVulkanValidationRuntime(${TARGET_NAME})
 	endif()
 	sw_copyTracyRuntime(${TARGET_NAME})

@@ -823,12 +823,14 @@ SW_TEST_CASE( AppSmokeTest, KitExtensionSelfTestsPassInTheirGame )
     }
 }
 
+    // 검증 레이어를 켜는 구성(SW_VULKAN_VALIDATION, cmake/Engine/BuildLayout.cmake 의 정의 하나)에서만 등록합니다. 켜는 코드와 레이어 복사도 같은 정의를 읽습니다.
+    #if defined( SW_VULKAN_VALIDATION )
 /**
  * @brief [AppSmokeTest] Vulkan 에디터에서 씬 뷰 RT 를 프레임마다 다시 만들어도 검증 레이어가 아무것도 남기지 않는다
  * @details 렌더 스레드는 UI 가 새 draw 스냅샷을 내기 전까지 옛 스냅샷을 여러 프레임에 다시 그린다. 뷰 RT 를 다시 만들 때 놓은 ImGui 디스크립터
  *          세트 · 렌더 타깃을 UI 스레드에서 곧바로 놓으면 그 프레임들이 놓인 세트를 쓰고(`vkFreeDescriptorSets ... in use`), 새 렌더 타깃을
  *          렌더러가 쓰기 전에 샘플링하면 UNDEFINED 레이아웃을 읽는다. 둘 다 검증 레이어가 [Error] 로 남긴다. `sceneView.resizeEveryFrame` 이
- *          90 프레임 동안 매 프레임 크기를 바꾼다. 검증 레이어는 Debug `Bin` 에 함께 놓인다 — 꺼진 채로 돌면 이 테스트는 아무것도 보지 못하므로 진다.
+ *          90 프레임 동안 매 프레임 크기를 바꾼다. 검증 레이어는 같은 구성의 `Bin` 에 함께 놓인다. 그래도 꺼진 채로 돌면 이 테스트는 아무것도 보지 못하므로 진다.
  */
 SW_TEST_CASE( AppSmokeTest, VulkanEditorSceneViewResizeLeavesNoValidationError )
 {
@@ -847,6 +849,7 @@ SW_TEST_CASE( AppSmokeTest, VulkanEditorSceneViewResizeLeavesNoValidationError )
     }
     SW_EXPECT_TRUE_MSG( bPassed, "sceneView.resizeEveryFrame did not pass" );
 }
+    #endif // SW_VULKAN_VALIDATION
 #endif
 
 /**
