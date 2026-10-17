@@ -282,21 +282,21 @@ SW_TEST_CASE( ShaderCookerTest, CachedSourceHashNoticesEditedFile )
 
     const sw::string original = "float4 main() : SV_Target { return 1; }\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( original.data() ), original.size() ) );
-    const uint64 firstHash = sw::ShaderCooker::computeEffectiveSourceHash( path );
+    const uint64 firstHash = sw::ShaderCooker::computeEffectiveSourceHash( dir, path );
     SW_ASSERT_TRUE( firstHash != 0u );
-    SW_EXPECT_EQUAL( firstHash, sw::ShaderCooker::computeEffectiveSourceHash( path ) ); // 캐시 적중
+    SW_EXPECT_EQUAL( firstHash, sw::ShaderCooker::computeEffectiveSourceHash( dir, path ) ); // 캐시 적중
 
     const sw::string edited = "float4 main() : SV_Target { return float4( 0.25, 0.5, 0.75, 1.0 ); }\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( edited.data() ), edited.size() ) );
-    const uint64 editedHash = sw::ShaderCooker::computeEffectiveSourceHash( path );
+    const uint64 editedHash = sw::ShaderCooker::computeEffectiveSourceHash( dir, path );
     SW_EXPECT_TRUE( editedHash != 0u );
     SW_EXPECT_TRUE( editedHash != firstHash );
 
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( original.data() ), original.size() ) );
-    SW_EXPECT_EQUAL( firstHash, sw::ShaderCooker::computeEffectiveSourceHash( path ) );
+    SW_EXPECT_EQUAL( firstHash, sw::ShaderCooker::computeEffectiveSourceHash( dir, path ) );
 
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( path ) );
-    SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderCooker::computeEffectiveSourceHash( path ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderCooker::computeEffectiveSourceHash( dir, path ) );
 }
 
 /**
@@ -306,7 +306,8 @@ SW_TEST_CASE( ShaderCookerTest, CachedSourceHashNoticesEditedFile )
  */
 SW_TEST_CASE( ShaderCookerTest, FailedSourcesAreLeftOutOfTheCookStamp )
 {
-    const sw::string shadersDir = sw::FileUtil::joinPath( test::makeTempDirectory( "cook_stamp" ), "shaders" );
+    const sw::string root       = test::makeTempDirectory( "cook_stamp" );
+    const sw::string shadersDir = sw::FileUtil::joinPath( root, "shaders" );
     const sw::string binDir     = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shadersDir, "bin" ), "dx12" );
     const sw::string goodPath   = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "good.hlsl" ) );
     const sw::string brokenPath = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "broken.hlsl" ) );
@@ -315,11 +316,11 @@ SW_TEST_CASE( ShaderCookerTest, FailedSourcesAreLeftOutOfTheCookStamp )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, "float4 main() : SV_Target { return }\n" ) );
 
     const sw::unordered_set<sw::string> uniqueFailedSource{ brokenPath };
-    sw::ShaderCooker::writeCookStamp( binDir, &uniqueFailedSource );
-    sw::ShaderCooker::invalidateSharedHeaderCache(); // 스탬프 읽기 캐시를 비워 방금 쓴 스탬프를 읽게 한다
+    sw::ShaderCooker::writeCookStamp( root, binDir, &uniqueFailedSource ); // 다른 include 루트도 이 임시 루트에서만 본다
+    sw::ShaderCooker::invalidateSharedHeaderCache();                       // 스탬프 읽기 캐시를 비워 방금 쓴 스탬프를 읽게 한다
 
-    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, goodPath ) );
-    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( binDir, brokenPath ) );
+    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, goodPath ) );
+    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, brokenPath ) );
 }
 
 /**
@@ -611,76 +612,96 @@ SW_TEST_CASE( ShaderCookerTest, CachePathCarriesPermutationHash )
  * @details 이 저장소는 쿠킹된 바이너리까지 커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 임의의
  *          순서로 덮어쓴다. `산출물 mtime >= 소스 mtime` 으로 판정하면 그때 "이미 최신" 이라 답해 낡은 바이너리가
  *          커밋된 채 돌고, 한 백엔드만 다른 그림을 내는 것이 백엔드 버그처럼 보인다. 여기서 막는다.
+ *          트리는 케이스 임시 루트에 짓는다. 소스 트리 `Resource/engine/shaders` 에 헤더를 넣었다 빼면 같은 폴더를 훑는
+ *          다른 테스트 프로세스(`ctest -j`)가 그 사이에 "낡음" 을 본다.
  */
 SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
 {
-    const sw::string shaderPath = sw::ResourcePaths::getResourcePath( "engine/shaders/forwardlit.hlsl" );
-    const sw::string binDir     = sw::ResourcePaths::getResourcePath( "engine/shaders/bin/dx12" );
-    // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
-    if ( shaderPath.empty() || binDir.empty() )
-        return;
+    const test::ScopedTempResourceRoot resourceRoot;
+    const sw::string&                  root = resourceRoot.getRootFolderPath();
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/common.hlsli", "#define SW_COMMON 1\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/forwardlit.hlsl", "#include \"common.hlsli\"\nfloat4 VSMain() : SV_Position { return 1; }\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/tonemap.hlsl", "#include \"common.hlsli\"\nfloat4 PSMain() : SV_Target { return 0.5; }\n" ) );
+    const sw::string shaderPath  = resourceRoot.makePath( "engine/shaders/forwardlit.hlsl" );
+    const sw::string tonemapPath = resourceRoot.makePath( "engine/shaders/tonemap.hlsl" );
+    const sw::string binDir      = resourceRoot.makePath( "engine/shaders/bin/dx12" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 
-    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ) );
+    sw::ShaderCooker::writeCookStamp( root, binDir, nullptr );
+    sw::ShaderCooker::invalidateSharedHeaderCache(); // 스탬프 읽기 캐시를 비워 방금 쓴 스탬프를 읽게 한다
+    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, shaderPath ) );
 
     // 스탬프에 없는 소스는 최신일 수 없다 — "파일이 있으니 최신" 으로 새지 않는지 본다.
-    const sw::string shadersDir = sw::FileUtil::getDirectoryPart( sw::FileUtil::normalizeSeparators( shaderPath ) );
-    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( binDir, sw::FileUtil::joinPath( shadersDir, "nosuchshader.hlsl" ) ) );
+    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, resourceRoot.makePath( "engine/shaders/nosuchshader.hlsl" ) ) );
 
     // 유효 소스 해시는 셰이더마다 달라야 한다(같으면 캐시 키가 셰이더를 못 가른다).
-    const uint64 hashForward = sw::ShaderCooker::computeEffectiveSourceHash( shaderPath );
-    const uint64 hashTonemap = sw::ShaderCooker::computeEffectiveSourceHash( sw::FileUtil::joinPath( shadersDir, "tonemap.hlsl" ) );
+    const uint64 hashForward = sw::ShaderCooker::computeEffectiveSourceHash( root, shaderPath );
+    const uint64 hashTonemap = sw::ShaderCooker::computeEffectiveSourceHash( root, tonemapPath );
     SW_EXPECT_TRUE( hashForward != 0 );
     SW_EXPECT_TRUE( hashTonemap != 0 );
     SW_EXPECT_TRUE( hashForward != hashTonemap );
 
     // **공유 헤더가 바뀌면 전부 낡은 것이 되어야 한다.** `.hlsl` 은 그대로인데 include 한 `.hlsli` 만
     // 바뀌는 경우다 — 파일 시간으로는 이 조합이 조용히 통과한다.
-    const sw::string tempHeader = sw::FileUtil::joinPath( shadersDir, "cooktemp.hlsli" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// cook staleness test\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/cooktemp.hlsli", "// cook staleness test\n" ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
-    const bool   bCurrentAfterHeaderAdded = sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath );
-    const uint64 hashAfterHeaderAdded     = sw::ShaderCooker::computeEffectiveSourceHash( shaderPath );
+    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, shaderPath ) );
+    SW_EXPECT_TRUE( sw::ShaderCooker::computeEffectiveSourceHash( root, shaderPath ) != hashForward );
 
-    // 넣은 헤더는 반드시 되돌린다 — 실패해도 소스 트리를 더럽힌 채 끝나면 안 된다.
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( tempHeader ) );
-    sw::ShaderCooker::invalidateSharedHeaderCache();
-
-    SW_EXPECT_FALSE( bCurrentAfterHeaderAdded );
-    SW_EXPECT_TRUE( hashAfterHeaderAdded != hashForward );
     // 되돌리면 다시 최신이다.
-    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ) );
-    SW_EXPECT_EQUAL( hashForward, sw::ShaderCooker::computeEffectiveSourceHash( shaderPath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( resourceRoot.makePath( "engine/shaders/cooktemp.hlsli" ) ) );
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, shaderPath ) );
+    SW_EXPECT_EQUAL( hashForward, sw::ShaderCooker::computeEffectiveSourceHash( root, shaderPath ) );
 }
 
 /**
  * @brief [ShaderCookStampTest] 다른 include 루트(engine)의 헤더가 바뀌면 common 셰이더 산출물도 낡은 것이 된다
  * @details common 셰이더는 `common.hlsli` · `binding.hlsli` 를 engine/shaders 에서 include 한다. 스탬프가 자기 도메인 헤더만 보면 engine 헤더를
- *          고쳐도 common 바이너리가 "최신" 으로 남아, 한쪽만 옛 바인딩으로 도는 바이너리가 커밋된다.
+ *          고쳐도 common 바이너리가 "최신" 으로 남아, 한쪽만 옛 바인딩으로 도는 바이너리가 커밋된다. 다른 도메인은 넘긴 루트 아래에서만 찾는다.
  */
 SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
 {
-    const sw::string shaderPath       = sw::ResourcePaths::getResourcePath( "common/shaders/samplecompute.hlsl" );
-    const sw::string binDir           = sw::ResourcePaths::getResourcePath( "common/shaders/bin/dx12" );
-    const sw::string engineShadersDir = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
-    // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
-    const bool bMissingShaderPaths = shaderPath.empty() || binDir.empty() || engineShadersDir.empty();
-    if ( bMissingShaderPaths )
-        return;
+    const test::ScopedTempResourceRoot resourceRoot;
+    const sw::string&                  root = resourceRoot.getRootFolderPath();
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/common.hlsli", "#define SW_COMMON 1\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "common/shaders/samplecompute.hlsl", "#include \"common.hlsli\"\n[numthreads(1,1,1)] void CSMain() {}\n" ) );
+    const sw::string shaderPath = resourceRoot.makePath( "common/shaders/samplecompute.hlsl" );
+    const sw::string binDir     = resourceRoot.makePath( "common/shaders/bin/dx12" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 
+    sw::ShaderCooker::writeCookStamp( root, binDir, nullptr );
     sw::ShaderCooker::invalidateSharedHeaderCache();
-    SW_ASSERT_TRUE_MSG( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ), "common 산출물이 지금 소스와 다르다 — App --cook-shaders 로 다시 쿠킹하고 시작한다" );
+    SW_ASSERT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, shaderPath ) );
 
-    const sw::string tempHeader = sw::FileUtil::joinPath( engineShadersDir, "cooktemp_otherroot.hlsli" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// cook staleness test (another include root)\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/cooktemp_otherroot.hlsli", "// cook staleness test (another include root)\n" ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
-    const bool bCurrentAfterEngineHeaderAdded = sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath );
+    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, shaderPath ) );
 
-    // 넣은 헤더는 반드시 되돌린다 — 실패해도 소스 트리를 더럽힌 채 끝나면 안 된다.
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( tempHeader ) );
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( resourceRoot.makePath( "engine/shaders/cooktemp_otherroot.hlsli" ) ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
+    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, binDir, shaderPath ) );
+}
 
-    SW_EXPECT_FALSE( bCurrentAfterEngineHeaderAdded );
-    SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ) );
+/**
+ * @brief [ShaderCookStampTest] 커밋된 engine · common 산출물이 지금 소스와 맞는다 — 소스 트리는 읽기만 한다
+ * @details 셰이더를 고치고 다시 쿠킹하지 않으면 커밋된 바이너리가 옛 소스의 것으로 남는다. 판정 규칙은 위 두 케이스가 임시 트리에서 고정하고,
+ *          여기서는 실제 트리에 그 규칙을 대어 보기만 한다(쓰지 않는다).
+ */
+SW_TEST_CASE( ShaderCookStampTest, CommittedCookedOutputIsCurrent )
+{
+    const sw::string arrShaderPath[] = { sw::ResourcePaths::getResourcePath( "engine/shaders/forwardlit.hlsl" ),
+                                         sw::ResourcePaths::getResourcePath( "common/shaders/samplecompute.hlsl" ) };
+    const sw::string arrBinDir[]     = { sw::ResourcePaths::getResourcePath( "engine/shaders/bin/dx12" ),
+                                         sw::ResourcePaths::getResourcePath( "common/shaders/bin/dx12" ) };
+    for ( uint32 index = 0; index < 2u; ++index )
+    {
+        // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
+        if ( arrShaderPath[index].empty() || arrBinDir[index].empty() )
+            continue;
+        SW_EXPECT_TRUE_MSG( sw::ShaderCooker::isCookedOutputCurrent( arrBinDir[index], arrShaderPath[index] ),
+                            ( arrShaderPath[index] + " 의 산출물이 지금 소스와 다르다 — App --cook-shaders 로 다시 쿠킹한다" ).c_str() );
+    }
 }
 
 /**

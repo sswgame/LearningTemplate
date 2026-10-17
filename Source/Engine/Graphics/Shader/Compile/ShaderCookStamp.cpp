@@ -25,9 +25,8 @@ namespace sw
             /** @brief 공유 헤더(.hlsli) 내용 해시 캐시입니다. 트리 전체를 매번 훑을 수는 없습니다. */
             inline static mutex _s_sharedHeaderMutex{};
 
-            inline static uint64 _s_sharedHeaderHash{ 0 };
-
-            inline static bool _s_bSharedHeaderHashCached{ false };
+            /// @brief 리소스 루트에서 그 아래 공유 헤더 해시를 찾는 캐시입니다. 루트마다 따로 둔다 — 테스트가 임시 루트를 넘겨도 실제 루트의 값을 덮지 않는다.
+            inline static unordered_map<string, uint64> _s_mapSharedHeaderHash{};
 
             /**
              * @brief 쿠킹 스탬프 헤더입니다. **버전을 올리면 스탬프가 모두 불일치가 되어 한 번 전부 다시 쿠킹합니다.**
@@ -133,8 +132,10 @@ namespace sw
              * @details 셰이더는 자기 폴더 밖 include 루트(engine, common)의 헤더도 include 한다. 자기 도메인만 보면 engine 헤더를 고쳐도
              *          common 셰이더가 "최신" 으로 남는다. 다른 도메인 헤더의 키는 `<도메인>:<상대 경로>` 다(자기 키에는 ':' 가 없다).
              *          `CookAssets.py` 의 `collectStampedSourceHashesInternal` 이 같은 규칙이다.
+             *          다른 도메인은 @p resourceRoot 아래에서 찾는다. 전역 루트(`ResourcePaths`)를 여기서 읽으면 임시 트리에서 도는 테스트도
+             *          실제 `Resource/` 의 헤더를 보게 되어, 다른 프로세스가 그 트리를 건드리는 순간 판정이 흔들린다.
              */
-            static void collectStampedSources( const string& shadersDir, bool bHeadersOnly, vector<StampedSource>& outListSource )
+            static void collectStampedSources( string_view resourceRoot, const string& shadersDir, bool bHeadersOnly, vector<StampedSource>& outListSource )
             {
                 outListSource.clear();
                 vector<string> listOwn;
@@ -151,11 +152,14 @@ namespace sw
                         outListSource.push_back( StampedSource{ std::move( key ), normSource } );
                 }
 
+                if ( resourceRoot.empty() )
+                    return; // 루트가 없으면 다른 도메인도 없다(상대 경로로 붙이면 작업 폴더 아래를 본다).
+
                 const string ownDirLower = StringUtil::toLower( shadersDir.c_str() );
                 for ( const utf8* pDomain : ShaderCooker::kArrIncludeRootDomain )
                 {
-                    const string rootDir = FileUtil::normalizeSeparators( ResourcePaths::getDomainFolderPath( pDomain, "shaders" ) );
-                    if ( rootDir.empty() || StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
+                    const string rootDir = FileUtil::normalizeSeparators( FileUtil::joinPath( FileUtil::joinPath( resourceRoot, pDomain ), "shaders" ) );
+                    if ( FileUtil::isDirectory( rootDir ) == false || StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
                         continue;
                     vector<string> listHeader;
                     FileUtil::collectFiles( rootDir, ".hlsli", listHeader, true );
@@ -180,7 +184,7 @@ namespace sw
                 bool _bHeadersCurrent{ false };
             };
 
-            /// @brief `bin/<rhi>` 폴더별 스탬프 읽기 캐시입니다. 쿠킹 루프가 요청마다 부릅니다.
+            /// @brief `<리소스 루트>|bin/<rhi>` 별 스탬프 읽기 캐시입니다. 쿠킹 루프가 요청마다 부릅니다.
             inline static unordered_map<string, StampInfo> _s_mapStamp{};
 
             /**
@@ -190,9 +194,13 @@ namespace sw
              * @warning 참조를 반환하므로 **`_s_sharedHeaderMutex` 를 잡은 채로만** 부르세요. 캐시에 삽입이
              *          일어나면 앞서 반환한 참조가 무효가 됩니다.
              */
-            static const StampInfo& readCookStamp( const string& binDirectory, const string& shadersDir )
+            static const StampInfo& readCookStamp( string_view resourceRoot, const string& binDirectory, const string& shadersDir )
             {
-                const auto cached = _s_mapStamp.find( binDirectory );
+                // 헤더 판정이 루트 아래 다른 도메인을 보므로 같은 폴더라도 루트가 다르면 다른 결과다.
+                string cacheKey{ resourceRoot };
+                cacheKey += '|';
+                cacheKey += binDirectory;
+                const auto cached = _s_mapStamp.find( cacheKey );
                 if ( cached != _s_mapStamp.end() )
                     return cached->second;
 
@@ -231,7 +239,7 @@ namespace sw
                 // 헤더는 어느 셰이더가 무엇을 include 하는지 파싱하지 않고 include 루트의 것을 **모두** 본다. 넉넉하게 쿠킹하는 쪽이 안전하다.
                 info._bHeadersCurrent = info._mapHash.empty() == false;
                 vector<StampedSource> listHeader;
-                collectStampedSources( shadersDir, true, listHeader );
+                collectStampedSources( resourceRoot, shadersDir, true, listHeader );
                 for ( const StampedSource& header : listHeader )
                 {
                     const auto iter = info._mapHash.find( header._key );
@@ -242,7 +250,7 @@ namespace sw
                     }
                 }
 
-                return _s_mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
+                return _s_mapStamp.emplace( std::move( cacheKey ), std::move( info ) ).first->second;
             }
 
             /** @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 상수만으로 정해져 OS · 파일과 무관하다. */
@@ -269,9 +277,10 @@ namespace sw
              *          `git clone` 이 모두 체크아웃 시각으로 덮어써서 비교 자체가 무의미해진다.
              *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 다. 해시는 CR 을
              *          뺀 바이트로 계산한다(`computeContentHash`). 판정 쪽과 같은 함수다.
+             * @param resourceRoot 다른 include 루트 도메인을 찾을 리소스 루트
              * @param binDirectory 매니페스트를 쓴 폴더(`<domain>/shaders/bin/<rhi>`)
              */
-            static void writeCookStamp( string_view binDirectory, const unordered_set<string>* pFailedSource )
+            static void writeCookStamp( string_view resourceRoot, string_view binDirectory, const unordered_set<string>* pFailedSource )
             {
                 // <domain>/shaders/bin/<rhi> → <domain>/shaders
                 const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
@@ -281,7 +290,7 @@ namespace sw
                     return;
 
                 vector<StampedSource> listSource;
-                collectStampedSources( shadersDir, false, listSource );
+                collectStampedSources( resourceRoot, shadersDir, false, listSource );
 
                 vector<string> listLine;
                 listLine.reserve( listSource.size() );
@@ -332,13 +341,18 @@ namespace sw
 
     void ShaderCooker::writeCookStamp( string_view binDirectory, const unordered_set<string>* pFailedSource )
     {
-        ShaderCookStampInternal::writeCookStamp( binDirectory, pFailedSource );
+        ShaderCookStampInternal::writeCookStamp( ResourcePaths::getRootFolderPath(), binDirectory, pFailedSource );
+    }
+
+    void ShaderCooker::writeCookStamp( string_view resourceRoot, string_view binDirectory, const unordered_set<string>* pFailedSource )
+    {
+        ShaderCookStampInternal::writeCookStamp( resourceRoot, binDirectory, pFailedSource );
     }
 
     void ShaderCooker::invalidateSharedHeaderCache()
     {
         std::scoped_lock<mutex> lock{ ShaderCookStampInternal::_s_sharedHeaderMutex };
-        ShaderCookStampInternal::_s_bSharedHeaderHashCached = false;
+        ShaderCookStampInternal::_s_mapSharedHeaderHash.clear();
         ShaderCookStampInternal::_s_mapStamp.clear();
         // 내용 해시는 파일 시각으로 스스로 낡음을 알지만, 수동 리로드는 "전부 다시 본다" 는 약속이라 같이 버린다.
         std::scoped_lock<mutex> contentLock{ ShaderCookStampInternal::_s_contentHashMutex };
@@ -347,14 +361,20 @@ namespace sw
 
     uint64 ShaderCooker::getSharedHeaderContentHash()
     {
+        return getSharedHeaderContentHash( ResourcePaths::getRootFolderPath() );
+    }
+
+    uint64 ShaderCooker::getSharedHeaderContentHash( string_view resourceRoot )
+    {
         std::scoped_lock<mutex> lock{ ShaderCookStampInternal::_s_sharedHeaderMutex };
-        if ( ShaderCookStampInternal::_s_bSharedHeaderHashCached )
-            return ShaderCookStampInternal::_s_sharedHeaderHash;
+        const string            rootDir{ resourceRoot };
+        const auto              cached = ShaderCookStampInternal::_s_mapSharedHeaderHash.find( rootDir );
+        if ( cached != ShaderCookStampInternal::_s_mapSharedHeaderHash.end() )
+            return cached->second;
 
         // 경로까지 섞는다. 헤더를 **지우기만** 해도 값이 달라져야 한다(내용만 XOR 하면 같은 내용 둘이
         // 서로를 지운다). 정렬은 collectFiles 순서에 기대지 않고 곱셈 누적으로 순서와 무관하게 만든다.
-        uint64        combined = 0;
-        const string& rootDir  = ResourcePaths::getRootFolderPath();
+        uint64 combined = 0;
         if ( rootDir.empty() == false )
         {
             vector<string> listHeader;
@@ -366,18 +386,22 @@ namespace sw
             }
         }
 
-        ShaderCookStampInternal::_s_sharedHeaderHash        = combined;
-        ShaderCookStampInternal::_s_bSharedHeaderHashCached = true;
+        ShaderCookStampInternal::_s_mapSharedHeaderHash.emplace( rootDir, combined );
         return combined;
     }
 
     uint64 ShaderCooker::computeEffectiveSourceHash( string_view absShaderPath )
     {
+        return computeEffectiveSourceHash( ResourcePaths::getRootFolderPath(), absShaderPath );
+    }
+
+    uint64 ShaderCooker::computeEffectiveSourceHash( string_view resourceRoot, string_view absShaderPath )
+    {
         const uint64 sourceHash = ShaderCookStampInternal::computeContentHash( absShaderPath );
         if ( sourceHash == 0 )
             return 0;
         // 도구 지문도 섞는다. 디스크 캐시 키가 이 값을 쓰므로, 빠지면 DXC 를 바꿔도 옛 바이트를 돌려준다.
-        const uint64 headerHash = StringUtil::computeHash64( to_string( getSharedHeaderContentHash() ), false, sourceHash );
+        const uint64 headerHash = StringUtil::computeHash64( to_string( getSharedHeaderContentHash( resourceRoot ) ), false, sourceHash );
         return StringUtil::computeHash64( to_string( getToolchainFingerprint() ), false, headerHash );
     }
 
@@ -395,6 +419,11 @@ namespace sw
 
     bool ShaderCooker::isCookedOutputCurrent( string_view binDirectory, string_view absShaderPath )
     {
+        return isCookedOutputCurrent( ResourcePaths::getRootFolderPath(), binDirectory, absShaderPath );
+    }
+
+    bool ShaderCooker::isCookedOutputCurrent( string_view resourceRoot, string_view binDirectory, string_view absShaderPath )
+    {
         // <domain>/shaders/bin/<rhi> → <domain>/shaders (writeCookStamp 와 같은 되짚기)
         const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
         const string shadersDir = FileUtil::getDirectoryPart( FileUtil::getDirectoryPart( rhiDir ) );
@@ -408,7 +437,7 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ ShaderCookStampInternal::_s_sharedHeaderMutex };
 
-        const ShaderCookStampInternal::StampInfo& stamp = ShaderCookStampInternal::readCookStamp( rhiDir, shadersDir );
+        const ShaderCookStampInternal::StampInfo& stamp = ShaderCookStampInternal::readCookStamp( resourceRoot, rhiDir, shadersDir );
         if ( stamp._bHeadersCurrent == false )
             return false;
 

@@ -339,34 +339,13 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     SW_EXPECT_STREQ( "game", defaultPriority[0].c_str() );
 
     // 2. 임시 game 및 DLC 디렉터리/에셋 생성하여 우선순위 오버라이드 검증
-    //    **소스 트리의 Resource/ 에 쓴다** — 우선순위 토큰은 리소스 루트 아래 폴더로만 풀리므로 임시 폴더로는 못 측정한다.
-    //    그래서 정리를 끝에 손으로 두지 않고 만들기 전에 걸어 둔다(일찍 빠지거나 죽어도 작업 트리에 남지 않게). 지우는 것은
-    //    이 케이스가 만든 폴더뿐이다 — `Resource/dlc` 는 이 케이스가 만들었을 때만 지운다(진짜 DLC 를 같이 지우지 않게).
-    const sw::string rootDir    = sw::ResourcePaths::getRootFolderPath();
-    const sw::string gameDir    = sw::FileUtil::joinPath( rootDir, "game/empty/test_asset" );
-    const sw::string gameFile   = sw::FileUtil::joinPath( gameDir, "priority_test.xml" );
-    const sw::string dlcRootDir = sw::FileUtil::joinPath( rootDir, "dlc" );
-    const sw::string dlcPackDir = sw::FileUtil::joinPath( dlcRootDir, "test_dlc" );
-    const bool       bHadDlcDir = sw::FileUtil::isDirectory( dlcRootDir );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [gameDir, dlcRootDir, dlcPackDir, bHadDlcDir]()
-    {
-        SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( gameDir ) );
-        SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dlcPackDir ) );
-        if ( bHadDlcDir == false )
-            SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dlcRootDir ) );
-    } ) );
-    sw::FileUtil::ensureDirectoryExists( gameDir );
-    const utf8* kGameContent = "<Asset source=\"game\" />";
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( gameFile, reinterpret_cast<const uint8*>( kGameContent ),
-                                             static_cast<uint64>( sw::StringUtil::strlen( kGameContent ) ) ) );
-
-    const sw::string dlcDir  = sw::FileUtil::joinPath( dlcPackDir, "test_asset" );
-    const sw::string dlcFile = sw::FileUtil::joinPath( dlcDir, "priority_test.xml" );
-    sw::FileUtil::ensureDirectoryExists( dlcDir );
-
-    const utf8* kDlcContent = "<Asset source=\"dlc\" />";
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( dlcFile, reinterpret_cast<const uint8*>( kDlcContent ),
-                                             static_cast<uint64>( sw::StringUtil::strlen( kDlcContent ) ) ) );
+    //    우선순위 토큰은 리소스 루트 아래 폴더로만 풀리므로 루트째 케이스 임시 루트로 바꾼다. 소스 트리 `Resource/` 에 폴더를 만들면
+    //    나란히 도는 다른 테스트 프로세스의 검색이 그 사이에 이 폴더를 본다.
+    const test::ScopedTempResourceRoot resourceRoot;
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "game/empty/test_asset/priority_test.xml", "<Asset source=\"game\" />" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "dlc/test_dlc/test_asset/priority_test.xml", "<Asset source=\"dlc\" />" ) );
+    const sw::string gameFile = resourceRoot.makePath( "game/empty/test_asset/priority_test.xml" );
+    const sw::string dlcFile  = resourceRoot.makePath( "dlc/test_dlc/test_asset/priority_test.xml" );
 
     // 3. DLC가 1순위인 우선순위 목록 적용
     //    검색 우선순위는 **프로세스 전역**이다. 아래 단언 중 하나가 깨져 여기서 빠져나가면 다음
@@ -785,14 +764,11 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityOutsideTheResourceRoot )
  */
 SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityToAMissingAsset )
 {
-    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    // 결함이 되살아나면 `.meta` 가 루트 안에 생긴다 — 소스 트리가 아니라 케이스 임시 루트에 생기게 루트를 바꾼다.
+    const test::ScopedTempResourceRoot resourceRoot;
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/materials/placeholder.txt", "" ) ); // 도메인 폴더가 있어야 경로가 풀린다
     const utf8*      pMissing      = "engine/materials/ensuremeta_missing_probe.material";
-    const sw::string metaWritePath = sw::ResourcePaths::getWritePath( "engine/materials/ensuremeta_missing_probe.material.meta" );
-    SW_ASSERT_FALSE( metaWritePath.empty() );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [metaWritePath]()
-    {
-        (void)sw::FileUtil::removeFile( metaWritePath ); // 없으면 할 일이 없다
-    } ) );
+    const sw::string metaWritePath = resourceRoot.makePath( "engine/materials/ensuremeta_missing_probe.material.meta" );
     SW_ASSERT_TRUE_MSG( sw::ResourcePaths::getResourcePath( pMissing ).empty(), "탐침 경로에 실제 파일이 있다 — 시험 전제가 깨졌다" );
 
     sw::AssetDatabase db;

@@ -94,6 +94,12 @@ namespace sw
          *                      실패한 셰이더의 옛 바이너리 위에 지금 소스의 해시를 기록하면 그 셰이더가 영영 최신으로 판정되기 때문입니다.
          */
         static void writeCookStamp( string_view binDirectory, const unordered_set<string>* pFailedSource = nullptr );
+        /**
+         * @brief `writeCookStamp` 의 본체 — 다른 include 루트 도메인(`kArrIncludeRootDomain`)을 @p resourceRoot 아래에서 찾습니다.
+         * @details 루트를 받지 않는 판은 `ResourcePaths` 의 루트를 넘긴다. 테스트는 임시 트리의 루트를 넘겨 실제 `Resource/` 를 보지 않는다
+         *          (병렬로 도는 다른 프로세스가 그 트리를 건드려도 판정이 흔들리지 않는다).
+         */
+        static void writeCookStamp( string_view resourceRoot, string_view binDirectory, const unordered_set<string>* pFailedSource );
 
         /** @brief 셰이더 파일의 스템을 소문자로 반환합니다. 쿠킹된 파일 이름의 앞부분입니다(`computeBinaryFileName` 의 짝). */
         static string getStemLower( string_view filePath );
@@ -120,8 +126,12 @@ namespace sw
          *          더 새것" 으로 판정되어 그대로 넘어가고, 한 백엔드만 다른 이미지를 내면 백엔드 버그로 보인다.
          */
         static uint64 computeEffectiveSourceHash( string_view absShaderPath );
+        /** @brief `computeEffectiveSourceHash` 의 본체 — 공유 헤더를 @p resourceRoot 아래에서 모읍니다. */
+        static uint64 computeEffectiveSourceHash( string_view resourceRoot, string_view absShaderPath );
         /** @brief Resource 아래 모든 .hlsli 의 경로와 내용을 합친 해시입니다(값을 캐시합니다). */
         static uint64 getSharedHeaderContentHash();
+        /** @brief @p resourceRoot 아래 모든 .hlsli 의 경로와 내용을 합친 해시입니다(루트마다 캐시합니다). */
+        static uint64 getSharedHeaderContentHash( string_view resourceRoot );
 
         /**
          * @brief 컴파일 옵션의 판입니다. **`ShaderCompiler.cpp` 가 컴파일러에 넘기는 인자(플래그 · 백엔드 define)를 바꾸면 올리세요.**
@@ -160,6 +170,8 @@ namespace sw
          * @param absShaderPath 원본 `.hlsl` 의 절대 경로입니다.
          */
         static bool isCookedOutputCurrent( string_view binDirectory, string_view absShaderPath );
+        /** @brief `isCookedOutputCurrent` 의 본체 — 다른 include 루트 도메인의 헤더를 @p resourceRoot 아래에서 봅니다. */
+        static bool isCookedOutputCurrent( string_view resourceRoot, string_view binDirectory, string_view absShaderPath );
 
         /**
          * @brief 캐시된 공유 헤더 해시와 스탬프 읽기 결과를 버려, 다음 조회가 다시 훑게 합니다.

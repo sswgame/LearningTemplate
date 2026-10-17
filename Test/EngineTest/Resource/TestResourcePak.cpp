@@ -66,23 +66,6 @@ namespace sw
             vector<string> _listSearchPriority;
         };
 
-        /** @brief 리소스 루트를 바꾸고 끝날 때 되돌립니다. `GlobalVfsScope` 보다 뒤에 두어 먼저 풀리게 한다(검색 우선순위가 원래 루트에서 다시 지어진다). */
-        struct ResourceRootScope
-        {
-            explicit ResourceRootScope( string_view resourceRootFolderPath )
-                : _previous{ ResourcePaths::exchangeRootFolderPath( resourceRootFolderPath ) }
-            {
-            }
-
-            ~ResourceRootScope() { (void)ResourcePaths::exchangeRootFolderPath( _previous ); }
-
-            ResourceRootScope( const ResourceRootScope& )            = delete;
-            ResourceRootScope& operator=( const ResourceRootScope& ) = delete;
-
-        private:
-            string _previous;
-        };
-
         /** @brief 같은 키를 텍스트 · 바이너리로 둘 다 읽습니다. 둘 다 읽었으면 true. */
         [[nodiscard]] bool readTextAndBinaryResource( const utf8* pKey, string& outText, string& outBinary )
         {
@@ -517,20 +500,16 @@ SW_TEST_CASE( ResourcePakTest, TextAndBinaryReadsPickTheSameSource )
  */
 SW_TEST_CASE( ResourcePakTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
 {
-    const sw::GlobalVfsScope vfsScope;
-    constexpr const utf8*    kKey      = "engine/lookup_order/probe.txt";
-    const sw::string         root      = test::makeTempDirectory( "lookup_order_root" );
-    const sw::string         loosePath = sw::FileUtil::joinPath( root, kKey );
-    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( loosePath ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( loosePath, "FROM_LOOSE" ) );
+    const sw::GlobalVfsScope           vfsScope;
+    constexpr const utf8*              kKey = "engine/lookup_order/probe.txt";
+    const test::ScopedTempResourceRoot resourceRoot; // GlobalVfsScope 보다 뒤에 두어 먼저 풀리게 한다(검색 우선순위가 원래 루트에서 다시 지어진다)
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( kKey, "FROM_LOOSE" ) );
     const sw::string packPath = test::makeTempPath( "lookup_order.pack" );
     SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
                                                                                                                    { kKey, "FROM_PACK" }
     } ) );
 
-    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::ResourceRootScope rootScope( root );
-    sw::ResourcePakManager&     packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
     packManager.unmountAll();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
     sw::string text;

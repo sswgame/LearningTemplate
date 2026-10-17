@@ -12,7 +12,6 @@
     #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-    #include "Engine/Resource/ResourcePaths.h"
 
     #include "TestFramework/TestFramework.h"
 
@@ -92,27 +91,21 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     const sw::string includeRel = "engine/shaders/livereloadprobe.hlsli";
     const sw::string shaderRel  = "engine/shaders/livereloadprobe.hlsl";
 
-    const sw::string engineFolder = sw::ResourcePaths::getDomainFolderPath( "engine" );
-    SW_ASSERT_FALSE( engineFolder.empty() );
-    const sw::string includeAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsli" );
-    const sw::string shaderAbs  = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsl" );
+    // 프로브는 케이스 임시 루트에 둔다. 소스 트리 `Resource/engine/shaders` 에 넣으면 그 폴더의 헤더를 훑는 다른 테스트 프로세스
+    // (`ShaderCookStampTest`, 쿠킹 판정)가 나란히 돌다 "낡음" 을 본다. 셰이더 디스크 캐시(`<루트>/cache/shaders`)도 같이 이 루트로 간다.
+    const test::ScopedTempResourceRoot resourceRoot;
+    const sw::string                   includeAbs = resourceRoot.makePath( includeRel );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( includeRel, "#define SW_PROBE_SCALE 1.0\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( shaderRel,
+                                                "#include \"livereloadprobe.hlsli\"\n"
+                                                "float4 VSMain( float3 pos : POSITION ) : SV_POSITION\n"
+                                                "{\n"
+                                                "    return float4( pos * SW_PROBE_SCALE, 1.0 );\n"
+                                                "}\n" ) );
 
-    sw::FileUtil::ensureParentDirectoryExists( shaderAbs );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( includeAbs, "#define SW_PROBE_SCALE 1.0\n" ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( shaderAbs,
-                                                 "#include \"livereloadprobe.hlsli\"\n"
-                                                 "float4 VSMain( float3 pos : POSITION ) : SV_POSITION\n"
-                                                 "{\n"
-                                                 "    return float4( pos * SW_PROBE_SCALE, 1.0 );\n"
-                                                 "}\n" ) );
-
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [includeAbs, shaderAbs]()
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []()
     {
-        SW_EXPECT_TRUE( sw::FileUtil::removeFile( includeAbs ) );
-        SW_EXPECT_TRUE( sw::FileUtil::removeFile( shaderAbs ) );
-        // **파일만 지우면 부족하다.** 공유 헤더 해시는 `.hlsli` 집합을 한 번 훑고 캐시하므로, 프로브가 있던
-        // 동안의 값이 다음 테스트로 샌다 — `ShaderCookStampTest` 가 그 값을 기준으로 잡고 스스로 무효화한 뒤
-        // 비교하면 진다. `.hlsli` 를 건드린 쪽이 자기가 더럽힌 캐시를 비운다.
+        // 공유 헤더 해시 캐시는 프로세스 전역이다. 임시 루트의 값이 다음 케이스로 새지 않게 이 케이스가 비운다.
         sw::ShaderCooker::invalidateSharedHeaderCache();
     } ) );
 
@@ -175,11 +168,10 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
  */
 SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
 {
-    // 쿠킹된 바이너리가 없는 셰이더라야 실시간 컴파일을 탄다.
-    const sw::string engineFolder = sw::ResourcePaths::getDomainFolderPath( "engine" );
-    SW_ASSERT_FALSE( engineFolder.empty() );
-    const sw::string shaderAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livecodegenprobe.hlsl" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( shaderAbs, "float4 VSMain( float3 pos : POSITION ) : SV_POSITION { return float4( pos * 3.0, 1.0 ); }\n" ) );
+    // 쿠킹된 바이너리가 없는 셰이더라야 실시간 컴파일을 탄다. 소스 트리가 아니라 케이스 임시 루트에 둔다(위 케이스와 같은 까닭).
+    const test::ScopedTempResourceRoot resourceRoot;
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/livecodegenprobe.hlsl",
+                                                "float4 VSMain( float3 pos : POSITION ) : SV_POSITION { return float4( pos * 3.0, 1.0 ); }\n" ) );
 
     sw::ShaderCompileDesc desc{};
     desc._filePath   = "engine/shaders/livecodegenprobe.hlsl";
@@ -194,9 +186,8 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
     const sw::ShaderCompileDesc liveDesc    = sw::ShaderCache::makeLiveCompileDesc( desc );
     const sw::string            livePath    = sw::ShaderCache::makeLocalCachePath( liveDesc ); // 작업 폴더 기준(캐시가 쓰는 그대로)
     const sw::string            requestPath = sw::ShaderCache::makeLocalCachePath( desc );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [shaderAbs, livePath, requestPath]()
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [livePath, requestPath]()
     {
-        SW_EXPECT_TRUE( sw::FileUtil::removeFile( shaderAbs ) );
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( livePath ) );
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( requestPath ) );
         // 엔진 캐시에 남은 프로브 항목도 비운다 — 남기면 다음 케이스의 수동 리로드(`triggerReloadAll`)가 지워진 소스를 다시 컴파일하려다
