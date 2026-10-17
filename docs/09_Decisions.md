@@ -544,6 +544,9 @@
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.
+- **이관 함수를 호출부에 넘기던 API 를 타입 옆 한 번 등록으로 바꿨습니다**(2026-10-17). 연결 방식만 바뀐 것이고 정책은 위 결정 그대로입니다. 스키마가 바뀌면 기본은 데이터를 다시 쓰는 것이고, 이관은 값 계산이 불가피한 예외입니다. `SW_SCHEMA_MIGRATION` 이 (타입, 기록된 버전)으로 `SchemaMigrationRegistry` 에 올리고, 세 형식의 버전 붙은 읽기가 타입과 그 부모로 찾으므로 `deserializeVersioned` · `Archive` 는 이관 함수를 받지 않습니다. 필요한데 없으면 오류로 멈추고, 같은 자리의 중복 등록은 모든 구성에서 프로세스를 멈춥니다. 같은 버전에서 지운 필드를 버려도 되는지는 이관이 아니라 orphan 정책이라 호출부가 컨텍스트로 정합니다(`setAllowUnknownProperties`, 오브젝트 상태만 켬).
+  - 등록은 생성기가 모으지 않고 정적 등록자로 했습니다([이름 변경 리다이렉트 계획](plans/RenameRedirects.md) R5 초안과 다름). 이관 함수는 손으로 쓰는 C++ 이라 생성기가 읽을 선언이 없고, 애노테이션으로 함수 이름을 적어도 결국 같은 이미지의 정적 저장소에 함수 포인터를 둡니다. 언리얼 `FCustomVersionRegistration` 과 같고, 기존 `RegistrationList` 가 핫 리로드 대체와 언로드 때 빼기를 이미 맡습니다.
+  - 찾은 이관 함수는 잠금 밖에서 부릅니다. 그래서 모듈 언로드는 직렬화가 도는 동안 하지 않습니다. 지금 언로드 경로(`LiveReloadManager::drainTasksBeforeUnload`)는 비동기 씬 로드를 취소하고 작업을 비운 뒤 내립니다.
 - **설정 파일에는 기본값과 다른 값만 적습니다**(2026-10-06). 언리얼의 `Default*.ini` 와 같은 규칙이고, `ConfigFileSchemaTest` 가 기본값을 다시 적은 키를 막습니다.
 - **설정 값의 출처는 하나씩입니다**(2026-10-06). 시작 씬은 팩의 `gamesettings.xml`, 창 제목은 게임 프리셋의 `GameConfig::_windowTitle`(언리얼 ProjectName), 고정 스텝은 `EngineConfig::_fixedDeltaTime` 입니다.
   물리는 고정 스텝 위에 서브스텝 수(`_subStepCount`)만 둡니다. 유니티의 `Time.fixedDeltaTime` 이 하나인 것과 같습니다. 기본 RHI 도 한 곳에만 적습니다.

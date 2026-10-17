@@ -1,11 +1,14 @@
 #include "pch.h"
 
+#include "Core/String/RegistrationList.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -20,6 +23,8 @@
 
 #include "TestFramework/Harness/TestPropertyCoverage.h"
 #include "TestFramework/TestFramework.h"
+
+#include <optional>
 
 // 리플렉션 직렬화 — Binary/JSON/XML 왕복 · 버전 · 스키마 마이그레이션 · 골든 출력 · 딥카피.
 // 골든 비교 헬퍼는 아래 익명 네임스페이스에 있다.
@@ -1705,11 +1710,11 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryVersionHeaderTest )
         static_cast<VersionedActor*>( context._pInstance )->_fieldA += 1;
         return true;
     };
+    const sw::SchemaMigrationRegistrar migration{ "sw::VersionedActor", 102u, +migrateFn };
     restored._fieldA = 0;
     restored._fieldB = 0;
     readVersion      = 0;
-    ok               = sw::BinarySerializer::deserializeVersioned( readVersion, &restored, info, buffer.data(), buffer.size(), 103u,
-                                                                   +migrateFn );
+    ok               = sw::BinarySerializer::deserializeVersioned( readVersion, &restored, info, buffer.data(), buffer.size(), 103u );
     SW_EXPECT_TRUE( ok );
     SW_EXPECT_TRUE( s_migrateCalled );
     SW_EXPECT_EQUAL( 778, restored._fieldA );
@@ -1929,7 +1934,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ScalarFieldTypeChangeMovesTheValue )
     {
         return true;
     };
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &intDst, intInfo, floatBin.data(), floatBin.size(), 1u, +acceptOrphans ) );
+    const sw::SchemaMigrationRegistrar acceptOrphanMigration{ "sw::ProbeIntValue", 1u, +acceptOrphans };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &intDst, intInfo, floatBin.data(), floatBin.size(), 1u ) );
     SW_EXPECT_TRUE_MSG( intDst._value == -1, "float32 1.5 의 비트가 int32 로 재해석됐습니다" );
 }
 
@@ -2041,6 +2047,238 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
     sw::string xml = sw::XMLSerializer::serializeVersioned( 1, &actor, info );
     ver            = 0;
     SW_EXPECT_FALSE( sw::XMLSerializer::deserializeVersioned( ver, &restored, info, xml, 2u ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 이관은 (타입, 기록된 버전)으로 찾습니다. 부모의 이관을 물려받고, 리로드는 같은 자리를 대체하며, 등록자가 사라지면 빠집니다
+ * @details 호출부는 이관 함수를 넘기지 않습니다(`SchemaMigrationRegistry`). 모듈을 언로드하면 그 모듈의 정적 등록자가 소멸하며 빠지는데,
+ *          함수 범위의 등록자가 범위를 벗어나는 것과 같은 길입니다. 같은 버전이고 남는 값이 없는 읽기는 이관을 부르지 않고,
+ *          파생 타입을 다른 버전으로 읽으면 orphan 정책과 상관없이 오류로 멈춥니다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, SchemaMigrationIsFoundByTypeAndWrittenVersion )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "Testing versioned reads that must stop without a registered migration" );
+    static constexpr const utf8* kModuleName = "SchemaMigrationRegistryTest";
+    struct ChildActor
+    {
+        int32 _base{ 0 };
+        int32 _own{ 0 };
+    };
+    struct UnregisterTypesOnExit
+    {
+        ~UnregisterTypesOnExit() { sw::engine::getSubsystem<sw::TypeRegistry>().unregisterTypesByModule( kModuleName ); }
+    };
+
+    sw::TypeInfo parentInfo;
+    parentInfo._name               = sw::hashed_string( "MigrationParentActor" );
+    parentInfo._fullyQualifiedName = sw::hashed_string( "sw::MigrationParentActor" );
+    parentInfo._moduleName         = sw::hashed_string( kModuleName );
+    parentInfo._size               = sizeof( int32 );
+    parentInfo._listProperty       = {
+        { sw::hashed_string( "_base" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( ChildActor, _base ) }
+    };
+    sw::TypeInfo childInfo;
+    childInfo._name               = sw::hashed_string( "MigrationChildActor" );
+    childInfo._fullyQualifiedName = sw::hashed_string( "sw::MigrationChildActor" );
+    childInfo._parentFQN          = parentInfo._fullyQualifiedName;
+    childInfo._moduleName         = sw::hashed_string( kModuleName );
+    childInfo._size               = sizeof( ChildActor );
+    childInfo._listProperty       = {
+        { sw::hashed_string( "_own" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( ChildActor, _own ) }
+    };
+    const UnregisterTypesOnExit unregisterTypes;
+    sw::TypeRegistry&           registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    registry.registerClass( parentInfo );
+    registry.registerClass( childInfo );
+    const sw::TypeInfo* pChild  = registry.findType( childInfo._fullyQualifiedName );
+    const sw::TypeInfo* pParent = registry.findType( parentInfo._fullyQualifiedName );
+    SW_ASSERT_NOT_NULL( pChild );
+    SW_ASSERT_NOT_NULL( pParent );
+
+    static uint32 s_migrateCount = 0;
+    struct Migrations
+    {
+        static bool parent( const sw::SchemaMigrateContext& ) { return true; }
+        static bool child( const sw::SchemaMigrateContext& ) { return true; }
+        static bool counted( const sw::SchemaMigrateContext& )
+        {
+            ++s_migrateCount;
+            return true;
+        }
+    };
+
+    // ① 부모의 이관을 물려받고, 파생이 자기 이관을 등록하면 그것이 먼저입니다.
+    {
+        const sw::SchemaMigrationRegistrar parentMigration{ "sw::MigrationParentActor", 1u, &Migrations::parent };
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 1u ) == &Migrations::parent );
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 2u ) == nullptr );
+
+        const sw::SchemaMigrationRegistrar childMigration{ "sw::MigrationChildActor", 1u, &Migrations::child };
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 1u ) == &Migrations::child );
+    }
+    SW_EXPECT_TRUE_MSG( sw::SchemaMigrationRegistry::find( *pChild, 1u ) == nullptr, "등록자가 사라진 뒤에도 이관이 남았습니다(모듈 언로드 뒤 해제된 코드를 부릅니다)" );
+
+    // ② 핫 리로드: 교체 이미지가 같은 자리를 대체하고, 옛 이미지가 내려가도 새 것이 남으며, 새 것이 내려가면 비웁니다.
+    {
+        std::optional<sw::SchemaMigrationRegistrar> oldImage;
+        std::optional<sw::SchemaMigrationRegistrar> newImage;
+        oldImage.emplace( "sw::MigrationChildActor", 3u, &Migrations::child );
+        {
+            const sw::RegistrationReloadScope reload;
+            newImage.emplace( "sw::MigrationChildActor", 3u, &Migrations::parent );
+        }
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 3u ) == &Migrations::parent );
+        oldImage.reset();
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 3u ) == &Migrations::parent );
+        newImage.reset();
+        SW_EXPECT_TRUE( sw::SchemaMigrationRegistry::find( *pChild, 3u ) == nullptr );
+    }
+
+    const ChildActor  source{ 5, 6 };
+    sw::vector<uint8> bin;
+    sw::BinarySerializer::serializeVersioned( 1, &source, *pChild, bin );
+    uint32 ver{ 0 };
+
+    // ③ 같은 버전이고 남는 값이 없는 읽기는 이관을 부르지 않습니다. 버전이 다르면 부릅니다.
+    {
+        const sw::SchemaMigrationRegistrar countedMigration{ "sw::MigrationChildActor", 1u, &Migrations::counted };
+        s_migrateCount = 0;
+        ChildActor sameVersion;
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &sameVersion, *pChild, bin.data(), bin.size(), 1u ) );
+        SW_EXPECT_EQUAL( 0u, s_migrateCount );
+        SW_EXPECT_EQUAL( 6, sameVersion._own );
+        ChildActor nextVersion;
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &nextVersion, *pChild, bin.data(), bin.size(), 2u ) );
+        SW_EXPECT_EQUAL( 1u, s_migrateCount );
+    }
+
+    // ④ 이관이 없으면 파생을 다른 버전으로 읽을 때 멈춥니다. 지운 필드를 받는 컨텍스트(오브젝트 상태의 orphan 정책)도 버전이 다르면 받지 않습니다.
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    lenient.setAllowUnknownProperties( true );
+    ChildActor otherVersion;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &otherVersion, *pChild, bin.data(), bin.size(), 0u ) );
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &otherVersion, *pChild, bin.data(), bin.size(), 0u, nullptr, lenient ) );
+
+    // ⑤ 같은 버전의 orphan 은 정책이 정합니다. 기본(바이너리 `Reject`)은 거절하고, 지운 필드를 받는 컨텍스트는 아는 필드만 읽습니다.
+    ChildActor narrowed;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &narrowed, *pParent, bin.data(), bin.size(), 1u ) );
+    narrowed = ChildActor{};
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &narrowed, *pParent, bin.data(), bin.size(), 1u, nullptr, lenient ) );
+    SW_EXPECT_EQUAL( 5, narrowed._base );
+    SW_EXPECT_EQUAL( 0, narrowed._own );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 바이너리 필드 추가 · 삭제 · 이름 변경 왕복입니다. 추가는 그대로 읽히고, 삭제와 이름 변경은 등록된 이관으로만 읽힙니다
+ * @details 세 경우 모두 같은 타입(FQN)의 앞뒤 빌드를 흉내 냅니다. 엔진 데이터의 기본은 다시 쓰는 것이고(결정 기록 5-4), 여기서는
+ *          값 계산이 불가피할 때의 이관 경로를 고정합니다. 이름 변경에 별칭을 두지 않고, 옛 TypeInfo 로 스테이징한 값을 이관 함수가 새 이름으로 옮깁니다(`moveProperty`).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, BinaryFieldAddRemoveRenameRoundTrip )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "Testing binary schema changes that need a registered migration" );
+    struct BeforeActor
+    {
+        int32 _hp{ 0 };
+        int32 _mp{ 0 };
+    };
+    struct AddedActor
+    {
+        int32 _hp{ 0 };
+        int32 _mp{ 0 };
+        int32 _level{ 3 };
+    };
+    struct RemovedActor
+    {
+        int32 _hp{ 0 };
+    };
+    struct RenamedActor
+    {
+        int32 _hitPoints{ 0 };
+        int32 _mp{ 0 };
+    };
+
+    const sw::hashed_string kFqn( "sw::FieldShiftActor" );
+    sw::TypeInfo            beforeInfo;
+    beforeInfo._name               = sw::hashed_string( "FieldShiftActor" );
+    beforeInfo._fullyQualifiedName = kFqn;
+    beforeInfo._size               = sizeof( BeforeActor );
+    beforeInfo._listProperty       = {
+        {sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( BeforeActor, _hp )},
+        {sw::hashed_string( "_mp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( BeforeActor, _mp )}
+    };
+
+    sw::TypeInfo addedInfo = beforeInfo;
+    addedInfo._size        = sizeof( AddedActor );
+    addedInfo._listProperty.push_back( sw::PropertyInfo( sw::hashed_string( "_level" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( AddedActor, _level ) ) );
+
+    sw::TypeInfo removedInfo  = beforeInfo;
+    removedInfo._size         = sizeof( RemovedActor );
+    removedInfo._listProperty = {
+        { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( RemovedActor, _hp ) }
+    };
+
+    sw::TypeInfo renamedInfo  = beforeInfo;
+    renamedInfo._size         = sizeof( RenamedActor );
+    renamedInfo._listProperty = {
+        {sw::hashed_string( "_hitPoints" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( RenamedActor, _hitPoints )},
+        {       sw::hashed_string( "_mp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( RenamedActor,        _mp )}
+    };
+
+    const BeforeActor source{ 40, 12 };
+    sw::vector<uint8> bin;
+    sw::BinarySerializer::serializeVersioned( 1, &source, beforeInfo, bin );
+    uint32 ver{ 0 };
+
+    // ① 필드 추가: 같은 버전에서 읽힌다. 새 필드는 생성자 기본값으로 남는다.
+    AddedActor added;
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &added, addedInfo, bin.data(), bin.size(), 1u ) );
+    SW_EXPECT_EQUAL( 40, added._hp );
+    SW_EXPECT_EQUAL( 12, added._mp );
+    SW_EXPECT_EQUAL( 3, added._level );
+
+    // ② 필드 삭제: 이관이 없으면 같은 버전이든 올린 버전이든 거절한다.
+    RemovedActor removed;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &removed, removedInfo, bin.data(), bin.size(), 1u ) );
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &removed, removedInfo, bin.data(), bin.size(), 2u ) );
+    {
+        struct DropMana
+        {
+            static bool migrate( const sw::SchemaMigrateContext& context ) { return context.findOrphanHash( sw::hashed_string( "_mp" ).getHash() ) != nullptr; }
+        };
+        const sw::SchemaMigrationRegistrar dropMana{ kFqn.c_str(), 1u, &DropMana::migrate };
+        removed = RemovedActor{};
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &removed, removedInfo, bin.data(), bin.size(), 2u ) );
+        SW_EXPECT_EQUAL( 1u, ver );
+        SW_EXPECT_EQUAL( 40, removed._hp );
+    }
+
+    // ③ 이름 변경: 별칭 없이 버전을 올리고, 옛 TypeInfo 로 스테이징한 값을 이관이 새 이름으로 옮긴다.
+    RenamedActor renamed;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &renamed, renamedInfo, bin.data(), bin.size(), 2u, &beforeInfo ) );
+    {
+        struct RenameHealth
+        {
+            static bool migrate( const sw::SchemaMigrateContext& context )
+            {
+                const bool bFromFirstVersion = context._fromVersion == 1u && context._toVersion == 2u;
+                return bFromFirstVersion && context.moveProperty( sw::hashed_string( "_hp" ), sw::hashed_string( "_hitPoints" ) );
+            }
+        };
+        const sw::SchemaMigrationRegistrar renameHealth{ kFqn.c_str(), 1u, &RenameHealth::migrate };
+        renamed = RenamedActor{};
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &renamed, renamedInfo, bin.data(), bin.size(), 2u, &beforeInfo ) );
+        SW_EXPECT_EQUAL( 40, renamed._hitPoints );
+        SW_EXPECT_EQUAL( 12, renamed._mp );
+
+        // 옮긴 값을 새 버전으로 다시 쓰고 읽으면 이관 없이 그대로다.
+        sw::vector<uint8> rewritten;
+        sw::BinarySerializer::serializeVersioned( 2, &renamed, renamedInfo, rewritten );
+        RenamedActor reread;
+        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &reread, renamedInfo, rewritten.data(), rewritten.size(), 2u ) );
+        SW_EXPECT_EQUAL( 2u, ver );
+        SW_EXPECT_EQUAL( 40, reread._hitPoints );
+        SW_EXPECT_EQUAL( 12, reread._mp );
+    }
 }
 
 /**
@@ -2165,10 +2403,10 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
         const sw::SchemaOrphanValue* pHealth = context.findOrphan( sw::hashed_string( "_dropProbeHealth" ) );
         return pHealth != nullptr && context.setPropertyFromText( sw::hashed_string( "_hp" ), pHealth->_text );
     };
-    DropProbe migrated;
+    const sw::SchemaMigrationRegistrar moveHealthMigration{ "sw::DropProbeActor", 1u, +moveHealth };
+    DropProbe                          migrated;
     ver = 0;
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &migrated, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})",
-                                                              2u, +moveHealth ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &migrated, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})", 2u ) );
     SW_EXPECT_EQUAL( 42, migrated._hp );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 1 saved field(s) that the type does not have or could not read: _dropProbeJunk" ) == 1,
                         logs.joined().c_str() );
@@ -2223,8 +2461,8 @@ SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )
     {
         return context.applyOrphanToPath( "_stats._hp" );
     };
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &nested, nestedActorInfo, R"({"_schemaVersion":1,"_hp":77})",
-                                                              2u, +moveOrphan ) );
+    const sw::SchemaMigrationRegistrar moveOrphanMigration{ "sw::NestedActor", 1u, +moveOrphan };
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &nested, nestedActorInfo, R"({"_schemaVersion":1,"_hp":77})", 2u ) );
     SW_EXPECT_EQUAL( 77, nested._stats._hp );
 
     // 필드 개명: Alias 로 옛 키 로드 (legacyTypeInfo 스테이징 불필요)

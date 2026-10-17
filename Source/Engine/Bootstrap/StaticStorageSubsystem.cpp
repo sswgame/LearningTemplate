@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 
 namespace sw
 {
@@ -31,6 +32,7 @@ namespace sw
         IModuleUnloadListener::releaseUnusedStorage();
         AutomationStepRegistry::releaseUnusedStorage();
         AutomationProbes::releaseUnusedStorage();
+        SchemaMigrationRegistry::releaseUnusedStorage();
 #if SW_DEV_COMMANDS_ENABLED
         DevCommandRegistry::get().releaseUnusedStorage();
 #endif

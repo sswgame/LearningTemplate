@@ -19,7 +19,7 @@
 namespace sw
 {
     bool runVersionedDeserialize( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                  uint32 currentVersion, SchemaMigrateFn migrate,
+                                  uint32          currentVersion,
                                   const TypeInfo* pLegacyTypeInfo, const SerializeContext& context,
                                   SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
                                   const SoftDeserializeFn& softDeserialize )
@@ -57,7 +57,7 @@ namespace sw
         const bool bNeedsMigrate = ( outVersion != currentVersion ) || bOrphanBlocks;
 
         return runSchemaMigrateStep( outVersion, currentVersion, pInstance, typeInfo, pLegacyPtr, pLegacyTypeInfo,
-                                     listOrphan, migrate, bNeedsMigrate, context );
+                                     listOrphan, bNeedsMigrate, context );
     }
 
     namespace
