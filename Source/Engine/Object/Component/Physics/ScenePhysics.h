@@ -83,6 +83,13 @@ namespace sw
         /** @brief 레이어 이름의 번호입니다. 없는 이름이면 오류를 남기고 0(첫 레이어)입니다. 이름이 비면 0 입니다. */
         uint8 resolveLayer( const hashed_string& layerName ) const;
 
+        /**
+         * @brief 이 씬의 고정 스텝(초)을 엔진 설정 대신 @p seconds 로 둡니다. 0 이면 엔진 설정으로 돌아갑니다. 다음 스텝 전에 누적기를 다시 맞춥니다.
+         * @details 미리보기 씬 정책(`ScenePreviewPolicy::_fixedStepOverride`)이 부른다. 서브스텝 수 · 프레임당 상한은 그대로 설정 표의 것이다. 음수는 거절하고 오류를 알린다.
+         */
+        void setFixedStepOverride( float32 seconds );
+        /** @brief 덮어쓴 고정 스텝(초)입니다. 0 이면 엔진 설정을 씁니다. */
+        float32 getFixedStepOverride() const { return _fixedStepOverride; }
         /** @brief 고정 스텝 누적기입니다. 스텝 크기 · 프레임당 상한은 설정 표에서 옵니다. */
         const FixedStepAccumulator& getAccumulator() const { return _accumulator; }
         /** @brief 마지막 프레임의 보간 비(0..1)입니다. */
@@ -132,6 +139,7 @@ namespace sw
         vector<PhysicsContactEvent2D> _listFrameEvent2D;
         uint64                        _stepCount;
         uint32                        _debrisBodyCount;
+        float32                       _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
         bool                          _bConfigured;
     };
 } // namespace sw

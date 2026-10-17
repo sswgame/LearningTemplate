@@ -55,7 +55,7 @@
   (4) **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 계획의 결정 2 대로 공유한다.
   (5) **미리보기 렌더러 내리기의 GPU 안전** — 창을 닫으면 렌더 스레드가 `FrameRenderer::shutdown` 으로 그 렌더러를 바로 내린다. 디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대며,
   네 백엔드에서 창을 연 채 여닫기를 반복하는 시나리오로 확인하지 않았다(DX12 · Vulkan 검증 레이어로 볼 것).
-  (6) `fixedStepOverride`(정책의 고정 스텝) · 미리보기 씬의 백엔드 교체(`-gv_rhiSwapAtFrame`) 확인 · 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기(헤더 계약을 따른다).
+  (6) 미리보기 씬의 백엔드 교체(`-gv_rhiSwapAtFrame`) 확인 · 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기(헤더 계약을 따른다).
 
 - `D3-8` [기능] **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
   - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 ·
