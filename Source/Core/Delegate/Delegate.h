@@ -511,6 +511,22 @@ namespace sw
             _listPendingRemove.clear();
         }
 
+        /**
+         * @brief 바뀌지 않는 사본(여러 스레드가 함께 읽는 스냅샷)의 델리게이트를 모두 호출합니다.
+         * @details `broadcast` 는 깊이 · 지연 제거 목록을 고쳐 한 객체를 여러 스레드가 동시에 부를 수 없다. 이 함수는 아무것도 고치지 않으므로
+         *          `shared_ptr<const MulticastDelegate>` 로 나눠 준 사본을 생산자 여럿이 동시에 불러도 된다. 사본에는 add · remove 를 하지 않는다.
+         */
+        void broadcastSnapshot( Args... args ) const
+        {
+            const size_t numDelegates = _listDelegate.size();
+            for ( size_t entryIndex = 0; entryIndex < numDelegates; ++entryIndex )
+            {
+                const delegate_type& callee = _listDelegate[entryIndex]._delegate;
+                if ( callee.isBound() )
+                    callee( args... );
+            }
+        }
+
         /** @brief 새 델리게이트를 등록하고 핸들을 반환합니다. */
         DelegateHandle add( const delegate_type& newDelegate )
         {
