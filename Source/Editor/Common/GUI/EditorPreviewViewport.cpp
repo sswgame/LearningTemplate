@@ -55,6 +55,8 @@ namespace sw::editor
 
     EditorPreviewViewport::EditorPreviewViewport()
         : _pScene{ nullptr }
+        , _imagePosition{}
+        , _imageSize{}
         , _orbitTarget{ 0.0f, 0.0f, 0.0f }
         , _orbitDistance{ EditorPreviewViewportInternal::kDefaultDistance }
         , _orbitYaw{ EditorPreviewViewportInternal::kDefaultYaw }
@@ -130,13 +132,19 @@ namespace sw::editor
 
     void EditorPreviewViewport::computeViewProjection( float32 aspectRatio, float4x4& outViewProj, float3& outEye ) const
     {
+        float4x4 view{};
+        float4x4 projection{};
+        computeViewAndProjection( aspectRatio, view, projection, outEye );
+        outViewProj = view * projection;
+    }
+
+    void EditorPreviewViewport::computeViewAndProjection( float32 aspectRatio, float4x4& outView, float4x4& outProjection, float3& outEye ) const
+    {
         const float3 toCamera{ MathUtil::sin( _orbitYaw ) * MathUtil::cos( _orbitPitch ), MathUtil::sin( _orbitPitch ),
                                MathUtil::cos( _orbitYaw ) * MathUtil::cos( _orbitPitch ) };
-        outEye                    = _orbitTarget + toCamera * _orbitDistance;
-        const float4x4 view       = float4x4::makeLookAt( outEye, _orbitTarget, float3{ 0.0f, 1.0f, 0.0f } );
-        const float4x4 projection = float4x4::makePerspectiveFieldOfView( _fieldOfViewY, aspectRatio, EditorPreviewViewportInternal::kNearPlane,
-                                                                          EditorPreviewViewportInternal::kFarPlane );
-        outViewProj               = view * projection;
+        outEye        = _orbitTarget + toCamera * _orbitDistance;
+        outView       = float4x4::makeLookAt( outEye, _orbitTarget, float3{ 0.0f, 1.0f, 0.0f } );
+        outProjection = float4x4::makePerspectiveFieldOfView( _fieldOfViewY, aspectRatio, EditorPreviewViewportInternal::kNearPlane, EditorPreviewViewportInternal::kFarPlane );
     }
 
     void EditorPreviewViewport::draw( const float2& size, bool bInputActive )
@@ -157,6 +165,9 @@ namespace sw::editor
         if ( pTarget == nullptr || pTarget->_target._pTextureID == nullptr )
             return;
 
+        const ImVec2 imagePosition = ImGui::GetCursorScreenPos();
+        _imagePosition             = float2{ imagePosition.x, imagePosition.y };
+        _imageSize                 = size;
         ImGui::Image( reinterpret_cast<ImTextureID>( pTarget->_target._pTextureID ), ImVec2{ size._x, size._y } );
         const bool bImageHovered = ImGui::IsItemHovered();
         if ( bInputActive && bImageHovered )

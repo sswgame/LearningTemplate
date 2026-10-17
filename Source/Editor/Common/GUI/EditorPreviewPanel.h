@@ -74,8 +74,11 @@ namespace sw::editor
 
         /** @brief 그리기 앞부분에서 부릅니다. 씬을 (처음이면) 만들고, 창 포커스에 따라 초점 씬 · Undo 스택을 걸거나 풉니다. */
         void beginPreviewFrame();
-        /** @brief 뷰포트를 @p size 로 그립니다. 창이 포커스 · 호버면 카메라 입력을 받습니다. */
-        void drawPreviewViewport( const float2& size );
+        /**
+         * @brief 뷰포트를 @p size 로 그립니다. 창이 포커스 · 호버면 카메라 입력을 받습니다.
+         * @param bOrbitBlocked 기즈모가 마우스를 가졌으면 true 입니다(`EditorPreviewGizmo::hasMouse`). 기즈모를 쓰지 않는 창은 false 입니다.
+         */
+        void drawPreviewViewport( const float2& size, bool bOrbitBlocked );
 
     private:
         /** @brief 초점 씬 · 창 스택을 이 창의 것으로 걸거나(@p bFocused) 이 창이 걸어 둔 것이면 풉니다. */

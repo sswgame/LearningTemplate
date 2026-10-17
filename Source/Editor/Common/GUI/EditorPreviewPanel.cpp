@@ -61,11 +61,11 @@ namespace sw::editor
         applyWindowFocus( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
     }
 
-    void EditorPreviewPanel::drawPreviewViewport( const float2& size )
+    void EditorPreviewPanel::drawPreviewViewport( const float2& size, bool bOrbitBlocked )
     {
         const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         const bool bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
-        _viewport.draw( size, bFocused || bHovered );
+        _viewport.draw( size, ( bFocused || bHovered ) && bOrbitBlocked == false );
     }
 
     bool EditorPreviewPanel::recordPreviewModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label )

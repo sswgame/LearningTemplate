@@ -313,7 +313,7 @@ namespace sw::editor
         syncPreviewSubjectMaterial();
         ImGui::SameLine();
         const float32 previewSide = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDpiScale();
-        drawPreviewViewport( float2{ previewSide * MaterialPanelInternal::kPreviewSceneAspect, previewSide } );
+        drawPreviewViewport( float2{ previewSide * MaterialPanelInternal::kPreviewSceneAspect, previewSide }, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "material.previewScene" );
 
         ImGui::InputText( "Name", _name.data(), _name.capacity() );
