@@ -169,7 +169,7 @@ namespace sw
                 pBall->setLocalScale( float3{ _settings._rigLookTargetScale } );
                 pBall->setLocalPosition( _settings._rigLookTargetStart );
                 pBall->setVisible( true );
-                _rigLookTarget = pBall->getHandle();
+                _rigLookTarget = TComponentHandle<MeshComponent>{ pBall };
                 _listBenchExtra.push_back( pBall->getHandle() );
             }
         }
@@ -199,7 +199,7 @@ namespace sw
             pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pAnimator->setClipFolder( _settings._knightClips.c_str() );
             pAnimator->setInitialState( _settings._rigAimState.c_str() );
-            _listRigBody.push_back( pBody->getHandle() );
+            _listRigBody.push_back( TComponentHandle<SkeletalMeshComponent>{ pBody } );
             _listBenchExtra.push_back( pBody->getHandle() );
 
             // 무기 유닛 — 오른손 소켓 자리를 리그(CopyTransform)가 따른다. 스킨 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그린다.
@@ -295,14 +295,14 @@ namespace sw
 
         // `-gv_benchAnimate=0` 이면 멈춘 그림(스크린샷 비교) — 시선 목표 · 몸 틀기를 움직이지 않는다.
         const float32 time = ( gv_benchAnimate != 0 ) ? _benchElapsed : _settings._rigStillTime;
-        if ( MeshComponent* pBall = castTo<MeshComponent>( pObjects->resolveComponent( _rigLookTarget ) ) )
+        if ( MeshComponent* pBall = pObjects->resolveComponent( _rigLookTarget ) )
             pBall->setLocalPosition( float3{ _settings._rigLookSwing * MathUtil::sin( time * _settings._rigLookSwingRate ),
                                              _settings._rigLookHeight + _settings._rigLookBob * MathUtil::sin( time * _settings._rigLookBobRate ), _settings._rigLookDepth } );
         // 몸을 좌우로 틀어 망토가 관성으로 흔들리게 한다(스프링 본은 월드 공간 입자라 몸이 돌면 뒤처진다).
         const float32 yaw = MathUtil::kPi + ( ( gv_benchAnimate != 0 ) ? _settings._rigSwayAngle * MathUtil::sin( time * _settings._rigSwayRate ) : 0.0f );
-        for ( const ComponentHandle handle : _listRigBody )
+        for ( const TComponentHandle<SkeletalMeshComponent> handle : _listRigBody )
         {
-            if ( SkeletalMeshComponent* pBody = castTo<SkeletalMeshComponent>( pObjects->resolveComponent( handle ) ) )
+            if ( SkeletalMeshComponent* pBody = pObjects->resolveComponent( handle ) )
                 pBody->setLocalRotation( float3{ 0.0f, yaw, 0.0f } );
         }
     }

@@ -42,6 +42,7 @@ namespace sw
         , _pStructuralChangeBuffer{ &structuralChangeBuffer }
         , _poolGameObject{ 256, true }
         , _mapComponentPool{}
+        , _listComponentPoolEntry{}
         , _listGameObject{}
         , _mapNameToObject{}
         , _mapNameSuffix{}
@@ -425,6 +426,26 @@ namespace sw
         // 해체는 틱 밖에서만 한다. 틱 중의 제거와 비우기는 미뤄지고, 틱 뒤의 지연 파괴가 여기로 온다.
         SW_ASSERT( _pStructuralChangeBuffer->isFrozen() == false );
 
+        // 버킷에서 **먼저** 뺀다. 오브젝트 목록에서 빠진 뒤라(`removeComponent`, `clearComponents`) 아래 콜백(onEndPlay, onUnregister) 동안
+        // 매니저 순회에도 보이지 않아야 오브젝트 순회와 같은 답이다. 배타 잠금을 새로 잡으므로 순회 콜백 안에서 부르면 멈춘다(단언으로 알린다).
+        ComponentPoolEntry* pEntry = pComp->_pPoolEntry;
+        if ( pEntry != nullptr && pComp->_poolEntrySlot != Component::kNotInPoolEntry )
+        {
+            SW_ASSERT( WalkScope::isInsideWalk() == false );
+            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            vector<Component*>&                 listBucket = pEntry->_listComponent;
+            const uint32                        slot       = pComp->_poolEntrySlot;
+            SW_ASSERT( slot < listBucket.size() && listBucket[slot] == pComp );
+            Component* pBack      = listBucket.back();
+            listBucket[slot]      = pBack;
+            pBack->_poolEntrySlot = slot;
+            pComp->_poolEntrySlot = Component::kNotInPoolEntry;
+            listBucket.pop_back();
+            // 비면 타입 포인터를 놓는다(묘비). 모듈 언로드 뒤에 남은 버킷이 해제된 `TypeInfo` 를 가리키지 않는다.
+            if ( listBucket.empty() )
+                pEntry->_pType = nullptr;
+        }
+
         // **컴포넌트 해체는 여기 하나다.** 등록 해제, 파괴 콜백, 소유자 연결 해제, 소멸, 반납 순서로 진행한다.
         // 레지스트리는 raw 포인터를 가지고 있다(렌더 경로가 프레임마다 전부 훑으므로 핸들은 비싸다). 그래서 메모리를 실제로 해제하는
         // 이 지점에서 등록을 해제해 "등록된 채로 해제"가 구조적으로 없게 한다. `onUnregister` 는 여기서 정확히 한 번 불린다.
@@ -435,14 +456,13 @@ namespace sw
         pComp->onDestroy();
         pComp->setOwner( nullptr );
 
-        // 풀은 컴포넌트가 가지고 있다(`_pPool`. 생성할 때 기록한다). 이름이나 타입 테이블로 **다시 찾지 않는다.** 이름은 바뀔 수 있고
-        // 타입은 그새 해제될 수 있어, 찾지 못하면 풀 블록을 힙으로 반납해 힙이 깨진다(Shipping 0xc0000374). 풀은 한 번
-        // 만들어지면 매니저가 죽을 때까지 그 위치에 있고 자체 잠금을 가지고 있으므로 _mutex 없이 반납한다.
-        PoolAllocator* pPool = pComp->_pPool;
-        if ( pPool != nullptr )
+        // 풀은 컴포넌트가 가지고 있다(`_pPoolEntry`. 생성할 때 기록한다). 이름이나 타입 테이블로 **다시 찾지 않는다.** 이름은 바뀔 수 있고
+        // 타입은 그새 해제될 수 있어, 찾지 못하면 풀 블록을 힙으로 반납해 힙이 깨진다(Shipping 0xc0000374). 항목은 한 번
+        // 만들어지면 매니저가 죽을 때까지 그 위치에 있고 풀은 자체 잠금을 가지고 있으므로 _mutex 없이 반납한다.
+        if ( pEntry != nullptr )
         {
             pComp->~Component();
-            pPool->free( pComp );
+            pEntry->_pool.free( pComp );
             return;
         }
 
@@ -567,10 +587,11 @@ namespace sw
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _poolGameObject.clear();
-            for ( auto& [typeFqn, pPool] : _mapComponentPool )
+            for ( ComponentPoolEntry* pEntry : _listComponentPoolEntry )
             {
-                if ( pPool != nullptr )
-                    pPool->clear();
+                // 오브젝트 소멸이 컴포넌트마다 `destroyComponentInstance` 를 지나 버킷을 비웠어야 한다. 남았으면 풀을 비우는 순간 매달린 포인터가 된다.
+                SW_ASSERT( pEntry->_listComponent.empty() && pEntry->_pType == nullptr );
+                pEntry->_pool.clear();
             }
         }
     }
@@ -734,7 +755,7 @@ namespace sw
         return hashed_string( sb.c_str(), sb.size() );
     }
 
-    PoolAllocator* GameObjectStore::getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize )
+    ComponentPoolEntry* GameObjectStore::getOrCreateComponentPoolEntry( const TypeInfo* pTypeInfo, size_t typeSize )
     {
         if ( pTypeInfo == nullptr || pTypeInfo->_fullyQualifiedName.empty() )
             return nullptr;
@@ -745,9 +766,40 @@ namespace sw
         if ( iter != _mapComponentPool.end() )
             return iter->second.get();
 
-        auto           pNewPool                           = make_unique<PoolAllocator>( typeSize, 64u, true );
-        PoolAllocator* pRaw                               = pNewPool.get();
-        _mapComponentPool[pTypeInfo->_fullyQualifiedName] = std::move( pNewPool );
+        auto                pNewEntry                     = make_unique<ComponentPoolEntry>( typeSize );
+        ComponentPoolEntry* pRaw                          = pNewEntry.get();
+        _mapComponentPool[pTypeInfo->_fullyQualifiedName] = std::move( pNewEntry );
+        _listComponentPoolEntry.push_back( pRaw );
         return pRaw;
+    }
+
+    void GameObjectStore::registerTypedComponent( Component* pComp )
+    {
+        ComponentPoolEntry* pEntry = pComp->_pPoolEntry;
+        if ( pEntry == nullptr )
+        {
+            // 항목이 없는 것은 타입 정보가 없어 힙에서 잡은 컴포넌트뿐이다. 타입이 있는데 항목이 없으면 순회에서 빠지므로 알린다.
+            SW_ASSERT( pComp->_pTypeInfo == nullptr );
+            return;
+        }
+        SW_ASSERT( WalkScope::isInsideWalk() == false );
+        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        SW_ASSERT( pComp->_poolEntrySlot == Component::kNotInPoolEntry );
+        if ( pEntry->_listComponent.empty() )
+            pEntry->_pType = pComp->_pTypeInfo;
+        pComp->_poolEntrySlot = static_cast<uint32>( pEntry->_listComponent.size() );
+        pEntry->_listComponent.push_back( pComp );
+    }
+
+    uint32 GameObjectStore::getTypedComponentBucketCount() const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        uint32                              count{ 0 };
+        for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
+        {
+            if ( pEntry->_pType != nullptr )
+                ++count;
+        }
+        return count;
     }
 } // namespace sw

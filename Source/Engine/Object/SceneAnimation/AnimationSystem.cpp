@@ -302,10 +302,10 @@ namespace sw
         }
         for ( size_t unitIndex = 0; unitIndex < unitCount; ++unitIndex )
         {
-            for ( const ComponentHandle handle : _listUnit[unitIndex]->getAnimationDependencies() )
+            for ( const TComponentHandle<SkeletalMeshComponent> handle : _listUnit[unitIndex]->getAnimationDependencies() )
             {
-                Component* pComponent = ( _pManager != nullptr ) ? _pManager->resolveComponent( handle ) : nullptr;
-                const auto it         = mapIndex.find( castTo<SkeletalMeshComponent>( pComponent ) );
+                const SkeletalMeshComponent* pUpstream = ( _pManager != nullptr ) ? _pManager->resolveComponent( handle ) : nullptr;
+                const auto                   it        = mapIndex.find( pUpstream );
                 if ( it == mapIndex.end() )
                     continue; // 사라졌거나 다른 씬의 유닛 — 순서를 강제하지 않는다
                 listDependent[it->second].push_back( static_cast<uint32>( unitIndex ) );

@@ -35,7 +35,7 @@ namespace sw
         // 시스템이 없으면 씬을 비우는 중이다 — 폰도 곧 지워지므로 끈만 버린다.
         if ( ControlSystem::find( manager ) != nullptr )
             unpossess();
-        _pawn = ComponentHandle{};
+        _pawn = TComponentHandle<PawnComponent>{};
         manager.getComponentRegistry().remove<ControllerComponent>( this );
         ControlSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
@@ -67,13 +67,13 @@ namespace sw
         // 남이 쥔 폰이면 그 조종자가 놓는다 — 폰 하나에 조종자 하나.
         if ( pawn.isPossessed() )
         {
-            ControllerComponent* pOther = static_cast<ControllerComponent*>( pManager->resolveComponent( pawn.getController() ) );
+            ControllerComponent* pOther = pManager->resolveComponent( pawn.getController() );
             if ( pOther != nullptr )
                 pOther->unpossess();
-            pawn._controller = ComponentHandle{};
+            pawn._controller = TComponentHandle<ControllerComponent>{};
         }
-        _pawn            = pawn.getHandle();
-        pawn._controller = getHandle();
+        _pawn            = TComponentHandle<PawnComponent>{ &pawn };
+        pawn._controller = TComponentHandle<ControllerComponent>{ this };
         pawn._inputPeer  = _inputPeer; // 폰의 연결은 빙의를 따라간다 — 탈것은 운전석 조종자의 연결
         _controlYaw      = pawn.getIntent()._controlYaw;
         _controlPitch    = pawn.getIntent()._controlPitch;
@@ -86,10 +86,10 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        const ComponentHandle self = getHandle();
+        const TComponentHandle<ControllerComponent> self{ this };
         pManager->executeOrDeferPostTick( [pManager, self, pawnObject]()
         {
-            ControllerComponent* pController = static_cast<ControllerComponent*>( pManager->resolveComponent( self ) );
+            ControllerComponent* pController = pManager->resolveComponent( self );
             GameObject*          pPawnObject = pManager->resolveGameObject( pawnObject );
             PawnComponent*       pPawn       = pPawnObject != nullptr ? pPawnObject->getComponent<PawnComponent>() : nullptr;
             if ( pController != nullptr && pPawn != nullptr )
@@ -100,12 +100,12 @@ namespace sw
     void ControllerComponent::unpossess()
     {
         PawnComponent* pPawn = findPawn();
-        _pawn                = ComponentHandle{};
+        _pawn                = TComponentHandle<PawnComponent>{};
         if ( pPawn == nullptr )
             return;
         if ( pPawn->_controller == getHandle() )
         {
-            pPawn->_controller = ComponentHandle{};
+            pPawn->_controller = TComponentHandle<ControllerComponent>{};
             pPawn->_inputPeer  = 0;
             pPawn->clearMotion();
         }
@@ -118,7 +118,7 @@ namespace sw
             return nullptr;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        return pManager != nullptr ? static_cast<PawnComponent*>( pManager->resolveComponent( _pawn ) ) : nullptr;
+        return pManager != nullptr ? pManager->resolveComponent( _pawn ) : nullptr;
     }
 
     void ControllerComponent::setInputPeer( uint32 inputPeer )

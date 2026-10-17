@@ -2936,7 +2936,7 @@ SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pNewChild, childXML, { nullptr, &batch, childSavedID } ) );
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pNewParent, parentXML, { nullptr, &batch, parentSavedID } ) );
     SW_EXPECT_EQUAL( 0, sw::MockPostLoadProbeComponent::s_postLoadCount ); // 묶음이 끝나기 전에는 부르지 않는다
-    batch.finish();
+    SW_EXPECT_TRUE( batch.finish() );
 
     SW_EXPECT_EQUAL( 1, sw::MockPostLoadProbeComponent::s_postLoadCount );
     SW_EXPECT_EQUAL( 1, sw::MockPostLoadProbeComponent::s_postLoadWithParentCount );

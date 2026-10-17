@@ -169,16 +169,16 @@ namespace sw
         // 다른 오브젝트(말 AI · 좌석)를 바꾸는 일과 UI 바인딩은 틱 뒤에 한다.
         const bool bWhistle = pPlayerPawn->wasButtonTriggered( pPlayerPawn->findButton( _whistleButton ) );
         if ( bWhistle )
-            pManager->executeOrDeferPostTickOnComponent<WildWestDirectorComponent>( getHandle(), []( WildWestDirectorComponent& director )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestDirectorComponent& director )
             { director.whistleHorses(); } );
         const bool bAutoMount = isAutoPlayOn() && _bAutoMountRequested == SW_FALSE;
         if ( bAutoMount )
         {
             _bAutoMountRequested = SW_TRUE;
-            pManager->executeOrDeferPostTickOnComponent<WildWestDirectorComponent>( getHandle(), []( WildWestDirectorComponent& director )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestDirectorComponent& director )
             { director.mountNearestHorse(); } );
         }
-        pManager->executeOrDeferPostTickOnComponent<WildWestDirectorComponent>( getHandle(), []( WildWestDirectorComponent& director )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestDirectorComponent& director )
         { director.updateHUD(); } );
     }
 

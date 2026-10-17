@@ -472,7 +472,8 @@ namespace sw
         }
 
         // 씬 계층 구조(부모와 소켓)를 한 번에 잇는다. 자식이 부모보다 먼저 읽혔어도 부모를 찾을 수 있다.
-        batch.finish();
+        // 옮기지 못한 핸들 PROPERTY(다른 실행의 세이브)는 로드 오류다 — 비우고 이어 가면 값이 조용히 사라진다.
+        bComplete = batch.finish() && bComplete;
 
         // 복원된 모든 오브젝트의 월드 매트릭스를 강제로 동기화한다.
         pObjectManager->flushSceneTransforms();

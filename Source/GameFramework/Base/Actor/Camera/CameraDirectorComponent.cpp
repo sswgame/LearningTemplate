@@ -344,7 +344,7 @@ namespace sw
             resolveCamera();
             return;
         }
-        pManager->executeOrDeferPostTickOnComponent<CameraDirectorComponent>( getHandle(), []( CameraDirectorComponent& component )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( CameraDirectorComponent& component )
         { component.resolveCamera(); } );
     }
 

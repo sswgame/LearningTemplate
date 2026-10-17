@@ -36,7 +36,7 @@ namespace sw
         const bool           bNoMountInput = pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _interactIndex ) == false;
         if ( bNoMountInput )
             return;
-        pManager->executeOrDeferPostTickOnComponent<MountInteractionComponent>( getHandle(), []( MountInteractionComponent& component )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( MountInteractionComponent& component )
         { component.toggleMount(); } );
     }
 

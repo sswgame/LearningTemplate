@@ -153,20 +153,20 @@ namespace sw
         PROPERTY( Category = "Appearance", DisplayName = "Seed", Tooltip = "Seed for the preset's random choices (lists, ranges, colour lists)" )
         int32 _seed;
 
-        CharacterAppearanceSocketTask _socketTask;
-        AppearanceSocketRig           _rig;
-        AppearanceSocketSetCache      _socketCache;
-        ResolvedAppearance            _resolved;
-        CharacterBoneArray            _bodyBindBones;
-        CharacterBoneArray            _bodyBones; ///< 지난 포즈(모델 공간). 소켓 질의가 읽는다
-        vector<SpawnedPart>           _listSpawnedPart;
-        vector<SlotOverride>          _listSlotOverride;
-        ComponentHandle               _taskUnit; ///< 단계 작업을 등록한 몸 유닛
-        uint32                        _assembleCount;
-        int32                         _bodyPart;
-        bool                          _bPartsVisible;
-        uint8                         _bAssembleScheduled : 1;
-        uint8                         _bStarted           : 1;
-        [[maybe_unused]] uint8        _reserved           : 6;
+        CharacterAppearanceSocketTask           _socketTask;
+        AppearanceSocketRig                     _rig;
+        AppearanceSocketSetCache                _socketCache;
+        ResolvedAppearance                      _resolved;
+        CharacterBoneArray                      _bodyBindBones;
+        CharacterBoneArray                      _bodyBones; ///< 지난 포즈(모델 공간). 소켓 질의가 읽는다
+        vector<SpawnedPart>                     _listSpawnedPart;
+        vector<SlotOverride>                    _listSlotOverride;
+        TComponentHandle<SkeletalMeshComponent> _taskUnit; ///< 단계 작업을 등록한 몸 유닛
+        uint32                                  _assembleCount;
+        int32                                   _bodyPart;
+        bool                                    _bPartsVisible;
+        uint8                                   _bAssembleScheduled : 1;
+        uint8                                   _bStarted           : 1;
+        [[maybe_unused]] uint8                  _reserved           : 6;
     };
 } // namespace sw

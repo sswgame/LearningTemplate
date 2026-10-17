@@ -124,7 +124,7 @@ namespace sw
     void CharacterAppearanceSocketTask::onAnimationUnitDetached( SkeletalMeshComponent& unit )
     {
         (void)unit;
-        _owner._taskUnit = ComponentHandle{};
+        _owner._taskUnit = TComponentHandle<SkeletalMeshComponent>{};
     }
 } // namespace sw
 
@@ -211,8 +211,8 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 메시 보임은 렌더 상태이므로, 틱 안이면 틱 뒤에 적용한다.
-        pManager->executeOrDeferPostTickOnComponent<CharacterAppearanceComponent>( getHandle(),
-                                                                                   []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
+        pManager->executeOrDeferPostTickOnComponent( *this,
+                                                     []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
         { appearance.applyVisibility( manager ); } );
     }
 
@@ -274,7 +274,7 @@ namespace sw
         if ( pManager == nullptr || _bAssembleScheduled == SW_TRUE )
             return;
         _bAssembleScheduled = SW_TRUE;
-        pManager->executeOrDeferPostTickOnComponent<CharacterAppearanceComponent>( getHandle(), []( CharacterAppearanceComponent& appearance )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance )
         {
             appearance._bAssembleScheduled = SW_FALSE;
             appearance.assemble();
@@ -388,9 +388,9 @@ namespace sw
         }
         _listSpawnedPart = std::move( listKeep );
 
-        AssetManager*         pAssetManager = game::findSubsystem<AssetManager>();
-        SceneComponent*       pBodyScene    = body.getOwner() != nullptr ? body.getOwner()->getPrimarySceneComponent() : nullptr;
-        const ComponentHandle bodyHandle    = body.getHandle();
+        AssetManager*                                 pAssetManager = game::findSubsystem<AssetManager>();
+        SceneComponent*                               pBodyScene    = body.getOwner() != nullptr ? body.getOwner()->getPrimarySceneComponent() : nullptr;
+        const TComponentHandle<SkeletalMeshComponent> bodyHandle{ &body };
         for ( size_t partIndex = 0; partIndex < _resolved._listPart.size(); ++partIndex )
         {
             const ResolvedPart& part      = _resolved._listPart[partIndex];
@@ -418,7 +418,7 @@ namespace sw
                 pSkinned->setMeshID( part._asset.c_str() );
                 if ( part._material.empty() == false )
                     pSkinned->setMaterialPath( part._material.c_str() );
-                pSkinned->setLeaderPose( static_cast<SkeletalMeshComponent*>( manager.resolveComponent( bodyHandle ) ) );
+                pSkinned->setLeaderPose( manager.resolveComponent( bodyHandle ) );
                 if ( pBodyScene != nullptr )
                     (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative ); // 붙일 수 없는 부모이면 false 이고, 그 부위는 제자리에 남는다
                 spawned._bSocketPart = SW_FALSE;
@@ -519,18 +519,19 @@ namespace sw
 
     void CharacterAppearanceComponent::registerSocketTask( SkeletalMeshComponent& body )
     {
-        if ( _taskUnit == body.getHandle() )
+        const TComponentHandle<SkeletalMeshComponent> bodyHandle{ &body };
+        if ( _taskUnit == bodyHandle )
             return;
         unregisterSocketTask();
         body.registerAnimationPhaseTask( &_socketTask );
-        _taskUnit = body.getHandle();
+        _taskUnit = bodyHandle;
     }
 
     void CharacterAppearanceComponent::unregisterSocketTask()
     {
         GameObjectManager*     pManager = findManager();
-        SkeletalMeshComponent* pUnit    = pManager != nullptr ? static_cast<SkeletalMeshComponent*>( pManager->resolveComponent( _taskUnit ) ) : nullptr;
-        _taskUnit                       = ComponentHandle{};
+        SkeletalMeshComponent* pUnit    = pManager != nullptr ? pManager->resolveComponent( _taskUnit ) : nullptr;
+        _taskUnit                       = TComponentHandle<SkeletalMeshComponent>{};
         if ( pUnit != nullptr )
             pUnit->unregisterAnimationPhaseTask( &_socketTask );
     }

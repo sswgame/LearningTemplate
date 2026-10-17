@@ -37,6 +37,14 @@ namespace sw
     class GameObjectManager;
     class SceneComponent;
 
+    /** @brief `GameObjectManager::makeTypedHandle` 의 결과입니다. */
+    enum class TypedHandleResult : uint8
+    {
+        Success,       ///< 무효 핸들이거나 대상의 타입이 맞습니다
+        TypeMismatch,  ///< 대상이 있지만 다른 타입입니다
+        TargetMissing, ///< 대상이 없습니다(파괴됨, 삭제 대기). 타입을 확인할 수 없어 성공으로 치지 않습니다
+    };
+
     /// @brief 씬 하나의 얼굴입니다 — 저장소(`GameObjectStore`) · 틱 디스패치(`SceneTickScheduler`) · 틱 중 규칙(`StructuralChangeBuffer`) · 레지스트리 · 물리를 소유하고
     ///        `tick` 의 단계를 정합니다. 게임이 부르는 API 는 같은 이름으로 각 단위에 전달합니다.
     class SW_API GameObjectManager
@@ -129,16 +137,31 @@ namespace sw
             } );
         }
 
-        /** @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. TypeInfo 는 씬 전체에 한 번만 구합니다. */
+        /**
+         * @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. 오브젝트를 훑지 않고 타입별 버킷을 돕니다(`GameObjectStore::forEachComponentOfType`).
+         * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. **방문 순서는 약속하지 않습니다** — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
+         *          버킷에서 꺼낸 포인터를 `static_cast` 로 바꿉니다. REFLECT 타입은 가상이 아닌 단일 상속만 받으므로(파서 7-b) 보정이 맞습니다.
+         * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`).
+         */
         template <typename TComponent, typename Func>
         void forEachComponentOfType( Func&& func ) const
         {
-            const TypeInfo* pToType = findStaticType<TComponent>();
-            forEachGameObject( [&func, pToType]( GameObject* pObj )
+            static_assert( std::is_base_of_v<Component, TComponent>, "TComponent must derive from sw::Component" );
+            _store.forEachComponentOfType( findStaticType<TComponent>(), [&func]( Component* pComp )
             {
-                pObj->forEachComponentOfType<TComponent>( pToType, func );
+                func( static_cast<TComponent*>( pComp ) );
             } );
         }
+
+        /** @brief 런타임 타입 @p pToType 이나 그 파생 컴포넌트를 순회합니다. 콜백은 `Component*` 를 받습니다. 타입을 템플릿으로 모르는 곳(인스펙터 선택기)이 씁니다. */
+        template <typename Func>
+        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
+        {
+            _store.forEachComponentOfType( pToType, std::forward<Func>( func ) );
+        }
+
+        /** @brief 비어 있지 않은 타입별 버킷 수입니다. 진단과 회귀 테스트(모듈 언로드 뒤 묘비)용입니다. */
+        uint32 getTypedComponentBucketCount() const { return _store.getTypedComponentBucketCount(); }
 
         /** @brief 태그를 가진 첫 GameObject 를 반환합니다. 없으면 nullptr 입니다. */
         GameObject* findGameObjectByTag( TagID tag ) const { return _store.findGameObjectByTag( tag ); }
@@ -261,24 +284,25 @@ namespace sw
         void executeOrDeferPostTick( PostTickDelegate func ) { _structuralChangeBuffer.executeOrDeferPostTick( std::move( func ) ); }
 
         /**
-         * @brief 컴포넌트 하나에 대한 일을 executeOrDeferPostTick 으로 넘깁니다. 실행할 때 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다.
+         * @brief 컴포넌트 @p self 에 대한 일을 executeOrDeferPostTick 으로 넘깁니다. 실행할 때 타입 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다.
          * @details 틱 중이면 틱 뒤로 미루고 아니면 바로 실행하는 의미는 executeOrDeferPostTick 과 같습니다.
+         *          **핸들을 받지 않고 컴포넌트를 받습니다.** 타입(`TComponent`)은 @p self 에서 추론하고 핸들은 여기서 만들므로, 다른 컴포넌트의 핸들에
+         *          이 타입의 일을 거는 실수(핸들과 템플릿 인자가 어긋나는 것)가 형식으로 없습니다. `const` 멤버 함수 안의 `*this` 도 받습니다.
          *          func 는 붙잡은 값이 없는 람다여야 하며(델리게이트 인라인 버퍼를 넘지 않게) `func( TComponent& )` 또는
-         *          `func( TComponent&, GameObjectManager& )` 로 부릅니다. 모양은 Object README 의 함정 절을 볼 것.
+         *          `func( TComponent&, GameObjectManager& )` 로 부릅니다.
          */
         template <typename TComponent, typename TFunc>
-        void executeOrDeferPostTickOnComponent( ComponentHandle handle, TFunc func )
+        void executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func )
         {
             static_assert( std::is_empty_v<TFunc>, "post-tick component callable must not capture" );
-            GameObjectManager* pManager = this;
+            const TComponentHandle<TComponent> handle{ &self };
+            GameObjectManager*                 pManager = this;
             executeOrDeferPostTick( [pManager, handle, func]()
             {
-                TComponent* pComponent = static_cast<TComponent*>( pManager->resolveComponent( handle ) );
+                TComponent* pComponent = pManager->resolveComponent( handle );
                 // 삭제 대기 컴포넌트는 핸들로 아직 찾히지만 일을 받지 않는다(틱 · 이벤트와 같은 규칙).
                 if ( pComponent == nullptr || pComponent->isPendingDestroy() )
                     return;
-                // 핸들은 id 만 담는다 — 다른 타입의 칸이면 위 캐스트가 틀렸다.
-                SW_ASSERT( pComponent->findCachedTypeInfo() != nullptr && pComponent->findCachedTypeInfo()->isDerivedFrom( TComponent::StaticType() ) );
                 if constexpr ( std::is_invocable_v<const TFunc&, TComponent&, GameObjectManager&> )
                     func( *pComponent, *pManager );
                 else
@@ -311,7 +335,8 @@ namespace sw
         /**
          * @brief 타입별 컴포넌트 레지스트리입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
          * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 **찾지** 않고, 컴포넌트가 붙을 때 **등록받습니다** —
-         *          `forEachComponentOfType` 은 모든 오브젝트를 훑으므로 프레임 경로에 쓰지 않습니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
+         *          `forEachComponentOfType` 은 타입별 버킷을 돌지만 공유 잠금을 잡고 순서를 약속하지 않으므로, 등록 순서 · 채널 · 잠금 없는 읽기가 필요한
+         *          프레임 경로는 이 레지스트리를 씁니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
          */
         ComponentRegistry& getComponentRegistry() { return _componentRegistry; }
         /** @brief 타입별 컴포넌트 레지스트리입니다. */
@@ -334,8 +359,51 @@ namespace sw
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const { return _tickScheduler.getTickRegistry(); }
 
-        /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. */
+        /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. 타입을 아는 곳은 타입 핸들(`TComponentHandle<T>`)의 찾기를 씁니다. */
         Component* resolveComponent( ComponentHandle handle ) const { return _store.resolveComponent( handle ); }
+
+        /**
+         * @brief 타입 핸들이 가리키는 컴포넌트를 `T*` 로 찾습니다. 삭제 예정이면 nullptr 입니다.
+         * @details 타입 없는 찾기 뒤에 `static_cast` 합니다(REFLECT 타입은 가상이 아닌 단일 상속뿐이라 보정이 맞습니다).
+         *          **Shipping 이 아닌 모든 구성에서 대상의 타입을 확인합니다.** 핸들은 id 만 담으므로, id 를 다른 타입이 받으면(핫 리로드, 되돌리기의 id 복원)
+         *          캐스트가 다른 타입의 칸을 읽습니다. 어긋나면 오류 로그와 Debug 단언을 남기고 nullptr 을 반환합니다. 그런 길이 없는 Shipping 만 확인을 뺍니다.
+         */
+        template <typename T>
+        T* resolveComponent( TComponentHandle<T> handle ) const
+        {
+            static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
+            static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
+            Component* pComponent = _store.resolveComponent( handle.untyped() );
+#if !defined( SW_SHIPPING )
+            if ( pComponent != nullptr && isComponentOfType( *pComponent, findStaticType<T>() ) == false )
+            {
+                reportTypedResolveMismatch( handle.untyped(), *pComponent, findStaticType<T>() );
+                return nullptr;
+            }
+#endif
+            return static_cast<T*>( pComponent );
+        }
+
+        /**
+         * @brief 타입 없는 핸들 @p handle 에서 타입 핸들을 만듭니다. 대상의 타입을 확인하는 유일한 길입니다(다운캐스트도 `untyped()` 로 여기를 지납니다).
+         * @details | 입력 | 결과 | @p outHandle |
+         *          | 무효 핸들 | `Success` | 무효 타입 핸들 |
+         *          | 대상이 `T` 이거나 그 파생 | `Success` | 타입 핸들 |
+         *          | 대상의 타입이 다름 | `TypeMismatch`, 오류 로그 | 바꾸지 않음 |
+         *          | 대상이 없음(파괴됨, 삭제 대기) | `TargetMissing`, 오류 로그 | 바꾸지 않음 |
+         *          실패를 빈 핸들로 바꾸지 않습니다. 빈 핸들은 "대상 없음"이라는 정상 값과 구분되지 않아, 타입이 틀린 핸들이 조용히 사라지기 때문입니다.
+         *          대상 없음을 정상으로 보는 쪽은 그 결과를 직접 처리합니다.
+         */
+        template <typename T>
+        [[nodiscard]] TypedHandleResult makeTypedHandle( ComponentHandle handle, TComponentHandle<T>& outHandle ) const
+        {
+            static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
+            static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
+            const TypedHandleResult result = resolveTypedHandleResult( handle, findStaticType<T>() );
+            if ( result == TypedHandleResult::Success )
+                outHandle = TComponentHandle<T>( ComponentHandleCastKey{}, handle );
+            return result;
+        }
 
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectByID`). */
         GameObject* resolveGameObject( GameObjectHandle handle ) const { return _store.resolveGameObject( handle ); }
@@ -439,12 +507,25 @@ namespace sw
         uint64 getTransformGeneration() const { return _transformHierarchy.getGeneration(); }
 
     private:
+        /** @brief @p component 의 타입이 @p pToType 이거나 그 파생이면 true 입니다. 타입 정보가 없으면(모듈이 내려감) false 입니다. */
+        static bool isComponentOfType( const Component& component, const TypeInfo* pToType )
+        {
+            const TypeInfo* pTypeInfo = component.findCachedTypeInfo();
+            return pTypeInfo != nullptr && pTypeInfo->isDerivedFrom( pToType );
+        }
+        /** @brief `makeTypedHandle` 의 확인입니다(템플릿 밖에서 찾고 로그를 남깁니다). */
+        [[nodiscard]] TypedHandleResult resolveTypedHandleResult( ComponentHandle handle, const TypeInfo* pToType ) const;
+        /** @brief `resolveComponent<T>` 가 다른 타입의 칸을 찾았을 때 오류 로그와 Debug 단언을 남깁니다. */
+        void reportTypedResolveMismatch( ComponentHandle handle, const Component& found, const TypeInfo* pToType ) const;
+
         /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
         void dispatchPendingBeginPlay() { _store.dispatchPendingBeginPlay(); }
         /** @brief 플레이 중에 붙은 컴포넌트를 시작 줄에 세웁니다(`GameObject::attachCreatedComponent`). 핸들로 들어 그새 해체돼도 안전합니다. */
         void queueBeginPlay( ComponentHandle handle ) { _store.queueBeginPlay( handle ); }
-        /** @brief 타입별 컴포넌트 풀을 얻거나 만듭니다(`GameObjectStore::getOrCreateComponentPool`). */
-        PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize ) { return _store.getOrCreateComponentPool( pTypeInfo, typeSize ); }
+        /** @brief 타입별 컴포넌트 항목(풀과 버킷)을 얻거나 만듭니다(`GameObjectStore::getOrCreateComponentPoolEntry`). */
+        ComponentPoolEntry* getOrCreateComponentPoolEntry( const TypeInfo* pTypeInfo, size_t typeSize ) { return _store.getOrCreateComponentPoolEntry( pTypeInfo, typeSize ); }
+        /** @brief 막 붙인 컴포넌트를 타입별 버킷에 넣습니다(`GameObject::attachCreatedComponent`). */
+        void registerTypedComponent( Component* pComp ) { _store.registerTypedComponent( pComp ); }
 
         /**
          * @brief `Physics` 단계의 서비스(`ScenePhysics` — 겹침 월드 → 강체 물리)를 진행하고 그 쓰기를 펼칩니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.

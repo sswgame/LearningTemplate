@@ -19,7 +19,7 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
-            pManager->executeOrDeferPostTickOnComponent<RiderDownWatcherComponent>( getHandle(), []( RiderDownWatcherComponent& component )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( RiderDownWatcherComponent& component )
             { component.forceDismount(); } );
     }
 

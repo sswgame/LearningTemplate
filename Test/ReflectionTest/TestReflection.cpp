@@ -238,26 +238,25 @@ SW_TEST_CASE( ReflectionComponentTest, ComponentPropertySerialization )
 }
 
 /**
- * @brief [ReflectionComponentTest] 파일 상태 묶음은 옮기지 못하는 핸들(ComponentHandle)을 비우고 알리고, 묶음에 없는 오브젝트를 가리키던 핸들은 없음이 된다 — 같은 실행 상태는 그대로 둔다
- * @details 묶음은 `GameObjectHandle` 을 어디에 들었든(단일 · 시퀀스 · set · 맵 키 · 값 · 중첩) 저장된 id 에서 이 실행의 오브젝트로 옮긴다. `ComponentHandle` 에 남은
- *          파일 id 는 이 실행에서 우연히 같은 값을 받은 다른 컴포넌트를 가리키므로 비운다. 같은 실행의 상태(`ObjectIDSpace::Live`)는 런타임 id 그대로가 맞다.
+ * @brief [ReflectionComponentTest] 파일 상태 묶음에서 묶음에 없는 오브젝트를 가리키던 핸들은 없음이 되고, 옮기지 못하는 모양의 핸들은 로드 오류다 — 같은 실행 상태는 그대로 둔다
+ * @details 묶음은 `GameObjectHandle` 을 어디에 들었든(단일 · 시퀀스 · set · 맵 키 · 값 · 중첩) 저장된 id 에서 이 실행의 오브젝트로 옮긴다. 원소가 컨테이너인 set 은
+ *          제자리에서 고칠 수 없어 옮기지 못한다. 예전에는 비우고 경고했지만(값이 조용히 사라지는 폴백) 이제 `finish` 가 false 다.
+ *          같은 실행의 상태(`ObjectIDSpace::Live`)는 런타임 id 그대로가 맞다. `ComponentHandle` 은 PROPERTY 에 둘 수 없다(파서 오류, TypedComponents.md 3.7).
  */
-SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
+SW_TEST_CASE( ReflectionComponentTest, LoadBatchFailsOnHandlesItCannotRemap )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       pTarget = manager.createGameObject( sw::hashed_string( "HandleTarget" ) );
     sw::GameObject*       pHolder = manager.createGameObject( sw::hashed_string( "HandleHolder" ) );
     SW_ASSERT_TRUE( pTarget != nullptr && pHolder != nullptr );
-    sw::Component*                 pTargetComp = pTarget->addComponent<sw::TestScriptComponent>();
     sw::TestHandleHolderComponent* pHolderComp = pHolder->addComponent<sw::TestHandleHolderComponent>();
-    SW_ASSERT_TRUE( pTargetComp != nullptr && pHolderComp != nullptr );
+    SW_ASSERT_NOT_NULL( pHolderComp );
     pHolderComp->_target          = pTarget->getHandle();
     pHolderComp->_listTarget      = { pTarget->getHandle() };
     pHolderComp->_mapSlotToTarget = {
         { 1, pTarget->getHandle() }
     };
-    pHolderComp->_targetComponent = pTargetComp->getHandle();
-    const sw::string state        = sw::ObjectStateSerializer::saveToXMLString( pHolder );
+    const sw::string state = sw::ObjectStateSerializer::saveToXMLString( pHolder );
     SW_ASSERT_TRUE( state.empty() == false );
 
     // 같은 실행 상태 — 묶음 밖의 오브젝트도 런타임 id 그대로다.
@@ -268,36 +267,54 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
         sw::ObjectLoadContext context{};
         context._pBatch = &batch;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLive, state, context ) );
-        batch.finish();
+        SW_EXPECT_TRUE( batch.finish() );
         const sw::TestHandleHolderComponent* pLoaded = pLive->getComponent<sw::TestHandleHolderComponent>();
         SW_ASSERT_NOT_NULL( pLoaded );
         SW_EXPECT_TRUE( pLoaded->_target == pTarget->getHandle() );
         SW_EXPECT_EQUAL( size_t( 1 ), pLoaded->_mapSlotToTarget.size() );
-        SW_EXPECT_TRUE( pLoaded->_targetComponent == pTargetComp->getHandle() );
     }
 
-    // 파일 상태 — 대상이 묶음에 없다. 옮기는 자리는 없음이 되고, 옮기지 못하는 자리는 비우고 이름과 함께 알린다.
-    sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "FromFile" ) );
-    SW_ASSERT_NOT_NULL( pFresh );
+    // 파일 상태 — 대상이 묶음에 없다. 옮기는 자리는 없음이 된다(파일 id 가 남아 다른 오브젝트를 가리키지 않는다).
+    {
+        sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "FromFile" ) );
+        SW_ASSERT_NOT_NULL( pFresh );
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
+        sw::ObjectLoadContext context{};
+        context._pBatch  = &batch;
+        context._savedID = 900000001; // 런타임 id 와 겹치지 않는 파일 id
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, state, context ) );
+        SW_EXPECT_TRUE( batch.finish() );
+        const sw::TestHandleHolderComponent* pFromFile = pFresh->getComponent<sw::TestHandleHolderComponent>();
+        SW_ASSERT_NOT_NULL( pFromFile );
+        SW_EXPECT_FALSE( pFromFile->_target.isValid() );
+        SW_EXPECT_TRUE( pFromFile->_listTarget.size() == 1 && pFromFile->_listTarget[0].isValid() == false );
+        SW_EXPECT_TRUE( pFromFile->_mapSlotToTarget.size() == 1 && pFromFile->_mapSlotToTarget.begin()->second.isValid() == false );
+    }
+
+    // 옮기지 못하는 모양 — 파일 상태면 로드 오류이고 필드 이름을 알린다. 값을 비우지 않는다.
+    sw::GameObject* pRowHolder = manager.createGameObject( sw::hashed_string( "RowHolder" ) );
+    SW_ASSERT_NOT_NULL( pRowHolder );
+    sw::TestUnremappableHandleHolderComponent* pRowComp = pRowHolder->addComponent<sw::TestUnremappableHandleHolderComponent>();
+    SW_ASSERT_NOT_NULL( pRowComp );
+    pRowComp->_uniqueRow       = { { pTarget->getHandle() } };
+    const sw::string rowState  = sw::ObjectStateSerializer::saveToXMLString( pRowHolder );
+    sw::GameObject*  pRowFresh = manager.createGameObject( sw::hashed_string( "RowFromFile" ) );
+    SW_ASSERT_NOT_NULL( pRowFresh );
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "unremappable handle property" );
         sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
         sw::ObjectLoadContext context{};
         context._pBatch  = &batch;
-        context._savedID = 900000001; // 런타임 id 와 겹치지 않는 파일 id
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, state, context ) );
-        batch.finish();
+        context._savedID = 900000002;
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pRowFresh, rowState, context ) );
+        SW_EXPECT_FALSE( batch.finish() );
+        SW_EXPECT_FALSE( batch.finish() ); // 두 번째 호출도 같은 결과
     }
-    const sw::TestHandleHolderComponent* pFromFile = pFresh->getComponent<sw::TestHandleHolderComponent>();
-    SW_ASSERT_NOT_NULL( pFromFile );
-    SW_EXPECT_FALSE( pFromFile->_target.isValid() );
-    SW_EXPECT_TRUE( pFromFile->_listTarget.size() == 1 && pFromFile->_listTarget[0].isValid() == false );
-    // 맵 값도 옮긴다 — 대상이 묶음에 없으니 없음이다(파일 id 가 남아 다른 오브젝트를 가리키지 않는다).
-    SW_EXPECT_TRUE( pFromFile->_mapSlotToTarget.size() == 1 && pFromFile->_mapSlotToTarget.begin()->second.isValid() == false );
-    SW_EXPECT_FALSE( pFromFile->_targetComponent.isValid() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "_mapSlotToTarget' holds object handles" ) == 0, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "TestHandleHolderComponent::_targetComponent' holds object handles" ) == 1, logs.joined().c_str() );
+    const sw::TestUnremappableHandleHolderComponent* pRowLoaded = pRowFresh->getComponent<sw::TestUnremappableHandleHolderComponent>();
+    SW_ASSERT_NOT_NULL( pRowLoaded );
+    SW_EXPECT_EQUAL( size_t( 1 ), pRowLoaded->_uniqueRow.size() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "TestUnremappableHandleHolderComponent::_uniqueRow' of '" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -355,7 +372,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
         else
             bLoaded = sw::ObjectStateSerializer::loadFromBinaryBuffer( pNewHolder, binaryState.data(), binaryState.size(), context ) != 0;
         SW_ASSERT_TRUE_MSG( bLoaded, arrFormatName[formatIndex] );
-        batch.finish();
+        SW_EXPECT_TRUE( batch.finish() );
 
         const sw::GameObjectHandle           moved   = pNewTarget->getHandle();
         const sw::TestHandleHolderComponent* pLoaded = pNewHolder->getComponent<sw::TestHandleHolderComponent>();

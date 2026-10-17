@@ -873,7 +873,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveBinaryFileState )
         context._pBatch  = &batch;
         context._savedID = 8u;
         SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pNewShot, bytes.data(), bytes.size(), context ) > 0 );
-        batch.finish();
+        SW_EXPECT_TRUE( batch.finish() );
     }
     const ProjectileComponent* pFromFile = pNewShot->getComponent<ProjectileComponent>();
     SW_ASSERT_NOT_NULL( pFromFile );
@@ -904,7 +904,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesOutsideTheirFileBecomeNone )
         context._pBatch  = &batch;
         context._savedID = 1;
         SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pFresh, state, context ) );
-        batch.finish();
+        SW_EXPECT_TRUE( batch.finish() );
     }
     const ProjectileComponent* pFromFile = pFresh->getComponent<ProjectileComponent>();
     SW_ASSERT_NOT_NULL( pFromFile );

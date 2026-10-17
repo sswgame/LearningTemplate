@@ -48,6 +48,7 @@ namespace sw
 
     class GameObjectManager;
     class IFracturePhysics;
+    class MeshComponent;
     class ValidationContext;
 
     /** @brief 어느 조각을 땅에 붙은(앵커) 것으로 볼지 정합니다. 앵커 볼륨(`_listAnchorVolume`)은 항상 추가로 적용합니다. */
@@ -288,8 +289,8 @@ namespace sw
         /** @brief 그룹 번호의 런타임입니다. 없으면 nullptr 입니다. */
         FractureGroupRuntime*       findRuntime( uint32 groupID );
         const FractureGroupRuntime* findRuntime( uint32 groupID ) const;
-        /** @brief 이 오브젝트의 컴포넌트 핸들로 대상을 찾습니다. 사라졌으면 nullptr 입니다. */
-        Component* resolveOwnedComponent( const ComponentHandle& handle ) const;
+        /** @brief 넘겨받은 온전한 메시(`_intactMesh`)를 찾습니다. 없거나 사라졌으면 nullptr 입니다. */
+        MeshComponent* resolveIntactMesh() const;
         /** @brief 바디가 하나도 남지 않게 해제하고 셰이프를 지웁니다. */
         void releaseAllBodies();
         /** @brief 쌓인 스냅샷 하나를 지금 적용합니다. 상태를 바꾸고 그룹 바디와 렌더링을 다시 만듭니다. */
@@ -345,8 +346,8 @@ namespace sw
         vector<BoneTransform>           _listPiecePose;      ///< 잎마다 본 로컬 변환이다.
         vector<uint32>                  _listRuntimeOfLeaf;  ///< 잎에서 `_listRuntime` 인덱스로 가는 테이블이다(그때마다 다시 만든다).
         FractureRenderUnits             _renderUnits;        ///< 스킨드 메시 둘과 베이크한 정적 메시 둘이다.
-        ComponentHandle                 _intactMesh;
-        ComponentHandle                 _intactBody;
+        TComponentHandle<MeshComponent> _intactMesh;
+        ComponentHandle                 _intactBody;     ///< 3D 는 `RigidBodyComponent`, 2D 는 `RigidBody2DComponent` 라 타입 없는 핸들로 둔다
         float3                          _objectPosition; ///< 쪼갤 때의 오브젝트 자세(메시 공간 → 월드)
         quaternion                      _objectRotation;
         float3                          _intactLinearVelocity;

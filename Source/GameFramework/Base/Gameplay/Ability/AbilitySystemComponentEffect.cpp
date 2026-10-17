@@ -153,16 +153,16 @@ namespace sw
             return pTarget->applyGameplayEffectSpecToSelf( spec );
 
         // 다른 워커가 대상을 틱하고 있을 수 있으므로 틱 직후 게임 스레드에서 건다. 그 사이 대상이 사라질 수 있어서 핸들로 다시 찾는다.
-        GameObject*           pTargetOwner = pTarget->getOwner();
-        GameObjectManager*    pManager     = pTargetOwner != nullptr ? pTargetOwner->getManager() : nullptr;
-        const ComponentHandle targetHandle = pTarget->getHandle();
+        GameObject*                                    pTargetOwner = pTarget->getOwner();
+        GameObjectManager*                             pManager     = pTargetOwner != nullptr ? pTargetOwner->getManager() : nullptr;
+        const TComponentHandle<AbilitySystemComponent> targetHandle{ pTarget };
         if ( pManager == nullptr )
             return ActiveEffectHandle{};
         pManager->deferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, targetHandle, spec]()
         {
-            Component* pComponent = pManager->resolveComponent( targetHandle );
-            if ( pComponent != nullptr )
-                (void)static_cast<AbilitySystemComponent*>( pComponent )->applyGameplayEffectSpecToSelf( spec ); // 미룬 적용은 핸들을 돌려줄 곳이 없다
+            AbilitySystemComponent* pResolved = pManager->resolveComponent( targetHandle );
+            if ( pResolved != nullptr )
+                (void)pResolved->applyGameplayEffectSpecToSelf( spec ); // 미룬 적용은 핸들을 돌려줄 곳이 없다
         } ) );
         return ActiveEffectHandle{};
     }

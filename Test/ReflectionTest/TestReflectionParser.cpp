@@ -980,6 +980,54 @@ SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] PROPERTY() 의 컴포넌트 핸들(타입 없는 것과 타입 핸들, 단일 값 · 원소 · 맵 키 · 중첩)은 빌드를 세운다
+ * @details 저장된 컴포넌트 id 를 다른 실행의 컴포넌트로 옮길 형태가 없다. 로드가 경고와 함께 비우던 폴백을 생성 오류로 바꿨다(TypedComponents.md 3.7).
+ *          PROPERTY 가 아닌 핸들 필드는 그대로 받는다(런타임 참조로 쓰는 정상 자리).
+ */
+SW_TEST_CASE( ReflectionParserTest, ComponentHandlePropertyStopsTheBuild )
+{
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "ComponentHandlePropertySample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Container/ComponentHandle.h\"\n"
+                                                       "#include \"Core/Container/map.h\"\n"
+                                                       "#include \"Core/Container/vector.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct ComponentHandlePropertySampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tComponentHandle _single;\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tvector<ComponentHandle> _listElement;\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tmap<ComponentHandle, int32> _mapKey;\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tvector<vector<ComponentHandle>> _listNested;\n"
+                                                       "\t\tComponentHandle _runtimeOnly;\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    const utf8* arrField[] = { "_single'", "_listElement'", "_mapKey'", "_listNested'" };
+    for ( const utf8* pField : arrField )
+    {
+        const sw::string expected = sw::string( "ComponentHandlePropertySampleActor::" ) + pField + " holds a component handle";
+        SW_EXPECT_TRUE_MSG( run._log.find( expected ) != sw::string::npos, run._log.c_str() );
+    }
+    SW_EXPECT_TRUE_MSG( run._log.find( "_runtimeOnly" ) == sw::string::npos, run._log.c_str() );
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] 헤더 여럿을 한 번역 단위로 묶어도, 깨진 헤더 하나가 나머지를 막지 않는다
  * @details 파서는 파싱할 헤더가 둘 이상이면 한 TU 로 묶는다 — 공통 include(CoreMinimal · Windows · D3D)가 비용의 거의 전부라,
  *          헤더마다 TU 를 따로 만들면 같은 것을 헤더 수만큼 다시 파싱한다.

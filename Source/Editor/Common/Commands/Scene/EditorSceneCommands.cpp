@@ -138,7 +138,9 @@ namespace sw::editor
                 break;
             }
         }
-        batch.finish();
+        // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
+        [[maybe_unused]] const bool bLinked = batch.finish();
+        SW_ASSERT( bLinked );
         if ( bAllLoaded == false )
         {
             SW_LOG_WARNING( "Duplicate of '%#' failed to read a copied state - nothing was duplicated", pSrc->getName().c_str() );
@@ -691,7 +693,9 @@ namespace sw::editor
             if ( bAllLoaded == false )
                 break;
         }
-        batch.finish();
+        // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
+        [[maybe_unused]] const bool bLinked = batch.finish();
+        SW_ASSERT( bLinked );
         if ( bAllLoaded == false )
         {
             SW_LOG_WARNING( "Paste failed to read a copied object - nothing was pasted" );

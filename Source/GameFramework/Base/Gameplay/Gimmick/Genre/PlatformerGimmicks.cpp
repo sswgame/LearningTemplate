@@ -146,12 +146,12 @@ namespace sw
         if ( bNoOccupantsToMove )
             return;
         // 겹친 것이 자기 틱에서 쓴 위치 위에 더한다. 틱 뒤의 게임 스레드에서 처리한다. 같은 틱에서 쓰면 그쪽의 쓰기와 순서가 정해지지 않기 때문이다.
-        const ComponentHandle self     = getHandle();
-        const float3          offset   = _velocity * deltaTime;
-        const float3          velocity = _velocity;
+        const TComponentHandle<ConveyorComponent> self{ this };
+        const float3                              offset   = _velocity * deltaTime;
+        const float3                              velocity = _velocity;
         pManager->executeOrDeferPostTick( [pManager, self, offset, velocity]()
         {
-            const ConveyorComponent*      pConveyor   = static_cast<const ConveyorComponent*>( pManager->resolveComponent( self ) );
+            const ConveyorComponent*      pConveyor   = pManager->resolveComponent( self );
             const GameObject*             pBelt       = pConveyor != nullptr ? pConveyor->getOwner() : nullptr;
             const GimmickSensorComponent* pBeltSensor = pBelt != nullptr ? pBelt->getComponent<GimmickSensorComponent>() : nullptr;
             if ( pBeltSensor == nullptr )

@@ -167,7 +167,9 @@ namespace sw::editor
                 // 3. 계층을 다시 연결한다. 모두 읽은 뒤에 부모의 원래 id 로 연결해야 한다. 읽으면서 바로 연결하면, 플레이 중에 부모도 지워졌고 자식이
                 // 스냅샷에서 먼저 나올 때 부모가 아직 없어 루트로 남는다. 이름으로 찾으면 플레이 중에 이름을 바꾼 오브젝트(A 가 B 의
                 // 이름을 가져간 경우)의 자식이 엉뚱한 쪽에 붙는다. 씬 로드(`Scene::instantiate`)와 같은 방식이다.
-                batch.finish();
+                // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
+                [[maybe_unused]] const bool bLinked = batch.finish();
+                SW_ASSERT( bLinked );
 
                 // 4. 플레이 전에 칠한 지형 편집을 되돌려 쓴다. 다시 만든 지형 컴포넌트는 디스크 에셋을 읽은 상태다.
                 for ( PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
@@ -220,7 +222,9 @@ namespace sw::editor
                         SW_LOG_WARNING( "Keep Simulation Changes: failed to apply the play state of '%#'", kept._name.c_str() );
                         continue;
                     }
-                    batch.finish();
+                    // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
+                    [[maybe_unused]] const bool bLinked = batch.finish();
+                    SW_ASSERT( bLinked );
                     EditorTransaction::recordModify( pObj, before, EditorTransaction::captureSnapshot( pObj ), "Keep Simulation Changes" );
                 }
                 if ( bCompound )

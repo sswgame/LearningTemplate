@@ -160,12 +160,12 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 핸들로 다시 찾는다 — 그 사이 지워졌으면(구조 변경 큐가 먼저 돈다) 아무것도 하지 않는다.
-        const ComponentHandle handle = getHandle();
+        const TComponentHandle<DamageNumberComponent> handle{ this };
         pManager->executeOrDeferPostTick( [pManager, handle]()
         {
-            Component* pComponent = pManager->resolveComponent( handle );
-            if ( pComponent != nullptr )
-                static_cast<DamageNumberComponent*>( pComponent )->refreshWidget();
+            DamageNumberComponent* pResolved = pManager->resolveComponent( handle );
+            if ( pResolved != nullptr )
+                pResolved->refreshWidget();
         } );
     }
 

@@ -331,11 +331,11 @@ namespace sw
         virtual ~GameObject();
 
     private:
-        /** @brief `addComponent` 가 받는 저장소 슬롯 하나입니다. 타입 풀의 블록이거나(풀 포인터 있음) 힙입니다. */
+        /** @brief `addComponent` 가 받는 저장소 슬롯 하나입니다. 타입 항목 풀의 블록이거나(항목 포인터 있음) 힙입니다. */
         struct ComponentStorage
         {
-            void*          _pMemory{ nullptr };
-            PoolAllocator* _pPool{ nullptr };
+            void*               _pMemory{ nullptr };
+            ComponentPoolEntry* _pPoolEntry{ nullptr };
         };
 
         /** @brief 매니저가 구조 변경을 막고 있으면(병렬 틱 중) true 를 반환합니다. 매니저가 없으면 false 입니다. */
@@ -346,7 +346,7 @@ namespace sw
          * @brief 막 만든 컴포넌트를 이 오브젝트에 붙입니다. 소유자, 풀, 이름, 기본값, 목록, primary 캐시, 등록, 틱 표시를 처리합니다.
          * @param bOverridesTick 타입이 `onTick` 을 오버라이드했는지 나타냅니다(`HasOnTickOverride_v`). 아니면 실행할 것이 없으므로 주 틱을 끕니다.
          */
-        void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool, bool bOverridesTick );
+        void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick );
         /**
          * @brief 목록에서 이미 뺀 컴포넌트를 해체합니다. 매니저가 있으면 `GameObjectManager::destroyComponentInstance` 가 모두 처리합니다.
          * @details 해제 콜백은 여기서 부르지 않는다. 매니저가 `onUnregister` 를 정확히 한 번 부른다.
@@ -465,7 +465,7 @@ namespace sw
             return nullptr;
 
         T* pComp = sw_placement_new( storage._pMemory ) T( std::forward<Args>( args )... );
-        attachCreatedComponent( pComp, pTypeInfo, storage._pPool, HasOnTickOverride_v<T> );
+        attachCreatedComponent( pComp, pTypeInfo, storage._pPoolEntry, HasOnTickOverride_v<T> );
         return pComp;
     }
 } // namespace sw

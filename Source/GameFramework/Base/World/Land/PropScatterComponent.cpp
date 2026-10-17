@@ -184,7 +184,7 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 시작이 틱 안이어도(플레이 중에 붙었다) 틱 뒤에 세운다. 그 사이에 컴포넌트가 사라질 수 있으니 핸들로 다시 찾는다.
-        pManager->executeOrDeferPostTickOnComponent<PropScatterComponent>( getHandle(), []( PropScatterComponent& scatter )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( PropScatterComponent& scatter )
         {
             // 핫 리로드가 복원한 것이 있으면 그대로 쓴다.
             if ( scatter.areSpawnedPropsAlive() == false )

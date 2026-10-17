@@ -1141,6 +1141,49 @@ namespace sw
                 collector._pType->_listEvent.push_back( std::move( event ) );
             }
 
+            /** @brief @p spelling 에 식별자 `ComponentHandle` 이나 `TComponentHandle` 이 낱말로 들어 있으면 true 입니다(`vector<sw::ComponentHandle>` 같은 템플릿 인자 포함). */
+            static bool spellsComponentHandle( const string& spelling )
+            {
+                const auto isIdentifierChar = []( const utf8 c )
+                {
+                    return ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) || c == '_';
+                };
+                constexpr string_view kToken = "ComponentHandle";
+                for ( size_t pos = spelling.find( kToken ); pos != string::npos; pos = spelling.find( kToken, pos + 1 ) )
+                {
+                    size_t begin = pos;
+                    if ( begin > 0 && spelling[begin - 1] == 'T' )
+                        --begin; // TComponentHandle
+                    const size_t end         = pos + kToken.size();
+                    const bool   bWordBefore = begin == 0 || isIdentifierChar( spelling[begin - 1] ) == false;
+                    const bool   bWordAfter  = end >= spelling.size() || isIdentifierChar( spelling[end] ) == false;
+                    if ( bWordBefore && bWordAfter )
+                        return true;
+                }
+                return false;
+            }
+
+            /**
+             * @brief PROPERTY 의 어느 자리(값, 원소, 키, 중첩 컨테이너)에든 컴포넌트 핸들이 있으면 오류를 남기고 false 를 반환합니다.
+             * @details 저장된 컴포넌트 id 를 다른 실행의 컴포넌트로 옮길 형태가 아직 없다. 실으면 파일 상태에서 그 id 가 우연히 같은 값을 받은
+             *          다른 컴포넌트를 가리키므로, 로드가 경고와 함께 비우던 폴백 대신 생성 단계에서 막는다(`docs/plans/TypedComponents.md` 3.7).
+             *          리플렉션 구조체의 필드도 이 검사를 지나므로 구조체 안의 핸들도 막힌다.
+             */
+            static bool rejectComponentHandleProperty( const ParsedPropertyInfo& prop, const string& owner )
+            {
+                bool bHolds = spellsComponentHandle( prop._typeName ) || spellsComponentHandle( prop._elementTypeName ) || spellsComponentHandle( prop._keyTypeName );
+                for ( const ParsedContainerNode* pNode = prop._containerTree.get(); pNode != nullptr && bHolds == false; pNode = pNode->_elementNested.get() )
+                {
+                    bHolds = spellsComponentHandle( pNode->_elementTypeName ) || spellsComponentHandle( pNode->_keyTypeName );
+                }
+                if ( bHolds == false )
+                    return true;
+                SW_LOG_ERROR( "ERROR: PROPERTY() '%#' holds a component handle (%#). A component handle cannot be saved yet - a saved component id would point at "
+                              "an unrelated component in another run. Keep it out of PROPERTY() (see docs/plans/TypedComponents.md 3.7).",
+                              owner, prop._typeName );
+                return false;
+            }
+
             /** @brief 필드 선언에서 PROPERTY 메타를 수집합니다. 멀티캐스트 델리게이트면 이벤트로 수집합니다. */
             static void collectField( const CXCursor cursor, MemberCollector& collector )
             {
@@ -1186,6 +1229,11 @@ namespace sw
                     return;
                 }
                 fillContainerDetails( prop, fieldType, session );
+                if ( rejectComponentHandleProperty( prop, owner ) == false )
+                {
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
                 if ( isInterpAllowed( prop, owner ) == false || applyDisplayMeta( prop, fieldType, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
@@ -1258,6 +1306,11 @@ namespace sw
                 if ( prop._bIsContainer == SW_TRUE )
                 {
                     SW_LOG_ERROR( "ERROR: PROPERTY() on method '%#' returns a container. Accessor properties support single values only.", owner );
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
+                if ( rejectComponentHandleProperty( prop, owner ) == false )
+                {
                     collector._bHasError = SW_TRUE;
                     return;
                 }

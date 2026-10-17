@@ -360,18 +360,15 @@ SW_TEST_CASE( GameObjectManagerTest, PostTickOnComponentSkipsPendingDestroy )
     MockMeshComponent* pDyingMesh = pDying->getComponent<MockMeshComponent>();
     SW_ASSERT_NOT_NULL( pLiveMesh );
     SW_ASSERT_NOT_NULL( pDyingMesh );
-    const ComponentHandle liveHandle  = pLiveMesh->getHandle();
-    const ComponentHandle dyingHandle = pDyingMesh->getHandle();
-
     static int32 s_callCount = 0;
     s_callCount              = 0;
-    // 틱 밖이므로 바로 돈다.
-    manager.executeOrDeferPostTickOnComponent<MockMeshComponent>( liveHandle, []( MockMeshComponent& )
+    // 틱 밖이므로 바로 돈다. 타입은 넘긴 컴포넌트에서 추론하고 핸들은 매니저가 만든다.
+    manager.executeOrDeferPostTickOnComponent( *pLiveMesh, []( MockMeshComponent& )
     { ++s_callCount; } );
     SW_EXPECT_EQUAL( 1, s_callCount );
 
     manager.destroyObject( pDying );
-    manager.executeOrDeferPostTickOnComponent<MockMeshComponent>( dyingHandle, []( MockMeshComponent& )
+    manager.executeOrDeferPostTickOnComponent( *pDyingMesh, []( MockMeshComponent& )
     { ++s_callCount; } );
     SW_EXPECT_EQUAL( 1, s_callCount );
     manager.update( 0.0f );
@@ -605,12 +602,12 @@ SW_TEST_CASE( ComponentPoolTest, ComponentPoolIsKeyedByTheTypeNameNotTheTypeInfo
     copy._fullyQualifiedName = pType->_fullyQualifiedName;
     copy._size               = pType->_size;
 
-    sw::PoolAllocator* pFromRegistry = store.getOrCreateComponentPool( pType, sizeof( sw::SceneComponent ) );
-    sw::PoolAllocator* pFromCopy     = store.getOrCreateComponentPool( &copy, sizeof( sw::SceneComponent ) );
+    sw::ComponentPoolEntry* pFromRegistry = store.getOrCreateComponentPoolEntry( pType, sizeof( sw::SceneComponent ) );
+    sw::ComponentPoolEntry* pFromCopy     = store.getOrCreateComponentPoolEntry( &copy, sizeof( sw::SceneComponent ) );
     SW_ASSERT_NOT_NULL( pFromRegistry );
     SW_EXPECT_TRUE( pFromRegistry == pFromCopy );
-    SW_EXPECT_TRUE( store.getOrCreateComponentPool( sw::MeshComponent::StaticType(), sizeof( sw::MeshComponent ) ) != pFromRegistry );
-    SW_EXPECT_TRUE( store.getOrCreateComponentPool( nullptr, sizeof( sw::SceneComponent ) ) == nullptr );
+    SW_EXPECT_TRUE( store.getOrCreateComponentPoolEntry( sw::MeshComponent::StaticType(), sizeof( sw::MeshComponent ) ) != pFromRegistry );
+    SW_EXPECT_TRUE( store.getOrCreateComponentPoolEntry( nullptr, sizeof( sw::SceneComponent ) ) == nullptr );
 }
 
 /**

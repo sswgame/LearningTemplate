@@ -36,8 +36,8 @@ namespace sw
              */
             struct ChildLink
             {
-                ComponentHandle _child;
-                string          _parentKey;
+                TComponentHandle<SceneComponent> _child;
+                string                           _parentKey;
             };
 
             /**
@@ -59,7 +59,7 @@ namespace sw
                         const bool bForeignChild = pChild == nullptr || pChild->getOwner() == nullptr || pChild->getOwner() == pGameObject;
                         if ( bForeignChild )
                             continue;
-                        outListLink.push_back( ChildLink{ pChild->getHandle(), ComponentStableKey::makeKey( pScene ) } );
+                        outListLink.push_back( ChildLink{ TComponentHandle<SceneComponent>{ pChild }, ComponentStableKey::makeKey( pScene ) } );
                     }
                 }
             }
@@ -75,7 +75,7 @@ namespace sw
                     return;
                 for ( const ChildLink& link : listLink )
                 {
-                    SceneComponent* pChild = castTo<SceneComponent>( pManager->resolveComponent( link._child ) );
+                    SceneComponent* pChild = pManager->resolveComponent( link._child );
                     if ( pChild == nullptr )
                         continue;
                     SceneComponent* pParent = castTo<SceneComponent>( ComponentStableKey::findComponent( pGameObject, link._parentKey ) );
@@ -193,31 +193,6 @@ namespace sw
             {
                 static const hashed_string s_typeName{ "GameObjectHandle" };
                 return s_typeName;
-            }
-
-            /** @brief `ComponentHandle` 의 타입 이름입니다. */
-            static const hashed_string& getComponentHandleTypeName()
-            {
-                static const hashed_string s_typeName{ "ComponentHandle" };
-                return s_typeName;
-            }
-
-            /**
-             * @brief 배치가 저장된 id 를 옮길 테이블이 없는 `ComponentHandle` 을 담은 프로퍼티인지 확인합니다(단일 값, 컨테이너의 어느 단계든).
-             * @details `GameObjectHandle` 은 어디에 있든 옮긴다(`ObjectStateBatch::remapContainerHandles`). `ComponentHandle` 은 저장된
-             *          컴포넌트 id 를 이 실행의 컴포넌트로 옮길 테이블이 없다.
-             */
-            static bool holdsComponentHandle( const PropertyInfo& prop )
-            {
-                if ( prop._bIsContainer == SW_FALSE )
-                    return prop._typeName == getComponentHandleTypeName();
-                const NestedContainerInfo shape = prop.getContainerShape();
-                for ( const NestedContainerInfo* pLevel = &shape; pLevel != nullptr; pLevel = pLevel->_elementNested.get() )
-                {
-                    if ( pLevel->_elementTypeName == getComponentHandleTypeName() || pLevel->_keyTypeName == getComponentHandleTypeName() )
-                        return true;
-                }
-                return false;
             }
 
             /** @brief 컨테이너의 어느 단계(키, 원소)에 `GameObjectHandle` 이 들어 있는지 확인합니다. */
@@ -345,7 +320,9 @@ namespace sw
                 // 혼자 읽는 상태도 같은 규칙으로 연결한다. 같은 실행의 상태라 다른 오브젝트는 매니저의 런타임 id 로 찾는다.
                 ObjectStateBatch single( ObjectIDSpace::Live );
                 single.addLoadedState( pGameObject, savedID, savedName, context._bExternalParentAllowed );
-                single.finish();
+                // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
+                [[maybe_unused]] const bool bLinked = single.finish();
+                SW_ASSERT( bLinked );
             }
         }
         else if ( previousBytes.empty() == false )
@@ -465,9 +442,11 @@ namespace sw
         {
             if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
-            // 타입 이름으로 적는다. 복원할 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 이름과 비교한다. 이름을 적으면 이름을 붙인
-            // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊긴다.
-            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getTypeName(), pComp->getComponentID() } );
+            // 타입 FQN 으로 적는다. 복원할 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 FQN 과 비교한다. 컴포넌트 이름을 적으면 이름을 붙인
+            // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊기고, 짧은 타입 이름을 적으면 이름이 같은 다른 타입이 id 를 가져간다.
+            // 타입 정보가 없으면(모듈이 내려감) 빈 값이고, 복원은 빈 값을 맞추지 않는다(그 컴포넌트는 새 id 를 받는다).
+            const TypeInfo* pTypeInfo = pComp->findCachedTypeInfo();
+            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{}, pComp->getComponentID() } );
         }
         return identity;
     }
@@ -479,7 +458,7 @@ namespace sw
         writer.write( static_cast<uint32>( identity._listComponent.size() ) );
         for ( const ObjectIdentity::ComponentEntry& entry : identity._listComponent )
         {
-            writer.writeString( entry._typeName.c_str() );
+            writer.writeString( entry._typeFqn.c_str() );
             writer.write( entry._componentID );
         }
     }
@@ -508,7 +487,7 @@ namespace sw
             ObjectIdentity::ComponentEntry entry;
             if ( reader.readString( typeName ) == false || reader.read( entry._componentID ) == false )
                 return 0;
-            entry._typeName = hashed_string( typeName.data(), static_cast<uint32>( typeName.size() ) );
+            entry._typeFqn = hashed_string( typeName.data(), static_cast<uint32>( typeName.size() ) );
             outIdentity._listComponent.push_back( entry );
         }
         return reader.getOffset();
@@ -530,6 +509,7 @@ namespace sw
         , _mapSavedNameToEntry{}
         , _idSpace{ idSpace }
         , _bFinished{ false }
+        , _bReferencesResolved{ true }
     {
     }
 
@@ -564,10 +544,10 @@ namespace sw
             _mapSavedNameToEntry.emplace( savedName, entryIndex );
     }
 
-    void ObjectStateBatch::finish()
+    bool ObjectStateBatch::finish()
     {
         if ( _bFinished )
-            return;
+            return _bReferencesResolved;
         _bFinished = true;
 
         // 1) 이름. 읽는 동안 다른 오브젝트가 잠시 차지하고 있던 저장된 이름이 이제 비었으면 되찾는다. 플레이 중 이름을 서로 바꾼 오브젝트를
@@ -590,7 +570,7 @@ namespace sw
         // 3) 핸들 PROPERTY. 부착과 같은 규칙으로 저장된 id 를 이 실행의 오브젝트로 옮긴다. 가리키던 오브젝트가 나중에 읽혔어도 찾는다.
         for ( const Entry& entry : _listEntry )
         {
-            resolveObjectReferences( entry );
+            _bReferencesResolved = resolveObjectReferences( entry ) && _bReferencesResolved;
         }
 
         // 4) 값을 다 읽고 연결했다. 컴포넌트가 값을 리소스로 바꾼다(`Component::onPostLoad`, 편집 중에도). 부착과 핸들이 해석된 뒤라 그것을 읽어도
@@ -612,13 +592,15 @@ namespace sw
             if ( entry._bLoadedState == true && entry._pObject->isPendingDestroy() == false )
                 (void)ObjectValidation::reportGameObject( *entry._pObject, true );
         }
+        return _bReferencesResolved;
     }
 
-    void ObjectStateBatch::resolveObjectReferences( const Entry& entry ) const
+    bool ObjectStateBatch::resolveObjectReferences( const Entry& entry ) const
     {
         GameObject* pObject = entry._pObject;
         if ( pObject->isPendingDestroy() )
-            return;
+            return true;
+        bool bAllRemapped = true;
 
         const hashed_string& handleTypeName = ObjectStateSerializerInternal::getObjectHandleTypeName();
         for ( Component* pComp : pObject->getComponents() )
@@ -631,9 +613,7 @@ namespace sw
                 // 읽지 않은 필드(Transient)는 현재 실행의 값이다. 옮기면 살아 있는 참조를 망친다.
                 if ( prop._metadata._bTransient == SW_TRUE )
                     continue;
-                // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못하는 위치는 비우고 알린다.
-                const bool bComponentHandle = ObjectStateSerializerInternal::holdsComponentHandle( prop );
-                if ( bComponentHandle == false && prop._bIsContainer == SW_FALSE )
+                if ( prop._bIsContainer == SW_FALSE )
                 {
                     if ( prop._typeName == handleTypeName )
                     {
@@ -642,23 +622,21 @@ namespace sw
                     }
                     continue;
                 }
-                bool bRemapped = bComponentHandle == false;
-                if ( bRemapped && prop._containerWrapper != nullptr )
-                {
-                    const NestedContainerInfo shape = prop.getContainerShape();
-                    if ( ObjectStateSerializerInternal::holdsObjectHandle( shape ) )
-                        bRemapped = remapContainerHandles( prop.getRawPtr( pComp ), shape );
-                }
-                if ( bRemapped || _idSpace != ObjectIDSpace::Saved )
+                if ( prop._containerWrapper == nullptr )
                     continue;
-                SW_LOG_WARNING( "Property '%#::%#' holds object handles a load batch cannot remap (ComponentHandle, or a set of containers) - cleared",
-                                pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str() );
-                if ( prop._bIsContainer == SW_TRUE )
-                    prop._containerWrapper->clear( prop.getRawPtr( pComp ) );
-                else
-                    *static_cast<ComponentHandle*>( prop.getRawPtr( pComp ) ) = ComponentHandle{};
+                const NestedContainerInfo shape = prop.getContainerShape();
+                if ( ObjectStateSerializerInternal::holdsObjectHandle( shape ) == false || remapContainerHandles( prop.getRawPtr( pComp ), shape ) )
+                    continue;
+                // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못한 것은 로드 오류다.
+                // 비우지 않는다 — 값이 조용히 사라지는 폴백이다(`docs/plans/TypedComponents.md` 3.7).
+                if ( _idSpace != ObjectIDSpace::Saved )
+                    continue;
+                SW_LOG_ERROR( "Property '%#::%#' of '%#' holds object handles a load batch cannot remap (a set of containers, or a copy failed) - the load fails",
+                              pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str() );
+                bAllRemapped = false;
             }
         }
+        return bAllRemapped;
     }
 
     bool ObjectStateBatch::remapContainerHandles( void* pContainer, const NestedContainerInfo& shape ) const

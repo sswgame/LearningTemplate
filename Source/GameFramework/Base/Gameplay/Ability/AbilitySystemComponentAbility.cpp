@@ -367,16 +367,16 @@ namespace sw
             return;
         }
 
-        GameObject*           pTargetOwner = pTarget->getOwner();
-        GameObjectManager*    pManager     = pTargetOwner != nullptr ? pTargetOwner->getManager() : nullptr;
-        const ComponentHandle targetHandle = pTarget->getHandle();
+        GameObject*                                    pTargetOwner = pTarget->getOwner();
+        GameObjectManager*                             pManager     = pTargetOwner != nullptr ? pTargetOwner->getManager() : nullptr;
+        const TComponentHandle<AbilitySystemComponent> targetHandle{ pTarget };
         if ( pManager == nullptr )
             return;
         pManager->deferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, targetHandle, eventTag, payload]()
         {
-            Component* pComponent = pManager->resolveComponent( targetHandle );
-            if ( pComponent != nullptr )
-                (void)static_cast<AbilitySystemComponent*>( pComponent )->handleGameplayEvent( eventTag, payload );
+            AbilitySystemComponent* pResolved = pManager->resolveComponent( targetHandle );
+            if ( pResolved != nullptr )
+                (void)pResolved->handleGameplayEvent( eventTag, payload );
         } ) );
     }
 

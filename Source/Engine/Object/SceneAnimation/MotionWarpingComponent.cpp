@@ -81,16 +81,15 @@ namespace sw
         if ( pAnimator == nullptr )
             return;
         pAnimator->registerRootMotionModifier( &_binding );
-        _animator = pAnimator->getHandle();
+        _animator = TComponentHandle<SkeletalAnimatorComponent>{ pAnimator };
     }
 
     void MotionWarpingComponent::unbindFromAnimator()
     {
-        const GameObject*          pOwner   = getOwner();
-        GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SkeletalAnimatorComponent* pAnimator =
-            ( pManager != nullptr && _animator.isValid() ) ? castTo<SkeletalAnimatorComponent>( pManager->resolveComponent( _animator ) ) : nullptr;
-        _animator = ComponentHandle{};
+        const GameObject*          pOwner    = getOwner();
+        GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        SkeletalAnimatorComponent* pAnimator = ( pManager != nullptr && _animator.isValid() ) ? pManager->resolveComponent( _animator ) : nullptr;
+        _animator                            = TComponentHandle<SkeletalAnimatorComponent>{};
         if ( pAnimator != nullptr )
             pAnimator->unregisterRootMotionModifier( &_binding );
     }

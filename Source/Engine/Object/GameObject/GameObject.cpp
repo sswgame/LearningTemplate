@@ -29,20 +29,23 @@ namespace sw
         thread_local ComponentIDRestoreState t_componentIDRestore{};
 
         /**
-         * @brief @p pOwner 에 붙는 @p typeName 컴포넌트가 복원할 원래 ID 를 가져갑니다. 복원 중이 아니거나 목록에 없으면 false 를 반환합니다.
+         * @brief @p pOwner 에 붙는 타입 FQN @p typeFqn 컴포넌트가 복원할 원래 ID 를 가져갑니다. 복원 중이 아니거나 목록에 없으면 false 를 반환합니다.
          * @details 커서부터 앞으로 찾아 타입이 같은 첫 항목을 가져간다. 목록과 다른 컴포넌트가 끼어들어도(생성 중에 다른
          *          컴포넌트를 스스로 붙이는 타입 등) 그 하나만 새 ID 를 받고 나머지 순서는 어긋나지 않는다.
+         *          **FQN 으로 맞춘다.** 짧은 이름이면 이름이 같은 다른 타입이 id 를 가져가 타입 핸들이 다른 타입을 가리킨다. 빈 FQN 은 맞추지 않는다.
          */
-        bool takeRestoredComponentID( const GameObject* pOwner, hashed_string typeName, uint64& outComponentID )
+        bool takeRestoredComponentID( const GameObject* pOwner, hashed_string typeFqn, uint64& outComponentID )
         {
             ComponentIDRestoreState& state = t_componentIDRestore;
+            if ( typeFqn.empty() )
+                return false;
             if ( state._pIdentity == nullptr || state._pTarget != pOwner )
                 return false;
 
             const vector<ObjectIdentity::ComponentEntry>& listEntry = state._pIdentity->_listComponent;
             for ( size_t entryIndex = state._cursor; entryIndex < listEntry.size(); ++entryIndex )
             {
-                if ( listEntry[entryIndex]._typeName != typeName )
+                if ( listEntry[entryIndex]._typeFqn != typeFqn )
                     continue;
                 state._cursor  = entryIndex + 1;
                 outComponentID = listEntry[entryIndex]._componentID;
@@ -564,29 +567,29 @@ namespace sw
         if ( _pOwnerManager == nullptr )
             return storage;
 
-        // 타입마다 풀 하나다. 파괴가 그 풀로 돌아간다(`Component::_pPool`). 풀을 만들 수 없는 타입(리플렉션 없음)은 힙에서 잡는다.
+        // 타입마다 항목(풀과 버킷) 하나다. 파괴가 그 풀로 돌아간다(`Component::_pPoolEntry`). 항목을 만들 수 없는 타입(리플렉션 없음)은 힙에서 잡는다.
         if ( pTypeInfo != nullptr )
         {
-            storage._pPool = _pOwnerManager->getOrCreateComponentPool( pTypeInfo, typeSize );
-            if ( storage._pPool != nullptr )
-                storage._pMemory = storage._pPool->allocate();
+            storage._pPoolEntry = _pOwnerManager->getOrCreateComponentPoolEntry( pTypeInfo, typeSize );
+            if ( storage._pPoolEntry != nullptr )
+                storage._pMemory = storage._pPoolEntry->_pool.allocate();
         }
         if ( storage._pMemory == nullptr )
         {
-            storage._pPool   = nullptr;
-            storage._pMemory = Memory::allocate( typeSize );
+            storage._pPoolEntry = nullptr;
+            storage._pMemory    = Memory::allocate( typeSize );
         }
         return storage;
     }
 
-    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool, bool bOverridesTick )
+    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick )
     {
         // 주 틱의 기본은 "onTick 을 오버라이드했는가"다(유니티의 Update). 오버라이드한 타입은 생성자의 값(기본은 켜짐, 끄면 꺼짐)을 그대로 둔다.
         if ( bOverridesTick == false )
             pComp->_bCanEverTick = SW_FALSE;
         pComp->setOwner( this );
-        pComp->_pPool     = pPool;
-        pComp->_pTypeInfo = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름(아래)은 타입과 무관하다
+        pComp->_pPoolEntry = pPoolEntry;
+        pComp->_pTypeInfo  = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름(아래)은 타입과 무관하다
 
         const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
         pComp->setComponentName( typeKey );
@@ -594,14 +597,17 @@ namespace sw
 
         // 상태를 되돌리는 로드 중이면 원래 ID 를 복원한다. 등록보다 먼저여야 서브틱 핸들도 원래 ID 로 잡힌다.
         // 같은 프로세스에서 발급된 ID 라 카운터는 보통 이미 그 뒤지만, 아니면 뒤로 밀어 앞으로의 발급과 겹치지 않게 한다.
-        uint64 restoredComponentID = 0;
-        if ( takeRestoredComponentID( this, typeKey, restoredComponentID ) )
+        uint64              restoredComponentID = 0;
+        const hashed_string typeFqn             = pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{};
+        if ( takeRestoredComponentID( this, typeFqn, restoredComponentID ) )
         {
             pComp->_componentID = restoredComponentID;
             Component::_s_nextComponentID.fetch_max( restoredComponentID + 1, std::memory_order_relaxed );
         }
 
         _listComponent.push_back( pComp );
+        // 오브젝트 목록에 넣는 바로 그 시점에 매니저의 타입별 목록(버킷)에도 넣는다. `onRegister` 안에서 씬을 찾는 코드가 둘 중 어느 순회로든 같은 답을 받는다.
+        _pOwnerManager->registerTypedComponent( pComp );
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 레지스트리에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.

@@ -124,22 +124,22 @@ namespace sw
         /** @brief 바깥 대상 하나의 런타임 상태입니다. */
         struct ExternalTarget
         {
-            float4x4                     _unitToModel{};         ///< 대상 유닛 모델에서 내 유닛 모델로 가는 변환이다(프레임 시작에 기록한다).
-            BoneTransform                _socketLocal{};         ///< 대상 본 기준 오프셋이다(소켓 로컬 × 데이터 오프셋).
-            const SkeletalMeshComponent* _pFrameUnit{ nullptr }; ///< 이번 프레임에 찾은 대상 유닛이다(프레임 시작부터 평가가 끝날 때까지만 참조한다).
-            ComponentHandle              _unit{};                ///< 다른 유닛(본이나 소켓 대상)이다.
-            GameObjectHandle             _object{};              ///< 오브젝트를 대상으로 삼는다.
-            int32                        _unitBone{ -1 };        ///< 대상 유닛의 본이다.
-            int32                        _spaceBone{ -1 };       ///< `space` 에 지정한 내 유닛의 본이다.
-            uint8                        _bBound{ SW_FALSE };
-            uint8                        _bLive{ SW_FALSE }; ///< 평가 중(워커)에 대상 유닛의 이번 프레임 포즈를 읽는다(의존을 건 대상)
+            float4x4                                _unitToModel{};         ///< 대상 유닛 모델에서 내 유닛 모델로 가는 변환이다(프레임 시작에 기록한다).
+            BoneTransform                           _socketLocal{};         ///< 대상 본 기준 오프셋이다(소켓 로컬 × 데이터 오프셋).
+            const SkeletalMeshComponent*            _pFrameUnit{ nullptr }; ///< 이번 프레임에 찾은 대상 유닛이다(프레임 시작부터 평가가 끝날 때까지만 참조한다).
+            TComponentHandle<SkeletalMeshComponent> _unit{};                ///< 다른 유닛(본이나 소켓 대상)이다.
+            GameObjectHandle                        _object{};              ///< 오브젝트를 대상으로 삼는다.
+            int32                                   _unitBone{ -1 };        ///< 대상 유닛의 본이다.
+            int32                                   _spaceBone{ -1 };       ///< `space` 에 지정한 내 유닛의 본이다.
+            uint8                                   _bBound{ SW_FALSE };
+            uint8                                   _bLive{ SW_FALSE }; ///< 평가 중(워커)에 대상 유닛의 이번 프레임 포즈를 읽는다(의존을 건 대상)
         };
 
         struct UnitBinding
         {
-            hashed_string               _name{};
-            shared_ptr<const SocketSet> _sockets{};
-            ComponentHandle             _unit{};
+            hashed_string                           _name{};
+            shared_ptr<const SocketSet>             _sockets{};
+            TComponentHandle<SkeletalMeshComponent> _unit{};
         };
 
         struct ObjectBinding
@@ -174,22 +174,22 @@ namespace sw
         PROPERTY( Category = "Rig", DisplayName = "Physics Asset", AssetPath, AssetType = "PhysicsAsset", Tooltip = "Sphere / capsule bodies used as spring bone colliders" )
         string _physicsAssetPath;
 
-        PoseModifierBinding              _binding;
-        RigInstance                      _instance;
-        shared_ptr<const RigAsset>       _asset;
-        shared_ptr<const SocketSet>      _ownSockets;
-        vector<ExternalTarget>           _listExternal;
-        vector<UnitBinding>              _listUnitBinding;
-        vector<ObjectBinding>            _listObjectBinding;
-        vector<ComponentHandle>          _listDependency; ///< 이 컴포넌트가 등록한 의존이다(해제할 때 쓴다).
-        vector<ComponentHandle>          _listTableUnit;  ///< 소켓 테이블의 유닛 번호에서 유닛으로 가는 목록이다.
-        unique_ptr<IRigGroundQuery>      _groundQuery;    ///< 씬 물리를 감싼 땅 질의다.
-        float4x4                         _worldFromModel;
-        const ResolvedSocketTable*       _pSocketTable;
-        const IRigGroundQuery*           _pGroundQueryOverride;
-        const SkeletalAnimatorComponent* _pFrameAnimator; ///< 이번 프레임의 같은 유닛 애니메이터(커브 출처, 프레임 시작에 찾음)
-        SkeletalMeshComponent*           _pUnit;
-        uint64                           _boundContentID;
+        PoseModifierBinding                             _binding;
+        RigInstance                                     _instance;
+        shared_ptr<const RigAsset>                      _asset;
+        shared_ptr<const SocketSet>                     _ownSockets;
+        vector<ExternalTarget>                          _listExternal;
+        vector<UnitBinding>                             _listUnitBinding;
+        vector<ObjectBinding>                           _listObjectBinding;
+        vector<TComponentHandle<SkeletalMeshComponent>> _listDependency; ///< 이 컴포넌트가 등록한 의존이다(해제할 때 쓴다).
+        vector<TComponentHandle<SkeletalMeshComponent>> _listTableUnit;  ///< 소켓 테이블의 유닛 번호에서 유닛으로 가는 목록이다.
+        unique_ptr<IRigGroundQuery>                     _groundQuery;    ///< 씬 물리를 감싼 땅 질의다.
+        float4x4                                        _worldFromModel;
+        const ResolvedSocketTable*                      _pSocketTable;
+        const IRigGroundQuery*                          _pGroundQueryOverride;
+        const SkeletalAnimatorComponent*                _pFrameAnimator; ///< 이번 프레임의 같은 유닛 애니메이터(커브 출처, 프레임 시작에 찾음)
+        SkeletalMeshComponent*                          _pUnit;
+        uint64                                          _boundContentID;
         PROPERTY( Category = "Rig", DisplayName = "Enabled", Tooltip = "Evaluate the rig; disabled rigs cost nothing" )
         uint8                  _bRigEnabled : 1;
         [[maybe_unused]] uint8 _reserved    : 7;

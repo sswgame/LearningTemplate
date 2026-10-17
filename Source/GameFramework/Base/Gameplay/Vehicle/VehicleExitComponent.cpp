@@ -37,7 +37,7 @@ namespace sw
         const bool           bNoExitInput = pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _exitIndex ) == false;
         if ( bNoExitInput )
             return;
-        pManager->executeOrDeferPostTickOnComponent<VehicleExitComponent>( getHandle(), []( VehicleExitComponent& component )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( VehicleExitComponent& component )
         { component.exitDriver(); } );
     }
 

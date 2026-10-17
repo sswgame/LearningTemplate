@@ -37,6 +37,37 @@ namespace sw
     class StructuralChangeBuffer;
     class TickRegistry;
 
+    /**
+     * @struct ComponentPoolEntry
+     * @brief 정확한 타입 하나의 컴포넌트 풀과 버킷(그 타입 인스턴스 목록)입니다. 저장소가 타입 FQN 마다 하나 가지며, 주소는 저장소가 죽을 때까지 그대로입니다.
+     * @details 매니저 순회(`forEachComponentOfType`)는 오브젝트를 훑지 않고 이 버킷들을 돈다. 버킷마다 `_pType->isDerivedFrom( 찾는 타입 )` 을
+     *          한 번 묻는다(언리얼 `GetObjectsOfClass` 의 정확한 클래스 버킷과 파생 열거). 풀과 같은 FQN 키라 맵을 하나 더 두지 않는다.
+     *
+     *          **`_pType` 은 버킷이 비어 있지 않을 때만 값이 있다.** 비면 nullptr 로 놓는다. 모듈 언로드 전에 `destroyComponentsOfModule` 이 그 모듈 타입의
+     *          인스턴스를 모두 지우므로, 언로드된 모듈의 `TypeInfo` 를 가리키는 버킷이 구조적으로 생기지 않는다(묘비 처리를 따로 두지 않는다).
+     *          풀과 버킷 벡터의 용량과 항목은 남긴다(같은 타입을 스폰하고 지우기를 거듭하는 게임이 매번 할당하지 않게).
+     */
+    struct ComponentPoolEntry
+    {
+        /** @brief 블록 크기 @p typeSize 의 풀로 만듭니다. 버킷은 비어 있습니다. */
+        explicit ComponentPoolEntry( size_t typeSize )
+            : _pool{ typeSize, 64u, true }
+            , _listComponent{}
+            , _pType{ nullptr }
+        {
+        }
+
+        ComponentPoolEntry( const ComponentPoolEntry& )            = delete;
+        ComponentPoolEntry& operator=( const ComponentPoolEntry& ) = delete;
+
+        PoolAllocator      _pool;          ///< 그 타입의 블록 풀이다. 자체 잠금이 있어 반납은 저장소 잠금 밖에서 한다
+        vector<Component*> _listComponent; ///< 버킷이다. 저장소 `_mutex` 아래에서만 바뀐다. 순서는 약속하지 않는다(제거가 마지막 원소를 빈 자리로 옮긴다)
+        const TypeInfo*    _pType;         ///< 버킷의 타입이다. 버킷이 비면 nullptr 이다
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @class GameObjectStore @brief 씬 하나의 오브젝트 저장소입니다. 자세한 내용은 파일 머리말을 참고하십시오. */
     class SW_API GameObjectStore
     {
@@ -120,6 +151,36 @@ namespace sw
             }
         }
 
+        /**
+         * @brief @p pToType 이나 그 파생 타입의 컴포넌트를 모두 방문합니다. 오브젝트를 훑지 않고 타입별 버킷(`ComponentPoolEntry`)을 돕니다.
+         * @details 비용은 씬에 있는 정확한 타입 수 K 와 맞는 컴포넌트 수의 합이다. 삭제 대기 컴포넌트와 삭제 대기 오브젝트의 컴포넌트는 건너뛴다(오브젝트 순회와 같은 결과).
+         *          **순서는 약속하지 않는다.** 버킷은 타입이 처음 나온 순서, 버킷 안은 추가 순서지만 제거가 마지막 원소를 빈 자리로 옮긴다.
+         *          런타임 `TypeInfo` 로 부를 수 있으므로 타입을 템플릿으로 모르는 곳(인스펙터 선택기)도 쓴다. @p pToType 이 nullptr 이면 아무것도 방문하지 않는다.
+         * @note `forEachGameObject` 와 같이 공유 잠금과 `WalkScope` 안에서 콜백을 부른다. 콜백 안에서 구조를 바꾸면 안 된다.
+         */
+        template <typename Func>
+        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
+        {
+            if ( pToType == nullptr )
+                return;
+            std::shared_lock<std::shared_mutex> lock{ _mutex };
+            const WalkScope                     walkScope{};
+            for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
+            {
+                if ( pEntry->_pType == nullptr || pEntry->_pType->isDerivedFrom( pToType ) == false )
+                    continue;
+                for ( Component* pComp : pEntry->_listComponent )
+                {
+                    if ( pComp->isPendingDestroy() || pComp->getOwner()->isPendingDestroy() )
+                        continue;
+                    func( pComp );
+                }
+            }
+        }
+
+        /** @brief 버킷의 타입 포인터를 가진 항목 수(비어 있지 않은 버킷 수)입니다. 진단과 회귀 테스트(묘비)용입니다. */
+        uint32 getTypedComponentBucketCount() const;
+
         /** @brief 태그를 가진 첫 GameObject 를 반환합니다. 없으면 nullptr 입니다. */
         GameObject* findGameObjectByTag( TagID tag ) const;
         /** @brief 태그를 가진 GameObject 를 outListGameObject 에 넣습니다. */
@@ -158,14 +219,20 @@ namespace sw
 #endif
 
         /**
-         * @brief 타입별 컴포넌트 풀을 얻거나 만듭니다.
+         * @brief 타입별 컴포넌트 항목(풀과 버킷)을 얻거나 만듭니다. 타입이 없거나 FQN 이 비었으면 nullptr 입니다.
          * @details 키는 **FQN 이고 TypeInfo 포인터가 아니다.** 재등록은 같은 객체에 덮어써서 주소가 고정이지만 레지스트리 밖 사본도
          *          있을 수 있으므로, 재등록에도 변하지 않는 FQN 을 쓴다. 포인터로 키를 잡아 한 클래스에 `TypeInfo` 가 둘이 되면
          *          **생성할 때와 해제할 때가 서로 다른 풀**을 가리켜 `PoolAllocator::free` 의 "Pointer does not belong to any allocated chunk"
-         *          단언이 걸린다.
-         *          해제는 이 테이블을 보지 않는다. 컴포넌트가 `_pPool` 로 자기 풀을 가지고 있고, 거기로 돌아간다.
+         *          단언이 걸린다. 같은 이유로 버킷도 같은 항목에 둔다(한 클래스의 인스턴스가 두 버킷으로 갈리지 않는다).
+         *          해제는 이 테이블을 보지 않는다. 컴포넌트가 `_pPoolEntry` 로 자기 항목을 가지고 있고, 거기로 돌아간다.
          */
-        PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize );
+        ComponentPoolEntry* getOrCreateComponentPoolEntry( const TypeInfo* pTypeInfo, size_t typeSize );
+        /**
+         * @brief 막 붙인 컴포넌트를 자기 항목의 버킷에 넣습니다(`GameObject::attachCreatedComponent`, 오브젝트 목록에 넣는 바로 그 시점).
+         * @details 항목은 컴포넌트가 가진 `_pPoolEntry` 라 맵을 다시 찾지 않는다. 버킷이 비어 있었으면 `_pType` 을 그 컴포넌트의 타입으로 채운다.
+         *          항목이 없는 컴포넌트(타입 정보가 없어 힙에서 잡은 것)는 버킷에 들어가지 않는다. 타입이 없으면 순회의 `isDerivedFrom` 도 맞추지 못한다.
+         */
+        void registerTypedComponent( Component* pComp );
 
     private:
         /**
@@ -270,8 +337,9 @@ namespace sw
         TickRegistry*                                  _pTickRegistry;           ///< 지운 컴포넌트와 오브젝트를 틱 레지스트리에 알린다
         [[maybe_unused]] const StructuralChangeBuffer* _pStructuralChangeBuffer; ///< 틱 중인지만 읽는다. 해체 단언에 쓰며, 단언이 빠지는 Release 와 Shipping 에서는 읽는 곳이 없다
 
-        TypedPoolAllocator<GameObject>                          _poolGameObject;
-        unordered_map<hashed_string, unique_ptr<PoolAllocator>> _mapComponentPool; ///< 키는 타입 FQN(`getOrCreateComponentPool` 설명 참고)
+        TypedPoolAllocator<GameObject>                               _poolGameObject;
+        unordered_map<hashed_string, unique_ptr<ComponentPoolEntry>> _mapComponentPool;       ///< 키는 타입 FQN(`getOrCreateComponentPoolEntry` 설명 참고)
+        vector<ComponentPoolEntry*>                                  _listComponentPoolEntry; ///< 항목을 처음 나온 순서로 둔다. 순회(`forEachComponentOfType`)가 이 목록을 돈다
 
         vector<GameObject*>                           _listGameObject;
         unordered_map<hashed_string, NameEntry>       _mapNameToObject;

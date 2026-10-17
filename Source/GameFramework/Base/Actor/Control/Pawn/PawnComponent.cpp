@@ -72,7 +72,7 @@ namespace sw
         ControlSystem* pSystem = ControlSystem::find( manager );
         if ( pSystem != nullptr && _controller.isValid() )
         {
-            ControllerComponent* pController = static_cast<ControllerComponent*>( manager.resolveComponent( _controller ) );
+            ControllerComponent* pController = manager.resolveComponent( _controller );
             if ( pController != nullptr )
             {
                 pController->unpossess();
@@ -81,7 +81,7 @@ namespace sw
                     manager.destroyObject( pController->getOwner() );
             }
         }
-        _controller = ComponentHandle{};
+        _controller = TComponentHandle<ControllerComponent>{};
         manager.getComponentRegistry().remove<PawnComponent>( this );
         ControlSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );

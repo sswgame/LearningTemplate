@@ -314,7 +314,12 @@ namespace sw
             }
         }
 
-        batch.finish();
+        // 옮기지 못한 핸들 PROPERTY 가 있으면 로드 오류다(배치가 필드를 적어 오류를 남겼다). 비우고 이어 가면 값이 조용히 사라진다.
+        if ( batch.finish() == false )
+        {
+            SW_LOG_ERROR( "Scene '%#' could not link its object handles - the load fails", _name.c_str() );
+            return false;
+        }
 
         // 프리팹의 중첩 인스턴스는 씬 파일에 없다 — 원본에서 부품으로 다시 스폰한다(원본을 고치면 퍼진다). 엔티티를 모두 만든 **뒤에** 스폰한다.
         // 부품이 먼저 이름을 가져가면 같은 이름의 엔티티가 로드마다 번호 붙은 이름으로 바뀐다. 프리팹은 위에서 이미 읽어 캐시에 있다.
@@ -566,16 +571,16 @@ namespace sw
         _defaultMaterialPath.clear();
     }
 
-    CameraComponent* Scene::resolveCamera( sw::ComponentHandle handle ) const
+    CameraComponent* Scene::resolveCamera( TComponentHandle<CameraComponent> handle ) const
     {
         if ( _objectManager == nullptr )
             return nullptr;
-        return static_cast<CameraComponent*>( _objectManager->resolveComponent( handle ) );
+        return _objectManager->resolveComponent( handle );
     }
 
-    void Scene::storeCameraHandle( CameraComponent* pCamera, sw::ComponentHandle& handle )
+    void Scene::storeCameraHandle( CameraComponent* pCamera, TComponentHandle<CameraComponent>& outHandle )
     {
-        handle = pCamera != nullptr ? pCamera->getHandle() : sw::ComponentHandle{};
+        outHandle = TComponentHandle<CameraComponent>{ pCamera };
     }
 
     void Scene::setEntityPrefabPath( uint64 objectID, string_view prefabPath )

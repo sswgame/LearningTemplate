@@ -127,7 +127,7 @@ namespace sw
         _bRecording = bRecording ? SW_TRUE : SW_FALSE;
     }
 
-    void ControlSystem::queuePossess( const ComponentHandle& controller, const ComponentHandle& pawn )
+    void ControlSystem::queuePossess( const TComponentHandle<ControllerComponent>& controller, const TComponentHandle<PawnComponent>& pawn )
     {
         QueuedPossess& queued = _listQueuedPossess.emplace_back();
         queued._controller    = controller;
@@ -187,10 +187,10 @@ namespace sw
         for ( size_t queuedIndex = 0; queuedIndex < _listQueuedPossess.size(); ++queuedIndex )
         {
             const QueuedPossess  queued      = _listQueuedPossess[queuedIndex];
-            ControllerComponent* pController = static_cast<ControllerComponent*>( manager.resolveComponent( queued._controller ) );
+            ControllerComponent* pController = manager.resolveComponent( queued._controller );
             if ( pController == nullptr )
                 continue;
-            PawnComponent* pPawn = queued._pawn.isValid() ? static_cast<PawnComponent*>( manager.resolveComponent( queued._pawn ) ) : nullptr;
+            PawnComponent* pPawn = queued._pawn.isValid() ? manager.resolveComponent( queued._pawn ) : nullptr;
             if ( pPawn != nullptr )
                 pController->possess( *pPawn );
             else
@@ -205,7 +205,7 @@ namespace sw
         {
             const GameObject* pOwner = pPawn != nullptr ? pPawn->getOwner() : nullptr;
             if ( pOwner != nullptr )
-                _history.record( _tick, pPawn->getHandle(), pOwner->getName(), pPawn->getIntent() );
+                _history.record( _tick, TComponentHandle<PawnComponent>{ pPawn }, pOwner->getName(), pPawn->getIntent() );
         }
     }
 
@@ -222,12 +222,12 @@ namespace sw
                 continue;
             pPawn->_bAutoPossessDone = SW_TRUE;
             if ( pPawn->isPossessed() == false )
-                _listAutoPossessPawn.push_back( pPawn->getHandle() );
+                _listAutoPossessPawn.push_back( TComponentHandle<PawnComponent>{ pPawn } );
         }
         // 조종자를 세우면 레지스트리가 바뀐다 — 다 모은 뒤에 세운다.
-        for ( const ComponentHandle& handle : _listAutoPossessPawn )
+        for ( const TComponentHandle<PawnComponent>& handle : _listAutoPossessPawn )
         {
-            PawnComponent* pPawn = static_cast<PawnComponent*>( manager.resolveComponent( handle ) );
+            PawnComponent* pPawn = manager.resolveComponent( handle );
             if ( pPawn == nullptr || pPawn->isPossessed() )
                 continue;
             ControllerComponent* pController = nullptr;

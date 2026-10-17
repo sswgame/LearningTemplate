@@ -711,7 +711,7 @@ namespace sw
         if ( pManager == nullptr || _bFlushScheduled == SW_TRUE )
             return;
         _bFlushScheduled = SW_TRUE;
-        pManager->executeOrDeferPostTickOnComponent<ShooterPlayerComponent>( getHandle(), []( ShooterPlayerComponent& player )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( ShooterPlayerComponent& player )
         { player.flushPending(); } );
     }
 

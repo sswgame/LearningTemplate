@@ -81,7 +81,7 @@ namespace sw
         // 같은 오브젝트의 애니메이터(표정 커브)를 다시 찾는다 — 컴포넌트가 붙고 떨어질 수 있다.
         GameObject*                pOwner    = unit.getOwner();
         SkeletalAnimatorComponent* pAnimator = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        _owner._animator                     = ( pAnimator != nullptr ) ? pAnimator->getHandle() : ComponentHandle{};
+        _owner._animator                     = TComponentHandle<SkeletalAnimatorComponent>{ pAnimator };
     }
 
     void FacialAnimationBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
@@ -198,7 +198,7 @@ namespace sw
         SkeletalMeshComponent*     pUnit     = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
         SkeletalAnimatorComponent* pAnimator = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         // 표정 커브를 낼 애니메이터 — 첫 평가부터 읽게 지금 찾는다(뒤에 붙으면 게임 스레드 마무리가 찾는다).
-        _animator = ( pAnimator != nullptr ) ? pAnimator->getHandle() : ComponentHandle{};
+        _animator = TComponentHandle<SkeletalAnimatorComponent>{ pAnimator };
         if ( pUnit == _pUnit )
             return;
         if ( _pUnit != nullptr )
@@ -452,7 +452,7 @@ namespace sw
         const SkeletalAnimatorComponent* pAnimator           = nullptr;
         const bool                       bAnimatorResolvable = _animator.isValid() && unit.getOwner() != nullptr && unit.getOwner()->getManager() != nullptr;
         if ( bAnimatorResolvable )
-            pAnimator = castTo<SkeletalAnimatorComponent>( unit.getOwner()->getManager()->resolveComponent( _animator ) );
+            pAnimator = unit.getOwner()->getManager()->resolveComponent( _animator );
         const vector<FacialPose>& listExpression = _rig.getExpressions();
         for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
         {

@@ -116,7 +116,7 @@ namespace sw
         const bool        bSourceUnresolvable = _source.isValid() == false || pOwner == nullptr || pOwner->getManager() == nullptr;
         if ( bSourceUnresolvable )
             return nullptr;
-        return castTo<SkeletalMeshComponent>( pOwner->getManager()->resolveComponent( _source ) );
+        return pOwner->getManager()->resolveComponent( _source );
     }
 
     void PoseRetargetComponent::setSource( SkeletalMeshComponent* pSource )
@@ -125,7 +125,7 @@ namespace sw
         SkeletalMeshComponent* pOld = findSource();
         if ( pOld != nullptr && _pUnit != nullptr )
             _pUnit->removeAnimationDependency( pOld );
-        _source                     = ( pSource != nullptr ) ? pSource->getHandle() : ComponentHandle{};
+        _source                     = TComponentHandle<SkeletalMeshComponent>{ pSource };
         _pBoundSourceSkeleton       = nullptr;
         const bool bNeedsDependency = pSource != nullptr && _pUnit != nullptr && pSource != _pUnit;
         if ( bNeedsDependency )

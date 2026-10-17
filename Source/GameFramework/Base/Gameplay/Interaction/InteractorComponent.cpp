@@ -100,7 +100,7 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
-            setFocus( *pManager, GameObjectHandle{}, ComponentHandle{} );
+            setFocus( *pManager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
         Component::onEndPlay();
     }
 
@@ -154,32 +154,32 @@ namespace sw
             if ( InteractionSelector::isInReach( viewer, candidate, distance ) == false )
                 continue;
             _listCandidate.push_back( candidate );
-            _listCandidateComponent.push_back( pInteractable->getHandle() );
+            _listCandidateComponent.push_back( TComponentHandle<InteractableComponent>{ pInteractable } );
         }
     }
 
-    void InteractorComponent::setFocus( GameObjectManager& manager, GameObjectHandle focus, ComponentHandle focusComponent )
+    void InteractorComponent::setFocus( GameObjectManager& manager, GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent )
     {
         if ( focusComponent == _focusComponent )
             return;
-        InteractableComponent* pOld = static_cast<InteractableComponent*>( manager.resolveComponent( _focusComponent ) );
+        InteractableComponent* pOld = manager.resolveComponent( _focusComponent );
         if ( pOld != nullptr )
             pOld->setHighlightRequested( false );
         _focus                      = focus;
         _focusComponent             = focusComponent;
-        InteractableComponent* pNew = static_cast<InteractableComponent*>( manager.resolveComponent( _focusComponent ) );
+        InteractableComponent* pNew = manager.resolveComponent( _focusComponent );
         if ( pNew != nullptr )
             pNew->setHighlightRequested( true );
     }
 
     void InteractorComponent::finishSession( GameObjectManager& manager, const GameObject& owner )
     {
-        const ComponentHandle  target     = _focusComponent;
-        const GameObjectHandle interactor = owner.getHandle();
-        GameObjectManager*     pManager   = &manager;
+        const TComponentHandle<InteractableComponent> target     = _focusComponent;
+        const GameObjectHandle                        interactor = owner.getHandle();
+        GameObjectManager*                            pManager   = &manager;
         manager.executeOrDeferPostTick( [pManager, target, interactor]()
         {
-            InteractableComponent* pInteractable = static_cast<InteractableComponent*>( pManager->resolveComponent( target ) );
+            InteractableComponent* pInteractable = pManager->resolveComponent( target );
             const GameObject*      pInteractor   = pManager->resolveGameObject( interactor );
             if ( pInteractable != nullptr && pInteractor != nullptr )
                 pInteractable->completeInteraction( *pInteractor );
@@ -204,7 +204,7 @@ namespace sw
         if ( _session.isActive() )
         {
             // 진행 중에는 대상을 바꾸지 않는다. 쓸 수 없게 됐거나 멀어지면 취소한다.
-            InteractableComponent* pTarget = static_cast<InteractableComponent*>( pManager->resolveComponent( _focusComponent ) );
+            InteractableComponent* pTarget = pManager->resolveComponent( _focusComponent );
             bool                   bKeep   = pTarget != nullptr && pTarget->isActive() && pTarget->getDefinition() != nullptr;
             if ( bKeep )
             {
@@ -231,9 +231,9 @@ namespace sw
             }
             else
             {
-                setFocus( *pManager, GameObjectHandle{}, ComponentHandle{} );
+                setFocus( *pManager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
             }
-            InteractableComponent* pTarget = best >= 0 ? static_cast<InteractableComponent*>( pManager->resolveComponent( _focusComponent ) ) : nullptr;
+            InteractableComponent* pTarget = best >= 0 ? pManager->resolveComponent( _focusComponent ) : nullptr;
             if ( bPressed && pTarget != nullptr )
             {
                 const InteractionDef*  pDef       = pTarget->getDefinition();
@@ -250,7 +250,7 @@ namespace sw
 
         _listSessionEvent.clear();
         _session.drainEvents( _listSessionEvent );
-        const InteractableComponent* pEventTarget = static_cast<const InteractableComponent*>( pManager->resolveComponent( _focusComponent ) );
+        const InteractableComponent* pEventTarget = pManager->resolveComponent( _focusComponent );
         const InteractionDef*        pEventDef    = pEventTarget != nullptr ? pEventTarget->getDefinition() : nullptr;
         for ( const InteractionSessionEvent event : _listSessionEvent )
         {
@@ -276,7 +276,7 @@ namespace sw
             }
         }
 
-        const InteractableComponent* pFocus = static_cast<const InteractableComponent*>( pManager->resolveComponent( _focusComponent ) );
+        const InteractableComponent* pFocus = pManager->resolveComponent( _focusComponent );
         const InteractionStepDef*    pStep  = _session.getStep();
         const InteractionDef*        pDef   = pFocus != nullptr ? pFocus->getDefinition() : nullptr;
         _prompt                             = InteractionPrompt{};

@@ -75,6 +75,13 @@
 - `C-49` [정리] **`sw::vector` 의 `_list[i]` 루프는 쓰기가 벡터 내부를 가려(별칭) 벡터화되지 않는다**(2026-10-17 `DynamicBitset` 측정에서 확인 — 원시 포인터 루프로 고쳤다).
   다른 컨테이너의 블록 루프와 `sw::vector::operator==` 에 같은 모양이 있을 수 있다. 호출부와 이득을 Release 로 잰 뒤에 한다.
 
+- `C-52` [정리] **타입별 버킷(7-c)과 타입 핸들(7-d) 뒤의 남은 정리**(`docs/plans/TypedComponents.md` 7절). ① 핸들 옮기기(`ObjectStateBatch::resolveObjectReferences`)가
+  컴포넌트 타입의 최상위 `PROPERTY` 만 봐서 리플렉션 구조체 필드 안의 `GameObjectHandle` 은 다시 매겨지지 않는다 — 구조체와 컨테이너를 재귀로 내려가는 값 방문으로 바꾼다.
+  ② `ComponentStateStore` 가 다른 실행의 세이브를 같은 타입 안의 열거 순서로 맞춘다 — 오브젝트 저장 id 와 `ComponentStableKey` 로 맞춘다.
+  ③ `ComponentRegistry` · `TickBatchRegistry` 가운데 버킷으로 충분한 목록을 옮긴다. 기준은 등록 순서가 결과에 나오는가, 채널이 있는가, 잠금 없이 읽어야 하는가이다.
+  ④ 측정(Release, VSync 끔, 3~5판, p50 · p99): 오브젝트 1만 · 10만 × 타입 수 50 · 200 · 500 의 `forEachComponentOfType`, 추가 · 제거 잠금, `sizeof( Component )` 전후와 큐브 20,000 개 `GT.Frame`,
+  개발 빌드의 `resolveComponent<T>` 확인 비용.
+
 - `D1-2` [기능] **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다

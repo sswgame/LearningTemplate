@@ -178,7 +178,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bBuiltOnTerrain )
             return;
-        pManager->executeOrDeferPostTickOnComponent<WaterBodyComponent>( getHandle(), []( WaterBodyComponent& water )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( WaterBodyComponent& water )
         { water.rebuildSurface(); } );
     }
 
@@ -220,7 +220,7 @@ namespace sw
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
         {
             // 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미룬다.
-            pManager->executeOrDeferPostTickOnComponent<WaterBodyComponent>( getHandle(), []( WaterBodyComponent& water )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WaterBodyComponent& water )
             { water.rebuildSurface(); } );
         }
         writeMaterialValues();

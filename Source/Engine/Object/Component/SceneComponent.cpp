@@ -324,11 +324,11 @@ namespace sw
 
     void SceneComponent::deferSelfCall( void ( SceneComponent::*pMethod )() )
     {
-        GameObjectManager*        pManager = _pManager;
-        const sw::ComponentHandle handle   = getHandle();
+        GameObjectManager*                     pManager = _pManager;
+        const TComponentHandle<SceneComponent> handle{ this };
         pManager->deferStructuralChange( [pManager, handle, pMethod]()
         {
-            SceneComponent* pSelf = static_cast<SceneComponent*>( pManager->resolveComponent( handle ) );
+            SceneComponent* pSelf = pManager->resolveComponent( handle );
             if ( pSelf != nullptr )
                 ( pSelf->*pMethod )();
         } );
@@ -394,13 +394,13 @@ namespace sw
 
         if ( isInParallelTick() )
         {
-            GameObjectManager*        pManager     = _pManager;
-            const sw::ComponentHandle selfHandle   = getHandle();
-            const sw::ComponentHandle parentHandle = ( pParent != nullptr ) ? pParent->getHandle() : sw::ComponentHandle{};
+            GameObjectManager*                     pManager = _pManager;
+            const TComponentHandle<SceneComponent> selfHandle{ this };
+            const TComponentHandle<SceneComponent> parentHandle{ pParent };
             pManager->deferHierarchyChange( [pManager, selfHandle, parentHandle, rule]()
             {
-                SceneComponent* pSelf           = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
-                SceneComponent* pResolvedParent = parentHandle.isValid() ? static_cast<SceneComponent*>( pManager->resolveComponent( parentHandle ) ) : nullptr;
+                SceneComponent* pSelf           = pManager->resolveComponent( selfHandle );
+                SceneComponent* pResolvedParent = parentHandle.isValid() ? pManager->resolveComponent( parentHandle ) : nullptr;
                 // 미루기 전에 붙일 수 있는지 봤다(`canAttachTo`). 그사이 부모가 죽어 가면 붙지 않는다.
                 if ( pSelf != nullptr )
                     (void)pSelf->attachToComponent( pResolvedParent, rule ); // 거부는 미루기 전에 걸렀다 — 남는 실패는 부모가 사라진 경우뿐이다
@@ -434,11 +434,11 @@ namespace sw
     {
         if ( isInParallelTick() )
         {
-            GameObjectManager*        pManager   = _pManager;
-            const sw::ComponentHandle selfHandle = getHandle();
+            GameObjectManager*                     pManager = _pManager;
+            const TComponentHandle<SceneComponent> selfHandle{ this };
             pManager->deferHierarchyChange( [pManager, selfHandle, rule]()
             {
-                SceneComponent* pSelf = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
+                SceneComponent* pSelf = pManager->resolveComponent( selfHandle );
                 if ( pSelf != nullptr )
                     pSelf->detachFromComponent( rule );
             } );

@@ -24,6 +24,13 @@ namespace sw
     {
     }
 
+    template <typename T>
+    T* FractureRenderUnits::findOwnedComponent( const GameObject& owner, TComponentHandle<T> handle )
+    {
+        GameObjectManager* pManager = owner.getManager();
+        return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveComponent( handle ) : nullptr;
+    }
+
     void FractureRenderUnits::create( GameObject& owner, const FractureAsset& asset, const MeshComponent* pIntact, const hashed_string& interiorMaterialPath )
     {
         shared_ptr<const Skeleton> skeleton   = FractureRenderUtil::createPieceSkeleton( asset );
@@ -46,16 +53,16 @@ namespace sw
                 pUnit->setMaterialPath( pIntact->getMaterialPath().c_str() );
             else if ( pIntact != nullptr )
                 pUnit->setMaterial( pIntact->getMaterial() );
-            _arrSkinnedUnit[slot] = pUnit->getHandle();
+            _arrSkinnedUnit[slot] = TComponentHandle<SkeletalMeshComponent>{ pUnit };
         }
     }
 
     void FractureRenderUnits::writePoses( const GameObject& owner, const FractureAsset& asset, const vector<BoneTransform>& listPiecePose, float32 maxOffset )
     {
         const float32 assetRadius = MathUtil::max( asset._boundsMax.getLength(), asset._boundsMin.getLength() );
-        for ( const ComponentHandle& handle : _arrSkinnedUnit )
+        for ( const TComponentHandle<SkeletalMeshComponent>& handle : _arrSkinnedUnit )
         {
-            SkeletalMeshComponent* pUnit = static_cast<SkeletalMeshComponent*>( findOwnedComponent( owner, handle ) );
+            SkeletalMeshComponent* pUnit = findOwnedComponent( owner, handle );
             if ( pUnit == nullptr )
                 continue;
             Pose& pose = pUnit->getLocalPose();
@@ -76,10 +83,10 @@ namespace sw
         const FractureSurfaceSlot arrSlot[2] = { FractureSurfaceSlot::Outer, FractureSurfaceSlot::Interior };
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
-            SkeletalMeshComponent* pSkinned = static_cast<SkeletalMeshComponent*>( findOwnedComponent( owner, _arrSkinnedUnit[slot] ) );
+            SkeletalMeshComponent* pSkinned = findOwnedComponent( owner, _arrSkinnedUnit[slot] );
             if ( pSkinned == nullptr )
                 continue;
-            MeshComponent* pBaked = static_cast<MeshComponent*>( findOwnedComponent( owner, _arrBakedUnit[slot] ) );
+            MeshComponent* pBaked = findOwnedComponent( owner, _arrBakedUnit[slot] );
             if ( bBaked && pBaked == nullptr )
             {
                 pBaked = owner.addComponent<MeshComponent>();
@@ -89,7 +96,7 @@ namespace sw
                     pBaked->setMaterialPath( pSkinned->getMaterialPath().c_str() );
                 else
                     pBaked->setMaterial( pSkinned->getMaterial() );
-                _arrBakedUnit[slot] = pBaked->getHandle();
+                _arrBakedUnit[slot] = TComponentHandle<MeshComponent>{ pBaked };
             }
             if ( bBaked )
             {
@@ -107,11 +114,5 @@ namespace sw
             }
         }
         _bBaked = bBaked ? SW_TRUE : SW_FALSE;
-    }
-
-    Component* FractureRenderUnits::findOwnedComponent( const GameObject& owner, const ComponentHandle& handle )
-    {
-        GameObjectManager* pManager = owner.getManager();
-        return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveComponent( handle ) : nullptr;
     }
 } // namespace sw

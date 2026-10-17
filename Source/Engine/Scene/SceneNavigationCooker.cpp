@@ -64,6 +64,12 @@ namespace sw
                 listAgentType.push_back( agentType );
             }
         } );
+        // 매니저 순회는 순서를 약속하지 않는다. 쿠킹 항목이 방문 순서에 따라 달라지지 않게 이름순으로 정렬하고, 같은 에이전트 타입은 한 번만 굽는다.
+        std::sort( listAgentType.begin(), listAgentType.end(), []( const hashed_string& lhs, const hashed_string& rhs )
+        {
+            return lhs.view() < rhs.view();
+        } );
+        listAgentType.erase( std::unique( listAgentType.begin(), listAgentType.end() ), listAgentType.end() );
         bool bAll = true;
         for ( const hashed_string& agentType : listAgentType )
         {

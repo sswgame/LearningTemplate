@@ -20,6 +20,8 @@
 
 namespace sw
 {
+    class ControllerComponent;
+
     /** @brief 조종자 없이 플레이를 시작한 폰을 누가 쥘지 정합니다. */
     ENUM()
     enum class PawnAutoPossess : uint8
@@ -65,8 +67,8 @@ namespace sw
         bool  wasButtonTriggered( int32 buttonIndex ) const { return _intent.wasTriggered( buttonIndex ); }
 
         /** @brief 지금 쥔 조종자 컴포넌트입니다. 없으면 무효 핸들입니다. */
-        const ComponentHandle& getController() const { return _controller; }
-        bool                   isPossessed() const { return _controller.isValid(); }
+        const TComponentHandle<ControllerComponent>& getController() const { return _controller; }
+        bool                                         isPossessed() const { return _controller.isValid(); }
         /** @brief 조종 회전에 더할 것(반동, 피격 흔들림)을 쌓습니다. 조종자가 다음 틱의 조종 회전에 넣습니다. 틱 안에서 여러 컴포넌트가 불러도 됩니다(원자적 합). */
         void addControlRotationOffset( float32 deltaYaw, float32 deltaPitch );
         /**
@@ -131,15 +133,15 @@ namespace sw
         PROPERTY( Category = "Control", DisplayName = "Lock Mouse", Tooltip = "Lock and hide the cursor while a player possesses this pawn (first person); the player's mouse lock action toggles it" )
         bool _bLockMouse;
 
-        ControlIntent          _intent;
-        ComponentHandle        _controller;           ///< 쥔 조종자 컴포넌트
-        atomic<int32>          _yawOffsetUnits;       ///< 쌓인 요 오프셋(`kRotationOffsetUnitsPerRadian` 단위 고정소수점)
-        atomic<int32>          _pitchOffsetUnits;     ///< 쌓인 피치 오프셋
-        atomic<int32>          _requestedYawUnits;    ///< 요청된 조종 요(오프셋과 같은 단위)
-        atomic<int32>          _requestedPitchUnits;  ///< 요청된 조종 피치
-        atomic<bool>           _bRotationRequested;   ///< 요청 값이 남아 있다(값을 쓴 뒤 release 로 세운다)
-        uint32                 _inputPeer;            ///< 의도를 내는 연결(0 = 로컬)
-        uint8                  _bAutoPossessDone : 1; ///< 자동 빙의를 한 번 시도했다(실패해도 다시 하지 않는다)
-        [[maybe_unused]] uint8 _reserved         : 7;
+        ControlIntent                         _intent;
+        TComponentHandle<ControllerComponent> _controller;           ///< 쥔 조종자 컴포넌트
+        atomic<int32>                         _yawOffsetUnits;       ///< 쌓인 요 오프셋(`kRotationOffsetUnitsPerRadian` 단위 고정소수점)
+        atomic<int32>                         _pitchOffsetUnits;     ///< 쌓인 피치 오프셋
+        atomic<int32>                         _requestedYawUnits;    ///< 요청된 조종 요(오프셋과 같은 단위)
+        atomic<int32>                         _requestedPitchUnits;  ///< 요청된 조종 피치
+        atomic<bool>                          _bRotationRequested;   ///< 요청 값이 남아 있다(값을 쓴 뒤 release 로 세운다)
+        uint32                                _inputPeer;            ///< 의도를 내는 연결(0 = 로컬)
+        uint8                                 _bAutoPossessDone : 1; ///< 자동 빙의를 한 번 시도했다(실패해도 다시 하지 않는다)
+        [[maybe_unused]] uint8                _reserved         : 7;
     };
 } // namespace sw

@@ -342,7 +342,7 @@ namespace sw
         if ( pObjects != nullptr )
         {
             // 핸들이 해석되면 그 소유 오브젝트를 지운다. 이미 없으면(씬이 바뀌었으면) 할 일이 없다.
-            for ( const ComponentHandle& handle : _listBenchMesh )
+            for ( const TComponentHandle<MeshComponent>& handle : _listBenchMesh )
             {
                 if ( Component* pComp = pObjects->resolveComponent( handle ) )
                 {
@@ -532,7 +532,7 @@ namespace sw
             MeshComponent* pMesh = spawnCube( pObjects, pSceneMaterial, index, side, origin );
             if ( pMesh == nullptr )
                 continue;
-            _listBenchMesh.push_back( pMesh->getHandle() );
+            _listBenchMesh.push_back( TComponentHandle<MeshComponent>{ pMesh } );
 
             // 큐브마다 자기 머티리얼 인스턴스를 준다. 색이 달라지는 것도 목적이지만, 배치 키가
             // 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우 경로가
@@ -696,7 +696,7 @@ namespace sw
             GameObject*  pEnemy = BenchCombatComponent::spawnEnemy( *pObjects, _settings, hashed_string( nameBuilder.c_str(), nameBuilder.size() ), position );
             if ( RagdollComponent* pRagdoll = pEnemy != nullptr ? pEnemy->getComponent<RagdollComponent>() : nullptr )
             {
-                _listRagdoll.push_back( pRagdoll->getHandle() );
+                _listRagdoll.push_back( TComponentHandle<RagdollComponent>{ pRagdoll } );
                 _listBenchExtra.push_back( pRagdoll->getHandle() );
             }
         }
@@ -718,9 +718,9 @@ namespace sw
         {
             // 상태가 실제로 오가는지 본다(기상이 계속 실패하면 모두 래그돌에 머문다).
             [[maybe_unused]] uint32 ragdollCount = 0;
-            for ( const ComponentHandle& handle : _listRagdoll )
+            for ( const TComponentHandle<RagdollComponent>& handle : _listRagdoll )
             {
-                const RagdollComponent* pRagdoll = castTo<RagdollComponent>( pObjects->resolveComponent( handle ) );
+                const RagdollComponent* pRagdoll = pObjects->resolveComponent( handle );
                 ragdollCount += ( pRagdoll != nullptr && pRagdoll->getState() == RagdollState::Ragdoll ) ? 1u : 0u;
             }
             SW_LOG_INFO( "[Bench] 프레임 %# 쓰러진 수 %#/%#", frame + 1u, ragdollCount, static_cast<uint32>( _listRagdoll.size() ) );
@@ -729,7 +729,7 @@ namespace sw
         {
             if ( ( frame + static_cast<uint32>( index ) ) % period != 0u )
                 continue;
-            RagdollComponent* pRagdoll = castTo<RagdollComponent>( pObjects->resolveComponent( _listRagdoll[index] ) );
+            RagdollComponent* pRagdoll = pObjects->resolveComponent( _listRagdoll[index] );
             if ( pRagdoll == nullptr )
                 continue;
             // 서 있으면 쓰러뜨리고, 쓰러져 있으면 일으킨다(물리 자세를 읽기 전이라 실패하면 다음 주기에 다시). 일어나는 중이면 끝날 때까지 둔다.
@@ -935,7 +935,7 @@ namespace sw
             if ( Component* pOld = pObjects->resolveComponent( _listBenchMesh[index] ) )
                 pObjects->destroyObject( pOld->getOwner() );
             MeshComponent* pMesh  = spawnCube( pObjects, pScene->getMaterial(), index, side, origin );
-            _listBenchMesh[index] = ( pMesh != nullptr ) ? pMesh->getHandle() : ComponentHandle{};
+            _listBenchMesh[index] = TComponentHandle<MeshComponent>{ pMesh };
         }
     }
 
@@ -982,7 +982,7 @@ namespace sw
         DirectionalLightComponent* pLight = pLightObject->addComponent<DirectionalLightComponent>();
         if ( pLight == nullptr )
             return;
-        _keyLight = pLight->getHandle();
+        _keyLight = TComponentHandle<DirectionalLightComponent>{ pLight };
 
         // 그림자 볼륨은 씬을 덮어야 한다. 엔진 기본값은 2 유닛이라 142 유닛 격자에서는
         // 그림자가 원점 근처 몇 개에만 걸린다.
@@ -1253,7 +1253,7 @@ namespace sw
             // 격자 자리는 생성 때와 같은 식으로 — 핸들을 풀어 읽지 않는다(그 읽기가 배치 쓰기 비용의 3 분의 1 쯤 된다).
             _listTransformWrite.emplace_back();
             SceneTransformWrite& write = _listTransformWrite.back();
-            write._handle              = _listBenchMesh[index];
+            write._handle              = _listBenchMesh[index].untyped();
             write._localPosition       = float3{ origin + static_cast<float32>( index % side ) * _settings._cubeSpacing,
                                            wave * _settings._waveHeight,
                                            origin + static_cast<float32>( index / side ) * _settings._cubeSpacing };
@@ -1337,8 +1337,7 @@ namespace sw
         // 2) 집합을 흔든다 — 붙이면 배치가 갈리고 원소가 늘고, 떼면 회수·재사용이 돈다.
         for ( uint32 step = 0; step < addChurn; ++step )
         {
-            MeshComponent* pMesh =
-                static_cast<MeshComponent*>( pObjects->resolveComponent( _listBenchMesh[nextChurnRandom() % cubeCount] ) );
+            MeshComponent* pMesh = pObjects->resolveComponent( _listBenchMesh[nextChurnRandom() % cubeCount] );
             if ( pMesh == nullptr )
                 continue;
 

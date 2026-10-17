@@ -204,10 +204,10 @@ namespace sw
         }
 
         // 물리 · 질의 · 스폰은 게임 스레드에서 — 틱 뒤로 미룬다(이 틱은 워커일 수 있다).
-        const ComponentHandle self = getHandle();
+        const TComponentHandle<BenchCombatComponent> self{ this };
         pManager->executeOrDeferPostTick( [pManager, self]()
         {
-            BenchCombatComponent* pCombat      = castTo<BenchCombatComponent>( pManager->resolveComponent( self ) );
+            BenchCombatComponent* pCombat      = pManager->resolveComponent( self );
             GameObject*           pEnemyObject = pCombat != nullptr ? pManager->resolveGameObject( pCombat->_enemy ) : nullptr;
             GameObject*           pSwordObject = pCombat != nullptr ? pManager->resolveGameObject( pCombat->_sword ) : nullptr;
             if ( pEnemyObject == nullptr || pSwordObject == nullptr )

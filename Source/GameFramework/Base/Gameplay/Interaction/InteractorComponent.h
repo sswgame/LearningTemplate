@@ -35,6 +35,8 @@ namespace sw
 
 namespace sw
 {
+    class InteractableComponent;
+
     /**
      * @class InteractorComponent
      * @brief 틱마다 씬의 `InteractableComponent` 중 쓸 수 있는 것(켜짐, 쿨다운, 태그 조건)을 후보로 모아 `InteractionSelector` 로 고르고, 입력(`setInput`)으로
@@ -73,7 +75,7 @@ namespace sw
     private:
         void makeView( InteractionView& outViewer ) const;
         void gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer );
-        void setFocus( GameObjectManager& manager, GameObjectHandle focus, ComponentHandle focusComponent );
+        void setFocus( GameObjectManager& manager, GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent );
         void finishSession( GameObjectManager& manager, const GameObject& owner );
 
     private:
@@ -88,17 +90,17 @@ namespace sw
         PROPERTY( Category = "Interaction", DisplayName = "Keep Distance Scale", Tooltip = "A focused target stays focused until it is this many times its reach away (hysteresis)", Min = 1.0 )
         float32 _keepDistanceScale;
 
-        InteractionSession              _session;
-        hashed_string                   _resumeState; ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
-        int32                           _montageStep; ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 −1).
-        InteractionPrompt               _prompt;
-        vector<InteractionCandidate>    _listCandidate;
-        vector<ComponentHandle>         _listCandidateComponent;
-        vector<InteractionSessionEvent> _listSessionEvent;
-        GameObjectHandle                _focus;
-        ComponentHandle                 _focusComponent;
-        uint8                           _bHeld;
-        uint8                           _bWasHeld;
-        uint8                           _bPressed;
+        InteractionSession                              _session;
+        hashed_string                                   _resumeState; ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
+        int32                                           _montageStep; ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 −1).
+        InteractionPrompt                               _prompt;
+        vector<InteractionCandidate>                    _listCandidate;
+        vector<TComponentHandle<InteractableComponent>> _listCandidateComponent;
+        vector<InteractionSessionEvent>                 _listSessionEvent;
+        GameObjectHandle                                _focus;
+        TComponentHandle<InteractableComponent>         _focusComponent;
+        uint8                                           _bHeld;
+        uint8                                           _bWasHeld;
+        uint8                                           _bPressed;
     };
 } // namespace sw

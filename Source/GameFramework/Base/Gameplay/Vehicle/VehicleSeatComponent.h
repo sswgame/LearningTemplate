@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    class ControllerComponent;
+
     /**
      * @class VehicleSeatComponent
      * @brief 탈것 오브젝트의 좌석 하나입니다. 운전석 하나와 승객석 여럿을 둘 수 있습니다. 운전석이 있으면 탈것 오브젝트에 `PawnComponent` 가 있어야 합니다.
@@ -68,8 +70,8 @@ namespace sw
         PROPERTY( Category = "Seat", DisplayName = "Driver Seat", Tooltip = "The rider here controls the vehicle" )
         bool _bDriverSeat;
 
-        GameObjectHandle _occupant;                  ///< 앉은 탑승자의 오브젝트
-        ComponentHandle  _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
-        ComponentHandle  _previousVehicleController; ///< 탈 때 탈것을 쥐고 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 쥔다
+        GameObjectHandle                      _occupant;                  ///< 앉은 탑승자의 오브젝트
+        TComponentHandle<ControllerComponent> _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
+        TComponentHandle<ControllerComponent> _previousVehicleController; ///< 탈 때 탈것을 쥐고 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 쥔다
     };
 } // namespace sw

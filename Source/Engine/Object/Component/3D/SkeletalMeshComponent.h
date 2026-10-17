@@ -118,7 +118,7 @@ namespace sw
         /** @brief 의존을 해제합니다. */
         void removeAnimationDependency( SkeletalMeshComponent* pUpstream );
         /** @brief 의존 목록(핸들)입니다. 리더를 포함합니다. */
-        const vector<ComponentHandle>& getAnimationDependencies() const { return _listDependency; }
+        const vector<TComponentHandle<SkeletalMeshComponent>>& getAnimationDependencies() const { return _listDependency; }
 
         /** @brief 단계에 끼어드는 작업을 등록합니다(소유하지 않습니다). 같은 작업은 한 번만 등록됩니다. */
         void registerAnimationPhaseTask( IAnimationPhaseTask* pTask );
@@ -232,35 +232,35 @@ namespace sw
         uint32                     _updateRateDivisor;
         shared_ptr<const Skeleton> _skeleton;
         /// @brief 스킨드 메시의 공유 원본입니다. 동일성 확인과 핫 리로드 대조에 씁니다. 이 컴포넌트의 메시는 그 복사본입니다.
-        shared_ptr<Mesh>                  _skinSourceMesh;
-        uint64                            _skinSourceContentID;
-        Pose                              _localPose;
-        vector<float4x4>                  _listModelSpace;
-        vector<float4x4>                  _listSkinPalette;
-        vector<ComponentHandle>           _listDependency;
-        vector<IAnimationPhaseTask*>      _listTask;
-        vector<int32>                     _listLeaderBone; ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
-        ComponentHandle                   _leader;
-        const Skeleton*                   _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
-        AnimationSystem*                  _pAnimationSystem;
-        AnimationFrameContext             _frameContext;
-        uint32                            _poseEvaluationCount;
-        SkeletalMeshLODClient             _lodClient;
-        AnimationLODState                 _lodState;
-        shared_ptr<const SkeletonBoneLOD> _boneLOD;
-        vector<vector<uint8>>             _listBoneLODMask;      ///< 본 LOD 단계 n + 1 의 본 마스크
-        uint64                            _boneLODRevision;      ///< 마스크를 만든 본 LOD 내용 번호다(0 이면 다시 만든다)
-        const Skeleton*                   _pBoneLODMaskSkeleton; ///< 마스크를 만든 스켈레톤이다(동일성만 확인한다)
-        Pose                              _interpolationFrom;    ///< 마지막 평가 때 표시하던 포즈
-        Pose                              _interpolationTarget;  ///< 마지막으로 평가한 포즈
-        uint32                            _updatePhase;
-        uint32                            _framesSinceEvaluation; ///< 마지막 평가 뒤 지난 프레임 수
-        uint32                            _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
-        vector<float32>                   _listMorphWeight;       ///< 그리는 메시의 모프 타깃 가중치(타깃 순서)
-        AnimationCrowdBucket*             _pCrowdBucket;          ///< 나누는 묶음이다. 군중이 소유하며 참조 수로 보호된다
-        shared_ptr<Mesh>                  _soloMesh;              ///< 혼자 평가할 때 빌린 사본
-        const AnimationClip*              _pVertexAnimationClip;  ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
-        AnimationCrowdMode                _crowdMode;
+        shared_ptr<Mesh>                                _skinSourceMesh;
+        uint64                                          _skinSourceContentID;
+        Pose                                            _localPose;
+        vector<float4x4>                                _listModelSpace;
+        vector<float4x4>                                _listSkinPalette;
+        vector<TComponentHandle<SkeletalMeshComponent>> _listDependency;
+        vector<IAnimationPhaseTask*>                    _listTask;
+        vector<int32>                                   _listLeaderBone; ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
+        TComponentHandle<SkeletalMeshComponent>         _leader;
+        const Skeleton*                                 _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
+        AnimationSystem*                                _pAnimationSystem;
+        AnimationFrameContext                           _frameContext;
+        uint32                                          _poseEvaluationCount;
+        SkeletalMeshLODClient                           _lodClient;
+        AnimationLODState                               _lodState;
+        shared_ptr<const SkeletonBoneLOD>               _boneLOD;
+        vector<vector<uint8>>                           _listBoneLODMask;      ///< 본 LOD 단계 n + 1 의 본 마스크
+        uint64                                          _boneLODRevision;      ///< 마스크를 만든 본 LOD 내용 번호다(0 이면 다시 만든다)
+        const Skeleton*                                 _pBoneLODMaskSkeleton; ///< 마스크를 만든 스켈레톤이다(동일성만 확인한다)
+        Pose                                            _interpolationFrom;    ///< 마지막 평가 때 표시하던 포즈
+        Pose                                            _interpolationTarget;  ///< 마지막으로 평가한 포즈
+        uint32                                          _updatePhase;
+        uint32                                          _framesSinceEvaluation; ///< 마지막 평가 뒤 지난 프레임 수
+        uint32                                          _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
+        vector<float32>                                 _listMorphWeight;       ///< 그리는 메시의 모프 타깃 가중치(타깃 순서)
+        AnimationCrowdBucket*                           _pCrowdBucket;          ///< 나누는 묶음이다. 군중이 소유하며 참조 수로 보호된다
+        shared_ptr<Mesh>                                _soloMesh;              ///< 혼자 평가할 때 빌린 사본
+        const AnimationClip*                            _pVertexAnimationClip;  ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
+        AnimationCrowdMode                              _crowdMode;
         PROPERTY( Category = "Animation", DisplayName = "Follow Parent Pose", Tooltip = "Use the parent object's skeletal mesh as the leader pose" )
         uint8 _bFollowParentPose : 1;
         PROPERTY( Category = "Animation", DisplayName = "Animate When Offscreen", Tooltip = "Keep building the pose while not visible" )

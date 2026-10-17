@@ -111,7 +111,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bBuiltOnTerrain == SW_TRUE )
             return;
-        pManager->executeOrDeferPostTickOnComponent<FoliageComponent>( getHandle(), []( FoliageComponent& foliage )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( FoliageComponent& foliage )
         { foliage.rebuildFoliage(); } );
     }
 
@@ -180,7 +180,7 @@ namespace sw
         // 같은 세대로 다시 미루지 않게 지금 표시해 둔다. 다시 만들기는 레지스트리를 바꾸므로 틱 뒤에 한다.
         _builtTerrainGeneration = generation;
         _builtSplatRevision     = revision;
-        manager.executeOrDeferPostTickOnComponent<FoliageComponent>( getHandle(), []( FoliageComponent& foliage )
+        manager.executeOrDeferPostTickOnComponent( *this, []( FoliageComponent& foliage )
         { foliage.rebuildFoliage(); } );
     }
 

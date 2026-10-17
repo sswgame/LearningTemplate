@@ -115,7 +115,7 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
         sw::ObjectLoadContext context{};
         context._pBatch = &batch;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLoaded, state, context ) );
-        batch.finish();
+        SW_EXPECT_TRUE( batch.finish() );
         sw::ValidationIssueLog::get().collectIssues( listIssue );
         SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listIssue.size() ) );
     }

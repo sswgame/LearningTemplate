@@ -380,10 +380,10 @@ namespace sw
         request._range       = range;
         request._bFromPlayer = from.getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
         // 어빌리티는 워커(유닛의 틱)에서 쏘고, 오브젝트는 틱이 끝난 뒤 게임 스레드에서 스폰한다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        const ComponentHandle self = getHandle();
+        const TComponentHandle<ArenaDirectorComponent> self{ this };
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, self, request]()
         {
-            ArenaDirectorComponent* pDirector = static_cast<ArenaDirectorComponent*>( pManager->resolveComponent( self ) );
+            ArenaDirectorComponent* pDirector = pManager->resolveComponent( self );
             if ( pDirector != nullptr )
                 pDirector->spawnProjectile( request );
         } ) );

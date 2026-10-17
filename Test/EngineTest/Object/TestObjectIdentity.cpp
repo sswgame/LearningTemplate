@@ -133,8 +133,8 @@ SW_TEST_CASE( ObjectIdentityTest, WireFormatRoundTripAndRejectsGarbage )
 {
     sw::ObjectIdentity identity;
     identity._objectID = 42;
-    identity._listComponent.push_back( sw::ObjectIdentity::ComponentEntry{ sw::hashed_string( "SceneComponent" ), 7 } );
-    identity._listComponent.push_back( sw::ObjectIdentity::ComponentEntry{ sw::hashed_string( "MeshComponent" ), 9 } );
+    identity._listComponent.push_back( sw::ObjectIdentity::ComponentEntry{ sw::hashed_string( "sw::SceneComponent" ), 7 } );
+    identity._listComponent.push_back( sw::ObjectIdentity::ComponentEntry{ sw::hashed_string( "sw::MeshComponent" ), 9 } );
 
     sw::vector<uint8> bytes;
     sw::ObjectStateSerializer::writeIdentity( identity, bytes );
@@ -143,7 +143,7 @@ SW_TEST_CASE( ObjectIdentityTest, WireFormatRoundTripAndRejectsGarbage )
     SW_ASSERT_EQUAL( bytes.size(), sw::ObjectStateSerializer::readIdentity( bytes.data(), bytes.size(), readBack ) );
     SW_EXPECT_EQUAL( uint64( 42 ), readBack._objectID );
     SW_ASSERT_EQUAL( size_t( 2 ), readBack._listComponent.size() );
-    SW_EXPECT_TRUE( readBack._listComponent[1]._typeName == sw::hashed_string( "MeshComponent" ) );
+    SW_EXPECT_TRUE( readBack._listComponent[1]._typeFqn == sw::hashed_string( "sw::MeshComponent" ) );
     SW_EXPECT_EQUAL( uint64( 9 ), readBack._listComponent[1]._componentID );
 
     // 잘린 입력
@@ -155,6 +155,77 @@ SW_TEST_CASE( ObjectIdentityTest, WireFormatRoundTripAndRejectsGarbage )
     const uint8*      pCount    = reinterpret_cast<const uint8*>( &hugeCount );
     bogus.insert( bogus.end(), pCount, pCount + sizeof( hugeCount ) );
     SW_EXPECT_EQUAL( size_t( 0 ), sw::ObjectStateSerializer::readIdentity( bogus.data(), bogus.size(), readBack ) );
+}
+
+/**
+ * @brief [ObjectIdentityTest] 복원 목록은 타입 FQN 으로 적히고, FQN 이 다른 타입은 원래 id 를 가져가지 못한다
+ * @details 짧은 이름으로 맞추면 이름이 같은 다른 타입이 id 를 가져가 타입 핸들이 다른 타입을 가리킨다(TypedComponents.md 3.3 ⓑ).
+ */
+SW_TEST_CASE( ObjectIdentityTest, RestoreMatchesTypeFullyQualifiedName )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "FqnSource" ) );
+    SW_ASSERT_NOT_NULL( pSource );
+    sw::MeshComponent* pMesh = pSource->addComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pMesh );
+    const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pSource );
+    SW_ASSERT_EQUAL( size_t( 1 ), identity._listComponent.size() );
+    SW_EXPECT_TRUE( identity._listComponent[0]._typeFqn == sw::MeshComponent::StaticType()->_fullyQualifiedName );
+
+    // 목록의 FQN 을 다른 타입(SceneComponent)으로 바꿔 두면, 다시 만든 MeshComponent 는 원래 id 를 받지 않는다.
+    sw::ObjectIdentity wrongType         = identity;
+    wrongType._listComponent[0]._typeFqn = sw::SceneComponent::StaticType()->_fullyQualifiedName;
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pSource, bytes.data(), bytes.size(), { &wrongType } ) > 0 );
+    const sw::MeshComponent* pReloaded = pSource->getComponent<sw::MeshComponent>();
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_EXPECT_TRUE( pReloaded->getComponentID() != identity._listComponent[0]._componentID );
+}
+
+/**
+ * @brief [ObjectIdentityTest] 타입 핸들 — `T*` 에서 만들기, 업캐스트, 섞은 비교, 확인 변환의 네 결과, 찾기의 타입
+ */
+SW_TEST_CASE( ObjectIdentityTest, TypedComponentHandle )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "Typed" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    sw::SceneComponent* pScene = pObject->addComponent<sw::SceneComponent>();
+    sw::MeshComponent*  pMesh  = pObject->addComponent<sw::MeshComponent>();
+    SW_ASSERT_TRUE( pScene != nullptr && pMesh != nullptr );
+    static_assert( sizeof( sw::TComponentHandle<sw::MeshComponent> ) == sizeof( sw::ComponentHandle ), "typed handle must stay 16 B" );
+    static_assert( std::is_trivially_copyable_v<sw::TComponentHandle<sw::MeshComponent>>, "typed handle must be trivially copyable" );
+
+    const sw::TComponentHandle<sw::MeshComponent>  meshHandle{ pMesh };
+    const sw::TComponentHandle<sw::SceneComponent> upcast = meshHandle; // MeshComponent 는 SceneComponent 의 파생이다
+    SW_EXPECT_TRUE( manager.resolveComponent( meshHandle ) == pMesh );
+    SW_EXPECT_TRUE( manager.resolveComponent( upcast ) == pMesh );
+    SW_EXPECT_TRUE( meshHandle == pMesh->getHandle() && pMesh->getHandle() == meshHandle );
+    SW_EXPECT_TRUE( upcast == meshHandle ); // 기반과 파생은 업캐스트로 비교한다
+    SW_EXPECT_FALSE( sw::TComponentHandle<sw::MeshComponent>{ nullptr }.isValid() );
+
+    BLOCK( "확인 변환 — 무효 핸들과 맞는 타입은 성공" )
+    {
+        sw::TComponentHandle<sw::MeshComponent> out;
+        SW_EXPECT_TRUE( manager.makeTypedHandle( sw::ComponentHandle{}, out ) == sw::TypedHandleResult::Success );
+        SW_EXPECT_FALSE( out.isValid() );
+        SW_EXPECT_TRUE( manager.makeTypedHandle( upcast.untyped(), out ) == sw::TypedHandleResult::Success ); // 다운캐스트
+        SW_EXPECT_TRUE( out == meshHandle );
+    }
+
+    BLOCK( "확인 변환 — 다른 타입과 없는 대상은 오류이고 출력을 바꾸지 않는다" )
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "typed handle of the wrong type or a missing target" );
+        sw::TComponentHandle<sw::MeshComponent> out = meshHandle;
+        SW_EXPECT_TRUE( manager.makeTypedHandle( pScene->getHandle(), out ) == sw::TypedHandleResult::TypeMismatch );
+        SW_EXPECT_TRUE( out == meshHandle );
+        const sw::ComponentHandle sceneHandle = pScene->getHandle();
+        SW_EXPECT_TRUE( pObject->removeComponent( pScene ) );
+        sw::TComponentHandle<sw::SceneComponent> sceneOut;
+        SW_EXPECT_TRUE( manager.makeTypedHandle( sceneHandle, sceneOut ) == sw::TypedHandleResult::TargetMissing );
+        SW_EXPECT_FALSE( sceneOut.isValid() );
+    }
 }
 
 /**
