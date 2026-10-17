@@ -6,7 +6,8 @@
  *          매니저의 서비스 묶음(`SceneEngineServices`)에서 받습니다. 2D 콜라이더(`BoxCollider2DComponent`)도 같은 2D 씬의 Box2D 센서 바디이고(유니티 트리거 ·
  *          Godot Area2D 처럼 물리 월드 하나), 에디터 시각화가 훑을 콜라이더 목록(`getColliders2D`)과 연속 콜라이더가 쓸어 낸 겹침(`queueSweptOverlap2D`)을 이 서비스가 듭니다.
  *
- *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 컴포넌트 `beginPhysicsFrame` → n 번(`prePhysicsStep` → 3D · 2D 씬 step → `postPhysicsStep`,
+ *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 컴포넌트 `beginPhysicsFrame` → 연속 콜라이더 쓸기(`sweepContinuousColliders2D` — 모든 콜라이더가
+ *          이번 자리로 옮겨진 뒤라 상대의 이동을 안다) → n 번(`prePhysicsStep` → 3D · 2D 씬 step → `postPhysicsStep`,
  *          이벤트를 모은다) → `endPhysicsFrame( alpha )`(보간한 자세를 트랜스폼에 쓴다) → 모은 이벤트를 두 오브젝트의 켜진 컴포넌트에
  *          나눠 준다(막는 접촉은 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `onOverlap*` — `PhysicsContactEvent::isOverlap`). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
  *          만든 바디도 사용자 값에 오브젝트 id 를 실으면 그 오브젝트가 이벤트를 받습니다.
@@ -90,7 +91,7 @@ namespace sw
         void unregisterCollider2D( BoxCollider2DComponent* pCollider );
         /** @brief 등록된 2D 콜라이더 목록입니다(순서 없음, 편집 중에도 있다). 에디터 시각화가 씬 전체를 훑지 않고 이것을 봅니다. */
         const vector<BoxCollider2DComponent*>& getColliders2D() const { return _listCollider2D; }
-        /** @brief 연속 콜라이더가 쓸고 지나간 겹침을 이번 프레임에 나눠 줄 목록에 더합니다(`beginPhysicsFrame` 안, 닿은 시점 순서로). */
+        /** @brief 연속 콜라이더가 쓸고 지나간 겹침을 이번 프레임에 나눠 줄 목록에 더합니다(`sweepContinuousColliders2D` 안, 콜라이더마다 닿은 시점 순서로). */
         void queueSweptOverlap2D( const SweptOverlap2D& overlap ) { _listSweptOverlap2D.push_back( overlap ); }
 
         /** @brief 3D 씬입니다. 처음 부를 때 생성자로 받은 물리 서비스(`PhysicsSystem`)로 만듭니다. 서비스가 없으면 nullptr 입니다. */
@@ -146,15 +147,22 @@ namespace sw
         void deliverEvent( GameObjectManager& manager, uint64 selfUserData, uint64 otherUserData, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody,
                            const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bSelfTrigger, bool bOtherTrigger,
                            bool bOverlap, bool bIs2D, float32 hitFraction );
+        /**
+         * @brief 이번 프레임에 움직인 2D 콜라이더를 모으고, 그 가운데 연속 콜라이더가 지나친 것을 쓸어 냅니다(`BoxCollider2DComponent::sweepPassedBodies`).
+         * @details 모든 콜라이더의 `beginPhysicsFrame` 뒤에 돈다 — 콜라이더 하나의 `beginPhysicsFrame` 안에서 쓸면 상대가 아직 지난 자리인지 이번 자리인지가
+         *          목록 순서로 갈리고, 함께 움직인 상대의 이동을 뺄 수 없다(길을 가로질러 건너간 유닛을 놓친다).
+         */
+        void sweepContinuousColliders2D();
         /** @brief 설정 표의 스텝 크기 · 상한을 누적기에 한 번 맞춥니다. */
         void configureOnce();
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
 
-        GameObjectManager&              _manager;            ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
-        PhysicsSystem*                  _pPhysicsSystem;     ///< 매니저의 서비스 묶음에서 받은 물리 서비스(빌림)
-        vector<BoxCollider2DComponent*> _listCollider2D;     ///< 콜라이더가 자기 자리(`_colliderIndex`)를 든다
-        vector<SweptOverlap2D>          _listSweptOverlap2D; ///< 이번 프레임에 연속 콜라이더가 쓸고 지나간 겹침(`step` 이 비운다)
+        GameObjectManager&              _manager;             ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
+        PhysicsSystem*                  _pPhysicsSystem;      ///< 매니저의 서비스 묶음에서 받은 물리 서비스(빌림)
+        vector<BoxCollider2DComponent*> _listCollider2D;      ///< 콜라이더가 자기 자리(`_colliderIndex`)를 든다
+        vector<BoxCollider2DComponent*> _listMovedCollider2D; ///< 이번 프레임에 움직인 콜라이더(연속 판정의 상대 운동, `sweepContinuousColliders2D` 가 다시 채운다)
+        vector<SweptOverlap2D>          _listSweptOverlap2D;  ///< 이번 프레임에 연속 콜라이더가 쓸고 지나간 겹침(`step` 이 비운다)
         unique_ptr<IPhysicsScene3D>     _pScene3D;
         unique_ptr<IPhysicsScene2D>     _pScene2D;
         FixedStepAccumulator            _accumulator;

@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/CollisionLayers.h"
+#include "Engine/Physics/Collision/ContinuousCollision.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
@@ -42,6 +43,15 @@ namespace sw
                 shape._halfExtents = halfExtents;
                 return shape;
             }
+
+            /** @brief 상대 운동 쓸기의 상자입니다. 깊이(Z)는 두 상자에 같은 두께를 준다 — 두께 0 끼리는 슬랩 검사가 경계 비교에 걸린다. */
+            static AABB makeSweepBox( const float2& center, const float2& halfExtents )
+            {
+                AABB box;
+                box._min = float3( center._x - halfExtents._x, center._y - halfExtents._y, -1.0f );
+                box._max = float3( center._x + halfExtents._x, center._y + halfExtents._y, 1.0f );
+                return box;
+            }
         };
     } // namespace
 } // namespace sw
@@ -58,10 +68,24 @@ namespace sw
         , _body{}
         , _bodyCenter{}
         , _bodyHalfExtent{}
+        , _sweepOrigin{}
+        , _frameFromCenter{}
         , _bodyLayer{ 0 }
         , _bBodyTrigger{ false }
+        , _bSweepOriginValid{ false }
         , _colliderIndex{ kNotRegistered }
     {
+    }
+
+    void BoxCollider2DComponent::onBeginPlay()
+    {
+        PhysicsComponent::onBeginPlay();
+        // 바디는 첫 물리 프레임에 생긴다. 그 전에 첫 틱이 옮긴 길(쏘자마자 얇은 적을 건너뛴 총알)도 쓸리도록 시작한 자리를 출발점으로 둔다.
+        float2 minB{};
+        float2 maxB{};
+        getBounds( minB, maxB );
+        _sweepOrigin       = float2{ ( minB._x + maxB._x ) * 0.5f, ( minB._y + maxB._y ) * 0.5f };
+        _bSweepOriginValid = true;
     }
 
     void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
@@ -202,79 +226,115 @@ namespace sw
 
         // 순간이동 표시는 이번 맞춤에서 쓰고 지운다 — 바디가 새로 들어도 남겨 두면 다음 이동을 잘못 건너뛴다.
         const bool bTeleported = consumeTeleport();
+        // 이번 프레임의 출발점 — 시작한 자리 또는 지난 프레임의 중심이다. 순간이동했거나 출발점이 없으면 제자리다(쓸지 않고, 움직인 상대로도 보지 않는다).
+        // 쓸기는 여기서 하지 않는다 — 모든 콜라이더가 이번 자리로 옮겨진 뒤 씬 물리가 부른다(`ScenePhysics::sweepContinuousColliders2D`).
+        _frameFromCenter = ( _bSweepOriginValid && bTeleported == false ) ? _sweepOrigin : center;
         // 크기 · 레이어 · 트리거가 바뀌면 다시 만든다 — 세터는 표시를 남기지 않으므로 매 프레임 바디를 만든 값과 견준다.
         const bool bShapeChanged = _body.isValid() &&
                                    ( _bodyHalfExtent != halfExtents || _bodyLayer != _colliderType || _bBodyTrigger != _bTrigger || pScene->isBodyValid( _body ) == false );
         if ( consumeRebuild() || bShapeChanged )
         {
-            // 다시 만든 바디도 지난 자리에서 출발한다 — 쓸기의 출발점은 지난 프레임의 중심이다.
-            const float2 previousCenter = _bodyCenter;
-            const bool   bHadBody       = _body.isValid();
             releasePhysics( physics );
             createBody( physics, center, halfExtents );
-            const bool bSweep = bHadBody && _bContinuous && bTeleported == false;
-            if ( bSweep )
-                sweepPassedBodies( physics, previousCenter, center, halfExtents );
-            return;
         }
-        if ( _body.isValid() == false )
+        else if ( _body.isValid() == false )
         {
             createBody( physics, center, halfExtents );
-            return;
         }
-        if ( _bodyCenter == center )
-            return;
-        const float2 previousCenter = _bodyCenter;
-        pScene->setBodyTransform( _body, center, 0.0f );
-        _bodyCenter = center;
-        if ( _bContinuous && bTeleported == false )
-            sweepPassedBodies( physics, previousCenter, center, halfExtents );
+        else if ( _bodyCenter != center )
+        {
+            pScene->setBodyTransform( _body, center, 0.0f );
+            _bodyCenter = center;
+        }
+        // 다시 만든 바디도 출발점을 잇는다 — 바디를 놓으며 지운 출발점을 이번 중심으로 다시 둔다.
+        _sweepOrigin       = center;
+        _bSweepOriginValid = true;
     }
 
-    void BoxCollider2DComponent::sweepPassedBodies( ScenePhysics& physics, const float2& from, const float2& to, const float2& halfExtents )
+    void BoxCollider2DComponent::sweepPassedBodies( ScenePhysics& physics, const vector<BoxCollider2DComponent*>& listMoved )
     {
+        using Internal                = BoxCollider2DComponentInternal;
         const IPhysicsScene2D* pScene = physics.findScene2D();
-        const float2           delta  = to - from;
+        const float2           delta  = _bodyCenter - _frameFromCenter;
         const float32          length = delta.getLength();
-        if ( pScene == nullptr || length <= BoxCollider2DComponentInternal::kMinSweepDistance )
+        if ( pScene == nullptr || length <= Internal::kMinSweepDistance )
             return;
 
         // 레이어 행렬이 이 콜라이더와 부딪히게 둔 레이어만, 트리거까지 본다(트리거도 겹침을 받는다). 자기 바디는 뺀다.
-        PhysicsQueryFilter filter;
+        const CollisionLayers& layers = pScene->getLayerCollision();
+        PhysicsQueryFilter     filter;
         filter._ignoreBody       = _body;
-        filter._layerMask        = pScene->getLayerCollision().getLayerMask( static_cast<uint8>( _colliderType ) );
+        filter._layerMask        = layers.getLayerMask( static_cast<uint8>( _bodyLayer ) );
         filter._bIncludeTriggers = true;
 
-        const PhysicsShapeDesc2D box = BoxCollider2DComponentInternal::makeBox( halfExtents );
-        vector<PhysicsCastHit2D> listHit;
-        (void)pScene->shapeCastAll( box, from, 0.0f, delta * ( 1.0f / length ), length, filter, listHit );
-        if ( listHit.empty() )
-            return;
-        vector<PhysicsBodyHandle> listAtEnd;
-        (void)pScene->overlapShape( box, to, 0.0f, filter, listAtEnd );
-
-        // 결과는 바디마다 하나, 가까운 순서다(`shapeCastAll`). 그 순서대로 알리면 먼저 닿은 것이 먼저 받는다(총알이 뒤의 적부터 맞지 않는다).
-        const uint64 selfUserData = getOwner()->getObjectID();
-        for ( const PhysicsCastHit2D& hit : listHit )
+        const uint64           selfUserData = getOwner()->getObjectID();
+        vector<SweptOverlap2D> listSwept;
+        const auto             addSwept = [&]( PhysicsBodyHandle otherBody, uint64 otherUserData, float32 hitFraction, bool bOtherTrigger )
         {
-            const bool bStartedInside = hit._fraction <= 0.0f;
-            const bool bStillInside   = std::find( listAtEnd.begin(), listAtEnd.end(), hit._body ) != listAtEnd.end();
-            if ( bStartedInside || bStillInside )
-                continue;
             SweptOverlap2D overlap;
             overlap._selfBody      = _body;
-            overlap._otherBody     = hit._body;
+            overlap._otherBody     = otherBody;
             overlap._selfUserData  = selfUserData;
-            overlap._otherUserData = hit._userData;
-            overlap._hitFraction   = hit._fraction;
-            overlap._bSelfTrigger  = _bTrigger;
-            overlap._bOtherTrigger = pScene->isBodyTrigger( hit._body );
+            overlap._otherUserData = otherUserData;
+            overlap._hitFraction   = hitFraction;
+            overlap._bSelfTrigger  = _bBodyTrigger;
+            overlap._bOtherTrigger = bOtherTrigger;
+            listSwept.push_back( overlap );
+        };
+
+        // 1) 가만히 있던 바디 — 이번 자리 그대로 Box2D 로 쓴다. 움직인 콜라이더의 바디는 2) 가 잰다(이번 자리에 선 채로 재면 틀린다).
+        const PhysicsShapeDesc2D box = Internal::makeBox( _bodyHalfExtent );
+        vector<PhysicsCastHit2D> listHit;
+        (void)pScene->shapeCastAll( box, _frameFromCenter, 0.0f, delta * ( 1.0f / length ), length, filter, listHit );
+        vector<PhysicsBodyHandle> listAtEnd;
+        if ( listHit.empty() == false )
+            (void)pScene->overlapShape( box, _bodyCenter, 0.0f, filter, listAtEnd );
+        for ( const PhysicsCastHit2D& hit : listHit )
+        {
+            const bool bMovedBody     = std::find_if( listMoved.begin(), listMoved.end(), [&hit]( const BoxCollider2DComponent* pOther )
+                { return pOther->_body == hit._body; } ) != listMoved.end();
+            const bool bStartedInside = hit._fraction <= 0.0f;
+            const bool bStillInside   = std::find( listAtEnd.begin(), listAtEnd.end(), hit._body ) != listAtEnd.end();
+            // 출발점 · 도착점의 겹침은 센서가 낸다. 지나친 것만 남는다.
+            const bool bSensorReports = bStartedInside || bStillInside;
+            if ( bMovedBody || bSensorReports )
+                continue;
+            addSwept( hit._body, hit._userData, hit._fraction, pScene->isBodyTrigger( hit._body ) );
+        }
+
+        // 2) 이번 프레임에 움직인 콜라이더 — 둘 다 출발점에서, 이 이동에서 상대의 이동을 뺀 만큼 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic).
+        //    함께 움직인 상대(나란히 나는 산탄)는 차이가 없어 제자리 겹침이 전부다.
+        const AABB fromBox = Internal::makeSweepBox( _frameFromCenter, _bodyHalfExtent );
+        const AABB toBox   = Internal::makeSweepBox( _bodyCenter, _bodyHalfExtent );
+        for ( const BoxCollider2DComponent* pOther : listMoved )
+        {
+            const bool bSkipOther = pOther == this || layers.shouldCollide( static_cast<uint8>( _bodyLayer ), static_cast<uint8>( pOther->_bodyLayer ) ) == false;
+            if ( bSkipOther )
+                continue;
+            const float2 relative = delta - ( pOther->_bodyCenter - pOther->_frameFromCenter );
+            if ( relative.getLength() <= Internal::kMinSweepDistance )
+                continue;
+            SweepHit   hit{};
+            const AABB otherFromBox = Internal::makeSweepBox( pOther->_frameFromCenter, pOther->_bodyHalfExtent );
+            const bool bEntered     = ContinuousCollision::sweepAABB( fromBox, float3( relative._x, relative._y, 0.0f ), otherFromBox, hit ) && hit._hitFraction > 0.0f;
+            const bool bStillInside = bEntered && toBox.intersects( Internal::makeSweepBox( pOther->_bodyCenter, pOther->_bodyHalfExtent ) );
+            if ( bEntered == false || bStillInside )
+                continue;
+            addSwept( pOther->_body, pOther->getOwner()->getObjectID(), hit._hitFraction, pOther->_bBodyTrigger );
+        }
+
+        // 먼저 닿은 것이 먼저 받는다(총알이 뒤의 적부터 맞지 않는다). 같은 시점끼리는 모은 순서 그대로다.
+        std::stable_sort( listSwept.begin(), listSwept.end(), []( const SweptOverlap2D& lhs, const SweptOverlap2D& rhs )
+        { return lhs._hitFraction < rhs._hitFraction; } );
+        for ( const SweptOverlap2D& overlap : listSwept )
+        {
             physics.queueSweptOverlap2D( overlap );
         }
     }
 
     void BoxCollider2DComponent::releasePhysics( ScenePhysics& physics )
     {
+        _bSweepOriginValid = false; // 다시 켠 콜라이더가 꺼진 자리에서 쓸리지 않게
         if ( _body.isValid() == false )
             return;
         IPhysicsScene2D* pScene = physics.findScene2D();

@@ -7,6 +7,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
@@ -28,14 +29,16 @@ namespace sw
      *          바디는 상자(`getBounds`)를 그대로 따릅니다 — 매 물리 프레임 처음(`beginPhysicsFrame`)에 자리를 옮기고, 크기 · 레이어 · 트리거가 바뀌면
      *          다시 만듭니다. 상자는 축 정렬이라 바디는 돌지 않습니다.
      *
-     *          **연속 판정**(`_bContinuous`, 투사체): Box2D 센서는 연속 충돌이 없으므로, 지난 자리에서 지금 자리까지 상자를 쓸어(`shapeCastAll`) 지나친 것을
+     *          **연속 판정**(`_bContinuous`, 투사체): Box2D 센서는 연속 충돌이 없으므로, 지난 자리에서 지금 자리까지 상자를 쓸어 지나친 것을
      *          닿은 시점 순서로 알립니다(`ScenePhysics::queueSweptOverlap2D`, 시작과 끝을 함께). 지금 자리에서도 겹친 것은 센서가 시작을 냅니다.
+     *          가만히 있던 상대는 Box2D 쓸기(`shapeCastAll`)로, 같은 프레임에 움직인 상대는 두 이동의 차이(상대 운동, Box2D 총알 TOI)로 잽니다.
+     *          첫 프레임의 출발점은 시작할 때(`onBeginPlay`)의 자리입니다 — 바디가 첫 물리 프레임에 생겨도 시작 뒤 첫 틱의 이동이 쓸립니다.
      *          순간이동(`SceneComponent::teleportTo`)한 프레임은 쓸지 않습니다.
      */
     REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume", Meta = "Icon=Collider, IconColor=Physics" )
     class SW_API BoxCollider2DComponent : public PhysicsComponent
     {
-        friend class ScenePhysics; ///< 콜라이더 목록 자리(`_colliderIndex`)를 적는다
+        friend class ScenePhysics; ///< 콜라이더 목록 자리(`_colliderIndex`)를 적고, 모든 콜라이더를 옮긴 뒤 연속 판정의 쓸기를 부른다
 
     public:
         REFLECT_BODY();
@@ -49,6 +52,8 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 바디를 놓고 콜라이더 목록 · 씬 물리에서 빠집니다. */
         void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 지금 자리를 연속 판정의 첫 출발점으로 둡니다(바디는 첫 물리 프레임에 생긴다 — 그 사이의 이동도 쓸린다). */
+        void onBeginPlay() override;
 
         /** @brief 물리 레이어 번호입니다(`CollisionLayers`). 시작한 뒤에 바꿔도 다음 물리 프레임부터 그 레이어로 걸러집니다. */
         int32 getColliderType() const { return _colliderType; }
@@ -106,11 +111,15 @@ namespace sw
     private:
         /** @brief 지금 상자 · 레이어 · 트리거로 바디를 만듭니다. */
         void createBody( ScenePhysics& physics, const float2& center, const float2& halfExtents );
+        /** @brief 이번 물리 프레임에 바디가 옮겨졌는지입니다(출발점 `_frameFromCenter` 와 바디 중심이 다르다). 순간이동한 프레임은 옮겨지지 않은 것으로 봅니다. */
+        bool hasMovedThisFrame() const { return _body.isValid() && _frameFromCenter != _bodyCenter; }
         /**
-         * @brief 연속 판정 — @p from 에서 @p to 까지 상자를 쓸어 지나친 것을 씬 물리에 알립니다(`ScenePhysics::queueSweptOverlap2D`).
-         * @details 출발점에서 이미 겹친 것(닿은 시점 0)과 도착점에서도 겹친 것은 뺀다 — 앞은 지난 프레임의 센서가, 뒤는 이번 프레임의 센서가 시작을 낸다.
+         * @brief 연속 판정 — 이번 프레임의 출발점에서 바디 중심까지 상자를 쓸어 지나친 것을 씬 물리에 알립니다(`ScenePhysics::queueSweptOverlap2D`).
+         * @details 가만히 있던 바디는 Box2D 쓸기로, @p listMoved (이번 프레임에 움직인 콜라이더, 자기 포함)는 두 이동의 차이로 잰다. 움직인 바디를 Box2D
+         *          쓸기로 재면 상대가 이번 자리에 선 채로 측정돼 길을 가로질러 건너간 상대를 놓친다. 출발점에서 이미 겹친 것(닿은 시점 0)과 도착점에서도
+         *          겹친 것은 뺀다 — 앞은 지난 프레임의 센서가, 뒤는 이번 프레임의 센서가 시작을 낸다. 모든 콜라이더의 `beginPhysicsFrame` 뒤에 부른다.
          */
-        void sweepPassedBodies( ScenePhysics& physics, const float2& from, const float2& to, const float2& halfExtents );
+        void sweepPassedBodies( ScenePhysics& physics, const vector<BoxCollider2DComponent*>& listMoved );
 
         /**
          * @brief 콜라이더 오프셋 · 크기입니다.
@@ -127,11 +136,14 @@ namespace sw
         PROPERTY( Category = "Collider", DisplayName = "Is Trigger", Tooltip = "Reports overlaps but does not block - projectiles and attacks ignore it" )
         bool _bTrigger;
 
-        PhysicsBodyHandle _body;           ///< 2D 씬의 센서 바디(시작 전 · 꺼짐이면 무효)
-        float2            _bodyCenter;     ///< 바디에 준 마지막 중심(연속 판정의 출발점)
-        float2            _bodyHalfExtent; ///< 바디를 만든 반 크기(바뀌면 다시 만든다)
-        int32             _bodyLayer;      ///< 바디를 만든 레이어
-        bool              _bBodyTrigger;   ///< 바디를 만든 트리거 여부
-        uint32            _colliderIndex;  ///< 씬 물리의 콜라이더 목록 자리(`ScenePhysics::registerCollider2D`). 없으면 `kNotRegistered`
+        PhysicsBodyHandle _body;              ///< 2D 씬의 센서 바디(시작 전 · 꺼짐이면 무효)
+        float2            _bodyCenter;        ///< 바디에 준 마지막 중심(이번 프레임의 도착점)
+        float2            _bodyHalfExtent;    ///< 바디를 만든 반 크기(바뀌면 다시 만든다)
+        float2            _sweepOrigin;       ///< 다음 물리 프레임의 출발점 — 시작할 때의 자리, 그 뒤로는 지난 프레임의 중심
+        float2            _frameFromCenter;   ///< 이번 물리 프레임의 출발점(순간이동했거나 출발점이 없으면 도착점과 같다)
+        int32             _bodyLayer;         ///< 바디를 만든 레이어
+        bool              _bBodyTrigger;      ///< 바디를 만든 트리거 여부
+        bool              _bSweepOriginValid; ///< `_sweepOrigin` 이 있는지(시작 전 · 바디를 놓은 뒤에는 없다 — 다시 켠 콜라이더는 꺼진 자리에서 쓸리지 않는다)
+        uint32            _colliderIndex;     ///< 씬 물리의 콜라이더 목록 자리(`ScenePhysics::registerCollider2D`). 없으면 `kNotRegistered`
     };
 } // namespace sw
