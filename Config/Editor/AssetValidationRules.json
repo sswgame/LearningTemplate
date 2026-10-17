@@ -122,8 +122,8 @@
       "severity": "warning",
       "include_patterns": ["*.prefab.xml", "*.material", "*.mesh", "*/textures/*.dds", "*.ogg", "*.scene.xml"],
       "exclude_patterns": ["game/nilecity/models/*.mesh", "game/starskirmish/models/*.mesh", "game/harvestvalley/models/crop*.mesh",
-                           "game/empty/models/avatarsample_d.mesh", "common/prefabs/gimmicks/*"],
-      "exclude_reason": "meshes a game picks by name from a code table (path built at runtime), the merged mesh of a sectioned VRM import, and the gimmick prefab library"
+                           "game/empty/models/avatarsample_d.mesh", "common/prefabs/gimmicks/*", "common/sounds/*", "common/music/*"],
+      "exclude_reason": "meshes a game picks by name from a code table (path built at runtime), the merged mesh of a sectioned VRM import, the gimmick prefab library, and the shared CC0 audio library (common/audio.sources.json)"
     },
     {
       "name": "materials",
