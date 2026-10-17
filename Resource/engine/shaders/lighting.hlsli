@@ -241,20 +241,62 @@ bool swComputeLightIncidence( SwLightData light, float3 worldPosition, out float
 	return bLight3d;
 }
 
-/** @brief 이번 패스에 걸린 라이트 수입니다. 라이트 버퍼가 안 걸렸으면 0 이다(키라이트 폴백). */
+/** @brief 이번 패스에 바인딩된 라이트 수입니다. 라이트 버퍼가 바인딩되지 않았으면 0 이고, 그 씬은 앰비언트만 받습니다(키 라이트로 대신하지 않습니다). */
 uint swComputeLightCount()
 {
 	return ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
 }
 
 /**
- * @brief 이 표면을 씬의 **모든 라이트**로 셰이딩합니다.
+ * 라이트 순회 커서. 조명 식(`swShadeLights`, 셀 셰이딩 `toon.hlsl`)은 라이트를 이 커서로만 돕니다.
+ * 조명 식은 버퍼 번호를 직접 세지 않고, `swBeginLights` 로 커서를 연 뒤 `swNextLight` 가 거짓을 낼 때까지 돕니다.
+ * 어느 라이트를 도는지(목록 전체 또는 클러스터의 라이트 목록)는 이 두 함수만 압니다. 그래서 컬링 방식을 바꿔도 조명 식은 그대로입니다.
+ * 언리얼 `ForwardLightData` 의 그리드 순회, 유니티 Forward+ 의 `LIGHT_LOOP_BEGIN` 에 해당합니다.
+ *
+ *   SwLightCursor cursor = swBeginLights( worldPosition );
+ *   SwLightData   light;
+ *   while ( swNextLight( cursor, light ) ) { ... }
+ */
+struct SwLightCursor
+{
+	uint position; // 다음에 읽을 라이트 번호
+	uint end;      // 이 번호에 닿으면 끝난다
+};
+
+/** @brief 이 월드 위치를 비추는 라이트의 순회를 엽니다. 라이트 버퍼가 바인딩되지 않았으면 빈 커서입니다. */
+SwLightCursor swBeginLights( float3 worldPosition )
+{
+	SwLightCursor cursor;
+	cursor.position = 0u;
+	cursor.end      = swComputeLightCount();
+	return cursor;
+}
+
+/**
+ * @brief 커서의 다음 라이트를 @p outLight 에 꺼냅니다. 남은 라이트가 없으면 거짓이고, @p outLight 는 어느 조명 식도 받지 않는 원소(2D 그림자 세그먼트)입니다.
+ * @note early-return 이 없습니다. GL 드라이버가 early-return 형태를 잘못 컴파일한 적이 있습니다(binding.hlsli swComputeMorphElement).
+ *       남은 라이트가 없으면 버퍼를 읽지 않습니다. 바인딩되지 않은 버퍼를 읽으면 DX12 와 Vulkan 은 디바이스를 잃습니다.
+ */
+bool swNextLight( inout SwLightCursor inoutCursor, out SwLightData outLight )
+{
+	const bool bHasLight = inoutCursor.position < inoutCursor.end;
+	outLight.positionRadius = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+	outLight.colorIntensity = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+	outLight.directionType  = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_SHADOW2D );
+	outLight.params         = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+	if ( bHasLight )
+		outLight = g_SwLights[inoutCursor.position];
+	inoutCursor.position += bHasLight ? 1u : 0u;
+	return bHasLight;
+}
+
+/**
+ * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다.
  * @param albedo   표면 색 (앰비언트에도 곱해진다)
  * @param worldPosition 월드 위치 — 점광의 거리 감쇠에 쓴다
  * @param normal   월드 노멀 (정규화되어 있어야 한다)
  * @param shadow   `swSampleShadowAtWorld` 가 준 방향광 값 — `params.x` 가 켜진 방향광에만 곱한다(점광 · 스폿은 `swComputeLightShadow` 가 자기 타일을 읽는다)
- * @details 라이트 버퍼가 안 걸렸으면(`kInvalidIndex`) PassCB 의 키라이트 하나로 폴백한다 —
- *          라이트 컴포넌트가 없는 씬도 키라이트 하나로 그려진다.
+ * @details 3D 라이트가 하나도 없으면 앰비언트만 남습니다. 키 라이트로 대신 비추지 않습니다. 3D 씬은 방향광이나 스카이를 데이터로 가집니다(결정 기록 5-12 D2-13).
  */
 float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow )
 {
@@ -265,19 +307,14 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 	// 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
 	float3 lit = albedo * g_KeyLightColor.rgb * g_KeyLightColor.a;
 
-	const uint lightCount = swComputeLightCount();
-	// 3D 빛이 하나도 없으면(빛 목록이 비었거나 2D 빛 · 그림자 토막뿐) 키라이트 하나로 폴백한다 — 2D 빛을 둔 씬의 3D 물체가 까맣게 죽지 않게.
-	bool bAnyLight3d = false;
-
-	for ( uint lightIndex = 0u; lightIndex < lightCount; ++lightIndex )
+	SwLightCursor cursor = swBeginLights( worldPosition );
+	SwLightData   light;
+	while ( swNextLight( cursor, light ) )
 	{
-		const SwLightData light = g_SwLights[lightIndex];
-
 		float3 toLight;
 		float  attenuation;
 		if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
 			continue;
-		bAnyLight3d = true;
 
 		const float normalDotLight = saturate( dot( normal, toLight ) );
 		if ( normalDotLight * attenuation <= 0.0f )
@@ -285,13 +322,6 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 
 		const float shadowTerm = swComputeLightShadow( light, worldPosition, normal, shadow );
 		lit += albedo * normalDotLight * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
-	}
-
-	if ( bAnyLight3d == false )
-	{
-		const float3 keyDirection      = normalize( -g_KeyLightDirIntensity.xyz );
-		const float  keyNormalDotLight = saturate( dot( normal, keyDirection ) );
-		lit += albedo * keyNormalDotLight * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb * shadow;
 	}
 	return lit;
 }

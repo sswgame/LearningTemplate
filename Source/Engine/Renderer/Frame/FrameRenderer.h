@@ -507,16 +507,17 @@ namespace sw
         void applyViewPassConstants( FramePassContext& context );
 
         /**
-         * @brief 이번 프레임의 주 광원 값입니다. 패킷이 값을 실어 오면 그 값을, 아니면 기본값을 씁니다.
-         * @details 방향, 색, 세기, 그림자 행렬은 씬의 주 광원에서 온다. 아래 기본값은 주 광원이 없을 때의 폴백이다.
+         * @brief 이번 프레임의 주 광원 값입니다(`g_KeyLightDirIntensity` · `g_KeyLightColor`). 패킷이 값을 실어 오면 그 값을, 아니면 빛 없음을 씁니다.
+         * @details 방향, 색, 세기, 앰비언트는 씬의 주 광원에서 온다. 기본값은 "주 광원 없음" 이다. 세기와 색과 앰비언트가 0 이라 그 씬은 어둡게 그려진다
+         *          (결정 기록 5-12 D2-13: 라이트는 데이터가 정하고 키 라이트로 대신 비추지 않는다). 방향은 단위 벡터로 둔다. 셰이더가 정규화하기 때문이다(water.hlsl 반사).
          */
         struct FrameLightState
         {
-            float4 _dirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
-            float4 _colorAmbient{ 1.0f, 0.82f, 0.62f, 0.28f };
+            float4 _dirIntensity{ 0.0f, -1.0f, 0.0f, 0.0f };
+            float4 _colorAmbient{ 0.0f, 0.0f, 0.0f, 0.0f };
         };
         /**
-         * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(주광이 없다) 프레임 키 라이트로 폴백하고, 주 시점 뷰에 옮깁니다.
+         * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(게임 스레드가 배치를 만들지 않았다) 그림자 없는 뷰로 두고, 주 시점 뷰에 옮깁니다.
          * @details 라이트 버퍼 업로드보다 먼저 부른다 — 점광 · 스폿 타일 원소가 라이트 버퍼 꼬리에 붙는다.
          */
         void applyFrameShadow();

@@ -25,12 +25,9 @@ namespace sw
         const uint32 atlasResolution = getShadowMapResolution();
         if ( _frameShadow._layout.getAtlasResolution() != atlasResolution )
             _frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _frameShadow._layout.getCascadeCount(), static_cast<uint32>( _frameShadow._listLocalTile.size() ) );
-        // 주 광원이 없으면 프레임 키 라이트(기본 방향)의 작은 고정 볼륨으로 폴백한다. 라이트 컴포넌트가 없는 씬도 그림자가 진다.
+        // 게임 스레드가 그림자 배치를 만들지 않은 프레임(씬 없음)은 그림자 없는 뷰다. 빛이 없는데 그림자 볼륨을 지어내지 않는다.
         if ( _frameShadow._mainView._bValid == SW_FALSE )
-        {
-            const float4& dirIntensity = _frameLight._dirIntensity;
-            _frameShadow._mainView     = ShadowSetupUtil::makeFallbackShadow( float3{ dirIntensity._x, dirIntensity._y, dirIntensity._z }, _frameShadow );
-        }
+            _frameShadow._mainView = ShadowSetupUtil::makeUnshadowedView( _frameShadow._layout );
         _mainView._shadow = _frameShadow._mainView;
     }
 
@@ -52,7 +49,7 @@ namespace sw
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
         //
         // 뷰 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 설정한다. 패킷이 자기 뷰 행렬을 갖고 있으면 executePacket 이
-        // 그 위에 덮어쓴다. 그림자는 `applyFrameShadow` 가 준비한 주 시점의 것이다(주 광원이 없으면 키 라이트 폴백).
+        // 그 위에 덮어쓴다. 그림자는 `applyFrameShadow` 가 준비한 주 시점의 것이다(그림자 빛이 없으면 그림자 없는 뷰).
         applyViewShadowConstants( context, _mainView._shadow );
         view( RenderViewType::Shadow ).setViewProjection( _mainView._shadow._cullViewProj );
 

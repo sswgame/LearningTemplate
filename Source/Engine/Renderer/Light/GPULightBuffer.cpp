@@ -90,7 +90,7 @@ namespace sw
         if ( count == 0 )
         {
             // 버퍼는 그대로 둔다. 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그것이 비용이다.
-            // 셰이더는 g_SwLightCount 가 0 이면 PassCB 키라이트로 폴백한다.
+            // 셰이더는 g_SwLightCount 가 0 이면 빛을 돌지 않는다(앰비언트만).
             return;
         }
 

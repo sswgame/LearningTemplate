@@ -514,7 +514,7 @@ namespace sw
         hashed_string _swBatches{ "SwBatches" };
         /// @brief 그 테이블의 원소 수입니다. PassCB g_SwBatchCount 에 대응합니다.
         hashed_string _swBatchCount{ "g_SwBatchCount" };
-        /// @brief 씬 라이트 버퍼의 원소 수입니다. PassCB g_SwLightCount 에 대응하며, 0이면 셰이더가 키 라이트로 폴백합니다.
+        /// @brief 씬 라이트 버퍼의 빛 원소 수입니다. PassCB g_SwLightCount 에 대응하며, 0이면 셰이더가 빛을 돌지 않습니다(앰비언트만).
         hashed_string _swLightCount{ "g_SwLightCount" };
         /// @brief 정점 애니메이션(VAT) 테이블입니다. binding.hlsli g_SwVertexAnimation 과 "SwVertexAnimation" 에 대응하며, 패스당 한 번 바인딩합니다.
         hashed_string _swVertexAnimation{ "SwVertexAnimation" };

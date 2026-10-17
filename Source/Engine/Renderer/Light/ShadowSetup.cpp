@@ -12,12 +12,6 @@ namespace sw
     {
         struct ShadowSetupInternal
         {
-            /// @brief 키 라이트 폴백 볼륨 — 원점에서 빛 쪽으로 이만큼 물러나 원점을 본다(m).
-            static constexpr float32 kFallbackLightDistance = 2.0f;
-            /// @brief 키 라이트 폴백 볼륨의 한 변(m) — 기본 주광의 고정 볼륨(`_shadowExtent` 기본값의 두 배)과 같다.
-            static constexpr float32 kFallbackOrthoExtent = 2.0f / 0.9f;
-            /// @brief 키 라이트 폴백의 기본 빛 방향입니다(방향이 0 일 때).
-            static constexpr float3 kFallbackDirection{ 0.57735f, -0.57735f, 0.57735f };
             /// @brief 점광 · 스폿 칸 가장자리의 여유 텍셀 — PCF 3x3(쌍선형 2x2 탭)이 칸 밖을 읽지 않게 시야각을 넓힌다.
             static constexpr float32 kLocalGuardTexels = 3.0f;
             /// @brief 점광 · 스폿 그림자의 가까운 면 — 반경의 이 비율(최소 kLocalMinNearPlane m).
@@ -265,32 +259,19 @@ namespace sw
         return data;
     }
 
-    ViewShadowData ShadowSetupUtil::makeFallbackShadow( const float3& lightDirection, const FrameShadowData& frame )
+    ViewShadowData ShadowSetupUtil::makeUnshadowedView( const ShadowAtlasLayout& layout )
     {
-        using Internal   = ShadowSetupInternal;
-        float3 direction = lightDirection;
-        if ( direction.getLengthSquared() < MathUtil::kEpsilon )
-            direction = Internal::kFallbackDirection;
-        direction.normalize();
-        // 라이트를 원점 위(빛이 오는 쪽)에 두고 빛 방향을 따라 원점을 내려다본다. 깊이 범위는 **눈을 기준으로** 잡는다(DirectionalLightComponent::computeShadowViewProj 와 같은 규칙).
-        const float3                up   = MathUtil::abs( direction._y ) > 0.99f ? float3::Forward : float3::Up;
-        const float3                eye  = direction * -Internal::kFallbackLightDistance;
-        const float32               half = Internal::kFallbackOrthoExtent * 0.5f;
-        const uint32                tile = frame._layout.getCascadeTileResolution();
-        DirectionalShadowProjection projection{};
-        projection._lightView      = float4x4::makeLookAt( eye, float3::Zero, up );
-        projection._viewProj       = projection._lightView * float4x4::makeOrthographic( Internal::kFallbackOrthoExtent, Internal::kFallbackOrthoExtent,
-                                                                                         Internal::kFallbackLightDistance - half, Internal::kFallbackLightDistance + half );
-        projection._lightSpaceMin  = float3{ -half, -half, Internal::kFallbackLightDistance - half };
-        projection._lightSpaceMax  = float3{ half, half, Internal::kFallbackLightDistance + half };
-        projection._resolution     = MathUtil::max( tile, 1u );
-        projection._texelWorldSize = Internal::kFallbackOrthoExtent / static_cast<float32>( projection._resolution );
-        projection._depthRange     = Internal::kFallbackOrthoExtent;
-        projection._cascadeCount   = 1;
-        return makeViewShadow( projection, frame._layout, frame._listLocalBound );
+        // 행렬은 기본값으로 둔다 — 그림자를 받는 방향광(`params.x`)이 없으므로 셰이더는 이 볼륨을 읽지 않는다. 캐스케이드 하나 · 깊이 끝 무한이라 고르기만 성립한다.
+        ViewShadowData data           = ViewShadowData{};
+        data._cascadeCount            = 1;
+        data._cascadeLayout           = float4{ 1.0f, layout.getCascadeTileScale(), kCascadeBlendFraction, 0.0f };
+        data._arrCascade[0]           = float4{ 1.0f, 0.0f, 0.0f, DirectionalShadowCascade::kUnboundedDepth };
+        data._arrCascadeTile[0]._cell = layout.getCascadeCell( 0 );
+        data._bValid                  = SW_TRUE;
+        return data;
     }
 
-    void ShadowSetupUtil::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, bool bHasKeyLight, uint32 atlasResolution,
+    void ShadowSetupUtil::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution,
                                          const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         outFrame.clear();
@@ -307,17 +288,11 @@ namespace sw
                                          : pShadowLight->computeShadowProjection( tileResolution );
             outFrame._mainView = makeViewShadow( projection, outFrame._layout, outFrame._listLocalBound );
         }
-        else if ( bHasKeyLight )
+        else
         {
-            // 주광은 있는데 그림자를 드리우지 않는다 — 행렬 0 이면 그림자 패스는 아무것도 그리지 않고 셰이더는 늘 빛(1)을 읽는다.
-            outFrame._mainView                          = ViewShadowData{};
-            outFrame._mainView._cascadeCount            = 1;
-            outFrame._mainView._cascadeLayout           = float4{ 1.0f, outFrame._layout.getCascadeTileScale(), kCascadeBlendFraction, 0.0f };
-            outFrame._mainView._arrCascade[0]           = float4{ 1.0f, 0.0f, 0.0f, DirectionalShadowCascade::kUnboundedDepth };
-            outFrame._mainView._arrCascadeTile[0]._cell = outFrame._layout.getCascadeCell( 0 );
-            outFrame._mainView._bValid                  = SW_TRUE;
+            // 그림자를 드리우는 방향광이 없다(주광이 그림자를 끈 경우와 주광이 아예 없는 경우가 같다) — 그림자 없는 뷰다. 키 라이트로 볼륨을 대신 만들지 않는다.
+            outFrame._mainView = makeUnshadowedView( outFrame._layout );
         }
-        // 주광도 없으면 비워 둔다 — 렌더 스레드가 프레임 키 라이트로 폴백한다(`makeFallbackShadow`).
     }
 
     ViewShadowData ShadowSetupUtil::makeViewShadowFor( const DirectionalLightComponent* pShadowLight, const float4x4& viewProj, const FrameShadowData& frame )

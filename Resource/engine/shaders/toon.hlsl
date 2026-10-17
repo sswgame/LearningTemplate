@@ -119,7 +119,7 @@ float3 computeAmbient()
 /**
  * @brief 빛 목록 전부의 툰 셰이딩 합과 직접광의 합을 구합니다.
  * @param outDirectLighting 빛마다의 색 × 세기 × 감쇠 합(그림자 · 노멀과 무관) — 림 · 외곽선이 빛을 섞을 때 쓴다
- * @details 빛이 하나도 없으면 키라이트 하나로 폴백한다(swShadeLights 와 같은 규칙).
+ * @details 빛은 커서(lighting.hlsli swBeginLights)로 돈다. 3D 빛이 없으면 0 이다(swShadeLights 와 같은 규칙 — 키라이트로 대신하지 않는다).
  */
 float3 shadeToonLights( float3 litColor, float3 shadeColor, float3 worldPosition, float3 normal, float shadow, float shadingShift, float shadingToony,
                         float shadowReceive, out float3 outDirectLighting )
@@ -128,16 +128,14 @@ float3 shadeToonLights( float3 litColor, float3 shadeColor, float3 worldPosition
 	float3 directLighting = float3( 0.0f, 0.0f, 0.0f );
 	const float lower      = -1.0f + shadingToony;
 	const float upper      = 1.0f - shadingToony;
-	const uint  lightCount  = swComputeLightCount();
-	bool        bAnyLight3d = false;
-	for ( uint lightIndex = 0u; lightIndex < lightCount; ++lightIndex )
+	SwLightCursor cursor = swBeginLights( worldPosition );
+	SwLightData   light;
+	while ( swNextLight( cursor, light ) )
 	{
-		const SwLightData light = g_SwLights[lightIndex];
 		float3 toLight;
 		float  attenuation;
 		if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
 			continue;
-		bAnyLight3d = true;
 
 		// 그림자는 그것을 받는 빛(params.x)마다다 — 방향광은 캐스케이드, 점광 · 스폿은 자기 타일(swComputeLightShadow). 계단을 지난 뒤에 곱한다(MToon 1.0) — 그림자 경계도 그림자색으로 떨어진다.
 		const float shadowTerm = lerp( 1.0f, swComputeLightShadow( light, worldPosition, normal, shadow ), shadowReceive );
@@ -146,39 +144,26 @@ float3 shadeToonLights( float3 litColor, float3 shadeColor, float3 worldPosition
 		color += lerp( shadeColor, litColor, shading ) * radiance;
 		directLighting += radiance;
 	}
-
-	if ( bAnyLight3d == false )
-	{
-		const float3 keyDirection = normalize( -g_KeyLightDirIntensity.xyz );
-		const float  shading      = linearStep( lower, upper, dot( normal, keyDirection ) + shadingShift ) * lerp( 1.0f, shadow, shadowReceive );
-		const float3 radiance     = g_KeyLightColor.rgb * g_KeyLightDirIntensity.w;
-		color += lerp( shadeColor, litColor, shading ) * radiance;
-		directLighting += radiance;
-	}
 	outDirectLighting = directLighting;
 	return color;
 }
 
 /**
- * @brief 빛마다의 색 × 세기 × 감쇠 합입니다(노멀 · 그림자와 무관) — 외곽선이 빛을 섞을 때 쓴다. 빛이 없으면 키라이트입니다.
+ * @brief 빛마다의 색 × 세기 × 감쇠 합입니다(노멀 · 그림자와 무관) — 외곽선이 빛을 섞을 때 쓴다. 3D 빛이 없으면 0 입니다.
  */
 float3 computeDirectLighting( float3 worldPosition )
 {
-	float3     directLighting = float3( 0.0f, 0.0f, 0.0f );
-	const uint lightCount     = swComputeLightCount();
-	bool       bAnyLight3d    = false;
-	for ( uint lightIndex = 0u; lightIndex < lightCount; ++lightIndex )
+	float3        directLighting = float3( 0.0f, 0.0f, 0.0f );
+	SwLightCursor cursor         = swBeginLights( worldPosition );
+	SwLightData   light;
+	while ( swNextLight( cursor, light ) )
 	{
-		const SwLightData light = g_SwLights[lightIndex];
 		float3 toLight;
 		float  attenuation;
 		if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
 			continue;
-		bAnyLight3d = true;
 		directLighting += light.colorIntensity.rgb * light.colorIntensity.a * attenuation;
 	}
-	if ( bAnyLight3d == false )
-		directLighting = g_KeyLightColor.rgb * g_KeyLightDirIntensity.w;
 	return directLighting;
 }
 

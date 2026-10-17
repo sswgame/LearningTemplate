@@ -148,22 +148,22 @@ namespace sw
 
         /**
          * @brief 한 프레임의 그림자 배치를 만듭니다. @p inoutListLight 에서 그림자를 드리우는 점광과 스폿의 원소에 그림자 슬롯(`_params.x`, `_params.w`)을 씁니다.
-         * @param pShadowLight          그림자 맵의 방향광(`Scene::findShadowCastingDirectionalLight`). 없으면 주 시점 그림자는 비고 렌더러가 키 라이트로 폴백합니다.
+         * @param pShadowLight          그림자 맵의 방향광(`Scene::findShadowCastingDirectionalLight`). 없으면 주 시점은 그림자 없는 뷰(`makeUnshadowedView`)입니다.
          * @param pMainViewProj         주 시점 카메라의 뷰-투영. 없으면 고정 볼륨입니다.
-         * @param bHasKeyLight          씬에 주 광원이 있는가. 주 광원은 있는데 그림자 빛이 없으면 그림자가 지지 않습니다(행렬 0).
          * @param listShadowLightIndex  `collectSceneLights` 가 준 그림자를 드리우는 점광과 스폿의 원소 번호
+         * @details 주 시점 그림자(`outFrame._mainView`)는 늘 유효합니다. 그림자 빛이 없을 때 키 라이트로 볼륨을 대신 만들지 않습니다(결정 기록 5-12 D2-13).
          */
-        static void populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, bool bHasKeyLight, uint32 atlasResolution,
-                                   const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame );
+        static void populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution, const vector<uint32>& listShadowLightIndex,
+                                   vector<GPULight>& inoutListLight, FrameShadowData& outFrame );
 
         /** @brief 추가 뷰 하나의 방향광 그림자입니다. 그림자 빛이 없으면 프레임의 주 시점 값을 그대로 씁니다. */
         static ViewShadowData makeViewShadowFor( const DirectionalLightComponent* pShadowLight, const float4x4& viewProj, const FrameShadowData& frame );
 
         /**
-         * @brief 그림자 빛이 없을 때(키 라이트 폴백) 원점 둘레 작은 볼륨의 그림자입니다. 렌더 스레드가 패킷에 주 시점 그림자가 없을 때 씁니다.
-         * @param lightDirection 빛이 나아가는 방향(정규화되지 않아도 되며, 0 이면 기본 방향)
+         * @brief 그림자 없는 뷰입니다 — 행렬은 기본값이고, 그림자를 받는 방향광이 없으므로 셰이더는 이 볼륨을 읽지 않습니다.
+         * @details 그림자를 드리우는 방향광이 없는 프레임과, 렌더 스레드가 그림자 배치 없이 받은 프레임(게임 스레드가 씬을 그리지 않았다)이 씁니다.
          */
-        static ViewShadowData makeFallbackShadow( const float3& lightDirection, const FrameShadowData& frame );
+        static ViewShadowData makeUnshadowedView( const ShadowAtlasLayout& layout );
 
         /** @brief 점광과 스폿 그림자가 원하는 슬롯 수입니다(점광 6, 스폿 1의 합). 그 밖의 원소는 세지 않습니다. */
         static uint32 countLocalTiles( const vector<GPULight>& listLight, const vector<uint32>& listShadowLightIndex );
