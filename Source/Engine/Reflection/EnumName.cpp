@@ -9,7 +9,7 @@ namespace sw
     const utf8* getEnumName( const hashed_string& enumTypeFqn, int64 value )
     {
         const utf8* pName = findEnumName( enumTypeFqn, value );
-        return pName != nullptr ? pName : "Unknown";
+        return pName != nullptr ? pName : EnumNameCache::kUnknownName;
     }
 
     const utf8* findEnumName( const hashed_string& enumTypeFqn, int64 value )
@@ -18,5 +18,25 @@ namespace sw
             return nullptr;
         const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnumByTypeFqn( enumTypeFqn );
         return pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
+    }
+
+    const EnumInfo* EnumNameCache::find( const hashed_string& enumTypeFqn ) const
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return nullptr;
+        // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이나 해제가 끼면 옛 세대가 남아 다음 호출이 다시 찾는다.
+        const uint32 generation = TypeRegistry::getGeneration();
+        if ( _generation.load( std::memory_order_acquire ) == generation )
+        {
+            const EnumInfo* pCached = _pInfo.load( std::memory_order_acquire );
+            if ( pCached != nullptr )
+                return pCached;
+        }
+        const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnumByTypeFqn( enumTypeFqn );
+        if ( pInfo == nullptr )
+            return nullptr;
+        _pInfo.store( pInfo, std::memory_order_release );
+        _generation.store( generation, std::memory_order_release );
+        return pInfo;
     }
 } // namespace sw

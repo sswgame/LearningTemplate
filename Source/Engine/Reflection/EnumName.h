@@ -5,6 +5,9 @@
  *          언리얼 `UEnum::GetValueAsString`, Godot 의 `VARIANT_ENUM_CAST` + ClassDB 열거 상수와 같은 자리입니다.
  *          철자가 열거자 이름과 다른 와이어 · 데이터 문자열(`AdminRole` 의 `"viewer"`, 지표 라벨)은 이 함수가 아니라 그 형식의 이름 표가 정본입니다.
  *          레지스트리는 엔진 범위의 `TypeRegistry` 이므로 Engine 밖(GameFramework · Editor · 게임)에서도 범위를 몰라도 씁니다.
+ *
+ *          템플릿 `getEnumName<E>` 는 찾은 `EnumInfo` 를 열거형마다 함수 지역 캐시(`EnumNameCache`)에 둡니다. 호출마다 잠금과 해시 맵 조회를 하지 않습니다.
+ *          열거자 값이 `0..N-1` 로 빈틈없으면 이름도 배열 인덱스로 찾습니다(`EnumInfo::_pArrDenseName`).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -22,12 +25,37 @@ namespace sw
      * @details 표시용 `getEnumName` 과 달리 대신 쓸 이름이 없습니다. 이름이 와이어 해시에 들어가는 곳(`OnlineProtocolEntry::computeMethodHash`)처럼 없으면 멈춰야 하는 쪽이 씁니다.
      */
     SW_API const utf8* findEnumName( const hashed_string& enumTypeFqn, int64 value );
+} // namespace sw
 
+namespace sw
+{
+    /**
+     * @brief 열거형 하나의 `findEnumByTypeFqn` 결과를 타입 테이블 세대와 함께 기록해 두는 캐시입니다.
+     * @details `EnumInfo` 의 주소는 레지스트리 안에서 고정이지만(묘비), 모듈 해제는 FQN 조회를 nullptr 로 바꾸고 레지스트리 파괴는 객체를 지웁니다.
+     *          둘 다 세대(`TypeRegistry::getGeneration`)를 올리므로, 세대가 그대로일 때만 기록한 포인터를 씁니다. 찾지 못한 결과는 기록하지 않습니다.
+     */
+    struct SW_API EnumNameCache
+    {
+        static constexpr const utf8* kUnknownName = "Unknown"; ///< 표시용 `getEnumName` 이 이름을 찾지 못했을 때 돌려주는 글입니다
+
+        mutable atomic<const EnumInfo*> _pInfo{ nullptr };
+        mutable atomic<uint32>          _generation{ 0 }; ///< `_pInfo` 를 찾은 세대입니다
+
+        /** @brief @p enumTypeFqn 의 EnumInfo 입니다. 엔진 서비스가 없거나 등록되지 않았으면 nullptr 입니다. */
+        const EnumInfo* find( const hashed_string& enumTypeFqn ) const;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief @p value 의 열거자 이름입니다. `ENUM()` 이 없거나 범위 밖(`Count` 포함)이면 `"Unknown"` 입니다. */
     template <typename E>
     const utf8* getEnumName( E value )
     {
         static_assert( std::is_enum_v<E>, "getEnumName requires an enum type" );
-        return getEnumName( typeFqn<E>(), static_cast<int64>( value ) );
+        static const EnumNameCache s_cache;
+        const EnumInfo*            pInfo = s_cache.find( typeFqn<E>() );
+        const utf8*                pName = pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( value ) ) : nullptr;
+        return pName != nullptr ? pName : EnumNameCache::kUnknownName;
     }
 } // namespace sw
