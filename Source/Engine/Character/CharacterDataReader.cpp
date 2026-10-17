@@ -94,54 +94,41 @@ namespace sw
         addError( node, "is not a known element here" );
     }
 
-    float32 CharacterDataReader::readFloat( const XMLNode& node, const utf8* pName, float32 fallback )
+    const utf8* CharacterDataReader::findRequiredText( const XMLNode& node, const utf8* pName )
     {
         const utf8* pText = node.findAttribute( pName );
         if ( pText == nullptr )
-            return fallback;
-        float32 value = fallback;
+            addError( node, string( "needs attribute '" ) + pName + "'" );
+        return pText;
+    }
+
+    float32 CharacterDataReader::parseFloatText( const XMLNode& node, const utf8* pName, const utf8* pText )
+    {
+        float32 value = 0.0f;
         if ( StringUtil::parseFloat( StringUtil::trim( string_view( pText ) ), value ) == false )
-        {
             addError( node, string( "attribute '" ) + pName + "' is not a number: '" + pText + "'" );
-            return fallback;
-        }
         return value;
     }
 
-    int32 CharacterDataReader::readInt( const XMLNode& node, const utf8* pName, int32 fallback )
+    int32 CharacterDataReader::parseIntText( const XMLNode& node, const utf8* pName, const utf8* pText )
     {
-        const utf8* pText = node.findAttribute( pName );
-        if ( pText == nullptr )
-            return fallback;
-        int32 value = fallback;
+        int32 value = 0;
         if ( StringUtil::parseInt( StringUtil::trim( string_view( pText ) ), value ) == false )
-        {
             addError( node, string( "attribute '" ) + pName + "' is not an integer: '" + pText + "'" );
-            return fallback;
-        }
         return value;
     }
 
-    bool CharacterDataReader::readBool( const XMLNode& node, const utf8* pName, bool fallback )
+    bool CharacterDataReader::parseBoolText( const XMLNode& node, const utf8* pName, const utf8* pText )
     {
-        const utf8* pText = node.findAttribute( pName );
-        if ( pText == nullptr )
-            return fallback;
-        bool value = fallback;
+        bool value = false;
         if ( StringUtil::tryParseBool( StringUtil::trim( string_view( pText ) ), value ) == false )
-        {
             addError( node, string( "attribute '" ) + pName + "' is not a boolean: '" + pText + "'" );
-            return fallback;
-        }
         return value;
     }
 
-    float3 CharacterDataReader::readFloat3( const XMLNode& node, const utf8* pName, const float3& fallback )
+    float3 CharacterDataReader::parseFloat3Text( const XMLNode& node, const utf8* pName, const utf8* pText )
     {
-        float3      value = fallback;
-        const utf8* pText = node.findAttribute( pName );
-        if ( pText == nullptr )
-            return value;
+        float3              value{};
         vector<string_view> listToken;
         splitTokens( string_view( pText ), listToken );
         bool bOk = listToken.size() == 3;
@@ -150,19 +137,73 @@ namespace sw
             bOk = StringUtil::parseFloat( listToken[axis], value.data()[axis] );
         }
         if ( bOk == false )
-        {
             addError( node, string( "attribute '" ) + pName + "' is not three numbers: '" + pText + "'" );
-            value = fallback;
-        }
         return value;
     }
 
-    quaternion CharacterDataReader::readRotation( const XMLNode& node, const utf8* pName, const quaternion& fallback )
+    quaternion CharacterDataReader::parseRotationText( const XMLNode& node, const utf8* pName, const utf8* pText )
     {
-        if ( hasAttribute( node, pName ) == false )
-            return fallback;
-        const float3 degrees = readFloat3( node, pName, float3::Zero );
-        return quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
+        return quaternion::makeFromYawPitchRoll( parseFloat3Text( node, pName, pText ) * MathUtil::kDegreeToRadian );
+    }
+
+    float32 CharacterDataReader::readFloat( const XMLNode& node, const utf8* pName )
+    {
+        const utf8* pText = findRequiredText( node, pName );
+        return pText != nullptr ? parseFloatText( node, pName, pText ) : 0.0f;
+    }
+
+    int32 CharacterDataReader::readInt( const XMLNode& node, const utf8* pName )
+    {
+        const utf8* pText = findRequiredText( node, pName );
+        return pText != nullptr ? parseIntText( node, pName, pText ) : 0;
+    }
+
+    bool CharacterDataReader::readBool( const XMLNode& node, const utf8* pName )
+    {
+        const utf8* pText = findRequiredText( node, pName );
+        return pText != nullptr && parseBoolText( node, pName, pText );
+    }
+
+    float3 CharacterDataReader::readFloat3( const XMLNode& node, const utf8* pName )
+    {
+        const utf8* pText = findRequiredText( node, pName );
+        return pText != nullptr ? parseFloat3Text( node, pName, pText ) : float3{};
+    }
+
+    quaternion CharacterDataReader::readRotation( const XMLNode& node, const utf8* pName )
+    {
+        const utf8* pText = findRequiredText( node, pName );
+        return pText != nullptr ? parseRotationText( node, pName, pText ) : quaternion::Identity;
+    }
+
+    float32 CharacterDataReader::readOptionalFloat( const XMLNode& node, const utf8* pName, float32 absentValue )
+    {
+        const utf8* pText = node.findAttribute( pName );
+        return pText != nullptr ? parseFloatText( node, pName, pText ) : absentValue;
+    }
+
+    int32 CharacterDataReader::readOptionalInt( const XMLNode& node, const utf8* pName, int32 absentValue )
+    {
+        const utf8* pText = node.findAttribute( pName );
+        return pText != nullptr ? parseIntText( node, pName, pText ) : absentValue;
+    }
+
+    bool CharacterDataReader::readOptionalBool( const XMLNode& node, const utf8* pName, bool bAbsentValue )
+    {
+        const utf8* pText = node.findAttribute( pName );
+        return pText != nullptr ? parseBoolText( node, pName, pText ) : bAbsentValue;
+    }
+
+    float3 CharacterDataReader::readOptionalFloat3( const XMLNode& node, const utf8* pName, const float3& absentValue )
+    {
+        const utf8* pText = node.findAttribute( pName );
+        return pText != nullptr ? parseFloat3Text( node, pName, pText ) : absentValue;
+    }
+
+    quaternion CharacterDataReader::readOptionalRotation( const XMLNode& node, const utf8* pName, const quaternion& absentValue )
+    {
+        const utf8* pText = node.findAttribute( pName );
+        return pText != nullptr ? parseRotationText( node, pName, pText ) : absentValue;
     }
 
     hashed_string CharacterDataReader::readName( const XMLNode& node, const utf8* pName, bool bRequired )

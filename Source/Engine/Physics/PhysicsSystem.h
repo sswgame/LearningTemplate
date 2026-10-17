@@ -30,8 +30,8 @@ namespace sw
         PhysicsSystem& operator=( const PhysicsSystem& ) = delete;
 
         /**
-         * @brief 설정 테이블을 읽고 백엔드를 초기화합니다. 테이블이 없으면 기본값(레이어와 재질 `Default`)으로 시작하고 경고를 남깁니다.
-         *        테이블이 틀리면(모르는 이름 등) 오류를 남기고 false 를 반환하며, 백엔드를 초기화하지 못해도 false 를 반환합니다.
+         * @brief 설정 테이블을 읽고 백엔드를 초기화합니다. 테이블이 없거나 틀리면(모르는 이름, 빈 레이어 · 재질 표 등) 오류를 남기고 false 를 반환하며,
+         *        백엔드를 초기화하지 못해도 false 를 반환합니다. 코드의 기본 표로 대신하지 않습니다.
          */
         [[nodiscard]] bool initialize( string_view settingsPath = kSettingsPath );
         /** @brief 백엔드를 내립니다. 이 서비스로 만든 씬은 먼저 모두 사라져 있어야 합니다. */
@@ -54,11 +54,11 @@ namespace sw
 
         /** @brief 지금 설정으로 3D 씬을 만듭니다. 올라와 있지 않으면 nullptr 입니다. */
         unique_ptr<IPhysicsScene3D> createScene3D() const;
-        /** @brief 주어진 설정으로 3D 씬을 만듭니다(테스트와 미리보기 월드에 씁니다). */
+        /** @brief 주어진 설정으로 3D 씬을 만듭니다(테스트와 미리보기 월드에 씁니다). 설정이 검사(`PhysicsSettings::validate`)에 지면 nullptr 입니다. */
         unique_ptr<IPhysicsScene3D> createScene3D( const PhysicsSettings& settings ) const;
         /** @brief 지금 설정으로 2D 씬을 만듭니다. */
         unique_ptr<IPhysicsScene2D> createScene2D() const;
-        /** @brief 주어진 설정으로 2D 씬을 만듭니다. */
+        /** @brief 주어진 설정으로 2D 씬을 만듭니다. 설정이 검사에 지면 nullptr 입니다. */
         unique_ptr<IPhysicsScene2D> createScene2D( const PhysicsSettings& settings ) const;
 
         /** @brief 읽은 설정 표입니다. */

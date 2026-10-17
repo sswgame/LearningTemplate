@@ -25,7 +25,18 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 인자 하나를 선언된 종류로 읽습니다. */
+            /** @brief 적지 않은 선택 인자 하나를 선언의 "적지 않음" 값으로 만듭니다. */
+            static AnimationNotifyParam makeAbsentParam( const AnimationNotifyParamDef& def )
+            {
+                AnimationNotifyParam param;
+                param._name   = hashed_string( def._pName );
+                param._kind   = def._kind;
+                param._number = def._absentNumber;
+                param._bValue = def._bAbsentBool;
+                return param;
+            }
+
+            /** @brief 인자 하나를 선언된 종류로 읽습니다. 값이 틀리면 리더에 오류가 쌓이고 로드가 실패합니다. */
             static AnimationNotifyParam readParam( const XMLNode& node, const AnimationNotifyParamDef& def, CharacterDataReader& reader )
             {
                 AnimationNotifyParam param;
@@ -47,17 +58,17 @@ namespace sw
                     }
                     case AnimationNotifyParamKind::Float:
                     {
-                        param._number = reader.readFloat( node, def._pName, 0.0f );
+                        param._number = reader.readFloat( node, def._pName );
                         break;
                     }
                     case AnimationNotifyParamKind::Vector:
                     {
-                        param._vector = reader.readFloat3( node, def._pName, float3{} );
+                        param._vector = reader.readFloat3( node, def._pName );
                         break;
                     }
                     case AnimationNotifyParamKind::Bool:
                     {
-                        param._bValue = reader.readBool( node, def._pName, false );
+                        param._bValue = reader.readBool( node, def._pName );
                         break;
                     }
                 }
@@ -79,34 +90,41 @@ namespace sw
         return nullptr;
     }
 
-    hashed_string AnimationNotifyEntry::getNameParam( const hashed_string& name, const hashed_string& fallback ) const
+    const AnimationNotifyParam* AnimationNotifyEntry::findDeclaredParam( const hashed_string& name ) const
     {
         const AnimationNotifyParam* pParam = findParam( name );
-        return pParam != nullptr ? pParam->_nameValue : fallback;
+        SW_LOG_ASSERT( pParam != nullptr, "Handler '%#' asked for argument '%#' it does not declare", _handlerName.c_str(), name.c_str() );
+        return pParam;
+    }
+
+    hashed_string AnimationNotifyEntry::getNameParam( const hashed_string& name ) const
+    {
+        const AnimationNotifyParam* pParam = findDeclaredParam( name );
+        return pParam != nullptr ? pParam->_nameValue : hashed_string{};
     }
 
     string AnimationNotifyEntry::getTextParam( const hashed_string& name ) const
     {
-        const AnimationNotifyParam* pParam = findParam( name );
+        const AnimationNotifyParam* pParam = findDeclaredParam( name );
         return pParam != nullptr ? pParam->_text : string{};
     }
 
-    float32 AnimationNotifyEntry::getFloatParam( const hashed_string& name, float32 fallback ) const
+    float32 AnimationNotifyEntry::getFloatParam( const hashed_string& name ) const
     {
-        const AnimationNotifyParam* pParam = findParam( name );
-        return pParam != nullptr ? pParam->_number : fallback;
+        const AnimationNotifyParam* pParam = findDeclaredParam( name );
+        return pParam != nullptr ? pParam->_number : 0.0f;
     }
 
-    float3 AnimationNotifyEntry::getVectorParam( const hashed_string& name, const float3& fallback ) const
+    float3 AnimationNotifyEntry::getVectorParam( const hashed_string& name ) const
     {
-        const AnimationNotifyParam* pParam = findParam( name );
-        return pParam != nullptr ? pParam->_vector : fallback;
+        const AnimationNotifyParam* pParam = findDeclaredParam( name );
+        return pParam != nullptr ? pParam->_vector : float3{};
     }
 
-    bool AnimationNotifyEntry::getBoolParam( const hashed_string& name, bool fallback ) const
+    bool AnimationNotifyEntry::getBoolParam( const hashed_string& name ) const
     {
-        const AnimationNotifyParam* pParam = findParam( name );
-        return pParam != nullptr ? pParam->_bValue : fallback;
+        const AnimationNotifyParam* pParam = findDeclaredParam( name );
+        return pParam != nullptr && pParam->_bValue;
     }
 } // namespace sw
 
@@ -178,12 +196,15 @@ namespace sw
             if ( bBaseField == false && AnimationNotifyTableInternal::findParamDef( listDef, pName ) == nullptr )
                 reader.addError( node, string( "has unknown argument '" ) + pName + "' for handler '" + entry._handlerName.c_str() + "'" );
         }
+        // 선언한 인자는 모두 채운다 — 적지 않은 선택 인자는 선언의 "적지 않음" 값이고, 처리기는 대신할 값을 따로 들지 않는다.
         for ( const AnimationNotifyParamDef& def : listDef )
         {
             if ( CharacterDataReader::hasAttribute( node, def._pName ) )
                 entry._listParam.push_back( AnimationNotifyTableInternal::readParam( node, def, reader ) );
             else if ( def._bRequired )
                 reader.addError( node, string( "needs argument '" ) + def._pName + "' for handler '" + entry._handlerName.c_str() + "'" );
+            else
+                entry._listParam.push_back( AnimationNotifyTableInternal::makeAbsentParam( def ) );
         }
         if ( findEntry( entry._notify ) != nullptr )
         {

@@ -32,20 +32,26 @@ namespace sw
              */
             inline static std::once_flag _s_initOnce{};
 
-            /** @brief 구성 때 구운 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다. */
+            /**
+             * @brief 구성 때 구운 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다.
+             * @details 빈 목록은 "읽지 못함" 의 표식이다 — `initialize()` 가 보고 실패로 멈춘다(빈 검색 목록으로 계속하지 않는다).
+             */
             static vector<string> readBasePriority()
             {
                 vector<string> listPriority;
                 JSONDocument   document;
                 if ( document.parse( shipping_host::kEngineConfigJSON, "EngineConfig.json (configure-time copy)" ) == false )
+                {
+                    SW_LOG_ERROR( "EngineConfig.json (configure-time copy) could not be parsed: %#", document.getLastError() );
                     return listPriority;
+                }
                 const JSONValue priority = document.getRoot().get( "_listResourcePriority", false );
                 for ( size_t index = 0; index < priority.size(); ++index )
                 {
                     listPriority.push_back( priority.at( index ).asString() );
                 }
                 if ( listPriority.empty() )
-                    SW_LOG_ERROR( "EngineConfig.json has no _listResourcePriority - resource lookups before the config loads find nothing" );
+                    SW_LOG_ERROR( "EngineConfig.json has no _listResourcePriority - resource paths cannot be initialized" );
                 return listPriority;
             }
 
@@ -237,6 +243,8 @@ namespace sw
 
             if ( _s_listSearchPriority.empty() )
                 _s_listSearchPriority = getDefaultSearchPriority();
+            if ( _s_listSearchPriority.empty() )
+                return; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 initialize() 가 false 를 반환한다(오류는 readBasePriority 가 남겼다).
 
             setSearchPriority( _s_listSearchPriority );
 

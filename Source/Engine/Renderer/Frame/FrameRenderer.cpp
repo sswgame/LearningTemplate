@@ -170,6 +170,15 @@ namespace sw
             return false;
         }
 
+        // 2D 정렬 레이어 표는 엔진 필수 데이터다. 주 렌더러가 기동 때 읽고, 못 읽으면 초기화가 실패한다(미리보기 렌더러는 같은 표를 쓴다).
+        if ( _bScenePreview == SW_FALSE && Render2DSettings::reloadActive() == false )
+        {
+            _status        = FrameRendererStatus::Failed;
+            _statusMessage = "2D render settings (render2d.xml) could not be loaded";
+            SW_LOG_ERROR( "initialize: %#", _statusMessage );
+            return false;
+        }
+
         // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).
         if ( gv_viewMode > 0 )
             setViewMode( static_cast<RenderViewMode>( gv_viewMode ) );

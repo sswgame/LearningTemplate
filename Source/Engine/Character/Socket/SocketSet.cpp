@@ -194,17 +194,17 @@ namespace sw
         }
         if ( CharacterDataReader::hasAttribute( node, "translation" ) )
         {
-            socket._translation = reader.readFloat3( node, "translation", float3::Zero );
+            socket._translation = reader.readFloat3( node, "translation" );
             socket._fieldMask |= SocketFieldBit::kTranslation;
         }
         if ( CharacterDataReader::hasAttribute( node, "rotation" ) )
         {
-            socket._rotation = reader.readRotation( node, "rotation", quaternion::Identity );
+            socket._rotation = reader.readRotation( node, "rotation" );
             socket._fieldMask |= SocketFieldBit::kRotation;
         }
         if ( CharacterDataReader::hasAttribute( node, "scale" ) )
         {
-            socket._scale = reader.readFloat3( node, "scale", float3( 1.0f ) );
+            socket._scale = reader.readFloat3( node, "scale" );
             socket._fieldMask |= SocketFieldBit::kScale;
         }
         if ( CharacterDataReader::hasAttribute( node, "preview" ) )
@@ -234,7 +234,7 @@ namespace sw
         virtualBone._name                 = reader.readName( node, "name", true );
         virtualBone._from                 = reader.readName( node, "from", true );
         virtualBone._to                   = reader.readName( node, "to", true );
-        virtualBone._weight               = reader.readFloat( node, "weight", 0.5f );
+        virtualBone._weight               = reader.readOptionalFloat( node, "weight", 0.5f );
         const bool bIncompleteVirtualBone = virtualBone._name.empty() || virtualBone._from.empty() || virtualBone._to.empty();
         if ( bIncompleteVirtualBone )
             return;

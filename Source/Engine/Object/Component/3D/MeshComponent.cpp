@@ -81,8 +81,9 @@ namespace sw
             borrowedPath = path;
             if ( pMaterial == nullptr )
             {
-                // 못 읽은 머티리얼은 마젠타 체커로 보인다 — 씬 기본(흰색)이면 화면에서 빠진 것을 알 수 없다.
-                const string& missingPath = engine::getSubsystem<EngineDefaultAssets>()._missingMaterial.get();
+                // 못 읽은 머티리얼은 마젠타 체커로 보인다 — 씬 기본(흰색)이면 화면에서 빠진 것을 알 수 없다. 대체를 정하는 곳은 여기 한 곳이다.
+                // 파일은 있는데 내용이 틀린 머티리얼은 GPU 에 올릴 때(`Material::initialize`) 실패해 그려지지 않고 오류가 남는다.
+                const string& missingPath = engine::getSubsystem<EngineDefaultAssets>()._missingMaterial;
                 SW_LOG_ERROR( "Material '%#' could not be acquired - the mesh uses the missing-material checker '%#'", path.c_str(), missingPath.c_str() );
                 borrowedPath = hashed_string( missingPath.c_str() );
                 pMaterial    = cache.acquire( borrowedPath.c_str(), nullptr );

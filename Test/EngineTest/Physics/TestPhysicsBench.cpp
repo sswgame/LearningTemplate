@@ -101,8 +101,7 @@ namespace
      */
     void measureBox2DSteps( uint32 workerCount, sw::vector<int64>& outListSample )
     {
-        sw::PhysicsSettings settings;
-        settings.ensureDefaults();
+        sw::PhysicsSettings settings               = sw::engine::getSubsystem<sw::PhysicsSystem>().getSettings(); // 엔진 설정 표(physicssettings.xml)
         settings._workerCount2D                    = workerCount;
         sw::unique_ptr<sw::IPhysicsScene2D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene2D( settings );
         outListSample.clear();
@@ -200,9 +199,8 @@ SW_TEST_CASE( PhysicsBenchTest, JoltStepWithAndWithoutCloth )
     constexpr float32 kStep             = 1.0f / 60.0f;
     for ( const bool bWithCloth : { false, true } )
     {
-        sw::PhysicsSettings settings;
-        settings.ensureDefaults();
-        sw::unique_ptr<sw::IPhysicsScene3D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D( settings );
+        const sw::PhysicsSettings           settings = sw::engine::getSubsystem<sw::PhysicsSystem>().getSettings(); // 엔진 설정 표(physicssettings.xml)
+        sw::unique_ptr<sw::IPhysicsScene3D> pScene   = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D( settings );
         SW_ASSERT_TRUE( pScene != nullptr );
         sw::PhysicsBodyDesc3D  floorDesc;
         sw::PhysicsShapeDesc3D floorShape;

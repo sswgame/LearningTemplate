@@ -95,9 +95,7 @@ namespace
 
     sw::unique_ptr<sw::IPhysicsScene3D> makeScene()
     {
-        sw::PhysicsSettings settings;
-        settings.ensureDefaults();
-        return sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D( settings );
+        return sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D(); // 엔진 설정 표(physicssettings.xml)로
     }
 
     sw::PhysicsShapeDesc3D makeMeshShape( sw::PhysicsShapeType3D type, const sw::string& meshPath )

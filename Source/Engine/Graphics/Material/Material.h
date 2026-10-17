@@ -143,8 +143,9 @@ namespace sw
         /**
          * @brief Texture2D 프로퍼티 중 assetPath 가 있는 것을 TextureCache 에서 빌려 SRV 인덱스를 패킹합니다.
          * @details initialize 끝에서 부른다(CB 가 있어야 인덱스가 GPU 에 올라간다). releaseRHI 와 forgetRHI 가 releaseTextureAssets 로 되돌린다.
+         *          못 읽은 텍스처는 엔진의 누락 텍스처 체커를 빌린다. 체커마저 못 읽으면 오류를 남기고 false 다(흰색으로 대신하지 않는다).
          */
-        void resolveTextureAssets( IRHIDevice* pRHI );
+        [[nodiscard]] bool resolveTextureAssets( IRHIDevice* pRHI );
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 반환합니다. */
         void releaseTextureAssets( IRHIDevice* pRHI );
         /**

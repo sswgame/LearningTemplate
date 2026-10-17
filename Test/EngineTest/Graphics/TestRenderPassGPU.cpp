@@ -4668,7 +4668,7 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
         material->releaseTextureAssets( device.get() );
         {
             SW_TEST_DEFENSIVE_SCOPE( "the material names a texture that does not exist" );
-            material->resolveTextureAssets( device.get() );
+            SW_EXPECT_TRUE( material->resolveTextureAssets( device.get() ) ); // 체커는 읽히므로 성공이다
         }
 
         const sw::Texture2D* pChecker = textures.find( missingTexture );

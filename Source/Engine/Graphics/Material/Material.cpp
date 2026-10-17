@@ -101,23 +101,19 @@ namespace sw
         _pRHIDevice = pRHI;
         _assetPath  = assetRelativePath;
 
+        // 못 읽은 머티리얼은 빈 값으로 올리지 않고 실패한다. 대신 그릴 것(마젠타 `missingmaterial`)은 부르는 쪽 한 곳이 정한다(`MeshComponent::resolveMaterialAsset`).
         AssetLoadScope loadScope( "Material", assetRelativePath );
         if ( loadFromFile( assetRelativePath ) == false )
-            SW_LOG_WARNING( "Failed to load material file '%#'. Using fallback defaults.", assetRelativePath );
+        {
+            SW_LOG_ERROR( "Material file '%#' could not be loaded", assetRelativePath );
+            return false;
+        }
         loadScope.beginPhase( AssetLoadPhase::Upload );
 
-        uint32 bufferSize = static_cast<uint32>( _data._bytes.size() );
-        if ( bufferSize == 0 )
-        {
-            bufferSize = 256;
-            _data._bytes.resize( bufferSize, 0 );
-        }
-        else
-        {
-            const uint32 alignedSize = MathUtil::align( bufferSize, 256u );
-            _data._bytes.resize( alignedSize, 0 );
-            bufferSize = alignedSize;
-        }
+        // 상수 버퍼는 256 바이트 단위다(D3D12 CBV 정렬). 파라미터가 없는 머티리얼도 한 단위를 잡는다 — 셰이더가 원소 하나를 읽는다.
+        constexpr uint32 kConstantBufferAlignment = 256u;
+        const uint32     bufferSize               = MathUtil::align( MathUtil::max( static_cast<uint32>( _data._bytes.size() ), 1u ), kConstantBufferAlignment );
+        _data._bytes.resize( bufferSize, 0 );
         ++_bufferGeneration; // 크기를 256 정렬로 맞췄다
 
         _constantBuffer = pRHI->getResourceFactory()->createConstantBuffer( bufferSize );
@@ -131,7 +127,11 @@ namespace sw
         _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSrv( _constantBuffer );
 
         // 텍스처는 CB 가 생긴 뒤에 푼다. setTextureParameter 가 인덱스를 CB 에 바로 올리기 때문이다.
-        resolveTextureAssets( pRHI );
+        if ( resolveTextureAssets( pRHI ) == false )
+        {
+            releaseRHI( pRHI ); // 반쯤 올린 상태(CB 만 있음)를 "올라갔다"(`isRHIValid`)로 남기지 않는다
+            return false;
+        }
 
         SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
         loadScope.setBytes( _data._bytes.size() );
@@ -140,10 +140,10 @@ namespace sw
         return _descriptorIndex != kInvalidDescriptorIndex;
     }
 
-    void Material::resolveTextureAssets( IRHIDevice* pRHI )
+    bool Material::resolveTextureAssets( IRHIDevice* pRHI )
     {
         if ( pRHI == nullptr || engine::areEngineServicesBound() == false )
-            return;
+            return true; // 엔진 서비스 없이 도는 도구 · 테스트는 텍스처를 풀지 않는다(텍스처 캐시가 없다)
 
         // DX12 · Vulkan 은 셰이더가 전역 bindless 인덱스로 힙 · 배열을 직접 읽는다. DX11 · GL 은 그게 안 되므로
         // (SM5.0 은 리소스 배열 동적 인덱싱이 없고, GL 은 SPIR-V 라 ARB_bindless_texture 를 못 쓴다) 엔진이
@@ -173,9 +173,10 @@ namespace sw
                 pTexture     = textures.acquire( borrowedPath, pRHI );
                 if ( pTexture == nullptr )
                 {
-                    SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded and neither could the missing-texture checker — sampling falls back to white.",
-                                  _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str() );
-                    continue;
+                    // 체커는 엔진 필수 데이터다. 그것마저 없으면 흰색으로 그리지 않고 머티리얼 초기화가 실패한다.
+                    SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded and neither could the missing-texture checker '%#'",
+                                  _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
+                    return false;
                 }
                 SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded — sampling the missing-texture checker '%#'.",
                               _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
@@ -196,6 +197,7 @@ namespace sw
             _listMaterialTextureName.emplace_back( prop._name.c_str() );
             setTextureParameter( pRHI, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSrv() : ordinal );
         }
+        return true;
     }
 
     bool Material::refreshTextureBindings()
@@ -881,7 +883,8 @@ namespace sw
                     continue;
                 if ( prop._shaderKeyword.empty() )
                     continue;
-                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, false ) )
+                bool bKeywordOn{ false };
+                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, bKeywordOn ) && bKeywordOn ) // 읽지 못한 값은 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다)
                     MaterialUtil::appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
             }
 

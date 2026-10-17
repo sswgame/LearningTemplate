@@ -46,3 +46,18 @@
 - `REFLECT( Alias = 옛이름 )` 와 XML · JSON · bin 이중 읽기 경로: 별칭 · 옛 형식 리더는 두지 않는 방침이라 쓰는 곳을 세어 데이터를 다시 쓰고 없앤다. 스키마 버전 이행(SchemaMigrate)은 별개라 남긴다.
 - 사용자 설정(사용자 폴더의 파일)이 깨졌을 때는 엔진 필수 데이터와 달라 복구가 필요하다: 조용히 기본값으로 가지 않고 깨진 파일을 옆으로 치우고 오류 로그를 남긴 뒤 새로 만든다.
 - 도구 훅(`.claude/hooks`)의 fail-open 은 훅 오류로 세션이 막히지 않게 하려는 것이라 남기고 이유를 주석에 적는다.
+
+## 5. W2 결과와 남은 것 (2026-10-16)
+
+고친 것: 머티리얼 로드 실패 · 체커 텍스처 실패 → 초기화 실패(대체는 `MeshComponent` 한 곳), 머티리얼 불리언 · 품질 · LOD · usage · 범위 글 → 읽기 오류(`parseBoolToken( …, bool& )`, `parseOptionalBoolField`),
+`Render2DSettings` 정본 하나(게임 팩 덮어쓰기 · 코드 `Default` 표 제거, 렌더러 초기화가 `reloadActive` 로 읽고 실패면 멈춤), 리소스 우선순위 빈 목록 → `ResourcePaths::initialize` 실패,
+오디오 믹서 · 물리 설정 · 엔진 기본 에셋 · 문화권 표 → 기동 실패(코드 그래프 · `ensureDefaults` · built-in defaults 제거), 군중 · LOD 표 → 단언하고 기능을 끈다(코드 표로 대신하지 않음),
+압축 코덱 대체 제거, `CharacterDataReader` 를 필수 `readXxx( node, name )` · 선택 `readOptionalXxx( node, name, absentValue )` 로 가름, 알림 인자의 "적지 않음" 값을 처리기 선언(`AnimationNotifyParamDef`) 한 곳으로,
+깨진 사용자 설정은 `.corrupt` 로 치우고 오류, 맨 `.scene` 접미사 별칭 제거.
+
+남긴 것(이유):
+- 팩 키의 도메인 떼고 재조회 — 도메인 없는 리소스 id(검색 우선순위로 푸는 형식)가 떼어 낸 키를 1단계에서 맞히는 데 기대고 있다. 키를 전역 경로로 바꾸려면 도메인 없는 id 쓰는 곳을 먼저 없애야 한다.
+- `attachmentFormatOrDefault` · `getAttachmentClearColorOrDefault` — 뿌리는 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것이다. 선언 필수화는 파이프라인 XML(셰이더 작업 소관)과 함께 한다.
+- `REFLECT( Alias )` — 제품 데이터 사용 0, 테스트 4. 리더 제거는 리플렉션 파서 · 코드젠 변경이라 따로 한다. 프리팹 JSON 리더는 데이터 0 이지만 에디터가 쓴다(에디터 작업 소관).
+- XML 저작본 ↔ bin 쿠킹본 두 리더(`PrefabAsset` · `SceneDocument`)는 옛 형식이 아니라 쿠킹 파이프라인이다.
+- 같은 모양이 더 있는 곳: `NavMeshSettings::ensureDefaults`, `PhysicsDesc` 의 모르는 재질 → 첫 재질, `MaterialUtil::parseBlendMode` 의 모르는 이름 → Opaque, `GameDataXML` · `CameraPreset`(GameFramework 작업 소관).

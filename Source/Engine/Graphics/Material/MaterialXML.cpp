@@ -103,15 +103,22 @@ namespace sw
         return {};
     }
 
-    bool MaterialUtil::parseBoolField( XMLNode node, const utf8* pName, bool defaultValue )
+    bool MaterialUtil::parseOptionalBoolField( XMLNode node, const utf8* pName, bool absentValue, bool& outValue )
     {
-        return MaterialUtil::parseBoolToken( MaterialUtil::fieldText( node, pName ), pName != nullptr ? pName : "", defaultValue );
+        const string text = MaterialUtil::fieldText( node, pName );
+        if ( text.empty() )
+        {
+            outValue = absentValue;
+            return true;
+        }
+        return MaterialUtil::parseBoolToken( text, pName != nullptr ? pName : "", outValue );
     }
 
-    MaterialProperty MaterialUtil::parsePropertyNode( XMLNode item )
+    bool MaterialUtil::parsePropertyNode( XMLNode item, MaterialProperty& outProp )
     {
-        MaterialProperty prop{};
-        prop._name = MaterialUtil::fieldText( item, "name" );
+        outProp                = MaterialProperty{};
+        MaterialProperty& prop = outProp;
+        prop._name             = MaterialUtil::fieldText( item, "name" );
         uint32 size{ 0 };
         string typeStr = MaterialUtil::fieldText( item, "type" );
         if ( typeStr.empty() )
@@ -127,24 +134,40 @@ namespace sw
             prop._defaultValue = prop._value;
         if ( prop._value.empty() && prop._defaultValue.empty() == false )
             prop._value = prop._defaultValue;
-        prop._assetPath     = MaterialUtil::fieldText( item, "assetPath" );
-        prop._enumType      = MaterialUtil::fieldText( item, "enumType" );
-        prop._displayName   = MaterialUtil::fieldText( item, "displayName" );
-        prop._group         = MaterialUtil::fieldText( item, "group" );
-        prop._tooltip       = MaterialUtil::fieldText( item, "tooltip" );
-        prop._shaderKeyword = MaterialUtil::fieldText( item, "shaderKeyword" );
-        const string minStr = MaterialUtil::fieldText( item, "min" );
-        const string maxStr = MaterialUtil::fieldText( item, "max" );
-        if ( minStr.empty() == false && StringUtil::parseFloat( minStr, prop._min ) == false )
-            SW_LOG_WARNING( "Material parameter '%#' has an unreadable min '%#' - no lower bound", prop._name, minStr );
-        if ( maxStr.empty() == false && StringUtil::parseFloat( maxStr, prop._max ) == false )
-            SW_LOG_WARNING( "Material parameter '%#' has an unreadable max '%#' - no upper bound", prop._name, maxStr );
-        prop._bHdr      = MaterialUtil::parseBoolField( item, "bHdr", false );
-        prop._bSrgb     = MaterialUtil::parseBoolField( item, "bSrgb", true );
-        prop._bHidden   = MaterialUtil::parseBoolField( item, "bHidden", false );
-        prop._bAdvanced = MaterialUtil::parseBoolField( item, "bAdvanced", false );
+        prop._assetPath                = MaterialUtil::fieldText( item, "assetPath" );
+        prop._enumType                 = MaterialUtil::fieldText( item, "enumType" );
+        prop._displayName              = MaterialUtil::fieldText( item, "displayName" );
+        prop._group                    = MaterialUtil::fieldText( item, "group" );
+        prop._tooltip                  = MaterialUtil::fieldText( item, "tooltip" );
+        prop._shaderKeyword            = MaterialUtil::fieldText( item, "shaderKeyword" );
+        const string minStr            = MaterialUtil::fieldText( item, "min" );
+        const string maxStr            = MaterialUtil::fieldText( item, "max" );
+        const bool   bBoundsUnreadable = ( minStr.empty() == false && StringUtil::parseFloat( minStr, prop._min ) == false ) ||
+                                       ( maxStr.empty() == false && StringUtil::parseFloat( maxStr, prop._max ) == false );
+        if ( bBoundsUnreadable )
+        {
+            SW_LOG_ERROR( "Material parameter '%#' has an unreadable bound (min '%#', max '%#')", prop._name, minStr, maxStr );
+            return false;
+        }
+        bool       bHdr{ false };
+        bool       bSrgb{ false };
+        bool       bHidden{ false };
+        bool       bAdvanced{ false };
+        const bool bFlagsRead = MaterialUtil::parseOptionalBoolField( item, "bHdr", false, bHdr ) &&
+                                MaterialUtil::parseOptionalBoolField( item, "bSrgb", true, bSrgb ) &&
+                                MaterialUtil::parseOptionalBoolField( item, "bHidden", false, bHidden ) &&
+                                MaterialUtil::parseOptionalBoolField( item, "bAdvanced", false, bAdvanced );
+        if ( bFlagsRead == false )
+            return false;
+        prop._bHdr      = bHdr;
+        prop._bSrgb     = bSrgb;
+        prop._bHidden   = bHidden;
+        prop._bAdvanced = bAdvanced;
         MaterialXMLInternal::parseEnumEntries( item, prop._listEnumEntry );
-        return prop;
+        // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.
+        const bool bBooleanValue = prop._type == MaterialPropertyType::Bool || ( prop._type == MaterialPropertyType::Keyword && prop._shaderKeyword.empty() == false );
+        bool       bUnused{ false };
+        return bBooleanValue == false || MaterialUtil::parseBoolToken( prop._value, prop._name, bUnused );
     }
 
     void MaterialUtil::appendAttribute( XMLNode parent, const utf8* pName, string_view value )
@@ -172,14 +195,17 @@ namespace sw
         return mode == RHIBlendMode::Transparent ? "Transparent" : "Opaque";
     }
 
-    MaterialQualityLevel MaterialUtil::parseQuality( string_view qualityName )
+    bool MaterialUtil::parseQuality( string_view qualityName, MaterialQualityLevel& outQuality )
     {
         const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
         int64           value{ 0 };
-        if ( pInfo != nullptr && pInfo->tryParse( qualityName, value ) )
-            return static_cast<MaterialQualityLevel>( value );
-        SW_LOG_WARNING( "Material quality '%#' is not a quality level - using High", qualityName );
-        return MaterialQualityLevel::High;
+        if ( pInfo == nullptr || pInfo->tryParse( qualityName, value ) == false )
+        {
+            SW_LOG_ERROR( "Material quality '%#' is not a quality level", qualityName );
+            return false;
+        }
+        outQuality = static_cast<MaterialQualityLevel>( value );
+        return true;
     }
 
     const utf8* MaterialUtil::qualityToString( MaterialQualityLevel quality )
@@ -191,24 +217,28 @@ namespace sw
         return "High";
     }
 
-    void MaterialUtil::parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc )
+    bool MaterialUtil::parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc )
     {
         outDesc = MaterialPermutationDesc{};
         if ( root.isValid() == false )
-            return;
+            return true;
         XMLNode permutationsNode = root.findChild( "_permutations" );
         if ( permutationsNode.isValid() == false )
-            return;
+            return true;
 
+        // 적은 값은 읽혀야 한다 — 읽지 못한 값을 기본값으로 바꿔 계속하지 않는다(적지 않은 칸만 형식의 값이다).
         const string quality = MaterialUtil::fieldText( permutationsNode, "quality" );
-        if ( quality.empty() == false )
-            outDesc._quality = MaterialUtil::parseQuality( quality );
+        if ( quality.empty() == false && MaterialUtil::parseQuality( quality, outDesc._quality ) == false )
+            return false;
         const string lod = MaterialUtil::fieldText( permutationsNode, "shaderLOD" );
         if ( lod.empty() == false )
         {
             uint64 lodVal{ 0 };
             if ( StringUtil::parseUint64( lod, lodVal, 10 ) == false )
-                SW_LOG_WARNING( "Material shader LOD '%#' is not a number - using 0", lod );
+            {
+                SW_LOG_ERROR( "Material shader LOD '%#' is not a number", lod );
+                return false;
+            }
             outDesc._shaderLOD = static_cast<uint32>( lodVal );
         }
         const string usage = MaterialUtil::fieldText( permutationsNode, "usage" );
@@ -216,11 +246,12 @@ namespace sw
         {
             const EnumInfo* pUsageEnum = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
             int64           usageValue{ 0 };
-            // 모르는 토큰이 하나라도 있으면 아는 토큰만 남기지 않고 기본값을 둔다(`EnumInfo::tryParseText`).
-            if ( pUsageEnum != nullptr && pUsageEnum->tryParseText( usage, usageValue ) )
-                outDesc._usage = static_cast<MaterialUsageFlags>( usageValue );
-            else
-                SW_LOG_WARNING( "Material usage '%#' has an unknown flag - keeping the default", usage );
+            if ( pUsageEnum == nullptr || pUsageEnum->tryParseText( usage, usageValue ) == false )
+            {
+                SW_LOG_ERROR( "Material usage '%#' has an unknown flag", usage );
+                return false;
+            }
+            outDesc._usage = static_cast<MaterialUsageFlags>( usageValue );
         }
 
         XMLNode always = permutationsNode.findChild( "_alwaysDefines" );
@@ -232,11 +263,16 @@ namespace sw
             for ( XMLNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialStaticSwitch entry{};
-                entry._name           = MaterialUtil::fieldText( item, "name" );
-                entry._keyword        = MaterialUtil::fieldText( item, "keyword" );
-                entry._keywordOff     = MaterialUtil::fieldText( item, "keywordOff" );
-                entry._bEnabled       = MaterialUtil::parseBoolField( item, "bEnabled", false );
-                entry._bShaderFeature = MaterialUtil::parseBoolField( item, "bShaderFeature", true );
+                entry._name       = MaterialUtil::fieldText( item, "name" );
+                entry._keyword    = MaterialUtil::fieldText( item, "keyword" );
+                entry._keywordOff = MaterialUtil::fieldText( item, "keywordOff" );
+                bool bEnabled{ false };
+                bool bShaderFeature{ false };
+                if ( MaterialUtil::parseOptionalBoolField( item, "bEnabled", false, bEnabled ) == false ||
+                     MaterialUtil::parseOptionalBoolField( item, "bShaderFeature", true, bShaderFeature ) == false )
+                    return false;
+                entry._bEnabled       = bEnabled;
+                entry._bShaderFeature = bShaderFeature;
                 if ( entry._name.empty() && entry._keyword.empty() == false )
                     entry._name = entry._keyword;
                 if ( entry._keyword.empty() == false || entry._name.empty() == false )
@@ -258,6 +294,7 @@ namespace sw
                     outDesc._listMultiCompile.push_back( std::move( multiCompile ) );
             }
         }
+        return true;
     }
 
     void MaterialUtil::appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationsNode )
@@ -438,13 +475,16 @@ namespace sw
         {
             for ( XMLNode item = props.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialProperty prop = MaterialUtil::parsePropertyNode( item );
+                MaterialProperty prop{};
+                if ( MaterialUtil::parsePropertyNode( item, prop ) == false )
+                    return false;
                 if ( prop._name.empty() == false )
                     _desc._listProperty.push_back( std::move( prop ) );
             }
         }
 
-        MaterialUtil::parsePermutationNode( root, _desc._permutations );
+        if ( MaterialUtil::parsePermutationNode( root, _desc._permutations ) == false )
+            return false;
 
         applyDescToRuntime();
         return true;

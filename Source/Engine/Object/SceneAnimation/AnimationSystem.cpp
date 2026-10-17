@@ -13,7 +13,6 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -81,8 +80,10 @@ namespace sw
         , _bCycle{ SW_FALSE }
         , _bLODViewsSet{ SW_FALSE }
         , _bLODSettingsReady{ SW_FALSE }
+        , _bLODSettingsFailed{ SW_FALSE }
         , _bLODApplied{ SW_FALSE }
         , _bCrowdSettingsReady{ SW_FALSE }
+        , _bCrowdSettingsFailed{ SW_FALSE }
         , _bHasLODViewPosition{ SW_FALSE }
     {
     }
@@ -119,11 +120,16 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.Animation.crowd" );
         if ( _bCrowdSettingsReady == SW_FALSE )
         {
+            // 군중 표는 엔진 필수 데이터다. 못 읽으면 단언하고 이 시스템은 군중을 묶지 않는다(코드 기본 표로 묶지 않는다).
             _bCrowdSettingsReady = SW_TRUE;
             AnimationCrowdSettings settings;
-            if ( ResourceIO::hasResource( AnimationCrowdSettings::kResourcePath ) && settings.loadFromResource( AnimationCrowdSettings::kResourcePath ) )
+            _bCrowdSettingsFailed = settings.loadFromResource( AnimationCrowdSettings::kResourcePath ) ? SW_FALSE : SW_TRUE;
+            SW_LOG_ASSERT( _bCrowdSettingsFailed == SW_FALSE, "Animation crowd settings '%#' could not be loaded", AnimationCrowdSettings::kResourcePath );
+            if ( _bCrowdSettingsFailed == SW_FALSE )
                 _crowd.setSettings( settings );
         }
+        if ( _bCrowdSettingsFailed == SW_TRUE )
+            return;
         // 묶음 · 사본 · VAT 를 정한다(게임 스레드 — 메시를 갈아 끼운다). 나눈 유닛은 이번 프레임 포즈 단계를 돌지 않는다.
         uint32 arrModeCount[4] = { 0, 0, 0, 0 };
         for ( SkeletalMeshComponent* pUnit : _listActive )
@@ -196,14 +202,16 @@ namespace sw
             _expectedEvaluationMicroseconds = 0.0f;
             return;
         }
-        _bLODApplied = SW_TRUE;
         if ( _bLODSettingsReady == SW_FALSE )
         {
-            // 표가 없으면 단계 없는 기본(가시성만)이다. 있는데 틀리면 오류를 남기고 기본으로 간다.
-            _bLODSettingsReady = SW_TRUE;
-            if ( ResourceIO::hasResource( AnimationLODSettings::kResourcePath ) )
-                (void)_lodSettings.loadFromResource( AnimationLODSettings::kResourcePath ); // 틀리면 loadFromResource 가 오류를 남기고 기본으로 돌린다
+            // LOD 표는 엔진 필수 데이터다. 못 읽으면 단언하고 이 시스템은 LOD 를 판정하지 않는다(모든 유닛이 매 프레임 — 코드 기본 표로 판정하지 않는다).
+            _bLODSettingsReady  = SW_TRUE;
+            _bLODSettingsFailed = _lodSettings.loadFromResource( AnimationLODSettings::kResourcePath ) ? SW_FALSE : SW_TRUE;
+            SW_LOG_ASSERT( _bLODSettingsFailed == SW_FALSE, "Animation LOD settings '%#' could not be loaded", AnimationLODSettings::kResourcePath );
         }
+        if ( _bLODSettingsFailed == SW_TRUE )
+            return;
+        _bLODApplied = SW_TRUE;
 
         _listScratchLODState.resize( clientCount );
         _listScratchBudgetItem.clear();

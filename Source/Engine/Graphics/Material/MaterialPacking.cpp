@@ -407,14 +407,16 @@ namespace sw
         return bytes;
     }
 
-    bool MaterialUtil::parseBoolToken( string_view token, string_view name, bool fallback )
+    bool MaterialUtil::parseBoolToken( string_view token, string_view name, bool& outValue )
     {
-        if ( StringUtil::trim( token ).empty() )
-            return fallback;
-        bool value{ fallback };
-        if ( StringUtil::tryParseBool( token, value ) == false )
-            SW_LOG_WARNING( "Material value '%#' has an unreadable boolean '%#' - using %#", name, token, fallback ? "true" : "false" );
-        return value;
+        bool value{ false };
+        if ( StringUtil::trim( token ).empty() || StringUtil::tryParseBool( token, value ) == false )
+        {
+            SW_LOG_ERROR( "Material value '%#' has an unreadable boolean '%#'", name, token );
+            return false;
+        }
+        outValue = value;
+        return true;
     }
 
     bool MaterialUtil::packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer )
@@ -447,7 +449,10 @@ namespace sw
         {
             case MaterialPropertyType::Bool:
             {
-                const uint32 boolVal = MaterialUtil::parseBoolToken( prop._value, prop._name, false ) ? 1u : 0u;
+                bool bValue{ false };
+                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, bValue ) == false )
+                    return false;
+                const uint32 boolVal = bValue ? 1u : 0u;
                 if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Range )
                 {
                     const float32 floatVal = boolVal != 0 ? 1.0f : 0.0f;

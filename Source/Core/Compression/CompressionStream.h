@@ -68,32 +68,32 @@ namespace sw
         static constexpr uint64 kMaxUncompressedSize = constant::kBytesPerGigabyte;
 
         /**
-         * @brief 메모리 버퍼를 압축해 헤더가 붙은 압축 스트림을 만듭니다.
+         * @brief 메모리 버퍼를 압축해 헤더가 붙은 압축 스트림을 만듭니다. 요청한 코덱이 등록되어 있지 않으면 오류를 남기고 false 입니다(다른 코덱으로 바꾸지 않습니다).
          */
-        static bool compressBuffer( const void*                     pSrc,
-                                    size_t                          srcSize,
-                                    vector<uint8>&                  outBytes,
-                                    CompressionCodecType            codecType        = CompressionCodecType::RLE,
-                                    int32                           compressionLevel = 0,
-                                    const CompressionCodecRegistry* pRegistry        = nullptr );
+        [[nodiscard]] static bool compressBuffer( const void*                     pSrc,
+                                                  size_t                          srcSize,
+                                                  vector<uint8>&                  outBytes,
+                                                  CompressionCodecType            codecType        = CompressionCodecType::RLE,
+                                                  int32                           compressionLevel = 0,
+                                                  const CompressionCodecRegistry* pRegistry        = nullptr );
 
         /**
          * @brief 압축 스트림을 풀어 원본 바이트 버퍼를 복원합니다.
          */
-        static bool decompressBuffer( const void*                     pSrc,
-                                      size_t                          srcSize,
-                                      vector<uint8>&                  outBytes,
-                                      const CompressionCodecRegistry* pRegistry = nullptr );
+        [[nodiscard]] static bool decompressBuffer( const void*                     pSrc,
+                                                    size_t                          srcSize,
+                                                    vector<uint8>&                  outBytes,
+                                                    const CompressionCodecRegistry* pRegistry = nullptr );
 
         /**
          * @brief 압축 스트림을 풀어 크기가 정해진 출력 버퍼에 복원합니다.
          */
-        static bool decompressBuffer( const void*                     pSrc,
-                                      size_t                          srcSize,
-                                      void*                           pDst,
-                                      size_t                          dstCapacity,
-                                      size_t&                         outUncompressedSize,
-                                      const CompressionCodecRegistry* pRegistry = nullptr );
+        [[nodiscard]] static bool decompressBuffer( const void*                     pSrc,
+                                                    size_t                          srcSize,
+                                                    void*                           pDst,
+                                                    size_t                          dstCapacity,
+                                                    size_t&                         outUncompressedSize,
+                                                    const CompressionCodecRegistry* pRegistry = nullptr );
 
         /**
          * @brief 압축 스트림의 헤더를 검증하고 메타데이터를 읽습니다.

@@ -210,12 +210,11 @@ SW_TEST_CASE( CompressionTest, CompressionStreamRoundtrip )
  *              페이로드는 무압축으로 쓴다. Zstd 가 등록된 다른 기계가 그 스트림을 읽으면 쓰레기다.
  *          (2) **읽기**: 모르는 `_codecType` 이 든 스트림을 "해제" 해 버린다.
  *
- *          여기서는 (1)을 못박는다 — 헤더의 코덱 종류가 **페이로드를 실제로 만든 코덱**과 같아야 한다.
+ *          여기서는 (1)을 못박는다 — 요청한 코덱이 없으면 다른 코덱(None)으로 바꾸지 않고 실패하며 아무것도 쓰지 않는다.
  */
-SW_TEST_CASE( CompressionTest, UnavailableCodecIsNotSilentlySwappedForNull )
+SW_TEST_CASE( CompressionTest, UnavailableCodecFailsInsteadOfSwappingForNull )
 {
-    // 이 테스트는 레지스트리를 넘기지 않는다 — 활성 레지스트리(테스트 호스트가 꽂은 것)를 탄다.
-    // Zstd 코덱은 Engine 쪽에 있고 CoreTest 에는 없으므로 "등록 안 된 코덱" 의 실물이다.
+    // Zstd 코덱은 Engine 쪽에 있고 빈 레지스트리에는 없으므로 "등록 안 된 코덱" 의 실물이다.
     sw::CompressionCodecRegistry registry;
     SW_EXPECT_TRUE( registry.isCodecRegistered( sw::CompressionCodecType::Zstd ) == false );
 
@@ -224,22 +223,8 @@ SW_TEST_CASE( CompressionTest, UnavailableCodecIsNotSilentlySwappedForNull )
     const bool        bCompressed = sw::CompressionStream::compressBuffer(
         source.data(), source.size(), compressedStream, sw::CompressionCodecType::Zstd, 0, &registry );
 
-    SW_EXPECT_TRUE( bCompressed );
-    SW_ASSERT_TRUE( compressedStream.size() > sizeof( sw::CompressionHeader ) );
-
-    sw::CompressionHeader header{};
-    SW_ASSERT_TRUE( sw::CompressionStream::verifyHeader( compressedStream.data(), compressedStream.size(), header ) );
-
-    // 핵심: 헤더가 Zstd 라고 말하면 안 된다. Zstd 는 이 빌드에 없으므로 페이로드는 Zstd 가 아니다.
-    SW_EXPECT_TRUE_MSG( header._codecType != sw::CompressionCodecType::Zstd,
-                        "없는 코덱으로 압축했다고 헤더에 적었다 — 그 코덱이 있는 기계가 읽으면 쓰레기가 나온다" );
-    SW_EXPECT_TRUE( header._codecType == sw::CompressionCodecType::None );
-
-    // 그리고 그 스트림은 어디서든 그대로 복원돼야 한다.
-    sw::vector<uint8> restored;
-    SW_EXPECT_TRUE( sw::CompressionStream::decompressBuffer( compressedStream.data(), compressedStream.size(), restored, &registry ) );
-    SW_EXPECT_EQUAL( source.size(), restored.size() );
-    SW_EXPECT_TRUE( sw::Memory::compare( restored.data(), source.data(), source.size() ) == 0 );
+    SW_EXPECT_FALSE_MSG( bCompressed, "없는 코덱을 요청했는데 성공했다 — 다른 코덱으로 바꿔 쓴 것이다" );
+    SW_EXPECT_TRUE( compressedStream.empty() );
 }
 
 /**

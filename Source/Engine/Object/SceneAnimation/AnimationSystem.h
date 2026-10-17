@@ -279,10 +279,12 @@ namespace sw
         uint32             _poseEvaluatedUnitCount;
         uint8              _bOrderDirty;
         uint8              _bCycle;
-        uint8              _bLODViewsSet;        ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
-        uint8              _bLODSettingsReady;   ///< 테이블을 정했거나 읽었다
-        uint8              _bLODApplied;         ///< 지난 프레임에 판정을 적용했다. 꺼질 때 한 번 되돌린다
-        uint8              _bCrowdSettingsReady; ///< 군중 테이블을 정했거나 읽었다
-        uint8              _bHasLODViewPosition; ///< 거리 LOD 기준점을 정했다
+        uint8              _bLODViewsSet;         ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
+        uint8              _bLODSettingsReady;    ///< 테이블을 정했거나 읽었다
+        uint8              _bLODSettingsFailed;   ///< 테이블 파일을 못 읽었다 — LOD 를 판정하지 않는다(기본 표로 대신하지 않는다)
+        uint8              _bLODApplied;          ///< 지난 프레임에 판정을 적용했다. 꺼질 때 한 번 되돌린다
+        uint8              _bCrowdSettingsReady;  ///< 군중 테이블을 정했거나 읽었다
+        uint8              _bCrowdSettingsFailed; ///< 군중 테이블 파일을 못 읽었다 — 군중을 묶지 않는다
+        uint8              _bHasLODViewPosition;  ///< 거리 LOD 기준점을 정했다
     };
 } // namespace sw

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
@@ -859,18 +860,23 @@ SW_TEST_CASE( MaterialTest, PackingDoesNotClobberTheNextPropertySlot )
 }
 
 /**
- * @brief [MaterialTest] 머티리얼의 불리언이 아닌 글은 기본값을 쓰고 알린다 — 말없이 false 가 되지 않는다
- * @details 머티리얼의 불리언 글은 모두 `MaterialUtil::parseBoolToken( 글, 이름, 기본값 )` 하나를 지나(필드 · 파라미터 값 · 키워드 define)
- *          기본값을 쓰고 이름과 함께 경고한다. `StringUtil::parseBool( token, false )` 로 읽으면 읽지 못한 글이 **기본값이 아니라 false** 가
- *          되어 텍스처의 `bSrgb="ture"` 가 기본(true)인 sRGB 를 말없이 끈다.
+ * @brief [MaterialTest] 머티리얼의 불리언이 아닌 글은 읽기 오류다 — 기본값이나 false 로 대신하지 않는다
+ * @details 머티리얼의 불리언 글은 모두 `MaterialUtil::parseBoolToken` 하나를 지나(필드 · 파라미터 값 · 키워드 define) 읽지 못하면
+ *          이름과 함께 오류를 남기고 로드가 실패한다. 어떤 값으로 대신하든 텍스처의 `bSrgb="ture"` 가 데이터와 다른 값이 된다.
  */
-SW_TEST_CASE( MaterialTest, UnreadableBooleanKeepsTheDefaultAndSaysSo )
+SW_TEST_CASE( MaterialTest, UnreadableBooleanFailsTheLoad )
 {
-    const sw::string xml =
+    const sw::string fieldXML =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         "<MaterialDesc formatVersion=\"0\" name=\"BoolProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
         "  <_properties>"
-        "    <item name=\"_albedo\" type=\"Texture2D\" bSrgb=\"ture\" bHdr=\"yes\"/>"
+        "    <item name=\"_albedo\" type=\"Texture2D\" bSrgb=\"ture\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    const sw::string valueXML =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"BoolProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
         "    <item name=\"_flip\" type=\"Bool\" shaderType=\"Uint\" defaultValue=\"maybe\"/>"
         "  </_properties>"
         "</MaterialDesc>";
@@ -879,15 +885,23 @@ SW_TEST_CASE( MaterialTest, UnreadableBooleanKeepsTheDefaultAndSaysSo )
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "non-boolean material text" );
-        SW_ASSERT_TRUE( material->loadFromXML( xml ) );
+        SW_EXPECT_FALSE( material->loadFromXML( fieldXML ) );
+        SW_EXPECT_FALSE( material->loadFromXML( valueXML ) );
     }
-
-    const sw::MaterialProperty* pAlbedo = material->findProperty( sw::hashed_string( "_albedo" ) );
-    SW_ASSERT_NOT_NULL( pAlbedo );
-    SW_EXPECT_TRUE_MSG( pAlbedo->_bSrgb == SW_TRUE, "bSrgb=\"ture\" 가 기본값(true)이 아니라 false 로 읽혔습니다" );
-    SW_EXPECT_TRUE( pAlbedo->_bHdr == SW_TRUE );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "Material value 'bSrgb' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "Material value '_flip' has an unreadable boolean 'maybe'" ) >= 1, logs.joined().c_str() );
+}
+
+/**
+ * @brief [MaterialTest] 없는 머티리얼 파일은 GPU 에 올리지 않는다 — 빈 기본값으로 계속하지 않는다
+ * @details 못 읽은 머티리얼을 빈 값으로 올리면 화면에서 빠진 것을 알 수 없다. 대신 그릴 것(누락 머티리얼)은 부르는 쪽이 정한다.
+ */
+SW_TEST_CASE( MaterialTest, MissingMaterialFileFailsLoad )
+{
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_TEST_DEFENSIVE_SCOPE( "missing material file" );
+    SW_EXPECT_FALSE( material->loadFromFile( "engine/materials/does_not_exist.material" ) );
+    SW_EXPECT_FALSE( material->isRHIValid() );
 }
 
 /**
@@ -1003,12 +1017,13 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
 
     test::ScopedLogCollector logs;
     {
+        // `_permutations` 의 usage 에 모르는 토큰이 있으면 로드 오류다 — 아는 토큰만 남기거나 기본값으로 계속하지 않는다.
         SW_TEST_DEFENSIVE_SCOPE( "unknown material enum text" );
-        SW_ASSERT_TRUE( material->loadFromXML( xml ) );
+        SW_EXPECT_FALSE( material->loadFromXML( xml ) );
     }
-    // usage 의 모르는 토큰은 아는 토큰만 남기지 않는다 — 기본값(StaticMesh)이 그대로다.
-    SW_EXPECT_TRUE_MSG( material->getPermutations()._usage == sw::MaterialUsageFlags::StaticMesh, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "ZqUsageTypoProbe" ) >= 1, logs.joined().c_str() );
+    SW_ASSERT_TRUE( material->loadFromXML( sw::StringUtil::replace( xml, " | ZqUsageTypoProbe", "" ) ) );
+    SW_EXPECT_TRUE( material->getPermutations()._usage == sw::MaterialUsageFlags::Instanced );
 
     const auto readUint = [&]( const utf8* pName ) -> uint32
     {

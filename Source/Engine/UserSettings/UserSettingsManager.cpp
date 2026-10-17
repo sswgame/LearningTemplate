@@ -172,13 +172,16 @@ namespace sw
     {
         if ( filePath.empty() || FileUtil::exists( filePath ) == false )
             return false;
+        // 사용자 파일은 엔진 필수 데이터와 달리 복구가 필요하다. 깨진 파일은 조용히 기본값으로 덮지 않고 `.corrupt` 로 치운 뒤
+        // 오류를 남긴다 — 다음 저장이 새 파일을 만들고, 사용자는 치운 파일로 무엇이 있었는지 볼 수 있다.
         string text;
-        if ( FileUtil::readTextFile( filePath, text ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read user settings '%#' - using defaults", filePath );
-            return false;
-        }
-        return loadUserJSON( text, filePath );
+        if ( FileUtil::readTextFile( filePath, text ) && loadUserJSON( text, filePath ) )
+            return true;
+        const string corruptPath = string( filePath ) + ".corrupt";
+        const bool   bMovedAside = FileUtil::copyFile( filePath, corruptPath ) && FileUtil::removeFile( filePath );
+        SW_LOG_ERROR( "User settings '%#' could not be read - %# and starting from a fresh file", filePath,
+                      bMovedAside ? ( "moved to '" + corruptPath + "'" ).c_str() : "could not be moved aside" );
+        return false;
     }
 
     bool UserSettingsManager::loadUserJSON( string_view jsonText, string_view sourceName )

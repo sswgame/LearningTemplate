@@ -99,14 +99,14 @@ namespace sw
         JSONDocument doc;
         if ( doc.parse( jsonText, sourceName ) == false )
         {
-            SW_LOG_WARNING( "User settings '%#' is not valid JSON - using defaults", sourceName );
+            SW_LOG_ERROR( "User settings '%#' is not valid JSON: %#", sourceName, doc.getLastError() );
             return false;
         }
         const JSONValue root   = doc.getRoot();
         const JSONValue values = root.get( Internal::kValuesKey );
         if ( root.isObject() == false || values.isObject() == false )
         {
-            SW_LOG_WARNING( "User settings '%#' has no \"values\" object - using defaults", sourceName );
+            SW_LOG_ERROR( "User settings '%#' has no \"values\" object", sourceName );
             return false;
         }
 
