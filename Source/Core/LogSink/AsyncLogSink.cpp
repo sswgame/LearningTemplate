@@ -39,6 +39,22 @@ namespace sw
         };
 
         GlobalLogListenerUnloadListener s_globalLogListenerUnloadListener;
+
+        /**
+         * @brief 스레드마다 둔 날짜 문자열 캐시입니다. 같은 초 안의 줄은 `localtime` · 포맷을 다시 하지 않습니다.
+         * @details 시각은 싱크와 상관없는 값이라 스레드마다 하나면 되고, 잠금이 필요 없습니다(전에는 싱크의 뮤텍스 하나를 모든 생산자가 줄마다 잡았다).
+         */
+        struct LogDateCache
+        {
+            std::time_t _timeSec{ -1 };
+            int32       _year{ 0 };
+            int32       _month{ 0 };
+            int32       _day{ 0 };
+            int32       _hour{ 0 };
+            utf8        _arrDate[constant::kMaxBuffer32]{};
+        };
+
+        thread_local LogDateCache t_logDateCache{};
     } // namespace
 } // namespace sw
 
@@ -53,17 +69,13 @@ namespace sw
         , _cv{}
         , _mutex{}
         , _cvMutex{}
-        , _timeMutex{}
-        , _cachedTimeSec{ 0 }
-        , _cachedYear{ 0 }
-        , _cachedMonth{ 0 }
-        , _cachedDay{ 0 }
-        , _cachedHour{ 0 }
+        , _listenerSnapshot{}
         , _arrBroadcastInFlight{}
         , _broadcastEpoch{ 0 }
         , _bIsRunning{ false }
         , _bInitialized{ false }
-        , _arrCachedDateStr{}
+        , _bHasListener{ false }
+        , _bWorkerSleeping{ false }
     {
         // 기본 장치 두 개. 다른 구성이 필요하면 addOutput 으로 더 붙인다.
         auto fileOutput = make_unique<FileLogOutput>();
@@ -125,6 +137,7 @@ namespace sw
                 output->close();
         }
         _onLogWritten.removeAll();
+        rebuildListenerSnapshot();
         _bInitialized = false;
     }
 
@@ -142,7 +155,9 @@ namespace sw
     DelegateHandle AsyncLogSink::registerLogWrittenListener( const LogWrittenDelegate& listener )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return _onLogWritten.add( listener );
+        const DelegateHandle    handle = _onLogWritten.add( listener );
+        rebuildListenerSnapshot();
+        return handle;
     }
 
     /**
@@ -154,6 +169,7 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _mutex };
             _onLogWritten.remove( handle );
+            rebuildListenerSnapshot();
             retiredSlot = retireBroadcastSlot();
         }
         waitForRetiredBroadcasts( retiredSlot );
@@ -167,7 +183,8 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _mutex };
             releasedCount = _onLogWritten.removeCodeWithin( pBegin, pEnd );
-            retiredSlot   = retireBroadcastSlot();
+            rebuildListenerSnapshot();
+            retiredSlot = retireBroadcastSlot();
         }
         waitForRetiredBroadcasts( retiredSlot );
         return releasedCount;
@@ -178,6 +195,15 @@ namespace sw
         const uint32 retiredSlot = _broadcastEpoch & 1u;
         ++_broadcastEpoch;
         return retiredSlot;
+    }
+
+    void AsyncLogSink::rebuildListenerSnapshot()
+    {
+        const bool bBound = _onLogWritten.isBound();
+        _listenerSnapshot.reset();
+        if ( bBound )
+            _listenerSnapshot = sw::make_shared<LogWrittenMulticast>( _onLogWritten );
+        _bHasListener.store( bBound, std::memory_order_release );
     }
 
     void AsyncLogSink::waitForRetiredBroadcasts( uint32 retiredSlot )
@@ -277,10 +303,14 @@ namespace sw
             if ( bProcessedAny == false && _bIsRunning.load( std::memory_order_acquire ) )
             {
                 std::unique_lock<mutex> lock{ _cvMutex };
+                // 잠든다고 알린 **뒤에** 큐를 본다(아래 술어). 생산자는 넣은 뒤 이 값을 보므로 둘 중 하나는 상대를 본다.
+                _bWorkerSleeping.store( true, std::memory_order_seq_cst );
+                std::atomic_thread_fence( std::memory_order_seq_cst );
                 _cv.wait_for( lock, std::chrono::milliseconds( 5 ), [this]
                 {
                     return _bIsRunning.load( std::memory_order_relaxed ) == false || _queue.empty() == false;
                 } );
+                _bWorkerSleeping.store( false, std::memory_order_relaxed );
             }
         }
     }
@@ -324,15 +354,15 @@ namespace sw
 
         fixed_string<constant::kMaxBuffer32> dateStr{};
         {
-            std::scoped_lock<mutex> lock{ _timeMutex };
-            const std::time_t       timeSec = std::time( nullptr );
-            if ( timeSec == _cachedTimeSec )
+            LogDateCache&     cache   = t_logDateCache;
+            const std::time_t timeSec = std::time( nullptr );
+            if ( timeSec == cache._timeSec )
             {
-                dateStr = _arrCachedDateStr;
-                year    = _cachedYear;
-                month   = _cachedMonth;
-                day     = _cachedDay;
-                hour    = _cachedHour;
+                dateStr = cache._arrDate;
+                year    = cache._year;
+                month   = cache._month;
+                day     = cache._day;
+                hour    = cache._hour;
             }
             else
             {
@@ -351,13 +381,13 @@ namespace sw
                 const int32 minute = localTime.tm_min;
                 const int32 second = localTime.tm_sec;
 
-                formatstring( _arrCachedDateStr, sizeof( _arrCachedDateStr ), "%#-%#-%# %#:%#:%#", year, month, day, hour, minute, second );
-                dateStr        = _arrCachedDateStr;
-                _cachedTimeSec = timeSec;
-                _cachedYear    = year;
-                _cachedMonth   = month;
-                _cachedDay     = day;
-                _cachedHour    = hour;
+                formatstring( cache._arrDate, sizeof( cache._arrDate ), "%#-%#-%# %#:%#:%#", year, month, day, hour, minute, second );
+                dateStr        = cache._arrDate;
+                cache._timeSec = timeSec;
+                cache._year    = year;
+                cache._month   = month;
+                cache._day     = day;
+                cache._hour    = hour;
             }
         }
 
@@ -405,23 +435,22 @@ namespace sw
             pFormattedBuffer = fallbackUtf8.c_str();
         }
 
-        // 4단계: 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)를 스냅샷으로 복사한 뒤 락 밖에서 알린다. 복사한 세대 칸에 "부르는 중" 을
-        //        올려 두어, 떼기가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`).
-        LogWrittenMulticast listenersCopy;
-        bool                bHasListeners{ false };
-        uint32              broadcastSlot{ 0 };
+        // 4단계: 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)의 불변 사본 참조를 잡고 락 밖에서 알린다(줄마다 목록을 복사하지 않는다). 그 세대 칸에
+        //        "부르는 중" 을 올려 두어, 떼기가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`). 리스너가 없으면 락도 잡지 않는다.
+        shared_ptr<const LogWrittenMulticast> listenerSnapshot;
+        uint32                                broadcastSlot{ 0 };
+        if ( _bHasListener.load( std::memory_order_acquire ) )
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            if ( _onLogWritten.isBound() )
+            if ( _listenerSnapshot != nullptr )
             {
-                listenersCopy = _onLogWritten;
-                bHasListeners = true;
-                broadcastSlot = _broadcastEpoch & 1u;
+                listenerSnapshot = _listenerSnapshot;
+                broadcastSlot    = _broadcastEpoch & 1u;
                 _arrBroadcastInFlight[broadcastSlot].fetch_add( 1, std::memory_order_acq_rel );
             }
         }
 
-        if ( bHasListeners )
+        if ( listenerSnapshot != nullptr )
         {
             LogEntry entry;
             entry._level     = level;
@@ -433,7 +462,7 @@ namespace sw
             entry._timeStamp = dateStr.c_str();
             entry._context   = context;
             ++t_broadcastDepth;
-            listenersCopy.broadcast( entry );
+            listenerSnapshot->broadcast( entry );
             --t_broadcastDepth;
             _arrBroadcastInFlight[broadcastSlot].fetch_sub( 1, std::memory_order_acq_rel );
         }
@@ -460,7 +489,16 @@ namespace sw
             return;
         }
 
-        _cv.notify_one();
+        // 작업 스레드가 잠들려 하거나 잠들어 있을 때만 깨운다(줄마다 조건 변수의 내부 잠금을 잡지 않는다). 넣기 → 펜스 → 확인이 작업 스레드의
+        // 알리기 → 펜스 → 큐 확인과 짝을 이룬다. `_cvMutex` 를 한 번 잡았다 놓아, 작업 스레드가 큐 확인과 잠들기 사이에 있으면 잠든 뒤에 깨우게 한다.
+        std::atomic_thread_fence( std::memory_order_seq_cst );
+        if ( _bWorkerSleeping.load( std::memory_order_relaxed ) )
+        {
+            {
+                std::scoped_lock<mutex> lock{ _cvMutex };
+            }
+            _cv.notify_one();
+        }
 
         // 위의 "실행 중" 확인과 넣기 사이에 종료가 시작됐으면, 작업 스레드는 이미 큐를 마지막으로 비우고 끝났을 수 있다 — 그러면 이 줄은
         // 큐에 영영 남는다. 여기서 직접 비운다(장치가 이미 닫혔으면 장치가 조용히 버린다).
