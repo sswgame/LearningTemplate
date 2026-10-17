@@ -9,6 +9,8 @@
 
 **증거는 린트가 직접 든다.** 각 게이트 클래스가 `selfTestCases` 에 "이건 반드시 잡아야 한다" 는 조각을
 적어 두고, 이 장치가 임시 트리에 그것을 써서 린트를 돌린다. 0 이 아닌 종료 코드가 나와야 통과다.
+게이트마다 하위 프로세스 하나(`--cases-of <게이트>`)가 그 게이트의 조각을 차례로 진입점(`XxxGate.run`)으로 돈다 — 조각마다 프로세스를 띄우면
+기동 · import 가 조각 수(수백)만큼 든다. 예외 기록은 `run` 이 조각마다 비우고, 게이트끼리는 프로세스가 갈려 모듈 상태가 섞이지 않는다.
 조각 표를 여기 모아 두지 않는 이유는 하나다 — **표가 둘이면 언제든 어긋난다.**
 
 게이트가 `selfTestCases` 를 선언하지 않으면 이 검사가 "덮이지 않은 린트" 로 실패한다.
@@ -26,6 +28,11 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import importlib
+import io
+import json
+import os
 import shutil
 import sys
 import tempfile
@@ -36,26 +43,60 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 
 from common import getProcessWorkerCount, mapConcurrent, runProcess  # noqa: E402
 from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from LintGate import GateError, GateResult, LintGate, findGateClass  # noqa: E402
+
+#: `--cases-of` 하위 프로세스가 결과 JSON 앞에 찍는 표식 — 게이트가 찍는 줄과 가른다.
+_kResultMarker = "\n@@CheckLintsAreAlive-result@@"
 
 
-def runCaseInternal(script: LintScript, case: dict) -> tuple[int, str]:
-    """조각 하나를 임시 저장소에 풀어 두고 게이트를 돌립니다. 조각마다 폴더가 따로라 동시에 돌려도 된다."""
+def runCaseInternal(gateClass: type[LintGate], case: dict) -> tuple[int, str]:
+    """
+    조각 하나를 임시 저장소에 풀어 두고 게이트를 **실제 진입점으로**(`run` — 인자 해석 · 예외 표 확인 · 낡은 예외까지) 이 프로세스에서 돌립니다.
+    예외 기록은 `run` 이 조각마다 비운다(`LintGate.beginRun`). 출력은 모아 돌려준다. 게이트가 예외로 죽으면 잡지 않는다 —
+    하위 프로세스가 결과 없이 끝나 이 검사가 종료 2 로 그 게이트를 알린다(죽은 게이트를 "0 이 아니니 살아 있다" 로 세지 않는다).
+    """
     tempRoot = Path(tempfile.mkdtemp(prefix="swLintAlive"))
+    output = io.StringIO()
     try:
         for relPath, content in case["files"].items():
             target = tempRoot / relPath
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8")
-        return runLintInternal(script, tempRoot, list(case.get("args", [])))
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            try:
+                code = gateClass.run(["--root", str(tempRoot), *case.get("args", [])])
+            except SystemExit as exitRequest:
+                code = exitRequest.code if isinstance(exitRequest.code, int) else 1
+        return code, output.getvalue()
     finally:
         shutil.rmtree(tempRoot, ignore_errors=True)
 
 
-def runLintInternal(script: LintScript, root: Path, extraArgs: list[str]) -> tuple[int, str]:
-    """린트를 **실제 진입점으로** 돌립니다 (import 가 아니라 프로세스로 — 전역 캐시 오염을 피한다)."""
-    result = runProcess([sys.executable, script.scriptPath, "--root", root, *extraArgs])
-    return result.returnCode, result.output
+def runGateCasesInternal(script: LintScript) -> list[tuple[int, str]]:
+    """
+    게이트 하나의 조각 전부를 **하위 프로세스 하나**에서 돌립니다(`--cases-of`). 조각마다 프로세스를 띄우면 기동 · import 가 조각 수(수백)만큼 든다.
+    게이트끼리는 프로세스를 나눈다 — 한 게이트의 모듈 상태가 다른 게이트로 새지 않게.
+    """
+    environment = dict(os.environ, PYTHONIOENCODING="utf-8")
+    result = runProcess([sys.executable, Path(__file__).resolve(), "--cases-of", script.name], env=environment)
+    marker = result.stdout.rfind(_kResultMarker)
+    if marker < 0:
+        raise GateError(f"{script.name}: 조각을 돌리는 하위 프로세스가 결과 없이 끝났습니다(종료 {result.returnCode}): {result.output.strip()[-500:]}")
+    return [tuple(item) for item in json.loads(result.stdout[marker + len(_kResultMarker):])]
+
+
+def runCasesOfInternal(gateName: str) -> int:
+    """`--cases-of` 하위 프로세스 — 게이트 하나의 조각을 차례로 돌려 (종료 코드, 출력) 목록을 표식 뒤 JSON 으로 찍는다."""
+    # 그 게이트 모듈 하나만 import 한다 — 폴더 전부(`discoverLintScripts`)를 import 하면 하위 프로세스마다 게이트 수만큼 import 한다.
+    gateClass = None
+    if (Path(__file__).resolve().parents[1] / "gate" / f"{gateName}.py").is_file():
+        gateClass = findGateClass(importlib.import_module(f"gate.{gateName}"))
+    if gateClass is None:
+        print(f"[CheckLintsAreAlive] gate/ 에 게이트 '{gateName}' 가 없습니다", file=sys.stderr)
+        return 2
+    listResult = [runCaseInternal(gateClass, case) for case in gateClass.selfTestCases]
+    sys.stdout.write(_kResultMarker + json.dumps(listResult, ensure_ascii=False))
+    return 0
 
 
 class CheckLintsAreAliveGate(LintGate):
@@ -101,11 +142,17 @@ class CheckLintsAreAliveGate(LintGate):
 
             listJob += [(script, case) for case in cases]
 
-        # 조각마다 하위 프로세스 하나다. 기다리는 일이라 스레드로 동시에 돌리고(`getProcessWorkerCount`), 보고는 조각 순서대로 한다.
-        # 차례로 돌리면 이 검사 하나가 린트 CTest 에서 수 초를 쓴다.
-        listResult = list(mapConcurrent(lambda index: (index, *runCaseInternal(*listJob[index])), range(len(listJob)),
-                                        workerCount=getProcessWorkerCount(len(listJob))))
-        listResult.sort(key=lambda result: result[0])
+        # 게이트마다 하위 프로세스 하나가 그 게이트의 조각을 전부 돈다. 기다리는 일이라 스레드로 동시에 돌리고(`getProcessWorkerCount`),
+        # 보고는 조각 순서대로 한다.
+        listScriptWithCase = list(dict.fromkeys(script for script, _ in listJob))
+        mapCaseResult = dict(mapConcurrent(lambda script: (script.name, runGateCasesInternal(script)), listScriptWithCase,
+                                           workerCount=getProcessWorkerCount(len(listScriptWithCase))))
+        listResult: list[tuple[int, int, str]] = []
+        mapNextCase: dict[str, int] = {}
+        for index, (script, _) in enumerate(listJob):
+            caseIndex = mapNextCase.get(script.name, 0)
+            mapNextCase[script.name] = caseIndex + 1
+            listResult.append((index, *mapCaseResult[script.name][caseIndex]))
         for index, code, output in listResult:
             script, case = listJob[index]
             caseName = case["name"]
@@ -119,7 +166,11 @@ class CheckLintsAreAliveGate(LintGate):
         return GateResult(listViolation=errors, summary=f"{checkedCases} cases across {len(listGateScript)} gates")
 
 
-main = CheckLintsAreAliveGate.run
+def main(argv: list[str] | None = None) -> int:
+    listArgument = list(sys.argv[1:] if argv is None else argv)
+    if len(listArgument) == 2 and listArgument[0] == "--cases-of":
+        return runCasesOfInternal(listArgument[1])
+    return CheckLintsAreAliveGate.run(listArgument)
 
 
 if __name__ == "__main__":
