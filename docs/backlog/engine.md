@@ -2,10 +2,6 @@
 
 엔진과 GameFramework 의 구조 정리, 오브젝트와 씬, 물리와 내비게이션, 핫 리로드와 모듈의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `A-19` [결함] **일반 `BinarySerializer` · JSON · XML 읽기가 `PROPERTY( Min · Max )` 범위 검사를 하지 않는다(`A-15` 잔여).** `SerializerUtil::collectRangeErrors` 는
-  원하는 호출부(`ConfigManager` · `ReflectedXMLFile` · `GameDataXML` · `FightingMatch`)만 부르므로, 다른 경로로 읽은 값은 선언된 범위를 벗어나도 성공으로 돌아온다.
-  뿌리: 범위 계약을 읽기 경로마다 따로 지킨다. 읽기 공통 경로(포맷과 무관한 역직렬화 끝)에서 한 번 검사하고 호출부의 개별 호출을 지운다.
-
 - `A-20` [결함] **`SW_ENABLE_STL_CONTAINER` 로 뜻이 바뀌는 다른 컨테이너 별칭을 전수 점검한다.** `vector<bool>`(`A-18`)처럼 `map` · `set` · `unordered_*` 도
   구성에 따라 반복자 무효화 규칙과 원소 주소 안정성이 다를 수 있다. 기본 구성 구현이 주는 보장(노드 주소 안정, 삽입 뒤 반복자 유효)에 기대는 호출부를 찾아,
   두 구성이 같은 계약을 갖게 하거나 계약이 다른 별칭을 쓰지 못하게 막는다(`DynamicBitset` 처럼 형식으로).

@@ -103,7 +103,9 @@ namespace sw
         vector<SchemaOrphanValue> listOrphan;
         if ( JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context ) == false )
         {
-            SW_LOG_ERROR( "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
+            // 범위 밖 값도 여기로 온다 — 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
+            SW_LOG_ERROR( "Config %#: cannot be read as %# (not a JSON object, or a value outside its declared range)", pSourceLabel,
+                          typeInfo._fullyQualifiedName.c_str() );
             return false;
         }
         for ( const SchemaOrphanValue& orphan : listOrphan )
@@ -121,8 +123,7 @@ namespace sw
         {
             SW_LOG_ERROR( "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
         }
-        const bool bWithinRange = isWithinRange( pInstance, typeInfo, pSourceLabel );
-        return listOrphan.empty() && listMissing.empty() && bWithinRange;
+        return listOrphan.empty() && listMissing.empty();
     }
 
     bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )

@@ -267,7 +267,8 @@ namespace sw
                     if ( bMatched == false && bOutsideSaveGame == false )
                         SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, context );
                 }
-                return true;
+                // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
+                return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
             }
 
             /**
