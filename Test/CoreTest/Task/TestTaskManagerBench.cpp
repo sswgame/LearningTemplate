@@ -11,6 +11,10 @@
  *          - 렌더 그래프 모양(스테이지 + High 태스크 몇 개 + waitStage).
  *          - 작은 독립 태스크 수천 개의 처리량(태스크당 ns).
  *          - CPU 바운드 본문의 직렬 대 병렬 배속(워커 + 호출 스레드가 전부 일하는가).
+ *          - 빈 데크의 pop · steal 한 번(훔치기 한 바퀴의 바닥, 구조 최적화 A ①).
+ *          - 바깥 스레드 둘(게임 · 렌더 흉내)이 동시에 포크-조인을 기다릴 때(대기자 스핀, A ②).
+ *          - 워커가 태스크를 만들고 끝내는 나무(활성 태스크 수를 모든 스레드가 올리고 내림, A ④).
+ *          구조 최적화 단위와 벤치의 짝, 전/후 결과 표는 `docs/plans/StructuralOptimization.md`.
  *
  * @note Release 로 읽는다. Debug 의 컨테이너 레이스 탐지기·프로파일러가 숫자를 다른 것으로 만든다.
  */
@@ -18,6 +22,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
@@ -95,6 +100,24 @@ namespace
         {
             s_ranCount.fetch_add( 1, std::memory_order_relaxed );
         }
+
+        /** @brief 나무의 가지 — 자식 `kTreeLeafPerBranch` 개를 만든다(본문 안에서 만들었으니 이 태스크의 자식이다). */
+        static void treeBranch()
+        {
+            s_ranCount.fetch_add( 1, std::memory_order_relaxed );
+            sw::TaskManager& manager = *s_pTreeManager;
+            for ( uint32 leaf = 0; leaf < kTreeLeafPerBranch; ++leaf )
+            {
+                sw::TaskHandle handle = manager.emplaceTask( "BenchLeaf", SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::tiny ) );
+                manager.submitWithoutWake( handle );
+            }
+            manager.wakeSleepingWorkers( kTreeLeafPerBranch );
+        }
+
+        /** @brief 나무 가지 하나가 만드는 잎 수입니다. */
+        static constexpr uint32 kTreeLeafPerBranch = 32;
+        /** @brief 나무 케이스가 쓰는 매니저(가지 본문이 잎을 만든다). */
+        static inline sw::TaskManager* s_pTreeManager{ nullptr };
 
         /** @brief 백그라운드 I/O 흉내 — 2 ms 를 바쁘게 돈다(잠들면 워커가 비어 그 자리를 다른 일이 채운다). */
         static void backgroundIO()
@@ -350,5 +373,120 @@ SW_TEST_CASE( TaskManagerBenchTest, CPUBoundSpeedup )
     SW_LOG_INFO( "[Bench] cpu-bound 2048 x ~1us: serial p50 %# us, parallel p50 %# us, speedup %#.%#x (threads %#)",
                  serialP50, parallelP50, speedupX100 / 100, speedupX100 % 100, manager.getWorkerCount() + 1 );
 
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerBenchTest] 빈 데크의 pop · steal 한 번 — 할 일 없는 워커 · 대기자가 큐를 훑을 때마다 데크 수만큼 치르는 바닥(구조 최적화 A ①)
+ */
+SW_TEST_CASE( TaskManagerBenchTest, EmptyDequeProbe )
+{
+    constexpr uint64                 kProbeCount = 1000000;
+    constexpr uint32                 kRound      = 5;
+    sw::WorkStealingDeque<uintptr_t> deque{ 4096 };
+
+    // 한 번 넣고 빼서 위치를 0 이 아닌 곳으로 옮긴다(실제 데크는 오래 돌아 위치가 0 이 아니다).
+    SW_ASSERT_TRUE( deque.push( 8 ) );
+    uintptr_t item{ 0 };
+    SW_ASSERT_TRUE( deque.pop( item ) );
+
+    uint32      foundCount    = 0;
+    const int64 popDeciNano   = test::measureBestDeciNanosPerOp( kProbeCount, kRound, [&deque, &foundCount]()
+      {
+        uintptr_t probe{ 0 };
+        for ( uint64 index = 0; index < kProbeCount; ++index )
+        {
+            foundCount += deque.pop( probe ) ? 1u : 0u;
+        }
+    } );
+    const int64 stealDeciNano = test::measureBestDeciNanosPerOp( kProbeCount, kRound, [&deque, &foundCount]()
+    {
+        uintptr_t probe{ 0 };
+        for ( uint64 index = 0; index < kProbeCount; ++index )
+        {
+            foundCount += deque.steal( probe ) ? 1u : 0u;
+        }
+    } );
+    test::logBenchDeciNanos( "empty deque pop (owner)", popDeciNano );
+    test::logBenchDeciNanos( "empty deque steal (thief)", stealDeciNano );
+    SW_EXPECT_EQUAL( 0u, foundCount );
+}
+
+/**
+ * @brief [TaskManagerBenchTest] 바깥 스레드 둘(게임 · 렌더 흉내)이 동시에 포크-조인을 연달아 기다릴 때 — 대기자의 스핀이 큐를 두드리는 비용(구조 최적화 A ②)
+ */
+SW_TEST_CASE( TaskManagerBenchTest, ConcurrentForkJoinWaiters )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+
+    constexpr uint32                kCount = 512; // 요소당 ~1 us — 합류를 기다리는 시간이 생긴다
+    constexpr uint32                kRound = 400;
+    const sw::ParallelBlockDelegate body   = SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, BenchBody::computeRange );
+
+    // 두 번째 스레드는 `data()` 로 받은 주소에만 쓴다(sw::vector 의 레이스 탐지기는 다른 스레드의 쓰기를 잡는다).
+    sw::vector<int64> listSecond;
+    listSecond.resize( kRound );
+    int64*      pSecond = listSecond.data();
+    std::thread second( [&manager, &body, pSecond]()
+    {
+        for ( uint32 round = 0; round < kRound; ++round )
+        {
+            const sw::Stopwatch stopwatch;
+            manager.runParallel( kCount, 1, body );
+            pSecond[round] = stopwatch.getElapsedMicroseconds();
+        }
+        manager.releaseCurrentThreadHelperSlot();
+    } );
+
+    sw::vector<int64> listMain;
+    listMain.reserve( kRound );
+    for ( uint32 round = 0; round < kRound; ++round )
+    {
+        const sw::Stopwatch stopwatch;
+        manager.runParallel( kCount, 1, body );
+        listMain.push_back( stopwatch.getElapsedMicroseconds() );
+    }
+    second.join();
+
+    test::logBenchSamples( "two waiters forkJoin, main, 512 x ~1us", listMain );
+    test::logBenchSamples( "two waiters forkJoin, second, 512 x ~1us", listSecond );
+    SW_EXPECT_EQUAL( 0u, manager.getActiveTaskCount() );
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerBenchTest] 워커가 태스크를 만들고 끝내는 나무 — 활성 태스크 수를 모든 스레드가 올리고 내린다(구조 최적화 A ④)
+ */
+SW_TEST_CASE( TaskManagerBenchTest, WorkerSpawnedTaskTree )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    BenchBody::s_pTreeManager = &manager;
+
+    constexpr uint32       kBranchCount = 128; // 가지 128 × 잎 32 = 태스크 4224 개
+    constexpr uint32       kRound       = 30;
+    const sw::TaskDelegate branch       = SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::treeBranch );
+    constexpr uint32       kTaskCount   = kBranchCount * ( 1 + BenchBody::kTreeLeafPerBranch );
+
+    sw::vector<int64> listRound;
+    listRound.reserve( kRound );
+    for ( uint32 round = 0; round < kRound; ++round )
+    {
+        s_ranCount.store( 0, std::memory_order_relaxed );
+        const sw::Stopwatch stopwatch;
+        for ( uint32 index = 0; index < kBranchCount; ++index )
+        {
+            sw::TaskHandle handle = manager.emplaceTask( "BenchBranch", branch );
+            manager.submitWithoutWake( handle );
+        }
+        manager.wakeSleepingWorkers();
+        SW_ASSERT_TRUE( manager.waitAll( 5000 ) );
+        listRound.push_back( stopwatch.getElapsedMicroseconds() );
+        SW_EXPECT_EQUAL( kTaskCount, s_ranCount.load() );
+    }
+    test::logBenchSamples( "worker-spawned task tree, 128 branches x 32 leaves", listRound );
+
+    BenchBody::s_pTreeManager = nullptr;
     manager.shutdown();
 }
