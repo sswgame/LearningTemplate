@@ -204,6 +204,23 @@ namespace sw
                                 enumInfo._fullyQualifiedName.c_str(), nameHash );
             }
 
+            /**
+             * @brief 바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입을 알립니다. 타입마다 한 번만 알립니다.
+             * @details 이런 타입은 바이너리로 쓰지도 읽지도 않습니다. 예전에는 쓰기가 0 바이트 하나를, 읽기가 1 바이트를 건너뛰고 성공을 돌려줘
+             *          값이 조용히 빠졌습니다(생성기가 컨테이너 원소의 별칭을 벗기지 않던 `vector<AccountID>`). 지금은 읽기가 실패를 돌려줍니다.
+             */
+            static void reportUncarriedTypeOnce( const hashed_string& typeName, const utf8* pDirection )
+            {
+                static mutex                 s_mutex;
+                static unordered_set<uint32> s_uniqueReportedTypes;
+                {
+                    std::lock_guard<mutex> lock( s_mutex );
+                    if ( s_uniqueReportedTypes.insert( typeName.getHash() ).second == false )
+                        return;
+                }
+                SW_LOG_ERROR( "type '%#' has no binary, enum, struct or text handler - the value cannot be %# (once per type)", typeName.c_str(), pDirection );
+            }
+
             /** @brief 열거자 항목 하나를 읽습니다. 이름을 모르면 `outKnown` 이 false 이고 바이트는 읽었습니다. 바이트가 모자라면 false 입니다. */
             [[nodiscard]] static bool readEnumEntry( const EnumInfo& enumInfo, const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue, bool& outKnown )
             {
@@ -626,7 +643,8 @@ namespace sw
             return;
         }
 
-        listBuffer.push_back( 0 );
+        // 실을 수 없는 타입은 아무 바이트도 쓰지 않는다. 읽기가 실패를 돌려주므로 자리 표시 바이트는 필요 없다.
+        SerializerUtilInternal::reportUncarriedTypeOnce( typeName, "written" );
     }
 
     bool SerializerUtil::deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
@@ -666,11 +684,7 @@ namespace sw
             return ( *pTextReader )( pValuePtr, text );
         }
 
-        if ( offset < dataSize )
-        {
-            ++offset;
-            return true;
-        }
+        SerializerUtilInternal::reportUncarriedTypeOnce( typeName, "read" );
         return false;
     }
 

@@ -885,36 +885,4 @@ namespace sw
             _bError = SW_TRUE;
         return bOk;
     }
-
-    bool Archive::serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
-    {
-        if ( pInstance == nullptr )
-        {
-            _bError = SW_TRUE;
-            return false;
-        }
-        vector<uint8> compactBytes;
-        BinarySerializer::serializeCompact( pInstance, typeInfo, compactBytes, context );
-        writeSection( compactBytes.data(), static_cast<uint32>( compactBytes.size() ) );
-        return isOk();
-    }
-
-    bool Archive::deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
-    {
-        if ( pInstance == nullptr )
-        {
-            _bError = SW_TRUE;
-            return false;
-        }
-        vector<uint8> compactBytes;
-        if ( readSection( compactBytes ) == false || compactBytes.empty() )
-        {
-            _bError = SW_TRUE;
-            return false;
-        }
-        const bool bOk = BinarySerializer::deserializeCompact( pInstance, typeInfo, compactBytes.data(), compactBytes.size(), context );
-        if ( bOk == false )
-            _bError = SW_TRUE;
-        return bOk;
-    }
 } // namespace sw

@@ -13,43 +13,6 @@
 namespace sw
 {
     /**
-     * @struct PresenceMaskUtil
-     * @brief 적응형 밀집 비트마스크(Dense Bitmask)와 희소 인덱스(Sparse Index)를 비트 단위로 인코딩하고 디코딩하는 도구입니다.
-     */
-    struct PresenceMaskUtil
-    {
-        static constexpr uint8 kModeDense  = 0x01;
-        static constexpr uint8 kModeSparse = 0x02;
-
-        /** @brief 밀집 모드를 고르는 기준입니다. 기록할(수정된) 프로퍼티가 3개 이상이고 전체의 25% 이상이면 밀집 모드입니다. */
-        static bool shouldUseDenseMode( size_t modifiedCount, size_t totalCount )
-        {
-            return ( modifiedCount >= 3 && modifiedCount * 4 >= totalCount );
-        }
-
-        /** @brief 비트마스크 바이트 수를 계산합니다: ceil(totalBits / 8) */
-        static size_t computeBitmaskBytes( size_t totalBits )
-        {
-            return ( totalBits + 7 ) / 8;
-        }
-
-        /** @brief 비트마스크의 특정 비트를 켭니다. */
-        static void setBit( uint8* pBitmask, size_t bitIndex )
-        {
-            pBitmask[bitIndex / 8] |= static_cast<uint8>( 1 << ( bitIndex % 8 ) );
-        }
-
-        /** @brief 비트마스크의 특정 비트가 켜져 있는지 확인합니다. */
-        static bool testBit( const uint8* pBitmask, size_t bitIndex )
-        {
-            return ( pBitmask[bitIndex / 8] & ( 1 << ( bitIndex % 8 ) ) ) != 0;
-        }
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @struct ScopedScratchInstance
      * @brief 임시 스크래치 인스턴스를 만들고, 범위를 벗어나면 반드시 파괴하는 RAII 래퍼입니다.
      */
@@ -150,6 +113,8 @@ namespace sw
          *                    기본값은 이 빌드가 방금 쓴 바이트(복사, 비교, diff)에만 맞습니다.
          * @details 모르는 열거자 이름(`Removed` 없이 지웠거나 `ValueAlias` 없이 이름을 바꾼 경우)이면 그 필드는 현재 값을 유지하고 false 를 반환한다. XML 의 모르는 이름과 같다.
          *          바이트는 끝까지 읽었으므로 부른 쪽이 다음 필드로 갈 수 있다(경고는 enum 과 이름마다 한 번이다).
+         *          바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면 바이트를 건너뛰지 않고 false 를 반환한다(오류는 타입마다 한 번이다).
+         *          쓰기(`serializeValueBinary`)도 그런 타입에는 아무 바이트도 쓰지 않는다.
          */
         [[nodiscard]] SW_API static bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
                                                                  const uint8* pData, size_t dataSize, size_t& offset,

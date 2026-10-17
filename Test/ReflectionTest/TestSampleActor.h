@@ -697,10 +697,12 @@ namespace sw
     using TestAliasScoreList = sw::vector<int32>;
     /// @brief 별칭으로 적은 스칼라 — 이름(int32 의 별칭)이 그대로여야 한다.
     using TestAliasCount = int32;
+    /// @brief 컨테이너 원소로 적은 별칭 — 원소 이름도 벗겨 `uint64` 여야 한다(벗기지 않으면 자기 기술형 바이너리가 원소를 읽지 못한다).
+    using TestAliasElementID = uint64;
 
     /**
      * @struct AliasContainerActor
-     * @brief 별칭으로 적은 컨테이너 · 스칼라 프로퍼티 샘플(`ReflectionTest.AliasedContainerPropertyIsAContainer`).
+     * @brief 별칭으로 적은 컨테이너 · 스칼라 · 원소 프로퍼티 샘플(`ReflectionTest.AliasedContainerPropertyIsAContainer`).
      */
     REFLECT()
     struct AliasContainerActor
@@ -712,6 +714,9 @@ namespace sw
 
         PROPERTY()
         TestAliasCount _aliasCount{ 0 };
+
+        PROPERTY()
+        sw::vector<TestAliasElementID> _listAliasID;
     };
 } // namespace sw
 

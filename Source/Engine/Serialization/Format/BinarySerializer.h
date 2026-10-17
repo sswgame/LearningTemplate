@@ -18,6 +18,9 @@ namespace sw
     /**
      * @class BinarySerializer
      * @brief TypeInfo 로 객체를 콤팩트 바이너리 버퍼에 쓰고 읽습니다(압축 직렬화도 함께 지원합니다).
+     * @details 스트림은 프로퍼티마다 이름 해시와 기록 타입을 싣는 자기 기술형이라 스키마가 바뀐 뒤에도 읽습니다.
+     *          프로퍼티 순서로 짝을 맞추던 컴팩트 모드는 스키마 확인 없이 엉뚱한 필드에 읽혀 지웠습니다. 같은 빌드끼리
+     *          주고받는 짧은 바이트는 스키마 해시로 배치를 확인하는 고정 배치형(`FixedLayout`)을 씁니다.
      */
     class SW_API BinarySerializer
     {
@@ -39,7 +42,7 @@ namespace sw
 
         /**
          * @brief Archive 의 현재 자리에서 객체를 역직렬화하고, 성공하면 읽기 자리를 그 객체 끝으로 옮깁니다.
-         * @details Archive 판 역직렬화(버전 · 압축 · 컴팩트도)는 모두 같다 — 스트림이 스스로 끝을 알므로 같은 Archive 에 이어 쓴 것을 차례로 읽습니다.
+         * @details Archive 판 역직렬화(버전 · 압축도)는 모두 같다 — 스트림이 스스로 끝을 알므로 같은 Archive 에 이어 쓴 것을 차례로 읽습니다.
          */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                                const SerializeContext& context = SerializeContext::getDefault() );
@@ -56,7 +59,7 @@ namespace sw
                                                    const SerializeContext&    context     = SerializeContext::getDefault() );
 
         // ------------------------------------------------------------------------------
-        // 3) 버전: 헤더 + migrate, 복제
+        // 3) 버전: 헤더 + migrate
         // ------------------------------------------------------------------------------
         /** @brief 버전 헤더를 붙여 바이너리로 직렬화합니다. */
         static void serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
@@ -81,9 +84,6 @@ namespace sw
                                                         uint32                  currentVersion  = 0,
                                                         const TypeInfo*         pLegacyTypeInfo = nullptr,
                                                         const SerializeContext& context         = SerializeContext::getDefault() );
-
-        /** @brief POD 는 memcpy 로, 그 외는 바이너리 직렬화 · 역직렬화로 객체를 복제합니다. */
-        static bool cloneObject( void* pDstData, const void* pSrcData, const TypeInfo& typeInfo );
 
         // ------------------------------------------------------------------------------
         // 4) 압축 바이너리 직렬화 (CompressionStream 통합)
@@ -114,40 +114,6 @@ namespace sw
                                                          const TypeInfo&         typeInfo,
                                                          Archive&                inArchive,
                                                          const SerializeContext& context = SerializeContext::getDefault() );
-
-        // ------------------------------------------------------------------------------
-        // 5) 적응형 컴팩트 바이너리 직렬화 (Presence Bitmask & Sparse VarUInt Index)
-        // ------------------------------------------------------------------------------
-        /**
-         * @brief 적응형 컴팩트 바이너리로 직렬화합니다(Dense: 비트마스크, Sparse: VarUInt 인덱스).
-         * @details 프로퍼티마다 12바이트 태그 헤더(이름 해시 · 타입 해시 · 크기)를 쓰는 대신, 어느 프로퍼티가 있는지를
-         *          비트마스크(프로퍼티 8개당 1바이트)나 VarUInt 인덱스로 적고 크기도 VarUInt 로 적습니다.
-         *          대신 스트림은 이름이 아니라 **프로퍼티 순서(인덱스)** 로 짝을 맞춥니다. 뒤에 덧붙인 프로퍼티는
-         *          괜찮지만, 중간에 넣거나 순서를 바꾼 스키마로 읽으면 엉뚱한 필드에 들어갑니다.
-         */
-        static void serializeCompact( const void*             pInstance,
-                                      const TypeInfo&         typeInfo,
-                                      vector<uint8>&          outBuffer,
-                                      const SerializeContext& context = SerializeContext::getDefault() );
-
-        /** @brief Archive 에 적응형 컴팩트 바이너리로 직렬화합니다. */
-        static void serializeCompact( const void*             pInstance,
-                                      const TypeInfo&         typeInfo,
-                                      Archive&                outArchive,
-                                      const SerializeContext& context = SerializeContext::getDefault() );
-
-        /** @brief 적응형 컴팩트 바이너리 버퍼에서 객체를 역직렬화합니다. */
-        [[nodiscard]] static bool deserializeCompact( void*                   pInstance,
-                                                      const TypeInfo&         typeInfo,
-                                                      const uint8*            pData,
-                                                      size_t                  dataSize,
-                                                      const SerializeContext& context = SerializeContext::getDefault() );
-
-        /** @brief Archive 에서 적응형 컴팩트 바이너리를 역직렬화합니다. */
-        [[nodiscard]] static bool deserializeCompact( void*                   pInstance,
-                                                      const TypeInfo&         typeInfo,
-                                                      Archive&                inArchive,
-                                                      const SerializeContext& context = SerializeContext::getDefault() );
     };
 
 } // namespace sw

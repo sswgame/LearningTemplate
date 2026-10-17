@@ -446,6 +446,27 @@ namespace sw
                 return nested;
             }
 
+            /**
+             * @brief 템플릿 인자 하나(원소 · 키)의 타입 이름입니다. 인자가 사용자 별칭이면 프로퍼티 타입과 같이 벗깁니다(`resolvePropertyAlias`).
+             * @details 적힌 이름만 쓰면 `vector<AccountID>` 의 원소가 모르는 이름 `AccountID` 로 등록되고, 자기 기술형 바이너리가 그 원소를 읽지 못합니다.
+             *          별칭이 아닌 인자는 적힌 이름 그대로입니다. clang 타입이 없으면(표기만으로 만든 노드) 적힌 이름을 씁니다.
+             */
+            static string resolveTemplateArgName( const CXType type, const int32 numClangArgs, const int32 index, const string& spelling,
+                                                  const ParserSession& session )
+            {
+                if ( 0 <= index && index < numClangArgs )
+                {
+                    const CXType argType = clang_Type_getTemplateArgumentAsType( type, static_cast<uint32>( index ) );
+                    if ( argType.kind != CXType_Invalid )
+                    {
+                        const CXType resolved = resolvePropertyAlias( argType, session );
+                        if ( clang_equalTypes( argType, resolved ) == 0 )
+                            return session._typeNameMap.normalize( takeString( clang_getTypeSpelling( resolved ) ) );
+                    }
+                }
+                return session._typeNameMap.normalize( spelling );
+            }
+
             static void fillContainerArgs( ParsedContainerNode& node, const string& typeSpelling, const CXType type,
                                            const ParserSession& session )
             {
@@ -456,14 +477,14 @@ namespace sw
                 {
                     if ( listArg.size() >= 2 )
                     {
-                        node._keyTypeName     = session._typeNameMap.normalize( listArg[0] );
-                        node._elementTypeName = session._typeNameMap.normalize( listArg[1] );
+                        node._keyTypeName     = resolveTemplateArgName( type, numClangArgs, 0, listArg[0], session );
+                        node._elementTypeName = resolveTemplateArgName( type, numClangArgs, 1, listArg[1], session );
                         node._elementNested   = makeNestedContainer( type, numClangArgs, 1, listArg[1], session );
                     }
                 }
                 else if ( listArg.empty() == false )
                 {
-                    node._elementTypeName = session._typeNameMap.normalize( listArg[0] );
+                    node._elementTypeName = resolveTemplateArgName( type, numClangArgs, 0, listArg[0], session );
                     node._elementNested   = makeNestedContainer( type, numClangArgs, 0, listArg[0], session );
                 }
             }

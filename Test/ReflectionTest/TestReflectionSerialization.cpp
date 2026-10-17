@@ -798,8 +798,8 @@ SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentByt
 /**
  * @brief [ReflectionSerializationTest] 바이너리는 enum 을 **열거자**로 싣는다 — 열거자 순서를 바꾼 다음 빌드도 같은 열거자를 읽는다(값 · 비트플래그 · 원소 · 맵 키)
  * @details enum 을 int64 **값**으로 실으면 열거자를 사이에 넣거나 순서를 바꿀 때 세이브 · 핫 리로드 뒤의 플레이 스냅샷 · 되돌리기 스냅샷이 조용히
- *          다른 열거자로 읽힌다(XML · JSON 은 이름). 테스트는 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 다섯
- *          (태그 · 판 붙은 · 압축 · 컴팩트 · diff)이 모두 열거자로 읽어야 한다 — 하나라도 값으로 읽으면 Green 이 Blue · Red 가 된다.
+ *          다른 열거자로 읽힌다(XML · JSON 은 이름). 테스트는 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 넷
+ *          (태그 · 판 붙은 · 압축 · diff)이 모두 열거자로 읽어야 한다 — 하나라도 값으로 읽으면 Green 이 Blue · Red 가 된다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenTheEnumIsReordered )
 {
@@ -815,8 +815,6 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
     sw::BinarySerializer::serializeVersioned( 3, &saved, info, versioned );
     sw::vector<uint8> compressed;
     SW_ASSERT_TRUE( sw::BinarySerializer::serializeCompressed( &saved, info, compressed ) );
-    sw::vector<uint8> compact;
-    sw::BinarySerializer::serializeCompact( &saved, info, compact );
     sw::vector<uint8> diff;
     SW_ASSERT_TRUE( sw::ObjectDiffSerializer::serializeDiff( diff, &defaults, &saved, info ) );
 
@@ -836,10 +834,6 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompressed( &fromCompressed, info, compressed.data(), compressed.size() ) );
     expectWireShiftEnumerators( "compressed", fromCompressed, 2, 3, 0, 1 );
 
-    WireShiftHost fromCompact;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &fromCompact, info, compact.data(), compact.size() ) );
-    expectWireShiftEnumerators( "compact", fromCompact, 2, 3, 0, 1 );
-
     WireShiftHost fromDiff;
     SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &fromDiff, info, diff.data(), diff.size() ) );
     expectWireShiftEnumerators( "diff", fromDiff, 2, 3, 0, 1 );
@@ -847,7 +841,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
 
 /**
  * @brief [ReflectionSerializationTest] 바이너리는 지금 판(`kCurrentBinaryWireVersion`)만 읽는다 — 판이 없던(0) 스트림 · 앞선 빌드의 판은 읽지 않는다
- * @details 아래 16진 두 줄은 enum 을 int64 값으로 싣던 판(0)의 바이트다(태그 · 컴팩트 — 머리의 판 자리가 0). 그 판을 쓰던 세이브 · 쿠킹 씬은
+ * @details 아래 16진은 enum 을 int64 값으로 싣던 판(0)의 태그 스트림 바이트다(머리의 판 자리가 0). 그 판을 쓰던 세이브 · 쿠킹 씬은
  *          저장소에 없고 쿠킹본은 매번 다시 쿠킹한다. 판을 짐작해 값으로 읽어 주면 열거자 순서가 바뀐 뒤 다른 열거자가 된다 — 읽지 않고 알린다.
  *          지금 빌드가 쓰는 바이트(골든)도 같이 둔다 — 머리의 판이 1 이고 enum 은 이름 해시다.
  */
@@ -859,15 +853,10 @@ SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )
     const sw::vector<uint8> legacyTagged = fromHexString(
         "05000000516400bbad02b3b908000000010000000000000069c34f84553734500800000005000000000000000d69608302e8898f1400000002000000020000000000000000000000000000"
         "0031a7168fb1efa2df1000000001000000010000000000000007000000849cb3ebbfe2defb0400000009000000" );
-    const sw::vector<uint8> legacyCompact = fromHexString(
-        "01051f0801000000000000000805000000000000001402000000020000000000000000000000000000001001000000010000000000000007000000"
-        "0409000000" );
     {
         test::ScopedDefensiveTestLog expected( "a binary stream of wire version 0" );
         WireShiftHost                fromTagged;
         SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &fromTagged, info, legacyTagged.data(), legacyTagged.size() ) );
-        WireShiftHost fromCompact;
-        SW_EXPECT_FALSE( sw::BinarySerializer::deserializeCompact( &fromCompact, info, legacyCompact.data(), legacyCompact.size() ) );
     }
 
     // 지금 빌드가 쓰는 바이트 — 머리 05000001(판 1), _color 는 "Green" 의 해시, _flags 는 이름 둘(해시 오름차순), 원소 · 맵 키도 해시.
@@ -2810,35 +2799,6 @@ SW_TEST_CASE( ReflectionSerializationTest, JSONPrettyPrint )
 }
 
 /**
- * @brief [ReflectionCloningTest] 오브젝트 딥카피
- */
-SW_TEST_CASE( ReflectionCloningTest, ObjectDeepCopyClone )
-{
-    struct CloneableActor
-    {
-        int32   _health = 100;
-        float32 _speed  = 5.5f;
-    } srcActor, dstActor;
-
-    srcActor._health = 250;
-    srcActor._speed  = 12.0f;
-
-    sw::TypeInfo info;
-    info._name               = sw::hashed_string( "CloneableActor" );
-    info._fullyQualifiedName = sw::hashed_string( "sw::CloneableActor" );
-    info._size               = sizeof( CloneableActor );
-    info._listProperty       = {
-        {sw::hashed_string( "_health" ),   sw::hashed_string( "int32" ), SW_OFFSET_OF( CloneableActor, _health ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-        { sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( CloneableActor,  _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-    };
-
-    bool cloneOk = sw::BinarySerializer::cloneObject( &dstActor, &srcActor, info );
-    SW_EXPECT_TRUE( cloneOk );
-    SW_EXPECT_EQUAL( 250, dstActor._health );
-    SW_EXPECT_NEAR_EQUAL( 12.0f, dstActor._speed, 1e-4f );
-}
-
-/**
  * @brief [ReflectionSerializationTest] 중첩 구조체·컨테이너 라운드트립
  */
 SW_TEST_CASE( ReflectionSerializationTest, NestedStructAndContainersRoundtrip )
@@ -3481,35 +3441,6 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
 }
 
 /**
- * @brief [ReflectionSerializationTest] 압축 스트림이 기록하지 않는 프로퍼티(Transient)를 가리키면 쓰지 않는다
- * @details 쓰는 쪽은 Transient 를 적지 않는다. 희소 모드가 아무 인덱스에나 페이로드를 쓰면 망가진 스트림이 런타임 전용 값을 덮는다.
- */
-SW_TEST_CASE( ReflectionSerializationTest, CompactStreamDoesNotWriteTransientProperties )
-{
-    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
-    SW_ASSERT_NOT_NULL( pType );
-    const sw::vector<sw::PropertyInfo>& listProp = pType->getPropertiesWithBase();
-    uint8                               healthIndex{ 0xFF };
-    for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
-    {
-        if ( listProp[propIndex]._name == sw::hashed_string( "_health" ) )
-            healthIndex = static_cast<uint8>( propIndex );
-    }
-    SW_ASSERT_TRUE( healthIndex < 0x80 ); // varint 한 바이트
-
-    // [판 · 희소 모드][수정 1 개][인덱스][크기 4][int32 777]
-    const int32       injected = 777;
-    const uint8       modeByte = static_cast<uint8>( ( static_cast<uint8>( sw::kCurrentBinaryWireVersion ) << 4 ) | sw::PresenceMaskUtil::kModeSparse );
-    sw::vector<uint8> stream{ modeByte, 1, healthIndex, 4 };
-    const uint8*      pInjected = reinterpret_cast<const uint8*>( &injected );
-    stream.insert( stream.end(), pInjected, pInjected + sizeof( injected ) );
-
-    sw::MetaTestActor actor;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &actor, *pType, stream.data(), stream.size(), sw::SerializeContext::getDefault() ) );
-    SW_EXPECT_EQUAL( 100, actor._health );
-}
-
-/**
  * @brief [ReflectionSerializationTest] `Archive::setOffset` 은 데이터 끝을 넘기지 않는다
  * @details 읽기 함수들은 `_offset <= _dataSize` 를 믿고 남은 양을 뺄셈으로 센다. 검사 없이 넣으면 그 뺄셈이 돌아 다음 읽기가 버퍼
  *          밖을 읽는다.
@@ -3795,12 +3726,6 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat
     sw::ContainerShapeActor fromBinary;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, *pType, bytes.data(), bytes.size() ) );
     SW_EXPECT_TRUE( isSame( fromBinary ) );
-
-    sw::vector<uint8> compactBytes;
-    sw::BinarySerializer::serializeCompact( &source, *pType, compactBytes );
-    sw::ContainerShapeActor fromCompact;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &fromCompact, *pType, compactBytes.data(), compactBytes.size() ) );
-    SW_EXPECT_TRUE( isSame( fromCompact ) );
 }
 
 /**
