@@ -450,11 +450,11 @@ namespace sw
                 const float32 intensity = _circuit.getOutput( node, hashed_string( "Lit" ) ) ? pose._intensity * Internal::readNumber( _circuit, node, "intensity", 1.0f ) : 0.0f;
                 if ( pLight->getIntensity() != intensity )
                 {
-                    const ComponentHandle light    = pLight->getHandle();
-                    GameObjectManager*    pManager = &manager;
+                    const TComponentHandle<LightComponent> light{ pLight };
+                    GameObjectManager*                     pManager = &manager;
                     manager.executeOrDeferPostTick( [pManager, light, intensity]()
                     {
-                        LightComponent* pResolved = static_cast<LightComponent*>( pManager->resolveComponent( light ) );
+                        LightComponent* pResolved = pManager->resolveComponent( light );
                         if ( pResolved != nullptr )
                             pResolved->setIntensity( intensity );
                     } );

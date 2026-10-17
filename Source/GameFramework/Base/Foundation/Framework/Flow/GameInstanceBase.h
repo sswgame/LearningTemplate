@@ -276,12 +276,12 @@ namespace sw
         static void despawnViewsOf( TManager& manager )
         {
             // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 핸들을 모은 뒤 걷는다.
-            vector<ComponentHandle> listComponent;
+            vector<TComponentHandle<TComponent>> listComponent;
             manager.template forEachComponentOfType<TComponent>( [&listComponent]( TComponent* pComponent )
-            { listComponent.push_back( pComponent->getHandle() ); } );
-            for ( const ComponentHandle& handle : listComponent )
+            { listComponent.push_back( TComponentHandle<TComponent>{ pComponent } ); } );
+            for ( const TComponentHandle<TComponent>& handle : listComponent )
             {
-                TComponent* pComponent = static_cast<TComponent*>( manager.resolveComponent( handle ) );
+                TComponent* pComponent = manager.resolveComponent( handle );
                 if ( pComponent != nullptr )
                     pComponent->despawnViews();
             }

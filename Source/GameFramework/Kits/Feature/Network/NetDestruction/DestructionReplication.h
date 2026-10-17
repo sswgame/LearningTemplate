@@ -138,11 +138,11 @@ namespace sw
 
         struct Entry
         {
-            vector<ChunkSendState> _listChunk{};
-            ComponentHandle        _component{};
-            uint32                 _netID{ 0 };
-            uint32                 _sentEventCount{ 0 };
-            float32                _poseTime{ 0.0f };
+            vector<ChunkSendState>                  _listChunk{};
+            TComponentHandle<FractureComponentBase> _component{};
+            uint32                                  _netID{ 0 };
+            uint32                                  _sentEventCount{ 0 };
+            float32                                 _poseTime{ 0.0f };
         };
 
         struct Request
@@ -240,14 +240,14 @@ namespace sw
 
         struct Entry
         {
-            vector<BufferedEvent> _listFutureEvent{}; ///< 번호가 앞서 도착한 이벤트와 스냅숏을 기다리는 동안 도착한 이벤트. 번호 순서로 이어서 적용한다
-            vector<HashCheck>     _listHashCheck{};
-            vector<ChunkTrack>    _listChunk{};
-            ComponentHandle       _component{};
-            uint32                _netID{ 0 };
-            uint32                _nextEventIndex{ 0 };
-            uint32                _skipCount{ 0 };
-            uint8                 _bAwaitingSnapshot{ SW_FALSE };
+            vector<BufferedEvent>                   _listFutureEvent{}; ///< 번호가 앞서 도착한 이벤트와 스냅숏을 기다리는 동안 도착한 이벤트. 번호 순서로 이어서 적용한다
+            vector<HashCheck>                       _listHashCheck{};
+            vector<ChunkTrack>                      _listChunk{};
+            TComponentHandle<FractureComponentBase> _component{};
+            uint32                                  _netID{ 0 };
+            uint32                                  _nextEventIndex{ 0 };
+            uint32                                  _skipCount{ 0 };
+            uint8                                   _bAwaitingSnapshot{ SW_FALSE };
         };
 
         FractureComponentBase* resolve( const Entry& entry ) const;

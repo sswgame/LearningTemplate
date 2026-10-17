@@ -126,12 +126,11 @@ namespace sw
                 return true;
             }
 
-            static FractureComponentBase* resolveFracture( GameObjectManager* pManager, const ComponentHandle& handle )
+            static FractureComponentBase* resolveFracture( GameObjectManager* pManager, TComponentHandle<FractureComponentBase> handle )
             {
                 if ( pManager == nullptr )
                     return nullptr;
-                Component* pComponent = pManager->resolveComponent( handle );
-                return pComponent != nullptr ? castTo<FractureComponentBase>( pComponent ) : nullptr;
+                return pManager->resolveComponent( handle );
             }
         };
     } // namespace
@@ -173,7 +172,7 @@ namespace sw
         }
         *pEntry                 = Entry{};
         pEntry->_netID          = netID;
-        pEntry->_component      = component.getHandle();
+        pEntry->_component      = TComponentHandle<FractureComponentBase>{ &component };
         pEntry->_sentEventCount = static_cast<uint32>( component.getEventLog()._listEvent.size() );
     }
 
@@ -484,7 +483,7 @@ namespace sw
         }
         *pEntry            = Entry{};
         pEntry->_netID     = netID;
-        pEntry->_component = component.getHandle();
+        pEntry->_component = TComponentHandle<FractureComponentBase>{ &component };
         _clock.setSampleInterval( MathUtil::max( _clock.getSampleInterval(), DestructionReplicationInternal::computePosePeriod( component ) ) );
     }
 

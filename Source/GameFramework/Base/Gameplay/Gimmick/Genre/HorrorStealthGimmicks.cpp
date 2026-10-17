@@ -124,12 +124,12 @@ namespace sw
         const bool         bNoLightUpdateNeeded = pLight == nullptr || pManager == nullptr || scale == _appliedScale;
         if ( bNoLightUpdateNeeded )
             return;
-        _appliedScale                = scale;
-        const ComponentHandle light  = pLight->getHandle();
-        const float32         target = _baseIntensity * scale;
+        _appliedScale = scale;
+        const TComponentHandle<LightComponent> light{ pLight };
+        const float32                          target = _baseIntensity * scale;
         pManager->executeOrDeferPostTick( [pManager, light, target]()
         {
-            LightComponent* pResolved = static_cast<LightComponent*>( pManager->resolveComponent( light ) );
+            LightComponent* pResolved = pManager->resolveComponent( light );
             if ( pResolved != nullptr )
                 pResolved->setIntensity( target );
         } );
