@@ -90,7 +90,7 @@ py -3 -m Scripts backlog --id C-28           # 그 항목의 본문만
 - **1-3** 그래픽스 · RHI · 셰이더: [graphics.md](graphics.md) `D2-1` `D2-2` `D2-5` `D2-6` `D2-7` `D2-9`
 - **1-4** 에디터: [editor.md](editor.md) `B-3` `B-4` `D3-1` `D3-3` `D3-4` `D3-5`, [network.md](network.md) `F-1`
 - **1-5** 핫 리로드 · 모듈: [engine.md](engine.md) `G-1`
-- **1-6** 게임프레임워크 · 킷 · 게임: [engine.md](engine.md) `C-4` `C-5` `D1-4`, [editor.md](editor.md) `D3-7`, [gameplay.md](gameplay.md) `D4-2` `D4-3` `D4-4` `D4-5` `D4-6` `D4-7` `D4-8` `D4-9` `D4-10` `D4-11` `D4-12` `D4-13`, [audio-ai-localization.md](audio-ai-localization.md) `D5-1` `D5-2` `D5-3`, [ui.md](ui.md) `D6-1` `D6-2` `D6-3` `D6-4` `D6-5` `D6-6`, [network.md](network.md) `G-2`, [project.md](project.md) `H-1`
+- **1-6** 게임프레임워크 · 킷 · 게임: [engine.md](engine.md) `C-4` `C-5` `D1-4`, [editor.md](editor.md) `D3-7`, [gameplay.md](gameplay.md) `D4-2` `D4-3` `D4-4` `D4-5` `D4-6` `D4-7` `D4-8` `D4-9` `D4-10` `D4-11` `D4-12` `D4-13`, [audio-ai-localization.md](audio-ai-localization.md) `D5-1` `D5-2` `D5-3`, [ui.md](ui.md) `D6-1` `D6-2` `D6-4` `D6-5` `D6-6`, [network.md](network.md) `G-2`, [project.md](project.md) `H-1`
 - **1-7** Core · 태스크 · 네트워크: [network.md](network.md) `B-9` `B-10` `D7-1` `D7-2` `D7-3` `D7-5` `D7-6`
 - **1-8** 성능: [engine.md](engine.md) `C-7`, [ui.md](ui.md) `C-8` `C-9`
 - **1-9** 빌드 · 린트 · CI · 테스트: [quality.md](quality.md) `B-5` `C-14` `C-15` `E-2`, [project.md](project.md) `C-11` `C-12` `C-16` `C-17`, [engine.md](engine.md) `C-13`

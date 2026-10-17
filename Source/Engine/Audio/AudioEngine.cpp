@@ -264,6 +264,11 @@ namespace sw
         _published.getInstanceStatuses( outListStatus );
     }
 
+    void AudioEngine::takeSubtitleCues( vector<AudioSubtitleCue>& outListCue )
+    {
+        _published.takeSubtitleCues( outListCue );
+    }
+
     bool AudioEngine::hasEventLibrary( const hashed_string& libraryName ) const
     {
         std::scoped_lock<mutex> lock{ _libraryMutex };

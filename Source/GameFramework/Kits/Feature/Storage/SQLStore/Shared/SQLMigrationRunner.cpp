@@ -7,6 +7,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
+
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriver.h"
 
@@ -77,69 +81,136 @@ namespace sw
                 text.appendFormat( "%#%#%#%#", prefix, version, middle, suffix );
                 return string( text.view() );
             }
+
+            /** @brief `%#` 서식으로 글을 만듭니다(오류 문구). */
+            template <typename... Args>
+            static string formatText( string_view format, Args&&... args )
+            {
+                StringBuilder<constant::kMaxBuffer1024> text;
+                text.appendFormat( format, std::forward<Args>( args )... );
+                return string( text.view() );
+            }
+
+            /** @brief 폴더(리소스 경로나 절대 경로) 아래 파일 경로입니다. 리소스 키는 `/` 로 잇는다. */
+            static string joinPath( string_view folder, string_view fileName ) { return formatText( "%#/%#", folder, fileName ); }
+
+            /** @brief 목록 파일(`{ "migrations": [ "NNNN_이름", ... ] }`)을 읽습니다. 다른 키 · 문자열이 아닌 항목 · 빈 목록은 오류입니다. */
+            [[nodiscard]] static bool readList( string_view folder, vector<string>& outListStem, string& outError )
+            {
+                const string listPath = joinPath( folder, SQLMigrationRunner::kListFileName );
+                string       text;
+                if ( ResourceIO::readTextResource( listPath, text ) == false )
+                {
+                    outError = formatText( "cannot read the migration list '%#'", listPath );
+                    return false;
+                }
+                JSONDocument document;
+                if ( document.tryParse( text ) == false || document.getRoot().isObject() == false )
+                {
+                    outError = formatText( "migration list '%#' is not a JSON object", listPath );
+                    return false;
+                }
+                const JSONValue root               = document.getRoot();
+                const JSONValue migrations         = root.get( "migrations", false );
+                const bool      bOnlyMigrationsKey = root.size() == 1 && migrations.isValid() && migrations.isArray();
+                if ( bOnlyMigrationsKey == false || migrations.size() == 0 )
+                {
+                    outError = formatText( "migration list '%#' must hold only a non-empty \"migrations\" array", listPath );
+                    return false;
+                }
+                outListStem.clear();
+                for ( size_t entryIndex = 0; entryIndex < migrations.size(); ++entryIndex )
+                {
+                    const JSONValue entry = migrations.at( entryIndex );
+                    if ( entry.isString() == false )
+                    {
+                        outError = formatText( "migration list '%#' holds an entry that is not a string", listPath );
+                        return false;
+                    }
+                    outListStem.push_back( entry.asString() );
+                }
+                return true;
+            }
+
+            /**
+             * @brief 원본 폴더가 디스크에 있으면 그 안의 `.sql` 이 모두 목록의 마이그레이션(공통이나 방언 분기)인지 대조합니다.
+             * @details 팩에는 폴더가 없어 대조할 것이 없다 — 팩은 이 폴더에서 만들어지므로 개발 · 테스트 · CI 에서 맞춰 두면 된다.
+             */
+            [[nodiscard]] static bool checkFolderMatchesList( string_view folder, const vector<string>& listStem, string& outError )
+            {
+                const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : ResourcePaths::makeAbsolutePath( folder );
+                if ( diskFolder.empty() || FileUtil::isDirectory( diskFolder ) == false )
+                    return true;
+                vector<string> listFilePath;
+                if ( FileUtil::collectFiles( diskFolder, ".sql", listFilePath, false ) == false )
+                {
+                    outError = formatText( "cannot read the migration folder '%#'", diskFolder );
+                    return false;
+                }
+                for ( const string& filePath : listFilePath )
+                {
+                    const string  fileName = FileUtil::getFileNamePart( filePath );
+                    MigrationFile file;
+                    if ( parseFileName( fileName, file ) == false )
+                    {
+                        outError = formatText( "migration file '%#' is not named NNNN_name.sql or NNNN_name.<driver>.sql", fileName );
+                        return false;
+                    }
+                    const string stem    = formatText( "%#%#", string_view( fileName ).substr( 0, static_cast<size_t>( kVersionDigitCount + 1 ) ), file._name );
+                    const bool   bListed = std::find( listStem.begin(), listStem.end(), stem ) != listStem.end();
+                    if ( bListed == false )
+                    {
+                        outError = formatText( "migration file '%#' is not listed in %# of '%#'", fileName, SQLMigrationRunner::kListFileName, diskFolder );
+                        return false;
+                    }
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    bool SQLMigrationRunner::loadMigrations( string_view folderPath, string_view driverName, vector<SQLMigration>& outListMigration, string& outError )
+    bool SQLMigrationRunner::loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration, string& outError )
     {
-        vector<string> listFilePath;
-        if ( FileUtil::collectFiles( folderPath, ".sql", listFilePath, false ) == false )
-        {
-            outError = "cannot read the migration folder '" + string( folderPath ) + "'";
+        vector<string> listStem;
+        if ( SQLMigrationRunnerInternal::readList( folder, listStem, outError ) == false )
             return false;
-        }
-        // 번호별로 (공통 파일, 이 드라이버의 방언 파일)을 모은다. 다른 드라이버의 방언 파일은 번호만 차지하고 쓰지 않는다.
-        map<int32, SQLMigrationRunnerInternal::MigrationFile> mapCommon;
-        map<int32, SQLMigrationRunnerInternal::MigrationFile> mapDriver;
-        map<int32, bool>                                      mapSeen;
-        for ( const string& filePath : listFilePath )
+        if ( SQLMigrationRunnerInternal::checkFolderMatchesList( folder, listStem, outError ) == false )
+            return false;
+        for ( size_t stemIndex = 0; stemIndex < listStem.size(); ++stemIndex )
         {
+            const string&                             stem = listStem[stemIndex];
             SQLMigrationRunnerInternal::MigrationFile file;
-            const string                              fileName = FileUtil::getFileNamePart( filePath );
-            if ( SQLMigrationRunnerInternal::parseFileName( fileName, file ) == false )
+            const bool                                bNamed = SQLMigrationRunnerInternal::parseFileName( SQLMigrationRunnerInternal::formatText( "%#.sql", stem ), file ) && file._driverName.empty();
+            if ( bNamed == false )
             {
-                outError = "migration file '" + fileName + "' is not named NNNN_name.sql or NNNN_name.<driver>.sql";
+                outError = SQLMigrationRunnerInternal::formatText( "migration '%#' in %# is not named NNNN_name", stem, SQLMigrationRunner::kListFileName );
                 return false;
             }
-            file._path             = filePath;
-            mapSeen[file._version] = true;
-            if ( file._driverName.empty() == false && file._driverName != driverName )
-                continue;
-            map<int32, SQLMigrationRunnerInternal::MigrationFile>& mapTarget = file._driverName.empty() ? mapCommon : mapDriver;
-            if ( mapTarget.find( file._version ) != mapTarget.end() )
+            const int32 expectedVersion = static_cast<int32>( stemIndex ) + 1;
+            if ( file._version != expectedVersion )
             {
-                outError = SQLMigrationRunnerInternal::makeText( "migration ", file._version, " has two files: ", fileName );
+                outError = SQLMigrationRunnerInternal::makeText( "migration numbers must run 1, 2, 3 ... without gaps - expected ", expectedVersion, " at ", stem );
                 return false;
             }
-            mapTarget.emplace( file._version, file );
-        }
-        int32 expectedVersion = 1;
-        for ( const auto& [version, bSeen] : mapSeen )
-        {
-            (void)bSeen;
-            if ( version != expectedVersion )
+            // 방언 분기 파일이 있으면 공통 파일 대신 쓴다. 다른 드라이버의 방언 파일은 읽지 않는다.
+            const string driverPath = SQLMigrationRunnerInternal::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.%#.sql", stem, driverName ) );
+            const string commonPath = SQLMigrationRunnerInternal::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.sql", stem ) );
+            const bool   bHasDriver = ResourceIO::hasResource( driverPath );
+            if ( bHasDriver == false && ResourceIO::hasResource( commonPath ) == false )
             {
-                outError = SQLMigrationRunnerInternal::makeText( "migration numbers must run 1, 2, 3 ... without gaps - expected ", expectedVersion, " in ", folderPath );
+                outError = SQLMigrationRunnerInternal::makeText( "migration ", file._version, " has no common file and no file for driver ", driverName );
                 return false;
             }
-            ++expectedVersion;
-            const auto driverIt = mapDriver.find( version );
-            const auto commonIt = mapCommon.find( version );
-            if ( driverIt == mapDriver.end() && commonIt == mapCommon.end() )
+            const string& path      = bHasDriver ? driverPath : commonPath;
+            SQLMigration& migration = outListMigration.emplace_back();
+            migration._version      = file._version;
+            migration._name         = file._name;
+            if ( ResourceIO::readTextResource( path, migration._sql ) == false )
             {
-                outError = SQLMigrationRunnerInternal::makeText( "migration ", version, " has no common file and no file for driver ", driverName );
-                return false;
-            }
-            const SQLMigrationRunnerInternal::MigrationFile& file      = driverIt != mapDriver.end() ? driverIt->second : commonIt->second;
-            SQLMigration&                                    migration = outListMigration.emplace_back();
-            migration._version                                         = version;
-            migration._name                                            = file._name;
-            if ( FileUtil::readTextFile( file._path, migration._sql ) == false )
-            {
-                outError = "cannot read migration file '" + file._path + "'";
+                outError = SQLMigrationRunnerInternal::formatText( "cannot read migration file '%#'", path );
                 return false;
             }
             SQLMigrationRunnerInternal::removeCarriageReturns( migration._sql );

@@ -22,6 +22,7 @@
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Bootstrap/CommandLineSubsystem.h"
@@ -703,6 +704,13 @@ namespace sw
             }
             const UIViewport viewport =
                 _pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
+            // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
+            if ( _pAudioService != nullptr && _pAudioService->isInitialized() )
+            {
+                vector<AudioSubtitleCue> listCue;
+                _pAudioService->getEngine().takeSubtitleCues( listCue );
+                _pUISystem->getSubtitles().postAudioCues( listCue );
+            }
             _pUISystem->update( GameTimeScale::getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
         }
 

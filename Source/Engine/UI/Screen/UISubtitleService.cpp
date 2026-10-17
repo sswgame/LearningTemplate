@@ -6,6 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Audio/AudioEngineState.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -55,6 +57,16 @@ namespace sw
         line._id               = _nextLineID++;
         _listQueued.push_back( std::move( line ) );
         return _listQueued.back()._id;
+    }
+
+    void UISubtitleService::postAudioCues( const vector<AudioSubtitleCue>& listCue )
+    {
+        for ( const AudioSubtitleCue& cue : listCue )
+        {
+            // 키는 `Namespace.Key` 이다. 표에 없으면 `SW_LOCKEY` 처럼 키 자체가 보인다(빠진 키는 조회가 알린다).
+            const utf8* pSpeaker = cue._speakerKey.empty() ? "" : LocalizedText::find( cue._speakerKey.c_str(), cue._speakerKey.c_str() );
+            post( pSpeaker, LocalizedText::find( cue._textKey.c_str(), cue._textKey.c_str() ) );
+        }
     }
 
     void UISubtitleService::clear()

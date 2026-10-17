@@ -57,6 +57,8 @@ namespace sw::editor
 {
     AudioEventBrowserPanel::AudioEventBrowserPanel()
         : IEditorPanel( false )
+        , _editLibrary{}
+        , _grid{}
         , _listEventName{}
         , _listVisibleEvent{}
         , _listFieldRow{}
@@ -64,9 +66,67 @@ namespace sw::editor
         , _listInstanceRow{}
         , _selectedEvent{}
         , _selectedLibrary{}
+        , _editLibraryName{}
         , _filter{}
         , _bOnlySelectedEvent{ false }
+        , _bEditDirty{ false }
     {
+    }
+
+    void AudioEventBrowserPanel::beginEditing()
+    {
+        // 엔진의 사본이 아니라 파일을 다시 읽는다 — 엔진 설명자는 오디오 스레드가 참조하고, 저장은 파일이 정본이다.
+        if ( _editLibrary.loadFromResource( _selectedLibrary.view() ) == false )
+        {
+            endEditing();
+            return;
+        }
+        _editLibraryName = _selectedLibrary;
+        _bEditDirty      = false;
+    }
+
+    void AudioEventBrowserPanel::endEditing()
+    {
+        _editLibrary     = AudioEventLibrary{};
+        _editLibraryName = hashed_string{};
+        _bEditDirty      = false;
+    }
+
+    void AudioEventBrowserPanel::onEventEdited( const PropertyInfo& /*prop*/ )
+    {
+        _bEditDirty = true;
+    }
+
+    void AudioEventBrowserPanel::drawEventEditor( AudioEventDesc& event )
+    {
+        ImGui::BeginDisabled( _bEditDirty == false );
+        if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "SaveEdits" ) ) )
+        {
+            // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
+            if ( _editLibrary.saveToResource( _editLibraryName.view() ) )
+                _bEditDirty = false;
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::note( "audioevents.save" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "SaveEditsTip" ) );
+        ImGui::SameLine();
+        if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "StopEditing" ) ) )
+        {
+            endEditing();
+            return;
+        }
+        EditorSelfTestMarks::note( "audioevents.stopEditing" );
+        if ( _bEditDirty )
+        {
+            ImGui::SameLine();
+            EditorThemeUtil::textMuted( SW_LOCKEY( "EditorAudioEvents", "Unsaved" ) );
+        }
+
+        EditorPropertyGridTarget target{};
+        target._pInstance = &event;
+        target._pType     = AudioEventDesc::StaticType();
+        target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &AudioEventBrowserPanel::onEventEdited, this );
+        _grid.drawProperties( target, nullptr, {} );
     }
 
     void AudioEventBrowserPanel::drawEventList()
@@ -118,12 +178,27 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) )
         {
-            // 이벤트 데이터를 고치는 길은 데이터 파일이다(엔진에 라이브러리 쓰기가 없다). 여는 도구가 없으면 경로를 클립보드에 둔다.
+            // 그리드에 없는 편집(이벤트 추가 · 파라미터 · 감쇠 프리셋)은 데이터 파일에서 한다. 여는 도구가 없으면 경로를 클립보드에 둔다.
             if ( EditorAssetCommands::openPath( _selectedLibrary.view() ) == false )
                 ImGui::SetClipboardText( _selectedLibrary.c_str() );
         }
         EditorSelfTestMarks::note( "audioevents.openDataFile" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "OpenDataFileTip" ) );
+
+        // 고치기 — 같은 파일의 사본이 있으면 그 사본의 이벤트를 고친다. 다시 읽어 이벤트가 사라졌으면 읽기 보기로 둔다.
+        AudioEventDesc* pEditEvent = _editLibraryName == _selectedLibrary ? _editLibrary.findEvent( _selectedEvent ) : nullptr;
+        if ( pEditEvent != nullptr )
+        {
+            drawEventEditor( *pEditEvent );
+            return;
+        }
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _bEditDirty ); // 다른 파일을 고치는 중에 저장하지 않은 것이 있으면 바꾸지 않는다
+        if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) )
+            beginEditing();
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::note( "audioevents.edit" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "EditEventTip" ) );
 
         AudioEventBrowserUtil::makeEventFieldRows( eventDesc, attenuation, _listFieldRow );
         if ( ImGui::BeginTable( "##AudioEventFields", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) )

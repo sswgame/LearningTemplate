@@ -1049,6 +1049,18 @@
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
             ]
         },
+        "EditorAudioEvents.EditEvent": {
+            "source": "Edit",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.EditEventTip": {
+            "source": "Edits a copy of this event's library file; Save writes it only when it passes validation, and hot reload applies it",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
         "EditorAudioEvents.FieldBus": {
             "source": "Bus",
             "origins": [
@@ -1211,8 +1223,26 @@
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
             ]
         },
+        "EditorAudioEvents.SaveEdits": {
+            "source": "Save",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.SaveEditsTip": {
+            "source": "Writes the library file; an invalid library is not written and the error is logged",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
         "EditorAudioEvents.SelectEvent": {
             "source": "Select an event on the left",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.StopEditing": {
+            "source": "Stop Editing",
             "origins": [
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
             ]
@@ -1231,6 +1261,12 @@
         },
         "EditorAudioEvents.TabVoices": {
             "source": "Voices",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.Unsaved": {
+            "source": "Unsaved changes",
             "origins": [
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
             ]

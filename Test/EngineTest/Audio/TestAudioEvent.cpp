@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixer.h"
@@ -8,6 +10,7 @@
 #include "EngineTest/AudioTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTempPath.h"
 
 // ------------------------------------------------------------------------------
 // AudioEventTest — 사운드 이벤트(컨테이너 · 범위 · 쿨다운 · 동시 재생 상한과 뺏기 · 우선순위 · 가상화 · 파라미터) · 스냅샷
@@ -406,4 +409,77 @@ SW_TEST_CASE( AudioEventTest, LibraryNamesAreValidated )
     SW_EXPECT_FALSE( engine.loadEventLibrary( sw::hashed_string( "test/other" ), library ) );
     SW_EXPECT_FALSE( engine.hasEvent( sw::hashed_string( "Bad" ) ) );
     SW_EXPECT_TRUE( engine.hasEvent( sw::hashed_string( "Seq" ) ) );
+}
+
+/**
+ * @brief [AudioEventTest] 음성 자막 — 자막 키를 가진 클립이 시작할 때만 신호(화자 키 · 글 키 · 재생 id)를 내고, 쿨다운으로 버린 재생과 키 없는 클립은 내지 않는다
+ * @details 변이: `applyPostEvent` 에서 `addSubtitleCue` 를 쿨다운 검사 앞으로 옮기면 버린 재생도 신호를 내서 진다. 화자 키만 있고 자막 키가 없는 이벤트는 읽기 오류다.
+ */
+SW_TEST_CASE( AudioEventTest, VoiceClipsPostSubtitleCues )
+{
+    sw::AudioEngine engine;
+    SW_ASSERT_TRUE( AudioEventTestInternal::initializeEngine( engine ) );
+    sw::AudioEventLibrary library;
+    SW_ASSERT_TRUE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent>
+        <AudioEventDesc _name="Line" _bus="sfx" _container="Sequence" _cooldownSeconds="0.1" _subtitleSpeakerKey="Voice.Hero">
+            <_listClip><AudioClipEntry _path="test/a" _subtitleKey="Voice.LineA" /><AudioClipEntry _path="test/b" /></_listClip>
+        </AudioEventDesc></_listEvent></AudioEventLibrary>)" ) );
+    SW_ASSERT_TRUE( engine.loadEventLibrary( sw::hashed_string( "test/voice" ), library ) );
+
+    sw::vector<sw::AudioSubtitleCue> listCue;
+    const sw::AudioPlayingID         first = engine.postEvent( sw::hashed_string( "Line" ) );
+    (void)engine.postEvent( sw::hashed_string( "Line" ) ); // 쿨다운 안 — 버려지고 신호도 없다
+    (void)test::AudioTestUtil::render( engine, 256 );
+    engine.takeSubtitleCues( listCue );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listCue.size() );
+    SW_EXPECT_STREQ( "Voice.Hero", listCue[0]._speakerKey.c_str() );
+    SW_EXPECT_STREQ( "Voice.LineA", listCue[0]._textKey.c_str() );
+    SW_EXPECT_EQUAL( first, listCue[0]._playingID );
+    engine.takeSubtitleCues( listCue );
+    SW_EXPECT_TRUE( listCue.empty() ); // 가져가면 비운다
+
+    (void)test::AudioTestUtil::render( engine, 4800 );
+    (void)engine.postEvent( sw::hashed_string( "Line" ) ); // 순서 커서가 키 없는 test/b 로 간다
+    (void)test::AudioTestUtil::render( engine, 256 );
+    engine.takeSubtitleCues( listCue );
+    SW_EXPECT_TRUE( listCue.empty() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, engine.getStats()._droppedSubtitleCueCount );
+
+    SW_TEST_DEFENSIVE_SCOPE( "A speaker key without any clip subtitle key is a load error" );
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Mute" _bus="sfx" _subtitleSpeakerKey="Voice.Hero">
+        <_listClip><AudioClipEntry _path="test/a" /></_listClip></AudioEventDesc></_listEvent></AudioEventLibrary>)" ) );
+}
+
+/**
+ * @brief [AudioEventTest] 라이브러리 저장 — 쓴 파일을 다시 읽으면 고친 값이 그대로이고, 검사를 통과하지 못한 라이브러리는 쓰지 않는다
+ * @details 에디터 오디오 이벤트 창의 저장 길(`saveToResource`)이다. 변이: 저장 전 `validate` 를 빼면 클립 없는 이벤트 파일이 남아 진다.
+ */
+SW_TEST_CASE( AudioEventTest, LibrarySavesAndRefusesInvalid )
+{
+    sw::AudioEventLibrary library;
+    SW_ASSERT_TRUE( library.loadFromXMLText( AudioEventTestInternal::kLibraryXML ) );
+    sw::AudioEventDesc* pEvent = library.findEvent( sw::hashed_string( "Ranged" ) );
+    SW_ASSERT_NOT_NULL( pEvent );
+    pEvent->_volumeDbMin              = -9.0f;
+    pEvent->_listClip[0]._subtitleKey = sw::hashed_string( "Voice.Ranged" );
+    pEvent->_subtitleSpeakerKey       = sw::hashed_string( "Voice.Hero" );
+    const sw::string path             = test::makeTempPath( "saved.audioevents.xml" );
+    SW_ASSERT_TRUE( library.saveToResource( path ) );
+
+    sw::string text;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+    sw::AudioEventLibrary reloaded;
+    SW_ASSERT_TRUE( reloaded.loadFromXMLText( text, path ) );
+    SW_EXPECT_EQUAL( library._listEvent.size(), reloaded._listEvent.size() );
+    const sw::AudioEventDesc* pReloaded = reloaded.findEvent( sw::hashed_string( "Ranged" ) );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_EXPECT_NEAR_EQUAL( -9.0f, pReloaded->_volumeDbMin, 1e-5f );
+    SW_EXPECT_STREQ( "Voice.Ranged", pReloaded->_listClip[0]._subtitleKey.c_str() );
+    SW_EXPECT_STREQ( "Voice.Hero", pReloaded->_subtitleSpeakerKey.c_str() );
+
+    SW_TEST_DEFENSIVE_SCOPE( "An event library that fails validation is not written" );
+    pEvent->_listClip.clear();
+    const sw::string invalidPath = test::makeTempPath( "invalid.audioevents.xml" );
+    SW_EXPECT_FALSE( library.saveToResource( invalidPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( invalidPath ) );
 }

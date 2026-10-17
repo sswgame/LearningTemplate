@@ -60,6 +60,7 @@ class CheckShaderStampsGate(LintGate):
     selfTestCases = [
         {
             "name": "dx12 만 쿠킹하고 나머지 백엔드를 빠뜨린 셰이더",
+            "expectedViolation": "바이너리 폴더가 없습니다 (한 번도 쿠킹하지 않았습니다)",
             "repoFiles": [kCookContractConfigRelative],
             "files": {
                 "Resource/engine/shaders/probe.hlsl": "float4 main() : SV_Target { return 0; }\n",

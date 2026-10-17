@@ -5,6 +5,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Text/FontService.h"
@@ -443,6 +444,28 @@ SW_TEST_CASE( UIAccessibilityTest, SubtitleQueueShowsTwo )
     SW_EXPECT_STREQ( "second", pScreen->getTree().findWidget<sw::TextWidget>( "Text0" )->getText().c_str() );
     SW_EXPECT_STREQ( "third", pScreen->getTree().findWidget<sw::TextWidget>( "Text1" )->getText().c_str() );
     SW_EXPECT_NEAR_EQUAL( 2.0f, subtitles.getActiveLine( 1 )._remainingSeconds, 1e-4f );
+}
+
+/**
+ * @brief [UIAccessibilityTest] 음성 이벤트의 자막 신호는 받은 순서대로 줄이 되고, 화자 키가 비면 이름 줄을 접는다
+ * @details 표에 없는 키는 키 자체가 보인다(`SW_LOCKEY` 와 같은 규칙). 신호를 만드는 쪽은 `AudioEventTest.VoiceClipsPostSubtitleCues`.
+ */
+SW_TEST_CASE( UIAccessibilityTest, AudioSubtitleCuesBecomeLines )
+{
+    const ScopedVariable   enabled( "gv_subtitles", "true" );
+    UIAccessibilityFixture fixture;
+    SW_ASSERT_TRUE( fixture._bReady );
+    sw::UISubtitleService&           subtitles = fixture._ui.getSubtitles();
+    sw::vector<sw::AudioSubtitleCue> listCue;
+    listCue.push_back( sw::AudioSubtitleCue{ sw::hashed_string( "TestVoice.Hero" ), sw::hashed_string( "TestVoice.LineA" ), 1 } );
+    listCue.push_back( sw::AudioSubtitleCue{ sw::hashed_string{}, sw::hashed_string( "TestVoice.LineB" ), 2 } );
+    subtitles.postAudioCues( listCue );
+    fixture.runFrame( 0.0f );
+    SW_ASSERT_EQUAL( 2u, subtitles.getActiveLineCount() );
+    SW_EXPECT_STREQ( "TestVoice.Hero", subtitles.getActiveLine( 0 )._speaker.c_str() );
+    SW_EXPECT_STREQ( "TestVoice.LineA", subtitles.getActiveLine( 0 )._text.c_str() );
+    SW_EXPECT_TRUE( subtitles.getActiveLine( 1 )._speaker.empty() );
+    SW_EXPECT_STREQ( "TestVoice.LineB", subtitles.getActiveLine( 1 )._text.c_str() );
 }
 
 /**

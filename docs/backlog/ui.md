@@ -21,9 +21,6 @@
   (4) 리눅스의 운영체제 클립보드 — Windows 만 끼웠다(`PlatformClipboard`, `App/RuntimeUIHost`). X11 은 CLIPBOARD 선택 소유와 `SelectionRequest` 응답이 창 메시지 루프에 있어야 하고
   (`Engine/Window/Linux/X11Clipboard.cpp` 는 `isAvailable` false), Wayland 는 `D1-6`. 그때까지 리눅스 UI 는 엔진 안 클립보드다.
 
-- `D6-3` [기능] **런타임 UI 접근성의 남은 것.** (1) 음성 재생 쪽 자막 — 음성 이벤트(`GameSound`)에 자막 키를 실어
-  `UISubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다).
-
 - `D6-4` [기능] **옵션 · 일시정지 메뉴의 남은 것**(`Engine/UI/README.md`). (5) 키 바인딩이 재시작 뒤에도 유지되는지의 실기동 확인(Shooter3D · 패드) — 두 번 기동해야 하고
   사용자 설정 파일을 쓰므로 시나리오 하나로 못 한다(15 초 되돌림은 `engine/automation/displayrevert.scenario.xml` 이 본다). 타이틀 씬(`titleScene`)을 가진 게임이 아직 없어
   "타이틀로" 단추는 어느 게임에서도 접혀 있다 — 타이틀 화면을 만드는 게임이 생기면 그 게임으로 확인한다.

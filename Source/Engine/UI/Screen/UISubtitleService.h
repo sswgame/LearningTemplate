@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    struct AudioSubtitleCue;
+
     class UISystem;
 
     /** @brief 자막 한 줄입니다. */
@@ -59,6 +61,11 @@ namespace sw
          * @return 줄 번호(1 부터)입니다.
          */
         uint32 post( string_view speaker, string_view text, float32 durationSeconds = 0.0f );
+        /**
+         * @brief 음성 이벤트의 자막 신호(`AudioEngine::takeSubtitleCues`)를 받은 순서대로 올립니다. 키를 지금 문화권으로 풀고 표시 시간은 읽기 시간입니다.
+         * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 정본은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDesc::_subtitleSpeakerKey`)다.
+         */
+        void postAudioCues( const vector<AudioSubtitleCue>& listCue );
         /** @brief 줄을 모두 지우고 화면을 닫습니다(`UISystem::shutdown` 과 장면 전환 때 부릅니다). */
         void clear();
         /** @brief 시간을 흘리고(꺼져 있어도) 대기열을 당긴 뒤, 설정을 따라 화면을 열고 닫고 줄 위젯을 맞춥니다. `UISystem::update` 가 부릅니다. */

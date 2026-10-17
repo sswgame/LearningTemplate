@@ -20,16 +20,32 @@ namespace sw
     /** @brief 마지막 블록에서 게시한 엔진 상태입니다. */
     struct AudioEngineStats
     {
-        uint64 _renderedFrameCount{ 0 }; ///< 지금까지 렌더한 프레임 수다.
-        uint32 _voiceCount{ 0 };         ///< 살아 있는 보이스 수다. 실제, 가상, 클립 대기 보이스를 모두 센다.
-        uint32 _realVoiceCount{ 0 };     ///< 섞은 보이스 수다.
-        uint32 _virtualVoiceCount{ 0 };  ///< 위치만 진행한 보이스 수다.
-        uint32 _instanceCount{ 0 };      ///< 살아 있는 이벤트 인스턴스 수다.
-        uint32 _peakRealVoiceCount{ 0 }; ///< 지금까지 한 블록에 섞은 보이스 수의 최댓값이다.
-        uint64 _playedEventCount{ 0 };   ///< 지금까지 낸 이벤트 수다. 인스턴스를 만든 이벤트만 센다.
-        uint64 _droppedEventCount{ 0 };  ///< 쿨다운, 상한(Reject), 슬롯 부족으로 버린 이벤트 수다.
-        uint32 _maxVoiceCount{ 0 };      ///< 믹서 그래프의 보이스 상한(실제 + 가상)이다. 그래프가 없으면 0 이다.
-        uint32 _maxRealVoiceCount{ 0 };  ///< 믹서 그래프의 실제 보이스 상한이다. 넘는 보이스는 가상이 된다.
+        uint64 _renderedFrameCount{ 0 };      ///< 지금까지 렌더한 프레임 수다.
+        uint32 _voiceCount{ 0 };              ///< 살아 있는 보이스 수다. 실제, 가상, 클립 대기 보이스를 모두 센다.
+        uint32 _realVoiceCount{ 0 };          ///< 섞은 보이스 수다.
+        uint32 _virtualVoiceCount{ 0 };       ///< 위치만 진행한 보이스 수다.
+        uint32 _instanceCount{ 0 };           ///< 살아 있는 이벤트 인스턴스 수다.
+        uint32 _peakRealVoiceCount{ 0 };      ///< 지금까지 한 블록에 섞은 보이스 수의 최댓값이다.
+        uint64 _playedEventCount{ 0 };        ///< 지금까지 낸 이벤트 수다. 인스턴스를 만든 이벤트만 센다.
+        uint64 _droppedEventCount{ 0 };       ///< 쿨다운, 상한(Reject), 슬롯 부족으로 버린 이벤트 수다.
+        uint32 _maxVoiceCount{ 0 };           ///< 믹서 그래프의 보이스 상한(실제 + 가상)이다. 그래프가 없으면 0 이다.
+        uint32 _maxRealVoiceCount{ 0 };       ///< 믹서 그래프의 실제 보이스 상한이다. 넘는 보이스는 가상이 된다.
+        uint64 _droppedSubtitleCueCount{ 0 }; ///< 게임 스레드가 가져가지 않아 상한(`AudioPublishedState::kMaxSubtitleCueCount`)을 넘겨 버린 자막 신호 수다.
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 자막 키를 가진 클립이 실제로 시작했다는 신호입니다. 오디오 스레드가 이벤트 인스턴스를 만들 때 쌓고, 게임 스레드가 가져가 자막 서비스에 올립니다.
+     * @details 쿨다운 · 동시 재생 상한으로 버려진 재생은 신호를 내지 않는다(언리얼은 활성 사운드가 시작할 때 `FSubtitleManager` 에 큐를 넣는다).
+     *          키는 현지화 전의 `Namespace.Key` 이며, 해석은 받는 쪽(`UISubtitleService::postAudioCues`)이 지금 문화권으로 한다.
+     */
+    struct AudioSubtitleCue
+    {
+        hashed_string  _speakerKey{};   ///< 이벤트의 화자 키다(`AudioEventDesc::_subtitleSpeakerKey`). 비면 이름 줄을 접는다.
+        hashed_string  _textKey{};      ///< 시작한 클립의 자막 키다(`AudioClipEntry::_subtitleKey`).
+        AudioPlayingID _playingID{ 0 }; ///< 재생 id 다.
     };
 } // namespace sw
 
@@ -101,6 +117,9 @@ namespace sw
     class AudioPublishedState
     {
     public:
+        /** @brief 게임 스레드가 가져가지 않은 자막 신호를 쌓아 두는 상한입니다. 넘으면 가장 오래된 것을 버리고 `_droppedSubtitleCueCount` 에 셉니다(자막을 보이는 UI 가 없는 헤드리스 구성). */
+        static constexpr uint32 kMaxSubtitleCueCount = 32;
+
         /** @brief 게시한 재생 목록과 상태를 비웁니다. */
         void clear();
         /**
@@ -144,14 +163,20 @@ namespace sw
         void getBusStatuses( vector<AudioBusStatus>& outListStatus ) const;
         /** @brief 마지막 블록의 이벤트 인스턴스 상태를 @p outListStatus 에 복사합니다(비우고 채웁니다). */
         void getInstanceStatuses( vector<AudioInstanceStatus>& outListStatus ) const;
+        /** @brief 자막 신호 하나를 쌓습니다(오디오 스레드). 상한을 넘으면 가장 오래된 것을 버리고 셉니다. */
+        void addSubtitleCue( const AudioSubtitleCue& cue );
+        /** @brief 쌓인 자막 신호를 시작한 순서대로 @p outListCue 에 옮기고 비웁니다(게임 스레드). */
+        void takeSubtitleCues( vector<AudioSubtitleCue>& outListCue );
 
     private:
-        vector<AudioPlayingID>      _listPlaying{};         /**< 살아 있는 재생 id 입니다. 정렬되어 있습니다. */
-        vector<AudioBusStatus>      _listBusStatus{};       /**< 버스 상태입니다(믹서 그래프 순서). */
-        vector<AudioInstanceStatus> _listInstanceStatus{};  /**< 살아 있는 이벤트 인스턴스 상태입니다(인스턴스 슬롯 순서). */
-        AudioEngineStats            _stats{};               /**< 마지막 블록의 상태입니다. */
-        AudioMusicStatus            _music{};               /**< 마지막 블록의 음악 위치입니다. */
-        atomic<uint64>              _appliedPlayingID{ 0 }; /**< 게시 시점에 적용된 재생 id 입니다. */
-        mutable mutex               _mutex{};               /**< 위 사본을 지킵니다. */
+        vector<AudioPlayingID>      _listPlaying{};                /**< 살아 있는 재생 id 입니다. 정렬되어 있습니다. */
+        vector<AudioBusStatus>      _listBusStatus{};              /**< 버스 상태입니다(믹서 그래프 순서). */
+        vector<AudioInstanceStatus> _listInstanceStatus{};         /**< 살아 있는 이벤트 인스턴스 상태입니다(인스턴스 슬롯 순서). */
+        vector<AudioSubtitleCue>    _listSubtitleCue{};            /**< 게임 스레드가 아직 가져가지 않은 자막 신호입니다(시작한 순서). */
+        uint64                      _droppedSubtitleCueCount{ 0 }; /**< 상한을 넘겨 버린 자막 신호 수입니다. `getStats` 가 붙입니다. */
+        AudioEngineStats            _stats{};                      /**< 마지막 블록의 상태입니다. */
+        AudioMusicStatus            _music{};                      /**< 마지막 블록의 음악 위치입니다. */
+        atomic<uint64>              _appliedPlayingID{ 0 };        /**< 게시 시점에 적용된 재생 id 입니다. */
+        mutable mutex               _mutex{};                      /**< 위 사본을 지킵니다. */
     };
 } // namespace sw

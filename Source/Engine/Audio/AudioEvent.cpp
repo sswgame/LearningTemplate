@@ -2,8 +2,11 @@
 
 #include "Engine/Audio/AudioEvent.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -82,6 +85,7 @@ namespace sw
                 SW_LOG_ERROR( "%#: event '%#' has no clips", sourceName, pName );
                 bValid = false;
             }
+            bool bHasSubtitle = false;
             for ( const AudioClipEntry& clip : event._listClip )
             {
                 if ( clip._path.empty() )
@@ -89,6 +93,12 @@ namespace sw
                     SW_LOG_ERROR( "%#: event '%#' has a clip with no path", sourceName, pName );
                     bValid = false;
                 }
+                bHasSubtitle = bHasSubtitle || clip._subtitleKey.empty() == false;
+            }
+            if ( event._subtitleSpeakerKey.empty() == false && bHasSubtitle == false )
+            {
+                SW_LOG_ERROR( "%#: event '%#' names a subtitle speaker but no clip has a subtitle key", sourceName, pName );
+                bValid = false;
             }
             if ( event._volumeDbMax < event._volumeDbMin || event._pitchMax < event._pitchMin )
             {
@@ -120,6 +130,37 @@ namespace sw
                 return &event;
         }
         return nullptr;
+    }
+
+    AudioEventDesc* AudioEventLibrary::findEvent( const hashed_string& name )
+    {
+        for ( AudioEventDesc& event : _listEvent )
+        {
+            if ( event._name == name )
+                return &event;
+        }
+        return nullptr;
+    }
+
+    string AudioEventLibrary::toXMLText() const
+    {
+        return XMLSerializer::serialize( this, *StaticType() );
+    }
+
+    bool AudioEventLibrary::saveToResource( string_view resourcePath ) const
+    {
+        if ( validate( resourcePath ) == false )
+        {
+            SW_LOG_ERROR( "%#: audio event library not saved - it does not pass validation", resourcePath );
+            return false;
+        }
+        const string filePath = ResourcePaths::getWritePath( resourcePath );
+        if ( FileUtil::writeTextFile( filePath, toXMLText() ) == false )
+        {
+            SW_LOG_ERROR( "%#: audio event library could not be written to '%#'", resourcePath, filePath );
+            return false;
+        }
+        return true;
     }
 
     const AudioParameterDesc* AudioEventLibrary::findParameter( const hashed_string& name ) const

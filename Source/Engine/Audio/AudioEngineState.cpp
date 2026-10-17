@@ -26,7 +26,9 @@ namespace sw
         _listPlaying.clear();
         _listBusStatus.clear();
         _listInstanceStatus.clear();
-        _stats = AudioEngineStats{};
+        _listSubtitleCue.clear();
+        _droppedSubtitleCueCount = 0;
+        _stats                   = AudioEngineStats{};
     }
 
     bool AudioPublishedState::isPlaying( AudioPlayingID playingID, uint64 nextPlayingID ) const
@@ -41,7 +43,27 @@ namespace sw
     AudioEngineStats AudioPublishedState::getStats() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return _stats;
+        AudioEngineStats        stats  = _stats;
+        stats._droppedSubtitleCueCount = _droppedSubtitleCueCount;
+        return stats;
+    }
+
+    void AudioPublishedState::addSubtitleCue( const AudioSubtitleCue& cue )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        if ( _listSubtitleCue.size() >= kMaxSubtitleCueCount )
+        {
+            _listSubtitleCue.erase( _listSubtitleCue.begin() );
+            ++_droppedSubtitleCueCount;
+        }
+        _listSubtitleCue.push_back( cue );
+    }
+
+    void AudioPublishedState::takeSubtitleCues( vector<AudioSubtitleCue>& outListCue )
+    {
+        outListCue.clear();
+        std::scoped_lock<mutex> lock{ _mutex };
+        outListCue.swap( _listSubtitleCue );
     }
 
     AudioMusicStatus AudioPublishedState::getMusicStatus() const

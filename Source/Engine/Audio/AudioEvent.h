@@ -66,6 +66,8 @@ namespace sw
 
         PROPERTY( Tooltip = "Resource path of the clip (wav, ogg)" )
         hashed_string _path{};
+        PROPERTY( Tooltip = "Subtitle text key (Namespace.Key in a string table) shown when this clip starts; empty shows none" )
+        hashed_string _subtitleKey{};
         PROPERTY( Min = 0.0, Tooltip = "Random container weight" )
         float32 _weight{ 1.0f };
         PROPERTY( Tooltip = "Per-clip volume trim", Meta = "Units=dB" )
@@ -135,6 +137,8 @@ namespace sw
         hashed_string _bus{};
         PROPERTY( Tooltip = "Attenuation preset; empty plays 2D (no spatialization)" )
         hashed_string _attenuation{};
+        PROPERTY( Tooltip = "Speaker name key (Namespace.Key) of the clip subtitles; empty hides the speaker line" )
+        hashed_string _subtitleSpeakerKey{};
         PROPERTY( Tooltip = "Clips of the container" )
         vector<AudioClipEntry> _listClip{};
         PROPERTY( Tooltip = "Parameter curves (RTPC)" )
@@ -175,6 +179,7 @@ namespace sw
     /**
      * @brief 이벤트 라이브러리 파일 하나입니다. 파라미터, 감쇠 프리셋, 이벤트를 담으며, 게임마다 하나 이상 둡니다(`game/<게임>/audio/<이름>.audioevents.xml`).
      * @details 이름이 비었거나 겹치거나, 이벤트가 모르는 파라미터를 쓰거나, 클립이 없거나, 범위가 거꾸로면 읽기 오류다.
+     *          화자 키(`_subtitleSpeakerKey`)가 있는데 자막 키(`AudioClipEntry::_subtitleKey`)를 가진 클립이 없어도 오류다(화자만 있는 자막은 없다).
      *          버스와 감쇠 이름은 로드하는 엔진의 그래프와 대조한다(`AudioEngine::loadEventLibrary`).
      */
     REFLECT()
@@ -197,9 +202,19 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
+        /** @brief 라이브러리를 읽기와 같은 XML 형식으로 씁니다(`loadFromXMLText` 가 다시 읽는다). */
+        string toXMLText() const;
+        /**
+         * @brief 검사(`validate`)를 통과한 라이브러리를 리소스 경로의 파일에 씁니다. 에디터의 오디오 이벤트 창이 고친 데이터를 저장하는 길입니다.
+         * @details 검사를 통과하지 못하면 쓰지 않는다 — 읽을 수 없는 파일을 남기지 않는다. 저장한 파일은 에셋 핫 리로드가 엔진에 다시 올린다.
+         * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool saveToResource( string_view resourcePath ) const;
 
         /** @brief 이벤트입니다. 없으면 nullptr 입니다. */
         const AudioEventDesc* findEvent( const hashed_string& name ) const;
+        /** @brief 고칠 이벤트입니다(에디터가 사본 라이브러리를 고칠 때). 없으면 nullptr 입니다. */
+        AudioEventDesc* findEvent( const hashed_string& name );
         /** @brief 파라미터입니다. 없으면 nullptr 입니다. */
         const AudioParameterDesc* findParameter( const hashed_string& name ) const;
     };
