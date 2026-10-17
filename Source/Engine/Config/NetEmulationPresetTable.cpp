@@ -5,7 +5,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
-#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 namespace sw
@@ -55,13 +54,7 @@ namespace sw
                 bOk = false;
                 continue;
             }
-            vector<string> listRangeError;
-            SerializerUtil::collectRangeErrors( *NetEmulationPresetDef::StaticType(), &preset, preset._name, listRangeError );
-            for ( const string& rangeError : listRangeError )
-            {
-                SW_LOG_ERROR( "%#: %#", path, rangeError.c_str() );
-                bOk = false;
-            }
+            // 원소의 `Min` · `Max` 는 `loadDesc` 가 본다(`SerializerUtil::collectRangeErrors` 는 시퀀스 원소까지 본다).
             for ( size_t otherIndex = 0; otherIndex < presetIndex; ++otherIndex )
             {
                 if ( StringUtil::equals( _listPreset[otherIndex]._name, preset._name, true ) )

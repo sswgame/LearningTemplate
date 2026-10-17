@@ -26,6 +26,8 @@
 
 namespace sw
 {
+    class DynamicBitset;
+
     /** @brief 읽기 결과입니다. `Ok` 가 아니면 대상 객체는 바뀌지 않았습니다. 결과를 버리면 컴파일이 멈춥니다. */
     enum class [[nodiscard]] FixedReadResult : uint8
     {
@@ -226,6 +228,9 @@ namespace sw
         /** @brief 길이(개수 규칙)와 문자마다 8 비트입니다. */
         [[nodiscard]] static bool writeString( BitWriter& writer, const string& value, uint32 maxCount );
         static FixedReadResult    readString( BitReader& reader, uint32 maxCount, string& outValue );
+        /** @brief 비트 수(개수 규칙)와 비트마다 1 비트입니다. 원소 주소 없이 값으로 읽고 씁니다(`DynamicBitset`). */
+        [[nodiscard]] static bool writeBitset( BitWriter& writer, const DynamicBitset& value, uint32 maxCount );
+        static FixedReadResult    readBitset( BitReader& reader, uint32 maxCount, DynamicBitset& outValue );
         /** @brief @p bitCount(최대 64) 비트를 씁니다. */
         static void                 writeRawBits( BitWriter& writer, uint64 value, int32 bitCount );
         [[nodiscard]] static uint64 readRawBits( BitReader& reader, int32 bitCount );

@@ -693,7 +693,7 @@ SW_TEST_CASE( ReflectionParserTest, FixedLayoutAnnotationMistakesStopTheBuild )
                                                             "}\n" );
     SW_EXPECT_TRUE_MSG( countRun._exitCode != 0, countRun._log.c_str() );
     SW_EXPECT_TRUE_MSG( countRun._log.find( "MaxCount = 2.5  (value is not a whole number of at least 1)" ) != sw::string::npos, countRun._log.c_str() );
-    SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_count': MaxCount applies to string and vector fields only" ) != sw::string::npos,
+    SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_count': MaxCount applies to string, vector and DynamicBitset fields only" ) != sw::string::npos,
                         run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_orphan': range name '_missing' is not a field of this type" ) != sw::string::npos,
                         run._log.c_str() );

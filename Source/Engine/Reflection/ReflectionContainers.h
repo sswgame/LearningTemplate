@@ -162,7 +162,7 @@ namespace sw
 namespace sw
 {
     template <typename TContainer>
-    /// @brief vector 시퀀스 래퍼입니다.
+    /// @brief vector 시퀀스 래퍼입니다. 원소 주소를 `&container[index]` 로 잡습니다. 비트로 묶는 `vector<bool>` 은 `VectorElementCheck` 가 막아 이 주소는 늘 원소 자체입니다.
     struct VectorWrapper : ISequenceContainerWrapper
     {
         /** @brief 원소 개수를 반환합니다. */

@@ -22,9 +22,17 @@ namespace sw
 
     public:
         /**
+         * @brief 빈 비트셋입니다. 암시적이어야 이 타입을 필드로 둔 구조체를 `T value{}` 로 값 초기화할 수 있습니다(리플렉션 필드).
+         */
+        DynamicBitset()
+            : _listBlock{}
+            , _bitCount{ 0 }
+        {
+        }
+        /**
          * @brief size 비트를 모두 0 으로 둡니다.
          */
-        explicit DynamicBitset( uint32 size = 0 );
+        explicit DynamicBitset( uint32 size );
         /**
          * @brief '0' · '1' 문자열로 비트를 채웁니다.
          */

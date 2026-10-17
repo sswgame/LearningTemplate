@@ -1,9 +1,13 @@
 #include "pch.h"
 
+#include "Core/Container/DynamicBitset.h"
 #include "Core/Network/BitStream.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "ReflectionTest/TestFixedLayoutTypes.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -143,7 +147,7 @@ namespace
         sample._arrWeight  = { 1.5f, -2.0f };
         sample._position   = sw::float3( -10.0f, 5.0f, 10.0f );
         sample._listKind   = { sw::EFixedSampleKind::Idle, sw::EFixedSampleKind::Run };
-        sample._listBit    = { true, false, true };
+        sample._listBit    = sw::DynamicBitset( "101" );
         return sample;
     }
 
@@ -394,4 +398,62 @@ SW_TEST_CASE( FixedLayoutTest, OutOfRangeValuesFailToWrite )
     container        = makeContainerSample();
     container._flags = static_cast<sw::EFixedSampleFlag>( 8 );
     SW_EXPECT_FALSE( sw::FixedLayout::write( container, writer ) );
+    container          = makeContainerSample();
+    container._listBit = sw::DynamicBitset( "101010101" ); // MaxCount 8 을 넘는 비트 수
+    SW_EXPECT_FALSE( sw::FixedLayout::write( container, writer ) );
+}
+
+/**
+ * @brief [FixedLayoutTest] `DynamicBitset` 필드는 비트 수와 비트 열을 그대로 왕복하고, 정규 문자열은 `bits` 입니다
+ * @details MaxCount 개(8 비트) · 빈 비트 열 · 위치마다 다른 값을 봅니다. 비트를 값으로 읽고 쓰므로 원소 주소를 쓰지 않습니다(`vector<bool>` 은 막혀 있다).
+ */
+SW_TEST_CASE( FixedLayoutTest, BitsetFieldKeepsEveryBit )
+{
+    SW_EXPECT_TRUE_MSG( sw::string( findCanonical<sw::FixedContainerSample>() ).find( ":maxcount=8:bits|" ) != sw::string::npos,
+                        findCanonical<sw::FixedContainerSample>() );
+
+    for ( const utf8* pBits : { "", "1", "10010110", "01111111" } )
+    {
+        sw::FixedContainerSample source       = makeContainerSample();
+        source._listBit                       = sw::DynamicBitset( pBits );
+        const sw::FixedContainerSample loaded = roundTrip( source );
+        SW_EXPECT_EQUAL( loaded._listBit.size(), source._listBit.size() );
+        SW_EXPECT_TRUE_MSG( loaded._listBit == source._listBit, loaded._listBit.to_string() + " != " + pBits );
+    }
+
+    sw::FixedContainerSample changed = makeContainerSample();
+    changed._listBit.flip( 1 );
+    SW_EXPECT_FALSE( sw::FixedLayout::equals( changed, makeContainerSample() ) );
+}
+
+/**
+ * @brief [FixedLayoutTest] `DynamicBitset` 필드는 자기 기술형(JSON · XML · 바이너리)으로도 비트 열 그대로 왕복하고, '0' · '1' 이 아닌 글은 읽기 실패입니다
+ */
+SW_TEST_CASE( FixedLayoutTest, BitsetFieldRoundTripsSelfDescribingFormats )
+{
+    const sw::TypeInfo&      typeInfo = *sw::FixedContainerSample::StaticType();
+    sw::FixedContainerSample source   = makeContainerSample();
+    source._listBit                   = sw::DynamicBitset( "0010110" );
+
+    sw::FixedContainerSample fromJSON;
+    const sw::string         json = sw::JSONSerializer::serialize( &source, typeInfo );
+    SW_EXPECT_TRUE_MSG( sw::JSONSerializer::deserialize( &fromJSON, typeInfo, json ), json );
+    SW_EXPECT_TRUE_MSG( fromJSON._listBit == source._listBit, json );
+
+    sw::FixedContainerSample fromXML;
+    const sw::string         xml = sw::XMLSerializer::serialize( &source, typeInfo );
+    SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, typeInfo, xml ), xml );
+    SW_EXPECT_TRUE_MSG( fromXML._listBit == source._listBit, xml );
+
+    sw::FixedContainerSample fromBinary;
+    sw::vector<uint8>        bytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &source, typeInfo, bytes ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, typeInfo, bytes.data(), bytes.size() ) );
+    SW_EXPECT_TRUE( fromBinary._listBit == source._listBit );
+
+    sw::FixedContainerSample fromBadJSON;
+    fromBadJSON._listBit     = sw::DynamicBitset( "11" );
+    const sw::string badJSON = replaceAll( json, "0010110", "0010210" );
+    SW_EXPECT_FALSE_MSG( sw::JSONSerializer::deserialize( &fromBadJSON, typeInfo, badJSON ), badJSON );
+    SW_EXPECT_TRUE( fromBadJSON._listBit == sw::DynamicBitset( "11" ) );
 }

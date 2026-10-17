@@ -81,6 +81,7 @@ namespace sw
         Vector,     ///< 가변 길이 시퀀스입니다. `MaxCount` 가 필요합니다
         FixedArray, ///< `T[N]` · `std::array<T, N>` 입니다. 개수 없이 원소 N 개를 씁니다
         Reflect,    ///< 다른 `REFLECT` 타입입니다. 그 타입의 필드를 씁니다
+        Bitset,     ///< `DynamicBitset` 입니다. 가변 길이라 `MaxCount` 가 필요하고, 비트를 값으로 읽고 씁니다(원소 주소가 없습니다)
     };
 } // namespace sw
 

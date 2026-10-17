@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ComponentHandle.h"
+#include "Core/Container/DynamicBitset.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/StringUtil.h"
@@ -486,6 +487,24 @@ namespace sw
                 if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectID, 10 ) == false )
                     return false;
                 *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectID );
+                return true;
+            } );
+
+            // 비트 목록은 '0' · '1' 글 하나로 값째 쓰고 읽는다(맨 왼쪽이 가장 높은 비트, `DynamicBitset::to_string`). 원소 주소가 없으므로 컨테이너 래퍼를 쓰지 않는다.
+            // 다른 글자가 섞이면 실패다(값은 그대로) — 생성자처럼 로그만 남기고 0 으로 읽지 않는다.
+            context.registerTextHandler(
+                hashed_string( "DynamicBitset" ),
+                []( const void* pPtr )
+            { return static_cast<const DynamicBitset*>( pPtr )->to_string(); },
+                []( void* pPtr, string_view strView )
+            {
+                const string_view text = SerializeContextInternal::stripQuotes( StringUtil::trim( strView ) );
+                for ( const utf8 digit : text )
+                {
+                    if ( digit != '0' && digit != '1' )
+                        return false;
+                }
+                *static_cast<DynamicBitset*>( pPtr ) = DynamicBitset( text );
                 return true;
             } );
 

@@ -180,7 +180,8 @@ namespace sw
             /** @brief 가변 길이 단계 수입니다(vector · 문자열). 중첩 REFLECT 타입 안은 그 타입의 키가 맡으므로 세지 않습니다. */
             static int32 countVariableLengthLevels( const ParsedFixedType& type )
             {
-                int32 count = ( type._kind == FixedValueKind::Vector || type._kind == FixedValueKind::String ) ? 1 : 0;
+                const bool bVariable = type._kind == FixedValueKind::Vector || type._kind == FixedValueKind::String || type._kind == FixedValueKind::Bitset;
+                int32      count     = bVariable ? 1 : 0;
                 if ( type._element != nullptr )
                     count += countVariableLengthLevels( *type._element );
                 return count;
@@ -711,6 +712,15 @@ namespace sw
                         emitEqualsCheck( state, site._exprA + " != " + site._exprB );
                         break;
                     }
+                    case FixedValueKind::Bitset:
+                    {
+                        outCanonical += "bits";
+                        const string maxCount = formatInteger( static_cast<int64>( site._pProp->_maxCount ) ) + "u";
+                        emitWriteCheck( state, "::sw::FixedCodecUtil::writeBitset( writer, " + site._expr + ", " + maxCount + " )" );
+                        emitReadCheck( state, "::sw::FixedCodecUtil::readBitset( reader, " + maxCount + ", " + site._expr + " )" );
+                        emitEqualsCheck( state, site._exprA + " != " + site._exprB );
+                        break;
+                    }
                     case FixedValueKind::Vector:
                     case FixedValueKind::FixedArray:
                     {
@@ -775,7 +785,7 @@ namespace sw
                         reportError( state, prop, "Step needs both Min and Max" );
                 }
                 if ( prop._bHasMaxCount == SW_TRUE && variable == 0 )
-                    reportError( state, prop, "MaxCount applies to string and vector fields only" );
+                    reportError( state, prop, "MaxCount applies to string, vector and DynamicBitset fields only" );
 
                 Site site;
                 site._pProp     = &prop;
