@@ -317,10 +317,18 @@ class MeshInfo:
     boundingRadius: float
 
 
-# `MeshAssetFormat.h` 와 같은 값 — 판이 바뀌면 함께 바꾼다.
-_kMeshVersion = 2
-_kMeshHeaderSize = 24
-_kMeshSkinVertexSize = 24
+def _readMeshFormatConstant(name: str) -> int:
+    """`MeshAssetFormat.h` 의 `static constexpr uint32 <name>` 값을 읽습니다. 정본은 C++ 헤더 하나다 — 판을 올리면 여기도 따라온다(손으로 맞추던 사본은 feat7 에서 어긋났다)."""
+    header = Path(__file__).resolve().parents[2] / "Source" / "Engine" / "Graphics" / "Mesh" / "MeshAssetFormat.h"
+    match = re.search(r"static constexpr uint32 " + name + r"\s*=\s*(\d+)\s*;", header.read_text(encoding="utf-8"))
+    if match is None:
+        raise RuntimeError(f"{header}: '{name}' 를 찾지 못했습니다")
+    return int(match.group(1))
+
+
+_kMeshVersion = _readMeshFormatConstant("kVersion")
+_kMeshHeaderSize = _readMeshFormatConstant("kHeaderSize")
+_kMeshSkinVertexSize = _readMeshFormatConstant("kSkinVertexSize")
 _kMeshChunkTags = (b"MRPH",)
 
 
