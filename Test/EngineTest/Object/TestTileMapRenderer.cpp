@@ -6,7 +6,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/PhysicsOverlapWorld.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"

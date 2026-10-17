@@ -32,7 +32,7 @@
   효과는 [검증과 측정](../08_Verification.md)). Windows 는 전 구성이 빌드로 확인됐고 리눅스 쪽 직접 include 는 CI 로 확인한다 — 빠진 파일이 나오면 그 파일에 include 를 더한다.
   ② `GameObjectManager.h` 의 값 멤버 서브시스템 4 개(`PrimitiveRegistry` · `ComponentRegistry` · `CameraRegistry` · `AnimationSystem`)를 `unique_ptr` 로 바꾸는 안은
   보류다(2026-10-05 측정 기준 Physics/* · Navigation/* 이 헤더 무게의 대부분이었다. `_store` · `_transformHierarchy` · `_structuralChangeBuffer` · `_tickScheduler` 는
-  헤더의 인라인 · 템플릿이 써서 포인터로 못 뺀다). 이득은 `ninja -t deps` 전후 TU 수로 판정한다. `SceneNavigation` · `ScenePhysics`(겹침 월드 포함) · `SceneAudio` 는
+  헤더의 인라인 · 템플릿이 써서 포인터로 못 뺀다). 이득은 `ninja -t deps` 전후 TU 수로 판정한다. `SceneNavigation` · `ScenePhysics` · `SceneAudio` 는
   씬 서비스(`ISceneService`)로 옮겨 코어 헤더가 Physics · Audio · Navigation 을 퍼뜨리지 않는다(엔진 분할 2 단계).
 
 - `C-19` [정리] **구조 리팩토링의 남은 후보.**
@@ -86,7 +86,6 @@
   `GimmickCircuitComponent::_state` 같은 플레이 상태가 에디터가 다음에 저장하는 씬 XML 로 들어갈 수 있다(지금 빈 요소는 우연). 언리얼 `SaveGame` 처럼 저장 문맥에 "저작 저장"을 표시하고
   런타임 상태 필드(예: `PROPERTY( RuntimeState )`)를 그 문맥에서 빼는 형식을 둔다. 리플렉션 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 해 이 단계 범위 밖으로 남겼다.
   `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
-- `D1-2` [기능] **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다
   (지형 높이장은 종류별 기하 레지스트리로 들어갔다) (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크

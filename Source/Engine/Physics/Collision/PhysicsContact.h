@@ -45,9 +45,12 @@ namespace sw
         PhysicsContactPhase _phase{ PhysicsContactPhase::Begin };
         uint8               _bTriggerA{ SW_FALSE }; ///< A 가 트리거인지 나타낸다.
         uint8               _bTriggerB{ SW_FALSE }; ///< B 가 트리거인지 나타낸다.
+        uint8               _bOverlap{ SW_FALSE };  ///< 막지 않는 겹침인지 나타낸다(어느 쪽이 트리거이거나 겹침 전용 바디 — `PhysicsBodyDesc::_bOverlapOnly`).
 
-        /** @brief 어느 쪽이든 트리거면 true 를 반환합니다. 막는 접촉이 아니라 감지입니다. */
+        /** @brief 어느 쪽이든 트리거면 true 를 반환합니다. */
         bool involvesTrigger() const { return _bTriggerA == SW_TRUE || _bTriggerB == SW_TRUE; }
+        /** @brief 막는 접촉이 아니라 감지(겹침)면 true 를 반환합니다. 받는 쪽은 `onOverlap*` 을 받습니다. */
+        bool isOverlap() const { return _bOverlap == SW_TRUE; }
     };
 
     using PhysicsContactEvent3D = PhysicsContactEvent<PhysicsDimension3D>;
@@ -62,6 +65,7 @@ namespace sw
         PhysicsBodyHandle _body{};
         uint64            _userData{ 0 };
         bool              _bTrigger{ false };
+        bool              _bOverlapOnly{ false }; ///< 막지 않는 겹침 전용 바디다(트리거가 아닌 센서, `PhysicsBodyDesc::_bOverlapOnly`).
     };
 } // namespace sw
 
@@ -235,8 +239,10 @@ namespace sw
             event._phase      = phase;
             event._bTriggerA  = state._first._bTrigger ? SW_TRUE : SW_FALSE;
             event._bTriggerB  = state._second._bTrigger ? SW_TRUE : SW_FALSE;
-            const bool bSolid = state._first._bTrigger == false && state._second._bTrigger == false;
-            event._impulse    = ( bSolid && phase != PhysicsContactPhase::End ) ? state._impulse : 0.0f;
+            const bool bSolid = state._first._bTrigger == false && state._second._bTrigger == false && state._first._bOverlapOnly == false &&
+                                state._second._bOverlapOnly == false;
+            event._bOverlap = bSolid ? SW_FALSE : SW_TRUE;
+            event._impulse  = ( bSolid && phase != PhysicsContactPhase::End ) ? state._impulse : 0.0f;
             return event;
         }
 

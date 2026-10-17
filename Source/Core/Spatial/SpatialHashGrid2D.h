@@ -29,7 +29,7 @@ namespace sw
          *          넘는 핸들은 셀에 흩뿌리는 대신 목록 하나에 모아 두고, 그리드를 보는 질의가 그
          *          목록을 **항상 함께** 봅니다. 그런 핸들은 수가 적고 어차피 거의 모든 질의에 걸리므로
          *          셀에 흩어 두는 것이 이득이 되지 않습니다.
-         * @note `PhysicsOverlapWorld::kMaxBodyCellCount` 와 값이 같지만 다른 질문입니다(그쪽은 물리 바디,
+         * @note 옛 겹침 월드의 바디 셀 상한과 값이 같았지만 다른 질문입니다(그쪽은 물리 바디,
          *       이쪽은 범용 질의 색인). 한쪽 사정으로 값을 바꿀 수 있어야 하므로 별칭을 두지 않습니다.
          */
         static constexpr int64 kMaxHandleCellCount = 1024;
@@ -51,7 +51,7 @@ namespace sw
         void insert( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
         /**
          * @brief 핸들의 경계를 바꿉니다. 없던 핸들이면 넣습니다.
-         * @details 새 경계가 덮는 셀 범위가 지금과 같으면 셀 목록은 건드리지 않고 경계만 바꿉니다(`PhysicsOverlapWorld::setAABBLocked` 와 같은
+         * @details 새 경계가 덮는 셀 범위가 지금과 같으면 셀 목록은 건드리지 않고 경계만 바꿉니다(옛 겹침 월드의 상자 갱신과 같은
          *          지름길) — 틱마다 조금씩 움직이는 점 엔티티는 거의 늘 이 길입니다. 좁힘 판정은 언제나 새 경계로 합니다.
          */
         void update( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
@@ -96,7 +96,7 @@ namespace sw
             template <typename Func>
             void forEachCell( Func&& func ) const
             {
-                // int64 로 돈다. 셀 번호가 int32 끝이면 `++` 가 넘쳐 끝나지 않았다(PhysicsOverlapWorld::CellRange 와 같은 이유).
+                // int64 로 돈다. 셀 번호가 int32 끝이면 `++` 가 넘쳐 끝나지 않았다(옛 겹침 월드의 셀 범위와 같은 이유).
                 for ( int64 cellY = _minY; cellY <= _maxY; ++cellY )
                 {
                     for ( int64 cellX = _minX; cellX <= _maxX; ++cellX )

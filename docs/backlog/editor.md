@@ -18,7 +18,7 @@
   키트 영역은 `GF_EditorPlugIn_<이름>` 확장 모듈에 둔다. 남은 것 —
   ⑦ 카탈로그 편집기 뒤: 엔진 데이터 종류(장면 · 머티리얼 · 파이프라인 …)는 아직 `ResourceDataSchemaTest` 의 표에 있고, 카탈로그 밖(Engine 쪽) 열거자 이름 표는 `EnumNameTable` 로 모으지 않았다.
   층 규칙은 걸림돌이 아니다(레지스트리는 티어 5 라 위 티어가 채울 수 있다) — 실제 걸림돌 셋과 단계적 대안은 [결정 기록](../09_Decisions.md) 5-11 "엔진 데이터 종류의 레지스트리 이전" 이다
-  (첫 단계: `EnumNameTable` 을 Core 로 옮기고 GameFramework include 만 고친다, 동작 불변). ⑧ 지형 칠하기 도구(`TerrainBrushTool`, 씬 뷰 Terrain 토글 — 올리기 · 내리기 · 평탄화 · 레이어 칠하기, 드래그 하나가 되돌리기 하나, 저장 단추)에
+  (첫 단계 들어감 2026-10-18: `EnumNameTable` 은 `Core/String/EnumNameTable.h` 로 옮겼다 — 다음은 D3-1.2, 로더가 `loadCatalog` 인 줄부터 레지스트리로). ⑧ 지형 칠하기 도구(`TerrainBrushTool`, 씬 뷰 Terrain 토글 — 올리기 · 내리기 · 평탄화 · 레이어 칠하기, 드래그 하나가 되돌리기 하나, 저장 단추)에
   높이장 크기 바꾸기 · 구멍 칠하기 · 스무드 브러시가 없다(쓰기 쪽 남은 것은 `D2-5` (7)).
   다중 월드 툴 창과 그 위의 미리보기 창은 `D3-7`, UI 문서 디자이너는 `D3-3` 이다.
   에디터에 이미 있는 것(전역 변수 표, 커맨드 팔레트, 핫 리로드, Undo, Play 와 Step, InputReplay, 기즈모, RenderTargetPanel, 프로파일러와 Tracy)은 다시 만들지 않는다.
@@ -90,7 +90,7 @@
     - **들어감(2026-10-14)**: 공용 마우스 양보 창구 `EditorViewportMouseClaim`(뷰포트의 양보 판정 두 곳에 반영), 에셋 슬롯의 여러 확장자 필터(`EditorAssetFilter`, 쉼표 · 공백 · 탭 · 세미콜론)와 Point Cache(`.mfpc`) ·
       두 Displace 의 필터 채우기, 참조 걸러 보기의 파생 컴포넌트 판정(`TypeInfo::isDerivedFrom`), 회전 고리의 오일러 정확도(`applyRotationDelta`), 범위 · ffd2d 상자가 앞 모디파이어 결과를 반영.
     - **남은 한계**: 기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
-  - **정리**: 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id). 값 노이즈는 `Stack/MeshModifierNoise.h` 한 곳으로 모았다(들어감).
+  - **정리**: 월드 공간 워프는 `World Warp` 모디파이어(씬 오브젝트 + 공유 `.mfwarp` 파일)로 들어갔다. 남은 것: 패널에서 묶음을 `.mfwarp` 로 내보내는 단추.
 
 - `D3-12` [기능] **첫 UX 감사에서 남은 결함(2026-10-15).** 목록 · 우선순위 · 캡처 번호는 [에디터 UX 기반](../plans/EditorUX.md) 8-1 절이 원본이다. 큰 것부터:
   ① 기본 배치의 아래 도크(Output Log · Content Browser)가 낮아 내용이 거의 안 보인다(도크 최소 높이 · 기본 비율). ② 씬 뷰 통계 오버레이가 뷰포트 절반을 덮는다(접기 · 앵커).

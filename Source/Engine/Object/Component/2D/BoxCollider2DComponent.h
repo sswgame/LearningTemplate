@@ -1,55 +1,63 @@
 /**
  * @file BoxCollider2DComponent.h
- * @brief 2D 박스 콜라이더 컴포넌트입니다.
+ * @brief 2D 박스 콜라이더 컴포넌트입니다 — 씬의 2D 물리(Box2D) 안의 센서 바디 하나로 겹침을 냅니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/atomic.h"
-#include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/Physics/PhysicsComponent.h"
+#include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class GameObjectManager;
-    class PhysicsOverlapWorld;
+    class ScenePhysics;
 
+    /**
+     * @class BoxCollider2DComponent
+     * @brief 축 정렬 상자 하나의 2D 콜라이더입니다(유니티 `BoxCollider2D` 의 트리거 쪽, Godot `Area2D`).
+     * @details 플레이 중에는 씬의 2D 물리 씬에 **키네마틱 센서 바디**를 하나 둡니다. 막는 콜라이더도 트리거도 센서입니다(`PhysicsBodyDesc::_bOverlapOnly`) —
+     *          Box2D 는 키네마틱끼리 접촉을 만들지 않으므로, 센서여야 콜라이더끼리 겹침이 납니다. 그래서 이 콜라이더는 강체를 막지 않고 겹침만 냅니다
+     *          (`onOverlapBegin/End`, `OverlapInfo::_bOtherTrigger` 로 트리거를 가린다). 질의(광선 · 쓸기)에서는 트리거가 아닌 콜라이더가 막는 것으로 보입니다.
+     *
+     *          바디는 상자(`getBounds`)를 그대로 따릅니다 — 매 물리 프레임 처음(`beginPhysicsFrame`)에 자리를 옮기고, 크기 · 레이어 · 트리거가 바뀌면
+     *          다시 만듭니다. 상자는 축 정렬이라 바디는 돌지 않습니다.
+     *
+     *          **연속 판정**(`_bContinuous`, 투사체): Box2D 센서는 연속 충돌이 없으므로, 지난 자리에서 지금 자리까지 상자를 쓸어(`shapeCastAll`) 지나친 것을
+     *          닿은 시점 순서로 알립니다(`ScenePhysics::queueSweptOverlap2D`, 시작과 끝을 함께). 지금 자리에서도 겹친 것은 센서가 시작을 냅니다.
+     *          순간이동(`SceneComponent::teleportTo`)한 프레임은 쓸지 않습니다.
+     */
     REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume", Meta = "Icon=Collider, IconColor=Physics" )
-    class SW_API BoxCollider2DComponent : public SceneComponent
+    class SW_API BoxCollider2DComponent : public PhysicsComponent
     {
-        friend class SceneOverlapWorld2D; ///< step 직전에 바디를 맞추고(`syncPhysicsBody`) 목록 자리(`_colliderIndex`)를 적는다
+        friend class ScenePhysics; ///< 콜라이더 목록 자리(`_colliderIndex`)를 적는다
 
     public:
         REFLECT_BODY();
-        /** @brief 매니저의 콜라이더 목록에 없다는 표시입니다. */
+        /** @brief 씬 물리의 콜라이더 목록에 없다는 표시입니다. */
         static constexpr uint32 kNotRegistered = invalid_index::kUint32;
 
         BoxCollider2DComponent();
-        virtual ~BoxCollider2DComponent() override = default;
+        ~BoxCollider2DComponent() override = default;
 
-        void onBeginPlay() override;
-        void onEndPlay() override;
-        void onDestroy() override;
-        /** @brief 물리 월드를 등록 시점에 받아 두고 매니저의 콜라이더 목록에 듭니다(바디는 매니저가 step 직전에 맞춘다 — 틱하지 않는다). */
+        /** @brief 씬 물리에 등록하고(바디는 시작한 뒤 첫 물리 프레임에 생긴다) 콜라이더 목록에 듭니다. */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 바디를 빼고 물리 월드 참조 · 콜라이더 목록 자리를 놓습니다. */
+        /** @brief 바디를 놓고 콜라이더 목록 · 씬 물리에서 빠집니다. */
         void onUnregister( GameObjectManager& manager ) override;
-        /** @brief 다음 step 의 바디 맞춤을 순간이동으로 합니다 — 옛 자리에서 새 자리까지를 쓸지 않습니다(`SceneComponent::teleportTo`). */
-        void onTeleported() override;
 
-        /** @brief 물리 레이어입니다(`CollisionLayers`). 시작한 뒤에 바꿔도 다음 step 부터 겹침이 그 레이어로 걸러집니다. */
+        /** @brief 물리 레이어 번호입니다(`CollisionLayers`). 시작한 뒤에 바꿔도 다음 물리 프레임부터 그 레이어로 걸러집니다. */
         int32 getColliderType() const { return _colliderType; }
         void  setColliderType( int32 type ) { _colliderType = type; }
 
         /**
-         * @brief 연속 충돌(ContinuousCollision)로 판정하는지입니다(유니티 `Rigidbody2D.collisionDetectionMode = Continuous` · 언리얼 `bUseContinuousCollision`).
-         * @details 켜면 물리가 지난 step 의 자리에서 지금 자리까지 상자를 쓸어, 한 프레임에 얇은 콜라이더를 건너뛴 것도 겹침으로 냅니다
-         *          (`PhysicsOverlapWorld::step`). 빠른 것(투사체)에만 켭니다. 순간이동은 `SceneComponent::teleportTo` 로 합니다 — 그냥 옮기면 그 길도 쓸립니다.
+         * @brief 연속 판정인지입니다(유니티 `Rigidbody2D.collisionDetectionMode = Continuous` · 언리얼 `bUseContinuousCollision`).
+         * @details 켜면 지난 물리 프레임의 자리에서 지금 자리까지 상자를 쓸어, 한 프레임에 얇은 콜라이더를 건너뛴 것도 겹침으로 냅니다. 빠른 것(투사체)에만 켭니다.
+         *          순간이동은 `SceneComponent::teleportTo` 로 합니다 — 그냥 옮기면 그 길도 쓸립니다.
          */
         bool isContinuous() const { return _bContinuous; }
         void setContinuous( bool bContinuous ) { _bContinuous = bContinuous; }
@@ -57,7 +65,7 @@ namespace sw
         /**
          * @brief 트리거인지입니다(유니티 `Collider.isTrigger` · 언리얼 Overlap 반응).
          * @details 트리거도 겹침 이벤트는 냅니다 — 받는 쪽이 `OverlapInfo::_bOtherTrigger` 로 가립니다. 투사체 · 공격 판정은 트리거에 막히지도 피해를
-         *          주지도 않습니다(감지 범위 · 구역 볼륨이 총알을 먹지 않는다).
+         *          주지도 않습니다(감지 범위 · 구역 볼륨이 총알을 먹지 않는다). 트리거는 질의(광선 · 쓸기)에도 보이지 않습니다.
          */
         bool isTrigger() const { return _bTrigger; }
         void setTrigger( bool bTrigger ) { _bTrigger = bTrigger; }
@@ -86,39 +94,44 @@ namespace sw
         bool containsPoint( const float2& point ) const;
         /**
          * @brief 두 콜라이더가 물리 규칙으로 겹치는지입니다 — 상자가 겹치고 레이어 행렬이 그 쌍을 허용해야 합니다(유니티 `Collider2D.IsTouching`).
-         * @details 물리 step 과 같은 판정(`queryOverlaps` · `PhysicsOverlapWorld::layers`)을 지금 상자로 합니다. 바디가 아직 없어도(시작 전 · 에디터) 같은 답을
-         *          냅니다. 레이어 행렬은 등록된 물리 월드의 것이고, 어느 쪽도 매니저에 없으면 기본 행렬(모든 쌍 허용)입니다.
+         * @details 지금 상자로 잽니다 — 바디가 아직 없어도(시작 전 · 에디터) 같은 답을 냅니다. 레이어 행렬은 등록된 씬의 2D 물리 씬의 것이고(`getLayerCollision`),
+         *          어느 쪽도 2D 씬이 없으면 기본 행렬(모든 쌍 허용)입니다.
          */
         bool isTouching( const BoxCollider2DComponent* pOther ) const;
 
+    protected:
+        void beginPhysicsFrame( ScenePhysics& physics ) override;
+        void releasePhysics( ScenePhysics& physics ) override;
+
     private:
-        void unregisterPhysicsBody();
+        /** @brief 지금 상자 · 레이어 · 트리거로 바디를 만듭니다. */
+        void createBody( ScenePhysics& physics, const float2& center, const float2& halfExtents );
         /**
-         * @brief 바디를 지금 상자 · 레이어 · 판정 방식에 맞춥니다. 시작 전이거나 꺼져 있으면 바디를 뺍니다(겹침에 들지 않는다).
-         * @details 순간이동 표시(`onTeleported`)가 있으면 그 사이를 쓸지 않게 맞추고 표시를 지웁니다.
+         * @brief 연속 판정 — @p from 에서 @p to 까지 상자를 쓸어 지나친 것을 씬 물리에 알립니다(`ScenePhysics::queueSweptOverlap2D`).
+         * @details 출발점에서 이미 겹친 것(닿은 시점 0)과 도착점에서도 겹친 것은 뺀다 — 앞은 지난 프레임의 센서가, 뒤는 이번 프레임의 센서가 시작을 낸다.
          */
-        void syncPhysicsBody();
+        void sweepPassedBodies( ScenePhysics& physics, const float2& from, const float2& to, const float2& halfExtents );
 
         /**
          * @brief 콜라이더 오프셋 · 크기입니다.
-         * @details getBounds() 는 onTick 의 syncPhysicsBody 와 에디터의 기즈모 · 히트 테스트가 매 프레임 부르므로,
-         *          문자열이 아니라 float2 PROPERTY 로 듭니다.
+         * @details getBounds() 는 물리 프레임과 에디터의 기즈모 · 히트 테스트가 매 프레임 부르므로, 문자열이 아니라 float2 PROPERTY 로 듭니다.
          */
         PROPERTY( Category = "Collider", DisplayName = "Offset Position", Tooltip = "Collider center offset from the owner" )
         float2 _offsetPos;
         PROPERTY( Category = "Collider", DisplayName = "Offset Scale", Tooltip = "Collider box size" )
         float2 _offsetScale;
-        /** @brief 등록 시점에 받은 물리 월드입니다. 소유자를 거슬러 올라가 매니저를 찾지 않습니다. */
-        PhysicsOverlapWorld* _pPhysics;
-        SlotHandle           _physicsBody;
         PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
-        int32  _colliderType;
-        uint32 _colliderIndex; ///< 겹침 월드의 콜라이더 목록 자리(`SceneOverlapWorld2D::registerCollider`). 없으면 `kNotRegistered`
-        PROPERTY( Category = "Collider", DisplayName = "Continuous", Tooltip = "Sweep the box from its last physics step so a fast mover cannot pass through a thin collider" )
+        int32 _colliderType;
+        PROPERTY( Category = "Collider", DisplayName = "Continuous", Tooltip = "Sweep the box from its last physics frame so a fast mover cannot pass through a thin collider" )
         bool _bContinuous;
         PROPERTY( Category = "Collider", DisplayName = "Is Trigger", Tooltip = "Reports overlaps but does not block - projectiles and attacks ignore it" )
         bool _bTrigger;
-        /** @brief 순간이동했다는 표시입니다. 틱 중 다른 워커가 세울 수 있어 원자값이고, step 직전 바디 맞춤이 읽고 지웁니다. 저장하지 않는다. */
-        atomic<bool> _bTeleportPending;
+
+        PhysicsBodyHandle _body;           ///< 2D 씬의 센서 바디(시작 전 · 꺼짐이면 무효)
+        float2            _bodyCenter;     ///< 바디에 준 마지막 중심(연속 판정의 출발점)
+        float2            _bodyHalfExtent; ///< 바디를 만든 반 크기(바뀌면 다시 만든다)
+        int32             _bodyLayer;      ///< 바디를 만든 레이어
+        bool              _bBodyTrigger;   ///< 바디를 만든 트리거 여부
+        uint32            _colliderIndex;  ///< 씬 물리의 콜라이더 목록 자리(`ScenePhysics::registerCollider2D`). 없으면 `kNotRegistered`
     };
 } // namespace sw

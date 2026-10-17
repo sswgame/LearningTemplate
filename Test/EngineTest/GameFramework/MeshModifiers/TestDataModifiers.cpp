@@ -6,6 +6,7 @@
 #include "EngineTest/GameFramework/MeshModifiers/MeshModifierTestUtil.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/WorldWarpModifier.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -214,6 +215,54 @@ SW_TEST_CASE( DataModifiersTest, DeformableMatchesItsSubStackAndSurvivesSave )
     MeshModifierMesh reloaded = source;
     loaded.apply( reloaded, MeshModifierEvaluation{} );
     SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( reloaded._listPosition, expected._listPosition ) < 1e-4f );
+}
+
+/**
+ * @brief [DataModifiersTest] 월드 공간 워프는 공유 정의 파일의 스택을 그대로 건다 — 같은 파일에 묶인 두 메시가 같이 휘고, 파일을 고친 뒤 다시 고르면 새 정의를 건다
+ * @details 워프의 "무엇을" 은 파일 하나, "어디에" 는 씬 오브젝트(공간 기준)다. 기준이 없으면 월드 원점이라 메시에 스택을 바로 건 결과와 같다.
+ */
+SW_TEST_CASE( DataModifiersTest, WorldWarpAppliesTheSharedDefinitionFile )
+{
+    MeshModifierStack definition;
+    for ( const string_view typeID : { string_view( "twist" ), string_view( "bend" ) } )
+    {
+        const int32 index = definition.addModifier( typeID );
+        SW_ASSERT_TRUE( index >= 0 );
+        test::MeshModifierTestUtil::fillParams( *definition.findModifier( index ), 11u + static_cast<uint32>( index ) );
+    }
+    const string path = test::makeTempPath( "shared.mfwarp" );
+    SW_ASSERT_TRUE( WorldWarpModifier::writeWarpFile( definition, path ) );
+
+    unique_ptr<MeshModifier> first  = MeshModifierRegistry::create( "worldwarp" );
+    unique_ptr<MeshModifier> second = MeshModifierRegistry::create( "worldwarp" );
+    SW_ASSERT_TRUE( first != nullptr && second != nullptr );
+    SW_EXPECT_TRUE( first->isWorldSpace() );
+    SW_EXPECT_TRUE( DataModifiersTestInternal::setText( *first, "Warp File", path ) );
+    SW_EXPECT_TRUE( DataModifiersTestInternal::setText( *second, "Warp File", path ) );
+
+    const MeshModifierMesh source   = test::MeshModifierTestUtil::makeBoxMesh( 3 );
+    MeshModifierMesh       expected = source;
+    definition.apply( expected, MeshModifierEvaluation{} );
+    MeshModifierMesh warpedA = source;
+    MeshModifierMesh warpedB = source;
+    test::MeshModifierTestUtil::applyOne( *first, warpedA );
+    test::MeshModifierTestUtil::applyOne( *second, warpedB );
+    SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( warpedA._listPosition, expected._listPosition ) < 1e-4f );
+    SW_EXPECT_TRUE( test::MeshModifierTestUtil::isBitwiseEqual( warpedA._listPosition, warpedB._listPosition ) );
+    SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( warpedA._listPosition, source._listPosition ) > 1e-3f );
+
+    // 정의 파일을 비우면(빈 스택) 다시 고른 뒤 항등이다
+    SW_ASSERT_TRUE( WorldWarpModifier::writeWarpFile( MeshModifierStack{}, path ) );
+    first->onParamsChanged();
+    MeshModifierMesh emptied = source;
+    test::MeshModifierTestUtil::applyOne( *first, emptied );
+    SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( emptied._listPosition, source._listPosition ) < 1e-6f );
+
+    // 없는 파일은 항등이다(경고 한 번)
+    SW_EXPECT_TRUE( DataModifiersTestInternal::setText( *second, "Warp File", test::makeTempPath( "missing.mfwarp" ) ) );
+    MeshModifierMesh missing = source;
+    test::MeshModifierTestUtil::applyOne( *second, missing );
+    SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( missing._listPosition, source._listPosition ) < 1e-6f );
 }
 
 SW_TEST_CASE( DataModifiersTest, TextureDisplaceMovesAlongNormalWithInputs )

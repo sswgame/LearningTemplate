@@ -41,7 +41,7 @@ namespace sw::editor
         const vector<GameObject*>* _pListObject{ nullptr };
         /** @brief 씬의 카메라 레지스트리 목록입니다. 프러스텀 시각화가 씬 전체를 스캔하지 않게 합니다. 매니저가 없으면 nullptr 입니다. */
         const vector<CameraComponent*>* _pListCamera{ nullptr };
-        /** @brief 씬의 콜라이더 레지스트리 목록입니다(`SceneOverlapWorld2D::getColliders`). 매니저가 없으면 nullptr 입니다. */
+        /** @brief 씬의 콜라이더 레지스트리 목록입니다(`ScenePhysics::getColliders2D`). 매니저가 없으면 nullptr 입니다. */
         const vector<BoxCollider2DComponent*>* _pListCollider{ nullptr };
         /** @brief 이번 프레임의 디버그 도형 큐입니다(`DebugDrawQueue` 엔진 서비스). 없으면 nullptr 입니다. */
         const DebugDrawQueue* _pDebugDrawQueue{ nullptr };

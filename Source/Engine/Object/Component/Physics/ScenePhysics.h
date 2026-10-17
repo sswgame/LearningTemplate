@@ -3,12 +3,12 @@
  * @brief 씬 하나의 강체 물리 — 3D · 2D 물리 씬(처음 쓸 때 만든다), 고정 스텝 누적기, 물리 컴포넌트 레지스트리, 접촉 이벤트를 컴포넌트에 나눠 주기입니다.
  * @details 씬 서비스(`ISceneService`)입니다. 이 .cpp 의 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생기고(`manager.getSubsystem<sw::ScenePhysics>()`),
  *          매니저는 프레임 표의 `Physics` 단계(`SceneFrameStepList.xxx`)에서 게임 스레드로 `update` 를 한 번 부릅니다. 물리 서비스(`PhysicsSystem`)는
- *          매니저의 서비스 묶음(`SceneEngineServices`)에서 받습니다. 겹침만 측정하는 겹침 월드(`SceneOverlapWorld2D` — AABB · 연속 쓸기 ·
- *          `BoxCollider2DComponent` · 키트의 투사체 · 근접 판정)도 이 서비스가 들고, `update` 가 겹침 → 강체 순서로 진행합니다 — 강체 씬과 같은 레이어 표를 받습니다.
+ *          매니저의 서비스 묶음(`SceneEngineServices`)에서 받습니다. 2D 콜라이더(`BoxCollider2DComponent`)도 같은 2D 씬의 Box2D 센서 바디이고(유니티 트리거 ·
+ *          Godot Area2D 처럼 물리 월드 하나), 에디터 시각화가 훑을 콜라이더 목록(`getColliders2D`)과 연속 콜라이더가 쓸어 낸 겹침(`queueSweptOverlap2D`)을 이 서비스가 듭니다.
  *
  *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 컴포넌트 `beginPhysicsFrame` → n 번(`prePhysicsStep` → 3D · 2D 씬 step → `postPhysicsStep`,
  *          이벤트를 모은다) → `endPhysicsFrame( alpha )`(보간한 자세를 트랜스폼에 쓴다) → 모은 이벤트를 두 오브젝트의 켜진 컴포넌트에
- *          나눠 준다(막는 접촉은 `onCollision*`, 트리거는 `onOverlap*`). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
+ *          나눠 준다(막는 접촉은 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `onOverlap*` — `PhysicsContactEvent::isOverlap`). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
  *          만든 바디도 사용자 값에 오브젝트 id 를 실으면 그 오브젝트가 이벤트를 받습니다.
  */
 #pragma once
@@ -17,7 +17,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Object/Component/Physics/SceneOverlapWorld2D.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/FixedStepAccumulator.h"
@@ -27,11 +26,31 @@ namespace sw
 {
     struct PhysicsSettings;
 
+    class BoxCollider2DComponent;
     class GameObjectManager;
     class IPhysicsDebugRenderer;
     class PhysicsComponent;
     class PhysicsSystem;
 
+    /**
+     * @brief 연속 콜라이더가 한 프레임에 쓸고 지나간 상대 하나입니다(`BoxCollider2DComponent` 의 연속 판정).
+     * @details Box2D 센서는 연속 충돌이 없다 — 지난 자리에서 지금 자리까지 셰이프를 쓸어(`shapeCastAll`) 지나친 것을 이것으로 알린다. 지금 자리에서도
+     *          겹친 것은 센서가 시작을 내므로 여기 넣지 않는다. 나눠 줄 때 시작과 끝을 함께 낸다(지나쳤다).
+     */
+    struct SweptOverlap2D
+    {
+        PhysicsBodyHandle _selfBody{};
+        PhysicsBodyHandle _otherBody{};
+        uint64            _selfUserData{ 0 };
+        uint64            _otherUserData{ 0 };
+        float32           _hitFraction{ 1.0f }; ///< 쓸린 길에서 닿은 시점(0..1)
+        bool              _bSelfTrigger{ false };
+        bool              _bOtherTrigger{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @class ScenePhysics @brief 씬 하나의 강체 물리입니다. 파일 머리말 참고. */
     class SW_API ScenePhysics final : public ISceneService
     {
@@ -44,7 +63,7 @@ namespace sw
 
         /**
          * @brief 매니저 @p manager 의 서비스 묶음에 든 물리 서비스로 씬을 만들 물리를 둡니다(소유하지 않음).
-         * @details 물리 서비스가 없으면(nullptr) 물리 씬을 만들지 않습니다(설정 표도 없다). 겹침 월드는 그래도 돕니다.
+         * @details 물리 서비스가 없으면(nullptr) 물리 씬을 만들지 않습니다(설정 표도 없다). 그러면 2D 콜라이더도 겹침을 내지 않습니다.
          */
         explicit ScenePhysics( GameObjectManager& manager );
         ~ScenePhysics() override;
@@ -54,7 +73,7 @@ namespace sw
 
         /** @brief 물리 씬을 모두 내립니다(바디 · 관절 · 캐릭터가 함께 사라진다). 매니저가 비울 때 부릅니다. */
         void onSceneCleared() override;
-        /** @brief 겹침 월드를 진행한 뒤 강체 물리를 진행합니다(`Physics` 단계, 게임 스레드). */
+        /** @brief 물리를 진행합니다(`Physics` 단계, 게임 스레드). */
         void update( float32 deltaTime ) override;
 
         /**
@@ -65,10 +84,14 @@ namespace sw
         /** @brief 3D · 2D 씬의 바디 · 캐릭터를 선으로 냅니다. */
         void drawDebug( IPhysicsDebugRenderer& renderer ) const;
 
-        /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsOverlapWorld()` 입니다. */
-        SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
-        /** @brief 이 씬의 겹침 월드입니다. */
-        const SceneOverlapWorld2D& getOverlapWorld2D() const { return _overlapWorld2D; }
+        /** @brief 2D 콜라이더를 목록에 넣습니다(`BoxCollider2DComponent::onRegister`). 이미 있으면 아무것도 하지 않습니다. */
+        void registerCollider2D( BoxCollider2DComponent* pCollider );
+        /** @brief 2D 콜라이더를 목록에서 뺍니다. 멱등입니다. */
+        void unregisterCollider2D( BoxCollider2DComponent* pCollider );
+        /** @brief 등록된 2D 콜라이더 목록입니다(순서 없음, 편집 중에도 있다). 에디터 시각화가 씬 전체를 훑지 않고 이것을 봅니다. */
+        const vector<BoxCollider2DComponent*>& getColliders2D() const { return _listCollider2D; }
+        /** @brief 연속 콜라이더가 쓸고 지나간 겹침을 이번 프레임에 나눠 줄 목록에 더합니다(`beginPhysicsFrame` 안, 닿은 시점 순서로). */
+        void queueSweptOverlap2D( const SweptOverlap2D& overlap ) { _listSweptOverlap2D.push_back( overlap ); }
 
         /** @brief 3D 씬입니다. 처음 부를 때 생성자로 받은 물리 서비스(`PhysicsSystem`)로 만듭니다. 서비스가 없으면 nullptr 입니다. */
         IPhysicsScene3D* getScene3D();
@@ -122,24 +145,25 @@ namespace sw
         /** @brief 이벤트 하나를 한 쪽(@p selfUserData)에서 본 것으로 그 오브젝트의 컴포넌트에 줍니다. */
         void deliverEvent( GameObjectManager& manager, uint64 selfUserData, uint64 otherUserData, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody,
                            const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bSelfTrigger, bool bOtherTrigger,
-                           bool bIs2D );
+                           bool bOverlap, bool bIs2D, float32 hitFraction );
         /** @brief 설정 표의 스텝 크기 · 상한을 누적기에 한 번 맞춥니다. */
         void configureOnce();
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
 
-        GameObjectManager&            _manager;        ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
-        PhysicsSystem*                _pPhysicsSystem; ///< 매니저의 서비스 묶음에서 받은 물리 서비스(빌림)
-        SceneOverlapWorld2D           _overlapWorld2D; ///< 겹침 월드 — `update` 가 강체보다 먼저 진행한다
-        unique_ptr<IPhysicsScene3D>   _pScene3D;
-        unique_ptr<IPhysicsScene2D>   _pScene2D;
-        FixedStepAccumulator          _accumulator;
-        vector<PhysicsComponent*>     _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
-        vector<PhysicsContactEvent3D> _listFrameEvent3D;
-        vector<PhysicsContactEvent2D> _listFrameEvent2D;
-        uint64                        _stepCount;
-        uint32                        _debrisBodyCount;
-        float32                       _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
-        bool                          _bConfigured;
+        GameObjectManager&              _manager;            ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
+        PhysicsSystem*                  _pPhysicsSystem;     ///< 매니저의 서비스 묶음에서 받은 물리 서비스(빌림)
+        vector<BoxCollider2DComponent*> _listCollider2D;     ///< 콜라이더가 자기 자리(`_colliderIndex`)를 든다
+        vector<SweptOverlap2D>          _listSweptOverlap2D; ///< 이번 프레임에 연속 콜라이더가 쓸고 지나간 겹침(`step` 이 비운다)
+        unique_ptr<IPhysicsScene3D>     _pScene3D;
+        unique_ptr<IPhysicsScene2D>     _pScene2D;
+        FixedStepAccumulator            _accumulator;
+        vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
+        vector<PhysicsContactEvent3D>   _listFrameEvent3D;
+        vector<PhysicsContactEvent2D>   _listFrameEvent2D;
+        uint64                          _stepCount;
+        uint32                          _debrisBodyCount;
+        float32                         _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
+        bool                            _bConfigured;
     };
 } // namespace sw

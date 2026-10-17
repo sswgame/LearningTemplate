@@ -436,7 +436,7 @@ namespace sw
     void BVHTree3D::queryAABB( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const
     {
         // **먼저 비운다**(트리가 비어도). 덧붙이기만 하면 부르는 쪽이 벡터 하나를 돌려 쓸 때 지난 질의의 답이 이번 답인 척 남는다.
-        // 형제들(`SpatialHashGrid2D` · `PhysicsOverlapWorld`)도 비우고 시작한다.
+        // 형제들(`SpatialHashGrid2D`)도 비우고 시작한다.
         outListHandle.clear();
         BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, [&queryBox]( const AABB& box )
         { return box.intersects( queryBox ); },

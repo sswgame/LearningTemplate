@@ -212,7 +212,7 @@ namespace sw
 
         /**
          * @brief 트랜스폼 계층입니다(루트 목록 · 더티 세대 · 플러시 알고리즘). 매니저는 소유하고 tick 의 단계만 정합니다.
-         * @details `PhysicsOverlapWorld` · `PrimitiveRegistry` 와 같은 자리입니다. 능력은 별도 타입이 갖고, 매니저는 순서만 정합니다. 병렬 시스템을
+         * @details `PrimitiveRegistry` 와 같은 자리입니다. 능력은 별도 타입이 갖고, 매니저는 순서만 정합니다. 병렬 시스템을
          *          하나 더하려면 이런 타입 하나와 tick 의 한 줄이면 됩니다. 매니저가 그 알고리즘을 알 필요가 없습니다.
          */
         SceneTransformHierarchy&       getTransformHierarchy() { return _transformHierarchy; }
@@ -318,7 +318,7 @@ namespace sw
 
         /**
          * @brief 그릴 수 있는 컴포넌트의 레지스트리입니다.
-         * @details PhysicsOverlapWorld 와 같은 자리입니다. 능력은 별도 타입으로 두고 매니저는 그것을 소유만
+         * @details `PrimitiveRegistry` 와 같은 자리입니다. 능력은 별도 타입으로 두고 매니저는 그것을 소유만
          *          합니다. 컴포넌트는 등록 시점에 이것을 받아 들고 있으므로, 매니저 전체를 알 필요가 없습니다.
          */
         PrimitiveRegistry& getPrimitiveRegistry() { return _primitiveRegistry; }
@@ -528,7 +528,7 @@ namespace sw
         void registerTypedComponent( Component* pComp ) { _store.registerTypedComponent( pComp ); }
 
         /**
-         * @brief `Physics` 단계의 서비스(`ScenePhysics` — 겹침 월드 → 강체 물리)를 진행하고 그 쓰기를 펼칩니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
+         * @brief `Physics` 단계의 서비스(`ScenePhysics` — 강체 물리와 2D 콜라이더)를 진행하고 그 쓰기를 펼칩니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
          * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 측정한다.
          */
         void stepPhysics( float32 deltaTime );

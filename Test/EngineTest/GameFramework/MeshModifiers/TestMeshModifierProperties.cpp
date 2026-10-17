@@ -34,7 +34,7 @@ SW_TEST_CASE( MeshModifierPropertiesTest, RegistryHasTheFirstTwelve )
                             "rubber", "simplemod", "crumple", "dynamicripple", "pageflip", "treebend", "vertnoise", "zstretchnoise", "waving",
                             "pivotadjust", "displacelimits", "paint", "curvedeform", "curvesculpt", "curvesculptlayered", "pathdeform", "worldpathdeform", "bezierattractor",
                             "ropedeform", "conform", "conformmulti", "collisiondeform", "hitdeform", "pointcache", "vertexanim", "deformable", "displacerendertarget",
-                            "displacewebcam", "ffd2d" };
+                            "displacewebcam", "ffd2d", "worldwarp" };
     for ( const utf8* pID : arrID )
     {
         SW_EXPECT_NOT_NULL( MeshModifierRegistry::findRegistration( pID ) );

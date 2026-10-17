@@ -98,7 +98,8 @@ namespace sw
             return _layers.shouldCollide( JoltLayerUtil::getLayer( layerA ), JoltLayerUtil::getLayer( layerB ) );
         }
 
-        void setLayers( const CollisionLayers& layers ) { _layers = layers; }
+        void                   setLayers( const CollisionLayers& layers ) { _layers = layers; }
+        const CollisionLayers& getLayers() const { return _layers; }
 
     private:
         CollisionLayers _layers;
@@ -149,6 +150,7 @@ namespace sw
         void                                 setGravity( const float3& gravity ) override;
         float3                               getGravity() const override;
         void                                 setLayerCollision( const CollisionLayers& layers ) override;
+        const CollisionLayers&               getLayerCollision() const override { return _objectLayerPairFilter.getLayers(); }
         void                                 drawDebug( IPhysicsDebugRenderer& renderer ) const override;
 
         PhysicsShapeHandle createShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& material ) override;
@@ -186,6 +188,7 @@ namespace sw
         bool            isBodySleeping( PhysicsBodyHandle body ) const override;
         void            wakeBody( PhysicsBodyHandle body ) override;
         uint64          getBodyUserData( PhysicsBodyHandle body ) const override;
+        bool            isBodyTrigger( PhysicsBodyHandle body ) const override;
         void            setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide ) override;
         bool            drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const override;
 

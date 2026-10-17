@@ -499,7 +499,7 @@ namespace sw
         settings.mLinearDamping           = desc._linearDamping;
         settings.mAngularDamping          = desc._angularDamping;
         settings.mGravityFactor           = desc._gravityFactor;
-        settings.mIsSensor                = desc._bTrigger;
+        settings.mIsSensor                = desc._bTrigger || desc._bOverlapOnly;
         settings.mAllowSleeping           = desc._bAllowSleep;
         settings.mAllowDynamicOrKinematic = desc._bAllowTypeChange;
         settings.mMotionQuality           = desc._bContinuous ? JPH::EMotionQuality::LinearCast : JPH::EMotionQuality::Discrete;
@@ -861,6 +861,12 @@ namespace sw
     {
         const BodyRecord* pRecord = findBody( body );
         return pRecord != nullptr ? pRecord->_userData : 0;
+    }
+
+    bool JoltPhysicsScene::isBodyTrigger( PhysicsBodyHandle body ) const
+    {
+        const BodyRecord* pRecord = findBody( body );
+        return pRecord != nullptr && pRecord->_bTrigger;
     }
 
     void JoltPhysicsScene::setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide )

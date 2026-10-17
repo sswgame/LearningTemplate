@@ -64,9 +64,10 @@ namespace sw
 
             static bool acceptsShape( const Box2DPhysicsScene& scene, b2ShapeId shapeID, const PhysicsQueryFilter& filter )
             {
-                if ( filter._bIncludeTriggers == false && b2Shape_IsSensor( shapeID ) )
-                    return false;
+                // 센서 여부가 아니라 바디의 뜻(트리거)으로 거른다 — 겹침 전용 센서(막는 2D 콜라이더, `_bOverlapOnly`)는 막는 것으로 보인다.
                 const PhysicsBodyHandle body = Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeID ) ) );
+                if ( filter._bIncludeTriggers == false && scene.isBodyTrigger( body ) )
+                    return false;
                 if ( body == filter._ignoreBody )
                     return false;
                 return filter._ignoreUserData == 0 || scene.getBodyUserData( body ) != filter._ignoreUserData;
@@ -420,8 +421,10 @@ namespace sw
             return PhysicsCharacterState2D{};
         PhysicsCharacterState2D& state  = pRecord->_state;
         b2QueryFilter            filter = b2DefaultQueryFilter();
-        filter.categoryBits             = static_cast<uint64_t>( 1 ) << pRecord->_desc._layer;
-        filter.maskBits                 = static_cast<uint64_t>( _layers.getLayerMask( pRecord->_desc._layer ) );
+        // 카테고리는 막는 셰이프 비트 하나다 — 무버 캐스트는 센서를 거르지 않으므로 센서(트리거 · 겹침 전용 콜라이더)는 그 비트가 없어 걸리지 않는다(`makeFilter`).
+        // 레이어는 마스크 쪽 한 방향으로만 거른다(레이어 행렬이 대칭이라 같은 답이다).
+        filter.categoryBits = kSolidShapeBit;
+        filter.maskBits     = static_cast<uint64_t>( _layers.getLayerMask( pRecord->_desc._layer ) );
 
         b2CollisionPlane                             arrPlane[Box2DPhysicsSceneQueryInternal::kMaxMoverPlaneCount];
         Box2DPhysicsSceneQueryInternal::MoverContext context{ arrPlane, 0 };
@@ -487,7 +490,7 @@ namespace sw
     bool Box2DPhysicsScene::raycast( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const
     {
         b2QueryFilter queryFilter = b2DefaultQueryFilter();
-        queryFilter.categoryBits  = ~static_cast<uint64_t>( 0 );
+        queryFilter.categoryBits  = ~kSolidShapeBit; // 막는 셰이프 비트는 무버 전용이다(셰이프 마스크가 레이어 행렬만으로 거르게)
         queryFilter.maskBits      = static_cast<uint64_t>( filter._layerMask );
         Box2DPhysicsSceneQueryInternal::CastContext context;
         context._pScene  = this;
@@ -516,7 +519,7 @@ namespace sw
             return false;
         }
         b2QueryFilter queryFilter = b2DefaultQueryFilter();
-        queryFilter.categoryBits  = ~static_cast<uint64_t>( 0 );
+        queryFilter.categoryBits  = ~kSolidShapeBit; // 막는 셰이프 비트는 무버 전용이다(셰이프 마스크가 레이어 행렬만으로 거르게)
         queryFilter.maskBits      = static_cast<uint64_t>( filter._layerMask );
         Box2DPhysicsSceneQueryInternal::CastContext context;
         context._pScene  = this;
@@ -537,7 +540,7 @@ namespace sw
                                           vector<PhysicsCastHit2D>& outListHit ) const
     {
         b2QueryFilter queryFilter                                 = b2DefaultQueryFilter();
-        queryFilter.categoryBits                                  = ~static_cast<uint64_t>( 0 );
+        queryFilter.categoryBits                                  = ~kSolidShapeBit;
         queryFilter.maskBits                                      = static_cast<uint64_t>( filter._layerMask );
         const size_t                                   firstIndex = outListHit.size();
         Box2DPhysicsSceneQueryInternal::CastAllContext context{ this, &filter, &_settings._listMaterial, &outListHit, maxDistance };
@@ -556,7 +559,7 @@ namespace sw
             return 0;
         }
         b2QueryFilter queryFilter                                 = b2DefaultQueryFilter();
-        queryFilter.categoryBits                                  = ~static_cast<uint64_t>( 0 );
+        queryFilter.categoryBits                                  = ~kSolidShapeBit;
         queryFilter.maskBits                                      = static_cast<uint64_t>( filter._layerMask );
         const size_t                                   firstIndex = outListHit.size();
         Box2DPhysicsSceneQueryInternal::CastAllContext context{ this, &filter, nullptr, &outListHit, maxDistance };
@@ -571,7 +574,7 @@ namespace sw
         if ( Box2DPhysicsSceneQueryInternal::makeProxy( shape, position, rotation, proxy ) == false )
             return 0;
         b2QueryFilter queryFilter = b2DefaultQueryFilter();
-        queryFilter.categoryBits  = ~static_cast<uint64_t>( 0 );
+        queryFilter.categoryBits  = ~kSolidShapeBit; // 막는 셰이프 비트는 무버 전용이다(셰이프 마스크가 레이어 행렬만으로 거르게)
         queryFilter.maskBits      = static_cast<uint64_t>( filter._layerMask );
         // 찾은 바디를 출력 끝에 바로 붙이고 그 구간만 정렬해 중복을 지운다(호출마다 임시 버퍼를 할당하지 않는다).
         const size_t                                   firstIndex = outListBody.size();

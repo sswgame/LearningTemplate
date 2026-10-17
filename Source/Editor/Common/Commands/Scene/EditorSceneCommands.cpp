@@ -18,13 +18,11 @@
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectCopyBuffer.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Physics/Collision/ContinuousCollision.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -478,18 +476,12 @@ namespace sw::editor
         if ( pObj == nullptr )
             return;
 
-        // 크기는 월드 상자 하나로 측정한다(`GameObject::getWorldBox`). 기준점(primary 의 월드 자리)에서 바닥까지 · 가로 반 크기를 지금 상자에서 얻는다.
+        // 크기는 월드 상자 하나로 측정한다(`GameObject::getWorldBox`). 기준점(primary 의 월드 자리)에서 바닥까지를 지금 상자에서 얻는다.
         float32               bottomOffset = 0.0f;
-        float32               halfExtentX  = 0.5f;
-        float32               halfExtentZ  = 0.5f;
         const SceneComponent* pMyScene     = pObj->getPrimarySceneComponent();
         AABB                  myBox{};
         if ( pMyScene != nullptr && pObj->getWorldBox( myBox ) )
-        {
             bottomOffset = pMyScene->getWorldPosition()._y - myBox._min._y;
-            halfExtentX  = MathUtil::max( ( myBox._max._x - myBox._min._x ) * 0.5f, 0.01f );
-            halfExtentZ  = MathUtil::max( ( myBox._max._z - myBox._min._z ) * 0.5f, 0.01f );
-        }
 
         Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
@@ -501,23 +493,7 @@ namespace sw::editor
         GameObjectManager* pManager = pScene->getObjectManager();
         float32            hitY     = 0.0f;
         bool               bHit     = false;
-
-        const float32 startY = translation._y + 10.0f;
-        const AABB    movingBox{
-            float3{translation._x - halfExtentX, startY - bottomOffset, translation._z - halfExtentZ},
-            float3{translation._x + halfExtentX, startY + bottomOffset, translation._z + halfExtentZ}
-        };
-        const float3 displacement{ 0.0f, -2000.0f, 0.0f };
-
-        SweepHit sweepHit{};
-        if ( pManager->getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().sweepTest( movingBox, displacement, 0, sweepHit ) )
-        {
-            if ( sweepHit._hitObjectID != pObj->getObjectID() )
-            {
-                hitY = movingBox._min._y + displacement._y * sweepHit._hitFraction;
-                bHit = true;
-            }
-        }
+        // 바닥은 모든 오브젝트의 월드 상자 윗면으로 찾는다 — 편집 중에는 물리 바디가 없다(콜라이더도 플레이 중에만 2D 씬에 든다).
 
         // 반환값을 const& 로 받으면 복사가 없어 보이지만, 값으로 반환하는 함수라 그때마다 벡터를 하나 할당한다. 그래서
         // 채워 넣는 쪽 오버로드를 쓴다.

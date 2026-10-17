@@ -218,7 +218,6 @@ cmake = ".cmake CMakeLists.txt"
 "SilentFallback:Source/GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp" = 1
 "SilentFallback:Source/GameFramework/Base/World/Query/GameFlags.cpp" = 1
 "SilentFallback:Source/GameFramework/Base/World/Query/GameFlags.h" = 1
-"SilentFallback:Source/GameFramework/Base/World/Query/WorldQuery.cpp" = 1
 "SilentFallback:Source/GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h" = 1
 "SilentFallback:Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.cpp" = 1
 "SilentFallback:Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.cpp" = 2

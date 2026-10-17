@@ -516,7 +516,7 @@ SW_TEST_CASE( SpatialTest, FailedUpdateKeepsElement )
  * @details 셀 범위는 **호출부가 준 좌표에서** 나온다. 상한이 없으면 큰 상자 하나가 수천만 개의
  *          셀을 요구하고, 삽입이 그만큼 돌면서 해시 표를 채운다 — 이 모듈이 스스로 제공하는
  *          `AABB2D::infinite()` 가 바로 그런 값이다. 넘치는 핸들은 목록 하나에 모아 두고 질의가
- *          그 목록을 항상 함께 본다. `PhysicsOverlapWorld` 도 같은 이유로 상한을 둔다.
+ *          그 목록을 항상 함께 본다. 물리 바디 그리드도 같은 이유로 상한을 둔다.
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DOversizedBoundsStayQueryable )
 {
@@ -591,7 +591,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
 
 /**
  * @brief [SpatialTest] 모든 질의가 결과 벡터를 먼저 비운다
- * @details `SpatialHashGrid2D` · `PhysicsOverlapWorld` · `BVHTree3D` · `SpatialTree` 가 같은 약속이다. 어느 하나가 **덧붙이기만** 하거나
+ * @details `SpatialHashGrid2D` · `BVHTree3D` · `SpatialTree` 가 같은 약속이다. 어느 하나가 **덧붙이기만** 하거나
  *          트리가 빌 때 벡터를 아예 건드리지 않고 돌아가면, 벡터 하나를 프레임마다 돌려 쓰는 호출부에 **지난 프레임의 답이 이번
  *          답인 척** 남는다. 질의마다 새 벡터를 넘기는 테스트는 이것을 못 잡는다.
  */
@@ -710,7 +710,7 @@ SW_TEST_CASE( SpatialTest, BVHTree3DFrustumQueryKeepsOnlyVisibleBoxes )
 
 /**
  * @brief [SpatialTest] 셀 번호가 int32 끝에 닿는 항목도 넣고 찾고 뺄 수 있다(순회가 끝난다)
- * @details `PhysicsOverlapWorld` 와 같은 순회 넘침 함정이다(셀 순회가 int32 로 돌면 `++` 가 넘친다).
+ * @details 셀 격자에 흔한 순회 넘침 함정이다(셀 순회가 int32 로 돌면 `++` 가 넘친다).
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DEntityAtTheCellLimitDoesNotHang )
 {
@@ -727,7 +727,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DEntityAtTheCellLimitDoesNotHang )
 
 /**
  * @brief [SpatialTest] 같은 셀 안의 update 는 경계만 바꾸고, 셀을 넘는 update 는 옮긴다(점 엔티티 · 음수 셀)
- * @details `update` 는 덮는 셀 범위가 그대로면 셀 목록을 건드리지 않는다(`PhysicsOverlapWorld::setAABBLocked` 와 같은 지름길). 그 길에서도 좁힘 판정은
+ * @details `update` 는 덮는 셀 범위가 그대로면 셀 목록을 건드리지 않는다(셀 격자에 흔한 지름길). 그 길에서도 좁힘 판정은
  *          **새 경계**로 해야 한다 — 경계를 안 바꾸면 셀 안에서 움직인 것이 옛 자리로 판정된다. NetMMO 관심 영역이 이 모양(점 · 반경)으로 쓴다.
  * @note 변이 검사: 지름길에서 경계 대입을 빼면 두 번째 (0, 0) 원 질의가 eNear 를 돌려줘 실패한다. 셀을 넘는 update 가 옛 셀에서 빼지 않으면 활성 버킷이 5 가 된다.
  */

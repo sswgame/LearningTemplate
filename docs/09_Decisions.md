@@ -1087,7 +1087,7 @@
     "층 규칙 때문에 못 올린다" 는 걸림돌이 아닙니다. 미루는 까닭은 셋입니다. (1) `ResourceDataSchemaTest` 표(`kArrDataKind`)의 로더 상당수가 테스트 전용 판단(씬 만들기 · 위젯 트리 짓기 · 빈 그래프 거절)을 담고 있어,
     엔진 .cpp 로 옮기면 그 판단이 제품 코드로 새거나 테스트에 둘로 갈립니다. 옮기려면 약 40 개 엔진 .cpp 에 등록 줄과 로더를 나눠 넣어야 합니다. (2) 테스트 표는 앞 줄이 먼저 맞는 함수 판정(`isPrefab` 은 접미 둘)이고,
     레지스트리는 접두 · 포함 · 접미 하나씩에 "정확히 한 종류만 맞아야 한다" 는 규칙이라, 옮기면 두 종류가 한 파일에 맞는 겹침을 하나씩 다시 따져야 합니다. (3) `EnumNameTable` 은
-    `Source/GameFramework/Base/Foundation/Data/EnumNameTable.h` 에 있어 아래 층인 Engine 이 쓸 수 없습니다 — 먼저 Core(예: `Core/String`)로 옮기고 GameFramework 사용처 약 10 곳의 include 를 고쳐야 합니다
+    GameFramework(`Base/Foundation/Data`)에 있어 아래 층인 Engine 이 쓸 수 없었습니다(2026-10-18 `Source/Core/String/EnumNameTable.h` 로 옮겼다) — 먼저 Core(예: `Core/String`)로 옮기고 GameFramework 사용처 약 10 곳의 include 를 고쳐야 합니다
     (손으로 둔 Engine 이름 배열은 14 개 파일: Telemetry 5 · `Localization/CultureInfo` · `Reflection/ReflectValue` · `UI/Debug/DebugHUD` 등). 사용처 개수는 grep 근사치입니다.
     대안은 영역 하나씩 단계로 옮기는 것입니다: 먼저 `EnumNameTable` 을 Core 로 옮기고 include 만 바꾼 뒤(동작 불변), 로더가 `ResourceDataKindUtil::loadCatalog` 인 줄(예: Audio)부터 `SW_RESOURCE_DATA_KIND` 로 옮기면서
     같은 커밋에서 테스트 표의 해당 줄을 지웁니다. 테스트 전용 로더가 필요한 종류(scene · prefab · uidocument · animgraph …)는 테스트 표에 남깁니다.
@@ -1125,6 +1125,7 @@
 | D3-7.4 | 엔진에 스카이 컴포넌트를 추가한다(하늘 그리기 + 환경광). 안개 · 시간대(D2-5.2)는 따로 둔다. | 언리얼 SkyAtmosphere · SkyLight, 유니티 Skybox, Godot Sky. | 사 |
 | D2-11 | 파티클 · VFX 시뮬레이션은 CPU 와 GPU 를 둘 다 만들고 개발 빌드에서 `gv` 변수로 고른다. Shipping 은 GPU 로 고정하며 CPU 경로와 변수를 두지 않는다. | 학습용 엔진이라 두 방식을 비교해 보게 한다. 언리얼 Niagara 도 CPU · GPU 시뮬을 둔다. | 사 |
 | D1-2.1 | 키트 투사체 · 근접 판정을 Box2D 센서로 옮기고 겹침 월드를 없앤다(뒤 순서). | 유니티 트리거 · Godot Area2D처럼 물리 월드 센서 하나로 통일한다. | 추 |
+| D1-2.1 구현 | `BoxCollider2DComponent` 는 2D 씬의 키네마틱 센서 바디다. 막는 콜라이더도 센서(`PhysicsBodyDesc::_bOverlapOnly`, 이벤트 · 질의에서 트리거로 치지 않음)다. 연속 판정은 콜라이더가 지난 자리에서 지금 자리까지 `shapeCastAll` 로 쓸어 지나친 것을 시작 · 끝으로 알린다. 겹침은 고정 스텝에서만 난다. 무버 캐스트가 센서를 거르도록 센서가 아닌 셰이프 마스크에 전용 비트를 둔다. 타일맵 충돌은 정적 바디(강체를 막는다)다. | Box2D 3.1 은 키네마틱끼리 접촉을 만들지 않고 센서는 연속 충돌이 없다(문서가 캐스트를 권한다). 센서끼리는 서로를 본다(3.1.1 `sensor.c`). 유니티 트리거가 FixedUpdate 에서 나는 것과 같다. | 추 |
 | D1-3.3 | 적이 `MoveTo`로 쫓는 게임을 내비메시로 옮긴다. `AbilityArena`부터. | 유니티 NavMeshAgent가 표준 경로다. | 추 |
 | D1-5.3 | `PrefabInstanceRegistry` 기록은 되돌리기 이력의 수명에 맞춰 비운다. | 언리얼 · 유니티는 오버라이드 기록을 오브젝트 수명에 묶는다. | 추 |
 | D4-3.3 | 명령형 게임의 오른쪽 스틱은 카메라 이동과 줌, 커서는 왼쪽 스틱. | 패드 RTS 관례. | 추 |

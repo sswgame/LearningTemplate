@@ -28,7 +28,7 @@
  * 그 타입의 (컴포넌트, 오브젝트) 연속 목록(`TickBatchList`)에 들고, 디스패치가 구간을 그 타입의 함수 하나에 넘깁니다(가상 호출 없음). 오브젝트는 그룹마다
  * 두 목록 중 한 곳에만 있고 `_arrTickIndex` 가 그 안의 위치입니다. 오브젝트 안의 순서와 "한 오브젝트는 한 스레드" 규칙은 그대로입니다.
  *
- * `PhysicsOverlapWorld`, `PrimitiveRegistry`, `SceneTransformHierarchy` 와 같은 구조입니다. 기능은 별도 타입이 가지고, 매니저는 순서만 정합니다.
+ * `PrimitiveRegistry`, `SceneTransformHierarchy` 와 같은 구조입니다. 기능은 별도 타입이 가지고, 매니저는 순서만 정합니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"

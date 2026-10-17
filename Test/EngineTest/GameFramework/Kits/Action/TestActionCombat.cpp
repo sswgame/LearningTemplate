@@ -9,6 +9,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Physics/Collision/CollisionLayers.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -315,7 +317,12 @@ SW_TEST_CASE( ActionCombatTest, ProjectilePassesItsInstigatorAndWhatIsAttachedTo
 SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWith )
 {
     GameObjectManager manager;
-    manager.getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 1, 2, false );
+    // 콜라이더는 씬의 2D 물리 씬의 레이어 행렬로 걸러진다 — 모든 쌍이 부딪히되 1 · 2 쌍만 뺀 행렬을 준다.
+    IPhysicsScene2D* pScene2D = manager.getSubsystem<sw::ScenePhysics>().getScene2D();
+    SW_ASSERT_NOT_NULL( pScene2D );
+    CollisionLayers layers;
+    layers.setLayerCollision( 1, 2, false );
+    pScene2D->setLayerCollision( layers );
     UnitStatsComponent*  pAlly       = spawnUnit( manager, "Ally", 3.0f, 100, 0, 0.0f );
     ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
     SW_ASSERT_TRUE( pAlly != nullptr && pProjectile != nullptr );
@@ -336,8 +343,8 @@ SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWi
 /**
  * @brief [ActionCombatTest] 한 프레임에 얇은 유닛을 통째로 건너뛰는 빠른 투사체도 맞힌다(터널링 없음)
  * @details 겹침을 step 마다 끝 자리만 보면 초당 600 으로 나는 총알은 한 프레임(1/60 초)에 10 을 가서 두께 0.1 인 유닛과 한 번도 겹치지
- *          않는다. 투사체는 시작할 때 제 콜라이더를 연속 충돌로 켜고(`setContinuous`), 물리가 지난 자리에서 지금 자리까지 쓸어 지나간 유닛과의
- *          겹침을 낸다(`PhysicsOverlapWorld::step`).
+ *          않는다. 투사체는 시작할 때 제 콜라이더를 연속 판정으로 켜고(`setContinuous`), 콜라이더가 지난 자리에서 지금 자리까지 쓸어 지나간 유닛과의
+ *          겹침을 낸다(`BoxCollider2DComponent::sweepPassedBodies` — Box2D 센서는 연속 충돌이 없다).
  */
 SW_TEST_CASE( ActionCombatTest, FastProjectileHitsAThinUnitItCrossesInOneFrame )
 {

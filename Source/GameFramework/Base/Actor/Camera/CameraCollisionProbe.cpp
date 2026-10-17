@@ -8,7 +8,6 @@
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
-#include "Engine/Physics/PhysicsOverlapWorld.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
 namespace sw
@@ -55,39 +54,6 @@ namespace sw
         return bHit;
     }
 
-    PhysicsOverlapWorldCameraProbe::PhysicsOverlapWorldCameraProbe( const PhysicsOverlapWorld& world, uint8 layer, uint64 ignoredObjectID )
-        : _pWorld{ &world }
-        , _ignoredObjectID{ ignoredObjectID }
-        , _layer{ layer }
-    {
-    }
-
-    bool PhysicsOverlapWorldCameraProbe::sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const
-    {
-        const float3  displacement = to - from;
-        const float32 length       = displacement.getLength();
-        if ( _pWorld == nullptr || length <= MathUtil::kEpsilon )
-            return false;
-        // 쓸리는 구간을 덮는 상자로 후보를 모으고, 바디마다 구를 쓸어 가장 가까운 것을 고른다. 대상 자신(피벗이 그 안에 있다)은 건너뛴다.
-        const float3                            extent{ radius, radius, radius };
-        const AABB                              sweptBounds{ float3::min( from, to ) - extent, float3::max( from, to ) + extent };
-        vector<PhysicsOverlapWorld::BodyHandle> listHandle;
-        _pWorld->queryAABB( sweptBounds, _layer, listHandle );
-        float32 nearest = length;
-        bool    bHit    = false;
-        for ( const PhysicsOverlapWorld::BodyHandle handle : listHandle )
-        {
-            PhysicsBody body{};
-            if ( _pWorld->tryGetBody( handle, body ) == false || body._bTrigger == SW_TRUE )
-                continue;
-            if ( _ignoredObjectID != 0 && body._objectID == _ignoredObjectID )
-                continue;
-            sweepAgainst( from, displacement, length, radius, body._aabb, nearest, bHit );
-        }
-        outDistance = nearest;
-        return bHit;
-    }
-
     SceneCameraProbe::SceneCameraProbe( const GameObjectManager& manager, uint64 ignoredObjectID )
         : _manager{ manager }
         , _ignoredObjectID{ ignoredObjectID }
@@ -120,12 +86,17 @@ namespace sw
             nearest = hit._distance;
             bHit    = true;
         }
-        const PhysicsOverlapWorldCameraProbe overlapProbe( _manager.getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld(), 0, _ignoredObjectID );
-        float32                              overlapDistance = 0.0f;
-        if ( overlapProbe.sweepSphere( from, to, radius, overlapDistance ) && overlapDistance < nearest )
+        // 2D 씬(2D 콜라이더 포함)은 XY 평면 — 암의 평면 성분으로 원을 쓸고, 닿은 비율을 3D 길이로 되돌린다. 암이 Z 로만 뻗으면 평면에서 걸리는 것이 없다.
+        const float32 planarLength = float2{ displacement._x, displacement._y }.getLength();
+        if ( planarLength > MathUtil::kEpsilon &&
+             CharacterHitUtil::circleCast2D( _manager, from, displacement, planarLength, radius, layerMask, _ignoredObjectID, hit ) )
         {
-            nearest = overlapDistance;
-            bHit    = true;
+            const float32 distance = hit._distance / planarLength * length;
+            if ( bHit == false || distance < nearest )
+            {
+                nearest = distance;
+                bHit    = true;
+            }
         }
         outDistance = nearest;
         return bHit;

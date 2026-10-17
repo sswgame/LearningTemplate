@@ -94,6 +94,8 @@ namespace sw
         virtual bool            isBodySleeping( PhysicsBodyHandle body ) const              = 0;
         virtual void            wakeBody( PhysicsBodyHandle body )                          = 0;
         virtual uint64          getBodyUserData( PhysicsBodyHandle body ) const             = 0;
+        /** @brief 바디가 트리거(`PhysicsBodyDesc::_bTrigger`)로 만들어졌으면 true 입니다. 겹침 전용 바디(`_bOverlapOnly`)는 트리거가 아닙니다. 없는 바디는 false 입니다. */
+        virtual bool isBodyTrigger( PhysicsBodyHandle body ) const = 0;
         /** @brief 두 바디의 충돌을 켜거나 끕니다(`PhysicsPairFilter`). 레이어 테이블보다 좁은 예외입니다. */
         virtual void setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide ) = 0;
 
