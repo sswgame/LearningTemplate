@@ -285,6 +285,40 @@ namespace sw
         s_pAllocationObserver.store( nullptr, std::memory_order_release );
 #endif
     }
+
+    void* Memory::copy( void* pDest, const void* pSrc, size_t size )
+    {
+        const bool bNothingToCopy = pDest == nullptr || pSrc == nullptr || size == 0;
+        if ( bNothingToCopy )
+            return pDest;
+        return std::memcpy( pDest, pSrc, size );
+    }
+
+    void* Memory::move( void* pDest, const void* pSrc, size_t size )
+    {
+        const bool bNothingToMove = pDest == nullptr || pSrc == nullptr || size == 0;
+        if ( bNothingToMove )
+            return pDest;
+        return std::memmove( pDest, pSrc, size );
+    }
+
+    void* Memory::set( void* pDest, uint8 value, size_t size )
+    {
+        if ( pDest == nullptr || size == 0 )
+            return pDest;
+        return std::memset( pDest, value, size );
+    }
+
+    int32 Memory::compare( const void* pLhs, const void* pRhs, size_t size )
+    {
+        if ( pLhs == pRhs || size == 0 )
+            return 0;
+        if ( pLhs == nullptr )
+            return -1;
+        if ( pRhs == nullptr )
+            return 1;
+        return std::memcmp( pLhs, pRhs, size );
+    }
 } // namespace sw
 
 namespace sw
