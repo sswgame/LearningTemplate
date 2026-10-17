@@ -52,7 +52,7 @@ namespace sw
         /** @brief id 의 세션입니다. 없으면(빠졌으면) nullptr 입니다. */
         const PairedAnimationSession* findSession( uint32 sessionID ) const;
         /** @brief 그 애니메이터가 재생 중인 세션에 묶여 있으면 true 입니다(재생 속도를 쓰는 컴포넌트가 세션 동안 물러설 때 묻는다). */
-        bool isParticipant( ComponentHandle animator ) const;
+        bool isParticipant( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const;
         /** @brief 세션 수입니다(끝났지만 아직 빠지지 않은 것 포함). */
         uint32 getSessionCount() const { return static_cast<uint32>( _listSession.size() ); }
 

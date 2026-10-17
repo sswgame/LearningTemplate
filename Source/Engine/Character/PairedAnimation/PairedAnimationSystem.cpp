@@ -68,7 +68,7 @@ namespace sw
             if ( isParticipant( binding._animator ) )
                 return PairedAnimationStartResult::ParticipantBusy;
         }
-        unique_ptr<PairedAnimationSession> session = make_unique<PairedAnimationSession>( _nextSessionID, std::move( def ) );
+        unique_ptr<PairedAnimationSession> session = sw::make_unique<PairedAnimationSession>( _nextSessionID, std::move( def ) );
         const PairedAnimationStartResult   result  = session->start( manager, listBinding );
         if ( result != PairedAnimationStartResult::Started )
             return result;
@@ -97,7 +97,7 @@ namespace sw
         return nullptr;
     }
 
-    bool PairedAnimationSystem::isParticipant( ComponentHandle animator ) const
+    bool PairedAnimationSystem::isParticipant( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const
     {
         for ( const unique_ptr<PairedAnimationSession>& session : _listSession )
         {

@@ -162,12 +162,12 @@ SW_TEST_CASE( PairedAnimationTest, SessionSnapsAndPlaysOnOneClock )
     PairedAnimationSystem&               system      = PairedAnimationSystem::getOrCreate( manager );
     uint32                               sessionID   = 0;
     const vector<PairedAnimationBinding> listBinding = {
-        PairedAnimationBinding{  hashed_string( "Leader" ),   pLeader->getHandle()},
-        PairedAnimationBinding{hashed_string( "Follower" ), pFollower->getHandle()},
+        PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pLeader )},
+        PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower )},
     };
     SW_ASSERT_TRUE( system.startSession( manager, def, listBinding, sessionID ) == PairedAnimationStartResult::Started );
     SW_EXPECT_TRUE( sessionID != 0 );
-    SW_EXPECT_TRUE( system.isParticipant( pFollower->getHandle() ) );
+    SW_EXPECT_TRUE( system.isParticipant( TComponentHandle<SkeletalAnimatorComponent>( pFollower ) ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pLeader->getPlayRate(), 1e-6f );
 
     // 진입 정렬(snap).
@@ -201,7 +201,7 @@ SW_TEST_CASE( PairedAnimationTest, SessionSnapsAndPlaysOnOneClock )
     SW_EXPECT_TRUE( pLeader->getCurrentStateName() == hashed_string( "Idle" ) );
     SW_EXPECT_TRUE( pFollower->getCurrentStateName() == hashed_string( "Idle" ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pLeader->getPlayRate(), 1e-6f );
-    SW_EXPECT_FALSE( system.isParticipant( pFollower->getHandle() ) );
+    SW_EXPECT_FALSE( system.isParticipant( TComponentHandle<SkeletalAnimatorComponent>( pFollower ) ) );
     // 끝난 세션은 다음 갱신 앞에서 빠진다.
     system.runBeforeTick( manager, TestPairedAnimationInternal::kStep );
     SW_EXPECT_NULL( system.findSession( sessionID ) );
@@ -236,8 +236,8 @@ SW_TEST_CASE( PairedAnimationTest, SessionWarpsRoleToAnchorOffset )
     PairedAnimationSystem&               system      = PairedAnimationSystem::getOrCreate( manager );
     uint32                               sessionID   = 0;
     const vector<PairedAnimationBinding> listBinding = {
-        PairedAnimationBinding{  hashed_string( "Leader" ),   pLeader->getHandle()},
-        PairedAnimationBinding{hashed_string( "Follower" ), pFollower->getHandle()},
+        PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pLeader )},
+        PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower )},
     };
     SW_ASSERT_TRUE( system.startSession( manager, def, listBinding, sessionID ) == PairedAnimationStartResult::Started );
     SW_EXPECT_EQUAL( 1u, pWarping->getOpenWindowCount() );
@@ -275,8 +275,8 @@ SW_TEST_CASE( PairedAnimationTest, SessionAbortsWhenRequiredRoleIsInterrupted )
     PairedAnimationSystem&               system      = PairedAnimationSystem::getOrCreate( manager );
     uint32                               sessionID   = 0;
     const vector<PairedAnimationBinding> listBinding = {
-        PairedAnimationBinding{  hashed_string( "Leader" ),   pLeader->getHandle()},
-        PairedAnimationBinding{hashed_string( "Follower" ), pFollower->getHandle()},
+        PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pLeader )},
+        PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower )},
     };
     SW_ASSERT_TRUE( system.startSession( manager, def, listBinding, sessionID ) == PairedAnimationStartResult::Started );
     TestPairedAnimationInternal::step( manager, system );
@@ -311,9 +311,9 @@ SW_TEST_CASE( PairedAnimationTest, LateOptionalRoleEntersAndLeavesWithoutAbortin
     PairedAnimationSystem&               system      = PairedAnimationSystem::getOrCreate( manager );
     uint32                               sessionID   = 0;
     const vector<PairedAnimationBinding> listBinding = {
-        PairedAnimationBinding{  hashed_string( "Leader" ),   pLeader->getHandle()},
-        PairedAnimationBinding{hashed_string( "Follower" ), pFollower->getHandle()},
-        PairedAnimationBinding{    hashed_string( "Prop" ),     pProp->getHandle()},
+        PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pLeader )},
+        PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower )},
+        PairedAnimationBinding{    hashed_string( "Prop" ),     TComponentHandle<SkeletalAnimatorComponent>( pProp )},
     };
     SW_ASSERT_TRUE( system.startSession( manager, def, listBinding, sessionID ) == PairedAnimationStartResult::Started );
     const PairedAnimationSession* pSession = system.findSession( sessionID );
@@ -355,18 +355,18 @@ SW_TEST_CASE( PairedAnimationTest, StartRefusesWithoutSideEffects )
     PairedAnimationSystem&                     system = PairedAnimationSystem::getOrCreate( manager );
     const shared_ptr<const PairedAnimationDef> def    = TestPairedAnimationInternal::makeDef( TestPairedAnimationInternal::kSnapXML );
     SW_ASSERT_NOT_NULL( def.get() );
-    const PairedAnimationBinding leader{ hashed_string( "Leader" ), pLeader->getHandle() };
-    const PairedAnimationBinding follower{ hashed_string( "Follower" ), pFollower->getHandle() };
+    const PairedAnimationBinding leader{ hashed_string( "Leader" ), TComponentHandle<SkeletalAnimatorComponent>( pLeader ) };
+    const PairedAnimationBinding follower{ hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower ) };
     uint32                       sessionID = 0;
 
     SW_EXPECT_TRUE( system.startSession( manager, def, { leader }, sessionID ) == PairedAnimationStartResult::MissingRequiredRole );
     SW_EXPECT_TRUE( system.startSession( manager, def, {
-                                                           leader, follower, PairedAnimationBinding{ hashed_string( "Ghost" ), pOther->getHandle() }
+                                                           leader, follower, PairedAnimationBinding{ hashed_string( "Ghost" ), TComponentHandle<SkeletalAnimatorComponent>( pOther ) }
     },
                                          sessionID ) == PairedAnimationStartResult::InvalidBinding );
     // 알림 표가 없는 오브젝트가 알림을 받는 역할이면 거절한다.
     SW_EXPECT_TRUE( system.startSession( manager, def, {
-                                                           leader, PairedAnimationBinding{ hashed_string( "Follower" ), pOther->getHandle() }
+                                                           leader, PairedAnimationBinding{ hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pOther ) }
     },
                                          sessionID ) == PairedAnimationStartResult::NotifyTargetMissing );
 

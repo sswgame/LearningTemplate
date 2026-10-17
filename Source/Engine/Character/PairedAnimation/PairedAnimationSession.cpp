@@ -80,7 +80,7 @@ namespace sw
 
     SkeletalAnimatorComponent* PairedAnimationSession::resolveAnimator( GameObjectManager& manager, const RoleState& role ) const
     {
-        return role._animator.isValid() ? castTo<SkeletalAnimatorComponent>( manager.resolveComponent( role._animator ) ) : nullptr;
+        return role._animator.isValid() ? manager.resolveComponent( role._animator ) : nullptr;
     }
 
     bool PairedAnimationSession::tryGetClipTime( const SkeletalAnimatorComponent& animator, const RoleState& role, float32& outTime )
@@ -100,7 +100,7 @@ namespace sw
         return false;
     }
 
-    bool PairedAnimationSession::hasParticipant( ComponentHandle animator ) const
+    bool PairedAnimationSession::hasParticipant( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const
     {
         for ( const RoleState& role : _listRole )
         {

@@ -95,7 +95,7 @@ namespace sw
             return PairedAnimationStartResult::ParticipantBusy;
         vector<PairedAnimationBinding> listBinding;
         listBinding.reserve( listOtherBinding.size() + 1 );
-        listBinding.push_back( PairedAnimationBinding{ hashed_string( _role ), pAnimator->getHandle() } );
+        listBinding.push_back( PairedAnimationBinding{ hashed_string( _role ), TComponentHandle<SkeletalAnimatorComponent>( pAnimator ) } );
         listBinding.insert( listBinding.end(), listOtherBinding.begin(), listOtherBinding.end() );
         uint32                           sessionID = 0;
         const PairedAnimationStartResult result    = PairedAnimationSystem::getOrCreate( *pManager ).startSession( *pManager, _def, listBinding, sessionID );

@@ -59,11 +59,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 역할 하나에 묶을 참가자입니다. 애니메이터 핸들입니다(feat14 의 `TComponentHandle<SkeletalAnimatorComponent>` 가 들어오면 그 형식으로 바꾼다). */
+    /** @brief 역할 하나에 묶을 참가자입니다. 애니메이터의 타입 핸들입니다. */
     struct PairedAnimationBinding
     {
-        hashed_string   _role{};
-        ComponentHandle _animator{};
+        hashed_string                               _role{};
+        TComponentHandle<SkeletalAnimatorComponent> _animator{};
     };
 } // namespace sw
 
@@ -100,7 +100,7 @@ namespace sw
         float32                   getTime() const { return _anchorTime; }
         const PairedAnimationDef& getDef() const { return *_def; }
         /** @brief 그 애니메이터가 이 세션에 묶여 아직 나가지 않았으면 true 입니다. */
-        bool hasParticipant( ComponentHandle animator ) const;
+        bool hasParticipant( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const;
         /** @brief 지금 재생 중인(들어왔고 나가지 않은) 역할 수입니다. */
         uint32 getPlayingRoleCount() const;
         /** @brief 이름의 역할이 지금 재생 중이면 true 입니다. */
@@ -119,13 +119,13 @@ namespace sw
         /** @brief 역할 하나의 실행 상태입니다(에셋의 역할과 인덱스가 같다). */
         struct RoleState
         {
-            ComponentHandle           _animator{};
-            const IAnimationPlayable* _pClip{ nullptr }; ///< 비교에만 쓴다(애니메이터의 클립 표가 소유)
-            float32                   _clipSeconds{ 0.0f };
-            float32                   _entryAnchorTime{ 0.0f };
-            float32                   _previousPlayRate{ 1.0f };
-            RoleStage                 _stage{ RoleStage::Unbound };
-            bool                      _bWarpOpen{ false };
+            TComponentHandle<SkeletalAnimatorComponent> _animator{};
+            const IAnimationPlayable*                   _pClip{ nullptr }; ///< 비교에만 쓴다(애니메이터의 클립 표가 소유)
+            float32                                     _clipSeconds{ 0.0f };
+            float32                                     _entryAnchorTime{ 0.0f };
+            float32                                     _previousPlayRate{ 1.0f };
+            RoleStage                                   _stage{ RoleStage::Unbound };
+            bool                                        _bWarpOpen{ false };
         };
 
         /** @brief 역할의 애니메이터를 풉니다. 없으면 nullptr 입니다. */
