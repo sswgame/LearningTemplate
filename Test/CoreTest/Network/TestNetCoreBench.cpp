@@ -22,6 +22,15 @@ namespace
     /** @brief 신뢰 메시지 칸 흉내(`NetConnection::OutgoingReliable` 과 같은 모양 — 바이트 버퍼 하나). */
     struct NetCoreBenchSlot
     {
+        /** @brief `NetConnection::OutgoingReliable::resetForReuse` 와 같다 — 칸을 다시 쓸 때 버퍼 용량을 남긴다. */
+        void resetForReuse()
+        {
+            sw::vector<uint8> keptBuffer = std::move( _buffer );
+            keptBuffer.clear();
+            *this   = NetCoreBenchSlot{};
+            _buffer = std::move( keptBuffer );
+        }
+
         sw::vector<uint8> _buffer{};
         float64           _lastSentTime{ -1.0 };
     };
