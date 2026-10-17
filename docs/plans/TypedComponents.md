@@ -3,6 +3,7 @@
 [리플렉션 직렬화 형식 계획](ReflectionFormats.md) 9절의 단계 7-c 와 7-d 를 구현할 수 있는 수준으로 나눈 계획입니다.
 배경과 판단은 그 문서의 7절(리플렉션 캐스트 비용)에 있고, 여기서는 반복하지 않습니다.
 사용자 결정은 끝났습니다. 7-d(타입 핸들)를 도입하고, 7-c(매니저의 타입별 컴포넌트 목록)를 7-d 보다 먼저 합니다.
+구현 전에 `design-reviewer` 검토(결론: 고쳐서 진행, `NEXT.md` 2절 0번의 ⓐ~ⓗ)를 반영했습니다. 반영한 자리는 본문에 ⓐ 처럼 표시합니다.
 
 이 문서에서 쓰는 말은 다음과 같습니다.
 
@@ -36,23 +37,27 @@
 
 ### 2.2 자료구조: 정확한 타입마다 버킷 하나
 
-저장소(`GameObjectStore`)가 다음을 보관합니다. 매니저는 지금처럼 전달만 합니다.
+**ⓐ 버킷은 컴포넌트 풀 항목에 합칩니다.** 풀 맵(`_mapComponentPool`)은 이미 타입 FQN 이 키이고 정확한 타입마다 하나라서, 버킷과 키가 같습니다.
+맵을 하나 더 두지 않고 풀 항목이 버킷을 함께 가집니다. 저장소(`GameObjectStore`)가 다음을 보관합니다. 매니저는 지금처럼 전달만 합니다.
 
 | 멤버 | 형식 | 뜻 |
 |---|---|---|
-| `_listTypeBucket` | `vector<TypeBucket>` | 버킷 배열입니다. 버킷 번호는 바뀌지 않습니다 |
-| `_mapTypeBucket` | `unordered_map<hashed_string, uint32>` | 타입 FQN 에서 버킷 번호로 갑니다 |
-| `TypeBucket::_pType` | `const TypeInfo*` | 버킷이 비어 있지 않을 때만 값이 있습니다. 비면 nullptr 입니다 |
-| `TypeBucket::_listComponent` | `vector<Component*>` | 그 타입 인스턴스들입니다 |
+| `_mapComponentPool` | `unordered_map<hashed_string, unique_ptr<ComponentPoolEntry>>` | 타입 FQN 에서 항목으로 갑니다. 항목 주소는 매니저가 죽을 때까지 바뀌지 않습니다 |
+| `_listComponentPoolEntry` | `vector<ComponentPoolEntry*>` | 항목을 처음 나온 순서로 둡니다. 조회가 이 목록을 돕니다 |
+| `ComponentPoolEntry::_pool` | `PoolAllocator` | 그 타입의 블록 풀입니다(지금의 풀) |
+| `ComponentPoolEntry::_listComponent` | `vector<Component*>` | 버킷입니다. 그 타입 인스턴스들입니다 |
+| `ComponentPoolEntry::_pType` | `const TypeInfo*` | 버킷이 비어 있지 않을 때만 값이 있습니다. 비면 nullptr 입니다 |
 
 컴포넌트는 두 값을 보관합니다.
 
 | 멤버 | 형식 | 뜻 |
 |---|---|---|
-| `Component::_typeBucketIndex` | `uint32` | 자기 버킷 번호입니다. 매니저 없이 만든 컴포넌트는 무효 값입니다 |
-| `Component::_typeBucketSlot` | `uint32` | 버킷 안의 위치입니다. 제거를 O(1) 로 하려고 둡니다 |
+| `Component::_pPoolEntry` | `ComponentPoolEntry*` | 지금의 `_pPool` 을 바꿉니다. 해체가 이 항목의 풀로 반납하고 이 항목의 버킷에서 뺍니다. 힙에서 왔으면 nullptr 입니다 |
+| `Component::_poolEntrySlot` | `uint32` | 버킷 안의 위치입니다. 제거를 O(1) 로 하려고 둡니다 |
 
-- 키를 `TypeInfo` 포인터가 아니라 FQN 으로 잡습니다. 컴포넌트 풀(`GameObjectStore.h:160-168`)과 같은 이유입니다. 한 클래스에 `TypeInfo` 사본이 둘 생겨도 같은 버킷을 씁니다.
+- 키를 `TypeInfo` 포인터가 아니라 FQN 으로 잡습니다. 컴포넌트 풀과 같은 이유입니다(같은 맵입니다). 한 클래스에 `TypeInfo` 사본이 둘 생겨도 같은 버킷을 씁니다.
+- 추가 때 해시 조회가 없습니다. 풀을 고를 때(`getOrCreateComponentPool`) 이미 찾은 항목을 컴포넌트가 가지고 있기 때문입니다.
+- 힙에서 잡은 컴포넌트(타입 정보가 없어 풀이 없는 것)는 버킷에 들어가지 않습니다. 타입 정보가 없으면 지금도 `castTo` 가 맞추지 못하므로 결과는 같습니다.
 - 조회 `forEachComponentOfType<T>` 는 `T` 의 `TypeInfo` 를 한 번 구한 뒤, `_pType` 이 있는 버킷마다 `_pType->isDerivedFrom( pToType )` 를 묻고, 맞는 버킷의 컴포넌트를 방문합니다.
   `isDerivedFrom` 은 깊이 8 까지 원자 로드 네 번과 비교 한 번입니다(ReflectionFormats.md 7.1).
 - 런타임 `TypeInfo` 를 받는 비템플릿 버전 `forEachComponentOfType( const TypeInfo*, Func )` 도 둡니다. 7-d-3 의 인스펙터 선택기가 씁니다.
@@ -77,7 +82,7 @@ K 가 200 이어도 `isDerivedFrom` 200 번은 1 µs 안쪽으로 추정하며, 
 
 1. **추가.** `GameObject::attachCreatedComponent` 가 컴포넌트를 오브젝트 목록에 넣는 줄(`GameObject.cpp:604`) 바로 옆에서 `registerTypedComponent` 를 부릅니다.
    지금 컴포넌트는 `onRegister` 보다 먼저 오브젝트 목록에 들어가 순회에 보입니다. 같은 시점에 버킷에 넣어야 `onRegister` 안에서 씬을 찾는 코드가 지금과 같은 답을 받습니다.
-   버킷이 비어 있었으면 `_pType` 을 그 컴포넌트의 `_pTypeInfo` 로 채웁니다.
+   버킷이 비어 있었으면 `_pType` 을 그 컴포넌트의 `_pTypeInfo` 로 채웁니다. 항목은 컴포넌트가 가진 `_pPoolEntry` 라서 맵을 다시 찾지 않습니다.
 2. **제거.** 컴포넌트 해체는 `GameObjectStore::destroyComponentInstance` 하나를 지납니다(`GameObjectStore.cpp:421-450`). 그 함수의 맨 앞, `dispatchEndPlay` 보다 먼저 버킷에서 뺍니다.
    마지막 원소를 빈 위치로 옮기고 그 원소의 `_typeBucketSlot` 을 고칩니다. 지금도 `removeComponent` 가 목록에서 먼저 빼므로 `onEndPlay` 와 `onUnregister` 동안에는 순회에 보이지 않습니다. 같은 시점입니다.
 3. **지연 제거와 오브젝트 파괴.** 삭제 대기 컴포넌트는 실제 해체까지 버킷에 남습니다. 조회가 `pComp->isPendingDestroy()` 와 `pComp->getOwner()->isPendingDestroy()` 를 보고 건너뜁니다. 지금 순회와 같은 결과입니다.
@@ -106,15 +111,18 @@ K 가 200 이어도 `isDerivedFrom` 200 번은 1 µs 안쪽으로 추정하며, 
 | 항목 | 정확한 타입 버킷 | 조상 목록, 깊이 8 |
 |---|---|---|
 | 목록의 포인터 | 8 B × 1 | 8 B × 8 |
-| 컴포넌트의 위치 값 | 8 B(버킷 번호와 위치) | 4 B × 8 + 목록 번호 |
-| 컴포넌트당 합계 | 16 B | 약 96 B 이상 |
-| 20,000 개 | 약 320 KB | 약 1.9 MB |
-| 추가 한 번 | 해시 조회 1 + push 1 | 디스플레이 읽기 + 해시 조회 8 + push 8 |
+| 컴포넌트의 위치 값 | 4 B(위치. 항목 포인터는 `_pPool` 자리를 씀) | 4 B × 8 + 목록 번호 |
+| 컴포넌트당 합계 | 12 B | 약 96 B 이상 |
+| 20,000 개 | 약 240 KB | 약 1.9 MB |
+| 추가 한 번 | push 1(항목은 이미 앎) | 디스플레이 읽기 + 해시 조회 8 + push 8 |
 
-- 버킷 하나의 고정 비용은 `TypeInfo*` 8 B, 벡터 24 B, 맵 노드 하나입니다. 버킷 200 개면 10 KB 안쪽입니다.
-- `Component` 에 `uint32` 두 개(8 B)가 늘어납니다. 플래그 뒤 패딩(`Component.h:581-588`)에 들어가는지는 구현 때 `sizeof` 로 확인합니다(미확인).
-  들어가지 않으면 컴포넌트마다 8 B 가 늘고, 풀 블록 크기가 커집니다.
+- 버킷 하나의 고정 비용은 `TypeInfo*` 8 B, 벡터 24 B, 항목 목록의 포인터 8 B 입니다. 맵 노드는 풀이 이미 가지고 있습니다. 버킷 200 개면 10 KB 안쪽입니다.
+- `Component` 에는 `uint32` 하나(4 B)가 늘어납니다. 플래그(`_bActive` 부터 비트 플래그까지 4 B) 뒤, `_listSubTick` 앞의 패딩 4 B 에 들어간다고 계산했습니다(`Component.h:581-588`, `sizeof` 미측정).
+  그래서 7-c 는 `sizeof( Component )` 가 늘지 않았는지 `static_assert` 로 묶지 않고, 측정 질문(5절)으로 남깁니다.
 - 추가와 제거마다 배타 잠금을 한 번 더 잡습니다. 추가는 이미 풀 조회(`getOrCreateComponentPool`)에서 같은 잠금을 잡지만, 그 사이에 생성자가 돌아서 하나로 합치지 않습니다.
+- **ⓗ 등록형 목록과의 관계.** 타입별 목록이 `ComponentRegistry`, `TickBatchRegistry`, 버킷 셋이 됩니다. `09_Decisions.md` 의 "씬 훑기 190 µs" 근거는 버킷으로 약해지므로,
+  어느 등록형 목록을 버킷으로 옮길지는 기준(등록 순서가 결과에 나오는가, 채널이 있는가, 잠금 없이 읽어야 하는가)과 함께 백로그에 남깁니다.
+  조회 타입마다 맞는 버킷 목록을 캐시하는 안(B 안)은 측정 뒤로 미룹니다. 넣을 때는 타입 레지스트리 세대로 무효화합니다.
   잠금 비용은 경합이 없을 때 수십 ns 로 추정합니다. 벤치의 큐브 교체(churn) 경로에서 p50 과 p99 를 전후로 측정합니다(5절).
 
 ### 2.6 호출부 전체 목록
@@ -205,10 +213,14 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 | `untyped()` | 타입을 지운 `ComponentHandle` 입니다. 레지스트리, 지연 파괴 목록처럼 타입을 모르는 곳에 넘길 때 씁니다 |
 | `objectID()`, `componentID()`, `isValid()`, `operator bool`, `==`, `!=` | `ComponentHandle` 과 같습니다 |
 
+- **ⓓ 비교.** 타입 핸들과 타입 없는 `ComponentHandle` 을 섞은 `==` 와 `!=` 를 허용합니다. 비교는 id 두 개만 보고 주소를 만들지 않으므로 타입이 어긋나도 잘못된 주소를 쓸 수 없습니다.
+  `pPawn->getHandle() == pController->getPawn()` 같은 호출부(`VoxelDirectorComponent.cpp`, `ShooterDirectorComponent.cpp`, `ShooterPlayerComponent.cpp`, `FarmDirectorComponent.cpp`, `ArenaDirectorComponent.cpp`)가 `untyped()` 없이 그대로 읽힙니다.
+  서로 관계없는 두 타입 핸들의 비교는 연산자가 없어 컴파일 오류입니다. 파생과 기반은 업캐스트로 비교합니다.
+- 이 저장소는 C++17 이라 비교 연산자를 양쪽 순서로 모두 적습니다(C++20 의 뒤집은 후보가 없습니다).
 - 타입 없는 핸들에서 바로 만드는 공개 생성자는 두지 않습니다. 그 변환은 3.2 의 확인을 거쳐야만 합니다.
   확인 함수만 만들 수 있게 하는 패스키(passkey, 생성자를 특정 클래스만 부를 수 있게 하는 빈 태그 타입)를 Core 에 두고, 생성자가 그 태그를 받습니다. 태그의 생성자는 `GameObjectManager` 만 부를 수 있습니다.
 - 다운캐스트 변환(`TComponentHandle<Base>` 에서 `TComponentHandle<Derived>`)도 3.2 를 거칩니다.
-- `ComponentHandle` 을 키로 쓰는 해시나 정렬 특수화가 있는지는 구현 때 확인합니다(미확인). 있으면 같은 것을 타입 핸들에도 둡니다.
+- `ComponentHandle` 을 키로 쓰는 해시나 정렬 특수화는 없습니다(2026-10-17 검색). 타입 핸들에도 두지 않습니다.
 
 ### 3.2 타입 없는 핸들에서 만들기
 
@@ -230,78 +242,88 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 `GameObjectManager::resolveComponent<T>( TComponentHandle<T> handle ) const` 를 더합니다. 반환은 `T*` 입니다.
 
 - 타입 없는 찾기(`resolveComponent( ComponentHandle )`)를 부르고 `static_cast<T*>` 로 바꿉니다. 삭제 대기의 처리는 타입 없는 찾기와 같습니다.
-- Debug 에서 `GameObjectManager.h:279-281` 과 같은 단언을 둡니다. 결과가 nullptr 이 아니면 `findCachedTypeInfo()->isDerivedFrom( T::StaticType() )` 이어야 합니다.
-- 단언으로 충분한 이유는 다음과 같습니다. 오브젝트 id 와 컴포넌트 id 는 프로세스 전체에서 한 번만 발급됩니다(`GameObjectStore.h:294-299`). 같은 id 를 다시 쓰는 곳은 `ComponentIDRestoreScope` 뿐이고, 이것도 타입이 맞는 것에만 원래 id 를 줍니다(`GameObject.h:369-377`). 그래서 한 핸들이 가리키는 타입은 바뀌지 않습니다.
-- `static_cast` 는 `T` 가 `Component` 를 가상이 아닌 방식으로 상속할 때 포인터 보정까지 맞습니다. 다중 상속 `REFLECT` 타입은 단계 7-b 가 생성 오류로 막습니다.
-- `executeOrDeferPostTickOnComponent` 의 인자를 `TComponentHandle<TComponent>` 로 바꿉니다(`GameObjectManager.h:269-287`). 람다 안의 `static_cast` 와 단언은 이 찾기로 대신합니다.
+- **ⓑ Shipping 이 아닌 모든 구성에서 확인합니다**(Debug 단언만이 아닙니다). 결과가 nullptr 이 아니면 `findCachedTypeInfo()->isDerivedFrom( T::StaticType() )` 이어야 하고,
+  아니면 오류 로그와 Debug 단언을 남기고 nullptr 을 반환합니다. 타입이 바뀌는 길(핫 리로드, 되돌리기의 id 복원)이 Shipping 에 없으므로 Shipping 만 확인을 뺍니다.
+  확인 비용은 개발 빌드의 측정 질문입니다(`BenchScene.cpp:1341`, 5절).
+- 확인이 결함을 드러내는 쪽인 이유는 다음과 같습니다. 오브젝트 id 와 컴포넌트 id 는 프로세스 전체에서 한 번만 발급됩니다(`GameObjectStore.h:294-299`). 같은 id 를 다시 쓰는 곳은 `ComponentIDRestoreScope` 뿐입니다(`GameObject.h:369-377`).
+  **ⓑ 이 복원은 지금 `TypeInfo::_name`(짧은 이름)으로 맞추므로, 짧은 이름이 같은 다른 네임스페이스의 타입이 원래 id 를 가져갈 수 있습니다.** 7-d-1 에서 복원 키를 FQN 으로 바꿉니다
+  (`ObjectIdentity::ComponentEntry::_typeFqn`, `takeRestoredComponentID`, `captureIdentity`). 그러면 한 핸들이 가리키는 타입은 바뀌지 않습니다. 복원 목록은 같은 프로세스에서만 읽으므로 저장 형식의 호환 문제는 없습니다.
+- `static_cast` 는 `T` 가 `Component` 를 가상이 아닌 방식으로 상속할 때 포인터 보정까지 맞습니다. 다중 상속 `REFLECT` 타입은 단계 7-b 가 생성 오류로 막습니다(main 에 있음).
+- **ⓒ `executeOrDeferPostTickOnComponent( const TComponent& self, func )`** 로 바꾸고 `TComponent` 는 인자에서 추론합니다(`GameObjectManager.h:269-287`). 함수가 `self` 에서 타입 핸들을 만들고, 람다 안의 `static_cast` 와 단언은 `resolveComponent<T>` 로 대신합니다.
+  호출부 23곳(약 20파일)에서 `getHandle()` 과 템플릿 인자가 함께 사라져, 둘이 어긋나는 일(다른 컴포넌트의 핸들에 이 타입의 일을 거는 것)이 형식으로 막힙니다.
+  이 파일들이 7-d-2 그룹과 겹치므로 7-d-1 에서 한 번에 끝내고 그룹은 그 뒤에 시작합니다. `const` 참조로 받는 것은 `const` 멤버 함수 안의 `*this` 도 받기 위해서입니다. 일은 그때 다시 찾은 `T&` 로 받습니다.
 - `getComponent<T>` 처럼 `T` 가 자기 `REFLECT_BODY` 를 가졌는지 `static_assert` 로 확인합니다(`GameObject.h:283-285`).
 
 ### 3.4 "찾고 바로 캐스트" 호출부
 
 `resolveComponent` 결과를 바로 `castTo` 나 `static_cast` 로 바꾸는 곳 전부입니다. 단계 0 의 틱 안 9 줄에는 "틱" 표시를 붙였습니다.
+**ⓖ 결함이 숨는 곳은 API 경계를 넘는 핸들**(인자, 대기 항목, 접근자 반환값)입니다. 자기 핸들과 `T*` 에서 바로 만든 지역 핸들은 타입이 어긋날 수 없고, 경계를 넘는 핸들은 받는 쪽이 출처를 모릅니다.
+그래서 "핸들 출처"에 "인자", "대기 항목", 접근자 이름이 적힌 줄이 마이그레이션의 우선이고, 그룹 A(조종)부터 합니다. 그 예가 `ControlSystem::queuePossess( const ComponentHandle& controller, const ComponentHandle& pawn )` 입니다.
+서로 다른 타입의 핸들 둘을 같은 형식으로 받아 인자를 바꿔 넘겨도 컴파일됩니다. 타입 핸들로 바꾸면 그 실수가 컴파일 오류가 됩니다.
+"자기 핸들"과 "지역 핸들"은 핸들이 `T*` 에서 만들어진 곳입니다. 나머지(필드, 인자, 대기 항목, 접근자)는 핸들이 다른 곳에서 넘어온 것입니다.
 "핸들 출처"는 바꿀 필드나 반환값입니다. `getComponent<T>` 결과를 다시 캐스트하는 곳은 `Source` 에 없었습니다(`RenderViewCollector.cpp:51` 은 업캐스트입니다).
 
 **지금 `castTo` 인 곳(실행 시간 확인이 있음), 17 곳**
 
-| 위치 | 대상 타입 | 핸들 출처 |
-|---|---|---|
-| `Engine/Object/SceneAnimation/MotionWarpingComponent.cpp:92` | `SkeletalAnimatorComponent` | `_animator` |
-| `Engine/Object/SceneAnimation/AnimationSystem.cpp:299` | `SkeletalMeshComponent` | 지역 목록(미확인) |
-| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:326` | `SkeletalMeshComponent` | `_listDependency` |
-| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:381` | `SkeletalMeshComponent` | `ObjectBinding::_unit` |
-| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:429` | `SkeletalMeshComponent` | 지역 핸들 |
-| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:502` | `SkeletalMeshComponent` | `_listTableUnit` |
-| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:617` | `SkeletalMeshComponent` | 외부 바인딩 `_unit`, 틱 |
-| `Engine/Object/GameObject/Serialization/ObjectStateSerializer.cpp:78` | `SceneComponent` | `ChildLink::_child` |
-| `Engine/Object/Component/3D/SkeletalMeshComponent.cpp:375` | `SkeletalMeshComponent` | `_leader` |
-| `Engine/Object/Component/3D/PoseRetargetComponent.cpp:119` | `SkeletalMeshComponent` | `_source` |
-| `Engine/Object/Component/3D/FacialAnimationComponent.cpp:455` | `SkeletalAnimatorComponent` | `_animator`, 틱 |
-| `GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.cpp:112` | `FractureComponentBase` | `_component` |
-| `Games/Empty/BenchSceneRig.cpp:298` | `MeshComponent` | `_rigLookTarget`, 틱 |
-| `Games/Empty/BenchSceneRig.cpp:305` | `SkeletalMeshComponent` | `_listRigBody`, 틱 |
-| `Games/Empty/BenchScene.cpp:723` | `RagdollComponent` | `_listRagdoll`, 틱 |
-| `Games/Empty/BenchScene.cpp:732` | `RagdollComponent` | `_listRagdoll`, 틱 |
-| `Games/Empty/BenchCombatComponent.cpp:215` | `BenchCombatComponent` | 자기 핸들, 틱 |
+| 위치 | 대상 타입 | 핸들 출처 | `T*` 에서 만듦 |
+|---|---|---|---|
+| `Engine/Object/SceneAnimation/MotionWarpingComponent.cpp:92` | `SkeletalAnimatorComponent` | `_animator` | 아니오 |
+| `Engine/Object/SceneAnimation/AnimationSystem.cpp:299` | `SkeletalMeshComponent` | 지역 목록(미확인) | 아니오 |
+| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:326` | `SkeletalMeshComponent` | `_listDependency` | 아니오 |
+| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:381` | `SkeletalMeshComponent` | `ObjectBinding::_unit` | 아니오 |
+| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:429` | `SkeletalMeshComponent` | 지역 핸들 | 예 |
+| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:502` | `SkeletalMeshComponent` | `_listTableUnit` | 아니오 |
+| `Engine/Character/PoseModifier/PoseModifierComponent.cpp:617` | `SkeletalMeshComponent` | 외부 바인딩 `_unit`, 틱 | 아니오 |
+| `Engine/Object/GameObject/Serialization/ObjectStateSerializer.cpp:78` | `SceneComponent` | `ChildLink::_child` | 아니오 |
+| `Engine/Object/Component/3D/SkeletalMeshComponent.cpp:375` | `SkeletalMeshComponent` | `_leader` | 아니오 |
+| `Engine/Object/Component/3D/PoseRetargetComponent.cpp:119` | `SkeletalMeshComponent` | `_source` | 아니오 |
+| `Engine/Object/Component/3D/FacialAnimationComponent.cpp:455` | `SkeletalAnimatorComponent` | `_animator`, 틱 | 아니오 |
+| `GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.cpp:112` | `FractureComponentBase` | `_component` | 아니오 |
+| `Games/Empty/BenchSceneRig.cpp:298` | `MeshComponent` | `_rigLookTarget`, 틱 | 아니오 |
+| `Games/Empty/BenchSceneRig.cpp:305` | `SkeletalMeshComponent` | `_listRigBody`, 틱 | 아니오 |
+| `Games/Empty/BenchScene.cpp:723` | `RagdollComponent` | `_listRagdoll`, 틱 | 아니오 |
+| `Games/Empty/BenchScene.cpp:732` | `RagdollComponent` | `_listRagdoll`, 틱 | 아니오 |
+| `Games/Empty/BenchCombatComponent.cpp:215` | `BenchCombatComponent` | 자기 핸들, 틱 | 예 |
 
 **지금 확인 없는 `static_cast` 인 곳, 35 곳**
 
-| 위치 | 대상 타입 | 핸들 출처 |
-|---|---|---|
-| `Engine/Object/GameObject/GameObjectManager.h:276` | 템플릿 `TComponent` | 인자 |
-| `Engine/Object/Component/SceneComponent.cpp:331` | `SceneComponent` | 자기 핸들 |
-| `Engine/Object/Component/SceneComponent.cpp:402` | `SceneComponent` | 자기 핸들 |
-| `Engine/Object/Component/SceneComponent.cpp:403` | `SceneComponent` | 부모 핸들 |
-| `Engine/Object/Component/SceneComponent.cpp:441` | `SceneComponent` | 자기 핸들 |
-| `Engine/Scene/Scene.cpp:573` | `CameraComponent` | `_activeGameCamera`, `_gameCameraOverride` |
-| `Games/Empty/BenchScene.cpp:1341` | `MeshComponent` | `_listBenchMesh`, 틱 |
-| `Games/AbilityArena/ArenaDirectorComponent.cpp:374` | `ArenaDirectorComponent` | 자기 핸들 |
-| `GameFramework/Base/Gameplay/Vehicle/MountUtil.cpp:133` | `ControllerComponent` | `PawnComponent::getController()` |
-| `GameFramework/Base/Gameplay/Vehicle/MountUtil.cpp:206` | `ControllerComponent` | `_occupantController` |
-| `GameFramework/Base/Gameplay/Vehicle/MountUtil.cpp:209` | `ControllerComponent` | `_previousVehicleController` |
-| `GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.cpp:457` | `LightComponent` | 지역 핸들 |
-| `GameFramework/Base/Gameplay/Gimmick/Genre/PlatformerGimmicks.cpp:154` | `ConveyorComponent` | 자기 핸들 |
-| `GameFramework/Base/Gameplay/Gimmick/Genre/HorrorStealthGimmicks.cpp:132` | `LightComponent` | 지역 핸들, 틱 |
-| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:165` | `InteractableComponent` | `_focusComponent` |
-| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:170` | `InteractableComponent` | `_focusComponent` |
-| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:182` | `InteractableComponent` | 인자 |
-| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:207` | `InteractableComponent` | `_focusComponent`, 틱 |
-| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:236` | `InteractableComponent` | `_focusComponent`, 틱 |
-| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:253` | `InteractableComponent` | `_focusComponent` |
-| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:279` | `InteractableComponent` | `_focusComponent` |
-| `GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.cpp:421` | `SkeletalMeshComponent` | 지역 핸들 |
-| `GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.cpp:532` | `SkeletalMeshComponent` | `_taskUnit` |
-| `GameFramework/Base/Actor/Control/Pawn/PawnComponent.cpp:75` | `ControllerComponent` | `_controller` |
-| `GameFramework/Base/Actor/Control/ControlSystem.cpp:190` | `ControllerComponent` | 대기 항목 `_controller` |
-| `GameFramework/Base/Actor/Control/ControlSystem.cpp:193` | `PawnComponent` | 대기 항목 `_pawn` |
-| `GameFramework/Base/Actor/Control/ControlSystem.cpp:230` | `PawnComponent` | `_listAutoPossessPawn` |
-| `GameFramework/Base/Actor/Control/Controller/ControllerComponent.cpp:70` | `ControllerComponent` | `PawnComponent::getController()` |
-| `GameFramework/Base/Actor/Control/Controller/ControllerComponent.cpp:92` | `ControllerComponent` | 자기 핸들 |
-| `GameFramework/Base/Actor/Control/Controller/ControllerComponent.cpp:121` | `PawnComponent` | `_pawn` |
-| `GameFramework/Base/UI/Marker/HealthBarComponent.cpp:193` | `HealthBarComponent` | 자기 핸들(다음 줄에서 캐스트) |
-| `GameFramework/Base/UI/Marker/DamageNumberComponent.cpp:166` | `DamageNumberComponent` | 자기 핸들(다음 줄에서 캐스트) |
-| `GameFramework/Base/Gameplay/Ability/AbilitySystemComponentEffect.cpp:163` | `AbilitySystemComponent` | 대상 핸들(다음 줄에서 캐스트) |
-| `GameFramework/Base/Gameplay/Ability/AbilitySystemComponentAbility.cpp:377` | `AbilitySystemComponent` | 대상 핸들(다음 줄에서 캐스트) |
-| `GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h:284` | 템플릿 `TComponent` | 매니저 순회로 모은 핸들 |
+| 위치 | 대상 타입 | 핸들 출처 | `T*` 에서 만듦 |
+|---|---|---|---|
+| `Engine/Object/GameObject/GameObjectManager.h:276` | 템플릿 `TComponent` | 인자 | 아니오 |
+| `Engine/Object/Component/SceneComponent.cpp:331` | `SceneComponent` | 자기 핸들 | 예 |
+| `Engine/Object/Component/SceneComponent.cpp:402` | `SceneComponent` | 자기 핸들 | 예 |
+| `Engine/Object/Component/SceneComponent.cpp:403` | `SceneComponent` | 부모 핸들 | 아니오 |
+| `Engine/Object/Component/SceneComponent.cpp:441` | `SceneComponent` | 자기 핸들 | 예 |
+| `Engine/Scene/Scene.cpp:573` | `CameraComponent` | `_activeGameCamera`, `_gameCameraOverride` | 아니오 |
+| `Games/Empty/BenchScene.cpp:1341` | `MeshComponent` | `_listBenchMesh`, 틱 | 아니오 |
+| `Games/AbilityArena/ArenaDirectorComponent.cpp:374` | `ArenaDirectorComponent` | 자기 핸들 | 예 |
+| `GameFramework/Base/Gameplay/Vehicle/MountUtil.cpp:133` | `ControllerComponent` | `PawnComponent::getController()` | 아니오 |
+| `GameFramework/Base/Gameplay/Vehicle/MountUtil.cpp:206` | `ControllerComponent` | `_occupantController` | 아니오 |
+| `GameFramework/Base/Gameplay/Vehicle/MountUtil.cpp:209` | `ControllerComponent` | `_previousVehicleController` | 아니오 |
+| `GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.cpp:457` | `LightComponent` | 지역 핸들 | 예 |
+| `GameFramework/Base/Gameplay/Gimmick/Genre/PlatformerGimmicks.cpp:154` | `ConveyorComponent` | 자기 핸들 | 예 |
+| `GameFramework/Base/Gameplay/Gimmick/Genre/HorrorStealthGimmicks.cpp:132` | `LightComponent` | 지역 핸들, 틱 | 예 |
+| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:165` | `InteractableComponent` | `_focusComponent` | 아니오 |
+| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:170` | `InteractableComponent` | `_focusComponent` | 아니오 |
+| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:182` | `InteractableComponent` | 인자 | 아니오 |
+| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:207` | `InteractableComponent` | `_focusComponent`, 틱 | 아니오 |
+| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:236` | `InteractableComponent` | `_focusComponent`, 틱 | 아니오 |
+| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:253` | `InteractableComponent` | `_focusComponent` | 아니오 |
+| `GameFramework/Base/Gameplay/Interaction/InteractorComponent.cpp:279` | `InteractableComponent` | `_focusComponent` | 아니오 |
+| `GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.cpp:421` | `SkeletalMeshComponent` | 지역 핸들 | 예 |
+| `GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.cpp:532` | `SkeletalMeshComponent` | `_taskUnit` | 아니오 |
+| `GameFramework/Base/Actor/Control/Pawn/PawnComponent.cpp:75` | `ControllerComponent` | `_controller` | 아니오 |
+| `GameFramework/Base/Actor/Control/ControlSystem.cpp:190` | `ControllerComponent` | 대기 항목 `_controller` | 아니오 |
+| `GameFramework/Base/Actor/Control/ControlSystem.cpp:193` | `PawnComponent` | 대기 항목 `_pawn` | 아니오 |
+| `GameFramework/Base/Actor/Control/ControlSystem.cpp:230` | `PawnComponent` | `_listAutoPossessPawn` | 아니오 |
+| `GameFramework/Base/Actor/Control/Controller/ControllerComponent.cpp:70` | `ControllerComponent` | `PawnComponent::getController()` | 아니오 |
+| `GameFramework/Base/Actor/Control/Controller/ControllerComponent.cpp:92` | `ControllerComponent` | 자기 핸들 | 예 |
+| `GameFramework/Base/Actor/Control/Controller/ControllerComponent.cpp:121` | `PawnComponent` | `_pawn` | 아니오 |
+| `GameFramework/Base/UI/Marker/HealthBarComponent.cpp:193` | `HealthBarComponent` | 자기 핸들(다음 줄에서 캐스트) | 예 |
+| `GameFramework/Base/UI/Marker/DamageNumberComponent.cpp:166` | `DamageNumberComponent` | 자기 핸들(다음 줄에서 캐스트) | 예 |
+| `GameFramework/Base/Gameplay/Ability/AbilitySystemComponentEffect.cpp:163` | `AbilitySystemComponent` | 대상 핸들(다음 줄에서 캐스트) | 아니오 |
+| `GameFramework/Base/Gameplay/Ability/AbilitySystemComponentAbility.cpp:377` | `AbilitySystemComponent` | 대상 핸들(다음 줄에서 캐스트) | 아니오 |
+| `GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h:284` | 템플릿 `TComponent` | 매니저 순회로 모은 핸들 | 아니오 |
 
 `castTo` 를 타입 핸들의 찾기로 바꾸면 동작이 하나 달라집니다. 지금은 타입이 다르면 nullptr 을 받고 넘어가지만, 바꾼 뒤에는 Debug 단언에 걸립니다.
 그래서 바꾸기 전에 그 핸들에 다른 타입이 들어갈 수 있는지 출처를 확인합니다. 들어갈 수 있으면 타입 없는 채로 둡니다(3.5). 특히 `AnimationSystem.cpp:299` 는 출처를 읽지 않았습니다(미확인).
@@ -368,6 +390,16 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 ### 3.7 직렬화 (7-d-3, 사용처가 생길 때)
 
 지금 `PROPERTY` 인 타입 핸들이 필요한 곳은 없습니다. 그래서 7-d-1 에서 리플렉션 파서가 `PROPERTY()` 의 `TComponentHandle<T>` 를 생성 오류로 막고, 메시지에 이 문서를 적습니다.
+
+**ⓔ 7-d-1 에서 타입 없는 `ComponentHandle` 도 `PROPERTY` 에서 막습니다.** 단일 값, 컨테이너 원소, 맵 키, 중첩 컨테이너의 어느 단계든 생성 오류입니다. 리플렉션 구조체의 필드도 같은 `PROPERTY` 검사를 지나므로 함께 막힙니다.
+`Source` 사용처는 0 이고, 테스트 타입 하나(`TestSampleActor.h` 의 `TestHandleHolderComponent::_targetComponent`)만 지웁니다.
+그러면 저장 id 공간에서 `ComponentHandle` 을 경고와 함께 비우던 폴백(`ObjectStateSerializer.cpp:651-658`)은 지울 수 있습니다. 값이 조용히 사라지는 길이 형식으로 없어집니다.
+남는 "옮길 수 없는 모양의 `GameObjectHandle`"(원소가 컨테이너인 set, 옮기는 중 메모리 할당이나 값 복사 실패)은 경고와 비우기 대신 **로드 오류**입니다.
+`ObjectStateBatch::finish` 가 `[[nodiscard]] bool` 을 반환하고, 부르는 곳(씬 로드, 플레이 세션 복원, 복제, 붙여넣기, 세이브 복원, 씬 넘김, 단독 상태 로드)이 실패로 처리합니다.
+
+**ⓕ 같은 뿌리.** `resolveObjectReferences` 는 컴포넌트 타입의 최상위 `PROPERTY` 만 봅니다(`ObjectStateSerializer.cpp:623-643`). 리플렉션 구조체 필드 안의 `GameObjectHandle` 은 다시 매겨지지 않습니다.
+`ComponentHandle` 은 위 금지로 구조체 안에도 없게 되지만, 구조체 안의 `GameObjectHandle` 은 남습니다. 그런 필드가 실제로 있는지는 확인하지 않았고, 7-d 범위 밖이라 백로그 후보로 둡니다.
+뿌리 해결은 핸들 옮기기를 최상위 필드 목록이 아니라 값 방문(구조체, 컨테이너를 재귀로 내려가는 방문)으로 하는 것입니다.
 아래는 사용처가 생겼을 때의 설계입니다.
 
 - **텍스트 형태는 그대로 `objectID:componentID` 입니다**(`SerializeContext.cpp:454-477`). 파서가 `TComponentHandle<X>` 를 내장 타입 `ComponentHandle` 로 기록하고, `PropertyInfo` 에 대상 타입의 FQN 을 더합니다.
@@ -375,8 +407,8 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 - **타입 확인은 필드를 읽는 순간이 아니라 배치가 끝날 때 합니다.** 배치 로드는 여러 오브젝트를 차례로 만들므로, 필드를 읽을 때 대상 컴포넌트가 아직 없을 수 있습니다.
   `ObjectStateBatch::finish` 의 핸들 처리(`ObjectStateSerializer.cpp:630-659`)에서 대상을 찾고, 대상이 있는데 `isDerivedFrom( X )` 가 아니면 **로드 오류**로 멈춥니다. 오류에는 타입, 필드, 오브젝트, 기대 타입, 실제 타입을 적습니다.
   대상이 없으면 핸들을 그대로 둡니다. 핸들은 약한 참조라서 대상이 사라진 핸들은 정상 값이고, 찾으면 nullptr 을 받습니다.
-- **파일 상태의 핸들.** 지금 저장 id 공간(`ObjectIDSpace::Saved`)에서 읽은 `ComponentHandle` 은 경고와 함께 비웁니다(`ObjectStateSerializer.cpp:651-658`). 저장된 컴포넌트 id 를 이 실행의 컴포넌트로 옮길 테이블이 없기 때문입니다.
-  이 처리는 값이 조용히 사라지는 폴백에 가깝습니다. 타입 핸들을 파일에 실으려면 오브젝트 저장 id 와 컴포넌트 안정 키(`타입#n`)로 쓰는 형태가 필요하고, 이는 형식 변경입니다. 7-d-3 을 시작할 때 따로 정합니다(결정 필요).
+- **파일 상태의 핸들.** 저장된 컴포넌트 id 를 이 실행의 컴포넌트로 옮길 테이블이 없습니다. 그래서 7-d-1 은 `PROPERTY` 의 컴포넌트 핸들을 모두 막습니다(위 ⓔ).
+  타입 핸들을 파일에 실으려면 오브젝트 저장 id 와 컴포넌트 안정 키(`타입#n`)로 쓰는 형태가 필요하고, 이는 형식 변경입니다. 7-d-3 을 시작할 때 따로 정합니다(결정 필요).
 
 ### 3.8 인스펙터
 
@@ -390,16 +422,17 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 | 단계 | 내용 | 건드릴 파일 | 겹침 주의 | 에이전트(모델) |
 |---|---|---|---|---|
 | 7-c | 버킷, 갱신 규칙, 비템플릿 순회, 쿠커 정렬, 테스트 | `GameObjectStore.*`, `GameObjectManager.h`, `GameObject.cpp`, `Component.h`, `SceneNavigationCooker.cpp`, 새 테스트 | 헤더 템플릿이 바뀌어 모든 모듈을 다시 빌드 | `integrator`(opus) |
-| 7-d-1 | 타입 핸들 형식, 확인 변환, 찾기, `executeOrDeferPostTickOnComponent`, 파서의 `PROPERTY` 금지 | `ComponentHandle.h`, `GameObjectManager.h`, `Tools/ReflectionParser` 의 금지 목록 | 7-c 와 같은 헤더, 7-c 뒤 | `integrator`(opus) |
+| 7-d-1 | 타입 핸들 형식, 확인 변환, 찾기, `executeOrDeferPostTickOnComponent` 와 호출부 23곳, 복원 키 FQN, 파서의 `PROPERTY` 금지(타입 없는 핸들 포함), 비우기 폴백 제거 | `ComponentHandle.h`, `GameObjectManager.h`, `GameObject.cpp`, `ObjectStateSerializer.*`, `Tools/ReflectionParser`, 호출부 파일, `finish` 호출부 | 7-c 와 같은 헤더, 7-c 뒤 | `integrator`(opus) |
 | 7-d-2 | 호출부 마이그레이션(그룹 A ~ E) | 3.4 와 3.6 의 파일 | 그룹끼리 파일이 겹치지 않음 | 그룹마다 `worker`(sonnet), 병합은 `integrator`(opus) |
 | 7-d-3 | (사용처가 생길 때) `PROPERTY` 타입 핸들, 배치 끝 타입 확인, 인스펙터 선택기 | `SerializeContext.cpp`, `ObjectStateSerializer.cpp`, 파서, `InspectorPropertyManager.cpp`, `InspectorBuiltinValue.*` | 파일 상태 형태 결정이 먼저 | `worker`(opus) |
 
-**7-d-2 그룹.** 그룹은 파일을 나눠 가지며, 접근자 반환형을 바꾸면 그 호출부가 있는 파일도 같은 그룹에 넣었습니다. 7-d-1 이 병합된 뒤 다섯 그룹이 함께 시작할 수 있습니다.
+**7-d-2 그룹.** 그룹은 파일을 나눠 가지며, 접근자 반환형을 바꾸면 그 호출부가 있는 파일도 같은 그룹에 넣었습니다. 7-d-1 이 병합된 뒤 시작하며, ⓖ 그룹 A(조종)를 먼저 합니다.
+ⓓ 의 비교 호출부는 섞은 비교를 허용하므로(3.1) 고치지 않아도 컴파일되지만, 반환형이 바뀌는 접근자의 호출부라 A 가 함께 읽고 확인합니다.
 빌드는 동시에 둘까지라서(docs/11_Workflow.md) 작업자 다섯이 빌드 차례를 나눠 씁니다.
 
 | 그룹 | 범위 | 파일 |
 |---|---|---|
-| A | 조종과 탈것 | `ControllerComponent.*`, `PawnComponent.*`, `IntentTrackControllerComponent.*`, `PlayerControllerComponent.*`, `ControlSystem.*`, `ControlIntentHistory.h`, `VehicleSeatComponent.*`, `MountUtil.cpp`, `GameplayAutomationSteps.cpp`, `VoxelPlayerComponent.cpp`, `FarmDirectorComponent.cpp`, `ArenaDirectorComponent.cpp` |
+| A | 조종과 탈것 | `ControllerComponent.*`, `PawnComponent.*`, `IntentTrackControllerComponent.*`, `PlayerControllerComponent.*`, `ControlSystem.*`, `ControlIntentHistory.h`, `VehicleSeatComponent.*`, `MountUtil.cpp`, `GameplayAutomationSteps.cpp`, `VoxelPlayerComponent.cpp`, `FarmDirectorComponent.cpp`, `ArenaDirectorComponent.cpp`, ⓓ `getPawn()` 비교 호출부 `VoxelDirectorComponent.cpp`, `ShooterDirectorComponent.cpp`, `ShooterPlayerComponent.cpp` |
 | B | 애니메이션과 캐릭터 | `SkeletalMeshComponent.*`, `PoseModifierComponent.*`, `PoseRetargetComponent.*`, `FacialAnimationComponent.*`, `MotionWarpingComponent.*`, `AnimationSystem.cpp`, `AnimationRewind.h`, `CharacterAppearanceComponent.*` |
 | C | 상호작용, 기믹, UI, 능력, 파괴 복제 | `InteractorComponent.*`, `GimmickCircuitComponent.cpp`, `PlatformerGimmicks.cpp`, `HorrorStealthGimmicks.cpp`, `HealthBarComponent.cpp`, `DamageNumberComponent.cpp`, `AbilitySystemComponentEffect.cpp`, `AbilitySystemComponentAbility.cpp`, `GameInstanceBase.h`, `DestructionReplication.*` |
 | D | 엔진 씬과 직렬화 | `SceneComponent.cpp`, `Scene.*`, `ObjectStateSerializer.cpp`, `Fracture*`(대상 타입을 확인한 것만) |
@@ -443,7 +476,10 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 
 ## 7. 확인하지 못한 것과 결정이 필요한 것
 
-- **결정 필요**: 7-c 의 자료구조를 ReflectionFormats.md 7.2 의 조상 목록 대신 정확한 타입 버킷으로 하는 것(2.2). 확정되면 7.2 의 해당 문장을 고칩니다.
+- **결정됨**: 7-c 의 자료구조는 ReflectionFormats.md 7.2 의 조상 목록 대신 정확한 타입 버킷이고, 버킷은 풀 항목에 합칩니다(2.2, `design-reviewer` 검토). 언리얼 `GetObjectsOfClass` 의 "정확한 클래스 버킷과 파생 열거"와 같은 계열입니다. `09_Decisions.md` 에 한 줄로 남깁니다.
 - **결정 필요**: 7-d-3 에서 파일 상태의 타입 핸들을 어떤 형태로 쓸지(3.7). 그 전까지 `PROPERTY` 타입 핸들은 생성 오류입니다.
 - 미확인: 씬의 실제 버킷 수 K, `Component` 패딩, `AnimationSystem.cpp:299` 와 `Fracture*` 핸들의 출처, `ComponentHandle` 의 바이너리 형태와 해시 특수화, 주석 줄이 낀 `PROPERTY` 의 `ComponentHandle`.
-- 백로그 후보: `ComponentStateStore` 가 다른 실행의 세이브를 열거 순서로 맞추는 구조(2.7), 저장 id 공간에서 `ComponentHandle` 을 경고와 함께 비우는 처리(3.7).
+- 백로그 후보: `ComponentStateStore` 가 다른 실행의 세이브를 열거 순서로 맞추는 구조(2.7), 리플렉션 구조체 필드 안의 `GameObjectHandle` 이 옮겨지지 않는 것(3.7 ⓕ), 등록형 목록을 버킷으로 옮기는 기준(2.5 ⓗ).
+- 측정 질문(Release, VSync 끔, 3~5판 번갈아, p50 과 p99): 오브젝트 1만과 10만 × 정확한 타입 수 K = 50, 200, 500 합성의 `forEachComponentOfType`(말단 타입 대 기반 타입), 실제 8게임의 K,
+  추가와 제거 잠금(`tickCostChurn`, 비동기 씬 로드 중 조회)의 전후 비교, `sizeof( Component )` 전후와 큐브 20,000 개 `GT.Frame`, 개발 빌드의 `resolveComponent<T>` 확인 비용(`BenchScene.cpp:1341`).
+- 미확인: 비동기 씬 로드 워커가 `_listComponent` 에 넣는 동안 게임 스레드 순회가 같은 목록을 읽는지.
