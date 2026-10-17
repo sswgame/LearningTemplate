@@ -6,6 +6,7 @@
 
     py -3 -m Scripts ci-jobs --runs                       # main 의 최근 실행(상태 · 결과 · 커밋)
     py -3 -m Scripts ci-jobs --runs --branch wt/apply5    # 다른 브랜치
+    py -3 -m Scripts ci-jobs --summary                    # main 의 ci.yml 가장 새로 끝난 실행 한 줄 — 실패한 잡과 연속 실패 수(세션 가드가 부른다)
     py -3 -m Scripts ci-jobs <실행 id>                    # 그 실행의 잡 표 — 잡 · 실패한 단계의 경과 시간
     py -3 -m Scripts ci-jobs <실행 id> --annotations      # 표에 종료 코드 · ctest Timeout 수를 더하고, 실패한 잡마다 실패 주석
     py -3 -m Scripts ci-jobs --job <잡 id> [<잡 id> …]    # 잡의 실패 주석 전문
@@ -52,6 +53,11 @@ _kRunnerNote = (("has exceeded the maximum execution time", "잡 시간 한도 �
 _kCtestTitle = re.compile(r"^ctest (?P<name>\S+) \[(?P<result>[^\]]+)\]$")
 _kStepIgnored = ("success", "skipped", None)
 _kExitRateLimited = 3
+#: `--summary` 가 CI 실패를 알리는 종료 코드. 세션 가드 훅이 이 값일 때만 알린다(0 은 정상, 1 · 2 · 3 은 도구 오류 · 한도).
+kExitCiFailing = 4
+#: `--summary` 가 보는 워크플로 파일과 실행 수. 끝난 실행의 잡 목록은 캐시되므로 두 번째부터는 가장 새 실행만 묻는다.
+kSummaryWorkflow = "ci.yml"
+kSummaryRunCount = 5
 
 
 class RateLimitError(Exception):
@@ -235,6 +241,46 @@ def listFailedJobs(payload: dict) -> list[dict]:
     return [job for job in payload.get("jobs", []) if job.get("conclusion") == "failure"]
 
 
+def selectJudgedRuns(listRun: list[dict], count: int = kSummaryRunCount) -> list[dict]:
+    """끝난 실행 중 결과를 낸 것(새것부터 `count` 개)입니다. 취소된 실행은 뺀다 — main 은 기다리던 실행을 더 새 push 가 취소하므로 결과가 아니다."""
+    return [run for run in listRun if run.get("conclusion") != "cancelled"][:count]
+
+
+def collectFailureStreaks(listJobPayload: list[dict]) -> list[tuple[str, int]]:
+    """
+    끝난 실행들(새것부터)의 `runs/<id>/jobs` 응답에서, 가장 새 실행에서 실패한 잡마다 새것부터 이어서 실패한 실행 수입니다.
+
+    잡은 이름으로 잇는다. 그 잡이 없는 실행(문서만 바뀌어 빌드 잡을 건너뛴 실행)은 세지도 끊지도 않는다 — 그 실행은 그 잡을 보지 않았다.
+    """
+    if not listJobPayload:
+        return []
+    listStreak = []
+    for job in listFailedJobs(listJobPayload[0]):
+        name = job.get("name", "")
+        count = 0
+        for payload in listJobPayload:
+            listSameJob = [other for other in payload.get("jobs", []) if other.get("name", "") == name]
+            if not listSameJob:
+                continue
+            if listSameJob[0].get("conclusion") != "failure":
+                break
+            count += 1
+        listStreak.append((name, count))
+    return listStreak
+
+
+def formatCiSummary(branch: str, listRun: list[dict], listStreak: list[tuple[str, int]]) -> str:
+    """세션 시작에 보일 한 줄 — 가장 새로 끝난 실행의 결과와, 실패한 잡마다 이어서 실패한 실행 수."""
+    if not listRun:
+        return f"{branch} CI: 끝난 실행이 없다"
+    run = listRun[0]
+    head = f"{branch} CI 실행 {run.get('id')} ({str(run.get('head_sha', ''))[:7]}, {str(run.get('updated_at') or '')[:10]})"
+    if not listStreak:
+        return f"{head}: {run.get('conclusion') or run.get('status')}"
+    jobs = ", ".join(f"{name} {count}회 연속" for name, count in listStreak)
+    return f"{head}: 실패 — {jobs}. `py -3 -m Scripts ci-jobs {run.get('id')} --annotations` 로 원인을 볼 것"
+
+
 def collectJobOutcome(listAnnotation: list[dict]) -> JobOutcome:
     """잡의 주석에서 단계 종료 코드 · 러너 메모 · ctest 결과를 모읍니다."""
     outcome = JobOutcome()
@@ -325,6 +371,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로 읽어 보인다.")
     parser.add_argument("run", nargs="?", help="실행 id — 그 실행의 잡을 보인다")
     parser.add_argument("--runs", action="store_true", help="최근 실행 목록")
+    parser.add_argument("--summary", action="store_true",
+                        help=f"--branch 의 {kSummaryWorkflow} 가장 새로 끝난 실행 한 줄(실패한 잡과 연속 실패 수). 실패면 종료 코드 {kExitCiFailing}")
     parser.add_argument("--branch", default="main", help="--runs 의 브랜치(기본 main)")
     parser.add_argument("--count", type=int, default=20, help="--runs 의 개수(기본 20)")
     parser.add_argument("--annotations", action="store_true", help="실행 id 와 함께: 표에 종료 코드를 더하고 실패한 잡마다 실패 주석")
@@ -337,12 +385,22 @@ def main(argv: list[str] | None = None) -> int:
     if not repository:
         print("[ListCiJobs] origin 이 GitHub 저장소가 아닙니다 — --repo owner/name 을 주세요.", file=sys.stderr)
         return 2
-    if not (args.runs or args.run or args.job):
+    if not (args.runs or args.run or args.job or args.summary):
         parser.print_help()
         return 1
 
     client = GithubClient(None if args.no_cache else Path(tempfile.gettempdir()) / kCacheFolderName)
+    exitCode = 0
     try:
+        if args.summary:
+            runsUrl = (f"{kApiRoot}/repos/{repository}/actions/workflows/{kSummaryWorkflow}/runs"
+                       f"?per_page={kSummaryRunCount * 4}&branch={args.branch}&status=completed")
+            listRun = selectJudgedRuns(client.fetch(runsUrl).get("workflow_runs", []))
+            listJobPayload = [client.fetch(f"{kApiRoot}/repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100", isRunFinished)
+                              for run in listRun]
+            listStreak = collectFailureStreaks(listJobPayload)
+            print(formatCiSummary(args.branch, listRun, listStreak))
+            exitCode = kExitCiFailing if listStreak else 0
         if args.runs:
             payload = client.fetch(f"{kApiRoot}/repos/{repository}/actions/runs?per_page={args.count}&branch={args.branch}")
             print("\n".join(formatRunLines(payload)) or "(실행 없음)")
@@ -377,7 +435,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     finally:
         print(f"[ListCiJobs] {client.describeQuota()}", file=sys.stderr)
-    return 0
+    return exitCode
 
 
 if __name__ == "__main__":

@@ -68,7 +68,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 - **검증을 마친 main 은 묻지 않고 push 합니다.** 사용자에게는 결과만 짧게 알립니다. 들어간 것, 검증 수치, 상용 엔진(언리얼, 유니티, Godot)과 비교한 위치와 빠진 것을 적습니다.
 - 도우미는 push 하지 않습니다. 검증되지 않은 브랜치가 원격에 가지 않게 하기 위해서입니다.
 - 검증이 초록이면 바로 넣고, 뒤에 문제가 드러나면 그 단위를 되돌립니다. 배치 사이에 사용자 확인을 기다리지 않고 다음 배치를 시작합니다.
-- **push 뒤 CI 결과를 기다리며 멈추지 않습니다.** 사용자가 실패를 알려 주면 그때 원인을 찾습니다. 실패를 읽는 방법(`ci-jobs`, 실패 주석)은 [검증과 측정](08_Verification.md) 4절에 있습니다.
+- **push 뒤 CI 결과를 기다리며 멈추지 않습니다.** 사용자가 실패를 알려 주거나, 세션 시작에 세션 가드가 main CI 실패(잡과 연속 실패 수, `py -3 -m Scripts ci-jobs --summary`)를 알리면 그때 원인을 찾습니다. 며칠 이어진 실패는 다른 일보다 먼저 봅니다. 실패를 읽는 방법(`ci-jobs`, 실패 주석)은 [검증과 측정](08_Verification.md) 4절에 있습니다.
 
 ## 5. 결정하는 방식
 
@@ -115,6 +115,6 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 - 사용자가 요청을 넘기면, 지금 세션과 다른 모델 · effort 가 맞을 때 한 줄로 권하고 진행합니다. 질문 · 상태 확인 · 진행 보고는 low 로 충분합니다.
 - 요청이 이 문서의 규칙과 부딪히거나 한도에 닿으면 실행 전에 한 줄로 알립니다(규칙 이름 · 비용 · 권하는 행동).
-- 세션 가드 훅 `.claude/hooks/SessionGuard.py`(`.claude/settings.json` 의 SessionStart · UserPromptSubmit · PreCompact · StopFailure)는 알릴 것이 있을 때만 출력합니다. 긴 대화 · 압축, 둘을 넘는 동시 빌드, 남은 워크트리, 규칙과 부딪히는 낱말(제안서 단계 · 전체 매트릭스 · CI 기다리기 · WSL · 별칭), 압축 · API 한도로 멈춘 것입니다.
+- 세션 가드 훅 `.claude/hooks/SessionGuard.py`(`.claude/settings.json` 의 SessionStart · UserPromptSubmit · PreCompact · StopFailure)는 알릴 것이 있을 때만 출력합니다. 긴 대화 · 압축, 둘을 넘는 동시 빌드, 남은 워크트리, main CI 실패(세션 시작), 규칙과 부딪히는 낱말(제안서 단계 · 전체 매트릭스 · CI 기다리기 · WSL · 별칭), 압축 · API 한도로 멈춘 것입니다.
 - **인계 문서는 [docs/plans/NEXT.md](plans/NEXT.md) 입니다.** 대화가 길어지면 배치 경계에서 그 문서에 다음 일과 상태를 적고 새 세션을 권합니다. 새 세션은 그 문서가 있으면 먼저 읽습니다.
 - `.gitignore` 는 `.claude` 에서 에이전트 정의 · 훅 · 공유 설정만 추적합니다. 개인 권한 목록은 `.claude/settings.local.json` 에 둡니다.

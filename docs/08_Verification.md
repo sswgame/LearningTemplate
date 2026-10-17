@@ -478,6 +478,7 @@ push 뒤 결과를 기다리지 않는 것은 [작업 방식](11_Workflow.md) 4�
 이름 · 상태 표를 바꾸는 커밋은 push 전에 `py -3 -m Scripts gate CheckNameReferences` 를 손으로 돌린다.
 
 ```powershell
+py -3 -m Scripts ci-jobs --summary                 # main 의 가장 새로 끝난 실행 한 줄(실패한 잡과 연속 실패 수) — 세션 가드가 세션 시작에 부른다
 py -3 -m Scripts ci-jobs --runs                    # main 의 최근 실행
 py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 주석
 ```
