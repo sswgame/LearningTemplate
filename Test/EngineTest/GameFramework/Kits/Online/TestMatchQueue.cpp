@@ -510,3 +510,38 @@ SW_TEST_CASE( MatchmakingProtocolTest, MessagesAndRecordsRoundTrip )
         SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( longMode ) );
     }
 }
+
+/**
+ * @brief [MatchmakingProtocolTest] 가장 큰 버스 메시지(`MatchFormed`)를 실제 상한으로 채워도 A 가 버스 메시지 상한 안이다
+ * @details 실제 상한은 팀 수 × 팀 인원(`MatchmakingLimit`)이고 티켓의 멤버 합계도 그만큼이다. `MaxCount` 를 모두 곱한 값(티켓 256 개 × 멤버 256 명)은
+ *          B 로도 60 KiB 를 넘으므로 상한이 아니다(docs/plans/ServerBusFormat.md 6절). 측정할 때 이 크기를 검증 문서에 적는다.
+ */
+SW_TEST_CASE( MatchmakingProtocolTest, LargestBusMessageFitsTheBusLimit )
+{
+    MatchFormed match;
+    match._matchID       = ~0ull;
+    match._modeID        = string( 32, 'm' );
+    match._region        = string( 16, 'r' );
+    match._averageRating = -5;
+    match._listTeam.resize( 16 );
+    for ( MatchFormedTeam& team : match._listTeam )
+    {
+        team._listMember.assign( 16, MatchMember{ ~0ull, -1500 } );
+    }
+    for ( int32 ticketIndex = 0; ticketIndex < 16; ++ticketIndex )
+    {
+        MatchTicket ticket;
+        ticket._listMember.assign( 16, MatchMember{ ~0ull, -1500 } );
+        ticket._region         = string( 16, 'r' );
+        ticket._ticketID       = ~0ull;
+        ticket._partyID        = ~0ull;
+        ticket._originServerID = ~0ull;
+        ticket._enqueuedMs     = -1;
+        match._listTicket.push_back( ticket );
+    }
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( MixedBuildCodec::encode( MatchFormed::kBusVersion, match, bytes ) );
+    std::fprintf( stdout, "[MatchFormed A bytes at the real limit] %zu\n", bytes.size() );
+    SW_EXPECT_TRUE_MSG( static_cast<int32>( bytes.size() ) <= IServerBusTransport::kMaxMessageSize, "가장 큰 매칭 버스 메시지가 버스 상한을 넘습니다" );
+    SW_EXPECT_TRUE( test::ServerBusTestUtil::roundTrips( MatchQueueBus::kAssignTopic, "0000000000000007", match ) );
+}
