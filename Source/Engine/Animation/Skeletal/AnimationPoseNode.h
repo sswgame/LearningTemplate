@@ -113,6 +113,9 @@ namespace sw
     {
     public:
         AnimationPoseNodeSet();
+        // 노드를 소유하고(unique_ptr) 노드가 다른 노드의 주소를 빌리므로 복사하지 않는다. SW_API 클래스는 복사 생성자도 내보내므로 명시해 지운다.
+        AnimationPoseNodeSet( const AnimationPoseNodeSet& )            = delete;
+        AnimationPoseNodeSet& operator=( const AnimationPoseNodeSet& ) = delete;
 
         /**
          * @brief @p graph 의 포즈 노드를 모두 다시 만듭니다. @p clipSource 는 빌리며, 이 표보다 오래 살아야 합니다.
