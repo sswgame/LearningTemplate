@@ -2002,6 +2002,7 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
         sw::GameHandle game = api.create();
         SW_ASSERT_NOT_NULL( game );
         SW_EXPECT_TRUE( api.initialize( game, nullptr, nullptr ) );
+        sw::GameTimeScale::setUnscaledDeltaTime( 0.016f ); // 엔진 프레임 없이 게임을 돌린다 - 이번 프레임의 실제 경과를 테스트가 적는다
 
         // 가벼운 틱 실행 (비동기 씬 로드 완료 대기)
         for ( int32 frame = 0; frame < 20; ++frame )
@@ -2151,6 +2152,7 @@ SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
     sw::GameHandle game = api.create();
     SW_ASSERT_NOT_NULL( game );
     SW_EXPECT_TRUE( api.initialize( game, nullptr, nullptr ) );
+    sw::GameTimeScale::setUnscaledDeltaTime( 0.016f ); // 엔진 프레임 없이 게임을 돌린다 - 이번 프레임의 실제 경과를 테스트가 적는다
     for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );

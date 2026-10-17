@@ -483,9 +483,17 @@ function(sw_addTestExecutable TARGET_NAME)
 				list(APPEND swCopyCommands COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${lib}>" "${testOutputDir}/")
 			endif()
 		endforeach()
+		# 복사는 실행 파일의 POST_BUILD 가 아니라 늘 도는 별도 타깃에 둔다.키트 DLL 의 구현만 바뀌면 가져오기 라이브러리가 같아
+		# 실행 파일이 다시 링크되지 않고, POST_BUILD 에 걸린 복사도 돌지 않아 테스트가 낡은 키트 DLL 로 돈다. copy_if_different 라 바뀐 것만 쓴다.
 		if(swCopyCommands)
-			add_custom_command(TARGET ${TARGET_NAME} POST_BUILD ${swCopyCommands}
+			add_custom_target(${TARGET_NAME}_CopyModules COMMAND ${CMAKE_COMMAND} -E make_directory "${testOutputDir}" ${swCopyCommands}
 				COMMENT "[${TARGET_NAME}] Copying linked module DLLs next to the test executable" VERBATIM)
+			foreach(lib IN LISTS ARG_LIBS)
+				if(lib IN_LIST swModuleList AND NOT lib IN_LIST swBinModuleList)
+					add_dependencies(${TARGET_NAME}_CopyModules ${lib})
+				endif()
+			endforeach()
+			add_dependencies(${TARGET_NAME} ${TARGET_NAME}_CopyModules)
 		endif()
 	endif()
 

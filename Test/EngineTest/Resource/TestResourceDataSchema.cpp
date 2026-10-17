@@ -6,6 +6,7 @@
 #include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
+#include "Engine/Animation/Graph/AnimationBoneMask.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
@@ -116,6 +117,13 @@ namespace
         {
             sw::AnimationGraphAsset graph;
             return graph.loadFromFile( resourceID ) && graph._listNode.empty() == false;
+        }
+        /** @brief 본 마스크 프리셋(그래프 레이어가 "file" 로 가리킨다) — 항목이 없거나 가중치가 범위 밖이면 로드 오류다. */
+        static bool               isBoneMask( sw::string_view resourceID ) { return endsWith( resourceID, sw::AnimationBoneMaskDef::kExtension ); }
+        [[nodiscard]] static bool loadBoneMask( const sw::string& resourceID )
+        {
+            sw::AnimationBoneMaskDef mask;
+            return mask.loadFromFile( resourceID );
         }
         static bool isTileSet( sw::string_view resourceID ) { return endsWith( resourceID, ".tileset.xml" ); }
         static bool isTileMap( sw::string_view resourceID ) { return endsWith( resourceID, ".tilemap.xml" ); }
@@ -546,6 +554,7 @@ namespace
             {        "destruction",  &isDestructionProfile,               &loadCatalog<sw::DestructionProfile>},
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
             {          "animgraph",      &isAnimationGraph,                                &loadAnimationGraph},
+            {           "bonemask",            &isBoneMask,                                      &loadBoneMask},
             {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
             {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
             {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},
