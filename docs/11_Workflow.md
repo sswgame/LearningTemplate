@@ -101,7 +101,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 ## 9. 에이전트 정의와 세션 가드
 
-에이전트 정의는 `.claude/agents/` 에 넷이 있고, 일에 맞는 가장 싼 모델을 고릅니다.
+에이전트 정의는 `.claude/agents/` 에 있고, 일에 맞는 가장 싼 모델을 고릅니다.
 
 | 일 | 에이전트(모델) | effort |
 |---|---|---|
@@ -110,6 +110,8 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 | 범위가 정해진 C++ · CMake · 파이썬 변경 | `worker`(opus, 변경이 국소적이고 명세가 있으면 sonnet) | medium |
 | 설계 · 모듈을 넘는 리팩터 · GPU/스레드 결함 · 배치 통합 | `integrator`(opus) | high |
 | 에디터 UI 캡처의 UX 점검(읽기 전용, 기준은 [EditorUX](plans/EditorUX.md)) | `ux-reviewer`(sonnet) | medium |
+| 구현 전 설계 · 구조 결정 검토(읽기 전용, 현재 구조 · 유지보수 · 성능 · 상용 엔진과 출시작 선례를 근거 수준과 함께 비교) | `design-reviewer`(opus) | high |
+| 병합 전 브랜치 diff 검토(규칙 위반 · 작업자 충돌, 읽기 전용) | `code-reviewer`(opus) | high |
 
 - 사용자가 요청을 넘기면, 지금 세션과 다른 모델 · effort 가 맞을 때 한 줄로 권하고 진행합니다. 질문 · 상태 확인 · 진행 보고는 low 로 충분합니다.
 - 요청이 이 문서의 규칙과 부딪히거나 한도에 닿으면 실행 전에 한 줄로 알립니다(규칙 이름 · 비용 · 권하는 행동).
