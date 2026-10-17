@@ -3761,9 +3761,9 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
             sw::GPUMeshMorphPool  morphPool;
             SW_EXPECT_TRUE( vertexPool.update( device.get(), listMesh ) );
             SW_EXPECT_FALSE( vertexPool.update( device.get(), listMesh ) ); // 그대로면 다시 만들지 않는다
-            morphPool.rebuild( device.get(), listMesh );
+            morphPool.update( device.get(), listMesh );
             SW_EXPECT_EQUAL( cubeVertexCount, vertexPool.getVertexCount() );
-            SW_EXPECT_EQUAL( cubeVertexCount, morphPool.getVertexCount() );
+            SW_EXPECT_EQUAL( cubeVertexCount, morphPool.getMorphLiveVertexCount() );
 
             // 같은 메시, 다른 내용 — 삼각형 하나.
             sw::vector<sw::RHIVertex> listTriangle;
@@ -3774,9 +3774,9 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
             mesh->setVertices( listTriangle );
 
             SW_EXPECT_TRUE_MSG( vertexPool.update( device.get(), listMesh ), "정점 풀이 바뀐 내용을 같은 집합으로 봤습니다" );
-            morphPool.rebuild( device.get(), listMesh );
+            morphPool.update( device.get(), listMesh );
             SW_EXPECT_EQUAL( 3u, vertexPool.getVertexCount() );
-            SW_EXPECT_EQUAL( 3u, morphPool.getVertexCount() );
+            SW_EXPECT_EQUAL( 3u, morphPool.getMorphLiveVertexCount() );
 
             vertexPool.release( device.get() );
             morphPool.release( device.get() );
@@ -3849,6 +3849,50 @@ SW_TEST_CASE( RenderPassGPUTest, VertexPoolUploadsOnlyChangedMeshes )
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the vertex pool partial update test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 모프 풀도 바뀐 모프 메시의 레스트만 올리고, 남은 메시의 시작 오프셋과 칸은 그대로다(C-43)
+ * @details 더하면 그 메시의 레스트 바이트만 올라가고 다시 채우기(repack)가 없다. 빼면 아무것도 올리지 않는다. 스킨 구간은 모프 **용량** 뒤에서
+ *          시작하므로 용량이 그대로면 바뀌지 않는다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, MorphPoolUploadsOnlyChangedMeshes )
+{
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::shared_ptr<sw::Mesh> meshA = sw::MeshUtil::createUnitCube();
+        const sw::shared_ptr<sw::Mesh> meshB = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( meshA.get() );
+        const uint32 cubeVertexCount = meshA->getVertexCount();
+
+        sw::GPUMeshMorphPool  pool;
+        sw::vector<sw::Mesh*> listMesh{ meshA.get() };
+        pool.update( device.get(), listMesh );
+        SW_EXPECT_EQUAL( 1u, pool.getMorphRepackCount() );
+        const uint32 baseA          = pool.baseOf( meshA.get() );
+        const uint32 skinVertexBase = pool.getSkinVertexBase();
+        SW_ASSERT_TRUE( baseA != sw::GPUMeshMorphPool::kInvalidBase );
+
+        listMesh.push_back( meshB.get() );
+        pool.update( device.get(), listMesh );
+        SW_EXPECT_EQUAL( 1u, pool.getMorphRepackCount() );
+        SW_EXPECT_EQUAL( cubeVertexCount * static_cast<uint32>( sizeof( sw::GPUMorphVertex ) ), pool.getLastMorphUploadBytes() );
+        SW_EXPECT_EQUAL( baseA, pool.baseOf( meshA.get() ) );
+        SW_EXPECT_EQUAL( skinVertexBase, pool.getSkinVertexBase() );
+        SW_EXPECT_EQUAL( 2u * cubeVertexCount, pool.getMorphLiveVertexCount() );
+
+        listMesh = sw::vector<sw::Mesh*>{ meshA.get() };
+        pool.update( device.get(), listMesh );
+        SW_EXPECT_EQUAL( 0u, pool.getLastMorphUploadBytes() );
+        SW_EXPECT_EQUAL( sw::GPUMeshMorphPool::kInvalidBase, pool.baseOf( meshB.get() ) );
+        SW_EXPECT_EQUAL( baseA, pool.baseOf( meshA.get() ) );
+
+        pool.release( device.get() );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the morph pool partial update test" );
 }
 
 /**

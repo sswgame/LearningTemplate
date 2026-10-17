@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -57,8 +58,11 @@ namespace sw
 
     uint32 GPUMeshMorphPool::baseOf( const Mesh* pMesh ) const
     {
-        const auto it = _mapBase.find( pMesh );
-        return ( it != _mapBase.end() ) ? it->second : kInvalidBase;
+        const auto morphIt = _mapMorphEntry.find( pMesh );
+        if ( morphIt != _mapMorphEntry.end() && morphIt->second._base != kInvalidBase )
+            return morphIt->second._base;
+        const auto skinIt = _mapSkinBase.find( pMesh );
+        return ( skinIt != _mapSkinBase.end() ) ? skinIt->second : kInvalidBase;
     }
 
     bool GPUMeshMorphPool::isSkinDispatchable() const
@@ -67,14 +71,14 @@ namespace sw
                _skinWeight._srv != kInvalidDescriptorIndex && _skinInstance._srv != kInvalidDescriptorIndex && _skinPalette._srv != kInvalidDescriptorIndex;
     }
 
-    void GPUMeshMorphPool::rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
-        rebuild( pDevice, listMesh, vector<Mesh*>{} );
+        update( pDevice, listMesh, vector<Mesh*>{} );
     }
 
     bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID )
     {
-        // 포인터와 **내용 번호**를 함께 본다(GPUMeshVertexPool::rebuild 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
+        // 포인터와 **내용 번호**를 함께 본다(GPUMeshVertexPool::update 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
         if ( listBuilt.size() != listMesh.size() )
             return false;
         for ( size_t index = 0; index < listMesh.size(); ++index )
@@ -170,25 +174,23 @@ namespace sw
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinWeight, listWeight.data(), static_cast<uint32>( listWeight.size() ) );
     }
 
-    void GPUMeshMorphPool::rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh )
+    void GPUMeshMorphPool::update( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh )
     {
         if ( pDevice == nullptr )
             return;
 
-        // 목록이 그대로면 다시 만들지 않는다. 레스트 포즈 · 스킨 가중치는 변하지 않으므로 **한 번만** 올린다.
-        // 매 프레임 올리면 이 클래스가 없애려던 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
-        const bool bSameMorph = isSameList( listMorphMesh, _listBuiltMorph, _listBuiltMorphContentID );
-        const bool bSameSkin  = isSameList( listSkinMesh, _listBuiltSkin, _listBuiltSkinContentID );
-        if ( bSameMorph && bSameSkin )
+        // 번호 = 이 호출 수(프레임마다 한 번). 돌려받은 모프 구간은 kMaxFrameCountInFlight 프레임 뒤에 다시 나간다(GPUMeshVertexPool::update 와 같은 규칙).
+        ++_updateCount;
+        _morphAllocator.retireDeferred( _updateCount );
+        _lastMorphUploadBytes = 0;
+
+        // 모프 구간은 바뀐 메시만 올린다. 레스트 포즈 · 스킨 가중치는 변하지 않으므로 **한 번만** 올린다 — 매 프레임 올리면 이 클래스가 없애려던
+        // 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
+        const bool bMorphChanged = updateMorphMeshes( pDevice, listMorphMesh );
+        const bool bSameSkin     = isSameList( listSkinMesh, _listBuiltSkin, _listBuiltSkinContentID );
+        if ( bMorphChanged == false && bSameSkin )
             return;
 
-        _mapBase.clear();
-        _listBuiltMorph.assign( listMorphMesh.begin(), listMorphMesh.end() );
-        _listBuiltMorphContentID.clear();
-        for ( const Mesh* pMesh : listMorphMesh )
-        {
-            _listBuiltMorphContentID.push_back( pMesh != nullptr ? pMesh->getContentID() : 0u );
-        }
         _listBuiltSkin.assign( listSkinMesh.begin(), listSkinMesh.end() );
         _listBuiltSkinContentID.clear();
         for ( const Mesh* pMesh : listSkinMesh )
@@ -196,44 +198,12 @@ namespace sw
             _listBuiltSkinContentID.push_back( pMesh != nullptr ? pMesh->getContentID() : 0u );
         }
 
-        // 모프 구간 — 레스트 정점을 한 줄로 잇는다. 구간 시작이 곧 그 메시의 base 다.
-        // 레스트 노멀의 w 는 칸 번호 + 1 이다 - 컴퓨트가 프로그램 버퍼의 칸 표에서 그 메시의 변형 프로그램을 찾는다(updateDeformPrograms).
-        vector<GPUMorphVertex> listRest;
-        uint32                 morphCount = 0;
-        _listPoolMorph.clear();
-        _listDeformProgramGeneration.clear(); // 칸이 바뀌었을 수 있다 - 다음 updateDeformPrograms 가 다시 올린다
-        for ( Mesh* pMesh : listMorphMesh )
-        {
-            if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
-                continue;
-            const uint32 count = pMesh->getVertexCount();
-            if ( morphCount + count > kMaxPoolVertices )
-            {
-                // 예산 초과. 이 메시는 풀에 넣지 않는다. `baseOf` 가 kInvalidBase 를 반환하고 셰이더는
-                // 레스트 포즈로 그린다. 언리얼 스킨 캐시가 가득 차면 일반 경로로 되돌리는 것과 같다.
-                SW_LOG_WARNING( "모프 풀이 가득 찼습니다(%# 정점) — 남은 메시는 레스트 포즈로 그립니다.", kMaxPoolVertices );
-                continue;
-            }
-            _mapBase.emplace( pMesh, morphCount );
-            const float32 slotTag = static_cast<float32>( _listPoolMorph.size() + 1 ); // float 로 정확한 정수(2^24 미만) - 비트 재해석은 비정규 수로 지워질 수 있다
-            _listPoolMorph.push_back( pMesh );
-            if ( bSameMorph == false )
-            {
-                for ( const RHIVertex& vertex : pMesh->getVertices() )
-                {
-                    GPUMorphVertex restVertex = GPUMeshMorphPoolInternal::makeRestVertex( vertex );
-                    restVertex._normal._w     = slotTag;
-                    listRest.push_back( restVertex );
-                }
-            }
-            morphCount += count;
-        }
-        _skinVertexBase = morphCount;
-        if ( bSameMorph == false )
-            GPUMeshMorphPoolInternal::uploadAll( pDevice, _rest, listRest.data(), static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex );
+        // 스킨 구간은 모프 **용량** 뒤에서 시작한다 — 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 그대로다.
+        _skinVertexBase = _morphAllocator.getCapacity();
 
         // 스킨 원본(바뀐 때만 올린다)과 인스턴스 — 인스턴스는 결과 구간 · 원본 구간 · 팔레트 시작을 표에 한 줄씩 갖는다.
         rebuildSkinSources( pDevice, listSkinMesh );
+        _mapSkinBase.clear();
         _listSkinMesh.clear();
         _listSkinRow.clear();
         _skinBoneCount        = 0;
@@ -241,7 +211,10 @@ namespace sw
         uint32 resultOffset   = 0;
         for ( Mesh* pMesh : listSkinMesh )
         {
-            const bool bSkipMesh = pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 || _mapBase.find( pMesh ) != _mapBase.end();
+            const auto morphIt   = ( pMesh != nullptr ) ? _mapMorphEntry.find( pMesh ) : _mapMorphEntry.end();
+            const bool bInMorph  = morphIt != _mapMorphEntry.end() && morphIt->second._base != kInvalidBase;
+            const bool bSkipMesh = pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 || bInMorph ||
+                                   _mapSkinBase.find( pMesh ) != _mapSkinBase.end();
             if ( bSkipMesh )
                 continue;
             const auto sourceIt = std::find( _listSourceDataID.begin(), _listSourceDataID.end(), pMesh->getSkinDataID() );
@@ -260,7 +233,7 @@ namespace sw
             row._paletteBase      = _skinBoneCount;
             row._morphTargetCount = pMesh->getMorphTargetCount();
             row._morphWeightBase  = _skinMorphWeightCount; // 팔레트 뒤 구간 기준 — 팔레트 본 수가 정해진 뒤 아래에서 절대 위치로 옮긴다
-            _mapBase.emplace( pMesh, _skinVertexBase + resultOffset );
+            _mapSkinBase.emplace( pMesh, _skinVertexBase + resultOffset );
             _listSkinMesh.push_back( pMesh );
             _listSkinRow.push_back( row );
             _skinBoneCount += pMesh->getSkinBoneCount();
@@ -297,6 +270,196 @@ namespace sw
             SW_LOG_WARNING( "모프 결과 버퍼에 UAV 를 걸지 못했습니다 — 이 백엔드에서는 모프가 꺼집니다." );
     }
 
+    bool GPUMeshMorphPool::updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh )
+    {
+        const uint64 retireStamp = _updateCount + constant::kMaxFrameCountInFlight;
+
+        // 1) 표시: 처음 보거나 내용이 바뀐 메시는 새 구간이 필요하다.
+        bool bChanged = false;
+        _listScratchAdded.clear();
+        _listScratchRetry.clear();
+        for ( Mesh* pMesh : listMorphMesh )
+        {
+            if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
+                continue;
+            const uint64 contentID = pMesh->getContentID();
+            const uint32 count     = pMesh->getVertexCount();
+            const auto   it        = _mapMorphEntry.find( pMesh );
+            if ( it == _mapMorphEntry.end() )
+            {
+                _mapMorphEntry.emplace( pMesh, MorphEntry{ contentID, _updateCount, kInvalidBase, count, kInvalidBase } );
+                _listScratchAdded.push_back( pMesh );
+                bChanged = true;
+                continue;
+            }
+            MorphEntry& entry = it->second;
+            if ( entry._seenStamp == _updateCount )
+                continue; // 같은 메시가 목록에 또 있다
+            entry._seenStamp = _updateCount;
+            if ( entry._contentID == contentID )
+            {
+                if ( entry._base == kInvalidBase )
+                    _listScratchRetry.push_back( pMesh ); // 예산 때문에 못 들어간 메시
+                continue;
+            }
+            // 포인터는 같고 내용이 다르다(지워진 자리에 새 메시, 또는 setVertices) — 옛 구간과 칸을 돌려주고 새로 받는다.
+            releaseMorphEntry( entry, retireStamp );
+            entry._contentID = contentID;
+            entry._count     = count;
+            _listScratchAdded.push_back( pMesh );
+            bChanged = true;
+        }
+
+        // 2) 쓸기: 이번 목록에 없는 메시의 구간과 칸을 돌려준다. 포인터는 따라가지 않는다.
+        _listScratchRemoved.clear();
+        for ( const auto& [pMesh, entry] : _mapMorphEntry )
+        {
+            if ( entry._seenStamp != _updateCount )
+                _listScratchRemoved.push_back( pMesh );
+        }
+        for ( const Mesh* pMesh : _listScratchRemoved )
+        {
+            releaseMorphEntry( _mapMorphEntry.find( pMesh )->second, retireStamp );
+            _mapMorphEntry.erase( pMesh );
+            bChanged = true;
+        }
+
+        if ( _mapMorphEntry.empty() )
+        {
+            // 모프 메시가 없다 — 모프 구간을 통째로 놓는다. 스킨 구간은 0 에서 시작한다.
+            const bool bHadMorph = _rest.isValid() || _morphAllocator.getCapacity() > 0;
+            _rest.release( pDevice );
+            _morphAllocator.reset( 0 );
+            _listPoolMorph.clear();
+            _listFreeMorphSlot.clear();
+            _listDeformProgramGeneration.clear();
+            _morphLiveVertexCount = 0;
+            return bChanged || bHadMorph;
+        }
+        if ( bChanged == false )
+            return false;
+
+        // 칸이 바뀌었을 수 있다 — 다음 updateDeformPrograms 가 프로그램 표를 다시 올린다(같은 칸에 다른 메시가 들어와 번호가 우연히 같을 수 있다).
+        _listDeformProgramGeneration.clear();
+        // 예산 때문에 못 들어간 메시는 집합이 바뀐 프레임에만 다시 시도한다.
+        _listScratchAdded.insert( _listScratchAdded.end(), _listScratchRetry.begin(), _listScratchRetry.end() );
+
+        // 3) 들어온 메시에 구간과 칸을 준다. 하나라도 자리가 없으면 새 버퍼로 다시 채운다.
+        if ( _rest.isValid() == false )
+        {
+            repackMorph( pDevice );
+            return true;
+        }
+        _listScratchRest.clear();
+        _listScratchRegion.clear();
+        for ( const Mesh* pMesh : _listScratchAdded )
+        {
+            MorphEntry&  entry = _mapMorphEntry.find( pMesh )->second;
+            const uint32 base  = _morphAllocator.allocate( entry._count );
+            if ( base == SpanAllocator::kInvalidOffset )
+            {
+                repackMorph( pDevice );
+                return true;
+            }
+            entry._base = base;
+            entry._slot = allocateFreeListIndex( _listPoolMorph, _listFreeMorphSlot, pMesh );
+            _morphLiveVertexCount += entry._count;
+            RHIBufferCopyRegion region{};
+            region._srcOffset = static_cast<uint32>( _listScratchRest.size() * sizeof( GPUMorphVertex ) );
+            region._dstOffset = base * static_cast<uint32>( sizeof( GPUMorphVertex ) );
+            region._sizeBytes = entry._count * static_cast<uint32>( sizeof( GPUMorphVertex ) );
+            _listScratchRegion.push_back( region );
+            appendRestVertices( *pMesh, entry._slot );
+        }
+        if ( _listScratchRegion.empty() == false )
+        {
+            pDevice->getResourceFactory()->updateStructuredBufferRegions( _rest._buffer, _listScratchRest.data(), _listScratchRegion.data(),
+                                                                          static_cast<uint32>( _listScratchRegion.size() ) );
+            _lastMorphUploadBytes = static_cast<uint32>( _listScratchRest.size() * sizeof( GPUMorphVertex ) );
+        }
+        return true;
+    }
+
+    void GPUMeshMorphPool::repackMorph( IRHIDevice* pDevice )
+    {
+        // 새 레스트 버퍼는 아무 프레임도 읽지 않는다 — 대기 중인 반납까지 버리고 살아 있는 메시를 앞에서부터 잇는다. 칸 번호는 그대로 둔다.
+        uint32 liveCount = 0;
+        for ( const auto& [pMesh, entry] : _mapMorphEntry )
+        {
+            liveCount += entry._count;
+        }
+        uint32 capacity = liveCount + liveCount / 2u;
+        if ( capacity < kMinMorphVertices )
+            capacity = kMinMorphVertices;
+        if ( capacity > kMaxPoolVertices )
+            capacity = kMaxPoolVertices;
+
+        _morphAllocator.reset( capacity );
+        _morphLiveVertexCount = 0;
+        ++_morphRepackCount;
+
+        // 빈 자리는 0(노멀 w = 0 → 칸 없음)으로 둔다. 컴퓨트는 빈 자리도 돌지만 그 결과는 아무도 읽지 않는다.
+        _listScratchRest.assign( capacity, GPUMorphVertex{} );
+        bool bWarnedFull = false;
+        for ( auto& [pMesh, entry] : _mapMorphEntry )
+        {
+            entry._base = _morphAllocator.allocate( entry._count );
+            if ( entry._base == SpanAllocator::kInvalidOffset )
+            {
+                // 예산 초과. 이 메시는 풀에 넣지 않는다 — `baseOf` 가 kInvalidBase 를 반환하고 셰이더는 레스트 포즈로 그린다.
+                entry._base = kInvalidBase;
+                if ( entry._slot != kInvalidBase )
+                {
+                    (void)releaseFreeListIndex( _listPoolMorph, _listFreeMorphSlot, entry._slot ); // 비우기 전 값(메시)은 쓰지 않는다
+                    entry._slot = kInvalidBase;
+                }
+                if ( bWarnedFull == false )
+                    SW_LOG_WARNING( "모프 풀이 가득 찼습니다(%# 정점) — 남은 메시는 레스트 포즈로 그립니다.", kMaxPoolVertices );
+                bWarnedFull = true;
+                continue;
+            }
+            if ( entry._slot == kInvalidBase )
+                entry._slot = allocateFreeListIndex( _listPoolMorph, _listFreeMorphSlot, pMesh );
+            // 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다(못 본 것은 쓸기에서 지웠다).
+            const vector<RHIVertex>& listVertex = pMesh->getVertices();
+            const float32            slotTag    = static_cast<float32>( entry._slot + 1u ); // float 로 정확한 정수(2^24 미만) - 비트 재해석은 비정규 수로 지워질 수 있다
+            for ( uint32 vertexIndex = 0; vertexIndex < entry._count; ++vertexIndex )
+            {
+                GPUMorphVertex restVertex                                          = GPUMeshMorphPoolInternal::makeRestVertex( listVertex[vertexIndex] );
+                restVertex._normal._w                                              = slotTag;
+                _listScratchRest[static_cast<size_t>( entry._base ) + vertexIndex] = restVertex;
+            }
+            _morphLiveVertexCount += entry._count;
+        }
+        GPUMeshMorphPoolInternal::uploadAll( pDevice, _rest, _listScratchRest.data(), capacity * shaderslot::kMorphFloat4PerVertex );
+        _lastMorphUploadBytes = capacity * static_cast<uint32>( sizeof( GPUMorphVertex ) );
+    }
+
+    void GPUMeshMorphPool::releaseMorphEntry( MorphEntry& inoutEntry, uint64 retireStamp )
+    {
+        if ( inoutEntry._base != kInvalidBase )
+        {
+            _morphAllocator.freeDeferred( inoutEntry._base, inoutEntry._count, retireStamp );
+            _morphLiveVertexCount -= inoutEntry._count;
+        }
+        if ( inoutEntry._slot != kInvalidBase )
+            (void)releaseFreeListIndex( _listPoolMorph, _listFreeMorphSlot, inoutEntry._slot ); // 비우기 전 값(메시)은 쓰지 않는다
+        inoutEntry._base = kInvalidBase;
+        inoutEntry._slot = kInvalidBase;
+    }
+
+    void GPUMeshMorphPool::appendRestVertices( const Mesh& mesh, uint32 slot )
+    {
+        // 레스트 노멀의 w 는 칸 번호 + 1 이다 - 컴퓨트가 프로그램 버퍼의 칸 표에서 그 메시의 변형 프로그램을 찾는다(updateDeformPrograms).
+        const float32 slotTag = static_cast<float32>( slot + 1u ); // float 로 정확한 정수(2^24 미만) - 비트 재해석은 비정규 수로 지워질 수 있다
+        for ( const RHIVertex& vertex : mesh.getVertices() )
+        {
+            GPUMorphVertex restVertex = GPUMeshMorphPoolInternal::makeRestVertex( vertex );
+            restVertex._normal._w     = slotTag;
+            _listScratchRest.push_back( restVertex );
+        }
+    }
+
     void GPUMeshMorphPool::updateDeformPrograms( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr )
@@ -309,9 +472,12 @@ namespace sw
         }
         // 칸마다 번호만 본다(프로그램을 바꾸지 않는 프레임은 잠금도 없다). 하나라도 다르면 표와 프로그램을 통째로 다시 올린다 - 미리보기 몇 개 규모다.
         bool bSame = _listDeformProgramGeneration.size() == _listPoolMorph.size() && _deformProgram.isValid();
+        // 나간 메시의 칸은 nullptr 이다 - 번호 대신 kUint64 를 둔다(그 칸의 표 값은 -1, 프로그램 없음).
         for ( size_t slot = 0; slot < _listPoolMorph.size() && bSame; ++slot )
         {
-            bSame = _listDeformProgramGeneration[slot] == _listPoolMorph[slot]->getGPUDeformProgramGeneration();
+            const Mesh*  pMesh      = _listPoolMorph[slot];
+            const uint64 generation = ( pMesh != nullptr ) ? pMesh->getGPUDeformProgramGeneration() : invalid_index::kUint64;
+            bSame                   = _listDeformProgramGeneration[slot] == generation;
         }
         if ( bSame )
             return;
@@ -320,7 +486,12 @@ namespace sw
         _listScratchDeformProgram.assign( _listPoolMorph.size(), float4{ -1.0f, 0.0f, 0.0f, 0.0f } );
         for ( size_t slot = 0; slot < _listPoolMorph.size(); ++slot )
         {
-            const Mesh* pMesh                              = _listPoolMorph[slot];
+            const Mesh* pMesh = _listPoolMorph[slot];
+            if ( pMesh == nullptr )
+            {
+                _listDeformProgramGeneration[slot] = invalid_index::kUint64;
+                continue;
+            }
             _listDeformProgramGeneration[slot]             = pMesh->getGPUDeformProgramGeneration(); // 사본보다 먼저 읽는다 - 사이에 바뀌면 다음 프레임에 다시 올린다
             const shared_ptr<const vector<float4>> program = pMesh->getGPUDeformProgram();
             if ( program == nullptr || program->empty() )
@@ -399,9 +570,11 @@ namespace sw
         _deformProgram.release( pDevice );
         _listPoolMorph.clear();
         _listDeformProgramGeneration.clear();
-        _mapBase.clear();
-        _listBuiltMorph.clear();
-        _listBuiltMorphContentID.clear();
+        _listFreeMorphSlot.clear();
+        _mapMorphEntry.clear();
+        _morphAllocator.reset( 0 );
+        _mapSkinBase.clear();
+        _morphLiveVertexCount = 0;
         _listBuiltSkin.clear();
         _listBuiltSkinContentID.clear();
         _listSkinMesh.clear();
