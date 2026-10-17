@@ -251,6 +251,35 @@ namespace sw
         return _pDevice->storeGlBuffer( vbo, sizeBytes );
     }
 
+    void OpenGLRHIResourceFactory::updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    {
+        const bool bInvalidVertexRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
+        if ( bInvalidVertexRegionUpdate )
+            return;
+        const GLuint vbo = _pDevice->resolveGlBuffer( buffer );
+        if ( vbo == 0 )
+            return;
+
+        // glBufferSubData 는 드라이버가 앞 드로우와 순서를 맞춘다. 대상은 GL_COPY_WRITE_BUFFER 다 — GL_ARRAY_BUFFER 바인딩을 건드리지 않는다.
+        ScopedOpenGLContext contextScope( _pDevice );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, vbo );
+        GLint bufferBytes{ 0 };
+        glGetBufferParameteriv( GL_COPY_WRITE_BUFFER, GL_BUFFER_SIZE, &bufferBytes );
+        const uint8* pBase = static_cast<const uint8*>( pBaseSource );
+        for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+        {
+            const RHIBufferCopyRegion& region = pRegions[regionIndex];
+            if ( static_cast<int64>( region._dstOffset ) + static_cast<int64>( region._sizeBytes ) > static_cast<int64>( bufferBytes ) )
+            {
+                SW_LOG_ERROR( "updateVertexBufferRegions: region [%#, +%#) is outside the %#-byte vertex buffer; skipped", region._dstOffset, region._sizeBytes,
+                              static_cast<int64>( bufferBytes ) );
+                continue;
+            }
+            glBufferSubData( GL_COPY_WRITE_BUFFER, static_cast<GLintptr>( region._dstOffset ), static_cast<GLsizeiptr>( region._sizeBytes ), pBase + region._srcOffset );
+        }
+        glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+    }
+
     void OpenGLRHIResourceFactory::destroyBuffer( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
