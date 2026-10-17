@@ -204,6 +204,24 @@ SW_TEST_CASE( FixedLayoutTest, SamplesRoundTripAtTheBoundaries )
 }
 
 /**
+ * @brief [FixedLayoutTest] `Count` 가 없는 열거형도 기반 타입 전체 폭이 아니라 [최소 열거자, 최대 열거자] 범위 비트로 씁니다
+ * @details 예전에는 `Count` 를 적었는지에 따라 같은 세 열거자가 2 비트 또는 8 비트였습니다. 열거자 밖의 값은 쓰기가 실패합니다.
+ */
+SW_TEST_CASE( FixedLayoutTest, EnumsWithoutCountUseEnumeratorRangeBits )
+{
+    sw::FixedEnumBSample sample;
+    sample._color = sw::EFixedColorB::Blue;
+    sw::BitWriter writer;
+    SW_ASSERT_TRUE( sw::FixedLayout::write( sample, writer ) );
+    SW_EXPECT_EQUAL( 64 + 2, writer.getBitCount() ); // 스키마 해시 64 비트 + 열거자 셋(0..2)의 2 비트
+    SW_EXPECT_TRUE( roundTrip( sample )._color == sw::EFixedColorB::Blue );
+
+    sample._color = static_cast<sw::EFixedColorB>( 3 );
+    sw::BitWriter outOfRange;
+    SW_EXPECT_FALSE( sw::FixedLayout::write( sample, outOfRange ) );
+}
+
+/**
  * @brief [FixedLayoutTest] 코덱에 없는 필드(Transient)는 읽기 대상의 값이 남습니다. 읽기는 대상의 복사본에서 시작합니다
  */
 SW_TEST_CASE( FixedLayoutTest, ReadKeepsFieldsOutsideTheCodec )

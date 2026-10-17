@@ -10,6 +10,8 @@
 #include "ReflectionParser/CodeGenerator.h"
 #include "ReflectionParser/ParserDefines.h"
 
+#include <limits>
+
 SW_LOG_CALLER( "FixedCodecGenerator" );
 namespace sw
 {
@@ -502,20 +504,32 @@ namespace sw
                 const string enumType = "::" + enumInfo._fullyQualifiedName;
                 emitWriteCheck( state, helper + "( " + site._expr + " )" );
 
-                const bool bCounted = enumInfo._countEnumerator.empty() == false && enumInfo._bIsBitFlag == SW_FALSE;
-                if ( bCounted )
+                if ( enumInfo._bIsBitFlag == SW_FALSE )
                 {
-                    // 범위는 [가장 작은 열거자, Count - 1] 입니다. 값은 컴파일러가 계산합니다(파서의 값은 진단용입니다).
+                    // 범위는 [가장 작은 열거자, Count - 1] 이고, `Count` 가 없으면 [가장 작은 열거자, 가장 큰 열거자] 입니다. 기반 타입 전체 폭으로
+                    // 쓰지 않습니다 — 열거자 셋에 8 비트를 쓰고, 그 폭은 선언에 `Count` 를 적었는지라는 우연으로 갈립니다(언리얼도 열거형 프로퍼티를
+                    // 가장 큰 열거자 값의 비트 수로 복제합니다). 어느 열거자가 끝인지는 파서의 값으로 고르고 값은 컴파일러가 계산합니다.
                     const ParsedEnumeratorInfo* pMin = nullptr;
+                    const ParsedEnumeratorInfo* pMax = nullptr;
                     for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
                     {
                         if ( enumerator._name == enumInfo._countEnumerator )
                             continue;
                         if ( pMin == nullptr || enumerator._value < pMin->_value )
                             pMin = &enumerator;
+                        if ( pMax == nullptr || enumerator._value > pMax->_value )
+                            pMax = &enumerator;
+                    }
+                    const uint64 width = static_cast<uint64>( pMax->_value ) - static_cast<uint64>( pMin->_value );
+                    if ( width > static_cast<uint64>( std::numeric_limits<uint32>::max() ) )
+                    {
+                        // 범위 비트는 32 비트까지입니다. 넘는 열거형을 실행 중 쓰기 실패로 두지 않고 생성에서 멈춥니다.
+                        reportError( state, *site._pProp, "enum '" + enumInfo._fullyQualifiedName + "' spans more than 32 bits of values" );
+                        return;
                     }
                     const string minExpr = "static_cast<int64>( " + enumType + "::" + pMin->_name + " )";
-                    const string maxExpr = "static_cast<int64>( " + enumType + "::" + enumInfo._countEnumerator + " ) - 1";
+                    const string maxExpr = enumInfo._countEnumerator.empty() ? "static_cast<int64>( " + enumType + "::" + pMax->_name + " )"
+                                                                             : "static_cast<int64>( " + enumType + "::" + enumInfo._countEnumerator + " ) - 1";
                     emitWriteCheck( state, "::sw::FixedCodecUtil::writeRangedInteger( writer, static_cast<int64>( " + site._expr + " ), " + minExpr + ", " + maxExpr + " )" );
                     const string value = "value" + formatInteger( site._depth );
                     state._read.line( "{" ).push();
@@ -528,6 +542,7 @@ namespace sw
                 }
                 else
                 {
+                    // 비트 플래그는 켜진 비트의 조합이라 범위가 없습니다. 기반 타입 폭으로 쓰고, 등록된 비트 밖은 위의 검사 함수가 거절합니다.
                     state._write.linef( "::sw::FixedCodecUtil::writeEnumBits( writer, %# );", site._expr );
                     const string value = "value" + formatInteger( site._depth );
                     state._read.line( "{" ).push();

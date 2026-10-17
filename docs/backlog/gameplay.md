@@ -125,11 +125,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
 
 - `G-7` [조건부] **걸음 조우 판정 둘**(Overworld `shouldEncounterOnStep` 의 결정적 주기 · ClassicJRPG `JRPGEncounterWalker` 의 확률 + 유예) — 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.
 
-- `G-14` [조건부] **Mech · Horror 스냅샷의 열거형을 기반 타입 전체 폭(8 비트) 대신 범위 비트로 쓴다.** `MatchPhase` · `MechPilotState` · `SurvivorState` ·
-  `SurvivorActivity` · `PalletState` 에는 `ENUM()` 도 `Count` 열거자도 없어 B 코덱이 8 비트를 쓴다(손 코덱은 2 ~ 3 비트였다). 하려면 다섯 열거형에 `ENUM( Count = Count )` 와
-  `Count` 열거자를 더하고, 모두 다루는 `switch`(`HorrorMatchRules.cpp` 의 `SurvivorActivity` 등)와 세이브 읽기의 `<= 마지막 열거자` 검사를 함께 본다.
-  `MatchPhase` 는 `Base/Gameplay/Match` 에 있어 여러 키트가 같이 바뀐다. 스냅샷 크기가 문제가 될 때(채널에 싣는 게임이 생길 때) 한다.
-
 ---
 
 [◀ 백로그 안내](README.md)
