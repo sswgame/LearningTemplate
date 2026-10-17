@@ -161,11 +161,17 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedVerticesFollowTheObject )
 SW_TEST_CASE( PhysicsSoftBodyTest, RenderVerticesAreATwoSidedGridInMeshSpace )
 {
     using Internal = PhysicsSoftBodyTestInternal;
-    sw::GameObjectManager        manager;
-    const sw::float3             origin{ 0.0f, 3.0f, 0.0f };
-    const sw::ClothComponent*    pCloth       = Internal::spawnCloth( manager, origin, sw::ClothPinMode::TopEdge );
-    const sw::vector<sw::float3> listWorld    = pCloth->makeSoftBodyDesc( origin, sw::quaternion{}, 0 )._listVertex;
-    const sw::float4x4           worldToLocal = sw::float4x4::makeTrs( origin, sw::quaternion{}, sw::float3{ 1.0f, 1.0f, 1.0f } ).invert();
+    sw::GameObjectManager     manager;
+    const sw::float3          origin{ 0.0f, 3.0f, 0.0f };
+    const sw::ClothComponent* pCloth = Internal::spawnCloth( manager, origin, sw::ClothPinMode::TopEdge );
+    // 서술자의 정점은 바디 기준 자세의 로컬이다(`PhysicsSoftBodyDesc::_listVertex`). 그릴 정점의 입력은 물리가 내는 월드 위치(`getSoftBodyVertices`)라 월드로 옮겨 넣는다.
+    const sw::float4x4     localToWorld = sw::float4x4::makeTrs( origin, sw::quaternion{}, sw::float3{ 1.0f, 1.0f, 1.0f } );
+    const sw::float4x4     worldToLocal = localToWorld.invert();
+    sw::vector<sw::float3> listWorld    = pCloth->makeSoftBodyDesc( origin, sw::quaternion{}, 0 )._listVertex;
+    for ( sw::float3& vertex : listWorld )
+    {
+        vertex = sw::float3::transform( vertex, localToWorld );
+    }
 
     sw::vector<sw::RHIVertex> listVertex;
     SW_ASSERT_TRUE( pCloth->makeRenderVertices( listWorld, worldToLocal, listVertex ) );
