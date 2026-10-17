@@ -18,6 +18,10 @@ namespace sw
         {
             /** @brief 조건 표기 표입니다. 순서는 `AnimationConditionOp` 와 같습니다(None 은 표기가 없습니다). */
             static constexpr const utf8* kArrOpText[] = { "", ">", "<", ">=", "<=", "==", "!=", "trigger" };
+            /** @brief 전이 방식 표기 표입니다. 순서는 `AnimationBlendMode` 와 같습니다. */
+            static constexpr const utf8* kArrBlendModeText[] = { "crossfade", "inertialization" };
+            /** @brief 포즈 노드 종류 표기 표입니다. 순서는 `AnimationPoseNodeType` 과 같습니다(None 은 표기가 없습니다). */
+            static constexpr const utf8* kArrPoseNodeTypeText[] = { "", "blend_poses" };
         };
     } // namespace
 } // namespace sw
@@ -118,6 +122,40 @@ namespace sw
         return bValid;
     }
 
+    bool AnimationGraphAsset::parsePoseNode( const JSONValue& poseNodeJSON, AnimationGraphNode& inoutNode )
+    {
+        AnimationGraphPoseNodeDef& def      = inoutNode._poseNode;
+        const string               typeText = poseNodeJSON.get( "type" ).asString();
+        def                                 = AnimationGraphPoseNodeDef{};
+        for ( uint32 index = 1; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrPoseNodeTypeText ) ); ++index )
+        {
+            if ( typeText == AnimationGraphAssetInternal::kArrPoseNodeTypeText[index] )
+                def._type = static_cast<AnimationPoseNodeType>( index );
+        }
+        if ( def._type == AnimationPoseNodeType::None )
+        {
+            SW_LOG_ERROR( "Animation graph node '%#' has unknown pose_node type '%#'", inoutNode._name.c_str(), typeText.c_str() );
+            return false;
+        }
+        const JSONValue inputsJSON = poseNodeJSON.get( "inputs" );
+        for ( size_t inputIndex = 0; inputsJSON.isArray() && inputIndex < inputsJSON.size(); ++inputIndex )
+        {
+            def._listInput.push_back( hashed_string( inputsJSON.at( inputIndex ).asString() ) );
+        }
+        if ( poseNodeJSON.has( "weight" ) )
+            def._weightParameter = hashed_string( poseNodeJSON.get( "weight" ).asString() );
+
+        // 종류마다 요구하는 값 — 지금은 blend_poses 하나다.
+        const bool bHasEmptyInput     = std::find( def._listInput.begin(), def._listInput.end(), hashed_string{} ) != def._listInput.end();
+        const bool bHasRequiredValues = def._listInput.size() == 2 && bHasEmptyInput == false && def._weightParameter.empty() == false;
+        if ( bHasRequiredValues == false )
+        {
+            SW_LOG_ERROR( "Animation graph node '%#' blend_poses needs two named 'inputs' and a 'weight' parameter", inoutNode._name.c_str() );
+            return false;
+        }
+        return true;
+    }
+
     bool AnimationGraphAsset::parseRoot( const JSONValue& root )
     {
         bool bValid = true;
@@ -135,6 +173,14 @@ namespace sw
             const JSONValue blendSpaceJSON = nodeJSON.get( "blend_space" );
             if ( blendSpaceJSON.isObject() && parseBlendSpace( blendSpaceJSON, node ) == false )
                 bValid = false;
+            const JSONValue poseNodeJSON = nodeJSON.get( "pose_node" );
+            if ( poseNodeJSON.isObject() && parsePoseNode( poseNodeJSON, node ) == false )
+                bValid = false;
+            if ( node.hasBlendSpace() && node.hasPoseNode() )
+            {
+                SW_LOG_ERROR( "Animation graph node '%#' has both blend_space and pose_node", node._name.c_str() );
+                bValid = false;
+            }
             if ( node._id > 0 )
                 _listNode.push_back( std::move( node ) );
         } );
@@ -147,6 +193,22 @@ namespace sw
             link._toNode   = static_cast<int32>( linkJSON.get( "to" ).asInt( 0 ) );
             if ( linkJSON.has( "blend" ) )
                 link._blendSeconds = static_cast<float32>( linkJSON.get( "blend" ).asFloat( -1.0 ) );
+            if ( linkJSON.has( "blend_mode" ) )
+            {
+                const string modeText = linkJSON.get( "blend_mode" ).asString();
+                if ( parseBlendMode( modeText, link._blendMode ) == false )
+                {
+                    SW_LOG_ERROR( "Animation graph link %# has unknown blend_mode '%#'", link._id, modeText.c_str() );
+                    bValid = false;
+                }
+            }
+            if ( linkJSON.has( "half_life" ) )
+                link._halfLifeSeconds = static_cast<float32>( linkJSON.get( "half_life" ).asFloat( 0.0 ) );
+            if ( link._blendMode == AnimationBlendMode::Inertialization && link._halfLifeSeconds <= 0.0f )
+            {
+                SW_LOG_ERROR( "Animation graph link %# uses inertialization without a positive 'half_life'", link._id );
+                bValid = false;
+            }
             const JSONValue condition = linkJSON.get( "condition" );
             if ( condition.isObject() )
             {
@@ -209,6 +271,21 @@ namespace sw
                         sampleJSON.set( "y" ).setFloat( static_cast<float64>( sample._position._y ) );
                 }
             }
+            if ( node.hasPoseNode() )
+            {
+                const AnimationGraphPoseNodeDef& def          = node._poseNode;
+                const JSONValue                  poseNodeJSON = nodeJSON.set( "pose_node" );
+                poseNodeJSON.setObject();
+                poseNodeJSON.set( "type" ).setString( AnimationGraphAssetInternal::kArrPoseNodeTypeText[static_cast<uint32>( def._type )] );
+                const JSONValue inputsJSON = poseNodeJSON.set( "inputs" );
+                inputsJSON.setArray();
+                for ( const hashed_string& input : def._listInput )
+                {
+                    inputsJSON.pushBack().setString( input.c_str() );
+                }
+                if ( def._weightParameter.empty() == false )
+                    poseNodeJSON.set( "weight" ).setString( def._weightParameter.c_str() );
+            }
         }
 
         const JSONValue linksVal = root.set( "links" );
@@ -222,6 +299,12 @@ namespace sw
             linkJSON.set( "to" ).setInt( link._toNode );
             if ( link._blendSeconds >= 0.0f )
                 linkJSON.set( "blend" ).setFloat( static_cast<float64>( link._blendSeconds ) );
+            // 크로스페이드는 이 키가 생기기 전 파일과 같은 모양으로 쓴다(키가 없으면 크로스페이드다).
+            if ( link._blendMode != AnimationBlendMode::Crossfade )
+            {
+                linkJSON.set( "blend_mode" ).setString( getBlendModeText( link._blendMode ) );
+                linkJSON.set( "half_life" ).setFloat( static_cast<float64>( link._halfLifeSeconds ) );
+            }
             if ( link._op != AnimationConditionOp::None )
             {
                 const JSONValue condition = linkJSON.set( "condition" );
@@ -315,6 +398,25 @@ namespace sw
     {
         const uint32 index = static_cast<uint32>( op );
         return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrOpText ) ) ? AnimationGraphAssetInternal::kArrOpText[index] : "";
+    }
+
+    bool AnimationGraphAsset::parseBlendMode( string_view text, AnimationBlendMode& outMode )
+    {
+        for ( uint32 index = 0; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrBlendModeText ) ); ++index )
+        {
+            if ( text == AnimationGraphAssetInternal::kArrBlendModeText[index] )
+            {
+                outMode = static_cast<AnimationBlendMode>( index );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    const utf8* AnimationGraphAsset::getBlendModeText( AnimationBlendMode mode )
+    {
+        const uint32 index = static_cast<uint32>( mode );
+        return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrBlendModeText ) ) ? AnimationGraphAssetInternal::kArrBlendModeText[index] : "";
     }
 
     int32 AnimationGraphAsset::findFirstOutgoingNodeID( int32 fromNodeID ) const

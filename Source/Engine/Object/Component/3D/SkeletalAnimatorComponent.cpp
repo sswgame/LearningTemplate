@@ -122,6 +122,8 @@ namespace sw
         , _listScratchTrackMask{}
         , _lastBasePose{}
         , _carryOverPose{}
+        , _previousBasePose{}
+        , _inertializer{}
         , _sequencerClip{}
         , _rootMotionDelta{}
         , _pUnit{ nullptr }
@@ -133,11 +135,13 @@ namespace sw
         , _carryOverElapsed{ 0.0f }
         , _carryOverDuration{ 0.0f }
         , _seenInterruptCount{ 0 }
+        , _seenInertializationCount{ 0 }
         , _bExtractRootMotion{ SW_FALSE }
         , _bPlayOnBegin{ SW_TRUE }
         , _bRootMotionThroughController{ SW_TRUE }
         , _bLastBasePoseValid{ SW_FALSE }
         , _bCarryingOver{ SW_FALSE }
+        , _bInertializationPending{ SW_FALSE }
         , _reserved{ 0 }
     {
         _graphPlayer.setPlayableSource( &_binding );
@@ -214,6 +218,12 @@ namespace sw
         // 워커의 전이는 읽어 둔 클립만 찾으므로 노드의 클립은 지금(게임 스레드) 읽는다.
         for ( const AnimationGraphNode& node : _graph._listNode )
         {
+            // 포즈 노드(`AnimationPoseNodeSet`)는 아직 이 애니메이터가 평가하지 않는다 — 클립으로 잘못 재생하지 않고 오류로 알린다.
+            if ( node.hasPoseNode() )
+            {
+                SW_LOG_ERROR( "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", _animationGraphPath.c_str(), node._name.c_str() );
+                continue;
+            }
             (void)preloadClip( hashed_string( node._name ) );
         }
     }
@@ -481,6 +491,18 @@ namespace sw
                 _bCarryingOver = SW_FALSE;
         }
 
+        // inertialization 전이 — 새 포즈를 샘플한 뒤(`populateBasePose`) 지난 포즈와의 차이를 잡는다. 그 차이가 이어 주므로 이어 섞기는 그만둔다.
+        if ( player.getInertializationCount() != _seenInertializationCount )
+        {
+            _seenInertializationCount = player.getInertializationCount();
+            _bInertializationPending  = _bLastBasePoseValid;
+            _bCarryingOver            = SW_FALSE;
+        }
+        else
+        {
+            _inertializer.update( deltaSeconds );
+        }
+
         const AnimationClip* pCurrent = static_cast<const AnimationClip*>( player.getCurrentPlayable() );
         const AnimationClip* pNext    = static_cast<const AnimationClip*>( player.getNextPlayable() );
         const float32        alpha    = player.getBlendAlpha();
@@ -602,6 +624,15 @@ namespace sw
         }
         if ( _bCarryingOver == SW_TRUE && _carryOverPose.getBoneCount() == pose.getBoneCount() )
             Pose::blend( _carryOverPose, pose, MathUtil::saturate( _carryOverElapsed / _carryOverDuration ), pose );
+        if ( _bInertializationPending == SW_TRUE )
+        {
+            _bInertializationPending = SW_FALSE;
+            const bool bHasPrevious  = _previousBasePose.getBoneCount() == _lastBasePose.getBoneCount();
+            // 본 수가 다르면(스켈레톤이 바뀜) begin 이 오류를 남기고 섞지 않는다 — 새 포즈를 그대로 쓴다.
+            (void)_inertializer.begin( _lastBasePose, bHasPrevious ? &_previousBasePose : nullptr, pose, nullptr, _lastDeltaSeconds, player.getInertializationHalfLife() );
+        }
+        _inertializer.apply( pose );
+        std::swap( _previousBasePose, _lastBasePose );
         _lastBasePose       = pose;
         _bLastBasePoseValid = SW_TRUE;
 

@@ -27,6 +27,12 @@ namespace sw
         void play( const IAnimationPlayable* pPlayable, bool bLoop );
         /** @brief @p fadeSeconds 동안 섞으며 넘어갑니다. 현재 재생이 없거나 길이가 0 이면 즉시 재생합니다. */
         void crossfade( const IAnimationPlayable* pPlayable, float32 fadeSeconds, bool bLoop );
+        /**
+         * @brief 섞지 않고 바로 넘어가되, 포즈를 내는 쪽이 끊긴 순간의 차이를 @p halfLifeSeconds 반감기로 풀어 내게 합니다(inertialization).
+         * @details 플레이어는 포즈를 모르므로 요청 횟수와 반감기만 남긴다. 포즈를 내는 쪽(스켈레탈 애니메이터)은 `getInertializationCount` 가 오르면
+         *          `PoseInertializer::begin` 으로 직전 포즈와 새 포즈의 차이를 잡는다. 페이드 중이었으면 섞이던 슬롯은 버린다(차이가 이어 준다).
+         */
+        void inertialize( const IAnimationPlayable* pPlayable, float32 halfLifeSeconds, bool bLoop );
         /** @brief 멈추고 비웁니다. */
         void stop() { play( nullptr, false ); }
         /**
@@ -42,6 +48,10 @@ namespace sw
         uint32 getInterruptCount() const { return _interruptCount; }
         /** @brief 현재(또는 마지막) 페이드 길이(초)입니다. */
         float32 getFadeDuration() const { return _fadeDuration; }
+        /** @brief `inertialize` 로 넘어간 횟수입니다. 포즈를 내는 쪽은 이 값이 오르면 직전 포즈에서 inertialization 을 시작합니다. */
+        uint32 getInertializationCount() const { return _inertializationCount; }
+        /** @brief 마지막 `inertialize` 의 반감기(초)입니다. */
+        float32 getInertializationHalfLife() const { return _inertializationHalfLife; }
 
         const IAnimationPlayable* getCurrentPlayable() const { return _arrSlot[0]._pPlayable; }
         const IAnimationPlayable* getNextPlayable() const { return _arrSlot[1]._pPlayable; }
@@ -82,7 +92,9 @@ namespace sw
         float32 _fadeDuration;
         float32 _fadeElapsed;
         float32 _speed;
+        float32 _inertializationHalfLife;
         uint32  _interruptCount;
+        uint32  _inertializationCount;
     };
 } // namespace sw
 

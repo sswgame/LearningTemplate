@@ -16,6 +16,7 @@
 namespace sw
 {
     class AnimationNotifyTrack;
+    class IAnimationPoseNode;
 
     /**
      * @class IAnimationPlayable
@@ -35,6 +36,11 @@ namespace sw
         virtual bool isLoopingByDefault() const = 0;
         /** @brief 알림 트랙입니다. 없으면 nullptr 입니다. */
         virtual const AnimationNotifyTrack* findNotifyTrack() const { return nullptr; }
+        /**
+         * @brief 포즈를 평가해 내는 노드(`IAnimationPoseNode`, 스켈레탈 전용)면 그것을, 클립 · 스프라이트 구간처럼 시각으로 샘플하는 것이면 nullptr 입니다.
+         * @details 포즈를 내는 쪽은 이 값으로 클립과 노드를 가른다(재생할 것을 클립으로 캐스팅하기 전에 묻는다).
+         */
+        virtual const IAnimationPoseNode* findPoseNode() const { return nullptr; }
     };
 } // namespace sw
 

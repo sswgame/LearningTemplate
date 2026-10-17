@@ -109,7 +109,10 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
 - `D4-15` [기능] **WildWest 승마의 남은 것**(2026-10-16, `Source/Games/WildWest`). 말 모델이 저장소에 없어 말과 기수가 큐브 · 캡슐 자리 표시다 — 네발 말 glTF(걸음새 클립 넷:
   걷기 · 속보 · 구보 · 질주, 안장 소켓)를 `Resource/game/wildwest/models_raw/` 에 들이고 `MountMovementComponent` 의 `_gaitParameter` · 좌석 `_socketName` 을 잇는다(KayKit · Kenney 에 말이 없다).
 
-- `D4-16` [기능] **애니메이션 고급 기능 후보.** 모션 매칭, 전신 IK, 리타게팅 도구, 애니메이션 압축 · 샘플링 최적화. 합성 리그 벤치(`도구 - 합성 리그 생성기`)가 비용 곡선을 낸 뒤 병목이 확인되는 것부터 한다.
+- `D4-16` [기능] **애니메이션 고급 기능 후보.** 모션 매칭, 전신 IK, 리타게팅 도구, 애니메이션 압축 · 샘플링 최적화.
+  모션 매칭은 보류다 — 데이터(이어진 이동 모캡)와 게임 요구가 생기면 다시 본다([모션 매칭](../plans/MotionMatching.md): 조건 · 구조 초안 · 측정 질문).
+  선행 구조(포즈 단위 inertialization `PoseInertializer`, 포즈를 내는 그래프 노드 `IAnimationPoseNode`)는 들어갔고, 스켈레탈 애니메이터의 포즈 노드 평가와 레이어 inertialization 연결이 남았다.
+  나머지 후보는 합성 리그 벤치(`도구 - 합성 리그 생성기`)가 비용 곡선을 낸 뒤 병목이 확인되는 것부터 한다.
 
 - `D4-17` [기능] **게임별 씬이 새로 들인 CC0 메시를 부르게 한다.** 2026-10-17 `res3` 가 여섯 게임에 CC0 모델 팩(KayKit Dungeon · Space Base, Kenney Nature · Fantasy Town)의 원본을
   배치했지만 씬 · 프리팹 · 코드는 아직 자리 표시 큐브를 쓴다. 게임마다 씬이 새 메시를 부르게 바꿔 에셋 검증 `orphans` 경고를 없앤다. 배치 목록은 `ModelImportConfig.json` 과 게임별 `credits.md`.

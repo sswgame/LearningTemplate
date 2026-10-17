@@ -32,6 +32,36 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @enum AnimationPoseNodeType
+     * @brief 포즈를 직접 평가해 내는 노드의 종류입니다(JSON 노드의 "pose_node"."type"). 모르는 표기는 로드 오류입니다.
+     * @details 종류마다 런타임 구현(`IAnimationPoseNode`)이 하나다. 모션 매칭 같은 새 노드는 여기에 종류를 더하고 `AnimationPoseNodeSet` 이 만든다.
+     */
+    enum class AnimationPoseNodeType : uint8
+    {
+        None = 0,   ///< 포즈 노드가 아닙니다(이름이 곧 클립이거나 블렌드 스페이스인 보통 상태).
+        BlendPoses, ///< "blend_poses" — 입력 클립 둘을 파라미터 가중치로 섞습니다(`BlendPosesNode`).
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AnimationGraphPoseNodeDef
+     * @brief 포즈 노드 상태의 데이터입니다(JSON 노드의 "pose_node").
+     * @details JSON 형식은 `{ "type": "blend_poses", "inputs": [ "Idle", "Wave" ], "weight": "WaveWeight" }` 이다.
+     *          "blend_poses" 는 입력이 정확히 둘이고 "weight" 파라미터 이름이 있어야 한다. 어기면 로드 오류다(기본값으로 채우지 않는다).
+     */
+    struct AnimationGraphPoseNodeDef
+    {
+        AnimationPoseNodeType _type{ AnimationPoseNodeType::None }; /**< 노드 종류입니다. None 이면 포즈 노드 상태가 아닙니다. */
+        vector<hashed_string> _listInput;                           /**< 입력 클립 이름입니다(그래프 플레이어의 클립 풀이로 찾습니다). */
+        hashed_string         _weightParameter;                     /**< 섞기 가중치 파라미터 이름(`AnimationParameterSet`)입니다. */
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 애니메이션 그래프 노드입니다. */
     struct AnimationGraphNode
     {
@@ -46,6 +76,8 @@ namespace sw
         hashed_string _syncGroup{};
         /** @brief 블렌드 스페이스 상태의 데이터입니다(JSON "blend_space", 선택). 표본이 없으면 이름이 곧 클립인 보통 상태입니다. */
         AnimationGraphBlendSpaceDef _blendSpace{};
+        /** @brief 포즈 노드 상태의 데이터입니다(JSON "pose_node", 선택). 블렌드 스페이스와 함께 적으면 로드 오류입니다. */
+        AnimationGraphPoseNodeDef _poseNode{};
         /**
          * @brief 이 상태의 반복 여부입니다(JSON "loop", 선택). -1 은 적지 않았다는 뜻입니다. 직접 재생은 호출한 쪽이 정하고, "끝나면 다음"으로 들어오면 반복하지 않습니다.
          */
@@ -53,6 +85,8 @@ namespace sw
 
         /** @brief 블렌드 스페이스 상태인지 반환합니다. */
         bool hasBlendSpace() const { return _blendSpace._space.getSampleCount() > 0; }
+        /** @brief 포즈 노드 상태인지 반환합니다. */
+        bool hasPoseNode() const { return _poseNode._type != AnimationPoseNodeType::None; }
     };
 } // namespace sw
 
@@ -77,16 +111,33 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @enum AnimationBlendMode
+     * @brief 전이가 포즈를 잇는 방식입니다(JSON 링크의 "blend_mode": "crossfade", "inertialization"). 모르는 표기는 로드 오류입니다.
+     * @details 키를 적지 않은 링크는 `Crossfade` 다 — 이 필드의 데이터 기본값이며, 이 필드가 생기기 전 파일의 뜻과 같다.
+     */
+    enum class AnimationBlendMode : uint8
+    {
+        Crossfade = 0,   ///< 두 재생을 함께 샘플해 "blend" 길이 동안 섞습니다.
+        Inertialization, ///< 새 재생 하나만 샘플하고, 끊긴 순간과의 차이를 "half_life" 반감기로 풀어 냅니다(`PoseInertializer`).
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 애니메이션 그래프 링크(상태 전이)입니다. */
     struct SW_API AnimationGraphLink
     {
-        int32                _id{ 0 };               /**< 그래프 안에서 유일한 링크 id 입니다. 1 이상이어야 합니다. */
-        int32                _fromNode{ 0 };         /**< 출발 노드 id 입니다. */
-        int32                _toNode{ 0 };           /**< 도착 노드 id 입니다. */
-        float32              _blendSeconds{ -1.0f }; /**< 크로스페이드 길이(JSON "blend", 선택). 음수면 플레이어 기본값입니다. */
-        hashed_string        _parameter;             /**< 조건 파라미터 이름(JSON "condition"."param")입니다. */
-        float32              _threshold{ 0.0f };     /**< 조건 비교값(JSON "condition"."value")입니다. */
+        int32   _id{ 0 };               /**< 그래프 안에서 유일한 링크 id 입니다. 1 이상이어야 합니다. */
+        int32   _fromNode{ 0 };         /**< 출발 노드 id 입니다. */
+        int32   _toNode{ 0 };           /**< 도착 노드 id 입니다. */
+        float32 _blendSeconds{ -1.0f }; /**< 크로스페이드 길이(JSON "blend", 선택). 음수면 플레이어 기본값입니다. */
+        /** @brief inertialization 반감기(초, JSON "half_life")입니다. "blend_mode" 가 "inertialization" 이면 반드시 0 보다 큰 값을 적어야 합니다(없으면 로드 오류). */
+        float32              _halfLifeSeconds{ 0.0f };
+        hashed_string        _parameter;         /**< 조건 파라미터 이름(JSON "condition"."param")입니다. */
+        float32              _threshold{ 0.0f }; /**< 조건 비교값(JSON "condition"."value")입니다. */
         AnimationConditionOp _op{ AnimationConditionOp::None };
+        AnimationBlendMode   _blendMode{ AnimationBlendMode::Crossfade }; /**< 포즈를 잇는 방식(JSON "blend_mode", 선택)입니다. */
 
         /** @brief 조건이 지금 파라미터 값으로 참인지 봅니다. 조건이 없으면 false 입니다(끝나면 다음은 따로 봅니다). */
         bool isConditionMet( float32 parameterValue ) const;
@@ -132,6 +183,10 @@ namespace sw
         [[nodiscard]] static bool parseConditionOp( string_view text, AnimationConditionOp& outOp );
         /** @brief 조건 표기를 씁니다. */
         static const utf8* getConditionOpText( AnimationConditionOp op );
+        /** @brief 전이 방식 표기("crossfade", "inertialization")를 읽습니다. 모르는 표기면 false 입니다. */
+        [[nodiscard]] static bool parseBlendMode( string_view text, AnimationBlendMode& outMode );
+        /** @brief 전이 방식 표기를 씁니다. */
+        static const utf8* getBlendModeText( AnimationBlendMode mode );
 
         vector<AnimationGraphNode> _listNode; /**< 노드 목록입니다. */
         vector<AnimationGraphLink> _listLink; /**< 링크 목록입니다. */
@@ -141,5 +196,7 @@ namespace sw
         [[nodiscard]] bool parseRoot( const JSONValue& root );
         /** @brief 노드의 "blend_space" 객체를 읽습니다. 잘못되었으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool parseBlendSpace( const JSONValue& blendSpaceJSON, AnimationGraphNode& inoutNode );
+        /** @brief 노드의 "pose_node" 객체를 읽습니다. 모르는 종류이거나 종류가 요구하는 값이 없으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool parsePoseNode( const JSONValue& poseNodeJSON, AnimationGraphNode& inoutNode );
     };
 } // namespace sw

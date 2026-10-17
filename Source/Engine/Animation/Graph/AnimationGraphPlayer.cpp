@@ -29,11 +29,11 @@ namespace sw
             // 이름이 비었으면 진입 노드, 그래프에 없는 이름이면 그래프 밖에서 그 이름을 바로 재생한다(전이 없음).
             const AnimationGraphNode* pNode = stateName.empty() ? _pGraph->findEntryNode() : _pGraph->findNodeByName( stateName.c_str() );
             if ( pNode != nullptr )
-                return enterNode( *pNode, bLoop ? kLoopYes : kLoopNo, blendSeconds );
+                return enterNode( *pNode, bLoop ? kLoopYes : kLoopNo, AnimationBlendMode::Crossfade, blendSeconds );
         }
         _currentNodeID    = 0;
         _currentStateName = stateName;
-        return startPlayable( stateName, bLoop, blendSeconds );
+        return startPlayable( stateName, bLoop, AnimationBlendMode::Crossfade, blendSeconds );
     }
 
     void AnimationGraphPlayer::playPlayable( const hashed_string& stateName, const IAnimationPlayable* pPlayable, bool bLoop )
@@ -66,7 +66,7 @@ namespace sw
                     pParameter->consumeTrigger( link._parameter );
                 const AnimationGraphNode* pTarget = _pGraph->findNode( link._toNode );
                 if ( pTarget != nullptr )
-                    (void)enterNode( *pTarget, kLoopFromPlayable, link._blendSeconds );
+                    (void)enterNodeThroughLink( *pTarget, link, kLoopFromPlayable );
                 break;
             }
         }
@@ -82,7 +82,7 @@ namespace sw
         const AnimationGraphLink* pFinish = _pGraph->findFinishLink( _currentNodeID );
         const AnimationGraphNode* pNext   = pFinish != nullptr ? _pGraph->findNode( pFinish->_toNode ) : nullptr;
         if ( pNext != nullptr )
-            (void)enterNode( *pNext, kLoopNo, pFinish->_blendSeconds );
+            (void)enterNodeThroughLink( *pNext, *pFinish, kLoopNo );
     }
 
     bool AnimationGraphPlayer::advance()
@@ -95,11 +95,17 @@ namespace sw
         const AnimationGraphNode* pNext   = pFinish != nullptr ? _pGraph->findNode( pFinish->_toNode ) : nullptr;
         if ( pNext == nullptr )
             return false;
-        (void)enterNode( *pNext, kLoopNo, pFinish->_blendSeconds );
+        (void)enterNodeThroughLink( *pNext, *pFinish, kLoopNo );
         return true;
     }
 
-    bool AnimationGraphPlayer::enterNode( const AnimationGraphNode& node, int8 loopWhenUnspecified, float32 blendSeconds )
+    bool AnimationGraphPlayer::enterNodeThroughLink( const AnimationGraphNode& node, const AnimationGraphLink& link, int8 loopWhenUnspecified )
+    {
+        const float32 seconds = link._blendMode == AnimationBlendMode::Inertialization ? link._halfLifeSeconds : link._blendSeconds;
+        return enterNode( node, loopWhenUnspecified, link._blendMode, seconds );
+    }
+
+    bool AnimationGraphPlayer::enterNode( const AnimationGraphNode& node, int8 loopWhenUnspecified, AnimationBlendMode blendMode, float32 blendSeconds )
     {
         _currentNodeID    = node._id;
         _currentStateName = hashed_string( node._name );
@@ -109,10 +115,12 @@ namespace sw
             const IAnimationPlayable* pPlayable = ( _pSource != nullptr ) ? _pSource->findPlayable( _currentStateName ) : nullptr;
             loop                                = ( pPlayable != nullptr && pPlayable->isLoopingByDefault() ) ? kLoopYes : kLoopNo;
         }
-        return startPlayable( _currentStateName, loop == kLoopYes, blendSeconds < 0.0f ? _defaultBlendSeconds : blendSeconds );
+        // 음수 길이는 "링크가 블렌드를 적지 않았다"는 크로스페이드의 뜻이다. inertialization 의 반감기는 로드에서 0 보다 큼을 확인했다.
+        const bool bUseDefaultBlend = blendMode == AnimationBlendMode::Crossfade && blendSeconds < 0.0f;
+        return startPlayable( _currentStateName, loop == kLoopYes, blendMode, bUseDefaultBlend ? _defaultBlendSeconds : blendSeconds );
     }
 
-    bool AnimationGraphPlayer::startPlayable( const hashed_string& name, bool bLoop, float32 blendSeconds )
+    bool AnimationGraphPlayer::startPlayable( const hashed_string& name, bool bLoop, AnimationBlendMode blendMode, float32 blendSeconds )
     {
         const IAnimationPlayable* pPlayable = ( _pSource != nullptr && name.empty() == false ) ? _pSource->findPlayable( name ) : nullptr;
         if ( pPlayable == nullptr )
@@ -120,7 +128,9 @@ namespace sw
             _player.stop();
             return false;
         }
-        if ( blendSeconds > 0.0f )
+        if ( blendMode == AnimationBlendMode::Inertialization )
+            _player.inertialize( pPlayable, blendSeconds, bLoop );
+        else if ( blendSeconds > 0.0f )
             _player.crossfade( pPlayable, blendSeconds, bLoop );
         else
             _player.play( pPlayable, bLoop );

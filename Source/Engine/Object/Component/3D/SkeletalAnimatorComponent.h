@@ -13,6 +13,7 @@
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/PoseInertializer.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -259,6 +260,8 @@ namespace sw
         vector<uint8>                                                 _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
         Pose                                                          _lastBasePose;         ///< 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 여기서 이어 섞는다
         Pose                                                          _carryOverPose;        ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
+        Pose                                                          _previousBasePose;     ///< `_lastBasePose` 의 한 프레임 전 포즈다(inertialization 의 시작 속도)
+        PoseInertializer                                              _inertializer;         ///< inertialization 전이의 남은 차이다(기본 포즈에 더한다)
         shared_ptr<const AnimationClip>                               _sequencerClip;
         BoneTransform                                                 _rootMotionDelta;
         SkeletalMeshComponent*                                        _pUnit;
@@ -269,7 +272,8 @@ namespace sw
         float32                                                       _initialTime; ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
         float32                                                       _carryOverElapsed;
         float32                                                       _carryOverDuration;
-        uint32                                                        _seenInterruptCount; ///< 플레이어의 중단 횟수를 마지막으로 확인한 값
+        uint32                                                        _seenInterruptCount;       ///< 플레이어의 중단 횟수를 마지막으로 확인한 값
+        uint32                                                        _seenInertializationCount; ///< 플레이어의 inertialization 횟수를 마지막으로 확인한 값
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )
         uint8 _bExtractRootMotion : 1;
         PROPERTY( Category = "Animation", DisplayName = "Play On Begin", Tooltip = "Start the initial state at begin play" )
@@ -279,6 +283,7 @@ namespace sw
         uint8                  _bRootMotionThroughController : 1;
         uint8                  _bLastBasePoseValid           : 1;
         uint8                  _bCarryingOver                : 1;
-        [[maybe_unused]] uint8 _reserved                     : 3;
+        uint8                  _bInertializationPending      : 1; ///< 새 inertialization 이 다음 포즈 계산에서 시작되기를 기다린다
+        [[maybe_unused]] uint8 _reserved                     : 2;
     };
 } // namespace sw

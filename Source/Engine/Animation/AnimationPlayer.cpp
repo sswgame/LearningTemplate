@@ -11,7 +11,9 @@ namespace sw
         , _fadeDuration{ 0.0f }
         , _fadeElapsed{ 0.0f }
         , _speed{ 1.0f }
+        , _inertializationHalfLife{ 0.0f }
         , _interruptCount{ 0 }
+        , _inertializationCount{ 0 }
     {
     }
 
@@ -44,6 +46,16 @@ namespace sw
         _arrSlot[1]._bLoop     = bLoop ? SW_TRUE : SW_FALSE;
         _fadeDuration          = fadeSeconds;
         _fadeElapsed           = 0.0f;
+    }
+
+    void AnimationPlayer::inertialize( const IAnimationPlayable* pPlayable, float32 halfLifeSeconds, bool bLoop )
+    {
+        play( pPlayable, bLoop );
+        // 재생할 것이 없거나 반감기가 없으면 풀어 낼 차이도 없다 — 그냥 바로 재생이다.
+        if ( pPlayable == nullptr || halfLifeSeconds <= 0.0f )
+            return;
+        _inertializationHalfLife = halfLifeSeconds;
+        ++_inertializationCount;
     }
 
     void AnimationPlayer::update( float32 deltaSeconds, vector<AnimationFiredNotify>* pOutListFired )
