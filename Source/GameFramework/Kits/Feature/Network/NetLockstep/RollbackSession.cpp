@@ -33,15 +33,28 @@ namespace sw
     {
     }
 
-    void RollbackSession::initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings )
+    bool RollbackSession::initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings )
     {
-        _pHost                   = pHost;
-        _pGame                   = pGame;
-        _playerCount             = MathUtil::max( 1, playerCount );
-        _localPlayer             = localPlayer;
-        _settings                = settings;
-        _settings._inputDelay    = MathUtil::clamp( _settings._inputDelay, 0, kMaxInputDelay );
-        _settings._maxPrediction = MathUtil::clamp( _settings._maxPrediction, 1, kMaxPrediction );
+        // 실패하면 시작하지 않은 세션으로 남긴다. 값을 범위 안으로 맞춰 돌지 않는다.
+        _pGame                      = nullptr;
+        const bool bPlayersValid    = playerCount >= 1 && localPlayer >= 0 && localPlayer < playerCount;
+        const bool bInputDelayValid = settings._inputDelay >= 0 && settings._inputDelay <= kMaxInputDelay;
+        const bool bPredictionValid = settings._maxPrediction >= 1 && settings._maxPrediction <= kMaxPrediction;
+        const bool bAdvantageValid  = settings._maxFrameAdvantage >= 0;
+        const bool bSettingsValid   = bInputDelayValid && bPredictionValid && bAdvantageValid;
+        const bool bCanStart        = pGame != nullptr && bPlayersValid && bSettingsValid;
+        if ( bCanStart == false )
+        {
+            SW_LOG_ERROR( "RollbackSession: refused to start - game %#, players %#, local player %#, input delay %# (0 ~ %#), max prediction %# (1 ~ %#), max frame advantage %# (0 or more)",
+                          pGame != nullptr ? "set" : "missing", playerCount, localPlayer, settings._inputDelay, kMaxInputDelay, settings._maxPrediction, kMaxPrediction,
+                          settings._maxFrameAdvantage );
+            return false;
+        }
+        _pHost       = pHost;
+        _pGame       = pGame;
+        _playerCount = playerCount;
+        _localPlayer = localPlayer;
+        _settings    = settings;
         _listRecord.initialize( kHistorySize );
         _listReceive.assign( static_cast<size_t>( _playerCount ), NetInputReceiveBuffer{} );
         for ( NetInputReceiveBuffer& buffer : _listReceive )
@@ -70,6 +83,7 @@ namespace sw
             }
             (void)_sendWindow.push( static_cast<uint32>( frame ), &neutralInput, 1 );
         }
+        return true;
     }
 
     int32 RollbackSession::getConfirmedFrame() const
