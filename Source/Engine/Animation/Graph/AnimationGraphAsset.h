@@ -10,7 +10,44 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Animation/Graph/AnimationBoneMask.h"
 #include "Engine/Animation/Graph/BlendSpace.h"
+
+namespace sw
+{
+    /**
+     * @enum AnimationLayerBlend
+     * @brief 레이어가 아래 포즈에 합쳐지는 방법입니다(JSON "blend": "Override", "Additive"). 모르는 표기는 로드 오류입니다.
+     */
+    enum class AnimationLayerBlend : uint8
+    {
+        Override = 0, ///< 마스크 안의 본을 가중치만큼 레이어 포즈로 섞습니다(상체만 조준).
+        Additive,     ///< 레이어 클립의 시각 0 포즈 기준 차이를 가중치만큼 더합니다(숨쉬기, 맞음 움찔).
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AnimationGraphLayerDef
+     * @brief 그래프의 레이어 하나입니다(JSON "layers" 항목). 상태 기계 결과 위에 클립 하나를 마스크 안의 본에 가중치만큼 얹습니다.
+     * @details JSON 형식은 `{ "name": "UpperBody", "clip": "Aim", "mask": "UpperBody", "weight": 1.0, "blend": "Override", "loop": true, "weight_param": "AimWeight" }` 이다.
+     *          name, clip, weight, blend 는 필수다. "mask" 를 적지 않으면 모든 본이고, 적었는데 "bone_masks" 에 없으면 로드 오류다.
+     *          "weight_param" 이 있으면 매 프레임 그 파라미터 값(0..1 로 자름)이 가중치다(게임 코드가 레이어 번호를 몰라도 파라미터로 켜고 끈다).
+     *          언리얼 Layered Blend Per Bone, 유니티 Animator 레이어(마스크, 가중치, Override/Additive)에 해당한다.
+     */
+    struct AnimationGraphLayerDef
+    {
+        hashed_string       _name{};
+        hashed_string       _clipName{};
+        hashed_string       _maskName{};        ///< 비었으면 모든 본이다.
+        hashed_string       _weightParameter{}; ///< 비었으면 `_weight` 를 그대로 쓴다.
+        float32             _weight{ 1.0f };
+        float32             _halfLifeSeconds{ 0.0f }; ///< JSON "half_life"(선택, 0 보다 커야 함). 다시 시작할 때 끊긴 포즈에서 이어 가는 반감기다. 적지 않으면 즉시 새 포즈다
+        AnimationLayerBlend _blend{ AnimationLayerBlend::Override };
+        uint8               _bLoop{ SW_TRUE };
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -187,9 +224,15 @@ namespace sw
         [[nodiscard]] static bool parseBlendMode( string_view text, AnimationBlendMode& outMode );
         /** @brief 전이 방식 표기를 씁니다. */
         static const utf8* getBlendModeText( AnimationBlendMode mode );
+        /** @brief 이름으로 본 마스크를 찾습니다. 없으면 nullptr 입니다. */
+        const AnimationBoneMaskDef* findBoneMask( const hashed_string& name ) const;
+        /** @brief 이름으로 레이어를 찾습니다. 없으면 nullptr 입니다. */
+        const AnimationGraphLayerDef* findLayer( const hashed_string& name ) const;
 
-        vector<AnimationGraphNode> _listNode; /**< 노드 목록입니다. */
-        vector<AnimationGraphLink> _listLink; /**< 링크 목록입니다. */
+        vector<AnimationGraphNode>     _listNode;     /**< 노드 목록입니다. */
+        vector<AnimationGraphLink>     _listLink;     /**< 링크 목록입니다. */
+        vector<AnimationBoneMaskDef>   _listBoneMask; /**< 본 마스크 목록입니다(JSON "bone_masks"). 레이어가 이름으로 가리킵니다. */
+        vector<AnimationGraphLayerDef> _listLayer;    /**< 레이어 목록입니다(JSON "layers"). 적은 순서대로 얹습니다. */
 
     private:
         /** @brief 이미 파싱된 JSON 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. */
@@ -198,5 +241,11 @@ namespace sw
         [[nodiscard]] static bool parseBlendSpace( const JSONValue& blendSpaceJSON, AnimationGraphNode& inoutNode );
         /** @brief 노드의 "pose_node" 객체를 읽습니다. 모르는 종류이거나 종류가 요구하는 값이 없으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool parsePoseNode( const JSONValue& poseNodeJSON, AnimationGraphNode& inoutNode );
+        /** @brief "bone_masks" 와 "layers" 를 읽습니다. 이름이 비거나 겹치거나, 레이어가 없는 마스크를 가리키면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool parseLayers( const JSONValue& root );
+        /** @brief "bone_masks" 와 "layers" 를 씁니다. */
+        void writeLayers( const JSONValue& root ) const;
+        /** @brief 목록을 모두 비웁니다. */
+        void clear();
     };
 } // namespace sw

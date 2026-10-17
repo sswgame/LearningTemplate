@@ -90,7 +90,43 @@ namespace sw
 
     const IAnimationPlayable* SkeletalAnimatorBinding::findPlayable( const hashed_string& name ) const
     {
+        // 블렌드 스페이스 노드는 그 상태를, 보통 노드(또는 그래프 밖 이름)는 같은 이름의 클립을 낸다.
+        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _owner._listBlendSpace )
+        {
+            if ( state->getStateName() == name )
+                return state.get();
+        }
         return _owner.findClip( name );
+    }
+
+    SkeletalBlendSpaceState::SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip )
+        : _stateName{ stateName }
+        , _pDef{ &def }
+        , _listClip{ std::move( listClip ) }
+        , _listLength{}
+        , _listWeight{}
+        , _playLength{ 0.0f }
+    {
+        _listLength.reserve( _listClip.size() );
+        for ( const AnimationClip* pClip : _listClip )
+        {
+            _listLength.push_back( pClip->getPlayLength() );
+        }
+        _listWeight.assign( _listClip.size(), 0.0f );
+    }
+
+    void SkeletalBlendSpaceState::updateWeights( const AnimationParameterSet& parameters )
+    {
+        const float2 parameter{ parameters.getFloat( _pDef->_parameterX ), _pDef->_parameterY.empty() ? 0.0f : parameters.getFloat( _pDef->_parameterY ) };
+        _pDef->_space.computeSampleWeights( parameter, _listWeight );
+        _playLength = BlendSpace::computeBlendedLength( _listLength, _listWeight );
+    }
+
+    float32 SkeletalBlendSpaceState::computeSampleTime( uint32 sampleIndex, float32 time ) const
+    {
+        if ( _playLength <= 0.0f )
+            return 0.0f;
+        return time / _playLength * _listLength[sampleIndex];
     }
 
     SkeletalAnimatorComponent::SkeletalAnimatorComponent()
@@ -111,6 +147,11 @@ namespace sw
         , _mapTrackToBone{}
         , _pTrackMapSkeleton{ nullptr }
         , _listLayer{}
+        , _listGraphLayer{}
+        , _listBlendSpace{}
+        , _listScratchSamplePose{}
+        , _listScratchSamplePosePointer{}
+        , _listScratchSampleWeight{}
         , _listFiredNotify{}
         , _listActivePlayable{}
         , _listRootMotionModifier{}
@@ -215,7 +256,13 @@ namespace sw
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( _animationGraphPath ) == false )
             SW_LOG_ERROR( "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         _graphPlayer.setGraph( _graph._listNode.empty() ? nullptr : &_graph );
-        // 워커의 전이는 읽어 둔 클립만 찾으므로 노드의 클립은 지금(게임 스레드) 읽는다.
+        rebuildGraphPlayables();
+    }
+
+    void SkeletalAnimatorComponent::rebuildGraphPlayables()
+    {
+        // 플레이어(`setGraph`, `stop`)가 빌린 상태를 놓은 뒤에 부른다. 워커의 전이는 읽어 둔 클립만 찾으므로 클립은 지금(게임 스레드) 읽는다.
+        _listBlendSpace.clear();
         for ( const AnimationGraphNode& node : _graph._listNode )
         {
             // 포즈 노드(`AnimationPoseNodeSet`)는 아직 이 애니메이터가 평가하지 않는다 — 클립으로 잘못 재생하지 않고 오류로 알린다.
@@ -224,7 +271,50 @@ namespace sw
                 SW_LOG_ERROR( "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", _animationGraphPath.c_str(), node._name.c_str() );
                 continue;
             }
-            (void)preloadClip( hashed_string( node._name ) );
+            if ( node.hasBlendSpace() == false )
+            {
+                (void)preloadClip( hashed_string( node._name ) ); // 노드 이름이 클립이 아닌 상태(이름만 옮기는 상태)도 있다. 재생할 때 못 찾으면 play 가 오류를 남긴다
+                continue;
+            }
+            vector<const AnimationClip*> listClip;
+            for ( const BlendSpaceSample& sample : node._blendSpace._space.getSamples() )
+            {
+                const bool bLoaded = preloadClip( sample._clipName );
+                if ( bLoaded == false )
+                    SW_LOG_ERROR( "Blend space state '%#' sample clip '%#' was not found in '%#'", node._name.c_str(), sample._clipName.c_str(), _clipFolder.c_str() );
+                listClip.push_back( bLoaded ? findClip( sample._clipName ) : nullptr );
+            }
+            // 표본 클립이 하나라도 없으면 상태를 만들지 않는다 — 없는 표본을 빼고 섞으면 데이터가 말한 것과 다른 포즈가 된다.
+            if ( std::find( listClip.begin(), listClip.end(), nullptr ) != listClip.end() )
+                continue;
+            unique_ptr<SkeletalBlendSpaceState> state = make_unique<SkeletalBlendSpaceState>( hashed_string( node._name ), node._blendSpace, std::move( listClip ) );
+            state->updateWeights( _parameters );
+            _listBlendSpace.push_back( std::move( state ) );
+        }
+        rebuildGraphLayers();
+    }
+
+    void SkeletalAnimatorComponent::rebuildGraphLayers()
+    {
+        _listGraphLayer.clear();
+        for ( const AnimationGraphLayerDef& def : _graph._listLayer )
+        {
+            if ( preloadClip( def._clipName ) == false )
+            {
+                SW_LOG_ERROR( "Animation graph layer '%#' clip '%#' was not found in '%#'", def._name.c_str(), def._clipName.c_str(), _clipFolder.c_str() );
+                continue;
+            }
+            LayerState layer{};
+            layer._desc._clipName        = def._clipName;
+            layer._desc._weight          = def._weight;
+            layer._desc._blend           = def._blend;
+            layer._desc._bLoop           = def._bLoop;
+            layer._desc._halfLifeSeconds = def._halfLifeSeconds;
+            layer._pGraphLayer           = &def;
+            layer._pBoneMask             = def._maskName.empty() ? nullptr : _graph.findBoneMask( def._maskName );
+            layer._clip                  = _mapClip[def._clipName];
+            layer._player.play( layer._clip.get(), def._bLoop == SW_TRUE );
+            _listGraphLayer.push_back( std::move( layer ) );
         }
     }
 
@@ -235,10 +325,7 @@ namespace sw
         _clipFolder = string{ folder };
         _mapClip.clear();
         _mapTrackToBone.clear();
-        for ( const AnimationGraphNode& node : _graph._listNode )
-        {
-            (void)preloadClip( hashed_string( node._name ) );
-        }
+        rebuildGraphPlayables();
     }
 
     void SkeletalAnimatorComponent::setAnimationGraphPath( string_view path )
@@ -275,7 +362,11 @@ namespace sw
     bool SkeletalAnimatorComponent::play( const hashed_string& stateName, bool bLoop, float32 blendSeconds )
     {
         const AnimationGraphNode* pNode = stateName.empty() ? _graph.findEntryNode() : _graph.findNodeByName( stateName.c_str() );
-        (void)preloadClip( pNode != nullptr ? hashed_string( pNode->_name ) : stateName );
+        // 블렌드 스페이스 노드의 표본은 그래프를 읽을 때 읽었다. 가중치와 길이는 지금 파라미터로 맞춰 둔다(길이 0 이면 재생되지 않는다).
+        if ( pNode != nullptr && pNode->hasBlendSpace() )
+            updateBlendSpaceWeights();
+        else
+            (void)preloadClip( pNode != nullptr ? hashed_string( pNode->_name ) : stateName ); // 못 찾으면 아래 play 가 오류를 남긴다
         const bool bFound = _graphPlayer.play( stateName, bLoop, blendSeconds < 0.0f ? _blendSeconds : blendSeconds );
         _currentState     = _graphPlayer.getCurrentStateName().c_str();
         _stateTime        = 0.0f;
@@ -322,6 +413,8 @@ namespace sw
             return;
         LayerState& layer = _listLayer[layerIndex];
         layer._player.play( layer._clip.get(), layer._desc._bLoop == SW_TRUE );
+        // 반감기가 있으면 다음 평가가 끊긴 레이어 포즈에서 새 포즈로 이어 간다(얹은 적이 없으면 이어 갈 포즈가 없다).
+        layer._bRestartPending = ( layer._desc._halfLifeSeconds > 0.0f && layer._lastLayerPose.getBoneCount() > 0 ) ? SW_TRUE : SW_FALSE;
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
     }
@@ -329,6 +422,25 @@ namespace sw
     void SkeletalAnimatorComponent::clearLayers()
     {
         _listLayer.clear();
+    }
+
+    bool SkeletalAnimatorComponent::setGraphLayerWeight( const hashed_string& layerName, float32 weight )
+    {
+        for ( LayerState& layer : _listGraphLayer )
+        {
+            if ( layer._pGraphLayer->_name != layerName )
+                continue;
+            if ( layer._pGraphLayer->_weightParameter.empty() == false )
+            {
+                SW_LOG_ERROR( "Animation graph layer '%#' takes its weight from parameter '%#'; set the parameter instead", layerName.c_str(),
+                              layer._pGraphLayer->_weightParameter.c_str() );
+                return false;
+            }
+            layer._desc._weight = MathUtil::clamp( weight, 0.0f, 1.0f );
+            return true;
+        }
+        SW_LOG_ERROR( "Animation graph layer '%#' was not found in '%#'", layerName.c_str(), _animationGraphPath.c_str() );
+        return false;
     }
 
     void SkeletalAnimatorComponent::setSequencerOverride( shared_ptr<const AnimationClip> clip, float32 time, float32 weight )
@@ -358,13 +470,16 @@ namespace sw
 
     bool SkeletalAnimatorComponent::describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
     {
-        const AnimationPlayer& player   = _graphPlayer.getPlayer();
-        const AnimationClip*   pCurrent = static_cast<const AnimationClip*>( player.getCurrentPlayable() );
-        // 섞는 중(끊긴 페이드를 이어 섞는 중 포함) · 레이어 · 시퀀서 덮어쓰기는 캐릭터마다 다르다. 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다.
-        const bool bNotShareable = pCurrent == nullptr || player.isCrossfading() || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || _listLayer.empty() == false || _sequencerWeight > 0.0f;
+        const AnimationPlayer&    player   = _graphPlayer.getPlayer();
+        const IAnimationPlayable* pPlaying = player.getCurrentPlayable();
+        // 섞는 중(끊긴 페이드를 이어 섞는 중 포함) · 레이어 · 블렌드 스페이스(파라미터가 캐릭터마다 다르다) · 시퀀서 덮어쓰기는 캐릭터마다 다르다.
+        // 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다.
+        const bool bLayered      = _listLayer.empty() == false || _listGraphLayer.empty() == false;
+        const bool bNotClip      = pPlaying == nullptr || findBlendSpaceState( pPlaying ) != nullptr;
+        const bool bNotShareable = bNotClip || player.isCrossfading() || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || bLayered || _sequencerWeight > 0.0f;
         if ( bNotShareable )
             return false;
-        outRequest._pClip             = pCurrent;
+        outRequest._pClip             = static_cast<const AnimationClip*>( pPlaying );
         outRequest._time              = player.getCurrentTime();
         outRequest._playRate          = _playRate * player.getSpeed();
         outRequest._bAnchorRootMotion = _bExtractRootMotion;
@@ -374,7 +489,8 @@ namespace sw
     bool SkeletalAnimatorComponent::isAnimationActive() const
     {
         const bool bPlaying = _graphPlayer.getPlayer().getCurrentPlayable() != nullptr;
-        return bPlaying || _listLayer.empty() == false || _sequencerWeight > 0.0f;
+        const bool bLayered = _listLayer.empty() == false || _listGraphLayer.empty() == false;
+        return bPlaying || bLayered || _sequencerWeight > 0.0f;
     }
 
     void SkeletalAnimatorComponent::collectActivePlayables( vector<const IAnimationPlayable*>& outListPlayable ) const
@@ -385,6 +501,11 @@ namespace sw
             outListPlayable.push_back( player.getCurrentPlayable() );
         if ( player.getNextPlayable() != nullptr )
             outListPlayable.push_back( player.getNextPlayable() );
+        for ( const LayerState& layer : _listGraphLayer )
+        {
+            if ( layer._clip != nullptr )
+                outListPlayable.push_back( layer._clip.get() );
+        }
         for ( const LayerState& layer : _listLayer )
         {
             if ( layer._clip != nullptr )
@@ -464,7 +585,14 @@ namespace sw
         const float32 deltaSeconds = context._deltaSeconds * _playRate;
         _lastDeltaSeconds          = deltaSeconds;
         _listFiredNotify.clear();
+        updateBlendSpaceWeights();
         _graphPlayer.update( deltaSeconds, &_parameters, &_listFiredNotify );
+        for ( LayerState& layer : _listGraphLayer )
+        {
+            if ( layer._pGraphLayer->_weightParameter.empty() == false )
+                layer._desc._weight = MathUtil::saturate( _parameters.getFloat( layer._pGraphLayer->_weightParameter ) );
+            layer._player.update( deltaSeconds, &_listFiredNotify );
+        }
         for ( LayerState& layer : _listLayer )
         {
             layer._player.update( deltaSeconds, &_listFiredNotify );
@@ -503,43 +631,29 @@ namespace sw
             _inertializer.update( deltaSeconds );
         }
 
-        const AnimationClip* pCurrent = static_cast<const AnimationClip*>( player.getCurrentPlayable() );
-        const AnimationClip* pNext    = static_cast<const AnimationClip*>( player.getNextPlayable() );
-        const float32        alpha    = player.getBlendAlpha();
+        const IAnimationPlayable* pCurrent = player.getCurrentPlayable();
+        const IAnimationPlayable* pNext    = player.getNextPlayable();
+        const float32             alpha    = player.getBlendAlpha();
 
         // 루트 모션 — 두 칸의 움직임을 섞임 가중치로 섞는다.
         _rootMotionDelta = BoneTransform{};
         if ( _bExtractRootMotion == SW_TRUE && pCurrent != nullptr )
         {
-            _rootMotionDelta = pCurrent->computeRootMotionDelta( player.getCurrentStep() );
+            _rootMotionDelta = computePlayableRootMotion( *pCurrent, player.getCurrentStep() );
             if ( pNext != nullptr )
-                _rootMotionDelta = BoneTransform::blend( _rootMotionDelta, pNext->computeRootMotionDelta( player.getNextStep() ), alpha );
+                _rootMotionDelta = BoneTransform::blend( _rootMotionDelta, computePlayableRootMotion( *pNext, player.getNextStep() ), alpha );
         }
 
         // 커브 — 두 칸의 값을 섞는다. 한쪽에만 있는 커브는 그쪽 가중치만큼입니다.
         _listCurveName.clear();
         _listCurveValue.clear();
-        const AnimationClip* arrClip[2]   = { pCurrent, pNext };
-        const float32        arrWeight[2] = { 1.0f - alpha, alpha };
-        const float32        arrTime[2]   = { player.getCurrentTime(), player.getNextTime() };
+        const IAnimationPlayable* arrPlayable[2] = { pCurrent, pNext };
+        const float32             arrWeight[2]   = { 1.0f - alpha, alpha };
+        const float32             arrTime[2]     = { player.getCurrentTime(), player.getNextTime() };
         for ( uint32 slotIndex = 0; slotIndex < 2; ++slotIndex )
         {
-            if ( arrClip[slotIndex] == nullptr )
-                continue;
-            for ( const AnimationClipCurve& curve : arrClip[slotIndex]->getCurves() )
-            {
-                const float32 value = curve.evaluate( arrTime[slotIndex] ) * arrWeight[slotIndex];
-                const auto    it    = std::find( _listCurveName.begin(), _listCurveName.end(), curve._name );
-                if ( it == _listCurveName.end() )
-                {
-                    _listCurveName.push_back( curve._name );
-                    _listCurveValue.push_back( value );
-                }
-                else
-                {
-                    _listCurveValue[static_cast<size_t>( it - _listCurveName.begin() )] += value;
-                }
-            }
+            if ( arrPlayable[slotIndex] != nullptr )
+                accumulatePlayableCurves( *arrPlayable[slotIndex], arrTime[slotIndex], arrWeight[slotIndex] );
         }
 
         // 핫 리로드가 복원할 상태 · 시각을 PROPERTY 에 비춘다(게임 스레드가 아니어도 이 컴포넌트만의 칸이다).
@@ -552,6 +666,10 @@ namespace sw
         {
             _mapTrackToBone.clear();
             _pTrackMapSkeleton = &skeleton;
+            for ( LayerState& layer : _listGraphLayer )
+            {
+                layer._pMaskSkeleton = nullptr;
+            }
             for ( LayerState& layer : _listLayer )
             {
                 layer._pMaskSkeleton = nullptr;
@@ -587,16 +705,25 @@ namespace sw
             return;
         layer._pMaskSkeleton   = &skeleton;
         const uint32 boneCount = skeleton.getBoneCount();
-        layer._listBoneWeight.assign( boneCount, layer._desc._maskRootBone.empty() ? 1.0f : 0.0f );
-        const int32 maskRoot = layer._desc._maskRootBone.empty() ? -1 : skeleton.findBoneIndex( layer._desc._maskRootBone );
-        if ( layer._desc._maskRootBone.empty() == false && maskRoot < 0 )
-            SW_LOG_WARNING( "Animation layer mask bone '%#' is not in the skeleton", layer._desc._maskRootBone.c_str() );
-        // 부모가 앞에 있으므로 한 번 훑으면 마스크 본의 자손이 모두 1 이 된다.
-        for ( uint32 boneIndex = 0; maskRoot >= 0 && boneIndex < boneCount; ++boneIndex )
+        if ( layer._pBoneMask != nullptr )
         {
-            const int32 parentIndex          = skeleton.getBone( boneIndex )._parentIndex;
-            const bool  bInMask              = static_cast<int32>( boneIndex ) == maskRoot || ( parentIndex >= 0 && layer._listBoneWeight[static_cast<uint32>( parentIndex )] > 0.0f );
-            layer._listBoneWeight[boneIndex] = bInMask ? 1.0f : 0.0f;
+            // 데이터 마스크(roots 퍼뜨림 + bones 예외)다. 스켈레톤에 없는 본을 가리키면 모두 0 이라 이 레이어는 아무것도 바꾸지 않는다.
+            if ( layer._pBoneMask->computeBoneWeights( skeleton, layer._listBoneWeight ) == false )
+                SW_LOG_ERROR( "Animation graph layer '%#' is off: bone mask '%#' does not fit the skeleton", layer._pGraphLayer->_name.c_str(), layer._pBoneMask->_name.c_str() );
+        }
+        else
+        {
+            layer._listBoneWeight.assign( boneCount, layer._desc._maskRootBone.empty() ? 1.0f : 0.0f );
+            const int32 maskRoot = layer._desc._maskRootBone.empty() ? -1 : skeleton.findBoneIndex( layer._desc._maskRootBone );
+            if ( layer._desc._maskRootBone.empty() == false && maskRoot < 0 )
+                SW_LOG_WARNING( "Animation layer mask bone '%#' is not in the skeleton", layer._desc._maskRootBone.c_str() );
+            // 부모가 앞에 있으므로 한 번 훑으면 마스크 본의 자손이 모두 1 이 된다.
+            for ( uint32 boneIndex = 0; maskRoot >= 0 && boneIndex < boneCount; ++boneIndex )
+            {
+                const int32 parentIndex          = skeleton.getBone( boneIndex )._parentIndex;
+                const bool  bInMask              = static_cast<int32>( boneIndex ) == maskRoot || ( parentIndex >= 0 && layer._listBoneWeight[static_cast<uint32>( parentIndex )] > 0.0f );
+                layer._listBoneWeight[boneIndex] = bInMask ? 1.0f : 0.0f;
+            }
         }
         // 가산 기준은 레이어 클립의 시각 0 본 포즈다.
         layer._additiveReference.setToReference( skeleton );
@@ -604,22 +731,168 @@ namespace sw
             sampleClipIntoPose( *layer._clip, 0.0f, skeleton, layer._additiveReference );
     }
 
+    void SkeletalAnimatorComponent::updateBlendSpaceWeights()
+    {
+        AnimationPlayer& player = _graphPlayer.getPlayer();
+        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _listBlendSpace )
+        {
+            const float32 previousLength = state->getPlayLength();
+            state->updateWeights( _parameters );
+            const float32 length = state->getPlayLength();
+            // 한 바퀴 길이가 바뀌면 같은 시각이 다른 위상이 된다(걷기 → 달리기에서 발이 튄다). 현재 슬롯은 위상을 지키게 시각을 옮긴다.
+            const bool bRescale = player.getCurrentPlayable() == state.get() && previousLength > 0.0f && length > 0.0f && previousLength != length;
+            if ( bRescale )
+                player.setCurrentTime( player.getCurrentTime() * ( length / previousLength ) );
+        }
+    }
+
+    const SkeletalBlendSpaceState* SkeletalAnimatorComponent::findBlendSpaceState( const IAnimationPlayable* pPlayable ) const
+    {
+        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _listBlendSpace )
+        {
+            if ( state.get() == pPlayable )
+                return state.get();
+        }
+        return nullptr;
+    }
+
+    void SkeletalAnimatorComponent::samplePlayableIntoPose( const IAnimationPlayable& playable, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
+    {
+        const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
+        if ( pState == nullptr )
+        {
+            // 이 애니메이터가 상태 기계에 주는 재생할 것은 블렌드 스페이스 상태가 아니면 클립뿐이다(`SkeletalAnimatorBinding::findPlayable`).
+            sampleClipIntoPose( static_cast<const AnimationClip&>( playable ), time, skeleton, inoutPose, pBoneMask );
+            return;
+        }
+        const uint32 sampleCount = pState->getSampleCount();
+        if ( _listScratchSamplePose.size() < sampleCount )
+            _listScratchSamplePose.resize( sampleCount );
+        _listScratchSamplePosePointer.clear();
+        _listScratchSampleWeight.clear();
+        // 가중치가 0 인 표본은 샘플하지 않는다(1D 는 많아야 둘, 2D 는 표본 위면 하나).
+        for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
+        {
+            const float32 weight = pState->getSampleWeight( sampleIndex );
+            if ( weight <= 0.0f )
+                continue;
+            Pose& samplePose = _listScratchSamplePose[sampleIndex];
+            samplePose.setToReference( skeleton );
+            sampleClipIntoPose( pState->getSampleClip( sampleIndex ), pState->computeSampleTime( sampleIndex, time ), skeleton, samplePose, pBoneMask );
+            _listScratchSamplePosePointer.push_back( &samplePose );
+            _listScratchSampleWeight.push_back( weight );
+        }
+        if ( _listScratchSamplePosePointer.empty() )
+            return;
+        Pose::blendWeighted( _listScratchSamplePosePointer.data(), _listScratchSampleWeight.data(), static_cast<uint32>( _listScratchSamplePosePointer.size() ), inoutPose );
+    }
+
+    BoneTransform SkeletalAnimatorComponent::computePlayableRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const
+    {
+        const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
+        if ( pState == nullptr )
+            return static_cast<const AnimationClip&>( playable ).computeRootMotionDelta( step );
+        // 표본마다 같은 위상 구간의 움직임을 구해 가중치로 섞는다(누적 평균: 앞의 합과 새 값을 새 가중치의 몫만큼).
+        BoneTransform result{};
+        float32       accumulatedWeight = 0.0f;
+        for ( uint32 sampleIndex = 0; sampleIndex < pState->getSampleCount(); ++sampleIndex )
+        {
+            const float32 weight = pState->getSampleWeight( sampleIndex );
+            if ( weight <= 0.0f )
+                continue;
+            AnimationTimeStep sampleStep = step;
+            sampleStep._previousTime     = pState->computeSampleTime( sampleIndex, step._previousTime );
+            sampleStep._currentTime      = pState->computeSampleTime( sampleIndex, step._currentTime );
+            const BoneTransform delta    = pState->getSampleClip( sampleIndex ).computeRootMotionDelta( sampleStep );
+            accumulatedWeight += weight;
+            result = BoneTransform::blend( result, delta, weight / accumulatedWeight );
+        }
+        return result;
+    }
+
+    void SkeletalAnimatorComponent::accumulatePlayableCurves( const IAnimationPlayable& playable, float32 time, float32 weight )
+    {
+        const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
+        if ( pState == nullptr )
+        {
+            accumulateClipCurves( static_cast<const AnimationClip&>( playable ), time, weight );
+            return;
+        }
+        for ( uint32 sampleIndex = 0; sampleIndex < pState->getSampleCount(); ++sampleIndex )
+        {
+            const float32 sampleWeight = pState->getSampleWeight( sampleIndex );
+            if ( sampleWeight > 0.0f )
+                accumulateClipCurves( pState->getSampleClip( sampleIndex ), pState->computeSampleTime( sampleIndex, time ), weight * sampleWeight );
+        }
+    }
+
+    void SkeletalAnimatorComponent::accumulateClipCurves( const AnimationClip& clip, float32 time, float32 weight )
+    {
+        for ( const AnimationClipCurve& curve : clip.getCurves() )
+        {
+            const float32 value = curve.evaluate( time ) * weight;
+            const auto    it    = std::find( _listCurveName.begin(), _listCurveName.end(), curve._name );
+            if ( it == _listCurveName.end() )
+            {
+                _listCurveName.push_back( curve._name );
+                _listCurveValue.push_back( value );
+            }
+            else
+            {
+                _listCurveValue[static_cast<size_t>( it - _listCurveName.begin() )] += value;
+            }
+        }
+    }
+
+    void SkeletalAnimatorComponent::applyLayer( LayerState& layer, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
+    {
+        // inertialization 의 시간은 가중치가 0 이어도 흐른다(다시 켰을 때 오래된 오프셋이 남지 않게).
+        layer._inertializer.update( _lastDeltaSeconds );
+        if ( layer._clip == nullptr || layer._desc._weight <= 0.0f )
+            return;
+        refreshLayerMask( layer, skeleton );
+        _scratchLayerPose.setToReference( skeleton );
+        sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose, pBoneMask );
+        if ( layer._desc._halfLifeSeconds > 0.0f )
+        {
+            if ( layer._bRestartPending == SW_TRUE )
+            {
+                // 출발은 끊기기 직전에 얹은 레이어 포즈(와 그 전 프레임), 도착은 다시 시작한 첫 포즈다. 실패(본 수가 바뀜)는 begin 이 오류를 남기고 즉시 새 포즈다.
+                const Pose* pPrevious = layer._previousLayerPose.getBoneCount() == layer._lastLayerPose.getBoneCount() ? &layer._previousLayerPose : nullptr;
+                (void)layer._inertializer.begin( layer._lastLayerPose, pPrevious, _scratchLayerPose, nullptr, _lastDeltaSeconds, layer._desc._halfLifeSeconds );
+                layer._bRestartPending = SW_FALSE;
+            }
+            layer._inertializer.apply( _scratchLayerPose );
+            layer._previousLayerPose = layer._lastLayerPose;
+            layer._lastLayerPose     = _scratchLayerPose;
+        }
+        if ( layer._desc._blend == AnimationLayerBlend::Override )
+        {
+            Pose::blendMasked( inoutPose, _scratchLayerPose, layer._desc._weight, layer._listBoneWeight.data(), inoutPose );
+        }
+        else
+        {
+            Pose::makeAdditive( _scratchLayerPose, layer._additiveReference, _scratchPose );
+            inoutPose.applyAdditive( _scratchPose, layer._desc._weight, layer._listBoneWeight.data() );
+        }
+    }
+
     void SkeletalAnimatorComponent::populateBasePose( SkeletalMeshComponent& unit )
     {
-        const Skeleton&        skeleton = unit.getSkeleton();
-        Pose&                  pose     = unit.getLocalPose();
-        const AnimationPlayer& player   = _graphPlayer.getPlayer();
-        const AnimationClip*   pCurrent = static_cast<const AnimationClip*>( player.getCurrentPlayable() );
-        const AnimationClip*   pNext    = static_cast<const AnimationClip*>( player.getNextPlayable() );
-        const uint8*           pMask    = unit.findBoneLODMask();
+        const Skeleton&           skeleton = unit.getSkeleton();
+        Pose&                     pose     = unit.getLocalPose();
+        const AnimationPlayer&    player   = _graphPlayer.getPlayer();
+        const IAnimationPlayable* pCurrent = player.getCurrentPlayable();
+        const IAnimationPlayable* pNext    = player.getNextPlayable();
+        const uint8*              pMask    = unit.findBoneLODMask();
 
         // pose 는 유닛이 레퍼런스(또는 리더 포즈)로 채워 둔 상태다. 지금 칸을 그 위에 샘플하고, 페이드 중이면 다음 칸과 섞는다.
         if ( pCurrent != nullptr )
-            sampleClipIntoPose( *pCurrent, player.getCurrentTime(), skeleton, pose, pMask );
+            samplePlayableIntoPose( *pCurrent, player.getCurrentTime(), skeleton, pose, pMask );
         if ( pNext != nullptr )
         {
             _scratchPose.setToReference( skeleton );
-            sampleClipIntoPose( *pNext, player.getNextTime(), skeleton, _scratchPose, pMask );
+            samplePlayableIntoPose( *pNext, player.getNextTime(), skeleton, _scratchPose, pMask );
             Pose::blend( pose, _scratchPose, player.getBlendAlpha(), pose );
         }
         if ( _bCarryingOver == SW_TRUE && _carryOverPose.getBoneCount() == pose.getBoneCount() )
@@ -636,22 +909,14 @@ namespace sw
         _lastBasePose       = pose;
         _bLastBasePoseValid = SW_TRUE;
 
+        // 그래프 레이어(데이터)를 먼저, 코드 레이어(게임이 그 위에 덮는 것)를 나중에 얹는다.
+        for ( LayerState& layer : _listGraphLayer )
+        {
+            applyLayer( layer, skeleton, pose, pMask );
+        }
         for ( LayerState& layer : _listLayer )
         {
-            if ( layer._clip == nullptr || layer._desc._weight <= 0.0f )
-                continue;
-            refreshLayerMask( layer, skeleton );
-            _scratchLayerPose.setToReference( skeleton );
-            sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose, pMask );
-            if ( layer._desc._blend == AnimationLayerBlend::Override )
-            {
-                Pose::blendMasked( pose, _scratchLayerPose, layer._desc._weight, layer._listBoneWeight.data(), pose );
-            }
-            else
-            {
-                Pose::makeAdditive( _scratchLayerPose, layer._additiveReference, _scratchPose );
-                pose.applyAdditive( _scratchPose, layer._desc._weight, layer._listBoneWeight.data() );
-            }
+            applyLayer( layer, skeleton, pose, pMask );
         }
 
         if ( _sequencerClip != nullptr && _sequencerWeight > 0.0f )

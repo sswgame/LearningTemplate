@@ -27,7 +27,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
 
 - `D4-6` [기능] **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/`(임포트 · 코덱 · 재생 · 상태 기계 · 블렌드 스페이스 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생),
   알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/`. 남은 것 —
-  ① 그래프에 레이어를 데이터로(지금 레이어는 `addLayer` 코드), 스켈레탈 애니메이터가 블렌드 스페이스 상태를 재생하는 연결(블렌드 스페이스 · 동기 그룹은 그래프 데이터다)
+  ① 그래프 레이어 · 본 마스크(`AnimationGraphAsset` "layers" · "bone_masks", 프리셋 `*.bonemask.json`)와 블렌드 스페이스 상태 재생은 들어갔다. 남은 것: Shooter3D 상체 레이어(`ShooterAvatarComponent::ensureLayers` 의 `addLayer`)를
+    그래프 데이터(`data/anim/masks/upper_body.bonemask.json`)로 옮기기, 블렌드 스페이스 표본 클립의 알림(지금은 내지 않는다), 그래프 에디터의 레이어 · 마스크 편집 화면
   ② 후처리 리그(`PoseModifierComponent`): 시퀀서 `RigSlot` 트랙(`setSlotWeight` 에 키 찍기)과 리그 디버그 창(`RigDebugPanel` — 노드 가중치 · 켜짐 · 쓰는 본 표시)은 들어갔다. 남은 것: 창에서 고친 가중치 · 켜짐은
     런타임 인스턴스의 복제본에만 들어가 저장되지 않는다(리그 에셋에 쓰는 길), 노드 대상 본 기즈모 편집,
     `Engine/Sequencer` 가 `Engine/Character` 헤더를 새로 include 한다(레이어 검사 확인)
@@ -37,7 +38,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   스킨 없는 메시의 모프(GPU 모프 풀이 스키닝 컴퓨트 안에서만 가중치를 건다) · 실시간 얼굴 입력(Live Link Face 자리)
   ⑤ 파워드 래그돌(관절 모터가 애니메이션 포즈를 쫓음 — 전신 · 부분 래그돌 · 맞음 반응 · 기상 섞기는 `RagdollComponent`), 헤어 카드 · 천(Jolt 소프트 바디 — `D1-4`), 가닥 헤어(TressFX)는 나중
   ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로 옮겨 머티리얼을 만들 것 — 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다. Shooter3D 팩에는 이미 꺼낸 아틀라스(`textures_raw/kaykit_*.png`) · `materials/kaykit_*.material` 이 있다.
-  ⑦ Shooter3D 발 미끄러짐 — 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞췄다. 범위를 넘는 뒷걸음 · 옆걸음은 남는다(보폭 워핑은 리그 노드가 필요하다).
+  ⑦ Shooter3D 발 미끄러짐 — 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞췄다. 범위를 넘는 몫은 리그 노드 `StrideWarping`(+ `LocomotionSpeedUtil::computeStrideScale`)이 맡는다.
+    남은 것: Shooter3D 연결(`knight.rig.json` 에 노드를 두고 `ShooterAvatarComponent` 가 프레임마다 `stride_scale` · 이동 방향을 `setNodeControl` 로 넣기)과 화면 확인.
 
 - `D4-7` [기능] **프리로딩 · LOD · 사전 준비(로드맵).** ① 프리로드 세트(미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집 —
   `collectReferencedPrefabPaths` 가 있다), `requestPreload` 가 진행률 · 완료를 준다, 프레임 예산(IO · 업로드 · PSO · 인스턴스 수), 참조 수 · LRU 로 내림(지금 캐시는

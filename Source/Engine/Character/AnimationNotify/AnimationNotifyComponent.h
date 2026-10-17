@@ -141,6 +141,8 @@ namespace sw
         void callHandler( const AnimationNotifyEntry& entry, const AnimationFiredNotify& fired, AnimationNotifyStateData* pState, AnimationNotifyPhase phase, bool bTick, float32 deltaSeconds );
         /** @brief 테이블 항목을 반환합니다(테이블이 없으면 nullptr 입니다). */
         const AnimationNotifyEntry* findEntry( const hashed_string& notify ) const;
+        /** @brief 테이블의 `<FootContact>` 마다 발 본 높이로 닿음을 감지하고, 닿은 발의 알림을 처리기로 보냅니다(3D 만). */
+        void processFootContacts( float32 deltaSeconds );
 
         PROPERTY( Category = "Animation", DisplayName = "Notify Table", AssetPath, AssetType = "AnimationNotifyTable", Tooltip = "Notify name to handler table (*.notifies.xml)" )
         string _notifyTablePath;
@@ -151,6 +153,8 @@ namespace sw
         vector<AnimationNotifyAction>          _listAction;
         vector<AnimationFiredNotify>           _listPendingFired;    ///< 2D 에서 워커가 복사한 이번 틱의 알림이다.
         vector<const IAnimationPlayable*>      _listPendingActive;   ///< 2D 에서 워커가 복사한 재생 중인 항목이다.
+        vector<AnimationFootContactTracker>    _listFootContact;     ///< 테이블의 `<FootContact>` 와 인덱스가 같은 발 상태다.
+        const AnimationNotifyTable*            _pFootContactTable;   ///< `_listFootContact` 를 만든 테이블이다. 바뀌면 상태를 새로 만든다.
         ComponentHandle                        _animator;            ///< 받는 쪽으로 붙은 애니메이터(스켈레탈 또는 스프라이트)
         float32                                _pendingDeltaSeconds; ///< 2D 에서 복사한 프레임의 이동 구간이다.
         uint32                                 _seenTableReloadCount;

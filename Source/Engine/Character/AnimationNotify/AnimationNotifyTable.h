@@ -4,12 +4,14 @@
  * @details 클립은 알림의 **이름, 시각, 길이**만 가진다(임포트 옆 데이터 `<모델>.clips.json`). 그 이름이 무엇을 하는지(발소리, 이펙트, 칼 궤적 판정,
  *          카메라 흔들림, 게임플레이 이벤트, 모션 워핑 창)는 캐릭터마다 이 테이블의 한 항목이 정하고, 코드에는 처리기 **종류**만 있다(언리얼의 AnimationNotify 클래스,
  *          유니티의 Animation Event 함수 이름에 해당한다). 모르는 처리기나 인자, 숫자가 아닌 값, 겹친 알림 이름은 읽기 오류다.
+ *          `<FootContact>` 는 그 알림을 클립 대신 발 닿음 감지(`AnimationFootContactDef`, 3D 만)가 내게 한다. 없는 알림 이름, 겹친 알림, 높이 순서가 틀린 값은 읽기 오류다.
  *          @code
  *          <AnimationNotifies>
  *            <Notify name="FootL" handler="Footstep" socket="foot.l" distance="0.4" sound="common/audio/footstep_{surface}.wav"/>
  *            <Notify name="Swing" handler="HitWindow" socketA="handslot.r" socketB="SwordTip" radius="0.05" damage="10" impulse="40"/>
  *            <Notify name="Impact" handler="CameraShake" amplitude="0.05" duration="0.25"/>
  *            <Notify name="Taunt" handler="GameplayEvent" event="Taunted"/>
+ *            <FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.12" max_vertical_speed="0.6"/>
  *          </AnimationNotifies>
  *          @endcode
  */
@@ -25,6 +27,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
+#include "Engine/Animation/Notify/AnimationFootContact.h"
 
 namespace sw
 {
@@ -118,12 +121,18 @@ namespace sw
         const AnimationNotifyEntry* findEntry( const hashed_string& notify ) const;
         /** @brief 줄들입니다. */
         const vector<AnimationNotifyEntry>& getEntries() const { return _listEntry; }
+        /** @brief 발 닿음 감지 줄들입니다(`<FootContact>`). */
+        const vector<AnimationFootContactDef>& getFootContacts() const { return _listFootContact; }
+        /** @brief 그 알림을 발 닿음 감지가 내는지 반환합니다. 그러면 클립의 같은 이름 알림은 처리하지 않습니다. */
+        bool isFootContactNotify( const hashed_string& notify ) const;
 
     private:
         void readRoot( const XMLNode& root, const AnimationNotifyHandlerRegistry& registry, CharacterDataReader& reader );
         void readEntry( const XMLNode& node, const AnimationNotifyHandlerRegistry& registry, CharacterDataReader& reader );
+        void readFootContact( const XMLNode& node, CharacterDataReader& reader );
 
-        vector<AnimationNotifyEntry> _listEntry;
+        vector<AnimationNotifyEntry>    _listEntry;
+        vector<AnimationFootContactDef> _listFootContact;
     };
 } // namespace sw
 

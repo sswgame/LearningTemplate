@@ -26,21 +26,9 @@ namespace sw
     class SkeletalAnimatorComponent;
 
     /**
-     * @enum AnimationLayerBlend
-     * @brief 레이어가 아래 포즈에 합쳐지는 방법입니다.
-     */
-    enum class AnimationLayerBlend : uint8
-    {
-        Override = 0, ///< 마스크 안의 본을 가중치만큼 레이어 포즈로 섞습니다(상체만 조준).
-        Additive,     ///< 레이어 클립의 시각 0 포즈 기준 차이를 가중치만큼 더합니다(숨쉬기, 맞음 움찔).
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @struct AnimationLayerDesc
-     * @brief 레이어 하나의 서술입니다. 마스크는 본 하나와 그 자손입니다(비었으면 모든 본).
+     * @brief 코드가 더하는 레이어 하나의 서술입니다(`addLayer`). 마스크는 본 하나와 그 자손입니다(비었으면 모든 본).
+     * @details 합치는 방법(`AnimationLayerBlend`)은 그래프 에셋 헤더에 있다. 데이터로 정하는 레이어(본 마스크 프리셋, 본별 가중치)는 그래프의 "layers" 다.
      */
     struct AnimationLayerDesc
     {
@@ -49,6 +37,46 @@ namespace sw
         float32             _weight{ 1.0f };
         AnimationLayerBlend _blend{ AnimationLayerBlend::Override };
         uint8               _bLoop{ SW_TRUE };
+        /** @brief 다시 시작(`restartLayer`)할 때 끊긴 레이어 포즈에서 이어 갈 inertialization 반감기(초)입니다. 0 이면 즉시 새 포즈입니다(뒤에 두어 기존 집합 초기화가 그대로 맞습니다). */
+        float32 _halfLifeSeconds{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class SkeletalBlendSpaceState
+     * @brief 그래프의 블렌드 스페이스 상태(노드의 "blend_space") 하나를 재생할 것으로 냅니다. 애니메이터가 노드마다 하나 가지고 상태 기계에 넘깁니다.
+     * @details 시간은 표본 길이를 가중치로 평균한 한 바퀴(`BlendSpace::computeBlendedLength`) 위에서 흐르고, 표본 클립은 같은 위상(정규화 시간)으로 샘플한다.
+     *          가중치는 매 시간 단계 앞에서 축 파라미터로 다시 구한다(`updateWeights`). 길이가 바뀌면 애니메이터가 현재 슬롯의 위상을 지킨다.
+     *          표본 클립의 알림은 내지 않는다(어느 표본의 알림을 낼지 정하지 않았다). 발소리는 발 닿음 감지(`AnimationFootContactDef`)가 맡는다.
+     */
+    class SW_API SkeletalBlendSpaceState final : public IAnimationPlayable
+    {
+    public:
+        /** @brief @p listClip 은 표본 순서의 클립이고 모두 있어야 합니다(빌린 포인터, 애니메이터의 클립 표가 소유). */
+        SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip );
+
+        float32 getPlayLength() const override { return _playLength; }
+        bool    isLoopingByDefault() const override { return true; }
+
+        /** @brief 축 파라미터로 표본 가중치와 한 바퀴 길이를 다시 구합니다. */
+        void updateWeights( const AnimationParameterSet& parameters );
+        /** @brief 이 상태의 이름(그래프 노드 이름)입니다. */
+        const hashed_string& getStateName() const { return _stateName; }
+        uint32               getSampleCount() const { return static_cast<uint32>( _listClip.size() ); }
+        const AnimationClip& getSampleClip( uint32 sampleIndex ) const { return *_listClip[sampleIndex]; }
+        float32              getSampleWeight( uint32 sampleIndex ) const { return _listWeight[sampleIndex]; }
+        /** @brief 상태 시각 @p time(한 바퀴 위의 초)을 표본 클립의 시각으로 옮깁니다(같은 위상). */
+        float32 computeSampleTime( uint32 sampleIndex, float32 time ) const;
+
+    private:
+        hashed_string                      _stateName;
+        const AnimationGraphBlendSpaceDef* _pDef; ///< 애니메이터의 그래프 노드 데이터다. 그래프를 다시 읽으면 상태도 다시 만든다
+        vector<const AnimationClip*>       _listClip;
+        vector<float32>                    _listLength;
+        vector<float32>                    _listWeight;
+        float32                            _playLength;
     };
 } // namespace sw
 
@@ -138,8 +166,15 @@ namespace sw
         void setLayerWeight( uint32 layerIndex, float32 weight );
         /** @brief 레이어 클립을 처음부터 다시 재생합니다(맞음 움찔처럼 한 번 도는 가산 레이어). */
         void restartLayer( uint32 layerIndex );
-        /** @brief 레이어를 모두 제거합니다. */
+        /** @brief 코드가 더한 레이어를 모두 제거합니다(그래프의 레이어는 그래프 데이터라 남습니다). */
         void clearLayers();
+        /**
+         * @brief 그래프 레이어(그래프 "layers")의 가중치를 바꿉니다.
+         * @return 그 이름의 레이어가 없거나, 가중치를 파라미터("weight_param")가 정하는 레이어면 오류를 남기고 false 입니다(값의 출처는 하나다).
+         */
+        bool setGraphLayerWeight( const hashed_string& layerName, float32 weight );
+        /** @brief 그래프 레이어 수입니다(읽은 그래프의 "layers" 중 클립을 찾은 것). */
+        uint32 getGraphLayerCount() const { return static_cast<uint32>( _listGraphLayer.size() ); }
 
         /**
          * @brief 시퀀서 덮어쓰기 슬롯입니다. 시퀀서가 클립과 시간을 정해 그래프 결과 위에 @p weight 만큼 섞습니다. 시간은 시퀀서가 진행시킵니다.
@@ -195,13 +230,37 @@ namespace sw
             AnimationPlayer                 _player;
             vector<float32>                 _listBoneWeight; ///< 본 마스크(본 수 크기)다. 스켈레톤이 바뀌면 다시 만든다
             const Skeleton*                 _pMaskSkeleton{ nullptr };
-            Pose                            _additiveReference; ///< 가산 기준(클립 시각 0, 본 포즈)
+            const AnimationGraphLayerDef*   _pGraphLayer{ nullptr };      ///< 그래프 레이어면 그 데이터다(`_graph` 안). 코드 레이어면 nullptr 이다
+            const AnimationBoneMaskDef*     _pBoneMask{ nullptr };        ///< 그래프 레이어의 본 마스크다(`_graph` 안). nullptr 이면 `_desc._maskRootBone` 을 쓴다
+            Pose                            _additiveReference;           ///< 가산 기준(클립 시각 0, 본 포즈)
+            PoseInertializer                _inertializer;                ///< 다시 시작할 때 끊긴 레이어 포즈에서 이어 간다(`_desc._halfLifeSeconds` 가 0 보다 클 때)
+            Pose                            _lastLayerPose;               ///< 지난 평가에서 얹은 레이어 포즈다(inertialization 의 출발)
+            Pose                            _previousLayerPose;           ///< 그 한 프레임 전 포즈다(출발 속도)
+            uint8                           _bRestartPending{ SW_FALSE }; ///< 다음 평가에서 inertialization 을 시작한다
         };
 
         /** @brief 같은 오브젝트의 유닛에 붙습니다. */
         void bindToUnit();
-        /** @brief 그래프를 다시 읽고 노드의 클립을 미리 읽습니다. */
+        /** @brief 그래프를 다시 읽고 노드의 클립을 미리 읽습니다. 그래프 레이어와 블렌드 스페이스 상태도 다시 만듭니다. */
         void loadGraph();
+        /** @brief 노드의 클립(블렌드 스페이스면 표본 클립)을 미리 읽고 블렌드 스페이스 상태를 다시 만듭니다. */
+        void rebuildGraphPlayables();
+        /** @brief 그래프의 "layers" 로 그래프 레이어를 다시 만듭니다. 클립을 못 찾은 레이어는 오류를 남기고 뺍니다. */
+        void rebuildGraphLayers();
+        /** @brief 블렌드 스페이스 상태의 가중치를 파라미터로 다시 구합니다. 현재 슬롯의 상태는 길이가 바뀌어도 위상을 지킵니다. */
+        void updateBlendSpaceWeights();
+        /** @brief 재생할 것이 이 애니메이터의 블렌드 스페이스 상태면 그것을, 아니면(클립) nullptr 을 반환합니다. */
+        const SkeletalBlendSpaceState* findBlendSpaceState( const IAnimationPlayable* pPlayable ) const;
+        /** @brief 재생할 것(클립 또는 블렌드 스페이스 상태)을 @p time 에 샘플해 @p inoutPose 에 씁니다. */
+        void samplePlayableIntoPose( const IAnimationPlayable& playable, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask );
+        /** @brief 재생할 것이 @p step 동안 낸 루트 모션입니다. 블렌드 스페이스면 표본의 움직임을 가중치로 섞습니다. */
+        BoneTransform computePlayableRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const;
+        /** @brief 재생할 것의 커브를 @p weight 를 곱해 이번 프레임 커브 값에 더합니다. */
+        void accumulatePlayableCurves( const IAnimationPlayable& playable, float32 time, float32 weight );
+        /** @brief 클립 하나의 커브를 @p weight 를 곱해 이번 프레임 커브 값에 더합니다. */
+        void accumulateClipCurves( const AnimationClip& clip, float32 time, float32 weight );
+        /** @brief 레이어 하나를 @p inoutPose 에 얹습니다. */
+        void applyLayer( LayerState& layer, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask );
         /** @brief 클립의 트랙에서 본으로 가는 테이블입니다(유닛 스켈레톤 기준이며, 처음 쓸 때 만듭니다). */
         const vector<int32>& getTrackMap( const AnimationClip& clip, const Skeleton& skeleton );
         /**
@@ -249,6 +308,11 @@ namespace sw
         unordered_map<const AnimationClip*, vector<int32>>            _mapTrackToBone;
         const Skeleton*                                               _pTrackMapSkeleton;
         vector<LayerState>                                            _listLayer;
+        vector<LayerState>                                            _listGraphLayer; ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다
+        vector<unique_ptr<SkeletalBlendSpaceState>>                   _listBlendSpace; ///< 그래프의 블렌드 스페이스 상태다(상태 기계가 포인터를 빌린다)
+        vector<Pose>                                                  _listScratchSamplePose;
+        vector<const Pose*>                                           _listScratchSamplePosePointer;
+        vector<float32>                                               _listScratchSampleWeight;
         vector<AnimationFiredNotify>                                  _listFiredNotify;
         vector<const IAnimationPlayable*>                             _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 항목이다(재사용)
         vector<IRootMotionModifier*>                                  _listRootMotionModifier;

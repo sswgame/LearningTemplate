@@ -20,6 +20,8 @@ namespace sw
         struct RigIKNodesInternal
         {
             static constexpr const utf8* kArrLimitType[] = { "Cone", "Hinge" };
+            /** @brief 보폭 워핑이 다리를 펴는 최대 비율(다리 길이 대비)입니다. 다 펴면 2 본 IK 의 무릎 방향이 정해지지 않는다. */
+            static constexpr float32 kMaxLegExtension = 0.995f;
 
             /** @brief 스켈레톤 레퍼런스 포즈의 모델 공간 변환입니다(묶을 때 한 번). */
             static void computeReferenceModel( const Skeleton& skeleton, vector<float4x4>& outListModel )
@@ -531,6 +533,170 @@ namespace sw
             uint8         _bPelvisInitialized{ SW_FALSE };
         };
 
+        /**
+         * @brief 보폭 워핑(Stride Warping)입니다. 키는 `pelvis`, `feet`(`[{ "root", "mid", "end" }]`), `min_scale`, `max_scale`, `max_pelvis_drop` 이고 모두 필수입니다.
+         * @details 재생 속도 매칭(`LocomotionSpeedUtil::computePlayRate`)이 범위에 막혀 남긴 몫을 보폭으로 맞춘다. 발마다 골반에서 이동 방향으로 떨어진 거리를
+         *          배율만큼 늘리거나 줄이고(옆 성분은 그대로), 다리가 닿지 않으면 그만큼 골반을 내린 뒤(`max_pelvis_drop` 까지), 2 본 IK 로 발을 옮긴다.
+         *          발의 모델 회전은 애니메이션 값을 지킨다. 배율과 방향은 게임이 프레임마다 조절 값으로 넣는다 — `stride_scale`
+         *          (`LocomotionSpeedUtil::computeStrideScale`, `[min_scale, max_scale]` 로 자름), `direction_x`, `direction_z`(모델 공간 수평 이동 방향).
+         *          배율이 1 이거나 방향이 없으면 포즈를 바꾸지 않는다. 언리얼 Stride Warping 노드(배율 · 골반 내리기)에 해당한다.
+         */
+        class RigStrideWarpingNode final : public RigNode
+        {
+        public:
+            unique_ptr<RigNode> clone() const override { return make_unique<RigStrideWarpingNode>( *this ); }
+            const utf8*         getTypeName() const override { return "StrideWarping"; }
+
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            {
+                bool bOk = reader.readName( "pelvis", _pelvisName, true ) && reader.readFloat( "min_scale", _minScale, true ) &&
+                           reader.readFloat( "max_scale", _maxScale, true ) && reader.readFloat( "max_pelvis_drop", _maxPelvisDrop, true );
+                const JSONValue feet = reader.readArray( "feet", true );
+                for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
+                {
+                    RigJSONReader footReader( feet.at( index ), reader.getContext() );
+                    Foot          foot{};
+                    bOk = footReader.readName( "root", foot._rootName, true ) && footReader.readName( "mid", foot._midName, true ) &&
+                          footReader.readName( "end", foot._endName, true );
+                    bOk = footReader.finish() && bOk;
+                    _listFoot.push_back( foot );
+                }
+                if ( bOk && _listFoot.empty() )
+                {
+                    reader.fail( "'feet' must not be empty" );
+                    return false;
+                }
+                const bool bScaleRangeValid = 0.0f < _minScale && _minScale <= _maxScale;
+                if ( bOk && bScaleRangeValid == false )
+                {
+                    reader.fail( "'min_scale' must be above 0 and not above 'max_scale'" );
+                    return false;
+                }
+                if ( bOk && _maxPelvisDrop < 0.0f )
+                {
+                    reader.fail( "'max_pelvis_drop' must not be negative" );
+                    return false;
+                }
+                return bOk && reader.isOk();
+            }
+
+            bool bind( const RigBindContext& context ) override
+            {
+                if ( context.findBone( _pelvisName, _pelvis ) == false )
+                    return false;
+                vector<float4x4> listReference;
+                RigIKNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
+                for ( Foot& foot : _listFoot )
+                {
+                    vector<uint32> listBone;
+                    if ( context.findBones( { foot._rootName, foot._midName, foot._endName }, listBone, true ) == false )
+                        return false;
+                    foot._root = listBone[0];
+                    foot._mid  = listBone[1];
+                    foot._end  = listBone[2];
+                    // 다리 길이는 레퍼런스 포즈의 두 마디 길이 합이다(뼈 길이는 애니메이션이 바꾸지 않는다고 본다).
+                    const float3 hip   = listReference[foot._root].getTranslation();
+                    const float3 knee  = listReference[foot._mid].getTranslation();
+                    const float3 ankle = listReference[foot._end].getTranslation();
+                    foot._legLength    = ( knee - hip ).getLength() + ( ankle - knee ).getLength();
+                }
+                return true;
+            }
+
+            void evaluate( RigEvaluateContext& context ) override
+            {
+                const float32 scale           = MathUtil::clamp( _strideScale, _minScale, _maxScale );
+                const float32 directionLength = MathUtil::sqrt( _directionX * _directionX + _directionZ * _directionZ );
+                const bool    bNoWarp         = MathUtil::abs( scale - 1.0f ) <= MathUtil::kEpsilon || directionLength <= MathUtil::kEpsilon;
+                if ( bNoWarp )
+                    return;
+                const float3   direction{ _directionX / directionLength, 0.0f, _directionZ / directionLength };
+                RigPoseBuffer& pose   = *context._pPose;
+                const float3   pelvis = pose.getModelPosition( _pelvis );
+
+                // 1) 발 목표 — 골반에서 이동 방향으로 떨어진 거리만 배율만큼(옆 · 높이는 그대로).
+                for ( Foot& foot : _listFoot )
+                {
+                    const float3  footPosition = pose.getModelPosition( foot._end );
+                    const float32 along        = ( footPosition - pelvis ).dot( direction );
+                    foot._goal                 = footPosition + direction * ( along * ( scale - 1.0f ) );
+                    foot._rotation             = pose.getModelRotation( foot._end );
+                }
+
+                // 2) 골반 — 가장 멀리 뻗은 다리가 닿을 만큼 내린다.
+                float32 drop = 0.0f;
+                for ( const Foot& foot : _listFoot )
+                {
+                    const float3  hip            = pose.getModelPosition( foot._root );
+                    const float32 reach          = foot._legLength * RigIKNodesInternal::kMaxLegExtension;
+                    const float3  toGoal         = foot._goal - hip;
+                    const float32 horizontalSq   = toGoal._x * toGoal._x + toGoal._z * toGoal._z;
+                    const float32 reachHeightSq  = reach * reach - horizontalSq;
+                    const float32 reachHeight    = reachHeightSq > 0.0f ? MathUtil::sqrt( reachHeightSq ) : 0.0f;
+                    const float32 neededVertical = -toGoal._y; // 엉덩이가 발보다 높은 만큼이다
+                    drop                         = MathUtil::max( drop, neededVertical - reachHeight );
+                }
+                drop = MathUtil::min( drop, _maxPelvisDrop );
+                if ( drop > 0.0f )
+                    pose.setModelPosition( _pelvis, pelvis - float3{ 0.0f, drop, 0.0f } );
+
+                // 3) 발 — 2 본 IK 로 목표에 두고 애니메이션 발 회전을 지킨다.
+                for ( const Foot& foot : _listFoot )
+                {
+                    (void)RigIKSolver::solveTwoBone( pose, foot._root, foot._mid, foot._end, foot._goal, nullptr, *context._pSpace );
+                    pose.setModelRotation( foot._end, foot._rotation );
+                }
+            }
+
+            void collectWrittenBones( vector<uint32>& inoutListBone ) const override
+            {
+                inoutListBone.push_back( _pelvis );
+                for ( const Foot& foot : _listFoot )
+                {
+                    inoutListBone.push_back( foot._root );
+                    inoutListBone.push_back( foot._mid );
+                    inoutListBone.push_back( foot._end );
+                }
+            }
+
+            bool setControl( const hashed_string& control, float32 value ) override
+            {
+                if ( control == hashed_string( "stride_scale" ) )
+                    _strideScale = value;
+                else if ( control == hashed_string( "direction_x" ) )
+                    _directionX = value;
+                else if ( control == hashed_string( "direction_z" ) )
+                    _directionZ = value;
+                else
+                    return false;
+                return true;
+            }
+
+        private:
+            struct Foot
+            {
+                hashed_string _rootName{};
+                hashed_string _midName{};
+                hashed_string _endName{};
+                float3        _goal{};
+                quaternion    _rotation{};
+                float32       _legLength{ 0.0f };
+                uint32        _root{ 0 };
+                uint32        _mid{ 0 };
+                uint32        _end{ 0 };
+            };
+
+            vector<Foot>  _listFoot{};
+            hashed_string _pelvisName{};
+            float32       _minScale{ 0.0f };
+            float32       _maxScale{ 0.0f };
+            float32       _maxPelvisDrop{ 0.0f };
+            float32       _strideScale{ 1.0f }; ///< 게임이 넣는 조절 값이다. 넣기 전에는 1(바꾸지 않음)이다
+            float32       _directionX{ 0.0f };
+            float32       _directionZ{ 1.0f }; ///< 넣기 전에는 모델 앞(+Z)이다
+            uint32        _pelvis{ 0 };
+        };
+
         struct RigIKNodesFactory
         {
             static unique_ptr<RigNode> createTwoBone() { return make_unique<RigTwoBoneIKNode>(); }
@@ -544,6 +710,7 @@ namespace sw
             }
             static unique_ptr<RigNode> createAim() { return make_unique<RigAimNode>(); }
             static unique_ptr<RigNode> createFootPlacement() { return make_unique<RigFootPlacementNode>(); }
+            static unique_ptr<RigNode> createStrideWarping() { return make_unique<RigStrideWarpingNode>(); }
         };
     } // namespace
 } // namespace sw
@@ -557,5 +724,6 @@ namespace sw
         registry.registerNode( "CcdChain", &RigIKNodesFactory::createCcd );
         registry.registerNode( "Aim", &RigIKNodesFactory::createAim );
         registry.registerNode( "FootPlacement", &RigIKNodesFactory::createFootPlacement );
+        registry.registerNode( "StrideWarping", &RigIKNodesFactory::createStrideWarping );
     }
 } // namespace sw

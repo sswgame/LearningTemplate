@@ -37,6 +37,8 @@ namespace sw
         , _listAction{}
         , _listPendingFired{}
         , _listPendingActive{}
+        , _listFootContact{}
+        , _pFootContactTable{ nullptr }
         , _animator{}
         , _pendingDeltaSeconds{ 0.0f }
         , _seenTableReloadCount{ 0 }
@@ -255,6 +257,9 @@ namespace sw
             const AnimationNotifyEntry* pEntry = findEntry( fired._name );
             if ( pEntry == nullptr || pEntry->_pHandler == nullptr )
                 continue;
+            // 발 닿음 감지가 내는 알림이면 클립의 같은 이름 알림은 처리하지 않는다(한 걸음에 소리가 두 번 나지 않게, 출처는 하나).
+            if ( _table->isFootContactNotify( fired._name ) )
+                continue;
             const bool bState = pEntry->_pHandler->supportsState();
             if ( fired._phase == AnimationNotifyPhase::End )
             {
@@ -292,6 +297,49 @@ namespace sw
             _listActiveState.push_back( std::move( state ) );
             ActiveState& opened = _listActiveState.back();
             callHandler( opened._entry, opened._fired, &opened._data, AnimationNotifyPhase::Begin, false, frame._deltaSeconds );
+        }
+
+        // 4) 발 닿음 — 클립 알림이 아니라 지금 포즈의 발 높이에서 낸다.
+        processFootContacts( frame._deltaSeconds );
+    }
+
+    void AnimationNotifyComponent::processFootContacts( float32 deltaSeconds )
+    {
+        const bool bNoFootContact = _table == nullptr || _table->getFootContacts().empty() || is2D();
+        if ( bNoFootContact )
+            return;
+        const vector<AnimationFootContactDef>& listDef = _table->getFootContacts();
+        if ( _pFootContactTable != _table.get() || _listFootContact.size() != listDef.size() )
+        {
+            _listFootContact.assign( listDef.size(), AnimationFootContactTracker{} );
+            _pFootContactTable = _table.get();
+        }
+        // 발 높이는 모델 공간(오브젝트 루트 기준)이다. 빈 이름은 계약상 오브젝트 루트 변환을 준다(그래서 false 를 버린다).
+        float4x4 rootWorld;
+        (void)findSocketWorldTransform( hashed_string{}, rootWorld );
+        const float4x4 modelFromWorld = rootWorld.invert();
+        for ( size_t footIndex = 0; footIndex < listDef.size(); ++footIndex )
+        {
+            const AnimationFootContactDef& def     = listDef[footIndex];
+            AnimationFootContactTracker&   tracker = _listFootContact[footIndex];
+            float4x4                       boneWorld;
+            if ( findSocketWorldTransform( def._bone, boneWorld ) == false )
+            {
+                if ( tracker.isMissingBoneReported() == false )
+                    SW_LOG_ERROR( "'%#': foot contact bone '%#' was not found", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", def._bone.c_str() );
+                tracker.setMissingBoneReported();
+                continue;
+            }
+            const float32 footHeight = float3::transform( boneWorld.getTranslation(), modelFromWorld )._y;
+            if ( tracker.update( def, footHeight, deltaSeconds ) == false )
+                continue;
+            const AnimationNotifyEntry* pEntry = findEntry( def._notify ); // 테이블이 읽을 때 이름을 맞췄다
+            if ( pEntry == nullptr )
+                continue;
+            AnimationFiredNotify fired{};
+            fired._name  = def._notify;
+            fired._phase = AnimationNotifyPhase::Instant;
+            callHandler( *pEntry, fired, nullptr, AnimationNotifyPhase::Instant, false, deltaSeconds );
         }
     }
 
