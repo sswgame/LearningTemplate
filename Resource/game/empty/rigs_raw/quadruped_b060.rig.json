@@ -1,0 +1,100 @@
+{
+  "targets": [
+    {
+      "name": "foot_leg_fl",
+      "bone": "root",
+      "translation": [
+        -0.15,
+        0.6,
+        0.416667
+      ]
+    },
+    {
+      "name": "foot_leg_fr",
+      "bone": "root",
+      "translation": [
+        0.15,
+        0.56875,
+        0.416667
+      ]
+    },
+    {
+      "name": "foot_leg_bl",
+      "bone": "root",
+      "translation": [
+        -0.15,
+        0.56875,
+        -0.5
+      ]
+    },
+    {
+      "name": "foot_leg_br",
+      "bone": "root",
+      "translation": [
+        0.15,
+        0.56875,
+        -0.5
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "type": "SpringChain",
+      "name": "spring_head",
+      "bones": [
+        "head_00",
+        "head_01",
+        "head_02",
+        "head_03",
+        "head_04",
+        "head_05",
+        "head_06"
+      ]
+    },
+    {
+      "type": "SpringChain",
+      "name": "spring_tail",
+      "bones": [
+        "tail_00",
+        "tail_01",
+        "tail_02",
+        "tail_03",
+        "tail_04",
+        "tail_05",
+        "tail_06"
+      ]
+    },
+    {
+      "type": "TwoBoneIK",
+      "name": "ik_leg_fl",
+      "root": "leg_fl_00",
+      "mid": "leg_fl_01",
+      "end": "leg_fl_02",
+      "target": "foot_leg_fl"
+    },
+    {
+      "type": "TwoBoneIK",
+      "name": "ik_leg_fr",
+      "root": "leg_fr_00",
+      "mid": "leg_fr_01",
+      "end": "leg_fr_02",
+      "target": "foot_leg_fr"
+    },
+    {
+      "type": "TwoBoneIK",
+      "name": "ik_leg_bl",
+      "root": "leg_bl_00",
+      "mid": "leg_bl_01",
+      "end": "leg_bl_02",
+      "target": "foot_leg_bl"
+    },
+    {
+      "type": "TwoBoneIK",
+      "name": "ik_leg_br",
+      "root": "leg_br_00",
+      "mid": "leg_br_01",
+      "end": "leg_br_02",
+      "target": "foot_leg_br"
+    }
+  ]
+}

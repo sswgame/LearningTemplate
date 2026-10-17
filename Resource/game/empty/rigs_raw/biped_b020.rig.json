@@ -1,0 +1,40 @@
+{
+  "targets": [
+    {
+      "name": "foot_leg_l",
+      "bone": "root",
+      "translation": [
+        -0.1,
+        0.15,
+        0.0
+      ]
+    },
+    {
+      "name": "foot_leg_r",
+      "bone": "root",
+      "translation": [
+        0.1,
+        0.15,
+        0.0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "type": "TwoBoneIK",
+      "name": "ik_leg_l",
+      "root": "leg_l_00",
+      "mid": "leg_l_01",
+      "end": "leg_l_02",
+      "target": "foot_leg_l"
+    },
+    {
+      "type": "TwoBoneIK",
+      "name": "ik_leg_r",
+      "root": "leg_r_00",
+      "mid": "leg_r_01",
+      "end": "leg_r_02",
+      "target": "foot_leg_r"
+    }
+  ]
+}

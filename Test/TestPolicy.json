@@ -93,6 +93,7 @@
     "EditorTest": {
       "area": "editor",
       "seconds": 38,
+      "loadSeconds": 120,
       "caseCosts": {
         "ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments": 21,
         "EditorNetPlaySessionTest.DedicatedServerAndTwoClientsConnectPauseAndMergeTraces": 5,

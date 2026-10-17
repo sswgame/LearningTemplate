@@ -15,7 +15,7 @@ namespace test
     int64 getPercentile( sw::vector<int64>& listSample, uint32 percent );
 
     /**
-     * @brief `[Bench] 이름  min · p50 · p90 · max (표본 수)` 한 줄을 찍습니다(마이크로초 표본).
+     * @brief `[Bench] 이름  min · p50 · p90 · p99 · max (표본 수)` 한 줄을 찍습니다(마이크로초 표본).
      * @details Shipping 은 Info 로그가 컴파일에서 빠져 값만 계산하고 만다. 벤치마다 같은 모양으로 찍어야 두 벤치의 줄을 나란히 놓고 견줄 수 있다.
      */
     void logBenchSamples( const utf8* pLabel, sw::vector<int64>& listSample );

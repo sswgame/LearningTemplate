@@ -18,6 +18,7 @@
     "shaders_raw",
     "models_raw",
     "heightfields_raw",
+    "rigs_raw",
     "docs",
     ".git",
     ".vs"
@@ -41,7 +42,8 @@
         "textures_raw",
         "shaders_raw",
         "models_raw",
-        "heightfields_raw"
+        "heightfields_raw",
+        "rigs_raw"
       ],
       "recursive": true
     },

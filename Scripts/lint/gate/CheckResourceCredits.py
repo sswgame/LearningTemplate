@@ -9,7 +9,7 @@ Scripts/lint/gate/CheckResourceCredits.py
 (`저장소와 같음` · `—`)가 생긴다 — 이 게이트가 대조한다.
 
 대상(`Resource/` 아래):
-  1) 원본 폴더(`models_raw` · `textures_raw` · `sounds` · `voice` · `heightfields_raw` · `music` · `fonts`)의 모델 · 이미지 · 소리 · 글꼴 파일.
+  1) 원본 폴더(`models_raw` · `textures_raw` · `sounds` · `voice` · `heightfields_raw` · `rigs_raw` · `music` · `fonts`)의 모델 · 이미지 · 소리 · 글꼴 파일.
   2) `textures/` 의 `.dds` 가운데 `textures_raw/` 에 같은 이름의 원본이 없는 것 — 가져온 것이 아니라 들여왔거나 코드로 만든 것이다.
 
 판정: 파일의 도메인(`Resource/game/<팩>/` 또는 `Resource/<engine|common|editor>/`)의 `credits.md` 표(`| 파일 | 원본 | 라이선스 |`)에서 첫 칸의
@@ -36,7 +36,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kResourceRoot = "Resource"
 _kCreditsFileName = "credits.md"
 #: 원본을 두는 폴더 이름 — 이 아래의 아래 확장자가 대상이다.
-_kSourceFolderNames = frozenset({"models_raw", "textures_raw", "sounds", "voice", "heightfields_raw", "music", "fonts"})
+_kSourceFolderNames = frozenset({"models_raw", "textures_raw", "sounds", "voice", "heightfields_raw", "rigs_raw", "music", "fonts"})
 _kSourceSuffixes = frozenset({".glb", ".gltf", ".vrm", ".bin", ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".exr", ".hdr", ".psd",
                               ".ogg", ".wav", ".mp3", ".flac", ".ttf", ".otf"})
 #: 라이선스 칸에 쓸 수 있는 철자 — CC0 급 하나와 이 저장소에서 만든 것 하나.
