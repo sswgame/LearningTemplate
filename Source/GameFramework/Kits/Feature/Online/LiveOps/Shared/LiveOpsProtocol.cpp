@@ -14,9 +14,9 @@ namespace sw
 
 namespace sw
 {
-    vector<uint8> LiveOpsProtocol::encodeEvent( const LiveEventDefinition& definition )
+    bool LiveOpsProtocol::encodeEvent( const LiveEventDefinition& definition, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kLiveOpsRecordVersion, definition );
+        return ServiceRecordUtil::encode( kLiveOpsRecordVersion, definition, outBytes );
     }
 
     bool LiveOpsProtocol::decodeEvent( const string_view key, const vector<uint8>& bytes, LiveEventDefinition& outDefinition )
@@ -24,9 +24,9 @@ namespace sw
         return ServiceRecordUtil::readDurable( key, bytes, kLiveOpsRecordVersion, outDefinition );
     }
 
-    vector<uint8> LiveOpsProtocol::encodeDevice( const PushDeviceRegistration& registration )
+    bool LiveOpsProtocol::encodeDevice( const PushDeviceRegistration& registration, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kLiveOpsRecordVersion, registration );
+        return ServiceRecordUtil::encode( kLiveOpsRecordVersion, registration, outBytes );
     }
 
     bool LiveOpsProtocol::decodeDevice( const string_view key, const vector<uint8>& bytes, PushDeviceRegistration& outRegistration )

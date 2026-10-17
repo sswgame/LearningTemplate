@@ -89,6 +89,7 @@ namespace sw
                 , _listTrimChannel{ std::move( listTrimChannel ) }
                 , _pService{ pService }
                 , _trimBeforeMs{ trimBeforeMs }
+                , _rejectedCount{ 0 }
                 , _bCommitted{ SW_FALSE }
             {
             }
@@ -98,9 +99,16 @@ namespace sw
                 ServiceTransaction transaction;
                 for ( const ChatMessage& message : _listMessage )
                 {
-                    transaction.put( ChatServiceInternal::getHistoryTable(), ChatServiceInternal::makeHistoryKey( message ), ChatProtocol::encodeRecord( message ) );
+                    vector<uint8> bytes;
+                    if ( ChatProtocol::encodeRecord( message, bytes ) == false )
+                    {
+                        ++_rejectedCount; // 쓰기가 오류 로그를 남겼다. 이 기록만 빼고 나머지는 쓴다
+                        continue;
+                    }
+                    transaction.put( ChatServiceInternal::getHistoryTable(), ChatServiceInternal::makeHistoryKey( message ), std::move( bytes ) );
                 }
-                _bCommitted = connection.commit( transaction ) == ServiceStoreResult::Ok ? SW_TRUE : SW_FALSE;
+                const bool bCommitted = transaction.isEmpty() || connection.commit( transaction ) == ServiceStoreResult::Ok;
+                _bCommitted           = bCommitted ? SW_TRUE : SW_FALSE;
 
                 for ( const string& channelID : _listTrimChannel )
                 {
@@ -108,7 +116,7 @@ namespace sw
                 }
             }
 
-            void complete() override { _pService->applyHistoryWrite( _bCommitted == SW_TRUE, static_cast<int32>( _listMessage.size() ) ); }
+            void complete() override { _pService->applyHistoryWrite( _bCommitted == SW_TRUE, static_cast<int32>( _listMessage.size() ) - _rejectedCount, _rejectedCount ); }
 
         private:
             void trimChannel( IServiceStoreConnection& connection, const string& channelID ) const
@@ -134,6 +142,7 @@ namespace sw
             vector<string>      _listTrimChannel;
             ChatService*        _pService;
             int64               _trimBeforeMs;
+            int32               _rejectedCount; ///< 기록 레코드를 쓰지 못해 뺀 메시지 수이다
             uint8               _bCommitted;
         };
 
@@ -662,12 +671,14 @@ namespace sw
         _dependencies._pStore->submit( sw::make_unique<ChatHistoryWriteWork>( this, std::move( listMessage ), std::move( listTrimChannel ), nowMs - _settings._historyRetentionMs ) );
     }
 
-    void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount )
+    void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount )
     {
         --_pendingStoreCount;
         _bHistoryWriting = SW_FALSE;
         if ( bCommitted == false )
             SW_LOG_WARNING( "ChatService: %# chat history records were not stored (store unavailable) - they are dropped", messageCount );
+        if ( rejectedCount > 0 )
+            SW_LOG_ERROR( "ChatService: %# chat history records could not be written - they are dropped", rejectedCount );
     }
 
     bool ChatService::isWhisperParticipant( AccountID accountID, string_view channelID ) const

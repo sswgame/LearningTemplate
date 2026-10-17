@@ -14,9 +14,9 @@ namespace sw
 
 namespace sw
 {
-    vector<uint8> TradeProtocol::encodeSession( const TradeSessionRecord& record )
+    bool TradeProtocol::encodeSession( const TradeSessionRecord& record, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kTradeRecordVersion, record );
+        return ServiceRecordUtil::encode( kTradeRecordVersion, record, outBytes );
     }
 
     bool TradeProtocol::decodeSession( const string_view key, const vector<uint8>& bytes, TradeSessionRecord& outRecord )

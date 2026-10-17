@@ -111,9 +111,9 @@ namespace sw
          *          서버가 읽은 정의를 운영 쓰기와 같은 규칙(`LiveEventRules::isValid`)으로 다시 확인합니다.
          *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 판을 올리고 데이터를 다시 씁니다.
          */
-        static vector<uint8>      encodeEvent( const LiveEventDefinition& definition );
+        [[nodiscard]] static bool encodeEvent( const LiveEventDefinition& definition, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeEvent( string_view key, const vector<uint8>& bytes, LiveEventDefinition& outDefinition );
-        static vector<uint8>      encodeDevice( const PushDeviceRegistration& registration );
+        [[nodiscard]] static bool encodeDevice( const PushDeviceRegistration& registration, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeDevice( string_view key, const vector<uint8>& bytes, PushDeviceRegistration& outRegistration );
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 손상된 본문은 Invalid, 도배 제한은 RateLimited, 나머지는 Unavailable 입니다. */
