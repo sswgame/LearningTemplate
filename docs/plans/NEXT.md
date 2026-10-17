@@ -19,8 +19,8 @@ Debug `-L lint` · `-L nogpu` · `-L race` 를 통과시키고(고친 둘: `Wild
 ## 2. 다음 할 일
 
 0. **리플렉션 병합 묶음 마무리**: Shipping 빌드와 `-L nogpu` · `-L hostgpu`, 네 백엔드 × 대표 셋(Empty · 에디터 · Shooter3D · NileCity), FightingMatch · Mech · Horror 게임 × 네 백엔드와 자동화 시나리오를 돌립니다. push 는 사용자 결정(1절 ④)을 따릅니다. 단계 1 끝에 기록하기로 한 실행 파일 크기 증가(단계 1 전후 Release `App.exe` · 모듈 DLL 크기)를 `ReflectionFormats.md` 에 적습니다.
-   - 리플렉션 남은 단계(`ReflectionFormats.md` 9절 표 순서): `D7-7` 넷 채널 등록 · 6 컴팩트 모드 삭제 · `cloneObject` B · 7-a 타입 캐시 · 열거형 이름 배열 · 7-b 다중 상속 생성 오류 · 7-c 타입별 컴포넌트 목록 · 7-d `TComponentHandle<T>`. 4-b(인스펙터 `Min` · `Max`)도 남았습니다. 단계 2 는 보류(1절 ②)입니다.
-   - 직렬화 결함과 정리: `C-38` `REFLECT( Alias )`(`_listAlias`) 제거, `A-13` 자기 기술형 바이너리가 모르는 타입을 1 바이트 건너뛰고 성공으로 읽음, `A-14` `BitStream` 손 코덱이 범위 밖 값을 조용히 자름, `A-15` `PROPERTY( Min · Max )` 를 고정 배치형만 지킴, `A-16` 계정 서버 응답 쓰기 실패 뒤 세션이 남음.
+   - 리플렉션 남은 단계(`ReflectionFormats.md` 9절 표 순서): `D7-7` 넷 채널 등록 · 7-a 타입 캐시 · 열거형 이름 배열 · 7-b 다중 상속 생성 오류 · 7-c 타입별 컴포넌트 목록 · 7-d `TComponentHandle<T>`. 4-b(인스펙터 `Min` · `Max`)도 남았습니다. 단계 2 는 보류(1절 ②)입니다.
+   - 직렬화 결함과 정리: `C-38` `REFLECT( Alias )`(`_listAlias`) 제거, `A-15` `PROPERTY( Min · Max )` 를 고정 배치형만 지킴, `A-16` 계정 서버 응답 쓰기 실패 뒤 세션이 남음.
 1. **CI 첫 결과 확인**(push 는 두 번 끝났다 — `b21bf6c4f`, `97dfd14fd`. 사용자가 실패를 알려 주면 `ci-jobs` 로 읽는다). 리눅스 · PCH 끈 Windows CI · `header-self-contained.yml`(Windows Debug 잡이 32 → 약 18 분인지) · 야간 `load.yml`. 리눅스 CI 가 `B-5`(퍼저 재확인) `B-7` `C-14`(린트 잡)를 풀 수 있다.
 2. 넷 설정의 남은 것: `gv_netLoopbackOnly` 도 테스트 전역 변수에서만 읽는 같은 모양, `_gamePortShardCount` 는 계약만 있고 구현이 없다(`D7-3` ⑤), Shipping 클라이언트에는 `gv_netConnectAddress` 가 없다.
 3. `Internal` 소거의 남은 것: `-DSW_ENABLE_UNITY_BUILD` 로 충돌을 한 번 본다(`DuplicateAnonymousFunction` 은 `Source/` 만 보므로 `Test/` 이름 충돌은 직접 확인), 병합 때 작업자끼리 겹친 익명 함수 이름이 한 건 났다(`makeRandomSeed`).

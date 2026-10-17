@@ -27,10 +27,10 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 이 비용은 스키마가 바뀐 뒤에도 예전 데이터를 읽기 위한 것입니다. 디스크 세이브, 에셋, 핫 리로드, 에디터 복사 · 붙여넣기에는 꼭 필요합니다.
 같은 빌드의 같은 프로세스 안에서 쓰고 읽는 데이터에는 필요 없는 비용입니다.
 
-같은 파일에 **적응형 컴팩트 모드**(`serializeCompact`)가 이미 있습니다. 이 모드는 이름 대신 프로퍼티 순서로 짝을 맞추고, 헤더 주석이 "중간에 넣거나 순서를 바꾼 스키마로 읽으면 엉뚱한 필드에 들어갑니다"라고 적고 있습니다(`BinarySerializer.h` 5절 주석).
-스키마를 확인하는 장치가 없어서 잘못 읽어도 알 수 없습니다. `Archive::serializeCompactObject` 외에 호출하는 곳은 없습니다(`Source` 전체 grep). B 가 이 모드를 대신하고, 단계 6 에서 컴팩트 모드를 지웁니다.
+같은 파일에 **적응형 컴팩트 모드**(`serializeCompact`)가 있었습니다. 이름 대신 프로퍼티 순서로 짝을 맞추고 스키마를 확인하는 장치가 없어, 순서를 바꾼 스키마로 읽으면 엉뚱한 필드에 들어갔습니다.
+디스크 경로가 없고 호출은 테스트뿐이었습니다. 단계 6 에서 `serializeCompact` · `deserializeCompact` · `Archive::serializeCompactObject` · `PresenceMaskUtil` 과 그 테스트를 지웠습니다. 같은 빌드끼리의 짧은 바이트는 B 가 맡습니다.
 
-`cloneObject` 는 POD 가 아니면 자기 기술형으로 쓰고 다시 읽어 복제합니다(`BinarySerializer.cpp:538-558`). `Source` 안에서 이 함수를 부르는 곳은 없습니다.
+`cloneObject`(POD 가 아니면 자기 기술형으로 쓰고 다시 읽어 복제)는 `Source` 안에 호출이 없어 B 로 옮기지 않고 단계 6 에서 지웠습니다. 복제가 필요해지면 B 의 `FixedLayout` 왕복으로 만듭니다.
 `BinarySerializer::` 를 직접 부르는 곳은 Serialization 밖에 세 파일뿐입니다. 에디터 컴포넌트 복사(`EditorWorkspace.cpp:275`, `EditorTransformCommands.cpp:103,150`)와 세이브의 커스텀 상태(`GameInstanceBase.cpp:454,537`)이며 모두 A 에 남습니다.
 
 ### 1.2 손으로 쓴 코덱(옮길 후보)
@@ -44,7 +44,7 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 | Horror 스냅샷(옛 `HorrorSnapshot.cpp`, 단계 4-a 에서 지움) | `BitWriter`, 양자화 | `kMagic = "DBD1"` | 같은 개수 자르기 |
 | 온라인 `*Protocol.cpp` 12 파일, 2,046 줄(단계 5-b 에서 B 로 옮김) | `BitWriter` | 키트마다 손 `kVersion`(`ChatProtocol.h:69` 등) | 와이어를 바꾸면 버전을 높이라는 주석(`ChatProtocol.h:23`)이 유일한 장치 |
 
-`BitWriter::writeInt` 는 범위 밖 정수를 경고 없이 잘라 씁니다(`Source/Core/Network/BitStream.cpp:70-74`). 범위를 잘못 정하면 값이 조용히 바뀝니다.
+`BitWriter::writeInt` 는 범위 밖 정수를 경고 없이 잘라 썼습니다. 지금은 `writeInt` · `writeQuantizedFloat` 가 `[[nodiscard]] bool` 이고 범위 밖이면 쓰지 않으며, 읽기는 범위 밖 칸을 깨진 데이터로 거절합니다(백로그 `A-14` 해결, 2026-10-17).
 `FighterRuntime`(`FightingMatch.h:117`)에는 `REFLECT` · `PROPERTY` 가 없습니다. Mech · Horror 스냅샷 구조체는 단계 4-a 에서 `REFLECT` · `PROPERTY` 를 받았습니다.
 
 손으로 쓴 `operator==` 는 `Source` 에 75 개입니다. 이 가운데 같은 파일에 `PROPERTY` 가 있는 것은 4 파일(`atomic.h`, `Component.h`, `DataPath.h`, `WidgetTypes.h`)뿐입니다.
@@ -71,9 +71,10 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 
 - 손 버전 상수: `FightingMatch` `kStateVersion`, `GimmickCircuit` `kStateVersion`, 온라인 키트 `kVersion` 12 개(단계 5-b 에서 지움), `NetWireVersion::kCore`(`Source/Core/Network/NetTypes.h:42`).
 - 손으로 계산한 크기: `GimmickCircuit.cpp:465,492` 의 `_listNode.size() * 16`.
-- 조용히 버리는 값: `writeInt` 의 범위 자르기. Mech · Horror 의 개수 255 자르기와 Mech 의 `max( 1.0f, halfSize )` 는 단계 4-a 에서 쓰기 실패로 바뀌었습니다.
-- 스키마 확인 없는 순서 기반 형식: 컴팩트 모드(1.1).
-- 모르는 타입 폴백: `deserializeValueBinary` 는 어느 핸들러도 없으면 1 바이트를 건너뛰고 성공을 반환합니다(`SerializerUtil.cpp:629-633`). 이 문서의 범위 밖이지만 B 에서는 인코딩 테이블 밖의 타입을 가진 타입에 코덱이 생기지 않고, 등록 API 가 이유와 함께 멈추는 구조로 막습니다(3.1, 3.4). A 쪽 수정은 백로그 후보입니다(8.2).
+- 조용히 버리는 값: `writeInt` 의 범위 자르기(쓰기 실패로 바뀜, 1.2). Mech · Horror 의 개수 255 자르기와 Mech 의 `max( 1.0f, halfSize )` 는 단계 4-a 에서 쓰기 실패로 바뀌었습니다.
+- 스키마 확인 없는 순서 기반 형식: 컴팩트 모드(1.1, 단계 6 에서 지움).
+- 모르는 타입 폴백: `deserializeValueBinary` 는 어느 핸들러도 없으면 1 바이트를 건너뛰고 성공을 반환했습니다. 지금은 쓰기가 아무것도 쓰지 않고 읽기가 실패를 돌려줍니다(타입마다 오류 한 번).
+  그 길을 타던 실제 경우는 생성기가 컨테이너 원소의 별칭을 벗기지 않던 것(`vector<AccountID>`)이라 `AstVisitor.cpp` 의 `resolveTemplateArgName` 이 원소 · 키도 `resolvePropertyAlias` 로 벗깁니다. B 에서는 인코딩 테이블 밖의 타입에 코덱이 생기지 않습니다(3.1, 3.4).
 
 ## 2. 두 형식의 역할
 
@@ -376,7 +377,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
 3. `FightingMatch` 롤백 B, 세이브 A(단계 3).
 4. Mech · Horror 스냅샷과 게임 넷 채널 등록(단계 4). 핸드셰이크에 해시를 섞습니다.
 5. 온라인: 핸드셰이크 첫 필드 해시와 "업데이트 필요" 거절을 먼저(단계 5-a), 그다음 프로토콜 12 파일(단계 5-b).
-6. 컴팩트 모드 삭제, `cloneObject` 를 B 로(단계 6).
+6. 컴팩트 모드 삭제(단계 6, 끝남). `cloneObject` 는 호출부가 없어 B 로 옮기지 않고 지웠습니다.
 
 단계마다 아래 테스트를 둡니다. 성능 수치는 요구하지 않습니다.
 
@@ -474,8 +475,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 
 ### 8.2 백로그로 넘긴 것
 
-- `SerializerUtil::deserializeValueBinary` 의 "모르는 타입이면 1 바이트 건너뛰고 성공"은 [engine.md](../backlog/engine.md) `A-13` 입니다. A 의 결함이며 이 계획과 독립입니다.
-- `BitWriter::writeInt` 의 조용한 범위 자르기와 `BitReader::readInt` · `readQuantizedFloat` 의 읽기 자르기는 [network.md](../backlog/network.md) `A-14` 입니다. 손 코덱이 남아 있는 동안의 안전망입니다.
+- `A-13`(모르는 타입 1 바이트 건너뛰기)과 `A-14`(`BitStream` 범위 자르기)는 단계 6 과 함께 해결했습니다(1.2, 1.4).
 
 ### 8.3 정한 것
 
@@ -505,7 +505,6 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 2 | (보류) `GimmickCircuit` 을 B 로. 상태 바이트 `_stateBytes` 가 씬 · 프리팹 XML 과 레벨 세이브에 남아 B 대상이 아님. 아래 문단 | `GimmickCircuit.*`, `GimmickCircuitComponent.*` | 세이브 형식 결정이 먼저 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게 | 인스펙터 범위 코드(미확인 위치) | 단계 1 뒤 | `worker`(sonnet) |
-| 6 | 컴팩트 모드 삭제, `cloneObject` B | `BinarySerializer.*`, `Archive.*` | 다른 직렬화 작업과 겹침 | `worker`(sonnet) |
 | 7-a | `GameObject` 타입 캐시, 열거형 이름 배열 | `GameObject.*`, `EnumName.cpp`, 생성기 열거형 등록 | 생성기는 단계 1 뒤 | `worker`(sonnet) |
 | 7-b | `REFLECT` 다중 상속 생성 오류 | `AstVisitor.cpp` | 단계 1 과 같은 파일, 순서대로 | `worker`(sonnet) |
 | 7-c | 매니저의 타입별 컴포넌트 목록 | `GameObjectManager.*`, `GameObjectStore.*` | 7-d 와 같은 파일, 7-c 먼저 | `integrator`(opus) |
@@ -528,6 +527,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 `RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.
 세이브 읽기는 자기 기술형이 `Min` · `Max` 를 보지 않으므로 `SerializerUtil::collectRangeErrors( ..., RangeCheckScope::IncludeSequenceElements )` 를 직접 부릅니다.
 자기 기술형 읽기 전반의 범위 검사는 기존 에셋을 깰 수 있어 백로그 `A-15` 로 남겼습니다.
+
+단계 6 은 끝났습니다(2026-10-17). 컴팩트 모드와 호출부 없는 `cloneObject` 를 지웠고(1.1), 같은 묶음으로 `A-13` · `A-14` 를 고쳤습니다(1.2, 1.4).
 
 단계 2 는 보류합니다. `GimmickCircuit` 상태 바이트는 `GimmickCircuitComponent::_stateBytes`(`PROPERTY`)로 씬 · 프리팹 · 레벨 세이브에 남으므로 B 의 조건(같은 빌드끼리만 읽는다)에 맞지 않습니다.
 옮긴다면 상태를 `REFLECT` 구조체로 꺼내 컴포넌트에는 A 로, 체크포인트 · 넷 스냅샷에는 B 로 싣는 구조가 됩니다. 이 결정은 단계 3 처럼 세이브 형식을 바꾸므로 따로 정합니다.
