@@ -270,8 +270,9 @@ class CheckNameReferencesGate(LintGate):
     description = "코드 · 실행 인자 · 시나리오가 이름으로 부르는 전역 변수 · 입력 액션 · 오디오 이벤트 · 시나리오 단계 · 탐침 · 개발 명령이 정의돼 있는지 검사"
     buildComment = "Checking that names used by code, arguments and scenarios (global variables, input actions, audio events, steps, probes, dev commands) are defined..."
     timeoutSeconds = 60
-    preCommitPattern = ("*.h", "*.cpp", "*.inl", "*.py", "*.json", "*.xml", "*.cmake", "*.txt", "*.yml", "*.ps1")
-    preCommitFileArgument = ""
+    # 이름의 정의(코드)와 쓰임(인자 · 시나리오 · 데이터)이 서로 다른 파일이라 staged 부분집합으로는 볼 수 없고, 트리 전체 대조가 거의 모든 커밋에서
+    # 6~7 s 로 훅의 바닥이었다. 커밋마다가 아니라 push 마다 본다 — CI 린트 잡(RunLintSuite)과 ctest -L lint 가 트리 전체로 돌린다.
+    preCommitSkipReason = "트리 전체 대조(6~7 s, 훅의 바닥) — CI 린트 잡(RunLintSuite)과 ctest -L lint 가 push 마다 본다"
     violationHeader = "정의되지 않은 이름"
     hint = (
         "  전역 변수: 정의(SW_*GLOBAL_VARIABLE)의 이름으로 고치거나, 지운 스위치면 그 인자 · 시나리오 줄을 지웁니다.\n"

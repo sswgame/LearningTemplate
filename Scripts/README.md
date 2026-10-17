@@ -386,13 +386,18 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 - **린트 CTest 는 프리셋이 4 개씩 동시에 돌린다**(`Ninja-Debug-lint` 의 `execution.jobs`) — 린트끼리 공유하는 출력이 없어야 한다: 셀프테스트는 `mkdtemp`,
   게이트는 읽기만. 새 린트가 저장소 안에 파일을 쓰면 이 전제가 깨진다. 8 · 16 은 4 와 같거나 느리다(`CheckCodeConventions` · `CheckLintsAreAlive` 가 스스로 여럿을 쓴다).
 - **커밋 훅은 트리 전체 게이트(`preCommitFileArgument = ""`)를 하위 프로세스로 먼저 띄운다**(`GateRunPlan.bBackground`) — 파일 하나 커밋 9.6 → 4.3 s(부하 중).
-  파일 단위 게이트는 이 프로세스에서(기동 0.1~0.3 s 가 게이트보다 비싸다). 훅의 바닥 시간은 가장 긴 트리 전체 게이트다 — 새 게이트는 가능하면 `--files` 를 받게 짓는다.
+  파일 단위 게이트는 이 프로세스에서(기동 0.1~0.3 s 가 게이트보다 비싸다). 훅의 바닥 시간은 가장 긴 트리 전체 게이트다 — 새 게이트는 가능하면 `--files` 를 받게 짓는다
+  (소스 게이트는 저절로 받는다 — `CheckEngineLayers` · `CheckGameFrameworkLayers` 가 그렇게 트리 전체에서 staged 파일로 줄었다).
   훅은 끝에 `게이트 시간:` 한 줄(가장 긴 셋 · 파일 단위 합)을 찍는다. 트리 전체 게이트(`CheckConfigReference` · `CheckDuplicateTypeNames` ·
   `CheckModuleTargets` · `CheckDataFileReferences` · `CheckGlobalVariableKinds`)가 비슷한 높이(조용할 때 1~1.4 s)라 하나만 깎으면 바닥이 안 내려간다 — 남은 것은 대개
   `Source/` 파일 3,000 개를 읽는 값이다. include · 파일마다 부르는 도우미는 `Path` 객체를 만들지 말 것(`normalizePath` 가 그것으로 2 s 를 썼다).
+- **파일 사이를 대조하느라 staged 부분집합으로 볼 수 없는 무거운 게이트는 훅에서 빼고 push 마다 본다**(`preCommitSkipReason`) — `CheckNameReferences`
+  (코드의 정의 ↔ 인자 · 시나리오 · 데이터의 쓰임, 거의 모든 커밋에서 6~7 s 로 훅의 바닥이었다) · `CheckKitNamespaces`(트리 전체의 같은 상태 표 · 로그 범주).
+  CI 린트 잡(`RunLintSuite`)과 `ctest -L lint` 의 목록에는 그대로 있다(`TestPreCommitLint.testTreeWideCrossFileGatesAreLeftToCi`). 근거와 한계는 `docs/08_Verification.md` 4절.
+  읽는 파일이 정해진 게이트는 그 파일에만 건다(`CheckRenderOwnership` 은 옮겨지는 헤더 둘).
 - **트리 전체 게이트를 소스 변경마다 돌리지 않으려면 내용 규칙을 쓴다**(`LintGate.preCommitContentPattern` · `preCommitChangedLinePattern`, 판정은 `PreCommitLint.StagedContentProbe`).
   `preCommitPattern` 은 "무조건 도는 파일" 이 되고, 소스는 **게이트가 읽는 토큰**이 든 파일일 때만 돈다 — 토큰 목록은 게이트가 읽는 정규식의 합집합이어야 하므로 규칙을 더하는
-  커밋이 같은 커밋에서 내용 규칙도 넓힌다(`CheckKitNamespaces._kContentTokenPattern` · `CheckConfigReference` 의 `REFLECT` · `enum class` · `GLOBAL_VARIABLE` · `ConfigKeyDoc`).
+  커밋이 같은 커밋에서 내용 규칙도 넓힌다(`CheckConfigReference` 의 `REFLECT` · `enum class` · `GLOBAL_VARIABLE` · `ConfigKeyDoc`).
   전체 내용 규칙은 HEAD · staged 어느 쪽이든 맞으면 돈다(토큰을 **지우는** 커밋도 잡는다). 바뀐 줄 규칙은 위반이 그 줄 하나로 생기는 게이트에만 쓴다(`CheckDuplicateTypeNames`:
   `class` · `struct` · `namespace` 줄 — 중괄호 깊이는 균형이 맞는 편집에서 안 바뀐다). 좁혀도 같은 결과인지는 건너뛴 커밋마다 부모 · 자식 트리에서 `buildConfigReference` 를 돌려
   바이트가 같은지로 봤다(최근 80 커밋 중 12 가 건너뛰기, 표본 4 개 모두 같음). git 이 답하지 못하면 도는 쪽으로 틀린다. 함정: 훅의 staged 목록은 `--diff-filter=ACM` 이라

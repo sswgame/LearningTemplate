@@ -433,7 +433,7 @@ push 뒤 결과를 기다리지 않는 것은 [작업 방식](11_Workflow.md) 4�
 
 | 단계 | 언제 | 무엇 | 파일 | 예산 |
 |---|---|---|---|---|
-| 린트 | 모든 push · PR (문서만 바뀌어도) | 게이트 + 셀프테스트 전부, 바뀐 파일이 문서뿐이면 빌드 잡을 건너뛰게 `code` 를 낸다 | `ci.yml` `lint` | 약 1 분 |
+| 린트 | 모든 push · PR (문서만 바뀌어도) | 게이트 + 셀프테스트 전부(훅이 건너뛰는 트리 전체 게이트 포함 — 아래 "커밋 훅과 린트 잡의 나눔"), 바뀐 파일이 문서뿐이면 빌드 잡을 건너뛰게 `code` 를 낸다 | `ci.yml` `lint` | 약 1 분 |
 | 빌드 · `nogpu` | push · PR, 린트 뒤 | 구성 열 개 — Windows Debug · STL · Shipping · 전용 서버 Shipping, Linux Debug · ASan · TSan · Shipping · 전용 서버 Shipping | `ci.yml` `build` | 15 ~ 30 분(가장 긴 잡이 전체 시간) |
 | 매일 컴파일 검사 | 03:00 KST · 수동 | 헤더 단독 컴파일, `SW_ENABLE_DEADLOCK_DETECTION` 구성 컴파일 | `header-self-contained.yml` | 약 30 분 |
 | 매일 퍼징 | 03:00 KST · 수동 | 로더 퍼저(ASan) | `fuzz.yml` | 최대 2 시간 |
@@ -441,6 +441,12 @@ push 뒤 결과를 기다리지 않는 것은 [작업 방식](11_Workflow.md) 4�
 
 판단 기준: push 마다 돌려도 잡 시간을 늘리지 않는 것만 `ci.yml` 에 둔다. 전 트리를 다시 훑는 검사(14 분 이상)나 평소 어느 프리셋도 켜지 않는 구성은 매일 잡으로 보낸다 —
 `SW_ENABLE_DEADLOCK_DETECTION` 확인이 Windows Debug 잡에 있을 때 그 잡이 32 분으로 가장 길었고 14 분이 이 단계였다(옮기면 약 18 분으로 줄 것으로 본다 — 다음 main 실행으로 확인). 새 검사를 더할 때는 위 표에서 줄을 고른다.
+
+**커밋 훅과 린트 잡의 나눔.** 커밋 훅은 staged 파일로 볼 수 있는 게이트만 돈다. 파일 사이를 대조해 트리 전체를 읽어야 하는 무거운 게이트는 훅에서 빼고(`preCommitSkipReason`)
+린트 잡이 push 마다 트리 전체로 본다 — `CheckNameReferences`(코드의 정의 ↔ 인자 · 시나리오 · 데이터의 쓰임, 거의 모든 커밋에서 6~7 s 로 훅의 바닥이었다) ·
+`CheckKitNamespaces`(트리 전체의 같은 상태 표 · 로그 범주). 린트 잡(`RunLintSuite`)과 `ctest -L lint` 는 훅의 건너뜀과 상관없이 `LintCatalog` 의 목록 전부를 돌린다
+(`TestPreCommitLint.testTreeWideCrossFileGatesAreLeftToCi` 가 목록에 남아 있는지 본다). 한계: 이 둘의 위반은 커밋이 아니라 push 뒤 CI 에서 처음 보인다 —
+이름 · 상태 표를 바꾸는 커밋은 push 전에 `py -3 -m Scripts gate CheckNameReferences` 를 손으로 돌린다.
 
 ```powershell
 py -3 -m Scripts ci-jobs --runs                    # main 의 최근 실행
