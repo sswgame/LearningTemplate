@@ -133,6 +133,7 @@ namespace sw
     bool AnimationNotifyTable::loadFromXMLText( string_view xmlText, string_view sourceName, const AnimationNotifyHandlerRegistry& registry )
     {
         _listEntry.clear();
+        _listFootContact.clear();
         CharacterDataReader reader( sourceName );
         XMLDocument         document;
         XMLNode             root;
@@ -144,6 +145,7 @@ namespace sw
     bool AnimationNotifyTable::loadFromResource( string_view path, const AnimationNotifyHandlerRegistry& registry )
     {
         _listEntry.clear();
+        _listFootContact.clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
@@ -169,9 +171,49 @@ namespace sw
         {
             if ( StringUtil::equals( child.getName(), "Notify", true ) )
                 readEntry( child, registry, reader );
+            else if ( StringUtil::equals( child.getName(), "FootContact", true ) )
+                readFootContact( child, reader );
             else
                 reader.reportUnknownElement( child );
         }
+        // 발 닿음은 테이블의 알림을 낸다 — 줄 순서와 상관없이 다 읽은 뒤에 이름을 맞춘다.
+        for ( const AnimationFootContactDef& def : _listFootContact )
+        {
+            if ( findEntry( def._notify ) == nullptr )
+                reader.addError( string( "FootContact names notify '" ) + def._notify.c_str() + "' that has no <Notify> entry" );
+        }
+    }
+
+    bool AnimationNotifyTable::isFootContactNotify( const hashed_string& notify ) const
+    {
+        for ( const AnimationFootContactDef& def : _listFootContact )
+        {
+            if ( def._notify == notify )
+                return true;
+        }
+        return false;
+    }
+
+    void AnimationNotifyTable::readFootContact( const XMLNode& node, CharacterDataReader& reader )
+    {
+        static constexpr const utf8* kArrKnown[] = { "notify", "bone", "contact_height", "release_height", "max_vertical_speed" };
+        reader.reportUnknownAttributes( node, kArrKnown );
+        AnimationFootContactDef def{};
+        def._notify           = reader.readName( node, "notify", true );
+        def._bone             = reader.readName( node, "bone", true );
+        def._contactHeight    = reader.readFloat( node, "contact_height" );
+        def._releaseHeight    = reader.readFloat( node, "release_height" );
+        def._maxVerticalSpeed = reader.readFloat( node, "max_vertical_speed" );
+        if ( def._releaseHeight <= def._contactHeight )
+            reader.addError( node, "needs 'release_height' above 'contact_height'" );
+        if ( def._maxVerticalSpeed <= 0.0f )
+            reader.addError( node, "needs a positive 'max_vertical_speed'" );
+        if ( isFootContactNotify( def._notify ) )
+        {
+            reader.addError( node, string( "repeats foot contact notify '" ) + def._notify.c_str() + "'" );
+            return;
+        }
+        _listFootContact.push_back( def );
     }
 
     void AnimationNotifyTable::readEntry( const XMLNode& node, const AnimationNotifyHandlerRegistry& registry, CharacterDataReader& reader )
