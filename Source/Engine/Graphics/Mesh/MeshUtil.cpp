@@ -511,7 +511,8 @@ namespace sw
                 { x, y, 0.0f },
                 { 0.0f, 0.0f, 1.0f },
                 { x + 0.5f, 0.5f - y },
-                { 1.0f, 1.0f, 1.0f, 1.0f }
+                { 1.0f, 1.0f, 1.0f, 1.0f },
+                { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
             };
         };
         vector<RHIVertex> listVert = {
@@ -538,7 +539,8 @@ namespace sw
                 { x, y, 0.0f },
                 { 0.0f, 0.0f, normalZ },
                 { u, 0.5f - y },
-                { 1.0f, 1.0f, 1.0f, 1.0f }
+                { 1.0f, 1.0f, 1.0f, 1.0f },
+                { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
             };
         };
         vector<RHIVertex> listVert = {
@@ -602,7 +604,8 @@ namespace sw
                         { position._x, position._y, position._z },
                         { kUp._x, kUp._y, kUp._z },
                         { position._x + 0.5f, position._z + 0.5f },
-                        { color._x, color._y, color._z, color._w }
+                        { color._x, color._y, color._z, color._w },
+                        { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
                     } );
                 };
                 pushPlaneVertex( p00 );
@@ -661,7 +664,8 @@ namespace sw
                     { position._x, position._y, position._z },
                     { normal._x, normal._y, normal._z },
                     { u, v },
-                    { 1.0f, 1.0f, 1.0f, 1.0f }
+                    { 1.0f, 1.0f, 1.0f, 1.0f },
+                    { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
                 } );
             };
             for ( uint32 node = 0; node < kSegmentCount; ++node )

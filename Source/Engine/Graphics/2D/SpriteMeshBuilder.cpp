@@ -92,7 +92,8 @@ namespace sw
                     { x, y, 0.0f },
                     { 0.0f, 0.0f, normalZ },
                     { u, v },
-                    { 1.0f, 1.0f, 1.0f, 1.0f }
+                    { 1.0f, 1.0f, 1.0f, 1.0f },
+                    { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
                 };
             }
 

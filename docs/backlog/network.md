@@ -15,6 +15,9 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   `PartyLobbyService::initialize` 는 파티 크기를 `std::clamp` 로 조용히 맞춘다(폴백). 뿌리: 범위의 원본이 `PROPERTY` 하나가 아니다.
   손 규칙을 지우고 메시지 읽기의 범위 검사(`A-19`)에 맡기며, 설정 범위 밖 값은 오류로 멈춘다.
 
+- `C-54` [정리] **키트 설정 구조체가 범위 밖 값을 조용히 clamp 한다**(`LockstepSession` · `TurnRelay` · `ReplicationServer`). 2026-10-18 `feat17` 이 `RollbackConfig` 를
+  "검증하고 거절"로 바꿨다. 나머지 키트 설정도 같은 공통 형식(설정 구조체의 `PROPERTY( Min · Max )` + 받을 때 `validate` 가 오류를 돌려주고 시작을 거절)으로 옮긴다. `C-39` 와 같은 뿌리.
+
 - `D7-1` [기능] **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
   받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 실제 세션 위의 파괴 복제(`DestructionNetSessionComponent` · `DestructionNetSession`)와 해시 로그 비교
@@ -25,7 +28,7 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   지킨다(Windows Debug · Release · Shipping 같은 값 확인, 리눅스는 CI 잡 — 리눅스 clang 에서 다르면 그 잡이 진다).
 
 - `D7-2` [기능] **전용 서버 타깃에서 남은 것.** (게임별 기동 확인은 ServerTest `EveryBuiltGameStartsAsADedicatedServer` — Debug 9 게임 77 s.)
-  ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). 렌더러 · RHI 를 Engine CMake 에서 타깃별로 가르는 일이라 Engine 소유 작업으로 남겼다.
+  ④ 서버 빌드에서 렌더러 코드를 아예 빼기(결정 기록 `D7-2.1`, 지금은 컴파일만 되고 돌지 않는다). 렌더러 · RHI 를 빼고 링크 오류를 보며 고친 뒤 실행 파일 크기 · 링크 시간을 전후로 잰다. 렌더러 · RHI 를 Engine CMake 에서 타깃별로 가르는 일이라 Engine 소유 작업으로 남겼다.
   ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 로컬 WSL 빌드는 하지 않기로 해서(사용자 결정) CI 리눅스 잡 몫이다. 서버용 크래시 보고 전송 동의(운영 설정)는 `H-3`.
 
 - `D7-3` [기능] **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](../plans/ServerDebug.md).** S3 · S6 · S7 의 프로세스 쪽은 들어갔고 다음은 에디터 쪽(Inspector · Sync 탭)이다. 방향 결정은 [결정 기록](../09_Decisions.md) 5-10. 단위를 끝내면 계획 문서에서 지운다. 운영 단위 O1 ~ O7 은 `H-3` 참고.

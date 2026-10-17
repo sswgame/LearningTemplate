@@ -4,11 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Net/GameNetSession.h"
 
 namespace sw
 {

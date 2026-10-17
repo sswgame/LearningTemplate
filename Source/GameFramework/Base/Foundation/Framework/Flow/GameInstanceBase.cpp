@@ -61,9 +61,12 @@ namespace sw
                 {
                     if ( pComponent == nullptr || pComponent->isPendingDestroy() )
                         continue;
+                    if ( pComponent->getTypeInfo() == nullptr )
+                        continue;
+                    const hashed_string typeFqn = pComponent->getTypeInfo()->_fullyQualifiedName;
                     for ( size_t savedIndex = cursor; savedIndex < listSaved.size(); ++savedIndex )
                     {
-                        if ( listSaved[savedIndex]._typeName != pComponent->getTypeName() )
+                        if ( listSaved[savedIndex]._typeFqn != typeFqn )
                             continue;
                         cursor = savedIndex + 1;
                         ComponentStateStore::SavedComponentID remap;

@@ -154,6 +154,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         bool operator==( const vector& other ) const;
         bool operator!=( const vector& other ) const;
+        /** @brief 사전식 비교입니다(`std::vector` 와 같다 — 정렬 컨테이너의 키로 쓸 수 있게). 원소에 `operator<` 가 있어야 인스턴스화됩니다. */
+        bool operator<( const vector& other ) const;
 
     private:
         constexpr bool has_inline_buffer() const;
@@ -1184,6 +1186,22 @@ namespace sw
     inline bool vector<T, Allocator>::operator!=( const vector& other ) const
     {
         return ( *this == other ) == false;
+    }
+
+    template <typename T, typename Allocator>
+    inline bool vector<T, Allocator>::operator<( const vector& other ) const
+    {
+        SW_SCOPED_RACE_READ();
+        SW_SCOPED_RACE_READ_OTHER( other );
+        const size_t commonSize = _size < other._size ? _size : other._size;
+        for ( size_t index = 0; index < commonSize; ++index )
+        {
+            if ( _pData[index] < other._pData[index] )
+                return true;
+            if ( other._pData[index] < _pData[index] )
+                return false;
+        }
+        return _size < other._size;
     }
 
 #endif

@@ -28,7 +28,7 @@ namespace sw
 {
     /** @brief push 중계 봉투입니다(주제 `push.<서버 id>`). */
     REFLECT()
-    struct OnlinePushRelay
+    struct SW_GF_API OnlinePushRelay
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)

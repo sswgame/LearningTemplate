@@ -82,7 +82,7 @@ namespace sw
 {
     /** @brief 파티 초대 알림입니다. */
     REFLECT()
-    struct PartyInvite
+    struct SW_KIT_API PartyInvite
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
@@ -137,7 +137,7 @@ namespace sw
 {
     /** @brief 서버 버스(대기열 취소 주제)의 본문입니다. 권한 서버가 대기열에서 그 티켓을 뺍니다. */
     REFLECT()
-    struct MatchTicketCancel
+    struct SW_KIT_API MatchTicketCancel
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 버스에만 쓰므로 `MessageTypes` 에 없다

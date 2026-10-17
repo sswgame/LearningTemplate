@@ -633,10 +633,12 @@ SW_TEST_CASE( ControlTest, RecordedIntentsReplayTheSameTrajectory )
  */
 SW_TEST_CASE( ControlTest, IntentFileRoundTrips )
 {
-    ControlIntentHistory history;
+    // 기록은 타입 핸들(`TComponentHandle<PawnComponent>`)로만 받는다 — 진짜 폰 둘에서 만든다.
+    GameObjectManager                     manager;
+    const TComponentHandle<PawnComponent> first( ControlTestInternal::spawnAnalogPawn( manager, "Walker" ) );
+    const TComponentHandle<PawnComponent> second( ControlTestInternal::spawnAnalogPawn( manager, "Swimmer" ) );
+    ControlIntentHistory                  history;
     history.initialize( 64 );
-    const ComponentHandle first  = ComponentHandle::makeOwned( 11, 12 );
-    const ComponentHandle second = ComponentHandle::makeOwned( 21, 22 );
     for ( uint32 tick = 100; tick < 110; ++tick )
     {
         ControlIntent intent;

@@ -109,7 +109,7 @@ namespace
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
                 {
-                    if ( message._originServerID != _bus.getServerID() )
+                    if ( message.getOriginServerID() != _bus.getServerID() )
                         _service.handleBusMessage( message );
                 }
                 _service.update( nowMs );

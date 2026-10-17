@@ -69,7 +69,7 @@ namespace sw
      *          문자열 상한은 `ChatLimit` 와 `RequestLimits::kMaxDisplayNameSize` 와 같은 값입니다. 가린 글은 코드 포인트마다 '*' 하나이므로 원문보다 길지 않습니다.
      */
     REFLECT()
-    struct ChatMessage
+    struct SW_KIT_API ChatMessage
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`ChatBus`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 기록 레코드의 판과 따로다

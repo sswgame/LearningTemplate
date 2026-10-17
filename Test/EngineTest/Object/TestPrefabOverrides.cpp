@@ -545,8 +545,8 @@ SW_TEST_CASE( PrefabOverridesTest, SceneEditOfANestedPartIsSavedOnTheOuterInstan
     const sw::GameObject* pReopenedLeft  = pReopened->getObjectManager()->findGameObjectByName( sw::hashed_string( "WheelL" ) );
     SW_ASSERT_TRUE( pReopenedRight != nullptr && pReopenedRight->getPrimarySceneComponent() != nullptr );
     SW_ASSERT_TRUE( pReopenedLeft != nullptr && pReopenedLeft->getPrimarySceneComponent() != nullptr );
-    SW_EXPECT_NEAR_EQUAL( 4.0f, pReopenedRight->getPrimarySceneComponent()->getLocalPosition().x, 0.0001f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pReopenedLeft->getPrimarySceneComponent()->getLocalPosition().x, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pReopenedRight->getPrimarySceneComponent()->getLocalPosition()._x, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pReopenedLeft->getPrimarySceneComponent()->getLocalPosition()._x, 0.0001f );
 
     // 다시 저장해도 같은 항목 하나다(덮어쓴 것을 얹어 만든 부품이 새 기준과 견줘 같은 차이를 낸다).
     sw::SceneDocument resaved;

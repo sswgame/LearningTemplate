@@ -437,8 +437,8 @@ namespace sw
 
         // 4단계: 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)의 불변 사본 참조를 잡고 락 밖에서 알린다(줄마다 목록을 복사하지 않는다). 그 세대 칸에
         //        "부르는 중" 을 올려 두어, 떼기가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`). 리스너가 없으면 락도 잡지 않는다.
-        shared_ptr<const LogWrittenMulticast> listenerSnapshot;
-        uint32                                broadcastSlot{ 0 };
+        shared_ptr<LogWrittenMulticast> listenerSnapshot;
+        uint32                          broadcastSlot{ 0 };
         if ( _bHasListener.load( std::memory_order_acquire ) )
         {
             std::scoped_lock<mutex> lock{ _mutex };

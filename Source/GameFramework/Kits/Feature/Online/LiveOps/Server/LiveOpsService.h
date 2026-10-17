@@ -52,7 +52,7 @@ namespace sw
 {
     /** @brief 라이브 운영 정의를 바꿨다는 버스 신호의 본문입니다. 필드가 없고 받는 서버가 다시 읽습니다. */
     REFLECT()
-    struct LiveOpsChanged
+    struct SW_KIT_SERVER_API LiveOpsChanged
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)

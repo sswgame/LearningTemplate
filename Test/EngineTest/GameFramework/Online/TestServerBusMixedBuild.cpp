@@ -18,10 +18,8 @@ namespace
 {
     struct TestServerBusMixedBuildInternal
     {
-        static constexpr ServerBusTopic<BusTestNoticeOld>         kOldTopic{ "test.notice" };
-        static constexpr ServerBusTopic<BusTestNoticeNew>         kNewTopic{ "test.notice" };
-        static constexpr ServerBusTopic<BusTestNoticeNextMeaning> kNextMeaningTopic{ "test.notice" };
-        static constexpr ServerBusTopic<BusTestNoticeWideLabel>   kWideLabelTopic{ "test.notice" };
+        static constexpr ServerBusTopic<BusTestNoticeOld> kOldTopic{ "test.notice" };
+        static constexpr ServerBusTopic<BusTestNoticeNew> kNewTopic{ "test.notice" };
 
         /** @brief @p value 를 그 타입의 의미 버전으로 쓴 바이트를 다른 서버(2)가 보낸 메시지로 만듭니다. */
         template <typename T>

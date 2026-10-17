@@ -145,7 +145,7 @@ namespace sw
 {
     /** @brief 서버 버스 `SocialBus::kLinksTopic` 의 본문입니다. 관계가 바뀐 두 사람이며, 받은 서버는 그 계정이 자기에게 있으면 관계를 다시 읽습니다. 버스에만 쓰므로 `MessageTypes` 에 없습니다(A). */
     REFLECT()
-    struct SocialLinkChanged
+    struct SW_KIT_API SocialLinkChanged
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)

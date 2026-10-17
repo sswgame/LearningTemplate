@@ -242,7 +242,7 @@ namespace sw
 {
     /** @brief 서버 버스(`AccountBus::kRevokeTopic`)의 본문입니다. 다른 서버에서 끊긴 세션을 알립니다. 버스에만 쓰므로 `MessageTypes` 에 없습니다(A). */
     REFLECT()
-    struct AccountRevokeNotice
+    struct SW_KIT_API AccountRevokeNotice
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)

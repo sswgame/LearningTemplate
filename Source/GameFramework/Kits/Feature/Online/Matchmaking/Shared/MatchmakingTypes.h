@@ -79,7 +79,7 @@ namespace sw
 {
     /** @brief 대기열 티켓 하나입니다. 혼자이거나 파티이며, 파티는 같은 팀에 함께 배정합니다. 서버 버스(대기열 주제)의 본문입니다. */
     REFLECT()
-    struct MatchTicket
+    struct SW_KIT_API MatchTicket
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 새 필드는 옛 빌드 매처를 지나면 기본값이 된다(3.6)
@@ -97,7 +97,7 @@ namespace sw
         int64 _enqueuedMs{ 0 };
 
         /** @brief 멤버 실력의 평균입니다. 멤버가 없으면 0입니다. */
-        SW_KIT_API int32 computeAverageRating() const;
+        int32 computeAverageRating() const;
     };
 } // namespace sw
 
@@ -117,7 +117,7 @@ namespace sw
 {
     /** @brief 만들어진 경기 하나입니다. 서버 버스(배정 주제)로 전용 서버에 보내는 본문입니다. */
     REFLECT()
-    struct MatchFormed
+    struct SW_KIT_API MatchFormed
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
@@ -160,7 +160,7 @@ namespace sw
      * @details 알림과 응답은 고정 배치형(B)이고, 캐시 기록은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `MatchmakingProtocol::encodeParty`)입니다.
      */
     REFLECT()
-    struct PartySnapshot
+    struct SW_KIT_API PartySnapshot
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
@@ -174,8 +174,8 @@ namespace sw
         PROPERTY( Min = 0, Max = 8 )
         int32 _maxMemberCount{ 4 };
 
-        AccountID       getLeaderID() const { return _listMemberID.empty() ? kInvalidAccountID : _listMemberID.front(); }
-        SW_KIT_API bool hasMember( AccountID accountID ) const;
+        AccountID getLeaderID() const { return _listMemberID.empty() ? kInvalidAccountID : _listMemberID.front(); }
+        bool      hasMember( AccountID accountID ) const;
     };
 } // namespace sw
 
@@ -228,7 +228,7 @@ namespace sw
      * @details 상한은 `PartyLobbyLimit` 와 `MatchmakingLimit` 와 같은 값입니다.
      */
     REFLECT()
-    struct LobbySnapshot
+    struct SW_KIT_API LobbySnapshot
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
@@ -249,10 +249,10 @@ namespace sw
         PROPERTY()
         LobbyState _state{ LobbyState::Open };
 
-        AccountID       getOwnerID() const { return _listMember.empty() ? kInvalidAccountID : _listMember.front()._accountID; }
-        SW_KIT_API bool hasMember( AccountID accountID ) const;
+        AccountID getOwnerID() const { return _listMember.empty() ? kInvalidAccountID : _listMember.front()._accountID; }
+        bool      hasMember( AccountID accountID ) const;
         /** @brief 방장을 뺀 모두가 준비했고 인원이 둘 이상이면 true 입니다. */
-        SW_KIT_API bool isEveryoneReady() const;
+        bool isEveryoneReady() const;
     };
 } // namespace sw
 
@@ -294,7 +294,7 @@ namespace sw
 {
     /** @brief 클라이언트가 받는 매칭 결과입니다. `Found` 이면 게임이 계정 클라이언트로 접속 티켓을 받아 그 서버에 UDP 로 접속합니다. 매칭 알림과 서버 버스(결과 주제)의 본문입니다. */
     REFLECT()
-    struct MatchAssignment
+    struct SW_KIT_API MatchAssignment
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스와 push 중계의 의미 버전(docs/plans/ServerBusFormat.md 3.4)

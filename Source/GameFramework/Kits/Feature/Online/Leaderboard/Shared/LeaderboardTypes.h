@@ -181,7 +181,7 @@ namespace sw
 {
     /** @brief 달성한 업적 하나입니다. 업적 알림(`kPushAchievement`)의 본문이며 응답 목록의 원소입니다. id 상한은 `LeaderboardLimit::kMaxIDSize` 와 같은 값입니다. */
     REFLECT()
-    struct AchievementState
+    struct SW_KIT_API AchievementState
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)

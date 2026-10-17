@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
+#include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetFormat.h"
 
 #include "EngineTest/TestGameObjectMocks.h"

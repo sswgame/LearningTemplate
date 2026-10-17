@@ -147,7 +147,7 @@ namespace sw
 {
     /** @brief 응답과 알림의 본문입니다. 결과, 스냅샷, 정산이면 이 계정의 이동 뒤 잔액입니다. */
     REFLECT()
-    struct TradeReply
+    struct SW_KIT_API TradeReply
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)

@@ -6,6 +6,9 @@
   구성에 따라 반복자 무효화 규칙과 원소 주소 안정성이 다를 수 있다. 기본 구성 구현이 주는 보장(노드 주소 안정, 삽입 뒤 반복자 유효)에 기대는 호출부를 찾아,
   두 구성이 같은 계약을 갖게 하거나 계약이 다른 별칭을 쓰지 못하게 막는다(`DynamicBitset` 처럼 형식으로).
 
+- `A-24` [결함] **메모리 태그 통계가 추적을 켜기 전에 잡은 블록의 해제도 센다.** 추적 전에 할당한 블록을 추적 중에 놓으면 태그 바이트가 그만큼 빠져 값이 음수 쪽으로 어긋난다
+  (2026-10-18 `feat19` 의 태그 통계 샤딩 작업에서 확인). 해제가 "이 블록을 셌는가"를 알 수 없는 것이 뿌리다 — 할당 헤더에 "추적 중 할당" 비트를 두고 해제는 그 비트가 선 블록만 뺀다.
+
 - `B-11` [검증대기] **어노테이션 키 완성을 Visual Studio IntelliSense(EDG)에서 손으로 확인하지 못했다.** `ReflectionMacros.h` 는 `__INTELLISENSE__` 에서도 풀이(`ReflectionIntellisense.h`)를 읽는다.
   풀이는 MS 호환 모드의 dependent base 찾기 · `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다 — EDG 가 오류 없이 읽는지 본다.
   DTE `ErrorList.ErrorItems` 로는 IntelliSense 오류가 나오지 않아 자동 확인 길이 없다. 손 확인: VS 로 저장소 폴더를 연다 → `CameraComponent.h` 의 `PROPERTY( ` 안에서
@@ -86,6 +89,9 @@
   `GimmickCircuitComponent::_state` 같은 플레이 상태가 에디터가 다음에 저장하는 씬 XML 로 들어갈 수 있다(지금 빈 요소는 우연). 언리얼 `SaveGame` 처럼 저장 문맥에 "저작 저장"을 표시하고
   런타임 상태 필드(예: `PROPERTY( RuntimeState )`)를 그 문맥에서 빼는 형식을 둔다. 리플렉션 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 해 이 단계 범위 밖으로 남겼다.
   `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
+
+- `C-56` [정리] **`GameDataXML` 이 범위를 따로 검사한다.** 2026-10-18 `feat18` 로 바이너리 · JSON · XML 읽기 공통 끝이 `PROPERTY( Min · Max )` 를 보게 됐는데
+  게임 데이터 XML 읽기는 자체 범위 검사를 그대로 들고 있다. 공통 끝에 맡기고 자체 검사를 지운다(범위의 원본을 `PROPERTY` 하나로 — `C-39` 와 같은 뿌리).
 
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다
   (지형 높이장은 종류별 기하 레지스트리로 들어갔다) (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크

@@ -102,7 +102,7 @@ namespace sw
      *          캐시 값(시한 있는 접속 상태)은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `SocialProtocol::encodePresenceRecord`)입니다.
      */
     REFLECT()
-    struct SocialPresence
+    struct SW_KIT_API SocialPresence
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`SocialBus::kPresenceTopic`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 캐시 레코드의 판과 따로다
@@ -135,7 +135,7 @@ namespace sw
 {
     /** @brief 알림 하나입니다. 알림(`kPushNotification`)의 본문입니다. 받는 사람(`_recipientID`)은 `PROPERTY` 가 아니어서 와이어에 싣지 않으며, 서버가 고른 연결로 전달됩니다. */
     REFLECT()
-    struct SocialNotification
+    struct SW_KIT_API SocialNotification
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)

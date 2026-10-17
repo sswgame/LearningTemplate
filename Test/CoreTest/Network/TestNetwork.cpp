@@ -520,7 +520,7 @@ SW_TEST_CASE( NetworkTest, SequencesWrapAndSequenceBufferForgetsStaleEntries )
         SW_ASSERT_TRUE( pValue != nullptr );
         SW_EXPECT_EQUAL( static_cast<int32>( step ), *pValue );
     }
-    SW_EXPECT_EQUAL( 8, SequenceBuffer<int32, 8>::getSize() );
+    SW_EXPECT_EQUAL( 8, ( SequenceBuffer<int32, 8>::getSize() ) );
 }
 
 SW_TEST_CASE( NetworkTest, ConnectionsResendReliableMessagesInOrderAndDropStaleSequenced )

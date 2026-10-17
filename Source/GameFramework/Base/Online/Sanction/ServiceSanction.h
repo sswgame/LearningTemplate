@@ -66,7 +66,7 @@ namespace sw
 {
     /** @brief 제재 버스(`ServiceSanctionBus::kChangedTopic`)의 본문입니다. 제재가 바뀐 계정입니다. */
     REFLECT()
-    struct ServiceSanctionChanged
+    struct SW_GF_API ServiceSanctionChanged
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)

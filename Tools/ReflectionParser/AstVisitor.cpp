@@ -1148,7 +1148,7 @@ namespace sw
                 {
                     return ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) || c == '_';
                 };
-                constexpr string_view kToken = "ComponentHandle";
+                const string kToken = "ComponentHandle";
                 for ( size_t pos = spelling.find( kToken ); pos != string::npos; pos = spelling.find( kToken, pos + 1 ) )
                 {
                     size_t begin = pos;
