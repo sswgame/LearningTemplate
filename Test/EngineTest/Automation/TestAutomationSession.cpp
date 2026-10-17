@@ -25,13 +25,15 @@ namespace
             return true;
         }
 
-        /** @brief 시나리오 파일 하나를 `Saved/Automation/SessionTest/<name>.scenario.xml` 에 씁니다. @p body 는 `<At>` 들입니다. */
+        /**
+         * @brief 시나리오 파일 하나를 케이스 임시 폴더의 `<name>.scenario.xml` 에 씁니다. @p body 는 `<At>` 들입니다.
+         * @details 작업 폴더(`Bin`)의 `Saved/` 는 같은 `Bin` 에서 도는 모든 테스트 프로세스가 같이 쓴다 — 고정 이름으로 쓰지 않는다.
+         */
         static sw::string writeScenario( const utf8* pName, const utf8* pBody )
         {
-            const sw::string folder = "Saved/Automation/SessionTest";
-            (void)sw::FileUtil::ensureDirectoryExists( folder );
-            const sw::string path = folder + "/" + pName + ".scenario.xml";
-            const sw::string text = sw::string( "<Scenario name=\"" ) + pName + "\" startAfter=\"Immediately\" timeoutFrames=\"50\">" + pBody + "</Scenario>";
+            const sw::string folder = test::makeTempDirectory( "SessionTest" );
+            const sw::string path   = folder + "/" + pName + ".scenario.xml";
+            const sw::string text   = sw::string( "<Scenario name=\"" ) + pName + "\" startAfter=\"Immediately\" timeoutFrames=\"50\">" + pBody + "</Scenario>";
             SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, text ) );
             return path;
         }

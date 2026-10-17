@@ -37,3 +37,42 @@ namespace test
     /** @brief 이 케이스의 임시 폴더 — `<임시 폴더>/sw_<pid>/<스위트_케이스>`(케이스 이름이 비면 프로세스 폴더). */
     sw::string getCaseTempDirectory( const sw::string& testName );
 } // namespace test
+
+namespace test
+{
+    /**
+     * @brief 이 케이스만 쓰는 리소스 루트입니다. 케이스 임시 폴더에 `Resource` 를 만들어 `ResourcePaths` 의 루트를 그리로 바꾸고, 범위가 끝나면 되돌립니다.
+     * @details 소스 트리의 `Resource/` 는 `ctest -j` 로 나란히 도는 모든 테스트 프로세스가 같이 읽는다. 한 케이스가 거기에 파일을 넣었다 빼면
+     *          그 사이에 그 폴더를 훑는 다른 프로세스(셰이더 쿠킹 스탬프, 검색 우선순위)가 진다. 도메인 · 검색 우선순위 · 셰이더 디스크 캐시처럼
+     *          "루트 아래 폴더" 로만 풀리는 것을 테스트할 때 이 루트를 쓴다.
+     *
+     *          파일은 `writeTextFile` 로 넣고 경로는 `makePath` 로 얻는다. 둘 다 **루트 기준 상대 경로**만 받고, 절대 경로나 `..` 는 그 자리에서
+     *          케이스를 떨어뜨린다 — 소스 트리 경로를 넘길 길이 없다. 폴더는 케이스 임시 폴더라 케이스가 끝나면 프레임워크가 지운다.
+     * @note 루트 교체는 프로세스 전역이다. 다른 스레드가 같은 때 경로를 풀면 임시 루트를 본다(`ResourcePaths::exchangeRootFolderPath`).
+     */
+    class ScopedTempResourceRoot
+    {
+    public:
+        ScopedTempResourceRoot();
+        ~ScopedTempResourceRoot();
+
+        ScopedTempResourceRoot( const ScopedTempResourceRoot& )            = delete;
+        ScopedTempResourceRoot& operator=( const ScopedTempResourceRoot& ) = delete;
+
+        /** @brief 임시 루트의 절대 경로(정규화)입니다. */
+        const sw::string& getRootFolderPath() const { return _rootFolderPath; }
+
+        /**
+         * @brief 루트 기준 상대 경로를 임시 루트 아래 절대 경로로 바꿉니다.
+         * @return 절대 경로나 `..` 가 든 경로면 케이스를 실패로 기록하고 빈 문자열을 돌려준다.
+         */
+        sw::string makePath( sw::string_view relativePath ) const;
+
+        /** @brief 임시 루트 아래 @p relativePath 에 글을 씁니다(부모 폴더를 만든다). 경로가 루트 밖이면 쓰지 않고 실패합니다. */
+        [[nodiscard]] bool writeTextFile( sw::string_view relativePath, sw::string_view text ) const;
+
+    private:
+        sw::string _rootFolderPath;
+        sw::string _sourceRootFolderPath;
+    };
+} // namespace test

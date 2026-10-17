@@ -222,7 +222,8 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
 - 에디터 지역 서비스는 `Test/EditorTest/EditorTestServices.h` 에 있습니다.
 - 네트워크 호스트 묶음은 `test::LoopbackCluster`(`TestFramework/Harness/TestLoopbackCluster.h`)입니다. 루프백에 엔드포인트마다 회선 흉내를 붙이고, 손으로 진행하는 시각(`step`)과 호스트 스레드를 둘 다 쓸 수 있으며 CoreTest 도 씁니다. 씬과 라우터까지 필요하면 `NetSimHarness` 를 씁니다.
 - 할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 테스트합니다. 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr 를 돌려줍니다.
-- 낱개 파일과 팩의 경쟁을 테스트하려면 리소스 루트를 임시 폴더로 바꿉니다(`ResourcePaths::exchangeRootFolderPath` — 검색 폴더와 경로 캐시를 다시 만들고 앞 루트를 돌려준다).
+- 리소스 루트 아래 폴더로만 풀리는 것(도메인 · 검색 우선순위 · 낱개 파일과 팩의 경쟁 · 셰이더 스탬프와 디스크 캐시)을 테스트하려면 `test::ScopedTempResourceRoot` 를 둡니다. 케이스 임시 폴더에 `Resource` 를 만들어 루트를 그리로 바꾸고 범위가 끝나면 되돌립니다.
+  파일은 그 객체의 `writeTextFile` 로 넣고 경로는 `makePath` 로 얻습니다. 루트 기준 상대 경로만 받고, 절대 경로나 `..` 는 그 자리에서 케이스를 떨어뜨립니다.
 - 바깥 서버가 있어야 하는 테스트는 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );` 을 둡니다. 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄이 남습니다(실패도 "모두 건너뜀" 도 아니고, 호스트 스위트와 섞이지 않는다).
   PostgreSQL 은 `SW_TEST_POSTGRES_URL` 입니다. 구현마다 같은 케이스는 계약 매크로(`SW_SERVICE_STORE_CONTRACT_SUITE` · `SW_SQL_DRIVER_CONTRACT_SUITE` · `SW_EPHEMERAL_STORE_CONTRACT_SUITE`)로 씁니다.
   서버 없이 실패 경로만 보려면 닿지 않는 주소(`host=127.0.0.1 port=1 connect_timeout=1`)를 줍니다. 깨끗이 실패하고 멈추지 않아야 합니다.
@@ -365,8 +366,8 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
   CI 분류와 `--test_filter` 가 모두 스위트 단위라서 이름이 흔들리면 둘이 흔들립니다. `CheckTestSuites.py` 가 강제합니다.
 - **호스트 스위트 파일에 다른 스위트를 두지 마세요.** 섞여 있으면 새 케이스를 옆 스위트에 붙이기 쉽고, 그 순간 GPU가 필요한 케이스가 CI로 들어갑니다.
   `SW_TEST_REQUIRES_HOST` 는 정책에서 `hostSplit` 인 실행 파일의 폴더에 있어야 효력이 있습니다. 그렇지 않으면 아무도 읽지 않아 CI가 그 스위트를 돌립니다. 이것도 `CheckTestSuites.py` 가 확인합니다.
-- **실행 파일 폴더(`Bin`)나 소스 트리에 파일을 쓰지 마세요.** 같은 `Bin` 을 쓰는 다른 프로세스와 부딪치고, 단언으로 일찍 빠지면 파일이 남습니다.
-  소스 트리의 `Resource/` 에 꼭 써야 한다면 만들기 **전에** `SW_TEST_DEFER_CLEANUP` 으로 지우는 일을 걸어 둡니다(`ResourceTest.ConfigurableResourcePriorityAndDlcSupport`).
+- **실행 파일 폴더(`Bin`)나 소스 트리에 파일을 쓰지 마세요.** `ctest -j` 로 나란히 도는 다른 프로세스가 같은 트리를 읽습니다. 넣었다 바로 지워도 그 사이에 폴더를 훑은 프로세스가 집니다
+  (셰이더 쿠킹 스탬프가 임시 헤더를 보고 "낡음" 으로 판정했다). 루트 아래 구조가 필요하면 `test::ScopedTempResourceRoot`, 그 밖에는 `makeTempPath` · `makeTempDirectory` 를 씁니다.
 - **테스트 도우미의 실패 가능 bool 도 `[[nodiscard]]` 입니다.** `parsePpm` · `readCounters` · `createPackFile` 의 false 를 버리면 테스트가 통과한 척 이어집니다.
   부르는 쪽은 `SW_ASSERT_TRUE( … )` 로 받습니다. `CheckFallibleNodiscard.py` 가 `Test` 까지 봅니다.
 - **스킵은 "이 구성에 없다"(`SW_TEST_REQUIRES_FEATURE`) · "이 기계에 없다"(`SW_TEST_SKIP`) 일 때만 씁니다.** 있어야 할 것이 실패하면 단언합니다. SmokeTest 는 모듈 파일이 있는지를 `isModuleBuilt` 로 보고 스킵하고,
