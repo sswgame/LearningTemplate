@@ -90,6 +90,7 @@
   `Editor/Common/Commands` 는 `Asset` · `Scene` · `Play` · `Dev`(등록부 · 백그라운드 입출력은 루트), `Engine/Object/GameObject` 는 `Registry` · `Tick` · `Service` · `Serialization`
   (`GameObject` · `GameObjectManager` · `GameObjectStore` 는 루트), `Engine/Renderer/Frame` 은 `View` · `Packet` · `Resource` · `Capture` · `Timeline`(`FrameRenderer*` 가족은 루트)입니다.
   층 규칙은 그대로 따라갑니다. 에디터 층은 `Common/<폴더>` 단위로 읽고, 오브젝트 모델 코어 규칙은 `GameObject` 트리 전체(`CheckEngineLayers.toml` 의 `coreTree`)입니다.
+- **스크립팅 언어 층(Lua · C# · 비주얼 스크립팅)은 두지 않는다**(2026-10-17, 사용자 결정). 게임 로직은 C++ 모듈과 핫리로드로 짠다. 비프로그래머용 층이 필요해지는 게임이 생기면 다시 연다. 백로그 `D4-9` 의 비주얼 스크립팅은 순위 목록에만 둔다.
 
 ## 3. 기각한 것 — 측정값과 함께 (다시 제안하지 말 것)
 

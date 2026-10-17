@@ -37,6 +37,12 @@
   Shipping 베이크(쿠킹한 LightingOnly 변형으로 Shipping hostgpu)는 Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
   안 한 것: Roughness / Metallic 버퍼 보기(G버퍼에 그 칸이 없다 — 칸을 늘리거나 패스를 새로 만들어야 한다), Shaded Wireframe(패스가 둘 필요), Light Complexity · Mipmaps(그리는 경로가 새로 필요).
 
+- `D2-11` [기능] **파티클 · VFX 시스템이 없다.** 언리얼 Niagara · 유니티 VFX Graph · Godot GPUParticles 에 해당한다. 코드에서 파티클 시스템을 찾지 못했고, VFX 는 `D4-9` 의 큼 묶음 순위 목록에만 있다(설계 없음).
+  먼저 설계 문서를 쓴다(`design-reviewer` 검토): 방출기 · 모듈 데이터 형식(데이터 주도, 에셋), CPU 대 GPU 시뮬레이션 경계, 렌더 경로(빌보드 · 메시 · 리본, 반투명 패스와 정렬), 물리 · 충돌 연동, 에디터 미리보기 창(`EditorPreviewPanel`) 재사용, 풀 · 예산. 스크립팅 층 없이 C++ 모듈과 핫리로드가 확장 경로다(결정 기록 2절).
+
+- `D2-12` [기능] **간접 조명이 없다 — 반사 프로브 · 라이트 프로브.** 라이트맵 · 프로브 · 전역 조명 코드를 찾지 못했다. 지금 조명은 방향광 · 그림자 · 앰비언트 수준이고 SSR · HDR 은 `D4-9` 대기열에 있다.
+  먼저 설계 문서를 쓴다(`design-reviewer` 검토): 반사 프로브(큐브맵 베이크 · 혼합), 라이트 프로브(구면 조화 함수), 베이크 도구와 쿠킹 단계, 스카이 컴포넌트(`D3-7.4`)와의 환경광 연동, 디퍼드 라이팅 경로 변경, 에디터 베이크 UI. 라이트맵 · 실시간 GI 는 이 설계가 정한 뒤 별도 항목으로 쪼갠다.
+
 - `E-3` [관찰] **Vulkan(FIFO) + VSync 에서 가끔 한 프레임이 여러 주기를 놓친다**(Release 큐브 100, 165 Hz — 조사 결과는 [검증과 측정](../08_Verification.md) 2절 "Vulkan VSync 프레임 놓침",
   스왑체인 이미지 4 개는 결정 기록 3절에서 기각). 다시 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고, 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다.
 
