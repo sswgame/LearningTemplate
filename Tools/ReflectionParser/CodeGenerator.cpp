@@ -321,14 +321,24 @@ namespace sw
         // 범위는 경계마다 값과 "있음" 표시가 함께 가는 Manual 필드다. 적힌 쪽만 낸다 — 표시가 하나면 `Min` 만 적어도
         // 위 경계(기본 1)까지 나가 인스펙터가 그 값을 1 에서 막는다.
         // 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 **생성된 파일마다** 난다.
+        // 경계는 float32 가 되돌아오는 자릿수(9)로 낸다. 6 자리로 자르면 `Max = 6.2831853` 이 6.283185f 가 되어 2π 를 담은 값이 범위 밖이 된다.
+        const auto formatRangeLiteral = []( const float32 value ) -> string
+        {
+            utf8 arrBuffer[constant::kMaxBuffer64]{};
+            std::snprintf( arrBuffer, sizeof( arrBuffer ), "%.9g", static_cast<float64>( value ) );
+            string literal( arrBuffer );
+            if ( literal.find_first_of( ".eE" ) == string::npos )
+                literal += ".0";
+            return literal + "f";
+        };
         if ( prop._bHasMinRange != SW_FALSE )
         {
-            emit.linef( "p._metadata._minRange     = %#f;", prop._minRange );
+            emit.linef( "p._metadata._minRange     = %#;", formatRangeLiteral( prop._minRange ).c_str() );
             emit.assign( "p._metadata._bHasMinRange", "SW_TRUE" );
         }
         if ( prop._bHasMaxRange != SW_FALSE )
         {
-            emit.linef( "p._metadata._maxRange     = %#f;", prop._maxRange );
+            emit.linef( "p._metadata._maxRange     = %#;", formatRangeLiteral( prop._maxRange ).c_str() );
             emit.assign( "p._metadata._bHasMaxRange", "SW_TRUE" );
         }
         // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터가 그 값으로 막는다).

@@ -36,16 +36,26 @@ namespace sw
                     reader.addError( node, string( "attribute '" ) + pName + "' is negative" );
             }
 
-            /** @brief `align` 글을 풉니다. 모르는 값이면 오류를 남기고 `None` 입니다(읽기는 `finish` 에서 실패한다). */
-            static PairedAnimationAlign parseAlign( CharacterDataReader& reader, const XMLNode& node, const hashed_string& text )
+            /**
+             * @brief `align` 글을 풉니다. 없거나 모르는 값이면 오류를 남기고 `None` 입니다(읽기는 `finish` 에서 실패한다).
+             * @details 글 그대로 견준다 — `hashed_string( "none" )` 은 빈 이름(None)과 같아 "적지 않음"과 가를 수 없다.
+             */
+            static PairedAnimationAlign parseAlign( CharacterDataReader& reader, const XMLNode& node )
             {
-                if ( text == hashed_string( "none" ) )
+                const utf8* pText = node.findAttribute( "align" );
+                if ( pText == nullptr )
+                {
+                    reader.addError( node, "needs attribute 'align'" );
                     return PairedAnimationAlign::None;
-                if ( text == hashed_string( "snap" ) )
+                }
+                const string_view text( pText );
+                if ( text == "none" )
+                    return PairedAnimationAlign::None;
+                if ( text == "snap" )
                     return PairedAnimationAlign::Snap;
-                if ( text == hashed_string( "warp" ) )
+                if ( text == "warp" )
                     return PairedAnimationAlign::Warp;
-                reader.addError( node, string( "attribute 'align' must be none, snap or warp: '" ) + text.c_str() + "'" );
+                reader.addError( node, string( "attribute 'align' must be none, snap or warp: '" ) + pText + "'" );
                 return PairedAnimationAlign::None;
             }
         };
@@ -131,15 +141,17 @@ namespace sw
     {
         reader.reportUnknownAttributes( node, PairedAnimationDefInternal::kArrRoleAttribute );
         PairedAnimationRoleDef role;
-        role._name              = reader.readName( node, "name", true );
-        role._clip              = reader.readName( node, "clip", true );
-        role._exitState         = reader.readName( node, "exitState", true );
-        role._skeletonPath      = reader.readName( node, "skeleton", false ).c_str();
-        role._bRequired         = reader.readBool( node, "required" );
-        role._bAnchor           = reader.readOptionalBool( node, "anchor", false );
-        role._startSeconds      = reader.readOptionalFloat( node, "start", 0.0f );
-        role._enterBlendSeconds = reader.readFloat( node, "enterBlend" );
-        role._exitBlendSeconds  = reader.readFloat( node, "exitBlend" );
+        role._name      = reader.readName( node, "name", true );
+        role._clip      = reader.readName( node, "clip", true );
+        role._exitState = reader.readName( node, "exitState", true );
+        // 경로는 글 그대로 둔다 — 빈 hashed_string 의 c_str() 은 "None" 이라 "적지 않음"이 경로 "None" 으로 바뀐다.
+        const utf8* pSkeletonPath = node.findAttribute( "skeleton" );
+        role._skeletonPath        = pSkeletonPath != nullptr ? pSkeletonPath : "";
+        role._bRequired           = reader.readBool( node, "required" );
+        role._bAnchor             = reader.readOptionalBool( node, "anchor", false );
+        role._startSeconds        = reader.readOptionalFloat( node, "start", 0.0f );
+        role._enterBlendSeconds   = reader.readFloat( node, "enterBlend" );
+        role._exitBlendSeconds    = reader.readFloat( node, "exitBlend" );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "start", role._startSeconds );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "enterBlend", role._enterBlendSeconds );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "exitBlend", role._exitBlendSeconds );
@@ -149,7 +161,7 @@ namespace sw
         if ( role._bAnchor && bHasAlign )
             reader.addError( node, "is the anchor and must not have 'align'" );
         else if ( role._bAnchor == false )
-            role._align = PairedAnimationDefInternal::parseAlign( reader, node, reader.readName( node, "align", true ) );
+            role._align = PairedAnimationDefInternal::parseAlign( reader, node );
 
         const bool bAligned = role._align == PairedAnimationAlign::Snap || role._align == PairedAnimationAlign::Warp;
         if ( bAligned )
