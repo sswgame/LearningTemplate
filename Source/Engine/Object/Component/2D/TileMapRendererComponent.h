@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
@@ -13,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/PhysicsHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/TileMap/TileGridUtil.h"
@@ -148,7 +148,7 @@ namespace sw
         vector<uint32>                          _listAnimatedCell;  ///< 애니메이션 모습을 보이는 칸 번호
         vector<TileRect>                        _listSolidRect;     ///< 병합한 충돌 사각형
         vector<TileEdge>                        _listOutlineEdge;   ///< 외곽선 토막
-        vector<SlotHandle>                      _listBody;          ///< 만든 물리 바디
+        vector<PhysicsBodyHandle>               _listBody;          ///< 만든 2D 물리 정적 바디(씬의 Box2D 씬)
         vector<unique_ptr<SpriteInstanceBatch>> _listChunkBatch;    ///< 청크마다 배치(빈 청크는 nullptr). 청크 안 칸마다 항목 하나
         float4x4                                _lastOwnerWorld;    ///< 마지막으로 칸을 놓은 오브젝트 월드 행렬
         float32                                 _elapsedSeconds;    ///< 애니메이션 시각

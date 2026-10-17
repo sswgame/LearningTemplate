@@ -398,7 +398,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
 
-        // 암 충돌: 따로 준 질의가 없으면 씬의 강체 물리 · 겹침 월드에 쓸어 본다(대상 자신의 바디는 모두 뺀다 — 피벗이 그 안에 있다).
+        // 암 충돌: 따로 준 질의가 없으면 씬의 물리(3D · 2D, 2D 콜라이더 포함)에 쓸어 본다(대상 자신의 바디는 모두 뺀다 — 피벗이 그 안에 있다).
         const CameraTarget target = computeTarget();
         _director.setUserSettings( CameraUserSettings::makeFromGlobalVariables() );
         if ( _pExternalProbe == nullptr && pManager != nullptr )

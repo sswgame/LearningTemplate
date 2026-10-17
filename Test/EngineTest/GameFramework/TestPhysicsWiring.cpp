@@ -97,7 +97,7 @@ SW_TEST_CASE( PhysicsWiringTest, SocketReleaseDropsRigidBodyAndReturns )
 }
 
 /**
- * @brief [PhysicsWiringTest] 월드 질의(시야 · 레이저)와 카메라 암 질의가 강체(Jolt 3D · Box2D 2D)를 본다 — 쏘는 쪽의 바디는 건너뛰고, 겹침 월드 콜라이더도 그대로 본다
+ * @brief [PhysicsWiringTest] 월드 질의(시야 · 레이저)와 카메라 암 질의가 강체(Jolt 3D · Box2D 2D)를 본다 — 쏘는 쪽의 바디는 건너뛰고, 2D 콜라이더(센서 바디)도 그대로 본다
  */
 SW_TEST_CASE( PhysicsWiringTest, WorldQueryAndCameraProbeSeeRigidBodies )
 {

@@ -88,6 +88,8 @@ namespace sw
         virtual Vector                      getGravity() const                  = 0;
         /** @brief 레이어끼리의 충돌 행렬을 바꿉니다(`PhysicsSettings::makeCollisionLayers`). 이미 있는 바디에도 다음 스텝부터 적용됩니다. */
         virtual void setLayerCollision( const CollisionLayers& layers ) = 0;
+        /** @brief 지금 쓰는 레이어 충돌 행렬입니다(`setLayerCollision` 이 마지막으로 준 것, 처음에는 설정 표의 것). */
+        virtual const CollisionLayers& getLayerCollision() const = 0;
         /** @brief 바디마다 셰이프를 선으로 냅니다(`PhysicsDebugDrawUtil`). */
         virtual void drawDebug( IPhysicsDebugRenderer& renderer ) const = 0;
     };

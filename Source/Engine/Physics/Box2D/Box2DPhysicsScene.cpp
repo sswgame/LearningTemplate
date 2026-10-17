@@ -147,7 +147,7 @@ namespace sw
             return;
         const b2Transform transform = b2Body_GetTransform( record._bodyID );
         const bool        bSleeping = record._type != PhysicsBodyType::Static && b2Body_IsAwake( record._bodyID ) == false;
-        const float4      color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
+        const float4      color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record.isSensor() );
         for ( const PhysicsShapeDesc2D& shape : *record._pListShape )
         {
             PhysicsDebugDrawUtil::drawShape2D( renderer, shape, Box2DUtil::toEngine( transform.p ), b2Rot_GetAngle( transform.q ), color );
@@ -169,17 +169,19 @@ namespace sw
         return _settings._listMaterial.front();
     }
 
-    b2Filter Box2DPhysicsScene::makeFilter( uint8 layer ) const
+    b2Filter Box2DPhysicsScene::makeFilter( uint8 layer, bool bSensor ) const
     {
         b2Filter filter     = b2DefaultFilter();
         filter.categoryBits = static_cast<uint64_t>( 1 ) << layer;
         filter.maskBits     = static_cast<uint64_t>( _layers.getLayerMask( layer ) );
+        if ( bSensor == false )
+            filter.maskBits |= kSolidShapeBit;
         return filter;
     }
 
     void Box2DPhysicsScene::applyFilter( const BodyRecord& record )
     {
-        const b2Filter filter = makeFilter( record._layer );
+        const b2Filter filter = makeFilter( record._layer, record.isSensor() );
         for ( const b2ShapeId& shapeID : record._listShapeID )
         {
             if ( b2Shape_IsValid( shapeID ) )
@@ -233,7 +235,7 @@ namespace sw
             chainDef.count              = static_cast<int32>( listPoint.size() );
             chainDef.materials          = &surface;
             chainDef.materialCount      = 1;
-            chainDef.filter             = makeFilter( record._layer );
+            chainDef.filter             = makeFilter( record._layer, false ); // 체인은 센서가 될 수 없다
             chainDef.isLoop             = shape._bLoop;
             chainDef.enableSensorEvents = true;
             chainDef.userData           = pUserData;
@@ -256,8 +258,8 @@ namespace sw
         shapeDef.material.restitution    = material._restitution;
         shapeDef.material.userMaterialId = findMaterialIndex( material._name );
         shapeDef.density                 = material._density;
-        shapeDef.filter                  = makeFilter( record._layer );
-        shapeDef.isSensor                = record._bTrigger;
+        shapeDef.filter                  = makeFilter( record._layer, record.isSensor() );
+        shapeDef.isSensor                = record.isSensor();
         shapeDef.enableSensorEvents      = true;
         shapeDef.enableContactEvents     = true;
         shapeDef.enableHitEvents         = true;
@@ -426,6 +428,7 @@ namespace sw
         record._type          = desc._type;
         record._layer         = desc._layer;
         record._bTrigger      = desc._bTrigger;
+        record._bOverlapOnly  = desc._bOverlapOnly;
         record._bEnabled      = true;
         const b2BodyId bodyID = record._bodyID;
         handle                = PhysicsBodyHandle::fromSlot( _bodies.insert( std::move( record ) ) );
@@ -688,6 +691,12 @@ namespace sw
         return pRecord != nullptr ? pRecord->_userData : 0;
     }
 
+    bool Box2DPhysicsScene::isBodyTrigger( PhysicsBodyHandle body ) const
+    {
+        const BodyRecord* pRecord = findBody( body );
+        return pRecord != nullptr && pRecord->_bTrigger;
+    }
+
     void Box2DPhysicsScene::setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide )
     {
         const BodyRecord* pRecordA            = findBody( bodyA );
@@ -799,8 +808,10 @@ namespace sw
             const BodyRecord*              pVisitor = findBody( visitor );
             if ( pSensor == nullptr || pVisitor == nullptr )
                 continue;
-            _contactTracker.beginSubContact( PhysicsContactBody{ sensor, pSensor->_userData, true }, PhysicsContactBody{ visitor, pVisitor->_userData, pVisitor->_bTrigger },
-                                             float2{}, float2{}, 0.0f );
+            // 트리거 표시는 바디의 뜻(`_bTrigger`)을 싣는다 — 겹침 전용 센서(막는 2D 콜라이더)는 트리거가 아니다. 센서끼리는 서로를 보므로 쌍 하나가 셰이프 쌍 둘이다
+            // (추적기가 바디 쌍 하나로 센다).
+            _contactTracker.beginSubContact( PhysicsContactBody{ sensor, pSensor->_userData, pSensor->_bTrigger, pSensor->_bOverlapOnly },
+                                             PhysicsContactBody{ visitor, pVisitor->_userData, pVisitor->_bTrigger, pVisitor->_bOverlapOnly }, float2{}, float2{}, 0.0f );
         }
         for ( int32 eventIndex = 0; eventIndex < sensorEvents.endCount; ++eventIndex )
         {
@@ -812,7 +823,7 @@ namespace sw
         // 유지의 충격량은 그 스텝에 푼 접촉 충격량이다(쉬는 상자는 무게 × 스텝). 3D(Jolt 의 유지 어림값)와 같은 의미다.
         for ( PhysicsContactEvent2D& event : _listContactEvent )
         {
-            if ( event._phase == PhysicsContactPhase::Stay && event.involvesTrigger() == false )
+            if ( event._phase == PhysicsContactPhase::Stay && event.isOverlap() == false )
                 event._impulse = computePairImpulse( event._bodyA, event._bodyB );
         }
     }

@@ -13,7 +13,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/PhysicsOverlapWorld.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
@@ -433,6 +433,10 @@ namespace sw
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( _bGenerateColliders == false || pManager == nullptr )
             return;
+        // 타일 충돌은 씬의 2D 물리 씬의 정적 바디다(유니티 TilemapCollider2D) — 강체를 막고, 2D 콜라이더(센서)가 겹침으로 본다.
+        IPhysicsScene2D* pScene = pManager->getSubsystem<sw::ScenePhysics>().getScene2D();
+        if ( pScene == nullptr )
+            return;
         const float32  size  = _tileSet.getTileSize();
         const float4x4 world = getOwnerWorld();
         for ( const TileRect& rect : _listSolidRect )
@@ -440,10 +444,18 @@ namespace sw
             const float3 cornerA = float3::transform( float3{ static_cast<float32>( rect._x ) * size, -static_cast<float32>( rect._y ) * size, 0.0f }, world );
             const float3 cornerB = float3::transform(
                 float3{ static_cast<float32>( rect._x + rect._width ) * size, -static_cast<float32>( rect._y + rect._height ) * size, 0.0f }, world );
-            AABB box{};
-            box._min = float3{ MathUtil::min( cornerA._x, cornerB._x ), MathUtil::min( cornerA._y, cornerB._y ), 0.0f };
-            box._max = float3{ MathUtil::max( cornerA._x, cornerB._x ), MathUtil::max( cornerA._y, cornerB._y ), 0.0f };
-            _listBody.push_back( pManager->getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().addBody( box, static_cast<uint8>( _colliderLayer ), pOwner->getObjectID() ) );
+            const float2       minB{ MathUtil::min( cornerA._x, cornerB._x ), MathUtil::min( cornerA._y, cornerB._y ) };
+            const float2       maxB{ MathUtil::max( cornerA._x, cornerB._x ), MathUtil::max( cornerA._y, cornerB._y ) };
+            PhysicsShapeDesc2D shape;
+            shape._type        = PhysicsShapeType2D::Box;
+            shape._halfExtents = ( maxB - minB ) * 0.5f;
+            PhysicsBodyDesc2D desc;
+            desc._listShape.push_back( shape );
+            desc._position = ( minB + maxB ) * 0.5f;
+            desc._type     = PhysicsBodyType::Static;
+            desc._layer    = static_cast<uint8>( _colliderLayer );
+            desc._userData = pOwner->getObjectID();
+            _listBody.push_back( pScene->createBody( desc ) );
         }
     }
 
@@ -451,11 +463,13 @@ namespace sw
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr )
+        IPhysicsScene2D*   pScene   = pManager != nullptr ? pManager->getSubsystem<sw::ScenePhysics>().findScene2D() : nullptr;
+        if ( pScene != nullptr )
         {
-            for ( const SlotHandle& body : _listBody )
+            for ( const PhysicsBodyHandle& body : _listBody )
             {
-                pManager->getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().removeBody( body );
+                if ( pScene->isBodyValid( body ) )
+                    pScene->destroyBody( body );
             }
         }
         _listBody.clear();

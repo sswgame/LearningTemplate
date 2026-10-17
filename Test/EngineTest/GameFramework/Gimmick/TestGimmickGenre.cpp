@@ -441,7 +441,7 @@ SW_TEST_CASE( GimmickGenreTest, Gimmick3DVariantsMirrorTheir2DPrefabs )
 /**
  * @brief [GimmickGenreTest] 3D 변형 프리팹의 트리거 강체는 3D 씬에서 들어온 강체의 겹침을 장치의 컴포넌트 겹침 훅(`onOverlapBegin`)으로 넘긴다
  * @details 트리거 변형마다 10 m 씩 띄워 세우고, 같은 오브젝트에 태그 조건이 없는 센서를 더해 훅을 본다. 상자 가운데에 작은 동적 강체를 두고 몇 프레임 돌리면
- *          센서에 그 강체가 들어 있어야 한다. 2D 짝은 `BoxCollider2DComponent` 겹침 월드로 받지만, 3D 변형은 강체 물리의 트리거 이벤트가 같은 훅으로 와야 장치가 돈다.
+ *          센서에 그 강체가 들어 있어야 한다. 2D 짝은 `BoxCollider2DComponent` 센서 겹침으로 받지만, 3D 변형은 강체 물리의 트리거 이벤트가 같은 훅으로 와야 장치가 돈다.
  */
 SW_TEST_CASE( GimmickGenreTest, Gimmick3DTriggerVariantsReceiveOverlapsInA3DScene )
 {

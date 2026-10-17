@@ -204,7 +204,7 @@ namespace sw
     struct OverlapInfo
     {
         GameObject*            _pOther{ nullptr };   ///< 상대 오브젝트. 끝 이벤트에서 상대가 이미 사라졌으면 nullptr
-        PhysicsBodyHandle      _selfBody{};          ///< 강체 물리의 트리거이면 이 오브젝트 쪽 바디다. 히트 존이나 래그돌 뼈를 구분한다. 겹침 월드(`PhysicsOverlapWorld`)이면 무효다
+        PhysicsBodyHandle      _selfBody{};          ///< 이 오브젝트 쪽 바디다(트리거 · 2D 콜라이더의 센서). 히트 존이나 래그돌 뼈를 구분한다
         PhysicsBodyHandle      _otherBody{};         ///< 강체 물리의 트리거면 상대 쪽 바디
         float32                _hitFraction{ 1.0f }; ///< 이번 물리 step 안에서 닿은 시점(0..1)이다. 연속 바디가 쓸려 가며 닿은 시작 이벤트만 1 보다 작다
         uint8                  _bSelfTrigger  : 1;   ///< 이 오브젝트 쪽 콜라이더가 트리거인지
@@ -353,7 +353,7 @@ namespace sw
         virtual void onOverlapBegin( const OverlapInfo& overlap ) { (void)overlap; }
         /** @brief 겹침이 끝났을 때 불립니다(떨어짐, 꺼짐, 사라짐). 상대가 이미 사라졌으면 `OverlapInfo::_pOther` 는 nullptr 입니다. */
         virtual void onOverlapEnd( const OverlapInfo& overlap ) { (void)overlap; }
-        /** @brief 트리거와 겹친 채로 물리 스텝 하나가 지났을 때 불립니다(유니티의 `OnTriggerStay`). 강체 물리의 트리거만 발생시키고, 겹침 월드는 발생시키지 않습니다. */
+        /** @brief 트리거와 겹친 채로 물리 스텝 하나가 지났을 때 불립니다(유니티의 `OnTriggerStay`). 물리 스텝의 겹침(트리거 · 2D 콜라이더)이 발생시키고, 연속 콜라이더가 쓸어 낸 겹침은 발생시키지 않습니다. */
         virtual void onOverlapStay( const OverlapInfo& overlap ) { (void)overlap; }
         /**
          * @brief 이 오브젝트의 강체가 다른 바디와 막는 접촉을 시작했을 때 불립니다(유니티의 `OnCollisionEnter`, 언리얼의 `OnComponentHit`).

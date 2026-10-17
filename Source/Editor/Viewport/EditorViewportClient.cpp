@@ -219,7 +219,7 @@ namespace sw::editor
             visualizerArgs._pActiveCamera   = pCamera;
             visualizerArgs._pListObject     = &_listSceneObject;
             visualizerArgs._pListCamera     = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
-            visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getColliders() : nullptr;
+            visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getSubsystem<sw::ScenePhysics>().getColliders2D() : nullptr;
             visualizerArgs._pDebugDrawQueue = findSubsystem<DebugDrawQueue>();
             visualizerArgs._pObjectManager  = pSnapshotManager;
             visualizerArgs._bGizmoDragging  = _gizmo.isDragging();

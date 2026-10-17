@@ -84,12 +84,19 @@ namespace sw
         float32            _angularDamping{ 0.05f }; ///< 각속도 감쇠(1/초)
         float32            _gravityFactor{ 1.0f };   ///< 중력 배율(0 이면 떠 있다)
         PhysicsBodyType    _type{ PhysicsBodyType::Dynamic };
-        uint8              _layer{ 0 };                ///< 충돌 레이어 번호다(`PhysicsSettings::findLayerIndex`).
-        bool               _bTrigger{ false };         ///< 감지만 하고 막지 않는다(유니티 isTrigger, Jolt sensor, Box2D sensor).
-        bool               _bContinuous{ false };      ///< 빠른 바디가 얇은 바디를 지나치지 않도록 연속 충돌로 측정한다(Jolt LinearCast, Box2D bullet).
-        bool               _bAllowSleep{ true };       ///< 멈추면 잠들어 시뮬레이션 비용을 내지 않는다.
-        bool               _bAllowTypeChange{ false }; ///< Static 으로 만든 바디를 나중에 Kinematic 이나 Dynamic 으로 바꿀 수 있게 한다(Jolt 는 만들 때 정한다).
-        bool               _bLockRotation{ false };    ///< 회전하지 않는다(2D 캐릭터, 3D 는 관성을 무한으로 둔다).
+        uint8              _layer{ 0 };        ///< 충돌 레이어 번호다(`PhysicsSettings::findLayerIndex`).
+        bool               _bTrigger{ false }; ///< 감지만 하고 막지 않는다(유니티 isTrigger, Jolt sensor, Box2D sensor).
+        /**
+         * @brief 막지 않고 겹침만 낸다(Box2D 센서)는 표시입니다. `_bTrigger` 와 달리 이벤트 · 질의에서 트리거로 치지 않습니다.
+         * @details 막는 콜라이더도 겹침만 재는 2D 콜라이더(`BoxCollider2DComponent`)가 쓴다 — 막는 것과 트리거가 모두 센서여야 키네마틱끼리도 겹침이 난다.
+         *          이 쌍의 이벤트는 겹침(`PhysicsContactEvent::isOverlap`)이고, 트리거를 빼는 질의(`PhysicsQueryFilter::_bIncludeTriggers`)에도 보인다.
+         *          Jolt 는 센서로 만들지만 이벤트에 트리거로 알린다(3D 에서 쓰는 곳이 없다).
+         */
+        bool _bOverlapOnly{ false };
+        bool _bContinuous{ false };      ///< 빠른 바디가 얇은 바디를 지나치지 않도록 연속 충돌로 측정한다(Jolt LinearCast, Box2D bullet).
+        bool _bAllowSleep{ true };       ///< 멈추면 잠들어 시뮬레이션 비용을 내지 않는다.
+        bool _bAllowTypeChange{ false }; ///< Static 으로 만든 바디를 나중에 Kinematic 이나 Dynamic 으로 바꿀 수 있게 한다(Jolt 는 만들 때 정한다).
+        bool _bLockRotation{ false };    ///< 회전하지 않는다(2D 캐릭터, 3D 는 관성을 무한으로 둔다).
     };
 
     using PhysicsBodyDesc3D = PhysicsBodyDesc<PhysicsDimension3D>;

@@ -5,6 +5,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -33,7 +34,8 @@ namespace sw
     ScenePhysics::ScenePhysics( GameObjectManager& manager )
         : _manager{ manager }
         , _pPhysicsSystem{ manager.getSceneEngineServices()._pPhysicsSystem }
-        , _overlapWorld2D{}
+        , _listCollider2D{}
+        , _listSweptOverlap2D{}
         , _pScene3D{}
         , _pScene2D{}
         , _accumulator{}
@@ -60,8 +62,6 @@ namespace sw
     void ScenePhysics::update( float32 deltaTime )
     {
         SW_MEMORY_SCOPE( Physics );
-        // 이 프레임에 적용된 월드 자리로 겹침을 먼저 측정하고, 강체(고정 스텝 · 보간 · 접촉 이벤트)를 진행한다.
-        _overlapWorld2D.step( _manager, deltaTime );
         step( _manager, deltaTime );
     }
 
@@ -79,7 +79,28 @@ namespace sw
         _pScene2D.reset();
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
+        _listSweptOverlap2D.clear();
         _accumulator.reset();
+    }
+
+    void ScenePhysics::registerCollider2D( BoxCollider2DComponent* pCollider )
+    {
+        if ( pCollider == nullptr || pCollider->_colliderIndex != BoxCollider2DComponent::kNotRegistered )
+            return;
+        pCollider->_colliderIndex = static_cast<uint32>( _listCollider2D.size() );
+        _listCollider2D.push_back( pCollider );
+    }
+
+    void ScenePhysics::unregisterCollider2D( BoxCollider2DComponent* pCollider )
+    {
+        const bool bNotRegistered = pCollider == nullptr || pCollider->_colliderIndex >= _listCollider2D.size() || _listCollider2D[pCollider->_colliderIndex] != pCollider;
+        if ( bNotRegistered )
+            return;
+        BoxCollider2DComponent* pMoved             = _listCollider2D.back();
+        _listCollider2D[pCollider->_colliderIndex] = pMoved;
+        pMoved->_colliderIndex                     = pCollider->_colliderIndex;
+        _listCollider2D.pop_back();
+        pCollider->_colliderIndex = BoxCollider2DComponent::kNotRegistered;
     }
 
     PhysicsSystem* ScenePhysics::findInitializedPhysicsSystem() const
@@ -182,6 +203,7 @@ namespace sw
     {
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
+        _listSweptOverlap2D.clear();
         // 물리 컴포넌트도 바디도 없는 씬은 아무것도 하지 않는다(시간도 쌓지 않는다 — 처음 바디가 생긴 프레임이 따라잡느라 여러 스텝을 돌지 않게).
         const bool bHasWork = getComponentCount() != 0 || _pScene3D != nullptr || _pScene2D != nullptr;
         if ( bHasWork == false )
@@ -249,19 +271,33 @@ namespace sw
 
     void ScenePhysics::dispatchEvents( GameObjectManager& manager )
     {
-        if ( _listFrameEvent3D.empty() && _listFrameEvent2D.empty() )
+        const bool bNoEvent = _listFrameEvent3D.empty() && _listFrameEvent2D.empty() && _listSweptOverlap2D.empty();
+        if ( bNoEvent )
             return;
         // 처리가 바디를 만들거나 지워도(다음 프레임의 이벤트가 된다) 이 프레임의 목록은 그대로 돈다 — 베껴 둔다.
         const vector<PhysicsContactEvent3D> listEvent3D = _listFrameEvent3D;
         const vector<PhysicsContactEvent2D> listEvent2D = _listFrameEvent2D;
+        const vector<SweptOverlap2D>        listSwept   = _listSweptOverlap2D;
         for ( const PhysicsContactEvent3D& event : listEvent3D )
         {
             const bool bTriggerA = event._bTriggerA == SW_TRUE;
             const bool bTriggerB = event._bTriggerB == SW_TRUE;
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, event._point, event._normal, event._impulse, event._phase,
-                          bTriggerA, bTriggerB, false );
+                          bTriggerA, bTriggerB, event.isOverlap(), false, 1.0f );
             deliverEvent( manager, event._userDataB, event._userDataA, event._bodyB, event._bodyA, event._point, -event._normal, event._impulse, event._phase,
-                          bTriggerB, bTriggerA, false );
+                          bTriggerB, bTriggerA, event.isOverlap(), false, 1.0f );
+        }
+        // 쓸고 지나간 겹침이 먼저다 — 이번 프레임 길 위에서 닿았으므로 지금 자리의 겹침(센서 시작)보다 이르다. 지나쳤으므로 시작과 끝을 함께 낸다.
+        // 이 목록은 콜라이더 쪽에서만 낸다(상대는 쓸리지 않았다) — 양쪽에 나눠 준다.
+        for ( const SweptOverlap2D& swept : listSwept )
+        {
+            for ( const PhysicsContactPhase phase : { PhysicsContactPhase::Begin, PhysicsContactPhase::End } )
+            {
+                deliverEvent( manager, swept._selfUserData, swept._otherUserData, swept._selfBody, swept._otherBody, float3{}, float3{}, 0.0f, phase,
+                              swept._bSelfTrigger, swept._bOtherTrigger, true, true, swept._hitFraction );
+                deliverEvent( manager, swept._otherUserData, swept._selfUserData, swept._otherBody, swept._selfBody, float3{}, float3{}, 0.0f, phase,
+                              swept._bOtherTrigger, swept._bSelfTrigger, true, true, swept._hitFraction );
+            }
         }
         for ( const PhysicsContactEvent2D& event : listEvent2D )
         {
@@ -270,15 +306,15 @@ namespace sw
             const bool   bTriggerA = event._bTriggerA == SW_TRUE;
             const bool   bTriggerB = event._bTriggerB == SW_TRUE;
             deliverEvent( manager, event._userDataA, event._userDataB, event._bodyA, event._bodyB, point, normal, event._impulse, event._phase, bTriggerA, bTriggerB,
-                          true );
+                          event.isOverlap(), true, 1.0f );
             deliverEvent( manager, event._userDataB, event._userDataA, event._bodyB, event._bodyA, point, -normal, event._impulse, event._phase, bTriggerB, bTriggerA,
-                          true );
+                          event.isOverlap(), true, 1.0f );
         }
     }
 
     void ScenePhysics::deliverEvent( GameObjectManager& manager, uint64 selfUserData, uint64 otherUserData, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody,
                                      const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bSelfTrigger, bool bOtherTrigger,
-                                     bool bIs2D )
+                                     bool bOverlap, bool bIs2D, float32 hitFraction )
     {
         GameObject* pSelf = selfUserData != 0 ? manager.findGameObjectByID( selfUserData ) : nullptr;
         if ( pSelf == nullptr || pSelf->isActiveInHierarchy() == false )
@@ -286,12 +322,13 @@ namespace sw
         GameObject* pOther = otherUserData != 0 ? manager.findGameObjectByID( otherUserData ) : nullptr;
         // 처리가 컴포넌트를 붙이고 뗄 수 있으므로 목록을 베껴 돈다.
         const vector<Component*> listTarget( pSelf->getComponents().begin(), pSelf->getComponents().end() );
-        if ( bSelfTrigger || bOtherTrigger )
+        if ( bOverlap )
         {
             OverlapInfo overlap;
             overlap._pOther        = pOther;
             overlap._selfBody      = selfBody;
             overlap._otherBody     = otherBody;
+            overlap._hitFraction   = hitFraction;
             overlap._bSelfTrigger  = bSelfTrigger ? SW_TRUE : SW_FALSE;
             overlap._bOtherTrigger = bOtherTrigger ? SW_TRUE : SW_FALSE;
             for ( Component* pComponent : listTarget )

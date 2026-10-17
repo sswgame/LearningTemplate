@@ -48,6 +48,7 @@ namespace sw
         void                                 setGravity( const float2& gravity ) override;
         float2                               getGravity() const override;
         void                                 setLayerCollision( const CollisionLayers& layers ) override;
+        const CollisionLayers&               getLayerCollision() const override { return _layers; }
         void                                 drawDebug( IPhysicsDebugRenderer& renderer ) const override;
 
         PhysicsShapeHandle createShape( span<const PhysicsShapeDesc2D> listShape, const hashed_string& material ) override;
@@ -85,6 +86,7 @@ namespace sw
         bool            isBodySleeping( PhysicsBodyHandle body ) const override;
         void            wakeBody( PhysicsBodyHandle body ) override;
         uint64          getBodyUserData( PhysicsBodyHandle body ) const override;
+        bool            isBodyTrigger( PhysicsBodyHandle body ) const override;
         void            setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide ) override;
         bool            drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const override;
 
@@ -113,6 +115,9 @@ namespace sw
     private:
         using ShapeDescList = vector<PhysicsShapeDesc2D>;
 
+        /** @brief 센서가 아닌 셰이프의 마스크에만 있는 비트입니다(`makeFilter`). 레이어 비트(0..31) 밖입니다. */
+        static constexpr uint64 kSolidShapeBit = static_cast<uint64>( 1 ) << 63;
+
         struct BodyRecord
         {
             shared_ptr<const ShapeDescList> _pListShape;
@@ -123,7 +128,11 @@ namespace sw
             PhysicsBodyType                 _type{ PhysicsBodyType::Dynamic };
             uint8                           _layer{ 0 };
             bool                            _bTrigger{ false };
+            bool                            _bOverlapOnly{ false }; ///< 트리거가 아닌 센서다(`PhysicsBodyDesc::_bOverlapOnly`)
             bool                            _bEnabled{ true };
+
+            /** @brief Box2D 센서 셰이프로 만드는지입니다(트리거이거나 겹침 전용). */
+            bool isSensor() const { return _bTrigger || _bOverlapOnly; }
         };
 
         struct JointRecord
@@ -152,8 +161,13 @@ namespace sw
         /** @brief 재질 이름의 설정 테이블 번호를 반환합니다(셰이프의 `userMaterialId` 이며, 질의가 이름으로 되돌립니다). 없으면 0 입니다. */
         int32 findMaterialIndex( const hashed_string& name ) const;
         /** @brief 설정 테이블 번호의 재질 이름을 반환합니다. 범위 밖이면 빈 이름입니다. */
-        hashed_string     findMaterialName( int32 materialIndex ) const;
-        b2Filter          makeFilter( uint8 layer ) const;
+        hashed_string findMaterialName( int32 materialIndex ) const;
+        /**
+         * @brief 셰이프 필터입니다. 센서가 아닌 셰이프는 마스크에 막는 셰이프 비트(`kSolidShapeBit`)를 더합니다.
+         * @details 무버 캐스트(`b2World_CastMover`)는 센서를 거르지 않는다 — 무버 질의의 카테고리를 그 비트 하나로 두어 센서(트리거 · 겹침 전용 콜라이더)에 걸리지 않게 한다.
+         *          레이어 비트는 0..31 이라 그 비트를 카테고리로 가진 셰이프가 없으므로 셰이프끼리의 충돌은 바뀌지 않는다.
+         */
+        b2Filter          makeFilter( uint8 layer, bool bSensor ) const;
         void              applyFilter( const BodyRecord& record );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
         BodyRecord*       findBody( PhysicsBodyHandle body );
