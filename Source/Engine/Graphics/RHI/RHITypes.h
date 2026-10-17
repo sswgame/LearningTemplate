@@ -38,7 +38,7 @@ namespace sw
 
     /**
      * @struct RHIVertex
-     * @brief 메시 정점 하나를 나타냅니다. 위치, 노멀, UV, 색을 가지며 정점 버퍼 슬롯 0 의 원소입니다.
+     * @brief 메시 정점 하나를 나타냅니다. 위치, 노멀, UV, 색, 탄젠트를 가지며 정점 버퍼 슬롯 0 의 원소입니다.
      */
     struct RHIVertex
     {
@@ -56,6 +56,12 @@ namespace sw
          */
         float32 _arrUv[2];
         float32 _arrColor[4]; ///< 정점 색상 (R, G, B, A)
+        /**
+         * @brief 탄젠트 (X, Y, Z)와 바이탄젠트 부호(W, ±1)입니다. 노멀 맵이 탄젠트 공간을 세울 때 씁니다(glTF · MikkTSpace 규약 — 바이탄젠트 = cross( N, T ) × W).
+         * @details 위치 · 노멀 · UV 에서 나오는 값이라 손으로 채우지 않는다. `Mesh::setVertices` 가 `Mesh::computeTangents` 로 구하고,
+         *          `.mesh` 는 임포트 때 구한 값을 싣는다(`Mesh::setVerticesWithTangents`). 노멀과 같은 함정 — 셰이더가 다른 값에서 지어내지 않는다.
+         */
+        float32 _arrTangent[4];
     };
 } // namespace sw
 
@@ -179,7 +185,8 @@ namespace sw
             { "NORMAL", 1, 3, SW_OFFSET_OF( RHIVertex, _arrNormal ), 0, SW_FALSE, SW_FALSE },
             { "TEXCOORD", 2, 2, SW_OFFSET_OF( RHIVertex, _arrUv ), 0, SW_FALSE, SW_FALSE },
             { "COLOR", 3, 4, SW_OFFSET_OF( RHIVertex, _arrColor ), 0, SW_FALSE, SW_FALSE },
-            { "SW_INSTANCESLOT", 4, 1, 0, kInstanceSlotStreamSlot, SW_TRUE, SW_TRUE },
+            { "TANGENT", 4, 4, SW_OFFSET_OF( RHIVertex, _arrTangent ), 0, SW_FALSE, SW_FALSE },
+            { "SW_INSTANCESLOT", 5, 1, 0, kInstanceSlotStreamSlot, SW_TRUE, SW_TRUE },
         };
         /// @brief 정점 속성 수입니다. 백엔드가 배열 크기를 직접 세지 않도록 함께 둡니다.
         inline constexpr uint32 kVertexAttributeCount = static_cast<uint32>( sizeof( arrVertexAttribute ) / sizeof( arrVertexAttribute[0] ) );
@@ -197,9 +204,9 @@ namespace sw
          * @details 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다. 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
          */
         inline constexpr RHIVertex arrFallbackVertex[kFallbackVertexCount] = {
-            { { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
-            { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
-            { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
+            { { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+            { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+            { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
             {},
             {},
             {},

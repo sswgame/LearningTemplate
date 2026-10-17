@@ -53,7 +53,7 @@ namespace
 } // namespace
 
 /**
- * @brief [MeshAssetTest] 쓴 정점을 그대로 다시 읽는다 — 위치 · 노멀 · UV · 색과 경계 반지름까지
+ * @brief [MeshAssetTest] 쓴 정점을 그대로 다시 읽는다 — 위치 · 노멀 · UV · 색과 경계 반지름까지. 탄젠트는 쓰기가 `Mesh::computeTangents` 로 구한 값이다
  */
 SW_TEST_CASE( MeshAssetTest, WriteThenReadRoundTripsEveryField )
 {
@@ -62,13 +62,17 @@ SW_TEST_CASE( MeshAssetTest, WriteThenReadRoundTripsEveryField )
     sw::MeshAssetFormat::makeBytes( listWritten, bytes );
     SW_ASSERT_EQUAL( size_t( sw::MeshAssetFormat::kHeaderSize + listWritten.size() * sw::MeshAssetFormat::kVertexSize ), bytes.size() );
 
+    sw::vector<sw::RHIVertex> listExpected = listWritten;
+    sw::Mesh::computeTangents( listExpected );
     sw::vector<sw::RHIVertex> listRead;
     float32                   boundingRadius = -1.0f;
     SW_ASSERT_TRUE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), listRead, &boundingRadius ) );
     SW_ASSERT_EQUAL( listWritten.size(), listRead.size() );
     for ( size_t vertexIndex = 0; vertexIndex < listRead.size(); ++vertexIndex )
     {
-        SW_EXPECT_TRUE( sw::Memory::compare( &listWritten[vertexIndex], &listRead[vertexIndex], sizeof( sw::RHIVertex ) ) == 0 );
+        SW_EXPECT_TRUE( sw::Memory::compare( &listExpected[vertexIndex], &listRead[vertexIndex], sizeof( sw::RHIVertex ) ) == 0 );
+        // UV 의 u 가 +X 로 는다 — 탄젠트는 +X, 노멀(+Y)에 수직이다.
+        SW_EXPECT_NEAR_EQUAL( 1.0f, listRead[vertexIndex]._arrTangent[0], 1e-5f );
     }
     // 가장 먼 정점은 (2, 0, 0) 이다.
     SW_EXPECT_NEAR_EQUAL( 2.0f, boundingRadius, 1e-6f );
@@ -119,6 +123,15 @@ SW_TEST_CASE( MeshAssetTest, MalformedBytesAreRejected )
     sw::vector<uint8> notTriangles;
     sw::MeshAssetFormat::makeBytes( listTwoVertex, notTriangles );
     SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( notTriangles.data(), notTriangles.size(), listRead ) );
+
+    // 탄젠트 부호가 ±1 이 아니다(첫 정점의 탄젠트 w — 머리 뒤 float 열다섯 번째 칸).
+    sw::vector<uint8> badTangent = valid;
+    const size_t      signOffset = sw::MeshAssetFormat::kHeaderSize + 15 * sizeof( float32 );
+    badTangent[signOffset + 0]   = 0;
+    badTangent[signOffset + 1]   = 0;
+    badTangent[signOffset + 2]   = 0;
+    badTangent[signOffset + 3]   = 0;
+    SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( badTangent.data(), badTangent.size(), listRead ) );
 
     // 원본은 여전히 읽힌다(위 거절이 우연이 아니다).
     SW_EXPECT_TRUE( sw::MeshAssetFormat::readFromBytes( valid.data(), valid.size(), listRead ) );

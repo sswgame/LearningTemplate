@@ -16,6 +16,80 @@ namespace sw
 {
     SW_LOG_CALLER( "Mesh" );
 
+    namespace
+    {
+        /**
+         * @struct MeshInternal
+         * @brief `Mesh::computeTangents` 의 도우미입니다 — 정점 묶기(위치 · 노멀 · UV 비트), 모서리 각도, 직교화입니다.
+         */
+        struct MeshInternal
+        {
+            /** @brief 탄젠트 합이 이보다 짧으면 UV 기울기가 없는 정점으로 본다(합은 각도로 가중한 단위 벡터라 크기가 1 근처다). */
+            static constexpr float32 kMinTangentLengthSquared = 1e-12f;
+            /**
+             * @brief 묶는 키(위치 · 노멀 · UV)의 바이트 수입니다. 세 멤버가 정점 앞쪽에 붙어 있어 키는 정점의 앞 32 바이트 그대로다(복사 없이 비교한다).
+             */
+            static constexpr size_t kWeldKeyBytes = SW_OFFSET_OF( RHIVertex, _arrColor );
+            static_assert( SW_OFFSET_OF( RHIVertex, _arrPosition ) == 0 && SW_OFFSET_OF( RHIVertex, _arrNormal ) == sizeof( float32 ) * 3 &&
+                               SW_OFFSET_OF( RHIVertex, _arrUv ) == sizeof( float32 ) * 6 && kWeldKeyBytes == sizeof( float32 ) * 8,
+                           "탄젠트 묶기 키는 RHIVertex 앞쪽의 위치 · 노멀 · UV 다 — 멤버 순서를 바꾸면 키를 다시 정한다" );
+
+            static bool isSameWeldKey( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kWeldKeyBytes ) == 0; }
+
+            /** @brief 정점 번호를 묶는 키(바이트) 순서로 세웁니다. 같은 키가 이웃하게 됩니다. */
+            struct WeldLess
+            {
+                const vector<RHIVertex>* _pListVertex{ nullptr };
+
+                bool operator()( uint32 lhs, uint32 rhs ) const
+                {
+                    const int32 order = Memory::compare( &( *_pListVertex )[lhs], &( *_pListVertex )[rhs], kWeldKeyBytes );
+                    if ( order != 0 )
+                        return order < 0;
+                    return lhs < rhs; // 같은 키 안에서는 번호 순 — 정렬 결과가 결정적이다
+                }
+            };
+
+            /** @brief 두 모서리 사이 각도(라디안)입니다. 길이가 0 인 모서리는 0 입니다. */
+            static float32 computeCornerAngle( const float3& toNext, const float3& toPrev )
+            {
+                const float32 lengthProduct = MathUtil::sqrt( toNext.getLengthSquared() * toPrev.getLengthSquared() );
+                if ( lengthProduct <= 0.0f || MathUtil::isFinite( lengthProduct ) == false )
+                    return 0.0f;
+                return MathUtil::acos( MathUtil::clamp( toNext.dot( toPrev ) / lengthProduct, -1.0f, 1.0f ) );
+            }
+
+            /** @brief 정점 하나가 받은 면들의 손잡이입니다. 0 은 오른손(cross( N, T ) 와 바이탄젠트가 같은 쪽), 1 은 왼손입니다. */
+            static uint32 computeHandednessSide( const RHIVertex& vertex, const float3& tangent, const float3& bitangent )
+            {
+                const float3 normal{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] };
+                return ( normal.cross( tangent ).dot( bitangent ) < 0.0f ) ? 1u : 0u;
+            }
+
+            /** @brief 합친 탄젠트를 노멀에 직교화해 정점에 적습니다. 기울기가 없으면 노멀에 수직이고 +X(노멀이 X 축이면 +Z)에 가장 가까운 방향입니다. */
+            static void storeTangent( RHIVertex& inoutVertex, const float3& tangentSum, const float3& bitangentSum )
+            {
+                float3        normal{ inoutVertex._arrNormal[0], inoutVertex._arrNormal[1], inoutVertex._arrNormal[2] };
+                const float32 normalLengthSquared = normal.getLengthSquared();
+                if ( normalLengthSquared > 0.0f )
+                    normal = normal / MathUtil::sqrt( normalLengthSquared );
+                float3     tangent      = tangentSum - normal * normal.dot( tangentSum );
+                const bool bHasGradient = MathUtil::isFinite( tangent.getLengthSquared() ) && tangent.getLengthSquared() > kMinTangentLengthSquared;
+                if ( bHasGradient == false )
+                {
+                    const float3 axis = ( MathUtil::abs( normal._x ) < 0.99f ) ? float3{ 1.0f, 0.0f, 0.0f } : float3{ 0.0f, 0.0f, 1.0f };
+                    tangent           = axis - normal * normal.dot( axis );
+                }
+                tangent                    = tangent / MathUtil::sqrt( tangent.getLengthSquared() );
+                const float32 handedness   = ( normal.cross( tangent ).dot( bitangentSum ) < 0.0f ) ? -1.0f : 1.0f;
+                inoutVertex._arrTangent[0] = tangent._x;
+                inoutVertex._arrTangent[1] = tangent._y;
+                inoutVertex._arrTangent[2] = tangent._z;
+                inoutVertex._arrTangent[3] = handedness;
+            }
+        };
+    } // namespace
+
     Mesh::~Mesh()
     {
         releaseVertexBuffer();
@@ -30,8 +104,9 @@ namespace sw
 
     shared_ptr<Mesh> Mesh::createSkinInstance( const Mesh& source )
     {
-        shared_ptr<Mesh> instance = create();
-        instance->setVertices( source._listVertex );
+        shared_ptr<Mesh>  instance   = create();
+        vector<RHIVertex> listVertex = source._listVertex;
+        instance->setVerticesWithTangents( std::move( listVertex ) );
         instance->setSkin( source._listSkinVertex, source._skinBoneCount );
         instance->setMorphTargets( source._listMorphTarget );
         // 정점과 스킨이 원본과 같다. 모프 풀이 원본 데이터를 한 번만 업로드하도록 번호를 공유한다(setVertices 와 setSkin 이 지운 뒤에 적는다).
@@ -41,20 +116,103 @@ namespace sw
 
     void Mesh::setVertices( const vector<RHIVertex>& listVertex )
     {
-        releaseVertexBuffer();
-        _listVertex       = listVertex;
-        _contentID        = allocateContentID();
-        _sharedSkinDataID = 0;
-        refreshBoundingRadius();
+        vector<RHIVertex> listCopy = listVertex;
+        setVertices( std::move( listCopy ) );
     }
 
     void Mesh::setVertices( vector<RHIVertex>&& listVertex )
+    {
+        computeTangents( listVertex );
+        setVerticesWithTangents( std::move( listVertex ) );
+    }
+
+    void Mesh::setVerticesWithTangents( vector<RHIVertex>&& listVertex )
     {
         releaseVertexBuffer();
         _listVertex       = std::move( listVertex );
         _contentID        = allocateContentID();
         _sharedSkinDataID = 0;
         refreshBoundingRadius();
+    }
+
+    void Mesh::computeTangents( vector<RHIVertex>& inoutListVertex )
+    {
+        const uint32   vertexCount = static_cast<uint32>( inoutListVertex.size() );
+        vector<float3> listTangent( vertexCount, float3{} );
+        vector<float3> listBitangent( vertexCount, float3{} );
+
+        // 1) 면마다 UV 기울기 → 탄젠트 · 바이탄젠트(정규화)를 모서리 각도로 가중해 그 정점에 더한다.
+        for ( uint32 triangleStart = 0; triangleStart + 2 < vertexCount; triangleStart += 3 )
+        {
+            float3 arrPosition[3];
+            float2 arrUv[3];
+            for ( uint32 corner = 0; corner < 3; ++corner )
+            {
+                const RHIVertex& vertex = inoutListVertex[triangleStart + corner];
+                arrPosition[corner]     = float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
+                arrUv[corner]           = float2{ vertex._arrUv[0], vertex._arrUv[1] };
+            }
+            const float3  edge1       = arrPosition[1] - arrPosition[0];
+            const float3  edge2       = arrPosition[2] - arrPosition[0];
+            const float32 du1         = arrUv[1]._x - arrUv[0]._x;
+            const float32 dv1         = arrUv[1]._y - arrUv[0]._y;
+            const float32 du2         = arrUv[2]._x - arrUv[0]._x;
+            const float32 dv2         = arrUv[2]._y - arrUv[0]._y;
+            const float32 determinant = du1 * dv2 - du2 * dv1;
+            if ( determinant == 0.0f )
+                continue; // UV 가 퇴화한 면은 방향을 주지 않는다
+            // 탄젠트 = dP/du. 바이탄젠트는 **-dP/dv** 다 — UV 의 v 가 아래로 늘어(위가 0, glTF 와 같다) 노멀 맵의 초록(+Y, 그림의 위쪽)이 v 가 줄어드는 쪽이다.
+            const float3 faceTangent   = ( edge1 * dv2 - edge2 * dv1 ) / determinant;
+            const float3 faceBitangent = ( edge1 * du2 - edge2 * du1 ) / determinant;
+            const bool   bUsable       = MathUtil::isFinite( faceTangent.getLengthSquared() ) && faceTangent.getLengthSquared() > 0.0f &&
+                                 MathUtil::isFinite( faceBitangent.getLengthSquared() ) && faceBitangent.getLengthSquared() > 0.0f;
+            if ( bUsable == false )
+                continue;
+            const float3 unitTangent   = faceTangent / faceTangent.getLength();
+            const float3 unitBitangent = faceBitangent / faceBitangent.getLength();
+            for ( uint32 corner = 0; corner < 3; ++corner )
+            {
+                const float3  toNext = arrPosition[( corner + 1 ) % 3] - arrPosition[corner];
+                const float3  toPrev = arrPosition[( corner + 2 ) % 3] - arrPosition[corner];
+                const float32 angle  = MeshInternal::computeCornerAngle( toNext, toPrev );
+                listTangent[triangleStart + corner] += unitTangent * angle;
+                listBitangent[triangleStart + corner] += unitBitangent * angle;
+            }
+        }
+
+        // 2) 위치 · 노멀 · UV 가 비트까지 같은 정점끼리 묶어 합친다(인덱스 없는 삼각형 목록이라 이웃 면의 같은 정점이 따로 있다).
+        vector<uint32> listOrder( vertexCount );
+        for ( uint32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
+        {
+            listOrder[vertexIndex] = vertexIndex;
+        }
+        std::sort( listOrder.begin(), listOrder.end(), MeshInternal::WeldLess{ &inoutListVertex } );
+        uint32 groupStart = 0;
+        while ( groupStart < vertexCount )
+        {
+            uint32 groupEnd = groupStart + 1;
+            while ( groupEnd < vertexCount && MeshInternal::isSameWeldKey( inoutListVertex[listOrder[groupStart]], inoutListVertex[listOrder[groupEnd]] ) )
+            {
+                ++groupEnd;
+            }
+            // 거울 UV 이음매에서는 같은 키에 손잡이(바이탄젠트 부호)가 다른 면이 만난다 — 부호마다 따로 더한다(MikkTSpace 도 손잡이가 다르면 묶지 않는다).
+            float3 arrGroupTangent[2]{};
+            float3 arrGroupBitangent[2]{};
+            for ( uint32 orderIndex = groupStart; orderIndex < groupEnd; ++orderIndex )
+            {
+                const uint32 vertexIndex = listOrder[orderIndex];
+                const uint32 side        = MeshInternal::computeHandednessSide( inoutListVertex[vertexIndex], listTangent[vertexIndex], listBitangent[vertexIndex] );
+                arrGroupTangent[side] += listTangent[vertexIndex];
+                arrGroupBitangent[side] += listBitangent[vertexIndex];
+            }
+            for ( uint32 orderIndex = groupStart; orderIndex < groupEnd; ++orderIndex )
+            {
+                const uint32 vertexIndex = listOrder[orderIndex];
+                const uint32 side        = MeshInternal::computeHandednessSide( inoutListVertex[vertexIndex], listTangent[vertexIndex], listBitangent[vertexIndex] );
+                MeshInternal::storeTangent( inoutListVertex[vertexIndex], arrGroupTangent[side], arrGroupBitangent[side] );
+            }
+            groupStart = groupEnd;
+        }
     }
 
     void Mesh::setSkin( vector<MeshSkinVertex> listSkinVertex, uint32 boneCount )
