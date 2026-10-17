@@ -27,6 +27,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/WindowEvents.h"
 
@@ -1756,6 +1757,8 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
     SW_ASSERT_NOT_NULL( game );
 
     SW_EXPECT_TRUE( api.initialize( game, nullptr, nullptr ) );
+    // 엔진 프레임(`Engine::beginFrame`) 없이 게임을 돌리므로 이번 프레임의 실제 경과를 테스트가 적는다 — 적지 않으면 읽는 쪽이 단언으로 멈춘다.
+    sw::GameTimeScale::setUnscaledDeltaTime( 0.016f );
 
     // 1) Test initial game updates
     for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )

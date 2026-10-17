@@ -534,6 +534,10 @@
             "text": "강조색과 둥글기 변경을 버리고 현재 테마의 값을 씁니다"
         },
         {
+            "source": "Edit",
+            "text": "편집"
+        },
+        {
             "source": "Edit the selected prefab on its own in isolation mode",
             "text": "고른 프리팹을 격리 모드에서 따로 편집합니다"
         },
@@ -544,6 +548,10 @@
         {
             "source": "Editor and game modules cannot be turned off here",
             "text": "에디터 · 게임 모듈은 여기서 끌 수 없습니다"
+        },
+        {
+            "source": "Edits a copy of this event's library file; Save writes it only when it passes validation, and hot reload applies it",
+            "text": "이 이벤트의 라이브러리 파일 사본을 고칩니다. 저장은 검사를 통과할 때만 파일에 쓰고, 핫 리로드가 적용합니다"
         },
         {
             "source": "Elapsed",
@@ -2226,6 +2234,10 @@
             "text": "미리보기를 전이 하나만큼 다음 상태로 넘깁니다."
         },
         {
+            "source": "Stop Editing",
+            "text": "편집 끝내기"
+        },
+        {
             "source": "Stop any vibration on gamepad 0.",
             "text": "게임패드 0의 진동을 멈춥니다."
         },
@@ -2514,6 +2526,10 @@
             "text": "즐겨찾기 고정 해제"
         },
         {
+            "source": "Unsaved changes",
+            "text": "* 저장하지 않은 변경"
+        },
+        {
             "source": "Unsaved scene edits are not in the new window",
             "text": "저장하지 않은 씬 편집은 새 창에 없습니다"
         },
@@ -2676,6 +2692,10 @@
         {
             "source": "Write the source table and every translation table of this project.",
             "text": "이 프로젝트의 원문 테이블과 모든 번역 테이블을 씁니다."
+        },
+        {
+            "source": "Writes the library file; an invalid library is not written and the error is logged",
+            "text": "라이브러리 파일에 씁니다. 검사에 실패한 라이브러리는 쓰지 않고 오류를 로그에 남깁니다"
         },
         {
             "source": "Z Order",

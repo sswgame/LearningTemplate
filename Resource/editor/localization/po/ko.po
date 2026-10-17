@@ -279,16 +279,19 @@ msgid "No saved layouts."
 msgstr "저장된 레이아웃이 없습니다."
 
 #: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
 msgctxt "EdCommon.NotifyBugReportFailed"
 msgid "The bug report could not be saved (see the log)"
 msgstr "버그 리포트를 저장하지 못했습니다(로그를 확인하십시오)"
 
 #: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
 msgctxt "EdCommon.NotifyBugReportSaved"
 msgid "Bug report saved"
 msgstr "버그 리포트를 저장했습니다"
 
 #: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
 msgctxt "EdCommon.NotifyBugReportTitle"
 msgid "Bug report"
 msgstr "버그 리포트"
@@ -298,12 +301,12 @@ msgctxt "EdCommon.NotifyClipboardEmpty"
 msgid "Clipboard is empty"
 msgstr "클립보드가 비어 있습니다"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifyDocumentSaveFailed"
 msgid "Document save failed"
 msgstr "문서를 저장하지 못했습니다"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifyEditorTitle"
 msgid "Editor"
 msgstr "에디터"
@@ -318,7 +321,7 @@ msgctxt "EdCommon.NotifyKeepSimulationTitle"
 msgid "Keep Simulation Changes"
 msgstr "시뮬레이션 변경 유지"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifyNewScene"
 msgid "New scene"
 msgstr "새 씬"
@@ -353,22 +356,22 @@ msgctxt "EdCommon.NotifyPlayUnsaved"
 msgid "The scene has unsaved changes. Use Play on the toolbar to confirm."
 msgstr "씬에 저장하지 않은 변경이 있습니다. 툴바의 Play 로 확인하십시오."
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp
 msgctxt "EdCommon.NotifyPrefabIsolated"
 msgid "Isolated the prefab in the current scene"
 msgstr "현재 씬에서 프리팹을 격리했습니다"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp
 msgctxt "EdCommon.NotifyPrefabIsolationExited"
 msgid "Exited prefab isolation"
 msgstr "프리팹 격리를 마쳤습니다"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp
 msgctxt "EdCommon.NotifyPrefabSaveFirst"
 msgid "Save the scene before opening prefab isolation"
 msgstr "프리팹 격리를 열기 전에 씬을 저장하십시오"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp
 msgctxt "EdCommon.NotifyPrefabTitle"
 msgid "Prefab"
 msgstr "프리팹"
@@ -388,32 +391,32 @@ msgctxt "EdCommon.NotifyPresetWriteFailed"
 msgid "Failed to write the preset file"
 msgstr "프리셋 파일을 쓰지 못했습니다"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifySaveFailed"
 msgid "Save failed"
 msgstr "저장하지 못했습니다"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifySaveTitle"
 msgid "Save"
 msgstr "저장"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifySaved"
 msgid "Saved"
 msgstr "저장했습니다"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifySceneOpenFailed"
 msgid "Failed to open the scene"
 msgstr "씬을 열지 못했습니다"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifySceneReadOnly"
 msgid "The scene file is read-only. Check it out (lock it) in the Content Browser first."
 msgstr "씬 파일이 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오."
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifySceneTitle"
 msgid "Scene"
 msgstr "씬"
@@ -448,7 +451,7 @@ msgctxt "EdCommon.NotifySelectObject"
 msgid "Select an object first"
 msgstr "먼저 오브젝트를 고르십시오"
 
-#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifyStopPlayFirst"
 msgid "Stop play before opening or creating a scene"
 msgstr "씬을 열거나 만들기 전에 플레이를 멈추십시오"
@@ -642,12 +645,12 @@ msgstr "버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px,
 #: Source/Editor/Common/GUI/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemePreset"
 msgid "Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Resource/editor/theme."
-msgstr "에디터 테마(다크, 라이트, 고대비 등)를 고릅니다. 테마는 Resource/editor/theme 의 토큰 파일입니다"
+msgstr "에디터 테마(Dark, Light, High Contrast 등)를 선택합니다. 테마는 Resource/editor/theme 의 토큰 파일입니다."
 
 #: Source/Editor/Common/GUI/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeReset"
 msgid "Drop your accent and rounding changes and use the values of the current theme."
-msgstr "바꾼 강조색과 둥글기를 버리고 지금 테마의 값을 씁니다"
+msgstr "강조색과 둥글기 변경을 버리고 현재 테마의 값을 씁니다"
 
 #: Source/Editor/Common/GUI/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeTabRounding"
@@ -834,6 +837,271 @@ msgctxt "EditorAnimationRewind.WindowTip"
 msgid "How many seconds of history to keep, 1 to 60. Older frames are dropped; longer windows use more memory."
 msgstr "보관할 기록 길이(초, 1~60)입니다. 오래된 프레임은 버려지고, 길게 잡을수록 메모리를 더 씁니다."
 
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.AllVoices"
+msgid "All voices"
+msgstr "전체 보이스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.Clips"
+msgid "Clips"
+msgstr "클립"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.ColumnBus"
+msgid "Bus"
+msgstr "버스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.ColumnElapsed"
+msgid "Elapsed"
+msgstr "지난 시간"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.ColumnEvent"
+msgid "Event"
+msgstr "이벤트"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.ColumnField"
+msgid "Field"
+msgstr "항목"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.ColumnRemaining"
+msgid "Remaining"
+msgstr "남은 시간"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.ColumnValue"
+msgid "Value"
+msgstr "값"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.ColumnVoices"
+msgid "Voices"
+msgstr "보이스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.EditEvent"
+msgid "Edit"
+msgstr "편집"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.EditEventTip"
+msgid "Edits a copy of this event's library file; Save writes it only when it passes validation, and hot reload applies it"
+msgstr "이 이벤트의 라이브러리 파일 사본을 고칩니다. 저장은 검사를 통과할 때만 파일에 쓰고, 핫 리로드가 적용합니다"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldBus"
+msgid "Bus"
+msgstr "버스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldClipCount"
+msgid "Clips"
+msgstr "클립 수"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldContainer"
+msgid "Container"
+msgstr "컨테이너"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldCooldown"
+msgid "Cooldown"
+msgstr "쿨다운"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldFade"
+msgid "Fade"
+msgstr "페이드"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldLoop"
+msgid "Loop"
+msgstr "반복"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldMaxInstances"
+msgid "Max instances"
+msgstr "최대 인스턴스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldParameterCount"
+msgid "Parameter curves"
+msgstr "파라미터 곡선 수"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldPitch"
+msgid "Pitch"
+msgstr "피치"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldPriority"
+msgid "Priority"
+msgstr "우선순위"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldRadius"
+msgid "Radius"
+msgstr "반경"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldSteal"
+msgid "Steal policy"
+msgstr "뺏기 규칙"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldVirtual"
+msgid "Virtual mode"
+msgstr "가상화 방식"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.FieldVolume"
+msgid "Volume"
+msgstr "볼륨"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.Instances"
+msgid "Instances"
+msgstr "인스턴스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.NoLibrary"
+msgid "No event library loaded"
+msgstr "로드된 이벤트 라이브러리가 없습니다"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.NoService"
+msgid "The audio service is not running"
+msgstr "오디오 서비스가 실행 중이 아닙니다"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.NothingPlaying"
+msgid "Nothing is playing"
+msgstr "재생 중인 것이 없습니다"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.OnlySelected"
+msgid "Only the selected event"
+msgstr "고른 이벤트만"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.OpenDataFile"
+msgid "Open Data File"
+msgstr "데이터 파일 열기"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.OpenDataFileTip"
+msgid "Event data is edited in its .audioevents.xml file; saving reloads it. Copies the path when no tool opens it"
+msgstr "이벤트 데이터는 .audioevents.xml 파일에서 고칩니다. 저장하면 다시 읽습니다. 여는 도구가 없으면 경로를 복사합니다"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.PeakRealVoices"
+msgid "Peak real voices"
+msgstr "최대 실제 보이스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.PlayedDropped"
+msgid "Played / dropped"
+msgstr "재생 / 버림"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.PlayedDroppedTip"
+msgid "Events posted since start, and events dropped by cooldown, limit or slot shortage"
+msgstr "시작 뒤 재생한 이벤트와 쿨다운 · 상한 · 슬롯 부족으로 버린 이벤트"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.PostEvent"
+msgid "Post Event"
+msgstr "이벤트 재생"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.RealVoices"
+msgid "Real voices"
+msgstr "실제 보이스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+msgctxt "EditorAudioEvents.RemainingLoop"
+msgid "loop"
+msgstr "반복"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.SaveEdits"
+msgid "Save"
+msgstr "저장"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.SaveEditsTip"
+msgid "Writes the library file; an invalid library is not written and the error is logged"
+msgstr "라이브러리 파일에 씁니다. 검사에 실패한 라이브러리는 쓰지 않고 오류를 로그에 남깁니다"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.SelectEvent"
+msgid "Select an event on the left"
+msgstr "왼쪽에서 이벤트를 고르세요"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.StopEditing"
+msgid "Stop Editing"
+msgstr "편집 끝내기"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.TabPlaying"
+msgid "Playing"
+msgstr "재생 중"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.TabProperties"
+msgid "Properties"
+msgstr "속성"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.TabVoices"
+msgid "Voices"
+msgstr "보이스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.Unsaved"
+msgid "Unsaved changes"
+msgstr "* 저장하지 않은 변경"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.VirtualVoices"
+msgid "Virtual voices"
+msgstr "가상 보이스"
+
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+msgctxt "EditorBugIt.Capture"
+msgid "Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugIt/<time>/ with the note above"
+msgstr "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugIt/<시각>/ 에 모읍니다"
+
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+msgctxt "EditorBugIt.CopyPath"
+msgid "Copy the absolute folder path"
+msgstr "폴더의 절대 경로를 복사합니다"
+
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+msgctxt "EditorBugIt.GoTo"
+msgid "Open that scene and move the camera to the saved position (bugitgo)"
+msgstr "그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugitgo)"
+
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+msgctxt "EditorBugIt.NoReports"
+msgid "No bug reports yet. Collect Now saves one under Saved/BugIt."
+msgstr "아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugIt 아래에 하나 모읍니다."
+
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+msgctxt "EditorBugIt.NoteHint"
+msgid "Note to attach (what you did and what went wrong)"
+msgstr "붙일 메모(무엇을 했고 무엇이 잘못됐는지)"
+
+#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+msgctxt "EditorBugIt.ShowInExplorer"
+msgid "Open this folder in the file explorer"
+msgstr "이 폴더를 파일 탐색기에서 엽니다"
+
 #: Source/Editor/Panels/Console/ConsolePanel.cpp
 msgctxt "EditorConsole.AllLevelsHidden"
 msgid "All log levels are hidden. Re-enable one in the toolbar."
@@ -862,7 +1130,7 @@ msgstr "같은 로그 줄을 한 줄로 접고 앞에 횟수를 적습니다"
 #: Source/Editor/Panels/Console/ConsolePanel.cpp
 msgctxt "EditorConsole.CommandHint"
 msgid "> command or gv_name [value] (Tab completes, Up/Down history, help)"
-msgstr "> 명령 또는 gv_이름 [값] (Tab 자동 완성, 위/아래 기록, help)"
+msgstr "> 명령 또는 gv_name [value] (Tab 자동 완성, 위/아래 기록, help)"
 
 #: Source/Editor/Panels/Console/ConsolePanel.cpp
 msgctxt "EditorConsole.CopyAll"
@@ -1509,6 +1777,11 @@ msgctxt "EditorInputMap.WaitingForInput"
 msgid "Waiting for input..."
 msgstr "입력을 기다리는 중..."
 
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.AddToFavorites"
+msgid "Add to Favorites"
+msgstr "즐겨찾기에 추가"
+
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EditorInspector.ApplyToPrefab"
 msgid "Save this object's changes to the source prefab file"
@@ -1518,6 +1791,16 @@ msgstr "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장
 msgctxt "EditorInspector.ClearAssetReference"
 msgid "Clear asset reference"
 msgstr "이 에셋 참조를 비웁니다."
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.FavoriteProperty"
+msgid "Favorite property"
+msgstr "즐겨찾기한 프로퍼티"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EditorInspector.FavoritesSection"
+msgid "Favorites"
+msgstr "즐겨찾기"
 
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EditorInspector.FollowingSelection"
@@ -1596,6 +1879,11 @@ msgid "Preset Name..."
 msgstr "프리셋 이름..."
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.RemoveFromFavorites"
+msgid "Remove from Favorites"
+msgstr "즐겨찾기에서 제거"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
 msgctxt "EditorInspector.ResetToDefaultTooltip"
 msgid "Reset to the default value"
 msgstr "기본값으로 되돌립니다"
@@ -1644,6 +1932,11 @@ msgstr "프리팹과의 연결을 끊고 독립된 일반 오브젝트로 변환
 msgctxt "EditorInspector.Unparent"
 msgid "Detach from the parent object and move to the scene root"
 msgstr "부모 오브젝트와의 연결을 해제하고 씬 루트로 이동합니다"
+
+#: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+msgctxt "EditorInspector.ViewOptions"
+msgid "View options: show only modified properties, expand or collapse all sections"
+msgstr "보기 옵션: 바뀐 프로퍼티만 보기, 모든 영역 펼치기 또는 접기"
 
 #: Source/Editor/Panels/MapCheck/MapCheckPanel.cpp
 msgctxt "EditorMapCheck.CheckMap"
@@ -1740,60 +2033,195 @@ msgctxt "EditorMaterial.ShaderTip"
 msgid "HLSL shader this material renders with. Drop a .hlsl file here or pick one from the Content Browser."
 msgstr "이 머티리얼이 렌더링에 쓰는 HLSL 셰이더입니다. .hlsl 파일을 여기에 놓거나 콘텐츠 브라우저에서 고릅니다."
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.ClientArgumentsHint"
 msgid "client arguments (e.g. -vulkan -width=960 -height=540)"
 msgstr "클라이언트 인자 (예: -vulkan -width=960 -height=540)"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsApplyToAll"
+msgid "Send each change to every process of the session instead of the selected one"
+msgstr "고른 프로세스 대신 세션의 모든 프로세스에 보냅니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsBandwidth"
+msgid "Line speed in KB/s (0 = unlimited)"
+msgstr "회선 속도(KB/s, 0 = 제한 없음)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsDisconnect"
+msgid "Drop every connection of the selected process (a client stays disconnected until Reconnect)"
+msgstr "고른 프로세스의 연결을 모두 끊습니다(클라이언트는 Reconnect 까지 끊긴 채로 남습니다)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsDown"
+msgid "Packets this process receives"
+msgstr "이 프로세스가 받는 패킷입니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsNoSession"
+msgid "Start a multiplayer session (Session tab) to change its line conditions."
+msgstr "회선 조건을 바꾸려면 멀티플레이 세션을 시작하세요(Session 탭)."
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsNoStats"
+msgid "No stats yet - press Refresh stats"
+msgstr "아직 수치가 없습니다 - Refresh stats 를 누르세요"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsPreset"
+msgid "Set both directions of the selected process to a line preset"
+msgstr "고른 프로세스의 두 방향을 회선 프리셋으로 둡니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsReconnect"
+msgid "Connect a disconnected client to the server again"
+msgstr "끊긴 클라이언트를 서버에 다시 붙입니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsRefreshStats"
+msgid "Ask the selected process for its line and connection numbers"
+msgstr "고른 프로세스에 회선 · 연결 수치를 묻습니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsSpike"
+msgid "Drop everything the selected process sends and receives for this many seconds"
+msgstr "고른 프로세스가 보내고 받는 것을 이 시간(초) 동안 모두 버립니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp
+msgctxt "EditorMultiplayer.ConditionsUp"
+msgid "Packets this process sends (client to server for a client)"
+msgstr "이 프로세스가 보내는 패킷입니다(클라이언트면 클라이언트 → 서버)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.FollowLog"
 msgid "Keep scrolling to the newest log line"
 msgstr "가장 최근 로그 줄을 따라 스크롤합니다"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.LogSource"
 msgid "Show the log of one process or of every process"
 msgstr "한 프로세스 또는 모든 프로세스의 로그를 보입니다"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.NoProcesses"
 msgid "No processes - pick a Net Mode and press Play (toolbar or here)."
 msgstr "프로세스가 없습니다 - Net Mode 를 고르고 Play 를 누르세요(툴바 또는 여기)."
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp
+msgctxt "EditorMultiplayer.NoTarget"
+msgid "No multiplayer session is running. Start one in the Session tab."
+msgstr "실행 중인 멀티플레이 세션이 없습니다. Session 탭에서 시작하세요."
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.PauseServer"
 msgid "Pause the dedicated server's game tick"
 msgstr "전용 서버의 게임 틱을 멈춥니다"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.Play"
 msgid "Start the server and clients for the selected Net Mode"
 msgstr "고른 Net Mode 로 서버와 클라이언트를 시작합니다"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerClear"
+msgid "Forget the collected history"
+msgstr "모은 기록을 지웁니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerKinds"
+msgid "Received messages by kind"
+msgstr "받은 메시지 종류별 비중"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerKindsAllProcesses"
+msgid "Add up the message kinds every process received instead of only the selected one"
+msgstr "고른 프로세스 대신 모든 프로세스가 받은 메시지 종류를 합쳐 봅니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerLoss"
+msgid "Packet loss (highest connection, %)"
+msgstr "패킷 손실 (가장 큰 연결, %)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerNoKinds"
+msgid "No messages received yet"
+msgstr "아직 받은 메시지가 없습니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerNoSession"
+msgid "Start a multiplayer session (Net Mode on the toolbar) to see its traffic"
+msgstr "멀티플레이 세션을 시작하면(툴바의 Net Mode) 트래픽이 보입니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerReceivedBytes"
+msgid "Received bytes per second (last second, all connections)"
+msgstr "받은 바이트 / 초 (최근 1 초, 모든 연결)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerReceivedPackets"
+msgid "Received packets per second"
+msgstr "받은 패킷 / 초"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerResent"
+msgid "Reliable messages resent per second"
+msgstr "다시 보낸 신뢰 메시지 / 초"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerRtt"
+msgid "Round-trip time (highest connection, ms)"
+msgstr "RTT (가장 큰 연결, ms)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerSentBytes"
+msgid "Sent bytes per second (last second, all connections)"
+msgstr "보낸 바이트 / 초 (최근 1 초, 모든 연결)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerSentPackets"
+msgid "Sent packets per second"
+msgstr "보낸 패킷 / 초"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerSource"
+msgid "Numbers the process already counts (connection stats, message kinds), asked with net.stats every 0.5 s while this tab is shown"
+msgstr "프로세스가 이미 세는 값(연결 통계, 메시지 종류)을 이 탭이 보이는 동안 0.5 초마다 net.stats 로 묻습니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerWaiting"
+msgid "Waiting for the first net.stats report from this process"
+msgstr "이 프로세스의 첫 net.stats 보고를 기다리는 중입니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.RecordTraces"
 msgid "Record a timeline per process and merge them into one file (merged.trace.json) on Stop - open it with Load Trace in the Profiler window or with Perfetto"
 msgstr "프로세스마다 타임라인을 기록해 Stop 때 한 파일(merged.trace.json)로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.ResumeServer"
 msgid "Resume the paused server's game tick"
 msgstr "멈춘 서버의 게임 틱을 다시 돌립니다"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.StepServer"
 msgid "Run the server game tick as many times as the field on the left says, then pause again (dedicated server Dev command step N)"
 msgstr "서버 게임 틱을 왼쪽 칸의 수만큼 돌리고 다시 멈춥니다 (전용 서버 Dev 명령 step N)"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.StepTickCount"
 msgid "Number of server ticks that Step runs (1 or more)"
 msgstr "Step 이 돌릴 서버 틱 수입니다(1 이상)"
 
-#: Source/Editor/Panels/MultiplayerPanel.cpp
+#: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.Stop"
 msgid "Stop every process and merge the recorded traces"
 msgstr "모든 프로세스를 멈추고 기록한 트레이스를 합칩니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp
+msgctxt "EditorMultiplayer.Target"
+msgid "Process the tabs act on: the server or one client"
+msgstr "탭이 다루는 프로세스입니다(서버 또는 클라이언트 하나)"
 
 #: Source/Editor/Panels/Packaging/PackagingPanel.cpp
 msgctxt "EditorPackaging.Game"
@@ -2025,6 +2453,21 @@ msgctxt "EditorRenderTarget.ZoomTip"
 msgid "Preview scale, 0 to 2. At 0 the image fits the panel; set 1 to inspect pixels at native resolution."
 msgstr "미리보기 배율(0~2)입니다. 0이면 패널에 맞추고, 원본 해상도로 픽셀을 보려면 1로 둡니다."
 
+#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+msgctxt "EditorRigDebug.BoneMarkersTip"
+msgid "Draw the bones written by the selected node in the viewport"
+msgstr "고른 노드가 쓰는 본을 뷰포트에 표시합니다"
+
+#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+msgctxt "EditorRigDebug.RigNotReady"
+msgid "The rig is not bound yet (check the rig asset and skeleton)"
+msgstr "리그가 아직 바인딩되지 않았습니다(리그 에셋과 스켈레톤을 확인하세요)"
+
+#: Source/Editor/Panels/Animation/RigDebugPanel.cpp
+msgctxt "EditorRigDebug.SelectRig"
+msgid "Select an object with a Pose Modifier component"
+msgstr "Pose Modifier 컴포넌트가 있는 오브젝트를 고르세요"
+
 #: Source/Editor/Panels/Scene/PrefabPanel.cpp
 msgctxt "EditorScene.ApplyAllOverrides"
 msgid "Write every override of this instance back to the prefab template"
@@ -2176,6 +2619,11 @@ msgid "Add a track that keys one numeric property of a component on the selected
 msgstr "고른 오브젝트 컴포넌트의 숫자 프로퍼티 하나를 키로 모는 트랙을 더합니다"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.AddRigSlotTrackTip"
+msgid "Add a track that keys a rig slot weight (PoseModifierComponent)"
+msgstr "리그 슬롯 가중치(PoseModifierComponent)에 키를 찍는 트랙을 추가합니다"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.AddTransformTrackTip"
 msgid "Add a track that keys the selected object's position, rotation and scale."
 msgstr "고른 오브젝트의 이동 · 회전 · 크기를 키로 모는 트랙을 더합니다"
@@ -2246,6 +2694,16 @@ msgid "Target or numeric property not found"
 msgstr "대상이나 숫자 프로퍼티를 찾을 수 없습니다"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.RigSlotTargetNotFound"
+msgid "Target has no Pose Modifier"
+msgstr "대상에 Pose Modifier 가 없습니다"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.RigSlotTip"
+msgid "Rig slot name (weight_slot in the rig asset); value is clamped to 0..1"
+msgstr "리그 슬롯 이름(리그 에셋의 weight_slot), 값은 0..1 로 자릅니다"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.SaveTip"
 msgid "Write the sequence to the focused .seq file."
 msgstr "시퀀스를 포커스된 .seq 파일에 씁니다."
@@ -2286,9 +2744,74 @@ msgid "Group the variables by the module that defines them"
 msgstr "변수를 정의한 모듈별로 묶습니다"
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleChangeNoCascade"
+msgid "No other modules change."
+msgstr "다른 모듈은 바뀌지 않습니다."
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleChangeTarget"
+msgid "Module"
+msgstr "모듈"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleChangeTurnsOff"
+msgid "Also turns off"
+msgstr "함께 꺼짐"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleChangeTurnsOn"
+msgid "Also turns on"
+msgstr "함께 켜짐"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleDefaultState"
+msgid "Default"
+msgstr "기본값"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleDependencies"
+msgid "Depends on"
+msgstr "의존 모듈"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleDependents"
+msgid "Required by"
+msgstr "이 모듈에 의존하는 모듈"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleKindAll"
+msgid "All categories"
+msgstr "모든 종류"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleKindFilter"
+msgid "Show only one module category"
+msgstr "한 종류의 모듈만 보입니다"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleLocked"
 msgid "Editor and game modules cannot be turned off here"
 msgstr "에디터 · 게임 모듈은 여기서 끌 수 없습니다"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleOverride"
+msgid "Project override"
+msgstr "프로젝트 오버라이드"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleOverrideNone"
+msgid "None (uses default)"
+msgstr "없음(기본값 사용)"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleResetOverride"
+msgid "Reset to default"
+msgstr "기본값으로 되돌리기"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleResetOverrideTip"
+msgid "Remove this module's line from the project manifest (previews the change first)"
+msgstr "프로젝트 매니페스트에서 이 모듈 줄을 지웁니다(먼저 변경을 미리 보여 줍니다)"
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleSetChanged"
@@ -2296,9 +2819,34 @@ msgid "Module set changed - build to apply, then restart the editor."
 msgstr "모듈 구성이 바뀌었습니다 - 빌드해 적용한 뒤 에디터를 다시 시작하세요."
 
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleStateAll"
+msgid "On and off"
+msgstr "켜짐과 꺼짐"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleStateFilter"
+msgid "Filter modules by whether they are on"
+msgstr "켜짐 여부로 모듈을 거릅니다"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleStateOff"
+msgid "Off only"
+msgstr "꺼진 것만"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleStateOn"
+msgid "On only"
+msgstr "켜진 것만"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleToggle"
 msgid "Turn this module on or off (the affected modules are shown before it applies)"
 msgstr "이 모듈을 켜거나 끕니다(적용하기 전에 영향받는 모듈을 보여 줍니다)"
+
+#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+msgctxt "EditorSettings.ModuleVersion"
+msgid "Version"
+msgstr "버전"
 
 #: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.NoDescription"
@@ -2741,6 +3289,66 @@ msgid "Show or hide this section of the in-game Debug HUD. The grey text is the 
 msgstr "게임 안 디버그 HUD 의 이 구역을 보이거나 숨깁니다. 회색 글자는 구역의 등록 이름입니다."
 
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorBottomCenter"
+msgid "Bottom Center"
+msgstr "아래 가운데"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorBottomLeft"
+msgid "Bottom Left"
+msgstr "왼쪽 아래"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorBottomRight"
+msgid "Bottom Right"
+msgstr "오른쪽 아래"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorCenter"
+msgid "Center"
+msgstr "가운데"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorCenterLeft"
+msgid "Center Left"
+msgstr "왼쪽 가운데"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorCenterRight"
+msgid "Center Right"
+msgstr "오른쪽 가운데"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorStretchAll"
+msgid "Stretch All"
+msgstr "전체 늘이기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorStretchHorizontal"
+msgid "Stretch Horizontal"
+msgstr "가로 늘이기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorStretchVertical"
+msgid "Stretch Vertical"
+msgstr "세로 늘이기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorTopCenter"
+msgid "Top Center"
+msgstr "위 가운데"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorTopLeft"
+msgid "Top Left"
+msgstr "왼쪽 위"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.AnchorTopRight"
+msgid "Top Right"
+msgstr "오른쪽 위"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EditorUIPreview.BuildFailed"
 msgid "Could not build the document (see the log)."
 msgstr "문서를 만들지 못했습니다(로그를 확인합니다)."
@@ -2779,6 +3387,146 @@ msgstr "가장자리를 잘라 내는 TV 처럼 각 변에서 잘라 낼 화면 
 msgctxt "EditorUIPreview.SelectWidgetHint"
 msgid "{width} x {height} UI units, scale {scale} - click the image or the tree to select a widget"
 msgstr "{width} x {height} UI 단위, 배율 {scale} - 이미지나 트리를 클릭해 위젯을 선택합니다"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotAnchorMax"
+msgid "Anchor Max"
+msgstr "앵커 최대"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotAnchorMin"
+msgid "Anchor Min"
+msgstr "앵커 최소"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotAnchorPreset"
+msgid "Anchors"
+msgstr "앵커"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotAnchorPresetTip"
+msgid "Sets the anchors and recomputes the offsets so the widget stays where it is."
+msgstr "앵커를 바꾸고 위젯이 제자리에 머물도록 오프셋을 다시 계산합니다."
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotAutoSize"
+msgid "Auto Size"
+msgstr "자동 크기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotColumn"
+msgid "Column"
+msgstr "열"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotColumnSpan"
+msgid "Column Span"
+msgstr "열 넓이"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotFillWeight"
+msgid "Fill Weight"
+msgstr "채우기 비율"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotGrowHorizontal"
+msgid "Grow Horizontal"
+msgstr "가로로 커지는 쪽"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotGrowVertical"
+msgid "Grow Vertical"
+msgstr "세로로 커지는 쪽"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotHeader"
+msgid "Slot"
+msgstr "슬롯"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotHeightOverride"
+msgid "Height Override"
+msgstr "높이 덮어쓰기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotHorizontalAlignment"
+msgid "Horizontal Alignment"
+msgstr "가로 정렬"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotMaxSize"
+msgid "Max Size"
+msgstr "최대 크기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotMaxSizeTip"
+msgid "0 means unbounded"
+msgstr "0 은 제한 없음"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotMinSize"
+msgid "Min Size"
+msgstr "최소 크기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotOffsetMax"
+msgid "Offset Max"
+msgstr "오프셋 최대"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotOffsetMin"
+msgid "Offset Min"
+msgstr "오프셋 최소"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotOverrideTip"
+msgid "0 means none"
+msgstr "0 은 덮어쓰지 않음"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotPadding"
+msgid "Padding"
+msgstr "여백"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotPaddingTip"
+msgid "Left, top, right, bottom (UI units)"
+msgstr "왼쪽, 위, 오른쪽, 아래(UI 단위)"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotRow"
+msgid "Row"
+msgstr "행"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotRowSpan"
+msgid "Row Span"
+msgstr "행 넓이"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotSizeRule"
+msgid "Size Rule"
+msgstr "크기 규칙"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotSizeRuleTip"
+msgid "Auto takes the desired size on the main axis; Fill shares the rest by fill weight."
+msgstr "Auto 는 주축에서 원하는 크기를 쓰고, Fill 은 남은 자리를 채우기 비율로 나눕니다."
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotVerticalAlignment"
+msgid "Vertical Alignment"
+msgstr "세로 정렬"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotWidthOverride"
+msgid "Width Override"
+msgstr "너비 덮어쓰기"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.SlotZOrder"
+msgid "Z Order"
+msgstr "Z 순서"
 
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EditorUIPreview.TextScaleTip"

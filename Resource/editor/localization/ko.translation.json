@@ -697,6 +697,14 @@
             "text": "보이스",
             "sourceHash": "e3767266a468255e"
         },
+        "EditorAudioEvents.EditEvent": {
+            "text": "편집",
+            "sourceHash": "64ef2a6c2dd1d3d1"
+        },
+        "EditorAudioEvents.EditEventTip": {
+            "text": "이 이벤트의 라이브러리 파일 사본을 고칩니다. 저장은 검사를 통과할 때만 파일에 쓰고, 핫 리로드가 적용합니다",
+            "sourceHash": "ed14ff9501495cf4"
+        },
         "EditorAudioEvents.FieldBus": {
             "text": "버스",
             "sourceHash": "166a3d19b1137d79"
@@ -805,9 +813,21 @@
             "text": "반복",
             "sourceHash": "cdece4ad70d57deb"
         },
+        "EditorAudioEvents.SaveEdits": {
+            "text": "저장",
+            "sourceHash": "33f85f24c0f5f008"
+        },
+        "EditorAudioEvents.SaveEditsTip": {
+            "text": "라이브러리 파일에 씁니다. 검사에 실패한 라이브러리는 쓰지 않고 오류를 로그에 남깁니다",
+            "sourceHash": "7d4c87e00afaf47f"
+        },
         "EditorAudioEvents.SelectEvent": {
             "text": "왼쪽에서 이벤트를 고르세요",
             "sourceHash": "6a6ebb1818fb7e8b"
+        },
+        "EditorAudioEvents.StopEditing": {
+            "text": "편집 끝내기",
+            "sourceHash": "a3c50c63093332c5"
         },
         "EditorAudioEvents.TabPlaying": {
             "text": "재생 중",
@@ -820,6 +840,10 @@
         "EditorAudioEvents.TabVoices": {
             "text": "보이스",
             "sourceHash": "e3767266a468255e"
+        },
+        "EditorAudioEvents.Unsaved": {
+            "text": "* 저장하지 않은 변경",
+            "sourceHash": "6e6e4d288ea76fc4"
         },
         "EditorAudioEvents.VirtualVoices": {
             "text": "가상 보이스",

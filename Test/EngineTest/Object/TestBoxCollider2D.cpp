@@ -84,7 +84,7 @@ namespace
     /**
      * @brief 한 프레임 길이입니다. 콜라이더 겹침은 2D 물리의 고정 스텝(1/60 초)에서 나므로, 프레임마다 스텝이 적어도 하나 돌게 고정 스텝보다 길게 둔다.
      */
-    constexpr float32 kFrame = 1.0f / 30.0f;
+    constexpr float32 kColliderFrame = 1.0f / 30.0f;
 
     /**
      * @brief 씬의 2D 물리 씬에 "모든 쌍이 부딪히되 @p layerA · @p layerB 쌍만 빼는" 레이어 행렬을 줍니다. 콜라이더는 그 씬의 행렬로 걸러진다.
@@ -184,7 +184,7 @@ SW_TEST_CASE( BoxCollider2DTest, OverlapEventsReachBothObjectsAfterTheTick )
     const uint64 idB = b._pObject->getObjectID();
 
     manager.beginPlay();
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), a._pListener->_listBeginOther.size() );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), b._pListener->_listBeginOther.size() );
     SW_EXPECT_EQUAL( idB, a._pListener->_listBeginOther[0] );
@@ -192,31 +192,31 @@ SW_TEST_CASE( BoxCollider2DTest, OverlapEventsReachBothObjectsAfterTheTick )
     SW_EXPECT_TRUE( c._pListener->_listBeginOther.empty() );
 
     // 계속 겹치면 다시 오지 않는다.
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), a._pListener->_listBeginOther.size() );
 
     // 떨어지면 끝.
     b._pCollider->setLocalPosition( sw::float3{ 20.0f, 0.0f, 0.0f } );
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), a._pListener->_listEndOther.size() );
     SW_EXPECT_EQUAL( idB, a._pListener->_listEndOther[0] );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), b._pListener->_listEndOther.size() );
 
     // 다시 겹쳤다가 B 를 끄면 끝 — 꺼진 콜라이더는 겹침에 들지 않는다.
     b._pCollider->setLocalPosition( sw::float3{ 0.5f, 0.0f, 0.0f } );
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), a._pListener->_listBeginOther.size() );
     b._pObject->setActive( false );
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), a._pListener->_listEndOther.size() );
 
     // 다시 켜면 시작, A 를 지우면 B 가 끝을 받는다(A 는 사라져 상대가 없다).
     b._pObject->setActive( true );
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), a._pListener->_listBeginOther.size() );
     const size_t endBefore = b._pListener->_listEndOther.size();
     manager.destroyObject( a._pObject );
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_ASSERT_EQUAL( endBefore + 1, b._pListener->_listEndOther.size() );
     SW_EXPECT_EQUAL( 0ull, b._pListener->_listEndOther.back() );
     manager.endPlay();
@@ -237,12 +237,12 @@ SW_TEST_CASE( BoxCollider2DTest, ColliderTypeChangedDuringPlayFiltersTheNextStep
     SW_ASSERT_NOT_NULL( b._pListener );
 
     manager.beginPlay();
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), a._pListener->_listBeginOther.size() );
 
     // B 를 A 와 부딪히지 않는 레이어로 옮기면 다음 step 에 겹침이 끝난다.
     b._pCollider->setColliderType( 1 );
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), a._pListener->_listEndOther.size() );
     manager.endPlay();
 }
@@ -269,17 +269,17 @@ SW_TEST_CASE( BoxCollider2DTest, TeleportToDoesNotSweepTheGapButSetWorldPosition
     SW_ASSERT_TRUE( rider._pObject->attachToParent( runner._pObject, sw::AttachRule::KeepWorld ) );
 
     manager.beginPlay();
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_ASSERT_TRUE( wall._pListener->_listBeginOther.empty() );
 
     // 순간이동 — 달리는 쪽도, 거기 탄 자식도 벽을 지나가지 않는다.
     runner._pCollider->teleportTo( sw::float3{ 10.0f, 0.0f, 0.0f } );
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_EXPECT_TRUE( wall._pListener->_listBeginOther.empty() );
 
     // 같은 거리를 그냥 옮기면 둘 다 벽을 쓸고 지나간다.
     runner._pCollider->setWorldPosition( sw::float3{ 0.0f, 0.0f, 0.0f } );
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), wall._pListener->_listBeginOther.size() );
     manager.endPlay();
 }
@@ -300,7 +300,7 @@ SW_TEST_CASE( BoxCollider2DTest, TriggerCollidersReportOverlapsAndSaySo )
     SW_EXPECT_TRUE( sensor._pCollider->isTrigger() );
 
     manager.beginPlay();
-    manager.update( kFrame );
+    manager.update( kColliderFrame );
     SW_ASSERT_EQUAL( static_cast<uint32>( 1 ), body._pListener->_listBeginOtherTrigger.size() );
     SW_EXPECT_TRUE( body._pListener->_listBeginOtherTrigger[0] );
     SW_ASSERT_EQUAL( static_cast<uint32>( 1 ), sensor._pListener->_listBeginOtherTrigger.size() );
@@ -345,7 +345,7 @@ SW_TEST_CASE( BoxCollider2DTest, GeometricAndLayerOverlapAnswerTheSameBeforeAndA
         if ( phaseIndex == 0 )
         {
             manager.beginPlay();
-            manager.update( kFrame );
+            manager.update( kColliderFrame );
             // 바디가 생겼다는 증거: 허용된 쌍은 겹침 이벤트를 받았고, 막힌 쌍은 받지 않았다.
             SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), allowed._pListener->_listBeginOther.size() );
             SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), blocker._pListener->_listBeginOther.size() );

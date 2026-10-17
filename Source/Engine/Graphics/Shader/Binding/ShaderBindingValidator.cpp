@@ -353,7 +353,6 @@ namespace sw
                 static string s_arrEngineName[shaderslot::kEngineTextureCount];
                 static string s_arrEngineSamplerName[shaderslot::kEngineTextureCount];
                 static string s_arrMaterialName[shaderslot::kMaterialTextureCount];
-                static string s_arrMaterialSamplerName[shaderslot::kMaterialTextureCount];
                 for ( uint32 slotIndex = 0; slotIndex < shaderslot::kEngineTextureCount; ++slotIndex )
                 {
                     s_arrEngineName[slotIndex]        = string( shaderslot::resname::kEngineTexture ) + to_string( slotIndex );
@@ -364,12 +363,11 @@ namespace sw
                 }
                 for ( uint32 slotIndex = 0; slotIndex < shaderslot::kMaterialTextureCount; ++slotIndex )
                 {
-                    s_arrMaterialName[slotIndex]        = string( shaderslot::resname::kMaterialTexture ) + to_string( slotIndex );
-                    s_arrMaterialSamplerName[slotIndex] = s_arrMaterialName[slotIndex] + "Sampler";
-                    const uint32 reg                    = shaderslot::kMaterialTexture0 + slotIndex;
+                    s_arrMaterialName[slotIndex] = string( shaderslot::resname::kMaterialTexture ) + to_string( slotIndex );
+                    const uint32 reg             = shaderslot::kMaterialTexture0 + slotIndex;
+                    // 짝 샘플러 이름은 계약에 없다 — 셰이더가 머티리얼 칸을 짝 샘플러 없이 선언하고(binding.hlsli `SW_DECLARE_TEXTURE2D`),
+                    // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 유닛에 건 머티리얼 샘플러 객체로 읽는다(OpenGLRHIDeviceInit).
                     add( s_arrMaterialName[slotIndex].c_str(), ShaderBindingKind::Texture, slotB( reg ), none(), none(), slotB( reg ) );
-                    // 짝 샘플러는 GL 만(결합 샘플러) — DX11 은 샘플러 슬롯이 16 개뿐이라 정적 세트로 읽는다(binding.hlsli 11-2).
-                    add( s_arrMaterialSamplerName[slotIndex].c_str(), ShaderBindingKind::Sampler, none(), none(), none(), slotB( reg ) );
                 }
                 // 컴퓨트 RW 텍스처 슬롯 u4..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
                 static string s_arrRwTextureName[shaderslot::kComputeTextureUavSlotCount];
