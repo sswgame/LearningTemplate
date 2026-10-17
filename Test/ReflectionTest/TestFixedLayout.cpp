@@ -134,6 +134,14 @@ namespace
         return sample;
     }
 
+    /** @brief '0' · '1' 리터럴을 비트셋으로 읽습니다. 읽기 실패는 테스트 실패입니다. */
+    sw::DynamicBitset parseBits( const sw::string_view text )
+    {
+        sw::DynamicBitset value;
+        SW_EXPECT_TRUE_MSG( sw::DynamicBitset::parse( text, value ), sw::string( text ) );
+        return value;
+    }
+
     sw::FixedContainerSample makeContainerSample()
     {
         sw::FixedContainerSample sample;
@@ -147,7 +155,7 @@ namespace
         sample._arrWeight  = { 1.5f, -2.0f };
         sample._position   = sw::float3( -10.0f, 5.0f, 10.0f );
         sample._listKind   = { sw::EFixedSampleKind::Idle, sw::EFixedSampleKind::Run };
-        sample._listBit    = sw::DynamicBitset( "101" );
+        sample._listBit    = parseBits( "101" );
         return sample;
     }
 
@@ -399,7 +407,7 @@ SW_TEST_CASE( FixedLayoutTest, OutOfRangeValuesFailToWrite )
     container._flags = static_cast<sw::EFixedSampleFlag>( 8 );
     SW_EXPECT_FALSE( sw::FixedLayout::write( container, writer ) );
     container          = makeContainerSample();
-    container._listBit = sw::DynamicBitset( "101010101" ); // MaxCount 8 을 넘는 비트 수
+    container._listBit = parseBits( "101010101" ); // MaxCount 8 을 넘는 비트 수
     SW_EXPECT_FALSE( sw::FixedLayout::write( container, writer ) );
 }
 
@@ -415,7 +423,7 @@ SW_TEST_CASE( FixedLayoutTest, BitsetFieldKeepsEveryBit )
     for ( const utf8* pBits : { "", "1", "10010110", "01111111" } )
     {
         sw::FixedContainerSample source       = makeContainerSample();
-        source._listBit                       = sw::DynamicBitset( pBits );
+        source._listBit                       = parseBits( pBits );
         const sw::FixedContainerSample loaded = roundTrip( source );
         SW_EXPECT_EQUAL( loaded._listBit.size(), source._listBit.size() );
         SW_EXPECT_TRUE_MSG( loaded._listBit == source._listBit, loaded._listBit.to_string() + " != " + pBits );
@@ -433,7 +441,7 @@ SW_TEST_CASE( FixedLayoutTest, BitsetFieldRoundTripsSelfDescribingFormats )
 {
     const sw::TypeInfo&      typeInfo = *sw::FixedContainerSample::StaticType();
     sw::FixedContainerSample source   = makeContainerSample();
-    source._listBit                   = sw::DynamicBitset( "0010110" );
+    source._listBit                   = parseBits( "0010110" );
 
     sw::FixedContainerSample fromJSON;
     const sw::string         json = sw::JSONSerializer::serialize( &source, typeInfo );
@@ -452,8 +460,8 @@ SW_TEST_CASE( FixedLayoutTest, BitsetFieldRoundTripsSelfDescribingFormats )
     SW_EXPECT_TRUE( fromBinary._listBit == source._listBit );
 
     sw::FixedContainerSample fromBadJSON;
-    fromBadJSON._listBit     = sw::DynamicBitset( "11" );
+    fromBadJSON._listBit     = parseBits( "11" );
     const sw::string badJSON = replaceAll( json, "0010110", "0010210" );
     SW_EXPECT_FALSE_MSG( sw::JSONSerializer::deserialize( &fromBadJSON, typeInfo, badJSON ), badJSON );
-    SW_EXPECT_TRUE( fromBadJSON._listBit == sw::DynamicBitset( "11" ) );
+    SW_EXPECT_TRUE( fromBadJSON._listBit == parseBits( "11" ) );
 }

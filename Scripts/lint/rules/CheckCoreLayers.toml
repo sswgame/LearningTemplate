@@ -34,5 +34,5 @@ LogSink = 11        # 기본 로그 싱크(AsyncLogSink)와 출력 장치
 "Source/Core/Math/VectorMath.cpp" = "영 벡터 단언(SW_LOG_ASSERT) — Math 가 Log 아래라 링크 간선이 거꾸로 간다"
 "Source/Core/Memory/LinearAllocator.cpp" = "블록 표 소진 · 블록 할당 실패 Error 로그"
 "Source/Core/Container/FrameArenaAllocator.cpp" = "프레임 아레나 청크 할당 실패 Error 로그"
-"Source/Core/Container/DynamicBitset.cpp" = "비트 위치 · 크기 단언과 잘못된 글자 Error 로그"
+"Source/Core/Container/DynamicBitset.cpp" = "비트 위치 · 크기 단언"
 "Source/Core/Container/StringUtil.cpp" = "UTF-8 검증 경고 · 단언"
