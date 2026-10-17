@@ -90,7 +90,7 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, FixedCArrayRoundTripsInEveryFormat )
     SW_EXPECT_TRUE_MSG( isSame( fromJSON ), json.c_str() );
 
     sw::vector<uint8> bytes;
-    sw::BinarySerializer::serialize( &source, type, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, type, bytes ) );
     sw::DisplayMetaActor fromBinary;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, type, bytes.data(), bytes.size() ) );
     SW_EXPECT_TRUE( isSame( fromBinary ) );

@@ -119,8 +119,10 @@ namespace sw
         ReflectAny any;
         if ( pValue == nullptr )
             return any;
+        // 바이너리로 싣지 못한 값은 빈 값으로 돌려준다. 반쯤 쓴 바이트를 담으면 꺼낼 때 값이 빠진다. 실패는 직렬화기가 알린다.
+        if ( BinarySerializer::serialize( pValue, info, any._bytes ) == false )
+            return ReflectAny{};
         any._typeFqn = info._fullyQualifiedName.empty() == false ? info._fullyQualifiedName : info._name;
-        BinarySerializer::serialize( pValue, info, any._bytes );
         return any;
     }
 

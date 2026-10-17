@@ -213,7 +213,7 @@ SW_TEST_CASE( ControlTest, IntentRoundTripsThroughBits )
     SW_EXPECT_FALSE( intent.wasTriggered( 31 ) );
 
     BitWriter writer;
-    intent.write( writer );
+    SW_ASSERT_TRUE( intent.write( writer ) );
     SW_EXPECT_TRUE( writer.getByteCount() <= ControlIntent::kMaxSerializedBytes );
     ControlIntent decoded;
     BitReader     reader( writer.getBytes().data(), writer.getByteCount() );
@@ -238,6 +238,15 @@ SW_TEST_CASE( ControlTest, IntentRoundTripsThroughBits )
     broken._move = float2{ 1.0f, 1.0f };
     SW_EXPECT_FALSE( broken.read( shortReader ) );
     SW_EXPECT_TRUE( broken == ControlIntent{} );
+
+    // 바이트는 넉넉하지만 첫 칸이 범위 밖(8 비트 255 는 -127 에서 세어 128)이다. 예전에는 127 로 잘라 읽고 true 였다.
+    uint8 arrBrokenCell[64] = {};
+    arrBrokenCell[0]        = 0xFF;
+    BitReader     outOfRangeReader( arrBrokenCell, 64 );
+    ControlIntent outOfRange;
+    outOfRange._move = float2{ 1.0f, 1.0f };
+    SW_EXPECT_FALSE( outOfRange.read( outOfRangeReader ) );
+    SW_EXPECT_TRUE( outOfRange == ControlIntent{} );
 }
 
 /**
@@ -582,7 +591,7 @@ SW_TEST_CASE( ControlTest, RecordedIntentsReplayTheSameTrajectory )
         // 아날로그가 실제로 실렸다(0.7 → 양자화 값).
         SW_EXPECT_NEAR_EQUAL( 0.7f, history.findIntent( 0, history.getTrack( 0 )._firstTick )->_arrAnalog[0], 1.0f / ControlIntent::kAxisSteps );
         BitWriter writer;
-        history.write( writer );
+        SW_ASSERT_TRUE( history.write( writer ) );
         fileBytes = writer.releaseBytes();
         manager.endPlay();
     }
@@ -668,7 +677,7 @@ SW_TEST_CASE( ControlTest, IntentFileRoundTrips )
     SW_EXPECT_NEAR_EQUAL( 1.0f, listSwimmer[0]._moveUp, 1.0e-6f );
 
     BitWriter writer;
-    history.write( writer );
+    SW_ASSERT_TRUE( history.write( writer ) );
     vector<uint8> bytes = writer.releaseBytes();
     SW_ASSERT_TRUE( bytes.size() > 8 );
     SW_EXPECT_TRUE( bytes[0] == 'S' && bytes[1] == 'W' && bytes[2] == 'I' && bytes[3] == 'N' );
@@ -719,7 +728,7 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
         localManager.update( ControlTestInternal::kDeltaTime );
         listLocalPosition.push_back( ControlTestInternal::findPosition( *pLocalPawn->getOwner() ) );
         BitWriter intentWriter;
-        pLocalPawn->getIntent().write( intentWriter );
+        SW_ASSERT_TRUE( pLocalPawn->getIntent().write( intentWriter ) );
         SW_ASSERT_TRUE( window.push( tick, intentWriter.getBytes().data(), intentWriter.getByteCount() ) );
         // 묶음 셋 중 하나를 잃는다 — 다음 묶음이 확인 안 된 틱부터 다시 싣는다.
         if ( ( tick % 3 ) != 1 )

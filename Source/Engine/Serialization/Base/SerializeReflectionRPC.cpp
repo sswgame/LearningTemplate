@@ -61,10 +61,7 @@ namespace sw
                     }
                     const TypeInfo* pInfo = engine::getSubsystem<TypeRegistry>().findType( typeHash );
                     if ( pInfo != nullptr )
-                    {
-                        BinarySerializer::serialize( pPtr, *pInfo, listPayload, serializeContext );
-                        return true;
-                    }
+                        return BinarySerializer::serialize( pPtr, *pInfo, listPayload, serializeContext );
                     return false;
                 };
 

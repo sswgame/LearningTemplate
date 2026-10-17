@@ -460,7 +460,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldSerializationRoundtrip )
 
     // 3) Binary 직렬화 & 역직렬화
     sw::vector<uint8> listBin;
-    sw::BinarySerializer::serialize( &source, *pType, listBin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, *pType, listBin ) );
     sw::BitfieldTestActor binTarget;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &binTarget, *pType, listBin.data(), listBin.size() ) );
     SW_EXPECT_EQUAL( SW_TRUE, binTarget._bActive );
@@ -574,7 +574,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldSerializationRoundtrip )
 
     // 3) Binary 직렬화 & 역직렬화
     sw::vector<uint8> listBin;
-    sw::BinarySerializer::serialize( &source, *pType, listBin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, *pType, listBin ) );
     sw::WideBitfieldTestActor binTarget;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &binTarget, *pType, listBin.data(), listBin.size() ) );
     SW_EXPECT_EQUAL( SW_TRUE, binTarget._bFlag16_A );

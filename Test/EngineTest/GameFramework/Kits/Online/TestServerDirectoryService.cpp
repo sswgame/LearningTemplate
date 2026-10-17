@@ -270,6 +270,27 @@ SW_TEST_CASE( ServerDirectoryProtocolTest, DeclaredLimitsMatchTheConstants )
 }
 
 /**
+ * @brief [ServerDirectoryProtocolTest] 허용 계정 목록의 원소를 `AccountID` 별칭으로 적어도 저장소 레코드의 바이트는 그대로다
+ * @details 생성기가 컨테이너 원소의 별칭을 벗기기 전에는 `uint64` 로 적어 피했다. 골든은 `uint64` 로 적던 빌드가 쓴 바이트다.
+ */
+SW_TEST_CASE( ServerDirectoryProtocolTest, MaintenanceRecordBytesStayTheSameWithTheAccountIDElement )
+{
+    MaintenanceWindow window;
+    window._scope      = "game";
+    window._messageKey = "notice.maintenance";
+    window._listAllowedAccount.push_back( 900 );
+    window._listAllowedAccount.push_back( 0x0102030405060708ull );
+    const vector<uint8> bytes = ServerDirectoryProtocol::encodeMaintenance( window );
+    const string        hex   = test::OnlineMessageTestUtil::toHexString( bytes );
+    SW_EXPECT_TRUE_MSG( hex == "0100000005000001f94ba75516ce124f140000000200000084030000000000000807060504030201aae70c7a3865c117080000000400000067616d65c4854d94"
+                               "3865c11716000000120000006e6f746963652e6d61696e74656e616e6365ce98ab1d6423d20308000000000000000000000013507a986423d203080000000000000000000000",
+                        hex.c_str() );
+    MaintenanceWindow decoded;
+    SW_ASSERT_TRUE( ServerDirectoryProtocol::decodeMaintenance( "game", bytes, decoded ) );
+    SW_EXPECT_TRUE( decoded.allowsAccount( 900 ) && decoded.allowsAccount( 0x0102030405060708ull ) );
+}
+
+/**
  * @brief [ServerDirectoryProtocolTest] 서버 디렉터리 메시지는 상한까지 왕복하고, 점검 창과 공지 레코드는 자기 기술형으로 왕복하며, 범위 밖 인원은 쓰지 않는다
  */
 SW_TEST_CASE( ServerDirectoryProtocolTest, MessagesAndRecordsRoundTrip )

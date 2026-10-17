@@ -409,7 +409,8 @@ namespace sw
         SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ) );
         const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
         ObjectStateSerializerInternal::registerReferenceWriter( serializeContext, referenceWriter );
-        BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, serializeContext );
+        if ( BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, serializeContext ) == false )
+            return false;
         writer.writeAt( sizeHeaderPos, static_cast<uint32>( writer.getOffset() - bodyStart ) );
 
         return true;

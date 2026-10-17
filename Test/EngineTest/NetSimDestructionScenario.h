@@ -61,13 +61,13 @@ namespace test
     class ShowcaseServerSession final : public INetSimSession
     {
     public:
-        ShowcaseServerSession( NetSimWorld& world, const SceneDocument& document )
+        ShowcaseServerSession( NetSimWorld& world, const SceneDocument& document, const DestructionReplicationConfig& replicationConfig )
             : _replication{}
             , _objects{}
         {
             (void)world.getScene().instantiate( document );
             _objects.collect( world.getObjectManager() );
-            _replication.initialize( &world.getHost(), &world.getObjectManager(), DestructionReplicationConfig{} );
+            _replication.initialize( &world.getHost(), &world.getObjectManager(), replicationConfig );
             for ( uint32 index = 0; index < static_cast<uint32>( _objects._listFracture.size() ); ++index )
             {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
@@ -91,7 +91,7 @@ namespace test
     class ShowcaseClientSession final : public INetSimSession
     {
     public:
-        ShowcaseClientSession( NetSimWorld& world, const SceneDocument& document )
+        ShowcaseClientSession( NetSimWorld& world, const SceneDocument& document, const DestructionReplicationConfig& replicationConfig )
             : _replication{}
             , _objects{}
         {
@@ -106,7 +106,7 @@ namespace test
                     pBarrel->setActive( false );
             }
             _objects.collect( world.getObjectManager() );
-            _replication.initialize( &world.getHost(), &world.getObjectManager(), DestructionReplicationConfig{} );
+            _replication.initialize( &world.getHost(), &world.getObjectManager(), replicationConfig );
             for ( uint32 index = 0; index < static_cast<uint32>( _objects._listFracture.size() ); ++index )
             {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
@@ -130,20 +130,22 @@ namespace test
     class ShowcaseGame final : public INetSimGame
     {
     public:
-        explicit ShowcaseGame( const SceneDocument& document )
+        ShowcaseGame( const SceneDocument& document, const DestructionReplicationConfig& replicationConfig )
             : _pDocument{ &document }
+            , _replicationConfig{ replicationConfig }
         {
         }
 
         unique_ptr<INetSimSession> createSession( NetSimWorld& world ) override
         {
             if ( world.isServer() )
-                return make_unique<ShowcaseServerSession>( world, *_pDocument );
-            return make_unique<ShowcaseClientSession>( world, *_pDocument );
+                return make_unique<ShowcaseServerSession>( world, *_pDocument, _replicationConfig );
+            return make_unique<ShowcaseClientSession>( world, *_pDocument, _replicationConfig );
         }
 
     private:
-        const SceneDocument* _pDocument;
+        const SceneDocument*         _pDocument;
+        DestructionReplicationConfig _replicationConfig;
     };
 } // namespace test
 
@@ -245,14 +247,15 @@ namespace test
 {
     struct ScenarioOptions
     {
-        NetEmulationConditions _conditions{};
-        uint32                 _tickCount{ 720 };
-        int32                  _lateJoinTick{ -1 };    ///< 이 틱에 클라이언트 하나가 더 들어온다
-        int32                  _skipEventClient{ -1 }; ///< 이 클라이언트(0 부터)가 벽의 다음 사건 하나를 빼먹는다
-        uint32                 _seed{ 5u };
-        uint32                 _settleTickLimit{ 600 }; ///< 창(_tickCount) 뒤에 모두가 서버와 같아질 때까지 더 도는 틱 상한
-        uint32                 _clientCount{ 3 };       ///< 처음 클라이언트 수(늦은 참가 제외)
-        uint32                 _rampUpTicks{ 0 };       ///< 0 이면 처음에 모두, 아니면 하나로 시작해 이 틱에 걸쳐 고르게 늘린다(부하 검증 `<Load rampUpSeconds>`)
+        NetEmulationConditions       _conditions{};
+        uint32                       _tickCount{ 720 };
+        int32                        _lateJoinTick{ -1 };    ///< 이 틱에 클라이언트 하나가 더 들어온다
+        int32                        _skipEventClient{ -1 }; ///< 이 클라이언트(0 부터)가 벽의 다음 사건 하나를 빼먹는다
+        uint32                       _seed{ 5u };
+        uint32                       _settleTickLimit{ 600 }; ///< 창(_tickCount) 뒤에 모두가 서버와 같아질 때까지 더 도는 틱 상한
+        uint32                       _clientCount{ 3 };       ///< 처음 클라이언트 수(늦은 참가 제외)
+        uint32                       _rampUpTicks{ 0 };       ///< 0 이면 처음에 모두, 아니면 하나로 시작해 이 틱에 걸쳐 고르게 늘린다(부하 검증 `<Load rampUpSeconds>`)
+        DestructionReplicationConfig _replicationConfig{};    ///< 서버와 클라이언트가 같은 설정을 쓴다(위치 범위 밖 처리를 볼 때 `_positionRange` 를 줄인다)
     };
 } // namespace test
 
@@ -281,7 +284,8 @@ namespace test
         float32         _destructionBytesPerSecond{ 0.0f };      ///< 그중 파괴 메시지 몸
         float32         _peakServerUploadBytesPerSecond{ 0.0f }; ///< 1 초 창 가운데 가장 많이 내놓은 창
         uint64          _poseMessageCount{ 0 };
-        vector<float32> _listStepMicro{}; ///< 틱마다 `NetSimHarness::step` 의 벽시계(마이크로초 — 서버와 모든 클라이언트 월드 한 틱)
+        uint32          _outOfRangePoseCount{ 0 }; ///< 서버가 위치 범위 밖이라 보내지 않은 움직이는 자세 수(`DestructionReplicationStats`)
+        vector<float32> _listStepMicro{};          ///< 틱마다 `NetSimHarness::step` 의 벽시계(마이크로초 — 서버와 모든 클라이언트 월드 한 틱)
         bool            _bValid{ false };
     };
 
@@ -297,7 +301,7 @@ namespace test
     inline ScenarioResult runShowcase( const SceneDocument& document, const ScenarioOptions& options )
     {
         ScenarioResult result;
-        ShowcaseGame   game{ document };
+        ShowcaseGame   game{ document, options._replicationConfig };
         NetSimHarness  harness;
         NetSimConfig   settings;
         settings._seed = options._seed;
@@ -514,6 +518,7 @@ namespace test
         result._serverUploadBytesPerSecond   = static_cast<float32>( harness.getServer().getTraffic()._sentBytes ) / seconds;
         result._destructionBytesPerSecond    = static_cast<float32>( getServerSession( harness )._replication.getStats()._sentBytes ) / seconds;
         result._poseMessageCount             = getServerSession( harness )._replication.getStats()._poseMessageCount;
+        result._outOfRangePoseCount          = getServerSession( harness )._replication.getStats()._outOfRangePoseCount;
         for ( const FractureComponent* pFracture : server._listFracture )
         {
             result._serverEventCount += pFracture->getState().getEventCount();

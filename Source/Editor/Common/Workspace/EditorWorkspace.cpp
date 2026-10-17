@@ -272,7 +272,9 @@ namespace sw::editor
 
         _copiedComponentTypeName = pComp->getTypeName().c_str();
         _copiedComponentBytes.clear();
-        BinarySerializer::serialize( pComp, *pComp->getTypeInfo(), _copiedComponentBytes );
+        // 바이너리로 싣지 못한 값이 있으면 바이트 사본을 두지 않는다(붙여 넣으면 그 값이 빠진다). 실패는 직렬화기가 알린다.
+        if ( BinarySerializer::serialize( pComp, *pComp->getTypeInfo(), _copiedComponentBytes ) == false )
+            _copiedComponentBytes.clear();
         _copiedComponentXML = XMLSerializer::serialize( pComp, *pComp->getTypeInfo() );
     }
 

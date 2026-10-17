@@ -69,8 +69,9 @@ namespace sw
         /**
          * @brief 파일 형식으로 씁니다. 틱은 가장 이른 트랙 시작을 0 으로 센다.
          * @details 고리가 돌아 앞을 잊은 트랙은 남은 틱부터 쓰며 경고한다. 그 기록은 씬 처음부터의 재생과 맞지 않는다.
+         * @return 의도 하나라도 쓰지 못하면(`ControlIntent::write`) false 입니다. 그때 @p writer 에 쓴 바이트는 중간에 끊긴 것이라 쓰면 안 됩니다.
          */
-        void write( BitWriter& writer ) const;
+        [[nodiscard]] bool write( BitWriter& writer ) const;
         /** @brief `write` 의 바이트를 읽어 이 기록을 바꿉니다. 표식, 버전, 상한이 틀리거나 바이트가 모자라면 false 와 이유를 반환하고 기록은 비워집니다. */
         [[nodiscard]] bool read( BitReader& reader, string& outError );
         /** @brief @p path 에 원자적으로 씁니다. */

@@ -555,7 +555,7 @@ SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )
 
     // 3) Binary 직렬화/역직렬화 검증
     sw::vector<uint8> listBin;
-    sw::BinarySerializer::serialize( &sourceActor, *pType, listBin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &sourceActor, *pType, listBin ) );
     sw::MetaTestActor binTarget;
     binTarget._health = 30;
     binTarget._armor  = 0;

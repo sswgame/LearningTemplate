@@ -468,6 +468,20 @@ SW_TEST_CASE( MatchmakingProtocolTest, MessagesAndRecordsRoundTrip )
     SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( MatchmakingReadyRequest{ 5, SW_TRUE } ) );
     SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, MatchmakingIDRequest>( MatchTicketCancel{ 77 } ) ) );
 
+    // 파티 구성원을 `AccountID` 별칭으로 적어도 캐시 기록의 바이트는 `uint64` 로 적던 빌드와 같다(골든).
+    PartySnapshot memberParty;
+    memberParty._listMemberID.push_back( 7 );
+    memberParty._listMemberID.push_back( 0x0102030405060708ull );
+    memberParty._maxMemberCount    = 4;
+    const vector<uint8> partyBytes = MatchmakingProtocol::encodeParty( memberParty );
+    const string        partyHex   = Util::toHexString( partyBytes );
+    SW_EXPECT_TRUE_MSG( partyHex == "0100000004000001f929239616ce124f140000000200000007000000000000000807060504030201d70392d01308a0ae080000000000000000000000aa3a1757"
+                                    "1308a0ae080000000000000000000000094c5f41bfe2defb0400000004000000",
+                        partyHex.c_str() );
+    PartySnapshot decodedMemberParty;
+    SW_ASSERT_TRUE( MatchmakingProtocol::decodeParty( partyBytes, decodedMemberParty ) );
+    SW_EXPECT_TRUE( FixedLayout::equals( decodedMemberParty, memberParty ) );
+
     LobbySnapshot decodedLobby;
     SW_ASSERT_TRUE( MatchmakingProtocol::decodeLobby( MatchmakingProtocol::encodeLobby( lobby ), decodedLobby ) );
     SW_EXPECT_TRUE( FixedLayout::equals( decodedLobby, lobby ) );

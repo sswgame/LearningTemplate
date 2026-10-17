@@ -4,6 +4,8 @@
  * @details 비트는 낮은 비트부터 채우고, 쓰기 · 읽기는 바이트의 남은 칸만큼씩 묶어(32 비트도 다섯 번 안) 처리합니다. 바이트 경계의 덩어리는 통째로 복사합니다.
  *          스냅샷 · 입력은 수가 많고 패킷은 작으므로(1200 바이트) bool 하나에 1 비트, 0..100 체력에 7 비트를 씁니다(Gaffer "Reading and Writing Packets").
  *          읽기가 버퍼를 넘으면 0 을 돌려주고 `hasOverflowed` 가 참이 됩니다 — 깨진 패킷을 받아도 버퍼 밖을 읽지 않습니다.
+ *          범위가 있는 값(`writeInt`, `writeQuantizedFloat`)은 범위 밖을 잘라 쓰거나 잘라 읽지 않고 실패를 돌려줍니다. 자르면 깨진 패킷이나 잘못 정한 범위가
+ *          경고 없이 다른 값이 됩니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -68,14 +70,22 @@ namespace sw
 
         void writeBits( uint32 value, int32 bitCount );
         void writeBool( bool bValue ) { writeBits( bValue ? 1u : 0u, 1 ); }
-        /** @brief [@p minValue, @p maxValue] 의 정수 — 범위를 넘으면 잘라 씁니다. */
-        void writeInt( int32 value, int32 minValue, int32 maxValue );
-        void writeUint32( uint32 value ) { writeBits( value, 32 ); }
-        void writeFloat( float32 value );
-        /** @brief [@p minValue, @p maxValue] 를 @p resolution 간격으로 양자화합니다(위치 0.01 m, 각도 0.1°). */
-        void writeQuantizedFloat( float32 value, float32 minValue, float32 maxValue, float32 resolution );
-        /** @brief x, y, z 순서로 축마다 `writeQuantizedFloat` 를 부릅니다. 범위는 축마다 따로, 간격은 셋이 같습니다. */
-        void writeQuantizedFloat3( const float3& value, const float3& minValue, const float3& maxValue, float32 resolution );
+        /**
+         * @brief [@p minValue, @p maxValue] 의 정수를 필요한 비트만 씁니다.
+         * @return 범위 밖이면 아무것도 쓰지 않고 false 입니다. 잘라 쓰면 받는 쪽이 경고 없이 다른 값을 받습니다.
+         */
+        [[nodiscard]] bool writeInt( int32 value, int32 minValue, int32 maxValue );
+        void               writeUint32( uint32 value ) { writeBits( value, 32 ); }
+        void               writeFloat( float32 value );
+        /**
+         * @brief [@p minValue, @p maxValue] 를 @p resolution 간격으로 양자화합니다(위치 0.01 m, 각도 0.1°).
+         * @return 값이 범위 안의 칸으로 반올림되지 않으면(범위 밖, NaN) 아무것도 쓰지 않고 false 입니다(`canWriteQuantizedFloat`).
+         */
+        [[nodiscard]] bool writeQuantizedFloat( float32 value, float32 minValue, float32 maxValue, float32 resolution );
+        /** @brief x, y, z 순서로 축마다 `writeQuantizedFloat` 를 부릅니다. 범위는 축마다 따로, 간격은 셋이 같습니다. 한 축이라도 범위 밖이면 아무것도 쓰지 않고 false 입니다. */
+        [[nodiscard]] bool writeQuantizedFloat3( const float3& value, const float3& minValue, const float3& maxValue, float32 resolution );
+        /** @brief `writeQuantizedFloat` 가 @p value 를 쓸 수 있는가입니다. 범위 안의 칸으로 반올림되는 값만 됩니다. 쓰기 전에 거를 때 씁니다. */
+        static bool canWriteQuantizedFloat( float32 value, float32 minValue, float32 maxValue, float32 resolution );
         /** @brief 작은 수일수록 짧게(7 비트씩) 씁니다. */
         void writeVarUint( uint64 value );
         void writeVarInt( int64 value );
@@ -112,14 +122,19 @@ namespace sw
 
         uint32             readBits( int32 bitCount );
         [[nodiscard]] bool readBool() { return readBits( 1 ) != 0; }
-        int32              readInt( int32 minValue, int32 maxValue );
+        /**
+         * @brief `writeInt` 로 쓴 정수를 읽습니다.
+         * @return 비트가 모자라거나 읽은 칸이 범위를 넘으면 false 이고 @p outValue 는 그대로입니다. 범위를 넘은 칸도 깨진 데이터로 보고 `hasOverflowed` 를 세웁니다.
+         */
+        [[nodiscard]] bool readInt( int32 minValue, int32 maxValue, int32& outValue );
         uint32             readUint32() { return readBits( 32 ); }
         float32            readFloat();
-        float32            readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution );
-        /** @brief `writeQuantizedFloat3` 로 쓴 값을 x, y, z 순서로 읽습니다. */
-        float3 readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution );
-        uint64 readVarUint();
-        int64  readVarInt();
+        /** @brief `writeQuantizedFloat` 로 쓴 값을 읽습니다. 실패 규칙은 `readInt` 와 같습니다. */
+        [[nodiscard]] bool readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution, float32& outValue );
+        /** @brief `writeQuantizedFloat3` 로 쓴 값을 x, y, z 순서로 읽습니다. 한 축이라도 실패하면 false 이고 @p outValue 는 그대로입니다. */
+        [[nodiscard]] bool readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution, float3& outValue );
+        uint64             readVarUint();
+        int64              readVarInt();
         /** @brief @p byteCount 바이트를 읽습니다. 모자라면 false 이고 읽지 않습니다. */
         [[nodiscard]] bool readBytes( uint8* pOutData, int32 byteCount );
         /** @brief @p byteCount 바이트를 읽지 않고 넘깁니다(필요 없는 페이로드 — 받을 버퍼를 잡지 않는다). 모자라면 false 이고 움직이지 않습니다. */

@@ -27,3 +27,27 @@ SW_TEST_CASE( NetSimDestructionTest, CleanLinkConvergesLateJoinsAndRepairs )
     SW_EXPECT_TRUE( result._hashMismatchCount >= 1 );
     SW_EXPECT_TRUE_MSG( 0 < result._desyncRecoverTicks && result._desyncRecoverTicks < 180, "the dropped event is repaired within three seconds" );
 }
+
+/**
+ * @brief [NetSimDestructionTest] 위치 범위(`_positionRange`) 밖으로 나간 덩어리는 움직이는 자세를 보내지 않고 세며, 멈추면 비트 그대로 보내 서버와 같은 자리가 된다
+ * @details 예전에는 범위 밖 위치를 경계로 잘라 보내 받는 쪽에서 덩어리가 경계에 붙어 보였다. 범위를 1 m 로 줄여 쇼케이스의 덩어리가 모두 범위 밖이 되게 한다.
+ */
+SW_TEST_CASE( NetSimDestructionTest, ChunksOutsideThePositionRangeAreNotSentMovingButRestExactly )
+{
+    SceneDocument document;
+    SW_ASSERT_TRUE( loadShowcase( document ) );
+    ScenarioOptions options;
+    options._tickCount                        = 480;
+    options._clientCount                      = 1;
+    options._replicationConfig._positionRange = 1.0f;
+    ScenarioResult result;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a chunk moved outside the position range" );
+        result = runShowcase( document, options );
+    }
+    logResult( "position range 1 m", result );
+    SW_ASSERT_TRUE( result._bValid );
+    SW_EXPECT_TRUE_MSG( result._outOfRangePoseCount > 0, "moving poses outside the range are counted, not clamped and sent" );
+    SW_EXPECT_TRUE_MSG( result._convergedTick >= 0, "the structure still converges" );
+    SW_EXPECT_TRUE_MSG( result._maxRestError < 1.0e-4f, "rested chunks are sent bit for bit and end where the server's are" );
+}

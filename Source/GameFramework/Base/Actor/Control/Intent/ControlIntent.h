@@ -53,9 +53,10 @@ namespace sw
         /**
          * @brief 양자화해 씁니다(이동 · 아날로그 8 비트, 각 16 비트 남짓, 버튼은 가변 정수). 쓴 뒤 `read` 한 값 = `quantize()` 한 값입니다.
          * @details 값마다 0 을 중심에 둔 정수 칸이라 0 · ±1 이 그대로 남습니다 — 최솟값에서 세는 칸이면 0 이 0 이 아닌 값으로 남아 서 있는 폰이 조금씩 흐른다.
+         * @return 칸이 범위를 넘어 쓰지 못하면 false 입니다. 칸은 쓰기 전에 범위로 잘리므로 정상 값에서는 늘 true 입니다.
          */
-        void write( BitWriter& writer ) const;
-        /** @brief `write` 의 바이트를 읽습니다. 넘침이면 false 이고 값은 0 입니다. */
+        [[nodiscard]] bool write( BitWriter& writer ) const;
+        /** @brief `write` 의 바이트를 읽습니다. 넘침이거나 칸이 범위를 넘으면 false 이고 값은 0 입니다. */
         [[nodiscard]] bool read( BitReader& reader );
         /** @brief 선 · 파일을 거친 것과 같은 값으로 자릅니다(할당 없음). */
         void quantize();

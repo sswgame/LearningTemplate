@@ -65,55 +65,6 @@ namespace
             return &s_typeInfo;
         }
     };
-
-    struct TestSparseReflectedConfig
-    {
-        int32 _v0{ 0 };
-        int32 _v1{ 0 };
-        int32 _v2{ 0 };
-        int32 _v3{ 0 };
-        int32 _v4{ 0 };
-        int32 _v5{ 0 };
-        int32 _v6{ 0 };
-        int32 _v7{ 0 };
-
-        static const sw::TypeInfo* StaticType()
-        {
-            static sw::TypeInfo s_typeInfo{};
-            if ( s_typeInfo._name.empty() )
-            {
-                s_typeInfo._name               = sw::hashed_string( "TestSparseReflectedConfig" );
-                s_typeInfo._fullyQualifiedName = sw::hashed_string( "TestSparseReflectedConfig" );
-                s_typeInfo._size               = sizeof( TestSparseReflectedConfig );
-                s_typeInfo._destroyInstance    = []( void* pMemory )
-                {
-                    static_cast<TestSparseReflectedConfig*>( pMemory )->~TestSparseReflectedConfig();
-                };
-
-                sw::FunctionInfo ctorInfo;
-                ctorInfo._name     = "$ctor";
-                ctorInfo._hashName = sw::hashed_string( "$ctor" );
-                ctorInfo._invoker  = []( void* pPtr, const sw::TaskArgs& ) -> sw::TaskValue
-                {
-                    sw_placement_new( pPtr ) TestSparseReflectedConfig();
-                    return sw::TaskValue{};
-                };
-                s_typeInfo._listMethod.push_back( ctorInfo );
-
-                s_typeInfo._listProperty = {
-                    {sw::hashed_string( "_v0" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestSparseReflectedConfig, _v0 ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                    {sw::hashed_string( "_v1" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestSparseReflectedConfig, _v1 ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                    {sw::hashed_string( "_v2" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestSparseReflectedConfig, _v2 ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                    {sw::hashed_string( "_v3" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestSparseReflectedConfig, _v3 ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                    {sw::hashed_string( "_v4" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestSparseReflectedConfig, _v4 ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                    {sw::hashed_string( "_v5" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestSparseReflectedConfig, _v5 ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                    {sw::hashed_string( "_v6" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestSparseReflectedConfig, _v6 ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-                    {sw::hashed_string( "_v7" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestSparseReflectedConfig, _v7 ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-                };
-            }
-            return &s_typeInfo;
-        }
-    };
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -627,7 +578,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveCompressedObjectSerialization )
 
 /**
  * @brief [ArchiveTest] 한 Archive 에 이어 쓴 바이너리 객체들을 차례로 읽는다 — 읽기 자리가 객체 끝으로 옮겨 간다
- * @details 태그 · 버전 · 압축 · 컴팩트 스트림은 모두 스스로 끝을 안다(칸마다 크기 · 압축 머리의 크기). 그 끝만큼 읽고 자리를 옮기므로 뒤에 쓴
+ * @details 태그 · 버전 · 압축 스트림은 모두 스스로 끝을 안다(칸마다 크기 · 압축 머리의 크기). 그 끝만큼 읽고 자리를 옮기므로 뒤에 쓴
  *          객체 · 값을 이어서 읽는다.
  */
 SW_TEST_CASE( ArchiveTest, BinaryObjectsWrittenBackToBackReadInOrder )
@@ -643,10 +594,10 @@ SW_TEST_CASE( ArchiveTest, BinaryObjectsWrittenBackToBackReadInOrder )
     }
 
     sw::Archive writeArch;
-    sw::BinarySerializer::serialize( &arrSource[0], *pType, writeArch );
-    sw::BinarySerializer::serializeVersioned( 3, &arrSource[1], *pType, writeArch );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &arrSource[0], *pType, writeArch ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 3, &arrSource[1], *pType, writeArch ) );
     SW_ASSERT_TRUE( sw::BinarySerializer::serializeCompressed( &arrSource[2], *pType, writeArch ) );
-    sw::BinarySerializer::serializeCompact( &arrSource[3], *pType, writeArch );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &arrSource[3], *pType, writeArch ) );
     SW_ASSERT_TRUE( writeArch.serializeObject( arrSource[4] ) );
     const int32 kTrailer = 0x5EED;
     writeArch << kTrailer;
@@ -657,7 +608,7 @@ SW_TEST_CASE( ArchiveTest, BinaryObjectsWrittenBackToBackReadInOrder )
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &arrRead[0], *pType, readArch ) );
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( version, &arrRead[1], *pType, readArch, 3 ) );
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompressed( &arrRead[2], *pType, readArch ) );
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &arrRead[3], *pType, readArch ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &arrRead[3], *pType, readArch ) );
     SW_EXPECT_TRUE( readArch.deserializeObject( arrRead[4] ) );
     int32 trailer{ 0 };
     readArch >> trailer;
@@ -1029,32 +980,6 @@ SW_TEST_CASE( ArchiveTest, PredefinedTypesStringPoolIntegration )
 }
 
 /**
- * @brief [ArchiveTest] BinarySerializer 적응형 밀집 비트마스크(Dense Bitmask) 직렬화 검증
- */
-SW_TEST_CASE( ArchiveTest, BinarySerializerAdaptiveDenseBitmask )
-{
-    TestReflectedPlayer player;
-    player._level = 88;
-    player._name  = "DenseCrusader";
-    player._gold  = 7777777;
-
-    sw::vector<uint8> denseBytes;
-    sw::BinarySerializer::serializeCompact( &player, *TestReflectedPlayer::StaticType(), denseBytes );
-
-    // 1) 3개 프로퍼티(100% 밀집도)이므로 Dense 모드(모드 바이트의 아래 4비트 0x01)로 시작하는지 검증 — 위 4비트는 이 빌드의 바이너리 판이다
-    SW_EXPECT_TRUE( denseBytes.empty() == false );
-    const uint8 expectedModeByte = static_cast<uint8>( ( static_cast<uint8>( sw::kCurrentBinaryWireVersion ) << 4 ) | sw::PresenceMaskUtil::kModeDense );
-    SW_EXPECT_EQUAL( expectedModeByte, denseBytes[0] );
-
-    // 2) 역직렬화 검증
-    TestReflectedPlayer restoredPlayer;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &restoredPlayer, *TestReflectedPlayer::StaticType(), denseBytes.data(), denseBytes.size() ) );
-    SW_EXPECT_EQUAL( 88, restoredPlayer._level );
-    SW_EXPECT_EQUAL( sw::string( "DenseCrusader" ), restoredPlayer._name );
-    SW_EXPECT_EQUAL( 7777777, restoredPlayer._gold );
-}
-
-/**
  * @brief [ArchiveTest] 경계 검사가 덧셈 넘침으로 뚫리지 않는다
  * @details 남은 바이트 검사를 `offset + count > size` 로 쓰면, 스트림에서 읽은 큰 `count` 에서
  *          **덧셈이 넘쳐 작은 값이 되어 검사를 통과한다.** 길이가 `uint32` 인 경로들은 넘칠 수
@@ -1108,160 +1033,18 @@ SW_TEST_CASE( ArchiveTest, BoundsChecksSurviveSizeOverflow )
 }
 
 /**
- * @brief [ArchiveTest] 밀집 비트마스크가 말하는 프로퍼티 수를 그대로 믿지 않는다
- * @details 모드 바이트 다음의 `totalProps` 는 **스트림에서 온 값**이다. 검사 없이 쓰면 세 군데가 무너진다.
- *          ① `(totalProps + 7) / 8` 로 비트마스크를 잡는다 — 큰 값이면 거대한 할당이고,
- *             uint64 끝자락이면 덧셈이 넘쳐 **0 바이트** 마스크가 나온다.
- *          ② 그 0 바이트 마스크를 `testBit` 이 그대로 읽는다 — 버퍼 밖이다.
- *          ③ 순회 변수가 `uint32` 인데 `totalProps` 는 `uint64` 라, 값이 4,294,967,295 를
- *             넘으면 인덱스가 되감겨 **끝나지 않는 루프**가 된다.
- *          남은 바이트로 비트마스크조차 채울 수 없는 수는 어떤 경우에도 거짓이다.
- */
-SW_TEST_CASE( ArchiveTest, CompactDensePropertyCountIsBounded )
-{
-    // 모드 바이트(Dense) + 터무니없는 totalProps 하나. 뒤에는 아무것도 없다.
-    const uint64 arrAbsurdCount[] = { 0xFFFFFFFFFFFFFFFFull, 0x100000000ull, 1000000ull };
-    for ( const uint64 absurdCount : arrAbsurdCount )
-    {
-        sw::vector<uint8> bytes;
-        bytes.push_back( sw::PresenceMaskUtil::kModeDense );
-        sw::VarIntUtil::encodeVarUint64( absurdCount, bytes );
-
-        TestReflectedPlayer restored;
-        SW_EXPECT_FALSE( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
-                                                                   bytes.data(), bytes.size() ) );
-    }
-
-    // 멀쩡한 것은 그대로 읽힌다 — 위 거부가 과잉이 아님을 못 박는다.
-    TestReflectedPlayer player;
-    player._level = 5;
-    player._name  = "Bounded";
-    player._gold  = 42;
-
-    sw::vector<uint8> goodBytes;
-    sw::BinarySerializer::serializeCompact( &player, *TestReflectedPlayer::StaticType(), goodBytes );
-
-    TestReflectedPlayer restored;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
-                                                              goodBytes.data(), goodBytes.size() ) );
-    SW_EXPECT_EQUAL( 5, restored._level );
-}
-
-/**
- * @brief [ArchiveTest] BinarySerializer 적응형 희소 인덱스(Sparse Index) 직렬화 검증
- */
-SW_TEST_CASE( ArchiveTest, BinarySerializerAdaptiveSparseIndex )
-{
-    TestSparseReflectedConfig config;
-    config._v3 = 12345;
-
-    sw::Archive arch;
-    SW_EXPECT_TRUE( arch.serializeCompactObject( config ) );
-
-    sw::Archive               readArch( arch.getData(), arch.getSize() );
-    TestSparseReflectedConfig restoredConfig;
-    SW_EXPECT_TRUE( readArch.deserializeCompactObject( restoredConfig ) );
-    SW_EXPECT_EQUAL( 12345, restoredConfig._v3 );
-    SW_EXPECT_EQUAL( 0, restoredConfig._v0 );
-    SW_EXPECT_EQUAL( 0, restoredConfig._v7 );
-}
-
-/**
- * @brief [ArchiveTest] Archive 컴팩트 직렬화(Compact Object) 대규모 스트레스 테스트 (1,000회)
- */
-SW_TEST_CASE( ArchiveTest, ArchiveCompactObjectStress1000 )
-{
-    sw::Archive  stressArch;
-    const size_t iterationCount = 1000;
-
-    for ( size_t index = 0; index < iterationCount; ++index )
-    {
-        TestReflectedPlayer p;
-        p._level = static_cast<int32>( index + 1 );
-        p._name  = "Player_" + sw::to_string( index );
-        p._gold  = static_cast<int64>( index * 100 );
-        SW_EXPECT_TRUE( stressArch.serializeCompactObject( p ) );
-    }
-
-    sw::Archive readArch( stressArch.getData(), stressArch.getSize() );
-    for ( size_t index = 0; index < iterationCount; ++index )
-    {
-        TestReflectedPlayer restored;
-        SW_EXPECT_TRUE( readArch.deserializeCompactObject( restored ) );
-        SW_EXPECT_EQUAL( static_cast<int32>( index + 1 ), restored._level );
-        SW_EXPECT_EQUAL( sw::string( "Player_" + sw::to_string( index ) ), restored._name );
-        SW_EXPECT_EQUAL( static_cast<int64>( index * 100 ), restored._gold );
-    }
-    SW_EXPECT_TRUE( readArch.isOk() );
-}
-
-/**
- * @brief [ArchiveTest] 멀티플레이어 넷코드 시뮬레이션: 50개 액터 상태 델타 패킷 압축 및 MTU 한도 내 전송 검증
- */
-SW_TEST_CASE( ArchiveTest, SimulatedNetworkPacketDeltaReplication )
-{
-    const size_t                    numActors = 50;
-    sw::vector<TestReflectedPlayer> listServerActor;
-    listServerActor.reserve( numActors );
-
-    for ( size_t actorIndex = 0; actorIndex < numActors; ++actorIndex )
-    {
-        TestReflectedPlayer actor;
-        actor._level = static_cast<int32>( ( actorIndex % 5 ) + 1 );
-        actor._name  = "Actor_" + sw::to_string( actorIndex );
-        actor._gold  = static_cast<int64>( actorIndex * 250 );
-        listServerActor.push_back( std::move( actor ) );
-    }
-
-    // 1) 서버 틱: 50개 액터 상태를 단일 네트워크 패킷 버퍼에 직렬화
-    sw::Archive networkPacketArch;
-    networkPacketArch.writeVarUint( static_cast<uint64>( numActors ) );
-
-    for ( const auto& actor : listServerActor )
-    {
-        SW_EXPECT_TRUE( networkPacketArch.serializeCompactObject( actor ) );
-    }
-    networkPacketArch.writeChecksum();
-
-    // 2) 패킷 크기 검증: 50개 액터 전체가 액터당 50바이트 미만(총 2.5KB 미만)으로 컴팩트 패킹되는지 검증
-    SW_EXPECT_TRUE( networkPacketArch.getSize() < 2500 );
-    SW_EXPECT_TRUE( networkPacketArch.getSize() < ( numActors * 50 ) );
-
-    // 3) 클라이언트 수신: 체크섬 검증 및 50개 액터 100% 무결성 복원
-    sw::Archive clientPacketArch( networkPacketArch.getData(), networkPacketArch.getSize() );
-    SW_EXPECT_TRUE( clientPacketArch.validateChecksum() );
-
-    uint64 receivedActorCount = 0;
-    SW_EXPECT_TRUE( clientPacketArch.readVarUint( receivedActorCount ) );
-    SW_EXPECT_EQUAL( static_cast<uint64>( numActors ), receivedActorCount );
-
-    for ( size_t actorIndex = 0; actorIndex < numActors; ++actorIndex )
-    {
-        TestReflectedPlayer clientActor;
-        SW_EXPECT_TRUE( clientPacketArch.deserializeCompactObject( clientActor ) );
-        SW_EXPECT_EQUAL( listServerActor[actorIndex]._level, clientActor._level );
-        SW_EXPECT_EQUAL( listServerActor[actorIndex]._name, clientActor._name );
-        SW_EXPECT_EQUAL( listServerActor[actorIndex]._gold, clientActor._gold );
-    }
-
-    uint32 packetChecksum = 0;
-    clientPacketArch >> packetChecksum;
-    SW_EXPECT_TRUE( clientPacketArch.isOk() );
-}
-
-/**
  * @brief [ArchiveTest] 손상된 버퍼 및 경계 초과 결함 주입(Fault Injection) 내결함성 검증
  */
 SW_TEST_CASE( ArchiveTest, CorruptedBufferFaultInjectionAndGracefulHandling )
 {
-    // 1) 잘못된 모드 매직 바이트(0xFF) 결함 주입
-    const sw::vector<uint8> corruptedMagic = { 0xFF, 0x03, 0x00, 0x00 };
+    // 1) 머리의 값 인코딩 버전이 이 빌드의 것이 아니다(위 8비트 0)
+    const sw::vector<uint8> wrongVersion = { 0x03, 0x00, 0x00, 0x00 };
     TestReflectedPlayer     dummyPlayer;
-    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeCompact( &dummyPlayer, *TestReflectedPlayer::StaticType(), corruptedMagic.data(), corruptedMagic.size() ) );
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &dummyPlayer, *TestReflectedPlayer::StaticType(), wrongVersion.data(), wrongVersion.size() ) );
 
-    // 2) 잘린(Truncated) 페이로드 바이트 결함 주입
-    const sw::vector<uint8> truncatedDense = { 0x01, 0x03, 0x07, 0x04 }; // Dense mode, 3 props, bitmask 0x07, payload length 4 but no actual payload bytes
-    SW_EXPECT_FALSE( sw::BinarySerializer::deserializeCompact( &dummyPlayer, *TestReflectedPlayer::StaticType(), truncatedDense.data(), truncatedDense.size() ) );
+    // 2) 머리는 프로퍼티 셋을 말하지만 태그가 없다(잘린 스트림)
+    const sw::vector<uint8> truncatedTagged = { 0x03, 0x00, 0x00, static_cast<uint8>( sw::kCurrentBinaryWireVersion ) };
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &dummyPlayer, *TestReflectedPlayer::StaticType(), truncatedTagged.data(), truncatedTagged.size() ) );
 
     // 3) 잘린 VarInt 스트림 결함 주입 (MSB 비트 0x80이 켜져 있으나 다음 바이트가 없는 경우)
     const sw::vector<uint8> truncatedVarInt = { 0x80, 0x80, 0x80 };
@@ -1272,7 +1055,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedBufferFaultInjectionAndGracefulHandling )
 
     // 4) 빈 버퍼 역직렬화 안전성 검증
     sw::Archive emptyArch( nullptr, 0 );
-    SW_EXPECT_FALSE( emptyArch.deserializeCompactObject( dummyPlayer ) );
+    SW_EXPECT_FALSE( emptyArch.deserializeObject( dummyPlayer ) );
     SW_EXPECT_TRUE( emptyArch.isError() );
 }
 
@@ -1311,12 +1094,12 @@ SW_TEST_CASE( ArchiveTest, MassiveEndToEndDeduplicationPipelineStress5000 )
         const int64 zigVal = ( ( iterationIndex % 2 ) == 0 ) ? static_cast<int64>( iterationIndex ) : -static_cast<int64>( iterationIndex );
         streamArch.writeVarInt( zigVal );
 
-        // 컴팩트 객체
+        // 리플렉션 객체
         TestReflectedPlayer player;
         player._level = static_cast<int32>( ( iterationIndex % 100 ) + 1 );
         player._name  = listDynStrings[iterationIndex % listDynStrings.size()];
         player._gold  = static_cast<int64>( iterationIndex * 50 );
-        SW_EXPECT_TRUE( streamArch.serializeCompactObject( player ) );
+        SW_EXPECT_TRUE( streamArch.serializeObject( player ) );
     }
 
     // 2) 아카이브 헤더에 스트링 풀 테이블 저장
@@ -1348,7 +1131,7 @@ SW_TEST_CASE( ArchiveTest, MassiveEndToEndDeduplicationPipelineStress5000 )
         SW_EXPECT_EQUAL( expectedZig, readZig );
 
         TestReflectedPlayer restoredPlayer;
-        SW_EXPECT_TRUE( readBundled.deserializeCompactObject( restoredPlayer ) );
+        SW_EXPECT_TRUE( readBundled.deserializeObject( restoredPlayer ) );
         SW_EXPECT_EQUAL( static_cast<int32>( ( iterationIndex % 100 ) + 1 ), restoredPlayer._level );
         SW_EXPECT_EQUAL( listDynStrings[iterationIndex % listDynStrings.size()], restoredPlayer._name );
         SW_EXPECT_EQUAL( static_cast<int64>( iterationIndex * 50 ), restoredPlayer._gold );
@@ -1602,126 +1385,6 @@ SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
     SW_EXPECT_EQUAL( sw::string( "quest.boss_defeated" ), slot2._listTag[0] );
     SW_EXPECT_NEAR_EQUAL( 20.0f, slot2._originPosition._z, 1.0e-6f );
     SW_EXPECT_EQUAL( 3, slot2._originMinute );
-}
-
-/**
- * @brief [ArchiveTest] 컴팩트 경로가 **컨테이너 프로퍼티**를 왕복시키는가
- * @details `serializeCompact`/`deserializeCompact` 는 프로퍼티 이름 대신 **순번**으로 값을 싣는
- *          조밀한 포맷이다. 그 경로의 "프로퍼티 하나를 인스턴스에 쓰는" 부분에는 비트필드·컨테이너·
- *          그 외 값의 세 갈래가 있다. 이 경로를 태우는 다른 테스트의 타입에는 **컨테이너 프로퍼티가
- *          없어** 컨테이너 갈래는 이 케이스가 아니면 실행되지 않는다.
- * @note 이 케이스가 없으면 컴팩트 경로에서 컨테이너를 잘못 읽어도 **모든 테스트가 초록**이다.
- */
-SW_TEST_CASE( ArchiveTest, CompactRoundTripsContainerProperties )
-{
-    struct CompactContainerState
-    {
-        int32                  _level{ 0 };
-        sw::vector<int32>      _listScore{};
-        sw::vector<sw::string> _listTag{};
-    };
-
-    static sw::TypeInfo s_typeInfo{};
-    if ( s_typeInfo._name.empty() )
-    {
-        s_typeInfo._name               = sw::hashed_string( "CompactContainerState" );
-        s_typeInfo._fullyQualifiedName = sw::hashed_string( "CompactContainerState" );
-        s_typeInfo._size               = sizeof( CompactContainerState );
-        s_typeInfo._listProperty       = {
-            {    sw::hashed_string( "_level" ),  sw::hashed_string( "int32" ),
-             SW_OFFSET_OF( CompactContainerState,     _level ), false,     sw::ContainerKind::None,
-             sw::hashed_string(), sw::hashed_string(),                                                      nullptr          },
-            {sw::hashed_string( "_listScore" ),  sw::hashed_string( "int32" ),
-             SW_OFFSET_OF( CompactContainerState, _listScore ),  true, sw::ContainerKind::Sequence,
-             sw::hashed_string( "int32" ), sw::hashed_string(),      sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() },
-            {  sw::hashed_string( "_listTag" ), sw::hashed_string( "string" ),
-             SW_OFFSET_OF( CompactContainerState,   _listTag ),  true, sw::ContainerKind::Sequence,
-             sw::hashed_string( "string" ), sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<sw::string>>>()}
-        };
-    }
-
-    CompactContainerState source{};
-    source._level     = 7;
-    source._listScore = { 10, 20, 30 };
-    source._listTag   = { sw::string( "alpha" ), sw::string( "beta" ) };
-
-    sw::vector<uint8> bytes;
-    sw::BinarySerializer::serializeCompact( &source, s_typeInfo, bytes );
-    SW_ASSERT_TRUE( bytes.empty() == false );
-
-    CompactContainerState restored{};
-    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeCompact( &restored, s_typeInfo, bytes.data(), bytes.size() ) );
-
-    SW_EXPECT_EQUAL( 7, restored._level );
-    SW_ASSERT_EQUAL( size_t( 3 ), restored._listScore.size() );
-    SW_EXPECT_EQUAL( 10, restored._listScore[0] );
-    SW_EXPECT_EQUAL( 20, restored._listScore[1] );
-    SW_EXPECT_EQUAL( 30, restored._listScore[2] );
-
-    SW_ASSERT_EQUAL( size_t( 2 ), restored._listTag.size() );
-    SW_EXPECT_EQUAL( sw::string( "alpha" ), restored._listTag[0] );
-    SW_EXPECT_EQUAL( sw::string( "beta" ), restored._listTag[1] );
-}
-
-/**
- * @brief [ArchiveTest] 컴팩트 페이로드 크기도 **남은 바이트를 넘을 수 없다**
- * @details 두 모드(밀집 비트마스크 · 희소)가 프로퍼티마다 `payloadSize` 를 varint 로 읽어 그만큼을
- *          인스턴스에 쓰고 건너뛴다. 그 수는 **파일에서 온 값**이다 — 검사가 없으면 손상된 파일
- *          하나로 버퍼 밖을 읽는다(`applyPropertyPayload` 가 그 크기를 그대로 믿는다). 검사는 두 모드가 한 곳을
- *          같이 쓰고, 이 케이스가 없으면 그 검사를 통째로 지워도 전 스위트가 초록이다.
- *
- * @note ASan 구성에서 이 케이스가 특히 값을 한다 — 검사가 없으면 거기서는 조용한 오독이 아니라
- *       **즉시 죽는다.**
- */
-SW_TEST_CASE( ArchiveTest, CompactPayloadSizeIsBounded )
-{
-    constexpr uint64 kAbsurdPayloadSize = 0xFFFFFFFFull;
-
-    BLOCK( "밀집 비트마스크 모드" )
-    {
-        sw::vector<uint8> bytes;
-        bytes.push_back( sw::PresenceMaskUtil::kModeDense );
-        sw::VarIntUtil::encodeVarUint64( 3, bytes ); // TestReflectedPlayer 의 프로퍼티 수
-        bytes.push_back( 0x07 );                     // 비트마스크 1바이트 — 셋 다 있음
-        sw::VarIntUtil::encodeVarUint64( kAbsurdPayloadSize, bytes );
-
-        TestReflectedPlayer restored;
-        SW_EXPECT_FALSE_MSG( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
-                                                                       bytes.data(), bytes.size() ),
-                             "남은 바이트보다 큰 페이로드 크기를 받아들이면 안 됩니다" );
-    }
-
-    BLOCK( "희소 인덱스 모드" )
-    {
-        sw::vector<uint8> bytes;
-        bytes.push_back( sw::PresenceMaskUtil::kModeSparse );
-        sw::VarIntUtil::encodeVarUint64( 1, bytes ); // 바뀐 프로퍼티 하나
-        sw::VarIntUtil::encodeVarUint64( 0, bytes ); // 그 인덱스
-        sw::VarIntUtil::encodeVarUint64( kAbsurdPayloadSize, bytes );
-
-        TestReflectedPlayer restored;
-        SW_EXPECT_FALSE_MSG( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
-                                                                       bytes.data(), bytes.size() ),
-                             "희소 모드도 같은 검사를 지나야 합니다 — 모드마다 따로 적으면 한쪽이 잃는다" );
-    }
-
-    BLOCK( "멀쩡한 것은 그대로 읽힌다 — 위 거부가 과잉이 아님을 못 박는다" )
-    {
-        TestReflectedPlayer player;
-        player._level = 9;
-        player._name  = "PayloadBounded";
-        player._gold  = 1234;
-
-        sw::vector<uint8> goodBytes;
-        sw::BinarySerializer::serializeCompact( &player, *TestReflectedPlayer::StaticType(), goodBytes );
-
-        TestReflectedPlayer restored;
-        SW_ASSERT_TRUE( sw::BinarySerializer::deserializeCompact( &restored, *TestReflectedPlayer::StaticType(),
-                                                                  goodBytes.data(), goodBytes.size() ) );
-        SW_EXPECT_EQUAL( 9, restored._level );
-        SW_EXPECT_EQUAL( sw::string( "PayloadBounded" ), restored._name );
-        SW_EXPECT_EQUAL( 1234, restored._gold );
-    }
 }
 
 /**

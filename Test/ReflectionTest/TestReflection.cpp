@@ -7,6 +7,7 @@
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
@@ -574,14 +575,27 @@ SW_TEST_CASE( ReflectionTest, AliasedContainerPropertyIsAContainer )
     SW_EXPECT_TRUE( pScores->_bIsContainer );
     SW_EXPECT_TRUE( pScores->_containerKind == sw::ContainerKind::Sequence );
     SW_EXPECT_FALSE( pCount->_bIsContainer );
+    // 원소로 적은 별칭도 벗긴다. 모르는 원소 이름이면 자기 기술형 바이너리 읽기가 실패한다.
+    const sw::PropertyInfo* pAliasID = pType->findProperty( sw::hashed_string( "_listAliasID" ) );
+    SW_ASSERT_NOT_NULL( pAliasID );
+    SW_EXPECT_TRUE( pAliasID->_elementTypeName == sw::hashed_string( "uint64" ) );
+    // 프로퍼티의 기록 타입 이름도 별칭을 벗긴다. 적힌 대로(`vector<TestAliasElementID>`)면 `vector<uint64>` 로 쓴 레코드를 읽지 못한다.
+    SW_EXPECT_TRUE_MSG( pAliasID->_typeName == sw::hashed_string( "vector<uint64>" ), pAliasID->_typeName.c_str() );
 
     sw::AliasContainerActor source;
     source._aliasScores          = { 3, 1, 4 };
     source._aliasCount           = 7;
+    source._listAliasID          = { 11, 22 };
     const sw::string        json = sw::JSONSerializer::serialize( &source, *pType );
     sw::AliasContainerActor restored;
     SW_ASSERT_TRUE_MSG( sw::JSONSerializer::deserialize( &restored, *pType, json ), json.c_str() );
     SW_EXPECT_EQUAL( size_t( 3 ), restored._aliasScores.size() );
     SW_EXPECT_TRUE_MSG( restored._aliasScores.size() == 3 && restored._aliasScores[2] == 4, json.c_str() );
     SW_EXPECT_EQUAL( 7, restored._aliasCount );
+
+    sw::vector<uint8> bytes;
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, *pType, bytes ) );
+    sw::AliasContainerActor fromBinary;
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, *pType, bytes.data(), bytes.size() ) );
+    SW_EXPECT_TRUE( fromBinary._listAliasID.size() == 2 && fromBinary._listAliasID[1] == 22 );
 }

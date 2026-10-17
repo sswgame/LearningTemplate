@@ -84,25 +84,46 @@ namespace sw
                 outRotation._w = reader.readFloat();
             }
 
-            static void writeQuantizedPose( BitWriter& writer, const float3& position, const quaternion& rotation, const DestructionReplicationConfig& settings )
+            /**
+             * @brief 움직이는 자세를 양자화 범위(`_positionRange`, 사원수 ±1)에 실을 수 있는가입니다.
+             * @details 범위 밖 덩어리는 움직이는 자세로 보내지 않는다(예전에는 경계로 잘려 받는 쪽에서 경계에 붙어 보였다). 멈추면 비트 그대로 보내므로 맞는 자리로 간다.
+             */
+            static bool canWriteQuantizedPose( const float3& position, const quaternion& rotation, const DestructionReplicationConfig& settings )
             {
-                const float32 range = settings._positionRange;
-                writer.writeQuantizedFloat3( position, float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution );
-                writer.writeQuantizedFloat( rotation._x, -1.0f, 1.0f, kQuaternionResolution );
-                writer.writeQuantizedFloat( rotation._y, -1.0f, 1.0f, kQuaternionResolution );
-                writer.writeQuantizedFloat( rotation._z, -1.0f, 1.0f, kQuaternionResolution );
-                writer.writeQuantizedFloat( rotation._w, -1.0f, 1.0f, kQuaternionResolution );
+                const float32 range      = settings._positionRange;
+                const float32 resolution = settings._positionResolution;
+                const bool    bPosition  = BitWriter::canWriteQuantizedFloat( position._x, -range, range, resolution ) &&
+                                       BitWriter::canWriteQuantizedFloat( position._y, -range, range, resolution ) &&
+                                       BitWriter::canWriteQuantizedFloat( position._z, -range, range, resolution );
+                const bool bRotation = BitWriter::canWriteQuantizedFloat( rotation._x, -1.0f, 1.0f, kQuaternionResolution ) &&
+                                       BitWriter::canWriteQuantizedFloat( rotation._y, -1.0f, 1.0f, kQuaternionResolution ) &&
+                                       BitWriter::canWriteQuantizedFloat( rotation._z, -1.0f, 1.0f, kQuaternionResolution ) &&
+                                       BitWriter::canWriteQuantizedFloat( rotation._w, -1.0f, 1.0f, kQuaternionResolution );
+                return bPosition && bRotation;
             }
 
-            static void readQuantizedPose( BitReader& reader, float3& outPosition, quaternion& outRotation, const DestructionReplicationConfig& settings )
+            [[nodiscard]] static bool writeQuantizedPose( BitWriter& writer, const float3& position, const quaternion& rotation, const DestructionReplicationConfig& settings )
             {
                 const float32 range = settings._positionRange;
-                outPosition         = reader.readQuantizedFloat3( float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution );
-                outRotation._x      = reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution );
-                outRotation._y      = reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution );
-                outRotation._z      = reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution );
-                outRotation._w      = reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution );
+                return writer.writeQuantizedFloat3( position, float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution ) &&
+                       writer.writeQuantizedFloat( rotation._x, -1.0f, 1.0f, kQuaternionResolution ) &&
+                       writer.writeQuantizedFloat( rotation._y, -1.0f, 1.0f, kQuaternionResolution ) &&
+                       writer.writeQuantizedFloat( rotation._z, -1.0f, 1.0f, kQuaternionResolution ) &&
+                       writer.writeQuantizedFloat( rotation._w, -1.0f, 1.0f, kQuaternionResolution );
+            }
+
+            [[nodiscard]] static bool readQuantizedPose( BitReader& reader, float3& outPosition, quaternion& outRotation, const DestructionReplicationConfig& settings )
+            {
+                const float32 range = settings._positionRange;
+                const bool    bRead = reader.readQuantizedFloat3( float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution, outPosition ) &&
+                                   reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution, outRotation._x ) &&
+                                   reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution, outRotation._y ) &&
+                                   reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution, outRotation._z ) &&
+                                   reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution, outRotation._w );
+                if ( bRead == false )
+                    return false;
                 outRotation.normalize();
+                return true;
             }
 
             static FractureComponentBase* resolveFracture( GameObjectManager* pManager, const ComponentHandle& handle )
@@ -348,8 +369,19 @@ namespace sw
             else
             {
                 state._bRestSent = SW_FALSE;
-                if ( bDue )
+                if ( bDue && Internal::canWriteQuantizedPose( pose._center, pose._rotation, _settings ) )
+                {
                     listMoving.push_back( &pose );
+                }
+                else if ( bDue )
+                {
+                    // 이 서버에서 처음 넘는 순간만 알린다. 넘은 덩어리는 틱마다 다시 걸리므로 매번 알리면 로그가 넘친다. 그 뒤는 `_outOfRangePoseCount` 가 센다.
+                    if ( _stats._outOfRangePoseCount == 0 )
+                        SW_LOG_WARNING( "DestructionReplication: chunk %# of object %# moved outside the position range +-%# m - its moving pose is not sent until it rests "
+                                        "(raise DestructionReplicationConfig::_positionRange)",
+                                        pose._groupID, entry._netID, _settings._positionRange );
+                    ++_stats._outOfRangePoseCount;
+                }
             }
             listKeep.push_back( state );
         }
@@ -375,6 +407,7 @@ namespace sw
                 const size_t room         = static_cast<size_t>( MathUtil::max( 1, ( Internal::kPoseMessageBudget - 16 ) / perPoseBytes ) );
                 const size_t count        = MathUtil::min( room, list.size() - start );
                 writer.writeVarUint( count );
+                bool bPosesWritten = true;
                 for ( size_t index = start; index < start + count; ++index )
                 {
                     const FractureGroupPose& pose = *list[index];
@@ -383,12 +416,15 @@ namespace sw
                     if ( bRest )
                         Internal::writeExactPose( writer, pose._center, pose._rotation );
                     else
-                        Internal::writeQuantizedPose( writer, pose._center, pose._rotation, _settings );
+                        bPosesWritten = bPosesWritten && Internal::writeQuantizedPose( writer, pose._center, pose._rotation, _settings );
                 }
+                start += count;
+                // 움직이는 자세는 위에서 범위로 걸렀다. 그래도 하나라도 쓰지 못했으면 메시지가 어긋났으므로 보내지 않는다.
+                if ( bPosesWritten == false )
+                    continue;
                 (void)broadcast( bReliable ? NetChannelType::ReliableOrdered : NetChannelType::Unreliable );
                 ++_stats._poseMessageCount;
                 _stats._restPoseCount += bReliable ? count : 0u;
-                start += count;
             }
         }
     }
@@ -635,8 +671,8 @@ namespace sw
             const uint32 groupID = static_cast<uint32>( reader.readVarUint() );
             if ( bRest )
                 Internal::readExactPose( reader, pose._position, pose._rotation );
-            else
-                Internal::readQuantizedPose( reader, pose._position, pose._rotation, _settings );
+            else if ( Internal::readQuantizedPose( reader, pose._position, pose._rotation, _settings ) == false )
+                return; // 범위 밖의 칸은 깨진 메시지다. 뒤 자세의 위치도 믿을 수 없다
             if ( pEntry == nullptr || reader.hasOverflowed() )
                 continue;
             ChunkTrack* pTrack = nullptr;

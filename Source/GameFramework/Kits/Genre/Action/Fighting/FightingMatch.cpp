@@ -1097,7 +1097,8 @@ namespace sw
 
     void FightingMatch::writeState( Archive& outArchive ) const
     {
-        BinarySerializer::serializeVersioned( kStateVersion, this, *StaticType(), outArchive );
+        // 실패하면 아카이브가 오류 상태가 된다. 세이브를 마무리하는 쪽이 아카이브 상태로 실패를 본다.
+        (void)BinarySerializer::serializeVersioned( kStateVersion, this, *StaticType(), outArchive );
     }
 
     bool FightingMatch::readState( Archive& archive )

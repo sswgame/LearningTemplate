@@ -2,13 +2,6 @@
 
 엔진과 GameFramework 의 구조 정리, 오브젝트와 씬, 물리와 내비게이션, 핫 리로드와 모듈의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `A-13` [결함] **자기 기술형 바이너리가 모르는 값 타입을 1 바이트 건너뛰고 성공으로 읽는다.** `SerializerUtil::deserializeValueBinary` 는 핸들러 · 열거형 · 타입 레지스트리
-  어디에도 없는 타입이면 1 바이트를 넘기고 성공을 돌려준다(`SerializerUtil.cpp` 의 마지막 분기). 이유를 담은 읽기 오류로 바꾼다. 고정 배치형은 표 밖의 타입에 코덱을
-  만들지 않는 형식으로 막았다([리플렉션 직렬화 형식 계획](../plans/ReflectionFormats.md) 1.4 · 8.2). 쓰는 쪽도 같은 타입을 무엇으로 쓰는지 함께 본다.
-  실제로 걸린 경우(2026-10-17, 단계 5-b): 생성기는 프로퍼티 타입의 별칭은 벗기지만 컨테이너 원소의 별칭은 벗기지 않아, `vector<AccountID>` 의 원소가 모르는 이름 `AccountID` 로
-  등록되고 자기 기술형 왕복에서 원소가 조용히 빠졌다. 저장소 레코드 두 칸(`MaintenanceWindow::_listAllowedAccount`, `PartySnapshot::_listMemberID`)은 원소를 같은 타입 `uint64` 로 적어 피했다.
-  뿌리는 `AstVisitor.cpp` 의 컨테이너 원소 이름(`fillContainerArgs`)이 `resolvePropertyAlias` 를 거치지 않는 것이므로 생성기와 이 읽기 오류를 함께 고친다.
-
 - `A-15` [결함] **`PROPERTY( Min · Max )` 를 고정 배치형 코덱만 지킨다.** 자기 기술형 읽기(`BinarySerializer` · JSON · XML)는 범위 밖 값을 그대로 넣는다.
   범위를 보는 `SerializerUtil::collectRangeErrors` 는 설정 JSON · 데이터 XML 로드만 부르고, 기본값(`RangeCheckScope::FieldsOnly`)은 컨테이너 원소를 보지 않는다.
   지금은 `FightingMatch::readState` 만 `IncludeSequenceElements` 로 직접 부른다(2026-10-17). 뿌리는 범위 계약을 읽기 경로마다 따로 지킨다는 것이다.

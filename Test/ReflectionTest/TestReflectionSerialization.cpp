@@ -78,9 +78,9 @@ namespace
                          const utf8* pJSON, const utf8* pXML, const utf8* pBinHex, const utf8* pJSONVer, const utf8* pBinVerHex )
     {
         sw::vector<uint8> bin;
-        sw::BinarySerializer::serialize( pInstance, typeInfo, bin );
+        SW_EXPECT_TRUE( sw::BinarySerializer::serialize( pInstance, typeInfo, bin ) );
         sw::vector<uint8> binVer;
-        sw::BinarySerializer::serializeVersioned( 7, pInstance, typeInfo, binVer );
+        SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 7, pInstance, typeInfo, binVer ) );
 
         bool bOk = true;
         bOk &= goldenEq( pLabel, sw::JSONSerializer::serialize( pInstance, typeInfo ), pJSON );
@@ -418,7 +418,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryRoundtrip )
     src._listScore = { 100, 200, 300 };
 
     sw::vector<uint8> buffer;
-    sw::BinarySerializer::serialize( &src, *typeInfo, buffer );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &src, *typeInfo, buffer ) );
     SW_EXPECT_TRUE( buffer.empty() == false );
 
     sw::ComplexData dst;
@@ -798,8 +798,8 @@ SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentByt
 /**
  * @brief [ReflectionSerializationTest] 바이너리는 enum 을 **열거자**로 싣는다 — 열거자 순서를 바꾼 다음 빌드도 같은 열거자를 읽는다(값 · 비트플래그 · 원소 · 맵 키)
  * @details enum 을 int64 **값**으로 실으면 열거자를 사이에 넣거나 순서를 바꿀 때 세이브 · 핫 리로드 뒤의 플레이 스냅샷 · 되돌리기 스냅샷이 조용히
- *          다른 열거자로 읽힌다(XML · JSON 은 이름). 테스트는 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 다섯
- *          (태그 · 판 붙은 · 압축 · 컴팩트 · diff)이 모두 열거자로 읽어야 한다 — 하나라도 값으로 읽으면 Green 이 Blue · Red 가 된다.
+ *          다른 열거자로 읽힌다(XML · JSON 은 이름). 테스트는 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 넷
+ *          (태그 · 판 붙은 · 압축 · diff)이 모두 열거자로 읽어야 한다 — 하나라도 값으로 읽으면 Green 이 Blue · Red 가 된다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenTheEnumIsReordered )
 {
@@ -810,13 +810,11 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
     const WireShiftHost               defaults{};
 
     sw::vector<uint8> tagged;
-    sw::BinarySerializer::serialize( &saved, info, tagged );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, info, tagged ) );
     sw::vector<uint8> versioned;
-    sw::BinarySerializer::serializeVersioned( 3, &saved, info, versioned );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 3, &saved, info, versioned ) );
     sw::vector<uint8> compressed;
     SW_ASSERT_TRUE( sw::BinarySerializer::serializeCompressed( &saved, info, compressed ) );
-    sw::vector<uint8> compact;
-    sw::BinarySerializer::serializeCompact( &saved, info, compact );
     sw::vector<uint8> diff;
     SW_ASSERT_TRUE( sw::ObjectDiffSerializer::serializeDiff( diff, &defaults, &saved, info ) );
 
@@ -836,10 +834,6 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompressed( &fromCompressed, info, compressed.data(), compressed.size() ) );
     expectWireShiftEnumerators( "compressed", fromCompressed, 2, 3, 0, 1 );
 
-    WireShiftHost fromCompact;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &fromCompact, info, compact.data(), compact.size() ) );
-    expectWireShiftEnumerators( "compact", fromCompact, 2, 3, 0, 1 );
-
     WireShiftHost fromDiff;
     SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &fromDiff, info, diff.data(), diff.size() ) );
     expectWireShiftEnumerators( "diff", fromDiff, 2, 3, 0, 1 );
@@ -847,7 +841,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
 
 /**
  * @brief [ReflectionSerializationTest] 바이너리는 지금 판(`kCurrentBinaryWireVersion`)만 읽는다 — 판이 없던(0) 스트림 · 앞선 빌드의 판은 읽지 않는다
- * @details 아래 16진 두 줄은 enum 을 int64 값으로 싣던 판(0)의 바이트다(태그 · 컴팩트 — 머리의 판 자리가 0). 그 판을 쓰던 세이브 · 쿠킹 씬은
+ * @details 아래 16진은 enum 을 int64 값으로 싣던 판(0)의 태그 스트림 바이트다(머리의 판 자리가 0). 그 판을 쓰던 세이브 · 쿠킹 씬은
  *          저장소에 없고 쿠킹본은 매번 다시 쿠킹한다. 판을 짐작해 값으로 읽어 주면 열거자 순서가 바뀐 뒤 다른 열거자가 된다 — 읽지 않고 알린다.
  *          지금 빌드가 쓰는 바이트(골든)도 같이 둔다 — 머리의 판이 1 이고 enum 은 이름 해시다.
  */
@@ -859,21 +853,16 @@ SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )
     const sw::vector<uint8> legacyTagged = fromHexString(
         "05000000516400bbad02b3b908000000010000000000000069c34f84553734500800000005000000000000000d69608302e8898f1400000002000000020000000000000000000000000000"
         "0031a7168fb1efa2df1000000001000000010000000000000007000000849cb3ebbfe2defb0400000009000000" );
-    const sw::vector<uint8> legacyCompact = fromHexString(
-        "01051f0801000000000000000805000000000000001402000000020000000000000000000000000000001001000000010000000000000007000000"
-        "0409000000" );
     {
         test::ScopedDefensiveTestLog expected( "a binary stream of wire version 0" );
         WireShiftHost                fromTagged;
         SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &fromTagged, info, legacyTagged.data(), legacyTagged.size() ) );
-        WireShiftHost fromCompact;
-        SW_EXPECT_FALSE( sw::BinarySerializer::deserializeCompact( &fromCompact, info, legacyCompact.data(), legacyCompact.size() ) );
     }
 
     // 지금 빌드가 쓰는 바이트 — 머리 05000001(판 1), _color 는 "Green" 의 해시, _flags 는 이름 둘(해시 오름차순), 원소 · 맵 키도 해시.
     const WireShiftHost saved = makeSavedWireShiftHost();
     sw::vector<uint8>   current;
-    sw::BinarySerializer::serialize( &saved, info, current );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, info, current ) );
     SW_EXPECT_TRUE( goldenEq( "enum wire", toHexString( current ),
                               "05000001516400bbad02b3b904000000bcec1d0169c34f84553734500c000000020000002c290ce4522c0ce60d69608302e8898f0c00000002000000"
                               "cdf5fb82dc80f44031a7168fb1efa2df0c00000001000000bcec1d0107000000849cb3ebbfe2defb0400000009000000" ) );
@@ -903,7 +892,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerFailsOnl
     saved._listColor                             = { WireShiftColor::Blue, WireShiftColor::Green, WireShiftColor::Red };
     saved._mapColorToCount[WireShiftColor::Blue] = 3; // Green(값 1) 뒤에 온다 — Green 에서 멈추면 이것을 잃는다
     sw::vector<uint8> bytes;
-    sw::BinarySerializer::serialize( &saved, info, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, info, bytes ) );
 
     // 다음 빌드: Green 이 Lime 이 됐다(별칭 없음).
     registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
@@ -970,7 +959,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorFailsOnlyItsField )
     const sw::TypeInfo                info  = makeWireShiftHostType();
     const WireShiftHost               saved = makeSavedWireShiftHost();
     sw::vector<uint8>                 bytes;
-    sw::BinarySerializer::serialize( &saved, info, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, info, bytes ) );
 
     // 다음 빌드: Green 이 Lime 이 됐고(별칭 없음) 플래그 C 는 지워졌다.
     registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
@@ -1091,7 +1080,7 @@ SW_TEST_CASE( ReflectionSerializationTest, RemovedEnumeratorReadsItsDeclaredRepl
     const sw::TypeInfo                info  = makeWireShiftHostType();
     const WireShiftHost               saved = makeSavedWireShiftHost();
     sw::vector<uint8>                 bytes;
-    sw::BinarySerializer::serialize( &saved, info, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, info, bytes ) );
     const sw::string xml = sw::XMLSerializer::serialize( &saved, info );
 
     const auto registerWithoutGreenAndC = []( bool bDeclareRemoved )
@@ -1179,7 +1168,7 @@ SW_TEST_CASE( ReflectionSerializationTest, RenamedEnumTypeReadsThroughItsOldName
     saved._color = WireShiftColor::Green;
     saved._after = 9;
     sw::vector<uint8> bytes;
-    sw::BinarySerializer::serialize( &saved, makeHost( "swtest::OldShiftColor" ), bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, makeHost( "swtest::OldShiftColor" ), bytes ) );
 
     // 다음 빌드: 열거형 이름이 swtest::NewShiftColor 다.
     registry.unregisterTypesByModule( "TestRenamedEnumOld" );
@@ -1214,7 +1203,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldAddRemoveRenameBinaryRoundTrip )
     saved._renamed = 2;
     saved._gone    = 3;
     sw::vector<uint8> bytes;
-    sw::BinarySerializer::serialize( &saved, makeSavedEvolutionType(), bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, makeSavedEvolutionType(), bytes ) );
 
     const sw::TypeInfo declared = makeNextEvolutionType( true );
     FieldEvolutionHost strict;
@@ -1262,7 +1251,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldAddRemoveRenameBinaryRoundTrip )
     next._renamed = 5;
     next._added   = 6;
     sw::vector<uint8> nextBytes;
-    sw::BinarySerializer::serialize( &next, declared, nextBytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &next, declared, nextBytes ) );
     FieldEvolutionHost nextRead;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &nextRead, declared, nextBytes.data(), nextBytes.size() ) );
     SW_EXPECT_EQUAL( 4, nextRead._kept );
@@ -1283,7 +1272,7 @@ SW_TEST_CASE( ReflectionSerializationTest, CurrentFieldNameWinsOverAnOldName )
     const sw::TypeInfo writer = makeEvolutionType( { makeEvolutionField( "_first", SW_OFFSET_OF( FieldEvolutionHost, _kept ) ),
                                                      makeEvolutionField( "_second", SW_OFFSET_OF( FieldEvolutionHost, _renamed ) ) } );
     sw::vector<uint8>  bytes;
-    sw::BinarySerializer::serialize( &saved, writer, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, writer, bytes ) );
 
     sw::PropertyInfo first    = makeEvolutionField( "_first", SW_OFFSET_OF( FieldEvolutionHost, _kept ) );
     first._listAlias          = { sw::hashed_string( "_second" ) };
@@ -1305,7 +1294,7 @@ SW_TEST_CASE( ReflectionSerializationTest, EnumFieldWithANewTypeReadsTheEnumerat
     const sw::TypeInfo  info  = makeWireShiftHostType();
     const WireShiftHost saved = makeSavedWireShiftHost();
     sw::vector<uint8>   bytes;
-    sw::BinarySerializer::serialize( &saved, info, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, info, bytes ) );
 
     const sw::TypeInfo                asText = makeWireShiftRetypedType( true );
     WireShiftRetypedHost              textTarget;
@@ -1364,7 +1353,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
     saved._color = WireShiftColor::Green;
     saved._after = 9;
     sw::vector<uint8> bytes;
-    sw::BinarySerializer::serialize( &saved, savedType, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, savedType, bytes ) );
 
     // 다음 빌드: enum 은 지워졌고 `_color` 는 int32 다.
     registry.unregisterTypesByModule( "TestGoneEnum" );
@@ -1487,7 +1476,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
     }
     {
         sw::vector<uint8> bin;
-        sw::BinarySerializer::serialize( &src, *typeInfo, bin );
+        SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &src, *typeInfo, bin ) );
         sw::NestedContainerActor dst;
         SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &dst, *typeInfo, bin.data(), bin.size() ) );
         verify( dst, "binary" );
@@ -1640,7 +1629,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
     sw::ComplexData binSrc;
     binSrc._id = 3;
     sw::vector<uint8> binBuf;
-    sw::BinarySerializer::serialize( &binSrc, *typeInfo, binBuf );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &binSrc, *typeInfo, binBuf ) );
     SW_ASSERT_TRUE( binBuf.size() >= sizeof( uint32 ) );
     uint32 propCount{ 0 };
     sw::Memory::copy( &propCount, binBuf.data(), sizeof( uint32 ) );
@@ -1840,7 +1829,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
 
     ReorderActor1     src;
     sw::vector<uint8> binBuf;
-    sw::BinarySerializer::serialize( &src, info1, binBuf );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &src, info1, binBuf ) );
 
     sw::TypeInfo infoReordered = info1;
     std::swap( infoReordered._listProperty[0], infoReordered._listProperty[1] );
@@ -1912,7 +1901,7 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
     // --- Binary: V1 blob → V2 (score 스킵, mana Default, hp 매칭) ---
     LayoutV1          v1{ 40, 99 };
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serialize( &v1, infoV1, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &v1, infoV1, bin ) );
 
     LayoutV2 fromBin{};
     fromBin._hp   = -1;
@@ -1988,7 +1977,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryVersionHeaderTest )
     };
 
     sw::vector<uint8> buffer;
-    sw::BinarySerializer::serializeVersioned( 102, &actor, info, buffer );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 102, &actor, info, buffer ) );
     SW_EXPECT_TRUE( buffer.size() > sizeof( uint32 ) );
 
     VersionedActor restored;
@@ -2055,7 +2044,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldTypeChangeAndTextVersioned )
 
     IntHp             src{ 42 };
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serializeVersioned( 1, &src, intInfo, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &src, intInfo, bin ) );
 
     StrHp  dst;
     uint32 ver{ 0 };
@@ -2120,7 +2109,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FloatFieldToStringCoerceKeepsTheNumbe
 
     FloatSpeed        src{ 1.5f };
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serializeVersioned( 1, &src, floatInfo, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &src, floatInfo, bin ) );
 
     StrSpeed dst;
     uint32   ver{ 0 };
@@ -2156,7 +2145,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FloatFieldToStringCoerceKeepsTheNumbe
 
     UintCount         uintSrc{ 4000000000u };
     sw::vector<uint8> uintBin;
-    sw::BinarySerializer::serializeVersioned( 1, &uintSrc, uintInfo, uintBin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &uintSrc, uintInfo, uintBin ) );
 
     StrSpeed uintDst;
     ver = 0;
@@ -2212,7 +2201,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ScalarFieldTypeChangeMovesTheValue )
     // int32 100 → float32 100
     const IntValue    intSrc{ 100 };
     sw::vector<uint8> intBin;
-    sw::BinarySerializer::serializeVersioned( 1, &intSrc, intInfo, intBin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &intSrc, intInfo, intBin ) );
     FloatValue floatDst{};
     uint32     ver{ 0 };
     SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &floatDst, floatInfo, intBin.data(), intBin.size(), 1u ) );
@@ -2221,7 +2210,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ScalarFieldTypeChangeMovesTheValue )
     // int32 0 → string "0"
     const IntValue    zeroSrc{ 0 };
     sw::vector<uint8> zeroBin;
-    sw::BinarySerializer::serializeVersioned( 1, &zeroSrc, intInfo, zeroBin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &zeroSrc, intInfo, zeroBin ) );
     StrValue strDst;
     ver = 0;
     SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &strDst, strInfo, zeroBin.data(), zeroBin.size(), 1u ) );
@@ -2230,7 +2219,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ScalarFieldTypeChangeMovesTheValue )
     // float32 1.5 → int32 는 옮기지 않는다. migrate 가 orphan 을 받아 주면 읽기는 성공하지만 값은 그대로다.
     const FloatValue  floatSrc{ 1.5f };
     sw::vector<uint8> floatBin;
-    sw::BinarySerializer::serializeVersioned( 1, &floatSrc, floatInfo, floatBin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &floatSrc, floatInfo, floatBin ) );
     IntValue intDst{ -1 };
     ver                = 0;
     auto acceptOrphans = []( const sw::SchemaMigrateContext& ) -> bool
@@ -2336,7 +2325,7 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
 
     VersionedActor    actor{ 7 };
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serializeVersioned( 1, &actor, info, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &actor, info, bin ) );
 
     VersionedActor restored{ 0 };
     uint32         ver{ 0 };
@@ -2439,7 +2428,7 @@ SW_TEST_CASE( ReflectionSerializationTest, SchemaMigrationIsFoundByTypeAndWritte
 
     const ChildActor  source{ 5, 6 };
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serializeVersioned( 1, &source, *pChild, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &source, *pChild, bin ) );
     uint32 ver{ 0 };
 
     // ③ 같은 버전이고 남는 값이 없는 읽기는 이관을 부르지 않습니다. 버전이 다르면 부릅니다.
@@ -2529,7 +2518,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryFieldAddRemoveRenameRoundTrip )
 
     const BeforeActor source{ 40, 12 };
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serializeVersioned( 1, &source, beforeInfo, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &source, beforeInfo, bin ) );
     uint32 ver{ 0 };
 
     // ① 필드 추가: 같은 버전에서 읽힌다. 새 필드는 생성자 기본값으로 남는다.
@@ -2575,7 +2564,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryFieldAddRemoveRenameRoundTrip )
 
         // 옮긴 값을 새 버전으로 다시 쓰고 읽으면 이관 없이 그대로다.
         sw::vector<uint8> rewritten;
-        sw::BinarySerializer::serializeVersioned( 2, &renamed, renamedInfo, rewritten );
+        SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 2, &renamed, renamedInfo, rewritten ) );
         RenamedActor reread;
         SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &reread, renamedInfo, rewritten.data(), rewritten.size(), 2u ) );
         SW_EXPECT_EQUAL( 2u, ver );
@@ -2627,7 +2616,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OrphanOnlyPolicyDiffersByFormat )
     uint32      ver{ 0 };
 
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serializeVersioned( 1, &source, wide, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &source, wide, bin ) );
     const bool bBinary = sw::BinarySerializer::deserializeVersioned( ver, &target, narrow, bin.data(), bin.size(), 1u );
 
     const sw::string json = sw::JSONSerializer::serializeVersioned( 1, &source, wide );
@@ -2810,35 +2799,6 @@ SW_TEST_CASE( ReflectionSerializationTest, JSONPrettyPrint )
 }
 
 /**
- * @brief [ReflectionCloningTest] 오브젝트 딥카피
- */
-SW_TEST_CASE( ReflectionCloningTest, ObjectDeepCopyClone )
-{
-    struct CloneableActor
-    {
-        int32   _health = 100;
-        float32 _speed  = 5.5f;
-    } srcActor, dstActor;
-
-    srcActor._health = 250;
-    srcActor._speed  = 12.0f;
-
-    sw::TypeInfo info;
-    info._name               = sw::hashed_string( "CloneableActor" );
-    info._fullyQualifiedName = sw::hashed_string( "sw::CloneableActor" );
-    info._size               = sizeof( CloneableActor );
-    info._listProperty       = {
-        {sw::hashed_string( "_health" ),   sw::hashed_string( "int32" ), SW_OFFSET_OF( CloneableActor, _health ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr},
-        { sw::hashed_string( "_speed" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( CloneableActor,  _speed ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr}
-    };
-
-    bool cloneOk = sw::BinarySerializer::cloneObject( &dstActor, &srcActor, info );
-    SW_EXPECT_TRUE( cloneOk );
-    SW_EXPECT_EQUAL( 250, dstActor._health );
-    SW_EXPECT_NEAR_EQUAL( 12.0f, dstActor._speed, 1e-4f );
-}
-
-/**
  * @brief [ReflectionSerializationTest] 중첩 구조체·컨테이너 라운드트립
  */
 SW_TEST_CASE( ReflectionSerializationTest, NestedStructAndContainersRoundtrip )
@@ -2857,7 +2817,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedStructAndContainersRoundtrip )
     src._inner._x       = 42;
 
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serialize( &src, *typeInfo, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &src, *typeInfo, bin ) );
     sw::NestedContainerActor dstBin;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &dstBin, *typeInfo, bin.data(), bin.size() ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dstBin._grid.size() );
@@ -2998,7 +2958,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
     SW_EXPECT_TRUE( xml == kGoldenXML );
 
     sw::vector<uint8> bin;
-    sw::BinarySerializer::serialize( &src, *typeInfo, bin );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &src, *typeInfo, bin ) );
     const sw::string binHex = toHexString( bin );
     if ( binHex != kGoldenBinHex )
         std::fprintf( stdout, "[golden binhex]\n  expected: %s\n  actual  : %s\n", kGoldenBinHex.c_str(), binHex.c_str() );
@@ -3224,7 +3184,7 @@ SW_TEST_CASE( ReflectionSerializationTest, SetPropertyRoundTripsInEveryFormat )
     // 1) Binary
     {
         sw::vector<uint8> bytes;
-        sw::BinarySerializer::serialize( &source, info, bytes );
+        SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, info, bytes ) );
         SetHolder restored{};
         SW_ASSERT_TRUE( sw::BinarySerializer::deserialize( &restored, info, bytes.data(), bytes.size() ) );
         expectContents( restored, "Binary 왕복이 set 을 잃었습니다" );
@@ -3295,7 +3255,7 @@ SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutside
     // 1) Binary — 직렬화가 바깥 칸을 읽고, 역직렬화가 대상 객체의 칸에 쓴다.
     {
         sw::vector<uint8> bytes;
-        sw::BinarySerializer::serialize( &source, info, bytes );
+        SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, info, bytes ) );
         sw::ExternalStorageTestActor restored;
         restored._storageIndex = 2;
         SW_ASSERT_TRUE( sw::BinarySerializer::deserialize( &restored, info, bytes.data(), bytes.size() ) );
@@ -3393,7 +3353,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
 
     {
         sw::vector<uint8> bytes;
-        sw::BinarySerializer::serialize( &source, *pActorType, bytes );
+        SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, *pActorType, bytes ) );
         sw::AssetPathActor restored;
         SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &restored, *pActorType, bytes.data(), bytes.size() ) );
         expectPayload( restored, "binary" );
@@ -3435,7 +3395,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownTypeNamesInAFileAreNotInterned
     sw::AssetPathActor source;
     source._payload = sw::ReflectAny::makeFrom( *pPayloadType, &payload );
     sw::vector<uint8> bytes;
-    sw::BinarySerializer::serialize( &source, *pActorType, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, *pActorType, bytes ) );
 
     // 같은 길이의 등록된 적 없는 이름으로 바꾼다(길이 접두가 그대로 맞는다).
     const sw::string_view knownName   = "sw::PolyPayloadA";
@@ -3478,35 +3438,6 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
     sw::Memory::copy( &rawValue, &value, sizeof( rawValue ) );
     SW_EXPECT_EQUAL( uint8{ 1 }, rawValue );
     SW_EXPECT_EQUAL( size_t( 1 ), offset );
-}
-
-/**
- * @brief [ReflectionSerializationTest] 압축 스트림이 기록하지 않는 프로퍼티(Transient)를 가리키면 쓰지 않는다
- * @details 쓰는 쪽은 Transient 를 적지 않는다. 희소 모드가 아무 인덱스에나 페이로드를 쓰면 망가진 스트림이 런타임 전용 값을 덮는다.
- */
-SW_TEST_CASE( ReflectionSerializationTest, CompactStreamDoesNotWriteTransientProperties )
-{
-    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
-    SW_ASSERT_NOT_NULL( pType );
-    const sw::vector<sw::PropertyInfo>& listProp = pType->getPropertiesWithBase();
-    uint8                               healthIndex{ 0xFF };
-    for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
-    {
-        if ( listProp[propIndex]._name == sw::hashed_string( "_health" ) )
-            healthIndex = static_cast<uint8>( propIndex );
-    }
-    SW_ASSERT_TRUE( healthIndex < 0x80 ); // varint 한 바이트
-
-    // [판 · 희소 모드][수정 1 개][인덱스][크기 4][int32 777]
-    const int32       injected = 777;
-    const uint8       modeByte = static_cast<uint8>( ( static_cast<uint8>( sw::kCurrentBinaryWireVersion ) << 4 ) | sw::PresenceMaskUtil::kModeSparse );
-    sw::vector<uint8> stream{ modeByte, 1, healthIndex, 4 };
-    const uint8*      pInjected = reinterpret_cast<const uint8*>( &injected );
-    stream.insert( stream.end(), pInjected, pInjected + sizeof( injected ) );
-
-    sw::MetaTestActor actor;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &actor, *pType, stream.data(), stream.size(), sw::SerializeContext::getDefault() ) );
-    SW_EXPECT_EQUAL( 100, actor._health );
 }
 
 /**
@@ -3791,16 +3722,10 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat
     SW_EXPECT_TRUE_MSG( isSame( fromJSON ), json.c_str() );
 
     sw::vector<uint8> bytes;
-    sw::BinarySerializer::serialize( &source, *pType, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, *pType, bytes ) );
     sw::ContainerShapeActor fromBinary;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, *pType, bytes.data(), bytes.size() ) );
     SW_EXPECT_TRUE( isSame( fromBinary ) );
-
-    sw::vector<uint8> compactBytes;
-    sw::BinarySerializer::serializeCompact( &source, *pType, compactBytes );
-    sw::ContainerShapeActor fromCompact;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &fromCompact, *pType, compactBytes.data(), compactBytes.size() ) );
-    SW_EXPECT_TRUE( isSame( fromCompact ) );
 }
 
 /**
@@ -3827,7 +3752,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FixedArrayPropertyRoundTripsInEveryFo
     SW_EXPECT_TRUE_MSG( fromJSON._arrSlot[0] == 7 && fromJSON._arrSlot[1] == 8 && fromJSON._arrSlot[2] == 9 && fromJSON._after == 42, json.c_str() );
 
     sw::vector<uint8> bytes;
-    sw::BinarySerializer::serialize( &source, *pType, bytes );
+    SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &source, *pType, bytes ) );
     sw::FixedArrayActor fromBinary;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, *pType, bytes.data(), bytes.size() ) );
     SW_EXPECT_TRUE( fromBinary._arrSlot[0] == 7 && fromBinary._arrSlot[1] == 8 && fromBinary._arrSlot[2] == 9 && fromBinary._after == 42 );
@@ -3844,4 +3769,60 @@ SW_TEST_CASE( ReflectionSerializationTest, FixedArrayPropertyRoundTripsInEveryFo
     SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromLong, *pType, "{\"_arrSlot\":[1,2,3,4],\"_after\":1}" ) );
     SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &fromLong, *pType,
                                                      "<FixedArrayActor><_arrSlot><item>1</item><item>2</item><item>3</item><item>4</item></_arrSlot></FixedArrayActor>" ) );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 실을 수 없는 값 타입은 읽기가 바이트를 건너뛰지 않고 실패하고, 쓰기 실패가 객체 · 아카이브까지 올라온다
+ * @details 예전에는 쓰기가 0 바이트 하나를 쓰고 성공하고, 읽기가 1 바이트를 건너뛰고 성공해 세이브는 써지고 로드에서 값이 빠졌다(생성기가 원소 별칭을 벗기지 않던 `vector<AccountID>`).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, UncarriedValueTypeFailsTheReadAndTheWriteReachesTheCaller )
+{
+    struct UncarriedHost
+    {
+        int32 _value{ 7 };
+    };
+    const sw::hashed_string kUncarriedType( "NoSuchCarriedValueType" );
+    sw::TypeInfo            uncarried;
+    uncarried._name               = sw::hashed_string( "UncarriedHost" );
+    uncarried._fullyQualifiedName = sw::hashed_string( "UncarriedHost" );
+    uncarried._size               = sizeof( UncarriedHost );
+    uncarried._listProperty       = {
+        { sw::hashed_string( "_value" ), kUncarriedType, SW_OFFSET_OF( UncarriedHost, _value ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr }
+    };
+    sw::TypeInfo writable               = uncarried;
+    writable._listProperty[0]           = { sw::hashed_string( "_value" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( UncarriedHost, _value ), false, sw::ContainerKind::None,
+                                            sw::hashed_string(), sw::hashed_string(), nullptr };
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
+    SW_EXPECT_FALSE( sw::SerializerUtil::hasBinaryValueCodec( kUncarriedType, context ) );
+
+    // 값 하나: 읽기는 실패하고 자리를 옮기지 않는다. 쓰기는 아무 바이트도 쓰지 않고 실패한다.
+    const sw::vector<uint8> arrPayload = { 1, 2, 3, 4 };
+    UncarriedHost           host;
+    size_t                  offset{ 0 };
+    SW_EXPECT_FALSE( sw::SerializerUtil::deserializeValueBinary( &host._value, kUncarriedType, arrPayload.data(), arrPayload.size(), offset, context ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), offset );
+    sw::vector<uint8> valueBytes;
+    SW_EXPECT_FALSE( sw::SerializerUtil::serializeValueBinary( &host._value, kUncarriedType, valueBytes, context ) );
+    SW_EXPECT_TRUE( valueBytes.empty() );
+
+    // 객체와 아카이브: 쓰기 실패가 올라오고, 아카이브는 오류 상태이며 반쯤 쓴 바이트가 남지 않는다.
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a property with no handler is not written" );
+        sw::vector<uint8> objectBytes;
+        SW_EXPECT_FALSE( sw::BinarySerializer::serialize( &host, uncarried, objectBytes ) );
+        sw::Archive archive;
+        archive << int32( 5 );
+        const uint64 sizeBefore = archive.getSize();
+        SW_EXPECT_FALSE( archive.serializeObject( &host, uncarried ) );
+        SW_EXPECT_TRUE( archive.isError() );
+        SW_EXPECT_EQUAL( sizeBefore, archive.getSize() );
+    }
+
+    // 실을 수 있는 타입으로 쓴 바이트를 실을 수 없는 타입으로 읽으면 실패한다.
+    sw::vector<uint8> writtenBytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &host, writable, writtenBytes ) );
+    UncarriedHost restored;
+    restored._value = 1;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &restored, uncarried, writtenBytes.data(), writtenBytes.size() ) );
+    SW_EXPECT_EQUAL( 1, restored._value );
 }

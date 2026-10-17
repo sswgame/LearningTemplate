@@ -374,26 +374,6 @@ namespace sw
         /** @brief 아카이브에서 StringPool 테이블 전체를 읽어 옵니다. */
         [[nodiscard]] bool loadStringPool();
 
-        // ------------------------------------------------------------------------------
-        // 8) 적응형 컴팩트 직렬화 (Presence Bitmask & Sparse Index)
-        // ------------------------------------------------------------------------------
-        /** @brief 객체를 적응형 컴팩트 바이너리(Dense Bitmask 또는 Sparse Index)로 직렬화합니다. */
-        [[nodiscard]] bool serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context = SerializeContext::getDefault() );
-        /** @brief 아카이브에서 적응형 컴팩트 바이너리를 역직렬화합니다. */
-        [[nodiscard]] bool deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context = SerializeContext::getDefault() );
-
-        template <typename T>
-        [[nodiscard]] bool serializeCompactObject( const T& instance, const SerializeContext& context = SerializeContext::getDefault() )
-        {
-            return serializeCompactObject( &instance, *T::StaticType(), context );
-        }
-
-        template <typename T>
-        [[nodiscard]] bool deserializeCompactObject( T& instance, const SerializeContext& context = SerializeContext::getDefault() )
-        {
-            return deserializeCompactObject( &instance, *T::StaticType(), context );
-        }
-
     private:
         StringPool             _stringPool;
         vector<uint8>          _bytes;

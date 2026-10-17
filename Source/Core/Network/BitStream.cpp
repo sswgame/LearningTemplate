@@ -11,9 +11,34 @@ namespace sw
 {
     namespace
     {
-        struct BitReaderInternal
+        struct BitStreamInternal
         {
             static constexpr int32 kMaxByteCount = 0x7FFFFFFF / 8; ///< 비트 위치가 int32 라 읽을 수 있는 바이트 상한
+
+            /** @brief 양자화 간격입니다. 0 이하의 간격으로 나누지 않게 아래를 막습니다. */
+            static float32 computeQuantizeStep( float32 resolution ) { return MathUtil::max( 1.0e-6f, resolution ); }
+
+            /** @brief 양자화 칸의 마지막 번호입니다. 칸은 0 부터 이 번호까지입니다. */
+            static uint32 computeQuantizeMaxIndex( float32 minValue, float32 maxValue, float32 step )
+            {
+                return static_cast<uint32>( ( maxValue - minValue ) / step + 0.5f );
+            }
+
+            /**
+             * @brief @p value 를 가장 가까운 칸 번호로 바꿉니다. 범위 안의 칸으로 반올림되지 않으면(범위 밖, NaN) false 입니다.
+             * @details 반올림이므로 경계에서 반 칸 안쪽으로 넘친 값(정규화한 사원수의 1.0000001)은 끝 칸입니다. 비교가 NaN 에서 거짓이 되도록 범위 안을 묻습니다.
+             */
+            [[nodiscard]] static bool tryComputeQuantizeIndex( float32 value, float32 minValue, float32 maxValue, float32 resolution, uint32& outIndex )
+            {
+                const float32 step     = computeQuantizeStep( resolution );
+                const uint32  maxIndex = computeQuantizeMaxIndex( minValue, maxValue, step );
+                const float32 scaled   = ( value - minValue ) / step + 0.5f;
+                const bool    bInRange = 0.0f <= scaled && scaled < static_cast<float32>( maxIndex ) + 1.0f;
+                if ( bInRange == false )
+                    return false;
+                outIndex = MathUtil::min( maxIndex, static_cast<uint32>( scaled ) );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -67,10 +92,13 @@ namespace sw
         }
     }
 
-    void BitWriter::writeInt( int32 value, int32 minValue, int32 maxValue )
+    bool BitWriter::writeInt( int32 value, int32 minValue, int32 maxValue )
     {
-        const int32 clamped = MathUtil::clamp( value, minValue, maxValue );
-        writeBits( static_cast<uint32>( static_cast<int64>( clamped ) - minValue ), BitMath::computeBitsRequired( minValue, maxValue ) );
+        const bool bInRange = minValue <= value && value <= maxValue;
+        if ( bInRange == false )
+            return false;
+        writeBits( static_cast<uint32>( static_cast<int64>( value ) - minValue ), BitMath::computeBitsRequired( minValue, maxValue ) );
+        return true;
     }
 
     void BitWriter::writeFloat( float32 value )
@@ -80,20 +108,32 @@ namespace sw
         writeBits( bits, 32 );
     }
 
-    void BitWriter::writeQuantizedFloat( float32 value, float32 minValue, float32 maxValue, float32 resolution )
+    bool BitWriter::writeQuantizedFloat( float32 value, float32 minValue, float32 maxValue, float32 resolution )
     {
-        const float32 step     = MathUtil::max( 1.0e-6f, resolution );
-        const uint32  maxIndex = static_cast<uint32>( ( maxValue - minValue ) / step + 0.5f );
-        const float32 clamped  = MathUtil::clamp( value, minValue, maxValue );
-        const uint32  index    = MathUtil::min( maxIndex, static_cast<uint32>( ( clamped - minValue ) / step + 0.5f ) );
+        uint32 index{ 0 };
+        if ( BitStreamInternal::tryComputeQuantizeIndex( value, minValue, maxValue, resolution, index ) == false )
+            return false;
+        const uint32 maxIndex = BitStreamInternal::computeQuantizeMaxIndex( minValue, maxValue, BitStreamInternal::computeQuantizeStep( resolution ) );
         writeBits( index, BitMath::computeBitsRequired( 0, maxIndex ) );
+        return true;
     }
 
-    void BitWriter::writeQuantizedFloat3( const float3& value, const float3& minValue, const float3& maxValue, float32 resolution )
+    bool BitWriter::writeQuantizedFloat3( const float3& value, const float3& minValue, const float3& maxValue, float32 resolution )
     {
-        writeQuantizedFloat( value._x, minValue._x, maxValue._x, resolution );
-        writeQuantizedFloat( value._y, minValue._y, maxValue._y, resolution );
-        writeQuantizedFloat( value._z, minValue._z, maxValue._z, resolution );
+        // 세 축을 먼저 다 본다. 한 축만 쓰고 멈추면 부른 쪽의 스트림이 어긋난다.
+        const bool bAllInRange = canWriteQuantizedFloat( value._x, minValue._x, maxValue._x, resolution ) &&
+                                 canWriteQuantizedFloat( value._y, minValue._y, maxValue._y, resolution ) &&
+                                 canWriteQuantizedFloat( value._z, minValue._z, maxValue._z, resolution );
+        if ( bAllInRange == false )
+            return false;
+        return writeQuantizedFloat( value._x, minValue._x, maxValue._x, resolution ) && writeQuantizedFloat( value._y, minValue._y, maxValue._y, resolution ) &&
+               writeQuantizedFloat( value._z, minValue._z, maxValue._z, resolution );
+    }
+
+    bool BitWriter::canWriteQuantizedFloat( float32 value, float32 minValue, float32 maxValue, float32 resolution )
+    {
+        uint32 index{ 0 };
+        return BitStreamInternal::tryComputeQuantizeIndex( value, minValue, maxValue, resolution, index );
     }
 
     void BitWriter::writeVarUint( uint64 value )
@@ -161,7 +201,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     BitReader::BitReader( const uint8* pData, int32 byteCount )
         : _pData{ pData }
-        , _bitCapacity{ MathUtil::clamp( byteCount, 0, BitReaderInternal::kMaxByteCount ) * 8 }
+        , _bitCapacity{ MathUtil::clamp( byteCount, 0, BitStreamInternal::kMaxByteCount ) * 8 }
         , _bitPosition{ 0 }
         , _bOverflow{ SW_FALSE }
     {
@@ -192,10 +232,19 @@ namespace sw
         return value;
     }
 
-    int32 BitReader::readInt( int32 minValue, int32 maxValue )
+    bool BitReader::readInt( int32 minValue, int32 maxValue, int32& outValue )
     {
         const uint32 raw = readBits( BitMath::computeBitsRequired( minValue, maxValue ) );
-        return static_cast<int32>( MathUtil::min<int64>( maxValue, static_cast<int64>( minValue ) + raw ) );
+        if ( hasOverflowed() )
+            return false;
+        const int64 value = static_cast<int64>( minValue ) + raw;
+        if ( value > maxValue )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖을 쓰지 않으므로 깨진 데이터다
+            return false;
+        }
+        outValue = static_cast<int32>( value );
+        return true;
     }
 
     float32 BitReader::readFloat()
@@ -206,21 +255,32 @@ namespace sw
         return value;
     }
 
-    float32 BitReader::readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution )
+    bool BitReader::readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution, float32& outValue )
     {
-        const float32 step     = MathUtil::max( 1.0e-6f, resolution );
-        const uint32  maxIndex = static_cast<uint32>( ( maxValue - minValue ) / step + 0.5f );
-        const uint32  index    = MathUtil::min( maxIndex, readBits( BitMath::computeBitsRequired( 0, maxIndex ) ) );
-        return MathUtil::min( maxValue, minValue + static_cast<float32>( index ) * step );
+        const float32 step     = BitStreamInternal::computeQuantizeStep( resolution );
+        const uint32  maxIndex = BitStreamInternal::computeQuantizeMaxIndex( minValue, maxValue, step );
+        const uint32  index    = readBits( BitMath::computeBitsRequired( 0, maxIndex ) );
+        if ( hasOverflowed() )
+            return false;
+        if ( index > maxIndex )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 범위 밖의 칸을 쓰지 않으므로 깨진 데이터다
+            return false;
+        }
+        // 끝 칸은 간격이 범위를 나누어떨어지지 않을 때 최댓값을 조금 넘는다. 범위 안의 칸이므로 최댓값으로 둔다.
+        outValue = MathUtil::min( maxValue, minValue + static_cast<float32>( index ) * step );
+        return true;
     }
 
-    float3 BitReader::readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution )
+    bool BitReader::readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution, float3& outValue )
     {
-        float3 value;
-        value._x = readQuantizedFloat( minValue._x, maxValue._x, resolution );
-        value._y = readQuantizedFloat( minValue._y, maxValue._y, resolution );
-        value._z = readQuantizedFloat( minValue._z, maxValue._z, resolution );
-        return value;
+        float3     value;
+        const bool bRead = readQuantizedFloat( minValue._x, maxValue._x, resolution, value._x ) && readQuantizedFloat( minValue._y, maxValue._y, resolution, value._y ) &&
+                           readQuantizedFloat( minValue._z, maxValue._z, resolution, value._z );
+        if ( bRead == false )
+            return false;
+        outValue = value;
+        return true;
     }
 
     uint64 BitReader::readVarUint()

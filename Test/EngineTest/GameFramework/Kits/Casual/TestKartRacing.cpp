@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/BitStream.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -533,13 +534,25 @@ SW_TEST_CASE( KartRacingTest, GhostReplaysTheSamePath )
 
     // 바이트로 오가도 같다. 잘린 기록은 읽지 않는다.
     vector<uint8> buffer;
-    ghost.serialize( buffer );
+    SW_ASSERT_TRUE( ghost.serialize( buffer ) );
     SW_EXPECT_TRUE( buffer.size() < static_cast<size_t>( ghost.getFrameCount() ) * 3u + 64u );
     KartGhost loaded;
     SW_ASSERT_TRUE( loaded.deserialize( buffer.data(), static_cast<int32>( buffer.size() ) ) );
     SW_EXPECT_EQUAL( loaded.getFrameCount(), ghost.getFrameCount() );
     KartGhost truncated;
     SW_EXPECT_FALSE( truncated.deserialize( buffer.data(), static_cast<int32>( buffer.size() / 2 ) ) );
+
+    // 축이 -127..127 밖(-128)인 프레임은 쓰지 않는다. 예전에는 -127 로 잘라 썼다. 8 비트 255 칸(128)은 깨진 데이터라 읽지 않는다.
+    BitWriter      frameWriter;
+    KartGhostFrame outOfRangeFrame;
+    outOfRangeFrame._throttle = -128;
+    SW_EXPECT_FALSE( KartGhost::writeFrame( frameWriter, outOfRangeFrame ) );
+    BitWriter rawFrame;
+    rawFrame.writeBits( 0xFF, 8 );
+    rawFrame.writeBits( 0, 16 );
+    BitReader      rawReader( rawFrame.getBytes().data(), rawFrame.getByteCount() );
+    KartGhostFrame readFrame;
+    SW_EXPECT_FALSE( KartGhost::readFrame( rawReader, readFrame ) );
 
     // 다시 돌리면 같은 자리에서 끝난다 — 부스트 패드 규칙까지 같이 돌아야 한다(트랙 없이 돌리면 어긋난다).
     KartGhostPlayer player;

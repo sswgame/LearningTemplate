@@ -52,16 +52,18 @@ namespace sw
         static ArcadeVehicleInput decodeInput( const KartGhostFrame& frame );
         /** @brief 기록했다가 되돌린 것과 똑같은 입력을 반환합니다. 기록하는 차는 이 입력으로 달립니다. */
         static ArcadeVehicleInput quantizeInput( const ArcadeVehicleInput& input ) { return decodeInput( encodeInput( input ) ); }
-        static void               writeFrame( BitWriter& writer, const KartGhostFrame& frame );
-        static KartGhostFrame     readFrame( BitReader& reader );
+        /** @brief 프레임 하나를 씁니다. 축이 -127..127 밖이면(-128) 아무것도 쓰지 않고 false 입니다. */
+        [[nodiscard]] static bool writeFrame( BitWriter& writer, const KartGhostFrame& frame );
+        /** @brief 프레임 하나를 읽습니다. 비트가 모자라거나 축이 범위 밖이면 false 입니다. */
+        [[nodiscard]] static bool readFrame( BitReader& reader, KartGhostFrame& outFrame );
 
         /** @brief 기록을 비우고 출발 위치, 방향(라디안), 걸음 크기를 설정합니다. */
         void begin( const float3& startPosition, float32 startYaw, float32 step );
         void record( const ArcadeVehicleInput& input, bool bUseItem = false );
         void setFinishTime( float32 finishTime ) { _finishTime = finishTime; }
 
-        /** @brief 바이트로 씁니다(세이브와 서버 순위표용). */
-        void serialize( vector<uint8>& outBuffer ) const;
+        /** @brief 바이트로 씁니다(세이브와 서버 순위표용). 프레임 하나라도 쓰지 못하면(`writeFrame`) false 이고 @p outBuffer 는 쓰면 안 됩니다. */
+        [[nodiscard]] bool serialize( vector<uint8>& outBuffer ) const;
         /** @brief 바이트를 읽습니다. 형식이 다르거나 잘렸으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool deserialize( const uint8* pData, int32 byteCount );
 
