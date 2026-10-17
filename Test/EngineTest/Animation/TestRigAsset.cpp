@@ -6,6 +6,7 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
+#include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -392,6 +393,66 @@ SW_TEST_CASE( RigAssetTest, FootPlacementPlantsFeetOnSlope )
     instance.prepare( prepare );
     TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
     SW_EXPECT_TRUE( TestRigAssetInternal::isNear( listReference[7].getTranslation(), listModel[7].getTranslation(), 2e-3f ) );
+}
+
+/**
+ * @brief [RigAssetTest] 보폭 워핑 — 발이 골반에서 이동 방향으로 떨어진 거리만 배율만큼 늘고, 닿지 않는 다리는 골반을 내려 닿게 한다
+ * @details 허벅지를 앞뒤로 0.3 라디안 벌린 자세. 배율 1.3(+Z 방향)이면 발의 z 거리가 1.3 배, x 와 높이는 그대로이고 골반은 내려간다.
+ *          배율은 `[min_scale, max_scale]` 로 잘리고, 1 이면 포즈를 바꾸지 않는다. 남은 몫은 `LocomotionSpeedUtil::computeStrideScale` 이 낸다.
+ */
+SW_TEST_CASE( RigAssetTest, StrideWarpingStretchesStrideAlongMoveDirection )
+{
+    SW_EXPECT_NEAR_EQUAL( 1.5f, LocomotionSpeedUtil::computeStrideScale( 3.0f, 1.0f, 2.0f ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, LocomotionSpeedUtil::computeStrideScale( 3.0f, 0.0f, 2.0f ), 1e-6f );
+
+    const Skeleton    skeleton = TestRigAssetInternal::makeLegs();
+    const string_view json     = R"({ "nodes": [ { "type": "StrideWarping", "name": "Stride", "pelvis": "hips", "min_scale": 0.5, "max_scale": 1.5, "max_pelvis_drop": 0.3,
+        "feet": [ { "root": "upperleg.l", "mid": "lowerleg.l", "end": "foot.l" }, { "root": "upperleg.r", "mid": "lowerleg.r", "end": "foot.r" } ] } ] })";
+    RigInstance       instance;
+    SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
+    SW_EXPECT_FALSE( instance.setNodeControl( hashed_string( "Stride" ), hashed_string( "unknown" ), 1.0f ) );
+
+    // 벌린 자세(왼다리 앞, 오른다리 뒤)의 모델 공간 — 리그 없이.
+    Pose stance;
+    stance.setToReference( skeleton );
+    BoneTransform leftThigh  = stance.getBoneTransform( 2 );
+    BoneTransform rightThigh = stance.getBoneTransform( 5 );
+    leftThigh._rotation      = quaternion::makeFromAxisAngle( float3{ 1.0f, 0.0f, 0.0f }, 0.3f );
+    rightThigh._rotation     = quaternion::makeFromAxisAngle( float3{ 1.0f, 0.0f, 0.0f }, -0.3f );
+    stance.setBoneTransform( 2, leftThigh );
+    stance.setBoneTransform( 5, rightThigh );
+    vector<float4x4> listStance;
+    stance.computeModelSpace( skeleton.getParentIndices(), listStance );
+    const float3 pelvis = listStance[1].getTranslation();
+
+    RigPrepareContext prepare{};
+    prepare._worldFromModel = float4x4::Identity;
+    prepare._deltaSeconds   = 1.0f / 60.0f;
+    vector<float4x4> listModel;
+    const float32    arrControl[3]  = { 1.3f, 5.0f, 1.0f }; // 늘림, 상한으로 잘림, 그대로
+    const float32    arrExpected[3] = { 1.3f, 1.5f, 1.0f };
+    for ( uint32 caseIndex = 0; caseIndex < 3; ++caseIndex )
+    {
+        SW_ASSERT_TRUE( instance.setNodeControl( hashed_string( "Stride" ), hashed_string( "stride_scale" ), arrControl[caseIndex] ) );
+        SW_ASSERT_TRUE( instance.setNodeControl( hashed_string( "Stride" ), hashed_string( "direction_x" ), 0.0f ) );
+        SW_ASSERT_TRUE( instance.setNodeControl( hashed_string( "Stride" ), hashed_string( "direction_z" ), 1.0f ) );
+        Pose pose = stance;
+        instance.prepare( prepare );
+        instance.evaluate( pose, skeleton.getParentIndices(), float4x4::Identity );
+        pose.computeModelSpace( skeleton.getParentIndices(), listModel );
+        for ( const uint32 footBone : { 4u, 7u } )
+        {
+            const float3 before = listStance[footBone].getTranslation();
+            const float3 after  = listModel[footBone].getTranslation();
+            SW_EXPECT_NEAR_EQUAL( pelvis._z + ( before._z - pelvis._z ) * arrExpected[caseIndex], after._z, 2e-3f );
+            SW_EXPECT_NEAR_EQUAL( before._x, after._x, 2e-3f );
+            SW_EXPECT_NEAR_EQUAL( before._y, after._y, 2e-3f );
+        }
+        if ( caseIndex == 2 )
+            SW_EXPECT_NEAR_EQUAL( pelvis._y, listModel[1].getTranslation()._y, 1e-5f ); // 배율 1 이면 그대로
+        else
+            SW_EXPECT_TRUE( listModel[1].getTranslation()._y < pelvis._y - 1e-3f ); // 뻗은 다리가 닿게 골반이 내려갔다
+    }
 }
 
 /**

@@ -39,7 +39,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   스킨 없는 메시의 모프(GPU 모프 풀이 스키닝 컴퓨트 안에서만 가중치를 건다) · 실시간 얼굴 입력(Live Link Face 자리)
   ⑤ 파워드 래그돌(관절 모터가 애니메이션 포즈를 쫓음 — 전신 · 부분 래그돌 · 맞음 반응 · 기상 섞기는 `RagdollComponent`), 헤어 카드 · 천(Jolt 소프트 바디 — `D1-4`), 가닥 헤어(TressFX)는 나중
   ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로 옮겨 머티리얼을 만들 것 — 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다. Shooter3D 팩에는 이미 꺼낸 아틀라스(`textures_raw/kaykit_*.png`) · `materials/kaykit_*.material` 이 있다.
-  ⑦ Shooter3D 발 미끄러짐 — 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞췄다. 범위를 넘는 뒷걸음 · 옆걸음은 남는다(보폭 워핑은 리그 노드가 필요하다).
+  ⑦ Shooter3D 발 미끄러짐 — 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞췄다. 범위를 넘는 몫은 리그 노드 `StrideWarping`(+ `LocomotionSpeedUtil::computeStrideScale`)이 맡는다.
+    남은 것: Shooter3D 연결(`knight.rig.json` 에 노드를 두고 `ShooterAvatarComponent` 가 프레임마다 `stride_scale` · 이동 방향을 `setNodeControl` 로 넣기)과 화면 확인.
 
 - `D4-7` [기능] **프리로딩 · LOD · 사전 준비(로드맵).** ① 프리로드 세트(미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집 —
   `collectReferencedPrefabPaths` 가 있다), `requestPreload` 가 진행률 · 완료를 준다, 프레임 예산(IO · 업로드 · PSO · 인스턴스 수), 참조 수 · LRU 로 내림(지금 캐시는

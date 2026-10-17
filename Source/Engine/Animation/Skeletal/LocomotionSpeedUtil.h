@@ -36,5 +36,11 @@ namespace sw
          * @details 클립 발 속도가 0 에 가까우면(제자리 동작, 측정 실패) 1 입니다. 범위를 넘는 몫은 미끄러짐으로 남는다. 보폭을 바꾸는 스트라이드 워핑이 그 몫을 맡는다.
          */
         static float32 computePlayRate( float32 moveSpeed, float32 clipFootSpeed, float32 minRate, float32 maxRate );
+        /**
+         * @brief 재생 속도로 맞추고 남은 몫, 곧 보폭 배율입니다. `moveSpeed / ( clipFootSpeed × playRate )` 이고 리그 `StrideWarping` 노드의 `stride_scale` 로 넣습니다.
+         * @details 재생 속도가 범위 안이면 1 이다(재생 속도만으로 맞았다). 클립 발 속도나 재생 속도가 0 에 가까우면(제자리 동작, 측정 실패) 1 이다.
+         *          뒷걸음 · 옆걸음처럼 클립이 느려 재생 속도가 상한에 닿은 경우 1 보다 크고, 보폭을 그만큼 늘려야 발이 미끄러지지 않는다.
+         */
+        static float32 computeStrideScale( float32 moveSpeed, float32 clipFootSpeed, float32 playRate );
     };
 } // namespace sw

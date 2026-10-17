@@ -62,4 +62,12 @@ namespace sw
             return 1.0f;
         return MathUtil::clamp( moveSpeed / clipFootSpeed, minRate, maxRate );
     }
+
+    float32 LocomotionSpeedUtil::computeStrideScale( float32 moveSpeed, float32 clipFootSpeed, float32 playRate )
+    {
+        const float32 playedFootSpeed = clipFootSpeed * playRate;
+        if ( playedFootSpeed <= MathUtil::kEpsilon )
+            return 1.0f;
+        return moveSpeed / playedFootSpeed;
+    }
 } // namespace sw
