@@ -11,8 +11,13 @@
  *          Spawner 는 프리팹을 스폰하고, Sound 는 `GameSound` 를 재생하며, Hazard 는 켜져 있는 동안 대상 센서에 겹친 것들에게 피해를 준다(`GimmickDamageEvent` 와 그쪽 센서의 Damage).
  *          모두 2D(XY 평면)와 3D 에서 같게 동작한다. 위치, 회전, 축은 데이터의 벡터를 그대로 쓴다.
  *
- *          고정 스텝으로 돈다(`_stepTime`). 스텝을 실행한 틱마다 회로 상태를 `_stateBytes`(PROPERTY)에 써 두므로, 레벨 세이브와 핫 리로드와 플레이 복원이
- *          그 상태에서 이어진다. 체크포인트는 `captureCheckpoint` 와 `restoreCheckpoint` 로, 처음 상태로의 복귀는 `resetCircuit` 으로 한다.
+ *          고정 스텝으로 돈다(`_stepTime`). 스텝을 실행한 틱마다 회로 상태를 `_state`(PROPERTY, `GimmickCircuitState`)에 써 두므로, 레벨 세이브와 핫 리로드와 플레이 복원이
+ *          그 상태에서 이어진다(자기 기술형 A). 체크포인트는 `captureCheckpoint` 와 `restoreCheckpoint` 로, 처음 상태로의 복귀는 `resetCircuit` 으로 한다.
+ *          체크포인트는 프로세스 밖으로 나가지 않으므로 바이트가 아니라 값으로 둔다. 롤백 · 넷 스냅샷은 `GimmickStateBundle` 이 고정 배치형(B)으로 싣는다.
+ *
+ *          저장 상태를 회로에 적용하는 길은 `applySavedState` 하나다(로드, 플레이 시작, 체크포인트). 상태는 노드 id 로 짝짓고(`GimmickCircuit::loadState`),
+ *          노드가 늘거나 준 것은 경고 뒤 이어 가며, 같은 id 인데 종류나 상태 버전이 바뀐 노드가 있으면 오류를 남기고 회로를 돌리지 않는다. 조용히 처음 상태로 바꾸지 않는다.
+ *          씬 · 프리팹 저작 저장에도 이 런타임 상태가 들어갈 수 있다(지금 저장 문맥이 레벨 세이브와 같다). 저작 저장에서 빼는 표시는 백로그 `C-52` 다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -121,21 +126,24 @@ namespace sw
 
         /** @brief 지금 상태를 체크포인트로 저장합니다. */
         void captureCheckpoint();
-        /** @brief 저장해 둔 체크포인트로 돌아갑니다. 없으면 처음 상태로 돌아갑니다. 액추에이터 자세도 그 상태로 다시 적용합니다. */
+        /**
+         * @brief 저장해 둔 체크포인트로 돌아갑니다. 잡은 체크포인트가 없으면(잡기 전이거나 `resetCircuit`) 처음 상태로 돌아갑니다. 액추에이터 자세도 그 상태로 다시 적용합니다.
+         * @details 체크포인트를 잡은 뒤 회로를 고쳐 다시 만들었으면 `applySavedState` 의 규칙을 따른다. 종류가 바뀐 노드가 있으면 오류로 멈춘다.
+         */
         void restoreCheckpoint();
         /** @brief 만든 직후 상태로 되돌립니다. */
         void resetCircuit();
         /**
-         * @brief `getStateBytes` 가 준 바이트(다른 기계에서 온 네트워크 스냅샷, 롤백 저장)로 상태를 되돌리고 액추에이터 자세를 다시 적용합니다.
-         * @return 바이트가 이 회로 구조의 것이 아니면(해시 · 크기 불일치) 아무것도 바꾸지 않고 false 입니다.
+         * @brief 같은 빌드 · 같은 회로가 만든 상태(롤백 저장, 다른 기계에서 온 넷 스냅샷)로 되돌리고 액추에이터 자세를 다시 적용합니다.
+         * @return 회로가 없거나 상태가 이 회로와 정확히 맞지 않으면(`GimmickStateMatch::Exact` 가 아니면) 아무것도 바꾸지 않고 false 입니다. 그 의미는 부르는 쪽이 정합니다.
          */
-        [[nodiscard]] bool restoreStateBytes( const vector<uint8>& bytes );
+        [[nodiscard]] bool restoreState( const GimmickCircuitState& state );
 
-        const GimmickCircuit& getCircuit() const { return _circuit; }
-        GimmickCircuit&       getCircuit() { return _circuit; }
-        const vector<string>& getErrors() const { return _listError; }
-        const vector<uint8>&  getStateBytes() const { return _stateBytes; }
-        int32                 findNode( const hashed_string& id ) const { return _circuit.findNode( id ); }
+        const GimmickCircuit&      getCircuit() const { return _circuit; }
+        GimmickCircuit&            getCircuit() { return _circuit; }
+        const vector<string>&      getErrors() const { return _listError; }
+        const GimmickCircuitState& getState() const { return _state; }
+        int32                      findNode( const hashed_string& id ) const { return _circuit.findNode( id ); }
 
     private:
         /** @brief 노드가 센서로서 무엇을 읽고, 액추에이터로서 무엇을 적용하는지 나타냅니다. 종류 이름으로 정하며, 게임이 추가한 종류는 None 입니다. */
@@ -160,11 +168,19 @@ namespace sw
             Enable
         };
 
-        void           bindNodes();
-        void           pullSensors( GameObjectManager& manager );
-        void           applyActuators( GameObjectManager& manager );
-        void           applyActuator( GameObjectManager& manager, int32 node, Binding binding );
-        void           storeState();
+        void bindNodes();
+        void pullSensors( GameObjectManager& manager );
+        void applyActuators( GameObjectManager& manager );
+        void applyActuator( GameObjectManager& manager, int32 node, Binding binding );
+        void storeState();
+        /**
+         * @brief 저장 상태(씬 · 프리팹 · 레벨 세이브의 `_state`, 체크포인트)를 회로에 적용하는 유일한 길입니다. `onPostLoad` · `onBeginPlay` · `restoreCheckpoint` 가 지납니다.
+         * @details 노드가 늘거나 줄었으면 경고 한 줄 뒤 이어 간다. 같은 id 인데 종류 · 상태 버전이 바뀐 노드가 있으면 오류를 `_listError` 와 로그에 남기고
+         *          회로를 비워 돌지 않게 한다. 처음 상태로 조용히 바꾸면 레벨 세이브의 진행이 경고 한 줄로만 사라진다.
+         */
+        void applySavedState( const GimmickCircuitState& state );
+        /** @brief 상태를 바꾼 뒤 액추에이터 자세를 다시 적용하고 `_state` 를 맞춥니다. */
+        void           commitRestoredState();
         GameObject*    resolveTarget( GameObjectManager& manager, int32 node ) const;
         float32        computeProximity( GameObjectManager& manager, int32 node, const GameObject& target ) const;
         float32        computeLaserBlocked( GameObjectManager& manager, int32 node, const GameObject& target ) const;
@@ -180,13 +196,13 @@ namespace sw
         PROPERTY( Category = "Circuit", DisplayName = "Rest Poses", Tooltip = "Actuator rest poses captured at first play (runtime)" )
         vector<GimmickRestPose> _listRestPose;
         PROPERTY( HideInInspector )
-        vector<uint8> _stateBytes;
+        GimmickCircuitState _state;
         PROPERTY( Category = "Circuit", DisplayName = "Step Time", Min = 0.001, Tooltip = "Fixed simulation step", Units = s )
         float32 _stepTime;
 
-        GimmickCircuit  _circuit;
-        vector<Binding> _listBinding;
-        vector<string>  _listError;
-        vector<uint8>   _checkpointBytes;
+        GimmickCircuit      _circuit;
+        vector<Binding>     _listBinding;
+        vector<string>      _listError;
+        GimmickCircuitState _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
     };
 } // namespace sw

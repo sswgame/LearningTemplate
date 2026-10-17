@@ -60,12 +60,12 @@ namespace sw
         , _listNodeTarget{}
         , _listWire{}
         , _listRestPose{}
-        , _stateBytes{}
+        , _state{}
         , _stepTime{ GimmickCircuitDef::kDefaultStepTime }
         , _circuit{}
         , _listBinding{}
         , _listError{}
-        , _checkpointBytes{}
+        , _checkpoint{}
     {
     }
 
@@ -128,7 +128,8 @@ namespace sw
         _listNodeTarget.clear();
         _listWire.clear();
         _listRestPose.clear();
-        _stateBytes.clear();
+        _state      = GimmickCircuitState{};
+        _checkpoint = GimmickCircuitState{};
         _circuit.clear();
     }
 
@@ -188,13 +189,8 @@ namespace sw
     void GimmickCircuitComponent::onPostLoad()
     {
         Component::onPostLoad();
-        if ( rebuild() == false || _stateBytes.empty() )
-            return;
-        if ( _circuit.loadState( _stateBytes ) == false )
-        {
-            SW_LOG_WARNING( "Saved gimmick state does not match circuit '%#' - starting from the initial state", getOwner() != nullptr ? getOwner()->getName().c_str() : "" );
-            _stateBytes.clear();
-        }
+        if ( rebuild() && _state.isEmpty() == false )
+            applySavedState( _state );
     }
 
     void GimmickCircuitComponent::onPropertyChanged( hashed_string propertyName )
@@ -207,9 +203,9 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
-        const bool bRestoreState = _circuit.isBuilt() == false && rebuild() && _stateBytes.empty() == false;
+        const bool bRestoreState = _circuit.isBuilt() == false && rebuild() && _state.isEmpty() == false;
         if ( bRestoreState )
-            (void)_circuit.loadState( _stateBytes ); // 구조가 다른 저장이면 false 이고, 이 경우 회로는 처음 상태로 시작한다
+            applySavedState( _state );
         bindNodes();
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -515,7 +511,40 @@ namespace sw
 
     void GimmickCircuitComponent::storeState()
     {
-        _circuit.saveState( _stateBytes );
+        _circuit.saveState( _state );
+    }
+
+    void GimmickCircuitComponent::applySavedState( const GimmickCircuitState& state )
+    {
+        const GameObject*      pOwner    = getOwner();
+        const utf8*            pName     = pOwner != nullptr ? pOwner->getName().c_str() : "";
+        const GimmickStateLoad loaded    = _circuit.loadState( state, GimmickStateMatch::NodeSetChanged );
+        const bool             bMismatch = loaded._match == GimmickStateMatch::Mismatch;
+        if ( bMismatch )
+        {
+            // 같은 id 인데 종류나 상태 뜻이 바뀐 노드다. 슬롯의 뜻을 메울 수 없으므로 처음 상태로 바꾸지 않고 멈춘다.
+            const utf8* pNode = loaded._changedNode >= 0 ? _circuit.getNodeID( loaded._changedNode ).c_str() : "(duplicate node id in the saved state)";
+            utf8        arrBuffer[constant::kMaxBuffer512]{};
+            formatstring( arrBuffer, constant::kMaxBuffer512,
+                          "Saved gimmick state of '%#' does not fit node '%#' (its kind or state version changed) - the circuit does not run until the saved state is cleared",
+                          pName, pNode );
+            SW_LOG_ERROR( "%#", arrBuffer );
+            _listError.push_back( string( arrBuffer ) );
+            _circuit.clear();
+            return;
+        }
+        if ( loaded._match == GimmickStateMatch::NodeSetChanged )
+            SW_LOG_WARNING( "Saved gimmick state of '%#' was written for a different node set - matching nodes continue, new nodes start from their initial state", pName );
+        commitRestoredState();
+    }
+
+    void GimmickCircuitComponent::commitRestoredState()
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager != nullptr )
+            applyActuators( *pManager );
+        storeState();
     }
 
     void GimmickCircuitComponent::stepOnce()
@@ -552,35 +581,37 @@ namespace sw
 
     void GimmickCircuitComponent::captureCheckpoint()
     {
-        _circuit.saveState( _checkpointBytes );
+        _circuit.saveState( _checkpoint );
     }
 
     void GimmickCircuitComponent::restoreCheckpoint()
     {
-        if ( _checkpointBytes.empty() || _circuit.loadState( _checkpointBytes ) == false )
+        if ( _circuit.isBuilt() == false )
+            return;
+        if ( _checkpoint.isEmpty() )
+        {
+            // 잡은 체크포인트가 없다는 뜻이다(`resetCircuit` 이 비운다). 실패를 덮는 길이 아니다.
             _circuit.resetToInitial();
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr )
-            applyActuators( *pManager );
-        storeState();
+            commitRestoredState();
+            return;
+        }
+        applySavedState( _checkpoint );
     }
 
     void GimmickCircuitComponent::resetCircuit()
     {
-        _checkpointBytes.clear();
+        _checkpoint = GimmickCircuitState{};
         restoreCheckpoint();
     }
 
-    bool GimmickCircuitComponent::restoreStateBytes( const vector<uint8>& bytes )
+    bool GimmickCircuitComponent::restoreState( const GimmickCircuitState& state )
     {
-        if ( _circuit.isBuilt() == false || _circuit.loadState( bytes ) == false )
+        if ( _circuit.isBuilt() == false )
             return false;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr )
-            applyActuators( *pManager );
-        storeState();
+        const GimmickStateLoad loaded = _circuit.loadState( state, GimmickStateMatch::Exact );
+        if ( loaded._bApplied == false )
+            return false;
+        commitRestoredState();
         return true;
     }
 

@@ -24,7 +24,6 @@
 					<GimmickWireDesc _from="every.OnTick" _to="spawn.Spawn" _bInvert="false" />
 				</_listWire>
 				<_listRestPose />
-				<_stateBytes />
 			</GimmickCircuitComponent>
 		</_listComponent>
 	</GameObject>

@@ -80,7 +80,6 @@
 					<GimmickWireDesc _from="hold.Out" _to="door.Open" _bInvert="false" />
 				</_listWire>
 				<_listRestPose />
-				<_stateBytes />
 			</GimmickCircuitComponent>
 		</_listComponent>
 	</GameObject>

@@ -110,7 +110,6 @@
 						</_listNodeTarget>
 						<_listWire />
 						<_listRestPose />
-						<_stateBytes />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>
@@ -149,7 +148,6 @@
 						</_listNodeTarget>
 						<_listWire />
 						<_listRestPose />
-						<_stateBytes />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>
@@ -246,7 +244,6 @@
 							<GimmickWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
 						</_listWire>
 						<_listRestPose />
-						<_stateBytes />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>
@@ -315,7 +312,6 @@
 							<GimmickWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
 						</_listWire>
 						<_listRestPose />
-						<_stateBytes />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>
@@ -518,7 +514,6 @@
 							<GimmickWireDesc _from="flip.Out" _to="lift.Call0" _bInvert="true" />
 						</_listWire>
 						<_listRestPose />
-						<_stateBytes />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>

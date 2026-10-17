@@ -88,8 +88,8 @@ SW_TEST_CASE( GimmickSceneTest, PressurePlateInSceneDrivesDoor )
 
 /**
  * @brief [GimmickSceneTest] 3D 무버 — 발판 하나(곡선 + 회로)가 자기 곡선을 따라 가고, 오브젝트 상태로 저장한 회로 상태를 새 오브젝트가 이어 받는다
- * @details 곡선은 플레이 시작의 변환으로 굳어 발판이 움직여도 길은 그대로다. 저장한 상태(`_stateBytes`)는 로드의 `onPostLoad` 가 회로에 되돌린다 —
- *          레벨 세이브 · 핫 리로드가 지나는 길이다.
+ * @details 곡선은 플레이 시작의 변환으로 굳어 발판이 움직여도 길은 그대로다. 저장한 상태(`_state`, `GimmickCircuitState`)는 로드의 `onPostLoad` 가 회로에 되돌린다 —
+ *          레벨 세이브 · 핫 리로드가 지나는 길이다. XML 글을 지나도 해시가 같으므로 실수 필드(누적 시간 · 센서 값)가 비트까지 이어진다.
  */
 SW_TEST_CASE( GimmickSceneTest, MoverFollowsSplineAndStateSurvivesSaveLoad )
 {
@@ -138,6 +138,78 @@ SW_TEST_CASE( GimmickSceneTest, MoverFollowsSplineAndStateSurvivesSaveLoad )
     manager.flushSceneTransforms();
     SW_EXPECT_NEAR_EQUAL( 10.0f, pPlatform->getPrimarySceneComponent()->getWorldPosition()._x, 0.1f );
     manager.endPlay();
+}
+
+/**
+ * @brief [GimmickSceneTest] 레벨 세이브(바이너리 오브젝트 상태) — 플레이 중 저장한 회로를 새 오브젝트로 읽고 N 스텝을 더 돌리면 끊지 않고 돌린 쪽과 같은 해시다
+ */
+SW_TEST_CASE( GimmickSceneTest, StateSurvivesBinaryObjectStateAndContinues )
+{
+    GameObjectManager manager;
+    GameObject*       pLogic = manager.createGameObject( hashed_string( "Logic" ) );
+    SW_ASSERT_NOT_NULL( pLogic );
+    GimmickCircuitComponent* pCircuit = pLogic->addComponent<GimmickCircuitComponent>();
+    pCircuit->addNode( "clock", "Timer", "interval=0.25" );
+    pCircuit->addNode( "count", "Counter", "target=3" );
+    pCircuit->addNode( "delay", "Delay", "seconds=0.1" );
+    pCircuit->addWire( "clock.OnTick", "count.Count" );
+    pCircuit->addWire( "count.Reached", "delay.In" );
+    SW_ASSERT_TRUE( pCircuit->rebuild() );
+    manager.beginPlay();
+    test::updateFrames( manager, 47 ); // 지연 큐와 누적 시간이 비어 있지 않은 때
+
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pLogic, bytes ) );
+    GameObjectManager restoredManager;
+    GameObject*       pRestored = restoredManager.createGameObject( hashed_string( "Logic" ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size() ) > 0 );
+    GimmickCircuitComponent* pRestoredCircuit = pRestored->getComponent<GimmickCircuitComponent>();
+    SW_ASSERT_NOT_NULL( pRestoredCircuit );
+    SW_EXPECT_EQUAL( pCircuit->getCircuit().computeStateHash(), pRestoredCircuit->getCircuit().computeStateHash() );
+
+    for ( int32 stepIndex = 0; stepIndex < 120; ++stepIndex )
+    {
+        pCircuit->getCircuit().step();
+        pRestoredCircuit->getCircuit().step();
+    }
+    SW_EXPECT_EQUAL( pCircuit->getCircuit().computeStateHash(), pRestoredCircuit->getCircuit().computeStateHash() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GimmickSceneTest] 종류가 바뀐 노드 — 저장 상태의 노드와 같은 id 의 종류가 바뀌면 처음 상태로 조용히 시작하지 않고 오류를 남기며 회로가 돌지 않는다
+ */
+SW_TEST_CASE( GimmickSceneTest, ChangedNodeKindStopsCircuitWithError )
+{
+    GameObjectManager        manager;
+    GameObject*              pLogic   = manager.createGameObject( hashed_string( "Logic" ) );
+    GimmickCircuitComponent* pCircuit = pLogic->addComponent<GimmickCircuitComponent>();
+    pCircuit->addNode( "switch", "Constant", "value=1" );
+    pCircuit->addNode( "flip", "Toggle", "" );
+    pCircuit->addWire( "switch.Out", "flip.In" );
+    SW_ASSERT_TRUE( pCircuit->rebuild() );
+    pCircuit->stepOnce(); // 상태가 저장된다
+    SW_ASSERT_FALSE( pCircuit->getState().isEmpty() );
+    string       xml      = ObjectStateSerializer::saveToXMLString( pLogic );
+    const size_t kindText = xml.find( "Toggle" );
+    SW_ASSERT_TRUE( kindText != string::npos );
+    xml.replace( kindText, 6, "Pulse" ); // 디자이너가 같은 id 의 종류를 바꿨다 — 입력 이름과 정수 슬롯 수는 같다
+
+    GameObject* pLoaded = manager.createGameObject( hashed_string( "Loaded" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "gimmick saved state for a node whose kind changed" );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, xml ) );
+    }
+    const GimmickCircuitComponent* pLoadedCircuit = pLoaded->getComponent<GimmickCircuitComponent>();
+    SW_ASSERT_NOT_NULL( pLoadedCircuit );
+    SW_EXPECT_FALSE( pLoadedCircuit->getCircuit().isBuilt() );
+    bool bChangedNode = false;
+    for ( const string& error : pLoadedCircuit->getErrors() )
+    {
+        bChangedNode = bChangedNode || error.find( "does not fit node 'flip'" ) != string::npos;
+    }
+    SW_EXPECT_TRUE( bChangedNode );
+    SW_EXPECT_FALSE( pLoadedCircuit->getState().isEmpty() ); // 저장 상태는 지우지 않는다
 }
 
 /**
