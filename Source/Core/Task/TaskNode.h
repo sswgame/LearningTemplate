@@ -363,5 +363,7 @@ namespace sw
          * @details 마지막 카운터 뒤의 패딩 영역에 둡니다 — 노드 크기가 늘지 않습니다(프레임마다 수백 개를 기록하는 노드다).
          */
         MemoryTag _memoryTag{ MemoryTag::Unknown };
+        /** @brief 활성 수를 올린 칸(`ShardedCounterUtil::getCurrentThreadShard`)입니다. 완료할 때 같은 칸에서 내립니다. 위와 같은 패딩 영역입니다. */
+        uint8 _activeShard{ 0 };
     };
 } // namespace sw

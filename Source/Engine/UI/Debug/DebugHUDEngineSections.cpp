@@ -142,7 +142,7 @@ namespace sw
                 const array<MemoryTag, kMemoryTagCount> arrTag = pProfiler->makeTagOrderByLiveBytes();
                 for ( uint32 index = 0; index < kMemoryTagLineCount && index < kMemoryTagCount; ++index )
                 {
-                    const uint64 bytes = pProfiler->getStats( arrTag[index] )._currentAllocatedBytes.load( std::memory_order_relaxed );
+                    const uint64 bytes = pProfiler->getStats( arrTag[index] )._currentAllocatedBytes;
                     if ( bytes == 0 )
                         break;
                     writer.addLineFormat( MemoryProfiler::getMemoryTagName( arrTag[index] ), "%.1f MB", static_cast<float64>( bytes ) / constant::kBytesPerMegabyte );

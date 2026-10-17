@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/ShardedCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/array.h"
@@ -17,27 +18,78 @@
 
 namespace sw
 {
-    /** @brief 태그별 할당 · 해제 누적 통계입니다. */
+    /**
+     * @brief 태그 하나의 할당 · 해제 통계를 한 시점에 읽은 값입니다(`MemoryProfiler::getStats` 가 스레드 칸을 합쳐 만든다).
+     * @details 값이라 읽은 뒤에는 바뀌지 않습니다. 새 값이 필요하면 `getStats` 를 다시 부릅니다. 칸을 차례로 읽는 동안 다른 스레드가 더한 것은
+     *          들어갈 수도 빠질 수도 있습니다(한 순간의 값이 아니다).
+     */
     struct MemoryProfileStats
     {
-        atomic<uint64> _totalAllocatedBytes{ 0 };
-        atomic<uint64> _totalFreedBytes{ 0 };
-        atomic<uint64> _currentAllocatedBytes{ 0 };
-        atomic<uint64> _currentAllocationCount{ 0 };
+        uint64 _totalAllocatedBytes{ 0 };
+        uint64 _totalFreedBytes{ 0 };
+        /** @brief 지금 살아 있는 바이트입니다. 추적을 켜기 전에 잡힌 블록을 켠 뒤에 풀면 칸의 합이 0 아래로 갈 수 있어, 0 아래는 0 으로 읽습니다. */
+        uint64 _currentAllocatedBytes{ 0 };
+        /** @brief 지금 살아 있는 할당 수입니다(0 아래는 0). */
+        uint64 _currentAllocationCount{ 0 };
         /**
          * @brief 추적을 켠 뒤로 센 할당 **횟수**의 누계입니다. 해제해도 줄지 않습니다.
-         * @details "살아 있는 양"(위의 세 값)으로는 프레임 안에서 할당했다가 바로 해제한 것을 볼 수 없습니다. 그것이 churn 이고,
+         * @details "살아 있는 양"(위의 두 값)으로는 프레임 안에서 할당했다가 바로 해제한 것을 볼 수 없습니다. 그것이 churn 이고,
          *          상용 엔진이 프레임당 할당 수로 감시하는 것입니다. 두 시점의 차이를 프레임 수로 나눠 읽습니다(`FrameProfileSession`).
          */
-        atomic<uint64> _totalAllocationCount{ 0 };
-        /** @brief 추적을 켠 뒤(또는 `resetPeaks` 뒤) 살아 있던 바이트의 최고치입니다. 프레임 안에서 잡았다 놓은 순간 최고치도 잡힌다. */
-        atomic<uint64> _peakAllocatedBytes{ 0 };
-        /** @brief 살아 있던 할당 수의 최고치입니다. */
-        atomic<uint64> _peakAllocationCount{ 0 };
+        uint64 _totalAllocationCount{ 0 };
+        /**
+         * @brief 추적을 켠 뒤(또는 `resetPeaks` 뒤) **읽을 때마다 본** 살아 있는 바이트의 최고치입니다.
+         * @details 할당 경로는 칸에만 더하므로 최고치는 합을 읽는 쪽(`getStats` · 프레임마다의 `reportExceededBudgets` · 패널)이 올립니다 — 언리얼 LLM 이
+         *          스레드별 상태를 프레임마다 합칠 때 최고치를 보는 것과 같습니다. 두 번 읽는 사이에 잡았다 놓은 순간 최고치는 잡히지 않습니다.
+         */
+        uint64 _peakAllocatedBytes{ 0 };
+        /** @brief 읽을 때마다 본 살아 있는 할당 수의 최고치입니다. */
+        uint64 _peakAllocationCount{ 0 };
         /** @brief 예산(바이트)입니다. 0 이면 예산이 없다. 데이터(`Config/Engine/MemoryBudget.json`)가 정한다. */
-        atomic<uint64> _budgetBytes{ 0 };
+        uint64 _budgetBytes{ 0 };
         /** @brief 지금 예산을 넘은 상태로 알렸으면 true 입니다(경고는 넘을 때 한 번, 90 % 아래로 내려가면 다시 건다). */
-        atomic<bool> _bOverBudget{ false };
+        bool _bOverBudget{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 스레드 칸 하나 안의 태그 하나 몫입니다. 할당 · 해제 경로는 지금 스레드 칸의 이 값만 고칩니다.
+     * @details 살아 있는 양은 부호 있는 값입니다 — 한 스레드가 할당하고 다른 스레드가 해제하면 칸 하나는 음수가 되지만 합은 맞습니다.
+     *          칸 안에서 태그 몫(40 B)이 이어 있어 한 스레드의 할당은 자기 칸의 줄 하나만 건드립니다.
+     */
+    struct MemoryTagShardCounter
+    {
+        atomic<int64>  _liveBytes{ 0 };
+        atomic<int64>  _liveCount{ 0 };
+        atomic<uint64> _totalAllocatedBytes{ 0 };
+        atomic<uint64> _totalAllocationCount{ 0 };
+        atomic<uint64> _totalFreedBytes{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 스레드 칸 하나 — 모든 태그의 몫입니다(`ShardArray` 가 칸마다 캐시 라인 경계에 둔다). */
+    struct MemoryProfilerShard
+    {
+        MemoryTagShardCounter _arrTag[kMemoryTagCount]{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 태그마다 하나뿐인 값(최고치 · 예산)입니다. 할당 경로는 건드리지 않고, 합을 읽는 쪽이 고칩니다.
+     * @details 태그마다 캐시 라인 경계에서 시작해, 합을 읽는 스레드(프레임 예산 확인 · 패널)끼리 이웃 태그 줄을 나눠 쓰지 않습니다.
+     */
+    struct alignas( 64 ) MemoryTagSummary
+    {
+        atomic<uint64> _peakAllocatedBytes{ 0 };
+        atomic<uint64> _peakAllocationCount{ 0 };
+        atomic<uint64> _budgetBytes{ 0 };
+        atomic<bool>   _bOverBudget{ false };
     };
 } // namespace sw
 
@@ -153,8 +205,8 @@ namespace sw
          */
         void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash = 0 ) override;
 
-        /** @brief 태그별 할당 통계를 반환합니다. */
-        const MemoryProfileStats& getStats( MemoryTag tag ) const;
+        /** @brief 태그별 할당 통계를 지금 스레드 칸에서 합쳐 읽은 값입니다(칸 수만큼 읽는다 — 할당마다가 아니라 프레임 · 패널에서 부른다). 최고치도 이때 올린다. */
+        MemoryProfileStats getStats( MemoryTag tag ) const;
         /** @brief 모든 태그의 지금 살아 있는 바이트 합입니다. */
         uint64 getLiveAllocatedBytes() const;
         /** @brief 태그를 지금 살아 있는 바이트가 큰 순서로 늘어놓습니다(같으면 enum 순서). 보고와 에디터 패널이 같은 순서를 씁니다. */
@@ -206,11 +258,18 @@ namespace sw
         vector<CallStackAllocInfo> getTopCallStacks( TopCallStackOrder order = TopCallStackOrder::LiveBytes ) const;
 
     private:
+        /**
+         * @brief 태그 @p tagIndex 의 살아 있는 바이트 · 수를 칸에서 합쳐 읽고(0 아래는 0), 그 값으로 최고치를 올립니다.
+         * @details 최고치는 할당 경로가 아니라 합을 읽는 곳이 올립니다(`MemoryProfileStats::_peakAllocatedBytes`).
+         */
+        void computeTagLive( uint32 tagIndex, uint64& outLiveBytes, uint64& outLiveCount ) const;
+
         atomic<bool> _bInitialized;
         atomic<bool> _bTrackingEnabled;
         atomic<bool> _bDetailedTrackingEnabled;
 
-        MemoryProfileStats _arrStat[static_cast<uint32>( MemoryTag::MaxTags )];
+        ShardArray<MemoryProfilerShard> _shard;                          ///< 스레드 칸마다 모든 태그의 몫. 할당 · 해제는 지금 스레드 칸만 고친다
+        mutable MemoryTagSummary        _arrTagSummary[kMemoryTagCount]; ///< 태그마다 최고치 · 예산. 합을 읽는 const 함수도 최고치를 올리므로 mutable
 
         array<uint64, kMemoryTagCount> _arrBaselineBytes; ///< `captureTagBaseline` 시점의 태그별 살아 있는 바이트
         array<uint64, kMemoryTagCount> _arrBaselineCount; ///< 같은 시점의 태그별 살아 있는 블록 수

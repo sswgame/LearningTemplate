@@ -85,20 +85,20 @@ namespace sw
             return;
         if ( bitCount < BitMath::kMaxBitsPerCall )
             value &= ( 1u << bitCount ) - 1u;
-        // 낮은 비트부터 — 바이트 안에서도 낮은 비트부터 채운다. 한 번에 바이트의 남은 칸만큼씩(32 비트도 5 번 안).
+        // 낮은 비트부터 — 바이트 안에서도 낮은 비트부터 채운다. 지금 끝 바이트부터 닿는 바이트(32 비트에 자리 7 이면 5 개)를 64 비트 워드 하나로
+        // 모아 바이트로 내보낸다(바이트마다 자르고 옮기던 반복이 없다). 와이어 바이트는 같다(`BitStreamWireTest`). 끝 바이트 위쪽과 새로 늘린 바이트는
+        // 0 이라(값을 잘라 쓰고, `resize` 가 0 으로 늘린다) 워드에 끝 바이트만 합치면 된다.
         const int32 newBitCount = _bitCount + bitCount;
         _buffer.resize( static_cast<size_t>( ( newBitCount + 7 ) >> 3 ), 0 );
-        uint8* pBytes = _buffer.data();
-        while ( bitCount > 0 )
+        const int32  bitOffset    = _bitCount & 7;
+        const int32  touchedBytes = ( bitOffset + bitCount + 7 ) >> 3;
+        uint8*       pBytes       = _buffer.data() + ( _bitCount >> 3 );
+        const uint64 word         = static_cast<uint64>( pBytes[0] ) | ( static_cast<uint64>( value ) << bitOffset );
+        for ( int32 byteIndex = 0; byteIndex < touchedBytes; ++byteIndex )
         {
-            const int32  bitOffset = _bitCount & 7;
-            const int32  chunkBits = MathUtil::min( bitCount, 8 - bitOffset );
-            const uint32 chunk     = value & ( ( 1u << chunkBits ) - 1u );
-            pBytes[_bitCount >> 3] = static_cast<uint8>( pBytes[_bitCount >> 3] | ( chunk << bitOffset ) );
-            value >>= chunkBits;
-            bitCount -= chunkBits;
-            _bitCount += chunkBits;
+            pBytes[byteIndex] = static_cast<uint8>( word >> ( byteIndex * 8 ) );
         }
+        _bitCount = newBitCount;
     }
 
     bool BitWriter::writeInt( int32 value, int32 minValue, int32 maxValue )
@@ -234,18 +234,28 @@ namespace sw
             _bitPosition = _bitCapacity;
             return 0;
         }
-        uint32 value   = 0;
-        int32  written = 0;
-        while ( written < bitCount )
+        // 닿는 바이트를 64 비트 워드 하나로 읽어 한 번에 자른다. 뒤에 8 바이트 넘게 남았으면 8 바이트를 통째로 읽는다(x64 · ARM64 는 리틀 엔디언이라
+        // 바이트 순서가 비트 순서와 같다). 끝 근처에서는 닿는 바이트만 읽는다 — 버퍼 밖을 읽지 않는다.
+        const int32  bitOffset     = _bitPosition & 7;
+        const int32  byteIndex     = _bitPosition >> 3;
+        const int32  touchedBytes  = ( bitOffset + bitCount + 7 ) >> 3;
+        const int32  byteAvailable = ( _bitCapacity >> 3 ) - byteIndex;
+        const uint8* pBytes        = _pData + byteIndex;
+        uint64       word          = 0;
+        if ( byteAvailable >= static_cast<int32>( sizeof( word ) ) )
         {
-            const int32  bitOffset = _bitPosition & 7;
-            const int32  chunkBits = MathUtil::min( bitCount - written, 8 - bitOffset );
-            const uint32 chunk     = ( static_cast<uint32>( _pData[_bitPosition >> 3] ) >> bitOffset ) & ( ( 1u << chunkBits ) - 1u );
-            value |= chunk << written;
-            written += chunkBits;
-            _bitPosition += chunkBits;
+            std::memcpy( &word, pBytes, sizeof( word ) );
         }
-        return value;
+        else
+        {
+            for ( int32 touched = 0; touched < touchedBytes; ++touched )
+            {
+                word |= static_cast<uint64>( pBytes[touched] ) << ( touched * 8 );
+            }
+        }
+        _bitPosition += bitCount;
+        const uint64 mask = ( static_cast<uint64>( 1 ) << bitCount ) - 1u;
+        return static_cast<uint32>( ( word >> bitOffset ) & mask );
     }
 
     bool BitReader::readInt( int32 minValue, int32 maxValue, int32& outValue )

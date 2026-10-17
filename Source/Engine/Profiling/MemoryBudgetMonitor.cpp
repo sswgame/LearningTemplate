@@ -173,7 +173,7 @@ namespace sw
                 const string scopeName       = string( "Mem." ) + MemoryProfiler::getMemoryTagName( tag ) + "KB";
                 _arrTagCounterSlot[tagIndex] = frameProfiler.registerScope( scopeName.c_str() );
             }
-            frameProfiler.addCount( _arrTagCounterSlot[tagIndex], profiler.getStats( tag )._currentAllocatedBytes.load( std::memory_order_relaxed ) / 1024 );
+            frameProfiler.addCount( _arrTagCounterSlot[tagIndex], profiler.getStats( tag )._currentAllocatedBytes / 1024 );
         }
     }
 
@@ -189,24 +189,24 @@ namespace sw
         for ( const MemoryTag tag : profiler.makeTagOrderByLiveBytes() )
         {
             const MemoryProfileStats& stats  = profiler.getStats( tag );
-            const uint64              bytes  = stats._currentAllocatedBytes.load( std::memory_order_relaxed );
-            const uint64              budget = stats._budgetBytes.load( std::memory_order_relaxed );
+            const uint64              bytes  = stats._currentAllocatedBytes;
+            const uint64              budget = stats._budgetBytes;
             if ( bytes == 0 && budget == 0 )
                 continue;
             const uint64 kbX10        = toKilobytesX10( bytes );
-            const uint64 peakX10      = toKilobytesX10( stats._peakAllocatedBytes.load( std::memory_order_relaxed ) );
+            const uint64 peakX10      = toKilobytesX10( stats._peakAllocatedBytes );
             const uint64 sharePermill = liveBytes == 0 ? 0 : ( bytes * 1000 ) / liveBytes;
             if ( budget == 0 )
             {
                 SW_LOG_INFO( "[Memory]   %#  %#.%# KB  %#.%#%%  %# blocks | peak %#.%# KB  %# blocks", MemoryProfiler::getMemoryTagName( tag ), kbX10 / 10, kbX10 % 10,
-                             sharePermill / 10, sharePermill % 10, stats._currentAllocationCount.load( std::memory_order_relaxed ), peakX10 / 10, peakX10 % 10,
-                             stats._peakAllocationCount.load( std::memory_order_relaxed ) );
+                             sharePermill / 10, sharePermill % 10, stats._currentAllocationCount, peakX10 / 10, peakX10 % 10,
+                             stats._peakAllocationCount );
                 continue;
             }
             const uint64 usePermill = ( bytes * 1000 ) / budget;
             SW_LOG_INFO( "[Memory]   %#  %#.%# KB  %#.%#%%  %# blocks | peak %#.%# KB  %# blocks | budget %# KB  %#.%#%%%#", MemoryProfiler::getMemoryTagName( tag ),
-                         kbX10 / 10, kbX10 % 10, sharePermill / 10, sharePermill % 10, stats._currentAllocationCount.load( std::memory_order_relaxed ), peakX10 / 10,
-                         peakX10 % 10, stats._peakAllocationCount.load( std::memory_order_relaxed ), budget / 1024, usePermill / 10, usePermill % 10,
+                         kbX10 / 10, kbX10 % 10, sharePermill / 10, sharePermill % 10, stats._currentAllocationCount, peakX10 / 10,
+                         peakX10 % 10, stats._peakAllocationCount, budget / 1024, usePermill / 10, usePermill % 10,
                          bytes > budget ? "  OVER" : "" );
         }
 

@@ -8,6 +8,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/ShardedCounter.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/WorkStealingDeque.h"
@@ -198,7 +199,7 @@ namespace sw
         /** @brief 지금까지 워커를 깨운 시그널 수입니다. 테스트가 "그룹 하나에 한 번" 인지 확인하는 데 씁니다. */
         uint32 getWakeSignalCount() const { return _wakeSignalCount.load( std::memory_order_relaxed ); }
         /** @brief 만들어졌지만 아직 끝나지 않은 태스크 수입니다. `waitStage` · `waitAll` 이 돌아온 직후에는 그 태스크가 빠져 있어야 합니다(테스트용). */
-        uint32 getActiveTaskCount() const { return _activeTaskCount.load( std::memory_order_acquire ); }
+        uint32 getActiveTaskCount() const { return static_cast<uint32>( _activeTaskCount.sum( std::memory_order_acquire ) ); }
 
         /**
          * @brief 등록된 모든 비동기 태스크가 끝날 때까지 기다립니다.
@@ -331,12 +332,24 @@ namespace sw
 
         // --- 기다리기 ---
         /**
-         * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 작업을 돌리고, 준비된 일을 하나 돕거나, 잠깐 스핀합니다.
-         * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
-         * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채워 둡니다)
-         * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다.
+         * @brief 기다리는 스레드 하나의 스핀 상태입니다(`helpOrSpin` 이 고친다). 대기 함수의 스택에 둡니다.
+         * @details 큐는 `_workEpoch` 가 바뀌었을 때만 다시 봅니다 — 워커의 유휴 스핀과 같은 규칙입니다. 스핀마다 큐를 뒤지면 High · Normal 전역 큐의
+         *          읽기와 데크마다의 steal 을 대기자(게임 · 렌더 · 로더 스레드)가 64 번씩 반복해 워커와 같은 캐시 라인을 두드립니다.
          */
-        bool helpOrSpin( uint32& inoutSpinCount, bool bHelpLowQueue );
+        struct WaitSpinState
+        {
+            uint32 _spinCount{ 0 };         ///< 이번 스핀 예산에서 쓴 `cpuPause` 수
+            uint32 _observedWorkEpoch{ 0 }; ///< 마지막으로 큐를 볼 때 읽은 `_workEpoch`
+            bool   _bQueueCheckDue{ true }; ///< 세대와 상관없이 다음 걸음에 큐를 봐야 하면 true(처음 · 일을 하나 한 뒤 · 잠들었다 깬 뒤)
+        };
+        /**
+         * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 작업을 돌리고, 세대가 바뀌었으면 준비된 일을 하나 돕고, 아니면 잠깐 스핀합니다.
+         * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
+         * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채우고, 깬 뒤 첫 걸음에 큐를 보게 해 둡니다)
+         * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다. 큐에 넣는 쪽은 모두 세대를 올립니다(`submit` ·
+         *          티켓 · 묶음 끝의 `wakeSleepingWorkers`). `submitWithoutWake` 만 하고 깨우지 않은 묶음은 대기자도 깨우기 전까지 보지 않습니다 — 워커와 같습니다.
+         */
+        bool helpOrSpin( WaitSpinState& inoutState, bool bHelpLowQueue );
         /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 작업을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
         void waitForJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
@@ -353,6 +366,13 @@ namespace sw
         void cancelBroadcastWait();
         /** @brief 브로드캐스트 대기자가 있으면 브로드캐스트 세대를 올려 모두 깨웁니다. */
         void notifyBroadcast();
+        /**
+         * @brief 활성 수를 방금 내린 쪽이 부릅니다. `waitAll` 대기자가 있을 때만 합(칸 16 개)을 읽고, 0 이면 브로드캐스트합니다.
+         * @details 칸으로 나눈 수는 "내가 0 으로 만들었다" 를 알 수 없습니다. 대신 내리기(seq_cst) → 대기자 수 읽기(seq_cst)와 대기자 쪽의
+         *          대기자 수 올리기 → 펜스 → 합 읽기(seq_cst)가 Dekker 식 짝을 이뤄, 둘 중 하나는 상대를 봅니다. 마지막 두 완료가 겹쳐도 나중에 합을
+         *          읽는 쪽이 두 내리기를 모두 봅니다. 대기자가 없으면(거의 언제나) 원자 읽기 하나로 끝납니다.
+         */
+        void notifyBroadcastIfNoActiveTask();
         /** @brief 메인 스레드가(어느 대기에서든) 잠들어 있으면 깨웁니다. 메인 전용 작업이 들어왔을 때 부릅니다. */
         void wakeParkedMainThread();
         /** @brief 대기자 슬롯 @p slotIndex 의 스레드를 깨웁니다. 할 일 없는 워커(슬롯 = 워커 번호)와 기다리는 스레드 모두 이 함수 하나로 깨웁니다. */
@@ -453,7 +473,12 @@ namespace sw
         /** @brief 워커가 아닌 스레드(메인 · 렌더 · 로더 …)의 대기자 슬롯입니다. 번호는 `getCurrentThreadScratchSlot` 의 도우미 칸과 같습니다. */
         WaiterSlot _arrHelperWaiter[kMaxHelperThreadCount];
 
-        alignas( 64 ) atomic<uint32> _activeTaskCount; ///< 지금 실행 중이거나 대기 중인 활성 태스크의 총 수
+        /**
+         * @brief 지금 실행 중이거나 대기 중인 활성 태스크의 수입니다. 스레드 칸에 나눠 셉니다(`ShardedCounter`).
+         * @details 만든 스레드의 칸에서 올리고, 끝낸 스레드가 아니라 **같은 칸**(`TaskNode::_activeShard`)에서 내립니다. 그래야 합이 살아 있는
+         *          태스크를 놓쳐 `waitAll` 이 일찍 돌아오지 않습니다(`ShardedCounter.h` 계약).
+         */
+        ShardedCounter<int64> _activeTaskCount;
         /**
          * @brief `clear()` 가 활성 수를 0 으로 놓을 때마다 올리는 세대입니다. 노드는 만들 때의 값을 적어 둡니다(`TaskNode::_clearEpoch`).
          * @details 그 전에 만든 노드가 나중에 버려져도 이미 0 으로 놓은 수를 한 번 더 내리지 않게 가립니다(내리면 0xFFFFFFFF 로 돌아 `waitAll` 이 멈춘다).

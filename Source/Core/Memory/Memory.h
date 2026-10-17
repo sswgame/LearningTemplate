@@ -72,14 +72,42 @@ namespace sw
          */
         static void freeAligned( void* pPtr );
 
+        // 아래 넷은 헤더에 둔다. DLL 경계 너머의 호출이면 크기가 상수인 작은 복사 · 비교도 함수 호출 + `memcpy` 호출이 되지만, 여기 있으면
+        // 컴파일러가 내장 복사(레지스터 이동 몇 개)로 푼다. 계측 · 레이스 탐지가 붙지 않는 순수 바이트 연산이라 옮겨도 동작이 같다.
         /** @brief pSrc 에서 pDest 로 size 바이트를 복사합니다. */
-        static void* copy( void* pDest, const void* pSrc, size_t size );
+        static void* copy( void* pDest, const void* pSrc, size_t size )
+        {
+            const bool bNothingToCopy = pDest == nullptr || pSrc == nullptr || size == 0;
+            if ( bNothingToCopy )
+                return pDest;
+            return std::memcpy( pDest, pSrc, size );
+        }
         /** @brief 겹칠 수 있는 영역 pSrc 에서 pDest 로 size 바이트를 옮깁니다(memmove). */
-        static void* move( void* pDest, const void* pSrc, size_t size );
+        static void* move( void* pDest, const void* pSrc, size_t size )
+        {
+            const bool bNothingToMove = pDest == nullptr || pSrc == nullptr || size == 0;
+            if ( bNothingToMove )
+                return pDest;
+            return std::memmove( pDest, pSrc, size );
+        }
         /** @brief pDest 의 size 바이트를 value 로 채웁니다. */
-        static void* set( void* pDest, uint8 value, size_t size );
+        static void* set( void* pDest, uint8 value, size_t size )
+        {
+            if ( pDest == nullptr || size == 0 )
+                return pDest;
+            return std::memset( pDest, value, size );
+        }
         /** @brief 두 버퍼의 size 바이트를 비교합니다. 같으면 0 입니다. */
-        static int32 compare( const void* pLhs, const void* pRhs, size_t size );
+        static int32 compare( const void* pLhs, const void* pRhs, size_t size )
+        {
+            if ( pLhs == pRhs || size == 0 )
+                return 0;
+            if ( pLhs == nullptr )
+                return -1;
+            if ( pRhs == nullptr )
+                return 1;
+            return std::memcmp( pLhs, pRhs, size );
+        }
 
         // 일반 할당 함수
         static void* allocate( size_t size );

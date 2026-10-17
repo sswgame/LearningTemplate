@@ -753,13 +753,13 @@ namespace sw::editor
         tgaBytes[16] = 32;
         tgaBytes[17] = 0x28;
 
-        const uint64 totalBefore = pProfiler->getStats( MemoryTag::Animation )._totalAllocatedBytes.load();
+        const uint64 totalBefore = pProfiler->getStats( MemoryTag::Animation )._totalAllocatedBytes;
         RawImageData image;
         {
             SW_MEMORY_SCOPE( Animation );
             SW_ASSERT_TRUE( ImageUtil::loadImageFromMemory( tgaBytes.data(), tgaBytes.size(), image ) );
         }
-        const uint64 totalGrowth = pProfiler->getStats( MemoryTag::Animation )._totalAllocatedBytes.load() - totalBefore;
+        const uint64 totalGrowth = pProfiler->getStats( MemoryTag::Animation )._totalAllocatedBytes - totalBefore;
         SW_EXPECT_EQUAL( static_cast<int32>( kSide ), image._width );
         SW_EXPECT_TRUE_MSG( totalGrowth >= 2 * kPixelBytes, ( string( "Animation bytes allocated while decoding: " ) + to_string( totalGrowth ) ).c_str() );
     }

@@ -78,11 +78,14 @@ namespace sw
         /**
          * @brief 뒤쪽에서 꺼냅니다(LIFO). **소유 스레드만** 부릅니다.
          * @details 마지막 하나는 훔치는 쪽과 경쟁합니다. CAS 로 승자를 정하고, 지면 false 를 반환합니다.
+         *          비어 있으면 `_bottom` 을 내리고 펜스를 치기 **전에** 돌아옵니다. `_top` 은 오르기만 하므로 낡게 읽은 값은 실제보다 작고,
+         *          그 값으로도 비었다면(`top >= bottom`) 실제로 비었습니다(`_bottom` 은 소유 스레드만 바꾼다). 워커는 큐를 볼 때마다 자기
+         *          데크부터 pop 하므로, 빈 데크에서 seq_cst 펜스를 치지 않는 것이 할 일 없는 워커 · 대기자의 바닥 비용을 줄입니다.
          */
         bool pop( T& outItem )
         {
             uint64 bottom = _bottom.load( std::memory_order_relaxed );
-            if ( bottom == 0 )
+            if ( _top.load( std::memory_order_relaxed ) >= bottom )
                 return false;
 
             bottom -= 1;
@@ -118,9 +121,18 @@ namespace sw
         /**
          * @brief 앞쪽에서 꺼냅니다(FIFO). **다른 스레드가** 부릅니다.
          * @details 항목을 먼저 읽고 CAS 로 확정합니다. CAS 에서 지면 그 항목은 다른 쪽이 가져간 것이므로 버립니다.
+         *          비어 보이면 seq_cst 펜스 **전에** relaxed 읽기 둘로 돌아옵니다. 할 일 없는 워커는 데크를 한 바퀴(워커 수만큼) 훑으므로
+         *          빈 데크마다 펜스를 치면 그것이 훑기 비용의 대부분입니다. 낡은 `_bottom` 때문에 방금 넣은 항목을 못 볼 수 있지만, CAS 에서
+         *          진 경우처럼 실패는 "이번에는 못 가져왔다" 일 뿐이고(원래도 펜스 뒤의 `_bottom` 읽기가 같은 순간을 본다), 잠들기 전의
+         *          마지막 확인은 부르는 쪽(`TaskManager::workerLoop`)이 유휴 비트를 올린 뒤 친 seq_cst 펜스 뒤에서 합니다.
          */
         bool steal( T& outItem )
         {
+            const uint64 observedTop    = _top.load( std::memory_order_relaxed );
+            const uint64 observedBottom = _bottom.load( std::memory_order_relaxed );
+            if ( observedTop >= observedBottom )
+                return false;
+
             uint64 top = _top.load( std::memory_order_acquire );
             std::atomic_thread_fence( std::memory_order_seq_cst );
             uint64 bottom = _bottom.load( std::memory_order_acquire );

@@ -1040,12 +1040,12 @@ namespace sw::editor
                 for ( const MemoryTag tag : profiler.makeTagOrderByLiveBytes() )
                 {
                     const auto& stats = profiler.getStats( tag );
-                    if ( tag != MemoryTag::Unknown && stats._totalAllocatedBytes.load() == 0 )
+                    if ( tag != MemoryTag::Unknown && stats._totalAllocatedBytes == 0 )
                         continue;
 
-                    const uint64 currentBytes = stats._currentAllocatedBytes.load();
+                    const uint64 currentBytes = stats._currentAllocatedBytes;
                     ProfilerPanelInternal::formatBytes( currentBytes, arrBytesBuf );
-                    ProfilerPanelInternal::formatBytes( stats._totalAllocatedBytes.load(), arrTotalBuf );
+                    ProfilerPanelInternal::formatBytes( stats._totalAllocatedBytes, arrTotalBuf );
 
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
@@ -1055,7 +1055,7 @@ namespace sw::editor
                     ImGui::TableNextColumn();
                     ImGui::Text( "%.1f%%", liveBytes == 0 ? 0.0 : static_cast<float64>( currentBytes ) * 100.0 / static_cast<float64>( liveBytes ) );
                     ImGui::TableNextColumn();
-                    ImGui::Text( "%u", static_cast<uint32>( stats._currentAllocationCount.load() ) );
+                    ImGui::Text( "%u", static_cast<uint32>( stats._currentAllocationCount ) );
                     ImGui::TableNextColumn();
 
                     ImGui::Text( "%s", arrTotalBuf.c_str() );

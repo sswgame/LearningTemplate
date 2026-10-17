@@ -16,6 +16,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/LogTypes.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 #include <condition_variable>
 
@@ -96,6 +97,11 @@ namespace sw
         void waitForRetiredBroadcasts( uint32 retiredSlot );
         /** @brief 세대를 넘기고 넘기기 전 칸을 돌려줍니다. _mutex 를 쥐고 부릅니다. */
         uint32 retireBroadcastSlot();
+        /**
+         * @brief 리스너 목록이 바뀐 뒤 생산자가 볼 사본(`_listenerSnapshot`)을 새로 만듭니다. _mutex 를 쥐고 부릅니다.
+         * @details 생산자는 줄마다 목록을 복사하지 않고 이 사본의 참조 하나만 잡습니다(리스너가 바뀔 때만 복사한다).
+         */
+        void rebuildListenerSnapshot();
 
         /**
          * @brief 달 수 있는 출력 장치의 최대 개수입니다.
@@ -110,18 +116,20 @@ namespace sw
         ConcurrentQueue<LogRecord, 4096> _queue;
         sw::thread                       _workerThread;
         std::condition_variable_any      _cv;
-        mutex                            _mutex;         ///< 리스너 목록과 출력 목록을 보호한다
-        mutex                            _cvMutex;       ///< 조건 변수 대기용 뮤텍스
-        mutex                            _timeMutex;     ///< 타임스탬프 계산과 문자열 캐시를 보호한다
-        std::time_t                      _cachedTimeSec; ///< 초 단위로 캐시한 시스템 시각
-        int32                            _cachedYear;
-        int32                            _cachedMonth;
-        int32                            _cachedDay;
-        int32                            _cachedHour;
-        atomic<uint32>                   _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 칸). 떼기가 이전 세대가 빌 때까지 기다린다
-        uint32                           _broadcastEpoch;          ///< 방송 세대. _mutex 로 보호한다
-        atomic<bool>                     _bIsRunning;
-        atomic<bool>                     _bInitialized;                             ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)
-        utf8                             _arrCachedDateStr[constant::kMaxBuffer32]; ///< 캐시한 날짜 문자열(YYYY-M-D H:M: 형식)
+        mutex                            _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
+        mutex                            _cvMutex; ///< 조건 변수 대기용 뮤텍스
+        /** @brief 리스너 목록의 불변 사본입니다. 리스너가 없으면 nullptr 입니다. _mutex 로 보호하고, 생산자는 참조만 잡아 락 밖에서 부른다. */
+        shared_ptr<const LogWrittenMulticast> _listenerSnapshot;
+        atomic<uint32>                        _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 칸). 떼기가 이전 세대가 빌 때까지 기다린다
+        uint32                                _broadcastEpoch;          ///< 방송 세대. _mutex 로 보호한다
+        atomic<bool>                          _bIsRunning;
+        atomic<bool>                          _bInitialized; ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)
+        atomic<bool>                          _bHasListener; ///< 리스너가 하나라도 있으면 true. 생산자가 없을 때 _mutex 를 건너뛴다
+        /**
+         * @brief 작업 스레드가 조건 변수에서 잠들려 하거나 잠들어 있으면 true 입니다. 생산자는 이때만 깨웁니다.
+         * @details 작업 스레드는 `_cvMutex` 를 쥔 채 이 값을 올리고(seq_cst) 큐를 확인한 뒤 잠들고, 생산자는 넣기 → 펜스 → 이 값을 봅니다(Dekker 짝).
+         *          생산자는 깨우기 전에 `_cvMutex` 를 한 번 잡았다 놓아, 작업 스레드가 확인과 잠들기 사이에 있을 때 깨우기를 놓치지 않게 합니다.
+         */
+        atomic<bool> _bWorkerSleeping;
     };
 } // namespace sw

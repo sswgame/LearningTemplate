@@ -140,7 +140,7 @@ SW_TEST_CASE( PagedArrayTest, ChunkIsCountedUnderTheCurrentMemoryTag )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
 
     constexpr uint64 kChunkBytes = 1024 * sizeof( uint64 );
-    const uint64     before      = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load();
+    const uint64     before      = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes;
     uint64           held{ 0 };
     {
         PagedArray<uint64, 1024, 4> pages;
@@ -148,9 +148,9 @@ SW_TEST_CASE( PagedArrayTest, ChunkIsCountedUnderTheCurrentMemoryTag )
             SW_MEMORY_SCOPE( Physics );
             SW_ASSERT_TRUE( pages.ensure( 5 ) != nullptr );
         }
-        held = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load();
+        held = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes;
     }
-    const uint64 after = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load();
+    const uint64 after = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes;
     SW_EXPECT_TRUE_MSG( held >= before + kChunkBytes, ( string( "Physics bytes grew by " ) + to_string( held - before ) ).c_str() );
     SW_EXPECT_TRUE( after < before + kChunkBytes );
 }

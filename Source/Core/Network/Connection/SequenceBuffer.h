@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/NetTypes.h"
@@ -17,6 +18,9 @@ namespace sw
      * @class SequenceBuffer
      * @brief 자리 = 시퀀스 & (크기 - 1) 입니다. 자리마다 들어 있는 시퀀스를 같이 적어 두어, 오래된(감겨 덮인) 것을 찾으면 없다고 합니다.
      * @tparam kSize 칸 수입니다. 2 의 거듭제곱이고 시퀀스 공간의 절반(32768) 이하입니다 — 넘으면 "가장 새 것보다 크기만큼 뒤"가 앞뒤를 가를 수 없습니다.
+     * @details 칸을 다시 쓸 때(`insert`) 원소가 `void resetForReuse()` 를 가지면 그것을 부르고, 아니면 `T{}` 를 대입합니다. 버퍼를 가진 원소(신뢰 메시지의
+     *          `vector<uint8>`)는 `resetForReuse` 로 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다 — `T{}` 대입은 버퍼를 놓아, 칸이 돌 때마다
+     *          다시 할당하게 합니다.
      */
     template <typename T, uint32 kSize>
     class SequenceBuffer
@@ -54,7 +58,10 @@ namespace sw
             }
             const size_t index   = computeIndex( sequence );
             _listSequence[index] = sequence;
-            _listEntry[index]    = T{};
+            if constexpr ( HasResetForReuse<T>::value )
+                _listEntry[index].resetForReuse();
+            else
+                _listEntry[index] = T{};
             return &_listEntry[index];
         }
 
@@ -88,6 +95,16 @@ namespace sw
         static constexpr int32 getSize() { return static_cast<int32>( kSize ); }
 
     private:
+        /** @brief 원소가 칸 재사용 함수(`resetForReuse`)를 가졌는지입니다. */
+        template <typename U, typename = void>
+        struct HasResetForReuse : std::false_type
+        {
+        };
+        template <typename U>
+        struct HasResetForReuse<U, std::void_t<decltype( std::declval<U&>().resetForReuse() )>> : std::true_type
+        {
+        };
+
         static size_t computeIndex( uint16 sequence ) { return static_cast<size_t>( sequence & ( kSize - 1 ) ); }
 
         vector<T>      _listEntry{};
