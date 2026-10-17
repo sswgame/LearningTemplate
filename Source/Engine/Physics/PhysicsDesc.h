@@ -238,7 +238,7 @@ namespace sw
         float32        _vertexMass{ 0.05f };       ///< 고정되지 않은 정점 하나의 질량(kg)
         float32        _stretchCompliance{ 0.0f }; ///< 변 늘어남(0 이면 늘어나지 않는다)
         float32        _shearCompliance{ 0.0f };   ///< 사각형 대각선 비틀림
-        float32        _bendCompliance{ 1.0e-3f }; ///< 이웃 삼각형 사이 굽힘(음수면 굽힘 구속을 만들지 않는다)
+        float32        _bendCompliance{ 1.0e-3f }; ///< 이웃 삼각형 사이 굽힘 — 공유 변 맞은편 두 정점 사이 거리 구속(음수면 굽힘 구속을 만들지 않는다)
         float32        _linearDamping{ 0.1f };
         float32        _friction{ 0.2f };
         float32        _gravityFactor{ 1.0f };
