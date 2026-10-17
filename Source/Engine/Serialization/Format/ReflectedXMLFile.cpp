@@ -33,7 +33,9 @@ namespace sw
         vector<SchemaOrphanValue> listOrphan;
         if ( XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan ) == false )
         {
-            SW_LOG_ERROR( "XML 로드 실패: %# (%#) — <%#> 문서가 아닙니다", assetRelativePath, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
+            // 범위 밖 값도 여기로 온다 — 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
+            SW_LOG_ERROR( "XML 로드 실패: %# (%#) — <%#> 문서가 아니거나 선언된 범위 밖 값이 있습니다", assetRelativePath, pTypeInfo->_name.c_str(),
+                          pTypeInfo->_name.c_str() );
             return false;
         }
         for ( const SchemaOrphanValue& orphan : listOrphan )
@@ -41,13 +43,7 @@ namespace sw
             const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
             SW_LOG_ERROR( "%#: '%#' is unknown to %# or its value '%#' cannot be read", assetRelativePath, pName, pTypeInfo->_name.c_str(), orphan._text.c_str() );
         }
-        vector<string> listRangeError;
-        SerializerUtil::collectRangeErrors( *pTypeInfo, pDesc, string(), listRangeError );
-        for ( const string& rangeError : listRangeError )
-        {
-            SW_LOG_ERROR( "%#: %#", assetRelativePath, rangeError.c_str() );
-        }
-        return listOrphan.empty() && listRangeError.empty();
+        return listOrphan.empty();
     }
 
     bool ReflectedXMLFile::saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo )

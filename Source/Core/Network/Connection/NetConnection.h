@@ -67,7 +67,8 @@ namespace sw
         static constexpr int32   kMessageSizeBits           = 11;        ///< 0~1024. 메시지 또는 조각 하나의 길이 필드 비트 수.
         static constexpr float64 kDefaultAckRequestInterval = 0.25;
         static constexpr int32   kMaxReliablePerPacket      = 64;  ///< 패킷 하나에 싣는 신뢰 메시지 상한(보낸 패킷 기록이 힙을 쓰지 않게 한다).
-        static constexpr int32   kReliableWindow            = 256; ///< 확인되지 않은 신뢰 메시지의 상한. 넘으면 `sendMessage` 가 거절한다(막힘).
+        static constexpr int32   kReliableWindow            = 256; ///< 확인되지 않은 신뢰 메시지의 상한. 넘으면 `sendMessage` 가 거절한다(막힘). 2 의 거듭제곱(`SequenceBuffer`).
+        static constexpr uint32  kPacketWindow              = 256; ///< 보낸 · 받은 패킷을 기억하는 칸 수. 2 의 거듭제곱(`SequenceBuffer`).
         static constexpr int32   kPacketHeaderBits          = 16 + 16 + 32;
         static constexpr int32   kFastResendGap             = 3;    ///< 이만큼 뒤의 패킷이 확인됐는데 확인이 없으면 잃은 것으로 본다.
         static constexpr float64 kResendMargin              = 0.05; ///< 재전송 간격은 RTT에 이 여유를 더한 값이다(흔들림과 상대의 보내기 간격을 흡수한다).
@@ -186,26 +187,26 @@ namespace sw
         /** @brief 순서가 온 신뢰 조각 하나를 넘기거나(조각이 하나뿐인 경우) 모읍니다(마지막 조각에서 한 메시지로 넘깁니다). */
         void deliverReliable( IncomingReliable& incoming );
 
-        SequenceBuffer<SentPacket>       _sentPackets;
-        SequenceBuffer<ReceivedPacket>   _receivedPackets;
-        SequenceBuffer<OutgoingReliable> _outgoingReliable;
-        SequenceBuffer<IncomingReliable> _incomingReliable;
-        deque<vector<uint8>>             _arrIncoming[static_cast<int32>( NetChannelType::Count )];
-        vector<vector<uint8>>            _listOutgoingSequenced; ///< 종류(첫 바이트)마다 가장 새 메시지 하나. 쌓인 순서대로 보관한다.
-        deque<QueuedUnreliable>          _listOutgoingUnreliable;
-        vector<ParsedMessage>            _listParsedScratch;    ///< 받은 패킷을 먼저 다 읽어 두는 스크래치 버퍼(용량을 다시 쓴다).
-        vector<SequencedStream>          _listSequencedReceive; ///< 순서만 채널에서 종류마다 마지막으로 넘긴 번호.
-        vector<uint8>                    _listReliableAssembly; ///< 모으는 중인 신뢰 순서 메시지(앞 조각들). 마지막 조각이 오면 넘긴다.
-        NetConnectionStats               _stats;
-        float64                          _lastStatsTime;
-        float64                          _lastAckRequestTime; ///< 확인을 요청한 패킷을 마지막으로 보낸 시각.
-        uint16                           _nextPacketSequence;
-        uint16                           _nextReliableSendID;
-        uint16                           _oldestUnackedReliableID;
-        uint16                           _nextReliableReceiveID;
-        uint16                           _nextSequencedSendID;
-        uint8                            _bAckPending;         ///< 받은 패킷이 있어 확인을 돌려줘야 한다.
-        uint8                            _bDiscardingAssembly; ///< 모으던 메시지가 상한을 넘었다(상대의 규약 위반). 마지막 조각까지 버린다.
-        uint8                            _bUnreliableFirst;    ///< 다음 패킷은 순서만과 비신뢰 메시지부터 싣는다(앞 패킷의 조각이 그쪽을 남겼다).
+        SequenceBuffer<SentPacket, kPacketWindow>                                _sentPackets;
+        SequenceBuffer<ReceivedPacket, kPacketWindow>                            _receivedPackets;
+        SequenceBuffer<OutgoingReliable, static_cast<uint32>( kReliableWindow )> _outgoingReliable;
+        SequenceBuffer<IncomingReliable, static_cast<uint32>( kReliableWindow )> _incomingReliable;
+        deque<vector<uint8>>                                                     _arrIncoming[static_cast<int32>( NetChannelType::Count )];
+        vector<vector<uint8>>                                                    _listOutgoingSequenced; ///< 종류(첫 바이트)마다 가장 새 메시지 하나. 쌓인 순서대로 보관한다.
+        deque<QueuedUnreliable>                                                  _listOutgoingUnreliable;
+        vector<ParsedMessage>                                                    _listParsedScratch;    ///< 받은 패킷을 먼저 다 읽어 두는 스크래치 버퍼(용량을 다시 쓴다).
+        vector<SequencedStream>                                                  _listSequencedReceive; ///< 순서만 채널에서 종류마다 마지막으로 넘긴 번호.
+        vector<uint8>                                                            _listReliableAssembly; ///< 모으는 중인 신뢰 순서 메시지(앞 조각들). 마지막 조각이 오면 넘긴다.
+        NetConnectionStats                                                       _stats;
+        float64                                                                  _lastStatsTime;
+        float64                                                                  _lastAckRequestTime; ///< 확인을 요청한 패킷을 마지막으로 보낸 시각.
+        uint16                                                                   _nextPacketSequence;
+        uint16                                                                   _nextReliableSendID;
+        uint16                                                                   _oldestUnackedReliableID;
+        uint16                                                                   _nextReliableReceiveID;
+        uint16                                                                   _nextSequencedSendID;
+        uint8                                                                    _bAckPending;         ///< 받은 패킷이 있어 확인을 돌려줘야 한다.
+        uint8                                                                    _bDiscardingAssembly; ///< 모으던 메시지가 상한을 넘었다(상대의 규약 위반). 마지막 조각까지 버린다.
+        uint8                                                                    _bUnreliableFirst;    ///< 다음 패킷은 순서만과 비신뢰 메시지부터 싣는다(앞 패킷의 조각이 그쪽을 남겼다).
     };
 } // namespace sw

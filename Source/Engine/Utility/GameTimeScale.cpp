@@ -54,9 +54,11 @@ namespace sw
         s_unscaledDeltaSeconds = MathUtil::max( deltaSeconds, 0.0f );
     }
 
-    float32 GameTimeScale::getUnscaledDeltaTime( float32 fallbackDeltaSeconds )
+    float32 GameTimeScale::getUnscaledDeltaTime()
     {
-        return s_unscaledDeltaSeconds >= 0.0f ? s_unscaledDeltaSeconds : fallbackDeltaSeconds;
+        // 적은 적이 없는 값을 다른 시간(벽시계 · 배율 걸린 경과)으로 대신하지 않는다 — 대신하면 녹화와 재생이 다른 시간을 읽는다.
+        SW_ASSERT( s_unscaledDeltaSeconds >= 0.0f );
+        return s_unscaledDeltaSeconds;
     }
 } // namespace sw
 

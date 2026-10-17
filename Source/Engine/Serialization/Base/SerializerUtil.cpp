@@ -2,9 +2,9 @@
 
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
@@ -104,6 +104,72 @@ namespace sw
                 outListError.push_back( path + " = " + to_string( value ) + " is outside [" + lower + ", " + upper + "]" );
             }
 
+            /** @brief 프로퍼티가 `Min` 이나 `Max` 를 선언했는지입니다. 선언이 없으면 숫자를 읽지 않습니다. */
+            static bool hasDeclaredRange( const PropertyMetadata& meta )
+            {
+                return meta._bHasMinRange == SW_TRUE || meta._bHasMaxRange == SW_TRUE;
+            }
+
+            /** @brief @p pValue(@p typeName 의 숫자)가 @p meta 의 범위 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
+            static bool isNumberWithinRange( const string_view typeName, const void* pValue, const PropertyMetadata& meta )
+            {
+                float64 value = 0.0;
+                if ( readRangeNumber( typeName, pValue, value ) == false )
+                    return true;
+                const bool bBelow = meta._bHasMinRange == SW_TRUE && value < static_cast<float64>( meta._minRange );
+                const bool bAbove = meta._bHasMaxRange == SW_TRUE && value > static_cast<float64>( meta._maxRange );
+                return bBelow == false && bAbove == false;
+            }
+
+            /**
+             * @brief `collectRangeErrors` 와 같은 칸을 같은 규칙으로 보되 글을 만들지 않고 첫 위반에서 멈춥니다. 읽기마다 도는 빠른 길입니다.
+             * @details 범위를 선언하지 않은 숫자 칸은 값을 읽지 않습니다. 위반이 있을 때만 `collectRangeErrors` 가 경로가 붙은 글을 만듭니다.
+             */
+            static bool isEveryValueWithinRange( const TypeInfo& typeInfo, const void* pInstance )
+            {
+                for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+                {
+                    const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
+                    if ( bSkipProperty )
+                        continue;
+                    const void* const pValue = prop.getRawPtr( pInstance );
+                    if ( prop._bIsContainer == SW_TRUE )
+                    {
+                        const bool bNestedContainer = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
+                        const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
+                        if ( bSequence == false )
+                            continue;
+                        const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault() );
+                        const bool      bNumberRange = pElement == nullptr && hasDeclaredRange( prop._metadata );
+                        if ( pElement == nullptr && bNumberRange == false )
+                            continue;
+                        ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
+                        const size_t               elementCount = pSequence->getSize( pValue );
+                        for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                        {
+                            const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
+                            const bool        bWithin       = pElement != nullptr ? isEveryValueWithinRange( *pElement, pElementValue )
+                                                                                  : isNumberWithinRange( prop._elementTypeName.view(), pElementValue, prop._metadata );
+                            if ( bWithin == false )
+                                return false;
+                        }
+                        continue;
+                    }
+                    // 숫자 칸은 범위를 선언했을 때만 본다. 숫자가 아닌 칸만 중첩 구조체인지 찾는다(숫자 칸마다 타입 조회를 하지 않는다).
+                    float64 value = 0.0;
+                    if ( readRangeNumber( prop._typeName.view(), pValue, value ) )
+                    {
+                        if ( hasDeclaredRange( prop._metadata ) && isNumberWithinRange( prop._typeName.view(), pValue, prop._metadata ) == false )
+                            return false;
+                        continue;
+                    }
+                    const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, SerializeContext::getDefault() );
+                    if ( pNested != nullptr && isEveryValueWithinRange( *pNested, pValue ) == false )
+                        return false;
+                }
+                return true;
+            }
+
             /** @brief uint32 하나를 리틀 엔디언 그대로 덧붙입니다. */
             static void appendUint32( vector<uint8>& buffer, uint32 value )
             {
@@ -192,14 +258,10 @@ namespace sw
             /** @brief 모르는 열거자 이름을 알립니다. enum 과 이름마다 한 번만 알립니다(같은 세이브의 오브젝트 천 개가 천 줄을 쓰지 않게 하려는 것입니다). */
             static void warnUnknownEnumeratorOnce( const EnumInfo& enumInfo, uint32 nameHash )
             {
-                static mutex                 s_mutex;
-                static unordered_set<uint64> s_uniqueWarnedKeys;
-                const uint64                 key = ( static_cast<uint64>( enumInfo._fullyQualifiedName.getHash() ) << 32 ) | nameHash;
-                {
-                    std::lock_guard<mutex> lock( s_mutex );
-                    if ( s_uniqueWarnedKeys.insert( key ).second == false )
-                        return;
-                }
+                // "한 번만"의 상태는 범위(테스트 케이스 · 프로세스)에 속한다(`LogOnce`). 함수 안 정적 집합이면 테스트 순서가 로그 판정을 바꾼다.
+                const uint64 key = ( static_cast<uint64>( enumInfo._fullyQualifiedName.getHash() ) << 32 ) | nameHash;
+                if ( LogOnce::tryClaim( LogOnceKind::UnknownEnumerator, key ) == false )
+                    return;
                 SW_LOG_WARNING( "%#: a saved enumerator (name hash %#) is not a value of it any more - the field keeps its current value (once per enumerator)",
                                 enumInfo._fullyQualifiedName.c_str(), nameHash );
             }
@@ -1068,5 +1130,18 @@ namespace sw
             if ( Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
                 Internal::appendRangeError( path, value, prop._metadata, outListError );
         }
+    }
+
+    bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const void* pInstance )
+    {
+        if ( SerializerUtilInternal::isEveryValueWithinRange( typeInfo, pInstance ) )
+            return true;
+        vector<string> listRangeError;
+        collectRangeErrors( typeInfo, pInstance, string(), listRangeError );
+        for ( const string& rangeError : listRangeError )
+        {
+            SW_LOG_ERROR( "%#: %# - the read fails", typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
+        }
+        return false;
     }
 } // namespace sw

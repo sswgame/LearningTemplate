@@ -561,9 +561,11 @@ namespace sw
         }
     }
 
-    void Engine::beginFrame( float32 deltaSeconds )
+    void Engine::beginFrame( float32 deltaSeconds, float32 unscaledDeltaSeconds )
     {
         _frameDeltaSeconds = deltaSeconds;
+        // 실제 경과는 호스트가 따로 적는 단계가 아니라 프레임 시작의 인자다 — 적지 않은 호스트가 생길 수 없다.
+        GameTimeScale::setUnscaledDeltaTime( unscaledDeltaSeconds );
         // 관찰자의 프레임 앞 단계(시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계)는 이 프레임의 입력 재생 전이다.
         if ( _listFrameObserver.empty() == false )
         {
@@ -577,7 +579,7 @@ namespace sw
             _pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _pUISystem != nullptr && _pUISystem->isInitialized() )
-            _pUISystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
+            _pUISystem->processInput( GameTimeScale::getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
 
         if ( gv_dumpReflection.empty() == false )
         {
@@ -615,8 +617,10 @@ namespace sw
         // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 % 를 측정했나" 에
         // 답할 수 없다. 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
         SW_PROFILE_SCOPE( "GT.Frame" );
+#if SW_DEV_COMMANDS_ENABLED
         // 개발 명령 `profile.stall` 이 건 지연을 이 구간 안에서 소비합니다. 스파이크를 프레임 비용에 기대지 않고 만듭니다.
         FrameStall::consume();
+#endif
 
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
         {
@@ -699,7 +703,7 @@ namespace sw
             }
             const UIViewport viewport =
                 _pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
-            _pUISystem->update( GameTimeScale::getUnscaledDeltaTime( deltaTime ), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+            _pUISystem->update( GameTimeScale::getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).

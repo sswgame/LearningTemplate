@@ -235,7 +235,7 @@ namespace sw
         static void                 writeRawBits( BitWriter& writer, uint64 value, int32 bitCount );
         [[nodiscard]] static uint64 readRawBits( BitReader& reader, int32 bitCount );
 
-        /** @brief 열거형을 기반 타입 전체 폭으로 씁니다(`ENUM( Count )` 가 없을 때입니다). */
+        /** @brief 비트 플래그 열거형(`ENUM( Flags )`)을 기반 타입 전체 폭으로 씁니다. 플래그가 아닌 열거형은 열거자 범위 비트(`writeRangedInteger`)로 씁니다. */
         template <typename E>
         static void writeEnumBits( BitWriter& writer, const E value )
         {
@@ -281,7 +281,7 @@ namespace sw
     {
     public:
         /** @brief 인코딩 규칙(가변 정수 꼴, 양자화 반올림, 스트림 머리)의 버전입니다. 규칙을 바꾸면 이 값을 올려 모든 스키마 해시를 바꿉니다. */
-        static constexpr uint32 kVersion = 1;
+        static constexpr uint32 kVersion = 2; ///< 2: `Count` 없는 열거형을 기반 타입 전체 폭 대신 [최소 열거자, 최대 열거자] 범위 비트로 쓴다.
 
         // ------------------------------------------------------------------------------
         // 1) 진입점

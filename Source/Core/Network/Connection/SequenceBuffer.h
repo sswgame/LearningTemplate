@@ -2,6 +2,8 @@
  * @file SequenceBuffer.h
  * @brief 16 비트 시퀀스로 찾는 고리 버퍼 — 보낸 패킷 · 받은 패킷 · 보낸 메시지를 시퀀스 번호로 기억합니다.
  * @details 감기는 시퀀스라 낡은 것을 거절하고 건너뛴 칸을 비웁니다. 감기지 않는 32 비트 틱 · 프레임은 `TickRingBuffer`(Replication 층 — 낡음은 쓰는 쪽이 본다).
+ *          크기는 형식의 일부(템플릿 상수)이고 2 의 거듭제곱이어야 합니다. 크기가 65536 의 약수가 아니면 시퀀스가 65535 → 0 으로 감길 때
+ *          자리(시퀀스 % 크기)가 이어지지 않아 감김 직전과 직후의 시퀀스가 같은 칸을 덮습니다. 실행 중 크기(0 이면 1 로 바꾸던 폴백 포함)는 받지 않습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -13,18 +15,22 @@ namespace sw
 {
     /**
      * @class SequenceBuffer
-     * @brief 자리 = 시퀀스 % 크기 입니다. 자리마다 들어 있는 시퀀스를 같이 적어 두어, 오래된(감겨 덮인) 것을 찾으면 없다고 합니다.
+     * @brief 자리 = 시퀀스 & (크기 - 1) 입니다. 자리마다 들어 있는 시퀀스를 같이 적어 두어, 오래된(감겨 덮인) 것을 찾으면 없다고 합니다.
+     * @tparam kSize 칸 수입니다. 2 의 거듭제곱이고 시퀀스 공간의 절반(32768) 이하입니다 — 넘으면 "가장 새 것보다 크기만큼 뒤"가 앞뒤를 가를 수 없습니다.
      */
-    template <typename T>
+    template <typename T, uint32 kSize>
     class SequenceBuffer
     {
+        static_assert( kSize > 0 && ( kSize & ( kSize - 1 ) ) == 0, "SequenceBuffer size must be a power of two (a divisor of 65536)" );
+        static_assert( kSize <= 32768, "SequenceBuffer size must not exceed half the 16-bit sequence space" );
+
     public:
         static constexpr uint32 kEmpty = invalid_index::kUint32;
 
-        explicit SequenceBuffer( int32 size = 256 )
+        SequenceBuffer()
         {
-            _listEntry.resize( static_cast<size_t>( size > 0 ? size : 1 ) );
-            _listSequence.assign( _listEntry.size(), kEmpty );
+            _listEntry.resize( kSize );
+            _listSequence.assign( kSize, kEmpty );
         }
 
         /** @brief 넣고 그 자리를 돌려줍니다. 지금 가장 새 것보다 크게 낡았으면 nullptr 입니다. */
@@ -38,7 +44,7 @@ namespace sw
                 if ( _bHasNewest )
                 {
                     const int32 gap = NetSequence::computeDifference( sequence, _newest );
-                    for ( int32 offset = 1; offset < gap && offset <= static_cast<int32>( _listEntry.size() ); ++offset )
+                    for ( int32 offset = 1; offset < gap && offset <= static_cast<int32>( kSize ); ++offset )
                     {
                         _listSequence[computeIndex( static_cast<uint16>( _newest + offset ) )] = kEmpty;
                     }
@@ -62,7 +68,7 @@ namespace sw
         /** @brief 넣으려 해도 너무 낡아(가장 새 것보다 크기만큼 넘게 뒤) `insert` 가 거절할 시퀀스면 true 입니다. */
         bool isStale( uint16 sequence ) const
         {
-            return _bHasNewest && NetSequence::isLess( sequence, static_cast<uint16>( _newest - static_cast<uint16>( _listEntry.size() ) ) );
+            return _bHasNewest && NetSequence::isLess( sequence, static_cast<uint16>( _newest - static_cast<uint16>( kSize ) ) );
         }
         void remove( uint16 sequence )
         {
@@ -72,17 +78,17 @@ namespace sw
         }
         void reset()
         {
-            _listSequence.assign( _listEntry.size(), kEmpty );
+            _listSequence.assign( kSize, kEmpty );
             _bHasNewest = false;
             _newest     = 0;
         }
 
-        uint16 getNewest() const { return _newest; }
-        bool   hasNewest() const { return _bHasNewest; }
-        int32  getSize() const { return static_cast<int32>( _listEntry.size() ); }
+        uint16                 getNewest() const { return _newest; }
+        bool                   hasNewest() const { return _bHasNewest; }
+        static constexpr int32 getSize() { return static_cast<int32>( kSize ); }
 
     private:
-        size_t computeIndex( uint16 sequence ) const { return static_cast<size_t>( sequence ) % _listEntry.size(); }
+        static size_t computeIndex( uint16 sequence ) { return static_cast<size_t>( sequence & ( kSize - 1 ) ); }
 
         vector<T>      _listEntry{};
         vector<uint32> _listSequence{};

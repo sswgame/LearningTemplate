@@ -521,9 +521,11 @@ namespace sw
             SerializerUtil::applyPropertyDefault( prop, pInstance, context );
         }
 
-        if ( pOutListOrphan != nullptr )
-            return true;
-        return bFieldError == false;
+        // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 칸을 목록으로 넘기고 계속한다. 선언된 범위는 어느 쪽이든 읽기 공통 끝에서 본다(바이너리 · XML 과 같다).
+        const bool bStrictFieldError = pOutListOrphan == nullptr && bFieldError;
+        if ( bStrictFieldError )
+            return false;
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
     }
 
     bool JSONSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,

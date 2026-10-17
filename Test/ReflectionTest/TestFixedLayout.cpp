@@ -204,6 +204,24 @@ SW_TEST_CASE( FixedLayoutTest, SamplesRoundTripAtTheBoundaries )
 }
 
 /**
+ * @brief [FixedLayoutTest] `Count` 가 없는 열거형도 기반 타입 전체 폭이 아니라 [최소 열거자, 최대 열거자] 범위 비트로 씁니다
+ * @details 예전에는 `Count` 를 적었는지에 따라 같은 세 열거자가 2 비트 또는 8 비트였습니다. 열거자 밖의 값은 쓰기가 실패합니다.
+ */
+SW_TEST_CASE( FixedLayoutTest, EnumsWithoutCountUseEnumeratorRangeBits )
+{
+    sw::FixedEnumBSample sample;
+    sample._color = sw::EFixedColorB::Blue;
+    sw::BitWriter writer;
+    SW_ASSERT_TRUE( sw::FixedLayout::write( sample, writer ) );
+    SW_EXPECT_EQUAL( 64 + 2, writer.getBitCount() ); // 스키마 해시 64 비트 + 열거자 셋(0..2)의 2 비트
+    SW_EXPECT_TRUE( roundTrip( sample )._color == sw::EFixedColorB::Blue );
+
+    sample._color = static_cast<sw::EFixedColorB>( 3 );
+    sw::BitWriter outOfRange;
+    SW_EXPECT_FALSE( sw::FixedLayout::write( sample, outOfRange ) );
+}
+
+/**
  * @brief [FixedLayoutTest] 코덱에 없는 필드(Transient)는 읽기 대상의 값이 남습니다. 읽기는 대상의 복사본에서 시작합니다
  */
 SW_TEST_CASE( FixedLayoutTest, ReadKeepsFieldsOutsideTheCodec )
@@ -497,3 +515,34 @@ SW_TEST_CASE( FixedLayoutTest, OwnFieldRangeBecomesAReaderForTheInspector )
     SW_EXPECT_TRUE( pY->_metadata._bHasMinRange == SW_FALSE );
 }
 #endif
+/**
+ * @brief [FixedLayoutTest] 자기 기술형 세 포맷의 일반 읽기도 `Min` · `Max` 밖 값을 성공으로 돌려주지 않습니다(A-19)
+ * @details 예전에는 설정 · 데이터 · 격투 세이브처럼 `collectRangeErrors` 를 직접 부른 호출부만 범위를 봤습니다. 이제 읽기 공통 끝이 봅니다.
+ */
+SW_TEST_CASE( FixedLayoutTest, SelfDescribingFormatsRejectValuesOutsideDeclaredRange )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "reads reject a value outside PROPERTY( Min, Max )" );
+    const sw::TypeInfo&   typeInfo = *sw::FixedScalarSample::StaticType();
+    sw::FixedScalarSample source   = makeScalarSample();
+    source._hp                     = 101;  // Max = 100
+    source._speed                  = 1.0f; // NaN 은 JSON 이 다른 이유로 실패할 수 있다
+
+    sw::vector<uint8> binary;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &source, typeInfo, binary ) ); // 쓰기는 범위를 보지 않는다
+    sw::FixedScalarSample fromBinary;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &fromBinary, typeInfo, binary.data(), binary.size() ) );
+
+    sw::FixedScalarSample fromJSON;
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromJSON, typeInfo, sw::JSONSerializer::serialize( &source, typeInfo ) ) );
+
+    sw::FixedScalarSample fromXML;
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &fromXML, typeInfo, sw::XMLSerializer::serialize( &source, typeInfo ) ) );
+
+    // 경계 값은 읽힌다.
+    source._hp = 100;
+    sw::vector<uint8> inRange;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &source, typeInfo, inRange ) );
+    sw::FixedScalarSample fromInRange;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromInRange, typeInfo, inRange.data(), inRange.size() ) );
+    SW_EXPECT_EQUAL( 100, fromInRange._hp );
+}

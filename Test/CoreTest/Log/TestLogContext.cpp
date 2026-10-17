@@ -3,6 +3,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/LogContext.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/LogSink/AsyncLogSink.h"
 #include "Core/LogSink/ILogOutput.h"
@@ -172,4 +173,18 @@ SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
     SW_EXPECT_TRUE_MSG( first.find( "[Test] [Probe] [Info] [tick=0] - first tick\n" ) != string::npos, first.c_str() );
     SW_EXPECT_TRUE_MSG( both.find( "[Test] [Probe] [Info] [tick=1234] [acct=0000000000000042] - tick and context\n" ) != string::npos, both.c_str() );
     SW_EXPECT_TRUE_MSG( cleared.find( "[Test] [Probe] [Info] - cleared\n" ) != string::npos, cleared.c_str() );
+}
+
+/**
+ * @brief [LogContextTest] "한 번만" 경고의 상태는 범위에 속한다 — 범위 안에서는 종류와 키마다 한 번, 새 범위에서는 다시 처음이다
+ * @details 예전에는 함수 안 정적 집합이라 앞 테스트가 낸 경고 때문에 뒤 테스트의 경고가 사라져 로그 판정이 테스트 순서에 따라 바뀌었다.
+ */
+SW_TEST_CASE( LogContextTest, LogOnceClaimsOncePerScopeAndKind )
+{
+    LogOnce::beginScope();
+    SW_EXPECT_TRUE( LogOnce::tryClaim( LogOnceKind::SkippedField, 7 ) );
+    SW_EXPECT_FALSE( LogOnce::tryClaim( LogOnceKind::SkippedField, 7 ) );
+    SW_EXPECT_TRUE( LogOnce::tryClaim( LogOnceKind::UnknownEnumerator, 7 ) ); // 종류마다 키 공간이 따로다
+    LogOnce::beginScope();
+    SW_EXPECT_TRUE( LogOnce::tryClaim( LogOnceKind::SkippedField, 7 ) );
 }

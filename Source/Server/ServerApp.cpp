@@ -494,7 +494,7 @@ namespace sw
     void ServerApp::updateOnce( float32 deltaSeconds )
     {
         // App::run 의 한 프레임에서 창, 에디터, 사용자 설정, 백엔드 교체를 뺀 것이다. 한 틱은 고정 스텝 하나다.
-        _engine.beginFrame( deltaSeconds );
+        _engine.beginFrame( deltaSeconds, deltaSeconds ); // 서버에는 시간 배율이 없다 — 틱 하나가 실제 경과다.
         _moduleHost->beginFrame();
         {
             SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );

@@ -219,7 +219,7 @@ _client.call( ChatMethod::kSend, request, onReply );
 ### 3.7 열거형
 
 - 값만 씁니다. 이름 해시는 쓰지 않습니다. 열거자를 바꾸면 스키마 해시가 바뀌므로 이름이 필요 없습니다.
-- `ENUM( Count = … )` 가 있으면 `[최소 열거자, Count - 1]` 범위 비트 수로 씁니다. 없으면 기반 타입 전체 폭입니다.
+- `ENUM( Count = … )` 가 있으면 `[최소 열거자, Count - 1]`, 없으면 `[최소 열거자, 최대 열거자]` 범위 비트 수로 씁니다. 기반 타입 전체 폭으로 쓰지 않습니다(인코딩 버전 2). 범위가 32 비트를 넘는 열거형은 생성 오류입니다.
 - 읽을 때 등록된 열거자 값이 아니면 `OutOfRange` 입니다. 생성기가 열거자 값 목록을 `switch` 로 만들어 실행 시간 조회가 없습니다. `FightingMatch.cpp:1174-1175` 의 `bBadEnum` 손 검사가 여기에 해당합니다.
 - `ENUM( Flags )` 는 기반 타입 폭의 비트로 쓰고, 등록된 비트 밖의 비트가 켜져 있으면 쓰기와 읽기가 모두 실패합니다.
 
@@ -527,7 +527,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 같은 상태를 두 벌 두지 않도록 `RoundSeries` · `InputCommandBuffer` 의 손 코덱(`writeState(BitWriter)` · `readState(BitReader)`)과 그 테스트도 지웠습니다.
 기반 헤더 셋이 바뀌었습니다. `FrameData.h`(`MoveTimeline` 의 `REFLECT`, `GuardStance` 의 `ENUM`), `InputCommandBuffer.h`(`InputFrame` · `InputCommandBuffer` 의 `REFLECT`, `clear` 가 칸을 비움),
 `RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.
-세이브 읽기는 자기 기술형이 `Min` · `Max` 를 보지 않으므로 `SerializerUtil::collectRangeErrors` 를 직접 부릅니다.
+세이브 읽기의 `Min` · `Max` 는 자기 기술형 세 포맷의 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 봅니다. 호출부가 따로 부르지 않습니다.
 이 함수는 시퀀스 원소까지 늘 보고, 범위를 어디까지 볼지 부르는 쪽이 고르는 인자를 두지 않습니다(설정 JSON · 데이터 XML · 세이브가 같은 계약).
 
 단계 6 은 끝났습니다(2026-10-17). 컴팩트 모드와 호출부 없는 `cloneObject` 를 지웠고(1.1), 같은 묶음으로 `A-13` · `A-14` 를 고쳤습니다(1.2, 1.4).

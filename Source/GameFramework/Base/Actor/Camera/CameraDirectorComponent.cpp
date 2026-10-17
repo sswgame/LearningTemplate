@@ -332,7 +332,7 @@ namespace sw
             return;
         // 포토 모드는 게임이 멈춰도 움직이므로 실제 경과로 돌고, 게임 카메라에는 입력을 주지 않는다.
         if ( _photoMode.isActive() )
-            gatherPhotoModeInput( GameTimeScale::getUnscaledDeltaTime( deltaTime ) );
+            gatherPhotoModeInput( GameTimeScale::getUnscaledDeltaTime() );
         else
             gatherInput( deltaTime );
         // 틱 중이면 틱 뒤로 미룬다 — 대상의 이번 프레임 자리는 틱이 끝나야 적용된다. 여러 번 불려도 시간은 모아 한 번 쓴다.

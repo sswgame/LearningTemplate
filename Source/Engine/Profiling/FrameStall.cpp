@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#if SW_DEV_COMMANDS_ENABLED
 namespace sw
 {
     namespace
@@ -14,7 +15,6 @@ namespace sw
         /** @brief 다음 `consume` 이 붙잡을 시간(밀리초)입니다. 0 이면 걸린 지연이 없습니다. 개발 명령이 쓰고 게임 스레드가 비웁니다. */
         atomic<int32> s_pendingStallMilliseconds{ 0 };
 
-#if SW_DEV_COMMANDS_ENABLED
         struct FrameStallInternal
         {
             /** @brief 한 번에 걸 수 있는 가장 긴 지연(밀리초)입니다. 잘못 친 값이 시나리오 시한보다 오래 창을 멈추지 않게 합니다. */
@@ -37,7 +37,6 @@ namespace sw
                 return true;
             }
         };
-#endif
     } // namespace
 
     void FrameStall::request( int32 milliseconds )
@@ -53,8 +52,7 @@ namespace sw
         MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( milliseconds ) * constant::kNanosecondsPerMillisecond );
     }
 
-#if SW_DEV_COMMANDS_ENABLED
     SW_DEV_COMMAND( ProfileStall, "profile.stall", "profile.stall <ms>", "Hold the next game thread frame for that many milliseconds (profiler spike checks)",
                     &FrameStallInternal::runStall );
-#endif
 } // namespace sw
+#endif

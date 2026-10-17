@@ -765,7 +765,8 @@ namespace sw
         vector<SchemaOrphanValue> listOrphan;
         if ( XMLSerializerInternal::tryAppendUnknownXMLChildOrphans( xmlStr, typeInfo, context, &listOrphan ) && listOrphan.empty() == false )
             return false;
-        return true;
+        // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
     }
 
     string XMLSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
@@ -838,7 +839,8 @@ namespace sw
         if ( pOutListOrphan != nullptr )
             XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
 
-        return true;
+        // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
     }
 
     string XMLSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,

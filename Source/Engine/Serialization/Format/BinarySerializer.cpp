@@ -3,7 +3,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "Core/Compression/CompressionStream.h"
-#include "Core/Concurrency/mutex.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
@@ -86,14 +86,10 @@ namespace sw
              */
             static void warnSkippedFieldOnce( const TypeInfo& typeInfo, uint32 nameHash )
             {
-                static mutex                 s_mutex;
-                static unordered_set<uint64> s_setWarned;
-                const uint64                 key = ( static_cast<uint64>( typeInfo._name.getHash() ) << 32 ) | nameHash;
-                {
-                    std::lock_guard<mutex> lock( s_mutex );
-                    if ( s_setWarned.insert( key ).second == false )
-                        return;
-                }
+                // "한 번만"의 상태는 범위(테스트 케이스 · 프로세스)에 속한다(`LogOnce`). 함수 안 정적 집합이면 테스트 순서가 로그 판정을 바꾼다.
+                const uint64 key = ( static_cast<uint64>( typeInfo._name.getHash() ) << 32 ) | nameHash;
+                if ( LogOnce::tryClaim( LogOnceKind::SkippedField, key ) == false )
+                    return;
                 SW_LOG_WARNING( "%#: a saved field (name hash %#) is not in the type any more - skipped (once per field)", typeInfo._name.c_str(), nameHash );
             }
 
@@ -104,14 +100,9 @@ namespace sw
              */
             static void warnUnreadableFieldOnce( const TypeInfo& typeInfo, const PropertyInfo& prop )
             {
-                static mutex                 s_mutex;
-                static unordered_set<uint64> s_setWarned;
-                const uint64                 key = ( static_cast<uint64>( typeInfo._name.getHash() ) << 32 ) | prop.getNameHash();
-                {
-                    std::lock_guard<mutex> lock( s_mutex );
-                    if ( s_setWarned.insert( key ).second == false )
-                        return;
-                }
+                const uint64 key = ( static_cast<uint64>( typeInfo._name.getHash() ) << 32 ) | prop.getNameHash();
+                if ( LogOnce::tryClaim( LogOnceKind::UnreadableField, key ) == false )
+                    return;
                 SW_LOG_WARNING( "%#: saved field '%#' (%#) could not be read - it is skipped and the rest is read (once per field)", typeInfo._name.c_str(),
                                 prop._name.c_str(), prop._typeName.c_str() );
             }
@@ -267,7 +258,8 @@ namespace sw
                     if ( bMatched == false && bOutsideSaveGame == false )
                         SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, context );
                 }
-                return true;
+                // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
+                return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
             }
 
             /**

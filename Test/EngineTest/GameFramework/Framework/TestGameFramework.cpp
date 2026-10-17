@@ -25,6 +25,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/TileMap/TileSetAsset.h"
+#include "Engine/Utility/GameTimeScale.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -821,6 +822,8 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
         sceneManager.updateTransitions();
     };
 
+    // 엔진 없이 게임 인스턴스를 돌리므로 `Engine::beginFrame` 대신 실제 경과를 직접 적는다(페이드 · 로딩 화면이 읽는다).
+    sw::GameTimeScale::setUnscaledDeltaTime( 0.016f );
     SceneGameInstance gameInstance;
     gameInstance.setEntranceScene( scenePath );
     SW_ASSERT_EQUAL( scenePath, gameInstance.getEntranceScene() );
@@ -1075,7 +1078,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIDsOnlyWithinTheSameProcess )
 }
 
 /**
- * @brief [GameFrameworkTest] PROPERTY 가 아닌 컴포넌트 상태는 스냅샷의 컴포넌트 섹션으로 다시 만든 컴포넌트에 돌아온다 — 같은 실행은 id 로, 다른 실행은 순서로
+ * @brief [GameFrameworkTest] PROPERTY 가 아닌 컴포넌트 상태는 스냅샷의 컴포넌트 섹션으로 다시 만든 컴포넌트에 돌아온다 — 같은 실행은 id 로, 다른 실행은 씬 섹션이 만든 id 표로
  * @details 디렉터의 시뮬레이션(밭 · 도시 · 전장)이 핫 리로드 · 세이브를 넘는 길이다(`ComponentStateStore`). 씬 섹션만으로는 `_counter` 가 0 으로 돌아온다.
  */
 SW_TEST_CASE( GameFrameworkTest, ComponentStateRidesTheSnapshotToTheRecreatedComponent )
@@ -1136,17 +1139,25 @@ SW_TEST_CASE( GameFrameworkTest, ComponentStateRidesTheSnapshotToTheRecreatedCom
         SW_EXPECT_EQUAL( 1, pRestoredFirst->_restoreCount );
     }
 
-    BLOCK( "다른 실행의 세이브(토큰이 다르다) — 새 id 라 같은 타입 안의 순서로 짝짓는다" )
+    BLOCK( "다른 실행의 세이브(토큰이 다르다) — 새 id 지만 저장된 id → 새 id 표로 제 오브젝트의 컴포넌트에 돌아간다" )
     {
         vector<uint8> foreign = snapshot;
         foreign[8] ^= 0xFF; // 토큰의 첫 바이트
         SW_ASSERT_TRUE( instance.restoreSnapshot( foreign ) );
         pManager->mergePendingAdds();
-        vector<int32> listCounter;
-        pManager->forEachComponentOfType<MockRuntimeStateComponent>( [&listCounter]( MockRuntimeStateComponent* pComponent )
-        { listCounter.push_back( pComponent->_counter ); } );
-        SW_ASSERT_EQUAL( size_t( 2 ), listCounter.size() );
-        SW_EXPECT_TRUE( ( listCounter[0] == 41 && listCounter[1] == 77 ) || ( listCounter[0] == 77 && listCounter[1] == 41 ) );
+        int32 firstCounter  = -1;
+        int32 secondCounter = -1;
+        pManager->forEachComponentOfType<MockRuntimeStateComponent>( [&firstCounter, &secondCounter]( MockRuntimeStateComponent* pComponent )
+        {
+            const GameObject* pOwner = pComponent->getOwner();
+            if ( pOwner != nullptr && pOwner->getName() == hashed_string( "FirstDirector" ) )
+                firstCounter = pComponent->_counter;
+            else if ( pOwner != nullptr && pOwner->getName() == hashed_string( "SecondDirector" ) )
+                secondCounter = pComponent->_counter;
+        } );
+        // 전역 순회 순서와 무관하게 제 오브젝트의 상태다(예전에는 순서로 맞춰 둘이 바뀔 수 있었다).
+        SW_EXPECT_EQUAL( 41, firstCounter );
+        SW_EXPECT_EQUAL( 77, secondCounter );
     }
 }
 
@@ -1222,14 +1233,21 @@ SW_TEST_CASE( GameFrameworkTest, ComponentStateStoreRejectsBrokenBytes )
     ComponentStateStore readStore;
     Archive             reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( readStore.read( reader ) );
-    const ComponentStateStore::Entry* pByID = readStore.findEntry( hashed_string( "Director" ), 8, 0 );
+    const ComponentStateStore::Entry* pByID = readStore.findEntry( hashed_string( "Director" ), 8 );
     SW_ASSERT_NOT_NULL( pByID );
     SW_EXPECT_EQUAL( size_t( 1 ), pByID->_bytes.size() );
     SW_EXPECT_EQUAL( uint8( 4 ), pByID->_bytes[0] );
-    const ComponentStateStore::Entry* pByOrder = readStore.findEntry( hashed_string( "Director" ), 99, 0 );
-    SW_ASSERT_NOT_NULL( pByOrder );
-    SW_EXPECT_EQUAL( uint8( 9 ), pByOrder->_bytes[0] );
-    SW_EXPECT_TRUE( readStore.findEntry( hashed_string( "Other" ), 7, 0 ) == nullptr );
+    SW_EXPECT_TRUE( readStore.findEntry( hashed_string( "Director" ), 99 ) == nullptr ); // id 가 맞지 않으면 차례로 대신하지 않는다
+    // 다른 실행의 세이브: 저장된 id 를 이번 id 로 바꾸고, 표에 없는 항목(다시 만들어지지 않은 컴포넌트)은 지운다.
+    readStore.remapComponentIDs( {
+        ComponentStateStore::SavedComponentID{ 7, 100 }
+    } );
+    SW_ASSERT_EQUAL( size_t( 1 ), readStore.getEntries().size() );
+    const ComponentStateStore::Entry* pRemapped = readStore.findEntry( hashed_string( "Director" ), 100 );
+    SW_ASSERT_NOT_NULL( pRemapped );
+    SW_EXPECT_EQUAL( uint8( 9 ), pRemapped->_bytes[0] );
+    SW_EXPECT_TRUE( readStore.findEntry( hashed_string( "Director" ), 8 ) == nullptr );
+    SW_EXPECT_TRUE( readStore.findEntry( hashed_string( "Other" ), 100 ) == nullptr );
 
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( readStore.read( cut ) );
