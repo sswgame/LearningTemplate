@@ -89,7 +89,8 @@ endif()
 #   레이어 복사(sw_deployRuntimeDependencies) : 변수 sw_vulkan_validation
 #   켜기(VulkanRHIDevice 생성자) · 그것을 보는 테스트(AppSmokeTest) : 매크로 SW_VULKAN_VALIDATION
 # 세 곳이 조건을 따로 적으면 한쪽만 바뀐다. 그러면 레이어가 없는 구성에서 테스트가 돌아 꺼진 레이어를 실패로 본다.
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+# 출시 빌드는 빌드 형식이 Debug 여도 레이어를 싣지 않는다(배포물에 개발용 DLL 이 들어가지 않게).
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT SW_SHIPPING_BUILD)
 	set(sw_vulkan_validation ON)
 	target_compile_definitions(sw_global_options INTERFACE SW_VULKAN_VALIDATION)
 else()

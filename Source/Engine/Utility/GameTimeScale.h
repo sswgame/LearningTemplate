@@ -32,11 +32,15 @@ namespace sw
         /** @brief 지금 걸린 정지 요청 수입니다. */
         static uint32 getPauseRequestCount();
         /**
-         * @brief 호스트가 이번 프레임의 실제 경과(배율 · 정지와 무관, 최대 델타로 자름)를 적습니다(App 루프 — `FrameTime::_unscaledDeltaTime`).
+         * @brief 이번 프레임의 실제 경과(배율 · 정지와 무관, 최대 델타로 자름)를 적습니다. `Engine::beginFrame` 이 호스트에게 받은 값으로 부릅니다
+         *        (App 은 `FrameTime::_unscaledDeltaTime`, 서버는 틱 길이). 엔진 없이 게임 인스턴스를 돌리는 테스트는 직접 적습니다.
          * @details 게임이 멈춰도 도는 것 — 런타임 UI(정지 메뉴의 애니메이션 · 탐색 반복) · 화면 전환 페이드 · 로딩 화면 — 이 읽습니다(유니티 `Time.unscaledDeltaTime`).
          */
         static void setUnscaledDeltaTime( float32 deltaSeconds );
-        /** @brief 이번 프레임의 실제 경과입니다. 호스트가 적은 적이 없으면(테스트 하니스 · 다른 호스트) @p fallbackDeltaSeconds 입니다. */
-        static float32 getUnscaledDeltaTime( float32 fallbackDeltaSeconds );
+        /**
+         * @brief 이번 프레임의 실제 경과입니다. 적은 적이 없으면 단언으로 멈춥니다.
+         * @details 대신할 값(ImGui 벽시계 · 배율 걸린 경과)을 받지 않습니다 — 받으면 호출부마다 다른 시간을 고르고, 시나리오 녹화(벽시계)와 재생(고정 스텝)이 어긋납니다.
+         */
+        static float32 getUnscaledDeltaTime();
     };
 } // namespace sw

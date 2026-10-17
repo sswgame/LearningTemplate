@@ -4,11 +4,14 @@
  * @details 프로파일러의 스파이크 정지 같은 기능을 시나리오가 확인하려면 문턱을 넘는 프레임이 필요합니다. 그 프레임을 에디터 프레임 비용에서
  *          기대하면 구성마다 결과가 달라집니다(Release 의 `GT.Frame` 은 0.1 ms 안팎입니다). 그래서 지연을 명시적으로 걸고,
  *          `Engine::update` 가 `GT.Frame` 구간 안에서 그 지연을 한 번 소비합니다.
+ *          개발 명령이 없는 구성(Shipping)에는 형식째 없습니다 — 걸 방법이 없는 지연을 매 프레임 확인하지 않고, 출시 빌드에 프레임을 붙잡는 길을 남기지 않습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Console/DevCommandsEnabled.h"
 
+#if SW_DEV_COMMANDS_ENABLED
 namespace sw
 {
     /**
@@ -23,3 +26,4 @@ namespace sw
         static void consume();
     };
 } // namespace sw
+#endif

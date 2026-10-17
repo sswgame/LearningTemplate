@@ -24,6 +24,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Utility/GameTimeScale.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -820,6 +821,8 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
         sceneManager.updateTransitions();
     };
 
+    // 엔진 없이 게임 인스턴스를 돌리므로 `Engine::beginFrame` 대신 실제 경과를 직접 적는다(페이드 · 로딩 화면이 읽는다).
+    sw::GameTimeScale::setUnscaledDeltaTime( 0.016f );
     SceneGameInstance gameInstance;
     gameInstance.setEntranceScene( scenePath );
     SW_ASSERT_EQUAL( scenePath, gameInstance.getEntranceScene() );

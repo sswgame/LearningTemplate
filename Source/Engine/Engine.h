@@ -93,8 +93,10 @@ namespace sw
          * @brief 입력 등을 시작하는 프레임의 첫 단계입니다.
          * @param deltaSeconds 지난 프레임의 실제 시간(초). 입력 장치의 타이머(진동 길이 · 게임패드 재연결 주기)가 이 값으로 흐릅니다.
          *                     고정값으로 흘리면 0.3 초 진동이 144 fps 에서 0.13 초로 끝납니다.
+         * @param unscaledDeltaSeconds 이번 프레임의 실제 경과(배율 · 정지와 무관). `GameTimeScale::setUnscaledDeltaTime` 으로 적어
+         *                             정지 메뉴 · 페이드 · 에디터 도구가 읽습니다(`GameTimeScale::getUnscaledDeltaTime`).
          */
-        void beginFrame( float32 deltaSeconds );
+        void beginFrame( float32 deltaSeconds, float32 unscaledDeltaSeconds );
         /**
          * @brief 씬 업데이트, RHI 제출 등을 수행합니다.
          * @param deltaTime 델타 타임
