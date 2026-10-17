@@ -110,11 +110,11 @@ class CheckScriptLayoutGate(LintGate):
     preCommitFileArgument = "--files"
     hint = "  폴더에 맞는 이름으로 옮기거나(git mv) 기반 클래스를 상속합니다 — Scripts/README.md 의 Layout 표."
     selfTestCases = [
-        {"name": "report/ 의 접두 어긋남",
+        {"name": "report/ 의 접두 어긋남", "expectedViolation": "Scripts/lint/report/ProbeReport.py: lint/report/ 의 파일 이름은 ^Run[A-Z]\\w+$",
          "files": {"Scripts/lint/report/ProbeReport.py": "from LintReport import LintReport\n\n\nclass ProbeReport(LintReport):\n    pass\n"}},
-        {"name": "report/ 인데 LintReport 가 아님",
+        {"name": "report/ 인데 LintReport 가 아님", "expectedViolation": "Scripts/lint/report/RunProbe.py: lint/report/ 의 스크립트는 LintReport 하위 클래스다",
          "files": {"Scripts/lint/report/RunProbe.py": "def main(argv=None):\n    return 0\n"}},
-        {"name": "dev/ 의 동사 없는 이름",
+        {"name": "dev/ 의 동사 없는 이름", "expectedViolation": "Scripts/dev/BackendProbe.py: dev/ 의 파일 이름은 ^(Run|Compare|Make|Move|Remove|Configure|Sample|Store|List|Ci)[A-Z]\\w*$",
          "files": {"Scripts/dev/BackendProbe.py": "import sys\n\nif __name__ == \"__main__\":\n    sys.exit(0)\n"}},
     ]
 

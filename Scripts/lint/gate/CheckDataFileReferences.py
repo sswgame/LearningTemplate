@@ -67,6 +67,7 @@ class CheckDataFileReferencesGate(LintGate):
     selfTestCases = [
         {
             "name": "아무도 참조하지 않는 .xxx",
+            "expectedViolation": "Source/Engine/Probe/Orphan.xxx",
             "files": {
                 "Source/Engine/Probe/Orphan.xxx": "PROBE_ENTRY(Alpha)\n",
                 "Source/Engine/Probe/Probe.cpp": '#include "pch.h"\n',

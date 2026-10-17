@@ -204,42 +204,52 @@ class CheckFunctionVocabularyGate(LintGate):
     selfTestCases = [
         {
             "name": "강제 약어가 아닌 대문자 묶음",
+            "expectedViolation": "Source/Engine/Probe.h:5: [AcronymRun] 'bindComputeUAV'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void bindComputeUAV( int32 a );\n    };\n}\n"},
         },
         {
             "name": "initialize 대신 setup",
+            "expectedViolation": "Source/Engine/Probe.h:5: [BannedVerb] 'setupLocalization'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool setupLocalization( int32 a );\n    };\n}\n"},
         },
         {
             "name": "allocate 대신 alloc",
+            "expectedViolation": "Source/Engine/Probe.h:5: [BannedVerb] 'allocSrvDescriptor'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void* allocSrvDescriptor( int32 a );\n    };\n}\n"},
         },
         {
             "name": "술어가 check 로 시작한다",
+            "expectedViolation": "Source/Engine/Probe.h:5: [CheckVerb] 'checkCollision'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool checkCollision( int32 a ) const;\n    };\n}\n"},
         },
         {
             "name": "같은 이름에 string_view 판과 hashed_string 판",
+            "expectedViolation": "Source/Engine/Probe.h:5: [NamePair] 'hasAction'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        bool hasAction( string_view action ) const;\n        bool hasAction( const hashed_string& action ) const;\n    };\n}\n"},
         },
         {
             "name": "setName 과 짝인 게터가 맨이름 name()",
+            "expectedViolation": "Source/Engine/Probe.h:5: [BareGetter] 'name()'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        const utf8* name() const;\n        void setName( const utf8* pName );\n    };\n}\n"},
         },
         {
             "name": "make / create 대신 build (예외 표의 같은 함수 이름도 다른 파일에서는 잡는다)",
+            "expectedViolation": "Source/Engine/Probe.h:5: [BannedVerb] 'build'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void build( int32 a );\n    };\n}\n"},
         },
         {
             "name": "make / create 대신 generate",
+            "expectedViolation": "Source/Engine/Probe.h:5: [BannedVerb] 'generateNewID'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        static uint64 generateNewID();\n    };\n}\n"},
         },
         {
             "name": "make / create 대신 construct",
+            "expectedViolation": "Source/Engine/Probe.h:5: [BannedVerb] 'constructEmpty'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void constructEmpty( void* pMemory ) const;\n    };\n}\n"},
         },
         {
             "name": "함수 이름에 줄임말 Attr",
+            "expectedViolation": "Source/Engine/Probe.h:5: [Abbreviation] 'appendIntAttr'",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        static void appendIntAttr( int32 value );\n    };\n}\n"},
         },
     ]

@@ -135,18 +135,22 @@ class CheckEditorLayersGate(LintGate):
         {
             # README 의 약속 — Commands 는 ImGui 없는 동작이고 패널을 모른다.
             "name": "Commands 가 패널을 include",
+            "expectedViolation": "Source/Editor/Common/Commands/Probe.cpp:3: <Editor/Panels/Scene/HierarchyPanel.h> -> 티어 3('Common/Commands')가 티어 6('Panels')를 include 합니다",
             "files": {"Source/Editor/Common/Commands/Probe.cpp": '#include "pch.h"\n\n#include "Editor/Panels/Scene/HierarchyPanel.h"\n'},
         },
         {
             "name": "Workspace 가 GUI 를 include",
+            "expectedViolation": "Source/Editor/Common/Workspace/Probe.h:2: <Editor/Common/GUI/EditorMenuBar.h> -> 티어 2('Common/Workspace')가 티어 4('Common/GUI')를 include 합니다",
             "files": {"Source/Editor/Common/Workspace/Probe.h": '#pragma once\n#include "Editor/Common/GUI/EditorMenuBar.h"\n'},
         },
         {
             "name": "패널이 자체 시험을 include",
+            "expectedViolation": "Source/Editor/Panels/Probe.cpp:3: <Editor/SelfTest/EditorSelfTest.h> -> 티어 6('Panels')가 티어 7('SelfTest')를 include 합니다",
             "files": {"Source/Editor/Panels/Probe.cpp": '#include "pch.h"\n\n#include "Editor/SelfTest/EditorSelfTest.h"\n'},
         },
         {
             "name": "표에 없는 층",
+            "expectedViolation": "Source/Editor/Scratch/Probe.h: 층 'Scratch' 가 티어 표(rules/CheckEditorLayers.toml 의 [tier])에 없습니다",
             "files": {"Source/Editor/Scratch/Probe.h": "#pragma once\n"},
         },
     ]

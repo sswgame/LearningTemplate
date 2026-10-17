@@ -40,6 +40,7 @@ class CheckEditorIconsGate(LintGate):
     selfTestCases = [
         {
             "name": "손으로 고친 글리프 헤더",
+            "expectedViolation": "그림 정의와 다릅니다: Source/Editor/Common/GUI/EditorIconGlyphs.h",
             "files": {"Source/Editor/Common/GUI/EditorIconGlyphs.h": "// hand edited\n"},
         },
     ]

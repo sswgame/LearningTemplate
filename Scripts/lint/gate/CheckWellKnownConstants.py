@@ -141,23 +141,23 @@ class CheckWellKnownConstantsGate(LintGate):
         "  리플렉션 메타데이터(PROPERTY 줄)와 Test/ 는 보지 않습니다."
     )
     selfTestCases = [
-        {"name": "2π 를 자릿수만 바꿔 다시 적는다",
+        {"name": "2π 를 자릿수만 바꿔 다시 적는다", "expectedViolation": "Source/Probe/ProbeAngle.cpp:1: π 계열 '6.2831853' -> MathUtil::kPi · kTwoPi · kHalfPi · kPi64 · kDegreeToRadian · kRadianToDegree (셰이더는 common",
          "files": {"Source/Probe/ProbeAngle.cpp": "float probe( float t ) { return t * 6.2831853f; }\n"}},
-        {"name": "셰이더에서 π 를 다시 적는다",
+        {"name": "셰이더에서 π 를 다시 적는다", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1: π 계열 '3.14159265' -> MathUtil::kPi · kTwoPi · kHalfPi · kPi64 · kDegreeToRadian · kRadianToDegree (셰이더",
          "files": {"Resource/engine/shaders/probe.hlsl": "static const float kProbePi = 3.14159265f;\n"}},
-        {"name": "황금비 해시 상수를 다시 적는다",
+        {"name": "황금비 해시 상수를 다시 적는다", "expectedViolation": "Source/Probe/ProbeHash.h:2: 황금비 해시 '0x9e3779b97f4a7c15' -> HashUtil::kGoldenRatio32 · kGoldenRatio64 · combine",
          "files": {"Source/Probe/ProbeHash.h": "#pragma once\ninline unsigned long long probe( unsigned long long h ) { return h * 0x9e3779b97f4a7c15ull; }\n"}},
-        {"name": "FNV 소수를 다시 적는다",
+        {"name": "FNV 소수를 다시 적는다", "expectedViolation": "Source/Probe/ProbeFnv.cpp:1: FNV-1a '16777619u' -> HashUtil::kFnvOffset32 · kFnvPrime32 · kFnvOffset64 · kFnvPrime64",
          "files": {"Source/Probe/ProbeFnv.cpp": "unsigned probe( unsigned h, unsigned char c ) { return ( h ^ c ) * 16777619u; }\n"}},
-        {"name": "끝 자리 빠진 FNV 기저값을 적는다",
+        {"name": "끝 자리 빠진 FNV 기저값을 적는다", "expectedViolation": "Source/Probe/ProbeFnvBasis.cpp:1: FNV-1a 기저 오기 '1469598103934665603ull' -> HashUtil::kFnvOffset64 (이 수는 끝 자리가 빠진 오기다)",
          "files": {"Source/Probe/ProbeFnvBasis.cpp": "unsigned long long probe() { return 1469598103934665603ull; }\n"}},
-        {"name": "1초의 나노초를 정수로 다시 적는다",
+        {"name": "1초의 나노초를 정수로 다시 적는다", "expectedViolation": "Source/Probe/ProbeNano.cpp:1: 1초의 나노초(정수) '1000000000LL' -> constant::kNanosecondsPerSecond",
          "files": {"Source/Probe/ProbeNano.cpp": "long long probe( long long seconds ) { return seconds * 1'000'000'000LL; }\n"}},
-        {"name": "초를 나노초로 바꾸며 1e9 를 적는다",
+        {"name": "초를 나노초로 바꾸며 1e9 를 적는다", "expectedViolation": "Source/Probe/ProbeNanoFloat.cpp:1: 1초의 나노초(실수) '* 1.0e9' -> constant::kNanosecondsPerSecond (곱하거나 나누는 변환만 본다",
          "files": {"Source/Probe/ProbeNanoFloat.cpp": "long long probe( double seconds ) { return static_cast<long long>( seconds * 1.0e9 ); }\n"}},
-        {"name": "1 MiB 를 곱으로 적는다",
+        {"name": "1 MiB 를 곱으로 적는다", "expectedViolation": "Source/Probe/ProbeMiB.h:2: 1 MiB '1024ull * 1024ull' -> constant::kBytesPerMegabyte (KiB 는 constant::kBytesPerKilobyte)",
          "files": {"Source/Probe/ProbeMiB.h": "#pragma once\ninline constexpr unsigned long long kProbeBuffer = 4ull * 1024ull * 1024ull;\n"}},
-        {"name": "중력을 다시 적는다(ReflectionParser)",
+        {"name": "중력을 다시 적는다(ReflectionParser)", "expectedViolation": "Tools/ReflectionParser/ProbeGravity.cpp:1: 중력 9.81 '9.81' -> PhysicsSystem::getConfiguredGravity(Magnitude)",
          "files": {"Tools/ReflectionParser/ProbeGravity.cpp": "const float kProbeGravity = 9.81f;\n"}},
     ]
 

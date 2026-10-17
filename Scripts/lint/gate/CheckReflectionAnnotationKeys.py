@@ -37,6 +37,7 @@ class CheckReflectionAnnotationKeysGate(LintGate):
     selfTestCases = [
         {
             "name": "손으로 고친 키 헤더",
+            "expectedViolation": "[AnnotationKeys] 원본과 다릅니다: Source/Engine/Reflection/ReflectionAnnotationKeys.h",
             "files": {
                 "Source/Core/Predefined/AnnotationMeta.txt": "[REFLECT]\nflag.Abstract = Abstract\n[ENUM]\nflag.Flags = Flags\n"
                                                              "[PROPERTY]\nflag.ReadOnly = ReadOnly\n[FUNCTION]\nflag.Reliable = Reliable\n",

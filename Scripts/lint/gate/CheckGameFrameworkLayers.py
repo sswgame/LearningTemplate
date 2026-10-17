@@ -231,6 +231,7 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             # 순환을 다시 만드는 가장 쉬운 엣지 — 상호작용이 기믹을 직접 부른다.
             "name": "Interaction 이 Gimmick 을 include (아래층이 위층을)",
+            "expectedViolation": "Source/GameFramework/Base/Gameplay/Interaction/Probe.cpp: #include \"GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h\"  (같은 층 Gam",
             "files": {
                 "Source/GameFramework/Base/Gameplay/Interaction/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"\n',
             },
@@ -238,30 +239,35 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             # 모델이 뷰를 아는 방향 — 체력 시스템이 HP 바를 민다.
             "name": "Combat 이 UI 를 include",
+            "expectedViolation": "Source/GameFramework/Base/Actor/Combat/Probe.cpp: #include \"GameFramework/Base/UI/Marker/HealthBarComponent.h\"  (층 Actor(L3) -> UI(L4)",
             "files": {
                 "Source/GameFramework/Base/Actor/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/UI/Marker/HealthBarComponent.h"\n',
             },
         },
         {
             "name": "아래 층(Foundation)이 위 층(World)을 include",
+            "expectedViolation": "Source/GameFramework/Base/Foundation/Framework/Probe.cpp: #include \"GameFramework/Base/World/Spline/SplineComponent.h\"  (층 Foundation(L1) ->",
             "files": {
                 "Source/GameFramework/Base/Foundation/Framework/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/World/Spline/SplineComponent.h"\n',
             },
         },
         {
             "name": "같은 층 · 같은 순서의 폴더끼리 include",
+            "expectedViolation": "Source/GameFramework/Base/Actor/Input/Probe.cpp: #include \"GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h\"  (같은 층 Actor/Input(0) ->",
             "files": {
                 "Source/GameFramework/Base/Actor/Input/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h"\n',
             },
         },
         {
             "name": "층 표에 없는 층",
+            "expectedViolation": "Source/GameFramework/Base/Stage/Probe/Probe.cpp: 기반 'Stage/Probe' 가 층 표 · 폴더 순서 표(rules/CheckGameFrameworkLayers.toml)에 없습니다",
             "files": {
                 "Source/GameFramework/Base/Stage/Probe/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {
             "name": "폴더 순서 표에 없는 기반 폴더",
+            "expectedViolation": "Source/GameFramework/Base/Actor/Stage/Probe.cpp: 기반 'Actor/Stage' 가 층 표 · 폴더 순서 표(rules/CheckGameFrameworkLayers.toml)에 없습니다",
             "files": {
                 "Source/GameFramework/Base/Actor/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
@@ -269,6 +275,7 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             # 층으로 묶기 전 자리(Base/<폴더>/)에 파일을 다시 만든다.
             "name": "층 바로 아래 파일",
+            "expectedViolation": "Source/GameFramework/Base/Actor/Probe.cpp: 기반 'Actor/' 가 층 표 · 폴더 순서 표(rules/CheckGameFrameworkLayers.toml)에 없습니다",
             "files": {
                 "Source/GameFramework/Base/Actor/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
@@ -276,12 +283,14 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             # 기반 폴더를 Base/ 밖(최상위)에 다시 만든다.
             "name": "최상위에 Base · Kits 아닌 폴더",
+            "expectedViolation": "Source/GameFramework/Stage/Probe.cpp: GameFramework 최상위 폴더 'Stage'",
             "files": {
                 "Source/GameFramework/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {
             "name": "기반이 키트를 include",
+            "expectedViolation": "Source/GameFramework/Base/Actor/Combat/Probe.cpp: #include \"GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h\"  (기",
             "files": {
                 "Source/GameFramework/Base/Actor/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"\n',
             },
@@ -289,42 +298,49 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             # 성격 폴더(Genre · Feature) 없이 그룹을 Kits/ 바로 아래에 다시 만든다.
             "name": "키트가 성격 폴더 밖에 있다",
+            "expectedViolation": "Source/GameFramework/Kits/Action/Probe/Probe.cpp: 키트 성격 폴더 'Action'",
             "files": {
                 "Source/GameFramework/Kits/Action/Probe/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {
             "name": "키트가 다른 키트를 include",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/Probe.cpp: #include \"GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h\"  (키트 RPG",
             "files": {
                 "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"\n',
             },
         },
         {
             "name": "서버 키트가 다른 서버 키트를 include",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Online/Trade/Server/Probe.cpp: #include \"GameFramework/Kits/Feature/Online/Account/Server/AccountService.h",
             "files": {
                 "Source/GameFramework/Kits/Feature/Online/Trade/Server/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Account/Server/AccountService.h"\n',
             },
         },
         {
             "name": "서버 키트가 다른 기능의 공유 키트를 include",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Online/Trade/Server/Probe.cpp: #include \"GameFramework/Kits/Feature/Online/Account/Shared/AccountMessages.",
             "files": {
                 "Source/GameFramework/Kits/Feature/Online/Trade/Server/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Account/Shared/AccountMessages.h"\n',
             },
         },
         {
             "name": "기반의 에디터 확장이 키트를 include",
+            "expectedViolation": "Source/GameFramework/PlugIn/Editor/Base/Gimmick/Probe.cpp: #include \"GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h\"  (에디터 확장",
             "files": {
                 "Source/GameFramework/PlugIn/Editor/Base/Gimmick/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"\n',
             },
         },
         {
             "name": "기반이 기반의 에디터 확장을 include",
+            "expectedViolation": "Source/GameFramework/Base/Gameplay/Gimmick/Probe.cpp: #include \"GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h\"  (에디터 확장 PlugI",
             "files": {
                 "Source/GameFramework/Base/Gameplay/Gimmick/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"\n',
             },
         },
         {
             "name": "키트가 게임을 include",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/Action/ActionCombat/Probe.cpp: #include \"Games/Shooter3D/ShooterEnemyComponent.h\"  (GameFramework 는 Games ·",
             "files": {
                 "Source/GameFramework/Kits/Genre/Action/ActionCombat/Probe.cpp": '#include "pch.h"\n\n#include "Games/Shooter3D/ShooterEnemyComponent.h"\n',
             },
@@ -332,6 +348,7 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             # 방향이 거꾸로 — 공유 키트(클라이언트에도 들어간다)가 같은 기능의 서버 키트를 본다.
             "name": "공유 키트가 같은 기능의 서버 키트를 include",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Online/Trade/Shared/Probe.cpp: #include \"GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h\"  (",
             "files": {
                 "Source/GameFramework/Kits/Feature/Online/Trade/Shared/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"\n',
             },
@@ -339,36 +356,42 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             # 우산 헤더처럼 루트 파일이 기반을 끌어오면 그 헤더를 쓰는 키트 · 기반이 층 검사 없이 의존을 얻는다.
             "name": "루트 파일이 기반을 include",
+            "expectedViolation": "Source/GameFramework/Probe.h: #include \"GameFramework/Base/Foundation/Framework/GameService.h\"  (루트 파일 -> base Foundation/Framework, Core ·",
             "files": {
                 "Source/GameFramework/Probe.h": '#pragma once\n\n#include "GameFramework/Base/Foundation/Framework/GameService.h"\n',
             },
         },
         {
             "name": "루트 파일이 키트를 include",
+            "expectedViolation": "Source/GameFramework/Probe.h: #include \"GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h\"  (루트 파일 -> kit RPG/MonsterCollector,",
             "files": {
                 "Source/GameFramework/Probe.h": '#pragma once\n\n#include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"\n',
             },
         },
         {
             "name": "묶음 공용 헤더가 기반을 include",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Network/Probe.h: #include \"GameFramework/Base/Foundation/Utility/Random/GameRandom.h\"  (묶음 Network 공용 헤더 -",
             "files": {
                 "Source/GameFramework/Kits/Feature/Network/Probe.h": '#pragma once\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {
             "name": "묶음 공용 헤더가 같은 묶음의 키트를 include",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/RPG/Probe.h: #include \"GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h\"  (묶음 RPG 공용 헤더 -> kit",
             "files": {
                 "Source/GameFramework/Kits/Genre/RPG/Probe.h": '#pragma once\n\n#include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"\n',
             },
         },
         {
             "name": "묶음 공용 헤더가 다른 묶음의 공용 헤더를 include",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/RPG/Probe.h: #include \"GameFramework/Kits/Feature/Network/NetKitMessageRange.h\"  (묶음 RPG 공용 헤더 -> kitGroup N",
             "files": {
                 "Source/GameFramework/Kits/Genre/RPG/Probe.h": '#pragma once\n\n#include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"\n',
             },
         },
         {
             "name": "서버 키트를 옛 꼴(<묶음>/Server/<키트>/)에 둔다",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Online/Server/Probe/Probe.cpp: 서버 · 클라이언트 키트는 Kits/<성격>/<묶음>/<기능>/Server|Client/ 에 둔다(공유 키트는 같은 기능의 Shared",
             "files": {
                 "Source/GameFramework/Kits/Feature/Online/Server/Probe/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },

@@ -117,6 +117,7 @@ class CheckControlBoundaryGate(LintGate):
     selfTestCases = [
         {
             "name": "게임의 몸 컴포넌트가 입력 맵을 읽음",
+            "expectedViolation": "[Control Boundary] Source/Games/Probe/FooPlayerComponent.cpp:3: pawn-side code reads input",
             "files": {
                 "Source/Games/Probe/FooPlayerComponent.cpp": (
                     "void FooPlayerComponent::onTick()\n"
@@ -128,12 +129,14 @@ class CheckControlBoundaryGate(LintGate):
         },
         {
             "name": "기반 폰 이동이 InputManager 를 include",
+            "expectedViolation": "[Control Boundary] Source/GameFramework/Base/Actor/Control/ProbeMovementComponent.cpp:1: pawn-side code reads input",
             "files": {
                 "Source/GameFramework/Base/Actor/Control/ProbeMovementComponent.cpp": "#include \"Engine/Input/InputManager.h\"\n",
             },
         },
         {
             "name": "허용 표의 명령 조종자가 마우스 버튼을 직접 물음",
+            "expectedViolation": "SkirmishDirectorComponent.cpp:3: reads the input device (wasMouseButtonPressed)",
             "files": {
                 "Source/Games/StarSkirmish/SkirmishDirectorComponent.cpp": (
                     "void SkirmishDirectorComponent::updateDrag( const InputManager& input )\n"
@@ -146,12 +149,14 @@ class CheckControlBoundaryGate(LintGate):
         },
         {
             "name": "허용 표의 플레이어 뷰 카메라가 휠을 직접 물음",
+            "expectedViolation": "ProbeCameraComponent.cpp:1: reads the input device (getMouseWheel)",
             "files": {
                 "Source/GameFramework/Base/Actor/Camera/ProbeCameraComponent.cpp": "    zoom( pInput->getMouseWheel() );\n",
             },
         },
         {
             "name": "허용 표 밖 게임 코드가 장치에서 패드를 꺼냄",
+            "expectedViolation": "[Control Boundary] Source/Games/Probe/ProbeComponent.cpp:1: reads the input device (getGamepad)",
             "files": {
                 "Source/Games/Probe/ProbeComponent.cpp": "    const GamepadDevice* pPad = pInput->getGamepad( 0 );\n",
             },
@@ -159,6 +164,7 @@ class CheckControlBoundaryGate(LintGate):
         {
             # 허용 표의 파일이 입력을 더는 읽지 않으면 그 줄은 낡은 예외다(LintGate 기반이 본다) — 표가 경계를 조용히 넓힌 채 남지 않게.
             "name": "입력을 더는 읽지 않는 허용 표 파일(낡은 예외)",
+            "expectedViolation": "[낡은 예외] 'Source/Games/NileCity/NileDirectorComponent.*' 의 대상은 그대로인데 규칙을 어기지 않습니다",
             "files": {
                 "Source/Games/NileCity/NileDirectorComponent.cpp": "void NileDirectorComponent::onTick()\n{\n}\n",
             },

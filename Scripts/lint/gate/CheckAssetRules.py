@@ -52,6 +52,7 @@ class CheckAssetRulesGate(LintGate):
     selfTestCases = [
         {
             "name": "없는 메시를 가리키는 씬",
+            "expectedViolation": "Resource/game/probe/maps/a.scene.xml: [references-exist] MeshComponent@_meshID points at 'game/probe/models/missing.mesh', which does not ex",
             "files": {
                 _kRulePath: selfTestRulesInternal("references-exist"),
                 "Resource/game/probe/maps/a.scene.xml": (
@@ -62,6 +63,7 @@ class CheckAssetRulesGate(LintGate):
         },
         {
             "name": "겹친 엔티티 id",
+            "expectedViolation": "Resource/game/probe/maps/b.scene.xml: [scene-entity-ids] entity id 2 is used twice",
             "files": {
                 _kRulePath: selfTestRulesInternal("scene-entity-ids"),
                 "Resource/game/probe/maps/b.scene.xml": '<Scene><entities><entity id="2" name="A"/><entity id="2" name="B"/></entities></Scene>',

@@ -215,23 +215,27 @@ class CheckModuleTargetsGate(LintGate):
     selfTestCases = [
         {
             "name": "매니페스트에 _listTarget 이 없다",
+            "expectedViolation": "Source/GameFramework/Kits/Probe/Probe/GF_Probe.module.json: `_listTarget` 이 없습니다",
             "files": {"Source/GameFramework/Kits/Probe/Probe/GF_Probe.module.json":
                       '{ "_name": "GF_Probe", "_version": "1.0.0", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ] }\n'},
         },
         {
             "name": "GF_Server_ 접두 키트가 클라이언트에도 들어간다",
+            "expectedViolation": "Source/GameFramework/Kits/Probe/Server/Probe/GF_Server_Probe.module.json: GF_Server_Probe 은 `GF_Server_` 로 시작하므로 `_listTarget` 이 [Server] 뿐이",
             "files": {"Source/GameFramework/Kits/Probe/Server/Probe/GF_Server_Probe.module.json":
                       '{ "_name": "GF_Server_Probe", "_version": "1.0.0", "_kind": "Kit", "_listPlatform": [ "Windows" ],'
                       ' "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client", "Server" ] }\n'},
         },
         {
             "name": "서버 전용 키트의 이름에 GF_Server_ 접두가 없다",
+            "expectedViolation": "Source/GameFramework/Kits/Probe/ProbeServer/GF_ProbeServer.module.json: [Server] 뿐인 키트는 이름이 `GF_Server_<X>` 입니다(지금 GF_ProbeServer)",
             "files": {"Source/GameFramework/Kits/Probe/ProbeServer/GF_ProbeServer.module.json":
                       '{ "_name": "GF_ProbeServer", "_version": "1.0.0", "_kind": "Kit", "_listPlatform": [ "Windows" ],'
                       ' "_listConfiguration": [ "Dev" ], "_listTarget": [ "Server" ] }\n'},
         },
         {
             "name": "공유 키트가 서버 전용 키트에 의존한다",
+            "expectedViolation": "Source/GameFramework/Kits/Probe/Shared/GF_Shared.module.json: GF_Shared(Client·Server) 이 GF_Server_Probe(Server) 에 의존합니다",
             "files": {
                 "Source/GameFramework/Kits/Probe/Shared/GF_Shared.module.json":
                     '{ "_name": "GF_Shared", "_version": "1.0.0", "_kind": "Kit", "_listDependency": [ { "_name": "GF_Server_Probe" } ],'
@@ -243,6 +247,7 @@ class CheckModuleTargetsGate(LintGate):
         },
         {
             "name": "공유 키트 .cpp 가 서버 전용 키트의 헤더를 include 한다",
+            "expectedViolation": "Source/GameFramework/Kits/Probe/Shared/Probe.cpp:1: \"GameFramework/Kits/Probe/Server/Probe/SessionStore.h\" -> GF_Shared(Client·Server) 가 GF_",
             "files": {
                 "Source/GameFramework/Kits/Probe/Shared/GF_Shared.module.json":
                     '{ "_name": "GF_Shared", "_version": "1.0.0", "_kind": "Kit",'
@@ -257,12 +262,14 @@ class CheckModuleTargetsGate(LintGate):
         },
         {
             "name": "에디터 확장 모듈의 이름에 GF_EditorPlugIn_ 접두가 없다",
+            "expectedViolation": "Source/GameFramework/PlugIn/Editor/Probe/ProbeEditor.module.json: 에디터 확장 모듈 ProbeEditor 의 이름은 `GF_EditorPlugIn_<이름>`(GameFramework · 키트) 또는",
             "files": {"Source/GameFramework/PlugIn/Editor/Probe/ProbeEditor.module.json":
                       '{ "_name": "ProbeEditor", "_version": "1.0.0", "_kind": "EditorExtension", "_listPlatform": [ "Windows" ],'
                       ' "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] }\n'},
         },
         {
             "name": "App(클라이언트)이 서버 실행 파일 헤더를 include 한다",
+            "expectedViolation": "Source/App/Probe.cpp:1: \"Server/ServerConsole.h\" -> Source/App(Client) 가 Source/Server(Server) 의 헤더를 include 합니다",
             "files": {
                 "Source/App/Probe.cpp": '#include "Server/ServerConsole.h"\nint probe() { return 0; }\n',
                 "Source/Server/ServerConsole.h": "#pragma once\nint serverConsoleProbe();\n",

@@ -71,18 +71,22 @@ class CheckStdFilesystemIsolationGate(LintGate):
     selfTestCases = [
         {
             "name": "엔진 코드가 <filesystem> 을 include 한다",
+            "expectedViolation": "Source/Engine/Resource/Probe.cpp:1: <filesystem> -> Source/Core/File/Std/ 안에서만 include 합니다",
             "files": {"Source/Engine/Resource/Probe.cpp": "#include <filesystem>\nint probe() { return 0; }\n"},
         },
         {
             "name": "시험이 include 없이 std::filesystem 으로 시각을 바꾼다",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp:1: std::filesystem -> FileUtil 로 묻습니다(Source/Core/File/Std/ 밖에서는 쓰지 않습니다)",
             "files": {"Test/EngineTest/TestProbe.cpp": "void probe() { std::filesystem::last_write_time( \"a\", {} ); }\n"},
         },
         {
             "name": "도구가 이름공간 별칭으로 쓴다",
+            "expectedViolation": "Tools/ReflectionParser/Probe.cpp:1: std::filesystem -> FileUtil 로 묻습니다(Source/Core/File/Std/ 밖에서는 쓰지 않습니다)",
             "files": {"Tools/ReflectionParser/Probe.cpp": "namespace fs = std::filesystem;\nint probe() { return 0; }\n"},
         },
         {
             "name": "Core 의 다른 File 폴더가 쓴다",
+            "expectedViolation": "Source/Core/File/Linux/Probe.cpp:1: <filesystem> -> Source/Core/File/Std/ 안에서만 include 합니다",
             "files": {"Source/Core/File/Linux/Probe.cpp": "#include <experimental/filesystem>\nint probe() { return 0; }\n"},
         },
     ]

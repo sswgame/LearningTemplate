@@ -82,6 +82,7 @@ class CheckExecutableBitsGate(LintGate):
     selfTestCases = [
         {
             "name": "실행 비트 없는 오버레이 포트 configure",
+            "expectedViolation": "ThirdParty/openssl/vcpkg-port/openssl/unix/configure -> 모드 100644, #! 스크립트는 100755",
             "files": {
                 "ThirdParty/openssl/vcpkg-port/openssl/unix/configure": "#!/usr/bin/env bash\nset -e\n",
             },

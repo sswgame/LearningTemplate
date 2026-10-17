@@ -194,17 +194,20 @@ class CheckScriptEntryPointsGate(LintGate):
     selfTestCases = [
         {
             "name": "common 을 부르지 않는 진입점",
+            "expectedViolation": "ProbeReport.py: 진입점이 모듈 수준에서 common 을 import 하지 않습니다",
             "files": {"Scripts/report/ProbeReport.py": "import sys\n\n\ndef main():\n    print('보고 — 끝')\n    return 0\n\n\n"
                                                        "if __name__ == \"__main__\":\n    sys.exit(main())\n"},
         },
         {
             "name": "함수 안에서만 common 을 import 한다",
+            "expectedViolation": "ProbeLate.py: 진입점이 모듈 수준에서 common 을 import 하지 않습니다",
             "files": {"Scripts/report/ProbeLate.py": "import sys\n\n\ndef verify():\n    import common\n    return common\n\n\n"
                                                      "def main():\n    print('보고 — 끝')\n    return 0\n\n\n"
                                                      "if __name__ == \"__main__\":\n    sys.exit(main())\n"},
         },
         {
             "name": "common 을 부르지 않는 이웃 모듈만 거친다",
+            "expectedViolation": "Scripts/report/ProbeEntry.py: 진입점이 모듈 수준에서 common 을 import 하지 않습니다",
             "files": {
                 "Scripts/report/ProbeHelper.py": "import os\n\nkProbeValue = os.sep\n",
                 "Scripts/report/ProbeEntry.py": "import sys\nfrom ProbeHelper import kProbeValue\n\n"
@@ -213,17 +216,20 @@ class CheckScriptEntryPointsGate(LintGate):
         },
         {
             "name": "인자를 받지 않는 main()",
+            "expectedViolation": "Scripts/report/ProbeArgless.py:5: def main() 이 인자를 받지 않습니다",
             "files": {"Scripts/report/ProbeArgless.py": "import sys\nimport common\n\n\ndef main():\n    return 0\n\n\n"
                                                          "if __name__ == \"__main__\":\n    sys.exit(main())\n"},
         },
         {
             "name": "parse_args() 를 인자 없이",
+            "expectedViolation": "Scripts/report/ProbeParse.py:7: parse_args() 를 인자 없이 부릅니다",
             "files": {"Scripts/report/ProbeParse.py": "import argparse\nimport sys\nimport common\n\n\ndef main(argv=None):\n"
                                                        "    argparse.ArgumentParser().parse_args()\n    return 0\n\n\n"
                                                        "if __name__ == \"__main__\":\n    sys.exit(main())\n"},
         },
         {
             "name": "python -m 진입점(__main__.py)",
+            "expectedViolation": "Scripts/__main__.py: 진입점이 모듈 수준에서 common 을 import 하지 않습니다",
             "files": {"Scripts/__main__.py": "import argparse\n\nargparse.ArgumentParser(description='도구 — 목록').print_help()\n"},
         },
     ]

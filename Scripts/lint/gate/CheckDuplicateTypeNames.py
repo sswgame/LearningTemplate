@@ -87,6 +87,7 @@ class CheckDuplicateTypeNamesGate(LintGate):
     selfTestCases = [
         {
             "name": "두 키트가 같은 이름의 클래스를 정의",
+            "expectedViolation": "sw::SharedCatalog: Source/GameFramework/Kits/KitA/Catalog.h · Source/GameFramework/Kits/KitB/Other.h 가 같은 이름을 정의합니다",
             "files": {
                 "Source/GameFramework/Kits/KitA/Catalog.h": "#pragma once\nnamespace sw\n{\n    class SharedCatalog\n    {\n    };\n} // namespace sw\n",
                 "Source/GameFramework/Kits/KitB/Other.h": "#pragma once\nnamespace sw\n{\n    struct SharedCatalog\n    {\n        int value;\n    };\n} // namespace sw\n",

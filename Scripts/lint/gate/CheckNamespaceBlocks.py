@@ -213,6 +213,7 @@ class CheckNamespaceBlocksGate(LintGate):
     selfTestCases = [
         {
             "name": "한 블록에 클래스 둘",
+            "expectedViolation": "Source/Engine/Probe/Probe.h:9: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다",
             "files": {
                 "Source/Engine/Probe/Probe.h": (
                     "#pragma once\n\nnamespace sw\n{\n    class Alpha\n    {\n    };\n\n    class Beta\n    {\n    };\n} // namespace sw\n"
@@ -221,6 +222,7 @@ class CheckNamespaceBlocksGate(LintGate):
         },
         {
             "name": "구조체와 클래스(상속 · 매크로 · final)",
+            "expectedViolation": "Source/Engine/Probe/Probe.h:10: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다",
             "files": {
                 "Source/Engine/Probe/Probe.h": (
                     "#pragma once\n\nnamespace sw::editor\n{\n    struct Settings\n    {\n        int value{ 0 };\n    };\n\n"
@@ -231,6 +233,7 @@ class CheckNamespaceBlocksGate(LintGate):
         {
             # 두 줄 전방 선언의 `;` 가 여는 중인 정의를 지운다 — 안 지우면 Alpha 의 `{` 가 Beta 로 읽혀 같은 이름 한 묶음이 된다.
             "name": "두 줄 전방 선언 뒤의 정의 둘",
+            "expectedViolation": "Source/Engine/Probe/Probe.h:12: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다",
             "files": {
                 "Source/Engine/Probe/Probe.h": (
                     "#pragma once\n\nnamespace sw\n{\n    struct Beta\n    ;\n\n    class Alpha\n    {\n    };\n\n    class Beta\n    {\n    };\n"

@@ -59,6 +59,7 @@ class CheckEngineRootFilesGate(LintGate):
     selfTestCases = [
         {
             "name": "엔진 루트의 기능 파일",
+            "expectedViolation": "Source/Engine/FeatureTools.cpp: 엔진 루트의 허용 목록에 없습니다",
             "files": {
                 "Source/Engine/Engine.cpp": "int engineProbe() { return 0; }\n",
                 "Source/Engine/FeatureTools.cpp": "int featureProbe() { return 0; }\n",

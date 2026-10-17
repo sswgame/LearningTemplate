@@ -120,18 +120,21 @@ class CheckExportMacrosGate(LintGate):
     selfTestCases = [
         {
             "name": "키트 헤더가 SW_GF_API 를 쓴다",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/Probe/ProbeKit/ProbeKit.h:2: SW_GF_API -> SW_KIT_API",
             "files": {
                 "Source/GameFramework/Kits/Genre/Probe/ProbeKit/ProbeKit.h": "#pragma once\nclass SW_GF_API ProbeKit\n{\npublic:\n    void run();\n};\n",
             },
         },
         {
             "name": "서버 키트 헤더가 SW_KIT_API 를 쓴다",
+            "expectedViolation": "Source/GameFramework/Kits/Feature/Online/Probe/Server/ProbeServer.h:2: SW_KIT_API -> SW_KIT_SERVER_API",
             "files": {
                 "Source/GameFramework/Kits/Feature/Online/Probe/Server/ProbeServer.h": "#pragma once\nclass SW_KIT_API ProbeServer\n{\npublic:\n    void run();\n};\n",
             },
         },
         {
             "name": "순수 인터페이스에 SW_GF_API 를 단다",
+            "expectedViolation": "Source/GameFramework/Base/Probe/IProbe.h:2: IProbe 는 순수 인터페이스",
             "files": {
                 "Source/GameFramework/Base/Probe/IProbe.h": (
                     "#pragma once\n"

@@ -46,18 +46,21 @@ class CheckNoDelayLoadGate(LintGate):
     selfTestCases = [
         {
             "name": "타깃 CMake 가 /DELAYLOAD 를 적음",
+            "expectedViolation": "Source/Probe/CMakeLists.txt:1: target_link_options(Probe PRIVATE /DELAYLOAD:probe.dll)",
             "files": {
                 "Source/Probe/CMakeLists.txt": "target_link_options(Probe PRIVATE /DELAYLOAD:probe.dll)\n",
             },
         },
         {
             "name": "링커 래퍼 철자로 지연 로드",
+            "expectedViolation": "cmake/Probe.cmake:1: target_link_options(Probe PRIVATE \"LINKER:/DELAYLOAD:probe.dll\")",
             "files": {
                 "cmake/Probe.cmake": "target_link_options(Probe PRIVATE \"LINKER:/DELAYLOAD:probe.dll\")\n",
             },
         },
         {
             "name": "delayimp 링크",
+            "expectedViolation": "Source/Probe/CMakeLists.txt:1: target_link_libraries(Probe PRIVATE delayimp)",
             "files": {
                 "Source/Probe/CMakeLists.txt": "target_link_libraries(Probe PRIVATE delayimp)\n",
             },

@@ -73,7 +73,7 @@ Scripts/
   │     ├── SetupVcpkg.py             # vcpkg 부트스트랩 (kVcpkgToolSpec 적용)
   │     ├── SetupLinuxDevEnvironment.py # Linux · WSL 홈 디렉터리 설정
   │     ├── HostTools.py              # MSVC, WinSDK, DXC, system include 탐색 (라이브러리 — SetupEnvironment 가 쓴다)
-  │     ├── InstallGitHooks.py        # Git pre-commit 훅 설치
+  │     ├── InstallGitHooks.py        # Git pre-commit 훅(린트) · pre-push 훅(main 으로 가는 트리의 전체 빌드 증거) 설치
   │     └── AddDefenderExclusions.py  # Windows Defender 빌드 폴더 예외 등록
   │
   ├── generate/                       # [생성] 원본(JSON · Constants.py · 폴더 목록)에서 파일을 만들어 낸다 — 대부분 구성 · 빌드가 부르고,
@@ -218,7 +218,10 @@ Scripts/
   │     ├── MakeBrandImages.py        # 에디터 스플래시 원본과 앱 아이콘(app.ico)을 같은 SW 모노그램에서 그린다
   │     ├── MakePackage.py            # 배포 패키지(Shipping 빌드 → 쿠킹 → 스테이징 → 검사, `[package]` 줄) — 에디터 Packaging 창이 같은 것을 부른다
   │     ├── MakeWorktree.py           # 작업 단위용 git 워크트리 + main 과 나눠 쓰는 도구 · vcpkg 폴더 링크(docs/11_Workflow.md)
-  │     ├── RemoveWorktree.py         # 워크트리 지우기 — 나눠 쓰는 링크를 먼저 끊는다
+  │     ├── RemoveWorktree.py         # 워크트리 지우기 — 나눠 쓰는 링크를 먼저 끊는다, 다른 세션이 쓰는 중이면 건너뛴다
+  │     ├── ListWorktrees.py          # 워크트리마다 브랜치 · 주인(살아 있는지) — `py -3 -m Scripts worktree-list`
+  │     ├── RunSharedLock.py          # 나눠 쓰는 자원 잠금(vcpkg · 빌드 칸 · GPU) — `run` 은 잡고 명령을 돌린 뒤 놓는다
+  │     ├── RunFullBuild.py           # 검증 빌드(all AllTests, 빌드 칸) · 트리 증거 — main push 의 pre-push 훅이 증거를 요구한다
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListBacklog.py            # 영역별 백로그를 상태 · 영역 · 번호로 골라 보인다(`py -3 -m Scripts backlog`, --id 는 항목 본문만)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)

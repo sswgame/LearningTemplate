@@ -57,13 +57,13 @@ class CheckAcronymSpellingGate(LintGate):
     preCommitFileArgument = "--files"
     maxViolationShown = 200
     selfTestCases = [
-        {"name": "강제 약어의 Pascal 타입 이름", "args": ["--enforce", "UI"],
+        {"name": "강제 약어의 Pascal 타입 이름", "expectedViolation": "Source/Probe/Probe.h:1: 'UiProbe' → 'UIProbe' (약어 UI)", "args": ["--enforce", "UI"],
          "files": {"Source/Probe/Probe.h": "class UiProbe {};\n"}},
-        {"name": "강제 약어의 Pascal 함수 이름", "args": ["--enforce", "Gpu"],
+        {"name": "강제 약어의 Pascal 함수 이름", "expectedViolation": "Source/Probe/Probe.cpp:1: 'syncGpu' → 'syncGPU' (약어 GPU)", "args": ["--enforce", "Gpu"],
          "files": {"Source/Probe/Probe.cpp": "void syncGpu() {}\n"}},
-        {"name": "강제 약어의 파일 이름", "args": ["--enforce", "UI"],
+        {"name": "강제 약어의 파일 이름", "expectedViolation": "Source/Probe/UiProbe.h: 이름 'UiProbe.h' → 'UIProbe.h' (약어 UI)", "args": ["--enforce", "UI"],
          "files": {"Source/Probe/UiProbe.h": "int x = 0;\n"}},
-        {"name": "이어 붙은 대문자 약어", "args": ["--enforce", "UI"],
+        {"name": "이어 붙은 대문자 약어", "expectedViolation": "Source/Probe/Probe.h:1: 'RHIUIPass'", "args": ["--enforce", "UI"],
          "files": {"Source/Probe/Probe.h": "class RHIUIPass {};\n"}},
     ]
 

@@ -350,6 +350,7 @@ class CheckIncludeOrderGate(LintGate):
     selfTestCases = [
         {
             "name": "Engine 이 Core 보다 앞",
+            "expectedViolation": "Source/Engine/Probe/Probe.cpp: Include 순서/중복 문제가 발견되었습니다. (`py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files Source/Engine/Probe/Probe",
             "files": {
                 "Source/Engine/Probe/Probe.cpp": (
                     '#include "pch.h"\n\n'
@@ -360,6 +361,7 @@ class CheckIncludeOrderGate(LintGate):
         },
         {
             "name": "같은 플랫폼 조건의 include 블록 둘",
+            "expectedViolation": "Source/Engine/Probe/Probe.cpp:9: SW_PLATFORM_* 로 include 를 고르는 #if 블록이 3 줄에도 있습니다",
             "files": {
                 "Source/Engine/Probe/Probe.cpp": (
                     '#include "pch.h"\n\n'

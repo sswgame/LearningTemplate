@@ -153,6 +153,7 @@ class CheckRenderOwnershipGate(LintGate):
     selfTestCases = [
         {
             "name": "스냅샷 구조체에 생포인터",
+            "expectedViolation": "Source/Engine/Renderer/Scene/GPUSceneSnapshot.h:3: GpuProbe 안의 원시 포인터 멤버",
             "files": {
                 "Source/Engine/Renderer/Scene/GPUSceneSnapshot.h": (
                     "#pragma once\n\n"
@@ -168,6 +169,7 @@ class CheckRenderOwnershipGate(LintGate):
         },
         {
             "name": "표식이 _pA 만 면제하는 구조체에 생포인터 _pB 를 더함",
+            "expectedViolation": "Source/Engine/Renderer/Scene/GPUSceneSnapshot.h:4: GpuProbeKey 안의 원시 포인터 멤버",
             "files": {
                 "Source/Engine/Renderer/Scene/GPUSceneSnapshot.h": (
                     "#pragma once\n\n"

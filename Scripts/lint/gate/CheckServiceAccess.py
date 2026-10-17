@@ -162,24 +162,28 @@ class CheckServiceAccessGate(LintGate):
     selfTestCases = [
         {
             "name": "옛 getService 조회",
+            "expectedViolation": "Source/Probe/ProbeService.cpp:3: [ServiceAccess/RetiredWindow] getService<",
             "files": {
                 "Source/Probe/ProbeService.cpp": "void probe()\n{\n    auto* pManager = game::getService<InputManager>();\n}\n",
             },
         },
         {
             "name": "이름 붙은 엔진 접근자",
+            "expectedViolation": "Source/Probe/ProbeNamed.cpp:3: [ServiceAccess/RetiredWindow] engine::getTypeRegistry(",
             "files": {
                 "Source/Probe/ProbeNamed.cpp": "void probe()\n{\n    engine::getTypeRegistry().find( 1 );\n}\n",
             },
         },
         {
             "name": "새 전역 단일체",
+            "expectedViolation": "Source/Probe/ProbeSingleton.h:4: [ServiceAccess/Singleton] ProbeSingleton::getInstance()",
             "files": {
                 "Source/Probe/ProbeSingleton.h": "class ProbeSingleton\n{\npublic:\n    static ProbeSingleton& getInstance();\n};\n",
             },
         },
         {
             "name": "getInstance() 를 더는 두지 않는 예외 타입(낡은 예외)",
+            "expectedViolation": "[낡은 예외] 'RawAnimationCodec' 의 대상은 그대로인데 규칙을 어기지 않습니다",
             "files": {
                 "Source/Probe/ProbeCodec.h": "class RawAnimationCodec\n{\n};\n",
             },

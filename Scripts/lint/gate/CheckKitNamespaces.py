@@ -76,6 +76,7 @@ class CheckKitNamespacesGate(LintGate):
     selfTestCases = [
         {
             "name": "두 파일이 같은 상태 표를 쓴다",
+            "expectedViolation": "상태 표 'FARM' 가 둘 이상입니다: Source/Games/GameA/ADirector.cpp:1 · Source/Games/GameB/BDirector.cpp:1",
             "files": {
                 "Source/Games/GameA/ADirector.cpp": "static constexpr uint32 kStateTag = FourCcUtil::make( \"FARM\" );\n",
                 "Source/Games/GameB/BDirector.cpp": "static constexpr uint32 kStateTag = FourCcUtil::make( \"FARM\" );\n",
@@ -83,48 +84,56 @@ class CheckKitNamespacesGate(LintGate):
         },
         {
             "name": "16 진 리터럴 상태 표",
+            "expectedViolation": "Source/Games/GameA/ADirector.cpp:1: kStateTag 를 16 진 리터럴로 적었습니다",
             "files": {
                 "Source/Games/GameA/ADirector.cpp": "static constexpr uint32 kStateTag = 0x4D524146u; ///< 'FARM'\n",
             },
         },
         {
             "name": "키트가 키를 직접 읽는다",
+            "expectedViolation": "키트가 키를 직접 읽습니다(isKeyDown()",
             "files": {
                 "Source/GameFramework/Kits/Genre/Simulation/Probe/ProbeSimulation.cpp": "void f( const InputManager& input ) { if ( input.isKeyDown( Key::W ) ) {} }\n",
             },
         },
         {
             "name": "키트가 입력 맵 액션 이름을 박는다",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/Action/Probe/ProbeController.cpp:1: 키트가 입력 맵 액션 이름을 글자로 박았습니다",
             "files": {
                 "Source/GameFramework/Kits/Genre/Action/Probe/ProbeController.cpp": "bool f( const InputMap& map ) { return map.wasActionTriggered( hashed_string( \"Jump\" ) ); }\n",
             },
         },
         {
             "name": "키트 설정 칸에 키트 접두가 없다",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/RPG/Probe/ProbeSave.cpp:1: 게임 설정 칸 'maxPartySize' 에 키트 접두가 없습니다",
             "files": {
                 "Source/GameFramework/Kits/Genre/RPG/Probe/ProbeSave.cpp": "int32 f( const GameSettings& settings ) { return settings.getCustomPropertyInt( \"maxPartySize\", 6 ); }\n",
             },
         },
         {
             "name": "키트 평판 세력에 키트 접두가 없다",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/Simulation/ProbeSim/ProbeSimulation.h:1: 평판 세력 'guests' 에 키트 접두가 없습니다",
             "files": {
                 "Source/GameFramework/Kits/Genre/Simulation/ProbeSim/ProbeSimulation.h": "struct ProbeSettings { hashed_string _reputationFaction{ \"guests\" }; };\n",
             },
         },
         {
             "name": "키트 클래스가 공유 지갑을 값으로 든다",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/Simulation/ProbeSim/ProbeShop.h:4: 키트가 공유 상태 Wallet 를 값으로 듭니다(_wallet)",
             "files": {
                 "Source/GameFramework/Kits/Genre/Simulation/ProbeSim/ProbeShop.h": "class ProbeShop\n{\nprivate:\n    Wallet _wallet;\n};\n",
             },
         },
         {
             "name": "키트가 빌린 일지의 알림을 꺼낸다",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/RPG/Probe/ProbeTown.cpp:1: 키트가 빌린 객체의 알림을 꺼냅니다",
             "files": {
                 "Source/GameFramework/Kits/Genre/RPG/Probe/ProbeTown.cpp": "void ProbeTown::tick() { vector<QuestEvent> list; _pQuestLog->drainEvents( list ); }\n",
             },
         },
         {
             "name": "두 파일이 같은 로그 범주를 쓴다",
+            "expectedViolation": "로그 범주 'Probe' 가 GameFramework · Games 의 파일 둘 이상에 있습니다: Source/GameFramework/Kits/Genre/Action/ProbeA/ProbeA.cpp:1 · Source/Games/ProbeGame/P",
             "files": {
                 "Source/GameFramework/Kits/Genre/Action/ProbeA/ProbeA.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
                 "Source/Games/ProbeGame/ProbeGame.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
@@ -132,12 +141,14 @@ class CheckKitNamespacesGate(LintGate):
         },
         {
             "name": "키트가 전역 변수를 정의한다",
+            "expectedViolation": "Source/GameFramework/Kits/Genre/Casual/Probe/ProbeRace.cpp:1: 키트가 전역 변수를 정의합니다",
             "files": {
                 "Source/GameFramework/Kits/Genre/Casual/Probe/ProbeRace.cpp": "SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_probeLaps, 3, \"laps\" );\n",
             },
         },
         {
             "name": "게임이 키를 직접 읽는다",
+            "expectedViolation": "게임이 키를 직접 읽습니다(wasKeyPressed()",
             "files": {
                 "Source/Games/ProbeGame/ProbeDirector.cpp": "void f( const InputManager& input ) { if ( input.wasKeyPressed( Key::Space ) ) {} }\n",
             },

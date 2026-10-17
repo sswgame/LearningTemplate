@@ -16,8 +16,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "dev"))
 
 import CiFailureReport  # noqa: E402
 import ListCiJobs  # noqa: E402
+import ListWorktrees  # noqa: E402
 import MakeWorktree  # noqa: E402
 import RemoveWorktree  # noqa: E402
+import RunFullBuild  # noqa: E402
 import RunSharedLock as SharedLock  # noqa: E402
 
 
@@ -65,6 +67,19 @@ class SharedLockTest(unittest.TestCase):
             self.assertFalse(any(slot.is_dir() for slot in SharedLock.getSharedSlotDirectories(root, "gpu", 2)))  # 물러난 칸은 남기지 않는다
             self.assertTrue(SharedLock.release(exclusive, "x"))
             self.assertEqual(0, SharedLock.acquireShared(root, self.makeArgs("a")))
+
+    def testSlotCountComesFromTheResourceTable(self) -> None:
+        self.assertEqual(SharedLock.getSharedSlotCount("build"), 2)   # 동시 빌드 한도(작업 방식 2 절)
+        with self.assertRaises(ValueError):
+            SharedLock.getSharedSlotCount("vcpkg")   # 공유 모드가 없는 자원
+
+    def testRunHoldingReleasesEvenWhenTheCommandFails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            args = argparse.Namespace(resource="build", owner="a", purpose="test", shared=True, slots=2, wait=0, belowNormal=False)
+            code = SharedLock.runHolding(root, args, [sys.executable, "-c", "import sys; sys.exit(3)"])
+            self.assertEqual(code, 3)
+            self.assertFalse(any(slot.is_dir() for slot in SharedLock.getSharedSlotDirectories(root, "build", 2)))
 
     def testResourceNameMustBeFolderSafe(self) -> None:
         for name in ("", "a/b", ".."):
@@ -119,6 +134,48 @@ class MakeWorktreePlanTest(unittest.TestCase):
                 folder.mkdir(parents=True)
                 (folder / "x64-windows.cmake").write_bytes(text)
             self.assertEqual(MakeWorktree.listDifferentTriplets(plan), ["cmake/Modules/Toolchain/Vcpkg/x64-windows.cmake"])
+
+
+class WorktreeOwnerTest(unittest.TestCase):
+    def testOwnerRecordRoundTripsAndTellsOtherLiveOwners(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            gitDirectory = Path(temp)
+            self.assertIsNone(MakeWorktree.readWorktreeOwner(gitDirectory))   # 이 기능 전 워크트리
+            owner = MakeWorktree.WorktreeOwner(owner="unit", pid=os.getpid(), session="s1", startTime=1000.0)
+            MakeWorktree.writeWorktreeOwner(gitDirectory, owner)
+            self.assertEqual(MakeWorktree.readWorktreeOwner(gitDirectory), owner)
+            self.assertFalse(MakeWorktree.isOwnedByOtherLiveProcess(owner, os.getpid()))   # 내 것
+            self.assertTrue(MakeWorktree.isOwnedByOtherLiveProcess(owner, None))           # 내 번호를 모르면 살아 있는 주인은 남이다
+            gone = MakeWorktree.WorktreeOwner(owner="gone", pid=0, session="", startTime=1000.0)
+            self.assertFalse(MakeWorktree.isOwnedByOtherLiveProcess(gone, None))           # 끝난 주인
+            (gitDirectory / MakeWorktree.kOwnerFileName).write_text("{}", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                MakeWorktree.readWorktreeOwner(gitDirectory)   # 깨진 기록은 "없음" 이 아니다
+
+    def testOwnerPidComesFromArgumentThenEnvironment(self) -> None:
+        from unittest import mock
+        with mock.patch.dict(os.environ, {MakeWorktree.kOwnerPidEnvironment: "4321"}):
+            self.assertEqual(MakeWorktree.resolveOwnerProcessId(None), 4321)
+            self.assertEqual(MakeWorktree.resolveOwnerProcessId(7), 7)
+        with mock.patch.dict(os.environ, {MakeWorktree.kOwnerPidEnvironment: ""}):
+            self.assertIsNone(MakeWorktree.resolveOwnerProcessId(None))
+
+    def testWorktreeListIsParsed(self) -> None:
+        text = ("worktree D:/repo\nHEAD abc\nbranch refs/heads/main\n\n"
+                "worktree D:/w/feat8\nHEAD def\nbranch refs/heads/wt/feat8\n\n"
+                "worktree D:/w/old\nHEAD 123\ndetached\n")
+        listEntry = ListWorktrees.parseWorktreeList(text)
+        self.assertEqual([(entry.path.as_posix(), entry.branch) for entry in listEntry],
+                         [("D:/repo", "main"), ("D:/w/feat8", "wt/feat8"), ("D:/w/old", "(detached)")])
+
+
+class FullBuildEvidenceTest(unittest.TestCase):
+    def testOnlyPushesToMainNeedEvidence(self) -> None:
+        pushInput = (f"refs/heads/main {'a' * 40} refs/heads/main {'b' * 40}\n"
+                     f"refs/heads/wt/x {'c' * 40} refs/heads/wt/x {'d' * 40}\n"
+                     f"(delete) {RunFullBuild.kZeroHash} refs/heads/main {'e' * 40}\n")
+        listNeeded = RunFullBuild.listPushedTreesNeedingEvidence(pushInput, lambda commit: "tree-of-" + commit[:1])
+        self.assertEqual(listNeeded, [("refs/heads/main", "tree-of-a")])
 
 
 class ListCiJobsTest(unittest.TestCase):

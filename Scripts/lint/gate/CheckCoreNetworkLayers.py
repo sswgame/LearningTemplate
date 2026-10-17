@@ -80,18 +80,22 @@ class CheckCoreNetworkLayersGate(LintGate):
     selfTestCases = [
         {
             "name": "전송이 연결 헤더를 include 한다",
+            "expectedViolation": "Source/Core/Network/Transport/Probe.h:2: <Core/Network/Connection/NetHost.h> -> 층 1('Transport')가 위 층 2('Connection')를 include 합니다",
             "files": {"Source/Core/Network/Transport/Probe.h": "#pragma once\n#include \"Core/Network/Connection/NetHost.h\"\n"},
         },
         {
             "name": "연결이 복제 부품을 include 한다",
+            "expectedViolation": "Source/Core/Network/Connection/Probe.cpp:2: <Core/Network/Replication/NetPrioritizer.h> -> 층 2('Connection')가 위 층 4('Replication')를 include",
             "files": {"Source/Core/Network/Connection/Probe.cpp": "#include \"pch.h\"\n#include \"Core/Network/Replication/NetPrioritizer.h\"\n"},
         },
         {
             "name": "보안이 연결 헤더를 include 한다",
+            "expectedViolation": "Source/Core/Network/Security/Probe.h:2: <Core/Network/Connection/NetHost.h> -> 층 1('Security')가 위 층 2('Connection')를 include 합니다",
             "files": {"Source/Core/Network/Security/Probe.h": "#pragma once\n#include \"Core/Network/Connection/NetHost.h\"\n"},
         },
         {
             "name": "표에 없는 폴더",
+            "expectedViolation": "Source/Core/Network/Session/Probe.h: 'Core/Network/Session/' 는 층 표에 없는 폴더입니다",
             "files": {"Source/Core/Network/Session/Probe.h": "#pragma once\n"},
         },
     ]

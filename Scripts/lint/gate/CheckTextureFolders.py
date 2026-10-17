@@ -74,18 +74,21 @@ class CheckTextureFoldersGate(LintGate):
     selfTestCases = [
         {
             "name": "런타임 폴더의 PNG",
+            "expectedViolation": "[Texture Folder] `textures/` 에는 .dds 와 데이터만 둡니다: Resource/engine/textures/white.png",
             "files": {
                 "Resource/engine/textures/white.png": "probe",
             },
         },
         {
             "name": "textures_raw 밖의 원본 이미지",
+            "expectedViolation": "[Texture Folder] 원본 이미지는 `textures_raw/` 에 둡니다: Resource/game/probe/art/hero.jpg",
             "files": {
                 "Resource/game/probe/art/hero.jpg": "probe",
             },
         },
         {
             "name": "textures_raw 안의 DDS",
+            "expectedViolation": "[Texture Folder] 임포트된 DDS 는 `textures/` 에 둡니다: Resource/editor/textures_raw/splash.dds",
             "files": {
                 "Resource/editor/textures_raw/splash.dds": "probe",
             },

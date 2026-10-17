@@ -166,11 +166,13 @@ class CheckCookContractGate(LintGate):
     selfTestCases = [
         {
             "name": "셰이더 폴더 필터가 opengl 을 빠뜨린 쿠커",
+            "expectedViolation": "shouldIncludeFile('shaders/bin/opengl/probe.vs.bin', targetRhi='dx11') 가 넣는다",
             "repoFiles": [kCookContractConfigRelative],
             "files": {kCookerRelative: _kBrokenCookerFixture},
         },
         {
             "name": "빌드 타깃 인자를 받기만 하고 서버 팩에서 텍스처를 빼지 않는 쿠커",
+            "expectedViolation": "shouldIncludeFile('probe/asset.dds', buildTarget='Server') 가 넣는다",
             "repoFiles": [kCookContractConfigRelative],
             "files": {kCookerRelative: _kTargetBlindCookerFixture},
         },

@@ -160,10 +160,10 @@ class CheckConditionPartsGate(LintGate):
     hint = ("  const bool bCanFire = bArmed && bHasAmmo && bNotReloading;\n  if ( bCanFire )\n  {\n      fire();\n  }\n"
             "  괄호 안 부분식은 한 부분이다 — 묶어서 `bool` 하나로 이름 붙여도 된다. 전체를 보려면 --whole-files 또는 --list.")
     selfTestCases = [
-        {"name": "한 줄 세 부분", "files": {"Source/Probe/A.cpp": "void f()\n{\n    if ( bArmed && bHasAmmo && bNotReloading )\n    {\n        fire();\n    }\n}\n"}, "args": ["--baseline", "0"]},
-        {"name": "여러 줄 + else if || 섞임", "files": {"Source/Probe/B.cpp": "void f()\n{\n    if ( a )\n    {\n    }\n    else if ( bX\n              || bY\n              && bZ )\n    {\n    }\n}\n"}, "args": ["--baseline", "0"]},
-        {"name": "while 세 부분", "files": {"Test/Probe/C.cpp": "void f()\n{\n    while ( a < 1 && b || !c )\n    {\n    }\n}\n"}, "args": ["--baseline", "0"]},
-        {"name": "--files + --whole-files", "files": {"Source/Probe/D.cpp": "void f()\n{\n    if ( a && b && c )\n    {\n    }\n}\n"},
+        {"name": "한 줄 세 부분", "expectedViolation": "1  Source/Probe/A.cpp", "files": {"Source/Probe/A.cpp": "void f()\n{\n    if ( bArmed && bHasAmmo && bNotReloading )\n    {\n        fire();\n    }\n}\n"}, "args": ["--baseline", "0"]},
+        {"name": "여러 줄 + else if || 섞임", "expectedViolation": "1  Source/Probe/B.cpp", "files": {"Source/Probe/B.cpp": "void f()\n{\n    if ( a )\n    {\n    }\n    else if ( bX\n              || bY\n              && bZ )\n    {\n    }\n}\n"}, "args": ["--baseline", "0"]},
+        {"name": "while 세 부분", "expectedViolation": "1  Test/Probe/C.cpp", "files": {"Test/Probe/C.cpp": "void f()\n{\n    while ( a < 1 && b || !c )\n    {\n    }\n}\n"}, "args": ["--baseline", "0"]},
+        {"name": "--files + --whole-files", "expectedViolation": "Source/Probe/D.cpp:3: if 조건이 3 부분", "files": {"Source/Probe/D.cpp": "void f()\n{\n    if ( a && b && c )\n    {\n    }\n}\n"},
          "args": ["--files", "Source/Probe/D.cpp", "--whole-files"]},
     ]
 

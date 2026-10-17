@@ -9,6 +9,7 @@
     py -3 -m Scripts shared-lock release vcpkg --owner <이름>    # 내가 잡은 것만 놓는다
     py -3 -m Scripts shared-lock acquire gpu --owner <이름> --shared   # 공유 모드(칸 2 개) — 독점이 없을 때 빈 칸을 잡는다
     py -3 -m Scripts shared-lock release gpu --owner <이름> --shared   # 내가 잡은 공유 칸을 놓는다
+    py -3 -m Scripts shared-lock run build --shared --owner <이름> --below-normal -- cmake --build --preset Ninja-Debug   # 빌드 칸을 잡고 돌린 뒤 놓는다
 
 공유 모드는 GPU 처럼 "동시에 둘까지는 괜찮지만 단독이 필요한 일도 있는" 자원에 씁니다. 공유 칸은 `<자원>-shared<n>` 디렉터리이고,
 독점(기본)은 `<자원>` 디렉터리입니다. 독점은 먼저 자기 디렉터리를 만든 뒤 공유 보유자가 모두 놓을 때까지 기다리고(그동안 새 공유는 들어오지 못한다),
@@ -20,7 +21,11 @@
 `kStaleSeconds` 보다 오래되면 버려진 잠금으로 보고 가져옵니다.
 
 의존성 정의가 다른 워크트리가 같은 `build/vcpkg_installed` 에 설치하면 main 의 라이브러리가 지워지고 다시 깔립니다. vcpkg 를 부르는
-작업(`cmake --preset`, `--clean-first` 빌드, 설치)은 먼저 `vcpkg` 를 잡습니다. 빌드 슬롯 잠금(`LT-wt/BUILD-LOCK-README.txt`)과는 별개입니다.
+작업(`cmake --preset`, `--clean-first` 빌드, 설치)은 먼저 `vcpkg` 를 잡습니다.
+
+**빌드 칸(`build`, 공유 칸 2 개)이 동시 빌드 한도다**(작업 방식 2 절). 빌드는 `run` 으로 돌린다 — 잡고, 명령을 돌리고, 지든 이기든 놓는다.
+소유 프로세스가 `run` 자신이라 명령이 도는 동안만 살아 있다(`acquire` 의 `--pid` 처럼 셸 번호를 잘못 주어 바로 버려지는 일이 없다).
+칸 수는 자원이 정한다(`kMapSharedSlotCount`) — 부르는 쪽마다 칸 수를 주면 서로 다른 한도로 잡는다.
 """
 
 from __future__ import annotations
@@ -35,7 +40,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import getProjectRoot  # noqa: E402
+from common import getProjectRoot, isProcessAlive, runProcess  # noqa: E402
 from MakeWorktree import findMainRoot  # noqa: E402
 
 #: main 체크아웃 기준 잠금 폴더.
@@ -45,8 +50,9 @@ kStaleSeconds = 6 * 3600
 #: 기다리는 최대 시간 기본값(초)과 폴링 간격(초).
 kDefaultWaitSeconds = 1800
 kPollSeconds = 5
-#: 공유 모드의 칸 수 기본값.
-kDefaultSharedSlots = 2
+#: 공유 모드를 쓰는 자원 → 칸 수. 칸 수를 부르는 쪽마다 주면 서로 다른 한도로 잡아 한도가 무너진다 — 그래서 자원이 정한다.
+#: `build` 는 동시 빌드 한도(작업 방식 2 절: 둘)다. 표에 없는 자원은 독점만 쓴다.
+kMapSharedSlotCount: dict[str, int] = {"gpu": 2, "build": 2}
 
 
 def getLockDirectory(mainRoot: Path, resource: str) -> Path:
@@ -54,29 +60,6 @@ def getLockDirectory(mainRoot: Path, resource: str) -> Path:
     if not resource or any(not (ch.isalnum() or ch in "-_") for ch in resource):
         raise ValueError(f"자원 이름은 영숫자 · '-' · '_' 만 씁니다: '{resource}'")
     return mainRoot / kLockRoot / resource
-
-
-def isProcessAlive(processId: int) -> bool:
-    """프로세스 번호가 살아 있는지 봅니다."""
-    if processId <= 0:
-        return False
-    if os.name == "nt":
-        import ctypes
-
-        kQueryLimited = 0x1000
-        kAccessDenied = 5
-        handle = ctypes.windll.kernel32.OpenProcess(kQueryLimited, False, processId)
-        if not handle:
-            return ctypes.windll.kernel32.GetLastError() == kAccessDenied
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
-    try:
-        os.kill(processId, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
 
 
 def readOwner(lockDirectory: Path) -> dict | None:
@@ -222,38 +205,18 @@ def printStatus(mainRoot: Path) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="워크트리가 나눠 쓰는 자원(vcpkg 설치 폴더 등)을 쓰기 전에 잡는 잠금.")
-    sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("status", help="잡힌 잠금과 소유자를 보인다")
-    acquireParser = sub.add_parser("acquire", help="비어 있을 때까지 기다렸다가 잡는다")
-    releaseParser = sub.add_parser("release", help="내가 잡은 잠금을 놓는다")
-    for subParser in (acquireParser, releaseParser):
-        subParser.add_argument("resource", help="자원 이름(예: vcpkg)")
-        subParser.add_argument("--owner", required=True, help="소유자 이름(에이전트 · 워크트리 이름)")
-        subParser.add_argument("--shared", action="store_true", help="공유 모드(칸 여럿 — 독점이 없을 때). 없으면 독점이며, 독점은 공유 보유자가 모두 놓을 때까지 기다린다")
-        subParser.add_argument("--slots", type=int, default=kDefaultSharedSlots, help=f"공유 칸 수(기본 {kDefaultSharedSlots})")
-    acquireParser.add_argument("--purpose", default="", help="하려는 일(다른 쪽이 status 로 본다)")
-    acquireParser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"기다릴 최대 초(기본 {kDefaultWaitSeconds}). 넘으면 실패(종료 코드 3)")
-    acquireParser.add_argument("--pid", type=int, default=os.getppid(), help="소유 프로세스 번호(기본: 부모). 죽으면 버려진 잠금이 된다")
-    args = parser.parse_args(argv)
+def getSharedSlotCount(resource: str) -> int:
+    """공유 모드로 잡는 자원의 칸 수(`kMapSharedSlotCount`). 표에 없으면 ValueError — 공유로 쓰지 않는 자원이다."""
+    if resource not in kMapSharedSlotCount:
+        raise ValueError(f"'{resource}' 는 공유 모드가 없는 자원입니다(공유 자원: {', '.join(sorted(kMapSharedSlotCount))}) — --shared 없이 잡는다")
+    return kMapSharedSlotCount[resource]
 
-    try:
-        mainRoot = findMainRoot(getProjectRoot())
-        if args.command == "status":
-            return printStatus(mainRoot)
-        lockDirectory = getLockDirectory(mainRoot, args.resource)
-    except (RuntimeError, ValueError) as error:
-        print(f"[SharedLock] {error}", file=sys.stderr)
-        return 2
 
-    if args.command == "release":
-        if args.shared:
-            return releaseShared(mainRoot, args)
-        return 0 if release(lockDirectory, args.owner) else 1
+def acquire(mainRoot: Path, args: argparse.Namespace) -> int:
+    """`args.shared` 에 따라 공유 칸 또는 독점을 잡습니다. 0 이면 잡았고, 3 이면 시한을 넘겼습니다."""
     if args.shared:
         return acquireShared(mainRoot, args)
-
+    lockDirectory = getLockDirectory(mainRoot, args.resource)
     deadline = time.time() + args.wait
     bShownWait = False
     while True:
@@ -273,6 +236,73 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[SharedLock] {args.wait} 초를 기다렸지만 {args.resource} 가 비지 않았습니다. 사용자에게 알리세요.", file=sys.stderr)
             return 3
         time.sleep(kPollSeconds)
+
+
+def releaseHeld(mainRoot: Path, args: argparse.Namespace) -> int:
+    """`acquire` 로 잡은 것을 놓습니다(공유면 내 칸, 아니면 독점)."""
+    if args.shared:
+        return releaseShared(mainRoot, args)
+    return 0 if release(getLockDirectory(mainRoot, args.resource), args.owner) else 1
+
+
+def runHolding(mainRoot: Path, args: argparse.Namespace, listCommand: list[str]) -> int:
+    """
+    잠금을 잡고 `listCommand` 를 돌린 뒤 **반드시** 놓습니다(명령이 지거나 예외로 끝나도). 소유 프로세스는 이 프로세스다 — 명령이 도는 동안
+    살아 있고, 죽으면 잠금이 버려진 것으로 보인다. `args.belowNormal` 이면 명령을 낮은 우선순위로 띄운다(Windows).
+    잡지 못하면 그 종료 코드(3)를, 잡았으면 명령의 종료 코드를 돌려준다.
+    """
+    if not listCommand:
+        raise ValueError("돌릴 명령이 없습니다 — `run <자원> --owner <이름> -- <명령…>`")
+    args.pid = os.getpid()
+    acquired = acquire(mainRoot, args)
+    if acquired != 0:
+        return acquired
+    try:
+        result = runProcess(listCommand, bCapture=False, bBelowNormalPriority=args.belowNormal)
+        if not result.bLaunched:
+            print(f"[SharedLock] {result.stderr}", file=sys.stderr)
+        return result.returnCode
+    finally:
+        releaseHeld(mainRoot, args)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="워크트리가 나눠 쓰는 자원(vcpkg 설치 폴더 · 빌드 칸 · GPU)을 쓰기 전에 잡는 잠금.")
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("status", help="잡힌 잠금과 소유자를 보인다")
+    acquireParser = sub.add_parser("acquire", help="비어 있을 때까지 기다렸다가 잡는다")
+    releaseParser = sub.add_parser("release", help="내가 잡은 잠금을 놓는다")
+    runParser = sub.add_parser("run", help="잡고 `--` 뒤의 명령을 돌린 뒤 놓는다(빌드는 이것으로 — 놓기를 잊을 수 없다)")
+    for subParser in (acquireParser, releaseParser, runParser):
+        subParser.add_argument("resource", help="자원 이름(예: vcpkg · build · gpu)")
+        subParser.add_argument("--owner", required=True, help="소유자 이름(에이전트 · 워크트리 이름)")
+        subParser.add_argument("--shared", action="store_true", help="공유 모드(칸 수는 자원이 정한다 — kMapSharedSlotCount). 없으면 독점이며, "
+                                                                     "독점은 공유 보유자가 모두 놓을 때까지 기다린다")
+    for subParser in (acquireParser, runParser):
+        subParser.add_argument("--purpose", default="", help="하려는 일(다른 쪽이 status 로 본다)")
+        subParser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"기다릴 최대 초(기본 {kDefaultWaitSeconds}). 넘으면 실패(종료 코드 3)")
+    acquireParser.add_argument("--pid", type=int, default=os.getppid(), help="소유 프로세스 번호(기본: 부모). 죽으면 버려진 잠금이 된다")
+    runParser.add_argument("--below-normal", dest="belowNormal", action="store_true", help="명령을 낮은 우선순위로 띄운다(도우미 빌드 — 작업 방식 2 절)")
+    # `run` 의 명령은 `--` 뒤 전부다 — argparse 의 REMAINDER 는 자원 이름 뒤의 옵션(--owner …)까지 삼키므로 먼저 가른다.
+    listArgument = list(sys.argv[1:] if argv is None else argv)
+    separator = listArgument.index("--") if "--" in listArgument else len(listArgument)
+    listArgument, listRunCommand = listArgument[:separator], listArgument[separator + 1:]
+    args = parser.parse_args(listArgument)
+
+    try:
+        mainRoot = findMainRoot(getProjectRoot())
+        if args.command == "status":
+            return printStatus(mainRoot)
+        getLockDirectory(mainRoot, args.resource)
+        args.slots = getSharedSlotCount(args.resource) if args.shared else kMapSharedSlotCount.get(args.resource, 0)
+        if args.command == "release":
+            return releaseHeld(mainRoot, args)
+        if args.command == "run":
+            return runHolding(mainRoot, args, listRunCommand)
+        return acquire(mainRoot, args)
+    except (RuntimeError, ValueError) as error:
+        print(f"[SharedLock] {error}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,33 +56,63 @@ def runProcess(command: Sequence[str | Path],
                env: Mapping[str, str] | None = None,
                stdinText: str | None = None,
                stdoutPath: Path | None = None,
-               bMergeStderr: bool = False) -> ProcessResult:
+               bMergeStderr: bool = False,
+               bBelowNormalPriority: bool = False) -> ProcessResult:
     """
     `command` 를 돌리고 끝날 때까지 기다립니다.
 
     - `bCapture` : 출력을 잡는다(UTF-8, 깨진 바이트는 대체 글자). 거짓이면 부모 콘솔로 흘린다.
     - `stdoutPath`: 출력(stdout + stderr)을 이 파일에 쓴다(`bCapture` 를 무시한다) — 긴 로그를 남기는 실행(백엔드 스모크).
     - `bMergeStderr`: 잡을 때 stderr 를 stdout 칸에 섞는다 — 쓰인 순서 그대로 다시 찍을 출력(커밋 훅이 뒤에서 돌린 게이트).
+    - `bBelowNormalPriority`: 낮은 우선순위로 띄운다(Windows 만 — 도우미 빌드, `docs/11_Workflow.md` 2 절).
     """
     listArgument = [str(part) for part in command]
     workingDir = str(cwd) if cwd else None
     environment = dict(env) if env else None
+    creationFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS if bBelowNormalPriority and os.name == "nt" else 0
     try:
         if stdoutPath is not None:
             stdoutPath.parent.mkdir(parents=True, exist_ok=True)
             with stdoutPath.open("w", encoding="utf-8", errors="replace") as logFile:
                 completed = subprocess.run(listArgument, cwd=workingDir, env=environment, stdout=logFile, stderr=subprocess.STDOUT,
-                                           timeout=timeoutSeconds, input=stdinText, encoding="utf-8", errors="replace", check=False)
+                                           timeout=timeoutSeconds, input=stdinText, encoding="utf-8", errors="replace", check=False,
+                                           creationflags=creationFlags)
             return ProcessResult(returnCode=completed.returncode)
         if bCapture and bMergeStderr:
             completed = subprocess.run(listArgument, cwd=workingDir, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                       timeout=timeoutSeconds, input=stdinText, encoding="utf-8", errors="replace", check=False)
+                                       timeout=timeoutSeconds, input=stdinText, encoding="utf-8", errors="replace", check=False,
+                                       creationflags=creationFlags)
         else:
             completed = subprocess.run(listArgument, cwd=workingDir, env=environment, capture_output=bCapture, timeout=timeoutSeconds,
-                                       input=stdinText, encoding="utf-8", errors="replace", check=False)
+                                       input=stdinText, encoding="utf-8", errors="replace", check=False, creationflags=creationFlags)
         return ProcessResult(returnCode=completed.returncode, stdout=completed.stdout or "", stderr=completed.stderr or "")
     except (FileNotFoundError, PermissionError) as error:
         return ProcessResult(returnCode=-1, stderr=f"실행 파일을 띄우지 못했다: {listArgument[0]} ({error})", bLaunched=False)
     except subprocess.TimeoutExpired as error:
         partial = error.stdout.decode("utf-8", "replace") if isinstance(error.stdout, bytes) else (error.stdout or "")
         return ProcessResult(returnCode=-1, stdout=partial, stderr=f"{timeoutSeconds} 초를 넘겼다", bTimedOut=True)
+
+
+def isProcessAlive(processId: int) -> bool:
+    """
+    프로세스 번호가 살아 있는지 봅니다(잠금 · 워크트리 주인 기록이 버려졌는지 가를 때). 권한이 없어 열지 못한 프로세스는 살아 있다고 본다.
+    """
+    if processId <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+
+        kQueryLimited = 0x1000
+        kAccessDenied = 5
+        handle = ctypes.windll.kernel32.OpenProcess(kQueryLimited, False, processId)
+        if not handle:
+            return ctypes.windll.kernel32.GetLastError() == kAccessDenied
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    try:
+        os.kill(processId, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True

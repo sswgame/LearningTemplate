@@ -185,14 +185,17 @@ class CheckCmakeConventionsGate(LintGate):
     selfTestCases = [
         {
             "name": "sw_ 없는 function",
+            "expectedViolation": "cmake/Probe/Bad.cmake:1 function 'addSomething' 는 sw_camelCase 여야 합니다",
             "files": {"cmake/Probe/Bad.cmake": "function(addSomething TARGET_NAME)\nendfunction()\n"},
         },
         {
             "name": "SW_ 없는 option",
+            "expectedViolation": "cmake/Probe/BadOption.cmake:1 option 'ENABLE_PROBE' 는 SW_UPPER_SNAKE_CASE 여야 합니다",
             "files": {"cmake/Probe/BadOption.cmake": 'option(ENABLE_PROBE "probe" OFF)\n'},
         },
         {
             "name": "'_' 로 시작하는 함수 내부 변수",
+            "expectedViolation": "cmake/Probe/BadLocal.cmake:2 함수 내부 변수 '_probeValue' 는 '_' 없이 camelCase 여야 합니다 ('probeValue' 권장)",
             "files": {
                 "cmake/Probe/BadLocal.cmake":
                     "function(sw_doProbe)\n\tset(_probeValue 1)\nendfunction()\n"
@@ -201,6 +204,7 @@ class CheckCmakeConventionsGate(LintGate):
         {
             # 역참조 없이 이름만 쓰이는 지역 변수 — 만드는 자리(file GLOB_RECURSE) · 쓰는 자리(IN LISTS)
             "name": "역참조 없는 '_' 지역 변수",
+            "expectedViolation": "cmake/Probe/BareLocal.cmake:2 함수 내부 변수 '_allHeaders' 는 '_' 없이 camelCase 여야 합니다 ('allHeaders' 권장)",
             "files": {
                 "cmake/Probe/BareLocal.cmake":
                     "function(sw_probe)\n\tfile(GLOB_RECURSE _allHeaders \"*.h\")\n\tforeach(h IN LISTS _allHeaders)\n\tendforeach()\nendfunction()\n"
@@ -208,14 +212,17 @@ class CheckCmakeConventionsGate(LintGate):
         },
         {
             "name": "팩토리 밖 MODULE 라이브러리",
+            "expectedViolation": "Source/Probe/CMakeLists.txt:1 SHARED · MODULE 라이브러리는 sw_addModuleLibrary 로 만든다",
             "files": {"Source/Probe/CMakeLists.txt": "add_library(ProbeModule MODULE probe.cpp)\n"},
         },
         {
             "name": "내장 경로 별칭",
+            "expectedViolation": "cmake/Probe/Alias.cmake:1 'sw_output_directory' 는 ${CMAKE_BINARY_DIR} 의 별칭",
             "files": {"cmake/Probe/Alias.cmake": "set(sw_output_directory \"${CMAKE_BINARY_DIR}\")\n"},
         },
         {
             "name": "if(COMMAND sw_…) 가드",
+            "expectedViolation": "cmake/Probe/Guard.cmake:1 if(COMMAND sw_…) 가드",
             "files": {"cmake/Probe/Guard.cmake": "if(COMMAND sw_probe)\n\tsw_probe()\nendif()\n"},
         },
     ]

@@ -13,10 +13,14 @@
 ```powershell
 py -3 -m Scripts worktree-make <이름>                  # <드라이브>:/w/<이름>(Windows) · <main 의 부모>/LT-wt/<이름>, 브랜치 wt/<이름>, 기준 origin/main
 py -3 -m Scripts worktree-make <이름> --base wt/apply5 # 다른 브랜치에서 갈라 만든다
-py -3 -m Scripts worktree-remove <이름>                # 나눠 쓰는 링크를 먼저 끊고 지운다
+py -3 -m Scripts worktree-remove <이름>                # 나눠 쓰는 링크를 먼저 끊고 지운다 — 다른 세션이 쓰는 중이면 건너뛴다
+py -3 -m Scripts worktree-list                         # 워크트리마다 브랜치와 주인(쓰는 중 · 주인 프로세스 끝남 · 기록 없음)
 py -3 -m Scripts shared-lock acquire vcpkg --owner <이름> --purpose "configure"   # vcpkg 를 부르기 전(cmake --preset · --clean-first · 설치) — 쓰는 쪽이 있으면 기다린다
 py -3 -m Scripts shared-lock release vcpkg --owner <이름>                          # 끝나면 바로 놓는다(status 로 누가 쓰는지 본다)
 ```
+
+- **워크트리에는 주인이 있습니다.** `worktree-make` 가 주인 이름 · 프로세스 번호(`CLAUDE_PID`, 사람 셸은 `--pid $PID`) · 세션 · 시작 시각을 워크트리의 git 디렉터리에 적습니다.
+  `worktree-remove` 는 주인 프로세스가 살아 있고 내 것이 아니면 지우지 않습니다(`--even-if-owned` 는 사용자가 시킨 때만). 주인 기록이 없는 워크트리(이 기능 전)는 누가 쓰는지 모르므로 지우기 전에 사용자에게 묻습니다.
 
 - 워크트리는 내려받은 도구(LLVM, Ninja, vcpkg)와 vcpkg 설치 폴더를 main 체크아웃과 링크로 나눠 씁니다. 이 링크 폴더(`Tools/*`, `build/vcpkg_*`)는 지우거나 고치지 않습니다.
   그래서 `vcpkg.json`, 포트, `cmake/Modules/Toolchain/Vcpkg/*` 를 바꿔야 하면 워크트리에서 바꾸지 않고 main 에서 먼저 바꿉니다.
@@ -35,10 +39,12 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 ## 2. 빌드와 CPU
 
 - **동시에 빌드하는 작업은 최대 둘입니다**(적용 담당과 도우미 하나). 나머지 도우미는 코드 적용과 빌드 없는 검사만 합니다. 워크트리마다 빌드 폴더가 따로라 전체를 다시 컴파일하고, 전체 빌드가 겹치면 CPU 가 100 % 에 붙어 테스트 시간 제한이 가짜로 집니다.
-- 도우미의 빌드와 테스트는 낮은 우선순위로 돌립니다. Git Bash 에서 `cmd //c "start /belownormal /wait /b cmake --build --preset Ninja-Debug -j 4"`, ctest 는 `-j 2` 입니다. 끌 때는 자기 PID 만 끕니다.
-  이 빌드는 테스트를 짓지 않습니다. 테스트를 돌릴 도우미는 `--target all AllTests` 를 붙여 낮은 우선순위로 먼저 짓습니다(ctest · `py -3 -m Scripts test` 가 대신 지으면 보통 우선순위로 돈다).
+- **한도는 빌드 칸 잠금(`build`, 공유 칸 둘)이 강제합니다.** 모든 빌드는 칸을 잡고 돌립니다 — 검증 빌드는 `full-build`(아래 3 절)가 스스로 잡고, 그 밖의 빌드는
+  `py -3 -m Scripts shared-lock run build --shared --owner <이름> [--below-normal] -- cmake --build --preset Ninja-Debug --target <타깃>` 으로 돌립니다.
+  `run` 은 명령이 지거나 끊겨도 칸을 놓고, 칸의 소유 프로세스가 `run` 자신이라 끝나면 버려진 칸으로 치워집니다. 칸이 비기를 기다리다 시한(기본 30 분)을 넘기면 사용자에게 알립니다.
+- 도우미의 빌드와 테스트는 낮은 우선순위로 돌립니다(`--below-normal`). ctest 는 `-j 2` 입니다. 끌 때는 자기 PID 만 끕니다.
+  `--target` 없는 빌드는 테스트를 짓지 않습니다. 테스트를 돌릴 도우미는 테스트까지 먼저 짓습니다(ctest · `py -3 -m Scripts test` 가 대신 지으면 칸 없이 보통 우선순위로 돈다).
 - **게임 코드는 `Ninja-Debug` 한 빌드가 모두 짓습니다(`SW_GAMES=ALL`).** 게임 실행 확인은 `App.exe -game=<게임>` 으로 합니다. 도우미가 `Ninja-Debug-Lean` 처럼 게임을 줄인 구성으로 지었으면 "게임 빌드 미확인" 으로 보고합니다.
-- 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`LT-wt/.slot1` ~ `.slot3`)을 씁니다.
 - **GPU 실행은 잠금 모드로 나눕니다.** 결정적 설정으로 기능만 보는 시나리오 · `hostgpu` · 캡처는 `shared-lock acquire gpu --shared`(공유, 동시에 두 프로세스 — 백엔드를 나눠 병렬로 돌린다),
   Release 측정 · 부하 기준선 · 실제 장치 제거(TDR) 실험과 실제 마우스 · 창 포커스에 기대는 시나리오(가상 입력으로 도는지 확인하지 못한 것)는 독점(`--shared` 없이)으로 혼자 돌립니다.
   독점은 공유 보유자가 모두 놓을 때까지 기다리고, 그동안 새 공유는 들어오지 못합니다.
@@ -49,10 +55,15 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 어떤 명령으로 무엇을 보는지는 [검증과 측정](08_Verification.md) 이 원본입니다. 여기에는 언제 어디까지 돌리는지만 적습니다.
 
+**검증 빌드는 늘 전체입니다 — `py -3 -m Scripts full-build --owner <이름>`(`all AllTests`, 빌드 칸을 잡는다).** 바꾼 영역의 테스트만 지으면 다른 영역의 테스트가 쓰는
+헤더 · 매크로를 바꾼 것이 병합 뒤에야 깨집니다(2026-10-17 integ5). 고치는 동안의 빌드는 단일 타깃이어도 되지만, "검증했다" 고 보고하는 빌드는 `full-build` 입니다.
+`full-build` 는 커밋하지 않은 변경이 없을 때만 짓고, 성공하면 그 커밋 트리의 증거를 공통 `.git` 에 남깁니다. **main 으로의 push 는 pre-push 훅이 그 증거를 요구합니다**
+(`Scripts/setup/InstallGitHooks.py` 가 설치한다 — 훅이 없는 체크아웃은 그 스크립트를 한 번 돌린다). 그래서 병합 결과 트리를 `full-build` 하지 않은 main 은 나가지 않습니다.
+
 | 단계 | Debug | Shipping | 그 밖 |
 |---|---|---|---|
-| 도우미 | 빌드 경고 0, 고친 스위트(`--test_filter`) 또는 `py -3 -m Scripts test --changed`, 고친 파일의 린트 | — | — |
-| 적용 담당(배치마다) | 경고 0, `-L lint`, `-L nogpu`, `-L race` | 빌드, `-L nogpu`, `-L hostgpu` | 건드린 게임 × 네 백엔드. 배치 끝에 네 백엔드 × 대표 셋(Empty, 에디터, Shooter3D, NileCity) |
+| 도우미 | `full-build` 경고 0, 고친 스위트(`--test_filter`) 또는 `py -3 -m Scripts test --changed`, 고친 파일의 린트 | — | — |
+| 적용 담당(배치마다) | 병합 결과의 `full-build` 경고 0, `-L lint`, `-L nogpu`, `-L race` | 빌드, `-L nogpu`, `-L hostgpu` | 건드린 게임 × 네 백엔드. 배치 끝에 네 백엔드 × 대표 셋(Empty, 에디터, Shooter3D, NileCity) |
 | 큰 단계 끝 | 위 + `-L hostgpu` 전체 한 번 | 위와 같음 | 모든 게임 × 모든 백엔드, Release 빌드와 성능 기준, 전용 서버 전체, WSL 리눅스 빌드 |
 
 - **기능 시나리오(`hostgpu`)는 Shipping 이 기본입니다.** Debug 한 바퀴는 같은 검증의 수십 배가 걸립니다. 레이스 검사(`DataRaceDetector`)는 `SW_DEBUG` 에서만 켜지므로 Debug 는 스레드 경로를 지나는 묶음 `race` 만 돕니다(묶음은 `Test/TestPolicy.json` 의 `raceCases`).
@@ -67,6 +78,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 - **검증을 마친 main 은 묻지 않고 push 합니다.** 사용자에게는 결과만 짧게 알립니다. 들어간 것, 검증 수치, 상용 엔진(언리얼, 유니티, Godot)과 비교한 위치와 빠진 것을 적습니다.
 - 도우미는 push 하지 않습니다. 검증되지 않은 브랜치가 원격에 가지 않게 하기 위해서입니다.
+- main push 가 "전체 빌드 증거가 없다" 로 막히면 그 커밋에서 `full-build` 를 돌립니다. 훅을 우회하지 않습니다.
 - 검증이 초록이면 바로 넣고, 뒤에 문제가 드러나면 그 단위를 되돌립니다. 배치 사이에 사용자 확인을 기다리지 않고 다음 배치를 시작합니다.
 - **push 뒤 CI 결과를 기다리며 멈추지 않습니다.** 사용자가 실패를 알려 주면 그때 원인을 찾습니다. 실패를 읽는 방법(`ci-jobs`, 실패 주석)은 [검증과 측정](08_Verification.md) 4절에 있습니다.
 

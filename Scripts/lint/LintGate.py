@@ -18,7 +18,7 @@ class CheckSomethingGate(LintGate):
     description = "무엇을 검사하는가"
     preCommitPattern = ("Source/*",)            # 이 파일이 staged 됐을 때만 훅에서 돈다
     preCommitFileArgument = "--files"           # 훅이 staged 부분집합을 --files 로 넘긴다
-    selfTestCases = [{"name": "...", "files": {"Source/Probe.h": "..."}}]
+    selfTestCases = [{"name": "...", "expectedViolation": "Source/Probe.h:1: ...", "files": {"Source/Probe.h": "..."}}]
 
     def addArguments(self, parser):
         self.addFilesArgument(parser)
@@ -71,6 +71,26 @@ from common.RuleData import RuleDataError, kExemptionKey, kKindReason, kRuleData
 from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings, scanSourceGates  # noqa: E402
 
 
+#: 음성 테스트 조각(`LintGate.selfTestCases`)이 가질 수 있는 키. `name` · `expectedViolation` 은 필수다.
+kSelfTestCaseKeys = frozenset({"name", "expectedViolation", "files", "args", "repoFiles", "git"})
+
+
+def checkSelfTestCase(className: str, case: dict) -> None:
+    """
+    조각 정의 하나를 봅니다. 이름 · 노린 위반 문구가 없거나 모르는 키가 있으면 `TypeError` — 약한 조각(종료 코드만 맞는 조각)이 들어오지 못하게
+    게이트 클래스를 만드는 자리에서 멈춘다.
+    """
+    caseName = case.get("name")
+    if not isinstance(caseName, str) or not caseName.strip():
+        raise TypeError(f"{className}: selfTestCases 조각에 name 이 없습니다")
+    expected = case.get("expectedViolation")
+    if not isinstance(expected, str) or not expected.strip():
+        raise TypeError(f"{className}/{caseName}: selfTestCases 조각에 expectedViolation(출력에 있어야 하는 노린 위반 문구)이 없습니다")
+    listUnknown = sorted(set(case) - kSelfTestCaseKeys)
+    if listUnknown:
+        raise TypeError(f"{className}/{caseName}: selfTestCases 조각의 모르는 키 {listUnknown} — 쓸 수 있는 키: {sorted(kSelfTestCaseKeys)}")
+
+
 class GateError(Exception):
     """
     검사가 **성립하지 않는다** — 위반(1)이 아니라 오류(2)로 끝냅니다.
@@ -107,8 +127,11 @@ class LintGate:
     - `maxViolationShown`: 위반을 몇 개까지 찍을지. 0 이면 전부.
     - `maxNoteShown`     : 참고를 몇 개까지 찍을지.
     - `selfTestCases`    : 이 게이트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive` 가 읽어 간다. 종료 1(위반)이 나와야 하고 종료 2 는 실패다.
-                           키: `name` · `files`(임시 트리에 쓸 글) · `args` · `repoFiles`(저장소에서 그대로 복사할 입력 — 표 · 설정을
-                           손으로 베끼면 형식이 바뀌는 날 조각이 종료 2 로 죽는다) · `git`(참이면 임시 트리를 git 저장소로 만든다).
+                           키: `name` · `expectedViolation`(필수 — 게이트 출력에 들어 있어야 하는 노린 위반 문구) · `files`(임시 트리에 쓸 글) ·
+                           `args` · `repoFiles`(저장소에서 그대로 복사할 입력 — 표 · 설정을 손으로 베끼면 형식이 바뀌는 날 조각이 종료 2 로
+                           죽는다) · `git`(참이면 임시 트리를 git 저장소로 만든다). 모르는 키도 오류다.
+                           `expectedViolation` 이 없으면 클래스를 만들 때 `TypeError` 로 멈춘다 — 종료 코드만 보면 노린 위반이 빠져도
+                           같은 조각의 다른 위반(입력 부족 · 낡은 예외)으로 통과한다.
     - `selfTestSkipReason`: 조각을 만들 수 없는 이유. 이유 없는 예외는 없다.
     - `mapExemption`     : 규칙에서 빼 주는 자리 → 이유. 이유 · 낡음 · 크기를 기반이 본다(아래 "예외 표").
 
@@ -239,6 +262,8 @@ class LintGate:
             raise TypeError(f"{cls.__name__}: sourceScanRoots 를 채운 소스 게이트는 sourceSuffixes 도 적는다")
         if cls.sourceScanRoots and "scan" in cls.__dict__:
             raise TypeError(f"{cls.__name__}: 소스 게이트(sourceScanRoots)는 scan() 이 아니라 checkSourceFile() 을 쓴다")
+        for case in cls.__dict__.get("selfTestCases", []):
+            checkSelfTestCase(cls.__name__, case)
         if "mapExemption" not in cls.__dict__:
             # 예외 표는 rules/<이름>.toml 에서 온다. 읽기 오류는 import 를 깨지 않고 main() 이 종료 2 로 알린다(CheckLintsAreAlive 도 본다).
             try:
