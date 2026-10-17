@@ -78,6 +78,9 @@
 
 - `C-49` [정리] **`sw::vector` 의 `_list[i]` 루프는 쓰기가 벡터 내부를 가려(별칭) 벡터화되지 않는다**(2026-10-17 `DynamicBitset` 측정에서 확인 — 원시 포인터 루프로 고쳤다).
   다른 컨테이너의 블록 루프와 `sw::vector::operator==` 에 같은 모양이 있을 수 있다. 호출부와 이득을 Release 로 잰 뒤에 한다.
+- `C-51` [정리] **열거형 이름 캐시의 낮은 위험 둘**(2026-10-17 `reflect7ab` 검토). ① `EnumNameCache::find`(`EnumName.cpp`)가 `_pInfo` 와 `_generation` 을 따로 저장해, 두 스레드가 세대 경계에서 겹쳐 쓰면 새 세대에 옛 포인터가 붙을 수 있다.
+  저장 순서만 바꿔서는 막히지 않으므로 쌍을 한 원자 값(세대를 담은 불변 항목 포인터 하나)으로 바꾼다. ② `EnumInfo::_pArrDenseName` 이 원자가 아닌 포인터라 핫 리로드 해제 중 렌더 · 오디오 · 로거 스레드가 `getEnumName` 을 부르면 위험하다.
+  같은 뿌리로 `TypeLookupCache` 도 세대를 보지 않아 엔진을 다시 만들면 해제된 `TypeInfo` 를 가리킨다 — 타입 캐시 전부가 세대 하나를 보게 한다.
 
 - `D1-2` [기능] **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 

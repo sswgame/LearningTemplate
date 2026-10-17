@@ -213,7 +213,7 @@ _client.call( ChatMethod::kSend, request, onReply );
 ### 3.6 중첩 형식과 필드 순서
 
 - 필드는 `PROPERTY()` 가 붙은 멤버를 **선언 순서대로** 씁니다. 기반 클래스의 필드가 먼저입니다. 크기 접두는 없습니다. 같은 빌드가 읽으므로 끝을 알 필요가 없습니다.
-- 다중 상속 타입은 적격이 아닙니다(7.4 와 같은 이유).
+- 다중 상속 타입은 생성 오류입니다(7.4 와 같은 이유, 생성기 `collectBase`).
 - 다른 헤더 · 다른 대상의 중첩 타입이 적격인지는 생성기가 libclang AST 에서 그 타입의 `PROPERTY` 를 읽어 판정합니다. AST 순회가 입력 헤더 밖의 선언도 보는지는 미확인이며 단계 1 의 첫 확인입니다(8.1 위험 2).
 
 ### 3.7 열거형
@@ -406,7 +406,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
   1. 대상 타입: `findStaticType<To>()` 가 `To::StaticType()` 을 부릅니다. 이 함수는 `.gen.cpp` 에 정의되어 있어 인라인되지 않고, 대상 타입이 다른 모듈이면 DLL 경계 호출입니다. 내부는 `TypeLookupCache::find` 의 원자 로드 한 번과 `isAlive` 확인입니다(`TypeRegistry.h:94-110`).
      조회 루프(`getComponent`)는 이것을 루프 밖에서 한 번 구합니다(`GameObject.h:288`).
   2. 동적 타입: `Component` 는 만들 때 받은 `_pTypeInfo` 포인터를 보관하고 `findCachedTypeInfo()` 가 그것을 반환합니다. 가상 호출은 캐시가 없을 때만 합니다(`Component.h:500-505`).
-     객체에 타입 필드를 두는 개선은 `Component` 에 이미 되어 있습니다. `GameObject` 는 가상 `getTypeInfo()` 를 쓰고, 그 안에서 `StaticType()` 결과를 함수 지역 정적 포인터에 둡니다(단계 7-a).
+     객체에 타입 필드를 두는 개선은 `Component` 에 이미 되어 있습니다. `GameObject` 는 가상 `getTypeInfo()` 를 쓰고 결과를 캐시하지 않습니다(단계 7-a, [결정 기록](../09_Decisions.md) 5-4).
   3. 상속 검사: `TypeInfo::isDerivedFrom( const TypeInfo* )` 는 깊이마다 조상 이름 인덱스를 적은 테이블(디스플레이)을 봅니다. 원자 로드 네 번과 비교 한 번이며 잠금 · 해시 맵 · 문자열 비교 · 사슬 순회가 없습니다(`ReflectionTypes.h:1051-1065`).
      깊이가 8(`kAncestorDisplayDepth`, `ReflectionConstants.h:53`)을 넘거나 테이블이 없으면 `isDerivedFromSlow` 가 부모 포인터를 따라갑니다.
 - `castToExact` 는 `Source` 에 없습니다.
@@ -420,7 +420,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
 - 구간 번호는 전체 타입 트리를 깊이 우선으로 번호 매겨야 합니다. 타입이 하나 추가되면(DLL 로드, 핫 리로드, 플러그인) 다른 타입의 번호가 바뀝니다. 코드 생성기는 모듈 하나만 보므로 전역 번호를 빌드 시간에 정할 수 없고, 실행 시간에 다시 매기면 그 사이 캐스트가 틀린 번호를 봅니다.
 - 디스플레이는 이름 인덱스 기반이라 타입 추가가 다른 타입의 테이블을 바꾸지 않습니다. 등록 · 해제 때 영향받는 테이블만 비웁니다(`ReflectionTypes.h:929-940`). 지금 구조가 동적 로드에 맞습니다.
 
-**`getTypeInfo` 가상 호출을 타입 필드로.** `Component` 는 이미 했습니다. `GameObject` 는 가상 호출을 그대로 두고 결과만 함수 지역 캐시에 둡니다(단계 7-a, [결정 기록](../09_Decisions.md) 5-4).
+**`getTypeInfo` 가상 호출을 타입 필드로.** `Component` 는 이미 했습니다. `GameObject` 는 가상 호출을 그대로 둡니다. 결과 캐시는 측정한 이득이 없고 엔진 재생성에서 낡아 넣지 않았습니다([결정 기록](../09_Decisions.md) 5-4).
 
 **정적 타입이 확정된 호출부는 `static_cast`.** 가장 흔한 모양은 "핸들로 컴포넌트를 찾고 바로 캐스트"입니다.
 `FacialAnimationComponent.cpp:455`, `PoseRetargetComponent.cpp:119`, `SkeletalMeshComponent.cpp:375`, `MotionWarpingComponent.cpp:91`, `ObjectStateSerializer.cpp:79` 가 그렇습니다.

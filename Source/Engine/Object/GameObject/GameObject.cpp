@@ -122,16 +122,7 @@ namespace sw
 
     const TypeInfo* GameObject::getTypeInfo() const
     {
-        // `Component::findCachedTypeInfo` 와 같은 자리다. GameObject 는 Engine 모듈 타입이라 핫 리로드로 해제되지 않으므로 한 번 찾은 포인터가 낡지 않는다.
-        // 레지스트리가 아직 없어 찾지 못한 결과는 기록하지 않는다(다음 호출이 다시 찾는다).
-        static atomic<const TypeInfo*> s_pType{ nullptr };
-        const TypeInfo*                pType = s_pType.load( std::memory_order_acquire );
-        if ( pType != nullptr )
-            return pType;
-        pType = StaticType();
-        if ( pType != nullptr )
-            s_pType.store( pType, std::memory_order_release );
-        return pType;
+        return StaticType();
     }
 
     /**
