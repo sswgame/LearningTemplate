@@ -405,6 +405,36 @@ SW_TEST_CASE( NetClientServerTest, OwnerStateSlotTravelsOutsideTheEntityBudget )
     SW_EXPECT_FALSE( server.setOwnerState( 0, 1, vector<uint8>( NetSnapshot::kMaxEntityBytes + 1, 0 ) ) );
 }
 
+/**
+ * @brief [NetClientServerTest] 예측 재조정은 "맞았다" 와 "맞출 기록이 없다" 를 다른 결과로 돌려주고, 기록은 빈 틱 없이 이어서만 받는다
+ * @details 예전에는 둘 다 false 였다. 예측이 기록 크기보다 앞서 기록이 밀려나도 부르는 쪽은 "맞았다" 로 읽고 영영 맞추지 않았다.
+ *          빈 틱을 두고 기록하면 다시 시뮬레이션이 그 입력을 건너뛰었다.
+ */
+SW_TEST_CASE( NetClientServerTest, PredictionReconcileReportsMissingHistory )
+{
+    const auto simulate = []( float32 x, float32 move )
+    { return x + move; };
+    const auto isClose = []( float32 lhs, float32 rhs )
+    { return MathUtil::abs( lhs - rhs ) < 1.0e-3f; };
+    ClientPrediction<float32, float32> prediction( 4 );
+    float32                            predicted = 0.0f;
+    SW_EXPECT_TRUE( PredictionReconcileResult::TickAhead == prediction.reconcile( 1, 0.0f, predicted, simulate, isClose ) ); // 아직 기록이 없다
+    for ( uint32 tick = 1; tick <= 10; ++tick )
+    {
+        predicted = simulate( predicted, 1.0f );
+        SW_ASSERT_TRUE( prediction.record( tick, 1.0f, predicted ) );
+    }
+    SW_EXPECT_FALSE( prediction.record( 12, 1.0f, 12.0f ) ); // 11 을 건너뛰었다
+    SW_EXPECT_EQUAL( 10, static_cast<int32>( prediction.getLatestTick() ) );
+    const float32 before = predicted;
+    SW_EXPECT_TRUE( PredictionReconcileResult::TickOverwritten == prediction.reconcile( 3, 0.0f, predicted, simulate, isClose ) ); // 고리 4 칸 밖
+    SW_EXPECT_TRUE( PredictionReconcileResult::TickAhead == prediction.reconcile( 11, 0.0f, predicted, simulate, isClose ) );
+    SW_EXPECT_NEAR_EQUAL( before, predicted, 1.0e-6f ); // 맞추지 못한 결과는 지금 상태를 건드리지 않는다
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( prediction.getCorrectionCount() ) );
+    SW_EXPECT_TRUE( PredictionReconcileResult::Corrected == prediction.reconcile( 7, 0.0f, predicted, simulate, isClose ) ); // 남은 7 · 8 · 9 · 10 중 8 · 9 · 10 을 다시
+    SW_EXPECT_NEAR_EQUAL( 3.0f, predicted, 1.0e-5f );
+}
+
 SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds )
 {
     // 예측 — 상태는 x, 입력은 이동량. 서버는 x 가 5 를 넘지 못하게 막는다(벽) — 클라이언트는 몰랐다.
@@ -415,16 +445,16 @@ SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds
     for ( uint32 tick = 1; tick <= 10; ++tick )
     {
         predicted = simulate( predicted, 1.0f );
-        prediction.record( tick, 1.0f, predicted );
+        SW_ASSERT_TRUE( prediction.record( tick, 1.0f, predicted ) );
     }
     SW_EXPECT_NEAR_EQUAL( 10.0f, predicted, 1.0e-5f );
     const auto isClose = []( float32 lhs, float32 rhs )
     { return MathUtil::abs( lhs - rhs ) < 1.0e-3f; };
-    SW_EXPECT_FALSE( prediction.reconcile( 4, 4.0f, predicted, simulate, isClose ) ); // 맞았다
-    SW_EXPECT_TRUE( prediction.reconcile( 6, 5.0f, predicted, simulate, isClose ) );  // 서버는 5 에서 멈췄다 → 남은 4 틱을 다시
+    SW_EXPECT_TRUE( PredictionReconcileResult::Matched == prediction.reconcile( 4, 4.0f, predicted, simulate, isClose ) );
+    SW_EXPECT_TRUE( PredictionReconcileResult::Corrected == prediction.reconcile( 6, 5.0f, predicted, simulate, isClose ) ); // 서버는 5 에서 멈췄다 → 남은 4 틱을 다시
     SW_EXPECT_NEAR_EQUAL( 9.0f, predicted, 1.0e-5f );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( prediction.getCorrectionCount() ) );
-    SW_EXPECT_FALSE( prediction.reconcile( 7, 6.0f, predicted, simulate, isClose ) ); // 고친 기록과 맞는다
+    SW_EXPECT_TRUE( PredictionReconcileResult::Matched == prediction.reconcile( 7, 6.0f, predicted, simulate, isClose ) ); // 고친 기록과 맞는다
 
     // 랙 보정 — 목표는 틱마다 x 로 1 m 씩 간다. 10 틱 전을 보던 사수는 그 자리를 맞힌다.
     LagCompensationHistory history( 32 );
