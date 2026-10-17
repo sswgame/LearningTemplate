@@ -1,4 +1,5 @@
 SWMODELIMPORT 1
+123928d790d9366b 89b1f42c91687d67 cart.glb
 0a19417e2d1bdc24 859f0df019f7eec7 crop_carrot.glb
 b9a22e28fef3c559 6bb1ec8687677311 crop_pumpkin.glb
 12ed96dfc03ad2ce 0bf693044c676b78 crop_turnip.glb
@@ -6,6 +7,8 @@ b9a22e28fef3c559 6bb1ec8687677311 crop_pumpkin.glb
 70e002e01a198171 52973cc22109a552 crops_corn_stage_b.glb
 8b4d7c642f7445a6 bfa3090424493c62 crops_corn_stage_c.glb
 e61885ea2420e0c9 65f96b7584b17857 crops_corn_stage_d.glb
+0175679b500565e9 b877639015a2e180 crops_dirt_row.glb
+249486e0d9d34135 8da5a0430b13bd9b crops_dirt_single.glb
 e8094ede9f506170 6f950d4426148e50 crops_leafs_stage_a.glb
 b7820b08e153d0c1 823916320c9f212b crops_leafs_stage_b.glb
 50c4cc1afcbfab92 99fb2587934b742e fence_simple.glb
