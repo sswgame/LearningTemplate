@@ -92,7 +92,7 @@ namespace sw
         else
         {
             _pRouter->unregisterHandler( &_client );
-            const DestructionReplicationStats& stats = _client.getStats();
+            [[maybe_unused]] const DestructionReplicationStats& stats = _client.getStats();
             SW_LOG_INFO( "[DestructionNetSession] client hash checks matched %# mismatched %# snapshots applied %#", stats._hashMatchCount, stats._hashMismatchCount,
                          stats._snapshotAppliedCount );
         }

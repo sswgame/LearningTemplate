@@ -381,7 +381,7 @@ SW_TEST_CASE( GameObjectBenchTest, PrerequisiteFanOut )
     }
     const sw::Stopwatch firstStopwatch;
     manager.update( 0.016f );
-    const int64 firstMicro = firstStopwatch.getElapsedMicroseconds();
+    [[maybe_unused]] const int64 firstMicro = firstStopwatch.getElapsedMicroseconds();
     SW_LOG_INFO( "[Bench] fan-out 1 -> 8000: first tick (registry + stage build) %# us", firstMicro );
 
     sw::vector<int64> listTick;

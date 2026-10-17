@@ -105,6 +105,7 @@ namespace sw
                 return pLatest != nullptr && FileUtil::copyFile( *pLatest, destination );
             }
 
+#if SW_DEV_COMMANDS_ENABLED // 두 명령 함수는 개발 명령 등록(파일 끝)만 부른다 — Shipping 에서는 함께 빠진다
             /** @brief `bugit [메모…]` — 낱말을 공백으로 다시 이은 것이 메모다. */
             static bool runBugIt( const vector<string>& listArgument, string& outReply )
             {
@@ -137,10 +138,8 @@ namespace sw
                 }
                 return BugItReport::goTo( engine::getSubsystem<SceneManager>(), listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
             }
-        };
-
-#if SW_DEV_COMMANDS_ENABLED
 #endif
+        };
     } // namespace
 } // namespace sw
 
