@@ -186,7 +186,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
 
     // 직렬화 — 받은 쪽이 같은 원을 본다.
     BitWriter writer;
-    zone.writeState( writer );
+    SW_ASSERT_TRUE( zone.writeState( writer ) );
     BrZone copy;
     copy.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr );
     BitReader reader( writer.getBytes().data(), writer.getByteCount() );
@@ -220,7 +220,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneStateRoundTripContinuesTheSameZone )
     auto captureNetBytes = []( const BrZone& target )
     {
         BitWriter writer;
-        target.writeState( writer );
+        SW_EXPECT_TRUE( target.writeState( writer ) );
         return writer.getBytes();
     };
     auto captureSaveBytes = []( const BrZone& target )

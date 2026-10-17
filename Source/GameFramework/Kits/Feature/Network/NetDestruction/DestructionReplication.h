@@ -87,9 +87,10 @@ namespace sw
         uint32 _hashMatchCount{ 0 };    ///< 클라이언트가 해시를 비교해 같았던 횟수
         uint32 _hashMismatchCount{ 0 }; ///< 클라이언트가 해시가 달라 스냅숏을 요청한 횟수
         uint32 _snapshotAppliedCount{ 0 };
-        uint32 _skippedEventCount{ 0 }; ///< 클라이언트가 일부러 건너뛴 이벤트 수(`skipNextEvent`)
-        uint32 _staleEventCount{ 0 };   ///< 클라이언트가 버린 이벤트 수. 스냅숏이 이미 담은 앞 번호의 이벤트이다
-        uint32 _sendRejectedCount{ 0 }; ///< 서버의 메시지를 연결이 거절한 횟수. 신뢰 창이 찼거나 스냅숏이 64 KB를 넘은 경우이다. 이벤트는 해시 비교와 스냅숏으로 복구하고, 스냅숏은 다음 update 에서 다시 보낸다
+        uint32 _skippedEventCount{ 0 };   ///< 클라이언트가 일부러 건너뛴 이벤트 수(`skipNextEvent`)
+        uint32 _staleEventCount{ 0 };     ///< 클라이언트가 버린 이벤트 수. 스냅숏이 이미 담은 앞 번호의 이벤트이다
+        uint32 _sendRejectedCount{ 0 };   ///< 서버의 메시지를 연결이 거절한 횟수. 신뢰 창이 찼거나 스냅숏이 64 KB를 넘은 경우이다. 이벤트는 해시 비교와 스냅숏으로 복구하고, 스냅숏은 다음 update 에서 다시 보낸다
+        uint32 _outOfRangePoseCount{ 0 }; ///< 움직이는 자세가 양자화 범위(`_positionRange`) 밖이라 보내지 않은 횟수. 멈추면 비트 그대로 보낸다. 0 이 아니면 범위를 넓힌다
     };
 } // namespace sw
 

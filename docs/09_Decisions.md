@@ -580,7 +580,7 @@
   - 코덱이 없는 타입을 진입점에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성). 0 해시 같은 대체 값을 돌려주면 단계 4 의 핸드셰이크 해시에 그 값이 섞입니다.
   - 정수 경계는 float32 로 정확히 나타나야 합니다(`Min` · `Max` 를 float32 로 보관합니다). 크기가 아니라 정확성이 기준이라 `OnlineServerConfig::_serverID` 의 `Max = 2000000000` 은 그대로 씁니다.
   - `MaxCount` 는 새 애노테이션 종류 `count` 로 1 이상의 정수만 받습니다. 실수로 읽어 반올림하지 않습니다.
-  - 양자화 읽기는 칸 번호를 직접 읽어 칸 수를 넘으면 `OutOfRange` 입니다. 손 코덱이 쓰는 `BitReader::readQuantizedFloat` 의 자르기는 [network.md](backlog/network.md) `A-14` 에 남겼습니다.
+  - 양자화 읽기는 칸 번호를 직접 읽어 칸 수를 넘으면 `OutOfRange` 입니다. 손 코덱이 쓰는 `BitReader::readQuantizedFloat` 도 같은 규칙으로 바꿨습니다(2026-10-17). 범위 밖 칸은 실패이고, `BitWriter::writeInt` · `writeQuantizedFloat` 는 범위 밖이면 쓰지 않고 `false` 입니다.
 
   실행 파일 크기(Debug, 단계 전후)는 `Engine.dll` +153,088 B(+0.7 %), `GameFramework.dll` +81,408 B(+1.0 %)입니다. 이때 `REFLECT` 타입 454 개 가운데 적격은 173 개,
   적격이 아닌 것은 281 개였습니다(대부분 `MaxCount` 없는 가변 길이와 표 밖 타입입니다). 기존 `.gen.cpp` · `.gen.h` 1069 개는 덧붙은 줄만 있고, 바뀐 줄은 ABI 스탬프 하나였습니다.

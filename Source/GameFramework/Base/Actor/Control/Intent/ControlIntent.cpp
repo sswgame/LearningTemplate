@@ -31,14 +31,19 @@ namespace sw
                 return computeValue( computeStep( value, stepsPerUnit, maxStep ), stepsPerUnit );
             }
 
-            static void writeValue( BitWriter& writer, float32 value, float32 stepsPerUnit, int32 maxStep )
+            [[nodiscard]] static bool writeValue( BitWriter& writer, float32 value, float32 stepsPerUnit, int32 maxStep )
             {
-                writer.writeInt( computeStep( value, stepsPerUnit, maxStep ), -maxStep, maxStep );
+                return writer.writeInt( computeStep( value, stepsPerUnit, maxStep ), -maxStep, maxStep );
             }
 
-            static float32 readValue( BitReader& reader, float32 stepsPerUnit, int32 maxStep )
+            /** @brief 칸 하나를 읽어 값으로 바꿉니다. 실패하면 @p outValue 는 그대로입니다. */
+            [[nodiscard]] static bool readValue( BitReader& reader, float32 stepsPerUnit, int32 maxStep, float32& outValue )
             {
-                return computeValue( reader.readInt( -maxStep, maxStep ), stepsPerUnit );
+                int32 step{ 0 };
+                if ( reader.readInt( -maxStep, maxStep, step ) == false )
+                    return false;
+                outValue = computeValue( step, stepsPerUnit );
+                return true;
             }
         };
     } // namespace
@@ -74,37 +79,41 @@ namespace sw
         _move = move;
     }
 
-    void ControlIntent::write( BitWriter& writer ) const
+    bool ControlIntent::write( BitWriter& writer ) const
     {
         using Internal = ControlIntentInternal;
-        Internal::writeValue( writer, _move._x, kAxisSteps, Internal::kAxisMaxStep );
-        Internal::writeValue( writer, _move._y, kAxisSteps, Internal::kAxisMaxStep );
-        Internal::writeValue( writer, _moveUp, kAxisSteps, Internal::kAxisMaxStep );
-        Internal::writeValue( writer, MathUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
-        Internal::writeValue( writer, _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
+        // 칸은 `computeStep` 이 ±maxStep 으로 자른 뒤라 범위 밖이 없다. 그래도 실패하면 스트림이 어긋나므로 멈춘다.
+        bool bWritten = Internal::writeValue( writer, _move._x, kAxisSteps, Internal::kAxisMaxStep ) &&
+                        Internal::writeValue( writer, _move._y, kAxisSteps, Internal::kAxisMaxStep ) &&
+                        Internal::writeValue( writer, _moveUp, kAxisSteps, Internal::kAxisMaxStep ) &&
+                        Internal::writeValue( writer, MathUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep ) &&
+                        Internal::writeValue( writer, _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
         for ( const float32 analog : _arrAnalog )
         {
-            Internal::writeValue( writer, analog, kAxisSteps, Internal::kAxisMaxStep );
+            bWritten = bWritten && Internal::writeValue( writer, analog, kAxisSteps, Internal::kAxisMaxStep );
         }
+        if ( bWritten == false )
+            return false;
         writer.writeVarUint( _buttonDown );
         writer.writeVarUint( _buttonTriggered );
+        return true;
     }
 
     bool ControlIntent::read( BitReader& reader )
     {
         using Internal = ControlIntentInternal;
-        _move._x       = Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep );
-        _move._y       = Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep );
-        _moveUp        = Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep );
-        _controlYaw    = Internal::readValue( reader, kAngleStepsPerRadian, Internal::kYawMaxStep );
-        _controlPitch  = Internal::readValue( reader, kAngleStepsPerRadian, Internal::kPitchMaxStep );
+        bool bRead     = Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, _move._x ) &&
+                     Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, _move._y ) &&
+                     Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, _moveUp ) &&
+                     Internal::readValue( reader, kAngleStepsPerRadian, Internal::kYawMaxStep, _controlYaw ) &&
+                     Internal::readValue( reader, kAngleStepsPerRadian, Internal::kPitchMaxStep, _controlPitch );
         for ( float32& analog : _arrAnalog )
         {
-            analog = Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep );
+            bRead = bRead && Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, analog );
         }
         _buttonDown      = static_cast<uint32>( reader.readVarUint() );
         _buttonTriggered = static_cast<uint32>( reader.readVarUint() );
-        if ( reader.hasOverflowed() )
+        if ( bRead == false || reader.hasOverflowed() )
         {
             *this = ControlIntent{};
             return false;

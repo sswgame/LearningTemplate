@@ -147,10 +147,11 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    void BrZone::writeState( BitWriter& writer ) const
+    bool BrZone::writeState( BitWriter& writer ) const
     {
-        writer.writeInt( _phaseIndex, 0, BrZoneInternal::kMaxPhaseBits );
-        writer.writeInt( static_cast<int32>( _stage ), 0, 2 );
+        const bool bHeadWritten = writer.writeInt( _phaseIndex, 0, BrZoneInternal::kMaxPhaseBits ) && writer.writeInt( static_cast<int32>( _stage ), 0, 2 );
+        if ( bHeadWritten == false )
+            return false;
         writer.writeFloat( _stageRemaining );
         writer.writeFloat( _center._x );
         writer.writeFloat( _center._y );
@@ -161,12 +162,15 @@ namespace sw
         writer.writeFloat( _nextCenter._x );
         writer.writeFloat( _nextCenter._y );
         writer.writeFloat( _nextRadius );
+        return true;
     }
 
     bool BrZone::readState( BitReader& reader )
     {
-        const int32   phaseIndex     = reader.readInt( 0, BrZoneInternal::kMaxPhaseBits );
-        const int32   stage          = reader.readInt( 0, 2 );
+        int32 phaseIndex{ 0 };
+        int32 stage{ 0 };
+        if ( reader.readInt( 0, BrZoneInternal::kMaxPhaseBits, phaseIndex ) == false || reader.readInt( 0, 2, stage ) == false )
+            return false;
         const float32 stageRemaining = reader.readFloat();
         const float32 centerX        = reader.readFloat();
         const float32 centerY        = reader.readFloat();
@@ -196,7 +200,11 @@ namespace sw
     void BrZone::writeState( Archive& outArchive ) const
     {
         BitWriter writer;
-        writeState( writer );
+        if ( writeState( writer ) == false )
+        {
+            outArchive.setError();
+            return;
+        }
         const vector<uint8>& bytes = writer.getBytes();
         outArchive.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
         StateArchiveUtil::writeRandom( outArchive, _random );

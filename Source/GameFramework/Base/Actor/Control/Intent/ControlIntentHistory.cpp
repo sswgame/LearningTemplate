@@ -61,7 +61,7 @@ namespace sw
         track._lastTick             = tick;
     }
 
-    void ControlIntentHistory::write( BitWriter& writer ) const
+    bool ControlIntentHistory::write( BitWriter& writer ) const
     {
         uint32 baseTick = 0;
         bool   bHasBase = false;
@@ -91,9 +91,11 @@ namespace sw
             for ( uint32 tickOffset = 0; tickOffset < tickCount; ++tickOffset )
             {
                 const ControlIntent* pIntent = track._ring.find( oldestTick + tickOffset );
-                ( pIntent != nullptr ? *pIntent : ControlIntent{} ).write( writer );
+                if ( ( pIntent != nullptr ? *pIntent : ControlIntent{} ).write( writer ) == false )
+                    return false;
             }
         }
+        return true;
     }
 
     bool ControlIntentHistory::read( BitReader& reader, string& outError )
@@ -157,7 +159,8 @@ namespace sw
     bool ControlIntentHistory::saveToFile( string_view path ) const
     {
         BitWriter writer;
-        write( writer );
+        if ( write( writer ) == false )
+            return false;
         return FileUtil::writeFile( path, writer.getBytes().data(), static_cast<uint64>( writer.getByteCount() ) );
     }
 

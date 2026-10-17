@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/VectorMath.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
@@ -162,10 +163,9 @@ SW_TEST_CASE( NetworkTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow )
 {
     BitWriter writer;
     writer.writeBool( true );
-    writer.writeInt( 73, 0, 100 );  // 7 비트
-    writer.writeInt( -5, -10, 10 ); // 5 비트
-    writer.writeInt( 500, 0, 100 ); // 잘린다
-    writer.writeQuantizedFloat( 12.345f, -100.0f, 100.0f, 0.01f );
+    SW_ASSERT_TRUE( writer.writeInt( 73, 0, 100 ) );  // 7 비트
+    SW_ASSERT_TRUE( writer.writeInt( -5, -10, 10 ) ); // 5 비트
+    SW_ASSERT_TRUE( writer.writeQuantizedFloat( 12.345f, -100.0f, 100.0f, 0.01f ) );
     writer.writeFloat( 3.25f );
     writer.writeVarUint( 300 );
     writer.writeVarInt( -70000 );
@@ -177,10 +177,12 @@ SW_TEST_CASE( NetworkTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow )
 
     BitReader reader( writer.getBytes().data(), writer.getByteCount() );
     SW_EXPECT_TRUE( reader.readBool() );
-    SW_EXPECT_EQUAL( 73, reader.readInt( 0, 100 ) );
-    SW_EXPECT_EQUAL( -5, reader.readInt( -10, 10 ) );
-    SW_EXPECT_EQUAL( 100, reader.readInt( 0, 100 ) );
-    SW_EXPECT_NEAR_EQUAL( 12.345f, reader.readQuantizedFloat( -100.0f, 100.0f, 0.01f ), 0.006f );
+    int32   readValue{ 0 };
+    float32 readQuantized{ 0.0f };
+    SW_EXPECT_TRUE( reader.readInt( 0, 100, readValue ) && readValue == 73 );
+    SW_EXPECT_TRUE( reader.readInt( -10, 10, readValue ) && readValue == -5 );
+    SW_EXPECT_TRUE( reader.readQuantizedFloat( -100.0f, 100.0f, 0.01f, readQuantized ) );
+    SW_EXPECT_NEAR_EQUAL( 12.345f, readQuantized, 0.006f );
     SW_EXPECT_NEAR_EQUAL( 3.25f, reader.readFloat(), 1.0e-6f );
     SW_EXPECT_EQUAL( 300, static_cast<int32>( reader.readVarUint() ) );
     SW_EXPECT_EQUAL( -70000, static_cast<int32>( reader.readVarInt() ) );
@@ -197,6 +199,43 @@ SW_TEST_CASE( NetworkTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow )
     BitReader   broken( arrBroken, 2 );
     (void)broken.readVarUint(); // 넘침을 일으키는 것이 목적이다 — 아래 단언이 본다
     SW_EXPECT_TRUE( broken.hasOverflowed() );
+}
+
+/**
+ * @brief [NetworkTest] 범위가 있는 값은 범위 밖을 잘라 쓰거나 잘라 읽지 않고 실패를 돌려준다
+ * @details 예전에는 `writeInt( 500, 0, 100 )` 이 100 을 쓰고, 범위 비트로 읽은 칸이 범위를 넘으면 최댓값으로 잘라 읽었다. 깨진 패킷이나 잘못 정한 범위가
+ *          경고 없이 다른 값이 된다. 실패한 쓰기는 아무 비트도 쓰지 않는다.
+ */
+SW_TEST_CASE( NetworkTest, BitStreamRangedValuesFailInsteadOfClamping )
+{
+    BitWriter writer;
+    SW_EXPECT_FALSE( writer.writeInt( 500, 0, 100 ) );
+    SW_EXPECT_FALSE( writer.writeInt( -1, 0, 100 ) );
+    SW_EXPECT_FALSE( writer.writeQuantizedFloat( 10.5f, -10.0f, 10.0f, 0.01f ) );
+    SW_EXPECT_FALSE( writer.writeQuantizedFloat( std::numeric_limits<float32>::quiet_NaN(), -10.0f, 10.0f, 0.01f ) );
+    SW_EXPECT_FALSE( writer.writeQuantizedFloat3( float3( 0.0f, 11.0f, 0.0f ), float3( -10.0f, -10.0f, -10.0f ), float3( 10.0f, 10.0f, 10.0f ), 0.01f ) );
+    SW_EXPECT_EQUAL( 0, writer.getBitCount() );
+
+    // 반 칸 안쪽으로 넘친 값은 끝 칸으로 반올림된다(정규화한 사원수의 1.0000001).
+    SW_EXPECT_TRUE( writer.writeQuantizedFloat( 1.0000001f, -1.0f, 1.0f, 1.0f / 32767.0f ) );
+
+    // 0..100 은 7 비트라 101..127 칸을 담을 수 있다. 그 칸은 깨진 데이터다.
+    BitWriter rawWriter;
+    rawWriter.writeBits( 127, 7 );
+    rawWriter.writeBits( 0x7FFF, 15 );
+    BitReader reader( rawWriter.getBytes().data(), rawWriter.getByteCount() );
+    int32     readValue{ 42 };
+    SW_EXPECT_FALSE( reader.readInt( 0, 100, readValue ) );
+    SW_EXPECT_EQUAL( 42, readValue );
+    SW_EXPECT_TRUE( reader.hasOverflowed() );
+
+    // 0..20 을 0.001 간격이면 칸은 0..20000 이고 15 비트다. 32767 칸은 범위 밖이다.
+    BitReader quantizedReader( rawWriter.getBytes().data(), rawWriter.getByteCount() );
+    SW_EXPECT_EQUAL( 127u, quantizedReader.readBits( 7 ) );
+    float32 readQuantized{ 0.5f };
+    SW_EXPECT_FALSE( quantizedReader.readQuantizedFloat( 0.0f, 20.0f, 0.001f, readQuantized ) );
+    SW_EXPECT_EQUAL( 0.5f, readQuantized );
+    SW_EXPECT_TRUE( quantizedReader.hasOverflowed() );
 }
 
 /**
@@ -1147,9 +1186,9 @@ SW_TEST_CASE( NetworkTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
     writer.writeBits( 5, 3 );
     writer.writeBool( true );
     writer.writeBits( 0xABCDE, 20 );
-    writer.writeInt( -7, -100, 100 );
+    SW_ASSERT_TRUE( writer.writeInt( -7, -100, 100 ) );
     writer.writeFloat( 3.25f );
-    writer.writeQuantizedFloat( 1.5f, -10.0f, 10.0f, 0.01f );
+    SW_ASSERT_TRUE( writer.writeQuantizedFloat( 1.5f, -10.0f, 10.0f, 0.01f ) );
     writer.writeVarUint( 300 );
     writer.writeVarInt( -12345 );
     writer.writeBytes( arrRaw, 5 ); // 바이트 경계가 아닌 곳

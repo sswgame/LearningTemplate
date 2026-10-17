@@ -67,20 +67,28 @@ namespace sw
         return input;
     }
 
-    void KartGhost::writeFrame( BitWriter& writer, const KartGhostFrame& frame )
+    bool KartGhost::writeFrame( BitWriter& writer, const KartGhostFrame& frame )
     {
-        writer.writeInt( frame._throttle, -127, 127 );
-        writer.writeInt( frame._steer, -127, 127 );
+        const bool bAxesWritten = writer.writeInt( frame._throttle, -127, 127 ) && writer.writeInt( frame._steer, -127, 127 );
+        if ( bAxesWritten == false )
+            return false;
         writer.writeBits( frame._buttons, KartGhostInternal::kButtonBits );
+        return true;
     }
 
-    KartGhostFrame KartGhost::readFrame( BitReader& reader )
+    bool KartGhost::readFrame( BitReader& reader, KartGhostFrame& outFrame )
     {
-        KartGhostFrame frame;
-        frame._throttle = static_cast<int8>( reader.readInt( -127, 127 ) );
-        frame._steer    = static_cast<int8>( reader.readInt( -127, 127 ) );
-        frame._buttons  = static_cast<uint8>( reader.readBits( KartGhostInternal::kButtonBits ) );
-        return frame;
+        int32 throttle{ 0 };
+        int32 steer{ 0 };
+        if ( reader.readInt( -127, 127, throttle ) == false || reader.readInt( -127, 127, steer ) == false )
+            return false;
+        const uint8 buttons = static_cast<uint8>( reader.readBits( KartGhostInternal::kButtonBits ) );
+        if ( reader.hasOverflowed() )
+            return false;
+        outFrame._throttle = static_cast<int8>( throttle );
+        outFrame._steer    = static_cast<int8>( steer );
+        outFrame._buttons  = buttons;
+        return true;
     }
 
     void KartGhost::begin( const float3& startPosition, float32 startYaw, float32 step )
@@ -97,7 +105,7 @@ namespace sw
         _listFrame.push_back( encodeInput( input, bUseItem ) );
     }
 
-    void KartGhost::serialize( vector<uint8>& outBuffer ) const
+    bool KartGhost::serialize( vector<uint8>& outBuffer ) const
     {
         BitWriter writer{ std::move( outBuffer ) };
         writer.writeUint32( KartGhostInternal::kMagic );
@@ -109,11 +117,13 @@ namespace sw
         writer.writeFloat( _step );
         writer.writeFloat( _finishTime );
         writer.writeVarUint( static_cast<uint64>( _listFrame.size() ) );
+        bool bFramesWritten = true;
         for ( const KartGhostFrame& frame : _listFrame )
         {
-            writeFrame( writer, frame );
+            bFramesWritten = bFramesWritten && writeFrame( writer, frame );
         }
         outBuffer = writer.releaseBytes();
+        return bFramesWritten;
     }
 
     bool KartGhost::deserialize( const uint8* pData, int32 byteCount )
@@ -140,10 +150,11 @@ namespace sw
         listFrame.reserve( static_cast<size_t>( frameCount ) );
         for ( uint64 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
-            listFrame.push_back( readFrame( reader ) );
+            KartGhostFrame frame;
+            if ( readFrame( reader, frame ) == false )
+                return false;
+            listFrame.push_back( frame );
         }
-        if ( reader.hasOverflowed() )
-            return false;
         _listFrame.swap( listFrame );
         _startPosition = startPosition;
         _startYaw      = startYaw;

@@ -533,7 +533,7 @@ SW_TEST_CASE( KartRacingTest, GhostReplaysTheSamePath )
 
     // 바이트로 오가도 같다. 잘린 기록은 읽지 않는다.
     vector<uint8> buffer;
-    ghost.serialize( buffer );
+    SW_ASSERT_TRUE( ghost.serialize( buffer ) );
     SW_EXPECT_TRUE( buffer.size() < static_cast<size_t>( ghost.getFrameCount() ) * 3u + 64u );
     KartGhost loaded;
     SW_ASSERT_TRUE( loaded.deserialize( buffer.data(), static_cast<int32>( buffer.size() ) ) );
