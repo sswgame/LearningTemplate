@@ -1023,6 +1023,97 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGenerati
 }
 
 /**
+ * @brief [ReflectionTypeRegistryTest] 레지스트리를 파괴하면 타입 캐시의 답이 버려진다
+ * @details 정적 `TypeLookupCache` 는 레지스트리보다 오래 산다. 엔진을 다시 만들면 옛 레지스트리의 `TypeInfo` 는 지워졌으므로,
+ *          파괴가 세대를 올려 칸의 답이 더는 적중하지 않아야 한다. 적중하면 해제된 객체를 내준다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheDropsAnswerWhenARegistryIsDestroyed )
+{
+    const sw::hashed_string fqn( "sw::DummyActor" );
+    sw::TypeLookupCache     cache;
+    const sw::TypeInfo*     pFound = cache.find( fqn );
+    SW_ASSERT_NOT_NULL( pFound );
+
+    const sw::TypeInfo* pCached = nullptr;
+    SW_EXPECT_TRUE( cache._slot.tryGet( sw::getTypeTableGeneration(), pCached ) );
+    SW_EXPECT_TRUE( pCached == pFound );
+    SW_EXPECT_EQUAL( sw::TypeRegistry::getGeneration(), sw::getTypeTableGeneration() );
+
+    {
+        const sw::TypeRegistry discardedRegistry;
+    }
+    pCached = nullptr;
+    SW_EXPECT_FALSE( cache._slot.tryGet( sw::getTypeTableGeneration(), pCached ) );
+    // 엔진의 레지스트리는 그대로 살아 있으므로 다시 찾으면 같은 객체다.
+    SW_EXPECT_TRUE( cache.find( fqn ) == pFound );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 타입 캐시 칸은 포인터와 세대를 한 쌍으로만 내준다
+ * @details 쓰는 스레드 넷이 세대 `g` 에는 늘 `arr[g]` 를 짝지어 기록하고, 읽는 스레드 둘이 그 사이 세대를 골라 읽는다.
+ *          포인터와 세대를 따로 저장하면 겹쳐 쓴 순간 `g` 에 다른 세대의 포인터가 붙는다. 칸이 적중을 낸 경우는 모두 짝이 맞아야 한다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeCacheSlotNeverPairsAGenerationWithAnotherGenerationsValue )
+{
+    constexpr uint32 kGenerationCount = 8;
+    constexpr uint32 kWriterCount     = 4;
+    constexpr uint32 kReaderCount     = 2;
+    constexpr uint32 kIterationCount  = 20000;
+
+    sw::EnumInfo                    arrInfo[kGenerationCount];
+    sw::TypeCacheSlot<sw::EnumInfo> slot;
+    std::atomic<uint32>             mismatchCount{ 0 };
+
+    // 처음 상태는 "세대 0 에 없음"이다.
+    const sw::EnumInfo* pInitial = &arrInfo[1];
+    SW_EXPECT_TRUE( slot.tryGet( 0, pInitial ) );
+    SW_EXPECT_NULL( pInitial );
+
+    sw::vector<std::thread> listThread;
+    for ( uint32 writerIndex = 0; writerIndex < kWriterCount; ++writerIndex )
+    {
+        listThread.emplace_back( [&slot, &arrInfo, writerIndex]()
+        {
+            for ( uint32 iteration = 0; iteration < kIterationCount; ++iteration )
+            {
+                const uint32 generation = ( iteration + writerIndex ) % kGenerationCount;
+                slot.set( generation, &arrInfo[generation] );
+            }
+        } );
+    }
+    for ( uint32 readerIndex = 0; readerIndex < kReaderCount; ++readerIndex )
+    {
+        listThread.emplace_back( [&slot, &arrInfo, &mismatchCount, readerIndex]()
+        {
+            for ( uint32 iteration = 0; iteration < kIterationCount; ++iteration )
+            {
+                const uint32        generation = ( iteration * 3 + readerIndex ) % kGenerationCount;
+                const sw::EnumInfo* pValue     = nullptr;
+                if ( slot.tryGet( generation, pValue ) == false )
+                    continue;
+                // 세대 0 의 처음 상태(없음)도 짝이 맞는 답이다.
+                const bool bPaired = pValue == &arrInfo[generation] || ( generation == 0 && pValue == nullptr );
+                if ( bPaired == false )
+                    mismatchCount.fetch_add( 1, std::memory_order_relaxed );
+            }
+        } );
+    }
+    for ( std::thread& thread : listThread )
+    {
+        thread.join();
+    }
+
+    SW_EXPECT_EQUAL( uint32( 0 ), mismatchCount.load() );
+    // 마지막 기록은 어느 쓰는 스레드의 것이든 짝이 맞는다.
+    for ( uint32 generation = 0; generation < kGenerationCount; ++generation )
+    {
+        const sw::EnumInfo* pValue = nullptr;
+        if ( slot.tryGet( generation, pValue ) )
+            SW_EXPECT_TRUE( pValue == &arrInfo[generation] );
+    }
+}
+
+/**
  * @brief [ReflectionTypeRegistryTest] `TypeInfo` 의 주소는 등록이 아무리 이어져도 고정이다
  * @details 타입 표는 `TypeInfo` 를 `unique_ptr` 로 든다. 밀집 배열에 값으로 들면 커질 때 원소가 옮겨 `findType` 이 내준 포인터가
  *          다음 등록에서 무효가 된다. 200 개를 더 등록해 표를 몇 번 키운 뒤에도 처음 포인터가 그 타입이어야 하고, 내용이 온전해야 한다.

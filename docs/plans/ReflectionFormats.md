@@ -304,9 +304,12 @@ struct MechArenaSnapshot
 
 B 는 열거자 이름을 쓰지 않습니다. 로그와 진단용 `getEnumName` 은 FQN 해시로 `TypeRegistry` 를 찾고, 없으면 `"Unknown"` 을 반환합니다(`Source/Engine/Reflection/EnumName.h`). API 는 그대로 두고 내부만 바꿨습니다(단계 7-a, 끝남).
 
-- 생성기가 표식(`Invalid`, `Count`)을 뺀 열거자 값이 `0..N-1` 로 빈틈없는 열거형에 이름 정적 배열(`kArrDenseName`)을 만들고 `EnumInfo::_pArrDenseName` 에 등록합니다. 조회는 배열 인덱스입니다.
+- 생성기가 표식(`Invalid`, `Count`)을 뺀 열거자 값이 `0..N-1` 로 빈틈없는 열거형의 이름을 `EnumInfo::_listDenseName` 에 채웁니다. 조회는 목록 인덱스입니다.
+  목록은 `EnumInfo` 가 값으로 가집니다(C-51). 모듈의 정적 배열을 가리키면 핫 리로드 해제와 겹친 렌더 · 오디오 · 로거 스레드의 조회가 해제된 저장소를 읽습니다.
   배열 순서는 libclang 이 읽은 값이므로 열거자마다 `static_assert` 로 컴파일러의 값과 대조합니다. 비트 플래그 · 음수 · 빈틈 · 같은 값의 별명이 있으면 배열 없이 이름 맵을 씁니다.
-- 템플릿 `getEnumName<E>` 는 `EnumInfo` 포인터를 함수 지역 캐시(`EnumNameCache`)에 둡니다. 호출마다 잠금과 해시 맵을 찾지 않고, 타입 테이블 세대가 바뀌면(모듈 해제 · 레지스트리 파괴) 다시 찾습니다.
+- 템플릿 `getEnumName<E>` 는 `EnumInfo` 포인터를 함수 지역 캐시(`EnumNameCache`)에 둡니다. 호출마다 잠금과 해시 맵을 찾지 않고, 타입 테이블 세대가 바뀌면(등록 · 별칭 · 모듈 해제 · 레지스트리 파괴) 다시 찾습니다.
+  답과 세대는 `TypeCacheSlot`(`TypeRegistry.h`) 한 칸에 한 쌍으로 기록합니다. 따로 저장하면 두 스레드가 세대 경계에서 겹쳐 쓸 때 새 세대에 옛 포인터가 붙습니다.
+  `TypeLookupCache` 도 같은 칸을 써서 레지스트리 파괴(엔진 재생성) 뒤 해제된 `TypeInfo` 를 내주지 않습니다.
 - 이름에서 값을 찾는 경로(`_mapNameToValue`)는 에디터와 데이터 파서만 씁니다. 그대로 둡니다.
 - `"Unknown"` 반환은 로그용 표시라 폴백 금지 원칙의 대상이 아닙니다. 데이터 읽기는 이 함수를 쓰지 않습니다(`EnumName.h:6` 주석).
 
@@ -403,7 +406,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
 - `castTo<To>( From* )` 는 업캐스트와 같은 타입이면 컴파일 시간에 끝납니다(`Source/Engine/Reflection/ReflectionCast.h:135,175`). `castTo<Component>( Component*, 타입 )` 은 이 분기에 걸려 타입 인자를 보지 않고 항상 성공합니다.
   종류로 거를 때는 `getTypeInfo()->isDerivedFrom( 타입 )` 을 씁니다. `NavGeometryCollector.cpp:133` 주석이 같은 함정을 적고 있습니다.
 - 다운캐스트는 세 단계입니다(`ReflectionCast.h:133-169`).
-  1. 대상 타입: `findStaticType<To>()` 가 `To::StaticType()` 을 부릅니다. 이 함수는 `.gen.cpp` 에 정의되어 있어 인라인되지 않고, 대상 타입이 다른 모듈이면 DLL 경계 호출입니다. 내부는 `TypeLookupCache::find` 의 원자 로드 한 번과 `isAlive` 확인입니다(`TypeRegistry.h:94-110`).
+  1. 대상 타입: `findStaticType<To>()` 가 `To::StaticType()` 을 부릅니다. 이 함수는 `.gen.cpp` 에 정의되어 있어 인라인되지 않고, 대상 타입이 다른 모듈이면 DLL 경계 호출입니다. 내부는 `TypeLookupCache::find` 의 칸 읽기(순서 번호 · 포인터 · 세대 원자 로드와 지금 세대 로드)와 `isAlive` 확인입니다(`TypeRegistry.h`).
      조회 루프(`getComponent`)는 이것을 루프 밖에서 한 번 구합니다(`GameObject.h:288`).
   2. 동적 타입: `Component` 는 만들 때 받은 `_pTypeInfo` 포인터를 보관하고 `findCachedTypeInfo()` 가 그것을 반환합니다. 가상 호출은 캐시가 없을 때만 합니다(`Component.h:500-505`).
      객체에 타입 필드를 두는 개선은 `Component` 에 이미 되어 있습니다. `GameObject` 는 가상 `getTypeInfo()` 를 쓰고 결과를 캐시하지 않습니다(단계 7-a, [결정 기록](../09_Decisions.md) 5-4).

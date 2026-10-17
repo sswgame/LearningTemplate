@@ -507,14 +507,14 @@ namespace sw
         hashed_string _fullyQualifiedName;
         hashed_string _moduleName;
         /**
-         * @brief 값이 곧 인덱스인 이름 배열입니다. 열거자 값이 `0..N-1` 로 빈틈없는 열거형에만 생성기가 만들어 넣고, 그 밖에는 nullptr 입니다.
-         * @details `valueToCString` 이 해시 맵 대신 이 배열을 봅니다. 원소는 `_mapValueToName` 과 같은 intern 된 이름이라 돌려주는 포인터도 같습니다.
-         *          배열 자체는 열거형을 정의한 모듈의 정적 저장소에 있으므로, 모듈을 해제하면 레지스트리가 묘비에서 이 포인터를 비웁니다.
+         * @brief 값이 곧 인덱스인 이름 목록입니다. 열거자 값이 `0..N-1` 로 빈틈없는 열거형에만 생성기가 채우고, 그 밖에는 비어 있습니다.
+         * @details `valueToCString` 이 해시 맵 대신 이 목록을 봅니다. 원소는 `_mapValueToName` 과 같은 intern 된 이름이라 돌려주는 포인터도 같습니다.
+         *          `EnumInfo` 가 값으로 가진다. 모듈의 정적 배열을 가리키면 핫 리로드 해제와 겹친 렌더 · 오디오 · 로거 스레드의 `getEnumName` 이
+         *          해제된 저장소를 읽는다. intern 된 이름은 모듈보다 오래 살므로 묘비에도 그대로 둔다(`_mapValueToName` 과 같은 규칙).
          */
-        const hashed_string*   _pArrDenseName;
+        vector<hashed_string>  _listDenseName;
         int64                  _invalidValue{ 0 };
         int64                  _countValue{ 0 };
-        uint32                 _denseNameCount; ///< `_pArrDenseName` 의 원소 수입니다
         uint8                  _size{ sizeof( int32 ) };
         uint8                  _bIsBitFlag    : 1;
         uint8                  _bHasInvalid   : 1;
@@ -678,10 +678,10 @@ namespace sw
         {
             if ( isValidValue( value ) == false )
                 return nullptr;
-            if ( _pArrDenseName != nullptr )
+            if ( _listDenseName.empty() == false )
             {
-                const bool bInRange = 0 <= value && value < static_cast<int64>( _denseNameCount );
-                return bInRange ? _pArrDenseName[value].c_str() : nullptr;
+                const bool bInRange = 0 <= value && value < static_cast<int64>( _listDenseName.size() );
+                return bInRange ? _listDenseName[static_cast<size_t>( value )].c_str() : nullptr;
             }
             const hashed_string name = ( _bIsBitFlag != SW_FALSE ) ? toStringFlags( value ) : toString( value );
             return name.empty() ? nullptr : name.c_str();
@@ -990,9 +990,9 @@ namespace sw
         /**
          * @brief 레지스트리에 살아 있는 타입인지 나타냅니다. 모듈을 해제하면 항목을 지우지 않고 이 값을 내립니다(묘비).
          * @details `TypeInfo` 의 주소는 고정이다. 레지스트리가 `unique_ptr` 로 보관하고, 테이블이 커져도 옮기지 않으며, 해제해도
-         *          지우지 않는다. 그래서 `TypeLookupCache` 와 `_pParentType` 은 세대 검사 없이 포인터를 그대로 쓰고, 이
-         *          플래그 하나로 해제 여부를 확인한다. 같은 FQN 을 다시 등록하면 같은 객체에 덮어써서 복원한다. 레지스트리
-         *          밖에서 만든 사본은 항상 살아 있다.
+         *          지우지 않는다. 그래서 `_pParentType` 은 세대 검사 없이 포인터를 그대로 쓰고, 이 플래그 하나로 해제 여부를 확인한다.
+         *          레지스트리보다 오래 사는 정적 캐시(`TypeLookupCache`)는 레지스트리 파괴도 봐야 하므로 세대를 담은 칸에 둔다.
+         *          같은 FQN 을 다시 등록하면 같은 객체에 덮어써서 복원한다. 레지스트리 밖에서 만든 사본은 항상 살아 있다.
          */
         mutable atomic<uint8> _bAlive;
         /** @brief `REFLECT( Abstract )` 이거나 C++ 추상 클래스입니다. 생성할 수 없습니다(`UCLASS( Abstract )` 에 해당). */

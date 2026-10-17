@@ -489,7 +489,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, CurrentEnumeratorNameWinsOverItsRedirect )
 
 /**
  * @brief [ReflectionEnumInfoTest] 값이 `0..N-1` 로 빈틈없는 열거형만 이름 배열을 받고, 이름 조회는 배열과 이름 맵이 같은 포인터를 돌려준다
- * @details 생성기가 빈틈없는 열거형에 `kArrDenseName` 을 만들어 `EnumInfo::_pArrDenseName` 에 등록합니다. 빈틈 · 음수 · 비트 플래그는 배열 없이 이름 맵을 씁니다.
+ * @details 생성기가 빈틈없는 열거형의 이름을 `EnumInfo::_listDenseName` 에 채웁니다. 빈틈 · 음수 · 비트 플래그는 목록 없이 이름 맵을 씁니다.
  *          `getEnumName<E>` 는 찾은 EnumInfo 를 함수 지역 캐시에 두므로 두 번째 호출도 같은 답이어야 합니다.
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, DenseEnumNamesComeFromTheArray )
@@ -497,8 +497,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, DenseEnumNamesComeFromTheArray )
     const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const sw::EnumInfo*     pDense   = registry.findEnum( sw::hashed_string( "sw::SampleStatus" ) );
     SW_ASSERT_NOT_NULL( pDense );
-    SW_ASSERT_NOT_NULL( pDense->_pArrDenseName );
-    SW_EXPECT_EQUAL( uint32( 3 ), pDense->_denseNameCount );
+    SW_EXPECT_EQUAL( size_t( 3 ), pDense->_listDenseName.size() );
     SW_EXPECT_TRUE( pDense->valueToCString( 1 ) == pDense->toString( 1 ).c_str() );
     SW_EXPECT_TRUE( pDense->valueToCString( 3 ) == nullptr );
     SW_EXPECT_TRUE( pDense->valueToCString( -1 ) == nullptr );
@@ -511,8 +510,87 @@ SW_TEST_CASE( ReflectionEnumInfoTest, DenseEnumNamesComeFromTheArray )
     {
         const sw::EnumInfo* pSparse = registry.findEnum( sw::hashed_string( pFqn ) );
         SW_ASSERT_NOT_NULL( pSparse );
-        SW_EXPECT_TRUE_MSG( pSparse->_pArrDenseName == nullptr, pFqn );
+        SW_EXPECT_TRUE_MSG( pSparse->_listDenseName.empty(), pFqn );
     }
     SW_EXPECT_STREQ( "High", sw::getEnumName( TestHighBitEnum::High ) );
     SW_EXPECT_STREQ( "Negative", sw::getEnumName( TestSignedNarrowEnum::Negative ) );
+}
+
+/**
+ * @brief [ReflectionEnumInfoTest] 이름 목록은 등록된 `EnumInfo` 가 가지고, 모듈을 해제해도 묘비의 이름 조회가 살아 있다
+ * @details 예전에는 목록이 모듈의 정적 배열을 가리켜, 핫 리로드 해제와 겹친 다른 스레드의 `getEnumName` 이 해제된 저장소를 읽을 수 있었다.
+ *          등록에 넘긴 원본이 사라져도, 모듈을 해제해 묘비가 되어도 이미 받은 `EnumInfo` 의 이름 조회는 같은 intern 이름을 내야 한다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, DenseEnumNamesAreOwnedByTheRegisteredInfo )
+{
+    sw::TypeRegistry&       registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::hashed_string fqn( "swtest::OwnedDenseEnum" );
+    {
+        sw::EnumInfo source;
+        source._name               = sw::hashed_string( "OwnedDenseEnum" );
+        source._fullyQualifiedName = fqn;
+        source._moduleName         = sw::hashed_string( "TestOwnedDenseEnum" );
+        source._mapNameToValue     = {
+            { sw::hashed_string( "First" ), 0},
+            {sw::hashed_string( "Second" ), 1}
+        };
+        source._mapValueToName = {
+            {0,  sw::hashed_string( "First" )},
+            {1, sw::hashed_string( "Second" )}
+        };
+        source._listDenseName = { sw::hashed_string( "First" ), sw::hashed_string( "Second" ) };
+        registry.registerEnum( source );
+        source._listDenseName.clear(); // 등록이 복사했으면 원본을 비워도 등록된 쪽은 그대로다
+    }
+
+    const sw::EnumInfo* pInfo = registry.findEnum( fqn );
+    SW_ASSERT_NOT_NULL( pInfo );
+    SW_EXPECT_EQUAL( size_t( 2 ), pInfo->_listDenseName.size() );
+    SW_EXPECT_STREQ( "Second", pInfo->valueToCString( 1 ) );
+
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestOwnedDenseEnum" );
+    SW_EXPECT_NULL( registry.findEnum( fqn ) );
+    SW_EXPECT_STREQ( "Second", pInfo->valueToCString( 1 ) );
+    SW_EXPECT_TRUE( pInfo->valueToCString( 1 ) == sw::hashed_string( "Second" ).c_str() );
+#endif
+}
+
+/**
+ * @brief [ReflectionEnumInfoTest] `EnumNameCache` 가 세대를 따라 미등록 → 등록 → 해제의 답을 갱신한다
+ * @details 칸은 찾지 못한 답도 기록하므로, 열거형 등록이 세대를 올리지 않으면 등록 뒤에도 "없음"이 남는다.
+ *          해제(와 레지스트리 파괴)도 세대를 올려 묘비를 내주지 않아야 한다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, EnumNameCacheFollowsRegistryGeneration )
+{
+    sw::TypeRegistry&       registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::hashed_string fqn( "swtest::CachedNameEnum" );
+    const sw::EnumNameCache cache;
+
+    SW_EXPECT_NULL( cache.find( fqn ) );
+    SW_EXPECT_NULL( cache.find( fqn ) );
+
+    sw::EnumInfo info;
+    info._name               = sw::hashed_string( "CachedNameEnum" );
+    info._fullyQualifiedName = fqn;
+    info._moduleName         = sw::hashed_string( "TestEnumNameCache" );
+    info._mapNameToValue     = {
+        { sw::hashed_string( "Only" ), 0 }
+    };
+    info._mapValueToName = {
+        { 0, sw::hashed_string( "Only" ) }
+    };
+    const uint32 generationBefore = sw::TypeRegistry::getGeneration();
+    registry.registerEnum( info );
+    SW_EXPECT_TRUE( sw::TypeRegistry::getGeneration() != generationBefore );
+
+    const sw::EnumInfo* pFound = cache.find( fqn );
+    SW_ASSERT_NOT_NULL( pFound );
+    SW_EXPECT_TRUE( pFound == registry.findEnum( fqn ) );
+    SW_EXPECT_TRUE( cache.find( fqn ) == pFound );
+
+#if !defined( SW_SHIPPING )
+    registry.unregisterTypesByModule( "TestEnumNameCache" );
+    SW_EXPECT_NULL( cache.find( fqn ) );
+#endif
 }

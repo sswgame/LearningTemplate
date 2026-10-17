@@ -171,7 +171,8 @@ libclang 의 타입 정보에 없는 것은 소스 토큰에서 직접 읽습니
 - `MeshComponent.gen.cpp` — 타입마다 `Registrar<T>`. 프로퍼티의 이름, 위치, 메타데이터를 담은 `TypeInfo` 를 만들어 등록합니다. `REFLECT_BODY()` 가 있으면 `StaticType()` 정의도 들어 있습니다.
   고정 배치형(B) 코덱도 여기 붙습니다(`FixedCodecGenerator`). 적격 타입은 `Registrar<T>` 의 정적 멤버 `fixedWrite` · `fixedRead` · `fixedEquals` · `computeFixedSchemaHash` 와
   `info._pFixedCodec` 등록 줄이 생기고, 적격이 아닌 타입은 이유만 등록합니다. 파일 끝의 `// FixedSchema:` 줄이 타입마다의 정규 문자열(또는 이유)입니다.
-  열거자 값이 `0..N-1` 로 빈틈없는 열거형은 등록 블록에 이름 배열 `kArrDenseName` 과 열거자마다의 `static_assert` 가 붙습니다. `getEnumName` 이 해시 맵 대신 이 배열을 봅니다.
+  열거자 값이 `0..N-1` 로 빈틈없는 열거형은 등록 블록에 이름 목록 `info._listDenseName` 과 열거자마다의 `static_assert` 가 붙습니다. `getEnumName` 이 해시 맵 대신 이 목록을 봅니다.
+  목록은 `EnumInfo` 가 값으로 가집니다. 모듈의 정적 배열을 가리키면 핫 리로드 해제와 겹친 다른 스레드의 이름 조회가 해제된 저장소를 읽습니다.
 - `FixedSchemas.gen.txt` 는 타깃마다 하나입니다. 그 `// FixedSchema:` 줄들을 모은 진단 파일로, 스키마 해시가 왜 바뀌었는지 빌드 둘을 비교할 때 봅니다. 빌드는 읽지 않습니다.
 - `MeshComponent.gen.h` — 그 헤더의 `ENUM( Flags )` 열거형을 전방 선언하고 `IsBitFlagEnum` 을 특수화합니다. 비트 플래그가 없으면 머리글만 있습니다.
 - `MeshComponent.gen.cpp.stamp` — 증분 판정용 스탬프입니다.

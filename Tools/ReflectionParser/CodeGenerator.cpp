@@ -714,13 +714,14 @@ namespace sw
             emit.line( "};" );
         }
 
-        // 값이 곧 인덱스인 이름 배열이다. `getEnumName` 이 해시 맵 대신 인덱스로 찾는다. 순서는 libclang 의 값이므로 컴파일러의 값과 열거자마다 대조한다
+        // 값이 곧 인덱스인 이름 목록이다. `getEnumName` 이 해시 맵 대신 인덱스로 찾는다. 순서는 libclang 의 값이므로 컴파일러의 값과 열거자마다 대조한다
         // (생성기는 SW_DEBUG 없이 헤더를 읽으므로, 빌드 설정에 따라 열거자가 달라지면 여기서 컴파일이 멈춘다).
+        // 목록은 `EnumInfo` 가 값으로 가진다. 모듈의 정적 배열을 가리키면 핫 리로드 해제 뒤 다른 스레드의 이름 조회가 해제된 저장소를 읽는다.
         vector<const ParsedEnumeratorInfo*> listDense;
         CodeGeneratorInternal::collectDenseEnumerator( enumInfo, invalidEn, countEn, listDense );
         if ( listDense.empty() == false )
         {
-            emit.line( "static const ::sw::hashed_string kArrDenseName[] =" );
+            emit.line( "info._listDenseName =" );
             emit.line( "{" );
             emit.push();
             for ( const ParsedEnumeratorInfo* pEn : listDense )
@@ -734,8 +735,6 @@ namespace sw
                 emit.linef( "static_assert( %# == %#, \"enumerator value differs from the one the reflection parser read\" );", valueExpr( *listDense[index] ),
                             static_cast<uint32>( index ) );
             }
-            emit.line( "info._pArrDenseName  = kArrDenseName;" );
-            emit.linef( "info._denseNameCount = %#;", static_cast<uint32>( listDense.size() ) );
         }
 
         // 옛 열거자 이름(이름 변경 · 지운 열거자의 대체)은 지금 이름과 따로 둔다. 읽기는 지금 이름에 없을 때만 이 표를 본다. 대상은 `AstVisitor` 가 이미 확인했다.
