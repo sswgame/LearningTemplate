@@ -100,14 +100,17 @@ namespace sw
         // 키는 대소문자까지 맞아야 한다 — 기본 문맥은 대소문자를 무시해 `_Width` 오타를 그대로 받아들인다.
         SerializeContext context = SerializeContext::deriveFromDefault();
         context.setIgnoreCaseKeys( false );
-        vector<SchemaOrphanValue> listOrphan;
-        if ( JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context ) == false )
+        // JSON 객체가 아닌 본문만 여기서 멈춘다. 소프트 읽기의 실패는 그 둘(본문 · 범위 밖 값)을 가르지 않으므로, 실패에서 바로 돌아가면
+        // 범위 밖 값 하나가 모르는 키 · 빠진 필수 칸의 오류를 삼킨다 — 모두 알린다는 계약(헤더)이 깨진다.
+        JSONDocument document;
+        if ( document.parse( jsonStr ) == false || document.getRoot().isObject() == false )
         {
-            // 범위 밖 값도 여기로 온다 — 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
-            SW_LOG_ERROR( "Config %#: cannot be read as %# (not a JSON object, or a value outside its declared range)", pSourceLabel,
-                          typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR( "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
             return false;
         }
+        vector<SchemaOrphanValue> listOrphan;
+        // 여기서의 실패는 범위 밖 값이다 — 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
+        const bool bWithinRange = JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context );
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {
             const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
@@ -116,14 +119,12 @@ namespace sw
         }
         // 필수 칸(`PROPERTY( Required )`)이 빠졌으면 초기값으로 읽지 않고 오류다 — 초기값은 형식이지 기본값이 아니다.
         vector<string> listMissing;
-        JSONDocument   document;
-        if ( document.parse( jsonStr ) )
-            collectMissingRequired( document.getRoot(), typeInfo, string(), listMissing );
+        collectMissingRequired( document.getRoot(), typeInfo, string(), listMissing );
         for ( const string& missingPath : listMissing )
         {
             SW_LOG_ERROR( "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
         }
-        return listOrphan.empty() && listMissing.empty();
+        return bWithinRange && listOrphan.empty() && listMissing.empty();
     }
 
     bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )
