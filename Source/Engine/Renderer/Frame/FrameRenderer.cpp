@@ -55,6 +55,13 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_vertexPool, 1, "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)" );
 
     /**
+     * @brief 라이트 컬링 방식입니다. 0 이면 라이트 그리드 없이 픽셀마다 목록 전체를 돕니다(비교 기준), 1 이면 CPU 가 만든 클러스터 그리드를 씁니다.
+     * @details 학습용으로 두 방식을 나란히 보게 둔다(결정 기록 5-12 D2-13). Shipping 은 변수가 등록되지 않아 기본값(CPU 그리드)으로 고정된다.
+     *          GPU 생산자(2)는 ClusteredLighting.md S2 에서 더한다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_lightCulling, 1, "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드)" );
+
+    /**
      * @brief `-gv_viewMode=<n>` 은 주 출력(게임 창)의 보기 모드입니다(0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly).
      * @details 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다.
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
@@ -545,7 +552,7 @@ namespace sw
         ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, pMainCamera != nullptr ? &mainCameraViewProj : nullptr, getShadowMapResolution(),
                                         _listScratchShadowLightIndex, _listScratchLight, _frameShadow );
         applyFrameShadow();
-        _lightBuffer.update( pDevice, _listScratchLight, _frameShadow._listTileElement );
+        _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement );
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
         resetPassCbRing();
@@ -629,7 +636,7 @@ namespace sw
         applyFrameShadow();
         // 씬의 모든 라이트다. 방향광과 점광이 한 버퍼에 섞여 올라가고 포워드와 디퍼드가 같이 읽는다. 점광 · 스폿 그림자 타일은 그 뒤에 붙는다.
         // 비어 있으면 셰이더는 앰비언트만 더한다 — 라이트 컴포넌트가 없는 씬은 어둡다(키 라이트로 대신 비추지 않는다).
-        _lightBuffer.update( pDevice, packet._listLight, _frameShadow._listTileElement );
+        _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement );
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
@@ -651,6 +658,30 @@ namespace sw
         return uploadSceneAndSubmit( pDevice, "executePacket" );
     }
 
+    void FrameRenderer::updateLightBuffer( IRHIDevice* pDevice )
+    {
+        // 그리드 번호는 이 목록의 순서다 — 주 시점이 0 번, 이번 프레임에 그리는 추가 뷰가 그 뒤다. 뷰-투영은 그 뷰의 g_ViewProj 와 같은 값이다.
+        _listScratchGridViewProj.clear();
+        _mainView._lightGridIndex = invalid_index::kUint32;
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            pView->_lightGridIndex = invalid_index::kUint32;
+        }
+        if ( gv_lightCulling != 0 )
+        {
+            _mainView._lightGridIndex = static_cast<uint32>( _listScratchGridViewProj.size() );
+            _listScratchGridViewProj.push_back( view( RenderViewType::Main )._viewProj );
+            for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+            {
+                if ( pView->_bRenderThisFrame == SW_FALSE )
+                    continue;
+                pView->_lightGridIndex = static_cast<uint32>( _listScratchGridViewProj.size() );
+                _listScratchGridViewProj.push_back( pView->_cullInput._viewProj );
+            }
+        }
+        _lightBuffer.update( pDevice, _listScratchGridViewProj );
+    }
+
     void FrameRenderer::setCanvasFrame( CanvasFrameData& inoutFrame )
     {
         std::swap( _canvasFrame, inoutFrame );
@@ -670,6 +701,8 @@ namespace sw
 #endif
         _gpuScene.setVertexPoolEnabled( vertexPool != 0 );
         _gpuScene.upload( pDevice );
+        // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
+        updateLightBuffer( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {

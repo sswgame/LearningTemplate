@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
@@ -70,11 +71,8 @@ namespace sw
         }
     }
 
-    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement )
+    void GPULightBuffer::populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement )
     {
-        if ( pDevice == nullptr )
-            return;
-
         uint32 count = static_cast<uint32>( listLight.size() );
         if ( count > shaderslot::kMaxFrameLight )
         {
@@ -85,31 +83,53 @@ namespace sw
             }
             count = shaderslot::kMaxFrameLight;
         }
-
         _count = count;
-        if ( count == 0 )
+        // 점광과 스폿 그림자 타일 원소는 (잘린) 라이트 뒤에 붙는다. 셰이더는 g_SwLightCount + 라이트의 params.w 로 찾는다. 그리드는 그 뒤에 붙는다(update).
+        _listUploadScratch.assign( listLight.begin(), listLight.begin() + count );
+        _listUploadScratch.insert( _listUploadScratch.end(), listShadowTileElement.begin(), listShadowTileElement.end() );
+        _populatedCount = static_cast<uint32>( _listUploadScratch.size() );
+    }
+
+    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj )
+    {
+        _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
+        if ( pDevice == nullptr || _count == 0 )
         {
             // 버퍼는 그대로 둔다. 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그것이 비용이다.
-            // 셰이더는 g_SwLightCount 가 0 이면 빛을 돌지 않는다(앰비언트만).
+            // 셰이더는 g_SwLightCount 가 0 이면 라이트를 돌지 않는다(앰비언트만).
             return;
         }
 
-        // 점광과 스폿 그림자 타일 원소는 (잘린) 빛 뒤에 붙는다. 셰이더는 g_SwLightCount + 빛의 params.w 로 찾는다.
-        const GPULight* pUpload    = listLight.data();
-        uint32          totalCount = count;
-        if ( listShadowTileElement.empty() == false )
+        // 뷰마다 그리드 하나 — 셰이더는 PassCB g_SwLightGridBase(지금 뷰의 첫 원소)로 찾는다.
+        _listUploadScratch.resize( _populatedCount );
+        if ( _listGrid.size() < listGridViewProj.size() )
+            _listGrid.resize( listGridViewProj.size() );
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( listGridViewProj.size() ); ++viewIndex )
         {
-            _listUploadScratch.assign( listLight.begin(), listLight.begin() + count );
-            _listUploadScratch.insert( _listUploadScratch.end(), listShadowTileElement.begin(), listShadowTileElement.end() );
-            pUpload    = _listUploadScratch.data();
-            totalCount = static_cast<uint32>( _listUploadScratch.size() );
+            LightGrid& grid = _listGrid[viewIndex];
+            if ( grid.populate( listGridViewProj[viewIndex], _listUploadScratch.data(), _count ) == false )
+            {
+                if ( _bWarnedGrid == SW_FALSE )
+                {
+                    _bWarnedGrid = SW_TRUE;
+                    SW_LOG_ERROR( "View %# has no usable projection for the light grid (near/far plane) - it walks every light", viewIndex );
+                }
+                continue;
+            }
+            const uint32 first = static_cast<uint32>( _listUploadScratch.size() );
+            _listUploadScratch.resize( first + grid.getElementCount() );
+            Memory::copy( _listUploadScratch.data() + first, grid.getWords().data(), grid.getWords().size() * sizeof( uint32 ) );
+            _listGridBase[viewIndex] = first;
         }
 
-        constexpr RHIBufferUsage kUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        const uint32             stride = static_cast<uint32>( sizeof( GPULight ) );
+        const GPULight*          pUpload    = _listUploadScratch.data();
+        const uint32             totalCount = static_cast<uint32>( _listUploadScratch.size() );
+        constexpr RHIBufferUsage kUsage     = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        const uint32             stride     = static_cast<uint32>( sizeof( GPULight ) );
         if ( _buffer.ensureCapacity( pDevice, stride, totalCount, kUsage, true, false, pUpload ) == false )
         {
             _count = 0;
+            _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
             return;
         }
         _buffer.upload( pDevice, pUpload, totalCount * stride );

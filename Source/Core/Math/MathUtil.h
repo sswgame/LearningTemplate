@@ -175,6 +175,9 @@ namespace sw
         [[nodiscard]] static SW_INLINE float32 log( const float32 x ) noexcept { return ::logf( x ); }
         [[nodiscard]] static SW_INLINE float64 log( const float64 x ) noexcept { return ::log( x ); }
 
+        /** @brief 밑이 2 인 로그 log2(x)를 계산합니다(셰이더 `log2` 와 같은 함수 — 클러스터 깊이 조각이 쓴다). */
+        [[nodiscard]] static SW_INLINE float32 log2( const float32 x ) noexcept { return ::log2f( x ); }
+
         /** @brief 삼각함수 sin을 계산합니다. */
         [[nodiscard]] static SW_INLINE float32 sin( const float32 radian ) noexcept { return ::sinf( radian ); }
         [[nodiscard]] static SW_INLINE float64 sin( const float64 radian ) noexcept { return ::sin( radian ); }

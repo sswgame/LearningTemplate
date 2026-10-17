@@ -268,5 +268,21 @@
 // 타일 원소는 g_SwLights 의 빛 뒤(g_SwLightCount 부터)에 붙고, 빛 원소의 `params.w` 가 첫 타일의 상대 번호다. 점광은 면 여섯(+X −X +Y −Y +Z −Z 순)이다.
 #define SW_SHADOW_TILE_ELEMENT_COUNT   2u
 #define SW_POINT_SHADOW_FACE_COUNT     6u
+// 라이트 그리드(클러스터드 라이팅, lighting.hlsli swBeginLights · C++ LightGrid) — 32 비트 단어의 배열이다. 라이트 버퍼 원소 하나(float4 네 개)가 단어 16 개다.
+// 그리드는 라이트 버퍼의 그림자 타일 원소 뒤에 뷰마다 하나씩 붙고, PassCB g_SwLightGridBase 가 지금 뷰의 첫 원소다.
+// 배치: 헤더 단어 16 개 → 클러스터마다 단어 두 개(목록 안의 시작, 개수) → 라이트 번호 목록(전역 구간이 맨 앞). 클러스터 번호는 (조각 × Y + y) × X + x 다.
+#define SW_LIGHT_GRID_WORDS_PER_ELEMENT 16u
+#define SW_LIGHT_GRID_HEADER_WORD_COUNT 16u
+#define SW_LIGHT_GRID_WORDS_PER_CLUSTER 2u
+// 헤더 단어의 번호. 실수 값은 비트 그대로 담는다(셰이더는 asfloat 로 읽는다).
+#define SW_LIGHT_GRID_WORD_DIM_X        0u  // NDC x 방향 칸 수
+#define SW_LIGHT_GRID_WORD_DIM_Y        1u  // NDC y 방향 칸 수
+#define SW_LIGHT_GRID_WORD_DIM_Z        2u  // 깊이 조각 수
+#define SW_LIGHT_GRID_WORD_PERSPECTIVE  3u  // 1 = 원근(조각은 클립 w 의 로그), 0 = 직교(조각은 NDC z 의 선형)
+#define SW_LIGHT_GRID_WORD_NEAR_DEPTH   4u  // 실수 — 원근의 가까운 면 클립 w
+#define SW_LIGHT_GRID_WORD_SLICE_SCALE  5u  // 실수 — 원근은 조각 수 / log2(먼 면 w / 가까운 면 w), 직교는 조각 수
+#define SW_LIGHT_GRID_WORD_GLOBAL_COUNT 6u  // 전역 구간(방향광)의 라이트 수
+#define SW_LIGHT_GRID_WORD_CLUSTER_BASE 7u  // 클러스터 단어의 시작(그리드 첫 단어 기준)
+#define SW_LIGHT_GRID_WORD_INDEX_BASE   8u  // 라이트 번호 목록의 시작(그리드 첫 단어 기준)
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

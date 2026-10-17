@@ -259,16 +259,77 @@ uint swComputeLightCount()
  */
 struct SwLightCursor
 {
-	uint position; // 다음에 읽을 라이트 번호
-	uint end;      // 이 번호에 닿으면 끝난다
+	uint position;        // 첫 구간의 다음 항목. 그리드가 없으면 라이트 번호, 있으면 전역 구간(방향광)의 그리드 단어 번호다
+	uint end;             // 첫 구간의 끝
+	uint clusterPosition; // 둘째 구간(이 위치의 클러스터 목록)의 다음 그리드 단어 번호. 그리드가 없으면 빈 구간이다
+	uint clusterEnd;      // 둘째 구간의 끝
+	uint bGrid;           // 1 이면 두 구간의 항목이 그리드 단어이고 라이트 번호는 그 단어에 있다
 };
 
-/** @brief 이 월드 위치를 비추는 라이트의 순회를 엽니다. 라이트 버퍼가 바인딩되지 않았으면 빈 커서입니다. */
+/**
+ * @brief 지금 뷰의 라이트 그리드 단어 하나를 읽습니다. @p wordIndex 는 그리드 첫 단어 기준입니다(bindingslots.hlsli 10절의 배치).
+ * @details 그리드는 라이트 버퍼의 원소(float4 네 개 = 단어 16 개)에 담겨 있다. 원소를 읽은 **바로 뒤에** 정수로 바꾼다 — 실수 연산을 거치면
+ *          작은 정수의 비트(비정규 수)가 0 으로 바뀔 수 있다. 실수 선택(movc)도 하지 않고 정수 벡터로 고른다.
+ *          이 함수만 그리드의 위치를 안다. 그리드를 전용 슬롯으로 옮기면(ClusteredLighting.md S2) 이 함수와 C++ 바인딩만 바뀐다.
+ */
+uint swLoadLightGridWord( uint wordIndex )
+{
+	const SwLightData element = g_SwLights[g_SwLightGridBase + wordIndex / SW_LIGHT_GRID_WORDS_PER_ELEMENT];
+	const uint4       row0    = asuint( element.positionRadius );
+	const uint4       row1    = asuint( element.colorIntensity );
+	const uint4       row2    = asuint( element.directionType );
+	const uint4       row3    = asuint( element.params );
+	const uint        lane    = wordIndex % SW_LIGHT_GRID_WORDS_PER_ELEMENT;
+	const uint4       row     = ( lane < 4u ) ? row0 : ( ( lane < 8u ) ? row1 : ( ( lane < 12u ) ? row2 : row3 ) );
+	const uint        column  = lane % 4u;
+	return ( column == 0u ) ? row.x : ( ( column == 1u ) ? row.y : ( ( column == 2u ) ? row.z : row.w ) );
+}
+
+/**
+ * @brief 이 월드 위치가 든 클러스터 번호입니다. C++ `LightGrid::computeClusterIndex` 와 같은 식입니다(LightGridTest 가 C++ 쪽으로 확인한다).
+ * @details 클러스터는 지금 뷰의 NDC 를 X · Y 칸으로, 깊이를 조각으로 나눈 것이다. 원근은 클립 w 의 로그 조각, 직교는 NDC z 의 선형 조각이다.
+ *          NDC 로 정의하므로 화면 크기 · 해상도 배율과 무관하다. 화면 밖 위치는 가장자리 칸으로 자른다.
+ */
+uint swComputeLightGridCluster( float3 worldPosition )
+{
+	const uint   dimX         = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_X );
+	const uint   dimY         = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Y );
+	const uint   dimZ         = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Z );
+	const bool   bPerspective = swLoadLightGridWord( SW_LIGHT_GRID_WORD_PERSPECTIVE ) != 0u;
+	const float  nearDepth    = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_NEAR_DEPTH ) );
+	const float  sliceScale   = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_SLICE_SCALE ) );
+	const float4 clip         = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+	const float3 ndc          = clip.xyz / clip.w;
+	const uint   tileX        = min( (uint)( saturate( ndc.x * 0.5f + 0.5f ) * (float)dimX ), dimX - 1u );
+	const uint   tileY        = min( (uint)( saturate( ndc.y * 0.5f + 0.5f ) * (float)dimY ), dimY - 1u );
+	const float  slicePosition = bPerspective ? log2( max( clip.w, nearDepth ) / nearDepth ) * sliceScale : saturate( ndc.z ) * sliceScale;
+	const uint   slice        = min( (uint)max( slicePosition, 0.0f ), dimZ - 1u );
+	return ( slice * dimY + tileY ) * dimX + tileX;
+}
+
+/**
+ * @brief 이 월드 위치를 비추는 라이트의 순회를 엽니다. 라이트 버퍼가 바인딩되지 않았으면 빈 커서입니다.
+ * @details 지금 뷰에 라이트 그리드가 있으면(`g_SwLightGridBase`) 전역 구간(방향광)과 이 위치의 클러스터 목록을 돈다. 없으면(`gv_lightCulling` 0) 목록 전체를 돈다.
+ */
 SwLightCursor swBeginLights( float3 worldPosition )
 {
 	SwLightCursor cursor;
-	cursor.position = 0u;
-	cursor.end      = swComputeLightCount();
+	cursor.position        = 0u;
+	cursor.end             = swComputeLightCount();
+	cursor.clusterPosition = 0u;
+	cursor.clusterEnd      = 0u;
+	cursor.bGrid           = 0u;
+	if ( cursor.end > 0u && g_SwLightGridBase != kInvalidIndex )
+	{
+		const uint cluster     = swComputeLightGridCluster( worldPosition );
+		const uint indexBase   = swLoadLightGridWord( SW_LIGHT_GRID_WORD_INDEX_BASE );
+		const uint clusterWord = swLoadLightGridWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + cluster * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
+		cursor.position        = indexBase;
+		cursor.end             = indexBase + swLoadLightGridWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT );
+		cursor.clusterPosition = indexBase + swLoadLightGridWord( clusterWord );
+		cursor.clusterEnd      = cursor.clusterPosition + swLoadLightGridWord( clusterWord + 1u );
+		cursor.bGrid           = 1u;
+	}
 	return cursor;
 }
 
@@ -276,17 +337,25 @@ SwLightCursor swBeginLights( float3 worldPosition )
  * @brief 커서의 다음 라이트를 @p outLight 에 꺼냅니다. 남은 라이트가 없으면 거짓이고, @p outLight 는 어느 조명 식도 받지 않는 원소(2D 그림자 세그먼트)입니다.
  * @note early-return 이 없습니다. GL 드라이버가 early-return 형태를 잘못 컴파일한 적이 있습니다(binding.hlsli swComputeMorphElement).
  *       남은 라이트가 없으면 버퍼를 읽지 않습니다. 바인딩되지 않은 버퍼를 읽으면 DX12 와 Vulkan 은 디바이스를 잃습니다.
+ *       그리드의 라이트 번호가 라이트 수를 넘으면(그리드가 깨졌다) 그 항목은 조명 식이 받지 않는 원소로 건너뛴다 — 버퍼 밖을 읽지 않는다.
  */
 bool swNextLight( inout SwLightCursor inoutCursor, out SwLightData outLight )
 {
-	const bool bHasLight = inoutCursor.position < inoutCursor.end;
+	const bool bFirst    = inoutCursor.position < inoutCursor.end;
+	const bool bSecond   = ( bFirst == false ) && ( inoutCursor.clusterPosition < inoutCursor.clusterEnd );
+	const bool bHasLight = bFirst || bSecond;
+	const uint entry     = bFirst ? inoutCursor.position : inoutCursor.clusterPosition;
+	uint       lightIndex = entry;
+	if ( bHasLight && inoutCursor.bGrid != 0u )
+		lightIndex = swLoadLightGridWord( entry );
 	outLight.positionRadius = float4( 0.0f, 0.0f, 0.0f, 0.0f );
 	outLight.colorIntensity = float4( 0.0f, 0.0f, 0.0f, 0.0f );
 	outLight.directionType  = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_SHADOW2D );
 	outLight.params         = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-	if ( bHasLight )
-		outLight = g_SwLights[inoutCursor.position];
-	inoutCursor.position += bHasLight ? 1u : 0u;
+	if ( bHasLight && lightIndex < g_SwLightCount )
+		outLight = g_SwLights[lightIndex];
+	inoutCursor.position += bFirst ? 1u : 0u;
+	inoutCursor.clusterPosition += bSecond ? 1u : 0u;
 	return bHasLight;
 }
 
