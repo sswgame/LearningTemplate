@@ -92,6 +92,12 @@ namespace sw
 
         /** @brief 한 프레임의 알림을 처리합니다(게임 스레드). 애니메이터가 받는 쪽으로 부르고, 테스트가 직접 부를 수도 있습니다. */
         void processFrame( const AnimationNotifyFrame& frame );
+        /**
+         * @brief 애니메이터 밖의 타임라인(페어드 애니메이션 세션)이 낸 순간 알림 하나를 표의 처리기로 보냅니다(게임 스레드).
+         * @details 열린 구간 · 처리 기록에는 손대지 않는다(기록은 덧붙인다). 구간 알림은 받지 않는다 — 구간의 끝을 낼 클립이 이 오브젝트의 재생 목록에 없다.
+         * @return 표에 그 이름의 항목이 있어 처리기를 불렀으면 true, 표가 없거나 항목이 없으면 false 입니다(부르는 쪽이 시작 때 미리 검사한다).
+         */
+        bool processExternalNotify( const AnimationFiredNotify& fired );
         /** @brief 열린 구간을 모두 닫습니다(끝 처리기를 부릅니다). */
         void closeAllStates();
         /** @brief 열린 구간 수입니다. */
