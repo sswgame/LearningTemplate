@@ -13,6 +13,7 @@ Scripts/lint/gate/CheckAssetRules.py
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -26,18 +27,20 @@ from common.AssetValidation import RuleConfigError, kAssetRuleConfigRelative, lo
 #: 규칙 표(저장소 루트 기준).
 _kRulePath = kAssetRuleConfigRelative
 
-#: 자기 테스트가 쓰는 최소 규칙 표 — 테스트 트리에는 저장소의 규칙 표가 없다.
-_kSelfTestRules = (
-    '{"rules": ['
-    '{"name": "references-exist", "check": "missing_reference", "include_patterns": ["*.xml"]},'
-    '{"name": "scene-entity-ids", "check": "entity_id", "include_patterns": ["*.scene.xml"]},'
-    '{"name": "orphans", "check": "orphan", "severity": "warning", "include_patterns": ["*.mesh"]}'
-    ']}'
-)
+
+def selfTestRulesInternal(ruleName: str) -> str:
+    """
+    셀프 테스트의 규칙 표 — 저장소 규칙 표에서 `ruleName` 한 줄만 고르고 예외(`exclude_*`)를 지운다.
+    형식은 저장소 표를 따르므로 손으로 베낀 표처럼 형식이 바뀌는 날 읽기 오류(종료 2)로 죽지 않는다. 표를 통째로 쓰지 않는 까닭은
+    조각 트리에 없는 예외 자리가 "낡은 예외" 위반을 내 조각이 노린 위반 없이도 지기 때문이다. 이름이 없으면 빈 표라 조각이 통과해 음성 테스트가 잡는다.
+    """
+    root = json.loads((Path(__file__).resolve().parents[3] / _kRulePath).read_text(encoding="utf-8"))
+    listRule = [{key: value for key, value in rule.items() if not key.startswith("exclude_")} for rule in root["rules"] if rule["name"] == ruleName]
+    return json.dumps({"rules": listRule}, ensure_ascii=False)
 
 
 class CheckAssetRulesGate(LintGate):
-    """`selfTestCases` 는 이 게이트가 **반드시 잡아야 하는** 조각이다."""
+    """`selfTestCases` 는 이 게이트가 **반드시 잡아야 하는** 조각이다. 규칙은 저장소 표에서 고른다(`selfTestRulesInternal`)."""
 
     description = "에셋 검증 규칙(Config/Editor/AssetValidationRules.json)의 오류 심각도"
     buildComment = "Checking Resource/ against the asset validation rules..."
@@ -50,7 +53,7 @@ class CheckAssetRulesGate(LintGate):
         {
             "name": "없는 메시를 가리키는 씬",
             "files": {
-                _kRulePath: _kSelfTestRules,
+                _kRulePath: selfTestRulesInternal("references-exist"),
                 "Resource/game/probe/maps/a.scene.xml": (
                     '<Scene><entities><entity id="1" name="A"><GameObject><_listComponent>'
                     '<MeshComponent _meshID="game/probe/models/missing.mesh"/></_listComponent></GameObject></entity></entities></Scene>'
@@ -60,7 +63,7 @@ class CheckAssetRulesGate(LintGate):
         {
             "name": "겹친 엔티티 id",
             "files": {
-                _kRulePath: _kSelfTestRules,
+                _kRulePath: selfTestRulesInternal("scene-entity-ids"),
                 "Resource/game/probe/maps/b.scene.xml": '<Scene><entities><entity id="2" name="A"/><entity id="2" name="B"/></entities></Scene>',
             },
         },

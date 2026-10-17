@@ -106,7 +106,9 @@ class LintGate:
     - `hint`             : 위반 목록 뒤에 덧붙일 안내 한 줄(고치는 법).
     - `maxViolationShown`: 위반을 몇 개까지 찍을지. 0 이면 전부.
     - `maxNoteShown`     : 참고를 몇 개까지 찍을지.
-    - `selfTestCases`    : 이 게이트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive` 가 읽어 간다.
+    - `selfTestCases`    : 이 게이트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive` 가 읽어 간다. 종료 1(위반)이 나와야 하고 종료 2 는 실패다.
+                           키: `name` · `files`(임시 트리에 쓸 글) · `args` · `repoFiles`(저장소에서 그대로 복사할 입력 — 표 · 설정을
+                           손으로 베끼면 형식이 바뀌는 날 조각이 종료 2 로 죽는다) · `git`(참이면 임시 트리를 git 저장소로 만든다).
     - `selfTestSkipReason`: 조각을 만들 수 없는 이유. 이유 없는 예외는 없다.
     - `mapExemption`     : 규칙에서 빼 주는 자리 → 이유. 이유 · 낡음 · 크기를 기반이 본다(아래 "예외 표").
 

@@ -14,6 +14,7 @@ C++ 은 같은 표를 생성 헤더의 X-macro 로 읽어 컴파일 때 따라�
   - `isCookedArtifact`   : 표의 쿠킹본 접미사는 산출물이고, 저작 소스 접미사는 산출물이 아니다.
 
 쿠커는 `--root` 아래의 `Scripts/generate/CookAssets.py` 를 파일 경로로 불러온다(게이트 셀프 테스트가 임시 트리의 조각을 쓴다).
+셀프 테스트의 쿠킹 표는 저장소의 것을 그대로 복사한다(`repoFiles`) — 손으로 베낀 표는 표 형식이 바뀌는 날 읽기 오류로 죽는다.
 """
 
 from __future__ import annotations
@@ -67,35 +68,6 @@ def resolveTargetRhi(cliRhi="", projectRoot=None):
 
 def isCookedArtifact(relPath):
     return relPath.lower().endswith(".scene.bin")
-'''
-
-#: 위 조각과 짝인 표 — 백엔드 하나 · 접미사 한 줄 · 서버가 텍스처를 뺀다.
-_kTargetContractFixture = '''{
-    "default_rhi_backend": "DirectX12",
-    "rhi_backends": [
-        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "command_line_name": "dx12" }
-    ],
-    "cook_suffixes": [
-        { "source": ".scene.xml", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": true }
-    ],
-    "asset_kinds": [ { "name": "Texture", "extensions": [ ".dds" ], "folders": [] } ],
-    "target_excluded_asset_kinds": [ { "target": "Server", "kinds": [ "Texture" ] } ]
-}
-'''
-
-#: 셀프 테스트의 표 — 백엔드 둘 · 접미사 한 줄이면 위 필터의 결함이 드러난다.
-_kContractFixture = '''{
-    "default_rhi_backend": "DirectX12",
-    "rhi_backends": [
-        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "command_line_name": "dx12" },
-        { "name": "OpenGL", "shader_folder": "opengl", "shader_target": "SPIRV_OpenGL", "command_line_argument": "OPENGL", "command_line_name": "gl" }
-    ],
-    "cook_suffixes": [
-        { "source": ".scene.xml", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": true }
-    ],
-    "asset_kinds": [],
-    "target_excluded_asset_kinds": []
-}
 '''
 
 
@@ -194,17 +166,13 @@ class CheckCookContractGate(LintGate):
     selfTestCases = [
         {
             "name": "셰이더 폴더 필터가 opengl 을 빠뜨린 쿠커",
-            "files": {
-                kCookContractConfigRelative: _kContractFixture,
-                kCookerRelative: _kBrokenCookerFixture,
-            },
+            "repoFiles": [kCookContractConfigRelative],
+            "files": {kCookerRelative: _kBrokenCookerFixture},
         },
         {
             "name": "빌드 타깃 인자를 받기만 하고 서버 팩에서 텍스처를 빼지 않는 쿠커",
-            "files": {
-                kCookContractConfigRelative: _kTargetContractFixture,
-                kCookerRelative: _kTargetBlindCookerFixture,
-            },
+            "repoFiles": [kCookContractConfigRelative],
+            "files": {kCookerRelative: _kTargetBlindCookerFixture},
         },
     ]
 

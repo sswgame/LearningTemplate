@@ -8,7 +8,8 @@
 소유 검사가 나열한 구조체 이름만 보고 새 구조체를 놓친다.
 
 **증거는 린트가 직접 든다.** 각 게이트 클래스가 `selfTestCases` 에 "이건 반드시 잡아야 한다" 는 조각을
-적어 두고, 이 장치가 임시 트리에 그것을 써서 린트를 돌린다. 0 이 아닌 종료 코드가 나와야 통과다.
+적어 두고, 이 장치가 임시 트리에 그것을 써서 린트를 돌린다. 종료 1(위반)이 나와야 통과다 — 종료 2(입력을 못 읽음 · 게이트 내부 오류)는
+조각과 무관하게 나오므로 실패로 센다. 조각에는 게이트가 읽는 입력 파일까지 갖춘다.
 게이트마다 하위 프로세스 하나(`--cases-of <게이트>`)가 그 게이트의 조각을 차례로 진입점(`XxxGate.run`)으로 돈다 — 조각마다 프로세스를 띄우면
 기동 · import 가 조각 수(수백)만큼 든다. 예외 기록은 `run` 이 조각마다 비우고, 게이트끼리는 프로세스가 갈려 모듈 상태가 섞이지 않는다.
 조각 표를 여기 모아 두지 않는 이유는 하나다 — **표가 둘이면 언제든 어긋난다.**
@@ -48,6 +49,9 @@ from LintGate import GateError, GateResult, LintGate, findGateClass  # noqa: E40
 #: `--cases-of` 하위 프로세스가 결과 JSON 앞에 찍는 표식 — 게이트가 찍는 줄과 가른다.
 _kResultMarker = "\n@@CheckLintsAreAlive-result@@"
 
+#: 조각의 `repoFiles` 를 복사해 오는 저장소 — 이 스크립트가 든 체크아웃이다.
+_kRepositoryRoot = Path(__file__).resolve().parents[3]
+
 
 def runCaseInternal(gateClass: type[LintGate], case: dict) -> tuple[int, str]:
     """
@@ -58,7 +62,17 @@ def runCaseInternal(gateClass: type[LintGate], case: dict) -> tuple[int, str]:
     tempRoot = Path(tempfile.mkdtemp(prefix="swLintAlive"))
     output = io.StringIO()
     try:
-        for relPath, content in case["files"].items():
+        if case.get("git"):
+            # 저장소를 묻는 게이트(`git check-ignore` …)용. 실패하면 조각을 돌리지 않고 멈춘다.
+            initResult = runProcess(["git", "init", "-q", str(tempRoot)])
+            if initResult.returnCode != 0:
+                raise GateError(f"{case['name']}: 임시 트리에서 git init 이 실패했습니다: {initResult.output.strip()}")
+        for relPath in case.get("repoFiles", []):
+            # 저장소의 표 · 설정을 그대로 복사한다 — 없으면 예외로 죽어 이 검사가 알린다.
+            target = tempRoot / relPath
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(_kRepositoryRoot / relPath, target)
+        for relPath, content in case.get("files", {}).items():
             target = tempRoot / relPath
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8")
@@ -158,9 +172,12 @@ class CheckLintsAreAliveGate(LintGate):
             caseName = case["name"]
             if args.verbose:
                 print(f"  [{script.name}/{caseName}] exit={code}")
-            if code == 0:
-                errors.append(f"{script.name}/{caseName}: 위반을 넣었는데 통과했습니다 — 이 검사는 죽었습니다\n"
-                              f"      출력: {output.strip().splitlines()[-1] if output.strip() else '(없음)'}")
+            if code != 1:
+                # 종료 1(위반)만 "잡았다" 로 센다. 종료 2 는 게이트가 입력을 못 읽거나 예외로 죽은 것이라 조각이 무엇이든 같은 결과다 —
+                # 0 이 아니라는 이유로 살아 있다고 세면 죽은 게이트가 숨는다.
+                lastLine = output.strip().splitlines()[-1] if output.strip() else '(없음)'
+                verdict = "위반을 넣었는데 통과했습니다" if code == 0 else f"위반 대신 종료 {code}(게이트 내부 오류)로 끝났습니다"
+                errors.append(f"{script.name}/{caseName}: {verdict} — 이 검사는 죽었습니다\n      출력: {lastLine}")
         checkedCases = len(listJob)
 
         return GateResult(listViolation=errors, summary=f"{checkedCases} cases across {len(listGateScript)} gates")

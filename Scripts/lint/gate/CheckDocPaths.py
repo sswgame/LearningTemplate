@@ -118,13 +118,16 @@ class CheckDocPathsGate(LintGate):
     violationHeader = "문서가 없는 자리를 가리킵니다"
     hint = ("  파일을 옮겼으면 문서의 경로를 새 자리로, 지웠으면 그 문장을 지우세요. 아직 없는 파일을 적는 것은 백로그와 계획 문서(docs/plans/)의 일입니다.\n"
             "  파일을 옮기거나 지운 커밋은 문서를 건드리지 않아 훅이 이 게이트를 돌리지 않습니다 — `ctest -L lint` 가 전체를 봅니다.")
+    # 없는 자리를 `git check-ignore` 로 묻는 게이트라 조각마다 임시 트리를 git 저장소로 만든다(`git`).
     selfTestCases = [
         {
             "name": "없는 파일로 가는 상대 링크",
+            "git": True,
             "files": {"docs/Guide.md": "# 안내\n\n[엔진](../Source/Engine/README.md)\n"},
         },
         {
             "name": "없는 제목으로 가는 앵커",
+            "git": True,
             "files": {
                 "docs/Guide.md": "# 안내\n\n[절](Other.md#없는-절)\n",
                 "docs/Other.md": "# 다른 문서\n\n## 있는 절\n",
@@ -132,22 +135,26 @@ class CheckDocPathsGate(LintGate):
         },
         {
             "name": "백틱 안의 없는 저장소 경로",
+            "git": True,
             "files": {"README.md": "# 저장소\n\n정본은 `Source/Engine/Missing/Thing.h` 다.\n",
                       "Source/Engine/Real.h": "#pragma once\n"},
         },
         {
             "name": "문서 폴더 기준의 없는 하위 경로",
+            "git": True,
             "files": {"Source/Engine/README.md": "# 엔진\n\n`Common/Gone` 을 본다.\n",
                       "Source/Engine/Common/Here.h": "#pragma once\n"},
         },
         {
             "name": "문서 지도에 없는 README",
+            "git": True,
             "files": {"docs/02_DocumentMap.md": "# 문서 지도\n\n- [엔진](../Source/Engine/README.md)\n",
                       "Source/Engine/README.md": "# 엔진\n",
                       "Source/Core/README.md": "# 코어\n"},
         },
         {
             "name": "코드 블록 안의 없는 include",
+            "git": True,
             "files": {"README.md": "# 저장소\n\n```cpp\n#include \"Engine/Nowhere/Gone.h\"\n```\n",
                       "Source/Engine/Real.h": "#pragma once\n"},
         },
