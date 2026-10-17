@@ -82,6 +82,26 @@ function(sw_getTestTimeoutScale OUT_VAR)
 endfunction()
 
 # ------------------------------------------------------------------------------
+# sw_getRequiredBackendsArgument — hostgpu 항목에 넘길 `--required_backends=<이름,…>`(정책 `requiredBackends.<플랫폼>`, 필수 키).
+#   그 백엔드가 서지 못하면 케이스가 건너뛰지 않고 진다(C-41 3단계). 이름은 쿠킹 표의 명령줄 이름이고, 모르는 이름은 테스트 실행이 거절한다.
+#   빌드에 없는 백엔드(배포본의 고르지 않은 것)는 실행 파일이 스스로 요구에서 뺀다(`test::isBackendInThisBuild`).
+# ------------------------------------------------------------------------------
+function(sw_getRequiredBackendsArgument OUT_VAR)
+	string(TOLOWER "${CMAKE_SYSTEM_NAME}" swPlatform)
+	sw_requireJsonValue(swCount "${SW_TEST_POLICY_FILE}" LENGTH requiredBackends ${swPlatform})
+	set(swNames "")
+	if(swCount GREATER 0)
+		math(EXPR swLast "${swCount} - 1")
+		foreach(swIndex RANGE 0 ${swLast})
+			sw_requireJsonValue(swName "${SW_TEST_POLICY_FILE}" requiredBackends ${swPlatform} ${swIndex})
+			list(APPEND swNames "${swName}")
+		endforeach()
+	endif()
+	list(JOIN swNames "," swJoined)
+	set(${OUT_VAR} "--required_backends=${swJoined}" PARENT_SCOPE)
+endfunction()
+
+# ------------------------------------------------------------------------------
 # sw_registerTestBuildFixture — `ctest` 가 테스트 실행 파일 없이 지지 않게, 첫 항목으로 빌드를 부르는 셋업 항목 하나
 #
 # 실행 파일 테스트(`sw_registerTestRun`)은 모두 이 픽스처를 요구한다. ctest 는 `-L` · `-R` 로 거른 실행에도 요구된 셋업 항목을 스스로 더하고,
@@ -322,8 +342,10 @@ function(sw_registerTestPolicy TARGET_NAME)
 		sw_requireJsonValue(swHostShards "${swPolicy}" executables ${TARGET_NAME} hostShards)
 		sw_computeTestTimeout(swHostTimeout ${swHostSeconds} ${swHostShards} ${swHostMaxCaseSeconds})
 		math(EXPR swHostShardCost "(${swHostSeconds} + ${swHostShards} - 1) / ${swHostShards}")
+		# 이 PC 에 있어야 할 백엔드가 서지 못하면 건너뛰지 않고 진다(정책 `requiredBackends`).
+		sw_getRequiredBackendsArgument(swRequiredBackends)
 		sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${swHostShards} GPU ${swHostLockArgs} COST ${swHostShardCost}
-			ARGS --host_suites=only LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} COSTS "${swHostCosts}" ASAN_OPTIONS ${swAsanOptions})
+			ARGS --host_suites=only ${swRequiredBackends} LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} COSTS "${swHostCosts}" ASAN_OPTIONS ${swAsanOptions})
 	endif()
 
 	# 부하 · 시간 예산 검증(`SW_TEST_LOAD_SUITE`) — 혼자 돌아야 숫자가 뜻이 있어 직렬이다. 예산을 넘은 케이스는 Release 에서만 진다
@@ -356,11 +378,13 @@ function(sw_registerTestPolicy TARGET_NAME)
 		sw_requireJsonValue(swRaceSeconds "${swPolicy}" executables ${TARGET_NAME} raceSeconds)
 		sw_computeTestTimeout(swRaceTimeout ${swRaceSeconds} 1 0)
 		set(swRaceExtra "")
+		set(swRaceRequired "")
 		if(swHostSplit)
 			set(swRaceExtra GPU ${swHostLockArgs})
+			sw_getRequiredBackendsArgument(swRaceRequired)
 		endif()
 		sw_registerTestRun(${TARGET_NAME}_Race ${TARGET_NAME} ${swRaceExtra} COST ${swRaceSeconds}
-			ARGS --host_suites=all "--test_filter=${swRaceFilter}" LABELS "${swBaseLabels};race" TIMEOUT ${swRaceTimeout} ASAN_OPTIONS ${swAsanOptions})
+			ARGS --host_suites=all "--test_filter=${swRaceFilter}" ${swRaceRequired} LABELS "${swBaseLabels};race" TIMEOUT ${swRaceTimeout} ASAN_OPTIONS ${swAsanOptions})
 	endif()
 endfunction()
 

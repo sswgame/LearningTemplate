@@ -114,6 +114,12 @@ namespace test
     uint32 getRandomSeed();
     /** @brief 이 스레드가 지금 실패를 기록하는 중인가 — 그때 남는 `[FAILED]` Error 줄은 판정기가 세지 않는다. */
     bool isReportingFailureOnThisThread();
+    /**
+     * @brief 서지 못한 백엔드를 알립니다. 이 실행이 그 백엔드를 요구하면(`--required_backends=`) 현재 케이스를 실패로 기록하고 true 를 반환합니다.
+     * @details 요구하지 않은 백엔드면 아무것도 하지 않고 false 이다 — 케이스는 그대로 건너뛰거나 다음 백엔드로 간다.
+     *          "이 PC 에 GPU 가 있는데 Vulkan 이 서지 않는다" 가 건너뜀으로 초록이 되지 않게 한다(C-41 3단계).
+     */
+    bool reportUnusableBackend( sw::RHIBackend backend, const utf8* pReason, const utf8* pFile, int32 line );
 } // namespace test
 
 /** @brief 현재 테스트를 사유와 함께 건너뜁니다 — 환경 탓(파일 · 장치 · 서버가 없음)일 때. 스위트가 전부 이것으로 건너뛰면 "아무것도 검증하지 않은 스위트" 로 진다. */

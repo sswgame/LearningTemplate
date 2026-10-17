@@ -5,6 +5,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 
+#include "TestFramework/TestRegistry.h"
 #include "TestFramework/TestScopes.h"
 
 namespace test
@@ -33,20 +34,28 @@ namespace test
         shutdown();
         _backend = backend;
 
-        // 빌드에 없는 백엔드(리눅스의 DX · 배포본의 고르지 않은 백엔드) · 런타임이 없는 백엔드는 창을 띄우기 전에 거른다.
-        if ( isBackendInThisBuild( backend ) == false || sw::RHIAvailability::isAvailable( backend ) == false )
+        // 빌드에 없는 백엔드(리눅스의 DX · 배포본의 고르지 않은 백엔드)는 구성 차이라 요구하지 않는다. 그 밖에 서지 못한 것은
+        // 이 실행이 요구한 백엔드면(`--required_backends=`) 케이스를 실패로 기록한다 — 건너뜀으로 초록이 되지 않게.
+        if ( isBackendInThisBuild( backend ) == false )
             return false;
+        if ( sw::RHIAvailability::isAvailable( backend ) == false )
+        {
+            (void)reportUnusableBackend( backend, "no runtime or driver for it", __FILE__, __LINE__ ); // 요구 여부와 상관없이 이 백엔드는 서지 않았다
+            return false;
+        }
 
         _window = sw::IWindow::createPlatformWindow();
         if ( _window == nullptr || _window->initializeWindow( "RHITestDevice", 320, 240 ) == false )
         {
             _window.reset();
+            (void)reportUnusableBackend( backend, "the test window could not be created", __FILE__, __LINE__ ); // 위와 같다
             return false;
         }
 
         if ( recreateDevice() == false )
         {
             shutdown();
+            (void)reportUnusableBackend( backend, "the device failed to initialize", __FILE__, __LINE__ ); // 위와 같다
             return false;
         }
         return true;

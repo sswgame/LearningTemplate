@@ -21,6 +21,11 @@
     "sanitizer": 10
   },
   "_timeoutScaleReason": "linux: CI 리눅스 Debug 러너의 EngineTest_NoGPU 조각은 Windows 값으로 계산한 조각(26 s)의 1.9 배(실행 38748985852, 50 s)에서 러너가 통째로 느린 날 4 배(38728893862, 104 s 한도에서 둘이 죽고 셋째가 99 s)까지 갔다. 2 배면 한도 208 s 로 느린 날에도 두 배 여유다. 조각 값이 러너에 맞는지는 CI 리눅스 Debug 의 가장 느린 EngineTest_NoGPU 조각(실행 38682436123, 101 s)이 한도의 절반(104 s) 안쪽인 것으로 확인했다 — 절반을 넘으면 러너에서 다시 잰다. sanitizer: ASan · TSan 은 한 자릿수 배로 느리다(실행 38728893862 의 TSan EngineTest 조각 440 s, 한도 1040 s).",
+  "requiredBackends": {
+    "windows": ["dx11", "dx12", "vk", "gl"],
+    "linux": ["vk", "gl"]
+  },
+  "_requiredBackendsReason": "hostgpu 항목(호스트 조각 · 레이스 묶음)이 --required_backends= 로 받는다. 이 백엔드가 서지 못하면 케이스가 건너뛰지 않고 진다 — GPU 가 있는 PC 에서 Vulkan 이 사라져도 건너뜀으로 초록이던 것을 막는다(C-41 3단계, 결정 기록 5-12). 이름은 쿠킹 표(Config/Engine/CookContract.json)의 command_line_name 이다. 배포본처럼 빌드에 없는 백엔드는 실행 파일이 스스로 뺀다. GPU 없는 PC 에서 hostgpu 를 돌리면 지는 것이 맞다(hostgpu 는 GPU 있는 PC 의 라벨).",
   "labels": {
     "unit": "C++ 테스트 실행 파일의 항목 전부",
     "nogpu": "CI 러너가 돌릴 수 있다 — GPU · 창 · DXC 가 필요 없다",

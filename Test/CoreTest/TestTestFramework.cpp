@@ -580,6 +580,26 @@ SW_TEST_CASE( TestFrameworkTest, HelpArgumentIsTakenByTheHarness )
 }
 
 /**
+ * @brief [TestFrameworkTest] 요구 백엔드는 쿠킹 표의 명령줄 이름으로 읽고, 모르는 이름은 실행을 실패로 만든다(버리면 그 백엔드가 서지 못해도 건너뜀으로 끝난다)
+ */
+SW_TEST_CASE( TestFrameworkTest, RequiredBackendsAreReadByCookTableNames )
+{
+    test::TestRunOptions options;
+    options.setRequiredBackends( "dx12,gl" );
+    SW_EXPECT_FALSE( options._bInvalidArgument );
+    SW_EXPECT_TRUE( options.isBackendRequired( sw::RHIBackend::DirectX12 ) );
+    SW_EXPECT_TRUE( options.isBackendRequired( sw::RHIBackend::OpenGL ) );
+    SW_EXPECT_FALSE( options.isBackendRequired( sw::RHIBackend::Vulkan ) );
+    SW_EXPECT_STREQ( "vk", test::TestRunOptions::getBackendName( sw::RHIBackend::Vulkan ) );
+    SW_EXPECT_TRUE( options.makeReproductionArguments( "", false ).find( "--required_backends=dx12,gl" ) != sw::string::npos );
+
+    test::TestRunOptions typo;
+    typo.setRequiredBackends( "dx12,vulkan" );
+    SW_EXPECT_TRUE( typo._bInvalidArgument );
+    SW_EXPECT_TRUE( typo.isBackendRequired( sw::RHIBackend::DirectX12 ) );
+}
+
+/**
  * @brief [TestFrameworkTest] `--help` 를 주고 띄우면 도움말만 찍고 케이스를 하나도 돌리지 않은 채 종료 코드 0 으로 곧 끝난다
  * @details 하네스가 `--help` 를 모르면 엔진 명령줄이 모르는 인자로 무시하고 전체 시험을 돈다 — 도움말을 보려던 사람에게는 끝나지 않는 실행이다.
  *          필터는 건너뛰는 자식 역할 케이스 하나만 고르게 해, 고치기 전 하네스에서도 이 케이스가 자기 자신을 다시 띄우지 않는다.

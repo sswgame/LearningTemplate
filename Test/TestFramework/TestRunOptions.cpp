@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "sw/config/CookContract.gen.h"
+
 #include <cstdlib>
 
 namespace test
@@ -44,6 +46,17 @@ namespace test
                 return true;
             }
 
+            /** @brief 쿠킹 표 한 줄의 백엔드와 그 명령줄 이름입니다. */
+            struct BackendName
+            {
+                sw::RHIBackend   _backend;
+                std::string_view _name;
+            };
+#define SW_TEST_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) BackendName{ sw::RHIBackend::Backend, CommandLineName },
+            /** @brief 백엔드 이름 표 — 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 줄마다 하나입니다. 이름을 여기 따로 적지 않습니다. */
+            static constexpr BackendName kArrBackendName[] = { SW_RHI_BACKEND_TABLE( SW_TEST_BACKEND_NAME_ROW ) };
+#undef SW_TEST_BACKEND_NAME_ROW
+
             static const utf8* getKindModeName( SuiteKindMode mode )
             {
                 switch ( mode )
@@ -69,6 +82,8 @@ namespace test
         , _listEngineArgument{}
         , _mapCaseCost{}
         , _caseCostText{}
+        , _listRequiredBackend{}
+        , _requiredBackendText{}
         , _arrKindMode{ SuiteKindMode::All, SuiteKindMode::Exclude }
         , _repeatCount{ 1 }
         , _randomSeed{ 0 }
@@ -223,6 +238,13 @@ namespace test
             if ( parseKind( arg, "--host_suites=", SuiteKind::Host ) || parseKind( arg, "--load_suites=", SuiteKind::Load ) )
                 continue;
 
+            constexpr std::string_view kRequiredBackendPrefix = "--required_backends=";
+            if ( sw::StringUtil::startsWith( arg, kRequiredBackendPrefix ) )
+            {
+                setRequiredBackends( TestRunOptionsInternal::trimArgValue( arg.substr( kRequiredBackendPrefix.size() ) ) );
+                continue;
+            }
+
             listApplicationArg.push_back( argv[argIndex] );
             _listEngineArgument.push_back( sw::string( arg ) );
         }
@@ -264,6 +286,56 @@ namespace test
         }
     }
 
+    void TestRunOptions::setRequiredBackends( const sw::string& text )
+    {
+        _requiredBackendText = text;
+        _listRequiredBackend.clear();
+        size_t start = 0;
+        while ( start < text.size() )
+        {
+            size_t separator = text.find( ',', start );
+            if ( separator == sw::string::npos )
+                separator = text.size();
+            const std::string_view name( text.c_str() + start, separator - start );
+            bool                   bKnown = false;
+            for ( const TestRunOptionsInternal::BackendName& row : TestRunOptionsInternal::kArrBackendName )
+            {
+                if ( row._name != name )
+                    continue;
+                _listRequiredBackend.push_back( row._backend );
+                bKnown = true;
+            }
+            if ( bKnown == false )
+            {
+                // 모르는 이름을 버리면 그 백엔드가 서지 못해도 건너뛰기로 끝난다 — 실행을 실패로 끝낸다.
+                _bInvalidArgument = true;
+                std::fprintf( stdout, "Unknown --required_backends entry '%s' (expected the cook table's command line names: dx11, dx12, vk, gl)\n",
+                              sw::string( name ).c_str() );
+            }
+            start = separator + 1;
+        }
+    }
+
+    bool TestRunOptions::isBackendRequired( sw::RHIBackend backend ) const
+    {
+        for ( const sw::RHIBackend required : _listRequiredBackend )
+        {
+            if ( required == backend )
+                return true;
+        }
+        return false;
+    }
+
+    const utf8* TestRunOptions::getBackendName( sw::RHIBackend backend )
+    {
+        for ( const TestRunOptionsInternal::BackendName& row : TestRunOptionsInternal::kArrBackendName )
+        {
+            if ( row._backend == backend )
+                return row._name.data(); // 표의 이름은 문자열 리터럴이라 널로 끝난다
+        }
+        return "?";
+    }
+
     void TestRunOptions::printHelp()
     {
         std::fprintf( stdout,
@@ -280,6 +352,7 @@ namespace test
                       "  --host_suites=exclude|only|all    Exclude or select suites that need a GPU, window or DXC (default all)\n"
                       "  --load_suites=exclude|only|all    Exclude or select load and time budget suites (default exclude)\n"
                       "  --enforce_budgets                 Fail cases that exceed their SW_TEST_TIME_BUDGET\n"
+                      "  --required_backends=dx11,dx12,... Fail (instead of skip) when one of these RHI backends cannot stand up\n"
                       "  --allow_empty_suite               Do not fail when a selected suite has no runnable case\n"
                       "Other arguments go to the engine command line (-gv_<name>=<value> and so on).\n" );
         std::fflush( stdout );
@@ -321,6 +394,8 @@ namespace test
             append( "--test_repeat=" + sw::to_string( _repeatCount ) );
         if ( _bEnforceBudgets )
             append( "--enforce_budgets" );
+        if ( _requiredBackendText.empty() == false )
+            append( "--required_backends=" + _requiredBackendText );
         for ( const sw::string& engineArgument : _listEngineArgument )
         {
             append( engineArgument );
