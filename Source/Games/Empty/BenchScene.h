@@ -20,6 +20,7 @@
 namespace sw
 {
     class CameraComponent;
+    class DirectionalLightComponent;
     class GameObject;
     class GameObjectManager;
     class Material;
@@ -27,7 +28,9 @@ namespace sw
     class Mesh;
     class MeshComponent;
     class MeshInstanceBatch;
+    class RagdollComponent;
     class Scene;
+    class SkeletalMeshComponent;
 
     /**
      * @class BenchScene
@@ -169,7 +172,7 @@ namespace sw
          *          만든 직후 상태 복원이 씬을 통째로 지우고, 다음 update 가 죽은 주소에 setLocalPosition 을 한다.
          *          핸들은 조회 결과가 nullptr 이 될 뿐 죽은 주소가 될 수 없다.
          */
-        vector<ComponentHandle> _listBenchMesh;
+        vector<TComponentHandle<MeshComponent>> _listBenchMesh;
         /**
          * @brief `-gv_benchInstanced=1` 의 큐브입니다. 메시 종류마다 배치 하나이며, 큐브 i 는 배치 i % 종류 수의 항목 i / 종류 수입니다.
          * @details 씬 컴포넌트가 없으므로 `_listBenchMesh` 는 비어 있고, update 가 월드 행렬을 항목에 바로 쓴다.
@@ -183,7 +186,7 @@ namespace sw
         /// @brief 프레임마다 다시 채우는 배치 쓰기 목록입니다. 큐브마다 세터를 부르지 않습니다(update 주석 참고).
         vector<SceneTransformWrite> _listTransformWrite;
         /** @brief 벤치가 만든 주 광원의 핸들입니다. despawn 이 정리할 때 씁니다. */
-        ComponentHandle _keyLight;
+        TComponentHandle<DirectionalLightComponent> _keyLight;
         /**
          * @brief 벤치가 만든 **큐브가 아닌** 것들의 핸들입니다. 흩뿌린 라이트와 바닥 평면입니다.
          * @details 모듈 리로드와 RHI 교체는 `despawn()` 과 `spawnFromGlobals()` 를 한 쌍으로
@@ -212,15 +215,15 @@ namespace sw
         /** @brief 늦게 생기는 에디터 카메라까지 한 번 더 맞췄으면 1. */
         uint8 _bRefreshedCameras : 1;
         /** @brief 리그 데모의 기사 몸 유닛 핸들입니다(몸 돌리기와 걷기). */
-        vector<ComponentHandle> _listRigBody;
+        vector<TComponentHandle<SkeletalMeshComponent>> _listRigBody;
         /** @brief 래그돌 군중의 래그돌 컴포넌트 핸들입니다. */
-        vector<ComponentHandle> _listRagdoll;
+        vector<TComponentHandle<RagdollComponent>> _listRagdoll;
         /** @brief 래그돌 군중 격자의 반폭입니다(카메라를 다시 맞출 때 씁니다). */
         float32 _ragdollHalfExtent;
         /** @brief 래그돌 군중이 센 프레임 수입니다. */
         uint32 _ragdollFrame;
         /** @brief 리그 데모의 시선 목표(작은 구). */
-        ComponentHandle _rigLookTarget;
+        TComponentHandle<MeshComponent> _rigLookTarget;
         /** @brief 캐릭터 벤치를 스폰했으면 1 입니다. 카메라를 캐릭터 기준으로 맞춥니다. */
         uint8                  _bCharacterFraming : 1;
         uint8                  _bFaceFraming      : 1; ///< 테스트 머리 줄을 스폰했다(카메라를 머리 높이로 맞춘다).
