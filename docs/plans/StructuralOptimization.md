@@ -26,10 +26,10 @@
 
 | 단위 | 목적 | 벤치 | 전 p50 / p99 | 후 p50 / p99 | 판정 | 유지보수 비용 |
 |---|---|---|---|---|---|---|
-| ① | `SequenceBuffer` 칸을 다시 쓸 때 버퍼 용량 유지(크기 상수화는 feat18) | 커밋 메시지 참조 | | | | |
-| ② | `sw::deque` 바이트 기준 블록 + 고정 용량 큐 링 버퍼 | 커밋 메시지 참조 | | | | |
-| ③ | 해시 표 노드 `uint32 next + 해시 태그` | 커밋 메시지 참조 | | | | |
-| ④ | `BitStream` 64비트 스크래치 워드(와이어 바이트 동일성 테스트 먼저) | 커밋 메시지 참조 | | | | |
-| ⑤ | `Memory::copy` · `compare` 헤더 inline | 커밋 메시지 참조 | | | | |
+| ① | `SequenceBuffer` 칸을 다시 쓸 때 버퍼 용량 유지(크기 상수화는 feat18) | `NetCoreBenchTest.SequenceBufferSlotReuse` | | | | 원소에 `resetForReuse`(모든 필드를 `T{}` 로, 버퍼만 남김) |
+| ② | `sw::deque` 바이트 기준 블록 + 고정 용량 큐 링 버퍼 | 미구현 | | | | 컨테이너 직접 구현 — 빌드 없이 넣기에 위험이 커서 다음 묶음 |
+| ③ | 해시 표 노드 `uint32 next + 해시 태그` | 미구현 | | | | map · set 표 코어 통합 — 같은 이유로 다음 묶음 |
+| ④ | `BitStream` 64비트 워드로 쓰기 · 읽기(와이어 바이트 고정 테스트 `BitStreamWireTest` 먼저) | `NetCoreBenchTest.BitStreamMixedFields` | | | | 읽기의 8 바이트 통째 읽기는 리틀 엔디언 전제 |
+| ⑤ | `Memory::copy` · `move` · `set` · `compare` 헤더 inline | `MemoryCopyBenchTest.CopyAndCompareBySize` | | | | 헤더를 바꾸면 전체 재컴파일 |
 
-B 에서 커밋하지 못한 단위는 [다음 세션 인계](NEXT.md) 2절 11번에 남는다.
+B ② · ③ 은 이 묶음에서 하지 않았고(빌드 없이 컨테이너를 직접 구현하는 위험), 남은 단위는 [다음 세션 인계](NEXT.md) 2절 11번에 남는다.
