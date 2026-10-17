@@ -360,6 +360,8 @@ namespace sw
         }
 
         // 2-2) 가상 커서(패드 스틱 → 마우스 이동 · 버튼)의 이벤트를 붙인다. 가상 입력이 붙어 있으면 그쪽이 입력을 정하므로 쉰다.
+        //      켜고 끄기와 스틱은 게임플레이 입력 맵이 정한다(`<InputMap virtualCursor>`) — 맵을 바꾸면 이 프레임부터 따른다.
+        syncVirtualCursorToMap();
         const bool bVirtualCursorActive = _virtualCursor.isEnabled() && _pVirtualInput == nullptr && _pMouse != nullptr;
         if ( bVirtualCursorActive )
         {
@@ -424,6 +426,19 @@ namespace sw
         //    엔진 루프, 리플레이 재동기화, 테스트가 같은 경로를 탄다.
         if ( _pInputMap != nullptr )
             _pInputMap->update( deltaSeconds );
+    }
+
+    void InputManager::syncVirtualCursorToMap()
+    {
+        const InputMapVirtualCursor stick   = _pInputMap != nullptr ? _pInputMap->getVirtualCursorStick() : InputMapVirtualCursor::Off;
+        const bool                  bWanted = stick != InputMapVirtualCursor::Off;
+        if ( bWanted != _virtualCursor.isEnabled() )
+            _virtualCursor.setEnabled( bWanted );
+        if ( bWanted == false )
+            return;
+        VirtualCursorSettings settings = _virtualCursor.getSettings();
+        settings._bRightStick          = stick == InputMapVirtualCursor::RightStick;
+        _virtualCursor.setSettings( settings );
     }
 
     void InputManager::dispatchRawEvent( const RawInputEvent& rawEvent )

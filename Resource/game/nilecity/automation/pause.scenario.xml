@@ -2,13 +2,13 @@
 <!--
   NileCity 일시정지 메뉴 시나리오 — Esc 로 엔진 일시정지 메뉴(engine/ui/pause.ui.xml)가 뜨고, 떠 있는 동안 UI 가 먹은 입력(패드 B = 뒤로)은
   디렉터의 허물기(Nile.Demolish)로 새지 않는다(UIInputMapView). 메뉴를 닫은 뒤의 B 는 허물기다(대조).
-  디렉터는 마우스 버튼이 아니라 액션을 읽는다. 커서는 포인터 위치(화면 가운데), 누르는 것은 패드 버튼(A = 짓기, B = 허물기).
+  디렉터는 마우스 버튼이 아니라 액션을 읽는다. 커서는 포인터 위치(화면 가운데), 짓기 · 허물기는 마우스 버튼 슬롯(왼쪽 · 오른쪽), 메뉴 뒤로는 패드 B(UI 입력 맵)다.
   App -scenario=game/nilecity/automation/pause.scenario.xml (종료 코드 0 = 통과)
 -->
 <Scenario name="nilecity.pause" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" input="exclusive">
 	<At frame="0"><Variable name="gv_nileAutoPlay" value="0"/></At>
 	<At frame="20"><MousePosition x="0.5" y="0.5"/></At>
-	<At frame="22"><Tap slot="Gamepad.A" hold="1"/></At>
+	<At frame="22"><Tap slot="Mouse.Left" hold="1"/></At>
 	<At frame="30"><Tap slot="Key.Escape" hold="1"/></At>
 	<At frame="36"><ExpectUI screen="engine/ui/pause.ui.xml"/></At>
 	<!-- 메뉴가 떠 있다: B 는 UI 뒤로가기라 메뉴를 닫고, 같은 B 로 허물지는 않는다 -->
@@ -17,8 +17,8 @@
 		<ExpectUI screen="none"/>
 		<ExpectLog contains="[Nile] demolished" count="0"/>
 	</At>
-	<!-- 메뉴를 닫은 뒤의 B 는 디렉터의 것이다 -->
-	<At frame="64"><Tap slot="Gamepad.B" hold="1"/></At>
+	<!-- 메뉴를 닫은 뒤의 오른쪽 버튼은 디렉터의 것이다 -->
+	<At frame="64"><Tap slot="Mouse.Right" hold="1"/></At>
 	<At frame="70">
 		<ExpectLog contains="[Nile] demolished" count="1"/>
 		<Pass/>

@@ -24,7 +24,7 @@ cd build/Ninja-Debug/Bin
 ./App.exe -game=StarSkirmish -dx12 -scenario=game/starskirmish/automation/control.scenario.xml
 ```
 
-`control.scenario.xml` 은 커서를 옮겨(`MousePosition`) 본진 근처를 패드 A 로 끌어 고르고, 빈 땅에 패드 B 로 명령합니다.
+`control.scenario.xml` 은 커서를 옮겨(`MousePosition`) 본진 근처를 마우스 왼쪽으로 끌어 고르고, 빈 땅에 오른쪽으로 명령합니다(패드 A · B 는 가상 커서가 마우스 버튼으로 바꾼다).
 탐침 `Skirmish.SelectedCount` 가 1 이상이 되고 `Skirmish.SelectedMovingCount` 가 1 이상이면 통과입니다.
 디렉터에 마우스 원시 조회가 남아 있으면 아무것도 고르지 못하므로, 이 시나리오가 디렉터가 액션을 읽는지 지킵니다.
 

@@ -5,8 +5,9 @@
   Camera.Pan · Camera.Rotate · Camera.Zoom 은 카메라 디렉터(CameraDirectorComponent 의 _panAction · _rotateAction · _zoomAction)가 프리셋 <Input> 이 받는 것만 읽는다.
   커서 아래 땅은 포인터 위치(InputManager::getMousePositionNormalized)로 고르고, 누르는 것은 액션(Skirmish.Select · Skirmish.Order)이다.
   플레이할 때 WASD 는 명령 단축키라 카메라는 방향키만, AI 끼리 관전할 때는 Skirmish.SpectatorPan(WASD 도)으로 민다.
+  virtualCursor 는 패드 가상 커서(오른쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽)를 켠다. 그래서 액션에 패드 A · B · 오른쪽 스틱을 따로 묶지 않는다(읽기가 거절한다).
 -->
-<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4" virtualCursor="RightStick">
 	<layers>
 		<layer name="Gameplay" enabled="1" blockLower="0"/>
 	</layers>
@@ -23,13 +24,11 @@
 	<!-- 고르기 — 누른 자리에서 놓은 자리까지(짧으면 클릭 한 유닛, 길면 사각형). 누름 · 누르는 중 · 뗌을 디렉터가 읽는다. -->
 	<action name="Skirmish.Select" layer="Gameplay" trigger="Pressed">
 		<bind source="mouse" code="Left"/>
-		<bind source="gamepad" code="A"/>
 	</action>
 
 	<!-- 명령 — 커서 자리로 이동 · 공격 · 채취 · 집결(똑똑한 명령). -->
 	<action name="Skirmish.Order" layer="Gameplay" trigger="Pressed">
 		<bind source="mouse" code="Right"/>
-		<bind source="gamepad" code="B"/>
 	</action>
 
 	<action name="Skirmish.Slower" layer="Gameplay" trigger="Pressed">

@@ -8,9 +8,9 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   카메라 세 값은 `CameraUserSettings` 가 읽는다. 머리 흔들림은 데이터(`<HeadBob>` · `FirstPersonCameraComponent::_headBob`)로 켜는데 아직 켠 게임이 없다 — Shooter3D · VoxelCraft 1인칭에 진폭을 넣고 화면으로 확인한다.
   (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 
-- `D4-3` [기능] **패드 가상 커서(명령형 게임)를 실제로 확인하기.** 스틱 시점과 가상 커서(`InputManager::getVirtualCursor`)는 들어갔고, StarSkirmish · NileCity 는 `onInitialize` 에서 켜고
-  `onShutdown` 에서 끈다(2026-10-14). 확인할 것: 그 시점에 `InputManager` 서비스가 이미 묶여 있는지(아니면 조용히 안 켜진다), 패드 A 를 누를 때 가상 커서가 마우스 왼쪽 누름도 내서 한 액션의 바인딩 두 개가
-  같은 프레임에 눌리는데 디렉터가 바인딩을 따로 읽는 곳이 없는지. 두 맵에는 오른쪽 스틱 바인딩이 없다.
+- `D4-3` [기능] **패드 가상 커서(명령형 게임)의 남은 것.** 켜고 끄기는 입력 맵의 `virtualCursor`(`InputMapVirtualCursor`)가 정하고, 커서가 마우스로 바꾸는 패드 A · B · 그 스틱을
+  액션에 따로 묶은 맵은 읽기가 거절한다(Nile · StarSkirmish 맵은 `RightStick`). 남은 것: 결정 `D4-3.3`(커서는 왼쪽 스틱, 오른쪽 스틱은 카메라 이동 · 줌)대로 두 맵을 바꾸기,
+  실제 패드로 확인하기(시나리오 동안 가상 커서는 쉬어 패드 길을 시나리오가 보지 않는다), 사용자 키 바인딩(`loadUserBindings`)이 커서 버튼을 다시 묶는 것도 거절하기.
 
 - `D4-4` [기능] **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
   들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 남은 것 — 둘째 조립(RTS + City)의 테스트 게임(필요해지면 MeadowVillage 모양 — 조건부라 남김). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에

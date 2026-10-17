@@ -203,16 +203,11 @@ namespace sw
 
     void NileDirectorComponent::onBeginPlay()
     {
-        GameDirectorComponent::onBeginPlay();
-        // 맵의 패드 A/B 바인딩은 그대로 둔다.
-        if ( InputManager* pInput = game::findSubsystem<InputManager>(); pInput != nullptr )
-            pInput->getVirtualCursor().setEnabled( true );
+        GameDirectorComponent::onBeginPlay(); // 패드 가상 커서는 입력 맵(`virtualCursor`)이 켠다
     }
 
     void NileDirectorComponent::onEndPlay()
     {
-        if ( InputManager* pInput = game::findSubsystem<InputManager>(); pInput != nullptr )
-            pInput->getVirtualCursor().setEnabled( false );
         GameDirectorComponent::onEndPlay();
     }
 
