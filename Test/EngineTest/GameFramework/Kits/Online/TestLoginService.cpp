@@ -966,6 +966,15 @@ SW_TEST_CASE( LoginServiceTest, DeletionWaitsForTheGraceThenErasesTheAccountButK
 }
 
 /**
+ * @brief [AccountProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
+ */
+SW_TEST_CASE( AccountProtocolTest, DeclaredLimitsMatchTheConstants )
+{
+    using Util = test::OnlineMessageTestUtil;
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<AccountClientInfo>( "_platform" ), uint32( LoginConstant::kMaxPlatformTextSize ) );
+}
+
+/**
  * @brief [AccountProtocolTest] 계정 메시지는 상한까지 왕복하고, 게임 티켓과 비밀 바이트가 그대로 돌아오며, 범위 밖 값은 쓰지 않는다
  */
 SW_TEST_CASE( AccountProtocolTest, MessagesRoundTripAndRefuseOutOfRange )

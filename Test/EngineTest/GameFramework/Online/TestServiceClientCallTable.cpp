@@ -4,7 +4,9 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
 #include "EngineTest/GameFramework/Online/OnlineHostTestUtil.h"
+#include "EngineTest/GameFramework/Online/OnlineMethodTableTestUtil.h"
 
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 
@@ -67,8 +69,8 @@ namespace
     };
 
     // 키트 항목이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
-    const OnlineProtocolEntry kKillerProtocol{ "ServiceClientCallTableTest.Killer", OnlineMethodRange::kGame + OnlineMethodRange::kSize, OnlineMessageTypes<>{} };
-    const OnlineProtocolEntry kVictimProtocol{ "ServiceClientCallTableTest.Victim", OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kKillerProtocol{ "ServiceClientCallTableTest.Killer", test::TestEmptyMethodTable<OnlineMethodRange::kGame + OnlineMethodRange::kSize>{}, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kVictimProtocol{ "ServiceClientCallTableTest.Victim", test::TestEmptyMethodTable<OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize>{}, OnlineMessageTypes<>{} };
 
     /** @brief 수명 순서만 보는 빈 키트(테스트 로그인과 같은 영역). */
     class LifetimeClientService final : public IOnlineClientService
@@ -303,4 +305,26 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitAndServiceClientMayBeDestroyedInEit
             SW_EXPECT_TRUE( client.registerClientService( &kit ) );
         } // 서비스 클라이언트가 먼저 — 키트 소멸자가 파괴된 객체를 부르지 않는다
     }
+}
+
+/**
+ * @brief [ServiceClientCallTableTest] 쓰지 못한 메시지(범위 밖 값)는 보내지 않고 kInvalidRequest 응답으로 끝난다. 요청 id 는 0 이 아니고 보내는 함수 안에서 델리게이트에 닿는다
+ */
+SW_TEST_CASE( ServiceClientCallTableTest, UnwritableMessageEndsAsInvalidRequestInsideSend )
+{
+    OnlineServiceClient client;
+    CallTableClient     tableClient;
+    tableClient._pClient = &client;
+    DoneRecorder  recorder;
+    LedgerBalance tooLong;
+    tooLong._assetID = string( LedgerConstant::kMaxAssetIDSize + 1, 'a' );
+    SW_TEST_DEFENSIVE_SCOPE( "an out-of-range message is logged and not sent" );
+    const uint64 requestID = tableClient._callTable.sendMessage<OnlineMessageTypes<LedgerBalance>>( client, OnlineMethodRange::kGame + 1, tooLong, NetRequestOptions{},
+                                                                                                    OnlineResponseDelegate::create<&CallTableClient::onResponse>( &tableClient ),
+                                                                                                    DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
+    SW_EXPECT_TRUE( requestID != 0 );
+    SW_ASSERT_EQUAL( recorder._listErrorCode.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( recorder._listErrorCode[0], OnlineError::kInvalidRequest );
+    SW_EXPECT_EQUAL( tableClient._callTable.getCount(), size_t( 0 ) );
+    SW_EXPECT_EQUAL( client.peekNextRequestID(), requestID + 1 ); // id 는 sendRequest 와 같은 순서에서 나온다
 }

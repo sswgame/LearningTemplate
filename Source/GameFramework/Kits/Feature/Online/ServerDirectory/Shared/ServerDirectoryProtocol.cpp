@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kServerDirectoryRecordVersion = 1; ///< 저장소 레코드(A)의 판이다. 필드를 바꿔 옛 레코드를 변환해야 할 때 올린다
+        constexpr uint32 kServerDirectoryRecordVersion = 1; ///< 저장소 레코드(A)의 판이다. 필드를 빼거나 뜻을 바꿀 때 올리고 데이터를 다시 쓴다
     } // namespace
 } // namespace sw
 
@@ -19,9 +19,9 @@ namespace sw
         return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, window );
     }
 
-    bool ServerDirectoryProtocol::decodeMaintenance( const vector<uint8>& bytes, MaintenanceWindow& outWindow )
+    bool ServerDirectoryProtocol::decodeMaintenance( const string_view key, const vector<uint8>& bytes, MaintenanceWindow& outWindow )
     {
-        return ServiceRecordUtil::decode( bytes, kServerDirectoryRecordVersion, outWindow );
+        return ServiceRecordUtil::readDurable( key, bytes, kServerDirectoryRecordVersion, outWindow );
     }
 
     vector<uint8> ServerDirectoryProtocol::encodeNotice( const ServiceNotice& notice )
@@ -29,13 +29,13 @@ namespace sw
         return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, notice );
     }
 
-    bool ServerDirectoryProtocol::decodeNotice( const vector<uint8>& bytes, ServiceNotice& outNotice )
+    bool ServerDirectoryProtocol::decodeNotice( const string_view key, const vector<uint8>& bytes, ServiceNotice& outNotice )
     {
-        return ServiceRecordUtil::decode( bytes, kServerDirectoryRecordVersion, outNotice );
+        return ServiceRecordUtil::readDurable( key, bytes, kServerDirectoryRecordVersion, outNotice );
     }
 } // namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry ServerDirectoryProtocol::kOnlineEntry{ "ServerDirectory", OnlineMethodRange::kServerDirectory, ServerDirectoryProtocol::MessageTypes{} };
+    const OnlineProtocolEntry ServerDirectoryProtocol::kOnlineEntry{ "ServerDirectory", ServerDirectoryMethod{}, ServerDirectoryProtocol::MessageTypes{} };
 } // namespace sw

@@ -56,8 +56,12 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 PushDeviceRegistration registration;
-                if ( LiveOpsProtocol::decodeDevice( record._bytes, registration ) )
-                    _listDevice.push_back( std::move( registration ) );
+                if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
+                {
+                    _listDevice.clear(); // 손상된 영속 레코드는 건너뛰지 않는다. 저장소 문제와 같이 이 알림을 버린다
+                    return;
+                }
+                _listDevice.push_back( std::move( registration ) );
             }
         }
 
@@ -129,8 +133,8 @@ namespace sw
                     ++deviceCount;
                     bReplacing = bReplacing || record._key == _key;
                     PushDeviceRegistration registration;
-                    if ( LiveOpsProtocol::decodeDevice( record._bytes, registration ) == false )
-                        continue;
+                    if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
+                        return; // 손상된 영속 레코드는 건너뛰지 않고 이 쓰기를 Unavailable 로 끝낸다
                     if ( record._key != _key && ( pOldestKey == nullptr || registration._registeredMs < oldestMs ) )
                     {
                         pOldestKey = &record._key;

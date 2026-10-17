@@ -138,11 +138,7 @@ namespace sw
             NetRequestToken token;
             if ( _pendingTable.take( completion._requestTag, token ) == false )
                 continue;
-            BitWriter reply;
-            if ( ChatProtocol::MessageTypes::write( reply, completion._reply ) )
-                (void)host.respondOk( token, reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
-            else
-                (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
+            (void)host.respondMessage<ChatProtocol::MessageTypes>( token, completion._reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
         }
 
         _listDeliveryScratch.clear();

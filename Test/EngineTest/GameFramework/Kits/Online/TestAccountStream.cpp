@@ -501,3 +501,20 @@ SW_TEST_CASE( AccountStreamTest, AdministrativeRevokeCarriesTheReasonCodeAndGues
     SW_EXPECT_EQUAL( string( "sanction.cheating" ), listEvent[0]._reasonCode );
     SW_EXPECT_FALSE( client._account.isLoggedIn() );
 }
+
+/**
+ * @brief [AccountStreamTest] 범위 밖 값의 요청은 보내지 않고 kInvalidRequest 응답으로 남는다. 응답의 요청 번호가 반환값과 같다
+ */
+SW_TEST_CASE( AccountStreamTest, OutOfRangeRequestEndsAsInvalidRequestWithARequestID )
+{
+    OnlineServiceClient client;
+    AccountClient       accountClient;
+    accountClient.initialize( &client, AccountClientInfo{} );
+    SW_TEST_DEFENSIVE_SCOPE( "an out-of-range request is logged and not sent" );
+    const uint64 requestID = accountClient.login( string( 65, 'n' ), "password" );
+    SW_EXPECT_TRUE( requestID != 0 );
+    vector<AccountClientReply> listReply;
+    SW_ASSERT_EQUAL( accountClient.pollReplies( listReply ), int32( 1 ) );
+    SW_EXPECT_EQUAL( listReply[0]._requestID, requestID );
+    SW_EXPECT_EQUAL( listReply[0]._errorCode, OnlineError::kInvalidRequest );
+}

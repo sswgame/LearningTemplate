@@ -239,6 +239,17 @@ namespace sw
         return requestID;
     }
 
+    uint64 OnlineServiceClient::rejectRequest( uint16 errorCode, OnlineResponseDelegate onResponse )
+    {
+        OnlineResponse response;
+        response._requestID = _nextRequestID++;
+        response._status    = NetRequestStatus::ApplicationError;
+        response._errorCode = errorCode;
+        if ( onResponse.isBound() )
+            onResponse( response );
+        return response._requestID;
+    }
+
     void OnlineServiceClient::setRequestGate( uint16 ownerRange, bool bClosed )
     {
         _gateOwnerRange = ownerRange;

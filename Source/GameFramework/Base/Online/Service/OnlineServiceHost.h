@@ -155,6 +155,23 @@ namespace sw
 
         // 답은 서비스가 부르며 한 번만 보낼 수 있다. 이미 답했거나 끝난 요청이면 false 를 반환한다.
         bool respondOk( const NetRequestToken& token, const BitWriter& body );
+        /**
+         * @brief @p message 를 키트 메시지 목록 @p TMessages 로 써서 성공 응답으로 보냅니다. 범위 밖 값이 있어 쓰지 못하면 `kInternal` 오류로 응답합니다.
+         * @details 쓰기가 범위 밖 값을 로그에 남기며, 고칠 곳은 그 값을 만든 서버 코드입니다. 키트 서버가 응답 메시지를 보내는 길은 이것 하나입니다.
+         * @return 메시지를 썼으면 true 입니다. 연결이 그사이 닫혀 응답이 버려졌어도 true 입니다.
+         */
+        template <typename TMessages, typename TMessage>
+        bool respondMessage( const NetRequestToken& token, const TMessage& message )
+        {
+            BitWriter body;
+            if ( TMessages::write( body, message ) == false )
+            {
+                (void)respondError( token, OnlineError::kInternal );
+                return false;
+            }
+            (void)respondOk( token, body );
+            return true;
+        }
         bool respondError( const NetRequestToken& token, uint16 errorCode, const BitWriter* pDetail = nullptr );
 
         // 계정과 연결을 잇는다. 계정 키트가 로그인과 재접속 때 부른다.

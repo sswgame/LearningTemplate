@@ -42,8 +42,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief GM 명령 메서드 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin>
+    /** @brief GM 명령 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin, OnlineNoPushName>
     {
         static constexpr uint16 kLookupAccount  = toMethod( AdminMethodName::LookupAccount );
         static constexpr uint16 kAdjustAsset    = toMethod( AdminMethodName::AdjustAsset );

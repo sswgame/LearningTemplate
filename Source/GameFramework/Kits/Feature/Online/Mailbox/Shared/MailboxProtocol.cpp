@@ -18,5 +18,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry MailboxProtocol::kOnlineEntry{ "Mailbox", OnlineMethodRange::kMailbox, MailboxProtocol::MessageTypes{} };
+    const OnlineProtocolEntry MailboxProtocol::kOnlineEntry{ "Mailbox", MailboxMethod{}, MailboxProtocol::MessageTypes{} };
 } // namespace sw

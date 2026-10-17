@@ -118,20 +118,9 @@ namespace sw
         options._idempotencyKey     = key.isValid() ? key : NetIdempotencyKey::makeRandom();
         const uint64      requestID = _nextRequestID++;
         const PendingCall pendingCall{ options._idempotencyKey, requestID, method };
-        BitWriter         body;
-        if ( TradeProtocol::MessageTypes::write( body, request ) == false )
-        {
-            // 범위 밖 값이라 보내지 않았다. 서버가 같은 본문을 거절한 것과 같은 응답을 남긴다
-            TradeClientReply reply;
-            reply._requestID      = requestID;
-            reply._method         = method;
-            reply._idempotencyKey = options._idempotencyKey;
-            reply._errorCode      = OnlineError::kInvalidRequest;
-            OnlineReplyUtil::markError<TradeProtocol>( OnlineError::kInvalidRequest, reply );
-            _listReply.push_back( std::move( reply ) );
-            return requestID;
-        }
-        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
+        // 범위 밖 값이라 쓰지 못하면 보내지 않고 kInvalidRequest 응답으로 끝난다. 그 응답도 onResponse 를 지난다
+        (void)_callTable.sendMessage<TradeProtocol::MessageTypes>( *_pClient, method, request, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ),
+                                                                   pendingCall ); // 응답은 pendingCall._requestID 로 알린다
         return requestID;
     }
 

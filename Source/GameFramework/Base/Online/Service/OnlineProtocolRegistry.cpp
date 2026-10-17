@@ -4,6 +4,8 @@
 
 #include "Core/Common/HashUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 
 #include <cstdio>
@@ -29,8 +31,9 @@ namespace sw
 
 namespace sw
 {
-    OnlineProtocolEntry::OnlineProtocolEntry( const utf8* pName, uint16 methodRange, SchemaHashFunction pComputeMessageHash )
+    OnlineProtocolEntry::OnlineProtocolEntry( const utf8* pName, uint16 methodRange, SchemaHashFunction pComputeMethodHash, SchemaHashFunction pComputeMessageHash )
         : ServiceFactoryNode{}
+        , _pComputeMethodHash{ pComputeMethodHash }
         , _pComputeMessageHash{ pComputeMessageHash }
         , _methodRange{ methodRange }
     {
@@ -42,6 +45,43 @@ namespace sw
     OnlineProtocolEntry::~OnlineProtocolEntry()
     {
         OnlineProtocolRegistry::unregisterEntry( this );
+    }
+
+    uint64 OnlineProtocolEntry::computeNameOrderHash( const vector<string>& listMethodName, const vector<string>& listPushName )
+    {
+        // 이름 사이와 두 목록 사이에 구분자를 두어 ("ab", "c") 와 ("a", "bc"), 메서드 끝과 알림 처음이 섞이지 않게 한다
+        string canonical;
+        for ( const string& name : listMethodName )
+        {
+            canonical += name;
+            canonical += ',';
+        }
+        canonical += ';';
+        for ( const string& name : listPushName )
+        {
+            canonical += name;
+            canonical += ',';
+        }
+        return FixedLayout::computeSchemaHash( FixedLayout::kVersion, canonical, {} );
+    }
+
+    vector<string> OnlineProtocolEntry::collectEnumNames( const hashed_string& enumFqn, const int32 count )
+    {
+        vector<string> listName;
+        if ( count == 0 )
+            return listName; // 이름이 없는 빈 표(`OnlineNoPushName`)는 리플렉션을 찾지 않는다
+        // 해시는 핸드셰이크 때(타입 등록이 끝난 뒤) 계산하므로 레지스트리와 로거가 있다
+        for ( int32 index = 0; index < count; ++index )
+        {
+            const utf8* pName = findEnumName( enumFqn, index );
+            if ( pName == nullptr )
+            {
+                SW_LOG_ERROR( "Online method table '%#' has no reflected name for value %# - add ENUM( Count = Count ) to it", enumFqn.c_str(), index );
+                std::abort();
+            }
+            listName.push_back( pName );
+        }
+        return listName;
     }
 
     void OnlineProtocolRegistry::registerEntry( OnlineProtocolEntry* pEntry )
@@ -71,6 +111,7 @@ namespace sw
         {
             const OnlineProtocolEntry* pEntry = static_cast<const OnlineProtocolEntry*>( pNode );
             hash                              = HashUtil::combine( hash, pEntry->_methodRange );
+            hash                              = HashUtil::combine( hash, pEntry->_pComputeMethodHash() );
             hash                              = HashUtil::combine( hash, pEntry->_pComputeMessageHash() );
         }
         return hash;

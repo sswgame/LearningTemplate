@@ -22,33 +22,68 @@
 
 namespace sw
 {
-    /** @brief 친구 키트 메서드 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct SocialMethod
+    /** @brief 소셜 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class SocialMethodName : uint8
     {
-        static constexpr uint16 kRequestFriend       = OnlineMethodRange::kSocial + 0x01; ///< 상대 id
-        static constexpr uint16 kRequestFriendByName = OnlineMethodRange::kSocial + 0x02; ///< 상대의 표시 이름(정식 계정)을 받으며 응답의 `_otherID` 에 찾은 계정이 들어간다
-        static constexpr uint16 kRespondFriend       = OnlineMethodRange::kSocial + 0x03; ///< 신청한 사람과 수락 여부를 받는다
-        static constexpr uint16 kRemoveFriend        = OnlineMethodRange::kSocial + 0x04; ///< 친구, 보낸 신청, 받은 신청을 지운다
-        static constexpr uint16 kBlock               = OnlineMethodRange::kSocial + 0x05;
-        static constexpr uint16 kUnblock             = OnlineMethodRange::kSocial + 0x06;
-        static constexpr uint16 kListLinks           = OnlineMethodRange::kSocial + 0x07; ///< 관계 목록을 돌려주며 이 서버의 메모리에도 올린다
-        static constexpr uint16 kSetPresence         = OnlineMethodRange::kSocial + 0x08; ///< 상태와 활동 문구를 받는다
-        static constexpr uint16 kFriendPresence      = OnlineMethodRange::kSocial + 0x09; ///< 친구들의 접속 상태를 돌려준다
-        static constexpr uint16 kGuildCreate         = OnlineMethodRange::kSocial + 0x10; ///< 이름을 받아 길드(id 와 이름)를 돌려준다
-        static constexpr uint16 kGuildInvite         = OnlineMethodRange::kSocial + 0x11; ///< 계정을 받으며 임원 이상만 부를 수 있다
-        static constexpr uint16 kGuildAccept         = OnlineMethodRange::kSocial + 0x12; ///< 길드 id
-        static constexpr uint16 kGuildLeave          = OnlineMethodRange::kSocial + 0x13;
-        static constexpr uint16 kGuildKick           = OnlineMethodRange::kSocial + 0x14; ///< 계정을 받으며 더 높은 역할만 부를 수 있다
-        static constexpr uint16 kGuildSetRole        = OnlineMethodRange::kSocial + 0x15; ///< 계정과 역할을 받으며 길드장만 부를 수 있다. 역할이 Master 이면 길드장을 넘기는 것이다
-        static constexpr uint16 kGuildSetNotice      = OnlineMethodRange::kSocial + 0x16; ///< 문구를 받으며 임원 이상만 부를 수 있다
-        static constexpr uint16 kGuildGet            = OnlineMethodRange::kSocial + 0x17; ///< 내 길드를 멤버 목록까지 돌려준다
-        static constexpr uint16 kGuildDeposit        = OnlineMethodRange::kSocial + 0x18; ///< 자산과 양을 받아 내 계정에서 길드 창고로 옮긴다. 멱등 키가 필수이다
-        static constexpr uint16 kGuildWithdraw       = OnlineMethodRange::kSocial + 0x19; ///< 자산과 양을 받아 길드 창고에서 내 계정으로 옮긴다. 임원 이상, 멱등 키 필수
-        static constexpr uint16 kGuildStorage        = OnlineMethodRange::kSocial + 0x1A; ///< 길드 창고의 잔액 목록을 돌려준다
-        static constexpr uint16 kPushNotification    = OnlineMethodRange::kSocial + 0x80; ///< 알림 하나이다
+        RequestFriend,
+        RequestFriendByName,
+        RespondFriend,
+        RemoveFriend,
+        Block,
+        Unblock,
+        ListLinks,
+        SetPresence,
+        FriendPresence,
+        GuildCreate,
+        GuildInvite,
+        GuildAccept,
+        GuildLeave,
+        GuildKick,
+        GuildSetRole,
+        GuildSetNotice,
+        GuildGet,
+        GuildDeposit,
+        GuildWithdraw,
+        GuildStorage,
+        Count,
+    };
 
-        static_assert( OnlineMethodRange::isInRange( kGuildStorage, OnlineMethodRange::kSocial ) && OnlineMethodRange::isMethod( kGuildStorage ) );
-        static_assert( OnlineMethodRange::isInRange( kPushNotification, OnlineMethodRange::kSocial ) && OnlineMethodRange::isMethod( kPushNotification ) == false );
+    /** @brief 소셜 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class SocialPushName : uint8
+    {
+        Notification,
+        Count,
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 친구 키트 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct SocialMethod : OnlineMethodTable<SocialMethodName, OnlineMethodRange::kSocial, SocialPushName>
+    {
+        static constexpr uint16 kRequestFriend       = toMethod( SocialMethodName::RequestFriend );       ///< 상대 id
+        static constexpr uint16 kRequestFriendByName = toMethod( SocialMethodName::RequestFriendByName ); ///< 상대의 표시 이름(정식 계정)을 받으며 응답의 `_otherID` 에 찾은 계정이 들어간다
+        static constexpr uint16 kRespondFriend       = toMethod( SocialMethodName::RespondFriend );       ///< 신청한 사람과 수락 여부를 받는다
+        static constexpr uint16 kRemoveFriend        = toMethod( SocialMethodName::RemoveFriend );        ///< 친구, 보낸 신청, 받은 신청을 지운다
+        static constexpr uint16 kBlock               = toMethod( SocialMethodName::Block );
+        static constexpr uint16 kUnblock             = toMethod( SocialMethodName::Unblock );
+        static constexpr uint16 kListLinks           = toMethod( SocialMethodName::ListLinks );      ///< 관계 목록을 돌려주며 이 서버의 메모리에도 올린다
+        static constexpr uint16 kSetPresence         = toMethod( SocialMethodName::SetPresence );    ///< 상태와 활동 문구를 받는다
+        static constexpr uint16 kFriendPresence      = toMethod( SocialMethodName::FriendPresence ); ///< 친구들의 접속 상태를 돌려준다
+        static constexpr uint16 kGuildCreate         = toMethod( SocialMethodName::GuildCreate );    ///< 이름을 받아 길드(id 와 이름)를 돌려준다
+        static constexpr uint16 kGuildInvite         = toMethod( SocialMethodName::GuildInvite );    ///< 계정을 받으며 임원 이상만 부를 수 있다
+        static constexpr uint16 kGuildAccept         = toMethod( SocialMethodName::GuildAccept );    ///< 길드 id
+        static constexpr uint16 kGuildLeave          = toMethod( SocialMethodName::GuildLeave );
+        static constexpr uint16 kGuildKick           = toMethod( SocialMethodName::GuildKick );      ///< 계정을 받으며 더 높은 역할만 부를 수 있다
+        static constexpr uint16 kGuildSetRole        = toMethod( SocialMethodName::GuildSetRole );   ///< 계정과 역할을 받으며 길드장만 부를 수 있다. 역할이 Master 이면 길드장을 넘기는 것이다
+        static constexpr uint16 kGuildSetNotice      = toMethod( SocialMethodName::GuildSetNotice ); ///< 문구를 받으며 임원 이상만 부를 수 있다
+        static constexpr uint16 kGuildGet            = toMethod( SocialMethodName::GuildGet );       ///< 내 길드를 멤버 목록까지 돌려준다
+        static constexpr uint16 kGuildDeposit        = toMethod( SocialMethodName::GuildDeposit );   ///< 자산과 양을 받아 내 계정에서 길드 창고로 옮긴다. 멱등 키가 필수이다
+        static constexpr uint16 kGuildWithdraw       = toMethod( SocialMethodName::GuildWithdraw );  ///< 자산과 양을 받아 길드 창고에서 내 계정으로 옮긴다. 임원 이상, 멱등 키 필수
+        static constexpr uint16 kGuildStorage        = toMethod( SocialMethodName::GuildStorage );   ///< 길드 창고의 잔액 목록을 돌려준다
+        static constexpr uint16 kPushNotification    = toPush( SocialPushName::Notification );       ///< 알림 하나이다
 
         /** @brief 관계를 바꾸는 메서드이면 true 입니다. 이 경우 멱등 키를 싣습니다. */
         static constexpr bool isLinkChange( uint16 method ) { return kRequestFriend <= method && method <= kUnblock; }
@@ -135,7 +170,8 @@ namespace sw
 
         /**
          * @brief 접속 상태 캐시 값을 읽고 씁니다. 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A)이며 레코드 판을 머리에 둡니다.
-         * @details 다른 판이거나 깨졌거나 선언된 범위를 벗어나면 읽지 않습니다. 읽는 쪽은 그 친구를 접속 끊김으로 봅니다.
+         * @details 다시 만들 수 있는 캐시이므로 `ServiceRecordUtil::readCache` 로 읽습니다. 다른 판이거나 깨졌거나 선언된 범위를 벗어나면 로그 없이 false 이고,
+         *          읽는 쪽은 그 친구를 접속 끊김으로 봅니다.
          */
         static vector<uint8>      encodePresenceRecord( const SocialPresence& presence );
         [[nodiscard]] static bool decodePresenceRecord( const vector<uint8>& bytes, SocialPresence& outPresence );

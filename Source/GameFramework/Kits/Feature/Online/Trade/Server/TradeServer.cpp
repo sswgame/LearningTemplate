@@ -239,11 +239,7 @@ namespace sw
 
     void TradeServer::respond( OnlineServiceHost& host, const NetRequestToken& token, const TradeReply& reply )
     {
-        BitWriter body;
-        if ( TradeProtocol::MessageTypes::write( body, reply ) )
-            (void)host.respondOk( token, body );
-        else
-            (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
+        (void)host.respondMessage<TradeProtocol::MessageTypes>( token, reply );
     }
 
     void TradeServer::collectBalances( const LedgerTransferOutcome& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )

@@ -330,7 +330,9 @@ namespace sw
         }
         if ( bWritten == false )
         {
-            (void)host.respondError( call._token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
+            // 응답은 계정을 연결에 묶은 뒤에 보내야 하므로 respondMessage 를 쓰지 않고 먼저 써 둔다. 쓰지 못하면 같은 약속(kInternal)으로 응답한다.
+            // 저장소에 이미 만든 세션은 그대로 남는다(백로그 `A-16` "계정")
+            (void)host.respondError( call._token, OnlineError::kInternal );
             return;
         }
 

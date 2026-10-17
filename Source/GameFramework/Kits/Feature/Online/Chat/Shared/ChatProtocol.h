@@ -22,18 +22,38 @@
 
 namespace sw
 {
-    /** @brief 채팅 메서드와 알림 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct ChatMethod
+    /** @brief 채팅 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class ChatMethodName : uint8
     {
-        static constexpr uint16 kJoin        = OnlineMethodRange::kChat + 0x01; ///< `ChatChannelRequest`
-        static constexpr uint16 kLeave       = OnlineMethodRange::kChat + 0x02; ///< `ChatChannelRequest`
-        static constexpr uint16 kSend        = OnlineMethodRange::kChat + 0x03; ///< 채널 id 와 글을 받아 거른 메시지(되울림)를 돌려준다
-        static constexpr uint16 kWhisper     = OnlineMethodRange::kChat + 0x04; ///< 받는 계정과 글을 받아 거른 메시지를 돌려준다
-        static constexpr uint16 kHistory     = OnlineMethodRange::kChat + 0x05; ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
-        static constexpr uint16 kPushMessage = OnlineMethodRange::kChat + 0x80; ///< 메시지 하나이다. 채널 메시지나 귓속말이다
+        Join,
+        Leave,
+        Send,
+        Whisper,
+        History,
+        Count,
+    };
 
-        static_assert( OnlineMethodRange::isInRange( kHistory, OnlineMethodRange::kChat ) && OnlineMethodRange::isMethod( kHistory ) );
-        static_assert( OnlineMethodRange::isMethod( kPushMessage ) == false );
+    /** @brief 채팅 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class ChatPushName : uint8
+    {
+        Message,
+        Count,
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 채팅 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct ChatMethod : OnlineMethodTable<ChatMethodName, OnlineMethodRange::kChat, ChatPushName>
+    {
+        static constexpr uint16 kJoin        = toMethod( ChatMethodName::Join );    ///< `ChatChannelRequest`
+        static constexpr uint16 kLeave       = toMethod( ChatMethodName::Leave );   ///< `ChatChannelRequest`
+        static constexpr uint16 kSend        = toMethod( ChatMethodName::Send );    ///< 채널 id 와 글을 받아 거른 메시지(되울림)를 돌려준다
+        static constexpr uint16 kWhisper     = toMethod( ChatMethodName::Whisper ); ///< 받는 계정과 글을 받아 거른 메시지를 돌려준다
+        static constexpr uint16 kHistory     = toMethod( ChatMethodName::History ); ///< 채널 id(귓속말은 기록 키), 커서, 개수를 받아 최근 메시지부터 목록과 다음 커서를 돌려준다
+        static constexpr uint16 kPushMessage = toPush( ChatPushName::Message );     ///< 메시지 하나이다. 채널 메시지나 귓속말이다
     };
 } // namespace sw
 
@@ -141,12 +161,12 @@ namespace sw
         static constexpr int32           kMaxCursorSize = 128; ///< 기록 키의 상한이다. 채널 id 뒤에 `/` 와 16진 문자열 셋이 붙는다
 
         /**
-         * @brief 기록 레코드를 읽고 씁니다. 저장소에 남으므로 자기 기술형(A)이며 레코드 판(`kRecordVersion`)을 머리에 둡니다.
-         * @details 다른 판이거나 모르는 필드가 있거나 `ChatMessage` 에 선언된 범위를 벗어나면 읽지 않습니다.
-         *          필드가 바뀌어 옛 레코드를 읽어야 하면 이 판을 올리고 변환(`SchemaMigrateFn`)을 등록합니다.
+         * @brief 기록 레코드를 읽고 씁니다. 저장소에 남는 영속 레코드이므로 자기 기술형(A)이며 레코드 판을 머리에 둡니다.
+         * @details 다른 판이거나 모르는 필드가 있거나 `ChatMessage` 에 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
+         *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 판을 올리고 데이터를 다시 씁니다.
          */
         static vector<uint8>      encodeRecord( const ChatMessage& message );
-        [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, ChatMessage& outMessage );
+        [[nodiscard]] static bool decodeRecord( string_view key, const vector<uint8>& bytes, ChatMessage& outMessage );
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 도배 제한은 각각 대응하는 결과로, 나머지(전송, 저장소, 시한)는 Unavailable 로 바꿉니다. */
         static ChatResult fromErrorCode( uint16 errorCode );

@@ -20,13 +20,34 @@
 
 namespace sw
 {
-    /** @brief 메서드와 알림 번호입니다(영역 `OnlineMethodRange::kServerDirectory`). 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct ServerDirectoryMethod
+    /** @brief 서버 목록 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class ServerDirectoryMethodName : uint8
     {
-        static constexpr uint16 kGetStatus    = OnlineMethodRange::kServerDirectory + 0x00; ///< 본문은 없고 상태를 돌려준다. 익명으로 쓸 수 있다
-        static constexpr uint16 kAssignServer = OnlineMethodRange::kServerDirectory + 0x01; ///< 배정 요청을 받아 배정을 돌려준다. 점검 허용 목록이 계정을 보므로 로그인한 뒤에 쓴다
-        static constexpr uint16 kListServers  = OnlineMethodRange::kServerDirectory + 0x02; ///< 종류를 받아 목록을 돌려준다. 서버 고르기 화면이 쓰며 익명으로 쓸 수 있다
-        static constexpr uint16 kPushStatus   = OnlineMethodRange::kServerDirectory + 0x80; ///< 보이는 상태가 바뀌었다는 알림이다. 본문은 상태이다
+        GetStatus,
+        AssignServer,
+        ListServers,
+        Count,
+    };
+
+    /** @brief 서버 목록 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class ServerDirectoryPushName : uint8
+    {
+        Status,
+        Count,
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 메서드와 알림 번호입니다(영역 `OnlineMethodRange::kServerDirectory`). 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct ServerDirectoryMethod : OnlineMethodTable<ServerDirectoryMethodName, OnlineMethodRange::kServerDirectory, ServerDirectoryPushName>
+    {
+        static constexpr uint16 kGetStatus    = toMethod( ServerDirectoryMethodName::GetStatus );    ///< 본문은 없고 상태를 돌려준다. 익명으로 쓸 수 있다
+        static constexpr uint16 kAssignServer = toMethod( ServerDirectoryMethodName::AssignServer ); ///< 배정 요청을 받아 배정을 돌려준다. 점검 허용 목록이 계정을 보므로 로그인한 뒤에 쓴다
+        static constexpr uint16 kListServers  = toMethod( ServerDirectoryMethodName::ListServers );  ///< 종류를 받아 목록을 돌려준다. 서버 고르기 화면이 쓰며 익명으로 쓸 수 있다
+        static constexpr uint16 kPushStatus   = toPush( ServerDirectoryPushName::Status );           ///< 보이는 상태가 바뀌었다는 알림이다. 본문은 상태이다
     };
 } // namespace sw
 
@@ -77,12 +98,13 @@ namespace sw
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 
         /**
-         * @brief 점검 창과 공지의 저장소 레코드를 읽고 씁니다. 자기 기술형(A)이며 레코드 판을 머리에 둡니다.
-         * @details 다른 판이거나 모르는 필드가 있으면 읽지 않습니다. A 는 `MaxCount` 를 보지 않으므로 서버는 읽은 값을 쓰기와 같은 규칙으로 다시 확인합니다.
+         * @brief 점검 창과 공지의 저장소 레코드를 읽고 씁니다. 둘 다 영속 레코드이므로 자기 기술형(A)이며 레코드 판을 머리에 둡니다.
+         * @details 다른 판이거나 모르는 필드가 있거나 깨졌으면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
+         *          공지는 선언된 범위도 확인합니다. 점검 창은 고정 배치형 코덱이 없으므로 서버가 읽은 값을 쓰기와 같은 규칙으로 다시 확인합니다.
          */
         static vector<uint8>      encodeMaintenance( const MaintenanceWindow& window );
-        [[nodiscard]] static bool decodeMaintenance( const vector<uint8>& bytes, MaintenanceWindow& outWindow );
+        [[nodiscard]] static bool decodeMaintenance( string_view key, const vector<uint8>& bytes, MaintenanceWindow& outWindow );
         static vector<uint8>      encodeNotice( const ServiceNotice& notice );
-        [[nodiscard]] static bool decodeNotice( const vector<uint8>& bytes, ServiceNotice& outNotice );
+        [[nodiscard]] static bool decodeNotice( string_view key, const vector<uint8>& bytes, ServiceNotice& outNotice );
     };
 } // namespace sw

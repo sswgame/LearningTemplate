@@ -419,6 +419,33 @@ SW_TEST_CASE( ChatServiceTest, HistoryIsWrittenInBatchesAndReadNewestFirst )
     SW_EXPECT_TRUE( node.getLastResult() == ChatResult::Unavailable );
 }
 
+/**
+ * @brief [ChatServiceTest] 손상된 기록이 하나라도 있으면 그 기록을 건너뛰지 않고 읽기 전체가 Unavailable 이다
+ */
+SW_TEST_CASE( ChatServiceTest, CorruptHistoryRecordFailsTheRead )
+{
+    MemoryServiceDatabase database;
+    LocalServerBusHub     hub;
+    ChatNode              node( &database, &hub, 1 );
+    node._directory._mapOnline[10] = "alice";
+    node._service.joinChannel( 10, "world.kr", 0, 1 );
+    node.step( 0 );
+    node._service.sendMessage( 10, "world.kr", "kept", 1000, 2 );
+    node.step( 1000 );
+
+    ServiceTransaction transaction;
+    transaction.put( hashed_string{ "chat_history" }, "world.kr/ffffffffffffffff.ffffffffffffffff.ffffffffffffffff", vector<uint8>{ 1, 2, 3 } );
+    SW_ASSERT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a corrupt durable history record is logged" );
+    node._listCompletion.clear();
+    node._service.readHistory( 10, "world.kr", "", 10, 3 );
+    node.step( 1000 );
+    SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::Unavailable );
+    SW_EXPECT_TRUE( node._listCompletion[0]._reply._listHistory.empty() );
+}
+
 SW_TEST_CASE( ChatServiceTest, HistoryPastRetentionIsTrimmedAndFailedWritesAreDropped )
 {
     MemoryServiceDatabase database;
@@ -480,7 +507,7 @@ SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
     message._sequence    = 9;
 
     ChatMessage decoded;
-    SW_ASSERT_TRUE( ChatProtocol::decodeRecord( ChatProtocol::encodeRecord( message ), decoded ) );
+    SW_ASSERT_TRUE( ChatProtocol::decodeRecord( "history", ChatProtocol::encodeRecord( message ), decoded ) );
     SW_EXPECT_STREQ( decoded._channelID.c_str(), message._channelID.c_str() );
     SW_EXPECT_EQUAL( decoded._recipientID, AccountID( 7 ) );
     SW_EXPECT_EQUAL( decoded._sentMs, int64( 123456 ) );
@@ -509,11 +536,35 @@ SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
     SW_EXPECT_TRUE( mutedBack._result == ChatResult::Muted );
     SW_EXPECT_EQUAL( mutedBack._retryAfterMs, int64( 4900 ) );
 
-    vector<uint8> otherVersion = ChatProtocol::encodeRecord( message );
-    otherVersion[0]            = 2;
-    SW_EXPECT_FALSE( ChatProtocol::decodeRecord( otherVersion, decoded ) ); // 다른 판은 읽지 않는다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a durable record of another version is logged as corrupt" );
+        vector<uint8> otherVersion = ChatProtocol::encodeRecord( message );
+        otherVersion[0]            = 2;
+        SW_EXPECT_FALSE( ChatProtocol::decodeRecord( "history", otherVersion, decoded ) ); // 다른 판은 읽지 않는다
+        ChatMessage tooLong = message;
+        tooLong._text       = string( ChatLimit::kMaxTextSize + 1, 'x' );
+        SW_EXPECT_FALSE( ChatProtocol::decodeRecord( "history", ChatProtocol::encodeRecord( tooLong ), decoded ) ); // 선언된 범위를 넘는 기록은 읽지 않는다
+    }
     SW_EXPECT_TRUE( ChatProtocol::fromErrorCode( OnlineError::kUnauthenticated ) == ChatResult::NotSignedIn );
     SW_EXPECT_TRUE( ChatProtocol::fromErrorCode( OnlineError::kInternal ) == ChatResult::Unavailable );
+}
+
+/**
+ * @brief [ChatProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
+ */
+SW_TEST_CASE( ChatProtocolTest, DeclaredLimitsMatchTheConstants )
+{
+    using Util = test::OnlineMessageTestUtil;
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatChannelRequest>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatSendRequest>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatSendRequest>( "_text" ), uint32( ChatLimit::kMaxTextSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatWhisperRequest>( "_text" ), uint32( ChatLimit::kMaxTextSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatHistoryRequest>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatHistoryRequest>( "_cursor" ), uint32( ChatProtocol::kMaxCursorSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatReply>( "_listHistory" ), uint32( ChatLimit::kMaxHistoryPage ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatReply>( "_nextCursor" ), uint32( ChatProtocol::kMaxCursorSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatMessage>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatMessage>( "_text" ), uint32( ChatLimit::kMaxTextSize ) );
 }
 
 /**

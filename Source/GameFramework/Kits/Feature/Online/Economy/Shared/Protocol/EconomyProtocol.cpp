@@ -18,5 +18,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry EconomyProtocol::kOnlineEntry{ "Economy", OnlineMethodRange::kEconomy, EconomyProtocol::MessageTypes{} };
+    const OnlineProtocolEntry EconomyProtocol::kOnlineEntry{ "Economy", EconomyMethod{}, EconomyProtocol::MessageTypes{} };
 } // namespace sw

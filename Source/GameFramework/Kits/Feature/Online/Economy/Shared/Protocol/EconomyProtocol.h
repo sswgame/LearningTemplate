@@ -34,8 +34,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 경제 서비스 메서드 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy>
+    /** @brief 경제 서비스 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy, OnlineNoPushName>
     {
         static constexpr uint16 kGetWallet     = toMethod( EconomyMethodName::GetWallet );
         static constexpr uint16 kGetHistory    = toMethod( EconomyMethodName::GetHistory );

@@ -21,26 +21,54 @@
 
 namespace sw
 {
-    /** @brief 계정 키트의 메서드와 알림 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct AccountMethod
+    /** @brief 계정 키트 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class AccountMethodName : uint8
     {
-        static constexpr uint16 kRegister        = OnlineMethodRange::kAccount + 0x01; ///< 익명 — 이름 · 비밀번호
-        static constexpr uint16 kLogin           = OnlineMethodRange::kAccount + 0x02; ///< 익명 호출이다. 이름, 비밀번호, 클라이언트 정보를 받는다
-        static constexpr uint16 kGuestLogin      = OnlineMethodRange::kAccount + 0x03; ///< 익명 호출이다. 장치 비밀 32바이트와 클라이언트 정보를 받는다
-        static constexpr uint16 kPlatformLogin   = OnlineMethodRange::kAccount + 0x04; ///< 익명 호출이다. 제공자, 티켓, 클라이언트 정보를 받는다
-        static constexpr uint16 kResume          = OnlineMethodRange::kAccount + 0x05; ///< 익명 호출이다. 토큰과 클라이언트 정보를 받는다
-        static constexpr uint16 kLogout          = OnlineMethodRange::kAccount + 0x06;
-        static constexpr uint16 kLinkCredential  = OnlineMethodRange::kAccount + 0x07; ///< 이름과 비밀번호를 받는다
-        static constexpr uint16 kLinkPlatform    = OnlineMethodRange::kAccount + 0x08; ///< 제공자와 티켓을 받는다
-        static constexpr uint16 kIssueGameTicket = OnlineMethodRange::kAccount + 0x09; ///< 서버 id 문자열을 받아 티켓 64바이트, 비밀 32바이트, 시한을 돌려준다
-        static constexpr uint16 kUnlinkPlatform  = OnlineMethodRange::kAccount + 0x0A; ///< 제공자
-        static constexpr uint16 kListLinks       = OnlineMethodRange::kAccount + 0x0B;
-        static constexpr uint16 kRequestDeletion = OnlineMethodRange::kAccount + 0x0C;
-        static constexpr uint16 kCancelDeletion  = OnlineMethodRange::kAccount + 0x0D;
-        static constexpr uint16 kPushRevoked     = OnlineMethodRange::kAccount + 0x80; ///< 알림이다. 이유와 사유 코드를 보내며, 보낸 뒤 서버가 연결을 닫는다
+        Register,
+        Login,
+        GuestLogin,
+        PlatformLogin,
+        Resume,
+        Logout,
+        LinkCredential,
+        LinkPlatform,
+        IssueGameTicket,
+        UnlinkPlatform,
+        ListLinks,
+        RequestDeletion,
+        CancelDeletion,
+        Count,
+    };
 
-        static_assert( OnlineMethodRange::isInRange( kCancelDeletion, OnlineMethodRange::kAccount ) && OnlineMethodRange::isMethod( kCancelDeletion ) );
-        static_assert( OnlineMethodRange::isMethod( kPushRevoked ) == false );
+    /** @brief 계정 키트 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class AccountPushName : uint8
+    {
+        Revoked,
+        Count,
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 계정 키트의 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct AccountMethod : OnlineMethodTable<AccountMethodName, OnlineMethodRange::kAccount, AccountPushName>
+    {
+        static constexpr uint16 kRegister        = toMethod( AccountMethodName::Register );      ///< 익명 — 이름 · 비밀번호
+        static constexpr uint16 kLogin           = toMethod( AccountMethodName::Login );         ///< 익명 호출이다. 이름, 비밀번호, 클라이언트 정보를 받는다
+        static constexpr uint16 kGuestLogin      = toMethod( AccountMethodName::GuestLogin );    ///< 익명 호출이다. 장치 비밀 32바이트와 클라이언트 정보를 받는다
+        static constexpr uint16 kPlatformLogin   = toMethod( AccountMethodName::PlatformLogin ); ///< 익명 호출이다. 제공자, 티켓, 클라이언트 정보를 받는다
+        static constexpr uint16 kResume          = toMethod( AccountMethodName::Resume );        ///< 익명 호출이다. 토큰과 클라이언트 정보를 받는다
+        static constexpr uint16 kLogout          = toMethod( AccountMethodName::Logout );
+        static constexpr uint16 kLinkCredential  = toMethod( AccountMethodName::LinkCredential );  ///< 이름과 비밀번호를 받는다
+        static constexpr uint16 kLinkPlatform    = toMethod( AccountMethodName::LinkPlatform );    ///< 제공자와 티켓을 받는다
+        static constexpr uint16 kIssueGameTicket = toMethod( AccountMethodName::IssueGameTicket ); ///< 서버 id 문자열을 받아 티켓 64바이트, 비밀 32바이트, 시한을 돌려준다
+        static constexpr uint16 kUnlinkPlatform  = toMethod( AccountMethodName::UnlinkPlatform );  ///< 제공자
+        static constexpr uint16 kListLinks       = toMethod( AccountMethodName::ListLinks );
+        static constexpr uint16 kRequestDeletion = toMethod( AccountMethodName::RequestDeletion );
+        static constexpr uint16 kCancelDeletion  = toMethod( AccountMethodName::CancelDeletion );
+        static constexpr uint16 kPushRevoked     = toPush( AccountPushName::Revoked ); ///< 알림이다. 이유와 사유 코드를 보내며, 보낸 뒤 서버가 연결을 닫는다
     };
 } // namespace sw
 

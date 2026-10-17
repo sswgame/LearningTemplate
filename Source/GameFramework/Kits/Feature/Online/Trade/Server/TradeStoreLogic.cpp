@@ -27,10 +27,10 @@ namespace sw
                 return TradeProtocol::encodeSession( TradeSessionRecord{ snapshot, ownerServerID } );
             }
 
-            [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
+            [[nodiscard]] static bool decodeSession( const string_view key, const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
             {
                 TradeSessionRecord record;
-                if ( TradeProtocol::decodeSession( bytes, record ) == false )
+                if ( TradeProtocol::decodeSession( key, bytes, record ) == false )
                     return false;
                 outSnapshot      = std::move( record._snapshot );
                 outOwnerServerID = record._ownerServerID;
@@ -439,11 +439,8 @@ namespace sw
             return TradeResult::NotFound;
         if ( read != ServiceStoreResult::Ok )
             return TradeResult::Unavailable;
-        if ( TradeStoreLogicInternal::decodeSession( raw._bytes, outSession._snapshot, outSession._ownerServerID ) == false )
-        {
-            SW_LOG_ERROR( "trade record %# is corrupt", ServiceKeyUtil::makeHex64( tradeID ).c_str() );
-            return TradeResult::Unavailable;
-        }
+        if ( TradeStoreLogicInternal::decodeSession( ServiceKeyUtil::makeHex64( tradeID ), raw._bytes, outSession._snapshot, outSession._ownerServerID ) == false )
+            return TradeResult::Unavailable; // 손상은 읽기가 오류 로그로 남겼다
         outSession._version = raw._version;
         return TradeResult::Ok;
     }

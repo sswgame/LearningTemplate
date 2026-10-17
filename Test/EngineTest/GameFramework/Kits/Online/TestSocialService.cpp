@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
@@ -378,6 +379,18 @@ SW_TEST_CASE( SocialServiceTest, StoreFailureWritesNothing )
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Unavailable );
     SW_EXPECT_EQUAL( database.computeContentHash(), hashBefore );
     SW_EXPECT_EQUAL( node._listNotification.size(), size_t( 0 ) );
+}
+
+/**
+ * @brief [SocialProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
+ */
+SW_TEST_CASE( SocialProtocolTest, DeclaredLimitsMatchTheConstants )
+{
+    using Util = test::OnlineMessageTestUtil;
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<SocialRequest>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildInfo>( "_name" ), uint32( GuildLimit::kMaxNameSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildInfo>( "_notice" ), uint32( GuildLimit::kMaxNoticeSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<GuildStorageItem>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
 }
 
 /**

@@ -39,12 +39,23 @@ namespace sw
         QueueLeave,
         Count,
     };
+
+    /** @brief 매칭 서비스 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class MatchmakingPushName : uint8
+    {
+        Party,
+        PartyInvite,
+        Lobby,
+        Match,
+        Count,
+    };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 매칭 서비스의 메서드와 알림 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct MatchmakingMethod : OnlineMethodTable<MatchmakingMethodName, OnlineMethodRange::kMatchmaking>
+    /** @brief 매칭 서비스의 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct MatchmakingMethod : OnlineMethodTable<MatchmakingMethodName, OnlineMethodRange::kMatchmaking, MatchmakingPushName>
     {
         static constexpr uint16 kPartyCreate = toMethod( MatchmakingMethodName::PartyCreate ); ///< 본문은 없고 파티를 돌려준다
         static constexpr uint16 kPartyInvite = toMethod( MatchmakingMethodName::PartyInvite ); ///< 계정을 받아 파티를 돌려준다. 파티장만 부를 수 있다
@@ -60,12 +71,10 @@ namespace sw
         static constexpr uint16 kQueueJoin   = toMethod( MatchmakingMethodName::QueueJoin );   ///< 모드와 지역을 받아 티켓 id 를 돌려준다. 파티장이면 파티 전체의 티켓이다
         static constexpr uint16 kQueueLeave  = toMethod( MatchmakingMethodName::QueueLeave );
 
-        static constexpr uint16 kPushParty       = OnlineMethodRange::kMatchmaking + 0x80; ///< 파티 알림이다. 멤버가 비어 있으면 해산, 나감, 내보내짐을 뜻한다
-        static constexpr uint16 kPushPartyInvite = OnlineMethodRange::kMatchmaking + 0x81; ///< 초대한 계정과 파티 id 를 보낸다
-        static constexpr uint16 kPushLobby       = OnlineMethodRange::kMatchmaking + 0x82; ///< 로비 알림이다. 멤버가 비어 있으면 나감을 뜻한다
-        static constexpr uint16 kPushMatch       = OnlineMethodRange::kMatchmaking + 0x83; ///< `MatchAssignment`
-
-        static_assert( OnlineMethodRange::isInRange( kPushMatch, OnlineMethodRange::kMatchmaking ) && OnlineMethodRange::isMethod( kPushMatch ) == false );
+        static constexpr uint16 kPushParty       = toPush( MatchmakingPushName::Party );       ///< 파티 알림이다. 멤버가 비어 있으면 해산, 나감, 내보내짐을 뜻한다
+        static constexpr uint16 kPushPartyInvite = toPush( MatchmakingPushName::PartyInvite ); ///< 초대한 계정과 파티 id 를 보낸다
+        static constexpr uint16 kPushLobby       = toPush( MatchmakingPushName::Lobby );       ///< 로비 알림이다. 멤버가 비어 있으면 나감을 뜻한다
+        static constexpr uint16 kPushMatch       = toPush( MatchmakingPushName::Match );       ///< `MatchAssignment`
     };
 } // namespace sw
 
@@ -171,7 +180,8 @@ namespace sw
 
         /**
          * @brief 캐시 기록을 읽고 씁니다. 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A)이며 기록 판을 머리에 둡니다.
-         * @details 다른 판이거나 모르는 필드가 있으면 읽지 않습니다. A 는 `MaxCount` 를 보지 않으므로 읽은 뒤 멤버 수 상한을 다시 확인합니다.
+         * @details 다시 만들 수 있는 캐시이므로 `ServiceRecordUtil::readCache` 로 읽습니다. 다른 판이거나 모르는 필드가 있거나 선언된 범위(멤버 수 같은)를
+         *          벗어나면 로그 없이 false 이고, 읽는 쪽은 그 파티나 로비가 없는 것으로 봅니다.
          */
         static vector<uint8>      encodeParty( const PartySnapshot& party );
         [[nodiscard]] static bool decodeParty( const vector<uint8>& bytes, PartySnapshot& outParty );

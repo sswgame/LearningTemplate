@@ -257,6 +257,19 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailureLeavesNothingAndBadInputIs
 }
 
 /**
+ * @brief [ServerDirectoryProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
+ */
+SW_TEST_CASE( ServerDirectoryProtocolTest, DeclaredLimitsMatchTheConstants )
+{
+    using Util = test::OnlineMessageTestUtil;
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<MaintenanceView>( "_messageKey" ), uint32( ServerDirectoryLimit::kMaxMessageKeySize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServerAssignment>( "_messageKey" ), uint32( ServerDirectoryLimit::kMaxMessageKeySize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceNotice>( "_text" ), uint32( ServerDirectoryLimit::kMaxNoticeTextSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServerDirectoryStatus>( "_listMaintenance" ), uint32( ServerDirectoryLimit::kMaxWindowCount ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServerDirectoryStatus>( "_listNotice" ), uint32( ServerDirectoryLimit::kMaxNoticeCount ) );
+}
+
+/**
  * @brief [ServerDirectoryProtocolTest] 서버 디렉터리 메시지는 상한까지 왕복하고, 점검 창과 공지 레코드는 자기 기술형으로 왕복하며, 범위 밖 인원은 쓰지 않는다
  */
 SW_TEST_CASE( ServerDirectoryProtocolTest, MessagesAndRecordsRoundTrip )
@@ -278,7 +291,7 @@ SW_TEST_CASE( ServerDirectoryProtocolTest, MessagesAndRecordsRoundTrip )
     window._messageKey = "notice.maintenance";
     window._listAllowedAccount.push_back( 900 );
     MaintenanceWindow decodedWindow;
-    SW_ASSERT_TRUE( ServerDirectoryProtocol::decodeMaintenance( ServerDirectoryProtocol::encodeMaintenance( window ), decodedWindow ) );
+    SW_ASSERT_TRUE( ServerDirectoryProtocol::decodeMaintenance( "game", ServerDirectoryProtocol::encodeMaintenance( window ), decodedWindow ) );
     SW_EXPECT_TRUE( decodedWindow.allowsAccount( 900 ) && decodedWindow._scope == "game" );
     SW_EXPECT_TRUE( window.makeView()._messageKey == "notice.maintenance" );
     {

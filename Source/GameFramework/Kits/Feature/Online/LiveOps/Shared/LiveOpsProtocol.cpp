@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kLiveOpsRecordVersion = 1; ///< 저장소 레코드(A)의 판이다. 필드를 바꿔 옛 레코드를 변환해야 할 때 올린다
+        constexpr uint32 kLiveOpsRecordVersion = 1; ///< 저장소 레코드(A)의 판이다. 필드를 빼거나 뜻을 바꿀 때 올리고 데이터를 다시 쓴다
     } // namespace
 } // namespace sw
 
@@ -19,9 +19,9 @@ namespace sw
         return ServiceRecordUtil::encode( kLiveOpsRecordVersion, definition );
     }
 
-    bool LiveOpsProtocol::decodeEvent( const vector<uint8>& bytes, LiveEventDefinition& outDefinition )
+    bool LiveOpsProtocol::decodeEvent( const string_view key, const vector<uint8>& bytes, LiveEventDefinition& outDefinition )
     {
-        return ServiceRecordUtil::decode( bytes, kLiveOpsRecordVersion, outDefinition );
+        return ServiceRecordUtil::readDurable( key, bytes, kLiveOpsRecordVersion, outDefinition );
     }
 
     vector<uint8> LiveOpsProtocol::encodeDevice( const PushDeviceRegistration& registration )
@@ -29,9 +29,9 @@ namespace sw
         return ServiceRecordUtil::encode( kLiveOpsRecordVersion, registration );
     }
 
-    bool LiveOpsProtocol::decodeDevice( const vector<uint8>& bytes, PushDeviceRegistration& outRegistration )
+    bool LiveOpsProtocol::decodeDevice( const string_view key, const vector<uint8>& bytes, PushDeviceRegistration& outRegistration )
     {
-        return ServiceRecordUtil::decode( bytes, kLiveOpsRecordVersion, outRegistration );
+        return ServiceRecordUtil::readDurable( key, bytes, kLiveOpsRecordVersion, outRegistration );
     }
 
     LiveOpsResult LiveOpsProtocol::fromErrorCode( uint16 errorCode )
@@ -47,5 +47,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry LiveOpsProtocol::kOnlineEntry{ "LiveOps", OnlineMethodRange::kLiveOps, LiveOpsProtocol::MessageTypes{} };
+    const OnlineProtocolEntry LiveOpsProtocol::kOnlineEntry{ "LiveOps", LiveOpsMethod{}, LiveOpsProtocol::MessageTypes{} };
 } // namespace sw

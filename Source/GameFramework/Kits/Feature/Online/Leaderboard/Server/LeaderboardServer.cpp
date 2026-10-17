@@ -66,11 +66,7 @@ namespace sw
             {
                 LeaderboardReply reply;
                 reply._result = pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::NotAllowed; // 점수는 서버가 낸다. 클라이언트가 낼 수 있는 보드가 아니면 거절한다
-                BitWriter replyBody;
-                if ( LeaderboardProtocol::MessageTypes::write( replyBody, reply ) )
-                    (void)host.respondOk( context._token, replyBody );
-                else
-                    (void)host.respondError( context._token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
+                (void)host.respondMessage<LeaderboardProtocol::MessageTypes>( context._token, reply );
                 return;
             }
         }
@@ -133,11 +129,7 @@ namespace sw
             reply._listEntry       = std::move( completion._listEntry );
             reply._listStat        = std::move( completion._listStat );
             reply._listAchievement = std::move( completion._listAchievement );
-            BitWriter body;
-            if ( LeaderboardProtocol::MessageTypes::write( body, reply ) )
-                (void)host.respondOk( token, body ); // 연결이 닫혔으면 호스트가 버린다
-            else
-                (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
+            (void)host.respondMessage<LeaderboardProtocol::MessageTypes>( token, reply ); // 연결이 닫혔으면 호스트가 버린다
         }
 
         _listUnlockScratch.clear();

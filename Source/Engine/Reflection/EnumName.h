@@ -17,6 +17,12 @@ namespace sw
     /** @brief @p enumTypeFqn(`typeFqn<E>()`)의 @p value 이름입니다. 엔진 서비스가 없거나 등록되지 않았거나 범위 밖이면 `"Unknown"` 입니다. 템플릿 `getEnumName` 을 씁니다. */
     SW_API const utf8* getEnumName( const hashed_string& enumTypeFqn, int64 value );
 
+    /**
+     * @brief @p enumTypeFqn 의 @p value 이름입니다. 엔진 서비스가 없거나 등록되지 않았거나 범위 밖이면 nullptr 입니다.
+     * @details 표시용 `getEnumName` 과 달리 대신 쓸 이름이 없습니다. 이름이 와이어 해시에 들어가는 곳(`OnlineProtocolEntry::computeMethodHash`)처럼 없으면 멈춰야 하는 쪽이 씁니다.
+     */
+    SW_API const utf8* findEnumName( const hashed_string& enumTypeFqn, int64 value );
+
     /** @brief @p value 의 열거자 이름입니다. `ENUM()` 이 없거나 범위 밖(`Count` 포함)이면 `"Unknown"` 입니다. */
     template <typename E>
     const utf8* getEnumName( E value )

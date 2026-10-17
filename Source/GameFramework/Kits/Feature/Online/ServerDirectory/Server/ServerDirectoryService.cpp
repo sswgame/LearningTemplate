@@ -96,11 +96,16 @@ namespace sw
                 return;
             for ( const ServiceRecord& record : listRecord )
             {
+                // 손상된 영속 레코드는 건너뛰지 않는다. 이 읽기를 실패로 두어 이전 값을 지키고 오류 로그를 남긴다
                 MaintenanceWindow window;
-                if ( ServerDirectoryProtocol::decodeMaintenance( record._bytes, window ) && Internal::isValidWindow( window ) )
-                    _listMaintenance.push_back( std::move( window ) );
-                else
-                    SW_LOG_WARNING( "Server directory maintenance record '%#' could not be read - it is skipped", record._key );
+                if ( ServerDirectoryProtocol::decodeMaintenance( record._key, record._bytes, window ) == false )
+                    return;
+                if ( Internal::isValidWindow( window ) == false )
+                {
+                    SW_LOG_ERROR( "Server directory maintenance record '%#' breaks the write rules", record._key );
+                    return;
+                }
+                _listMaintenance.push_back( std::move( window ) );
             }
             listRecord.clear();
             if ( connection.listRecords( Internal::getNoticeTable(), "", "", ServerDirectoryLimit::kMaxNoticeCount * 4, false, listRecord ) != ServiceStoreResult::Ok )
@@ -108,10 +113,14 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 ServiceNotice notice;
-                if ( ServerDirectoryProtocol::decodeNotice( record._bytes, notice ) && Internal::isValidNotice( notice ) )
-                    _listNotice.push_back( std::move( notice ) );
-                else
-                    SW_LOG_WARNING( "Server directory notice record '%#' could not be read - it is skipped", record._key );
+                if ( ServerDirectoryProtocol::decodeNotice( record._key, record._bytes, notice ) == false )
+                    return;
+                if ( Internal::isValidNotice( notice ) == false )
+                {
+                    SW_LOG_ERROR( "Server directory notice record '%#' breaks the write rules", record._key );
+                    return;
+                }
+                _listNotice.push_back( std::move( notice ) );
             }
             _bReadOk = SW_TRUE;
         }

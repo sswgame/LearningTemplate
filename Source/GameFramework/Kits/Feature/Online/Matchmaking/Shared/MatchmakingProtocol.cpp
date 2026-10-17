@@ -9,7 +9,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kMatchmakingRecordVersion = 1; ///< 캐시 기록(A)의 판이다. 필드를 바꿔 옛 기록을 변환해야 할 때 올린다
+        constexpr uint32 kMatchmakingRecordVersion = 1; ///< 캐시 기록(A)의 판이다. 필드를 빼거나 뜻을 바꿀 때 올린다. 옛 기록은 읽지 못해 버려지고 다시 만들어진다
     } // namespace
 } // namespace sw
 
@@ -22,7 +22,7 @@ namespace sw
 
     bool MatchmakingProtocol::decodeParty( const vector<uint8>& bytes, PartySnapshot& outParty )
     {
-        return ServiceRecordUtil::decodeWithinRange( bytes, kMatchmakingRecordVersion, outParty );
+        return ServiceRecordUtil::readCache( bytes, kMatchmakingRecordVersion, outParty );
     }
 
     vector<uint8> MatchmakingProtocol::encodeLobby( const LobbySnapshot& lobby )
@@ -32,7 +32,7 @@ namespace sw
 
     bool MatchmakingProtocol::decodeLobby( const vector<uint8>& bytes, LobbySnapshot& outLobby )
     {
-        return ServiceRecordUtil::decodeWithinRange( bytes, kMatchmakingRecordVersion, outLobby );
+        return ServiceRecordUtil::readCache( bytes, kMatchmakingRecordVersion, outLobby );
     }
 
     vector<uint8> MatchmakingProtocol::encodeID( uint64 id )
@@ -60,5 +60,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry MatchmakingProtocol::kOnlineEntry{ "Matchmaking", OnlineMethodRange::kMatchmaking, MatchmakingProtocol::MessageTypes{} };
+    const OnlineProtocolEntry MatchmakingProtocol::kOnlineEntry{ "Matchmaking", MatchmakingMethod{}, MatchmakingProtocol::MessageTypes{} };
 } // namespace sw

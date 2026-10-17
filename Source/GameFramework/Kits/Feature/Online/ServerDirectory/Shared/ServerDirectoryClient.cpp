@@ -36,30 +36,16 @@ namespace sw
 
     uint64 ServerDirectoryClient::requestAssignment( const ServerAssignmentRequest& request, const AssignmentDelegate& onAssignment )
     {
-        BitWriter body;
-        if ( ServerDirectoryProtocol::MessageTypes::write( body, request ) == false )
-        {
-            if ( onAssignment.isBound() )
-                onAssignment( OnlineError::kInvalidRequest, ServerAssignment{} ); // 범위 밖 값이라 보내지 않았다. 서버가 거절한 것과 같은 오류이다
-            return 0;
-        }
-        return _assignmentCallTable.send( *_pClient, ServerDirectoryMethod::kAssignServer, body, NetRequestOptions{},
-                                          OnlineResponseDelegate::create<&ServerDirectoryClient::onAssignmentResponse>( this ), onAssignment );
+        return _assignmentCallTable.sendMessage<ServerDirectoryProtocol::MessageTypes>( *_pClient, ServerDirectoryMethod::kAssignServer, request, NetRequestOptions{},
+                                                                                        OnlineResponseDelegate::create<&ServerDirectoryClient::onAssignmentResponse>( this ), onAssignment );
     }
 
     uint64 ServerDirectoryClient::requestServerList( string_view kind, const ServerListDelegate& onServerList )
     {
         ServerListRequest request;
         request._kind = string( kind );
-        BitWriter body;
-        if ( ServerDirectoryProtocol::MessageTypes::write( body, request ) == false )
-        {
-            if ( onServerList.isBound() )
-                onServerList( OnlineError::kInvalidRequest, vector<ServerListEntry>{} ); // 범위 밖 값이라 보내지 않았다. 서버가 거절한 것과 같은 오류이다
-            return 0;
-        }
-        return _serverListCallTable.send( *_pClient, ServerDirectoryMethod::kListServers, body, NetRequestOptions{},
-                                          OnlineResponseDelegate::create<&ServerDirectoryClient::onServerListResponse>( this ), onServerList );
+        return _serverListCallTable.sendMessage<ServerDirectoryProtocol::MessageTypes>( *_pClient, ServerDirectoryMethod::kListServers, request, NetRequestOptions{},
+                                                                                        OnlineResponseDelegate::create<&ServerDirectoryClient::onServerListResponse>( this ), onServerList );
     }
 
     void ServerDirectoryClient::onServicePush( uint16 kind, BitReader& body )

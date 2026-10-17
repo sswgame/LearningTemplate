@@ -3,11 +3,13 @@
  * @brief 키트 클라이언트(우편함 · 경제 · 순위표 등)의 공통 기반입니다. 요청 하나를 보내고 응답을 키트 응답 구조체로 읽어 호출자 델리게이트에 넘기는 일을 한 곳에 둡니다.
  * @details - 키트 클라이언트는 이 기반을 상속하고 요청 함수(`requestX`)에서 요청 메시지를 만들어 `sendRequest` 를 부른다(본문이 없는 메서드는 `sendCall`).
  *            응답 처리 · 연결 전 실패 · 요청 번호 · 멱등 키는 기반이 맡는다.
- *          - 요청 메시지는 키트 메시지 목록(`TProtocol::MessageTypes`)으로 쓴다. 범위 밖 값이 있으면 보내지 않고 `kInvalidRequest` 와 같은 결과로 콜백한다.
- *          - 요청 번호는 이 클라이언트가 붙인다. 반환값과 응답의 `_requestID` 가 같고, 연결 전(`initialize` 전) 실패도 0 이 아닌 번호로 콜백한다.
+ *          - 요청 메시지는 키트 메시지 목록(`TProtocol::MessageTypes`)으로 쓴다(`ServiceClientCallTable::sendMessage`). 범위 밖 값이 있으면 보내지 않고
+ *            `kInvalidRequest` 응답으로 끝내며, 그 응답은 서버가 거절한 응답과 같은 처리기를 지난다.
+ *          - 요청 번호는 이 클라이언트가 붙인다. 반환값과 응답의 `_requestID` 가 같고 0 이 아니다. 보내지 못한 요청(연결 전, 쓰기 실패)도 마찬가지이다.
  *          - 응답 읽기는 `OnlineReplyUtil::readResponse` 규칙이다. 오류 코드면 `TProtocol::fromErrorCode`, 본문을 못 읽으면 결과가 `Unavailable` 이다.
  *          - 성공 응답(본문을 읽었고 결과가 `Ok`)에 캐시를 고치는 키트는 `onCallSucceeded` 를 재정의한다. 콜백보다 먼저 불린다.
- *          - 콜백은 `OnlineServiceClient::update` 스레드에서 요청마다 정확히 한 번 불린다.
+ *          - 콜백은 요청마다 정확히 한 번 불린다. 보내지 못한 요청(연결 전, 범위 밖 값, 멈춘 클라이언트)은 요청 함수 안에서 바로 불리고,
+ *            나머지는 `OnlineServiceClient::update` 를 부르는 스레드에서 불린다. 그래서 콜백이 요청 함수가 번호를 반환하기 전에 올 수 있다.
  *          언리얼 Online Services 의 인터페이스마다 `TOnlineAsyncOpHandle<T>` 를 돌려주는 공통 비동기 연산 틀과 같은 자리다(기억에 의존).
  */
 #pragma once
@@ -88,15 +90,19 @@ namespace sw
 
         /**
          * @brief @p request 를 키트 메시지로 써서 보내고 요청 번호를 반환합니다.
-         * @details 범위 밖 값이 있어 쓰지 못하면 보내지 않고 `kInvalidRequest` 로 콜백합니다. 서버가 같은 본문을 받아 거절한 것과 같은 결과입니다.
+         * @details 범위 밖 값이 있어 쓰지 못하면 보내지 않고 `kInvalidRequest` 응답으로 끝냅니다(`ServiceClientCallTable::sendMessage`). 서버가 같은 본문을 받아 거절한 것과 같은 결과입니다.
          */
         template <typename TRequest>
         uint64 sendRequest( uint16 method, const TRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply, const TCallContext& context = TCallContext{} )
         {
-            BitWriter body;
-            if ( TProtocol::MessageTypes::write( body, request ) )
-                return sendCall( method, body, key, onReply, context );
-            return failCall( method, key, onReply, OnlineError::kInvalidRequest );
+            if ( _pClient == nullptr )
+                return failCall( method, key, onReply, OnlineError::kUnavailable );
+            const Call        call{ onReply, context, key, _nextRequestID++, method };
+            NetRequestOptions options;
+            options._idempotencyKey = key;
+            (void)_callTable.template sendMessage<typename TProtocol::MessageTypes>( *_pClient, method, request, options,
+                                                                                     OnlineResponseDelegate::create<&OnlineKitClient::onResponse>( this ), call );
+            return call._requestID; // 응답은 call._requestID 로 알린다
         }
 
         /** @brief @p body 를 보내고 요청 번호를 반환합니다. 상태를 바꾸는 메서드는 @p key 를 채워 보냅니다(비어 있으면 서버가 중복을 거르지 않는다). */
@@ -119,7 +125,7 @@ namespace sw
         }
 
     private:
-        /** @brief 보내지 못한 요청을 바로 콜백합니다. 결과는 공통 오류 코드 @p errorCode 를 키트 표로 바꾼 값입니다. */
+        /** @brief 서비스 클라이언트 없이(`initialize` 전) 부른 요청을 바로 콜백합니다. 결과는 공통 오류 코드 @p errorCode 를 키트 표로 바꾼 값입니다. */
         uint64 failCall( uint16 method, const NetIdempotencyKey& key, const ReplyDelegate& onReply, uint16 errorCode )
         {
             Reply reply;

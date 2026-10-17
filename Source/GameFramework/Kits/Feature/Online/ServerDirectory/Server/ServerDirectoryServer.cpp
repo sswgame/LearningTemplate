@@ -52,14 +52,13 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnavailable );
             return;
         }
-        BitWriter reply;
-        bool      bWritten = false;
+        using Messages = ServerDirectoryProtocol::MessageTypes;
         switch ( context._method )
         {
             case ServerDirectoryMethod::kGetStatus:
             {
-                bWritten = ServerDirectoryProtocol::MessageTypes::write( reply, _pService->makeStatus( context._nowMs ) );
-                break;
+                (void)host.respondMessage<Messages>( context._token, _pService->makeStatus( context._nowMs ) );
+                return;
             }
             case ServerDirectoryMethod::kAssignServer:
             {
@@ -75,8 +74,8 @@ namespace sw
                     (void)host.respondError( context._token, ServerDirectoryError::kUnknownKind );
                     return;
                 }
-                bWritten = ServerDirectoryProtocol::MessageTypes::write( reply, assignment );
-                break;
+                (void)host.respondMessage<Messages>( context._token, assignment );
+                return;
             }
             case ServerDirectoryMethod::kListServers:
             {
@@ -92,8 +91,8 @@ namespace sw
                     (void)host.respondError( context._token, ServerDirectoryError::kUnknownKind );
                     return;
                 }
-                bWritten = ServerDirectoryProtocol::MessageTypes::write( reply, listReply );
-                break;
+                (void)host.respondMessage<Messages>( context._token, listReply );
+                return;
             }
             default:
             {
@@ -101,10 +100,6 @@ namespace sw
                 return;
             }
         }
-        if ( bWritten )
-            (void)host.respondOk( context._token, reply );
-        else
-            (void)host.respondError( context._token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
     }
 
     void ServerDirectoryServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )

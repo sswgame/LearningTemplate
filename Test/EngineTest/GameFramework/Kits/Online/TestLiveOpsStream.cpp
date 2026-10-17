@@ -166,3 +166,20 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
     SW_EXPECT_TRUE( recorder._listReply.back()._reply._result == LiveOpsResult::Ok );
     binding.shutdown();
 }
+
+/**
+ * @brief [LiveOpsStreamTest] 공통 키트 클라이언트(`OnlineKitClient`)도 범위 밖 값의 요청은 보내지 않고 kInvalidRequest 로 콜백한다. 콜백의 요청 번호가 반환값과 같다
+ */
+SW_TEST_CASE( LiveOpsStreamTest, OutOfRangeRequestEndsAsInvalidRequestWithARequestID )
+{
+    OnlineServiceClient client;
+    LiveOpsClient       liveOpsClient;
+    liveOpsClient.initialize( &client );
+    LiveOpsRecorder recorder;
+    SW_TEST_DEFENSIVE_SCOPE( "an out-of-range request is logged and not sent" );
+    const uint64 requestID = liveOpsClient.registerDevice( PushDeviceRegistration{ "fcm", string( PushLimit::kMaxTokenSize + 1, 't' ), "en", 0 }, recorder.makeDelegate() );
+    SW_EXPECT_TRUE( requestID != 0 );
+    SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( recorder._listReply[0]._requestID, requestID );
+    SW_EXPECT_EQUAL( recorder._listReply[0]._errorCode, OnlineError::kInvalidRequest );
+}

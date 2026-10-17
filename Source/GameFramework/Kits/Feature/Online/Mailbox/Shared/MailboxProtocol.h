@@ -37,8 +37,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 우편함 메서드 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox>
+    /** @brief 우편함 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox, OnlineNoPushName>
     {
         static constexpr uint16 kList     = toMethod( MailboxMethodName::List );
         static constexpr uint16 kMarkRead = toMethod( MailboxMethodName::MarkRead );

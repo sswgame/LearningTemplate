@@ -244,12 +244,8 @@ namespace sw
     {
         NetRequestToken token;
         if ( _pendingTable.take( requestTag, token ) == false )
-            return; // 요청 태그가 0이거나(내부에서 건 작업) 이미 응답했다
-        BitWriter body;
-        if ( SocialProtocol::MessageTypes::write( body, reply ) )
-            (void)host.respondOk( token, body ); // 연결이 닫혔으면 호스트가 버린다
-        else
-            (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
+            return;                                                              // 요청 태그가 0이거나(내부에서 건 작업) 이미 응답했다
+        (void)host.respondMessage<SocialProtocol::MessageTypes>( token, reply ); // 연결이 닫혔으면 호스트가 버린다
     }
 
     void SocialServer::sendNotifications( OnlineServiceHost& host )

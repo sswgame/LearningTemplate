@@ -76,11 +76,7 @@ namespace sw
 
     void LiveOpsServer::respond( OnlineServiceHost& host, const NetRequestToken& token, const LiveOpsReply& reply )
     {
-        BitWriter replyBody;
-        if ( LiveOpsProtocol::MessageTypes::write( replyBody, reply ) )
-            (void)host.respondOk( token, replyBody );
-        else
-            (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
+        (void)host.respondMessage<LiveOpsProtocol::MessageTypes>( token, reply );
     }
 
     void LiveOpsServer::handleDeviceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )

@@ -56,13 +56,17 @@ namespace sw
                 return;
             for ( const ServiceRecord& record : listRecord )
             {
-                // 레코드는 자기 기술형이라 상한을 보지 않으므로, 운영 쓰기와 같은 규칙으로 다시 확인한다
+                // 손상된 영속 레코드는 건너뛰지 않는다. 이 읽기를 실패로 두어 이전 값을 지키고 오류 로그를 남긴다
                 LiveEventDefinition definition;
-                const bool          bDecoded = LiveOpsProtocol::decodeEvent( record._bytes, definition ) && LiveEventRules::isValid( definition );
-                if ( bDecoded )
-                    _listEvent.push_back( std::move( definition ) );
-                else
-                    SW_LOG_WARNING( "LiveOps event record '%#' could not be read - it is skipped", record._key );
+                if ( LiveOpsProtocol::decodeEvent( record._key, record._bytes, definition ) == false )
+                    return;
+                // 이벤트 정의는 고정 배치형 코덱이 없어 상한을 읽기가 보지 않으므로, 운영 쓰기와 같은 규칙으로 다시 확인한다
+                if ( LiveEventRules::isValid( definition ) == false )
+                {
+                    SW_LOG_ERROR( "LiveOps event record '%#' breaks the event rules", record._key );
+                    return;
+                }
+                _listEvent.push_back( std::move( definition ) );
             }
             _bReadOk = SW_TRUE;
         }

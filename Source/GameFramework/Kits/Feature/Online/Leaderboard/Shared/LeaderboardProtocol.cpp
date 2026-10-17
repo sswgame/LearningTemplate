@@ -18,5 +18,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry LeaderboardProtocol::kOnlineEntry{ "Leaderboard", OnlineMethodRange::kLeaderboard, LeaderboardProtocol::MessageTypes{} };
+    const OnlineProtocolEntry LeaderboardProtocol::kOnlineEntry{ "Leaderboard", LeaderboardMethod{}, LeaderboardProtocol::MessageTypes{} };
 } // namespace sw

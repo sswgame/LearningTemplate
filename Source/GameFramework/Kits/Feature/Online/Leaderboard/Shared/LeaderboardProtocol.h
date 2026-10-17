@@ -20,19 +20,40 @@
 
 namespace sw
 {
-    /** @brief 순위표 메서드 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct LeaderboardMethod
+    /** @brief 순위표 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class LeaderboardMethodName : uint8
     {
-        static constexpr uint16 kGetTop          = OnlineMethodRange::kLeaderboard + 0x01; ///< 보드, 시작, 개수를 받아 기간 id 와 항목 목록을 돌려준다
-        static constexpr uint16 kGetAround       = OnlineMethodRange::kLeaderboard + 0x02; ///< 보드와 반경을 받아 내 주변 항목을 나를 포함해 돌려준다
-        static constexpr uint16 kGetStats        = OnlineMethodRange::kLeaderboard + 0x03; ///< 내 통계 목록을 돌려준다
-        static constexpr uint16 kSubmitScore     = OnlineMethodRange::kLeaderboard + 0x04; ///< 보드와 점수를 받아 적용한 뒤의 점수를 돌려준다. 클라이언트 제출이 켜진 보드만 받는다
-        static constexpr uint16 kGetAchievements = OnlineMethodRange::kLeaderboard + 0x05; ///< 달성한 업적 목록을 돌려준다
-        static constexpr uint16 kGetSeasonResult = OnlineMethodRange::kLeaderboard + 0x06; ///< 보드와 시즌을 받아 내 결과를 돌려준다. 없으면 NotRanked 이다
-        static constexpr uint16 kPushAchievement = OnlineMethodRange::kLeaderboard + 0x80; ///< 업적 id 와 달성 시각을 보낸다
+        GetTop,
+        GetAround,
+        GetStats,
+        SubmitScore,
+        GetAchievements,
+        GetSeasonResult,
+        Count,
+    };
 
-        static_assert( OnlineMethodRange::isInRange( kGetSeasonResult, OnlineMethodRange::kLeaderboard ) && OnlineMethodRange::isMethod( kGetSeasonResult ) );
-        static_assert( OnlineMethodRange::isInRange( kPushAchievement, OnlineMethodRange::kLeaderboard ) && OnlineMethodRange::isMethod( kPushAchievement ) == false );
+    /** @brief 순위표 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class LeaderboardPushName : uint8
+    {
+        Achievement,
+        Count,
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 순위표 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct LeaderboardMethod : OnlineMethodTable<LeaderboardMethodName, OnlineMethodRange::kLeaderboard, LeaderboardPushName>
+    {
+        static constexpr uint16 kGetTop          = toMethod( LeaderboardMethodName::GetTop );          ///< 보드, 시작, 개수를 받아 기간 id 와 항목 목록을 돌려준다
+        static constexpr uint16 kGetAround       = toMethod( LeaderboardMethodName::GetAround );       ///< 보드와 반경을 받아 내 주변 항목을 나를 포함해 돌려준다
+        static constexpr uint16 kGetStats        = toMethod( LeaderboardMethodName::GetStats );        ///< 내 통계 목록을 돌려준다
+        static constexpr uint16 kSubmitScore     = toMethod( LeaderboardMethodName::SubmitScore );     ///< 보드와 점수를 받아 적용한 뒤의 점수를 돌려준다. 클라이언트 제출이 켜진 보드만 받는다
+        static constexpr uint16 kGetAchievements = toMethod( LeaderboardMethodName::GetAchievements ); ///< 달성한 업적 목록을 돌려준다
+        static constexpr uint16 kGetSeasonResult = toMethod( LeaderboardMethodName::GetSeasonResult ); ///< 보드와 시즌을 받아 내 결과를 돌려준다. 없으면 NotRanked 이다
+        static constexpr uint16 kPushAchievement = toPush( LeaderboardPushName::Achievement );         ///< 업적 id 와 달성 시각을 보낸다
     };
 } // namespace sw
 

@@ -19,18 +19,34 @@
 
 namespace sw
 {
-    /** @brief 라이브 운영 메서드와 알림 번호입니다. 와이어 값이며 온라인 스키마 해시에 들어가지 않습니다(`OnlineProtocolRegistry.h`). */
-    struct LiveOpsMethod
+    /** @brief 라이브 운영 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class LiveOpsMethodName : uint8
     {
-        static constexpr uint16 kGetLiveState     = OnlineMethodRange::kLiveOps + 0x01; ///< 지역과 빌드 버전을 받아 이 계정에 열린 이벤트 목록을 돌려준다. 출시 비율이 계정을 보므로 로그인한 뒤에 쓴다
-        static constexpr uint16 kRegisterDevice   = OnlineMethodRange::kLiveOps + 0x02; ///< 제공자, 토큰, 언어를 받는다. 로그인한 뒤에 쓰며 같은 토큰은 덮어쓴다
-        static constexpr uint16 kUnregisterDevice = OnlineMethodRange::kLiveOps + 0x03; ///< 제공자와 토큰을 받는다. 로그아웃이나 알림 끄기에서 쓴다
-        static constexpr int32  kCount            = 3;
+        GetLiveState,
+        RegisterDevice,
+        UnregisterDevice,
+        Count,
+    };
 
-        static constexpr uint16 kPushLiveState = OnlineMethodRange::kLiveOps + 0x80; ///< 본문은 없다. 열린 이벤트 목록이 바뀌었으니 다시 받으라는 알림이다
+    /** @brief 라이브 운영 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class LiveOpsPushName : uint8
+    {
+        LiveState,
+        Count,
+    };
+} // namespace sw
 
-        static_assert( OnlineMethodRange::isInRange( kUnregisterDevice, OnlineMethodRange::kLiveOps ) && OnlineMethodRange::isMethod( kUnregisterDevice ) );
-        static_assert( OnlineMethodRange::isInRange( kPushLiveState, OnlineMethodRange::kLiveOps ) && OnlineMethodRange::isMethod( kPushLiveState ) == false );
+namespace sw
+{
+    /** @brief 라이브 운영 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct LiveOpsMethod : OnlineMethodTable<LiveOpsMethodName, OnlineMethodRange::kLiveOps, LiveOpsPushName>
+    {
+        static constexpr uint16 kGetLiveState     = toMethod( LiveOpsMethodName::GetLiveState );     ///< 지역과 빌드 버전을 받아 이 계정에 열린 이벤트 목록을 돌려준다. 출시 비율이 계정을 보므로 로그인한 뒤에 쓴다
+        static constexpr uint16 kRegisterDevice   = toMethod( LiveOpsMethodName::RegisterDevice );   ///< 제공자, 토큰, 언어를 받는다. 로그인한 뒤에 쓰며 같은 토큰은 덮어쓴다
+        static constexpr uint16 kUnregisterDevice = toMethod( LiveOpsMethodName::UnregisterDevice ); ///< 제공자와 토큰을 받는다. 로그아웃이나 알림 끄기에서 쓴다
+        static constexpr uint16 kPushLiveState    = toPush( LiveOpsPushName::LiveState );            ///< 본문은 없다. 열린 이벤트 목록이 바뀌었으니 다시 받으라는 알림이다
     };
 } // namespace sw
 
@@ -89,14 +105,16 @@ namespace sw
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 
         /**
-         * @brief 이벤트 정의와 기기 등록의 저장소 레코드를 읽고 씁니다. 자기 기술형(A)이며 레코드 판을 머리에 둡니다.
-         * @details 다른 판이거나 모르는 필드가 있으면 읽지 않습니다. 필드가 바뀌어 옛 레코드를 읽어야 하면 판을 올리고 변환(`SchemaMigrateFn`)을 등록합니다.
-         *          A 는 `MaxCount` 를 보지 않으므로 서버는 읽은 이벤트 정의를 운영 쓰기와 같은 규칙(`LiveEventRules::isValid`)으로 다시 확인합니다.
+         * @brief 이벤트 정의와 기기 등록의 저장소 레코드를 읽고 씁니다. 둘 다 영속 레코드이므로 자기 기술형(A)이며 레코드 판을 머리에 둡니다.
+         * @details 다른 판이거나 모르는 필드가 있거나 깨졌으면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
+         *          기기 등록은 고정 배치형 코덱이 있어 선언된 범위(제공자 16, 토큰 256, 언어 16 바이트)도 확인합니다. 이벤트 정의는 코덱이 없으므로
+         *          서버가 읽은 정의를 운영 쓰기와 같은 규칙(`LiveEventRules::isValid`)으로 다시 확인합니다.
+         *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 판을 올리고 데이터를 다시 씁니다.
          */
         static vector<uint8>      encodeEvent( const LiveEventDefinition& definition );
-        [[nodiscard]] static bool decodeEvent( const vector<uint8>& bytes, LiveEventDefinition& outDefinition );
+        [[nodiscard]] static bool decodeEvent( string_view key, const vector<uint8>& bytes, LiveEventDefinition& outDefinition );
         static vector<uint8>      encodeDevice( const PushDeviceRegistration& registration );
-        [[nodiscard]] static bool decodeDevice( const vector<uint8>& bytes, PushDeviceRegistration& outRegistration );
+        [[nodiscard]] static bool decodeDevice( string_view key, const vector<uint8>& bytes, PushDeviceRegistration& outRegistration );
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 손상된 본문은 Invalid, 도배 제한은 RateLimited, 나머지는 Unavailable 입니다. */
         static LiveOpsResult fromErrorCode( uint16 errorCode );

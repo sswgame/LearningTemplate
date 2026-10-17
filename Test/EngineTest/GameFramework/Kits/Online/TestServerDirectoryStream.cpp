@@ -192,3 +192,21 @@ SW_TEST_CASE( ServerDirectoryStreamTest, MaintenanceSetOnAnotherServerIsPushedTo
     SW_ASSERT_EQUAL( directoryClient.getLastStatus()._listMaintenance.size(), size_t( 1 ) ); // 버스 → 다시 읽기 → 알림
     SW_EXPECT_TRUE( directoryClient.getLastStatus()._listMaintenance[0]._scope == "game" );
 }
+
+/**
+ * @brief [ServerDirectoryStreamTest] 범위 밖 값의 요청은 보내지 않고 kInvalidRequest 로 콜백한다. 다른 실패와 같이 0 이 아닌 요청 번호를 돌려준다
+ */
+SW_TEST_CASE( ServerDirectoryStreamTest, OutOfRangeRequestEndsAsInvalidRequestWithARequestID )
+{
+    OnlineServiceClient   client;
+    ServerDirectoryClient directoryClient;
+    directoryClient.initialize( &client );
+    DirectoryRecorder       recorder;
+    ServerAssignmentRequest request = makeDirectoryRequest( "game" );
+    request._seatCount              = ServerDirectoryLimit::kMaxSeatCount + 1;
+    SW_TEST_DEFENSIVE_SCOPE( "an out-of-range request is logged and not sent" );
+    const uint64 requestID = directoryClient.requestAssignment( request, ServerDirectoryClient::AssignmentDelegate::create<&DirectoryRecorder::onAssignment>( &recorder ) );
+    SW_EXPECT_TRUE( requestID != 0 );
+    SW_ASSERT_EQUAL( recorder._listAssignmentError.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( recorder._listAssignmentError[0], OnlineError::kInvalidRequest );
+}

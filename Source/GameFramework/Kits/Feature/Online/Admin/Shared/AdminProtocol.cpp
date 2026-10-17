@@ -60,5 +60,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry AdminProtocol::kOnlineEntry{ "Admin", OnlineMethodRange::kAdmin, AdminProtocol::MessageTypes{} };
+    const OnlineProtocolEntry AdminProtocol::kOnlineEntry{ "Admin", AdminMethod{}, AdminProtocol::MessageTypes{} };
 } // namespace sw

@@ -320,11 +320,7 @@ namespace sw
         NetRequestToken token;
         if ( requestTag == 0 || _pendingTable.take( requestTag, token ) == false )
             return; // 서버가 낸 요청이다. 계정이 떠난 경우이다
-        BitWriter body;
-        if ( MatchmakingProtocol::MessageTypes::write( body, reply ) )
-            (void)host.respondOk( token, body );
-        else
-            (void)host.respondError( token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
+        (void)host.respondMessage<MatchmakingProtocol::MessageTypes>( token, reply );
     }
 
     void MatchmakingServer::push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const BitWriter& body )

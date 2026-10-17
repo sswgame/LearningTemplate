@@ -248,17 +248,9 @@ namespace sw
         const PendingCall pending = _listPendingCall[pendingIndex];
         _listPendingCall.erase( _listPendingCall.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
         if ( pending._pHost != nullptr )
-        {
-            BitWriter writer;
-            if ( AdminProtocol::MessageTypes::write( writer, reply ) )
-                (void)pending._pHost->respondOk( pending._token, writer );
-            else
-                (void)pending._pHost->respondError( pending._token, OnlineError::kInternal ); // write 가 범위 밖 값을 로그에 남겼다
-        }
+            (void)pending._pHost->respondMessage<AdminProtocol::MessageTypes>( pending._token, reply );
         else if ( pending._onReply.isBound() )
-        {
             pending._onReply( reply );
-        }
         _metrics.countRequest( pending._methodIndex, static_cast<int32>( reply._result ) );
         MetricHistogram* pLatency = _metrics.findLatencyHistogram( pending._methodIndex );
         if ( pLatency != nullptr )

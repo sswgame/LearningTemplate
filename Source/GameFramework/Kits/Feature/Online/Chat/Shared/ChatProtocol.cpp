@@ -9,7 +9,7 @@ namespace sw
 {
     namespace
     {
-        constexpr uint32 kChatRecordVersion = 1; ///< 기록 레코드(A)의 판이다. 필드를 바꿔 옛 레코드를 변환해야 할 때 올린다
+        constexpr uint32 kChatRecordVersion = 1; ///< 기록 레코드(A)의 판이다. 필드를 빼거나 뜻을 바꿀 때 올리고 데이터를 다시 쓴다
     } // namespace
 } // namespace sw
 
@@ -20,9 +20,9 @@ namespace sw
         return ServiceRecordUtil::encode( kChatRecordVersion, message );
     }
 
-    bool ChatProtocol::decodeRecord( const vector<uint8>& bytes, ChatMessage& outMessage )
+    bool ChatProtocol::decodeRecord( const string_view key, const vector<uint8>& bytes, ChatMessage& outMessage )
     {
-        return ServiceRecordUtil::decodeWithinRange( bytes, kChatRecordVersion, outMessage );
+        return ServiceRecordUtil::readDurable( key, bytes, kChatRecordVersion, outMessage );
     }
 
     ChatResult ChatProtocol::fromErrorCode( uint16 errorCode )
@@ -53,5 +53,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlineProtocolEntry ChatProtocol::kOnlineEntry{ "Chat", OnlineMethodRange::kChat, ChatProtocol::MessageTypes{} };
+    const OnlineProtocolEntry ChatProtocol::kOnlineEntry{ "Chat", ChatMethod{}, ChatProtocol::MessageTypes{} };
 } // namespace sw

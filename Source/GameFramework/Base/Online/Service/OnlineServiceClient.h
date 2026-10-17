@@ -158,6 +158,12 @@ namespace sw
 
         /** @brief 요청을 보내고 id 를 반환합니다. Hello 전이거나 문이 닫혀 있으면 모아 둡니다. id 는 콜백의 `_requestID` 와 같으며, 콜백은 정확히 한 번 불립니다. */
         uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );
+        /**
+         * @brief 보내지 않은 요청 하나를 @p errorCode 응답으로 끝내고 id 를 반환합니다. 본문을 쓰지 못한 요청(범위 밖 값)이 씁니다(`ServiceClientCallTable::sendMessage`).
+         * @details `sendRequest` 가 그 자리에서 끝내는 실패(초기화 전, 멈춤)와 같은 약속입니다. id 는 `sendRequest` 와 같은 순서에서 나오며 0 이 아니고,
+         *          @p onResponse 는 이 함수 안에서 정확히 한 번 불립니다. 서버가 같은 본문을 거절한 응답과 구별되지 않습니다.
+         */
+        uint64 rejectRequest( uint16 errorCode, OnlineResponseDelegate onResponse );
         /** @brief 다음 `sendRequest` 가 돌려줄 id 입니다. 보내는 중에 바로 온 응답을 그 요청의 것으로 맞춰 보는 데 씁니다(`ServiceClientCallTable`). */
         uint64 peekNextRequestID() const { return _nextRequestID; }
         /**
