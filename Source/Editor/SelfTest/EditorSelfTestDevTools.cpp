@@ -26,6 +26,7 @@
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Scene/GameViewPanel.h"
+#include "Editor/Panels/Scene/HistoryPanel.h"
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -76,8 +77,8 @@ namespace sw::editor
             /** @brief 등록 항목 커맨드(`selftest.ping`)의 동작입니다. 로그 한 줄을 남기며, 시나리오 `commandpalette` 가 이 로그를 확인합니다. */
             static void runPingCommand() { SW_LOG_INFO( "Self-test registration command ran" ); }
 
-            static constexpr const utf8* kSceneViewPanelID = "scene_view";
-            static constexpr const utf8* kGameViewPanelID  = "game_view";
+            static constexpr const utf8* kSceneViewPanelID = SceneViewPanel::kPanelID;
+            static constexpr const utf8* kGameViewPanelID  = GameViewPanel::kPanelID;
             static constexpr uint32      kMaxWaitFrame     = 60;
             static constexpr const utf8* kProbeTag         = "SelfTestDevTools";
 
@@ -91,7 +92,7 @@ namespace sw::editor
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return nullptr;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( pPanelID, true );
-                IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel( pPanelID );
+                IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( pPanelID );
                 if ( context.expect( pPanel != nullptr, "the panel is not registered" ) == false )
                     return nullptr;
                 if ( context.getStepIndex() == 0 )
@@ -154,8 +155,8 @@ namespace sw::editor
                 EditorContext*        pContext      = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "console", true );
-                ConsolePanel* pConsole = static_cast<ConsolePanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "console" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
+                ConsolePanel* pConsole = pContext->getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -225,8 +226,8 @@ namespace sw::editor
                 EditorContext*        pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "console", true );
-                ConsolePanel* pConsole = static_cast<ConsolePanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "console" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
+                ConsolePanel* pConsole = pContext->getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -280,7 +281,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runNamedLayoutRoundTrip( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kPanelID    = "history";
+                constexpr const utf8* kPanelID    = HistoryPanel::kPanelID;
                 constexpr const utf8* kLayoutName = "selftest";
                 EditorContext*        pContext    = EditorContext::get();
                 EditorDockLayout*     pDock       = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
@@ -309,7 +310,7 @@ namespace sw::editor
                 if ( stepIndex < 4 )
                     return EditorSelfTestStep::Continue; // 다음 프레임 시작에 적용되고, 그 프레임에 창이 다시 만들어진다
 
-                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel( kPanelID );
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
                 const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( "Hierarchy" );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );

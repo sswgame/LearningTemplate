@@ -17,7 +17,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw::editor
@@ -83,54 +82,51 @@ namespace sw::editor
                 const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
                 EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, actionName );
             }
+
+            /**
+             * @brief 컴포넌트 값 XML 을 @p pComp 에 덮어쓰고 되돌리기 기록을 남깁니다. 붙여넣기와 프리셋이 함께 쓰는 한 경로입니다.
+             * @details 클립보드와 프리셋 파일은 같은 형식(XML) 하나다 — 두 형식을 두고 하나가 실패하면 다른 것으로 가던 길을 없앴다.
+             *          이름은 값이 아니라 정체다(컴포넌트 키) — 대상의 것을 지킨다(언리얼의 속성 붙여넣기도 컴포넌트 이름을 옮기지 않는다).
+             */
+            [[nodiscard]] static bool applyComponentXML( Component* pComp, string_view xml, string_view actionName )
+            {
+                const bool bNothingToApply = pComp == nullptr || pComp->getTypeInfo() == nullptr || xml.empty();
+                if ( bNothingToApply )
+                    return false;
+                GameObject* const    pOwner         = pComp->getOwner();
+                const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
+                const hashed_string  targetName     = pComp->getComponentName();
+                const bool           bSuccess       = XMLSerializer::deserialize( pComp, *pComp->getTypeInfo(), string{ xml } );
+                pComp->setComponentName( targetName );
+                if ( bSuccess == false )
+                    return false;
+                // 직렬화기는 값만 쓴다 — 컴포넌트가 그 값으로 다시 맞추게 알린다. 알리지 않으면 붙여 넣은 위치가 월드 행렬에 들지 않고
+                // (화면 · 기즈모가 옛 자리) 메시 id 를 붙여 넣어도 옛 메시를 그린다.
+                pComp->notifyStateWritten();
+                if ( pOwner != nullptr )
+                {
+                    const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
+                    EditorTransaction::recordModify( pOwner, beforeSnapshot, afterSnapshot, actionName );
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorTransformCommands::pasteComponentValues( Component* pTargetComp, const vector<uint8>& bytes, string_view xmlFallback )
-    {
-        if ( pTargetComp == nullptr || pTargetComp->getTypeInfo() == nullptr )
-            return false;
-
-        GameObject* const    pOwner         = pTargetComp->getOwner();
-        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
-        const hashed_string  targetName     = pTargetComp->getComponentName();
-
-        bool bSuccess = false;
-        if ( bytes.empty() == false )
-            bSuccess = BinarySerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), bytes.data(), bytes.size() );
-
-        if ( bSuccess == false && xmlFallback.empty() == false )
-            bSuccess = XMLSerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), string{ xmlFallback } );
-        // 이름은 값이 아니라 정체다(컴포넌트 키) — 붙여 넣어도 대상의 것을 지킨다(언리얼의 속성 붙여넣기도 컴포넌트 이름을 옮기지 않는다).
-        pTargetComp->setComponentName( targetName );
-
-        // 직렬화기는 값만 쓴다 — 컴포넌트가 그 값으로 다시 맞추게 알린다. 알리지 않으면 붙여 넣은 위치가 월드 행렬에 들지 않고
-        // (화면 · 기즈모가 옛 자리) 메시 id 를 붙여 넣어도 옛 메시를 그린다.
-        if ( bSuccess )
-            pTargetComp->notifyStateWritten();
-
-        if ( bSuccess && pOwner != nullptr )
-        {
-            const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
-            EditorTransaction::recordModify( pOwner, beforeSnapshot, afterSnapshot, "Paste Component Values" );
-        }
-        return bSuccess;
-    }
-
     bool EditorTransformCommands::pasteComponentValues( Component* pTargetComp, string_view xml )
     {
-        return pasteComponentValues( pTargetComp, vector<uint8>{}, xml );
+        return EditorTransformCommandsInternal::applyComponentXML( pTargetComp, xml, "Paste Component Values" );
     }
 
     bool EditorTransformCommands::pasteCopiedComponentValues( const EditorWorkspace& workspace, Component* pTargetComp )
     {
-        return pasteComponentValues( pTargetComp, workspace.getCopiedComponentBytes(), workspace.getCopiedComponentXML() );
+        return pasteComponentValues( pTargetComp, workspace.getCopiedComponentXML() );
     }
 
-    Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, const vector<uint8>& bytes, string_view xmlFallback )
+    Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml )
     {
         if ( pTargetObj == nullptr || typeName.empty() )
             return nullptr;
@@ -145,17 +141,12 @@ namespace sw::editor
         if ( pNewComp != nullptr && pNewComp->getTypeInfo() != nullptr )
         {
             const hashed_string newName  = pNewComp->getComponentName();
-            bool                bSuccess = false;
-            if ( bytes.empty() == false )
-                bSuccess = BinarySerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), bytes.data(), bytes.size() );
-
-            if ( bSuccess == false && xmlFallback.empty() == false )
-                bSuccess = XMLSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xmlFallback } );
+            const bool          bSuccess = xml.empty() == false && XMLSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xml } );
             pNewComp->setComponentName( newName ); // 새 컴포넌트는 제 이름(타입 이름)로 — 원본의 이름을 옮기면 키가 겹친다
             // 읽지 못했어도 기본값이 그 상태다 — 어느 쪽이든 컴포넌트가 값을 자원으로 바꾸게 한다(`EditorSceneCommands::addComponent` 와 같다).
             pNewComp->notifyStateWritten();
 
-            // 이 결과를 버리면 둘 다 실패해도 값이 하나도 안 들어간 컴포넌트와 "붙여넣기" 실행 취소 항목만
+            // 이 결과를 버리면 값이 하나도 안 들어간 컴포넌트와 "붙여넣기" 실행 취소 항목만
             // 남아, 쓰는 사람은 왜 비었는지 알 수 없다. 컴포넌트는 이미 붙었으니 되돌리지 않고, 대신 조용히 넘어가지 않는다.
             if ( bSuccess == false )
             {
@@ -170,14 +161,9 @@ namespace sw::editor
         return nullptr;
     }
 
-    Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml )
-    {
-        return pasteComponentAsNew( pTargetObj, typeName, vector<uint8>{}, xml );
-    }
-
     Component* EditorTransformCommands::pasteCopiedComponentAsNew( const EditorWorkspace& workspace, GameObject* pTargetObj )
     {
-        return pasteComponentAsNew( pTargetObj, workspace.getCopiedComponentTypeName(), workspace.getCopiedComponentBytes(), workspace.getCopiedComponentXML() );
+        return pasteComponentAsNew( pTargetObj, workspace.getCopiedComponentTypeName(), workspace.getCopiedComponentXML() );
     }
 
     string EditorTransformCommands::makeComponentPresetFileName( const Component* pComp, string_view presetName )
@@ -237,20 +223,7 @@ namespace sw::editor
         if ( FileUtil::readTextFile( presetFilePath, xmlData ) == false )
             return false;
 
-        GameObject* const    pOwner         = pComp->getOwner();
-        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
-
-        const hashed_string targetName = pComp->getComponentName();
-        const bool          bSuccess   = XMLSerializer::deserialize( pComp, *pComp->getTypeInfo(), xmlData );
-        pComp->setComponentName( targetName ); // 프리셋은 값이다 — 이름(컴포넌트 키)는 대상의 것을 지킨다
-        if ( bSuccess )
-            pComp->notifyStateWritten();
-        if ( bSuccess && pOwner != nullptr )
-        {
-            const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
-            EditorTransaction::recordModify( pOwner, beforeSnapshot, afterSnapshot, "Apply Component Preset" );
-        }
-        return bSuccess;
+        return EditorTransformCommandsInternal::applyComponentXML( pComp, xmlData, "Apply Component Preset" );
     }
 
     void EditorTransformCommands::snapSelectedToGround()

@@ -29,6 +29,9 @@ namespace sw::editor
     class TileMapPanel : public EditorDocumentPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "tile_map";
+
         /** @brief 타일맵 도구를 생성합니다. */
         TileMapPanel();
 

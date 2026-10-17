@@ -5,6 +5,7 @@
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
+#include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -13,7 +14,11 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/Inspector/InspectorPanel.h"
+#include "Editor/Panels/Profiler/ProfilerPanel.h"
 #include "Editor/Panels/Scene/HierarchyPanel.h"
+#include "Editor/Panels/Scene/SceneViewPanel.h"
+#include "Editor/Panels/Settings/UserSettingsPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -135,7 +140,7 @@ namespace sw::editor
                 const EditorThemeConfig savedTheme = EditorThemeUtil::getActiveTheme();
                 const float32           savedScale = EditorThemeUtil::getDpiScale();
                 const float32           probeScale = savedScale + 0.5f; // 배율 1 은 ScaleAllSizes 를 건너뛰어 거듭 곱해지는지 볼 수 없다. 그래서 모니터 배율과 무관하게 1 이 아닌 값을 쓴다
-                (void)context.expect( EditorThemeUtil::applyThemeByName( EditorThemeTokens::kDefaultName ), "the default theme token set is missing" );
+                (void)context.expect( EditorThemeUtil::applyThemeByName( EditorConfig{}._themeName ), "the default theme token set is missing" );
                 EditorThemeUtil::setDpiScale( probeScale );
                 const EditorThemeConfig probeTheme = EditorThemeUtil::getActiveTheme();
                 for ( uint32 applyIndex = 0; applyIndex < 3; ++applyIndex )
@@ -426,7 +431,7 @@ namespace sw::editor
                     pCamera->setOrthographic( true );
                     probe._objectID  = pObj->getObjectID();
                     probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj );
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "inspector", true );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<InspectorPanel>( true );
                     pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj );
                     return EditorSelfTestStep::Continue;
                 }
@@ -506,8 +511,8 @@ namespace sw::editor
                 EditorContext*  pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
-                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel* pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 if ( context.expect( pHierarchy != nullptr, "no hierarchy panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -581,8 +586,8 @@ namespace sw::editor
                 EditorContext*     pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
-                HierarchyPanel*    pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel*    pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 GameObjectManager* pManager   = editor::getActiveObjectManager();
                 if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -668,7 +673,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runSceneViewResizeEveryFrame( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kSceneViewPanelID = "scene_view";
+                constexpr const utf8* kSceneViewPanelID = SceneViewPanel::kPanelID;
                 constexpr uint32      kResizeFrameCount = 90;
 
                 EditorContext* pContext = EditorContext::get();
@@ -747,7 +752,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runProfilerGPUMemoryTabDrawsTheLedger( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kProfilerPanelID = "profiler";
+                constexpr const utf8* kProfilerPanelID = ProfilerPanel::kPanelID;
                 constexpr uint32      kMaxStepCount    = 30;
 
                 EditorContext* pContext = EditorContext::get();
@@ -887,7 +892,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runUserSettingsPanelDrawsEveryTab( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kPanelID  = "user_settings";
+                constexpr const utf8* kPanelID  = UserSettingsPanel::kPanelID;
                 EditorContext*        pContext  = EditorContext::get();
                 UserSettingsManager*  pSettings = editor::findSubsystem<UserSettingsManager>();
                 const bool            bReady    = pContext != nullptr && pSettings != nullptr && pSettings->getCategories().empty() == false;

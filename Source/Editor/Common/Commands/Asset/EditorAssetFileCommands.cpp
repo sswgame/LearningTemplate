@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
@@ -32,14 +33,17 @@ namespace sw::editor
             /** @brief 새 프리팹의 글입니다. */
             static constexpr const utf8* kPrefabText = "<Prefab formatVersion=\"0\" name=\"NewPrefab\">\n\t<GameObject _schemaVersion=\"0\" _name=\"NewPrefab\" _bActive=\"true\">\n"
                                                        "\t\t<_listComponent>\n\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n";
+            /** @brief 새 머티리얼이 베끼는 엔진 기본 머티리얼 칸입니다. */
+            static const DataPath& selectDefaultMaterial( const EngineDefaultAssets& assets ) { return assets._defaultMaterial; }
+
             /**
              * @brief 새 에셋 틀의 표입니다. 한 줄이 Add 메뉴 항목 하나입니다.
              * @details 머티리얼은 엔진 머티리얼을 베낀다(손으로 지은 머티리얼 XML 은 퍼뮤테이션을 빠뜨리기 쉽다).
              */
             static constexpr EditorNewAssetTemplate kArrNewAssetTemplate[] = {
-                {"material", "Material", "new_material",   ".material", "engine/materials/defaultmaterial.material",     nullptr, "name=\"DefaultMaterial\""},
-                {   "scene",    "Scene",    "new_scene",  ".scene.xml",                                     nullptr,  kSceneText,                    nullptr},
-                {  "prefab",   "Prefab",   "new_prefab", ".prefab.xml",                                     nullptr, kPrefabText,                    nullptr},
+                {"material", "Material", "new_material",   ".material", &selectDefaultMaterial,     nullptr, "name=\"DefaultMaterial\""},
+                {   "scene",    "Scene",    "new_scene",  ".scene.xml",                nullptr,  kSceneText,                    nullptr},
+                {  "prefab",   "Prefab",   "new_prefab", ".prefab.xml",                nullptr, kPrefabText,                    nullptr},
             };
             /** @brief `_2` 부터 세다 멈추는 상한입니다. */
             static constexpr uint32 kMaxUniqueSuffix = 10000;
@@ -149,14 +153,24 @@ namespace sw::editor
     bool EditorAssetFileCommands::createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )
     {
         string text;
-        if ( assetTemplate._pSourcePath == nullptr )
+        if ( assetTemplate._pfnSourcePath == nullptr )
         {
             text = assetTemplate._pText;
         }
-        else if ( ResourceIO::readTextResource( assetTemplate._pSourcePath, text ) == false )
+        else
         {
-            SW_LOG_ERROR( "Could not read the new asset template '%#'", assetTemplate._pSourcePath );
-            return false;
+            const EngineDefaultAssets* pAssets = editor::findSubsystem<const EngineDefaultAssets>();
+            if ( pAssets == nullptr )
+            {
+                SW_LOG_ERROR( "Engine default assets are not loaded - the new asset template has no source" );
+                return false;
+            }
+            const DataPath& sourcePath = assetTemplate._pfnSourcePath( *pAssets );
+            if ( ResourceIO::readTextResource( sourcePath.get(), text ) == false )
+            {
+                SW_LOG_ERROR( "Could not read the new asset template '%#'", sourcePath.c_str() );
+                return false;
+            }
         }
         outAssetAbs = makeUniquePath( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix );
         if ( assetTemplate._pNameAttribute != nullptr )

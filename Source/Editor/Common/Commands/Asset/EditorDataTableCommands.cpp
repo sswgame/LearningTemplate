@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -19,8 +20,6 @@ namespace sw::editor
     {
         struct EditorDataTableCommandsInternal
         {
-            static constexpr const utf8* kEngineProject = "engine/localization/engine.locproject.json";
-
             /** @brief 원문 표들을 읽습니다. 못 읽은 표가 있으면 false 입니다. */
             [[nodiscard]] static bool readSourceTables( const LocalizationSheet& sheet, vector<SourceStringTable>& outListTable )
             {
@@ -73,7 +72,11 @@ namespace sw::editor
     void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )
     {
         outListProjectPath.clear();
-        const string enginePath = ResourcePaths::getResourcePath( EditorDataTableCommandsInternal::kEngineProject );
+        // 엔진 문자열 프로젝트 경로의 정본은 데이터에서 읽은 엔진 기본 에셋 표다 — 표가 없으면 대신 쓸 값이 없으므로 오류로 알리고 빼고 모은다.
+        const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
+        if ( pDefaultAssets == nullptr )
+            SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
+        const string enginePath = pDefaultAssets != nullptr ? ResourcePaths::getResourcePath( pDefaultAssets->_localizationProject.get() ) : string{};
         if ( enginePath.empty() == false && FileUtil::exists( enginePath ) )
             outListProjectPath.push_back( FileUtil::normalizeSeparators( enginePath ) );
 

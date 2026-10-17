@@ -24,6 +24,9 @@ namespace sw::editor
     class ProfilerPanel : public IEditorPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "profiler";
+
         /** @brief 프로파일러 창을 만듭니다. */
         ProfilerPanel();
         /** @brief 해제할 GPU 리소스가 없으므로 아무것도 하지 않습니다. */

@@ -221,5 +221,5 @@ namespace sw::editor
         EditorCommandGUI::registerDefaults();
     }
 
-    SW_EDITOR_PANEL( ShortcutsPanel, "shortcuts", EditorPanelCategory::Tool, 2010 );
+    SW_EDITOR_PANEL( ShortcutsPanel, ShortcutsPanel::kPanelID, EditorPanelCategory::Tool, 2010 );
 } // namespace sw::editor

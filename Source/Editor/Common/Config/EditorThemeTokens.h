@@ -205,9 +205,8 @@ namespace sw::editor
      */
     struct SW_EDITOR_API EditorThemeTokens
     {
-        static constexpr const utf8* kFolderName  = "theme";        ///< 에디터 팩(`Resource/editor`) 아래 폴더
-        static constexpr const utf8* kExtension   = ".tokens.json"; ///< 토큰 파일 접미사
-        static constexpr const utf8* kDefaultName = "dark";         ///< 설정이 없거나 그 이름의 파일이 없을 때 쓰는 벌
+        static constexpr const utf8* kFolderName = "theme";        ///< 에디터 팩(`Resource/editor`) 아래 폴더
+        static constexpr const utf8* kExtension  = ".tokens.json"; ///< 토큰 파일 접미사
 
         /** @brief 토큰 폴더의 절대 경로입니다. 리소스 루트가 없으면 빈 문자열입니다. */
         static string getFolderPath();

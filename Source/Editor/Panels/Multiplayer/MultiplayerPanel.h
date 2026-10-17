@@ -22,6 +22,9 @@ namespace sw::editor
     class MultiplayerPanel final : public IEditorPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "multiplayer";
+
         MultiplayerPanel();
 
         const utf8* getPanelTitle() const override { return "Multiplayer"; }

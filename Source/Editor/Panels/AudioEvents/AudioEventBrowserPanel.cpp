@@ -32,7 +32,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "audioevents", true ); // 패널은 이 파일에 등록되어 있다
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<AudioEventBrowserPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
 
             /** @brief 사용률 막대 하나를 그립니다. 상한에 닿으면 경고색입니다. */
@@ -246,7 +246,7 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    SW_EDITOR_PANEL( AudioEventBrowserPanel, "audioevents", EditorPanelCategory::Tool, 2101 );
+    SW_EDITOR_PANEL( AudioEventBrowserPanel, AudioEventBrowserPanel::kPanelID, EditorPanelCategory::Tool, 2101 );
     SW_EDITOR_COMMAND( AudioEventBrowserOpen, "window.audioEvents", 2231, "Audio Events", editoricon::kSettings, "Audio",
                        "오디오 이벤트 창을 엽니다(이벤트 속성 · 재생 중 인스턴스 · 보이스 프로파일러)", "Open the audio event browser", {}, &AudioEventBrowserPanelInternal::openPanel, nullptr,
                        "MainMenu/Window" );

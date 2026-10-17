@@ -742,7 +742,7 @@ namespace sw::editor
             {
                 EditorContext*        pContext = EditorContext::get();
                 const HierarchyPanel* pHierarchy =
-                    pContext != nullptr ? static_cast<const HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) ) : nullptr;
+                    pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>() : nullptr;
                 if ( pHierarchy == nullptr )
                     return false;
                 outValue = static_cast<float64>( pHierarchy->getVisibleRootCount() );
@@ -1103,7 +1103,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const SceneViewPanel*               pPanel        = static_cast<const SceneViewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "scene_view" ) );
+                const SceneViewPanel*               pPanel        = pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>();
                 const EditorVisualizerRegistration* pRegistration = EditorExtensionRegistry<EditorVisualizerRegistration>::find( gv_editorProbeVisualizer );
                 if ( pPanel == nullptr || pRegistration == nullptr )
                     return false;
@@ -1267,7 +1267,7 @@ namespace sw::editor
             static const EditorViewportClient* findSceneViewClient()
             {
                 EditorContext*        pContext = EditorContext::get();
-                const SceneViewPanel* pPanel   = pContext != nullptr ? static_cast<const SceneViewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "scene_view" ) ) : nullptr;
+                const SceneViewPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>() : nullptr;
                 return pPanel != nullptr ? &pPanel->getViewportClient() : nullptr;
             }
 
@@ -1428,7 +1428,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const AnimationGraphPanel* pPanel = static_cast<const AnimationGraphPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "animation_graph" ) );
+                const AnimationGraphPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AnimationGraphPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( bConditionOnly ? pPanel->countConditionLinks() : pPanel->getLinkCount() );
@@ -1451,7 +1451,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel( gv_editorProbePanel );
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorProbePanel );
                 if ( pPanel == nullptr )
                     return false;
                 outValue = pPanel->isOpen() ? 1.0 : 0.0;
@@ -1534,7 +1534,7 @@ namespace sw::editor
             [[nodiscard]] static bool readInputMapValue( uint32 which, float64& outValue )
             {
                 EditorContext*       pContext = EditorContext::get();
-                const InputMapPanel* pPanel   = pContext != nullptr ? static_cast<const InputMapPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "input_map" ) ) : nullptr;
+                const InputMapPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<InputMapPanel>() : nullptr;
                 if ( pPanel == nullptr )
                     return false;
                 uint32 value{ 0 };
@@ -1554,7 +1554,7 @@ namespace sw::editor
             [[nodiscard]] static bool readProfilerPanelValue( uint32 which, float64& outValue )
             {
                 EditorContext*       pContext = EditorContext::get();
-                const ProfilerPanel* pPanel   = pContext != nullptr ? static_cast<const ProfilerPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "profiler" ) ) : nullptr;
+                const ProfilerPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<ProfilerPanel>() : nullptr;
                 if ( pPanel == nullptr || pPanel->isOpen() == false )
                     return false;
                 switch ( which )
@@ -1612,7 +1612,7 @@ namespace sw::editor
             [[nodiscard]] static bool readRenderTargetPanelValue( uint32 which, float64& outValue )
             {
                 EditorContext*           pContext = EditorContext::get();
-                const RenderTargetPanel* pPanel   = pContext != nullptr ? static_cast<const RenderTargetPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "render_targets" ) )
+                const RenderTargetPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<RenderTargetPanel>()
                                                                         : nullptr;
                 if ( pPanel == nullptr || pPanel->isOpen() == false )
                     return false;
@@ -1684,7 +1684,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const SequencerPanel* pPanel = static_cast<const SequencerPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "sequencer" ) );
+                const SequencerPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SequencerPanel>();
                 uint32                count{ 0 };
                 const bool            bKeyFrameCountUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findSelectedTrackKeyFrameCount( count ) == false;
                 if ( bKeyFrameCountUnavailable )

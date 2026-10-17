@@ -111,8 +111,8 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
-                HierarchyPanel*    pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel*    pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 GameObjectManager* pManager   = editor::getActiveObjectManager();
                 if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -382,8 +382,8 @@ namespace sw::editor
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
-                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel* pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 uint64&         objectID   = getToggleProbeObjectID();
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -443,8 +443,8 @@ namespace sw::editor
                 GameObjectManager*    pManager         = editor::getActiveObjectManager();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
-                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel* pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 uint64&         objectID   = getRowProbeObjectID();
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )

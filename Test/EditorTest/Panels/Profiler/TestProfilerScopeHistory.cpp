@@ -152,12 +152,12 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, DisabledProfilerIsNotCaptured )
 }
 
 /**
- * @brief [EditorTracyLauncherTest] 뷰어는 설정 경로(파일 · 폴더) → 프로젝트의 Tools/Tracy 순서로 찾고, 명령은 localhost 에 붙는다
+ * @brief [EditorTracyLauncherTest] 뷰어는 설정한 자리(파일 · 폴더, 상대 경로는 프로젝트 기준) 한 곳에서만 찾고, 명령은 localhost 에 붙는다
  */
 SW_TEST_CASE( EditorTracyLauncherTest, FindsViewerAndBuildsConnectCommand )
 {
     const sw::string root   = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_tracy_launcher_test" );
-    const sw::string folder = sw::FileUtil::joinPath( root, sw::editor::EditorTracyLauncher::kDefaultViewerFolder );
+    const sw::string folder = sw::FileUtil::joinPath( root, "Tools/Tracy" );
     const sw::string viewer = sw::FileUtil::joinPath( folder, sw::editor::EditorTracyLauncher::getViewerFileName() );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
     const uint8 arrByte[1] = { 0 };
@@ -168,16 +168,18 @@ SW_TEST_CASE( EditorTracyLauncherTest, FindsViewerAndBuildsConnectCommand )
     } ) );
 
     sw::string found;
-    // 설정이 없으면 프로젝트의 Tools/Tracy.
-    SW_ASSERT_TRUE( sw::editor::EditorTracyLauncher::findViewerPath( "", root, found ) );
+    // 상대 경로는 프로젝트 루트 기준이다.
+    SW_ASSERT_TRUE( sw::editor::EditorTracyLauncher::findViewerPath( "Tools/Tracy", root, found ) );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( found, viewer ) );
+    // 설정이 비면 다른 자리를 뒤지지 않는다.
+    SW_EXPECT_FALSE( sw::editor::EditorTracyLauncher::findViewerPath( "", root, found ) );
     // 설정이 폴더를 가리키면 그 안의 실행 파일, 파일을 가리키면 그대로.
     SW_ASSERT_TRUE( sw::editor::EditorTracyLauncher::findViewerPath( folder, "", found ) );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( found, viewer ) );
     SW_ASSERT_TRUE( sw::editor::EditorTracyLauncher::findViewerPath( viewer, "", found ) );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( found, viewer ) );
     // 없는 곳만 주면 못 찾는다.
-    SW_EXPECT_FALSE( sw::editor::EditorTracyLauncher::findViewerPath( "", sw::FileUtil::joinPath( root, "missing" ), found ) );
+    SW_EXPECT_FALSE( sw::editor::EditorTracyLauncher::findViewerPath( "Tools/Tracy", sw::FileUtil::joinPath( root, "missing" ), found ) );
     SW_EXPECT_TRUE( found.empty() );
 
     const sw::string command = sw::editor::EditorTracyLauncher::makeViewerCommand( "C:/Tools/Tracy/tracy-profiler.exe", 8087 );

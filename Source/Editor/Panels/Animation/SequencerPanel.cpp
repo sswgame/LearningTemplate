@@ -31,7 +31,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( SequencerPanel, "sequencer", EditorPanelCategory::Tool, 1000 );
+    SW_EDITOR_PANEL( SequencerPanel, SequencerPanel::kPanelID, EditorPanelCategory::Tool, 1000 );
 
     /**
      * @brief ImSequencer 가 보는 시퀀스입니다. 항목은 애셋의 `SequenceTrackItem` 그대로입니다.

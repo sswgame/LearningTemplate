@@ -13,8 +13,15 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/Animation/AnimationRewindPanel.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
+#include "Editor/Panels/Data/DataTablePanel.h"
+#include "Editor/Panels/InputMap/InputMapPanel.h"
 #include "Editor/Panels/MapCheck/MapCheckPanel.h"
+#include "Editor/Panels/RenderTarget/RenderTargetPanel.h"
+#include "Editor/Panels/Scene/HistoryPanel.h"
+#include "Editor/Panels/Settings/GlobalVariablesPanel.h"
+#include "Editor/Panels/Settings/UserSettingsPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -36,7 +43,7 @@ namespace sw::editor
          */
         struct EditorSelfTestPanelCasesInternal
         {
-            static constexpr const utf8* kContentBrowserPanelID    = "content_browser";
+            static constexpr const utf8* kContentBrowserPanelID    = ContentBrowserPanel::kPanelID;
             static constexpr const utf8* kContentBrowserPanelTitle = "Content Browser";
             static constexpr const utf8* kProbeFolderName          = "__editorselftest"; ///< 활성 게임 팩 아래의 테스트 폴더. 끝나면 지운다
             static constexpr uint32      kMaxWaitStepCount         = 180;                ///< 폴더 목록(워커)과 파일 감시를 기다리는 최대 프레임 수
@@ -62,7 +69,7 @@ namespace sw::editor
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return nullptr;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kContentBrowserPanelID, true );
-                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( kContentBrowserPanelID ) );
+                ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( context.expect( pPanel != nullptr, "no content browser panel" ) == false )
                     return nullptr;
                 ImGui::SetWindowFocus( kContentBrowserPanelTitle );
@@ -391,7 +398,7 @@ namespace sw::editor
                 const uint32       stepIndex = context.getStepIndex();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                MapCheckPanel* pPanel = static_cast<MapCheckPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( MapCheckPanel::kPanelID ) );
+                MapCheckPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MapCheckPanel>();
                 if ( context.expect( pPanel != nullptr, "no map check panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -475,7 +482,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runGlobalVariableGroupsStack( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kPanelID      = "global_variables";
+                constexpr const utf8* kPanelID      = GlobalVariablesPanel::kPanelID;
                 constexpr uint32      kMaxStepCount = 30;
 
                 EditorContext* pContext = EditorContext::get();
@@ -519,8 +526,9 @@ namespace sw::editor
             // 자체 테스트는 레이아웃을 저장하거나 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 적용된다.
             // ------------------------------------------------------------------------------
             // UI Preview 는 `.ui.xml` 에셋을 여는 패널이라(EditorAssetType::UIDocument) 기본 배치가 다른 에셋 패널처럼 가운데 영역에 도킹한다 — 여기 넣지 않는다.
-            static constexpr const utf8* kArrFloatingToolPanelID[] = { "history", "global_variables", "render_targets", "animation_rewind",
-                                                                       "data_table", "input_map", "user_settings" };
+            static constexpr const utf8* kArrFloatingToolPanelID[] = { HistoryPanel::kPanelID, GlobalVariablesPanel::kPanelID, RenderTargetPanel::kPanelID,
+                                                                       AnimationRewindPanel::kPanelID, DataTablePanel::kPanelID, InputMapPanel::kPanelID,
+                                                                       UserSettingsPanel::kPanelID };
 
             /** @brief 도구 창 테스트의 진행 상태입니다. */
             struct ToolWindowProbe
@@ -576,7 +584,7 @@ namespace sw::editor
                 }
 
                 const utf8*   pPanelID = kArrFloatingToolPanelID[probe._panelIndex];
-                IEditorPanel* pPanel   = panelManager.findPanel( pPanelID );
+                IEditorPanel* pPanel   = panelManager.findPanelByID( pPanelID );
                 if ( pPanel == nullptr )
                 {
                     ++probe._panelIndex;

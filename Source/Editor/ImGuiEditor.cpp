@@ -115,32 +115,44 @@ namespace sw::editor
             /** @brief `allocateForImGui` 로 할당한 메모리를 해제합니다. */
             static void freeForImGui( void* pPtr, void* /*pUserData*/ ) { Memory::free( pPtr ); }
 
+            /**
+             * @brief 스플래시 로드 작업 둘의 결과입니다. 작업마다 제 칸만 쓰고, 기동 스레드는 단계(`waitStage`)가 끝난 뒤에 읽는다.
+             * @details 두 파일은 엔진 필수 데이터다. 읽지 못해도 경고만 남기고 기동하면 렌더 경로가 틀린 채로 돈다 — 결과를 기동 단계가 받아 멈춘다.
+             */
+            struct SplashLoadResult
+            {
+                bool _bRenderPassLoaded{ false };
+                bool _bForwardPipelineLoaded{ false };
+            };
+
             static void loadSplashDefaultRenderPass( const TaskArgs& args )
             {
-                shared_ptr<RenderPassAsset> pPass = args.get<shared_ptr<RenderPassAsset>>( 0 );
-                if ( pPass == nullptr )
-                    return;
+                shared_ptr<RenderPassAsset>  pPass   = args.get<shared_ptr<RenderPassAsset>>( 0 );
+                shared_ptr<SplashLoadResult> pResult = args.get<shared_ptr<SplashLoadResult>>( 1 );
                 // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 워커 스레드에서 도는 스플래시 로드라, 서비스 연결이 아직
-                // 없거나 이미 끊긴 시점에 걸리면 조용히 크래시한다.
+                // 없거나 이미 끊긴 시점에 걸리면 조용히 크래시한다. 그때는 결과가 false 로 남아 기동이 멈춘다.
                 const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
-                if ( pEngineDefaultAssets == nullptr )
+                const bool                 bNotReady            = pPass == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
+                if ( bNotReady )
                     return;
                 SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
-                if ( pPass->loadFromXMLFile( pEngineDefaultAssets->_defaultRenderPass.get() ) == false )
-                    SW_LOG_WARNING( "Splash: could not read %#", pEngineDefaultAssets->_defaultRenderPass.c_str() );
+                pResult->_bRenderPassLoaded = pPass->loadFromXMLFile( pEngineDefaultAssets->_defaultRenderPass.get() );
+                if ( pResult->_bRenderPassLoaded == false )
+                    SW_LOG_ERROR( "Splash: could not read %#", pEngineDefaultAssets->_defaultRenderPass.c_str() );
             }
 
             static void loadSplashForwardPipeline( const TaskArgs& args )
             {
-                shared_ptr<RenderPipelineAsset> pPipeline = args.get<shared_ptr<RenderPipelineAsset>>( 0 );
-                if ( pPipeline == nullptr )
-                    return;
-                const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
-                if ( pEngineDefaultAssets == nullptr )
+                shared_ptr<RenderPipelineAsset> pPipeline            = args.get<shared_ptr<RenderPipelineAsset>>( 0 );
+                shared_ptr<SplashLoadResult>    pResult              = args.get<shared_ptr<SplashLoadResult>>( 1 );
+                const EngineDefaultAssets*      pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
+                const bool                      bNotReady            = pPipeline == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
+                if ( bNotReady )
                     return;
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
-                if ( pPipeline->loadFromXMLFile( pEngineDefaultAssets->_defaultForwardPipeline.get() ) == false )
-                    SW_LOG_WARNING( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
+                pResult->_bForwardPipelineLoaded = pPipeline->loadFromXMLFile( pEngineDefaultAssets->_defaultForwardPipeline.get() );
+                if ( pResult->_bForwardPipelineLoaded == false )
+                    SW_LOG_ERROR( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
             }
 
             /** @brief 인스턴스가 내려가기 전에 선택 · 미저장 표시를 엔진(`EditSessionState`)에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
@@ -475,15 +487,14 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializeEditorData()
     {
-#if !defined( SW_SHIPPING )
-        // 처음 실행이면 파일이 없으므로 기본값을 그대로 쓴다.
-        if ( EditorPreferencesStore::loadAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
-            SW_LOG_INFO( "Editor preferences: no saved file yet - using defaults" );
+        // 사용자 환경설정은 사용자 파일이다 — 처음 실행이면 없고, 깨졌으면 옆으로 치우고 새로 쓴다(`EditorPreferencesStore::loadAll`).
+        if ( EditorPreferencesStore::loadAll( EditorPreferencesStore::getDefaultFilePath() ) == EditorUserFileResult::Missing )
+            SW_LOG_INFO( "Editor preferences: first run - nothing changed from the defaults yet" );
+        // 도구 시드는 에디터 필수 데이터다. 대신 쓸 값이 없으므로 읽지 못하면 기동을 멈춘다(이유는 로드가 키 이름과 남겼다).
         _editorToolDefaults = make_unique<EditorToolDefaults>();
         if ( _editorToolDefaults->loadFromHostPath() == false )
-            SW_LOG_WARNING( "Editor data could not be read - using defaults" );
+            return SubsystemInitResult::Failed;
         editor::setEditorToolDefaults( _editorToolDefaults.get() );
-#endif
         return SubsystemInitResult::Succeeded;
     }
 
@@ -517,7 +528,12 @@ namespace sw::editor
         _dockLayout.initializePersistencePaths();
         _dockLayout.applyIniFilename();
 
-        EditorFontSetup::apply();
+        // 글꼴은 데이터(editortooldefaults.json 후보 · 테마 글자 크기)에서 온다. 못 찾으면 이유를 남겼고 기동을 멈춘다.
+        if ( EditorFontSetup::apply() == false )
+        {
+            shutdownImGuiContext();
+            return SubsystemInitResult::Failed;
+        }
         return SubsystemInitResult::Succeeded;
     }
 
@@ -594,15 +610,17 @@ namespace sw::editor
             return SubsystemInitResult::Failed;
         }
 
+        const shared_ptr<ImGuiEditorInternal::SplashLoadResult> pResult = sw::make_shared<ImGuiEditorInternal::SplashLoadResult>();
+
         TaskHandle hDefault = pTaskManager->emplaceTask(
             "EditorSplash_DefaultRenderPass",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
-            MakeTaskArgs( defaultPass ) );
+            MakeTaskArgs( defaultPass, pResult ) );
 
         TaskHandle hForward = pTaskManager->emplaceTask(
             "EditorSplash_ForwardPipeline",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashForwardPipeline ),
-            MakeTaskArgs( forwardPipeline ) );
+            MakeTaskArgs( forwardPipeline, pResult ) );
 
         TaskStageHandle stage = pTaskManager->createStage( "EditorSplashLoad" );
         stage.addTask( hDefault ).addTask( hForward );
@@ -611,6 +629,9 @@ namespace sw::editor
         hForward.submit();
 
         pTaskManager->waitStage( stage );
+        // 두 파일은 엔진 필수 데이터다 — 하나라도 못 읽었으면(이유는 작업이 남겼다) 기동을 멈춘다.
+        if ( pResult->_bRenderPassLoaded == false || pResult->_bForwardPipelineLoaded == false )
+            return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
     }
 
@@ -621,14 +642,18 @@ namespace sw::editor
         _editorContext->setDockLayout( &_dockLayout );
         _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
-        // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다.
-        EditorThemeUtil::loadFromConfig();
+        // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다. 설정한 벌이 없으면 다른 벌로 대신하지 않고 기동을 멈춘다(이유는 로그에 남았다).
+        if ( EditorThemeUtil::loadFromConfig() == false )
+        {
+            shutdownEditorContext();
+            return SubsystemInitResult::Failed;
+        }
         _editorContext->getSubsystem<EditorRenderViews>().setRHIDevice( _pRHIDevice );
         _editorContext->getSubsystem<EditorRenderViews>().setRendererBackend( _rendererBackend.get() );
 
         _editorContext->getSubsystem<EditorPanelManager>().registerDefaultPanels();
         // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 적용한다. 처음 실행이면 파일이 없다.
-        if ( EditorCommandGUI::loadShortcutOverrides() == false )
+        if ( EditorCommandGUI::loadShortcutOverrides() == EditorUserFileResult::Missing )
             SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
         EditorCommandGUI::registerDefaults();
         // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.

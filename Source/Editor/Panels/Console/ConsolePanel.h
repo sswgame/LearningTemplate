@@ -22,6 +22,9 @@ namespace sw::editor
     class ConsolePanel : public IEditorPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "console";
+
         // ------------------------------------------------------------------------------
         // 1) 수명 주기. 생성할 때 Logger 를 구독하고 shutdown 이나 소멸할 때 해제한다
         // ------------------------------------------------------------------------------

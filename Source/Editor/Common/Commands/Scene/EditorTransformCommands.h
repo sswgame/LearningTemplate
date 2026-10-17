@@ -35,18 +35,16 @@ namespace sw::editor
 
     /**
      * @class EditorTransformCommands
-     * @brief 워크스페이스 클립보드의 바이너리와 XML 을 받아 붙여 넣기와 정렬을 수행합니다.
+     * @brief 워크스페이스 클립보드의 컴포넌트 값(XML — 프리셋 파일과 같은 형식 하나)을 붙여 넣고 정렬을 수행합니다.
      */
     class EditorTransformCommands
     {
     public:
-        /** @brief 복사한 컴포넌트의 바이너리나 XML 값을 대상에 덮어씁니다. */
-        static bool pasteComponentValues( Component* pTargetComp, const vector<uint8>& bytes, string_view xmlFallback = {} );
+        /** @brief 복사한 컴포넌트의 값(XML)을 대상에 덮어씁니다. 이름(컴포넌트 키)은 대상의 것을 지킵니다. 읽지 못하면 false 이고 대상은 그대로입니다. */
         static bool pasteComponentValues( Component* pTargetComp, string_view xml );
         /** @brief 작업 공간 클립보드(`EditorWorkspace::copyComponent`)의 값을 @p pTargetComp 에 붙여 넣습니다. */
         static bool pasteCopiedComponentValues( const EditorWorkspace& workspace, Component* pTargetComp );
-        /** @brief 복사한 타입으로 새 컴포넌트를 붙이고 바이너리나 XML 값을 적용합니다. */
-        static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, const vector<uint8>& bytes, string_view xmlFallback = {} );
+        /** @brief 복사한 타입으로 새 컴포넌트를 붙이고 값(XML)을 적용합니다. 값을 읽지 못하면 경고하고 기본값 컴포넌트로 둡니다. */
         static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml );
         /** @brief 작업 공간 클립보드의 컴포넌트를 @p pTargetObj 에 새로 붙입니다. */
         static Component* pasteCopiedComponentAsNew( const EditorWorkspace& workspace, GameObject* pTargetObj );

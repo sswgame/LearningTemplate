@@ -30,7 +30,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( GameViewPanel, "game_view", EditorPanelCategory::Core, 350 );
+    SW_EDITOR_PANEL( GameViewPanel, GameViewPanel::kPanelID, EditorPanelCategory::Core, 350 );
 
     GameViewPanel::GameViewPanel()
         : _aspect{ EditorGameViewAspect::Free }

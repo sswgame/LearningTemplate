@@ -47,23 +47,13 @@ SW_TEST_CASE( ConfigHotReloadTest, ChangedFileGoesToItsOwner )
     SW_EXPECT_FALSE( ConfigHotReload::reloadChangedFile( &manager, FileUtil::joinPath( rootDir, "EditorConfig.json" ) ) );
     SW_EXPECT_FALSE( ConfigHotReload::reloadChangedFile( nullptr, path ) );
 
-    // 에디터 도구 시드 파일은 기본값과 다른 값이 있을 때만 생긴다. 저장소에는 없으니 그 경로의 "변경" 은 아무것도 바꾸지 않는다.
+    // 에디터 도구 시드 파일(저장소에 있다)의 "변경" 은 에디터가 들고 있는 값을 파일 값으로 통째로 바꾼다.
     EditorToolDefaults toolDefaults{};
     toolDefaults._defaultMap = "stale";
     setEditorToolDefaults( &toolDefaults );
     const string toolDefaultsPath = EditorPaths::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
-    if ( FileUtil::exists( toolDefaultsPath ) == false )
-    {
-        SW_EXPECT_FALSE( ConfigHotReload::reloadChangedFile( nullptr, toolDefaultsPath ) );
-        SW_EXPECT_EQUAL( string( "stale" ), toolDefaults._defaultMap );
-    }
+    SW_EXPECT_TRUE( ConfigHotReload::reloadChangedFile( nullptr, toolDefaultsPath ) );
+    SW_EXPECT_TRUE( toolDefaults._defaultMap != "stale" );
+    SW_EXPECT_FALSE( toolDefaults._listBaseFont.empty() );
     setEditorToolDefaults( nullptr );
-
-    // 파일이 있으면 그 값만 덮고 나머지는 기본값이다.
-    const string localToolDefaults = FileUtil::joinPath( rootDir, "editortooldefaults.json" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( localToolDefaults, "{ \"_defaultMap\": \"game/empty/maps/probe.tilemap.json\" }" ) );
-    EditorToolDefaults loaded{};
-    SW_EXPECT_TRUE( loaded.loadFromHostPath( localToolDefaults ) );
-    SW_EXPECT_EQUAL( string( "game/empty/maps/probe.tilemap.json" ), loaded._defaultMap );
-    SW_EXPECT_EQUAL( EditorToolDefaults{}._spriteAtlas, loaded._spriteAtlas );
 }

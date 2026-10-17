@@ -23,7 +23,7 @@ namespace sw::editor
             static SceneViewPanel* findSceneViewPanel()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? static_cast<SceneViewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "scene_view" ) ) : nullptr;
+                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>() : nullptr;
             }
 
             /** @brief 씬 뷰 오버레이입니다(씬 뷰 패널이 없으면 nullptr). */

@@ -38,28 +38,24 @@ namespace sw::editor
             }
 
             /**
-             * @brief 컨텍스트가 없을 때 반환할 빈 테마입니다. 상수이므로 상태가 아닙니다.
-             * @details 색 게터가 `const Color&` 를 반환하므로 임시 객체를 참조로 넘길 수 없다. 값은 토큰을 읽기 전의 기본값이라 의미가 없다.
+             * @brief 환경설정 섹션 Appearance 의 값이 바뀌었을 때(창에서 고침 · 파일을 다시 읽음 · 섹션 되돌림) 테마를 다시 적용합니다.
+             * @details 환경설정 파일은 ImGui 컨텍스트보다 먼저 읽는다 — 그때는 적용할 UI 가 없고, 컨텍스트를 만든 뒤 `ImGuiEditor` 가 적용하며 실패하면 기동을 멈춘다.
+             *          실행 중에 없는 벌 이름을 적으면 오류를 남기고 지금 테마를 그대로 둔다.
              */
-            static const EditorThemeConfig& fallbackTheme()
+            static void onAppearanceChanged()
             {
-                static const EditorThemeConfig kFallback{};
-                return kFallback;
+                if ( ImGui::GetCurrentContext() != nullptr && EditorThemeUtil::loadFromConfig() == false )
+                    SW_LOG_ERROR( "Editor/Appearance names a theme that cannot be applied - the current theme stays until it is fixed" );
             }
 
-            /** @brief 현재 적용된 테마를 반환합니다. 에디터 서브시스템 `EditorTheme` 이 들며, 에디터 범위가 없으면 빈 테마를 봅니다. */
-            static const EditorThemeConfig& activeTheme()
-            {
-                const EditorTheme* pTheme = findSubsystem<EditorTheme>();
-                return pTheme != nullptr ? pTheme->getConfig() : fallbackTheme();
-            }
+            /**
+             * @brief 현재 적용된 테마를 반환합니다. 에디터 서브시스템 `EditorTheme` 이 듭니다.
+             * @details 테마는 에디터 범위 안에서만 뜻이 있다. 범위 밖에서 색을 물으면 지어낸 빈 테마로 답하지 않고 `getSubsystem` 이 멈춘다.
+             */
+            static const EditorThemeConfig& activeTheme() { return getSubsystem<EditorTheme>().getConfig(); }
 
-            /** @brief 테마를 교체합니다. 에디터 범위가 없으면 적용할 UI 가 없으므로 조용히 무시합니다. */
-            static void setActiveTheme( const EditorThemeConfig& config )
-            {
-                if ( EditorTheme* pTheme = findSubsystem<EditorTheme>() )
-                    pTheme->getConfig() = config;
-            }
+            /** @brief 테마를 교체합니다. */
+            static void setActiveTheme( const EditorThemeConfig& config ) { getSubsystem<EditorTheme>().getConfig() = config; }
 
             /** @brief 폴더에 있는 토큰 벌을 모두 읽어 둡니다. 읽지 못한 벌은 이유와 함께 로그로 남기고 뺀다. */
             static void loadAvailableThemes( vector<EditorThemeConfig>& outListTheme )
@@ -77,26 +73,21 @@ namespace sw::editor
                         SW_LOG_ERROR( "Theme tokens '%#' were not loaded: %#", name.c_str(), error.c_str() );
                 }
                 if ( outListTheme.empty() )
-                    SW_LOG_ERROR( "No editor theme token file under %# - the editor keeps the ImGui default style", EditorThemeTokens::getFolderPath().c_str() );
+                    SW_LOG_ERROR( "No editor theme token file under %# - no theme can be applied", EditorThemeTokens::getFolderPath().c_str() );
             }
 
-            /** @brief 읽어 둔 벌 목록입니다. 비었으면 지금 읽습니다. 에디터 범위가 없으면 nullptr 입니다. */
-            static vector<EditorThemeConfig>* availableThemes()
+            /** @brief 읽어 둔 벌 목록입니다. 비었으면 지금 읽습니다. */
+            static vector<EditorThemeConfig>& availableThemes()
             {
-                EditorTheme* pTheme = findSubsystem<EditorTheme>();
-                if ( pTheme == nullptr )
-                    return nullptr;
-                if ( pTheme->getAvailable().empty() )
-                    loadAvailableThemes( pTheme->getAvailable() );
-                return &pTheme->getAvailable();
+                EditorTheme& theme = getSubsystem<EditorTheme>();
+                if ( theme.getAvailable().empty() )
+                    loadAvailableThemes( theme.getAvailable() );
+                return theme.getAvailable();
             }
 
             static const EditorThemeConfig* findAvailable( string_view name )
             {
-                const vector<EditorThemeConfig>* pListTheme = availableThemes();
-                if ( pListTheme == nullptr )
-                    return nullptr;
-                for ( const EditorThemeConfig& theme : *pListTheme )
+                for ( const EditorThemeConfig& theme : availableThemes() )
                 {
                     if ( StringUtil::equals( theme._name, name, true ) )
                         return &theme;
@@ -189,10 +180,7 @@ namespace sw::editor
     void EditorThemeUtil::listThemes( vector<string>& outListName )
     {
         outListName.clear();
-        const vector<EditorThemeConfig>* pListTheme = EditorThemeInternal::availableThemes();
-        if ( pListTheme == nullptr )
-            return;
-        for ( const EditorThemeConfig& theme : *pListTheme )
+        for ( const EditorThemeConfig& theme : EditorThemeInternal::availableThemes() )
         {
             outListName.push_back( theme._name );
         }
@@ -200,13 +188,11 @@ namespace sw::editor
 
     void EditorThemeUtil::reloadThemes()
     {
-        EditorTheme* pTheme = findSubsystem<EditorTheme>();
-        if ( pTheme == nullptr )
-            return;
-        EditorThemeInternal::loadAvailableThemes( pTheme->getAvailable() );
-        // 지금 벌을 새 값으로 다시 적용하고, 사용자가 덮어쓴 강조색 · 둥글기는 설정에서 다시 얹는다.
-        loadFromConfig();
-        SW_LOG_INFO( "Editor theme tokens reloaded (%# set(s))", pTheme->getAvailable().size() );
+        EditorTheme& theme = getSubsystem<EditorTheme>();
+        EditorThemeInternal::loadAvailableThemes( theme.getAvailable() );
+        // 지금 벌을 새 값으로 다시 적용하고, 사용자가 덮어쓴 강조색 · 둥글기는 설정에서 다시 얹는다. 못 하면 오류를 남기고 지금 테마를 둔다.
+        if ( loadFromConfig() )
+            SW_LOG_INFO( "Editor theme tokens reloaded (%# set(s))", theme.getAvailable().size() );
     }
 
     void EditorThemeUtil::applyTheme( const EditorThemeConfig& config )
@@ -342,25 +328,21 @@ namespace sw::editor
         return EditorThemeInternal::dpiScale();
     }
 
-    void EditorThemeUtil::loadFromConfig()
+    bool EditorThemeUtil::loadFromConfig()
     {
-        // 환경설정 파일은 ImGui 컨텍스트보다 먼저 읽는다. 섹션이 바뀐 뒤의 동작이 여기로 들어온다. 테마는 컨텍스트를 만든 뒤 ImGuiEditor 가 다시 적용한다.
-        if ( ImGui::GetCurrentContext() == nullptr )
-            return;
-        const EditorConfig& editorConfig = EditorConfig::getActive();
-
-        const EditorThemeConfig* pTheme = EditorThemeInternal::findAvailable( editorConfig._themeName );
+        // 테마 이름의 정본은 설정(`EditorConfig::_themeName`)이다. 그 벌이 없으면 다른 벌로 바꿔 끼우지 않는다 — 고친 이름이 무시된 것을 아무도 모른다.
+        const EditorConfig&      editorConfig = EditorConfig::getActive();
+        const EditorThemeConfig* pTheme       = EditorThemeInternal::findAvailable( editorConfig._themeName );
         if ( pTheme == nullptr )
         {
-            SW_LOG_WARNING( "Editor theme '%#' not found - using '%#'", editorConfig._themeName.c_str(), EditorThemeTokens::kDefaultName );
-            pTheme = EditorThemeInternal::findAvailable( EditorThemeTokens::kDefaultName );
+            SW_LOG_ERROR( "Editor theme '%#' (Editor/Appearance) has no token file under %#", editorConfig._themeName.c_str(), EditorThemeTokens::getFolderPath().c_str() );
+            return false;
         }
-        if ( pTheme == nullptr )
-            return; // 벌을 하나도 읽지 못했다(loadAvailableThemes 가 오류를 남겼다). ImGui 기본 스타일로 둔다
 
         EditorThemeConfig themeConfig = *pTheme;
         EditorThemeInternal::applyUserOverrides( editorConfig, themeConfig );
         applyTheme( themeConfig );
+        return true;
     }
 
     void EditorThemeUtil::saveToConfig()
@@ -593,10 +575,9 @@ namespace sw::editor
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
             // 1) 테마(토큰 벌) 선택. 목록은 `Resource/editor/theme/*.tokens.json` 이다.
-            const vector<EditorThemeConfig>* pListTheme = EditorThemeInternal::availableThemes();
-            if ( pListTheme != nullptr && ImGui::BeginCombo( "Theme", editorConfig._displayName.c_str() ) )
+            if ( ImGui::BeginCombo( "Theme", editorConfig._displayName.c_str() ) )
             {
-                for ( const EditorThemeConfig& theme : *pListTheme )
+                for ( const EditorThemeConfig& theme : EditorThemeInternal::availableThemes() )
                 {
                     const bool bSelected = theme._name == editorConfig._name;
                     if ( ImGui::Selectable( theme._displayName.c_str(), bSelected ) )
@@ -750,5 +731,5 @@ namespace sw::editor
 {
     // 테마는 환경설정 섹션 "Editor/Appearance" 다. 저장은 EditorPreferences.json 하나에 하고, 값을 고치면(창에서 편집하거나 파일을 다시 읽으면) 테마를 다시 적용한다.
     SW_EDITOR_REGISTER( EditorSettingsRegistration, Settings_EditorConfig, { "appearance", 200 }, "Editor/Appearance", &EditorConfig::StaticType,
-                        &EditorThemeInternal::getAppearanceInstance, &EditorThemeInternal::getAppearanceDefault, &EditorThemeUtil::loadFromConfig, nullptr );
+                        &EditorThemeInternal::getAppearanceInstance, &EditorThemeInternal::getAppearanceDefault, &EditorThemeInternal::onAppearanceChanged, nullptr );
 } // namespace sw::editor

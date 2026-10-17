@@ -179,9 +179,7 @@ namespace sw::editor
         void          copyComponent( const Component* pComp );
         bool          hasCopiedComponent() const;
         const string& getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
-        /** @brief 복사한 컴포넌트의 바이너리 값입니다. 붙여 넣기는 `EditorTransformCommands::pasteCopiedComponentValues` 가 합니다. */
-        const vector<uint8>& getCopiedComponentBytes() const { return _copiedComponentBytes; }
-        /** @brief 바이너리로 옮기지 못하는 값의 XML 대체 사본입니다. */
+        /** @brief 복사한 컴포넌트의 값입니다(XML — 프리셋 파일과 같은 형식 하나). 붙여 넣기는 `EditorTransformCommands::pasteCopiedComponentValues` 가 합니다. */
         const string& getCopiedComponentXML() const { return _copiedComponentXML; }
 
         // 붙여 넣기, 프리셋, 정렬, 분배, 바닥 스냅은 여기에 전달 함수를 두지 않는다. 로직은 EditorTransformCommands 에 있고(작업 공간은 클립보드만 보관한다),
@@ -209,7 +207,6 @@ namespace sw::editor
         string                       _emptyString;
         string                       _copiedComponentXML;
         string                       _copiedComponentTypeName;
-        vector<uint8>                _copiedComponentBytes;
         mutex                        _pendingSceneMutex;
         array<CameraBookmark, 9>     _arrCameraBookmark;
         vector<PrefabIsolationFrame> _listPrefabIsolationFrame;

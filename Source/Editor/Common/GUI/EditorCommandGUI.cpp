@@ -637,7 +637,7 @@ namespace sw::editor
         return EditorCommandGUIInternal::getOverrides();
     }
 
-    bool EditorCommandGUI::loadShortcutOverrides()
+    EditorUserFileResult EditorCommandGUI::loadShortcutOverrides()
     {
         return getShortcutOverrides().loadFromFile( EditorShortcutOverrides::getDefaultFilePath() );
     }

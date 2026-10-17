@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorThemeTokens.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -44,7 +45,7 @@ SW_TEST_CASE( EditorThemeTokensTest, ResolveRejectsMalformedColor )
 {
     sw::editor::EditorThemeConfig dark{};
     sw::string                    error;
-    SW_ASSERT_TRUE( sw::editor::EditorThemeTokens::loadTheme( sw::editor::EditorThemeTokens::kDefaultName, dark, error ) );
+    SW_ASSERT_TRUE( sw::editor::EditorThemeTokens::loadTheme( sw::editor::EditorConfig{}._themeName, dark, error ) );
 
     sw::editor::EditorThemeDef def{};
     def._name                               = "broken";

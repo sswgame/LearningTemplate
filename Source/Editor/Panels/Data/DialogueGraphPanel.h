@@ -18,6 +18,9 @@ namespace sw::editor
     class DialogueGraphPanel : public EditorGraphDocumentPanel<DialogueGraphAsset>
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "dialogue_graph";
+
         /** @brief 대화 그래프 도구를 생성합니다. */
         DialogueGraphPanel();
         /** @brief 노드 에디터 컨텍스트를 해제합니다. */

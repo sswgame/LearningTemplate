@@ -19,7 +19,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( UserSettingsPanel, "user_settings", EditorPanelCategory::Tool, 1900 );
+    SW_EDITOR_PANEL( UserSettingsPanel, UserSettingsPanel::kPanelID, EditorPanelCategory::Tool, 1900 );
 
     UserSettingsPanel::UserSettingsPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다

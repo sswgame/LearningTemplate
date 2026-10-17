@@ -6,6 +6,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Editor/Common/Config/EditorUserFile.h"
+
 namespace sw::editor
 {
     struct EditorCommandShortcut;
@@ -32,8 +34,8 @@ namespace sw::editor
         static void setHotkeysSuspended( bool bSuspended );
         /** @brief 사용자 단축키 덮어쓰기입니다(레지스트리를 다시 만들 때 입힌다). 바꾼 뒤에는 `registerDefaults` 로 다시 만든다. */
         static EditorShortcutOverrides& getShortcutOverrides();
-        /** @brief `Saved/Editor/Shortcuts.json` 을 읽습니다. 파일이 없으면 false 입니다(처음 — 정상). */
-        [[nodiscard]] static bool loadShortcutOverrides();
+        /** @brief `Saved/Editor/Shortcuts.json` 을 읽습니다. 결과는 `EditorShortcutOverrides::loadFromFile` 과 같습니다(없으면 `Missing`, 깨졌으면 치우고 `Recovered`). */
+        [[nodiscard]] static EditorUserFileResult loadShortcutOverrides();
         /** @brief 이번 프레임에 눌린 키 하나와 지금 수정자로 조합을 만듭니다. 눌린 키가 없으면 false 입니다(단축키 편집기의 키 받기). */
         [[nodiscard]] static bool findPressedShortcut( EditorCommandShortcut& outShortcut );
 

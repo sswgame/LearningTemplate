@@ -186,8 +186,8 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         page="EditorToolDefaults", pathPattern=kFileRuntimeEditorToolDefaults, layer=kLayerEditor, fileFormat="json",
         reader="`EditorToolDefaults::loadFromHostPath` (에디터 모듈 기동)", readWhen="에디터 기동 · 에디터 핫 리로드",
         shipping="없음(에디터 없음)", bCommitted=True,
-        typeName="EditorToolDefaults", header="Source/Editor/Common/Config/EditorToolDefaults.h", keyStyle=kKeyStyleJsonMember, bOptional=True,
-        note="기본값과 다른 값이 있을 때만 만든다 — 없으면 기본값"),
+        typeName="EditorToolDefaults", header="Source/Editor/Common/Config/EditorToolDefaults.h", keyStyle=kKeyStyleJsonMember,
+        note="값의 정본(헤더는 형식만) — 없거나 필수 칸이 빠지면 에디터가 서지 않는다"),
     ConfigFileEntry(
         page="", pathPattern="Saved/Editor/EditorPreferences.json", layer=kLayerEditor, fileFormat="json",
         reader="`EditorPreferencesStore::loadAll` · `saveAll`", readWhen="에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**",

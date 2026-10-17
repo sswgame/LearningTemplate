@@ -455,7 +455,7 @@ namespace sw::editor
             clearDocumentDirty();
     }
 
-    SW_EDITOR_PANEL( CatalogPanel, "catalog_editor", EditorPanelCategory::Tool, 1710 );
+    SW_EDITOR_PANEL( CatalogPanel, CatalogPanel::kPanelID, EditorPanelCategory::Tool, 1710 );
 } // namespace sw::editor
 
 namespace sw

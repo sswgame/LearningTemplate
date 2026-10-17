@@ -25,25 +25,23 @@ namespace sw::editor
         struct EditorFontSetupInternal
         {
             /**
-             * @brief 글꼴 크기와 아이콘 비율을 지금 테마 토큰(`_typography`)에서 읽습니다. 테마 서브시스템보다 먼저 불리므로 파일을 직접 읽는다.
+             * @brief 글꼴 크기와 아이콘 비율을 설정한 테마 토큰(`_typography`)에서 읽습니다. 테마 서브시스템보다 먼저 불리므로 파일을 직접 읽는다.
              * @details 아이콘은 24 격자의 가운데 20 칸에 그려져 있어 em 의 5/6 을 차지합니다. 비율 0.8 이면 아이콘 높이가 본문 크기의 2/3 쯤입니다.
-             *          토큰을 읽지 못하면 ImGui 기본 크기와 비율 1 로 둔다(오류는 로그로 남는다).
+             * @return 토큰을 읽었으면 true. 못 읽으면 이유를 오류로 남기고 false 다(다른 벌이나 ImGui 기본 크기로 대신하지 않는다).
              */
-            static void readTypography( float32& outFontSize, float32& outIconScale )
+            [[nodiscard]] static bool readTypography( float32& outFontSize, float32& outIconScale )
             {
-                outFontSize  = ImGui::GetStyle().FontSizeBase;
-                outIconScale = 1.0f;
+                const string&     themeName = EditorConfig::getActive()._themeName;
                 EditorThemeConfig theme{};
                 string            error;
-                const bool        bLoaded = EditorThemeTokens::loadTheme( EditorConfig::getActive()._themeName, theme, error ) ||
-                                     EditorThemeTokens::loadTheme( EditorThemeTokens::kDefaultName, theme, error );
-                if ( bLoaded == false )
+                if ( EditorThemeTokens::loadTheme( themeName, theme, error ) == false )
                 {
-                    SW_LOG_ERROR( "Editor font size falls back to the ImGui default: %#", error.c_str() );
-                    return;
+                    SW_LOG_ERROR( "Editor font size needs the theme '%#' tokens: %#", themeName.c_str(), error.c_str() );
+                    return false;
                 }
                 outFontSize  = theme._typography._fontSize;
                 outIconScale = theme._typography._iconScale;
+                return true;
             }
 
             /**
@@ -105,7 +103,7 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorFontSetup" );
 
-    void EditorFontSetup::apply()
+    bool EditorFontSetup::apply()
     {
         ImGuiIO& io = ImGui::GetIO();
         io.Fonts->Clear();
@@ -117,9 +115,21 @@ namespace sw::editor
         const EditorToolDefaults& data = editor::getEditorToolDefaults();
         float32                   fontSize{ 0.0f };
         float32                   iconScale{ 0.0f };
-        EditorFontSetupInternal::readTypography( fontSize, iconScale );
+        if ( EditorFontSetupInternal::readTypography( fontSize, iconScale ) == false )
+            return false;
+        // 후보가 데이터다. 하나도 없으면 ImGui 기본 글꼴로 대신하지 않고 멈춘다 — 대신하면 한글 · 아이콘이 빈 상자로 그려져도 원인이 로그 한 줄에 묻힌다.
         const string basePath   = EditorFontSetupInternal::resolveFontFile( data._listBaseFont );
         const string koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
+        const string iconPath   = EditorFontSetupInternal::resolveFontFile( EditorPaths::kIconFontFileName );
+        if ( basePath.empty() )
+            SW_LOG_ERROR( "No base font from editortooldefaults.json _listBaseFont exists under editor/fonts or the OS font folders" );
+        if ( koreanPath.empty() )
+            SW_LOG_ERROR( "No Korean font from editortooldefaults.json _listKoreanFont exists under editor/fonts or the OS font folders" );
+        if ( iconPath.empty() )
+            SW_LOG_ERROR( "Editor icon font '%#' not found under editor/fonts", EditorPaths::kIconFontFileName );
+        const bool bFontMissing = basePath.empty() || koreanPath.empty() || iconPath.empty();
+        if ( bFontMissing )
+            return false;
 
         ImFont* pBaseFont{ nullptr };
         BLOCK( "Base Font" )
@@ -127,62 +137,41 @@ namespace sw::editor
             ImFontConfig baseConfig{};
             baseConfig.OversampleH = 1;
             baseConfig.OversampleV = 1;
-            // 명시적 크기가 필요하다. MergeMode 는 명시 크기를 쓰는데,
-            // 대상 폰트가 암시적 참조 크기(AddFontDefault)이면 ImGui 가 assert 한다.
+            // 명시적 크기가 필요하다. MergeMode 는 명시 크기를 쓴다.
             baseConfig.SizePixels = fontSize;
-
-            if ( basePath.empty() == false )
-            {
-                pBaseFont = io.Fonts->AddFontFromFileTTF( basePath.c_str(), fontSize, &baseConfig,
-                                                          io.Fonts->GetGlyphRangesDefault() );
-                SW_LOG_TRACE( "Loaded base font: %#", basePath.c_str() );
-            }
-
+            pBaseFont             = io.Fonts->AddFontFromFileTTF( basePath.c_str(), fontSize, &baseConfig, io.Fonts->GetGlyphRangesDefault() );
             if ( pBaseFont == nullptr )
             {
-                pBaseFont = io.Fonts->AddFontDefault( &baseConfig );
-                SW_LOG_WARNING( "No system UI font found - using ImGui default font." );
+                SW_LOG_ERROR( "Base font %# could not be loaded", basePath.c_str() );
+                return false;
             }
+            SW_LOG_TRACE( "Loaded base font: %#", basePath.c_str() );
         }
 
         BLOCK( "Korean Glyph Merge" )
         {
-            if ( koreanPath.empty() == false )
-            {
-                ImFontConfig mergeConfig{};
-                mergeConfig.MergeMode   = true;
-                mergeConfig.OversampleH = 2;
-                mergeConfig.OversampleV = 1;
-                mergeConfig.PixelSnapH  = true;
-                io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), fontSize, &mergeConfig,
-                                              io.Fonts->GetGlyphRangesKorean() );
-                SW_LOG_TRACE( "Merged Korean glyphs from: %#", koreanPath.c_str() );
-            }
-            else
-                SW_LOG_WARNING( "Korean font not found - Hangul may not render." );
+            ImFontConfig mergeConfig{};
+            mergeConfig.MergeMode   = true;
+            mergeConfig.OversampleH = 2;
+            mergeConfig.OversampleV = 1;
+            mergeConfig.PixelSnapH  = true;
+            io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), fontSize, &mergeConfig, io.Fonts->GetGlyphRangesKorean() );
+            SW_LOG_TRACE( "Merged Korean glyphs from: %#", koreanPath.c_str() );
         }
 
         BLOCK( "Editor icon font" )
         {
             // ImWchar 가 16 비트일 때만 헤더의 범위 배열을 그대로 넘길 수 있다(IMGUI_USE_WCHAR32 를 켜면 이 단언이 알려 준다).
             static_assert( sizeof( ImWchar ) == sizeof( editoricon::kArrGlyphRange[0] ), "editor icon glyph range must match ImWchar" );
-            const string iconPath = EditorFontSetupInternal::resolveFontFile( EditorPaths::kIconFontFileName );
-            if ( iconPath.empty() )
-            {
-                SW_LOG_ERROR( "Editor icon font '%#' not found under editor/fonts - icons render as empty boxes", EditorPaths::kIconFontFileName );
-            }
-            else
-            {
-                const float32 iconFontSize = fontSize * iconScale;
-                ImFontConfig  iconConfig{};
-                iconConfig.MergeMode        = true;
-                iconConfig.PixelSnapH       = true;
-                iconConfig.GlyphMinAdvanceX = iconFontSize;
-                io.Fonts->AddFontFromFileTTF( iconPath.c_str(), iconFontSize, &iconConfig,
-                                              reinterpret_cast<const ImWchar*>( editoricon::kArrGlyphRange ) );
-            }
+            const float32 iconFontSize = fontSize * iconScale;
+            ImFontConfig  iconConfig{};
+            iconConfig.MergeMode        = true;
+            iconConfig.PixelSnapH       = true;
+            iconConfig.GlyphMinAdvanceX = iconFontSize;
+            io.Fonts->AddFontFromFileTTF( iconPath.c_str(), iconFontSize, &iconConfig, reinterpret_cast<const ImWchar*>( editoricon::kArrGlyphRange ) );
         }
 
         io.FontDefault = pBaseFont;
+        return true;
     }
 } // namespace sw::editor

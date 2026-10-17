@@ -37,6 +37,13 @@ namespace
             return true;
         }
 
+        /** @brief 실제 로더(필수 칸 검사 포함)로 읽고, 기본값을 다시 적은 키도 본다. */
+        [[nodiscard]] static bool loadEditorToolDefaults( const string& absolutePath )
+        {
+            EditorToolDefaults defaults{};
+            return defaults.loadFromHostPath( absolutePath ) && loadStrict<EditorToolDefaults>( absolutePath );
+        }
+
         [[nodiscard]] static bool loadTextureImport( const string& absolutePath )
         {
             TextureImportConfig config;
@@ -58,10 +65,10 @@ namespace
 
         /** @brief 앞의 줄이 먼저 맞습니다. 짝은 `Scripts/common/ConfigCatalog.py` 다. */
         static constexpr ConfigKind kArrKind[] = {
-            {  "editortooldefaults.json", &loadStrict<EditorToolDefaults>},
-            { "TextureImportConfig.json",              &loadTextureImport},
-            {   "ModelImportConfig.json",                &loadModelImport},
-            {"AssetValidationRules.json",                         nullptr}, // Scripts/common/AssetValidation.py · CheckAssetRules
+            {  "editortooldefaults.json", &loadEditorToolDefaults},
+            { "TextureImportConfig.json",      &loadTextureImport},
+            {   "ModelImportConfig.json",        &loadModelImport},
+            {"AssetValidationRules.json",                 nullptr}, // Scripts/common/AssetValidation.py · CheckAssetRules
         };
 
         static const ConfigKind* findKind( string_view relativePath )
@@ -101,6 +108,6 @@ SW_TEST_CASE( EditorConfigFileSchemaTest, EveryEditorConfigFileLoadsStrictly )
         SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath ), relative + " 를 엄격하게 읽지 못했습니다:" + logs.joined() );
         ++loadedCount;
     }
-    // 임포트 설정 둘(editortooldefaults 는 기본값과 다른 값이 있을 때만 생긴다). 앱이 쓰는 상태는 Saved/Editor 에 있다.
-    SW_EXPECT_TRUE_MSG( loadedCount >= 2u, "읽은 에디터 설정 파일이 " + to_string( loadedCount ) + " 개뿐입니다" );
+    // 도구 시드(필수 데이터)와 임포트 설정 둘. 앱이 쓰는 상태는 Saved/Editor 에 있다.
+    SW_EXPECT_TRUE_MSG( loadedCount >= 3u, "읽은 에디터 설정 파일이 " + to_string( loadedCount ) + " 개뿐입니다" );
 }

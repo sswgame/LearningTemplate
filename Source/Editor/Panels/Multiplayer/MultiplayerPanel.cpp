@@ -228,5 +228,5 @@ namespace sw::editor
         }
     }
 
-    SW_EDITOR_PANEL( MultiplayerPanel, "multiplayer", EditorPanelCategory::Tool, 2035 );
+    SW_EDITOR_PANEL( MultiplayerPanel, MultiplayerPanel::kPanelID, EditorPanelCategory::Tool, 2035 );
 } // namespace sw::editor

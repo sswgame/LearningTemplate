@@ -11,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -54,7 +55,7 @@
 namespace sw::editor
 {
     SW_LOG_CALLER( "UIPreviewPanel" );
-    SW_EDITOR_PANEL( UIPreviewPanel, "ui_preview", EditorPanelCategory::Tool, 950 );
+    SW_EDITOR_PANEL( UIPreviewPanel, UIPreviewPanel::kPanelID, EditorPanelCategory::Tool, 950 );
 
     /** @brief 되돌리기 항목이 패널을 가리키는 길입니다. 패널이 사라지면 `_pPanel` 이 비어 항목은 아무것도 하지 않습니다. */
     struct UIPreviewPanel::EditSession
@@ -128,7 +129,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                const UIPreviewPanel* pPanel            = static_cast<const UIPreviewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "ui_preview" ) );
+                const UIPreviewPanel* pPanel            = pContext->getSubsystem<EditorPanelManager>().findPanel<UIPreviewPanel>();
                 const bool            bProbeUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->getProbe()._bValid == false;
                 if ( bProbeUnavailable )
                     return nullptr;
@@ -338,7 +339,7 @@ namespace sw::editor
         , _paletteFilter{}
         , _slotDragBaseline{}
         , _paletteType{}
-        , _documentPath{ "engine/ui/pause.ui.xml" }
+        , _documentPath{ getEditorToolDefaults()._uiPreviewDocument.get() } // 처음 여는 문서 — 정본은 editortooldefaults.json
         , _openedDocument{}
         , _targetPath{}
         , _error{}

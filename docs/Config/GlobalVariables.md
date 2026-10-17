@@ -58,7 +58,7 @@
 | `gv_editorStateDir` | `string` | — | 시험 | 에디터 상태 폴더(Saved/Editor 대신, 프로젝트 루트 기준 상대 또는 절대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor) | [EditorPaths.cpp](../../Source/Editor/Common/EditorPaths.cpp) |
 | `gv_screenshotEditor` | `string` | — | 시험 | 에디터 UI 전체(ImGui 패널 + 플로팅 창)를 이 경로(.png)에 한 장 찍는다 (비면 사용 안 함) | [EditorUICapture.cpp](../../Source/Editor/Common/Backend/EditorUICapture.cpp) |
 | `gv_screenshotEditorFrame` | `int32` | `60` | 시험 | -gv_screenshotEditor 를 찍을 에디터 UI 프레임 번호 (기본 60) | [EditorUICapture.cpp](../../Source/Editor/Common/Backend/EditorUICapture.cpp) |
-| `gv_tracyViewerPath` | `string` | — | 일반 | Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy) | [EditorTracyLauncher.cpp](../../Source/Editor/Common/Commands/Dev/EditorTracyLauncher.cpp) |
+| `gv_tracyViewerPath` | `string` | `Tools/Tracy` | 일반 | Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더, 상대 경로는 프로젝트 루트 기준 | [EditorTracyLauncher.cpp](../../Source/Editor/Common/Commands/Dev/EditorTracyLauncher.cpp) |
 
 ## `Source/Editor/Panels`
 

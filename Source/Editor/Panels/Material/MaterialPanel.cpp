@@ -200,7 +200,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "material" ) );
+                const MaterialPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MaterialPanel>();
                 float32              value{ 0.0f };
                 const bool           bPreviewValueUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findPreviewRedMinusBlue( value ) == false;
                 if ( bPreviewValueUnavailable )
@@ -215,7 +215,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "material" ) );
+                const MaterialPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MaterialPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 
@@ -256,7 +256,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "MaterialPanel" );
-    SW_EDITOR_PANEL( MaterialPanel, "material", EditorPanelCategory::Tool, 1300 );
+    SW_EDITOR_PANEL( MaterialPanel, MaterialPanel::kPanelID, EditorPanelCategory::Tool, 1300 );
     SW_AUTOMATION_PROBE( editorMaterialPreviewRedMinusBlue, "Editor.MaterialPreviewRedMinusBlue",
                          "Mean (R - B) of the Material panel's sphere preview in the last frame (0..255; red materials are high)",
                          &MaterialPanelInternal::readPreviewRedMinusBlue );

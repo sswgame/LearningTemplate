@@ -47,11 +47,7 @@ cmake = ".cmake CMakeLists.txt"
 # 0 으로 수렴해야 한다. 고친 뒤 `py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --print-baseline` 으로 다시 적는다.
 [baseline]
 "AssetPathLiteral:Source/Editor/Common/Asset/VrmMaterialImporter.cpp" = 1
-"AssetPathLiteral:Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp" = 1
-"AssetPathLiteral:Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp" = 1
 "AssetPathLiteral:Source/Editor/Common/EditorPaths.h" = 1
-"AssetPathLiteral:Source/Editor/Panels/InputMap/InputMapPanel.cpp" = 1
-"AssetPathLiteral:Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp" = 1
 "AssetPathLiteral:Source/Engine/Animation/Facial/LipSync.h" = 1
 "AssetPathLiteral:Source/Engine/Audio/IAudioService.h" = 1
 "AssetPathLiteral:Source/Engine/Automation/AutomationLogPolicy.h" = 1
@@ -189,9 +185,6 @@ cmake = ".cmake CMakeLists.txt"
 "SilentFallback:Source/Core/File/KeyValueFile.h" = 3
 "SilentFallback:Source/Editor/Common/Asset/VrmAvatarImporter.cpp" = 1
 "SilentFallback:Source/Editor/Common/Asset/VrmMaterialImporter.cpp" = 2
-"SilentFallback:Source/Editor/Common/Config/EditorSettingsRegistry.cpp" = 1
-"SilentFallback:Source/Editor/Common/Workspace/EditorService.cpp" = 1
-"SilentFallback:Source/Editor/ImGuiEditor.cpp" = 2
 "SilentFallback:Source/Editor/Panels/Animation/SequencerPanel.cpp" = 1
 "SilentFallback:Source/Editor/Panels/Material/MaterialPreviewShading.cpp" = 1
 "SilentFallback:Source/Editor/Viewport/EditorViewportToolbar.cpp" = 1

@@ -17,9 +17,10 @@ namespace sw::editor
 
     /**
      * @brief `-gv_tracyViewerPath=<경로>`: "Tracy 열기" 가 띄울 Tracy 뷰어(tracy-profiler, 같은 판 0.14.1). 파일이나 그 파일이 든 폴더.
-     * @details 비우면 `<프로젝트>/Tools/Tracy/` 를 본다. 뷰어는 저장소에 넣지 않는다(`Source/Engine/Profiling/README.md`).
+     * @details 상대 경로는 프로젝트 루트 기준이다. 기본은 저장소 안 `Tools/Tracy`(저장소에 넣지 않는다 — `.gitignore`, `Source/Engine/Profiling/README.md`).
+     *          자리의 정본은 이 설정 하나이고, 찾기(`EditorTracyLauncher::findViewerPath`)는 다른 자리를 더 뒤지지 않는다.
      */
-    SW_GLOBAL_VARIABLE( sw::string, gv_tracyViewerPath, "", "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)" );
+    SW_GLOBAL_VARIABLE( sw::string, gv_tracyViewerPath, "Tools/Tracy", "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더, 상대 경로는 프로젝트 루트 기준" );
 
     const utf8* EditorTracyLauncher::getViewerFileName()
     {
@@ -33,34 +34,22 @@ namespace sw::editor
     bool EditorTracyLauncher::findViewerPath( string_view configuredPath, string_view projectRoot, string& outPath )
     {
         outPath.clear();
-        if ( configuredPath.empty() == false )
+        if ( configuredPath.empty() )
+            return false;
+        const string place = ( FileUtil::isAbsolutePath( configuredPath ) || projectRoot.empty() ) ? string( configuredPath ) : FileUtil::joinPath( projectRoot, configuredPath );
+        // 폴더를 가리키면 그 안의 실행 파일, 파일을 가리키면 그대로. 폴더를 먼저 본다 — `exists` 는 폴더에도 true 다.
+        if ( FileUtil::isDirectory( place ) )
         {
-            // 폴더를 가리키면 그 안의 실행 파일, 파일을 가리키면 그대로. 폴더를 먼저 본다 — `exists` 는 폴더에도 true 다.
-            if ( FileUtil::isDirectory( configuredPath ) )
-            {
-                const string inFolder = FileUtil::joinPath( configuredPath, getViewerFileName() );
-                if ( FileUtil::exists( inFolder ) )
-                {
-                    outPath = inFolder;
-                    return true;
-                }
-            }
-            else if ( FileUtil::exists( configuredPath ) )
-            {
-                outPath = string( configuredPath );
-                return true;
-            }
+            const string inFolder = FileUtil::joinPath( place, getViewerFileName() );
+            if ( FileUtil::exists( inFolder ) == false )
+                return false;
+            outPath = inFolder;
+            return true;
         }
-        if ( projectRoot.empty() == false )
-        {
-            const string inTools = FileUtil::joinPath( FileUtil::joinPath( projectRoot, kDefaultViewerFolder ), getViewerFileName() );
-            if ( FileUtil::exists( inTools ) )
-            {
-                outPath = inTools;
-                return true;
-            }
-        }
-        return false;
+        if ( FileUtil::exists( place ) == false )
+            return false;
+        outPath = place;
+        return true;
     }
 
     string EditorTracyLauncher::makeViewerCommand( string_view viewerPath, uint16 port )
@@ -81,8 +70,8 @@ namespace sw::editor
         string viewerPath;
         if ( findViewerPath( gv_tracyViewerPath, EditorPaths::getProjectRootPath(), viewerPath ) == false )
         {
-            SW_LOG_WARNING( "Tracy viewer not found — download the 0.14.1 Windows release and put %# in Tools/Tracy (or set gv_tracyViewerPath)",
-                            getViewerFileName() );
+            SW_LOG_WARNING( "Tracy viewer not found at gv_tracyViewerPath '%#' — download the 0.14.1 Windows release and put %# there (or point gv_tracyViewerPath at it)",
+                            string( gv_tracyViewerPath ).c_str(), getViewerFileName() );
             return EditorTracyLaunchResult::ViewerNotFound;
         }
 
@@ -109,7 +98,7 @@ namespace sw::editor
             case EditorTracyLaunchResult::TracyNotCompiled:
                 return "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF or Shipping)";
             case EditorTracyLaunchResult::ViewerNotFound:
-                return "Tracy viewer not found: put tracy-profiler (0.14.1) in Tools/Tracy or set gv_tracyViewerPath";
+                return "Tracy viewer not found at gv_tracyViewerPath: put tracy-profiler (0.14.1) there or point the variable at it";
             case EditorTracyLaunchResult::ViewerLaunchFailed:
                 return "Failed to launch the Tracy viewer (see the log)";
         }
