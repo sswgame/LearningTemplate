@@ -162,7 +162,6 @@ cmake = ".cmake CMakeLists.txt"
 "DiscardedLoadResult:Source/GameFramework/Base/Foundation/Data/GameDataXML.cpp" = 2
 "DiscardedLoadResult:Source/GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.cpp" = 1
 "DiscardedLoadResult:Source/GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp" = 3
-"DiscardedLoadResult:Source/GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.cpp" = 1
 "DiscardedLoadResult:Source/GameFramework/Base/Gameplay/Inventory/ItemCatalog.cpp" = 1
 "DiscardedLoadResult:Source/GameFramework/Base/Gameplay/Quest/QuestCatalog.cpp" = 1
 "DiscardedLoadResult:Source/GameFramework/Base/Online/Service/OnlineServiceHost.cpp" = 1

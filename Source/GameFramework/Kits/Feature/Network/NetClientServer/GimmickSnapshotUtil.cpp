@@ -4,6 +4,9 @@
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/BitStream.h"
+
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include <algorithm>
 
@@ -30,24 +33,31 @@ namespace sw
         for ( size_t circuitIndex = 0; circuitIndex < bundle._listEntry.size(); ++circuitIndex )
         {
             const GimmickStateEntry& entry = bundle._listEntry[circuitIndex];
-            if ( circuitIndex >= kMaxCircuitCount || entry._bytes.size() > kMaxCircuitBytes )
+            if ( circuitIndex >= kMaxCircuitCount )
             {
                 ++notSent;
                 continue;
             }
-            const uint32 chunkCount = MathUtil::max( 1u, static_cast<uint32>( ( entry._bytes.size() + kChunkPayloadBytes - 1 ) / kChunkPayloadBytes ) );
+            BitWriter           writer;
+            const bool          bWritten = FixedLayout::write( entry._state, writer );
+            const vector<uint8> bytes( writer.getBytes().begin(), writer.getBytes().begin() + writer.getByteCount() );
+            if ( bWritten == false || bytes.size() > kMaxCircuitBytes )
+            {
+                ++notSent;
+                continue;
+            }
+            const uint32 chunkCount = MathUtil::max( 1u, static_cast<uint32>( ( bytes.size() + kChunkPayloadBytes - 1 ) / kChunkPayloadBytes ) );
             for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
             {
                 const size_t   offset  = static_cast<size_t>( chunkIndex ) * kChunkPayloadBytes;
-                const size_t   payload = MathUtil::min( static_cast<size_t>( kChunkPayloadBytes ), entry._bytes.size() - offset );
+                const size_t   payload = MathUtil::min( static_cast<size_t>( kChunkPayloadBytes ), bytes.size() - offset );
                 NetEntityState state;
                 state._entityID = firstEntityID + static_cast<uint32>( circuitIndex ) * kMaxChunksPerCircuit + chunkIndex;
                 state._typeID   = typeID;
                 LittleEndianUtil::appendUint64( state._buffer, entry._ownerKey );
                 state._buffer.push_back( static_cast<uint8>( chunkIndex ) );
                 state._buffer.push_back( static_cast<uint8>( chunkCount ) );
-                state._buffer.insert( state._buffer.end(), entry._bytes.begin() + static_cast<ptrdiff_t>( offset ),
-                                      entry._bytes.begin() + static_cast<ptrdiff_t>( offset + payload ) );
+                state._buffer.insert( state._buffer.end(), bytes.begin() + static_cast<ptrdiff_t>( offset ), bytes.begin() + static_cast<ptrdiff_t>( offset + payload ) );
                 inoutSnapshot._listEntity.push_back( std::move( state ) );
             }
         }
@@ -92,21 +102,23 @@ namespace sw
             {
                 bComplete = listChunk[index]._count == chunkCount && listChunk[index]._index == index - begin;
             }
+            bool bRead = false;
             if ( bComplete )
             {
-                GimmickStateEntry entry;
-                entry._ownerKey = listChunk[begin]._ownerKey;
+                vector<uint8> bytes;
                 for ( size_t index = begin; index < end; ++index )
                 {
                     const vector<uint8>& buffer = listChunk[index]._pEntity->_buffer;
-                    entry._bytes.insert( entry._bytes.end(), buffer.begin() + kChunkHeaderBytes, buffer.end() );
+                    bytes.insert( bytes.end(), buffer.begin() + kChunkHeaderBytes, buffer.end() );
                 }
-                outBundle._listEntry.push_back( std::move( entry ) );
+                GimmickStateEntry entry;
+                entry._ownerKey = listChunk[begin]._ownerKey;
+                bRead           = FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), entry._state ) == FixedReadResult::Ok;
+                if ( bRead )
+                    outBundle._listEntry.push_back( std::move( entry ) );
             }
-            else
-            {
+            if ( bRead == false )
                 ++skipped;
-            }
             begin = end;
         }
         return skipped;

@@ -3,25 +3,13 @@
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickStateBundle.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/Container/LittleEndianUtil.h"
+#include "Core/Network/BitStream.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct GimmickStateBundleInternal
-        {
-            static constexpr size_t kHeaderBytes      = 12; ///< magic, version, count
-            static constexpr size_t kEntryHeaderBytes = 12; ///< objectID, length
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -36,7 +24,7 @@ namespace sw
                 continue;
             GimmickStateEntry entry;
             entry._ownerKey = makeOwnerKey( pOwner->getName() );
-            entry._bytes    = pCircuit->getStateBytes();
+            entry._state    = pCircuit->getState();
             _listEntry.push_back( std::move( entry ) );
         }
         // 등록 순서에 기대지 않는다 — 키 순이라 같은 씬이면 늘 같은 묶음이다.
@@ -69,7 +57,7 @@ namespace sw
             const auto liveIt = std::lower_bound( listLive.begin(), listLive.end(), entry._ownerKey, []( const Live& live, uint64 key )
             { return live._ownerKey < key; } );
             const bool bFound = liveIt != listLive.end() && liveIt->_ownerKey == entry._ownerKey;
-            if ( bFound && liveIt->_pCircuit->restoreStateBytes( entry._bytes ) )
+            if ( bFound && liveIt->_pCircuit->restoreState( entry._state ) )
                 ++applied;
             else
                 ++skipped;
@@ -79,62 +67,34 @@ namespace sw
         return applied;
     }
 
-    void GimmickStateBundle::write( vector<uint8>& outBytes ) const
+    bool GimmickStateBundle::write( vector<uint8>& outBytes ) const
     {
-        outBytes.clear();
-        LittleEndianUtil::appendUint32( outBytes, kMagic );
-        LittleEndianUtil::appendUint32( outBytes, kVersion );
-        LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( _listEntry.size() ) );
-        for ( const GimmickStateEntry& entry : _listEntry )
-        {
-            LittleEndianUtil::appendUint64( outBytes, entry._ownerKey );
-            LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( entry._bytes.size() ) );
-            outBytes.insert( outBytes.end(), entry._bytes.begin(), entry._bytes.end() );
-        }
+        BitWriter  writer{ std::move( outBytes ) };
+        const bool bWritten = FixedLayout::write( *this, writer );
+        outBytes            = writer.releaseBytes();
+        if ( bWritten == false )
+            outBytes.clear();
+        return bWritten;
     }
 
-    bool GimmickStateBundle::read( const uint8* pData, size_t size )
+    FixedReadResult GimmickStateBundle::read( const uint8* pData, size_t size )
     {
-        using Internal            = GimmickStateBundleInternal;
-        const bool bInvalidBundle = pData == nullptr || size < Internal::kHeaderBytes || LittleEndianUtil::readUint32( pData ) != kMagic || LittleEndianUtil::readUint32( pData + 4 ) != kVersion;
-        if ( bInvalidBundle )
-            return false;
-        const uint32 count = LittleEndianUtil::readUint32( pData + 8 );
-        if ( count > kMaxEntryCount )
-            return false;
-
-        vector<GimmickStateEntry> listEntry;
-        size_t                    position = Internal::kHeaderBytes;
-        for ( uint32 entryIndex = 0; entryIndex < count; ++entryIndex )
-        {
-            if ( size - position < Internal::kEntryHeaderBytes )
-                return false;
-            GimmickStateEntry entry;
-            entry._ownerKey     = LittleEndianUtil::readUint64( pData + position );
-            const uint32 length = LittleEndianUtil::readUint32( pData + position + 8 );
-            position += Internal::kEntryHeaderBytes;
-            if ( length > kMaxEntryBytes || length > size - position )
-                return false;
-            entry._bytes.assign( pData + position, pData + position + length );
-            position += length;
-            listEntry.push_back( std::move( entry ) );
-        }
-        if ( position != size )
-            return false; // 끝 뒤에 남는 바이트
-        _listEntry = std::move( listEntry );
-        return true;
+        // BitReader 는 int32 바이트 수를 받는다. 그보다 큰 입력은 항목 상한으로도 나올 수 없는 크기다.
+        if ( pData == nullptr || size > static_cast<size_t>( std::numeric_limits<int32>::max() ) )
+            return FixedReadResult::Truncated;
+        return FixedLayout::read( pData, static_cast<int32>( size ), *this );
     }
 
     uint64 GimmickStateBundle::computeHash() const
     {
-        uint64 hash = HashUtil::kFnvOffset64;
-        for ( const GimmickStateEntry& entry : _listEntry )
+        BitWriter  writer;
+        const bool bWritten = FixedLayout::write( *this, writer );
+        SW_ASSERT( bWritten ); // 항목 수는 kMaxEntryCount, 회로 상태는 populate · registerKind 가 상한 안으로 막았다
+        uint64       hash  = HashUtil::kFnvOffset64;
+        const uint8* pByte = writer.getBytes().data();
+        for ( int32 index = 0; index < writer.getByteCount(); ++index )
         {
-            hash = HashUtil::combine( hash, entry._ownerKey );
-            for ( const uint8 value : entry._bytes )
-            {
-                hash = ( hash ^ value ) * HashUtil::kFnvPrime64;
-            }
+            hash = ( hash ^ pByte[index] ) * HashUtil::kFnvPrime64;
         }
         return hash;
     }
