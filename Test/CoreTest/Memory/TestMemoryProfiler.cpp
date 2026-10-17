@@ -25,13 +25,13 @@ SW_TEST_CASE( MemoryProfilerTest, BasicTracking )
     profiler.setDetailedTrackingEnabled( true );
 
     const auto& beforeStats  = profiler.getStats( MemoryTag::Game );
-    uint64      initialBytes = beforeStats._currentAllocatedBytes.load();
+    uint64      initialBytes = beforeStats._currentAllocatedBytes;
 
     void*  dummyPtr = reinterpret_cast<void*>( 0x12345678 );
     uint64 hash     = profiler.recordAllocation( dummyPtr, 1024, MemoryTag::Game );
 
     const auto& afterStats = profiler.getStats( MemoryTag::Game );
-    uint64      afterBytes = afterStats._currentAllocatedBytes.load();
+    uint64      afterBytes = afterStats._currentAllocatedBytes;
 
     SW_EXPECT_TRUE( afterBytes > initialBytes );
 
@@ -41,7 +41,7 @@ SW_TEST_CASE( MemoryProfilerTest, BasicTracking )
     profiler.recordFree( dummyPtr, 1024, MemoryTag::Game, hash );
 
     const auto& finalStats = profiler.getStats( MemoryTag::Game );
-    SW_EXPECT_EQUAL( initialBytes, finalStats._currentAllocatedBytes.load() );
+    SW_EXPECT_EQUAL( initialBytes, finalStats._currentAllocatedBytes );
 
     profiler.shutdown();
 }
@@ -63,15 +63,15 @@ SW_TEST_CASE( MemoryProfilerTest, FreeWithoutMatchingAllocationDoesNotWrap )
     void* pDummy = reinterpret_cast<void*>( 0x1234'5678 );
     profiler.recordAllocation( pDummy, 4096, MemoryTag::Game );
 
-    const uint64 beforeBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes.load();
-    const uint64 beforeCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount.load();
+    const uint64 beforeBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes;
+    const uint64 beforeCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount;
 
     // 켜고 해제한다 — 세지 않은 것을 빼게 된다.
     profiler.setTrackingEnabled( true );
     profiler.recordFree( pDummy, 4096, MemoryTag::Game, 0 );
 
-    const uint64 afterBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes.load();
-    const uint64 afterCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount.load();
+    const uint64 afterBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes;
+    const uint64 afterCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount;
 
     // 0 아래로 접히면 여기가 1.8e19 가 된다.
     SW_EXPECT_TRUE( afterBytes <= beforeBytes );
@@ -101,7 +101,7 @@ SW_TEST_CASE( MemoryProfilerTest, TotalAllocationCountSurvivesFrees )
     }
 
     SW_EXPECT_EQUAL( uint64( 3 ), profiler.getTotalAllocationCount() - totalBefore );
-    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getStats( MemoryTag::EngineMisc )._currentAllocationCount.load() );
+    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getStats( MemoryTag::EngineMisc )._currentAllocationCount );
 
     const vector<CallStackAllocInfo> listByChurn = profiler.getTopCallStacks( TopCallStackOrder::TotalCount );
     SW_ASSERT_FALSE( listByChurn.empty() );
@@ -136,14 +136,14 @@ SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
     }
 
     const MemoryTag tag       = Memory::getCurrentMemoryTag();
-    const uint64    before    = pProfiler->getStats( tag )._currentAllocatedBytes.load();
+    const uint64    before    = pProfiler->getStats( tag )._currentAllocatedBytes;
     size_t          lastBytes = 0;
     for ( uint32 repeat = 0; repeat < 64; ++repeat )
     {
         const sw::vector<CallStackAllocInfo> listTop = pProfiler->getTopCallStacks();
         lastBytes                                    = listTop.capacity() * sizeof( CallStackAllocInfo );
     }
-    const uint64 after = pProfiler->getStats( tag )._currentAllocatedBytes.load();
+    const uint64 after = pProfiler->getStats( tag )._currentAllocatedBytes;
 
     pProfiler->setDetailedTrackingEnabled( bWasDetailed );
     pProfiler->setTrackingEnabled( bWasTracking );
@@ -172,8 +172,8 @@ SW_TEST_CASE( MemoryProfilerTest, ScopedTagAttributesAllocationsAndRestores )
 
     constexpr size_t kBlockBytes = 64 * 1024;
     const MemoryTag  outerTag    = Memory::getCurrentMemoryTag();
-    const uint64     textureBase = pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes.load();
-    const uint64     meshBase    = pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes.load();
+    const uint64     textureBase = pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes;
+    const uint64     meshBase    = pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes;
 
     void* pTextureBlock{ nullptr };
     void* pMeshBlock{ nullptr };
@@ -191,14 +191,14 @@ SW_TEST_CASE( MemoryProfilerTest, ScopedTagAttributesAllocationsAndRestores )
     }
     SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == outerTag );
 
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes.load() >= textureBase + kBlockBytes );
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes.load() >= meshBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes >= textureBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes >= meshBase + kBlockBytes );
 
     // 스코프 밖에서 풀어도 할당한 태그에서 빠진다.
     Memory::free( pTextureBlock );
     Memory::free( pMeshBlock );
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes.load() < textureBase + kBlockBytes );
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes.load() < meshBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes < textureBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes < meshBase + kBlockBytes );
 
     pProfiler->setTrackingEnabled( bWasTracking );
 }
@@ -246,7 +246,8 @@ SW_TEST_CASE( MemoryProfilerTest, TagOrderFollowsLiveBytes )
 }
 
 /**
- * @brief [MemoryProfilerTest] 최고치는 해제해도 내려가지 않고, resetPeaks 가 지금 값으로 되돌린다
+ * @brief [MemoryProfilerTest] 최고치는 읽을 때 본 값의 최고치다 — 해제해도 내려가지 않고, resetPeaks 가 지금 값으로 되돌리며, 두 번 읽는 사이의 순간 최고치는 잡지 않는다
+ * @details 할당 경로는 스레드 칸에만 더하고 최고치는 합을 읽는 쪽(`getStats` · 프레임마다의 `reportExceededBudgets`)이 올린다(언리얼 LLM 과 같다).
  */
 SW_TEST_CASE( MemoryProfilerTest, PeakKeepsTheHighWaterMark )
 {
@@ -258,16 +259,24 @@ SW_TEST_CASE( MemoryProfilerTest, PeakKeepsTheHighWaterMark )
     void* const pSecond = reinterpret_cast<void*>( 0x2000 );
     (void)profiler.recordAllocation( pFirst, 3000, MemoryTag::Audio );
     (void)profiler.recordAllocation( pSecond, 5000, MemoryTag::Audio );
+    (void)profiler.getStats( MemoryTag::Audio ); // 여기서 읽은 8000 이 최고치가 된다
     profiler.recordFree( pSecond, 5000, MemoryTag::Audio );
 
-    const MemoryProfileStats& stats = profiler.getStats( MemoryTag::Audio );
-    SW_EXPECT_EQUAL( uint64{ 3000 }, stats._currentAllocatedBytes.load() );
-    SW_EXPECT_EQUAL( uint64{ 8000 }, stats._peakAllocatedBytes.load() );
-    SW_EXPECT_EQUAL( uint64{ 2 }, stats._peakAllocationCount.load() );
+    const MemoryProfileStats afterFree = profiler.getStats( MemoryTag::Audio );
+    SW_EXPECT_EQUAL( uint64{ 3000 }, afterFree._currentAllocatedBytes );
+    SW_EXPECT_EQUAL( uint64{ 8000 }, afterFree._peakAllocatedBytes );
+    SW_EXPECT_EQUAL( uint64{ 2 }, afterFree._peakAllocationCount );
 
     profiler.resetPeaks();
-    SW_EXPECT_EQUAL( uint64{ 3000 }, stats._peakAllocatedBytes.load() );
-    SW_EXPECT_EQUAL( uint64{ 1 }, stats._peakAllocationCount.load() );
+    const MemoryProfileStats afterReset = profiler.getStats( MemoryTag::Audio );
+    SW_EXPECT_EQUAL( uint64{ 3000 }, afterReset._peakAllocatedBytes );
+    SW_EXPECT_EQUAL( uint64{ 1 }, afterReset._peakAllocationCount );
+
+    // 읽지 않은 사이에 잡았다 놓은 순간 최고치(3000 + 7000)는 잡히지 않는다.
+    (void)profiler.recordAllocation( pSecond, 7000, MemoryTag::Audio );
+    profiler.recordFree( pSecond, 7000, MemoryTag::Audio );
+    SW_EXPECT_EQUAL( uint64{ 3000 }, profiler.getStats( MemoryTag::Audio )._peakAllocatedBytes );
+
     profiler.recordFree( pFirst, 3000, MemoryTag::Audio );
     profiler.shutdown();
 }
@@ -334,12 +343,12 @@ SW_TEST_CASE( MemoryProfilerTest, DisabledTrackingRecordsNothing )
     const uint64 hash   = profiler.recordAllocation( pBlock, 4096, MemoryTag::Physics );
     SW_EXPECT_EQUAL( uint64{ 0 }, hash );
     const MemoryProfileStats& stats = profiler.getStats( MemoryTag::Physics );
-    SW_EXPECT_EQUAL( uint64{ 0 }, stats._currentAllocatedBytes.load() );
-    SW_EXPECT_EQUAL( uint64{ 0 }, stats._totalAllocationCount.load() );
-    SW_EXPECT_EQUAL( uint64{ 0 }, stats._peakAllocatedBytes.load() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, stats._currentAllocatedBytes );
+    SW_EXPECT_EQUAL( uint64{ 0 }, stats._totalAllocationCount );
+    SW_EXPECT_EQUAL( uint64{ 0 }, stats._peakAllocatedBytes );
     SW_EXPECT_TRUE( profiler.getTopCallStacks().empty() );
     profiler.recordFree( pBlock, 4096, MemoryTag::Physics );
-    SW_EXPECT_EQUAL( uint64{ 0 }, stats._totalFreedBytes.load() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, profiler.getStats( MemoryTag::Physics )._totalFreedBytes );
     profiler.shutdown();
 }
 
@@ -408,8 +417,8 @@ SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
 
     constexpr uint32 kBlockCount = 64;
     constexpr size_t kBlockBytes = 1024;
-    const uint64     uiBase      = pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes.load();
-    const uint64     physicsBase = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load();
+    const uint64     uiBase      = pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes;
+    const uint64     physicsBase = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes;
 
     vector<void*> listBlock( kBlockCount, nullptr );
     void**        ppBlock = listBlock.data();
@@ -426,9 +435,9 @@ SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
     } );
     worker.join();
 
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes.load() >= uiBase + kBlockCount * kBlockBytes );
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load() >= physicsBase + kBlockBytes );
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._peakAllocatedBytes.load() >= uiBase + kBlockCount * kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes >= uiBase + kBlockCount * kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes >= physicsBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._peakAllocatedBytes >= uiBase + kBlockCount * kBlockBytes );
 
     // 이 스레드(태그가 UI 가 아니다)에서 푼다.
     for ( void* pBlock : listBlock )
@@ -436,8 +445,8 @@ SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
         Memory::free( pBlock );
     }
     Memory::free( pExplicit );
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes.load() < uiBase + kBlockBytes );
-    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load() < physicsBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes < uiBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes < physicsBase + kBlockBytes );
 
     pProfiler->setTrackingEnabled( bWasTracking );
 }

@@ -39,20 +39,13 @@ namespace sw
         struct MemoryProfilerInternal
         {
             /**
-             * @brief 원자 카운터에서 빼되 **0 아래로 내려가지 않게** 합니다.
-             * @details 카운터가 `uint64` 라 그냥 `fetch_sub` 하면 0 아래가 1.8e19 로 돌아갑니다. 할당은 세지 않았는데 해제만 세는 경우가
-             *          실제로 있습니다. 에디터의 프로파일러 패널에서 **추적을 런타임에 켤 수 있어서**, 켜기 전에 할당된 블록이 켠 뒤에
-             *          해제되면 그렇게 됩니다.
+             * @brief 칸의 합(부호 있음)을 살아 있는 양으로 읽습니다. 0 아래는 0 입니다.
+             * @details 할당은 세지 않았는데 해제만 세는 경우가 실제로 있습니다. 에디터의 프로파일러 패널에서 **추적을 런타임에 켤 수 있어서**,
+             *          켜기 전에 할당된 블록이 켠 뒤에 해제되면 합이 0 아래로 갑니다. 부호 없는 값으로 그대로 돌려주면 1.8e19 가 됩니다.
              */
-            static void subtractSaturating( atomic<uint64>& counter, uint64 amount )
+            static uint64 clampLiveSum( int64 sum )
             {
-                uint64 current = counter.load( std::memory_order_relaxed );
-                while ( true )
-                {
-                    const uint64 next = ( current >= amount ) ? ( current - amount ) : 0;
-                    if ( counter.compare_exchange_weak( current, next, std::memory_order_relaxed, std::memory_order_relaxed ) )
-                        return;
-                }
+                return sum > 0 ? static_cast<uint64>( sum ) : 0;
             }
 
 #if defined( SW_HAS_CRT_LEAK_CHECK )
@@ -265,6 +258,8 @@ namespace sw
         : _bInitialized{ false }
         , _bTrackingEnabled{ true }
         , _bDetailedTrackingEnabled{ false }
+        , _shard{}
+        , _arrTagSummary{}
         , _arrBaselineBytes{}
         , _arrBaselineCount{}
         , _bHasTagBaseline{ false }
@@ -330,13 +325,12 @@ namespace sw
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
             tagIdx = 0;
 
-        MemoryProfileStats& stats = _arrStat[tagIdx];
-        stats._totalAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
-        const uint64 liveBytes = stats._currentAllocatedBytes.fetch_add( size, std::memory_order_relaxed ) + size;
-        const uint64 liveCount = stats._currentAllocationCount.fetch_add( 1, std::memory_order_relaxed ) + 1;
-        stats._totalAllocationCount.fetch_add( 1, std::memory_order_relaxed );
-        MemoryProfilerInternal::raiseToAtLeast( stats._peakAllocatedBytes, liveBytes );
-        MemoryProfilerInternal::raiseToAtLeast( stats._peakAllocationCount, liveCount );
+        // 지금 스레드 칸에만 더한다 — 다른 스레드와 캐시 라인을 다투지 않는다. 최고치는 합을 읽는 쪽이 올린다(`computeTagLive`).
+        MemoryTagShardCounter& counter = _shard.getCurrentThreadShard()._arrTag[tagIdx];
+        counter._liveBytes.fetch_add( static_cast<int64>( size ), std::memory_order_relaxed );
+        counter._liveCount.fetch_add( 1, std::memory_order_relaxed );
+        counter._totalAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
+        counter._totalAllocationCount.fetch_add( 1, std::memory_order_relaxed );
 
         uint64 outHash{ 0 };
 
@@ -378,13 +372,13 @@ namespace sw
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
             tagIdx = 0;
 
-        _arrStat[tagIdx]._totalFreedBytes.fetch_add( size, std::memory_order_relaxed );
-
-        // **세지 않은 것을 빼면 안 된다.** 두 카운터는 `uint64` 라 0 아래로 내려가면 1.8e19 로 돌아간다. 에디터의 프로파일러
-        // 패널에 **추적 켜기 체크박스**가 있어서, 켜기 전에 할당된 블록이 켠 뒤에 해제되면 바로 그 일이 생긴다(할당은 세지 않았는데
-        // 해제만 센다). 바로 아래 콜 스택 표도 `>= size` 로 막는다.
-        MemoryProfilerInternal::subtractSaturating( _arrStat[tagIdx]._currentAllocatedBytes, size );
-        MemoryProfilerInternal::subtractSaturating( _arrStat[tagIdx]._currentAllocationCount, 1 );
+        // 지금 스레드 칸에서 뺀다. 할당한 스레드의 칸과 달라 이 칸은 음수가 될 수 있지만 합은 맞다. 에디터의 프로파일러 패널에 **추적 켜기
+        // 체크박스**가 있어서, 켜기 전에 할당된 블록이 켠 뒤에 해제되면 세지 않은 것을 뺀다 — 합이 0 아래로 가면 읽는 쪽이 0 으로 읽는다
+        // (`MemoryProfilerInternal::clampLiveSum`). 바로 아래 콜 스택 표도 `>= size` 로 막는다.
+        MemoryTagShardCounter& counter = _shard.getCurrentThreadShard()._arrTag[tagIdx];
+        counter._totalFreedBytes.fetch_add( size, std::memory_order_relaxed );
+        counter._liveBytes.fetch_sub( static_cast<int64>( size ), std::memory_order_relaxed );
+        counter._liveCount.fetch_sub( 1, std::memory_order_relaxed );
 
         if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) )
         {
@@ -425,20 +419,57 @@ namespace sw
         }
     }
 
-    const MemoryProfileStats& MemoryProfiler::getStats( MemoryTag tag ) const
+    void MemoryProfiler::computeTagLive( uint32 tagIndex, uint64& outLiveBytes, uint64& outLiveCount ) const
+    {
+        int64 liveBytesSum = 0;
+        int64 liveCountSum = 0;
+        for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
+        {
+            const MemoryTagShardCounter& counter = _shard.getShard( shardIndex )._arrTag[tagIndex];
+            liveBytesSum += counter._liveBytes.load( std::memory_order_relaxed );
+            liveCountSum += counter._liveCount.load( std::memory_order_relaxed );
+        }
+        outLiveBytes = MemoryProfilerInternal::clampLiveSum( liveBytesSum );
+        outLiveCount = MemoryProfilerInternal::clampLiveSum( liveCountSum );
+
+        MemoryTagSummary& summary = _arrTagSummary[tagIndex];
+        MemoryProfilerInternal::raiseToAtLeast( summary._peakAllocatedBytes, outLiveBytes );
+        MemoryProfilerInternal::raiseToAtLeast( summary._peakAllocationCount, outLiveCount );
+    }
+
+    MemoryProfileStats MemoryProfiler::getStats( MemoryTag tag ) const
     {
         uint32 tagIdx = static_cast<uint32>( tag );
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
             tagIdx = 0;
-        return _arrStat[tagIdx];
+
+        MemoryProfileStats stats{};
+        for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
+        {
+            const MemoryTagShardCounter& counter = _shard.getShard( shardIndex )._arrTag[tagIdx];
+            stats._totalAllocatedBytes += counter._totalAllocatedBytes.load( std::memory_order_relaxed );
+            stats._totalAllocationCount += counter._totalAllocationCount.load( std::memory_order_relaxed );
+            stats._totalFreedBytes += counter._totalFreedBytes.load( std::memory_order_relaxed );
+        }
+        computeTagLive( tagIdx, stats._currentAllocatedBytes, stats._currentAllocationCount );
+
+        const MemoryTagSummary& summary = _arrTagSummary[tagIdx];
+        stats._peakAllocatedBytes       = summary._peakAllocatedBytes.load( std::memory_order_relaxed );
+        stats._peakAllocationCount      = summary._peakAllocationCount.load( std::memory_order_relaxed );
+        stats._budgetBytes              = summary._budgetBytes.load( std::memory_order_relaxed );
+        stats._bOverBudget              = summary._bOverBudget.load( std::memory_order_relaxed );
+        return stats;
     }
 
     uint64 MemoryProfiler::getLiveAllocatedBytes() const
     {
         uint64 total = 0;
-        for ( const MemoryProfileStats& stat : _arrStat )
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            total += stat._currentAllocatedBytes.load( std::memory_order_relaxed );
+            uint64 liveBytes = 0;
+            uint64 liveCount = 0;
+            computeTagLive( tagIndex, liveBytes, liveCount );
+            total += liveBytes;
         }
         return total;
     }
@@ -450,8 +481,9 @@ namespace sw
         array<MemoryTag, kMemoryTagCount> arrTag{};
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            arrLiveBytes[tagIndex] = _arrStat[tagIndex]._currentAllocatedBytes.load( std::memory_order_relaxed );
-            arrTag[tagIndex]       = static_cast<MemoryTag>( tagIndex );
+            uint64 liveCount = 0;
+            computeTagLive( tagIndex, arrLiveBytes[tagIndex], liveCount );
+            arrTag[tagIndex] = static_cast<MemoryTag>( tagIndex );
         }
         std::stable_sort( arrTag.begin(), arrTag.end(), [&arrLiveBytes]( MemoryTag lhs, MemoryTag rhs )
         { return arrLiveBytes[static_cast<uint32>( lhs )] > arrLiveBytes[static_cast<uint32>( rhs )]; } );
@@ -460,24 +492,29 @@ namespace sw
 
     void MemoryProfiler::resetPeaks()
     {
-        for ( MemoryProfileStats& stats : _arrStat )
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            stats._peakAllocatedBytes.store( stats._currentAllocatedBytes.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-            stats._peakAllocationCount.store( stats._currentAllocationCount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            uint64 liveBytes = 0;
+            uint64 liveCount = 0;
+            computeTagLive( tagIndex, liveBytes, liveCount );
+            MemoryTagSummary& summary = _arrTagSummary[tagIndex];
+            summary._peakAllocatedBytes.store( liveBytes, std::memory_order_relaxed );
+            summary._peakAllocationCount.store( liveCount, std::memory_order_relaxed );
         }
     }
 
     void MemoryProfiler::setBudget( MemoryTag tag, uint64 budgetBytes )
     {
-        const uint32        tagIndex = static_cast<uint32>( tag ) < kMemoryTagCount ? static_cast<uint32>( tag ) : 0;
-        MemoryProfileStats& stats    = _arrStat[tagIndex];
-        stats._budgetBytes.store( budgetBytes, std::memory_order_relaxed );
-        stats._bOverBudget.store( false, std::memory_order_relaxed );
+        const uint32      tagIndex = static_cast<uint32>( tag ) < kMemoryTagCount ? static_cast<uint32>( tag ) : 0;
+        MemoryTagSummary& summary  = _arrTagSummary[tagIndex];
+        summary._budgetBytes.store( budgetBytes, std::memory_order_relaxed );
+        summary._bOverBudget.store( false, std::memory_order_relaxed );
     }
 
     uint64 MemoryProfiler::getBudget( MemoryTag tag ) const
     {
-        return getStats( tag )._budgetBytes.load( std::memory_order_relaxed );
+        const uint32 tagIndex = static_cast<uint32>( tag ) < kMemoryTagCount ? static_cast<uint32>( tag ) : 0;
+        return _arrTagSummary[tagIndex]._budgetBytes.load( std::memory_order_relaxed );
     }
 
     void MemoryProfiler::clearBudgets()
@@ -493,24 +530,27 @@ namespace sw
         uint32 newlyExceededCount{ 0 };
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            MemoryProfileStats& stats  = _arrStat[tagIndex];
-            const uint64        budget = stats._budgetBytes.load( std::memory_order_relaxed );
+            // 프레임마다 한 번 부르는 곳이라 예산이 없는 태그도 합을 읽어 최고치를 올린다(최고치를 프레임마다 보는 자리).
+            uint64 liveBytes = 0;
+            uint64 liveCount = 0;
+            computeTagLive( tagIndex, liveBytes, liveCount );
+            MemoryTagSummary& summary = _arrTagSummary[tagIndex];
+            const uint64      budget  = summary._budgetBytes.load( std::memory_order_relaxed );
             if ( budget == 0 )
                 continue;
-            const uint64 liveBytes = stats._currentAllocatedBytes.load( std::memory_order_relaxed );
-            const bool   bWasOver  = stats._bOverBudget.load( std::memory_order_relaxed );
+            const bool bWasOver = summary._bOverBudget.load( std::memory_order_relaxed );
             if ( bWasOver == false && liveBytes > budget )
             {
-                stats._bOverBudget.store( true, std::memory_order_relaxed );
+                summary._bOverBudget.store( true, std::memory_order_relaxed );
                 ++newlyExceededCount;
                 if ( pOutListNewlyExceeded != nullptr )
                     pOutListNewlyExceeded->push_back( static_cast<MemoryTag>( tagIndex ) );
                 SW_LOG_WARNING( "[MemoryBudget] %# is over budget: %# KB live (peak %# KB) > %# KB budget", MemoryProfilerInternal::kArrTagName[tagIndex],
-                                liveBytes / 1024, stats._peakAllocatedBytes.load( std::memory_order_relaxed ) / 1024, budget / 1024 );
+                                liveBytes / 1024, summary._peakAllocatedBytes.load( std::memory_order_relaxed ) / 1024, budget / 1024 );
             }
             else if ( bWasOver && liveBytes * 100 < budget * MemoryProfilerInternal::kBudgetRearmPercent )
             {
-                stats._bOverBudget.store( false, std::memory_order_relaxed );
+                summary._bOverBudget.store( false, std::memory_order_relaxed );
             }
         }
         return newlyExceededCount;
@@ -520,8 +560,7 @@ namespace sw
     {
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            _arrBaselineBytes[tagIndex] = _arrStat[tagIndex]._currentAllocatedBytes.load( std::memory_order_relaxed );
-            _arrBaselineCount[tagIndex] = _arrStat[tagIndex]._currentAllocationCount.load( std::memory_order_relaxed );
+            computeTagLive( tagIndex, _arrBaselineBytes[tagIndex], _arrBaselineCount[tagIndex] );
         }
         _bHasTagBaseline = true;
     }
@@ -533,10 +572,11 @@ namespace sw
             return listGrowth;
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            const int64 byteDelta = static_cast<int64>( _arrStat[tagIndex]._currentAllocatedBytes.load( std::memory_order_relaxed ) ) -
-                                    static_cast<int64>( _arrBaselineBytes[tagIndex] );
-            const int64 blockCountDelta = static_cast<int64>( _arrStat[tagIndex]._currentAllocationCount.load( std::memory_order_relaxed ) ) -
-                                          static_cast<int64>( _arrBaselineCount[tagIndex] );
+            uint64 liveBytes = 0;
+            uint64 liveCount = 0;
+            computeTagLive( tagIndex, liveBytes, liveCount );
+            const int64 byteDelta       = static_cast<int64>( liveBytes ) - static_cast<int64>( _arrBaselineBytes[tagIndex] );
+            const int64 blockCountDelta = static_cast<int64>( liveCount ) - static_cast<int64>( _arrBaselineCount[tagIndex] );
             if ( byteDelta > 0 || blockCountDelta > 0 )
                 listGrowth.push_back( MemoryTagGrowth{ static_cast<MemoryTag>( tagIndex ), byteDelta, blockCountDelta } );
         }
@@ -566,9 +606,12 @@ namespace sw
     uint64 MemoryProfiler::getTotalAllocatedBytes() const
     {
         uint64 totalBytes{ 0 };
-        for ( const MemoryProfileStats& stat : _arrStat )
+        for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
         {
-            totalBytes += stat._totalAllocatedBytes.load( std::memory_order_relaxed );
+            for ( const MemoryTagShardCounter& counter : _shard.getShard( shardIndex )._arrTag )
+            {
+                totalBytes += counter._totalAllocatedBytes.load( std::memory_order_relaxed );
+            }
         }
         return totalBytes;
     }
@@ -576,9 +619,12 @@ namespace sw
     uint64 MemoryProfiler::getTotalAllocationCount() const
     {
         uint64 total = 0;
-        for ( const MemoryProfileStats& stat : _arrStat )
+        for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
         {
-            total += stat._totalAllocationCount.load( std::memory_order_relaxed );
+            for ( const MemoryTagShardCounter& counter : _shard.getShard( shardIndex )._arrTag )
+            {
+                total += counter._totalAllocationCount.load( std::memory_order_relaxed );
+            }
         }
         return total;
     }
@@ -586,9 +632,12 @@ namespace sw
     uint64 MemoryProfiler::getLiveAllocationCount() const
     {
         uint64 total = 0;
-        for ( const MemoryProfileStats& stat : _arrStat )
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            total += stat._currentAllocationCount.load( std::memory_order_relaxed );
+            uint64 liveBytes = 0;
+            uint64 liveCount = 0;
+            computeTagLive( tagIndex, liveBytes, liveCount );
+            total += liveCount;
         }
         return total;
     }

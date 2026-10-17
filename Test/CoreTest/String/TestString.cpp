@@ -127,7 +127,7 @@ SW_TEST_CASE( StringTest, InternPoolMemoryIsTaggedEngineMisc )
     }
 
     const uint32 internedBefore = sw::hashed_string::getInternedCount();
-    const uint64 scriptBefore   = pProfiler->getStats( sw::MemoryTag::Script )._currentAllocatedBytes.load();
+    const uint64 scriptBefore   = pProfiler->getStats( sw::MemoryTag::Script )._currentAllocatedBytes;
     uint32       nonEmptyCount{ 0 };
     {
         SW_MEMORY_SCOPE( Script );
@@ -137,7 +137,7 @@ SW_TEST_CASE( StringTest, InternPoolMemoryIsTaggedEngineMisc )
             nonEmptyCount += ( interned.size() > 0 ) ? 1u : 0u;
         }
     }
-    const uint64 scriptAfter = pProfiler->getStats( sw::MemoryTag::Script )._currentAllocatedBytes.load();
+    const uint64 scriptAfter = pProfiler->getStats( sw::MemoryTag::Script )._currentAllocatedBytes;
 
     SW_ASSERT_EQUAL( kNameCount, nonEmptyCount );
     SW_ASSERT_TRUE( sw::hashed_string::getInternedCount() >= internedBefore + kNameCount );

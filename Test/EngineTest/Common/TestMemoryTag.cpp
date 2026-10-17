@@ -33,13 +33,13 @@ namespace
     /** @brief 태그 하나의 "지금 살아 있는 바이트" 입니다. */
     uint64 getLiveBytes( const sw::MemoryProfiler& profiler, sw::MemoryTag tag )
     {
-        return profiler.getStats( tag )._currentAllocatedBytes.load();
+        return profiler.getStats( tag )._currentAllocatedBytes;
     }
 
     /** @brief 태그 하나의 "지금까지 잡은 바이트" 누계입니다(잡았다 놓은 것도 남는다). */
     uint64 getTotalBytes( const sw::MemoryProfiler& profiler, sw::MemoryTag tag )
     {
-        return profiler.getStats( tag )._totalAllocatedBytes.load();
+        return profiler.getStats( tag )._totalAllocatedBytes;
     }
 } // namespace
 

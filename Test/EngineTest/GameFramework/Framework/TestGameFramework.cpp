@@ -1267,7 +1267,7 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
         uint64 totalBytes = 0;
         for ( uint32 tagIndex = 0; tagIndex < static_cast<uint32>( MemoryTag::MaxTags ); ++tagIndex )
         {
-            totalBytes += pProfiler->getStats( static_cast<MemoryTag>( tagIndex ) )._totalAllocatedBytes.load();
+            totalBytes += pProfiler->getStats( static_cast<MemoryTag>( tagIndex ) )._totalAllocatedBytes;
         }
         return totalBytes;
     };
