@@ -24,6 +24,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Utility/GameTimeScale.h"
 
 #include <cmath>
 #include <imgui.h>
@@ -497,6 +498,9 @@ namespace sw::editor
         else
             EditorViewportMouseClaim::release( &state );
 
+        // 칠하는 양은 세기 × 경과 시간입니다. 경과는 엔진 프레임의 실제 경과를 씁니다(씬 뷰 카메라와 같은 시계). ImGui 의 경과는 벽시계라
+        // 고정 프레임 시간으로 도는 시나리오에서도 프레임 비용을 따라 바뀌고, 프레임이 빠른 Release 에서는 같은 드래그가 덜 칠합니다.
+        const float32 deltaTime = GameTimeScale::getUnscaledDeltaTime( ImGui::GetIO().DeltaTime );
         if ( state._bStroking )
         {
             TerrainComponent* pTerrain   = Internal::findTerrain( state._stroke._object );
@@ -504,13 +508,13 @@ namespace sw::editor
             if ( bStillDown == false )
                 Internal::endStroke( state );
             else if ( state._bHit )
-                Internal::applyStroke( state, *pTerrain, hit, ImGui::GetIO().DeltaTime );
+                Internal::applyStroke( state, *pTerrain, hit, deltaTime );
         }
         else if ( bClaim && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
         {
             TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( *args._pObjectManager, hit._x, hit._z );
             if ( pTerrain != nullptr && Internal::beginStroke( state, *pTerrain, hit ) )
-                Internal::applyStroke( state, *pTerrain, hit, ImGui::GetIO().DeltaTime );
+                Internal::applyStroke( state, *pTerrain, hit, deltaTime );
         }
 
         Internal::drawSettingsWindow( state, args );

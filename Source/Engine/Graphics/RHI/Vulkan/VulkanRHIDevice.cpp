@@ -62,7 +62,7 @@ namespace sw
         , _depthFormat{ 0 }
         , _surfaceLostCount{ 0 }
         , _bFrameStarted{ SW_FALSE }
-#if defined( SW_DEBUG )
+#if defined( SW_VULKAN_VALIDATION )
         , _bEnableValidationLayers{ SW_TRUE }
 #else
         , _bEnableValidationLayers{ SW_FALSE }

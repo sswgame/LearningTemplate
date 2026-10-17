@@ -107,13 +107,6 @@
   `[TestHost] stopping: destroying objects`(`TestHostRuntime::stop` 의 `destroyAll`)에서 끝나지 않았다. 같은 실행의 오디오 디코드 태스크 수명 결함(해제된 `AudioClipCache` 를 워커가 씀 — 고쳤다)이
   워커를 망가뜨려 태스크 매니저 join 이 멈춘 것인지 미확정. 종료 경로가 서브시스템 분해로 다시 쓰인 뒤 새 기준에서 다시 본다.
 
-- `E-11` [관찰] **`editor.netconditions` 가 hostgpu 격리 실행 DX11 에서 한 번 졌다**(2026-10-15, `Editor.NetPlayResentMessages >= 1` 이 0, 프레임 91). 같은 날 DX11 단독 3/3 · 다른 백엔드 통과.
-  지연 · 손실 조건이 프레임 91 안에 재전송을 한 번도 일으키지 못한 시간 문제로 보인다. 다시 지면 그 실행의 전송 통계(보낸 · 잃은 수)를 함께 남긴다.
-  2026-10-16 독점 GPU 단독 DX11 5/5 통과.
-  2026-10-17 **Release 에서 재현됩니다**(공유 GPU 단독 실행): 세션 시작 `f2b29427f` DX12 2/3 · DX11 5/5 실패, `b727bb112` DX12 2/3 · DX11 4/5 실패, Debug DX12 0/3 실패. `ctest -L hostgpu` 에서는 네 백엔드 2/2 실패.
-  진 실행의 통계는 클라이언트 `sent=6 dropped=5 resent=0`, 서버 `tick=14` 입니다. Release 는 프레임 22 → 90 이 1 초도 걸리지 않아 재전송 시한이 오기 전에 묻습니다.
-  뿌리는 벽시계로 도는 재전송을 프레임 수로 기다리는 시나리오입니다(메모 "기다림은 시간으로"). `netplay.stats` 앞에 "재전송이 1 이상이 될 때까지, 시간 상한까지" 기다리는 단계가 있어야 합니다.
-
 - `E-12` [관찰] **`editor.uipreview` Vulkan 1 회 "레이블 없음"**(2026-10-13 전체 체인, 프레임 180 `uipreview.language.en` — 콤보는 눌렀는데 항목이 없었다). 2026-10-15 Vulkan 단독 10 회(유휴 5 · CPU 부하 5)
   모두 통과해 재현하지 못했다. 에디터 입력 단계(`EditorClick` · `EditorDrag` · `EditorHover`)가 이제 레이블이 그려질 때까지 시계를 60 프레임까지 붙잡고(`AutomationRunner::holdUntilReady`)
   기다린 프레임을 `[Scenario] … held the clock for N frame(s)` 로 남긴다. 다시 지면 그 줄로 "늦게 열렸다"(기다려서 통과) · "닫혔다"(60 프레임 뒤에도 없음)를 가른다.
@@ -125,17 +118,6 @@
   같은 때 다른 App 창(스크린샷 캡처)을 띄우고 있었다. 이 시나리오는 실제 포커스 · 커서 클립을 쓰므로(`input="mixed"`) 독점으로 단독 GL 5/5 통과. 겹친 창이 포커스를 가져간 것으로 본다.
 
 - `E-16` [관찰] **WSL VM(Ubuntu-26.04)이 `wsl --shutdown` 후에도 1 초 안에 다시 뜬다.** VS Code 의 WSL 연결이나 다른 도구가 깨우는 것으로 보이며 원인을 특정하지 못했다.
-
-- `E-17` [관찰] **`editor.profilercapture` 가 Release 에서 늘 집니다**(2026-10-17, frame 300 `Editor.ProfilerCapturePaused == 1` 이 0, 로그 'Profiler paused on a spike' 0 건). 세션 시작 `f2b29427f` · `b727bb112` 모두 DX12 단독 2/2 실패, Debug DX12 2/2 통과, `ctest -L hostgpu` 에디터 체인 네 백엔드 실패.
-  진 실행에서도 frame 300 뒤에 `Profiler paused on a spike: GT.Frame 0.11 ms (threshold 0.1 ms)` 가 찍힙니다. Release 의 `GT.Frame` 이 0.1 ms 안팎이라 문턱 최솟값(`ProfilerPanel.cpp` `DragFloat` 최소 0.1)을 넘는 프레임이 늦게 옵니다.
-  뿌리는 "에디터 프레임은 0.1 ms 를 넘는다"는 시나리오의 가정입니다. 프레임 비용에 기대지 않고 스파이크를 일으키는 방법(개발 명령으로 한 프레임 지연 주입 등)이 필요합니다. 기대치를 낮춰 덮지 않습니다.
-
-- `E-18` [관찰] **`editor.terrainbrush` DX12 가 `ctest -L hostgpu` 에서 경계값으로 한 번 졌습니다**(2026-10-17 `b727bb112`, `ExpectImage differentFrom >= 0.001` 이 0.000944). 단독 DX12 는 `f2b29427f` 3/3 · `b727bb112` 3/3 통과입니다.
-  브러시 한 번이 바꾸는 화면 비율이 문턱 바로 위라 GPU 공유 실행의 프레임 차이로 밑돌 수 있습니다. 다시 지면 같은 실행의 다른 백엔드 값과 함께 남깁니다.
-
-- `E-19` [관찰] **`AppSmokeTest.VulkanEditorSceneViewResizeLeavesNoValidationError` 가 Release 에서 늘 집니다**('the Vulkan validation layer was not enabled'). `f2b29427f` 에서도 같습니다.
-  레이어가 없는 것이 아닙니다(vcpkg 가 `VkLayer_khronos_validation` 을 짓고 Debug `Bin` 에는 있습니다). 레이어 복사(`BuildLayout.cmake` `sw_deployRuntimeDependencies`)와 켜기(`VulkanRHIDevice.cpp` 생성자)가 Debug 전용인데 테스트는 `SW_SHIPPING` 만 빼고 돕니다.
-  고칠 곳은 테스트를 레이어를 켜는 조건(`SW_DEBUG`)과 같은 조건 하나로 묶는 것입니다.
 
 ---
 

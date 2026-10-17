@@ -72,6 +72,7 @@
 #include "Engine/Object/SceneAnimation/VertexAnimationCooker.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/FrameStall.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Profiling/ProfilerBackendSubsystem.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
@@ -614,6 +615,8 @@ namespace sw
         // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 % 를 측정했나" 에
         // 답할 수 없다. 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
         SW_PROFILE_SCOPE( "GT.Frame" );
+        // 개발 명령 `profile.stall` 이 건 지연을 이 구간 안에서 소비합니다. 스파이크를 프레임 비용에 기대지 않고 만듭니다.
+        FrameStall::consume();
 
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
         {
