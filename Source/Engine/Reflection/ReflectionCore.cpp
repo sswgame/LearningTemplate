@@ -154,6 +154,8 @@ namespace sw
         , _fileFilter{}
         , _uiMinRange{ 0.0f }
         , _uiMaxRange{ 1.0f }
+        , _pReadMinRange{ nullptr }
+        , _pReadMaxRange{ nullptr }
         , _bHasUIMinRange{ SW_FALSE }
         , _bHasUIMaxRange{ SW_FALSE }
         , _bEditConditionHides{ SW_FALSE }

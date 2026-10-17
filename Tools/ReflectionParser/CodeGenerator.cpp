@@ -26,6 +26,48 @@ namespace sw
             static constexpr int32 kMaxNestedContainerDepth = 3;
 
             /**
+             * @brief `Min` · `Max` 글이 이 타입의 필드 하나(`_halfSize`, `-_halfSize`)이면 그 필드와 부호를 찾습니다.
+             * @return 그 필드입니다. 숫자 · 성분 목록 · 이 타입에 없는 이름(바깥 타입의 필드)이면 nullptr 입니다. 그 꼴은 고정 배치형 코덱만 씁니다.
+             */
+            static const ParsedPropertyInfo* findOwnRangeField( const ParsedTypeInfo& typeInfo, const string& text, bool& outbNegate )
+            {
+                const string_view term = StringUtil::trim( text );
+                if ( term.empty() || term.find( ',' ) != string_view::npos )
+                    return nullptr;
+                const bool        bNegate = term.front() == '-';
+                const string_view name    = bNegate ? StringUtil::trim( term.substr( 1 ) ) : term;
+                if ( name.empty() )
+                    return nullptr;
+                const utf8 first            = name.front();
+                const bool bIdentifierStart = first == '_' || ( 'a' <= first && first <= 'z' ) || ( 'A' <= first && first <= 'Z' );
+                if ( bIdentifierStart == false )
+                    return nullptr;
+                for ( const ParsedPropertyInfo& candidate : typeInfo._listProperty )
+                {
+                    if ( string_view( candidate._memberName ) != name )
+                        continue;
+                    outbNegate = bNegate;
+                    return &candidate;
+                }
+                return nullptr;
+            }
+
+            /** @brief 필드 이름 꼴 경계를 인스턴스에서 읽는 함수(`PropertyMetadata::_pReadMinRange` 등)를 냅니다. 에디터 메타라 Shipping 에는 없습니다. */
+            static void emitRangeReader( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const string& text, const utf8* pMemberName )
+            {
+                bool                      bNegate = false;
+                const ParsedPropertyInfo* pField  = findOwnRangeField( typeInfo, text, bNegate );
+                if ( pField == nullptr )
+                    return;
+                // 접근자 프로퍼티는 메서드를 부른다(`_pValueAccessor` 와 같은 규칙). 이름이 틀리거나 숫자가 아닌 필드면 생성된 코드가 컴파일되지 않는다.
+                const utf8* pCall = pField->_bIsAccessor == SW_TRUE ? "()" : "";
+                emit.line( "#if !defined( SW_SHIPPING )" );
+                emit.linef( "p._metadata.%# = []( const void* pInstance ) -> ::float64 { return %#static_cast<::float64>( static_cast<const %#*>( pInstance )->%#%# ); };",
+                            pMemberName, bNegate ? "-" : "", typeInfo._fullyQualifiedName, pField->_memberName, pCall );
+                emit.line( "#endif" );
+            }
+
+            /**
              * @brief 열거형 전체 FQN(예: "sw::EState::Idle")에서 말단 열거자 이름("Idle")을 추출합니다.
              */
             static string_view enumeratorLeaf( string_view spec )
@@ -272,7 +314,7 @@ namespace sw
         } );
     }
 
-    void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop ) const
+    void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const
     {
         AnnotationFields::emitMetadata( emit, prop, "p._metadata." );
 
@@ -289,6 +331,9 @@ namespace sw
             emit.linef( "p._metadata._maxRange     = %#f;", prop._maxRange );
             emit.assign( "p._metadata._bHasMaxRange", "SW_TRUE" );
         }
+        // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터가 그 값으로 막는다).
+        CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
+        CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._maxRangeExpr._text, "_pReadMaxRange" );
         // 슬라이더 범위는 에디터 메타다(Shipping 에 멤버가 없다).
         if ( prop._bHasUIMinRange != SW_FALSE || prop._bHasUIMaxRange != SW_FALSE )
         {
@@ -460,7 +505,7 @@ namespace sw
             emit.pop();
             emit.line( "};" );
         }
-        emitPropertyMetadata( emit, prop );
+        emitPropertyMetadata( emit, typeInfo, prop );
         emit.line( "return p;" );
         emit.pop();
         emit.line( "}()," );

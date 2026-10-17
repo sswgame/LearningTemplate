@@ -136,14 +136,17 @@ namespace sw::editor
         return format;
     }
 
-    InspectorNumericRange InspectorPropertyLayout::getNumericRange( const PropertyInfo& prop )
+    InspectorNumericRange InspectorPropertyLayout::getNumericRange( const PropertyInfo& prop, const void* pInstance )
     {
         const PropertyMetadata& meta = prop._metadata;
         InspectorNumericRange   range;
-        range._bHasClampMin = meta._bHasMinRange != SW_FALSE;
-        range._bHasClampMax = meta._bHasMaxRange != SW_FALSE;
-        range._clampMin     = static_cast<float64>( meta._minRange );
-        range._clampMax     = static_cast<float64>( meta._maxRange );
+        // 경계 하나는 숫자이거나 필드다(둘이 함께 있지 않다). 필드 경계는 그 객체의 지금 값이다.
+        const bool bFieldBound = meta._pReadMinRange != nullptr || meta._pReadMaxRange != nullptr;
+        SW_ASSERT( bFieldBound == false || pInstance != nullptr );
+        range._bHasClampMin = meta._bHasMinRange != SW_FALSE || meta._pReadMinRange != nullptr;
+        range._bHasClampMax = meta._bHasMaxRange != SW_FALSE || meta._pReadMaxRange != nullptr;
+        range._clampMin     = meta._pReadMinRange != nullptr ? meta._pReadMinRange( pInstance ) : static_cast<float64>( meta._minRange );
+        range._clampMax     = meta._pReadMaxRange != nullptr ? meta._pReadMaxRange( pInstance ) : static_cast<float64>( meta._maxRange );
 
         range._bHasWidgetMin = meta._bHasUIMinRange != SW_FALSE || range._bHasClampMin;
         range._bHasWidgetMax = meta._bHasUIMaxRange != SW_FALSE || range._bHasClampMax;
@@ -151,7 +154,8 @@ namespace sw::editor
         range._widgetMax     = meta._bHasUIMaxRange != SW_FALSE ? static_cast<float64>( meta._uiMaxRange ) : range._clampMax;
 
         const bool bSliderMeta = prop.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
-        range._bSlider         = meta.hasFullUIRange() || ( meta.hasFullRange() && bSliderMeta );
+        const bool bFullClamp  = range._bHasClampMin && range._bHasClampMax;
+        range._bSlider         = meta.hasFullUIRange() || ( bFullClamp && bSliderMeta );
         return range;
     }
 

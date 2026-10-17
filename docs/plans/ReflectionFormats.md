@@ -249,7 +249,9 @@ struct MechArenaSnapshot
   읽기는 선언 순서이므로 범위 필드가 **앞에** 있어야 읽는 쪽이 범위를 압니다. 뒤에 있으면 생성 오류입니다. `MechArenaSnapshot` 은 단계 4-a 에서 `_arenaHalfSize` · `_ceiling` 을 목록 앞으로 옮겼습니다.
 - 바깥 타입으로 이름을 찾는 경우는 생성기가 중첩 타입을 부모 코덱 안에 펼칠 수 있을 때(3.2, 같은 헤더 · 공개 필드)만 됩니다. 펼칠 수 없거나 같은 중첩 타입을 이름이 다른 두 부모가 쓰면 생성 오류입니다.
 - 범위 필드는 자기 `Min` 으로 하한을 강제합니다. Mech 의 `>= 1.0f` 검사가 그것이고, 자르지 않고 읽기 실패입니다. 옛 손 코덱이 쓰던 `max( 1.0f, … )` 는 쓰기 실패로 바뀌었습니다.
-- 에디터는 지금 리터럴 `Min` · `Max` 만 압니다. 필드 이름 형태의 범위를 인스펙터가 쓰는 일은 별도 단계(9절 4-b)이고, 그 전까지 그 필드는 인스펙터에서 범위를 강제하지 않습니다. 에디터 메타데이터 생성은 이름 형태를 만나면 범위를 쓰지 않습니다.
+- 인스펙터는 같은 타입의 필드 하나를 가리키는 경계(`Min = "-_halfSize"`)를 그 객체의 지금 값으로 막습니다(단계 4-b, 끝남). 메타가 숫자 하나(`_minRange`)뿐이던 형식이 뿌리였으므로,
+  생성기가 그 필드를 읽는 함수(`PropertyMetadata::_pReadMinRange` · `_pReadMaxRange`, 에디터 전용)를 냅니다. 실행 시간에 이름을 찾지 않으므로 이름이 틀리면 생성된 코드가 컴파일되지 않습니다.
+  바깥 타입의 필드를 가리키는 경계와 성분 목록(`"-_a, 0, -_a"`)은 읽기 함수가 없습니다. 인스펙터는 그 객체를 가진 바깥 객체를 모르고, 벡터 성분에는 범위를 두지 않기 때문입니다.
 
 **한계.** 키 값은 리터럴이나 필드 이름만 받고 C++ 상수(`kMaxCount`)는 받지 않습니다. 파서가 상수 식을 계산하지 않기 때문입니다. 같은 값이 여러 필드에 반복될 수 있습니다(8.1 위험 4).
 데이터(카탈로그 크기 등)로 정해지는 범위는 키로 표현하지 않습니다. `FightingMatch` 의 `_moveIndex < moveCount`(`:1176-1177`)가 그 예이며 3.10 의 검증 훅에 둡니다.
@@ -506,7 +508,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록 | 없음(읽기) | 없음 | `scout`(haiku) |
 | 2 | (보류) `GimmickCircuit` 을 B 로. 상태 바이트 `_stateBytes` 가 씬 · 프리팹 XML 과 레벨 세이브에 남아 B 대상이 아님. 아래 문단 | `GimmickCircuit.*`, `GimmickCircuitComponent.*` | 세이브 형식 결정이 먼저 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
-| 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게 | 인스펙터 범위 코드(미확인 위치) | 단계 1 뒤 | `worker`(sonnet) |
+| 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게(끝남, 3.8 끝 문단). 같은 타입의 필드 하나만 읽고, 바깥 타입 · 성분 목록은 코덱만 쓴다 | `ReflectionTypes.h`, `CodeGenerator.cpp`, `InspectorPropertyLayout.*` | 없음 | `worker`(opus) |
 | 7-c | 매니저의 타입별 컴포넌트 목록 | `GameObjectManager.*`, `GameObjectStore.*` | 7-d 와 같은 파일, 7-c 먼저 | `integrator`(opus) |
 | 7-d | 타입 핸들 `TComponentHandle<T>` | `ComponentHandle.h`, `GameObjectManager.*`, 호출부, 인스펙터 | 7-c 뒤 같은 손 | `integrator`(opus) |
 

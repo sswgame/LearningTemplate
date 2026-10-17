@@ -46,8 +46,8 @@ namespace sw
         void emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, size_t typeIndex ) const;
         /** @brief PropertyInfo 한 항목을 출력합니다. */
         void emitPropertyInfoEntry( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
-        /** @brief 프로퍼티 메타데이터(필드 표 + 범위)를 출력합니다. */
-        void emitPropertyMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop ) const;
+        /** @brief 프로퍼티 메타데이터(필드 표 + 범위)를 출력합니다. 필드 이름 꼴 범위는 @p typeInfo 의 필드를 읽는 함수가 됩니다. */
+        void emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 중첩 컨테이너 트리를 출력합니다. */
         void emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 출력합니다. */
