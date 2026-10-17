@@ -1,7 +1,8 @@
 /**
  * @file MailboxProtocol.h
  * @brief 우편함 서비스의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kMailbox`), 결과, 화면에 보이는 우편, 요청과 응답 형식을 정의합니다.
- * @details 응답 본문은 `MailboxResult` 뒤에 필드가 이어지는 형식이다. 업무 결과는 본문에 담으며 경제와 거래 키트도 같다.
+ * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ *          업무 결과는 응답 본문(`MailboxReply::_result`)에 담으며 경제와 거래 키트도 같다.
  *          캠페인 우편의 키는 `campaign/<id 16진>` 이다. 개인 우편의 키는 받는 계정의 16진 문자열로 시작하므로 겹치지 않는다.
  *          수령 응답의 잔액은 게임이 경제 클라이언트(`EconomyClient::applyBalances`)로 넘긴다. 키트끼리는 서로 모른다.
  */
@@ -21,9 +22,6 @@
 
 namespace sw
 {
-    class BitReader;
-    class BitWriter;
-
     /** @brief 우편함 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
     ENUM( Count = Count )
     enum class MailboxMethodName : uint8
@@ -39,8 +37,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 우편함 메서드 번호입니다. 와이어 값이므로 바꾸면 `MailboxProtocol::kVersion` 을 올려야 합니다. */
-    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox>
+    /** @brief 우편함 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox, OnlineNoPushName>
     {
         static constexpr uint16 kList     = toMethod( MailboxMethodName::List );
         static constexpr uint16 kMarkRead = toMethod( MailboxMethodName::MarkRead );
@@ -77,59 +75,83 @@ namespace sw
 namespace sw
 {
     /** @brief 화면에 보이는 우편 하나입니다. */
+    REFLECT()
     struct MailView
     {
-        vector<ServiceMailAttachment> _listAttachment{};
-        string                        _mailKey{};
-        string                        _titleKey{};
-        string                        _body{};
-        string                        _senderName{};
-        int64                         _createdMs{ 0 };
-        int64                         _expiresMs{ 0 };
-        ServiceMailState              _state{ ServiceMailState::Unread };
-        uint8                         _bLiteralText{ SW_FALSE };
-        uint8                         _bCampaign{ SW_FALSE };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 8 )
+        vector<ServiceMailAttachment> _listAttachment{}; ///< 상한은 `ServiceMailConstant::kMaxAttachmentCount` 와 같다
+        PROPERTY( MaxCount = 256 )
+        string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
+        PROPERTY( MaxCount = 128 )
+        string _titleKey{}; ///< 상한은 `ServiceMailConstant::kMaxTitleSize` 와 같다
+        PROPERTY( MaxCount = 2048 )
+        string _body{}; ///< 상한은 `ServiceMailConstant::kMaxBodySize` 와 같다
+        PROPERTY( MaxCount = 64 )
+        string _senderName{}; ///< 상한은 `ServiceMailConstant::kMaxSenderNameSize` 와 같다
+        PROPERTY()
+        int64 _createdMs{ 0 };
+        PROPERTY()
+        int64 _expiresMs{ 0 };
+        PROPERTY()
+        ServiceMailState _state{ ServiceMailState::Unread };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bLiteralText{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bCampaign{ SW_FALSE };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 모든 메서드의 요청입니다. 메서드마다 쓰는 필드만 채웁니다. */
+    REFLECT()
     struct MailboxRequest
     {
-        string _mailKey{};
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 256 )
+        string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
+        PROPERTY( MaxCount = 256 )
         string _cursor{}; ///< List 에서 쓴다. 앞 응답의 `_nextCursor` 이며 처음에는 빈 문자열이다
-        int32  _maxCount{ 20 };
+        PROPERTY( Min = 1, Max = 50 )
+        int32 _maxCount{ 20 }; ///< 상한은 `MailboxProtocol::kMaxListCount` 와 같다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 모든 메서드의 응답입니다. 메서드마다 쓰는 필드만 채웁니다. */
+    REFLECT()
     struct MailboxReply
     {
-        vector<MailView>      _listMail{};
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 100 )
+        vector<MailView> _listMail{}; ///< 캠페인이 개인 우편 앞에 끼어들므로 상한은 `MailboxProtocol::kMaxListCount` 의 두 배이다
+        PROPERTY( MaxCount = 1024 )
         vector<LedgerBalance> _listBalance{}; ///< 수령과 모두 받기에서 바뀐 잔액이다. 게임이 EconomyClient::applyBalances 로 넘긴다
-        string                _nextCursor{};
-        int32                 _claimedCount{ 0 };
-        MailboxResult         _result{ MailboxResult::Ok };
+        PROPERTY( MaxCount = 256 )
+        string _nextCursor{};
+        PROPERTY()
+        int32 _claimedCount{ 0 };
+        PROPERTY()
+        MailboxResult _result{ MailboxResult::Ok };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 형식을 읽고 씁니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
+    /**
+     * @struct MailboxProtocol
+     * @brief 우편함 키트의 메시지 타입 목록, 등록 항목, 목록 상한입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     */
     struct SW_KIT_API MailboxProtocol
     {
+        using MessageTypes = OnlineMessageTypes<MailboxRequest, MailboxReply>;
+
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
-        static constexpr uint32          kVersion        = 1;
         static constexpr int32           kMaxListCount   = 50;
         static constexpr const utf8*     kCampaignPrefix = "campaign/";
 
-        static void               writeRequest( BitWriter& outWriter, const MailboxRequest& request );
-        [[nodiscard]] static bool readRequest( BitReader& reader, MailboxRequest& outRequest );
-        static void               writeReply( BitWriter& outWriter, const MailboxReply& reply );
-        [[nodiscard]] static bool readReply( BitReader& reader, MailboxReply& outReply );
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 충돌은 각각 대응하는 결과로, 나머지는 Unavailable 로 바꿉니다. */
         static MailboxResult fromErrorCode( uint16 errorCode );
     };

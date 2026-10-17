@@ -1,9 +1,19 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+#include "EngineTest/GameFramework/Online/OnlineMethodTableTestUtil.h"
+
+#include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Base/Online/Guard/RequestLimits.h"
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 
@@ -69,10 +79,10 @@ namespace
     };
 
     // 영역 확인용 항목들이다. 항목은 만들면 레지스트리에 오르므로 이름 공간 범위에 둔다.
-    const OnlineProtocolEntry kAccountRangeProtocol{ "OnlineServiceTest.Account", OnlineMethodRange::kAccount, 1 };
-    const OnlineProtocolEntry kSameRangeProtocol{ "OnlineServiceTest.SameRange", OnlineMethodRange::kAccount, 1 };
-    const OnlineProtocolEntry kNotABaseProtocol{ "OnlineServiceTest.NotABase", 0x0910, 1 };
-    const OnlineProtocolEntry kHostRangeProtocol{ "OnlineServiceTest.HostRange", OnlineMethodRange::kHost, 1 };
+    const OnlineProtocolEntry kAccountRangeProtocol{ "OnlineServiceTest.Account", test::TestEmptyMethodTable<OnlineMethodRange::kAccount>{}, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kSameRangeProtocol{ "OnlineServiceTest.SameRange", test::TestEmptyMethodTable<OnlineMethodRange::kAccount>{}, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kNotABaseProtocol{ "OnlineServiceTest.NotABase", test::TestEmptyMethodTable<0x0910>{}, OnlineMessageTypes<>{} };
+    const OnlineProtocolEntry kHostRangeProtocol{ "OnlineServiceTest.HostRange", test::TestEmptyMethodTable<OnlineMethodRange::kHost>{}, OnlineMessageTypes<>{} };
 
     static_assert( OnlineMethodRange::isInRange( OnlineMethodRange::kAccount + 0x7F, OnlineMethodRange::kAccount ), "last method of a range" );
     static_assert( OnlineMethodRange::isInRange( OnlineMethodRange::kTrade, OnlineMethodRange::kAccount ) == false, "ranges do not overlap" );
@@ -156,21 +166,47 @@ SW_TEST_CASE( OnlineProtocolTest, VersionMismatchBecomesUpdateRequiredBeforeTheK
 }
 
 /**
- * @brief [OnlineProtocolTest] 응답 첫 칸의 결과(varuint)는 Count 미만만 읽고, 넘거나 몸이 모자라면 거절한다
+ * @brief [OnlineProtocolTest] 메시지 타입 목록의 해시는 타입마다의 스키마 해시를 목록 순서대로 섞은 값이고, 타입이나 순서가 다르면 달라진다
+ * @details 키트는 이 목록 하나로 메시지를 쓰고 읽으며 같은 목록이 등록 항목에 섞이므로, 와이어에 오르는 타입의 배치가 바뀌면 온라인 스키마 해시가 바뀐다.
  */
-SW_TEST_CASE( OnlineProtocolTest, ReadEnumRejectsOutOfRangeAndShortBody )
+SW_TEST_CASE( OnlineProtocolTest, MessageTypesHashFollowsTheTypes )
 {
-    BitWriter writer;
-    writer.writeVarUint( static_cast<uint64>( SampleOnlineResult::NotSignedIn ) );
-    writer.writeVarUint( static_cast<uint64>( SampleOnlineResult::Count ) );
+    using Balance      = OnlineMessageTypes<LedgerBalance>;
+    using Attachment   = OnlineMessageTypes<ServiceMailAttachment>;
+    using Both         = OnlineMessageTypes<LedgerBalance, ServiceMailAttachment>;
+    using BothReversed = OnlineMessageTypes<ServiceMailAttachment, LedgerBalance>;
+    SW_EXPECT_TRUE( Balance::computeSchemaHash() == HashUtil::combine( 0, FixedLayout::getSchemaHash<LedgerBalance>() ) );
+    SW_EXPECT_TRUE( Balance::computeSchemaHash() != Attachment::computeSchemaHash() ); // 필드가 같아도 타입 이름이 정규 문자열에 들어간다
+    SW_EXPECT_TRUE( Both::computeSchemaHash() != BothReversed::computeSchemaHash() );
+    SW_EXPECT_TRUE( OnlineMessageTypes<>::computeSchemaHash() == 0 );
+    SW_EXPECT_TRUE( Both::kContains<LedgerBalance> );
+    SW_EXPECT_FALSE( Both::kContains<AccountIdentity> );
+    SW_EXPECT_TRUE( OnlineProtocolRegistry::computeSchemaHash() == OnlineProtocolRegistry::computeSchemaHash() );
+}
 
-    BitReader          reader( writer.getBytes().data(), writer.getByteCount() );
-    SampleOnlineResult result = SampleOnlineResult::Ok;
-    SW_EXPECT_TRUE( OnlineReplyUtil::readEnum( reader, SampleOnlineResult::Count, result ) );
-    SW_EXPECT_TRUE( result == SampleOnlineResult::NotSignedIn );
-    SW_EXPECT_FALSE( OnlineReplyUtil::readEnum( reader, SampleOnlineResult::Count, result ) );
-    SW_EXPECT_TRUE( result == SampleOnlineResult::NotSignedIn );
+/**
+ * @brief [OnlineProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
+ */
+SW_TEST_CASE( OnlineProtocolTest, DeclaredLimitsMatchTheConstants )
+{
+    using Util = test::OnlineMessageTestUtil;
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LedgerBalance>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceMailAttachment>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceAuditEntry>( "_before" ), uint32( ServiceAuditEntry::kMaxStateSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceAuditEntry>( "_after" ), uint32( ServiceAuditEntry::kMaxStateSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<ServiceAuditEntry>( "_memo" ), uint32( ServiceAuditEntry::kMaxMemoSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<AccountIdentity>( "_displayName" ), uint32( RequestLimits::kMaxDisplayNameSize ) );
+}
 
-    BitReader empty( nullptr, 0 );
-    SW_EXPECT_FALSE( OnlineReplyUtil::readEnum( empty, SampleOnlineResult::Count, result ) );
+/**
+ * @brief [OnlineProtocolTest] 메서드 표의 해시는 이름 순서를 따르므로, 같은 타입을 받는 두 메서드의 번호를 맞바꾸면 값이 바뀐다
+ */
+SW_TEST_CASE( OnlineProtocolTest, MethodTableHashFollowsTheNameOrder )
+{
+    const vector<string> lockThenCancel{ "Lock", "Cancel" };
+    const vector<string> cancelThenLock{ "Cancel", "Lock" };
+    SW_EXPECT_TRUE( OnlineProtocolEntry::computeNameOrderHash( lockThenCancel, {} ) != OnlineProtocolEntry::computeNameOrderHash( cancelThenLock, {} ) );
+    SW_EXPECT_TRUE( OnlineProtocolEntry::computeNameOrderHash( { "Lock" }, {} ) != OnlineProtocolEntry::computeNameOrderHash( {}, { "Lock" } ) ); // 메서드와 알림은 섞이지 않는다
+    SW_EXPECT_TRUE( OnlineProtocolEntry::computeNameOrderHash( { "ab", "c" }, {} ) != OnlineProtocolEntry::computeNameOrderHash( { "a", "bc" }, {} ) );
+    SW_EXPECT_TRUE( ( OnlineProtocolEntry::computeMethodHash<test::TestNoMethodName, OnlineNoPushName>() == OnlineProtocolEntry::computeNameOrderHash( {}, {} ) ) );
 }

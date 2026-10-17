@@ -2,8 +2,6 @@
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Shared/MailboxClient.h"
 
-#include "Core/Network/BitStream.h"
-
 namespace sw
 {
     MailboxClient::MailboxClient()
@@ -58,10 +56,8 @@ namespace sw
 
     uint64 MailboxClient::send( uint16 method, const MailboxRequest& request, const NetIdempotencyKey& key, ReplyDelegate onReply )
     {
-        BitWriter body;
-        MailboxProtocol::writeRequest( body, request );
         const bool bFirstPage = method == MailboxMethod::kList && request._cursor.empty();
-        return sendCall( method, body, key, onReply, MailboxCallContext{ request._mailKey, static_cast<uint8>( bFirstPage ? SW_TRUE : SW_FALSE ) } );
+        return sendRequest( method, request, key, onReply, MailboxCallContext{ request._mailKey, static_cast<uint8>( bFirstPage ? SW_TRUE : SW_FALSE ) } );
     }
 
     void MailboxClient::onCallSucceeded( const Call& call, const MailboxReply& reply )

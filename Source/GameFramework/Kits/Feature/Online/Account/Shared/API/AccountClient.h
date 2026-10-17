@@ -130,6 +130,9 @@ namespace sw
             AccountClientOperation _operation{ AccountClientOperation::Logout };
         };
 
+        /** @brief @p request 를 키트 메시지로 써서 보냅니다. 범위 밖 값이 있으면 보내지 않고 `InvalidRequest` 응답을 바로 남깁니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
+        template <typename TRequest>
+        uint64 sendRequest( AccountClientOperation operation, uint16 method, const TRequest& request, bool bNeedsSession, bool bAutomatic = false );
         uint64 send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic = false );
         void   transmit( AccountClientOperation operation, uint16 method, const vector<uint8>& bodyBytes, uint64 requestID, bool bAutomatic );
         void   onResponse( const OnlineResponse& response );

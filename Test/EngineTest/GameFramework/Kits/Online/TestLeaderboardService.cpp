@@ -2,10 +2,13 @@
 // 같은 순위(그동안 온 읽기는 줄을 서고 다음 읽기는 다시 채우지 않는다), 통계 → 연동 표 · 통계 조회, 규칙 밖 값 · 저장소 실패.
 #include "pch.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -228,4 +231,29 @@ SW_TEST_CASE( LeaderboardServiceTest, StatFeedsLinkedBoardAndStoreFailure )
     node.step();
     SW_EXPECT_TRUE( node.getLast()._result == LeaderboardResult::Unavailable );
     SW_EXPECT_EQUAL( database.computeContentHash(), hashBefore );
+}
+
+/**
+ * @brief [LeaderboardProtocolTest] 순위표 메시지와 업적 알림은 상한까지 왕복하고, 음수 시작과 상한을 넘는 개수는 쓰지 않는다
+ */
+SW_TEST_CASE( LeaderboardProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
+{
+    using Messages = LeaderboardProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    LeaderboardReply reply;
+    reply._result   = LeaderboardResult::NotRanked;
+    reply._periodID = ~0ull;
+    reply._score    = -( 1ll << 53 );
+    reply._listEntry.assign( 100, LeaderboardEntry{ string( 32, 'n' ), 7, 1 << 20, 100 } );
+    reply._listStat.assign( 256, LeaderboardStat{ "kills", 42 } );
+    reply._listAchievement.assign( 1024, AchievementState{ "first_win", 99 } );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( reply ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( AchievementState{ string( 32, 'a' ), -1 } ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( LeaderboardRequest{ "board", 5, 3, 0, 100 } ) );
+    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, AchievementState>( LeaderboardRequest{ "board", 5, 3, 0, 10 } ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( LeaderboardRequest{ "board", 0, 0, -1, 10 } ) );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( LeaderboardRequest{ "board", 0, 0, 0, 101 } ) );
+    }
 }

@@ -30,14 +30,14 @@ namespace sw
     {
         BitReader   reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         MatchFormed match;
-        if ( MatchmakingProtocol::readFormed( reader, match ) == false )
+        if ( MatchmakingProtocol::MessageTypes::read( reader, match ) != FixedReadResult::Ok )
         {
             SW_LOG_WARNING( "MatchServerAgent: dropped a malformed assignment (%# bytes)", bytes.size() );
             return false;
         }
         for ( size_t team = 0; team < match._listTeam.size(); ++team )
         {
-            for ( const MatchMember& member : match._listTeam[team] )
+            for ( const MatchMember& member : match._listTeam[team]._listMember )
             {
                 _mapAccountToExpected[member._accountID] = Expected{ match._matchID, nowMs + kExpectTtlMs, static_cast<int32>( team ) };
             }

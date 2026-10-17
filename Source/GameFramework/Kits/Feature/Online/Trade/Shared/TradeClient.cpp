@@ -28,32 +28,30 @@ namespace sw
 
     uint64 TradeClient::invite( string_view peerDisplayName, const NetIdempotencyKey& key )
     {
-        BitWriter body;
-        body.writeBlob( reinterpret_cast<const uint8*>( peerDisplayName.data() ), static_cast<int32>( peerDisplayName.size() ) );
-        return send( TradeMethod::kInvite, body, key );
+        TradeInviteRequest request;
+        request._peerDisplayName = string( peerDisplayName );
+        return send( TradeMethod::kInvite, request, key );
     }
 
     uint64 TradeClient::respond( uint64 tradeID, bool bAccept, const NetIdempotencyKey& key )
     {
-        BitWriter body;
-        body.writeVarUint( tradeID );
-        body.writeBool( bAccept );
-        return send( TradeMethod::kRespond, body, key );
+        TradeRespondRequest request;
+        request._tradeID = tradeID;
+        request._bAccept = bAccept ? SW_TRUE : SW_FALSE;
+        return send( TradeMethod::kRespond, request, key );
     }
 
     uint64 TradeClient::setOffer( uint64 tradeID, const vector<TradeLeg>& listLeg, const NetIdempotencyKey& key )
     {
-        BitWriter body;
-        body.writeVarUint( tradeID );
-        TradeWire::writeLegs( body, listLeg );
-        return send( TradeMethod::kSetOffer, body, key );
+        TradeOfferRequest request;
+        request._listLeg = listLeg;
+        request._tradeID = tradeID;
+        return send( TradeMethod::kSetOffer, request, key );
     }
 
     uint64 TradeClient::lock( uint64 tradeID, const NetIdempotencyKey& key )
     {
-        BitWriter body;
-        body.writeVarUint( tradeID );
-        return send( TradeMethod::kLock, body, key );
+        return send( TradeMethod::kLock, TradeIDRequest{ tradeID }, key );
     }
 
     uint64 TradeClient::confirm( uint64 tradeID, const NetIdempotencyKey& key )
@@ -66,18 +64,16 @@ namespace sw
 
     uint64 TradeClient::confirmSeen( uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, const NetIdempotencyKey& key )
     {
-        BitWriter body;
-        body.writeVarUint( tradeID );
-        body.writeVarUint( seenOwnRevision );
-        body.writeVarUint( seenPeerRevision );
-        return send( TradeMethod::kConfirm, body, key );
+        TradeConfirmRequest request;
+        request._tradeID          = tradeID;
+        request._seenOwnRevision  = seenOwnRevision;
+        request._seenPeerRevision = seenPeerRevision;
+        return send( TradeMethod::kConfirm, request, key );
     }
 
     uint64 TradeClient::cancel( uint64 tradeID, const NetIdempotencyKey& key )
     {
-        BitWriter body;
-        body.writeVarUint( tradeID );
-        return send( TradeMethod::kCancel, body, key );
+        return send( TradeMethod::kCancel, TradeIDRequest{ tradeID }, key );
     }
 
     int32 TradeClient::pollReplies( vector<TradeClientReply>& outListReply )
@@ -104,22 +100,27 @@ namespace sw
 
     void TradeClient::onServicePush( uint16 kind, BitReader& body )
     {
-        TradeClientUpdate update;
-        update._kind       = kind;
-        TradeResult result = TradeResult::Ok;
-        if ( TradeReplyWire::readReply( body, result, update._snapshot, update._listBalance ) == false )
+        TradeReply push;
+        if ( TradeProtocol::MessageTypes::read( body, push ) != FixedReadResult::Ok )
             return;
+        TradeClientUpdate update;
+        update._kind        = kind;
+        update._snapshot    = std::move( push._snapshot );
+        update._listBalance = std::move( push._listBalance );
         observe( update._snapshot );
         _listUpdate.push_back( std::move( update ) );
     }
 
-    uint64 TradeClient::send( uint16 method, const BitWriter& body, const NetIdempotencyKey& key )
+    template <typename TRequest>
+    uint64 TradeClient::send( uint16 method, const TRequest& request, const NetIdempotencyKey& key )
     {
         NetRequestOptions options;
         options._idempotencyKey     = key.isValid() ? key : NetIdempotencyKey::makeRandom();
         const uint64      requestID = _nextRequestID++;
         const PendingCall pendingCall{ options._idempotencyKey, requestID, method };
-        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
+        // 범위 밖 값이라 쓰지 못하면 보내지 않고 kInvalidRequest 응답으로 끝난다. 그 응답도 onResponse 를 지난다
+        (void)_callTable.sendMessage<TradeProtocol::MessageTypes>( *_pClient, method, request, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ),
+                                                                   pendingCall ); // 응답은 pendingCall._requestID 로 알린다
         return requestID;
     }
 
@@ -139,11 +140,19 @@ namespace sw
         }
         else
         {
-            BitReader body( response._pBody, response._bodySize );
-            if ( TradeReplyWire::readReply( body, reply._result, reply._snapshot, reply._listBalance ) == false )
+            BitReader  body( response._pBody, response._bodySize );
+            TradeReply received;
+            if ( TradeProtocol::MessageTypes::read( body, received ) != FixedReadResult::Ok )
+            {
                 reply._result = TradeResult::Invalid;
+            }
             else
+            {
+                reply._result      = received._result;
+                reply._snapshot    = std::move( received._snapshot );
+                reply._listBalance = std::move( received._listBalance );
                 observe( reply._snapshot );
+            }
         }
         _listReply.push_back( std::move( reply ) );
     }

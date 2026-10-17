@@ -233,7 +233,7 @@ namespace sw
         call._accountID      = context._accountID;
         call._idempotencyKey = context._idempotencyKey;
         call._nowMs          = context._nowMs;
-        if ( MailboxProtocol::readRequest( body, call._request ) == false )
+        if ( MailboxProtocol::MessageTypes::read( body, call._request ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -326,15 +326,9 @@ namespace sw
         const PendingCall pending = _listPendingCall[pendingIndex];
         _listPendingCall.erase( _listPendingCall.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
         if ( pending._pHost != nullptr )
-        {
-            BitWriter writer;
-            MailboxProtocol::writeReply( writer, reply );
-            (void)pending._pHost->respondOk( pending._token, writer );
-        }
+            (void)pending._pHost->respondMessage<MailboxProtocol::MessageTypes>( pending._token, reply );
         else if ( pending._onReply.isBound() )
-        {
             pending._onReply( reply );
-        }
         _metrics.countRequest( pending._methodIndex, static_cast<int32>( reply._result ) );
         MetricHistogram* pLatency = _metrics.findLatencyHistogram( pending._methodIndex );
         if ( pLatency != nullptr )

@@ -420,3 +420,20 @@ SW_TEST_CASE( TradeStreamTest, InventorySlotsBecomeLegs )
     SW_EXPECT_TRUE( TradeClient::makeLegs( inventory, { firstPotion, firstPotion }, &isTradableItem, listLeg ) == TradeResult::Invalid );
     SW_EXPECT_TRUE( TradeClient::makeLegs( inventory, { 99 }, &isTradableItem, listLeg ) == TradeResult::Invalid );
 }
+
+/**
+ * @brief [TradeStreamTest] 범위 밖 값의 요청은 보내지 않고 kInvalidRequest 응답으로 남는다. 응답의 요청 번호가 반환값과 같다
+ */
+SW_TEST_CASE( TradeStreamTest, OutOfRangeRequestEndsAsInvalidRequestWithARequestID )
+{
+    OnlineServiceClient client;
+    TradeClient         tradeClient;
+    tradeClient.initialize( &client );
+    SW_TEST_DEFENSIVE_SCOPE( "an out-of-range request is logged and not sent" );
+    const uint64 requestID = tradeClient.invite( string( 65, 'p' ) );
+    SW_EXPECT_TRUE( requestID != 0 );
+    vector<TradeClientReply> listReply;
+    SW_ASSERT_EQUAL( tradeClient.pollReplies( listReply ), int32( 1 ) );
+    SW_EXPECT_EQUAL( listReply[0]._requestID, requestID );
+    SW_EXPECT_EQUAL( listReply[0]._errorCode, OnlineError::kInvalidRequest );
+}

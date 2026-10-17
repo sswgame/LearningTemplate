@@ -99,7 +99,9 @@ namespace sw
             uint16            _method{ 0 };
         };
 
-        uint64 send( uint16 method, const BitWriter& body, const NetIdempotencyKey& key );
+        /** @brief @p request 를 써서 보냅니다. 범위 밖 값이 있으면 보내지 않고 `kInvalidRequest` 응답을 바로 남깁니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
+        template <typename TRequest>
+        uint64 send( uint16 method, const TRequest& request, const NetIdempotencyKey& key );
         void   onResponse( const OnlineResponse& response );
         void   observe( const TradeSnapshot& snapshot );
 

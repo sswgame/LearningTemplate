@@ -19,6 +19,8 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMethodTableTestUtil.h"
+
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
@@ -34,7 +36,7 @@
 namespace test
 {
     /** @brief 테스트 로그인 서비스의 프로토콜 항목입니다. 테스트 실행 파일에 하나뿐이도록 inline 변수로 둡니다(서버와 클라이언트가 같은 해시를 얻는다). */
-    inline const sw::OnlineProtocolEntry kTestLoginProtocol{ "OnlineHostTestUtil.Login", sw::OnlineMethodRange::kGame, 1 };
+    inline const sw::OnlineProtocolEntry kTestLoginProtocol{ "OnlineHostTestUtil.Login", TestEmptyMethodTable<sw::OnlineMethodRange::kGame>{}, sw::OnlineMessageTypes<>{} };
 
     /** @brief 테스트 로그인 — 몸 `varuint 계정 id` 로 이 연결을 그 계정에 묶습니다. 이미 다른 연결에 붙은 계정이면 kConflict. */
     class TestLoginService final : public sw::IOnlineHostService

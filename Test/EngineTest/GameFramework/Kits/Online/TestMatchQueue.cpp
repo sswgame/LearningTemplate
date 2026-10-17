@@ -3,6 +3,8 @@
 // 끝내 없으면 NoServer. 파티 장이 줄 서면 파티 전체가 한 팀, 장이 아니면 거절. 로비 시작은 로비의 편 그대로 배정.
 #include "pch.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
@@ -10,6 +12,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -416,4 +419,67 @@ SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
     SW_EXPECT_TRUE( node._listNotification[0]._assignment._outcome == MatchQueueOutcome::Found );
     SW_EXPECT_NOT_EQUAL( node._listNotification[0]._assignment._team, node._listNotification[1]._assignment._team ); // 로비의 편 그대로(방장 0 · 들어온 이 1)
     SW_EXPECT_EQUAL( node._listNotification[0]._assignment._serverID, uint64( 50 ) );
+}
+
+/**
+ * @brief [MatchmakingProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
+ */
+SW_TEST_CASE( MatchmakingProtocolTest, DeclaredLimitsMatchTheConstants )
+{
+    using Util = test::OnlineMessageTestUtil;
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LobbySetting>( "_value" ), uint32( PartyLobbyLimit::kMaxSettingValueSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LobbySnapshot>( "_listSetting" ), uint32( PartyLobbyLimit::kMaxLobbySetting ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LobbySnapshot>( "_name" ), uint32( PartyLobbyLimit::kMaxLobbyNameSize ) );
+}
+
+/**
+ * @brief [MatchmakingProtocolTest] 매칭 메시지와 버스 본문은 상한까지 왕복하고, 파티와 로비 캐시 기록은 자기 기술형으로 왕복하며, 범위 밖 값은 쓰지 않는다
+ */
+SW_TEST_CASE( MatchmakingProtocolTest, MessagesAndRecordsRoundTrip )
+{
+    using Messages = MatchmakingProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    MatchFormed match;
+    match._matchID       = ~0ull;
+    match._modeID        = string( 32, 'm' );
+    match._region        = string( 16, 'r' );
+    match._averageRating = -5;
+    match._listTeam.resize( 16 );
+    for ( MatchFormedTeam& team : match._listTeam )
+    {
+        team._listMember.assign( 16, MatchMember{ 3, 1500 } );
+    }
+    MatchTicket ticket;
+    ticket._listMember.assign( 256, MatchMember{ 4, -1 } );
+    match._listTicket.push_back( ticket );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( match ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( MatchTicketCancel{ 77 } ) );
+    LobbySnapshot lobby;
+    lobby._name           = string( 48, 'l' );
+    lobby._maxMemberCount = 32;
+    lobby._state          = LobbyState::Starting;
+    lobby._listMember.assign( 32, LobbyMember{ 2, 1, SW_TRUE } );
+    lobby._listSetting.assign( 8, LobbySetting{ string( 16, 'k' ), string( 64, 'v' ) } );
+    MatchmakingReply reply;
+    reply._listLobby.assign( 50, lobby );
+    reply._party._listMemberID.assign( 8, AccountID( 9 ) );
+    reply._party._maxMemberCount = 8;
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( reply ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( MatchmakingReadyRequest{ 5, SW_TRUE } ) );
+    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, MatchmakingIDRequest>( MatchTicketCancel{ 77 } ) ) );
+
+    LobbySnapshot decodedLobby;
+    SW_ASSERT_TRUE( MatchmakingProtocol::decodeLobby( MatchmakingProtocol::encodeLobby( lobby ), decodedLobby ) );
+    SW_EXPECT_TRUE( FixedLayout::equals( decodedLobby, lobby ) );
+    PartySnapshot party;
+    party._listMemberID.assign( 9, AccountID( 1 ) ); // 상한(8)을 넘는 캐시 기록은 읽지 않는다
+    PartySnapshot decodedParty;
+    SW_EXPECT_FALSE( MatchmakingProtocol::decodeParty( MatchmakingProtocol::encodeParty( party ), decodedParty ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( party ) );
+        MatchmakingModeRequest longMode;
+        longMode._modeID = string( 33, 'm' );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( longMode ) );
+    }
 }

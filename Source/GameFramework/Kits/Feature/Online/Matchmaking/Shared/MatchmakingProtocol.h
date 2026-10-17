@@ -1,12 +1,14 @@
 /**
  * @file MatchmakingProtocol.h
  * @brief 매칭 서비스의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kMatchmaking`), 본문, 캐시 기록, 버스 메시지의 형식을 정의하며 클라이언트와 서버가 함께 씁니다.
- * @details 응답 본문은 `MatchmakingResult` 뒤에 필드가 이어지는 형식이다. 업무 결과는 본문에 담으며 거래와 경제 키트도 같다.
+ * @details 요청, 응답, 알림, 서버 버스 본문은 `REFLECT` 구조체 하나씩이고 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ *          업무 결과는 응답 본문(`MatchmakingReply::_result`)에 담으며 거래와 경제 키트도 같다.
  *          공통 오류(`OnlineError`)만 오류 코드로 오며, 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 `fromErrorCode` 로 이를 결과에 맞춘다.
- *          캐시 기록은 `[버전 1][본문]` 형식이며 다른 버전은 읽지 않는다.
+ *          캐시 기록(파티, 로비)은 자기 기술형(A)이며 기록 판이 다르면 읽지 않는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -18,9 +20,6 @@
 
 namespace sw
 {
-    class BitReader;
-    class BitWriter;
-
     /** @brief 매칭 서비스 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
     ENUM( Count = Count )
     enum class MatchmakingMethodName : uint8
@@ -40,12 +39,23 @@ namespace sw
         QueueLeave,
         Count,
     };
+
+    /** @brief 매칭 서비스 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class MatchmakingPushName : uint8
+    {
+        Party,
+        PartyInvite,
+        Lobby,
+        Match,
+        Count,
+    };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 매칭 서비스의 메서드와 알림 번호입니다. 와이어 값이므로 바꾸면 `MatchmakingProtocol::kVersion` 을 올려야 합니다. */
-    struct MatchmakingMethod : OnlineMethodTable<MatchmakingMethodName, OnlineMethodRange::kMatchmaking>
+    /** @brief 매칭 서비스의 메서드와 알림 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct MatchmakingMethod : OnlineMethodTable<MatchmakingMethodName, OnlineMethodRange::kMatchmaking, MatchmakingPushName>
     {
         static constexpr uint16 kPartyCreate = toMethod( MatchmakingMethodName::PartyCreate ); ///< 본문은 없고 파티를 돌려준다
         static constexpr uint16 kPartyInvite = toMethod( MatchmakingMethodName::PartyInvite ); ///< 계정을 받아 파티를 돌려준다. 파티장만 부를 수 있다
@@ -61,35 +71,96 @@ namespace sw
         static constexpr uint16 kQueueJoin   = toMethod( MatchmakingMethodName::QueueJoin );   ///< 모드와 지역을 받아 티켓 id 를 돌려준다. 파티장이면 파티 전체의 티켓이다
         static constexpr uint16 kQueueLeave  = toMethod( MatchmakingMethodName::QueueLeave );
 
-        static constexpr uint16 kPushParty       = OnlineMethodRange::kMatchmaking + 0x80; ///< 파티 알림이다. 멤버가 비어 있으면 해산, 나감, 내보내짐을 뜻한다
-        static constexpr uint16 kPushPartyInvite = OnlineMethodRange::kMatchmaking + 0x81; ///< 초대한 계정과 파티 id 를 보낸다
-        static constexpr uint16 kPushLobby       = OnlineMethodRange::kMatchmaking + 0x82; ///< 로비 알림이다. 멤버가 비어 있으면 나감을 뜻한다
-        static constexpr uint16 kPushMatch       = OnlineMethodRange::kMatchmaking + 0x83; ///< `MatchAssignment`
-
-        static_assert( OnlineMethodRange::isInRange( kPushMatch, OnlineMethodRange::kMatchmaking ) && OnlineMethodRange::isMethod( kPushMatch ) == false );
+        static constexpr uint16 kPushParty       = toPush( MatchmakingPushName::Party );       ///< 파티 알림이다. 멤버가 비어 있으면 해산, 나감, 내보내짐을 뜻한다
+        static constexpr uint16 kPushPartyInvite = toPush( MatchmakingPushName::PartyInvite ); ///< 초대한 계정과 파티 id 를 보낸다
+        static constexpr uint16 kPushLobby       = toPush( MatchmakingPushName::Lobby );       ///< 로비 알림이다. 멤버가 비어 있으면 나감을 뜻한다
+        static constexpr uint16 kPushMatch       = toPush( MatchmakingPushName::Match );       ///< `MatchAssignment`
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 파티 초대 알림입니다. */
+    REFLECT()
     struct PartyInvite
     {
-        uint64    _partyID{ 0 };
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _partyID{ 0 };
+        PROPERTY()
         AccountID _inviterID{ kInvalidAccountID };
     };
 } // namespace sw
 
 namespace sw
 {
+    /** @brief id 하나를 받는 요청입니다. 파티 초대, 수락, 내보내기는 계정이나 파티 id 이고, 로비 들어가기, 나오기, 시작은 로비 id 입니다. */
+    REFLECT()
+    struct MatchmakingIDRequest
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _id{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 로비 준비(`kLobbyReady`)의 요청입니다. */
+    REFLECT()
+    struct MatchmakingReadyRequest
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _lobbyID{ 0 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bReady{ SW_FALSE };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 로비 목록(`kLobbyList`)과 줄서기(`kQueueJoin`)의 요청입니다. 목록은 지역을 비웁니다. */
+    REFLECT()
+    struct MatchmakingModeRequest
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 32 )
+        string _modeID{}; ///< 상한은 `MatchmakingLimit::kMaxIDSize` 와 같다
+        PROPERTY( MaxCount = 16 )
+        string _region{}; ///< 상한은 `ServerRecord::kMaxNameSize` 와 같다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 서버 버스(대기열 취소 주제)의 본문입니다. 권한 서버가 대기열에서 그 티켓을 뺍니다. */
+    REFLECT()
+    struct MatchTicketCancel
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _ticketID{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 모든 메서드의 응답입니다. 메서드마다 쓰는 필드만 채웁니다. 실패하면 `_result` 만 의미가 있습니다. */
+    REFLECT()
     struct MatchmakingReply
     {
-        vector<LobbySnapshot> _listLobby{}; ///< LobbyList
-        PartySnapshot         _party{};
-        LobbySnapshot         _lobby{};
-        uint64                _ticketID{ 0 }; ///< QueueJoin 과 QueueLeave 의 티켓 id 이다
-        MatchmakingResult     _result{ MatchmakingResult::Ok };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 50 )
+        vector<LobbySnapshot> _listLobby{}; ///< LobbyList. 상한은 `PartyLobbyLimit::kMaxLobbyList` 와 같다
+        PROPERTY()
+        PartySnapshot _party{};
+        PROPERTY()
+        LobbySnapshot _lobby{};
+        PROPERTY()
+        uint64 _ticketID{ 0 }; ///< QueueJoin 과 QueueLeave 의 티켓 id 이다
+        PROPERTY()
+        MatchmakingResult _result{ MatchmakingResult::Ok };
     };
 } // namespace sw
 
@@ -97,22 +168,21 @@ namespace sw
 {
     /**
      * @struct MatchmakingProtocol
-     * @brief 본문 코덱입니다. 읽을 때 상한(`PartyLobbyLimit`, `MatchmakingLimit`)을 넘으면 false 를 반환합니다.
+     * @brief 매칭의 메시지 타입 목록, 등록 항목, 캐시 기록 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @details 알림 본문은 `PartySnapshot`, `PartyInvite`, `LobbySnapshot`, `MatchAssignment` 이고, 서버 버스 본문은 `MatchTicket`, `MatchTicketCancel`, `MatchFormed`, `MatchAssignment` 입니다.
      */
     struct SW_KIT_API MatchmakingProtocol
     {
+        using MessageTypes = OnlineMessageTypes<MatchmakingIDRequest, MatchmakingReadyRequest, MatchmakingModeRequest, LobbySnapshot, MatchmakingReply, PartySnapshot, PartyInvite,
+                                                MatchAssignment, MatchTicket, MatchTicketCancel, MatchFormed>;
+
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
-        static constexpr uint32          kVersion      = 1;
-        static constexpr uint8           kRecordFormat = 1;
 
-        static void               writeParty( BitWriter& outWriter, const PartySnapshot& party );
-        [[nodiscard]] static bool readParty( BitReader& reader, PartySnapshot& outParty );
-        static void               writeLobby( BitWriter& outWriter, const LobbySnapshot& lobby );
-        [[nodiscard]] static bool readLobby( BitReader& reader, LobbySnapshot& outLobby );
-        static void               writeInvite( BitWriter& outWriter, const PartyInvite& invite );
-        [[nodiscard]] static bool readInvite( BitReader& reader, PartyInvite& outInvite );
-
-        /** @brief 캐시 기록(`[버전][본문]`)을 읽고 씁니다. */
+        /**
+         * @brief 캐시 기록을 읽고 씁니다. 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A)이며 기록 판을 머리에 둡니다.
+         * @details 다시 만들 수 있는 캐시이므로 `ServiceRecordUtil::readCache` 로 읽습니다. 다른 판이거나 모르는 필드가 있거나 선언된 범위(멤버 수 같은)를
+         *          벗어나면 로그 없이 false 이고, 읽는 쪽은 그 파티나 로비가 없는 것으로 봅니다.
+         */
         static vector<uint8>      encodeParty( const PartySnapshot& party );
         [[nodiscard]] static bool decodeParty( const vector<uint8>& bytes, PartySnapshot& outParty );
         static vector<uint8>      encodeLobby( const LobbySnapshot& lobby );
@@ -120,18 +190,6 @@ namespace sw
         /** @brief 캐시 값 하나에 든 id(16진 문자열)입니다. 계정에서 파티로 가는 인덱스와 임대 주인이 쓰는 값입니다. */
         static vector<uint8>      encodeID( uint64 id );
         [[nodiscard]] static bool decodeID( const vector<uint8>& bytes, uint64& outID );
-
-        // 서버 사이(버스)에서 주고받는 티켓, 만들어진 경기, 결과이다
-        static void               writeTicket( BitWriter& outWriter, const MatchTicket& ticket );
-        [[nodiscard]] static bool readTicket( BitReader& reader, MatchTicket& outTicket );
-        static void               writeFormed( BitWriter& outWriter, const MatchFormed& match );
-        [[nodiscard]] static bool readFormed( BitReader& reader, MatchFormed& outMatch );
-        static void               writeAssignment( BitWriter& outWriter, const MatchAssignment& assignment );
-        [[nodiscard]] static bool readAssignment( BitReader& reader, MatchAssignment& outAssignment );
-
-        /** @brief 응답 본문을 읽고 씁니다. 결과 뒤에 필드가 이어집니다. */
-        static void               writeReply( BitWriter& outWriter, const MatchmakingReply& reply );
-        [[nodiscard]] static bool readReply( BitReader& reader, MatchmakingReply& outReply );
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 손상된 본문은 Invalid, 충돌은 Conflict, 나머지(로그인, 전송, 저장소, 시한)는 Unavailable 입니다. */
         static MatchmakingResult fromErrorCode( uint16 errorCode );

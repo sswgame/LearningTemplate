@@ -1,7 +1,8 @@
 /**
  * @file AdminProtocol.h
  * @brief GM 명령의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kAdmin`), 권한 등급, 결과, 요청과 응답 형식, 명령별 필요 등급을 정의합니다.
- * @details 요청과 응답은 명령 하나에 구조체 하나를 쓰며 명령마다 쓰는 필드만 채운다. GM 요청은 드물어서 크기보다 형식을 하나로 두는 편이 낫다. 응답 본문은 `AdminResult` 뒤에 필드가 이어지며 업무 결과는 본문에 담는다.
+ * @details 요청과 응답은 명령 하나에 `REFLECT` 구조체 하나를 쓰며 명령마다 쓰는 필드만 채운다. GM 요청은 드물어서 크기보다 형식을 하나로 두는 편이 낫다.
+ *          본문은 고정 배치형(B)이고 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다. 업무 결과는 응답 본문(`AdminReply::_result`)에 담는다.
  *          권한 등급은 넷이며 `Viewer` < `Support` < `Operator` < `Super` 순서이다. 국내 게임사 GM 툴의 권한 그룹과 Nakama 콘솔의 역할에 해당한다.
  */
 #pragma once
@@ -23,9 +24,6 @@
 
 namespace sw
 {
-    class BitReader;
-    class BitWriter;
-
     /** @brief GM 명령 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
     ENUM( Count = Count )
     enum class AdminMethodName : uint8
@@ -44,8 +42,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief GM 명령 메서드 번호입니다. 와이어 값이므로 바꾸면 `AdminProtocol::kVersion` 을 올려야 합니다. */
-    struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin>
+    /** @brief GM 명령 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
+    struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin, OnlineNoPushName>
     {
         static constexpr uint16 kLookupAccount  = toMethod( AdminMethodName::LookupAccount );
         static constexpr uint16 kAdjustAsset    = toMethod( AdminMethodName::AdjustAsset );
@@ -63,7 +61,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 권한 등급입니다. 큰 등급이 작은 등급을 포함합니다. 저장 값이므로 순서를 바꾸지 않습니다. */
+    /** @brief 권한 등급입니다. 큰 등급이 작은 등급을 포함합니다. 저장 값이므로 순서를 바꾸지 않습니다. `Count` 는 누구도 가질 수 없는 등급이며 와이어에 오르지 않습니다. */
+    ENUM( Count = Count )
     enum class AdminRole : uint8
     {
         None = 0,
@@ -99,83 +98,125 @@ namespace sw
 
 namespace sw
 {
-    /** @brief GM 명령 하나의 입력입니다. 명령마다 쓰는 필드만 채웁니다. */
+    /** @brief GM 명령 하나의 입력입니다. 명령마다 쓰는 필드만 채웁니다. 문구 상한(256)은 관리자 프로토콜 공통 값입니다. */
+    REFLECT()
     struct AdminRequest
     {
-        vector<ServiceMailAttachment> _listAttachment{}; ///< SendMail, BulkMail, CreateCampaign 에서 쓴다
-        vector<AccountID>             _listAccountID{};  ///< BulkMail 에서 쓰며 16개 이하이다
-        string                        _displayName{};    ///< LookupAccount 에서 계정 id 대신 쓴다. 이 프로세스에 접속해 있는 계정만 찾을 수 있다
-        string                        _subject{};        ///< ListAudit 의 주체 접두어이다(예: `acct.<16진>/`)
-        string                        _assetID{};
-        string                        _reasonCode{}; ///< 제재 표시 사유이며 로컬라이제이션 키이다
-        string                        _memo{};       ///< 티켓이나 사유이다. 상태를 바꾸는 명령에는 필수이며 1 KB 이하이다
-        string                        _titleKey{};
-        string                        _body{};
-        string                        _cursor{};
-        AccountID                     _accountID{ kInvalidAccountID };
-        uint64                        _batchID{ 0 }; ///< BulkMail 의 배치 id 이거나 CreateCampaign 의 id 이다
-        int64                         _amount{ 0 };  ///< AdjustAsset 에서 양수는 지급이고 음수는 회수이다
-        int64                         _untilMs{ 0 }; ///< SetSanction 의 종료 시각이다. 0이면 해제한다
-        int64                         _startMs{ 0 };
-        int64                         _endMs{ 0 };
-        int32                         _maxCount{ 20 };
-        ServiceSanctionKind           _sanctionKind{ ServiceSanctionKind::ChatMute };
-        AdminRole                     _role{ AdminRole::None };
-        uint8                         _bRefund{ SW_FALSE }; ///< AdjustAsset 회수에서 환불이나 결제 취소로 회수하는 경우이다. 잔액이 모자라면 빚으로 남기며 사유는 "refund.revoke" 이다
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 8 )
+        vector<ServiceMailAttachment> _listAttachment{}; ///< SendMail, BulkMail, CreateCampaign 에서 쓴다. 상한은 `ServiceMailConstant::kMaxAttachmentCount` 와 같다
+        PROPERTY( MaxCount = 16 )
+        vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 16개 이하이다
+        PROPERTY( MaxCount = 256 )
+        string _displayName{}; ///< LookupAccount 에서 계정 id 대신 쓴다. 이 프로세스에 접속해 있는 계정만 찾을 수 있다
+        PROPERTY( MaxCount = 256 )
+        string _subject{}; ///< ListAudit 의 주체 접두어이다(예: `acct.<16진>/`)
+        PROPERTY( MaxCount = 48 )
+        string _assetID{}; ///< 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같다
+        PROPERTY( MaxCount = 256 )
+        string _reasonCode{}; ///< 제재 표시 사유이며 로컬라이제이션 키이다
+        PROPERTY( MaxCount = 1024 )
+        string _memo{}; ///< 티켓이나 사유이다. 상태를 바꾸는 명령에는 필수이며 1 KB 이하이다
+        PROPERTY( MaxCount = 128 )
+        string _titleKey{}; ///< 상한은 `ServiceMailConstant::kMaxTitleSize` 와 같다
+        PROPERTY( MaxCount = 2048 )
+        string _body{}; ///< 상한은 `ServiceMailConstant::kMaxBodySize` 와 같다
+        PROPERTY( MaxCount = 256 )
+        string _cursor{};
+        PROPERTY()
+        AccountID _accountID{ kInvalidAccountID };
+        PROPERTY()
+        uint64 _batchID{ 0 }; ///< BulkMail 의 배치 id 이거나 CreateCampaign 의 id 이다
+        PROPERTY()
+        int64 _amount{ 0 }; ///< AdjustAsset 에서 양수는 지급이고 음수는 회수이다
+        PROPERTY()
+        int64 _untilMs{ 0 }; ///< SetSanction 의 종료 시각이다. 0이면 해제한다
+        PROPERTY()
+        int64 _startMs{ 0 };
+        PROPERTY()
+        int64 _endMs{ 0 };
+        PROPERTY( Min = 1, Max = 100 )
+        int32 _maxCount{ 20 }; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
+        PROPERTY()
+        ServiceSanctionKind _sanctionKind{ ServiceSanctionKind::ChatMute };
+        PROPERTY()
+        AdminRole _role{ AdminRole::None };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bRefund{ SW_FALSE }; ///< AdjustAsset 회수에서 환불이나 결제 취소로 회수하는 경우이다. 잔액이 모자라면 빚으로 남기며 사유는 "refund.revoke" 이다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 조회 결과의 분개 한 줄입니다. 그 계정 쪽의 자산별 순변화입니다. */
+    REFLECT()
     struct AdminJournalLine
     {
-        vector<LedgerBalance> _listChange{};
-        string                _reason{};
-        string                _memo{};
-        int64                 _timeMs{ 0 };
-        uint64                _actorID{ 0 };
-        LedgerActorKind       _actorKind{ LedgerActorKind::System };
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 1024 )
+        vector<LedgerBalance> _listChange{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
+        PROPERTY( MaxCount = 32 )
+        string _reason{}; ///< 상한은 `LedgerConstant::kMaxReasonSize` 와 같다
+        PROPERTY( MaxCount = 256 )
+        string _memo{}; ///< 상한은 `LedgerConstant::kMaxMemoSize` 와 같다
+        PROPERTY()
+        int64 _timeMs{ 0 };
+        PROPERTY()
+        uint64 _actorID{ 0 };
+        PROPERTY()
+        LedgerActorKind _actorKind{ LedgerActorKind::System };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief GM 명령의 응답입니다. */
+    REFLECT()
     struct AdminReply
     {
-        vector<LedgerBalance>     _listBalance{};
-        vector<AdminJournalLine>  _listJournal{};
-        vector<ServiceAuditEntry> _listAudit{};
-        ServiceSanctionState      _sanction{};
-        AccountIdentity           _identity{};
-        string                    _nextCursor{};
-        int32                     _processedCount{ 0 }; ///< BulkMail 에서 이번에 새로 보낸 수이다
-        AdminRole                 _targetRole{ AdminRole::None };
-        AdminResult               _result{ AdminResult::Ok };
-        uint8                     _bOnline{ SW_FALSE };
-        uint8                     _bReplayed{ SW_FALSE };
-        uint8                     _bRevokeSessions{ SW_FALSE }; ///< 서버 안에서만 쓴다. 정지나 영구 정지가 걸렸다는 뜻이며 와이어에 싣지 않는다
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 1024 )
+        vector<LedgerBalance> _listBalance{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
+        PROPERTY( MaxCount = 100 )
+        vector<AdminJournalLine> _listJournal{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
+        PROPERTY( MaxCount = 100 )
+        vector<ServiceAuditEntry> _listAudit{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
+        PROPERTY()
+        ServiceSanctionState _sanction{};
+        PROPERTY()
+        AccountIdentity _identity{};
+        PROPERTY( MaxCount = 256 )
+        string _nextCursor{};
+        PROPERTY()
+        int32 _processedCount{ 0 }; ///< BulkMail 에서 이번에 새로 보낸 수이다
+        PROPERTY()
+        AdminRole _targetRole{ AdminRole::None };
+        PROPERTY()
+        AdminResult _result{ AdminResult::Ok };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bOnline{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bReplayed{ SW_FALSE };
+        uint8 _bRevokeSessions{ SW_FALSE }; ///< 서버 안에서만 쓴다. 정지나 영구 정지가 걸렸다는 뜻이며 `PROPERTY` 가 아니어서 와이어에 싣지 않는다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 형식을 읽고 쓰며 등급 테이블을 제공합니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
+    /**
+     * @struct AdminProtocol
+     * @brief GM 명령의 메시지 타입 목록, 등록 항목, 상한, 등급 테이블입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     */
     struct SW_KIT_API AdminProtocol
     {
+        using MessageTypes = OnlineMessageTypes<AdminRequest, AdminReply>;
+
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
-        static constexpr uint32          kVersion        = 1;
         static constexpr int32           kMaxBulkCount   = 16;
         static constexpr int32           kMaxMemoSize    = 1024;
         static constexpr int32           kMaxLookupCount = 10;
         static constexpr int32           kMaxListCount   = 100;
-        static constexpr int32           kMaxTextSize    = 256;
 
-        static void               writeRequest( BitWriter& outWriter, const AdminRequest& request );
-        [[nodiscard]] static bool readRequest( BitReader& reader, AdminRequest& outRequest );
-        static void               writeReply( BitWriter& outWriter, const AdminReply& reply );
-        [[nodiscard]] static bool readReply( BitReader& reader, AdminReply& outReply );
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. */
         static AdminResult fromErrorCode( uint16 errorCode );
         /** @brief 명령에 필요한 등급을 반환합니다. 제재는 종류에 따라 다릅니다. 모르는 메서드는 `Count` 이며 누구도 가질 수 없는 등급입니다. */

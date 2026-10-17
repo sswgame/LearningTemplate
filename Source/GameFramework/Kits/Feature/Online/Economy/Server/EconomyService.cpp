@@ -167,26 +167,26 @@ namespace sw
             return;
         }
         EconomyCall call;
-        call._method         = context._method;
-        call._accountID      = context._accountID;
-        call._idempotencyKey = context._idempotencyKey;
-        call._nowMs          = context._nowMs;
-        bool bDecoded        = true;
+        call._method               = context._method;
+        call._accountID            = context._accountID;
+        call._idempotencyKey       = context._idempotencyKey;
+        call._nowMs                = context._nowMs;
+        FixedReadResult readResult = FixedReadResult::Ok;
         switch ( context._method )
         {
             case EconomyMethod::kGetHistory:
             {
-                bDecoded = EconomyProtocol::readHistoryRequest( body, call._history );
+                readResult = EconomyProtocol::MessageTypes::read( body, call._history );
                 break;
             }
             case EconomyMethod::kPurchase:
             {
-                bDecoded = EconomyProtocol::readPurchaseRequest( body, call._purchase );
+                readResult = EconomyProtocol::MessageTypes::read( body, call._purchase );
                 break;
             }
             case EconomyMethod::kRedeemReceipt:
             {
-                bDecoded = EconomyProtocol::readRedeemRequest( body, call._redeem );
+                readResult = EconomyProtocol::MessageTypes::read( body, call._redeem );
                 break;
             }
             default:
@@ -194,7 +194,7 @@ namespace sw
                 break;
             }
         }
-        if ( bDecoded == false )
+        if ( readResult != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -312,15 +312,9 @@ namespace sw
         const PendingCall pending = _listPendingCall[pendingIndex];
         _listPendingCall.erase( _listPendingCall.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
         if ( pending._pHost != nullptr )
-        {
-            BitWriter writer;
-            EconomyProtocol::writeReply( writer, reply );
-            (void)pending._pHost->respondOk( pending._token, writer );
-        }
+            (void)pending._pHost->respondMessage<EconomyProtocol::MessageTypes>( pending._token, reply );
         else if ( pending._onReply.isBound() )
-        {
             pending._onReply( reply );
-        }
         _metrics.countRequest( pending._methodIndex, static_cast<int32>( reply._result ) );
         MetricHistogram* pLatency = _metrics.findLatencyHistogram( pending._methodIndex );
         if ( pLatency != nullptr )

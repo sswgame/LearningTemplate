@@ -4,7 +4,6 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Shared/ServerDirectoryProtocol.h"
 
 namespace sw
@@ -37,18 +36,16 @@ namespace sw
 
     uint64 ServerDirectoryClient::requestAssignment( const ServerAssignmentRequest& request, const AssignmentDelegate& onAssignment )
     {
-        BitWriter body;
-        ServerDirectoryProtocol::writeAssignmentRequest( body, request );
-        return _assignmentCallTable.send( *_pClient, ServerDirectoryMethod::kAssignServer, body, NetRequestOptions{},
-                                          OnlineResponseDelegate::create<&ServerDirectoryClient::onAssignmentResponse>( this ), onAssignment );
+        return _assignmentCallTable.sendMessage<ServerDirectoryProtocol::MessageTypes>( *_pClient, ServerDirectoryMethod::kAssignServer, request, NetRequestOptions{},
+                                                                                        OnlineResponseDelegate::create<&ServerDirectoryClient::onAssignmentResponse>( this ), onAssignment );
     }
 
     uint64 ServerDirectoryClient::requestServerList( string_view kind, const ServerListDelegate& onServerList )
     {
-        BitWriter body;
-        ServiceKeyUtil::writeString( body, kind );
-        return _serverListCallTable.send( *_pClient, ServerDirectoryMethod::kListServers, body, NetRequestOptions{},
-                                          OnlineResponseDelegate::create<&ServerDirectoryClient::onServerListResponse>( this ), onServerList );
+        ServerListRequest request;
+        request._kind = string( kind );
+        return _serverListCallTable.sendMessage<ServerDirectoryProtocol::MessageTypes>( *_pClient, ServerDirectoryMethod::kListServers, request, NetRequestOptions{},
+                                                                                        OnlineResponseDelegate::create<&ServerDirectoryClient::onServerListResponse>( this ), onServerList );
     }
 
     void ServerDirectoryClient::onServicePush( uint16 kind, BitReader& body )
@@ -56,7 +53,7 @@ namespace sw
         if ( kind != ServerDirectoryMethod::kPushStatus )
             return;
         ServerDirectoryStatus status;
-        if ( ServerDirectoryProtocol::readStatus( body, status ) == false )
+        if ( ServerDirectoryProtocol::MessageTypes::read( body, status ) != FixedReadResult::Ok )
             return;
         _lastStatus = std::move( status );
         ++_statusRevision;
@@ -72,7 +69,7 @@ namespace sw
         if ( errorCode == OnlineError::kOk )
         {
             BitReader reader( response._pBody, response._bodySize );
-            if ( ServerDirectoryProtocol::readStatus( reader, status ) )
+            if ( ServerDirectoryProtocol::MessageTypes::read( reader, status ) == FixedReadResult::Ok )
             {
                 _lastStatus = status;
                 ++_statusRevision;
@@ -96,7 +93,7 @@ namespace sw
         if ( errorCode == OnlineError::kOk )
         {
             BitReader reader( response._pBody, response._bodySize );
-            if ( ServerDirectoryProtocol::readAssignment( reader, assignment ) == false )
+            if ( ServerDirectoryProtocol::MessageTypes::read( reader, assignment ) != FixedReadResult::Ok )
                 errorCode = OnlineError::kInvalidRequest;
         }
         if ( onAssignment.isBound() )
@@ -108,15 +105,15 @@ namespace sw
         ServerListDelegate onServerList;
         if ( _serverListCallTable.take( response._requestID, onServerList ) == false )
             return;
-        uint16                  errorCode = response._errorCode;
-        vector<ServerListEntry> listEntry;
+        uint16          errorCode = response._errorCode;
+        ServerListReply listReply;
         if ( errorCode == OnlineError::kOk )
         {
             BitReader reader( response._pBody, response._bodySize );
-            if ( ServerDirectoryProtocol::readServerList( reader, listEntry ) == false )
+            if ( ServerDirectoryProtocol::MessageTypes::read( reader, listReply ) != FixedReadResult::Ok )
                 errorCode = OnlineError::kInvalidRequest;
         }
         if ( onServerList.isBound() )
-            onServerList( errorCode, listEntry );
+            onServerList( errorCode, listReply._listEntry );
     }
 } // namespace sw

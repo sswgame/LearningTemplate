@@ -59,16 +59,14 @@ namespace sw
         if ( kind != LeaderboardMethod::kPushAchievement )
             return;
         AchievementState achievement;
-        if ( LeaderboardProtocol::readAchievement( body, achievement ) )
+        if ( LeaderboardProtocol::MessageTypes::read( body, achievement ) == FixedReadResult::Ok )
             _unlockBuffer.push( std::move( achievement ) );
     }
 
     uint64 LeaderboardClient::send( uint16 method, const LeaderboardRequest& request, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        LeaderboardProtocol::writeRequest( body, request );
         // 다시 보내도 합산 보드에 두 번 들어가지 않게 점수 제출에는 멱등 키를 붙인다.
         const NetIdempotencyKey key = method == LeaderboardMethod::kSubmitScore ? NetIdempotencyKey::makeRandom() : NetIdempotencyKey{};
-        return sendCall( method, body, key, onReply );
+        return sendRequest( method, request, key, onReply );
     }
 } // namespace sw

@@ -4,8 +4,6 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-
 namespace sw
 {
     LiveOpsClient::LiveOpsClient()
@@ -22,25 +20,23 @@ namespace sw
         _region       = string( region );
         _buildVersion = buildVersion;
         _bRequested   = SW_TRUE;
-        BitWriter body;
-        ServiceKeyUtil::writeString( body, region );
-        body.writeVarUint( buildVersion );
-        return sendCall( LiveOpsMethod::kGetLiveState, body, NetIdempotencyKey{}, onReply );
+        LiveOpsStateRequest request;
+        request._region       = string( region );
+        request._buildVersion = buildVersion;
+        return sendRequest( LiveOpsMethod::kGetLiveState, request, NetIdempotencyKey{}, onReply );
     }
 
     uint64 LiveOpsClient::registerDevice( const PushDeviceRegistration& registration, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        LiveOpsProtocol::writeDevice( body, registration );
-        return sendCall( LiveOpsMethod::kRegisterDevice, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( LiveOpsMethod::kRegisterDevice, registration, NetIdempotencyKey{}, onReply );
     }
 
     uint64 LiveOpsClient::unregisterDevice( string_view providerID, string_view token, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        ServiceKeyUtil::writeString( body, providerID );
-        ServiceKeyUtil::writeString( body, token );
-        return sendCall( LiveOpsMethod::kUnregisterDevice, body, NetIdempotencyKey{}, onReply );
+        LiveOpsDeviceKey key;
+        key._providerID = string( providerID );
+        key._token      = string( token );
+        return sendRequest( LiveOpsMethod::kUnregisterDevice, key, NetIdempotencyKey{}, onReply );
     }
 
     bool LiveOpsClient::hasEventKind( string_view kind ) const

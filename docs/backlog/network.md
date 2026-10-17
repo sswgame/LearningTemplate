@@ -4,8 +4,12 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 
 - `A-14` [결함] **`BitStream` 의 손 코덱 경로가 범위 밖 값을 조용히 자른다.** `BitWriter::writeInt` 는 범위 밖 정수를 경계로 잘라 쓰고, `BitReader::readInt` ·
   `readQuantizedFloat` 은 범위 비트로 읽은 값이 범위를 넘으면 `min` 으로 잘라 읽는다. 깨진 패킷이 경고 없이 다른 값이 된다.
-  손 코덱(롤백 · 온라인 `*Protocol`)이 남아 있는 동안의 안전망으로, 쓰기는 `[[nodiscard]] bool`, 읽기는 실패를 돌려주는 모양으로 바꾼다.
-  고정 배치형(`FixedCodecUtil::readQuantizedFloat32`)은 칸 번호를 직접 읽어 `OutOfRange` 로 거절한다. 손 코덱을 B 로 옮기면(계획 단계 2 ~ 5) 이 경로를 쓰는 곳이 줄어든다.
+  손 코덱(롤백과 온라인 키트 프로토콜은 B 로 옮겼다. 기반 `Online/` 레코드와 넷 키트 쪽이 남았다)이 남아 있는 동안의 안전망으로, 쓰기는 `[[nodiscard]] bool`, 읽기는 실패를 돌려주는 모양으로 바꾼다.
+  고정 배치형(`FixedCodecUtil::readQuantizedFloat32`)은 칸 번호를 직접 읽어 `OutOfRange` 로 거절한다. 남은 손 코덱을 B 로 옮기면 이 경로를 쓰는 곳이 줄어든다.
+
+- `A-16` [결함] **계정 서버가 로그인 응답을 쓰지 못해도 세션은 이미 저장소에 있다.** `AccountServer::handleCompletion` 은 응답 몸(`AccountGrantReply` 같은 것)을 쓰지 못하면
+  `kInternal` 로 답하고 돌아오지만, 그때는 로그인 저장소 작업(`LoginStoreLogic`)이 세션 레코드를 이미 만든 뒤다. 클라이언트는 실패로 알고 세션은 시한까지 남는다.
+  응답 몸을 저장소 작업 전에 쓸 수 있는지 확인하거나, 실패하면 그 세션을 지우는 작업을 걸어 둔다. 쓰기 실패는 서버 코드가 범위 밖 값을 만든 결함일 때만 난다.
 
 - `B-9` [검증대기] **패킷 압축의 남은 것**(UDP 압축을 끈 결정과 측정값은 [결정 기록](../09_Decisions.md) 5-9). WSL Release 로 `NetCompressionBenchTest` 를 한 번 돌린다(압축 시간은
   컴파일러 · libc 에 따라 다르다). 채팅 수치는 채팅 키트가 실제 기록을 내면 다시 잰다. 스트림 프레임 압축은 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
@@ -66,6 +70,10 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 - `F-1` [기능] **지형 가중치 에셋의 에디터 쪽 마무리** — 가중치는 `.layerweights` 데이터 에셋이 됐다([결정 기록](../09_Decisions.md) 5-10, 서버도 레이어 질의에 답한다).
   남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다 ·
   ② 에디터 에셋 종류(`EditorAssetType`)에 `.layerweights` 를 더해 콘텐츠 브라우저 · 속성 칸이 고르게 한다 · ③ 바깥 도구가 만든 스플랫 PNG 를 `.layerweights` 로 가져오는 임포트(높이장 임포터와 같은 길).
+
+- `F-2` [결정대기] **서버 버스 메시지의 빌드 확인.** 서버끼리 주고받는 버스 메시지(`ChatService` 의 채널 전달, `SocialService` 의 관계 바뀜, `AccountServer` 의 해지 알림)는
+  고정 배치형(B)이라 머리 해시가 다르면 받는 쪽이 `SchemaMismatch` 로 버린다. 클라이언트와 달리 서버 사이에는 핸드셰이크가 없어, 배포 중에 빌드가 섞이면 메시지가 조용히 사라진다.
+  "서버 클러스터는 한 빌드로만 돈다" 를 정책으로 정할지, 버스 구독 때 빌드 해시를 확인하고 다르면 오류로 멈출지 사용자가 정한다([결정 기록](../09_Decisions.md) 5-9 열린 질문).
 
 - `G-2` [조건부] **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 테스트 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사

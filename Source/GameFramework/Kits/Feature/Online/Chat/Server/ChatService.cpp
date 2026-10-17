@@ -161,8 +161,12 @@ namespace sw
                 for ( const ServiceRecord& record : listRecord )
                 {
                     ChatMessage message;
-                    if ( ChatProtocol::decodeRecord( record._bytes, message ) )
-                        _listMessage.push_back( std::move( message ) );
+                    if ( ChatProtocol::decodeRecord( record._key, record._bytes, message ) == false )
+                    {
+                        _listMessage.clear(); // 손상된 영속 기록은 건너뛰지 않고 이 읽기를 실패로 돌려준다
+                        return;
+                    }
+                    _listMessage.push_back( std::move( message ) );
                 }
                 if ( static_cast<int32>( listRecord.size() ) == _maxCount )
                     _nextCursor = listRecord.back()._key;
@@ -579,8 +583,8 @@ namespace sw
         if ( _dependencies._pBus == nullptr )
             return;
         BitWriter body;
-        ChatProtocol::writeMessage( body, message );
-        _dependencies._pBus->publish( topic, body.getBytes().data(), body.getByteCount() );
+        if ( ChatProtocol::MessageTypes::write( body, message ) )
+            _dependencies._pBus->publish( topic, body.getBytes().data(), body.getByteCount() );
     }
 
     void ChatService::deliverToChannel( const ChatMessage& message )
@@ -615,7 +619,7 @@ namespace sw
             return;
         }
         ChatMessage message;
-        if ( ChatProtocol::readMessage( reader, message ) == false || message._serverID == _dependencies._serverID )
+        if ( ChatProtocol::MessageTypes::read( reader, message ) != FixedReadResult::Ok || message._serverID == _dependencies._serverID )
             return;
         if ( message._kind == ChatChannelKind::Whisper )
         {

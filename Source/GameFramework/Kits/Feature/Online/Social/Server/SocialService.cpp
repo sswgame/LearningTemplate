@@ -389,9 +389,8 @@ namespace sw
         if ( _dependencies._pBus != nullptr )
         {
             BitWriter body;
-            body.writeVarUint( accountID );
-            body.writeVarUint( otherID );
-            _dependencies._pBus->publish( SocialBus::kLinksTopic, body.getBytes().data(), body.getByteCount() );
+            if ( SocialProtocol::MessageTypes::write( body, SocialLinkChanged{ accountID, otherID } ) )
+                _dependencies._pBus->publish( SocialBus::kLinksTopic, body.getBytes().data(), body.getByteCount() );
         }
 
         if ( decision._bNotifyOtherRequested == SW_TRUE )
@@ -522,18 +521,17 @@ namespace sw
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         if ( topic == SocialBus::kLinksTopic )
         {
-            const AccountID firstID  = reader.readVarUint();
-            const AccountID secondID = reader.readVarUint();
-            if ( reader.hasOverflowed() )
+            SocialLinkChanged changed;
+            if ( SocialProtocol::MessageTypes::read( reader, changed ) != FixedReadResult::Ok )
                 return;
-            reloadIfLocal( firstID );
-            reloadIfLocal( secondID );
+            reloadIfLocal( changed._firstID );
+            reloadIfLocal( changed._secondID );
             return;
         }
         if ( topic == SocialBus::kPresenceTopic )
         {
             SocialPresence presence;
-            if ( SocialProtocol::readPresence( reader, presence ) )
+            if ( SocialProtocol::MessageTypes::read( reader, presence ) == FixedReadResult::Ok )
                 notifyFriendsOfPresence( presence );
         }
     }
@@ -564,10 +562,9 @@ namespace sw
     {
         if ( _dependencies._pRouter == nullptr )
             return;
-        BitWriter            body;
         const SocialPresence presence{ local._activity, accountID, local._status };
-        SocialProtocol::writePresence( body, presence );
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( accountID ), body.getBytes(), SocialServiceInternal::kPresenceTtlMs ),
+        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( accountID ), SocialProtocol::encodePresenceRecord( presence ),
+                                                                         SocialServiceInternal::kPresenceTtlMs ),
                                               EphemeralStoreRouter::ReplyDelegate{} );
     }
 
@@ -578,7 +575,8 @@ namespace sw
         if ( _dependencies._pBus == nullptr )
             return;
         BitWriter body;
-        SocialProtocol::writePresence( body, presence );
+        if ( SocialProtocol::MessageTypes::write( body, presence ) == false )
+            return; // write 가 범위 밖 값을 로그에 남겼다
         _dependencies._pBus->publish( SocialBus::kPresenceTopic, body.getBytes().data(), body.getByteCount() );
     }
 
@@ -613,8 +611,7 @@ namespace sw
         SocialPresence presence{ string{}, read._friendID, SocialPresenceStatus::Offline };
         if ( reply._result == EphemeralResult::Ok )
         {
-            BitReader reader( reply._value.data(), static_cast<int32>( reply._value.size() ) );
-            if ( SocialProtocol::readPresence( reader, presence ) == false || presence._accountID != read._friendID )
+            if ( SocialProtocol::decodePresenceRecord( reply._value, presence ) == false || presence._accountID != read._friendID )
                 presence = SocialPresence{ string{}, read._friendID, SocialPresenceStatus::Offline };
         }
         query._listPresence.push_back( std::move( presence ) );

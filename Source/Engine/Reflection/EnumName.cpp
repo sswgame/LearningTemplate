@@ -8,10 +8,15 @@ namespace sw
 {
     const utf8* getEnumName( const hashed_string& enumTypeFqn, int64 value )
     {
-        if ( engine::areEngineServicesBound() == false )
-            return "Unknown";
-        const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnumByTypeFqn( enumTypeFqn );
-        const utf8*     pName = pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
+        const utf8* pName = findEnumName( enumTypeFqn, value );
         return pName != nullptr ? pName : "Unknown";
+    }
+
+    const utf8* findEnumName( const hashed_string& enumTypeFqn, int64 value )
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return nullptr;
+        const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnumByTypeFqn( enumTypeFqn );
+        return pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
     }
 } // namespace sw

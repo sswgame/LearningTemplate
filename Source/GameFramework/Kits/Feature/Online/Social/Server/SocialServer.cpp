@@ -128,7 +128,7 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kNotFound );
             return;
         }
-        if ( SocialProtocol::readRequest( body, request ) == false )
+        if ( SocialProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -244,10 +244,8 @@ namespace sw
     {
         NetRequestToken token;
         if ( _pendingTable.take( requestTag, token ) == false )
-            return; // 요청 태그가 0이거나(내부에서 건 작업) 이미 응답했다
-        BitWriter body;
-        SocialProtocol::writeReply( body, reply );
-        (void)host.respondOk( token, body ); // 연결이 닫혔으면 호스트가 버린다
+            return;                                                              // 요청 태그가 0이거나(내부에서 건 작업) 이미 응답했다
+        (void)host.respondMessage<SocialProtocol::MessageTypes>( token, reply ); // 연결이 닫혔으면 호스트가 버린다
     }
 
     void SocialServer::sendNotifications( OnlineServiceHost& host )
@@ -258,7 +256,8 @@ namespace sw
         for ( const SocialNotification& notification : _listNotificationScratch )
         {
             BitWriter body;
-            SocialProtocol::writeNotification( body, notification );
+            if ( SocialProtocol::MessageTypes::write( body, notification ) == false )
+                continue; // write 가 범위 밖 값을 로그에 남겼다. 알림은 다음 조회로 대신한다
             if ( host.sendPush( notification._recipientID, SocialMethod::kPushNotification, body ) == false && _pPresence != nullptr )
                 (void)_pPresence->sendRemotePush( notification._recipientID, SocialMethod::kPushNotification, body ); // 다른 서버에 접속해 있다
         }

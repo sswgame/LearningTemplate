@@ -21,23 +21,17 @@ namespace sw
 
     uint64 EconomyClient::requestHistory( const EconomyHistoryRequest& request, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        EconomyProtocol::writeHistoryRequest( body, request );
-        return sendCall( EconomyMethod::kGetHistory, body, NetIdempotencyKey{}, onReply );
+        return sendRequest( EconomyMethod::kGetHistory, request, NetIdempotencyKey{}, onReply );
     }
 
     uint64 EconomyClient::requestPurchase( const EconomyPurchaseRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        EconomyProtocol::writePurchaseRequest( body, request );
-        return sendCall( EconomyMethod::kPurchase, body, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
+        return sendRequest( EconomyMethod::kPurchase, request, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
     }
 
     uint64 EconomyClient::requestRedeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        EconomyProtocol::writeRedeemRequest( body, request );
-        return sendCall( EconomyMethod::kRedeemReceipt, body, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
+        return sendRequest( EconomyMethod::kRedeemReceipt, request, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
     }
 
     void EconomyClient::applyBalances( const vector<LedgerBalance>& listBalance, bool bSnapshot )

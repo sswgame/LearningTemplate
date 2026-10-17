@@ -338,8 +338,8 @@ namespace sw
         if ( _dependencies._pBus == nullptr )
             return;
         BitWriter body;
-        MatchmakingProtocol::writeTicket( body, ticket );
-        MatchQueueServiceInternal::publish( _dependencies._pBus, makeQueueTopic( join._modeID ), body );
+        if ( MatchmakingProtocol::MessageTypes::write( body, ticket ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼고, 티켓은 시한으로 끝난다
+            MatchQueueServiceInternal::publish( _dependencies._pBus, makeQueueTopic( join._modeID ), body );
     }
 
     void MatchQueueService::placeMatches( ModeState& state, int64 nowMs )
@@ -377,13 +377,13 @@ namespace sw
     {
         for ( size_t team = 0; team < match._listTeam.size(); ++team )
         {
-            for ( const MatchMember& member : match._listTeam[team] )
+            for ( const MatchMember& member : match._listTeam[team]._listMember )
             {
                 if ( member._accountID != accountID )
                     continue;
                 inoutAssignment._team = static_cast<int32>( team );
                 inoutAssignment._listTeammate.clear();
-                for ( const MatchMember& mate : match._listTeam[team] )
+                for ( const MatchMember& mate : match._listTeam[team]._listMember )
                 {
                     inoutAssignment._listTeammate.push_back( mate._accountID );
                 }
@@ -400,9 +400,9 @@ namespace sw
         query._region       = match._region;
         query._buildVersion = mode._buildVersion;
         query._seatCount    = 0;
-        for ( const vector<MatchMember>& team : match._listTeam )
+        for ( const MatchFormedTeam& team : match._listTeam )
         {
-            query._seatCount += static_cast<int32>( team.size() );
+            query._seatCount += static_cast<int32>( team._listMember.size() );
         }
         ServerStatus picked;
         const bool   bPlaced = state._reader->pickServer( query, nowMs, picked );
@@ -412,8 +412,8 @@ namespace sw
         if ( bPlaced && _dependencies._pBus != nullptr ) // 게임 서버에 접속할 사람을 먼저 알린다
         {
             BitWriter body;
-            MatchmakingProtocol::writeFormed( body, match );
-            MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverID ), body );
+            if ( MatchmakingProtocol::MessageTypes::write( body, match ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
+                MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverID ), body );
         }
         for ( const MatchTicket& ticket : match._listTicket )
         {
@@ -447,7 +447,7 @@ namespace sw
         for ( const LobbyMember& member : lobby._listMember )
         {
             const size_t team = static_cast<size_t>( std::clamp( member._team, 0, PartyLobbyLimit::kLobbyTeamCount - 1 ) );
-            match._listTeam[team].push_back( MatchMember{ member._accountID, findRating( member._accountID, lobby._modeID ) } );
+            match._listTeam[team]._listMember.push_back( MatchMember{ member._accountID, findRating( member._accountID, lobby._modeID ) } );
         }
         ServerStatus picked;
         bool         bPlaced = false;
@@ -464,8 +464,8 @@ namespace sw
         if ( bPlaced && _dependencies._pBus != nullptr )
         {
             BitWriter body;
-            MatchmakingProtocol::writeFormed( body, match );
-            MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverID ), body );
+            if ( MatchmakingProtocol::MessageTypes::write( body, match ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
+                MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverID ), body );
         }
         for ( const LobbyMember& member : lobby._listMember )
         {
@@ -494,8 +494,8 @@ namespace sw
             return;
         }
         BitWriter body;
-        MatchmakingProtocol::writeAssignment( body, assignment );
-        MatchQueueServiceInternal::publish( _dependencies._pBus, makeResultTopic( originServerID ), body );
+        if ( MatchmakingProtocol::MessageTypes::write( body, assignment ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
+            MatchQueueServiceInternal::publish( _dependencies._pBus, makeResultTopic( originServerID ), body );
     }
 
     void MatchQueueService::notifyLocalTicket( uint64 ticketID, const MatchAssignment& assignment )
@@ -526,8 +526,8 @@ namespace sw
         if ( _dependencies._pBus == nullptr )
             return;
         BitWriter body;
-        body.writeVarUint( ticketID );
-        MatchQueueServiceInternal::publish( _dependencies._pBus, makeCancelTopic( modeID ), body );
+        if ( MatchmakingProtocol::MessageTypes::write( body, MatchTicketCancel{ ticketID } ) )
+            MatchQueueServiceInternal::publish( _dependencies._pBus, makeCancelTopic( modeID ), body );
     }
 
     void MatchQueueService::handleBusMessage( string_view topic, const vector<uint8>& bytes, int64 nowMs )
@@ -539,24 +539,24 @@ namespace sw
         {
             MatchTicket ticket;
             ModeState*  pState        = findModeState( topic.substr( string_view( Internal::kQueuePrefix ).size() ) );
-            const bool  bAcceptTicket = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchmakingProtocol::readTicket( reader, ticket );
+            const bool  bAcceptTicket = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchmakingProtocol::MessageTypes::read( reader, ticket ) == FixedReadResult::Ok;
             if ( bAcceptTicket )
                 (void)pState->_maker.addTicket( ticket );
             return;
         }
         if ( Internal::hasPrefix( topic, Internal::kCancelPrefix ) )
         {
-            const uint64 ticketID      = reader.readVarUint();
-            ModeState*   pState        = findModeState( topic.substr( string_view( Internal::kCancelPrefix ).size() ) );
-            const bool   bAcceptCancel = pState != nullptr && pState->_bAuthority != SW_FALSE && reader.hasOverflowed() == false;
+            MatchTicketCancel cancel;
+            ModeState*        pState        = findModeState( topic.substr( string_view( Internal::kCancelPrefix ).size() ) );
+            const bool        bAcceptCancel = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchmakingProtocol::MessageTypes::read( reader, cancel ) == FixedReadResult::Ok;
             if ( bAcceptCancel )
-                (void)pState->_maker.removeTicket( ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
+                (void)pState->_maker.removeTicket( cancel._ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
             return;
         }
         if ( topic == makeResultTopic( _dependencies._serverID ) )
         {
             MatchAssignment assignment;
-            if ( MatchmakingProtocol::readAssignment( reader, assignment ) )
+            if ( MatchmakingProtocol::MessageTypes::read( reader, assignment ) == FixedReadResult::Ok )
                 notifyLocalTicket( assignment._ticketID, assignment );
         }
     }

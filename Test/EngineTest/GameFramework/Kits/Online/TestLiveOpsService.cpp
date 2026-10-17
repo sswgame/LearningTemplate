@@ -2,11 +2,14 @@
 // '@' 매개변수는 원격 설정 값(글 · 정수)으로 풀리고 긴급 스위치가 모두 숨김, 저장소 실패는 아무것도 남기지 않음 · 없는 이벤트 지우기는 NotFound · 규칙 밖은 Invalid.
 #include "pch.h"
 
+#include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -243,4 +246,70 @@ SW_TEST_CASE( LiveOpsServiceTest, StoreFailureOnPutLeavesNothing )
     SW_EXPECT_TRUE( node._listCompletion[1]._result == LiveOpsResult::Invalid ); // 규칙 밖은 맡기기 전에
     SW_EXPECT_TRUE( node._listCompletion[2]._result == LiveOpsResult::NotFound );
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
+}
+
+/**
+ * @brief [LiveOpsProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
+ */
+SW_TEST_CASE( LiveOpsProtocolTest, DeclaredLimitsMatchTheConstants )
+{
+    using Util = test::OnlineMessageTestUtil;
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveOpsDeviceKey>( "_token" ), uint32( PushLimit::kMaxTokenSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<PushDeviceRegistration>( "_providerID" ), uint32( PushLimit::kMaxProviderIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<PushDeviceRegistration>( "_token" ), uint32( PushLimit::kMaxTokenSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<PushDeviceRegistration>( "_locale" ), uint32( PushLimit::kMaxLocaleSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventParameter>( "_key" ), uint32( LiveOpsLimit::kMaxParameterKey ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventParameter>( "_value" ), uint32( LiveOpsLimit::kMaxParameterValue ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventState>( "_listParameter" ), uint32( LiveOpsLimit::kMaxParameterCount ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventState>( "_eventID" ), uint32( LiveOpsLimit::kMaxIDSize ) );
+    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventState>( "_kind" ), uint32( LiveOpsLimit::kMaxKindSize ) );
+}
+
+/**
+ * @brief [LiveOpsProtocolTest] 라이브 운영 메시지는 상한까지 왕복하고, 이벤트 정의와 기기 레코드는 자기 기술형으로 왕복하며, 다른 판의 레코드는 읽지 않는다
+ */
+SW_TEST_CASE( LiveOpsProtocolTest, MessagesAndRecordsRoundTrip )
+{
+    using Messages = LiveOpsProtocol::MessageTypes;
+    using Util     = test::OnlineMessageTestUtil;
+    LiveOpsReply reply;
+    reply._result = LiveOpsResult::UnknownProvider;
+    LiveEventState state;
+    state._eventID     = string( 48, 'e' );
+    state._kind        = string( 32, 'k' );
+    state._windowEndMs = -1;
+    state._listParameter.assign( 16, LiveEventParameter{ string( 32, 'p' ), string( 128, 'v' ) } );
+    reply._listEvent.assign( 256, state );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( reply ) );
+    SW_EXPECT_TRUE( Util::roundTrips<Messages>( PushDeviceRegistration{ "apns", string( 256, 't' ), "ko-KR", 5 } ) );
+    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( LiveOpsStateRequest{ "kr", 7 } ) );
+    SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, LiveOpsDeviceKey>( LiveOpsStateRequest{ "kr", 7 } ) ) );
+
+    LiveEventDefinition definition;
+    definition._eventID    = "halloween";
+    definition._kind       = "xp_boost";
+    definition._listRegion = { "kr", "eu-west" };
+    definition._recurrence = LiveEventRecurrence::Weekly;
+    definition._listParameter.push_back( LiveEventParameter{ "rate", "@liveops.xp" } );
+    LiveEventDefinition decodedEvent;
+    SW_ASSERT_TRUE( LiveOpsProtocol::decodeEvent( "halloween", LiveOpsProtocol::encodeEvent( definition ), decodedEvent ) );
+    SW_EXPECT_TRUE( decodedEvent._listRegion.size() == 2 && decodedEvent._listRegion[1] == "eu-west" );
+    SW_EXPECT_TRUE( decodedEvent._recurrence == LiveEventRecurrence::Weekly && decodedEvent._listParameter[0]._value == "@liveops.xp" );
+    PushDeviceRegistration decodedDevice;
+    SW_ASSERT_TRUE( LiveOpsProtocol::decodeDevice( "device", LiveOpsProtocol::encodeDevice( PushDeviceRegistration{ "fcm", "token", "en", 9 } ), decodedDevice ) );
+    SW_EXPECT_TRUE( decodedDevice._token == "token" && decodedDevice._registeredMs == 9 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a corrupt durable record is logged" );
+        vector<uint8> otherVersion = LiveOpsProtocol::encodeEvent( definition );
+        otherVersion[0]            = 2;
+        SW_EXPECT_FALSE( LiveOpsProtocol::decodeEvent( "halloween", otherVersion, decodedEvent ) ); // 다른 판은 변환 없이 읽지 않는다
+        // 기기 등록은 고정 배치형 코덱이 있으므로 읽기가 선언된 범위(토큰 256 바이트)도 확인한다
+        const PushDeviceRegistration longToken{ "fcm", string( PushLimit::kMaxTokenSize + 1, 't' ), "en", 9 };
+        SW_EXPECT_FALSE( LiveOpsProtocol::decodeDevice( "device", LiveOpsProtocol::encodeDevice( longToken ), decodedDevice ) );
+        SW_EXPECT_TRUE( decodedDevice._token == "token" ); // 못 읽으면 그대로이다
+    }
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( LiveOpsDeviceKey{ string( 17, 'p' ), "token" } ) );
+    }
 }

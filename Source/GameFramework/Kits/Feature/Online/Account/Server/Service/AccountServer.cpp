@@ -4,7 +4,6 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountProtocol.h"
 
 namespace sw
@@ -98,55 +97,49 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnauthenticated );
             return;
         }
-        const uint64 tag      = _nextTag++;
-        const int64  nowMs    = context._nowMs;
-        bool         bDecoded = true;
+        const uint64    tag        = _nextTag++;
+        const int64     nowMs      = context._nowMs;
+        FixedReadResult readResult = FixedReadResult::Ok;
         switch ( context._method )
         {
             case AccountMethod::kRegister:
             {
-                LoginCredential credential;
-                bDecoded = AccountWire::readCredential( body, credential._loginName, credential._password );
-                if ( bDecoded )
-                    _pLoginService->registerAccount( credential, nowMs, tag );
+                AccountCredentialRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->registerAccount( LoginCredential{ request._loginName, request._password }, nowMs, tag );
                 break;
             }
             case AccountMethod::kLogin:
             {
-                LoginCredential   credential;
-                AccountClientInfo clientInfo;
-                bDecoded = AccountWire::readCredential( body, credential._loginName, credential._password ) && AccountWire::readClientInfo( body, clientInfo );
-                if ( bDecoded )
-                    _pLoginService->login( credential, clientInfo, context._remoteKey, nowMs, tag );
+                AccountLoginRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->login( LoginCredential{ request._loginName, request._password }, request._clientInfo, context._remoteKey, nowMs, tag );
                 break;
             }
             case AccountMethod::kGuestLogin:
             {
-                uint8             arrSecret[LoginConstant::kDeviceSecretSize];
-                AccountClientInfo clientInfo;
-                bDecoded = body.readBytes( arrSecret, LoginConstant::kDeviceSecretSize ) && AccountWire::readClientInfo( body, clientInfo );
-                if ( bDecoded )
-                    _pLoginService->guestLogin( arrSecret, clientInfo, context._remoteKey, nowMs, tag );
+                AccountGuestLoginRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->guestLogin( request._arrDeviceSecret, request._clientInfo, context._remoteKey, nowMs, tag );
                 break;
             }
             case AccountMethod::kPlatformLogin:
             {
-                string            provider;
-                vector<uint8>     ticketBytes;
-                AccountClientInfo clientInfo;
-                bDecoded = AccountWire::readText( body, LoginConstant::kMaxProviderNameSize, provider ) &&
-                           AccountWire::readBlob( body, LoginConstant::kMaxPlatformTicketSize, ticketBytes ) && AccountWire::readClientInfo( body, clientInfo );
-                if ( bDecoded )
-                    _pLoginService->platformLogin( provider, ticketBytes, clientInfo, context._remoteKey, nowMs, tag );
+                AccountPlatformRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->platformLogin( request._provider, request._ticketBytes, request._clientInfo, context._remoteKey, nowMs, tag );
                 break;
             }
             case AccountMethod::kResume:
             {
-                LoginSessionToken token;
-                AccountClientInfo clientInfo;
-                bDecoded = AccountWire::readToken( body, token ) && AccountWire::readClientInfo( body, clientInfo );
-                if ( bDecoded )
-                    _pLoginService->resumeSession( token, clientInfo, context._remoteKey, nowMs, tag );
+                AccountResumeRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->resumeSession( request._token, request._clientInfo, context._remoteKey, nowMs, tag );
                 break;
             }
             case AccountMethod::kLogout:
@@ -156,36 +149,36 @@ namespace sw
             }
             case AccountMethod::kLinkCredential:
             {
-                LoginCredential credential;
-                bDecoded = AccountWire::readCredential( body, credential._loginName, credential._password );
-                if ( bDecoded )
-                    _pLoginService->linkCredential( pSession->_token, credential, nowMs, tag );
+                AccountCredentialRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->linkCredential( pSession->_token, LoginCredential{ request._loginName, request._password }, nowMs, tag );
                 break;
             }
             case AccountMethod::kLinkPlatform:
             {
-                string        provider;
-                vector<uint8> ticketBytes;
-                bDecoded = AccountWire::readText( body, LoginConstant::kMaxProviderNameSize, provider ) &&
-                           AccountWire::readBlob( body, LoginConstant::kMaxPlatformTicketSize, ticketBytes );
-                if ( bDecoded )
-                    _pLoginService->linkPlatform( pSession->_token, provider, ticketBytes, nowMs, tag );
+                AccountPlatformRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->linkPlatform( pSession->_token, request._provider, request._ticketBytes, nowMs, tag );
                 break;
             }
             case AccountMethod::kIssueGameTicket:
             {
-                string serverID;
-                bDecoded = AccountWire::readText( body, LoginConstant::kMaxDisplayNameSize, serverID ) && serverID.empty() == false;
-                if ( bDecoded )
-                    _pLoginService->issueGameTicket( pSession->_token, hashed_string( serverID ), nowMs, tag );
+                AccountGameTicketRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok && request._serverID.empty() )
+                    readResult = FixedReadResult::ValidateFailed; // 서버 id 가 없으면 발급할 곳이 없다
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->issueGameTicket( pSession->_token, hashed_string( request._serverID ), nowMs, tag );
                 break;
             }
             case AccountMethod::kUnlinkPlatform:
             {
-                string provider;
-                bDecoded = AccountWire::readText( body, LoginConstant::kMaxProviderNameSize, provider );
-                if ( bDecoded )
-                    _pLoginService->unlinkPlatform( pSession->_token, provider, nowMs, tag );
+                AccountProviderRequest request;
+                readResult = AccountProtocol::MessageTypes::read( body, request );
+                if ( readResult == FixedReadResult::Ok )
+                    _pLoginService->unlinkPlatform( pSession->_token, request._provider, nowMs, tag );
                 break;
             }
             case AccountMethod::kListLinks:
@@ -209,7 +202,7 @@ namespace sw
                 return;
             }
         }
-        if ( bDecoded == false || body.hasOverflowed() )
+        if ( readResult != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -271,21 +264,17 @@ namespace sw
         }
         if ( host.getServerBus() != nullptr && message._originServerID == host.getServerBus()->getServerID() )
             return; // 이 서버가 보낸 알림이므로 이미 끊었다
-        BitReader       reader( message._bytes.data(), static_cast<int32>( message._bytes.size() ) );
-        const AccountID accountID = reader.readVarUint();
-        const uint64    sessionID = reader.readVarUint();
-        const uint64    reason    = reader.readVarUint();
-        string          reasonCode;
-        const bool      bMalformedRevoke = ServiceKeyUtil::readString( reader, LoginConstant::kMaxReasonCodeSize, reasonCode ) == false || reader.hasOverflowed() ||
-                                      reason > static_cast<uint64>( LoginRevokeReason::AccountDeleted );
-        if ( bMalformedRevoke )
+        BitReader             reader( message._bytes.data(), static_cast<int32>( message._bytes.size() ) );
+        AccountRevokeNotice   notice;
+        const FixedReadResult readResult = AccountProtocol::MessageTypes::read( reader, notice );
+        if ( readResult != FixedReadResult::Ok )
         {
-            SW_LOG_WARNING( "Malformed account revoke bus message from server %#", message._originServerID );
+            SW_LOG_WARNING( "Malformed account revoke bus message from server %# (%#)", message._originServerID, FixedLayout::toString( readResult ) );
             return;
         }
-        if ( reasonCode.empty() == false && findSessionID( accountID ) == sessionID )
-            _mapAccountToReasonCode[accountID] = reasonCode;
-        _pLoginService->noteRevokedElsewhere( accountID, sessionID, static_cast<LoginRevokeReason>( reason ) );
+        if ( notice._reasonCode.empty() == false && findSessionID( notice._accountID ) == notice._sessionID )
+            _mapAccountToReasonCode[notice._accountID] = notice._reasonCode;
+        _pLoginService->noteRevokedElsewhere( notice._accountID, notice._sessionID, notice._reason );
     }
 
     void AccountServer::revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs )
@@ -311,32 +300,40 @@ namespace sw
             return;
 
         BitWriter body;
+        bool      bWritten = false;
         switch ( completion._operation )
         {
             case LoginOperation::IssueGameTicket:
             {
-                AccountWire::writeTicketReply( body, completion._result, completion._ticket );
+                bWritten = AccountProtocol::MessageTypes::write( body, AccountTicketReply{ completion._ticket, completion._result } );
                 break;
             }
             case LoginOperation::ListLinks:
             {
-                AccountWire::writeLinkReply( body, completion._result, completion._linkSummary );
+                bWritten = AccountProtocol::MessageTypes::write( body, AccountLinkReply{ completion._linkSummary, completion._result } );
                 break;
             }
             case LoginOperation::Register:
             case LoginOperation::LinkCredential:
             case LoginOperation::LinkPlatform:
             {
-                LoginGrant grant = completion._grant;
-                grant._identity  = completion._identity;
-                AccountWire::writeGrantReply( body, completion._result, grant );
+                AccountGrantReply reply{ completion._grant, completion._result };
+                reply._grant._identity = completion._identity;
+                bWritten               = AccountProtocol::MessageTypes::write( body, reply );
                 break;
             }
             default:
             {
-                AccountWire::writeGrantReply( body, completion._result, completion._grant );
+                bWritten = AccountProtocol::MessageTypes::write( body, AccountGrantReply{ completion._grant, completion._result } );
                 break;
             }
+        }
+        if ( bWritten == false )
+        {
+            // 응답은 계정을 연결에 묶은 뒤에 보내야 하므로 respondMessage 를 쓰지 않고 먼저 써 둔다. 쓰지 못하면 같은 약속(kInternal)으로 응답한다.
+            // 저장소에 이미 만든 세션은 그대로 남는다(백로그 `A-16` "계정")
+            (void)host.respondError( call._token, OnlineError::kInternal );
+            return;
         }
 
         const bool bOk = completion._result == LoginResult::Ok;
@@ -405,8 +402,10 @@ namespace sw
             }
             case LoginResult::UpdateRequired:
             {
-                AccountWire::writeText( detail, grant._storeURL );
-                (void)host.respondError( token, OnlineError::kUpdateRequired, &detail );
+                if ( AccountProtocol::MessageTypes::write( detail, AccountUpdateDetail{ grant._storeURL } ) )
+                    (void)host.respondError( token, OnlineError::kUpdateRequired, &detail );
+                else
+                    (void)host.respondError( token, OnlineError::kUpdateRequired ); // 상점 주소가 상한을 넘어 write 가 로그를 남겼다. 결과 코드는 그대로 보낸다
                 return true;
             }
             default:
@@ -427,8 +426,8 @@ namespace sw
             _mapAccountToReasonCode.erase( codeIt );
         }
         BitWriter push;
-        AccountWire::writeRevokedPush( push, reason, reasonCode );
-        (void)host.sendPush( accountID, AccountMethod::kPushRevoked, push );
+        if ( AccountProtocol::MessageTypes::write( push, AccountRevokedPush{ reasonCode, reason } ) ) // 쓰지 못했으면 write 가 로그를 남겼고, 연결은 아래에서 그대로 끊는다
+            (void)host.sendPush( accountID, AccountMethod::kPushRevoked, push );
         host.unbindAccount( accountID );
     }
 
@@ -459,11 +458,8 @@ namespace sw
             if ( pBus == nullptr )
                 continue; // 서버가 한 대이므로 접속해 있지 않은 세션(재접속 유예)은 알릴 곳이 없다
             BitWriter message;
-            message.writeVarUint( event._accountID );
-            message.writeVarUint( event._sessionID );
-            message.writeVarUint( static_cast<uint64>( event._reason ) );
-            ServiceKeyUtil::writeString( message, reasonCode );
-            pBus->publish( kRevokeTopic, message.getBytes().data(), message.getByteCount() );
+            if ( AccountProtocol::MessageTypes::write( message, AccountRevokeNotice{ reasonCode, event._accountID, event._sessionID, event._reason } ) )
+                pBus->publish( kRevokeTopic, message.getBytes().data(), message.getByteCount() );
         }
     }
 } // namespace sw

@@ -68,10 +68,18 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 잔액 하나입니다. 계정 잔액은 환불 회수로 음수(빚)가 될 수 있습니다. */
+    /**
+     * @brief 잔액 하나입니다. 계정 잔액은 환불 회수로 음수(빚)가 될 수 있습니다.
+     * @details 온라인 메시지(경제 · 관리자 · 우편함 응답)에 고정 배치형으로 실립니다. `MaxCount` 는 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다.
+     *          `_version` 은 저장소 레코드의 판이라 `PROPERTY` 가 아니며 와이어에 싣지 않습니다.
+     */
+    REFLECT()
     struct LedgerBalance
     {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 48 )
         string _assetID{};
+        PROPERTY()
         int64  _amount{ 0 };
         uint64 _version{ 0 }; ///< 레코드 판 — 0 이면 레코드가 없다(잔액 0)
 
@@ -82,6 +90,7 @@ namespace sw
 namespace sw
 {
     /** @brief 이동을 요청한 쪽입니다. 감사와 내역 표시에 쓰며, 저장 값이라 순서를 바꾸면 안 됩니다. */
+    ENUM( Count = Count )
     enum class LedgerActorKind : uint8
     {
         System = 0, ///< 서버 로직(보상 · 만료 · 예약 작업)

@@ -5,7 +5,6 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatProtocol.h"
 
 #include <algorithm>
@@ -57,49 +56,43 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnavailable );
             return;
         }
-        string channelID;
-        string text;
         switch ( context._method )
         {
             case ChatMethod::kJoin:
             case ChatMethod::kLeave:
             {
-                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIDSize, channelID ) == false || body.hasOverflowed() )
+                ChatChannelRequest request;
+                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
                     break;
                 const uint64 requestTag = _pendingTable.add( context._token );
                 if ( context._method == ChatMethod::kJoin )
-                    _pService->joinChannel( context._accountID, channelID, context._nowMs, requestTag );
+                    _pService->joinChannel( context._accountID, request._channelID, context._nowMs, requestTag );
                 else
-                    _pService->leaveChannel( context._accountID, channelID, requestTag );
+                    _pService->leaveChannel( context._accountID, request._channelID, requestTag );
                 return;
             }
             case ChatMethod::kSend:
             {
-                const bool bMalformedSend = ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIDSize, channelID ) == false ||
-                                            ServiceKeyUtil::readString( body, ChatLimit::kMaxTextSize, text ) == false || body.hasOverflowed();
-                if ( bMalformedSend )
+                ChatSendRequest request;
+                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
                     break;
-                _pService->sendMessage( context._accountID, channelID, text, context._nowMs, _pendingTable.add( context._token ) );
+                _pService->sendMessage( context._accountID, request._channelID, request._text, context._nowMs, _pendingTable.add( context._token ) );
                 return;
             }
             case ChatMethod::kWhisper:
             {
-                const AccountID recipientID = body.readVarUint();
-                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxTextSize, text ) == false || body.hasOverflowed() )
+                ChatWhisperRequest request;
+                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
                     break;
-                _pService->sendWhisper( context._accountID, recipientID, text, context._nowMs, _pendingTable.add( context._token ) );
+                _pService->sendWhisper( context._accountID, request._recipientID, request._text, context._nowMs, _pendingTable.add( context._token ) );
                 return;
             }
             case ChatMethod::kHistory:
             {
-                string cursor;
-                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIDSize, channelID ) == false ||
-                     ServiceKeyUtil::readString( body, ChatProtocol::kMaxCursorSize, cursor ) == false )
+                ChatHistoryRequest request;
+                if ( ChatProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
                     break;
-                const uint64 maxCount = body.readVarUint();
-                if ( body.hasOverflowed() || maxCount > static_cast<uint64>( ChatLimit::kMaxHistoryPage ) )
-                    break;
-                _pService->readHistory( context._accountID, channelID, cursor, static_cast<int32>( maxCount ), _pendingTable.add( context._token ) );
+                _pService->readHistory( context._accountID, request._channelID, request._cursor, request._maxCount, _pendingTable.add( context._token ) );
                 return;
             }
             default:
@@ -145,9 +138,7 @@ namespace sw
             NetRequestToken token;
             if ( _pendingTable.take( completion._requestTag, token ) == false )
                 continue;
-            BitWriter reply;
-            ChatProtocol::writeReply( reply, completion._method, completion._reply );
-            (void)host.respondOk( token, reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
+            (void)host.respondMessage<ChatProtocol::MessageTypes>( token, completion._reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
         }
 
         _listDeliveryScratch.clear();
@@ -155,7 +146,8 @@ namespace sw
         for ( const ChatDelivery& delivery : _listDeliveryScratch )
         {
             BitWriter body;
-            ChatProtocol::writeMessage( body, delivery._message );
+            if ( ChatProtocol::MessageTypes::write( body, delivery._message ) == false )
+                continue;                                                                 // write 가 범위 밖 값을 로그에 남겼다
             (void)host.sendPush( delivery._recipientID, ChatMethod::kPushMessage, body ); // 그사이 떠난 계정이면 버린다
         }
     }

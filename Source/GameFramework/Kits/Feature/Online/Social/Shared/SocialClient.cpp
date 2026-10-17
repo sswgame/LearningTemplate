@@ -151,16 +151,14 @@ namespace sw
         if ( kind != SocialMethod::kPushNotification )
             return;
         SocialNotification notification;
-        if ( SocialProtocol::readNotification( body, notification ) )
+        if ( SocialProtocol::MessageTypes::read( body, notification ) == FixedReadResult::Ok )
             _notificationBuffer.push( std::move( notification ) );
     }
 
     uint64 SocialClient::send( uint16 method, const SocialRequest& request, const ReplyDelegate& onReply )
     {
-        BitWriter body;
-        SocialProtocol::writeRequest( body, request );
         const bool              bChange = SocialMethod::isLinkChange( method ) || ( SocialMethod::isGuild( method ) && SocialMethod::isGuildRead( method ) == false );
         const NetIdempotencyKey key     = bChange ? NetIdempotencyKey::makeRandom() : NetIdempotencyKey{};
-        return sendCall( method, body, key, onReply );
+        return sendRequest( method, request, key, onReply );
     }
 } // namespace sw

@@ -184,7 +184,7 @@ namespace sw
     void AdminService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
         AdminRequest request;
-        if ( AdminProtocol::readRequest( body, request ) == false )
+        if ( AdminProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
@@ -248,15 +248,9 @@ namespace sw
         const PendingCall pending = _listPendingCall[pendingIndex];
         _listPendingCall.erase( _listPendingCall.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
         if ( pending._pHost != nullptr )
-        {
-            BitWriter writer;
-            AdminProtocol::writeReply( writer, reply );
-            (void)pending._pHost->respondOk( pending._token, writer );
-        }
+            (void)pending._pHost->respondMessage<AdminProtocol::MessageTypes>( pending._token, reply );
         else if ( pending._onReply.isBound() )
-        {
             pending._onReply( reply );
-        }
         _metrics.countRequest( pending._methodIndex, static_cast<int32>( reply._result ) );
         MetricHistogram* pLatency = _metrics.findLatencyHistogram( pending._methodIndex );
         if ( pLatency != nullptr )

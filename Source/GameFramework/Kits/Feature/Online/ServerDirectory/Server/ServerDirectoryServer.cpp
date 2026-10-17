@@ -5,7 +5,6 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Shared/ServerDirectoryProtocol.h"
 
@@ -53,18 +52,18 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnavailable );
             return;
         }
-        BitWriter reply;
+        using Messages = ServerDirectoryProtocol::MessageTypes;
         switch ( context._method )
         {
             case ServerDirectoryMethod::kGetStatus:
             {
-                ServerDirectoryProtocol::writeStatus( reply, _pService->makeStatus( context._nowMs ) );
-                break;
+                (void)host.respondMessage<Messages>( context._token, _pService->makeStatus( context._nowMs ) );
+                return;
             }
             case ServerDirectoryMethod::kAssignServer:
             {
                 ServerAssignmentRequest request;
-                if ( ServerDirectoryProtocol::readAssignmentRequest( body, request ) == false )
+                if ( ServerDirectoryProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
                 {
                     (void)host.respondError( context._token, OnlineError::kInvalidRequest );
                     return;
@@ -75,25 +74,25 @@ namespace sw
                     (void)host.respondError( context._token, ServerDirectoryError::kUnknownKind );
                     return;
                 }
-                ServerDirectoryProtocol::writeAssignment( reply, assignment );
-                break;
+                (void)host.respondMessage<Messages>( context._token, assignment );
+                return;
             }
             case ServerDirectoryMethod::kListServers:
             {
-                string kind;
-                if ( ServiceKeyUtil::readString( body, ServerRecord::kMaxNameSize, kind ) == false || body.hasOverflowed() )
+                ServerListRequest request;
+                if ( ServerDirectoryProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
                 {
                     (void)host.respondError( context._token, OnlineError::kInvalidRequest );
                     return;
                 }
-                vector<ServerListEntry> listEntry;
-                if ( _pService->listServers( kind, context._nowMs, listEntry ) != ServerDirectoryResult::Ok )
+                ServerListReply listReply;
+                if ( _pService->listServers( request._kind, context._nowMs, listReply._listEntry ) != ServerDirectoryResult::Ok )
                 {
                     (void)host.respondError( context._token, ServerDirectoryError::kUnknownKind );
                     return;
                 }
-                ServerDirectoryProtocol::writeServerList( reply, listEntry );
-                break;
+                (void)host.respondMessage<Messages>( context._token, listReply );
+                return;
             }
             default:
             {
@@ -101,7 +100,6 @@ namespace sw
                 return;
             }
         }
-        (void)host.respondOk( context._token, reply );
     }
 
     void ServerDirectoryServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
@@ -114,8 +112,8 @@ namespace sw
         if ( _pService->takeStatusChange() == false )
             return;
         BitWriter body;
-        ServerDirectoryProtocol::writeStatus( body, _pService->makeStatus( nowMs ) );
-        (void)host.sendPushToAll( ServerDirectoryMethod::kPushStatus, body );
+        if ( ServerDirectoryProtocol::MessageTypes::write( body, _pService->makeStatus( nowMs ) ) )
+            (void)host.sendPushToAll( ServerDirectoryMethod::kPushStatus, body );
     }
 
     void ServerDirectoryServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
