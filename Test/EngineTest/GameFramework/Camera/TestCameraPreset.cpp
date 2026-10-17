@@ -652,6 +652,7 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentRidesEverySnapshotThroughTheSta
     SW_ASSERT_NOT_NULL( pRegistration );
 
     ComponentStateStore store;
+    uint64              savedDirectorID = 0;
     {
         GameObjectManager manager;
         GameObject*       pCameraObject = manager.createGameObject( hashed_string( "SnapshotCamera" ) );
@@ -659,6 +660,7 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentRidesEverySnapshotThroughTheSta
         SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
         CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
         SW_ASSERT_NOT_NULL( pDirector );
+        savedDirectorID = pDirector->getComponentID();
         SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( kCatalogXML, "registration-source" ) );
         pDirector->setInputEnabled( false );
         manager.beginPlay();
@@ -677,6 +679,10 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentRidesEverySnapshotThroughTheSta
     SW_ASSERT_NOT_NULL( pDirector );
     SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( kCatalogXML, "registration-target" ) );
     pDirector->setInputEnabled( false );
+    // 짝짓기는 컴포넌트 id 다(`ComponentStateStore`). 다른 매니저의 디렉터는 id 가 새로 나가므로, 씬 섹션을 읽은 쪽이 하듯 "저장된 id → 새 id" 표로 바꾼다.
+    store.remapComponentIDs( {
+        ComponentStateStore::SavedComponentID{ savedDirectorID, pDirector->getComponentID() }
+    } );
     pRegistration->getRestore()( store, manager ); // 시작 전 — 디렉터가 들고 있다가 카탈로그를 읽은 뒤 적용한다
     manager.beginPlay();
     SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "second" ) );

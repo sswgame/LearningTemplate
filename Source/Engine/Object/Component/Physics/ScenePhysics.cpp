@@ -35,6 +35,7 @@ namespace sw
         : _manager{ manager }
         , _pPhysicsSystem{ manager.getSceneEngineServices()._pPhysicsSystem }
         , _listCollider2D{}
+        , _listMovedCollider2D{}
         , _listSweptOverlap2D{}
         , _pScene3D{}
         , _pScene2D{}
@@ -81,6 +82,7 @@ namespace sw
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
         _listSweptOverlap2D.clear();
+        _listMovedCollider2D.clear();
         _accumulator.reset();
     }
 
@@ -234,6 +236,7 @@ namespace sw
                 listComponent[index]->beginPhysicsFrame( *this );
             }
         }
+        sweepContinuousColliders2D();
 
         const uint32  stepCount = _accumulator.advance( deltaTime );
         const float32 fixedStep = _accumulator.getFixedTimeStep();
@@ -281,6 +284,22 @@ namespace sw
         }
 
         dispatchEvents( manager );
+    }
+
+    void ScenePhysics::sweepContinuousColliders2D()
+    {
+        _listMovedCollider2D.clear();
+        for ( BoxCollider2DComponent* pCollider : _listCollider2D )
+        {
+            if ( pCollider->hasMovedThisFrame() )
+                _listMovedCollider2D.push_back( pCollider );
+        }
+        // 쓸기는 겹침을 목록에 더할 뿐 콜라이더를 더하거나 빼지 않는다 — 움직인 목록을 그대로 돈다.
+        for ( BoxCollider2DComponent* pCollider : _listMovedCollider2D )
+        {
+            if ( pCollider->isContinuous() )
+                pCollider->sweepPassedBodies( *this, _listMovedCollider2D );
+        }
     }
 
     void ScenePhysics::dispatchEvents( GameObjectManager& manager )

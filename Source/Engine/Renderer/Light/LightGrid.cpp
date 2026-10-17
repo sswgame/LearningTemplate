@@ -77,11 +77,12 @@ namespace sw
             return false;
 
         // XY 범위는 월드 AABB 모서리 여덟 개의 NDC 범위다. 원근에서 모서리 하나라도 카메라 면을 넘으면 화면 전체다.
+        // 처음 값은 빈 범위(±최대)다. 화면 끝(±1)에서 시작하면 모서리가 모두 화면 밖 한쪽에 있어도 범위가 화면 끝에 걸쳐 남아 화면 밖 판정이 늘 거짓이 된다.
         bool    bFullScreen = false;
-        float32 minX        = 1.0f;
-        float32 maxX        = -1.0f;
-        float32 minY        = 1.0f;
-        float32 maxY        = -1.0f;
+        float32 minX        = MathUtil::kMaxFloat;
+        float32 maxX        = -MathUtil::kMaxFloat;
+        float32 minY        = MathUtil::kMaxFloat;
+        float32 maxY        = -MathUtil::kMaxFloat;
         for ( uint32 corner = 0; corner < 8u; ++corner )
         {
             const float3 offset{ ( corner & 1u ) != 0 ? radius : -radius, ( corner & 2u ) != 0 ? radius : -radius, ( corner & 4u ) != 0 ? radius : -radius };
