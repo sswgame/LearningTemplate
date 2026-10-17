@@ -77,7 +77,7 @@ SW_TEST_CASE( EditorAssetFileCommandsTest, NewAssetTemplateRowsAreDistinctAndVal
     {
         const EditorNewAssetTemplate& row = listTemplate[index];
         SW_ASSERT_TRUE( row._pID != nullptr && row._pLabel != nullptr && row._pStem != nullptr && row._pSuffix != nullptr );
-        const bool bOneSource = ( row._pSourcePath == nullptr ) != ( row._pText == nullptr );
+        const bool bOneSource = ( row._pfnSourcePath == nullptr ) != ( row._pText == nullptr );
         SW_EXPECT_TRUE( bOneSource );
         SW_EXPECT_TRUE( EditorAssetFileCommands::isValidAssetName( string( row._pStem ) + row._pSuffix ) );
         if ( string_view( row._pID ) == "material" )
