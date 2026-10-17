@@ -605,12 +605,12 @@ SW_TEST_CASE( ComponentPoolTest, ComponentPoolIsKeyedByTheTypeNameNotTheTypeInfo
     copy._fullyQualifiedName = pType->_fullyQualifiedName;
     copy._size               = pType->_size;
 
-    sw::PoolAllocator* pFromRegistry = store.getOrCreateComponentPool( pType, sizeof( sw::SceneComponent ) );
-    sw::PoolAllocator* pFromCopy     = store.getOrCreateComponentPool( &copy, sizeof( sw::SceneComponent ) );
+    sw::ComponentPoolEntry* pFromRegistry = store.getOrCreateComponentPoolEntry( pType, sizeof( sw::SceneComponent ) );
+    sw::ComponentPoolEntry* pFromCopy     = store.getOrCreateComponentPoolEntry( &copy, sizeof( sw::SceneComponent ) );
     SW_ASSERT_NOT_NULL( pFromRegistry );
     SW_EXPECT_TRUE( pFromRegistry == pFromCopy );
-    SW_EXPECT_TRUE( store.getOrCreateComponentPool( sw::MeshComponent::StaticType(), sizeof( sw::MeshComponent ) ) != pFromRegistry );
-    SW_EXPECT_TRUE( store.getOrCreateComponentPool( nullptr, sizeof( sw::SceneComponent ) ) == nullptr );
+    SW_EXPECT_TRUE( store.getOrCreateComponentPoolEntry( sw::MeshComponent::StaticType(), sizeof( sw::MeshComponent ) ) != pFromRegistry );
+    SW_EXPECT_TRUE( store.getOrCreateComponentPoolEntry( nullptr, sizeof( sw::SceneComponent ) ) == nullptr );
 }
 
 /**

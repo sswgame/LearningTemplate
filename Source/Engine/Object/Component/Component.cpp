@@ -19,7 +19,7 @@ namespace sw
         , _componentID{ _s_nextComponentID.fetch_add( 1, std::memory_order_relaxed ) }
         , _componentName{}
         , _pTypeInfo{ nullptr }
-        , _pPool{ nullptr }
+        , _pPoolEntry{ nullptr }
         , _subTickActiveMask{ 0 }
         , _bActive{ true }
         , _bIsPendingDestroy{ false }
@@ -28,6 +28,7 @@ namespace sw
         , _bIsSceneComponent{ SW_FALSE }
         , _bHasBegunPlay{ SW_FALSE }
         , _reservedFlags{ 0 }
+        , _poolEntrySlot{ kNotInPoolEntry }
         , _listSubTick{}
     {
         // **여기서 기본값을 적용하지 않는다.** 생성 중에는 객체가 아직 Component 라 가상

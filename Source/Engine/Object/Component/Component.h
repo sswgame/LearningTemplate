@@ -19,9 +19,10 @@
 namespace sw
 {
 
+    struct ComponentPoolEntry;
+
     class GameObject;
     class GameObjectManager;
-    class PoolAllocator;
     /**
      * @enum TickGroup
      * @brief 한 프레임 안에서 컴포넌트 틱이 도는 순서 슬롯입니다.
@@ -292,10 +293,13 @@ namespace sw
     class SW_API Component
     {
         friend class GameObject;
-        friend class GameObjectStore; ///< 해체(`destroyComponentInstance`)가 `_pPool` 로 반납한다
+        friend class GameObjectStore; ///< 해체(`destroyComponentInstance`)가 `_pPoolEntry` 의 풀로 반납하고 버킷에서 뺀다
 
     public:
         REFLECT_BODY();
+
+        /** @brief 버킷 위치(`_poolEntrySlot`)의 "버킷에 없음" 값입니다. */
+        static constexpr uint32 kNotInPoolEntry = 0xFFFFFFFFu;
 
         /** @brief 기본 컴포넌트를 만듭니다. */
         Component();
@@ -476,7 +480,7 @@ namespace sw
          * @details 오브젝트 안에서 컴포넌트를 가리키는 키(`ComponentStableKey`: 부착 대상, 프리팹 오버라이드, 에디터 선택 복원)가 이 이름으로
          *          만들어진다. 언리얼에서 컴포넌트 이름이 참조와 오버라이드의 키인 것과 같다. 이름이 없는 상태는 기본값(타입 이름)으로
          *          읽힌다. 타입은 만들 때 받은 `TypeInfo`(`_pTypeInfo`)이고 이름과 무관하다. 타입 이름이 필요하면 `getTypeName` 을 쓴다.
-         * @note 풀 키도 **아니다.** 파괴할 때는 `_pPool` 로 돌아간다. 이름을 바꾸면 그 컴포넌트를 키로 가리키던 저장된 참조(다른 컴포넌트의 부착,
+         * @note 풀 키도 **아니다.** 파괴할 때는 `_pPoolEntry` 로 돌아간다. 이름을 바꾸면 그 컴포넌트를 키로 가리키던 저장된 참조(다른 컴포넌트의 부착,
          *       프리팹 오버라이드)가 다음 로드에서 대상을 잃는다. 언리얼에서 컴포넌트 이름을 바꿀 때와 같다.
          */
         void setComponentName( hashed_string name ) { _componentName = name; }
@@ -565,11 +569,12 @@ namespace sw
         hashed_string   _componentName;
         const TypeInfo* _pTypeInfo; ///< 만들 때 받은 타입이다. `GameObject::attachCreatedComponent` 가 한 번 기록하며, 공개 전이라 원자값이 아니다
         /**
-         * @brief 이 인스턴스를 내준 풀입니다. 힙에서 왔으면 nullptr 입니다. 생성할 때 한 번 기록하고 파괴할 때 읽습니다.
+         * @brief 이 인스턴스를 내준 타입 항목(풀과 버킷, `ComponentPoolEntry`)입니다. 힙에서 왔으면 nullptr 입니다. 생성할 때 한 번 기록하고 파괴할 때 읽습니다.
          * @details 파괴할 때 타입 이름으로 풀을 다시 찾으면 안 된다. 이름이 바뀌었거나(`setComponentName`) 그 타입이 그새 해제되었으면
          *          풀을 찾지 못해 풀 블록을 힙으로 반납하고, Shipping 에서 힙이 깨진다(0xc0000374. Debug 와 ASan 은 조용하다).
+         *          같은 항목이 매니저의 타입별 목록(버킷)이라, 해체가 여기서 자기 자리(`_poolEntrySlot`)를 뺀다.
          */
-        PoolAllocator* _pPool;
+        ComponentPoolEntry* _pPoolEntry;
 
         atomic<uint64> _subTickActiveMask; ///< 서브틱 1~63 의 활성 상태(원자 비트마스크, O(1))
         /**
@@ -578,13 +583,18 @@ namespace sw
          *          인스펙터는 컴포넌트 머리의 체크박스로 그린다.
          */
         PROPERTY( HideInInspector )
-        atomic<bool>        _bActive;
-        atomic<bool>        _bIsPendingDestroy; ///< 삭제 예정 표시
-        TickGroup           _tickGroup;         ///< 이 컴포넌트가 속한 TickGroup
-        uint8               _bCanEverTick      : 1;
-        uint8               _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
-        uint8               _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
-        uint8               _reservedFlags     : 5;
+        atomic<bool> _bActive;
+        atomic<bool> _bIsPendingDestroy; ///< 삭제 예정 표시
+        TickGroup    _tickGroup;         ///< 이 컴포넌트가 속한 TickGroup
+        uint8        _bCanEverTick      : 1;
+        uint8        _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
+        uint8        _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
+        uint8        _reservedFlags     : 5;
+        /**
+         * @brief `_pPoolEntry` 의 버킷 안 위치입니다. 버킷에 없으면 `kNotInPoolEntry` 입니다. 제거를 O(1) 로 하려고 둡니다.
+         * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.
+         */
+        uint32              _poolEntrySlot;
         vector<SubTickInfo> _listSubTick; ///< 등록된 보조 서브틱 목록
     };
 } // namespace sw

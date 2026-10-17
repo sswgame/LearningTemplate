@@ -564,29 +564,29 @@ namespace sw
         if ( _pOwnerManager == nullptr )
             return storage;
 
-        // 타입마다 풀 하나다. 파괴가 그 풀로 돌아간다(`Component::_pPool`). 풀을 만들 수 없는 타입(리플렉션 없음)은 힙에서 잡는다.
+        // 타입마다 항목(풀과 버킷) 하나다. 파괴가 그 풀로 돌아간다(`Component::_pPoolEntry`). 항목을 만들 수 없는 타입(리플렉션 없음)은 힙에서 잡는다.
         if ( pTypeInfo != nullptr )
         {
-            storage._pPool = _pOwnerManager->getOrCreateComponentPool( pTypeInfo, typeSize );
-            if ( storage._pPool != nullptr )
-                storage._pMemory = storage._pPool->allocate();
+            storage._pPoolEntry = _pOwnerManager->getOrCreateComponentPoolEntry( pTypeInfo, typeSize );
+            if ( storage._pPoolEntry != nullptr )
+                storage._pMemory = storage._pPoolEntry->_pool.allocate();
         }
         if ( storage._pMemory == nullptr )
         {
-            storage._pPool   = nullptr;
-            storage._pMemory = Memory::allocate( typeSize );
+            storage._pPoolEntry = nullptr;
+            storage._pMemory    = Memory::allocate( typeSize );
         }
         return storage;
     }
 
-    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool, bool bOverridesTick )
+    void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick )
     {
         // 주 틱의 기본은 "onTick 을 오버라이드했는가"다(유니티의 Update). 오버라이드한 타입은 생성자의 값(기본은 켜짐, 끄면 꺼짐)을 그대로 둔다.
         if ( bOverridesTick == false )
             pComp->_bCanEverTick = SW_FALSE;
         pComp->setOwner( this );
-        pComp->_pPool     = pPool;
-        pComp->_pTypeInfo = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름(아래)은 타입과 무관하다
+        pComp->_pPoolEntry = pPoolEntry;
+        pComp->_pTypeInfo  = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름(아래)은 타입과 무관하다
 
         const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
         pComp->setComponentName( typeKey );
@@ -602,6 +602,8 @@ namespace sw
         }
 
         _listComponent.push_back( pComp );
+        // 오브젝트 목록에 넣는 바로 그 시점에 매니저의 타입별 목록(버킷)에도 넣는다. `onRegister` 안에서 씬을 찾는 코드가 둘 중 어느 순회로든 같은 답을 받는다.
+        _pOwnerManager->registerTypedComponent( pComp );
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 레지스트리에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.

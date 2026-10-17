@@ -129,16 +129,31 @@ namespace sw
             } );
         }
 
-        /** @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. TypeInfo 는 씬 전체에 한 번만 구합니다. */
+        /**
+         * @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. 오브젝트를 훑지 않고 타입별 버킷을 돕니다(`GameObjectStore::forEachComponentOfType`).
+         * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. **방문 순서는 약속하지 않습니다** — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
+         *          버킷에서 꺼낸 포인터를 `static_cast` 로 바꿉니다. REFLECT 타입은 가상이 아닌 단일 상속만 받으므로(파서 7-b) 보정이 맞습니다.
+         * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`).
+         */
         template <typename TComponent, typename Func>
         void forEachComponentOfType( Func&& func ) const
         {
-            const TypeInfo* pToType = findStaticType<TComponent>();
-            forEachGameObject( [&func, pToType]( GameObject* pObj )
+            static_assert( std::is_base_of_v<Component, TComponent>, "TComponent must derive from sw::Component" );
+            _store.forEachComponentOfType( findStaticType<TComponent>(), [&func]( Component* pComp )
             {
-                pObj->forEachComponentOfType<TComponent>( pToType, func );
+                func( static_cast<TComponent*>( pComp ) );
             } );
         }
+
+        /** @brief 런타임 타입 @p pToType 이나 그 파생 컴포넌트를 순회합니다. 콜백은 `Component*` 를 받습니다. 타입을 템플릿으로 모르는 곳(인스펙터 선택기)이 씁니다. */
+        template <typename Func>
+        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
+        {
+            _store.forEachComponentOfType( pToType, std::forward<Func>( func ) );
+        }
+
+        /** @brief 비어 있지 않은 타입별 버킷 수입니다. 진단과 회귀 테스트(모듈 언로드 뒤 묘비)용입니다. */
+        uint32 getTypedComponentBucketCount() const { return _store.getTypedComponentBucketCount(); }
 
         /** @brief 태그를 가진 첫 GameObject 를 반환합니다. 없으면 nullptr 입니다. */
         GameObject* findGameObjectByTag( TagID tag ) const { return _store.findGameObjectByTag( tag ); }
@@ -311,7 +326,8 @@ namespace sw
         /**
          * @brief 타입별 컴포넌트 레지스트리입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
          * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 **찾지** 않고, 컴포넌트가 붙을 때 **등록받습니다** —
-         *          `forEachComponentOfType` 은 모든 오브젝트를 훑으므로 프레임 경로에 쓰지 않습니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
+         *          `forEachComponentOfType` 은 타입별 버킷을 돌지만 공유 잠금을 잡고 순서를 약속하지 않으므로, 등록 순서 · 채널 · 잠금 없는 읽기가 필요한
+         *          프레임 경로는 이 레지스트리를 씁니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
          */
         ComponentRegistry& getComponentRegistry() { return _componentRegistry; }
         /** @brief 타입별 컴포넌트 레지스트리입니다. */
@@ -443,8 +459,10 @@ namespace sw
         void dispatchPendingBeginPlay() { _store.dispatchPendingBeginPlay(); }
         /** @brief 플레이 중에 붙은 컴포넌트를 시작 줄에 세웁니다(`GameObject::attachCreatedComponent`). 핸들로 들어 그새 해체돼도 안전합니다. */
         void queueBeginPlay( ComponentHandle handle ) { _store.queueBeginPlay( handle ); }
-        /** @brief 타입별 컴포넌트 풀을 얻거나 만듭니다(`GameObjectStore::getOrCreateComponentPool`). */
-        PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize ) { return _store.getOrCreateComponentPool( pTypeInfo, typeSize ); }
+        /** @brief 타입별 컴포넌트 항목(풀과 버킷)을 얻거나 만듭니다(`GameObjectStore::getOrCreateComponentPoolEntry`). */
+        ComponentPoolEntry* getOrCreateComponentPoolEntry( const TypeInfo* pTypeInfo, size_t typeSize ) { return _store.getOrCreateComponentPoolEntry( pTypeInfo, typeSize ); }
+        /** @brief 막 붙인 컴포넌트를 타입별 버킷에 넣습니다(`GameObject::attachCreatedComponent`). */
+        void registerTypedComponent( Component* pComp ) { _store.registerTypedComponent( pComp ); }
 
         /**
          * @brief `Physics` 단계의 서비스(`ScenePhysics` — 겹침 월드 → 강체 물리)를 진행하고 그 쓰기를 펼칩니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.

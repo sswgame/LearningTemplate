@@ -92,6 +92,45 @@ namespace sw
                 return scanned == manager.getComponentRegistry().getAll<T>().size();
             }
 
+            /** @brief 오브젝트마다 컴포넌트 목록을 거르는 옛 매니저 순회(전수 훑기)로 T 와 그 파생을 정렬한 포인터 목록으로 꺼냅니다. */
+            template <typename T>
+            static vector<const Component*> scanObjects( const GameObjectManager& manager )
+            {
+                vector<const Component*> listComponent;
+                manager.forEachGameObject( [&listComponent]( GameObject* pObject )
+                {
+                    pObject->forEachComponentOfType<T>( [&listComponent]( T* pComponent )
+                    { listComponent.push_back( pComponent ); } );
+                } );
+                std::sort( listComponent.begin(), listComponent.end() );
+                return listComponent;
+            }
+
+            /** @brief 타입별 버킷 순회(`GameObjectManager::forEachComponentOfType`)로 T 와 그 파생을 정렬한 포인터 목록으로 꺼냅니다. */
+            template <typename T>
+            static vector<const Component*> scanBuckets( const GameObjectManager& manager )
+            {
+                vector<const Component*> listComponent;
+                manager.forEachComponentOfType<T>( [&listComponent]( T* pComponent )
+                { listComponent.push_back( pComponent ); } );
+                std::sort( listComponent.begin(), listComponent.end() );
+                return listComponent;
+            }
+
+            /** @brief 기반 · 중간 · 말단 타입 모두에서 버킷 순회가 전수 훑기와 같으면 true 입니다. 런타임 타입 순회도 같은 집합이어야 합니다. */
+            static bool bucketsMatchObjectScan( const GameObjectManager& manager )
+            {
+                vector<const Component*> listByType;
+                manager.forEachComponentOfType( LightComponent::StaticType(), [&listByType]( Component* pComponent )
+                { listByType.push_back( pComponent ); } );
+                std::sort( listByType.begin(), listByType.end() );
+                return scanBuckets<Component>( manager ) == scanObjects<Component>( manager ) &&
+                       scanBuckets<SceneComponent>( manager ) == scanObjects<SceneComponent>( manager ) &&
+                       scanBuckets<LightComponent>( manager ) == scanObjects<LightComponent>( manager ) &&
+                       scanBuckets<PointLightComponent>( manager ) == scanObjects<PointLightComponent>( manager ) &&
+                       scanBuckets<ShadowCaster2DComponent>( manager ) == scanObjects<ShadowCaster2DComponent>( manager ) && listByType == scanObjects<LightComponent>( manager );
+            }
+
             /** @brief 결정적인 작은 난수(LCG)입니다. */
             static uint32 nextRandom( uint32& inoutState )
             {
@@ -275,4 +314,117 @@ SW_TEST_CASE( ComponentRegistryTest, EnvironmentFindersSeeTheSameAsTheSceneScan 
     {
         SW_EXPECT_NEAR_EQUAL( listDistance[slot], ( float3{ arrSphere[slot]._x, arrSphere[slot]._y, arrSphere[slot]._z } - view ).getLengthSquared(), 1.0e-3f );
     }
+}
+
+/**
+ * @brief [TypedComponentBucketTest] 붙이기 · 떼기 · 지연 파괴 · 비우기 · 이번 프레임 생성을 섞은 600 걸음 내내 타입별 버킷 순회가 오브젝트 전수 훑기와 같은 집합이다
+ * @details 기반(`Component`, `SceneComponent`), 중간(`LightComponent`), 말단(`PointLightComponent`) 타입을 모두 묻는다. 삭제 대기 컴포넌트와 삭제 대기 오브젝트는
+ *          두 순회가 모두 건너뛰어야 하므로 지연 파괴를 플러시하지 않은 걸음에서도 견준다. 순서는 약속이 아니라 정렬한 집합으로 비교한다.
+ */
+SW_TEST_CASE( TypedComponentBucketTest, MatchesObjectScanThroughChurn )
+{
+    using Internal = ComponentRegistryTestInternal;
+    GameObjectManager   manager;
+    vector<GameObject*> listObject;
+    uint32              state      = 777u;
+    uint32              mismatches = 0;
+    for ( uint32 step = 0; step < 600; ++step )
+    {
+        const uint32 roll = Internal::nextRandom( state ) % 12;
+        if ( roll < 4 || listObject.empty() )
+        {
+            GameObject*  pObject = manager.createGameObject( hashed_string( "Bucket" ) );
+            const uint32 kind    = Internal::nextRandom( state ) % 5;
+            if ( kind == 0 )
+                (void)pObject->addComponent<PointLightComponent>();
+            else if ( kind == 1 )
+                (void)pObject->addComponent<SpotLightComponent>();
+            else if ( kind == 2 )
+                (void)pObject->addComponent<ShadowCaster2DComponent>();
+            else if ( kind == 3 )
+                (void)pObject->addComponent<SceneComponent>();
+            else
+            {
+                (void)pObject->addComponent<DirectionalLightComponent>();
+                (void)pObject->addComponent<PointLightComponent>();
+            }
+            listObject.push_back( pObject );
+        }
+        else if ( roll < 6 )
+        {
+            // 즉시 떼기 — 오브젝트는 남는다.
+            GameObject* pObject = listObject[Internal::nextRandom( state ) % listObject.size()];
+            Component*  pFirst  = pObject->getComponent<Component>();
+            if ( pFirst != nullptr )
+                (void)pObject->removeComponent( pFirst ); // 무작위 조작 — 성공 여부와 무관하게 두 순회가 같은지만 본다
+        }
+        else if ( roll < 7 )
+        {
+            // 지연 떼기 — 플러시 전까지 삭제 대기로 버킷에 남고, 두 순회가 모두 건너뛴다.
+            GameObject* pObject = listObject[Internal::nextRandom( state ) % listObject.size()];
+            Component*  pFirst  = pObject->getComponent<Component>();
+            if ( pFirst != nullptr )
+                manager.destroyComponent( pFirst );
+        }
+        else if ( roll < 8 )
+        {
+            listObject[Internal::nextRandom( state ) % listObject.size()]->clearComponents();
+        }
+        else if ( roll < 10 )
+        {
+            const size_t index = Internal::nextRandom( state ) % listObject.size();
+            manager.destroyObject( listObject[index] );
+            listObject.erase( listObject.begin() + static_cast<ptrdiff_t>( index ) );
+        }
+        else if ( roll < 11 )
+            manager.processDeferredDestruction();
+        else
+            manager.mergePendingAdds();
+        mismatches += Internal::bucketsMatchObjectScan( manager ) ? 0u : 1u;
+    }
+    SW_EXPECT_EQUAL( 0u, mismatches );
+    SW_EXPECT_TRUE( Internal::scanBuckets<LightComponent>( manager ).empty() == false );
+
+    // 모두 지우면 모든 버킷이 비고 타입 포인터를 놓는다(`GameObjectStore::clear` 의 단언과 같은 조건).
+    manager.clear();
+    SW_EXPECT_EQUAL( 0u, manager.getTypedComponentBucketCount() );
+    SW_EXPECT_TRUE( Internal::scanBuckets<Component>( manager ).empty() );
+}
+
+/**
+ * @brief [TypedComponentBucketTest] 버킷은 인스턴스가 있을 때만 타입 포인터를 가지고, 비면 놓는다(모듈 언로드의 묘비 처리)
+ * @details 언로드 전에 그 모듈 타입의 인스턴스를 지우면(`destroyComponentsOfModule`) 그 타입의 버킷이 모두 비어 해제될 `TypeInfo` 를 가리키지 않는다.
+ */
+SW_TEST_CASE( TypedComponentBucketTest, EmptyBucketReleasesItsType )
+{
+    GameObjectManager manager;
+    SW_EXPECT_EQUAL( 0u, manager.getTypedComponentBucketCount() );
+    GameObject*          pFirst  = manager.createGameObject( hashed_string( "LampA" ) );
+    GameObject*          pSecond = manager.createGameObject( hashed_string( "LampB" ) );
+    PointLightComponent* pPointA = pFirst->addComponent<PointLightComponent>();
+    PointLightComponent* pPointB = pSecond->addComponent<PointLightComponent>();
+    SpotLightComponent*  pSpot   = pSecond->addComponent<SpotLightComponent>();
+    SW_ASSERT_TRUE( pPointA != nullptr && pPointB != nullptr && pSpot != nullptr );
+    SW_EXPECT_EQUAL( 2u, manager.getTypedComponentBucketCount() );
+
+    // 같은 타입 둘 가운데 하나를 떼도 버킷은 남는다. 둘째까지 떼면 그 버킷이 타입을 놓는다.
+    SW_EXPECT_TRUE( pFirst->removeComponent( pPointA ) );
+    SW_EXPECT_EQUAL( 2u, manager.getTypedComponentBucketCount() );
+    SW_EXPECT_TRUE( pSecond->removeComponent( pPointB ) );
+    SW_EXPECT_EQUAL( 1u, manager.getTypedComponentBucketCount() );
+
+    // 비운 버킷에 다시 넣으면 타입을 다시 잡는다(항목과 용량은 남아 있었다).
+    SW_ASSERT_NOT_NULL( pFirst->addComponent<PointLightComponent>() );
+    SW_EXPECT_EQUAL( 2u, manager.getTypedComponentBucketCount() );
+    size_t pointCount = 0;
+    manager.forEachComponentOfType<PointLightComponent>( [&pointCount]( PointLightComponent* )
+    { ++pointCount; } );
+    SW_EXPECT_EQUAL( size_t( 1 ), pointCount );
+
+#if !defined( SW_SHIPPING )
+    // 모듈 언로드 전 정리 — 이 테스트의 컴포넌트는 모두 같은 모듈 타입이다. 지우고 나면 타입을 가진 버킷이 없다.
+    const hashed_string moduleName = PointLightComponent::StaticType()->_moduleName;
+    SW_EXPECT_TRUE( manager.destroyComponentsOfModule( moduleName.view() ) > 0u );
+    SW_EXPECT_EQUAL( 0u, manager.getTypedComponentBucketCount() );
+#endif
 }
