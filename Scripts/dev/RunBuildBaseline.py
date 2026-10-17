@@ -162,7 +162,8 @@ def measureWorktreeScenario(repositoryRoot: Path, preset: str, args: argparse.Na
     worktreeRoot = findMainRoot(repositoryRoot).parent / kWorktreeFolderName / kWorktreeName
     scriptsCommand = [sys.executable, "-m", "Scripts"]
     if not worktreeRoot.is_dir():
-        runTimed([*scriptsCommand, "worktree-make", kWorktreeName, "--base", commit], cwd=repositoryRoot)
+        # 주인은 이 측정 프로세스다 — 측정이 끝나면 지운다.
+        runTimed([*scriptsCommand, "worktree-make", kWorktreeName, "--base", commit, "--pid", str(os.getpid())], cwd=repositoryRoot)
     result = ScenarioResult(preset, "worktree")
     try:
         tree = BuildTree.fromPreset(preset, worktreeRoot)
@@ -179,7 +180,8 @@ def measureWorktreeScenario(repositoryRoot: Path, preset: str, args: argparse.Na
     finally:
         if not args.keep_worktree:
             # 청소다 — 측정은 이미 끝났고, 지우지 못한 워크트리는 worktree-remove 가 스스로 알린다.
-            runProcess([*scriptsCommand, "worktree-remove", kWorktreeName, "--force"], cwd=repositoryRoot, bCapture=False)
+            runProcess([*scriptsCommand, "worktree-remove", kWorktreeName, "--force", "--pid", str(os.getpid())], cwd=repositoryRoot,
+                       bCapture=False)
     return result
 
 

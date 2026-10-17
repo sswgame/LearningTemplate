@@ -220,7 +220,7 @@ cd build/Ninja-Debug/Bin
 
 - **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(구성 + 빌드)를 각 3 회 측정해서
   중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py`(전 TU `-ftime-trace`, PCH 없이)다.
-  표는 같은 PC 의 전후만 견준다. 측정하는 동안은 `LT-wt/.slot1` ~ `.slot3` 를 모두 잡아 다른 에이전트의 빌드를 막는다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있다.
+  표는 같은 PC 의 전후만 견준다. 측정하는 동안은 빌드 칸을 독점으로 잡아(`py -3 -m Scripts shared-lock acquire build --owner <이름>`, 공유 칸 보유자가 모두 놓을 때까지 기다린다) 다른 에이전트의 빌드를 막는다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있다.
 - **CPU 시간 나눔**(빌드 속도 계획을 세울 때의 Debug `.ninja_log`, 명령 하나당 한 번 센 값이라 시점이 섞였을 수 있다): 일반 컴파일 2,435 s(2,413 TU, 약 85 %), PCH 생성 370 s(86 개, 13 %),
   링크 23 s(85 개, 1 % 미만), 리플렉션 코드젠 40 s(28 개, 1 %)였다. 모듈별 컴파일은 Engine 688 TU 805 s, GameFramework 833 TU 671 s, Editor 143 TU 123 s, Core 84 TU 72 s, 테스트 614 TU 732 s(26 %)였다.
   16 스레드 기준 풀 빌드의 이론 하한은 약 170 ~ 180 초였다. 가장 느린 TU 는 `Engine.cpp` 6.5 초이고, `Physics/Jolt/*` 래퍼가 5.3 ~ 6.7 초로 보인 것은 다른 빌드와 겹쳐 잰 값이었다(조용할 때 각 1.9 ~ 2.5 초).

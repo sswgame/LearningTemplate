@@ -7,6 +7,10 @@
     py -3 -m Scripts worktree-remove <이름> [<이름> …]            # 워크트리와 브랜치 wt/<이름> 을 지운다
     py -3 -m Scripts worktree-remove <이름> --keep-branch         # 브랜치는 남긴다
     py -3 -m Scripts worktree-remove <이름> --force               # 커밋하지 않은 변경이 있어도 지운다
+    py -3 -m Scripts worktree-remove <이름> --even-if-owned       # 다른 세션이 쓰는 중이어도 지운다(사용자가 시킨 때만)
+
+주인 기록(`MakeWorktree.kOwnerFileName`)의 프로세스가 살아 있고 내 프로세스(`--pid` · `CLAUDE_PID`)가 아니면 "다른 세션이 쓰는 중" 으로 건너뛴다.
+`--force` 는 커밋하지 않은 변경만 넘는다 — 둘을 한 플래그로 두면 변경을 버리려고 준 `--force` 가 남의 워크트리까지 지운다.
 
 링크를 끊지 않고 폴더를 지우면 도구에 따라 링크 너머(main 의 LLVM · vcpkg 설치 트리)까지 지울 수 있습니다. 그래서 지우기 전에
 `MakeWorktree.kSharedFolders` 의 링크를 링크로서만 지우고, 그 뒤에 `git worktree remove` 를 부릅니다.
@@ -19,6 +23,7 @@ import os
 import shutil
 import stat
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -26,7 +31,17 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common import getProjectRoot, runGit  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from MakeWorktree import findMainRoot, kSharedFolders, makePlan  # noqa: E402
+from MakeWorktree import (  # noqa: E402
+    describeWorktreeOwner,
+    findMainRoot,
+    getWorktreeGitDirectory,
+    isOwnedByOtherLiveProcess,
+    kOwnerPidEnvironment,
+    kSharedFolders,
+    makePlan,
+    readWorktreeOwner,
+    resolveOwnerProcessId,
+)
 
 
 def isDirectoryLink(path: Path) -> bool:
@@ -55,9 +70,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--worktree-root", type=Path, default=None, help="워크트리를 둔 폴더(기본: main 체크아웃의 부모/LT-wt)")
     parser.add_argument("--keep-branch", action="store_true", help="브랜치 wt/<이름> 을 지우지 않는다")
     parser.add_argument("--force", action="store_true", help="커밋하지 않은 변경이 있어도 지운다")
+    parser.add_argument("--even-if-owned", dest="evenIfOwned", action="store_true",
+                        help="다른 세션이 쓰는 중(주인 프로세스가 살아 있음)이어도 지운다 — 사용자가 시킨 때만")
+    parser.add_argument("--pid", type=int, default=None, help=f"내 프로세스 번호(기본: 환경 변수 {kOwnerPidEnvironment}) — 내가 주인인 워크트리는 그냥 지운다")
     args = parser.parse_args(argv)
 
     mainRoot = findMainRoot(getProjectRoot())
+    currentPid = resolveOwnerProcessId(args.pid)
+    now = time.time()
     failureCount = 0
     for name in args.names:
         plan = makePlan(mainRoot, name, "", args.worktree_root)
@@ -66,6 +86,19 @@ def main(argv: list[str] | None = None) -> int:
             failureCount += 1
             continue
         if plan.worktreePath.exists():
+            try:
+                owner = readWorktreeOwner(getWorktreeGitDirectory(plan.worktreePath))
+            except (RuntimeError, ValueError) as error:
+                print(f"[RemoveWorktree] 주인을 확인하지 못해 건너뜁니다(--even-if-owned 로 지운다): {error}", file=sys.stderr)
+                if not args.evenIfOwned:
+                    failureCount += 1
+                    continue
+                owner = None
+            if isOwnedByOtherLiveProcess(owner, currentPid) and not args.evenIfOwned:
+                print(f"[RemoveWorktree] 다른 세션이 쓰는 중이라 건너뜁니다(--even-if-owned 로 지운다): {plan.worktreePath} — "
+                      f"{describeWorktreeOwner(owner, now)}", file=sys.stderr)
+                failureCount += 1
+                continue
             status = runGit(["status", "--porcelain"], cwd=plan.worktreePath)
             if status.bSucceeded and status.stdout.strip() and not args.force:
                 print(f"[RemoveWorktree] 커밋하지 않은 변경이 있어 건너뜁니다(--force 로 지운다): {plan.worktreePath}", file=sys.stderr)

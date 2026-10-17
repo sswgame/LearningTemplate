@@ -23,7 +23,9 @@ py -3 -m Scripts worktree-make <이름> --base main
 
 ## 2. 빌드와 테스트
 
-- 동시 빌드는 최대 둘입니다. `all AllTests` 는 통합 담당만 합니다. 작업자는 필요한 단일 타깃(EngineTest · EditorTest · CoreTest · 모듈 DLL)만 짓고 경고 0 으로 맞춥니다.
+- 동시 빌드는 최대 둘이고 빌드 칸 잠금이 강제합니다. 빌드는 `py -3 -m Scripts shared-lock run build --shared --owner <이름> --below-normal -- cmake --build --preset Ninja-Debug --target <타깃>` 으로 돌립니다.
+  고치는 동안은 필요한 단일 타깃(EngineTest · EditorTest · CoreTest · 모듈 DLL)만 짓고, "검증했다" 고 보고하는 빌드는 `py -3 -m Scripts full-build --owner <이름> --below-normal`(`all AllTests`)입니다.
+  빌드를 맡지 않은 작업자는 "빌드 미확인" 으로 보고합니다.
 - ctest 전체를 돌리지 않습니다. 테스트 실행 파일을 필터로 돌립니다. PATH 에 `build\Ninja-Debug\Bin` 을 넣고 `TestBin\<이름>.exe --test_filter=...` 입니다.
 - 코드를 먼저 쓰고 빌드는 아껴서 합니다. 빌드가 겹쳐 시간 제한에 걸리면 단독으로 다시 돌려 구분합니다.
 - **빌드 로그를 UTF-8 로 쓰고 경고를 `Select-String | Measure-Object` 로 셉니다.** `Start-Process` 의 `*>` 로 쓴 로그는 UTF-16 이라 bash `grep` 이 항상 0 을 돌려줍니다.
@@ -70,6 +72,7 @@ py -3 -m Scripts worktree-make <이름> --base main
 
 ## 6. 병합 담당이 하는 일
 
-- 끝난 브랜치를 통합 브랜치에 모아 전체 Debug 빌드를 하고, UTF-8 로그로 경고와 오류를 센 뒤 main 에 병합합니다. 병합 성공을 확인한 뒤에만 워크트리를 지웁니다.
+- 끝난 브랜치를 통합 브랜치에 모아 병합 결과를 `full-build` 하고, UTF-8 로그로 경고와 오류를 센 뒤 main 에 병합합니다. main push 는 pre-push 훅이 그 트리의 `full-build` 증거를 요구합니다.
+  병합 성공을 확인한 뒤에만 워크트리를 지웁니다. 주인이 살아 있는 워크트리는 `worktree-remove` 가 건너뜁니다(`worktree-list` 로 본다).
 - 병합 전에 `code-reviewer` 에이전트로 읽기 전용 검토를 시킬 수 있습니다. 작업자끼리 부딪히는 결정과 규칙 위반을 찾습니다.
 - 문서 충돌은 양쪽을 남기는 것이 보통입니다. 생성 문서(`docs/Config/*`)가 충돌하면 `GenerateConfigReference.py` 로 다시 만듭니다.
