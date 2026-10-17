@@ -22,6 +22,11 @@ namespace sw
         uint64 _ownerObjectID{ 0 };     ///< 이 부품을 스폰한 프리팹 인스턴스의 루트 오브젝트
         uint64 _registrationOrder{ 0 }; ///< 기록한 순서(스폰 순서). 부모 부품이 자식 부품보다 작다
         string _prefabPath;             ///< 이 부품의 원본 프리팹 경로
+        /**
+         * @brief 바깥 인스턴스(`_ownerObjectID`)에서 이 부품을 스폰한 노드의 키입니다(`PrefabInstanceNode::makePartKey`). 이어 붙이면 부품 경로가 됩니다(`makePartPath`).
+         * @details 비어 있으면 노드에서 스폰하지 않은 부품이다(에디터가 프리팹을 만들며 들인 자식). 그런 부품은 다음 로드에서 노드 키를 얻는다.
+         */
+        string _partKey;
     };
 } // namespace sw
 
@@ -56,8 +61,8 @@ namespace sw
         /** @brief 씬을 비울 때 항목을 모두 버립니다. */
         void onSceneCleared() override;
 
-        /** @brief @p objectID 를 @p ownerObjectID 인스턴스의 부품으로 기록합니다. 이미 있으면 바꿉니다. */
-        void registerNestedPart( uint64 objectID, uint64 ownerObjectID, string_view prefabPath );
+        /** @brief @p objectID 를 @p ownerObjectID 인스턴스의 부품으로 기록합니다(@p partKey 는 `PrefabNestedPart::_partKey`). 이미 있으면 바꿉니다. */
+        void registerNestedPart( uint64 objectID, uint64 ownerObjectID, string_view prefabPath, string_view partKey );
         /** @brief 기록을 지웁니다. 없으면 아무것도 하지 않습니다. */
         void unregisterNestedPart( uint64 objectID );
         /** @brief @p objectID 의 부품 기록입니다. 부품이 아니면 nullptr 입니다. */
@@ -73,6 +78,11 @@ namespace sw
          * @details 표 전체를 돈다 — 프리팹으로 저장하는 에디터 경로가 쓴다. 프레임마다 부르지 않는다.
          */
         void collectNestedPartsOf( uint64 ownerObjectID, vector<uint64>& outListObjectID ) const;
+        /**
+         * @brief @p rootObjectID 인스턴스에서 부품 @p objectID 까지의 부품 경로(`PrefabPartOverride::_partPath`)를 만듭니다 — 바깥 인스턴스를 따라 올라가며 키를 잇습니다.
+         * @return 부품이 아니거나, 키가 빈 부품을 지나거나, @p rootObjectID 에 닿지 않으면 false 입니다.
+         */
+        [[nodiscard]] bool makePartPath( uint64 objectID, uint64 rootObjectID, string& outPath ) const;
         /** @brief 기록된 부품 수입니다. */
         size_t getNestedPartCount() const { return _mapNestedPart.size(); }
 

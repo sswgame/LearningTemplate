@@ -799,7 +799,7 @@ namespace sw
             {
                 const PrefabNestedPart* pPart = ( carried._pTarget != nullptr ) ? sourceParts.findNestedPart( carried._identity._objectID ) : nullptr;
                 if ( pPart != nullptr )
-                    targetParts.registerNestedPart( carried._pTarget->getObjectID(), pPart->_ownerObjectID, pPart->_prefabPath );
+                    targetParts.registerNestedPart( carried._pTarget->getObjectID(), pPart->_ownerObjectID, pPart->_prefabPath, pPart->_partKey );
             }
             if ( listCarried.front()._pTarget != nullptr )
                 listKept.push_back( rootID );

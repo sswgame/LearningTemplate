@@ -439,3 +439,121 @@ SW_TEST_CASE( PrefabOverridesTest, NestedPartsAreRespawnedNotSavedAndUnlinkKeeps
 
     manager.shutdown();
 }
+
+/**
+ * @brief [PrefabOverridesTest] 부품 항목(`<Part>`)은 루트 상태에 섞이지 않고, 더한 그대로 다시 읽힌다
+ */
+SW_TEST_CASE( PrefabOverridesTest, PartOverridesRoundTripAndStayOutOfTheRootState )
+{
+    const sw::PrefabAsset prefab = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
+    sw::string            baseState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeBaseState( prefab, baseState ) );
+
+    const sw::string partBody = "<PrefabOverrides><Object _bActive=\"false\" /></PrefabOverrides>";
+    sw::string       overrides;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::appendPartOverrides( overrides, {
+                                                                             sw::PrefabPartOverride{ "0/1", partBody }
+    } ) );
+    SW_EXPECT_TRUE_MSG( overrides.find( "<Part path=\"0/1\">" ) != sw::string::npos, overrides.c_str() );
+
+    sw::vector<sw::PrefabPartOverride> listPart;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::collectPartOverrides( overrides, listPart ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), listPart.size() );
+    SW_EXPECT_STREQ( "0/1", listPart[0]._partPath.c_str() );
+    SW_EXPECT_TRUE_MSG( listPart[0]._overrideXML.find( "_bActive=\"false\"" ) != sw::string::npos, listPart[0]._overrideXML.c_str() );
+
+    // 루트에는 부품 것이 얹히지 않는다 — 부품 항목만 있는 덮어쓴 것으로 만든 상태는 원형 그대로다.
+    sw::string rootState;
+    SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, {}, rootState ) );
+    SW_EXPECT_TRUE_MSG( rootState.find( "_bActive=\"false\"" ) == sw::string::npos, rootState.c_str() );
+
+    // 경로 없는 항목은 읽기 오류다(조용히 버리지 않는다).
+    sw::string pathless = "<PrefabOverrides><Part>";
+    pathless += partBody;
+    pathless += "</Part></PrefabOverrides>";
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a nested part override without a path" );
+        SW_EXPECT_FALSE( sw::PrefabOverrides::collectPartOverrides( pathless, listPart ) );
+    }
+    SW_EXPECT_TRUE( listPart.empty() );
+}
+
+/**
+ * @brief [PrefabOverridesTest] 씬에서 부품을 고친 값은 바깥 인스턴스 엔티티의 `<Part>` 로 저장되고 다시 열면 부품에 얹힌다 — 고치지 않은 부품은 적히지 않는다
+ * @details 부품은 다시 스폰되므로 엔티티로 적지 않는다(앞 테스트). 그래서 씬에서 바퀴를 옮긴 값은 예전에 저장할 때 사라졌다. 유니티 nested override 처럼
+ *          바깥 인스턴스가 부품 경로(노드 키를 이은 것)와 그 부품의 덮어쓴 것을 싣는다.
+ */
+SW_TEST_CASE( PrefabOverridesTest, SceneEditOfANestedPartIsSavedOnTheOuterInstance )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string wheelPath = test::makeTempPath( "scene_part_wheel.prefab.xml" );
+    const sw::string cratePath = test::makeTempPath( "scene_part_crate.prefab.xml" );
+    {
+        sw::GameObjectManager authoring;
+        sw::GameObject*       pWheel = authoring.createGameObject( sw::hashed_string( "Wheel" ) );
+        SW_ASSERT_NOT_NULL( pWheel->addComponent<sw::SceneComponent>() );
+        sw::PrefabAsset wheel;
+        wheel.setFromGameObject( pWheel );
+        SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( wheel, wheelPath ) );
+    }
+    sw::PrefabAsset                    crate = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
+    sw::vector<sw::PrefabInstanceNode> listNode( 2 );
+    listNode[0]._name       = "WheelL";
+    listNode[0]._prefabPath = wheelPath;
+    listNode[0]._attachKey  = "Socket#0";
+    listNode[1]._name       = "WheelR";
+    listNode[1]._prefabPath = wheelPath;
+    listNode[1]._attachKey  = "Socket#0";
+    SW_ASSERT_TRUE( crate.setNestedInstances( listNode ) );
+    SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( crate, cratePath ) );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::SceneDocument                  authored;
+    sw::SceneDocument::SceneObjectNode entity;
+    entity._name   = "Cart";
+    entity._prefab = cratePath;
+    authored._listSceneObjectNode.push_back( entity );
+    sw::Scene* pScene = manager.createScene( "PartOverrideWorld" );
+    SW_ASSERT_TRUE( pScene->instantiate( authored ) );
+    sw::GameObjectManager& objects = *pScene->getObjectManager();
+    sw::GameObject*        pRight  = objects.findGameObjectByName( sw::hashed_string( "WheelR" ) );
+    SW_ASSERT_TRUE( pRight != nullptr && pRight->getPrimarySceneComponent() != nullptr );
+
+    // 고치지 않으면 부품 항목이 없다.
+    sw::SceneDocument untouched;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( untouched ) );
+    const sw::SceneDocument::SceneObjectNode* pUntouchedCart = sw::PrefabOverridesTestInternal::findEntity( untouched, "Cart" );
+    SW_ASSERT_NOT_NULL( pUntouchedCart );
+    SW_EXPECT_TRUE_MSG( pUntouchedCart->_prefabOverrideXML.find( "<Part" ) == sw::string::npos, pUntouchedCart->_prefabOverrideXML.c_str() );
+
+    // 오른쪽 바퀴만 옮긴다 — 두 번째 노드라 경로는 "1" 이다.
+    pRight->getPrimarySceneComponent()->setLocalPosition( sw::float3( 4.0f, 0.0f, 0.0f ) );
+    objects.flushSceneTransforms();
+    sw::SceneDocument saved;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
+    const sw::SceneDocument::SceneObjectNode* pSavedCart = sw::PrefabOverridesTestInternal::findEntity( saved, "Cart" );
+    SW_ASSERT_NOT_NULL( pSavedCart );
+    SW_EXPECT_TRUE_MSG( pSavedCart->_prefabOverrideXML.find( "<Part path=\"1\">" ) != sw::string::npos, pSavedCart->_prefabOverrideXML.c_str() );
+    SW_EXPECT_TRUE_MSG( pSavedCart->_prefabOverrideXML.find( "<Part path=\"0\">" ) == sw::string::npos, pSavedCart->_prefabOverrideXML.c_str() );
+    SW_EXPECT_TRUE( sw::PrefabOverridesTestInternal::findEntity( saved, "WheelR" ) == nullptr ); // 부품은 여전히 엔티티로 적지 않는다
+
+    // 다시 열면 오른쪽 바퀴만 옮긴 자리에 있다.
+    sw::Scene* pReopened = manager.createScene( "PartOverrideWorldReopened" );
+    SW_ASSERT_TRUE( pReopened->instantiate( saved ) );
+    const sw::GameObject* pReopenedRight = pReopened->getObjectManager()->findGameObjectByName( sw::hashed_string( "WheelR" ) );
+    const sw::GameObject* pReopenedLeft  = pReopened->getObjectManager()->findGameObjectByName( sw::hashed_string( "WheelL" ) );
+    SW_ASSERT_TRUE( pReopenedRight != nullptr && pReopenedRight->getPrimarySceneComponent() != nullptr );
+    SW_ASSERT_TRUE( pReopenedLeft != nullptr && pReopenedLeft->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pReopenedRight->getPrimarySceneComponent()->getLocalPosition().x, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pReopenedLeft->getPrimarySceneComponent()->getLocalPosition().x, 0.0001f );
+
+    // 다시 저장해도 같은 항목 하나다(덮어쓴 것을 얹어 만든 부품이 새 기준과 견줘 같은 차이를 낸다).
+    sw::SceneDocument resaved;
+    SW_ASSERT_TRUE( pReopened->serializeToDocument( resaved ) );
+    const sw::SceneDocument::SceneObjectNode* pResavedCart = sw::PrefabOverridesTestInternal::findEntity( resaved, "Cart" );
+    SW_ASSERT_NOT_NULL( pResavedCart );
+    SW_EXPECT_STREQ( pSavedCart->_prefabOverrideXML.c_str(), pResavedCart->_prefabOverrideXML.c_str() );
+
+    manager.shutdown();
+}

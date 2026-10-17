@@ -911,6 +911,10 @@ SW_TEST_CASE( PrefabTest, CookFlattensNestedInstancesSoTheOriginalIsNotRead )
     SW_EXPECT_EQUAL( -1, cookedTrain.getNestedInstances()[0]._parentIndex );
     SW_EXPECT_EQUAL( 0, cookedTrain.getNestedInstances()[1]._parentIndex );
     SW_EXPECT_EQUAL( 0, cookedTrain.getNestedInstances()[2]._parentIndex );
+    // 펼친 노드는 펼치기 전 부품 경로를 싣는다 — 씬의 `<Part>` 가 저작본과 쿠킹본에서 같은 부품을 가리킨다.
+    SW_EXPECT_STREQ( "0", cookedTrain.getNestedInstances()[0]._partPath.c_str() );
+    SW_EXPECT_STREQ( "0/0", cookedTrain.getNestedInstances()[1]._partPath.c_str() );
+    SW_EXPECT_STREQ( "0/1", cookedTrain.getNestedInstances()[2]._partPath.c_str() );
 
     // 원본을 지운다 — 펼친 쿠킹본은 그것을 읽지 않는다.
     for ( const sw::string& path : { wheelPath, cartPath } )
@@ -922,7 +926,7 @@ SW_TEST_CASE( PrefabTest, CookFlattensNestedInstancesSoTheOriginalIsNotRead )
     sw::PrefabCache       prefabs;
     sw::GameObject*       pTrain = objects.createGameObject( sw::hashed_string( "Train" ) );
     SW_ASSERT_TRUE( cookedTrain.applyStateTo( pTrain ) );
-    SW_EXPECT_EQUAL( 3u, prefabs.spawnNestedInstances( pTrain, cookedTrain ) );
+    SW_EXPECT_EQUAL( 3u, prefabs.spawnNestedInstances( pTrain, cookedTrain, {} ) );
     sw::GameObject* pCar = sw::findChildByNamePrefix( pTrain, "Car" );
     SW_ASSERT_NOT_NULL( pCar );
     sw::GameObject* pLeft = sw::findChildByNamePrefix( pCar, "WheelL" );

@@ -6,11 +6,27 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
     class PrefabAsset;
 
+    /**
+     * @struct PrefabPartOverride
+     * @brief 프리팹 인스턴스가 그 안의 중첩 부품 하나에 덮어쓴 것입니다(`<PrefabOverrides>` 안의 `<Part>` 항목, 유니티 nested override).
+     * @details 경로는 인스턴스 루트에서 부품까지 노드 키(`PrefabNestedPart::_partKey` — 저작본 노드는 목록 인덱스)를 `/` 로 이은 것이다(`2/0`).
+     *          쿠킹으로 펼친 프리팹도 노드에 펼치기 전 경로(`PrefabInstanceNode::_partPath`)를 실어 같은 경로가 나온다.
+     */
+    struct PrefabPartOverride
+    {
+        string _partPath;    ///< 인스턴스 루트에서 부품까지의 경로
+        string _overrideXML; ///< 그 부품의 `<PrefabOverrides>`(부품의 스폰 상태에 얹는다)
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class PrefabOverrides
      * @brief 씬이 프리팹 인스턴스를 저장하는 형식입니다 — 프리팹 경로와 **덮어쓴 것만** 적습니다(언리얼 레벨의 블루프린트 인스턴스 ·
@@ -23,6 +39,8 @@ namespace sw
      *          - `<Override key="SpriteComponent#0"><SpriteComponent _localPosition="1,0,0"/></Override>` — 프리팹 컴포넌트 가운데 값이 다른 칸만.
      *          - `<Add after="SceneComponent#0"><TagComponent .../></Add>` — 인스턴스가 더한 컴포넌트(전체 상태). `after` 는 인스턴스 목록에서 바로 앞에 있던
      *            물려받은 컴포넌트의 키이고, 얹을 때 그 뒤에 들어갑니다. 앞에 물려받은 것이 없으면 `after` 가 없고 맨 앞에, 그 키가 프리팹에서 사라졌으면 끝에 붙습니다.
+     *          - `<Part path="2/0"><PrefabOverrides>…</PrefabOverrides></Part>` — 인스턴스 안 중첩 부품에 덮어쓴 것(`PrefabPartOverride`). 루트 상태를 만드는
+     *            `makeInstanceState` 는 읽지 않고, 부품을 스폰하는 `PrefabCache::spawnNestedInstances` 가 읽습니다. 씬 엔티티와 프리팹의 중첩 노드가 같은 형식을 씁니다.
      *
      *          키는 **프리팹 쪽** 컴포넌트의 키(`이름#n` — `ComponentStableKey` 와 같은 규칙, 이름이 없으면 타입 이름)입니다. 프리팹 컴포넌트의
      *          이름을 바꾼 인스턴스는 그 컴포넌트를 지우고 새로 더한 것으로 적힙니다(언리얼도 상속한 컴포넌트의 이름은 바꾸지 못한다).
@@ -55,5 +73,17 @@ namespace sw
          *          오버라이드는 버린다). 읽지 못하면 false 입니다.
          */
         [[nodiscard]] static bool makeInstanceState( string_view baseStateXML, string_view overrideXML, string_view instanceName, string& outStateXML );
+
+        /**
+         * @brief @p inoutOverrideXML 에 부품 항목(`<Part>`)들을 더합니다. @p inoutOverrideXML 이 비었으면 루트를 만듭니다. 더할 것이 없으면 그대로입니다.
+         * @return 어느 글이든 `<PrefabOverrides>` XML 로 읽지 못하면 false 이고 @p inoutOverrideXML 은 그대로입니다.
+         */
+        [[nodiscard]] static bool appendPartOverrides( string& inoutOverrideXML, const vector<PrefabPartOverride>& listPartOverride );
+
+        /**
+         * @brief @p overrideXML 의 부품 항목(`<Part>`)을 문서 순서대로 모읍니다(비우고 채웁니다). 비었으면 빈 목록입니다.
+         * @return 읽지 못하거나 경로 · 본문이 빈 항목이 있으면 오류를 알리고 false 입니다.
+         */
+        [[nodiscard]] static bool collectPartOverrides( string_view overrideXML, vector<PrefabPartOverride>& outListPartOverride );
     };
 } // namespace sw

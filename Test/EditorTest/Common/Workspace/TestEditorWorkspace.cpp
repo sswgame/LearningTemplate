@@ -70,7 +70,7 @@ SW_TEST_CASE( EditorWorkspaceTest, PrefabPathCoversPlacedInstancesAndNestedParts
     EditorSelection editorSelection;
     EditorWorkspace workspace{ &editorSelection };
     workspace.setPlacedPrefabPath( pPost->getObjectID(), "game/prefabs/post.prefab.xml" );
-    objects.getSubsystem<PrefabInstanceRegistry>().registerNestedPart( pLamp->getObjectID(), pPost->getObjectID(), "game/prefabs/lamp.prefab.xml" );
+    objects.getSubsystem<PrefabInstanceRegistry>().registerNestedPart( pLamp->getObjectID(), pPost->getObjectID(), "game/prefabs/lamp.prefab.xml", "0" );
 
     SW_EXPECT_TRUE( workspace.findPrefabPath( pPost ) == "game/prefabs/post.prefab.xml" );
     SW_EXPECT_TRUE( workspace.findPrefabPath( pLamp ) == "game/prefabs/lamp.prefab.xml" ); // 씬 컴포넌트가 없는 부품 — 바깥 인스턴스가 살아 있으면 부품이다

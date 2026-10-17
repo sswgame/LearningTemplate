@@ -15,6 +15,7 @@
 namespace sw
 {
     struct ObjectIdentity;
+    struct PrefabPartOverride;
 
     class GameObject;
     class GameObjectManager;
@@ -41,10 +42,13 @@ namespace sw
         string _attachKey;         ///< 부모 오브젝트에서 붙을 씬 컴포넌트의 키(`이름#n`, `ComponentStableKey`). 비면 부모의 primary 씬 컴포넌트
         string _overrideXML;       ///< 원본과 다른 점(`<PrefabOverrides>`). 비면 원본 그대로
         string _resolvedStateXML;  ///< 쿠킹본만: 오버라이드를 얹은 최종 오브젝트 상태. 있으면 원본을 읽지 않고, 원본의 중첩 인스턴스는 뒤 노드로 펼쳐져 있다
+        string _partPath;          ///< 쿠킹본만: 펼치기 전 이 노드의 부품 경로(`2/0`, `PrefabPartOverride`). 저작본 노드의 경로는 목록 인덱스다
         int32  _parentIndex{ -1 }; ///< 부모 노드의 목록 인덱스(자기보다 앞). -1 이면 이 프리팹의 루트 오브젝트
 
         /** @brief 쿠킹본 형식(펼친 상태)이면 true 입니다. */
         bool isResolved() const { return _resolvedStateXML.empty() == false; }
+        /** @brief 이 노드가 스폰한 부품의 키입니다(`PrefabNestedPart::_partKey`) — 펼친 노드는 `_partPath`, 저작본 노드는 목록 인덱스 @p index 입니다. */
+        string makePartKey( size_t index ) const;
     };
 } // namespace sw
 
@@ -183,9 +187,20 @@ namespace sw
          *          원본을 읽지 못한 노드와 그 아래 노드는 건너뛰고 경고한다(유니티의 Missing Prefab 처럼 바깥 인스턴스는 남는다).
          *          스폰이 같은 프리팹을 다시 펼치면(로드 뒤 원본을 고쳐 생긴 순환) 그 노드에서 멈추고 오류를 알린다.
          *          구조 변경이 막힌 틱 안에서는 부르지 않는다(`spawn` 은 틱 뒤로 미룬 자리에서 부른다).
+         *          노드 오버라이드 안의 `<Part>` 는 그 노드 아래 부품에, @p listPartOverride 는 @p pRoot 아래 부품에 얹는다 — 바깥 것이 나중에 얹혀 이긴다.
+         * @param listPartOverride 인스턴스가 부품에 덮어쓴 것(씬 엔티티의 `<Part>`, `PrefabOverrides::collectPartOverrides`)입니다. 스폰한 부품에 닿지 않은 항목은 경고합니다.
          * @return 만든 오브젝트 수입니다.
          */
-        uint32 spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset );
+        uint32 spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride );
+        /**
+         * @brief @p root(@p asset 의 인스턴스 루트) 아래 부품 가운데 스폰한 그대로가 아닌 것의 덮어쓴 것을 모읍니다(비우고 채웁니다, 경로 순서는 스폰 순서).
+         * @details 기준은 같은 프리팹을 씬 밖 임시 매니저에 덮어쓴 것 없이 스폰한 부품이다 — 노드 오버라이드 · 안쪽 `<Part>` 까지 스폰과 같은 식이라
+         *          고치지 않은 부품은 적히지 않는다. 씬 저장(인스턴스 엔티티의 `<Part>`)과 Apply to Prefab(바깥 프리팹 노드의 `<Part>`)이 쓴다.
+         *          옮긴 부품(`isAttachedNestedPart` 가 false)과 부품 키가 없는 부품(에디터가 프리팹을 만들며 들인 것)은 적지 않는다.
+         *          구조 변경이 막힌 순회(`forEachGameObject`) 안에서는 부르지 않는다 — 임시 매니저에 오브젝트를 만든다.
+         * @return 기준 스폰이나 비교에 실패하면 false 입니다.
+         */
+        [[nodiscard]] bool collectPartOverrides( const GameObject& root, const PrefabAsset& asset, vector<PrefabPartOverride>& outListPartOverride );
         /**
          * @brief @p inoutAsset 의 중첩 인스턴스를 쿠킹본 형식으로 펼칩니다 — 노드마다 원본에 오버라이드를 얹은 최종 상태를 싣고, 원본의 중첩 인스턴스를 뒤 노드로 덧붙입니다.
          * @details 쿠킹은 펼친다. 로드 시간 기준이다 — 참조를 남기면 배포본이 스폰할 때마다 원본 프리팹을 하나씩 열고 원형 상태를 만들어 오버라이드를
@@ -225,7 +240,7 @@ namespace sw
         static uint32 cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
 
     private:
-        /** @brief 스폰한 오브젝트에 프리팹 상태와 이름을 쓰고 중첩 인스턴스를 스폰합니다. 바로 하는 스폰과 틱 뒤로 미룬 스폰이 같이 씁니다. 실패하면 false 입니다. */
+        /** @brief 스폰한 오브젝트에 프리팹 상태와 이름을 쓰고 중첩 인스턴스를 스폰합니다. 바로 하는 스폰과 틱 뒤로 미룬 스폰, 부품 기준 스폰이 같이 씁니다. 실패하면 false 입니다. */
         [[nodiscard]] bool applySpawnState( GameObject* pGameObject, const PrefabAsset& asset, string_view instanceName );
         /**
          * @brief 막 읽은 @p asset 의 중첩 인스턴스가 순환하지 않는지 봅니다(원본을 재귀로 로드한다). 이 프리팹이 순환에 들면 오류를 알리고 false 입니다.
@@ -235,8 +250,19 @@ namespace sw
         [[nodiscard]] bool validateNestedInstances( const PrefabAsset& asset, const string& cacheKey );
         /** @brief 노드 하나의 오브젝트 상태(원본 + 오버라이드, 또는 펼친 상태)를 만듭니다. 원본 노드면 @p ppOutSource 에 원본 프리팹을 줍니다. 실패하면 false 입니다. */
         [[nodiscard]] bool makeNestedInstanceState( const PrefabInstanceNode& node, string& outStateXML, const PrefabAsset** ppOutSource );
-        /** @brief `flattenNestedInstances` 의 재귀 단계입니다 — @p asset 의 노드를 펼쳐 @p inoutListNode 끝에 더합니다. 루트 노드의 부모는 @p parentIndex 입니다. */
-        [[nodiscard]] bool appendFlattenedNodes( const PrefabAsset& asset, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode );
+        /**
+         * @brief `flattenNestedInstances` 의 재귀 단계입니다 — @p asset 의 노드를 펼쳐 @p inoutListNode 끝에 더합니다. 루트 노드의 부모는 @p parentIndex 입니다.
+         * @param parentPath 부모 노드의 부품 경로입니다(맨 바깥은 빈 글). 펼친 노드의 `_partPath` 가 이 아래에 붙습니다.
+         * @param listPartOverride 바깥 노드들의 `<Part>` 입니다(바깥 프리팹 루트에서의 경로). 펼친 상태에 구워 넣습니다.
+         */
+        [[nodiscard]] bool appendFlattenedNodes( const PrefabAsset& asset, int32 parentIndex, string_view parentPath, const vector<PrefabPartOverride>& listPartOverride,
+                                                 vector<PrefabInstanceNode>& inoutListNode );
+        /**
+         * @brief `spawnNestedInstances` 의 재귀 단계입니다. @p listPartOverride 의 경로는 맨 바깥 인스턴스 루트에서 잰 것이고, @p pRoot 는 그 경로 @p rootPath 의 부품입니다.
+         * @param inoutListSpawnedPath 스폰한 부품의 경로를 끝에 더합니다(닿지 않은 `<Part>` 를 알리는 데 씁니다).
+         */
+        uint32 spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
+                                          vector<string>& inoutListSpawnedPath );
 
         mutable std::shared_mutex                      _mapCacheMutex;
         unordered_map<string, unique_ptr<PrefabAsset>> _mapCache;

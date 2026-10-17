@@ -181,8 +181,8 @@ namespace sw::editor
                     continue;
                 const string childPrefab{ workspace.getPlacedPrefabPath( pChild->getObjectID() ) };
                 if ( childPrefab.empty() )
-                    continue; // 프리팹 인스턴스가 아니다 — 프리팹 본문에 들지 않는다
-                registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab );
+                    continue;                                                                                // 프리팹 인스턴스가 아니다 — 프리팹 본문에 들지 않는다
+                registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab, {} ); // 노드는 프리팹을 쓸 때 생긴다 — 키는 다음 로드에서 얻는다
                 workspace.setPlacedPrefabPath( pChild->getObjectID(), "" );
                 listPending.push_back( pChild );
                 ++adoptedCount;

@@ -124,11 +124,12 @@ namespace sw
                 return stored.empty() ? nullptr : &stored;
             }
 
-            /** @brief 로드에서 만든 프리팹 엔티티와 그 프리팹 경로(문서의 것을 빌린다)입니다 — 엔티티를 모두 만든 뒤 중첩 인스턴스를 스폰한다. */
+            /** @brief 로드에서 만든 프리팹 엔티티와 그 프리팹 경로 · 덮어쓴 것(문서의 것을 빌린다)입니다 — 엔티티를 모두 만든 뒤 중첩 인스턴스를 스폰한다. */
             struct PrefabEntity
             {
                 GameObject*   _pObject;
                 const string* _pPrefabPath;
+                const string* _pOverrideXML; ///< 부품에 덮어쓴 것(`<Part>`)을 여기서 읽는다
             };
 
             /**
@@ -158,6 +159,32 @@ namespace sw
                         outUniqueRespawned.insert( pGo->getObjectID() );
                     else if ( mapPrefabSource.find( pGo->getObjectID() ) == mapPrefabSource.end() )
                         outMapDetachedPrefab[pGo->getObjectID()] = pPart->_prefabPath;
+                }
+            }
+
+            /**
+             * @brief 씬에 적는 프리팹 인스턴스(@p mapInstancePrefab: 오브젝트 id → 프리팹 경로)마다 부품에 덮어쓴 것을 @p inoutMapPartOverride 에 담습니다.
+             * @details 덮어쓴 것이 없는 인스턴스는 담지 않는다. 프리팹을 읽지 못한 인스턴스는 전체 상태로 적히므로(부품은 다시 스폰되지 않는다) 건너뛴다.
+             */
+            static void collectInstancePartOverrides( const GameObjectManager& objects, PrefabCache& prefabs, const unordered_map<uint64, string>& mapInstancePrefab,
+                                                      unordered_map<uint64, vector<PrefabPartOverride>>& inoutMapPartOverride )
+            {
+                if ( objects.getSubsystem<PrefabInstanceRegistry>().getNestedPartCount() == 0 )
+                    return;
+                vector<PrefabPartOverride> listPartOverride;
+                for ( const auto& [objectID, prefabPath] : mapInstancePrefab )
+                {
+                    const GameObject*  pInstance = objects.findGameObjectByID( objectID );
+                    const PrefabAsset* pPrefab   = pInstance != nullptr ? prefabs.loadPrefab( prefabPath ) : nullptr;
+                    if ( pPrefab == nullptr )
+                        continue;
+                    if ( prefabs.collectPartOverrides( *pInstance, *pPrefab, listPartOverride ) == false )
+                    {
+                        SW_LOG_ERROR( "Nested part overrides of '%#' could not be computed - its parts are saved as the prefab has them", pInstance->getName().c_str() );
+                        continue;
+                    }
+                    if ( listPartOverride.empty() == false )
+                        inoutMapPartOverride[objectID] = std::move( listPartOverride );
                 }
             }
         };
@@ -310,7 +337,7 @@ namespace sw
                 }
 
                 if ( entity._prefab.empty() == false )
-                    listPrefabEntity.push_back( SceneInternal::PrefabEntity{ pGo, &entity._prefab } );
+                    listPrefabEntity.push_back( SceneInternal::PrefabEntity{ pGo, &entity._prefab, &entity._prefabOverrideXML } );
             }
         }
 
@@ -318,14 +345,19 @@ namespace sw
 
         // 프리팹의 중첩 인스턴스는 씬 파일에 없다 — 원본에서 부품으로 다시 스폰한다(원본을 고치면 퍼진다). 엔티티를 모두 만든 **뒤에** 스폰한다.
         // 부품이 먼저 이름을 가져가면 같은 이름의 엔티티가 로드마다 번호 붙은 이름으로 바뀐다. 프리팹은 위에서 이미 읽어 캐시에 있다.
+        // 씬에서 부품을 고친 것은 엔티티의 덮어쓴 것 안 `<Part>` 로 실려 스폰하는 부품에 얹는다(유니티 nested override).
         if ( _services._pAssetManager != nullptr )
         {
-            PrefabCache& prefabs = _services._pAssetManager->getAssetCache<PrefabCache>();
+            PrefabCache&               prefabs = _services._pAssetManager->getAssetCache<PrefabCache>();
+            vector<PrefabPartOverride> listPartOverride;
             for ( const SceneInternal::PrefabEntity& prefabEntity : listPrefabEntity )
             {
                 const PrefabAsset* pPrefab = prefabs.loadPrefab( *prefabEntity._pPrefabPath );
-                if ( pPrefab != nullptr )
-                    (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab ); // 건너뛴 노드는 노드마다 경고했다
+                if ( pPrefab == nullptr )
+                    continue;
+                if ( PrefabOverrides::collectPartOverrides( *prefabEntity._pOverrideXML, listPartOverride ) == false )
+                    SW_LOG_ERROR( "Nested part overrides of '%#' could not be read - its parts are spawned as the prefab has them", prefabEntity._pObject->getName().c_str() );
+                (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab, listPartOverride ); // 건너뛴 노드는 노드마다 경고했다
             }
         }
 
@@ -371,6 +403,13 @@ namespace sw
                 (void)SceneInternal::findPrefabBaseState( *pAssetManager, mapPrefabBaseState, prefabPath ); // 위와 같다
             }
         }
+        // 인스턴스마다 부품에 덮어쓴 것(`<Part>`)도 순회 밖에서 뽑는다 — 기준 부품을 임시 매니저에 스폰한다.
+        unordered_map<uint64, vector<PrefabPartOverride>> mapPartOverride;
+        if ( pAssetManager != nullptr )
+        {
+            SceneInternal::collectInstancePartOverrides( *_objectManager, pAssetManager->getAssetCache<PrefabCache>(), _mapPrefabSource, mapPartOverride );
+            SceneInternal::collectInstancePartOverrides( *_objectManager, pAssetManager->getAssetCache<PrefabCache>(), mapDetachedPartPrefab, mapPartOverride );
+        }
 
         // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 자기 씬 컴포넌트의 부착 필드(부모의 파일 id)로
         // 읽은 뒤 다시 붙는다(`instantiate` 의 배치이므로 순서는 상관없다). 부모가 있는 오브젝트를 건너뛰면 계층 아래의 오브젝트가
@@ -411,6 +450,9 @@ namespace sw
                 node._prefabOverrideXML.clear();
                 node._embeddedXML = state;
             }
+            const auto partIt = node._embeddedXML.empty() ? mapPartOverride.find( pGo->getObjectID() ) : mapPartOverride.end();
+            if ( partIt != mapPartOverride.end() && PrefabOverrides::appendPartOverrides( node._prefabOverrideXML, partIt->second ) == false )
+                SW_LOG_ERROR( "Nested part overrides of '%#' could not be written - its parts are saved as the prefab has them", node._name );
             if ( node._embeddedXML.empty() == false || node._prefab.empty() == false )
                 outDoc._listSceneObjectNode.push_back( std::move( node ) );
         } );
