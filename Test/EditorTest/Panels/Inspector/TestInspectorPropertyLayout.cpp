@@ -20,6 +20,13 @@ using namespace sw::editor;
 
 namespace
 {
+    /** @brief 범위가 앞선 필드인 표본입니다(`PROPERTY( Min = "-_halfSize", Max = "_halfSize" )` 꼴). */
+    struct FieldBoundSample
+    {
+        float32 _halfSize = 10.0f;
+        float32 _offset   = 0.0f;
+    };
+
     /** @brief 묶음 전체에서 이 이름의 프로퍼티가 몇 번 나오는지 셉니다. */
     uint32 countProperty( const vector<InspectorPropertyGroup>& listGroup, const utf8* pName )
     {
@@ -198,7 +205,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange
     height._metadata._bHasUIMinRange = SW_TRUE;
     height._metadata._bHasUIMaxRange = SW_TRUE;
 
-    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( height );
+    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( height, nullptr );
     SW_EXPECT_TRUE( range._bSlider );
     SW_EXPECT_NEAR_EQUAL( 50.0, range._widgetMin, 1e-9 );
     SW_EXPECT_NEAR_EQUAL( 250.0, range._widgetMax, 1e-9 );
@@ -213,19 +220,56 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange
     ratio._metadata._maxRange     = 1.0f;
     ratio._metadata._bHasMinRange = SW_TRUE;
     ratio._metadata._bHasMaxRange = SW_TRUE;
-    InspectorNumericRange plain   = InspectorPropertyLayout::getNumericRange( ratio );
+    InspectorNumericRange plain   = InspectorPropertyLayout::getNumericRange( ratio, nullptr );
     SW_EXPECT_FALSE( plain._bSlider );
     SW_EXPECT_NEAR_EQUAL( 1.0, plain._widgetMax, 1e-9 );
     ratio._metadata._mapCustomMeta[hashed_string( "Slider" )] = "1";
-    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( ratio )._bSlider );
+    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( ratio, nullptr )._bSlider );
 
     // 한쪽만 적은 범위는 그쪽만 막는다
     PropertyInfo lowOnly;
     lowOnly._metadata._minRange     = 1.0f;
     lowOnly._metadata._bHasMinRange = SW_TRUE;
-    const InspectorNumericRange low = InspectorPropertyLayout::getNumericRange( lowOnly );
+    const InspectorNumericRange low = InspectorPropertyLayout::getNumericRange( lowOnly, nullptr );
     SW_EXPECT_FALSE( low._bHasWidgetMax );
     SW_EXPECT_NEAR_EQUAL( 99999.0, InspectorPropertyLayout::clampToAllowedRange( low, 99999.0 ), 1e-9 );
+}
+
+/**
+ * @brief [InspectorPropertyLayoutTest] 필드 이름 꼴 범위(`Min = "-_halfSize"`)는 그 객체의 지금 필드 값으로 막는다
+ * @details 메타가 숫자 하나뿐이던 때는 이름 꼴 범위를 담지 못해 인스펙터가 그 필드를 막지 않았다. 생성 코드가 내는 읽기 함수
+ *          (`PropertyMetadata::_pReadMinRange`)를 같은 모양으로 손으로 두고, 필드 값이 바뀌면 범위도 따라오는지 본다.
+ */
+SW_TEST_CASE( InspectorPropertyLayoutTest, FieldNamedRangeFollowsTheInstance )
+{
+    PropertyInfo offset;
+    offset._metadata._pReadMinRange = []( const void* pInstance ) -> float64
+    {
+        return -static_cast<float64>( static_cast<const FieldBoundSample*>( pInstance )->_halfSize );
+    };
+    offset._metadata._pReadMaxRange = []( const void* pInstance ) -> float64
+    {
+        return static_cast<float64>( static_cast<const FieldBoundSample*>( pInstance )->_halfSize );
+    };
+
+    FieldBoundSample            sample;
+    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( offset, &sample );
+    SW_EXPECT_TRUE( range._bHasClampMin && range._bHasClampMax );
+    SW_EXPECT_NEAR_EQUAL( -10.0, range._clampMin, 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 10.0, range._clampMax, 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 10.0, range._widgetMax, 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 10.0, InspectorPropertyLayout::clampToAllowedRange( range, 25.0 ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( -10.0, InspectorPropertyLayout::clampToAllowedRange( range, -25.0 ), 1e-9 );
+    // 두 경계가 다 있으니 `Meta = "Slider"` 면 슬라이더다(숫자 범위와 같은 규칙).
+    SW_EXPECT_FALSE( range._bSlider );
+    offset._metadata._mapCustomMeta[hashed_string( "Slider" )] = "1";
+    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( offset, &sample )._bSlider );
+
+    // 범위 필드가 바뀌면 다음 그리기의 범위도 바뀐다.
+    sample._halfSize                   = 2.5f;
+    const InspectorNumericRange shrunk = InspectorPropertyLayout::getNumericRange( offset, &sample );
+    SW_EXPECT_NEAR_EQUAL( -2.5, shrunk._clampMin, 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 2.5, InspectorPropertyLayout::clampToAllowedRange( shrunk, 7.0 ), 1e-9 );
 }
 
 /**

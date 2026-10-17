@@ -18,7 +18,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 타입 테이블의 세대입니다(`TypeRegistry::getGeneration`). 등록, 별칭, 모듈 해제가 일어날 때마다 오릅니다. */
+        /** @brief 타입 테이블의 세대입니다(`TypeRegistry::getGeneration`). 타입 · 열거형의 등록, 별칭, 모듈 해제, 레지스트리 파괴마다 오릅니다. */
         atomic<uint32> s_typeTableGeneration{ 0 };
 
         struct ReflectionCoreInternal
@@ -154,6 +154,8 @@ namespace sw
         , _fileFilter{}
         , _uiMinRange{ 0.0f }
         , _uiMaxRange{ 1.0f }
+        , _pReadMinRange{ nullptr }
+        , _pReadMaxRange{ nullptr }
         , _bHasUIMinRange{ SW_FALSE }
         , _bHasUIMaxRange{ SW_FALSE }
         , _bEditConditionHides{ SW_FALSE }
@@ -361,10 +363,9 @@ namespace sw
         , _name{}
         , _fullyQualifiedName{}
         , _moduleName{}
-        , _pArrDenseName{ nullptr }
+        , _listDenseName{}
         , _invalidValue{ 0 }
         , _countValue{ 0 }
-        , _denseNameCount{ 0 }
         , _size{ sizeof( int32 ) }
         , _bIsBitFlag{ SW_FALSE }
         , _bHasInvalid{ SW_FALSE }
@@ -666,7 +667,7 @@ namespace sw
     }
     TypeRegistry::~TypeRegistry()
     {
-        // 이 레지스트리가 가진 EnumInfo 가 사라진다. 세대를 기록해 둔 열거형 이름 캐시(`EnumNameCache`)가 다음 호출에 다시 찾게 한다.
+        // 이 레지스트리가 가진 TypeInfo · EnumInfo 가 사라진다. 세대를 담은 타입 캐시(`TypeCacheSlot`)가 다음 호출에 다시 찾게 한다.
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
 
@@ -770,6 +771,8 @@ namespace sw
                 shadowedFqn = previousIt->second->_fullyQualifiedName;
             _mapNameToEnum.insert_or_assign( pEnumInfo->_name, pEnumInfo );
         }
+        // 이름의 답이 없음에서 이 열거형으로 바뀔 수 있다. 미등록을 기록해 둔 열거형 캐시(`EnumNameCache`)가 다시 찾게 한다.
+        s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
 
         hashed_string clashFirst;
         hashed_string clashSecond;
@@ -1009,15 +1012,7 @@ namespace sw
         }
 
         // enum 은 이름만 정리한다. 객체는 `_mapFqnToEnum` 에 남는다(묘비). 반환한 포인터가 허공을 가리키지 않고, 다시 로드되면 그 위치에 덮어쓴다.
-        // 이름 배열은 해제되는 모듈의 정적 저장소에 있으므로 묘비에서 비운다. 그 뒤로는 intern 된 이름 맵(`_mapValueToName`)이 답한다.
-        for ( auto& [fqn, pEnumInfo] : _mapFqnToEnum )
-        {
-            (void)fqn;
-            if ( pEnumInfo->_moduleName != hashModule )
-                continue;
-            pEnumInfo->_pArrDenseName  = nullptr;
-            pEnumInfo->_denseNameCount = 0;
-        }
+        // 묘비의 이름 목록(`_listDenseName`, `_mapValueToName`)은 `EnumInfo` 가 가진 intern 된 이름이라 모듈 해제와 무관하게 그대로 둔다.
         for ( auto it = _mapNameToEnum.begin(); it != _mapNameToEnum.end(); )
         {
             if ( it->second->_moduleName == hashModule )
@@ -1119,6 +1114,8 @@ namespace sw
         const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
             _mapNameToEnum.insert_or_assign( hashed_string( qualified.c_str() ), pEnumInfo );
+        // 별칭이 생기면 같은 이름의 답이 nullptr 에서 열거형으로 바뀔 수 있다(타입 별칭과 같은 규칙).
+        s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
 
     const TypeInfo* TypeRegistry::findType( const hashed_string& nameOrFqn ) const
@@ -1140,19 +1137,20 @@ namespace sw
         return canonicalIt->second.get();
     }
 
+    const atomic<uint32>& getTypeTableGenerationCounter()
+    {
+        return s_typeTableGeneration;
+    }
+
     const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn ) const
     {
-        // 빈 결과를 기록한 세대가 그대로면 다시 찾지 않는다.
-        if ( _generation.load( std::memory_order_acquire ) == s_typeTableGeneration.load( std::memory_order_acquire ) )
-            return nullptr;
-        // 레지스트리가 아직 없으면 캐시를 건드리지 않고 nullptr 를 반환한다(다음 호출이 다시 본다).
+        // 레지스트리가 아직 없으면 칸을 건드리지 않고 nullptr 를 반환한다(다음 호출이 다시 본다).
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
         // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
         const uint32    generation = s_typeTableGeneration.load( std::memory_order_acquire );
         const TypeInfo* pType      = engine::getSubsystem<TypeRegistry>().findType( fqn );
-        _pType.store( pType, std::memory_order_release );
-        _generation.store( generation, std::memory_order_release );
+        _slot.set( generation, pType );
         return pType;
     }
 

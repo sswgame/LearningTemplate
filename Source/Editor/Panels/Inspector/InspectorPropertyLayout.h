@@ -118,8 +118,12 @@ namespace sw::editor
         /** @brief 함수나 이벤트의 인자 목록을 `int32 amount, float32 scale = 1.5f` 형태로 만듭니다. 이름이나 기본 인자가 없으면 생략합니다. */
         static string formatParameterList( const vector<FunctionParameterInfo>& listParameter );
 
-        /** @brief 숫자 프로퍼티의 위젯 범위와 허용 범위를 구합니다(`InspectorNumericRange`). */
-        static InspectorNumericRange getNumericRange( const PropertyInfo& prop );
+        /**
+         * @brief 숫자 프로퍼티의 위젯 범위와 허용 범위를 구합니다(`InspectorNumericRange`).
+         * @details 경계는 숫자(`Min = 0`)이거나 같은 타입의 필드(`Min = "-_halfSize"`, `PropertyMetadata::_pReadMinRange`)다. 필드 경계는
+         *          @p pInstance(프로퍼티를 가진 객체)에서 지금 값을 읽는다. 필드 경계가 있는 프로퍼티에 @p pInstance 가 nullptr 이면 멈춘다.
+         */
+        static InspectorNumericRange getNumericRange( const PropertyInfo& prop, const void* pInstance );
         /** @brief 값을 허용 범위 안으로 제한합니다. 범위가 적힌 쪽만 제한합니다. */
         static float64 clampToAllowedRange( const InspectorNumericRange& range, float64 value );
 

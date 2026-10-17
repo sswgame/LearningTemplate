@@ -25,18 +25,12 @@ namespace sw
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
         // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이나 해제가 끼면 옛 세대가 남아 다음 호출이 다시 찾는다.
-        const uint32 generation = TypeRegistry::getGeneration();
-        if ( _generation.load( std::memory_order_acquire ) == generation )
-        {
-            const EnumInfo* pCached = _pInfo.load( std::memory_order_acquire );
-            if ( pCached != nullptr )
-                return pCached;
-        }
+        const uint32    generation = TypeRegistry::getGeneration();
+        const EnumInfo* pCached    = nullptr;
+        if ( _slot.tryGet( generation, pCached ) )
+            return pCached;
         const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnumByTypeFqn( enumTypeFqn );
-        if ( pInfo == nullptr )
-            return nullptr;
-        _pInfo.store( pInfo, std::memory_order_release );
-        _generation.store( generation, std::memory_order_release );
+        _slot.set( generation, pInfo );
         return pInfo;
     }
 } // namespace sw

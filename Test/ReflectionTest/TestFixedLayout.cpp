@@ -462,3 +462,38 @@ SW_TEST_CASE( FixedLayoutTest, BitsetFieldRoundTripsSelfDescribingFormats )
     SW_EXPECT_FALSE_MSG( sw::JSONSerializer::deserialize( &fromBadJSON, typeInfo, badJSON ), badJSON );
     SW_EXPECT_TRUE( fromBadJSON._listBit == parseBits( "11" ) );
 }
+
+#if !defined( SW_SHIPPING )
+/**
+ * @brief [FixedLayoutTest] 같은 타입의 필드를 가리키는 범위는 생성 코드가 그 필드를 읽는 함수로 내고, 바깥 타입의 필드는 내지 않는다
+ * @details 인스펙터가 `Min = "-_halfSize"` 를 그 객체의 지금 값으로 막는 근거다(`PropertyMetadata::_pReadMinRange`). 숫자 경계는 숫자로만 남고,
+ *          바깥 타입의 필드(`FixedPointSample::_y` 의 `_arenaHalfSize`)는 그 객체만으로 값을 모르므로 읽기 함수가 없다.
+ */
+SW_TEST_CASE( FixedLayoutTest, OwnFieldRangeBecomesAReaderForTheInspector )
+{
+    const sw::TypeInfo* pScalarType = sw::FixedScalarSample::StaticType();
+    SW_ASSERT_NOT_NULL( pScalarType );
+    const sw::PropertyInfo* pOffset = pScalarType->findProperty( sw::hashed_string( "_offset" ) );
+    SW_ASSERT_NOT_NULL( pOffset );
+    SW_ASSERT_NOT_NULL( pOffset->_metadata._pReadMinRange );
+    SW_ASSERT_NOT_NULL( pOffset->_metadata._pReadMaxRange );
+    SW_EXPECT_TRUE( pOffset->_metadata._bHasMinRange == SW_FALSE );
+
+    sw::FixedScalarSample sample;
+    sample._halfSize = 12.5f;
+    SW_EXPECT_NEAR_EQUAL( -12.5, pOffset->_metadata._pReadMinRange( &sample ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 12.5, pOffset->_metadata._pReadMaxRange( &sample ), 1e-9 );
+
+    const sw::PropertyInfo* pHalfSize = pScalarType->findProperty( sw::hashed_string( "_halfSize" ) );
+    SW_ASSERT_NOT_NULL( pHalfSize );
+    SW_EXPECT_TRUE( pHalfSize->_metadata._pReadMinRange == nullptr );
+    SW_EXPECT_TRUE( pHalfSize->_metadata._bHasMinRange == SW_TRUE );
+
+    const sw::TypeInfo* pPointType = sw::FixedPointSample::StaticType();
+    SW_ASSERT_NOT_NULL( pPointType );
+    const sw::PropertyInfo* pY = pPointType->findProperty( sw::hashed_string( "_y" ) );
+    SW_ASSERT_NOT_NULL( pY );
+    SW_EXPECT_TRUE( pY->_metadata._pReadMinRange == nullptr && pY->_metadata._pReadMaxRange == nullptr );
+    SW_EXPECT_TRUE( pY->_metadata._bHasMinRange == SW_FALSE );
+}
+#endif

@@ -249,7 +249,9 @@ struct MechArenaSnapshot
   읽기는 선언 순서이므로 범위 필드가 **앞에** 있어야 읽는 쪽이 범위를 압니다. 뒤에 있으면 생성 오류입니다. `MechArenaSnapshot` 은 단계 4-a 에서 `_arenaHalfSize` · `_ceiling` 을 목록 앞으로 옮겼습니다.
 - 바깥 타입으로 이름을 찾는 경우는 생성기가 중첩 타입을 부모 코덱 안에 펼칠 수 있을 때(3.2, 같은 헤더 · 공개 필드)만 됩니다. 펼칠 수 없거나 같은 중첩 타입을 이름이 다른 두 부모가 쓰면 생성 오류입니다.
 - 범위 필드는 자기 `Min` 으로 하한을 강제합니다. Mech 의 `>= 1.0f` 검사가 그것이고, 자르지 않고 읽기 실패입니다. 옛 손 코덱이 쓰던 `max( 1.0f, … )` 는 쓰기 실패로 바뀌었습니다.
-- 에디터는 지금 리터럴 `Min` · `Max` 만 압니다. 필드 이름 형태의 범위를 인스펙터가 쓰는 일은 별도 단계(9절 4-b)이고, 그 전까지 그 필드는 인스펙터에서 범위를 강제하지 않습니다. 에디터 메타데이터 생성은 이름 형태를 만나면 범위를 쓰지 않습니다.
+- 인스펙터는 같은 타입의 필드 하나를 가리키는 경계(`Min = "-_halfSize"`)를 그 객체의 지금 값으로 막습니다(단계 4-b, 끝남). 메타가 숫자 하나(`_minRange`)뿐이던 형식이 뿌리였으므로,
+  생성기가 그 필드를 읽는 함수(`PropertyMetadata::_pReadMinRange` · `_pReadMaxRange`, 에디터 전용)를 냅니다. 실행 시간에 이름을 찾지 않으므로 이름이 틀리면 생성된 코드가 컴파일되지 않습니다.
+  바깥 타입의 필드를 가리키는 경계와 성분 목록(`"-_a, 0, -_a"`)은 읽기 함수가 없습니다. 인스펙터는 그 객체를 가진 바깥 객체를 모르고, 벡터 성분에는 범위를 두지 않기 때문입니다.
 
 **한계.** 키 값은 리터럴이나 필드 이름만 받고 C++ 상수(`kMaxCount`)는 받지 않습니다. 파서가 상수 식을 계산하지 않기 때문입니다. 같은 값이 여러 필드에 반복될 수 있습니다(8.1 위험 4).
 데이터(카탈로그 크기 등)로 정해지는 범위는 키로 표현하지 않습니다. `FightingMatch` 의 `_moveIndex < moveCount`(`:1176-1177`)가 그 예이며 3.10 의 검증 훅에 둡니다.
@@ -304,9 +306,12 @@ struct MechArenaSnapshot
 
 B 는 열거자 이름을 쓰지 않습니다. 로그와 진단용 `getEnumName` 은 FQN 해시로 `TypeRegistry` 를 찾고, 없으면 `"Unknown"` 을 반환합니다(`Source/Engine/Reflection/EnumName.h`). API 는 그대로 두고 내부만 바꿨습니다(단계 7-a, 끝남).
 
-- 생성기가 표식(`Invalid`, `Count`)을 뺀 열거자 값이 `0..N-1` 로 빈틈없는 열거형에 이름 정적 배열(`kArrDenseName`)을 만들고 `EnumInfo::_pArrDenseName` 에 등록합니다. 조회는 배열 인덱스입니다.
+- 생성기가 표식(`Invalid`, `Count`)을 뺀 열거자 값이 `0..N-1` 로 빈틈없는 열거형의 이름을 `EnumInfo::_listDenseName` 에 채웁니다. 조회는 목록 인덱스입니다.
+  목록은 `EnumInfo` 가 값으로 가집니다(C-51). 모듈의 정적 배열을 가리키면 핫 리로드 해제와 겹친 렌더 · 오디오 · 로거 스레드의 조회가 해제된 저장소를 읽습니다.
   배열 순서는 libclang 이 읽은 값이므로 열거자마다 `static_assert` 로 컴파일러의 값과 대조합니다. 비트 플래그 · 음수 · 빈틈 · 같은 값의 별명이 있으면 배열 없이 이름 맵을 씁니다.
-- 템플릿 `getEnumName<E>` 는 `EnumInfo` 포인터를 함수 지역 캐시(`EnumNameCache`)에 둡니다. 호출마다 잠금과 해시 맵을 찾지 않고, 타입 테이블 세대가 바뀌면(모듈 해제 · 레지스트리 파괴) 다시 찾습니다.
+- 템플릿 `getEnumName<E>` 는 `EnumInfo` 포인터를 함수 지역 캐시(`EnumNameCache`)에 둡니다. 호출마다 잠금과 해시 맵을 찾지 않고, 타입 테이블 세대가 바뀌면(등록 · 별칭 · 모듈 해제 · 레지스트리 파괴) 다시 찾습니다.
+  답과 세대는 `TypeCacheSlot`(`TypeRegistry.h`) 한 칸에 한 쌍으로 기록합니다. 따로 저장하면 두 스레드가 세대 경계에서 겹쳐 쓸 때 새 세대에 옛 포인터가 붙습니다.
+  `TypeLookupCache` 도 같은 칸을 써서 레지스트리 파괴(엔진 재생성) 뒤 해제된 `TypeInfo` 를 내주지 않습니다.
 - 이름에서 값을 찾는 경로(`_mapNameToValue`)는 에디터와 데이터 파서만 씁니다. 그대로 둡니다.
 - `"Unknown"` 반환은 로그용 표시라 폴백 금지 원칙의 대상이 아닙니다. 데이터 읽기는 이 함수를 쓰지 않습니다(`EnumName.h:6` 주석).
 
@@ -403,7 +408,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
 - `castTo<To>( From* )` 는 업캐스트와 같은 타입이면 컴파일 시간에 끝납니다(`Source/Engine/Reflection/ReflectionCast.h:135,175`). `castTo<Component>( Component*, 타입 )` 은 이 분기에 걸려 타입 인자를 보지 않고 항상 성공합니다.
   종류로 거를 때는 `getTypeInfo()->isDerivedFrom( 타입 )` 을 씁니다. `NavGeometryCollector.cpp:133` 주석이 같은 함정을 적고 있습니다.
 - 다운캐스트는 세 단계입니다(`ReflectionCast.h:133-169`).
-  1. 대상 타입: `findStaticType<To>()` 가 `To::StaticType()` 을 부릅니다. 이 함수는 `.gen.cpp` 에 정의되어 있어 인라인되지 않고, 대상 타입이 다른 모듈이면 DLL 경계 호출입니다. 내부는 `TypeLookupCache::find` 의 원자 로드 한 번과 `isAlive` 확인입니다(`TypeRegistry.h:94-110`).
+  1. 대상 타입: `findStaticType<To>()` 가 `To::StaticType()` 을 부릅니다. 이 함수는 `.gen.cpp` 에 정의되어 있어 인라인되지 않고, 대상 타입이 다른 모듈이면 DLL 경계 호출입니다. 내부는 `TypeLookupCache::find` 의 칸 읽기(순서 번호 · 포인터 · 세대 원자 로드와 지금 세대 로드)와 `isAlive` 확인입니다(`TypeRegistry.h`).
      조회 루프(`getComponent`)는 이것을 루프 밖에서 한 번 구합니다(`GameObject.h:288`).
   2. 동적 타입: `Component` 는 만들 때 받은 `_pTypeInfo` 포인터를 보관하고 `findCachedTypeInfo()` 가 그것을 반환합니다. 가상 호출은 캐시가 없을 때만 합니다(`Component.h:500-505`).
      객체에 타입 필드를 두는 개선은 `Component` 에 이미 되어 있습니다. `GameObject` 는 가상 `getTypeInfo()` 를 쓰고 결과를 캐시하지 않습니다(단계 7-a, [결정 기록](../09_Decisions.md) 5-4).
@@ -503,7 +508,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록 | 없음(읽기) | 없음 | `scout`(haiku) |
 | 2 | (보류) `GimmickCircuit` 을 B 로. 상태 바이트 `_stateBytes` 가 씬 · 프리팹 XML 과 레벨 세이브에 남아 B 대상이 아님. 아래 문단 | `GimmickCircuit.*`, `GimmickCircuitComponent.*` | 세이브 형식 결정이 먼저 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
-| 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게 | 인스펙터 범위 코드(미확인 위치) | 단계 1 뒤 | `worker`(sonnet) |
+| 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게(끝남, 3.8 끝 문단). 같은 타입의 필드 하나만 읽고, 바깥 타입 · 성분 목록은 코덱만 쓴다 | `ReflectionTypes.h`, `CodeGenerator.cpp`, `InspectorPropertyLayout.*` | 없음 | `worker`(opus) |
 | 7-c | 매니저의 타입별 컴포넌트 목록 | `GameObjectManager.*`, `GameObjectStore.*` | 7-d 와 같은 파일, 7-c 먼저 | `integrator`(opus) |
 | 7-d | 타입 핸들 `TComponentHandle<T>` | `ComponentHandle.h`, `GameObjectManager.*`, 호출부, 인스펙터 | 7-c 뒤 같은 손 | `integrator`(opus) |
 
