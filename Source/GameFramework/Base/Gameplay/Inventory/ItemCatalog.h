@@ -61,6 +61,9 @@ namespace sw
         friend class XMLCatalog<ItemCatalog>;
 
     public:
+        /** @brief 데이터 종류 이름입니다(`SW_RESOURCE_DATA_KIND` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
+        static constexpr const utf8* kDataKind = "items";
+
         /** @brief 겹침 수입니다. 알 수 없는 아이템은 1 입니다. */
         int32 getMaxStack( const hashed_string& id ) const;
 

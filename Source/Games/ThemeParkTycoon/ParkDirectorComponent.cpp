@@ -84,8 +84,8 @@ namespace sw
 namespace sw
 {
     ParkDirectorComponent::ParkDirectorComponent()
-        : _coasterDataPath{ "game/themepark/data/coasters.xml" }
-        , _parkDataPath{ "game/themepark/data/rides.xml" }
+        : _coasterDataPath{}
+        , _parkDataPath{}
         , _guestPrefab{}
         , _carFrontPrefab{}
         , _carPrefab{}

@@ -3,4 +3,6 @@
 <GameSettings>
   <startMap>game/starskirmish/maps/skirmish.scene.xml</startMap>
   <inputMap>game/starskirmish/data/skirmish.input.xml</inputMap>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <audioEvents>game/starskirmish/audio/starskirmish.audioevents.xml</audioEvents>
 </GameSettings>

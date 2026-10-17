@@ -99,6 +99,7 @@ namespace sw
         root.takeChildText( "fallbackLanguage", _fallbackLanguage );
         root.takeChildText( "inputMap", _inputMap );
         root.takeChildText( "loadingScreen", _loadingScreen );
+        root.takeChildText( "audioEvents", _audioEvents );
 
         bool bUnknownElement = false;
         for ( XMLNode child = root.findChild(); child.isValid() == true; child = child.findNextSibling() )
@@ -115,7 +116,8 @@ namespace sw
                                           StringUtil::equals( pName, "defaultLanguage" ) ||
                                           StringUtil::equals( pName, "fallbackLanguage" ) ||
                                           StringUtil::equals( pName, "inputMap" ) ||
-                                          StringUtil::equals( pName, "loadingScreen" );
+                                          StringUtil::equals( pName, "loadingScreen" ) ||
+                                          StringUtil::equals( pName, "audioEvents" );
             if ( bReservedSetting )
                 continue;
 

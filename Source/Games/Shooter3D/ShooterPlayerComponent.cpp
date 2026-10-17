@@ -42,10 +42,6 @@ namespace sw
     {
         struct ShooterPlayerComponentInternal
         {
-            static constexpr const utf8* kArrWeaponID[ShooterPlayerComponent::kWeaponCount]     = { "rifle", "shotgun", "pistol" };
-            static constexpr const utf8* kArrWeaponModel[ShooterPlayerComponent::kWeaponCount]  = { "game/shooter3d/models/blaster_d.mesh",
-                                                                                                    "game/shooter3d/models/blaster_h.mesh",
-                                                                                                    "game/shooter3d/models/blaster_a.mesh" };
             static constexpr const utf8* kArrWeaponAction[ShooterPlayerComponent::kWeaponCount] = { "Weapon1", "Weapon2", "Weapon3" };
             // 폰 스키마의 버튼과 아날로그 이름이다(플레이어는 같은 이름의 입력 맵 액션을 쓰고, 자동 플레이 AI 는 그 이름을 누른다).
             static constexpr const utf8* kFireButton         = "Fire";
@@ -175,8 +171,10 @@ namespace sw
     ShooterPlayerComponent::ShooterPlayerComponent()
         : _director{}
         , _spawnPosition{ 0.0f, 0.0f, -16.0f }
-        , _bodyPrefab{ "game/shooter3d/prefabs/player_body.prefab.xml" }
-        , _listWeaponItem{ "blaster_rifle", "blaster_shotgun", "blaster_pistol" }
+        , _bodyPrefab{}
+        , _listWeaponID{}
+        , _listWeaponModel{}
+        , _listWeaponItem{}
         , _eyeHeight{ 1.6f }
         , _maxHealth{ 100.0f }
         , _regenDelay{ 4.0f }
@@ -222,7 +220,11 @@ namespace sw
     void ShooterPlayerComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        equipWeapons();
+        if ( equipWeapons() == false )
+        {
+            setCanEverTick( false ); // 무기 데이터가 틀리면 플레이어가 서지 않는다 — 이유는 equipWeapons 가 남겼다
+            return;
+        }
         VitalitySettings settings;
         settings._maxHealth        = _maxHealth;
         settings._healthRegenDelay = _regenDelay;
@@ -429,18 +431,36 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 입력, 이동, 사격(DuringPhysics, 자기 오브젝트)
     // ------------------------------------------------------------------------------
-    void ShooterPlayerComponent::equipWeapons()
+    bool ShooterPlayerComponent::equipWeapons()
     {
         const WeaponCatalog* pCatalog = game::findSubsystem<WeaponCatalog>();
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR( "[Shooter] no WeaponCatalog game service - the player cannot be armed" );
+            return false;
+        }
+        const size_t slotCount   = static_cast<size_t>( kWeaponCount );
+        const bool   bSlotsMatch = _listWeaponID.size() == slotCount && _listWeaponModel.size() == slotCount && _listWeaponItem.size() == slotCount;
+        if ( bSlotsMatch == false )
+        {
+            SW_LOG_ERROR( "[Shooter] the player needs %# weapon ids, models and items (has %#, %#, %#) - the player cannot be armed", kWeaponCount,
+                          static_cast<uint32>( _listWeaponID.size() ), static_cast<uint32>( _listWeaponModel.size() ), static_cast<uint32>( _listWeaponItem.size() ) );
+            return false;
+        }
+        bool bArmed = true;
         for ( int32 weaponIndex = 0; weaponIndex < kWeaponCount; ++weaponIndex )
         {
-            const WeaponDef* pDef                  = pCatalog != nullptr ? pCatalog->find( hashed_string( ShooterPlayerComponentInternal::kArrWeaponID[weaponIndex] ) ) : nullptr;
-            const bool       bShouldFallbackWeapon = pDef == nullptr && pCatalog != nullptr && pCatalog->getAll().empty() == false;
-            if ( bShouldFallbackWeapon )
-                pDef = &pCatalog->getAll().front();
-            if ( pDef != nullptr )
-                _arrWeapon[weaponIndex].equip( *pDef, pDef->_maxReserveAmmo / 2, 0x51ed270bu + static_cast<uint32>( weaponIndex ) );
+            const string&    weaponID = _listWeaponID[static_cast<size_t>( weaponIndex )];
+            const WeaponDef* pDef     = pCatalog->find( hashed_string( weaponID ) );
+            if ( pDef == nullptr )
+            {
+                SW_LOG_ERROR( "[Shooter] weapon slot %# names '%#', which is not in the weapon catalog", weaponIndex + 1, weaponID.c_str() );
+                bArmed = false;
+                continue;
+            }
+            _arrWeapon[weaponIndex].equip( *pDef, pDef->_maxReserveAmmo / 2, 0x51ed270bu + static_cast<uint32>( weaponIndex ) );
         }
+        return bArmed;
     }
 
     void ShooterPlayerComponent::applyWeaponIntent( const PawnComponent& pawn )
@@ -732,10 +752,11 @@ namespace sw
         _soundQueue.playAll();
         if ( _bWeaponModelDirty == SW_TRUE )
         {
-            _bWeaponModelDirty    = SW_FALSE;
-            MeshComponent* pModel = Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName );
-            if ( pModel != nullptr )
-                pModel->setMeshID( Internal::kArrWeaponModel[_weaponIndex] );
+            _bWeaponModelDirty       = SW_FALSE;
+            MeshComponent* pModel    = Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName );
+            const bool     bHasModel = 0 <= _weaponIndex && _weaponIndex < static_cast<int32>( _listWeaponModel.size() );
+            if ( pModel != nullptr && bHasModel )
+                pModel->setMeshID( _listWeaponModel[static_cast<size_t>( _weaponIndex )] );
             // 몸의 무기는 외형의 MainHand 슬롯이다(같은 소켓 이름 MainHand.Muzzle 이 새 무기의 총구를 가리킨다).
             GameObject*                   pBody       = findBodyObject();
             CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;

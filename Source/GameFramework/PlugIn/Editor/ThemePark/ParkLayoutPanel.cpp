@@ -39,7 +39,8 @@ namespace sw::editor
             SW_LOG_INFO( "Park layout reloaded on request" );
         if ( preview.isLoaded() == false )
         {
-            EditorWidgets::drawEmptyHint( "game/themepark/data/rides.xml could not be read" );
+            const string hint = ( preview.isMissing() ? "This game has no park layout data (" : "The park layout could not be read (" ) + preview.getLayoutPath() + ")";
+            EditorWidgets::drawEmptyHint( hint.c_str() );
             return;
         }
 

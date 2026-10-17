@@ -109,11 +109,16 @@ namespace sw
 
     void ElementStatusComponent::rebuild()
     {
-        _seenTableReloadCount          = ElementRuleTable::getSharedReloadCount();
-        const ElementRuleTable* pTable = ElementRuleTable::findShared( _tablePath.empty() ? string_view( ElementRuleTable::kDefaultPath ) : string_view( _tablePath ) );
+        _seenTableReloadCount = ElementRuleTable::getSharedReloadCount();
+        if ( _tablePath.empty() )
+        {
+            SW_LOG_ERROR( "Element status '%#' has no rule table path - set Rule Table", _material.c_str() );
+            return;
+        }
+        const ElementRuleTable* pTable = ElementRuleTable::findShared( _tablePath );
         if ( pTable == nullptr )
         {
-            SW_LOG_ERROR( "Element rule table %# could not be read", _tablePath.empty() ? ElementRuleTable::kDefaultPath : _tablePath.c_str() );
+            SW_LOG_ERROR( "Element rule table %# could not be read", _tablePath.c_str() );
             return;
         }
         _grid.initialize( 1, 1, pTable );
@@ -167,6 +172,13 @@ namespace sw
     void ElementStatusComponent::setMaterial( const hashed_string& material )
     {
         _material = material;
+        rebuild();
+        publishSignal();
+    }
+
+    void ElementStatusComponent::setTablePath( string_view path )
+    {
+        _tablePath = string( path );
         rebuild();
         publishSignal();
     }

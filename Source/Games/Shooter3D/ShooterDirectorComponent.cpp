@@ -120,9 +120,9 @@ namespace sw
     }
 
     ShooterDirectorComponent::ShooterDirectorComponent()
-        : _enemyPrefab{ "game/shooter3d/prefabs/skeleton.prefab.xml" }
+        : _enemyPrefab{}
         , _effectPrefab{}
-        , _tracerPrefab{ "game/shooter3d/prefabs/tracer.prefab.xml" }
+        , _tracerPrefab{}
         , _listEnemyPreset{ "SkeletonMinion", "SkeletonRaider", "SkeletonRogue", "SkeletonRaider" }
         , _eliteEnemyPreset{ "SkeletonWarrior" }
         , _player{}

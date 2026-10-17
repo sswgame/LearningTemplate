@@ -133,7 +133,9 @@ SW_TEST_CASE( GimmickGenreTest, PushBlockAndTorchPuzzle )
     for ( GameObject* pTorch : { pTorchA, pTorchB } )
     {
         pTorch->addComponent<GimmickSensorComponent>();
-        pTorch->addComponent<ElementStatusComponent>()->setMaterial( "Torch" );
+        ElementStatusComponent* pStatus = pTorch->addComponent<ElementStatusComponent>();
+        pStatus->setTablePath( "common/data/elements/default.elements.xml" ); // 필수 칸 — 비우면 테이블 없이 오류다
+        pStatus->setMaterial( "Torch" );
     }
     GameObject*              pDoor    = Internal::spawnAt( manager, "Door", float3{ 11.0f, 0.0f, 5.0f } );
     GameObject*              pLogic   = manager.createGameObject( hashed_string( "Puzzle" ) );
@@ -283,7 +285,7 @@ SW_TEST_CASE( GimmickGenreTest, RacingHorrorStealth )
     SW_EXPECT_NEAR_EQUAL( 1.0f, pFlicker->computeScaleAtStep( 151 ), 1.0e-4f ); // 2.52 초 → 25 글자 = 한 바퀴 돌아 처음
 
     GameObject*               pCloset  = Internal::spawnAt( manager, "Closet", float3{ 60.0f, 0.0f, 0.0f } );
-    const InteractionCatalog* pCatalog = InteractionCatalog::findShared( InteractionCatalog::kDefaultPath );
+    const InteractionCatalog* pCatalog = InteractionCatalog::findShared( "common/data/interactions/default.interactions.xml" );
     SW_ASSERT_NOT_NULL( pCatalog );
     pCloset->addComponent<SmartObjectComponent>()->setDefinition( *pCatalog->findSmartObject( "HidingSpot" ) );
     HidingSpotComponent* pHiding = pCloset->addComponent<HidingSpotComponent>();

@@ -45,7 +45,7 @@ namespace sw
 namespace sw
 {
     MeadowFarmDirectorComponent::MeadowFarmDirectorComponent()
-        : _tilePrefab{ "game/meadowvillage/prefabs/tile.prefab.xml" }
+        : _tilePrefab{}
         , _startingGold{ 20 }
         , _fastTimeScale{ 8.0f }
         , _readyColor{ 0.95f, 0.85f, 0.30f, 1.0f }

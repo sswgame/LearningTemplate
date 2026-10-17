@@ -5,7 +5,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 
 #include "Games/AbilityArena/ArenaAbilities.h"
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
@@ -14,16 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AbilityArenaGame" );
-
-    namespace
-    {
-        struct AbilityArenaGameInternal
-        {
-            static constexpr const utf8* kAudioEvents = "game/abilityarena/audio/abilityarena.audioevents.xml";
-        };
-    } // namespace
-
     AbilityArenaGame::AbilityArenaGame()
         : _abilityCatalog{}
     {
@@ -35,28 +24,15 @@ namespace sw
 
     bool AbilityArenaGame::onInitialize()
     {
-        // 사운드 이벤트 — 어빌리티 데이터를 못 읽어도 소리 라이브러리는 올려 둔다(에디터에서 데이터를 고치는 동안에도 같은 상태).
-        if ( GameSound::loadEvents( AbilityArenaGameInternal::kAudioEvents ) == false )
-            SW_LOG_WARNING( "[Arena] %# could not be loaded - sounds stay silent", AbilityArenaGameInternal::kAudioEvents );
         // 클래스를 먼저 등록하고 데이터를 읽는다 — 읽을 때 모르는 클래스 이름은 경고한다.
         ArenaAbilities::registerClasses( _abilityCatalog );
-        if ( _abilityCatalog.loadFromResource( "game/abilityarena/data/abilities.xml" ) == false )
-        {
-            SW_LOG_WARNING( "[Arena] abilities.xml could not be loaded - the arena cannot start" );
-            return true; // 모듈은 뜬다(에디터에서 데이터를 고칠 수 있게) — 디렉터만 서지 않는다
-        }
-        // 어빌리티 시스템이 찾는 자리. 모듈이 다시 올라오면 새 인스턴스가 다시 건다.
-        bindScopedService( &_abilityCatalog );
+        // 어빌리티 데이터는 필수다 — 못 읽으면 게임을 띄우지 않는다. 읽으면 어빌리티 시스템이 찾는 게임 범위에 걸린다.
+        if ( loadRequiredCatalog( _abilityCatalog ) == false )
+            return false;
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)requestFirstScene();
         return true;
     }
-
-    void AbilityArenaGame::onShutdown()
-    {
-        GameSound::unloadEvents( AbilityArenaGameInternal::kAudioEvents );
-    }
-
 } // namespace sw
 
 SW_IMPLEMENT_GAME_MODULE( sw::AbilityArenaGame );

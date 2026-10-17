@@ -83,9 +83,10 @@ namespace sw
 
     bool LoadingScreenController::beginLoading()
     {
-        _shownSeconds = 0.0f;
-        if ( _pUISystem == nullptr || _pUISystem->isInitialized() == false )
-            return false;
+        _shownSeconds       = 0.0f;
+        const bool bUIReady = _pUISystem != nullptr && _pUISystem->isInitialized();
+        if ( bUIReady == false || _settings._documentPath.empty() )
+            return false; // 문서를 적지 않은 게임은 로딩 화면이 없다(gamesettings 의 `loadingScreen`)
         if ( findLoadingScreen() != nullptr )
             return true;
         _loadingScreen    = _pUISystem->openScreen<LoadingScreen>( _settings._documentPath );

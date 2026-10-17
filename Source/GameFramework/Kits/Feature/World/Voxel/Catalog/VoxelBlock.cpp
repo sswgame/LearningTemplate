@@ -133,9 +133,19 @@ namespace sw
             block._bSolid                                                  = node.getAttributeBool( "solid", true ) ? SW_TRUE : SW_FALSE;
             block._bOpaque                                                 = node.getAttributeBool( "opaque", true ) ? SW_TRUE : SW_FALSE;
             block._bBreakable                                              = node.getAttributeBool( "breakable", true ) ? SW_TRUE : SW_FALSE;
+            block._dropID                                                  = GameDataXML::readName( node, "drop" );
             if ( addBlock( block ) != kVoxelAirBlock )
                 ++loadedCount;
         }
-        return loadedCount;
+        // 얻는 블록은 같은 카탈로그의 블록이어야 한다 — 모든 블록을 읽은 뒤에 본다(앞 블록이 뒤 블록을 가리킬 수 있다).
+        bool bDropsKnown = true;
+        for ( const VoxelBlockDef& block : getBlocks() )
+        {
+            if ( block._dropID.empty() || findBlockIndex( block._dropID ) != kVoxelAirBlock )
+                continue;
+            SW_LOG_ERROR( "%#: block '%#' drops '%#', which is not a block in this catalog", sourceName, block._id.c_str(), block._dropID.c_str() );
+            bDropsKnown = false;
+        }
+        return bDropsKnown ? loadedCount : 0;
     }
 } // namespace sw

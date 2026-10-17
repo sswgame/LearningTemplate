@@ -147,9 +147,6 @@ namespace sw
         static constexpr int32 kMaxStatusCount   = 4;
         static constexpr int32 kMaxMaterialCount = 255;
 
-        /** @brief 공용 기본 테이블의 경로입니다. */
-        static constexpr const utf8* kDefaultPath = "common/data/elements/default.elements.xml";
-
         [[nodiscard]] bool loadFromResource( string_view path );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();

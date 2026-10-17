@@ -67,6 +67,18 @@ namespace sw
         string _rigCapeSkeleton{};
         PROPERTY( Category = "Assets" )
         string _rigWeaponSockets{};
+        PROPERTY( Category = "Assets", Tooltip = "Skinned enemy mesh of the combat bench" )
+        string _combatEnemyMesh{};
+        PROPERTY( Category = "Assets" )
+        string _combatEnemySkeleton{};
+        PROPERTY( Category = "Assets" )
+        string _combatEnemyClips{};
+        PROPERTY( Category = "Assets", Tooltip = "Path stem of the enemy's character data (.notifies.xml, .sockets.xml, .physics.xml are appended)" )
+        string _combatEnemyData{};
+        PROPERTY( Category = "Assets", Tooltip = "Sword mesh held in the enemy's right hand" )
+        string _combatSwordMesh{};
+        PROPERTY( Category = "Characters", Tooltip = "Distance in front of the combat enemy the bench shots are fired from", Min = 0.0, Units = m )
+        float32 _combatShooterRange{};
 
         // ---- 큐브 격자 ----
         PROPERTY( Category = "Cubes", Tooltip = "Distance between cubes", Min = 0.0, Units = m )

@@ -38,6 +38,7 @@ namespace sw
         : _mapSocketSet{}
         , _kinds{}
         , _bKindsLoaded{ SW_FALSE }
+        , _bKindsValid{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -54,9 +55,13 @@ namespace sw
         if ( _bKindsLoaded == SW_FALSE )
         {
             _bKindsLoaded = SW_TRUE;
-            if ( _kinds.loadFromResource( AppearanceSocketRigInternal::kDefaultSocketKinds ) == false )
-                SW_LOG_ERROR( "Socket kinds '%#' could not be loaded - sockets with a kind will fail", AppearanceSocketRigInternal::kDefaultSocketKinds );
+            _bKindsValid  = _kinds.loadFromResource( AppearanceSocketRigInternal::kDefaultSocketKinds ) ? SW_TRUE : SW_FALSE;
+            if ( _bKindsValid == SW_FALSE )
+                SW_LOG_ERROR( "Socket kinds '%#' could not be loaded - no socket asset is handed out", AppearanceSocketRigInternal::kDefaultSocketKinds );
         }
+        // 종류 표 없이 읽은 소켓은 종류 검사를 건너뛴 반쪽짜리다 — 내주지 않는다(위 오류가 이유다).
+        if ( _bKindsValid == SW_FALSE )
+            return nullptr;
         unique_ptr<SocketSet> socketSet = make_unique<SocketSet>();
         if ( socketSet->loadFromResource( path.c_str(), _kinds ) == false )
         {
@@ -73,6 +78,7 @@ namespace sw
         _mapSocketSet.clear();
         _kinds        = SocketKindTable{};
         _bKindsLoaded = SW_FALSE;
+        _bKindsValid  = SW_FALSE;
     }
 } // namespace sw
 

@@ -114,7 +114,62 @@
 					                           _cameraRig="1"
 					                           _watchFocus="32,0,30"
 					                           _watchOrthoHeight="70"
-					                           _bAutoPlay="false" />
+					                           _selectAction="Skirmish.Select"
+					                           _orderAction="Skirmish.Order"
+					                           _addToSelectionAction="Skirmish.AddToSelection"
+					                           _groupModifierAction="Skirmish.GroupModifier"
+					                           _attackMoveAction="Skirmish.AttackMove"
+					                           _holdAction="Skirmish.Hold"
+					                           _stopAction="Skirmish.Stop"
+					                           _jumpToSelectionAction="Skirmish.JumpToSelection"
+					                           _fasterAction="Skirmish.Faster"
+					                           _slowerAction="Skirmish.Slower"
+					                           _pauseAction="Skirmish.Pause"
+					                           _statusAction="Skirmish.Status"
+					                           _playerPanAction="Camera.Pan"
+					                           _spectatorPanAction="Skirmish.SpectatorPan"
+					                           _workerUnitID="worker"
+					                           _depotUnitID="command_center"
+					                           _supplyUnitID="supply_depot"
+					                           _productionUnitID="barracks"
+					                           _armyUnitID="marine"
+					                           _bAutoPlay="false">
+						<_listTrainAction>
+							<item>Skirmish.Command1</item>
+							<item>Skirmish.Command2</item>
+							<item>Skirmish.Command3</item>
+						</_listTrainAction>
+						<_listGroupAction>
+							<item>Skirmish.Group0</item>
+							<item>Skirmish.Group1</item>
+							<item>Skirmish.Group2</item>
+							<item>Skirmish.Group3</item>
+							<item>Skirmish.Group4</item>
+							<item>Skirmish.Group5</item>
+							<item>Skirmish.Group6</item>
+							<item>Skirmish.Group7</item>
+							<item>Skirmish.Group8</item>
+							<item>Skirmish.Group9</item>
+						</_listGroupAction>
+						<_listBuildAction>
+							<item>Skirmish.Build.SupplyDepot</item>
+							<item>Skirmish.Build.Barracks</item>
+							<item>Skirmish.Build.Refinery</item>
+							<item>Skirmish.Build.Academy</item>
+							<item>Skirmish.Build.Factory</item>
+							<item>Skirmish.Build.Starport</item>
+							<item>Skirmish.Build.Bunker</item>
+						</_listBuildAction>
+						<_listBuildUnitID>
+							<item>supply_depot</item>
+							<item>barracks</item>
+							<item>refinery</item>
+							<item>academy</item>
+							<item>factory</item>
+							<item>starport</item>
+							<item>bunker</item>
+						</_listBuildUnitID>
+					</SkirmishDirectorComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

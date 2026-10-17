@@ -3,4 +3,6 @@
 <GameSettings>
   <startMap>game/nilecity/maps/nile.scene.xml</startMap>
   <inputMap>game/nilecity/data/nile.input.xml</inputMap>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <audioEvents>game/nilecity/audio/nilecity.audioevents.xml</audioEvents>
 </GameSettings>

@@ -16,15 +16,15 @@ namespace sw
     {
         struct SkirmishMatchInternal
         {
-            /** @brief 성향별 AI 설정입니다 — 0 러시(일찍 작게) · 1 운영(일꾼 · 병영을 늘려 크게) · 2 사람 상대(그 사이). */
-            static RTSCommanderAISettings makeAISettings( int32 style )
+            /** @brief 성향별 AI 설정입니다 — 0 러시(일찍 작게) · 1 운영(일꾼 · 병영을 늘려 크게) · 2 사람 상대(그 사이). 유닛 id 는 판 설정(씬 데이터)에서 온다. */
+            static RTSCommanderAISettings makeAISettings( int32 style, const SkirmishMatchSettings& matchSettings )
             {
                 RTSCommanderAISettings settings;
-                settings._workerID     = hashed_string( "worker" );
-                settings._depotID      = hashed_string( "command_center" );
-                settings._supplyID     = hashed_string( "supply_depot" );
-                settings._productionID = hashed_string( "barracks" );
-                settings._armyUnitID   = hashed_string( "marine" );
+                settings._workerID     = matchSettings._workerID;
+                settings._depotID      = matchSettings._depotID;
+                settings._supplyID     = matchSettings._supplyID;
+                settings._productionID = matchSettings._productionID;
+                settings._armyUnitID   = matchSettings._armyUnitID;
                 if ( style == 0 )
                 {
                     settings._workerTarget     = 12;
@@ -109,7 +109,7 @@ namespace sw
             _arrAIActive[player] = bAI ? SW_TRUE : SW_FALSE;
             const int32 style    = bHumanPlayer ? 2 : player;
             if ( bAI )
-                _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style ) );
+                _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ) );
         }
         SW_LOG_INFO( "[Skirmish] match start - %#", bHumanPlayer ? "you (blue, south-west) vs computer (red)" : "computer (rush, blue) vs computer (macro, red)" );
     }

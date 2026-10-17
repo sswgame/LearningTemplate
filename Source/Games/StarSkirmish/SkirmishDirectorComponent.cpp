@@ -24,6 +24,7 @@
 #include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Actor/Control/InputActionCheckUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
@@ -149,7 +150,7 @@ namespace sw
 namespace sw
 {
     SkirmishDirectorComponent::SkirmishDirectorComponent()
-        : _unitDataPath{ "game/starskirmish/data/units.xml" }
+        : _unitDataPath{}
         , _cliffPrefab{}
         , _unitPrefab{}
         , _cameraRig{}
@@ -161,6 +162,29 @@ namespace sw
         , _statusLogInterval{ 30.0f }
         , _clickSlop{ 0.6f }
         , _maxSelectionCount{ 12 }
+        , _selectAction{}
+        , _orderAction{}
+        , _addToSelectionAction{}
+        , _groupModifierAction{}
+        , _attackMoveAction{}
+        , _holdAction{}
+        , _stopAction{}
+        , _jumpToSelectionAction{}
+        , _fasterAction{}
+        , _slowerAction{}
+        , _pauseAction{}
+        , _statusAction{}
+        , _playerPanAction{}
+        , _spectatorPanAction{}
+        , _listTrainAction{}
+        , _listGroupAction{}
+        , _listBuildAction{}
+        , _listBuildUnitID{}
+        , _workerUnitID{}
+        , _depotUnitID{}
+        , _supplyUnitID{}
+        , _productionUnitID{}
+        , _armyUnitID{}
         , _playerZeroColor{ 0.25f, 0.45f, 0.95f, 1.0f }
         , _playerOneColor{ 0.9f, 0.25f, 0.2f, 1.0f }
         , _neutralColor{ 0.7f, 0.7f, 0.7f, 1.0f }
@@ -214,7 +238,7 @@ namespace sw
         OrthoCameraRigComponent* pRig = findCameraRig();
         if ( pRig != nullptr )
         {
-            pRig->setPanAction( hashed_string( _bHuman == SW_TRUE ? "Camera.Pan" : "Skirmish.SpectatorPan" ) ); // 플레이할 때 WASD 는 명령 단축키다.
+            pRig->setPanAction( _bHuman == SW_TRUE ? _playerPanAction : _spectatorPanAction ); // 플레이할 때 WASD 는 명령 단축키다.
             if ( _bHuman == SW_FALSE )
             {
                 pRig->setFocus( _watchFocus );
@@ -326,12 +350,22 @@ namespace sw
             SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
         }
+        if ( hasValidNames() == false )
+        {
+            SW_LOG_ERROR( "[Skirmish] the director's input actions or unit ids do not match the data - the match cannot start" );
+            return false;
+        }
         _bHuman = isAutoPlayOn() ? SW_FALSE : SW_TRUE;
         SkirmishMatchSettings matchSettings;
         matchSettings._huntIntervalSeconds   = _huntIntervalSeconds;
         matchSettings._arrivedRadius         = _arrivedRadius;
         matchSettings._startMinerals         = _startMinerals;
         matchSettings._statusIntervalSeconds = _statusLogInterval;
+        matchSettings._workerID              = _workerUnitID;
+        matchSettings._depotID               = _depotUnitID;
+        matchSettings._supplyID              = _supplyUnitID;
+        matchSettings._productionID          = _productionUnitID;
+        matchSettings._armyUnitID            = _armyUnitID;
         _match.initialize( &_catalog, _bHuman == SW_TRUE, matchSettings );
         _selection.clear();
         _selection.setPlayer( 0 );
@@ -470,18 +504,18 @@ namespace sw
         // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 속도, 일시정지, 명령을 처리한다.
         // 키는 입력 맵(`data/skirmish.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
         const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
-        const bool           bFaster = inputMap.wasActionTriggered( hashed_string( "Skirmish.Faster" ) );
-        if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Skirmish.Slower" ) ) )
+        const bool           bFaster = inputMap.wasActionTriggered( _fasterAction );
+        if ( bFaster || inputMap.wasActionTriggered( _slowerAction ) )
         {
             _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
             SW_LOG_INFO( "[Skirmish] speed x%#", _timeScale );
         }
-        if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Pause" ) ) )
+        if ( inputMap.wasActionTriggered( _pauseAction ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO( "[Skirmish] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
-        if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Status" ) ) )
+        if ( inputMap.wasActionTriggered( _statusAction ) )
             _match.logStatus();
         if ( _bHuman == SW_TRUE && _match.isOver() == false )
             updateHumanCommands( input );
@@ -493,66 +527,46 @@ namespace sw
         const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
         float3               point{};
         const bool           bPointValid = findGroundPoint( input, point );
-        const bool           bShift      = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
-        const bool           bControl    = inputMap.isActionDown( hashed_string( "Skirmish.GroupModifier" ) );
+        const bool           bShift      = inputMap.isActionDown( _addToSelectionAction );
+        const bool           bControl    = inputMap.isActionDown( _groupModifierAction );
         updateDrag( input, point, bPointValid );
 
-        if ( bPointValid && inputMap.wasActionTriggered( hashed_string( "Skirmish.Order" ) ) )
+        if ( bPointValid && inputMap.wasActionTriggered( _orderAction ) )
             issueOrder( point, bShift );
 
         // 명령 단축키는 선택한 것이 모두 내 것일 때만 동작한다.
         if ( _selection.isCommandable( world ) && _selection.getSelected().empty() == false )
         {
-            if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.AttackMove" ) ) )
+            if ( inputMap.wasActionTriggered( _attackMoveAction ) )
             {
                 _bAttackMovePending = SW_TRUE;
                 SW_LOG_INFO( "[Skirmish] attack-move - left click a target point" );
             }
-            const bool bHold = inputMap.wasActionTriggered( hashed_string( "Skirmish.Hold" ) );
-            if ( bHold || inputMap.wasActionTriggered( hashed_string( "Skirmish.Stop" ) ) )
+            const bool bHold = inputMap.wasActionTriggered( _holdAction );
+            if ( bHold || inputMap.wasActionTriggered( _stopAction ) )
             {
                 for ( const RTSUnitID unitID : _selection.getSelected() )
                 {
                     (void)( bHold ? world.issueHold( unitID ) : world.issueStop( unitID ) );
                 }
             }
-            if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Command1" ) ) )
-                trainFromPrimary( 0 );
-            if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Command2" ) ) )
-                trainFromPrimary( 1 );
-            if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Command3" ) ) )
-                trainFromPrimary( 2 );
-            if ( bPointValid )
+            for ( size_t productIndex = 0; productIndex < _listTrainAction.size(); ++productIndex )
             {
-                struct BuildAction
-                {
-                    const utf8* _pAction;
-                    const utf8* _pBuildingID;
-                };
-                constexpr BuildAction kArrBuildAction[] = {
-                    {"Skirmish.Build.SupplyDepot", "supply_depot"},
-                    {   "Skirmish.Build.Barracks",     "barracks"},
-                    {   "Skirmish.Build.Refinery",     "refinery"},
-                    {    "Skirmish.Build.Academy",      "academy"},
-                    {    "Skirmish.Build.Factory",      "factory"},
-                    {   "Skirmish.Build.Starport",     "starport"},
-                    {     "Skirmish.Build.Bunker",       "bunker"},
-                };
-                for ( const BuildAction& entry : kArrBuildAction )
-                {
-                    if ( inputMap.wasActionTriggered( hashed_string( entry._pAction ) ) )
-                        orderBuild( entry._pBuildingID, point );
-                }
+                if ( inputMap.wasActionTriggered( _listTrainAction[productIndex] ) )
+                    trainFromPrimary( static_cast<int32>( productIndex ) );
+            }
+            // 건설 단축키 표는 씬 데이터다(액션 · 지을 유닛 id 가 같은 자리). 길이가 같은지는 판을 열 때 봤다.
+            for ( size_t buildIndex = 0; bPointValid && buildIndex < _listBuildAction.size(); ++buildIndex )
+            {
+                if ( inputMap.wasActionTriggered( _listBuildAction[buildIndex] ) )
+                    orderBuild( _listBuildUnitID[buildIndex], point );
             }
         }
 
-        // 부대 입력: Ctrl + 숫자는 지정, Shift + 숫자는 추가, 숫자는 호출이다.
-        for ( int32 group = 0; group < RTSSelection::kGroupCount; ++group )
+        // 부대 입력: Ctrl + 숫자는 지정, Shift + 숫자는 추가, 숫자는 호출이다. 부대 액션 수는 판을 열 때 `RTSSelection::kGroupCount` 와 맞는지 봤다.
+        for ( int32 group = 0; group < static_cast<int32>( _listGroupAction.size() ); ++group )
         {
-            constexpr const utf8* kArrGroupAction[] = { "Skirmish.Group0", "Skirmish.Group1", "Skirmish.Group2", "Skirmish.Group3", "Skirmish.Group4",
-                                                        "Skirmish.Group5", "Skirmish.Group6", "Skirmish.Group7", "Skirmish.Group8", "Skirmish.Group9" };
-            static_assert( sizeof( kArrGroupAction ) / sizeof( kArrGroupAction[0] ) == RTSSelection::kGroupCount, "one group action per group" );
-            if ( inputMap.wasActionTriggered( hashed_string( kArrGroupAction[group] ) ) == false )
+            if ( inputMap.wasActionTriggered( _listGroupAction[static_cast<size_t>( group )] ) == false )
                 continue;
             if ( bControl )
                 _selection.assignGroup( group );
@@ -561,7 +575,7 @@ namespace sw
             else if ( _selection.recallGroup( world, group ) )
                 SW_LOG_INFO( "[Skirmish] group %# - %# units", group, static_cast<int32>( _selection.getSelected().size() ) );
         }
-        if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.JumpToSelection" ) ) )
+        if ( inputMap.wasActionTriggered( _jumpToSelectionAction ) )
         {
             // 선택한 유닛으로 이동한다. 리그는 PostUpdate 에서 이 초점을 읽는다(리그의 오브젝트에는 다른 쓰기가 없다).
             const RTSUnit*           pPrimary = world.findUnit( _selection.getPrimary() );
@@ -575,8 +589,8 @@ namespace sw
     {
         RTSWorld&            world = _match.getWorld();
         const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
-        const hashed_string  selectAction( "Skirmish.Select" );
-        const bool           bShift = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
+        const hashed_string& selectAction = _selectAction;
+        const bool           bShift       = inputMap.isActionDown( _addToSelectionAction );
         if ( bPointValid && inputMap.wasActionPressed( selectAction ) )
         {
             if ( _bAttackMovePending == SW_TRUE )
@@ -642,10 +656,52 @@ namespace sw
             (void)world.issueGroupMove( listMobile, point, false, bQueue );
     }
 
-    void SkirmishDirectorComponent::orderBuild( const utf8* pBuildingID, const float3& point )
+    bool SkirmishDirectorComponent::hasValidNames() const
+    {
+        static constexpr const utf8* kOwner = "SkirmishDirectorComponent";
+        bool                         bValid = true;
+        // AI 와 건설 단축키가 쓰는 유닛 id 는 유닛 카탈로그에 있어야 한다.
+        for ( const hashed_string* pUnitID : { &_workerUnitID, &_depotUnitID, &_supplyUnitID, &_productionUnitID, &_armyUnitID } )
+        {
+            if ( _catalog.find( *pUnitID ) != nullptr )
+                continue;
+            SW_LOG_ERROR( "%#: unit id '%#' is not in %#", kOwner, pUnitID->c_str(), _unitDataPath.c_str() );
+            bValid = false;
+        }
+        if ( _listBuildAction.size() != _listBuildUnitID.size() )
+        {
+            SW_LOG_ERROR( "%#: %# build actions but %# build units - they pair by index", kOwner, static_cast<uint32>( _listBuildAction.size() ),
+                          static_cast<uint32>( _listBuildUnitID.size() ) );
+            bValid = false;
+        }
+        for ( const hashed_string& unitID : _listBuildUnitID )
+        {
+            if ( _catalog.find( unitID ) != nullptr )
+                continue;
+            SW_LOG_ERROR( "%#: build unit '%#' is not in %#", kOwner, unitID.c_str(), _unitDataPath.c_str() );
+            bValid = false;
+        }
+        // 입력 액션은 입력 맵에 있어야 한다. 입력이 없는 실행(전용 서버 · 헤드리스)은 보지 않는다.
+        const InputManager* pInput = game::findSubsystem<InputManager>();
+        if ( pInput == nullptr )
+            return bValid;
+        const InputMap& inputMap = pInput->getInputMap();
+        bValid                   = InputActionCheckUtil::hasAllActions( inputMap,
+                                                                        { &_selectAction, &_orderAction, &_addToSelectionAction, &_groupModifierAction, &_attackMoveAction, &_holdAction,
+                                                                          &_stopAction, &_jumpToSelectionAction, &_fasterAction, &_slowerAction, &_pauseAction, &_statusAction,
+                                                                          &_playerPanAction, &_spectatorPanAction },
+                                                                        kOwner ) &&
+                 bValid;
+        bValid = InputActionCheckUtil::hasAllActions( inputMap, _listGroupAction, static_cast<size_t>( RTSSelection::kGroupCount ), kOwner ) && bValid;
+        bValid = InputActionCheckUtil::hasAllActions( inputMap, _listTrainAction, _listTrainAction.size(), kOwner ) && bValid;
+        bValid = InputActionCheckUtil::hasAllActions( inputMap, _listBuildAction, _listBuildAction.size(), kOwner ) && bValid;
+        return bValid;
+    }
+
+    void SkirmishDirectorComponent::orderBuild( const hashed_string& buildingID, const float3& point )
     {
         RTSWorld&         world = _match.getWorld();
-        const RTSUnitDef* pDef  = _catalog.find( hashed_string( pBuildingID ) );
+        const RTSUnitDef* pDef  = _catalog.find( buildingID );
         if ( pDef == nullptr )
             return;
         // 선택한 것 중 첫 일꾼이 짓는다. 정제소는 커서에 가까운 빈 간헐천에, 다른 건물은 커서가 중심이 되는 위치에 짓는다.

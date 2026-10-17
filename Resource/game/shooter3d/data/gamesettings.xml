@@ -5,4 +5,6 @@
   <startMap>game/shooter3d/maps/arena.scene.xml</startMap>
   <inputMap>game/shooter3d/data/shooter.input.xml</inputMap>
   <localizationProject>game/shooter3d/data/localization/shooter3d.locproject.json</localizationProject>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <audioEvents>game/shooter3d/audio/shooter3d.audioevents.xml</audioEvents>
 </GameSettings>

@@ -6671,6 +6671,9 @@
 				<_listComponent>
 					<ArenaDirectorComponent _componentName="ArenaDirectorComponent"
 					                        _bActive="true"
+					                        _playerAbilitySet="Player"
+					                        _gruntAbilitySet="Grunt"
+					                        _casterAbilitySet="Caster"
 					                        _playerPrefab="game/abilityarena/prefabs/player.prefab.xml"
 					                        _gruntPrefab="game/abilityarena/prefabs/grunt.prefab.xml"
 					                        _casterPrefab="game/abilityarena/prefabs/caster.prefab.xml"

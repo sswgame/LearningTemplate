@@ -8,6 +8,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -50,6 +51,10 @@ namespace sw
         // ---- 다른 컴포넌트가 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
         const VoxelBody&   getBody() const { return _body; }
         const VoxelHotbar& getHotbar() const { return _hotbar; }
+        /** @brief 폰 의도의 버튼 이름입니다(씬 데이터). 자동 플레이 AI 가 같은 이름을 누른다. */
+        const hashed_string& getJumpButton() const { return _jumpButton; }
+        const hashed_string& getBreakButton() const { return _breakButton; }
+        const hashed_string& getPlaceButton() const { return _placeButton; }
         /** @brief 바라보는 블록입니다. 없으면 false 입니다. */
         bool findTarget( VoxelCoord& outBlock ) const;
         /** @brief 몸 자리 · 핫바 · 부순/놓은 수를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
@@ -84,8 +89,10 @@ namespace sw
 
     private:
         void initializeBody( const VoxelDirectorComponent& director );
-        /** @brief 폰의 의도 이름을 자리로 풉니다. */
-        void resolveIntentSlots( const PawnComponent& pawn );
+        /** @brief 폰의 의도 이름(PROPERTY)을 자리로 풉니다. 폰 스키마에 없는 이름은 모두 오류로 남기고 false 입니다. */
+        [[nodiscard]] bool resolveIntentSlots( const PawnComponent& pawn );
+        /** @brief 블록 이름(PROPERTY — 물, 처음 핫바)이 카탈로그에 모두 있으면 핫바와 몸에 넣고 true, 아니면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool applyBlockNames( const VoxelBlockCatalog& catalog );
         /** @brief 의도에서 이번 틱의 걸음 · 손을 읽고 핫바를 고릅니다. */
         void readIntent( const PawnComponent& pawn, const VoxelBlockCatalog& catalog, float3& outWish, bool& outJump, bool& outSprint, bool& outBreak, bool& outPlace );
         void updateTarget( const VoxelDirectorComponent& director, const FirstPersonCameraComponent& camera );
@@ -107,6 +114,24 @@ namespace sw
         float32 _startYaw;
         PROPERTY( Category = "Player", DisplayName = "Start Pitch", Units = rad )
         float32 _startPitch;
+        // ---- 폰 의도 이름 — 같은 오브젝트의 PawnComponent 스키마(_listButton · _listAnalog)에 있어야 한다 ----
+        PROPERTY( Category = "Intent", DisplayName = "Jump Button" )
+        hashed_string _jumpButton;
+        PROPERTY( Category = "Intent", DisplayName = "Sprint Button" )
+        hashed_string _sprintButton;
+        PROPERTY( Category = "Intent", DisplayName = "Break Button" )
+        hashed_string _breakButton;
+        PROPERTY( Category = "Intent", DisplayName = "Place Button" )
+        hashed_string _placeButton;
+        PROPERTY( Category = "Intent", DisplayName = "Hotbar Scroll Analog" )
+        hashed_string _hotbarScrollAnalog;
+        PROPERTY( Category = "Intent", DisplayName = "Slot Buttons", Tooltip = "One button per hotbar slot" )
+        vector<hashed_string> _listSlotButton;
+        // ---- 블록 이름 — 블록 카탈로그(data/blocks.xml)의 id 다 ----
+        PROPERTY( Category = "Blocks", DisplayName = "Water Block", Tooltip = "Block the body swims in" )
+        hashed_string _waterBlock;
+        PROPERTY( Category = "Blocks", DisplayName = "Start Blocks", Tooltip = "Blocks in the first hotbar (64 each)" )
+        vector<hashed_string> _listStartBlock;
 
         VoxelBody         _body;
         VoxelHotbar       _hotbar;

@@ -40,6 +40,12 @@ namespace sw
         float32 _arrivedRadius{ 10.0f };         ///< 적 시작 지점에서 이 안이면 "닿았다"(m)
         int32   _startMinerals{ 50 };            ///< 플레이어마다 시작 광물
         float32 _statusIntervalSeconds{ 30.0f }; ///< 판 상황 로그 주기
+        // AI 가 쓰는 유닛 카탈로그 id — 디렉터의 PROPERTY(씬 데이터)가 채우고, 비어 있으면 AI 가 그 일을 하지 못한다.
+        hashed_string _workerID{};
+        hashed_string _depotID{};
+        hashed_string _supplyID{};
+        hashed_string _productionID{};
+        hashed_string _armyUnitID{};
     };
 } // namespace sw
 

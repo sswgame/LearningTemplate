@@ -84,7 +84,33 @@
 					                      _reachDistance="6"
 					                      _placeInterval="0.25"
 					                      _startYaw="0.6"
-					                      _startPitch="-0.2" />
+					                      _startPitch="-0.2"
+					                      _jumpButton="Voxel.Jump"
+					                      _sprintButton="Voxel.Sprint"
+					                      _breakButton="Voxel.Break"
+					                      _placeButton="Voxel.Place"
+					                      _hotbarScrollAnalog="Voxel.HotbarScroll"
+					                      _waterBlock="water">
+						<_listSlotButton>
+							<item>Voxel.Slot1</item>
+							<item>Voxel.Slot2</item>
+							<item>Voxel.Slot3</item>
+							<item>Voxel.Slot4</item>
+							<item>Voxel.Slot5</item>
+							<item>Voxel.Slot6</item>
+							<item>Voxel.Slot7</item>
+							<item>Voxel.Slot8</item>
+							<item>Voxel.Slot9</item>
+						</_listSlotButton>
+						<_listStartBlock>
+							<item>planks</item>
+							<item>cobblestone</item>
+							<item>brick</item>
+							<item>log</item>
+							<item>sand</item>
+							<item>leaves</item>
+						</_listStartBlock>
+					</VoxelPlayerComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -118,6 +144,12 @@
 					                        _player="3"
 					                        _terrainSeed="20261003"
 					                        _chunkBuildsPerFrame="4"
+					                        _waterBlock="water"
+					                        _stoneBlock="stone"
+					                        _grassBlock="grass"
+					                        _snowBlock="snow"
+					                        _coalOreBlock="coal_ore"
+					                        _ironOreBlock="iron_ore"
 					                        _bAutoPlay="false" />
 				</_listComponent>
 			</GameObject>

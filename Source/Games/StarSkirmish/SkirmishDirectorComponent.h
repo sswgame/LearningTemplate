@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Mesh/MeshPreloadSet.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -100,11 +101,16 @@ namespace sw
         void updateInput( const InputManager& input );
         void updateHumanCommands( const InputManager& input );
         void updateDrag( const InputManager& input, const float3& point, bool bPointValid );
-        /** @brief `Skirmish.Order`(오른쪽 클릭)입니다. 선택한 유닛에 커서 위치로 상황에 맞는 명령(이동, 공격, 채취, 집결)을 냅니다. */
+        /** @brief 명령 액션(`_orderAction`, 오른쪽 클릭)입니다. 선택한 유닛에 커서 위치로 상황에 맞는 명령(이동, 공격, 채취, 집결)을 냅니다. */
         void issueOrder( const float3& point, bool bQueue );
-        void orderBuild( const utf8* pBuildingID, const float3& point );
-        void trainFromPrimary( int32 productIndex );
-        void handleEvents();
+        void orderBuild( const hashed_string& buildingID, const float3& point );
+        /**
+         * @brief 씬 데이터가 준 이름(입력 액션 · AI 가 쓰는 유닛 id · 건설 단축키 표)이 입력 맵과 유닛 카탈로그에 모두 있는지 봅니다.
+         * @details 빠진 것은 모두 오류로 남기고 false 다 — 판을 열지 않는다. 입력 관리자가 없으면(전용 서버 · 헤드리스) 액션은 보지 않는다.
+         */
+        [[nodiscard]] bool hasValidNames() const;
+        void               trainFromPrimary( int32 productIndex );
+        void               handleEvents();
         /** @brief 포인터가 가리키는 땅(y = 0) 위치를 반환합니다(`getMousePositionNormalized`). 맵 밖이면 false 입니다. */
         [[nodiscard]] bool       findGroundPoint( const InputManager& input, float3& outPoint ) const;
         OrthoCameraRigComponent* findCameraRig() const;
@@ -134,6 +140,54 @@ namespace sw
         float32 _clickSlop;
         PROPERTY( Category = "Input", DisplayName = "Max Selection", Tooltip = "Most units one selection holds", Min = 1 )
         int32 _maxSelectionCount;
+        // ---- 입력 액션 — 이름은 입력 맵(data/skirmish.input.xml)의 액션이다. 판을 열 때 모두 있는지 본다(hasValidNames) ----
+        PROPERTY( Category = "Input Actions", DisplayName = "Select", Tooltip = "Picks a unit or starts a drag box" )
+        hashed_string _selectAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Order", Tooltip = "Context order at the cursor (move, attack, gather, rally)" )
+        hashed_string _orderAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Add To Selection", Tooltip = "Held: select adds, order queues, group number adds" )
+        hashed_string _addToSelectionAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Group Modifier", Tooltip = "Held: a group number assigns the selection" )
+        hashed_string _groupModifierAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Attack Move" )
+        hashed_string _attackMoveAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Hold" )
+        hashed_string _holdAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Stop" )
+        hashed_string _stopAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Jump To Selection", Tooltip = "Moves the camera to the primary selected unit" )
+        hashed_string _jumpToSelectionAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Faster" )
+        hashed_string _fasterAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Slower" )
+        hashed_string _slowerAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Pause" )
+        hashed_string _pauseAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Status", Tooltip = "Logs the match status" )
+        hashed_string _statusAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Player Pan", Tooltip = "Camera pan while a human plays (letter keys are commands)" )
+        hashed_string _playerPanAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Spectator Pan", Tooltip = "Camera pan while both players are AI" )
+        hashed_string _spectatorPanAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Train Actions", Tooltip = "One action per product of the primary selected building, in catalog order" )
+        vector<hashed_string> _listTrainAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Group Actions", Tooltip = "One action per control group (0..9)" )
+        vector<hashed_string> _listGroupAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Build Actions", Tooltip = "Build hotkey actions; Build Units holds the building each one places" )
+        vector<hashed_string> _listBuildAction;
+        PROPERTY( Category = "Input Actions", DisplayName = "Build Units", Tooltip = "Unit catalog id placed by the build action at the same index" )
+        vector<hashed_string> _listBuildUnitID;
+        // ---- AI 가 쓰는 유닛 — 유닛 카탈로그(data/units.xml)의 id 다 ----
+        PROPERTY( Category = "AI Units", DisplayName = "Worker" )
+        hashed_string _workerUnitID;
+        PROPERTY( Category = "AI Units", DisplayName = "Depot", Tooltip = "Resource drop-off building" )
+        hashed_string _depotUnitID;
+        PROPERTY( Category = "AI Units", DisplayName = "Supply", Tooltip = "Supply building" )
+        hashed_string _supplyUnitID;
+        PROPERTY( Category = "AI Units", DisplayName = "Production", Tooltip = "Building that trains the army unit" )
+        hashed_string _productionUnitID;
+        PROPERTY( Category = "AI Units", DisplayName = "Army", Tooltip = "Unit the AI trains and attacks with" )
+        hashed_string _armyUnitID;
         PROPERTY( Category = "Look", DisplayName = "Player 0 Color", Tooltip = "Tint of player 0's units (multiplies the kit's white body)" )
         float4 _playerZeroColor;
         PROPERTY( Category = "Look", DisplayName = "Player 1 Color" )

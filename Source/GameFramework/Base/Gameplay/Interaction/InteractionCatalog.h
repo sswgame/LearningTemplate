@@ -134,9 +134,6 @@ namespace sw
         friend class XMLCatalog<InteractionCatalog>;
 
     public:
-        /** @brief 컴포넌트가 따로 정하지 않으면 읽는 테이블입니다. */
-        static constexpr const utf8* kDefaultPath = "common/data/interactions/default.interactions.xml";
-
         void addInteraction( const InteractionDef& def ) { (void)_interactionCatalog.add( def ); }
         void addSmartObject( const SmartObjectDef& def ) { (void)_smartObjectCatalog.add( def ); }
 

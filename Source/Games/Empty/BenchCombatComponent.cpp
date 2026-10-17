@@ -18,6 +18,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 
+#include "Games/Empty/BenchSceneSettings.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "BenchCombat" );
@@ -26,15 +28,7 @@ namespace sw
     {
         struct BenchCombatComponentInternal
         {
-            static constexpr const utf8* kEnemyMesh     = "game/shooter3d/models/kaykit/skeleton_warrior.mesh";
-            static constexpr const utf8* kEnemySkeleton = "game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.json";
-            static constexpr const utf8* kEnemyClips    = "game/shooter3d/models/kaykit/skeleton_warrior/clips";
-            static constexpr const utf8* kCharacterData = "game/shooter3d/characters/skeleton_warrior/skeleton_warrior";
-            static constexpr const utf8* kSwordMesh     = "game/shooter3d/models/kaykit/skeleton_blade.mesh";
-            static constexpr const utf8* kHandSocket    = "handslot.r";
-            static constexpr float32     kShooterRange  = 3.0f;
-
-            static string makeDataPath( const utf8* pSuffix ) { return string( kCharacterData ) + pSuffix; }
+            static constexpr const utf8* kHandSocket = "handslot.r";
         };
     } // namespace
 } // namespace sw
@@ -49,6 +43,7 @@ namespace sw
         , _stage{ 0 }
         , _footstepCount{ 0 }
         , _loggedSecond{ 0 }
+        , _shooterRange{ 0.0f }
     {
         setCanEverTick( true );
     }
@@ -60,9 +55,9 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    GameObject* BenchCombatComponent::spawnEnemy( GameObjectManager& objects, const hashed_string& name, const float3& position )
+    GameObject* BenchCombatComponent::spawnEnemy( GameObjectManager& objects, const BenchSceneSettings& settings, const hashed_string& name,
+                                                  const float3& position )
     {
-        using Internal = BenchCombatComponentInternal;
         // 적 — 유닛 · 애니메이터(걷기, 발소리 알림) · 알림 디스패치 · 소켓 표 · 래그돌(히트 존 · 움찔 · 기상).
         GameObject* pEnemy = objects.createGameObject( name );
         if ( pEnemy == nullptr )
@@ -72,26 +67,25 @@ namespace sw
         AnimationNotifyComponent*  pNotify   = pEnemy->addComponent<AnimationNotifyComponent>();
         SocketSetComponent*        pSockets  = pEnemy->addComponent<SocketSetComponent>();
         RagdollComponent*          pRagdoll  = pEnemy->addComponent<RagdollComponent>();
-        pUnit->setMeshID( Internal::kEnemyMesh );
-        pUnit->setSkeletonPath( Internal::kEnemySkeleton );
+        pUnit->setMeshID( settings._combatEnemyMesh );
+        pUnit->setSkeletonPath( settings._combatEnemySkeleton );
         pUnit->resolveRenderAssets();
         pUnit->setAnimateWhenOffscreen( true );
         pUnit->setLocalPosition( position );
         // KayKit 은 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다.
         pUnit->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
-        pAnimator->setClipFolder( Internal::kEnemyClips );
+        pAnimator->setClipFolder( settings._combatEnemyClips );
         pAnimator->setInitialState( "Walking_A" );
-        pNotify->setNotifyTablePath( Internal::makeDataPath( ".notifies.xml" ) );
-        pSockets->setSocketSetPath( Internal::makeDataPath( ".sockets.xml" ) );
-        pRagdoll->setPhysicsAssetPath( Internal::makeDataPath( ".physics.xml" ) );
+        pNotify->setNotifyTablePath( settings._combatEnemyData + ".notifies.xml" );
+        pSockets->setSocketSetPath( settings._combatEnemyData + ".sockets.xml" );
+        pRagdoll->setPhysicsAssetPath( settings._combatEnemyData + ".physics.xml" );
         pRagdoll->setFlinchClip( hashed_string( "Hit_A" ) );
         pRagdoll->setGetUpClips( hashed_string( "Lie_StandUp" ), hashed_string{}, hashed_string( "Idle" ) );
         return pEnemy;
     }
 
-    void BenchCombatComponent::spawnScene( Scene& scene, vector<GameObjectHandle>& outListObject )
+    void BenchCombatComponent::spawnScene( Scene& scene, const BenchSceneSettings& settings, vector<GameObjectHandle>& outListObject )
     {
-        using Internal              = BenchCombatComponentInternal;
         GameObjectManager* pObjects = scene.getObjectManager();
         if ( pObjects == nullptr )
             return;
@@ -111,7 +105,7 @@ namespace sw
         pFloorMesh->setLocalScale( float3{ 12.0f, 1.0f, 12.0f } );
         outListObject.push_back( pFloor->getHandle() );
 
-        GameObject* pEnemy = spawnEnemy( *pObjects, hashed_string( "CombatEnemy" ), float3{} );
+        GameObject* pEnemy = spawnEnemy( *pObjects, settings, hashed_string( "CombatEnemy" ), float3{} );
         outListObject.push_back( pEnemy->getHandle() );
 
         // 칼 — 강체(손을 따르는 키네마틱 → 떼면 동적) + 메시 + 소켓 부착.
@@ -126,7 +120,7 @@ namespace sw
         pSwordBody->setBodyType( PhysicsBodyType::Kinematic );
         pSwordBody->setLayer( hashed_string( "Debris" ) );
         pSwordBody->setMaterial( hashed_string( "Metal" ) );
-        pSwordMesh->setMeshID( Internal::kSwordMesh );
+        pSwordMesh->setMeshID( settings._combatSwordMesh );
         (void)pBinding;
         outListObject.push_back( pSword->getHandle() );
 
@@ -135,6 +129,7 @@ namespace sw
         BenchCombatComponent* pCombat   = pDirector->addComponent<BenchCombatComponent>();
         pCombat->_enemy                 = pEnemy->getHandle();
         pCombat->_sword                 = pSword->getHandle();
+        pCombat->_shooterRange          = settings._combatShooterRange;
         outListObject.push_back( pDirector->getHandle() );
     }
 
@@ -160,7 +155,7 @@ namespace sw
         (void)SocketLookupUtil::findSocketWorldPosition( enemy, hashed_string( pBone ), target );
         // 머리 · 가슴 뼈는 그 바디의 아래 끝이다 — 바디 가운데 높이로 조금 올려 쏜다.
         target._y += 0.15f;
-        const float3 muzzle = target + float3{ 0.0f, 0.0f, -BenchCombatComponentInternal::kShooterRange };
+        const float3 muzzle = target + float3{ 0.0f, 0.0f, -_shooterRange };
         HitInfo      hit;
         if ( bFatal == false )
         {

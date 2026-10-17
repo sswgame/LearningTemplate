@@ -101,11 +101,16 @@ namespace sw
         _seenCatalogReloadCount = InteractionCatalog::getSharedReloadCount();
         if ( _bHasOverride == SW_TRUE || _smartObjectID.empty() )
             return;
-        const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath.empty() ? string_view( InteractionCatalog::kDefaultPath ) : string_view( _catalogPath ) );
+        if ( _catalogPath.empty() )
+        {
+            SW_LOG_ERROR( "Smart object '%#' has no catalog path - set Catalog", _smartObjectID.c_str() );
+            return;
+        }
+        const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath );
         const SmartObjectDef*     pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectID ) : nullptr;
         if ( pDef == nullptr )
         {
-            SW_LOG_ERROR( "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.empty() ? InteractionCatalog::kDefaultPath : _catalogPath.c_str() );
+            SW_LOG_ERROR( "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.c_str() );
             return;
         }
         std::lock_guard<std::mutex> lock( _mutex );

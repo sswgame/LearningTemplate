@@ -61,3 +61,15 @@
 - `REFLECT( Alias )` — 제품 데이터 사용 0, 테스트 4. 리더 제거는 리플렉션 파서 · 코드젠 변경이라 따로 한다. 프리팹 JSON 리더는 데이터 0 이지만 에디터가 쓴다(에디터 작업 소관).
 - XML 저작본 ↔ bin 쿠킹본 두 리더(`PrefabAsset` · `SceneDocument`)는 옛 형식이 아니라 쿠킹 파이프라인이다.
 - 같은 모양이 더 있는 곳: `NavMeshSettings::ensureDefaults`, `PhysicsDesc` 의 모르는 재질 → 첫 재질, `MaterialUtil::parseBlendMode` 의 모르는 이름 → Opaque, `GameDataXML` · `CameraPreset`(GameFramework 작업 소관).
+
+## 6. W4 결과 (2026-10-17, 빌드 전)
+
+`wt/feat12` 에 `backup/gamesdata-w4`(미검증 백업)를 main 위로 옮겼다. 빌드 · 테스트 · 실행은 아직 하지 않았다(묶음 빌드에서 확인). 바뀐 .cpp 는 main 의 컴파일 DB 로 `clang-cl /Zs` 구문 검사만 통과했다.
+
+- 카탈로그 경로의 정본은 데이터 종류 등록 줄 하나다. 게임 코드는 `GameInstanceBase::loadRequiredCatalog` · `loadRequiredData`(팩 루트 + `kDataKind` → `GamePackDataUtil::tryMakeKindPath`)로 읽고, 못 읽으면 `onInitialize` 가 false 라 기동이 멈춘다(`return true` 제거).
+- 사운드 이벤트는 gamesettings `_audioEvents` 를 인스턴스가 올리고 내린다. 로딩 화면 문서는 gamesettings 하나(`LoadingScreenController` 의 코드 경로 제거).
+- 계층 역전: 캐릭터 편집 창은 활성 팩의 `data/charactereditor.xml`(네 칸 필수, 레퍼런스 포즈는 스켈레톤 이름에서 만든다), 공원 배치 미리보기는 활성 팩 경로로 읽는다. 데이터가 없는 게임은 창이 "데이터 없음" 을 보이고 다른 게임 경로로 대체하지 않는다.
+- 입력 액션 이름은 씬 데이터의 핸들 `PROPERTY` 이고 `InputActionCheckUtil` 이 시작 때 입력 맵과 대조한다. 벤치 적 에셋 · 사거리는 `benchscene.xml`, 기믹 상호작용 카탈로그는 프리팹 `_catalogPath` 가 정본이다.
+- 게이트 `CheckDataDrivenStructure` 기준선에서 고친 23 파일을 지웠다.
+
+빌드 때 볼 것: 새 `PROPERTY` 의 리플렉션 생성물, 모든 게임의 기동(필수 데이터가 하나라도 없으면 이제 멈춘다), 에디터 캐릭터 편집 · 공원 배치 시나리오.

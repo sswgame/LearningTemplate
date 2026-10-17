@@ -4,4 +4,5 @@
 <GameSettings>
   <startMap>game/meadowvillage/maps/meadow.scene.xml</startMap>
   <inputMap>game/meadowvillage/data/meadow.input.xml</inputMap>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
 </GameSettings>

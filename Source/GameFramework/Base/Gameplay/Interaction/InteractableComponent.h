@@ -58,7 +58,7 @@ namespace sw
         bool computeAlignmentPoint( float3& outPosition, float32& outYaw ) const;
 
         void setInteractionID( const hashed_string& id );
-        /** @brief 상호작용 테이블 경로를 바꾸고 정의를 다시 찾습니다. 빈 문자열이면 공용 기본 테이블(`InteractionCatalog::kDefaultPath`)을 씁니다. */
+        /** @brief 상호작용 테이블 경로를 바꾸고 정의를 다시 찾습니다. 필수 칸이다 — 비어 있으면 정의를 찾지 않고 오류로 알립니다. */
         void    setCatalogPath( string_view path );
         void    setEnabled( bool bEnabled ) { _bEnabled = bEnabled; }
         bool    isEnabled() const { return _bEnabled; }
@@ -83,7 +83,7 @@ namespace sw
     private:
         PROPERTY( Category = "Interaction", DisplayName = "Interaction", Tooltip = "Interaction kind id in the catalog" )
         hashed_string _interactionID;
-        PROPERTY( Category = "Interaction", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table; empty uses the common default" )
+        PROPERTY( Category = "Interaction", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table (required)" )
         string _catalogPath;
         PROPERTY( Category = "Interaction", DisplayName = "Last Interactor", Tooltip = "Who completed it last (runtime)" )
         GameObjectHandle _lastInteractor;

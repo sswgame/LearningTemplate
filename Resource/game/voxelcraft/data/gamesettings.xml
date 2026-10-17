@@ -3,4 +3,6 @@
 <GameSettings>
   <startMap>game/voxelcraft/maps/island.scene.xml</startMap>
   <inputMap>game/voxelcraft/data/voxel.input.xml</inputMap>
+  <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
+  <audioEvents>game/voxelcraft/audio/voxelcraft.audioevents.xml</audioEvents>
 </GameSettings>

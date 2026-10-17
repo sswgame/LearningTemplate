@@ -85,13 +85,15 @@ namespace sw
         bool hasStatus( const hashed_string& status ) const;
         /** @brief 재질 이름을 바꿉니다. 상태는 지웁니다. */
         void setMaterial( const hashed_string& material );
+        /** @brief 원소 규칙 테이블 경로를 바꾸고 다시 만듭니다. 비우면 테이블이 없어 자극이 듣지 않는다(오류로 알린다). */
+        void setTablePath( string_view path );
 
     private:
         void rebuild();
         void publishSignal();
 
     private:
-        PROPERTY( Category = "Element", DisplayName = "Rule Table", AssetPath, Tooltip = "Element rule table; empty uses the common default" )
+        PROPERTY( Category = "Element", DisplayName = "Rule Table", AssetPath, Tooltip = "Element rule table (required)" )
         string _tablePath;
         PROPERTY( Category = "Element", DisplayName = "Material", Tooltip = "Material name in the table" )
         hashed_string _material;
