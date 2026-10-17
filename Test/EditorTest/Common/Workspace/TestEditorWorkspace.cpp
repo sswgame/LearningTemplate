@@ -10,6 +10,7 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -70,7 +71,7 @@ SW_TEST_CASE( EditorWorkspaceTest, PrefabPathCoversPlacedInstancesAndNestedParts
     EditorSelection editorSelection;
     EditorWorkspace workspace{ &editorSelection };
     workspace.setPlacedPrefabPath( pPost->getObjectID(), "game/prefabs/post.prefab.xml" );
-    objects.getSubsystem<PrefabInstanceRegistry>().registerNestedPart( pLamp->getObjectID(), pPost->getObjectID(), "game/prefabs/lamp.prefab.xml" );
+    objects.getSubsystem<PrefabInstanceRegistry>().registerNestedPart( pLamp->getObjectID(), pPost->getObjectID(), "game/prefabs/lamp.prefab.xml", "0" );
 
     SW_EXPECT_TRUE( workspace.findPrefabPath( pPost ) == "game/prefabs/post.prefab.xml" );
     SW_EXPECT_TRUE( workspace.findPrefabPath( pLamp ) == "game/prefabs/lamp.prefab.xml" ); // 씬 컴포넌트가 없는 부품 — 바깥 인스턴스가 살아 있으면 부품이다
@@ -82,4 +83,45 @@ SW_TEST_CASE( EditorWorkspaceTest, PrefabPathCoversPlacedInstancesAndNestedParts
     // 바깥 인스턴스가 사라지면 그 부품은 더는 부품이 아니다.
     objects.destroyObject( pPost );
     SW_EXPECT_TRUE( workspace.findPrefabPath( pLamp ).empty() );
+}
+
+/**
+ * @brief [EditorWorkspaceTest] 미리보기 씬에 묶인 선택은 그 씬에서 풀고, 바뀌면 겨누는 선택이 되며, 메인 선택이 바뀌거나 풀리면 메인으로 돌아온다
+ * @details 인스펙터는 `getFocusedSelection` 하나로 대상을 묻는다. 창 선택이 활성 씬에서 풀리면 같은 id 의 다른 오브젝트를 가리키거나 비어 보인다.
+ */
+SW_TEST_CASE( EditorWorkspaceTest, PreviewSelectionResolvesInItsSceneAndBecomesTheFocusedSelection )
+{
+    SceneManager sceneManager;
+    Scene*       pMain    = sceneManager.createEmptyActiveScene( "Main" );
+    Scene*       pPreview = sceneManager.createScene( "PreviewWorld" );
+    SW_ASSERT_TRUE( pMain != nullptr && pPreview != nullptr );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    GameObject* pBall = pPreview->getObjectManager()->createGameObject( hashed_string( "Ball" ) );
+    SW_ASSERT_NOT_NULL( pBall );
+    pPreview->getObjectManager()->mergePendingAdds();
+
+    CommandStack    windowStack;
+    EditorSelection mainSelection;
+    EditorSelection previewSelection;
+    previewSelection.bindPreviewScope( *pPreview, windowStack );
+    SW_EXPECT_TRUE( previewSelection.isPreviewScope() );
+    SW_EXPECT_TRUE( previewSelection.getScene() == pPreview );
+
+    previewSelection.selectObject( pBall );
+    SW_EXPECT_TRUE( previewSelection.getPrimaryObject() == pBall ); // 활성 씬이 아니라 묶인 씬에서 푼다
+    SW_EXPECT_TRUE( getFocusedSelection() == &previewSelection );
+
+    // 메인 선택이 바뀌면 메인으로 돌아온다(포인터가 아니라 nullptr 로 걸어 메인을 뜻한다).
+    mainSelection.clearAll();
+    mainSelection.selectObject( nullptr );
+    SW_EXPECT_TRUE( getFocusedSelection() != &previewSelection );
+
+    previewSelection.selectObject( pBall, SelectionMode::Toggle );
+    previewSelection.selectObject( pBall, SelectionMode::Toggle );
+    SW_EXPECT_TRUE( getFocusedSelection() == &previewSelection );
+    previewSelection.unbindPreviewScope();
+    SW_EXPECT_TRUE( getFocusedSelection() != &previewSelection );
+    SW_EXPECT_FALSE( previewSelection.isPreviewScope() );
+    SW_EXPECT_EQUAL( size_t( 0 ), previewSelection.getSelectedObjectCount() );
 }

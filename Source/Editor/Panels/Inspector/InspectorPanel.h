@@ -35,6 +35,7 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorSelection;
     class EditorWorkspace;
 
     /** @brief 아웃라이너에서 현재 선택한 것을 살펴보고 편집하는 패널입니다. */
@@ -82,6 +83,11 @@ namespace sw::editor
          * @details 언리얼 Details 의 Favorites 에 해당한다. 다중 선택에서는 주 선택 오브젝트 기준이다.
          */
         void drawFavoritesSection( GameObject* pObj );
+        /**
+         * @brief 미리보기 창의 선택(`editor::getFocusedSelection`)을 그립니다. 값 편집만 낸다 — 기록은 그 창의 스택이다(`InspectorPropertyUndo`).
+         * @details 컴포넌트 추가 · 제거 · 프리팹 줄은 활성 씬의 명령이라 미리보기 오브젝트에는 내지 않는다.
+         */
+        void drawPreviewSelection( const EditorSelection& selection );
 
     private:
         /** @brief 리플렉션 프로퍼티, 메서드, 이벤트를 그립니다. 검색 입력란을 포함하며, 컴포넌트와 오브젝트마다 대상을 바꿔 호출합니다. */

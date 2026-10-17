@@ -1995,6 +1995,15 @@ SW_TEST_CASE( SceneTest, PreviewScenesLiveApartFromLoadedScenes )
     sw::Scene* pThird = manager.createPreviewScene( "AnimationWindow" );
     SW_EXPECT_EQUAL( uint32( 3 ), manager.getPreviewSceneKey( pThird ) );
 
+    // 정책의 고정 스텝은 그 씬의 물리에만 간다 — 활성 씬은 엔진 설정 그대로다.
+    sw::ScenePreviewPolicy ragdoll;
+    ragdoll._bPhysics          = true;
+    ragdoll._fixedStepOverride = 0.005f;
+    sw::Scene* pRagdoll        = manager.createPreviewScene( "RagdollWindow", ragdoll );
+    SW_ASSERT_NOT_NULL( pRagdoll );
+    SW_EXPECT_NEAR_EQUAL( 0.005f, pRagdoll->getObjectManager()->getSubsystem<sw::ScenePhysics>().getFixedStepOverride(), 0.000001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pMain->getObjectManager()->getSubsystem<sw::ScenePhysics>().getFixedStepOverride(), 0.000001f );
+
     // 월드마다 오브젝트 매니저 · 씬 범위 · 물리 서비스가 따로다.
     SW_EXPECT_TRUE( pSecond->getObjectManager() != pMain->getObjectManager() );
     SW_EXPECT_TRUE( &pSecond->getObjectManager()->getSceneScope() != &pMain->getObjectManager()->getSceneScope() );

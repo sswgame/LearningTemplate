@@ -14,6 +14,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -546,7 +547,10 @@ namespace sw
         {
             scene.setAudioUpdateEnabled( policy._bAudio );
             if ( scene.getObjectManager() != nullptr )
+            {
                 scene.getObjectManager()->setPhysicsStepEnabled( policy._bPhysics );
+                scene.getObjectManager()->getSubsystem<ScenePhysics>().setFixedStepOverride( policy._fixedStepOverride );
+            }
         }
 
         /** @brief 정책의 플레이 설정에 맞춰 씬의 플레이 상태를 맞춥니다. */
@@ -801,7 +805,7 @@ namespace sw
             {
                 const PrefabNestedPart* pPart = ( carried._pTarget != nullptr ) ? sourceParts.findNestedPart( carried._identity._objectID ) : nullptr;
                 if ( pPart != nullptr )
-                    targetParts.registerNestedPart( carried._pTarget->getObjectID(), pPart->_ownerObjectID, pPart->_prefabPath );
+                    targetParts.registerNestedPart( carried._pTarget->getObjectID(), pPart->_ownerObjectID, pPart->_prefabPath, pPart->_partKey );
             }
             if ( listCarried.front()._pTarget != nullptr )
                 listKept.push_back( rootID );

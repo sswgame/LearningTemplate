@@ -67,7 +67,7 @@ namespace sw::editor
 
         /**
          * @brief 렌더 타깃을 @p size 에 맞추고, 오빗 입력을 받고, 이 씬 · 이 눈으로 그려 달라고 알린 뒤 지난 그림을 이미지로 놓습니다.
-         * @param bInputActive 창이 포커스 · 호버여서 카메라 입력을 받아도 되는지입니다.
+         * @param bInputActive 창이 포커스 · 호버여서 카메라 입력을 받아도 되는지입니다. 기즈모 위 · 기즈모 드래그 중이면 부르는 쪽이 false 로 넘깁니다.
          */
         void draw( const float2& size, bool bInputActive );
 
@@ -88,6 +88,11 @@ namespace sw::editor
         void frameSphere( const float3& center, float32 radius );
         /** @brief 이 비율로 본 오빗 카메라의 뷰-투영 행렬과 눈 위치를 계산합니다. */
         void computeViewProjection( float32 aspectRatio, float4x4& outViewProj, float3& outEye ) const;
+        /** @brief 이 비율로 본 오빗 카메라의 뷰 · 투영 행렬을 따로 계산합니다(기즈모가 쓴다). */
+        void computeViewAndProjection( float32 aspectRatio, float4x4& outView, float4x4& outProjection, float3& outEye ) const;
+        /** @brief 지난 `draw` 가 이미지를 놓은 화면 위치 · 크기입니다. 그리지 않았으면 크기가 0 입니다. */
+        const float2& getImagePosition() const { return _imagePosition; }
+        const float2& getImageSize() const { return _imageSize; }
 
         /** @brief 환경 프리셋을 @p scene 에 오브젝트로 스폰합니다(방향광 · 바닥). 만든 수를 반환합니다. 창 없이 테스트가 부릅니다. */
         static uint32 spawnEnvironment( Scene& scene, const EditorPreviewEnvironment& environment );
@@ -97,6 +102,8 @@ namespace sw::editor
         void requestScreenshotIfAsked();
 
         Scene*  _pScene;
+        float2  _imagePosition;
+        float2  _imageSize;
         float3  _orbitTarget;
         float32 _orbitDistance;
         float32 _orbitYaw;

@@ -26,13 +26,41 @@ namespace sw
         _mapNestedPart.clear();
     }
 
-    void PrefabInstanceRegistry::registerNestedPart( uint64 objectID, uint64 ownerObjectID, string_view prefabPath )
+    void PrefabInstanceRegistry::registerNestedPart( uint64 objectID, uint64 ownerObjectID, string_view prefabPath, string_view partKey )
     {
         PrefabNestedPart& part  = _mapNestedPart[objectID];
         part._ownerObjectID     = ownerObjectID;
         part._registrationOrder = _nextRegistration;
         part._prefabPath        = string{ prefabPath };
+        part._partKey           = string{ partKey };
         ++_nextRegistration;
+    }
+
+    bool PrefabInstanceRegistry::makePartPath( uint64 objectID, uint64 rootObjectID, string& outPath ) const
+    {
+        outPath.clear();
+        vector<const string*> listKey;
+        uint64                currentID = objectID;
+        // 기록 수보다 깊게 올라가면 고리다(기록을 손으로 고친 경우) — 멈춘다.
+        for ( size_t depth = 0; depth <= _mapNestedPart.size(); ++depth )
+        {
+            if ( currentID == rootObjectID )
+            {
+                for ( auto keyIt = listKey.rbegin(); keyIt != listKey.rend(); ++keyIt )
+                {
+                    if ( outPath.empty() == false )
+                        outPath += "/";
+                    outPath += **keyIt;
+                }
+                return listKey.empty() == false;
+            }
+            const PrefabNestedPart* pPart = findNestedPart( currentID );
+            if ( pPart == nullptr || pPart->_partKey.empty() )
+                return false;
+            listKey.push_back( &pPart->_partKey );
+            currentID = pPart->_ownerObjectID;
+        }
+        return false;
     }
 
     void PrefabInstanceRegistry::unregisterNestedPart( uint64 objectID )

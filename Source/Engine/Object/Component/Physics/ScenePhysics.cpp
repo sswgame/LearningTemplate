@@ -42,6 +42,7 @@ namespace sw
         , _listFrameEvent2D{}
         , _stepCount{ 0 }
         , _debrisBodyCount{ 0 }
+        , _fixedStepOverride{ 0.0f }
         , _bConfigured{ false }
     {
     }
@@ -116,10 +117,23 @@ namespace sw
         if ( pSettings == nullptr )
             return;
         // 고정 스텝의 출처는 엔진 설정 하나다 — 물리는 그 스텝을 서브스텝 수로 나눈다(상한도 같은 배수).
+        // 미리보기 씬 정책이 덮어쓰면 그 스텝이다(`setFixedStepOverride`).
         const EngineConfig& engineConfig = EngineConfig::getActive();
         const uint32        subStepCount = pSettings->_subStepCount;
-        _accumulator.configure( engineConfig._fixedDeltaTime / static_cast<float32>( subStepCount ), engineConfig._maxFixedStepPerFrame * subStepCount );
+        const float32       fixedStep    = _fixedStepOverride > 0.0f ? _fixedStepOverride : engineConfig._fixedDeltaTime;
+        _accumulator.configure( fixedStep / static_cast<float32>( subStepCount ), engineConfig._maxFixedStepPerFrame * subStepCount );
         _bConfigured = true;
+    }
+
+    void ScenePhysics::setFixedStepOverride( float32 seconds )
+    {
+        if ( seconds < 0.0f )
+        {
+            SW_LOG_ERROR( "Fixed step override %# is negative - the scene keeps its step", seconds );
+            return;
+        }
+        _fixedStepOverride = seconds;
+        _bConfigured       = false; // 다음 스텝 전에 누적기를 이 스텝으로 다시 맞춘다
     }
 
     IPhysicsScene3D* ScenePhysics::getScene3D()

@@ -3,15 +3,24 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/ObjectUndoUtil.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "EditorSelection" );
+
     void EditorSelection::selectObject( GameObject* pObj, SelectionMode mode )
     {
         pruneInvalid();
@@ -102,7 +111,7 @@ namespace sw::editor
     {
         if ( _listSelectedObject.empty() )
             return nullptr;
-        return editor::findGameObject( _listSelectedObject.front() );
+        return findObject( _listSelectedObject.front() );
     }
 
     uint64 EditorSelection::getPrimaryObjectID() const
@@ -117,7 +126,7 @@ namespace sw::editor
         outListObject.reserve( _listSelectedObject.size() );
         for ( const GameObjectHandle handle : _listSelectedObject )
         {
-            GameObject* pObj = editor::findGameObject( handle );
+            GameObject* pObj = findObject( handle );
             if ( pObj != nullptr )
                 outListObject.push_back( pObj );
         }
@@ -244,16 +253,64 @@ namespace sw::editor
         const size_t previousCount = _listSelectedObject.size();
         _listSelectedObject.erase(
             std::remove_if( _listSelectedObject.begin(), _listSelectedObject.end(),
-                            []( GameObjectHandle handle )
-        { return editor::findGameObject( handle ) == nullptr; } ),
+                            [this]( GameObjectHandle handle )
+        { return findObject( handle ) == nullptr; } ),
             _listSelectedObject.end() );
 
         if ( _listSelectedObject.size() != previousCount )
             notifyChanged();
     }
 
+    void EditorSelection::bindPreviewScope( Scene& scene, CommandStack& stack )
+    {
+        _listSelectedObject.clear();
+        _pPreviewScene = &scene;
+        _pPreviewStack = &stack;
+    }
+
+    void EditorSelection::unbindPreviewScope()
+    {
+        if ( editor::getFocusedSelection() == this )
+            editor::setFocusedSelection( nullptr );
+        _listSelectedObject.clear();
+        _pPreviewScene = nullptr;
+        _pPreviewStack = nullptr;
+    }
+
+    Scene* EditorSelection::getScene() const
+    {
+        return _pPreviewScene != nullptr ? _pPreviewScene : editor::getActiveScene();
+    }
+
+    GameObject* EditorSelection::findObject( GameObjectHandle handle ) const
+    {
+        if ( _pPreviewScene == nullptr )
+            return editor::findGameObject( handle );
+        const GameObjectManager* pManager = _pPreviewScene->getObjectManager();
+        return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveGameObject( handle ) : nullptr;
+    }
+
+    void EditorSelection::recordModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label ) const
+    {
+        if ( _pPreviewScene == nullptr )
+        {
+            EditorTransaction::recordModify( &obj, before, after, label );
+            return;
+        }
+        // 창의 스택에 남긴다 — 명령은 기록할 때의 씬 키를 기억해 활성 씬이 바뀌어도 그 미리보기 씬에서 되돌린다(`ObjectUndoUtil`).
+        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
+        if ( pSceneManager == nullptr )
+        {
+            SW_LOG_ERROR( "No SceneManager - the edit of '%#' in the preview scene is not recorded", obj.getName().c_str() );
+            return;
+        }
+        _pPreviewStack->push( ObjectUndoUtil::makeModify( *_pPreviewStack, *pSceneManager, obj, before, after, label ) );
+    }
+
     void EditorSelection::notifyChanged()
     {
+        // 바뀐 선택이 겨누는 선택이 된다 — 미리보기 창에서 고르면 그 창의 것, 메인에서 고르면 메인으로 돌아온다.
+        editor::setFocusedSelection( isPreviewScope() ? this : nullptr );
         if ( _onSelectionChanged.isBound() )
             _onSelectionChanged();
     }

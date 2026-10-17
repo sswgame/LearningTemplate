@@ -121,8 +121,8 @@ namespace sw
             static constexpr const utf8* kNestedOverrides = "overrides";
             static constexpr const utf8* kNestedList      = "_listPrefabInstance";
             static constexpr uint32      kBinMagic        = FourCcUtil::make( "PFB2" );
-            /** @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙는다. 다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다). */
-            static constexpr uint32 kBinVersion = 1;
+            /** @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙는다. 다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다). */
+            static constexpr uint32 kBinVersion = 2;
 
             static string makePrefabCacheKey( string_view assetRelativePath )
             {
@@ -278,18 +278,25 @@ namespace sw
                 return node._prefabGuid;
             }
 
-            /** @brief 노드 목록이 규칙(부모가 자기보다 앞, 원본 경로나 GUID 나 펼친 상태가 있음)을 지키면 true 입니다. 어긴 노드를 오류로 알립니다. */
+            /**
+             * @brief 노드 목록이 규칙(부모가 자기보다 앞, 원본 경로나 GUID 나 펼친 상태가 있음, 펼친 노드는 부품 경로가 있고 저작본 노드는 없음)을 지키면 true 입니다.
+             *        어긴 노드를 오류로 알립니다.
+             */
             static bool areNodesWellFormed( const vector<PrefabInstanceNode>& listNode, string_view sourceName )
             {
                 for ( size_t index = 0; index < listNode.size(); ++index )
                 {
-                    const PrefabInstanceNode& node       = listNode[index];
-                    const bool                bParentOk  = -1 <= node._parentIndex && node._parentIndex < static_cast<int32>( index );
-                    const bool                bHasSource = node.isResolved() || node._prefabPath.empty() == false || node._prefabGuid.empty() == false;
-                    if ( bParentOk && bHasSource )
+                    const PrefabInstanceNode& node        = listNode[index];
+                    const bool                bParentOk   = -1 <= node._parentIndex && node._parentIndex < static_cast<int32>( index );
+                    const bool                bHasSource  = node.isResolved() || node._prefabPath.empty() == false || node._prefabGuid.empty() == false;
+                    const bool                bPartPathOk = node.isResolved() != node._partPath.empty();
+                    const bool                bWellFormed = bParentOk && bHasSource && bPartPathOk;
+                    if ( bWellFormed )
                         continue;
-                    SW_LOG_ERROR( "Nested prefab instance #%# ('%#') in '%#' has %# - the prefab is not loaded", static_cast<uint32>( index ), node._name, sourceName,
-                                  bParentOk ? "no prefab path" : "a parent that does not come before it" );
+                    const utf8* pProblem = bParentOk == false  ? "a parent that does not come before it"
+                                         : bHasSource == false ? "no prefab path"
+                                                               : "a part path only a flattened (cooked) node may have, or a flattened node without one";
+                    SW_LOG_ERROR( "Nested prefab instance #%# ('%#') in '%#' has %# - the prefab is not loaded", static_cast<uint32>( index ), node._name, sourceName, pProblem );
                     return false;
                 }
                 return true;
@@ -436,6 +443,57 @@ namespace sw
                     SW_LOG_WARNING( "Nested prefab instance '%#' could not be attached to '%#'", pChild->getName().c_str(), pParent->getName().c_str() );
             }
 
+            /** @brief 부품 경로 @p parentPath 아래 토막 @p key 를 이은 경로입니다(`PrefabPartOverride`). */
+            static string joinPartPath( string_view parentPath, string_view key )
+            {
+                string path{ parentPath };
+                if ( path.empty() == false )
+                    path += "/";
+                path += key;
+                return path;
+            }
+
+            /** @brief @p listPartOverride 가운데 경로가 @p partPath 인 것을 문서 순서대로 @p inoutStateXML 에 얹습니다. 얹지 못하면 false 입니다. */
+            [[nodiscard]] static bool applyPartOverrides( const vector<PrefabPartOverride>& listPartOverride, const string& partPath, string& inoutStateXML )
+            {
+                for ( const PrefabPartOverride& part : listPartOverride )
+                {
+                    if ( part._partPath != partPath )
+                        continue;
+                    string merged;
+                    if ( PrefabOverrides::makeInstanceState( inoutStateXML, part._overrideXML, {}, merged ) == false )
+                        return false;
+                    inoutStateXML = std::move( merged );
+                }
+                return true;
+            }
+
+            /**
+             * @brief 노드가 자기 부품 아래에 덮어쓴 것 @p inoutListInner(부품 @p partPath 에서 잰 경로)를 바깥 루트에서 잰 경로로 바꾸고, 그 뒤에 바깥 것 @p listEnclosingPart 를 잇습니다.
+             * @details 안쪽이 앞이라 같은 부품이면 바깥 것이 나중에 얹혀 이긴다(유니티: 씬 인스턴스의 오버라이드가 바깥 프리팹의 오버라이드를 이긴다).
+             */
+            static void prependInnerParts( string_view partPath, vector<PrefabPartOverride>& inoutListInner, const vector<PrefabPartOverride>& listEnclosingPart )
+            {
+                for ( PrefabPartOverride& inner : inoutListInner )
+                {
+                    inner._partPath = joinPartPath( partPath, inner._partPath );
+                }
+                inoutListInner.insert( inoutListInner.end(), listEnclosingPart.begin(), listEnclosingPart.end() );
+            }
+
+            /** @brief @p rootObjectID 인스턴스가 스폰한 부품과 그 부품들이 스폰한 부품을 모두 모읍니다(부모 부품이 앞). */
+            static void collectPartTree( const PrefabInstanceRegistry& registry, uint64 rootObjectID, vector<uint64>& outListObjectID )
+            {
+                outListObjectID.clear();
+                registry.collectNestedPartsOf( rootObjectID, outListObjectID );
+                vector<uint64> listChildPart;
+                for ( size_t index = 0; index < outListObjectID.size(); ++index )
+                {
+                    registry.collectNestedPartsOf( outListObjectID[index], listChildPart );
+                    outListObjectID.insert( outListObjectID.end(), listChildPart.begin(), listChildPart.end() );
+                }
+            }
+
             /** @brief 노드로 담은 부품 오브젝트와 그 노드 인덱스입니다(`captureNestedParts`). */
             struct NestedPartEntry
             {
@@ -510,7 +568,12 @@ namespace sw
                     }
                     ObjectSaveOptions options{};
                     options._bOmitExternalParent = true; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
-                    if ( PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML ) == false )
+                    // 부품 아래 부품(원본이 스폰하는 것)을 고친 것은 노드의 `<Part>` 로 싣는다 — 노드로 담지 않으므로 싣지 않으면 Apply 가 버린다.
+                    vector<PrefabPartOverride> listDeepPart;
+                    const bool                 bOverridesMade =
+                        PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML ) &&
+                        pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
+                    if ( bOverridesMade == false )
                     {
                         SW_LOG_WARNING( "Overrides of nested prefab instance '%#' could not be computed - it is not written to the prefab", node._name );
                         continue;
@@ -526,6 +589,11 @@ namespace sw
 namespace sw
 {
     SW_LOG_CALLER( "PrefabAsset" );
+
+    string PrefabInstanceNode::makePartKey( size_t index ) const
+    {
+        return isResolved() ? _partPath : to_string( static_cast<uint64>( index ) );
+    }
 
     PrefabAsset::PrefabAsset()
         : _name{}
@@ -681,7 +749,7 @@ namespace sw
         vector<PrefabInstanceNode> listNode( nodeCount );
         for ( PrefabInstanceNode& node : listNode )
         {
-            arch >> node._name >> node._prefabPath >> node._prefabGuid >> node._attachKey >> node._overrideXML >> node._resolvedStateXML >> node._parentIndex;
+            arch >> node._name >> node._prefabPath >> node._prefabGuid >> node._attachKey >> node._overrideXML >> node._resolvedStateXML >> node._partPath >> node._parentIndex;
         }
         if ( arch.isError() )
         {
@@ -828,7 +896,7 @@ namespace sw
         arch << static_cast<uint32>( _listNestedInstance.size() );
         for ( const PrefabInstanceNode& node : _listNestedInstance )
         {
-            arch << node._name << node._prefabPath << node._prefabGuid << node._attachKey << node._overrideXML << node._resolvedStateXML << node._parentIndex;
+            arch << node._name << node._prefabPath << node._prefabGuid << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex;
         }
 
         FileUtil::ensureParentDirectoryExists( absPath );
@@ -1223,7 +1291,7 @@ namespace sw
             }
             pGameObject->setName( hashed_string( string( instanceName ).c_str() ) );
         }
-        (void)spawnNestedInstances( pGameObject, asset ); // 건너뛴 노드는 노드마다 경고했다 — 바깥 인스턴스는 남는다
+        (void)spawnNestedInstances( pGameObject, asset, {} ); // 건너뛴 노드는 노드마다 경고했다 — 바깥 인스턴스는 남는다
         return true;
     }
 
@@ -1264,7 +1332,21 @@ namespace sw
         return true;
     }
 
-    uint32 PrefabCache::spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset )
+    uint32 PrefabCache::spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride )
+    {
+        vector<string> listSpawnedPath;
+        const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listPartOverride, listSpawnedPath );
+        for ( const PrefabPartOverride& part : listPartOverride )
+        {
+            if ( std::find( listSpawnedPath.begin(), listSpawnedPath.end(), part._partPath ) == listSpawnedPath.end() )
+                SW_LOG_WARNING( "Override of nested prefab part '%#' in '%#' is dropped - '%#' no longer spawns that part", part._partPath,
+                                pRoot != nullptr ? pRoot->getName().c_str() : "?", asset.getName() );
+        }
+        return createdCount;
+    }
+
+    uint32 PrefabCache::spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
+                                                   vector<string>& inoutListSpawnedPath )
     {
         const vector<PrefabInstanceNode>& listNode = asset.getNestedInstances();
         GameObjectManager*                pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;
@@ -1299,6 +1381,13 @@ namespace sw
             const PrefabAsset* pSource = nullptr;
             if ( makeNestedInstanceState( node, state, &pSource ) == false )
                 continue;
+            const string partKey  = node.makePartKey( index );
+            const string partPath = PrefabAssetInternal::joinPartPath( rootPath, partKey );
+            if ( PrefabAssetInternal::applyPartOverrides( listPartOverride, partPath, state ) == false )
+            {
+                SW_LOG_WARNING( "Overrides of nested prefab part '%#' (%#) could not be applied - it is skipped", partPath, node._prefabPath );
+                continue;
+            }
 
             const string& sourceName = pSource != nullptr ? pSource->getName() : node._name;
             const utf8*   pName      = node._name.empty() == false ? node._name.c_str() : sourceName.c_str();
@@ -1314,18 +1403,78 @@ namespace sw
                 continue;
             }
             PrefabAssetInternal::attachNestedInstance( pPart, pParent, node._attachKey );
-            registry.registerNestedPart( pPart->getObjectID(), pRoot->getObjectID(), node._prefabPath );
+            registry.registerNestedPart( pPart->getObjectID(), pRoot->getObjectID(), node._prefabPath, partKey );
+            inoutListSpawnedPath.push_back( partPath );
             listCreated[index] = pPart;
             ++createdCount;
 
-            // 원본 노드면 원본의 중첩 인스턴스를 이 부품 아래에 스폰한다(펼친 노드는 그것이 뒤 노드로 이미 있다).
+            // 원본 노드면 원본의 중첩 인스턴스를 이 부품 아래에 스폰한다(펼친 노드는 그것이 뒤 노드로 이미 있다). 노드가 부품 아래에 덮어쓴 것(`<Part>`)을
+            // 바깥 것보다 앞에 둔다 — 같은 부품이면 바깥 것이 나중에 얹혀 이긴다.
             if ( pSource != nullptr && pSource->getNestedInstances().empty() == false )
             {
+                vector<PrefabPartOverride> listInnerPart;
+                if ( PrefabOverrides::collectPartOverrides( node._overrideXML, listInnerPart ) == false )
+                    listInnerPart.clear(); // 오류는 알렸다 — 안쪽 덮어쓴 것 없이 스폰한다
                 const PrefabAssetInternal::PathStackScope scope{ spawnStack, sourceKey };
-                createdCount += spawnNestedInstances( pPart, *pSource );
+                if ( listInnerPart.empty() )
+                {
+                    createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listPartOverride, inoutListSpawnedPath );
+                    continue;
+                }
+                PrefabAssetInternal::prependInnerParts( partPath, listInnerPart, listPartOverride );
+                createdCount += spawnNestedInstancesUnder( pPart, *pSource, partPath, listInnerPart, inoutListSpawnedPath );
             }
         }
         return createdCount;
+    }
+
+    bool PrefabCache::collectPartOverrides( const GameObject& root, const PrefabAsset& asset, vector<PrefabPartOverride>& outListPartOverride )
+    {
+        outListPartOverride.clear();
+        GameObjectManager* pManager = root.getManager();
+        if ( asset.getNestedInstances().empty() || pManager == nullptr )
+            return true;
+        const PrefabInstanceRegistry& registry = pManager->getSubsystem<PrefabInstanceRegistry>();
+        vector<uint64>                listPartID;
+        PrefabAssetInternal::collectPartTree( registry, root.getObjectID(), listPartID );
+        if ( listPartID.empty() )
+            return true;
+
+        // 기준: 같은 프리팹을 덮어쓴 것 없이 씬 밖에서 스폰한 부품(스폰과 같은 식이라 고치지 않은 부품은 차이가 없다).
+        GameObjectManager scratch;
+        GameObject*       pScratchRoot = scratch.createGameObject( hashed_string( asset.getName().empty() ? PrefabAssetInternal::kDefaultInstance : asset.getName().c_str() ) );
+        if ( pScratchRoot == nullptr || applySpawnState( pScratchRoot, asset, asset.getName() ) == false )
+            return false;
+        const PrefabInstanceRegistry& scratchRegistry = scratch.getSubsystem<PrefabInstanceRegistry>();
+        vector<uint64>                listScratchPartID;
+        PrefabAssetInternal::collectPartTree( scratchRegistry, pScratchRoot->getObjectID(), listScratchPartID );
+        ObjectSaveOptions options{};
+        options._bOmitExternalParent = true; // 부모는 노드의 자리가 정한다
+        unordered_map<string, string> mapBaseState;
+        for ( const uint64 scratchPartID : listScratchPartID )
+        {
+            string partPath;
+            if ( scratchRegistry.makePartPath( scratchPartID, pScratchRoot->getObjectID(), partPath ) )
+                mapBaseState[partPath] = ObjectStateSerializer::saveToXMLString( scratch.findGameObjectByID( scratchPartID ), options );
+        }
+
+        for ( const uint64 partID : listPartID )
+        {
+            const GameObject* pPart       = pManager->findGameObjectByID( partID );
+            const bool        bLivingPart = pPart != nullptr && pPart->isPendingDestroy() == false && registry.isAttachedNestedPart( pPart );
+            string            partPath;
+            if ( bLivingPart == false || registry.makePartPath( partID, root.getObjectID(), partPath ) == false )
+                continue; // 지운 · 옮긴 부품, 키 없이 들인 부품은 이 인스턴스의 덮어쓴 것이 아니다
+            const auto baseIt = mapBaseState.find( partPath );
+            if ( baseIt == mapBaseState.end() )
+                continue; // 프리팹이 더는 스폰하지 않는 부품 — 다음 로드에 다시 생기지 않는다
+            PrefabPartOverride part{ partPath, {} };
+            if ( PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseIt->second, part._overrideXML ) == false )
+                return false;
+            if ( part._overrideXML.empty() == false )
+                outListPartOverride.push_back( std::move( part ) );
+        }
+        return true;
     }
 
     bool PrefabCache::flattenNestedInstances( PrefabAsset& inoutAsset )
@@ -1333,12 +1482,13 @@ namespace sw
         if ( inoutAsset.getNestedInstances().empty() )
             return true;
         vector<PrefabInstanceNode> listFlat;
-        if ( appendFlattenedNodes( inoutAsset, -1, listFlat ) == false )
+        if ( appendFlattenedNodes( inoutAsset, -1, {}, {}, listFlat ) == false )
             return false;
         return inoutAsset.setNestedInstances( std::move( listFlat ) );
     }
 
-    bool PrefabCache::appendFlattenedNodes( const PrefabAsset& asset, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode )
+    bool PrefabCache::appendFlattenedNodes( const PrefabAsset& asset, int32 parentIndex, string_view parentPath, const vector<PrefabPartOverride>& listPartOverride,
+                                            vector<PrefabInstanceNode>& inoutListNode )
     {
         const vector<PrefabInstanceNode>&     listNode = asset.getNestedInstances();
         vector<int32>                         listFlatIndex( listNode.size(), -1 );
@@ -1347,11 +1497,18 @@ namespace sw
         {
             const PrefabInstanceNode& node       = listNode[index];
             const int32               flatParent = node._parentIndex < 0 ? parentIndex : listFlatIndex[static_cast<size_t>( node._parentIndex )];
+            const string              partPath   = PrefabAssetInternal::joinPartPath( parentPath, node.makePartKey( index ) );
             if ( node.isResolved() )
             {
                 PrefabInstanceNode copied = node;
                 copied._parentIndex       = flatParent;
-                listFlatIndex[index]      = static_cast<int32>( inoutListNode.size() );
+                copied._partPath          = partPath;
+                if ( PrefabAssetInternal::applyPartOverrides( listPartOverride, partPath, copied._resolvedStateXML ) == false )
+                {
+                    SW_LOG_ERROR( "Overrides of nested prefab part '%#' in '%#' could not be applied - the prefab is not flattened", partPath, asset.getName() );
+                    return false;
+                }
+                listFlatIndex[index] = static_cast<int32>( inoutListNode.size() );
                 inoutListNode.push_back( std::move( copied ) );
                 continue;
             }
@@ -1375,8 +1532,13 @@ namespace sw
             flat._prefabPath  = node._prefabPath;
             flat._prefabGuid  = node._prefabGuid;
             flat._attachKey   = node._attachKey;
+            flat._partPath    = partPath;
             flat._parentIndex = flatParent;
-            if ( PrefabOverrides::makeInstanceState( baseState, node._overrideXML, flat._name, flat._resolvedStateXML ) == false || flat.isResolved() == false )
+            vector<PrefabPartOverride> listInnerPart;
+            const bool                 bStateMade = PrefabOverrides::makeInstanceState( baseState, node._overrideXML, flat._name, flat._resolvedStateXML ) &&
+                                    PrefabAssetInternal::applyPartOverrides( listPartOverride, partPath, flat._resolvedStateXML ) &&
+                                    PrefabOverrides::collectPartOverrides( node._overrideXML, listInnerPart );
+            if ( bStateMade == false || flat.isResolved() == false )
             {
                 SW_LOG_ERROR( "Overrides of nested prefab instance '%#' in '%#' could not be applied - the prefab is not flattened", flat._name, asset.getName() );
                 return false;
@@ -1385,8 +1547,10 @@ namespace sw
             listFlatIndex[index]  = flatIndex;
             inoutListNode.push_back( std::move( flat ) );
 
+            // 노드가 부품 아래에 덮어쓴 것(`<Part>`)은 스폰과 같은 순서(안쪽 먼저, 바깥 것이 이김)로 아래 노드의 펼친 상태에 굽는다.
+            PrefabAssetInternal::prependInnerParts( partPath, listInnerPart, listPartOverride );
             const PrefabAssetInternal::PathStackScope scope{ spawnStack, sourceKey };
-            if ( appendFlattenedNodes( *pSource, flatIndex, inoutListNode ) == false )
+            if ( appendFlattenedNodes( *pSource, flatIndex, partPath, listInnerPart, inoutListNode ) == false )
                 return false;
         }
         return true;

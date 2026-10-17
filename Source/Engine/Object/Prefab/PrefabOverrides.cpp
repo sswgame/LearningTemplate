@@ -31,6 +31,8 @@ namespace sw
             static constexpr const utf8* kAdd           = "Add";
             static constexpr const utf8* kKey           = "key";
             static constexpr const utf8* kAfter         = "after";
+            static constexpr const utf8* kPart          = "Part";
+            static constexpr const utf8* kPath          = "path";
             static constexpr const utf8* kBaseName      = "PrefabBase";
 
             /** @brief 컴포넌트 원소 하나와 그 키(`이름#n`)입니다. */
@@ -479,5 +481,73 @@ namespace sw
         PrefabOverridesInternal::appendMergedChildren( outRoot, baseRoot, objectOverride, &writeList );
         outStateXML = outRoot.toString();
         return outStateXML.empty() == false;
+    }
+
+    bool PrefabOverrides::appendPartOverrides( string& inoutOverrideXML, const vector<PrefabPartOverride>& listPartOverride )
+    {
+        if ( listPartOverride.empty() )
+            return true;
+        XMLDocument outDoc;
+        XMLNode     outRoot;
+        if ( StringUtil::trim( inoutOverrideXML ).empty() )
+        {
+            outRoot = outDoc.appendRoot( kRootName );
+        }
+        else
+        {
+            if ( outDoc.parse( inoutOverrideXML ) == false )
+                return false;
+            outRoot = outDoc.getRoot( kRootName, false );
+        }
+        if ( outRoot.isValid() == false )
+            return false;
+
+        for ( const PrefabPartOverride& part : listPartOverride )
+        {
+            XMLDocument partDoc;
+            if ( part._partPath.empty() || partDoc.parse( part._overrideXML ) == false )
+                return false;
+            const XMLNode partRoot = partDoc.getRoot( kRootName, false );
+            if ( partRoot.isValid() == false )
+                return false;
+            XMLNode entry = outRoot.appendChild( PrefabOverridesInternal::kPart );
+            entry.appendAttribute( PrefabOverridesInternal::kPath, part._partPath );
+            entry.appendClone( partRoot );
+        }
+        inoutOverrideXML = outRoot.toString();
+        return true;
+    }
+
+    bool PrefabOverrides::collectPartOverrides( string_view overrideXML, vector<PrefabPartOverride>& outListPartOverride )
+    {
+        outListPartOverride.clear();
+        if ( StringUtil::trim( overrideXML ).empty() )
+            return true;
+        XMLDocument doc;
+        if ( doc.parse( overrideXML ) == false )
+        {
+            SW_LOG_ERROR( "Prefab overrides could not be parsed - nested part overrides are not read" );
+            return false;
+        }
+        const XMLNode root = doc.getRoot( kRootName, false );
+        if ( root.isValid() == false )
+        {
+            SW_LOG_ERROR( "Prefab overrides have no <%#> root - nested part overrides are not read", kRootName );
+            return false;
+        }
+        for ( XMLNode entry = root.findChild( PrefabOverridesInternal::kPart, false ); entry.isValid();
+              entry         = entry.findNextSibling( PrefabOverridesInternal::kPart, false ) )
+        {
+            const utf8*   pPath = entry.findAttribute( PrefabOverridesInternal::kPath, false );
+            const XMLNode body  = PrefabOverridesInternal::findChildElement( entry, kRootName );
+            if ( StringUtil::isNullOrEmpty( pPath ) || body.isValid() == false )
+            {
+                SW_LOG_ERROR( "A nested part override has no path or no <%#> body - nested part overrides are not read", kRootName );
+                outListPartOverride.clear();
+                return false;
+            }
+            outListPartOverride.push_back( PrefabPartOverride{ string{ pPath }, body.toString() } );
+        }
+        return true;
     }
 } // namespace sw

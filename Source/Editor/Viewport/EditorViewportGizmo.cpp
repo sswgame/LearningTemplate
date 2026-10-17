@@ -25,15 +25,18 @@ namespace sw::editor
         , _listObject{}
         , _listUndo{}
         , _listRelativeWorld{}
+        , _pTarget{ nullptr }
         , _arrGroupMatrix{}
         , _lastDrawFrame{ -1 }
         , _lastObjectCount{ 0 }
         , _bTracking{ SW_FALSE }
+        , _bHovered{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
-    void EditorViewportGizmo::draw( const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize, const ViewportToolbarSettings& settings )
+    void EditorViewportGizmo::draw( EditorSelection& selection, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
+                                    const ViewportToolbarSettings& settings )
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
@@ -44,8 +47,15 @@ namespace sw::editor
             return;
         }
 
+        // 다른 선택으로 넘어왔으면 앞 드래그를 그 선택의 범위에 정리한다.
+        if ( _pTarget != &selection )
+        {
+            endDrag();
+            _pTarget = &selection;
+        }
+        _bHovered = SW_FALSE;
         vector<GameObject*> listSelected;
-        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+        selection.getSelectedObjects( listSelected );
         vector<GameObject*> listGizmo;
         listGizmo.reserve( listSelected.size() );
         for ( GameObject* pRaw : listSelected )
@@ -118,7 +128,8 @@ namespace sw::editor
 
             // 표면 붙이기는 월드 위치와 월드 Y 스케일로 한다. 로컬로 분해한 값을 넘기면 부모가 있을 때 다른 오브젝트의 월드 윗면과
             // 로컬 높이를 비교하게 된다.
-            if ( op == ImGuizmo::TRANSLATE && settings._bSurfaceSnap )
+            const bool bSurfaceSnap = op == ImGuizmo::TRANSLATE && settings._bSurfaceSnap && selection.isPreviewScope() == false;
+            if ( bSurfaceSnap )
             {
                 float3 worldTranslation = newWorldMat.getTranslation();
                 EditorSceneCommands::snapTranslationToSurface( pRaw, worldTranslation );
@@ -129,6 +140,7 @@ namespace sw::editor
             EditorSceneCommands::applyWorldTransform( pRaw, newWorldMat );
         }
 
+        _bHovered = ImGuizmo::IsOver() ? SW_TRUE : SW_FALSE;
         if ( ImGuizmo::IsUsing() )
         {
             // 클릭 없이 시작된 드래그(스냅샷이 없다)는 대상만 기억한다. 커밋할 "이전" 값이 없으므로 끝에서 버린다.
@@ -150,16 +162,16 @@ namespace sw::editor
         if ( _bTracking == SW_TRUE && EditorPlaySession::areSceneEditsAllowed() )
         {
             // 단일 드래그는 스냅샷을 찍은 그 오브젝트에만 커밋한다. 핸들로 다시 찾으며, 지워졌으면 버린다.
-            GameObject* pTracked = editor::findGameObject( _object );
+            GameObject* pTracked = findTracked( _object );
             if ( pTracked != nullptr && _undoBefore._xml.empty() == false )
-                EditorSceneCommands::commitModify( pTracked, _undoBefore, "Gizmo Transform" );
+                commitDrag( *pTracked, _undoBefore );
             // 그룹 드래그: 살아 있는 대상마다 커밋한다.
             const uint32 count = static_cast<uint32>( _listObject.size() );
             for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
             {
-                GameObject* pObj = editor::findGameObject( _listObject[objectIndex] );
+                GameObject* pObj = findTracked( _listObject[objectIndex] );
                 if ( pObj != nullptr )
-                    EditorSceneCommands::commitModify( pObj, _listUndo[objectIndex], "Gizmo Transform" );
+                    commitDrag( *pObj, _listUndo[objectIndex] );
             }
         }
         _undoBefore = ObjectSnapshot{};
@@ -168,6 +180,20 @@ namespace sw::editor
         _listUndo.clear();
         _listRelativeWorld.clear();
         _bTracking = SW_FALSE;
+    }
+
+    GameObject* EditorViewportGizmo::findTracked( GameObjectHandle handle ) const
+    {
+        return _pTarget != nullptr ? _pTarget->findObject( handle ) : nullptr;
+    }
+
+    void EditorViewportGizmo::commitDrag( GameObject& obj, const ObjectSnapshot& before ) const
+    {
+        // 메인 선택은 씬 명령(되돌리기 + 씬 dirty), 미리보기 선택은 그 창의 스택이다.
+        if ( _pTarget != nullptr && _pTarget->isPreviewScope() )
+            _pTarget->recordModify( obj, before, EditorTransaction::captureSnapshot( &obj ), "Gizmo Transform" );
+        else
+            EditorSceneCommands::commitModify( &obj, before, "Gizmo Transform" );
     }
 
     void EditorViewportGizmo::manipulateGroup( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo,
@@ -214,7 +240,7 @@ namespace sw::editor
             const uint32 count = static_cast<uint32>( _listObject.size() );
             for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
             {
-                GameObject* pObj = editor::findGameObject( _listObject[objectIndex] );
+                GameObject* pObj = findTracked( _listObject[objectIndex] );
                 if ( pObj == nullptr )
                     continue;
                 SceneComponent* pSc = pObj->getPrimarySceneComponent();
@@ -224,6 +250,7 @@ namespace sw::editor
             }
         }
 
+        _bHovered = ImGuizmo::IsOver() ? SW_TRUE : SW_FALSE;
         if ( ImGuizmo::IsUsing() )
             _bTracking = SW_TRUE;
         else if ( _bTracking == SW_TRUE )
