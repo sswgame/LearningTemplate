@@ -22,7 +22,7 @@
   뿌린다(쇼케이스 Debug 약 0.86 s) — 바뀐 셀만 다시 계산한다. 내비는 런타임 내비메시 타일만 다시 굽는다(에디터가 구운 내비 에셋은 다시 굽기 명령으로). ⓓ 에디터 편집 모드에서도 틱이 남은 청크를
   만드는지 확인하지 않았다(브러시 한 번은 쓰기에서 끝난다). ⓔ 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로 지형을 훑는다(측정 안 함).
 
-- `D2-6` [기능] **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — UV 스크롤 애니메이션(`uvAnimation*`) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) ·
+- `D2-6` [기능] **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — UV 스크롤 애니메이션(`uvAnimation*`) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다 — 셋째 타깃(셰이딩 모델 ID · 그림자색 · 시프트 · 계단 · 그림자 받기)과 에뮬 백엔드의 엔진 텍스처 칸 다섯째 · 입력 역할 · G버퍼 PSO 의 타깃 셋이 필요해 빌드로 확인하는 단위로 남겼다) ·
   스킨 · 모프 메시의 탄젠트(스키닝 · 모프 컴퓨트가 위치 · 노멀만 돌려 노멀 맵이 레스트 탄젠트를 쓴다 — `GPUMorphVertex` 에 탄젠트 칸이 필요하다).
   UV 스크롤은 VRM 머티리얼 임포터(`Source/Editor`)의 매핑과 같이 바꾼다.
 
@@ -36,7 +36,8 @@
 - `D2-10` [기능] **뷰포트 보기 모드의 남은 것**(2026-10-14, `RenderViewMode` — 언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다). `LightingOnly` 는 들어갔다 —
   `toon` · `sprite2dlit` 포워드 경로까지 회색으로 바꾸고 4 백엔드 그림(`RenderPassGPUTest.ViewModesProduceDistinctPictures`, 포워드 · 디퍼드)은 2026-10-17 Debug 로 통과했다.
   Shipping 베이크(쿠킹한 LightingOnly 변형으로 Shipping hostgpu)는 Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
-  안 한 것: Roughness / Metallic 버퍼 보기(G버퍼에 그 칸이 없다 — 칸을 늘리거나 패스를 새로 만들어야 한다), Shaded Wireframe(패스가 둘 필요), Light Complexity · Mipmaps(그리는 경로가 새로 필요).
+  Roughness · Metallic · Mipmaps 는 셰이더 보기 모드로 들어갔다(`swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다 — 금속도 칸은 PBR(`D2-12`)과 함께 생긴다).
+  안 한 것: Shaded Wireframe(패스가 둘 필요), Light Complexity(디퍼드는 G버퍼 패스가 빛 목록을 보지 않는다 — 조명 패스에 보기 모드 변형이 필요).
 
 - `D2-11` [기능] **파티클 · VFX 시스템이 없다.** 언리얼 Niagara · 유니티 VFX Graph · Godot GPUParticles 에 해당한다. 코드에서 파티클 시스템을 찾지 못했고, VFX 는 `D4-9` 의 큼 묶음 순위 목록에만 있다(설계 없음).
   먼저 설계 문서를 쓴다(`design-reviewer` 검토): 방출기 · 모듈 데이터 형식(데이터 주도, 에셋), CPU 대 GPU 시뮬레이션 경계, 렌더 경로(빌보드 · 메시 · 리본, 반투명 패스와 정렬), 물리 · 충돌 연동, 에디터 미리보기 창(`EditorPreviewPanel`) 재사용, 풀 · 예산. 스크립팅 층 없이 C++ 모듈과 핫리로드가 확장 경로다(결정 기록 2절).

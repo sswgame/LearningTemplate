@@ -829,9 +829,80 @@ float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
  *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그래서 엔진이 머티리얼 텍스처를
  *          t12..t27 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
  */
+#if defined( SW_VIEWMODE_MIPMAPS )
+/**
+ * @brief 보기 모드 Mipmaps — 머티리얼 텍스처를 읽는 밉 단계를 색으로 바꾼다(유니티 Scene 뷰 Mipmaps 와 같은 목적).
+ * @details 확대(밉 0 보다 작다 — 텍스처 해상도가 모자란다)는 파랑, 밉 0 은 초록, 1 노랑, 2 주황, 3 이상 빨강(해상도가 남는다)이다. 텍스처가 없으면 흰색.
+ *          픽셀 셰이더에서만 부른다(CalculateLevelOfDetail 은 미분이 필요하다).
+ */
+float4 swComputeViewModeMipColor( float lod )
+{
+	if ( lod < -0.5f )
+		return float4( 0.2f, 0.4f, 1.0f, 1.0f );
+	const float4 arrColor[4] = { float4( 0.2f, 0.9f, 0.2f, 1.0f ), float4( 1.0f, 0.95f, 0.2f, 1.0f ), float4( 1.0f, 0.55f, 0.1f, 1.0f ), float4( 1.0f, 0.15f, 0.1f, 1.0f ) };
+	return arrColor[min( uint( lod + 0.5f ), 3u )];
+}
+float4 swSampleMaterialTextureMipColor( uint index, float2 uv )
+{
+#if defined( SW_NATIVE_BINDLESS )
+	if ( index == kInvalidIndex )
+		return float4( 1, 1, 1, 1 );
+	const uint slot = swBindlessTextureSlot( index );
+#if defined( __spirv__ )
+	return swComputeViewModeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv ) );
+#else
+	return swComputeViewModeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( g_SwSampler0, uv ) );
+#endif
+#else
+	switch ( index )
+	{
+#if defined( DX11 )
+		case 0u: return swComputeViewModeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 1u: return swComputeViewModeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 2u: return swComputeViewModeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 3u: return swComputeViewModeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 4u: return swComputeViewModeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 5u: return swComputeViewModeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 6u: return swComputeViewModeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 7u: return swComputeViewModeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 8u: return swComputeViewModeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 9u: return swComputeViewModeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 10u: return swComputeViewModeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 11u: return swComputeViewModeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 12u: return swComputeViewModeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 13u: return swComputeViewModeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 14u: return swComputeViewModeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+		case 15u: return swComputeViewModeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+#else
+		case 0u: return swComputeViewModeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwMaterialTex0Sampler, uv ) );
+		case 1u: return swComputeViewModeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwMaterialTex1Sampler, uv ) );
+		case 2u: return swComputeViewModeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwMaterialTex2Sampler, uv ) );
+		case 3u: return swComputeViewModeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwMaterialTex3Sampler, uv ) );
+		case 4u: return swComputeViewModeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwMaterialTex4Sampler, uv ) );
+		case 5u: return swComputeViewModeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwMaterialTex5Sampler, uv ) );
+		case 6u: return swComputeViewModeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwMaterialTex6Sampler, uv ) );
+		case 7u: return swComputeViewModeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwMaterialTex7Sampler, uv ) );
+		case 8u: return swComputeViewModeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwMaterialTex8Sampler, uv ) );
+		case 9u: return swComputeViewModeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwMaterialTex9Sampler, uv ) );
+		case 10u: return swComputeViewModeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwMaterialTex10Sampler, uv ) );
+		case 11u: return swComputeViewModeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwMaterialTex11Sampler, uv ) );
+		case 12u: return swComputeViewModeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwMaterialTex12Sampler, uv ) );
+		case 13u: return swComputeViewModeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwMaterialTex13Sampler, uv ) );
+		case 14u: return swComputeViewModeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwMaterialTex14Sampler, uv ) );
+		case 15u: return swComputeViewModeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwMaterialTex15Sampler, uv ) );
+#endif
+		default: return float4( 1, 1, 1, 1 );
+	}
+#endif
+}
+#endif
+
 #if defined( SW_NATIVE_BINDLESS )
 float4 swSampleMaterialTexture( uint index, float2 uv )
 {
+#if defined( SW_VIEWMODE_MIPMAPS )
+	return swSampleMaterialTextureMipColor( index, uv );
+#endif
 	// 네이티브 bindless: index 는 배열 전역 인덱스다. 샘플러는 머티리얼 텍스처 샘플러(선형 · 랩)다.
 	if ( index == kInvalidIndex )
 		return float4( 1, 1, 1, 1 );
@@ -840,6 +911,9 @@ float4 swSampleMaterialTexture( uint index, float2 uv )
 #else
 float4 swSampleMaterialTexture( uint index, float2 uv )
 {
+#if defined( SW_VIEWMODE_MIPMAPS )
+	return swSampleMaterialTextureMipColor( index, uv );
+#endif
 	// 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
 	// 엔진이 그 서수 순서대로 t12..t27 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
 	// (그건 SM5.1 = D3D12) 리터럴 분기로 고른다 — 칸 수가 16 이라 분기도 16 개다.
@@ -1056,7 +1130,8 @@ struct SwSurfaceOutput
 // 보기 모드 Unlit · Normals · Depth · Overdraw — 조명 · 그림자 · 림 · 반사를 컴파일 아웃한다. 조명을 하는 셰이더는 **모두** 이 매크로로 가르고,
 // 내보낼 색은 swStoreSurface 가 보기 모드대로 바꾼다(swComputeViewModeColor). C++ 정본은 RenderView.h 의 보기 모드 표(kArrRenderViewModeInfo)다 —
 // 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.ViewModesProduceDistinctPictures).
-#if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW )
+#if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW ) || \
+	defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS )
 #define SW_VIEWMODE_SKIPS_LIGHTING 1
 #else
 #define SW_VIEWMODE_SKIPS_LIGHTING 0
@@ -1074,9 +1149,13 @@ static const float kViewModeOverdrawStep = 0.08f;  // Overdraw 보기: 한 번 �
  * @details Overdraw 는 알파 0 을 낸다 — PSO 가 프리멀티플라이 블렌드(색 One / InvSrcAlpha)라 알파 0 이 더하기가 된다.
  *          Depth 는 클립 w(원근 카메라의 뷰 공간 깊이)다. 직교 카메라는 w 가 1 이라 한 색이다.
  */
-float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition )
+float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
-#if defined( SW_VIEWMODE_NORMALS )
+#if defined( SW_VIEWMODE_ROUGHNESS )
+	return float4( saturate( roughness ).xxx, 1.0f );
+#elif defined( SW_VIEWMODE_METALLIC )
+	return float4( saturate( metallic ).xxx, 1.0f );
+#elif defined( SW_VIEWMODE_NORMALS )
 	return float4( normalize( worldNormal ) * 0.5f + 0.5f, 1.0f );
 #elif defined( SW_VIEWMODE_DEPTH )
 	const float viewDepth = swComputeClipPosition( float4( worldPosition, 1.0f ), g_ViewProj ).w;
@@ -1101,15 +1180,16 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
 
 /**
  * @brief 표면을 **패스가 원하는 모양**으로 내보낸다.
+ * @param roughness · metallic 보기 모드 Roughness · Metallic 이 보이는 값이다. 기본값을 두지 않는다 — 셰이더마다 자기 값(머티리얼 칸이나 그 셰이더의 정의)을 넘긴다.
  * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도(알파 = 셰이딩 모델)와 월드 노멀 둘. 노멀 인코딩은 한 군데뿐이어야
  *          한다 — 쓰는 쪽(여기)과 읽는 쪽(deferredlighting)이 어긋나면 조명이 조용히 틀린다.
  *          보기 모드(Unlit · Normals · Depth · Overdraw)의 색도 여기서 바꾼다. G버퍼는 그 색을 알베도 칸에 셰이딩 모델 Unlit 으로 적어
  *          디퍼드 조명 패스가 그대로 낸다 — 조명 패스는 보기 모드 변형이 없다.
  */
-SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition )
+SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
 #if SW_VIEWMODE_SKIPS_LIGHTING
-	litColor = swComputeViewModeColor( litColor, albedo, worldNormal, worldPosition );
+	litColor = swComputeViewModeColor( litColor, albedo, worldNormal, worldPosition, roughness, metallic );
 	albedo   = float4( litColor.rgb, albedo.a );
 #elif defined( SW_VIEWMODE_LIGHTINGONLY )
 	albedo = float4( SW_VIEWMODE_LIGHTINGONLY_ALBEDO, albedo.a );

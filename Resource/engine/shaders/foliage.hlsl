@@ -1,5 +1,9 @@
 #include "lighting.hlsli"
 
+// 보기 모드 Roughness · Metallic 이 보이는 값 — 잎은 거친 유전체다(PBR 칸이 없다).
+static const float kSurfaceRoughness = 1.0f;
+static const float kSurfaceMetallic  = 0.0f;
+
 /**
  * foliage.hlsl — 식생(FoliageComponent). GPU 인스턴스마다 바람에 흔들고, 휘게 하는 구(캐릭터)에서 밀려나고, 먼 인스턴스는 뿌리 쪽으로 줄여 사라지게 한다.
  *
@@ -119,12 +123,12 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	const float3 normal = normalize( input.normal );
 	const float4 albedo = input.color * swSampleMaterialTexture( input.albedoMap, input.uv );
 #if defined( SW_PASS_GBUFFER )
-	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), albedo, normal, input.worldPosition );
+	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), albedo, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #elif SW_VIEWMODE_SKIPS_LIGHTING
-	return swStoreSurface( float4( albedo.rgb, 1.0f ), albedo, normal, input.worldPosition );
+	return swStoreSurface( float4( albedo.rgb, 1.0f ), albedo, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
 	const float  shadow = swSampleShadowAtWorld( input.worldPosition, normal );
 	const float3 lit    = swShadeLights( albedo.rgb, input.worldPosition, normal, shadow );
-	return swStoreSurface( float4( lit, 1.0f ), albedo, normal, input.worldPosition );
+	return swStoreSurface( float4( lit, 1.0f ), albedo, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #endif
 }

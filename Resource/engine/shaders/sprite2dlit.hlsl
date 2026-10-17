@@ -1,5 +1,9 @@
 #include "lighting2d.hlsli"
 
+// 보기 모드 Roughness · Metallic 이 보이는 값 — 스프라이트는 PBR 칸이 없는 거친 유전체로 본다.
+static const float kSurfaceRoughness = 1.0f;
+static const float kSurfaceMetallic  = 0.0f;
+
 /**
  * sprite2dlit.hlsl — 2D 빛을 받는 스프라이트(유니티 Sprite-Lit-Default · Godot CanvasItem + Light2D).
  * 정점 단계는 sprite2d.hlsl 과 같다(인스턴스의 아틀라스 프레임 · 색 · 픽셀 스냅). 픽셀 단계는 알베도에 2D 빛(lighting2d.hlsli)을 곱하고,
@@ -74,7 +78,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
 #if SW_VIEWMODE_SKIPS_LIGHTING
 	// 보기 모드(Unlit · Normals · Depth · Overdraw) — 2D 빛 없이 보기 모드의 색. 스프라이트 평면은 Z 0 이다.
-	return swComputeViewModeColor(albedo, albedo, normal, float3(input.worldPosition, 0.0f));
+	return swComputeViewModeColor(albedo, albedo, normal, float3(input.worldPosition, 0.0f), kSurfaceRoughness, kSurfaceMetallic);
 #else
 #if defined(SW_VIEWMODE_LIGHTINGONLY)
 	// 보기 모드 LightingOnly — 2D 빛은 그대로, 표면 색만 회색(swShadeLights2d 는 swShadeLights 를 거치지 않는다). 알파는 텍스처 것 그대로.

@@ -23,6 +23,10 @@
  */
 #include "lighting.hlsli"
 
+// 보기 모드 Roughness · Metallic 이 보이는 값 — 툰은 PBR 칸이 없는 거친 유전체로 본다.
+static const float kSurfaceRoughness = 1.0f;
+static const float kSurfaceMetallic  = 0.0f;
+
 // toon.material 의 프로퍼티와 이름 · 순서가 같다. 머티리얼 패커는 리플렉션 오프셋(이름)으로 채운다.
 SW_MATERIAL_BEGIN
 {
@@ -345,9 +349,9 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 
 #if defined( SW_PASS_GBUFFER )
 	// 디퍼드의 G버퍼는 표면만 적는다 — 계단 셰이딩은 포워드 경로의 것이다(디퍼드 조명은 램버트로 칠한다).
-	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), litColor, normal, input.worldPosition );
+	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #elif SW_VIEWMODE_SKIPS_LIGHTING
-	return swStoreSurface( float4( litColor.rgb, litColor.a ), litColor, normal, input.worldPosition );
+	return swStoreSurface( float4( litColor.rgb, litColor.a ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
 #if defined( SW_VIEWMODE_LIGHTINGONLY )
 	// 보기 모드 LightingOnly — 계단 셰이딩은 그대로 두고 기본색 · 그늘색만 회색으로 바꾼다(swShadeLights 를 쓰지 않으므로 여기서).
@@ -376,9 +380,9 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 	color += material.emissiveColor.rgb * material.emissiveStrength * swSampleMaterialTexture( material.emissiveMap, input.uv ).rgb;
 
 #if defined( MATERIAL_BLEND_TRANSLUCENT )
-	return swStoreSurface( float4( color, litColor.a ), litColor, normal, input.worldPosition );
+	return swStoreSurface( float4( color, litColor.a ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #else
-	return swStoreSurface( float4( color, 1.0f ), litColor, normal, input.worldPosition );
+	return swStoreSurface( float4( color, 1.0f ), litColor, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
 #endif
 #endif
 }

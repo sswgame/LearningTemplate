@@ -59,6 +59,9 @@ namespace sw
         Depth,        ///< 카메라에서의 거리(뷰 공간 깊이)를 보이며 `kViewModeDepthRange` 에서 흰색이 된다.
         Overdraw,     ///< 겹쳐 그린 횟수를 보인다. 단색을 깊이 쓰기 없이 더한다(유니티 Overdraw).
         LightingOnly, ///< 알베도를 회색 하나로 바꾸고 조명만 보인다(언리얼 Lighting Only). 빛 · 그림자 배치를 텍스처 없이 본다.
+        Roughness,    ///< 표면의 거칠기를 회색으로 보인다(언리얼 Buffer Visualization Roughness). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceRoughness)을 보인다.
+        Metallic,     ///< 표면의 금속도를 회색으로 보인다(언리얼 Buffer Visualization Metallic). 금속도 칸이 아직 없어 모든 표면이 0 이다.
+        Mipmaps,      ///< 머티리얼 텍스처를 읽는 밉 단계를 색으로 보인다(유니티 Scene 뷰 Mipmaps). 확대는 파랑, 밉 0 초록, 1 노랑, 2 주황, 3 이상 빨강.
 
         Count
     };
@@ -82,6 +85,9 @@ namespace sw
         {       "Depth",        "SW_VIEWMODE_DEPTH=1", false, false,  true},
         {    "Overdraw",     "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
         {"LightingOnly", "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false},
+        {   "Roughness",    "SW_VIEWMODE_ROUGHNESS=1", false, false,  true},
+        {    "Metallic",     "SW_VIEWMODE_METALLIC=1", false, false,  true},
+        {     "Mipmaps",      "SW_VIEWMODE_MIPMAPS=1", false, false,  true},
     };
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );

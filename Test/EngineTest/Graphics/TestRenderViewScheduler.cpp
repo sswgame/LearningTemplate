@@ -153,3 +153,21 @@ SW_TEST_CASE( RenderViewModeTest, NamesAreUniqueAndLightingOnlyIsShaded )
     // 범위 밖 값은 Lit 항목으로 떨어진다.
     SW_EXPECT_TRUE( string( getRenderViewModeInfo( RenderViewMode::Count )._pName ) == string( "Lit" ) );
 }
+
+/**
+ * @brief [RenderViewModeTest] 버퍼 보기 Roughness · Metallic · Mipmaps 는 셰이더 define 을 갖고 표면 값을 그대로 보인다(톤맵 · 후처리 없음)
+ * @details 셰이더(binding.hlsli)가 그 define 으로 조명을 건너뛰고 값을 색으로 낸다. 톤맵이 걸리면 회색 값이 바뀌어 읽을 수 없다.
+ */
+SW_TEST_CASE( RenderViewModeTest, BufferVisualizationModesShowRawValues )
+{
+    const RenderViewMode arrMode[]   = { RenderViewMode::Roughness, RenderViewMode::Metallic, RenderViewMode::Mipmaps };
+    const utf8*          arrDefine[] = { "SW_VIEWMODE_ROUGHNESS=1", "SW_VIEWMODE_METALLIC=1", "SW_VIEWMODE_MIPMAPS=1" };
+    for ( uint32 modeIndex = 0; modeIndex < 3; ++modeIndex )
+    {
+        const RenderViewModeInfo& info = getRenderViewModeInfo( arrMode[modeIndex] );
+        SW_EXPECT_TRUE( info._pShaderDefine != nullptr && string( info._pShaderDefine ) == string( arrDefine[modeIndex] ) );
+        SW_EXPECT_TRUE( info._bShowsBuffer );
+        SW_EXPECT_FALSE( info._bWireframe );
+        SW_EXPECT_FALSE( info._bAdditiveNoDepth );
+    }
+}
