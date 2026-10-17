@@ -48,6 +48,7 @@
 
 `App.exe --check-textures` 와 `TextureImportStampTest` 가 원본, 규칙, DDS가 어긋났는지를 내용 해시로 확인합니다.
 BC7 압축은 Debug 빌드에서 느리므로 큰 원본은 Release 빌드의 App으로 임포트합니다.
+외부에서 들이는 CC0 원본(Poly Haven · Kenney)은 `engine/textures_raw/cc0_sources.toml` 에 원본 URL · SHA-256 · 라이선스 인용을 적고 `Scripts/dev/MakeCc0Import.py fetch` 로 씁니다. 해시나 인용이 어긋나면 스크립트가 멈추고, `verify` 는 내려받지 않고 저장소 파일을 목록과 대조합니다.
 참조하는 곳이 없는 원본은 다른 곳으로 옮기지 말고 지웁니다. `CheckTextureFolders.py` 게이트가 폴더 규칙을 검사합니다.
 
 ## 함정과 주의

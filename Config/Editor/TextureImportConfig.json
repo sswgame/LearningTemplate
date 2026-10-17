@@ -51,6 +51,12 @@
       "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*"]
     },
     {
+      "name": "Roughness_Maps",
+      "inherits": "Base_Default",
+      "include_patterns": ["*_rough.*"],
+      "srgb": false
+    },
+    {
       "name": "UI_Textures",
       "inherits": "Base_UI",
       "include_paths": ["ui/", "gui/", "icons/"]
