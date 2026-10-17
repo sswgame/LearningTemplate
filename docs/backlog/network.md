@@ -65,6 +65,8 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 - `D7-8` [기능] **클라이언트 예측 · 롤백과 관심 영역 기반 복제가 없다.** 상태 동기화와 파괴 동기화(`D7-1`)는 있지만 입력 예측 · 서버 보정 · 롤백, 그리고 관심 영역(relevancy)으로 복제 대상을 거르는 층을 찾지 못했다. `B-10`(MMO 규모 UDP 계층)이 이 방향이다.
   먼저 설계 문서를 쓴다(`design-reviewer` 검토): 언리얼 CharacterMovement 예측과 Network Prediction, 유니티 Netcode for GameObjects · Fish-Net, Overwatch 식 입력 버퍼링과 비교. 결정 기록 5-9 · 5-10 의 넷 스냅샷 · 의도 기록(`D4-13`)과의 접점을 정한다.
 
+- `D7-9` [기능] **네트워크 확장 후보.** 물리 객체 예측(`D7-8` 5단계), 음성 채팅, 치팅 방어 체계(서버 검증 규칙 목록 · 이상 탐지), 서버 오케스트레이션(매칭 뒤 인스턴스 할당 · 확장). 쓰는 게임이 생기면 설계한다.
+
 - `F-1` [기능] **지형 가중치 에셋의 에디터 쪽 마무리** — 가중치는 `.layerweights` 데이터 에셋이 됐다([결정 기록](../09_Decisions.md) 5-10, 서버도 레이어 질의에 답한다).
   남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다 ·
   ② 에디터 에셋 종류(`EditorAssetType`)에 `.layerweights` 를 더해 콘텐츠 브라우저 · 속성 칸이 고르게 한다 · ③ 바깥 도구가 만든 스플랫 PNG 를 `.layerweights` 로 가져오는 임포트(높이장 임포터와 같은 길).
