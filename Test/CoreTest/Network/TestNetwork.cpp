@@ -470,7 +470,7 @@ SW_TEST_CASE( NetworkTest, SequencesWrapAndSequenceBufferForgetsStaleEntries )
     SW_EXPECT_EQUAL( 4, NetSequence::computeDifference( 2, 65534 ) );
     SW_EXPECT_EQUAL( -4, NetSequence::computeDifference( 65534, 2 ) );
 
-    SequenceBuffer<int32> buffer( 8 );
+    SequenceBuffer<int32, 8> buffer;
     *buffer.insert( 65534 ) = 1;
     *buffer.insert( 3 )     = 2; // 감겨서 앞섰다 — 사이(65535 · 0 · 1 · 2)는 비운다
     SW_EXPECT_TRUE( buffer.find( 65534 ) != nullptr && *buffer.find( 65534 ) == 1 );
@@ -479,6 +479,20 @@ SW_TEST_CASE( NetworkTest, SequencesWrapAndSequenceBufferForgetsStaleEntries )
     SW_EXPECT_NULL( buffer.insert( 65000 ) ); // 너무 낡았다
     *buffer.insert( 20 ) = 3;
     SW_EXPECT_FALSE( buffer.exists( 65534 ) ); // 크기만큼 지나 덮였다
+
+    // 감김 직전 크기만큼의 시퀀스와 직후 시퀀스가 서로 다른 칸에 남는다(크기가 65536 의 약수라 자리가 이어진다).
+    SequenceBuffer<int32, 8> wrapping;
+    for ( uint32 step = 0; step < 8; ++step )
+    {
+        *wrapping.insert( static_cast<uint16>( 65532 + step ) ) = static_cast<int32>( step );
+    }
+    for ( uint32 step = 0; step < 8; ++step )
+    {
+        const int32* pValue = wrapping.find( static_cast<uint16>( 65532 + step ) );
+        SW_ASSERT_TRUE( pValue != nullptr );
+        SW_EXPECT_EQUAL( static_cast<int32>( step ), *pValue );
+    }
+    SW_EXPECT_EQUAL( 8, SequenceBuffer<int32, 8>::getSize() );
 }
 
 SW_TEST_CASE( NetworkTest, ConnectionsResendReliableMessagesInOrderAndDropStaleSequenced )

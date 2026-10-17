@@ -67,10 +67,10 @@ namespace sw
     }
 
     NetConnection::NetConnection()
-        : _sentPackets{ 256 }
-        , _receivedPackets{ 256 }
-        , _outgoingReliable{ kReliableWindow }
-        , _incomingReliable{ kReliableWindow }
+        : _sentPackets{}
+        , _receivedPackets{}
+        , _outgoingReliable{}
+        , _incomingReliable{}
         , _arrIncoming{}
         , _listOutgoingSequenced{}
         , _listOutgoingUnreliable{}
