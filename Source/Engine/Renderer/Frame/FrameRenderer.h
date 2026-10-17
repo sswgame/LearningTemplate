@@ -369,7 +369,8 @@ namespace sw
             uint32               _shadowCullSlot{ static_cast<uint32>( RenderViewType::Shadow ) }; ///< 그림자 패스가 쓰는 컬링 슬롯(주 시점은 1, 추가 뷰는 자기 슬롯)
             uint32               _outputWidth{ 0 };                                                ///< 출력 크기(렌더 텍스처, 화면 사각형)
             uint32               _outputHeight{ 0 };
-            uint32               _shadowMapResolution{ 0 }; ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
+            uint32               _shadowMapResolution{ 0 };                 ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
+            uint32               _lightGridIndex{ invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
             RenderViewOutputKind _outputKind{ RenderViewOutputKind::ScreenRect };
             uint8                _bRenderThisFrame{ SW_FALSE };
             uint8                _bSeenThisFrame{ SW_FALSE };
@@ -507,16 +508,17 @@ namespace sw
         void applyViewPassConstants( FramePassContext& context );
 
         /**
-         * @brief 이번 프레임의 주 광원 값입니다. 패킷이 값을 실어 오면 그 값을, 아니면 기본값을 씁니다.
-         * @details 방향, 색, 세기, 그림자 행렬은 씬의 주 광원에서 온다. 아래 기본값은 주 광원이 없을 때의 폴백이다.
+         * @brief 이번 프레임의 주 광원 값입니다(`g_KeyLightDirIntensity` · `g_KeyLightColor`). 패킷이 값을 실어 오면 그 값을, 아니면 빛 없음을 씁니다.
+         * @details 방향, 색, 세기, 앰비언트는 씬의 주 광원에서 온다. 기본값은 "주 광원 없음" 이다. 세기와 색과 앰비언트가 0 이라 그 씬은 어둡게 그려진다
+         *          (결정 기록 5-12 D2-13: 라이트는 데이터가 정하고 키 라이트로 대신 비추지 않는다). 방향은 단위 벡터로 둔다. 셰이더가 정규화하기 때문이다(water.hlsl 반사).
          */
         struct FrameLightState
         {
-            float4 _dirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
-            float4 _colorAmbient{ 1.0f, 0.82f, 0.62f, 0.28f };
+            float4 _dirIntensity{ 0.0f, -1.0f, 0.0f, 0.0f };
+            float4 _colorAmbient{ 0.0f, 0.0f, 0.0f, 0.0f };
         };
         /**
-         * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(주광이 없다) 프레임 키 라이트로 폴백하고, 주 시점 뷰에 옮깁니다.
+         * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(게임 스레드가 배치를 만들지 않았다) 그림자 없는 뷰로 두고, 주 시점 뷰에 옮깁니다.
          * @details 라이트 버퍼 업로드보다 먼저 부른다 — 점광 · 스폿 타일 원소가 라이트 버퍼 꼬리에 붙는다.
          */
         void applyFrameShadow();
@@ -611,6 +613,11 @@ namespace sw
          * @param pCallerName 오류 로그에 찍을 호출자 이름
          */
         bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
+        /**
+         * @brief 뷰마다 라이트 그리드를 만들어 라이트 버퍼를 올립니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(`gv_lightCulling` 0 이면 그리드 없이).
+         * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `ViewTarget::_lightGridIndex` 에 남는다.
+         */
+        void updateLightBuffer( IRHIDevice* pDevice );
 
         // ------------------------------------------------------------------------------
         // 6) 어태치먼트 · PSO
@@ -775,7 +782,8 @@ namespace sw
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트입니다. 그 역할의 입력은 바인딩하지 않습니다.
         uint32 _disabledInputRoleMask;
         /// @brief 씬 라이트 구조 버퍼입니다. RT 가 소유하며 포워드와 디퍼드가 같은 버퍼를 읽습니다.
-        GPULightBuffer _lightBuffer;
+        GPULightBuffer   _lightBuffer;
+        vector<float4x4> _listScratchGridViewProj; ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
         vector<GPULight> _listScratchLight;
         /// @brief 씬 직접 경로에서 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다. 프레임마다 재사용합니다.

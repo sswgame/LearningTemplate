@@ -3251,6 +3251,14 @@
    "source": "Source/Core/File/PlatformFileUtil.cpp"
   },
   {
+   "name": "gv_lightCulling",
+   "type": "int32",
+   "default": "1",
+   "kind": "시험",
+   "description": "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드)",
+   "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
+  },
+  {
    "name": "gv_meadowAutoPlay",
    "type": "int32",
    "default": "0",

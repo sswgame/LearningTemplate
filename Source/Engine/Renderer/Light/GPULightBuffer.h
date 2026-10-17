@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Renderer/Light/LightGrid.h"
 
 namespace sw
 {
@@ -54,18 +55,25 @@ namespace sw
         GPULightBuffer& operator=( const GPULightBuffer& ) = delete;
 
         /**
-         * @brief 이번 프레임의 라이트를 올립니다.
-         * @details 용량은 `ensureCapacity` 가 필요할 때만 다시 잡습니다. 라이트 수가 그대로면
-         *          버퍼도 그대로이고 업로드만 합니다. 상한(`shaderslot::kMaxFrameLight`)을 넘으면 잘라
-         *          보내고 **한 번만** 경고합니다(매 프레임 찍으면 로그가 그것으로 덮입니다).
-         *          @p listShadowTileElement(점광과 스폿 그림자 타일)는 잘린 빛 바로 뒤에 붙고 `getCount` 에 들지 않습니다.
+         * @brief 이번 프레임의 라이트와 그림자 타일 원소를 업로드 목록에 담습니다. 업로드는 뷰가 정해진 뒤 `update` 가 합니다.
+         * @details 상한(`shaderslot::kMaxFrameLight`)을 넘으면 잘라 담고 **한 번만** 경고합니다(매 프레임 찍으면 로그가 그것으로 덮입니다).
+         *          @p listShadowTileElement(점광과 스폿 그림자 타일)는 잘린 라이트 바로 뒤에 붙고 `getCount` 에 들지 않습니다.
          */
-        void update( IRHIDevice* pDevice, const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement );
+        void populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement );
+
+        /**
+         * @brief 뷰마다 라이트 그리드(`LightGrid`)를 만들어 타일 원소 뒤에 붙이고 버퍼를 올립니다.
+         * @param listGridViewProj 그리드를 만들 뷰의 뷰-투영(셰이더의 `g_ViewProj` 와 같은 값). 비면 그리드 없이 올립니다(`gv_lightCulling` 0).
+         * @details 용량은 `ensureCapacity` 가 필요할 때만 다시 잡습니다. 그리드를 만들지 못한 뷰(투영이 깨졌다)는 오류를 한 번 남기고 그리드 없이 그립니다.
+         */
+        void update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj );
 
         /** @brief 라이트 버퍼입니다. 셰이더가 SRV 로 읽습니다. */
         const RHIStructuredBufferSlot& getBuffer() const { return _buffer; }
         /** @brief GPU 에 올라간 라이트 수입니다. 셰이더 루프가 이 수만큼 돕니다. */
         uint32 getCount() const { return _count; }
+        /** @brief `update` 에 준 뷰 @p gridIndex 의 그리드 첫 원소입니다(PassCB `g_SwLightGridBase`). 그리드가 없으면 `invalid_index::kUint32` 입니다. */
+        uint32 getGridBase( uint32 gridIndex ) const { return gridIndex < _listGridBase.size() ? _listGridBase[gridIndex] : invalid_index::kUint32; }
         /** @brief 셰이더에 걸 수 있는 상태인지 확인합니다. */
         bool isBindable() const { return _count > 0 && _buffer._buffer != 0 && _buffer._srv != kInvalidDescriptorIndex; }
 
@@ -74,9 +82,14 @@ namespace sw
 
     private:
         RHIStructuredBufferSlot _buffer;
-        vector<GPULight>        _listUploadScratch; ///< 빛과 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
+        vector<GPULight>        _listUploadScratch; ///< 라이트, 그림자 타일, 뷰마다의 그리드를 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
+        vector<LightGrid>       _listGrid;          ///< 뷰마다의 라이트 그리드(저장소를 프레임마다 다시 쓴다)
+        vector<uint32>          _listGridBase;      ///< 뷰마다 그리드의 첫 원소(없으면 invalid_index::kUint32)
         uint32                  _count{ 0 };
+        uint32                  _populatedCount{ 0 }; ///< `populate` 가 담은 라이트와 타일 원소 수(그리드는 이 뒤에 붙는다)
         /// @brief 상한 초과 경고를 한 번만 남기기 위한 표시입니다.
         uint8 _bWarnedOverflow{ SW_FALSE };
+        /// @brief 그리드를 만들지 못한 뷰의 오류를 한 번만 남기기 위한 표시입니다.
+        uint8 _bWarnedGrid{ SW_FALSE };
     };
 } // namespace sw

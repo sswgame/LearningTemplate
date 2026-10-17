@@ -140,8 +140,8 @@ namespace sw
             packet._bHasLight         = SW_TRUE;
         }
 
-        // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 그림자
-        // 행렬과 앰비언트의 출처이자, 라이트 목록이 비었을 때의 폴백이다. 그림자를 켠 점광 · 스폿은 번호를 따로 받아 아래에서 아틀라스 칸을 준다.
+        // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 앰비언트의 출처이고, 목록이 비면
+        // 그 씬은 앰비언트만 받는다(키라이트로 대신 비추지 않는다). 그림자를 켠 점광 · 스폿은 번호를 따로 받아 아래에서 아틀라스 칸을 준다.
         collectSceneLights( pActiveScene, packet._listLight, &_listShadowLightIndex );
 
         pActiveScene->ensureDefaultCameras();
@@ -170,7 +170,7 @@ namespace sw
         packet._mainView._viewMode         = bSceneMain ? sceneViewMode : ( pFrameRenderer != nullptr ? pFrameRenderer->getViewMode() : RenderViewMode::Lit );
         // 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일)는 카메라가 정해진 **뒤에** 만든다 — `_shadowViewDistance` 를 준 빛은 볼륨을
         // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 잰다.
-        ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, packet._bHasViewProj == SW_TRUE ? &packet._viewProj : nullptr, pLight != nullptr,
+        ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, packet._bHasViewProj == SW_TRUE ? &packet._viewProj : nullptr,
                                         FrameRenderer::getShadowMapResolution(), _listShadowLightIndex, packet._listLight, packet._shadow );
         // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
         _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );
@@ -282,8 +282,8 @@ namespace sw
                 preview._bHasLight         = SW_TRUE;
             }
             collectSceneLights( pScene, preview._listLight, &_listShadowLightIndex );
-            ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, &preview._viewProj, pLight != nullptr, FrameRenderer::getShadowMapResolution(),
-                                            _listShadowLightIndex, preview._listLight, preview._shadow );
+            ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, &preview._viewProj, FrameRenderer::getShadowMapResolution(), _listShadowLightIndex,
+                                            preview._listLight, preview._shadow );
 
             // 미리보기 씬의 애니메이션 LOD 는 이 눈 하나로 본다(뷰가 없으면 화면 밖으로 보고 포즈를 거른다).
             if ( pScene->getObjectManager() != nullptr )

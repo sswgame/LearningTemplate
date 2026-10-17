@@ -140,6 +140,28 @@ namespace sw
         /// @brief 점광 그림자의 면 수입니다(+X −X +Y −Y +Z −Z 순 — 셰이더의 면 고르기와 같은 순서).
         inline constexpr uint32 kPointShadowFaceCount = SW_POINT_SHADOW_FACE_COUNT;
 
+        /**
+         * @brief 라이트 그리드(클러스터드 라이팅)의 단어 배치입니다. 원본은 bindingslots.hlsli 10절이고, C++ `LightGrid` 와 셰이더 `swBeginLights` 가 같은 값을 읽습니다.
+         * @details 그리드는 32 비트 단어 배열이고 라이트 버퍼 원소 하나가 단어 16 개입니다. 헤더, 클러스터마다 단어 두 개, 라이트 번호 목록 순서로 놓입니다.
+         */
+        namespace lightgrid
+        {
+            inline constexpr uint32 kWordsPerElement = SW_LIGHT_GRID_WORDS_PER_ELEMENT;
+            inline constexpr uint32 kHeaderWordCount = SW_LIGHT_GRID_HEADER_WORD_COUNT;
+            inline constexpr uint32 kWordsPerCluster = SW_LIGHT_GRID_WORDS_PER_CLUSTER;
+            inline constexpr uint32 kWordDimX        = SW_LIGHT_GRID_WORD_DIM_X;
+            inline constexpr uint32 kWordDimY        = SW_LIGHT_GRID_WORD_DIM_Y;
+            inline constexpr uint32 kWordDimZ        = SW_LIGHT_GRID_WORD_DIM_Z;
+            inline constexpr uint32 kWordPerspective = SW_LIGHT_GRID_WORD_PERSPECTIVE;
+            inline constexpr uint32 kWordNearDepth   = SW_LIGHT_GRID_WORD_NEAR_DEPTH;
+            inline constexpr uint32 kWordSliceScale  = SW_LIGHT_GRID_WORD_SLICE_SCALE;
+            inline constexpr uint32 kWordGlobalCount = SW_LIGHT_GRID_WORD_GLOBAL_COUNT;
+            inline constexpr uint32 kWordClusterBase = SW_LIGHT_GRID_WORD_CLUSTER_BASE;
+            inline constexpr uint32 kWordIndexBase   = SW_LIGHT_GRID_WORD_INDEX_BASE;
+            static_assert( kHeaderWordCount == kWordsPerElement, "라이트 그리드 헤더는 라이트 버퍼 원소 하나다" );
+            static_assert( kWordIndexBase < kHeaderWordCount, "헤더 단어 번호가 헤더 안에 있어야 한다" );
+        } // namespace lightgrid
+
         // ------------------------------------------------------------------------------
         // 3) 컴퓨트와 샘플러
         // ------------------------------------------------------------------------------
