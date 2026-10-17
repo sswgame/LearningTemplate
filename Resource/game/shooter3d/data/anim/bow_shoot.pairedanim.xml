@@ -1,0 +1,12 @@
+<!--
+  활 쏘기 페어드 애니메이션 샘플(docs/plans/PairedAnimation.md). 궁수가 앵커이고, 활은 궁수 손 소켓에 붙은 채로 같은 시각을 재생한다.
+  메긴 화살은 선택 역할로 0.2 초에 들어와 놓는 시각(0.9 초)에 클립이 끝나 나간다. 발사는 공유 알림 ReleaseArrow 가
+  활 오브젝트의 알림 표(SpawnPrefab — 투사체 프리팹, 시위 소켓)로 간다.
+  클립 · 활 메시는 아직 없다(백로그 D4-6 후속 — 시나리오 테스트). 지금은 형식 검사(ResourceDataSchemaTest)만 돈다.
+-->
+<PairedAnimation duration="1.6">
+  <Role name="Archer" anchor="true" required="true" clip="Bow_Shoot_Archer" enterBlend="0.15" exitState="Idle" exitBlend="0.2"/>
+  <Role name="Bow" required="true" clip="Bow_Shoot_Bow" align="none" enterBlend="0" exitState="Bow_Idle" exitBlend="0.1"/>
+  <Role name="Arrow" required="false" clip="Arrow_Nock" start="0.2" align="none" enterBlend="0" exitState="Arrow_Hidden" exitBlend="0"/>
+  <Notify name="ReleaseArrow" time="0.9" role="Bow"/>
+</PairedAnimation>

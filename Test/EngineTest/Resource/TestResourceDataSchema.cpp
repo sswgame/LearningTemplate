@@ -24,6 +24,7 @@
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/Fit/SurfaceState.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/PoseModifier/ReferencePoseOverride.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Common/EngineServices.h"
@@ -340,6 +341,13 @@ namespace
         static bool                  isDestructionProfile( sw::string_view resourceID ) { return endsWith( resourceID, ".destruction.xml" ); }
         static bool                  isNotifyTable( sw::string_view resourceID ) { return endsWith( resourceID, ".notifies.xml" ); }
         static bool                  isClipData( sw::string_view resourceID ) { return endsWith( resourceID, ".clips.json" ); }
+        /** @brief 페어드 애니메이션(역할 · 정렬 · 공유 알림) — 모르는 속성 · 유한하지 않은 수 · 앵커 규칙 위반은 읽기 오류다. 클립은 세션 시작에서 본다. */
+        static bool               isPairedAnimation( sw::string_view resourceID ) { return endsWith( resourceID, sw::PairedAnimationDef::kExtension ); }
+        [[nodiscard]] static bool loadPairedAnimation( const sw::string& resourceID )
+        {
+            sw::PairedAnimationDef def;
+            return def.loadFromResource( resourceID );
+        }
         /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
         [[nodiscard]] static bool loadClipData( const sw::string& resourceID )
         {
@@ -554,6 +562,7 @@ namespace
             {                "rig",                 &isRig,                                           &loadRig},
             {    "retargetprofile",     &isRetargetProfile,                               &loadRetargetProfile},
             {        "notifytable",         &isNotifyTable,                                   &loadNotifyTable},
+            {    "pairedanimation",     &isPairedAnimation,                               &loadPairedAnimation},
             {           "clipdata",            &isClipData,                                      &loadClipData},
             {     "sourcemanifest",      &isSourceManifest,                                &loadSourceManifest},
             {            "bonelod",             &isBoneLOD,                                       &loadBoneLOD},

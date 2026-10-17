@@ -1,0 +1,69 @@
+/**
+ * @file PairedAnimationSystem.h
+ * @brief 씬의 페어드 애니메이션 세션을 들고 프레임마다 갱신하는 프레임 시스템입니다(`ISceneFrameSystem`, 키 `PairedAnimation`).
+ * @details `FrameSystems` 단계(게임 스레드, 컴포넌트 틱 · 애니메이션 평가 앞)에서 돈다 — 세션은 다른 오브젝트의 애니메이터를 바꾸므로 틱 워커에서
+ *          돌 수 없고, 평가보다 먼저 이번 프레임의 결정(진입 · 정렬 · 공유 알림)을 끝내야 한다. 참가자는 한 번에 한 세션에만 있다(`ParticipantBusy`).
+ *          `PairedAnimationComponent` 가 플레이 시작에 붙이고(`acquire`), 마지막 컴포넌트가 끝나면 뗀다(엔진 모듈 타입이라 핫 리로드와 상관없다).
+ *          끝난 세션(`Finished` · `Aborted`)은 그 프레임 동안 조회되고 다음 갱신 앞에서 빠진다.
+ */
+#pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Container/ComponentHandle.h"
+#include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
+
+#include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
+#include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
+
+namespace sw
+{
+    class GameObjectManager;
+    class PairedAnimationDef;
+
+    /**
+     * @class PairedAnimationSystem
+     * @brief 세션 목록과 참가자 독점을 맡습니다. 파일 머리말 참고.
+     */
+    class SW_API PairedAnimationSystem final : public ISceneFrameSystem
+    {
+    public:
+        /** @brief 매니저의 프레임 시스템 키입니다. */
+        static constexpr const utf8* kFrameSystemKey = "PairedAnimation";
+
+        PairedAnimationSystem();
+
+        /** @brief 매니저에 붙은 시스템입니다. 없으면 nullptr 입니다. */
+        static PairedAnimationSystem* find( const GameObjectManager& manager );
+        /** @brief 매니저에 붙은 시스템을 반환하고, 없으면 붙입니다(게임 스레드, 틱 밖). */
+        static PairedAnimationSystem& getOrCreate( GameObjectManager& manager );
+
+        /** @brief 이번 프레임을 갱신합니다 — 지난 프레임에 끝난 세션을 빼고, 남은 세션을 갱신합니다. */
+        void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+
+        /**
+         * @brief 세션을 만들어 시작합니다(게임 스레드, 틱 밖). 거절되면 세션을 남기지 않습니다.
+         * @param outSessionID 시작했으면 새 세션 id, 아니면 0 입니다.
+         */
+        [[nodiscard]] PairedAnimationStartResult startSession( GameObjectManager& manager, shared_ptr<const PairedAnimationDef> def, const vector<PairedAnimationBinding>& listBinding,
+                                                               uint32& outSessionID );
+        /** @brief 세션을 중단합니다. 없거나 끝났으면 할 일이 없습니다. */
+        void abortSession( GameObjectManager& manager, uint32 sessionID );
+        /** @brief id 의 세션입니다. 없으면(빠졌으면) nullptr 입니다. */
+        const PairedAnimationSession* findSession( uint32 sessionID ) const;
+        /** @brief 그 애니메이터가 재생 중인 세션에 묶여 있으면 true 입니다(재생 속도를 쓰는 컴포넌트가 세션 동안 물러설 때 묻는다). */
+        bool isParticipant( ComponentHandle animator ) const;
+        /** @brief 세션 수입니다(끝났지만 아직 빠지지 않은 것 포함). */
+        uint32 getSessionCount() const { return static_cast<uint32>( _listSession.size() ); }
+
+        /** @brief 시스템을 쓰는 컴포넌트 수를 하나 올립니다. */
+        void registerUser() { ++_userCount; }
+        /** @brief 하나 내립니다. 0 이 되면 true — 부르는 쪽이 매니저에서 뗀다. */
+        [[nodiscard]] bool unregisterUser();
+
+    private:
+        vector<unique_ptr<PairedAnimationSession>> _listSession;
+        uint32                                     _nextSessionID;
+        uint32                                     _userCount;
+    };
+} // namespace sw

@@ -1,0 +1,121 @@
+/**
+ * @file PairedAnimationDef.h
+ * @brief 페어드 애니메이션 에셋(`*.pairedanim.xml`)입니다. 여러 개체가 한 타임라인으로 도는 애니메이션(활 쏘기, 잡기, 문 열기)의 역할 목록,
+ *        역할마다 클립 · 시작 시각 · 정렬, 공유 타임라인 길이와 알림을 담습니다. 설계는 `docs/plans/PairedAnimation.md`.
+ * @details 캐릭터 데이터 XML 관례(`CharacterDataReader`)로 읽는다. 모르는 속성 · 원소, 숫자가 아닌 값, 유한하지 않은 수(`nan` · `inf`),
+ *          빠진 필수 값, 규칙 위반(앵커가 하나가 아님, 정렬 방식에 맞지 않는 속성, 타임라인 밖 알림)은 모두 읽기 오류다 — 조용히 기본값이 되지 않는다.
+ *          @code
+ *          <PairedAnimation duration="1.6">
+ *            <Role name="Archer" anchor="true" required="true" clip="Bow_Shoot_Archer" enterBlend="0.15" exitState="Idle" exitBlend="0.2"/>
+ *            <Role name="Bow" required="true" clip="Bow_Shoot_Bow" align="none" enterBlend="0" exitState="Bow_Idle" exitBlend="0.1"/>
+ *            <Role name="Victim" required="true" clip="Grab_Victim" align="warp" offset="0 0 1" yaw="180" warpEnd="0.3" maxAlignDistance="1.5"
+ *                  enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
+ *            <Notify name="ReleaseArrow" time="0.9" role="Bow"/>
+ *          </PairedAnimation>
+ *          @endcode
+ */
+#pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
+
+namespace sw
+{
+    class CharacterDataReader;
+    class XMLNode;
+
+    /**
+     * @enum PairedAnimationAlign
+     * @brief 역할 루트를 앵커 기준 자리에 맞추는 방법입니다.
+     */
+    enum class PairedAnimationAlign : uint8
+    {
+        None = 0, ///< 맞추지 않는다(앵커, 소켓에 붙은 프롭).
+        Snap,     ///< 진입 때 한 번 자리 · 요를 맞춘다.
+        Warp,     ///< `MotionWarpingComponent` 창이 `warpEnd` 까지 루트 모션을 휘어 맞춘다. 목표는 매 프레임 앵커에서 다시 구한다.
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct PairedAnimationRoleDef
+     * @brief 역할 하나의 저작 데이터입니다. 정렬 오프셋은 정렬 시각(`Snap` 은 진입, `Warp` 는 `_warpEndSeconds`)의 앵커 루트 기준 이 역할 루트의 자리 · 요입니다.
+     */
+    struct PairedAnimationRoleDef
+    {
+        hashed_string        _name{};
+        hashed_string        _clip{};
+        hashed_string        _exitState{};
+        string               _skeletonPath{};       ///< 비었으면 스켈레톤을 묻지 않는다
+        float3               _offset{};             ///< 앵커 요로 돌릴 앵커 기준 자리(m)
+        float32              _yawRadians{ 0.0f };   ///< 앵커 요에 더할 요(라디안)
+        float32              _startSeconds{ 0.0f }; ///< 공유 타임라인에서 들어오는 시각
+        float32              _enterBlendSeconds{ 0.0f };
+        float32              _exitBlendSeconds{ 0.0f };
+        float32              _warpEndSeconds{ 0.0f };   ///< `Warp` 창 끝(역할 클립 시각)
+        float32              _maxAlignDistance{ 0.0f }; ///< 진입 조건 — 시작 때 루트와 목표의 거리 상한(m)
+        PairedAnimationAlign _align{ PairedAnimationAlign::None };
+        bool                 _bRequired{ false };
+        bool                 _bAnchor{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 공유 타임라인 알림 하나입니다. 그 역할 오브젝트의 알림 표(`AnimationNotifyComponent`)로 순간 알림을 보냅니다. */
+    struct PairedAnimationNotifyDef
+    {
+        hashed_string _name{};
+        hashed_string _role{};
+        float32       _time{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class PairedAnimationDef
+     * @brief 페어드 애니메이션 에셋 하나입니다. 파일 머리말 참고.
+     */
+    class SW_API PairedAnimationDef
+    {
+    public:
+        static constexpr string_view kExtension = ".pairedanim.xml";
+
+        PairedAnimationDef();
+
+        /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 오류가 있으면 모두 로그로 내고 false 입니다. */
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
+        /** @brief 리소스 파일에서 읽습니다. */
+        [[nodiscard]] bool loadFromResource( string_view path );
+
+        /** @brief 공유 타임라인 길이(초)입니다. 앵커 클립 길이와 같아야 세션이 시작합니다. */
+        float32 getDuration() const { return _duration; }
+        /** @brief 역할들입니다(파일 순서). */
+        const vector<PairedAnimationRoleDef>& getRoles() const { return _listRole; }
+        /** @brief 공유 알림들입니다(시각 순서). */
+        const vector<PairedAnimationNotifyDef>& getNotifies() const { return _listNotify; }
+        /** @brief 앵커 역할의 인덱스입니다(읽기에 성공했으면 늘 있습니다). */
+        uint32 getAnchorRoleIndex() const { return _anchorRoleIndex; }
+        /** @brief 이름의 역할 인덱스입니다. 없으면 `invalid_index::kUint32` 입니다. */
+        uint32 findRoleIndex( const hashed_string& roleName ) const;
+
+    private:
+        void readRoot( const XMLNode& root, CharacterDataReader& reader );
+        void readRole( const XMLNode& node, CharacterDataReader& reader );
+        void readNotify( const XMLNode& node, CharacterDataReader& reader );
+        /** @brief 역할 사이 · 알림의 규칙을 검사합니다(앵커 하나, 겹친 이름, 알림 시각과 역할). */
+        void validate( CharacterDataReader& reader );
+        /** @brief 내용을 비웁니다. */
+        void clear();
+
+        vector<PairedAnimationRoleDef>   _listRole;
+        vector<PairedAnimationNotifyDef> _listNotify;
+        float32                          _duration;
+        uint32                           _anchorRoleIndex;
+    };
+} // namespace sw

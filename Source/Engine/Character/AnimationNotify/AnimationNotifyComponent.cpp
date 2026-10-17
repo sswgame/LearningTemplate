@@ -220,6 +220,16 @@ namespace sw
         }
     }
 
+    bool AnimationNotifyComponent::processExternalNotify( const AnimationFiredNotify& fired )
+    {
+        SW_ASSERT( fired._phase == AnimationNotifyPhase::Instant );
+        const AnimationNotifyEntry* pEntry = findEntry( fired._name );
+        if ( pEntry == nullptr || pEntry->_pHandler == nullptr )
+            return false;
+        callHandler( *pEntry, fired, nullptr, AnimationNotifyPhase::Instant, false, 0.0f );
+        return true;
+    }
+
     void AnimationNotifyComponent::processFrame( const AnimationNotifyFrame& frame )
     {
         _listAction.clear();
