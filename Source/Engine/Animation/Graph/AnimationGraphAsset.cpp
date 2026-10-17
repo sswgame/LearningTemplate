@@ -18,6 +18,8 @@ namespace sw
         {
             /** @brief 조건 표기 표입니다. 순서는 `AnimationConditionOp` 와 같습니다(None 은 표기가 없습니다). */
             static constexpr const utf8* kArrOpText[] = { "", ">", "<", ">=", "<=", "==", "!=", "trigger" };
+            /** @brief 전이 방식 표기 표입니다. 순서는 `AnimationBlendMode` 와 같습니다. */
+            static constexpr const utf8* kArrBlendModeText[] = { "crossfade", "inertialization" };
         };
     } // namespace
 } // namespace sw
@@ -147,6 +149,22 @@ namespace sw
             link._toNode   = static_cast<int32>( linkJSON.get( "to" ).asInt( 0 ) );
             if ( linkJSON.has( "blend" ) )
                 link._blendSeconds = static_cast<float32>( linkJSON.get( "blend" ).asFloat( -1.0 ) );
+            if ( linkJSON.has( "blend_mode" ) )
+            {
+                const string modeText = linkJSON.get( "blend_mode" ).asString();
+                if ( parseBlendMode( modeText, link._blendMode ) == false )
+                {
+                    SW_LOG_ERROR( "Animation graph link %# has unknown blend_mode '%#'", link._id, modeText.c_str() );
+                    bValid = false;
+                }
+            }
+            if ( linkJSON.has( "half_life" ) )
+                link._halfLifeSeconds = static_cast<float32>( linkJSON.get( "half_life" ).asFloat( 0.0 ) );
+            if ( link._blendMode == AnimationBlendMode::Inertialization && link._halfLifeSeconds <= 0.0f )
+            {
+                SW_LOG_ERROR( "Animation graph link %# uses inertialization without a positive 'half_life'", link._id );
+                bValid = false;
+            }
             const JSONValue condition = linkJSON.get( "condition" );
             if ( condition.isObject() )
             {
@@ -222,6 +240,12 @@ namespace sw
             linkJSON.set( "to" ).setInt( link._toNode );
             if ( link._blendSeconds >= 0.0f )
                 linkJSON.set( "blend" ).setFloat( static_cast<float64>( link._blendSeconds ) );
+            // 크로스페이드는 이 키가 생기기 전 파일과 같은 모양으로 쓴다(키가 없으면 크로스페이드다).
+            if ( link._blendMode != AnimationBlendMode::Crossfade )
+            {
+                linkJSON.set( "blend_mode" ).setString( getBlendModeText( link._blendMode ) );
+                linkJSON.set( "half_life" ).setFloat( static_cast<float64>( link._halfLifeSeconds ) );
+            }
             if ( link._op != AnimationConditionOp::None )
             {
                 const JSONValue condition = linkJSON.set( "condition" );
@@ -315,6 +339,25 @@ namespace sw
     {
         const uint32 index = static_cast<uint32>( op );
         return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrOpText ) ) ? AnimationGraphAssetInternal::kArrOpText[index] : "";
+    }
+
+    bool AnimationGraphAsset::parseBlendMode( string_view text, AnimationBlendMode& outMode )
+    {
+        for ( uint32 index = 0; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrBlendModeText ) ); ++index )
+        {
+            if ( text == AnimationGraphAssetInternal::kArrBlendModeText[index] )
+            {
+                outMode = static_cast<AnimationBlendMode>( index );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    const utf8* AnimationGraphAsset::getBlendModeText( AnimationBlendMode mode )
+    {
+        const uint32 index = static_cast<uint32>( mode );
+        return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrBlendModeText ) ) ? AnimationGraphAssetInternal::kArrBlendModeText[index] : "";
     }
 
     int32 AnimationGraphAsset::findFirstOutgoingNodeID( int32 fromNodeID ) const

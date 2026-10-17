@@ -77,16 +77,33 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @enum AnimationBlendMode
+     * @brief 전이가 포즈를 잇는 방식입니다(JSON 링크의 "blend_mode": "crossfade", "inertialization"). 모르는 표기는 로드 오류입니다.
+     * @details 키를 적지 않은 링크는 `Crossfade` 다 — 이 필드의 데이터 기본값이며, 이 필드가 생기기 전 파일의 뜻과 같다.
+     */
+    enum class AnimationBlendMode : uint8
+    {
+        Crossfade = 0,   ///< 두 재생을 함께 샘플해 "blend" 길이 동안 섞습니다.
+        Inertialization, ///< 새 재생 하나만 샘플하고, 끊긴 순간과의 차이를 "half_life" 반감기로 풀어 냅니다(`PoseInertializer`).
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 애니메이션 그래프 링크(상태 전이)입니다. */
     struct SW_API AnimationGraphLink
     {
-        int32                _id{ 0 };               /**< 그래프 안에서 유일한 링크 id 입니다. 1 이상이어야 합니다. */
-        int32                _fromNode{ 0 };         /**< 출발 노드 id 입니다. */
-        int32                _toNode{ 0 };           /**< 도착 노드 id 입니다. */
-        float32              _blendSeconds{ -1.0f }; /**< 크로스페이드 길이(JSON "blend", 선택). 음수면 플레이어 기본값입니다. */
-        hashed_string        _parameter;             /**< 조건 파라미터 이름(JSON "condition"."param")입니다. */
-        float32              _threshold{ 0.0f };     /**< 조건 비교값(JSON "condition"."value")입니다. */
+        int32   _id{ 0 };               /**< 그래프 안에서 유일한 링크 id 입니다. 1 이상이어야 합니다. */
+        int32   _fromNode{ 0 };         /**< 출발 노드 id 입니다. */
+        int32   _toNode{ 0 };           /**< 도착 노드 id 입니다. */
+        float32 _blendSeconds{ -1.0f }; /**< 크로스페이드 길이(JSON "blend", 선택). 음수면 플레이어 기본값입니다. */
+        /** @brief inertialization 반감기(초, JSON "half_life")입니다. "blend_mode" 가 "inertialization" 이면 반드시 0 보다 큰 값을 적어야 합니다(없으면 로드 오류). */
+        float32              _halfLifeSeconds{ 0.0f };
+        hashed_string        _parameter;         /**< 조건 파라미터 이름(JSON "condition"."param")입니다. */
+        float32              _threshold{ 0.0f }; /**< 조건 비교값(JSON "condition"."value")입니다. */
         AnimationConditionOp _op{ AnimationConditionOp::None };
+        AnimationBlendMode   _blendMode{ AnimationBlendMode::Crossfade }; /**< 포즈를 잇는 방식(JSON "blend_mode", 선택)입니다. */
 
         /** @brief 조건이 지금 파라미터 값으로 참인지 봅니다. 조건이 없으면 false 입니다(끝나면 다음은 따로 봅니다). */
         bool isConditionMet( float32 parameterValue ) const;
@@ -132,6 +149,10 @@ namespace sw
         [[nodiscard]] static bool parseConditionOp( string_view text, AnimationConditionOp& outOp );
         /** @brief 조건 표기를 씁니다. */
         static const utf8* getConditionOpText( AnimationConditionOp op );
+        /** @brief 전이 방식 표기("crossfade", "inertialization")를 읽습니다. 모르는 표기면 false 입니다. */
+        [[nodiscard]] static bool parseBlendMode( string_view text, AnimationBlendMode& outMode );
+        /** @brief 전이 방식 표기를 씁니다. */
+        static const utf8* getBlendModeText( AnimationBlendMode mode );
 
         vector<AnimationGraphNode> _listNode; /**< 노드 목록입니다. */
         vector<AnimationGraphLink> _listLink; /**< 링크 목록입니다. */

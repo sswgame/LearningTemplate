@@ -12,6 +12,9 @@
 
 namespace sw
 {
+    enum class AnimationBlendMode : uint8;
+
+    struct AnimationGraphLink;
     struct AnimationGraphNode;
 
     class AnimationGraphAsset;
@@ -40,7 +43,7 @@ namespace sw
      * @brief 현재 상태 하나와 그 재생(`AnimationPlayer`)을 가집니다. 그래프가 없으면 이름으로 바로 재생하는 단순 플레이어입니다.
      * @details 매 갱신은 다음 순서로 진행한다. (1) 현재 상태에서 나가는 조건 링크 중 참인 첫 것으로 넘어간다(트리거는 끈다). (2) 시간을 흘린다.
      *          (3) 현재 상태가 반복 없이 끝났으면 조건 없는 첫 링크("끝나면 다음")로 넘어간다. 넘어갈 때는 링크의 블렌드(없으면 기본값)로
-     *          크로스페이드하고, 반복은 노드의 "loop" 를 따른다. "loop" 가 없으면 조건 전이는 재생할 것의 기본값을, "끝나면 다음"으로 들어온 상태는
+     *          크로스페이드하고(링크의 "blend_mode" 가 inertialization 이면 섞지 않고 넘어가며 반감기를 `AnimationPlayer::inertialize` 로 남긴다), 반복은 노드의 "loop" 를 따른다. "loop" 가 없으면 조건 전이는 재생할 것의 기본값을, "끝나면 다음"으로 들어온 상태는
      *          반복하지 않음을, 직접 재생은 호출한 쪽의 값을 쓴다.
      *          재생할 것이 없는 상태로 넘어가면 재생을 비운다. 이름은 새 상태를 말하는데 포즈는 이전 상태인 일이 없게 하려는 것이다.
      */
@@ -86,10 +89,12 @@ namespace sw
         static constexpr int8 kLoopNo           = 0;
         static constexpr int8 kLoopYes          = 1;
         static constexpr int8 kLoopFromPlayable = 2;
-        /** @brief 노드로 넘어갑니다. @p blendSeconds 가 음수면 기본값입니다. */
-        bool enterNode( const AnimationGraphNode& node, int8 loopWhenUnspecified, float32 blendSeconds );
-        /** @brief 이름으로 재생할 것을 찾아 재생(또는 크로스페이드)합니다. */
-        bool startPlayable( const hashed_string& name, bool bLoop, float32 blendSeconds );
+        /** @brief 링크가 정한 방식(크로스페이드 길이 또는 inertialization 반감기)으로 노드로 넘어갑니다. */
+        bool enterNodeThroughLink( const AnimationGraphNode& node, const AnimationGraphLink& link, int8 loopWhenUnspecified );
+        /** @brief 노드로 넘어갑니다. 크로스페이드에서 @p blendSeconds 가 음수면 기본값입니다. inertialization 이면 @p blendSeconds 는 반감기입니다. */
+        bool enterNode( const AnimationGraphNode& node, int8 loopWhenUnspecified, AnimationBlendMode blendMode, float32 blendSeconds );
+        /** @brief 이름으로 재생할 것을 찾아 재생(크로스페이드 또는 inertialization)합니다. */
+        bool startPlayable( const hashed_string& name, bool bLoop, AnimationBlendMode blendMode, float32 blendSeconds );
 
         AnimationPlayer                 _player;
         hashed_string                   _currentStateName;
