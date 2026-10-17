@@ -32,7 +32,7 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
 - `D7-5` [기능] **네트워크 서비스 계층(로그인 · 채팅 · 거래 키트)의 남은 것.** 구성과 원칙(공통 기반 · 드라이버 키트 · 기능 키트, DB 와 캐시)은 [결정 기록](../09_Decisions.md) 5-9, 들어간 기반 · 키트 · 서버 조립
   (`OnlineServerRuntime`, 키트마다 `<키트>OnlineServerKit.cpp`, 서버 설정 옆 `<이름>.online.json`)은 Online README. 운영 쪽(관측 출력 · 오케스트레이터 · 비밀 배포 · 부하 기준선)은 `H-3`.
   - **할 일**
-    - 기반: 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다), 클라이언트 접속 인자 `-gv_netConnectAddress` 의 이름(`GameNetSession` — 같은 함수로 바꾸면 된다, 이 작업의 파일 소유 밖이라 남김).
+    - 기반: 클라이언트 접속 인자 `-gv_netConnectAddress` 의 이름(`GameNetSession` — 같은 함수로 바꾸면 된다, 이 작업의 파일 소유 밖이라 남김).
     - 계정: 실제 외부 로그인 제공자 설정(구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면), 애플 client secret JWT · 탈퇴 때 토큰 철회(`Provider/Apple/`), 모바일 SDK 클라이언트,
       OS 브라우저 열기(`IExternalBrowser` 구현 — 게임 몫), 텔레메트리의 `IHTTPClient`(Engine, 막는 창구 · 기본 Null)를 이 HTTP 클라이언트로 연결하는 게임 어댑터(Engine 은 GameFramework 를 모른다).
     - 채팅: 신고(메시지 스냅숏 → GM 도구), 채널 샤딩(world 채널 수천 명 — 부하 봇 수치로 정함, 거르개 비용은 `ChatService.send` p99), 클라이언트 UI 위젯.

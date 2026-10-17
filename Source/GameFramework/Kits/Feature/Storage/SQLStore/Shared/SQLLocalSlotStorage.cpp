@@ -4,8 +4,6 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourcePaths.h"
-
 #include "GameFramework/Base/Online/Local/LocalStoreFactory.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.h"
@@ -39,10 +37,9 @@ namespace sw
         ISQLDriver* pDriver = SQLDriverRegistry::findDriver( SQLLocalSlotStorageInternal::kLocalSlotDriverName, outError );
         if ( pDriver == nullptr )
             return false;
-        ISQLDriver&          driver     = *pDriver;
-        const string         folderPath = ResourcePaths::makeAbsolutePath( kMigrationFolder );
+        ISQLDriver&          driver = *pDriver;
         vector<SQLMigration> listMigration;
-        if ( SQLMigrationRunner::loadMigrations( folderPath, driver.getName(), listMigration, outError ) == false )
+        if ( SQLMigrationRunner::loadMigrations( kMigrationFolder, driver.getName(), listMigration, outError ) == false )
             return false;
         if ( databasePath != ":memory:" )
             (void)FileUtil::ensureParentDirectoryExists( databasePath );
