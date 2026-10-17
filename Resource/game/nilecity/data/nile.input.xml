@@ -2,10 +2,11 @@
 <!--
   NileCity 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstanceBase 가 통합 맵(InputManager::getInputMap)에 읽는다.
   게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩). 이름은 게임 접두(Nile.) — 섞인 게임에서 디렉터 둘이 같은 이름을 나눠 쓰지 않게.
-  Camera.Pan · Camera.Rotate · Camera.Zoom 은 기반 카메라 리그(OrthoCameraRigComponent 의 _panAction · _rotateAction · _zoomAction)가 읽는다.
+  Camera.Pan · Camera.Rotate · Camera.Zoom 은 카메라 디렉터(CameraDirectorComponent 의 _panAction · _rotateAction · _zoomAction)가 프리셋 <Input> 이 받는 것만 읽는다.
   커서 아래 땅은 포인터 위치(InputManager::getMousePositionNormalized)로 고르고, 누르는 것은 액션(Nile.Place · Nile.Demolish)이다.
+  virtualCursor 는 패드 가상 커서(오른쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽)를 켠다. 그래서 액션에 패드 A · B · 오른쪽 스틱을 따로 묶지 않는다(읽기가 거절한다).
 -->
-<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4" virtualCursor="RightStick">
 	<layers>
 		<layer name="Gameplay" enabled="1" blockLower="0"/>
 	</layers>
@@ -18,13 +19,11 @@
 	<!-- 놓기 — 고른 도구로 커서 칸에 짓는다(길 도구는 누르는 동안 끌어 잇는다). -->
 	<action name="Nile.Place" layer="Gameplay" trigger="Pressed">
 		<bind source="mouse" code="Left"/>
-		<bind source="gamepad" code="A"/>
 	</action>
 
 	<!-- 헐기 — 커서 칸의 건물 · 길. -->
 	<action name="Nile.Demolish" layer="Gameplay" trigger="Pressed">
 		<bind source="mouse" code="Right"/>
-		<bind source="gamepad" code="B"/>
 	</action>
 
 	<action name="Nile.NextTool" layer="Gameplay" trigger="Pressed">

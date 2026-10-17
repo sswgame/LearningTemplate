@@ -18,21 +18,14 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<OrthoCameraRigComponent _componentName="OrthoCameraRigComponent"
+					<CameraDirectorComponent _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _focus="20,0,20"
-					                         _yaw="0.7853982"
-					                         _pitch="0.5235988"
-					                         _distance="250"
-					                         _orthoHeight="110"
-					                         _minOrthoHeight="25"
-					                         _maxOrthoHeight="220"
-					                         _zoomStep="0.85"
-					                         _panSpeed="40"
-					                         _panReferenceHeight="110"
-					                         _rotateStep="1.5707964"
-					                         _farPlaneScale="2.5"
-					                         _bInputEnabled="true" />
+					                         _catalogPath="game/themepark/data/park.cameras.xml"
+					                         _initialPreset="park"
+					                         _focusPoint="20,0,20"
+					                         _bReadInput="true">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -14,6 +14,7 @@ namespace sw
 {
     class GameObjectManager;
     class InputManager;
+    class InputMap;
 
     /**
      * @struct ScenarioRecordCheckpoint
@@ -34,6 +35,11 @@ namespace sw
     /** @struct ScenarioRecordSettings @brief 녹화를 시나리오 글로 바꿀 때 쓰는 값입니다. */
     struct ScenarioRecordSettings
     {
+        /**
+         * @brief 단추 단계를 액션 단계로 쓸 때 거꾸로 찾는 입력 맵입니다. nullptr 이면 키 · 단추 단계(`Press` · `Release`)만 씁니다.
+         * @details `ScenarioRecorder::stop` 이 녹화한 입력 관리자의 맵으로 채운다. `toScenarioXML` 을 직접 부르는 쪽(테스트)은 직접 넣는다.
+         */
+        const InputMap*                  _pInputMap{ nullptr };
         vector<ScenarioRecordCheckpoint> _listCheckpoint{};   ///< 끝 프레임에 `<Expect>` 로 쓸 값입니다(수는 `near`, 글은 `is`).
         string                           _name{ "recorded" }; ///< 루트 `name` 속성입니다.
         float32                          _fixedDelta{ 1.0f / 60.0f };
@@ -62,6 +68,8 @@ namespace sw
     /**
      * @class ScenarioRecorder
      * @brief `InputReplay` 로 프레임별 원시 입력을 녹화하고, 멈출 때 시나리오 입력 단계(`Press` · `Release` · `MousePosition` · `MouseDelta` · `GamepadAxis` · `Text`)로 씁니다.
+     * @details 눌린 단추가 입력 맵의 어떤 액션이 재생 때 누를 단추(그 장치의 첫 단추 바인딩)와 같으면 액션 단계(`ActionPress` · `ActionRelease`)로 쓴다.
+     *          재생은 같은 단추를 누르므로 결과가 같고, 키 배치를 바꿔도 녹화가 산다. 어느 액션의 그 자리도 아닌 단추는 키 · 단추 단계로 남는다.
      * @details 키 반복(`_bRepeat`)은 누름이 이어지는 것이라 쓰지 않는다. 한 프레임의 마우스 이동은 마지막 위치 하나, 원시 이동량은 합 하나로 줄인다.
      *          가상 입력(`_bSynthetic`)은 시나리오 재생이 낸 것이라 기본으로 쓰지 않는다(`_bIncludeSynthetic` 이면 쓴다 — 왕복 확인).
           검사점(`_listCheckpoint`)이 있으면 마지막 녹화 프레임에 `<Expect>` 로, 그다음 프레임에 `<Pass/>` 를 쓴다.
@@ -90,8 +98,9 @@ namespace sw
         [[nodiscard]] static bool readCheckpoint( string_view spec, const GameObjectManager* pManager, ScenarioRecordCheckpoint& outCheckpoint, string& outError );
 
     private:
-        InputReplay _replay;
-        uint32      _lastBeginFrameCount{ 0 };
-        bool        _bHasLastBeginFrame{ false };
+        InputReplay     _replay;
+        const InputMap* _pInputMap{ nullptr }; ///< 마지막 `update` 의 입력 관리자 맵 — `stop` 이 단추를 액션으로 거꾸로 찾는다
+        uint32          _lastBeginFrameCount{ 0 };
+        bool            _bHasLastBeginFrame{ false };
     };
 } // namespace sw

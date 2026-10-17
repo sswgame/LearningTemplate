@@ -192,7 +192,7 @@ namespace sw
         float4 _wateredSoilColor;
         PROPERTY( Category = "Look", DisplayName = "Withered Crop", Tooltip = "Crop colour once withered" )
         float4 _witheredCropColor;
-        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the OrthoCameraRigComponent that follows the farmer" )
+        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent that follows the farmer" )
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "Scene", DisplayName = "Shipping Bin", Tooltip = "Object whose position is the shipping bin (required - the farm does not start without it)" )
         GameObjectHandle _shippingBin;

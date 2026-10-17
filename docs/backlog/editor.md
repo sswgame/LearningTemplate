@@ -59,7 +59,7 @@
 - `D3-8` [기능] **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
   - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 ·
     패드 연결은 시나리오 의미가 없어 건너뛴 수만 센다. 재생은 원시 Down 을 두 번 내므로 더블클릭 이벤트 자체를 보는 UI 코드는 재현되지 않는다(`DoubleClick` 단계가 필요하면 `VirtualInputScript` 를 고친다).
-    녹화는 키 · 단추 단계로 쓴다 — 입력 맵을 거꾸로 찾아 액션 단계(`Action` · `ActionAxis`)로 쓰면 키 배치를 바꿔도 녹화가 산다(아직 안 함).
+    액션의 단추(재생이 누를 그 장치의 첫 단추 바인딩)는 `ActionPress` · `ActionRelease` 로 쓴다. 축(스틱 · 합성 축)은 아직 `GamepadAxis` · 키 단계라 `ActionAxis` 로 쓰지 않는다.
   - **인스펙터**(`Panels/Inspector/`): 즐겨찾기(`InspectorFavorites` — 행 우클릭, 맨 위 Favorites 구역, `Saved/Editor/InspectorFavorites.txt` 에 저장)는 들어갔다. 키가 가장 파생된 타입 이름이라 기반 클래스에
     즐겨찾기한 프로퍼티는 파생 타입마다 따로 저장된다. 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖)는 하지 않았다. "바뀐 것만 보기" 는 다중 선택에서 주 선택 오브젝트의 값만 기준으로 거른다.
   - **모듈 창**(`ModulesPanel`): 종류 · 켜짐 필터, 상세(의존 · 역의존 · 오버라이드), 연쇄 영향 확인 창, 오버라이드 초기화는 들어갔다. 모듈 설치 · 제거(파일 복사 · 삭제) · 외부 패키지 받기는 없다 —

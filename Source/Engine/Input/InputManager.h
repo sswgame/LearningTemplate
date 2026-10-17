@@ -119,10 +119,10 @@ namespace sw
         MouseDevice*    getMouse() const { return _pMouse; }
         GamepadDevice*  getGamepad( uint32 deviceIndex = 0 ) const;
         /**
-         * @brief 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. 꺼진 채 시작하며, 패드로 커서를 쓰는 게임이 켭니다(`VirtualCursor::setEnabled`).
-         * @details 켜면 `beginFrame` 이 스틱 · 버튼을 마우스 이동 · 버튼 이벤트로 바꿔 OS 이벤트 뒤에 적용한다. 가상 입력(시나리오 · 리플레이)이 붙어 있으면 쉰다.
+         * @brief 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. 읽기 전용입니다 — 켜고 끄기와 스틱은 입력 맵이 정합니다(`InputMap::getVirtualCursorStick`).
+         * @details `beginFrame` 이 매 프레임 맵 값대로 맞추고, 켜져 있으면 스틱 · 버튼을 마우스 이동 · 버튼 이벤트로 바꿔 OS 이벤트 뒤에 적용한다.
+         *          가상 입력(시나리오 · 리플레이)이 붙어 있으면 쉰다. 게임 코드가 켜는 창구를 두지 않는다 — 서비스가 묶이는 시점에 기대면 조용히 안 켜진다.
          */
-        VirtualCursor&       getVirtualCursor() { return _virtualCursor; }
         const VirtualCursor& getVirtualCursor() const { return _virtualCursor; }
 
         // ------------------------------------------------------------------------------
@@ -272,6 +272,8 @@ namespace sw
 
     private:
         void dispatchRawEvent( const RawInputEvent& rawEvent );
+        /** @brief 가상 커서를 입력 맵의 `virtualCursor` 대로 켜고 끄고 스틱을 맞춥니다. 바뀔 때만 켜고 끕니다(켜고 끌 때 버튼 상태를 새로 잡는다). */
+        void syncVirtualCursorToMap();
         /** @brief 모든 패드의 가상 세션을 켜거나 끕니다(배타 가상 입력이 붙고 뗄 때). */
         void setGamepadVirtualSession( bool bVirtual );
 

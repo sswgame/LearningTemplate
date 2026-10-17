@@ -280,10 +280,13 @@ namespace sw
             case CameraPresetMode::OrthoTopDown:
             {
                 // 직교 시점의 상자는 초점(X · Z)을 가둔다 — 카메라 자리는 수백 m 위에 있어 그것을 가두면 화면이 상자 밖을 본다.
+                // 팬도 상자 끝에서 멈춘다 — 넘친 만큼 남겨 두면 되돌아올 때 그만큼 키를 눌러도 화면이 움직이지 않는다.
                 if ( confiner._bBounds )
                 {
                     const float3 clamped = CameraModeInternal::clampToBounds( confiner, pivot );
-                    pivot                = float3{ clamped._x, pivot._y, clamped._z };
+                    inoutState._panOffset._x += clamped._x - pivot._x;
+                    inoutState._panOffset._z += clamped._z - pivot._z;
+                    pivot = float3{ clamped._x, pivot._y, clamped._z };
                 }
                 break;
             }

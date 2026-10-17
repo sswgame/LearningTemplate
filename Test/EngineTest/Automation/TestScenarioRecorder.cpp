@@ -5,6 +5,7 @@
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 
 #include "TestFramework/TestFramework.h"
@@ -184,4 +185,42 @@ SW_TEST_CASE( ScenarioRecorderTest, OutputPathStaysUnderSavedAutomation )
     SW_EXPECT_FALSE( sw::ScenarioRecorder::isAllowedOutputPath( "Saved/BugIt/a.scenario.xml" ) );
     SW_EXPECT_FALSE( sw::ScenarioRecorder::isAllowedOutputPath( "C:/Saved/Automation/a.scenario.xml" ) );
     SW_EXPECT_FALSE( sw::ScenarioRecorder::isAllowedOutputPath( "Saved/Automation/a.xml" ) );
+}
+
+/**
+ * @brief [ScenarioRecorderTest] 입력 맵이 있으면 액션이 재생 때 누를 단추(그 장치의 첫 단추 바인딩)는 액션 단계로 쓴다 — 키 배치를 바꿔도 녹화가 산다.
+ *        그 액션의 첫 단추가 아닌 단추와 어느 액션에도 없는 단추는 키 단계로 남는다
+ */
+SW_TEST_CASE( ScenarioRecorderTest, MappedButtonsBecomeActionSteps )
+{
+    sw::InputMap inputMap;
+    inputMap.registerLayer( "Gameplay", 0, true, false, false );
+    inputMap.bind( "Jump", sw::Key::Space, sw::ActionTrigger::Pressed, "Gameplay" );
+    inputMap.bind( "Jump", sw::Key::W, sw::ActionTrigger::Pressed, "Gameplay" ); // 둘째 키보드 단추 — 재생은 Space 를 누른다
+
+    sw::vector<sw::InputReplayFrame> listFrame( 3 );
+    listFrame[0]._listRawEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
+    listFrame[1]._listRawEvent.push_back( sw::RawInputEvent::makeKeyUp( sw::Key::Space ) );
+    listFrame[2]._listRawEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
+    listFrame[2]._listRawEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::F5 ) );
+
+    sw::ScenarioRecordSettings settings;
+    settings._pInputMap                   = &inputMap;
+    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXML( listFrame, settings );
+
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_ASSERT_TRUE( scenario.parse( output._xmlText, "recorded.scenario.xml", error ) );
+    SW_EXPECT_EQUAL( 1u, TestScenarioRecorderInternal::countKind( scenario, "ActionPress" ) );
+    SW_EXPECT_EQUAL( 1u, TestScenarioRecorderInternal::countKind( scenario, "ActionRelease" ) );
+    for ( const sw::AutomationStep& step : scenario.getSteps() )
+    {
+        if ( sw::string_view{ step._kind } != "ActionPress" )
+            continue;
+        SW_EXPECT_STREQ( "Jump", step.findAttribute( "name" )->c_str() );
+        SW_EXPECT_STREQ( "keyboard", step.findAttribute( "device" )->c_str() );
+        SW_EXPECT_EQUAL( 1u, step._frameIndex );
+    }
+    // W(첫 단추가 아님) · F5(맵에 없음)는 키 단계다. 키 이름을 다시 읽지 못하면(엔진 서비스 없음) 건너뛴 입력으로 센다.
+    SW_EXPECT_EQUAL( 2u, TestScenarioRecorderInternal::countKind( scenario, "Press" ) + output._skippedEventCount );
 }

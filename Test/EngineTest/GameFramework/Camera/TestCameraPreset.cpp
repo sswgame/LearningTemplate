@@ -16,9 +16,11 @@
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Actor/Camera/CameraMode.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 #include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -626,6 +628,129 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentRestoresItsPresetBeforeBeginPla
     pDirector->restoreState( std::move( bytes ) );
     manager.beginPlay();
     SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "second" ) );
+    manager.endPlay();
+}
+
+/**
+ * @brief [CameraPresetTest] 디렉터 컴포넌트는 정적 등록(`StatefulComponentRegistration`)으로 모든 게임의 스냅샷에 오른다 — 게임 인스턴스가 올리지 않아도
+ *        등록의 싣기 · 돌려주기가 켠 프리셋을 다른 매니저의 디렉터로 넘긴다
+ */
+SW_TEST_CASE( CameraPresetTest, DirectorComponentRidesEverySnapshotThroughTheStaticRegistration )
+{
+    constexpr const utf8* kCatalogXML = R"(<CameraPresets>
+        <Preset id="first"><View mode="Orbit" distance="5"/></Preset>
+        <Preset id="second"><View mode="Orbit" distance="9"/></Preset>
+    </CameraPresets>)";
+
+    const StatefulComponentRegistration* pRegistration = nullptr;
+    for ( const StatefulComponentRegistration* pCandidate : StatefulComponentRegistration::getRegistrations() )
+    {
+        if ( string_view( pCandidate->getTypeName() ) == string_view( "CameraDirectorComponent" ) )
+            pRegistration = pCandidate;
+    }
+    SW_ASSERT_NOT_NULL( pRegistration );
+
+    ComponentStateStore store;
+    {
+        GameObjectManager manager;
+        GameObject*       pCameraObject = manager.createGameObject( hashed_string( "SnapshotCamera" ) );
+        SW_ASSERT_NOT_NULL( pCameraObject );
+        SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
+        CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
+        SW_ASSERT_NOT_NULL( pDirector );
+        SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( kCatalogXML, "registration-source" ) );
+        pDirector->setInputEnabled( false );
+        manager.beginPlay();
+        SW_ASSERT_TRUE( pDirector->activatePreset( "second" ) );
+        pDirector->updateCamera( 0.1f );
+        pRegistration->getCapture()( store, manager );
+        manager.endPlay();
+    }
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( store.getEntries().size() ) );
+
+    GameObjectManager manager;
+    GameObject*       pCameraObject = manager.createGameObject( hashed_string( "RestoredSnapshotCamera" ) );
+    SW_ASSERT_NOT_NULL( pCameraObject );
+    SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
+    CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_NOT_NULL( pDirector );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( kCatalogXML, "registration-target" ) );
+    pDirector->setInputEnabled( false );
+    pRegistration->getRestore()( store, manager ); // 시작 전 — 디렉터가 들고 있다가 카탈로그를 읽은 뒤 적용한다
+    manager.beginPlay();
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "second" ) );
+    manager.endPlay();
+}
+
+/**
+ * @brief [CameraPresetTest] 직교 시점의 상자(`<Confiner>`)는 팬도 상자 끝에서 멈춘다 — 넘친 만큼 남지 않아 반대로 밀면 그 프레임에 바로 움직인다
+ */
+SW_TEST_CASE( CameraPresetTest, OrthoConfinerStopsThePanAtTheBoxEdge )
+{
+    CameraPresetDef def;
+    def._id                  = hashed_string( "ortho" );
+    def._view._mode          = CameraPresetMode::OrthoTopDown;
+    def._view._pitch         = 60.0f * MathUtil::kDegreeToRadian;
+    def._view._distance      = 100.0f;
+    def._lens._orthoHeight   = 30.0f;
+    def._input._panSpeed     = 10.0f;
+    def._confiner._bBounds   = true;
+    def._confiner._boundsMin = float3{ 0.0f, 0.0f, 0.0f };
+    def._confiner._boundsMax = float3{ 64.0f, 0.0f, 64.0f };
+    CameraTarget target;
+    target._focus = float3{ 60.0f, 0.0f, 32.0f };
+    CameraModeState state;
+
+    CameraModeInput input;
+    input._pan = float2{ 0.0f, 1.0f }; // (앞, 오른쪽) — 요 0 의 오른쪽은 +X
+    applyCameraInput( def, input, 1.0f, state );
+    (void)evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, state._panOffset._x, 1.0e-4f ); // 10 m 밀었지만 상자 끝(64)까지만 남는다
+
+    input._pan = float2{ 0.0f, -1.0f };
+    applyCameraInput( def, input, 0.1f, state );
+    const CameraPose pose = evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, state._panOffset._x, 1.0e-4f ); // 되돌아오는 첫 프레임에 1 m 움직인다
+    SW_EXPECT_TRUE( pose._bOrthographic == SW_TRUE );
+}
+
+/**
+ * @brief [CameraPresetTest] 대상 없는 직교 디렉터는 초점 점(`setFocusPoint`)을 내려다보고, 화면 가운데의 땅 고르기가 그 점이다.
+ *        `startWithPreset` 은 시작 전이면 시작 프리셋을, 시작 뒤면 그 프리셋으로 끊어 바꾼다(오브젝트 시작 순서에 기대지 않는다)
+ */
+SW_TEST_CASE( CameraPresetTest, TopDownDirectorPicksTheGroundUnderItsFocusPoint )
+{
+    GameObjectManager manager;
+    GameObject*       pCameraObject = manager.createGameObject( hashed_string( "TopDownCamera" ) );
+    SW_ASSERT_NOT_NULL( pCameraObject );
+    SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
+    CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_NOT_NULL( pDirector );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
+        <Preset id="play"><View mode="OrthoTopDown" pitch="60" distance="150"/><Lens orthoHeight="30" far="375"/></Preset>
+        <Preset id="watch"><View mode="OrthoTopDown" pitch="60" distance="150"/><Lens orthoHeight="70" far="375"/></Preset>
+    </CameraPresets>)",
+                                                             "topdown-test" ) );
+    pDirector->setInputEnabled( false );
+    pDirector->setFocusPoint( float3{ 14.0f, 0.0f, 14.0f } );
+    pDirector->startWithPreset( hashed_string( "watch" ) ); // 시작 전 — 시작 프리셋이 된다
+    manager.beginPlay();
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "watch" ) );
+    SW_EXPECT_NEAR_EQUAL( 70.0f, pDirector->getPose()._orthoHeight, 1.0e-4f );
+
+    float3 ground{};
+    SW_ASSERT_TRUE( pDirector->findGroundPoint( float2{ 0.5f, 0.5f }, 0.0f, ground ) );
+    SW_EXPECT_NEAR_EQUAL( 14.0f, ground._x, 1.0e-2f );
+    SW_EXPECT_NEAR_EQUAL( 14.0f, ground._z, 1.0e-2f );
+
+    pDirector->setFocusPoint( float3{ 30.0f, 0.0f, 20.0f } );
+    pDirector->startWithPreset( hashed_string( "play" ) ); // 시작 뒤 — 끊어 바꾼다
+    pDirector->updateCamera( 0.0f );
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "play" ) );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, pDirector->getPose()._orthoHeight, 1.0e-4f );
+    SW_ASSERT_TRUE( pDirector->findGroundPoint( float2{ 0.5f, 0.5f }, 0.0f, ground ) );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, ground._x, 1.0e-2f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, ground._z, 1.0e-2f );
     manager.endPlay();
 }
 

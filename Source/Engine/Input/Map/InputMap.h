@@ -40,6 +40,20 @@ namespace sw
         Axis2D       ///< 2차원 평면 이동/시점 벡터
     };
 
+    /**
+     * @brief 입력 맵이 켜는 패드 가상 커서입니다(`<InputMap virtualCursor="RightStick">`, 적지 않으면 끔).
+     * @details 명령형 게임(RTS · 도시 건설)이 패드만으로 커서를 쓰게 한다. 맵을 들고 있는 `InputManager` 가 매 프레임 이 값대로 켜고 끈다 —
+     *          게임 코드가 켜고 끄지 않으므로 서비스가 묶이는 시점 · 오브젝트 시작 순서에 기대지 않는다.
+     *          가상 커서는 그 스틱과 패드 A · B 를 마우스 이동 · 왼쪽 · 오른쪽 버튼으로 바꾸므로, 맵이 같은 스틱 · 버튼을 액션에 따로 묶으면
+     *          한 입력이 두 입력이 된다. 그래서 읽기가 그런 바인딩을 오류로 거절한다(`loadFromResource`).
+     */
+    enum class InputMapVirtualCursor : uint8
+    {
+        Off = 0,    ///< 가상 커서를 쓰지 않는다
+        LeftStick,  ///< 왼쪽 스틱이 커서를 움직인다
+        RightStick, ///< 오른쪽 스틱이 커서를 움직인다
+    };
+
     enum class BindingKind : uint8
     {
         SingleSlot = 0,    ///< 단일 Key / MouseButton / GamepadButton
@@ -494,12 +508,15 @@ namespace sw
             _navRepeatDelay = delaySeconds;
             _navRepeatRate  = rateSeconds;
         }
-        InputManager* getInputManager() const { return _pInput; }
-        float32       getDoubleClickTime() const { return _doubleClickTime; }
-        float32       getDoubleTapTime() const { return _doubleTapTime; }
-        float32       getHoldThreshold() const { return _holdThreshold; }
-        float32       getNavRepeatDelay() const { return _navRepeatDelay; }
-        float32       getNavRepeatRate() const { return _navRepeatRate; }
+        /** @brief 이 맵이 켜는 가상 커서입니다. `InputManager` 가 매 프레임 읽어 켜고 끕니다. */
+        InputMapVirtualCursor getVirtualCursorStick() const { return _virtualCursorStick; }
+        void                  setVirtualCursorStick( InputMapVirtualCursor stick ) { _virtualCursorStick = stick; }
+        InputManager*         getInputManager() const { return _pInput; }
+        float32               getDoubleClickTime() const { return _doubleClickTime; }
+        float32               getDoubleTapTime() const { return _doubleTapTime; }
+        float32               getHoldThreshold() const { return _holdThreshold; }
+        float32               getNavRepeatDelay() const { return _navRepeatDelay; }
+        float32               getNavRepeatRate() const { return _navRepeatRate; }
 
         /** @brief 실시간 액션 평가 상태를 덤프합니다(HUD, 에디터 인스펙터용). */
         void getDebugActionStates( vector<DebugActionState>& outListState ) const;
@@ -689,6 +706,13 @@ namespace sw
         const ActionEntry*     findAction( const hashed_string& action ) const;
 
     private:
+        /**
+         * @brief 가상 커서(`_virtualCursorStick`)가 마우스로 바꾸는 스틱 · 패드 버튼(기본 설정의 A · B, 0 번 패드)을 따로 묶은 바인딩마다 알리고 그 수를 반환합니다.
+         * @details 가상 커서가 꺼져 있으면 0 이다. 읽기(`loadFromResource`)가 0 이 아니면 실패로 돌린다.
+         */
+        [[nodiscard]] uint32 countVirtualCursorConflicts( string_view sourceName ) const;
+
+    private:
         InputManager*                        _pInput;
         unordered_map<hashed_string, uint32> _mapAction;       /**< 액션 이름에서 `_listActionEntry` 인덱스를 찾는 맵입니다. */
         unordered_map<hashed_string, uint32> _mapLayer;        /**< 레이어 이름에서 `_listLayerEntry` 인덱스를 찾는 맵입니다. */
@@ -708,7 +732,8 @@ namespace sw
         float32                              _navRepeatDelay;
         float32                              _navRepeatRate;
         float32                              _totalElapsedTime;
-        float32                              _lastDeltaSeconds; ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
+        float32                              _lastDeltaSeconds;   ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
+        InputMapVirtualCursor                _virtualCursorStick; ///< 이 맵이 켜는 가상 커서(`<InputMap virtualCursor>`)
         uint8                                _bSuppressBaseActionOnChord : 1;
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(셸 맵). */
         [[maybe_unused]] uint8               _reservedFlags              : 6;

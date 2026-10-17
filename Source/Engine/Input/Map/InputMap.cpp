@@ -157,6 +157,7 @@ namespace sw
         , _navRepeatRate{ 0.08f }
         , _totalElapsedTime{ 0.0f }
         , _lastDeltaSeconds{ 0.0f }
+        , _virtualCursorStick{ InputMapVirtualCursor::Off }
         , _bSuppressBaseActionOnChord{ SW_TRUE }
         , _bKeyboardFocusIgnored{ SW_FALSE }
         , _reservedFlags{ 0 }
@@ -179,6 +180,7 @@ namespace sw
         _holdThreshold          = InputMapDefaults::kHoldThreshold;
         _totalElapsedTime       = 0.0f;
         _lastDeltaSeconds       = 0.0f;
+        _virtualCursorStick     = InputMapVirtualCursor::Off;
     }
 
     void InputMap::createAction( const hashed_string& action, InputActionValueType valueType )

@@ -21,6 +21,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 
 namespace sw
@@ -82,6 +83,9 @@ namespace sw
                 return true;
             }
         };
+
+        /** @brief 켠 프리셋과 블렌드 스택을 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다). */
+        const StatefulComponentRegistrar<CameraDirectorComponent> s_stateRegistration{ "CameraDirectorComponent" };
     } // namespace
 } // namespace sw
 
@@ -92,6 +96,7 @@ namespace sw
         , _initialPreset{}
         , _target{}
         , _listGroupTarget{}
+        , _focusPoint{ 0.0f, 0.0f, 0.0f }
         , _cycleAction{}
         , _panAction{ "Camera.Pan" }
         , _rotateAction{ "Camera.Rotate" }
@@ -235,6 +240,24 @@ namespace sw
         GameTimeScale::removePauseRequest();
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
+    }
+
+    void CameraDirectorComponent::setFocusPoint( const float3& point )
+    {
+        _focusPoint                         = point;
+        _director.getModeState()._panOffset = float3{ 0.0f, 0.0f, 0.0f };
+    }
+
+    void CameraDirectorComponent::startWithPreset( const hashed_string& id )
+    {
+        _initialPreset = id;
+        if ( hasBegunPlay() == false )
+            return;
+        BlendCurveDef cut;
+        cut._curve    = BlendCurve::Cut;
+        cut._duration = 0.0f;
+        if ( _director.activatePreset( _catalog, id, cut ) == false )
+            SW_LOG_WARNING( "Camera preset '%#' is not in '%#'", id.c_str(), _catalogPath );
     }
 
     bool CameraDirectorComponent::findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const
@@ -481,7 +504,8 @@ namespace sw
 
     CameraTarget CameraDirectorComponent::computeTarget() const
     {
-        CameraTarget             target;
+        CameraTarget target;
+        target._focus                     = _focusPoint; // 대상 오브젝트가 없을 때의 초점(직교 시점 게임)
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;

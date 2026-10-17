@@ -8,6 +8,7 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -86,6 +87,46 @@ namespace sw
                 return outText.empty() == false && InputSlotUtil::tryParse( outText, parsed );
             }
 
+            /**
+             * @brief @p slot 이 어떤 액션의, 그 장치의 첫 단추 바인딩이면 그 액션 이름입니다. 없으면 nullptr 입니다.
+             * @details 재생 단계(`ActionPress` · `ActionRelease` + `device`)는 그 장치의 첫 단추 바인딩을 누른다 — 같은 슬롯일 때만 같은 입력이 재현된다.
+             *          여럿이면 맵의 액션 순서로 첫 것이다(어느 것이든 같은 슬롯을 누른다).
+             */
+            [[nodiscard]] static const hashed_string* findActionOfSlot( const InputMap& inputMap, const InputSlot& slot )
+            {
+                for ( const hashed_string& action : inputMap.getActionNames() )
+                {
+                    const uint32 bindingCount = inputMap.getBindingCount( action );
+                    for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
+                    {
+                        const ActionBinding* pBinding        = inputMap.getBinding( action, bindIndex );
+                        const bool           bButtonOfDevice = pBinding != nullptr && pBinding->_kind == BindingKind::SingleSlot && pBinding->_arrSlot[0]._deviceKind == slot._deviceKind;
+                        if ( bButtonOfDevice == false )
+                            continue;
+                        if ( pBinding->_arrSlot[0] == slot )
+                            return &action;
+                        break; // 재생은 이 바인딩을 누른다 — 다른 슬롯이면 이 액션으로 쓸 수 없다
+                    }
+                }
+                return nullptr;
+            }
+
+            /** @brief 액션 단계의 `device` 값입니다. 액션 단계가 받지 않는 장치면 nullptr 입니다. */
+            static const utf8* toDeviceName( InputDeviceKind kind )
+            {
+                switch ( kind )
+                {
+                    case InputDeviceKind::Keyboard:
+                        return "keyboard";
+                    case InputDeviceKind::Mouse:
+                        return "mouse";
+                    case InputDeviceKind::Gamepad:
+                        return "gamepad";
+                    default:
+                        return nullptr;
+                }
+            }
+
             static float32 toFraction( int32 value, uint32 size )
             {
                 if ( size <= 1 )
@@ -110,6 +151,19 @@ namespace sw
 
                 const auto appendSlot = [&]( const utf8* pKind, const InputSlot& slot )
                 {
+                    // 액션의 단추면 액션 단계로 쓴다 — 키 배치를 바꿔도 녹화가 산다.
+                    const hashed_string* pAction     = settings._pInputMap != nullptr ? findActionOfSlot( *settings._pInputMap, slot ) : nullptr;
+                    const utf8*          pDeviceName = toDeviceName( slot._deviceKind );
+                    if ( pAction != nullptr && pDeviceName != nullptr )
+                    {
+                        outBody += string_view{ pKind } == "Press" ? "<ActionPress name=\"" : "<ActionRelease name=\"";
+                        appendEscaped( outBody, pAction->view() );
+                        outBody += "\" device=\"";
+                        outBody += pDeviceName;
+                        outBody += "\"/>";
+                        ++outResult._writtenStepCount;
+                        return;
+                    }
                     if ( tryMakeSlotText( slot, slotText ) == false )
                     {
                         ++outResult._skippedEventCount;
@@ -287,6 +341,7 @@ namespace sw
             return;
         _bHasLastBeginFrame  = true;
         _lastBeginFrameCount = input.getBeginFrameCount();
+        _pInputMap           = &input.getInputMap();
         _replay.recordFrame( deltaTime, input.getLastFrameEvents() );
     }
 
@@ -295,7 +350,10 @@ namespace sw
         if ( _replay.isRecording() == false )
             return {};
         _replay.stopRecording();
-        ScenarioRecordOutput result = toScenarioXML( _replay.getFrames(), settings );
+        ScenarioRecordSettings resolved = settings;
+        if ( resolved._pInputMap == nullptr )
+            resolved._pInputMap = _pInputMap;
+        ScenarioRecordOutput result = toScenarioXML( _replay.getFrames(), resolved );
         _replay.clear();
         if ( result._skippedEventCount != 0 )
             SW_LOG_INFO( "[ScenarioRecorder] skipped %# input events that have no scenario step", result._skippedEventCount );

@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class GameObjectManager;
+
     /**
      * @class ComponentStateStore
      * @brief 컴포넌트마다 바이트 덩어리 하나를 (타입 이름, 컴포넌트 id) 로 들고, 게임 상태 봉투(`GameInstanceBase::serializeState`)의 한 섹션으로 씁니다.
@@ -116,5 +118,66 @@ namespace sw
 
     private:
         vector<Entry> _listEntry;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class StatefulComponentRegistration
+     * @brief 게임 프레임워크의 컴포넌트 타입 하나를 **모든 게임**의 상태 스냅샷에 올리는 정적 등록입니다. 컴포넌트를 정의한 .cpp 에 하나 둡니다.
+     * @details `GameInstanceBase` 생성자가 등록된 타입을 모두 올린다(`registerStatefulComponent` 와 같은 일). 게임마다 한 줄씩 넣으면 빠뜨린 게임만
+     *          세이브 · 핫 리로드에서 그 상태를 조용히 잃으므로, 타입을 정의한 쪽이 한 번 등록한다. 층이 위인 컴포넌트(Actor 의 카메라 디렉터)도
+     *          기반 층(Foundation)의 게임 인스턴스가 include 하지 않고 올라온다.
+     *          등록은 프레임워크 모듈의 정적 초기화에서 돌아 어떤 게임 인스턴스보다 먼저 끝난다. 같은 이름은 두 번 오르지 않는다.
+     *          게임 모듈의 타입은 이것을 쓰지 않고 게임 인스턴스 생성자에서 `registerStatefulComponent<T>()` 로 올린다(모듈 리로드와 수명이 같다).
+     */
+    class SW_GF_API StatefulComponentRegistration
+    {
+    public:
+        using CaptureFn = void ( * )( ComponentStateStore& store, GameObjectManager& manager );
+        using RestoreFn = void ( * )( const ComponentStateStore& store, GameObjectManager& manager );
+
+        StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore );
+        ~StatefulComponentRegistration();
+        StatefulComponentRegistration( const StatefulComponentRegistration& )            = delete;
+        StatefulComponentRegistration& operator=( const StatefulComponentRegistration& ) = delete;
+
+        /** @brief 지금 올라 있는 등록입니다(등록 순서). */
+        static const vector<StatefulComponentRegistration*>& getRegistrations();
+
+        const utf8* getTypeName() const { return _pTypeName; }
+        CaptureFn   getCapture() const { return _pCapture; }
+        RestoreFn   getRestore() const { return _pRestore; }
+
+    private:
+        const utf8* _pTypeName;
+        CaptureFn   _pCapture;
+        RestoreFn   _pRestore;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class StatefulComponentRegistrar
+     * @brief @p TComponent 의 `writeState` / `restoreState` 를 `ComponentStateStore` 로 잇는 정적 등록입니다.
+     * @details 오브젝트 매니저를 include 한 .cpp 에서 만든다(순회 템플릿이 그때 인스턴스화된다).
+     */
+    template <typename TComponent>
+    class StatefulComponentRegistrar final : public StatefulComponentRegistration
+    {
+    public:
+        explicit StatefulComponentRegistrar( const utf8* pTypeName )
+            : StatefulComponentRegistration( pTypeName, &StatefulComponentRegistrar::captureOf, &StatefulComponentRegistrar::restoreOf )
+        {
+        }
+
+    private:
+        static void captureOf( ComponentStateStore& store, GameObjectManager& manager ) { (void)store.capture<TComponent>( manager ); }
+        static void restoreOf( const ComponentStateStore& store, GameObjectManager& manager )
+        {
+            (void)store.restore<TComponent>( manager ); // 짝이 없는 컴포넌트는 그대로 둔다
+        }
     };
 } // namespace sw

@@ -1674,3 +1674,47 @@ SW_TEST_CASE( InputMapTest, MultiTapRoundTripsThroughXML )
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( reloaded.getBinding( "Roll", 1 )->_tapCount ) );
     SW_EXPECT_TRUE( reloaded.getBinding( "Dash", 0 )->_trigger == sw::ActionTrigger::DoubleTap );
 }
+
+/**
+ * @brief [InputMapTest] 입력 맵의 `virtualCursor` 가 가상 커서를 정하고, 커서가 마우스로 바꾸는 패드 A · B · 그 스틱을 액션에 따로 묶은 맵은 읽기가 거절한다
+ * @details 패드 A 가 가상 커서의 마우스 왼쪽과 맵의 A 바인딩 둘로 나가면 한 누름이 두 입력이 된다. 모르는 이름도 조용히 끄지 않고 거절한다.
+ */
+SW_TEST_CASE( InputMapTest, VirtualCursorMapRejectsBindingsTheCursorTurnsIntoTheMouse )
+{
+    const sw::string okPath = test::makeTempPath( "cursor_ok.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( okPath, "<InputMap virtualCursor=\"RightStick\"><action name=\"Place\"><bind source=\"mouse\" code=\"Left\"/></action>"
+                                                         "<action name=\"Move\"><bind source=\"gamepad\" code=\"LeftStick\"/></action></InputMap>" ) );
+    sw::InputMap okMap;
+    SW_ASSERT_TRUE( okMap.loadFromResource( okPath ) );
+    SW_EXPECT_TRUE( okMap.getVirtualCursorStick() == sw::InputMapVirtualCursor::RightStick );
+    const sw::string savedPath = test::makeTempPath( "cursor_saved.input.xml" );
+    SW_ASSERT_TRUE( okMap.saveToResource( savedPath ) );
+    sw::InputMap reloaded;
+    SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+    SW_EXPECT_TRUE( reloaded.getVirtualCursorStick() == sw::InputMapVirtualCursor::RightStick );
+
+    const sw::string buttonPath = test::makeTempPath( "cursor_button.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( buttonPath, "<InputMap virtualCursor=\"RightStick\"><action name=\"Place\"><bind source=\"mouse\" code=\"Left\"/>"
+                                                             "<bind source=\"gamepad\" code=\"A\"/></action></InputMap>" ) );
+    const sw::string stickPath = test::makeTempPath( "cursor_stick.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( stickPath, "<InputMap virtualCursor=\"LeftStick\"><action name=\"Move\"><bind source=\"gamepad\" code=\"LeftStick\"/></action></InputMap>" ) );
+    const sw::string unknownPath = test::makeTempPath( "cursor_unknown.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( unknownPath, "<InputMap virtualCursor=\"Both\"></InputMap>" ) );
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "input maps whose bindings fight the virtual cursor" );
+        sw::InputMap buttonMap;
+        SW_EXPECT_FALSE( buttonMap.loadFromResource( buttonPath ) );
+        sw::InputMap stickMap;
+        SW_EXPECT_FALSE( stickMap.loadFromResource( stickPath ) );
+        sw::InputMap unknownMap;
+        SW_EXPECT_FALSE( unknownMap.loadFromResource( unknownPath ) );
+    }
+
+    // 맵이 커서를 적지 않으면 끈다 — 같은 패드 A 바인딩도 그대로 읽힌다.
+    const sw::string offPath = test::makeTempPath( "cursor_off.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( offPath, "<InputMap><action name=\"Place\"><bind source=\"gamepad\" code=\"A\"/></action></InputMap>" ) );
+    sw::InputMap offMap;
+    SW_ASSERT_TRUE( offMap.loadFromResource( offPath ) );
+    SW_EXPECT_TRUE( offMap.getVirtualCursorStick() == sw::InputMapVirtualCursor::Off );
+}

@@ -98,6 +98,14 @@ namespace sw
         _gameScope.addSubsystem( make_unique<LoadingScreenController>() );
         // 엔진 컴포넌트 중 PROPERTY 밖의 편집 상태를 가진 것 — 지형의 저장하지 않은 높이 · 스플랫이 모듈 리로드와 백엔드 교체를 넘어간다.
         registerStatefulComponent<TerrainComponent>();
+        // 프레임워크 컴포넌트(카메라 디렉터 등)는 정의한 쪽이 정적으로 등록한다 — 게임마다 올리지 않아도 모든 게임의 스냅샷에 실린다.
+        for ( const StatefulComponentRegistration* pRegistration : StatefulComponentRegistration::getRegistrations() )
+        {
+            StatefulComponentType type;
+            type._pCapture = pRegistration->getCapture();
+            type._pRestore = pRegistration->getRestore();
+            _listStatefulType.push_back( type );
+        }
     }
 
     GameInstanceBase::~GameInstanceBase()

@@ -6,6 +6,7 @@
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/Virtual/VirtualCursor.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -37,6 +38,7 @@ namespace sw
                 static constexpr const utf8* kAttrDoubleClick     = "doubleClickTime";
                 static constexpr const utf8* kAttrDoubleClickDist = "doubleClickMaxDistance";
                 static constexpr const utf8* kAttrHoldThreshold   = "holdThreshold";
+                static constexpr const utf8* kAttrVirtualCursor   = "virtualCursor";
                 static constexpr const utf8* kAttrName            = "name";
                 static constexpr const utf8* kAttrPriority        = "priority";
                 static constexpr const utf8* kAttrEnabled         = "enabled";
@@ -54,6 +56,43 @@ namespace sw
                 static constexpr const utf8* kSourceGamepad       = "gamepad";
                 static constexpr const utf8* kSourceMouse         = "mouse";
             };
+
+            struct VirtualCursorNameEntry
+            {
+                const utf8*           _pName;
+                InputMapVirtualCursor _stick;
+            };
+
+            /** @brief `virtualCursor` 특성의 이름입니다. 읽기와 쓰기가 이 표 하나를 함께 씁니다. */
+            static constexpr VirtualCursorNameEntry kArrVirtualCursorNames[] = {
+                {       "Off",        InputMapVirtualCursor::Off},
+                { "LeftStick",  InputMapVirtualCursor::LeftStick},
+                {"RightStick", InputMapVirtualCursor::RightStick},
+            };
+
+            /** @brief `virtualCursor` 특성을 읽습니다. 모르는 이름이면 false 입니다(대소문자는 무시한다). */
+            [[nodiscard]] static bool tryParseVirtualCursor( const utf8* pText, InputMapVirtualCursor& outStick )
+            {
+                for ( const VirtualCursorNameEntry& entry : kArrVirtualCursorNames )
+                {
+                    if ( StringUtil::equals( pText, entry._pName, true ) )
+                    {
+                        outStick = entry._stick;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            static const utf8* toVirtualCursorName( InputMapVirtualCursor stick )
+            {
+                for ( const VirtualCursorNameEntry& entry : kArrVirtualCursorNames )
+                {
+                    if ( entry._stick == stick )
+                        return entry._pName;
+                }
+                return kArrVirtualCursorNames[0]._pName;
+            }
 
             struct TriggerNameEntry
             {
@@ -410,15 +449,23 @@ namespace sw
             return false;
         }
 
-        const float32 dblClick      = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrDoubleClick, InputMapDefaults::kDoubleClickTime );
-        const float32 dblDist       = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrDoubleClickDist, InputMapDefaults::kDoubleClickMaxDistance );
-        const float32 holdThreshold = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrHoldThreshold, InputMapDefaults::kHoldThreshold );
-        const utf8*   pDefaultLayer = root.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrDefaultLayer );
+        const float32         dblClick       = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrDoubleClick, InputMapDefaults::kDoubleClickTime );
+        const float32         dblDist        = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrDoubleClickDist, InputMapDefaults::kDoubleClickMaxDistance );
+        const float32         holdThreshold  = root.getAttributeFloat( InputMapSerializationInternal::InputMapXML::kAttrHoldThreshold, InputMapDefaults::kHoldThreshold );
+        const utf8*           pDefaultLayer  = root.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrDefaultLayer );
+        const utf8*           pVirtualCursor = root.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrVirtualCursor );
+        InputMapVirtualCursor virtualCursor  = InputMapVirtualCursor::Off;
+        if ( pVirtualCursor != nullptr && InputMapSerializationInternal::tryParseVirtualCursor( pVirtualCursor, virtualCursor ) == false )
+        {
+            SW_LOG_ERROR( "InputMap %# has an unknown virtualCursor '%#' (Off, LeftStick, RightStick)", absPath, pVirtualCursor );
+            return false;
+        }
 
         clear();
         setDoubleClickTime( dblClick );
         setDoubleClickMaxDistance( dblDist );
         setHoldThreshold( holdThreshold );
+        _virtualCursorStick = virtualCursor;
         if ( StringUtil::isNullOrEmpty( pDefaultLayer ) == false )
             _defaultLayerName = hashed_string( pDefaultLayer );
 
@@ -722,7 +769,46 @@ namespace sw
             loadAction( actionNode, _defaultLayerName.view() );
         }
 
+        // 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 액션에 따로 묶으면 한 입력이 두 입력이 된다 — 읽기를 실패로 돌려 데이터를 고치게 한다.
+        if ( countVirtualCursorConflicts( absPath ) > 0 )
+            return false;
         return true;
+    }
+
+    uint32 InputMap::countVirtualCursorConflicts( string_view sourceName ) const
+    {
+        if ( _virtualCursorStick == InputMapVirtualCursor::Off )
+            return 0;
+        const VirtualCursorSettings cursor{};
+        const GamepadStick          cursorStick       = _virtualCursorStick == InputMapVirtualCursor::RightStick ? GamepadStick::Right : GamepadStick::Left;
+        const InputSlot             arrCursorButton[] = { InputSlot::fromGamepadButton( cursor._primaryButton, cursor._padIndex ),
+                                                          InputSlot::fromGamepadButton( cursor._secondaryButton, cursor._padIndex ) };
+        uint32                      conflictCount     = 0;
+        for ( const hashed_string& actionName : _listActionName )
+        {
+            const ActionEntry* pEntry = findAction( actionName );
+            if ( pEntry == nullptr )
+                continue;
+            for ( const ActionBinding& binding : pEntry->_listBinding )
+            {
+                const bool bCursorStick  = binding._kind == BindingKind::GamepadStick2D && binding._stick == cursorStick && binding._deviceIndex == cursor._padIndex;
+                bool       bCursorButton = false;
+                for ( const InputSlot& slot : binding._arrSlot )
+                {
+                    for ( const InputSlot& button : arrCursorButton )
+                    {
+                        bCursorButton = bCursorButton || slot == button;
+                    }
+                }
+                if ( bCursorStick == false && bCursorButton == false )
+                    continue;
+                SW_LOG_ERROR( "InputMap %#: action '%#' binds the %# the virtual cursor (%#) turns into the mouse - one press would fire twice; bind the mouse only",
+                              sourceName, actionName.c_str(), bCursorStick ? "stick" : "gamepad button",
+                              InputMapSerializationInternal::toVirtualCursorName( _virtualCursorStick ) );
+                ++conflictCount;
+            }
+        }
+        return conflictCount;
     }
 
     bool InputMap::saveToResource( string_view relativePath ) const
@@ -737,6 +823,8 @@ namespace sw
         root.appendAttribute( InputMapXML::kAttrDoubleClick, _doubleClickTime );
         root.appendAttribute( InputMapXML::kAttrDoubleClickDist, _doubleClickMaxDistance );
         root.appendAttribute( InputMapXML::kAttrHoldThreshold, _holdThreshold );
+        if ( _virtualCursorStick != InputMapVirtualCursor::Off )
+            root.appendAttribute( InputMapXML::kAttrVirtualCursor, InputMapSerializationInternal::toVirtualCursorName( _virtualCursorStick ) );
 
         XMLNode layersNode = root.appendChild( InputMapXML::kLayers );
         for ( const hashed_string& layerName : _listLayerName )

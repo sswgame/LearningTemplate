@@ -21,9 +21,8 @@
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Utility/GameAutoplay.h"
-#include "Engine/Window/IWindow.h"
 
-#include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Control/InputActionCheckUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -155,7 +154,6 @@ namespace sw
         , _unitPrefab{}
         , _cameraRig{}
         , _watchFocus{ 32.0f, 0.0f, 30.0f }
-        , _watchOrthoHeight{ 70.0f }
         , _huntIntervalSeconds{ 4.0f }
         , _arrivedRadius{ 10.0f }
         , _startMinerals{ 50 }
@@ -215,16 +213,11 @@ namespace sw
 
     void SkirmishDirectorComponent::onBeginPlay()
     {
-        GameDirectorComponent::onBeginPlay();
-        // 맵의 패드 A/B 바인딩은 그대로 둔다.
-        if ( InputManager* pInput = game::findSubsystem<InputManager>(); pInput != nullptr )
-            pInput->getVirtualCursor().setEnabled( true );
+        GameDirectorComponent::onBeginPlay(); // 패드 가상 커서는 입력 맵(`virtualCursor`)이 켠다
     }
 
     void SkirmishDirectorComponent::onEndPlay()
     {
-        if ( InputManager* pInput = game::findSubsystem<InputManager>(); pInput != nullptr )
-            pInput->getVirtualCursor().setEnabled( false );
         _unitModels.clear();
         GameDirectorComponent::onEndPlay();
     }
@@ -234,16 +227,16 @@ namespace sw
         // 처음 짓는 건물 · 유닛의 모델을 게임 스레드가 플레이 중에 디스크에서 읽지 않게 판을 열 때 워커로 미리 읽는다(느린 디스크의 히치).
         if ( _unitModels.isComplete() && _unitModels.getLoadedCount() == 0 )
             _unitModels.request( SkirmishUnitComponent::makeAllModelPaths() );
-        // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러서고 WASD 도 카메라를 움직인다.
-        OrthoCameraRigComponent* pRig = findCameraRig();
+        // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러선 프리셋(watch)으로 시작하고 WASD 도 카메라를 움직인다.
+        // 프리셋 고르기는 카메라 오브젝트의 시작 순서에 기대지 않는다(`startWithPreset` — 시작 전이면 시작 프리셋, 뒤면 컷).
+        CameraDirectorComponent* pRig = findCameraRig();
         if ( pRig != nullptr )
         {
             pRig->setPanAction( _bHuman == SW_TRUE ? _playerPanAction : _spectatorPanAction ); // 플레이할 때 WASD 는 명령 단축키다.
             if ( _bHuman == SW_FALSE )
             {
-                pRig->setFocus( _watchFocus );
-                pRig->setOrthoHeight( _watchOrthoHeight );
-                pRig->applyToCamera();
+                pRig->setFocusPoint( _watchFocus );
+                pRig->startWithPreset( hashed_string( "watch" ) );
             }
         }
         if ( _bHuman == SW_TRUE )
@@ -577,11 +570,11 @@ namespace sw
         }
         if ( inputMap.wasActionTriggered( _jumpToSelectionAction ) )
         {
-            // 선택한 유닛으로 이동한다. 리그는 PostUpdate 에서 이 초점을 읽는다(리그의 오브젝트에는 다른 쓰기가 없다).
+            // 선택한 유닛으로 이동한다. 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽는다(카메라 오브젝트에는 다른 쓰기가 없다).
             const RTSUnit*           pPrimary = world.findUnit( _selection.getPrimary() );
-            OrthoCameraRigComponent* pRig     = findCameraRig();
+            CameraDirectorComponent* pRig     = findCameraRig();
             if ( pPrimary != nullptr && pRig != nullptr )
-                pRig->setFocus( float3{ pPrimary->_position._x, 0.0f, pPrimary->_position._z } );
+                pRig->setFocusPoint( float3{ pPrimary->_position._x, 0.0f, pPrimary->_position._z } );
         }
     }
 
@@ -745,15 +738,11 @@ namespace sw
 
     bool SkirmishDirectorComponent::findGroundPoint( const InputManager& input, float3& outPoint ) const
     {
-        // 리그의 직교 시점으로 포인터 아래 땅을 찾는다. 리그는 PostUpdate 에서 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
-        const OrthoCameraRigComponent* pRig = findCameraRig();
+        // 카메라 디렉터가 지금 낸 포즈로 포인터 아래 땅을 찾는다. 디렉터는 PostPhysics 틱 뒤에 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
+        const CameraDirectorComponent* pRig = findCameraRig();
         if ( pRig == nullptr )
             return false;
-        const IWindow* pWindow = IWindow::getActiveWindow();
-        const float32  aspect  = pWindow != nullptr && pWindow->getHeight() > 0
-                                   ? static_cast<float32>( pWindow->getWidth() ) / static_cast<float32>( pWindow->getHeight() )
-                                   : 16.0f / 9.0f;
-        if ( pRig->findGroundPoint( input.getMousePositionNormalized(), aspect, 0.0f, outPoint ) == false )
+        if ( pRig->findGroundPoint( input.getMousePositionNormalized(), 0.0f, outPoint ) == false )
             return false;
         const float32 mapSize = static_cast<float32>( SkirmishMatch::kMapSize );
         return 0.0f <= outPoint._x && outPoint._x < mapSize && 0.0f <= outPoint._z && outPoint._z < mapSize;
@@ -822,10 +811,10 @@ namespace sw
         }
     }
 
-    OrthoCameraRigComponent* SkirmishDirectorComponent::findCameraRig() const
+    CameraDirectorComponent* SkirmishDirectorComponent::findCameraRig() const
     {
         GameObjectManager* pManager   = getObjectManager();
         const GameObject*  pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        return pRigObject != nullptr ? pRigObject->getComponent<OrthoCameraRigComponent>() : nullptr;
+        return pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
     }
 } // namespace sw
