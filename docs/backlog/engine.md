@@ -69,7 +69,6 @@
 - `C-36` [정리] **데이터 주도 구조 정리(2026-10-16, 사용자 지시 "원천적인 문제 해결").** 6 영역 조사가 경로 리터럴 약 200곳 · 조용한 폴백 약 60곳 · 이중 정본 약 30곳을 드러냈다. 뿌리 원인 · 형식으로 막는 해법 · 작업 묶음 W0~W8 은 [데이터 주도 구조 정리 계획](../plans/DataDriven.md).
   기준은 "게이트는 최후의 수단" — 위반을 쓸 수 없는 형식(`DataPath` · `Optional` · `[[nodiscard]]` 로더 결과)이 먼저고 린트 `CheckDataDrivenStructure` 는 틈을 지키는 안전망이다. 진행 표는 그 게이트의 `--summary`.
 
-- `C-38` [정리] **`REFLECT( Alias )` 필드 별칭(`PropertyInfo::_listAlias`)을 지우기.** 엔진 데이터에는 별칭을 두지 않는다는 결정(5-4)과 맞지 않는 기존 코드입니다.
   읽기가 옛 키를 별칭으로 찾는 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)와 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절이 씁니다.
   쓰는 곳을 세어 데이터를 새 이름으로 다시 쓰고 별칭을 없앱니다([데이터 주도 구조 정리 계획](../plans/DataDriven.md) 의 Alias 항목과 같은 일). 값 계산이 필요한 경우만 `SW_SCHEMA_MIGRATION` 입니다.
 
