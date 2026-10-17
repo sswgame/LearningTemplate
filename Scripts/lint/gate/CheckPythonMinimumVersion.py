@@ -49,11 +49,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import kNotOurCodeDirNames  # noqa: E402
+from common import kMinimumPythonVersion, kNotOurCodeDirNames  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
-#: CI 러너(ubuntu-22.04)의 `python3` 가 이 버전이다. 여기서 파싱되지 않으면 리눅스 CI 가 멈춘다.
-kMinimumVersion = (3, 10)
+#: 정본은 `common.Constants.kMinimumPythonVersion` 이다(CI 러너 ubuntu-22.04 의 `python3`). 여기서 파싱되지 않으면 리눅스 CI 가 멈춘다.
+kMinimumVersion = kMinimumPythonVersion
 
 #: 검사에서 빼는 경로 조각 — 남의 코드이거나 생성물이다.
 _kExcludedDirName = kNotOurCodeDirNames

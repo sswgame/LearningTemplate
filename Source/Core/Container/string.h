@@ -779,43 +779,57 @@ namespace sw
             return hash;
         }
     };
-} // namespace sw
 
-// `SW_ENABLE_STL_CONTAINER` 이면 sw::string 이 std::string 그 자체라 표준 특수화와 겹친다 — 그때는 표준 해시를 쓴다.
-#if !defined( SW_ENABLE_STL_CONTAINER )
-namespace std
-{
     /**
-     * @brief sw::string 을 해시 컨테이너 키로 쓸 때의 해시(`sw::RuntimeStringHash`)입니다. 세 오버로드가 같은 바이트에 같은 값을 내므로 이종 조회가 됩니다.
+     * @brief sw::string 을 해시 컨테이너 키로 쓸 때의 기본 해시(`sw::RuntimeStringHash`)입니다. 세 오버로드가 같은 바이트에 같은 값을 내므로 이종 조회가 됩니다.
+     * @details 정본은 `std::hash` 특수화가 아니라 이 `DefaultHash` 특수화입니다. `SW_ENABLE_STL_CONTAINER` 이면 sw::string 이 std::string 그 자체라
+     *          `std::hash` 를 특수화할 수 없고, 표준 해시에는 `string_view` 오버로드가 없습니다. 여기 두면 두 구성이 같은 해시 · 같은 이종 조회를 갖습니다.
      */
     template <>
-    struct hash<sw::string>
+    struct DefaultHash<string>
     {
         using is_transparent = void;
         /** @brief 내용 바이트를 해시합니다. */
-        size_t operator()( std::string_view s ) const noexcept { return static_cast<size_t>( sw::RuntimeStringHash::compute( s.data(), s.size() ) ); }
+        [[nodiscard]] size_t operator()( std::string_view s ) const noexcept { return static_cast<size_t>( RuntimeStringHash::compute( s.data(), s.size() ) ); }
         /** @brief 내용 바이트를 해시합니다. */
-        size_t operator()( const sw::string& s ) const noexcept { return operator()( std::string_view{ s.data(), s.size() } ); }
+        [[nodiscard]] size_t operator()( const string& s ) const noexcept { return operator()( std::string_view{ s.data(), s.size() } ); }
         /** @brief 널 종료 문자열의 바이트를 해시합니다. */
-        size_t operator()( const utf8* s ) const noexcept { return operator()( std::string_view{ s } ); }
+        [[nodiscard]] size_t operator()( const utf8* s ) const noexcept { return operator()( std::string_view{ s } ); }
     };
 
     /**
-     * @brief sw::wstring 을 해시 컨테이너 키로 쓸 때의 해시입니다. 문자 바이트를 `sw::RuntimeStringHash` 로 해시합니다.
+     * @brief sw::wstring 을 해시 컨테이너 키로 쓸 때의 기본 해시입니다. 문자 바이트를 `sw::RuntimeStringHash` 로 해시합니다(`DefaultHash<string>` 과 같은 이유로 여기 둡니다).
      */
     template <>
-    struct hash<sw::wstring>
+    struct DefaultHash<wstring>
     {
         using is_transparent = void;
         /** @brief 내용 바이트를 해시합니다. */
-        size_t operator()( std::wstring_view s ) const noexcept
+        [[nodiscard]] size_t operator()( std::wstring_view s ) const noexcept
         {
-            return static_cast<size_t>( sw::RuntimeStringHash::compute( s.data(), s.size() * sizeof( utf16 ) ) );
+            return static_cast<size_t>( RuntimeStringHash::compute( s.data(), s.size() * sizeof( utf16 ) ) );
         }
         /** @brief 내용 바이트를 해시합니다. */
-        size_t operator()( const sw::wstring& s ) const noexcept { return operator()( std::wstring_view{ s.data(), s.size() } ); }
+        [[nodiscard]] size_t operator()( const wstring& s ) const noexcept { return operator()( std::wstring_view{ s.data(), s.size() } ); }
         /** @brief 널 종료 문자열의 바이트를 해시합니다. */
-        size_t operator()( const utf16* s ) const noexcept { return operator()( std::wstring_view{ s } ); }
+        [[nodiscard]] size_t operator()( const utf16* s ) const noexcept { return operator()( std::wstring_view{ s } ); }
+    };
+} // namespace sw
+
+// `std::hash` 로 직접 부르는 쪽(std 컨테이너 등)도 같은 값을 받게 합니다. STL 구성에서는 sw::string 이 std::string 이라 표준 특수화와 겹쳐 두지 않습니다.
+#if !defined( SW_ENABLE_STL_CONTAINER )
+namespace std
+{
+    /** @brief sw::string 의 `std::hash` 입니다. 본문은 `sw::DefaultHash<sw::string>` 입니다. */
+    template <>
+    struct hash<sw::string> : sw::DefaultHash<sw::string>
+    {
+    };
+
+    /** @brief sw::wstring 의 `std::hash` 입니다. 본문은 `sw::DefaultHash<sw::wstring>` 입니다. */
+    template <>
+    struct hash<sw::wstring> : sw::DefaultHash<sw::wstring>
+    {
     };
 } // namespace std
 #endif // !SW_ENABLE_STL_CONTAINER

@@ -8,7 +8,7 @@
  *    메모리 단편화를 없앱니다.
  * 3. 레이스 탐지: 디버그 빌드에서 ScopedRaceRead / ScopedRaceWrite 로 동시 쓰기와 읽기/쓰기 충돌을 바로 잡아냅니다.
  * 4. 이종 키 조회: `string_view` 같은 이종 키로 찾을 때 키를 새로 만들지 않습니다(할당 없음).
- *    성립 조건은 **해시가 transparent** 라는 것 하나입니다. 기본 해시 `DefaultHash<sw::string>` 이 상속한 `std::hash<sw::string>` 에
+ *    성립 조건은 **해시가 transparent** 라는 것 하나입니다. 기본 해시 `DefaultHash<sw::string>`(`Core/Container/string.h` 의 특수화)에
  *    `string_view` 오버로드가 있어서 같은 바이트에서 같은 해시가 나옵니다. 비교자의 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있습니다.
  * 5. 기본 해시: `DefaultHash<Key>`(`Core/Common/HashUtil.h`)입니다. 키에 `computeHash() const` 가 있으면 그것을 부르므로 키마다 해시 구조체를
  *    따로 두지 않습니다.

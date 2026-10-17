@@ -219,7 +219,9 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
 
 Shape. `CheckPythonConventions.py` checks every tracked `.py` against the rules below; the bracketed word is the rule name in its
 violations and in `Scripts/lint/rules/CheckPythonConventions.toml` exemption keys (`<rule>:<path>`). The code must still run on Python 3.10,
-the CI lint job's interpreter (`CheckPythonMinimumVersion.py`).
+the CI runners' interpreter: syntax and standard-library APIs alike (no `hashlib.file_digest`, TOML only through `common.RuleData`).
+The single source is `kMinimumPythonVersion` in `Scripts/common/Constants.py`; importing `common` stops on an older interpreter, and
+`CheckPythonMinimumVersion.py` checks syntax against it.
 
 - A module opens with a docstring `[docstring]`; a module with any code also has `from __future__ import annotations` `[future]`.
 - Every function annotates its parameters (except `self` / `cls`, including `*args` / `**kwargs`) and its return type, `__init__` included (`-> None`) `[annotation]`.

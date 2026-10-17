@@ -7,6 +7,12 @@
   지금은 `FightingMatch::readState` 만 `IncludeSequenceElements` 로 직접 부른다(2026-10-17). 뿌리는 범위 계약을 읽기 경로마다 따로 지킨다는 것이다.
   자기 기술형 읽기 공통 경로에서 원소까지 보게 하려면, 먼저 지금 에셋 · 세이브 가운데 범위 밖 값이 있는지 전수로 세고(쿠커나 테스트로), 고친 뒤 기본값을 바꾼다.
 
+- `A-17` [결함] **STL 구성(`CI-Debug-STL`)에서 `ReflectionTest` 가 컴파일되지 않는다.** 생성된 `TestFixedLayoutTypes.gen.cpp` 가 `VectorWrapper<vector<bool>>` 를 만들고,
+  `ReflectionContainers.h` 의 `getElement` · `getElementConst` 가 `&( container[index] )` 로 원소 주소를 잡는다. STL 구성에서는 `sw::vector<bool>` 이 비트 묶음인
+  `std::vector<bool>` 이라 원소가 프록시 · `bool` 값으로 나와 주소를 잡을 수 없다(`-Waddress-of-temporary`, 2026-10-17 로컬 STL 빌드에서 확인, CI 에는 아직 안 나왔다).
+  뿌리는 `sw::vector<bool>` 의 의미가 구성마다 다르다는 것이다. 두 구성에서 같은 원소 저장(바이트 하나)을 갖는 형식으로 맞추거나, 리플렉션이 `vector<bool>` 을
+  원소 주소 없이 다루는 래퍼를 갖게 한다.
+
 - `B-11` [검증대기] **어노테이션 키 완성을 Visual Studio IntelliSense(EDG)에서 손으로 확인하지 못했다.** `ReflectionMacros.h` 는 `__INTELLISENSE__` 에서도 풀이(`ReflectionIntellisense.h`)를 읽는다.
   풀이는 MS 호환 모드의 dependent base 찾기 · `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다 — EDG 가 오류 없이 읽는지 본다.
   DTE `ErrorList.ErrorItems` 로는 IntelliSense 오류가 나오지 않아 자동 확인 길이 없다. 손 확인: VS 로 저장소 폴더를 연다 → `CameraComponent.h` 의 `PROPERTY( ` 안에서

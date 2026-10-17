@@ -1413,11 +1413,8 @@ SW_TEST_CASE( DataStructureTest, HashMapShrinkToFitKeepsKeysAndReleasesWhenEmpty
  */
 SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys )
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "std::hash<sw::string> is the standard (non-transparent) hash in the STL container build" );
-#else
-    const std::hash<sw::string> hasher{};
-    sw::unordered_set<uint64>   setHash;
+    const sw::DefaultHash<sw::string> hasher{};
+    sw::unordered_set<uint64>         setHash;
     for ( uint32 length = 0; length < 40; ++length )
     {
         sw::string text;
@@ -1446,7 +1443,6 @@ SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys 
     SW_EXPECT_TRUE( mapName.find( sw::string_view( "engine/materials/glassmaterial.material" ) ) != mapName.end() );
     SW_EXPECT_TRUE( mapName.find( sw::string( "engine/materials/glassmaterial.material" ) ) != mapName.end() );
     SW_EXPECT_TRUE( mapName.find( sw::string_view( "engine/materials/glassmaterial.materia" ) ) == mapName.end() );
-#endif
 }
 
 /**
