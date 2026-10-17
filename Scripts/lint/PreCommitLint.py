@@ -285,13 +285,13 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
 
 
 def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bool:
-    """Staged HLSL/HLSLI 파일이 있을 경우 전 RHI 백엔드(DX12, Vulkan, DX11) 컴파일 검증 및 바이너리 갱신을 확인합니다."""
+    """Staged HLSL/HLSLI 파일이 있을 경우 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증 및 바이너리 갱신을 확인합니다."""
     stagedShaders = [f for f in stagedFiles if f.suffix.lower() in (".hlsl", ".hlsli")]
     if not stagedShaders:
         print("  - Staged 셰이더 없음 (HLSL 검증 생략)")
         return True
 
-    print(f"  - {len(stagedShaders)}개의 Staged 셰이더 소스 발견. 전 RHI 백엔드(DX12, Vulkan, DX11) 컴파일 검증 진행...")
+    print(f"  - {len(stagedShaders)}개의 Staged 셰이더 소스 발견. 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증 진행...")
     for s in stagedShaders:
         try:
             rel = s.relative_to(projectRoot)
@@ -303,7 +303,7 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
     # 그 프리셋만 빌드해 둔 사람은 이 검증을 통째로 건너뛴다.
     appExe = findAppExecutable(projectRoot)
     if appExe is None:
-        print("  [Warning] App.exe를 찾을 수 없어 셰이더 쿠킹 검증을 건너뜁니다. (빌드 후 다시 시도하세요)")
+        print("  [Warning] App 을 찾을 수 없어 셰이더를 굽지 못했습니다. 낡은 바이너리는 CheckShaderStamps 게이트가 스탬프로 막습니다(빌드 후 --cook-shaders).")
         return True
 
     res = runShaderCook(appExe, cwd=projectRoot, bCapture=True)
@@ -324,7 +324,7 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
         print("  [Error] 하나 이상의 RHI 백엔드에서 셰이더 컴파일 실패가 발생했습니다. HLSL 문법을 수정하세요.")
         return False
 
-    print("  - 모든 RHI 백엔드(DirectX 12, Vulkan, DirectX 11) 컴파일 검증 통과.")
+    print("  - 모든 RHI 백엔드 컴파일 검증 통과.")
 
     gitCmd = runGit(["status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
     if gitCmd.returnCode == 0 and gitCmd.stdout.strip():
@@ -332,7 +332,7 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
         if not added.bSucceeded:
             print(f"  [Error] 갱신된 셰이더 바이너리를 stage 하지 못했습니다: {added.stderr.strip()}")
             return False
-        print("  - 갱신된 RHI별 바이너리(.dxil, .spv, .dxbc)를 자동으로 Git Stage에 추가했습니다.")
+        print("  - 갱신된 RHI별 바이너리(.dxil · .spv · .dxbc)를 자동으로 Git Stage에 추가했습니다.")
 
     return True
 
@@ -357,7 +357,7 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
 
     # --- staged HLSL 이 있으면 전 백엔드 컴파일 검증 ----------------------------
-    print("\n[셰이더] Staged 셰이더 전 RHI 백엔드(DX12, Vulkan, DX11) 컴파일 검증...")
+    print("\n[셰이더] Staged 셰이더 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증...")
     if not checkStagedShadersInternal(projectRoot, allStagedFiles):
         hasErrors = True
 
