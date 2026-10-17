@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import blankComments, firstFolderAfter, iterIncludes, normalizePath  # noqa: E402
 from common.RuleData import kKindInteger  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kCorePrefix = "Core/"
 _kSourceCorePrefix = "Source/Core/"
@@ -83,17 +84,11 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
     return listViolation
 
 
-def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> tuple[list[str], int]:
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=("Source/Core",), suffixes=_kSourceSuffixes)
-    listViolation: list[str] = []
-    fileCount = 0
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if relative.startswith(_kSourceCorePrefix) is False:
-            continue
-        fileCount += 1
-        listViolation.extend(findViolationsInFile(relative, text))
-    return listViolation, fileCount
+def findViolationsInSource(source: SourceFile) -> FileFindings | None:
+    """`Source/Core/` 파일 하나 — 센 파일은 `value` 가 True 다."""
+    if source.relative.startswith(_kSourceCorePrefix) is False:
+        return None
+    return FileFindings(listViolation=findViolationsInFile(source.relative, source.text), value=True)
 
 
 class CheckCoreLayersGate(LintGate):
@@ -105,6 +100,8 @@ class CheckCoreLayersGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = ("Source/Core/*",)
     preCommitFileArgument = "--files"
+    sourceScanRoots = ("Source/Core",)
+    sourceSuffixes = _kSourceSuffixes
     violationHeader = "Core 층 위반"
     hint = (
         "  아래 층이 위 층을 알아야 하면 타입을 아래로 내리거나, 위 층이 인터페이스 · 함수 포인터를 건넨다(ILockObserver · IAllocationTracker 처럼).\n"
@@ -136,8 +133,12 @@ class CheckCoreLayersGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listViolation, fileCount = findViolations(repositoryRoot, args.files)
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return findViolationsInSource(source)
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, _ = joinFindings(result.listFindings)
+        fileCount = sum(1 for findings in result.listFindings if findings.value)
         return GateResult(listViolation=listViolation, summary=f"Core 파일 {fileCount} 개가 폴더 티어를 지킨다")
 
 

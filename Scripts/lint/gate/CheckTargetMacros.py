@@ -31,9 +31,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import findFast, kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from LintGate import GateError, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 #: 내장 매크로를 읽어도 되는 유일한 파일(CMake 판정과 실제 컴파일러를 대조한다).
 _kCheckHeader = "Source/Core/Common/TargetMacroCheck.h"
@@ -54,27 +55,24 @@ _kMapUnsupportedMacroToReason = {
 
 _kUnsupportedRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kMapUnsupportedMacroToReason) + r")(?![\w$])")
 
-def findBuiltinMacroUses(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
+def findBuiltinMacroUses(source: SourceFile) -> list[str]:
     """검사 헤더 밖에서 내장 매크로를 읽는 줄과, 어디서든 지원하지 않는 플랫폼 매크로를 읽는 줄을 위반 문자열로 돌려줍니다."""
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        bCheckBuiltin = relative != _kCheckHeader and _kBuiltinRe.search(text) is not None
-        bCheckUnsupported = _kUnsupportedRe.search(text) is not None
-        if bCheckBuiltin is False and bCheckUnsupported is False:
-            continue
-        listOriginalLine = text.splitlines()
-        for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1):
-            originalLine = listOriginalLine[lineIndex - 1].strip()
-            if bCheckBuiltin:
-                for match in _kBuiltinRe.finditer(line):
-                    builtin = match.group(1)
-                    listViolation.append(f"{relative}:{lineIndex}: {builtin} -> {_kMapBuiltinToReplacement[builtin]}  | {originalLine}")
-            if bCheckUnsupported:
-                for match in _kUnsupportedRe.finditer(line):
-                    macro = match.group(1)
-                    listViolation.append(f"{relative}:{lineIndex}: {macro} -> {_kMapUnsupportedMacroToReason[macro]}  | {originalLine}")
+    relative = source.relative
+    bCheckBuiltin = relative != _kCheckHeader and findFast(_kBuiltinRe, source.text) is not None
+    bCheckUnsupported = findFast(_kUnsupportedRe, source.text) is not None
+    if bCheckBuiltin is False and bCheckUnsupported is False:
+        return listViolation
+    for lineIndex, line in enumerate(source.listMaskedLine, start=1):
+        originalLine = source.listLine[lineIndex - 1].strip()
+        if bCheckBuiltin:
+            for match in _kBuiltinRe.finditer(line):
+                builtin = match.group(1)
+                listViolation.append(f"{relative}:{lineIndex}: {builtin} -> {_kMapBuiltinToReplacement[builtin]}  | {originalLine}")
+        if bCheckUnsupported:
+            for match in _kUnsupportedRe.finditer(line):
+                macro = match.group(1)
+                listViolation.append(f"{relative}:{lineIndex}: {macro} -> {_kMapUnsupportedMacroToReason[macro]}  | {originalLine}")
     return listViolation
 
 
@@ -88,6 +86,9 @@ class CheckTargetMacrosGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = _kSuffixes
+    sourceSummary = f"{' · '.join(_kListScanRoot)} 의 내장 매크로 · 지원하지 않는 플랫폼 매크로"
     violationHeader = "컴파일러 내장 매크로 사용"
     hint = (
         "  플랫폼 · 아키텍처 · 컴파일러는 CMake 가 정의하는 SW_ 매크로로 묻습니다:\n"
@@ -151,12 +152,13 @@ class CheckTargetMacrosGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
         # 예외 파일이 사라지면(이름이 바뀌면) 예외도 함께 낡는다 — 조용히 넘기지 않는다.
         if not (repositoryRoot / _kCheckHeader).is_file():
             raise GateError(f"{_kCheckHeader} 가 없습니다 — 내장 매크로를 읽어도 되는 유일한 파일입니다. 옮겼다면 이 게이트의 _kCheckHeader 를 고치십시오.")
-        violations = findBuiltinMacroUses(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 내장 매크로 · 지원하지 않는 플랫폼 매크로")
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findBuiltinMacroUses(source))
 
 
 main = CheckTargetMacrosGate.run

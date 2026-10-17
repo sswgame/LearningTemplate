@@ -37,8 +37,9 @@ from typing import NamedTuple
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, kLintProductRelDirs, normalizePath  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from common import blankCommentsAndLiterals, findFast, kLintProductRelDirs  # noqa: E402
+from LintGate import GateError, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 # 테스트는 기대값을 리터럴로 적는 곳이라 뺀다(kLintProductRelDirs).
 _kListScanRoot = kLintProductRelDirs + ("Resource/engine/shaders", "Resource/common/shaders")
@@ -102,29 +103,27 @@ _kListRule = (
 )
 
 
-def findWellKnownLiterals(repositoryRoot: Path, listTargetFile: list[str] | None) -> tuple[list[str], list[str]]:
-    """집 밖에서 잘 알려진 상수를 리터럴로 쓴 줄을 (위반, 참고) 문자열 목록으로 돌려줍니다."""
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
-    listViolation: list[str] = []
-    listNote: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        listOriginalLine = text.splitlines()
-        text = _kDigitSeparatorRe.sub('', text)
-        listRule = [rule for rule in _kListRule if relative not in rule.homes and rule.pattern.search(text) is not None]
-        if not listRule:
+def findWellKnownLiterals(source: SourceFile) -> FileFindings | None:
+    """집 밖에서 잘 알려진 상수를 리터럴로 쓴 줄을 위반 · 참고로 돌려줍니다."""
+    relative = source.relative
+    text = _kDigitSeparatorRe.sub('', source.text)
+    listRule = [rule for rule in _kListRule if relative not in rule.homes and findFast(rule.pattern, text) is not None]
+    if not listRule:
+        return None
+    findings = FileFindings()
+    # 숫자 구분자가 없으면 글이 그대로라 함께 도는 게이트의 가린 글을 쓴다.
+    listMaskedLine = source.listMaskedLine if len(text) == len(source.text) else blankCommentsAndLiterals(text).splitlines()
+    for lineIndex, line in enumerate(listMaskedLine, start=1):
+        if _kMetadataLineRe.search(line):
             continue
-        for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1):
-            if _kMetadataLineRe.search(line):
+        for rule in listRule:
+            if rule.context is not None and rule.context.search(line) is None:
                 continue
-            for rule in listRule:
-                if rule.context is not None and rule.context.search(line) is None:
-                    continue
-                match = rule.pattern.search(line)
-                if match is not None:
-                    message = f"{relative}:{lineIndex}: {rule.label} '{match.group(0)}' -> {rule.replacement}  | {listOriginalLine[lineIndex - 1].strip()}"
-                    (listNote if rule.bNote else listViolation).append(message)
-    return listViolation, listNote
+            match = rule.pattern.search(line)
+            if match is not None:
+                message = f"{relative}:{lineIndex}: {rule.label} '{match.group(0)}' -> {rule.replacement}  | {source.listLine[lineIndex - 1].strip()}"
+                (findings.listNote if rule.bNote else findings.listViolation).append(message)
+    return findings
 
 
 class CheckWellKnownConstantsGate(LintGate):
@@ -162,18 +161,23 @@ class CheckWellKnownConstantsGate(LintGate):
          "files": {"Tools/ReflectionParser/ProbeGravity.cpp": "const float kProbeGravity = 9.81f;\n"}},
     ]
 
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = _kSuffixes
+    sourceSummary = f"{' · '.join(kLintProductRelDirs)} · 셰이더의 잘 알려진 상수 리터럴"
+
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 시험을 뺀 린트 대상 · 셰이더 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
         # 집이 사라지면(옮기면) 예외도 함께 낡는다 — 조용히 넘기지 않는다. 테스트용 가짜 저장소(자기 테스트)는 집이 없어도 된다.
         if (repositoryRoot / "Source/Core").is_dir():
             for rule in _kListRule:
                 for home in rule.homes:
                     if not (repositoryRoot / home).is_file():
                         raise GateError(f"{home} 가 없습니다 — '{rule.label}' 의 집입니다. 옮겼다면 이 게이트의 homes 를 고치십시오.")
-        violations, notes = findWellKnownLiterals(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, listNote=notes, summary=f"{' · '.join(kLintProductRelDirs)} · 셰이더의 잘 알려진 상수 리터럴")
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return findWellKnownLiterals(source)
 
 
 main = CheckWellKnownConstantsGate.run

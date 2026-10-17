@@ -31,9 +31,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments, normalizePath, runGit  # noqa: E402
+from common import blankComments, runGit  # noqa: E402
 from common.RuleData import kKindInteger  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".cpp")
 _kScanRoots = ("Source",)
@@ -58,9 +59,9 @@ class Finding:
     text: str
 
 
-def findInText(relative: str, text: str) -> list[Finding]:
-    """파일 하나의 위반 후보를 찾습니다(주석은 가린 글에서 본다)."""
-    masked = blankComments(text)
+def findInText(relative: str, text: str, masked: str | None = None) -> list[Finding]:
+    """파일 하나의 위반 후보를 찾습니다(주석은 가린 글에서 본다 — `masked` 는 이미 만든 `blankComments(text)`)."""
+    masked = blankComments(text) if masked is None else masked
     if len(masked) != len(text):
         return []
     listFinding: list[Finding] = []
@@ -104,6 +105,8 @@ class CheckDataDrivenLiteralsGate(LintGate):
     timeoutSeconds = 120
     preCommitPattern = tuple(f"{root}/*" for root in _kScanRoots)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kScanRoots
+    sourceSuffixes = _kSuffixes
     violationHeader = "데이터로 옮길 리터럴"
     ruleSchema = _kRuleSchema
     maxNoteShown = 12
@@ -124,28 +127,37 @@ class CheckDataDrivenLiteralsGate(LintGate):
         parser.add_argument("--whole-files", action="store_true", help="--files 에서 추가한 줄이 아니라 파일 전체를 본다")
         parser.add_argument("--list", action="store_true", help="전체 훑기에서 위반을 전부 찍는다")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        bFiles = bool(args.files)
-        mapAdded: dict[str, set[int]] | None = None
-        if bFiles and not args.whole_files:
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
+        args.bMergeSkip = False
+        args.mapAdded = None
+        if bool(args.files) and not args.whole_files:
             if (repositoryRoot / ".git" / "MERGE_HEAD").exists():
-                return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
+                args.bMergeSkip = True
+                return
             result = runGit(["diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--no-renames", "--diff-filter=ACM"], cwd=repositoryRoot)
-            mapAdded = parseAddedLines(result.stdout) if result.returnCode == 0 else None
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=_kScanRoots, suffixes=_kSuffixes)
+            args.mapAdded = parseAddedLines(result.stdout) if result.returnCode == 0 else None
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if args.bMergeSkip:
+            return None
+        relative = source.relative
         listCounted: list[Finding] = []
-        fileCount = 0
-        for path, text in self.readFiles(listPath):
-            fileCount += 1
-            relative = normalizePath(str(path.relative_to(repositoryRoot)))
-            for finding in findInText(relative, text):
-                key = f"{finding.rule}:{finding.relative}:{finding.name}"
-                if key in self.mapExemption:
-                    self.useExemption(key)
-                    continue
-                if mapAdded is not None and finding.line not in mapAdded.get(relative, set()):
-                    continue
-                listCounted.append(finding)
+        for finding in findInText(relative, source.text, source.noComment):
+            key = f"{finding.rule}:{finding.relative}:{finding.name}"
+            if key in self.mapExemption:
+                self.useExemption(key)
+                continue
+            if args.mapAdded is not None and finding.line not in args.mapAdded.get(relative, set()):
+                continue
+            listCounted.append(finding)
+        return FileFindings(value=listCounted) if listCounted else None
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        if args.bMergeSkip:
+            return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
+        bFiles = bool(args.files)
+        fileCount = result.fileCount
+        listCounted: list[Finding] = [finding for findings in result.listFindings for finding in (findings.value or ())]
 
         def describe(finding: Finding) -> str:
             return f"{finding.relative}:{finding.line}: {finding.rule} '{finding.name}' | {finding.text}"

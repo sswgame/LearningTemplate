@@ -28,7 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import iterIncludes, kLintTargetRelDirs, normalizePath  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 #: X11 매크로를 정의하는 시스템 헤더의 접두어입니다.
 _kListX11SystemPrefix = ("X11/", "GL/glx", "vulkan/vulkan_xlib")
@@ -78,15 +79,6 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
     return listViolation
 
 
-def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> list[str]:
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=_kListSourceRoot, suffixes=_kSourceSuffixes)
-    listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        listViolation.extend(findViolationsInFile(relative, text))
-    return listViolation
-
-
 class CheckX11IsolationGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
@@ -95,6 +87,9 @@ class CheckX11IsolationGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = ("Source/*", "Test/*", "Tools/*")
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListSourceRoot
+    sourceSuffixes = _kSourceSuffixes
+    sourceSummary = "X11 헤더는 X11 구현 .cpp 안에만 있다"
     violationHeader = "X11 격리 위반"
     hint = (
         f"  X11 이 필요한 .cpp 에서 \"{_kX11Wrapper}\" 를 include 합니다(공용 헤더 · PlatformOsHeaders.h 에 넣지 않는다).\n"
@@ -123,8 +118,8 @@ class CheckX11IsolationGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        return GateResult(listViolation=findViolations(repositoryRoot, args.files), summary="X11 헤더는 X11 구현 .cpp 안에만 있다")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findViolationsInFile(source.relative, source.text))
 
 
 main = CheckX11IsolationGate.run

@@ -25,9 +25,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
 
-from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs  # noqa: E402
 from gate.CheckFallibleNodiscard import _kListFallibleVerb  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 #: `(void)` 뒤의 호출 — 마지막 이름(`a.b->c::load`)을 뽑는다. 템플릿 인자 `<…>` 는 건너뛴다.
@@ -36,14 +37,14 @@ _kVoidCallRe = re.compile(r"\(\s*void\s*\)\s*(?P<callee>[A-Za-z_][\w:.\->]*?)\s*
 _kFallibleNameRe = re.compile(r"^(?:re)?(?:" + "|".join(_kListFallibleVerb) + r")(?:[A-Z0-9_]\w*)?$")
 
 
-def findFallibleDiscards(text: str) -> list[tuple[int, str, str]]:
+def findFallibleDiscards(text: str, source: SourceFile | None = None) -> list[tuple[int, str, str]]:
     """
     파일 하나에서 실패 가능 함수의 결과를 `(void)` 로 버리는 자리를 (줄 번호, 함수 이름, 이유 — 없으면 빈 글자)로 돌려줍니다.
-    `RunDiscardReasons` 보고서도 이 판정을 쓴다.
+    `RunDiscardReasons` 보고서도 이 판정을 쓴다. 게이트는 함께 도는 게이트와 가린 글을 나눠 쓰려고 `source` 를 넘긴다.
     """
     listOriginal = text.splitlines()
-    listNoComment = blankComments(text).splitlines()
-    listCode = blankCommentsAndLiterals(text).splitlines()
+    listNoComment = (blankComments(text) if source is None else source.noComment).splitlines()
+    listCode = blankCommentsAndLiterals(text).splitlines() if source is None else source.listMaskedLine
     listResult: list[tuple[int, str, str]] = []
 
     def commentOfInternal(index: int) -> str:
@@ -79,6 +80,8 @@ class CheckDiscardReasonGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in kLintTargetRelDirs)
     preCommitFileArgument = "--files"
+    sourceScanRoots = kLintTargetRelDirs
+    sourceSuffixes = _kSuffixes
     violationHeader = "이유 없이 버린 실패 가능 결과"
     hint = ("  (void)FileUtil::removeFile( path ); // 없으면 할 일이 없고, 실패는 removeFile 이 경고로 남긴다\n"
             "  이유를 댈 수 없으면 버리지 말고 처리하거나(되돌리기 · 오류 로그 · 단언) 위로 돌려줍니다.")
@@ -92,17 +95,16 @@ class CheckDiscardReasonGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=_kSuffixes)
-        listViolation: list[str] = []
-        countDiscard = 0
-        for path, text in self.readFiles(listPath, mustContain="void"):
-            relative = normalizePath(str(path.relative_to(repositoryRoot)))
-            listOriginal = text.splitlines()
-            for lineNumber, name, reason in findFallibleDiscards(text):
-                countDiscard += 1
-                if not reason:
-                    listViolation.append(f"{relative}:{lineNumber}: (void){name}(…) 에 이유가 없습니다 | {listOriginal[lineNumber - 1].strip()}")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if "void" not in source.text:
+            return None
+        listDiscard = findFallibleDiscards(source.text, source)
+        return FileFindings(listViolation=[f"{source.relative}:{lineNumber}: (void){name}(…) 에 이유가 없습니다 | {source.listLine[lineNumber - 1].strip()}"
+                                           for lineNumber, name, reason in listDiscard if not reason], value=len(listDiscard))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, _ = joinFindings(result.listFindings)
+        countDiscard = sum(findings.value or 0 for findings in result.listFindings)
         return GateResult(listViolation=listViolation, summary=f"실패 가능 결과를 버린 자리 {countDiscard}")
 
 

@@ -112,7 +112,37 @@ def makeLintTarget(script: LintScript) -> LintTarget:
     raise ValueError(f"{script.relPath}: `LintGate` 하위 클래스가 없다 — gate/ · selftest/ 의 스크립트는 게이트다(Scripts/lint/LintGate.py)")
 
 
+def discoverSourceGateScripts() -> list[LintScript]:
+    """`gate/` 의 소스 게이트(`LintGate.sourceScanRoots` 를 채운 것) — `RunSourceGates.py` 가 한 번의 훑기로 함께 돌린다."""
+    return [script for script in discoverLintScripts("gate") if script.gateClass is not None and script.gateClass.isSourceGate()]
+
+
+#: 소스 게이트 전부를 한 프로세스로 돌리는 실행 단위(`RunSourceGates.py`). 게이트를 더해도 타깃은 이것 하나다.
+kSourceGateTarget = LintTarget(
+    name="CheckSourceFiles",
+    scriptRelPath="Scripts/lint/RunSourceGates.py",
+    buildComment="Running every per-file source gate in one shared tree scan...",
+    timeoutSeconds=120,
+    listCtestArgument=(),
+)
+
+
 def discoverLintTargets(folderName: str = "") -> list[LintTarget]:
-    """등록 대상 린트를 찾아 CMake 등록 정보까지 만들어 돌려줍니다. `ctestSkipReason` 을 든 게이트는 뺀다."""
-    return [makeLintTarget(script) for script in discoverLintScripts(folderName)
-            if script.gateClass is None or not script.gateClass.ctestSkipReason]
+    """
+    등록 대상 린트를 찾아 CMake 등록 정보까지 만들어 돌려줍니다 — CTest 와 CI 린트 잡(`RunLintSuite`)이 같은 목록을 쓴다.
+    `ctestSkipReason` 을 든 게이트는 뺀다. **소스 게이트는 게이트마다가 아니라 `kSourceGateTarget` 하나로 묶는다** — 게이트마다 프로세스를
+    띄우면 게이트마다 트리를 걷고 읽고 가린다(`SourceScan.py` 머리말).
+    """
+    listTarget: list[LintTarget] = []
+    bSourceGate = False
+    for script in discoverLintScripts(folderName):
+        gateClass = script.gateClass
+        if gateClass is not None and gateClass.ctestSkipReason:
+            continue
+        if gateClass is not None and gateClass.isSourceGate():
+            bSourceGate = True
+            continue
+        listTarget.append(makeLintTarget(script))
+    if bSourceGate:
+        listTarget.append(kSourceGateTarget)
+    return listTarget

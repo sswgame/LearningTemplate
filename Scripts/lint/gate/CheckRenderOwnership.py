@@ -148,7 +148,8 @@ class CheckRenderOwnershipGate(LintGate):
     description = "렌더 패킷 소유 규칙 검사"
     buildComment = "Checking render packet ownership rules (no raw pointers in snapshots, factory-only shared materials)..."
     timeoutSeconds = 15
-    preCommitPattern = ("*.cpp", "*.cc", "*.cxx", "*.c", "*.h", "*.hpp", "*.inl")
+    # 이 게이트가 읽는 것은 옮겨지는 헤더 둘뿐이다 — 그 둘이 staged 일 때만 돈다(모든 C++ 커밋에서 돌던 것을 좁혔다).
+    preCommitPattern = tuple(_kTransportedHeaders)
     selfTestCases = [
         {
             "name": "스냅샷 구조체에 생포인터",

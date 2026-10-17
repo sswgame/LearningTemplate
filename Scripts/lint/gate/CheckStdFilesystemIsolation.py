@@ -23,8 +23,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments, kLintTargetRelDirs, normalizePath  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from common import kLintTargetRelDirs  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 #: `std::filesystem` 을 써도 되는 유일한 폴더입니다.
 _kStdFilesystemHome = "Source/Core/File/Std/"
@@ -36,25 +37,17 @@ _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"](experimental/)?filesystem[>"]'
 _kTokenRe = re.compile(r"\bstd\s*::\s*(experimental\s*::\s*)?filesystem\b")
 
 
-def findViolationsInFile(relative: str, text: str) -> list[str]:
+def findViolationsInFile(source: SourceFile) -> list[str]:
     """파일 하나의 위반 줄입니다."""
+    relative = source.relative
     if relative.startswith(_kStdFilesystemHome):
         return []
     listViolation: list[str] = []
-    for lineNumber, line in enumerate(blankComments(text).splitlines(), start=1):
+    for lineNumber, line in enumerate(source.noComment.splitlines(), start=1):
         if _kIncludeRe.match(line) is not None:
             listViolation.append(f"{relative}:{lineNumber}: <filesystem> -> {_kStdFilesystemHome} 안에서만 include 합니다")
         elif _kTokenRe.search(line) is not None:
             listViolation.append(f"{relative}:{lineNumber}: std::filesystem -> FileUtil 로 묻습니다({_kStdFilesystemHome} 밖에서는 쓰지 않습니다)")
-    return listViolation
-
-
-def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> list[str]:
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=_kListSourceRoot, suffixes=_kSourceSuffixes)
-    listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        listViolation.extend(findViolationsInFile(relative, text))
     return listViolation
 
 
@@ -66,6 +59,9 @@ class CheckStdFilesystemIsolationGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = ("Source/*", "Test/*", "Tools/*")
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListSourceRoot
+    sourceSuffixes = _kSourceSuffixes
+    sourceSummary = "std::filesystem 은 Core/File/Std 안에만 있다"
     violationHeader = "std::filesystem 경계 위반"
     hint = (
         "  파일 시스템은 FileUtil 로 묻습니다 — 존재 · 크기 · 시각(getFileWriteTime · setFileWriteTime) · 순회(forEachDirectoryEntry) ·\n"
@@ -94,8 +90,8 @@ class CheckStdFilesystemIsolationGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        return GateResult(listViolation=findViolations(repositoryRoot, args.files), summary="std::filesystem 은 Core/File/Std 안에만 있다")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findViolationsInFile(source))
 
 
 main = CheckStdFilesystemIsolationGate.run

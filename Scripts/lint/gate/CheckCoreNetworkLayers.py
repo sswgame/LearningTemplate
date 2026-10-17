@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 from common import firstFolderAfter, iterIncludes, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kNetworkPrefix = "Core/Network/"
 _kSourceNetworkPrefix = "Source/Core/Network/"
@@ -61,19 +62,6 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
     return listViolation
 
 
-def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> tuple[list[str], int]:
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=("Source/Core/Network",), suffixes=_kSourceSuffixes)
-    listViolation: list[str] = []
-    fileCount = 0
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if relative.startswith(_kSourceNetworkPrefix) is False:
-            continue
-        fileCount += 1
-        listViolation.extend(findViolationsInFile(relative, text))
-    return listViolation, fileCount
-
-
 class CheckCoreNetworkLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
@@ -82,6 +70,8 @@ class CheckCoreNetworkLayersGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = ("Source/Core/Network/*",)
     preCommitFileArgument = "--files"
+    sourceScanRoots = ("Source/Core/Network",)
+    sourceSuffixes = _kSourceSuffixes
     violationHeader = "Core/Network 층 위반"
     hint = (
         "  아래 층이 위 층을 알아야 하면 그 타입을 아래 층으로 내리거나(공용 타입은 NetTypes.h), 위 층이 아래 층에 콜백 · 인터페이스를 건넨다.\n"
@@ -109,9 +99,12 @@ class CheckCoreNetworkLayersGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listViolation, fileCount = findViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=listViolation, summary=f"Core/Network 파일 {fileCount} 개가 층을 지킨다")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findViolationsInFile(source.relative, source.text))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, _ = joinFindings(result.listFindings)
+        return GateResult(listViolation=listViolation, summary=f"Core/Network 파일 {result.fileCount} 개가 층을 지킨다")
 
 
 main = CheckCoreNetworkLayersGate.run

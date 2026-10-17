@@ -26,8 +26,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import kLintTargetRelDirs, normalizePath  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from common import findFast, kLintTargetRelDirs  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 # 한 줄 안에 로그 호출과 `<식별자>.data()` 가 같이 있는 모양만 본다.
 # 여러 줄로 쪼갠 호출은 놓친다 — 그 대신 오탐이 없다(이 저장소의 로그는 거의 한 줄이다).
@@ -37,23 +38,16 @@ _kViewDataRe = re.compile(r"\b[A-Za-z_]\w*\s*\.\s*data\s*\(\s*\)")
 _kListScanRoot = kLintTargetRelDirs
 
 
-def findLogViewArguments(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    """로그 호출 줄에 있는 `.data()` 를 모아 위반 문자열로 돌려줍니다."""
+def findLogViewArguments(source: SourceFile) -> list[str]:
+    """파일 하나에서 로그 호출 줄에 있는 `.data()` 를 모아 위반 문자열로 돌려줍니다."""
     violations: list[str] = []
-    for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".cpp", ".h")):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace")
-        except FileNotFoundError:
+    if findFast(_kLogCallRe, source.text) is None:
+        return violations
+    for lineIndex, line in enumerate(source.listLine, start=1):
+        if not _kLogCallRe.search(line):
             continue
-        except OSError as exception:
-            raise GateError(f"읽기 실패: {relative}: {exception}") from exception
-
-        for lineIndex, line in enumerate(text.splitlines(), start=1):
-            if not _kLogCallRe.search(line):
-                continue
-            if _kViewDataRe.search(line):
-                violations.append(f"[Log View Argument] {relative}:{lineIndex}: {line.strip()}")
+        if _kViewDataRe.search(line):
+            violations.append(f"[Log View Argument] {source.relative}:{lineIndex}: {line.strip()}")
     return violations
 
 
@@ -65,6 +59,9 @@ class CheckLogViewArgumentGate(LintGate):
     timeoutSeconds = 20
     preCommitPattern = ("Source/*", "Tools/*")
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = (".cpp", ".h")
+    sourceSummary = f"{' · '.join(_kListScanRoot)} 의 로그 인자 .data()"
     violationHeader = "로그 인자로 넘긴 .data()"
     hint = (
         "  포매터는 string_view 를 길이로 쓰고 const utf8* 는 strlen 으로 읽습니다.\n"
@@ -89,9 +86,8 @@ class CheckLogViewArgumentGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = findLogViewArguments(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 로그 인자 .data()")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findLogViewArguments(source))
 
 
 main = CheckLogViewArgumentGate.run

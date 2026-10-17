@@ -28,9 +28,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import findFast, kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings, scanSourceGates  # noqa: E402
 
 _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".cpp", ".inl")
@@ -93,8 +94,9 @@ def findRetiredWindowUses(relative: str, text: str, code: str) -> list[str]:
     listViolation: list[str] = []
     listHit: list[tuple[int, str, str]] = []
     for regex, advice in _kRetiredWindowRe:
-        listHit.extend((match.start(), match.group(0), advice) for match in regex.finditer(code))
-    for match in _kEngineNamedAccessorRe.finditer(code):
+        if findFast(regex, code) is not None:
+            listHit.extend((match.start(), match.group(0), advice) for match in regex.finditer(code))
+    for match in _kEngineNamedAccessorRe.finditer(code) if findFast(_kEngineNamedAccessorRe, code) is not None else ():
         if match.group(1) not in _kSetRemainingEngineFunction and match.group(1) != "getBoundEngineServices":  # 뒤쪽은 위 표가 이미 센다
             listHit.append((match.start(), match.group(0), "engine::getSubsystem<T>() / findSubsystem<T>() 를 쓰십시오"))
     for offset, spelling, advice in sorted(listHit):
@@ -122,18 +124,21 @@ def findSingletons(relative: str, text: str, code: str) -> list[str]:
     return listViolation
 
 
-def findServiceAccessViolations(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
-    listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if relative.endswith(".gen.cpp") or "/ThirdParty/" in f"/{relative}":
-            continue
-        code = blankCommentsAndLiterals(text)
-        listViolation.extend(findRetiredWindowUses(relative, text, code))
-        if relative.endswith(_kHeaderSuffixes):
-            listViolation.extend(findSingletons(relative, text, code))
+def findServiceAccessViolationsInFile(source: SourceFile) -> list[str]:
+    relative = source.relative
+    if relative.endswith(".gen.cpp") or "/ThirdParty/" in f"/{relative}":
+        return []
+    listViolation = findRetiredWindowUses(relative, source.text, source.masked)
+    if relative.endswith(_kHeaderSuffixes):
+        listViolation.extend(findSingletons(relative, source.text, source.masked))
     return listViolation
+
+
+def findServiceAccessViolations(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
+    """`repositoryRoot`(셀프테스트의 조각 트리) 를 이 게이트 하나로 훑은 위반 — 게이트와 같은 훑기다."""
+    gate = CheckServiceAccessGate()
+    args = argparse.Namespace(files=listTargetFile)
+    return gate.finishSourceScan(repositoryRoot, args, scanSourceGates(repositoryRoot, [(gate, args)])[0]).listViolation
 
 
 class CheckServiceAccessGate(LintGate):
@@ -144,6 +149,8 @@ class CheckServiceAccessGate(LintGate):
     timeoutSeconds = 60
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = _kSuffixes
     ruleSchema = _kRuleSchema
     violationHeader = "서비스 접근 위반"
     hint = (
@@ -182,8 +189,11 @@ class CheckServiceAccessGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Test · Tools 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listViolation = findServiceAccessViolations(repositoryRoot, args.files)
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findServiceAccessViolationsInFile(source))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, _ = joinFindings(result.listFindings)
         listRetired = [line for line in listViolation if f"[{_kRetiredWindowCategory}]" in line]
         summary = (f"{' · '.join(_kListScanRoot)} — {_kRetiredWindowCategory} {len(listRetired)} · "
                    f"{_kSingletonCategory} {len(listViolation) - len(listRetired)}")

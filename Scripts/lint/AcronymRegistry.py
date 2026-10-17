@@ -247,10 +247,13 @@ def splitIntoAcronyms(run: str) -> tuple[str, ...]:
     return found if found and len(found) >= 2 else ()
 
 
-def maskCode(text: str) -> str:
-    """주석 · 문자열 · 원시 문자열 · `#include` 같은 글 줄을 같은 길이의 공백으로 가립니다(줄바꿈은 남긴다)."""
+def maskCode(text: str, blankedText: str | None = None) -> str:
+    """
+    주석 · 문자열 · 원시 문자열 · `#include` 같은 글 줄을 같은 길이의 공백으로 가립니다(줄바꿈은 남긴다).
+    `blankedText` 는 이미 만든 `blankCommentsAndLiterals(text)`(함께 도는 게이트가 나눠 쓰는 것) — 원시 문자열이 없으면 그것을 쓴다.
+    """
     masked = _kRawStringRe.sub(blankMatch, text)
-    masked = blankCommentsAndLiterals(masked)
+    masked = blankedText if blankedText is not None and masked == text else blankCommentsAndLiterals(masked)
     return _kDirectiveTextRe.sub(blankMatch, masked)
 
 

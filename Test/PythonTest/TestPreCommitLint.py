@@ -14,7 +14,7 @@ kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
-from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
+from LintCatalog import LintScript, discoverLintScripts, discoverLintTargets  # noqa: E402
 from LintGate import LintGate  # noqa: E402
 from PreCommitLint import StagedContentProbe, selectGatesForStaged  # noqa: E402
 
@@ -128,9 +128,24 @@ class PreCommitLintContentRuleTest(unittest.TestCase):
         self.assertTrue(self.plan("CheckDuplicateTypeNames", ["Source/A.h"], {}, {"Source/A.h": "int x = 1;"}))
         self.assertEqual(self.plan("CheckDuplicateTypeNames", ["Source/A.h"], {}, {"Source/A.h": "struct Foo"}), "")
 
-    def testKitNamespacesRunsWhenTokenIsInEitherContent(self) -> None:
-        self.assertEqual(self.plan("CheckKitNamespaces", ["Source/A.cpp"], {"Source/A.cpp": "SW_LOG_CALLER( \"x\" );"}, {}), "")
-        self.assertTrue(self.plan("CheckKitNamespaces", ["Source/A.cpp"], {"Source/A.cpp": "int x;"}, {}))
+    def testTreeWideCrossFileGatesAreLeftToCi(self) -> None:
+        # 훅의 바닥이던 트리 전체 대조 게이트는 훅에서 돌지 않는다 — 그 대신 CI 린트 잡(RunLintSuite)과 ctest -L lint 의 목록에 남아 있어야 한다.
+        listRegistered = {target.name for target in discoverLintTargets()}
+        for gateName in ("CheckNameReferences", "CheckKitNamespaces"):
+            self.assertIn("CI", self.plan(gateName, ["Source/A.cpp"], {"Source/A.cpp": "SW_LOG_CALLER( \"x\" ); gv_x"}, {}))
+            self.assertIn(gateName, listRegistered)
+
+    def testRenderOwnershipRunsOnlyForItsHeaders(self) -> None:
+        self.assertTrue(self.plan("CheckRenderOwnership", ["Source/Engine/Scene/A.cpp"], {}, {}))
+        self.assertEqual(self.plan("CheckRenderOwnership", ["Source/Engine/Renderer/Scene/GPUSceneSnapshot.h"], {}, {}), "")
+
+    def testEngineLayersTakesStagedFiles(self) -> None:
+        listScript = [script for script in discoverLintScripts("gate") if script.name == "CheckEngineLayers"]
+        listStaged = [kRepositoryRoot / "Source/Engine/Scene/A.cpp"]
+        plan = selectGatesForStaged(kRepositoryRoot, listStaged, listStaged, listScript)[0]
+        self.assertEqual(plan.skipReason, "")
+        self.assertIn("--files", plan.listArgument)
+        self.assertFalse(plan.bBackground)
 
     def testWithoutProbeAnyMatchingGlobRuns(self) -> None:
         listScript = [script for script in discoverLintScripts("gate") if script.name == "CheckConfigReference"]

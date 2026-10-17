@@ -25,21 +25,22 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 _kTypeRe = re.compile(r"^\s*(?:template\s*<[^;{]*>\s*)?(?:class|struct)\s+(?:SW_\w+\s+|alignas\s*\([^)]*\)\s+)*(\w+)(?:\s+final)?\s*(?::[^;{]*)?\{?\s*$")
 _kNamespaceRe = re.compile(r"^\s*namespace(?:\s+([\w:]+))?\s*\{?\s*$")
 _kBraceRe = re.compile(r"[{}]")
 
 
-def collectTypeDefinitions(path: Path, relativePath: str, mapDefinition: dict[str, set[str]]) -> None:
-    """파일 하나의 네임스페이스 수준 정의를 `네임스페이스::이름 → 파일들` 에 더한다."""
-    text = path.read_text(encoding="utf-8", errors="replace")
+def collectTypeDefinitions(source: SourceFile) -> list[str]:
+    """파일 하나의 네임스페이스 수준 정의 `네임스페이스::이름` 들(파일 사이의 비교는 끝맺음이 한다)."""
+    listKey: list[str] = []
+    text = source.text
     # 이름 있는 네임스페이스와 class · struct 가 둘 다 있어야 정의가 잡힌다 — 없는 파일은 가리기도 하지 않는다(결과는 같다).
     if "namespace" not in text or ("class" not in text and "struct" not in text):
-        return
-    lines = blankCommentsAndLiterals(text).split("\n")
+        return listKey
+    lines = source.masked.split("\n")
     depth = 0
     stackNamespace: list[tuple[str, int]] = []
     pendingNamespace: str | None = None
@@ -51,8 +52,7 @@ def collectTypeDefinitions(path: Path, relativePath: str, mapDefinition: dict[st
         typeMatch = _kTypeRe.match(line) if ("class" in line or "struct" in line) else None
         if (typeMatch is not None and stackNamespace and depth == stackNamespace[-1][1]
                 and all(name != "" for name, _ in stackNamespace)):
-            key = "::".join(name for name, _ in stackNamespace) + "::" + typeMatch.group(1)
-            mapDefinition[key].add(relativePath)
+            listKey.append("::".join(name for name, _ in stackNamespace) + "::" + typeMatch.group(1))
         if "{" not in line and "}" not in line:
             continue
         for character in _kBraceRe.findall(line):
@@ -65,6 +65,7 @@ def collectTypeDefinitions(path: Path, relativePath: str, mapDefinition: dict[st
                 if stackNamespace and stackNamespace[-1][1] == depth:
                     stackNamespace.pop()
                 depth -= 1
+    return listKey
 
 
 class CheckDuplicateTypeNamesGate(LintGate):
@@ -80,6 +81,8 @@ class CheckDuplicateTypeNamesGate(LintGate):
         ("Source/*.cpp", r"\b(?:class|struct|namespace)\b"),
     )
     preCommitFileArgument = ""
+    sourceScanRoots = ("Source",)
+    sourceSuffixes = (".h", ".cpp")
     violationHeader = "같은 이름의 타입 정의"
     selfTestCases = [
         {
@@ -94,11 +97,17 @@ class CheckDuplicateTypeNamesGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         pass
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listFile = self.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source",), suffixes=(".h", ".cpp"))
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        listKey = collectTypeDefinitions(source)
+        return FileFindings(value=(source.relative, listKey)) if listKey else None
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
         mapDefinition: dict[str, set[str]] = defaultdict(set)
-        for path in listFile:
-            collectTypeDefinitions(path, path.relative_to(repositoryRoot).as_posix(), mapDefinition)
+        for findings in result.listFindings:
+            if findings.value is not None:
+                relativePath, listKey = findings.value
+                for key in listKey:
+                    mapDefinition[key].add(relativePath)
 
         listViolation: list[str] = []
         for key, setFile in sorted(mapDefinition.items()):
@@ -106,7 +115,7 @@ class CheckDuplicateTypeNamesGate(LintGate):
             if len(setStem) > 1:
                 listViolation.append(f"{key}: {' · '.join(sorted(setFile))} 가 같은 이름을 정의합니다 — 한 프로그램에 함께 올라가면 ODR 위반입니다. "
                                      f"키트 · 모듈 이름을 붙여 가르세요")
-        return GateResult(listViolation=listViolation, summary=f"{len(listFile)} files, {len(mapDefinition)} types")
+        return GateResult(listViolation=listViolation, summary=f"{result.fileCount} files, {len(mapDefinition)} types")
 
 
 main = CheckDuplicateTypeNamesGate.run

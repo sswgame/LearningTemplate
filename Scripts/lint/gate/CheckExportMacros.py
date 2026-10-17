@@ -30,8 +30,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
 
-from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from common import findFast  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kRoot = "Source/GameFramework/"
 _kKitRoot = _kRoot + "Kits/"
@@ -79,25 +80,23 @@ def _findClassBody(text: str, openIndex: int) -> str:
     return text[openIndex:index - 1]
 
 
-def findExportMacroMisuse(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
+def findExportMacroMisuse(source: SourceFile) -> list[str]:
     """DLL 에 맞지 않는 내보내기 매크로와, 매크로를 단 순수 인터페이스를 위반 문자열로 돌려줍니다."""
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
+    relative = source.relative
     listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if relative.startswith(_kRoot) == False or _kMacroRe.search(text) is None:
-            continue
-        expected = _expectedMacro(relative)
-        listOriginalLine = text.splitlines()
-        blanked = blankCommentsAndLiterals(text)
-        for lineIndex, line in enumerate(blanked.splitlines(), start=1):
-            for match in _kMacroRe.finditer(line):
-                if match.group(1) != expected:
-                    listViolation.append(f"{relative}:{lineIndex}: {match.group(1)} -> {expected}  | {listOriginalLine[lineIndex - 1].strip()}")
-        for match in _kExportedClassRe.finditer(blanked):
-            if _isPureInterfaceBody(_findClassBody(blanked, match.end())):
-                lineIndex = blanked.count("\n", 0, match.start()) + 1
-                listViolation.append(f"{relative}:{lineIndex}: {match.group(2)} 는 순수 인터페이스 — {match.group(1)} 를 뺀다  | {listOriginalLine[lineIndex - 1].strip()}")
+    if relative.startswith(_kRoot) == False or findFast(_kMacroRe, source.text) is None:
+        return listViolation
+    expected = _expectedMacro(relative)
+    listOriginalLine = source.listLine
+    blanked = source.masked
+    for lineIndex, line in enumerate(source.listMaskedLine, start=1):
+        for match in _kMacroRe.finditer(line):
+            if match.group(1) != expected:
+                listViolation.append(f"{relative}:{lineIndex}: {match.group(1)} -> {expected}  | {listOriginalLine[lineIndex - 1].strip()}")
+    for match in _kExportedClassRe.finditer(blanked):
+        if _isPureInterfaceBody(_findClassBody(blanked, match.end())):
+            lineIndex = blanked.count("\n", 0, match.start()) + 1
+            listViolation.append(f"{relative}:{lineIndex}: {match.group(2)} 는 순수 인터페이스 — {match.group(1)} 를 뺀다  | {listOriginalLine[lineIndex - 1].strip()}")
     return listViolation
 
 
@@ -109,6 +108,9 @@ class CheckExportMacrosGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = _kSuffixes
+    sourceSummary = f"{' · '.join(_kListScanRoot)} 의 내보내기 매크로 오용"
     violationHeader = "내보내기 매크로 오용"
     hint = (
         "  헤더가 속한 DLL 의 매크로를 씁니다(RuntimeAPI/Export/GameFrameworkAPI.h):\n"
@@ -148,9 +150,8 @@ class CheckExportMacrosGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source/GameFramework 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = findExportMacroMisuse(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 내보내기 매크로 오용")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findExportMacroMisuse(source))
 
 
 main = CheckExportMacrosGate.run

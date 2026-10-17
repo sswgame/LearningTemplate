@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 import AcronymRegistry as registry  # noqa: E402
 from common import kLintTargetRelDirs, kNotOurCodeDirNames, lineOf  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 #: 대문자 셋 이상이 이어진 이름 — 규칙 4 후보를 찾는 앞 거르기.
 _kUpperRunRe = re.compile(r"[A-Z]{3,}")
@@ -74,55 +75,68 @@ class CheckAcronymSpellingGate(LintGate):
         parser.add_argument("--enforce-only", action="append", default=None,
                             help="등록부의 kEnforced 대신 이 약어만 강제한다(시험용 — 등록부 상태와 무관하게 '강제 전엔 보고만' 을 본다)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+    sourceScanRoots = kLintTargetRelDirs
+    sourceSuffixes = registry.kCodeSuffix
+    sourceExcludedDirNames = kNotOurCodeDirNames
+
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
         listProblem = registry.checkRegistry()
         if listProblem:
             raise GateError("등록부: " + " · ".join(listProblem))
         listEnforceArgument = [value for value in (args.enforce or []) if value.strip().lower() != "all"]
         try:
             setBase = set(registry.resolveAcronyms(args.enforce_only)) if args.enforce_only else set(registry.kEnforced)
-            setEnforced = set(registry.kAcronym) if any(value.strip().lower() == "all" for value in (args.enforce or [])) \
+            args.setEnforced = set(registry.kAcronym) if any(value.strip().lower() == "all" for value in (args.enforce or [])) \
                 else setBase | (set(registry.resolveAcronyms(listEnforceArgument)) if listEnforceArgument else set())
         except ValueError as error:
             raise GateError(str(error)) from error
 
-        listFile = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=registry.kCodeSuffix,
-                                          excludedDirNames=kNotOurCodeDirNames)
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        # 경로 조각은 폴더를 한 번만 세므로 파일 사이의 관계다 — 조각마다의 판정만 돌려주고 끝맺음이 순서대로 거른다.
+        counterPending: Counter = Counter()
+        listTextViolation = self.checkTextInternal(source.relative, source.text, args.setEnforced, counterPending, source.masked)
+        return FileFindings(value=(self.judgePathInternal(source.relative, args.setEnforced), listTextViolation, counterPending))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
         listViolation: list[str] = []
         counterPending: Counter = Counter()
         setSeenPath: set[str] = set()
-        for path, text in self.readFiles(listFile):
-            relPath = path.resolve().relative_to(repositoryRoot.resolve()).as_posix()
-            listViolation += self.checkPathInternal(relPath, setEnforced, counterPending, setSeenPath)
-            listViolation += self.checkTextInternal(relPath, text, setEnforced, counterPending)
+        for findings in result.listFindings:
+            listPathJudgement, listTextViolation, counterText = findings.value
+            for prefix, listJudgement in listPathJudgement:
+                if prefix in setSeenPath:
+                    continue
+                setSeenPath.add(prefix)
+                for acronym, violation in listJudgement:
+                    if violation:
+                        listViolation.append(violation)
+                    else:
+                        counterPending[acronym] += 1
+            listViolation += listTextViolation
+            counterPending.update(counterText)
 
         listNote = [f"{registry.toPascal(acronym)}: {count:,}곳" for acronym, count in counterPending.most_common()] if args.verbose else []
-        enforcedText = ", ".join(sorted(setEnforced)) or "없음"
-        summary = (f"{len(listFile)} files · 강제 약어 {enforcedText} · 강제 전 남은 Pascal 철자 {sum(counterPending.values()):,}곳"
+        enforcedText = ", ".join(sorted(args.setEnforced)) or "없음"
+        summary = (f"{result.fileCount} files · 강제 약어 {enforcedText} · 강제 전 남은 Pascal 철자 {sum(counterPending.values()):,}곳"
                    f"(약어 {len(counterPending)}개 — 보고만)")
         return GateResult(listViolation=listViolation, listNote=listNote, summary=summary)
 
     @staticmethod
-    def checkPathInternal(relPath: str, setEnforced: set[str], counterPending: Counter, setSeenPath: set[str]) -> list[str]:
-        """경로 조각(폴더 · 파일 이름) — 폴더는 한 번만 센다."""
-        listViolation: list[str] = []
+    def judgePathInternal(relPath: str, setEnforced: set[str]) -> list[tuple[str, list[tuple[str, str]]]]:
+        """경로 조각(폴더 · 파일 이름)마다 (조각까지의 경로, [(약어, 위반 줄 — 강제 전이면 빈 글)])."""
+        listJudgement: list[tuple[str, list[tuple[str, str]]]] = []
         parts = relPath.split("/")
         for index, part in enumerate(parts):
             prefix = "/".join(parts[:index + 1])
-            if prefix in setSeenPath:
-                continue
-            setSeenPath.add(prefix)
-            for acronym in registry.changedAcronyms(part.partition(".")[0]):
-                if acronym in setEnforced:
-                    listViolation.append(f"{prefix}: 이름 '{part}' → '{registry.respellPathPart(part, (acronym,))}' (약어 {acronym})")
-                else:
-                    counterPending[acronym] += 1
-        return listViolation
+            listJudgement.append((prefix, [
+                (acronym, f"{prefix}: 이름 '{part}' → '{registry.respellPathPart(part, (acronym,))}' (약어 {acronym})" if acronym in setEnforced else "")
+                for acronym in registry.changedAcronyms(part.partition(".")[0])]))
+        return listJudgement
 
     @staticmethod
-    def checkTextInternal(relPath: str, text: str, setEnforced: set[str], counterPending: Counter) -> list[str]:
+    def checkTextInternal(relPath: str, text: str, setEnforced: set[str], counterPending: Counter, blankedText: str) -> list[str]:
         listViolation: list[str] = []
-        masked = registry.maskCode(text)
+        masked = registry.maskCode(text, blankedText)
         for site in registry.iterateNameSites(text, registry.kAcronym, masked=masked):
             if registry.isExternalName(site.name, site.qualifier):
                 continue

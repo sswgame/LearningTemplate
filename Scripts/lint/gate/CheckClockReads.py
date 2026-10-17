@@ -28,8 +28,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
 
-from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from common import findFast, kLintTargetRelDirs  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
@@ -37,28 +38,22 @@ _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 _kClockNameRe = re.compile(r"(?<![\w$])(steady_clock|high_resolution_clock|system_clock)(?![\w$])")
 
 
-def findClockReads(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
+def findClockReads(source: SourceFile) -> list[str]:
     """예외 밖에서 std 시계 이름을 쓰는 줄을 위반 문자열로 돌려줍니다. 예외 파일은 보면 `see`, 시계를 읽으면 `use` 로 적습니다."""
     gate = CheckClockReadsGate
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
-    listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        bExempt = relative in gate.mapExemption
-        listCodeMatch: list[tuple[int, str]] = []
-        if _kClockNameRe.search(text) is not None:
-            listCodeMatch = [(lineIndex, match.group(1))
-                             for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1)
-                             for match in _kClockNameRe.finditer(line)]
-        if bExempt:
-            gate.seeExemption(relative)
-            if listCodeMatch:
-                gate.useExemption(relative)
-            continue
-        listOriginalLine = text.splitlines()
-        for lineIndex, clockName in listCodeMatch:
-            listViolation.append(f"{relative}:{lineIndex}: std::chrono::{clockName}  | {listOriginalLine[lineIndex - 1].strip()}")
-    return listViolation
+    relative = source.relative
+    bExempt = relative in gate.mapExemption
+    listCodeMatch: list[tuple[int, str]] = []
+    if findFast(_kClockNameRe, source.text) is not None:
+        listCodeMatch = [(lineIndex, match.group(1))
+                         for lineIndex, line in enumerate(source.listMaskedLine, start=1)
+                         for match in _kClockNameRe.finditer(line)]
+    if bExempt:
+        gate.seeExemption(relative)
+        if listCodeMatch:
+            gate.useExemption(relative)
+        return []
+    return [f"{relative}:{lineIndex}: std::chrono::{clockName}  | {source.listLine[lineIndex - 1].strip()}" for lineIndex, clockName in listCodeMatch]
 
 
 class CheckClockReadsGate(LintGate):
@@ -69,6 +64,9 @@ class CheckClockReadsGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = _kSuffixes
+    sourceSummary = f"{' · '.join(_kListScanRoot)} 의 std::chrono 시계 읽기"
     violationHeader = "std::chrono 시계 직접 읽기"
     hint = (
         "  시계는 Source/Core/Time/MonotonicClock.h 하나입니다:\n"
@@ -122,9 +120,8 @@ class CheckClockReadsGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = findClockReads(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 std::chrono 시계 읽기")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findClockReads(source))
 
 
 main = CheckClockReadsGate.run

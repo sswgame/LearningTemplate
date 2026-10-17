@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common.ConfigReference import buildConfigReference, kConfigReferenceDir  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 
 class CheckConfigReferenceGate(LintGate):
@@ -69,7 +69,11 @@ class CheckConfigReferenceGate(LintGate):
         pass
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        mapOutput, violations = buildConfigReference(repositoryRoot)
+        try:
+            mapOutput, violations = buildConfigReference(repositoryRoot)
+        except OSError as exception:
+            # 문서의 재료(쿡 계약 · 설정 구조체 …)를 읽지 못하면 검사가 서지 않는다 — 트레이스백이 아니라 종료 2 로 알린다.
+            raise GateError(f"설정 참조 문서의 재료를 읽지 못했습니다: {exception}") from exception
         for relative, text in mapOutput.items():
             path = repositoryRoot / relative
             if path.is_file() is False:

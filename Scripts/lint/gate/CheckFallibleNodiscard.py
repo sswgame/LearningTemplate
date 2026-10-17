@@ -38,9 +38,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import LintGate  # noqa: E402
+from SourceScan import FileFindings, SourceFile  # noqa: E402
 
 # 실패할 수 있는 동사(`rules/CheckFallibleNodiscard.toml`).
 _kRuleSchema = {"fallible_verb": kKindTextList}
@@ -115,34 +116,33 @@ def findFallibleNameInternal(listLine: list[str], lineIndex: int) -> str | None:
     return None
 
 
-def findFallibleDeclarationsWithoutNodiscard(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    """`[[nodiscard]]` 가 없는 실패 가능 bool 선언을 모아 위반 문자열로 돌려줍니다."""
+def findFallibleDeclarationsWithoutNodiscard(source: SourceFile) -> list[str]:
+    """파일 하나에서 `[[nodiscard]]` 가 없는 실패 가능 bool 선언을 모아 위반 문자열로 돌려줍니다."""
     gate = CheckFallibleNodiscardGate
     violations: list[str] = []
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kListScanSuffix)
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        # 예외 키는 폴더 패턴(`Source/RuntimeAPI/*`)이거나 `<파일>:<이름>` 하나다.
-        folderKey = gate.findExemptionKey(relative)
-        if folderKey is not None:
-            gate.seeExemption(folderKey)
-        listLine = text.splitlines()
-        # 헤더가 아니면 번역 단위 지역 함수(익명 네임스페이스 안 · static)만 본다 — 나머지는 헤더 선언의 정의다.
-        bHeader = path.suffix.lower() == ".h"
-        setLocalLine = set() if bHeader else findTranslationUnitLocalLinesInternal(listLine)
+    relative = source.relative
+    # 예외 키는 폴더 패턴(`Source/RuntimeAPI/*`)이거나 `<파일>:<이름>` 하나다.
+    folderKey = gate.findExemptionKey(relative)
+    if folderKey is not None:
+        gate.seeExemption(folderKey)
+    if "bool" not in source.text:
+        return violations      # 선언 모양(`_kDeclarationRe` · `_kReturnTypeOnlyRe`)이 모두 `bool` 을 든다
+    listLine = source.listLine
+    # 헤더가 아니면 번역 단위 지역 함수(익명 네임스페이스 안 · static)만 본다 — 나머지는 헤더 선언의 정의다.
+    bHeader = source.path.suffix.lower() == ".h"
+    setLocalLine = set() if bHeader else findTranslationUnitLocalLinesInternal(listLine)
 
-        for lineIndex, line in enumerate(listLine):
-            name = findFallibleNameInternal(listLine, lineIndex)
-            if name is None or "[[nodiscard]]" in line or hasNodiscardAboveInternal(listLine, lineIndex):
-                continue
-            if bHeader is False and lineIndex not in setLocalLine and re.match(r"^\s*static\b", line) is None:
-                continue
-            declarationKey = f"{relative}:{name}"
-            if folderKey is not None or declarationKey in gate.mapExemption:
-                gate.useExemption(folderKey if folderKey is not None else declarationKey)
-                continue
-            violations.append(f"[Fallible Nodiscard] {relative}:{lineIndex + 1}: {name} — {line.strip()}")
-
+    for lineIndex, line in enumerate(listLine):
+        name = findFallibleNameInternal(listLine, lineIndex)
+        if name is None or "[[nodiscard]]" in line or hasNodiscardAboveInternal(listLine, lineIndex):
+            continue
+        if bHeader is False and lineIndex not in setLocalLine and re.match(r"^\s*static\b", line) is None:
+            continue
+        declarationKey = f"{relative}:{name}"
+        if folderKey is not None or declarationKey in gate.mapExemption:
+            gate.useExemption(folderKey if folderKey is not None else declarationKey)
+            continue
+        violations.append(f"[Fallible Nodiscard] {relative}:{lineIndex + 1}: {name} — {line.strip()}")
     return violations
 
 
@@ -156,6 +156,9 @@ class CheckFallibleNodiscardGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*{suffix}" for root in _kListScanRoot for suffix in _kListScanSuffix)
     preCommitFileArgument = "--files"
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = _kListScanSuffix
+    sourceSummary = f"{' · '.join(_kListScanRoot)} 의 .h · .cpp · .inl 실패 가능 bool 선언"
     violationHeader = "실패를 bool 로 알리는데 [[nodiscard]] 가 없는 선언"
     hint = (
         "  실패할 수 있는 동사(load · save · parse · apply …)의 bool 함수는 [[nodiscard]] 를 답니다:\n"
@@ -242,9 +245,8 @@ class CheckFallibleNodiscardGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상(시험 제외)의 .h · .cpp · .inl 전체)")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        violations = findFallibleDeclarationsWithoutNodiscard(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 .h · .cpp · .inl 실패 가능 bool 선언")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=findFallibleDeclarationsWithoutNodiscard(source))
 
 
 main = CheckFallibleNodiscardGate.run
