@@ -2,6 +2,8 @@
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 빌드 속도, 간헐 실패 관찰의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
+- `A-23` [결함] **Shipping `-L nogpu` 에서 합성 리그 테스트 둘이 `game/empty/rigs_raw/*.rig.json` 을 못 읽는다.** `ResourceDataSchemaTest.EveryResourceDataFileLoadsWithoutUnknownNames` ·
+  `SyntheticRigImportTest.RepresentativesImportAndBindTheirRig`(2026-10-18 `pixel2` Shipping 에서 확인, PixelTown 과 무관 — `rigbench` 병합 뒤 Shipping 을 돌리지 않았다). 원본 폴더(`rigs_raw`)가 Shipping 마운트에 없는 것으로 보인다(미확인).
 - `A-21` [결함] **키트 DLL 만 바뀌고 `EngineTest.exe` 가 다시 링크되지 않으면 `TestBin` 의 키트 DLL 복사본이 낡는다.** 키트 소스만 고친 증분 빌드에서
   테스트가 옛 코드로 돈다(고친 결함이 안 고쳐진 것처럼 보이거나 그 반대). 복사가 테스트 실행 파일의 링크 뒤 단계에 걸린 것으로 보인다(미확인).
   복사를 DLL 타깃 자체의 산출물 의존으로 옮겨, 바뀐 DLL 은 늘 `TestBin` 에 다시 놓이게 한다.
