@@ -6,6 +6,10 @@
   테스트가 옛 코드로 돈다(고친 결함이 안 고쳐진 것처럼 보이거나 그 반대). 복사가 테스트 실행 파일의 링크 뒤 단계에 걸린 것으로 보인다(미확인).
   복사를 DLL 타깃 자체의 산출물 의존으로 옮겨, 바뀐 DLL 은 늘 `TestBin` 에 다시 놓이게 한다.
 
+- `A-22` [결함] **린트 음성 테스트(`CheckLintsAreAlive`)가 종료 코드 0 이 아니면 살아 있다고 센다.** 종료 2(게이트 내부 오류)로 죽는 조각도 살아 있다고 세어진다 —
+  `CheckConfigReference` 조각 둘이 `CookContract.json` 이 없어 트레이스백으로 죽고, 종료 2 인 조각이 `AssetRules` · `CookContract` · `DocPaths` 에 8 개 더 있다(2026-10-17 `lintspeed` 통합에서 확인).
+  종료 1(위반)만 인정하도록 바꾸고, 그 조각들은 게이트가 위반으로 판정하도록 고친다.
+
 - `B-5` [검증대기] **`LoaderFuzzer` `Compression` 타임아웃은 고쳤고 퍼저 재확인과 씨앗이 남았다**(실행 38806424034). 원인은 헤더의 원본 크기(620 MB)를 압축 크기(0)와 견주지 않고 할당한 것이었다 —
   코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 `vector` 소멸 루프 생략으로 고쳤다(결정 기록 5-3, 2026-10-17). 퍼저는 리눅스 전용이라 로컬에서는 `CompressionTest.FuzzTimeoutInputIsRejectedBeforeAllocating` 이
   그 입력을 그대로 재현해 할당 전에 끊기는지(용량 0)만 본다. 남은 일: ① 다음 야간 퍼징에서 `Compression` 이 통과하는지 확인 ② 그 입력을 `Test/EngineTest/LoaderFuzzTargets.cpp` `seedCompression` 씨앗에 더하기
@@ -45,6 +49,11 @@
 
 - `C-14` [검증대기] **CI 린트 잡의 `CheckDataDrivenStructure` 수정을 push 뒤 CI 로 확인한다.** 실행 38893227125 에서 리눅스 린트 잡이 이 게이트 하나로 졌다(낡은 예외 `SilentFallback:Scripts/setup/*` — 나머지 71 개는 통과, 훅 시간은 staged 1 개 5.81 s · 10 개 6.35 s 라 `kHookBudgetSeconds` 를 1.5 배인 9 · 10 s 로 맞췄다).
   예외와 다 고친 기준선 다섯 줄을 지웠고 이 PC 에서 같은 출력으로 통과하는 것까지 봤다. 리눅스 러너에서 통과하는지는 push 뒤 첫 린트 잡으로 본다.
+
+- `C-48` [정리] **소스 게이트 공유 훑기(`SourceScan`)로 못 옮긴 게이트와 픽서.** 파일마다 보는 소스 게이트 28 개는 `SourceScan` · `RunSourceGates`(CTest · CI 의 `CheckSourceFiles`)로 옮겼다(2026-10-17 `lintspeed`).
+  못 옮긴 것: `NamespaceBlocks` · `IncludeOrder`(줄 끝 · utf-8-sig 를 따로 다루고 픽서와 판정이 나뉨), `ThirdPartyIsolation` · `SuppressionReasons`(C++ 와 CMake 두 파일 집합), `KitNamespaces`.
+  픽서(`FormatBranchBraces` 등)도 파일마다 따로 읽고 주석을 가리는 같은 틀이다. `ConditionParts` · `EditorStyleLiterals` · `DataDrivenLiterals` 는 추가 줄 · 기준선 로직을 저마다 중복해 든다 —
+  공유 드라이버가 판정 단위(줄 끝 · 인코딩 · 파일 집합)와 추가 줄 · 기준선을 형식으로 갖게 한다.
 
 - `C-15` [정리] **`dev/MoveEditorState.py`**(옛 위치의 에디터 로컬 상태를 옮기는 PC 마다 한 번짜리 이동기, 2026-10-13 들임)는 모든 PC 가 돌렸으면 지운다 — 추적되지 않는 파일을 옮기므로 돌렸는지 저장소에서는 알 수 없다.
   이 PC 는 `--dry-run` 에 옮길 것이 없다(2026-10-16). 다른 PC 는 사용자가 확인한 뒤에 지운다.

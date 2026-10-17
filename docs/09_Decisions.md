@@ -174,6 +174,8 @@
   도구 비용을 줄인 뒤 단독 실행 중앙값(5 회)은 `CheckConfigReference` 1.49 → 0.99 s, `CheckDuplicateTypeNames` 1.35 → 1.03 s, `CheckEngineLayers` 2.00 → 1.09 s, `CheckModuleTargets` 1.44 → 1.21 s,
   커밋 훅(`REFLECT` 헤더 하나) 2.31 → 1.92 s 였습니다. 그래서 하나만 0 으로 만들어도 나머지 다섯이 같은 높이로 남습니다.
   더 내리려면 트리 전체 게이트들이 파일 읽기를 나누는 구조(한 프로세스가 읽고 여럿이 훑기)가 필요한데, 파이썬 GIL 때문에 지금의 동시 실행을 잃습니다.
+  파일마다 보는 소스 게이트는 그 구조로 옮겼습니다(2026-10-17, `SourceScan` — 트리를 한 번 걷고 파일을 코어 수만큼 프로세스에 나눠 읽고 가린 뒤 게이트 전부가 훑는다, GIL 은 프로세스로 피함).
+  위의 트리 전체 대조 게이트 중 무거운 `CheckNameReferences` · `CheckKitNamespaces` 는 커밋 훅에서 빼 CI 린트 잡으로 넘겼습니다([검증과 측정](08_Verification.md) 4절 "커밋 훅과 린트 잡의 나눔").
 
 ## 4. 옛 이름 → 지금 이름 (`git log` 을 읽을 때)
 
