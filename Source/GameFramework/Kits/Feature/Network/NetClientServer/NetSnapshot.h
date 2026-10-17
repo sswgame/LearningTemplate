@@ -45,6 +45,22 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 받는 클라이언트가 조종하는 엔티티의 예측용 상태와, 그 상태를 만든 마지막 입력 틱입니다. 클라이언트 예측이 이 둘을 한 쌍으로 맞춥니다.
+     * @details 틱과 상태를 한 칸에 묶는다. 예전에는 틱만 스냅샷 머리에 싣고 상태는 엔티티 목록에서 찾았는데,
+     *          엔티티는 예산 · 우선도 · 관련 정책으로 빠지거나 지난 기준 값으로 남을 수 있어 "새 틱 + 옛 상태" 를 비교하는 헛된 재조정이 났다.
+     *          이 칸은 예산 순서 밖에서 스냅샷마다 통째로 싣는다(델타 없음, `NetSnapshot::kMaxEntityBytes` 이하). 언리얼의 자율 프록시 보정(ClientAdjustPosition)과 같은 자리이다.
+     */
+    struct NetOwnerState
+    {
+        vector<uint8> _buffer{};
+        uint32        _inputTick{ 0 };       ///< 서버가 이 상태를 만들 때 쓴 마지막 입력 틱
+        uint8         _bPresent{ SW_FALSE }; ///< 서버가 이 클라이언트의 상태를 아직 정하지 않았으면 false 이다
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 한 틱의 엔티티 상태 모음입니다. 엔티티 id 오름차순으로 보관하며, 델타가 두 스냅샷을 나란히 순회합니다. */
     struct SW_KIT_API NetSnapshot
     {
@@ -57,8 +73,8 @@ namespace sw
 
         vector<NetEntityState> _listEntity{};
         uint32                 _tick{ 0 };
-        uint32                 _lastProcessedInputTick{ 0 }; ///< 서버가 받는 클라이언트의 입력을 어느 틱까지 썼는지 나타낸다. 클라이언트 예측을 맞추는 데 쓴다
-        uint32                 _firstMissingInputTick{ 0 };  ///< 서버가 받는 클라이언트의 입력을 빈틈없이 받았거나 이미 꺼낸 마지막 틱의 다음 틱이다. 클라이언트는 여기서부터 다시 보낸다
+        NetOwnerState          _ownerState{};               ///< 받는 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 클라이언트 예측을 맞추는 데 쓴다
+        uint32                 _firstMissingInputTick{ 0 }; ///< 서버가 받는 클라이언트의 입력을 빈틈없이 받았거나 이미 꺼낸 마지막 틱의 다음 틱이다. 클라이언트는 여기서부터 다시 보낸다
 
         const NetEntityState* findEntity( uint32 entityID ) const;
         void                  sortEntities();

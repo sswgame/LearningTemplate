@@ -56,6 +56,12 @@ namespace sw
         return _listSnapshot.hasNewest() ? _listSnapshot.find( _listSnapshot.getNewestTick() ) : nullptr;
     }
 
+    const NetOwnerState* ReplicationClient::findOwnerState() const
+    {
+        const NetSnapshot* pLatest = getLatest();
+        return pLatest != nullptr && pLatest->_ownerState._bPresent == SW_TRUE ? &pLatest->_ownerState : nullptr;
+    }
+
     NetHandleResult ReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
         (void)context; // 클라이언트가 받는 쪽이므로 상대는 서버 하나뿐이다

@@ -313,7 +313,8 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
                 {
                     ++poppedInputs;
                     exactInputs += bExact ? 1 : 0;
-                    server.setLastProcessedInputTick( 0, serverTick - 4 );
+                    // 소유자 상태는 그 입력 틱을 값으로 담는다 — 클라이언트에서 틱과 상태가 한 쌍으로 오는지 본다.
+                    SW_EXPECT_TRUE( server.setOwnerState( 0, serverTick - 4, makeFloatBytes( static_cast<float32>( serverTick - 4 ) ) ) );
                 }
             }
             server.beginTick( serverTick );
@@ -351,6 +352,57 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     SW_EXPECT_TRUE( poppedInputs > 150 );
     SW_EXPECT_TRUE( static_cast<float32>( exactInputs ) / static_cast<float32>( poppedInputs ) > 0.97f ); // 손실 10 % 를 겹쳐 보내기가 메운다
     SW_EXPECT_TRUE( server.getClientViewTick( 0 ) > static_cast<float32>( serverTick ) - 15.0f );
+    const NetOwnerState* pOwnerState = client.findOwnerState();
+    SW_ASSERT_NOT_NULL( pOwnerState );
+    SW_EXPECT_NEAR_EQUAL( static_cast<float32>( pOwnerState->_inputTick ), readFloatBytes( pOwnerState->_buffer ), 1.0e-3f );
+    SW_EXPECT_TRUE( pOwnerState->_inputTick + 20 > serverTick ); // 손실이 있어도 최근 틱의 상태이다
+}
+
+/**
+ * @brief [NetClientServerTest] 소유자 상태 칸은 엔티티 예산과 상관없이 스냅샷마다 실려, 틱과 상태가 늘 한 쌍으로 풀린다
+ * @details 예전에는 처리한 입력 틱만 머리에 싣고 상태는 엔티티 목록에서 찾았다. 예산이 그 엔티티를 빼면 "새 틱 + 옛 상태" 로 헛된 재조정이 났다.
+ *          서버에 넘는 상태는 오류로 거절되고, 아무 상태도 정하지 않은 스냅샷은 칸이 비어 온다.
+ */
+SW_TEST_CASE( NetClientServerTest, OwnerStateSlotTravelsOutsideTheEntityBudget )
+{
+    NetSnapshot big;
+    big._tick = 21;
+    for ( uint32 entityID = 1; entityID <= 60; ++entityID )
+    {
+        big._listEntity.push_back( NetEntityState{ vector<uint8>( 20, static_cast<uint8>( entityID ) ), entityID, 1 } );
+    }
+    big._ownerState._buffer    = vector<uint8>( 40, 0xA5 );
+    big._ownerState._inputTick = 17;
+    big._ownerState._bPresent  = SW_TRUE;
+    BitWriter   writer;
+    NetSnapshot written;
+    big.writeDelta( writer, nullptr, 120, written ); // 엔티티는 몇 개만 들어간다
+    SW_EXPECT_TRUE( writer.getByteCount() <= 120 );
+    SW_EXPECT_TRUE( written._listEntity.size() < 60 );
+    BitReader   reader( writer.getBytes().data(), writer.getByteCount() );
+    NetSnapshot decoded;
+    SW_ASSERT_TRUE( NetSnapshot::readDelta( reader, nullptr, decoded ) );
+    SW_EXPECT_TRUE( decoded._ownerState._bPresent == SW_TRUE );
+    SW_EXPECT_EQUAL( 17, static_cast<int32>( decoded._ownerState._inputTick ) );
+    SW_EXPECT_TRUE( decoded._ownerState._buffer == big._ownerState._buffer );
+    SW_EXPECT_EQUAL( written._listEntity.size(), decoded._listEntity.size() );
+
+    // 칸이 빈 스냅샷은 빈 칸으로 풀린다 — 앞서 푼 값이 남지 않는다.
+    NetSnapshot empty;
+    empty._tick = 22;
+    BitWriter   emptyWriter;
+    NetSnapshot emptyWritten;
+    empty.writeDelta( emptyWriter, nullptr, 1000, emptyWritten );
+    BitReader emptyReader( emptyWriter.getBytes().data(), emptyWriter.getByteCount() );
+    SW_ASSERT_TRUE( NetSnapshot::readDelta( emptyReader, nullptr, decoded ) );
+    SW_EXPECT_TRUE( decoded._ownerState._bPresent == SW_FALSE );
+    SW_EXPECT_TRUE( decoded._ownerState._buffer.empty() );
+
+    // 서버는 넘는 상태를 정하지 않는다.
+    test::ScopedDefensiveTestLog expected( "an owner state larger than the snapshot limit is refused" );
+    ReplicationServer            server;
+    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
+    SW_EXPECT_FALSE( server.setOwnerState( 0, 1, vector<uint8>( NetSnapshot::kMaxEntityBytes + 1, 0 ) ) );
 }
 
 SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds )
@@ -565,7 +617,7 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
     vector<uint8> input;
     bool          bExact = false;
     SW_ASSERT_TRUE( server.popInput( 0, 100, input, bExact ) && bExact );
-    server.setLastProcessedInputTick( 0, 100 );
+    SW_EXPECT_TRUE( server.setOwnerState( 0, 100, vector<uint8>{ 1, 2, 3 } ) );
 
     // 게임 프레임 사이 — 첫째가 떠나고 둘째가 같은 자리에 들어와 틱 0 입력을 보낸다. 서버 게임은 그동안 라우터를 돌리지 않았다.
     first.disconnect( 0 );
@@ -811,7 +863,7 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
                 ++checkedCount;
                 exactCount += bExact && input.size() == 2 && input[0] == static_cast<uint8>( popTick & 0xFF ) ? 1 : 0;
             }
-            server.setLastProcessedInputTick( 0, popTick );
+            (void)server.setOwnerState( 0, popTick, input ); // 이 테스트는 입력 확인만 본다. 상태 대신 꺼낸 입력을 싣는다
         }
         server.beginTick( tick );
         server.setEntity( 1, 1, makeFloatBytes( static_cast<float32>( tick ) ) );

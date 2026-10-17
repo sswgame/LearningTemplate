@@ -30,11 +30,12 @@ namespace sw
             pOutListCurrent->assign( _listEntity.size(), kEntityNotSent );
         // 복원 결과는 @p outWritten 의 엔티티 항목을 덮어쓴다. 버퍼 용량이 남으므로 틱마다 엔티티 수만큼 할당하지 않는다. 서버는 보낸 링 버퍼의 슬롯을 넘긴다.
         SW_ASSERT( pBaseline != &outWritten && this != &outWritten );
-        outWritten._tick                   = _tick;
-        outWritten._lastProcessedInputTick = _lastProcessedInputTick;
-        outWritten._firstMissingInputTick  = _firstMissingInputTick;
-        size_t     writtenCount            = 0;
-        const auto appendWritten           = [&outWritten, &writtenCount]( const NetEntityState& entity )
+        SW_ASSERT( static_cast<int32>( _ownerState._buffer.size() ) <= kMaxEntityBytes ); // `ReplicationServer::setOwnerState` 가 넘는 상태를 거절한다
+        outWritten._tick                  = _tick;
+        outWritten._ownerState            = _ownerState;
+        outWritten._firstMissingInputTick = _firstMissingInputTick;
+        size_t     writtenCount           = 0;
+        const auto appendWritten          = [&outWritten, &writtenCount]( const NetEntityState& entity )
         {
             if ( writtenCount < outWritten._listEntity.size() )
                 outWritten._listEntity[writtenCount] = entity;
@@ -44,7 +45,13 @@ namespace sw
         };
         writer.writeVarUint( _tick );
         writer.writeVarUint( pBaseline != nullptr ? pBaseline->_tick + 1u : 0u ); // 0이면 기준이 없다
-        writer.writeVarUint( _lastProcessedInputTick );
+        // 소유자 상태는 엔티티 예산 순서 밖에서 늘 통째로 싣는다. 아래 예산이 이미 쓴 비트로 함께 센다.
+        writer.writeBool( _ownerState._bPresent == SW_TRUE );
+        if ( _ownerState._bPresent == SW_TRUE )
+        {
+            writer.writeVarUint( _ownerState._inputTick );
+            writer.writeBlob( _ownerState._buffer.data(), static_cast<int32>( _ownerState._buffer.size() ) );
+        }
         writer.writeVarUint( _firstMissingInputTick );
         // 예산은 메시지 전체에 적용한다. 앞서 쓴 종류 바이트와 헤더, 끝 표시 1비트를 먼저 센다.
         NetSendBudget budget( maxBytes );
@@ -129,10 +136,22 @@ namespace sw
     bool NetSnapshot::readDelta( BitReader& reader, const NetSnapshot* pBaseline, NetSnapshot& outSnapshot )
     {
         SW_ASSERT( pBaseline != &outSnapshot );
-        outSnapshot._tick                   = static_cast<uint32>( reader.readVarUint() );
-        const uint32 baselineCode           = static_cast<uint32>( reader.readVarUint() );
-        outSnapshot._lastProcessedInputTick = static_cast<uint32>( reader.readVarUint() );
-        outSnapshot._firstMissingInputTick  = static_cast<uint32>( reader.readVarUint() );
+        outSnapshot._tick           = static_cast<uint32>( reader.readVarUint() );
+        const uint32   baselineCode = static_cast<uint32>( reader.readVarUint() );
+        NetOwnerState& ownerState   = outSnapshot._ownerState;
+        ownerState._bPresent        = reader.readBool() ? SW_TRUE : SW_FALSE;
+        if ( ownerState._bPresent == SW_TRUE )
+        {
+            ownerState._inputTick = static_cast<uint32>( reader.readVarUint() );
+            if ( reader.readBlob( ownerState._buffer, kMaxEntityBytes ) == false )
+                return false;
+        }
+        else
+        {
+            ownerState._inputTick = 0;
+            ownerState._buffer.clear();
+        }
+        outSnapshot._firstMissingInputTick = static_cast<uint32>( reader.readVarUint() );
         if ( baselineCode != 0 && ( pBaseline == nullptr || pBaseline->_tick != baselineCode - 1u ) )
             return false; // 기준이 없으므로 서버가 곧 다른 기준으로 다시 보낸다
         // 기준에서 시작한다. 벡터 복사 대입은 이미 있는 원소에 대입하므로 @p outSnapshot 의 엔티티 버퍼 용량을 재사용한다.
