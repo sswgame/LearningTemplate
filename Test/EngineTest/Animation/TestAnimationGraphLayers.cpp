@@ -30,8 +30,11 @@ namespace
 {
     struct TestAnimationGraphLayersInternal
     {
-        /** @brief 모든 본의 이동 x 가 @p offsetX 로 고정된 클립을 `<폴더>/<소문자 이름>.animclip` 으로 씁니다. 길이는 (@p sampleCount - 1) / 30 초입니다. */
-        [[nodiscard]] static bool saveOffsetClip( const Skeleton& skeleton, const string& folder, const utf8* pName, float32 offsetX, uint32 sampleCount )
+        /**
+         * @brief 모든 본의 이동 x 가 @p offsetX + @p slopePerSecond × 시각인 클립을 `<폴더>/<소문자 이름>.animclip` 으로 씁니다. 길이는 (@p sampleCount - 1) / 30 초입니다.
+         */
+        [[nodiscard]] static bool saveOffsetClip( const Skeleton& skeleton, const string& folder, const utf8* pName, float32 offsetX, uint32 sampleCount,
+                                                  float32 slopePerSecond = 0.0f )
         {
             AnimationRawClip raw;
             raw._sampleRate  = 30.0f;
@@ -46,7 +49,7 @@ namespace
                 for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
                 {
                     BoneTransform transform   = skeleton.getBone( boneIndex )._referencePose;
-                    transform._translation._x = offsetX;
+                    transform._translation._x = offsetX + slopePerSecond * static_cast<float32>( sampleIndex ) / raw._sampleRate;
                     raw._listSample.push_back( transform );
                 }
             }
@@ -106,7 +109,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, LayersAndBoneMasksRoundTripThroughJSON )
 {
     const string_view   json = R"({ "nodes": [ { "id": 1, "name": "Idle" } ],
         "bone_masks": [ { "name": "Upper", "roots": [ { "bone": "spine", "weight": 1 } ], "bones": [ { "bone": "spine", "weight": 0.5 } ] } ],
-        "layers": [ { "name": "Aim", "clip": "AimClip", "mask": "Upper", "weight": 0.75, "blend": "Additive", "loop": false, "weight_param": "AimWeight" },
+        "layers": [ { "name": "Aim", "clip": "AimClip", "mask": "Upper", "weight": 0.75, "blend": "Additive", "loop": false, "weight_param": "AimWeight", "half_life": 0.15 },
                     { "name": "Breath", "clip": "BreathClip", "weight": 1, "blend": "Override" } ] })";
     AnimationGraphAsset parsed;
     SW_ASSERT_TRUE( parsed.parseJSON( json ) );
@@ -130,6 +133,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, LayersAndBoneMasksRoundTripThroughJSON )
         SW_EXPECT_TRUE( pAim->_blend == AnimationLayerBlend::Additive );
         SW_EXPECT_TRUE( pAim->_bLoop == SW_FALSE );
         SW_EXPECT_NEAR_EQUAL( 0.75f, pAim->_weight, 1e-6f );
+        SW_EXPECT_NEAR_EQUAL( 0.15f, pAim->_halfLifeSeconds, 1e-6f );
         const AnimationGraphLayerDef* pBreath = pGraph->findLayer( "Breath" );
         SW_ASSERT_NOT_NULL( pBreath );
         SW_EXPECT_TRUE( pBreath->_maskName.empty() );
@@ -148,6 +152,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, InvalidLayerDataFailsTheGraphLoad )
         R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "weight": 1, "blend": "Multiply" } ] })",
         R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "blend": "Override" } ] })",
         R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "weight": 1.5, "blend": "Override" } ] })",
+        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "weight": 1, "blend": "Override", "half_life": 0 } ] })",
         R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "bone_masks": [ { "name": "M", "file": "x.bonemask.json", "roots": [ { "bone": "b", "weight": 1 } ] } ] })",
         R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "bone_masks": [ { "name": "M", "roots": [ { "bone": "b", "weight": 1 } ] }, { "name": "M", "roots": [ { "bone": "b", "weight": 1 } ] } ] })",
         R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "bone_masks": [ { "name": "M" } ] })",
@@ -273,4 +278,50 @@ SW_TEST_CASE( AnimationGraphLayersTest, GraphLayerMasksUpperBodyFromData )
     SW_EXPECT_NEAR_EQUAL( 0.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 2 ), 1e-3f );
     SW_EXPECT_FALSE( pAnimator->setGraphLayerWeight( hashed_string( "Upper" ), 0.5f ) );
     SW_EXPECT_FALSE( pAnimator->setGraphLayerWeight( hashed_string( "Missing" ), 0.5f ) );
+}
+
+/**
+ * @brief [AnimationGraphLayersTest] 반감기가 있는 레이어를 다시 시작하면 끊긴 레이어 포즈에서 이어 간다(inertialization) — 처음 포즈로 튀지 않고, 반감기 몇 배 뒤엔 클립 값이다
+ * @details 레이어 클립 Ramp 는 본 x 가 시각과 같다(1 초 반복). 0.5 초에 다시 시작하면 바로 다음 프레임도 x ≈ 0.5 이고, 0.6 초 뒤에는 클립 값(≈ 0.6)이다.
+ */
+SW_TEST_CASE( AnimationGraphLayersTest, RestartedLayerInertializesFromInterruptedPose )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const Skeleton skeleton = test::makeChainSkeleton( 2 );
+    const string   folder   = test::makeTempDirectory( "graph_layer_restart" );
+    SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Base", 0.0f, 31 ) );
+    SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Ramp", 0.0f, 31, 1.0f ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Flincher" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SkeletalMeshComponent*     pUnit     = pObject->addComponent<SkeletalMeshComponent>();
+    SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
+    SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
+    pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
+    pAnimator->setClipFolder( folder );
+    pAnimator->setInitialState( "Base" );
+    pAnimator->dispatchBeginPlay();
+    AnimationLayerDesc desc{};
+    desc._clipName         = hashed_string( "Ramp" );
+    desc._halfLifeSeconds  = 0.1f;
+    const int32 layerIndex = pAnimator->addLayer( desc );
+    SW_ASSERT_TRUE( layerIndex >= 0 );
+
+    for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
+        manager.getAnimationSystem().evaluate( 0.05f );
+    }
+    const float32 beforeRestart = TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, beforeRestart, 0.02f );
+
+    pAnimator->restartLayer( static_cast<uint32>( layerIndex ) );
+    manager.getAnimationSystem().evaluate( 0.001f );
+    SW_EXPECT_NEAR_EQUAL( beforeRestart, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 0.05f ); // 0 으로 튀지 않았다
+
+    for ( uint32 frameIndex = 0; frameIndex < 12; ++frameIndex )
+    {
+        manager.getAnimationSystem().evaluate( 0.05f );
+    }
+    SW_EXPECT_NEAR_EQUAL( 0.601f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 0.03f );
 }

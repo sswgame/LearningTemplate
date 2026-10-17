@@ -43,6 +43,7 @@ namespace sw
         hashed_string       _maskName{};        ///< 비었으면 모든 본이다.
         hashed_string       _weightParameter{}; ///< 비었으면 `_weight` 를 그대로 쓴다.
         float32             _weight{ 1.0f };
+        float32             _halfLifeSeconds{ 0.0f }; ///< JSON "half_life"(선택, 0 보다 커야 함). 다시 시작할 때 끊긴 포즈에서 이어 가는 반감기다. 적지 않으면 즉시 새 포즈다
         AnimationLayerBlend _blend{ AnimationLayerBlend::Override };
         uint8               _bLoop{ SW_TRUE };
     };

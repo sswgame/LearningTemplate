@@ -295,13 +295,14 @@ namespace sw
                 continue;
             }
             LayerState layer{};
-            layer._desc._clipName = def._clipName;
-            layer._desc._weight   = def._weight;
-            layer._desc._blend    = def._blend;
-            layer._desc._bLoop    = def._bLoop;
-            layer._pGraphLayer    = &def;
-            layer._pBoneMask      = def._maskName.empty() ? nullptr : _graph.findBoneMask( def._maskName );
-            layer._clip           = _mapClip[def._clipName];
+            layer._desc._clipName        = def._clipName;
+            layer._desc._weight          = def._weight;
+            layer._desc._blend           = def._blend;
+            layer._desc._bLoop           = def._bLoop;
+            layer._desc._halfLifeSeconds = def._halfLifeSeconds;
+            layer._pGraphLayer           = &def;
+            layer._pBoneMask             = def._maskName.empty() ? nullptr : _graph.findBoneMask( def._maskName );
+            layer._clip                  = _mapClip[def._clipName];
             layer._player.play( layer._clip.get(), def._bLoop == SW_TRUE );
             _listGraphLayer.push_back( std::move( layer ) );
         }
@@ -402,6 +403,8 @@ namespace sw
             return;
         LayerState& layer = _listLayer[layerIndex];
         layer._player.play( layer._clip.get(), layer._desc._bLoop == SW_TRUE );
+        // 반감기가 있으면 다음 평가가 끊긴 레이어 포즈에서 새 포즈로 이어 간다(얹은 적이 없으면 이어 갈 포즈가 없다).
+        layer._bRestartPending = ( layer._desc._halfLifeSeconds > 0.0f && layer._lastLayerPose.getBoneCount() > 0 ) ? SW_TRUE : SW_FALSE;
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
     }
@@ -821,11 +824,26 @@ namespace sw
 
     void SkeletalAnimatorComponent::applyLayer( LayerState& layer, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
     {
+        // inertialization 의 시간은 가중치가 0 이어도 흐른다(다시 켰을 때 오래된 오프셋이 남지 않게).
+        layer._inertializer.update( _lastDeltaSeconds );
         if ( layer._clip == nullptr || layer._desc._weight <= 0.0f )
             return;
         refreshLayerMask( layer, skeleton );
         _scratchLayerPose.setToReference( skeleton );
         sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose, pBoneMask );
+        if ( layer._desc._halfLifeSeconds > 0.0f )
+        {
+            if ( layer._bRestartPending == SW_TRUE )
+            {
+                // 출발은 끊기기 직전에 얹은 레이어 포즈(와 그 전 프레임), 도착은 다시 시작한 첫 포즈다. 실패(본 수가 바뀜)는 begin 이 오류를 남기고 즉시 새 포즈다.
+                const Pose* pPrevious = layer._previousLayerPose.getBoneCount() == layer._lastLayerPose.getBoneCount() ? &layer._previousLayerPose : nullptr;
+                (void)layer._inertializer.begin( layer._lastLayerPose, pPrevious, _scratchLayerPose, nullptr, _lastDeltaSeconds, layer._desc._halfLifeSeconds );
+                layer._bRestartPending = SW_FALSE;
+            }
+            layer._inertializer.apply( _scratchLayerPose );
+            layer._previousLayerPose = layer._lastLayerPose;
+            layer._lastLayerPose     = _scratchLayerPose;
+        }
         if ( layer._desc._blend == AnimationLayerBlend::Override )
         {
             Pose::blendMasked( inoutPose, _scratchLayerPose, layer._desc._weight, layer._listBoneWeight.data(), inoutPose );

@@ -272,7 +272,16 @@ namespace sw
             const bool bMaskValid = layer._maskName.empty() || findBoneMask( layer._maskName ) != nullptr;
             if ( bMaskValid == false )
                 SW_LOG_ERROR( "Animation graph layer '%#' names unknown bone mask '%#'", layer._name.c_str(), layer._maskName.c_str() );
-            const bool bLayerValid = bWeightValid && bBlendValid && bMaskValid;
+            bool bHalfLifeValid = true;
+            if ( layerJSON.has( "half_life" ) )
+            {
+                const JSONValue halfLifeJSON = layerJSON.get( "half_life" );
+                layer._halfLifeSeconds       = static_cast<float32>( halfLifeJSON.asFloat( -1.0 ) );
+                bHalfLifeValid               = halfLifeJSON.isNumber() && layer._halfLifeSeconds > 0.0f;
+                if ( bHalfLifeValid == false )
+                    SW_LOG_ERROR( "Animation graph layer '%#' needs a positive 'half_life'", layer._name.c_str() );
+            }
+            const bool bLayerValid = bWeightValid && bBlendValid && bMaskValid && bHalfLifeValid;
             if ( bLayerValid == false )
             {
                 bValid = false;
@@ -317,6 +326,8 @@ namespace sw
             layerJSON.set( "loop" ).setBool( layer._bLoop == SW_TRUE );
             if ( layer._weightParameter.empty() == false )
                 layerJSON.set( "weight_param" ).setString( layer._weightParameter.c_str() );
+            if ( layer._halfLifeSeconds > 0.0f )
+                layerJSON.set( "half_life" ).setFloat( static_cast<float64>( layer._halfLifeSeconds ) );
         }
     }
 

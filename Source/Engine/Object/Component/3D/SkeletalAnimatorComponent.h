@@ -13,6 +13,7 @@
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/PoseInertializer.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -36,6 +37,8 @@ namespace sw
         float32             _weight{ 1.0f };
         AnimationLayerBlend _blend{ AnimationLayerBlend::Override };
         uint8               _bLoop{ SW_TRUE };
+        /** @brief 다시 시작(`restartLayer`)할 때 끊긴 레이어 포즈에서 이어 갈 inertialization 반감기(초)입니다. 0 이면 즉시 새 포즈입니다(뒤에 두어 기존 집합 초기화가 그대로 맞습니다). */
+        float32 _halfLifeSeconds{ 0.0f };
     };
 } // namespace sw
 
@@ -227,9 +230,13 @@ namespace sw
             AnimationPlayer                 _player;
             vector<float32>                 _listBoneWeight; ///< 본 마스크(본 수 크기)다. 스켈레톤이 바뀌면 다시 만든다
             const Skeleton*                 _pMaskSkeleton{ nullptr };
-            const AnimationGraphLayerDef*   _pGraphLayer{ nullptr }; ///< 그래프 레이어면 그 데이터다(`_graph` 안). 코드 레이어면 nullptr 이다
-            const AnimationBoneMaskDef*     _pBoneMask{ nullptr };   ///< 그래프 레이어의 본 마스크다(`_graph` 안). nullptr 이면 `_desc._maskRootBone` 을 쓴다
-            Pose                            _additiveReference;      ///< 가산 기준(클립 시각 0, 본 포즈)
+            const AnimationGraphLayerDef*   _pGraphLayer{ nullptr };      ///< 그래프 레이어면 그 데이터다(`_graph` 안). 코드 레이어면 nullptr 이다
+            const AnimationBoneMaskDef*     _pBoneMask{ nullptr };        ///< 그래프 레이어의 본 마스크다(`_graph` 안). nullptr 이면 `_desc._maskRootBone` 을 쓴다
+            Pose                            _additiveReference;           ///< 가산 기준(클립 시각 0, 본 포즈)
+            PoseInertializer                _inertializer;                ///< 다시 시작할 때 끊긴 레이어 포즈에서 이어 간다(`_desc._halfLifeSeconds` 가 0 보다 클 때)
+            Pose                            _lastLayerPose;               ///< 지난 평가에서 얹은 레이어 포즈다(inertialization 의 출발)
+            Pose                            _previousLayerPose;           ///< 그 한 프레임 전 포즈다(출발 속도)
+            uint8                           _bRestartPending{ SW_FALSE }; ///< 다음 평가에서 inertialization 을 시작한다
         };
 
         /** @brief 같은 오브젝트의 유닛에 붙습니다. */
