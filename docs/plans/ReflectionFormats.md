@@ -302,10 +302,11 @@ struct MechArenaSnapshot
 
 ### 3.13 열거형 이름 조회
 
-B 는 열거자 이름을 쓰지 않습니다. 로그와 진단용 `getEnumName` 은 FQN 해시로 `TypeRegistry` 를 찾고, 없으면 `"Unknown"` 을 반환합니다(`Source/Engine/Reflection/EnumName.h:16-25`). API 는 그대로 두고 내부만 바꿉니다.
+B 는 열거자 이름을 쓰지 않습니다. 로그와 진단용 `getEnumName` 은 FQN 해시로 `TypeRegistry` 를 찾고, 없으면 `"Unknown"` 을 반환합니다(`Source/Engine/Reflection/EnumName.h`). API 는 그대로 두고 내부만 바꿨습니다(단계 7-a, 끝남).
 
-- 생성기가 열거자 값이 `0..Count-1` 로 빈틈없는 열거형에 이름 정적 배열을 만들고 `EnumInfo` 에 그 포인터를 등록합니다. 조회는 배열 인덱스입니다.
-- 템플릿 `getEnumName<E>` 는 `EnumInfo` 포인터를 함수 지역 캐시에 둡니다. 호출마다 해시 맵을 찾지 않습니다.
+- 생성기가 표식(`Invalid`, `Count`)을 뺀 열거자 값이 `0..N-1` 로 빈틈없는 열거형에 이름 정적 배열(`kArrDenseName`)을 만들고 `EnumInfo::_pArrDenseName` 에 등록합니다. 조회는 배열 인덱스입니다.
+  배열 순서는 libclang 이 읽은 값이므로 열거자마다 `static_assert` 로 컴파일러의 값과 대조합니다. 비트 플래그 · 음수 · 빈틈 · 같은 값의 별명이 있으면 배열 없이 이름 맵을 씁니다.
+- 템플릿 `getEnumName<E>` 는 `EnumInfo` 포인터를 함수 지역 캐시(`EnumNameCache`)에 둡니다. 호출마다 잠금과 해시 맵을 찾지 않고, 타입 테이블 세대가 바뀌면(모듈 해제 · 레지스트리 파괴) 다시 찾습니다.
 - 이름에서 값을 찾는 경로(`_mapNameToValue`)는 에디터와 데이터 파서만 씁니다. 그대로 둡니다.
 - `"Unknown"` 반환은 로그용 표시라 폴백 금지 원칙의 대상이 아닙니다. 데이터 읽기는 이 함수를 쓰지 않습니다(`EnumName.h:6` 주석).
 
@@ -405,7 +406,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
   1. 대상 타입: `findStaticType<To>()` 가 `To::StaticType()` 을 부릅니다. 이 함수는 `.gen.cpp` 에 정의되어 있어 인라인되지 않고, 대상 타입이 다른 모듈이면 DLL 경계 호출입니다. 내부는 `TypeLookupCache::find` 의 원자 로드 한 번과 `isAlive` 확인입니다(`TypeRegistry.h:94-110`).
      조회 루프(`getComponent`)는 이것을 루프 밖에서 한 번 구합니다(`GameObject.h:288`).
   2. 동적 타입: `Component` 는 만들 때 받은 `_pTypeInfo` 포인터를 보관하고 `findCachedTypeInfo()` 가 그것을 반환합니다. 가상 호출은 캐시가 없을 때만 합니다(`Component.h:500-505`).
-     객체에 타입 필드를 두는 개선은 `Component` 에 이미 되어 있습니다. `GameObject` 는 가상 `getTypeInfo()` 를 씁니다(`GameObject.h:75`). 캐시 여부는 미확인입니다.
+     객체에 타입 필드를 두는 개선은 `Component` 에 이미 되어 있습니다. `GameObject` 는 가상 `getTypeInfo()` 를 쓰고, 그 안에서 `StaticType()` 결과를 함수 지역 정적 포인터에 둡니다(단계 7-a).
   3. 상속 검사: `TypeInfo::isDerivedFrom( const TypeInfo* )` 는 깊이마다 조상 이름 인덱스를 적은 테이블(디스플레이)을 봅니다. 원자 로드 네 번과 비교 한 번이며 잠금 · 해시 맵 · 문자열 비교 · 사슬 순회가 없습니다(`ReflectionTypes.h:1051-1065`).
      깊이가 8(`kAncestorDisplayDepth`, `ReflectionConstants.h:53`)을 넘거나 테이블이 없으면 `isDerivedFromSlow` 가 부모 포인터를 따라갑니다.
 - `castToExact` 는 `Source` 에 없습니다.
@@ -419,7 +420,7 @@ B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지
 - 구간 번호는 전체 타입 트리를 깊이 우선으로 번호 매겨야 합니다. 타입이 하나 추가되면(DLL 로드, 핫 리로드, 플러그인) 다른 타입의 번호가 바뀝니다. 코드 생성기는 모듈 하나만 보므로 전역 번호를 빌드 시간에 정할 수 없고, 실행 시간에 다시 매기면 그 사이 캐스트가 틀린 번호를 봅니다.
 - 디스플레이는 이름 인덱스 기반이라 타입 추가가 다른 타입의 테이블을 바꾸지 않습니다. 등록 · 해제 때 영향받는 테이블만 비웁니다(`ReflectionTypes.h:929-940`). 지금 구조가 동적 로드에 맞습니다.
 
-**`getTypeInfo` 가상 호출을 타입 필드로.** `Component` 는 이미 했습니다. `GameObject` 는 미확인이며 단계 7-a 에서 확인합니다.
+**`getTypeInfo` 가상 호출을 타입 필드로.** `Component` 는 이미 했습니다. `GameObject` 는 가상 호출을 그대로 두고 결과만 함수 지역 캐시에 둡니다(단계 7-a, [결정 기록](../09_Decisions.md) 5-4).
 
 **정적 타입이 확정된 호출부는 `static_cast`.** 가장 흔한 모양은 "핸들로 컴포넌트를 찾고 바로 캐스트"입니다.
 `FacialAnimationComponent.cpp:455`, `PoseRetargetComponent.cpp:119`, `SkeletalMeshComponent.cpp:375`, `MotionWarpingComponent.cpp:91`, `ObjectStateSerializer.cpp:79` 가 그렇습니다.
@@ -451,7 +452,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 ### 7.4 위험
 
 - **다중 상속 · 인터페이스**: 디스플레이는 부모 하나(`_parentFQN`)의 사슬만 표현합니다. 리플렉션이 파생이라고 답했지만 C++ 상속 관계가 아니면 `reinterpret_cast` 로 내려갑니다(`ReflectionCast.h:167`).
-  두 번째 기반을 거치는 경우 포인터 보정이 없어 잘못된 주소가 됩니다. 지금 그런 타입이 있는지는 미확인입니다(단계 0). 구조로 막으려면 생성기가 `REFLECT` 타입의 다중 상속을 생성 오류로 처리합니다(단계 7-b).
+  두 번째 기반을 거치는 경우 포인터 보정이 없어 잘못된 주소가 됩니다. 생성기가 `REFLECT` 타입의 둘째 베이스와 가상 베이스를 헤더 · 줄 · 타입 이름과 함께 생성 오류로 막습니다(단계 7-b, `AstVisitor.cpp` `collectBase`).
 - **모듈 경계 · 핫 리로드**: 디스플레이와 `TypeLookupCache` 는 이미 묘비(`isAlive`)와 테이블 비우기로 처리합니다. 타입 목록(7.2)을 더하면 모듈 해제 때 그 모듈 타입의 목록을 비워야 합니다.
 - **유니티 빌드**: 캐스트 경로는 헤더 인라인과 `.gen.cpp` 정의뿐이라 영향이 없습니다.
 - **ID 결정성**: `_typeID` 는 등록 순서 카운터입니다(`ReflectionCore.cpp:657`). 네트워크 · 디스크에 싣지 않습니다. 타입을 와이어에 실어야 하면 FQN 해시를 씁니다.
@@ -494,7 +495,6 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
   다시 모으지는 않고 실행 시간에 그 코덱을 찾아 의존을 확인합니다(`FixedLayout::findCodec`). 템플릿 · 키 상수는 `ParserDefines.h` 의 `templatekey` · `fixedlayout` 입니다.
   `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 입니다. 명세와 다르게 정한 것은 [결정 기록](../09_Decisions.md) 5-4 에 있습니다.
 - 지금 `ComponentHandle` 필드가 A 에서 어떤 바이트로 직렬화되는가(단계 7-d).
-- `GameObject::getTypeInfo` 에 타입 캐시가 있는가, `REFLECT` 타입 가운데 다중 상속이 있는가(단계 0).
 
 ## 9. 단계
 
@@ -504,8 +504,6 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 2 | (보류) `GimmickCircuit` 을 B 로. 상태 바이트 `_stateBytes` 가 씬 · 프리팹 XML 과 레벨 세이브에 남아 B 대상이 아님. 아래 문단 | `GimmickCircuit.*`, `GimmickCircuitComponent.*` | 세이브 형식 결정이 먼저 | `worker`(opus) |
 | 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게 | 인스펙터 범위 코드(미확인 위치) | 단계 1 뒤 | `worker`(sonnet) |
-| 7-a | `GameObject` 타입 캐시, 열거형 이름 배열 | `GameObject.*`, `EnumName.cpp`, 생성기 열거형 등록 | 생성기는 단계 1 뒤 | `worker`(sonnet) |
-| 7-b | `REFLECT` 다중 상속 생성 오류 | `AstVisitor.cpp` | 단계 1 과 같은 파일, 순서대로 | `worker`(sonnet) |
 | 7-c | 매니저의 타입별 컴포넌트 목록 | `GameObjectManager.*`, `GameObjectStore.*` | 7-d 와 같은 파일, 7-c 먼저 | `integrator`(opus) |
 | 7-d | 타입 핸들 `TComponentHandle<T>` | `ComponentHandle.h`, `GameObjectManager.*`, 호출부, 인스펙터 | 7-c 뒤 같은 손 | `integrator`(opus) |
 

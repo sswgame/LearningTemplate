@@ -3,6 +3,7 @@
 #include "Core/Common/EnumUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -484,4 +485,34 @@ SW_TEST_CASE( ReflectionEnumInfoTest, CurrentEnumeratorNameWinsOverItsRedirect )
     SW_EXPECT_EQUAL( int64( 1 ), value );
     SW_EXPECT_TRUE( info.toString( 1 ) == sw::hashed_string( "Green" ) );
     SW_EXPECT_FALSE( info.tryParseText( "Teal", value ) );
+}
+
+/**
+ * @brief [ReflectionEnumInfoTest] 값이 `0..N-1` 로 빈틈없는 열거형만 이름 배열을 받고, 이름 조회는 배열과 이름 맵이 같은 포인터를 돌려준다
+ * @details 생성기가 빈틈없는 열거형에 `kArrDenseName` 을 만들어 `EnumInfo::_pArrDenseName` 에 등록합니다. 빈틈 · 음수 · 비트 플래그는 배열 없이 이름 맵을 씁니다.
+ *          `getEnumName<E>` 는 찾은 EnumInfo 를 함수 지역 캐시에 두므로 두 번째 호출도 같은 답이어야 합니다.
+ */
+SW_TEST_CASE( ReflectionEnumInfoTest, DenseEnumNamesComeFromTheArray )
+{
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::EnumInfo*     pDense   = registry.findEnum( sw::hashed_string( "sw::SampleStatus" ) );
+    SW_ASSERT_NOT_NULL( pDense );
+    SW_ASSERT_NOT_NULL( pDense->_pArrDenseName );
+    SW_EXPECT_EQUAL( uint32( 3 ), pDense->_denseNameCount );
+    SW_EXPECT_TRUE( pDense->valueToCString( 1 ) == pDense->toString( 1 ).c_str() );
+    SW_EXPECT_TRUE( pDense->valueToCString( 3 ) == nullptr );
+    SW_EXPECT_TRUE( pDense->valueToCString( -1 ) == nullptr );
+
+    SW_EXPECT_STREQ( "Attacking", sw::getEnumName( sw::SampleStatus::Attacking ) );
+    SW_EXPECT_STREQ( "Attacking", sw::getEnumName( sw::SampleStatus::Attacking ) );
+    SW_EXPECT_STREQ( "Unknown", sw::getEnumName( static_cast<sw::SampleStatus>( 7 ) ) );
+
+    for ( const utf8* pFqn : { "TestHighBitEnum", "TestSignedNarrowEnum", "sw::DummyBitFlag" } )
+    {
+        const sw::EnumInfo* pSparse = registry.findEnum( sw::hashed_string( pFqn ) );
+        SW_ASSERT_NOT_NULL( pSparse );
+        SW_EXPECT_TRUE_MSG( pSparse->_pArrDenseName == nullptr, pFqn );
+    }
+    SW_EXPECT_STREQ( "High", sw::getEnumName( TestHighBitEnum::High ) );
+    SW_EXPECT_STREQ( "Negative", sw::getEnumName( TestSignedNarrowEnum::Negative ) );
 }

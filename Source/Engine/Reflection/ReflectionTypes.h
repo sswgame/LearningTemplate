@@ -503,11 +503,18 @@ namespace sw
 #if !defined( SW_SHIPPING )
         unordered_map<hashed_string, string> _mapCustomMeta;
 #endif
-        hashed_string          _name;
-        hashed_string          _fullyQualifiedName;
-        hashed_string          _moduleName;
+        hashed_string _name;
+        hashed_string _fullyQualifiedName;
+        hashed_string _moduleName;
+        /**
+         * @brief 값이 곧 인덱스인 이름 배열입니다. 열거자 값이 `0..N-1` 로 빈틈없는 열거형에만 생성기가 만들어 넣고, 그 밖에는 nullptr 입니다.
+         * @details `valueToCString` 이 해시 맵 대신 이 배열을 봅니다. 원소는 `_mapValueToName` 과 같은 intern 된 이름이라 돌려주는 포인터도 같습니다.
+         *          배열 자체는 열거형을 정의한 모듈의 정적 저장소에 있으므로, 모듈을 해제하면 레지스트리가 묘비에서 이 포인터를 비웁니다.
+         */
+        const hashed_string*   _pArrDenseName;
         int64                  _invalidValue{ 0 };
         int64                  _countValue{ 0 };
+        uint32                 _denseNameCount; ///< `_pArrDenseName` 의 원소 수입니다
         uint8                  _size{ sizeof( int32 ) };
         uint8                  _bIsBitFlag    : 1;
         uint8                  _bHasInvalid   : 1;
@@ -671,6 +678,11 @@ namespace sw
         {
             if ( isValidValue( value ) == false )
                 return nullptr;
+            if ( _pArrDenseName != nullptr )
+            {
+                const bool bInRange = 0 <= value && value < static_cast<int64>( _denseNameCount );
+                return bInRange ? _pArrDenseName[value].c_str() : nullptr;
+            }
             const hashed_string name = ( _bIsBitFlag != SW_FALSE ) ? toStringFlags( value ) : toString( value );
             return name.empty() ? nullptr : name.c_str();
         }

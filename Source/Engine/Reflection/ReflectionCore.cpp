@@ -361,8 +361,10 @@ namespace sw
         , _name{}
         , _fullyQualifiedName{}
         , _moduleName{}
+        , _pArrDenseName{ nullptr }
         , _invalidValue{ 0 }
         , _countValue{ 0 }
+        , _denseNameCount{ 0 }
         , _size{ sizeof( int32 ) }
         , _bIsBitFlag{ SW_FALSE }
         , _bHasInvalid{ SW_FALSE }
@@ -662,7 +664,11 @@ namespace sw
     {
         return _bAllModuleTypesRegistered.load( std::memory_order_acquire );
     }
-    TypeRegistry::~TypeRegistry() = default;
+    TypeRegistry::~TypeRegistry()
+    {
+        // 이 레지스트리가 가진 EnumInfo 가 사라진다. 세대를 기록해 둔 열거형 이름 캐시(`EnumNameCache`)가 다음 호출에 다시 찾게 한다.
+        s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
+    }
 
     static atomic<uint32> _s_typeIDCounter{ 0 }; // 실행 중에만 쓰는 로컬 인덱스(직렬화하지 않으므로 플랫폼과 무관하다)
 
@@ -1003,6 +1009,15 @@ namespace sw
         }
 
         // enum 은 이름만 정리한다. 객체는 `_mapFqnToEnum` 에 남는다(묘비). 반환한 포인터가 허공을 가리키지 않고, 다시 로드되면 그 위치에 덮어쓴다.
+        // 이름 배열은 해제되는 모듈의 정적 저장소에 있으므로 묘비에서 비운다. 그 뒤로는 intern 된 이름 맵(`_mapValueToName`)이 답한다.
+        for ( auto& [fqn, pEnumInfo] : _mapFqnToEnum )
+        {
+            (void)fqn;
+            if ( pEnumInfo->_moduleName != hashModule )
+                continue;
+            pEnumInfo->_pArrDenseName  = nullptr;
+            pEnumInfo->_denseNameCount = 0;
+        }
         for ( auto it = _mapNameToEnum.begin(); it != _mapNameToEnum.end(); )
         {
             if ( it->second->_moduleName == hashModule )

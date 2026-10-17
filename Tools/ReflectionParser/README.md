@@ -171,6 +171,7 @@ libclang 의 타입 정보에 없는 것은 소스 토큰에서 직접 읽습니
 - `MeshComponent.gen.cpp` — 타입마다 `Registrar<T>`. 프로퍼티의 이름, 위치, 메타데이터를 담은 `TypeInfo` 를 만들어 등록합니다. `REFLECT_BODY()` 가 있으면 `StaticType()` 정의도 들어 있습니다.
   고정 배치형(B) 코덱도 여기 붙습니다(`FixedCodecGenerator`). 적격 타입은 `Registrar<T>` 의 정적 멤버 `fixedWrite` · `fixedRead` · `fixedEquals` · `computeFixedSchemaHash` 와
   `info._pFixedCodec` 등록 줄이 생기고, 적격이 아닌 타입은 이유만 등록합니다. 파일 끝의 `// FixedSchema:` 줄이 타입마다의 정규 문자열(또는 이유)입니다.
+  열거자 값이 `0..N-1` 로 빈틈없는 열거형은 등록 블록에 이름 배열 `kArrDenseName` 과 열거자마다의 `static_assert` 가 붙습니다. `getEnumName` 이 해시 맵 대신 이 배열을 봅니다.
 - `FixedSchemas.gen.txt` 는 타깃마다 하나입니다. 그 `// FixedSchema:` 줄들을 모은 진단 파일로, 스키마 해시가 왜 바뀌었는지 빌드 둘을 비교할 때 봅니다. 빌드는 읽지 않습니다.
 - `MeshComponent.gen.h` — 그 헤더의 `ENUM( Flags )` 열거형을 전방 선언하고 `IsBitFlagEnum` 을 특수화합니다. 비트 플래그가 없으면 머리글만 있습니다.
 - `MeshComponent.gen.cpp.stamp` — 증분 판정용 스탬프입니다.
@@ -254,6 +255,9 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 다른 빌드의 바이트는 `SchemaMismatch` 로 거절됩니다(조용히 잘못 읽지는 않습니다). `Min` · `Max` 는 B 의 와이어 범위이기도 해서, 정수는 범위 비트 수로 쓰고
 범위 밖 값은 쓰기가 실패합니다. 키를 잘못 적은 것(범위 필드가 뒤에 있음, float32 로 정확히 나타낼 수 없는 정수 경계, 찾지 못한 범위 이름, 숫자가 아닌 필드의 `Min` · `Max`, 가변 길이가 아닌 필드의 `MaxCount`)은
 헤더 경로 · 줄 · 필드와 함께 생성 오류입니다. 표 밖의 타입(포인터, `MaxCount` 없는 vector)은 오류가 아니라 코덱이 없을 뿐입니다. 명세는 [리플렉션 직렬화 형식 계획](../../docs/plans/ReflectionFormats.md)입니다.
+
+**`REFLECT` 타입은 비가상 베이스를 하나까지만 둡니다.** 둘째 베이스나 가상 베이스가 있으면 헤더 · 줄 · 타입 이름과 함께 생성 오류입니다(`AstVisitor.cpp` `collectBase`).
+`castTo` 는 리플렉션 부모 사슬로 파생을 판단하고 `reinterpret_cast` 로 내려가므로, 부모가 offset 0 에 있지 않으면 잘못된 주소가 됩니다. 베이스가 `REFLECT()` 없는 인터페이스여도 막습니다.
 
 **모르는 토큰은 빌드를 멈춥니다.** `PROPERTY( Color )` 처럼 철자 목록에 없는 토큰이 있으면 그 헤더의 생성이 실패합니다.
 에디터 힌트는 `Meta = "Color"` 로 적고, 단위는 `Units = m` 으로 적습니다. 목록에 있는 단위를 `Meta = "Units=m"` 으로 적으면 철자 검사를 건너뛰게 되므로 거절합니다.

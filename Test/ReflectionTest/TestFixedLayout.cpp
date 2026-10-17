@@ -288,7 +288,7 @@ SW_TEST_CASE( FixedLayoutTest, ReorderedFieldsWithTheSameNameAreRejected )
 }
 
 /**
- * @brief [FixedLayoutTest] 포인터 · MaxCount 없는 vector · 바깥 필드 범위 · 다중 상속 · vector<string> 을 가진 타입은 코덱 대신 이유가 있습니다
+ * @brief [FixedLayoutTest] 포인터 · MaxCount 없는 vector · 바깥 필드 범위 · vector<string> 을 가진 타입은 코덱 대신 이유가 있습니다
  */
 SW_TEST_CASE( FixedLayoutTest, IneligibleTypesReportTheReason )
 {
@@ -300,9 +300,6 @@ SW_TEST_CASE( FixedLayoutTest, IneligibleTypesReportTheReason )
 
     reason = findIneligibleReason<sw::FixedPointSample>();
     SW_EXPECT_TRUE_MSG( reason.find( "_arenaHalfSize" ) != sw::string::npos, reason.c_str() );
-
-    reason = findIneligibleReason<sw::MultiBaseOrderTestActor>();
-    SW_EXPECT_TRUE_MSG( reason.find( "multiple inheritance" ) != sw::string::npos, reason.c_str() );
 
     reason = findIneligibleReason<sw::FixedVectorOfStringSample>();
     SW_EXPECT_TRUE_MSG( reason.find( "_listName" ) != sw::string::npos && reason.find( "nested variable-length" ) != sw::string::npos, reason.c_str() );

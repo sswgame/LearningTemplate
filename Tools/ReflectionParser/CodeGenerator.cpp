@@ -140,6 +140,37 @@ namespace sw
                 }
                 return string( buf.view() );
             }
+
+            /**
+             * @brief 표식(`Invalid`, `Count`)을 뺀 열거자의 값이 `0..N-1` 로 빈틈없고 겹치지 않으면, 값 순서로 늘어놓은 열거자를 @p outListDense 에 담습니다.
+             * @details 그 밖(비트 플래그, 음수, 빈틈, 같은 값의 별명)은 비워 둡니다. 그러면 이름 배열을 만들지 않고 런타임은 이름 맵을 씁니다.
+             *          여기 값은 libclang 이 읽은 값이라, 배열을 쓰는 쪽이 열거자마다 `static_assert` 로 컴파일러의 값과 대조합니다.
+             */
+            static void collectDenseEnumerator( const ParsedEnumInfo& enumInfo, const ParsedEnumeratorInfo* pInvalid, const ParsedEnumeratorInfo* pCount,
+                                                vector<const ParsedEnumeratorInfo*>& outListDense )
+            {
+                outListDense.clear();
+                if ( enumInfo._bIsBitFlag == SW_TRUE )
+                    return;
+                for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
+                {
+                    if ( &en != pInvalid && &en != pCount )
+                        outListDense.push_back( &en );
+                }
+                const int64                         count = static_cast<int64>( outListDense.size() );
+                vector<const ParsedEnumeratorInfo*> listByValue( outListDense.size(), nullptr );
+                for ( const ParsedEnumeratorInfo* pEn : outListDense )
+                {
+                    const bool bInRange = 0 <= pEn->_value && pEn->_value < count;
+                    if ( bInRange == false || listByValue[static_cast<size_t>( pEn->_value )] != nullptr )
+                    {
+                        outListDense.clear();
+                        return;
+                    }
+                    listByValue[static_cast<size_t>( pEn->_value )] = pEn;
+                }
+                outListDense = std::move( listByValue );
+            }
         };
 
         /**
@@ -681,6 +712,30 @@ namespace sw
             }
             emit.pop();
             emit.line( "};" );
+        }
+
+        // 값이 곧 인덱스인 이름 배열이다. `getEnumName` 이 해시 맵 대신 인덱스로 찾는다. 순서는 libclang 의 값이므로 컴파일러의 값과 열거자마다 대조한다
+        // (생성기는 SW_DEBUG 없이 헤더를 읽으므로, 빌드 설정에 따라 열거자가 달라지면 여기서 컴파일이 멈춘다).
+        vector<const ParsedEnumeratorInfo*> listDense;
+        CodeGeneratorInternal::collectDenseEnumerator( enumInfo, invalidEn, countEn, listDense );
+        if ( listDense.empty() == false )
+        {
+            emit.line( "static const ::sw::hashed_string kArrDenseName[] =" );
+            emit.line( "{" );
+            emit.push();
+            for ( const ParsedEnumeratorInfo* pEn : listDense )
+            {
+                emit.linef( "%#,", CodeEmit::hs( pEn->_name ) );
+            }
+            emit.pop();
+            emit.line( "};" );
+            for ( size_t index = 0; index < listDense.size(); ++index )
+            {
+                emit.linef( "static_assert( %# == %#, \"enumerator value differs from the one the reflection parser read\" );", valueExpr( *listDense[index] ),
+                            static_cast<uint32>( index ) );
+            }
+            emit.line( "info._pArrDenseName  = kArrDenseName;" );
+            emit.linef( "info._denseNameCount = %#;", static_cast<uint32>( listDense.size() ) );
         }
 
         // 옛 열거자 이름(이름 변경 · 지운 열거자의 대체)은 지금 이름과 따로 둔다. 읽기는 지금 이름에 없을 때만 이 표를 본다. 대상은 `AstVisitor` 가 이미 확인했다.

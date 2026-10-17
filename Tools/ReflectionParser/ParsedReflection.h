@@ -377,7 +377,7 @@ namespace sw
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
         vector<ParsedEventInfo>      _listEvent;
-        uint32                       _baseCount; ///< 기반 클래스 수입니다. 둘 이상이면 고정 배치형 코덱이 없습니다
+        uint32                       _baseCount; ///< 기반 클래스 수입니다. 둘 이상이면 `collectBase` 가 생성 오류로 멈추므로 코드젠에는 0 이나 1 만 옵니다
         uint8                        _bAbstract         : 1;
         uint8                        _bStatic           : 1;
         uint8                        _bReflectBody      : 1;

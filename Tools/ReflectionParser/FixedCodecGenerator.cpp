@@ -1037,10 +1037,8 @@ namespace sw
             state._read.push( Internal::kMemberIndent + 1 );
             state._equals.push( Internal::kMemberIndent + 1 );
 
-            string canonical = "T=" + type._fullyQualifiedName + "|";
-            if ( type._baseCount > 1 )
-                state._reason = "multiple inheritance";
-            const bool bHasBase = type._baseCount == 1 && type._bParentReflected == SW_TRUE && type._parentFQN.empty() == false;
+            string     canonical = "T=" + type._fullyQualifiedName + "|";
+            const bool bHasBase  = type._baseCount == 1 && type._bParentReflected == SW_TRUE && type._parentFQN.empty() == false;
             if ( bHasBase )
             {
                 canonical += "B=" + type._parentFQN + "|";
