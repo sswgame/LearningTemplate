@@ -14,6 +14,10 @@
 - **함정**: 에이전트가 "waiting on its own background work" 알림을 여러 번 보내도 진행 중이다 — 진짜 진행은 `git log origin/main..<브랜치>` 와 워크트리 `git status` 로 본다. 세션 한도(429)로 끊긴 에이전트는 `SendMessage` 로 이어 가게 하면 이전 컨텍스트가 유지된다. 동시 빌드 한도(2)의 잠금 폴더가 이 PC 에 없어 강제되지 않는다(`C-45`). 공유 scratchpad 의 가상환경 `python.exe` 가 작업 중 사라진 적이 있어 작업자는 전용 가상환경을 쓴다. 오디오 변환은 `soundfile`(전용 가상환경)이 필요하고 없으면 `MakeCommonAudio.py fetch` 가 설치 안내를 내고 멈춘다.
 - **사용자 결정 대기**: 없음.
 
+**(2026-10-17 밤, `integ5`) 위 "남은 워크트리" 가운데 `toolfollowup` · `reflect7ab` · `enginefallback` · `editordata` · `testisolation`(남은 변경) 을 main 에 병합했다.** `reflect7ab` 의 `GameObject` 타입 캐시(`46ee16248`)는 되돌렸다(결정 기록 5-4), 열거형 이름 캐시의 낮은 위험 둘은 `C-51`.
+`gamesdata` 의 커밋 안 된 변경(약 120 파일, W4 게임 데이터화 — `GamePackDataUtil` · `CharacterEditorPackData` · `InputActionCheckUtil` 새 파일, 기믹 프리팹 `_catalogPath` 채우기)은 **적용하지 않았다**: 마지막 수정(10-16 05:47)이 마지막 빌드(05:26) 뒤라 검증되지 않았고 main 과 8파일 이상 충돌한다. 이어 할 때는 `git -C D:\w\gamesdata diff` 를 읽고 W4(`DataDriven.md` 3절)로 다시 맡긴다. 워크트리는 남겨 두었다.
+병합에서 드러난 것: 브랜치 단독 검증이 EditorTest 를 빌드하지 않아 옛 필드 이름(`_pSourcePath`)이 남았고, 실수 벡터 글은 쉼표 형식만 읽으므로 데이터에 공백으로 적으면 읽기 오류다.
+
 ## 1. 지금 상태 (2026-10-17 밤)
 
 **(2026-10-17 밤, `integ2`) `res2`(공용 팩 CC0 오디오) · `res3`(여섯 게임 CC0 모델 원본) · `rigbench`(합성 리그 생성기 · 벤치) · `bitset`(DynamicBitset parse) 을 main 에 병합했습니다.**
