@@ -1,0 +1,137 @@
+<Scene formatVersion="1" name="PixelTown">
+	<entities>
+		<entity id="1" name="Camera2D">
+			<GameObject _schemaVersion="0" _name="Camera2D" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="10,-6,-10"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="11.25"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true">
+						<_renderOutput _screenRect="0,0,1,1"
+						               _renderTexture=""
+						               _renderTextureWidth="256"
+						               _renderTextureHeight="256"
+						               _resolutionScale="1"
+						               _updateRate="0"
+						               _visibilityObject="0"
+						               _target="MainView"
+						               _bShadows="false"
+						               _bPostProcess="false" />
+					</CameraComponent>
+					<PixelPerfectCameraComponent _pixelsPerUnit="16"
+					                             _referenceResolution="320,180"
+					                             _barSortingLayer="Overlay"
+					                             _bCropX="true"
+					                             _bCropY="true"
+					                             _bPixelSnapping="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<TileMapRendererComponent _tileMapPath="game/pixeltown/maps/town.tilemap.xml"
+					                          _materialPath="engine/materials/sprite2dpixel.material"
+					                          _sortingLayer="Default"
+					                          _orderInLayer="-20"
+					                          _colliderLayer="0"
+					                          _bGenerateColliders="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Props">
+			<GameObject _schemaVersion="0" _name="Props" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<TileMapRendererComponent _tileMapPath="game/pixeltown/maps/townprops.tilemap.xml"
+					                          _materialPath="engine/materials/sprite2dpixel.material"
+					                          _sortingLayer="Default"
+					                          _orderInLayer="-10"
+					                          _colliderLayer="0"
+					                          _bGenerateColliders="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Hero">
+			<GameObject _schemaVersion="0" _name="Hero" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="7.5,-6.9,-0.075"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,2,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _clipPath="game/pixeltown/sprites/hero.sprite.json"
+					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _sortingLayer="Default"
+					                 _orderInLayer="0" />
+					<SpriteAnimatorComponent _localPosition="0,0,0"
+					                         _localRotation="0,0,0"
+					                         _localScale="1,1,1"
+					                         _attachOwner="None"
+					                         _attachComponent="None"
+					                         _bRepeat="true" />
+					<TownWalkerViewComponent _director="6" _spriteOffset="0,0.6" _depthPerUnitY="0.01" />
+					<PawnComponent _moveAction="Town.Move"
+					               _lookAction="None"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="1.4"
+					               _autoPossess="Player0">
+						<_listButton>
+							<item>Town.Interact</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Elder">
+			<GameObject _schemaVersion="0" _name="Elder" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="12.5,-6.3,-0.065"
+					                 _localRotation="0,0,0"
+					                 _localScale="2,2,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _clipPath="game/pixeltown/sprites/elder.sprite.json"
+					                 _materialPath="engine/materials/sprite2dpixel.material"
+					                 _sortingLayer="Default"
+					                 _orderInLayer="0" />
+					<SpriteAnimatorComponent _localPosition="0,0,0"
+					                         _localRotation="0,0,0"
+					                         _localScale="1,1,1"
+					                         _attachOwner="None"
+					                         _attachComponent="None"
+					                         _currentAnimation="idle_down"
+					                         _bRepeat="true" />
+					<DialogueRunnerComponent _graphPath="game/pixeltown/dialogue/elder.dialogue.json" _bPostSubtitles="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="TownDirector">
+			<GameObject _schemaVersion="0" _name="TownDirector" _bActive="true">
+				<_listComponent>
+					<TownDirectorComponent _ground="2" _props="3" _hero="4" _interactButton="Town.Interact" _stepSeconds="0.18" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

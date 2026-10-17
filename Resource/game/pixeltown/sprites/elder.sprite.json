@@ -1,0 +1,26 @@
+{
+  "_atlasPath": "engine/textures/pixel/puny_characters/mage_cyan.dds",
+  "_atlasPixelSize": "768,256",
+  "_listFrame": [
+    {
+      "_uvRect": "0.0,0.0,0.04166667,0.125",
+      "_borderPixels": "0,0,0,0",
+      "_durationMs": 400
+    },
+    {
+      "_uvRect": "0.04166667,0.0,0.04166667,0.125",
+      "_borderPixels": "0,0,0,0",
+      "_durationMs": 400
+    }
+  ],
+  "_listKey": [],
+  "_listAnimation": [
+    {
+      "_name": "idle_down",
+      "_listNotify": [],
+      "_firstFrame": 0,
+      "_frameCount": 2,
+      "_bLoop": 1
+    }
+  ]
+}

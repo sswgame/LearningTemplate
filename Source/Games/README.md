@@ -43,6 +43,7 @@ Resource/game/<게임 소문자>/               → 팩: data/gamesettings.xml, 
 | [`HarvestValley`](HarvestValley/README.md) | 농장 생활 | 키트 하나(`GF_Farming`), 공유 상태, 자동 플레이 빙의 |
 | [`MeadowVillage`](MeadowVillage/README.md) | 농장 + 생물 마을 | 키트 둘을 한 게임에 섞기 |
 | [`NileCity`](NileCity/README.md) | 도시 건설 | 명령형 디렉터, 절차 지형, 커서 아래 땅 고르기 |
+| [`PixelTown`](PixelTown/README.md) | 탑다운 RPG(2D 픽셀 아트) | 오버월드 키트의 한 칸 걸음, 타일 레이어 둘의 충돌, 주민 대화, 4 방향 스프라이트 애니메이션 |
 | [`Shooter3D`](Shooter3D/README.md) | 1인칭 슈터 | 캐릭터 외형과 애니메이션, 페이싱 감독, HUD, 카메라 프리셋 |
 | [`StarSkirmish`](StarSkirmish/README.md) | 실시간 전략 | RTS 키트, 끌어 고르기, AI 대 AI |
 | [`ThemeParkTycoon`](ThemeParkTycoon/README.md) | 롤러코스터 타이쿤 | 씬, 프리팹, 디렉터, 뷰 구조의 본보기 |
