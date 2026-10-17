@@ -90,6 +90,12 @@
   런타임 상태 필드(예: `PROPERTY( RuntimeState )`)를 그 문맥에서 빼는 형식을 둔다. 리플렉션 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 해 이 단계 범위 밖으로 남겼다.
   `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
 
+- `C-59` [정리] **빈 `hashed_string` 이 글 "None" 으로 읽혀 "적지 않음"과 값 "none" 이 같아진다**(2026-10-18 통합 — 페어드 애니메이션의 `align="none"` 이 필수 값 없음으로, 적지 않은 스켈레톤 경로가 "None" 으로 읽혔다).
+  열거형 글이나 경로를 `readName` → `hashed_string` 으로 받는 읽기를 찾아 글 그대로(`findAttribute`) 견주게 하거나, 이름 형식이 빈 값과 "none" 을 가르게 한다(언리얼 `NAME_None` 과 같은 함정).
+
+- `C-60` [정리] **읽기가 첫 실패에서 바로 돌아가 이미 모은 오류를 버리는 경로를 찾는다.** 2026-10-18 통합에서 `readConfigJSON` · `ReflectedXMLFile` 이 범위 밖 값 하나에서 돌아가
+  같은 파일의 모르는 키를 알리지 않았다(고침). `GameDataXML` 과 다른 `deserializeSoft` 호출부는 보지 않았다 — 오류를 모두 모은 뒤 실패를 돌려주는 한 모양으로 맞춘다.
+
 - `C-56` [정리] **`GameDataXML` 이 범위를 따로 검사한다.** 2026-10-18 `feat18` 로 바이너리 · JSON · XML 읽기 공통 끝이 `PROPERTY( Min · Max )` 를 보게 됐는데
   게임 데이터 XML 읽기는 자체 범위 검사를 그대로 들고 있다. 공통 끝에 맡기고 자체 검사를 지운다(범위의 원본을 `PROPERTY` 하나로 — `C-39` 와 같은 뿌리).
 
