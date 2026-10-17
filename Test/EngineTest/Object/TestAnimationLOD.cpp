@@ -340,6 +340,43 @@ SW_TEST_CASE( AnimationLODTest, FrustumVisibilityAcrossViews )
 }
 
 /**
+ * @brief [AnimationLODTest] 숨긴 유닛 — 뷰 한가운데 있어도 포즈를 만들지 않고(1인칭에서 숨긴 몸), 다시 보이면 만들며, 화면 밖 애니메이션을 켜면 숨겨도 만든다
+ */
+SW_TEST_CASE( AnimationLODTest, HiddenUnitSkipsPoseUntilShown )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pUnit = TestAnimationLODInternal::createUnit( manager, "Hidden", 3, float3{ 0.0f, 0.0f, 5.0f } );
+    SW_ASSERT_NOT_NULL( pUnit );
+    manager.flushSceneTransforms();
+    TestAnimationLODInternal::CountingTask task( 0.1f );
+    pUnit->registerAnimationPhaseTask( &task );
+    AnimationSystem& system = manager.getAnimationSystem();
+    system.setLODSettings( AnimationLODSettings::makeDefault() );
+    system.evaluate( 0.016f ); // 처음은 포즈가 더러워 늘 만든다
+    system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
+
+    pUnit->setVisible( false );
+    const uint32 before = pUnit->getPoseEvaluationCount();
+    for ( uint32 frame = 0; frame < 3; ++frame )
+    {
+        system.evaluate( 0.016f );
+    }
+    SW_EXPECT_FALSE( pUnit->isVisibleHint() );
+    SW_EXPECT_EQUAL( before, pUnit->getPoseEvaluationCount() );
+
+    pUnit->setAnimateWhenOffscreen( true );
+    system.evaluate( 0.016f );
+    SW_EXPECT_EQUAL( before + 1u, pUnit->getPoseEvaluationCount() );
+    pUnit->setAnimateWhenOffscreen( false );
+
+    pUnit->setVisible( true );
+    system.evaluate( 0.016f );
+    SW_EXPECT_TRUE( pUnit->isVisibleHint() );
+    SW_EXPECT_EQUAL( before + 2u, pUnit->getPoseEvaluationCount() );
+    pUnit->unregisterAnimationPhaseTask( &task );
+}
+
+/**
  * @brief [AnimationLODTest] 화면 크기 → 갱신 주기(URO) — 작은 유닛은 4 프레임에 한 번 평가하고, 보간이 켜지면 건너뛴 프레임도 포즈가 움직인다(마지막엔 목표에 닿는다)
  * @details 보간이 꺼지면 건너뛴 프레임의 포즈는 그대로다. 보간은 "평가 때 보이던 포즈 → 새 포즈" 를 1/4 씩 가므로 평가 직전 프레임에 목표와 같다.
  */

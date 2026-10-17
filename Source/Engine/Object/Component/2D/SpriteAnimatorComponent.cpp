@@ -46,6 +46,13 @@ namespace sw
         return pSprite != nullptr && pSprite->getWorldBounds( outCenter, outRadius );
     }
 
+    bool SpriteAnimatorLODClient::isRendered() const
+    {
+        // 스프라이트가 없으면 경계도 없어 늘 보이는 쪽으로 판정한다(`findAnimationLODBounds`) — 그와 같은 답이다.
+        const SpriteComponent* pSprite = _owner.findSprite();
+        return pSprite == nullptr || pSprite->isVisible();
+    }
+
     void SpriteAnimatorLODClient::applyAnimationLOD( const AnimationLODState& state )
     {
         _owner._lodState = state;

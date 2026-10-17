@@ -63,6 +63,11 @@ namespace sw
         return _owner.getWorldBounds( outCenter, outRadius );
     }
 
+    bool SkeletalMeshLODClient::isRendered() const
+    {
+        return _owner.isVisible();
+    }
+
     const SkeletonBoneLOD* SkeletalMeshLODClient::findBoneLOD() const
     {
         return _owner.findBoneLOD();
