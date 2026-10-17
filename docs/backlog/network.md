@@ -2,14 +2,6 @@
 
 Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `A-16` [결함] **계정 서버가 로그인 응답을 쓰지 못해도 세션은 이미 저장소에 있다.** `AccountServer::handleCompletion` 은 응답 몸(`AccountGrantReply` 같은 것)을 쓰지 못하면
-  `kInternal` 로 답하고 돌아오지만, 그때는 로그인 저장소 작업(`LoginStoreLogic`)이 세션 레코드를 이미 만든 뒤다. 클라이언트는 실패로 알고 세션은 시한까지 남는다.
-  응답 몸을 저장소 작업 전에 쓸 수 있는지 확인하거나, 실패하면 그 세션을 지우는 작업을 걸어 둔다. 쓰기 실패는 서버 코드가 범위 밖 값을 만든 결함일 때만 난다.
-
-- `A-17` [결함] **저장소 레코드 쓰기(`ServiceRecordUtil::encode`)가 실패를 돌려주지 못한다.** `BinarySerializer::serialize` 는 실을 수 없는 값에서 `false` 를 돌려주지만(2026-10-17),
-  `encode` 는 바이트를 돌려주는 모양이라 Debug 단언으로만 멈춘다. Release 에서는 중간에 끊긴 레코드가 저장소에 들어간다. 호출은 키트 `encodeRecord` 9 곳과 그 호출 14 곳이며,
-  저장소 작업마다 실패 응답을 정해야 해서 따로 뗐다. `[[nodiscard]] bool encode( version, record, outBytes )` 로 바꾸고 호출부가 요청을 실패로 돌려준다.
-
 - `B-9` [검증대기] **패킷 압축의 남은 것**(UDP 압축을 끈 결정과 측정값은 [결정 기록](../09_Decisions.md) 5-9). WSL Release 로 `NetCompressionBenchTest` 를 한 번 돌린다(압축 시간은
   컴파일러 · libc 에 따라 다르다). 채팅 수치는 채팅 키트가 실제 기록을 내면 다시 잰다. 스트림 프레임 압축은 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
 
@@ -18,6 +10,10 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   리눅스(WSL Release, `ulimit -n 8192` 뒤 같은 필터)는 아직이다 — 수치를 나란히 놓는다. 그다음 일은 ②.
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
   ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUDPBenchTest` 숫자로 전후를 측정한다.
+
+- `C-39` [정리] **범위를 `PROPERTY` 선언과 서비스 손 규칙에 두 번 적는다.** `isValidLobbyRequest` · `registerDevice` 확인 같은 손 검사가 `PROPERTY( Min · Max )` 와 같은 범위를 따로 적고,
+  `PartyLobbyService::initialize` 는 파티 크기를 `std::clamp` 로 조용히 맞춘다(폴백). 뿌리: 범위의 원본이 `PROPERTY` 하나가 아니다.
+  손 규칙을 지우고 메시지 읽기의 범위 검사(`A-19`)에 맡기며, 설정 범위 밖 값은 오류로 멈춘다.
 
 - `D7-1` [기능] **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도

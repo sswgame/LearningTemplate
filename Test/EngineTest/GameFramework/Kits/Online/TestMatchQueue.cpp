@@ -472,9 +472,10 @@ SW_TEST_CASE( MatchmakingProtocolTest, MessagesAndRecordsRoundTrip )
     PartySnapshot memberParty;
     memberParty._listMemberID.push_back( 7 );
     memberParty._listMemberID.push_back( 0x0102030405060708ull );
-    memberParty._maxMemberCount    = 4;
-    const vector<uint8> partyBytes = MatchmakingProtocol::encodeParty( memberParty );
-    const string        partyHex   = Util::toHexString( partyBytes );
+    memberParty._maxMemberCount = 4;
+    vector<uint8> partyBytes;
+    SW_ASSERT_TRUE( MatchmakingProtocol::encodeParty( memberParty, partyBytes ) );
+    const string partyHex = Util::toHexString( partyBytes );
     SW_EXPECT_TRUE_MSG( partyHex == "0100000004000001f929239616ce124f140000000200000007000000000000000807060504030201d70392d01308a0ae080000000000000000000000aa3a1757"
                                     "1308a0ae080000000000000000000000094c5f41bfe2defb0400000004000000",
                         partyHex.c_str() );
@@ -483,14 +484,20 @@ SW_TEST_CASE( MatchmakingProtocolTest, MessagesAndRecordsRoundTrip )
     SW_EXPECT_TRUE( FixedLayout::equals( decodedMemberParty, memberParty ) );
 
     LobbySnapshot decodedLobby;
-    SW_ASSERT_TRUE( MatchmakingProtocol::decodeLobby( MatchmakingProtocol::encodeLobby( lobby ), decodedLobby ) );
+    vector<uint8> lobbyBytes;
+    SW_ASSERT_TRUE( MatchmakingProtocol::encodeLobby( lobby, lobbyBytes ) );
+    SW_ASSERT_TRUE( MatchmakingProtocol::decodeLobby( lobbyBytes, decodedLobby ) );
     SW_EXPECT_TRUE( FixedLayout::equals( decodedLobby, lobby ) );
     PartySnapshot party;
     party._listMemberID.assign( 9, AccountID( 1 ) ); // 상한(8)을 넘는 캐시 기록은 읽지 않는다
     PartySnapshot decodedParty;
-    SW_EXPECT_FALSE( MatchmakingProtocol::decodeParty( MatchmakingProtocol::encodeParty( party ), decodedParty ) );
+    vector<uint8> oversizedPartyBytes;
+    SW_ASSERT_TRUE( test::OnlineMessageTestUtil::writeUncheckedRecord( 1, "sw::PartySnapshot", party, oversizedPartyBytes ) ); // 다른 빌드가 쓴 기록을 흉내 낸다
+    SW_EXPECT_FALSE( MatchmakingProtocol::decodeParty( oversizedPartyBytes, decodedParty ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );
+        SW_EXPECT_FALSE( MatchmakingProtocol::encodeParty( party, oversizedPartyBytes ) );
+        SW_EXPECT_TRUE( oversizedPartyBytes.empty() );
         SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( party ) );
         MatchmakingModeRequest longMode;
         longMode._modeID = string( 33, 'm' );

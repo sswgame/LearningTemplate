@@ -482,7 +482,9 @@ SW_TEST_CASE( TradeProtocolTest, MessagesAndRecordsRoundTrip )
     SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, TradeIDRequest>( TradeConfirmRequest{ 5, 1, 2 } ) ) );
 
     TradeSessionRecord decoded;
-    SW_ASSERT_TRUE( TradeProtocol::decodeSession( "trade", TradeProtocol::encodeSession( TradeSessionRecord{ reply._snapshot, 42 } ), decoded ) );
+    vector<uint8>      sessionBytes;
+    SW_ASSERT_TRUE( TradeProtocol::encodeSession( TradeSessionRecord{ reply._snapshot, 42 }, sessionBytes ) );
+    SW_ASSERT_TRUE( TradeProtocol::decodeSession( "trade", sessionBytes, decoded ) );
     SW_EXPECT_TRUE( decoded._ownerServerID == 42 && FixedLayout::equals( decoded._snapshot, reply._snapshot ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "out-of-range values are not written" );

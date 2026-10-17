@@ -292,20 +292,27 @@ SW_TEST_CASE( LiveOpsProtocolTest, MessagesAndRecordsRoundTrip )
     definition._recurrence = LiveEventRecurrence::Weekly;
     definition._listParameter.push_back( LiveEventParameter{ "rate", "@liveops.xp" } );
     LiveEventDefinition decodedEvent;
-    SW_ASSERT_TRUE( LiveOpsProtocol::decodeEvent( "halloween", LiveOpsProtocol::encodeEvent( definition ), decodedEvent ) );
+    vector<uint8>       eventBytes;
+    SW_ASSERT_TRUE( LiveOpsProtocol::encodeEvent( definition, eventBytes ) );
+    SW_ASSERT_TRUE( LiveOpsProtocol::decodeEvent( "halloween", eventBytes, decodedEvent ) );
     SW_EXPECT_TRUE( decodedEvent._listRegion.size() == 2 && decodedEvent._listRegion[1] == "eu-west" );
     SW_EXPECT_TRUE( decodedEvent._recurrence == LiveEventRecurrence::Weekly && decodedEvent._listParameter[0]._value == "@liveops.xp" );
     PushDeviceRegistration decodedDevice;
-    SW_ASSERT_TRUE( LiveOpsProtocol::decodeDevice( "device", LiveOpsProtocol::encodeDevice( PushDeviceRegistration{ "fcm", "token", "en", 9 } ), decodedDevice ) );
+    vector<uint8>          deviceBytes;
+    SW_ASSERT_TRUE( LiveOpsProtocol::encodeDevice( PushDeviceRegistration{ "fcm", "token", "en", 9 }, deviceBytes ) );
+    SW_ASSERT_TRUE( LiveOpsProtocol::decodeDevice( "device", deviceBytes, decodedDevice ) );
     SW_EXPECT_TRUE( decodedDevice._token == "token" && decodedDevice._registeredMs == 9 );
     {
         SW_TEST_DEFENSIVE_SCOPE( "a corrupt durable record is logged" );
-        vector<uint8> otherVersion = LiveOpsProtocol::encodeEvent( definition );
+        vector<uint8> otherVersion = eventBytes;
         otherVersion[0]            = 2;
-        SW_EXPECT_FALSE( LiveOpsProtocol::decodeEvent( "halloween", otherVersion, decodedEvent ) ); // 다른 판은 변환 없이 읽지 않는다
-        // 기기 등록은 고정 배치형 코덱이 있으므로 읽기가 선언된 범위(토큰 256 바이트)도 확인한다
+        SW_EXPECT_FALSE( LiveOpsProtocol::decodeEvent( "halloween", otherVersion, decodedEvent ) ); // 다른 버전은 변환 없이 읽지 않는다
+        // 기기 등록은 고정 배치형 코덱이 있으므로 쓰기와 읽기가 선언된 범위(토큰 256 바이트)도 확인한다
         const PushDeviceRegistration longToken{ "fcm", string( PushLimit::kMaxTokenSize + 1, 't' ), "en", 9 };
-        SW_EXPECT_FALSE( LiveOpsProtocol::decodeDevice( "device", LiveOpsProtocol::encodeDevice( longToken ), decodedDevice ) );
+        vector<uint8>                longTokenBytes;
+        SW_EXPECT_FALSE( LiveOpsProtocol::encodeDevice( longToken, longTokenBytes ) );
+        SW_ASSERT_TRUE( test::OnlineMessageTestUtil::writeUncheckedRecord( 1, "sw::PushDeviceRegistration", longToken, longTokenBytes ) ); // 다른 빌드가 쓴 레코드를 흉내 낸다
+        SW_EXPECT_FALSE( LiveOpsProtocol::decodeDevice( "device", longTokenBytes, decodedDevice ) );
         SW_EXPECT_TRUE( decodedDevice._token == "token" ); // 못 읽으면 그대로이다
     }
     {

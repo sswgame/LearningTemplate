@@ -2,16 +2,13 @@
 
 엔진과 GameFramework 의 구조 정리, 오브젝트와 씬, 물리와 내비게이션, 핫 리로드와 모듈의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `A-15` [결함] **`PROPERTY( Min · Max )` 를 고정 배치형 코덱만 지킨다.** 자기 기술형 읽기(`BinarySerializer` · JSON · XML)는 범위 밖 값을 그대로 넣는다.
-  범위를 보는 `SerializerUtil::collectRangeErrors` 는 설정 JSON · 데이터 XML 로드만 부르고, 기본값(`RangeCheckScope::FieldsOnly`)은 컨테이너 원소를 보지 않는다.
-  지금은 `FightingMatch::readState` 만 `IncludeSequenceElements` 로 직접 부른다(2026-10-17). 뿌리는 범위 계약을 읽기 경로마다 따로 지킨다는 것이다.
-  자기 기술형 읽기 공통 경로에서 원소까지 보게 하려면, 먼저 지금 에셋 · 세이브 가운데 범위 밖 값이 있는지 전수로 세고(쿠커나 테스트로), 고친 뒤 기본값을 바꾼다.
+- `A-19` [결함] **일반 `BinarySerializer` · JSON · XML 읽기가 `PROPERTY( Min · Max )` 범위 검사를 하지 않는다(`A-15` 잔여).** `SerializerUtil::collectRangeErrors` 는
+  원하는 호출부(`ConfigManager` · `ReflectedXMLFile` · `GameDataXML` · `FightingMatch`)만 부르므로, 다른 경로로 읽은 값은 선언된 범위를 벗어나도 성공으로 돌아온다.
+  뿌리: 범위 계약을 읽기 경로마다 따로 지킨다. 읽기 공통 경로(포맷과 무관한 역직렬화 끝)에서 한 번 검사하고 호출부의 개별 호출을 지운다.
 
-- `A-18` [결함] **STL 구성(`CI-Debug-STL`)에서 `ReflectionTest` 가 컴파일되지 않는다.** 생성된 `TestFixedLayoutTypes.gen.cpp` 가 `VectorWrapper<vector<bool>>` 를 만들고,
-  `ReflectionContainers.h` 의 `getElement` · `getElementConst` 가 `&( container[index] )` 로 원소 주소를 잡는다. STL 구성에서는 `sw::vector<bool>` 이 비트 묶음인
-  `std::vector<bool>` 이라 원소가 프록시 · `bool` 값으로 나와 주소를 잡을 수 없다(`-Waddress-of-temporary`, 2026-10-17 로컬 STL 빌드에서 확인, CI 에는 아직 안 나왔다).
-  뿌리는 `sw::vector<bool>` 의 의미가 구성마다 다르다는 것이다. 두 구성에서 같은 원소 저장(바이트 하나)을 갖는 형식으로 맞추거나, 리플렉션이 `vector<bool>` 을
-  원소 주소 없이 다루는 래퍼를 갖게 한다.
+- `A-20` [결함] **`SW_ENABLE_STL_CONTAINER` 로 뜻이 바뀌는 다른 컨테이너 별칭을 전수 점검한다.** `vector<bool>`(`A-18`)처럼 `map` · `set` · `unordered_*` 도
+  구성에 따라 반복자 무효화 규칙과 원소 주소 안정성이 다를 수 있다. 기본 구성 구현이 주는 보장(노드 주소 안정, 삽입 뒤 반복자 유효)에 기대는 호출부를 찾아,
+  두 구성이 같은 계약을 갖게 하거나 계약이 다른 별칭을 쓰지 못하게 막는다(`DynamicBitset` 처럼 형식으로).
 
 - `B-11` [검증대기] **어노테이션 키 완성을 Visual Studio IntelliSense(EDG)에서 손으로 확인하지 못했다.** `ReflectionMacros.h` 는 `__INTELLISENSE__` 에서도 풀이(`ReflectionIntellisense.h`)를 읽는다.
   풀이는 MS 호환 모드의 dependent base 찾기 · `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다 — EDG 가 오류 없이 읽는지 본다.
@@ -70,6 +67,10 @@
 
   읽기가 옛 키를 별칭으로 찾는 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)와 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절이 씁니다.
   쓰는 곳을 세어 데이터를 새 이름으로 다시 쓰고 별칭을 없앱니다([데이터 주도 구조 정리 계획](../plans/DataDriven.md) 의 Alias 항목과 같은 일). 값 계산이 필요한 경우만 `SW_SCHEMA_MIGRATION` 입니다.
+
+- `C-40` [정리] **Shipping 에서 빠지는 API 를 부르는 쪽마다 `#if !defined( SW_SHIPPING )` 을 기억해야 한다.** `TypeRegistry::unregisterTypesByModule` 등을 테스트가 부르면
+  Shipping 컴파일이 깨지고(리눅스 CI 에서 실제로 깨짐, `b206e2a26`), 가드를 잊은 곳은 Shipping 빌드에서야 드러난다.
+  테스트 전용 RAII 도우미(등록 범위 객체)로 감싸거나 늘 컴파일되는 API 로 바꿔 호출부가 구성을 몰라도 되게 한다.
 
 - `D1-2` [기능] **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 

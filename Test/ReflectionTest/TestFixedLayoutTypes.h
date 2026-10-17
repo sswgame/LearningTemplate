@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/DynamicBitset.h"
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -92,7 +93,7 @@ namespace sw
         PROPERTY( MaxCount = 8 )
         vector<EFixedSampleKind> _listKind;
         PROPERTY( MaxCount = 8 )
-        vector<bool> _listBit;
+        DynamicBitset _listBit; ///< 불 목록입니다. `vector<bool>` 은 막혀 있어(`VectorElementCheck`) 비트를 값으로 다루는 `DynamicBitset` 을 씁니다.
     };
 } // namespace sw
 

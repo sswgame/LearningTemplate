@@ -325,14 +325,18 @@ namespace sw
             return;
         }
         unique_ptr<LiveOpsWriteWork> work = make_unique<LiveOpsWriteWork>();
-        work->_key                        = definition._eventID;
-        work->_bytes                      = LiveOpsProtocol::encodeEvent( definition );
-        work->_auditEntry._actor          = LiveOpsServiceInternal::makeActor( actorID );
-        work->_auditEntry._action         = "liveops.event.put";
-        work->_auditEntry._subject        = "liveops/" + definition._eventID;
-        work->_auditEntry._memo           = string( memo );
-        work->_auditEntry._timeMs         = nowMs;
-        work->_requestTag                 = requestTag;
+        if ( LiveOpsProtocol::encodeEvent( definition, work->_bytes ) == false )
+        {
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
+            return;
+        }
+        work->_key                 = definition._eventID;
+        work->_auditEntry._actor   = LiveOpsServiceInternal::makeActor( actorID );
+        work->_auditEntry._action  = "liveops.event.put";
+        work->_auditEntry._subject = "liveops/" + definition._eventID;
+        work->_auditEntry._memo    = string( memo );
+        work->_auditEntry._timeMs  = nowMs;
+        work->_requestTag          = requestTag;
         submitWrite( std::move( work ) );
     }
 

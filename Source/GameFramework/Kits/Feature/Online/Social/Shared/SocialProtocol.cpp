@@ -14,9 +14,9 @@ namespace sw
 
 namespace sw
 {
-    vector<uint8> SocialProtocol::encodePresenceRecord( const SocialPresence& presence )
+    bool SocialProtocol::encodePresenceRecord( const SocialPresence& presence, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kSocialPresenceRecordVersion, presence );
+        return ServiceRecordUtil::encode( kSocialPresenceRecordVersion, presence, outBytes );
     }
 
     bool SocialProtocol::decodePresenceRecord( const vector<uint8>& bytes, SocialPresence& outPresence )

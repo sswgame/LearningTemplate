@@ -102,9 +102,9 @@ namespace sw
          * @details 다른 판이거나 모르는 필드가 있거나 깨졌으면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
          *          공지는 선언된 범위도 확인합니다. 점검 창은 고정 배치형 코덱이 없으므로 서버가 읽은 값을 쓰기와 같은 규칙으로 다시 확인합니다.
          */
-        static vector<uint8>      encodeMaintenance( const MaintenanceWindow& window );
+        [[nodiscard]] static bool encodeMaintenance( const MaintenanceWindow& window, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeMaintenance( string_view key, const vector<uint8>& bytes, MaintenanceWindow& outWindow );
-        static vector<uint8>      encodeNotice( const ServiceNotice& notice );
+        [[nodiscard]] static bool encodeNotice( const ServiceNotice& notice, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeNotice( string_view key, const vector<uint8>& bytes, ServiceNotice& outNotice );
     };
 } // namespace sw

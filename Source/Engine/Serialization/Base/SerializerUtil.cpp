@@ -1026,8 +1026,7 @@ namespace sw
         } );
     }
 
-    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError,
-                                             const RangeCheckScope scope )
+    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError )
     {
         using Internal = SerializerUtilInternal;
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
@@ -1042,7 +1041,7 @@ namespace sw
                 // 시퀀스 원소만 본다. 맵과 중첩 컨테이너는 원소 경로를 하나로 정할 수 없어 보지 않는다.
                 const bool bNestedContainer = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
                 const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
-                if ( scope == RangeCheckScope::FieldsOnly || bSequence == false )
+                if ( bSequence == false )
                     continue;
                 ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                 const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault() );
@@ -1053,7 +1052,7 @@ namespace sw
                     const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
                     float64           value         = 0.0;
                     if ( pElement != nullptr )
-                        collectRangeErrors( *pElement, pElementValue, elementPath, outListError, scope );
+                        collectRangeErrors( *pElement, pElementValue, elementPath, outListError );
                     else if ( Internal::readRangeNumber( prop._elementTypeName.view(), pElementValue, value ) )
                         Internal::appendRangeError( elementPath, value, prop._metadata, outListError );
                 }
@@ -1062,7 +1061,7 @@ namespace sw
             const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault() );
             if ( pNested != nullptr )
             {
-                collectRangeErrors( *pNested, pValue, path, outListError, scope );
+                collectRangeErrors( *pNested, pValue, path, outListError );
                 continue;
             }
             float64 value = 0.0;

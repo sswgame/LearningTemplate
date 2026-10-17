@@ -190,7 +190,7 @@ namespace sw
          * @details 다른 판이거나 모르는 필드가 있거나 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
          *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 판을 올리고 데이터를 다시 씁니다.
          */
-        static vector<uint8>      encodeSession( const TradeSessionRecord& record );
+        [[nodiscard]] static bool encodeSession( const TradeSessionRecord& record, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeSession( string_view key, const vector<uint8>& bytes, TradeSessionRecord& outRecord );
 
         /** @brief 공통 오류 코드를 거래 결과로 바꿉니다. `kVersionMismatch` 는 그 앞에서 `OnlineReplyUtil::markError` 가 `UpdateRequired` 로 바꿉니다. */

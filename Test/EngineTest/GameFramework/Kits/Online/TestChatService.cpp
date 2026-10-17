@@ -506,8 +506,10 @@ SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
     message._serverID    = 2;
     message._sequence    = 9;
 
-    ChatMessage decoded;
-    SW_ASSERT_TRUE( ChatProtocol::decodeRecord( "history", ChatProtocol::encodeRecord( message ), decoded ) );
+    ChatMessage   decoded;
+    vector<uint8> recordBytes;
+    SW_ASSERT_TRUE( ChatProtocol::encodeRecord( message, recordBytes ) );
+    SW_ASSERT_TRUE( ChatProtocol::decodeRecord( "history", recordBytes, decoded ) );
     SW_EXPECT_STREQ( decoded._channelID.c_str(), message._channelID.c_str() );
     SW_EXPECT_EQUAL( decoded._recipientID, AccountID( 7 ) );
     SW_EXPECT_EQUAL( decoded._sentMs, int64( 123456 ) );
@@ -538,12 +540,16 @@ SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
 
     {
         SW_TEST_DEFENSIVE_SCOPE( "a durable record of another version is logged as corrupt" );
-        vector<uint8> otherVersion = ChatProtocol::encodeRecord( message );
+        vector<uint8> otherVersion = recordBytes;
         otherVersion[0]            = 2;
-        SW_EXPECT_FALSE( ChatProtocol::decodeRecord( "history", otherVersion, decoded ) ); // 다른 판은 읽지 않는다
+        SW_EXPECT_FALSE( ChatProtocol::decodeRecord( "history", otherVersion, decoded ) ); // 다른 버전은 읽지 않는다
         ChatMessage tooLong = message;
         tooLong._text       = string( ChatLimit::kMaxTextSize + 1, 'x' );
-        SW_EXPECT_FALSE( ChatProtocol::decodeRecord( "history", ChatProtocol::encodeRecord( tooLong ), decoded ) ); // 선언된 범위를 넘는 기록은 읽지 않는다
+        vector<uint8> tooLongBytes;
+        SW_EXPECT_FALSE( ChatProtocol::encodeRecord( tooLong, tooLongBytes ) ); // 선언된 범위를 넘는 기록은 쓰지 않는다
+        SW_EXPECT_TRUE( tooLongBytes.empty() );
+        SW_ASSERT_TRUE( test::OnlineMessageTestUtil::writeUncheckedRecord( 1, "sw::ChatMessage", tooLong, tooLongBytes ) ); // 다른 빌드가 쓴 레코드를 흉내 낸다
+        SW_EXPECT_FALSE( ChatProtocol::decodeRecord( "history", tooLongBytes, decoded ) );                                  // 선언된 범위를 넘는 기록은 읽지 않는다
     }
     SW_EXPECT_TRUE( ChatProtocol::fromErrorCode( OnlineError::kUnauthenticated ) == ChatResult::NotSignedIn );
     SW_EXPECT_TRUE( ChatProtocol::fromErrorCode( OnlineError::kInternal ) == ChatResult::Unavailable );

@@ -176,67 +176,24 @@
 
 ## 4. 옛 이름 → 지금 이름 (`git log` 을 읽을 때)
 
-| 옛 이름 | 지금 이름 |
-|---|---|
-| `PendingKill` · `markPendingKill` | `PendingDestroy` · `markPendingDestroy` |
-| `GameConfig::_gameSettingsFile` · `EngineConfig::_engineDefaultAssets` · `EditorToolDefaults::_configFolder` 외 11 칸 | `path::kGameSettingsFile` · `path::kEngineDefaultAssets` · `config::kDirConfig(Editor)` · `EditorUtil::k…FileName` |
-| 렌더 그래프 wave / 틱 wave | level / stage(`GT.Scene.tick.stages`) |
-| `precede` · `succeed` | `runBefore` · `runAfter` |
-| lane | queue |
-| `EditorThemePreset`(ModernDark · DeepCharcoal · MidnightBlue · ClassicDark) · `applyPreset` · `EditorConfig::_themePreset` | 토큰 벌 `Resource/editor/theme/<이름>.tokens.json`(dark · charcoal · midnight · light · highcontrast) · `applyThemeByName` · `_themeName` |
-| `editor::style::kOk` · `kWarn` · `kError` · `kAccent` · `kHighlight` · `kOverlayBg` … | `EditorThemeUtil::getSuccessColor()` · `getWarningColor()` · `getErrorColor()` · `getAccentColor()` · `getHighlightColor()` · `getOverlayBgColor()` … |
-| 탐침 `Editor.ThemePreset`(수) · 자체 테스트 `input.classicDarkSwatch` | `Editor.ThemeName`(글) · `input.themeSwatch` |
-| `retire*` · `retireImage` | `DeferredImageUnloadQueue::deferUnload` · `free*` |
-| `*Recipe`(`D3D12RHIResourceRecipe` · `VulkanRHISamplerRecipe`) | `*Preset` · `ShaderCookRequest` |
-| `poisonLiveReload` | `markGraphBroken` |
-| `bindDelayLoadImports` · `DelayLoadNotifyHook` · `IModuleHandleProvider` · `DelayLoad.cmake`(`sw_addDelayloadHook`) | 없음 — 지연 로드를 걷고 `ModuleShadowCopy::writeShadowCopy` |
-| `CheckDelayLoadSites` · `DelayLoadBindTest` | `CheckNoDelayLoad` · `ArchitectureTest.NoBuiltImageHasDelayLoadedImports` |
-| `rewriteShadowSonames` · `SonameState` | `ModuleShadowCopy::writeShadowCopy` · `ShadowImageNameState` |
-| Vulkan band | range(`SW_VK_SLOT_RANGE_SIZE`) |
-| `HandleTable` · `ObjectHandle` | `SlotHandleTable` · `SlotHandle` |
-| `isVisibleIntended` | `isVisibleRequested` |
-| `RHI::applyPendingChange` | `RHI::recreateDevice` |
-| `createParentDirectory` | `ensureParentDirectoryExists` |
-| `FileUtil::fileExists` · `directoryExists` | `FileUtil::exists`(파일 · 폴더 무엇이든) · `isDirectory`(파일만은 `isRegularFile`) |
-| `transformNormal` | `transformVector`(방향 변환) |
-| `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
-| `RenderResourceXml` | `Serialization/Format/ReflectedXMLFile` |
-| `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Base/Actor/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveDef`(`Engine/Animation/BlendCurve.h`) |
-| `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimationNotify}/`, 워핑 둘은 `Object/SceneAnimation/`(2026-10-05) |
-| `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` 는 `Utility/`, `KeyValueFile` 은 `Core/File/`) |
-| `Graphics/Renderer/Debug/` | `Graphics/Debug/` |
-| 엔진 루트 `LocalizationTools` · `EngineDevCommands.cpp` | `DevTools/` |
-| `Engine/DevTools/`(`LocalizationTools` · `DevConsoleController` · `EngineDevCommands.cpp`) | `Editor/Common/Localization/` · `Engine/Input/` · 명령마다 소유 코드 옆(`GameTimeScale.cpp` · `GameAutoplay.cpp` · `DebugDrawQueue.cpp` · `Scene/SceneDevCommands.cpp`)(2026-10-10) |
-| `Input/Events/` · `Input/Utils/` · `Reflection/Rpc/` | 한 단계 위(`Input/` · `Reflection/`) |
-| `Test/<실행 파일>/Test*.cpp`(평면) | 소스 폴더를 따르는 하위 폴더(`Test/README.md`) |
-| Overworld `PlayerController` · `PlayerControllerSettings` | `OverworldTileMover` · `OverworldTileMoverSettings`(의도를 받는 몸 — 조종자는 `PlayerControllerComponent`) |
-| `RtsAiController` · `SrpgAiController` | `RTSCommanderAI` · `SRPGCommanderAI`(명령형 장르의 AI — 조종자가 아니다) |
-| `NavMeshAgentComponent::_bUpdatePosition` | `_driveMode`(`NavAgentDriveMode` — Transform · CharacterController · SteerOnly) |
-| `InputReplay::play` · `updatePlayback` | `InputManager::attachVirtualInput`(재생은 가상 입력 원천) |
-| `InputSnapshot` · `InputHistoryBuffer` · `InputManager::recordSnapshot` | 삭제 — 행동 층은 `ControlIntent` · `ControlIntentHistory` |
-| `Base/Camera/FirstPersonCameraComponent` | `Base/Control/FirstPersonCameraComponent`(시점 = 폰의 조종 회전) |
-| `Engine/Renderer/` | `Engine/Renderer/`(2026-10-10, 티어 표의 하위 폴더 예외도 삭제) |
-| `Resource/{AnimationAssetCache,SpriteClipCache,LocalizationReloadCache}` | `Animation/` · `Animation/Sprite/` · `Localization/` |
-| `Character/Pose/` · `Animation/AnimationNotifyPhase` · `Object/Animation/AnimationNotifyListener` | `Character/PoseModifier/` · `Animation/Notify/`(`AnimationNotifyPhase` 는 뒤에 `Common/`) |
-| `IRenderSurface`(Common 루트) · `ServerConfig` · `ServerSecret`(Config 루트) | `Graphics/RHI/IRenderSurface` · `Config/Server/` |
-| `Utility/{XML,JSON,TileMap,Console,Profiling}` | `Serialization/{XML,JSON}` · `TileMap/` · `Console/` · `Profiling/` |
-| `Telemetry/HTTPClient` · `UI/Screens/` · `Serialization/Core/` · `UI/Core/` | `Observability/HTTPClient` · `UI/Screen/` · `Serialization/Base/` · `UI/Base/` |
-| `Physics` · `Resource` · `Animation` · `Input` 루트 파일 | `Physics/{Collision,Asset}` · `Resource/{Pack,Image,Cache}` · `Animation/{Sprite,Graph,Skeletal}` · `Input/{Map,Virtual}`(이동 표는 그 이동 커밋들의 기록) |
-| `IOnlineService` · `OnlineServiceHost::registerService` | `IOnlineHostService` · `registerHostService` |
-| `GameStateComponent` · `GameStateRefs` · `GameStateSettings` · `GameStateInitResult` · `Base/Gameplay/GameState` | `SessionStateComponent` · `SessionStateRefs` · `SessionStateSettings` · `SessionStateInitResult` · `Base/Gameplay/SessionState` |
-| `InteractionViewer` · `InteractorComponent::makeViewer` | `InteractionView` · `makeView` |
-| `EditorViewportPick`(Common/Commands) | `EditorViewportRayPick` |
-| `GameInstanceBase::requestSceneLoad` · `EditorWidgets::drawPropertyRowBegin` · `IEditorPanel::getOpenPtr` | `requestLoadScene` · `drawPropertyRowLabel` · `getOpenFlagAddress` |
-| `TurnOrder::Actor`(private) | `TurnOrder::Combatant` |
-| `Engine/Object/Animation/`(AnimationSystem · Crowd · LOD · Rewind · 워핑 컴포넌트 · 정점 애니메이션 베이커) | `Engine/Object/SceneAnimation/`(2026-10-13 — 애니메이션 데이터 폴더 `Engine/Animation/` 과 구분) |
-| `Object/GameObject/{ScenePhysics,SceneOverlapWorld2D,SceneAudio,MeshInstanceBatch,SpriteInstanceBatch}` · `GameObjectManager::getScenePhysics` · `getSceneAudio` · `getOverlapWorld2D` | `Object/Component/{Physics,Audio,3D,2D}/` · `getSubsystem<ScenePhysics>()` · `getSubsystem<SceneAudio>()` · `getSubsystem<ScenePhysics>().getOverlapWorld2D()`(2026-10-13) |
-| `EngineLoop` · `Engine/EngineLoop.h` · `_engineLoop`(2026-10-15) | `Engine` · `Engine/Engine.h` · `_engine` (네임스페이스 `engine` 은 그대로 — 5-3) |
-| `PhysicsTypes.h` 의 `PhysicsHandle` · `PhysicsBodyHandle` 등 핸들 | `Engine/Common/PhysicsHandle.h`(2026-10-13 — 컴포넌트 모델 코어가 Physics 를 include 하지 않게) |
-| 서비스 · 호스트 · 전송 · 저장소의 `initialize` 설정 `*Settings` 41 개(`NetHostSettings` · `MailboxServiceSettings` · `TLSContextSettings` …) | `*Config`(2026-10-15, C-26 ③). `ChatSettings` · `TradeSettings` · `LoginSettings` · `ServerDirectorySettings` 는 `*ServiceConfig` |
-| 카탈로그 파일 안의 `*Settings` 18 개(`BrZoneSettings` · `ScavengerQuotaSettings` · `FacialBlinkSettings` …) | `*Def`(`WitcherAlchemySettings` 는 `WitcherAlchemyRuleDef` — 연금 아이템 정의 `WitcherAlchemyDef` 와 구분) |
-| `NetMessageRouter::addHandler` · `Engine::addFrameObserver` · `addRootMotionModifier` · `addAnimationPhaseTask` · `GameDataCacheRegistry::addCache`(와 짝 `remove*`) | `register*` · `unregister*`(2026-10-15 — 나중에 불리는 것을 넘기는 일, AGENTS.md 어휘표) |
-| `PresentCaptureTarget` · `FrameRenderer::{setPresentCaptureEnabled, readbackPresentCapture, dumpPresentCaptureToFile, readbackTransient, dumpTransientToFile, dumpTextureToFile}` | `FrameCapture` · `getCapture().{setPresentEnabled, readbackPresent, dumpPresentToFile, readbackTransient, dumpTransientToFile, dumpTextureToFile}`(2026-10-15, C-26 ⑤) |
-| `FrameRenderer::{setMeshMorphDiag, setDrawMergeEnabled, setVertexPoolEnabled, setAnimationTimeOverride}` · `getLastDrawnCanvasTargetCount` | `setDebugOverrides( FrameDebugOverrides )`(배포본에 없음) · `getCanvasRenderer().getLastDrawnTargetCount()` |
+이름만 바뀐 것은 적지 않습니다. 별칭을 두지 않으므로(5-4) 코드에 옛 이름이 남지 않고, `git log -S '<옛 이름>'`(커밋 메시지 속 용어는 `git log --grep`)으로 찾습니다.
+여기에는 뜻이 바뀌었거나, 여러 곳으로 나뉘었거나, 개념이 없어져 `git log` 만으로는 이유가 보이지 않는 것만 둡니다.
+
+| 옛 이름 | 지금 이름 | 남긴 이유 |
+|---|---|---|
+| `EngineLoop` · `_engineLoop` | `Engine` · `_engine`(네임스페이스 `engine` 은 그대로 — 5-3) | `Engine` 이 이제 클래스 이름이다 |
+| Overworld `PlayerController` | `OverworldTileMover` | `PlayerController` 는 조종자(`PlayerControllerComponent`)의 뜻으로 쓴다. 의도를 받는 몸은 조종자가 아니다 |
+| `RtsAiController` · `SrpgAiController` | `RTSCommanderAI` · `SRPGCommanderAI` | 명령형 장르의 AI 는 폰을 조종하지 않는다 |
+| `InputSnapshot` · `InputHistoryBuffer` · `InputReplay::play` | 삭제 — 행동 층은 `ControlIntent` · `ControlIntentHistory`, 재생은 `InputManager::attachVirtualInput`(가상 입력 원천) | 입력 기록 개념이 없어졌다 |
+| `GameStateComponent` 등 `GameState*` | `SessionState*` | 언리얼의 GameState 와 뜻이 다르다 |
+| 지연 로드(`bindDelayLoadImports` · `DelayLoad.cmake` · `CheckDelayLoadSites`) | 없음 — `ModuleShadowCopy::writeShadowCopy`, 게이트 `CheckNoDelayLoad` | 개념을 제거했다 |
+| `FileUtil::fileExists` · `directoryExists` | `exists`(파일 · 폴더 모두) · `isDirectory` · `isRegularFile`(파일만) | 같은 질문의 뜻이 바뀌었다 |
+| `transformNormal` | `transformVector`(방향 변환) | 법선 변환(역전치)이 아니다 |
+| `EditorThemePreset` · `editor::style::kOk` 등 색 상수 | 토큰 파일 `Resource/editor/theme/<이름>.tokens.json` · `EditorThemeUtil::get*Color()` | 테마가 코드 열거에서 데이터로 옮겨 갔다 |
+| `Engine/Object/Animation/` | `Engine/Object/SceneAnimation/` | 애니메이션 데이터 폴더 `Engine/Animation/` 과 구분한다 |
+| `Engine/DevTools/` | `Editor/Common/Localization/` · `Engine/Input/` · 명령마다 소유 코드 옆(`*DevCommands.cpp` 등) | 여러 곳으로 나뉘었다 |
+| `PhysicsTypes.h` 의 핸들 | `Engine/Common/PhysicsHandle.h` | 컴포넌트 모델 코어가 Physics 를 include 하지 않게 하려는 것이다 |
+| `initialize` 설정 `*Settings` · 카탈로그 `*Settings` | 서비스 · 호스트 설정은 `*Config`, 카탈로그 항목은 `*Def`(C-26 ③) | 한 이름이 뜻에 따라 둘로 나뉘었다 |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
 
@@ -564,6 +521,12 @@
   대화 노드 · 링크 id 와 핀)은 `PROPERTY( Required )` 로 두어 빠지면 오류입니다 — `ConfigManager::readConfigJSON` 이 구조체 칸과 구조체 목록 원소 안까지 봅니다.
   종류(시퀀스 항목 · 트랙, 대화 노드)는 정수 대신 열거자 이름이고, 모르는 종류를 읽어 두고 적용만 않던 규칙과 모르는 노드 종류를 Dialogue 로 읽던 폴백은 없앴습니다.
   범위 밖 프레임 번호도 자르지 않고 오류입니다. 스프라이트 구간이 프레임 밖이면 자르고 알리는 것만 남겼습니다(에디터가 프레임을 지운 뒤 저장할 수 있다).
+- **`sw::vector<bool>` 은 쓰지 못하고, 불 목록은 `DynamicBitset` 입니다**(2026-10-17, A-18). 기본 구성의 `sw::vector<bool>` 은 원소마다 바이트였고 `SW_ENABLE_STL_CONTAINER` 구성에서는
+  비트로 묶는 `std::vector<bool>` 이라, 같은 이름이 구성마다 다른 의미였습니다(STL 구성에서 리플렉션 래퍼가 원소 주소를 잡지 못해 컴파일이 멈춤). `VectorElementCheck` 가 두 구성에서
+  같은 `static_assert` 로 막습니다. 언리얼 `TArray<bool>` 은 바이트 배열이고 비트 묶음은 `TBitArray` 로 따로 둡니다(기억에 의존). 리플렉션은 `DynamicBitset` 을 값 하나로 다룹니다.
+  자기 기술형은 '0' · '1' 글(텍스트 처리기), 고정 배치형은 `MaxCount` 가 필요한 `bits`(개수 + 비트마다 1 비트)이고, 원소 주소를 쓰는 컨테이너 래퍼를 거치지 않습니다.
+- **`Min` · `Max` 범위 검사는 시퀀스 원소까지 늘 봅니다**(2026-10-17, A-15). `SerializerUtil::collectRangeErrors` 에서 범위를 고르는 인자(`RangeCheckScope`)를 지웠습니다.
+  설정 JSON · 데이터 XML · 세이브가 같은 `Min` · `Max` 를 다르게 지키던 것을 한 계약으로 합쳤고, 프리셋 표가 원소마다 따로 부르던 검사도 지웠습니다.
 - **열거자 이름의 정본은 리플렉션 `ENUM()` 입니다**(2026-10-15, 같은 해 10-12 의 "enum 이름 테이블 45 곳 유지" 를 뒤집음). 철자가 열거자 이름과 같은 손 이름 표 · `toString( Enum )` 은 지우고
   `getEnumName( value )`(`Engine/Reflection/EnumName.h`)로 읽습니다. 언리얼은 `UENUM` + `UEnum::GetValueAsString`, Godot 은 ClassDB 열거 상수가 이름의 유일한 출처로 알고 있습니다(기억에 의존).
   손 표는 `static_assert` 가 개수만 지키고 순서 · 철자의 어긋남은 못 막았고, 쓰는 곳이 거의 로그였으므로 "배열 인덱스가 빠르다" 는 이득이 없습니다.
@@ -922,6 +885,10 @@
     A 는 `MaxCount` 를 보지 않으므로 두 읽기는 B 코덱이 있는 타입이면 언제나 B 쓰기 검사로 선언된 범위를 다시 봅니다. 없는 타입은 쓰기 때의 규칙 함수(`LiveEventRules::isValid`, 서버 디렉터리 `isValidWindow` · `isValidNotice`)를 다시 지나고, 어기면 오류로 다시 읽기를 멈춥니다.
     A 는 필드를 이름으로 짝짓고 모르는 필드(orphan)를 거절합니다. 필드를 더하면 옛 레코드의 그 필드는 기본값이 되고, 필드를 빼면 옛 레코드 전부가 읽기 실패입니다. 필드를 빼거나 뜻을 바꿀 때는 판을 올리고 데이터를 다시 씁니다.
     값 계산이 불가피한 예외만 `SW_SCHEMA_MIGRATION` 으로 그 판의 이관을 등록합니다(5-4).
+    쓰기(`ServiceRecordUtil::encode`)는 `[[nodiscard]] bool` 이고 읽기가 거절할 레코드는 쓰지 않습니다(2026-10-17, 백로그 `A-17`). 실을 수 없는 필드가 있거나 B 코덱이 있는 타입인데 선언된 범위를 벗어나면 오류 로그와 false 입니다.
+    바이트를 돌려주던 모양은 실패를 Debug 단언으로만 막아 Release 에서 끊긴 레코드가 저장소에 들어갔고, 범위를 넘는 값은 써지고 나서 읽을 때 손상으로 보였습니다.
+    호출부는 저장소 작업을 하지 않고 요청을 `Invalid` 로 끝냅니다(재시도로 풀리지 않으므로 `Unavailable` 이 아닙니다). 요청이 없는 쓰기(채팅 기록 묶음, 접속 상태 시한 연장)는 그 값만 빼고 오류 로그를 남깁니다.
+    지금은 서비스마다 손 규칙(`isValidLobbyRequest`, `PushNotificationDispatcher::registerDevice` 의 확인 같은 것)이 같은 범위를 먼저 보므로 호출부의 실패 분기는 공개 API 로 닿지 않습니다. 그래서 테스트는 쓰기 함수에서 거절을 봅니다.
   - 범위 밖 요청은 클라이언트가 보내지 않고 `kInvalidRequest` 응답으로 끝냅니다(서버가 같은 본문을 거절한 것과 같은 결과). 쓰기와 거절은 `ServiceClientCallTable::sendMessage` 하나가 맡고,
     거절 응답은 `OnlineServiceClient::rejectRequest` 가 만들어 서버 응답과 같은 처리기를 지납니다. 그래서 공통 기반 · 계정 · 거래 · 서버 디렉터리 클라이언트가 같은 약속을 가집니다.
     0 이 아닌 요청 번호를 돌려주고, 콜백(또는 받은 응답 목록)의 번호가 그 번호와 같으며, 보내지 못한 요청의 콜백은 요청 함수 안에서 바로 옵니다(초기화 전 · 멈춤과 같습니다).
@@ -935,6 +902,9 @@
   - 가변 길이가 두 겹인 칸(`vector<string>`, `vector<vector<T>>`)은 원소를 구조체로 감쌌습니다(`AccountLinkedProvider`, `MatchFormedTeam`). 클라이언트에 보내지 않는 값은 형식으로 막았습니다. 점검 허용 목록은 상태 응답의 타입(`MaintenanceView`)에 없고, 서버 안에서만 쓰는 칸(`AdminReply::_bRevokeSessions`, 레코드 판 `_version`)은 `PROPERTY` 가 아닙니다.
   - 의미만 바뀌고 배치는 그대로인 변경(단위 변경 같은 것)은 해시가 잡지 못하므로 `OnlineProtocolConstant::kBaseVersion` 하나를 올립니다.
   - 남은 손 코덱(기반 계층의 제재 버스, 접속 상태 전달 봉투와 캐시 값, 원장 · 우편 · 감사 · 원격 설정 레코드, 계정 · 길드 · 거래의 id 레코드)은 키트 프로토콜이 아니어서 이 단계에서 옮기지 않았습니다.
+- **로그인 응답 쓰기 실패**(2026-10-17, 백로그 `A-16`): 계정 서버가 로그인 · 재접속 응답 몸을 쓰지 못하면 `kInternal` 로 답하고, 저장소 작업이 이미 만든 그 세션은 로그아웃 작업(`LoginService::logout`)으로 지웁니다.
+  응답 몸을 저장소 작업 전에 쓰는 안은 기각했습니다. 몸이 싣는 세션 토큰 · 신원 · 시한은 그 작업이 만들기 때문입니다. 지금 실패를 부르는 값(원격 설정의 상점 주소)만 미리 확인하는 것은 같은 결함이 다른 필드로 다시 날 수 있어 고르지 않았습니다.
+  지우는 작업의 완료는 짝이 되는 요청이 없어 버려지고, 지우기가 저장소 오류로 실패하면 세션은 시한까지 남습니다(클라이언트는 토큰을 받지 못했으므로 쓸 수 없습니다).
 
 ### 5-10. 전용 서버
 

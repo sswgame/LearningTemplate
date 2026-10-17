@@ -1,7 +1,7 @@
 // 계정 스트림 바인딩 — 루프백 스트림(평문 · TLS 1.3) 위 AccountServer + AccountClient + 메모리 저장소, 실제 암호(OpenSSL — 가벼운 Argon2id).
 // 가입 → 로그인 → 접속 표 → UDP NetHost(Encrypted + 인증기) 접속(주체 = 계정), 두 번째 로그인이 첫 연결을 밀어냄(알림 + 닫힘), 스트림이 끊기면 다시 붙어
 // 재접속을 먼저 보내고 그동안 낸 표 요청은 그 뒤에, 틀린 토큰 · 변조 표 · 다른 서버 표 거절, 로그인 전 표 요청 kUnauthenticated, 낡은 빌드 kUpdateRequired,
-// 서버 재시작 뒤 재접속, 운영 끊기(사유 코드), 게스트 장치 비밀(로컬 저장 봉인)로 같은 계정.
+// 서버 재시작 뒤 재접속, 운영 끊기(사유 코드), 게스트 장치 비밀(로컬 저장 봉인)로 같은 계정, 응답을 못 쓴 로그인의 세션 지우기.
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
@@ -500,6 +500,46 @@ SW_TEST_CASE( AccountStreamTest, AdministrativeRevokeCarriesTheReasonCodeAndGues
     SW_EXPECT_TRUE( listEvent[0]._reason == LoginRevokeReason::Administrative );
     SW_EXPECT_EQUAL( string( "sanction.cheating" ), listEvent[0]._reasonCode );
     SW_EXPECT_FALSE( client._account.isLoggedIn() );
+}
+
+/**
+ * @brief [AccountStreamTest] 로그인 응답을 쓰지 못하면 kInternal 로 답하고, 저장소 작업이 이미 만든 세션은 남기지 않는다
+ * @details 원격 설정의 상점 주소가 응답 필드의 상한(512 바이트)을 넘으면 업데이트 권장 로그인의 응답 몸을 쓰지 못한다. 세션은 그보다 먼저 저장소에 생긴다.
+ */
+SW_TEST_CASE( AccountStreamTest, LoginReplyThatCannotBeWrittenLeavesNoSession )
+{
+    AccountRig        rig{ false };
+    ServiceAuditEntry audit;
+    audit._actor   = "gm.0000000000000001";
+    audit._action  = "config.set";
+    audit._subject = "config";
+    audit._timeMs  = 1;
+    RemoteConfigValue recommended;
+    recommended._type = RemoteConfigValueType::Text;
+    recommended._text = "2.0";
+    RemoteConfigValue storeURL;
+    storeURL._type = RemoteConfigValueType::Text;
+    storeURL._text = string( 513, 'u' );
+    rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.recommended_build.windows", recommended, audit );
+    rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.store_url.windows", storeURL, audit );
+    (void)rig._server->_store.pollCompletions();
+    AccountClientInfo oldBuild;
+    oldBuild._build    = "1.9";
+    oldBuild._platform = "windows";
+    ClientSide client{ rig._network, nullptr, oldBuild };
+    rig._listClient.push_back( &client );
+    SW_ASSERT_TRUE( rig.waitReady( client ) );
+    SW_ASSERT_TRUE( rig.waitReply( client, client._account.registerAccount( "unlucky", "password123" ) )._result == LoginResult::Ok );
+
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a login reply that cannot be written is logged" );
+        const AccountClientReply refused = rig.waitReply( client, client._account.login( "unlucky", "password123" ) );
+        SW_EXPECT_EQUAL( OnlineError::kInternal, refused._errorCode );
+        rig.step( 10 ); // 세션을 지우는 작업이 돈다
+    }
+    SW_EXPECT_FALSE( client._account.isLoggedIn() );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "login_session" ) ) );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "login_account_session" ) ) );
 }
 
 /**

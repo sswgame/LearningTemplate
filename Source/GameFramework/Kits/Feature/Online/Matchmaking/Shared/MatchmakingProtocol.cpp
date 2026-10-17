@@ -15,9 +15,9 @@ namespace sw
 
 namespace sw
 {
-    vector<uint8> MatchmakingProtocol::encodeParty( const PartySnapshot& party )
+    bool MatchmakingProtocol::encodeParty( const PartySnapshot& party, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kMatchmakingRecordVersion, party );
+        return ServiceRecordUtil::encode( kMatchmakingRecordVersion, party, outBytes );
     }
 
     bool MatchmakingProtocol::decodeParty( const vector<uint8>& bytes, PartySnapshot& outParty )
@@ -25,9 +25,9 @@ namespace sw
         return ServiceRecordUtil::readCache( bytes, kMatchmakingRecordVersion, outParty );
     }
 
-    vector<uint8> MatchmakingProtocol::encodeLobby( const LobbySnapshot& lobby )
+    bool MatchmakingProtocol::encodeLobby( const LobbySnapshot& lobby, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kMatchmakingRecordVersion, lobby );
+        return ServiceRecordUtil::encode( kMatchmakingRecordVersion, lobby, outBytes );
     }
 
     bool MatchmakingProtocol::decodeLobby( const vector<uint8>& bytes, LobbySnapshot& outLobby )

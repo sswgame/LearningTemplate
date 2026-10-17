@@ -91,9 +91,8 @@ namespace sw
                 party._partyID        = _request._partyID;
                 party._maxMemberCount = _pService->getMaxPartySize();
                 party._listMemberID.push_back( _request._actorID );
-                _snapshot   = party;
-                outNewBytes = MatchmakingProtocol::encodeParty( party );
-                return MatchmakingResult::Ok;
+                _snapshot = party;
+                return MatchmakingProtocol::encodeParty( party, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingResult::Invalid;
             }
             if ( bExists == false || MatchmakingProtocol::decodeParty( oldBytes, party ) == false )
             {
@@ -161,9 +160,8 @@ namespace sw
                     return MatchmakingResult::Invalid;
                 }
             }
-            _snapshot   = party;
-            outNewBytes = MatchmakingProtocol::encodeParty( party );
-            return MatchmakingResult::Ok;
+            _snapshot = party;
+            return MatchmakingProtocol::encodeParty( party, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingResult::Invalid;
         }
 
         void onFinished( MatchmakingResult result, const vector<uint8>& finalBytes ) override
@@ -213,9 +211,8 @@ namespace sw
                 lobby._state   = LobbyState::Open;
                 lobby._listMember.clear();
                 lobby._listMember.push_back( LobbyMember{ _request._actorID, 0, SW_FALSE } );
-                _snapshot   = lobby;
-                outNewBytes = MatchmakingProtocol::encodeLobby( lobby );
-                return MatchmakingResult::Ok;
+                _snapshot = lobby;
+                return MatchmakingProtocol::encodeLobby( lobby, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingResult::Invalid;
             }
             if ( bExists == false || MatchmakingProtocol::decodeLobby( oldBytes, lobby ) == false )
             {
@@ -295,9 +292,8 @@ namespace sw
                     return MatchmakingResult::Invalid;
                 }
             }
-            _snapshot   = lobby;
-            outNewBytes = MatchmakingProtocol::encodeLobby( lobby );
-            return MatchmakingResult::Ok;
+            _snapshot = lobby;
+            return MatchmakingProtocol::encodeLobby( lobby, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingResult::Invalid;
         }
 
         void onFinished( MatchmakingResult result, const vector<uint8>& finalBytes ) override

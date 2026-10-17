@@ -173,7 +173,7 @@ namespace sw
          * @details 다시 만들 수 있는 캐시이므로 `ServiceRecordUtil::readCache` 로 읽습니다. 다른 판이거나 깨졌거나 선언된 범위를 벗어나면 로그 없이 false 이고,
          *          읽는 쪽은 그 친구를 접속 끊김으로 봅니다.
          */
-        static vector<uint8>      encodePresenceRecord( const SocialPresence& presence );
+        [[nodiscard]] static bool encodePresenceRecord( const SocialPresence& presence, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodePresenceRecord( const vector<uint8>& bytes, SocialPresence& outPresence );
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 충돌은 각각 대응하는 결과로, 나머지는 Unavailable 로 바꿉니다. */

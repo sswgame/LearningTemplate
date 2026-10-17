@@ -524,8 +524,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 같은 상태를 두 벌 두지 않도록 `RoundSeries` · `InputCommandBuffer` 의 손 코덱(`writeState(BitWriter)` · `readState(BitReader)`)과 그 테스트도 지웠습니다.
 기반 헤더 셋이 바뀌었습니다. `FrameData.h`(`MoveTimeline` 의 `REFLECT`, `GuardStance` 의 `ENUM`), `InputCommandBuffer.h`(`InputFrame` · `InputCommandBuffer` 의 `REFLECT`, `clear` 가 칸을 비움),
 `RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.
-세이브 읽기는 자기 기술형이 `Min` · `Max` 를 보지 않으므로 `SerializerUtil::collectRangeErrors( ..., RangeCheckScope::IncludeSequenceElements )` 를 직접 부릅니다.
-자기 기술형 읽기 전반의 범위 검사는 기존 에셋을 깰 수 있어 백로그 `A-15` 로 남겼습니다.
+세이브 읽기는 자기 기술형이 `Min` · `Max` 를 보지 않으므로 `SerializerUtil::collectRangeErrors` 를 직접 부릅니다.
+이 함수는 시퀀스 원소까지 늘 보고, 범위를 어디까지 볼지 부르는 쪽이 고르는 인자를 두지 않습니다(설정 JSON · 데이터 XML · 세이브가 같은 계약).
 
 단계 6 은 끝났습니다(2026-10-17). 컴팩트 모드와 호출부 없는 `cloneObject` 를 지웠고(1.1), 같은 묶음으로 `A-13` · `A-14` 를 고쳤습니다(1.2, 1.4).
 

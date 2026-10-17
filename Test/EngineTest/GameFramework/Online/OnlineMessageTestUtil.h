@@ -9,7 +9,10 @@
 #include "Core/Container/string.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 
 namespace test
 {
@@ -94,6 +97,18 @@ namespace test
         {
             sw::BitWriter writer;
             return TMessageTypes::write( writer, message ) == false;
+        }
+
+        /**
+         * @brief 범위를 확인하지 않고 @p record 를 판 머리가 붙은 자기 기술형(A) 레코드로 씁니다. 다른 빌드가 쓴 레코드를 흉내 내 읽기의 거절을 볼 때 씁니다.
+         * @details 키트 타입의 `StaticType` 은 키트 모듈 밖으로 내보내지 않으므로 타입은 레지스트리에서 @p typeFqn 으로 찾습니다. 못 찾거나 못 쓰면 false 입니다.
+         */
+        template <typename T>
+        [[nodiscard]] static bool writeUncheckedRecord( const uint32 version, const sw::hashed_string& typeFqn, const T& record, sw::vector<uint8>& outBytes )
+        {
+            const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( typeFqn );
+            outBytes.clear();
+            return pType != nullptr && sw::BinarySerializer::serializeVersioned( version, &record, *pType, outBytes );
         }
 
         /** @brief 바이트를 소문자 16진 글로 씁니다. 저장소 레코드의 바이트가 바뀌지 않았는지 골든과 비교할 때 씁니다. */

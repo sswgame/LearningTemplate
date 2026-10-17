@@ -738,6 +738,11 @@ namespace sw
                     result->_kind = FixedValueKind::String;
                     return result;
                 }
+                if ( canonicalSpelling == "sw::DynamicBitset" )
+                {
+                    result->_kind = FixedValueKind::Bitset;
+                    return result;
+                }
                 for ( const FixedMathTypeDef& math : fixedlayout::kArrMathType )
                 {
                     if ( result->_typeName == math._pName )

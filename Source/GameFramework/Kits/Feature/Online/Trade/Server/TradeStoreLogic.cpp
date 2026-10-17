@@ -22,9 +22,14 @@ namespace sw
             static constexpr uint64 kSettleAuditUnique = 0x5E771Eull; ///< 정산 감사 기록은 거래당 하나이다. 재시도가 둘을 만들지 않게 한다
             static constexpr int32  kMaxRecoverCount   = 256;
 
-            static vector<uint8> encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerID )
+            /** @brief 거래 레코드를 써 @p inoutTransaction 에 넣습니다. 못 쓰면 오류 로그를 남기고 false 이며 아무것도 넣지 않습니다. */
+            [[nodiscard]] static bool stageSession( const TradeSnapshot& snapshot, uint64 ownerServerID, uint64 expectedVersion, ServiceTransaction& inoutTransaction )
             {
-                return TradeProtocol::encodeSession( TradeSessionRecord{ snapshot, ownerServerID } );
+                vector<uint8> bytes;
+                if ( TradeProtocol::encodeSession( TradeSessionRecord{ snapshot, ownerServerID }, bytes ) == false )
+                    return false;
+                inoutTransaction.put( TradeStoreLogic::getSessionTable(), ServiceKeyUtil::makeHex64( snapshot._tradeID ), std::move( bytes ), expectedVersion );
+                return true;
             }
 
             [[nodiscard]] static bool decodeSession( const string_view key, const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
@@ -174,8 +179,8 @@ namespace sw
                     closedTradeID        = stale._snapshot._tradeID;
                     TradeSnapshot closed = stale._snapshot;
                     TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::Timeout, nowMs );
-                    transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeID ), TradeStoreLogicInternal::encodeSession( closed, stale._ownerServerID ),
-                                     stale._version );
+                    if ( Internal::stageSession( closed, stale._ownerServerID, stale._version, transaction ) == false )
+                        return TradeResult::Invalid;
                     transaction.erase( getOwnerTable(), Internal::makeOwnerKey( stale._ownerServerID, closed._tradeID ) );
                 }
             }
@@ -189,7 +194,8 @@ namespace sw
             // 쓰기 번호 0과 1이 두 활성 링크이다. Conflict 번호로 누가 바쁜지 구분한다
             transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), Internal::encodeID( tradeID ), arrLinkVersion[0] );
             transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), Internal::encodeID( tradeID ), arrLinkVersion[1] );
-            transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeStoreLogicInternal::encodeSession( trade, _serverID ), ServiceRecord::kAbsentVersion );
+            if ( Internal::stageSession( trade, _serverID, ServiceRecord::kAbsentVersion, transaction ) == false )
+                return TradeResult::Invalid;
             transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverID, tradeID ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
             ServiceCommitInfo        info;
             const ServiceStoreResult committed = _connection.commit( transaction, &info );
@@ -226,7 +232,8 @@ namespace sw
             {
                 TradeSnapshot closed = session._snapshot;
                 TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::Timeout, nowMs );
-                stageClose( session, closed, transaction );
+                if ( stageClose( session, closed, transaction ) == false )
+                    return TradeResult::Invalid;
                 const ServiceStoreResult committed = _connection.commit( transaction );
                 if ( committed == ServiceStoreResult::Conflict )
                     continue;
@@ -296,7 +303,8 @@ namespace sw
 
             if ( next.isClosed() )
             {
-                stageClose( session, next, transaction );
+                if ( stageClose( session, next, transaction ) == false )
+                    return TradeResult::Invalid;
                 ServiceAuditEntry audit;
                 audit._actor   = "system";
                 audit._action  = next._state == TradeState::Settled ? "trade.settle" : "trade.fail";
@@ -306,9 +314,9 @@ namespace sw
                 if ( next._state != TradeState::Cancelled )
                     ServiceAuditLog::stageEntry( transaction, audit, tradeID, Internal::kSettleAuditUnique );
             }
-            else
+            else if ( Internal::stageSession( next, session._ownerServerID, session._version, transaction ) == false )
             {
-                transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeStoreLogicInternal::encodeSession( next, session._ownerServerID ), session._version );
+                return TradeResult::Invalid;
             }
 
             const ServiceStoreResult committed = _connection.commit( transaction );
@@ -345,7 +353,8 @@ namespace sw
             TradeSnapshot closed = session._snapshot;
             TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::Timeout, nowMs );
             ServiceTransaction transaction;
-            stageClose( session, closed, transaction );
+            if ( stageClose( session, closed, transaction ) == false )
+                return TradeResult::Invalid;
             const ServiceStoreResult committed = _connection.commit( transaction );
             if ( committed == ServiceStoreResult::Conflict )
                 continue;
@@ -378,7 +387,8 @@ namespace sw
             TradeSnapshot closed = session._snapshot;
             TradeStateMachine::close( closed, TradeState::Cancelled, reason, nowMs );
             ServiceTransaction transaction;
-            stageClose( session, closed, transaction );
+            if ( stageClose( session, closed, transaction ) == false )
+                return TradeResult::Invalid;
             const ServiceStoreResult committed = _connection.commit( transaction );
             if ( committed == ServiceStoreResult::Conflict )
                 continue;
@@ -418,7 +428,8 @@ namespace sw
                     return read;
                 TradeSnapshot closed = session._snapshot;
                 TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::ServerRestart, nowMs );
-                stageClose( session, closed, transaction );
+                if ( stageClose( session, closed, transaction ) == false )
+                    return TradeResult::Invalid;
                 const ServiceStoreResult committed = _connection.commit( transaction );
                 if ( committed == ServiceStoreResult::Conflict )
                     continue;
@@ -445,15 +456,16 @@ namespace sw
         return TradeResult::Ok;
     }
 
-    void TradeStoreLogic::stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction )
+    bool TradeStoreLogic::stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction )
     {
-        inoutTransaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeID ), TradeStoreLogicInternal::encodeSession( closed, session._ownerServerID ),
-                              session._version );
+        if ( TradeStoreLogicInternal::stageSession( closed, session._ownerServerID, session._version, inoutTransaction ) == false )
+            return false;
         for ( const TradeSide& side : closed._arrSide )
         {
             inoutTransaction.erase( getActiveTable(), ServiceKeyUtil::makeHex64( side._accountID ) );
         }
         inoutTransaction.erase( getOwnerTable(), TradeStoreLogicInternal::makeOwnerKey( session._ownerServerID, closed._tradeID ) );
+        return true;
     }
 
     TradeResult TradeStoreLogic::evaluateFunds( const TradeSide& side )

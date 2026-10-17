@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/DynamicBitset.h"
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Message/NetRequest.h"
@@ -118,7 +119,7 @@ namespace
                 return;
             for ( const NetRequestToken& token : _listLateToken )
             {
-                _listLateAnswer.push_back( host.respondOk( token, BitWriter{} ) );
+                _listLateAnswer.resize( _listLateAnswer.size() + 1, host.respondOk( token, BitWriter{} ) );
             }
             _listLateToken.clear();
             if ( _bReadCacheOnTick && host.getEphemeralRouter() != nullptr )
@@ -151,7 +152,7 @@ namespace
         void onCacheReply( const EphemeralReply& reply ) { _listCacheReply.push_back( reply ); }
 
         vector<NetRequestToken>    _listLateToken;
-        vector<bool>               _listLateAnswer;
+        DynamicBitset              _listLateAnswer;
         vector<AccountID>          _listLeftAccount;
         vector<ServerBusMessage>   _listBusMessage;
         vector<EphemeralReply>     _listCacheReply;
@@ -689,7 +690,7 @@ SW_TEST_CASE( OnlineServiceHostTest, LateAnswersUseTheTokenAndAnswersAfterCloseA
     (void)rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kLogin, 5 );
     const ResponseRecord late = rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kLate, 0 );
     SW_EXPECT_TRUE( late._status == NetRequestStatus::Ok );
-    SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceA._listLateAnswer.size() );
+    SW_ASSERT_EQUAL( uint32( 1 ), rig._serviceA._listLateAnswer.size() );
     SW_EXPECT_TRUE( rig._serviceA._listLateAnswer[0] );
 
     // 답하기 전에 연결이 닫히면 그 답은 버려진다.
