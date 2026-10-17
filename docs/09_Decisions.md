@@ -521,6 +521,12 @@
   대화 노드 · 링크 id 와 핀)은 `PROPERTY( Required )` 로 두어 빠지면 오류입니다 — `ConfigManager::readConfigJSON` 이 구조체 칸과 구조체 목록 원소 안까지 봅니다.
   종류(시퀀스 항목 · 트랙, 대화 노드)는 정수 대신 열거자 이름이고, 모르는 종류를 읽어 두고 적용만 않던 규칙과 모르는 노드 종류를 Dialogue 로 읽던 폴백은 없앴습니다.
   범위 밖 프레임 번호도 자르지 않고 오류입니다. 스프라이트 구간이 프레임 밖이면 자르고 알리는 것만 남겼습니다(에디터가 프레임을 지운 뒤 저장할 수 있다).
+- **`sw::vector<bool>` 은 쓰지 못하고, 불 목록은 `DynamicBitset` 입니다**(2026-10-17, A-18). 기본 구성의 `sw::vector<bool>` 은 원소마다 바이트였고 `SW_ENABLE_STL_CONTAINER` 구성에서는
+  비트로 묶는 `std::vector<bool>` 이라, 같은 이름이 구성마다 다른 의미였습니다(STL 구성에서 리플렉션 래퍼가 원소 주소를 잡지 못해 컴파일이 멈춤). `VectorElementCheck` 가 두 구성에서
+  같은 `static_assert` 로 막습니다. 언리얼 `TArray<bool>` 은 바이트 배열이고 비트 묶음은 `TBitArray` 로 따로 둡니다(기억에 의존). 리플렉션은 `DynamicBitset` 을 값 하나로 다룹니다.
+  자기 기술형은 '0' · '1' 글(텍스트 처리기), 고정 배치형은 `MaxCount` 가 필요한 `bits`(개수 + 비트마다 1 비트)이고, 원소 주소를 쓰는 컨테이너 래퍼를 거치지 않습니다.
+- **`Min` · `Max` 범위 검사는 시퀀스 원소까지 늘 봅니다**(2026-10-17, A-15). `SerializerUtil::collectRangeErrors` 에서 범위를 고르는 인자(`RangeCheckScope`)를 지웠습니다.
+  설정 JSON · 데이터 XML · 세이브가 같은 `Min` · `Max` 를 다르게 지키던 것을 한 계약으로 합쳤고, 프리셋 표가 원소마다 따로 부르던 검사도 지웠습니다.
 - **열거자 이름의 정본은 리플렉션 `ENUM()` 입니다**(2026-10-15, 같은 해 10-12 의 "enum 이름 테이블 45 곳 유지" 를 뒤집음). 철자가 열거자 이름과 같은 손 이름 표 · `toString( Enum )` 은 지우고
   `getEnumName( value )`(`Engine/Reflection/EnumName.h`)로 읽습니다. 언리얼은 `UENUM` + `UEnum::GetValueAsString`, Godot 은 ClassDB 열거 상수가 이름의 유일한 출처로 알고 있습니다(기억에 의존).
   손 표는 `static_assert` 가 개수만 지키고 순서 · 철자의 어긋남은 못 막았고, 쓰는 곳이 거의 로그였으므로 "배열 인덱스가 빠르다" 는 이득이 없습니다.

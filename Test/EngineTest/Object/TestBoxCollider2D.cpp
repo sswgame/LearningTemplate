@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/DynamicBitset.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
@@ -22,13 +23,13 @@ namespace sw
 
         vector<uint64> _listBeginOther;
         vector<uint64> _listEndOther;
-        vector<bool>   _listBeginOtherTrigger;
+        DynamicBitset  _listBeginOtherTrigger;
 
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
         void            onOverlapBegin( const OverlapInfo& overlap ) override
         {
             _listBeginOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectID() : 0 );
-            _listBeginOtherTrigger.push_back( overlap._bOtherTrigger == SW_TRUE );
+            _listBeginOtherTrigger.resize( _listBeginOtherTrigger.size() + 1, overlap._bOtherTrigger == SW_TRUE );
         }
         void onOverlapEnd( const OverlapInfo& overlap ) override { _listEndOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectID() : 0 ); }
     };
@@ -278,9 +279,9 @@ SW_TEST_CASE( BoxCollider2DTest, TriggerCollidersReportOverlapsAndSaySo )
 
     manager.beginPlay();
     manager.update( 0.016f );
-    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), body._pListener->_listBeginOtherTrigger.size() );
+    SW_ASSERT_EQUAL( static_cast<uint32>( 1 ), body._pListener->_listBeginOtherTrigger.size() );
     SW_EXPECT_TRUE( body._pListener->_listBeginOtherTrigger[0] );
-    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), sensor._pListener->_listBeginOtherTrigger.size() );
+    SW_ASSERT_EQUAL( static_cast<uint32>( 1 ), sensor._pListener->_listBeginOtherTrigger.size() );
     SW_EXPECT_FALSE( sensor._pListener->_listBeginOtherTrigger[0] );
     manager.endPlay();
 }

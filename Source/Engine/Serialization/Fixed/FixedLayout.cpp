@@ -3,6 +3,7 @@
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/DynamicBitset.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -291,6 +292,32 @@ namespace sw
         {
             outValue[index] = static_cast<utf8>( reader.readBits( 8 ) );
         }
+        return FixedReadResult::Ok;
+    }
+
+    bool FixedCodecUtil::writeBitset( BitWriter& writer, const DynamicBitset& value, const uint32 maxCount )
+    {
+        if ( writeCount( writer, value.size(), maxCount ) == false )
+            return false;
+        for ( uint32 bitIndex = 0; bitIndex < value.size(); ++bitIndex )
+        {
+            writer.writeBool( value.test( bitIndex ) );
+        }
+        return true;
+    }
+
+    FixedReadResult FixedCodecUtil::readBitset( BitReader& reader, const uint32 maxCount, DynamicBitset& outValue )
+    {
+        uint32                count  = 0;
+        const FixedReadResult result = readCount( reader, maxCount, count );
+        if ( result != FixedReadResult::Ok )
+            return result;
+        DynamicBitset value( count );
+        for ( uint32 bitIndex = 0; bitIndex < count; ++bitIndex )
+        {
+            value.set( bitIndex, reader.readBool() );
+        }
+        outValue = std::move( value );
         return FixedReadResult::Ok;
     }
 

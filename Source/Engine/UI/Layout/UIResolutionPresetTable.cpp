@@ -3,7 +3,6 @@
 #include "Engine/UI/Layout/UIResolutionPresetTable.h"
 
 #include "Engine/Resource/ResourceDataKind.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 namespace sw
@@ -34,16 +33,7 @@ namespace sw
             SW_LOG_ERROR( "%#: no resolutions in <_listResolution>", path );
             bOk = false;
         }
-        for ( const UIResolutionPreset& resolution : _listResolution )
-        {
-            vector<string> listRangeError;
-            SerializerUtil::collectRangeErrors( *UIResolutionPreset::StaticType(), &resolution, resolution._name, listRangeError );
-            for ( const string& rangeError : listRangeError )
-            {
-                SW_LOG_ERROR( "%#: %#", path, rangeError.c_str() );
-                bOk = false;
-            }
-        }
+        // 원소의 `Min` · `Max` 는 `loadDesc` 가 본다(`SerializerUtil::collectRangeErrors` 는 시퀀스 원소까지 본다).
         if ( bOk == false )
             _listResolution.clear();
         return bOk;

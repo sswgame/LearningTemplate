@@ -1110,7 +1110,7 @@ namespace sw
             return false;
         // 자기 기술형 읽기는 `Min` · `Max` 를 보지 않으므로, 롤백 코덱이 지키는 범위를 두 캐릭터 배열 · 고리 버퍼 원소까지 여기서 본다.
         vector<string> listRangeError;
-        SerializerUtil::collectRangeErrors( *StaticType(), &loaded, string(), listRangeError, RangeCheckScope::IncludeSequenceElements );
+        SerializerUtil::collectRangeErrors( *StaticType(), &loaded, string(), listRangeError );
         if ( listRangeError.empty() == false )
         {
             SW_LOG_WARNING( "Fighting save state has %# value(s) outside the declared range (first: %#) - the match keeps its current state",
