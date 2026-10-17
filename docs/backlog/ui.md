@@ -21,9 +21,6 @@
   (3) UI 행동 맵(`engine/input/ui.input.xml`)의 키 리바인딩 — 키 바인딩 창(`KeyRebindScreen`)은 있다, UI 맵을 설정 대상으로 두는 길(`UserSettingsTargets` 의 입력 맵이 게임 맵 하나)이 남았다.
   (4) 글 입력 칸의 운영체제 클립보드 — `UIClipboardAPI` 함수 표를 창 계층이 끼워야 한다(끼우기 전엔 엔진 안 버퍼 하나다).
 
-- `D6-3` [기능] **런타임 UI 접근성의 남은 것.** (1) 음성 재생 쪽 자막 — 음성 이벤트(`GameSound`)에 자막 키를 실어
-  `UISubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다).
-
 - `D6-4` [기능] **옵션 · 일시정지 메뉴의 남은 것**(`Engine/UI/README.md`). (1) 일시정지 메뉴의 타이틀로 · 끝내기 단추는 전역 명령 표(`UISystem::getGlobalCommands`)에 같은 이름의 명령이 있을 때만 보인다 —
   등록하는 쪽(`Engine` 의 `QuitGame`, 게임 흐름 `GameInstanceBase` 의 `ReturnToTitle`)이 아직 없다. (5) 해상도 바꾸고 15 초 되돌림 ·
   키 바인딩 재시작 뒤 유지의 실기동 확인(Shooter3D · 패드)은 게임별 빌드 때.

@@ -82,6 +82,7 @@ namespace sw
                 SW_LOG_ERROR( "%#: event '%#' has no clips", sourceName, pName );
                 bValid = false;
             }
+            bool bHasSubtitle = false;
             for ( const AudioClipEntry& clip : event._listClip )
             {
                 if ( clip._path.empty() )
@@ -89,6 +90,12 @@ namespace sw
                     SW_LOG_ERROR( "%#: event '%#' has a clip with no path", sourceName, pName );
                     bValid = false;
                 }
+                bHasSubtitle = bHasSubtitle || clip._subtitleKey.empty() == false;
+            }
+            if ( event._subtitleSpeakerKey.empty() == false && bHasSubtitle == false )
+            {
+                SW_LOG_ERROR( "%#: event '%#' names a subtitle speaker but no clip has a subtitle key", sourceName, pName );
+                bValid = false;
             }
             if ( event._volumeDbMax < event._volumeDbMin || event._pitchMax < event._pitchMin )
             {

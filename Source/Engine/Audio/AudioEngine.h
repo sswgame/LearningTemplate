@@ -191,6 +191,11 @@ namespace sw
                                           AudioAttenuationDesc* pOutAttenuation = nullptr ) const;
         /** @brief 살아 있는 이벤트 인스턴스마다 마지막 블록의 상태(이벤트 · 버스 · 남은 시간 · 가상 보이스 수)를 @p outListStatus 에 담습니다(비우고 채웁니다). */
         void getInstanceStatuses( vector<AudioInstanceStatus>& outListStatus ) const;
+        /**
+         * @brief 자막 키를 가진 클립이 시작했다는 신호를 시작한 순서대로 @p outListCue 에 옮기고 비웁니다(비우고 채웁니다).
+         * @details 엔진 프레임이 UI 갱신 직전에 한 번 가져가 자막 서비스에 올린다(`Engine.cpp`). 가져가는 곳은 하나다 — 둘이면 한쪽만 받는다.
+         */
+        void takeSubtitleCues( vector<AudioSubtitleCue>& outListCue );
 
         // --- 오디오 스레드 --------------------------------------------------------------------------------------------------
 
