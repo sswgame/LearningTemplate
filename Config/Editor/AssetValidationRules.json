@@ -48,13 +48,11 @@
     {
       "name": "texture-limits",
       "check": "texture",
-      "description": "Every runtime texture: at most 4096, power of two, a known GPU format.",
+      "description": "Every runtime texture: at most 4096, a known GPU format, and a power of two when it has mips (a mip chain halves each side; UI images and pixel-art atlases have none).",
       "severity": "error",
       "include_patterns": ["*/textures/*.dds"],
-      "exclude_patterns": ["editor/textures/splash.dds", "engine/textures/ui/kenney_ui/*"],
-      "exclude_reason": "splash.dds is the 1376x768 editor splash and kenney_ui/* are Kenney UI Pack sprites (20x18, 192x64 ...); both are UI images imported without mips or tiling (UI_Textures rule), so no reason to be a power of two",
       "max_size": 4096,
-      "power_of_two": true,
+      "mipped_power_of_two": true,
       "allowed_formats": ["BC1_UNORM", "BC1_UNORM_SRGB", "BC3_UNORM", "BC3_UNORM_SRGB", "BC4_UNORM", "BC5_UNORM", "BC6H_UF16",
                           "BC7_UNORM", "BC7_UNORM_SRGB", "R8G8B8A8_UNORM", "R8G8B8A8_UNORM_SRGB", "B8G8R8A8_UNORM",
                           "B8G8R8A8_UNORM_SRGB", "R16G16B16A16_FLOAT", "UNCOMPRESSED_32BPP"]
@@ -66,6 +64,15 @@
       "severity": "error",
       "include_patterns": ["*colormap*.dds", "game/voxelcraft/textures/blocks.dds"],
       "require_mips": false
+    },
+    {
+      "name": "texture-pixel-art",
+      "check": "texture",
+      "description": "Pixel-art atlases are sampled by exact texel: no mips (they blur neighbouring cells) and no block compression (it bleeds colours across 4x4 blocks and needs sides in multiples of 4).",
+      "severity": "error",
+      "include_patterns": ["*/textures/pixel/*.dds"],
+      "require_mips": false,
+      "allowed_formats": ["R8G8B8A8_UNORM_SRGB"]
     },
     {
       "name": "texture-ui-no-mips",

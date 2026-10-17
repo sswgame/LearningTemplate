@@ -148,12 +148,13 @@ class CheckTest(AssetValidationFixture):
 
     def testTextureLimits(self) -> None:
         self.put("Resource/game/p/textures/big.dds", makeDdsInternal(8192, 8192, 14, 98))
-        self.put("Resource/game/p/textures/npot.dds", makeDdsInternal(300, 256, 1, 98))
+        self.put("Resource/game/p/textures/npot.dds", makeDdsInternal(300, 256, 9, 98))
+        self.put("Resource/game/p/textures/npotnomips.dds", makeDdsInternal(300, 256, 1, 98))
         self.put("Resource/game/p/textures/odd.dds", makeDdsInternal(256, 256, 9, 2))
         self.put("Resource/game/p/textures/fine.dds", makeDdsInternal(256, 256, 9, 98))
         messages = self.findMessages({"name": "t", "check": "texture", "include_patterns": ["*.dds"], "max_size": 4096,
-                                      "power_of_two": True, "allowed_formats": ["BC7_UNORM"]})
-        self.assertEqual(3, len(messages), messages)
+                                      "mipped_power_of_two": True, "allowed_formats": ["BC7_UNORM"]})
+        self.assertEqual(3, len(messages), messages)   # 밉 없는 2 의 거듭제곱 아님(npotnomips)은 통과한다
 
     def testTextureMipPolicy(self) -> None:
         self.put("Resource/a/partial.dds", makeDdsInternal(256, 256, 3, 98))

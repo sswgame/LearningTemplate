@@ -38,6 +38,12 @@
   },
   "rules": [
     {
+      "name": "Pixel_Art",
+      "inherits": "Base_Uncompressed",
+      "include_patterns": ["*/textures_raw/pixel/*"],
+      "generate_mips": false
+    },
+    {
       "name": "Editor_Splash",
       "inherits": "Base_UI",
       "include_patterns": ["*splash*"],

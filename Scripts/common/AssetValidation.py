@@ -381,8 +381,10 @@ def checkTextureInternal(rule: Rule, relPath: str, context: ValidationContext) -
     maxSize = rule.params.get("max_size")
     if maxSize and max(info.width, info.height) > maxSize:
         listMessage.append(f"{info.width}x{info.height} exceeds the {maxSize} limit")
-    if rule.params.get("power_of_two") and not (isPowerOfTwoInternal(info.width) and isPowerOfTwoInternal(info.height)):
-        listMessage.append(f"{info.width}x{info.height} is not a power of two")
+    # 2 의 거듭제곱은 밉 사슬(변마다 반씩)의 요구다 — 밉이 없는 UI 이미지 · 픽셀 아트 아틀라스는 제외 목록 없이 통과한다.
+    bPowerOfTwo = isPowerOfTwoInternal(info.width) and isPowerOfTwoInternal(info.height)
+    if rule.params.get("mipped_power_of_two") and info.mipCount > 1 and not bPowerOfTwo:
+        listMessage.append(f"{info.width}x{info.height} has {info.mipCount} mip levels but is not a power of two")
     requireMips = rule.params.get("require_mips")
     fullMipCount = max(info.width, info.height).bit_length()
     if requireMips is True and info.mipCount < fullMipCount:
@@ -732,7 +734,7 @@ kAssetRuleConfigRelative = "Config/Editor/AssetValidationRules.json"
 
 _kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str], frozenset[str]]] = {
     "naming": (checkNamingInternal, frozenset(), frozenset({"name_pattern", "allowed_suffixes"})),
-    "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "power_of_two", "require_mips", "allowed_formats"})),
+    "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "mipped_power_of_two", "require_mips", "allowed_formats"})),
     "mesh_budget": (checkMeshBudgetInternal, frozenset(), frozenset({"max_triangles", "max_bounding_radius"})),
     "xml_wellformed": (checkXmlWellFormedInternal, frozenset(), frozenset()),
     "missing_reference": (checkMissingReferenceInternal, frozenset(), frozenset({"transient_folders"})),

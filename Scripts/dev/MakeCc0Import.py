@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-엔진 팩의 CC0 텍스처 원본(`Resource/engine/textures_raw/` 의 `sky` · `surfaces` · `ui/kenney_*` · `particles`)을 출처 목록
+엔진 팩의 CC0 텍스처 원본(`Resource/engine/textures_raw/` 의 `sky` · `surfaces` · `ui/kenney_*` · `particles` · `pixel`)을 출처 목록
 `Resource/engine/textures_raw/cc0_sources.toml` 과 대조하거나 다시 받습니다.
 
 목록이 정본이다(`Scripts/dev/MakeCommonAudio.py` 의 오디오 목록과 같은 칸). 팩마다 공식 페이지(`page`) · 페이지의 라이선스 표시(`page_license_marker`) ·
@@ -16,7 +16,7 @@
 파이썬 3.11 이상(`tomllib`)이 필요하다. CI 린트가 돌리는 스크립트가 아니라 사람이 가끔 돌리는 도구다.
 변환: 없다. 원본 바이트를 그대로 쓴다(HDRI 는 2K · 재질은 1K 를 그 크기로 받는다). 크기를 줄여야 하면 받는 해상도를 바꾸고 목록의 해시를 새로 적는다.
 목록은 JSON 이 아니라 TOML 이다 — `Resource/` 아래의 `.json` 은 `ResourceDataSchemaTest` 가 데이터로 읽으려 해 종류 표에 없으면 실패한다.
-주의: 받는 곳은 https 의 polyhaven.com · dl.polyhaven.org · kenney.nl 만이다. 묶음은 메모리에서 목록의 `member` 만 읽고 풀지 않는다
+주의: 받는 곳은 https 의 polyhaven.com · dl.polyhaven.org · kenney.nl · opengameart.org 만이다. 묶음은 메모리에서 목록의 `member` 만 읽고 풀지 않는다
 (같이 든 Unity 패키지 · 바로가기 파일은 디스크에 닿지 않는다). 쓴 원본은 `App --import-textures` 로 DDS 와 `import.stamp` 를 만든다.
 
 사용법:
@@ -46,7 +46,7 @@ _kRepositoryRoot = getProjectRoot()
 _kEngineRoot = _kRepositoryRoot / "Resource" / "engine"
 _kManifestPath = _kEngineRoot / "textures_raw" / "cc0_sources.toml"
 _kAllowedLicense = "CC0 1.0"
-_kAllowedHosts = frozenset({"polyhaven.com", "dl.polyhaven.org", "kenney.nl"})
+_kAllowedHosts = frozenset({"polyhaven.com", "dl.polyhaven.org", "kenney.nl", "opengameart.org"})
 #: 목록이 다루는 원본 확장자 — 팩 폴더의 이 확장자 파일은 모두 목록에 있어야 한다.
 _kImageSuffixes = frozenset({".png", ".jpg", ".hdr"})
 _kResourceNameRe = re.compile(r"[a-z0-9_./-]+")

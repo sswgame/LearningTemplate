@@ -5134,3 +5134,140 @@ sha256 = "3963633f6b2395a3fa95b9f4f65f22a4d38a2c561d9312dfff4646b71c7aa6e2"
 name = "window_01.png"
 member = "PNG (Transparent)/window_01.png"
 sha256 = "373747a996fcfc320c76d093bde08252db2adde8d29672aca98430e521e702fa"
+
+# 픽셀 아트 16 px 세트(탑다운 RPG) — 필터 · 밉 없이 R8G8B8A8 로 굽는다(TextureImportConfig 의 Pixel_Art 규칙).
+# 아틀라스가 2 의 거듭제곱이 아니어도 된다: texture-limits 는 밉이 있는 텍스처에만 2 의 거듭제곱을 요구한다.
+# Kenney Roguelike/RPG Pack 1.0 — 지형 · 집 · 소품 타일(16 px, 칸 사이 1 px). magenta 판 · 샘플 맵은 넣지 않는다.
+[[packs]]
+folder = "textures_raw/pixel/kenney_roguelike"
+page = "https://kenney.nl/assets/roguelike-rpg-pack"
+page_license_marker = "Creative Commons CC0"
+download = "https://kenney.nl/media/pages/assets/roguelike-rpg-pack/12c03cd78b-1677697420/kenney_roguelike-rpg-pack.zip"
+download_sha256 = "8e7d2378f8f794245645f6d7dc7aeeb246791410a7e512293c594b46a5a9524b"
+license = "CC0 1.0"
+license_source = "License.txt"
+license_quote = "License (Creative Commons Zero, CC0) http://creativecommons.org/publicdomain/zero/1.0/"
+
+[[packs.files]]
+name = "roguelike_sheet.png"
+member = "Spritesheet/roguelikeSheet_transparent.png"
+sha256 = "808c8d734480bc949b284f3bcc252e87e1ee53b24178791a6838cce6a319c439"
+
+# Kenney Roguelike Characters 2.0 — 몸 · 옷 · 머리 · 무기 조각(16 px, 칸 사이 1 px). Modern City 팩은 RPG 에 맞지 않아 넣지 않는다.
+[[packs]]
+folder = "textures_raw/pixel/kenney_roguelike_characters"
+page = "https://kenney.nl/assets/roguelike-characters"
+page_license_marker = "Creative Commons CC0"
+download = "https://kenney.nl/media/pages/assets/roguelike-characters/53ffff4133-1729196490/kenney_roguelike-characters.zip"
+download_sha256 = "05c4c0af7326584cfffbbb196571eb9e102981d2033e90e225c5ba8da8771284"
+license = "CC0 1.0"
+license_source = "License.txt"
+license_quote = "License: (Creative Commons Zero, CC0) http://creativecommons.org/publicdomain/zero/1.0/"
+
+[[packs.files]]
+name = "roguelike_characters.png"
+member = "Spritesheet/roguelikeChar_transparent.png"
+sha256 = "771d51ca84b2c5b412027ba80c6a6b8a98bb5a983b2c58ac4f0ccf08ae4d10f2"
+
+# ArMM1998 "Zelda-like tilesets and sprites" (OpenGameArt) — 지상 · 실내 · 동굴 타일, 소품, 4 방향 걷기 캐릭터, NPC, 적(log).
+# 묶음에 라이선스 파일이 없어 근거는 페이지의 라이선스 칸이다. font.png 는 엔진 글꼴을 쓰므로 넣지 않는다.
+[[packs]]
+folder = "textures_raw/pixel/zelda_like"
+page = "https://opengameart.org/content/zelda-like-tilesets-and-sprites"
+page_license_marker = "License(s): CC0"
+download = "https://opengameart.org/sites/default/files/gfx_3.zip"
+download_sha256 = "c678f5447ab44fa31ba2e498dd845f4f4dda97fd1d89291a442e0a23a446c133"
+license = "CC0 1.0"
+license_source = "page"
+license_quote = "License(s): CC0"
+
+[[packs.files]]
+name = "overworld.png"
+member = "gfx/Overworld.png"
+sha256 = "2172a3629161c3c4a8c319efa5584f77d2ec28d6bf498b1d04e3e548e7717697"
+
+[[packs.files]]
+name = "inner.png"
+member = "gfx/Inner.png"
+sha256 = "8cde6c5dd77e5543c38d2e0138eb9a14c2a8831898d73c9ff76a0e315299bb5d"
+
+[[packs.files]]
+name = "cave.png"
+member = "gfx/cave.png"
+sha256 = "2659cf3ce5b5f657f92c45185b4f022cf7332f306ffef80069da53fd65e35925"
+
+[[packs.files]]
+name = "objects.png"
+member = "gfx/objects.png"
+sha256 = "fe55d5fda9f5d2a6d1052e51e9c64657e09b2f8b8486dbc708b53091c8422a44"
+
+[[packs.files]]
+name = "character.png"
+member = "gfx/character.png"
+sha256 = "c69beb279dafd75ece32755ef3da32d6d720daba7b225f849a220cd73a3f5329"
+
+[[packs.files]]
+name = "npc.png"
+member = "gfx/NPC_test.png"
+sha256 = "2a3849efa90b4ffc4a82a985691b78126fdc330f77a32f65fdac6a2b40220cae"
+
+[[packs.files]]
+name = "log.png"
+member = "gfx/log.png"
+sha256 = "38c071742c81f9d6645771fc311f0e404968d815bb185ddd8083055ac69044f0"
+
+# Shade "16x16 Puny World Tileset" (OpenGameArt) — 지상 타일 · 건물 · 자원. 낱개 파일이라 묶음 해시가 없다.
+[[packs]]
+folder = "textures_raw/pixel/puny_world"
+page = "https://opengameart.org/content/16x16-puny-world-tileset"
+page_license_marker = "License(s): CC0"
+license = "CC0 1.0"
+license_source = "page"
+license_quote = "License(s): CC0"
+
+[[packs.files]]
+name = "puny_world.png"
+download = "https://opengameart.org/sites/default/files/punyworld-overworld-tileset_0.png"
+sha256 = "14d285bde8dee96cb0113947c8cce4922b86bf1d033b19123112145c7cef3a38"
+
+# Shade "Puny Characters" (OpenGameArt) — 32 px 칸에 그린 16 px 캐릭터, 8 방향 대기 · 걷기 · 공격 · 피격 · 죽음.
+# 직업마다 한 색만 넣는다(나머지 색은 같은 그림의 색 바꿈이다). 오크를 넣은 묶음 · 환경 타일은 넣지 않는다.
+[[packs]]
+folder = "textures_raw/pixel/puny_characters"
+page = "https://opengameart.org/content/puny-characters"
+page_license_marker = "License(s): CC0"
+download = "https://opengameart.org/sites/default/files/puny-characters.zip"
+download_sha256 = "971d7b07eea18fb2cce475cd6554a176ebf783bb064dec5a637ba33c7829320e"
+license = "CC0 1.0"
+license_source = "page"
+license_quote = "License(s): CC0"
+
+[[packs.files]]
+name = "character_base.png"
+member = "Puny-Characters/Character-Base.png"
+sha256 = "a542332ff1ed66ce28e7eea489f2e1e304d90671aa531fc9ccf0b00b9f2857ff"
+
+[[packs.files]]
+name = "warrior_blue.png"
+member = "Puny-Characters/Warrior-Blue.png"
+sha256 = "acc8db08577086f1520d74d0806a614833a1f7356ba8a560437fd4c59538cdbc"
+
+[[packs.files]]
+name = "soldier_red.png"
+member = "Puny-Characters/Soldier-Red.png"
+sha256 = "b9a89aef6607463d9444b701c8b687e70b2499f9c44257da0d48d68e48f6faf4"
+
+[[packs.files]]
+name = "mage_cyan.png"
+member = "Puny-Characters/Mage-Cyan.png"
+sha256 = "bd43df96cef751f76252723bfa5a6095d68e982cba59260aec7f4fbfedf7ec3f"
+
+[[packs.files]]
+name = "archer_green.png"
+member = "Puny-Characters/Archer-Green.png"
+sha256 = "2fe5178f77e431b7e3b6f3934459047ac86f29f2e23f44425eb60e4aac3a89e1"
+
+[[packs.files]]
+name = "slime.png"
+member = "Puny-Characters/Slime.png"
+sha256 = "456578c6da103c18ac3ffd6bba475b8154a4d82910e0ad34ca699304883f87b0"
