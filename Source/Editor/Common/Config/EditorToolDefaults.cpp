@@ -20,30 +20,27 @@ namespace sw::editor
 
     namespace
     {
-        struct EditorToolDefaultsInternal
+        /**
+         * @brief `PROPERTY( Required )` 칸이 json 최상위 키로 모두 있으면 true 입니다. 빠진 칸마다 키 이름과 함께 오류를 남깁니다.
+         * @details 엄격한 JSON 읽기(`ConfigManager::readConfigJSON`)는 모르는 키만 막고 빠진 키는 멤버 초기값으로 둔다. 이 타입의 필수 칸은 초기값이
+         *          형식일 뿐이라(빈 글꼴 목록 · 0 색) 빠진 채로 서면 조용히 틀린 값으로 돈다.
+         */
+        [[nodiscard]] bool hasEveryRequiredKey( string_view jsonText, const utf8* pSourceLabel )
         {
-            /**
-             * @brief `PROPERTY( Required )` 칸이 json 최상위 키로 모두 있으면 true 입니다. 빠진 칸마다 키 이름과 함께 오류를 남깁니다.
-             * @details 엄격한 JSON 읽기(`ConfigManager::readConfigJSON`)는 모르는 키만 막고 빠진 키는 멤버 초기값으로 둔다. 이 타입의 필수 칸은 초기값이
-             *          형식일 뿐이라(빈 글꼴 목록 · 0 색) 빠진 채로 서면 조용히 틀린 값으로 돈다.
-             */
-            [[nodiscard]] static bool hasEveryRequiredKey( string_view jsonText, const utf8* pSourceLabel )
+            JSONDocument document;
+            if ( document.parse( jsonText ) == false || document.getRoot().isObject() == false )
+                return false; // 읽기(readConfigJSON)가 이미 오류를 남겼다
+            const JSONValue root      = document.getRoot();
+            bool            bComplete = true;
+            for ( const PropertyInfo& prop : EditorToolDefaults::StaticType()->getPropertiesWithBase() )
             {
-                JSONDocument document;
-                if ( document.parse( jsonText ) == false || document.getRoot().isObject() == false )
-                    return false; // 읽기(readConfigJSON)가 이미 오류를 남겼다
-                const JSONValue root      = document.getRoot();
-                bool            bComplete = true;
-                for ( const PropertyInfo& prop : EditorToolDefaults::StaticType()->getPropertiesWithBase() )
-                {
-                    if ( prop._metadata._bRequired == SW_FALSE || root.has( prop._name.view(), false ) )
-                        continue;
-                    SW_LOG_ERROR( "Editor tool defaults %#: required key '%#' is missing", pSourceLabel, prop._name.c_str() );
-                    bComplete = false;
-                }
-                return bComplete;
+                if ( prop._metadata._bRequired == SW_FALSE || root.has( prop._name.view(), false ) )
+                    continue;
+                SW_LOG_ERROR( "Editor tool defaults %#: required key '%#' is missing", pSourceLabel, prop._name.c_str() );
+                bComplete = false;
             }
-        };
+            return bComplete;
+        }
     } // namespace
 
     bool EditorToolDefaults::loadFromHostPath( string_view hostRelativePath )
@@ -71,7 +68,7 @@ namespace sw::editor
         // 따로 읽고 성공할 때만 덮는다 — 틀린 파일의 앞부분 값이 섞이면 무엇이 맞는 값인지 아무도 모른다. 두 검사는 오류를 모두 남기도록 둘 다 돈다.
         EditorToolDefaults loaded{};
         const bool         bRead     = ConfigManager::readConfigJSON( loaded, jsonText, absPath.c_str() );
-        const bool         bComplete = EditorToolDefaultsInternal::hasEveryRequiredKey( jsonText, absPath.c_str() );
+        const bool         bComplete = hasEveryRequiredKey( jsonText, absPath.c_str() );
         if ( bRead == false || bComplete == false )
             return false;
         *this = std::move( loaded );
