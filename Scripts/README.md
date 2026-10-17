@@ -158,6 +158,7 @@ Scripts/
   │     │     ├── CheckX11Isolation.py        # X11 헤더는 X11 구현 .cpp 에서만 · 뒤에 매크로 지우기 · 서드파티와 한 TU 에 두지 않기
   │     │     ├── CheckCookContract.py        # 쿠커가 쿠킹 표대로 고르는지
   │     │     ├── CheckShaderConventions.py   # HLSL 명명 규칙(AGENTS.md 의 HLSL 절)
+  │     │     ├── CheckShaderStamps.py        # 커밋된 셰이더 바이너리가 지금 소스에서 나온 것인지 쿠킹 표의 모든 백엔드에서(빌드 없이 cook.stamp 로)
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckDocPaths.py            # 문서(.md)의 링크 · 앵커 · 저장소 경로가 실재하는지, 모든 README 가 문서 지도에 있는지

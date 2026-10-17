@@ -203,6 +203,35 @@ jobs:
       run: |
         ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure
 
+    # 소프트웨어 렌더러 묶음(`swrender`, C-41 4단계 · 결정 기록 5-12) — GPU 가 없는 러너에서 호스트 케이스 일부(Test/TestPolicy.json 의
+    # softwareRenderCases)를 소프트웨어 래스터라이저로 돈다: Windows 는 WARP(DX11 · DX12), 리눅스는 mesa lavapipe(Vulkan) · llvmpipe(OpenGL) + xvfb.
+    # 그림은 비교하지 않는다(소프트웨어 렌더러 전용 골든은 두지 않는다). 정책 softwareRequiredBackends 의 백엔드가 서지 못하면 진다.
+    # 처음 켜는 검사라 보고만 한다(continue-on-error) — 첫 실행들이 초록이면 이 줄을 지운다.
+    - name: Install software renderer (Linux)
+      if: matrix.preset == 'CI-Debug' && matrix.os == 'linux'
+      shell: bash
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers libgl1-mesa-dri xvfb
+
+    - name: Test on software renderer
+      id: swrender
+      if: matrix.preset == 'CI-Debug'
+      continue-on-error: true
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          xvfb-run -a ctest --test-dir build/${{ matrix.preset }} -L swrender --output-on-failure
+        else
+          ctest --test-dir build/${{ matrix.preset }} -L swrender --output-on-failure
+        fi
+
+    - name: Report software renderer failures as annotations
+      if: steps.swrender.outcome == 'failure'
+      shell: bash
+      run: |
+        $PY Scripts/dev/CiFailureReport.py tests --ctest-dir build/${{ matrix.preset }}
+
     # 진 테스트를 주석(annotation)으로 올린다. 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소라도 API 는 403), 무엇이
     # 졌는지 밖에서 보이는 곳은 주석뿐이다. 테스트마다 실패 줄 · 마지막 `[ RUN ]` · 출력의 마지막 25 줄, 그리고 크래시 스택(Scripts/dev/CiFailureReport.py).
     - name: Report failed tests as annotations

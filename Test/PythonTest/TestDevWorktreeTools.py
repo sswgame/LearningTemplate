@@ -253,6 +253,33 @@ class ListCiJobsTest(unittest.TestCase):
                 with self.assertRaises(urllib.error.HTTPError):
                     client.fetch("https://example/c")
 
+    def testSummaryCountsConsecutiveFailuresAndSkipsCancelledRuns(self) -> None:
+        # 새것부터: 취소된 실행은 결과가 아니다. linux 는 세 번 이어서 실패했고(문서만 바뀐 실행에는 잡이 없어 세지도 끊지도 않는다), windows 는 이번만.
+        listRun = [{"id": 9, "conclusion": "cancelled"}, {"id": 8, "conclusion": "failure", "head_sha": "abcdef123", "updated_at": "2026-10-17T01:00:00Z"},
+                   {"id": 7, "conclusion": "failure"}, {"id": 6, "conclusion": "success"}, {"id": 5, "conclusion": "failure"}, {"id": 4, "conclusion": "success"}]
+        listJudged = ListCiJobs.selectJudgedRuns(listRun, 4)
+        self.assertEqual([run["id"] for run in listJudged], [8, 7, 6, 5])
+        listJobPayload = [
+            {"jobs": [{"name": "linux", "conclusion": "failure"}, {"name": "windows", "conclusion": "failure"}]},
+            {"jobs": [{"name": "linux", "conclusion": "failure"}, {"name": "windows", "conclusion": "success"}]},
+            {"jobs": [{"name": "lint", "conclusion": "success"}]},
+            {"jobs": [{"name": "linux", "conclusion": "failure"}, {"name": "windows", "conclusion": "success"}]},
+        ]
+        listStreak = ListCiJobs.collectFailureStreaks(listJobPayload)
+        self.assertEqual(listStreak, [("linux", 3), ("windows", 1)])
+        line = ListCiJobs.formatCiSummary("main", listJudged, listStreak)
+        self.assertIn("실행 8 (abcdef1, 2026-10-17): 실패 — linux 3회 연속, windows 1회 연속", line)
+        self.assertEqual(ListCiJobs.collectFailureStreaks([{"jobs": [{"name": "linux", "conclusion": "success"}]}]), [])
+        self.assertEqual(ListCiJobs.formatCiSummary("main", [], []), "main CI: 끝난 실행이 없다")
+
+    def testSessionGuardReadsTheSameFailingExitCode(self) -> None:
+        import importlib.util
+        hookPath = Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "SessionGuard.py"
+        spec = importlib.util.spec_from_file_location("SessionGuard", hookPath)
+        sessionGuard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sessionGuard)
+        self.assertEqual(sessionGuard.kCiFailingExitCode, ListCiJobs.kExitCiFailing)
+
 
 class CiFailureReportTest(unittest.TestCase):
     def testTestResultSeparatesTimeoutFromFailureAndCrash(self) -> None:

@@ -130,7 +130,7 @@ namespace
                 if ( bConnected == false || _startDelayTicks-- > 0 )
                     return;
                 _player = world.isServer() ? 0 : host.getClientIndex() + 1;
-                _session.initialize( &host, &_game, 2, _player, _settings );
+                SW_EXPECT_TRUE( _session.initialize( &host, &_game, 2, _player, _settings ) );
             }
             if ( _session.advanceFrame( scriptInput( _player, _localFrame ) ) )
                 ++_localFrame;
@@ -573,7 +573,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
     settings._inputDelay = 2;
     for ( int32 index = 0; index < 2; ++index )
     {
-        arrSession[index].initialize( &cluster.getHost( index ), &arrGame[index], 2, index, settings );
+        SW_ASSERT_TRUE( arrSession[index].initialize( &cluster.getHost( index ), &arrGame[index], 2, index, settings ) );
     }
 
     vector<uint8> buffer;
@@ -674,7 +674,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackIgnoresInputsOutsideTheFrameWindow )
 {
     InputRecordingGame game;
     RollbackSession    session;
-    session.initialize( nullptr, &game, 2, 0, RollbackConfig{} );
+    SW_ASSERT_TRUE( session.initialize( nullptr, &game, 2, 0, RollbackConfig{} ) );
     sendRollbackInput( session, 2, vector<uint8>{ 2, 3, 4, 5 } );
     sendRollbackInput( session, 3 + RollbackSession::kHistorySize, vector<uint8>{ 9 } );
     for ( int32 frame = 0; frame < 6; ++frame )
@@ -686,6 +686,34 @@ SW_TEST_CASE( NetLockstepTest, RollbackIgnoresInputsOutsideTheFrameWindow )
     {
         SW_EXPECT_EQUAL( frame, static_cast<int32>( game._mapInput[frame][1] ) );
     }
+}
+
+/**
+ * @brief [NetLockstepTest] 범위 밖 롤백 설정은 조용히 범위 안으로 맞추지 않고 오류로 거절하며, 거절된 세션은 진행하지 않는다
+ * @details 예전에는 지연 20 을 8 로, 예측 0 을 1 로 바꿔 돌았다. 내 번호가 범위 밖이어도 받았다.
+ */
+SW_TEST_CASE( NetLockstepTest, RollbackRefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range rollback settings are refused" );
+    InputRecordingGame           game;
+    RollbackSession              session;
+    RollbackConfig               tooLongDelay;
+    tooLongDelay._inputDelay = RollbackSession::kMaxInputDelay + 1;
+    SW_EXPECT_FALSE( session.initialize( nullptr, &game, 2, 0, tooLongDelay ) );
+    SW_EXPECT_FALSE( session.advanceFrame( 0 ) );
+    RollbackConfig noPrediction;
+    noPrediction._maxPrediction = 0;
+    SW_EXPECT_FALSE( session.initialize( nullptr, &game, 2, 0, noPrediction ) );
+    RollbackConfig negativeAdvantage;
+    negativeAdvantage._maxFrameAdvantage = -1;
+    SW_EXPECT_FALSE( session.initialize( nullptr, &game, 2, 0, negativeAdvantage ) );
+    SW_EXPECT_FALSE( session.initialize( nullptr, &game, 2, 2, RollbackConfig{} ) ); // 내 번호가 플레이어 수 밖
+    SW_EXPECT_FALSE( session.initialize( nullptr, &game, 0, 0, RollbackConfig{} ) );
+    SW_EXPECT_FALSE( session.initialize( nullptr, nullptr, 2, 0, RollbackConfig{} ) );
+    SW_EXPECT_EQUAL( 0, session.getFrame() );
+    // 맞는 설정이면 시작한다.
+    SW_ASSERT_TRUE( session.initialize( nullptr, &game, 2, 0, RollbackConfig{} ) );
+    SW_EXPECT_TRUE( session.advanceFrame( 0 ) );
 }
 
 /**

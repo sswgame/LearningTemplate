@@ -147,11 +147,11 @@ namespace sw
     void ReplicationServer::sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch )
     {
         // 이 클라이언트에 관련 있는 엔티티만 넣는다. 엔티티 버퍼는 제자리에 덮어써서 용량을 남긴다.
-        NetSnapshot& filtered            = scratch._filtered;
-        filtered._tick                   = _world._tick;
-        filtered._lastProcessedInputTick = client._lastProcessedInputTick;
-        filtered._firstMissingInputTick  = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다. 입력은 전송 전에 게임 스레드가 넣었다
-        NetPrioritizer& prioritizer      = client._prioritizer;
+        NetSnapshot& filtered           = scratch._filtered;
+        filtered._tick                  = _world._tick;
+        filtered._ownerState            = client._ownerState;                  // 복사 대입으로 스크래치 버퍼의 용량을 재사용한다
+        filtered._firstMissingInputTick = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다. 입력은 전송 전에 게임 스레드가 넣었다
+        NetPrioritizer& prioritizer     = client._prioritizer;
         prioritizer.beginAccumulate();
         size_t relevantCount = 0;
         for ( const NetEntityState& entity : std::as_const( _world._listEntity ) ) // 여러 워커가 함께 읽는다
@@ -290,10 +290,21 @@ namespace sw
         return true;
     }
 
-    void ReplicationServer::setLastProcessedInputTick( int32 connectionID, uint32 tick )
+    bool ReplicationServer::setOwnerState( int32 connectionID, uint32 inputTick, const vector<uint8>& buffer )
     {
-        if ( connectionID >= 0 && connectionID < static_cast<int32>( _listClient.size() ) )
-            _listClient[static_cast<size_t>( connectionID )]._lastProcessedInputTick = tick;
+        if ( static_cast<int32>( buffer.size() ) > NetSnapshot::kMaxEntityBytes )
+        {
+            SW_LOG_ERROR( "ReplicationServer: owner state of connection %# has %# bytes, more than the snapshot limit %# - not set", connectionID,
+                          static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
+            return false;
+        }
+        if ( connectionID < 0 || connectionID >= static_cast<int32>( _listClient.size() ) )
+            return false; // 입력을 꺼낸 적 없는 연결이다. 입력 없이 만든 상태는 예측이 맞출 틱이 없다
+        NetOwnerState& ownerState = _listClient[static_cast<size_t>( connectionID )]._ownerState;
+        ownerState._buffer        = buffer;
+        ownerState._inputTick     = inputTick;
+        ownerState._bPresent      = SW_TRUE;
+        return true;
     }
 
     float32 ReplicationServer::getClientViewTick( int32 connectionID ) const

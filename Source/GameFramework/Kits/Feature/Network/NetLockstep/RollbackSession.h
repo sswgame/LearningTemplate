@@ -51,12 +51,15 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 롤백 설정입니다. 범위를 벗어난 값은 `initialize` 가 범위 안으로 맞춥니다. */
+    /**
+     * @brief 롤백 설정입니다. 범위를 벗어난 값은 `RollbackSession::initialize` 가 오류로 거절합니다.
+     * @details 예전에는 범위 안으로 조용히 맞췄다. 그러면 지연 20을 준 게임이 8로 돌면서도 아무도 몰랐다(폴백 금지 원칙).
+     */
     struct RollbackConfig
     {
         int32 _inputDelay{ 2 };        ///< 내 입력을 이만큼 뒤 프레임에 적용한다(0 ~ `RollbackSession::kMaxInputDelay`)
         int32 _maxPrediction{ 8 };     ///< 확인된 상대 입력보다 이 프레임 수를 넘겨 앞서지 않는다(1 ~ `RollbackSession::kMaxPrediction`)
-        int32 _maxFrameAdvantage{ 2 }; ///< 상대보다 이 프레임 수를 넘겨 앞서면 한 프레임 쉰다. 0이면 쉬지 않는다
+        int32 _maxFrameAdvantage{ 2 }; ///< 상대보다 이 프레임 수를 넘겨 앞서면 한 프레임 쉰다. 0이면 쉬지 않는다(0 이상)
     };
 } // namespace sw
 
@@ -83,7 +86,11 @@ namespace sw
 
         RollbackSession();
 
-        void initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings );
+        /**
+         * @brief 세션을 시작합니다. 게임이 없거나, 플레이어 수가 1보다 작거나, 내 번호가 범위 밖이거나, 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
+         * @details 실패한 세션은 시작하지 않은 것과 같다. `advanceFrame` 이 false 를 반환한다.
+         */
+        [[nodiscard]] bool initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings );
         /** @brief 이번 프레임의 내 입력을 넣고 한 프레임 진행합니다. 필요하면 먼저 되감습니다. 너무 앞서 멈췄거나 시간 동기로 쉬었으면 false 를 반환합니다. */
         bool  advanceFrame( uint8 localInput );
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kLockstep; }

@@ -295,8 +295,9 @@ namespace sw
         _initResult = RHIInitResult::Succeeded;
         if ( swapChainDesc._bSoftwareAdapter )
         {
+            // 요청대로 섰으면 알림이다(소프트웨어 렌더러 CI 묶음 `swrender` 가 일부러 켠다 — 호스트 스위트는 Warning 을 실패로 센다). 요청을 무시한 것만 경고다.
             if ( _bSoftwareAdapter )
-                SW_LOG_WARNING( "RHI %# is running on a software adapter (gv_rhiSoftwareAdapter) - timings are not representative", getBackendName() );
+                SW_LOG_INFO( "RHI %# is running on a software adapter (gv_rhiSoftwareAdapter) - timings are not representative", getBackendName() );
             else
                 SW_LOG_WARNING( "RHI %# ignored the software adapter request (gv_rhiSoftwareAdapter) - it runs on the hardware adapter", getBackendName() );
         }

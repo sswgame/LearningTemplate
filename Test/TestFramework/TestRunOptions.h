@@ -3,8 +3,37 @@
  * @brief 테스트 실행 파일의 명령줄 — 필터 · 샤드 · 반복 · 섞기 · 씨앗 · 스위트 종류 · 예산을 읽고, 실패한 실행을 다시 돌릴 명령을 만든다
  */
 #pragma once
+#include "Engine/Config/RHIBackendType.h"
+
 #include "TestFramework/TestCase.h"
 #include "TestFramework/TestFilter.h"
+
+namespace test
+{
+    /**
+     * @brief 이 빌드가 그 백엔드를 링크했는가. 배포본은 `SW_RHI_TARGET_*` 로 고른 **하나만** 링크한다 — 나머지를 만들려 하면 엔진이
+     *        "이 빌드에 없습니다" Error 를 남기고(호스트 스위트는 예상 밖 Error 로 진다) 널을 돌려준다. 개발 구성은 넷 다 모듈로 짓는다
+     *        (이 호스트에 런타임이 없는 것은 `RHIAvailability` 가 따로 거른다). 빌드에 없는 백엔드는 요구 백엔드(`--required_backends=`)여도
+     *        요구하지 않는다 — 구성 차이는 선언된 차이다.
+     */
+    constexpr bool isBackendInThisBuild( sw::RHIBackend backend )
+    {
+#if defined( SW_SHIPPING )
+    #if defined( SW_RHI_TARGET_DX11 )
+        return backend == sw::RHIBackend::DirectX11;
+    #elif defined( SW_RHI_TARGET_VULKAN )
+        return backend == sw::RHIBackend::Vulkan;
+    #elif defined( SW_RHI_TARGET_OPENGL )
+        return backend == sw::RHIBackend::OpenGL;
+    #else
+        return backend == sw::RHIBackend::DirectX12;
+    #endif
+#else
+        (void)backend;
+        return true;
+#endif
+    }
+} // namespace test
 
 namespace test
 {
@@ -33,12 +62,23 @@ namespace test
         void setCaseCosts( const sw::string& text );
         /** @brief 종류 @p kind 의 스위트를 어떻게 다루는지. */
         SuiteKindMode getKindMode( SuiteKind kind ) const { return _arrKindMode[static_cast<size_t>( kind )]; }
+        /**
+         * @brief 요구 백엔드를 읽습니다(쿠킹 표의 명령줄 이름 `dx11` · `dx12` · `vk` · `gl` 을 쉼표로). 모르는 이름이면 실행이 진다.
+         * @details 값의 정본은 `Test/TestPolicy.json` 의 `requiredBackends` 이고 CMake 가 hostgpu 항목에 넘긴다(C-41 3단계).
+         */
+        void setRequiredBackends( const sw::string& text );
+        /** @brief 이 실행이 그 백엔드를 요구하는가 — 요구한 백엔드가 서지 못하면 케이스는 건너뛰지 않고 진다. */
+        bool isBackendRequired( sw::RHIBackend backend ) const;
+        /** @brief 쿠킹 표의 명령줄 이름(`dx12` 등)입니다. 메시지에 씁니다. */
+        static const utf8* getBackendName( sw::RHIBackend backend );
 
         TestFilter                   _filter;
         sw::string                   _filterText;                                           ///< 받은 그대로의 `--test_filter`(재현 명령용)
         sw::vector<sw::string>       _listEngineArgument;                                   ///< 테스트 인자가 아닌 것(엔진 명령줄)
         sw::map<sw::string, float64> _mapCaseCost;                                          ///< `--test_costs=A.B=40,C.D=12` — 샤드를 비용으로 고르게 나눌 때(`Test/TestPolicy.json` 의 `caseCosts`)
         sw::string                   _caseCostText;                                         ///< 받은 그대로의 `--test_costs`(재현 명령용)
+        sw::vector<sw::RHIBackend>   _listRequiredBackend;                                  ///< `--required_backends=` — 서지 못하면 건너뛰는 대신 지는 백엔드
+        sw::string                   _requiredBackendText;                                  ///< 받은 그대로의 `--required_backends`(재현 명령용)
         SuiteKindMode                _arrKindMode[static_cast<size_t>( SuiteKind::Count )]; ///< 기본: 호스트 All, 부하 Exclude
         uint32                       _repeatCount;
         uint32                       _randomSeed; ///< `--test_seed` · `--test_shuffle=` · `--gtest_random_seed` — 0 이면 아직 정하지 않음

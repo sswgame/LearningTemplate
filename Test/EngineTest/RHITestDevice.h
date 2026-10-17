@@ -9,6 +9,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Window/IWindow.h"
 
+#include "TestFramework/TestRunOptions.h"
+
 #include <initializer_list>
 
 namespace test
@@ -24,29 +26,6 @@ namespace test
      */
     inline constexpr sw::RHIBackend kArrAllRHIBackend[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan,
                                                             sw::RHIBackend::OpenGL };
-
-    /**
-     * @brief 이 빌드가 그 백엔드를 링크했는가. 배포본은 `SW_RHI_TARGET_*` 로 고른 **하나만** 링크한다 — 나머지를 만들려 하면 엔진이
-     *        "이 빌드에 없습니다" Error 를 남기고(호스트 스위트는 예상 밖 Error 로 진다) 널을 돌려준다. 개발 구성은 넷 다 모듈로 짓는다
-     *        (이 호스트에 런타임이 없는 것은 `RHIAvailability` 가 따로 거른다).
-     */
-    constexpr bool isBackendInThisBuild( sw::RHIBackend backend )
-    {
-#if defined( SW_SHIPPING )
-    #if defined( SW_RHI_TARGET_DX11 )
-        return backend == sw::RHIBackend::DirectX11;
-    #elif defined( SW_RHI_TARGET_VULKAN )
-        return backend == sw::RHIBackend::Vulkan;
-    #elif defined( SW_RHI_TARGET_OPENGL )
-        return backend == sw::RHIBackend::OpenGL;
-    #else
-        return backend == sw::RHIBackend::DirectX12;
-    #endif
-#else
-        (void)backend;
-        return true;
-#endif
-    }
 
     /**
      * @brief 디바이스가 필요한 케이스의 창 + 디바이스 한 벌(`RHIDeviceTest` · `RenderPassGPUTest`).

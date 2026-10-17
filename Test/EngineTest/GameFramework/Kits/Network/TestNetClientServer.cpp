@@ -313,7 +313,8 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
                 {
                     ++poppedInputs;
                     exactInputs += bExact ? 1 : 0;
-                    server.setLastProcessedInputTick( 0, serverTick - 4 );
+                    // 소유자 상태는 그 입력 틱을 값으로 담는다 — 클라이언트에서 틱과 상태가 한 쌍으로 오는지 본다.
+                    SW_EXPECT_TRUE( server.setOwnerState( 0, serverTick - 4, makeFloatBytes( static_cast<float32>( serverTick - 4 ) ) ) );
                 }
             }
             server.beginTick( serverTick );
@@ -351,6 +352,87 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     SW_EXPECT_TRUE( poppedInputs > 150 );
     SW_EXPECT_TRUE( static_cast<float32>( exactInputs ) / static_cast<float32>( poppedInputs ) > 0.97f ); // 손실 10 % 를 겹쳐 보내기가 메운다
     SW_EXPECT_TRUE( server.getClientViewTick( 0 ) > static_cast<float32>( serverTick ) - 15.0f );
+    const NetOwnerState* pOwnerState = client.findOwnerState();
+    SW_ASSERT_NOT_NULL( pOwnerState );
+    SW_EXPECT_NEAR_EQUAL( static_cast<float32>( pOwnerState->_inputTick ), readFloatBytes( pOwnerState->_buffer ), 1.0e-3f );
+    SW_EXPECT_TRUE( pOwnerState->_inputTick + 20 > serverTick ); // 손실이 있어도 최근 틱의 상태이다
+}
+
+/**
+ * @brief [NetClientServerTest] 소유자 상태 칸은 엔티티 예산과 상관없이 스냅샷마다 실려, 틱과 상태가 늘 한 쌍으로 풀린다
+ * @details 예전에는 처리한 입력 틱만 머리에 싣고 상태는 엔티티 목록에서 찾았다. 예산이 그 엔티티를 빼면 "새 틱 + 옛 상태" 로 헛된 재조정이 났다.
+ *          서버에 넘는 상태는 오류로 거절되고, 아무 상태도 정하지 않은 스냅샷은 칸이 비어 온다.
+ */
+SW_TEST_CASE( NetClientServerTest, OwnerStateSlotTravelsOutsideTheEntityBudget )
+{
+    NetSnapshot big;
+    big._tick = 21;
+    for ( uint32 entityID = 1; entityID <= 60; ++entityID )
+    {
+        big._listEntity.push_back( NetEntityState{ vector<uint8>( 20, static_cast<uint8>( entityID ) ), entityID, 1 } );
+    }
+    big._ownerState._buffer    = vector<uint8>( 40, 0xA5 );
+    big._ownerState._inputTick = 17;
+    big._ownerState._bPresent  = SW_TRUE;
+    BitWriter   writer;
+    NetSnapshot written;
+    big.writeDelta( writer, nullptr, 120, written ); // 엔티티는 몇 개만 들어간다
+    SW_EXPECT_TRUE( writer.getByteCount() <= 120 );
+    SW_EXPECT_TRUE( written._listEntity.size() < 60 );
+    BitReader   reader( writer.getBytes().data(), writer.getByteCount() );
+    NetSnapshot decoded;
+    SW_ASSERT_TRUE( NetSnapshot::readDelta( reader, nullptr, decoded ) );
+    SW_EXPECT_TRUE( decoded._ownerState._bPresent == SW_TRUE );
+    SW_EXPECT_EQUAL( 17, static_cast<int32>( decoded._ownerState._inputTick ) );
+    SW_EXPECT_TRUE( decoded._ownerState._buffer == big._ownerState._buffer );
+    SW_EXPECT_EQUAL( written._listEntity.size(), decoded._listEntity.size() );
+
+    // 칸이 빈 스냅샷은 빈 칸으로 풀린다 — 앞서 푼 값이 남지 않는다.
+    NetSnapshot empty;
+    empty._tick = 22;
+    BitWriter   emptyWriter;
+    NetSnapshot emptyWritten;
+    empty.writeDelta( emptyWriter, nullptr, 1000, emptyWritten );
+    BitReader emptyReader( emptyWriter.getBytes().data(), emptyWriter.getByteCount() );
+    SW_ASSERT_TRUE( NetSnapshot::readDelta( emptyReader, nullptr, decoded ) );
+    SW_EXPECT_TRUE( decoded._ownerState._bPresent == SW_FALSE );
+    SW_EXPECT_TRUE( decoded._ownerState._buffer.empty() );
+
+    // 서버는 넘는 상태를 정하지 않는다.
+    test::ScopedDefensiveTestLog expected( "an owner state larger than the snapshot limit is refused" );
+    ReplicationServer            server;
+    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
+    SW_EXPECT_FALSE( server.setOwnerState( 0, 1, vector<uint8>( NetSnapshot::kMaxEntityBytes + 1, 0 ) ) );
+}
+
+/**
+ * @brief [NetClientServerTest] 예측 재조정은 "맞았다" 와 "맞출 기록이 없다" 를 다른 결과로 돌려주고, 기록은 빈 틱 없이 이어서만 받는다
+ * @details 예전에는 둘 다 false 였다. 예측이 기록 크기보다 앞서 기록이 밀려나도 부르는 쪽은 "맞았다" 로 읽고 영영 맞추지 않았다.
+ *          빈 틱을 두고 기록하면 다시 시뮬레이션이 그 입력을 건너뛰었다.
+ */
+SW_TEST_CASE( NetClientServerTest, PredictionReconcileReportsMissingHistory )
+{
+    const auto simulate = []( float32 x, float32 move )
+    { return x + move; };
+    const auto isClose = []( float32 lhs, float32 rhs )
+    { return MathUtil::abs( lhs - rhs ) < 1.0e-3f; };
+    ClientPrediction<float32, float32> prediction( 4 );
+    float32                            predicted = 0.0f;
+    SW_EXPECT_TRUE( PredictionReconcileResult::TickAhead == prediction.reconcile( 1, 0.0f, predicted, simulate, isClose ) ); // 아직 기록이 없다
+    for ( uint32 tick = 1; tick <= 10; ++tick )
+    {
+        predicted = simulate( predicted, 1.0f );
+        SW_ASSERT_TRUE( prediction.record( tick, 1.0f, predicted ) );
+    }
+    SW_EXPECT_FALSE( prediction.record( 12, 1.0f, 12.0f ) ); // 11 을 건너뛰었다
+    SW_EXPECT_EQUAL( 10, static_cast<int32>( prediction.getLatestTick() ) );
+    const float32 before = predicted;
+    SW_EXPECT_TRUE( PredictionReconcileResult::TickOverwritten == prediction.reconcile( 3, 0.0f, predicted, simulate, isClose ) ); // 고리 4 칸 밖
+    SW_EXPECT_TRUE( PredictionReconcileResult::TickAhead == prediction.reconcile( 11, 0.0f, predicted, simulate, isClose ) );
+    SW_EXPECT_NEAR_EQUAL( before, predicted, 1.0e-6f ); // 맞추지 못한 결과는 지금 상태를 건드리지 않는다
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( prediction.getCorrectionCount() ) );
+    SW_EXPECT_TRUE( PredictionReconcileResult::Corrected == prediction.reconcile( 7, 0.0f, predicted, simulate, isClose ) ); // 남은 7 · 8 · 9 · 10 중 8 · 9 · 10 을 다시
+    SW_EXPECT_NEAR_EQUAL( 3.0f, predicted, 1.0e-5f );
 }
 
 SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds )
@@ -363,16 +445,16 @@ SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds
     for ( uint32 tick = 1; tick <= 10; ++tick )
     {
         predicted = simulate( predicted, 1.0f );
-        prediction.record( tick, 1.0f, predicted );
+        SW_ASSERT_TRUE( prediction.record( tick, 1.0f, predicted ) );
     }
     SW_EXPECT_NEAR_EQUAL( 10.0f, predicted, 1.0e-5f );
     const auto isClose = []( float32 lhs, float32 rhs )
     { return MathUtil::abs( lhs - rhs ) < 1.0e-3f; };
-    SW_EXPECT_FALSE( prediction.reconcile( 4, 4.0f, predicted, simulate, isClose ) ); // 맞았다
-    SW_EXPECT_TRUE( prediction.reconcile( 6, 5.0f, predicted, simulate, isClose ) );  // 서버는 5 에서 멈췄다 → 남은 4 틱을 다시
+    SW_EXPECT_TRUE( PredictionReconcileResult::Matched == prediction.reconcile( 4, 4.0f, predicted, simulate, isClose ) );
+    SW_EXPECT_TRUE( PredictionReconcileResult::Corrected == prediction.reconcile( 6, 5.0f, predicted, simulate, isClose ) ); // 서버는 5 에서 멈췄다 → 남은 4 틱을 다시
     SW_EXPECT_NEAR_EQUAL( 9.0f, predicted, 1.0e-5f );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( prediction.getCorrectionCount() ) );
-    SW_EXPECT_FALSE( prediction.reconcile( 7, 6.0f, predicted, simulate, isClose ) ); // 고친 기록과 맞는다
+    SW_EXPECT_TRUE( PredictionReconcileResult::Matched == prediction.reconcile( 7, 6.0f, predicted, simulate, isClose ) ); // 고친 기록과 맞는다
 
     // 랙 보정 — 목표는 틱마다 x 로 1 m 씩 간다. 10 틱 전을 보던 사수는 그 자리를 맞힌다.
     LagCompensationHistory history( 32 );
@@ -565,7 +647,7 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
     vector<uint8> input;
     bool          bExact = false;
     SW_ASSERT_TRUE( server.popInput( 0, 100, input, bExact ) && bExact );
-    server.setLastProcessedInputTick( 0, 100 );
+    SW_EXPECT_TRUE( server.setOwnerState( 0, 100, vector<uint8>{ 1, 2, 3 } ) );
 
     // 게임 프레임 사이 — 첫째가 떠나고 둘째가 같은 자리에 들어와 틱 0 입력을 보낸다. 서버 게임은 그동안 라우터를 돌리지 않았다.
     first.disconnect( 0 );
@@ -811,7 +893,7 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
                 ++checkedCount;
                 exactCount += bExact && input.size() == 2 && input[0] == static_cast<uint8>( popTick & 0xFF ) ? 1 : 0;
             }
-            server.setLastProcessedInputTick( 0, popTick );
+            (void)server.setOwnerState( 0, popTick, input ); // 이 테스트는 입력 확인만 본다. 상태 대신 꺼낸 입력을 싣는다
         }
         server.beginTick( tick );
         server.setEntity( 1, 1, makeFloatBytes( static_cast<float32>( tick ) ) );

@@ -228,10 +228,11 @@ def checkPolicy(rootDir: Path, policy: dict, cases: list[tuple[str, str, str]]) 
                 errors.append(f"{_kPolicyFile}: `{name}` 의 비용표가 없는 케이스 `{caseName}` 을 가리킵니다 — 이름을 바꿨으면 비용표도 바꾸세요")
         folderCases = casesByFolder.get(f"{_kTestRoot}/{name}", set())
         folderSuites = {caseName.split(".", 1)[0] for caseName in folderCases}
-        for pattern in row.get("raceCases", []):
-            bKnown = pattern[:-2] in folderSuites if pattern.endswith(".*") else pattern in folderCases
-            if not bKnown:
-                errors.append(f"{_kPolicyFile}: `{name}` 의 레이스 묶음(raceCases)이 없는 케이스 `{pattern}` 을 가리킵니다 — 이름을 바꿨으면 묶음도 바꾸세요")
+        for bundleKey, bundleName in (("raceCases", "레이스 묶음"), ("softwareRenderCases", "소프트웨어 렌더러 묶음")):
+            for pattern in row.get(bundleKey, []):
+                bKnown = pattern[:-2] in folderSuites if pattern.endswith(".*") else pattern in folderCases
+                if not bKnown:
+                    errors.append(f"{_kPolicyFile}: `{name}` 의 {bundleName}({bundleKey})이 없는 케이스 `{pattern}` 을 가리킵니다 — 이름을 바꿨으면 묶음도 바꾸세요")
     return errors
 
 

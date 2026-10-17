@@ -67,6 +67,31 @@ namespace
     };
 
     /**
+     * @brief App 이 "이 기계에서 그 백엔드를 못 돌린다" 로 끝났을 때, 명령줄이 고른 백엔드(`-dx11` · `-dx12` · `-vk` · `-gl`)가 이 실행의
+     *        요구 백엔드(`--required_backends=`)면 케이스를 실패로 기록합니다. 건너뜀으로 초록이 되지 않게 한다(C-41 3단계).
+     */
+    void reportUnusableBackendSwitch( string_view arguments )
+    {
+        for ( const RHIBackend backend : { RHIBackend::DirectX11, RHIBackend::DirectX12, RHIBackend::Vulkan, RHIBackend::OpenGL } )
+        {
+            const string switchText = string( "-" ) + test::TestRunOptions::getBackendName( backend );
+            size_t       position   = arguments.find( switchText.c_str() );
+            while ( position != string_view::npos )
+            {
+                const size_t end         = position + switchText.size();
+                const bool   bTokenStart = position == 0 || arguments[position - 1] == ' ';
+                const bool   bTokenEnd   = end == arguments.size() || arguments[end] == ' ';
+                if ( bTokenStart && bTokenEnd )
+                {
+                    (void)test::reportUnusableBackend( backend, "App exited with the RHI-unusable-here code", __FILE__, __LINE__ ); // 요구하지 않았으면 케이스가 건너뛴다
+                    return;
+                }
+                position = arguments.find( switchText.c_str(), end );
+            }
+        }
+    }
+
+    /**
      * @brief App 을 한 판 돌리고 종료 코드와 `[Error]` 줄 수를 돌려줍니다.
      * @details 작업 디렉터리는 **바꾸지 않는다** — 테스트의 작업 폴더가 이미 `Bin` 이고(ctest 가 그렇게
      *          돌린다) App 도 거기서 `Resource/` 를 찾아 올라간다. 배포본에서는 테스트 바이너리만
@@ -106,6 +131,8 @@ namespace
         result._exitCode                 = run._bTimedOut ? -1 : run._exitCode;
         // App 이 RHI 를 세우다 환경 탓(이 빌드에 없다 · 드라이버가 기능을 안 준다)으로 물러나면 이 코드로 끝난다. 로그 문구는 보지 않는다.
         result._bBackendUnusableHere = ( result._exitCode == kRHIUnusableHereExitCode );
+        if ( result._bBackendUnusableHere )
+            reportUnusableBackendSwitch( arguments );
         return result;
     }
 

@@ -65,6 +65,8 @@ namespace sw
         void collectVisibleEntities( vector<uint32>& outListEntity ) const;
 
         const NetSnapshot* getLatest() const;
+        /** @brief 가장 새 스냅샷에 실린 내 엔티티의 상태와 그 입력 틱입니다. 클라이언트 예측의 `reconcile` 에 넘깁니다. 서버가 아직 정하지 않았으면 nullptr 입니다. */
+        const NetOwnerState* findOwnerState() const;
         /** @brief 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수이고, 서버의 랙 보정이 씁니다. 스냅샷을 받기 전에는 0 입니다. */
         float32 getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0f; }
         uint64  getDecodeFailureCount() const { return _decodeFailureCount; }

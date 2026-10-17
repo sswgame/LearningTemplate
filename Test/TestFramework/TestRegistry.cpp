@@ -4,6 +4,7 @@
 
 #include "Core/Common/BuildInfo.h"
 
+#include "TestFramework/TestAssert.h"
 #include "TestFramework/TestScopes.h"
 
 #include <algorithm>
@@ -73,6 +74,19 @@ namespace test
     uint32 getRandomSeed()
     {
         return TestRegistry::getInstance().getRandomSeed();
+    }
+
+    bool reportUnusableBackend( sw::RHIBackend backend, const utf8* pReason, const utf8* pFile, int32 line )
+    {
+        const bool bRequired = isBackendInThisBuild( backend ) && TestRegistry::getInstance().getOptions().isBackendRequired( backend );
+        if ( bRequired == false )
+            return false;
+        sw::string message = "required RHI backend '";
+        message += TestRunOptions::getBackendName( backend );
+        message += "' could not stand up on this machine (--required_backends, Test/TestPolicy.json requiredBackends): ";
+        message += pReason != nullptr ? pReason : "";
+        reportFailure( "required backend is usable", pFile, line, message );
+        return true;
     }
 
     TestRegistry::TestRegistry()

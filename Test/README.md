@@ -354,6 +354,8 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 
 **부하 · 시간 예산 검증을 더하려면** 스위트 파일에 `SW_TEST_LOAD_SUITE( 스위트, "이유" )` 와 `SW_TEST_TIME_BUDGET( 스위트, 밀리초, "이유" )` 를 두고, 정책 줄에 `loadSeconds` 를 더합니다.
 `<타깃>_Load`(라벨 `load`, 직렬)가 `--load_suites=only` 로 돌고, **Release 구성에서만** `--enforce_budgets` 를 받아 예산을 넘은 케이스가 집니다(Debug 는 정확성만 본다). 다른 실행은 부하 스위트를 빼고, 예산을 넘은 케이스를 요약에 찍기만 합니다.
+
+hostgpu 항목(호스트 조각 · 레이스 묶음)은 `--required_backends=<이름,…>`(정책 `requiredBackends.<플랫폼>`, 쿠킹 표의 명령줄 이름)를 받습니다. 그 백엔드가 서지 못하면(`RHITestDevice` · App 의 "이 기계에서 못 돌린다" 종료 코드) 케이스가 건너뛰지 않고 집니다(`test::reportUnusableBackend`). 빌드에 없는 백엔드(배포본의 고르지 않은 것)는 요구에서 빠집니다.
 벤치 스위트(`*BenchTest`)는 모두 부하 스위트이고, CI 에서 사라지면 안 되는 정확성은 짧은 nogpu 스위트로 남깁니다(`OnlineLoadBotTest` 봇 12 · `OnlineLoadBotLoadTest` 봇 200).
 시나리오 × 하드웨어 프로필 단위의 부하 검증(App · 온라인 봇 · 루프백 클러스터, 예산 · 기준선 · 병목 보고)은 `py -3 -m Scripts load` 이고 [검증과 측정](../docs/08_Verification.md) "부하 검증" 절이 원본입니다.
 클러스터 드라이버는 부하 스위트(`NetSimLoadTest`)를 환경 변수(`SW_LOAD_CLIENTS` · `SW_LOAD_RAMP_UP_SECONDS` · `SW_LOAD_DURATION_SECONDS` · `SW_LOAD_NETWORK`)로 돌리고 `[LoadMetric] 이름=값` 줄을 읽습니다.

@@ -85,7 +85,7 @@ namespace sw
      *     server.sendSnapshots();
      *     // 받은 메시지와 연결 이벤트: router.registerHandler( &server ) 한 뒤 매 틱 router.pump( host ) 를 부른다.
      *     //                           직접 처리하려면 server.handleMessage( connectionID, bytes ), server.onConnectionOpened / onConnectionClosed 를 쓴다
-     *     // 시뮬레이션: server.popInput( connectionID, tick, inputBytes ); ... server.setLastProcessedInputTick( connectionID, tick );
+     *     // 시뮬레이션: server.popInput( connectionID, tick, inputBytes ); ... (void)server.setOwnerState( connectionID, tick, pawnStateBytes );
      * @endcode
      */
     class SW_KIT_API ReplicationServer : public INetMessageHandler
@@ -118,7 +118,11 @@ namespace sw
          * @details 그 틱까지는 처리한 것으로 본다. 그 틱 이전의 입력은 더 받지 않고, 스냅샷의 확인 틱도 다음 틱으로 넘어간다.
          */
         [[nodiscard]] bool popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
-        void               setLastProcessedInputTick( int32 connectionID, uint32 tick );
+        /**
+         * @brief 이 클라이언트가 조종하는 엔티티의 상태를, 그 상태를 만든 마지막 입력 틱과 함께 정합니다. 다음 스냅샷부터 예산과 관련 정책에 상관없이 통째로 싣습니다.
+         * @details 틱과 상태는 늘 한 번에 정한다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 오류를 남기고 정하지 않으며 false 를 반환한다.
+         */
+        [[nodiscard]] bool setOwnerState( int32 connectionID, uint32 inputTick, const vector<uint8>& buffer );
         /** @brief 클라이언트가 보고 있는 틱입니다. 보간 지연만큼 과거이며 소수이고, 랙 보정에서 되감을 때 씁니다. */
         float32            getClientViewTick( int32 connectionID ) const;
         uint32             getAckedTick( int32 connectionID ) const;
@@ -133,9 +137,9 @@ namespace sw
             TickRingBuffer<NetSnapshot> _listSent{};    ///< 보낸 스냅샷(재구성한 것). 클라이언트가 확인한 틱의 스냅샷을 델타의 기준으로 찾는다
             NetInputReceiveBuffer       _input{};       ///< 받은 입력. 받은 가장 새 틱을 따라가는 창이며 꺼낸 틱은 버린다
             vector<uint8>               _lastInput{};
+            NetOwnerState               _ownerState{}; ///< 이 클라이언트가 조종하는 엔티티의 상태와 그 입력 틱. 스냅샷마다 싣는다
             float32                     _viewTick{ 0.0f };
             uint32                      _ackedTick{ 0 };
-            uint32                      _lastProcessedInputTick{ 0 };
             uint8                       _bHasAck{ SW_FALSE };
             uint8                       _bHasInput{ SW_FALSE };
             uint8                       _bActive{ SW_FALSE };
