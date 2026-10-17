@@ -73,6 +73,10 @@
   ④ 하드웨어 흉내는 코어 수 · 메모리 · 디스크 · 해상도 · 품질까지다. 클럭 · 캐시 · GPU 성능은 흉내 내지 않으니 LowEnd 의 프레임 시간이 Native 보다 짧게 나올 수 있다 — 실제 저사양 기기로 한 번 재서 흉내와의 차이를 적는다.
   ⑤ 야간 잡(`load.yml`) 첫 실행(38813564584)은 성공했다 — 리눅스에서 OnlineLoadBot 이 서버 키트를 올려 connect × Mid, replication × Mid · LowEnd 가 통과했다(오류율 0, tick p99 약 15 ms). 러너에는 기준선이 없어 알림만 나오므로 기준선 비교는 이 PC 에서만 본다.
 
+- `C-41` [정리] **Linux · GPU 검증 구조.** 새 기능의 Linux 결함이 늦게 드러난다(2026-10-17: Linux 잡이 며칠 configure 에서 죽어 있었고 소프트 바디는 처음 돌자마자 발산). CI 에 GPU 가 없어 hostgpu 테스트는 로컬뿐이다. 후보: GPU 러너(자체 호스트 또는 유료 러너), Linux 빌드를 커밋 전에 보는 가벼운 경로, 백엔드별 골든 이미지. 비용 · 계정이 드는 연동은 사용자 결정이다. 설계 검토 뒤에 쪼갠다.
+
+- `C-42` [정리] **증분 쿠킹 · 파생 데이터 캐시(DDC).** 리소스를 100MB 이상 들이는 중이라 에셋이 늘면 쿠킹 시간이 병목이 된다. 현재 쿠킹의 입력 해시 · 재사용 범위를 확인하고 증분 쿠킹과 공유 캐시를 설계한다(셰이더는 입력 해시 스탬프가 있다 — 결정 기록 5-5).
+
 - `E-1` [관찰] **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](../08_Verification.md) 4절).
   고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),
   ASan 둘(OpenSSL 스택 수명, `NetRequestTest` 선언 순서), `ServerBootTest` 접속 로그, Linux Debug `EngineTest_NoGPU` 샤드의 180 초 초과(멈춤이 아니라 느림 — 샤드를 여섯으로 늘렸다).
