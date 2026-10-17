@@ -1452,6 +1452,57 @@ SW_TEST_CASE( ReflectionParserTest, AliasedBaseClassKeepsParentAndFactory )
 }
 
 /**
+ * @brief [ReflectionParserTest] REFLECT 타입의 둘째 베이스와 가상 베이스는 빌드를 세운다
+ * @details `castTo` 는 리플렉션 부모 사슬로 파생을 판단하고 C++ 상속이 보이지 않으면 `reinterpret_cast` 로 내려갑니다. 부모가 offset 0 에 있다는
+ *          전제가 깨지는 베이스(둘째 이후, 가상)를 거치면 포인터 보정 없이 잘못된 주소가 됩니다. 둘째 베이스가 `REFLECT()` 없는 인터페이스여도 막습니다.
+ *          메시지에는 헤더 · 줄 · 타입 · 베이스 이름이 있어야 합니다.
+ */
+SW_TEST_CASE( ReflectionParserTest, MultipleOrVirtualBaseStopsTheBuild )
+{
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "MultiBaseSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tstruct MultiBaseSampleFirst\n"
+                                                       "\t{\n"
+                                                       "\t\tint32 _first{ 0 };\n"
+                                                       "\t};\n"
+                                                       "\tstruct MultiBaseSampleListener\n"
+                                                       "\t{\n"
+                                                       "\t\tvirtual ~MultiBaseSampleListener() = default;\n"
+                                                       "\t};\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct MultiBaseSampleActor : public MultiBaseSampleFirst, public MultiBaseSampleListener\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tint32 _value{ 0 };\n"
+                                                       "\t};\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct VirtualBaseSampleActor : virtual public MultiBaseSampleFirst\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    const bool bNamesTheSecondBase = run._log.find( "MultiBaseSample.h(14): REFLECT type 'sw::MultiBaseSampleActor' has a second base "
+                                                    "'sw::MultiBaseSampleListener'" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNamesTheSecondBase, run._log.c_str() );
+    const bool bNamesTheVirtualBase = run._log.find( "MultiBaseSample.h(21): REFLECT type 'sw::VirtualBaseSampleActor' has a virtual base "
+                                                     "'sw::MultiBaseSampleFirst'" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNamesTheVirtualBase, run._log.c_str() );
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] 파서 실행 파일이 있다 — 없으면 이 스위트의 다른 케이스는 모두 건너뛰므로, 그 전제를 여기서 단언한다
  * @details 파서를 못 찾은 케이스는 `SW_TEST_SKIP` 한다. "스위트 전체가 건너뜀" 은 실행 끝의 검사가 잡았지만, ReflectionTest 를 샤드로 나눈 뒤로는
  *          갈린 스위트를 한 샤드가 판단할 수 없다 — 그래서 전제를 케이스로 둔다.

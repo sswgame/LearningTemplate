@@ -759,14 +759,12 @@ namespace sw
             }
 
             /**
-             * @brief 베이스 클래스 FQN을 부모로 기록합니다. ParsedTypeInfo 는 부모 하나만 담습니다 (단일 상속 체인).
-             * @details PropertyInfo 의 오프셋 접근 · 캐스팅은 "리플렉션 부모는 항상 파생 객체의 byte offset 0 에 있다" 는
-             *          전제로 동작합니다(비가상 첫 번째 베이스는 C++ ABI 가 offset 0 을 보장하지만, 두 번째 이후 베이스는 그렇지
-             *          않습니다). 그래서 부모는 항상 선언 순서상 첫 번째 베이스로 고정합니다.
-             *          두 번째 이후 베이스가 REFLECT() 없는 순수 인터페이스 · 믹스인(콜백 인터페이스 등)이면 잃을 프로퍼티가 없으므로
-             *          조용히 무시합니다. REFLECT() 가 붙은 베이스가 두 번째 이후에 있으면 프로퍼티가 유실되거나 조용히 오프셋이
-             *          잘못될 수 있으므로, 경고가 아니라 빌드를 실패시키는 에러로 처리합니다. 그 베이스를 첫 번째로 옮기면
-             *          해결됩니다.
+             * @brief 베이스 클래스 FQN을 부모로 기록합니다. ParsedTypeInfo 는 부모 하나만 담습니다(단일 상속 체인).
+             * @details PropertyInfo 의 오프셋 접근과 캐스트는 "리플렉션 부모는 항상 파생 객체의 byte offset 0 에 있다"는 전제로 동작합니다.
+             *          비가상 베이스가 하나뿐이면 C++ ABI 가 offset 0 을 보장하지만, 두 번째 이후 베이스와 가상 베이스는 그렇지 않습니다.
+             *          `castTo` 는 리플렉션이 파생이라고 답하고 C++ 상속 관계가 보이지 않으면 `reinterpret_cast` 로 내려가므로(`ReflectionCast.h`)
+             *          그런 베이스를 거치면 포인터 보정 없이 잘못된 주소가 됩니다. 그래서 `REFLECT` 타입은 비가상 베이스를 하나까지만 받고,
+             *          베이스가 `REFLECT()` 인지와 상관없이 둘째 베이스와 가상 베이스를 생성 오류로 막습니다. 인터페이스는 컴포넌트로 나눠 조합합니다.
              */
             static void collectBase( const CXCursor cursor, MemberCollector& collector )
             {
@@ -775,21 +773,22 @@ namespace sw
 
                 ++collector._baseCount;
                 collector._pType->_baseCount = collector._baseCount;
-                if ( collector._baseCount == 1 )
+                const bool bVirtualBase      = clang_isVirtualBase( cursor ) != 0;
+                if ( collector._baseCount == 1 && bVirtualBase == false )
                 {
                     collector._pType->_parentFQN        = baseFQN;
                     collector._pType->_bParentReflected = isReflectedRecord( baseDecl, collector._pSession->_config ) ? SW_TRUE : SW_FALSE;
                     return;
                 }
 
-                // 두 번째 이후 베이스다. REFLECT() 가 없으면 잃을 프로퍼티가 없으므로 조용히 넘어간다.
-                if ( isReflectedRecord( baseDecl, collector._pSession->_config ) == false )
-                    return;
-
-                SW_LOG_ERROR( "ERROR: %# has multiple base classes; '%#' has REFLECT() but is not the first base. "
-                              "Its properties would not be inherited and its member offsets would be unsafe to access. "
-                              "Declare '%#' as the first base instead (only the first base may be REFLECT()).",
-                              collector._pType->_fullyQualifiedName, baseFQN, baseFQN );
+                CXFile file = nullptr;
+                uint32 line = 0;
+                clang_getExpansionLocation( clang_getCursorLocation( cursor ), &file, &line, nullptr, nullptr );
+                const string path = file != nullptr ? takeString( clang_getFileName( file ) ) : string{};
+                SW_LOG_ERROR( "ERROR: %#(%#): REFLECT type '%#' has %# base '%#'. A REFLECT type takes at most one non-virtual base: castTo "
+                              "reinterpret_casts along the reflected parent chain, so any other base gets the wrong address. "
+                              "Compose the extra behaviour as a component or member instead.",
+                              path, line, collector._pType->_fullyQualifiedName, bVirtualBase ? "a virtual" : "a second", baseFQN );
                 collector._bHasError = SW_TRUE;
             }
 
