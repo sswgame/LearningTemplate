@@ -89,8 +89,13 @@
 - `C-43` [정리] **정점 풀을 집합이 바뀔 때 통째로 다시 올린다 — 부분 갱신으로.** `GPUMeshVertexPool::rebuild` 가 메시 집합이 바뀌면 풀 전체를 다시 올린다(`GPUMeshVertexPool.h:16,57`). 월드 스트리밍(`D1-7`)의 셀 로드 · 언로드마다 전체 업로드가 일어나고, 지형 LOD 교체 히치(`D2-5`(6))와 뿌리가 같다. 모프 풀(`GPUMeshMorphPool`)도 같은 구조다. 부분 갱신(구간 할당 · 해제 목록)으로 바꾸고 전/후를 `RT.GPUScene.vertexPool` 로 Release 에서 잰다. `D1-7` 의 선행.
 - `C-44` [정리] **credits 표와 임포트 규칙이 "넓은 와일드카드 + 첫 매칭"이다.** 새 팩 파일이 다른 팩의 출처로 붙거나 다른 팩의 배치 오프셋(`ModelImportConfig.json`)이 적용돼도 경고가 없다(2026-10-17 `res3` 도입에서 확인; 이번엔 새 줄을 표 앞에 두어 피했다). 팩마다 하위 폴더를 하나씩 두고 패턴이 하위 폴더를 넘지 못하게 하거나, 파일 하나에 규칙이 둘 이상 맞으면 오류로 낸다. `CheckResourceCredits` 가 출처 목록(해시) 형식(`audio.sources.json` 의 모양)을 모든 리소스 도메인에서 읽게 넓히는 일을 포함한다.
   출처 목록의 해시가 맞으려면 산출물이 결정적이어야 하므로, 인코더가 만드는 다른 산출물(텍스처 DDS 변환 등)의 비결정 바이트도 점검한다.
+  이미지 출처 목록(TOML, `textures_raw/cc0_sources.toml`)과 오디오 출처 목록(JSON)의 형식이 갈렸다 — 도구 데이터를 `Resource/` 에 둘 형식 · 위치를 한 번에 정한다. 이미지 쪽 스크립트(`Scripts/dev/MakeCc0Import.py`)는 파이썬 3.11 이상(`tomllib`)이 필요하다.
 - `C-45` [정리] **동시 빌드 한도(2)의 잠금 폴더가 이 PC 에 없다.** `docs/11_Workflow.md` 2절이 말하는 `LT-wt\BUILD-LOCK-README.txt` 와 슬롯 잠금 폴더가 없어(2026-10-17 `softbodylinux` 보고) 제한이 실제로 강제되는지 확인되지 않는다. 강제 수단(잠금 파일 · `shared-lock`)을 확인하고 없으면 만든다.
 - `C-46` [정리] **쿠커가 `common` 팩을 모든 게임 패키지에 넣는지 확인한다.** `Resource/common` 에 오디오 35MB 가 들어왔다(2026-10-17 `res2`). 모든 게임 패키지에 들어가면 게임마다 그만큼 늘어난다. 게임별로 쓰는 팩만 넣는 방식(팩 선언)이 필요한지 정한다.
+- `C-50` [정리] **리소스 도입 용량 예산을 원본이 아니라 쿠킹 DDS 까지 합쳐 잡는다.** 2026-10-17 `res1` 에서 재질 31MB 가 57MB 로, 파티클 4.8MB 가 27MB 로 늘었다.
+  현재 이미지 도입분은 120.7MB(원본 44.2MB + DDS 76.4MB)이며 110MB 이하로 줄이려면 재질 10 → 8(약 -12MB), HDRI 4 → 3(약 -7.5MB), 파티클 40 → 20(약 -8MB) 중 둘쯤.
+- `B-15` [검증대기] **`res1` 이미지 도입의 확인 둘.** ① normal 맵 G 채널 방향 — 기존 `invert_green` 규칙으로 구웠을 뿐 렌더로 확인하지 않았다(Poly Haven `_nor_gl`).
+  ② Kenney "Smoke Particles" 팩은 362x336 등 2의 거듭제곱이 아니라 `texture-limits` 규칙 위반이다 — 들이려면 변환(2의 거듭제곱으로 맞춤)이 필요하다. 지금 들인 Particle Pack 의 `smoke_*.png` 는 512x512 라 해당 없다(통합 때 확인).
 
 - `E-1` [관찰] **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](../08_Verification.md) 4절).
   고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),
