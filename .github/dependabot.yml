@@ -1,0 +1,9 @@
+# 액션 버전(checkout · upload-artifact · cache 등)은 워크플로마다 적혀 있어 손으로 맞추면 어긋난다 — 주 1회 새 판을 PR 로 올린다.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/*
+    schedule:
+      interval: weekly

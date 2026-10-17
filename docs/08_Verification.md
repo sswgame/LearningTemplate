@@ -452,8 +452,8 @@ py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 �
   (Configure 50~90 분이 매번). 키는 OS 별 하나(트리플릿이 OS 당 하나). ③ 모든 잡이 PCH 를 켠 채 짓는다(로컬과 같은 구성). PCH 가 가리는 include 누락은
   하루 한 번 도는 헤더 단독 컴파일 잡(`header-self-contained.yml`)이 잡는다.
   작업 로그 · 아티팩트는 API 로 403 이라 진 테스트는 주석(annotation)으로 올린다 — 실행 목록 · 잡 단계 · 주석은 로그인 없이 읽힌다(시간당 60 회 한도를 여럿이 나눠 쓴다).
-- **리눅스 CI 는 ubuntu-22.04 의 `libclang-dev`(16 미만)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. 16 미만은 한정 없이 적은
-  타입도 FQN(`sw::editor::Foo`)으로 철자하므로 타입 이름은 `TypeNameMap::normalize` 가 잎 이름으로 맞춘다(`ReflectionParserTest.NestedNamespaceStructPropertyUsesTheLeafName`). CI 러너 파이썬은 3.10 이라
+- **리눅스 CI 는 ubuntu-24.04 의 `libclang-dev`(18)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. 16 미만은 한정 없이 적은
+  타입도 FQN(`sw::editor::Foo`)으로 철자하므로 타입 이름은 `TypeNameMap::normalize` 가 잎 이름으로 맞춘다(`ReflectionParserTest.NestedNamespaceStructPropertyUsesTheLeafName`). CI 러너 파이썬은 ubuntu-24.04 에서 3.12 이지만 최소 지원이 3.10(`kMinimumPythonVersion`)이라
   f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 빌드째 죽는다
   (증상: 구성 단계의 파이썬 생성기가 `UnicodeEncodeError` 로 끝난다) — 진입점은 `Scripts/common` 을 **모듈 수준에서** import 한다(UTF-8 stdout, 게이트 `CheckScriptEntryPoints` —
   함수 안의 import 는 치지 않는다: 한 갈래에서만 끌어오면 다른 갈래의 print 가 죽는다). 재현은 `PYTHONIOENCODING=cp1252`(cp949 는 `—` 에서 죽는다).

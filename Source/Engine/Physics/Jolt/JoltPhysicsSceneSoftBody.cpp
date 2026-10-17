@@ -5,6 +5,9 @@
  *          이 위치를 직접 쓴다(Jolt 의 키네마틱 정점 방식). 몸 자리는 만든 때 그대로 둔다(`mUpdatePosition` 끔) — 정점이 질량 중심 기준이라
  *          몸이 정점을 따라 옮겨 다니면 고정 정점의 로컬 위치를 매번 다시 맞춰야 한다. 천이 멀리 가지 않는 쓰임(옷 · 깃발 · 커튼)이라 넓은 단계 상자가
  *          커지는 값은 작다.
+ *          굽힘 구속은 거리형(`EBendType::Distance`, 공유 변 맞은편 두 정점 사이 거리)이다. 이면각형(`Dihedral`)은 쓰지 않는다 — 두 삼각형이 180° 로
+ *          접혀 법선이 반대가 되면 각도 부호(`(n2 × n1) · e`)가 반올림 잡음으로 정해져 보정이 반복마다 뒤집히고, 바닥에 떨어져 접히는 천이
+ *          수만 m 로 발산했다(Windows 에서 떨어뜨리는 자세 24 가지 중 4 가지, 리눅스 CI 는 기본 자세에서). 거리형은 접혀도 특이점이 없다.
  */
 #include "pch.h"
 
@@ -76,7 +79,7 @@ namespace sw
         // 정점 속성 하나를 모든 정점이 나눠 쓴다(속성 수가 정점보다 적으면 Jolt 가 마지막 것을 되풀이한다).
         const bool                                          bBend = desc._bendCompliance >= 0.0f;
         const JPH::SoftBodySharedSettings::VertexAttributes attributes{ desc._stretchCompliance, desc._shearCompliance, bBend ? desc._bendCompliance : FLT_MAX };
-        pShared->CreateConstraints( &attributes, 1, bBend ? JPH::SoftBodySharedSettings::EBendType::Dihedral : JPH::SoftBodySharedSettings::EBendType::None );
+        pShared->CreateConstraints( &attributes, 1, bBend ? JPH::SoftBodySharedSettings::EBendType::Distance : JPH::SoftBodySharedSettings::EBendType::None );
         pShared->Optimize();
 
         JPH::SoftBodyCreationSettings settings{ pShared, JoltUtil::toJolt( desc._position ), JoltUtil::toJolt( desc._rotation ), JoltLayerUtil::makeObjectLayer( desc._layer, true ) };

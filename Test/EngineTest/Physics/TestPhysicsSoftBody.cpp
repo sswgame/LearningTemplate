@@ -16,10 +16,25 @@
 #include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
 
+#include <string>
+
 namespace
 {
     struct PhysicsSoftBodyTestInternal
     {
+        /**
+         * @brief 고정하지 않은 천을 떨어뜨리는 자세(피치 · 요, 라디안)입니다.
+         * @details 똑바로 선 자세(0, 0)는 넣지 않는다 — 평면 안에서만 움직여 모서리로 선 채 멈추는 불안정 평형이라, 넘어지는지가 반올림 잡음으로
+         *          정해진다. 아주 작은 기울기 넷은 이면각 굽힘 구속이 천을 접으며 발산하던 자세다(Windows 재현). 마지막은 분명히 기운 자세다.
+         */
+        static constexpr float32 kDropPose[][2] = {
+            {5.0e-4f,  0.0f},
+            {7.0e-4f,  0.0f},
+            {   0.0f, 0.13f},
+            {   0.0f, 1.43f},
+            {   0.3f,  0.0f},
+        };
+
         /** @brief 윗면이 y = 0 인 넓은 정적 바닥입니다. */
         static void spawnFloor( sw::GameObjectManager& manager )
         {
@@ -80,30 +95,36 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedClothHangsWithoutStretching )
 }
 
 /**
- * @brief [PhysicsSoftBodyTest] 고정하지 않은 천은 떨어져 바닥(y = 0) 위에 멈춘다 — 바닥을 뚫는 정점이 없다
+ * @brief [PhysicsSoftBodyTest] 고정하지 않은 천은 어느 자세로 떨어져도 바닥(y = 0) 위에 접혀 멈춘다 — 바닥을 뚫거나 튀어 오르는 정점이 없다
  */
 SW_TEST_CASE( PhysicsSoftBodyTest, FreeClothFallsAndRestsOnFloor )
 {
     using Internal = PhysicsSoftBodyTestInternal;
-    sw::GameObjectManager manager;
-    Internal::spawnFloor( manager );
-    sw::ClothComponent* pCloth = Internal::spawnCloth( manager, sw::float3{ 0.0f, 2.0f, 0.0f }, sw::ClothPinMode::None );
-    manager.beginPlay();
-    test::updateFrames( manager, 240 );
-    SW_ASSERT_TRUE( pCloth->isClothCreated() );
-    const sw::vector<sw::float3>& listVertex = pCloth->getVertices();
-    SW_EXPECT_TRUE( Internal::isFinite( listVertex ) );
-    float32 lowest  = listVertex.front()._y;
-    float32 highest = listVertex.front()._y;
-    for ( const sw::float3& vertex : listVertex )
+    for ( const auto& pose : Internal::kDropPose )
     {
-        lowest  = sw::MathUtil::min( lowest, vertex._y );
-        highest = sw::MathUtil::max( highest, vertex._y );
+        sw::GameObjectManager manager;
+        Internal::spawnFloor( manager );
+        sw::ClothComponent* pCloth = Internal::spawnCloth( manager, sw::float3{ 0.0f, 2.0f, 0.0f }, sw::ClothPinMode::None );
+        pCloth->setLocalRotation( sw::float3{ pose[0], pose[1], 0.0f } );
+        manager.beginPlay();
+        test::updateFrames( manager, 240 );
+        SW_ASSERT_TRUE( pCloth->isClothCreated() );
+        const sw::vector<sw::float3>& listVertex = pCloth->getVertices();
+        SW_EXPECT_TRUE( Internal::isFinite( listVertex ) );
+        float32 lowest  = listVertex.front()._y;
+        float32 highest = listVertex.front()._y;
+        for ( const sw::float3& vertex : listVertex )
+        {
+            lowest  = sw::MathUtil::min( lowest, vertex._y );
+            highest = sw::MathUtil::max( highest, vertex._y );
+        }
+        // 바닥을 뚫지 않고(정점 반지름 0.01 m 위), 처음 윗변(y = 2)에서 천 높이(1 m) 넘게 내려와 있다.
+        const std::string message = "pitch " + std::to_string( pose[0] ) + " yaw " + std::to_string( pose[1] ) + ": lowest " + std::to_string( lowest ) +
+                                    " highest " + std::to_string( highest );
+        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( lowest ) <= 0.05f, message.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( highest - 0.5f ) <= 0.5f, message.c_str() );
+        manager.endPlay();
     }
-    // 바닥을 뚫지 않고(정점 반지름 0.01 m 위), 처음 윗변(y = 2)에서 천 높이(1 m) 넘게 내려와 있다.
-    SW_EXPECT_NEAR_EQUAL( 0.0f, lowest, 0.05f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, highest, 0.5f );
-    manager.endPlay();
 }
 
 /**
