@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -805,6 +806,44 @@ SW_TEST_CASE( SequencerTest, PropertyTrackDrivesNumericProperty )
     sw::SequenceKeyTrack wrong = track;
     wrong._propertyPath        = "CameraComponent._noSuchProperty";
     SW_EXPECT_FALSE( sw::SequenceTimelineUtil::readTrackValues( &manager, wrong, &value, 1 ) );
+}
+
+/**
+ * @brief [SequencerTest] 리그 슬롯 트랙 — 재생이 대상 `PoseModifierComponent` 의 슬롯 가중치를 쓰고, 키를 찍을 때 읽는 값은 그 슬롯의 지금 가중치다(정하지 않으면 1)
+ * @details 읽기가 늘 1 이면 슬롯을 0.25 로 둔 상태에서 키를 찍어도 1 이 키로 들어가 재생이 리그를 다시 켠다.
+ */
+SW_TEST_CASE( SequencerTest, RigSlotTrackReadsAndWritesTheSlotWeight )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pTarget = manager.createGameObject( sw::hashed_string{ "Rigged" } );
+    SW_ASSERT_NOT_NULL( pTarget );
+    sw::PoseModifierComponent* pModifier = pTarget->addComponent<sw::PoseModifierComponent>();
+    SW_ASSERT_NOT_NULL( pModifier );
+    manager.mergePendingAdds();
+
+    sw::SequenceKeyTrack track{};
+    track._targetObject = "Rigged";
+    track._kind         = sw::SequenceTrackKind::RigSlot;
+    track._propertyPath = "Aim";
+    track.fitChannelsToKind();
+
+    float32 value{ 0.0f };
+    SW_ASSERT_TRUE( sw::SequenceTimelineUtil::readTrackValues( &manager, track, &value, 1 ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, value, 0.0001f );
+    pModifier->setSlotWeight( sw::hashed_string{ "Aim" }, 0.25f );
+    SW_ASSERT_TRUE( sw::SequenceTimelineUtil::readTrackValues( &manager, track, &value, 1 ) );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, value, 0.0001f );
+
+    (void)track.setChannelKey( 0, 0.0f, 0.5f );
+    sw::SequenceAsset asset;
+    asset._listTrack.push_back( track );
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 3 );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pModifier->getSlotWeight( sw::hashed_string{ "Aim" } ), 0.0001f );
+
+    // 컴포넌트가 없는 대상은 읽지 못한다.
+    sw::SequenceKeyTrack orphan = track;
+    orphan._targetObject        = "Nobody";
+    SW_EXPECT_FALSE( sw::SequenceTimelineUtil::readTrackValues( &manager, orphan, &value, 1 ) );
 }
 
 /**

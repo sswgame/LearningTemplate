@@ -30,7 +30,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/`. 남은 것 —
   ① 그래프에 레이어를 데이터로(지금 레이어는 `addLayer` 코드), 스켈레탈 애니메이터가 블렌드 스페이스 상태를 재생하는 연결(블렌드 스페이스 · 동기 그룹은 그래프 데이터다)
   ② 후처리 리그(`PoseModifierComponent`): 시퀀서 `RigSlot` 트랙(`setSlotWeight` 에 키 찍기)과 리그 디버그 창(`RigDebugPanel` — 노드 가중치 · 켜짐 · 쓰는 본 표시)은 들어갔다. 남은 것: 창에서 고친 가중치 · 켜짐은
-    런타임 인스턴스의 복제본에만 들어가 저장되지 않는다(리그 에셋에 쓰는 길), 노드 대상 본 기즈모 편집, 시퀀서가 슬롯 가중치를 읽는 함수가 엔진에 없어 `readTrackValues` 는 컴포넌트가 있으면 1 을 돌려준다,
+    런타임 인스턴스의 복제본에만 들어가 저장되지 않는다(리그 에셋에 쓰는 길), 노드 대상 본 기즈모 편집,
     `Engine/Sequencer` 가 `Engine/Character` 헤더를 새로 include 한다(레이어 검사 확인)
   ③ 애니메이션 LOD(`AnimationLOD.h` — 리그 노드도 화면 크기 `min_screen_size` 로 꺼진다): 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기
   ④ 군중 공유(`AnimationCrowd.h`): 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중 켜기.

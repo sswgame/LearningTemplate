@@ -94,6 +94,8 @@ namespace sw
         void setSlotWeight( const hashed_string& slotName, float32 weight );
         /** @brief 시퀀서 슬롯을 해제합니다(가중치가 다시 1 이 됩니다). */
         void clearSlotWeight( const hashed_string& slotName );
+        /** @brief 시퀀서 슬롯 가중치입니다. 정하지 않았거나 해제한 슬롯은 1 입니다(곱해도 노드 가중치가 그대로인 값 — `clearSlotWeight` 와 같은 뜻). */
+        float32 getSlotWeight( const hashed_string& slotName ) const;
         /** @brief 노드의 이번 프레임 가중치입니다(0..1). */
         float32 computeNodeWeight( uint32 nodeIndex ) const;
 

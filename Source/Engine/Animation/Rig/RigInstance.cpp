@@ -229,6 +229,16 @@ namespace sw
         }
     }
 
+    float32 RigInstance::getSlotWeight( const hashed_string& slotName ) const
+    {
+        for ( const SlotWeight& slot : _listSlotWeight )
+        {
+            if ( slot._name == slotName )
+                return slot._weight;
+        }
+        return 1.0f;
+    }
+
     float32 RigInstance::computeNodeWeight( uint32 nodeIndex ) const
     {
         const RigNode& node = *_listNode[nodeIndex];
@@ -238,13 +248,7 @@ namespace sw
         if ( node.getWeightCurve().empty() == false )
             weight *= ( _pCurveSource != nullptr ) ? _pCurveSource->getCurveValue( node.getWeightCurve() ) : 0.0f;
         if ( node.getWeightSlot().empty() == false )
-        {
-            for ( const SlotWeight& slot : _listSlotWeight )
-            {
-                if ( slot._name == node.getWeightSlot() )
-                    weight *= slot._weight;
-            }
-        }
+            weight *= getSlotWeight( node.getWeightSlot() );
         return MathUtil::saturate( weight );
     }
 
