@@ -49,11 +49,11 @@ namespace
  */
 SW_TEST_CASE( NetCoreBenchTest, SequenceBufferSlotReuse )
 {
-    sw::SequenceBuffer<NetCoreBenchSlot> buffer;
-    uint8                                arrPayload[NetCoreBenchInternal::kPayloadBytes]{};
-    uint64                               totalBytes = 0;
-    const int64                          deciNanos  = test::measureBestDeciNanosPerOp( NetCoreBenchInternal::kInsertCount, NetCoreBenchInternal::kRoundCount, [&buffer, &arrPayload, &totalBytes]()
-                              {
+    sw::SequenceBuffer<NetCoreBenchSlot, 256> buffer;
+    uint8                                     arrPayload[NetCoreBenchInternal::kPayloadBytes]{};
+    uint64                                    totalBytes = 0;
+    const int64                               deciNanos  = test::measureBestDeciNanosPerOp( NetCoreBenchInternal::kInsertCount, NetCoreBenchInternal::kRoundCount, [&buffer, &arrPayload, &totalBytes]()
+                                   {
         for ( uint64 index = 0; index < NetCoreBenchInternal::kInsertCount; ++index )
         {
             NetCoreBenchSlot* pSlot = buffer.insert( static_cast<uint16>( index ) );
