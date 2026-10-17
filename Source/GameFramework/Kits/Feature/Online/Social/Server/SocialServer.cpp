@@ -6,6 +6,7 @@
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialProtocol.h"
@@ -259,8 +260,14 @@ namespace sw
             if ( SocialProtocol::MessageTypes::write( body, notification ) == false )
                 continue; // write 가 범위 밖 값을 로그에 남겼다. 알림은 다음 조회로 대신한다
             if ( host.sendPush( notification._recipientID, SocialMethod::kPushNotification, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( notification._recipientID, SocialMethod::kPushNotification, body ); // 다른 서버에 접속해 있다
+                (void)_pPresence->sendRemotePush( notification._recipientID, SocialPushName::Notification, notification ); // 다른 서버에 접속해 있다
         }
         _listNotificationScratch.clear();
     }
+} // namespace sw
+
+namespace sw
+{
+    // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
+    const OnlinePushRelayEntry kSocialNotificationRelay{ "Social.Notification", SocialMethod{}, SocialPushName::Notification, SocialProtocol::MessageTypes{}, OnlinePushBody<SocialNotification>{} };
 } // namespace sw

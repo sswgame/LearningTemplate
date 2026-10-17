@@ -13,12 +13,11 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class BitWriter;
-
     /** @brief 찾은 결과 하나입니다. 접속해 있지 않으면 `_serverID` 가 0 입니다. */
     struct AccountPresenceResult
     {
@@ -52,8 +51,21 @@ namespace sw
         virtual uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound ) = 0;
         /** @brief 계정이 지금 붙어 있는 서버를 찾습니다(친구 접속 표시 · 다른 서버 귓속말 · 매칭 결과를 보낼 곳). 0 이 아닌 요청 id — 결과는 @p onFound 로 한 번. */
         virtual uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound ) = 0;
-        /** @brief 다른 서버에 붙은 계정에게 알림(`[종류][몸]`)을 맡깁니다(그 계정의 서버를 찾아 넘긴다 — 접속해 있지 않으면 버린다). 서버 여럿이 아니면 false. */
-        virtual bool sendRemotePush( AccountID accountID, uint16 kind, const BitWriter& body ) = 0;
+        /**
+         * @brief 다른 서버에 붙은 계정에게 알림을 맡깁니다(그 계정의 서버를 찾아 넘긴다 — 접속해 있지 않으면 버린다). 서버 여럿이 아니면 false.
+         * @details 알림 번호와 B 본문이 아니라 알림 열거자와 본문 값을 받습니다. 받는 서버가 자기 빌드의 번호와 B 로 다시 씁니다(`OnlinePushRelay`).
+         *          그 알림은 키트 서버 `.cpp` 에 `OnlinePushRelayEntry` 로 등록돼 있어야 합니다.
+         */
+        template <typename TPushName, typename TBody>
+        bool sendRemotePush( const AccountID accountID, const TPushName pushName, const TBody& body )
+        {
+            OnlinePushRelay relay;
+            if ( OnlinePushRelayRegistry::makeRelay( accountID, pushName, body, relay ) == false )
+                return false;
+            return relayRemotePush( relay );
+        }
+        /** @brief 만든 중계 봉투(`OnlinePushRelayRegistry::makeRelay`)를 그 계정의 서버로 넘깁니다. 서버 여럿이 아니면 false. */
+        virtual bool relayRemotePush( const OnlinePushRelay& relay ) = 0;
         /**
          * @brief 맡긴 찾기를 취소합니다 — 그 델리게이트는 불리지 않는다. 델리게이트 주인이 이 창구보다 먼저 내려갈 때 자기 `shutdown` 에서 부른다
          *        (캐시 라우터의 `cancel` 과 같은 계약). 끝났거나 모르는 id 면 아무것도 하지 않는다.

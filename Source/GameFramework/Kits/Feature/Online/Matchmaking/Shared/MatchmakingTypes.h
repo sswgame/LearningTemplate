@@ -163,6 +163,7 @@ namespace sw
     struct PartySnapshot
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         /// 첫 항목이 파티장이다. 상한은 `PartyLobbyLimit::kMaxPartySize` 와 같다.
         PROPERTY( MaxCount = 8 )
         vector<AccountID> _listMemberID{};
@@ -230,6 +231,7 @@ namespace sw
     struct LobbySnapshot
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY( MaxCount = 32 )
         vector<LobbyMember> _listMember{}; ///< 첫 항목이 방장이다
         PROPERTY( MaxCount = 8 )

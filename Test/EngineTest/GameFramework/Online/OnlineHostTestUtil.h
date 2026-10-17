@@ -150,10 +150,10 @@ namespace test
             return result._requestID;
         }
 
-        bool sendRemotePush( sw::AccountID accountID, uint16 kind, const sw::BitWriter& body ) override
+        bool relayRemotePush( const sw::OnlinePushRelay& relay ) override
         {
-            (void)body;
-            _listRemotePush.push_back( RemotePush{ accountID, kind } );
+            const sw::OnlinePushRelayEntry* pEntry = sw::OnlinePushRelayRegistry::findEntry( relay ); // 키트가 등록한 알림이어야 번호가 나온다
+            _listRemotePush.push_back( RemotePush{ relay._accountID, pEntry != nullptr ? pEntry->getKind() : uint16( 0 ) } );
             return true;
         }
 

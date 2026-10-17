@@ -150,6 +150,7 @@ namespace sw
     struct TradeReply
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY()
         TradeSnapshot _snapshot{};
         PROPERTY( MaxCount = 16 )

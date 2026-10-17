@@ -6,6 +6,7 @@
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardProtocol.h"
 
 namespace sw
@@ -140,7 +141,13 @@ namespace sw
             if ( LeaderboardProtocol::MessageTypes::write( body, unlock._state ) == false )
                 continue; // write 가 범위 밖 값을 로그에 남겼다. 알림은 다음 조회로 대신한다
             if ( host.sendPush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ); // 다른 서버에 접속해 있다
+                (void)_pPresence->sendRemotePush( unlock._accountID, LeaderboardPushName::Achievement, unlock._state ); // 다른 서버에 접속해 있다
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
+    const OnlinePushRelayEntry kLeaderboardAchievementRelay{ "Leaderboard.Achievement", LeaderboardMethod{}, LeaderboardPushName::Achievement, LeaderboardProtocol::MessageTypes{}, OnlinePushBody<AchievementState>{} };
 } // namespace sw
