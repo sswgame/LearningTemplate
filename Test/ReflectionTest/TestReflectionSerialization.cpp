@@ -316,6 +316,101 @@ namespace
         added._metadata._defaultValue = "7";
         return makeEvolutionType( { makeEvolutionField( "_kept", SW_OFFSET_OF( FieldEvolutionHost, _kept ) ), renamed, added } );
     }
+
+    /** @brief 혼합 빌드 읽기 테스트의 중첩 원소입니다. 옛 빌드의 타입 정보는 `_extra` 를 모릅니다(같은 메모리를 두 빌드의 `TypeInfo` 가 가리킵니다). */
+    struct MixedBuildItem
+    {
+        int32          _id{ -1 };
+        int32          _extra{ -1 };
+        WireShiftColor _color{ WireShiftColor::Red };
+    };
+
+    /** @brief 중첩 원소를 목록과 값으로 하나씩 가지는 바깥 타입입니다. 마지막 필드는 앞 필드가 실패해도 뒤가 읽히는지 봅니다. */
+    struct MixedBuildHolder
+    {
+        sw::vector<MixedBuildItem> _listItem;
+        MixedBuildItem             _single;
+        int32                      _after{ 0 };
+    };
+
+    /**
+     * @brief 한 빌드의 타입 테이블입니다. 이름이 같은 중첩 타입을 빌드마다 다르게 두려고 전역이 아닌 레지스트리에 손으로 등록합니다.
+     * @details 바깥 타입은 등록하지 않고 직렬화기에 바로 넘깁니다. 중첩 타입과 열거형은 컨텍스트의 레지스트리(`SerializeContext::setTypeRegistry`)에서 찾습니다.
+     */
+    struct MixedBuildSide
+    {
+        sw::TypeRegistry _registry;
+        sw::TypeInfo     _holderType;
+
+        /** @brief @p bItemHasExtra 면 원소가 `_extra` 를 아는 새 빌드, @p bColorHasGreen 이면 열거형에 `Green` 이 있는 빌드입니다. */
+        MixedBuildSide( bool bItemHasExtra, bool bColorHasGreen )
+            : _registry{}
+            , _holderType{}
+        {
+            sw::EnumInfo color;
+            color._name                                    = sw::hashed_string( "WireShiftColor" );
+            color._fullyQualifiedName                      = sw::hashed_string( "sw::WireShiftColor" );
+            color._size                                    = static_cast<uint8>( sizeof( WireShiftColor ) );
+            color._bIsSigned                               = SW_TRUE;
+            color._bIsBitFlag                              = SW_FALSE;
+            sw::vector<WireShiftEnumerator> listEnumerator = {
+                { "Red", 0, false},
+                {"Blue", 2, false}
+            };
+            if ( bColorHasGreen )
+                listEnumerator.push_back( WireShiftEnumerator{ "Green", 1, false } );
+            for ( const WireShiftEnumerator& enumerator : listEnumerator )
+            {
+                const sw::hashed_string name( enumerator._pName );
+                color._mapNameToValue[name]              = enumerator._value;
+                color._mapValueToName[enumerator._value] = name;
+            }
+            _registry.registerEnum( color );
+
+            sw::TypeInfo item;
+            item._name               = sw::hashed_string( "MixedBuildItem" );
+            item._fullyQualifiedName = sw::hashed_string( "sw::MixedBuildItem" );
+            item._size               = sizeof( MixedBuildItem );
+            item._listProperty.push_back( { sw::hashed_string( "_id" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( MixedBuildItem, _id ) } );
+            if ( bItemHasExtra )
+                item._listProperty.push_back( { sw::hashed_string( "_extra" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( MixedBuildItem, _extra ) } );
+            item._listProperty.push_back( { sw::hashed_string( "_color" ), sw::hashed_string( "sw::WireShiftColor" ), SW_OFFSET_OF( MixedBuildItem, _color ) } );
+            _registry.registerClass( item );
+
+            _holderType._name               = sw::hashed_string( "MixedBuildHolder" );
+            _holderType._fullyQualifiedName = sw::hashed_string( "sw::MixedBuildHolder" );
+            _holderType._size               = sizeof( MixedBuildHolder );
+            _holderType._listProperty       = {
+                { sw::hashed_string( "_listItem" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( MixedBuildHolder, _listItem ), true, sw::ContainerKind::Sequence,
+                 sw::hashed_string( "sw::MixedBuildItem" ), sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<MixedBuildItem>>>() },
+                { sw::hashed_string( "_single" ), sw::hashed_string( "sw::MixedBuildItem" ), SW_OFFSET_OF( MixedBuildHolder, _single ) },
+                { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( MixedBuildHolder, _after ) },
+            };
+        }
+
+        /** @brief 이 빌드의 레지스트리로 찾는 컨텍스트입니다. 두 플래그를 그대로 받습니다. */
+        sw::SerializeContext makeContext( bool bSkipUnknown, bool bSkipUnreadable ) const
+        {
+            sw::SerializeContext context = sw::SerializeContext::deriveFromDefault();
+            context.setTypeRegistry( &_registry );
+            context.setSkipUnknownProperties( bSkipUnknown );
+            context.setSkipUnreadableProperties( bSkipUnreadable );
+            return context;
+        }
+    };
+
+    /** @brief 새 빌드가 쓰는 값입니다. 모든 원소가 `_extra` 를 가지고, @p color 를 씁니다. */
+    MixedBuildHolder makeMixedBuildHolder( WireShiftColor color )
+    {
+        MixedBuildHolder holder;
+        holder._listItem = {
+            MixedBuildItem{1, 10,                color},
+            MixedBuildItem{2, 20, WireShiftColor::Blue}
+        };
+        holder._single = MixedBuildItem{ 3, 30, WireShiftColor::Blue };
+        holder._after  = 9;
+        return holder;
+    }
 } // namespace
 
 /**
@@ -3829,4 +3924,180 @@ SW_TEST_CASE( ReflectionSerializationTest, UncarriedValueTypeFailsTheReadAndTheW
     restored._value = 1;
     SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &restored, uncarried, writtenBytes.data(), writtenBytes.size() ) );
     SW_EXPECT_EQUAL( 1, restored._value );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 모르는 이름만 건너뛰는 읽기는 **모든 깊이에서** 같다 — 중첩 원소에 필드가 하나 더 있어도 메시지 전체를 거절하지 않는다
+ * @details 혼합 빌드 사이의 메시지(서버 버스, 캐시 레코드)의 정책이다(docs/plans/ServerBusFormat.md 3.3 ⓐ). 중첩 구조체는 언제나 엄격 읽기로 읽히므로,
+ *          최상위의 orphan 정책만 바꾸면 목록 원소에 필드 하나를 더한 새 빌드의 메시지를 옛 빌드가 통째로 버린다. 플래그가 컨텍스트에 있고 컨텍스트가
+ *          중첩까지 내려가므로 깊이와 상관없이 같은 정책이다. 두 빌드는 이름이 같은 중첩 타입을 서로 다른 레지스트리에 둔다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, MixedBuildReadSkipsAnUnknownNameAtEveryDepth )
+{
+    const MixedBuildSide   newBuild( true, true );
+    const MixedBuildSide   oldBuild( false, true );
+    const MixedBuildHolder saved = makeMixedBuildHolder( WireShiftColor::Green );
+    sw::vector<uint8>      newBytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &saved, newBuild._holderType, newBytes, newBuild.makeContext( false, false ) ) );
+
+    // 두 플래그를 끈 엄격 읽기는 중첩 원소의 `_extra` 하나로 전체를 거절한다.
+    {
+        test::ScopedLogSuppressor suppressor;
+        MixedBuildHolder          strict;
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &strict, oldBuild._holderType, newBytes.data(), newBytes.size(), oldBuild.makeContext( false, false ) ) );
+    }
+
+    // 모르는 이름만 건너뛰면 목록 원소와 값 필드 모두에서 `_extra` 를 건너뛰고 나머지를 읽는다(새 → 옛).
+    MixedBuildHolder mixed;
+    {
+        test::ScopedLogSuppressor suppressor; // 건너뛴 필드 경고(타입과 필드마다 한 번)
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &mixed, oldBuild._holderType, newBytes.data(), newBytes.size(), oldBuild.makeContext( true, false ) ) );
+    }
+    SW_ASSERT_EQUAL( size_t( 2 ), mixed._listItem.size() );
+    SW_EXPECT_EQUAL( 1, mixed._listItem[0]._id );
+    SW_EXPECT_TRUE( mixed._listItem[0]._color == WireShiftColor::Green );
+    SW_EXPECT_EQUAL( 2, mixed._listItem[1]._id );
+    SW_EXPECT_EQUAL( 3, mixed._single._id );
+    SW_EXPECT_EQUAL( 9, mixed._after );
+
+    // 옛 빌드가 쓴 값을 새 빌드가 읽으면(옛 → 새) 없는 `_extra` 는 기본값이고 나머지는 같다.
+    sw::vector<uint8> oldBytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &saved, oldBuild._holderType, oldBytes, oldBuild.makeContext( false, false ) ) );
+    MixedBuildHolder fromOld;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromOld, newBuild._holderType, oldBytes.data(), oldBytes.size(), newBuild.makeContext( true, false ) ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), fromOld._listItem.size() );
+    SW_EXPECT_EQUAL( 1, fromOld._listItem[0]._id );
+    SW_EXPECT_EQUAL( 3, fromOld._single._id );
+    SW_EXPECT_EQUAL( 9, fromOld._after );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 혼합 빌드 읽기는 중첩 원소 안의 모르는 열거자도 거절한다 — 두 플래그를 함께 켠 옛 정책은 그 필드를 기본값으로 남기고 성공했다
+ * @details 옛 빌드는 새 빌드가 더한 열거자를 모른다. 버스 메시지에서 그 값을 기본값(`None` 같은 것)으로 받으면 폴백이다(계정 해지 사유). 읽지 못한 아는 필드는
+ *          깊이와 상관없이 읽기 전체의 실패다(docs/plans/ServerBusFormat.md 3.3 의 3).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, MixedBuildReadRejectsAnUnknownEnumeratorAtEveryDepth )
+{
+    const MixedBuildSide   newBuild( true, true );
+    const MixedBuildSide   oldBuild( true, false ); // 옛 빌드의 열거형에는 Green 이 없다
+    const MixedBuildHolder saved = makeMixedBuildHolder( WireShiftColor::Green );
+    sw::vector<uint8>      bytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &saved, newBuild._holderType, bytes, newBuild.makeContext( false, false ) ) );
+
+    test::ScopedLogSuppressor suppressor; // 모르는 열거자 · 읽지 못한 필드 경고
+    MixedBuildHolder          mixed;
+    SW_EXPECT_FALSE_MSG( sw::BinarySerializer::deserialize( &mixed, oldBuild._holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, false ) ),
+                         "목록 원소 안의 모르는 열거자가 기본값으로 통과했습니다" );
+
+    MixedBuildHolder lenient;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &lenient, oldBuild._holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, true ) ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), lenient._listItem.size() );
+    SW_EXPECT_TRUE( lenient._listItem[0]._color == WireShiftColor::Red ); // 읽지 못한 필드는 지금 값 그대로 남는다 — 오브젝트 상태에만 맞는 정책이다
+    SW_EXPECT_EQUAL( 9, lenient._after );
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 소프트 읽기는 기록 타입이 다르고 변환이 안 되는 필드를 제 타입으로 "읽힌 만큼" 받지 않고 orphan 으로 남긴다
+ * @details 예전에는 `int32` 0 으로 기록된 필드를 `vector<int32>` 로 읽으면 그 4 바이트를 원소 수 0 으로 읽어 빈 목록으로 성공했다(docs/plans/ServerBusFormat.md 3.3 ⓒ).
+ *          버전 붙은 바이너리 읽기는 orphan 을 이관 없이 거절하므로 이제 실패가 드러난다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, SoftReadKeepsAFieldOfAnotherShapeAsAnOrphan )
+{
+    struct IntSlot
+    {
+        int32 _listValue{ 0 };
+    };
+    struct ListSlot
+    {
+        sw::vector<int32> _listValue;
+    };
+
+    sw::TypeInfo intInfo;
+    intInfo._name               = sw::hashed_string( "ProbeIntSlot" );
+    intInfo._fullyQualifiedName = sw::hashed_string( "sw::ProbeIntSlot" );
+    intInfo._size               = sizeof( IntSlot );
+    intInfo._listProperty       = {
+        { sw::hashed_string( "_listValue" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntSlot, _listValue ) }
+    };
+
+    sw::TypeInfo listInfo;
+    listInfo._name               = sw::hashed_string( "ProbeListSlot" );
+    listInfo._fullyQualifiedName = sw::hashed_string( "sw::ProbeListSlot" );
+    listInfo._size               = sizeof( ListSlot );
+    listInfo._listProperty       = {
+        { sw::hashed_string( "_listValue" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( ListSlot, _listValue ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ),
+         sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() }
+    };
+
+    const IntSlot     source{ 0 };
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &source, intInfo, bytes ) );
+
+    ListSlot target;
+    target._listValue = { 5 };
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &target, listInfo, bytes.data(), bytes.size(), &listOrphan ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
+    SW_EXPECT_TRUE_MSG( target._listValue.size() == 1 && target._listValue[0] == 5, "다른 모양으로 기록된 값을 제 타입으로 읽어 목록을 비웠습니다" );
+
+    sw::vector<uint8> versionedBytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serializeVersioned( 1, &source, intInfo, versionedBytes ) );
+    ListSlot versionedTarget;
+    uint32   version{ 0 };
+    {
+        test::ScopedLogSuppressor suppressor; // orphan 을 이관 없이 거절한다는 오류
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( version, &versionedTarget, listInfo, versionedBytes.data(), versionedBytes.size(), 1u ) );
+    }
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 정확한 버전 읽기는 버전이 다르면 이관을 찾지 않고 거절하고, 같으면 컨텍스트의 정책으로 엄격하게 읽는다
+ * @details 혼합 빌드 사이의 메시지가 쓰는 읽기다(`BinarySerializer::deserializeExactVersion`). 의미 버전이 다르면 섞인 동안 버리는 것이 계약이라
+ *          (타입, 기록된 버전)의 이관이 등록돼 있어도 보지 않는다. 그래서 레코드의 버전 수열과 묶이지 않는다(docs/plans/ServerBusFormat.md 3.4).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ExactVersionReadDoesNotLookForAMigration )
+{
+    const sw::TypeInfo savedType = makeSavedEvolutionType();
+    const sw::TypeInfo nextType  = makeNextEvolutionType( true );
+    FieldEvolutionHost source;
+    source._kept    = 1;
+    source._renamed = 2;
+    source._gone    = 4;
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serializeVersioned( 3, &source, savedType, bytes ) );
+
+    sw::SerializeContext mixedContext = sw::SerializeContext::deriveFromDefault();
+    mixedContext.setSkipUnknownProperties( true );
+
+    // 같은 버전: 지운 `_gone` 은 건너뛰고, 옛 이름 `_oldName` 은 `_renamed` 로 읽고, 새 `_added` 는 선언된 기본값이다.
+    FieldEvolutionHost target;
+    uint32             readVersion{ 0 };
+    {
+        test::ScopedLogSuppressor suppressor; // 건너뛴 필드 경고
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeExactVersion( 3, &target, nextType, bytes.data(), bytes.size(), readVersion, mixedContext ) ==
+                        sw::BinaryExactVersionResult::Read );
+    }
+    SW_EXPECT_EQUAL( 3u, readVersion );
+    SW_EXPECT_EQUAL( 1, target._kept );
+    SW_EXPECT_EQUAL( 2, target._renamed );
+    SW_EXPECT_EQUAL( 7, target._added );
+
+    // 다른 버전: 그 버전의 이관이 등록돼 있어도 보지 않고, 대상은 그대로다.
+    auto acceptAll = []( const sw::SchemaMigrateContext& ) -> bool
+    {
+        return true;
+    };
+    const sw::SchemaMigrationRegistrar acceptMigration{ "sw::FieldEvolutionHost", 3u, +acceptAll };
+    FieldEvolutionHost                 otherVersion;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeExactVersion( 4, &otherVersion, nextType, bytes.data(), bytes.size(), readVersion, mixedContext ) ==
+                    sw::BinaryExactVersionResult::VersionMismatch );
+    SW_EXPECT_EQUAL( 3u, readVersion );
+    SW_EXPECT_EQUAL( -1, otherVersion._kept );
+
+    // 버전 머리가 잘렸거나, 모르는 이름을 받지 않는 정책이면 읽지 못한 것이다.
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeExactVersion( 3, &otherVersion, nextType, bytes.data(), 2, readVersion, mixedContext ) ==
+                    sw::BinaryExactVersionResult::Unreadable );
+    const sw::SerializeContext strictContext = sw::SerializeContext::deriveFromDefault();
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeExactVersion( 3, &otherVersion, nextType, bytes.data(), bytes.size(), readVersion, strictContext ) ==
+                    sw::BinaryExactVersionResult::Unreadable );
 }

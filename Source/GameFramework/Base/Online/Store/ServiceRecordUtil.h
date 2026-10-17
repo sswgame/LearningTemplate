@@ -7,6 +7,9 @@
  *          데이터를 다시 씁니다. 값 계산이 불가피한 예외만 그 판의 이관을 `SW_SCHEMA_MIGRATION` 으로 등록합니다(결정 기록 5-4).
  *          못 읽은 레코드를 어떻게 할지는 레코드마다 손으로 정하지 않고 읽기 함수가 정합니다. 영속 레코드는 `readDurable` 로 읽어 손상이면
  *          오류 로그를 남기고 호출부가 실패를 돌려줍니다. 다시 만들 수 있는 캐시는 `readCache` 로 읽어 없는 것으로 봅니다.
+ *          캐시는 배포 중에 빌드가 다른 서버가 읽으므로 서버 버스와 같은 읽기(`MixedBuildCodec::decode`)입니다. 판이 같으면 모르는 이름의 필드는 건너뛰고,
+ *          읽지 못한 아는 필드(모르는 열거자)와 다른 판은 없는 것으로 봅니다. 영속 레코드는 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지므로
+ *          모르는 필드를 거절합니다(보관해 다시 쓰는 구조는 백로그 `F-3`).
  *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 고정 배치형 코덱이 있는 타입이면 언제나 선언된 범위(`Min` · `Max` · `MaxCount`)도 확인합니다.
  *          코덱이 없는 타입(지역 목록 같은 문자열 목록)은 서비스가 쓰기 때와 같은 규칙으로 확인합니다.
  */
@@ -19,6 +22,8 @@
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+
+#include "GameFramework/Base/Online/Bus/MixedBuildCodec.h"
 
 namespace sw
 {
@@ -59,11 +64,12 @@ namespace sw
             return false;
         }
 
-        /** @brief 다시 만들 수 있는 캐시 레코드를 읽습니다. 못 읽으면 없는 것으로 보고 false 이며 @p outRecord 는 그대로입니다. 로그는 남기지 않습니다. */
+        /** @brief 다시 만들 수 있는 캐시 레코드를 읽습니다(혼합 빌드 읽기). 못 읽으면 없는 것으로 보고 false 이며 @p outRecord 는 그대로입니다. 로그는 남기지 않습니다. */
         template <typename T>
         [[nodiscard]] static bool readCache( const vector<uint8>& bytes, const uint32 version, T& outRecord )
         {
-            return read( bytes, version, outRecord );
+            uint32 readVersion = 0;
+            return MixedBuildCodec::decode( bytes.data(), bytes.size(), version, outRecord, readVersion ) == MixedBuildReadResult::Read;
         }
 
     private:

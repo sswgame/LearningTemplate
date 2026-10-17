@@ -20,17 +20,20 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistryReader.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingProtocol.h"
 
 namespace sw
 {
     struct EphemeralReply;
 
     class EphemeralStoreRouter;
-    class IServerBus;
     class PartyLobbyService;
+    class ServerBus;
+    class ServerBusMessage;
 
     /**
      * @class IMatchRatingSource
@@ -50,7 +53,7 @@ namespace sw
     struct MatchQueueDependencies
     {
         EphemeralStoreRouter*     _pRouter{ nullptr };       ///< 필수이다. 임대와 서버 목록에 쓴다
-        IServerBus*               _pBus{ nullptr };          ///< 서버가 한 대이면 null 이며 이 서버가 항상 권한을 가진다
+        ServerBus*                _pBus{ nullptr };          ///< 서버가 한 대이면 null 이며 이 서버가 항상 권한을 가진다
         PartyLobbyService*        _pPartyLobby{ nullptr };   ///< 파티 티켓과 로비 다시 열기에 쓴다. 없으면 혼자 티켓만 다룬다
         const IMatchRatingSource* _pRatingSource{ nullptr }; ///< 없으면 모두 `MatchQueueLimit::kDefaultRating`
         uint64                    _serverID{ 1 };            ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
@@ -134,7 +137,7 @@ namespace sw
         void placeLobby( const LobbySnapshot& lobby, int64 nowMs );
 
         /** @brief 바인딩이 구독한 주제로 온 버스 메시지를 처리합니다. */
-        void handleBusMessage( string_view topic, const vector<uint8>& bytes, int64 nowMs );
+        void handleBusMessage( const ServerBusMessage& message, int64 nowMs );
         void drainCompletions( vector<MatchQueueCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainNotifications( vector<MatchQueueNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
         void drainTopicChanges( vector<MatchQueueTopicChange>& outListChange ) { _topicBuffer.drainTo( outListChange ); }
@@ -212,5 +215,17 @@ namespace sw
         uint64                                     _nextLookupTag;
         uint32                                     _sequence;
         uint32                                     _lobbySequence;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 매칭의 서버 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다(지연 로드 모듈은 데이터를 가져올 수 없습니다). */
+    struct MatchQueueBus
+    {
+        static constexpr ServerBusTopicFamily<MatchTicket>       kQueueTopic{ "mm.queue." };   ///< 뒤에 모드 id. 권한 서버로 가는 티켓이다
+        static constexpr ServerBusTopicFamily<MatchTicketCancel> kCancelTopic{ "mm.cancel." }; ///< 뒤에 모드 id. 권한 서버로 가는 티켓 취소이다
+        static constexpr ServerBusTopicFamily<MatchAssignment>   kResultTopic{ "mm.result." }; ///< 뒤에 서버 16진. 티켓을 낸 서버로 가는 결과이다
+        static constexpr ServerBusTopicFamily<MatchFormed>       kAssignTopic{ "mm.assign." }; ///< 뒤에 게임 서버 16진. 게임 서버로 가는 접속 예정자 목록이다
     };
 } // namespace sw

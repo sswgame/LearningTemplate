@@ -37,8 +37,9 @@ namespace sw
     struct AccountPresenceResult;
 
     class IAccountPresence;
-    class IServerBus;
     class IServiceStore;
+    class ServerBus;
+    class ServerBusMessage;
 
     /**
      * @class IChatPolicy
@@ -82,7 +83,7 @@ namespace sw
     struct ChatServiceDependencies
     {
         IServiceStore*           _pStore{ nullptr };     ///< 필수이다. 기록과 제재에 쓴다
-        IServerBus*              _pBus{ nullptr };       ///< 서버가 하나면 null 이다
+        ServerBus*               _pBus{ nullptr };       ///< 서버가 하나면 null 이다
         IAccountPresence*        _pPresence{ nullptr };  ///< 서버가 하나면 null 이며 다른 서버로 가는 귓속말이 없다
         const IAccountDirectory* _pDirectory{ nullptr }; ///< 필수이다. 표시 이름과 이 서버에 있는지를 조회한다
         const IChatPolicy*       _pPolicy{ nullptr };    ///< null 이면 차단을 쓰지 않는다
@@ -160,7 +161,7 @@ namespace sw
         void removeAccount( AccountID accountID );
 
         /** @brief 구독한 버스 메시지를 처리합니다. 바인딩이 넘기며, 자기 서버가 낸 채팅은 메시지의 서버 id 로 거릅니다. 제재 알림은 자기 서버가 낸 것도 처리합니다. */
-        void handleBusMessage( string_view topic, const vector<uint8>& bytes );
+        void handleBusMessage( const ServerBusMessage& message );
 
         void drainCompletions( vector<ChatCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainDeliveries( vector<ChatDelivery>& outListDelivery ) { _deliveryBuffer.drainTo( outListDelivery ); }
@@ -209,7 +210,7 @@ namespace sw
         void       submitSend( AccountID accountID, PendingSend&& send );
         ChatResult prepareText( AccountID accountID, Member& member, string_view text, int64 nowMs, string& outText, int64& outRetryAfterMs );
         void       processSend( AccountID accountID, Member& member, const PendingSend& send );
-        void       publishMessage( const string& topic, const ChatMessage& message );
+        void       publishMessage( const ServerBusTopicFamily<ChatMessage>& family, string_view suffix, const ChatMessage& message );
         void       deliverToChannel( const ChatMessage& message );
         void       deliverWhisperLocally( const ChatMessage& message );
         void       queueHistory( const ChatMessage& message );

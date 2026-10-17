@@ -23,6 +23,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/LogContext.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
@@ -95,7 +96,7 @@ namespace sw
             (void)host;
             (void)accountID;
         }
-        /** @brief 이 서비스가 `subscribeServerBus` 한 주제의 메시지를 받습니다. 자기 서버가 낸 것도 오므로 `_originServerID` 로 거릅니다. */
+        /** @brief 이 서비스가 `subscribeServerBus` 한 주제의 메시지를 받습니다. 자기 서버가 낸 것도 오므로 `getOriginServerID` 로 거릅니다. 본문은 주제 정의(`ServerBusTopic::read`)로 읽습니다. */
         virtual void onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
         {
             (void)host;
@@ -119,8 +120,8 @@ namespace sw
         StreamEndpointConfig  _endpointSettings{};
         NetAddress            _listenAddress{ NetAddress::makeAnyInterface( 7100 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
         IServiceStore*        _pServiceStore{ nullptr };
-        IEphemeralStore*      _pEphemeralStore{ nullptr }; ///< 없으면 서버 한 대(라우터 없음)
-        IServerBus*           _pServerBus{ nullptr };
+        IEphemeralStore*      _pEphemeralStore{ nullptr };     ///< 없으면 서버 한 대(라우터 없음)
+        IServerBusTransport*  _pServerBusTransport{ nullptr }; ///< 없으면 서버 한 대. 키트에는 호스트가 만든 앞(`getServerBus`)만 간다
         RemoteConfig*         _pRemoteConfig{ nullptr };
         int32                 _requestBurstPerAccount{ 30 };
         int64                 _requestRefillMsPerAccount{ 100 };
@@ -191,8 +192,9 @@ namespace sw
         void subscribeServerBus( string_view topic, IOnlineHostService* pService );
         void unsubscribeServerBus( string_view topic, IOnlineHostService* pService );
 
-        RemoteConfig*    getRemoteConfig() const { return _settings._pRemoteConfig; }
-        IServerBus*      getServerBus() const { return _settings._pServerBus; }
+        RemoteConfig* getRemoteConfig() const { return _settings._pRemoteConfig; }
+        /** @brief 버스의 타입 있는 앞입니다. 버스가 없으면(서버 한 대) nullptr 입니다. `initialize` 뒤부터 있습니다. */
+        ServerBus*       getServerBus() const { return _pServerBus.get(); }
         IServiceStore*   getServiceStore() const { return _settings._pServiceStore; }
         IEphemeralStore* getEphemeralStore() const { return _settings._pEphemeralStore; }
         uint16           getListenPort() const;
@@ -244,6 +246,7 @@ namespace sw
         vector<uint8>                                    _responseBytes;
         unordered_map<uint64, ConnectionState>           _mapConnection; ///< 연결(packed) → 상태
         unordered_map<AccountID, StreamConnectionHandle> _mapAccountToConnection;
+        unique_ptr<ServerBus>                            _pServerBus; ///< `_settings._pServerBusTransport` 의 앞이다
         IStreamTransport*                                _pTransport;
         int64                                            _nowMs;
         uint64                                           _schemaHash; ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다

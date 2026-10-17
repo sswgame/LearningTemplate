@@ -184,6 +184,7 @@ namespace sw
     struct AchievementState
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY( MaxCount = 32 )
         string _achievementID{};
         PROPERTY()

@@ -143,11 +143,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버 버스 `SocialBus::kLinksTopic` 의 본문입니다. 관계가 바뀐 두 사람이며, 받은 서버는 그 계정이 자기에게 있으면 관계를 다시 읽습니다. */
+    /** @brief 서버 버스 `SocialBus::kLinksTopic` 의 본문입니다. 관계가 바뀐 두 사람이며, 받은 서버는 그 계정이 자기에게 있으면 관계를 다시 읽습니다. 버스에만 쓰므로 `MessageTypes` 에 없습니다(A). */
     REFLECT()
     struct SocialLinkChanged
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY()
         AccountID _firstID{ kInvalidAccountID };
         PROPERTY()
@@ -164,7 +165,7 @@ namespace sw
      */
     struct SW_KIT_API SocialProtocol
     {
-        using MessageTypes = OnlineMessageTypes<SocialRequest, SocialReply, SocialNotification, SocialPresence, SocialLinkChanged>;
+        using MessageTypes = OnlineMessageTypes<SocialRequest, SocialReply, SocialNotification, SocialPresence>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 

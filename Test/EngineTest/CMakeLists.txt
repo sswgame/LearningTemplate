@@ -76,12 +76,14 @@ sw_addTestExecutable(EngineTest
 # 없으면 ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 DXIL 리플렉션을
 # 못 얻어 "forwardlit_ps g_SwMaterials 원소 없음: dx12" 로 실패한다 — 셰이더가 아니라 도구가
 # 없어서 나는 실패라 원인을 찾기 어렵다.
-# 에디터 테마 토큰(EditorThemeDef)은 REFLECT 타입이라 StaticType() 이 코드젠에서 나온다. EditorModule 을 링크하지 않으므로 이 헤더만 따로 코드젠한다.
+# 에디터 테마 토큰(EditorThemeDef)은 REFLECT 타입이라 StaticType() 이 코드젠에서 나온다. EditorModule 을 링크하지 않으므로 이 헤더만 따로 코드젠한다. 서버 버스 혼합 빌드 테스트의 본문 타입(ServerBusTestTypes.h)도 같다.
 sw_addReflectionStep(EngineTest
 	HEADERS
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/GameFramework/Online/ServerBusTestTypes.h"
 	INCLUDES
 		"${CMAKE_SOURCE_DIR}/Source"
+		"${CMAKE_SOURCE_DIR}/Test"
 )
 
 sw_deployRuntimeDependencies(EngineTest ALWAYS_DXC)

@@ -3,11 +3,13 @@
 #include "pch.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+#include "EngineTest/GameFramework/Online/ServerBusTestUtil.h"
 
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
+#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
@@ -70,6 +72,7 @@ namespace
         MemoryEphemeralStore       _cache;
         EphemeralStoreRouter       _router;
         LocalServerBus             _bus;
+        ServerBus                  _busFront;
         SocialService              _service;
         vector<SocialCompletion>   _listCompletion;
         vector<SocialNotification> _listNotification;
@@ -81,18 +84,19 @@ namespace
             , _cache{ pCacheDatabase }
             , _router{}
             , _bus{ pHub, serverID }
+            , _busFront{ _bus }
             , _service{}
             , _listCompletion{}
             , _listNotification{}
             , _pFront{ pStore != nullptr ? pStore : &_store }
         {
             _router.initialize( &_cache );
-            _bus.subscribe( SocialBus::kLinksTopic );
-            _bus.subscribe( SocialBus::kPresenceTopic );
+            _bus.subscribe( SocialBus::kLinksTopic.getName() );
+            _bus.subscribe( SocialBus::kPresenceTopic.getName() );
             SocialServiceDependencies dependencies;
             dependencies._pStore     = _pFront;
             dependencies._pRouter    = &_router;
-            dependencies._pBus       = &_bus;
+            dependencies._pBus       = &_busFront;
             dependencies._pNameIndex = pNameIndex;
             _service.initialize( dependencies );
         }
@@ -106,7 +110,7 @@ namespace
                 for ( const ServerBusMessage& message : listMessage )
                 {
                     if ( message._originServerID != _bus.getServerID() )
-                        _service.handleBusMessage( message._topic, message._bytes );
+                        _service.handleBusMessage( message );
                 }
                 _service.update( nowMs );
                 (void)_pFront->pollCompletions();
@@ -413,8 +417,7 @@ SW_TEST_CASE( SocialProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
     notification._kind     = SocialNotificationKind::PresenceChanged;
     notification._presence = SocialPresence{ "dungeon", 4, SocialPresenceStatus::Away };
     SW_EXPECT_TRUE( Util::roundTrips<Messages>( notification ) );
-    SW_EXPECT_TRUE( Util::roundTrips<Messages>( SocialLinkChanged{ 1, 2 } ) );
-    SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( SocialLinkChanged{ 1, 2 } ) );
+    SW_EXPECT_TRUE( test::ServerBusTestUtil::roundTrips( SocialBus::kLinksTopic, SocialLinkChanged{ 1, 2 } ) );
     SocialPresence decoded;
     vector<uint8>  presenceBytes;
     SW_ASSERT_TRUE( SocialProtocol::encodePresenceRecord( SocialPresence{ "lobby", 8, SocialPresenceStatus::Busy }, presenceBytes ) );
@@ -436,4 +439,41 @@ SW_TEST_CASE( SocialProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
         badRole._role = GuildRole::Count;
         SW_EXPECT_TRUE( Util::refusesToWrite<Messages>( badRole ) );
     }
+}
+
+/**
+ * @brief [SocialProtocolTest] 다른 서버로 가는 알림 중계는 받는 서버가 자기 빌드의 번호와 B 로 다시 쓰고, 모르는 알림 · 다른 본문 타입은 버린다
+ * @details 봉투는 알림 번호 · B 대신 알림 열거자 이름과 본문 A 를 싣는다(docs/plans/ServerBusFormat.md 3.5). 소셜 키트가 `Social.Notification` 항목을 등록한다.
+ */
+SW_TEST_CASE( SocialProtocolTest, RelayedPushIsRewrittenByTheReceivingBuild )
+{
+    SocialNotification notification;
+    notification._otherID = 7;
+    notification._kind    = SocialNotificationKind::FriendAdded;
+    OnlinePushRelay relay;
+    SW_ASSERT_TRUE( OnlinePushRelayRegistry::makeRelay( AccountID( 3 ), SocialPushName::Notification, notification, relay ) );
+    SW_EXPECT_EQUAL( AccountID( 3 ), relay._accountID );
+    SW_EXPECT_TRUE( relay._pushName == "Notification" );
+
+    uint16    kind = 0;
+    BitWriter body;
+    SW_ASSERT_TRUE( OnlinePushRelayRegistry::convert( relay, kind, body ) );
+    SW_EXPECT_EQUAL( SocialMethod::kPushNotification, kind );
+    BitReader          reader( body.getBytes().data(), body.getByteCount() );
+    SocialNotification decoded;
+    SW_ASSERT_TRUE( SocialProtocol::MessageTypes::read( reader, decoded ) == FixedReadResult::Ok );
+    SW_EXPECT_EQUAL( AccountID( 7 ), decoded._otherID );
+    SW_EXPECT_TRUE( decoded._kind == SocialNotificationKind::FriendAdded );
+
+    const uint64              rejectedAt = OnlinePushRelayRegistry::getRejectedCount();
+    test::ScopedLogSuppressor suppressor; // 버린 중계 오류(알림과 이유마다 한 번)
+    OnlinePushRelay           unknownPush = relay;
+    unknownPush._pushName                 = "NotificationAddedLater";
+    BitWriter unknownBody;
+    SW_EXPECT_FALSE( OnlinePushRelayRegistry::convert( unknownPush, kind, unknownBody ) );
+    OnlinePushRelay otherBody = relay;
+    otherBody._bodyType       = "sw::SocialPresence";
+    BitWriter otherBodyWriter;
+    SW_EXPECT_FALSE( OnlinePushRelayRegistry::convert( otherBody, kind, otherBodyWriter ) );
+    SW_EXPECT_EQUAL( rejectedAt + 2, OnlinePushRelayRegistry::getRejectedCount() );
 }

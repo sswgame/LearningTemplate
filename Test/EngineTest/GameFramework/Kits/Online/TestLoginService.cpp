@@ -4,6 +4,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
+#include "EngineTest/GameFramework/Online/ServerBusTestUtil.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
@@ -13,6 +14,7 @@
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/FakePlatformLoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountProtocol.h"
 
@@ -854,9 +856,9 @@ SW_TEST_CASE( LoginServiceTest, OldBuildIsToldToUpdate )
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     RemoteConfig config;
-    config.submitSet( fixture->_store, nullptr, "account.minimum_build.windows", Internal::makeText( "1.9.0" ), Internal::makeAudit() );
-    config.submitSet( fixture->_store, nullptr, "account.recommended_build.windows", Internal::makeText( "1.10.0" ), Internal::makeAudit() );
-    config.submitSet( fixture->_store, nullptr, "account.store_url.windows", Internal::makeText( "https://store.example/game" ), Internal::makeAudit() );
+    config.submitSet( fixture->_store, "account.minimum_build.windows", Internal::makeText( "1.9.0" ), Internal::makeAudit() );
+    config.submitSet( fixture->_store, "account.recommended_build.windows", Internal::makeText( "1.10.0" ), Internal::makeAudit() );
+    config.submitSet( fixture->_store, "account.store_url.windows", Internal::makeText( "https://store.example/game" ), Internal::makeAudit() );
     (void)fixture->_store.pollCompletions();
     fixture->_service->setRemoteConfig( &config );
 
@@ -1007,7 +1009,7 @@ SW_TEST_CASE( AccountProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
     platform._ticketBytes.assign( 8192, uint8( 0xAB ) );
     platform._clientInfo = AccountClientInfo{ "1.4.2", "windows" };
     SW_EXPECT_TRUE( Util::roundTrips<Messages>( platform ) );
-    SW_EXPECT_TRUE( Util::roundTrips<Messages>( AccountRevokeNotice{ "sanction.suspended", 3, 4, LoginRevokeReason::Sanctioned } ) );
+    SW_EXPECT_TRUE( test::ServerBusTestUtil::roundTrips( AccountBus::kRevokeTopic, AccountRevokeNotice{ "sanction.suspended", 3, 4, LoginRevokeReason::Sanctioned } ) );
     SW_EXPECT_TRUE( Util::refusesEveryPrefix<Messages>( AccountCredentialRequest{ "alice", "password123" } ) );
     SW_EXPECT_TRUE( ( Util::refusesAsOtherType<Messages, AccountProviderRequest>( AccountCredentialRequest{ "alice", "password123" } ) ) );
     {

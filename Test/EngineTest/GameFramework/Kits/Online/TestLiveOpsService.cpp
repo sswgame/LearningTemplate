@@ -49,6 +49,7 @@ namespace
     {
         MemoryServiceStore        _store;
         LocalServerBus            _bus;
+        ServerBus                 _busFront;
         LiveOpsService            _service;
         vector<LiveOpsCompletion> _listCompletion;
         int32                     _stateChangeCount;
@@ -56,14 +57,15 @@ namespace
         LiveOpsNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverID, const RemoteConfig* pRemoteConfig = nullptr )
             : _store{ pDatabase }
             , _bus{ pHub, serverID }
+            , _busFront{ _bus }
             , _service{}
             , _listCompletion{}
             , _stateChangeCount{ 0 }
         {
-            _bus.subscribe( LiveOpsBus::kChangedTopic );
+            _bus.subscribe( LiveOpsBus::kChangedTopic.getName() );
             LiveOpsDependencies dependencies;
             dependencies._pStore        = &_store;
-            dependencies._pBus          = &_bus;
+            dependencies._pBus          = &_busFront;
             dependencies._pRemoteConfig = pRemoteConfig;
             _service.initialize( dependencies );
         }
@@ -83,7 +85,9 @@ namespace
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
                 {
-                    if ( message._originServerID != _bus.getServerID() )
+                    LiveOpsChanged changed;
+                    const bool     bFromOtherServer = message.getOriginServerID() != _bus.getServerID();
+                    if ( bFromOtherServer && LiveOpsBus::kChangedTopic.read( message, changed ) == ServerBusReadResult::Read )
                         _service.notifyChanged();
                 }
                 _service.update( nowMs );
@@ -174,11 +178,11 @@ SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHide
     RemoteConfigValue     rate;
     rate._type = RemoteConfigValueType::Text;
     rate._text = "2.5";
-    config.submitSet( configFront, nullptr, "event.xp_rate", rate, Internal::makeAudit() );
+    config.submitSet( configFront, "event.xp_rate", rate, Internal::makeAudit() );
     RemoteConfigValue bonus;
     bonus._type    = RemoteConfigValueType::Integer;
     bonus._integer = 3;
-    config.submitSet( configFront, nullptr, "event.bonus", bonus, Internal::makeAudit() );
+    config.submitSet( configFront, "event.bonus", bonus, Internal::makeAudit() );
     (void)configFront.pollCompletions();
     SW_ASSERT_TRUE( config.getLastSetResult() == ServiceStoreResult::Ok );
 
@@ -212,7 +216,7 @@ SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHide
     killSwitch._type               = RemoteConfigValueType::Flag;
     killSwitch._integer            = 1;
     killSwitch._rolloutBasisPoints = 0;
-    config.submitSet( configFront, nullptr, LiveOpsBus::kKillSwitchFlag, killSwitch, Internal::makeAudit() );
+    config.submitSet( configFront, LiveOpsBus::kKillSwitchFlag, killSwitch, Internal::makeAudit() );
     (void)configFront.pollCompletions();
     SW_EXPECT_EQUAL( node.countActive( nowMs ), 0 );
     SW_EXPECT_FALSE( node._service.isEventActive( "halloween", 1, "kr", 100, nowMs ) );

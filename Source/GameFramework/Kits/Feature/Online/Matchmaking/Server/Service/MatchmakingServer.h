@@ -49,7 +49,9 @@ namespace sw
     private:
         void attachHost( OnlineServiceHost& host );
         void respond( OnlineServiceHost& host, uint64 requestTag, const MatchmakingReply& reply );
-        void push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const BitWriter& body );
+        /** @brief 알림 @p kind 를 이 서버의 계정에게 B 로 보내고, 없으면 다른 서버로 중계합니다(`IAccountPresence::sendRemotePush`). 정의는 `.cpp` 에만 있습니다. */
+        template <typename TBody>
+        void push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const TBody& message );
 
         ServicePendingTable            _pendingTable;
         vector<PartyLobbyCompletion>   _listPartyCompletionScratch;

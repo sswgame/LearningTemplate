@@ -40,6 +40,7 @@ namespace sw
         , _responseBytes{}
         , _mapConnection{}
         , _mapAccountToConnection{}
+        , _pServerBus{}
         , _pTransport{ nullptr }
         , _nowMs{ 0 }
         , _schemaHash{ 0 }
@@ -62,6 +63,7 @@ namespace sw
         }
         _settings   = settings;
         _pTransport = pTransport;
+        _pServerBus = settings._pServerBusTransport != nullptr ? make_unique<ServerBus>( *settings._pServerBusTransport ) : nullptr;
         _schemaHash = OnlineProtocolRegistry::computeSchemaHash(); // 서비스를 올린 뒤 기동 때 한 번. 같은 빌드의 클라이언트와 같은 값이다
         _accountBucket.initialize( settings._requestBurstPerAccount, settings._requestRefillMsPerAccount, OnlineServiceHostInternal::kMaxTrackedBucketCount );
         _remoteBucket.initialize( settings._requestBurstPerRemote, settings._requestRefillMsPerRemote, OnlineServiceHostInternal::kMaxTrackedBucketCount );
@@ -111,7 +113,7 @@ namespace sw
         }
         for ( const BusSubscription& subscription : _listBusSubscription )
         {
-            _settings._pServerBus->unsubscribe( subscription._topic );
+            _settings._pServerBusTransport->unsubscribe( subscription._topic );
         }
         _listBusSubscription.clear();
         releaseTransportSide();
@@ -172,10 +174,10 @@ namespace sw
         (void)_endpoint.pump( *this );
         _requestServer.update();
         (void)_ephemeralRouter.pump();
-        if ( _settings._pServerBus != nullptr )
+        if ( _settings._pServerBusTransport != nullptr )
         {
             _listBusScratch.clear();
-            (void)_settings._pServerBus->pollMessages( _listBusScratch );
+            (void)_settings._pServerBusTransport->pollMessages( _listBusScratch );
             for ( const ServerBusMessage& message : _listBusScratch )
             {
                 dispatchServerBusMessage( message );
@@ -269,7 +271,7 @@ namespace sw
 
     void OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineHostService* pService )
     {
-        if ( _settings._pServerBus == nullptr )
+        if ( _settings._pServerBusTransport == nullptr )
             return;
         bool bTopicOpen = false;
         for ( const BusSubscription& subscription : _listBusSubscription )
@@ -279,7 +281,7 @@ namespace sw
             bTopicOpen = bTopicOpen || subscription._topic == topic;
         }
         if ( bTopicOpen == false )
-            _settings._pServerBus->subscribe( topic );
+            _settings._pServerBusTransport->subscribe( topic );
         _listBusSubscription.push_back( BusSubscription{ string( topic ), pService } );
     }
 
@@ -298,9 +300,9 @@ namespace sw
             bTopicStillOpen = bTopicStillOpen || _listBusSubscription[index]._topic == topic;
             ++index;
         }
-        const bool bUnsubscribeTopic = bRemoved && bTopicStillOpen == false && _settings._pServerBus != nullptr;
+        const bool bUnsubscribeTopic = bRemoved && bTopicStillOpen == false && _settings._pServerBusTransport != nullptr;
         if ( bUnsubscribeTopic )
-            _settings._pServerBus->unsubscribe( topic );
+            _settings._pServerBusTransport->unsubscribe( topic );
     }
 
     uint16 OnlineServiceHost::getListenPort() const
@@ -465,7 +467,7 @@ namespace sw
         vector<IOnlineHostService*> listTarget;
         for ( const BusSubscription& subscription : _listBusSubscription )
         {
-            if ( subscription._topic == message._topic )
+            if ( subscription._topic == message.getTopic() )
                 listTarget.push_back( subscription._pService );
         }
         for ( IOnlineHostService* pService : listTarget )

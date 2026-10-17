@@ -6,6 +6,7 @@
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 
 #include <algorithm>
@@ -246,24 +247,18 @@ namespace sw
         _pPartyLobby->drainNotifications( _listPartyNotificationScratch );
         for ( const PartyLobbyNotification& notification : _listPartyNotificationScratch )
         {
-            BitWriter body;
-            bool      bWritten = false;
             if ( notification._pushKind == MatchmakingMethod::kPushPartyInvite )
-                bWritten = MatchmakingProtocol::MessageTypes::write( body, notification._invite );
+                push( host, notification._recipientID, notification._pushKind, notification._invite );
             else if ( notification._pushKind == MatchmakingMethod::kPushLobby )
-                bWritten = MatchmakingProtocol::MessageTypes::write( body, notification._lobby );
+                push( host, notification._recipientID, notification._pushKind, notification._lobby );
             else
-                bWritten = MatchmakingProtocol::MessageTypes::write( body, notification._party );
-            if ( bWritten ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
-                push( host, notification._recipientID, notification._pushKind, body );
+                push( host, notification._recipientID, notification._pushKind, notification._party );
         }
         _listQueueNotificationScratch.clear();
         _pQueue->drainNotifications( _listQueueNotificationScratch );
         for ( const MatchQueueNotification& notification : _listQueueNotificationScratch )
         {
-            BitWriter body;
-            if ( MatchmakingProtocol::MessageTypes::write( body, notification._assignment ) ) // 쓰지 못했으면 write 가 범위 밖 값을 로그에 남겼다
-                push( host, notification._recipientID, MatchmakingMethod::kPushMatch, body );
+            push( host, notification._recipientID, MatchmakingMethod::kPushMatch, notification._assignment );
         }
 
         _listTopicChangeScratch.clear();
@@ -296,13 +291,13 @@ namespace sw
     void MatchmakingServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
     {
         (void)host;
-        if ( _pAgent != nullptr && message._topic == _pAgent->getAssignTopic() )
+        if ( _pAgent != nullptr && message.getTopic() == _pAgent->getAssignTopic() )
         {
-            (void)_pAgent->handleAssign( message._bytes, _nowMs );
+            (void)_pAgent->handleAssign( message, _nowMs ); // 읽지 못한 배정은 읽기가 로그와 카운터를 남겼다
             return;
         }
         if ( _pQueue != nullptr )
-            _pQueue->handleBusMessage( message._topic, message._bytes, _nowMs );
+            _pQueue->handleBusMessage( message, _nowMs );
     }
 
     void MatchmakingServer::attachHost( OnlineServiceHost& host )
@@ -323,11 +318,24 @@ namespace sw
         (void)host.respondMessage<MatchmakingProtocol::MessageTypes>( token, reply );
     }
 
-    void MatchmakingServer::push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const BitWriter& body )
+    template <typename TBody>
+    void MatchmakingServer::push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const TBody& message )
     {
+        BitWriter body;
+        if ( MatchmakingProtocol::MessageTypes::write( body, message ) == false )
+            return; // write 가 범위 밖 값을 로그에 남겼다
         if ( host.sendPush( accountID, kind, body ) )
             return;
-        if ( _pPresence != nullptr )
-            (void)_pPresence->sendRemotePush( accountID, kind, body ); // 다른 서버에 접속한 멤버이다
+        if ( _pPresence != nullptr ) // 다른 서버에 접속한 멤버이다. 받는 서버가 자기 빌드의 번호와 B 로 다시 쓴다
+            (void)_pPresence->sendRemotePush( accountID, static_cast<MatchmakingPushName>( kind - MatchmakingMethod::kFirstPush ), message );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
+    const OnlinePushRelayEntry kMatchmakingPartyRelay{ "Matchmaking.Party", MatchmakingMethod{}, MatchmakingPushName::Party, MatchmakingProtocol::MessageTypes{}, OnlinePushBody<PartySnapshot>{} };
+    const OnlinePushRelayEntry kMatchmakingPartyInviteRelay{ "Matchmaking.PartyInvite", MatchmakingMethod{}, MatchmakingPushName::PartyInvite, MatchmakingProtocol::MessageTypes{}, OnlinePushBody<PartyInvite>{} };
+    const OnlinePushRelayEntry kMatchmakingLobbyRelay{ "Matchmaking.Lobby", MatchmakingMethod{}, MatchmakingPushName::Lobby, MatchmakingProtocol::MessageTypes{}, OnlinePushBody<LobbySnapshot>{} };
+    const OnlinePushRelayEntry kMatchmakingMatchRelay{ "Matchmaking.Match", MatchmakingMethod{}, MatchmakingPushName::Match, MatchmakingProtocol::MessageTypes{}, OnlinePushBody<MatchAssignment>{} };
 } // namespace sw

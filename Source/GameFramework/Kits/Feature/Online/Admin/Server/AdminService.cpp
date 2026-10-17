@@ -8,7 +8,7 @@
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
@@ -225,11 +225,7 @@ namespace sw
             }
             const bool bSanctionChanged = pending._method == AdminMethod::kSetSanction && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
             if ( bSanctionChanged && _settings._pBus != nullptr )
-            {
-                BitWriter body;
-                body.writeVarUint( pending._targetID );
-                _settings._pBus->publish( ServiceSanctionBus::kChangedTopic, body.getBytes().data(), body.getByteCount() );
-            }
+                (void)ServiceSanctionBus::kChangedTopic.publish( *_settings._pBus, ServiceSanctionChanged{ pending._targetID } ); // 실패는 발행이 로그로 남겼다. 채팅은 묵힘 시한 안에 다시 읽는다
             finishCall( pendingIndex, inoutReply );
             return;
         }

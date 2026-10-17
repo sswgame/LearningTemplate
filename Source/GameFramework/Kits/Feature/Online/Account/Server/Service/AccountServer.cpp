@@ -257,21 +257,16 @@ namespace sw
 
     void AccountServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
     {
-        if ( message._topic != kRevokeTopic )
+        if ( AccountBus::kRevokeTopic.matches( message ) == false )
         {
             (void)_presence.handlePushMessage( message );
             return;
         }
-        if ( host.getServerBus() != nullptr && message._originServerID == host.getServerBus()->getServerID() )
+        if ( host.getServerBus() != nullptr && message.getOriginServerID() == host.getServerBus()->getServerID() )
             return; // 이 서버가 보낸 알림이므로 이미 끊었다
-        BitReader             reader( message._bytes.data(), static_cast<int32>( message._bytes.size() ) );
-        AccountRevokeNotice   notice;
-        const FixedReadResult readResult = AccountProtocol::MessageTypes::read( reader, notice );
-        if ( readResult != FixedReadResult::Ok )
-        {
-            SW_LOG_WARNING( "Malformed account revoke bus message from server %# (%#)", message._originServerID, FixedLayout::toString( readResult ) );
-            return;
-        }
+        AccountRevokeNotice notice;
+        if ( AccountBus::kRevokeTopic.read( message, notice ) != ServerBusReadResult::Read )
+            return; // 읽기가 (타입, 결과, 버전)마다 한 번 오류 로그와 카운터를 남겼다 — 그 세션은 영속 레코드 다시 읽기로 끊긴다
         if ( notice._reasonCode.empty() == false && findSessionID( notice._accountID ) == notice._sessionID )
             _mapAccountToReasonCode[notice._accountID] = notice._reasonCode;
         _pLoginService->noteRevokedElsewhere( notice._accountID, notice._sessionID, notice._reason );
@@ -440,7 +435,7 @@ namespace sw
         _presence.attach( &host );
         if ( _presence.isEnabled() == false )
             return; // 서버가 한 대이다
-        host.subscribeServerBus( kRevokeTopic, this );
+        host.subscribeServerBus( AccountBus::kRevokeTopic.getName(), this );
         host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerID() ), this );
     }
 
@@ -448,7 +443,7 @@ namespace sw
     {
         _listEventScratch.clear();
         _pLoginService->drainRemoteRevocations( _listEventScratch );
-        IServerBus* pBus = host.getServerBus();
+        ServerBus* pBus = host.getServerBus();
         for ( const LoginEvent& event : _listEventScratch )
         {
             string     reasonCode;
@@ -459,10 +454,8 @@ namespace sw
                 _mapAccountToReasonCode.erase( codeIt );
             }
             if ( pBus == nullptr )
-                continue; // 서버가 한 대이므로 접속해 있지 않은 세션(재접속 유예)은 알릴 곳이 없다
-            BitWriter message;
-            if ( AccountProtocol::MessageTypes::write( message, AccountRevokeNotice{ reasonCode, event._accountID, event._sessionID, event._reason } ) )
-                pBus->publish( kRevokeTopic, message.getBytes().data(), message.getByteCount() );
+                continue;                                                                                                                          // 서버가 한 대이므로 접속해 있지 않은 세션(재접속 유예)은 알릴 곳이 없다
+            (void)AccountBus::kRevokeTopic.publish( *pBus, AccountRevokeNotice{ reasonCode, event._accountID, event._sessionID, event._reason } ); // 실패는 발행이 오류 로그로 남겼다
         }
     }
 } // namespace sw

@@ -4,7 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
@@ -389,9 +389,7 @@ namespace sw
         reloadIfLocal( otherID );
         if ( _dependencies._pBus != nullptr )
         {
-            BitWriter body;
-            if ( SocialProtocol::MessageTypes::write( body, SocialLinkChanged{ accountID, otherID } ) )
-                _dependencies._pBus->publish( SocialBus::kLinksTopic, body.getBytes().data(), body.getByteCount() );
+            (void)SocialBus::kLinksTopic.publish( *_dependencies._pBus, SocialLinkChanged{ accountID, otherID } ); // 실패는 발행이 로그로 남겼다. 다른 서버는 다음 로그인에 다시 읽는다
         }
 
         if ( decision._bNotifyOtherRequested == SW_TRUE )
@@ -521,24 +519,18 @@ namespace sw
         _mapAccountToLocal.erase( localIt );
     }
 
-    void SocialService::handleBusMessage( string_view topic, const vector<uint8>& bytes )
+    void SocialService::handleBusMessage( const ServerBusMessage& message )
     {
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( topic == SocialBus::kLinksTopic )
+        SocialLinkChanged changed;
+        if ( SocialBus::kLinksTopic.read( message, changed ) == ServerBusReadResult::Read )
         {
-            SocialLinkChanged changed;
-            if ( SocialProtocol::MessageTypes::read( reader, changed ) != FixedReadResult::Ok )
-                return;
             reloadIfLocal( changed._firstID );
             reloadIfLocal( changed._secondID );
             return;
         }
-        if ( topic == SocialBus::kPresenceTopic )
-        {
-            SocialPresence presence;
-            if ( SocialProtocol::MessageTypes::read( reader, presence ) == FixedReadResult::Ok )
-                notifyFriendsOfPresence( presence );
-        }
+        SocialPresence presence;
+        if ( SocialBus::kPresenceTopic.read( message, presence ) == ServerBusReadResult::Read )
+            notifyFriendsOfPresence( presence );
     }
 
     SocialService::LocalAccount& SocialService::ensureLocal( AccountID accountID )
@@ -582,10 +574,7 @@ namespace sw
         notifyFriendsOfPresence( presence ); // 이 서버의 계정이다
         if ( _dependencies._pBus == nullptr )
             return;
-        BitWriter body;
-        if ( SocialProtocol::MessageTypes::write( body, presence ) == false )
-            return; // write 가 범위 밖 값을 로그에 남겼다
-        _dependencies._pBus->publish( SocialBus::kPresenceTopic, body.getBytes().data(), body.getByteCount() );
+        (void)SocialBus::kPresenceTopic.publish( *_dependencies._pBus, presence ); // 실패는 발행이 로그로 남겼다
     }
 
     void SocialService::notifyFriendsOfPresence( const SocialPresence& presence )

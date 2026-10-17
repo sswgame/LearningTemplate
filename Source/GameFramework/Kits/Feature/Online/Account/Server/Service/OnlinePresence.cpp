@@ -18,7 +18,6 @@ namespace sw
         {
             static constexpr const utf8* kAccountKeyPrefix = "presence:";
             static constexpr const utf8* kNameKeyPrefix    = "presence.name:";
-            static constexpr const utf8* kPushTopicPrefix  = "push.";
 
             static vector<uint8> takeBytes( const BitWriter& writer )
             {
@@ -147,24 +146,17 @@ namespace sw
 
     bool OnlinePresence::handlePushMessage( const ServerBusMessage& message )
     {
-        if ( _pHost == nullptr || message._topic != makePushTopic( _serverID ) )
+        if ( _pHost == nullptr || message.getTopic() != makePushTopic( _serverID ) )
             return false;
-        BitReader       reader( message._bytes.data(), static_cast<int32>( message._bytes.size() ) );
-        const AccountID accountID = reader.readVarUint();
-        const uint16    kind      = static_cast<uint16>( reader.readVarUint() );
-        vector<uint8>   bodyBytes;
-        if ( reader.readBlob( bodyBytes, IServerBus::kMaxMessageSize ) == false || reader.hasOverflowed() )
-            return true;
-        BitWriter body;
-        if ( bodyBytes.empty() == false )
-            body.writeBytes( bodyBytes.data(), static_cast<int32>( bodyBytes.size() ) );
-        (void)_pHost->sendPush( accountID, kind, body ); // 그사이 떠났으면 버린다. 배달은 최대 한 번이다
+        OnlinePushRelay relay;
+        if ( OnlinePresenceBus::kPushTopic.read( message, relay ) == ServerBusReadResult::Read )
+            deliverRelay( relay ); // 못 읽으면 읽기가 로그와 카운터를 남겼다
         return true;
     }
 
     string OnlinePresence::makePushTopic( uint64 serverID )
     {
-        return string( OnlinePresenceInternal::kPushTopicPrefix ) + ServiceKeyUtil::makeHex64( serverID );
+        return OnlinePresenceBus::kPushTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
     }
 
     string OnlinePresence::makeAccountKey( AccountID accountID )
@@ -218,17 +210,24 @@ namespace sw
         return lookupID;
     }
 
-    bool OnlinePresence::sendRemotePush( AccountID accountID, uint16 kind, const BitWriter& body )
+    bool OnlinePresence::relayRemotePush( const OnlinePushRelay& relay )
     {
         if ( _pHost == nullptr )
             return false;
         PendingOperation pending;
-        pending._bodyBytes   = OnlinePresenceInternal::takeBytes( body );
-        pending._accountID   = accountID;
-        pending._kind        = kind;
+        pending._relay       = relay;
+        pending._accountID   = relay._accountID;
         pending._pendingKind = PendingKind::Push;
-        submitPending( EphemeralRequest::makeGet( makeAccountKey( accountID ) ), std::move( pending ) );
+        submitPending( EphemeralRequest::makeGet( makeAccountKey( relay._accountID ) ), std::move( pending ) );
         return true;
+    }
+
+    void OnlinePresence::deliverRelay( const OnlinePushRelay& relay )
+    {
+        uint16    kind = 0;
+        BitWriter body;
+        if ( OnlinePushRelayRegistry::convert( relay, kind, body ) )
+            (void)_pHost->sendPush( relay._accountID, kind, body ); // 그사이 떠났으면 버린다. 배달은 최대 한 번이다
     }
 
     void OnlinePresence::onCacheReply( const EphemeralReply& reply )
@@ -348,19 +347,12 @@ namespace sw
         const bool bDropNotification = reply._result != EphemeralResult::Ok || OnlinePresenceInternal::readServerID( reply._value, serverID ) == false || _pHost == nullptr;
         if ( bDropNotification )
             return; // 접속해 있지 않으므로 알림은 버린다. 다시 접속하면 저장소에서 다시 읽는다
-        BitWriter body;
-        if ( pending._bodyBytes.empty() == false )
-            body.writeBytes( pending._bodyBytes.data(), static_cast<int32>( pending._bodyBytes.size() ) );
         if ( serverID == _serverID )
         {
-            (void)_pHost->sendPush( pending._accountID, pending._kind, body ); // 그사이 이 서버로 옮겨 왔다
+            deliverRelay( pending._relay ); // 그사이 이 서버로 옮겨 왔다
             return;
         }
-        BitWriter message;
-        message.writeVarUint( pending._accountID );
-        message.writeVarUint( pending._kind );
-        message.writeBlob( pending._bodyBytes.data(), static_cast<int32>( pending._bodyBytes.size() ) );
-        _pHost->getServerBus()->publish( makePushTopic( serverID ), message.getBytes().data(), message.getByteCount() );
+        (void)OnlinePresenceBus::kPushTopic.publish( *_pHost->getServerBus(), ServiceKeyUtil::makeHex64( serverID ), pending._relay ); // 실패는 발행이 로그로 남겼다
     }
 
     void OnlinePresence::finishRefresh( const PendingOperation& pending, const EphemeralReply& reply )

@@ -71,6 +71,7 @@ namespace
     {
         MemoryServiceStore        _store;
         LocalServerBus            _bus;
+        ServerBus                 _busFront;
         ChatTestDirectory         _directory;
         ChatTestPolicy            _policy;
         test::FakeAccountPresence _presence;
@@ -81,6 +82,7 @@ namespace
         ChatNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverID, const ChatServiceConfig& settings = ChatServiceConfig{} )
             : _store{ pDatabase }
             , _bus{ pHub, serverID }
+            , _busFront{ _bus }
             , _directory{}
             , _policy{}
             , _presence{}
@@ -90,7 +92,7 @@ namespace
         {
             ChatServiceDependencies dependencies;
             dependencies._pStore     = &_store;
-            dependencies._pBus       = &_bus;
+            dependencies._pBus       = &_busFront;
             dependencies._pPresence  = &_presence;
             dependencies._pDirectory = &_directory;
             dependencies._pPolicy    = &_policy;
@@ -117,7 +119,7 @@ namespace
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
                 {
-                    _service.handleBusMessage( message._topic, message._bytes );
+                    _service.handleBusMessage( message );
                 }
                 _service.update( nowMs );
                 (void)_store.pollCompletions();
@@ -154,10 +156,9 @@ namespace
 
         static void publishSanctionChanged( LocalServerBusHub& hub, AccountID accountID )
         {
-            LocalServerBus gmBus( &hub, 99 ); // GM 서버
-            BitWriter      body;
-            body.writeVarUint( accountID );
-            gmBus.publish( ServiceSanctionBus::kChangedTopic, body.getBytes().data(), body.getByteCount() );
+            LocalServerBus gmTransport( &hub, 99 ); // GM 서버
+            ServerBus      gmBus( gmTransport );
+            SW_EXPECT_TRUE( ServiceSanctionBus::kChangedTopic.publish( gmBus, ServiceSanctionChanged{ accountID } ) );
         }
     };
 } // namespace

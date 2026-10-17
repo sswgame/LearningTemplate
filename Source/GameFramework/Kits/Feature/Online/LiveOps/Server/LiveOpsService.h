@@ -16,21 +16,24 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsTypes.h"
 
 namespace sw
 {
-    class IServerBus;
     class IServiceStore;
     class LiveOpsWriteWork;
     class RemoteConfig;
+    class ServerBus;
 
     /** @brief 빌려 쓰는 객체들입니다. 로직보다 오래 살아야 합니다. */
     struct LiveOpsDependencies
     {
         IServiceStore*      _pStore{ nullptr };        ///< 필수
-        IServerBus*         _pBus{ nullptr };          ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며, 받기는 바인딩이 구독한다
+        ServerBus*          _pBus{ nullptr };          ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며, 받기는 바인딩이 구독한다
         const RemoteConfig* _pRemoteConfig{ nullptr }; ///< null 이면 '@' 값은 그대로 두고 긴급 스위치도 없다
     };
 } // namespace sw
@@ -47,12 +50,23 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 라이브 운영 정의를 바꿨다는 버스 신호의 본문입니다. 필드가 없고 받는 서버가 다시 읽습니다. */
+    REFLECT()
+    struct LiveOpsChanged
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 서버 간 버스 주제와 플래그입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
     struct LiveOpsBus
     {
-        static constexpr const utf8* kChangedTopic   = "liveops.changed"; ///< 정의를 바꿨다는 알림이다. 본문은 없고 받는 서버가 다시 읽는다
-        static constexpr const utf8* kKillSwitchFlag = "feature.liveops"; ///< 꺼지면 아무 이벤트도 보이지 않는다
-        static constexpr int64       kReloadPeriodMs = 30000;
+        static constexpr ServerBusTopic<LiveOpsChanged> kChangedTopic{ "liveops.changed" };  ///< 정의를 바꿨다는 알림이다. 받는 서버가 다시 읽는다
+        static constexpr const utf8*                    kKillSwitchFlag = "feature.liveops"; ///< 꺼지면 아무 이벤트도 보이지 않는다
+        static constexpr int64                          kReloadPeriodMs = 30000;
     };
 } // namespace sw
 

@@ -15,12 +15,22 @@ namespace sw
 
     class Archive;
 
+    /** @brief `BinarySerializer::deserializeExactVersion` 의 결과입니다. */
+    enum class [[nodiscard]] BinaryExactVersionResult : uint8
+    {
+        Read,            ///< 버전이 같고 본문을 읽었습니다
+        VersionMismatch, ///< 버전 머리가 기대한 값과 다릅니다. 본문은 읽지 않았습니다
+        Unreadable       ///< 버전 머리가 없거나 본문을 컨텍스트의 정책으로 읽지 못했습니다
+    };
+
     /**
      * @class BinarySerializer
      * @brief TypeInfo 로 객체를 콤팩트 바이너리 버퍼에 쓰고 읽습니다(압축 직렬화도 함께 지원합니다).
      * @details 스트림은 프로퍼티마다 이름 해시와 기록 타입을 싣는 자기 기술형이라 스키마가 바뀐 뒤에도 읽습니다.
      *          프로퍼티 순서로 짝을 맞추던 컴팩트 모드는 스키마 확인 없이 엉뚱한 필드에 읽혀 지웠습니다. 같은 빌드끼리
      *          주고받는 짧은 바이트는 스키마 해시로 배치를 확인하는 고정 배치형(`FixedLayout`)을 씁니다.
+     *          빌드가 섞인 서버끼리의 메시지와 캐시도 이 형식이므로(docs/plans/ServerBusFormat.md), 인코딩 버전(`kCurrentBinaryWireVersion`)을 올릴 때는
+     *          한 배포 동안 옛 버전도 읽어야 합니다. 이 빌드는 지금 버전 하나만 읽으므로 그냥 올리면 섞인 동안 모든 버스 메시지와 캐시 레코드를 읽지 못합니다.
      */
     class SW_API BinarySerializer
     {
@@ -87,6 +97,16 @@ namespace sw
                                                         uint32                  currentVersion  = 0,
                                                         const TypeInfo*         pLegacyTypeInfo = nullptr,
                                                         const SerializeContext& context         = SerializeContext::getDefault() );
+
+        /**
+         * @brief `serializeVersioned` 가 쓴 바이트를 버전 머리가 @p expectedVersion 과 같을 때만 **엄격하게** 읽습니다. 이관 레지스트리와 orphan 수집을 지나지 않습니다.
+         * @details 혼합 빌드 사이의 메시지와 캐시가 씁니다(docs/plans/ServerBusFormat.md 3.3). 모르는 이름 · 읽지 못한 필드의 처리는 @p context 의 두 플래그
+         *          (`setSkipUnknownProperties` · `setSkipUnreadableProperties`)가 정하고, 중첩 구조체까지 같은 정책입니다. 기본 컨텍스트를 받지 않습니다 —
+         *          부르는 쪽이 정책을 고릅니다. 실패해도 이미 쓴 프로퍼티는 되돌리지 않으므로 임시 객체에 읽습니다.
+         * @param outReadVersion 읽은 버전 머리입니다. 머리가 없으면 0 입니다.
+         */
+        static BinaryExactVersionResult deserializeExactVersion( uint32 expectedVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData,
+                                                                 size_t dataSize, uint32& outReadVersion, const SerializeContext& context );
 
         // ------------------------------------------------------------------------------
         // 4) 압축 바이너리 직렬화 (CompressionStream 통합)

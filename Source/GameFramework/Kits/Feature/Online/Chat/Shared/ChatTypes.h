@@ -72,6 +72,7 @@ namespace sw
     struct ChatMessage
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`ChatBus`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 기록 레코드의 판과 따로다
         PROPERTY( MaxCount = 48 )
         string _channelID{}; ///< 귓속말이면 기록 키(`ChatChannelID::makeWhisper`)이다
         PROPERTY( MaxCount = 32 )

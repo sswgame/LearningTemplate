@@ -4,7 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Shared/ServerDirectoryProtocol.h"
 
@@ -24,7 +24,7 @@ namespace sw
     void ServerDirectoryServer::shutdown()
     {
         if ( _pHost != nullptr )
-            _pHost->unsubscribeServerBus( ServerDirectoryBus::kChangedTopic, this );
+            _pHost->unsubscribeServerBus( ServerDirectoryBus::kChangedTopic.getName(), this );
         _pHost    = nullptr;
         _pService = nullptr;
     }
@@ -118,17 +118,19 @@ namespace sw
 
     void ServerDirectoryServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
     {
-        const IServerBus* pBus = host.getServerBus();
-        if ( _pService == nullptr || message._topic != ServerDirectoryBus::kChangedTopic )
+        const ServerBus* pBus = host.getServerBus();
+        if ( _pService == nullptr || ServerDirectoryBus::kChangedTopic.matches( message ) == false )
             return;
-        if ( pBus != nullptr && message._originServerID == pBus->getServerID() )
+        if ( pBus != nullptr && message.getOriginServerID() == pBus->getServerID() )
             return; // 이 서버가 낸 것이다. 쓰기 완료 때 이미 다시 읽기를 걸었다
-        _pService->notifyChanged();
+        ServerDirectoryChanged changed;
+        if ( ServerDirectoryBus::kChangedTopic.read( message, changed ) == ServerBusReadResult::Read )
+            _pService->notifyChanged(); // 못 읽으면(의미 버전이 다름) 주기 다시 읽기를 기다린다
     }
 
     void ServerDirectoryServer::attachHost( OnlineServiceHost& host )
     {
         _pHost = &host;
-        host.subscribeServerBus( ServerDirectoryBus::kChangedTopic, this );
+        host.subscribeServerBus( ServerDirectoryBus::kChangedTopic.getName(), this );
     }
 } // namespace sw

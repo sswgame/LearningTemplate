@@ -323,9 +323,10 @@ SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
     MemoryServiceDatabase database;
     MemoryServiceStore    store{ &database };
     LocalServerBusHub     hub;
-    LocalServerBus        adminBus{ &hub, 1 };
+    LocalServerBus        adminTransport{ &hub, 1 };
+    ServerBus             adminBus{ adminTransport };
     LocalServerBus        chatBus{ &hub, 2 }; // 다른 서버의 채팅이 듣는다
-    chatBus.subscribe( ServiceSanctionBus::kChangedTopic );
+    chatBus.subscribe( ServiceSanctionBus::kChangedTopic.getName() );
     AdminService       service;
     AdminServiceConfig settings;
     settings._pBus = &adminBus;
@@ -351,8 +352,9 @@ SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
     vector<ServerBusMessage> listMessage;
     (void)chatBus.pollMessages( listMessage );
     SW_ASSERT_EQUAL( listMessage.size(), size_t( 1 ) ); // 재시도 · 조회는 내지 않는다
-    BitReader reader( listMessage[0]._bytes.data(), static_cast<int32>( listMessage[0]._bytes.size() ) );
-    SW_EXPECT_EQUAL( reader.readVarUint(), AdminFixture::kPlayer );
+    ServiceSanctionChanged changed;
+    SW_ASSERT_TRUE( ServiceSanctionBus::kChangedTopic.read( listMessage[0], changed ) == ServerBusReadResult::Read );
+    SW_EXPECT_EQUAL( changed._accountID, AdminFixture::kPlayer );
     service.shutdown();
     store.shutdown();
     (void)store.pollCompletions();

@@ -7,7 +7,7 @@
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
@@ -373,6 +373,6 @@ namespace sw
             return;
         _bReloadRequested = SW_TRUE; // 이 서버는 다음 tick 에 다시 읽고 알린다
         if ( _dependencies._pBus != nullptr )
-            _dependencies._pBus->publish( LiveOpsBus::kChangedTopic, nullptr, 0 );
+            (void)LiveOpsBus::kChangedTopic.publish( *_dependencies._pBus, LiveOpsChanged{} ); // 실패는 발행이 로그로 남겼다. 다른 서버는 주기로 다시 읽는다
     }
 } // namespace sw

@@ -4,8 +4,9 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialProtocol.h"
@@ -90,8 +91,8 @@ namespace sw
     {
         if ( _pHost != nullptr )
         {
-            _pHost->unsubscribeServerBus( SocialBus::kLinksTopic, this );
-            _pHost->unsubscribeServerBus( SocialBus::kPresenceTopic, this );
+            _pHost->unsubscribeServerBus( SocialBus::kLinksTopic.getName(), this );
+            _pHost->unsubscribeServerBus( SocialBus::kPresenceTopic.getName(), this );
         }
         _pendingTable.clear();
         _pHost          = nullptr;
@@ -227,17 +228,17 @@ namespace sw
 
     void SocialServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
     {
-        const IServerBus* pBus = host.getServerBus();
-        if ( _pSocialService == nullptr || ( pBus != nullptr && message._originServerID == pBus->getServerID() ) )
+        const ServerBus* pBus = host.getServerBus();
+        if ( _pSocialService == nullptr || ( pBus != nullptr && message.getOriginServerID() == pBus->getServerID() ) )
             return; // 이 서버가 낸 메시지이다. 바꾼 시점에 이미 처리했다
-        _pSocialService->handleBusMessage( message._topic, message._bytes );
+        _pSocialService->handleBusMessage( message );
     }
 
     void SocialServer::attachHost( OnlineServiceHost& host )
     {
         _pHost = &host;
-        host.subscribeServerBus( SocialBus::kLinksTopic, this );
-        host.subscribeServerBus( SocialBus::kPresenceTopic, this );
+        host.subscribeServerBus( SocialBus::kLinksTopic.getName(), this );
+        host.subscribeServerBus( SocialBus::kPresenceTopic.getName(), this );
     }
 
     void SocialServer::respond( OnlineServiceHost& host, uint64 requestTag, const SocialReply& reply )
@@ -259,8 +260,14 @@ namespace sw
             if ( SocialProtocol::MessageTypes::write( body, notification ) == false )
                 continue; // write 가 범위 밖 값을 로그에 남겼다. 알림은 다음 조회로 대신한다
             if ( host.sendPush( notification._recipientID, SocialMethod::kPushNotification, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( notification._recipientID, SocialMethod::kPushNotification, body ); // 다른 서버에 접속해 있다
+                (void)_pPresence->sendRemotePush( notification._recipientID, SocialPushName::Notification, notification ); // 다른 서버에 접속해 있다
         }
         _listNotificationScratch.clear();
     }
+} // namespace sw
+
+namespace sw
+{
+    // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
+    const OnlinePushRelayEntry kSocialNotificationRelay{ "Social.Notification", SocialMethod{}, SocialPushName::Notification, SocialProtocol::MessageTypes{}, OnlinePushBody<SocialNotification>{} };
 } // namespace sw

@@ -61,7 +61,7 @@ namespace
             mode._teamSize  = 1;
             MatchQueueDependencies dependencies;
             dependencies._pRouter     = server._host.getEphemeralRouter();
-            dependencies._pBus        = &server._bus;
+            dependencies._pBus        = server._host.getServerBus();
             dependencies._pPartyLobby = &_partyLobby;
             dependencies._serverID    = server.getServerID();
             _queue.initialize( dependencies, vector<MatchModeDefinition>{ mode } );

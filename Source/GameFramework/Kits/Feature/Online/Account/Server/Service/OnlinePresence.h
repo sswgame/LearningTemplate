@@ -18,21 +18,30 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    struct ServerBusMessage;
-
     class OnlineServiceHost;
+    class ServerBusMessage;
 
     /** @brief 접속 상태 설정입니다. */
     struct OnlinePresenceConfig
     {
         int64 _ttlMs{ 60000 };             ///< 캐시 키의 시한이다
         int64 _refreshIntervalMs{ 30000 }; ///< 캐시에 다시 기록하는 간격이다. 시한의 절반이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 접속 상태의 서버 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다(지연 로드 모듈은 데이터를 가져올 수 없습니다). */
+    struct OnlinePresenceBus
+    {
+        static constexpr ServerBusTopicFamily<OnlinePushRelay> kPushTopic{ "push." }; ///< 뒤에 서버 16진. 그 서버에 접속한 계정에게 가는 알림 중계이다
     };
 } // namespace sw
 
@@ -63,7 +72,7 @@ namespace sw
         void noteOffline( AccountID accountID );
         /** @brief 캐시에 다시 기록하는 주기를 처리합니다. */
         void update( int64 nowMs );
-        /** @brief 이 서버의 알림 주제(`push.<서버>`) 메시지를 접속해 있는 계정에게 넘깁니다. 이 주제가 아니면 false 를 반환합니다. */
+        /** @brief 이 서버의 알림 주제(`push.<서버>`) 메시지를 이 빌드의 알림으로 바꿔 접속해 있는 계정에게 넘깁니다. 이 주제가 아니면 false 를 반환합니다. */
         bool handlePushMessage( const ServerBusMessage& message );
 
         /** @brief 서버 @p serverID 의 알림 주제를 반환합니다. */
@@ -74,7 +83,7 @@ namespace sw
         // IAccountPresence
         uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound ) override;
         uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound ) override;
-        bool   sendRemotePush( AccountID accountID, uint16 kind, const BitWriter& body ) override;
+        bool   relayRemotePush( const OnlinePushRelay& relay ) override;
         void   cancel( uint64 requestID ) override;
 
     private:
@@ -89,12 +98,11 @@ namespace sw
 
         struct PendingOperation
         {
-            vector<uint8>           _bodyBytes{}; ///< Push 의 알림 본문이다
-            string                  _nameKey{};   ///< FindName 에서는 찾는 이름(소문자 비교)이고, RefreshName 에서는 키이다
-            AccountPresenceDelegate _onFound{};   ///< Find* — 부른 쪽
+            OnlinePushRelay         _relay{};   ///< Push 의 중계 봉투이다
+            string                  _nameKey{}; ///< FindName 에서는 찾는 이름(소문자 비교)이고, RefreshName 에서는 키이다
+            AccountPresenceDelegate _onFound{}; ///< Find* — 부른 쪽
             AccountID               _accountID{ kInvalidAccountID };
             uint64                  _lookupID{ 0 }; ///< Find* 를 부른 쪽에 준 id 이다
-            uint16                  _kind{ 0 };     ///< Push 의 알림 종류이다
             PendingKind             _pendingKind{ PendingKind::FindName };
         };
 
@@ -104,14 +112,16 @@ namespace sw
             AccountPresenceDelegate _onFound{};
         };
 
-        void          onCacheReply( const EphemeralReply& reply );
-        void          submitPending( const EphemeralRequest& request, PendingOperation&& pending );
-        void          writeAccountEntries( const AccountIdentity& identity, bool bRefresh );
-        void          finishFindName( const PendingOperation& pending, const EphemeralReply& reply );
-        void          finishFindAccount( const PendingOperation& pending, const EphemeralReply& reply );
-        void          deliverDeferred();
-        void          finishPush( const PendingOperation& pending, const EphemeralReply& reply );
-        void          finishRefresh( const PendingOperation& pending, const EphemeralReply& reply );
+        void onCacheReply( const EphemeralReply& reply );
+        void submitPending( const EphemeralRequest& request, PendingOperation&& pending );
+        void writeAccountEntries( const AccountIdentity& identity, bool bRefresh );
+        void finishFindName( const PendingOperation& pending, const EphemeralReply& reply );
+        void finishFindAccount( const PendingOperation& pending, const EphemeralReply& reply );
+        void deliverDeferred();
+        void finishPush( const PendingOperation& pending, const EphemeralReply& reply );
+        void finishRefresh( const PendingOperation& pending, const EphemeralReply& reply );
+        /** @brief 중계 봉투를 이 빌드의 알림으로 바꿔 이 서버에 접속한 계정에게 보냅니다. 바꾸지 못하면 레지스트리가 로그와 카운터를 남겼다. */
+        void          deliverRelay( const OnlinePushRelay& relay );
         vector<uint8> makeServerBytes() const;
         vector<uint8> makeNameBytes( const AccountIdentity& identity ) const;
 

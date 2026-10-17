@@ -26,15 +26,11 @@ namespace sw
         return MatchQueueService::makeAssignTopic( _serverID );
     }
 
-    bool MatchServerAgent::handleAssign( const vector<uint8>& bytes, int64 nowMs )
+    bool MatchServerAgent::handleAssign( const ServerBusMessage& message, int64 nowMs )
     {
-        BitReader   reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         MatchFormed match;
-        if ( MatchmakingProtocol::MessageTypes::read( reader, match ) != FixedReadResult::Ok )
-        {
-            SW_LOG_WARNING( "MatchServerAgent: dropped a malformed assignment (%# bytes)", bytes.size() );
-            return false;
-        }
+        if ( MatchQueueBus::kAssignTopic.read( message, match ) != ServerBusReadResult::Read )
+            return false; // 읽기가 (타입, 결과, 버전)마다 한 번 오류 로그와 카운터를 남겼다
         for ( size_t team = 0; team < match._listTeam.size(); ++team )
         {
             for ( const MatchMember& member : match._listTeam[team]._listMember )

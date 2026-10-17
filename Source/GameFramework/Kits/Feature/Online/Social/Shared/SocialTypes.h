@@ -98,13 +98,14 @@ namespace sw
 {
     /**
      * @brief 한 계정의 접속 상태입니다. 친구에게 보이는 값입니다.
-     * @details 응답과 알림, 서버 버스(`SocialBus::kPresenceTopic`)에는 고정 배치형(B)으로 실립니다.
+     * @details 응답과 알림에는 고정 배치형(B)으로, 서버 버스(`SocialBus::kPresenceTopic`)에는 자기 기술형(A)으로 실립니다.
      *          캐시 값(시한 있는 접속 상태)은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `SocialProtocol::encodePresenceRecord`)입니다.
      */
     REFLECT()
     struct SocialPresence
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`SocialBus::kPresenceTopic`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 캐시 레코드의 판과 따로다
         PROPERTY( MaxCount = 64 )
         string _activity{}; ///< 활동 문구이다(예: "던전 3층"). 상한은 `SocialLimit::kMaxActivitySize` 와 같다
         PROPERTY()
@@ -137,6 +138,7 @@ namespace sw
     struct SocialNotification
     {
         REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
         PROPERTY()
         SocialPresence _presence{}; ///< PresenceChanged
         AccountID      _recipientID{ kInvalidAccountID };

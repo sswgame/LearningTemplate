@@ -146,10 +146,8 @@ namespace sw
             ++_droppedCount;
             return;
         }
-        ServerBusMessage& busMessage = _listQueuedMessage.emplace_back();
-        busMessage._topic            = message._channel.substr( prefix.size() );
-        busMessage._originServerID   = LittleEndianUtil::readUint64( message._bytes.data() + 1 );
-        busMessage._sequence         = LittleEndianUtil::readUint64( message._bytes.data() + 9 );
-        busMessage._bytes.assign( message._bytes.begin() + static_cast<ptrdiff_t>( EphemeralServerBusInternal::kEnvelopeSize ), message._bytes.end() );
+        vector<uint8> bodyBytes( message._bytes.begin() + static_cast<ptrdiff_t>( EphemeralServerBusInternal::kEnvelopeSize ), message._bytes.end() );
+        _listQueuedMessage.emplace_back( std::move( bodyBytes ), string( message._channel.substr( prefix.size() ) ), LittleEndianUtil::readUint64( message._bytes.data() + 1 ),
+                                         LittleEndianUtil::readUint64( message._bytes.data() + 9 ) );
     }
 } // namespace sw

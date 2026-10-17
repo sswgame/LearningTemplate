@@ -5,8 +5,9 @@
  *            응답 본문(`ChatReply`)은 업무 결과(`ChatResult`, 거래와 경제 키트도 같다), 기다릴 시간(ms), 메서드별 필드로 이루어진다.
  *            말하기와 귓속말은 필터를 거친 메시지를 되울림으로 돌려주고, 기록은 메시지 목록과 다음 커서를 돌려준다.
  *            공통 오류(`OnlineError`)만 오류 코드로 오며 로그인 없음, 손상된 본문, 시한 초과가 해당한다. 클라이언트는 `fromErrorCode` 로 이를 결과에 맞춘다.
- *          - 메시지 형식(`ChatMessage`) 하나를 알림, 서버 간 버스, 기록 레코드가 함께 쓴다. 알림과 버스는 B 이고,
- *            기록 레코드는 저장소에 남아 다른 빌드가 읽으므로 자기 기술형(A, `BinarySerializer`)이다.
+ *          - 메시지 형식(`ChatMessage`) 하나를 알림, 서버 간 버스, 기록 레코드가 함께 쓴다. 알림은 B 이고,
+ *            버스(배포 중 빌드가 섞인다)와 기록 레코드(저장소에 남아 다른 빌드가 읽는다)는 자기 기술형(A, `BinarySerializer`)이다.
+ *            버스의 의미 버전은 `ChatMessage::kBusVersion`, 기록 레코드의 판은 `kChatRecordVersion` 으로 따로다(버스는 이관을 보지 않는다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -15,6 +16,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -65,8 +67,8 @@ namespace sw
      */
     struct ChatBus
     {
-        static constexpr const utf8* kChannelTopicPrefix = "chat.channel."; ///< 뒤에 채널 id 를 붙인다. 채널 말하기이며 본문은 메시지이다
-        static constexpr const utf8* kServerTopicPrefix  = "chat.server.";  ///< 뒤에 서버 16진 문자열을 붙인다. 그 서버에 접속한 계정에게 가는 귓속말이며 본문은 메시지이다
+        static constexpr ServerBusTopicFamily<ChatMessage> kChannelTopic{ "chat.channel." }; ///< 뒤에 채널 id 를 붙인다. 채널 말하기이다
+        static constexpr ServerBusTopicFamily<ChatMessage> kServerTopic{ "chat.server." };   ///< 뒤에 서버 16진 문자열을 붙인다. 그 서버에 접속한 계정에게 가는 귓속말이다
     };
 } // namespace sw
 
@@ -151,7 +153,7 @@ namespace sw
     /**
      * @struct ChatProtocol
      * @brief 채팅 키트의 메시지 타입 목록, 등록 항목, 기록 레코드 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
-     * @details 알림과 서버 버스의 본문은 `ChatMessage` 하나입니다.
+     * @details 알림과 서버 버스의 본문은 `ChatMessage` 하나입니다. 버스는 B 가 아니라 주제 정의(`ChatBus`)로 씁니다.
      */
     struct SW_KIT_API ChatProtocol
     {
