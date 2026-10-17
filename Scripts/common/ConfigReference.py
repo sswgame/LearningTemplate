@@ -895,8 +895,37 @@ def makeBuildOptionPage(listOption: list[BuildOptionDoc], outMetadata: dict) -> 
     return "\n".join(lines).rstrip() + "\n"
 
 
-def makeUserSettingsPage(listSchema: list[tuple[str, list[dict[str, str]]]]) -> str:
-    """사용자 설정 표 — 스키마 파일마다 `<Setting>` 한 줄씩입니다."""
+#: 사용자 설정 스키마를 읽는 C++ — 속성을 생략했을 때의 값(적용 시점 · 키 바인딩 대상)은 이 두 파일이 정본이다.
+_kUserSettingsSchemaHeader = "Source/Engine/UserSettings/UserSettingsSchema.h"
+_kUserSettingsSchemaSource = "Source/Engine/UserSettings/UserSettingsSchema.cpp"
+_kApplyTimingDefaultRe = re.compile(r"\bUserSettingApplyTiming\s+_applyTiming\s*\{\s*UserSettingApplyTiming::(\w+)\s*\}")
+_kApplyTimingNameRe = re.compile(r"\{\s*\"(\w+)\"\s*,\s*UserSettingApplyTiming::(\w+)\s*\}")
+_kKeyBindingHandlerRe = re.compile(r"\bkKeyBindingHandler\s*\[\s*\]\s*=\s*\"([^\"]+)\"")
+
+
+@dataclass(frozen=True)
+class UserSettingDefaults:
+    """`<Setting>` 이 속성을 생략했을 때 런타임이 쓰는 값 — C++ 스키마 읽기에서 뽑는다(문서 생성기가 따로 들고 있지 않는다)."""
+    applyName: str          # `apply` 생략 → 이 철자(`UserSettingDef::_applyTiming` 의 기본 열거자를 이름 표로 되돌린 것)
+    keyBindingTarget: str   # `type="keyBinding"` 이 `target` 을 생략 → 이 핸들러
+
+
+def findUserSettingDefaults(repositoryRoot: Path) -> UserSettingDefaults:
+    """C++ 스키마 읽기에서 생략값을 뽑습니다. 모양을 찾지 못하면 ValueError — 문서가 런타임과 다른 값을 적지 않게 멈춘다."""
+    headerText = (repositoryRoot / _kUserSettingsSchemaHeader).read_text(encoding="utf-8")
+    sourceText = (repositoryRoot / _kUserSettingsSchemaSource).read_text(encoding="utf-8")
+    defaultMatch = _kApplyTimingDefaultRe.search(headerText)
+    handlerMatch = _kKeyBindingHandlerRe.search(sourceText)
+    mapTimingName = {enumerator: name for name, enumerator in _kApplyTimingNameRe.findall(sourceText)}
+    if defaultMatch is None or handlerMatch is None or defaultMatch.group(1) not in mapTimingName:
+        raise ValueError(f"[Config Reference] {_kUserSettingsSchemaHeader} 의 `_applyTiming{{ UserSettingApplyTiming::… }}` 기본값, "
+                         f"{_kUserSettingsSchemaSource} 의 이름 표(`{{\"이름\", UserSettingApplyTiming::…}}`)와 `kKeyBindingHandler` 를 찾지 못했다 — "
+                         "모양이 바뀌었으면 이 정규식을 고친다")
+    return UserSettingDefaults(applyName=mapTimingName[defaultMatch.group(1)], keyBindingTarget=handlerMatch.group(1))
+
+
+def makeUserSettingsPage(listSchema: list[tuple[str, list[dict[str, str]]]], defaults: UserSettingDefaults) -> str:
+    """사용자 설정 표 — 스키마 파일마다 `<Setting>` 한 줄씩입니다. 생략한 속성은 런타임 값(@p defaults)으로 적는다."""
     lines = [_kGeneratedBanner, "", "# 사용자 설정 (플레이어 옵션)", "", "[설정 색인](README.md)", "",
              "플레이어 값은 `usersettings.json`(사용자 폴더)에 **기본값과 다른 것만** 쓰인다. `target` 이 `gv:` 면 그 전역 변수에 값을 넣는다 — "
              "기동 때 명령줄 `-gv_*` 로 준 변수는 덮지 않는다(명령줄이 이긴다, `docs/07_Configuration.md` 우선순위).", ""]
@@ -908,10 +937,11 @@ def makeUserSettingsPage(listSchema: list[tuple[str, list[dict[str, str]]]]) -> 
                 rangeText = f"{setting.get('min', '-')} ~ {setting.get('max', '-')}"
                 if "step" in setting:
                     rangeText += f" (눈금 {setting['step']})"
-            # id · type · default 는 스키마의 필수 속성이다(없으면 KeyError). apply 를 생략하면 런타임이 confirm 으로 읽는다(UserSettings 스키마 규칙).
-            target = setting.get("target") or ("input.keyBinding" if setting["type"] == "keyBinding" else "게임 코드")
+            # id · type · default 는 스키마의 필수 속성이다(없으면 KeyError). apply · target 생략은 런타임 생략값이다(`findUserSettingDefaults`).
+            # target 이 없는 키 바인딩 밖의 설정은 대상이 없다 — 게임 코드가 값을 직접 읽는다.
+            target = setting.get("target") or (defaults.keyBindingTarget if setting["type"] == "keyBinding" else "게임 코드")
             lines.append(f"| `{setting['id']}` | {setting['type']} | `{escapeCellInternal(setting['default'])}` | {rangeText} | "
-                         f"{setting.get('apply') or 'confirm'} | `{escapeCellInternal(target)}` |")
+                         f"{setting.get('apply') or defaults.applyName} | `{escapeCellInternal(target)}` |")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
@@ -936,7 +966,8 @@ def buildConfigReference(repositoryRoot: Path) -> tuple[dict[str, str], list[str
             continue
         setPage.add(entry.page)
         mapOutput[f"{kConfigReferenceDir}/{entry.page}.md"] = makeEntryPage(repositoryRoot, entry, index, mapMacro, metadata)
-    mapOutput[f"{kConfigReferenceDir}/UserSettings.md"] = makeUserSettingsPage(collectUserSettings(repositoryRoot))
+    mapOutput[f"{kConfigReferenceDir}/UserSettings.md"] = makeUserSettingsPage(collectUserSettings(repositoryRoot),
+                                                                                findUserSettingDefaults(repositoryRoot))
     mapOutput[f"{kConfigReferenceDir}/GlobalVariables.md"] = makeGlobalVariablePage(collectGlobalVariables(reader), metadata)
     mapOutput[f"{kConfigReferenceDir}/CommandLine.md"] = makeArgumentPage(collectArguments(repositoryRoot), metadata)
     mapOutput[f"{kConfigReferenceDir}/BuildOptions.md"] = makeBuildOptionPage(collectBuildOptions(reader), metadata)

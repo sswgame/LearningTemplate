@@ -15,42 +15,31 @@ if(NOT TARGET AllTests)
 	set_target_properties(AllTests PROPERTIES FOLDER "Test")
 endif()
 
+include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
+
 #: 테스트 실행 파일 항목이 기다리는 ctest 픽스처 — 그 셋업 항목이 `all` 과 `AllTests` 를 짓는다(`sw_registerTestBuildFixture`).
 set(SW_TEST_BUILD_FIXTURE "SWTestBinaries")
 
 #: 테스트 등록 정책 — 실행 파일마다 영역 라벨 · 시간 · 샤드 · 호스트 분리, 그리고 쓸 수 있는 라벨 표.
+#   값은 모두 `sw_requireJsonValue` · `sw_readOptionalJsonValue` 로 읽는다. 선택 키는 "없다는 사실이 곧 뜻" 인 것뿐이고 읽는 자리에 그 뜻을 적는다.
+#   나머지 키(시간 공식 · 영역 · seconds 등)는 필수다 — 코드 쪽 기본값을 두지 않는다(정책 파일과 코드가 같은 숫자를 둘 다 들고 있게 된다).
 set(SW_TEST_POLICY_FILE "${CMAKE_SOURCE_DIR}/Test/TestPolicy.json")
 set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SW_TEST_POLICY_FILE}")
-file(READ "${SW_TEST_POLICY_FILE}" SW_TEST_POLICY_JSON)
 
 # GPU 칸 — hostgpu 항목은 RUN_SERIAL 대신 ctest 자원 `gpu` 한 칸을 받는다(`RESOURCE_GROUPS gpu:1`). 칸 수는 정책 `gpuSlots`(GPU 공유 잠금의 두 프로세스와 같은 뜻).
 # 자원 명세 파일은 이 빌드 폴더에 쓰고 `CTEST_RESOURCE_SPEC_FILE` 로 알린다 — `include(CTest)` 가 DartConfiguration 에 적어 `ctest` 가 인자 없이 쓴다.
-string(JSON swGpuSlots ERROR_VARIABLE swGpuSlotsError GET "${SW_TEST_POLICY_JSON}" gpuSlots)
-if(swGpuSlotsError)
-	message(FATAL_ERROR "Test/TestPolicy.json 에 gpuSlots(hostgpu 항목이 동시에 받는 GPU 칸 수)가 없다 — 정책에 적는다")
-endif()
+sw_requireJsonValue(swGpuSlots "${SW_TEST_POLICY_FILE}" gpuSlots)
 set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_BINARY_DIR}/CTestResources.json")
 file(CONFIGURE OUTPUT "${CTEST_RESOURCE_SPEC_FILE}" CONTENT
 	"{\"version\":{\"major\":1,\"minor\":0},\"local\":[{\"gpu\":[{\"id\":\"0\",\"slots\":${swGpuSlots}}]}]}\n")
-
-# ------------------------------------------------------------------------------
-# sw_getTestPolicyValue — 정책 JSON 의 값 하나(경로 ARGN). 없으면 DEFAULT_VALUE.
-# ------------------------------------------------------------------------------
-function(sw_getTestPolicyValue OUT_VAR DEFAULT_VALUE)
-	string(JSON swValue ERROR_VARIABLE swError GET "${SW_TEST_POLICY_JSON}" ${ARGN})
-	if(swError)
-		set(swValue "${DEFAULT_VALUE}")
-	endif()
-	set(${OUT_VAR} "${swValue}" PARENT_SCOPE)
-endfunction()
 
 # ------------------------------------------------------------------------------
 # sw_assertTestLabels — 라벨마다 정책의 `labels` 표에 있는지 본다. 모르는 라벨은 `ctest -L` 로 고를 수 없는 철자 실수다.
 # ------------------------------------------------------------------------------
 function(sw_assertTestLabels CONTEXT)
 	foreach(swLabel IN LISTS ARGN)
-		string(JSON swType ERROR_VARIABLE swError TYPE "${SW_TEST_POLICY_JSON}" labels "${swLabel}")
-		if(swError)
+		sw_readOptionalJsonValue(swType "${SW_TEST_POLICY_FILE}" TYPE labels "${swLabel}")
+		if(NOT DEFINED swType)
 			message(FATAL_ERROR "${CONTEXT}: 라벨 '${swLabel}' 이 Test/TestPolicy.json 의 labels 표에 없다 — 표에 뜻과 함께 더하거나 철자를 고친다")
 		endif()
 	endforeach()
@@ -60,8 +49,8 @@ endfunction()
 # sw_computeTestTimeout — 제한 시간 = max(최소, 여유 배수 × max(조각 하나의 초, 가장 비싼 케이스의 초))
 # ------------------------------------------------------------------------------
 function(sw_computeTestTimeout OUT_VAR TOTAL_SECONDS SHARD_COUNT MAX_CASE_SECONDS)
-	sw_getTestPolicyValue(swHeadroom 4 timeoutHeadroom)
-	sw_getTestPolicyValue(swMinimum 60 minimumTimeoutSeconds)
+	sw_requireJsonValue(swHeadroom "${SW_TEST_POLICY_FILE}" timeoutHeadroom)
+	sw_requireJsonValue(swMinimum "${SW_TEST_POLICY_FILE}" minimumTimeoutSeconds)
 	math(EXPR swShardSeconds "(${TOTAL_SECONDS} + ${SHARD_COUNT} - 1) / ${SHARD_COUNT}")
 	if(MAX_CASE_SECONDS GREATER swShardSeconds)
 		set(swShardSeconds ${MAX_CASE_SECONDS})
@@ -85,9 +74,9 @@ endfunction()
 function(sw_getTestTimeoutScale OUT_VAR)
 	set(swScale 1)
 	if(SW_ENABLE_SANITIZER)
-		sw_getTestPolicyValue(swScale 10 timeoutScale sanitizer)
+		sw_requireJsonValue(swScale "${SW_TEST_POLICY_FILE}" timeoutScale sanitizer)
 	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-		sw_getTestPolicyValue(swScale 1 timeoutScale linux)
+		sw_requireJsonValue(swScale "${SW_TEST_POLICY_FILE}" timeoutScale linux)
 	endif()
 	set(${OUT_VAR} ${swScale} PARENT_SCOPE)
 endfunction()
@@ -247,27 +236,28 @@ endfunction()
 #         갈라진 항목 말고 전체 실행을 하나 더 등록하지 않는다(라벨 없는 `ctest` 가 같은 테스트를 두 번 돈다).
 # ------------------------------------------------------------------------------
 function(sw_registerTestPolicy TARGET_NAME)
-	string(JSON swRowType ERROR_VARIABLE swError TYPE "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME})
-	if(swError)
+	set(swPolicy "${SW_TEST_POLICY_FILE}")
+	sw_readOptionalJsonValue(swRowType "${swPolicy}" TYPE executables ${TARGET_NAME})
+	if(NOT DEFINED swRowType)
 		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): Test/TestPolicy.json 의 executables 에 줄이 없다 — 영역(area)과 한 실행 시간(seconds)을 더한다")
 	endif()
 
-	sw_getTestPolicyValue(swArea "" executables ${TARGET_NAME} area)
-	sw_getTestPolicyValue(swSeconds 30 executables ${TARGET_NAME} seconds)
-	sw_getTestPolicyValue(swShards "" executables ${TARGET_NAME} shards)
-	sw_getTestPolicyValue(swHostSplit OFF executables ${TARGET_NAME} hostSplit)
-	sw_getTestPolicyValue(swHostSeconds ${swSeconds} executables ${TARGET_NAME} hostSeconds)
-	sw_getTestPolicyValue(swHostShards 1 executables ${TARGET_NAME} hostShards)
-	sw_getTestPolicyValue(swLoadSeconds "" executables ${TARGET_NAME} loadSeconds)
-	sw_getTestPolicyValue(swTargetShardSeconds 30 targetShardSeconds)
+	sw_requireJsonValue(swArea "${swPolicy}" executables ${TARGET_NAME} area)
+	sw_requireJsonValue(swSeconds "${swPolicy}" executables ${TARGET_NAME} seconds)
+	sw_requireJsonValue(swTargetShardSeconds "${swPolicy}" targetShardSeconds)
+	# 선택 키 — 없을 때의 뜻: shards 없음 = seconds 로 계산, hostSplit 없음 = 호스트 스위트로 가르지 않음, loadSeconds 없음 = 부하 스위트 없음.
+	sw_readOptionalJsonValue(swShards "${swPolicy}" executables ${TARGET_NAME} shards)
+	sw_readOptionalJsonValue(swHostSplit "${swPolicy}" executables ${TARGET_NAME} hostSplit)
+	sw_readOptionalJsonValue(swLoadSeconds "${swPolicy}" executables ${TARGET_NAME} loadSeconds)
 	sw_assertTestLabels("sw_addTestExecutable(${TARGET_NAME})" ${swArea})
 
+	# 선택 키 — asanOptions 없음 = 공통 ASan 옵션만.
 	set(swAsanOptions "")
-	string(JSON swAsanCount ERROR_VARIABLE swError LENGTH "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} asanOptions)
-	if(NOT swError AND swAsanCount GREATER 0)
+	sw_readOptionalJsonValue(swAsanCount "${swPolicy}" LENGTH executables ${TARGET_NAME} asanOptions)
+	if(DEFINED swAsanCount AND swAsanCount GREATER 0)
 		math(EXPR swLastAsan "${swAsanCount} - 1")
 		foreach(swIndex RANGE 0 ${swLastAsan})
-			string(JSON swOption GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} asanOptions ${swIndex})
+			sw_requireJsonValue(swOption "${swPolicy}" executables ${TARGET_NAME} asanOptions ${swIndex})
 			list(APPEND swAsanOptions "${swOption}")
 		endforeach()
 	endif()
@@ -277,12 +267,12 @@ function(sw_registerTestPolicy TARGET_NAME)
 	foreach(swCostKey IN ITEMS caseCosts hostCaseCosts)
 		set(swKeyCosts "")
 		set(swKeyMax 0)
-		string(JSON swCostCount ERROR_VARIABLE swError LENGTH "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} ${swCostKey})
-		if(NOT swError AND swCostCount GREATER 0)
+		sw_readOptionalJsonValue(swCostCount "${swPolicy}" LENGTH executables ${TARGET_NAME} ${swCostKey})
+		if(DEFINED swCostCount AND swCostCount GREATER 0)
 			math(EXPR swLastCost "${swCostCount} - 1")
 			foreach(swIndex RANGE 0 ${swLastCost})
-				string(JSON swCaseName MEMBER "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} ${swCostKey} ${swIndex})
-				string(JSON swCaseSeconds GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} ${swCostKey} ${swCaseName})
+				sw_requireJsonValue(swCaseName "${swPolicy}" MEMBER executables ${TARGET_NAME} ${swCostKey} ${swIndex})
+				sw_requireJsonValue(swCaseSeconds "${swPolicy}" executables ${TARGET_NAME} ${swCostKey} ${swCaseName})
 				if(swKeyCosts)
 					string(APPEND swKeyCosts ",")
 				endif()
@@ -301,7 +291,7 @@ function(sw_registerTestPolicy TARGET_NAME)
 		endif()
 	endforeach()
 
-	if(swShards STREQUAL "")
+	if(NOT DEFINED swShards)
 		math(EXPR swShards "(${swSeconds} + ${swTargetShardSeconds} - 1) / ${swTargetShardSeconds}")
 	endif()
 	if(swShards LESS 1)
@@ -312,9 +302,9 @@ function(sw_registerTestPolicy TARGET_NAME)
 
 	# 같은 `Bin` 에 산출물을 쓰는 호스트 실행은 정책의 `hostResourceLock` 으로 서로 비켜 간다(호스트 조각 · 레이스 묶음이 같이 쓴다).
 	# 선택 키다 — 키가 없으면 "다른 항목과 겹쳐도 되는 실행" 이라는 뜻이다(EngineTest 호스트 조각은 App 을 띄우지 않는다).
-	sw_getTestPolicyValue(swHostLock "" executables ${TARGET_NAME} hostResourceLock)
+	sw_readOptionalJsonValue(swHostLock "${swPolicy}" executables ${TARGET_NAME} hostResourceLock)
 	set(swHostLockArgs "")
-	if(swHostLock)
+	if(DEFINED swHostLock)
 		set(swHostLockArgs RESOURCE_LOCK ${swHostLock})
 	endif()
 
@@ -327,6 +317,9 @@ function(sw_registerTestPolicy TARGET_NAME)
 			ARGS --host_suites=exclude LABELS "${swBaseLabels};nogpu" TIMEOUT ${swTimeout} COSTS "${swCosts}" COST ${swShardCost} ASAN_OPTIONS ${swAsanOptions})
 		# 창을 띄우고 GPU 를 잡으므로 GPU 칸 하나를 받는다(동시에 `gpuSlots` 개까지 — 공유 GPU 잠금과 같은 수).
 		# 조각마다 호스트 케이스가 하나는 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
+		# 갈라 내면 호스트 갈래의 초 · 조각 수는 필수다 — nogpu 의 seconds 와 뜻이 다르다(분 단위 시나리오).
+		sw_requireJsonValue(swHostSeconds "${swPolicy}" executables ${TARGET_NAME} hostSeconds)
+		sw_requireJsonValue(swHostShards "${swPolicy}" executables ${TARGET_NAME} hostShards)
 		sw_computeTestTimeout(swHostTimeout ${swHostSeconds} ${swHostShards} ${swHostMaxCaseSeconds})
 		math(EXPR swHostShardCost "(${swHostSeconds} + ${swHostShards} - 1) / ${swHostShards}")
 		sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${swHostShards} GPU ${swHostLockArgs} COST ${swHostShardCost}
@@ -335,7 +328,7 @@ function(sw_registerTestPolicy TARGET_NAME)
 
 	# 부하 · 시간 예산 검증(`SW_TEST_LOAD_SUITE`) — 혼자 돌아야 숫자가 뜻이 있어 직렬이다. 예산을 넘은 케이스는 Release 에서만 진다
 	# (Debug 는 경합 검출기 · 할당 추적이 시간을 부풀리고, Shipping 은 측정 로그가 없다 — 다른 구성은 정확성만 보고 예산은 요약에 찍기만 한다).
-	if(NOT swLoadSeconds STREQUAL "")
+	if(DEFINED swLoadSeconds)
 		sw_computeTestTimeout(swLoadTimeout ${swLoadSeconds} 1 0)
 		set(swLoadArgs --host_suites=all --load_suites=only)
 		if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -348,21 +341,19 @@ function(sw_registerTestPolicy TARGET_NAME)
 	# 레이스 묶음(`race`) — 스레드 경로를 지나는 케이스(`raceCases`, `Suite.Case` · `Suite.*`)만 호스트 스위트까지 넣어 한 실행으로 돈다.
 	# Debug 에서만 등록한다: `DataRaceDetector` 는 `SW_DEBUG`(Debug 구성)에서만 켜지므로 다른 구성에서는 같은 케이스를 nogpu · hostgpu 가 이미 돈다.
 	# 호스트 실행 파일(`hostSplit`)이면 호스트 조각과 같은 GPU 칸 · 잠금을 받는다. 라벨 없는 `ctest` 에서는 이 케이스들이 한 번 더 돈다(묶음이 작아 받아들인다).
-	string(JSON swRaceCount ERROR_VARIABLE swError LENGTH "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} raceCases)
-	if(NOT swError AND swRaceCount GREATER 0 AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT SW_SHIPPING_BUILD)
+	# 선택 키 — raceCases 없음 = 레이스 묶음에 넣을 스레드 경로가 없음. 있으면 raceSeconds(그 한 실행의 Debug 초)는 필수다.
+	sw_readOptionalJsonValue(swRaceCount "${swPolicy}" LENGTH executables ${TARGET_NAME} raceCases)
+	if(DEFINED swRaceCount AND swRaceCount GREATER 0 AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT SW_SHIPPING_BUILD)
 		set(swRaceFilter "")
 		math(EXPR swLastRace "${swRaceCount} - 1")
 		foreach(swIndex RANGE 0 ${swLastRace})
-			string(JSON swRaceCase GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} raceCases ${swIndex})
+			sw_requireJsonValue(swRaceCase "${swPolicy}" executables ${TARGET_NAME} raceCases ${swIndex})
 			if(swRaceFilter)
 				string(APPEND swRaceFilter ",")
 			endif()
 			string(APPEND swRaceFilter "${swRaceCase}")
 		endforeach()
-		string(JSON swRaceSeconds ERROR_VARIABLE swError GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} raceSeconds)
-		if(swError)
-			message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): raceCases 가 있으면 raceSeconds(그 한 실행의 Debug 초)도 Test/TestPolicy.json 에 적는다")
-		endif()
+		sw_requireJsonValue(swRaceSeconds "${swPolicy}" executables ${TARGET_NAME} raceSeconds)
 		sw_computeTestTimeout(swRaceTimeout ${swRaceSeconds} 1 0)
 		set(swRaceExtra "")
 		if(swHostSplit)
