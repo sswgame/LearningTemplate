@@ -2,7 +2,16 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법은 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../backlog/README.md)(영역별 파일 · 상태 태그, `py -3 -m Scripts backlog` 로 목록), 작업 방식은 [작업 방식](../11_Workflow.md), 병렬 작업자 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다. 이 문서에는 지금 상태 · 다음 할 일 · 함정 · 시작 절차만 둡니다.
 
-## 0. 2026-10-17 저녁 세션 인계 (가장 먼저 읽는다)
+## 0. 2026-10-18 새벽 통합 `integ6` 인계 (가장 먼저 읽는다)
+
+- **main 에 병합한 브랜치 21개**(빌드 없이 준비된 것들): feat2 ~ feat22(feat1 은 앞서 병합). 통합 커밋으로 컴파일 · 의미 충돌을 풀었다 — 자세한 것은 `git log --grep='^통합\|^되돌림\|^시간\|^로그\|^테스트\|^빌드'` 의 커밋 메시지.
+- **검증**: Debug · Release · Shipping `all AllTests` 경고 0, 두 구성 `-L lint` · `-L nogpu` 통과, Debug `-L race` 통과, Shipping `-L nogpu` 는 `A-23`(rigs_raw) 만 실패. 셰이더 네 백엔드 재쿠킹, `.mesh` 형식 3 재임포트, 쿠킹 팩에 `.bonemask.json` · `bow_shoot.pairedanim.xml` · `migrations.json` 확인. GPU(네 백엔드 × 대표 셋, `-L hostgpu`)와 코드 리뷰 결과는 아래 "남은 일"에 적었다.
+- **측정**: 구조 최적화 A · B 표(`StructuralOptimization.md`) — A ④ · B ⑤ 되돌림, 나머지 유지. feat16 `RT.GPUScene.vertexPool` · `RT.Deform.rebuildMorphPool`, feat10 `saveState` 시간 · B 바이트 크기(`GimmickCircuitState.md` 8절 방법), feat9 캐스트 적중 경로는 **재지 못했다**(하니스가 없거나 GPU 잠금이 겹침) — 다음 측정 묶음의 첫 일.
+- **새로 드러난 뿌리**: 브랜치를 빌드 · 테스트 없이 커밋하면 새 테스트가 한 번도 돌지 않는다(feat6 · feat13 · feat15 · feat18 · feat19 · feat22 의 결함이 모두 여기서). 구조로 고친 것: 키트 DLL 복사 타깃(옛 `A-21`), 메시 판의 정본(`MeshAssetFormat.h`), 범위 경계 9 자리, `broadcastSnapshot`, 실제 경과를 적지 않으면 모든 구성에서 멈춤. 후속은 `C-59`(빈 이름 "None") · `C-60`(오류 수집 읽기) · `C-61`(버스 타입 내보내기) · `A-24` ~ `A-27` · `C-54` ~ `C-58`.
+- **남은 일**: (GPU · 리뷰 결과를 병합 뒤 여기에 적는다)
+- **사용자 결정 대기**: 없음.
+
+## 0-1. 2026-10-17 저녁 세션 인계
 
 **main 은 `948f76e27` 까지 push 됐다.** 아래 1절 첫 단락들("main 은 push 하지 않았습니다" 등)은 그 전 세션 기록이다. PR #1(러너 이미지 · Linux 수정 · 소프트 바디, `e68ba5c4c`)은 CI 11개 잡 전부 통과를 확인했다. 그 뒤 병합(`res2` 오디오, `res3` 3D, `rigbench` 합성 리그, `bitset` · `bitsetperf`, `lintspeed`, 결정 기록 정리)은 Debug 전체 빌드 · `-L nogpu` · `-L lint` 로 확인했지만 **push 뒤 CI 는 아직 보지 않았다** — 첫 일은 `py -3 -m Scripts ci-jobs --runs`.
 

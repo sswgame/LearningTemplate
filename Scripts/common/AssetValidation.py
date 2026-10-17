@@ -329,6 +329,7 @@ def _readMeshFormatConstant(name: str) -> int:
 _kMeshVersion = _readMeshFormatConstant("kVersion")
 _kMeshHeaderSize = _readMeshFormatConstant("kHeaderSize")
 _kMeshSkinVertexSize = _readMeshFormatConstant("kSkinVertexSize")
+_kMeshVertexSize = _readMeshFormatConstant("kVertexSize")
 _kMeshChunkTags = (b"MRPH",)
 
 
@@ -339,6 +340,8 @@ def readMeshInfo(data: bytes) -> MeshInfo:
     version, vertexCount, vertexSize, boundingRadius, skinBoneCount = struct.unpack_from("<IIIfI", data, 4)
     if version != _kMeshVersion:
         raise ValueError(f"mesh version {version} is not the current {_kMeshVersion} - re-import the model")
+    if vertexSize != _kMeshVertexSize:
+        raise ValueError(f"vertex size {vertexSize} is not the current {_kMeshVertexSize} - re-import the model")
     if vertexCount == 0 or vertexCount % 3 != 0:
         raise ValueError(f"vertex count {vertexCount} is not a non-zero multiple of 3")
     skinSize = vertexCount * _kMeshSkinVertexSize if skinBoneCount > 0 else 0
