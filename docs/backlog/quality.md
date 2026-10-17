@@ -77,6 +77,11 @@
 
 - `C-42` [정리] **증분 쿠킹 · 파생 데이터 캐시(DDC).** 리소스를 100MB 이상 들이는 중이라 에셋이 늘면 쿠킹 시간이 병목이 된다. 현재 쿠킹의 입력 해시 · 재사용 범위를 확인하고 증분 쿠킹과 공유 캐시를 설계한다(셰이더는 입력 해시 스탬프가 있다 — 결정 기록 5-5).
 
+- `C-43` [정리] **정점 풀을 집합이 바뀔 때 통째로 다시 올린다 — 부분 갱신으로.** `GPUMeshVertexPool::rebuild` 가 메시 집합이 바뀌면 풀 전체를 다시 올린다(`GPUMeshVertexPool.h:16,57`). 월드 스트리밍(`D1-7`)의 셀 로드 · 언로드마다 전체 업로드가 일어나고, 지형 LOD 교체 히치(`D2-5`(6))와 뿌리가 같다. 모프 풀(`GPUMeshMorphPool`)도 같은 구조다. 부분 갱신(구간 할당 · 해제 목록)으로 바꾸고 전/후를 `RT.GPUScene.vertexPool` 로 Release 에서 잰다. `D1-7` 의 선행.
+- `C-44` [정리] **credits 표와 임포트 규칙이 "넓은 와일드카드 + 첫 매칭"이다.** 새 팩 파일이 다른 팩의 출처로 붙거나 다른 팩의 배치 오프셋(`ModelImportConfig.json`)이 적용돼도 경고가 없다(2026-10-17 `res3` 도입에서 확인; 이번엔 새 줄을 표 앞에 두어 피했다). 팩마다 하위 폴더를 하나씩 두고 패턴이 하위 폴더를 넘지 못하게 하거나, 파일 하나에 규칙이 둘 이상 맞으면 오류로 낸다. `CheckResourceCredits` 가 출처 목록(해시) 형식(`audio.sources.json` 의 모양)을 모든 리소스 도메인에서 읽게 넓히는 일을 포함한다.
+- `C-45` [정리] **동시 빌드 한도(2)의 잠금 폴더가 이 PC 에 없다.** `docs/11_Workflow.md` 2절이 말하는 `LT-wt\BUILD-LOCK-README.txt` 와 슬롯 잠금 폴더가 없어(2026-10-17 `softbodylinux` 보고) 제한이 실제로 강제되는지 확인되지 않는다. 강제 수단(잠금 파일 · `shared-lock`)을 확인하고 없으면 만든다.
+- `C-46` [정리] **쿠커가 `common` 팩을 모든 게임 패키지에 넣는지 확인한다.** `Resource/common` 에 오디오 22MB 가 들어왔다(2026-10-17 `res2`). 모든 게임 패키지에 들어가면 게임마다 그만큼 늘어난다. 게임별로 쓰는 팩만 넣는 방식(팩 선언)이 필요한지 정한다.
+
 - `E-1` [관찰] **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](../08_Verification.md) 4절).
   고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),
   ASan 둘(OpenSSL 스택 수명, `NetRequestTest` 선언 순서), `ServerBootTest` 접속 로그, Linux Debug `EngineTest_NoGPU` 샤드의 180 초 초과(멈춤이 아니라 느림 — 샤드를 여섯으로 늘렸다).
