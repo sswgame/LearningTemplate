@@ -26,11 +26,17 @@
     "linux": ["vk", "gl"]
   },
   "_requiredBackendsReason": "hostgpu 항목(호스트 조각 · 레이스 묶음)이 --required_backends= 로 받는다. 이 백엔드가 서지 못하면 케이스가 건너뛰지 않고 진다 — GPU 가 있는 PC 에서 Vulkan 이 사라져도 건너뜀으로 초록이던 것을 막는다(C-41 3단계, 결정 기록 5-12). 이름은 쿠킹 표(Config/Engine/CookContract.json)의 command_line_name 이다. 배포본처럼 빌드에 없는 백엔드는 실행 파일이 스스로 뺀다. GPU 없는 PC 에서 hostgpu 를 돌리면 지는 것이 맞다(hostgpu 는 GPU 있는 PC 의 라벨).",
+  "softwareRequiredBackends": {
+    "windows": ["dx11", "dx12"],
+    "linux": ["vk", "gl"]
+  },
+  "_softwareRequiredBackendsReason": "swrender 항목(<타깃>_SoftwareRender)이 --required_backends= 로 받는다. CI 러너에 있는 소프트웨어 렌더러다 — Windows 는 WARP(DX11 · DX12), 리눅스는 mesa lavapipe(Vulkan) · llvmpipe(OpenGL) + xvfb. Windows 러너의 Vulkan · GL 소프트웨어 드라이버는 기본으로 없다.",
   "labels": {
     "unit": "C++ 테스트 실행 파일의 항목 전부",
     "nogpu": "CI 러너가 돌릴 수 있다 — GPU · 창 · DXC 가 필요 없다",
     "hostgpu": "GPU · 창이 있는 PC 에서만 — CI 가 돌리지 않는다(GPU 칸 gpuSlots 개까지 동시). 기능 확인은 Shipping 이 기본이고 Debug 전체는 큰 단계 끝에 한 번",
     "race": "Debug 전용 레이스 묶음 — DataRaceDetector(SW_DEBUG)가 켜진 구성에서 스레드 경로(잡 · 비동기 씬 로드 · 렌더 스레드 · 물리 · 네트워크 · 모듈 리로드)를 지나는 최소 케이스(raceCases)를 네 백엔드로. 직렬 합 10 분 안쪽",
+    "swrender": "소프트웨어 렌더러 묶음 — GPU 없는 CI 러너가 WARP · lavapipe(+xvfb)로 도는 호스트 케이스(softwareRenderCases). SW_RHI_SOFTWARE_ADAPTER=1, 골든 비교 없음",
     "load": "부하 · 시간 예산 검증 — 기본 집합에서 빠지고 -L load 로 고른다(직렬, --enforce_budgets)",
     "lint": "Scripts/lint 의 게이트와 자기 검사",
     "python": "파이썬 도구의 단위 테스트",
@@ -118,6 +124,15 @@
       "hostSeconds": 220,
       "hostShards": 2,
       "_hostShardsReason": "GPU 를 잡아 조각도 직렬이다 — 합계는 같고 조각마다 제한 시간을 받는다.",
+      "softwareRenderCases": [
+        "RHIDeviceTest.DeviceCreationAllBackends",
+        "RHIDeviceTest.BackendSweepVisitsEveryBackendThatStandsUp",
+        "RHIDeviceTest.CommandListCreationAndExecution",
+        "RHIDeviceTest.BindlessResourceLifecycle",
+        "RHIDeviceTest.UploadTexture2DAllBackends"
+      ],
+      "softwareRenderSeconds": 120,
+      "_softwareRenderCasesReason": "GPU 없는 CI 러너가 소프트웨어 렌더러(WARP · lavapipe/llvmpipe)로 도는 첫 묶음 — 백엔드마다 디바이스를 세우고 명령 목록 · bindless 등록 · 업로드를 지난다. 픽셀을 읽어 비교하는 케이스는 넣지 않았다(TestRHIDevice.cpp 머리말: WARP 에서 픽셀 검증이 진다). 초는 추정이다 — CI 의 첫 실행에서 재고 고친다.",
       "caseCosts": {
         "NetSimDestructionMatrixTest.MediumLossLinkConverges": 16,
         "NetSimDestructionMatrixTest.HeavyLossDuplicateReorderLinkConverges": 15,
