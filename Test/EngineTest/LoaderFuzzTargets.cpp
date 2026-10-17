@@ -51,8 +51,20 @@ namespace test
 
             static string_view asText( const uint8* pData, size_t size ) { return string_view( reinterpret_cast<const utf8*>( pData ), size ); }
 
-            /** @brief 리소스 루트 아래에서 이름이 @p suffix 로 끝나는 파일을 최대 @p limit 개 읽어 씨앗으로 더합니다. */
-            static void appendResourceSeeds( string_view suffix, size_t limit, vector<vector<uint8>>& outListSeed )
+            /**
+             * @brief 씨앗 파일을 고르는 순서입니다.
+             * @details 텍스트는 이름 순이다 — 체크아웃마다 줄끝(CRLF · LF)이 달라 크기 순은 플랫폼마다 다른 씨앗을 고른다.
+             *          바이너리는 가장 작은 것부터다(크기가 같으면 이름 순) — 이름 순이면 리소스가 늘 때 몇 분짜리 음악이 Ogg 씨앗이 되어
+             *          Debug 에서 대상 하나가 85 초를 썼다. 씨앗 비용이 데이터에 끌려가지 않게 한다.
+             */
+            enum class SeedPick : uint8
+            {
+                ByName,
+                SmallestFirst
+            };
+
+            /** @brief 리소스 루트 아래에서 이름이 @p suffix 로 끝나는 파일을 @p pick 순서로 최대 @p limit 개 읽어 씨앗으로 더합니다. */
+            static void appendResourceSeeds( string_view suffix, size_t limit, SeedPick pick, vector<vector<uint8>>& outListSeed )
             {
                 const string& root = ResourcePaths::getRootFolderPath();
                 if ( root.empty() )
@@ -61,12 +73,20 @@ namespace test
                 vector<string> listPath;
                 if ( FileUtil::collectFiles( root, extension, listPath, true ) == false )
                     return;
-                std::sort( listPath.begin(), listPath.end() );
-                size_t added = 0;
-                for ( const string& path : listPath )
+                vector<std::pair<uint64, string>> listOrderedPath;
+                for ( string& path : listPath )
                 {
-                    if ( added >= limit || StringUtil::endsWith( path, suffix, true ) == false )
+                    if ( StringUtil::endsWith( path, suffix, true ) == false )
                         continue;
+                    const uint64 sortSize = pick == SeedPick::SmallestFirst ? FileUtil::getFileSize( path ) : 0;
+                    listOrderedPath.emplace_back( sortSize, std::move( path ) );
+                }
+                std::sort( listOrderedPath.begin(), listOrderedPath.end() );
+                size_t added = 0;
+                for ( const auto& [sortSize, path] : listOrderedPath )
+                {
+                    if ( added >= limit )
+                        break;
                     vector<uint8> bytes;
                     if ( FileUtil::readFile( path, bytes ) && bytes.empty() == false )
                     {
@@ -233,23 +253,23 @@ namespace test
             // ---------------------------------------------------------------------------------------------------------
             static void seedXML( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".xml", 12, outListSeed );
+                appendResourceSeeds( ".xml", 12, SeedPick::ByName, outListSeed );
                 appendTextSeed( "<a x=\"1\"><b>t&amp;</b><!-- c --><![CDATA[d]]></a>", outListSeed );
             }
             static void seedJSON( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".json", 4, outListSeed );
+                appendResourceSeeds( ".json", 4, SeedPick::ByName, outListSeed );
                 appendTextSeed( R"({"a":[1,2.5e3,-0,true,null,"é"],"b":{"c":"d"}})", outListSeed );
             }
             static void seedKeyValue( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".meta", 4, outListSeed );
+                appendResourceSeeds( ".meta", 4, SeedPick::ByName, outListSeed );
                 appendTextSeed( "# c\nguid=11111111-1111-1111-1111-111111111111\nimported=0\nkey = value with spaces\n", outListSeed );
             }
-            static void seedDDS( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".dds", 13, outListSeed ); }
+            static void seedDDS( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".dds", 13, SeedPick::SmallestFirst, outListSeed ); }
             static void seedMesh( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".mesh", 3, outListSeed );
+                appendResourceSeeds( ".mesh", 3, SeedPick::SmallestFirst, outListSeed );
                 vector<RHIVertex> listVertex( 3 );
                 vector<uint8>     bytes;
                 MeshAssetFormat::makeBytes( listVertex, bytes );
@@ -280,11 +300,11 @@ namespace test
                         outListSeed.push_back( std::move( bytes ) );
                 }
             }
-            static void seedScene( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".scene.xml", 4, outListSeed ); }
+            static void seedScene( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".scene.xml", 4, SeedPick::ByName, outListSeed ); }
             static void seedSceneBinary( vector<vector<uint8>>& outListSeed )
             {
                 vector<vector<uint8>> listXML;
-                appendResourceSeeds( ".scene.xml", 2, listXML );
+                appendResourceSeeds( ".scene.xml", 2, SeedPick::ByName, listXML );
                 for ( const vector<uint8>& xml : listXML )
                 {
                     const string  xmlPath = makeScratchPath( "seed.scene.xml" );
@@ -300,8 +320,8 @@ namespace test
             static void seedGameObject( vector<vector<uint8>>& outListSeed )
             {
                 vector<vector<uint8>> listFile;
-                appendResourceSeeds( ".scene.xml", 3, listFile );
-                appendResourceSeeds( ".prefab.xml", 6, listFile );
+                appendResourceSeeds( ".scene.xml", 3, SeedPick::ByName, listFile );
+                appendResourceSeeds( ".prefab.xml", 6, SeedPick::ByName, listFile );
                 for ( const vector<uint8>& file : listFile )
                 {
                     const string_view text  = asText( file.data(), file.size() );
@@ -311,7 +331,7 @@ namespace test
                         appendTextSeed( text.substr( start, end + 13 - start ), outListSeed );
                 }
             }
-            static void seedMaterial( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".material", 6, outListSeed ); }
+            static void seedMaterial( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".material", 6, SeedPick::ByName, outListSeed ); }
             static void seedSockets( vector<vector<uint8>>& outListSeed )
             {
                 appendTextSeed( "<SocketSet>\n  <VirtualBone name=\"AimRef\" from=\"hand_r\" to=\"hand_l\" weight=\"0.5\"/>\n"
@@ -321,39 +341,39 @@ namespace test
             }
             static void seedBodyShape( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".bodyshape.xml", 2, outListSeed );
+                appendResourceSeeds( ".bodyshape.xml", 2, SeedPick::ByName, outListSeed );
                 appendTextSeed( "<BodyShapeSet>\n  <Axis name=\"Weight\" min=\"-1\" max=\"1\">\n"
                                 "    <Positive morph=\"Heavy\"><Bone name=\"upperarm\" scale=\"1.2 1 1.2\"/></Positive>\n"
                                 "    <Negative morph=\"Thin\"/>\n  </Axis>\n  <Axis name=\"Height\" min=\"-1\" max=\"2\">\n"
                                 "    <Positive><Bone name=\"lowerarm\" offset=\"0 0.1 0\"/></Positive>\n  </Axis>\n</BodyShapeSet>\n",
                                 outListSeed );
             }
-            static void seedSurfaceChannels( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".surfacechannels.xml", 2, outListSeed ); }
-            static void seedUserSettings( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".settings.xml", 2, outListSeed ); }
-            static void seedSpriteClip( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".sprite.json", 2, outListSeed ); }
+            static void seedSurfaceChannels( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".surfacechannels.xml", 2, SeedPick::ByName, outListSeed ); }
+            static void seedUserSettings( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".settings.xml", 2, SeedPick::ByName, outListSeed ); }
+            static void seedSpriteClip( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".sprite.json", 2, SeedPick::ByName, outListSeed ); }
             static void seedAnimationGraph( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".animgraph.json", 2, outListSeed );
+                appendResourceSeeds( ".animgraph.json", 2, SeedPick::ByName, outListSeed );
                 appendTextSeed( R"({"nodes":[{"id":1,"type":"Clip","name":"Idle","x":0,"y":0}],"links":[{"from":1,"to":2}]})", outListSeed );
             }
             static void seedDialogue( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".dialogue.json", 2, outListSeed );
+                appendResourceSeeds( ".dialogue.json", 2, SeedPick::ByName, outListSeed );
                 appendTextSeed( R"({"nodes":[{"id":1,"kind":"Line","text":"Hi","speaker":"A"}],"links":[{"from":1,"to":1,"pin":0}]})", outListSeed );
             }
             static void seedSequence( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".sequence.json", 2, outListSeed );
+                appendResourceSeeds( ".sequence.json", 2, SeedPick::ByName, outListSeed );
                 appendTextSeed( R"({"duration":3.5,"tracks":[{"name":"T","items":[{"kind":"Event","start":0.5,"end":1.0}]}]})", outListSeed );
             }
             static void seedStringTable( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( SourceStringTable::kExtension, 2, outListSeed );
+                appendResourceSeeds( SourceStringTable::kExtension, 2, SeedPick::ByName, outListSeed );
                 appendTextSeed( R"({"culture":"en","entries":{"Menu.Start":{"source":"Start","maxLength":12},"Greeting":{"source":"Hi {name}"}}})", outListSeed );
             }
             static void seedTileMap( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".tilemap.xml", 2, outListSeed );
+                appendResourceSeeds( ".tilemap.xml", 2, SeedPick::ByName, outListSeed );
                 appendTextSeed( "<TileMap width=\"4\" height=\"2\" tileSize=\"16\"><Layer name=\"Ground\">1,1,1,1,0,0,2,2</Layer></TileMap>", outListSeed );
             }
             static void seedStringPool( vector<vector<uint8>>& outListSeed )
@@ -367,13 +387,13 @@ namespace test
             }
             static void seedWav( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".wav", 2, outListSeed );
+                appendResourceSeeds( ".wav", 2, SeedPick::SmallestFirst, outListSeed );
                 // 8 kHz 모노 16 비트 PCM 네 표본
                 static constexpr uint8 kArrWav[] = { 'R', 'I', 'F', 'F', 44, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ', 16, 0, 0, 0, 1, 0, 1, 0, 0x40, 0x1F,
                                                      0, 0, 0x80, 0x3E, 0, 0, 2, 0, 16, 0, 'd', 'a', 't', 'a', 8, 0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0 };
                 outListSeed.emplace_back( kArrWav, kArrWav + sizeof( kArrWav ) );
             }
-            static void seedOgg( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".ogg", 1, outListSeed ); }
+            static void seedOgg( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".ogg", 1, SeedPick::SmallestFirst, outListSeed ); }
         };
 
         constexpr LoaderFuzzTarget kArrLoaderFuzzTarget[] = {

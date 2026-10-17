@@ -28,6 +28,7 @@
     "*.blend",
     "*.blend1",
     "*.meta",
+    "*.sources.json",
     "*.bak",
     "*.tmp",
     "thumbs.db",

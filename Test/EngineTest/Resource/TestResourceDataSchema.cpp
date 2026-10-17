@@ -360,6 +360,45 @@ namespace
             }
             return true;
         }
+
+        static bool isSourceManifest( sw::string_view resourceID ) { return endsWith( resourceID, ".sources.json" ); }
+        /**
+         * @brief 리소스 출처 목록(`common/audio.sources.json`) — 도구(`Scripts/dev/MakeCommonAudio.py`)가 읽고 쓰는 키 규칙(모르는 키는 오류)으로 본다.
+         * @details 팩에 실리지 않는다(`PackConfig.json` 의 `*.sources.json`) — 원본 트리에서 파일로 읽는다.
+         */
+        [[nodiscard]] static bool loadSourceManifest( const sw::string& resourceID )
+        {
+            sw::JSONDocument document;
+            if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
+                return false;
+            const sw::JSONValue root = document.getRoot();
+            if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( root, { "_note", "packs" }, resourceID ) == false || root.get( "packs" ).isArray() == false )
+                return false;
+            const sw::JSONValue packs = root.get( "packs" );
+            for ( size_t packIndex = 0; packIndex < packs.size(); ++packIndex )
+            {
+                const sw::JSONValue pack     = packs.at( packIndex );
+                const bool          bBadPack = sw::AnimationJSONUtil::hasOnlyKnownKeys(
+                                          pack, { "folder", "page", "page_license_marker", "download", "license", "license_source", "license_quote", "convert", "files" }, resourceID ) == false ||
+                                      pack.get( "files" ).isArray() == false;
+                if ( bBadPack )
+                    return false;
+                const sw::JSONValue convert = pack.get( "convert" );
+                const bool          bBadConvert =
+                    convert.isObject() &&
+                    sw::AnimationJSONUtil::hasOnlyKnownKeys(
+                        convert, { "format", "subtype", "encoder", "vorbis_quality", "compression_level", "libsndfile_version", "soundfile_version" }, resourceID ) == false;
+                if ( bBadConvert )
+                    return false;
+                const sw::JSONValue files = pack.get( "files" );
+                for ( size_t fileIndex = 0; fileIndex < files.size(); ++fileIndex )
+                {
+                    if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( files.at( fileIndex ), { "name", "member", "sha256", "source_sha256" }, resourceID ) == false )
+                        return false;
+                }
+            }
+            return true;
+        }
         /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 레지스트리에 대조한다. */
         [[nodiscard]] static bool loadNotifyTable( const sw::string& resourceID )
         {
@@ -507,6 +546,7 @@ namespace
             {    "retargetprofile",     &isRetargetProfile,                               &loadRetargetProfile},
             {        "notifytable",         &isNotifyTable,                                   &loadNotifyTable},
             {           "clipdata",            &isClipData,                                      &loadClipData},
+            {     "sourcemanifest",      &isSourceManifest,                                &loadSourceManifest},
             {            "bonelod",             &isBoneLOD,                                       &loadBoneLOD},
             {       "animationlod",        &isAnimationLOD,             &loadCatalog<sw::AnimationLODSettings>},
             {     "animationcrowd",      &isAnimationCrowd,           &loadCatalog<sw::AnimationCrowdSettings>},

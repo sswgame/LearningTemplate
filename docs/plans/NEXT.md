@@ -4,6 +4,9 @@
 
 ## 1. 지금 상태 (2026-10-17 밤)
 
+**(2026-10-17 밤, `integ2`) `res2`(공용 팩 CC0 오디오) · `res3`(여섯 게임 CC0 모델 원본) · `rigbench`(합성 리그 생성기 · 벤치) · `bitset`(DynamicBitset parse) 을 main 에 병합했습니다.**
+남은 일: 씬 연결 `D4-17`, 리그 벤치 비정상 `C-47`, 산출물 결정성 `C-44`, 공용 팩 용량 `C-46`.
+
 **(2026-10-17 새벽) 지금 main 은 push 하지 않았습니다(마지막 push `97dfd14fd`). 병합 후 전체 검증도 하지 않았습니다 — 사용자 지시로 이 세션의 검증은 다음 세션으로 넘깁니다.**
 마지막으로 검증한 것은 `59a9e7d38`(Release · Debug `all AllTests` 경고 0, 두 구성 `-L lint` 73 · `-L nogpu` 53, Debug `-L race` 5 통과)입니다. 그 뒤 main 에 병합한 것은 검증하지 않았습니다: `reflectstage5b` 의 검토 반영 뒤 병합본, `renameredirect`(이름 변경 리다이렉트 R1~R4, `764049e47` — 별칭은 영구 금지가 아니라 지금 이관할 출시 데이터가 없어서 둔 조건부 규칙이라는 사용자 확인으로 병합, 결정 기록 5-4), `scenariorelease`(`72c0608aa`), `serialcleanup`(`d2c4766fc` — 컴팩트 모드 · `cloneObject` 삭제, `A-13` · `A-14`, `serializeValueBinary` 류를 `[[nodiscard]] bool` 로, 컨테이너 타입 이름의 C++ 별칭 벗기기). 각 브랜치는 자기 워크트리에서 Debug · Release 전체 빌드 경고 0 과 `-L lint` · `-L nogpu` 를 통과했지만 합친 상태는 처음입니다.
 **다음 세션 첫 일 — 검증**: ① 새 `REFLECT` 헤더가 들어왔으니 두 구성을 `shared-lock acquire vcpkg` 아래에서 `cmake --preset` 으로 다시 구성 ② Release · Debug `all AllTests` 경고 0 ③ 두 구성 `-L lint` `-L nogpu`, Debug `-L race` ④ `-L hostgpu`(Release, `-DSW_GAMES=ALL` 로 구성된 main 빌드에서) — 실패 4건 중 에디터 시나리오 셋(`netconditions` · `profilercapture` · `terrainbrush`)과 Vulkan 검증 테스트는 `scenariorelease` 로 고쳤고, `shooter3d.closewindow`(Vulkan · GL)는 실제 창 포커스를 쓰는 시나리오라 세션 이전부터 불안정합니다 ⑤ Shipping 빌드와 네 백엔드 × 대표 셋(Empty · 에디터 · Shooter3D · NileCity). 통과하면 push 여부를 사용자에게 묻습니다.
