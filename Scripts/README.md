@@ -211,6 +211,7 @@ Scripts/
   │     ├── RunBackendSmoke.py        # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교
   │     ├── CiFailureReport.py        # CI 실패(테스트 · 구성 · 크래시 스택)를 GitHub 주석으로 — ci.yml 이 부른다
   │     ├── ConfigureSnapshot.py      # CMake 구성 결과 스냅숏 · 비교(리팩터 전후) · 구성 시간 요약
+  │     ├── CompareDestructionHashLogs.py # 서버 · 클라이언트 로그의 파괴 구조 해시(`[DestructionHash]`)를 (번호, 사건 수)로 맞대기 — 컴파일러 · 플랫폼을 넘어 같은지
   │     ├── MakeStressScene.py        # 로드 경로를 재기 위한 큰 씬(사람이 테스트 데이터를 만든다 — `Make*`, 빌드가 만드는 것은 generate/)
   │     ├── MakeTerrainShowcase.py    # 지형 쇼케이스의 절차 생성 원본(heightfields_raw · textures_raw)
   │     ├── MakeNoiseTexture.py       # 엔진 잡음 텍스처 원본(engine/textures_raw/perlin.png — 이음매 없는 Perlin fBm)

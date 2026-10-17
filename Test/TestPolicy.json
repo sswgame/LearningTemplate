@@ -119,6 +119,7 @@
         "NetSimDestructionMatrixTest.HeavyLossRepairsASkippedEvent": 15,
         "LoaderFuzzTest.EveryLoaderSurvivesMutatedInput": 13,
         "NetSimDestructionTest.CleanLinkConvergesLateJoinsAndRepairs": 12,
+        "NetSimDestructionTest.NetSessionHashRecordsMatchTheServer": 8,
         "ConformSurfaceTest.ParallelQueriesMatchSerialResult": 8,
         "RealTimeStrategyTest.AIGrowsEconomyBuildsArmyAndWinsByRazingBuildings": 7,
         "FractureTest.ManySeedsGiveOnlyClosedPieces": 4,
