@@ -79,7 +79,7 @@ cd build/Ninja-Debug/Bin
 - `Resource/game/starskirmish/data/units.xml` 에 자원 셋, 건물 아홉, 유닛 일곱이 있습니다. 엔진 밖 하니스로 확인한 결과, AI 대 AI 는 422초에 1번(운영)이 이기고,
   사람이 아무것도 하지 않으면 284초에 집니다.
 - 유닛 종류와 모델의 대응 테이블은 `SkirmishUnitComponent` 에 있습니다.
-- 디렉터의 PROPERTY 로 유닛 데이터, 프리팹 경로, 카메라 오브젝트, 구경 초점을 정합니다(구경 높이는 `watch` 프리셋). 자동 플레이는 베이스의 `_bAutoPlay` 이고 `-gv_skirmishAutoPlay=1` 도 켭니다.
+- 디렉터의 PROPERTY 로 유닛 데이터, 프리팹 경로, 카메라 오브젝트, 구경 초점, 구경 카메라 프리셋(`_watchCameraPreset`, 씬은 `watch`)을 정합니다(구경 높이는 그 프리셋). 프리셋 이름이 비면 판을 열지 않습니다. 자동 플레이는 베이스의 `_bAutoPlay` 이고 `-gv_skirmishAutoPlay=1` 도 켭니다.
 
 ## 함정과 주의
 

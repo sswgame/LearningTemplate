@@ -161,9 +161,8 @@ namespace sw
         , _scratchTrackPose{}
         , _scratchLayerPose{}
         , _listScratchTrackMask{}
-        , _lastBasePose{}
+        , _baseHistory{}
         , _carryOverPose{}
-        , _previousBasePose{}
         , _inertializer{}
         , _sequencerClip{}
         , _rootMotionDelta{}
@@ -177,10 +176,11 @@ namespace sw
         , _carryOverDuration{ 0.0f }
         , _seenInterruptCount{ 0 }
         , _seenInertializationCount{ 0 }
+        , _lastTimeFrameIndex{ 0 }
         , _bExtractRootMotion{ SW_FALSE }
         , _bPlayOnBegin{ SW_TRUE }
         , _bRootMotionThroughController{ SW_TRUE }
-        , _bLastBasePoseValid{ SW_FALSE }
+        , _bPoseShownThisFrame{ SW_FALSE }
         , _bCarryingOver{ SW_FALSE }
         , _bInertializationPending{ SW_FALSE }
         , _reserved{ 0 }
@@ -255,20 +255,36 @@ namespace sw
         _graph = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( _animationGraphPath ) == false )
             SW_LOG_ERROR( "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
-        _graphPlayer.setGraph( _graph._listNode.empty() ? nullptr : &_graph );
-        rebuildGraphPlayables();
+        applyGraphPlayables();
     }
 
-    void SkeletalAnimatorComponent::rebuildGraphPlayables()
+    void SkeletalAnimatorComponent::applyGraphPlayables()
+    {
+        // 플레이어가 빌린 상태를 먼저 놓는다(`setGraph` 는 재생을 멈춘다).
+        _graphPlayer.setGraph( nullptr );
+        if ( rebuildGraphPlayables() )
+        {
+            _graphPlayer.setGraph( _graph._listNode.empty() ? nullptr : &_graph );
+            return;
+        }
+        // 빠진 것만 빼고 돌지 않는다 — 파일을 못 읽은 그래프와 같이 플레이어에 그래프를 걸지 않는다. 데이터는 남겨 클립 폴더를 바꾸면 다시 맞춰 본다.
+        SW_LOG_ERROR( "Animation graph '%#' is not used - it names what SkeletalAnimatorComponent cannot play (errors above)", _animationGraphPath.c_str() );
+        _listBlendSpace.clear();
+        _listGraphLayer.clear();
+    }
+
+    bool SkeletalAnimatorComponent::rebuildGraphPlayables()
     {
         // 플레이어(`setGraph`, `stop`)가 빌린 상태를 놓은 뒤에 부른다. 워커의 전이는 읽어 둔 클립만 찾으므로 클립은 지금(게임 스레드) 읽는다.
         _listBlendSpace.clear();
+        bool bPlayable = true;
         for ( const AnimationGraphNode& node : _graph._listNode )
         {
-            // 포즈 노드(`AnimationPoseNodeSet`)는 아직 이 애니메이터가 평가하지 않는다 — 클립으로 잘못 재생하지 않고 오류로 알린다.
+            // 포즈 노드(`AnimationPoseNodeSet`)는 아직 이 애니메이터가 평가하지 않는다 — 클립으로 잘못 재생하지 않고 그래프를 쓰지 않는다.
             if ( node.hasPoseNode() )
             {
                 SW_LOG_ERROR( "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", _animationGraphPath.c_str(), node._name.c_str() );
+                bPlayable = false;
                 continue;
             }
             if ( node.hasBlendSpace() == false )
@@ -284,24 +300,29 @@ namespace sw
                     SW_LOG_ERROR( "Blend space state '%#' sample clip '%#' was not found in '%#'", node._name.c_str(), sample._clipName.c_str(), _clipFolder.c_str() );
                 listClip.push_back( bLoaded ? findClip( sample._clipName ) : nullptr );
             }
-            // 표본 클립이 하나라도 없으면 상태를 만들지 않는다 — 없는 표본을 빼고 섞으면 데이터가 말한 것과 다른 포즈가 된다.
+            // 표본 클립이 하나라도 없으면 그래프를 쓰지 않는다 — 없는 표본을 빼고 섞으면 데이터가 말한 것과 다른 포즈가 된다.
             if ( std::find( listClip.begin(), listClip.end(), nullptr ) != listClip.end() )
+            {
+                bPlayable = false;
                 continue;
+            }
             unique_ptr<SkeletalBlendSpaceState> state = make_unique<SkeletalBlendSpaceState>( hashed_string( node._name ), node._blendSpace, std::move( listClip ) );
             state->updateWeights( _parameters );
             _listBlendSpace.push_back( std::move( state ) );
         }
-        rebuildGraphLayers();
+        return rebuildGraphLayers() && bPlayable;
     }
 
-    void SkeletalAnimatorComponent::rebuildGraphLayers()
+    bool SkeletalAnimatorComponent::rebuildGraphLayers()
     {
         _listGraphLayer.clear();
+        bool bPlayable = true;
         for ( const AnimationGraphLayerDef& def : _graph._listLayer )
         {
             if ( preloadClip( def._clipName ) == false )
             {
                 SW_LOG_ERROR( "Animation graph layer '%#' clip '%#' was not found in '%#'", def._name.c_str(), def._clipName.c_str(), _clipFolder.c_str() );
+                bPlayable = false;
                 continue;
             }
             LayerState layer{};
@@ -316,6 +337,7 @@ namespace sw
             layer._player.play( layer._clip.get(), def._bLoop == SW_TRUE );
             _listGraphLayer.push_back( std::move( layer ) );
         }
+        return bPlayable;
     }
 
     void SkeletalAnimatorComponent::setClipFolder( string_view folder )
@@ -325,7 +347,7 @@ namespace sw
         _clipFolder = string{ folder };
         _mapClip.clear();
         _mapTrackToBone.clear();
-        rebuildGraphPlayables();
+        applyGraphPlayables();
     }
 
     void SkeletalAnimatorComponent::setAnimationGraphPath( string_view path )
@@ -414,7 +436,7 @@ namespace sw
         LayerState& layer = _listLayer[layerIndex];
         layer._player.play( layer._clip.get(), layer._desc._bLoop == SW_TRUE );
         // 반감기가 있으면 다음 평가가 끊긴 레이어 포즈에서 새 포즈로 이어 간다(얹은 적이 없으면 이어 갈 포즈가 없다).
-        layer._bRestartPending = ( layer._desc._halfLifeSeconds > 0.0f && layer._lastLayerPose.getBoneCount() > 0 ) ? SW_TRUE : SW_FALSE;
+        layer._bRestartPending = ( layer._desc._halfLifeSeconds > 0.0f && layer._history.findLast() != nullptr ) ? SW_TRUE : SW_FALSE;
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
     }
@@ -584,6 +606,24 @@ namespace sw
     {
         const float32 deltaSeconds = context._deltaSeconds * _playRate;
         _lastDeltaSeconds          = deltaSeconds;
+        // 지난 프레임에 포즈가 화면에 보이지 않았거나(화면 밖 · 숨김 · 군중 묶음이 대신 냈다) 쉬어서 시간 단계가 끊겼으면, 기록한 포즈는 아무도 보지 않은 옛 포즈다.
+        // 다음 전이가 거기서 출발하면 다시 보일 때 옛 포즈로 튄다 — 무효로 표시해 새 포즈에서 바로 시작한다.
+        const bool bHistoryBroken = _bPoseShownThisFrame == SW_FALSE || context._frameIndex != _lastTimeFrameIndex + 1;
+        _lastTimeFrameIndex       = context._frameIndex;
+        // 포즈를 만들지 않아도 화면 안이면 지난 포즈(또는 그 보간)가 그대로 보인다(LOD 주기). 만들면 `populateBasePose` 가 참으로 둔다.
+        _bPoseShownThisFrame = context._bPoseNeeded == SW_FALSE && context._bOnScreen == SW_TRUE ? SW_TRUE : SW_FALSE;
+        _baseHistory.advance( deltaSeconds );
+        if ( bHistoryBroken )
+            _baseHistory.invalidate();
+        for ( vector<LayerState>* pListLayer : { &_listGraphLayer, &_listLayer } )
+        {
+            for ( LayerState& layer : *pListLayer )
+            {
+                layer._history.advance( deltaSeconds );
+                if ( bHistoryBroken )
+                    layer._history.invalidate();
+            }
+        }
         _listFiredNotify.clear();
         updateBlendSpaceWeights();
         _graphPlayer.update( deltaSeconds, &_parameters, &_listFiredNotify );
@@ -603,10 +643,11 @@ namespace sw
         const AnimationPlayer& player = _graphPlayer.getPlayer();
         if ( player.getInterruptCount() != _seenInterruptCount )
         {
-            _seenInterruptCount = player.getInterruptCount();
-            if ( _bLastBasePoseValid == SW_TRUE )
+            _seenInterruptCount    = player.getInterruptCount();
+            const Pose* pShownPose = _baseHistory.findLast();
+            if ( pShownPose != nullptr )
             {
-                _carryOverPose     = _lastBasePose;
+                _carryOverPose     = *pShownPose;
                 _carryOverElapsed  = 0.0f;
                 _carryOverDuration = MathUtil::max( player.getFadeDuration(), 1.0e-3f );
                 _bCarryingOver     = SW_TRUE;
@@ -623,7 +664,7 @@ namespace sw
         if ( player.getInertializationCount() != _seenInertializationCount )
         {
             _seenInertializationCount = player.getInertializationCount();
-            _bInertializationPending  = _bLastBasePoseValid;
+            _bInertializationPending  = _baseHistory.findLast() != nullptr ? SW_TRUE : SW_FALSE;
             _bCarryingOver            = SW_FALSE;
         }
         else
@@ -849,7 +890,10 @@ namespace sw
         // inertialization 의 시간은 가중치가 0 이어도 흐른다(다시 켰을 때 오래된 오프셋이 남지 않게).
         layer._inertializer.update( _lastDeltaSeconds );
         if ( layer._clip == nullptr || layer._desc._weight <= 0.0f )
+        {
+            layer._history.invalidate(); // 얹지 않은 프레임이다 — 다시 켰을 때 옛 레이어 포즈에서 출발하지 않는다
             return;
+        }
         refreshLayerMask( layer, skeleton );
         _scratchLayerPose.setToReference( skeleton );
         sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose, pBoneMask );
@@ -857,14 +901,18 @@ namespace sw
         {
             if ( layer._bRestartPending == SW_TRUE )
             {
-                // 출발은 끊기기 직전에 얹은 레이어 포즈(와 그 전 프레임), 도착은 다시 시작한 첫 포즈다. 실패(본 수가 바뀜)는 begin 이 오류를 남기고 즉시 새 포즈다.
-                const Pose* pPrevious = layer._previousLayerPose.getBoneCount() == layer._lastLayerPose.getBoneCount() ? &layer._previousLayerPose : nullptr;
-                (void)layer._inertializer.begin( layer._lastLayerPose, pPrevious, _scratchLayerPose, nullptr, _lastDeltaSeconds, layer._desc._halfLifeSeconds );
+                // 출발은 끊기기 직전에 화면에 얹힌 레이어 포즈(와 그 전 기록), 도착은 다시 시작한 첫 포즈다. 출발이 무효(화면 밖 프레임이 끼었다)면 새 포즈에서 시작한다.
+                // 실패(본 수가 바뀜)는 begin 이 오류를 남기고 즉시 새 포즈다.
+                const Pose* pSource = layer._history.findLast();
+                if ( pSource == nullptr )
+                    layer._inertializer.reset();
+                else
+                    (void)layer._inertializer.begin( *pSource, layer._history.findPrevious(), _scratchLayerPose, nullptr, layer._history.getIntervalSeconds(),
+                                                     layer._desc._halfLifeSeconds );
                 layer._bRestartPending = SW_FALSE;
             }
             layer._inertializer.apply( _scratchLayerPose );
-            layer._previousLayerPose = layer._lastLayerPose;
-            layer._lastLayerPose     = _scratchLayerPose;
+            layer._history.record( _scratchLayerPose );
         }
         if ( layer._desc._blend == AnimationLayerBlend::Override )
         {
@@ -900,14 +948,16 @@ namespace sw
         if ( _bInertializationPending == SW_TRUE )
         {
             _bInertializationPending = SW_FALSE;
-            const bool bHasPrevious  = _previousBasePose.getBoneCount() == _lastBasePose.getBoneCount();
-            // 본 수가 다르면(스켈레톤이 바뀜) begin 이 오류를 남기고 섞지 않는다 — 새 포즈를 그대로 쓴다.
-            (void)_inertializer.begin( _lastBasePose, bHasPrevious ? &_previousBasePose : nullptr, pose, nullptr, _lastDeltaSeconds, player.getInertializationHalfLife() );
+            // 전이와 이 포즈 사이에 화면 밖 프레임이 끼었으면 출발 포즈가 없다 — 아무도 보지 않았으므로 새 포즈에서 바로 시작한다.
+            const Pose* pSource = _baseHistory.findLast();
+            if ( pSource == nullptr )
+                _inertializer.reset();
+            else // 본 수가 다르면(스켈레톤이 바뀜) begin 이 오류를 남기고 섞지 않는다 — 새 포즈를 그대로 쓴다.
+                (void)_inertializer.begin( *pSource, _baseHistory.findPrevious(), pose, nullptr, _baseHistory.getIntervalSeconds(), player.getInertializationHalfLife() );
         }
         _inertializer.apply( pose );
-        std::swap( _previousBasePose, _lastBasePose );
-        _lastBasePose       = pose;
-        _bLastBasePoseValid = SW_TRUE;
+        _baseHistory.record( pose );
+        _bPoseShownThisFrame = SW_TRUE;
 
         // 그래프 레이어(데이터)를 먼저, 코드 레이어(게임이 그 위에 덮는 것)를 나중에 얹는다.
         for ( LayerState& layer : _listGraphLayer )

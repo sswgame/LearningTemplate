@@ -103,6 +103,7 @@
 					                           _unitPrefab="game/starskirmish/prefabs/unit.prefab.xml"
 					                           _cameraRig="1"
 					                           _watchFocus="32,0,30"
+					                           _watchCameraPreset="watch"
 					                           _selectAction="Skirmish.Select"
 					                           _orderAction="Skirmish.Order"
 					                           _addToSelectionAction="Skirmish.AddToSelection"

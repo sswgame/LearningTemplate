@@ -12,6 +12,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -111,7 +112,7 @@ namespace
     };
 
     /**
-     * @brief 게임 서비스에 씬 매니저만 겁니다 — `GameInstanceBase` · `DontDestroyOnLoadComponent` 가 활성 씬을 여기서 찾습니다.
+     * @brief 게임 서비스에 씬 매니저와 필수 엔진 서비스 `GameNetSession` 만 겁니다 — `GameInstanceBase` · `DontDestroyOnLoadComponent` 가 활성 씬을 여기서 찾습니다.
      * @details 어서션이 중간에 빠져나가도 풀리게 RAII 로 둡니다.
      *          (`EngineTest/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 이 파일의 `test::makeTempPath` 와 이름이 부딪힌다.)
      */
@@ -119,7 +120,8 @@ namespace
     {
         explicit ScopedSceneGameService( SceneManager& manager )
         {
-            (void)_hostServices.bind( &manager ); // 새 범위 — 겹치지 않는다
+            (void)_hostServices.bind( &manager );                                // 새 범위 — 겹치지 않는다
+            (void)_hostServices.bind( &engine::getSubsystem<GameNetSession>() ); // 타입이 달라 겹치지 않는다
             game::bindGameService( _hostServices );
         }
         ~ScopedSceneGameService() { game::unbindGameService(); }
@@ -1214,6 +1216,43 @@ SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
         engine::getSubsystem<TaskManager>().waitAll();
         first.shutdown();
     }
+    sceneManager.shutdown();
+}
+
+/**
+ * @brief [GameFrameworkTest] 필수 엔진 서비스 `GameNetSession` 이 게임 서비스에 없으면 게임 인스턴스는 서지 않는다 — 세션 없이 조용히 돌지 않는다
+ * @details 예전에는 `findSubsystem` 의 nullptr 을 건너뛰어, 세션이 빠진 바인딩에서도 기동이 성공하고 네트워크만 말없이 꺼졌다.
+ */
+SW_TEST_CASE( GameFrameworkTest, GameInstanceStopsWithoutGameNetSession )
+{
+    class ProbeGameInstance : public GameInstanceBase
+    {
+    public:
+        bool _bInitializeCalled{ false };
+
+    protected:
+        bool onInitialize() override
+        {
+            _bInitializeCalled = true;
+            return true;
+        }
+    };
+
+    SceneManager sceneManager;
+    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SubsystemScope hostServices{};
+    (void)hostServices.bind( &sceneManager ); // 새 범위 — 겹치지 않는다. 세션은 일부러 걸지 않는다
+    game::bindGameService( hostServices );
+
+    ProbeGameInstance instance;
+    {
+        test::ScopedDefensiveTestLog expected( "the required engine service GameNetSession is missing" );
+        SW_EXPECT_FALSE( instance.initialize( nullptr, nullptr ) );
+    }
+    SW_EXPECT_FALSE( instance._bInitializeCalled );
+    SW_EXPECT_TRUE( game::findSubsystem<GameSettings>() == nullptr ); // 아무것도 걸기 전에 멈췄다
+
+    game::unbindGameService();
     sceneManager.shutdown();
 }
 
@@ -2832,6 +2871,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
             (void)_input.initialize();                                                // 장치 등록뿐이다 — 아래 단언이 통합 맵을 본다
             (void)_hostServices.bind( &_input );                                      // 새 범위 — 겹치지 않는다
             (void)_hostServices.bind( &engine::getSubsystem<LocalizationManager>() ); // 타입이 달라 겹치지 않는다
+            (void)_hostServices.bind( &engine::getSubsystem<GameNetSession>() );      // 필수 엔진 서비스(`GameInstanceBase::initialize`)
             game::bindGameService( _hostServices );
         }
         ~ScopedRunState()

@@ -49,6 +49,12 @@ namespace sw
         float32 _deltaSeconds{ 0.0f };
         uint64  _frameIndex{ 0 };
         uint8   _bPoseNeeded{ SW_TRUE }; ///< 이번 프레임에 포즈를 만드는지 나타낸다. LOD 나 화면 밖이면 거짓이고, 시간만 흐른다
+        /**
+         * @brief 이번 프레임에 이 유닛의 포즈가 화면에 보이는지 나타낸다(뷰 안이거나 화면 밖에서도 움직이게 했다).
+         * @details 포즈를 건너뛴 프레임(`_bPoseNeeded` 거짓)이라도 참이면 화면에는 지난 포즈(또는 그 보간)가 그대로 보인다. 거짓이면 아무도 보지 않았으므로
+         *          지난 포즈는 다음 전이의 출발점이 될 수 없다(`SkeletalAnimatorComponent` 의 inertialization · 이어 섞기).
+         */
+        uint8 _bOnScreen{ SW_TRUE };
     };
 } // namespace sw
 

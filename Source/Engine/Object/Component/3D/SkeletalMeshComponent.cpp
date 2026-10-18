@@ -620,6 +620,7 @@ namespace sw
         _frameContext._deltaSeconds = deltaSeconds;
         _frameContext._frameIndex   = frameIndex;
         _frameContext._bPoseNeeded  = ( bPoseDirty || ( bOnRate && bOnScreen ) ) ? SW_TRUE : SW_FALSE;
+        _frameContext._bOnScreen    = bOnScreen ? SW_TRUE : SW_FALSE;
         // 건너뛰는 프레임 — 보이고 보간이 켜졌으면 직전 두 포즈 사이를 채운다(평가는 하지 않는다).
         const bool bInterpolationOn = _lodState._bInterpolate == SW_TRUE && _effectiveDivisor > 1 && bOnScreen;
         if ( bInterpolationOn == false )

@@ -121,6 +121,8 @@ namespace sw
     private:
         struct SentPacket
         {
+            static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::Assign;
+
             uint16  _arrReliableID[kMaxReliablePerPacket]{};
             float64 _time{ 0.0 };
             int32   _byteCount{ 0 };
@@ -132,6 +134,8 @@ namespace sw
 
         struct ReceivedPacket
         {
+            static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::Assign;
+
             float64 _time{ 0.0 };
             int32   _byteCount{ 0 };
         };
@@ -139,6 +143,8 @@ namespace sw
         /** @brief 보낸 신뢰 메시지 하나입니다. 큰 메시지면 그 조각 하나입니다. */
         struct OutgoingReliable
         {
+            static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::ReuseBuffer;
+
             /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 칸을 다시 쓸 때 부른다). */
             void resetForReuse()
             {
@@ -158,6 +164,8 @@ namespace sw
         /** @brief 받은 신뢰 메시지 하나(조각 하나)입니다. 순서가 오면 `deliverReliable` 이 넘기거나 모읍니다. */
         struct IncomingReliable
         {
+            static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::ReuseBuffer;
+
             /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 칸을 다시 쓸 때 부른다). */
             void resetForReuse()
             {
