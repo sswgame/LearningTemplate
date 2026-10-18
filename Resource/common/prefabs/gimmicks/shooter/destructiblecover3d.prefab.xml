@@ -56,7 +56,7 @@
 				</_requiredTags>
 				<_listOccupant />
 			</GimmickSensorComponent>
-			<DestructibleComponent _componentName="DestructibleComponent" _bActive="true" _damageTaken="0" _stage="0">
+			<DestructibleComponent _componentName="DestructibleComponent" _bActive="true">
 				<_listStageThreshold>
 					<item>20</item>
 					<item>50</item>

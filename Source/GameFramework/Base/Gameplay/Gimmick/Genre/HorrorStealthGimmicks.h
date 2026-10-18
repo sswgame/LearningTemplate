@@ -47,9 +47,9 @@ namespace sw
         bool _bOnce;
         PROPERTY( Category = "Scare", DisplayName = "Cooldown", Min = 0.0, Units = s )
         float32 _cooldown;
-        PROPERTY( Category = "Scare", DisplayName = "Cooldown Left", Tooltip = "Runtime", Units = s )
+        PROPERTY( RuntimeState, Category = "Scare", DisplayName = "Cooldown Left", Tooltip = "Runtime", Units = s )
         float32 _cooldownLeft;
-        PROPERTY( Category = "Scare", DisplayName = "Fire Count", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Scare", DisplayName = "Fire Count", Tooltip = "Runtime" )
         int32 _fireCount;
     };
 } // namespace sw
@@ -80,7 +80,7 @@ namespace sw
         string _pattern;
         PROPERTY( Category = "Flicker", DisplayName = "Rate", Min = 0.1, Tooltip = "Pattern letters per second" )
         float32 _rate;
-        PROPERTY( Category = "Flicker", DisplayName = "Step", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Flicker", DisplayName = "Step", Tooltip = "Runtime" )
         int32 _step;
 
         FixedStepTimer _clock;
@@ -145,13 +145,13 @@ namespace sw
         float32 _interval;
         PROPERTY( Category = "Noise", DisplayName = "On Step", Tooltip = "Emit when something steps onto the sensor" )
         bool _bOnStep;
-        PROPERTY( Category = "Noise", DisplayName = "Noise Radius", Tooltip = "Runtime: radius of the last noise this step" )
+        PROPERTY( RuntimeState, Category = "Noise", DisplayName = "Noise Radius", Tooltip = "Runtime: radius of the last noise this step" )
         float32 _noiseRadius;
-        PROPERTY( Category = "Noise", DisplayName = "Steps", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Noise", DisplayName = "Steps", Tooltip = "Runtime" )
         int32 _steps;
-        PROPERTY( Category = "Noise", DisplayName = "Occupants", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Noise", DisplayName = "Occupants", Tooltip = "Runtime" )
         int32 _lastOccupantCount;
-        PROPERTY( Category = "Noise", DisplayName = "Emit Count", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Noise", DisplayName = "Emit Count", Tooltip = "Runtime" )
         int32 _emitCount;
 
         FixedStepTimer _clock;

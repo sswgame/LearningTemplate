@@ -28,12 +28,7 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<ItemBoxComponent _componentName="ItemBoxComponent"
-			                  _bActive="true"
-			                  _respawnDelay="3"
-			                  _seed="1"
-			                  _openCount="0"
-			                  _respawnStepsLeft="0">
+			<ItemBoxComponent _componentName="ItemBoxComponent" _bActive="true" _respawnDelay="3" _seed="1">
 				<_listChoice>
 					<GimmickItemChoice _item="Banana" _weight="3" _count="1" />
 					<GimmickItemChoice _item="Shell" _weight="2" _count="1" />

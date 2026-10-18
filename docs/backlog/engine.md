@@ -65,9 +65,6 @@
 - `C-52` [정리] **타입별 버킷(7-c)과 타입 핸들(7-d) 뒤의 남은 정리.** 설계 완료, 단위는 [타입별 컴포넌트 계획](../plans/TypedComponents.md) 8절(T1 ~ T4)이다.
   ① 핸들 옮기기의 값 방문(T1) ② 상태 저장소 짝짓기를 안정 키로(T2, 전역 순서 문제는 7c577ec27 이 풀었다) ③ 등록형 목록 → 버킷(T4) ④ 측정(T3).
 
-- `C-53` [정리] **씬 · 프리팹 저작 저장에 런타임 상태가 들어간다**(2026-10-17 `GimmickCircuitState` 검토 ⓕ). 남은 단위는 [저작 저장과 런타임 상태 분리 계획](../plans/AuthoringState.md) 4절의 A4(런타임 필드에 `PROPERTY( RuntimeState )` 를 붙이고 데이터를 다시 쓰기)다.
-  저장 목적(`SerializePurpose`)은 필수 값이 됐고, `RuntimeState` 필드는 저작 저장에서 빠진다.
-
 - `C-63` [정리] **`SW_ENABLE_STL_CONTAINER` 가 이름이 같은 `sw::` 형식을 구성마다 다른 형식으로 바꾼다**(2026-10-18 `A-20`). 해시 컨테이너는 두 구성이 같은 구현을 쓰게 했고 `CompressedPair` 로 `pair` 차이를 막았다.
   남은 것: ① 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다) ② `Source/sw.natvis` 의 `unordered_map` · `unordered_set` · `vector` 항목이 std 형식으로 캐스트해 지금 구조와 맞지 않는다
   ③ `TestDestructionDamage` 의 해시 기준값 테스트가 STL 구성에서 건너뛰던 이유가 해시 컨테이너 순서였다면 다시 켤 수 있다(확인 안 함). `map` · `set` 은 두 구성 모두 키 순서지만 주소 · 반복자 보장은 기본 구성 쪽이 약하다.

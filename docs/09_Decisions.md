@@ -619,7 +619,6 @@
   값은 `enginedefaultassets.xml` 에만 있고, 표는 `EngineDefaultAssets::load` · 서브시스템만 만든다(`ConstructKey`, `REFLECT( Abstract )`). 못 읽으면 기동 · 쿠킹이 멈춘다. 테스트는
   `test::getEngineDefaultAssets()`(하네스가 읽은 표)로 경로를 얻는다. 언리얼 `FSoftObjectPath` 가 ini 에서만 채워지는 설정 칸과 같은 자리이고, 게이트가 아니라 형식으로 막는다.
 - **읽기 API 는 폴백 인자를 받지 않습니다**(2026-10-18 설계, 구현 전). `XMLNode` · `JSONValue` · `KeyValueFile` 의 값 읽기는 스키마 읽기(`readFields`), 필수 읽기(`std::optional` 반환), 선택 읽기(`std::optional` 출력) 셋만 남기고 폴백 인자 함수를 지웁니다. 기본값의 원본은 Def 초기값 하나입니다([데이터 주도 구조 정리 계획](plans/DataDriven.md) 7절).
-- **저장 문맥은 목적(`SerializePurpose`: Authoring · Snapshot · SaveGame)을 필수로 가지고, `PROPERTY( RuntimeState )` 는 저작 저장에서 빠집니다**(2026-10-18 설계, 구현 전). 언리얼 아카이브 목적 플래그와 목적별 Transient 와 같은 계열입니다. 에디터 되돌리기와 복사는 Authoring 입니다([저작 저장 계획](plans/AuthoringState.md)).
 - **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼의 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
 - **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다. 언리얼의 `UWorld::GetGravityZ` 에 해당합니다.
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
@@ -653,6 +652,8 @@
 
 - **저장 목적은 문맥의 필수 값이다(2026-10-18, C-53).** `SerializeContext` 는 `SerializePurpose`(Authoring · Snapshot · SaveGame)를 생성자로만 받고, 기본 문맥도 `getDefault( purpose )` 로 목적을 말해야 얻는다. 필드 규칙(`Transient` · `RuntimeState` · `SaveGame`)은 `SerializerUtil::shouldSerializeProperty` 한 곳이 세 형식(XML · JSON · 바이너리)에 같게 정한다.
   리플렉션 직렬화기(`XMLSerializer` · `JSONSerializer` · `BinarySerializer`)의 문맥 기본 인자는 `getDefault( SerializePurpose::Authoring )` 이다 — 그 함수들은 파일 입출력 도우미라 저작 형식이 계약이고, 기본 인자가 시그니처에 목적을 적는다. 오브젝트 상태(`ObjectStateSerializer`)는 기본 인자 없이 목적을 받는 `ObjectSaveOptions` · `ObjectLoadContext` 로만 쓰고 읽는다. 아카이브(`Archive::serializeObject`)도 문맥 없는 겹지정을 지웠다(언리얼도 평범한 아카이브가 영속 저장이고 PIE 복제 · 세이브는 플래그로 따로 고른다).
+  에디터 되돌리기 · 복사 · 복제 · "시뮬레이션 변경 남기기" 는 Authoring 이다(사용자가 고치는 대상은 저작 데이터 — 언리얼 복사도 `TextExportTransient` 를 뺀다). 게임 상태 봉투는 핫 리로드(Snapshot)와 세이브 파일(SaveGame)이 함께 쓰므로 부르는 쪽이 목적을 넘긴다.
+  컴포넌트 필드에는 `RuntimeState` 만 붙이고 `SaveGame` 을 함께 붙이지 않는다 — 붙이면 그 타입이 옵트인 세이브가 되어, 씬 오브젝트 전체를 싣는 세이브에서 나머지 필드가 빠진다. 런타임 값이 저작 값에서 시작하면 "남은 수" 가 아니라 "쓴 수" 를 둔다(`GatheringNodeComponent::_usesTaken`) — 저작 값이 바뀌어도 첫 플레이가 따른다.
 
 ### 5-5. 그래픽스와 RHI
 

@@ -58,9 +58,9 @@ namespace sw
         float32 _fractureStrain;
         PROPERTY( Category = "Barrel", DisplayName = "Blast Impulse", Min = 0.0, Tooltip = "Impulse given to pieces broken off by the blast", Meta = "Units=N*s" )
         float32 _blastImpulse;
-        PROPERTY( Category = "Barrel", DisplayName = "Damage Taken", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Barrel", DisplayName = "Damage Taken", Tooltip = "Runtime" )
         float32 _damageTaken;
-        PROPERTY( Category = "Barrel", DisplayName = "Exploded", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Barrel", DisplayName = "Exploded", Tooltip = "Runtime" )
         bool _bExploded;
 
         int32          _fuseStepsLeft; ///< 도화선이 다 타기까지 남은 스텝 수(-1 이면 아직 세지 않음)
@@ -106,11 +106,11 @@ namespace sw
         float32 _fireInterval;
         PROPERTY( Category = "Turret", DisplayName = "Damage", Min = 0.0 )
         float32 _damage;
-        PROPERTY( Category = "Turret", DisplayName = "Target", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Turret", DisplayName = "Target", Tooltip = "Runtime" )
         GameObjectHandle _target;
-        PROPERTY( Category = "Turret", DisplayName = "Cooldown Steps", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Turret", DisplayName = "Cooldown Steps", Tooltip = "Runtime" )
         int32 _cooldownSteps;
-        PROPERTY( Category = "Turret", DisplayName = "Shot Count", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Turret", DisplayName = "Shot Count", Tooltip = "Runtime" )
         int32 _shotCount;
 
         FixedStepTimer _clock;
@@ -148,9 +148,9 @@ namespace sw
         float32 _stageStrain;
         PROPERTY( Category = "Destructible", DisplayName = "Shatter Strain", Min = 0.0, Tooltip = "Fracture strain that shatters the object at the last stage" )
         float32 _shatterStrain;
-        PROPERTY( Category = "Destructible", DisplayName = "Damage Taken", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Destructible", DisplayName = "Damage Taken", Tooltip = "Runtime" )
         float32 _damageTaken;
-        PROPERTY( Category = "Destructible", DisplayName = "Stage", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Destructible", DisplayName = "Stage", Tooltip = "Runtime" )
         int32 _stage;
 
         FixedStepTimer _clock;

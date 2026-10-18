@@ -19,9 +19,7 @@
 			                       _cue="Scare"
 			                       _sound=""
 			                       _bOnce="true"
-			                       _cooldown="10"
-			                       _cooldownLeft="0"
-			                       _fireCount="0">
+			                       _cooldown="10">
 				<_requiredTags>
 					<_listTag>
 						<item>Player</item>
