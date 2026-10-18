@@ -409,6 +409,225 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
     }
 }
 
+namespace
+{
+    /** @brief 형제 컴포넌트를 가리키는 오브젝트입니다 — 프로브 둘(안정 키 `#0` · `#1`), 다른 타입 하나, 링크 하나. 링크는 두 번째 프로브와 [두 번째, 첫 번째] 목록을 가리킵니다. */
+    struct ProbeObject
+    {
+        sw::GameObject*             _pObject{ nullptr };
+        sw::TestProbeComponent*     _pFirstProbe{ nullptr };
+        sw::TestProbeComponent*     _pSecondProbe{ nullptr };
+        sw::TestProbeLinkComponent* _pLink{ nullptr };
+    };
+
+    ProbeObject makeProbeObject( sw::GameObjectManager& manager, const utf8* pName )
+    {
+        ProbeObject probe;
+        probe._pObject      = manager.createGameObject( sw::hashed_string( pName ) );
+        probe._pFirstProbe  = probe._pObject->addComponent<sw::TestProbeComponent>();
+        probe._pSecondProbe = probe._pObject->addComponent<sw::TestProbeComponent>();
+        (void)probe._pObject->addComponent<sw::TestOtherComponent>();
+        probe._pLink            = probe._pObject->addComponent<sw::TestProbeLinkComponent>();
+        const bool bProbesReady = probe._pFirstProbe != nullptr && probe._pSecondProbe != nullptr;
+        if ( bProbesReady && probe._pLink != nullptr )
+        {
+            probe._pFirstProbe->_value  = 1;
+            probe._pSecondProbe->_value = 2;
+            probe._pLink->_probe        = sw::TComponentHandle<sw::TestProbeComponent>{ probe._pSecondProbe };
+            probe._pLink->_listProbe    = { sw::TComponentHandle<sw::TestProbeComponent>{ probe._pSecondProbe }, sw::TComponentHandle<sw::TestProbeComponent>{ probe._pFirstProbe } };
+        }
+        return probe;
+    }
+
+    /** @brief @p text 의 @p from 첫 자리를 @p to 로 바꾼 글입니다. 없으면 빈 글입니다(테스트가 단언한다). */
+    sw::string replaceFirstText( const sw::string& text, const sw::string& from, const sw::string& to )
+    {
+        const size_t pos = text.find( from );
+        if ( pos == sw::string::npos )
+            return {};
+        sw::string edited = text;
+        edited.replace( pos, from.size(), to );
+        return edited;
+    }
+
+    /** @brief 파일 형태로 저장합니다 — 오브젝트의 저장 id 표(씬 파일과 같다)를 줍니다. */
+    sw::ObjectSaveOptions makeFileOptions( const sw::ObjectSavedIDMap& savedIDs )
+    {
+        sw::ObjectSaveOptions options{ sw::SerializePurpose::Authoring };
+        options._pSavedIDMap = &savedIDs;
+        return options;
+    }
+} // namespace
+
+/**
+ * @brief [TypedComponentHandleTest] 같은 오브젝트의 형제 컴포넌트를 가리키는 타입 핸들이 파일 왕복(XML · JSON · 바이너리)에서 새 오브젝트의 형제를 가리킨다
+ * @details 파일 상태에는 컴포넌트 자신의 id 가 없다. 쓸 때 `{저장 id, 안정 키}` 로 적고(같은 오브젝트면 저장 id 자리가 0), 읽은 뒤 묶음이 키로 새 컴포넌트를 찾는다.
+ *          런타임 컴포넌트 id 를 그대로 적으면 읽는 실행에서 같은 값을 받은 다른 컴포넌트를 가리킨다 — 이 테스트의 "원래 오브젝트를 가리키지 않는다" 단언이 그것이다.
+ */
+SW_TEST_CASE( TypedComponentHandleTest, SiblingHandlesSurviveAFileRoundTrip )
+{
+    sw::GameObjectManager manager;
+    const ProbeObject     source = makeProbeObject( manager, "ProbeSource" );
+    SW_ASSERT_TRUE( source._pObject != nullptr && source._pFirstProbe != nullptr && source._pSecondProbe != nullptr && source._pLink != nullptr );
+
+    const sw::ObjectSavedIDMap savedIDs{
+        { source._pObject->getObjectID(), 900002001 }
+    };
+    const sw::ObjectSaveOptions options = makeFileOptions( savedIDs );
+    sw::vector<uint8>           binaryState;
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( source._pObject, binaryState, options ) );
+    const sw::string xmlState  = sw::ObjectStateSerializer::saveToXMLString( source._pObject, options );
+    const sw::string jsonState = sw::ObjectStateSerializer::saveToJSONString( source._pObject, options );
+    SW_EXPECT_TRUE_MSG( xmlState.find( "TestProbeComponent#1" ) != sw::string::npos, xmlState.c_str() ); // 사람이 읽는 키로 적힌다
+
+    for ( uint32 formatIndex = 0; formatIndex < 3; ++formatIndex )
+    {
+        const utf8*     arrFormatName[] = { "xml", "json", "binary" };
+        sw::GameObject* pFresh          = manager.createGameObject( sw::hashed_string( "ProbeFresh" ) );
+        SW_ASSERT_NOT_NULL( pFresh );
+
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Authoring };
+        context._pBatch  = &batch;
+        context._savedID = 900002001;
+        bool bLoaded     = false;
+        if ( formatIndex == 0 )
+            bLoaded = sw::ObjectStateSerializer::loadFromXMLString( pFresh, xmlState, context );
+        else if ( formatIndex == 1 )
+            bLoaded = sw::ObjectStateSerializer::loadFromJSONString( pFresh, jsonState, context );
+        else
+            bLoaded = sw::ObjectStateSerializer::loadFromBinaryBuffer( pFresh, binaryState.data(), binaryState.size(), context ) != 0;
+        SW_ASSERT_TRUE_MSG( bLoaded, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( batch.finish(), arrFormatName[formatIndex] );
+
+        const sw::TestProbeLinkComponent* pLoadedLink = pFresh->getComponent<sw::TestProbeLinkComponent>();
+        SW_ASSERT_NOT_NULL( pLoadedLink );
+        const sw::TestProbeComponent* pProbe = manager.resolveComponent( pLoadedLink->_probe );
+        SW_ASSERT_TRUE_MSG( pProbe != nullptr, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pProbe->getOwner() == pFresh && pProbe->_value == 2, arrFormatName[formatIndex] ); // 원래 오브젝트의 컴포넌트가 아니다
+        SW_ASSERT_EQUAL( size_t( 2 ), pLoadedLink->_listProbe.size() );
+        const sw::TestProbeComponent* pListFirst  = manager.resolveComponent( pLoadedLink->_listProbe[0] );
+        const sw::TestProbeComponent* pListSecond = manager.resolveComponent( pLoadedLink->_listProbe[1] );
+        SW_ASSERT_TRUE_MSG( pListFirst != nullptr && pListSecond != nullptr, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pListFirst == pProbe && pListFirst->getOwner() == pFresh, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pListSecond->getOwner() == pFresh && pListSecond->_value == 1, arrFormatName[formatIndex] );
+    }
+}
+
+/**
+ * @brief [TypedComponentHandleTest] 파일이 대상 타입이 아닌 컴포넌트를 가리키면 로드 오류이고, 사라진 컴포넌트를 가리키면 핸들만 비운다
+ * @details 같은 키(`타입#n`)라도 타입이 다르면 다른 컴포넌트다. 대상 타입은 필드가 알고(`PropertyInfo::_handleTargetTypeName`) 묶음이 끝날 때 확인한다.
+ *          대상이 사라진 핸들은 약한 참조의 정상 값이라 비우되 경고를 남긴다.
+ */
+SW_TEST_CASE( TypedComponentHandleTest, WrongTypeFailsTheLoadAndMissingTargetClearsTheHandle )
+{
+    sw::GameObjectManager manager;
+    const ProbeObject     source = makeProbeObject( manager, "ProbeSource" );
+    SW_ASSERT_TRUE( source._pObject != nullptr && source._pLink != nullptr );
+    const sw::ObjectSavedIDMap savedIDs{
+        { source._pObject->getObjectID(), 900002002 }
+    };
+    const sw::string xmlState = sw::ObjectStateSerializer::saveToXMLString( source._pObject, makeFileOptions( savedIDs ) );
+
+    // 1) 첫 프로브 자리를 다른 타입(TestOtherComponent#0)으로 바꾼다 — 대상이 있는데 타입이 아니다.
+    const sw::string wrongType = replaceFirstText( xmlState, "TestProbeComponent#1", "TestOtherComponent#0" );
+    SW_ASSERT_TRUE( wrongType.empty() == false );
+    {
+        sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "WrongTypeFresh" ) );
+        SW_ASSERT_NOT_NULL( pFresh );
+        test::ScopedLogCollector logs;
+        SW_TEST_DEFENSIVE_SCOPE( "typed handle points at another type" );
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Authoring };
+        context._pBatch  = &batch;
+        context._savedID = 900002002;
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, wrongType, context ) );
+        SW_EXPECT_FALSE( batch.finish() );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( "must point at a 'TestProbeComponent'" ) >= 1, logs.joined().c_str() );
+    }
+
+    // 2) 없는 키(#7)를 가리킨다 — 로드는 성공하고 그 핸들만 빈다. 같은 필드의 목록 원소는 따로 본다.
+    const sw::string missingTarget = replaceFirstText( xmlState, "TestProbeComponent#1", "TestProbeComponent#7" );
+    SW_ASSERT_TRUE( missingTarget.empty() == false );
+    {
+        sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "MissingTargetFresh" ) );
+        SW_ASSERT_NOT_NULL( pFresh );
+        test::ScopedLogCollector logs;
+        sw::ObjectStateBatch     batch( sw::ObjectIDSpace::Saved );
+        sw::ObjectLoadContext    context{ sw::SerializePurpose::Authoring };
+        context._pBatch  = &batch;
+        context._savedID = 900002002;
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, missingTarget, context ) );
+        SW_EXPECT_TRUE( batch.finish() );
+        const sw::TestProbeLinkComponent* pLoadedLink = pFresh->getComponent<sw::TestProbeLinkComponent>();
+        SW_ASSERT_NOT_NULL( pLoadedLink );
+        SW_EXPECT_FALSE( pLoadedLink->_probe.isValid() );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( "no longer exists" ) >= 1, logs.joined().c_str() );
+    }
+}
+
+/**
+ * @brief [TypedComponentHandleTest] 런타임 id 로 쓴 핸들은 같은 실행의 상태(Live)에서만 읽히고, 세이브는 어느 쪽 공간에서 읽어도 새 형제를 가리킨다
+ * @details 스냅샷(되돌리기 · 복제)은 런타임 id 를 그대로 적고 Live 배치가 그대로 둔다. 파일 id 공간(Saved)으로 읽으면 같은 id 가 다른 컴포넌트일 수 있어 로드 오류다.
+ *          세이브는 다른 실행에서 읽는 일이 있어 파일 형태로 쓰고, 같은 실행에서 복원(Live)해도 키 해시의 표지 비트로 형태를 알아본다.
+ */
+SW_TEST_CASE( TypedComponentHandleTest, RuntimeFormIsLiveOnlyAndSaveGameReadsInBothSpaces )
+{
+    sw::GameObjectManager manager;
+    const ProbeObject     source = makeProbeObject( manager, "ProbeSource" );
+    SW_ASSERT_TRUE( source._pObject != nullptr && source._pLink != nullptr );
+
+    // 스냅샷 — 런타임 id 그대로. Live 로 읽으면 원래 오브젝트의 컴포넌트를 가리킨다.
+    sw::vector<uint8> snapshotState;
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( source._pObject, snapshotState, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
+    {
+        sw::GameObject* pLive = manager.createGameObject( sw::hashed_string( "SnapshotLive" ) );
+        SW_ASSERT_NOT_NULL( pLive );
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Live );
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
+        context._pBatch = &batch;
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pLive, snapshotState.data(), snapshotState.size(), context ) != 0 );
+        SW_EXPECT_TRUE( batch.finish() );
+        const sw::TestProbeLinkComponent* pLoadedLink = pLive->getComponent<sw::TestProbeLinkComponent>();
+        SW_ASSERT_NOT_NULL( pLoadedLink );
+        SW_EXPECT_TRUE( pLoadedLink->_probe == sw::TComponentHandle<sw::TestProbeComponent>{ source._pSecondProbe } );
+    }
+    // 같은 데이터를 파일 id 공간으로 읽으면 로드 오류다 — 비우고 조용히 넘기지 않는다.
+    {
+        sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "SnapshotAsFile" ) );
+        SW_ASSERT_NOT_NULL( pFresh );
+        test::ScopedLogCollector logs;
+        SW_TEST_DEFENSIVE_SCOPE( "runtime component id read as a saved file" );
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
+        context._pBatch  = &batch;
+        context._savedID = 900002003;
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pFresh, snapshotState.data(), snapshotState.size(), context ) != 0 );
+        SW_EXPECT_FALSE( batch.finish() );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( "holds a runtime component id" ) >= 1, logs.joined().c_str() );
+    }
+
+    // 세이브 — 파일 형태. Live · Saved 어느 공간에서 읽어도 새 오브젝트의 형제다.
+    sw::vector<uint8> saveGameState;
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( source._pObject, saveGameState, sw::ObjectSaveOptions{ sw::SerializePurpose::SaveGame } ) );
+    for ( uint32 spaceIndex = 0; spaceIndex < 2; ++spaceIndex )
+    {
+        sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "SaveGameFresh" ) );
+        SW_ASSERT_NOT_NULL( pFresh );
+        sw::ObjectStateBatch  batch( spaceIndex == 0 ? sw::ObjectIDSpace::Live : sw::ObjectIDSpace::Saved );
+        sw::ObjectLoadContext context{ sw::SerializePurpose::SaveGame };
+        context._pBatch  = &batch;
+        context._savedID = source._pObject->getObjectID(); // 세이브가 적은 그때의 오브젝트 id
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pFresh, saveGameState.data(), saveGameState.size(), context ) != 0 );
+        SW_EXPECT_TRUE( batch.finish() );
+        const sw::TestProbeLinkComponent* pLoadedLink = pFresh->getComponent<sw::TestProbeLinkComponent>();
+        SW_ASSERT_NOT_NULL( pLoadedLink );
+        const sw::TestProbeComponent* pProbe = manager.resolveComponent( pLoadedLink->_probe );
+        SW_ASSERT_TRUE_MSG( pProbe != nullptr, spaceIndex == 0 ? "live" : "saved" );
+        SW_EXPECT_TRUE_MSG( pProbe->getOwner() == pFresh && pProbe->_value == 2, spaceIndex == 0 ? "live" : "saved" );
+    }
+}
+
 /**
  * @brief [ReflectionGenericQueryTest] TypeRegistry 템플릿 조회 및 isA 헬퍼 검증
  */

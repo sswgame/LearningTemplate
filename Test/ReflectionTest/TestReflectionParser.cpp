@@ -818,6 +818,62 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRenamedByAMacroStopsTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] 컴포넌트 핸들 PROPERTY 는 타입 핸들 한 값과 그 시퀀스만 받고 내장 `ComponentHandle` 로 기록하며, 나머지 모양은 생성이 멈춥니다
+ * @details 타입 핸들의 대상 타입은 코드에 `_handleTargetTypeName` 으로 실려 묶음이 끝날 때 타입을 확인한다. 타입 없는 핸들 · 맵 · 중첩은 확인할 자리가 없다(TypedComponents.md 3.7).
+ */
+SW_TEST_CASE( ReflectionParserTest, ComponentHandlePropertyShapes )
+{
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const auto makeHeader = []( const utf8* pFieldDeclarations )
+    {
+        return sw::string( "#pragma once\n"
+                           "#include \"Core/Container/ComponentHandle.h\"\n"
+                           "#include \"Core/Container/map.h\"\n"
+                           "#include \"Core/Container/vector.h\"\n"
+                           "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                           "namespace sw\n"
+                           "{\n"
+                           "\tstruct HandleTargetSample { void* getHandle() const { return nullptr; } };\n"
+                           "\tREFLECT()\n"
+                           "\tstruct HandleShapeSample\n"
+                           "\t{\n"
+                           "\t\tREFLECT_BODY();\n" ) +
+               pFieldDeclarations + "\t};\n}\n";
+    };
+
+    // 허용: 타입 핸들 한 값과 그 벡터. 내장 이름으로 기록하고 대상 타입을 싣는다.
+    const ParserRunResult allowed = runParserOnTempHeader( parserExe, "HandleShapeAllowed",
+                                                           makeHeader( "\t\tPROPERTY()\n\t\tTComponentHandle<HandleTargetSample> _single;\n"
+                                                                       "\t\tPROPERTY()\n\t\tvector<TComponentHandle<HandleTargetSample>> _list;\n" ) );
+    SW_ASSERT_TRUE_MSG( allowed._exitCode == 0, allowed._log.c_str() );
+    SW_ASSERT_TRUE( allowed._listGeneratedCpp.empty() == false );
+    const sw::string& generated = allowed._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "p._handleTargetTypeName = ::sw::hashed_string( \"HandleTargetSample\" );" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "\"TComponentHandle" ) == sw::string::npos, "the reflection type names must be the builtin ComponentHandle" );
+    SW_EXPECT_TRUE_MSG( generated.find( "\"ComponentHandle\"" ) != sw::string::npos, generated.c_str() );
+
+    // 거절: 타입 없는 핸들, 맵, 중첩 컨테이너.
+    const utf8* const arrRejected[] = {
+        "\t\tPROPERTY()\n\t\tComponentHandle _untyped;\n",
+        "\t\tPROPERTY()\n\t\tmap<int32, TComponentHandle<HandleTargetSample>> _map;\n",
+        "\t\tPROPERTY()\n\t\tvector<vector<TComponentHandle<HandleTargetSample>>> _nested;\n",
+    };
+    for ( const utf8* pDeclaration : arrRejected )
+    {
+        const ParserRunResult rejected = runParserOnTempHeader( parserExe, "HandleShapeRejected", makeHeader( pDeclaration ) );
+        SW_EXPECT_TRUE_MSG( rejected._exitCode != 0, pDeclaration );
+        SW_EXPECT_TRUE_MSG( rejected._log.find( "holds a component handle" ) != sw::string::npos, rejected._log.c_str() );
+    }
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] `RuntimeState` 를 `Transient` 나 `Required` 와 함께 붙이면 생성이 멈추고, 혼자 붙이면 메타데이터 비트로 나갑니다
  * @details `RuntimeState` 는 저작 저장만 빼는 필드다. 어디에도 쓰지 않는 `Transient`, 데이터 파일이 반드시 적는 `Required` 와는 뜻이 모순이다.
  */

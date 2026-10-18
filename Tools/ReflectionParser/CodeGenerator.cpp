@@ -474,6 +474,8 @@ namespace sw
         }
 
         emit.pop(); // 생성자 인자 들여쓰기
+        if ( prop._handleTargetTypeName.empty() == false )
+            emit.linef( "p._handleTargetTypeName = %#;", CodeEmit::hs( prop._handleTargetTypeName ) );
         if ( prop._bIsAccessor == SW_TRUE )
         {
             // 값 자리는 메서드가 안다. 인자는 오프셋이 기준으로 삼는 객체 주소다(`PropertyInfo::getRawPtr`).

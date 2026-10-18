@@ -145,23 +145,25 @@ namespace sw
         /** @brief 리플렉션 이름(직렬화 키)입니다. 기본은 멤버 이름이고 `PROPERTY( Name = "..." )` 로 바꿉니다. */
         string _name;
         /** @brief C++ 식별자입니다. 필드 이름, 또는 접근자 프로퍼티면 값 참조를 돌려주는 메서드 이름입니다. 코드젠이 `offsetof` · `decltype` · 호출에 씁니다. */
-        string                          _memberName;
-        string                          _typeName;
-        vector<string>                  _listAlias;
-        string                          _category;
-        string                          _displayName;
-        string                          _tooltip;
-        string                          _defaultValue;
-        string                          _assetType;
-        string                          _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
-        string                          _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
-        string                          _editCondition; ///< `EditCondition = "…"` — 식은 런타임(`PropertyEditCondition`)이 푼다
-        string                          _fileFilter;    ///< `FileFilter = "*.png;*.dds"`
-        string                          _units;         ///< `Units = m` — 단위 표(`ReflectUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
-        vector<pair<string, string>>    _listCustomMeta;
-        string                          _containerType;
-        string                          _elementTypeName;
-        string                          _keyTypeName;
+        string                       _memberName;
+        string                       _typeName;
+        vector<string>               _listAlias;
+        string                       _category;
+        string                       _displayName;
+        string                       _tooltip;
+        string                       _defaultValue;
+        string                       _assetType;
+        string                       _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
+        string                       _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
+        string                       _editCondition; ///< `EditCondition = "…"` — 식은 런타임(`PropertyEditCondition`)이 푼다
+        string                       _fileFilter;    ///< `FileFilter = "*.png;*.dds"`
+        string                       _units;         ///< `Units = m` — 단위 표(`ReflectUnits.h`)에 있어야 한다. 커스텀 메타 `Units` 로 실린다
+        vector<pair<string, string>> _listCustomMeta;
+        string                       _containerType;
+        string                       _elementTypeName;
+        string                       _keyTypeName;
+        /** @brief 타입 핸들(`TComponentHandle<T>`)의 대상 타입 `T` 입니다. 타입 핸들이 아니면 비어 있습니다. 이때 위 타입 이름은 내장 `ComponentHandle` 로 바뀌어 있습니다. */
+        string                          _handleTargetTypeName;
         shared_ptr<ParsedContainerNode> _containerTree;
         /** @brief 고정 배치형 코덱에서의 분류입니다. 필드면 늘 있고, 접근자 프로퍼티는 Ineligible 입니다. */
         shared_ptr<ParsedFixedType> _fixedType;
@@ -231,6 +233,7 @@ namespace sw
             , _containerType{}
             , _elementTypeName{}
             , _keyTypeName{}
+            , _handleTargetTypeName{}
             , _containerTree{ nullptr }
             , _fixedType{ nullptr }
             , _minRangeExpr{}

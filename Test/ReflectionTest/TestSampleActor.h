@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/array.h"
 #include "Core/Container/map.h"
@@ -582,6 +583,48 @@ namespace sw
 
         PROPERTY()
         map<GameObjectHandle, TestHandleWaypoint> _mapTargetToWaypoint; ///< 옮긴다(핸들 키와 구조체 값 안)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 타입 핸들이 가리키는 컴포넌트 샘플입니다. 한 오브젝트에 여럿 붙여 안정 키(`타입#n`)가 갈리게 합니다(`TypedComponentHandleTest`). */
+    REFLECT()
+    struct TestProbeComponent : public Component
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _value{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `TestProbeComponent` 가 아닌 컴포넌트 샘플입니다. 타입 핸들이 엉뚱한 타입을 가리키는 파일을 만드는 데 씁니다. */
+    REFLECT()
+    struct TestOtherComponent : public Component
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _value{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 같은 오브젝트의 형제 컴포넌트를 타입 핸들로 가리키는 샘플입니다(값 하나 · 시퀀스). 파일 형태는 `{오브젝트 저장 id, 안정 키}` 입니다. */
+    REFLECT()
+    struct TestProbeLinkComponent : public Component
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        TComponentHandle<TestProbeComponent> _probe;
+
+        PROPERTY()
+        vector<TComponentHandle<TestProbeComponent>> _listProbe;
     };
 } // namespace sw
 

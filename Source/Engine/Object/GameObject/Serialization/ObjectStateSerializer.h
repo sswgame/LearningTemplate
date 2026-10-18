@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -20,9 +21,11 @@
 namespace sw
 {
     struct ObjectIdentity;
+    struct PropertyInfo;
 
     class GameObject;
     class ObjectStateBatch;
+    class TypeRegistry;
 
     /// @brief GameObject 와 Component 리플렉션 스키마 버전입니다(XMLSerializer 의 `_schemaVersion`).
     inline constexpr uint32 kObjectReflectedSchemaVersion = 0;
@@ -180,7 +183,12 @@ namespace sw
      *          배치의 저장된 id 면 그 오브젝트로, `Live` 면 런타임 id 를 그대로(핫 리로드와 되돌리기에서는 id 가 다시 쓰이지 않는다), `Saved` 인데 배치에 없으면 없음으로 처리한다.
      *          컨테이너(시퀀스, set, 맵의 키와 값, 중첩)의 핸들도 옮긴다. 옮기지 못하는 모양(원소가 컨테이너인 set)이나 옮기다 실패한 것은 `Saved` 면
      *          **로드 오류**다(`finish` 가 false). 파일 id 를 그대로 두면 이 실행에서 같은 값을 받은 다른 오브젝트를 가리키고, 비우면 값이 조용히 사라진다.
-     *          `Live` 면 런타임 id 가 맞으므로 그대로 둔다. `ComponentHandle` 은 PROPERTY 에 둘 수 없다(리플렉션 파서 생성 오류).
+     *          `Live` 면 런타임 id 가 맞으므로 그대로 둔다.
+     *
+     *          타입 핸들(`TComponentHandle<T>`) PROPERTY 도 옮긴다(값 하나, 또는 시퀀스 원소 — 파서가 그 밖의 모양을 막는다). 파일 형태는 `{대상 오브젝트의 저장 id, 컴포넌트 안정 키}` 이고
+     *          오브젝트 자리가 0 이면 이 오브젝트 자신이다. 읽은 값의 컴포넌트 자리는 키의 해시이며, 대상 오브젝트의 컴포넌트 키 해시와 맞춰 찾는다.
+     *          오브젝트를 찾지 못했거나 그 키의 컴포넌트가 없으면 핸들은 비운다(약한 참조라서 사라진 대상은 정상 값이다). **대상이 있는데 대상 타입이 아니면 로드 오류**다(`finish` 가 false).
+     *          `Live` 면 런타임 id 를 그대로 두되 같은 타입 확인을 한다. 타입 없는 `ComponentHandle` 은 PROPERTY 에 둘 수 없다(리플렉션 파서 생성 오류).
      */
     class SW_API ObjectStateBatch
     {
@@ -245,6 +253,13 @@ namespace sw
         [[nodiscard]] bool resolveObjectReferences( const Entry& entry ) const;
         /** @brief 저장된 핸들 하나가 이 실행에서 가리키는 오브젝트를 반환합니다(클래스 설명의 규칙). */
         GameObjectHandle resolveObjectReference( GameObjectHandle savedHandle ) const;
+        /**
+         * @brief 저장된 컴포넌트 핸들 하나가 이 실행에서 가리키는 컴포넌트의 핸들을 반환합니다(클래스 설명의 규칙).
+         * @param leafProperty 이 핸들이 든 필드다. 대상 타입(`_handleTargetTypeName`)이 여기 있다.
+         * @param outInvalid 대상이 대상 타입이 아니거나 대상 타입을 알 수 없으면 true 로 바꿉니다(오류 로그와 함께). 부르는 쪽이 로드 오류로 처리합니다.
+         */
+        ComponentHandle resolveComponentReference( const Entry& entry, const TypeRegistry& registry, ComponentHandle savedHandle, const PropertyInfo& leafProperty,
+                                                   bool& outInvalid ) const;
 
         vector<Entry>                        _listEntry;
         unordered_map<uint64, GameObject*>   _mapSavedIDToObject;

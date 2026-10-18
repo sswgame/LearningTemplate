@@ -1,6 +1,6 @@
 # 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17)
 
-> 상태: 구현대기 · 선행: ReflectionFormats · 영역: engine · 옛번호: C-52 · 진행: 4/6
+> 상태: 구현대기 · 선행: ReflectionFormats · 영역: engine · 옛번호: C-52 · 진행: 5/6
 
 [리플렉션 직렬화 형식 계획](ReflectionFormats.md) 9절의 단계 7-c 와 7-d 를 구현할 수 있는 수준으로 나눈 계획입니다.
 배경과 판단은 그 문서의 7절(리플렉션 캐스트 비용)에 있고, 여기서는 반복하지 않습니다.
@@ -23,7 +23,7 @@
 - 순회 순서는 지금도 약속이 아닙니다. 오브젝트를 지우면 저장소가 마지막 오브젝트를 빈 위치로 옮기기 때문입니다(`GameObjectStore.cpp:483-489`). 순서가 결과에 나오는 곳은 2.7 의 세 곳입니다.
 - 7-d 의 "찾고 바로 캐스트" 호출부는 52 곳입니다. 그 가운데 35 곳은 지금 확인 없는 `static_cast` 라서, 핸들의 타입이 틀리면 조용히 잘못된 주소를 씁니다. 타입 핸들은 이 패턴을 형식으로 막습니다.
 - `Source` 에는 `PROPERTY` 인 `ComponentHandle` 필드가 없습니다. 하나 있는 것은 테스트 타입(`Test/ReflectionTest/TestSampleActor.h:607`)입니다.
-  그래서 7-d 는 직렬화와 인스펙터를 바꾸지 않는 부분(7-d-1, 7-d-2)과, 사용처가 생길 때 하는 부분(7-d-3)으로 나눕니다. 그때까지 리플렉션 파서가 `PROPERTY` 의 타입 핸들을 생성 오류로 막습니다.
+  그래서 7-d 는 직렬화와 인스펙터를 바꾸지 않는 부분(7-d-1, 7-d-2)과, 사용처가 생길 때 하는 부분(7-d-3)으로 나눴습니다. 7-d-3 의 직렬화는 2026-10-19 에 구현했습니다(3.7). 인스펙터 선택기는 남았습니다(3.8).
 
 ## 2. 7-c 매니저의 타입별 컴포넌트 목록
 
@@ -399,7 +399,16 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 
 ### 3.7 직렬화 (7-d-3, 사용처가 생길 때)
 
-지금 `PROPERTY` 인 타입 핸들이 필요한 곳은 없습니다. 그래서 7-d-1 에서 리플렉션 파서가 `PROPERTY()` 의 `TComponentHandle<T>` 를 생성 오류로 막고, 메시지에 이 문서를 적습니다.
+**구현됨 (7-d-3, 2026-10-19).** `PROPERTY` 로 둘 수 있는 것은 `TComponentHandle<T>` 한 값과 그 시퀀스(한 겹)입니다. 타입 없는 `ComponentHandle` · 맵 · 중첩 컨테이너는 대상 타입을 확인할 자리가 없어 파서 생성 오류로 남깁니다.
+파서는 값 · 원소의 타입 이름을 내장 `ComponentHandle` 로 기록하고(직렬화기 · 인스펙터의 기존 처리기가 그대로 동작) 대상 `T` 를 `PropertyInfo::_handleTargetTypeName` 에 싣습니다(`AstVisitor.cpp` `resolveComponentHandleProperty`).
+- **파일 형태.** `{대상 오브젝트의 저장 id, 컴포넌트 안정 키}` 입니다(텍스트는 `0:TestProbeComponent#1`, 바이너리는 키의 해시). 오브젝트 자리가 0 이면 이 오브젝트 자신입니다(부착의 "소유자 필드가 비면 자기 자신"). 저장 id 표가 있을 때(씬), 프리팹, 세이브가 이 형태로 씁니다.
+  스냅샷 · 되돌리기 · 복제는 런타임 id 를 그대로 적습니다. 읽는 쪽은 키 해시의 표지 비트(최상위 비트)로 두 형태를 가립니다. 그래서 세이브를 같은 실행(Live)에서 복원하든 다른 실행(Saved)에서 읽든 맞습니다.
+- **읽기.** `ObjectStateBatch::finish` 가 오브젝트 핸들과 같은 깊이의 값 방문(`ReflectedValueWalk`, 이제 remap 이 잎이 든 필드를 받는다)으로 컴포넌트 핸들을 옮깁니다. 오브젝트나 키를 못 찾으면 핸들을 비우고 경고합니다.
+  **대상이 있는데 대상 타입이 아니면 로드 오류**입니다. 런타임 id 로 쓴 핸들을 파일 id 공간(Saved)으로 읽는 것도 로드 오류입니다(우연히 같은 id 를 받은 다른 컴포넌트를 가리키므로).
+- 테스트: `TypedComponentHandleTest`(왕복 세 형식, 잘못된 타입, 사라진 대상, 런타임 형태와 세이브), `ReflectionParserTest.ComponentHandlePropertyShapes`.
+- 남은 것: 인스펙터 선택기(3.8), 타입 없는 `ComponentHandle` 을 허용할지(지금은 막힘), 키가 같은 이름의 컴포넌트가 순서를 바꾸면 다른 컴포넌트를 가리키는 문제(안정 키 `이름#n` 의 한계로 부착과 같다).
+
+(아래는 구현 전 설계입니다.) 지금 `PROPERTY` 인 타입 핸들이 필요한 곳은 없습니다. 그래서 7-d-1 에서 리플렉션 파서가 `PROPERTY()` 의 `TComponentHandle<T>` 를 생성 오류로 막고, 메시지에 이 문서를 적습니다.
 
 **ⓔ 7-d-1 에서 타입 없는 `ComponentHandle` 도 `PROPERTY` 에서 막습니다.** 단일 값, 컨테이너 원소, 맵 키, 중첩 컨테이너의 어느 단계든 생성 오류입니다. 리플렉션 구조체의 필드도 같은 `PROPERTY` 검사를 지나므로 함께 막힙니다.
 `Source` 사용처는 0 이고, 테스트 타입 하나(`TestSampleActor.h` 의 `TestHandleHolderComponent::_targetComponent`)만 지웁니다.
@@ -437,7 +446,7 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 | 7-c | 버킷, 갱신 규칙, 비템플릿 순회, 쿠커 정렬, 테스트 | `GameObjectStore.*`, `GameObjectManager.h`, `GameObject.cpp`, `Component.h`, `SceneNavigationCooker.cpp`, 새 테스트 | 헤더 템플릿이 바뀌어 모든 모듈을 다시 빌드 | `integrator`(opus) |
 | 7-d-1 | 타입 핸들 형식, 확인 변환, 찾기, `executeOrDeferPostTickOnComponent` 와 호출부 23곳, 복원 키 FQN, 파서의 `PROPERTY` 금지(타입 없는 핸들 포함), 비우기 폴백 제거 | `ComponentHandle.h`, `GameObjectManager.h`, `GameObject.cpp`, `ObjectStateSerializer.*`, `Tools/ReflectionParser`, 호출부 파일, `finish` 호출부 | 7-c 와 같은 헤더, 7-c 뒤 | `integrator`(opus) |
 | 7-d-2 | 호출부 마이그레이션(그룹 A ~ E) | 3.4 와 3.6 의 파일 | 그룹끼리 파일이 겹치지 않음 | 그룹마다 `worker`(sonnet), 병합은 `integrator`(opus) |
-| 7-d-3 | `PROPERTY` 타입 핸들 허용(2026-10-19 결정, 3.7), 배치 끝 타입 확인, 인스펙터 선택기 | `SerializeContext.cpp`, `ObjectStateSerializer.cpp`, 파서, `InspectorPropertyManager.cpp`, `InspectorBuiltinValue.*` | 없음(8.2 의 짝짓기가 있음) | `worker`(opus) |
+| 7-d-3 | `PROPERTY` 타입 핸들 허용(2026-10-19 결정, **직렬화 · 배치 끝 타입 확인은 끝**, 3.7), **인스펙터 선택기는 남음**(3.8) | `SerializeContext.cpp`, `ObjectStateSerializer.cpp`, 파서, `InspectorPropertyManager.cpp`, `InspectorBuiltinValue.*` | 없음(8.2 의 짝짓기가 있음) | `worker`(opus) |
 
 **7-d-2 그룹.** 그룹은 파일을 나눠 가지며, 접근자 반환형을 바꾸면 그 호출부가 있는 파일도 같은 그룹에 넣었습니다. 7-d-1 이 병합된 뒤 시작하며, ⓖ 그룹 A(조종)를 먼저 합니다.
 ⓓ 의 비교 호출부는 섞은 비교를 허용하므로(3.1) 고치지 않아도 컴파일되지만, 반환형이 바뀌는 접근자의 호출부라 A 가 함께 읽고 확인합니다.
@@ -490,7 +499,7 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 ## 7. 확인하지 못한 것과 결정이 필요한 것
 
 - **결정됨**: 7-c 의 자료구조는 ReflectionFormats.md 7.2 의 조상 목록 대신 정확한 타입 버킷이고, 버킷은 풀 항목에 합칩니다(2.2, `design-reviewer` 검토). 언리얼 `GetObjectsOfClass` 의 "정확한 클래스 버킷과 파생 열거"와 같은 계열입니다. `09_Decisions.md` 에 한 줄로 남깁니다.
-- **결정됨 (2026-10-19)**: `PROPERTY` 의 타입 핸들을 허용합니다(3.7). 구현 전까지는 생성 오류입니다.
+- **결정됨 · 구현됨 (2026-10-19)**: `PROPERTY` 의 타입 핸들을 허용합니다(3.7). 인스펙터 선택기만 남았습니다(3.8).
 - 미확인: 씬의 실제 버킷 수 K, `Component` 패딩, `AnimationSystem.cpp:299` 와 `Fracture*` 핸들의 출처, `ComponentHandle` 의 바이너리 형태와 해시 특수화, 주석 줄이 낀 `PROPERTY` 의 `ComponentHandle`.
 - 후보 절: `ComponentStateStore` 가 다른 실행의 세이브를 열거 순서로 맞추는 구조(2.7), 리플렉션 구조체 필드 안의 `GameObjectHandle` 이 옮겨지지 않는 것(3.7 ⓕ), 등록형 목록을 버킷으로 옮기는 기준(2.5 ⓗ).
 - 측정 질문(Release, VSync 끔, 3~5판 번갈아, p50 과 p99): 오브젝트 1만과 10만 × 정확한 타입 수 K = 50, 200, 500 합성의 `forEachComponentOfType`(말단 타입 대 기반 타입), 실제 8게임의 K,
@@ -613,7 +622,7 @@ GPU 를 쓰지 않는 벤치라 셰이더 베이크와 VSync 는 해당하지 �
 8.3절 기준을 통과한 목록 가운데 **K 가 작은 씬에서 쓰이고 호출부가 이미 삭제 대기를 거르는 목록**은 옮겨도 프레임 경로가 느려지지 않습니다. 호출부가 삭제 대기를 거르지 않는 목록은 옮기면 그 검사 몫(10만 · 50 에서 약 1.7 µs)만큼 느려지므로, 표에 "호출부가 삭제 대기를 거르는가" 열을 더해 고릅니다.
 K 가 수백인 씬에서 자주 묻는 질의는 2.5절의 B 안(조회 타입마다 맞는 버킷 목록 캐시)이 먼저 필요합니다.
 
-컴포넌트 핸들은 여전히 `PROPERTY` 에서 막혀 있습니다(7-d-3 은 허용으로 결정, 구현 대기).
+`PROPERTY` 의 타입 핸들은 허용합니다(7-d-3 직렬화 구현, 3.7). 타입 없는 컴포넌트 핸들 · 맵 · 중첩은 여전히 파서 오류입니다.
 
 ### 8.6 사용자 결정
 

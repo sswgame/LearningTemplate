@@ -25,7 +25,7 @@ namespace sw
     /**
      * @class ReflectedValueWalk
      * @brief 파일 머리말 참고. @p TLeaf 는 바이트로 복사할 수 있는 잎 타입이고, @p TFieldFilter 는 `bool( const TypeInfo& owner, const PropertyInfo& prop )`,
-     *        @p TRemap 은 `TLeaf( const TLeaf& )` 입니다.
+     *        @p TRemap 은 `TLeaf( const TLeaf&, const PropertyInfo& leafProperty )` 입니다. 뒤의 인자는 그 잎이 든 필드입니다(컨테이너 원소 · 키도 그 컨테이너 필드).
      */
     template <typename TLeaf, typename TFieldFilter, typename TRemap>
     class ReflectedValueWalk
@@ -66,14 +66,24 @@ namespace sw
             void* pValue = prop.getRawPtr( pInstance );
             if ( pValue == nullptr )
                 return true;
+            // 이 필드 아래의 잎은 모두 이 필드의 것이다 — 구조체 안으로 내려가면 안쪽 필드가 자기 것으로 바꿨다가 돌아올 때 되돌린다.
+            const PropertyInfo* pOuterProperty = _pLeafProperty;
+            _pLeafProperty                     = &prop;
+            bool bWalked                       = true;
             if ( prop._bIsContainer == SW_TRUE )
             {
-                if ( prop._containerWrapper == nullptr )
-                    return true;
-                const NestedContainerInfo shape = prop.getContainerShape();
-                return walkContainer( pValue, shape );
+                if ( prop._containerWrapper != nullptr )
+                {
+                    const NestedContainerInfo shape = prop.getContainerShape();
+                    bWalked                         = walkContainer( pValue, shape );
+                }
             }
-            return walkValue( pValue, prop._typeName );
+            else
+            {
+                bWalked = walkValue( pValue, prop._typeName );
+            }
+            _pLeafProperty = pOuterProperty;
+            return bWalked;
         }
 
         /** @brief 타입 @p type 이 어느 깊이에든 잎을 품을 수 있으면 true 입니다(타입 그래프로 판정하고 기억한다). false 면 내려갈 필요가 없습니다. */
@@ -101,7 +111,7 @@ namespace sw
             if ( typeName == _leafTypeName )
             {
                 TLeaf* pLeaf = static_cast<TLeaf*>( pValue );
-                *pLeaf       = _remap( *pLeaf );
+                *pLeaf       = _remap( *pLeaf, *_pLeafProperty );
                 return true;
             }
             const TypeInfo* pStruct = findStruct( typeName );
@@ -121,7 +131,7 @@ namespace sw
                 listLeaf.reserve( elementCount );
                 for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                 {
-                    listLeaf.push_back( _remap( *static_cast<const TLeaf*>( sequence.getElementConst( pContainer, elementIndex ) ) ) );
+                    listLeaf.push_back( _remap( *static_cast<const TLeaf*>( sequence.getElementConst( pContainer, elementIndex ) ), *_pLeafProperty ) );
                 }
                 sequence.clear( pContainer );
                 bool bAllAppended = true;
@@ -188,7 +198,7 @@ namespace sw
                 void* pSlot = pValueBlock + valueStride * listKey.size();
                 map.defaultConstructValue( pSlot );
                 bCopied = map.copyValue( pSlot, pValue ) && bCopied;
-                listKey.push_back( _remap( *static_cast<const TLeaf*>( pKey ) ) );
+                listKey.push_back( _remap( *static_cast<const TLeaf*>( pKey ), *_pLeafProperty ) );
             } ) );
             if ( bCopied )
             {
@@ -256,6 +266,7 @@ namespace sw
         hashed_string                        _leafTypeName;
         TFieldFilter                         _filter;
         TRemap                               _remap;
+        const PropertyInfo*                  _pLeafProperty{ nullptr }; ///< 지금 내려가는 필드다. `_remap` 이 잎과 함께 받는다(타입 핸들의 대상 타입이 필드에 있다)
         unordered_map<const TypeInfo*, bool> _mapTypeHoldsLeaf;
     };
 } // namespace sw

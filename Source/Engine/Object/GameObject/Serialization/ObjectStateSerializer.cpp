@@ -187,6 +187,12 @@ namespace sw
                 // 버전 붙은 읽기가 이 값을 같은 버전의 orphan 정책으로 읽는다(`SchemaOrphanPolicy::Ignore`). 버전이 다른 상태는 그래도 거절한다.
                 // 버린 필드는 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이름과 함께 로드마다 한 번 알린다.
                 serializeContext.setAllowUnknownProperties( true );
+                // 컴포넌트 핸들 텍스트는 두 형태를 읽는다(숫자 런타임 id, 파일 형태의 키). 쓰기는 저장할 때 `registerReferenceWriter` 가 바꾼다. 바이너리는 같은 16 바이트다.
+                serializeContext.registerTextHandler(
+                    getComponentHandleTypeName(), []( const void* pPtr )
+                { return ReferenceWriter::writeRuntimeComponentText( *static_cast<const ComponentHandle*>( pPtr ) ); },
+                    []( void* pPtr, string_view text )
+                { return readComponentHandleText( pPtr, text ); } );
                 return serializeContext;
             }
 
@@ -195,6 +201,63 @@ namespace sw
             {
                 static const hashed_string s_typeName{ "GameObjectHandle" };
                 return s_typeName;
+            }
+
+            /** @brief @p pObject 의 컴포넌트 가운데 안정 키(`타입#n`)의 해시가 @p keyHash 인 것입니다. 없으면 nullptr 입니다. */
+            static Component* findComponentByKeyHash( GameObject* pObject, uint64 keyHash )
+            {
+                Component* pFound = nullptr;
+                pObject->forEachComponent( [&]( Component* pComp )
+                {
+                    if ( pFound != nullptr || pComp == nullptr )
+                        return;
+                    if ( hashComponentKey( ComponentStableKey::makeKey( pComp ) ) == keyHash )
+                        pFound = pComp;
+                } );
+                return pFound;
+            }
+
+            /** @brief `ComponentHandle` 의 타입 이름입니다. 타입 핸들(`TComponentHandle<T>`)도 파서가 이 이름으로 기록합니다(`PropertyInfo::_handleTargetTypeName` 에 대상 `T`). */
+            static const hashed_string& getComponentHandleTypeName()
+            {
+                static const hashed_string s_typeName{ "ComponentHandle" };
+                return s_typeName;
+            }
+
+            /** @brief 파일 형태의 컴포넌트 자리(키 해시)에 세우는 표지 비트입니다. 런타임 컴포넌트 id 는 작은 카운터라 이 비트를 쓰지 않는다. */
+            static constexpr uint64 kComponentKeyHashMarker = 1ull << 63;
+
+            /**
+             * @brief 파일에 적는 컴포넌트 키(`타입#n`)의 해시입니다. 읽은 핸들의 `componentID` 자리에 들어가고, 배치가 대상 오브젝트의 컴포넌트 키 해시와 맞춰 찾습니다.
+             * @details 최상위 비트(`kComponentKeyHashMarker`)를 세운다. 그래야 읽는 쪽이 값만 보고 파일 형태와 런타임 id 를 가른다 — 같은 세이브를 같은 실행에서
+             *          복원(`Live`)하든 다른 실행에서 읽든(`Saved`) 쓴 형태가 맞는다.
+             */
+            static uint64 hashComponentKey( string_view key ) { return StringUtil::computeHash64( key.data(), key.size(), false ) | kComponentKeyHashMarker; }
+
+            /** @brief 읽은 컴포넌트 자리가 파일 형태(키 해시)인지 가립니다. */
+            static bool isComponentKeyHash( uint64 componentID ) { return ( componentID & kComponentKeyHashMarker ) != 0; }
+
+            /**
+             * @brief 컴포넌트 핸들 텍스트(`오브젝트:컴포넌트`)를 읽습니다. 컴포넌트 자리가 숫자면 런타임 id 이고, 아니면 파일 형태의 키(`타입#n`)라서 해시로 둡니다.
+             * @details 두 형태는 쓴 쪽이 정한다(`ReferenceWriter::writesFileForm`). 읽은 값은 배치가 끝날 때 이 실행의 컴포넌트로 바뀝니다(`ObjectStateBatch::finish`).
+             */
+            [[nodiscard]] static bool readComponentHandleText( void* pPtr, string_view text )
+            {
+                const string_view trimmed = StringUtil::trim( text );
+                const size_t      sep     = trimmed.find( ':' );
+                if ( sep == string_view::npos )
+                    return false;
+                uint64 objectID{ 0 };
+                if ( StringUtil::parseUint64( StringUtil::trim( trimmed.substr( 0, sep ) ), objectID, 10 ) == false )
+                    return false;
+                const string_view second = StringUtil::trim( trimmed.substr( sep + 1 ) );
+                if ( second.empty() )
+                    return false;
+                uint64 componentID{ 0 };
+                if ( StringUtil::parseUint64( second, componentID, 10 ) == false )
+                    componentID = hashComponentKey( second );
+                *static_cast<ComponentHandle*>( pPtr ) = ComponentHandle::makeOwned( objectID, componentID );
+                return true;
             }
 
             /**
@@ -206,6 +269,80 @@ namespace sw
             struct ReferenceWriter
             {
                 const ObjectSaveOptions* _pOptions{ nullptr };
+                const GameObject*        _pOuter{ nullptr }; ///< 지금 쓰는 오브젝트다. 컴포넌트 핸들의 대상이 이 오브젝트의 것인지(소유자 0) 가린다
+
+                /** @brief 컴포넌트 핸들의 런타임 id 글(`오브젝트:컴포넌트`)입니다. 같은 실행의 스냅샷이 쓰고, 읽기 처리기의 숫자 갈래가 읽는다. */
+                static string writeRuntimeComponentText( const ComponentHandle& handle )
+                {
+                    return sw::to_string( handle.objectID() ) + ":" + sw::to_string( handle.componentID() );
+                }
+
+                /**
+                 * @brief 컴포넌트 핸들을 **파일 형태**로 적는가입니다. 저장 id 표가 있거나(씬 파일), 프리팹(바깥 참조를 적지 않음)이거나, 세이브이면 그렇고,
+                 *        아니면 런타임 id 를 그대로 적습니다(같은 실행의 스냅샷 · 되돌리기 · 복제).
+                 * @details 파일 형태는 `{대상 오브젝트의 저장 id, 컴포넌트 안정 키}` 다. 파일 상태에는 컴포넌트 자신의 id 가 없고, 런타임 컴포넌트 id 는 읽는 실행에서
+                 *          우연히 같은 값을 받은 다른 컴포넌트를 가리킨다. 부착(`SceneAttachReference`)과 같은 방식이다. 세이브는 다른 실행에서 읽을 수 있어 늘 파일 형태이고,
+                 *          같은 실행에서 복원해도 읽는 쪽이 키 해시의 표지 비트로 형태를 알아본다(`isComponentKeyHash`).
+                 */
+                bool writesFileForm() const
+                {
+                    return _pOptions->_pSavedIDMap != nullptr || _pOptions->_bOmitExternalParent || _pOptions->getPurpose() == SerializePurpose::SaveGame;
+                }
+
+                /** @brief 파일 형태의 컴포넌트 참조 하나입니다. `_key` 가 비면 "대상 없음" 입니다. */
+                struct ComponentReference
+                {
+                    uint64 _objectID{ 0 }; ///< 0 이면 이 오브젝트 자신(부착의 "소유자 필드가 비면 자기 자신" 과 같은 규칙)
+                    string _key{};
+                };
+
+                /**
+                 * @brief @p pValue 의 컴포넌트 핸들이 가리키는 컴포넌트를 파일 형태로 바꿉니다.
+                 * @details 대상이 없거나(사라졌거나 비었거나), 이 파일에 없는 다른 오브젝트의 컴포넌트면 "대상 없음" 입니다. 프리팹은 바깥 오브젝트를 적지 않습니다.
+                 */
+                ComponentReference computeComponentReference( const void* pValue ) const
+                {
+                    ComponentReference       reference;
+                    const ComponentHandle&   handle   = *static_cast<const ComponentHandle*>( pValue );
+                    const GameObjectManager* pManager = _pOuter != nullptr ? _pOuter->getManager() : nullptr;
+                    const Component*         pTarget  = ( pManager != nullptr && handle.isValid() ) ? pManager->resolveComponent( handle ) : nullptr;
+                    if ( pTarget == nullptr || pTarget->getOwner() == nullptr )
+                        return reference;
+                    string key = ComponentStableKey::makeKey( pTarget );
+                    if ( key.empty() )
+                        return reference;
+                    if ( pTarget->getOwner() != _pOuter )
+                    {
+                        if ( _pOptions->_bOmitExternalParent )
+                            return reference;
+                        reference._objectID = _pOptions->getSavedObjectID( handle.objectID() );
+                        if ( reference._objectID == 0 )
+                            return reference;
+                    }
+                    reference._key = std::move( key );
+                    return reference;
+                }
+
+                string writeComponent( const void* pValue ) const
+                {
+                    if ( writesFileForm() == false )
+                        return writeRuntimeComponentText( *static_cast<const ComponentHandle*>( pValue ) );
+                    const ComponentReference reference = computeComponentReference( pValue );
+                    return reference._key.empty() ? string{ "0:0" } : sw::to_string( reference._objectID ) + ":" + reference._key;
+                }
+
+                /** @brief 기본 바이너리 처리기와 같은 형태(핸들 하나, 16 바이트)로 씁니다. 파일 형태에서는 컴포넌트 자리에 키 해시가 들어갑니다. */
+                void writeComponentBinary( const void* pValue, vector<uint8>& outListBuffer ) const
+                {
+                    ComponentHandle written = *static_cast<const ComponentHandle*>( pValue );
+                    if ( writesFileForm() )
+                    {
+                        const ComponentReference reference = computeComponentReference( pValue );
+                        written                            = reference._key.empty() ? ComponentHandle{} : ComponentHandle::makeOwned( reference._objectID, hashComponentKey( reference._key ) );
+                    }
+                    const uint8* pByte = reinterpret_cast<const uint8*>( &written );
+                    outListBuffer.insert( outListBuffer.end(), pByte, pByte + sizeof( ComponentHandle ) );
+                }
 
                 uint64 computeSavedID( const void* pValue ) const
                 {
@@ -228,6 +365,16 @@ namespace sw
             /** @brief 오브젝트 상태를 쓰는 컨텍스트에 핸들 텍스트와 바이너리 처리기를 등록합니다. 읽기는 기본 처리기를 그대로 쓰며, 옮기는 일은 배치가 모두 읽은 뒤 합니다(`ObjectStateBatch::finish`). */
             static void registerReferenceWriter( SerializeContext& serializeContext, const ReferenceWriter& writer )
             {
+                // 컴포넌트 핸들: 읽기는 `makeGameObjectXMLContext` 가 이미 두 형태(숫자 · 키)를 읽는 처리기로 바꿔 두었다.
+                const SerializeContext::TextReadFn* pComponentReader = serializeContext.findTextReader( getComponentHandleTypeName() );
+                if ( pComponentReader != nullptr )
+                    serializeContext.registerTextHandler( getComponentHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::writeComponent, &writer ),
+                                                          *pComponentReader );
+                const SerializeContext::BinaryReadFn* pComponentBinaryReader = serializeContext.findBinaryReader( getComponentHandleTypeName() );
+                if ( pComponentBinaryReader != nullptr )
+                    serializeContext.registerBinaryHandler( getComponentHandleTypeName(),
+                                                            SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeComponentBinary, &writer ), *pComponentBinaryReader );
+
                 const SerializeContext::TextReadFn* pReader = serializeContext.findTextReader( getObjectHandleTypeName() );
                 if ( pReader == nullptr )
                     return;
@@ -260,7 +407,7 @@ namespace sw
         (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
         SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ), options.getPurpose() );
-        const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
+        const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options, pGameObject };
         ObjectStateSerializerInternal::registerReferenceWriter( serializeContext, referenceWriter );
         return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, serializeContext );
     }
@@ -375,7 +522,7 @@ namespace sw
 
         const size_t                                         bodyStart        = writer.getOffset();
         SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ), options.getPurpose() );
-        const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
+        const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options, pGameObject };
         ObjectStateSerializerInternal::registerReferenceWriter( serializeContext, referenceWriter );
         if ( BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, serializeContext ) == false )
             return false;
@@ -601,31 +748,100 @@ namespace sw
         const SerializeContext& context = SerializeContext::getDefault( *entry._loadedPurpose );
         auto                    filter  = [&context]( const TypeInfo& owner, const PropertyInfo& prop )
         { return SerializerUtil::shouldSerializeProperty( owner, prop, context ); };
-        auto remap = [this]( const GameObjectHandle& savedHandle )
+        const TypeRegistry& registry = context.getTypeRegistry();
+        auto                remap    = [this]( const GameObjectHandle& savedHandle, const PropertyInfo& )
         { return resolveObjectReference( savedHandle ); };
-        ReflectedValueWalk<GameObjectHandle, decltype( filter ), decltype( remap )> walk( context.getTypeRegistry(), ObjectStateSerializerInternal::getObjectHandleTypeName(),
-                                                                                          filter, remap );
-        bool                                                                        bAllRemapped = true;
-        for ( Component* pComp : pObject->getComponents() )
+        ReflectedValueWalk<GameObjectHandle, decltype( filter ), decltype( remap )> objectWalk( registry, ObjectStateSerializerInternal::getObjectHandleTypeName(), filter, remap );
+
+        // 컴포넌트 핸들은 오브젝트 핸들과 같은 깊이를 같은 방식으로 내려가되, 잎이 든 필드의 대상 타입을 확인한다.
+        bool bInvalid       = false;
+        auto remapComponent = [this, &entry, &registry, &bInvalid]( const ComponentHandle& savedHandle, const PropertyInfo& leafProperty )
+        { return resolveComponentReference( entry, registry, savedHandle, leafProperty, bInvalid ); };
+        ReflectedValueWalk<ComponentHandle, decltype( filter ), decltype( remapComponent )> componentWalk( registry, ObjectStateSerializerInternal::getComponentHandleTypeName(), filter,
+                                                                                                           remapComponent );
+
+        const auto walkAllProperties = [this, pObject]( auto& walk, const utf8* pLeafKind )
         {
-            const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
-            if ( pTypeInfo == nullptr || walk.holdsLeaf( *pTypeInfo ) == false )
-                continue;
-            for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
+            bool bAllWalked = true;
+            for ( Component* pComp : pObject->getComponents() )
             {
-                if ( walk.walkProperty( pComp, *pTypeInfo, prop ) )
+                const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
+                if ( pTypeInfo == nullptr || walk.holdsLeaf( *pTypeInfo ) == false )
                     continue;
-                // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못한 것은 로드 오류다.
-                // 비우지 않는다 — 값이 조용히 사라지는 폴백이다.
-                if ( _idSpace != ObjectIDSpace::Saved )
-                    continue;
-                SW_LOG_ERROR( "Property '%#::%#' of '%#' holds object handles a load batch cannot remap (inside a set element or a map key that is a struct or "
-                              "container, or a copy failed) - the load fails",
-                              pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str() );
-                bAllRemapped = false;
+                for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
+                {
+                    if ( walk.walkProperty( pComp, *pTypeInfo, prop ) )
+                        continue;
+                    // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못한 것은 로드 오류다.
+                    // 비우지 않는다 — 값이 조용히 사라지는 폴백이다.
+                    if ( _idSpace != ObjectIDSpace::Saved )
+                        continue;
+                    SW_LOG_ERROR( "Property '%#::%#' of '%#' holds %# a load batch cannot remap (inside a set element or a map key that is a struct or "
+                                  "container, or a copy failed) - the load fails",
+                                  pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str(), pLeafKind );
+                    bAllWalked = false;
+                }
+            }
+            return bAllWalked;
+        };
+        bool bAllRemapped = walkAllProperties( objectWalk, "object handles" );
+        bAllRemapped      = walkAllProperties( componentWalk, "component handles" ) && bAllRemapped;
+        // 대상이 있는데 대상 타입이 아닌 핸들(`resolveComponentReference` 가 이유를 로그에 남겼다)은 어느 id 공간이든 로드 오류다.
+        return bAllRemapped && bInvalid == false;
+    }
+
+    ComponentHandle ObjectStateBatch::resolveComponentReference( const Entry& entry, const TypeRegistry& registry, ComponentHandle savedHandle, const PropertyInfo& leafProperty,
+                                                                 bool& outInvalid ) const
+    {
+        if ( savedHandle.componentID() == 0 )
+            return ComponentHandle{}; // 대상 없음(`0:0`)
+
+        // 형태는 값이 말한다(`isComponentKeyHash`): 파일 형태는 `{오브젝트의 저장 id, 키 해시}` 이고, 오브젝트 자리가 0 이면 이 오브젝트 자신이다
+        // (부착의 "소유자 필드가 비면 자기 자신" 과 같은 규칙). 런타임 형태는 이 실행의 id 라서 같은 실행의 상태(Live)에서만 뜻이 있다.
+        Component* pTarget = nullptr;
+        if ( ObjectStateSerializerInternal::isComponentKeyHash( savedHandle.componentID() ) )
+        {
+            GameObject* pTargetObject = savedHandle.objectID() == 0 ? entry._pObject : findBySavedID( savedHandle.objectID() );
+            if ( pTargetObject == nullptr )
+                return ComponentHandle{}; // 파일 밖(또는 이 배치에 없는) 오브젝트다. 약한 참조라서 사라진 대상은 정상 값이다
+            pTarget = ObjectStateSerializerInternal::findComponentByKeyHash( pTargetObject, savedHandle.componentID() );
+            if ( pTarget == nullptr )
+            {
+                SW_LOG_WARNING( "Handle '%#' of '%#' points at a component of '%#' that no longer exists (key hash %#) - the handle is cleared", leafProperty._name.c_str(),
+                                entry._pObject->getName().c_str(), pTargetObject->getName().c_str(), savedHandle.componentID() );
+                return ComponentHandle{};
             }
         }
-        return bAllRemapped;
+        else if ( _idSpace == ObjectIDSpace::Saved )
+        {
+            // 런타임 id 를 파일 id 공간으로 읽을 수 없다. 이 실행의 컴포넌트 id 가 우연히 같은 값을 받은 다른 컴포넌트를 가리키므로 비우고 조용히 넘기지 않는다.
+            SW_LOG_ERROR( "Handle '%#' of '%#' holds a runtime component id but is read as a saved file - write it with a saved id table, as a prefab or as a save game "
+                          "(object %#, component %#) - the load fails",
+                          leafProperty._name.c_str(), entry._pObject->getName().c_str(), savedHandle.objectID(), savedHandle.componentID() );
+            outInvalid = true;
+            return ComponentHandle{};
+        }
+        else
+        {
+            const GameObjectManager* pManager = entry._pObject->getManager();
+            pTarget                           = pManager != nullptr ? pManager->resolveComponent( savedHandle ) : nullptr;
+            if ( pTarget == nullptr )
+                return savedHandle; // 사라진 대상: 같은 실행에서는 id 가 다시 쓰이지 않으므로 그대로 두면 찾을 때 nullptr 이다
+        }
+
+        // 대상 타입 확인. 타입 없는 핸들(대상 타입이 비었다)이나 모르는 타입은 확인할 수 없으므로 오류다 — 파서가 막는 모양이라 손으로 만든 타입 정보다.
+        const TypeInfo* pTargetType = leafProperty._handleTargetTypeName.empty() ? nullptr : registry.findType( leafProperty._handleTargetTypeName );
+        const TypeInfo* pActualType = pTarget->getTypeInfo();
+        const bool      bTypesKnown = pTargetType != nullptr && pActualType != nullptr;
+        if ( bTypesKnown == false || pActualType->isDerivedFrom( pTargetType ) == false )
+        {
+            SW_LOG_ERROR( "Handle '%#' of '%#' must point at a '%#' but points at a '%#' (component '%#') - the load fails", leafProperty._name.c_str(),
+                          entry._pObject->getName().c_str(), leafProperty._handleTargetTypeName.empty() ? "?" : leafProperty._handleTargetTypeName.c_str(),
+                          pActualType != nullptr ? pActualType->_fullyQualifiedName.c_str() : "?", ComponentStableKey::makeKey( pTarget ).c_str() );
+            outInvalid = true;
+            return ComponentHandle{};
+        }
+        return pTarget->getHandle();
     }
 
     GameObjectHandle ObjectStateBatch::resolveObjectReference( GameObjectHandle savedHandle ) const

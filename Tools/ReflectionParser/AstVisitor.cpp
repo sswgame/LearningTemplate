@@ -1179,12 +1179,37 @@ namespace sw
             }
 
             /**
-             * @brief PROPERTY 의 어느 자리(값, 원소, 키, 중첩 컨테이너)에든 컴포넌트 핸들이 있으면 오류를 남기고 false 를 반환합니다.
-             * @details 저장된 컴포넌트 id 를 다른 실행의 컴포넌트로 옮길 형태가 아직 없다. 실으면 파일 상태에서 그 id 가 우연히 같은 값을 받은
-             *          다른 컴포넌트를 가리키므로, 로드가 경고와 함께 비우던 폴백 대신 생성 단계에서 막는다(`docs/plans/TypedComponents.md` 3.7).
-             *          리플렉션 구조체의 필드도 이 검사를 지나므로 구조체 안의 핸들도 막힌다.
+             * @brief 정규화한 표기 @p name 이 타입 핸들(`TComponentHandle<대상>`)이면 true 이고, 대상 타입 이름을 @p outTarget 에 넣습니다.
              */
-            static bool rejectComponentHandleProperty( const ParsedPropertyInfo& prop, const string& owner )
+            [[nodiscard]] static bool tryReadTypedHandleTarget( const string& name, string& outTarget )
+            {
+                constexpr string_view kPrefix = "TComponentHandle<";
+                string_view           view    = StringUtil::trim( name );
+                if ( StringUtil::startsWith( view, kPrefix ) == false || view.back() != '>' )
+                    return false;
+                view.remove_prefix( kPrefix.size() );
+                view.remove_suffix( 1 );
+                outTarget = string{ StringUtil::trim( view ) };
+                return outTarget.empty() == false;
+            }
+
+            /** @brief @p text 안의 @p from 을 모두 @p to 로 바꿉니다. */
+            static void replaceAllText( string& text, const string& from, const string& to )
+            {
+                for ( size_t pos = text.find( from ); pos != string::npos; pos = text.find( from, pos + to.size() ) )
+                {
+                    text.replace( pos, from.size(), to );
+                }
+            }
+
+            /**
+             * @brief PROPERTY 에 컴포넌트 핸들이 있으면 저장할 수 있는 모양인지 확인하고 내장 `ComponentHandle` 로 정규화합니다. 아니면 오류를 남기고 false 입니다.
+             * @details 저장할 수 있는 모양은 **타입 핸들 `TComponentHandle<T>` 한 값**, 또는 **그 시퀀스(한 겹, `vector` 등)** 입니다. 정규화하면 값 · 원소의 타입 이름은
+             *          내장 `ComponentHandle` 이 되어 직렬화기 · 인스펙터가 기존 처리기를 그대로 쓰고, 대상 `T` 는 `_handleTargetTypeName` 에 실려
+             *          읽은 뒤의 연결이 타입을 확인한다. 맵 · 중첩 컨테이너 · 타입 없는 `ComponentHandle` 은 대상 타입을 확인할 자리가 없어 생성 오류다
+             *          (`docs/plans/TypedComponents.md` 3.7). 리플렉션 구조체의 필드도 이 검사를 지난다.
+             */
+            static bool resolveComponentHandleProperty( ParsedPropertyInfo& prop, const string& owner )
             {
                 bool bHolds = spellsComponentHandle( prop._typeName ) || spellsComponentHandle( prop._elementTypeName ) || spellsComponentHandle( prop._keyTypeName );
                 for ( const ParsedContainerNode* pNode = prop._containerTree.get(); pNode != nullptr && bHolds == false; pNode = pNode->_elementNested.get() )
@@ -1193,10 +1218,37 @@ namespace sw
                 }
                 if ( bHolds == false )
                     return true;
-                SW_LOG_ERROR( "ERROR: PROPERTY() '%#' holds a component handle (%#). A component handle cannot be saved yet - a saved component id would point at "
-                              "an unrelated component in another run. Keep it out of PROPERTY() (see docs/plans/TypedComponents.md 3.7).",
-                              owner, prop._typeName );
-                return false;
+
+                string               target;
+                ParsedContainerNode* pTree         = prop._containerTree.get();
+                const bool           bSingleValue  = prop._bIsContainer == SW_FALSE && tryReadTypedHandleTarget( prop._typeName, target );
+                const bool           bFlatSequence = prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._keyTypeName.empty() &&
+                                           ( pTree == nullptr || pTree->_elementNested == nullptr || pTree->_elementNested->_bIsContainer == SW_FALSE );
+                const bool bSequenceOfHandles = bFlatSequence && tryReadTypedHandleTarget( prop._elementTypeName, target );
+                if ( bSingleValue == false && bSequenceOfHandles == false )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY() '%#' holds a component handle (%#) in a shape that cannot be saved. Use one TComponentHandle<T>, or a vector of "
+                                  "TComponentHandle<T>. An untyped ComponentHandle, a map and nested containers have no place to check the target type "
+                                  "(see docs/plans/TypedComponents.md 3.7).",
+                                  owner, prop._typeName );
+                    return false;
+                }
+
+                const string kCanonical = "ComponentHandle";
+                if ( bSingleValue )
+                {
+                    prop._typeName = kCanonical;
+                }
+                else
+                {
+                    const string typedSpelling = prop._elementTypeName;
+                    replaceAllText( prop._typeName, typedSpelling, kCanonical );
+                    prop._elementTypeName = kCanonical;
+                    if ( pTree != nullptr )
+                        pTree->_elementTypeName = kCanonical;
+                }
+                prop._handleTargetTypeName = target;
+                return true;
             }
 
             /** @brief 필드 선언에서 PROPERTY 메타를 수집합니다. 멀티캐스트 델리게이트면 이벤트로 수집합니다. */
@@ -1253,7 +1305,7 @@ namespace sw
                     return;
                 }
                 fillContainerDetails( prop, fieldType, session );
-                if ( rejectComponentHandleProperty( prop, owner ) == false )
+                if ( resolveComponentHandleProperty( prop, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;
@@ -1333,7 +1385,7 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
-                if ( rejectComponentHandleProperty( prop, owner ) == false )
+                if ( resolveComponentHandleProperty( prop, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;
