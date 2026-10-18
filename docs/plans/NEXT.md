@@ -2,7 +2,21 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법은 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../backlog/README.md)(영역별 파일 · 상태 태그, `py -3 -m Scripts backlog` 로 목록), 작업 방식은 [작업 방식](../11_Workflow.md), 병렬 작업자 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다. 이 문서에는 지금 상태 · 다음 할 일 · 함정 · 시작 절차만 둡니다.
 
-## 000. 2026-10-18 세션 인계 — 통합 `integ7` · `integ8` · `integ9` (가장 먼저 읽는다)
+## 0000. 2026-10-19 새벽 상태 (이 절을 먼저, 그다음 000절)
+
+- **main 은 push 하지 않았다**: origin 보다 앞선 커밋이 있다(`git status -sb`). 원격 CI(실행 39132269496, 5634363)가 빨갛다 — **Shipping 4 잡 · TSan · Windows Debug**. 직전 "초록" 실행 39093507717 은 빌드 매트릭스가 skipped 였다(기준으로 쓰지 말 것).
+- **CI 실패 원인과 고친 것**(`wt/cifix2`, main 에 병합됨 `64b486808` `32824cfbe` `8a11bdc63`):
+  - 쿠커 · 테스트가 디스크로 훑은 절대 경로를 리소스 id 입구에 넣어 Shipping(낱개 파일 불허)이 거절 → `loadFromDiskFile` 계열.
+  - `MemoryProfilerTest.FreeCountsOnlyBlocksTheTrackerCounted` 는 Shipping 할당기에 블록 헤더가 없어 기능 조건을 붙였다.
+  - TSan 레이스는 `AsyncLogSink` 의 `std::localtime` → `WallClock::toLocalCalendar` 한 곳.
+  - Windows Debug nogpu 샤드 시간 초과는 러너 부하로 판단(Python 테스트도 같은 비율로 느려짐). 104 s 한도가 빠듯하다.
+- **아직 안 끝난 것**: main 검증에서 **Shipping 클라이언트 nogpu 에 `SceneTest.RepositoryScenesAndPrefabsKeepComponentNames` · `SceneCookTest.PrefabEditCooksOnlyTheScenesThatUseIt`** 가 실패했다(같은 계열, 작업자 `cifix2` 가 `5ddb2124a` 로 프리팹 쪽을 고쳤으나 장면 쪽 · 서버 Shipping(`Ninja-Shipping-Server`, 낡은 컴파일러 런처 캐시로 서 있었다) · STL(`CI-Debug-STL` 프리셋)은 확인 중이었다). 이어받을 때 `git log main..wt/cifix2` 로 확인하고, 병합 뒤 main 에서 **Shipping · Shipping-Server · CI-Debug-STL 구성의 빌드 + nogpu** 를 반드시 돌린 뒤 push 한다(이번 통합 검증은 Debug · Release · STL(옛 바이너리) 이라 Shipping 계열을 놓쳤다).
+- **측정 · GPU 묶음은 한도(429)로 중단**(작업자 `meas`, 아직 워크트리 없음). 팩 빌드 외형 프리셋 로드 확인 도중이었다. 임시 탐침 `Resource/game/shooter3d/data/appearance/presets/zz_packcheck.appearance.xml` 이 main 체크아웃에 남아 있어 지웠다 — 재개하면 같은 탐침을 만들지 말고 워크트리나 임시 쿠킹 폴더에서 하게 할 것.
+- **"뿌리 → 근본 원인"** 용어 치환은 끝나 main 에 병합했다(`f0d41e439`). 000절의 해당 줄은 처리됨.
+- **남은 워크트리**: `feat-pv` · `feat-net`(추적 안 된 로그 때문에 `worktree-remove` 가 건너뜀 — 사용자가 `--force` 로 직접 지운다), `cifix2`(진행 중).
+- **교훈**: 통합 검증이 구성 이름 오타(없는 프리셋)로 빌드를 건너뛰고 옛 바이너리로 테스트를 돌려 "통과"로 보였다. 검증 스크립트는 빌드 종료 코드와 `ctest` 가 읽는 바이너리의 갱신 시각을 함께 본다. 근본 원인 후보 두 가지: 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다(`DiskFilePath` 형식으로 막는 안은 안 했다), 워크트리가 `vcpkg_installed` 를 나눠 쓴다.
+
+## 000. 2026-10-18 세션 인계 — 통합 `integ7` · `integ8` · `integ9`
 
 - **main 에 들어간 것**(이 세션 전체):
   - 정리 여덟 브랜치: `cl-a` C-37, `cl-b` C-5, `cl-c` C-40 · C-63, `cl-d` C-46 일부, `cl-f` C-34 · C-48, `cl-g` C-19 · C-64, `cl-h` C-44 일부 · C-50, `cl-i` C-12 · C-15(imgui-node-editor 오버레이 제거).
