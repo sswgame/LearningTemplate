@@ -1,6 +1,6 @@
 # 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17)
 
-> 상태: 구현대기 · 선행: ReflectionFormats · 영역: engine · 옛번호: C-52 · 진행: 5/6
+> 상태: 구현대기 · 선행: ReflectionFormats · 영역: engine · 옛번호: C-52 · 진행: 6/6
 
 [리플렉션 직렬화 형식 계획](ReflectionFormats.md) 9절의 단계 7-c 와 7-d 를 구현할 수 있는 수준으로 나눈 계획입니다.
 배경과 판단은 그 문서의 7절(리플렉션 캐스트 비용)에 있고, 여기서는 반복하지 않습니다.
@@ -438,6 +438,10 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
   아무 정수나 넣을 수 있어서 다른 타입의 컴포넌트를 가리키게 만들 수 있습니다.
 - 7-d-3 에서 타입 핸들 필드는 선택기(콤보)로 그립니다. 목록은 7-c 의 비템플릿 매니저 순회 `forEachComponentOfType( 대상 TypeInfo, ... )` 로 채우고, 항목은 "오브젝트 이름 / 컴포넌트 이름"입니다. 정수 입력은 두지 않습니다. 그래서 인스펙터로는 잘못된 타입을 넣을 수 없습니다.
 - 타입 없는 `ComponentHandle` 위젯은 그대로 둡니다.
+- **구현됨(2026-10-19).** 판단은 ImGui 없는 `InspectorComponentPicker` 가 하고(단위 테스트 6건), 시퀀스 원소의 `PropertyInfo` 는 `makeElementProperty` 한 함수로 만들어 대상 타입이 빠지지 않습니다.
+  선택 값은 `EditorPropertyGrid::applyPropertyTextAsEdit` 로 써서 되돌리기가 되고, 목록은 편집 대상 씬(`getEditOwner`)에서만 채웁니다. 타입 핸들의 Paste Value 는 막았습니다.
+  `resolveComponent` 는 삭제 대기 컴포넌트도 돌려주므로 선택기가 `isPendingDestroy()` 를 따로 봅니다.
+- **남은 것.** 화면 확인(콤보 · `(none)` · 되돌리기 · Paste 비활성). `set<TComponentHandle<T>>` 는 `operator<` 와 해시가 없어 컴파일되지 않는데 파서는 이 모양을 통과시킵니다(후보 `TypedHandleInspectorGaps`).
 
 ## 4. 단계
 
@@ -446,7 +450,7 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 | 7-c | 버킷, 갱신 규칙, 비템플릿 순회, 쿠커 정렬, 테스트 | `GameObjectStore.*`, `GameObjectManager.h`, `GameObject.cpp`, `Component.h`, `SceneNavigationCooker.cpp`, 새 테스트 | 헤더 템플릿이 바뀌어 모든 모듈을 다시 빌드 | `integrator`(opus) |
 | 7-d-1 | 타입 핸들 형식, 확인 변환, 찾기, `executeOrDeferPostTickOnComponent` 와 호출부 23곳, 복원 키 FQN, 파서의 `PROPERTY` 금지(타입 없는 핸들 포함), 비우기 폴백 제거 | `ComponentHandle.h`, `GameObjectManager.h`, `GameObject.cpp`, `ObjectStateSerializer.*`, `Tools/ReflectionParser`, 호출부 파일, `finish` 호출부 | 7-c 와 같은 헤더, 7-c 뒤 | `integrator`(opus) |
 | 7-d-2 | 호출부 마이그레이션(그룹 A ~ E) | 3.4 와 3.6 의 파일 | 그룹끼리 파일이 겹치지 않음 | 그룹마다 `worker`(sonnet), 병합은 `integrator`(opus) |
-| 7-d-3 | `PROPERTY` 타입 핸들 허용(2026-10-19 결정, **직렬화 · 배치 끝 타입 확인은 끝**, 3.7), **인스펙터 선택기는 남음**(3.8) | `SerializeContext.cpp`, `ObjectStateSerializer.cpp`, 파서, `InspectorPropertyManager.cpp`, `InspectorBuiltinValue.*` | 없음(8.2 의 짝짓기가 있음) | `worker`(opus) |
+| 7-d-3 | `PROPERTY` 타입 핸들 허용(2026-10-19 결정, **직렬화 · 배치 끝 타입 확인 · 인스펙터 선택기는 끝**(3.7, 3.8. 선택기의 **화면 확인은 남음**) | `SerializeContext.cpp`, `ObjectStateSerializer.cpp`, 파서, `InspectorPropertyManager.cpp`, `InspectorBuiltinValue.*` | 없음(8.2 의 짝짓기가 있음) | `worker`(opus) |
 
 **7-d-2 그룹.** 그룹은 파일을 나눠 가지며, 접근자 반환형을 바꾸면 그 호출부가 있는 파일도 같은 그룹에 넣었습니다. 7-d-1 이 병합된 뒤 시작하며, ⓖ 그룹 A(조종)를 먼저 합니다.
 ⓓ 의 비교 호출부는 섞은 비교를 허용하므로(3.1) 고치지 않아도 컴파일되지만, 반환형이 바뀌는 접근자의 호출부라 A 가 함께 읽고 확인합니다.

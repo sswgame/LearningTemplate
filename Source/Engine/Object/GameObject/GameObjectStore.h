@@ -97,7 +97,7 @@ namespace sw
         GameObject* findGameObjectByID( uint64 objectID ) const;
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기 중이면 nullptr 입니다. */
         GameObject* resolveGameObject( GameObjectHandle handle ) const { return findGameObjectByID( handle.objectID() ); }
-        /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. */
+        /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 파괴됐으면 nullptr 이고, 삭제 대기 중이어도 돌려주므로 호출부가 `isPendingDestroy()` 를 봅니다. */
         Component* resolveComponent( ComponentHandle handle ) const;
 
         /**

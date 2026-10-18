@@ -84,6 +84,17 @@
 - 모듈창: 모듈 설치 · 제거(파일 복사 · 삭제) · 외부 패키지 받기는 위험이 커서 뺐다. 확인 창이 패널 수준 ID 로 열려 셀프테스트 시나리오가 창 위치에 기댄다면 영향이 있을 수 있다.
 함정: UI 디자이너 손잡이의 가정은 [UIPreviewDesigner](#uipreviewdesigner) 에 있다.
 
+### TypedHandleInspectorGaps
+제목: 타입 핸들 인스펙터 선택기(TypedComponents 3.8)의 남은 빈틈
+옛번호: 없음
+왜 필요한가: 선택기는 `PROPERTY` 의 타입 핸들만 막습니다. 같은 "타입 없이 정수나 글로 핸들을 넣는" 길이 아래에 남았습니다.
+착수 조건 / 남은 것:
+- `set<TComponentHandle<T>>`: `operator<` 와 `std::hash` 가 없어 컴파일되지 않는데 리플렉션 파서는 이 모양을 통과시킵니다. 파서에서 막거나 `TComponentHandle` 에 순서 · 해시를 둡니다(막는 쪽이 형식으로 닫는 길).
+- `FUNCTION` 인자: CallInEditor 에서 타입 핸들 인자는 아직 정수 입력입니다(`drawMethodArgFor`).
+- Reset to Default 가 기본 인스턴스의 핸들 글을 어떻게 적용하는지 확인하지 못했습니다.
+- `FloatCurvePropertyDrawer.cpp` 에도 `PropertyInfo` 손 복사가 하나 남았습니다(커브 값이라 핸들과 무관). 엔진 쪽 `PropertyInfo` 에 `makeElementProperty` 를 두면 손 복사 자체가 사라집니다.
+- 화면 확인: 콤보 · `(none)` · 되돌리기 · Paste 비활성(`gpu-verifier`).
+
 ### MeshModifierStack
 제목: 메시 모디파이어 스택 플러그인의 남은 것
 옛번호: D3-10
