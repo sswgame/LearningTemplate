@@ -59,6 +59,24 @@ namespace sw::editor
             static constexpr const utf8* kTraceExtension = ".trace.json";
 #endif
 
+            /** @brief 창 배치에서 이웃 창과 띄우는 가로 폭(픽셀)입니다. 위치는 틀의 왼쪽 위이고 크기는 클라이언트 영역이라 테두리 두 쪽만큼 더 띄운다. */
+            static constexpr int32 kWindowFrameWidth = 16;
+            /** @brief 위와 같다(세로) — 제목 줄과 아래 테두리입니다. */
+            static constexpr int32 kWindowFrameHeight = 40;
+            /** @brief 창 배치의 가장 작은 클라이언트 영역 한 변(픽셀)입니다(`EditorNetPlaySettings` 의 `Min` 과 같다). */
+            static constexpr int32 kMinWindowSide = 64;
+
+            /** @brief 창 배치를 켠 구성의 크기 · 열 수가 쓸 수 있는 값이면 true 입니다. 아니면 이유를 오류로 남깁니다. */
+            static bool isWindowLayoutValid( const EditorNetPlaySettings& settings )
+            {
+                const bool bValid = settings._bArrangeWindows == false ||
+                                    ( settings._windowColumnCount >= 1 && settings._windowWidth >= kMinWindowSide && settings._windowHeight >= kMinWindowSide );
+                if ( bValid == false )
+                    SW_LOG_ERROR( "Window layout %#x%# in %# column(s) is not usable - each side needs at least %# pixels and one column", settings._windowWidth,
+                                  settings._windowHeight, settings._windowColumnCount, kMinWindowSide );
+                return bValid;
+            }
+
             /** @brief 명령줄 인자 하나를 따옴표로 감쌉니다(경로의 공백). */
             static string quote( string_view text ) { return "\"" + string( text ) + "\""; }
 
@@ -102,8 +120,44 @@ namespace sw::editor
         , _mergedTracePath{}
         , _settings{}
         , _pendingSettings{}
+        , _presetStore{}
         , _port{ 0 }
+        , _bMergedTraceUnopened{ false }
     {
+    }
+
+    SubsystemInitResult EditorNetPlaySession::initializeSubsystem()
+    {
+        // 사용자 파일이라 깨졌어도 기동은 잇는다 — 치우고 오류를 남기는 일은 `load` 가 했다(`EditorUserFile`).
+        // 고른 프리셋은 읽은 파일에만 있다(없는 파일 · 치운 파일은 빈 목록) — 그때만 다음 세션의 구성으로 입힌다.
+        const EditorUserFileResult   loadResult = _presetStore.load( EditorNetPlayPresetStore::getDefaultFilePath() );
+        const EditorNetPlaySettings* pSelected  = loadResult == EditorUserFileResult::Loaded ? _presetStore.findSelectedPreset() : nullptr;
+        if ( pSelected != nullptr )
+        {
+            _pendingSettings = *pSelected;
+            SW_LOG_INFO( "Multiplayer preset '%#' restored - %#, %# player(s)", _presetStore.getSelectedPresetName(), toString( _pendingSettings._mode ), _pendingSettings._clientCount );
+        }
+        return SubsystemInitResult::Succeeded;
+    }
+
+    string EditorNetPlaySession::takeUnopenedMergedTrace()
+    {
+        if ( _bMergedTraceUnopened == false )
+            return {};
+        _bMergedTraceUnopened = false;
+        return _mergedTracePath;
+    }
+
+    string EditorNetPlaySession::makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex )
+    {
+        if ( settings._bArrangeWindows == false )
+            return {};
+        SW_ASSERT( settings._windowColumnCount > 0 ); // `start` 가 막는다(`isWindowLayoutValid`)
+        const int32 column = windowIndex % settings._windowColumnCount;
+        const int32 row    = windowIndex / settings._windowColumnCount;
+        const int32 x      = column * ( settings._windowWidth + EditorNetPlaySessionInternal::kWindowFrameWidth );
+        const int32 y      = row * ( settings._windowHeight + EditorNetPlaySessionInternal::kWindowFrameHeight );
+        return "-W=" + to_string( settings._windowWidth ) + " -H=" + to_string( settings._windowHeight ) + " -WinX=" + to_string( x ) + " -WinY=" + to_string( y );
     }
 
     EditorNetPlaySession::~EditorNetPlaySession()
@@ -186,9 +240,12 @@ namespace sw::editor
             SW_LOG_WARNING( "Net mode %# with %# player(s) needs no processes - play in the editor instead", toString( settings._mode ), settings._clientCount );
             return false;
         }
+        if ( EditorNetPlaySessionInternal::isWindowLayoutValid( settings ) == false )
+            return false;
         _settings = settings;
         _listLogLine.clear();
         _mergedTracePath.clear();
+        _bMergedTraceUnopened = false;
         _traceDirectory.clear();
         _port = settings._port != 0 ? settings._port : findFreeUDPPort();
         if ( _port == 0 )
@@ -218,15 +275,19 @@ namespace sw::editor
             EditorNetPlaySessionInternal::quote( "-gv_netConnectAddress=127.0.0.1:" + port ) + " -gv_standardInputCommands=1 " + settings._clientArguments;
 
         // 서버를 먼저 띄운다 — 클라이언트는 서버가 늦게 서도 연결을 다시 시도하지만(연결 시한 안), 먼저 서 있으면 첫 시도에 붙는다.
+        // `App` 창은 띄우는 순서대로 나란히 놓는다 — 리슨 호스트가 첫 칸이다(전용 서버는 창이 없다).
         const bool  bDedicated  = settings._mode == EditorNetMode::DedicatedServer;
+        int32       windowIndex = 0;
         bool        bLaunched   = bDedicated ? launchChild( "Server", serverPath, "-gv_netListenPort=" + port, makeTracePath( "server" ) )
-                                             : launchChild( "Host", clientPath, "-gv_netListenPort=" + port + " -gv_standardInputCommands=1 " + settings._clientArguments,
+                                             : launchChild( "Host", clientPath,
+                                                            "-gv_netListenPort=" + port + " -gv_standardInputCommands=1 " + settings._clientArguments + " " +
+                                                                makeWindowArguments( settings, windowIndex++ ),
                                                             makeTracePath( "host" ) );
         const int32 clientCount = bDedicated ? settings._clientCount : settings._clientCount - 1;
         for ( int32 clientIndex = 1; bLaunched && clientIndex <= clientCount; ++clientIndex )
         {
             const string number = to_string( clientIndex );
-            bLaunched           = launchChild( "Client" + number, clientPath, clientArguments, makeTracePath( "client" + number ) );
+            bLaunched           = launchChild( "Client" + number, clientPath, clientArguments + " " + makeWindowArguments( settings, windowIndex++ ), makeTracePath( "client" + number ) );
         }
         if ( bLaunched == false )
         {
@@ -365,7 +426,8 @@ namespace sw::editor
         {
             SW_LOG_INFO( "%# exited with code %#", pChild->_label, pChild->_exitCode.load() );
         }
-        _mergedTracePath = mergeTraces();
+        _mergedTracePath      = mergeTraces();
+        _bMergedTraceUnopened = _mergedTracePath.empty() == false;
         _listProcess.clear();
         SW_LOG_INFO( "Multiplayer session stopped%#", _mergedTracePath.empty() ? string{} : " - merged trace " + _mergedTracePath );
         return _mergedTracePath;
