@@ -3,11 +3,12 @@
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -15,63 +16,49 @@ namespace sw
     {
         struct MechCatalogInternal
         {
-            static MechWeaponKind parseWeaponKind( string_view text )
+            /** @brief `<Weapon>` 하나를 읽습니다. Melee · Special 은 `range` 를 적어야 합니다(종류에 따라 다른 기본값을 두지 않는다). */
+            [[nodiscard]] static bool readWeapon( const XMLNode& node, string_view sourceName, MechWeaponSlotDef& outSlot )
             {
-                if ( StringUtil::equals( text, string_view( "Melee" ), true ) )
-                    return MechWeaponKind::Melee;
-                if ( StringUtil::equals( text, string_view( "Special" ), true ) )
-                    return MechWeaponKind::Special;
-                return MechWeaponKind::Shot;
+                bool bValid = GameDataXML::readFields( node, outSlot, sourceName, { "moves" } );
+                GameDataXML::appendNameList( node.getAttributeText( "moves" ), ",; ", outSlot._listMoveID );
+                if ( outSlot._kind != MechWeaponKind::Shot && node.findAttribute( "range" ) == nullptr )
+                {
+                    SW_LOG_ERROR( "%#: <Weapon id=\"%#\"> of kind Melee or Special needs range=\"...\"", sourceName, outSlot._id.c_str() );
+                    bValid = false;
+                }
+                return bValid;
             }
 
-            static MechSkillTrigger parseSkillTrigger( string_view text )
+            /** @brief @p parent 아래의 `<Weapon>` 을 모두 읽습니다. 하나라도 오류면 false 이고, 오류인 무기는 넣지 않습니다. */
+            [[nodiscard]] static bool readWeapons( const XMLNode& parent, string_view sourceName, MechModeDef& outMode )
             {
-                if ( StringUtil::equals( text, string_view( "HealthBelow" ), true ) )
-                    return MechSkillTrigger::HealthBelow;
-                if ( StringUtil::equals( text, string_view( "OnDown" ), true ) )
-                    return MechSkillTrigger::OnDown;
-                if ( StringUtil::equals( text, string_view( "OnRespawn" ), true ) )
-                    return MechSkillTrigger::OnRespawn;
-                return MechSkillTrigger::Manual;
-            }
-
-            static MechWeaponSlotDef readWeapon( const XMLNode& node, const utf8* pID )
-            {
-                MechWeaponSlotDef slot;
-                slot._id                = hashed_string( pID );
-                slot._kind              = parseWeaponKind( node.getAttributeText( "kind" ) );
-                const utf8* pWeaponID   = node.findAttribute( "weapon" );
-                slot._weaponID          = pWeaponID != nullptr ? hashed_string( pWeaponID ) : hashed_string{};
-                const string_view moves = node.getAttributeText( "moves" );
-                StringUtil::forEachToken( moves, ",; ", [&]( string_view token )
-                { slot._listMoveID.push_back( hashed_string( token ) ); } );
-                slot._damage          = MathUtil::max( 0.0f, node.getAttributeFloat( "damage", slot._damage ) );
-                slot._downValue       = MathUtil::max( 0.0f, node.getAttributeFloat( "down", slot._downValue ) );
-                slot._knockback       = MathUtil::max( 0.0f, node.getAttributeFloat( "knockback", slot._knockback ) );
-                slot._range           = MathUtil::max( 0.0f, node.getAttributeFloat( "range", slot._kind == MechWeaponKind::Melee ? 3.0f : 60.0f ) );
-                slot._projectileSpeed = MathUtil::max( 0.0f, node.getAttributeFloat( "speed", slot._projectileSpeed ) );
-                slot._homing          = MathUtil::max( 0.0f, node.getAttributeFloat( "homing", slot._homing ) );
-                slot._cooldown        = MathUtil::max( 0.0f, node.getAttributeFloat( "cooldown", slot._cooldown ) );
-                slot._staggerTime     = MathUtil::max( 0.0f, node.getAttributeFloat( "stagger", slot._staggerTime ) );
-                return slot;
-            }
-
-            static void readWeapons( const XMLNode& parent, string_view sourceName, MechModeDef& outMode )
-            {
+                bool bValid = true;
                 for ( XMLNode node = parent.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
                 {
-                    const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-                    if ( pID == nullptr )
-                        continue;
-                    outMode._listWeapon.push_back( readWeapon( node, pID ) );
+                    MechWeaponSlotDef slot;
+                    if ( readWeapon( node, sourceName, slot ) )
+                        outMode._listWeapon.push_back( slot );
+                    else
+                        bValid = false;
                 }
+                return bValid;
+            }
+
+            /** @brief `<Mode>` 없이 무기를 바로 단 기체의 형태 "default" 를 읽습니다. 속도는 `<Mech speed>` 이고 적지 않으면 형태의 초기값입니다. */
+            [[nodiscard]] static bool readDefaultMode( const XMLNode& node, string_view sourceName, MechModeDef& outMode )
+            {
+                outMode._id = hashed_string( "default" );
+                std::optional<float32> speed;
+                bool                   bValid = node.readOptionalAttribute( "speed", speed ) && ( speed.has_value() == false || *speed >= 0.0f );
+                if ( bValid == false )
+                    SW_LOG_ERROR( "%#: <Mech speed=\"%#\"> needs a number of 0 or more", sourceName, node.getAttributeText( "speed" ) );
+                else if ( speed.has_value() )
+                    outMode._speed = *speed;
+                return readWeapons( node, sourceName, outMode ) && bValid;
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
     SW_LOG_CALLER( "MechCatalog" );
 
     int32 MechDef::computeSlotOffset( int32 mode ) const
@@ -99,115 +86,118 @@ namespace sw
 
     const StatBlock& MechCatalog::getClassModifier( MechRangeClass rangeClass ) const
     {
-        const size_t index = MathUtil::min( static_cast<size_t>( rangeClass ), static_cast<size_t>( MechRangeClass::Count ) - 1 );
-        return _arrClassModifier[index];
+        return _arrClassModifier[static_cast<size_t>( rangeClass )];
     }
 
-    MechRangeClass MechCatalog::parseRangeClass( string_view text, MechRangeClass fallback )
+    bool MechCatalog::parseRangeClass( string_view text, MechRangeClass& outRangeClass )
     {
         if ( StringUtil::equals( text, string_view( "Near" ), true ) )
-            return MechRangeClass::Near;
-        if ( StringUtil::equals( text, string_view( "Mid" ), true ) )
-            return MechRangeClass::Mid;
-        if ( StringUtil::equals( text, string_view( "Far" ), true ) )
-            return MechRangeClass::Far;
-        return fallback;
+            outRangeClass = MechRangeClass::Near;
+        else if ( StringUtil::equals( text, string_view( "Mid" ), true ) )
+            outRangeClass = MechRangeClass::Mid;
+        else if ( StringUtil::equals( text, string_view( "Far" ), true ) )
+            outRangeClass = MechRangeClass::Far;
+        else
+            return false;
+        return true;
     }
 
     uint32 MechCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _deckCostLimit = MathUtil::max( 0, root.getAttributeInt( "deckCostLimit", _deckCostLimit ) );
-        for ( XMLNode node = root.findChild( "Class" ); node; node = node.findNextSibling( "Class" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            const MechRangeClass rangeClass = parseRangeClass( string_view( pID ), MechRangeClass::Count );
-            if ( rangeClass == MechRangeClass::Count )
-            {
-                SW_LOG_WARNING( "%#: unknown mech class '%#' - skipped", sourceName, pID );
-                continue;
-            }
-            StatBlock& modifier = _arrClassModifier[static_cast<size_t>( rangeClass )];
-            modifier.clear();
-            (void)modifier.loadFromAttributes( node, "id" ); // 읽은 속성 수만 반환한다. 속성이 없으면 보정이 없는 것이다
-        }
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        MechCatalogRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+            _deckCostLimit = rootDef._deckCostLimit;
 
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Mech" ); node; node = node.findNextSibling( "Mech" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            MechDef def;
-            def._id                = hashed_string( pID );
-            const utf8* pName      = node.findAttribute( "name" );
-            def._name              = pName != nullptr ? pName : pID;
-            const utf8* pRank      = node.findAttribute( "rank" );
-            def._rank              = pRank != nullptr ? hashed_string( pRank ) : hashed_string{};
-            def._rangeClass        = parseRangeClass( node.getAttributeText( "class" ), def._rangeClass );
-            def._cost              = MathUtil::max( 0, node.getAttributeInt( "cost", def._cost ) );
-            def._maxHealth         = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", def._maxHealth ) );
-            def._radius            = MathUtil::max( 0.1f, node.getAttributeFloat( "radius", def._radius ) );
-            def._dashSpeed         = MathUtil::max( 0.0f, node.getAttributeFloat( "dashSpeed", def._dashSpeed ) );
-            def._dashTime          = MathUtil::max( 0.0f, node.getAttributeFloat( "dashTime", def._dashTime ) );
-            def._jumpSpeed         = MathUtil::max( 0.0f, node.getAttributeFloat( "jumpSpeed", def._jumpSpeed ) );
-            def._boostMax          = MathUtil::max( 1.0f, node.getAttributeFloat( "boost", def._boostMax ) );
-            def._boostRegen        = MathUtil::max( 0.0f, node.getAttributeFloat( "boostRegen", def._boostRegen ) );
-            def._boostRegenDelay   = MathUtil::max( 0.0f, node.getAttributeFloat( "boostRegenDelay", def._boostRegenDelay ) );
-            def._overheatPenalty   = MathUtil::max( 0.0f, node.getAttributeFloat( "overheatPenalty", def._overheatPenalty ) );
-            def._overheatRecover   = MathUtil::clamp( node.getAttributeFloat( "overheatRecover", def._overheatRecover ), 0.0f, def._boostMax );
-            def._dashCost          = MathUtil::max( 0.0f, node.getAttributeFloat( "dashCost", def._dashCost ) );
-            def._jumpCost          = MathUtil::max( 0.0f, node.getAttributeFloat( "jumpCost", def._jumpCost ) );
-            def._hoverPerSecond    = MathUtil::max( 0.0f, node.getAttributeFloat( "hoverPerSecond", def._hoverPerSecond ) );
-            def._downMax           = MathUtil::max( 0.0f, node.getAttributeFloat( "down", def._downMax ) );
-            def._downRecovery      = MathUtil::max( 0.0f, node.getAttributeFloat( "downRecovery", def._downRecovery ) );
-            def._downRecoveryDelay = MathUtil::max( 0.0f, node.getAttributeFloat( "downRecoveryDelay", def._downRecoveryDelay ) );
-            def._downTime          = MathUtil::max( 0.0f, node.getAttributeFloat( "downTime", def._downTime ) );
-            def._wakeInvulnerable  = MathUtil::max( 0.0f, node.getAttributeFloat( "wakeInvulnerable", def._wakeInvulnerable ) );
-            def._lockOnRange       = MathUtil::max( 0.0f, node.getAttributeFloat( "lockOn", def._lockOnRange ) );
-            def._lockOnAngle       = MathUtil::clamp( node.getAttributeFloat( "lockOnAngle", def._lockOnAngle ), 1.0f, 180.0f );
-            def._transformTime     = MathUtil::max( 0.0f, node.getAttributeFloat( "transformTime", def._transformTime ) );
-            def._skillSlots        = MathUtil::max( 0, node.getAttributeInt( "skillSlots", def._skillSlots ) );
-
-            for ( XMLNode modeNode = node.findChild( "Mode" ); modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( StringUtil::equals( name, string_view( "Mech" ), true ) )
             {
-                const utf8* pModeID = GameDataXML::findRequiredID( modeNode, sourceName );
-                if ( pModeID == nullptr )
-                    continue;
-                MechModeDef mode;
-                mode._id             = hashed_string( pModeID );
-                mode._speed          = MathUtil::max( 0.0f, modeNode.getAttributeFloat( "speed", node.getAttributeFloat( "speed", mode._speed ) ) );
-                mode._boostCostScale = MathUtil::max( 0.0f, modeNode.getAttributeFloat( "boostCostScale", mode._boostCostScale ) );
-                MechCatalogInternal::readWeapons( modeNode, sourceName, mode );
-                def._listMode.push_back( mode );
+                if ( loadMech( node, sourceName ) )
+                    ++loadedCount;
             }
-            if ( def._listMode.empty() )
+            else if ( StringUtil::equals( name, string_view( "Class" ), true ) )
             {
-                MechModeDef mode;
-                mode._id    = hashed_string( "default" );
-                mode._speed = MathUtil::max( 0.0f, node.getAttributeFloat( "speed", mode._speed ) );
-                MechCatalogInternal::readWeapons( node, sourceName, mode );
-                def._listMode.push_back( mode );
+                if ( loadClass( node, sourceName ) == false )
+                    SW_LOG_ERROR( "%#: <Class> was not read", sourceName );
             }
-            (void)_catalogMech.add( def );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            MechSkillDef skill;
-            skill._id        = hashed_string( pID );
-            skill._trigger   = MechCatalogInternal::parseSkillTrigger( node.getAttributeText( "trigger" ) );
-            skill._threshold = MathUtil::saturate( node.getAttributeFloat( "threshold", skill._threshold ) );
-            skill._duration  = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", skill._duration ) );
-            skill._cooldown  = MathUtil::max( 0.0f, node.getAttributeFloat( "cooldown", skill._cooldown ) );
-            (void)skill._modifier.loadFromAttributes( node, "id,trigger,threshold,duration,cooldown" ); // 읽은 속성 수만 반환한다. 속성이 없으면 보정이 없는 것이다
-            (void)_catalogSkill.add( skill );
+            else if ( StringUtil::equals( name, string_view( "Skill" ), true ) )
+            {
+                if ( loadSkill( node, sourceName ) == false )
+                    SW_LOG_ERROR( "%#: <Skill> was not read", sourceName );
+            }
+            else
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         }
         return loadedCount;
+    }
+
+    bool MechCatalog::loadClass( const XMLNode& node, string_view sourceName )
+    {
+        const utf8*    pID        = GameDataXML::findRequiredID( node, sourceName );
+        MechRangeClass rangeClass = MechRangeClass::Near;
+        if ( pID == nullptr )
+            return false;
+        if ( parseRangeClass( string_view( pID ), rangeClass ) == false )
+        {
+            SW_LOG_ERROR( "%#: unknown mech class '%#' (Near, Mid, Far)", sourceName, pID );
+            return false;
+        }
+        StatBlock& modifier = _arrClassModifier[static_cast<size_t>( rangeClass )];
+        modifier.clear();
+        modifier.loadFromAttributes( node, "id" ); // 속성이 없으면 보정이 없는 것이다
+        return true;
+    }
+
+    bool MechCatalog::loadMech( const XMLNode& node, string_view sourceName )
+    {
+        using Internal = MechCatalogInternal;
+        MechDef def;
+        bool    bValid   = GameDataXML::readFields( node, def, sourceName, { "speed" } );
+        XMLNode modeNode = node.findChild( "Mode" );
+        if ( modeNode )
+        {
+            if ( node.findAttribute( "speed" ) != nullptr )
+            {
+                SW_LOG_ERROR( "%#: <Mech id=\"%#\" speed> belongs to each <Mode> when the mech has modes", sourceName, def._id.c_str() );
+                bValid = false;
+            }
+            for ( ; modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
+            {
+                MechModeDef mode;
+                const bool  bModeFields = GameDataXML::readFields( modeNode, mode, sourceName );
+                if ( Internal::readWeapons( modeNode, sourceName, mode ) && bModeFields )
+                    def._listMode.push_back( mode );
+                else
+                    bValid = false;
+            }
+        }
+        else
+        {
+            MechModeDef mode;
+            bValid = Internal::readDefaultMode( node, sourceName, mode ) && bValid;
+            def._listMode.push_back( mode );
+        }
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "%#: <Mech id=\"%#\"> has errors - not added", sourceName, def._id.c_str() );
+            return false;
+        }
+        (void)_catalogMech.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
+    }
+
+    bool MechCatalog::loadSkill( const XMLNode& node, string_view sourceName )
+    {
+        MechSkillDef skill;
+        if ( GameDataXML::readFields( node, skill, sourceName ) == false )
+            return false;
+        const XMLNode statNode = node.findChild( "Stats" );
+        if ( statNode )
+            skill._modifier.loadFromAttributes( statNode ); // 속성이 없으면 보정이 없는 것이다
+        (void)_catalogSkill.add( skill );
+        return true;
     }
 } // namespace sw

@@ -57,7 +57,7 @@ namespace sw
             return MetroCharmResult::Equipped;
         }
         // 넘겨 끼기는 빈 슬롯이 하나라도 남아 있을 때 한 번만 가능하다(이미 넘겼으면 더는 못 낀다).
-        if ( _pCatalog->getRules()._bAllowOvercharm == SW_TRUE && used < _notchCount )
+        if ( _pCatalog->getRules()._bAllowOvercharm && used < _notchCount )
         {
             _listEquipped.push_back( pCharm->_id );
             return MetroCharmResult::Overcharmed;

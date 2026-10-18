@@ -51,9 +51,6 @@ namespace sw
 
             static constexpr const utf8* kWallJumpName = "wallJump";
             static constexpr const utf8* kDashName     = "dash";
-
-            /** @brief 능력의 플래그입니다. 비어 있으면 `ability.<id>` 를 씁니다(공유 플래그에서 다른 키트의 같은 id 와 겹치지 않게 합니다). */
-            static hashed_string resolveFlag( const MetroAbilityDef& ability ) { return ability._flag.empty() ? hashed_string( string( "ability." ) + ability._id.c_str() ) : ability._flag; }
         };
     } // namespace
 } // namespace sw
@@ -85,7 +82,7 @@ namespace sw
         if ( pAbility == nullptr )
             return false;
         _listAbility.push_back( pAbility->_id );
-        flags.setFlag( MetroAbilitySetInternal::resolveFlag( *pAbility ), 1 );
+        flags.setFlag( pAbility->_flag, 1 );
         return true;
     }
 
@@ -96,7 +93,7 @@ namespace sw
             return 0;
         for ( const MetroAbilityDef& ability : _pCatalog->getAbilities() )
         {
-            if ( flags.hasFlag( MetroAbilitySetInternal::resolveFlag( ability ) ) )
+            if ( flags.hasFlag( ability._flag ) )
                 _listAbility.push_back( ability._id );
         }
         return static_cast<int32>( _listAbility.size() );

@@ -41,12 +41,12 @@ namespace
           <Weapon id="rifle" kind="Shot" weapon="rifle" down="30" stagger="0"/>
           <Weapon id="saber" kind="Melee" moves="slash1,slash2" range="3" down="0"/>
         </Mech>
-        <Mech id="sniper" class="Far" rank="B" cost="200" hp="1000" down="100" downRecovery="0">
+        <Mech id="sniper" name="Sniper" class="Far" rank="B" cost="200" hp="1000" down="100" downRecovery="0">
           <Mode id="ms" speed="6"><Weapon id="bazooka" kind="Special" damage="80" speed="30" homing="0" range="100" cooldown="2" down="0" stagger="0"/></Mode>
           <Mode id="ma" speed="20"><Weapon id="homing" kind="Special" damage="80" speed="30" homing="180" range="100" cooldown="2" down="0" stagger="0"/></Mode>
         </Mech>
-        <Mech id="heavy" class="Mid" rank="S" cost="600" hp="1000" down="100" downRecovery="0" downTime="1" wakeInvulnerable="1"/>
-        <Skill id="berserk" trigger="HealthBelow" threshold="0.5" duration="10" attack="2"/>
+        <Mech id="heavy" name="Heavy" class="Mid" rank="S" cost="600" hp="1000" down="100" downRecovery="0" downTime="1" wakeInvulnerable="1"/>
+        <Skill id="berserk" trigger="HealthBelow" threshold="0.5" duration="10"><Stats attack="2"/></Skill>
       </MechCatalog>)";
 
     /** @brief 카탈로그 셋을 함께 쥡니다(월드가 빌려 쓴다). */

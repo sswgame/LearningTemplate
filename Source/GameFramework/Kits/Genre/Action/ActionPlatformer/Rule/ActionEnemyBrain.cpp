@@ -54,9 +54,9 @@ namespace sw
             pState = getState();
         }
         action._moveX         = pState->_moveX * static_cast<float32>( _facing );
-        action._bAttack       = pState->_bAttack;
+        action._bAttack       = pState->_bAttack ? SW_TRUE : SW_FALSE;
         action._bStateChanged = _bEntered;
-        if ( _bEntered == SW_TRUE && pState->_bFire == SW_TRUE )
+        if ( _bEntered == SW_TRUE && pState->_bFire )
         {
             action._bFire     = SW_TRUE;
             action._fireSpeed = pState->_fireSpeed;

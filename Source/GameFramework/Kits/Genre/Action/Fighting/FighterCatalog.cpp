@@ -3,11 +3,12 @@
 #include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -17,10 +18,13 @@ namespace sw
     {
         struct FighterCatalogInternal
         {
-            /** @brief "Standing,Crouching,Airborne,Stance" 를 비트로 읽습니다. 모르는 낱말은 경고하고, 문자열이 비면 @p fallback 을 반환합니다. */
-            static uint8 parsePostureMask( string_view text, uint8 fallback, string_view sourceName, const utf8* pMoveID )
+            /** @brief "Standing,Crouching,Airborne,Stance" 를 비트로 읽습니다. 문자열이 비면 @p inoutMask 를 그대로 둡니다(스키마 초기값). 모르는 낱말은 오류입니다. */
+            [[nodiscard]] static bool readPostureMask( string_view text, string_view sourceName, const hashed_string& moveID, uint8& inoutMask )
             {
-                uint8 mask = 0;
+                if ( text.empty() )
+                    return true;
+                uint8 mask   = 0;
+                bool  bValid = true;
                 StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, "Standing", true ) )
@@ -32,16 +36,41 @@ namespace sw
                     else if ( StringUtil::equals( token, "Stance", true ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Stance ) ) );
                     else
-                        SW_LOG_WARNING( "%#: move '%#' has an unknown posture '%#' - ignored", sourceName, pMoveID, string( token ) );
+                    {
+                        SW_LOG_ERROR( "%#: move '%#' has an unknown posture '%#' (Standing, Crouching, Airborne, Stance)", sourceName, moveID.c_str(), string( token ) );
+                        bValid = false;
+                    }
                 } );
-                return mask != 0 ? mask : fallback;
+                if ( bValid )
+                    inoutMask = mask;
+                return bValid;
             }
 
-            /** @brief 커맨드 표기를 읽습니다. 문자열이 비면 @p pDefault 를 씁니다. */
-            [[nodiscard]] static bool parseCommandOr( const InputCommandParser& parser, string_view text, const utf8* pDefault, InputCommand& outCommand )
+            /** @brief 반드시 적는 커맨드 속성 @p pName 을 읽습니다. 없거나 읽지 못하면 오류입니다. */
+            [[nodiscard]] static bool readRequiredCommand( const InputCommandParser& parser, const XMLNode& node, const utf8* pName, string_view sourceName,
+                                                           InputCommand& outCommand )
             {
-                const string_view notation = text.empty() ? string_view( pDefault ) : text;
-                return parser.parse( notation, outCommand );
+                const string_view notation = node.getAttributeText( pName );
+                if ( notation.empty() == false && parser.parse( notation, outCommand ) )
+                    return true;
+                SW_LOG_ERROR( "%#: <%# id=\"%#\"> needs a readable %#=\"...\" command", sourceName, node.getName(), node.getAttributeText( "id" ), pName );
+                return false;
+            }
+
+            /** @brief 없어도 되는 정수 속성을 읽습니다. 없으면 @p inoutValue 를 그대로 두고, 깨졌거나 @p minValue 보다 작으면 오류입니다. */
+            [[nodiscard]] static bool readOptionalInt( const XMLNode& node, const utf8* pName, int32 minValue, string_view sourceName, int32& inoutValue )
+            {
+                std::optional<int32> value;
+                const bool           bRead = node.readOptionalAttribute( pName, value );
+                if ( bRead == false || ( value.has_value() && *value < minValue ) )
+                {
+                    SW_LOG_ERROR( "%#: <%# id=\"%#\" %#=\"%#\"> needs an integer of %# or more", sourceName, node.getName(), node.getAttributeText( "id" ), pName,
+                                  node.getAttributeText( pName ), minValue );
+                    return false;
+                }
+                if ( value.has_value() )
+                    inoutValue = *value;
+                return true;
             }
 
             static void addStance( FighterDef& fighter, const hashed_string& stance )
@@ -50,12 +79,53 @@ namespace sw
                     return;
                 fighter._listStance.push_back( stance );
             }
+
+            /** @brief `<Move>` 하나를 읽습니다. 오류면 false 이고 @p outMove 를 쓰지 않습니다. */
+            [[nodiscard]] static bool readMove( const XMLNode& node, const InputCommandParser& parser, const MoveCatalog& moveCatalog, string_view sourceName,
+                                                FighterMove& outMove )
+            {
+                const utf8* pMoveID = GameDataXML::findRequiredID( node, sourceName );
+                if ( pMoveID == nullptr )
+                    return false;
+                FighterMove          move;
+                bool                 bValid   = GameDataXML::readFields( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
+                const string_view    framesID = node.getAttributeText( "frames" );
+                const MoveFrameData* pFrame   = moveCatalog.find( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
+                if ( pFrame == nullptr )
+                {
+                    SW_LOG_ERROR( "%#: move '%#' has no frame data in the MoveCatalog", sourceName, pMoveID );
+                    return false;
+                }
+                move._frame       = *pFrame;
+                move._frame._id   = hashed_string( pMoveID );
+                bValid            = readRequiredCommand( parser, node, "command", sourceName, move._command ) && bValid;
+                move._command._id = move._frame._id;
+                bValid            = readOptionalInt( node, "priority", 0, sourceName, move._command._priority ) && bValid;
+                bValid            = readOptionalInt( node, "maxGap", 1, sourceName, move._command._maxGap ) && bValid;
+                if ( move._stance.empty() == false )
+                    move._postureMask = static_cast<uint8>( 1u << static_cast<uint32>( FighterPosture::Stance ) );
+                else
+                    bValid = readPostureMask( node.getAttributeText( "from" ), sourceName, move._frame._id, move._postureMask ) && bValid;
+                const string_view breakButtons = node.getAttributeText( "breakButtons" );
+                if ( breakButtons.empty() == false )
+                {
+                    InputCommand breakCommand;
+                    if ( parser.parse( breakButtons, breakCommand ) && breakCommand._listStep.size() == 1 )
+                        move._breakButtons = breakCommand._listStep[0]._buttons;
+                    else
+                    {
+                        SW_LOG_ERROR( "%#: move '%#' has unreadable breakButtons '%#' (one step such as \"1\" or \"1+2\")", sourceName, pMoveID, breakButtons );
+                        bValid = false;
+                    }
+                }
+                if ( bValid == false )
+                    return false;
+                outMove = move;
+                return true;
+            }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
     // ------------------------------------------------------------------------------
     // FighterDef
     // ------------------------------------------------------------------------------
@@ -112,98 +182,38 @@ namespace sw
 
     uint32 FighterCatalog::loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName )
     {
+        using Internal = FighterCatalogInternal;
         InputCommandParser parser;
         const string_view  buttonNames = root.getAttributeText( "buttons" );
         if ( buttonNames.empty() == false )
             parser.setButtonNames( buttonNames );
 
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Fighter" ); node; node = node.findNextSibling( "Fighter" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
             FighterDef fighter;
-            fighter._id             = hashed_string( pID );
-            const utf8* pName       = node.findAttribute( "name" );
-            fighter._name           = pName != nullptr ? pName : pID;
-            fighter._health         = MathUtil::max( 1, node.getAttributeInt( "health", fighter._health ) );
-            fighter._sidestepFrames = MathUtil::max( 1, node.getAttributeInt( "sidestepFrames", fighter._sidestepFrames ) );
-            fighter._jumpFrames     = MathUtil::max( 2, node.getAttributeInt( "jumpFrames", fighter._jumpFrames ) );
-            fighter._walkSpeed      = MathUtil::max( 0.0f, node.getAttributeFloat( "walkSpeed", fighter._walkSpeed ) );
-            fighter._hurtRadius     = MathUtil::max( 0.01f, node.getAttributeFloat( "hurtRadius", fighter._hurtRadius ) );
-            fighter._pushRadius     = MathUtil::max( 0.0f, node.getAttributeFloat( "pushRadius", fighter._pushRadius ) );
-            fighter._standHeight    = MathUtil::max( 0.1f, node.getAttributeFloat( "standHeight", fighter._standHeight ) );
-            fighter._crouchHeight   = MathUtil::clamp( node.getAttributeFloat( "crouchHeight", fighter._crouchHeight ), 0.1f, fighter._standHeight );
-            fighter._sidestepAngle  = node.getAttributeFloat( "sidestepAngle", fighter._sidestepAngle );
-            fighter._jumpHeight     = MathUtil::max( 0.0f, node.getAttributeFloat( "jumpHeight", fighter._jumpHeight ) );
-            fighter._jumpDistance   = node.getAttributeFloat( "jumpDistance", fighter._jumpDistance );
-            const bool bSidestepOk  = FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "sidestep" ), "u", fighter._sidestepUp );
-            const bool bSidestepDownOk =
-                FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "sidestepDown" ), "d,n", fighter._sidestepDown );
-            const bool bJumpOk                   = FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "jump" ), "u/f", fighter._jump );
-            const bool bAnyMoveCommandUnreadable = bSidestepOk == false || bSidestepDownOk == false || bJumpOk == false;
-            if ( bAnyMoveCommandUnreadable )
-                SW_LOG_WARNING( "%#: fighter '%#' has an unreadable sidestep/jump command - movement disabled", sourceName, pID );
+            bool       bValid = GameDataXML::readFields( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
+            bValid            = Internal::readRequiredCommand( parser, node, "sidestep", sourceName, fighter._sidestepUp ) && bValid;
+            bValid            = Internal::readRequiredCommand( parser, node, "sidestepDown", sourceName, fighter._sidestepDown ) && bValid;
+            bValid            = Internal::readRequiredCommand( parser, node, "jump", sourceName, fighter._jump ) && bValid;
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: <Fighter id=\"%#\"> has errors - not added", sourceName, fighter._id.c_str() );
+                continue;
+            }
 
+            // 틀린 기술은 그 기술만 버린다(오류는 남긴다) — 나머지 기술로 캐릭터를 쓸 수 있다.
             for ( XMLNode child = node.findChild( "Move" ); child; child = child.findNextSibling( "Move" ) )
             {
-                const utf8* pMoveID = GameDataXML::findRequiredID( child, sourceName );
-                if ( pMoveID == nullptr )
-                    continue;
-                const string_view    framesID = child.getAttributeText( "frames" );
-                const MoveFrameData* pFrame   = moveCatalog.find( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
-                if ( pFrame == nullptr )
-                {
-                    SW_LOG_WARNING( "%#: fighter '%#' move '%#' has no frame data in the MoveCatalog - skipped", sourceName, pID, pMoveID );
-                    continue;
-                }
                 FighterMove move;
-                move._frame     = *pFrame;
-                move._frame._id = hashed_string( pMoveID );
-                if ( parser.parse( child.getAttributeText( "command" ), move._command ) == false )
-                {
-                    SW_LOG_WARNING( "%#: fighter '%#' move '%#' has an unreadable command - skipped", sourceName, pID, pMoveID );
-                    continue;
-                }
-                move._command._id        = move._frame._id;
-                move._command._priority  = child.getAttributeInt( "priority", 0 );
-                move._command._maxGap    = MathUtil::max( 1, child.getAttributeInt( "maxGap", move._command._maxGap ) );
-                const string_view stance = child.getAttributeText( "stance" );
-                if ( stance.empty() == false )
-                {
-                    move._stance      = hashed_string( stance );
-                    move._postureMask = static_cast<uint8>( 1u << static_cast<uint32>( FighterPosture::Stance ) );
-                }
+                if ( Internal::readMove( child, parser, moveCatalog, sourceName, move ) )
+                    fighter._listMove.push_back( move );
                 else
-                {
-                    move._postureMask = FighterCatalogInternal::parsePostureMask( child.getAttributeText( "from" ), move._postureMask, sourceName, pMoveID );
-                }
-                const string_view enterStance = child.getAttributeText( "enterStance" );
-                if ( enterStance.empty() == false )
-                    move._enterStance = hashed_string( enterStance );
-                const string_view breakButtons = child.getAttributeText( "breakButtons" );
-                if ( breakButtons.empty() == false )
-                {
-                    InputCommand breakCommand;
-                    if ( parser.parse( breakButtons, breakCommand ) && breakCommand._listStep.size() == 1 )
-                        move._breakButtons = breakCommand._listStep[0]._buttons;
-                    else
-                        SW_LOG_WARNING( "%#: fighter '%#' move '%#' has unreadable breakButtons - throw cannot be broken", sourceName, pID, pMoveID );
-                }
-                move._pushback    = MathUtil::max( 0.0f, child.getAttributeFloat( "pushback", move._pushback ) );
-                move._bStringOnly = child.getAttributeBool( "stringOnly", false ) ? SW_TRUE : SW_FALSE;
-                move._bTracking   = child.getAttributeBool( "tracking", false ) ? SW_TRUE : SW_FALSE;
-                move._bScrew      = child.getAttributeBool( "screw", false ) ? SW_TRUE : SW_FALSE;
-                move._bBound      = child.getAttributeBool( "bound", false ) ? SW_TRUE : SW_FALSE;
-                move._bGroundHit  = child.getAttributeBool( "groundHit", false ) ? SW_TRUE : SW_FALSE;
-                move._bNearWall   = child.getAttributeBool( "nearWall", false ) ? SW_TRUE : SW_FALSE;
-                move._bRageArt    = child.getAttributeBool( "rageArt", false ) ? SW_TRUE : SW_FALSE;
-                move._bHeatBurst  = child.getAttributeBool( "heatBurst", false ) ? SW_TRUE : SW_FALSE;
-                fighter._listMove.push_back( move );
+                    SW_LOG_ERROR( "%#: fighter '%#' move was not read - skipped", sourceName, fighter._id.c_str() );
             }
             if ( fighter._listMove.empty() )
-                SW_LOG_WARNING( "%#: fighter '%#' has no usable <Move>", sourceName, pID );
+                SW_LOG_WARNING( "%#: fighter '%#' has no usable <Move>", sourceName, fighter._id.c_str() );
             addFighter( fighter );
             ++loadedCount;
         }

@@ -29,12 +29,30 @@ namespace sw
         Shrine
     };
 
-    /** @brief 탑이나 사당 하나입니다. */
+    /** @brief 탑이나 사당 하나입니다. 종류는 원소 이름(`<Tower>` · `<Shrine>`)입니다. */
+    REFLECT()
     struct AdventureLandmarkDef
     {
-        hashed_string         _id{};
-        hashed_string         _region{}; ///< 탑이면 드러낼 지역, 사당이면 사당이 놓인 지역
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        hashed_string         _region{}; ///< 탑이면 드러낼 지역(탑은 반드시 적는다), 사당이면 사당이 놓인 지역
         AdventureLandmarkKind _kind{ AdventureLandmarkKind::Shrine };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 루트 `<AdventureWorld>` 의 속성입니다. */
+    REFLECT()
+    struct AdventureWorldRootDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1 )
+        int32 _orbsPerExchange{ 4 };
     };
 } // namespace sw
 
@@ -92,7 +110,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "AdventureWorld"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-        void                         readLandmarks( const XMLNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount );
+        [[nodiscard]] bool           readLandmarks( const XMLNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount );
 
         GameCatalog<AdventureLandmarkDef> _catalog;
         vector<uint8>                     _listActivated; ///< 탑이면 깨웠는지, 사당이면 찾았는지(카탈로그 순서)

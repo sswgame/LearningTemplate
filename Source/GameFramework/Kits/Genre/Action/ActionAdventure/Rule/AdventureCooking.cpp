@@ -17,27 +17,18 @@ namespace sw
 
     namespace
     {
-        struct AdventureCookingInternal
+        /** @brief 레시피의 재료가 냄비와 똑같은지(종류와 개수 모두) 확인합니다. */
+        bool isSameItems( const ItemStackList& lhs, const ItemStackList& rhs )
         {
-            static hashed_string readName( const XMLNode& node, const utf8* pName, const utf8* pFallback )
+            if ( lhs.getItems().size() != rhs.getItems().size() )
+                return false;
+            for ( const auto& [itemID, count] : lhs.getItems() )
             {
-                const utf8* pValue = node.findAttribute( pName );
-                return hashed_string( pValue != nullptr && pValue[0] != '\0' ? pValue : pFallback );
-            }
-
-            /** @brief 레시피의 재료가 냄비와 똑같은지(종류와 개수 모두) 확인합니다. */
-            static bool isSameItems( const ItemStackList& lhs, const ItemStackList& rhs )
-            {
-                if ( lhs.getItems().size() != rhs.getItems().size() )
+                if ( rhs.getItemCount( itemID ) != count )
                     return false;
-                for ( const auto& [itemID, count] : lhs.getItems() )
-                {
-                    if ( rhs.getItemCount( itemID ) != count )
-                        return false;
-                }
-                return true;
             }
-        };
+            return true;
+        }
     } // namespace
 } // namespace sw
 
@@ -46,52 +37,34 @@ namespace sw
     AdventureCooking::AdventureCooking()
         : _ingredientCatalog{}
         , _effectCatalog{}
-        , _station{ "CookingPot" }
-        , _genericDish{ "simmeredDish" }
-        , _dubiousDish{ "dubiousFood" }
-        , _heartScale{ 2.0f }
-        , _durationPerIngredient{ 30.0f }
-        , _maxIngredientCount{ 5 }
-        , _dubiousHeartQuarters{ 4 }
+        , _rules{}
     {
     }
 
     uint32 AdventureCooking::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _station               = AdventureCookingInternal::readName( root, "station", "CookingPot" );
-        _genericDish           = AdventureCookingInternal::readName( root, "generic", "simmeredDish" );
-        _dubiousDish           = AdventureCookingInternal::readName( root, "dubious", "dubiousFood" );
-        _heartScale            = MathUtil::max( 0.0f, root.getAttributeFloat( "heartScale", _heartScale ) );
-        _durationPerIngredient = MathUtil::max( 0.0f, root.getAttributeFloat( "durationPerIngredient", _durationPerIngredient ) );
-        _maxIngredientCount    = MathUtil::max( 1, root.getAttributeInt( "maxIngredients", _maxIngredientCount ) );
-        _dubiousHeartQuarters  = MathUtil::max( 0, root.getAttributeInt( "dubiousHearts", _dubiousHeartQuarters ) );
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        AdventureCookingRulesDef rules;
+        if ( GameDataXML::readFields( root, rules, sourceName ) == false )
+            return 0;
+        _rules = rules;
         for ( XMLNode node = root.findChild( "Effect" ); node; node = node.findNextSibling( "Effect" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
             AdventureCookEffectDef effect;
-            effect._id           = hashed_string( pID );
-            effect._tier2Potency = MathUtil::max( 0.0f, node.getAttributeFloat( "tier2", effect._tier2Potency ) );
-            effect._tier3Potency = MathUtil::max( effect._tier2Potency, node.getAttributeFloat( "tier3", effect._tier3Potency ) );
-            effect._maxDuration  = MathUtil::max( 0.0f, node.getAttributeFloat( "maxDuration", effect._maxDuration ) );
-            (void)_effectCatalog.add( effect );
+            if ( GameDataXML::readFields( node, effect, sourceName ) )
+                (void)_effectCatalog.add( effect ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         }
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Ingredient" ); node; node = node.findNextSibling( "Ingredient" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
             AdventureIngredientDef ingredient;
-            ingredient._id            = hashed_string( pID );
-            const utf8* pEffect       = node.findAttribute( "effect" );
-            ingredient._effect        = pEffect != nullptr ? hashed_string( pEffect ) : hashed_string{};
-            ingredient._potency       = MathUtil::max( 0.0f, node.getAttributeFloat( "potency", 0.0f ) );
-            ingredient._duration      = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", 0.0f ) );
-            ingredient._heartQuarters = MathUtil::max( 0, node.getAttributeInt( "hearts", 0 ) );
+            if ( GameDataXML::readFields( node, ingredient, sourceName ) == false )
+                continue;
             if ( ingredient._effect.empty() == false && _effectCatalog.find( ingredient._effect ) == nullptr )
-                SW_LOG_WARNING( "%#: ingredient '%#' has an undeclared effect '%#' - tier stays 1", sourceName, pID, ingredient._effect.c_str() );
+            {
+                SW_LOG_ERROR( "%#: ingredient '%#' has an undeclared effect '%#' - not added", sourceName, ingredient._id.c_str(), ingredient._effect.c_str() );
+                continue;
+            }
             (void)_ingredientCatalog.add( ingredient );
             ++loadedCount;
         }
@@ -103,7 +76,7 @@ namespace sw
         outDish = AdventureDish{};
         if ( listIngredient.empty() )
             return AdventureCookResult::EmptyPot;
-        if ( static_cast<int32>( listIngredient.size() ) > _maxIngredientCount )
+        if ( static_cast<int32>( listIngredient.size() ) > _rules._maxIngredientCount )
             return AdventureCookResult::TooManyIngredients;
         int32         heartQuarters = 0;
         float32       potency       = 0.0f;
@@ -128,19 +101,19 @@ namespace sw
         if ( bMixed )
         {
             // 서로 다른 효과는 서로를 지운다. 효과도 회복 배율도 없는 수상한 요리가 된다.
-            outDish._itemID        = _dubiousDish;
-            outDish._heartQuarters = _dubiousHeartQuarters;
+            outDish._itemID        = _rules._dubiousDish;
+            outDish._heartQuarters = _rules._dubiousHeartQuarters;
             outDish._bDubious      = SW_TRUE;
             return AdventureCookResult::Ok;
         }
-        outDish._itemID        = _genericDish;
-        outDish._heartQuarters = static_cast<int32>( static_cast<float32>( heartQuarters ) * _heartScale + 0.5f );
+        outDish._itemID        = _rules._genericDish;
+        outDish._heartQuarters = static_cast<int32>( static_cast<float32>( heartQuarters ) * _rules._heartScale + 0.5f );
         if ( effect.empty() )
             return AdventureCookResult::Ok;
         const AdventureCookEffectDef* pEffect = _effectCatalog.find( effect );
         outDish._effect                       = effect;
         outDish._potency                      = potency;
-        outDish._duration                     = duration + _durationPerIngredient * static_cast<float32>( listIngredient.size() );
+        outDish._duration                     = duration + _rules._durationPerIngredient * static_cast<float32>( listIngredient.size() );
         outDish._effectTier                   = 1;
         if ( pEffect != nullptr )
         {
@@ -173,10 +146,10 @@ namespace sw
             for ( const RecipeDef& recipe : recipes.getAll() )
             {
                 const bool bSingleOutput   = recipe._outputs.getItems().size() == 1;
-                const bool bRecipeMismatch = ( recipe._station == _station ) == false || bSingleOutput == false || AdventureCookingInternal::isSameItems( recipe._inputs, pot ) == false;
+                const bool bRecipeMismatch = ( recipe._station == _rules._station ) == false || bSingleOutput == false || isSameItems( recipe._inputs, pot ) == false;
                 if ( bRecipeMismatch )
                     continue;
-                const CraftResult craftResult = crafter.craft( recipe._id, inventory, _station, level );
+                const CraftResult craftResult = crafter.craft( recipe._id, inventory, _rules._station, level );
                 if ( craftResult == CraftResult::NoRoom )
                     return AdventureCookResult::NoRoom;
                 if ( craftResult != CraftResult::Ok )

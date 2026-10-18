@@ -140,7 +140,6 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| D4 | 액션 키트(Mech 38, BattleRoyale 33, ActionPlatformer 29, Metroidvania 26, Fighter 20, ActionAdventure) | `GameFramework/Kits/Genre/Action/`, 데이터 | D1 | 위와 같음 | 없음 |
 | D5 | 전략, 캐주얼, 시뮬레이션 장르와 Feature 키트 | `GameFramework/Kits/Genre/{Strategy,Casual,Simulation}/`, `GameFramework/Kits/Feature/`, 데이터 | D1 | 위와 같음 | 없음 |
 | D6 | Base 의 카탈로그(CameraPreset 43, Combat 36, AI 35, Ability 22, Inventory 17 등)와 이름으로 찾는 값 모음(블랙보드, 스탯, 어빌리티 속성, SetByCaller, 원소 규칙) | `GameFramework/Base/`, 데이터 | D1 | Base 테스트, 대표 셋 실행 | 없음 |
 | D7 | 엔진의 손 읽기(Input 33, TileMap 15, Telemetry 10, Character Fit, `FloatCurve`, Sprite 클립) | `Engine/Input/`, `Engine/TileMap/`, `Engine/Telemetry/`, `Engine/Character/Fit/`, `Engine/Utility/FloatCurve.*`, `Engine/Animation/Sprite/` | D1 | 입력 맵, 타일맵, 텔레메트리 테스트 | 없음 |
