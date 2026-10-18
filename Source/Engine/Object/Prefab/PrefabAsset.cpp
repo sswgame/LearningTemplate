@@ -20,6 +20,7 @@
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
+#include "Engine/Resource/Cook/CookJob.h"
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -609,11 +610,36 @@ namespace sw
 
     bool PrefabAsset::loadFromXMLFile( string_view assetRelativePath )
     {
+        return loadFromXMLSource( assetRelativePath, ReadSource::Resource );
+    }
+
+    bool PrefabAsset::loadFromJSONFile( string_view assetRelativePath )
+    {
+        return loadFromJSONSource( assetRelativePath, ReadSource::Resource );
+    }
+
+    bool PrefabAsset::loadFromDiskFile( string_view diskPath )
+    {
+        // 형식은 확장자 하나로 정한다 — `saveToFile` · 쿠커와 같은 규칙.
+        if ( StringUtil::endsWith( diskPath, ".prefab.json", true ) )
+            return loadFromJSONSource( diskPath, ReadSource::DiskFile );
+        if ( StringUtil::endsWith( diskPath, ".prefab.xml", true ) )
+            return loadFromXMLSource( diskPath, ReadSource::DiskFile );
+        SW_LOG_ERROR( "Not a prefab source file (.prefab.xml / .prefab.json): %#", diskPath );
+        return false;
+    }
+
+    bool PrefabAsset::loadFromXMLSource( string_view path, ReadSource source )
+    {
         _bValid = SW_FALSE;
-        AssetLoadScope loadScope( "Prefab", assetRelativePath );
+        AssetLoadScope loadScope( "Prefab", path );
         string         absPath;
         XMLDocument    doc;
-        if ( doc.loadResource( assetRelativePath, &absPath ) == false )
+        // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( path, &absPath );
+        if ( source == ReadSource::DiskFile )
+            absPath = string( path );
+        if ( bRead == false )
         {
             SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
             return false;
@@ -661,12 +687,15 @@ namespace sw
         return true;
     }
 
-    bool PrefabAsset::loadFromJSONFile( string_view assetRelativePath )
+    bool PrefabAsset::loadFromJSONSource( string_view path, ReadSource source )
     {
         _bValid = SW_FALSE;
         string       absPath;
         JSONDocument doc;
-        if ( doc.loadResource( assetRelativePath, &absPath ) == false )
+        const bool   bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( path, &absPath );
+        if ( source == ReadSource::DiskFile )
+            absPath = string( path );
+        if ( bRead == false )
         {
             SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
             return false;
@@ -1074,9 +1103,12 @@ namespace sw
         if ( binPath.empty() )
             binPath = resolvedPath;
 
-        // 배포 구성은 쿠킹본만 읽는다. 소스 트리를 올린 쿠킹(`ContentSource::SourceTree`)만 소스를 읽는다 — 쿠킹의 입력은 소스다.
+        // 배포 구성은 쿠킹본만 읽는다. 쿠킹은 소스를 읽는다 — 쿠킹의 입력은 소스다. 쿠킹인지는 둘 중 하나로 안다: 소스 트리를 올린 쿠킹 프로세스
+        // (`ContentSource::SourceTree`), 또는 이 스레드의 쿠킹 작업(`CookJob` — 쿠커가 작업 안에서 씬을 지으며 프리팹을 부른다. 프로세스의 콘텐츠
+        // 출처와 상관없이 그 작업의 입력은 소스이고, 쿠킹본을 읽으면 아직 굽지 않은 프리팹이 없다고 지거나 낡은 것을 읽는다).
 #if defined( SW_SHIPPING )
-        const bool bReadsSource = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getContentSource() == ContentSource::SourceTree;
+        const bool bSourceTreeProcess = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getContentSource() == ContentSource::SourceTree;
+        const bool bReadsSource       = bSourceTreeProcess || CookJob::findCurrent() != nullptr;
 #else
         constexpr bool bReadsSource = true;
 #endif
@@ -1604,8 +1636,9 @@ namespace sw
                 // 중첩 인스턴스의 원본을 읽는 캐시는 작업마다 새로 둔다 — 앞 작업이 읽어 둔 원본을 쓰면 그 읽기가 이 작업의 입력에서 빠진다.
                 PrefabCache nestedPrefabs;
                 PrefabAsset asset;
-                const bool  bLoaded    = bJSON ? asset.loadFromJSONFile( normalized ) : asset.loadFromXMLFile( normalized );
-                const bool  bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
+                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
+                const bool bLoaded    = asset.loadFromDiskFile( normalized );
+                const bool bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
                 if ( bFlattened == false || asset.saveToBinaryFile( outputPath ) == false )
                 {
                     SW_LOG_WARNING( "Prefab cook failed for '%#'", normalized );

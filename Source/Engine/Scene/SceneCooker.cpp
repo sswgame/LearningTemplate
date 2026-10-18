@@ -165,7 +165,8 @@ namespace sw
                                        string_view activePackRoot, const string& outputPath )
             {
                 SceneDocument doc{};
-                if ( doc.loadXML( scenePath ) == false )
+                // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
+                if ( doc.loadXMLFromDiskFile( scenePath ) == false )
                 {
                     SW_LOG_ERROR( "Scene cook failed to read '%#'.", scenePath );
                     return CookStep::Failed;

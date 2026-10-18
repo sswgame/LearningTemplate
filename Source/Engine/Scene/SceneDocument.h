@@ -52,12 +52,29 @@ namespace sw
         [[nodiscard]] SW_API bool load( string_view path );
         /** @brief 리소스 상대/절대 경로에서 XML 을 로드합니다. */
         [[nodiscard]] SW_API bool loadXML( string_view path );
+        /**
+         * @brief **디스크 파일**에서 XML 을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다.
+         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadXML` 에 넣으면 팩 전용 구성이 거절합니다.
+         *          게임 런타임 코드는 쓰지 않습니다(`CheckRuntimeResourceDiskAccess`).
+         */
+        [[nodiscard]] SW_API bool loadXMLFromDiskFile( string_view diskPath );
         /** @brief XML 을 리소스 상대/절대 경로에 저장합니다. */
         [[nodiscard]] SW_API bool saveXML( string_view path ) const;
         /** @brief 리소스 상대/절대 경로에서 바이너리(SCN1)를 로드합니다. */
         [[nodiscard]] SW_API bool loadBinary( string_view path );
         /** @brief 바이너리(SCN1)를 리소스 상대/절대 경로에 저장합니다. */
         [[nodiscard]] SW_API bool saveBinary( string_view path ) const;
+
+    private:
+        /** @brief 본문을 어디서 읽는지입니다. 리소스 id(낱개 파일 정책 · 팩) 또는 디스크 파일. */
+        enum class ReadSource : uint8
+        {
+            Resource,
+            DiskFile,
+        };
+
+        /** @brief XML 읽기 입구 둘(`loadXML` · `loadXMLFromDiskFile`)의 본문입니다. */
+        [[nodiscard]] bool loadXMLSource( string_view path, ReadSource source );
     };
 
 } // namespace sw
