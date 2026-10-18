@@ -6,10 +6,8 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
-#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Scene/Scene.h"
 
 namespace sw
 {
@@ -43,27 +41,17 @@ namespace sw
         }
     }
 
-    void FrameRenderer::updatePassConstants( FramePassContext& context )
+    void FrameRenderer::updatePassConstants( FramePassContext& context, const float4x4& mainViewProj )
     {
         // **프레임당 한 번** 프레임 시드(_frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
         //
-        // 뷰 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 설정한다. 패킷이 자기 뷰 행렬을 갖고 있으면 executePacket 이
-        // 그 위에 덮어쓴다. 그림자는 `applyFrameShadow` 가 준비한 주 시점의 것이다(그림자 빛이 없으면 그림자 없는 뷰).
+        // 주 시점 뷰-투영은 호출자가 카메라에서 만들어 넘긴다(씬 직접 경로는 씬의 게임 카메라, 패킷 경로는 패킷의 주 시점).
+        // 그림자는 `applyFrameShadow` 가 준비한 주 시점의 것이다(그림자 빛이 없으면 그림자 없는 뷰).
         applyViewShadowConstants( context, _mainView._shadow );
         view( RenderViewType::Shadow ).setViewProjection( _mainView._shadow._cullViewProj );
 
-        CameraComponent* pCam = ( _pScene != nullptr ) ? _pScene->getActiveGameCamera() : nullptr;
-        if ( pCam != nullptr )
-        {
-            applyViewFromCamera( context, pCam );
-        }
-        else
-        {
-            float4x4 viewProj = float4x4::Identity;
-            computeViewProj( viewProj );
-            applyViewProjection( context, viewProj );
-        }
+        applyViewProjection( context, mainViewProj );
         context._passValues.setMatrix( passConstantNames()._world, context._world );
 
         context._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
@@ -94,17 +82,6 @@ namespace sw
         context._passValues.setUint( passConstantNames()._flags, flags );
     }
 
-    void FrameRenderer::applyViewFromCamera( FramePassContext& context, CameraComponent* pCamera )
-    {
-        if ( pCamera == nullptr )
-            return;
-        const TransientAttachmentPool& pool     = activePool();
-        const float32                  aspect   = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
-                                                                           : ( 16.0f / 9.0f );
-        const float4x4                 viewProj = pCamera->getViewProjectionMatrix( aspect );
-        applyViewProjection( context, viewProj );
-    }
-
     void FrameRenderer::applyViewProjection( FramePassContext& context, const float4x4& viewProj )
     {
         context._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
@@ -113,22 +90,6 @@ namespace sw
         context._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
         // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
         activeCullInput().setViewProjection( viewProj );
-    }
-
-    void FrameRenderer::computeViewProj( float4x4& outMat ) const
-    {
-        // CameraComponent 가 없을 때만 쓰는 폴백 궤도 카메라다. 원점을 바라본다.
-        // CameraComponent::getViewMatrix 와 같은 makeLookAt 으로 만든다. 주의: view 행렬을 직접 채우며 z축을
-        // eye.normalize() 로 잡으면 원점을 등지고 보는 셈이라, 이 엔진이 쓰는 좌수 투영
-        // (makePerspectiveFieldOfView, w' = z_view)에서는 원점이 뷰 z = -|eye| 로 카메라 뒤에
-        // 떨어져 아무것도 그려지지 않는다.
-        constexpr float3 eye{ 2.15f, 1.55f, 2.65f };
-
-        const TransientAttachmentPool& pool   = activePool();
-        const float32                  aspect = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
-                                                                         : ( 16.0f / 9.0f );
-
-        outMat = float4x4::makeLookAt( eye, float3::Zero, float3::Up ) * float4x4::makePerspectiveFieldOfView( CameraComponent::kDefaultFovY, aspect, CameraComponent::kDefaultNearZ, CameraComponent::kDefaultFarZ );
     }
 
     void FrameRenderer::setIdentityWorld( FramePassContext& context )

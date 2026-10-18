@@ -74,7 +74,6 @@ namespace sw
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{ nullptr }
         , _pCmd{ nullptr }
-        , _pScene{ nullptr }
         , _pTaskManager{ nullptr }
         , _gpuScene{}
         , _sceneBuilder{}
@@ -509,21 +508,24 @@ namespace sw
 
     // ---------------------------------------------------------------------------
 
-    bool FrameRenderer::execute( IRHIDevice* pDevice, Scene* pScene )
+    bool FrameRenderer::execute( IRHIDevice* pDevice, Scene& scene )
     {
         if ( isReady() == false || pDevice == nullptr )
             return false;
 
+        // 주 시점은 씬의 게임 카메라다. 없으면 기본 카메라로 대신 그리지 않고 멈춘다 — 카메라가 없다는 씬 데이터의 결함이 화면으로 가려진다.
+        scene.ensureDefaultCameras();
+        CameraComponent* pMainCamera = scene.getActiveGameCamera();
+        if ( pMainCamera == nullptr )
+        {
+            SW_LOG_ERROR( "Scene '%#' has no usable camera - nothing is drawn", scene.getName() );
+            return false;
+        }
+        Scene* const pScene = &scene;
+
         _pDevice            = pDevice;
-        _pScene             = pScene;
         _outputRenderTarget = 0;
         // 주 시점의 출력 설정(사각형, 배율, 끌 기능, 컷)은 패킷 경로와 같은 규칙으로 카메라에서 읽는다.
-        CameraComponent* pMainCamera = nullptr;
-        if ( pScene != nullptr )
-        {
-            pScene->ensureDefaultCameras();
-            pMainCamera = pScene->getActiveGameCamera();
-        }
         _mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera );
         _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
@@ -532,8 +534,8 @@ namespace sw
         // 주 광원(그림자 배치, 앰비언트)도 패킷 경로(Engine)와 **같은 규칙**으로
         // 씬에서 읽는다. 주의: 이 경로가 주 광원을 채우지 않으면 테스트가 씬에 둔 방향광이 이미지에 반영되지 않아,
         // 조명이 필요한 픽셀 검증(블룸이 1을 넘는 위치)이 불가능해진다.
-        DirectionalLightComponent* pKeyLight    = ( pScene != nullptr ) ? pScene->findActiveDirectionalLight() : nullptr;
-        DirectionalLightComponent* pShadowLight = ( pScene != nullptr ) ? pScene->findShadowCastingDirectionalLight() : nullptr;
+        DirectionalLightComponent* pKeyLight    = scene.findActiveDirectionalLight();
+        DirectionalLightComponent* pShadowLight = scene.findShadowCastingDirectionalLight();
         if ( pKeyLight != nullptr )
         {
             const float3 lightDir     = pKeyLight->getLightDirection();
@@ -546,11 +548,9 @@ namespace sw
             _frameLight = FrameLightState{};
         }
         // 그림자 배치(볼륨 맞춤 · 아틀라스 칸 · 점광 · 스폿 타일)는 패킷 경로(Engine)와 같은 함수로 주 시점 카메라의 뷰-투영에 맞춘다.
-        const float4x4 mainCameraViewProj =
-            pMainCamera != nullptr ? pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) )
-                                   : float4x4{};
-        ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, pMainCamera != nullptr ? &mainCameraViewProj : nullptr, getShadowMapResolution(),
-                                        _listScratchShadowLightIndex, _listScratchLight, _frameShadow );
+        const float4x4 mainCameraViewProj = pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) );
+        ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, &mainCameraViewProj, getShadowMapResolution(), _listScratchShadowLightIndex, _listScratchLight,
+                                        _frameShadow );
         applyFrameShadow();
         _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement );
         ensurePassResources();
@@ -558,19 +558,21 @@ namespace sw
         resetPassCbRing();
         setIdentityWorld( _frameContext );
 
-        updatePassConstants( _frameContext );
+        // 그리는 뷰-투영의 비율은 지금 풀의 크기다(위 그림자 배치의 비율은 출력 설정의 것).
+        const TransientAttachmentPool& pool       = activePool();
+        const float32                  poolAspect = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
+                                                                             : ( 16.0f / 9.0f );
+        updatePassConstants( _frameContext, pMainCamera->getViewProjectionMatrix( poolAspect ) );
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 
-        float3 cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
-        if ( pMainCamera != nullptr )
-            cameraPos = pMainCamera->getCameraPosition();
+        const float3 cameraPos                 = pMainCamera->getCameraPosition();
         view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다.
         // 추가 뷰(캡처 카메라, 화면 사각형)는 패킷 경로(Engine)와 같은 수집기와 스케줄러로 고른다. 시각은 렌더러 시계를 쓴다(테스트는 고정할 수 있다).
         _listDirectViewScratch.clear();
-        if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+        if ( scene.getObjectManager() != nullptr )
         {
-            RenderViewCollector::collectExtraViews( *pScene->getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, _outputWidth, _outputHeight,
+            RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, _outputWidth, _outputHeight,
                                                     static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
                                                     _listDirectViewScratch );
         }
@@ -582,8 +584,7 @@ namespace sw
         }
         // 패킷 경로와 **같은 경로**다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GPUScene 에는 씬을 읽는 메서드가 없다.
         // 주 카메라의 정렬 축도 패킷 경로(Engine)처럼 설정한다. 직교 카메라는 시선 축을, 원근 카메라는 거리를 쓴다.
-        if ( pMainCamera != nullptr )
-            _sceneBuilder.setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
+        _sceneBuilder.setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
         _sceneBuilder.populateFromScene( pScene, cameraPos );
         _sceneBuilder.computeViewTransparentOrders( _listDirectViewScratch );
         prepareExtraViews( _listDirectViewScratch );
@@ -592,9 +593,7 @@ namespace sw
             _sceneBuilder.exportCPUSnapshot( _sceneSnapshotScratch );
             _gpuScene.adoptCPUSnapshot( _sceneSnapshotScratch );
         }
-        const bool bOk = uploadSceneAndSubmit( pDevice, "execute" );
-        _pScene        = nullptr;
-        return bOk;
+        return uploadSceneAndSubmit( pDevice, "execute" );
     }
 
     bool FrameRenderer::executePacket( IRHIDevice* pDevice, RenderFramePacket& packet )
@@ -602,6 +601,17 @@ namespace sw
         const bool bNotExecutable = isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE;
         if ( bNotExecutable )
             return false;
+
+        // 주 시점이 없는 패킷은 그리지 않는다 — 기본 카메라로 대신 그리면 카메라가 없다는 결함이 화면으로 가려진다. 활성 씬이 없는 프레임은
+        // 그릴 3D 내용도 없어 조용히 넘기고, 3D 내용을 실은 채 시점이 빠진 패킷(만든 쪽의 결함)만 한 번 알린다. 씬에 카메라가 없는 것은 게임 스레드가 알린다.
+        if ( packet._bHasViewProj == SW_FALSE )
+        {
+            static std::atomic<bool> s_bMissingViewReported{ false };
+            const bool               bCarries3DContent = packet._gpuScene.getInstances().empty() == false || packet._listView.empty() == false;
+            if ( bCarries3DContent && s_bMissingViewReported.exchange( true ) == false )
+                SW_LOG_ERROR( "Render packet carries scene content but no main view (RenderFramePacket::setMainView) - the frame is not drawn" );
+            return false;
+        }
 
         // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
         if ( engine::areEngineServicesBound() )
@@ -611,7 +621,6 @@ namespace sw
         }
 
         _pDevice            = pDevice;
-        _pScene             = nullptr;
         _outputRenderTarget = packet._outputRenderTarget;
         _mainView._settings = packet._mainView;
         // _gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼, 핸들, 머티리얼 데이터 버퍼를 보존한다).
@@ -621,7 +630,7 @@ namespace sw
         // 캔버스(화면 2D)도 패킷으로만 온다(렌더 스레드는 위젯을 볼 수 없다). 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         setCanvasFrame( packet._canvas );
 
-        // 주 광원은 씬이 아니라 패킷으로 온다. 렌더 스레드는 씬을 볼 수 없다(_pScene = nullptr).
+        // 주 광원은 씬이 아니라 패킷으로 온다. 렌더 스레드는 씬을 볼 수 없다.
         if ( packet._bHasLight != SW_FALSE )
         {
             _frameLight._dirIntensity = packet._lightDirIntensity;
@@ -643,11 +652,8 @@ namespace sw
         resetPassCbRing();
         setIdentityWorld( _frameContext );
         // 시드는 씬 경로와 같은 updatePassConstants 로 채운다. 따로 채우면 라이트, 블룸, 아웃라인 색 상수가
-        // 빠지기 쉽다. 패킷이 자기 뷰 행렬을 가지고 있을 때만 그 위에 덮어쓴다.
-        // _pScene 이 null 이라 updatePassConstants 는 폴백 뷰를 만든다.
-        updatePassConstants( _frameContext );
-        if ( packet._bHasViewProj != SW_FALSE )
-            applyViewProjection( _frameContext, packet._viewProj ); // 역행렬과 절두체도 함께 갱신된다.
+        // 빠지기 쉽다. 뷰-투영은 패킷의 주 시점이다(역행렬과 절두체도 함께 갱신된다).
+        updatePassConstants( _frameContext, packet._viewProj );
         view( RenderViewType::Main )._position = packet._cameraPos;
         // 추가 뷰의 풀, 텍스처, 컬링 슬롯을 업로드 전에 맞춘다(기록 중에는 만들 수 없다).
         prepareExtraViews( packet._listView );

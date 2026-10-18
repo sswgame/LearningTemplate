@@ -129,9 +129,16 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief RenderPipeline XML 로 그래프를 다시 만듭니다(동기 로드). 패스 콜백은 한 번만 바인딩합니다. */
         [[nodiscard]] bool loadPipeline( string_view pipelineXMLPath );
-        /** @brief 컴파일된 그래프를 실행합니다. scene 이 있으면 자기 빌더로 스냅샷을 만들고, 패킷 경로와 같은 경로로 GPU 에 올립니다. */
-        bool execute( IRHIDevice* pDevice, Scene* pScene = nullptr );
-        /** @brief 렌더 스레드 경로입니다. 미리 만들어 둔 packet 의 GPUScene 을 쓰며 Scene 에는 접근하지 않습니다. */
+        /**
+         * @brief 컴파일된 그래프를 실행합니다. 자기 빌더로 scene 의 스냅샷을 만들고, 패킷 경로와 같은 경로로 GPU 에 올립니다.
+         * @details 주 시점은 scene 의 게임 카메라(`Scene::ensureDefaultCameras`)다. 쓸 카메라가 없으면 오류로 알리고 그리지 않은 채 false 입니다.
+         */
+        bool execute( IRHIDevice* pDevice, Scene& scene );
+        /**
+         * @brief 렌더 스레드 경로입니다. 미리 만들어 둔 packet 의 GPUScene 을 쓰며 Scene 에는 접근하지 않습니다.
+         * @details 주 시점이 없는 패킷(`RenderFramePacket::_bHasViewProj` 가 0 — 활성 씬이 없거나 씬에 카메라가 없다)은 그리지 않고 false 입니다.
+         *          3D 내용을 실은 채 주 시점이 없으면 오류로 한 번 알립니다. 주 시점은 `RenderFramePacket::setMainView` 로 싣습니다.
+         */
         bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
          * @brief 미리보기 씬 패킷(`RenderFramePacket::_listScenePreview` 의 하나)을 그 씬 키의 렌더러로 그립니다. 렌더 스레드에서 주 패킷 뒤에 부릅니다.
@@ -252,7 +259,7 @@ namespace sw
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
         RHITextureHandle getTaaHistory() const { return _mainView._taaHistory; }
         /**
-         * @brief 씬 직접 경로(`execute( pScene )`)의 출력 크기를 정합니다. 0 이면 백버퍼 크기를 씁니다. 초상화 베이크처럼 창과 다른 크기로 그릴 때 씁니다.
+         * @brief 씬 직접 경로(`execute( scene )`)의 출력 크기를 정합니다. 0 이면 백버퍼 크기를 씁니다. 초상화 베이크처럼 창과 다른 크기로 그릴 때 씁니다.
          * @details 패킷 경로는 패킷의 뷰포트 크기를 따르므로 이 값을 보지 않는다.
          */
         void setOutputSizeOverride( uint32 width, uint32 height )
@@ -502,8 +509,11 @@ namespace sw
         void registerDeclaredInputs( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /** @brief 역할의 셰이더 이름입니다. intern 된 hashed_string 입니다. */
         const hashed_string& inputRoleName( RenderPassInputRole role ) const;
-        /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드와 바인딩은 ShaderParameterBinder 가 합니다. */
-        void updatePassConstants( FramePassContext& context );
+        /**
+         * @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드와 바인딩은 ShaderParameterBinder 가 합니다.
+         * @param mainViewProj 주 시점 카메라의 뷰-투영입니다. 카메라가 없는 프레임은 여기까지 오지 않습니다(기본 카메라로 대신 그리지 않는다).
+         */
+        void updatePassConstants( FramePassContext& context, const float4x4& mainViewProj );
         /** @brief 지금 그리는 뷰에 따라 달라지는 패스 상수를 채웁니다. 외곽선 텍셀 크기와 패스 플래그(후처리 끄기)가 해당합니다. */
         void applyViewPassConstants( FramePassContext& context );
 
@@ -531,16 +541,12 @@ namespace sw
         void drawShadowTiles( FramePassContext& context, RHIDescriptorIndex passCb, bool bTransparentBatch );
         /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
         uint32 computeShadowTileCountPerView() const;
-        /** @brief 카메라의 뷰와 투영 행렬을 적용합니다. */
-        void applyViewFromCamera( FramePassContext& context, CameraComponent* pCamera );
         /**
          * @brief 뷰-투영 행렬과 **그 역행렬**을 함께 적용합니다.
          * @details 둘을 따로 채우면 언젠가 한쪽만 갱신된다. 그러면 디퍼드가 복원한 월드 위치가
          *          지난 프레임의 카메라를 가리키고, 증상은 "빛이 한 프레임 늦게 따라온다" 로 나타난다.
          */
         void applyViewProjection( FramePassContext& context, const float4x4& viewProj );
-        /** @brief 카메라의 뷰-투영 행렬을 만듭니다. */
-        void computeViewProj( float4x4& outMat ) const;
         /** @brief 월드 행렬을 단위 행렬로 설정합니다. */
         void setIdentityWorld( FramePassContext& context );
         /** @brief 드로우 직전에 리플렉션 기반으로 바인딩합니다. PassCB, MaterialCB, 텍스처, 인스턴스 버퍼가 대상입니다. */
@@ -708,10 +714,9 @@ namespace sw
         IRHIDevice*                          _pCmdOwnerDevice;
         unique_ptr<IRHICommandList>          _frameCmd;
         IRHICommandList*                     _pCmd;
-        Scene*                               _pScene;
         TaskManager*                         _pTaskManager;
         GPUScene                             _gpuScene;
-        /// @brief 씬 직접 경로(`execute( pScene )`, 에디터와 테스트)가 쓰는 빌더입니다. 패킷 경로에서는 Engine 의 빌더를 씁니다.
+        /// @brief 씬 직접 경로(`execute( scene )`, 에디터와 테스트)가 쓰는 빌더입니다. 패킷 경로에서는 Engine 의 빌더를 씁니다.
         GPUSceneBuilder     _sceneBuilder;
         RenderPipelineAsset _pipelineResource;
         RenderGraph         _graph;
@@ -739,7 +744,7 @@ namespace sw
         GPUSceneSnapshot _sceneSnapshotScratch;
         /// @brief 주 시점의 패스 시드입니다. 추가 뷰는 이것에서 출발해 자기 값(뷰 행렬, 플래그, 컬링 슬롯)만 덮어씁니다. 프레임마다 대입하므로 용량이 남습니다.
         FramePassContext _mainSeedScratch;
-        /// @brief 씬 직접 경로(`execute( pScene )`)가 추가 뷰를 고르는 스케줄러와 요청 목록입니다. 패킷 경로에서는 Engine 의 것을 씁니다.
+        /// @brief 씬 직접 경로(`execute( scene )`)가 추가 뷰를 고르는 스케줄러와 요청 목록입니다. 패킷 경로에서는 Engine 의 것을 씁니다.
         RenderViewScheduler       _directViewScheduler;
         vector<RenderViewRequest> _listDirectViewScratch;
         /** @brief 이번 프레임 배치가 쓰는 PSO 변형 하나의 조건(퍼뮤테이션, 컬 반전)입니다. 퍼뮤테이션이 없으면 kInvalidShaderPermutation 입니다. */

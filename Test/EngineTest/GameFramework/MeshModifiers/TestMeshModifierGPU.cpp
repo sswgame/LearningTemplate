@@ -182,7 +182,7 @@ namespace
             for ( uint32 frame = 0; frame < 4; ++frame )
             {
                 device.beginFrame( clear );
-                if ( renderer.execute( &device, &scene ) == false )
+                if ( renderer.execute( &device, scene ) == false )
                     return result;
                 device.endFrame( false, false );
                 device.waitIdle();

@@ -123,7 +123,7 @@ namespace
     bool renderSceneFrame( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, const sw::float4& clear )
     {
         pDevice->beginFrame( clear );
-        const bool bExecuted = renderer.execute( pDevice, &scene );
+        const bool bExecuted = renderer.execute( pDevice, scene );
         pDevice->endFrame( false, false );
         pDevice->waitIdle();
         return bExecuted;
@@ -148,7 +148,7 @@ namespace
             return false;
 
         pDevice->beginFrame( clear );
-        bool                    bOk     = renderer.execute( pDevice, &scene );
+        bool                    bOk     = renderer.execute( pDevice, scene );
         sw::IRHICommandContext* pStream = pDevice->getFrameStreamContext();
         bOk                             = bOk && pStream != nullptr;
         if ( bOk )
@@ -166,6 +166,26 @@ namespace
     }
 
     /**
+     * @brief 씬의 게임 카메라를 패킷의 주 시점으로 싣습니다(`RenderPacketBuilder::populateScene` 과 같은 값). 카메라가 없으면 false 입니다.
+     * @details 주 시점이 없는 패킷은 렌더러가 그리지 않는다(기본 카메라로 대신 그리지 않는다). 비율은 패킷의 출력 크기, 0 이면 백버퍼 크기다.
+     *          씬 스냅샷(`populateFromScene`)보다 먼저 불러 정렬 거리의 기준 위치(`_cameraPos`)도 카메라의 것이 되게 한다.
+     */
+    [[nodiscard]] bool setMainViewFromScene( sw::RenderFramePacket& packet, sw::Scene& scene, const sw::IRHIDevice& device )
+    {
+        if ( scene.ensureDefaultCameras() == false )
+            return false;
+        const sw::CameraComponent* pCamera = scene.getActiveGameCamera();
+        if ( pCamera == nullptr )
+            return false;
+        const uint32 width  = packet._viewportWidth > 0 ? packet._viewportWidth : device.getBackBufferWidth();
+        const uint32 height = packet._viewportHeight > 0 ? packet._viewportHeight : device.getBackBufferHeight();
+        if ( width == 0 || height == 0 )
+            return false;
+        packet.setMainView( pCamera->getViewProjectionMatrix( static_cast<float32>( width ) / static_cast<float32>( height ) ), pCamera->getCameraPosition() );
+        return true;
+    }
+
+    /**
      * @brief 패킷 경로로 몇 프레임 그리고(프레젠트 포함) SceneColor 에서 배경이 아닌 픽셀 수를 셉니다. 실패면 -1.
      * @details 패킷은 프레임마다 새로 만든다 — `executePacket` 이 스냅샷을 **옮겨 가므로** 같은 패킷을 두 번 내면 두 번째는
      *          빈 스냅샷이다(GT 도 프레임마다 export 한다).
@@ -178,6 +198,8 @@ namespace
         {
             sw::RenderFramePacket packet{};
             packet._bValid = 1;
+            if ( setMainViewFromScene( packet, scene, *pDevice ) == false )
+                return -1;
             gtGPUScene.populateFromScene( &scene, packet._cameraPos );
             gtGPUScene.exportCPUSnapshot( packet._gpuScene );
             if ( packet._gpuScene.getInstances().empty() )
@@ -273,7 +295,7 @@ namespace
         for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
         {
             pDevice->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-            if ( renderer.execute( pDevice, &scene ) == false )
+            if ( renderer.execute( pDevice, scene ) == false )
             {
                 pDevice->endFrame( false, false );
                 return false;
@@ -950,7 +972,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererInitializeAndExecuteSmoke )
 
     sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
     device->beginFrame( clear );
-    SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+    SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
     device->waitIdle();
 
@@ -1001,7 +1023,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileRebuildsPipelineStates )
 
     const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
     device->beginFrame( clear );
-    SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), &scene ), "PSO 재생성 후 프레임 실행" );
+    SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), scene ), "PSO 재생성 후 프레임 실행" );
     device->endFrame( false, false );
 }
 
@@ -1024,7 +1046,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
 
     const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
     device->beginFrame( clear );
-    SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+    SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
     SW_ASSERT_TRUE_MSG( renderer.getTaaHistory() != 0, "디퍼드 파이프라인의 첫 프레임 뒤 TAA 히스토리가 없다" );
 
@@ -1033,7 +1055,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
     renderer.onShaderRecompiled( test::getEngineDefaultAssets()._shaderForwardLit.get(), result );
 
     device->beginFrame( clear );
-    SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+    SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
     device->waitIdle();
     SW_EXPECT_TRUE_MSG( renderer.getTaaHistory() != 0, "셰이더 리로드 뒤 TAA 히스토리가 사라졌다 — 패스 자원 해제가 트랜지언트 자원을 놓았다" );
@@ -1071,6 +1093,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
     {
         sw::RenderFramePacket packet{};
         packet._bValid = 1;
+        SW_ASSERT_TRUE( setMainViewFromScene( packet, scene, *device.get() ) );
         gtGPUScene.populateFromScene( &scene, packet._cameraPos );
         gtGPUScene.exportCPUSnapshot( packet._gpuScene );
 
@@ -1085,6 +1108,18 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
         else
             SW_EXPECT_EQUAL( instanceBufferAfterFrame1, instanceBuffer );
     }
+
+    // 주 시점을 싣지 않은 패킷은 그리지 않는다 — 기본 카메라로 대신 그리면 카메라가 없다는 결함이 화면으로 가려진다.
+    sw::RenderFramePacket noViewPacket{};
+    noViewPacket._bValid = 1;
+    gtGPUScene.populateFromScene( &scene, noViewPacket._cameraPos );
+    gtGPUScene.exportCPUSnapshot( noViewPacket._gpuScene );
+    device->beginFrame( clear );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "render packet without a main view" );
+        SW_EXPECT_FALSE( renderer.executePacket( device.get(), noViewPacket ) );
+    }
+    device->endFrame( false, false );
 }
 
 /**
@@ -1127,6 +1162,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
     {
         sw::RenderFramePacket packet{};
         packet._bValid = 1;
+        SW_ASSERT_TRUE( setMainViewFromScene( packet, scene, *device.get() ) );
         gtGPUScene.populateFromScene( &scene, packet._cameraPos );
         gtGPUScene.exportCPUSnapshot( packet._gpuScene );
         device->beginFrame( clear );
@@ -1138,6 +1174,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
     // 오브젝트 삭제·인스턴스 교체가 RT 보다 먼저 일어나는 순서다.
     sw::RenderFramePacket lateePacket{};
     lateePacket._bValid = 1;
+    SW_ASSERT_TRUE( setMainViewFromScene( lateePacket, scene, *device.get() ) );
     gtGPUScene.populateFromScene( &scene, lateePacket._cameraPos );
     gtGPUScene.exportCPUSnapshot( lateePacket._gpuScene );
     SW_ASSERT_FALSE( lateePacket._gpuScene.getInstances().empty() );
@@ -1265,7 +1302,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
             for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
             {
                 device->beginFrame( clear );
-                SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), &scene ), ( label + ": execute 실패" ).c_str() );
+                SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), scene ), ( label + ": execute 실패" ).c_str() );
                 device->endFrame( false, false );
             }
             device->waitIdle();
@@ -2396,7 +2433,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
             device->beginFrame( clear );
-            const bool bFrameOk = renderer.execute( device.get(), &scene );
+            const bool bFrameOk = renderer.execute( device.get(), scene );
             device->endFrame( false, false );
             device->waitIdle();
             return bFrameOk;
@@ -2769,7 +2806,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPipelineDrawsGeometry )
     for ( uint32 frame = 0; frame < kWarmupFrames; ++frame )
     {
         device->beginFrame( clear );
-        SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+        SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
         device->endFrame( false, false );
         device->waitIdle();
     }
@@ -2835,7 +2872,7 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
         for ( uint32 frame = 0; frame < kFrames; ++frame )
         {
             device.beginFrame( clear );
-            if ( renderer.execute( &device, &scene ) == false )
+            if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
             device.waitIdle();
@@ -3054,7 +3091,7 @@ SW_TEST_CASE( RenderPassGPUTest, AmbientOcclusionReachesBloom )
             for ( uint32 frame = 0; frame < frameCount; ++frame )
             {
                 device->beginFrame( clear );
-                if ( renderer.execute( device.get(), &scene ) == false )
+                if ( renderer.execute( device.get(), scene ) == false )
                     return false;
                 device->endFrame( false, false );
                 device->waitIdle();
@@ -3207,7 +3244,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
         for ( uint32 frame = 0; frame < kFrames; ++frame )
         {
             device.beginFrame( clear );
-            if ( renderer.execute( &device, &scene ) == false )
+            if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
             device.waitIdle();
@@ -3384,7 +3421,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
             // 팔레트는 애니메이션 시스템이 틱 뒤에 만든다 — 테스트는 틱 대신 평가만 부른다.
             scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
             device.beginFrame( clear );
-            if ( renderer.execute( &device, &scene ) == false )
+            if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
             device.waitIdle();
@@ -3573,7 +3610,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
         {
             scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
             device.beginFrame( clear );
-            if ( renderer.execute( &device, &scene ) == false )
+            if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
             device.waitIdle();
@@ -4292,7 +4329,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPresentCopiesTheTonemapResult )
                 for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
                 {
                     device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-                    bOk = renderer.execute( device.get(), &scene );
+                    bOk = renderer.execute( device.get(), scene );
                     device->endFrame( false, false );
                     device->waitIdle();
                 }
@@ -4430,7 +4467,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
             for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
             {
                 device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-                if ( renderer.execute( device.get(), &scene ) == false )
+                if ( renderer.execute( device.get(), scene ) == false )
                 {
                     device->endFrame( false, false );
                     return false;
@@ -5206,7 +5243,7 @@ SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
                     for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
                     {
                         device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-                        SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+                        SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
                         device->endFrame( false, false );
                         device->waitIdle();
                     }
@@ -5293,7 +5330,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
                 for ( uint32 frameIndex = 0; frameIndex < kFrameCount; ++frameIndex )
                 {
                     device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-                    SW_EXPECT_TRUE( renderer.execute( device.get(), &cube._scene ) );
+                    SW_EXPECT_TRUE( renderer.execute( device.get(), cube._scene ) );
                     device->endFrame( false, false );
                     device->waitIdle();
                 }
@@ -6744,6 +6781,7 @@ SW_TEST_CASE( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput )
             packet._outputRenderTarget = outputTarget;
             packet._viewportWidth      = kOutputWidth;
             packet._viewportHeight     = kOutputHeight;
+            bOk                        = setMainViewFromScene( packet, stage._scene, *device.get() );
             builder.populateFromScene( &stage._scene, packet._cameraPos );
             builder.exportCPUSnapshot( packet._gpuScene );
             device->beginFrame( clear );
@@ -6833,6 +6871,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
         packet._outputRenderTarget = outputTarget;
         packet._viewportWidth      = kOutputWidth;
         packet._viewportHeight     = kOutputHeight;
+        SW_ASSERT_TRUE( setMainViewFromScene( packet, stage._scene, *device.get() ) );
         builder.populateFromScene( &stage._scene, packet._cameraPos );
         builder.exportCPUSnapshot( packet._gpuScene );
         device->beginFrame( clear );
@@ -7401,7 +7440,7 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
             // 팔레트 · 묶음은 애니메이션 시스템이 틱 뒤에 만든다 — 테스트는 틱 대신 평가만 부른다(시간은 흐르지 않는다).
             manager.getAnimationSystem().evaluate( 0.0f );
             device->beginFrame( clear );
-            if ( renderer.execute( device.get(), &scene ) == false )
+            if ( renderer.execute( device.get(), scene ) == false )
                 return result;
             device->endFrame( false, false );
             device->waitIdle();

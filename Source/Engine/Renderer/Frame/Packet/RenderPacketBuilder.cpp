@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -41,6 +42,8 @@ namespace sw
 
 namespace sw
 {
+    SW_LOG_CALLER( "RenderPacketBuilder" );
+
     RenderPacketBuilder::RenderPacketBuilder()
         : _gpuSceneBuilder{ nullptr }
         , _packetScratch{ nullptr }
@@ -52,6 +55,7 @@ namespace sw
         , _listScenePreviewBuilder{}
         , _listPreviewLODView{}
         , _bMergeBatchesAcrossMaterials{ false }
+        , _bMissingCameraReported{ false }
     {
     }
 
@@ -158,12 +162,17 @@ namespace sw
         if ( pCam != nullptr )
         {
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
-            packet._mainView     = RenderViewCollector::makeMainSettings( pCam );
-            packet._cameraPos    = pCam->getCameraPosition();
-            packet._viewProj     = pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) );
-            packet._bHasViewProj = SW_TRUE;
+            packet._mainView = RenderViewCollector::makeMainSettings( pCam );
+            packet.setMainView( pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) ), pCam->getCameraPosition() );
             // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
             _gpuSceneBuilder->setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
+            _bMissingCameraReported = false;
+        }
+        else if ( _bMissingCameraReported == false )
+        {
+            // 주 시점이 없는 패킷은 렌더러가 그리지 않는다(기본 카메라로 대신 그리지 않는다). 씬 데이터의 결함이므로 한 번 알린다.
+            SW_LOG_ERROR( "Active scene '%#' has no usable camera - the main view is not drawn", pActiveScene->getName() );
+            _bMissingCameraReported = true;
         }
         // 보기 모드는 뷰마다다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 씬 뷰 툴바의 모드, 게임 화면은 주 출력 모드(-gv_viewMode, 기본 Lit).
         const RenderViewMode sceneViewMode = pFrameRenderer != nullptr ? pFrameRenderer->getSceneViewMode() : RenderViewMode::Lit;
@@ -266,9 +275,7 @@ namespace sw
             preview._viewportWidth      = request._target._width;
             preview._viewportHeight     = request._target._height;
             preview._mainView           = request._settings;
-            preview._cameraPos          = request._cameraPos;
-            preview._viewProj           = request._viewProj;
-            preview._bHasViewProj       = SW_TRUE;
+            preview.setMainView( request._viewProj, request._cameraPos );
 
             // 주 패킷과 같은 규칙으로 이 씬의 빛을 싣는다 — 렌더 스레드는 미리보기 씬도 볼 수 없다.
             DirectionalLightComponent* pLight       = pScene->findActiveDirectionalLight();
