@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -14,7 +13,7 @@ namespace sw
     SW_LOG_CALLER( "RTSCatalog" );
 
     RTSCatalog::RTSCatalog()
-        : _supplyMax{ 200 }
+        : _supplyMax{ RTSCatalogRootDef{}._supplyMax }
     {
     }
 
@@ -30,80 +29,55 @@ namespace sw
 
     uint32 RTSCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _supplyMax         = MathUtil::max( 1, root.getAttributeInt( "supplyMax", _supplyMax ) );
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        RTSCatalogRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+            _supplyMax = rootDef._supplyMax;
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            RTSUnitDef def;
-            def._id                = hashed_string( pID );
-            const utf8* pName      = node.findAttribute( "name" );
-            def._name              = pName != nullptr ? pName : pID;
-            const string_view kind = node.getAttributeText( "kind" );
-            if ( StringUtil::equals( kind, string_view( "Building" ), true ) )
-                def._kind = RTSUnitKind::Building;
-            else if ( StringUtil::equals( kind, string_view( "Resource" ), true ) )
-                def._kind = RTSUnitKind::Resource;
-            else if ( kind.empty() == false && StringUtil::equals( kind, string_view( "Unit" ), true ) == false )
-                SW_LOG_WARNING( "%#: '%#' has an unknown kind '%#' - read as a unit", sourceName, pID, kind );
-            const string_view resource = node.getAttributeText( "resource" );
-            if ( StringUtil::equals( resource, string_view( "Minerals" ), true ) )
-                def._resourceType = RTSResourceType::Minerals;
-            else if ( StringUtil::equals( resource, string_view( "Gas" ), true ) )
-                def._resourceType = RTSResourceType::Gas;
-            const utf8* pProducedBy   = node.findAttribute( "producedBy" );
-            const utf8* pRequires     = node.findAttribute( "requires" );
-            def._producedBy           = pProducedBy != nullptr ? hashed_string( pProducedBy ) : hashed_string{};
-            def._requires             = pRequires != nullptr ? hashed_string( pRequires ) : hashed_string{};
-            def._hp                   = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", def._hp ) );
-            def._armor                = MathUtil::max( 0.0f, node.getAttributeFloat( "armor", def._armor ) );
-            def._speed                = MathUtil::max( 0.0f, node.getAttributeFloat( "speed", def._kind == RTSUnitKind::Unit ? def._speed : 0.0f ) );
-            def._radius               = MathUtil::max( 0.1f, node.getAttributeFloat( "radius", def._radius ) );
-            def._sight                = MathUtil::max( 0.0f, node.getAttributeFloat( "sight", def._sight ) );
-            def._buildTime            = MathUtil::max( 0.1f, node.getAttributeFloat( "buildTime", def._buildTime ) );
-            def._damage               = MathUtil::max( 0.0f, node.getAttributeFloat( "damage", def._damage ) );
-            def._range                = MathUtil::max( 0.0f, node.getAttributeFloat( "range", def._range ) );
-            def._cooldown             = MathUtil::max( 0.05f, node.getAttributeFloat( "cooldown", def._cooldown ) );
-            def._gatherTime           = MathUtil::max( 0.1f, node.getAttributeFloat( "gatherTime", def._gatherTime ) );
-            def._minerals             = MathUtil::max( 0, node.getAttributeInt( "minerals", def._minerals ) );
-            def._gas                  = MathUtil::max( 0, node.getAttributeInt( "gas", def._gas ) );
-            def._supplyCost           = MathUtil::max( 0, node.getAttributeInt( "supply", def._supplyCost ) );
-            def._supplyProvided       = MathUtil::max( 0, node.getAttributeInt( "provides", def._supplyProvided ) );
-            def._footprint            = MathUtil::clamp( node.getAttributeInt( "footprint", def._kind == RTSUnitKind::Unit ? 1 : 2 ), 1, 8 );
-            def._cargo                = MathUtil::max( 1, node.getAttributeInt( "cargo", def._cargo ) );
-            def._resourceAmount       = MathUtil::max( 0, node.getAttributeInt( "amount", def._resourceAmount ) );
-            def._bWorker              = node.getAttributeBool( "worker", false ) ? SW_TRUE : SW_FALSE;
-            def._bDepot               = node.getAttributeBool( "depot", false ) ? SW_TRUE : SW_FALSE;
-            def._bAir                 = node.getAttributeBool( "air", false ) ? SW_TRUE : SW_FALSE;
-            def._bExtractor           = node.getAttributeBool( "extractor", false ) ? SW_TRUE : SW_FALSE;
-            bool              bGround = true;
-            bool              bAir    = false;
-            const string_view targets = node.getAttributeText( "targets" );
-            if ( targets.empty() == false )
-            {
-                bGround = false;
-                StringUtil::forEachToken( targets, ",; ", [&]( string_view token )
-                {
-                    bGround = bGround || StringUtil::equals( token, string_view( "Ground" ), true );
-                    bAir    = bAir || StringUtil::equals( token, string_view( "Air" ), true );
-                } );
-            }
-            def._bTargetsGround = bGround ? SW_TRUE : SW_FALSE;
-            def._bTargetsAir    = bAir ? SW_TRUE : SW_FALSE;
-            if ( def._kind == RTSUnitKind::Building || def._kind == RTSUnitKind::Resource )
-                def._radius = static_cast<float32>( def._footprint ) * 0.5f;
-            (void)add( def );
-            ++loadedCount;
+            if ( StringUtil::equals( node.getName(), "Unit", true ) == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+            else if ( loadUnit( node, sourceName ) )
+                ++loadedCount;
         }
         for ( const RTSUnitDef& def : getAll() )
         {
             if ( def._producedBy.empty() == false && find( def._producedBy ) == nullptr )
-                SW_LOG_WARNING( "%#: '%#' is produced by unknown '%#'", sourceName, def._id.c_str(), def._producedBy.c_str() );
+                SW_LOG_ERROR( "%#: '%#' is produced by unknown '%#'", sourceName, def._id.c_str(), def._producedBy.c_str() );
             if ( def._requires.empty() == false && find( def._requires ) == nullptr )
-                SW_LOG_WARNING( "%#: '%#' requires unknown '%#'", sourceName, def._id.c_str(), def._requires.c_str() );
+                SW_LOG_ERROR( "%#: '%#' requires unknown '%#'", sourceName, def._id.c_str(), def._requires.c_str() );
         }
         return loadedCount;
+    }
+
+    bool RTSCatalog::loadUnit( const XMLNode& node, string_view sourceName )
+    {
+        RTSUnitDef def;
+        bool       bValid = GameDataXML::readFields( node, def, sourceName, { "targets" } );
+        // 공격 대상은 적었으면 그것만이다(적지 않으면 지상). 모르는 이름은 오류다.
+        const string_view targets = node.getAttributeText( "targets" );
+        if ( targets.empty() == false )
+        {
+            def._bTargetsGround = false;
+            StringUtil::forEachToken( targets, ",; ", [&]( string_view token )
+            {
+                if ( StringUtil::equals( token, string_view( "Ground" ), true ) )
+                    def._bTargetsGround = true;
+                else if ( StringUtil::equals( token, string_view( "Air" ), true ) )
+                    def._bTargetsAir = true;
+                else
+                {
+                    SW_LOG_ERROR( "%#: '%#' has an unknown target '%#' (Ground, Air)", sourceName, def._id.c_str(), token );
+                    bValid = false;
+                }
+            } );
+        }
+        // 건물과 자원의 몸 반지름은 막는 셀(`footprint`)이 정한다 — 두 값이 어긋나지 않게 데이터에 따로 적지 않는다.
+        if ( def._kind != RTSUnitKind::Unit )
+            def._radius = static_cast<float32>( def._footprint ) * 0.5f;
+        if ( bValid )
+            (void)add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 } // namespace sw

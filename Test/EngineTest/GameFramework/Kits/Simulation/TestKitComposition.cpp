@@ -377,10 +377,10 @@ namespace sw
 )";
         static constexpr const utf8* kRTSCatalogXML    = R"(
 <RTSCatalog supplyMax="200">
-  <Unit id="base" kind="Building" hp="1500" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60"/>
-  <Unit id="worker" hp="40" speed="3" radius="0.35" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12"/>
-  <Unit id="barracks" kind="Building" hp="1000" footprint="3" producedBy="worker" minerals="150" buildTime="20"/>
-  <Unit id="marine" hp="40" speed="2.25" radius="0.35" producedBy="barracks" minerals="50" supply="1" buildTime="18"/>
+  <Unit id="base" name="base" kind="Building" hp="1500" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60"/>
+  <Unit id="worker" name="worker" hp="40" speed="3" radius="0.35" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12"/>
+  <Unit id="barracks" name="barracks" kind="Building" hp="1000" footprint="3" producedBy="worker" minerals="150" buildTime="20"/>
+  <Unit id="marine" name="marine" hp="40" speed="2.25" radius="0.35" producedBy="barracks" minerals="50" supply="1" buildTime="18"/>
 </RTSCatalog>
 )";
         static constexpr int32       kLandSize         = 32;

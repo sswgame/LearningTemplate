@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -18,6 +20,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 정의의 종류입니다. */
+    ENUM()
     enum class RTSUnitKind : uint8
     {
         Unit = 0, ///< 움직이는 정의이다
@@ -26,6 +29,7 @@ namespace sw
     };
 
     /** @brief 자원의 종류입니다. */
+    ENUM()
     enum class RTSResourceType : uint8
     {
         Minerals = 0,
@@ -34,40 +38,83 @@ namespace sw
     };
 
     /** @brief 유닛, 건물, 자원 정의 하나입니다. */
+    REFLECT()
     struct RTSUnitDef
     {
-        hashed_string   _id{};
-        string          _name{};
-        hashed_string   _producedBy{}; ///< 만드는 건물 id 이다(건물이면 짓는 일꾼 id)
-        hashed_string   _requires{};   ///< 건설이 끝난 이 건물이 있어야 만들 수 있다(테크)
-        float32         _hp{ 40.0f };
-        float32         _armor{ 0.0f };
-        float32         _speed{ 2.8f };
-        float32         _radius{ 0.4f };
-        float32         _sight{ 8.0f };
-        float32         _buildTime{ 15.0f };
-        float32         _damage{ 0.0f };
-        float32         _range{ 0.3f }; ///< 몸 가장자리 사이의 거리
-        float32         _cooldown{ 1.0f };
-        float32         _gatherTime{ 2.8f };
-        int32           _minerals{ 50 };
-        int32           _gas{ 0 };
-        int32           _supplyCost{ 0 };
-        int32           _supplyProvided{ 0 };
-        int32           _footprint{ 1 }; ///< 건물과 자원이 막는 셀 수(정사각형의 한 변)
-        int32           _cargo{ 5 };     ///< 일꾼이 한 번에 나르는 양
-        int32           _resourceAmount{ 0 };
-        RTSUnitKind     _kind{ RTSUnitKind::Unit };
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        hashed_string _producedBy{}; ///< 만드는 건물 id 이다(건물이면 짓는 일꾼 id)
+        PROPERTY()
+        hashed_string _requires{}; ///< 건설이 끝난 이 건물이 있어야 만들 수 있다(테크)
+        PROPERTY( Min = 1.0 )
+        float32 _hp{ 40.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _armor{ 0.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _speed{ 0.0f }; ///< 이동 속도(m/s)이다. 적지 않으면 움직이지 않는다(건물 · 자원)
+        PROPERTY( Min = 0.1 )
+        float32 _radius{ 0.4f };
+        PROPERTY( Min = 0.0 )
+        float32 _sight{ 8.0f };
+        PROPERTY( Min = 0.1 )
+        float32 _buildTime{ 15.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _damage{ 0.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _range{ 0.3f }; ///< 몸 가장자리 사이의 거리
+        PROPERTY( Min = 0.05 )
+        float32 _cooldown{ 1.0f };
+        PROPERTY( Min = 0.1 )
+        float32 _gatherTime{ 2.8f };
+        PROPERTY( Min = 0 )
+        int32 _minerals{ 50 };
+        PROPERTY( Min = 0 )
+        int32 _gas{ 0 };
+        PROPERTY( Name = "supply", Min = 0 )
+        int32 _supplyCost{ 0 };
+        PROPERTY( Name = "provides", Min = 0 )
+        int32 _supplyProvided{ 0 };
+        PROPERTY( Min = 1, Max = 8 )
+        int32 _footprint{ 1 }; ///< 건물과 자원이 막는 셀 수(정사각형의 한 변)
+        PROPERTY( Min = 1 )
+        int32 _cargo{ 5 }; ///< 일꾼이 한 번에 나르는 양
+        PROPERTY( Name = "amount", Min = 0 )
+        int32 _resourceAmount{ 0 };
+        PROPERTY()
+        RTSUnitKind _kind{ RTSUnitKind::Unit };
+        PROPERTY( Name = "resource" )
         RTSResourceType _resourceType{ RTSResourceType::None }; ///< 자원이면 무엇을 주는지, 건물(정제소)이면 무엇을 뽑아 올리는지를 나타낸다
-        uint8           _bWorker{ SW_FALSE };
-        uint8           _bDepot{ SW_FALSE }; ///< 일꾼이 자원을 내려놓는 곳이다
-        uint8           _bAir{ SW_FALSE };
-        uint8           _bTargetsGround{ SW_TRUE };
-        uint8           _bTargetsAir{ SW_FALSE };
-        uint8           _bExtractor{ SW_FALSE }; ///< 가스 간헐천 위에 짓는다
+        PROPERTY()
+        bool _bWorker{ false };
+        PROPERTY()
+        bool _bDepot{ false }; ///< 일꾼이 자원을 내려놓는 곳이다
+        PROPERTY()
+        bool _bAir{ false };
+        bool _bTargetsGround{ true };
+        bool _bTargetsAir{ false };
+        PROPERTY()
+        bool _bExtractor{ false }; ///< 가스 간헐천 위에 짓는다
 
         bool canAttack() const { return _damage > 0.0f; }
         bool isMobile() const { return _kind == RTSUnitKind::Unit; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<RTSCatalog>` 루트 속성의 스키마입니다. */
+    REFLECT()
+    struct RTSCatalogRootDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1 )
+        int32 _supplyMax{ 200 }; ///< 보급 상한
     };
 } // namespace sw
 
@@ -94,6 +141,8 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "RTSCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief `<Unit>` 하나를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadUnit( const XMLNode& node, string_view sourceName );
 
         int32 _supplyMax;
     };
