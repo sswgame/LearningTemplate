@@ -32,7 +32,7 @@ namespace sw
         float4 _lightColorAmbient;
         /**
          * @brief 이 프레임의 **모든** 라이트(방향광 + 점광)입니다. 값으로 싣습니다.
-         * @details 렌더 스레드는 씬을 볼 수 없으므로(`_pScene` 은 늘 null) 라이트도 패킷으로만 옵니다.
+         * @details 렌더 스레드는 씬을 볼 수 없으므로 라이트도 패킷으로만 옵니다.
          *          위의 `_light*` 셋은 **키라이트 하나**로, 그림자 행렬과 앰비언트가 거기서 나옵니다.
          *          라이트 목록이 비어도 키라이트 하나로 그리는 폴백 경로이기도 합니다.
          */
@@ -61,8 +61,9 @@ namespace sw
         uint32           _viewportWidth;
         uint32           _viewportHeight;
         uint64           _frameIndex;
-        uint8            _bHasViewProj : 1;
-        uint8            _bValid       : 1;
+        /** @brief `_viewProj` · `_cameraPos` 가 카메라에서 온 주 시점이면 1 입니다. 0 인 패킷은 그리지 않습니다(`FrameRenderer::executePacket` — 기본 카메라로 대신 그리지 않는다). `setMainView` 로만 켭니다. */
+        uint8 _bHasViewProj : 1;
+        uint8 _bValid       : 1;
         /** @brief 씬에 DirectionalLightComponent 가 있어 라이트 필드가 유효하면 1 입니다. */
         uint8                  _bHasLight : 1;
         [[maybe_unused]] uint8 _reserved  : 5;
@@ -91,6 +92,17 @@ namespace sw
             , _bHasLight{ SW_FALSE }
             , _reserved{ 0 }
         {
+        }
+
+        /**
+         * @brief 주 시점(카메라의 뷰-투영과 위치)을 한 번에 싣고 `_bHasViewProj` 를 켭니다.
+         * @details 행렬 · 위치 · 플래그를 따로 쓰면 한쪽이 빠진 패킷이 생긴다(행렬 없이 플래그만, 위치는 기본값 그대로).
+         */
+        void setMainView( const float4x4& viewProj, const float3& cameraPos )
+        {
+            _viewProj     = viewProj;
+            _cameraPos    = cameraPos;
+            _bHasViewProj = SW_TRUE;
         }
 
         /**

@@ -177,8 +177,9 @@ namespace sw::editor
             }
         };
 
-        /** @brief 임포트 결과(밉까지 끝난 이미지)를 DDS 로 쓰고 결과를 채웁니다. 8비트 경로와 HDR 경로가 함께 씁니다. */
-        [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, [[maybe_unused]] string_view sourcePath, string_view outputPath, TextureImportResult* pOutResult )
+        /** @brief 임포트 결과(밉까지 끝난 이미지)를 DDS 로 쓰고 결과를 채웁니다. 8비트 경로와 HDR 경로가 함께 쓰며, 둘 다 원본 채널 수를 넘깁니다. */
+        [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, uint32 sourceChannelCount, [[maybe_unused]] string_view sourcePath, string_view outputPath,
+                                                    TextureImportResult* pOutResult )
         {
             const string outputDir = FileUtil::getDirectoryPart( outputPath );
             if ( outputDir.empty() == false )
@@ -199,11 +200,12 @@ namespace sw::editor
             const uint64                outputSizeBytes = FileUtil::getFileSize( outputPath );
             if ( pOutResult != nullptr )
             {
-                pOutResult->_width           = static_cast<uint32>( metadata.width );
-                pOutResult->_height          = static_cast<uint32>( metadata.height );
-                pOutResult->_mipCount        = mipCount;
-                pOutResult->_outputSizeBytes = outputSizeBytes;
-                pOutResult->_bSuccess        = SW_TRUE;
+                pOutResult->_width              = static_cast<uint32>( metadata.width );
+                pOutResult->_height             = static_cast<uint32>( metadata.height );
+                pOutResult->_mipCount           = mipCount;
+                pOutResult->_sourceChannelCount = sourceChannelCount;
+                pOutResult->_outputSizeBytes    = outputSizeBytes;
+                pOutResult->_bSuccess           = SW_TRUE;
             }
             SW_LOG_INFO( "Imported texture: %# -> %# (Format: %#, Mips: %#, %# -> %# bytes)", sourcePath, outputPath,
                          static_cast<uint32>( metadata.format ), mipCount, FileUtil::getFileSize( sourcePath ), outputSizeBytes );
@@ -251,7 +253,9 @@ namespace sw::editor
                               sourcePath );
                 return false;
             }
-            return saveImportedDDSInternal( finalImage, sourcePath, outputPath, pOutResult );
+            // Radiance RGBE 는 알파 없는 RGB 세 채널이다.
+            constexpr uint32 kHdrSourceChannelCount = 3;
+            return saveImportedDDSInternal( finalImage, kHdrSourceChannelCount, sourcePath, outputPath, pOutResult );
         }
 
         /**
@@ -406,7 +410,7 @@ namespace sw::editor
         // 아래의 변환과 압축이 선형에서 sRGB 로 가는 곡선을 한 번 더 적용한다. 밉 필터도 이 이름을 보고 선형 공간에서 섞는다.
         const DXGI_FORMAT layoutFormat = swizzleLayoutInternal( rule._swizzle )._format;
         baseImage.format               = DirectX::IsSRGB( targetFormat ) ? DirectX::MakeSRGB( layoutFormat ) : layoutFormat;
-        baseImage.rowPitch             = static_cast<size_t>( rawImage._width ) * 4;
+        baseImage.rowPitch             = static_cast<size_t>( rawImage._width ) * RawImageData::kChannelCount;
         baseImage.slicePitch           = baseImage.rowPitch * static_cast<size_t>( rawImage._height );
         baseImage.pixels               = rawImage._bytes.data();
 
@@ -481,7 +485,7 @@ namespace sw::editor
         }
 
         // 5) DDS 파일로 저장한다
-        return saveImportedDDSInternal( finalImage, sourcePath, outputPath, pOutResult );
+        return saveImportedDDSInternal( finalImage, static_cast<uint32>( rawImage._sourceChannelCount ), sourcePath, outputPath, pOutResult );
     }
 
     void TextureImporter::applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels )

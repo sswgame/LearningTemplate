@@ -32,26 +32,9 @@ namespace sw::editor
             static constexpr uint32 kImporterVersion = 1;
             /** @brief 스플랫 임포트 동작을 바꾸면 올린다(스플랫 원본의 스탬프만 어긋난다). */
             static constexpr uint32 kSplatImporterVersion = 1;
-            /** @brief PNG 머리(IHDR)의 색 형식 바이트 위치와 RGBA 값입니다(PNG 명세 11.2.2). */
-            static constexpr size_t kPngColorTypeOffset = 25;
-            static constexpr uint8  kPngColorTypeRgba   = 6;
 
             /** @brief 원본 옆의 구멍 마스크 경로(`x.png` → `x_holes.png`)입니다. */
             static string makeHolePath( string_view sourcePath ) { return FileUtil::removeExtension( sourcePath ) + string( kHoleSuffix ) + ".png"; }
-
-            /** @brief PNG 이고 알파 채널을 가졌으면 true 입니다. 디코더는 알파가 없으면 255 로 채우므로 디코딩 전에 머리로 가린다. */
-            static bool isRgbaPng( const vector<uint8>& bytes )
-            {
-                constexpr uint8 kArrPngSignature[] = { 0x89, 'P', 'N', 'G' };
-                if ( bytes.size() <= kPngColorTypeOffset )
-                    return false;
-                for ( size_t index = 0; index < SW_COUNT_OF( kArrPngSignature ); ++index )
-                {
-                    if ( bytes[index] != kArrPngSignature[index] )
-                        return false;
-                }
-                return bytes[kPngColorTypeOffset] == kPngColorTypeRgba;
-            }
 
             [[nodiscard]] static bool readRaw16( const vector<uint8>& bytes, string_view sourcePath, HeightfieldData& outData )
             {
@@ -190,22 +173,23 @@ namespace sw::editor
 
     bool HeightfieldImporter::readLayerWeights( string_view sourcePath, LayerWeightsData& outData )
     {
-        using Internal = HeightfieldImporterInternal;
-        outData        = LayerWeightsData{};
+        outData = LayerWeightsData{};
         vector<uint8> bytes;
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
         {
             SW_LOG_ERROR( "Failed to read splat source '%#'", sourcePath );
             return false;
         }
-        if ( Internal::isRgbaPng( bytes ) == false )
-        {
-            SW_LOG_ERROR( "Splat source '%#' is not an RGBA PNG - each channel is one layer weight, so the alpha channel (layer 3) is required", sourcePath );
-            return false;
-        }
         RawImageData image;
         if ( ImageUtil::loadImageFromMemory( bytes.data(), bytes.size(), image ) == false )
             return false;
+        // 디코더는 알파가 없는 원본도 255 로 채워 RGBA 로 펼치므로, 원본 채널 수로 가린다.
+        if ( image._sourceChannelCount != RawImageData::kChannelCount )
+        {
+            SW_LOG_ERROR( "Splat source '%#' has %# channels, not RGBA - each channel is one layer weight, so the alpha channel (layer 3) is required", sourcePath,
+                          image._sourceChannelCount );
+            return false;
+        }
         outData._width  = static_cast<uint32>( image._width );
         outData._height = static_cast<uint32>( image._height );
         outData._bytes  = std::move( image._bytes );

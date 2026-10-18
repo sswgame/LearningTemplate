@@ -30,6 +30,7 @@ namespace sw::editor
         uint32                 _width;
         uint32                 _height;
         uint32                 _mipCount;
+        uint32                 _sourceChannelCount; ///< 원본 이미지의 채널 수(1 회색 · 2 회색+알파 · 3 RGB · 4 RGBA). 압축 형식과 알파 유무를 고르는 근거다.
         uint8                  _bSuccess : 1;
         [[maybe_unused]] uint8 _reserved : 7;
 
@@ -41,6 +42,7 @@ namespace sw::editor
             , _width{ 0 }
             , _height{ 0 }
             , _mipCount{ 0 }
+            , _sourceChannelCount{ 0 }
             , _bSuccess{ SW_FALSE }
             , _reserved{ 0 }
         {
