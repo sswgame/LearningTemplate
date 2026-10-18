@@ -23,15 +23,14 @@ namespace
     constexpr const utf8* kCityTestXML = R"(
 <CityCatalog roadCost="1">
   <Good id="grain" name="Grain" food="true"/>
-  <Building id="house" kind="House" size="1" cost="5"/>
-  <Building id="well" kind="Service" service="Water" delivery="Radius" range="3" size="1" cost="10"/>
-  <Building id="shrine" kind="Service" service="Religion" range="30" walkerInterval="2" workers="2" size="1" cost="20" desirability="3" desirabilityRadius="2"/>
-  <Building id="tax" kind="Service" service="Tax" range="30" walkerInterval="2" workers="2" size="1" cost="20"/>
-  <Building id="farm" kind="Producer" goods="grain" productionTime="4" amount="8" terrain="Floodplain" workers="4" size="2" cost="20" desirability="-2" desirabilityRadius="1"/>
-  <Building id="granary" kind="Storage" goods="grain" capacity="100" workers="2" size="2" cost="30"/>
-  <Building id="bazaar" kind="Market" goods="grain" capacity="40" range="30" walkerInterval="2" workers="2" size="1" cost="20"/>
-  <Building id="garden" kind="Decoration" desirability="5" desirabilityRadius="3" cost="5"/>
-  <Building id="mystery" kind="Spaceport"/>
+  <Building id="house" name="house" kind="House" size="1" cost="5"/>
+  <Building id="well" name="well" kind="Service" service="Water" delivery="Radius" range="3" size="1" cost="10"/>
+  <Building id="shrine" name="shrine" kind="Service" service="Religion" range="30" walkerInterval="2" workers="2" size="1" cost="20" desirability="3" desirabilityRadius="2"/>
+  <Building id="tax" name="tax" kind="Service" service="Tax" range="30" walkerInterval="2" workers="2" size="1" cost="20"/>
+  <Building id="farm" name="farm" kind="Producer" goods="grain" productionTime="4" amount="8" terrain="Floodplain" workers="4" size="2" cost="20" desirability="-2" desirabilityRadius="1"/>
+  <Building id="granary" name="granary" kind="Storage" goods="grain" capacity="100" workers="2" size="2" cost="30"/>
+  <Building id="bazaar" name="bazaar" kind="Market" goods="grain" capacity="40" range="30" walkerInterval="2" workers="2" size="1" cost="20"/>
+  <Building id="garden" name="garden" kind="Decoration" desirability="5" desirabilityRadius="3" cost="5"/>
   <HouseLevel name="Hut" population="4" tax="1"/>
   <HouseLevel name="Shack" population="6" services="Water" tax="1"/>
   <HouseLevel name="Cottage" population="8" services="Water,Religion" goods="grain" tax="2"/>
@@ -88,13 +87,30 @@ namespace
 } // namespace
 
 /**
- * @brief [CityBuilderTest] 카탈로그 — 물자 · 건물 · 집 단계를 읽고 모르는 종류는 경고하고 장식으로 둔다
+ * @brief [CityBuilderTest] 카탈로그 — 모르는 건물 종류는 장식으로 물러나지 않고 그 원소를 넣지 않는 오류다
+ */
+SW_TEST_CASE( CityBuilderTest, CatalogRejectsAnUnknownBuildingKindInsteadOfReadingDecoration )
+{
+    // 모르는 종류를 Decoration 으로 읽으면 아무 일도 안 하는 건물이 조용히 생긴다 — 그 원소를 넣지 않고 오류로 알린다.
+    CityCatalog catalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown building kind is rejected" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( "<CityCatalog><Building id=\"house\" name=\"House\" kind=\"House\"/><Building id=\"mystery\" name=\"Mystery\" kind=\"Spaceport\"/>"
+                                                 "<HouseLevel name=\"Hut\"/></CityCatalog>",
+                                                 "CityBuilderTest" ) );
+    }
+    SW_EXPECT_NULL( catalog.findBuilding( "mystery" ) );
+    SW_EXPECT_NOT_NULL( catalog.findBuilding( "house" ) );
+}
+
+/**
+ * @brief [CityBuilderTest] 카탈로그 — 물자 · 건물 · 집 단계를 읽는다
  */
 SW_TEST_CASE( CityBuilderTest, CatalogReadsBuildingsGoodsAndHouseLevels )
 {
     CityCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kCityTestXML, "CityBuilderTest" ) );
-    SW_EXPECT_EQUAL( static_cast<size_t>( 9 ), catalog.getBuildings().size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 8 ), catalog.getBuildings().size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), catalog.getHouseLevels().size() );
     SW_EXPECT_EQUAL( 1, catalog.getRoadCost() );
     const CityBuildingDef* pFarm = catalog.findBuilding( "farm" );
@@ -103,7 +119,6 @@ SW_TEST_CASE( CityBuilderTest, CatalogReadsBuildingsGoodsAndHouseLevels )
     SW_EXPECT_TRUE( pFarm->_bRequiresTerrain == SW_TRUE && pFarm->_requiredTerrain == CityTerrain::Floodplain );
     SW_EXPECT_TRUE( pFarm->_listGood.size() == 1 && pFarm->_listGood[0] == hashed_string( "grain" ) );
     SW_EXPECT_TRUE( catalog.findBuilding( "well" )->_delivery == CityDelivery::Radius );
-    SW_EXPECT_TRUE( catalog.findBuilding( "mystery" )->_kind == CityBuildingKind::Decoration );
     SW_EXPECT_TRUE( catalog.findHouseBuilding() == catalog.findBuilding( "house" ) );
     const CityHouseLevelDef* pCottage = catalog.findHouseLevel( 2 );
     SW_ASSERT_NOT_NULL( pCottage );

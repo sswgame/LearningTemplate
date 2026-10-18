@@ -370,8 +370,8 @@ namespace sw
     {
         static constexpr const utf8* kCityXML          = R"(
 <CityCatalog roadCost="1">
-  <Building id="house" kind="House" size="1" cost="5"/>
-  <Building id="temple" kind="Decoration" size="4" cost="40"/>
+  <Building id="house" name="house" kind="House" size="1" cost="5"/>
+  <Building id="temple" name="temple" kind="Decoration" size="4" cost="40"/>
   <HouseLevel name="Hut" population="4" tax="1"/>
 </CityCatalog>
 )";
