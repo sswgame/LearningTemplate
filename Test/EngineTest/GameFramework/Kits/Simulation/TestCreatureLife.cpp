@@ -28,16 +28,15 @@ namespace
     <Key symbol="G" object="grass"/><Key symbol="T" object="tree"/>
     <Row cells="GGT"/><Row cells="GG."/>
   </Habitat>
-  <Habitat id="flower_patch"><Key symbol="G" object="grass"/><Row cells="GG"/></Habitat>
-  <Habitat id="pond" capacity="2"><Key symbol="W" object="water"/><Row cells="WW"/></Habitat>
-  <Habitat id="broken"><Key symbol="G" object="grass"/><Row cells="GG"/><Row cells="G"/></Habitat>
+  <Habitat id="flower_patch" name="flower_patch"><Key symbol="G" object="grass"/><Row cells="GG"/></Habitat>
+  <Habitat id="pond" name="pond" capacity="2"><Key symbol="W" object="water"/><Row cells="WW"/></Habitat>
   <Ability id="plant_tree" uses="2"><Rule from="empty" to="tree"/><Rule from="grass" to="tree"/></Ability>
   <Ability id="water_gun" uses="3"><Rule from="empty" to="water"/></Ability>
   <Ability id="rock_smash" uses="1"><Rule from="rock" to="empty" yield="stone" count="2"/></Ability>
-  <Species id="sprout" habitats="tall_grass" foods="berry" gifts="flower" phases="Dawn,Day" weathers="sunny" chance="1"
+  <Species id="sprout" name="sprout" habitats="tall_grass" foods="berry" gifts="flower" phases="Dawn,Day" weathers="sunny" chance="1"
            abilities="plant_tree,rock_smash" requests="sprout_berries,sprout_pond"/>
-  <Species id="frog" habitats="pond" phases="Night" weathers="rain" chance="1" abilities="water_gun"/>
-  <Species id="newt" habitats="pond" chance="0.35"/>
+  <Species id="frog" name="frog" habitats="pond" phases="Night" weathers="rain" chance="1" abilities="water_gun"/>
+  <Species id="newt" name="newt" habitats="pond" chance="0.35"/>
   <Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/><Tier name="Village" min="30"/><Tier name="Town" min="60"/></Appeal>
 </CreatureLifeCatalog>
 )";
@@ -144,14 +143,39 @@ namespace
 } // namespace
 
 /**
- * @brief [CreatureLifeTest] 카탈로그 — 행 길이가 다른 서식지는 빠지고, 차지 칸이 많은 서식지가 먼저 맞춰지며, 종의 때 · 날씨 조건을 읽는다
+ * @brief [CreatureLifeTest] 카탈로그 — 행 길이가 다른 서식지 · 이름 없는 종 · 아무것도 바꾸지 않는 규칙 · 범위 밖 확률은 기본값으로 물러나지 않고 그 원소를 넣지 않는 오류다
+ */
+SW_TEST_CASE( CreatureLifeTest, CatalogRejectsBrokenElementsInsteadOfReadingDefaults )
+{
+    CreatureLifeCatalog catalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "broken creature life elements are rejected" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( "<CreatureLifeCatalog>"
+                                                 "<Habitat id=\"broken\" name=\"broken\"><Key symbol=\"G\" object=\"grass\"/><Row cells=\"GG\"/><Row cells=\"G\"/></Habitat>"
+                                                 "<Habitat id=\"meadow\" name=\"meadow\"><Key symbol=\"G\" object=\"grass\"/><Row cells=\"GG\"/></Habitat>"
+                                                 "<Ability id=\"noop\"><Rule from=\"grass\" to=\"grass\"/></Ability>"
+                                                 "<Species id=\"nameless\" habitats=\"meadow\"/>"
+                                                 "<Species id=\"sure\" name=\"sure\" habitats=\"meadow\" chance=\"1.5\"/>"
+                                                 "<Species id=\"sprout\" name=\"sprout\" habitats=\"meadow\"/>"
+                                                 "</CreatureLifeCatalog>",
+                                                 "CreatureLifeTest" ) );
+    }
+    SW_EXPECT_NULL( catalog.findHabitat( "broken" ) );
+    SW_EXPECT_NOT_NULL( catalog.findHabitat( "meadow" ) );
+    SW_EXPECT_NULL( catalog.findAbility( "noop" ) );
+    SW_EXPECT_NULL( catalog.findSpecies( "nameless" ) );
+    SW_EXPECT_NULL( catalog.findSpecies( "sure" ) );
+    SW_EXPECT_NOT_NULL( catalog.findSpecies( "sprout" ) );
+}
+
+/**
+ * @brief [CreatureLifeTest] 카탈로그 — 차지 칸이 많은 서식지가 먼저 맞춰지며, 종의 때 · 날씨 조건을 읽는다
  */
 SW_TEST_CASE( CreatureLifeTest, CatalogReadsPatternsAndOrdersBySize )
 {
     CreatureLifeTestWorld world;
     SW_ASSERT_TRUE( world.load() );
-    SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), world._catalog.getHabitats().size() ); // broken 은 빠졌다
-    SW_EXPECT_TRUE( world._catalog.findHabitat( "broken" ) == nullptr );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), world._catalog.getHabitats().size() );
 
     const HabitatDef* pTallGrass = world._catalog.findHabitat( "tall_grass" );
     SW_ASSERT_NOT_NULL( pTallGrass );

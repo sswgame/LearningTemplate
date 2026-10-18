@@ -61,47 +61,51 @@ namespace sw
 
     uint32 CurrencyCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        for ( XMLNode node = root.findChild( "Currency" ); node; node = node.findNextSibling( "Currency" ) )
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        uint32 loadedCount = 0;
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            if ( LedgerUtil::isValidAssetID( pID ) == false )
-            {
-                SW_LOG_WARNING( "%#: currency id '%#' must be [0-9a-z_.-] - skipped", sourceName, pID );
-                continue;
-            }
-            CurrencyDef def;
-            def._id                   = pID;
-            def._bPaid                = node.getAttributeBool( "paid", false ) ? SW_TRUE : SW_FALSE;
-            const string_view capText = node.getAttributeText( "cap" );
-            const bool        bCapBad = capText.empty() == false && ( StringUtil::parseInt64( capText, def._cap ) == false || def._cap < 0 );
-            if ( bCapBad )
-            {
-                SW_LOG_WARNING( "%#: currency '%#' has an invalid cap '%#' - no cap", sourceName, pID, capText );
-                def._cap = 0;
-            }
-            for ( XMLNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )
-            {
-                def._listFundingAsset.push_back( string( fundingNode.getAttributeText( "asset" ) ) );
-            }
-            addCurrency( def );
+            if ( StringUtil::equals( node.getName(), "Currency", true ) == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+            else if ( loadCurrency( node, sourceName ) )
+                ++loadedCount;
         }
         // 가상 화폐의 재원은 정의된 비가상 화폐여야 한다. 적힌 순서와 상관없이 모두 읽은 뒤에 확인한다.
-        uint32 loadedCount = 0;
         for ( size_t defIndex = 0; defIndex < _listCurrency.size(); )
         {
             if ( hasValidFunding( *this, _listCurrency[defIndex] ) == false )
             {
-                SW_LOG_WARNING( "%#: virtual currency '%#' funds from an unknown or virtual currency - skipped", sourceName, _listCurrency[defIndex]._id );
+                SW_LOG_ERROR( "%#: virtual currency '%#' funds from an unknown or virtual currency - skipped", sourceName, _listCurrency[defIndex]._id );
                 _listCurrency.erase( _listCurrency.begin() + static_cast<ptrdiff_t>( defIndex ) );
+                loadedCount = loadedCount > 0 ? loadedCount - 1 : 0;
                 continue;
             }
-            ++loadedCount;
             ++defIndex;
         }
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Currency> entries", sourceName );
         return loadedCount;
+    }
+
+    bool CurrencyCatalog::loadCurrency( const XMLNode& node, string_view sourceName )
+    {
+        CurrencyDef def;
+        bool        bValid = GameDataXML::readFields( node, def, sourceName );
+        if ( bValid && LedgerUtil::isValidAssetID( def._id ) == false )
+        {
+            SW_LOG_ERROR( "%#: currency id '%#' must be [0-9a-z_.-]", sourceName, def._id );
+            bValid = false;
+        }
+        for ( XMLNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )
+        {
+            CurrencyFundingDef funding;
+            if ( GameDataXML::readFields( fundingNode, funding, sourceName ) )
+                def._listFundingAsset.push_back( funding._asset );
+            else
+                bValid = false;
+        }
+        if ( bValid )
+            addCurrency( def );
+        return bValid;
     }
 } // namespace sw

@@ -9,9 +9,9 @@
     <Piece type="Drop" length="60" height="25"/>
     <Piece type="Loop" radius="10" width="3"/>
     <Piece type="Straight" length="10"/>
-    <Piece type="TurnRight" radius="18" angle="180" bank="45"/>
+    <Piece type="TurnRight" radius="18" angle="3.14159" bank="45"/>
     <Piece type="Straight" length="145"/>
-    <Piece type="TurnRight" radius="18" angle="180" bank="30"/>
+    <Piece type="TurnRight" radius="18" angle="3.14159" bank="30"/>
     <Piece type="Brakes" length="15"/>
   </Layout>
   <Layout id="camelback" name="Camel Hills" startHeight="1">
@@ -21,18 +21,18 @@
     <Piece type="Hill" length="80" height="10"/>
     <Piece type="Hill" length="64" height="7"/>
     <Piece type="Straight" length="8"/>
-    <Piece type="TurnRight" radius="16" angle="180" bank="40"/>
+    <Piece type="TurnRight" radius="16" angle="3.14159" bank="40"/>
     <Piece type="Straight" length="273"/>
-    <Piece type="TurnRight" radius="16" angle="180" bank="30"/>
+    <Piece type="TurnRight" radius="16" angle="3.14159" bank="30"/>
     <Piece type="Brakes" length="15"/>
   </Layout>
   <Layout id="family" name="Little Dipper" startHeight="1">
     <Piece type="Station" length="10"/>
     <Piece type="LiftHill" length="16" height="8"/>
     <Piece type="Drop" length="16" height="8"/>
-    <Piece type="TurnLeft" radius="10" angle="180" bank="20"/>
+    <Piece type="TurnLeft" radius="10" angle="3.14159" bank="20"/>
     <Piece type="Straight" length="54"/>
-    <Piece type="TurnLeft" radius="10" angle="180" bank="15"/>
+    <Piece type="TurnLeft" radius="10" angle="3.14159" bank="15"/>
     <Piece type="Brakes" length="8"/>
   </Layout>
 </CoasterCatalog>

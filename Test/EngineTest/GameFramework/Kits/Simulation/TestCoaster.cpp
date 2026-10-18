@@ -23,12 +23,12 @@ namespace
         return piece;
     }
 
-    CoasterTrackPiece makeCoasterTurn( CoasterPieceType type, float32 radius, float32 angle, float32 bank )
+    CoasterTrackPiece makeCoasterTurn( CoasterPieceType type, float32 radius, float32 angleDegree, float32 bank )
     {
         CoasterTrackPiece piece;
         piece._type   = type;
         piece._radius = radius;
-        piece._angle  = angle;
+        piece._angle  = MathUtil::toRadian( angleDegree ); // 조각은 라디안으로 담는다
         piece._bank   = bank;
         return piece;
     }
@@ -220,22 +220,29 @@ SW_TEST_CASE( CoasterTest, CamelbackGivesAirtimeAndTooTallHillStalls )
 }
 
 /**
- * @brief [CoasterTest] 레이아웃 XML 은 조각을 차례로 읽고 모르는 조각은 건너뛴다 · 조각 이름은 왕복한다
+ * @brief [CoasterTest] 레이아웃 XML 은 조각을 차례로 읽는다(종류 이름은 대소문자 무시) · 모르는 조각이 든 레이아웃은 조각을 빼고 잇지 않고 통째로 넣지 않는 오류다 · 조각 이름은 왕복한다
  */
-SW_TEST_CASE( CoasterTest, LayoutCatalogReadsPiecesAndSkipsUnknownOnes )
+SW_TEST_CASE( CoasterTest, LayoutCatalogReadsPiecesAndRejectsUnknownOnes )
 {
     constexpr const utf8* kLayoutXML = R"(
 <CoasterCatalog>
   <Layout id="mini" name="Mini" startHeight="2">
     <Piece type="Station" length="8"/>
     <Piece type="liftHill" length="20" height="12"/>
+    <Piece type="TurnLeft" radius="9" angle="2.0944" bank="25"/>
+  </Layout>
+  <Layout id="twisted" name="Twisted">
+    <Piece type="Station" length="8"/>
     <Piece type="Corkscrew" length="10"/>
-    <Piece type="TurnLeft" radius="9" angle="120" bank="25"/>
   </Layout>
 </CoasterCatalog>
 )";
     CoasterLayoutCatalog  catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXMLText( kLayoutXML, "CoasterTest" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a layout with an unknown piece is rejected" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kLayoutXML, "CoasterTest" ) );
+    }
+    SW_EXPECT_NULL( catalog.find( "twisted" ) );
     const CoasterLayoutDef* pLayout = catalog.find( "mini" );
     SW_ASSERT_NOT_NULL( pLayout );
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), pLayout->_listPiece.size() );

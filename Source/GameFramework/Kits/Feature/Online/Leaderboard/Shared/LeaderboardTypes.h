@@ -36,7 +36,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 정렬 방향입니다. 와이어 값입니다. */
+    /** @brief 정렬 방향입니다. 와이어 값입니다. 데이터에는 열거자 이름을 적습니다(대소문자 무시). */
+    ENUM( Count = Count )
     enum class LeaderboardOrder : uint8
     {
         Descending = 0, ///< 큰 값이 1등이다
@@ -45,6 +46,7 @@ namespace sw
     };
 
     /** @brief 같은 보드에 다시 낼 때의 갱신 방식입니다. */
+    ENUM( Count = Count )
     enum class LeaderboardUpdate : uint8
     {
         Best = 0, ///< 더 좋을 때만 갱신한다. 정렬 방향을 기준으로 한다
@@ -54,6 +56,7 @@ namespace sw
     };
 
     /** @brief 초기화 주기입니다. 기간 id 가 바뀌면 빈 보드로 시작하며 지난 기간의 점수는 그대로 남습니다. */
+    ENUM( Count = Count )
     enum class LeaderboardReset : uint8
     {
         None = 0,
@@ -66,43 +69,68 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 시즌 보상 구간 하나입니다. 순위 from 부터 to 까지에게 자산과 수량을 우편으로 줍니다. */
-    struct LeaderboardRewardTier
+    /** @brief 시즌 보상 구간 하나입니다. 순위 from 부터 to 까지에게 자산과 수량을 우편으로 줍니다. `<Reward>` 의 스키마이기도 합니다. */
+    REFLECT()
+    struct SW_KIT_API LeaderboardRewardTier
     {
-        string _assetID{};      ///< 원장 자산 id 이다(예: "cur.gem", "item.badge_gold")
+        REFLECT_BODY();
+
+        PROPERTY( Name = "asset", Required )
+        string _assetID{}; ///< 원장 자산 id 이다(예: "cur.gem", "item.badge_gold")
+        PROPERTY( Name = "mailTitle", Required )
         string _mailTitleKey{}; ///< 우편 제목의 로컬라이제이션 키이다
-        int64  _amount{ 0 };
-        int32  _rankFrom{ 1 };
-        int32  _rankTo{ 1 }; ///< 이 순위를 포함한다
+        PROPERTY( Required, Min = 1 )
+        int64 _amount{ 0 };
+        PROPERTY( Name = "from", Required, Min = 1 )
+        int32 _rankFrom{ 1 };
+        PROPERTY( Name = "to", Required, Min = "_rankFrom" )
+        int32 _rankTo{ 1 }; ///< 이 순위를 포함한다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 시즌 하나입니다. 끝나면 정산 작업(`lb.settle.<보드>.<시즌>`, 창 [끝, 끝 + 7일))이 순위대로 결과와 보상 우편을 남깁니다. */
-    struct LeaderboardSeason
+    REFLECT()
+    struct SW_KIT_API LeaderboardSeason
     {
-        vector<LeaderboardRewardTier> _listRewardTier{};
-        int64                         _startMs{ 0 };
-        int64                         _endMs{ 0 };
-        uint32                        _seasonID{ 0 }; ///< 1부터 시작하며 보드 안에서 유일하다
+        REFLECT_BODY();
+
+        vector<LeaderboardRewardTier> _listRewardTier{}; ///< `<Reward>` 자식에서 읽는다
+        PROPERTY( Min = 0 )
+        int64 _startMs{ 0 };
+        PROPERTY( Min = 0 )
+        int64 _endMs{ 0 };
+        PROPERTY( Name = "id", Required, Min = 1 )
+        uint32 _seasonID{ 0 }; ///< 1부터 시작하며 보드 안에서 유일하다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 보드 하나의 정의입니다. 게임 데이터이며 서버가 기동할 때 등록합니다. */
-    struct LeaderboardDefinition
+    /** @brief 보드 하나의 정의입니다. 게임 데이터이며 서버가 기동할 때 등록합니다. `<Board>` 의 스키마이기도 합니다. */
+    REFLECT()
+    struct SW_KIT_API LeaderboardDefinition
     {
-        vector<LeaderboardSeason> _listSeason{};          ///< Season 보드에서만 쓴다
-        string                    _boardID{};             ///< `[0-9a-z_]` 형식이며 1~32자이다
-        string                    _sourceStat{};          ///< 비어 있지 않으면 이 통계가 바뀔 때 같은 값을 낸다
-        int32                     _resetMinuteOfDay{ 0 }; ///< UTC 기준 0~1439분이다
-        int32                     _resetDayOfWeek{ 0 };   ///< 0이 월요일이다
-        LeaderboardOrder          _order{ LeaderboardOrder::Descending };
-        LeaderboardUpdate         _update{ LeaderboardUpdate::Best };
-        LeaderboardReset          _reset{ LeaderboardReset::None };
-        uint8                     _bClientSubmit{ SW_FALSE }; ///< true 이면 클라이언트의 점수 제출을 받는다
+        REFLECT_BODY();
+
+        vector<LeaderboardSeason> _listSeason{}; ///< Season 보드에서만 쓴다(`<Season>` 자식에서 읽는다)
+        PROPERTY( Name = "id", Required )
+        string _boardID{}; ///< `[0-9a-z_]` 형식이며 1~32자이다
+        PROPERTY()
+        string _sourceStat{}; ///< 비어 있지 않으면 이 통계가 바뀔 때 같은 값을 낸다
+        PROPERTY( Name = "resetMinute", Min = 0, Max = 1439 )
+        int32 _resetMinuteOfDay{ 0 }; ///< UTC 기준 0~1439분이다
+        PROPERTY( Name = "resetDay", Min = 0, Max = 6 )
+        int32 _resetDayOfWeek{ 0 }; ///< 0이 월요일이다
+        PROPERTY()
+        LeaderboardOrder _order{ LeaderboardOrder::Descending };
+        PROPERTY()
+        LeaderboardUpdate _update{ LeaderboardUpdate::Best };
+        PROPERTY()
+        LeaderboardReset _reset{ LeaderboardReset::None };
+        PROPERTY()
+        bool _bClientSubmit{ false }; ///< true 이면 클라이언트의 점수 제출을 받는다
     };
 } // namespace sw
 
@@ -165,15 +193,24 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 업적 하나의 정의입니다. 서버가 기동할 때 등록하며, 통계가 임계값을 넘으면 한 번 달성하고 보상은 우편으로 줍니다. */
-    struct AchievementDefinition
+    /** @brief 업적 하나의 정의입니다. 서버가 기동할 때 등록하며, 통계가 임계값을 넘으면 한 번 달성하고 보상은 우편으로 줍니다. `<Achievement>` 의 스키마이기도 합니다. */
+    REFLECT()
+    struct SW_KIT_API AchievementDefinition
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "id", Required )
         string _achievementID{}; ///< `[0-9a-z_]` 형식이다
+        PROPERTY( Name = "stat", Required )
         string _statName{};
+        PROPERTY( Name = "rewardAsset" )
         string _rewardAssetID{}; ///< 비어 있으면 보상이 없다
+        PROPERTY( Name = "mailTitle" )
         string _mailTitleKey{};
-        int64  _threshold{ 1 };
-        int64  _rewardAmount{ 0 };
+        PROPERTY( Min = 1 )
+        int64 _threshold{ 1 };
+        PROPERTY( Min = 0 )
+        int64 _rewardAmount{ 0 };
     };
 } // namespace sw
 

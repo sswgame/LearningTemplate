@@ -22,7 +22,6 @@ namespace
 <CropCatalog>
   <Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="3" seasons="Spring" seedPrice="20" sellPrice="60"/>
   <Crop id="tomato" name="Tomato" seed="tomato_seed" produce="tomato" days="4" regrow="2" seasons="Spring, Summer" seedPrice="40" sellPrice="30" harvest="2"/>
-  <Crop id="ghost" seed="ghost_seed" seasons="Monsoon"/>
 </CropCatalog>
 )";
 
@@ -36,6 +35,29 @@ namespace
 } // namespace
 
 /**
+ * @brief [FarmingTest] 카탈로그 — 모르는 계절 · 빠진 씨앗/수확물 · 빠진 계절은 id 나 봄으로 물러나지 않고 그 작물을 넣지 않는 오류다
+ */
+SW_TEST_CASE( FarmingTest, CatalogRejectsUnknownSeasonsAndMissingItemsInsteadOfReadingDefaults )
+{
+    CropCatalog catalog;
+    catalog.setKnownSeasons( { "Spring", "Summer", "Fall", "Winter" } );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "broken crops are rejected" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( "<CropCatalog>"
+                                                 "<Crop id=\"ghost\" name=\"Ghost\" seed=\"ghost_seed\" produce=\"ghost\" seasons=\"Monsoon\"/>"
+                                                 "<Crop id=\"bare\" name=\"Bare\" seasons=\"Spring\"/>"
+                                                 "<Crop id=\"timeless\" name=\"Timeless\" seed=\"timeless_seed\" produce=\"timeless\"/>"
+                                                 "<Crop id=\"turnip\" name=\"Turnip\" seed=\"turnip_seed\" produce=\"turnip\" seasons=\"Spring\"/>"
+                                                 "</CropCatalog>",
+                                                 "FarmingTest" ) );
+    }
+    SW_EXPECT_NULL( catalog.findCrop( "ghost" ) );
+    SW_EXPECT_NULL( catalog.findCrop( "bare" ) );
+    SW_EXPECT_NULL( catalog.findCrop( "timeless" ) );
+    SW_EXPECT_NOT_NULL( catalog.findCrop( "turnip" ) );
+}
+
+/**
  * @brief [FarmingTest] 작물은 물 받은 날만 자라고 정한 날 수만큼 자라야 거둔다 — 갈지 않은 땅에는 심을 수 없다
  */
 SW_TEST_CASE( FarmingTest, CropsGrowOnlyOnWateredDays )
@@ -43,7 +65,7 @@ SW_TEST_CASE( FarmingTest, CropsGrowOnlyOnWateredDays )
     CropCatalog catalog;
     catalog.setKnownSeasons( { "Spring", "Summer", "Fall", "Winter" } );
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
-    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), catalog.getCrops().size() ); // 모르는 계절(Monsoon)만 적힌 ghost 는 빠졌다
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), catalog.getCrops().size() );
 
     FarmField field;
     field.initialize( 4, 4, &catalog );

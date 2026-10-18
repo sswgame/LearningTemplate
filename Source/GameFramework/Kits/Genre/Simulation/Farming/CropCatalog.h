@@ -11,6 +11,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -27,19 +29,33 @@ namespace sw
      * @details 물을 준 날에만 하루씩 자란다. `_growthDays` 번 자라면 거둘 수 있고, `_regrowDays` 가 0 이 아니면 거둔 뒤에도 남아 그만큼 다시 자란다
      *          (토마토, 옥수수). 자라는 계절(`_listSeason`, 시계의 계절 이름) 밖으로 계절이 바뀌면 시든다.
      */
+    REFLECT()
     struct CropDef
     {
-        hashed_string         _id{};
-        string                _name{};
-        hashed_string         _seedItem{};    ///< 심을 때 쓰는 아이템
-        hashed_string         _produceItem{}; ///< 거두면 받는 아이템
-        int32                 _growthDays{ 4 };
-        int32                 _regrowDays{ 0 }; ///< 0 이면 한 번 거두고 끝난다
-        int32                 _seedPrice{ 20 };
-        int32                 _sellPrice{ 60 };
-        int32                 _harvestCount{ 1 };               ///< 한 번에 받는 수
-        vector<hashed_string> _listSeason{};                    ///< 자라는 계절이다(시계의 계절 이름이며 `WorldClockSettings::_listSeason` 과 같다)
-        float4                _color{ 0.3f, 0.7f, 0.3f, 1.0f }; ///< 다 자란 작물의 색(`color="r,g,b,a"`). 적지 않으면 초록이다
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY( Name = "seed", Required )
+        hashed_string _seedItem{}; ///< 심을 때 쓰는 아이템
+        PROPERTY( Name = "produce", Required )
+        hashed_string _produceItem{}; ///< 거두면 받는 아이템
+        PROPERTY( Name = "days", Min = 1 )
+        int32 _growthDays{ 4 };
+        PROPERTY( Name = "regrow", Min = 0 )
+        int32 _regrowDays{ 0 }; ///< 0 이면 한 번 거두고 끝난다
+        PROPERTY( Min = 0 )
+        int32 _seedPrice{ 20 };
+        PROPERTY( Min = 0 )
+        int32 _sellPrice{ 60 };
+        PROPERTY( Name = "harvest", Min = 1 )
+        int32 _harvestCount{ 1 }; ///< 한 번에 받는 수
+        PROPERTY( Meta = "Color" )
+        float4 _color{ 0.3f, 0.7f, 0.3f, 1.0f }; ///< 다 자란 작물의 색(`color="r,g,b,a"`). 적지 않으면 초록이다
+
+        vector<hashed_string> _listSeason{}; ///< 자라는 계절이다(`seasons`, 필수). 시계의 계절 이름이며 `WorldClockSettings::_listSeason` 과 같다
 
         /** @brief @p season 에 자라면 true 를 반환합니다. */
         bool growsIn( const hashed_string& season ) const { return std::find( _listSeason.begin(), _listSeason.end(), season ) != _listSeason.end(); }
@@ -75,7 +91,7 @@ namespace sw
         int32                  findSellPrice( const hashed_string& itemID ) const;
         const vector<CropDef>& getCrops() const { return _catalog.getAll(); }
 
-        /** @brief 읽기 전에 알려 둘 계절 이름을 정합니다. 모르는 계절만 적힌 작물은 경고하고 뺍니다(비우면 검사하지 않습니다). */
+        /** @brief 읽기 전에 알려 둘 계절 이름을 정합니다. 모르는 계절이 적힌 작물은 오류로 뺍니다(비우면 검사하지 않습니다). */
         void setKnownSeasons( const vector<hashed_string>& listSeason ) { _listKnownSeason = listSeason; }
         /** @brief 작물마다 씨앗과 수확물 아이템을 @p inoutItems 에 더합니다(이미 있으면 그대로 둡니다). 플레이어 가방(`Inventory`)이 겹침 수를 물을 때 씁니다. */
         void fillItemCatalog( ItemCatalog& inoutItems, int32 maxStack ) const;
@@ -83,6 +99,8 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "CropCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief `<Crop>` 하나를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadCrop( const XMLNode& node, string_view sourceName );
         /** @brief 씨앗과 수확물에서 작물 index 로 가는 맵을 다시 만듭니다(작물이 추가될 때 호출합니다). */
         void rebuildItemIndex();
 

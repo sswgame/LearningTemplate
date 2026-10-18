@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- VoxelCraft 의 블록. 블록 번호는 이 순서로 1 부터 붙는다(0 은 공기) — 순서를 바꾸면 저장된 월드의 블록이 바뀐다.
-     tile · top · bottom · side 는 textures/blocks.dds 아틀라스(4 x 4 칸, 칸 128 텍셀)의 칸 번호다 — 왼쪽 위부터 줄마다 0, 1, 2 …
+     tile(여섯 면) 또는 top · bottom · side(셋 모두)는 textures/blocks.dds 아틀라스(4 x 4 칸, 칸 128 텍셀)의 칸 번호다 — 왼쪽 위부터 줄마다 0, 1, 2 …
      (원본은 textures_raw/blocks.png, Kenney Voxel Pack 타일을 이 순서로 모은 것 — credits.md).
-     hardness 는 맨손으로 부수는 데 걸리는 초, color 는 정점 색으로 곱해지는 틴트(알파 < 1 이면 반투명 메시로 간다).
+     hardness 는 맨손으로 부수는 데 걸리는 초, color 는 정점 색으로 곱해지는 틴트 "r,g,b,a"(알파 < 1 이면 반투명 메시로 간다).
      drop 은 부수면 얻는 블록이다(없으면 자기 자신). -->
 <BlockCatalog atlasColumns="4" atlasRows="4" tileTexels="128">
-  <Block id="grass" name="Grass" tile="2" top="0" side="1" hardness="0.6" drop="dirt"/>
+  <Block id="grass" name="Grass" top="0" bottom="2" side="1" hardness="0.6" drop="dirt"/>
   <Block id="dirt" name="Dirt" tile="2" hardness="0.5"/>
   <Block id="stone" name="Stone" tile="3" hardness="1.5" drop="cobblestone"/>
   <Block id="sand" name="Sand" tile="4" hardness="0.5"/>
-  <Block id="water" name="Water" tile="5" solid="false" opaque="false" breakable="false" color="1 1 1 0.7"/>
+  <Block id="water" name="Water" tile="5" solid="false" opaque="false" breakable="false" color="1,1,1,0.7"/>
   <Block id="bedrock" name="Bedrock" tile="6" breakable="false"/>
-  <Block id="log" name="Oak Log" tile="7" top="8" bottom="8" hardness="1.0"/>
+  <Block id="log" name="Oak Log" top="8" bottom="8" side="7" hardness="1.0"/>
   <Block id="leaves" name="Leaves" tile="9" hardness="0.2"/>
   <Block id="planks" name="Planks" tile="10" hardness="1.0"/>
   <Block id="cobblestone" name="Cobblestone" tile="11" hardness="1.6"/>

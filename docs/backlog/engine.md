@@ -35,7 +35,7 @@
 - `C-22` [정리] **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
 - `C-30` [정리] **유지보수성을 위한 데이터화의 남은 것**(기준은 [결정 기록](../09_Decisions.md) 5-4). 설계 완료, 단위는 [데이터 주도 구조 정리 계획](../plans/DataDriven.md) 7절이다(C-36 과 한 순서).
-  뿌리는 읽기 API(`XMLNode` · `JSONValue` · `KeyValueFile`)의 폴백 인자라서 D1 ~ D9 가 그 인자를 없앤다. ② 게임 리터럴은 G1, ⑤ Shipping 그림 비교는 G2, ④ 에디터 색 · 크기는 editorux 묶음이 맡는다.
+  뿌리는 읽기 API(`XMLNode` · `JSONValue` · `KeyValueFile`)의 폴백 인자라서 D1 ~ D9 가 그 인자를 없앤다. D0 ~ D5(장르 키트 카탈로그 전부)는 끝났고 남은 단위는 D6 ~ D9 · P1 · P2 · P4 · G1 · G2 다. ② 게임 리터럴은 G1, ⑤ Shipping 그림 비교는 G2, ④ 에디터 색 · 크기는 editorux 묶음이 맡는다.
 
 - `C-25` [정리] **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).

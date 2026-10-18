@@ -4,7 +4,7 @@
  *        <Currency id="cur.gem"><Funding asset="cur.gem_free"/><Funding asset="cur.gem_paid"/></Currency></CurrencyCatalog>` 입니다.
  * @details `<Funding>` 이 있는 화폐는 **가상** 화폐(가격 단위)이다. 가상 화폐에는 잔액이 없고, 그 가격은 재원 자산을 적힌 순서대로 차감한다.
  *          유상과 무상을 구분하며 차감 순서는 데이터가 정한다. 관례는 무상을 먼저 쓰는 것이다.
- *          재원은 가상이 아닌, 정의된 화폐여야 한다. 아니면 그 가상 화폐를 버리고 경고한다.
+ *          재원은 가상이 아닌, 정의된 화폐여야 한다. 아니면 그 가상 화폐를 버리는 오류다.
  *          `ILedgerPolicy` 로 계정 상한을 답한다(`cap`, 0이면 원장 상한만 적용한다).
  */
 #pragma once
@@ -12,6 +12,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
@@ -21,13 +23,32 @@ namespace sw
 {
     class XMLNode;
 
+    /** @brief `<Funding>` 한 줄의 스키마입니다. 가상 화폐가 차감할 재원 자산입니다. */
+    REFLECT()
+    struct CurrencyFundingDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _asset{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 화폐 하나입니다. */
+    REFLECT()
     struct CurrencyDef
     {
-        vector<string> _listFundingAsset{}; ///< 비어 있지 않으면 가상 화폐이다. 차감 순서를 나타낸다
-        string         _id{};
-        int64          _cap{ 0 };          ///< 계정 잔액 상한이다. 0이면 원장 상한만 적용한다
-        uint8          _bPaid{ SW_FALSE }; ///< 결제로 산 재화이다. 청약 철회와 표시 구분에 쓴다
+        REFLECT_BODY();
+
+        vector<string> _listFundingAsset{}; ///< 비어 있지 않으면 가상 화폐이다. 차감 순서를 나타낸다(`<Funding>` 자식에서 읽는다)
+        PROPERTY( Required )
+        string _id{};
+        PROPERTY( Min = 0 )
+        int64 _cap{ 0 }; ///< 계정 잔액 상한이다. 0이면 원장 상한만 적용한다
+        PROPERTY()
+        bool _bPaid{ false }; ///< 결제로 산 재화이다. 청약 철회와 표시 구분에 쓴다
 
         bool isVirtual() const { return _listFundingAsset.empty() == false; }
     };
@@ -54,6 +75,8 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "CurrencyCatalog";
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief `<Currency>` 와 그 `<Funding>` 을 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadCurrency( const XMLNode& node, string_view sourceName );
 
         vector<CurrencyDef> _listCurrency{};
     };

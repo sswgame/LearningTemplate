@@ -12,6 +12,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -19,30 +21,45 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 가격 항목 하나입니다. 화폐(가상이면 재원 순서로)와 양을 가집니다. */
+    /** @brief 가격 항목 하나입니다. 화폐(가상이면 재원 순서로)와 양을 가집니다. 양의 상한은 원장 다리 하나(`LedgerConstant::kMaxAmount`, 읽는 쪽이 확인한다)입니다. */
+    REFLECT()
     struct OfferPrice
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "currency", Required )
         string _currencyID{};
-        int64  _amount{ 0 };
+        PROPERTY( Required, Min = 1 )
+        int64 _amount{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 지급 항목 하나입니다. 자산과 양을 가집니다. */
+    /** @brief 지급 항목 하나입니다. 자산과 양을 가집니다. 양의 상한은 원장 다리 하나(`LedgerConstant::kMaxAmount`, 읽는 쪽이 확인한다)입니다. */
+    REFLECT()
     struct OfferGrant
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "asset", Required )
         string _assetID{};
-        int64  _amount{ 0 };
+        PROPERTY( Required, Min = 1 )
+        int64 _amount{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 스토어 상품 하나입니다. 스토어 이름과 스토어의 상품 id 를 가집니다. */
+    REFLECT()
     struct OfferProduct
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "store", Required )
         string _storeName{};
+        PROPERTY( Name = "id", Required )
         string _productID{};
     };
 } // namespace sw
@@ -50,16 +67,24 @@ namespace sw
 namespace sw
 {
     /** @brief 상품 하나입니다. */
+    REFLECT()
     struct OfferDef
     {
-        vector<OfferPrice>   _listPrice{};
-        vector<OfferGrant>   _listGrant{};
-        vector<OfferProduct> _listProduct{};
-        string               _id{};
-        int64                _startMs{ 0 };
-        int64                _endMs{ 0 };
-        int32                _limitPerAccount{ 0 };
-        int32                _maxCountPerPurchase{ 1 };
+        REFLECT_BODY();
+
+        vector<OfferPrice>   _listPrice{};   ///< `<Price>` 자식에서 읽는다
+        vector<OfferGrant>   _listGrant{};   ///< `<Grant>` 자식에서 읽는다
+        vector<OfferProduct> _listProduct{}; ///< `<Product>` 자식에서 읽는다
+        PROPERTY( Required )
+        string _id{};
+        PROPERTY( Min = 0 )
+        int64 _startMs{ 0 };
+        PROPERTY( Min = 0 )
+        int64 _endMs{ 0 };
+        PROPERTY( Name = "limit", Min = 0 )
+        int32 _limitPerAccount{ 0 };
+        PROPERTY( Name = "maxCount", Min = 1 )
+        int32 _maxCountPerPurchase{ 1 };
 
         bool isRealMoney() const { return _listProduct.empty() == false; }
         bool isOnSale( int64 nowMs ) const { return ( _startMs == 0 || _startMs <= nowMs ) && ( _endMs == 0 || nowMs < _endMs ); }
@@ -84,6 +109,8 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "OfferCatalog";
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief `<Offer>` 와 그 자식을 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadOffer( const XMLNode& node, string_view sourceName );
 
         vector<OfferDef> _listOffer{};
     };
