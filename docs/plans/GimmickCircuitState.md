@@ -1,6 +1,6 @@
 # 기믹 회로 상태 구조 계획 (2026-10-17)
 
-> 상태: 구현중 · 선행: ReflectionFormats · 영역: engine · 백로그: 없음 · 진행: 3/5
+> 상태: 구현중 · 선행: ReflectionFormats · 영역: engine · 옛번호: 없음 · 진행: 3/5
 
 [리플렉션 형식 계획](ReflectionFormats.md) 9절 단계 2(`GimmickCircuit` 을 B 로)의 설계입니다. 그 단계는 "상태 바이트가 씬 · 프리팹 · 레벨 세이브에 남는다"는 이유로 보류됐고, 이 문서는 그 보류를 푸는 구조를 정합니다.
 

@@ -1,6 +1,6 @@
 # 에디터 시나리오 표
 
-> 상태: 참고 · 선행: 없음 · 영역: editor · 백로그: 없음 · 진행: 해당없음
+> 상태: 참고 · 선행: 없음 · 영역: editor · 옛번호: 없음 · 진행: 해당없음
 
 에디터 기능마다 어느 자동화 시나리오가 확인하는지 적은 표입니다. 시나리오는 `Resource/engine/automation/editor/` 에 있고 `AppScenarioTest.EditorScenariosPassOn<백엔드>` 가
 네 백엔드에서 돌립니다(`rhiswap/` 은 네 백엔드가 모두 있는 PC 에서 손으로 돌린다). 형식과 단계 · 탐침은 [Automation README](../../Source/Engine/Automation/README.md) 에 있습니다.

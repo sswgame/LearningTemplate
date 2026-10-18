@@ -13,39 +13,33 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 아래 표는 `docs/plans` 문서의 머리 줄과 [로드맵](docs/plans/Roadmap.md)에서 `py -3 -m Scripts status-board --write README.md` 로 만든 것입니다. 손으로 고치지 않습니다.
 
 <!-- status-board:start -->
-| 순위 | 업무(계획 문서) | 상태 | 진행 | 선행 | 영역 | 백로그 |
+| 순위 | 업무(계획 문서) | 상태 | 진행 | 선행 | 영역 | 옛번호 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [데이터 주도 구조 정리 계획 (2026-10-16)](docs/plans/DataDriven.md) | 구현중 | 5/15 | 없음 | engine | C-30 |
-| 2 | [기믹 회로 상태 구조 계획 (2026-10-17)](docs/plans/GimmickCircuitState.md) | 구현중 | 3/5 | ReflectionFormats | engine | 없음 |
-| 3 | [파티클 · VFX 구현 단위 (`D2-11`)](docs/plans/Vfx.md) | 구현대기 | 0/7 | 없음 | graphics | D2-11 |
-| 4 | (문서 없음) | | | | | |
-| 6 | (문서 없음) | | | | | |
-| 7 | (문서 없음) | | | | | |
-| 8 | (문서 없음) | | | | | |
-| 9 | [페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션)](docs/plans/PairedAnimation.md) | 구현중 | 3/5 | 없음 | gameplay | D4-6 |
-| 10 | (문서 없음) | | | | | |
-| 11 | (문서 없음) | | | | | |
-| 12 | (문서 없음) | | | | | |
-| 13 | (문서 없음) | | | | | |
-| 14 | [빌드 속도 계획](docs/plans/BuildSpeed.md) | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
-| - | [간접 조명 구현 단위 (`D2-12`)](docs/plans/IndirectLighting.md) | 설계 | 0/7 | ClusteredLighting | graphics | D2-12 |
-| - | [월드 스트리밍(D1-7) — 설계와 구현 단위](docs/plans/WorldStreaming.md) | 설계 | 1/7 | 없음 | engine | D1-7 |
-| - | [캐릭터 편집 창 구현 계획 (D4-8 ⑥)](docs/plans/EditorCharacterEditor.md) | 구현대기 | 0/6 | EditorMultiWorld | gameplay | D4-8 |
-| - | [엔진 분할 계획](docs/plans/EnginePartition.md) | 구현대기 | 2/6 | 없음 | engine | C-1 |
-| - | [서버 버스 메시지 형식 계획 (2026-10-17)](docs/plans/ServerBusFormat.md) | 구현대기 | 7/7 | ReflectionFormats | network | F-2 |
-| - | [타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17)](docs/plans/TypedComponents.md) | 구현대기 | 2/6 | ReflectionFormats | engine | C-49 |
-| - | [클러스터드 라이팅 구현 단위 (`D2-13`)](docs/plans/ClusteredLighting.md) | 구현중 | 2/6 | 없음 | graphics | D2-13 |
-| - | [다중 월드 · 에디터 툴 창 구현 계획 (D3-7)](docs/plans/EditorMultiWorld.md) | 구현중 | 4/6 | 없음 | editor | D3-7 |
-| - | [Linux 와 GPU 검증 구조의 남은 일 (2026-10-18, 백로그 C-41)](docs/plans/GpuVerification.md) | 구현중 | 1/2 | 없음 | quality | C-41 |
-| - | [증분 쿠킹과 파생 데이터 캐시 계획 (2026-10-18, 백로그 C-42)](docs/plans/IncrementalCook.md) | 구현중 | 5/6 | 없음 | quality | C-42 |
-| - | [긴 함수 정리 기준 (2026-10-18, 백로그 C-18)](docs/plans/LongFunctions.md) | 구현중 | 해당없음 | 없음 | project | C-18 |
-| - | [리플렉션 직렬화 형식 계획 (2026-10-17)](docs/plans/ReflectionFormats.md) | 구현중 | 9/11 | 없음 | engine | 없음 |
-| - | [서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길](docs/plans/ServerDebug.md) | 구현중 | 3/15 | 없음 | network | D7-3 |
-| - | [저장소 소유 정리 — 종료 전용 해제 함수 없애기](docs/plans/StorageOwnership.md) | 구현중 | 0/6 | 없음 | engine | 없음 |
-| - | [구조 최적화 측정 표 (A · B)](docs/plans/StructuralOptimization.md) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
-| - | [모션 매칭 (보류)](docs/plans/MotionMatching.md) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
+| 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 5/15 | 없음 | engine | C-30 |
+| 2 | [GimmickCircuitState](docs/plans/GimmickCircuitState.md) — 기믹 회로 상태 구조 계획 (2026-10-17) | 구현중 | 3/5 | ReflectionFormats | engine | 없음 |
+| 3 | [Vfx](docs/plans/Vfx.md) — 파티클 · VFX 구현 단위 (`D2-11`) | 구현대기 | 0/7 | 없음 | graphics | D2-11 |
+| 5 | 파일이 겹쳐 미룬 정리: engine C-4 C-13 C-22, project C-16 C-17 C-18 — 위 1~2 뒤에. (C-5 C-1… | | | | | |
+| 6 | 새로 쓴 정리 항목(C-65 ~ C-76)은 백로그 안내의 순서(정리 → 기능)를 따른다. | | | | | |
+| 7 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
+| - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 설계 | 0/7 | ClusteredLighting | graphics | D2-12 |
+| - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 설계 | 1/7 | 없음 | engine | D1-7 |
+| - | [EditorCharacterEditor](docs/plans/EditorCharacterEditor.md) — 캐릭터 편집 창 구현 계획 (D4-8 ⑥) | 구현대기 | 0/6 | EditorMultiWorld | gameplay | D4-8 |
+| - | [EnginePartition](docs/plans/EnginePartition.md) — 엔진 분할 계획 | 구현대기 | 2/6 | 없음 | engine | C-1 |
+| - | [ServerBusFormat](docs/plans/ServerBusFormat.md) — 서버 버스 메시지 형식 계획 (2026-10-17) | 구현대기 | 7/7 | ReflectionFormats | network | F-2 |
+| - | [TypedComponents](docs/plans/TypedComponents.md) — 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17) | 구현대기 | 2/6 | ReflectionFormats | engine | C-49 |
+| - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 2/6 | 없음 | graphics | D2-13 |
+| - | [EditorMultiWorld](docs/plans/EditorMultiWorld.md) — 다중 월드 · 에디터 툴 창 구현 계획 (D3-7) | 구현중 | 4/6 | 없음 | editor | D3-7 |
+| - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18, 백로그 C-41) | 구현중 | 1/2 | 없음 | quality | C-41 |
+| - | [IncrementalCook](docs/plans/IncrementalCook.md) — 증분 쿠킹과 파생 데이터 캐시 계획 (2026-10-18, 백로그 C-42) | 구현중 | 5/6 | 없음 | quality | C-42 |
+| - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18, 백로그 C-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
+| - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 구현중 | 3/5 | 없음 | gameplay | D4-6 |
+| - | [ReflectionFormats](docs/plans/ReflectionFormats.md) — 리플렉션 직렬화 형식 계획 (2026-10-17) | 구현중 | 9/11 | 없음 | engine | 없음 |
+| - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 3/15 | 없음 | network | D7-3 |
+| - | [StorageOwnership](docs/plans/StorageOwnership.md) — 저장소 소유 정리 — 종료 전용 해제 함수 없애기 | 구현중 | 0/6 | 없음 | engine | 없음 |
+| - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
+| - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-백로그 149건: 결함 0 · 검증대기 12 · 정리 44 · 기능 59 · 관찰 15 · 결정대기 0 · 조건부 16 · 보류 3
+후보 문서 0개 · 후보 절 0개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.

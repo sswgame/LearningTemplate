@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 @file RunStatusBoard.py
-@brief 최상단 README 의 '지금 진행 상황' 표를 계획 문서 머리 줄 · 로드맵 · 백로그에서 만듭니다.
+@brief 최상단 README 의 '지금 진행 상황' 표를 계획 문서 머리 줄 · 로드맵 · 후보 문서에서 만듭니다.
 
     py -3 -m Scripts status-board                      # 표를 찍는다
     py -3 -m Scripts status-board --write README.md    # 파일의 두 표지 사이만 바꾼다(표지가 없으면 오류)
@@ -25,7 +25,7 @@ from common.StatusBoard import StatusBoardError, buildBoard, diffBoard, replaceB
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="README 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 백로그에서 만든다.")
+    parser = argparse.ArgumentParser(description="README 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 후보 문서에서 만든다.")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--write", type=Path, metavar="FILE", help="이 파일의 표지 사이를 생성 결과로 바꾼다")
     group.add_argument("--check", type=Path, metavar="FILE", help="이 파일의 표지 사이가 생성 결과와 같은지 본다")
