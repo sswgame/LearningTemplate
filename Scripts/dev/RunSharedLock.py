@@ -250,10 +250,11 @@ def releaseHeld(mainRoot: Path, args: argparse.Namespace) -> int:
     return 0 if release(getLockDirectory(mainRoot, args.resource), args.owner) else 1
 
 
-def runHolding(mainRoot: Path, args: argparse.Namespace, listCommand: list[str]) -> int:
+def runHolding(mainRoot: Path, args: argparse.Namespace, listCommand: list[str], logPath: Path | None = None) -> int:
     """
     잠금을 잡고 `listCommand` 를 돌린 뒤 **반드시** 놓습니다(명령이 지거나 예외로 끝나도). 소유 프로세스는 이 프로세스다 — 명령이 도는 동안
     살아 있고, 죽으면 잠금이 버려진 것으로 보인다. `args.belowNormal` 이면 명령을 낮은 우선순위로 띄운다(Windows).
+    `logPath` 를 주면 명령의 출력이 콘솔 대신 그 파일로 간다(`RunLogDigest` 가 요약해 보인다).
     잡지 못하면 그 종료 코드(3)를, 잡았으면 명령의 종료 코드를 돌려준다.
     """
     if not listCommand:
@@ -263,7 +264,7 @@ def runHolding(mainRoot: Path, args: argparse.Namespace, listCommand: list[str])
     if acquired != 0:
         return acquired
     try:
-        result = runProcess(listCommand, bCapture=False, bBelowNormalPriority=args.belowNormal)
+        result = runProcess(listCommand, bCapture=False, stdoutPath=logPath, bBelowNormalPriority=args.belowNormal)
         if not result.bLaunched:
             print(f"[SharedLock] {result.stderr}", file=sys.stderr)
         return result.returnCode

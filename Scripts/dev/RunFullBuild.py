@@ -36,6 +36,7 @@ from common import BuildTree, getProjectRoot, kTestBuildTargets, runGit  # noqa:
 from common.BuildTree import kDefaultPreset  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from RunLogDigest import getLogPath, printDigest  # noqa: E402
 from MakeWorktree import findMainRoot  # noqa: E402
 from RunSharedLock import getSharedSlotCount, kDefaultWaitSeconds, runHolding  # noqa: E402
 
@@ -158,7 +159,11 @@ def runFullBuild(repositoryRoot: Path, args: argparse.Namespace) -> int:
     lockArgs = argparse.Namespace(resource=kBuildLockResource, owner=args.owner, shared=True, slots=getSharedSlotCount(kBuildLockResource),
                                   purpose=f"full-build {args.preset} {inputHash[:12]}", wait=args.wait, belowNormal=args.belowNormal)
     startTime = time.time()
-    returnCode = runHolding(findMainRoot(repositoryRoot), lockArgs, tree.buildCommand(kTestBuildTargets, args.jobs))
+    # 출력은 로그 파일로 가고 끝나서 요약만 보인다(`RunLogDigest`) — `--verbose` 면 지금까지처럼 흘린다. 잠금 동작은 그대로다.
+    logPath = None if args.bVerbose else getLogPath(repositoryRoot, f"full-build-{args.preset}")
+    returnCode = runHolding(findMainRoot(repositoryRoot), lockArgs, tree.buildCommand(kTestBuildTargets, args.jobs), logPath)
+    if logPath is not None and logPath.is_file():
+        printDigest(logPath, returnCode, time.time() - startTime)
     if returnCode != 0:
         print(f"[FullBuild] 빌드가 실패했습니다(종료 {returnCode}) — 증거를 남기지 않습니다.", file=sys.stderr)
         return returnCode
@@ -186,6 +191,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.add_argument("-j", "--jobs", type=int, default=None, help="동시 작업 수(기본: 빌드 도구가 정한다)")
         parser.add_argument("--below-normal", dest="belowNormal", action="store_true", help="낮은 우선순위로 짓는다(도우미 — 작업 방식 2 절)")
         parser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"빌드 칸을 기다릴 최대 초(기본 {kDefaultWaitSeconds})")
+        parser.add_argument("--verbose", dest="bVerbose", action="store_true", help="빌드 출력을 요약하지 않고 전부 흘린다(기본: 로그 파일 + 요약)")
         args = parser.parse_args(listArgument)
         return runFullBuild(repositoryRoot, args)
     except RuntimeError as error:

@@ -33,6 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ListChangedTests  # noqa: E402
+from RunLogDigest import runDigested  # noqa: E402
 from common import BuildTree, ProcessResult, addBuildTreeArguments, getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
@@ -140,7 +141,7 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
         regex = "^(" + "|".join(re.escape(name) for name in listEntry) + ")$"
         command = ["ctest", "--test-dir", str(tree.path), "-R", regex, "-j", str(jobCount), "--output-on-failure", "-FS", "SWTestBinaries"]
         print(f"[RunTests] ctest 항목 {len(listEntry)} 개(-j {jobCount})", flush=True)
-        bFailed = runProcess(command, bCapture=False).returnCode != 0
+        bFailed = runDigested(command, root, "ctest", bVerbose=args.bVerbose).returnCode != 0
 
     workingDir, listExecutable = findTestExecutables(tree)
     mapPath = {path.stem: path for path in listExecutable}
@@ -153,7 +154,7 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
         command = [str(mapPath[executable]), "--test_filter=" + ":".join(f"{suite}.*" for suite in sorted(setSuite)), hostArgument,
                    "--allow_empty_suite", *listExtra]
         print(f"\n[RunTests] ({workingDir}) {' '.join(command)}", flush=True)
-        bFailed = runProcess(command, cwd=workingDir, bCapture=False).returnCode != 0 or bFailed
+        bFailed = runDigested(command, root, executable, bVerbose=args.bVerbose, cwd=workingDir).returnCode != 0 or bFailed
     print("\n[RunTests] " + ("실패가 있습니다" if bFailed else "모두 통과"))
     return 1 if bFailed else 0
 
@@ -191,7 +192,7 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
     for executable, _ in listSelection:
         command = [str(executable), f"--test_filter={args.pattern}", *listExtra]
         print(f"\n[RunTests] ({workingDir}) {' '.join(command)}", flush=True)
-        if runProcess(command, cwd=workingDir, bCapture=False).returnCode != 0:
+        if runDigested(command, getProjectRoot(), executable.stem, bVerbose=args.bVerbose, cwd=workingDir).returnCode != 0:
             listFailed.append(executable.name)
 
     print()
@@ -213,6 +214,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repeat", type=int, default=0, help="고른 케이스를 N 번 되풀이한다(--test_repeat)")
     parser.add_argument("--shuffle", nargs="?", const="random", default=None, help="순서를 섞는다 — 씨앗을 주면 그 순서를 다시 만든다")
     parser.add_argument("--list", action="store_true", help="돌리지 않고 어느 실행 파일에 어떤 케이스가 있는지만 찍는다")
+    parser.add_argument("--verbose", dest="bVerbose", action="store_true", help="빌드 · 테스트 출력을 요약하지 않고 전부 흘린다(기본: 로그 파일 + 요약)")
     parser.add_argument("--no-build", dest="bBuild", action="store_false", help="시험 빌드(all · AllTests)를 건너뛰고 있는 실행 파일로 돌린다")
     # 모르는 인자는 실행 파일 몫이다. 위치 인자 REMAINDER 로 받으면 패턴 뒤의 --list · --repeat 까지 삼킨다.
     args, listPassthrough = parser.parse_known_args(argv)
@@ -226,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         buildCommand = tree.buildCommand()
         print(f"[RunTests] {' '.join(buildCommand)}", flush=True)
-        buildResult = runProcess(buildCommand, bCapture=False)
+        buildResult = runDigested(buildCommand, getProjectRoot(), "test-build", bVerbose=args.bVerbose)
         if not buildResult.bSucceeded:
             print("[RunTests] 시험 빌드가 졌습니다" if buildResult.bLaunched else "[RunTests] cmake 를 찾지 못했습니다 (PATH)", file=sys.stderr)
             return 2
