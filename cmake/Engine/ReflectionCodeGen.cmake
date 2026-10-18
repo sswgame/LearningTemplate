@@ -24,9 +24,10 @@ endfunction()
 # 1) sw_addReflectionStep — ENUM() 헤더 → .gen.cpp / .gen.h
 # HEADERS / INCLUDES / OUTPUT_DIR. .gen.cpp는 Unity 배치에서 제외 (ODR)
 # 루트가 Tools(ReflectionParser) 이후 Engine을 호출해야 이 스텝이 살아 있음
+# MODULE_LOCAL: 이 타깃의 타입을 다른 모듈이 링크하지 않는다(게임 모듈). 실행 파일 타깃은 저절로 이렇게 본다.
 # ------------------------------------------------------------------------------
 function(sw_addReflectionStep TARGET_NAME)
-	cmake_parse_arguments(ARG "" "OUTPUT_DIR;EXCLUDE_REGEX" "HEADERS;INCLUDES" ${ARGN})
+	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX" "HEADERS;INCLUDES" ${ARGN})
 
 	sw_skipWithoutReflectionParser(${TARGET_NAME} swSkip)
 	if(swSkip)
@@ -80,11 +81,11 @@ function(sw_addReflectionStep TARGET_NAME)
 	# 리포지토리를 담은 상위 폴더 이름(.../AppData/..., D:/Games/... 등)에 걸려 오분류된다.
 	list(APPEND parserArgs "--source-root" "${CMAKE_SOURCE_DIR}/Source")
 
-	# 실행 파일의 타입은 모듈 경계를 넘지 않는다 — 생성기가 서버 버스 본문 타입(`kBusVersion`)에 내보내기 매크로를 요구하지 않게 알린다.
-	# 라이브러리(SHARED · MODULE · STATIC 배포)는 늘 검사한다. 정적 배포에서도 같은 헤더가 DLL 빌드로 쓰이기 때문이다.
+	# 실행 파일과 게임 모듈의 타입은 모듈 경계를 넘지 않는다. 그래서 생성기가 서버 버스 본문 타입(`kBusVersion`)에 내보내기 매크로를 요구하지 않게 알린다.
+	# 그 밖의 라이브러리(Base · 키트, STATIC 배포 포함)는 늘 검사한다. 정적 배포에서도 같은 헤더가 DLL 빌드로 쓰이기 때문이다.
 	get_target_property(swTargetType ${TARGET_NAME} TYPE)
-	if(swTargetType STREQUAL "EXECUTABLE")
-		list(APPEND parserArgs "--executable")
+	if(ARG_MODULE_LOCAL OR swTargetType STREQUAL "EXECUTABLE")
+		list(APPEND parserArgs "--module-local")
 	endif()
 	file(GLOB swEmitTpls "${swEmitTemplatesDir}/*.tpl")
 

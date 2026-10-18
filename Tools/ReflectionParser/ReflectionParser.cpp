@@ -114,8 +114,8 @@ int32 main( int32 argc, utf8* argv[] )
 
     // 파서 한 번 실행이 쓰는 설정과 표들이다. 여기가 소유자고, 아래로는 읽기만 하게 내려 준다.
     sw::ParserSession session;
-    session._bExecutableTarget = options._bExecutable;
-    const bool bConfigLoaded   = session._config.load();
+    session._bModuleLocal    = options._bModuleLocal;
+    const bool bConfigLoaded = session._config.load();
     if ( sw::ReflectionParserInternal::loadTemplates( options, session ) == false )
         return 1;
 

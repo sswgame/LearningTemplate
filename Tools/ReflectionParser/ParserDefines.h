@@ -133,7 +133,7 @@ namespace sw
         inline constexpr const utf8* kEmitTemplates   = "--emit-templates";
         inline constexpr const utf8* kEmitBuiltinsGen = "--emit-builtins-gen";
         inline constexpr const utf8* kDepfile         = "--depfile";
-        inline constexpr const utf8* kExecutable      = "--executable";
+        inline constexpr const utf8* kModuleLocal     = "--module-local";
     } // namespace cli
 
     // ------------------------------------------------------------------------------

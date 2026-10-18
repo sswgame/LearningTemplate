@@ -1809,15 +1809,15 @@ namespace sw
             /**
              * @brief 서버 버스 본문 타입(`kBusVersion`)이 모듈 내보내기 매크로를 달았는지 봅니다. 아니면 알리고 `_bHasError` 를 켭니다.
              * @details `ServerBusTopic<T>` 는 `T::StaticType()` 을 부르고, 그 정의는 `T` 를 선언한 모듈의 `.gen.cpp` 에 있다. 내보내기가 없으면
-             *          다른 모듈(서버 키트)의 링크에서야 미해결 기호로 드러난다. C++ 형식으로는 막을 수 없다 — 내보내기 여부를 보는 타입 특성이 없고,
+             *          다른 모듈(서버 키트)의 링크에서야 미해결 기호로 드러난다. C++ 형식으로는 막을 수 없다. 내보내기 여부를 보는 타입 특성이 없고,
              *          리눅스의 visibility 는 컴파일에 드러나지 않는다. 생성기는 AST 의 속성을 보므로 여기서 막는다.
              *          파서는 Base · 키트 매크로를 속성으로 읽는다(Windows 는 `parser_config` 가 `SW_GF_IMPORTS` · `SW_KIT_IMPORTS` 를 정의하고, 리눅스는 늘 visibility 다).
-             *          실행 파일 대상(`--executable`)은 타입이 모듈 경계를 넘지 않으므로 보지 않는다.
+             *          모듈 경계를 넘지 않는 타깃(`--module-local`: 실행 파일 · 게임 모듈)은 보지 않는다.
              */
             static void validateBusBodyExport( MemberCollector& collector )
             {
                 const bool bMissingExport = collector._bBusBody == SW_TRUE && collector._bExported == SW_FALSE;
-                if ( bMissingExport == false || collector._pSession->_bExecutableTarget )
+                if ( bMissingExport == false || collector._pSession->_bModuleLocal )
                     return;
                 SW_LOG_ERROR( "ERROR: '%#' declares '%#' (a server bus body type) but has no module export macro. "
                               "Another module's ServerBusTopic<T> calls T::StaticType(), which then fails to link. "

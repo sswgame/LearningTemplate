@@ -152,7 +152,12 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 
 	if(NOT ARG_NO_REFLECTION)
-		sw_addReflectionStep(${TARGET_NAME}
+		# 게임 모듈의 타입은 다른 모듈이 링크하지 않는다. 타입을 내보내는 매크로도 없다(`GameModuleExports.h` 는 C-ABI 진입점만 만든다).
+		set(listReflectionOption "")
+		if(ARG_KIND STREQUAL "game")
+			set(listReflectionOption MODULE_LOCAL)
+		endif()
+		sw_addReflectionStep(${TARGET_NAME} ${listReflectionOption}
 			HEADERS ${ARG_REFLECTION_HEADERS}
 			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 			EXCLUDE_REGEX "${ARG_REFLECTION_EXCLUDE}"

@@ -1003,7 +1003,7 @@ SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
 /**
  * @brief [ReflectionParserTest] 서버 버스 본문 타입(`kBusVersion`)에 모듈 내보내기 매크로가 없으면 빌드를 세운다
  * @details 다른 모듈의 `ServerBusTopic<T>` 가 `T::StaticType()` 을 부르므로, 내보내기가 없으면 서버 키트의 링크에서야 드러났다(C-61).
- *          모듈 매크로(`SW_KIT_API`)를 단 타입과, 타입이 모듈 경계를 넘지 않는 실행 파일 대상(`--executable`)은 받는다.
+ *          모듈 매크로(`SW_KIT_API`)를 단 타입과, 타입이 모듈 경계를 넘지 않는 대상(`--module-local`: 실행 파일 · 게임 모듈)은 받는다.
  */
 SW_TEST_CASE( ReflectionParserTest, BusBodyWithoutExportStopsTheBuild )
 {
@@ -1022,10 +1022,10 @@ SW_TEST_CASE( ReflectionParserTest, BusBodyWithoutExportStopsTheBuild )
     const ParserRunResult exportedRun = runParserOnTempHeader( parserExe, "BusExportSample", makeBusBodyHeader( "BusExportSampleNotice", "SW_KIT_API" ) );
     SW_EXPECT_TRUE_MSG( exportedRun._exitCode == 0, exportedRun._log.c_str() );
 
-    sw::vector<TempHeader> listExecutableHeader;
-    listExecutableHeader.push_back( TempHeader{ "BusExecutableSample", makeBusBodyHeader( "BusExecutableSampleNotice", "" ) } );
-    const ParserRunResult executableRun = runParserOnTempHeaders( parserExe, listExecutableHeader, "--executable" );
-    SW_EXPECT_TRUE_MSG( executableRun._exitCode == 0, executableRun._log.c_str() );
+    sw::vector<TempHeader> listModuleLocalHeader;
+    listModuleLocalHeader.push_back( TempHeader{ "BusModuleLocalSample", makeBusBodyHeader( "BusModuleLocalSampleNotice", "" ) } );
+    const ParserRunResult moduleLocalRun = runParserOnTempHeaders( parserExe, listModuleLocalHeader, "--module-local" );
+    SW_EXPECT_TRUE_MSG( moduleLocalRun._exitCode == 0, moduleLocalRun._log.c_str() );
 #endif
 }
 
