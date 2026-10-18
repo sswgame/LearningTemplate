@@ -52,7 +52,7 @@ namespace sw
         SkirmishDirectorComponent();
         virtual ~SkirmishDirectorComponent() override;
 
-        /** @brief 판을 열고 패드 가상 커서를 켭니다(오른쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽). 패드만으로 고르기 · 명령을 씁니다. */
+        /** @brief 판을 열고 패드 가상 커서를 켭니다(왼쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽, 오른쪽 스틱 = 카메라 이동). 패드만으로 고르기 · 명령을 씁니다. */
         void onBeginPlay() override;
         /** @brief 가상 커서를 끄고 판을 닫습니다. */
         void onEndPlay() override;
