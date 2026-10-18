@@ -11,8 +11,7 @@ LLVM(컴파일러), Ninja(빌드 도구), vcpkg(패키지 매니저) 등 엔진�
 
 ## 함정 · 계약
 
-- **에디터 로컬 상태는 `Saved/Editor/` 에만 있다 — 다른 PC 의 체크아웃은 한 번 `py -3 Scripts/dev/MoveEditorState.py`**(옛 `Config/Editor/` 의 imgui.ini · 레이아웃 ·
-  팩 안 gv 프리셋을 옮긴다). git 이 무시하는 파일이라 pull 로 옮겨지지 않고, 엔진은 옛 자리를 읽지 않아 안 돌리면 그 PC 의 레이아웃이 기본값으로 돌아간다.
+- **에디터 로컬 상태는 `Saved/Editor/` 에만 있다.** 엔진은 옛 자리(`Config/Editor/` · 팩 안 gv 프리셋)를 읽지 않는다 — 옛 자리에만 상태가 있는 체크아웃은 레이아웃이 기본값으로 돌아간다.
 - **리눅스 Vulkan 검증 레이어는 시스템 패키지(`vulkan-validationlayers`)다 — vcpkg 포트는 Windows 만**(`"platform": "!linux"`). Windows 만 레이어를 Bin 옆에
   복사하고 `VK_LAYER_PATH` 를 건다(`RuntimeDependencies.cmake` · `VulkanRHIDevice.cpp`). 리눅스 CI(ubuntu-22.04 · clang 14)에서 그 포트가 configure 에서 져 잡 넷이 섰다.
   레이어가 없으면 경고 한 줄 뒤 검증 없이 돈다.
