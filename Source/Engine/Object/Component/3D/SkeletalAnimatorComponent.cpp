@@ -306,7 +306,7 @@ namespace sw
                 bPlayable = false;
                 continue;
             }
-            unique_ptr<SkeletalBlendSpaceState> state = make_unique<SkeletalBlendSpaceState>( hashed_string( node._name ), node._blendSpace, std::move( listClip ) );
+            unique_ptr<SkeletalBlendSpaceState> state = sw::make_unique<SkeletalBlendSpaceState>( hashed_string( node._name ), node._blendSpace, std::move( listClip ) );
             state->updateWeights( _parameters );
             _listBlendSpace.push_back( std::move( state ) );
         }
