@@ -90,8 +90,6 @@
     - **들어감(2026-10-14)**: 공용 마우스 양보 창구 `EditorViewportMouseClaim`(뷰포트의 양보 판정 두 곳에 반영), 에셋 슬롯의 여러 확장자 필터(`EditorAssetFilter`, 쉼표 · 공백 · 탭 · 세미콜론)와 Point Cache(`.mfpc`) ·
       두 Displace 의 필터 채우기, 참조 걸러 보기의 파생 컴포넌트 판정(`TypeInfo::isDerivedFrom`), 회전 고리의 오일러 정확도(`applyRotationDelta`), 범위 · ffd2d 상자가 앞 모디파이어 결과를 반영.
     - **남은 한계**: 기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
-  - **정리**: 월드 공간 워프는 `World Warp` 모디파이어(씬 오브젝트 + 공유 `.mfwarp` 파일)로 들어갔다. 남은 것: 패널에서 묶음을 `.mfwarp` 로 내보내는 단추.
-
 - `D3-12` [기능] **첫 UX 감사에서 남은 결함(2026-10-15).** 목록 · 우선순위 · 캡처 번호는 [에디터 UX 기반](../plans/EditorUX.md) 8-1 절이 원본이다. 큰 것부터:
   ① 기본 배치의 아래 도크(Output Log · Content Browser)가 낮아 내용이 거의 안 보인다(도크 최소 높이 · 기본 비율). ② 씬 뷰 통계 오버레이가 뷰포트 절반을 덮는다(접기 · 앵커).
   ③ 탭 · 표 열 · 콤보의 말줄임 · 툴팁 · 가로 스크롤 정책을 공용 위젯으로(Hierarchy · Profiler · Keyboard Shortcuts · Global Variables · Data Table · Project Settings).

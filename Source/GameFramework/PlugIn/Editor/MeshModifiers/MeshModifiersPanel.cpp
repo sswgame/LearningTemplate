@@ -26,6 +26,7 @@
 #include "GameFramework/PlugIn/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/LatticeModifier.h"
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/WorldWarpModifier.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierParamEdit.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
@@ -209,6 +210,7 @@ namespace sw::editor
         , _pNestedRoot{ nullptr }
         , _listNestedPath{}
         , _nestedSelectedIndex{ -1 }
+        , _warpExportPath{}
         , _bEditing{ false }
     {
     }
@@ -380,6 +382,7 @@ namespace sw::editor
         _nestedSelectedIndex = drawStackRows( session, *pShown, _nestedSelectedIndex, "meshmodifiers.nested.row", &enterIndex );
         if ( pShown->getModifierCount() == 0 )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdMeshModifiers", "NestedEmpty" ) );
+        drawWarpExport( *pShown );
         if ( enterIndex >= 0 )
         {
             _listNestedPath.push_back( enterIndex );
@@ -403,6 +406,27 @@ namespace sw::editor
         }
         ImGui::PopID();
         ImGui::PopID();
+    }
+
+    void MeshModifiersPanel::drawWarpExport( const MeshModifierStack& shown )
+    {
+        // 보이는 하위 스택을 워프 정의 파일로 쓴다 — World Warp 모디파이어가 그 파일을 가리키면 여러 메시가 한 워프를 함께 받는다.
+        // 경로는 사용자가 정한다(확장자가 `.mfwarp` 가 아니면 단추를 끈다 — 에셋 슬롯 필터가 그 확장자만 고른다).
+        (void)MeshModifiersPanelInternal::drawTextInput( SW_LOCKEY( "EdMeshModifiers", "WarpExportPath" ), _warpExportPath, _warpExportPath );
+        EditorSelfTestMarks::note( "meshmodifiers.nested.warppath" );
+        const string_view extension     = WorldWarpModifier::kFileExtension;
+        const bool        bWarpFilePath = _warpExportPath.size() > extension.size() &&
+                                   string_view( _warpExportPath ).substr( _warpExportPath.size() - extension.size() ) == extension;
+        ImGui::BeginDisabled( bWarpFilePath == false || shown.getModifierCount() == 0 );
+        const bool bExport = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ExportWarp" ) );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::note( "meshmodifiers.nested.exportwarp" );
+        if ( bExport == false )
+            return;
+        if ( WorldWarpModifier::writeWarpFile( shown, _warpExportPath ) )
+            SW_LOG_INFO( "Exported %# modifiers as the world warp '%#'", shown.getModifierCount(), _warpExportPath.c_str() );
+        else
+            SW_LOG_ERROR( "Could not write the world warp '%#'", _warpExportPath.c_str() );
     }
 
     int32 MeshModifiersPanel::drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix )

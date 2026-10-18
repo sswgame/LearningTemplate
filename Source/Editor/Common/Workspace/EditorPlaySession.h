@@ -13,6 +13,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 
 namespace sw
 {
@@ -49,6 +50,12 @@ namespace sw::editor
             string         _name;
             vector<uint8>  _bytes;
             string         _prefabPath; ///< 씬이 이 오브젝트에 연결한 프리팹 경로(`Scene::getEntityPrefabPath`). 씬을 다시 만들 때 복원한다
+            /**
+             * @brief 중첩 프리팹 부품 표시(`PrefabInstanceRegistry`)입니다. `_bNestedPart` 가 false 면 부품이 아닙니다.
+             * @details 레지스트리는 놓인 오브젝트의 표시를 거두므로, 플레이 중에 지워진 부품을 원래 id 로 되살릴 때 이 값으로 다시 기록한다.
+             */
+            PrefabNestedPart _nestedPart;
+            bool             _bNestedPart{ false };
             /**
              * @brief 프로퍼티 밖에 있는 저장하지 않은 지형 편집(`TerrainComponent::writeState`)입니다. 없으면 비어 있습니다.
              * @details 되돌리기는 컴포넌트를 다시 만들고 지형이 디스크 에셋을 다시 읽으므로, 플레이 전에 칠한 것은 이것으로만 돌아온다.

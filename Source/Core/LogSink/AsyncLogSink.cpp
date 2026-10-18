@@ -406,11 +406,12 @@ namespace sw
         const LogContext& context = LogContext::getCurrent();
         utf8              arrContextTag[LogContext::kMaxTagSize];
         (void)context.formatTag( arrContextTag, LogContext::kMaxTagSize );
-        // 틱 꼬리표(`Logger::setTickNumber` — 전용 서버)도 같은 자리에 붙는다. 정하지 않았으면 빈 글이다.
+        // 시계 꼬리표(`Logger::setClockNumber` — 전용 서버의 틱, 리슨 호스트의 프레임)도 같은 자리에 붙는다. 정하지 않았으면 빈 글이다.
         fixed_string<32> tickTag{};
-        uint64           tickNumber{ 0 };
-        if ( Logger::getTickNumber( tickNumber ) )
-            formatstring( tickTag.data(), tickTag.capacity(), "[tick=%#] ", tickNumber );
+        LogClock         clock{ LogClock::Tick };
+        uint64           clockNumber{ 0 };
+        if ( Logger::getClockNumber( clock, clockNumber ) )
+            formatstring( tickTag.data(), tickTag.capacity(), ( clock == LogClock::Frame ) ? "[frame=%#] " : "[tick=%#] ", clockNumber );
 
         // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
         fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
