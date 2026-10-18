@@ -44,6 +44,121 @@ namespace sw::editor
             {
                 return EditorColorUtil::toImU32( color.withAlpha( alpha ) );
             }
+
+            /** @brief 한 번 그리는 동안 단계 함수들이 함께 보는 값입니다(그릴 곳, 상자 위치, 크기 배율, 알파). */
+            struct DrawFrame
+            {
+                ImDrawList* _pDrawList{ nullptr };
+                ImVec2      _boxMin{};
+                float32     _scale{ 1.0f };
+                float32     _alpha{ 1.0f };
+
+                ImVec2 at( const float32 x, const float32 y ) const { return ImVec2( _boxMin.x + x * _scale, _boxMin.y + y * _scale ); }
+                uint32 color( const Color& base ) const { return fade( base, _alpha ); }
+            };
+
+            /** @brief 페이스 버튼 하나의 자리와 색입니다. 다이아몬드의 네 버튼이 이 표 한 줄씩입니다. */
+            struct FaceButton
+            {
+                GamepadButton _button;
+                float32       _offsetX; ///< 다이아몬드 중심에서의 방향(-1 · 0 · 1) — 거리는 `btnDist`
+                float32       _offsetY;
+                Color         _downColor;
+                Color         _upColor;
+                const utf8*   _pLabel;
+            };
+
+            static constexpr FaceButton kArrFaceButton[] = {
+                {GamepadButton::A,  0.0f,  1.0f, kButtonADown, kButtonAUp, "A"}, // 아래
+                {GamepadButton::B,  1.0f,  0.0f, kButtonBDown, kButtonBUp, "B"}, // 오른쪽
+                {GamepadButton::X, -1.0f,  0.0f, kButtonXDown, kButtonXUp, "X"}, // 왼쪽
+                {GamepadButton::Y,  0.0f, -1.0f, kButtonYDown, kButtonYUp, "Y"}, // 위
+            };
+
+            /** @brief 설정의 모서리에 맞춰 상자의 왼쪽 위를 정합니다. */
+            static ImVec2 computeBoxMin( const ViewportInputOverlayConfig& config, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const float32 boxW,
+                                         const float32 boxH )
+            {
+                constexpr float32 kMargin = 15.0f;
+                const float32     left    = viewportScreenPos.x + kMargin;
+                const float32     right   = viewportScreenPos.x + viewportSize.x - boxW - kMargin;
+                const float32     top     = viewportScreenPos.y + kMargin;
+                const float32     bottom  = viewportScreenPos.y + viewportSize.y - boxH - kMargin;
+                switch ( config._position )
+                {
+                    case ViewportOverlayPosition::BottomRight:
+                        return ImVec2( right, bottom );
+                    case ViewportOverlayPosition::BottomLeft:
+                        return ImVec2( left, bottom );
+                    case ViewportOverlayPosition::TopRight:
+                        return ImVec2( right, top );
+                    case ViewportOverlayPosition::TopLeft:
+                        return ImVec2( left, top );
+                }
+                return ImVec2( left, top );
+            }
+
+            /** @brief 스틱 하나(바탕 원 · 테 · 기울기 점)를 그립니다. */
+            static void drawStick( const DrawFrame& frame, const ImVec2& center, const float32 radius, const float2& stick, const float32 dotRadius )
+            {
+                frame._pDrawList->AddCircleFilled( center, radius, frame.color( kStickBase ) );
+                frame._pDrawList->AddCircle( center, radius, frame.color( kStickRing ), 16, 1.0f );
+                const ImVec2 dot = ImVec2( center.x + stick._x * radius, center.y - stick._y * radius );
+                frame._pDrawList->AddCircleFilled( dot, dotRadius, frame.color( kStickDot ) );
+            }
+
+            /** @brief 트리거 막대 하나(바탕 · 눌린 만큼 채움)를 그립니다. */
+            static void drawTrigger( const DrawFrame& frame, const ImVec2& barMin, const ImVec2& barMax, const float32 value )
+            {
+                frame._pDrawList->AddRectFilled( barMin, barMax, frame.color( kTriggerTrack ) );
+                frame._pDrawList->AddRectFilled( barMin, ImVec2( barMin.x + ( barMax.x - barMin.x ) * value, barMax.y ), frame.color( kTriggerFill ) );
+            }
+
+            /** @brief 양쪽 스틱과 두 트리거를 그립니다. 패드가 없으면 모두 가운데 · 0 입니다. */
+            static void drawSticksAndTriggers( const DrawFrame& frame, GamepadDevice* pGamepad )
+            {
+                const bool    bConnected  = pGamepad != nullptr && pGamepad->isConnected();
+                const float2  leftStick   = bConnected ? pGamepad->getLeftStick() : float2{};
+                const float2  rightStick  = bConnected ? pGamepad->getRightStick() : float2{};
+                const float32 stickRadius = 24.0f * frame._scale;
+                drawStick( frame, frame.at( 40.0f, 55.0f ), stickRadius, leftStick, 4.0f );
+                drawStick( frame, frame.at( 105.0f, 75.0f ), stickRadius * 0.8f, rightStick, 3.5f );
+
+                const ImVec2 ltBarMin = ImVec2( frame._boxMin.x + 10.0f, frame.at( 0.0f, 100.0f ).y );
+                drawTrigger( frame, ltBarMin, frame.at( 70.0f, 110.0f ), bConnected ? pGamepad->getLeftTrigger() : 0.0f );
+                drawTrigger( frame, frame.at( 80.0f, 100.0f ), frame.at( 140.0f, 110.0f ), bConnected ? pGamepad->getRightTrigger() : 0.0f );
+            }
+
+            /** @brief 페이스 버튼 다이아몬드(A · B · X · Y)를 그립니다(`kArrFaceButton`). */
+            static void drawFaceButtons( const DrawFrame& frame, GamepadDevice* pGamepad )
+            {
+                const ImVec2  faceCenter = frame.at( 200.0f, 60.0f );
+                const float32 btnDist    = 18.0f * frame._scale;
+                const float32 btnRadius  = 7.0f * frame._scale;
+                for ( const FaceButton& face : kArrFaceButton )
+                {
+                    const bool   bDown = pGamepad != nullptr && pGamepad->isButtonDown( face._button );
+                    const ImVec2 pos   = ImVec2( faceCenter.x + face._offsetX * btnDist, faceCenter.y + face._offsetY * btnDist );
+                    frame._pDrawList->AddCircleFilled( pos, btnRadius, frame.color( bDown ? face._downColor : face._upColor ) );
+                    frame._pDrawList->AddText( ImVec2( pos.x - 3.0f, pos.y - 6.0f ), frame.color( kButtonLabel ), face._pLabel );
+                }
+            }
+
+            /** @brief 지금 눌린 입력 맵 액션을 상자 안에 들어가는 만큼 적습니다. */
+            static void drawActiveActions( const DrawFrame& frame, const InputMap& inputMap, const float32 boxH )
+            {
+                float32 offsetY = 100.0f * frame._scale;
+                for ( const hashed_string& act : inputMap.getActionNames() )
+                {
+                    if ( inputMap.isActionDown( act ) == false )
+                        continue;
+                    const string text = inputMap.getGlyphForAction( sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
+                    frame._pDrawList->AddText( ImVec2( frame.at( 150.0f, 0.0f ).x, frame._boxMin.y + offsetY ), frame.color( kActiveAction ), text.c_str() );
+                    offsetY += 14.0f;
+                    if ( offsetY > boxH - 10.0f )
+                        break;
+                }
+            }
         };
     } // namespace
 
@@ -63,140 +178,29 @@ namespace sw::editor
         if ( bOverlayHidden )
             return;
 
+        using Internal          = ViewportInputOverlayInternal;
         const float32 boxW      = 260.0f * config._scale;
         const float32 boxH      = 130.0f * config._scale;
-        const float32 margin    = 15.0f;
         const uint8   alphaByte = static_cast<uint8>( 255.0f * config._opacity );
-        const float32 alpha     = static_cast<float32>( alphaByte ) / 255.0f;
 
-        ImVec2 boxMin{ 0.0f, 0.0f };
-        switch ( config._position )
-        {
-            case ViewportOverlayPosition::BottomRight:
-            {
-                boxMin = ImVec2( viewportScreenPos.x + viewportSize.x - boxW - margin, viewportScreenPos.y + viewportSize.y - boxH - margin );
-                break;
-            }
-            case ViewportOverlayPosition::BottomLeft:
-            {
-                boxMin = ImVec2( viewportScreenPos.x + margin, viewportScreenPos.y + viewportSize.y - boxH - margin );
-                break;
-            }
-            case ViewportOverlayPosition::TopRight:
-            {
-                boxMin = ImVec2( viewportScreenPos.x + viewportSize.x - boxW - margin, viewportScreenPos.y + margin );
-                break;
-            }
-            case ViewportOverlayPosition::TopLeft:
-            {
-                boxMin = ImVec2( viewportScreenPos.x + margin, viewportScreenPos.y + margin );
-                break;
-            }
-        }
-        const ImVec2 boxMax = ImVec2( boxMin.x + boxW, boxMin.y + boxH );
+        Internal::DrawFrame frame;
+        frame._pDrawList    = pDrawList;
+        frame._boxMin       = Internal::computeBoxMin( config, viewportScreenPos, viewportSize, boxW, boxH );
+        frame._scale        = config._scale;
+        frame._alpha        = static_cast<float32>( alphaByte ) / 255.0f;
+        const ImVec2 boxMax = ImVec2( frame._boxMin.x + boxW, frame._boxMin.y + boxH );
 
-        // 1) 반투명 배경 및 테두리
-        pDrawList->AddRectFilled( boxMin, boxMax, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kBackground, alpha ), 8.0f );
-        pDrawList->AddRect( boxMin, boxMax, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kBorder, alpha ), 8.0f, 0, 1.5f );
-
-        // 2) 타이틀 텍스트
-        const ImVec2 titlePos = ImVec2( boxMin.x + 10.0f, boxMin.y + 6.0f );
-        pDrawList->AddText( titlePos, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTitle, alpha ), "INPUT OVERLAY" );
+        // 반투명 배경 · 테두리 · 제목
+        pDrawList->AddRectFilled( frame._boxMin, boxMax, frame.color( Internal::kBackground ), 8.0f );
+        pDrawList->AddRect( frame._boxMin, boxMax, frame.color( Internal::kBorder ), 8.0f, 0, 1.5f );
+        pDrawList->AddText( ImVec2( frame._boxMin.x + 10.0f, frame._boxMin.y + 6.0f ), frame.color( Internal::kTitle ), "INPUT OVERLAY" );
 
         GamepadDevice* pGamepad = pInput->getGamepad( 0 );
-        float32        lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f, lt = 0.0f, rt = 0.0f;
-        if ( pGamepad != nullptr && pGamepad->isConnected() )
-        {
-            const float2 leftStick  = pGamepad->getLeftStick();
-            const float2 rightStick = pGamepad->getRightStick();
-            lx                      = leftStick._x;
-            ly                      = leftStick._y;
-            rx                      = rightStick._x;
-            ry                      = rightStick._y;
-            lt                      = pGamepad->getLeftTrigger();
-            rt                      = pGamepad->getRightTrigger();
-        }
-
-        // 3) 좌측/우측 스틱 2D 캔버스
         if ( config._bShowStick == SW_TRUE )
-        {
-            const float32 stickRadius = 24.0f * config._scale;
-            const ImVec2  centerL     = ImVec2( boxMin.x + 40.0f * config._scale, boxMin.y + 55.0f * config._scale );
-            const ImVec2  centerR     = ImVec2( boxMin.x + 105.0f * config._scale, boxMin.y + 75.0f * config._scale );
-
-            // LS
-            pDrawList->AddCircleFilled( centerL, stickRadius, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickBase, alpha ) );
-            pDrawList->AddCircle( centerL, stickRadius, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickRing, alpha ), 16, 1.0f );
-            const ImVec2 dotL = ImVec2( centerL.x + lx * stickRadius, centerL.y - ly * stickRadius );
-            pDrawList->AddCircleFilled( dotL, 4.0f, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickDot, alpha ) );
-
-            // RS
-            pDrawList->AddCircleFilled( centerR, stickRadius * 0.8f, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickBase, alpha ) );
-            pDrawList->AddCircle( centerR, stickRadius * 0.8f, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickRing, alpha ), 16, 1.0f );
-            const ImVec2 dotR = ImVec2( centerR.x + rx * stickRadius * 0.8f, centerR.y - ry * stickRadius * 0.8f );
-            pDrawList->AddCircleFilled( dotR, 3.5f, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickDot, alpha ) );
-
-            // LT / RT Bar
-            const ImVec2 ltBarMin = ImVec2( boxMin.x + 10.0f, boxMin.y + 100.0f * config._scale );
-            const ImVec2 ltBarMax = ImVec2( boxMin.x + 70.0f * config._scale, boxMin.y + 110.0f * config._scale );
-            pDrawList->AddRectFilled( ltBarMin, ltBarMax, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTriggerTrack, alpha ) );
-            pDrawList->AddRectFilled( ltBarMin, ImVec2( ltBarMin.x + ( ltBarMax.x - ltBarMin.x ) * lt, ltBarMax.y ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTriggerFill, alpha ) );
-
-            const ImVec2 rtBarMin = ImVec2( boxMin.x + 80.0f * config._scale, boxMin.y + 100.0f * config._scale );
-            const ImVec2 rtBarMax = ImVec2( boxMin.x + 140.0f * config._scale, boxMin.y + 110.0f * config._scale );
-            pDrawList->AddRectFilled( rtBarMin, rtBarMax, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTriggerTrack, alpha ) );
-            pDrawList->AddRectFilled( rtBarMin, ImVec2( rtBarMin.x + ( rtBarMax.x - rtBarMin.x ) * rt, rtBarMax.y ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTriggerFill, alpha ) );
-        }
-
-        // 4) 페이스 버튼 다이아몬드 (A, B, X, Y)
+            Internal::drawSticksAndTriggers( frame, pGamepad );
         if ( config._bShowButtons == SW_TRUE )
-        {
-            const ImVec2  faceCenter = ImVec2( boxMin.x + 200.0f * config._scale, boxMin.y + 60.0f * config._scale );
-            const float32 btnDist    = 18.0f * config._scale;
-            const float32 btnRadius  = 7.0f * config._scale;
-
-            const bool bA = pGamepad != nullptr && pGamepad->isButtonDown( GamepadButton::A );
-            const bool bB = pGamepad != nullptr && pGamepad->isButtonDown( GamepadButton::B );
-            const bool bX = pGamepad != nullptr && pGamepad->isButtonDown( GamepadButton::X );
-            const bool bY = pGamepad != nullptr && pGamepad->isButtonDown( GamepadButton::Y );
-
-            // A (Bottom)
-            const ImVec2 posA = ImVec2( faceCenter.x, faceCenter.y + btnDist );
-            pDrawList->AddCircleFilled( posA, btnRadius, bA ? ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonADown, alpha ) : ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonAUp, alpha ) );
-            pDrawList->AddText( ImVec2( posA.x - 3.0f, posA.y - 6.0f ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonLabel, alpha ), "A" );
-
-            // B (Right)
-            const ImVec2 posB = ImVec2( faceCenter.x + btnDist, faceCenter.y );
-            pDrawList->AddCircleFilled( posB, btnRadius, bB ? ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonBDown, alpha ) : ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonBUp, alpha ) );
-            pDrawList->AddText( ImVec2( posB.x - 3.0f, posB.y - 6.0f ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonLabel, alpha ), "B" );
-
-            // X (Left)
-            const ImVec2 posX = ImVec2( faceCenter.x - btnDist, faceCenter.y );
-            pDrawList->AddCircleFilled( posX, btnRadius, bX ? ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonXDown, alpha ) : ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonXUp, alpha ) );
-            pDrawList->AddText( ImVec2( posX.x - 3.0f, posX.y - 6.0f ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonLabel, alpha ), "X" );
-
-            // Y (Top)
-            const ImVec2 posY = ImVec2( faceCenter.x, faceCenter.y - btnDist );
-            pDrawList->AddCircleFilled( posY, btnRadius, bY ? ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonYDown, alpha ) : ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonYUp, alpha ) );
-            pDrawList->AddText( ImVec2( posY.x - 3.0f, posY.y - 6.0f ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonLabel, alpha ), "Y" );
-        }
-
-        // 5) 활성 액션 표시
+            Internal::drawFaceButtons( frame, pGamepad );
         if ( pInputMap != nullptr && config._bShowCommandHistory == SW_TRUE )
-        {
-            const vector<hashed_string>& listAction = pInputMap->getActionNames();
-            float32                      offsetY    = 100.0f * config._scale;
-            for ( const hashed_string& act : listAction )
-            {
-                if ( pInputMap->isActionDown( act ) )
-                {
-                    const string text = pInputMap->getGlyphForAction( sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
-                    pDrawList->AddText( ImVec2( boxMin.x + 150.0f * config._scale, boxMin.y + offsetY ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kActiveAction, alpha ), text.c_str() );
-                    offsetY += 14.0f;
-                    if ( offsetY > boxH - 10.0f )
-                        break;
-                }
-            }
-        }
+            Internal::drawActiveActions( frame, *pInputMap, boxH );
     }
 } // namespace sw::editor

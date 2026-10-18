@@ -65,6 +65,12 @@ namespace sw::editor
         EditorOverlayBarRuntime& getRuntime( string_view barID );
         void                     drawBar( EditorOverlayBarState& state, const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, bool bHasSelection );
         void                     drawBarMenuItems();
+        /**
+         * @brief 바의 손잡이를 그리고 끌기 · 놓기 · 오른쪽 클릭 메뉴를 처리합니다. 놓으면 가까운 가장자리에 붙이고 저장합니다.
+         * @param position 이번 프레임의 바 자리(캔버스 기준), @param innerSize 여백을 뺀 캔버스 크기, @param margin 가장자리 여백(DPI 반영)
+         */
+        void drawBarGrip( EditorOverlayBarState& state, EditorOverlayBarRuntime& runtime, const float2& position, const float2& canvasSize, const float2& innerSize,
+                          float32 margin, float32 scale );
         /** @brief 이번 프레임에 먼저 놓인 바와 겹치면 가장자리에서 먼 쪽으로 밀어 낸 자리입니다. */
         float2 pushOutOfPlacedBars( EditorOverlayDock dock, const float2& position, const float2& size ) const;
 

@@ -26,7 +26,7 @@
 |---|---|---|---|---|---|
 | L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
 
-L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
+L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다). 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
 
 ## 3. 목록
 
@@ -65,9 +65,6 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 
 | `Source/Core/Network` | 4 | `NetHost::handlePacket` (`Connection/NetHost.cpp:691`) 213 · 4 · 32 · 0 | 3 |
 |  |  | `NetRequestServer::handleFrame` (`Message/NetRequest.cpp:353`) 133 · 4 · 5 · 0 | 3 |
 |  |  | `NetConnection::writePacket` (`Connection/NetConnection.cpp:262`) 117 · 2 · 0 · 48 | 3 |
-| `Source/Editor/Viewport` | 4 | `ViewportInputOverlay::draw` (`ViewportInputOverlay.cpp:61`) 140 · 3 · 1 · 0 | 3 |
-|  |  | `EditorViewportGizmo::draw` (`EditorViewportGizmo.cpp:40`) 118 · 3 · 5 · 0 | 3 |
-|  |  | `EditorViewportCanvasOverlay::drawAdaptiveGrid` (`EditorViewportCanvasOverlay.cpp:149`) 108 · 4 · 1 · 66 | 3(람다를 단계 함수로) |
 | `Source/Engine/Character` | 4 | `FitSolver::solve` (`Fit/FitSolver.cpp:254`) 148 · 4 · 3 · 0 | 3 |
 |  |  | `PairedAnimationSession::start` (`PairedAnimation/PairedAnimationSession.cpp:160`) 122 · 3 · 13 · 0 | 3 |
 |  |  | `PairedAnimationSession::update` (`PairedAnimation/PairedAnimationSession.cpp:428`) 103 · 3 · 7 · 0 | 3 |

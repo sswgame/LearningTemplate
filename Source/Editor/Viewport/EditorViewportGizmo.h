@@ -55,6 +55,9 @@ namespace sw::editor
         /** @brief 다중 선택 기즈모를 조작합니다. 열거형은 ImGuizmo 에 의존하지 않도록 uint32 로 받습니다. */
         void manipulateGroup( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo, bool bUseSnap,
                               const float32* pSnap );
+        /** @brief 오브젝트 하나의 기즈모를 조작하고 드래그 추적(되돌리기 스냅샷)을 갱신합니다. 열거형은 `manipulateGroup` 과 같이 uint32 로 받습니다. */
+        void manipulateSingle( GameObject& object, const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode,
+                               const float32* pSnap, bool bSurfaceSnap );
         /**
          * @brief 끊긴 기즈모 드래그를 정리합니다. 대상이 아직 있고 편집이 허용되면 그 대상에 되돌리기를 남기고, 아니면 버립니다.
          * @details 드래그 도중 선택이 비거나(Delete, 생성 되돌리기) 편집이 막히면(Play) `draw` 가 앞에서 반환하므로, 추적 표시와

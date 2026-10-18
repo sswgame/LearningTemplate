@@ -19,6 +19,45 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct EditorViewportGizmoInternal
+        {
+            /** @brief 이번 프레임의 기즈모 조작(이동 · 회전 · 크기), 좌표계, 스냅 값입니다. 워크스페이스 · 툴바 설정에서 한 번 만듭니다. */
+            struct GizmoSetup
+            {
+                ImGuizmo::OPERATION _operation{ ImGuizmo::TRANSLATE };
+                ImGuizmo::MODE      _mode{ ImGuizmo::WORLD };
+                float32             _arrSnap[3]{ 0.0f, 0.0f, 0.0f };
+
+                bool hasSnap() const { return _arrSnap[0] > 0.0f; }
+            };
+
+            /** @brief 워크스페이스의 조작 번호(0 이동 · 1 회전 · 2 크기)와 좌표계, 툴바의 스냅 설정으로 설정을 만듭니다. */
+            static GizmoSetup makeSetup( const int32 operationIndex, const bool bLocalSpace, const ViewportToolbarSettings& settings )
+            {
+                GizmoSetup setup;
+                setup._mode       = bLocalSpace ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
+                float32 snapValue = 0.0f;
+                if ( operationIndex == 1 )
+                {
+                    setup._operation = ImGuizmo::ROTATE;
+                    snapValue        = settings._bRotationSnap ? settings._rotationSnapValue : 0.0f;
+                }
+                else if ( operationIndex == 2 )
+                {
+                    setup._operation = ImGuizmo::SCALE;
+                    snapValue        = settings._bScaleSnap ? settings._scaleSnapValue : 0.0f;
+                }
+                else
+                {
+                    snapValue = settings._bGridSnap ? settings._gridSnapValue : 0.0f;
+                }
+                setup._arrSnap[0] = setup._arrSnap[1] = setup._arrSnap[2] = snapValue;
+                return setup;
+            }
+        };
+    } // namespace
     EditorViewportGizmo::EditorViewportGizmo()
         : _undoBefore{}
         , _object{}
@@ -77,38 +116,29 @@ namespace sw::editor
         // beginFrame 이 프레임마다 끈다. 캔버스가 이번 프레임에 그려졌고 편집이 허용될 때(위에서 걸렀다)만 켠다. 꺼 둔 상태이면 그리기만 하고 조작을 받지 않는다.
         ImGuizmo::Enable( true );
 
-        EditorWorkspace&    ws    = pContext->getSubsystem<EditorWorkspace>();
-        const int32         opInt = ws.getGizmoOperation();
-        ImGuizmo::OPERATION op    = ImGuizmo::TRANSLATE;
-        if ( opInt == 1 )
-            op = ImGuizmo::ROTATE;
-        else if ( opInt == 2 )
-            op = ImGuizmo::SCALE;
-
-        const ImGuizmo::MODE mode = ws.isGizmoLocalSpace() ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
-
-        float32 arrSnap[3] = { 0.0f, 0.0f, 0.0f };
-        if ( op == ImGuizmo::TRANSLATE && settings._bGridSnap )
-            arrSnap[0] = arrSnap[1] = arrSnap[2] = settings._gridSnapValue;
-        else if ( op == ImGuizmo::ROTATE && settings._bRotationSnap )
-            arrSnap[0] = arrSnap[1] = arrSnap[2] = settings._rotationSnapValue;
-        else if ( op == ImGuizmo::SCALE && settings._bScaleSnap )
-            arrSnap[0] = arrSnap[1] = arrSnap[2] = settings._scaleSnapValue;
-        const bool bUseSnap = ( arrSnap[0] > 0.0f );
-
-        const bool bGroup = ( listGizmo.size() > 1 );
-        if ( bGroup )
+        const EditorWorkspace&                        ws    = pContext->getSubsystem<EditorWorkspace>();
+        const EditorViewportGizmoInternal::GizmoSetup setup = EditorViewportGizmoInternal::makeSetup( ws.getGizmoOperation(), ws.isGizmoLocalSpace(), settings );
+        const float32*                                pSnap = setup.hasSnap() ? setup._arrSnap : nullptr;
+        const uint32                                  op    = static_cast<uint32>( setup._operation );
+        const uint32                                  mode  = static_cast<uint32>( setup._mode );
+        if ( listGizmo.size() > 1 )
         {
-            manipulateGroup( pView, pProj, static_cast<uint32>( op ), static_cast<uint32>( mode ), listGizmo, bUseSnap, bUseSnap ? arrSnap : nullptr );
+            manipulateGroup( pView, pProj, op, mode, listGizmo, setup.hasSnap(), pSnap );
             return;
         }
+        // 표면 붙이기는 이동에서만, 미리 보기 범위가 아닐 때만 한다.
+        const bool bSurfaceSnap = setup._operation == ImGuizmo::TRANSLATE && settings._bSurfaceSnap && selection.isPreviewScope() == false;
+        manipulateSingle( *listGizmo[0], pView, pProj, op, mode, pSnap, bSurfaceSnap );
+    }
 
-        GameObject*     pRaw       = listGizmo[0];
-        SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
+    void EditorViewportGizmo::manipulateSingle( GameObject& object, const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode,
+                                                const float32* pSnap, bool bSurfaceSnap )
+    {
+        SceneComponent* pSceneComp = object.getPrimarySceneComponent();
         if ( pSceneComp == nullptr )
             return;
         // 추적 중인 드래그가 이 오브젝트의 것이 아니면(선택이 바뀌었거나 그룹 드래그였다) 먼저 정리한다. 그 스냅샷을 이 오브젝트에 커밋하지 않는다.
-        if ( _bTracking == SW_TRUE && _object != pRaw->getHandle() )
+        if ( _bTracking == SW_TRUE && _object != object.getHandle() )
             endDrag();
 
         float32 arrMatrix[16];
@@ -117,37 +147,36 @@ namespace sw::editor
         const bool bGizmoDragStarted = _bTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left );
         if ( bGizmoDragStarted )
         {
-            _undoBefore = EditorTransaction::captureSnapshot( pRaw );
-            _object     = pRaw->getHandle();
+            _undoBefore = EditorTransaction::captureSnapshot( &object );
+            _object     = object.getHandle();
         }
 
-        if ( ImGuizmo::Manipulate( pView, pProj, op, mode, arrMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
+        if ( ImGuizmo::Manipulate( pView, pProj, static_cast<ImGuizmo::OPERATION>( operation ), static_cast<ImGuizmo::MODE>( gizmoMode ), arrMatrix, nullptr, pSnap ) )
         {
             float4x4 newWorldMat{};
             EditorViewportProjectionUtil::loadGizmoMatrix( newWorldMat, arrMatrix );
 
             // 표면 붙이기는 월드 위치와 월드 Y 스케일로 한다. 로컬로 분해한 값을 넘기면 부모가 있을 때 다른 오브젝트의 월드 윗면과
             // 로컬 높이를 비교하게 된다.
-            const bool bSurfaceSnap = op == ImGuizmo::TRANSLATE && settings._bSurfaceSnap && selection.isPreviewScope() == false;
             if ( bSurfaceSnap )
             {
                 float3 worldTranslation = newWorldMat.getTranslation();
-                EditorSceneCommands::snapTranslationToSurface( pRaw, worldTranslation );
+                EditorSceneCommands::snapTranslationToSurface( &object, worldTranslation );
                 newWorldMat.setTranslation( worldTranslation );
             }
 
             // 분해는 엔진이 한다. 엔진의 오일러 규칙을 따라야 한다. ImGuizmo 의 XYZ 분해는 엔진의 요, 피치, 롤 순서와 달라서 여러 축이 섞인 회전이 틀어진다.
-            EditorSceneCommands::applyWorldTransform( pRaw, newWorldMat );
+            EditorSceneCommands::applyWorldTransform( &object, newWorldMat );
         }
 
         _bHovered = ImGuizmo::IsOver() ? SW_TRUE : SW_FALSE;
         if ( ImGuizmo::IsUsing() )
         {
             // 클릭 없이 시작된 드래그(스냅샷이 없다)는 대상만 기억한다. 커밋할 "이전" 값이 없으므로 끝에서 버린다.
-            if ( _bTracking == SW_FALSE && _object != pRaw->getHandle() )
+            if ( _bTracking == SW_FALSE && _object != object.getHandle() )
             {
                 _undoBefore = ObjectSnapshot{};
-                _object     = pRaw->getHandle();
+                _object     = object.getHandle();
             }
             _bTracking = SW_TRUE;
         }
