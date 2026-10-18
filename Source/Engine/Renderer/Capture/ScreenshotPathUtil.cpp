@@ -5,6 +5,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/WallClock.h"
 
 #include "Engine/Renderer/RenderThread.h"
 
@@ -49,20 +50,16 @@ namespace sw
 
     ScreenshotLocalTime ScreenshotPathUtil::getLocalTimeNow()
     {
-        const std::time_t timeSeconds = std::time( nullptr );
-        std::tm           calendar{};
-#if defined( SW_PLATFORM_WINDOWS )
-        localtime_s( &calendar, &timeSeconds );
-#else
-        localtime_r( &timeSeconds, &calendar );
-#endif
+        // 달력 변환은 `WallClock::toLocalCalendar` 하나다(스레드 안전한 플랫폼 함수를 거기서 고른다). 바꾸지 못하면 0 날짜 이름이 된다.
+        LocalCalendarTime calendar{};
+        (void)WallClock::toLocalCalendar( static_cast<int64>( std::time( nullptr ) ), calendar );
         ScreenshotLocalTime localTime{};
-        localTime._year   = calendar.tm_year + 1900;
-        localTime._month  = calendar.tm_mon + 1;
-        localTime._day    = calendar.tm_mday;
-        localTime._hour   = calendar.tm_hour;
-        localTime._minute = calendar.tm_min;
-        localTime._second = calendar.tm_sec;
+        localTime._year   = calendar._year;
+        localTime._month  = calendar._month;
+        localTime._day    = calendar._day;
+        localTime._hour   = calendar._hour;
+        localTime._minute = calendar._minute;
+        localTime._second = calendar._second;
         return localTime;
     }
 } // namespace sw

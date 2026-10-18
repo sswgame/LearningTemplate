@@ -15,6 +15,7 @@
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
+#include "Core/Time/WallClock.h"
 
 namespace sw
 {
@@ -41,7 +42,7 @@ namespace sw
         GlobalLogListenerUnloadListener s_globalLogListenerUnloadListener;
 
         /**
-         * @brief 스레드마다 둔 날짜 문자열 캐시입니다. 같은 초 안의 줄은 `localtime` · 포맷을 다시 하지 않습니다.
+         * @brief 스레드마다 둔 날짜 문자열 캐시입니다. 같은 초 안의 줄은 달력 변환(`WallClock::toLocalCalendar`) · 포맷을 다시 하지 않습니다.
          * @details 시각은 싱크와 상관없는 값이라 스레드마다 하나면 되고, 잠금이 필요 없습니다(전에는 싱크의 뮤텍스 하나를 모든 생산자가 줄마다 잡았다).
          */
         struct LogDateCache
@@ -366,20 +367,15 @@ namespace sw
             }
             else
             {
-                std::tm localTime{};
-#if defined( SW_PLATFORM_WINDOWS )
-                localtime_s( &localTime, &timeSec );
-#else
-                std::tm* pLocalTime = std::localtime( &timeSec );
-                if ( pLocalTime != nullptr )
-                    localTime = *pLocalTime;
-#endif
-                year               = localTime.tm_year + 1900;
-                month              = localTime.tm_mon + 1;
-                day                = localTime.tm_mday;
-                hour               = localTime.tm_hour;
-                const int32 minute = localTime.tm_min;
-                const int32 second = localTime.tm_sec;
+                // 로그 줄은 날짜를 못 바꿔도 남긴다 — 바꾸지 못한 시각(플랫폼 범위 밖)은 0 날짜로 찍혀 눈에 띈다.
+                LocalCalendarTime localTime{};
+                (void)WallClock::toLocalCalendar( static_cast<int64>( timeSec ), localTime );
+                year               = localTime._year;
+                month              = localTime._month;
+                day                = localTime._day;
+                hour               = localTime._hour;
+                const int32 minute = localTime._minute;
+                const int32 second = localTime._second;
 
                 formatstring( cache._arrDate, sizeof( cache._arrDate ), "%#-%#-%# %#:%#:%#", year, month, day, hour, minute, second );
                 dateStr        = cache._arrDate;

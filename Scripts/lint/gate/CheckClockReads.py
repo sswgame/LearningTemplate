@@ -35,7 +35,10 @@ from SourceScan import FileFindings, SourceFile  # noqa: E402
 _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
-_kClockNameRe = re.compile(r"(?<![\w$])(steady_clock|high_resolution_clock|system_clock)(?![\w$])")
+_kClockNameRe = re.compile(r"(?<![\w$])(steady_clock|high_resolution_clock|system_clock|localtime|gmtime)(?![\w$])")
+# 프로세스에 하나뿐인 정적 버퍼에 쓰는 C 달력 변환이다 — 여러 스레드가 부르면 데이터 레이스다(`WallClock::toLocalCalendar` 가 재진입 변형을 쓴다).
+# `localtime_s` · `localtime_r` 은 이름이 달라 걸리지 않는다. 함수라 형식으로 막을 수 없어 이 게이트가 본다.
+_kNonReentrantCalendar = frozenset({"localtime", "gmtime"})
 
 
 def findClockReads(source: SourceFile) -> list[str]:
@@ -53,7 +56,14 @@ def findClockReads(source: SourceFile) -> list[str]:
         if listCodeMatch:
             gate.useExemption(relative)
         return []
-    return [f"{relative}:{lineIndex}: std::chrono::{clockName}  | {source.listLine[lineIndex - 1].strip()}" for lineIndex, clockName in listCodeMatch]
+    return [f"{relative}:{lineIndex}: {_describeName(clockName)}  | {source.listLine[lineIndex - 1].strip()}" for lineIndex, clockName in listCodeMatch]
+
+
+def _describeName(name: str) -> str:
+    """위반 줄에 적을 이름입니다. std 시계와 재진입 불가 달력 변환을 가릅니다."""
+    if name in _kNonReentrantCalendar:
+        return f"non-reentrant {name} (WallClock::toLocalCalendar)"
+    return f"std::chrono::{name}"
 
 
 class CheckClockReadsGate(LintGate):
@@ -73,6 +83,7 @@ class CheckClockReadsGate(LintGate):
         "      지금 시각   MonotonicClock::nowNanoseconds()\n"
         "      걸린 시간   Stopwatch stopwatch; ... stopwatch.getElapsedMilliseconds()\n"
         "      기다림 기한 Deadline::afterMilliseconds( ms ) · isExpired()\n"
+        "      지역 달력   WallClock::toLocalCalendar( unixSeconds, out )  (localtime · gmtime 은 정적 버퍼라 스레드 사이 레이스)\n"
         "  정말 std 시계가 필요하면 Scripts/lint/rules/CheckClockReads.toml 의 [exemption] 에 이유와 함께 적습니다."
     )
     selfTestCases = [
@@ -109,6 +120,17 @@ class CheckClockReadsGate(LintGate):
                     "#include <chrono>\n"
                     "using namespace std::chrono;\n"
                     "long long probe() { return system_clock::now().time_since_epoch().count(); }\n"
+                ),
+            },
+        },
+        {
+            "name": "정적 버퍼에 쓰는 std::localtime(로그 싱크)",
+            "expectedViolation": "Source/Probe/ProbeLogDate.cpp:2: non-reentrant localtime",
+            "files": {
+                "Source/Probe/ProbeLogDate.cpp": (
+                    "#include <ctime>\n"
+                    "int probe( std::time_t t ) { return std::localtime( &t )->tm_year; }\n"
+                    "int probeSafe( std::time_t t ) { std::tm c{}; localtime_r( &t, &c ); return c.tm_year; }\n"
                 ),
             },
         },
