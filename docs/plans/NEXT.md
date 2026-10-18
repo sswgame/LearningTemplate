@@ -22,10 +22,12 @@
 - 토큰 줄이기(2026-10-19, 전부 push 함): AGENTS.md 를 `docs/agents/` 로 나누고, 작업 방식 9절 · 보조 도구 설치 · 함정을 [에이전트와 토큰](../12_Agents.md) · [보조 도구 설치](../13_LocalTools.md) · [함정](../14_Pitfalls.md) 으로 뗐다. 도구 `edit-file` · `agent-log` · `doc`(문서 절 읽기) · `plans --section`, 30KB 넘는 .md 의 통째 읽기를 거절하는 훅(`ReadGuard`, 새 세션부터 적용), 커밋 훅 · `full-build` · `test` · `lint-suite` 출력 요약을 더했다. 전체 빌드 증거의 키는 마크다운 · `.claude/` · 빌드가 실행하지 않는 `Scripts/` 폴더 · `Test/PythonTest/*.py` 를 뺀 빌드 입력 해시라 문서만 바꾼 커밋은 다시 짓지 않는다. `worker` · `mech-worker` · `integrator` 의 `tools` 를 좁혔다(첫 기동에서 도구 이름 오류가 없는지 확인한다).
   - 압축은 효과가 작았다: `09_Decisions.md` 290KB → 274KB(-5.7%). 결정 · 이유 · 수치가 대부분이라 더 줄이려면 "수치 없는 기각 사유를 뺄지" 사람이 정해야 한다. 같은 이유로 `08_Verification`(79KB) · `TypedComponents`(87KB) · `ReflectionFormats`(68KB) 압축은 하지 않았다. 계획 문서는 끝난 단위 절을 지우는 쪽이 낫다(작업 방식 6절). `Scripts/README.md`(69KB)는 나누는 쪽이 낫다.
   - `09_Decisions.md` 5-4 의 "메모리 태그 통계" 항목 끝에 DynamicBitset 설명으로 보이는 문장("자기 기술형은 '0'·'1' 글…")이 잘못 붙어 있다. 원 위치를 확인해 옮긴다.
-  - 남은 후보: 끝난 단위 절 정리(`TypedComponents` · `ReflectionFormats`), `Scripts/README.md` 분할, 남은 래퍼 출력 요약(`Scripts/generate` 등 미확인), 12 문서 측정값 표에 이번 작업의 토큰을 `agent-log` 로 적기(분할 약 10만 · 도구 약 9만 · 훅 약 12만 · Read 훅 약 9만 · 래퍼 약 7만 · 결정 압축 셋 약 17만씩).
+  - 끝난 단위 정리(push 함): `ServerBusFormat` 46→12KB, `TypedComponents` 87→26KB, `ReflectionFormats` 68→46KB, `GimmickCircuitState` 29→9KB, `DataDriven` 24→20KB. 남은 확인은 각 문서의 "남은 확인" 절과 `Candidates-network.md` 의 `ServerBusFormatLeftovers` 에 있다. `ReflectionFormats` 9절의 7-c · 7-d 행과 머리 줄 `9/11` 은 `TypedComponents` 구현이 끝난 사실에 맞춰 고쳐야 한다(작업자가 소유 때문에 못 고쳤다).
+  - 측정(ccusage 20.0.36 고정, 읽기 전용): 세션 43개, 캐시 읽기가 토큰의 97.9%, 상위 2개 세션이 49%(첫째 127억 토큰). 비용은 (턴 수 × 컨텍스트 크기)에 비례해 세션 길이가 가장 큰 변수다. 큰 Bash 출력은 `sed` 19.0% · `grep` 8.8% · `cat` 3.9% 로 명령 출력이 아니라 읽기라서 RTK 는 보류, 세션 요약형 `claude-mem` 은 정본과 겹쳐 비추천, Serena 는 `clangd` 가 없어 보류. `GuardCommands` 가 30KB 넘는 `.md` 의 `cat` · 넓은 `sed -n` · `Get-Content` 를 막는다.
+  - 남은 후보: `Scripts/README.md` 분할, 남은 래퍼 출력 요약(`Scripts/generate` 등 미확인), 12 문서 측정값 표에 이번 작업의 토큰을 `agent-log` 로 적기(분할 약 10만 · 도구 약 9만 · 훅 약 12만 · Read 훅 약 9만 · 래퍼 약 7만 · 결정 압축 셋 약 17만씩).
 - 측정 · GPU 묶음(`meas`)은 한도(429)로 중단했다. 다시 하면 임시 쿠킹 폴더에서 한다(main 체크아웃에 탐침 파일을 만들지 않는다).
 - 근본 원인 후보(미해결): `DiskPathVsResourceId`(디스크 경로와 리소스 id 가 같은 `string_view` 입구), `WorktreeVcpkgInstalledDir`(워크트리가 `vcpkg_installed` 를 나눠 씀).
-- 사용자 결정 대기: 없음.
+- 사용자 결정 대기: 세션 길이 하드 한도(`SessionGuard`, `UserPromptSubmit` 훅이 압축 3회 또는 기록 20MB 를 넘으면 프롬프트를 막고 `NEXT.md` 인계와 새 세션을 안내) — 임계값과 도입 여부. 지금은 6MB · 12MB 에서 경고만 해서 무시된다.
 
 ## 2. 첫 일
 
