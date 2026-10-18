@@ -7,12 +7,6 @@
 
 ## 결함
 
-### TsanNetPlayTraceMerge
-제목: TSan 에서 넷 플레이 합친 트레이스에 Client1 이 없다
-옛번호: 없음
-왜 필요한가: 2026-10-19 main CI(`332fae7`)에서 이전에 졌던 여섯 잡 중 이것만 남았다. Linux TSan 의 `EditorTest_Shard2` 에서 `EditorNetPlaySessionTest.DedicatedServerAndTwoClientsConnectPauseAndMergeTraces` 가 졌다(`TestEditorNetPlaySession.cpp:113`, 합친 트레이스에 `"label":"Client1"` 이 없다). 같은 구성에서 이 테스트는 19 초 걸렸다.
-남은 것: 원인 확인 전이다. 후보 둘 — TSan 이 느려 클라이언트가 접속하기 전에 트레이스를 합친 시간 경쟁, 또는 합치기 코드가 늦게 접속한 클라이언트를 빠뜨리는 결함. `py -3 -m Scripts ci-jobs 39143580252 --annotations` 와 같은 테스트의 Debug 결과(통과)를 비교하고, TSan 구성에서 3~5 회 다시 돌려 재현율을 적는다. 기다림은 횟수가 아니라 시간으로 묶는다.
-
 ### ImportRuleOverlap
 제목: 임포트 규칙의 넓은 와일드카드와 첫 매칭
 옛번호: C-44

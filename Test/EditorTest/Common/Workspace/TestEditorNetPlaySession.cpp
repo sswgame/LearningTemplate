@@ -10,6 +10,7 @@
 #include "TestFramework/TestFramework.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <thread>
 
 using namespace sw;
@@ -62,6 +63,38 @@ namespace
         }
         return false;
     }
+
+    /** @brief 모은 줄 가운데 @p processIndex 의 것에 붙은 가장 큰 틱 번호(`[tick=N]`)입니다. 없으면 0. */
+    int64 highestTick( const EditorNetPlaySession& session, int32 processIndex )
+    {
+        int64 highest = 0;
+        for ( const EditorNetPlayLogLine& line : session.getLogLines() )
+        {
+            const size_t tagPosition = line._processIndex == processIndex ? line._text.find( "[tick=" ) : string::npos;
+            if ( tagPosition != string::npos )
+                highest = std::max<int64>( highest, std::strtoll( line._text.c_str() + tagPosition + 6, nullptr, 10 ) );
+        }
+        return highest;
+    }
+
+    /**
+     * @brief @p processIndex 가 틱을 하나 끝낼 때까지 기다립니다(시한 안에 끝내면 true).
+     * @details 종료 트레이스는 끝난 프레임이 하나는 있어야 써진다. 접속 줄은 첫 틱 안에서 나오므로 그것만 기다리고 끄면, 느린 구성(TSan)에서 트레이스가 빠진다.
+     *          `status` 는 그 프로세스의 현재 틱 번호를 단 줄을 내므로 줄이 없는 동안 계속 보낸다. 틱 번호 N 은 N-1 틱까지 끝났다는 뜻이다.
+     */
+    bool waitForFinishedTick( EditorNetPlaySession& session, int32 processIndex )
+    {
+        const Deadline deadline = Deadline::afterMilliseconds( kWaitTimeoutMilliseconds );
+        while ( deadline.isExpired() == false )
+        {
+            (void)session.sendProcessCommand( processIndex, "status" );
+            session.update();
+            if ( highestTick( session, processIndex ) >= 2 )
+                return true;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        }
+        return false;
+    }
 } // namespace
 
 /**
@@ -103,6 +136,12 @@ SW_TEST_CASE( EditorNetPlaySessionTest, DedicatedServerAndTwoClientsConnectPause
     SW_EXPECT_TRUE_MSG( waitForLine( session, 0, "Server resumed at tick" ), "resume did not reach the server" );
     // 모은 서버 줄에는 서버 틱 번호가 붙어 있다 — Output Log 에서 클라이언트 줄과 틱으로 맞춰 본다.
     SW_EXPECT_TRUE_MSG( waitForLine( session, 0, "[tick=" ), "the server lines in the session log carry no tick number" );
+
+    // 끄기 전에 프로세스마다 틱 하나는 끝나야 한다 — 아니면 종료 트레이스가 "끝난 프레임 없음" 으로 빠진다(TSan 에서 Client1 이 그랬다).
+    for ( int32 processIndex = 0; processIndex < session.getProcessCount(); ++processIndex )
+    {
+        SW_EXPECT_TRUE_MSG( waitForFinishedTick( session, processIndex ), "a process did not finish a tick before the stop" );
+    }
 
     const string mergedPath = session.stop();
     SW_EXPECT_FALSE( session.isRunning() );
