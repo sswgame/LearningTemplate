@@ -8,7 +8,7 @@
 - **검증**: Debug · Release · Shipping `all AllTests` 경고 0, 두 구성 `-L lint` · `-L nogpu` 통과, Debug `-L race` 통과, Shipping `-L nogpu` 는 `A-23`(rigs_raw) 만 실패. 셰이더 네 백엔드 재쿠킹, `.mesh` 형식 3 재임포트, 쿠킹 팩에 `.bonemask.json` · `bow_shoot.pairedanim.xml` · `migrations.json` 확인. GPU(네 백엔드 × 대표 셋, `-L hostgpu`)와 코드 리뷰 결과는 아래 "남은 일"에 적었다.
 - **측정**: 구조 최적화 A · B 표(`StructuralOptimization.md`) — A ④ · B ⑤ 되돌림, 나머지 유지. feat16 `RT.GPUScene.vertexPool` · `RT.Deform.rebuildMorphPool`, feat10 `saveState` 시간 · B 바이트 크기(`GimmickCircuitState.md` 8절 방법), feat9 캐스트 적중 경로는 **재지 못했다**(하니스가 없거나 GPU 잠금이 겹침) — 다음 측정 묶음의 첫 일.
 - **새로 드러난 뿌리**: 브랜치를 빌드 · 테스트 없이 커밋하면 새 테스트가 한 번도 돌지 않는다(feat6 · feat13 · feat15 · feat18 · feat19 · feat22 의 결함이 모두 여기서). 구조로 고친 것: 키트 DLL 복사 타깃(옛 `A-21`), 메시 판의 정본(`MeshAssetFormat.h`), 범위 경계 9 자리, `broadcastSnapshot`, 실제 경과를 적지 않으면 모든 구성에서 멈춤. 후속은 `C-59`(빈 이름 "None") · `C-60`(오류 수집 읽기) · `C-61`(버스 타입 내보내기) · `A-24` ~ `A-27` · `C-54` ~ `C-58`.
-- **남은 일**: (GPU · 리뷰 결과를 병합 뒤 여기에 적는다)
+- **남은 일**: GPU 확인 — Release `-L hostgpu` 의 EngineTest · QaGoldenImages 통과(머티리얼 텍스처 칸 오프셋 결함 · 라이트 없는 GPU 테스트 · 넷 세션 종료 경고 · 씬 뷰 맥락 메뉴를 고침). 남은 실패 editorstartup `PanelCount` 41/42 와 AppSmoke themepark 둘은 Ninja-Release 프리셋에 `SW_GAMES` 가 비어 키트 집합이 Debug 와 다른 구성 문제다(병합 원인 아님 — hostgpu 는 `-DSW_GAMES=ALL` 구성에서 돈다, 프리셋에 둘지는 다음 결정). 네 백엔드 × Empty · 에디터 · Shooter3D · NileCity 스크린샷 이상 없음, `gv_lightCulling` 0/1 네 백엔드 바이트 동일(방향광 장면만), 게임 시나리오 26 개 dx12 통과. Shooter3D 는 1 인칭이라 캐릭터 걷기 · 조준 · 발 IK · 마스크 레이어는 화면에서 보지 못했다 — 3 인칭 확인 장면이 필요. 리뷰 지적은 `C-62`.
 - **사용자 결정 대기**: 없음.
 
 ## 0-1. 2026-10-17 저녁 세션 인계
