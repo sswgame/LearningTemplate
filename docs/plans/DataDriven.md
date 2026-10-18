@@ -32,49 +32,27 @@
 
 | 묶음 | 내용 | 순서 |
 |---|---|---|
-| W0 형식 | `DataPath` · `Optional` · `[[nodiscard]]` 로더 결과 · 소유 규칙을 만들고 `EngineDefaultAssets` 한 구조체에 먼저 적용(첫 적용) | 셰이더 묶음 병합 뒤 가장 먼저 |
-| W1 엔진 기본 에셋 | `EngineDefaultAssets` 전 필드 · `ShaderCookRequest` 리터럴 · 시스템 설정 경로 상수(물리 · 내비 · 오디오 믹서 · UI 문서 · Render2D · 네트워크 에뮬레이션) · 컴포넌트 기본 머티리얼 → XML. 필수 읽기 형식과 `[[nodiscard]]` 결과 | 셰이더 묶음(경로 일부 선행) 병합 뒤 |
-| W2 엔진 조용한 폴백 | `Material.cpp` 로드 실패 · `ResourcePaths` 우선순위 · `Render2DSettings` · 오디오 믹서 · `AnimationSystem` · `PhysicsSettings::ensureDefaults` · `CharacterDataReader` fallback 인자 · `CompressionStream` · 머티리얼 불리언 파싱 · 팩 도메인 떼고 재조회 | W1 뒤 |
-| W3 에디터 | 도구 기본값(`EditorToolDefaults`) · 테마 폴백 · 패널 처음 문서 · `findPanel` id 상수 | W1 뒤, W2 와 병행 |
-| W4 게임 | `gamesettings.xml` 로 카탈로그 · 오디오 · UI 경로, 이중 정본 제거, 입력 액션 · 카탈로그 id, 로드 실패 `return true` → 오류, 슈터 무기 폴백, 계층 역전 | W1 뒤, 게임별로 쪼갬 |
+| W1 엔진 기본 에셋 | `EngineDefaultAssets` 전 필드 · `ShaderCookRequest` 리터럴 · 시스템 설정 경로 상수(물리 · 내비 · 오디오 믹서 · UI 문서 · Render2D · 네트워크 에뮬레이션) · 컴포넌트 기본 머티리얼 → XML. 필수 읽기 형식과 `[[nodiscard]]` 결과. `EngineDefaultAssets` 의 경로 칸은 끝났고 남은 것은 7.5 의 P1 | 셰이더 묶음(경로 일부 선행) 병합 뒤 |
 | W5 도구 | `Scripts/common/Config.py` 의 `{}` 반환 · `FileScan.py` 조용한 통과 · `AssetValidation` 기본값 · CMake `ERROR_VARIABLE` 뒤 빈 값 · `DEFAULT_VALUE` | 지금(빌드 없음, `TestTargets.cmake` 는 testspeed 뒤) |
 | W6 테스트 | `EngineDefaultAssets{}` 기본 생성 · 정본 경로 리터럴 · 폴백을 단언하는 테스트 | W1 · W2 뒤 |
-| W8 게이트 | `CheckDataDrivenStructure` — 형식이 막지 못하는 틈의 기준선 동결(이미 `datagate` 가 만드는 중, 병합은 W0 뒤에 기준선을 다시 뜨고) | 마지막 |
 | W7 셰이더 잔여 | 죽은 `ALPHA_TEST` 가지 · `material_keywords` 주석 무시 · 셰이더 안 조용한 대체(AO · 월드 · 키 라이트) 설계 판단 · 파이프라인 XML · 재질 반복 | 셰이더 묶음 뒤 |
 
 ## 4. 정한 판단
 
-- 게임이 데이터를 못 읽으면 `return true` 로 모듈만 띄우던 설계(주석에 의도 기록)는 방침과 충돌해 오류로 멈추게 한다.
 - `REFLECT( Alias = 옛이름 )` 와 XML · JSON · bin 이중 읽기 경로: 별칭 · 옛 형식 리더는 두지 않는 방침이라 쓰는 곳을 세어 데이터를 다시 쓰고 없앤다. 스키마 버전 이행(SchemaMigrate)은 별개라 남긴다.
-- 사용자 설정(사용자 폴더의 파일)이 깨졌을 때는 엔진 필수 데이터와 달라 복구가 필요하다: 조용히 기본값으로 가지 않고 깨진 파일을 옆으로 치우고 오류 로그를 남긴 뒤 새로 만든다.
 - 도구 훅(`.claude/hooks`)의 fail-open 은 훅 오류로 세션이 막히지 않게 하려는 것이라 남기고 이유를 주석에 적는다.
 
-## 5. W2 결과와 남은 것 (2026-10-16)
+## 5. W2 에서 남긴 것
 
-고친 것: 머티리얼 로드 실패 · 체커 텍스처 실패 → 초기화 실패(대체는 `MeshComponent` 한 곳), 머티리얼 불리언 · 품질 · LOD · usage · 범위 글 → 읽기 오류(`parseBoolToken( …, bool& )`, `parseOptionalBoolField`),
-`Render2DSettings` 정본 하나(게임 팩 덮어쓰기 · 코드 `Default` 표 제거, 렌더러 초기화가 `reloadActive` 로 읽고 실패면 멈춤), 리소스 우선순위 빈 목록 → `ResourcePaths::initialize` 실패,
-오디오 믹서 · 물리 설정 · 엔진 기본 에셋 · 문화권 표 → 기동 실패(코드 그래프 · `ensureDefaults` · built-in defaults 제거), 군중 · LOD 표 → 단언하고 기능을 끈다(코드 표로 대신하지 않음),
-압축 코덱 대체 제거, `CharacterDataReader` 를 필수 `readXxx( node, name )` · 선택 `readOptionalXxx( node, name, absentValue )` 로 가름, 알림 인자의 "적지 않음" 값을 처리기 선언(`AnimationNotifyParamDef`) 한 곳으로,
-깨진 사용자 설정은 `.corrupt` 로 치우고 오류, 맨 `.scene` 접미사 별칭 제거.
-
-남긴 것(이유):
 - 팩 키의 도메인 떼고 재조회 — 도메인 없는 리소스 id(검색 우선순위로 푸는 형식)가 떼어 낸 키를 1단계에서 맞히는 데 기대고 있다. 키를 전역 경로로 바꾸려면 도메인 없는 id 쓰는 곳을 먼저 없애야 한다.
 - `attachmentFormatOrDefault` · `getAttachmentClearColorOrDefault` — 근본 원인은 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것이다. 선언 필수화는 파이프라인 XML(셰이더 작업 소관)과 함께 한다.
 - `REFLECT( Alias )` — 제품 데이터 사용 0, 테스트 4. 리더 제거는 리플렉션 파서 · 코드젠 변경이라 따로 한다. 프리팹 JSON 리더는 데이터 0 이지만 에디터가 쓴다(에디터 작업 소관).
 - XML 저작본 ↔ bin 쿠킹본 두 리더(`PrefabAsset` · `SceneDocument`)는 옛 형식이 아니라 쿠킹 파이프라인이다.
 - 같은 모양이 더 있는 곳: `NavMeshSettings::ensureDefaults`, `PhysicsDesc` 의 모르는 재질 → 첫 재질, `MaterialUtil::parseBlendMode` 의 모르는 이름 → Opaque, `GameDataXML` · `CameraPreset`(GameFramework 작업 소관).
 
-## 6. W4 결과 (2026-10-17, 빌드 전)
+## 6. W4 에서 볼 것
 
-`wt/feat12` 에 `backup/gamesdata-w4`(미검증 백업)를 main 위로 옮겼다. 빌드 · 테스트 · 실행은 아직 하지 않았다(묶음 빌드에서 확인). 바뀐 .cpp 는 main 의 컴파일 DB 로 `clang-cl /Zs` 구문 검사만 통과했다.
-
-- 카탈로그 경로의 정본은 데이터 종류 등록 줄 하나다. 게임 코드는 `GameInstanceBase::loadRequiredCatalog` · `loadRequiredData`(팩 루트 + `kDataKind` → `GamePackDataUtil::tryMakeKindPath`)로 읽고, 못 읽으면 `onInitialize` 가 false 라 기동이 멈춘다(`return true` 제거).
-- 사운드 이벤트는 gamesettings `_audioEvents` 를 인스턴스가 올리고 내린다. 로딩 화면 문서는 gamesettings 하나(`LoadingScreenController` 의 코드 경로 제거).
-- 계층 역전: 캐릭터 편집 창은 활성 팩의 `data/charactereditor.xml`(네 칸 필수, 레퍼런스 포즈는 스켈레톤 이름에서 만든다), 공원 배치 미리보기는 활성 팩 경로로 읽는다. 데이터가 없는 게임은 창이 "데이터 없음" 을 보이고 다른 게임 경로로 대체하지 않는다.
-- 입력 액션 이름은 씬 데이터의 핸들 `PROPERTY` 이고 `InputActionCheckUtil` 이 시작 때 입력 맵과 대조한다. 벤치 적 에셋 · 사거리는 `benchscene.xml`, 기믹 상호작용 카탈로그는 프리팹 `_catalogPath` 가 정본이다.
-- 게이트 `CheckDataDrivenStructure` 기준선에서 고친 23 파일을 지웠다.
-
-빌드 때 볼 것: 새 `PROPERTY` 의 리플렉션 생성물, 모든 게임의 기동(필수 데이터가 하나라도 없으면 이제 멈춘다), 에디터 캐릭터 편집 · 공원 배치 시나리오.
+W4(게임 데이터의 필수 읽기 · 계층 역전 제거)는 코드에 들어갔다. 빌드 · 실행 확인 기록은 찾지 못했다. 새 `PROPERTY` 의 리플렉션 생성물, 모든 게임의 기동(필수 데이터가 하나라도 없으면 멈춘다), 에디터 캐릭터 편집 · 공원 배치 시나리오를 묶음 빌드에서 본다.
 
 ## 7. 남은 순서 (2026-10-18 설계)
 
@@ -138,7 +116,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 ### 7.5 단위
 
-동시 빌드는 둘까지입니다. D1(새 읽기 함수 `readRequiredAttribute` · `readOptionalAttribute` · `readRequiredChild` · `readOptionalChild`, `JSONValue::readRequired` · `readOptional`, `KeyValueFile::readRequired` · `readOptional`, `GameSettings` 커스텀 모음 삭제)은 들어갔습니다. D2 ~ D7 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
+동시 빌드는 둘까지입니다. D1(새 읽기 함수 `readRequiredAttribute` · `readOptionalAttribute` · `readRequiredChild` · `readOptionalChild`, `JSONValue::readRequired` · `readOptional`, `KeyValueFile::readRequired` · `readOptional`, `GameSettings` 커스텀 모음 삭제)과 D2 ~ D5(키트 카탈로그를 `readFields` 스키마 읽기로)는 들어갔습니다. D6 ~ D8 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
@@ -154,7 +132,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 | G2 | Shipping 의 그림 비교(C-30 ⑤)를 구운 팩의 시나리오 스크린샷으로 둡니다 | `Test/AppTest/`, 팩 시나리오 | 없음 | Shipping 빌드와 `-L hostgpu` | 없음 |
 
 C-30 ④(에디터 색과 아이콘 테이블, UI 크기 리터럴)는 디자인 토큰 작업(editorux 묶음)이 맡으므로 이 표에 넣지 않습니다.
-D2 ~ D6 의 데이터 다시 쓰기는 키트가 읽는 데이터 파일만 건드립니다. 두 키트가 한 파일을 읽으면 같은 단위에 넣습니다. 맡기기 전에 `grep` 으로 확인합니다.
+D6 의 데이터 다시 쓰기는 키트가 읽는 데이터 파일만 건드립니다. 두 키트가 한 파일을 읽으면 같은 단위에 넣습니다. 맡기기 전에 `grep` 으로 확인합니다.
 
 ### 7.6 사용자 결정
 
