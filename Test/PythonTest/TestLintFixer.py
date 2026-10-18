@@ -20,7 +20,7 @@ def replaceBadInternal(text: str) -> tuple[str, bool]:
 
 
 class _ProbeFixer(LintFixer):
-    listPass = (FixPass(transform=replaceBadInternal, problem="bad", done="fixed", badSample="bad", goodSample="good"),)
+    listPass = (FixPass(transform=replaceBadInternal, problem="bad", done="fixed", badSample="bad", fixedSample="good", goodSample="good"),)
 
 
 class LintFixerTest(unittest.TestCase):

@@ -8,6 +8,7 @@ import argparse
 import os
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -27,18 +28,27 @@ class SharedLockTest(unittest.TestCase):
     def testSecondOwnerWaitsUntilTheFirstReleases(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             lockDirectory = SharedLock.getLockDirectory(Path(temp), "vcpkg")
-            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "a", "install", 1, 1000.0))
-            self.assertFalse(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1001.0))
+            # 주인이 살아 있어야 잠금이 지켜진다 — 죽은 주인의 잠금은 바로 버려진 잠금이다(아래 테스트).
+            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "a", "install", os.getpid(), 1000.0))
+            self.assertFalse(SharedLock.tryAcquire(lockDirectory, "b", "install", os.getpid(), 1001.0))
             self.assertFalse(SharedLock.release(lockDirectory, "b"))  # 남의 잠금은 놓지 못한다
             self.assertTrue(SharedLock.release(lockDirectory, "a"))
-            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1002.0))
+            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "b", "install", os.getpid(), 1002.0))
 
-    def testAbandonedLockIsTakenOver(self) -> None:
+    def testLockOfADeadOwnerIsTakenOverAtOnce(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             lockDirectory = SharedLock.getLockDirectory(Path(temp), "vcpkg")
             self.assertTrue(SharedLock.tryAcquire(lockDirectory, "gone", "install", 0, 1000.0))  # pid 0 은 살아 있지 않다
-            self.assertFalse(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1000.0 + 60))
-            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1000.0 + SharedLock.kStaleSeconds + 1))
+            # 소유자는 오래 사는 프로세스라 죽었으면 끝난 것이다 — 시간을 기다리지 않는다.
+            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "b", "install", os.getpid(), 1000.0 + 1))
+
+    def testLockWithoutOwnerRecordIsAbandonedOnlyAfterTheStaleTime(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            lockDirectory = SharedLock.getLockDirectory(Path(temp), "vcpkg")
+            lockDirectory.mkdir(parents=True)  # 기록(owner.json)을 쓰다 만 잠금
+            now = time.time()
+            self.assertFalse(SharedLock.tryAcquire(lockDirectory, "b", "install", os.getpid(), now + 60))
+            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "b", "install", os.getpid(), now + SharedLock.kStaleSeconds + 1))
 
     @staticmethod
     def makeArgs(owner: str) -> argparse.Namespace:
