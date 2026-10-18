@@ -2,7 +2,19 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법은 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../backlog/README.md)(영역별 파일 · 상태 태그, `py -3 -m Scripts backlog` 로 목록), 작업 방식은 [작업 방식](../11_Workflow.md), 병렬 작업자 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다. 이 문서에는 지금 상태 · 다음 할 일 · 함정 · 시작 절차만 둡니다.
 
-## 00. 2026-10-18 오후 세션 인계 (가장 먼저 읽는다)
+## 000. 2026-10-18 저녁 통합 `integ7` 인계 (가장 먼저 읽는다)
+
+- **main 에 병합**: 정리 여덟(`cl-a` C-37 · `cl-b` C-5 · `cl-c` C-40 · C-63 · `cl-d` C-46 일부 · `cl-f` C-34 · C-48 · `cl-g` C-19 · C-64 · `cl-h` C-44 일부 · C-50 · `cl-i` C-12 · C-15)과 아직 진행 중인 `impl` · `impl-h` · `feat` · `feat-net` 의 그때 tip. `resl`(대규모 개명)은 미완이라 합치지 않았다.
+  진행 중인 네 워크트리와 `resl` 은 지우지 않았다 — 그 작업자는 main 을 병합한 뒤 이어 간다.
+- **푼 충돌**: 백로그 `quality.md` C-44 · C-46(cl-h · cl-d 쪽을 각각), `MakePackage.py` 스테이징(cl-d 의 이름으로 팩 고르기를 택해 impl-h 의 `.packrec` 제외가 필요 없어짐), `ko.tm.json` 번역 항목 둘 다.
+- **합친 상태에서 드러난 환경 결함(고침)**: 프리셋이 `VCPKG_OVERLAY_TRIPLETS` 를 환경 변수로만 넘겨 ninja 재구성 · ctest `BuildTestBinaries` · `ModuleCompiler` 가 기본 triplet(MSVC)으로 공유 vcpkg 설치를 덮었다 — DirectXTex 가 OpenMP 판으로 바뀌어 `Could NOT find OpenMP_C`.
+  `Vcpkg.cmake` 가 처음 구성의 값을 캐시에 박는다. **main 병합 전의 워크트리는 여전히 MSVC 판을 깔 수 있다** — 구성이 OpenMP 로 서면 main 을 병합하고 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 한 번 구성한다.
+  `imgui-node-editor` 는 오버레이(옛 main)와 내장 포트(cl-i) 사이에서 워크트리마다 다시 깔리므로, 진행 중인 워크트리도 main 을 병합해야 멈춘다.
+- **검증**: Debug · Release · STL(`SW_ENABLE_STL_CONTAINER`) `all AllTests` 경고 0, 두 구성 `-L lint` 47 · `-L nogpu` 57 통과, Debug `-L race` 5 통과, STL `-L nogpu` 57 통과. GPU(hostgpu · 네 백엔드 × 대표 셋)는 이번 묶음에서 돌리지 않았다.
+- **남은 일**: ① GPU 확인(`-L hostgpu`, 네 백엔드 × Empty · 에디터 · Shooter3D · NileCity — 카메라 디렉터로 옮긴 MeadowVillage · WildWest 포함) ② 아래 00절의 남은 일 ③ `resl` 통합(다음 라운드).
+- **사용자 결정 대기**: 없음.
+
+## 00. 2026-10-18 오후 세션 인계
 
 - **main 은 `4979c0144` 까지 push 했다**(전체 빌드 증거 있음). 아래 0절의 `A-23`(Shipping 합성 리그) · `C-14`(린트 잡 확인)는 **해소됐다** — 이 절을 우선한다.
 - **한 일**: 결함 `A-20` `A-23` `A-24` `A-25` `A-26` `A-27`, 정리 `C-39` `C-54`(일부) `C-56` `C-58` `C-59` `C-60` `C-62` 전부, `C-14` 확인. 워크트리 8곳(`fixci` `fixengine` `fixgfx` `fixscripts` `scr2` `rangesrc` `netkit` `miscfix`)을 병합했다. 워크트리는 아직 지우지 않았다 —
