@@ -254,7 +254,7 @@ namespace sw
             {
                 typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
                 {
-                    if ( prop._metadata._bTransient == SW_TRUE )
+                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                         return;
 
                     if ( prop._bIsBitField == SW_TRUE )
@@ -334,11 +334,20 @@ namespace sw
                                                            vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 bool bFieldError{ false };
+                bool bForbiddenField{ false };
 
                 typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
                 {
-                    if ( prop._metadata._bTransient == SW_TRUE )
+                    // 이 목적이 다루지 않는 필드는 지금 값 그대로다(기본값을 채우지 않는다). 저작 파일의 런타임 상태는 로드 오류다.
+                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
+                    {
+                        if ( SerializerUtil::isForbiddenInFile( prop, context ) && hasXMLField( backend, prop ) )
+                        {
+                            SerializerUtil::reportForbiddenProperty( typeInfo, prop );
+                            bForbiddenField = true;
+                        }
                         return;
+                    }
                     void* pPropPtr = prop.getRawPtr( pInstance );
 
                     if ( prop._bIsContainer && prop.hasContainerWrapper() )
@@ -406,9 +415,31 @@ namespace sw
                     }
                 }, true /* 상속 PROPERTY 포함 */ );
 
+                // 금지된 필드는 소프트 읽기(orphan 목록)에서도 실패다 — orphan 으로 넘기면 경고 한 줄로 사라진다.
+                if ( bForbiddenField )
+                    return false;
                 if ( pOutListOrphan != nullptr )
                     return true;
                 return bFieldError == false;
+            }
+
+            /** @brief 지금 원소에 프로퍼티 @p prop 의 속성이나 자식(지금 이름 또는 옛 이름)이 있으면 true 입니다. 읽는 위치는 그대로입니다. */
+            static bool hasXMLField( IXMLBackend& backend, const PropertyInfo& prop )
+            {
+                string     ignoredText;
+                const bool bAttribute = tryNameOrAlias( prop, [&]( const utf8* pName )
+                {
+                    return backend.readAttribute( pName, ignoredText );
+                } );
+                if ( bAttribute )
+                    return true;
+                return tryNameOrAlias( prop, [&]( const utf8* pName )
+                {
+                    if ( backend.pushChild( pName ) == false )
+                        return false;
+                    backend.popChild();
+                    return true;
+                } );
             }
 
             /** @brief 파일에 적힌 모르는 이름 하나를 orphan 으로 남깁니다. @p pOwnerTypeName 이 있으면 경고에 찍을 이름 앞에 붙입니다. */

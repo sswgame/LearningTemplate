@@ -13,6 +13,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Serialization/Base/SerializePurpose.h"
+
 namespace sw
 {
     struct NestedContainerInfo;
@@ -42,10 +44,20 @@ namespace sw
 
     /**
      * @struct ObjectSaveOptions
-     * @brief 오브젝트 상태를 쓸 때 다른 오브젝트를 가리키는 참조(부착의 부모, `GameObjectHandle` PROPERTY)를 어떻게 적을지 정합니다.
+     * @brief 오브젝트 상태를 쓰는 목적(`SerializePurpose`, 필수)과, 다른 오브젝트를 가리키는 참조(부착의 부모, `GameObjectHandle` PROPERTY)를 어떻게 적을지 정합니다.
+     * @details 목적은 만들 때만 정한다(기본 생성자가 없다). 저작(씬 · 프리팹 · 쿠킹 · 에디터의 복사 · 복제 · 되돌리기)은 `RuntimeState` 필드를 쓰지 않고,
+     *          스냅샷(플레이 세션 복원 · 핫 리로드 · 씬 넘김)은 모두 쓰며, 세이브는 옵트인 타입의 `SaveGame` 필드만 쓴다(`SerializerUtil::shouldSerializeProperty`).
      */
     struct ObjectSaveOptions
     {
+        /** @brief 목적 @p purpose 로 저장합니다. 참조는 런타임 id 그대로 적습니다(아래 필드로 바꾼다). */
+        explicit ObjectSaveOptions( SerializePurpose purpose )
+            : _purpose{ purpose }
+        {
+        }
+
+        SerializePurpose getPurpose() const { return _purpose; }
+
         /** @brief 있으면 다른 오브젝트의 런타임 id 를 이 테이블로 바꿔 적습니다(씬 파일 id). 없으면 런타임 id 를 그대로 적습니다(같은 실행의 스냅샷). */
         const ObjectSavedIDMap* _pSavedIDMap{ nullptr };
         /**
@@ -67,6 +79,9 @@ namespace sw
             const auto mapIt = _pSavedIDMap->find( runtimeID );
             return ( mapIt != _pSavedIDMap->end() ) ? mapIt->second : 0;
         }
+
+    private:
+        SerializePurpose _purpose;
     };
 } // namespace sw
 
@@ -74,10 +89,25 @@ namespace sw
 {
     /**
      * @struct ObjectLoadContext
-     * @brief 오브젝트 상태 하나를 읽을 때의 문맥입니다. 기본값은 "같은 실행의 상태 하나를 새 id 로 읽기"입니다.
+     * @brief 오브젝트 상태 하나를 읽을 때의 문맥입니다. 목적(`SerializePurpose`)은 필수이고, 나머지 기본값은 "상태 하나를 새 id 로 읽기"입니다.
+     * @details 저작 목적으로 읽는 상태에 `RuntimeState` 필드가 있으면 로드 오류다(저작 파일에 런타임 상태가 섞인 것이다). 목적이 쓰지 않는 필드는 지금 값 그대로다.
      */
     struct ObjectLoadContext
     {
+        /**
+         * @brief 목적 @p purpose 로 읽습니다. 나머지는 선택입니다 — @p pIdentity 를 주면 원래 id 를 복원하고(같은 오브젝트를 같은 실행에서 되살릴 때),
+         *        @p pBatch 를 주면 그 배치에 기록하며, @p savedID 는 이 상태가 저장될 때의 id 입니다.
+         */
+        explicit ObjectLoadContext( SerializePurpose purpose, const ObjectIdentity* pIdentity = nullptr, ObjectStateBatch* pBatch = nullptr, uint64 savedID = 0 )
+            : _pIdentity{ pIdentity }
+            , _pBatch{ pBatch }
+            , _savedID{ savedID }
+            , _purpose{ purpose }
+        {
+        }
+
+        SerializePurpose getPurpose() const { return _purpose; }
+
         /** @brief 같은 오브젝트를 복원할 때의 원래 id 입니다. 주면 다시 만드는 컴포넌트가 원래 componentID 를 받습니다. */
         const ObjectIdentity* _pIdentity{ nullptr };
         /** @brief 여러 오브젝트를 함께 읽을 때의 배치입니다. 주면 부착은 읽는 시점이 아니라 `ObjectStateBatch::finish` 가 한 번에 연결합니다. */
@@ -92,6 +122,9 @@ namespace sw
          *          되돌리기는 결과를 버리므로 그 빈 오브젝트가 그대로 저장된다.
          */
         bool _bRestorePreviousOnFailure{ true };
+
+    private:
+        SerializePurpose _purpose;
     };
 } // namespace sw
 
@@ -243,12 +276,12 @@ namespace sw
          *          GameObject 의 부모는 `getParent()` 가 SceneComponent 의 `_pParent` 에서 구하므로
          *          별도 `_parentGO` 필드나 속성을 쓰지 않는다.
          */
-        static string saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
+        static string saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options );
         /** @brief GameObject 상태를 JSON 으로 직렬화합니다. XMLSerializer 와 같은 PROPERTY 그래프를 씁니다. */
-        [[maybe_unused]] static string saveToJSONString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
+        [[maybe_unused]] static string saveToJSONString( const GameObject* pGameObject, const ObjectSaveOptions& options );
 
         /** @brief GameObject 상태를 바이너리 버퍼로 빠르게 직렬화합니다(핫 리로드와 프리팹용). */
-        [[nodiscard]] static bool saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options = {} );
+        [[nodiscard]] static bool saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options );
 
         /**
          * @brief XML 문자열에서 GameObject 상태를 복원합니다(ObjectID 제외).
@@ -257,15 +290,15 @@ namespace sw
          *          매니저의 런타임 id 로 찾는다). 여러 오브젝트를 읽을 때는 배치를 주고 모두 읽은 뒤 `ObjectStateBatch::finish` 를 부른다.
          *          그래야 자식이 부모보다 먼저 읽혀도 부모를 찾는다.
          */
-        [[nodiscard]] static bool loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context = {} );
-        [[nodiscard]] static bool loadFromJSONString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context = {} );
+        [[nodiscard]] static bool loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context );
+        [[nodiscard]] static bool loadFromJSONString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context );
 
         /**
          * @brief 바이너리 버퍼에서 GameObject 상태를 복원하고 읽은 바이트 수를 반환합니다(실패하면 0).
          * @param context `loadFromXMLString` 과 같습니다.
          * @details 버퍼는 본문 크기(uint32)와 본문으로 이루어진다. 부모는 상태의 부착 필드가 id 로 가리킨다.
          */
-        [[nodiscard]] static size_t loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context = {} );
+        [[nodiscard]] static size_t loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context );
 
         // ------------------------------------------------------------------------------
         // 2) 런타임 ID: 같은 오브젝트를 복원할 때 핸들이 이어지게 한다(`ObjectIdentity`)

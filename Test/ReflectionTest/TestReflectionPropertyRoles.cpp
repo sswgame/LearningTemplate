@@ -33,9 +33,7 @@ namespace
 
     sw::SerializeContext makeSaveContext()
     {
-        sw::SerializeContext context = sw::SerializeContext::deriveFromDefault();
-        context.setSaveGameOnly( true );
-        return context;
+        return sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::SaveGame );
     }
 } // namespace
 
@@ -103,12 +101,13 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, SaveGameOptInWritesOnlyFlaggedProperti
     SW_EXPECT_EQUAL( 100, loaded._health );     // 쓰지 않았다
     SW_EXPECT_EQUAL( 5, loaded._sessionScore ); // 덮지도, Default="7" 로 되돌리지도 않는다
 
-    // 세이브 문맥이 아니면 전부 쓴다(지금 동작 그대로)
-    sw::Archive fullWriter;
-    SW_ASSERT_TRUE( fullWriter.serializeObject( saved ) );
+    // 스냅샷 문맥은 전부 쓴다
+    const sw::SerializeContext& snapshotContext = sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot );
+    sw::Archive                 fullWriter;
+    SW_ASSERT_TRUE( fullWriter.serializeObject( saved, snapshotContext ) );
     sw::PropertyRoleActor fullLoaded;
     sw::Archive           fullReader( fullWriter.getData(), fullWriter.getSize() );
-    SW_ASSERT_TRUE( fullReader.deserializeObject( fullLoaded ) );
+    SW_ASSERT_TRUE( fullReader.deserializeObject( fullLoaded, snapshotContext ) );
     SW_EXPECT_EQUAL( 10, fullLoaded._health );
     SW_EXPECT_EQUAL( 99, fullLoaded._sessionScore );
     SW_EXPECT_TRUE( fullWriter.getSize() > writer.getSize() );

@@ -398,23 +398,23 @@ SW_TEST_CASE( CommandStackTest, GameObjectBinarySnapshotUndoRedoTransactions )
     for ( int32 stepIndex = 1; stepIndex <= kTotalSteps; ++stepIndex )
     {
         vector<uint8> beforeBytes;
-        SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pObject, beforeBytes ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pObject, beforeBytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
 
         const float3 newPos{ static_cast<float32>( stepIndex * 2 ), static_cast<float32>( stepIndex * 3 ), static_cast<float32>( stepIndex * 4 ) };
         pSceneComp->setLocalPosition( newPos );
 
         vector<uint8> afterBytes;
-        SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pObject, afterBytes ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pObject, afterBytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
 
         CommandStack::Command cmd;
         cmd._label = "MoveStep_" + to_string( stepIndex );
         cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, afterBytes]()
          {
-            SW_EXPECT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size() ) > 0 );
+            SW_EXPECT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } ) > 0 );
         } );
         cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, beforeBytes]()
          {
-            SW_EXPECT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size() ) > 0 );
+            SW_EXPECT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } ) > 0 );
         } );
 
         stack.push( std::move( cmd ) );
@@ -497,11 +497,11 @@ SW_TEST_CASE( CommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
         SW_ASSERT_TRUE( pChildSc->attachToComponent( pRootSc ) );
 
         vector<uint8> rootBytes;
-        SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pRoot, rootBytes ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pRoot, rootBytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
         listRecord.push_back( { rootName, std::move( rootBytes ) } );
 
         vector<uint8> childBytes;
-        SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pChild, childBytes ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pChild, childBytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
         listRecord.push_back( { childName, std::move( childBytes ) } );
     }
 
@@ -526,7 +526,7 @@ SW_TEST_CASE( CommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
     {
         GameObject* pRestored = manager.createGameObject( hashed_string( record._name.c_str() ) );
         SW_ASSERT_NOT_NULL( pRestored );
-        const size_t bytesRead = ObjectStateSerializer::loadFromBinaryBuffer( pRestored, record._bytes.data(), record._bytes.size() );
+        const size_t bytesRead = ObjectStateSerializer::loadFromBinaryBuffer( pRestored, record._bytes.data(), record._bytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } );
         SW_EXPECT_EQUAL( record._bytes.size(), bytesRead );
     }
 

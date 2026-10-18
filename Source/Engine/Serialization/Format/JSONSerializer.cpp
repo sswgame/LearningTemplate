@@ -442,7 +442,7 @@ namespace sw
         dst.setObject();
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
-            if ( prop._metadata._bTransient == SW_TRUE )
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 return;
             JSONSerializerInternal::writeProperty( dst, prop, pInstance, context );
         }, true /* 상속 PROPERTY 포함 */ );
@@ -459,6 +459,7 @@ namespace sw
         const vector<PropertyInfo>& listProp        = typeInfo.getPropertiesWithBase();
         unordered_set<uint32>       uniqueMatched;
         bool                        bFieldError{ false };
+        bool                        bForbiddenField{ false };
 
         if ( pOutVersion != nullptr )
             *pOutVersion = 0;
@@ -497,6 +498,15 @@ namespace sw
                     bFieldError = true;
                 continue;
             }
+            // 저작 파일의 런타임 상태는 로드 오류다. 이 목적이 다루지 않는 그 밖의 필드(옵트인 세이브의 나머지)는 지금 값 그대로 둔다.
+            if ( SerializerUtil::isForbiddenInFile( *pMatched, context ) )
+            {
+                SerializerUtil::reportForbiddenProperty( typeInfo, *pMatched );
+                bForbiddenField = true;
+                continue;
+            }
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, *pMatched, context ) == false )
+                continue;
 
             uniqueMatched.insert( pMatched->getNameHash() );
             if ( JSONSerializerInternal::readProperty( field, *pMatched, pInstance, context, pOutListOrphan ) == false )
@@ -516,11 +526,16 @@ namespace sw
 
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( uniqueMatched.find( prop.getNameHash() ) != uniqueMatched.end() )
+            const bool bKeepCurrent = uniqueMatched.find( prop.getNameHash() ) != uniqueMatched.end() ||
+                                      SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false;
+            if ( bKeepCurrent )
                 continue;
             SerializerUtil::applyPropertyDefault( prop, pInstance, context );
         }
 
+        // 금지된 필드는 소프트 읽기에서도 실패다(XML · 바이너리와 같다).
+        if ( bForbiddenField )
+            return false;
         // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 칸을 목록으로 넘기고 계속한다. 선언된 범위는 어느 쪽이든 읽기 공통 끝에서 본다(바이너리 · XML 과 같다).
         const bool bStrictFieldError = pOutListOrphan == nullptr && bFieldError;
         if ( bStrictFieldError )
@@ -548,7 +563,7 @@ namespace sw
         root.set( kSchemaVersionKey, false ).setUint( version );
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
-            if ( prop._metadata._bTransient == SW_TRUE )
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 return;
             JSONSerializerInternal::writeProperty( root, prop, pInstance, context );
         }, true /* 상속 PROPERTY 포함 */ );

@@ -807,6 +807,50 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 저장 목적 표의 네 행(플래그 없음 · Transient · RuntimeState · SaveGame 과 RuntimeState)을 가진 옵트인 세이브 샘플입니다(`ReflectionPurposeTest`). */
+    REFLECT()
+    struct PurposeOptInSample
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _plain = 0;
+
+        PROPERTY( Transient )
+        int32 _transient = 0;
+
+        PROPERTY( RuntimeState )
+        int32 _runtime = 0;
+
+        PROPERTY( SaveGame )
+        int32 _saved = 0;
+
+        PROPERTY( RuntimeState, SaveGame )
+        int32 _savedRuntime = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `SaveGame` 필드가 없는(옵트인이 아닌) 저장 목적 샘플입니다 — 세이브는 Transient 밖을 모두 씁니다(`ReflectionPurposeTest`). */
+    REFLECT()
+    struct PurposePlainSample
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _plain = 0;
+
+        PROPERTY( Transient )
+        int32 _transient = 0;
+
+        PROPERTY( RuntimeState )
+        int32 _runtime = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 표시 메타 샘플의 모드입니다. */
     ENUM()
     enum class DisplayMetaMode : uint8

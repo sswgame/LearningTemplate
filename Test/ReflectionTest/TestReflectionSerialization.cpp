@@ -391,7 +391,7 @@ namespace
         /** @brief 이 빌드의 레지스트리로 찾는 컨텍스트입니다. 두 플래그를 그대로 받습니다. */
         sw::SerializeContext makeContext( bool bSkipUnknown, bool bSkipUnreadable ) const
         {
-            sw::SerializeContext context = sw::SerializeContext::deriveFromDefault();
+            sw::SerializeContext context = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
             context.setTypeRegistry( &_registry );
             context.setSkipUnknownProperties( bSkipUnknown );
             context.setSkipUnreadableProperties( bSkipUnreadable );
@@ -427,12 +427,12 @@ SW_TEST_CASE( ReflectionSerializationTest, ObjectDiffSerializationDelta )
         modActor._hp = 999;
 
         sw::vector<uint8> diffBuf;
-        bool              diffOk = sw::ObjectDiffSerializer::serializeDiff( diffBuf, &cdoActor, &modActor, *info );
+        bool              diffOk = sw::ObjectDiffSerializer::serializeDiff( diffBuf, &cdoActor, &modActor, *info, sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) );
         SW_EXPECT_TRUE( diffOk );
         SW_EXPECT_FALSE( diffBuf.empty() );
 
         sw::DummyActor restored = cdoActor;
-        SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &restored, *info, diffBuf.data(), diffBuf.size() ) );
+        SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &restored, *info, diffBuf.data(), diffBuf.size(), sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
         SW_EXPECT_EQUAL( 999, restored._hp );
     }
 
@@ -454,7 +454,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ObjectDiffSerializationDelta )
     DiffAliasActor mod{};
     mod._currentHp = 42;
     sw::vector<uint8> aliasDiff;
-    SW_EXPECT_TRUE( sw::ObjectDiffSerializer::serializeDiff( aliasDiff, &cdo, &mod, aliasInfo ) );
+    SW_EXPECT_TRUE( sw::ObjectDiffSerializer::serializeDiff( aliasDiff, &cdo, &mod, aliasInfo, sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
 
     // 직렬화 페이로드 상의 이름을 alias 해시로 위조해 matchesNameHash 경로를 검증합니다.
     if ( aliasDiff.size() >= sizeof( uint32 ) )
@@ -463,7 +463,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ObjectDiffSerializationDelta )
         sw::Memory::copy( aliasDiff.data(), &aliasHash, sizeof( uint32 ) );
     }
     DiffAliasActor viaAlias{};
-    SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &viaAlias, aliasInfo, aliasDiff.data(), aliasDiff.size() ) );
+    SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &viaAlias, aliasInfo, aliasDiff.data(), aliasDiff.size(), sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
     SW_EXPECT_EQUAL( 42, viaAlias._currentHp );
 
     {
@@ -473,7 +473,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ObjectDiffSerializationDelta )
         sw::vector<uint8> unknownDiff( sizeof( uint32 ) * 2 );
         sw::Memory::copy( unknownDiff.data(), &unknownHash, sizeof( uint32 ) );
         sw::Memory::copy( unknownDiff.data() + sizeof( uint32 ), &zeroPayload, sizeof( uint32 ) );
-        SW_EXPECT_FALSE( sw::ObjectDiffSerializer::deserializeDiff( &viaAlias, aliasInfo, unknownDiff.data(), unknownDiff.size() ) );
+        SW_EXPECT_FALSE( sw::ObjectDiffSerializer::deserializeDiff( &viaAlias, aliasInfo, unknownDiff.data(), unknownDiff.size(), sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
     }
 }
 
@@ -484,12 +484,12 @@ SW_TEST_CASE( ReflectionSerializationTest, ContextTypeRegistryIsolatesLookup )
 {
     const sw::hashed_string typeName( "sw::ComplexData" );
 
-    const sw::SerializeContext globalContext = sw::SerializeContext::deriveFromDefault();
+    const sw::SerializeContext globalContext = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     SW_EXPECT_TRUE( &globalContext.getTypeRegistry() == &sw::engine::getSubsystem<sw::TypeRegistry>() );
     SW_EXPECT_TRUE( sw::SerializerUtil::findNestedObjectType( typeName, globalContext ) != nullptr );
 
     const sw::TypeRegistry emptyRegistry;
-    sw::SerializeContext   isolatedContext = sw::SerializeContext::deriveFromDefault();
+    sw::SerializeContext   isolatedContext = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     isolatedContext.setTypeRegistry( &emptyRegistry );
     SW_EXPECT_TRUE( &isolatedContext.getTypeRegistry() == &emptyRegistry );
     SW_EXPECT_TRUE( sw::SerializerUtil::findNestedObjectType( typeName, isolatedContext ) == nullptr );
@@ -831,7 +831,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLAndJSONKeysIgnoreCaseValuesPreserv
     SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( json, "_title", false ).empty() );
 
     // 옵트아웃: 대소문자 구분 키 조회는 다른 대소문자를 바인딩하면 안 된다.
-    sw::SerializeContext strictContext = sw::SerializeContext::getDefault();
+    sw::SerializeContext strictContext = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
     strictContext.setIgnoreCaseKeys( false );
 
     sw::ComplexData strictJSON;
@@ -911,7 +911,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
     sw::vector<uint8> compressed;
     SW_ASSERT_TRUE( sw::BinarySerializer::serializeCompressed( &saved, info, compressed ) );
     sw::vector<uint8> diff;
-    SW_ASSERT_TRUE( sw::ObjectDiffSerializer::serializeDiff( diff, &defaults, &saved, info ) );
+    SW_ASSERT_TRUE( sw::ObjectDiffSerializer::serializeDiff( diff, &defaults, &saved, info, sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
 
     // 다음 빌드: 같은 enum 의 열거자 순서가 바뀐다. Green 은 2, A | C 는 2 | 1.
     registerWireShiftEnumsReordered();
@@ -930,7 +930,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
     expectWireShiftEnumerators( "compressed", fromCompressed, 2, 3, 0, 1 );
 
     WireShiftHost fromDiff;
-    SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &fromDiff, info, diff.data(), diff.size() ) );
+    SW_EXPECT_TRUE( sw::ObjectDiffSerializer::deserializeDiff( &fromDiff, info, diff.data(), diff.size(), sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
     expectWireShiftEnumerators( "diff", fromDiff, 2, 3, 0, 1 );
 }
 
@@ -997,7 +997,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerFailsOnl
                                {"Blue", 2, false}
     } );
 
-    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     lenient.setAllowUnknownProperties( true );
     WireShiftHost target;
     {
@@ -1078,7 +1078,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorFailsOnlyItsField )
     }
     SW_EXPECT_TRUE_MSG( strictTarget._color == WireShiftColor::Blue, "모르는 열거자가 칸의 값을 바꿨습니다(예전에는 값으로 읽어 Lime 이 됐다)" );
 
-    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     lenient.setAllowUnknownProperties( true );
     WireShiftHost lenientTarget;
     lenientTarget._color = WireShiftColor::Blue;
@@ -1307,7 +1307,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldAddRemoveRenameBinaryRoundTrip )
         SW_EXPECT_FALSE_MSG( sw::BinarySerializer::deserialize( &strict, declared, bytes.data(), bytes.size() ), "지운 필드(_gone)를 선언 없이 건너뛰었습니다" );
     }
 
-    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     lenient.setAllowUnknownProperties( true );
     FieldEvolutionHost fromLenient;
     {
@@ -1456,7 +1456,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
 
     const sw::TypeInfo   asNumber = makeWireShiftRetypedType( false );
     WireShiftRetypedHost lenientTarget;
-    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     lenient.setAllowUnknownProperties( true );
     {
         test::ScopedDefensiveTestLog expected( "a saved field whose type no longer exists" );
@@ -1482,7 +1482,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
     SW_ASSERT_TRUE( sw::BinarySerializer::deserializeSoft( &partial, withoutColor, bytes.data(), bytes.size(), &listColorOrphan ) == sw::SoftReadResult::Read );
     SW_ASSERT_EQUAL( size_t( 1 ), listColorOrphan.size() );
     WireShiftRetypedHost     migrated;
-    sw::SchemaMigrateContext migrateContext;
+    sw::SchemaMigrateContext migrateContext{ sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) };
     migrateContext._pInstance = &migrated;
     migrateContext._pTypeInfo = &asNumber;
     migrateContext._pOrphans  = &listColorOrphan;
@@ -1779,7 +1779,7 @@ SW_TEST_CASE( ReflectionSerializationTest, CustomXMLBackend )
  */
 SW_TEST_CASE( ReflectionSerializationTest, CustomSerializeContext )
 {
-    sw::SerializeContext customContext = sw::SerializeContext::getDefault();
+    sw::SerializeContext customContext = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
 
     customContext.registerTextHandler(
         sw::hashed_string( "int32" ),
@@ -2374,7 +2374,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ApplyOrphanWithOtherWireTypeKeepsNeig
     // int32 5 로 기록된 `_small` 을 int16 자리에 적용한다. 뒤의 `_neighbor` 는 그대로여야 한다.
     const sw::vector<sw::SchemaOrphanValue> listPairOrphan{ makeInt32Orphan( "_small", 5 ) };
     NarrowPair                              target;
-    sw::SchemaMigrateContext                context;
+    sw::SchemaMigrateContext                context{ sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) };
     context._pInstance = &target;
     context._pTypeInfo = &pairInfo;
     context._pOrphans  = &listPairOrphan;
@@ -2543,7 +2543,7 @@ SW_TEST_CASE( ReflectionSerializationTest, SchemaMigrationIsFoundByTypeAndWritte
     }
 
     // ④ 이관이 없으면 파생을 다른 버전으로 읽을 때 멈춥니다. 지운 필드를 받는 컨텍스트(오브젝트 상태의 orphan 정책)도 버전이 다르면 받지 않습니다.
-    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault();
+    sw::SerializeContext lenient = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     lenient.setAllowUnknownProperties( true );
     ChildActor otherVersion;
     SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &otherVersion, *pChild, bin.data(), bin.size(), 0u ) );
@@ -3532,7 +3532,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
     bool        value{ false };
     size_t      offset{ 0 };
     SW_ASSERT_TRUE( sw::SerializerUtil::deserializeValueBinary( &value, sw::hashed_string( "bool" ), arrByte, sizeof( arrByte ), offset,
-                                                                sw::SerializeContext::getDefault() ) );
+                                                                sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
     uint8 rawValue{ 0 };
     sw::Memory::copy( &rawValue, &value, sizeof( rawValue ) );
     SW_EXPECT_EQUAL( uint8{ 1 }, rawValue );
@@ -3590,7 +3590,7 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
 
     // 고아는 여전히 이름으로 찾는다 — 마이그레이션이 옛 이름을 물을 때 그 이름은 **그때** intern 되고, 고아는 해시로 맞춘다.
     SW_EXPECT_EQUAL( size_t( 2 ), listOrphan.size() );
-    sw::SchemaMigrateContext context;
+    sw::SchemaMigrateContext context{ sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) };
     context._pOrphans                       = &listOrphan;
     const sw::SchemaOrphanValue* pOrphanTag = context.findOrphan( sw::hashed_string( "R8NoSuchTagProbe" ) );
     SW_ASSERT_NOT_NULL( pOrphanTag );
@@ -3644,7 +3644,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWra
  */
 SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwnBit )
 {
-    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
     const sw::TypeInfo*         pBits   = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
     SW_ASSERT_NOT_NULL( pBits );
     const sw::PropertyInfo* pActive  = pBits->findPropertyInHierarchy( sw::hashed_string( "_bActive" ) );
@@ -3731,7 +3731,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
     SW_EXPECT_EQUAL( 1, static_cast<int32>( fromJSON._bInvulnerable ) );
 
     // 비트필드가 아닌 bool 도 같은 규칙이다(직렬화기가 함께 쓰는 글 읽기).
-    const sw::SerializeContext::TextReadFn* pBoolReader = sw::SerializeContext::getDefault().findTextReader( sw::hashed_string( "bool" ) );
+    const sw::SerializeContext::TextReadFn* pBoolReader = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ).findTextReader( sw::hashed_string( "bool" ) );
     SW_ASSERT_NOT_NULL( pBoolReader );
     bool bPlain = true;
     SW_EXPECT_FALSE( ( *pBoolReader )( &bPlain, "ture" ) );
@@ -3749,7 +3749,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
  */
 SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCanCarry )
 {
-    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
     // 판정 자체가 늘 참이면 이 테스트는 아무것도 지키지 않는다.
     SW_EXPECT_FALSE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "void *" ), context ) );
     SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "float3" ), context ) );
@@ -3891,7 +3891,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UncarriedValueTypeFailsTheReadAndTheW
     sw::TypeInfo writable               = uncarried;
     writable._listProperty[0]           = { sw::hashed_string( "_value" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( UncarriedHost, _value ), false, sw::ContainerKind::None,
                                             sw::hashed_string(), sw::hashed_string(), nullptr };
-    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
     SW_EXPECT_FALSE( sw::SerializerUtil::hasBinaryValueCodec( kUncarriedType, context ) );
 
     // 값 하나: 읽기는 실패하고 자리를 옮기지 않는다. 쓰기는 아무 바이트도 쓰지 않고 실패한다.
@@ -3912,7 +3912,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UncarriedValueTypeFailsTheReadAndTheW
         sw::Archive archive;
         archive << int32( 5 );
         const uint64 sizeBefore = archive.getSize();
-        SW_EXPECT_FALSE( archive.serializeObject( &host, uncarried ) );
+        SW_EXPECT_FALSE( archive.serializeObject( &host, uncarried, sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring ) ) );
         SW_EXPECT_TRUE( archive.isError() );
         SW_EXPECT_EQUAL( sizeBefore, archive.getSize() );
     }
@@ -4066,7 +4066,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ExactVersionReadDoesNotLookForAMigrat
     sw::vector<uint8> bytes;
     SW_ASSERT_TRUE( sw::BinarySerializer::serializeVersioned( 3, &source, savedType, bytes ) );
 
-    sw::SerializeContext mixedContext = sw::SerializeContext::deriveFromDefault();
+    sw::SerializeContext mixedContext = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     mixedContext.setSkipUnknownProperties( true );
 
     // 같은 버전: 지운 `_gone` 은 건너뛰고, 옛 이름 `_oldName` 은 `_renamed` 로 읽고, 새 `_added` 는 선언된 기본값이다.
@@ -4097,7 +4097,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ExactVersionReadDoesNotLookForAMigrat
     // 버전 머리가 잘렸거나, 모르는 이름을 받지 않는 정책이면 읽지 못한 것이다.
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeExactVersion( 3, &otherVersion, nextType, bytes.data(), 2, readVersion, mixedContext ) ==
                     sw::BinaryExactVersionResult::Unreadable );
-    const sw::SerializeContext strictContext = sw::SerializeContext::deriveFromDefault();
+    const sw::SerializeContext strictContext = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeExactVersion( 3, &otherVersion, nextType, bytes.data(), bytes.size(), readVersion, strictContext ) ==
                     sw::BinaryExactVersionResult::Unreadable );
 }

@@ -605,10 +605,10 @@ SW_TEST_CASE( ScheduleTest, SaveStateRoundTripsThroughTheArchive )
     original.fillSaveState( saved );
     SW_EXPECT_TRUE( saved._listReservation.empty() == false ); // 저녁 벤치 예약
     Archive writer;
-    SW_ASSERT_TRUE( writer.serializeObject( saved ) );
+    SW_ASSERT_TRUE( writer.serializeObject( saved, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
     Archive           reader( writer.getData(), writer.getSize() );
     ScheduleSaveState loaded;
-    SW_ASSERT_TRUE( reader.deserializeObject( loaded ) );
+    SW_ASSERT_TRUE( reader.deserializeObject( loaded, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
 
     ScheduleSystem restored;
     SW_ASSERT_TRUE( restored.initialize( &catalog, Internal::makeSettings( 99u ), Internal::makeMinute( 0, 6 ) ) );

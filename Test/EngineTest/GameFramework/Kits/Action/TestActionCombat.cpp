@@ -837,9 +837,9 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesKeepTheirTargetWhenReloadedInPla
     GameObject* pShotObject = pShot->getOwner();
 
     vector<uint8> bytes;
-    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pShotObject, bytes ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pShotObject, bytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
     const ObjectIdentity identity = ObjectStateSerializer::captureIdentity( pShotObject );
-    ObjectLoadContext    context{};
+    ObjectLoadContext    context{ sw::SerializePurpose::Snapshot };
     context._pIdentity = &identity;
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pShotObject, bytes.data(), bytes.size(), context ) > 0 );
 
@@ -865,7 +865,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveBinaryFileState )
     ObjectSavedIDMap mapSavedID;
     mapSavedID.emplace( pShooter->getOwner()->getHandle().objectID(), 7u );
     mapSavedID.emplace( pShot->getOwner()->getHandle().objectID(), 8u );
-    ObjectSaveOptions options{};
+    ObjectSaveOptions options{ sw::SerializePurpose::Authoring };
     options._pSavedIDMap = &mapSavedID;
     vector<uint8> bytes;
     SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pShot->getOwner(), bytes, options ) );
@@ -876,7 +876,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveBinaryFileState )
     {
         ObjectStateBatch batch( ObjectIDSpace::Saved );
         batch.add( pNewShooter, 7u, hashed_string( "Shooter" ), false );
-        ObjectLoadContext context{};
+        ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
         context._pBatch  = &batch;
         context._savedID = 8u;
         SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pNewShot, bytes.data(), bytes.size(), context ) > 0 );
@@ -902,12 +902,12 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesOutsideTheirFileBecomeNone )
 
     // 1) 파일 상태(Saved)로 읽는데 그 값의 오브젝트가 묶음에 없다 — 없음.
     pShot->setInstigator( GameObjectHandle::make( 987654321 ) );
-    const string state  = ObjectStateSerializer::saveToXMLString( pShot->getOwner() );
+    const string state  = ObjectStateSerializer::saveToXMLString( pShot->getOwner(), sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     GameObject*  pFresh = manager.createGameObject( hashed_string( "FromFile" ) );
     SW_ASSERT_TRUE( state.empty() == false && pFresh != nullptr );
     {
         ObjectStateBatch  batch( ObjectIDSpace::Saved );
-        ObjectLoadContext context{};
+        ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
         context._pBatch  = &batch;
         context._savedID = 1;
         SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pFresh, state, context ) );

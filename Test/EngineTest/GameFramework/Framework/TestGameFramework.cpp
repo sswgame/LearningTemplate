@@ -704,13 +704,13 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
 
     // 1) 인메모리 스냅샷 캡처
     vector<uint8> snapshotBytes;
-    SW_EXPECT_TRUE( gameInstance.captureSnapshot( snapshotBytes ) );
+    SW_EXPECT_TRUE( gameInstance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshotBytes ) );
     SW_EXPECT_TRUE( snapshotBytes.size() > 0 );
     SW_EXPECT_TRUE( gameInstance._bBeforeCalled );
 
     // 2) 인메모리 스냅샷 복원
     CustomStateGameInstance restoredInstance;
-    SW_EXPECT_TRUE( restoredInstance.restoreSnapshot( snapshotBytes ) );
+    SW_EXPECT_TRUE( restoredInstance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshotBytes ) );
     SW_EXPECT_TRUE( restoredInstance._bAfterCalled );
     SW_EXPECT_EQUAL( 77777, restoredInstance._customState._score );
     SW_EXPECT_EQUAL( string( "BossRoom_03" ), restoredInstance._customState._stageName );
@@ -937,11 +937,11 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
     }
 
     vector<uint8> snapshot;
-    SW_EXPECT_TRUE( writeInstance.captureSnapshot( snapshot ) );
+    SW_EXPECT_TRUE( writeInstance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     SW_EXPECT_TRUE( snapshot.size() > 50000 ); // 수만 바이트 이상 대용량 바이너리
 
     MassiveGameInstance readInstance;
-    SW_EXPECT_TRUE( readInstance.restoreSnapshot( snapshot ) );
+    SW_EXPECT_TRUE( readInstance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
 
     SW_EXPECT_EQUAL( 1234, readInstance._state._playerX );
     SW_EXPECT_EQUAL( -5678, readInstance._state._playerY );
@@ -980,14 +980,14 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCyclicRewindStressTest )
         instance._customState._stageName = string( "Room_" ) + std::to_string( step ).c_str();
 
         vector<uint8> snap;
-        SW_EXPECT_TRUE( instance.captureSnapshot( snap ) );
+        SW_EXPECT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snap ) );
         listHistory.push_back( std::move( snap ) );
     }
 
     // 임의의 과거 시점으로 되감기(Rewind) 시뮬레이션 및 데이터 일치 검증
     for ( size_t rewindStep : { 0ull, 50ull, 25ull, 75ull, 99ull, 10ull, 88ull } )
     {
-        SW_EXPECT_TRUE( instance.restoreSnapshot( listHistory[rewindStep] ) );
+        SW_EXPECT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, listHistory[rewindStep] ) );
         SW_EXPECT_EQUAL( static_cast<int32>( rewindStep * 100 ), instance._customState._score );
         SW_EXPECT_EQUAL( string( "Room_" ) + std::to_string( rewindStep ).c_str(), instance._customState._stageName );
     }
@@ -1003,30 +1003,30 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience 
     instance._customState._stageName = "SafeRoom";
 
     // 1) Null/빈 버퍼 주입
-    SW_EXPECT_FALSE( instance.restoreSnapshot( {} ) );
+    SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, {} ) );
     SW_EXPECT_FALSE( instance.deserializeState( nullptr, 100 ) );
     SW_EXPECT_FALSE( instance.deserializeState( nullptr, 0 ) );
 
     // 2) 정상 스냅샷 생성
     vector<uint8> validSnapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( validSnapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, validSnapshot ) );
 
     // 3) 잘린 버퍼(Truncated payload) 주입
     vector<uint8> truncated = validSnapshot;
     truncated.resize( 6 ); // 헤더만 겨우 있고 바디 없음
-    SW_EXPECT_FALSE( instance.restoreSnapshot( truncated ) );
+    SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, truncated ) );
 
     // 4) 매직 변조
     vector<uint8> badMagic = validSnapshot;
     badMagic[0] ^= 0xFF;
     // 매직이 맞지 않으면 복원하지 않고 실패한다
-    SW_EXPECT_FALSE( instance.restoreSnapshot( badMagic ) );
+    SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, badMagic ) );
 
     // 5) 빈 게임 인스턴스 (커스텀 상태 없음) 동작 검증
     GameInstanceBase defaultGameInstance;
     vector<uint8>    emptySnapshot;
-    SW_EXPECT_TRUE( defaultGameInstance.captureSnapshot( emptySnapshot ) );
-    SW_EXPECT_TRUE( defaultGameInstance.restoreSnapshot( emptySnapshot ) );
+    SW_EXPECT_TRUE( defaultGameInstance.captureSnapshot( sw::SerializePurpose::Snapshot, emptySnapshot ) );
+    SW_EXPECT_TRUE( defaultGameInstance.restoreSnapshot( sw::SerializePurpose::Snapshot, emptySnapshot ) );
 }
 
 /**
@@ -1054,11 +1054,11 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIDsOnlyWithinTheSameProcess )
 
     GameInstanceBase instance;
     vector<uint8>    snapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
 
     BLOCK( "같은 프로세스 — 원래 id 를 되살린다" )
     {
-        SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+        SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
         pManager->mergePendingAdds();
         GameObject* pRestored = pManager->resolveGameObject( objectHandle );
         SW_ASSERT_NOT_NULL( pRestored );
@@ -1071,7 +1071,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIDsOnlyWithinTheSameProcess )
         SW_ASSERT_TRUE( snapshot.size() > 16 );
         vector<uint8> foreign = snapshot;
         foreign[8] ^= 0xFF; // 토큰의 첫 바이트
-        SW_ASSERT_TRUE( instance.restoreSnapshot( foreign ) );
+        SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, foreign ) );
         pManager->mergePendingAdds();
         SW_EXPECT_TRUE( pManager->resolveGameObject( objectHandle ) == nullptr );
         SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) == nullptr );
@@ -1126,11 +1126,11 @@ SW_TEST_CASE( GameFrameworkTest, ComponentStateRidesTheSnapshotToTheRecreatedCom
 
     DirectorStateGameInstance instance;
     vector<uint8>             snapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
 
     BLOCK( "같은 프로세스 — 원래 id 의 컴포넌트가 제 상태를 받는다" )
     {
-        SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+        SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
         pManager->mergePendingAdds();
         const MockRuntimeStateComponent* pRestoredFirst  = static_cast<const MockRuntimeStateComponent*>( pManager->resolveComponent( firstHandle ) );
         const MockRuntimeStateComponent* pRestoredSecond = static_cast<const MockRuntimeStateComponent*>( pManager->resolveComponent( secondHandle ) );
@@ -1145,7 +1145,7 @@ SW_TEST_CASE( GameFrameworkTest, ComponentStateRidesTheSnapshotToTheRecreatedCom
     {
         vector<uint8> foreign = snapshot;
         foreign[8] ^= 0xFF; // 토큰의 첫 바이트
-        SW_ASSERT_TRUE( instance.restoreSnapshot( foreign ) );
+        SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, foreign ) );
         pManager->mergePendingAdds();
         int32 firstCounter  = -1;
         int32 secondCounter = -1;
@@ -1387,7 +1387,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreKeepsASocketChildReadBeforeItsPa
 
     GameInstanceBase instance;
     vector<uint8>    snapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
 
     const auto expectWeaponInHand = [pManager]( const utf8* pStep )
     {
@@ -1400,13 +1400,13 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreKeepsASocketChildReadBeforeItsPa
         SW_EXPECT_TRUE_MSG( pRestoredBlade->getParent() != pRestoredHero->getPrimarySceneComponent(), pStep ); // 몸통이 아니라 손
     };
 
-    SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     pManager->mergePendingAdds();
     expectWeaponInHand( "같은 실행(핫 리로드)" );
 
     vector<uint8> foreign = snapshot;
     foreign[8] ^= 0xFF; // 프로세스 토큰 — 다른 실행의 세이브처럼 id 를 복원하지 않는다
-    SW_ASSERT_TRUE( instance.restoreSnapshot( foreign ) );
+    SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, foreign ) );
     pManager->mergePendingAdds();
     expectWeaponInHand( "다른 실행(세이브)" );
 }
@@ -2832,7 +2832,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
 
     GameInstanceBase instance;
     vector<uint8>    snapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
 
     // 봉투(magic 4 · version 4 · token 8) 뒤 씬 섹션(길이 4) 다음이 오브젝트 수다. 하나 늘리면 마지막 읽기가 데이터 끝에서 멈춘다.
     constexpr size_t kObjectCountOffset = 4 + 4 + 8 + 4;
@@ -2842,14 +2842,14 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
 
     {
         test::ScopedDefensiveTestLog expected( "a snapshot that claims one object more than it holds" );
-        SW_EXPECT_FALSE( instance.restoreSnapshot( oneTooMany ) );
+        SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, oneTooMany ) );
     }
     pManager->mergePendingAdds();
     pManager->processDeferredDestruction();
     SW_EXPECT_TRUE( pManager->findGameObjectByName( hashed_string( "GameObject" ) ) == nullptr ); // 빈 자리 오브젝트가 남지 않는다
 
     // 온전한 스냅샷은 그대로 된다.
-    SW_EXPECT_TRUE( instance.restoreSnapshot( snapshot ) );
+    SW_EXPECT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
 }
 
 /**

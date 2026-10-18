@@ -828,7 +828,7 @@ namespace sw::editor
                 if ( pActive == nullptr )
                     return false;
                 vector<std::pair<string, uint64>> listEntry;
-                ObjectSaveOptions                 options{};
+                ObjectSaveOptions                 options{ SerializePurpose::Authoring };
                 options._bOmitExternalParent = true;
                 pActive->forEachGameObject( [&listEntry, &options]( const GameObject* pObject )
                 {

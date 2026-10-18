@@ -238,8 +238,8 @@ SW_TEST_CASE( SessionStateComponentTest, SnapshotRestoresSharedStateBeforeTheDir
 
     SessionStateProbeGameInstance instance;
     vector<uint8>                 snapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
-    SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
+    SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     pManager->mergePendingAdds();
     pManager->update( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
 

@@ -12,6 +12,8 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskFuture.h"
 
+#include "Engine/Serialization/Base/SerializePurpose.h"
+
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/IGame.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
@@ -61,17 +63,20 @@ namespace sw
         // --------------------------------------------------------------------------
         // 런타임 상태 직렬화 / 스냅샷 (Dev LiveReload & Shipping 체크포인트/세이브)
         // --------------------------------------------------------------------------
-        /** @brief C-ABI: 활성 씬과 파생 클래스의 커스텀 리플렉션 상태를 통합 바이너리로 직렬화합니다. */
+        /** @brief C-ABI(모듈 핫 리로드): 활성 씬과 파생 클래스의 커스텀 리플렉션 상태를 스냅샷 목적(`SerializePurpose::Snapshot`)의 통합 바이너리로 직렬화합니다. */
         [[nodiscard]] bool serializeState( void* pOutBuffer, uint32* pInOutSize ) override;
 
-        /** @brief C-ABI: 바이너리 버퍼에서 씬과 커스텀 리플렉션 상태를 복원합니다. */
+        /** @brief C-ABI(모듈 핫 리로드): 스냅샷 목적의 바이너리 버퍼에서 씬과 커스텀 리플렉션 상태를 복원합니다. */
         [[nodiscard]] bool deserializeState( const void* pInBuffer, uint32 size ) override;
 
-        /** @brief Shipping/Gameplay: 현재 씬과 게임 상태를 인메모리 스냅샷 버퍼에 캡처합니다 (체크포인트/타임리와인드용). */
-        bool captureSnapshot( vector<uint8>& outBytes );
+        /**
+         * @brief Shipping/Gameplay: 현재 씬과 게임 상태를 인메모리 버퍼에 캡처합니다(체크포인트 · 타임 리와인드는 `Snapshot`, 세이브 파일은 `SaveGame`).
+         * @details 같은 봉투를 두 목적이 함께 쓰므로 목적은 부르는 쪽이 정한다. 읽는 쪽(`restoreSnapshot`)도 같은 목적이어야 한다.
+         */
+        bool captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes );
 
-        /** @brief Shipping/Gameplay: 인메모리 스냅샷 버퍼로부터 씬과 게임 상태를 즉시 복원합니다. */
-        [[nodiscard]] bool restoreSnapshot( const vector<uint8>& inBytes );
+        /** @brief Shipping/Gameplay: `captureSnapshot` 과 같은 목적으로 찍은 버퍼로부터 씬과 게임 상태를 즉시 복원합니다. */
+        [[nodiscard]] bool restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes );
 
         /**
          * @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. 경로를 비우면 기본 세이브 경로(`GameSettings::_defaultSavePath`)입니다.
@@ -256,13 +261,17 @@ namespace sw
          * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 복원하면(핫 리로드)
          *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
          */
-        [[nodiscard]] bool serializeSceneObjects( vector<uint8>& outBytes );
+        [[nodiscard]] bool serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes );
         /**
          * @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
          * @param outListRemap id 를 복원하지 않을 때(`WithIdentity`) 저장된 컴포넌트 id → 다시 만든 컴포넌트 id 표를 채웁니다(`ComponentStateStore::remapComponentIDs`).
          */
-        [[nodiscard]] bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format,
+        [[nodiscard]] bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
                                                     vector<ComponentStateStore::SavedComponentID>& outListRemap );
+        /** @brief 게임 상태 봉투(씬 오브젝트, 커스텀 상태, 컴포넌트 상태)를 목적 @p purpose 로 씁니다. 버퍼가 없으면 크기만 돌려줍니다. */
+        [[nodiscard]] bool writeStateEnvelope( SerializePurpose purpose, void* pOutBuffer, uint32* pInOutSize );
+        /** @brief `writeStateEnvelope` 로 같은 목적으로 쓴 봉투를 읽습니다. */
+        [[nodiscard]] bool readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
 
         BootstrapConfig _bootstrap;  ///< 팩 루트와 gamesettings
         IWindow*        _pWindow;    ///< 호스트 윈도우 (App 이 소유)

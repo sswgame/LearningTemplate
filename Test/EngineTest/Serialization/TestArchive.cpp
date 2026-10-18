@@ -322,7 +322,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveObjectTLVSerialization )
 
     sw::Archive archWrite;
     DummyStruct src;
-    bool        writeOk = archWrite.serializeObject( &src, info );
+    bool        writeOk = archWrite.serializeObject( &src, info, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) );
     SW_EXPECT_TRUE( writeOk );
 
     sw::vector<uint8> data;
@@ -337,7 +337,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveObjectTLVSerialization )
     DummyStruct dst;
     dst._valA   = 0;
     dst._valB   = 0;
-    bool readOk = archRead.deserializeObject( &dst, infoReordered );
+    bool readOk = archRead.deserializeObject( &dst, infoReordered, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) );
     SW_EXPECT_TRUE( readOk );
     SW_EXPECT_EQUAL( 123, dst._valA );
     SW_EXPECT_EQUAL( 456, dst._valB );
@@ -524,7 +524,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveByteVectorAndTemplateObjectSerialization )
     playerWrite._level = 99;
     playerWrite._name  = "HeroKnight";
     playerWrite._gold  = 9876543210123ll;
-    SW_ASSERT_TRUE( writeArch.serializeObject( playerWrite ) );
+    SW_ASSERT_TRUE( writeArch.serializeObject( playerWrite, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
 
     sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
 
@@ -536,7 +536,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveByteVectorAndTemplateObjectSerialization )
     SW_EXPECT_EQUAL( 0xFD, outBytes[6] );
 
     TestReflectedPlayer playerRead;
-    SW_EXPECT_TRUE( readArch.deserializeObject( playerRead ) );
+    SW_EXPECT_TRUE( readArch.deserializeObject( playerRead, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
     SW_EXPECT_EQUAL( 99, playerRead._level );
     SW_EXPECT_EQUAL( sw::string( "HeroKnight" ), playerRead._name );
     SW_EXPECT_EQUAL( 9876543210123ll, playerRead._gold );
@@ -598,7 +598,7 @@ SW_TEST_CASE( ArchiveTest, BinaryObjectsWrittenBackToBackReadInOrder )
     SW_EXPECT_TRUE( sw::BinarySerializer::serializeVersioned( 3, &arrSource[1], *pType, writeArch ) );
     SW_ASSERT_TRUE( sw::BinarySerializer::serializeCompressed( &arrSource[2], *pType, writeArch ) );
     SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &arrSource[3], *pType, writeArch ) );
-    SW_ASSERT_TRUE( writeArch.serializeObject( arrSource[4] ) );
+    SW_ASSERT_TRUE( writeArch.serializeObject( arrSource[4], sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
     const int32 kTrailer = 0x5EED;
     writeArch << kTrailer;
 
@@ -609,7 +609,7 @@ SW_TEST_CASE( ArchiveTest, BinaryObjectsWrittenBackToBackReadInOrder )
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( version, &arrRead[1], *pType, readArch, 3 ) );
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompressed( &arrRead[2], *pType, readArch ) );
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &arrRead[3], *pType, readArch ) );
-    SW_EXPECT_TRUE( readArch.deserializeObject( arrRead[4] ) );
+    SW_EXPECT_TRUE( readArch.deserializeObject( arrRead[4], sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
     int32 trailer{ 0 };
     readArch >> trailer;
 
@@ -675,7 +675,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveJSONObjectEmbeddingAndTranscoding )
 
     sw::Archive         transcodeRead( transcodeArch.getData(), transcodeArch.getSize() );
     TestReflectedPlayer playerFromTranscode;
-    SW_EXPECT_TRUE( transcodeRead.deserializeObject( playerFromTranscode ) );
+    SW_EXPECT_TRUE( transcodeRead.deserializeObject( playerFromTranscode, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
     SW_EXPECT_EQUAL( 88, playerFromTranscode._level );
     SW_EXPECT_EQUAL( sw::string( "TranscodedHero" ), playerFromTranscode._name );
     SW_EXPECT_EQUAL( 99999, playerFromTranscode._gold );
@@ -714,7 +714,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveXMLObjectEmbeddingAndTranscoding )
 
     sw::Archive         transcodeRead( transcodeArch.getData(), transcodeArch.getSize() );
     TestReflectedPlayer playerFromTranscode;
-    SW_EXPECT_TRUE( transcodeRead.deserializeObject( playerFromTranscode ) );
+    SW_EXPECT_TRUE( transcodeRead.deserializeObject( playerFromTranscode, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
     SW_EXPECT_EQUAL( 44, playerFromTranscode._level );
     SW_EXPECT_EQUAL( sw::string( "TranscodedCleric" ), playerFromTranscode._name );
     SW_EXPECT_EQUAL( 44444, playerFromTranscode._gold );
@@ -1055,7 +1055,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedBufferFaultInjectionAndGracefulHandling )
 
     // 4) 빈 버퍼 역직렬화 안전성 검증
     sw::Archive emptyArch( nullptr, 0 );
-    SW_EXPECT_FALSE( emptyArch.deserializeObject( dummyPlayer ) );
+    SW_EXPECT_FALSE( emptyArch.deserializeObject( dummyPlayer, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
     SW_EXPECT_TRUE( emptyArch.isError() );
 }
 
@@ -1099,7 +1099,7 @@ SW_TEST_CASE( ArchiveTest, MassiveEndToEndDeduplicationPipelineStress5000 )
         player._level = static_cast<int32>( ( iterationIndex % 100 ) + 1 );
         player._name  = listDynStrings[iterationIndex % listDynStrings.size()];
         player._gold  = static_cast<int64>( iterationIndex * 50 );
-        SW_EXPECT_TRUE( streamArch.serializeObject( player ) );
+        SW_EXPECT_TRUE( streamArch.serializeObject( player, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
     }
 
     // 2) 아카이브 헤더에 스트링 풀 테이블 저장
@@ -1131,7 +1131,7 @@ SW_TEST_CASE( ArchiveTest, MassiveEndToEndDeduplicationPipelineStress5000 )
         SW_EXPECT_EQUAL( expectedZig, readZig );
 
         TestReflectedPlayer restoredPlayer;
-        SW_EXPECT_TRUE( readBundled.deserializeObject( restoredPlayer ) );
+        SW_EXPECT_TRUE( readBundled.deserializeObject( restoredPlayer, sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot ) ) );
         SW_EXPECT_EQUAL( static_cast<int32>( ( iterationIndex % 100 ) + 1 ), restoredPlayer._level );
         SW_EXPECT_EQUAL( listDynStrings[iterationIndex % listDynStrings.size()], restoredPlayer._name );
         SW_EXPECT_EQUAL( static_cast<int64>( iterationIndex * 50 ), restoredPlayer._gold );

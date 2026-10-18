@@ -198,7 +198,7 @@ namespace sw::editor
 
     void EditorPropertyGrid::resetPropertyToDefault( void* pInstance, const PropertyInfo& prop, const void* pDefaultInstance )
     {
-        const string text = pDefaultInstance != nullptr ? SerializerUtil::formatPropertyText( prop, pDefaultInstance, SerializeContext::getDefault() )
+        const string text = pDefaultInstance != nullptr ? SerializerUtil::formatPropertyText( prop, pDefaultInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) )
                                                         : prop._metadata._defaultValue;
         applyPropertyTextAsEdit( pInstance, prop, text, "Reset to Default" );
     }
@@ -211,7 +211,7 @@ namespace sw::editor
         const string value{ text };
         auto         apply = [this, &prop, pInstance, &value]()
         {
-            if ( SerializerUtil::applyPropertyText( prop, pInstance, value, SerializeContext::getDefault() ) )
+            if ( SerializerUtil::applyPropertyText( prop, pInstance, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
                 notifyPropertyEdited( prop );
             else
                 SW_LOG_WARNING( "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
@@ -365,7 +365,7 @@ namespace sw::editor
                                 resetPropertyToDefault( pInstance, *prop, pDefaultInstance );
                         }
                         if ( ImGui::MenuItem( "Copy Value" ) )
-                            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( *prop, pInstance, SerializeContext::getDefault() ).c_str() );
+                            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( *prop, pInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
                         if ( ImGui::MenuItem( "Paste Value", nullptr, false, ImGui::GetClipboardText() != nullptr ) )
                             applyPropertyTextAsEdit( pInstance, *prop, ImGui::GetClipboardText(), "Paste Value" );
                         if ( ImGui::MenuItem( "Copy Property Name" ) )
@@ -696,7 +696,7 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawMapContainer( void* pContainer, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly )
     {
-        const SerializeContext&               context = SerializeContext::getDefault();
+        const SerializeContext&               context = SerializeContext::getDefault( SerializePurpose::Authoring );
         fixed_string<constant::kMaxBuffer128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%# -> %#] (%# entries)", prop._keyTypeName.c_str(), prop._elementTypeName.c_str(),
                       mapWrapper.getSize( pContainer ) );
@@ -771,7 +771,7 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawKeyedSequenceContainer( void* pContainer, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly )
     {
-        const SerializeContext&               context = SerializeContext::getDefault();
+        const SerializeContext&               context = SerializeContext::getDefault( SerializePurpose::Authoring );
         const size_t                          count   = sequence.getSize( pContainer );
         fixed_string<constant::kMaxBuffer128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );

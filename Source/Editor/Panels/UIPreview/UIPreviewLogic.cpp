@@ -209,12 +209,12 @@ namespace sw::editor
 
     string UIPreviewLogic::formatWidgetProperty( const Widget& widget, const PropertyInfo& prop )
     {
-        return SerializerUtil::formatPropertyText( prop, &widget, SerializeContext::getDefault() );
+        return SerializerUtil::formatPropertyText( prop, &widget, SerializeContext::getDefault( SerializePurpose::Authoring ) );
     }
 
     bool UIPreviewLogic::applyWidgetProperty( Widget& widget, const PropertyInfo& prop, string_view text )
     {
-        if ( SerializerUtil::applyPropertyText( prop, &widget, text, SerializeContext::getDefault() ) == false )
+        if ( SerializerUtil::applyPropertyText( prop, &widget, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
             return false;
         widget.onBoundPropertyChanged( prop );
         return true;
