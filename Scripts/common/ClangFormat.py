@@ -105,12 +105,12 @@ def resolveClangFormatWheelUrlInternal(version: str) -> str:
         sys.stderr.write(f"[ClangFormat] PyPI 조회 실패 ({url}): {error}\n")
         return ""
 
-    for entry in payload.get("urls", []):
-        fileName = str(entry.get("filename", ""))
+    for entry in payload["urls"]:
+        fileName = str(entry["filename"])
         if not fileName.endswith(".whl"):
             continue
         if all(tag in fileName for tag in listTag):
-            return str(entry.get("url", ""))
+            return str(entry["url"])
     return ""
 
 
