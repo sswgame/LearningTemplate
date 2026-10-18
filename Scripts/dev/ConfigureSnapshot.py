@@ -116,7 +116,7 @@ def snapshotTargetInternal(replyDir: Path, jsonFile: str, repositoryRoot: Path, 
     for group in data.get("compileGroups", []):
         listSource = sorted(rel(data["sources"][index]["path"]) for index in group.get("sourceIndexes", []))
         mapCompileGroup[f"{group.get('language', '')}:{listSource[0] if listSource else ''}"] = {
-            "standard": group.get("languageStandard", {}).get("standard", ""),
+            "standard": group["languageStandard"]["standard"] if "languageStandard" in group else None,   # 표준을 정하지 않은 묶음
             "defines": sorted(item["define"] for item in group.get("defines", [])),
             "includes": sorted(f"{'system:' if item.get('isSystem') else ''}{rel(item['path'])}" for item in group.get("includes", [])),
             "fragments": [item["fragment"] for item in group.get("compileCommandFragments", [])],
@@ -126,9 +126,9 @@ def snapshotTargetInternal(replyDir: Path, jsonFile: str, repositoryRoot: Path, 
 
     link = data.get("link") or {}
     return {
-        "type": data.get("type", ""),
-        "nameOnDisk": data.get("nameOnDisk", ""),
-        "folder": (data.get("folder") or {}).get("name", ""),
+        "type": data["type"],
+        "nameOnDisk": data.get("nameOnDisk"),   # 산출물이 없는 타깃(INTERFACE · UTILITY)에는 없다 — None
+        "folder": data["folder"]["name"] if "folder" in data else None,   # FOLDER 속성을 주지 않은 타깃
         "artifacts": sorted(rel(item["path"]) for item in data.get("artifacts", [])),
         "sources": sorted(rel(item["path"]) for item in data.get("sources", [])),
         "compileGroups": mapCompileGroup,
@@ -214,6 +214,12 @@ def diffSnapshots(beforePath: Path, afterPath: Path) -> list[str]:
     return listLine
 
 
+def makeTraceKeyInternal(event: dict) -> str:
+    """구간을 여는 사건(X · B)의 키 `이름 @ 위치` 입니다. 위치(파일:줄)는 명령 사건에만 있다 — 없으면 이름만 쓴다. 끝 사건(E)은 이름이 없을 수 있어 부르지 않는다."""
+    location = event["args"]["location"] if "args" in event and "location" in event["args"] else None
+    return f"{event['name']} @ {location}" if location is not None else str(event["name"])
+
+
 def iterTraceSpansInternal(listEvent: list[dict]) -> list[tuple[str, float]]:
     """
     (이름 @ 위치, 길이 us) 목록. CMake 의 google-trace 는 시작(`B`) · 끝(`E`) 짝으로 적는다 — 스레드마다 쌓아 짝을 맞춘다.
@@ -223,16 +229,14 @@ def iterTraceSpansInternal(listEvent: list[dict]) -> list[tuple[str, float]]:
     mapStack: dict[tuple[object, object], list[tuple[str, float]]] = defaultdict(list)
     for event in listEvent:
         phase = event.get("ph")
-        location = (event.get("args") or {}).get("location", "")
-        key = f"{event.get('name', '')} @ {location}"
         stack = mapStack[(event.get("pid"), event.get("tid"))]
         if phase == "X":
-            listSpan.append((key, float(event.get("dur", 0.0))))
+            listSpan.append((makeTraceKeyInternal(event), float(event["dur"])))
         elif phase == "B":
-            stack.append((key, float(event.get("ts", 0.0))))
+            stack.append((makeTraceKeyInternal(event), float(event["ts"])))
         elif phase == "E" and stack:
             beginKey, beginUs = stack.pop()
-            listSpan.append((beginKey, float(event.get("ts", 0.0)) - beginUs))
+            listSpan.append((beginKey, float(event["ts"]) - beginUs))
     return listSpan
 
 

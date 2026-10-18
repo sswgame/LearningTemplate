@@ -70,9 +70,9 @@
 
 - `C-41` [정리] **Linux · GPU 검증 구조.** 새 기능의 Linux 결함이 늦게 드러난다(2026-10-17: Linux 잡이 며칠 configure 에서 죽어 있었고 소프트 바디는 처음 돌자마자 발산). CI 에 GPU 가 없어 hostgpu 테스트는 로컬뿐이다. 순서는 결정 기록 5-12 `C-41` 행이다(GPU 러너 · 자체 호스트 러너는 하지 않는다).
   끝난 것: ① 세션 시작에 main CI 실패를 알린다(`ci-jobs --summary`, 세션 가드). ② 셰이더 전 백엔드 확인(`CheckShaderStamps` 게이트 — 쿠킹 표의 네 백엔드 폴더마다 `cook.stamp` 가 지금 소스와 같은지, 빌드 없이 린트 잡에서).
-  ③ 요구 백엔드(`Test/TestPolicy.json` 의 `requiredBackends` → hostgpu 항목의 `--required_backends=`)가 서지 못하면 건너뛰지 않고 진다(`RHITestDevice` · AppSmoke 의 `runApp`).
+  ③ 요구 백엔드(`Test/TestPolicy.json` 의 `requiredBackends` → hostgpu 항목의 `--required_backends=`)가 서지 못하면 건너뛰지 않고 진다(`RHITestDevice`, 앱을 띄우는 러너는 모두 `AppTestUtil::runAppOnBackend` · `runScenario` — 종료 코드 해석은 그 안에만 있다).
   ④ 소프트웨어 렌더러 묶음(라벨 `swrender`, `<타깃>_SoftwareRender` — 정책 `softwareRenderCases` · `softwareRequiredBackends`, CI-Debug 잡이 WARP · lavapipe+xvfb 로 돈다).
-  남은 것: 설계 완료, 단위는 [Linux 와 GPU 검증 계획](../plans/GpuVerification.md) 3절(V1 앱 러너 건너뜀을 한 함수로, V2 CI 보고 전용 해제)이다.
+  남은 것: 설계 완료, 단위는 [Linux 와 GPU 검증 계획](../plans/GpuVerification.md) 3절(V2 CI 보고 전용 해제)이다.
 
 - `C-42` [정리] **증분 쿠킹 · 파생 데이터 캐시(DDC).** 리소스를 100MB 이상 들이는 중이라 에셋이 늘면 쿠킹 시간이 병목이 된다. 설계 완료, 단위는 [증분 쿠킹 계획](../plans/IncrementalCook.md) 4절(K0 측정부터)이다.
   공유 DDC 위치(K6)는 사용자 결정이 필요하다(같은 문서 5절).

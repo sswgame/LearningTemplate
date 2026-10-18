@@ -80,7 +80,10 @@ def findGamePresetViolations(repositoryRoot: Path) -> tuple[list[str], int]:
         except (OSError, ValueError) as error:
             violations.append(f"[Game Preset] JSON 을 읽지 못했습니다: {presetPath} ({error})")
             continue
-        packRoot = str(data.get("_packRoot", ""))
+        if "_packRoot" not in data:
+            violations.append(f"[Game Preset] `_packRoot` 가 없습니다: {presetPath}")
+            continue
+        packRoot = str(data["_packRoot"])
         if packRoot.startswith("game/") is False or "/" in packRoot[len("game/"):]:
             violations.append(f"[Game Preset] `_packRoot` 는 `game/<폴더>` 입니다: {presetPath} (`{packRoot}`)")
         elif (resourceRoot / packRoot).is_dir() is False:

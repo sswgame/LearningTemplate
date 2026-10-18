@@ -96,7 +96,7 @@ def readTestTimeouts(ctestDir: Path) -> dict[str, float]:
     for test in payload.get("tests", []):
         for prop in test.get("properties", []):
             if prop.get("name") == "TIMEOUT" and isinstance(prop.get("value"), (int, float)):
-                mapTimeout[test.get("name", "")] = float(prop["value"])
+                mapTimeout[test["name"]] = float(prop["value"])
     return mapTimeout
 
 

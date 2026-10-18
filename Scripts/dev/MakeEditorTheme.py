@@ -107,10 +107,10 @@ def parseColor(value: object) -> str | None:
     if isinstance(value, dict):
         if "r" in value and "g" in value and "b" in value:
             channel = [value["r"], value["g"], value["b"]]
-            alpha = value.get("a", 1.0)
+            alpha = value["a"] if "a" in value else 1.0   # Figma 색의 a 는 선택 칸이고 형식이 정한 뜻은 불투명이다
         elif isinstance(value.get("components"), list) and len(value["components"]) == 3:
             channel = value["components"]
-            alpha = value.get("alpha", 1.0)
+            alpha = value["alpha"] if "alpha" in value else 1.0   # DTCG 색의 alpha 는 선택 칸이고 형식이 정한 뜻은 불투명이다
         else:
             return None
         if all(isinstance(item, (int, float)) for item in [*channel, alpha]):
@@ -129,7 +129,7 @@ def parseNumber(value: object) -> float | None:
     if isinstance(value, str):
         match = re.fullmatch(r"\s*(-?\d+(?:\.\d+)?)\s*(?:px)?\s*", value)
         return float(match.group(1)) if match else None
-    if isinstance(value, dict) and value.get("unit", "px") == "px":
+    if isinstance(value, dict) and "unit" in value and value["unit"] == "px":   # DTCG 치수는 unit 이 필수다 — 없으면 읽을 수 없는 값
         return parseNumber(value.get("value"))
     return None
 
@@ -210,7 +210,7 @@ def extractFigmaRest(data: dict, setName: str | None, modeName: str | None, list
     for variable in variables.values():
         if not isinstance(variable, dict) or variable.get("variableCollectionId") != collectionId:
             continue
-        name = str(variable.get("name", ""))
+        name = str(variable["name"])
         value = figmaValueInternal(variables, variable, modeName, modeId, 0, listWarning)
         resolvedType = variable.get("resolvedType")
         if resolvedType == "COLOR":

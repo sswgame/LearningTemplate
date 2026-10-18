@@ -258,7 +258,11 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
             if probe and probe not in uniqueProbe:
                 listViolation.append(f"[NameReference/ScenarioProbe] {relative}: 탐침 '{probe}' 가 등록돼 있지 않습니다(SW_AUTOMATION_PROBE)")
         for element in root.iter("DevCommand"):
-            listToken = element.get("line", "").split()
+            line = element.get("line")
+            if line is None:
+                listViolation.append(f"[NameReference/DevCommand] {relative}: <DevCommand> 에 line 이 없습니다")
+                continue
+            listToken = line.split()
             if listToken and listToken[0] not in uniqueCommand:
                 listViolation.append(f"[NameReference/DevCommand] {relative}: 개발 명령 '{listToken[0]}' 이(가) 등록돼 있지 않습니다(SW_DEV_COMMAND)")
     return listViolation, scenarioCount
