@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/String/EnumNameTable.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -12,12 +11,15 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ConquestCatalog" );
-
     namespace
     {
         struct ConquestCatalogInternal
         {
+            static constexpr const utf8*                 kArrTeamName[] = { "Neutral", "Player", "Enemy" };
+            static constexpr EnumNameTable<ConquestTeam> kTeamTable{ kArrTeamName };
+            static_assert( kTeamTable.getCount() == static_cast<size_t>( ConquestTeam::Enemy ) + 1, "team names must cover every ConquestTeam" );
+
+            /** @brief 자식 원소(`<Cost>` · `<Income>`)의 속성을 자원 이름과 양으로 읽습니다. 자식이 없으면 비어 있습니다. */
             static void loadStatChild( const XMLNode& node, const utf8* pChildName, StatBlock& outStats )
             {
                 outStats.clear();
@@ -25,67 +27,32 @@ namespace sw
                     (void)outStats.loadFromAttributes( child ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
             }
 
-            static constexpr const utf8*                      kArrKindName[] = { "Village", "Outpost", "Fortress" };
-            static constexpr EnumNameTable<ConquestSiteKind>  kSiteKindTable{ kArrKindName };
-            static constexpr const utf8*                      kArrRoleName[] = { "None", "Ram", "Ladder" };
-            static constexpr EnumNameTable<ConquestSiegeRole> kSiegeRoleTable{ kArrRoleName };
-            static constexpr const utf8*                      kArrTeamName[] = { "Neutral", "Player", "Enemy" };
-            static constexpr EnumNameTable<ConquestTeam>      kTeamTable{ kArrTeamName };
-            static_assert( kSiteKindTable.getCount() == static_cast<size_t>( ConquestSiteKind::Fortress ) + 1, "site kind names must cover every ConquestSiteKind" );
-            static_assert( kSiegeRoleTable.getCount() == static_cast<size_t>( ConquestSiegeRole::Ladder ) + 1, "siege role names must cover every ConquestSiegeRole" );
-            static_assert( kTeamTable.getCount() == static_cast<size_t>( ConquestTeam::Enemy ) + 1, "team names must cover every ConquestTeam" );
-
-            [[nodiscard]] static bool parseSiteKind( string_view text, ConquestSiteKind& outKind ) { return kSiteKindTable.parse( text, outKind ); }
-
-            [[nodiscard]] static bool parseSiegeRole( string_view text, ConquestSiegeRole& outRole ) { return kSiegeRoleTable.parse( text, outRole ); }
-
-            /** @brief "spearman:3,archer:2" 를 읽습니다. 개수를 빼면 하나로 봅니다. */
-            static void parseGarrison( string_view text, vector<ConquestGarrisonDef>& outListGarrison, string_view sourceName, const utf8* pID )
+            /** @brief "spearman:3,archer:2" 를 읽습니다. 개수를 빼면 하나이고, 깨진 개수는 오류입니다. */
+            [[nodiscard]] static bool readGarrison( string_view text, vector<ConquestGarrisonDef>& outListGarrison, string_view sourceName, const hashed_string& siteID )
             {
                 outListGarrison.clear();
+                bool bAllValid = true;
                 GameDataXML::forEachNamedNumber( text, ",; ", ConquestGarrisonDef{}._count, GameDataXML::MissingValue::UseDefault,
                                                  [&]( string_view token, string_view unitName, int32 count, bool bValid )
                 {
+                    if ( bValid == false || count < 0 )
+                    {
+                        SW_LOG_ERROR( "%#: site '%#' has a bad garrison count '%#'", sourceName, siteID.c_str(), token );
+                        bAllValid = false;
+                        return;
+                    }
                     ConquestGarrisonDef garrison;
                     garrison._unitID = hashed_string( unitName );
-                    if ( bValid == false )
-                        SW_LOG_WARNING( "%#: site '%#' has a bad garrison count '%#'", sourceName, pID, token );
-                    garrison._count = MathUtil::max( 0, count );
+                    garrison._count  = count;
                     outListGarrison.push_back( garrison );
                 } );
-            }
-
-            static void loadRules( const XMLNode& node, ConquestRules& outRules )
-            {
-                outRules._waveUnit                = hashed_string( node.getAttributeText( "waveUnit" ) );
-                outRules._fixedStep               = MathUtil::clamp( node.getAttributeFloat( "fixedStep", outRules._fixedStep ), 0.01f, 1.0f );
-                outRules._incomeInterval          = MathUtil::max( 0.1f, node.getAttributeFloat( "incomeInterval", outRules._incomeInterval ) );
-                outRules._captureTime             = MathUtil::max( 0.0f, node.getAttributeFloat( "captureTime", outRules._captureTime ) );
-                outRules._moraleRadius            = MathUtil::max( 0.0f, node.getAttributeFloat( "moraleRadius", outRules._moraleRadius ) );
-                outRules._moraleDamageBonus       = MathUtil::max( 0.0f, node.getAttributeFloat( "moraleDamageBonus", outRules._moraleDamageBonus ) );
-                outRules._wallProtection          = MathUtil::saturate( node.getAttributeFloat( "wallProtection", outRules._wallProtection ) );
-                outRules._commanderHealth         = MathUtil::max( 1.0f, node.getAttributeFloat( "commanderHealth", outRules._commanderHealth ) );
-                outRules._commanderDamage         = MathUtil::max( 0.0f, node.getAttributeFloat( "commanderDamage", outRules._commanderDamage ) );
-                outRules._commanderStructureRate  = MathUtil::max( 0.0f, node.getAttributeFloat( "commanderStructureRate", outRules._commanderStructureRate ) );
-                outRules._commanderRange          = MathUtil::max( 0.1f, node.getAttributeFloat( "commanderRange", outRules._commanderRange ) );
-                outRules._commanderSpeed          = MathUtil::max( 0.0f, node.getAttributeFloat( "commanderSpeed", outRules._commanderSpeed ) );
-                outRules._commanderAttackInterval = MathUtil::max( 0.05f, node.getAttributeFloat( "commanderAttackInterval", outRules._commanderAttackInterval ) );
-                outRules._commanderRespawnTime    = MathUtil::max( 0.0f, node.getAttributeFloat( "commanderRespawn", outRules._commanderRespawnTime ) );
-                outRules._formationSpacing        = MathUtil::max( 0.1f, node.getAttributeFloat( "formationSpacing", outRules._formationSpacing ) );
-                outRules._followLeash             = MathUtil::max( 0.0f, node.getAttributeFloat( "followLeash", outRules._followLeash ) );
-                outRules._aggroRange              = MathUtil::max( 0.0f, node.getAttributeFloat( "aggroRange", outRules._aggroRange ) );
-                outRules._waveInterval            = MathUtil::max( 0.0f, node.getAttributeFloat( "waveInterval", outRules._waveInterval ) );
-                outRules._waveCountPerMinute      = MathUtil::max( 0.0f, node.getAttributeFloat( "waveCountPerMinute", outRules._waveCountPerMinute ) );
-                outRules._waveBaseCount           = MathUtil::max( 0, node.getAttributeInt( "waveBaseCount", outRules._waveBaseCount ) );
-                outRules._waveCountPerSite        = MathUtil::max( 0, node.getAttributeInt( "waveCountPerSite", outRules._waveCountPerSite ) );
-                outRules._basePopulation          = MathUtil::max( 0, node.getAttributeInt( "basePopulation", outRules._basePopulation ) );
+                return bAllValid;
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
+    SW_LOG_CALLER( "ConquestCatalog" );
+
     bool parseConquestTeam( string_view text, ConquestTeam& outTeam )
     {
         return ConquestCatalogInternal::kTeamTable.parse( text, outTeam );
@@ -101,94 +68,96 @@ namespace sw
 
     uint32 ConquestCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
-        if ( const XMLNode rulesNode = root.findChild( "Rules" ) )
-            ConquestCatalogInternal::loadRules( rulesNode, _rules );
-        if ( const XMLNode startNode = root.findChild( "Start" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            _rules._startResources.clear();
-            (void)_rules._startResources.loadFromAttributes( startNode ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
+            const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            const bool        bLoaded = loadElement( node, name, sourceName );
+            const bool        bDef    = name == "Unit" || name == "Building" || name == "Site";
+            if ( bLoaded && bDef )
+                ++loadedCount;
         }
 
-        for ( XMLNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )
+        // 서로 가리키는 id 는 모두 읽은 뒤에 확인한다(건물 · 거점이 병종보다 앞에 적혀도 된다).
+        for ( const ConquestBuildingDef& building : _buildingCatalog.getAll() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            ConquestUnitDef unit;
-            unit._id                   = hashed_string( pID );
-            unit._health               = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", unit._health ) );
-            unit._damage               = MathUtil::max( 0.0f, node.getAttributeFloat( "damage", unit._damage ) );
-            unit._range                = MathUtil::max( 0.1f, node.getAttributeFloat( "range", unit._range ) );
-            unit._attackInterval       = MathUtil::max( 0.05f, node.getAttributeFloat( "attackInterval", unit._attackInterval ) );
-            unit._speed                = MathUtil::max( 0.0f, node.getAttributeFloat( "speed", unit._speed ) );
-            unit._trainTime            = MathUtil::max( 0.0f, node.getAttributeFloat( "train", unit._trainTime ) );
-            unit._structureScale       = MathUtil::max( 0.0f, node.getAttributeFloat( "structureScale", unit._structureScale ) );
-            unit._population           = MathUtil::max( 0, node.getAttributeInt( "pop", unit._population ) );
-            const string_view roleText = node.getAttributeText( "siege" );
-            if ( roleText.empty() == false && ConquestCatalogInternal::parseSiegeRole( roleText, unit._siegeRole ) == false )
-                SW_LOG_WARNING( "%#: unit '%#' has an unknown siege role '%#'", sourceName, pID, roleText );
-            ConquestCatalogInternal::loadStatChild( node, "Cost", unit._cost );
-            (void)_unitCatalog.add( unit );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "Building" ); node; node = node.findNextSibling( "Building" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            ConquestBuildingDef building;
-            building._id              = hashed_string( pID );
-            building._produces        = hashed_string( node.getAttributeText( "produces" ) );
-            building._cycleTime       = MathUtil::max( 0.1f, node.getAttributeFloat( "cycleTime", building._cycleTime ) );
-            building._amountPerWorker = MathUtil::max( 0, node.getAttributeInt( "amount", building._amountPerWorker ) );
-            building._workerSlots     = MathUtil::max( 0, node.getAttributeInt( "workerSlots", building._workerSlots ) );
-            building._housing         = MathUtil::max( 0, node.getAttributeInt( "housing", building._housing ) );
-            StringUtil::forEachToken( node.getAttributeText( "trains" ), ",; ", [&]( string_view token )
+            for ( const hashed_string& unitID : building._listTrainable )
             {
-                const hashed_string unitID( token );
                 if ( _unitCatalog.find( unitID ) == nullptr )
-                    SW_LOG_WARNING( "%#: building '%#' trains an unknown unit '%#'", sourceName, pID, token );
-                building._listTrainable.push_back( unitID );
-            } );
-            ConquestCatalogInternal::loadStatChild( node, "Cost", building._cost );
-            (void)_buildingCatalog.add( building );
-            ++loadedCount;
+                    SW_LOG_ERROR( "%#: building '%#' trains an unknown unit '%#'", sourceName, building._id.c_str(), unitID.c_str() );
+            }
         }
-
-        for ( XMLNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
+        for ( const ConquestSiteDef& site : _siteCatalog.getAll() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            ConquestSiteDef site;
-            site._id                   = hashed_string( pID );
-            site._x                    = node.getAttributeFloat( "x", site._x );
-            site._captureRadius        = MathUtil::max( 0.5f, node.getAttributeFloat( "captureRadius", site._captureRadius ) );
-            site._gateHealth           = MathUtil::max( 0.0f, node.getAttributeFloat( "gate", site._gateHealth ) );
-            site._wallHealth           = MathUtil::max( 0.0f, node.getAttributeFloat( "wall", site._wallHealth ) );
-            site._workers              = MathUtil::max( 0, node.getAttributeInt( "workers", site._workers ) );
-            site._housing              = MathUtil::max( 0, node.getAttributeInt( "housing", site._housing ) );
-            site._buildSlots           = MathUtil::max( 0, node.getAttributeInt( "slots", site._buildSlots ) );
-            const string_view kindText = node.getAttributeText( "kind" );
-            if ( kindText.empty() == false && ConquestCatalogInternal::parseSiteKind( kindText, site._kind ) == false )
-                SW_LOG_WARNING( "%#: site '%#' has an unknown kind '%#'", sourceName, pID, kindText );
-            const string_view ownerText = node.getAttributeText( "owner" );
-            if ( ownerText.empty() == false && parseConquestTeam( ownerText, site._owner ) == false )
-                SW_LOG_WARNING( "%#: site '%#' has an unknown owner '%#'", sourceName, pID, ownerText );
-            ConquestCatalogInternal::parseGarrison( node.getAttributeText( "garrison" ), site._listGarrison, sourceName, pID );
             for ( const ConquestGarrisonDef& garrison : site._listGarrison )
             {
                 if ( _unitCatalog.find( garrison._unitID ) == nullptr )
-                    SW_LOG_WARNING( "%#: site '%#' garrisons an unknown unit '%#'", sourceName, pID, garrison._unitID.c_str() );
+                    SW_LOG_ERROR( "%#: site '%#' garrisons an unknown unit '%#'", sourceName, site._id.c_str(), garrison._unitID.c_str() );
             }
-            ConquestCatalogInternal::loadStatChild( node, "Income", site._income );
-            (void)_siteCatalog.add( site );
-            ++loadedCount;
         }
         if ( _rules._waveUnit.empty() == false && _unitCatalog.find( _rules._waveUnit ) == nullptr )
-            SW_LOG_WARNING( "%#: waveUnit '%#' is not a unit - no counter-attack waves", sourceName, _rules._waveUnit.c_str() );
+            SW_LOG_ERROR( "%#: waveUnit '%#' is not a unit - no counter-attack waves", sourceName, _rules._waveUnit.c_str() );
         return loadedCount;
+    }
+
+    bool ConquestCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        if ( name == "Rules" )
+        {
+            ConquestRules rules;
+            if ( GameDataXML::readFields( node, rules, sourceName ) == false )
+                return false;
+            rules._startResources = _rules._startResources; // `<Start>` 는 따로 읽는다(적힌 순서와 상관없게)
+            _rules                = rules;
+            return true;
+        }
+        if ( name == "Start" )
+        {
+            _rules._startResources.clear();
+            (void)_rules._startResources.loadFromAttributes( node ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
+            return true;
+        }
+        if ( name == "Unit" )
+            return loadUnit( node, sourceName );
+        if ( name == "Building" )
+            return loadBuilding( node, sourceName );
+        if ( name == "Site" )
+            return loadSite( node, sourceName );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool ConquestCatalog::loadUnit( const XMLNode& node, string_view sourceName )
+    {
+        ConquestUnitDef unit;
+        if ( GameDataXML::readFields( node, unit, sourceName ) == false )
+            return false;
+        ConquestCatalogInternal::loadStatChild( node, "Cost", unit._cost );
+        (void)_unitCatalog.add( unit ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
+    }
+
+    bool ConquestCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
+    {
+        ConquestBuildingDef building;
+        if ( GameDataXML::readFields( node, building, sourceName, { "trains" } ) == false )
+            return false;
+        GameDataXML::parseNameList( node.getAttributeText( "trains" ), ",; ", building._listTrainable );
+        ConquestCatalogInternal::loadStatChild( node, "Cost", building._cost );
+        (void)_buildingCatalog.add( building ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
+    }
+
+    bool ConquestCatalog::loadSite( const XMLNode& node, string_view sourceName )
+    {
+        ConquestSiteDef site;
+        bool            bValid = GameDataXML::readFields( node, site, sourceName, { "garrison" } );
+        bValid                 = ConquestCatalogInternal::readGarrison( node.getAttributeText( "garrison" ), site._listGarrison, sourceName, site._id ) && bValid;
+        if ( bValid == false )
+            return false;
+        ConquestCatalogInternal::loadStatChild( node, "Income", site._income );
+        (void)_siteCatalog.add( site ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
     }
 } // namespace sw
