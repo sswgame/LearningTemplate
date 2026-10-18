@@ -27,7 +27,7 @@ namespace sw
     {
         uint64 _totalAllocatedBytes{ 0 };
         uint64 _totalFreedBytes{ 0 };
-        /** @brief 지금 살아 있는 바이트입니다. 추적을 켜기 전에 잡힌 블록을 켠 뒤에 풀면 칸의 합이 0 아래로 갈 수 있어, 0 아래는 0 으로 읽습니다. */
+        /** @brief 지금 살아 있는 바이트입니다. 해제는 센 블록만 빼므로 합은 0 아래로 가지 않습니다(칸을 차례로 읽는 사이의 어긋남은 0 으로 읽는다). */
         uint64 _currentAllocatedBytes{ 0 };
         /** @brief 지금 살아 있는 할당 수입니다(0 아래는 0). */
         uint64 _currentAllocationCount{ 0 };
@@ -195,13 +195,14 @@ namespace sw
         bool isDetailedTrackingEnabled() const { return _bDetailedTrackingEnabled.load( std::memory_order_relaxed ); }
 
         /**
-         * @brief 메모리 할당을 기록합니다.
-         * @return 콜 스택 해시
+         * @brief 메모리 할당을 기록합니다. 추적이 꺼져 있거나 프로파일러 안에서 잡힌 블록은 세지 않습니다(`_bCounted` 가 false).
+         * @return 센 여부와 콜 스택 해시
          */
-        uint64 recordAllocation( void* pPtr, size_t size, MemoryTag tag ) override;
+        [[nodiscard]] AllocationRecord recordAllocation( void* pPtr, size_t size, MemoryTag tag ) override;
 
         /**
-         * @brief 메모리 해제를 기록합니다.
+         * @brief 메모리 해제를 기록합니다. **이 프로파일러가 센 블록만** 넘깁니다 — 할당기는 블록 헤더의 기록기 번호로 거른다.
+         * @details 센 블록이면 추적을 지금 꺼 두었어도 뺍니다. 할당을 셀 때와 해제를 셀 때가 늘 짝이라 살아 있는 양이 어긋나지 않는다.
          */
         void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash = 0 ) override;
 

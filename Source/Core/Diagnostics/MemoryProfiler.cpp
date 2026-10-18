@@ -40,8 +40,8 @@ namespace sw
         {
             /**
              * @brief 칸의 합(부호 있음)을 살아 있는 양으로 읽습니다. 0 아래는 0 입니다.
-             * @details 할당은 세지 않았는데 해제만 세는 경우가 실제로 있습니다. 에디터의 프로파일러 패널에서 **추적을 런타임에 켤 수 있어서**,
-             *          켜기 전에 할당된 블록이 켠 뒤에 해제되면 합이 0 아래로 갑니다. 부호 없는 값으로 그대로 돌려주면 1.8e19 가 됩니다.
+             * @details 해제는 센 블록만 오므로(블록 헤더의 기록기 번호) 끝난 합은 0 아래로 가지 않습니다. 다만 칸을 차례로 읽는 동안 다른
+             *          스레드가 앞 칸에 할당하고 뒤 칸에서 풀면 읽은 합이 잠깐 0 아래일 수 있어, 부호 없는 값으로 접히지 않게 자릅니다.
              */
             static uint64 clampLiveSum( int64 sum )
             {
@@ -312,14 +312,14 @@ namespace sw
         _bDetailedTrackingEnabled.store( bEnabled, std::memory_order_relaxed );
     }
 
-    uint64 MemoryProfiler::recordAllocation( void* pPtr, size_t size, MemoryTag tag )
+    AllocationRecord MemoryProfiler::recordAllocation( void* pPtr, size_t size, MemoryTag tag )
     {
         (void)pPtr;
         if ( _bTrackingEnabled.load( std::memory_order_relaxed ) == false )
-            return 0;
+            return AllocationRecord{};
 
         if ( MemoryProfilerInternal::t_bIsInsideProfiler )
-            return 0; // 방어: 프로파일러 안에서 해시 맵이 할당할 때의 재귀를 막는다
+            return AllocationRecord{}; // 방어: 프로파일러 안에서 해시 맵이 할당할 때의 재귀를 막는다. 세지 않으므로 그 해제도 오지 않는다
 
         uint32 tagIdx = static_cast<uint32>( tag );
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
@@ -357,28 +357,25 @@ namespace sw
             MemoryProfilerInternal::t_bIsInsideProfiler = false;
         }
 
-        return outHash;
+        return AllocationRecord{ outHash, true };
     }
 
     void MemoryProfiler::recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash )
     {
-        if ( _bTrackingEnabled.load( std::memory_order_relaxed ) == false )
-            return;
-
-        if ( MemoryProfilerInternal::t_bIsInsideProfiler )
-            return; // 방어: 프로파일러 안에서 해시 맵 노드를 해제할 때의 재귀를 막는다
-
+        // 추적 스위치는 보지 않는다 — 이 블록은 셀 때 켜져 있었다(할당기가 센 블록만 넘긴다). 꺼진 동안의 해제를 건너뛰면 살아 있는 양이 위로 어긋난다.
         uint32 tagIdx = static_cast<uint32>( tag );
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
             tagIdx = 0;
 
-        // 지금 스레드 칸에서 뺀다. 할당한 스레드의 칸과 달라 이 칸은 음수가 될 수 있지만 합은 맞다. 에디터의 프로파일러 패널에 **추적 켜기
-        // 체크박스**가 있어서, 켜기 전에 할당된 블록이 켠 뒤에 해제되면 세지 않은 것을 뺀다 — 합이 0 아래로 가면 읽는 쪽이 0 으로 읽는다
-        // (`MemoryProfilerInternal::clampLiveSum`). 바로 아래 콜 스택 표도 `>= size` 로 막는다.
+        // 지금 스레드 칸에서 뺀다. 할당한 스레드의 칸과 달라 이 칸은 음수가 될 수 있지만 합은 맞다.
         MemoryTagShardCounter& counter = _shard.getCurrentThreadShard()._arrTag[tagIdx];
         counter._totalFreedBytes.fetch_add( size, std::memory_order_relaxed );
         counter._liveBytes.fetch_sub( static_cast<int64>( size ), std::memory_order_relaxed );
         counter._liveCount.fetch_sub( 1, std::memory_order_relaxed );
+
+        // 프로파일러 안(해시 맵을 고치는 중)에서는 콜 스택 표를 건드리지 않는다 — 재귀로 같은 잠금을 다시 잡는다.
+        if ( MemoryProfilerInternal::t_bIsInsideProfiler )
+            return;
 
         if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) )
         {
@@ -644,9 +641,8 @@ namespace sw
 
     vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks( TopCallStackOrder order ) const
     {
-        // 결과 버퍼는 **가드 밖에서** 잡는다. 가드(`t_bIsInsideProfiler`)를 켠 뒤 reserve 하면 이 할당은 세지 않고, 호출한 쪽이
-        // 가드 밖에서 풀 때는 세어 현재 사용량이 줄기만 한다(프로파일러 패널이 매 프레임 불러 태그 카운터가 0 에 붙는다). 표가 자란 만큼만
-        // 여유를 두고, 가드 안에서는 그 용량 안에서만 넣어 다시 할당하지 않는다.
+        // 결과 버퍼는 **가드 밖에서** 잡아 호출한 쪽의 태그로 센다. 가드(`t_bIsInsideProfiler`) 안에서 잡으면 세지 않는 블록이 된다
+        // (그 해제도 세지 않으므로 어긋나지는 않는다). 표가 자란 만큼만 여유를 두고, 가드 안에서는 그 용량 안에서만 넣어 다시 할당하지 않는다.
         size_t entryCount{ 0 };
         {
             std::scoped_lock<mutex> lock{ _stackMapMutex };
