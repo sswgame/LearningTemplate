@@ -391,16 +391,16 @@
 
 ### 5-3. Core 와 플랫폼
 
-- **macOS 는 지원 대상이 아닙니다**(2026-10-04). 코드는 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막습니다. 복원하려면 그 전 git 기록에서 찾습니다.
+- **macOS 는 지원 대상이 아닙니다**(2026-10-04). 코드는 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막습니다. 복원은 그 전 git 기록에서 찾습니다.
   `Vcpkg.cmake` 의 APPLE 분기와 레거시 스탬프 이관, `arm64-osx` · `x64-osx` 트리플릿은 손대지 않는 파일이라 사용자가 정리합니다.
 
 - **파일 존재 술어는 `FileUtil::exists`(무엇이든), `isDirectory`, `isRegularFile` 셋입니다**(2026-10-06). `exists` 는 `std::filesystem::exists` 와 같은 뜻입니다. 경로 전용 타입(`FilePath`)은 만들지 않습니다.
-  파일 오류는 그 자리에서 경고하고 `[[nodiscard]] bool` 로 돌려주며, 실패를 알리지 않는 시도는 `FileUtil::tryRemoveFile` 하나입니다. 언리얼 `IFileManager::Delete` 의 `bQuiet` 에 해당합니다.
+  파일 오류는 그 자리에서 경고하고 `[[nodiscard]] bool` 로 돌려주며, 실패를 알리지 않는 시도는 `FileUtil::tryRemoveFile` 하나입니다(언리얼 `IFileManager::Delete` 의 `bQuiet`).
 - **`std::hash<fixed_string>` 은 대소문자를 구분합니다**(2026-10-06). `string` 과 `wstring` 의 해시와 같은 규칙입니다.
 - **`fixed_string` 은 길이 필드 없이 배열 하나만 듭니다**(2026-10-11). `size()` 는 앞 N 칸의 경계 있는 검색이고, 길이를 정하는 연산이 꼬리를 0 으로 채워
   바깥이 `data()` 에 널 없이 써도 길이가 맞습니다. 캐시하던 `mutable` 길이는 const `size()` 가 써서 읽기끼리 데이터 레이스였습니다.
   EASTL `fixed_string` · folly `FixedString` 은 길이를 들지만 바깥이 버퍼에 직접 쓰는 계약이 없습니다. 이 저장소는 ImGui · `formatstring` · Win32 가 `data()` 에 쓰므로 C 배열과 같은 계약을 택했습니다.
-  넘침은 지금처럼 잘라 경고하고, 잘림이 틀린 값이면 `try_assign` · `try_append` 를 씁니다. 측정은 Release, 같은 PC 에서 옛 · 새 바이너리를 번갈아 세 번 돌린 중앙값입니다(`FixedStringBenchTest`).
+  넘침은 잘라 경고하고, 잘림이 틀린 값이면 `try_assign` · `try_append` 를 씁니다. 측정은 Release, 같은 PC 에서 옛 · 새 바이너리를 번갈아 세 번 돌린 중앙값입니다(`FixedStringBenchTest`).
 
   | 항목 | 전 | 후 |
   |---|---|---|
@@ -414,40 +414,40 @@
   | `clear()` + 짧은 `append` — `<64>` · `<8192>` | 7.9 · 10.1 ns | 5.5 · 68.7 ns |
 
   `clear()` 가 O(N)이 된 것이 유일한 손해입니다. `fixed_string<8192>` 를 되풀이해 비우는 호출처는 없습니다(8KB 는 로그 줄 버퍼 하나이고 만들 때 한 번 0 으로 채웁니다).
-  꼬리를 길이만큼만 채우는 안은 ImGui 가 널 뒤에 남긴 옛 글자를 지우지 못해 기각했습니다. 작은 배열(256 바이트 이하)의 대입은 배열 전체를 먼저 0 으로 채웁니다. 크기가 컴파일 때 정해져 그 자리에 펼쳐지기 때문입니다.
+  꼬리를 길이만큼만 채우는 안은 ImGui 가 널 뒤에 남긴 옛 글자를 지우지 못해 기각했습니다. 작은 배열(256 바이트 이하)의 대입은 크기가 컴파일 때 정해져 배열 전체 0 채우기가 그 자리에 펼쳐집니다.
 - **Win32 API 는 W 버전을 이름으로 부르고, A 버전도 막습니다**(2026-10-06). 전역 `UNICODE` 정의는 대상마다 정의가 빠지면 말없이 A 버전으로 돌아가서 택하지 않았습니다. 언리얼, 유니티, Godot 모두 Windows 경계에서는 W 버전만 씁니다.
-  X11 창 제목은 `XStoreName` 과 `_NET_WM_NAME` 을 함께 적습니다. SDL2, GLFW, Godot 과 같은 방식입니다.
+  X11 창 제목은 `XStoreName` 과 `_NET_WM_NAME` 을 함께 적습니다(SDL2, GLFW, Godot 과 같음).
 - **벽시계는 `WallClock` 하나만 읽습니다**(2026-10-06). 서비스는 현재 시각을 매개변수로 받고, 테스트는 가짜 시각을 넣습니다.
 - **문자열 타입은 담는 것으로 고르고, `string` 을 `fixed_string` 으로 일괄 치환하지 않습니다**(2026-10-10). 규칙은 [agents/NamingCpp](agents/NamingCpp.md#function-names) 에 있습니다.
-  `sw::string` 은 MSVC STL 의 SSO 라 15바이트까지 힙을 쓰지 않고, `sizeof` 는 32입니다. `fixed_string<N>` 은 4의 배수로 올린 (N+1) 에 4를 더한 크기이고,
-  N 을 넘으면 잘라 내며 경고하고, `size()` 는 매번 `strlen` 입니다. 그래서 짧은 이름은 이득이 없고, 긴 텍스트는 잘리며 스택만 커집니다.
+  `sw::string` 은 MSVC STL 의 SSO 라 15바이트까지 힙을 쓰지 않고 `sizeof` 는 32입니다. `fixed_string<N>` 은 4의 배수로 올린 (N+1) 에 4를 더한 크기이고,
+  N 을 넘으면 잘라 내며 경고하고, `size()` 는 매번 `strlen` 이었습니다. 그래서 짧은 이름은 이득이 없고, 긴 텍스트는 잘리며 스택만 커집니다.
   후보를 조사했더니 프레임 경로를 지나는 것은 0건이었습니다. 프레임 경로의 이름은 `hashed_string` 이나 기존 저장소를 가리키는 `string_view` 로 넘깁니다
   (`FrameRenderer::resolvePresentSource` 가 사본 대신 뷰를 돌려줍니다). `fixed_string` 은 상한이 코드 상수이고, 힙이 금지된 경로(크래시 · 로그 · 시그널)나
-  고정 버퍼가 필요한 곳(ImGui 입력)에만 씁니다. 언리얼도 `FString` 을 기본으로 두고, 인라인 버퍼(`TStringBuilder<N>`, 넘치면 힙으로 늘어남)는 임시 조립에만 씁니다.
-- **Engine 폴더 사이의 작은 고리는 "위층이 아래층 등록표에 등록" 과 "둘을 다 아는 층으로 옮기기" 로 풉니다**(2026-10-11, 엔진 분할 1 단계). 자동화 실행기는 UI 를 모르고 UI 가 단계 · 로딩 화면 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)을 올립니다 — 언리얼 Automation 도 모듈이 테스트 · 래치 명령을 등록하고 실행기는 그 모듈을 모릅니다.
-  정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/SceneAnimation` 으로, 물리 디버그 선 어댑터는 조립점 `Engine.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다 — 언리얼 AnimToTexture 도 애니메이션과 렌더를 함께 드는 별도 플러그인입니다.
+  고정 버퍼가 필요한 곳(ImGui 입력)에만 씁니다. 언리얼도 `FString` 을 기본으로 두고 인라인 버퍼(`TStringBuilder<N>`)는 임시 조립에만 씁니다.
+- **Engine 폴더 사이의 작은 고리는 "위층이 아래층 등록표에 등록" 과 "둘을 다 아는 층으로 옮기기" 로 풉니다**(2026-10-11, 엔진 분할 1 단계). 자동화 실행기는 UI 를 모르고 UI 가 단계 · 로딩 화면 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)을 올립니다(언리얼 Automation 도 모듈이 테스트 · 래치 명령을 등록).
+  정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/SceneAnimation` 으로, 물리 디버그 선 어댑터는 조립점 `Engine.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다(언리얼 AnimToTexture 도 별도 플러그인).
 - **엔진 내장 에셋 캐시는 기능 폴더가 등록하고 `AssetManager` 는 등록표만 봅니다**(2026-10-11, 엔진 분할). 캐시 클래스의 .cpp 에 `SW_BUILT_IN_ASSET_CACHE( MaterialCache )` 한 줄을 두고(`Resource/Cache/BuiltInAssetCache.h`),
   매니저는 생성자에서 표를 훑어 소유 캐시를 만들고 종류 이름 순으로 올립니다. 타입으로 찾는 창구는 `getAssetCache<T>()` 입니다(`getMaterialCache` 넷은 지웠습니다).
-  언리얼 서브시스템(모듈이 타입을 올리고 엔진이 인스턴스를 만들며 `GetSubsystem<T>()` 로 찾는다) · 고도 `register_types` 의 `add_resource_format_loader` 와 같은 방향입니다 — 유니티 `ScriptedImporter` 도 특성으로 등록되고 `AssetDatabase` 는 구현 타입을 모릅니다.
+  언리얼 서브시스템 · 고도 `register_types` 의 `add_resource_format_loader` · 유니티 `ScriptedImporter` 와 같은 방향입니다.
   **에셋 캐시는 서브시스템으로 만들지 않습니다**(2026-10-14, C-27 ② 판정). 캐시는 경로 → 에셋 표일 뿐 세울 것 · 내릴 것이 없고(`IAssetCache` 에 초기화 · 종료가 없다),
-  캐시끼리 기대는 순서도 없다(비우기 순서는 종류 이름 순으로 고정했고, 에셋 사이 참조는 공유 포인터가 든다). 판정 기준 "수명 범위 · 초기화/종료 순서 · 의존이
-  있는 서비스" 에 들지 않는 값 저장소다. 수명은 이미 `AssetManager`(소유 캐시) · 소유한 시스템(UI 문서 · 게임 데이터 캐시의 등록/해제)이 정한다. 언리얼도
+  캐시끼리 기대는 순서도 없다(비우기 순서는 종류 이름 순으로 고정, 에셋 사이 참조는 공유 포인터). 판정 기준 "수명 범위 · 초기화/종료 순서 · 의존이
+  있는 서비스" 에 들지 않는 값 저장소다. 수명은 `AssetManager`(소유 캐시) · 소유한 시스템(UI 문서 · 게임 데이터 캐시의 등록/해제)이 정한다. 언리얼도
   자산 캐시(`FStreamableManager` · 셰이더 맵 캐시)를 서브시스템으로 두지 않는 것으로 알고 있다.
   그래서 `Source/Engine/Resource/AssetManager.cpp` 의 배선 예외가 없어졌습니다. 모듈(게임 · 키트)의 캐시는 이 표가 아니라 `registerAssetCache` 로 올리고 내립니다(표 항목은 내리지 않으므로).
 - **씬마다 하나인 기능 서비스는 기능 폴더가 등록하고 `GameObjectManager` 는 레지스트리만 봅니다**(2026-10-12, 엔진 분할 2 단계). 서비스 .cpp 에 `SW_SCENE_SERVICE( SceneNavigation, Navigation )` 한 줄을 두면 매니저가 생성자에서 만들고, 그 줄의 프레임 단계에서 `update` 를, `clear` 에서 `onSceneCleared` 를 부르며, 찾는 창구는 `getSubsystem<T>()` 입니다(`Object/GameObject/Service/ISceneService.h`).
   씬 서비스는 서브시스템이고 매니저의 씬 범위(`SubsystemScope`, 부모는 엔진 범위)가 소유한다(2026-10-14, C-27 ①) — 선언한 의존으로 세우고 같은 단계의 갱신도 그 순서다.
-  언리얼 `UWorldSubsystem` · `UTickableWorldSubsystem` 과 같은 자리로 알고 있다. 프레임 단계 갱신(`update`)은 서브시스템 계약 밖의 씬 서비스 몫으로 둔다 —
+  언리얼 `UWorldSubsystem` · `UTickableWorldSubsystem` 과 같은 자리로 알고 있다. 프레임 단계 갱신(`update`)은 서브시스템 계약 밖의 씬 서비스 몫이다 —
   초기화 · 종료는 수명이고 갱신은 프레임 단계 표(`SceneFrameStepList.xxx`)의 자리라서.
-  언리얼은 `UNavigationSystem` 이 월드에 등록되는 서브시스템이고(`UWorld::GetSubsystem<T>()`), 유니티의 `NavMeshManager` 도 씬 코어 밖 모듈이라 같은 방향입니다 — 그래서 `GameObject/` 는 `Component/Navigation` 을 include 하지 않습니다(`getSceneNavigation` 은 지웠습니다).
+  언리얼 `UNavigationSystem`(월드 서브시스템) · 유니티 `NavMeshManager`(씬 코어 밖 모듈)와 같은 방향이라 `GameObject/` 는 `Component/Navigation` 을 include 하지 않습니다(`getSceneNavigation` 은 지웠습니다).
 - **`AABB` 는 Core 수학 타입입니다**(2026-10-11, 엔진 분할). `Engine/Physics/Collision/AABB.h` → `Core/Math/AABB.h`(`Frustum.h` 옆) — 언리얼 `FBox` · `FBoxSphereBounds` 와 유니티 `Bounds` 도 물리가 아닌 수학 타입입니다. 레이어를 보는 겹침 질의 `queryOverlaps` 만 물리의 `CollisionLayers.h` 에 남고, `Spatial` 은 티어 4 → 1 로, Object → Physics include 는 41 → 36 으로 줄었습니다.
 
 - **서브시스템(초기화 · 종료 짝 + 의존 순서)은 Core 의 계약입니다**(2026-10-14). `ISubsystem` · `SubsystemCollection` 은 `Core/Subsystem/`(티어 4 — 로그를 남기지 않아
   Log 아래)에 있고, 호스트 종류는 Core 의 비트 마스크(`SubsystemHostMask`)이며 비트의 뜻(클라이언트 · 전용 서버)은 엔진(`EngineSubsystemHost`)이 정합니다.
-  언리얼은 서브시스템을 `UEngineSubsystem` · `UWorldSubsystem` 처럼 수명 범위마다 나누고 `ShouldCreateSubsystem` 으로 호스트를 거르며, 순서는 `InitializeDependency`
-  호출로 실행 중에 정하는 것으로 알고 있다. 여기서는 같은 모양(서브시스템이 이름 · 의존 · 호스트를 스스로 선언하고 목록이 호스트로 거른다)을 취하되 두 가지를 더 했다:
+  언리얼은 `UEngineSubsystem` · `UWorldSubsystem` 처럼 수명 범위마다 나누고 `ShouldCreateSubsystem` 으로 호스트를 거르며, 순서는 `InitializeDependency`
+  호출로 실행 중에 정하는 것으로 알고 있다. 여기서는 같은 모양(서브시스템이 이름 · 의존 · 호스트를 스스로 선언하고 목록이 호스트로 거른다)에 두 가지를 더 했다:
   의존은 선언 전체로 위상 정렬하고(동점은 이름 순 — 결정적), 의존 칸은 다른 서브시스템의 이름 상수(`kSubsystemName`)를 가리켜 철자가 틀리면 컴파일 오류다.
   모르는 이름 · 순환 · 호스트 어긋남은 `EngineInitSequenceTest` 가 호스트 종류마다 걸러진 실제 목록으로 잡는다(`EveryHostKindSortsItsOwnSubsystems`).
-  목록은 로그를 남기지 않고 오류 글을 돌려준다 — 로거도 이 목록의 서브시스템이 될 수 있게 하기 위해서다. 정렬 오류는 부른 쪽이 표준 오류로 낸다.
+  목록은 로그를 남기지 않고 오류 글을 돌려준다(로거도 이 목록의 서브시스템이 될 수 있게). 정렬 오류는 부른 쪽이 표준 오류로 낸다.
   이름 상수는 층을 따라 아래로만 include 되므로, 낮은 층(비동기 IO · 물리)이 높은 층(모듈 이미지 · 리소스)보다 늦게 서야 하면 높은 층이 역방향 의존(`getSubsystemDependents`)으로 적는다 —
   목록에 없는 이름은 건너뛰어 "있으면 그 뒤" 인 선택 의존을 겸한다. 정방향 의존은 없으면 오류다. 언리얼에는 역방향 칸이 없는 것으로 알고 있다(층 규칙이 없어 필요가 없다).
 - **서브시스템이 서비스를 소유하고, 컬렉션 하나가 범위 하나입니다**(2026-10-14, 정리 ④).
@@ -455,7 +455,7 @@
   정적 저장소), 서비스(이벤트 · 지역화 · 커맨드 스택 · 디버그 도구 · 프로파일러 · 외부 프로파일러 · 크래시 보고 · 백엔드 레지스트리), 엔진(기동 단계).
   메모리 예산은 추적만 부트스트랩에서 켜고 예산 표는 첫 프레임 끝에 읽는다 — 표는 리플렉션으로 읽는데 타입 등록부가 엔진 범위다(2026-10-14, C-27 ③;
   언리얼도 LLM 은 기동 초에 켜고 예산은 설정 뒤에 읽는 것으로 알고 있다). 엔진을 세우지 않는 도구(OnlineLoadBot)도 같은 부트스트랩 서브시스템을 쓴다(C-27 ⑥). 아래 범위가 다 선 뒤 위 범위가 서고,
-  위 범위가 다 사라진 뒤 아래 범위가 내려간다. 서비스 범위는 "엔진 범위의 누가 소멸자에서 부르든 살아 있는" 옛 수명(저장소가 기동 앞에 만들고 뒤에 놓던 것)을
+  위 범위가 다 사라진 뒤 아래 범위가 내려간다. 서비스 범위는 "엔진 범위의 누가 소멸자에서 부르든 살아 있는" 옛 수명을
   구조로 지킨다 — 엔진 범위로 내리려면 쓰는 쪽마다 의존을 적어야 하는데, 소멸자 · 종료 경로의 쓰임을 모두 찾을 수 없어 택하지 않았다.
   세 범위는 게임 · 에디터와 같은 `SubsystemScope`(5-8)이고 타입 해시로 찾는다. 언리얼은 범위마다(엔진 · 월드 · 게임 인스턴스) 컬렉션이 있고
   `GetSubsystem<T>()` 가 부를 때마다 맵을 찾는 것으로 알고 있다. 여기서 엔진 창구(`engine::getSubsystem<T>()` 의 칸)는
@@ -470,11 +470,11 @@
 - **서비스 접근은 소유 수명마다 한 창구, 한 어휘다 — `getSubsystem<T>()`(반드시 있음, `T&`) · `findSubsystem<T>()`(없을 수 있음, `T*`)**(2026-10-15, C-28 마감).
   엔진은 `engine::`, 씬은 `GameObjectManager::`, 게임은 `game::`(게임 범위 → 호스트), 에디터는 `editor::`(에디터 범위 → 호스트)이고 소유 객체(`EditorContext` · `GameInstanceBase`)의 멤버도 같은 두 이름이다.
   이름 붙은 엔진 접근자 서른 개(`engine::getTypeRegistry()` …) · `getBoundEngineServices` · `getService<T>` · `getSceneService<T>` · `isServiceBound<T>` 는 지웠다(별칭 없음).
-  언리얼이 범위 객체마다 `GetSubsystem<T>()` 를 두는 것과 같은 모양으로 알고 있고, 유니티 서비스 로케이터 · Godot `Engine::get_singleton( "이름" )` 의 이름 조회는 철자 오류가 실행 때에야 드러나 택하지 않았다.
+  언리얼이 범위 객체마다 `GetSubsystem<T>()` 를 두는 것과 같은 모양이다. 유니티 서비스 로케이터 · Godot `Engine::get_singleton( "이름" )` 의 이름 조회는 철자 오류가 실행 때에야 드러나 택하지 않았다.
   우리 쪽 확장 셋: ① 엔진 칸은 바인딩 때 한 번 찾고 템플릿이 칸 색인을 컴파일 때 고른다 — 목록 밖 타입이나 빌 수 있는 행(`SW_ENGINE_SERVICE_OPT`)에 `getSubsystem` 을 쓰면 `static_assert` 다.
   ② `CheckServiceAccess` 가 옛 창구와 새 `static getInstance()` 를 막는다(상태 없는 코덱 · 드라이버 · 링크 때 등록 표만 예외 표에 이유와 함께). ③ 목은 범위로 넣는다
   (`test::ScopedEngineServiceOverride` · `game::ScopedGameScope` · `editor::ScopedEditorScope`). 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스)에서 게임 창구는 엔진 범위를 본다
-  (`Engine/Common/EngineScope.h` — 게임 모듈을 돌리지 않으니 가릴 것이 없다). GameFramework 의 표 읽기가 타입 레지스트리를 이 창구로 찾는다.
+  (`Engine/Common/EngineScope.h`). GameFramework 의 표 읽기가 타입 레지스트리를 이 창구로 찾는다.
 - **스레드는 `sw::thread`, 백그라운드 잡의 상태는 한 번에 읽는다**(C-24). `Source/` 에서 `std::thread` 를 직접 만들면 `CheckStdThread` 가 막는다
   (예외: 래퍼 자신 · 크래시 재현 테스트). `sw::thread` 는 합류 대기를 잠금 관찰자에 알려 `join` 순환을 교착 검출기가 보게 하고, 로더 락 안의
   `join`(`DllMain` · 모듈 정적 소멸자)은 멈추는 대신 단언한다. `Test/` 의 쓰고 버리는 스레드는 대상이 아니다. 에디터 백그라운드 잡의
@@ -483,21 +483,21 @@
   반환값으로 정하고, `isPending` 은 화면 표시용이다. 풀을 가리키는 핸들(`TaskHandle` · `TaskStageHandle`)의 수명 순서는 세대가 아니라
   참조 계수로 닫혀 있다 — 매니저가 사라질 때 남은 핸들이 풀을 이어받고(`TaskNodePool::detachOwner`) 마지막 핸들이 풀을 소멸시킨다.
 - **엔진 루프 클래스는 `Engine` 이고 서비스 네임스페이스 `engine` 은 그대로 둔다**(2026-10-15, 정리 ⑥). 둘은 대소문자만 다르지만 C++ 에서 클래스(`sw::Engine`)와
-  네임스페이스(`sw::engine`)는 다른 이름이고, 이 저장소의 규칙(타입은 PascalCase · 네임스페이스는 소문자, 예 `editor`)이 그대로 구분한다. 네임스페이스를 바꾸지 않는 까닭: `engine::` 가 엔진 범위 창구(`engine::getSubsystem<T>()`)의
+  네임스페이스(`sw::engine`)는 다른 이름이고, 이 저장소의 규칙(타입은 PascalCase · 네임스페이스는 소문자, 예 `editor`)이 구분한다. 네임스페이스를 바꾸지 않는 까닭: `engine::` 가 엔진 범위 창구(`engine::getSubsystem<T>()`)의
   수명 이름이라(`game::` · `editor::` 와 짝) 이름만 바꾸는 큰 변경은 얻을 것이 적다. 클래스를 `EngineLoop` 로 두지 않는 까닭: 이 객체는 루프만이 아니라 부트스트랩 · 서비스 · 엔진 세 범위와 프레임 관찰자 ·
   종료 코드를 소유하는 엔진 호스트의 본체다. 언리얼의 `UEngine`(`GEngine`)도 틱 루프와 서브시스템 범위를 함께 가진 한 객체로 알고 있다(기억에 의존). 로컬 변수 `engine` 은 네임스페이스를 가리지 않는다 —
   한정 이름 조회(`engine::`)는 타입과 네임스페이스만 본다. 별칭 · 옛 이름은 두지 않는다(파일 `EngineLoop.h` · `.cpp` → `Engine.h` · `.cpp`, 멤버 `_engineLoop` → `_engine`).
 - **호스트 범위가 엔진 범위의 부모다 — 엔진 앞에 서서 뒤에 사라지고, 호스트가 엔진에 내주는 것을 든다**(2026-10-15, 정리 ⑥). App · ServerApp 이 `SubsystemScope _host` 를 `_engine` 보다 앞에 두고
   (`Engine::initialize` 의 마지막 인자로 넘겨 부트스트랩 범위의 부모로 잇는다. 사슬은 엔진 → 서비스 → 부트스트랩 → 호스트). 거기에 거는 것은 둘이다.
   ① **모듈 이미지 창구**(`ModuleImageHostSubsystem`, `IModuleImageHost` 로 드러낸다): 엔진의 `ModuleTypes` 단계가 `loadTypeProviders` 를, `ModuleImages` 의 종료가 `onScenesReleased` 를
-  자기 범위에서 부모로 올라가며 찾아 부른다. 옛 `Engine::setModuleTypeLoader` · `setOnScenesReleased` 와 델리게이트 멤버 둘은 지웠다 — 엔진이 호스트의 델리게이트를 들던 고리가
-  "부모 범위의 호스트에 의존" 이 됐고, 호스트 범위가 없는 하네스는 자리만 둔다. DLL 언로드는 그대로 씬 뒤 · 서비스 앞(엔진 범위 종료의 `ModuleImages` 자리)에서 일어난다 —
+  자기 범위에서 부모로 올라가며 찾아 부른다. 옛 `Engine::setModuleTypeLoader` · `setOnScenesReleased` 와 델리게이트 멤버 둘은 지웠다(엔진이 호스트의 델리게이트를 들던 고리가
+  "부모 범위의 호스트에 의존" 이 됐고, 호스트 범위가 없는 하네스는 자리만 둔다). DLL 언로드는 그대로 씬 뒤 · 서비스 앞(엔진 범위 종료의 `ModuleImages` 자리)에서 일어난다 —
   엔진 범위 종료는 모든 서브시스템에 `stopSubsystem` 을 먼저 돌린 뒤 `shutdownSubsystem` 을 도는 두 패스이고, 훅은 `ModuleImages` 의 종료 패스에서 `getSubsystemDependents`(입력 · 오디오 · 씬 · 비동기 IO) 뒤에 불린다.
   ② **자동화 구동기**(`AutomationSession`, App 만): 서브시스템이 됐다. 초기화는 하는 일이 없고 `-scenario` 를 읽은 App 이 엔진이 선 뒤 `begin` 으로 시작한다. 구동기는 엔진 서비스(로그 리스너 · 입력)를 빌려 쓰므로
   엔진 종료 앞에서 내려야 하는데 호스트 범위는 엔진 종료 안에서도 창구 때문에 살아 있어야 한다 — 그래서 창구가 `getSubsystemDependents` 로 구동기를 뒤에 서는 것으로 적고
   App 이 `shutdownDependentsOf( 창구 )` 로 구동기만 먼저 내린다(그 API 는 원래 백엔드 교체용이다). `Dev` 호스트 비트는 두지 않았다: 자동화는 Shipping 구성에서도 쓴다
   (`AppScenarioTest` 가 Shipping 에서 백엔드 스위치 없이 시나리오를 돌린다)라 `#if !defined( SW_SHIPPING )` 로 감쌀 개발 도구가 아니다. 개발 도구가 이 범위에 오면 호스트가 그 한 자리에서 `#if` 로 넣는다.
-  언리얼은 엔진 서브시스템(`UEngineSubsystem`)과 게임 인스턴스 서브시스템의 부모 · 자식으로 수명을 가르고, `FEngineLoop` 이 모듈 로드 순서를 쥐는 것으로 알고 있다(기억에 의존).
+  언리얼은 엔진 서브시스템과 게임 인스턴스 서브시스템의 부모 · 자식으로 수명을 가르는 것으로 알고 있다(기억에 의존).
   `OnlineServerRuntime` 의 `_bHostStarted` · `_bSchedulerStarted` 는 지웠다 — 호스트(`OnlineServiceHost::shutdown`)는 자기 초기화 비트를 보고 스케줄러는 목록을 비울 뿐이라 시작 여부를 밖에서 적을 필요가 없었다.
   테스트 하네스(`TestHostRuntime`)는 호스트 범위를 두지 않는다 — 모듈 DLL 을 올리고 내리지 않고 타입은 리플렉션 단계가 이미 모았다(`EngineInitSequenceTest.ModuleImageStepsReachTheHostScopeThroughTheParentChain` 이
   범위 사슬 찾기를, 호스트 범위가 없을 때의 무동작을 지킨다).
@@ -507,7 +507,7 @@
   할당 전에 `findCodecForHeader` 에서 견준다. 기본 구현("모르면 무한대")을 두지 않는 까닭: 그 코덱으로 적힌 스트림은 다시 헤더를 그대로 믿게 되어 같은 결함이 조용히 돌아온다. 절대 상한은 남긴다 —
   팽창률만으로는 Zstd 100 KB 가 3 GB 를 요구해도 통과한다. 같은 날 `vector` 의 소멸 루프는 `destroyRangeInternal` 하나로 모아 소멸자가 할 일이 없는 타입이면 루프를 두지 않고(`if constexpr`),
   `resize` 의 값 초기화는 산술 · 열거 · 포인터 타입의 64 칸 이상 구간만 `std::memset` 으로 한다(멤버 포인터의 널은 0 바이트가 아닌 ABI 가 있어 사용자 구조체는 넣지 않았다.
-  짧은 구간까지 memset 으로 하면 크기가 변수인 함수 호출이 되어 `resize( size() + 1 )` 벤치가 Release 에서 두 배 느려졌다). 최적화 빌드는 원래 그 루프를 지우므로 Debug 와 계측 빌드의 비용만 준다.
+  짧은 구간까지 memset 으로 하면 크기가 변수인 함수 호출이 되어 `resize( size() + 1 )` 벤치가 Release 에서 두 배 느려졌다).
 
 - 여러 스레드가 함께 더하는 카운터(활성 태스크 수 · 메모리 태그 통계)는 `ShardedCounter` · `ShardArray`(스레드 칸 16, 읽는 쪽이 합침)로 둔다(2026-10-18, 언리얼 LLM 스레드별 상태 · 리눅스 `percpu_counter` 와 같은 구조). "0 이 됐나" 를 보는 카운터는 같은 칸에서 올리고 내린다. 메모리 태그 최고치는 합을 읽을 때(프레임 · 패널) 본 값의 최고치다 — 측정(`docs/plans/StructuralOptimization.md`)에서 이득이 없으면 단위 커밋을 되돌린다.
 
@@ -516,12 +516,12 @@
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.
   - 이 결정은 지금 이관할 데이터가 없다는 사실에 기댄 것이지 영구 금지가 아닙니다(사용자 확인, 2026-10-17). 출시한 데이터가 생겼을 때 바로 쓰도록 별칭(`Alias` · `ValueAlias` · `Removed`)과 이관 등록은 미리 갖춥니다([이름 변경 리다이렉트 계획](plans/RenameRedirects.md)).
    - 기능은 갖추되 출시 데이터가 이관할 것이 생기기 전에는 사용하지 않습니다 — 제품 데이터 · 게임 코드에 별칭을 두지 않습니다(2026-10-18 사용자 결정).
-- **이관 함수를 호출부에 넘기던 API 를 타입 옆 한 번 등록으로 바꿨습니다**(2026-10-17). 연결 방식만 바뀐 것이고 정책은 위 결정 그대로입니다. 스키마가 바뀌면 기본은 데이터를 다시 쓰는 것이고, 이관은 값 계산이 불가피한 예외입니다. `SW_SCHEMA_MIGRATION` 이 (타입, 기록된 버전)으로 `SchemaMigrationRegistry` 에 올리고, 세 형식의 버전 붙은 읽기가 타입과 그 부모로 찾으므로 `deserializeVersioned` · `Archive` 는 이관 함수를 받지 않습니다. 필요한데 없으면 오류로 멈추고, 같은 자리의 중복 등록은 모든 구성에서 프로세스를 멈춥니다. 같은 버전에서 지운 필드를 버려도 되는지는 이관이 아니라 orphan 정책이라 호출부가 컨텍스트로 정합니다(`setAllowUnknownProperties`, 오브젝트 상태만 켬).
-  - 등록은 생성기가 모으지 않고 정적 등록자로 했습니다([이름 변경 리다이렉트 계획](plans/RenameRedirects.md) R5 초안과 다름). 이관 함수는 손으로 쓰는 C++ 이라 생성기가 읽을 선언이 없고, 애노테이션으로 함수 이름을 적어도 결국 같은 이미지의 정적 저장소에 함수 포인터를 둡니다. 언리얼 `FCustomVersionRegistration` 과 같고, 기존 `RegistrationList` 가 핫 리로드 대체와 언로드 때 빼기를 이미 맡습니다.
-  - 찾은 이관 함수는 잠금 밖에서 부릅니다. 그래서 모듈 언로드는 직렬화가 도는 동안 하지 않습니다. 지금 언로드 경로(`LiveReloadManager::drainTasksBeforeUnload`)는 비동기 씬 로드를 취소하고 작업을 비운 뒤 내립니다.
+- **이관 함수는 타입 옆 한 번 등록입니다**(2026-10-17). 정책은 위 결정 그대로입니다. 스키마가 바뀌면 기본은 데이터를 다시 쓰는 것이고, 이관은 값 계산이 불가피한 예외입니다. `SW_SCHEMA_MIGRATION` 이 (타입, 기록된 버전)으로 `SchemaMigrationRegistry` 에 올리고, 세 형식의 버전 붙은 읽기가 타입과 그 부모로 찾으므로 `deserializeVersioned` · `Archive` 는 이관 함수를 받지 않습니다. 필요한데 없으면 오류로 멈추고, 같은 자리의 중복 등록은 모든 구성에서 프로세스를 멈춥니다. 같은 버전에서 지운 필드를 버려도 되는지는 이관이 아니라 orphan 정책이라 호출부가 컨텍스트로 정합니다(`setAllowUnknownProperties`, 오브젝트 상태만 켬).
+  - 등록은 생성기가 모으지 않고 정적 등록자로 했습니다([이름 변경 리다이렉트 계획](plans/RenameRedirects.md) R5 초안과 다름). 이관 함수는 손으로 쓰는 C++ 이라 생성기가 읽을 선언이 없습니다. 언리얼 `FCustomVersionRegistration` 과 같고, 기존 `RegistrationList` 가 핫 리로드 대체와 언로드 때 빼기를 이미 맡습니다.
+  - 찾은 이관 함수는 잠금 밖에서 부릅니다. 그래서 모듈 언로드는 직렬화가 도는 동안 하지 않습니다(`LiveReloadManager::drainTasksBeforeUnload` 가 비동기 씬 로드를 취소하고 작업을 비운 뒤 내림).
 - **설정 파일에는 기본값과 다른 값만 적습니다**(2026-10-06). 언리얼의 `Default*.ini` 와 같은 규칙이고, `ConfigFileSchemaTest` 가 기본값을 다시 적은 키를 막습니다.
 - **설정 값의 출처는 하나씩입니다**(2026-10-06). 시작 씬은 팩의 `gamesettings.xml`, 창 제목은 게임 프리셋의 `GameConfig::_windowTitle`(언리얼 ProjectName), 고정 스텝은 `EngineConfig::_fixedDeltaTime` 입니다.
-  물리는 고정 스텝 위에 서브스텝 수(`_subStepCount`)만 둡니다. 유니티의 `Time.fixedDeltaTime` 이 하나인 것과 같습니다. 기본 RHI 도 한 곳에만 적습니다.
+  물리는 고정 스텝 위에 서브스텝 수(`_subStepCount`)만 둡니다(유니티 `Time.fixedDeltaTime` 과 같음). 기본 RHI 도 한 곳에만 적습니다.
 - **앱이 다시 쓰는 에디터 상태는 `Saved/Editor/` 에 둡니다**(2026-10-06). `Config/Editor/` 에는 사람이 쓰는 설정만 남깁니다.
 - **텍스처와 모델 임포트 설정은 키 테이블입니다**(2026-10-06). 리플렉션 구조체로 만들지 않았고, `PROPERTY( Config )` 메타도 지웠습니다. 엔진 타입에 키트 설정 필드를 두지 않고, 키트 설정은 팩 데이터에 둡니다.
 - **자체 JSON 로더를 리플렉션 구조체로 옮기는 기준**(2026-10-12). 모듈 매니페스트, `AnimationLODSettings`, `MemoryBudgetFile`, `FacialRig`, `LipSync` 는 옮겼습니다. 다음은 옮기지 않습니다.
@@ -550,19 +550,19 @@
 - **범위는 인스펙터와 읽기가 한 함수로 풀고, 소프트 읽기는 실패를 둘로 가릅니다**(2026-10-18, C-56 · C-60 · C-62).
   `PropertyMetadata::computeAllowedRange` 가 숫자 경계와 필드 경계(`Min = "-_halfSize"`)를 함께 풀어 인스펙터와 읽기 공통 끝이 같은 규칙을 지킵니다(필드 경계 읽기 함수는 그래서 Shipping 에도 있습니다).
   게임 데이터 XML(`GameDataXML::readFields`)의 자체 범위 검사는 지우고 공통 끝에 맡겼습니다. `deserializeSoft` 는 `bool` 대신 `SoftReadResult`(`NotParsed` · `Rejected` · `Read`)를 돌려줍니다.
-  `bool` 하나일 때는 부르는 쪽이 범위 밖 값에서 바로 돌아가 같은 파일의 모르는 키를 알리지 않았고, 범위 밖 값을 "JSON 이 아니다"로 알렸습니다. 이제 `NotParsed` 만 바로 돌아가고 `Rejected` 는 orphan 을 모두 알린 뒤 실패합니다.
+  `bool` 하나일 때는 범위 밖 값에서 바로 돌아가 같은 파일의 모르는 키를 알리지 않았고, 범위 밖 값을 "JSON 이 아니다"로 알렸습니다. 이제 `NotParsed` 만 바로 돌아가고 `Rejected` 는 orphan 을 모두 알린 뒤 실패합니다.
   float32 로 보관하는 숫자 경계를 float64 칸과 견주는 어긋남(`Min = 0.1`)은 조사 시점에 그런 칸이 없어(float64 칸의 경계는 `MemoryBudgetMonitor::_megabytes` 의 `Min = 0.0` 하나) 형식을 바꾸지 않았습니다.
 - **이름 읽기(`XMLReadUtil::readName`)는 글 `none` 을 오류로 알립니다**(2026-10-18, C-59). `hashed_string` 은 언리얼 `FName` 처럼 `none` 을 빈 이름과 같게 보고 빈 이름의 `c_str()` 은 "None" 이라,
   이름으로 받은 열거형 글(`align="none"`)이 "적지 않음"이 되고 적지 않은 경로가 "None" 이 됐습니다. 이름 형식을 바꾸면 리플렉션이 빈 이름을 "None" 으로 쓴 씬 · 프리팹(100 곳 넘음)과 열거자 `None` 이 함께 바뀌므로,
   이름 읽기의 한 창구가 그 글을 오류로 막고 그런 속성은 글로 읽습니다. 경로로 쓰는 이름은 비었는지 먼저 봅니다(`CharacterAppearanceComponent::applyBodyPart`).
 - **열거자 이름의 정본은 리플렉션 `ENUM()` 입니다**(2026-10-15, 같은 해 10-12 의 "enum 이름 테이블 45 곳 유지" 를 뒤집음). 철자가 열거자 이름과 같은 손 이름 표 · `toString( Enum )` 은 지우고
-  `getEnumName( value )`(`Engine/Reflection/EnumName.h`)로 읽습니다. 언리얼은 `UENUM` + `UEnum::GetValueAsString`, Godot 은 ClassDB 열거 상수가 이름의 유일한 출처로 알고 있습니다(기억에 의존).
+  `getEnumName( value )`(`Engine/Reflection/EnumName.h`)로 읽습니다. 언리얼 `UENUM` + `UEnum::GetValueAsString`, Godot ClassDB 열거 상수와 같은 방향입니다(기억에 의존).
   손 표는 `static_assert` 가 개수만 지키고 순서 · 철자의 어긋남은 못 막았고, 쓰는 곳이 거의 로그였으므로 "배열 인덱스가 빠르다" 는 이득이 없습니다.
   남기는 것: 철자가 다른 와이어 · 데이터 · 지표 문자열(`AdminRole` 의 `"viewer"`, `HealthState` 의 소문자, 서비스 지표 라벨, `EnumNameTable` 로 읽는 데이터 이름)과 Core 의 열거형(Core 는 리플렉션 아래 티어)입니다.
   철자가 데이터에 박힌 이름 표를 리플렉션으로 옮기려면 데이터를 열거자 철자로 다시 씁니다(별칭 없음).
 - **같은 빌드끼리만 읽는 바이트는 고정 배치형(B) 코덱이고, 생성기가 모든 적격 `REFLECT` 타입에 만듭니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 1).
-  사용자는 B 를 선언하지 않고, 등록 API 가 `FixedLayout::findCodec` 으로 확인합니다. 세이브와 에셋은 자기 기술형(A) 그대로입니다. 언리얼의 `NetSerialize` · Iris 디스크립터처럼
-  선언(`UPROPERTY`)에서 와이어 형식을 도출하는 방식이고, 손 코덱의 손 버전 상수 대신 정규 문자열 해시가 형식 변경을 잡습니다. 단계 1 에서 정한 세부는 아래와 같습니다.
+  사용자는 B 를 선언하지 않고, 등록 API 가 `FixedLayout::findCodec` 으로 확인합니다. 세이브와 에셋은 자기 기술형(A) 그대로입니다. 언리얼 `NetSerialize` · Iris 디스크립터처럼
+  선언(`UPROPERTY`)에서 와이어 형식을 도출하고, 손 코덱의 손 버전 상수 대신 정규 문자열 해시가 형식 변경을 잡습니다. 단계 1 에서 정한 세부:
   - 버전 상수 이름은 docs/agents/Constants.md "Constants" 를 따라 `FixedLayout::kVersion` 입니다(계획 초안의 `kFixedFormatVersion`).
   - 읽기 결과에 `TrailingData` 를 더했습니다. 남은 비트를 `OutOfRange` 로 부르면 원인이 섞이기 때문입니다.
   - `float64` 는 64 비트 원본으로 씁니다. `Step` 은 float32 에만 붙습니다.
@@ -570,39 +570,39 @@
   - `vector<string>` 처럼 가변 길이가 두 겹이면 `MaxCount` 하나로 길이를 정할 수 없으므로 적격이 아닙니다.
   - 다른 헤더의 중첩 타입과 기반 타입은 실행 시간에 코덱을 찾아 의존을 한 번 확인합니다(계획 8.1 위험 2).
   - 코덱이 없는 타입을 진입점에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성). 0 해시 같은 대체 값을 돌려주면 단계 4 의 핸드셰이크 해시에 그 값이 섞입니다.
-  - 정수 경계는 float32 로 정확히 나타나야 합니다(`Min` · `Max` 를 float32 로 보관합니다). 크기가 아니라 정확성이 기준이라 `OnlineServerConfig::_serverID` 의 `Max = 2000000000` 은 그대로 씁니다.
+  - 정수 경계는 float32 로 정확히 나타나야 합니다(`Min` · `Max` 를 float32 로 보관). 크기가 아니라 정확성이 기준이라 `OnlineServerConfig::_serverID` 의 `Max = 2000000000` 은 그대로 씁니다.
   - `MaxCount` 는 새 애노테이션 종류 `count` 로 1 이상의 정수만 받습니다. 실수로 읽어 반올림하지 않습니다.
   - 양자화 읽기는 칸 번호를 직접 읽어 칸 수를 넘으면 `OutOfRange` 입니다. 손 코덱이 쓰는 `BitReader::readQuantizedFloat` 도 같은 규칙으로 바꿨습니다(2026-10-17). 범위 밖 칸은 실패이고, `BitWriter::writeInt` · `writeQuantizedFloat` 는 범위 밖이면 쓰지 않고 `false` 입니다.
 
   실행 파일 크기(Debug, 단계 전후)는 `Engine.dll` +153,088 B(+0.7 %), `GameFramework.dll` +81,408 B(+1.0 %)입니다. 이때 `REFLECT` 타입 454 개 가운데 적격은 173 개,
-  적격이 아닌 것은 281 개였습니다(대부분 `MaxCount` 없는 가변 길이와 표 밖 타입입니다). 기존 `.gen.cpp` · `.gen.h` 1069 개는 덧붙은 줄만 있고, 바뀐 줄은 ABI 스탬프 하나였습니다.
+  적격이 아닌 것은 281 개였습니다(대부분 `MaxCount` 없는 가변 길이와 표 밖 타입). 기존 `.gen.cpp` · `.gen.h` 1069 개는 덧붙은 줄만 있고, 바뀐 줄은 ABI 스탬프 하나였습니다.
 - **이름 변경 리다이렉트는 선언 옆에 적고, 리다이렉트 표는 그 이름의 주인이 듭니다**(2026-10-17, [이름 변경 리다이렉트 계획](plans/RenameRedirects.md) R1~R4). 선언은 기존 키를 그대로 씁니다.
   타입 · 열거형의 옛 FQN 은 `REFLECT( Alias )` · `ENUM( Alias )`, 열거자의 옛 이름은 `ENUM( ValueAlias = "Old:New" )`, 지운 열거자의 대체는 새 키 `ENUM( Removed = "Old:Replacement" )`, 필드의 옛 이름은 `PROPERTY( Alias )` 입니다.
   유니티 `FormerlySerializedAs` 처럼 이력이 선언 옆에 있고, 언리얼 `CoreRedirects` 처럼 호출부는 모릅니다. 다만 표를 전역 하나로 모으지 않고 `EnumInfo::_mapRedirectNameToValue`, `PropertyInfo::_listAlias`,
   `TypeRegistry` 별칭 표에 둡니다. 언리얼이 전역 표인 것은 리다이렉트가 ini 에서 오기 때문이고, 여기서는 선언이 등록과 함께 오므로 주인에 붙여야 상속 필드 복사 · 핫 리로드 재등록 · 모듈 해제 묘비를 그대로 따릅니다.
   읽기는 지금 이름을 모두 본 뒤에만 옛 이름을 봅니다(`EnumInfo::findValueByNameHash` · `findValueByText`, `SerializerUtil::findPropertyIndexByNameHash` · `matchProperty`). 텍스트 읽기도 같은 표를 씁니다.
   옛 이름은 `_mapNameToValue` 에서 빠져 인스펙터 목록과 쓰기에 나오지 않습니다. 대상이 없거나, 옛 이름이 지금 열거자 · 필드이거나, 같은 옛 이름을 두 번 적으면 생성 오류입니다(예전에는 경고만 하고 버렸습니다).
-  선언 없이 지우거나 바꾼 이름은 지금처럼 엄격한 읽기가 실패합니다. 리다이렉트는 바이트 배치와 무관하므로 고정 배치형 정규 문자열에 넣지 않습니다(`FixedLayoutTest.RenameRedirectsDoNotChangeTheSchemaHash`).
+  선언 없이 지우거나 바꾼 이름은 엄격한 읽기가 실패합니다. 리다이렉트는 바이트 배치와 무관하므로 고정 배치형 정규 문자열에 넣지 않습니다(`FixedLayoutTest.RenameRedirectsDoNotChangeTheSchemaHash`).
   `.gen` 1108 개를 전후 생성기로 비교해 바뀐 파일은 `ValueAlias` 를 쓰는 `TestSampleActor.gen.cpp` 하나였습니다.
 - **`REFLECT` 타입은 비가상 베이스를 하나까지만 둡니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 7-b). 둘째 베이스와 가상 베이스는 베이스가 `REFLECT()` 인지와 상관없이
   헤더 · 줄 · 타입 · 베이스 이름과 함께 생성 오류입니다(`AstVisitor.cpp` `collectBase`). `castTo` 는 리플렉션 부모 사슬로 파생을 판단하고 C++ 상속이 보이지 않으면 `reinterpret_cast` 로 내려가므로,
-  부모가 offset 0 에 있지 않으면 포인터 보정 없이 잘못된 주소가 됩니다. 전에는 `REFLECT()` 없는 둘째 베이스(인터페이스)를 받았지만 제품 코드에는 그런 타입이 없었고, 그 모양을 지키던 테스트 픽스처만 지웠습니다.
+  부모가 offset 0 에 있지 않으면 포인터 보정 없이 잘못된 주소가 됩니다. 제품 코드에는 `REFLECT()` 없는 둘째 베이스가 없었고, 그 모양을 지키던 테스트 픽스처만 지웠습니다.
 - **열거형 이름 조회는 값이 빈틈없으면 생성된 배열 인덱스이고, `getEnumName<E>` 는 `EnumInfo` 를 함수 지역 캐시에 둡니다**(2026-10-17, 같은 계획 3.13 · 단계 7-a). API 는 그대로입니다.
   생성기가 표식(`Invalid`, `Count`)을 뺀 값이 `0..N-1` 인 열거형에 intern 된 이름 배열을 만들고 열거자마다 `static_assert` 로 libclang 의 값과 컴파일러의 값을 대조합니다(생성기는 `SW_DEBUG` 없이 헤더를 읽습니다).
   캐시는 타입 테이블 세대가 같을 때만 씁니다. 모듈 해제는 묘비에서 배열 포인터를 비우고, 레지스트리 파괴도 세대를 올립니다. 이름에서 값으로 가는 경로와 리다이렉트 표는 바꾸지 않았습니다.
   배열을 받은 열거형은 198 개이고, 기존 `.gen` 은 덧붙은 줄만 있었습니다(바뀐 다른 줄은 지운 7-b 픽스처뿐). 실행 파일 크기(Release, 7-a · 7-b 전후)는 `Engine.dll` +12,800 B(+0.08 %),
   `GameFramework.dll` +5,120 B(+0.10 %), `App.exe` -512 B 입니다. 시간은 재지 않았습니다.
 - **`GameObject::getTypeInfo` 는 `StaticType()` 결과를 캐시하지 않습니다**(2026-10-17, 단계 7-a 에서 넣었다가 병합에서 뺐습니다). 측정한 이득이 없고(`StaticType()` 이 이미 `TypeLookupCache` 를 거침), 함수 지역 정적 포인터는 엔진을 다시 만들면 해제된 `TypeInfo` 를 가리킵니다.
-- **테스트만 쓰는 공개 타입은 상용 엔진 대응으로 가릅니다**(2026-10-15). 조사에서 제품 코드 참조 0 인 공개 타입이 654 개였습니다. "사용처 0 이어도 상용 엔진에 대응이 있는 공개 API 는 남긴다" 를 그대로 적용합니다.
+- **테스트만 쓰는 공개 타입은 상용 엔진 대응으로 가릅니다**(2026-10-15). 조사에서 제품 코드 참조 0 인 공개 타입이 654 개였습니다. "사용처 0 이어도 상용 엔진에 대응이 있는 공개 API 는 남긴다" 를 적용합니다.
   대응이 있는 것(언리얼 · 유니티 · Godot 에 같은 기능이 있는 키트 규칙 · 엔진 API)은 남기고 테스트를 붙여 둡니다. 대응이 없고 테스트를 돕기만 하는 타입(테스트용 목 · 고정값 · 한 테스트만 부르는 `Util`)은
-  `Test/` 로 옮기거나 그 테스트 파일 안으로 넣습니다. 언리얼도 `Developer` · 테스트 모듈을 런타임 모듈과 가릅니다. 일괄 삭제는 하지 않고 영역을 고칠 때 그 영역의 목록을 정리합니다.
+  `Test/` 로 옮기거나 그 테스트 파일 안으로 넣습니다. 일괄 삭제는 하지 않고 영역을 고칠 때 그 영역의 목록을 정리합니다.
 - **한 타입만 다루는 `Util` 은 그 타입의 메서드로, 한 파일만 쓰는 `Util` 은 그 `.cpp` 안으로 옮깁니다**(2026-10-15, C-26 ②). 언리얼 `FBuoyancyData` · Godot 의 값 타입 메서드처럼 데이터가 자기 계산을 듭니다(기억에 의존).
   옮긴 곳: 부력 → `BuoyancyPontoon`, 찢김 → `SurfaceMask`, 체형 모프 · 스키닝 → `AppearanceGeometry`, 팟 → `PokerPot`, JWT 서명 → `JSONWebToken`, JWK 쓰기 → `JwksKeyCache`,
   인벤토리 → 거래 항목 → `TradeClient`, 에디터 서브시스템 등록 함수 → `EditorSubsystemRegistration`, 복수형 키워드 → `CultureInfo`(규칙 표는 `CultureInfo.cpp`), RHI 환경 판정 → `App.cpp`, 프레임 단계 실행 → `ImGuiEditor.cpp`.
   테스트만 부르던 일곱(JWT 서명 · JWK · 팟 · 거래 항목 등)은 상용 엔진 · 라이브러리에 대응 기능이 있어 제품 코드에 남겼습니다.
 - **확장자 → 에디터 종류의 정본은 종류 표(`EditorAssetType.cpp`) 하나입니다**(2026-10-15, C-26 ④). 엔진이 읽는 포맷은 그 타입이 `kExtension` 을 들고(`Material` · `AnimationGraphAsset` · `SpriteClipAsset` · `SequenceAsset` · `TileMapXMLData` · 오디오 데이터 둘을 더함)
   표는 그 상수를 가리키며, 씬 · 프리팹은 쿠킹 규칙(`AssetCookPath`)을 따릅니다. `EveryEngineFormatMapsToItsKind` · `EveryResourceDataKindIsData` 가 엔진 포맷과 데이터 파일 종류를 이 표에 대어 봅니다.
-  언리얼은 팩토리 · 에셋 타입 액션이, Godot 은 `ResourceFormatLoader::get_recognized_extensions` 가 포맷마다 확장자를 드는 것과 같은 방향입니다(기억에 의존). 파일이 하나도 없던 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 별칭이라 지웠습니다.
+  언리얼 팩토리 · 에셋 타입 액션, Godot `ResourceFormatLoader::get_recognized_extensions` 처럼 포맷마다 확장자를 듭니다(기억에 의존). 파일이 하나도 없던 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 별칭이라 지웠습니다.
 - **`UIStyleField` 서술자 표는 필드마다 플래그 한 칸이고, 필드 이름은 `WidgetStyle` 리플렉션 PROPERTY 이름입니다**(2026-10-15). 플래그를 PROPERTY `Meta` 로 옮기는 안은 기각했습니다 — 커스텀 메타는 Shipping 에 없습니다.
 - **이벤트(`MulticastDelegate` 필드)가 받는 애노테이션은 필드 표의 Emit 열이 `Display` 인 줄입니다**(2026-10-15). 표시 메타(Category · DisplayName · Tooltip · Meta · HideInInspector · HideInMenu)를 `Editor` 에서 갈라 `Display` 로 적고, 파서의 손 목록을 지웠습니다. 생성 코드는 같습니다.
 - **게임 · 키트 튜닝 값의 데이터화**(2026-10-15, C-26 ④): 작물 색 → `CropDef::_color`(`crops.xml` 의 `color`), StarSkirmish 유닛 색과 판 규칙(사냥 주기 · 도착 반경 · 시작 광물) → 디렉터 PROPERTY,
@@ -611,7 +611,7 @@
   부하 봇은 동작 이름 · 받는 칸 · 받는 값을 동작 표 한 줄(`LoadBotScenario.cpp`)로 모았습니다.
 - **유지보수성을 위한 데이터화**(2026-10-15, 사용자 기준). 코드에는 불변식(수학 상수, ABI · 프로토콜 필드 번호 · 상한, 세이브 태그 · 버전, 비트 마스크, enum 1:1 순서 표, 로그 · assert 문자열, PROPERTY 메타 리터럴)만 남기고
   튜닝값 · 이름 표 · 기본값 · 색 · 크기 · 목록 · 표는 데이터(PROPERTY, 리플렉션 데이터, `Config/*.json`, 리소스 XML)로 둡니다. 정한 모양 —
-  ① **코드 폴백 정의를 두지 않는다**: 액션 룸의 내장 몬스터 · 배치와 `MonsterCatalog` 의 `default_monster` 를 지우고 카탈로그 · `ActionRoomLayout` 이 없으면 오류(언리얼 DataTable 이 행을 못 찾으면 null 인 것과 같다).
+  ① **코드 폴백 정의를 두지 않는다**: 액션 룸의 내장 몬스터 · 배치와 `MonsterCatalog` 의 `default_monster` 를 지우고 카탈로그 · `ActionRoomLayout` 이 없으면 오류(언리얼 DataTable 이 행을 못 찾으면 null).
   ② **엔진 기동 설정은 바탕 층 파일**: `Config/Engine/EngineConfig.json` 이 값의 정본이고 헤더는 형식만이다(언리얼 `BaseEngine.ini`). 바탕 층은 모든 키를 적고(`ConfigFileSchemaTest`), 프로젝트 설정 창은 `REFLECT( Meta = "ConfigBaseLayer" )` 를 보고 모든 키로 저장한다.
   파일 · 구운 사본이 모두 없으면 형식(0)이 범위 검사에서 져 기동이 멈춘다. 기동 전 리소스 우선순위는 구운 사본에서 읽는다. `_window._defaultRHI` 만 쿠킹 표가 정본이다. `FixedTimestep` 의 "0 이하면 기본값" 폴백도 지웠다.
   ③ **표는 엔진 데이터 하나**: 회선 흉내 프리셋은 `engine/settings/netemulation.presets.xml`(`NetEmulationPresetTable`, 유니티 Network Simulator 프리셋 자산 자리) — Core 는 리플렉션 아래라 표를 읽지 않고 조건만 갖는다. 에디터 단추 이름도 그 표의 `_label`.
@@ -625,8 +625,8 @@
   값은 `enginedefaultassets.xml` 에만 있고, 표는 `EngineDefaultAssets::load` · 서브시스템만 만든다(`ConstructKey`, `REFLECT( Abstract )`). 못 읽으면 기동 · 쿠킹이 멈춘다. 테스트는
   `test::getEngineDefaultAssets()`(하네스가 읽은 표)로 경로를 얻는다. 언리얼 `FSoftObjectPath` 가 ini 에서만 채워지는 설정 칸과 같은 자리이고, 게이트가 아니라 형식으로 막는다.
 - **읽기 API 는 폴백 인자를 받지 않습니다**(2026-10-18 설계, 구현 전). `XMLNode` · `JSONValue` · `KeyValueFile` 의 값 읽기는 스키마 읽기(`readFields`), 필수 읽기(`std::optional` 반환), 선택 읽기(`std::optional` 출력) 셋만 남기고 폴백 인자 함수를 지웁니다. 기본값의 원본은 Def 초기값 하나입니다([데이터 주도 구조 정리 계획](plans/DataDriven.md) 7절).
-- **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼의 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
-- **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다. 언리얼의 `UWorld::GetGravityZ` 에 해당합니다.
+- **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
+- **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다(언리얼 `UWorld::GetGravityZ`).
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
 - **엔진의 각도 필드는 라디안입니다**(2026-10-06). 도 단위 필드를 두지 않고, `PropertyUnitsTest` 가 이 규칙에 예외를 두지 않습니다.
 - **이름으로 다른 표를 가리키는 데이터는 저장소 전체를 정적으로 훑어 검사합니다**(2026-10-15, 참조 감사). 런타임이 모르는 이름을 기본값으로 대신하고 로그만 남기는 곳(물리 레이어 · 재질, 정렬 레이어, 내비 영역,
@@ -651,7 +651,7 @@
 | `OverlapInfo` · `CollisionInfo` · `HitInfo` → `*Event`/`*Contact` | 접촉 결과 값 묶음이고 `Info` 가 맞다(언리얼 `FHitResult` 와 같은 자리) |
 | `ComponentRegistry` → `*Index` 등 | `Registry` 는 이 저장소에서 "등록된 것의 목록"으로 일관 |
 | `WeakInternTable` → `WeakSharedTable` | `Intern` 은 `hashed_string` 과 같은 쓰임 |
-| 열거형 `Auto` · `Normal` · `Custom` · `Count` | 열거형 안에서만 뜻이 서고 각자 문맥이 분명하다. `Misc = 0`(`HorrorCatalog.h`) `Misc = 0`(`HorrorCatalog.h`) 하나만 `None` 으로 바꿨다 |
+| 열거형 `Auto` · `Normal` · `Custom` · `Count` | 열거형 안에서만 뜻이 서고 각자 문맥이 분명하다. `Misc = 0`(`HorrorCatalog.h`) 하나만 `None` 으로 바꿨다 |
 | 통지 동사(`notify` · `broadcast` · `publish` …) 규칙화 | 추정에 그친다 |
 
 약어 철자 · 어휘표 · 접미사는 docs/agents/NamingCpp.md "Function names" 와 [코딩 규칙 예시](04_CodingGuidelines.md) 2 절에 있다.
@@ -670,24 +670,24 @@
   (`getPendingReleaseCount`, nogpu 테스트 `RHIDeviceShutdownTest`). 점검에서 Vulkan 이 4 단계에서 오프스크린 프레임버퍼를 해제 큐에 넣고 비우지 않던 것을 고쳤다.
 - **셰이더 쿠킹 스탬프의 도구 지문은 버전 상수로 만든다 — 컴파일 옵션 판 · Vulkan 타깃 판 · 컴파일러 버전 글(`ShaderCooker::kCompilerVersion`, vcpkg `directx-dxc` 포트 버전)**(2026-10-14).
   컴파일러 라이브러리 파일의 내용 해시로 만들었더니 Windows 에서 쿠킹해 커밋한 스탬프가 리눅스(다른 라이브러리 파일)에서 모두 낡은 것으로 판정돼 리눅스 CI 다섯 잡이 졌다.
-  언리얼은 셰이더 DDC 키에 컴파일러 바이너리 해시가 아니라 셰이더 포맷 · 컴파일러 버전 식별자를 넣는 것으로 알고 있다(기억에 의존 — 단정하지 않는다). 같은 원칙을 따르고,
-  사람이 고치는 상수가 실제 설치와 어긋나지 않게 `TestShaderCompilerVersionPin.py` 가 vcpkg 설치 기록과 대조한다(언리얼보다 한 겹 더 지킨다).
+  언리얼은 셰이더 DDC 키에 컴파일러 바이너리 해시가 아니라 셰이더 포맷 · 컴파일러 버전 식별자를 넣는 것으로 알고 있다(기억에 의존). 같은 원칙을 따르고,
+  사람이 고치는 상수가 실제 설치와 어긋나지 않게 `TestShaderCompilerVersionPin.py` 가 vcpkg 설치 기록과 대조한다.
 - **셰이더 쿠킹 스탬프(`cook.stamp`)는 쿠킹 기록(`.cookrec`) 형식으로 옮기지 않습니다**(2026-10-18, C-42 K5). 스탬프는 커밋되는 산출물 곁에 있고 App 없이 파이썬(`CheckShaderStamps`, CI)이 같은 규칙으로 판정하는 계약인데,
   쿠킹 기록은 체크아웃마다의 `Saved/` 캐시이고 판정에 엔진의 읽기 기록이 필요하다. 내용 해시는 이미 같은 함수(`ContentHash`)를 쓰므로 판정 기준은 하나다. 언리얼도 셰이더는 DDC 키를 따로 만들고 에셋 쿠킹과 섞지 않는다 [기억].
 
-- **런타임 UI 를 위해 RHI 에 R8 텍스처, 영역 업로드, 프리멀티플라이 블렌드, 가위 사각형을 더했습니다**(2026-10-06). 사각형 클리핑은 가위로 합니다. Slate, Dear ImGui, Godot 모두 같은 방식이고, 배치가 끊기지 않습니다.
+- **런타임 UI 를 위해 RHI 에 R8 텍스처, 영역 업로드, 프리멀티플라이 블렌드, 가위 사각형을 더했습니다**(2026-10-06). 사각형 클리핑은 가위로 합니다(Slate, Dear ImGui, Godot 과 같고 배치가 끊기지 않음).
   둥근 모서리 클리핑만 셰이더에서 합니다.
-- **프리멀티플라이 블렌드는 PSO 비트(`_bPremultipliedAlpha`)이고, 머티리얼 블렌드 enum 에는 넣지 않습니다**(2026-10-06). 언리얼도 머티리얼의 `EBlendMode` 와 RHI 블렌드 상태가 따로입니다. 머티리얼이 프리멀티플라이를 원하게 되면 그때 enum 에 더합니다.
-- **보기 모드는 뷰마다의 설정입니다**(`RenderViewSettings::_viewMode`, 2026-10-10). 에디터 씬 뷰 툴바는 씬 뷰에만 걸고 게임 뷰는 주 출력 모드(Lit)로 그립니다 — 언리얼 뷰포트(뷰 패밀리)마다의 View Mode, 유니티 Scene 뷰 Draw Mode 와 같습니다.
+- **프리멀티플라이 블렌드는 PSO 비트(`_bPremultipliedAlpha`)이고, 머티리얼 블렌드 enum 에는 넣지 않습니다**(2026-10-06). 언리얼도 머티리얼의 `EBlendMode` 와 RHI 블렌드 상태가 따로입니다. 머티리얼이 원하게 되면 그때 enum 에 더합니다.
+- **보기 모드는 뷰마다의 설정입니다**(`RenderViewSettings::_viewMode`, 2026-10-10). 에디터 씬 뷰 툴바는 씬 뷰에만 걸고 게임 뷰는 주 출력 모드(Lit)로 그립니다 — 언리얼 뷰 패밀리마다의 View Mode, 유니티 Scene 뷰 Draw Mode 와 같습니다.
   Normals · Depth · Overdraw 는 표면 값을 보이므로 후처리 · 톤맵을 건너뜁니다(언리얼 버퍼 시각화와 같다). Overdraw 는 RHI 에 블렌드를 더하지 않고 알파 0 의 프리멀티플라이로 더하며, 깊이 테스트는 남기고 쓰기만 끕니다(테스트를 끄면 Vulkan 이 깊이 첨부 없는 PSO 로 만든다).
 - **톤맵을 HDR 씬 컬러로 바꾸는 일은 하지 않았습니다**(2026-10-06). 기본 포워드 파이프라인의 Reinhard 가 흰색을 0.5 로 누르지만, 바꾸면 골든 이미지를 모두 다시 떠야 합니다. 화면이 어두운 게임은 데이터(체력 바 보임 정책 등)로 맞췄습니다.
 - **점광 · 스폿 그림자는 큐브 · 배열 텍스처가 아니라 2D 그림자 아틀라스입니다**(2026-10-13). 유니티 URP · Godot 방식이고, RHI 를 바꾸지 않으며 DX11 · GL 의 엔진 텍스처 슬롯 네 개가 그대로입니다.
   방향광 캐스케이드(최대 4)도 같은 아틀라스 안의 타일이고, 추가 뷰는 자기 볼륨 · 그림자 컬링 슬롯을 씁니다.
-  칸이 모자라면 주 시점의 화면 크기 대리값(경계 구 반경 / 카메라 깊이)이 큰 빛부터 받습니다(2026-10-17, `ShadowSetupUtil::computeLocalShadowPriority`) — 언리얼이 그림자 해상도 · 아틀라스 자리를
-  투영한 화면 반경으로 고르는 것과 같은 기준입니다. 목록 순서였을 때는 씬에 먼저 놓인 먼 빛이 눈앞의 빛의 그림자를 밀어냈습니다. 화면 크기에 따라 칸 크기를 바꾸는 일은 하지 않았습니다(칸은 한 크기).
+  칸이 모자라면 주 시점의 화면 크기 대리값(경계 구 반경 / 카메라 깊이)이 큰 빛부터 받습니다(2026-10-17, `ShadowSetupUtil::computeLocalShadowPriority`) — 언리얼이 투영한 화면 반경으로 고르는 것과 같은 기준입니다.
+  목록 순서였을 때는 씬에 먼저 놓인 먼 빛이 눈앞의 빛의 그림자를 밀어냈습니다. 화면 크기에 따라 칸 크기를 바꾸는 일은 하지 않았습니다(칸은 한 크기).
 - **깊이 패스(그림자 · 깊이 프리패스)는 모양을 머티리얼 코드가 정하는 배치만 머티리얼 셰이더로 그립니다**(2026-10-17, `FrameRendererUtil::drawsDepthWithMaterialShader`).
   알파 컷오프는 두 깊이 패스 모두 머티리얼 셰이더의 깊이 퍼뮤테이션(`SW_PASS_SHADOW` · `SW_PASS_DEPTH_PREPASS`)에 픽셀 스테이지(`clip` 만)를 두고, 정점 변형(바람)은 그림자 패스만 정점 스테이지로 그립니다.
-  나머지는 shadowdepth.hlsl 하나를 나눠 씁니다 — 언리얼이 Masked · World Position Offset 머티리얼만 자기 깊이 · 그림자 셰이더를 컴파일하고 불투명은 기본 머티리얼의 것을 쓰는 것과 같습니다.
+  나머지는 shadowdepth.hlsl 하나를 나눠 씁니다 — 언리얼이 Masked · World Position Offset 머티리얼만 자기 깊이 · 그림자 셰이더를 컴파일하는 것과 같습니다.
   shadowdepth.hlsl 에 머티리얼 값을 읽게 하는 안은 기각했습니다 — 머티리얼마다 구조체 배치가 달라 공통 셰이더가 컷오프 값 · 텍스처 칸을 찾을 수 없고, 정점 변형 코드는 옮길 수 없습니다.
   뎁스 전용 PSO 도 PS 경로가 있으면 픽셀 스테이지를 둡니다(`RHIShaderRequest::resolveGraphics`). 패스 PSO 는 FrameRenderer 가 PS 경로를 비우므로 그대로입니다.
 - **지형 쓰기는 "사본을 고쳐 사각형만 넘기는" 한 길입니다**(`D2-5` (7), 2026-10-15, `TerrainComponent::writeHeights` · `writeLayerWeights`). 에디터 브러시(`TerrainBrush::applyHeight` ·
@@ -696,15 +696,15 @@
   읽는 쪽(병렬 틱 · 배치 계산)과 겹치지 않게 하는 방법은 이중 버퍼나 락이 아니라 **호출 규칙**입니다 — `reloadTerrain` 과 같이 틱 밖(`executeOrDeferPostTickOnComponent`)에서, 프레임에 한 번만 부릅니다.
   락을 읽기 경로 모두에 넣으면 질의마다 비용이 붙고, 이중 버퍼는 N × N 높이를 통째로 두 벌 들며, 에디터 스트로크는 어차피 프레임에 한 번이라 둘 다 얻는 것이 없습니다.
   높이를 쓰면 닿는 청크(노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지, 경계 샘플은 양쪽 청크)의 메시와 바운드를 그 자리에서 다시 만들고, 바뀐 샘플을 쓰는 청크의 세대(`getChunkGenerations`)를 올려
-  그 청크의 물리 바디만 다시 만들어지게 합니다(바디는 청크마다 하나 — 언리얼 랜드스케이프의 컴포넌트별 충돌과 같다). 내비메시는 `SceneNavigation::invalidateArea` 로 그 자리 타일만 다시 굽고,
-  식생은 지형 세대가 0.3 초 동안 그대로일 때(드래그가 끝난 뒤) 다시 뿌립니다 — 칠하는 프레임마다 숲 전체를 다시 계산하지 않습니다.
+  그 청크의 물리 바디만 다시 만들어지게 합니다(바디는 청크마다 하나 — 언리얼 랜드스케이프 컴포넌트별 충돌과 같다). 내비메시는 `SceneNavigation::invalidateArea` 로 그 자리 타일만 다시 굽고,
+  식생은 지형 세대가 0.3 초 동안 그대로일 때(드래그가 끝난 뒤) 다시 뿌립니다.
   가중치는 CPU 스플랫 바이트를 고치고 바뀐 사각형만 `TextureCache::requestRegionUpdate` 로 맡깁니다. 렌더 스레드가 다음 프레임 기록 전에 RHI 영역 업로드(`uploadTexture2DRegion`, 네 백엔드)로
   한 번에 올립니다 — 업로드 비용은 호출당이라 프레임마다 사각형 하나입니다. 칠하는 텍스처는 **지형마다 자기 것**입니다(언리얼 랜드스케이프 가중치 맵 · 유니티 `TerrainData` 알파맵으로 알고 있다).
   지형을 읽을 때 그 지형만의 CPU 텍스처(`TextureCache::createCPUTexture`, `cpu/` 경로)를 가중치 에셋(`.layerweights`, 5-10 절)으로 만들어 머티리얼에 겁니다. 원본 픽셀은 텍스처가 들고 구간 업로드가 함께 고치므로
   디바이스를 다시 만들어도 칠한 그림이 남고(백엔드 교체 · 모듈 리로드는 씬을 다시 읽으므로 저장하지 않은 높이 · 스플랫은 `TerrainComponent::writeState` 가 상태 스냅샷에 싣는다), 같은 가중치 에셋을 쓰는 다른 지형은 칠해지지 않습니다.
   에디터 도구는 `TerrainBrushTool`(뷰포트 Terrain 토글)이고 드래그 하나가 되돌리기 하나입니다(닿은 사각형의 전 · 후 값만 담는다). 저장은 `saveHeightfield`(16 비트로 다시 양자화)와
   `saveSplat`(`.layerweights`)입니다. 가중치 사각형은 스플랫 **텍셀** 좌표이고 브러시 격자의 해상도는 스플랫 너비입니다(정사각형 스플랫만 브러시가 다룹니다).
-- **저장하지 않은 지형 편집은 상태 스냅샷으로 넘깁니다**(2026-10-15, `64c1fef75`). 교체 전에 묻는 대신(`setSaveBlockReason`) `GameInstanceBase` 가 `TerrainComponent` 를 `registerStatefulComponent` 로 올려 마지막 다시 읽기 뒤의 높이 · 스플랫을 싣습니다. 언리얼 랜드스케이프 편집도 저장 전까지 메모리의 레벨에 남는 것으로 알고 있습니다 — 렌더러를 바꾸는 일이 편집을 잃게 하면 안 됩니다.
+- **저장하지 않은 지형 편집은 상태 스냅샷으로 넘깁니다**(2026-10-15, `64c1fef75`). 교체 전에 묻는 대신(`setSaveBlockReason`) `GameInstanceBase` 가 `TerrainComponent` 를 `registerStatefulComponent` 로 올려 마지막 다시 읽기 뒤의 높이 · 스플랫을 싣습니다. 렌더러를 바꾸는 일이 편집을 잃게 하면 안 됩니다(언리얼 랜드스케이프 편집도 저장 전까지 메모리에 남는 것으로 안다).
 - **`FrameRenderer` 는 "한 씬의 프레임을 그래프로 그린다" 만 들고, 이미지를 꺼내는 일 · 진단 덮어쓰기 · 캔버스 렌더 텍스처 대상을 가릅니다**(2026-10-15, C-26 ⑤).
   캡처 · 되읽기(Present 캡처 텍스처, 트랜지언트 · 임의 텍스처 읽기와 파일 쓰기)는 `FrameCapture`(`getCapture()`) — 언리얼이 스크린샷 · 프레임 그랩(`FScreenshotRequest` · `FFrameGrabber`)을
   장면 렌더러 밖에 두는 자리이고, 렌더러의 디바이스 포인터 변수 · 주 시점 풀 · 파이프라인을 참조로 빌린다(렌더러가 `execute` 마다 디바이스를 다시 받으므로 사본을 들지 않는다).
@@ -731,10 +731,10 @@
 
 - **병렬 분배는 항목 수가 아니라 잰 비용으로 고르는 공용 API 를 둔다**(2026-10-16): 고정 임계값 16 은 가벼운 항목(~25 ns)에서 너무 낮아 작은 그룹이 깨우는 비용(~20 us)을 일보다 크게 치렀다(무버 16 개 19 us 대 직렬 1 us). `TaskManager::runParallelByCost` (엔진은 `engine::runParallelByCost`)는 호출 스레드가 앞 항목을 1, 2, 4, … 개씩 직접 돌며 비용을 재고, 경과 3 us 에서 남은 일의 예상 직렬 시간이 16 us 보다 짧으면 이어서 직렬로, 아니면 나머지 구간만 나눈다(저장하는 추정 없음 — 낡을 일이 없다). 무거운 항목은 첫 항목에서 바로 나뉜다(처음 만든 "앞 16 개를 직렬로" 안은 무거운 항목에서 병렬을 막는 결함이라 버렸다). 씬 틱의 보통 길 · 선행 조건 스테이지가 쓴다. `runParallel(count, threshold)` 는 "임계값 이상이면 나눈다"는 계약을 그대로 둔다(`TaskManagerBench` 의 디스패치 바닥 측정 · 워커 청크 테스트가 기댄다). 상용 엔진(UE 틱 그룹 · Unity 의 작은 `Update` 목록)도 일이 작으면 깨우지 않는다.
   애니메이션 평가(`AnimationSystem::runPhase`, 스킨드 캐릭터 `-gv_benchCharacters=N`, Release · 3 판 중앙값, `GT.Animation.evaluate` p50): 옛 고정 임계값 8 개는 20 개에서 122 us, 완전 직렬은 81 us(비용 기반과 같다), 100 개에서 196 us(직렬 491), 비용 기반 163 ~ 180 us, 400 개에서 786 ~ 851 us(직렬 2097, 비용 기반과 같다). 캐릭터 하나가 직렬로 약 5 us 라 20 개는 깨우는 비용이 더 크고 100 개부터 병렬이 이긴다 — `AnimationSystem` 은 비용 기반으로 옮겼다(`kParallelUnitCount` 삭제). 측정한 부하는 걷기 · 대기 클립뿐이다: IK 그래프와 랙돌이 섞인 부하는 아직 재지 않았다(NEXT.md).
-  실제 게임 부하 확인(2026-10-16, Release · dx12 · 자동 플레이 900 프레임 · 3 판 번갈아, `-gv_tickCostDispatch=0` 이 전): 틱이 도는 오브젝트 칸이 2 ~ 200 개뿐이라 이득이 작다. `GT.Scene.tick.components` p50 — VoxelCraft 36 → 7 us(가벼운 뷰 68 개), 나머지 일곱 게임은 같거나 1 ~ 5 us 느림(AbilityArena 7 → 8, HarvestValley 40 → 45, StarSkirmish 40 → 45, ThemePark 36 → 40, Shooter3D 45 → 49), 꼬리(p99)는 AbilityArena 20 → 53 us 등 몇 곳이 오히려 길어졌다. `GT.Frame` p50 · p99 는 모두 같다. 원인은 무거운 디렉터가 앞 항목이라 비용을 재는 동안 호출 스레드에서 직렬로 돌고 그동안 워커가 논다는 것이다. 합성 작은 씬(무버 300)은 32 → 9 us, 큰 씬(8000 · 변동 4000)은 같다(4096 개 이상은 재지 않고 바로 나눈다). 결론: 순이득은 프레임 시간의 0.1 % 안쪽이라 기본값을 바꿀 근거는 약하다 — **`-gv_tickCostDispatch` 기본은 0(옛 방식)으로 정했다**(2026-10-16, 사용자가 상용 엔진 기준으로 위임). 스위치와 API 는 남긴다. **AAA 규모로 다시 따져도 같다**: 틱 수천 개 씬은 어느 방식이든 바로 나뉘어(4096 개 이상은 재지 않는다) 차이가 없고, 갈리는 곳은 "무거운 항목이 앞에 올 때"다 — 잰 뒤 나누는 방식은 그 항목을 직렬로 돌려 꼬리(p99)를 늘리고(AbilityArena 20 → 53 us), 고정 임계값은 청크 티켓으로 다른 워커가 나머지를 바로 가져간다. AAA 프레임(16 ~ 33 ms)에서 작은 그룹이 깨우는 비용 ~20 us 는 무시되고 최악의 꼬리가 중요하다. 비용을 다시 켜려면 프레임 사이에 비용(그룹별 · 무거운 항목 위치)을 기억해 재는 직렬 구간을 없애야 하고, 그때 이 스위치로 다시 잰다. 랙돌 100 + IK 기사 20 군중(`tickCostRagdolls`, 5 판)에서도 `GT.Scene.tick.components` p50 0 us · p99 3 us 로 전후가 같아 틱 분배는 병목이 아니었다(비용은 `GT.Animation.evaluate` ~0.5 ms). 비교 케이스는 `perf-compare --cases tickCostMovers tickCostSmallScene tickCostChurn`.
-- **`PostUpdate` 그룹은 서브틱으로 바꾸지 않고, `TickPhase` · 서브틱 우선순위는 유지한다**(2026-10-16, 사용자가 상용 엔진 · AAA 기준으로 위임). `PostUpdate` 사용처 41 개 중 게임 뷰 컴포넌트 다수는 "디렉터(`PrePhysics`)가 이 프레임을 끝낸 뒤 읽는다", 카메라 · 패럴랙스 · 하이라이트는 "앞 그룹이 옮긴 뒤 읽는다"이다. 둘 다 그룹 순서(그룹 사이 장벽 하나)가 정확히 표현하는 의도이고, 서브틱 선행 조건으로 바꾸면 오브젝트 사이 의존을 핸들로 걸어야 해 복잡하다. 속도는 차이가 없다(`FollowerOrderingGroupVersusPrerequisite`, Release, 4000 쌍: 순서 없음 p50 71~86 us · 그룹 69~74 us · 선행 조건 52~68 us). 서브틱 선행 조건은 같은 그룹 안의 오브젝트 사이 순서(`GameDirectorComponent::_tickAfter`)에 쓴다. `TickPhase` 의 `Early` · `Late` · `Finalize` 와 `priority` 는 제품 코드 사용이 0 이지만 UE(TickGroup · 선행 조건) · Unity(Script Execution Order) · Godot(process priority)이 모두 오브젝트 안의 순서 지정 수단을 두므로 지우지 않는다. 사용법은 `Component.h` 의 `TickPhase` 주석. 서브틱은 같은 프레임, 같은 그룹 안의 스테이지로 돈다(다음 프레임으로 넘어가지 않는다).
-- **선행 조건 스테이지는 말단 오브젝트만 증분으로 끼우고 뺀다**(2026-10-16): 팔로워 4000 에 프레임마다 하나 만들고 지우면 재구축이 프레임당 559 us 였다(선행 조건 없는 변동은 37 us). 재구축 자체를 평평한 표 · CSR · 오브젝트 순번으로 짓게 해 약 275 us 로 줄였고, 아무도 기다리지 않고 선행 조건이 모두 의존 오브젝트 밖(보통 길)인 오브젝트는 스테이지를 다시 짓지 않고 그 그룹의 레벨 0 스테이지에 끼우고 뺀다(`TickRegistry::applyStageDelta` · `removeStageItems`, 스테이지가 항목마다 오브젝트 id 와 레벨을 든다) — 약 69 us. 누군가 기다리는 오브젝트가 바뀌거나 선행 조건이 다른 의존 오브젝트를 가리키면 전체 재구축이다(순서가 바뀔 수 있다). 기각: 모든 변경을 증분으로 처리(사슬 · 순환은 전체 위상 정렬이 필요하다). 증분으로 끼운 항목의 스테이지 안 자리는 전체 재구축과 같다 — 재구축은 (순서 키, 오브젝트 id) 순이라 끼울 때도 같은 키로 정렬 삽입한다(예전에는 같은 순서 키 끝에 붙어, 예전 오브젝트를 껐다 켜면 길에 따라 실행 순서가 달랐다). `IncrementalStageLayoutMatchesFullRebuild` 가 스테이지마다 (그룹, 레벨, 오브젝트 id 차례)까지 견준다.
-- **`AnimationCrowd` 의 묶음 평가 분배(`kParallelBucketCount` 8)는 비용 기반으로 옮기지 않는다**(2026-10-16, Release · 5 판 번갈아 · 혼자 돌며 잰 중앙값, `-gv_benchCharacterColumns=20 -gv_benchCharacterStagger=1 -gv_benchCrowdShare=1`): `GT.Animation.crowdBuckets` p50 이 군중 1000 에서 36 → 49 us, 300 에서 32 → 49 us 로 오히려 늘었다(p99 73 → 98 · 90 us). 묶음은 수십 개뿐이고 하나가 수 us 라, 비용을 재는 동안 호출 스레드가 앞 묶음을 직렬로 돌고 나머지를 나누는 길이 고정 임계값(8 개 이상이면 바로 나눈다)보다 느리다. `GT.Animation.evaluate` p50 은 1000 에서 720 대 720, 300 에서 294 대 327 us 로 이득이 없다. 군중 포즈 공유를 끈 스킨드 캐릭터 1000 은 묶음 경로를 타지 않아 같은 코드이고(`AnimationSystem` 은 이미 비용 기반) 차이가 잡음 안이다(p50 2883 대 3145 us, 판마다 1835 ~ 3407 us 로 흔들렸다). 랙돌 300(`-gv_benchRagdolls=300`)은 `GT.Animation.evaluate` p50 1 us 라 분배가 병목이 아니다. 이 기계에서는 판 사이 흔들림(프레임 8 ~ 12 ms)이 이득보다 크므로 근거는 `crowdBuckets` 구간의 방향(전 판 B 가 높다)이다.
+  실제 게임 부하 확인(2026-10-16, Release · dx12 · 자동 플레이 900 프레임 · 3 판 번갈아, `-gv_tickCostDispatch=0` 이 전): 틱이 도는 오브젝트 칸이 2 ~ 200 개뿐이라 이득이 작다. `GT.Scene.tick.components` p50 — VoxelCraft 36 → 7 us(가벼운 뷰 68 개), 나머지 일곱 게임은 같거나 1 ~ 5 us 느림(AbilityArena 7 → 8, HarvestValley 40 → 45, StarSkirmish 40 → 45, ThemePark 36 → 40, Shooter3D 45 → 49), 꼬리 p99 는 AbilityArena 20 → 53 us 등 몇 곳이 길어졌다. `GT.Frame` p50 · p99 는 같다. 원인은 무거운 디렉터가 앞 항목이라 비용을 재는 동안 호출 스레드에서 직렬로 돌고 워커가 노는 것이다. 합성 작은 씬(무버 300)은 32 → 9 us, 큰 씬(8000 · 변동 4000)은 같다(4096 개 이상은 재지 않고 바로 나눈다). 결론: 순이득이 프레임 시간의 0.1 % 안쪽이라 **`-gv_tickCostDispatch` 기본은 0(옛 방식)으로 정했다**(2026-10-16, 사용자가 상용 엔진 기준으로 위임). 스위치와 API 는 남긴다. **AAA 규모로 다시 따져도 같다**: 틱 수천 개 씬은 어느 방식이든 바로 나뉘어 차이가 없고, 갈리는 곳은 무거운 항목이 앞에 올 때다 — 잰 뒤 나누는 방식은 그 항목을 직렬로 돌려 꼬리를 늘리고, 고정 임계값은 청크 티켓으로 다른 워커가 나머지를 바로 가져간다. 다시 켜려면 프레임 사이에 비용(그룹별 · 무거운 항목 위치)을 기억해 재는 직렬 구간을 없애야 하고, 그때 이 스위치로 다시 잰다. 랙돌 100 + IK 기사 20 군중(`tickCostRagdolls`, 5 판)에서도 `GT.Scene.tick.components` p50 0 us · p99 3 us 로 전후가 같아 틱 분배는 병목이 아니었다(비용은 `GT.Animation.evaluate` ~0.5 ms). 비교 케이스는 `perf-compare --cases tickCostMovers tickCostSmallScene tickCostChurn`.
+- **`PostUpdate` 그룹은 서브틱으로 바꾸지 않고, `TickPhase` · 서브틱 우선순위는 유지한다**(2026-10-16, 사용자가 상용 엔진 · AAA 기준으로 위임). `PostUpdate` 사용처 41 개 중 게임 뷰 컴포넌트 다수는 "디렉터(`PrePhysics`)가 이 프레임을 끝낸 뒤 읽는다", 카메라 · 패럴랙스 · 하이라이트는 "앞 그룹이 옮긴 뒤 읽는다"이다. 둘 다 그룹 순서(그룹 사이 장벽 하나)가 정확히 표현하는 의도이고, 서브틱 선행 조건으로 바꾸면 오브젝트 사이 의존을 핸들로 걸어야 해 복잡하다. 속도는 차이가 없다(`FollowerOrderingGroupVersusPrerequisite`, Release, 4000 쌍: 순서 없음 p50 71~86 us · 그룹 69~74 us · 선행 조건 52~68 us). 서브틱 선행 조건은 같은 그룹 안의 오브젝트 사이 순서(`GameDirectorComponent::_tickAfter`)에 쓴다. `TickPhase` 의 `Early` · `Late` · `Finalize` 와 `priority` 는 제품 코드 사용이 0 이지만 UE · Unity · Godot 이 모두 오브젝트 안의 순서 지정 수단을 두므로 지우지 않는다(사용법은 `Component.h` 의 `TickPhase` 주석).
+- **선행 조건 스테이지는 말단 오브젝트만 증분으로 끼우고 뺀다**(2026-10-16): 팔로워 4000 에 프레임마다 하나 만들고 지우면 재구축이 프레임당 559 us 였다(선행 조건 없는 변동은 37 us). 재구축 자체를 평평한 표 · CSR · 오브젝트 순번으로 짓게 해 약 275 us 로 줄였고, 아무도 기다리지 않고 선행 조건이 모두 의존 오브젝트 밖(보통 길)인 오브젝트는 스테이지를 다시 짓지 않고 그 그룹의 레벨 0 스테이지에 끼우고 뺀다(`TickRegistry::applyStageDelta` · `removeStageItems`, 스테이지가 항목마다 오브젝트 id 와 레벨을 든다) — 약 69 us. 누군가 기다리는 오브젝트가 바뀌거나 선행 조건이 다른 의존 오브젝트를 가리키면 전체 재구축이다(순서가 바뀔 수 있다). 기각: 모든 변경을 증분으로 처리(사슬 · 순환은 전체 위상 정렬이 필요하다). 증분으로 끼운 항목의 스테이지 안 자리는 전체 재구축과 같다 — 재구축은 (순서 키, 오브젝트 id) 순이라 끼울 때도 같은 키로 정렬 삽입한다(예전에는 같은 순서 키 끝에 붙어 껐다 켜면 길에 따라 실행 순서가 달랐다). `IncrementalStageLayoutMatchesFullRebuild` 가 스테이지마다 (그룹, 레벨, 오브젝트 id 차례)까지 견준다.
+- **`AnimationCrowd` 의 묶음 평가 분배(`kParallelBucketCount` 8)는 비용 기반으로 옮기지 않는다**(2026-10-16, Release · 5 판 번갈아 · 혼자 돌며 잰 중앙값, `-gv_benchCharacterColumns=20 -gv_benchCharacterStagger=1 -gv_benchCrowdShare=1`): `GT.Animation.crowdBuckets` p50 이 군중 1000 에서 36 → 49 us, 300 에서 32 → 49 us 로 늘었다(p99 73 → 98 · 90 us). 묶음은 수십 개뿐이고 하나가 수 us 라, 비용을 재는 동안 호출 스레드가 앞 묶음을 직렬로 돌고 나머지를 나누는 길이 고정 임계값(8 개 이상이면 바로 나눈다)보다 느리다. `GT.Animation.evaluate` p50 은 1000 에서 720 대 720, 300 에서 294 대 327 us 로 이득이 없다. 군중 포즈 공유를 끈 스킨드 캐릭터 1000 은 묶음 경로를 타지 않아 같은 코드이고 차이가 잡음 안이다(p50 2883 대 3145 us, 판마다 1835 ~ 3407 us). 랙돌 300(`-gv_benchRagdolls=300`)은 `GT.Animation.evaluate` p50 1 us 라 분배가 병목이 아니다. 이 기계의 판 사이 흔들림(프레임 8 ~ 12 ms)이 이득보다 커서 근거는 `crowdBuckets` 구간의 방향(전 판 B 가 높다)이다.
 - **프리팹에서 사라진 컴포넌트의 오버라이드는 경고하고 버립니다**(2026-10-06). 언리얼과 같습니다. 유니티는 남겨 둡니다.
 - **"그 타입의 컴포넌트 모두" 는 타입별 레지스트리(`ComponentRegistry`)에서 찾습니다**(2026-10-06). 상호작용 대상을 프레임마다 씬 전체에서 찾던 경로가 Release 10k 오브젝트에서 190 us 를 넘었고, 레지스트리로 2~6 us 가 됐습니다.
   언리얼 서브시스템의 등록 목록과 같은 방식입니다. 공간 해시는 두지 않았습니다([후보 문서](plans/Candidates-gameplay.md) `G-4`).
@@ -815,7 +815,7 @@
   사각형은 앵커 번호(`CanvasQuad::_anchor`)를 가진다. 마커가 움직이면 앵커 표(`CanvasFrameData::_listAnchor`, 사각형 버퍼 맨 앞 원소)만 바뀌어 다시 배치 · 칠하기 · 사각형 업로드가 없다.
   모든 화면 트리가 재사용이면 그리기 목록 이어 붙이기와 같은 내용 비교도 건너뛴다. 측정(PC SW, AMD Family 25 · Release dx12 · 이름표 2,000 · 600 프레임, 전후 바이너리를 번갈아 5 판씩 세 번, 가운데 값):
   `GT.UI.Layout + GT.UI.Paint` p50 3.15 ~ 3.4 ms → 0.004 ms, 새로 잰 `GT.UI.Markers`(투영 · 앵커 쓰기, 전에는 구간 밖) 0.49 ~ 0.52 ms, `GT.Frame` p50 4.19 → 0.92 ~ 1.18 ms,
-  `RT.Canvas.Upload` p50 196 → 36 ~ 49 us, 벽시계 4.3 ~ 4.7 → 1.1 ~ 1.2 ms/프레임. 남은 게임 스레드 몫은 마커마다 월드 위치를 읽고 투영하는 일(카메라 · 행렬을 한 번만 구해도 그대로)이고,
+  `RT.Canvas.Upload` p50 196 → 36 ~ 49 us, 벽시계 4.3 ~ 4.7 → 1.1 ~ 1.2 ms/프레임. 남은 게임 스레드 몫은 마커마다 월드 위치를 읽고 투영하는 일이고,
   `GT.UI.*` 합이 기준 0.5 ms 언저리다. 투영 · 컬링까지 컴퓨트로 옮기려면 GPU 가 마커의 월드 위치(GPUScene 변환)를 읽어야 해 [후보 문서](plans/Candidates-ui.md) `G-13` 으로 둔다.
   앵커 아래에서는 자르기를 쓸 수 없다(가위는 대상 픽셀이다 — `UIPaintPass` 가 단언한다). 앵커가 따로 바인딩을 늘리지 않으려고 사각형 버퍼 원소 하나(rect 만 읽음)를 쓴다(SRV 슬롯 16 이 Vulkan 밴드를 꽉 채운다).
 
@@ -824,13 +824,13 @@
 - **게임 · 에디터 서비스는 범위(`SubsystemScope`)에서 타입으로 찾고, 없으면 호스트 서비스 표를 본다 — 범위는 게임 인스턴스 · 에디터 컨텍스트가 소유한다**(2026-10-14).
   언리얼은 서브시스템을 범위(엔진 · 에디터 · 게임 인스턴스)마다 그 범위 객체가 소유하고 `GetSubsystem<T>()` 로 찾는 것으로 알고 있다(기억에 의존). 같은 모양을 Core 에 두고(`ISubsystemLocator` · `SubsystemScope` ·
   `locateSubsystem` 이 상위 범위로 올라간다), 게임 · 에디터 창구의 복제 템플릿(타입 해시 · 서비스 칸 trait · 로컬 표)을 지웠다. 이전의 "건 이미지" 를 반환 주소로 기록해 언로드 때 훑어 회수하던
-  장치는 없앴다 — 범위가 인스턴스와 함께 사라져 풀지 않은 칸이 남을 수 없다(우리 쪽이 더 단순해진 확장). 테스트는 자기 범위를 `ScopedGameScope` · `ScopedEditorScope` 로 잠시 건다.
+  장치는 없앴다 — 범위가 인스턴스와 함께 사라져 풀지 않은 칸이 남을 수 없다. 테스트는 자기 범위를 `ScopedGameScope` · `ScopedEditorScope` 로 잠시 건다.
 - **`EditorContext` 는 범위를 들고 하위 객체를 만드는 얇은 껍데기다 — 상태는 모두 에디터 서브시스템이 든다**(2026-10-14). 하위 객체마다 두던 포인터 · 접근자 열다섯은
   `getSubsystem<T>()` 하나로(언리얼 `GEditor->GetEditorSubsystem<T>()`), 컨텍스트에 직접 있던 뷰 렌더 타깃 · RHI 디바이스 · 렌더러 백엔드 · 게임 뷰 입력은 `EditorRenderViews`,
   플레이 세션 상태는 `EditorPlaySessionState`, 테마 값은 `EditorTheme` 으로 옮겼다. 셸의 독 레이아웃은 범위에 빌려 건다(`findSubsystem<EditorDockLayout>()`).
-  활성 컨텍스트 정적 포인터도 지웠다 — 컨텍스트가 자기 범위에 자신을 걸어 `EditorContext::get()` 은 지금 에디터 범위의 주인을 찾는다(첫 칸이라 비교 한 번). 정적 상태는 "지금 에디터 범위" 하나뿐이다.
+  활성 컨텍스트 정적 포인터도 지웠다 — 컨텍스트가 자기 범위에 자신을 걸어 `EditorContext::get()` 은 지금 에디터 범위의 주인을 찾는다. 정적 상태는 "지금 에디터 범위" 하나뿐이다.
 - **게임 인스턴스 서브시스템은 수명 · 순서가 인스턴스에 묶인 것만이다 — 화면 전환 · 로딩 화면 · 네트워크 세션**(2026-10-14, `GameInstanceSubsystem`). 게임 범위가 소유하고
-  `onInitialize` 앞에 초기화, `onShutdown` 뒤에 역순 종료한다(언리얼 `UGameInstanceSubsystem` — 로딩 화면을 게임 인스턴스 서브시스템으로 두는 것도 같은 모양으로 알고 있다).
+  `onInitialize` 앞에 초기화, `onShutdown` 뒤에 역순 종료한다(언리얼 `UGameInstanceSubsystem` 과 같은 모양으로 알고 있다).
   카탈로그 · gamesettings 는 데이터라 서브시스템으로 만들지 않고 빌려 건다(`bindScopedService`). 스냅샷 상태 저장소 · 씬 로드 대기 목록은 인스턴스 흐름의 일부라 멤버로 둔다.
   GameFramework 의 남은 정적 상태(정의 약 75 곳)는 상수 · 빈 값 · 불변 표 · 상태 없는 드라이버 · 링크 때 등록 표 · 의도된 프로세스 공유(메모리 DB 드라이버)라 남긴다.
   에디터 플러그인의 함수 정적(`AdminToolSession` · `ParkLayoutPreview`)은 확장 모듈이 서브시스템을 기여하는 창구가 생기면(`C-27` ④ 와 같은 장치) 에디터 범위로 옮긴다.
@@ -841,26 +841,26 @@
   UI 가 게임플레이 아래인 것은 언리얼에서 UMG 가 게임플레이 모듈 아래에 있는 것과 같습니다. 전투 수치(체력 신호)는 HP 바가 읽으므로 Actor 층에 둡니다.
 - **키트 헤더는 `SW_KIT_API`, 서버 키트 헤더는 `SW_KIT_SERVER_API`, Base 헤더는 `SW_GF_API` 를 씁니다 — 키트 TU 는 `SW_GF_EXPORTS` 를 정의하지 않습니다**(2026-10-15, 백로그 C-3).
   키트 TU 가 `SW_GF_EXPORTS` 를 정의하니 include 한 Base 클래스(`Inventory` · `StatBlock` 등)가 키트 DLL 에서도 dllexport 로 풀려, 키트 DLL 55개가 `GameFramework.dll` 과 같은 심볼 4909개를 한 번 더 내보내고 있었다(`GF_WitcherRPG.dll` 은 326개 중 116개). 키트는 이제 `SW_KIT_EXPORTS`(PRIVATE) · `SW_KIT_IMPORTS`(INTERFACE)만 쓰고, 그 뒤 키트 DLL 에서 `GameFramework.dll` 과 겹치는 심볼은 0 이다. 언리얼이 모듈마다 `<MODULE>_API` 를 클래스에 달고 다른 모듈의 선언은 import 로 두는 것과 같은 모양으로 알고 있다(기억에 의존).
-  함정: 겹침이 가리고 있던 결함이 하나 드러났다. 순수 인터페이스(`IAccountNameIndex` 등)의 `= default` 생성자 · 소멸자는 그 헤더를 include 하는 `.cpp` 가 DLL 에 있을 때만 내보내져서(clang-cl), 서버 키트가 파생 클래스를 만들며 dllimport 로 찾다 링크가 깨졌다. 그래서 **순수 인터페이스(순수 가상 · `= default` · `= delete` · `using` 뿐)는 내보내기 매크로를 달지 않는다**(인라인 멤버를 쓰는 쪽이 만든다). 전수 조사로 같은 모양 28개(Base 15 · 키트 13)에서 매크로를 뺐다. `CheckExportMacros` 가 새로 생기는 것을 막는다(헤더가 속한 DLL 의 매크로인지도 함께 본다).
-  서버 키트는 `SW_KIT_SERVER_EXPORTS`(`SW_KIT_EXPORTS` 가 아니라)만 정의하고 폴더 `Server/` 의 헤더는 `SW_KIT_SERVER_API` 를 쓴다. 서버 키트가 include 한 공유 키트 헤더의 `SW_KIT_API` 는 dllimport 로 남는다. 모든 키트 TU 가 `SW_KIT_IMPORTS` 를 함께 정의한다(자기 내보내기 매크로가 먼저 읽힌다). 키트 PCH 하나(`sw_kit_pch`)를 나눠 쓰려면 명령줄 정의가 같아야 해서 PCH 소유자도 같은 정의를 갖는다(이전에는 키트가 키트를 링크할 때 `SW_KIT_IMPORTS` 가 달라 PCH 경고 43개가 났다). Linux 는 `-fvisibility=hidden` 을 주지 않아 기본이 default visibility 라 세 매크로가 모두 `visibility("default")` 로 같다 — 동작 차이가 없고 심볼 보간(interposition)이라 중복 내보내기로 링크가 깨지지 않는다. Release 는 Dev 와 같은 SHARED 라 매크로가 dllexport 로 풀리고, Shipping(STATIC)은 `SW_KIT_*_EXPORTS` · `SW_KIT_IMPORTS` 를 정의하지 않아 매크로가 빈다. 그 뒤 서버 키트 11개와 공유 키트의 겹침은 100 → 0 이다.
+  함정: 겹침이 가리던 결함이 드러났다. 순수 인터페이스(`IAccountNameIndex` 등)의 `= default` 생성자 · 소멸자는 그 헤더를 include 하는 `.cpp` 가 DLL 에 있을 때만 내보내져서(clang-cl), 서버 키트가 파생 클래스를 만들며 dllimport 로 찾다 링크가 깨졌다. 그래서 **순수 인터페이스(순수 가상 · `= default` · `= delete` · `using` 뿐)는 내보내기 매크로를 달지 않는다**(인라인 멤버를 쓰는 쪽이 만든다). 같은 모양 28개(Base 15 · 키트 13)에서 매크로를 뺐고, `CheckExportMacros` 가 새로 생기는 것을 막는다(헤더가 속한 DLL 의 매크로인지도 본다).
+  서버 키트는 `SW_KIT_SERVER_EXPORTS`(`SW_KIT_EXPORTS` 가 아니라)만 정의하고 폴더 `Server/` 의 헤더는 `SW_KIT_SERVER_API` 를 쓴다. 서버 키트가 include 한 공유 키트 헤더의 `SW_KIT_API` 는 dllimport 로 남는다. 모든 키트 TU 가 `SW_KIT_IMPORTS` 를 함께 정의한다(자기 내보내기 매크로가 먼저 읽힌다). 키트 PCH 하나(`sw_kit_pch`)를 나눠 쓰려면 명령줄 정의가 같아야 해서 PCH 소유자도 같은 정의를 갖는다(전에는 `SW_KIT_IMPORTS` 가 달라 PCH 경고 43개). Linux 는 `-fvisibility=hidden` 을 주지 않아 세 매크로가 모두 `visibility("default")` 로 같다 — 동작 차이가 없고 심볼 보간이라 중복 내보내기로 링크가 깨지지 않는다. Release 는 Dev 와 같은 SHARED 라 dllexport 로 풀리고, Shipping(STATIC)은 `SW_KIT_*_EXPORTS` · `SW_KIT_IMPORTS` 를 정의하지 않아 매크로가 빈다. 서버 키트 11개와 공유 키트의 겹침은 100 → 0 이다.
 - **키트는 성격으로 나눕니다: 장르 키트는 `Kits/Genre/<그룹>/`, 장르를 가리지 않는 기능 키트(네트워크 · 온라인 · 저장 · 타일 월드 · 복셀)는 `Kits/Feature/<그룹>/`**(2026-10-10).
   언리얼 플러그인 폴더가 Runtime · Online · Experimental 처럼 성격으로 묶이는 것과 같은 단입니다. 모듈 이름(`GF_<키트>`)은 경로와 상관없이 그대로입니다.
-  클라이언트 · 서버로 나뉘는 기능은 기능 폴더 하나 아래 `Shared/` · `Server/` · `Client/` 짝으로 둡니다(Nakama · PlayFab 이 서비스 단위로 클라이언트 SDK 와 서버 모듈을 묶는 것과 같은 단위).
+  클라이언트 · 서버로 나뉘는 기능은 기능 폴더 하나 아래 `Shared/` · `Server/` · `Client/` 짝으로 둡니다(Nakama · PlayFab 과 같은 단위).
 - **모듈 이름은 공유 `GF_<X>`, 서버 전용 `GF_Server_<X>`, 클라이언트 전용 `GF_Client_<X>` 입니다**(2026-10-06). `CheckModuleTargets` 가 접두와 매니페스트의 대상(`_listTarget`)이 맞는지 봅니다.
   서버 키트는 같은 기능의 공유 키트만 include 할 수 있고, 키트끼리는 include 하지 않습니다.
 - **키트 조립 규칙**(2026-10-06): 조립 테스트 게임은 `MeadowVillage` 입니다. 플레이어와 세계가 들고 있는 가방은 `Inventory`, "아이템과 개수" 값 목록은 `ItemStackList` 입니다.
-  가방의 칸 구조체는 `InventorySlot` 이고, 달력은 `WorldClock` 하나입니다. 키트 하나만 쓰는 게임은 디렉터가 기반 상태를 들고 키트에 빌려 줍니다. 언리얼 Lyra 도 단일 기능 게임은 GameMode 나 GameState 에 직접 상태를 둡니다.
+  가방의 칸 구조체는 `InventorySlot` 이고, 달력은 `WorldClock` 하나입니다. 키트 하나만 쓰는 게임은 디렉터가 기반 상태를 들고 키트에 빌려 줍니다(언리얼 Lyra 도 단일 기능 게임은 GameMode 나 GameState 에 직접 상태를 둠).
 - **실시간 키트의 체력 직접 관리(`_hp -= damage`)를 `Vitality` 로 옮기지 않습니다**(2026-10-11). 대상은 `ConquestWorld` · `RTSWorld`(유닛 수천) · `ActionRoom` · `UnitStatsComponent` · `GhostEncounter` · `FightingMatch` 입니다.
   `Vitality` 는 실드 · 기절 · 부활 · 경직 · 무적을 가진 큰 상태 기계(필드 수십 개 + 알림 버퍼)라 유닛마다 하나씩 들면 메모리와 상태 바이트가 커지고, 키트마다 체력 의미(정수 · 실수, 0 에서 멈춤 · 1 에서 멈춤, 죽음 알림 시점)가 달라
-  옮기면 수치와 세이브 · 되감기 바이트가 바뀝니다. 같은 상태 기계가 필요한 키트(배틀로얄 · 소울라이크 · 데드 바이 데이라이트 · 위쳐)만 이미 씁니다. 단순 체력은 `Vitality` 가 아니라 각 키트의 값으로 두는 것이 언리얼 `UHealthComponent` 샘플 · 유니티 개별 스크립트와 같은 쪽입니다.
+  옮기면 수치와 세이브 · 되감기 바이트가 바뀝니다. 같은 상태 기계가 필요한 키트(배틀로얄 · 소울라이크 · 데드 바이 데이라이트 · 위쳐)만 이미 씁니다. 단순 체력은 각 키트의 값으로 두는 것이 언리얼 `UHealthComponent` 샘플 · 유니티 개별 스크립트와 같은 쪽입니다.
 - **온라인 게임의 로컬 지갑은 서버 원장의 읽기 사본입니다**(2026-10-06).
 - **시퀀서는 카메라를 직접 움직이지 않고 신호만 냅니다**(2026-10-13). 엔진(시퀀서)은 GameFramework 카메라를 모르므로 컷 · 시네마틱 시작 · 끝 · 대기 뷰 · 흔들림을 신호로 내고,
   GameFramework 의 `CinematicCameraComponent` 가 디렉터 프리셋 · 블렌드로 카메라를 움직입니다(언리얼 Sequencer 의 Camera Cut · Blend In/Out 과 같은 나눔).
 - **옵션 메뉴의 카메라 설정(시야각 · 흔들림 배율 · 머리 흔들림)은 컴포넌트가 읽어 디렉터에 넣고, 모드 계산은 모른다**(2026-10-17, `CameraUserSettings`).
-  시야각은 1인칭 · 3인칭 모드에만 건다 — 언리얼 · 유니티 게임이 옵션 시야각을 플레이어 카메라에만 걸고 시네마틱 · 고정 카메라는 저작한 렌즈로 두는 것과 같다.
+  시야각은 1인칭 · 3인칭 모드에만 건다 — 시네마틱 · 고정 카메라는 저작한 렌즈로 둔다(언리얼 · 유니티 게임과 같음).
   값을 그대로 덮지 않고 변수 기본값 대비 반각의 tan 비율로 프리셋 시야각을 넓힌다. 기본값이면 저작한 화면 그대로이고, 좁게 저작한 조준 프리셋도 같은 비율로 따라간다.
   흔들림 배율은 손떨림 잡음과 충격 오프셋에 곱한다(접근성 옵션 "카메라 흔들림" 이 모든 흔들림을 줄이는 것과 같다). 머리 흔들림은 프리셋 `<HeadBob>` · `FirstPersonCameraComponent::_headBob`
-  데이터로 켜고(진폭 0 이 기본), 위상은 시간이 아니라 간 거리로 간다 — 언리얼 걷기 카메라 셰이크 · 유니티 FPS 템플릿의 head bob 과 같은 자리이고, 걸음 빠르기와 어긋나지 않는다.
+  데이터로 켜고(진폭 0 이 기본), 위상은 시간이 아니라 간 거리로 간다(걸음 빠르기와 어긋나지 않음; 언리얼 걷기 카메라 셰이크 · 유니티 FPS 템플릿 head bob 과 같은 자리).
   엔진 서비스가 없는 실행(엔진 없이 도는 테스트)은 사용자 설정이 없는 상태가 맞아 기본값이고, 변수 관리자가 있는데 변수가 없으면 `SW_ASSERT` 로 멈춘다.
 - **RTS 땅 격자 다시 칠하기는 전체를 훑되 바뀐 칸만 쓴다**(2026-10-17, `D4-4`). 64 × 64 는 4096 칸이고 땅 리비전은 다른 키트가 땅을 얻거나 반납할 때만 바뀌어 훑기 자체는 문제가 아니다.
   비용은 훑기가 아니라 부작용이었다 — 지형 · 땅으로 칠한 뒤 건물 발자국을 다시 덮어 그대로인 건물 칸이 풀렸다 막히며 격자 리비전이 올라, 상관없는 땅 변경(남의 도로)에도 모든 흐름장이 다시 구해졌다.
