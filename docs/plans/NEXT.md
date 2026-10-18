@@ -16,7 +16,7 @@
 
 ## 1. 지금 상태 (2026-10-19)
 
-- main CI(실행 39143580252)는 열 잡 중 아홉이 통과했다. 남았던 Linux TSan 의 `EditorNetPlaySessionTest.DedicatedServerAndTwoClientsConnectPauseAndMergeTraces` 는 테스트가 프로세스마다 틱 하나가 끝나길 기다리게 고쳤다. 다음 main CI 의 TSan 잡으로 확인한다.
+- main CI(실행 39157285831, 86370c0)는 두 잡이 실패했다. Linux TSan: `TaskManager::resolveDependency` 가 후속 노드의 `_callable` 을 읽다가 그 후속의 `completeTask` 와 레이스 — `_bParallelGroupParent` 원자 플래그로 가르게 고쳤다(커밋됨, push 전). TSan 잡으로 확인한다. Windows Debug: `EngineTest_NoGPU_Shard1·2·4` 가 리소스 전체를 훑는 테스트(`EveryResourceComponentRewritesToTheSameBytes` 등)에서 104 초 시간 초과 — 원인 미조사(러너 느림인지 리소스 증가인지 최근 통과 실행과 테스트 시간을 비교한다).
 - `TypedComponents`: 인스펙터 콤보 선택기(3.8)까지 구현했다. 남은 것은 선택기의 화면 확인(`gpu-verifier`: 콤보 · `(none)` · 되돌리기 · Paste 비활성)과 앱 측정 넷(8.4). 새 후보 `StableAddressMap`(`Candidates-engine.md`).
 - 문서 개편(커밋됨, **아직 push 안 함**): 백로그를 없애고 계획 문서 + `Candidates-<영역>.md` + `Roadmap.md` + `NEXT.md` 로 일원화했다. push 전에 [작업 방식](../11_Workflow.md) 3절대로 `full-build` 증거를 남긴다.
 - 토큰 줄이기(2026-10-19, 푸시함): 규칙과 측정(ccusage 43개 세션: 캐시 읽기 약 77% · 쓰기 약 20% · 출력 약 3%)은 [에이전트와 토큰](../12_Agents.md) 에 있다. 비용의 거의 전부가 세션 길이와 캐시 재생성이라 effort 를 더 내릴 이득은 작다. 압축은 효과가 작았다(`09_Decisions.md` -5.7%). 계획 문서는 끝난 단위 절을 지우는 쪽이 낫다(작업 방식 6절).

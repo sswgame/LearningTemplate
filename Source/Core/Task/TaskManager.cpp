@@ -552,10 +552,11 @@ namespace sw
 
         // 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 모두 채웠다 — 지금 티켓을 올린다. 0 을 보는 스레드는 하나뿐이므로 여기서 꺼내도 안전하다.
         // 부모는 그룹이 끝나 의존 하나가 더 풀릴 때 큐로 가고, 거기서 제 실행 스레드(메인 지정이면 메인)에서 완료된다.
-        if ( std::holds_alternative<ParallelGroupLaunch>( pNode->_callable ) )
+        if ( pNode->_bParallelGroupParent.load( std::memory_order_acquire ) )
         {
             const ParallelGroupLaunch launch = std::get<ParallelGroupLaunch>( pNode->_callable );
             pNode->_callable                 = std::monostate{};
+            pNode->_bParallelGroupParent.store( false, std::memory_order_release );
             if ( pNode->_bCancelled.load( std::memory_order_acquire ) == false && launch._pGroup != nullptr )
             {
                 launchParallelGroup( pNode, launch );
@@ -625,6 +626,7 @@ namespace sw
         TaskNode*    pParent     = parentTask.getNode();
         const uint32 ticketCount = MathUtil::max( split._ticketCount, 1u );
         pParent->_callable       = ParallelGroupLaunch{ pGroup, ticketCount };
+        pParent->_bParallelGroupParent.store( true, std::memory_order_release );
 
         return parentTask;
     }
@@ -801,7 +803,7 @@ namespace sw
 
     void TaskManager::releaseUnlaunchedGroup( TaskNode* pNode )
     {
-        if ( std::holds_alternative<ParallelGroupLaunch>( pNode->_callable ) == false )
+        if ( pNode->_bParallelGroupParent.exchange( false, std::memory_order_acq_rel ) == false )
             return;
         ParallelGroup* pGroup = std::get<ParallelGroupLaunch>( pNode->_callable )._pGroup;
         pNode->_callable      = std::monostate{};

@@ -342,6 +342,12 @@ namespace sw
          */
         atomic<bool> _bScheduled{ false };
         atomic<bool> _bCancelled{ false };
+        /**
+         * @brief `_callable` 이 `ParallelGroupLaunch` 인 부모인지입니다. 시작 조건을 채운 스레드가 꺼내며 내린다.
+         * @details `resolveDependency` 는 후속 노드가 이미 돌고 있을 수도 있는 때(제출 뒤 `runBefore`)에도 불린다. 그때 `_callable` 을 읽으면
+         *          완료 처리의 `_callable` 비우기와 데이터 레이스다. 그래서 변수 본체 대신 이 원자 값으로 가른다.
+         */
+        atomic<bool> _bParallelGroupParent{ false };
 
         /**
          * @brief 이 노드가 든 풀입니다(슬랩을 만들 때 한 번 정한다). 매니저는 풀이 압니다(`TaskNodePool::getOwner`).

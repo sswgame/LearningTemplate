@@ -77,6 +77,7 @@ namespace sw
         pMem->_pendingChildren.store( 1, std::memory_order_relaxed );
         pMem->_bScheduled.store( false, std::memory_order_relaxed );
         pMem->_bCancelled.store( false, std::memory_order_relaxed );
+        pMem->_bParallelGroupParent.store( false, std::memory_order_relaxed );
         pMem->_refCount.store( 1, std::memory_order_relaxed );
         pMem->_pParent = nullptr;
 #if !defined( SW_SHIPPING )
