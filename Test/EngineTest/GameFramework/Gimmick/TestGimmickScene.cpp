@@ -119,12 +119,12 @@ SW_TEST_CASE( GimmickSceneTest, MoverFollowsSplineAndStateSurvivesSaveLoad )
     SW_EXPECT_NEAR_EQUAL( 10.0f, pPlatform->getPrimarySceneComponent()->getWorldPosition()._x, 0.1f );
 
     const uint64 savedHash = pCircuit->getCircuit().computeStateHash();
-    const string xml       = ObjectStateSerializer::saveToXMLString( pPlatform, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
+    const string xml       = ObjectStateSerializer::saveToXMLString( pPlatform, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } );
     SW_ASSERT_FALSE( xml.empty() );
 
     GameObjectManager restoredManager;
     GameObject*       pRestored = restoredManager.createGameObject( hashed_string( "Platform" ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pRestored, xml, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pRestored, xml, sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } ) );
     GimmickCircuitComponent* pRestoredCircuit = pRestored->getComponent<GimmickCircuitComponent>();
     SW_ASSERT_NOT_NULL( pRestoredCircuit );
     SW_EXPECT_EQUAL( savedHash, pRestoredCircuit->getCircuit().computeStateHash() );
@@ -190,7 +190,8 @@ SW_TEST_CASE( GimmickSceneTest, ChangedNodeKindStopsCircuitWithError )
     SW_ASSERT_TRUE( pCircuit->rebuild() );
     pCircuit->stepOnce(); // 상태가 저장된다
     SW_ASSERT_FALSE( pCircuit->getState().isEmpty() );
-    string       xml      = ObjectStateSerializer::saveToXMLString( pLogic, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
+    // 실행 상태(회로 상태)는 저작 저장에 없다 — 스냅샷(레벨 세이브 · 핫 리로드와 같은 목적)으로 쓴다.
+    string       xml      = ObjectStateSerializer::saveToXMLString( pLogic, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } );
     const size_t kindText = xml.find( "Toggle" );
     SW_ASSERT_TRUE( kindText != string::npos );
     xml.replace( kindText, 6, "Pulse" ); // 디자이너가 같은 id 의 종류를 바꿨다 — 입력 이름과 정수 슬롯 수는 같다
@@ -198,7 +199,7 @@ SW_TEST_CASE( GimmickSceneTest, ChangedNodeKindStopsCircuitWithError )
     GameObject* pLoaded = manager.createGameObject( hashed_string( "Loaded" ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "gimmick saved state for a node whose kind changed" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, xml, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, xml, sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } ) );
     }
     const GimmickCircuitComponent* pLoadedCircuit = pLoaded->getComponent<GimmickCircuitComponent>();
     SW_ASSERT_NOT_NULL( pLoadedCircuit );

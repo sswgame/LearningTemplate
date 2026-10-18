@@ -60,9 +60,7 @@
 			                          _bActive="true"
 			                          _health="30"
 			                          _radius="4"
-			                          _damage="80"
-			                          _damageTaken="0"
-			                          _bExploded="false" />
+			                          _damage="80" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

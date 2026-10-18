@@ -62,8 +62,10 @@ namespace sw
 
         /// @brief 런타임 상세도입니다. 기본값은 Info 이고, 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘립니다.
         atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
-        /// @brief 줄 꼬리표의 틱 번호 + 1 입니다(0 = 정하지 않음 — 꼬리표 없음).
-        atomic<uint64> s_tickNumberPlusOne{ 0 };
+        /// @brief 줄 꼬리표의 시계입니다. 낮은 63 비트가 번호 + 1(0 = 정하지 않음 — 꼬리표 없음), 맨 위 비트가 종류(`LogClock::Frame` 이면 1)입니다.
+        atomic<uint64>   s_clockPacked{ 0 };
+        constexpr uint64 kClockFrameBit   = uint64( 1 ) << 63;
+        constexpr uint64 kClockNumberMask = kClockFrameBit - 1;
     } // namespace
 } // namespace sw
 
@@ -128,21 +130,25 @@ namespace sw
         return static_cast<LogLevel>( s_runtimeVerbosity.load( std::memory_order_relaxed ) );
     }
 
-    void Logger::setTickNumber( uint64 tickNumber )
+    void Logger::setClockNumber( LogClock clock, uint64 number )
     {
-        s_tickNumberPlusOne.store( tickNumber + 1, std::memory_order_relaxed );
+        // 번호는 63 비트에 담는다 — 2^63 틱 · 프레임은 오지 않는다.
+        const uint64 kindBit = ( clock == LogClock::Frame ) ? kClockFrameBit : 0;
+        s_clockPacked.store( kindBit | ( ( number + 1 ) & kClockNumberMask ), std::memory_order_relaxed );
     }
 
-    void Logger::clearTickNumber()
+    void Logger::clearClockNumber()
     {
-        s_tickNumberPlusOne.store( 0, std::memory_order_relaxed );
+        s_clockPacked.store( 0, std::memory_order_relaxed );
     }
 
-    bool Logger::getTickNumber( uint64& outTickNumber )
+    bool Logger::getClockNumber( LogClock& outClock, uint64& outNumber )
     {
-        const uint64 tickNumberPlusOne = s_tickNumberPlusOne.load( std::memory_order_relaxed );
-        outTickNumber                  = tickNumberPlusOne != 0 ? tickNumberPlusOne - 1 : 0;
-        return tickNumberPlusOne != 0;
+        const uint64 packed        = s_clockPacked.load( std::memory_order_relaxed );
+        const uint64 numberPlusOne = packed & kClockNumberMask;
+        outClock                   = ( numberPlusOne != 0 && ( packed & kClockFrameBit ) != 0 ) ? LogClock::Frame : LogClock::Tick;
+        outNumber                  = numberPlusOne != 0 ? numberPlusOne - 1 : 0;
+        return numberPlusOne != 0;
     }
 
     void Logger::setGlobalSink( ILogSink* pSink )

@@ -4,7 +4,7 @@
 |------|------|----------|
 | `models_raw/kaykit_space/*` · `textures_raw/kaykit_space.png` | KayKit "Space Base Bits 1.0" (<https://github.com/KayKit-Game-Assets/KayKit-Space-Base-Bits-1.0>, 커밋 `6dfbcac9927d06283752c4defd4882cfe0d29666`) — 지형 다섯(`terrain_low` · `terrain_tall` · `terrain_slope` · `terrain_slope_inner_corner` · `terrain_slope_outer_corner`) · 바위 넷(`rock_a` · `rock_b` · `rocks_a` · `rocks_b`), 큐브 절벽(`prefabs/cliff.prefab.xml`) 자리용 · 아틀라스 `spacebits_texture.png`. 경로 `addons/kaykit_space_base_bits/Assets/gltf/`. `Assets/LICENSE.txt` 원문 "License: (Creative Commons Zero, CC0)". 만든 이 Kay Lousberg | CC0 1.0 |
 | `models_raw/*.glb` | Kenney "Space Kit" (<https://kenney.nl/assets/space-kit>) — 우주선 다섯 · 격납고 셋 · 발전기 · 안테나 · 구조물 · 착륙장 · 포탑 둘 · 결정 · 분화구 | CC0 1.0 |
-| `sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_003` · `error_003` · `select_004` | CC0 1.0 |
+| `sounds/confirmation_003.ogg` · `sounds/error_003.ogg` · `sounds/select_004.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_003` · `error_003` · `select_004` | CC0 1.0 |
 | `sounds/impact_metal_heavy_000.ogg` | Kenney "Impact Sounds" (<https://kenney.nl/assets/impact-sounds>) — `impactMetal_heavy_000` | CC0 1.0 |
 
 - 원본은 `models_raw/` 에 두고, 엔진이 읽는 `models/*.mesh` 는 `App --import-models` 가 만든다(스탬프는 `models_raw/import.stamp`).

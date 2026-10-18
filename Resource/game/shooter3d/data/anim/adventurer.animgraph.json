@@ -709,5 +709,30 @@
         "value": 5.0
       }
     }
+  ],
+  "bone_masks": [
+    {
+      "name": "UpperBody",
+      "file": "game/shooter3d/data/anim/masks/upper_body.bonemask.json"
+    }
+  ],
+  "layers": [
+    {
+      "name": "Aim",
+      "clip": "1H_Ranged_Aiming",
+      "mask": "UpperBody",
+      "weight": 0.0,
+      "blend": "Override",
+      "loop": false,
+      "weight_param": "AimWeight"
+    },
+    {
+      "name": "Shoot",
+      "clip": "1H_Ranged_Shooting",
+      "mask": "UpperBody",
+      "weight": 0.0,
+      "blend": "Override",
+      "weight_param": "ShootWeight"
+    }
   ]
 }

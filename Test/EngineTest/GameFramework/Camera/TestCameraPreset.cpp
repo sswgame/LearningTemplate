@@ -19,7 +19,6 @@
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
-#include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 
@@ -179,15 +178,16 @@ SW_TEST_CASE( CameraPresetTest, PresetModesProduceKnownPoses )
     SW_EXPECT_NEAR_EQUAL( toFocus._z, orbitLooksAt._z, 1.0e-4f );
     SW_EXPECT_TRUE( orbitPose._bOrthographic == SW_FALSE );
 
-    CameraPresetDef topDown           = orbit;
-    topDown._view._mode               = CameraPresetMode::OrthoTopDown;
-    topDown._view._yaw                = 45.0f * MathUtil::kDegreeToRadian;
-    topDown._view._distance           = 250.0f;
-    const CameraPose      topDownPose = evaluatePreset( topDown, target );
-    const OrthoCameraView rigView     = OrthoCameraRigMath::computeView( target._focus, topDown._view._yaw, topDown._view._pitch, 250.0f );
-    SW_EXPECT_NEAR_EQUAL( rigView._position._x, topDownPose._position._x, 1.0e-2f );
-    SW_EXPECT_NEAR_EQUAL( rigView._position._y, topDownPose._position._y, 1.0e-2f );
-    SW_EXPECT_NEAR_EQUAL( rigView._position._z, topDownPose._position._z, 1.0e-2f );
+    CameraPresetDef topDown      = orbit;
+    topDown._view._mode          = CameraPresetMode::OrthoTopDown;
+    topDown._view._yaw           = 45.0f * MathUtil::kDegreeToRadian;
+    topDown._view._distance      = 250.0f;
+    const CameraPose topDownPose = evaluatePreset( topDown, target );
+    // 카메라는 초점의 반대쪽 위에 있다 — 요 45° · 피치 30° 로 보는 방향의 반대쪽으로 거리만큼(대상의 요는 보지 않는다).
+    const float32 horizontal = 250.0f * MathUtil::cos( topDown._view._pitch );
+    SW_EXPECT_NEAR_EQUAL( 1.0f - MathUtil::sin( topDown._view._yaw ) * horizontal, topDownPose._position._x, 1.0e-2f );
+    SW_EXPECT_NEAR_EQUAL( 250.0f * MathUtil::sin( topDown._view._pitch ), topDownPose._position._y, 1.0e-2f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f - MathUtil::cos( topDown._view._yaw ) * horizontal, topDownPose._position._z, 1.0e-2f );
     SW_EXPECT_TRUE( topDownPose._bOrthographic == SW_TRUE );
 
     CameraPresetDef follow;

@@ -48,9 +48,6 @@ namespace sw
 {
     ShooterAvatarComponent::ShooterAvatarComponent()
         : _player{}
-        , _aimLayerClip{ "1H_Ranged_Aiming" }
-        , _shootLayerClip{ "1H_Ranged_Shooting" }
-        , _upperBodyBone{ "spine" }
         , _walkThreshold{ 0.4f }
         , _runThreshold{ 3.0f }
         , _hitPause{ 0.45f }
@@ -68,9 +65,6 @@ namespace sw
         , _hitTimer{ 0.0f }
         , _bodyYaw{ 0.0f }
         , _lastHitReaction{ 0 }
-        , _aimLayer{ -1 }
-        , _shootLayer{ -1 }
-        , _bLayersReady{ SW_FALSE }
         , _bYawReady{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -108,26 +102,6 @@ namespace sw
         return LocomotionSpeedUtil::computePlayRate( moveSpeed, found->second, _minPlayRate, _maxPlayRate );
     }
 
-    void ShooterAvatarComponent::ensureLayers()
-    {
-        GameObject*                pOwner    = getOwner();
-        SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        if ( pAnimator == nullptr || _bLayersReady == SW_TRUE )
-            return;
-        _bLayersReady = SW_TRUE;
-        AnimationLayerDesc aim;
-        aim._clipName     = hashed_string( _aimLayerClip );
-        aim._maskRootBone = hashed_string( _upperBodyBone );
-        aim._weight       = 0.0f;
-        aim._bLoop        = SW_FALSE; // 겨누기 클립은 총을 올려 겨눈 자세로 끝난다 — 돌리면 끝 → 처음에서 팔이 튄다. 끝 자세를 쥔다
-        _aimLayer         = _aimLayerClip.empty() ? -1 : pAnimator->addLayer( aim );
-        AnimationLayerDesc shoot;
-        shoot._clipName     = hashed_string( _shootLayerClip );
-        shoot._maskRootBone = hashed_string( _upperBodyBone );
-        shoot._weight       = 0.0f;
-        _shootLayer         = _shootLayerClip.empty() ? -1 : pAnimator->addLayer( shoot );
-    }
-
     void ShooterAvatarComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
@@ -150,7 +124,6 @@ namespace sw
         pScene->setLocalRotation( float3{ 0.0f, _bodyYaw, 0.0f } );
         if ( pAnimator == nullptr )
             return;
-        ensureLayers();
 
         const bool bAlive = pPlayer->isAlive();
         if ( pPlayer->getHitReactionCount() != _lastHitReaction )
@@ -182,9 +155,8 @@ namespace sw
         const float32 shootTarget    = bUpperBodyFree && pPlayer->getTimeSinceShot() < 0.2f ? 1.0f : 0.0f;
         _aimWeight                   = MathUtil::moveToward( _aimWeight, aimTarget, _layerBlendRate * step );
         _shootWeight                 = MathUtil::moveToward( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
-        if ( _aimLayer >= 0 )
-            pAnimator->setLayerWeight( static_cast<uint32>( _aimLayer ), _aimWeight );
-        if ( _shootLayer >= 0 )
-            pAnimator->setLayerWeight( static_cast<uint32>( _shootLayer ), _shootWeight );
+        // 레이어(클립 · 상체 마스크)는 그래프 데이터("layers" · "bone_masks")가 갖는다 — 코드는 가중치 파라미터만 쓴다.
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimWeight ), _aimWeight );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight );
     }
 } // namespace sw

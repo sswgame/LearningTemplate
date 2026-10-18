@@ -477,9 +477,7 @@
 					                          _damage="80"
 					                          _fuseTime="1.5"
 					                          _fractureStrain="200"
-					                          _blastImpulse="400"
-					                          _damageTaken="0"
-					                          _bExploded="false" />
+					                          _blastImpulse="400" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -568,9 +566,7 @@
 					                          _damage="80"
 					                          _fuseTime="0"
 					                          _fractureStrain="200"
-					                          _blastImpulse="400"
-					                          _damageTaken="0"
-					                          _bExploded="false" />
+					                          _blastImpulse="400" />
 				</_listComponent>
 			</GameObject>
 		</entity>

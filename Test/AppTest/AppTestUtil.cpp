@@ -13,6 +13,8 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include "TestFramework/TestFramework.h"
+
 #include "sw/config/ConfigConstants.h"
 
 #include <chrono>
@@ -24,6 +26,37 @@ namespace test
     {
         struct AppTestUtilInternal
         {
+            /** @brief 시나리오가 건너뜀으로 끝났다(전경 창을 못 얻음 등 — `AutomationResult::Skipped`). */
+            static constexpr int32 kSkippedExitCode = 13;
+            /** @brief 시나리오는 통과했지만 출력에 허용하지 않은 Warning · Error 가 있다(`AutomationResult::Failed` 와 같은 값). */
+            static constexpr int32 kUnexpectedLogExitCode = 10;
+
+            /**
+             * @brief 명령줄 @p arguments 가 고른 백엔드(`-dx11` · `-dx12` · `-vk` · `-gl` 토큰)입니다. 스위치가 없으면(빌드 기본 · 배포본) false 다.
+             * @details 스위치 철자는 쿠킹 표의 명령줄 이름이다(`TestRunOptions::getBackendName`).
+             */
+            static bool findBackendSwitch( sw::string_view arguments, sw::RHIBackend& outBackend )
+            {
+                for ( const sw::RHIBackend backend : { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } )
+                {
+                    const sw::string switchText = sw::string( "-" ) + TestRunOptions::getBackendName( backend );
+                    size_t           position   = arguments.find( switchText.c_str() );
+                    while ( position != sw::string_view::npos )
+                    {
+                        const size_t end         = position + switchText.size();
+                        const bool   bTokenStart = position == 0 || arguments[position - 1] == ' ';
+                        const bool   bTokenEnd   = end == arguments.size() || arguments[end] == ' ';
+                        if ( bTokenStart && bTokenEnd )
+                        {
+                            outBackend = backend;
+                            return true;
+                        }
+                        position = arguments.find( switchText.c_str(), end );
+                    }
+                }
+                return false;
+            }
+
             /** @brief 플랫폼별 실행 파일 이름입니다. */
             static const utf8* getAppExecutableName()
             {
@@ -111,7 +144,7 @@ namespace test
         return listGame;
     }
 
-    int32 AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines, sw::string_view extraArguments )
+    AppRunOutcome AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines, sw::string_view extraArguments )
     {
         return runScenarioArgument( scenarioPath, AppTestUtilInternal::getScenarioStem( scenarioPath ), pBackendSwitch, outScenarioLines, extraArguments,
                                     kScenarioTimeoutSeconds );
@@ -155,8 +188,8 @@ namespace test
         return listRecord;
     }
 
-    int32 AppTestUtil::runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
-                                         sw::string& outScenarioLines, sw::string_view extraArguments )
+    AppRunOutcome AppTestUtil::runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
+                                                 sw::string& outScenarioLines, sw::string_view extraArguments )
     {
         sw::string argument;
         for ( const sw::string& scenarioPath : listScenarioPath )
@@ -169,8 +202,8 @@ namespace test
         return runScenarioArgument( argument, "chain_" + chainName, pBackendSwitch, outScenarioLines, extraArguments, timeoutSeconds );
     }
 
-    int32 AppTestUtil::runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch, sw::string& outScenarioLines,
-                                            sw::string_view extraArguments, uint32 timeoutSeconds )
+    AppRunOutcome AppTestUtil::runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch,
+                                                    sw::string& outScenarioLines, sw::string_view extraArguments, uint32 timeoutSeconds )
     {
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
         const sw::string outputBase = "Saved/Automation/" + outputStem + "_" + backend;
@@ -183,8 +216,8 @@ namespace test
         }
 
         // 실패 줄은 여러 줄이다(`[Scenario] FAIL …` 다음에 들여 쓴 실패 이유가 이어진다) — 들여 쓴 줄도 함께 모은다.
-        bool                         bInScenarioBlock = false;
-        const test::ProcessRunResult result           = runApp( arguments, timeoutSeconds, [&outScenarioLines, &bInScenarioBlock]( sw::Process&, const sw::string& line )
+        bool                   bInScenarioBlock = false;
+        test::ProcessRunResult result           = runApp( arguments, timeoutSeconds, [&outScenarioLines, &bInScenarioBlock]( sw::Process&, const sw::string& line )
                   {
             const bool bScenarioLine = line.find( "[Scenario]" ) != sw::string::npos;
             const bool bContinuation = bInScenarioBlock && sw::StringUtil::startsWith( line, "    " );
@@ -192,19 +225,53 @@ namespace test
                 outScenarioLines += line + "\n";
             bInScenarioBlock = bScenarioLine || bContinuation;
         } );
-        if ( result._bLaunched == false )
-            return kNotLaunchedExitCode;
-        (void)sw::FileUtil::writeTextFile( outputBase + ".log", result._output ); // 진단용 로그 사본 — 실패는 writeTextFile 이 오류로 남긴다
-        if ( result._bTimedOut )
-            return -1;
-        if ( result._exitCode != 0 )
-            return result._exitCode;
-        const sw::vector<sw::string> listUnexpected = collectUnexpectedLogLines( result._output, scenarioArgument );
-        for ( const sw::string& line : listUnexpected )
+        if ( result._bLaunched )
+            (void)sw::FileUtil::writeTextFile( outputBase + ".log", result._output ); // 진단용 로그 사본 — 실패는 writeTextFile 이 오류로 남긴다
+        const bool bExitedCleanly = result._bLaunched && result._bTimedOut == false && result._exitCode == 0;
+        if ( bExitedCleanly )
         {
-            outScenarioLines += "unexpected log (outside the scenario window): " + line + "\n";
+            const sw::vector<sw::string> listUnexpected = collectUnexpectedLogLines( result._output, scenarioArgument );
+            for ( const sw::string& line : listUnexpected )
+            {
+                outScenarioLines += "unexpected log (outside the scenario window): " + line + "\n";
+            }
+            if ( listUnexpected.empty() == false )
+                result._exitCode = AppTestUtilInternal::kUnexpectedLogExitCode;
         }
-        return listUnexpected.empty() ? 0 : kUnexpectedLogExitCode;
+        return judgeRun( result, arguments, "log: " + outputBase + ".log\n" + outScenarioLines );
+    }
+
+    AppRunOutcome AppTestUtil::judgeRun( const ProcessRunResult& run, sw::string_view arguments, const sw::string& detail )
+    {
+        sw::string label = "App " + sw::string( arguments );
+        if ( run._bLaunched == false )
+        {
+            reportFailure( "App is launched", __FILE__, __LINE__, label + " -> not launched (is App in the working folder Bin or next to the test binary?)" );
+            return AppRunOutcome::Failed;
+        }
+        label += run._bTimedOut ? sw::string( " -> timed out and killed" ) : " -> exit " + sw::to_string( run._exitCode );
+        label += "\n" + detail;
+        if ( run._bTimedOut == false && run._exitCode == 0 )
+            return AppRunOutcome::Passed;
+        if ( run._bTimedOut == false && run._exitCode == AppTestUtilInternal::kSkippedExitCode )
+        {
+            SW_LOG_INFO( "[AppTestUtil] skipped by the scenario: %#", label.c_str() );
+            return AppRunOutcome::Skipped;
+        }
+        if ( run._bTimedOut == false && run._exitCode == sw::kRHIUnusableHereExitCode )
+        {
+            // 스위치가 없는 실행(빌드 기본 · 배포본)은 백엔드를 고르지 않았으므로 요구 여부를 따질 대상이 없다.
+            sw::RHIBackend backend{};
+            const bool     bRequired = AppTestUtilInternal::findBackendSwitch( arguments, backend ) &&
+                                   reportUnusableBackend( backend, ( "App exited with the RHI-unusable-here code: " + label ).c_str(), __FILE__, __LINE__ );
+            if ( bRequired )
+                return AppRunOutcome::Failed;
+            // 어느 백엔드가 빠졌는지 남긴다. Warning 이 아니라 Info 다 — 케이스의 로그 판정기가 Warning 을 실패로 센다. 그 백엔드를 지켜야 하면 요구 백엔드로 적는다.
+            SW_LOG_INFO( "[AppTestUtil] backend not usable on this machine, skipping: %#", label.c_str() );
+            return AppRunOutcome::BackendUnusable;
+        }
+        reportFailure( "App run passes", __FILE__, __LINE__, label );
+        return AppRunOutcome::Failed;
     }
 
     sw::vector<sw::string> AppTestUtil::collectUnexpectedLogLines( const sw::string& output, const sw::string& scenarioArgument )
@@ -243,10 +310,5 @@ namespace test
                 listLine.push_back( sw::string( line ) );
         } );
         return listLine;
-    }
-
-    bool AppTestUtil::isSkippedExitCode( int32 exitCode )
-    {
-        return exitCode == kSkippedExitCode || exitCode == sw::kRHIUnusableHereExitCode || exitCode == kNotLaunchedExitCode;
     }
 } // namespace test

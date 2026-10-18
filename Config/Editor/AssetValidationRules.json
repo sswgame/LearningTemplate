@@ -233,7 +233,7 @@
       "description": "A query for an action the InputMap does not have returns false forever - the control silently does nothing.",
       "severity": "error",
       "include_patterns": ["*.scene.xml", "*.prefab.xml"],
-      "component_types": ["PawnComponent", "PlayerControllerComponent", "CameraDirectorComponent", "CameraManagerComponent", "OrthoCameraRigComponent"],
+      "component_types": ["PawnComponent", "PlayerControllerComponent", "CameraDirectorComponent", "CameraManagerComponent"],
       "attributes": ["_moveAction", "_lookAction", "_upAction", "_mouseLockAction", "_cycleAction", "_panAction", "_rotateAction", "_lookHoldAction",
                      "_zoomAction"],
       "target_patterns": ["engine/input/*.input.xml", "{pack}/*.input.xml"],

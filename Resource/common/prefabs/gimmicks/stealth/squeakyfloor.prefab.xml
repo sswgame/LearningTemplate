@@ -27,11 +27,7 @@
 			                       _bActive="true"
 			                       _radius="8"
 			                       _interval="0"
-			                       _bOnStep="true"
-			                       _noiseRadius="0"
-			                       _steps="0"
-			                       _lastOccupantCount="0"
-			                       _emitCount="0" />
+			                       _bOnStep="true" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

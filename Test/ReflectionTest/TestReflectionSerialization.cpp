@@ -1223,9 +1223,6 @@ SW_TEST_CASE( ReflectionSerializationTest, RemovedEnumeratorReadsItsDeclaredRepl
  */
 SW_TEST_CASE( ReflectionSerializationTest, RenamedEnumTypeReadsThroughItsOldName )
 {
-#if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "unregisterTypesByModule is not compiled into Shipping" );
-#else
     sw::TypeRegistry& registry   = sw::engine::getSubsystem<sw::TypeRegistry>();
     const auto        makeColors = []( const utf8* pFqn, const utf8* pModule )
     {
@@ -1283,7 +1280,6 @@ SW_TEST_CASE( ReflectionSerializationTest, RenamedEnumTypeReadsThroughItsOldName
     SW_EXPECT_TRUE( declared._color == WireShiftColor::Green );
     SW_EXPECT_EQUAL( 9, declared._after );
     registry.unregisterTypesByModule( "TestRenamedEnumNew" );
-#endif
 }
 
 /**
@@ -1416,9 +1412,6 @@ SW_TEST_CASE( ReflectionSerializationTest, EnumFieldWithANewTypeReadsTheEnumerat
  */
 SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANumber )
 {
-#if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "unregisterTypesByModule is not compiled into Shipping" );
-#else
     sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     sw::EnumInfo      goneEnum;
     goneEnum._name               = sw::hashed_string( "GoneColor" );
@@ -1488,7 +1481,6 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
     migrateContext._pOrphans  = &listColorOrphan;
     SW_EXPECT_FALSE( migrateContext.applyOrphanTo( sw::hashed_string( "_color" ) ) );
     SW_EXPECT_TRUE_MSG( migrated._colorNumber == -1, "지운 enum 의 열거자 이름 해시가 이관으로 수 칸에 들어갔습니다" );
-#endif
 }
 
 /**
@@ -2444,9 +2436,6 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
  */
 SW_TEST_CASE( ReflectionSerializationTest, SchemaMigrationIsFoundByTypeAndWrittenVersion )
 {
-#if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "unregisterTypesByModule is not compiled into Shipping" );
-#else
     SW_TEST_DEFENSIVE_SCOPE( "Testing versioned reads that must stop without a registered migration" );
     static constexpr const utf8* kModuleName = "SchemaMigrationRegistryTest";
     struct ChildActor
@@ -2556,7 +2545,6 @@ SW_TEST_CASE( ReflectionSerializationTest, SchemaMigrationIsFoundByTypeAndWritte
     SW_ASSERT_TRUE( sw::BinarySerializer::deserializeVersioned( ver, &narrowed, *pParent, bin.data(), bin.size(), 1u, nullptr, lenient ) );
     SW_EXPECT_EQUAL( 5, narrowed._base );
     SW_EXPECT_EQUAL( 0, narrowed._own );
-#endif
 }
 
 /**

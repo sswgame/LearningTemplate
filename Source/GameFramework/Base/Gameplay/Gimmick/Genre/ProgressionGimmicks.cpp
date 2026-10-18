@@ -80,7 +80,7 @@ namespace sw
         , _count{ 1 }
         , _uses{ 3 }
         , _respawnDelay{ 30.0f }
-        , _usesLeft{ 3 }
+        , _usesTaken{ 0 }
         , _respawnStepsLeft{ 0 }
         , _clock{ GenreGimmickUtil::makeClock() }
     {
@@ -91,7 +91,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || isDepleted() )
             return false;
-        --_usesLeft;
+        ++_usesTaken;
         GimmickItemEvent event;
         event._target = who.getHandle();
         event._source = pOwner->getHandle();
@@ -137,7 +137,7 @@ namespace sw
         --_respawnStepsLeft;
         if ( _respawnStepsLeft > 0 )
             return;
-        _usesLeft = _uses;
+        _usesTaken = 0;
         GenreGimmickUtil::setBodyActive( *pOwner, true, this );
         GenreGimmickUtil::setInteractableEnabled( *pOwner, true );
     }

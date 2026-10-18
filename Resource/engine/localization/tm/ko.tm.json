@@ -210,6 +210,10 @@
             "text": "비어 있음 - 모디파이어를 더해 묶습니다."
         },
         {
+            "source": "Export as World Warp",
+            "text": "월드 워프로 내보내기"
+        },
+        {
             "source": "Farthest distance the camera draws. Geometry beyond this is clipped.",
             "text": "카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다."
         },
@@ -728,6 +732,10 @@
         {
             "source": "Voice Volume",
             "text": "음성 음량"
+        },
+        {
+            "source": "Warp File (.mfwarp)",
+            "text": "워프 파일(.mfwarp)"
         },
         {
             "source": "What will {name} do?",

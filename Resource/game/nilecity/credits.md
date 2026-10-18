@@ -3,7 +3,7 @@
 | 폴더 | 원본 | 라이선스 |
 |------|------|----------|
 | `models_raw/statue_*.glb` · `models_raw/crops_*.glb` | Kenney "Nature Kit" 2.1 (<https://kenney.nl/assets/nature-kit>) — 조각상 넷(`statue_obelisk` · `statue_head` · `statue_column` · `statue_block`) · 밭(`crops_dirt_row` · `crops_wheat_stage_a` · `crops_wheat_stage_b`). 색 상자(`prefabs/blockbuilding.prefab.xml`)로 그리는 밭 · 조각상 자리용. 묶음 <https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip> (SHA-256 `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d`), `License.txt` 원문 "License: (Creative Commons Zero, CC0)" | CC0 1.0 |
-| `models_raw/*.glb` · `textures_raw/suburban_colormap.png` | Kenney "City Kit (Suburban)" (<https://kenney.nl/assets/city-kit-suburban>) — 집 여덟 종 · 낮은 울타리 · 보도 · 화분 · 나무 | CC0 1.0 |
+| `models_raw/building_type_*.glb` · `models_raw/fence_low.glb` · `models_raw/path_short.glb` · `models_raw/planter.glb` · `models_raw/tree_large.glb` · `textures_raw/suburban_colormap.png` | Kenney "City Kit (Suburban)" (<https://kenney.nl/assets/city-kit-suburban>) — 집 여덟 종 · 낮은 울타리 · 보도 · 화분 · 나무 | CC0 1.0 |
 | `sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_002` · `drop_003` · `error_002` · `select_003` | CC0 1.0 |
 
 - 원본은 `models_raw/` · `textures_raw/` 에 그대로 두고, 엔진이 읽는 `models/*.mesh` · `textures/*.dds` 는 `App --import-models` ·

@@ -131,9 +131,17 @@ def parseDeclaration(repositoryRoot: Path, name: str, relativePath: str, mapGame
             raise ValueError(f"{relativePath}: no Config/Game preset has _packRoot game/{parts[2]}")
         declaration.gameName = mapGameByPack[parts[2]] if bGamePack else "Empty"
     elif root.tag == "LoadScenario":
-        declaration = LoadDeclaration(name, root.get("driver", ""), path, botScenario=root.get("botScenario", ""), testFilter=root.get("test", ""))
-        if declaration.driver not in ("loadbot", "cluster"):
-            raise ValueError(f"{relativePath}: driver must be loadbot or cluster, got '{declaration.driver}'")
+        driver = root.get("driver")
+        if driver not in ("loadbot", "cluster"):
+            raise ValueError(f"{relativePath}: driver must be loadbot or cluster, got '{driver}'")
+        # 드라이버마다 필수 속성이 다르다 — loadbot 은 botScenario, cluster 는 test.
+        requiredAttribute = "botScenario" if driver == "loadbot" else "test"
+        if root.get(requiredAttribute) is None:
+            raise ValueError(f"{relativePath}: driver=\"{driver}\" needs the {requiredAttribute} attribute")
+        if driver == "loadbot":
+            declaration = LoadDeclaration(name, driver, path, botScenario=root.attrib["botScenario"])
+        else:
+            declaration = LoadDeclaration(name, driver, path, testFilter=root.attrib["test"])
     else:
         raise ValueError(f"{relativePath}: root must be <Scenario> or <LoadScenario>")
     listLoad = root.findall("Load")
@@ -401,7 +409,8 @@ def classifyBottleneck(metricName: str, summary: dict[str, dict[str, float]]) ->
     """예산을 깬 지표 하나가 어느 자원의 문제인지 가릅니다 — 같은 판의 하위 구간 비율로 본다(GT 가 RT 를, RT 가 GPU 를 기다리는지)."""
 
     def medianInternal(name: str) -> float:
-        return summary.get(name, {}).get("median", 0.0)
+        # 이 판이 재지 않은 구간(서버 판의 GT · RT 등)은 0 — 아래 비교는 "0 보다 크면" 만 본다.
+        return summary[name]["median"] if name in summary else 0.0
 
     stat = metricName.rsplit(".", 1)[-1] if "." in metricName else "p99_us"
     if metricName.startswith("GPU.") or metricName == "gpu_memory_mb":

@@ -45,13 +45,13 @@ namespace sw
         float32 _moveTime;
         PROPERTY( Category = "Push", DisplayName = "Planar 2D", Tooltip = "Push along X/Y instead of X/Z" )
         bool _bPlanar2D;
-        PROPERTY( Category = "Push", DisplayName = "From", Tooltip = "Runtime: cell the move started from", Units = m )
+        PROPERTY( RuntimeState, Category = "Push", DisplayName = "From", Tooltip = "Runtime: cell the move started from", Units = m )
         float3 _from;
-        PROPERTY( Category = "Push", DisplayName = "To", Tooltip = "Runtime: cell the move ends at", Units = m )
+        PROPERTY( RuntimeState, Category = "Push", DisplayName = "To", Tooltip = "Runtime: cell the move ends at", Units = m )
         float3 _to;
-        PROPERTY( Category = "Push", DisplayName = "Steps Left", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Push", DisplayName = "Steps Left", Tooltip = "Runtime" )
         int32 _stepsLeft;
-        PROPERTY( Category = "Push", DisplayName = "Move Steps", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Push", DisplayName = "Move Steps", Tooltip = "Runtime" )
         int32 _moveSteps;
 
         FixedStepTimer _clock;

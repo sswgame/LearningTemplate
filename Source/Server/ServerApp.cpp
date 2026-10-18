@@ -219,7 +219,7 @@ namespace sw
 #endif
         _bReady = SW_TRUE;
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
-        Logger::setTickNumber( _tickCount );
+        Logger::setClockNumber( LogClock::Tick, _tickCount );
         SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
                      _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         return true;
@@ -456,7 +456,7 @@ namespace sw
             _statusTickMaxNanoseconds = tickTime > _statusTickMaxNanoseconds ? tickTime : _statusTickMaxNanoseconds;
             ++_statusTickSampleCount;
             ++_tickCount;
-            Logger::setTickNumber( _tickCount );
+            Logger::setClockNumber( LogClock::Tick, _tickCount );
 #if !defined( SW_SHIPPING )
             if ( StateHashHistory::get().isRecording() && engine::areEngineServicesBound() )
             {
@@ -696,7 +696,7 @@ namespace sw
         // 엔진 범위가 사라졌다 — 이제 호스트 범위를 내린다(모듈 이미지 창구 소멸).
         _host.destroyAll();
         _pModuleImageHost = nullptr;
-        Logger::clearTickNumber();
+        Logger::clearClockNumber();
         if ( _bSignalHandlerInstalled == SW_TRUE )
             ShutdownSignal::uninstall();
         // Windows 창 닫기와 시스템 종료 처리기가 이것을 기다린다.

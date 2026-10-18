@@ -10,6 +10,8 @@
 |---|---|---|---|
 | `-W` | 숫자 값(`-이름=값`) | 창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다 | `WIDTH` |
 | `-H` | 숫자 값(`-이름=값`) | 창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다 | `HEIGHT` |
+| `-WinX` | 숫자 값(`-이름=값`) | 창 틀 왼쪽 위의 화면 좌표(픽셀) — 둘을 함께 준다(하나만 주면 창을 만들지 않고 멈춘다). 없으면 플랫폼이 놓는다. 에디터 멀티 프로세스 재생이 클라이언트 창을 나란히 놓는다 | `WINDOW_X` |
+| `-WinY` | 숫자 값(`-이름=값`) | 창 틀 왼쪽 위의 화면 좌표(픽셀) — 둘을 함께 준다(하나만 주면 창을 만들지 않고 멈춘다). 없으면 플랫폼이 놓는다. 에디터 멀티 프로세스 재생이 클라이언트 창을 나란히 놓는다 | `WINDOW_Y` |
 | `-vsync` | 플래그(`-이름`) | 수직 동기화를 켠다 — EngineConfig · 플레이어 값보다 이긴다 | `VSYNC` |
 | `-dx11` | 플래그(`-이름`) | DirectX11 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`) | `DIRECTX_11` |
 | `-dx12` | 플래그(`-이름`) | DirectX12 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`) | `DIRECTX_12` |

@@ -80,7 +80,7 @@ namespace
             if ( pTerrain == nullptr )
                 return nullptr;
             pTerrain->setHeightfieldPath( heightfieldPath );
-            pTerrain->setSplatTexturePath( weightsPath );
+            pTerrain->setLayerWeightsPath( weightsPath );
             pTerrain->setSize( float2{ 32.0f, 32.0f } );
             pTerrain->setHeightRange( kHeightMin, kHeightMax );
             pTerrain->setChunkCells( 16 );
@@ -825,9 +825,9 @@ SW_TEST_CASE( TerrainTest, DedicatedServerAnswersLayerQueries )
     SW_TEST_DEFENSIVE_SCOPE( "layer weights the server cannot read stop the terrain instead of answering layer 0" );
     const string ddsPath = test::makeTempPath( "server_splat.dds" );
     SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( ddsPath, TerrainTestUtil::makeUniformWeights( 8, 2 )._bytes, 8, 8 ) );
-    pTerrain->setSplatTexturePath( ddsPath );
+    pTerrain->setLayerWeightsPath( ddsPath );
     SW_EXPECT_FALSE( pTerrain->reloadTerrain() );
     SW_EXPECT_FALSE( pTerrain->getHeightfield().isValid() );
-    pTerrain->setSplatTexturePath( test::makeTempPath( "missing.layerweights" ) );
+    pTerrain->setLayerWeightsPath( test::makeTempPath( "missing.layerweights" ) );
     SW_EXPECT_FALSE( pTerrain->reloadTerrain() );
 }

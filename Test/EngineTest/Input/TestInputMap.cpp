@@ -1718,3 +1718,60 @@ SW_TEST_CASE( InputMapTest, VirtualCursorMapRejectsBindingsTheCursorTurnsIntoThe
     SW_ASSERT_TRUE( offMap.loadFromResource( offPath ) );
     SW_EXPECT_TRUE( offMap.getVirtualCursorStick() == sw::InputMapVirtualCursor::Off );
 }
+
+/**
+ * @brief [InputMapTest] 사용자 바인딩 읽기(`loadUserBindings`)와 리바인딩(`rebindSlot`)도 맵 읽기와 같은 검사로 가상 커서의 패드 A · B · 그 스틱을 다시 묶지 않는다
+ * @details 커서가 쓰지 않는 버튼(X)은 들어가고, 커서 버튼(A) · 커서 스틱(왼쪽)을 묶은 바인딩은 넣지 않으며 읽기는 실패를 알린다. 리바인딩은 바꾸지 않고 false 다.
+ */
+SW_TEST_CASE( InputMapTest, UserBindingsAndRebindRejectTheVirtualCursorInputs )
+{
+    const sw::string mapPath = test::makeTempPath( "cursor_user_map.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( mapPath, "<InputMap virtualCursor=\"LeftStick\"><action name=\"Confirm\"><bind source=\"key\" code=\"K\"/></action></InputMap>" ) );
+    sw::InputMap inputMap;
+    SW_ASSERT_TRUE( inputMap.loadFromResource( mapPath ) );
+    SW_ASSERT_EQUAL( 1u, inputMap.getBindingCount( "Confirm" ) );
+
+    const sw::string singleKind = sw::BindingKinds::toName( sw::BindingKind::SingleSlot );
+    const sw::string stickKind  = sw::BindingKinds::toName( sw::BindingKind::GamepadStick2D );
+    sw::string       xml        = "<UserBindings>";
+    xml += "<bind action=\"Confirm\" kind=\"" + singleKind + "\" source=\"gamepad\" code=\"X\" pad=\"0\"/>";
+    xml += "<bind action=\"Confirm\" kind=\"" + singleKind + "\" source=\"gamepad\" code=\"A\" pad=\"0\"/>";
+    xml += "<bind action=\"Pan\" kind=\"" + stickKind + "\" stick=\"Left\" pad=\"0\"/>";
+    xml += "</UserBindings>";
+    const sw::string userPath = test::makeTempPath( "cursor_user_bindings.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( userPath, xml ) );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "user bindings and rebinds onto the virtual cursor inputs" );
+        SW_EXPECT_FALSE( inputMap.loadUserBindings( userPath ) );
+        SW_EXPECT_FALSE( inputMap.rebindSlot( "Confirm", sw::InputSlot::fromGamepadButton( sw::GamepadButton::B ), 0 ) );
+    }
+    SW_ASSERT_EQUAL( 2u, inputMap.getBindingCount( "Confirm" ) );                                               // 맵의 K + 사용자의 X
+    SW_EXPECT_TRUE( inputMap.getBinding( "Confirm", 0 )->_arrSlot[0] == sw::InputSlot::fromKey( sw::Key::K ) ); // 거절한 리바인딩은 바꾸지 않았다
+    SW_EXPECT_TRUE( inputMap.getBinding( "Confirm", 1 )->_arrSlot[0] == sw::InputSlot::fromGamepadButton( sw::GamepadButton::X ) );
+    SW_EXPECT_EQUAL( 0u, inputMap.getBindingCount( "Pan" ) );
+
+    // 커서가 쓰지 않는 버튼으로는 그대로 다시 묶인다.
+    SW_EXPECT_TRUE( inputMap.rebindSlot( "Confirm", sw::InputSlot::fromGamepadButton( sw::GamepadButton::Y ), 0 ) );
+}
+
+/**
+ * @brief [InputMapTest] 명령형 게임(Nile · StarSkirmish)의 패드 — 가상 커서는 왼쪽 스틱, 오른쪽 스틱은 카메라 이동(`Camera.Pan`)이다(결정 D4-3.3)
+ */
+SW_TEST_CASE( InputMapTest, CommandGamesPutTheCursorOnTheLeftStickAndTheCameraOnTheRight )
+{
+    for ( const sw::string_view resourceID : { "game/nilecity/data/nile.input.xml", "game/starskirmish/data/skirmish.input.xml" } )
+    {
+        sw::InputMap inputMap;
+        SW_ASSERT_TRUE( inputMap.loadFromResource( resourceID ) );
+        SW_EXPECT_TRUE( inputMap.getVirtualCursorStick() == sw::InputMapVirtualCursor::LeftStick );
+        bool bPanOnRightStick = false;
+        for ( uint32 bindIndex = 0; bindIndex < inputMap.getBindingCount( "Camera.Pan" ); ++bindIndex )
+        {
+            const sw::ActionBinding* pBinding = inputMap.getBinding( "Camera.Pan", bindIndex );
+            bPanOnRightStick                  = bPanOnRightStick || ( pBinding->_kind == sw::BindingKind::GamepadStick2D && pBinding->_stick == sw::GamepadStick::Right );
+        }
+        SW_EXPECT_TRUE( bPanOnRightStick );
+    }
+}

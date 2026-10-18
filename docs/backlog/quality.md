@@ -41,11 +41,8 @@
 
 - `C-48` [정리] **소스 게이트 공유 훑기(`SourceScan`)로 못 옮긴 게이트와 픽서.** 파일마다 보는 소스 게이트 28 개는 `SourceScan` · `RunSourceGates`(CTest · CI 의 `CheckSourceFiles`)로 옮겼다(2026-10-17 `lintspeed`).
   못 옮긴 것: `NamespaceBlocks` · `IncludeOrder`(줄 끝 · utf-8-sig 를 따로 다루고 픽서와 판정이 나뉨), `ThirdPartyIsolation` · `SuppressionReasons`(C++ 와 CMake 두 파일 집합), `KitNamespaces`.
-  픽서(`FormatBranchBraces` 등)도 파일마다 따로 읽고 주석을 가리는 같은 틀이다. `ConditionParts` · `EditorStyleLiterals` · `DataDrivenLiterals` 는 추가 줄 · 기준선 로직을 저마다 중복해 든다 —
-  공유 드라이버가 판정 단위(줄 끝 · 인코딩 · 파일 집합)와 추가 줄 · 기준선을 형식으로 갖게 한다.
-
-- `C-15` [정리] **`dev/MoveEditorState.py`**(옛 위치의 에디터 로컬 상태를 옮기는 PC 마다 한 번짜리 이동기, 2026-10-13 들임)는 모든 PC 가 돌렸으면 지운다 — 추적되지 않는 파일을 옮기므로 돌렸는지 저장소에서는 알 수 없다.
-  이 PC 는 `--dry-run` 에 옮길 것이 없다(2026-10-16). 다른 PC 는 사용자가 확인한 뒤에 지운다.
+  픽서(`FormatBranchBraces` 등)도 파일마다 따로 읽고 주석을 가리는 같은 틀이다 — 공유 드라이버가 판정 단위(줄 끝 · 인코딩 · 파일 집합)를 형식으로 갖게 한다.
+  (추가 줄 · 기준선은 `LintGate.BaselineSourceGate` · `SourceScan.LineScope` 로 옮겼다, 2026-10-18.)
 
 - `C-28` [정리] **테스트 틀 개편(2026-10-15)의 남은 것.** 틀 · 정책 · 확장 지점은 들어갔다(`Test/README.md`, 결정 기록 5-2 끝). 남은 것 —
   ① 벤치 스위트는 부하 스위트로 옮겼다(2026-10-15). 옮긴 뒤의 `CoreTest` · `EngineTest` `seconds` 와 `loadSeconds` 는 뺄셈 어림이라 다음 정책 재측정 때 실제 값으로 맞춘다.
@@ -73,24 +70,19 @@
 
 - `C-41` [정리] **Linux · GPU 검증 구조.** 새 기능의 Linux 결함이 늦게 드러난다(2026-10-17: Linux 잡이 며칠 configure 에서 죽어 있었고 소프트 바디는 처음 돌자마자 발산). CI 에 GPU 가 없어 hostgpu 테스트는 로컬뿐이다. 순서는 결정 기록 5-12 `C-41` 행이다(GPU 러너 · 자체 호스트 러너는 하지 않는다).
   끝난 것: ① 세션 시작에 main CI 실패를 알린다(`ci-jobs --summary`, 세션 가드). ② 셰이더 전 백엔드 확인(`CheckShaderStamps` 게이트 — 쿠킹 표의 네 백엔드 폴더마다 `cook.stamp` 가 지금 소스와 같은지, 빌드 없이 린트 잡에서).
-  ③ 요구 백엔드(`Test/TestPolicy.json` 의 `requiredBackends` → hostgpu 항목의 `--required_backends=`)가 서지 못하면 건너뛰지 않고 진다(`RHITestDevice` · AppSmoke 의 `runApp`).
+  ③ 요구 백엔드(`Test/TestPolicy.json` 의 `requiredBackends` → hostgpu 항목의 `--required_backends=`)가 서지 못하면 건너뛰지 않고 진다(`RHITestDevice`, 앱을 띄우는 러너는 모두 `AppTestUtil::runAppOnBackend` · `runScenario` — 종료 코드 해석은 그 안에만 있다).
   ④ 소프트웨어 렌더러 묶음(라벨 `swrender`, `<타깃>_SoftwareRender` — 정책 `softwareRenderCases` · `softwareRequiredBackends`, CI-Debug 잡이 WARP · lavapipe+xvfb 로 돈다).
-  남은 것: 설계 완료, 단위는 [Linux 와 GPU 검증 계획](../plans/GpuVerification.md) 3절(V1 앱 러너 건너뜀을 한 함수로, V2 CI 보고 전용 해제)이다.
+  남은 것: 설계 완료, 단위는 [Linux 와 GPU 검증 계획](../plans/GpuVerification.md) 3절(V2 CI 보고 전용 해제)이다.
 
 - `C-42` [정리] **증분 쿠킹 · 파생 데이터 캐시(DDC).** 리소스를 100MB 이상 들이는 중이라 에셋이 늘면 쿠킹 시간이 병목이 된다. 설계 완료, 단위는 [증분 쿠킹 계획](../plans/IncrementalCook.md) 4절(K0 측정부터)이다.
   공유 DDC 위치(K6)는 사용자 결정이 필요하다(같은 문서 5절).
 
-- `C-44` [정리] **credits 표와 임포트 규칙이 "넓은 와일드카드 + 첫 매칭"이다.** 새 팩 파일이 다른 팩의 출처로 붙거나 다른 팩의 배치 오프셋(`ModelImportConfig.json`)이 적용돼도 경고가 없다(2026-10-17 `res3` 도입에서 확인; 이번엔 새 줄을 표 앞에 두어 피했다). 팩마다 하위 폴더를 하나씩 두고 패턴이 하위 폴더를 넘지 못하게 하거나, 파일 하나에 규칙이 둘 이상 맞으면 오류로 낸다. `CheckResourceCredits` 가 출처 목록(해시) 형식(`audio.sources.json` 의 모양)을 모든 리소스 도메인에서 읽게 넓히는 일을 포함한다.
-  출처 목록의 해시가 맞으려면 산출물이 결정적이어야 하므로, 인코더가 만드는 다른 산출물(텍스처 DDS 변환 등)의 비결정 바이트도 점검한다.
-  이미지 출처 목록(TOML, `textures_raw/cc0_sources.toml`)과 오디오 출처 목록(JSON)의 형식이 갈렸다 — 도구 데이터를 `Resource/` 에 둘 형식 · 위치를 한 번에 정한다. 이미지 쪽 스크립트(`Scripts/dev/MakeCc0Import.py`)는 파이썬 3.11 이상(`tomllib`)이 필요하다.
-- `C-46` [정리] **게임 패키지에 다른 게임의 팩까지 모두 들어간다.** 확인한 사실(2026-10-18, 코드로 — 쿠킹한 팩은 이 PC 에 없어 크기는 원본으로 쟀다):
-  `cookAllPacks`(`Scripts/generate/CookAssets.py`)는 `engine.pack` · `common.pack` 과 함께 `Resource/game/` 아래 **모든** 폴더를 `game_<이름>.pack` 으로 한 출력 폴더에 굽는다 — `SW_ACTIVE_GAME` 을 보지 않는다.
-  `MakePackage --game <이름>` 은 그 `Bin/Packs` 폴더를 통째로 담는다. 그래서 `common`(원본 33.6MB, 그중 오디오 33.1MB)은 모든 패키지에 들어가지만, 런타임이 `game` → `common` → `engine` 순으로 늘 올리는 공용 도메인이라 이것은 설계대로다.
-  서버 패키지는 `--build-target Server` 가 오디오를 빼므로(`CookContract.json`) 공용 오디오가 들지 않는다.
-  판단: `common` 만 고르는 팩 선언은 지금 필요 없다. 더 큰 낭비는 다른 게임의 팩이다(원본 `empty` 73.5MB · `shooter3d` 39.1MB 가 모든 게임 패키지에 든다) — 쿠커가 패키지의 게임(`SW_ACTIVE_GAME`)의 `game_` 팩만 굽게 하는 것이 먼저다.
+- `C-44` [정리] **임포트 규칙(`ModelImportConfig.json`)이 아직 "넓은 와일드카드 + 첫 매칭"이다.** 새 팩 파일에 다른 팩의 배치 오프셋이 적용돼도 경고가 없다(2026-10-17 `res3` 도입에서 확인; 새 줄을 표 앞에 두어 피했다). credits 표는 2026-10-18 에 고쳤다 — `CheckResourceCredits` 의 패턴은 경로 마디 단위(`*` 는 폴더를 넘지 않고 `**` 만 넘는다)이고 한 파일에 줄이 둘 이상 맞으면 오류다. 출처 목록(`*.sources.json`)의 해시 · 목록 밖 파일도 그 게이트가 본다.
+  남은 것: ① 임포트 규칙도 같은 마디 단위 매칭 + 둘 이상 맞으면 오류로(C++ `ModelImportConfig` · `TextureImportConfig` 매칭기, 지금은 순서가 뜻을 가진 규칙이 있어 — `StarSkirmish_KayKitSpaceBase` 가 `StarSkirmish_KitLayoutOffset` 보다 먼저 맞아야 한다 — 규칙 데이터를 겹치지 않게 다시 써야 한다).
+  ② 출처 목록의 해시가 맞으려면 산출물이 결정적이어야 하므로, 인코더가 만드는 다른 산출물(텍스처 DDS 변환 등)의 비결정 바이트를 점검한다(같은 원본을 두 번 구워 바이트 비교 — App 빌드와 실행이 필요).
+- `C-46` [정리] **Shipping 빌드의 쿠킹이 아직 모든 게임의 팩을 굽는다.** 패키지 내용은 고쳤다(2026-10-18): `MakePackage` 가 `Bin/Packs` 에서 공용 팩과 그 게임의 팩만 고르고(`CookAssets.listPackNameOfGame`, 게임 프리셋의 `_packRoot`), 그 팩이 없으면 실패한다. `CookAssets --game <게임>` 은 그 게임의 팩만 굽는다.
+  남은 것: `cmake/Engine/AssetAndToolTargets.cmake` 의 `swCookArgs` 가 Shipping(`SW_SHIPPING_BUILD`)일 때 `--game ${SW_ACTIVE_GAME}` 을 넘기게 한다 — 지금은 쓰지 않는 게임 팩을 굽느라 쿠킹 시간만 든다. Dev 프리셋은 `-game=` 으로 고르므로 계속 모두 굽는다.
   공용 오디오를 일부 게임만 쓰게 되면 그때 `Config/Game/<게임>.json` 에 쓰는 공용 팩을 적는 선언을 들인다.
-- `C-50` [정리] **리소스 도입 용량 예산을 원본이 아니라 쿠킹 DDS 까지 합쳐 잡는다.** 2026-10-17 `res1` 에서 재질 31MB 가 57MB 로, 파티클 4.8MB 가 27MB 로 늘었다.
-  현재 이미지 도입분은 120.7MB(원본 44.2MB + DDS 76.4MB)이며 110MB 이하로 줄이려면 재질 10 → 8(약 -12MB), HDRI 4 → 3(약 -7.5MB), 파티클 40 → 20(약 -8MB) 중 둘쯤.
 - `B-15` [검증대기] **`res1` 이미지 도입의 확인 둘.** ① normal 맵 G 채널 방향 — 기존 `invert_green` 규칙으로 구웠을 뿐 렌더로 확인하지 않았다(Poly Haven `_nor_gl`).
   ② Kenney "Smoke Particles" 팩은 362x336 등 2의 거듭제곱이 아니라 `texture-limits` 규칙 위반이다 — 들이려면 변환(2의 거듭제곱으로 맞춤)이 필요하다. 지금 들인 Particle Pack 의 `smoke_*.png` 는 512x512 라 해당 없다(통합 때 확인).
 

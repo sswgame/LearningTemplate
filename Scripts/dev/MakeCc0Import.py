@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 엔진 팩의 CC0 텍스처 원본(`Resource/engine/textures_raw/` 의 `sky` · `surfaces` · `ui/kenney_*` · `particles` · `pixel`)을 출처 목록
-`Resource/engine/textures_raw/cc0_sources.toml` 과 대조하거나 다시 받습니다.
+`Resource/engine/textures.sources.json` 과 대조하거나 다시 받습니다.
 
-목록이 정본이다(`Scripts/dev/MakeCommonAudio.py` 의 오디오 목록과 같은 칸). 팩마다 공식 페이지(`page`) · 페이지의 라이선스 표시(`page_license_marker`) ·
+목록이 정본이다(`Scripts/dev/MakeCommonAudio.py` 의 오디오 목록 `audio.sources.json` 과 같은 형식 · 칸, `folder` 는 목록이 있는 도메인 기준). 팩마다 공식 페이지(`page`) · 페이지의 라이선스 표시(`page_license_marker`) ·
 라이선스(`license` — `CC0 1.0` 만) · 라이선스 근거(`license_source` — 묶음 안 파일 이름 또는 `page`) · 원문 인용(`license_quote`)을,
 묶음이면 받는 주소(`download`)와 그 바이트의 SHA-256(`download_sha256`)을 적는다. 파일마다 저장소 이름(`name`, 팩 `folder` 기준) ·
 묶음 안 경로(`member`) 또는 받는 주소(`download`) · 저장소 파일의 SHA-256(`sha256`)을 적는다.
@@ -13,9 +13,9 @@
           팩 폴더에 목록 밖 이미지가 없는지 본다.
   fetch   공식 페이지에 라이선스 표시가 있는지 보고 받는다. 묶음 해시 · 라이선스 인용 · 파일 해시가 목록과 다르면 아무것도 쓰기 전에 멈춘다.
 
-파이썬 3.11 이상(`tomllib`)이 필요하다. CI 린트가 돌리는 스크립트가 아니라 사람이 가끔 돌리는 도구다.
+CI 린트가 돌리는 스크립트가 아니라 사람이 가끔 돌리는 도구다. 해시 · 목록 밖 파일 대조는 린트 `CheckResourceCredits` 도 모든 `*.sources.json` 에 한다.
 변환: 없다. 원본 바이트를 그대로 쓴다(HDRI 는 2K · 재질은 1K 를 그 크기로 받는다). 크기를 줄여야 하면 받는 해상도를 바꾸고 목록의 해시를 새로 적는다.
-목록은 JSON 이 아니라 TOML 이다 — `Resource/` 아래의 `.json` 은 `ResourceDataSchemaTest` 가 데이터로 읽으려 해 종류 표에 없으면 실패한다.
+목록의 키 규칙은 `ResourceDataSchemaTest` 의 출처 목록 종류(`*.sources.json`)가 본다 — 모르는 키는 오류다.
 주의: 받는 곳은 https 의 polyhaven.com · dl.polyhaven.org · kenney.nl · opengameart.org 만이다. 묶음은 메모리에서 목록의 `member` 만 읽고 풀지 않는다
 (같이 든 Unity 패키지 · 바로가기 파일은 디스크에 닿지 않는다). 쓴 원본은 `App --import-textures` 로 DDS 와 `import.stamp` 를 만든다.
 
@@ -30,11 +30,11 @@ import argparse
 import hashlib
 import html
 import io
+import json
 import pathlib
 import posixpath
 import re
 import sys
-import tomllib
 import urllib.parse
 import urllib.request
 import zipfile
@@ -44,7 +44,7 @@ from common import getProjectRoot  # noqa: E402 — import 하면 콘솔이 UTF-
 
 _kRepositoryRoot = getProjectRoot()
 _kEngineRoot = _kRepositoryRoot / "Resource" / "engine"
-_kManifestPath = _kEngineRoot / "textures_raw" / "cc0_sources.toml"
+_kManifestPath = _kEngineRoot / "textures.sources.json"
 _kAllowedLicense = "CC0 1.0"
 _kAllowedHosts = frozenset({"polyhaven.com", "dl.polyhaven.org", "kenney.nl", "opengameart.org"})
 #: 목록이 다루는 원본 확장자 — 팩 폴더의 이 확장자 파일은 모두 목록에 있어야 한다.
@@ -55,7 +55,7 @@ _kUserAgent = "LearningTemplate-MakeCc0Import"
 
 
 def readManifestInternal() -> dict:
-    return tomllib.loads(_kManifestPath.read_text(encoding="utf-8"))
+    return json.loads(_kManifestPath.read_text(encoding="utf-8"))
 
 
 def checkUrlInternal(url: str) -> str | None:
@@ -167,7 +167,7 @@ def fetch(manifest: dict) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="엔진 팩 CC0 텍스처 원본을 출처 목록(cc0_sources.toml)과 대조하거나 다시 받는다")
+    parser = argparse.ArgumentParser(description="엔진 팩 CC0 텍스처 원본을 출처 목록(textures.sources.json)과 대조하거나 다시 받는다")
     parser.add_argument("command", choices=("verify", "fetch"), help="verify: 내려받지 않고 대조 · fetch: 받아서 대조한 뒤 쓴다")
     args = parser.parse_args(argv)
     manifest = readManifestInternal()

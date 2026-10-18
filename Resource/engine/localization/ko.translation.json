@@ -145,6 +145,10 @@
             "text": "이 묶음의 하위 스택 편집",
             "sourceHash": "a8e48d4c6a6a8255"
         },
+        "EdMeshModifiers.ExportWarp": {
+            "text": "월드 워프로 내보내기",
+            "sourceHash": "0cc4a3640140e0f5"
+        },
         "EdMeshModifiers.FitBounds": {
             "text": "경계 상자에 맞추기",
             "sourceHash": "402ad59bb6ed0112"
@@ -280,6 +284,10 @@
         "EdMeshModifiers.UseSelectionForParam": {
             "text": "선택 사용",
             "sourceHash": "18163441a7dc78f2"
+        },
+        "EdMeshModifiers.WarpExportPath": {
+            "text": "워프 파일(.mfwarp)",
+            "sourceHash": "ab63f8ba7f42ead5"
         },
         "EdMeshModifiers.WorldSpace": {
             "text": "월드 공간",

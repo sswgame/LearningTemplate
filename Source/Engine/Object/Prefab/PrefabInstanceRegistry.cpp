@@ -19,6 +19,18 @@ namespace sw
     void PrefabInstanceRegistry::update( float32 deltaTime )
     {
         (void)deltaTime;
+        pruneDestroyedParts();
+    }
+
+    void PrefabInstanceRegistry::pruneDestroyedParts()
+    {
+        for ( auto partIt = _mapNestedPart.begin(); partIt != _mapNestedPart.end(); )
+        {
+            if ( _pManager->findGameObjectByID( partIt->first ) == nullptr )
+                partIt = _mapNestedPart.erase( partIt );
+            else
+                ++partIt;
+        }
     }
 
     void PrefabInstanceRegistry::onSceneCleared()
@@ -34,6 +46,13 @@ namespace sw
         part._prefabPath        = string{ prefabPath };
         part._partKey           = string{ partKey };
         ++_nextRegistration;
+    }
+
+    void PrefabInstanceRegistry::restoreNestedPart( uint64 objectID, const PrefabNestedPart& part )
+    {
+        _mapNestedPart[objectID] = part;
+        // 되살린 순서보다 뒤에 기록하는 부품이 늘 뒤에 오게 한다.
+        _nextRegistration = std::max( _nextRegistration, part._registrationOrder + 1 );
     }
 
     bool PrefabInstanceRegistry::makePartPath( uint64 objectID, uint64 rootObjectID, string& outPath ) const

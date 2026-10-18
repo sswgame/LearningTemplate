@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/ModuleImageHost.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
@@ -228,8 +229,10 @@ namespace sw
         _window.reset( IWindow::getActiveWindow() );
         if ( _window == nullptr )
         {
-            _window = IWindow::createPlatformWindow();
-            if ( _window == nullptr || _window->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), width, height ) == false )
+            _window             = IWindow::createPlatformWindow();
+            const bool bCreated = _window != nullptr && _window->applyCommandLinePosition( commandLineManager ) &&
+                                  _window->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), width, height );
+            if ( bCreated == false )
             {
                 SW_LOG_ERROR( "Failed to create platform window!" );
                 return false;
@@ -413,8 +416,21 @@ namespace sw
         _fixedTimestep.start();
         _devConsole.initialize( _window.get(), _bEnableEditor == SW_TRUE );
 
+        uint64 frameNumber      = 0;
+        bool   bFrameClockShown = false;
         while ( _window->processMessages() )
         {
+            // 리슨 호스트(이 App 의 넷 세션이 서버)이면 줄마다 프레임 번호를 붙인다. 고정 틱이 없어 전용 서버의 `[tick=N]` 과 구분해
+            // `[frame=N]` 으로 적는다(결정 기록 5-12 `D7-3.6`). 세션이 서버가 아니게 되면 꼬리표를 뗀다.
+            const GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+            const bool            bListenHost = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server;
+            if ( bListenHost )
+                Logger::setClockNumber( LogClock::Frame, frameNumber );
+            else if ( bFrameClockShown )
+                Logger::clearClockNumber();
+            bFrameClockShown = bListenHost;
+            ++frameNumber;
+
             _devConsole.runPendingExec();
             // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다.
             if ( _engine.isQuitRequested() || _devConsole.pollStandardInputCommands() )

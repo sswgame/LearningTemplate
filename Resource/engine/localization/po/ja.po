@@ -59,6 +59,401 @@ msgctxt "Discard"
 msgid "Discard"
 msgstr ""
 
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnActive"
+msgid "Active"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnBase"
+msgid "Base"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnCooldown"
+msgid "Cooldown"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnCount"
+msgid "Count"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnCurrent"
+msgid "Current"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnName"
+msgid "Name"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnRemaining"
+msgid "Remaining"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnStacks"
+msgid "Stacks"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnTag"
+msgid "Tag"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.HintNoTarget"
+msgid "Select an object with an AbilitySystemComponent, or pick one above."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.HintPlayOnly"
+msgid "Runtime ability state exists only during play. Press Play to inspect it."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.Infinite"
+msgid "Infinite"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.NoComponentsInScene"
+msgid "No AbilitySystemComponent in the active scene"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.PickTarget"
+msgid "Pick an ability system..."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionAbilities"
+msgid "Granted Abilities"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionAttributes"
+msgid "Attributes"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionEffects"
+msgid "Active Effects"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionTags"
+msgid "Owned Tags"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.AddItem"
+msgid "Add Item"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.AddModifier"
+msgid "Add Modifier"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Axis"
+msgid "Axis"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Bake"
+msgid "Bake"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.CPUOnly"
+msgid "(CPU only)"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Center"
+msgid "Center"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ControlPoints"
+msgid "Control Points"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.CurveEditHint"
+msgid "Click to edit the curve"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.DuplicateRow"
+msgid "Duplicate row"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.EnterNestedStack"
+msgid "Edit this group's nested stack"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ExportWarp"
+msgid "Export as World Warp"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.FitBounds"
+msgid "Fit to Bounds"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.GPUPreviewBlockedBy"
+msgid "CPU only:"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.GPUPreviewBlockedByStack"
+msgid "CPU only (Recompute Normals)"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.HintPickTarget"
+msgid "Select an object whose mesh component uses a .mesh asset, then press Use Selection."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.HintSelectModifier"
+msgid "Select a modifier in the stack."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.HintTargetGone"
+msgid "The target object no longer exists."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Mirror"
+msgid "Mirror"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.MoveRowDown"
+msgid "Move row down"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.MoveRowUp"
+msgid "Move row up"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Name"
+msgid "Name"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NestedDepth"
+msgid "Depth"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NestedEmpty"
+msgid "Empty - add modifiers to group them."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NestedStack"
+msgid "Nested Stack"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NestedUp"
+msgid "Up"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NoTarget"
+msgid "No target"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.PointIndex"
+msgid "Point"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.PointPosition"
+msgid "Position"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.PreviewTime"
+msgid "Preview Time"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.RecomputeNormals"
+msgid "Recompute Normals"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Redo"
+msgid "Redo"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ReferenceNoMatch"
+msgid "No object has component:"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ReferenceNone"
+msgid "(None)"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ReloadStack"
+msgid "Reload Stack"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.RemoveRow"
+msgid "Remove row"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ResetLattice"
+msgid "Reset Lattice"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ResetParams"
+msgid "Reset Parameters"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Rotation"
+msgid "Rotation"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.SaveStack"
+msgid "Save Stack"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ShadedPreview"
+msgid "Shaded Preview"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ShadedPreviewTooltip"
+msgid "Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.SpaceReference"
+msgid "Reference Object"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Undo"
+msgid "Undo"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.UseSelection"
+msgid "Use Selection"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.UseSelectionForParam"
+msgid "Use Selection"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.WarpExportPath"
+msgid "Warp File (.mfwarp)"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.WorldSpace"
+msgid "World Space"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnActivity"
+msgid "Activity"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnPlace"
+msgid "Place"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnSource"
+msgid "Source"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnTime"
+msgid "Time"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnTravel"
+msgid "Travel"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.EmptyHint"
+msgid "No schedule system is running. Start play with NPCs that have schedules."
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.EmptyPlan"
+msgid "No plan for today"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.FollowClock"
+msgid "Follow game clock"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.GameTime"
+msgid "Game time"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.NpcListTitle"
+msgid "NPCs"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.RawTimeline"
+msgid "Raw timeline"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.SelectNpcHint"
+msgid "Select an NPC on the left"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.SystemIndex"
+msgid "Schedule system"
+msgstr ""
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.WhyNow"
+msgid "Why this activity now"
+msgstr ""
+
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Keep"
@@ -75,6 +470,16 @@ msgstr ""
 #: engine/ui/loading.ui.xml
 msgctxt "Loading"
 msgid "Loading"
+msgstr ""
+
+#: Source/GameFramework/Base/Foundation/Framework/Save/Autosave.cpp
+msgctxt "Notification.GameSaved"
+msgid "Game saved"
+msgstr ""
+
+#: Source/Engine/UI/Screen/OptionsMenuScreen.cpp
+msgctxt "Notification.RestartRequired"
+msgid "Some changes take effect after a restart."
 msgstr ""
 
 #. Context: TextWidget._text
@@ -425,6 +830,13 @@ msgstr ""
 #: engine/settings/engine.settings.xml
 msgctxt "settings.controls.mouseSensitivity"
 msgid "Mouse Sensitivity"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.pauseMenu"
+msgid "Pause Menu"
 msgstr ""
 
 #. Context: Options menu label

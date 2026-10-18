@@ -25,8 +25,11 @@ namespace sw
     struct TypeInfo;
 
     class GameObjectManager;
+    class InputManager;
     class LoadingScreenController;
     class Scene;
+    class UISystem;
+    class UserSettingsManager;
     class Widget;
 
     // ------------------------------------------------------------------------------
@@ -293,8 +296,17 @@ namespace sw
             TaskFuture<Scene*> _future;
         };
 
-        /** @brief `GameSettings` 의 다국어 · 입력 맵 칸을 적용합니다. 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다). */
-        void applyBootstrap();
+        /**
+         * @brief 기동(`initialize`)이 쓰는 엔진 서비스를 한 번 받아 듭니다(언리얼 `InitializeDependency`). 쓰는 곳은 다시 찾지 않습니다.
+         * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서비스라 창이 있는 호스트(클라이언트)에서는 필수이고,
+         *          창이 없는 호스트(전용 서버 · 테스트)에서만 없다. 필수 서비스가 없으면 오류를 남기고 false 입니다(인스턴스가 서지 않는다).
+         */
+        [[nodiscard]] bool bindEngineServices( const IWindow* pWindow );
+        /**
+         * @brief `GameSettings` 의 다국어 · 입력 맵 칸을 적용합니다. 파일을 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다).
+         * @return 입력 맵을 적었는데 입력 서비스(`InputManager`)가 없으면 오류를 남기고 false 입니다 — 호스트의 결함이라 조용히 건너뛰지 않는다.
+         */
+        [[nodiscard]] bool applyBootstrap();
         /** @brief gamesettings 의 사운드 이벤트 라이브러리(`_audioEvents`)를 올립니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true). */
         [[nodiscard]] bool loadAudioEvents();
         /** @brief `loadRequiredData` 의 경로를 만듭니다. 못 만들면 이유를 오류로 남기고 false 입니다. */
@@ -353,6 +365,9 @@ namespace sw
         unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
         SubsystemScope                  _gameScope;            ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
         string                          _loadedAudioEvents;    ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        UISystem*                       _pUISystem;            ///< `bindEngineServices` 가 받은 UI(빌림) — 창이 없는 호스트에서만 nullptr
+        UserSettingsManager*            _pUserSettings;        ///< `bindEngineServices` 가 받은 사용자 설정(빌림) — 창이 없는 호스트에서만 nullptr
+        InputManager*                   _pInput;               ///< `bindEngineServices` 가 받은 입력(빌림) — 없으면 입력 맵을 적은 게임이 서지 않는다(`applyBootstrap`)
         uint8                           _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

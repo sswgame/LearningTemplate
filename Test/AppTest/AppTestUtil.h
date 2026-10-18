@@ -10,6 +10,24 @@
 
 namespace test
 {
+    /**
+     * @brief 백엔드를 고른 App 실행 한 판의 판정입니다. 종료 코드는 러너에 내주지 않는다 — 건너뜀 정책(요구 백엔드면 실패)을 러너가 다시 정할 수 없게 한다.
+     * @details `Failed` 이면 실패가 이미 기록됐다(인자 · 종료 코드 · 출력 끝이나 시나리오 줄과 함께). 러너는 그 판의 다른 검사만 건너뛴다.
+     */
+    enum class AppRunOutcome : uint8
+    {
+        Passed,          ///< 종료 코드 0(시나리오는 허용하지 않은 로그 줄도 없다)
+        Failed,          ///< 실패를 기록했다 — 0 이 아닌 종료, 시한 초과, 못 띄움, 요구 백엔드(`--required_backends=`)가 서지 못함
+        BackendUnusable, ///< 요구하지 않은 백엔드가 이 기계에서 서지 못했다(종료 코드 77) — 그 판을 건너뛴다
+        Skipped,         ///< 시나리오가 스스로 건너뛰었다(종료 코드 13 — 전경 창을 못 얻음 · 배포본에 없는 개발 명령). 백엔드와 무관한 환경 탓이다
+    };
+
+    /** @brief 그 판이 이 기계에서 실제로 돌았으면(통과든 실패든) true 입니다. 모든 판이 false 일 때만 케이스가 `SW_TEST_SKIP` 으로 남는다. */
+    constexpr bool hasRunHere( AppRunOutcome outcome )
+    {
+        return outcome == AppRunOutcome::Passed || outcome == AppRunOutcome::Failed;
+    }
+
     /** @brief 빌드된 App 실행 파일을 찾고 띄웁니다(`AppCookTest` · `AppSmokeTest`). */
     struct AppTestUtil
     {
@@ -30,6 +48,8 @@ namespace test
         /**
          * @brief App 을 `arguments` 로 한 판 돌리고 줄마다 @p onLine( process, line ) 을 부릅니다. 못 찾거나 못 띄우면 `_bLaunched` 가 false 다.
          * @details 작업 폴더는 바꾸지 않는다 — 테스트의 작업 폴더가 `Bin` 이고 App 도 거기서 `Resource/` 를 찾아 올라간다. 시한을 넘기면 죽인다.
+         *          **렌더러를 세우지 않는 실행(쿠킹 · `--check-*`)만 쓴다.** 백엔드를 고르는 실행은 `runAppOnBackend` 로 돌린다 — 종료 코드를 직접 보면
+         *          요구 백엔드가 서지 못한 판을 건너뜀으로 넘길 수 있다.
          */
         template <typename TOnLine>
         static ProcessRunResult runApp( sw::string_view arguments, uint32 timeoutSeconds, TOnLine&& onLine )
@@ -38,6 +58,18 @@ namespace test
             if ( command.empty() )
                 return ProcessRunResult{};
             return runProcessWithDeadline( command, sw::ProcessOptions{}, timeoutSeconds, onLine );
+        }
+
+        /**
+         * @brief 백엔드 스위치(`-dx11` · `-dx12` · `-vk` · `-gl`, 없으면 빌드 기본)가 든 @p arguments 로 App 을 한 판 돌려 판정합니다. 줄마다 @p onLine 을 부른다.
+         * @details 종료 코드 77 이면 `reportUnusableBackend` 를 지난다 — 그 백엔드가 요구 백엔드면 `Failed`, 아니면 `BackendUnusable` 이다.
+         *          0 이 아닌 다른 종료 · 시한 초과 · 못 띄움은 실패를 기록하고 `Failed` 다(메시지에 인자와 출력 끝 몇 줄).
+         */
+        template <typename TOnLine>
+        [[nodiscard]] static AppRunOutcome runAppOnBackend( sw::string_view arguments, uint32 timeoutSeconds, TOnLine&& onLine )
+        {
+            const ProcessRunResult run = runApp( arguments, timeoutSeconds, onLine );
+            return judgeRun( run, arguments, run.getOutputTail() );
         }
 
         /**
@@ -58,30 +90,21 @@ namespace test
          * @details 에디터 체인(125 단계, Debug)은 혼자 돌아도 2 분 남짓이라 고정 180 초로는 부하에 따라 끝 단계에서 죽었다(-1).
          */
         static constexpr uint32 kChainStageTimeoutSeconds = 5;
-        /** @brief 시나리오가 건너뜀으로 끝났다(전경 창을 못 얻음 등 — `AutomationResult::Skipped`). */
-        static constexpr int32 kSkippedExitCode = 13;
-        /** @brief App 을 띄우지 못했다(실행 파일이 없다). */
-        static constexpr int32 kNotLaunchedExitCode = -1000;
-        /** @brief 시나리오는 통과했지만 출력에 허용하지 않은 Warning · Error 가 있다(`AutomationResult::Failed` 와 같은 값). */
-        static constexpr int32 kUnexpectedLogExitCode = 10;
 
         /**
-         * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 종료 코드를 돌려줍니다.
+         * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 판정합니다(`runAppOnBackend` 와 같은 정책).
          * @details 로그는 `Saved/Automation/<시나리오 이름 조각>_<백엔드>.log`, 보고는 `.json`. `[Scenario]` 줄은 @p outScenarioLines 에 모읍니다.
-         *          @p extraArguments 는 명령줄 끝에 붙는다(에디터 시나리오의 `-EnableEditor`).
-         * @return 띄우지 못하면 `kNotLaunchedExitCode`, 시한을 넘겨 죽였으면 -1
+         *          @p extraArguments 는 명령줄 끝에 붙는다(에디터 시나리오의 `-EnableEditor`). 실패 메시지와 건너뜀 로그에는 시나리오 · 백엔드 · 종료 코드 · `[Scenario]` 줄이 든다.
          */
-        static int32 runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines,
-                                  sw::string_view extraArguments = {} );
+        [[nodiscard]] static AppRunOutcome runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines,
+                                                        sw::string_view extraArguments = {} );
         /**
          * @brief 시나리오 여럿을 **한 프로세스**에서 차례로 돌립니다(`-scenario=a,b,c`). 앞 단계가 통과해야 다음으로 가고, 앞 단계가 만든 상태를 이어받습니다.
          * @param chainName 로그 · 보고 파일 이름(`Saved/Automation/chain_<이름>_<백엔드>.log` · `.<단계>.json`)
-         * @return 체인의 종료 코드 — 전부 통과면 0, 아니면 처음 통과하지 못한 단계의 코드입니다. `[Scenario] chain stage n/m …` 줄이 @p outScenarioLines 에 모입니다.
+         * @return 체인의 판정 — 체인의 종료 코드(전부 통과면 0, 아니면 처음 통과하지 못한 단계의 코드)로 정한다. `[Scenario] chain stage n/m …` 줄이 @p outScenarioLines 에 모입니다.
          */
-        static int32 runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
-                                       sw::string& outScenarioLines, sw::string_view extraArguments = {} );
-        /** @brief 이 기계에서 돌릴 수 없어 건너뛸 종료 코드(13 건너뜀 · 77 백엔드 없음 · 못 띄움)면 true 입니다. */
-        static bool isSkippedExitCode( int32 exitCode );
+        [[nodiscard]] static AppRunOutcome runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
+                                                             sw::string& outScenarioLines, sw::string_view extraArguments = {} );
         /** @brief `runScenario` 가 그 시나리오 · 백엔드로 쓴 보고 경로(`Saved/Automation/<이름 조각>_<백엔드>.json`)입니다. */
         static sw::string makeReportPath( const sw::string& scenarioPath, const utf8* pBackendSwitch );
         /**
@@ -98,10 +121,15 @@ namespace test
 
     private:
         /**
-         * @brief `-scenario=` 인자(경로 하나 또는 쉼표 목록)를 받아 App 을 띄우고 종료 코드를 돌려줍니다.
-         * @details 종료 코드 0 이어도 출력에 허용하지 않은 Warning · Error 가 있으면 그 줄을 @p outScenarioLines 에 붙이고 10(실패)을 돌려준다.
+         * @brief 실행 한 판 @p run 을 판정합니다 — 종료 코드를 해석하는 곳은 여기 하나다. 77 이면 @p arguments 의 백엔드 스위치로 `reportUnusableBackend` 를 부른다.
+         * @param detail 실패 메시지 · 건너뜀 로그 끝에 붙일 글(출력 끝 몇 줄이나 `[Scenario]` 줄)
          */
-        static int32 runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch, sw::string& outScenarioLines,
-                                          sw::string_view extraArguments, uint32 timeoutSeconds );
+        [[nodiscard]] static AppRunOutcome judgeRun( const ProcessRunResult& run, sw::string_view arguments, const sw::string& detail );
+        /**
+         * @brief `-scenario=` 인자(경로 하나 또는 쉼표 목록)를 받아 App 을 띄우고 판정합니다.
+         * @details 종료 코드 0 이어도 출력에 허용하지 않은 Warning · Error 가 있으면 그 줄을 @p outScenarioLines 에 붙이고 실패(10)로 판정한다.
+         */
+        [[nodiscard]] static AppRunOutcome runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch,
+                                                                sw::string& outScenarioLines, sw::string_view extraArguments, uint32 timeoutSeconds );
     };
 } // namespace test

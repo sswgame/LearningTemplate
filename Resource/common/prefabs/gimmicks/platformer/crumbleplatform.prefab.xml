@@ -40,9 +40,7 @@
 			<CrumblePlatformComponent _componentName="CrumblePlatformComponent"
 			                          _bActive="true"
 			                          _crumbleDelay="0.5"
-			                          _respawnDelay="3"
-			                          _stepsInState="0"
-			                          _state="Solid" />
+			                          _respawnDelay="3" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

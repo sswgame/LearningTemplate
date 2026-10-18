@@ -94,6 +94,9 @@ namespace sw
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
         , _gameScope{}
         , _loadedAudioEvents{}
+        , _pUISystem{ nullptr }
+        , _pUserSettings{ nullptr }
+        , _pInput{ nullptr }
         , _bResumingWorld{ SW_FALSE }
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
@@ -150,15 +153,36 @@ namespace sw
         return pSceneManager->findActiveObjectManager();
     }
 
-    bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
+    bool GameInstanceBase::bindEngineServices( const IWindow* pWindow )
     {
+        _pUISystem     = nullptr;
+        _pUserSettings = nullptr;
+        _pInput        = nullptr;
         // 네트워크 세션은 필수 엔진 서비스다(`EngineServiceList.xxx` 의 `Required` 행). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
-        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
-        if ( pNetSession == nullptr )
+        if ( game::findSubsystem<GameNetSession>() == nullptr )
         {
             SW_LOG_ERROR( "Game instance cannot start - the required engine service GameNetSession is not bound to the game services" );
             return false;
         }
+        // UI · 사용자 설정은 Client 호스트 서비스다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
+        UISystem*            pUISystem     = game::findSubsystem<UISystem>();
+        UserSettingsManager* pUserSettings = game::findSubsystem<UserSettingsManager>();
+        if ( pWindow != nullptr && ( pUISystem == nullptr || pUserSettings == nullptr ) )
+        {
+            SW_LOG_ERROR( "Game instance cannot start - a windowed (client) host must bind the engine services UISystem and UserSettingsManager to the game services" );
+            return false;
+        }
+        _pUISystem     = pUISystem;
+        _pUserSettings = pUserSettings;
+        _pInput        = game::findSubsystem<InputManager>();
+        return true;
+    }
+
+    bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
+    {
+        // 엔진 서비스는 여기서 한 번 받아 든다 — 아래에서 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 다시 찾지 않는다. 필수 서비스가 없으면 아무것도 걸기 전에 멈춘다.
+        if ( bindEngineServices( pWindow ) == false )
+            return false;
         _pWindow        = pWindow;
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
@@ -174,21 +198,20 @@ namespace sw
             _gameScope.setParentScope( game::findGameScope() );
         game::setGameScope( &_gameScope );
         bindScopedService( &_bootstrap._data );
-        applyBootstrap();
+        const bool bBootstrapApplied = applyBootstrap();
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다 — 첫 씬 요청(onInitialize 안)이 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다.
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
         // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
-        pNetSession->openFromLaunch();
-        // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다).
-        const bool bInitialized = loadAudioEvents() && onInitialize();
+        game::getSubsystem<GameNetSession>().openFromLaunch(); // `bindEngineServices` 가 있음을 확인했다
+        // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
+        const bool bInitialized = bBootstrapApplied && loadAudioEvents() && onInitialize();
         registerSessionCommands();
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
-        // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다.
-        UserSettingsManager* pUserSettings = game::findSubsystem<UserSettingsManager>();
-        if ( pUserSettings != nullptr )
-            pUserSettings->reapplyAll();
+        // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다. 창이 없는 호스트는 사용자 설정이 없다.
+        if ( _pUserSettings != nullptr )
+            _pUserSettings->reapplyAll();
         return bInitialized;
     }
 
@@ -205,11 +228,14 @@ namespace sw
         _gameScope.getCollection().shutdownAll();
         detachGameScope();
         _listPendingSceneLoad.clear();
-        _pWindow    = nullptr;
-        _pRHIDevice = nullptr;
+        _pWindow       = nullptr;
+        _pRHIDevice    = nullptr;
+        _pUISystem     = nullptr;
+        _pUserSettings = nullptr;
+        _pInput        = nullptr;
     }
 
-    void GameInstanceBase::applyBootstrap()
+    bool GameInstanceBase::applyBootstrap()
     {
         const GameSettings& settings = _bootstrap._data;
 
@@ -218,14 +244,17 @@ namespace sw
             SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", settings._localizationProject.c_str() );
 
         // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
-        if ( settings._inputMap.empty() == false )
+        if ( settings._inputMap.empty() )
+            return true;
+        if ( _pInput == nullptr )
         {
-            InputManager* pInput = game::findSubsystem<InputManager>();
-            if ( pInput == nullptr )
-                SW_LOG_WARNING( "GameSettings input map '%#' is not loaded - no InputManager service", settings._inputMap.c_str() );
-            else if ( pInput->getInputMap().loadFromResource( settings._inputMap ) == false )
-                SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
+            SW_LOG_ERROR( "GameSettings input map '%#' needs the engine service InputManager, which is not bound to the game services - the game does not start",
+                          settings._inputMap.c_str() );
+            return false;
         }
+        if ( _pInput->getInputMap().loadFromResource( settings._inputMap ) == false )
+            SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
+        return true;
     }
 
     bool GameInstanceBase::loadAudioEvents()
@@ -298,19 +327,18 @@ namespace sw
 
     void GameInstanceBase::registerSessionCommands()
     {
-        UISystem* pUI = game::findSubsystem<UISystem>();
-        if ( pUI == nullptr || _bootstrap._data._titleScene.empty() )
+        // 창이 없는 호스트(전용 서버 · 테스트)는 UI 가 없다(`bindEngineServices`) — 타이틀로 돌아갈 메뉴도 없다.
+        if ( _pUISystem == nullptr || _bootstrap._data._titleScene.empty() )
             return;
-        pUI->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                  SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        _pUISystem->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                         SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
     }
 
     void GameInstanceBase::unregisterSessionCommands()
     {
-        UISystem* pUI = game::findSubsystem<UISystem>();
-        if ( pUI != nullptr )
-            pUI->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                        SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        if ( _pUISystem != nullptr )
+            _pUISystem->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                               SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
     }
 
     void GameInstanceBase::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )

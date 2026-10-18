@@ -103,7 +103,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayClients" ) );
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
-                    (void)session.stop(); // 합친 트레이스 경로는 로그에 남는다
+                    (void)session.stop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 Timeline 탭에 연다
                 EditorSelfTestMarks::note( "toolbar.netStop" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayStop" ) );
                 return true;

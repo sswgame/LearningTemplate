@@ -20,6 +20,8 @@
 
 namespace sw::editor
 {
+    class EditorPanelManager;
+
     /** @brief 메모리와 성능 프로파일러 탭을 보여 주는 에디터 도구 창입니다. */
     class ProfilerPanel : public IEditorPanel
     {
@@ -99,8 +101,13 @@ namespace sw::editor
         void setTraceSearch( const utf8* pText );
         /** @brief 저장 폴더의 가장 최근 트레이스를 불러옵니다. 성공하면 true 입니다. */
         [[nodiscard]] bool loadLatestTrace();
-        /** @brief 지정한 파일을 불러옵니다. 성공하면 true 입니다. */
+        /** @brief 지정한 파일을 불러옵니다. 성공하면 true 입니다. "Load Trace" 단추와 `openTraceInTimeline` 이 같이 쓰는 한 길입니다. */
         [[nodiscard]] bool loadTraceFile( string_view path );
+        /**
+         * @brief Profiler 창을 열고 @p path 를 불러와 다음 그리기에서 Timeline 탭을 고릅니다. 창이 없거나 불러오지 못하면 false 입니다(이유는 로그 · 상태 줄에 남는다).
+         * @details 멀티 프로세스 재생의 Stop 뒤에 합친 트레이스를 저절로 여는 자리다(`EditorNetPlaySession::takeUnopenedMergedTrace`, 이 창의 프레임 단계가 부른다 — 창이 닫혀 있어도 돈다).
+         */
+        [[nodiscard]] static bool openTraceInTimeline( EditorPanelManager& panelManager, string_view path );
 #endif
 
     private:
@@ -146,7 +153,8 @@ namespace sw::editor
         string                         _traceStatus;         ///< 마지막 불러오기 결과 한 줄
         utf8                           _arrTraceSearch[constant::kMaxBuffer128];
         uint32                         _traceSearchMatched;
-        uint8                          _bLoadedTrace : 1;
+        uint8                          _bLoadedTrace       : 1;
+        uint8                          _bSelectTimelineTab : 1; ///< 다음 그리기에서 Timeline 탭을 고른다(`openTraceInTimeline`)
 #endif
     };
 } // namespace sw::editor

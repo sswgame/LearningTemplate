@@ -24,14 +24,12 @@ if(swSkipEditor)
 endif()
 
 # ImGui 를 모르는 층(모델: 에셋 · 커맨드 · 설정 · 로컬라이즈 · 버전 관리)은 아래 2) 의 EditorModel 이 짓고 EditorModule 소스에서는 뺀다.
-# EditorScenarioRecordCommands.cpp 는 이미 ImGui 를 쓰는 파일이라 EditorModule 에 남는다(백로그 `C-37` "모델").
 set(listEditorModelDir Common/Asset Common/Commands Common/Config Common/Localization Common/SourceControl)
 set(listEditorModelSource "")
 foreach(modelDir IN LISTS listEditorModelDir)
 	file(GLOB_RECURSE listModelDirSource CONFIGURE_DEPENDS "${modelDir}/*.cpp" "${modelDir}/*.h")
 	list(APPEND listEditorModelSource ${listModelDirSource})
 endforeach()
-list(REMOVE_ITEM listEditorModelSource "${CMAKE_CURRENT_SOURCE_DIR}/Common/Commands/Play/EditorScenarioRecordCommands.cpp")
 list(REMOVE_ITEM listEditorSource ${listEditorModelSource})
 
 sw_addModuleLibrary(EditorModule
@@ -49,6 +47,7 @@ sw_addModuleLibrary(EditorModule
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorThemeTokens.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorToolDefaults.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/GUI/EditorChrome.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Workspace/EditorNetPlaySettings.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/SelfTest/EditorCurveProbeComponent.h"
 )
 

@@ -209,7 +209,7 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
     node._embeddedXML = sourceXML;
     doc._listSceneObjectNode.push_back( node );
 
-    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookEntityState( doc ) );
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), doc ) );
     SW_ASSERT_TRUE( doc._listSceneObjectNode[0]._embeddedStateBytes.empty() == false );
     SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._embeddedXML.empty() );
 
@@ -888,7 +888,7 @@ SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIDIsRejected )
         SW_ASSERT_TRUE( doc.loadXML( withIDPath ) );
         doc._listSceneObjectNode.push_back( noIDEntity );
         SW_EXPECT_FALSE( doc.saveXML( test::makeTempPath( "no_id_written.scene.xml" ) ) );
-        SW_EXPECT_EQUAL( 0u, sw::SceneCooker::cookEntityState( doc ) );
+        SW_EXPECT_EQUAL( 0u, sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), doc ) );
     }
 }
 
@@ -1002,7 +1002,7 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
     uint32 failedCount = 0;
     {
         test::ScopedDefensiveTestLog expected( "a scene file that is not XML" );
-        SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( root, cooked, failedCount ) );
+        SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, failedCount ) );
     }
     SW_EXPECT_EQUAL( 1u, failedCount );
     SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( cooked, "game/demo/maps/good.scene.bin" ) ) );
@@ -1031,7 +1031,7 @@ SW_TEST_CASE( SceneTest, SceneCookSkipsEditorOnlyScenes )
     }
 
     uint32 failedCount = 0;
-    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( root, cooked, failedCount ) );
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
     SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( cooked, "editor/maps/preview.scene.bin" ) ) );
 }
@@ -1074,7 +1074,7 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
         SW_ASSERT_FALSE( sw::engine::getSubsystem<sw::TypeRegistry>().areAllModuleTypesRegistered() );
         test::ScopedDefensiveTestLog expected( "a scene read before the ModuleTypes startup step" );
         bRequestAccepted = manager.requestLoadFuture( scenePath ).isValid();
-        earlyCookedCount = sw::SceneCooker::cookAllScenes( root, cooked, earlyFailedCount );
+        earlyCookedCount = sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, earlyFailedCount );
     }
 
     SW_EXPECT_FALSE( bRequestAccepted );
@@ -1084,7 +1084,7 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 
     // 단계를 지난 레지스트리로는 같은 쿠킹이 된다.
     uint32 failedCount{ 0 };
-    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( root, cooked, failedCount ) );
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
     SW_EXPECT_TRUE( sw::FileUtil::exists( cookedPath ) );
     manager.shutdown();
@@ -1186,8 +1186,8 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     {
         test::ScopedDefensiveTestLog expected( "a scene with a component type that is not loaded" );
         sw::SceneDocument            direct = doc;
-        (void)sw::SceneCooker::cookEntityState( direct, &missingComponentCount ); // 돌려준 수 대신 빠진 컴포넌트 수를 아래 단언이 본다
-        cookedCount = sw::SceneCooker::cookAllScenes( root, cooked, failedCount );
+        (void)sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), direct, &missingComponentCount ); // 돌려준 수 대신 빠진 컴포넌트 수를 아래 단언이 본다
+        cookedCount = sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, failedCount );
     }
     SW_EXPECT_EQUAL( 1u, missingComponentCount );
     SW_EXPECT_EQUAL( 0u, cookedCount );
@@ -1224,7 +1224,7 @@ SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
     SW_ASSERT_TRUE( pScene->serializeToDocument( doc ) );
     SW_ASSERT_EQUAL( size_t( 2 ), doc._listSceneObjectNode.size() );
     SW_EXPECT_STREQ( "Sword", doc._listSceneObjectNode[0]._name.c_str() );
-    SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( doc ) );
+    SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), doc ) );
     SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._embeddedXML.empty() ); // 쿠킹된 상태로만 읽힌다
 
     // 배포본처럼 바이너리 씬 파일을 건너 읽는다 — 엔티티의 파일 id 도 파일에 실려야 한다.
@@ -1836,7 +1836,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
     Check::run( pFromXML, "xml" );
 
     // 쿠커는 엔티티 상태를 리플렉션 바이너리로 쿠킹한다 — 그 길에도 실려야 배포본이 같은 이름을 본다.
-    SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( fromXML ) );
+    SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), fromXML ) );
     const sw::string binPath = test::makeTempPath( "named_components.scene.bin" );
     SW_ASSERT_TRUE( fromXML.saveBinary( binPath ) );
     sw::SceneDocument fromBinary;
