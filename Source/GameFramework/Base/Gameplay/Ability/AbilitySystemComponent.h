@@ -162,6 +162,16 @@ namespace sw
          */
         GameplayTagCountContainer&       getOwnedTagCounts() { return _ownedTagCounts; }
         const GameplayTagCountContainer& getOwnedTagCounts() const { return _ownedTagCounts; }
+        /**
+         * @brief 무적 태그("State.Invulnerable")입니다. 주인이 이 태그를 가진 동안 체력 어트리뷰트의 base 는 내려가지 않습니다.
+         * @details 막는 자리는 base 를 쓰는 두 길(이펙트 모디파이어 `applyModifierToBase` · 직접 쓰기 `setAttributeBaseValue`)이 함께 지나는
+         *          `guardHealthBaseChange` 하나다 — `IncomingDamage` 같은 메타 어트리뷰트도 끝내 `setAttributeBaseValue` 로 체력을 쓰므로 함께 막힌다.
+         *          이펙트가 부여 태그로 주면 무적 시간(구르기 · 부활 직후)이고, 치트(`cheat.god`)는 이펙트 없는 태그로 단다(언리얼 Lyra 의
+         *          `Cheat.GodMode` · `Gameplay.DamageImmunity` 와 같은 자리, 결정 기록 5-12 `D3-4.2`).
+         */
+        static TagID getInvulnerableTag();
+        /** @brief 주인이 무적 태그를 가졌으면 true 입니다. */
+        bool isInvulnerable() const { return _ownedTagCounts.hasMatchingTag( getInvulnerableTag() ); }
 
         // --------------------------------------------------------------------------
         // 4) 게임플레이 이펙트
@@ -377,6 +387,8 @@ namespace sw
         bool canMutateNow() const;
         /** @brief 깎인 체력 @p amount 를 피해 숫자로 띄웁니다. 틱 중이면 틱 직후에 띄웁니다. */
         void spawnDamageNumber( float32 amount );
+        /** @brief base 를 쓰기 직전에 부릅니다. @p name 이 체력이고 무적이면 내려가는 @p inoutNewBase 를 @p oldBase 로 되돌립니다(`getInvulnerableTag`). */
+        void guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase ) const;
         /** @brief 모듈을 언로드하기 전에, [@p pBegin, @p pEnd) 안의 코드(어빌리티, 세트, 실행 계산의 vtable과 델리게이트 스텁)를 가리키는 참조를 제거합니다. */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 

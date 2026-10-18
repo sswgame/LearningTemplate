@@ -228,6 +228,12 @@
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
+        "EdMeshModifiers.ExportWarp": {
+            "source": "Export as World Warp",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
         "EdMeshModifiers.FitBounds": {
             "source": "Fit to Bounds",
             "origins": [
@@ -428,6 +434,12 @@
         },
         "EdMeshModifiers.UseSelectionForParam": {
             "source": "Use Selection",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.WarpExportPath": {
+            "source": "Warp File (.mfwarp)",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]

@@ -159,6 +159,8 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
         processDeferredDestruction();
+        // 놓은 오브젝트의 기록을 거두는 서비스(`PrefabInstanceRegistry`)가 여기서 돈다 — 파괴를 처리한 뒤라야 무엇이 없어졌는지 안다.
+        updateSceneServices( SceneFrameStep::DestroyPost, 0.0f );
     }
 
     const utf8* getSceneFrameStepName( SceneFrameStep step )

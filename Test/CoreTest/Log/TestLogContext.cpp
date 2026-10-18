@@ -148,13 +148,15 @@ SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
     LogContextCaptureOutput*            pCapture = output.get();
     SW_ASSERT_TRUE( logger.addOutput( std::move( output ) ) );
 
-    uint64 tickNumber = 1;
-    SW_EXPECT_FALSE( Logger::getTickNumber( tickNumber ) );
+    LogClock clock      = LogClock::Frame;
+    uint64   tickNumber = 1;
+    SW_EXPECT_FALSE( Logger::getClockNumber( clock, tickNumber ) );
     SW_EXPECT_EQUAL( tickNumber, uint64( 0 ) );
-    Logger::setTickNumber( 0 ); // 0 도 꼬리표가 붙는다 — 첫 틱
+    Logger::setClockNumber( LogClock::Tick, 0 ); // 0 도 꼬리표가 붙는다 — 첫 틱
     logger.writeLog( LogLevel::Info, "Test", "Probe", "first tick", __FILE__, __LINE__ );
-    Logger::setTickNumber( 1234 );
-    SW_EXPECT_TRUE( Logger::getTickNumber( tickNumber ) );
+    Logger::setClockNumber( LogClock::Tick, 1234 );
+    SW_EXPECT_TRUE( Logger::getClockNumber( clock, tickNumber ) );
+    SW_EXPECT_TRUE( clock == LogClock::Tick );
     SW_EXPECT_EQUAL( tickNumber, uint64( 1234 ) );
     LogContext context;
     context._principalID = 0x42;
@@ -162,16 +164,24 @@ SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
         ScopedLogContext scope( context );
         logger.writeLog( LogLevel::Info, "Test", "Probe", "tick and context", __FILE__, __LINE__ );
     }
-    Logger::clearTickNumber();
+    // 리슨 호스트(App)는 고정 틱이 없어 프레임 번호를 "frame" 으로 적는다(결정 기록 5-12 `D7-3.6`).
+    Logger::setClockNumber( LogClock::Frame, 77 );
+    SW_EXPECT_TRUE( Logger::getClockNumber( clock, tickNumber ) );
+    SW_EXPECT_TRUE( clock == LogClock::Frame );
+    SW_EXPECT_EQUAL( tickNumber, uint64( 77 ) );
+    logger.writeLog( LogLevel::Info, "Test", "Probe", "listen frame", __FILE__, __LINE__ );
+    Logger::clearClockNumber();
     logger.writeLog( LogLevel::Info, "Test", "Probe", "cleared", __FILE__, __LINE__ );
     logger.shutdown();
 
-    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
     const string& first   = pCapture->_listFormatted[0];
     const string& both    = pCapture->_listFormatted[1];
-    const string& cleared = pCapture->_listFormatted[2];
+    const string& frame   = pCapture->_listFormatted[2];
+    const string& cleared = pCapture->_listFormatted[3];
     SW_EXPECT_TRUE_MSG( first.find( "[Test] [Probe] [Info] [tick=0] - first tick\n" ) != string::npos, first.c_str() );
     SW_EXPECT_TRUE_MSG( both.find( "[Test] [Probe] [Info] [tick=1234] [acct=0000000000000042] - tick and context\n" ) != string::npos, both.c_str() );
+    SW_EXPECT_TRUE_MSG( frame.find( "[Test] [Probe] [Info] [frame=77] - listen frame\n" ) != string::npos, frame.c_str() );
     SW_EXPECT_TRUE_MSG( cleared.find( "[Test] [Probe] [Info] - cleared\n" ) != string::npos, cleared.c_str() );
 }
 

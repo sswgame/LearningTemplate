@@ -697,6 +697,18 @@
             "text": "보이스",
             "sourceHash": "e3767266a468255e"
         },
+        "EditorAudioEvents.DeleteEvent": {
+            "text": "이벤트 지우기",
+            "sourceHash": "888d161861e3f8ca"
+        },
+        "EditorAudioEvents.DeleteEventTip": {
+            "text": "고치는 사본에서 이벤트를 지웁니다. 저장하면 라이브러리 파일에 씁니다",
+            "sourceHash": "fae4f98df51ad841"
+        },
+        "EditorAudioEvents.DuplicateEvent": {
+            "text": "이벤트 복제",
+            "sourceHash": "07b63c5c5a963e5e"
+        },
         "EditorAudioEvents.EditEvent": {
             "text": "편집",
             "sourceHash": "64ef2a6c2dd1d3d1"
@@ -704,6 +716,10 @@
         "EditorAudioEvents.EditEventTip": {
             "text": "이 이벤트의 라이브러리 파일 사본을 고칩니다. 저장은 검사를 통과할 때만 파일에 쓰고, 핫 리로드가 적용합니다",
             "sourceHash": "ed14ff9501495cf4"
+        },
+        "EditorAudioEvents.EditedEvent": {
+            "text": "고치는 이벤트",
+            "sourceHash": "3761fcc65a66d680"
         },
         "EditorAudioEvents.FieldBus": {
             "text": "버스",
@@ -764,6 +780,10 @@
         "EditorAudioEvents.Instances": {
             "text": "인스턴스",
             "sourceHash": "2f4f955934b0c573"
+        },
+        "EditorAudioEvents.LibrarySettings": {
+            "text": "라이브러리 파라미터와 감쇠",
+            "sourceHash": "ea89884bde093979"
         },
         "EditorAudioEvents.NoLibrary": {
             "text": "로드된 이벤트 라이브러리가 없습니다",

@@ -1049,6 +1049,24 @@
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
             ]
         },
+        "EditorAudioEvents.DeleteEvent": {
+            "source": "Delete Event",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.DeleteEventTip": {
+            "source": "Removes the event from the edited copy; saving writes the library file",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.DuplicateEvent": {
+            "source": "Duplicate Event",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
         "EditorAudioEvents.EditEvent": {
             "source": "Edit",
             "origins": [
@@ -1057,6 +1075,12 @@
         },
         "EditorAudioEvents.EditEventTip": {
             "source": "Edits a copy of this event's library file; Save writes it only when it passes validation, and hot reload applies it",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.EditedEvent": {
+            "source": "Edited Event",
             "origins": [
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
             ]
@@ -1147,6 +1171,12 @@
         },
         "EditorAudioEvents.Instances": {
             "source": "Instances",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.LibrarySettings": {
+            "source": "Library Parameters and Attenuation",
             "origins": [
                 "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
             ]

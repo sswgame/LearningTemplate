@@ -88,3 +88,40 @@ SW_TEST_CASE( AudioEventBrowserUtilTest, EngineStateBecomesTableRows )
 
     SW_EXPECT_TRUE( AudioEventBrowserUtil::formatRemainingSeconds( 1.25f ) == "1.25 s" );
 }
+
+/**
+ * @brief [AudioEventBrowserUtilTest] 창에서 이벤트를 복제하고 지운 사본은 라이브러리 검사를 통과한다 — 복제는 겹치지 않는 이름과 원본의 클립을 갖는다
+ * @details 클립 없는 빈 이벤트를 더하면 검사가 저장을 막는다. 이름이 겹쳐도 막는다. 그래서 더하기는 복제로 하고 이름은 `_Copy`, `_Copy2` 로 피한다.
+ */
+SW_TEST_CASE( AudioEventBrowserUtilTest, DuplicatedAndRemovedEventsKeepTheLibraryValid )
+{
+    using sw::editor::AudioEventBrowserUtil;
+
+    sw::AudioEventLibrary library;
+    sw::AudioEventDesc    step;
+    step._name = sw::hashed_string( "Footstep" );
+    step._bus  = sw::hashed_string( "sfx" );
+    sw::AudioClipEntry clip;
+    clip._path = sw::hashed_string( "game/x/sounds/step_0.ogg" );
+    step._listClip.push_back( clip );
+    library._listEvent.push_back( step );
+    SW_ASSERT_TRUE( library.validate( "<test>" ) );
+
+    const sw::hashed_string first  = AudioEventBrowserUtil::duplicateEvent( library, sw::hashed_string( "Footstep" ) );
+    const sw::hashed_string second = AudioEventBrowserUtil::duplicateEvent( library, sw::hashed_string( "Footstep" ) );
+    SW_EXPECT_TRUE( first == sw::hashed_string( "Footstep_Copy" ) );
+    SW_EXPECT_TRUE( second == sw::hashed_string( "Footstep_Copy2" ) );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( library._listEvent.size() ) );
+    const sw::AudioEventDesc* pCopy = library.findEvent( first );
+    SW_ASSERT_NOT_NULL( pCopy );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pCopy->_listClip.size() ) );
+    SW_EXPECT_TRUE( pCopy->_bus == sw::hashed_string( "sfx" ) );
+    SW_EXPECT_TRUE( library.validate( "<test>" ) );
+
+    SW_EXPECT_TRUE( AudioEventBrowserUtil::duplicateEvent( library, sw::hashed_string( "Missing" ) ).empty() );
+    SW_EXPECT_TRUE( AudioEventBrowserUtil::removeEvent( library, first ) );
+    SW_EXPECT_FALSE( AudioEventBrowserUtil::removeEvent( library, first ) );
+    SW_EXPECT_NULL( library.findEvent( first ) );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( library._listEvent.size() ) );
+    SW_EXPECT_TRUE( library.validate( "<test>" ) );
+}

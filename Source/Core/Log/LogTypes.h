@@ -30,6 +30,13 @@ namespace sw
         Count    /**< 로그 수준의 개수 */
     };
 
+    /** @brief 로그 줄에 붙는 호스트 시계의 종류입니다(`Logger::setClockNumber`). */
+    enum class LogClock : uint8
+    {
+        Tick = 0, ///< 고정 틱(전용 서버) — `[tick=N]`
+        Frame     ///< 가변 프레임(리슨 호스트 App) — `[frame=N]`
+    };
+
     /** @brief 싱크 · 리스너에 넘기는 로그 한 줄입니다. */
     struct LogEntry
     {

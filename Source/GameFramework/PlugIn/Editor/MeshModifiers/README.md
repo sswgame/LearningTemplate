@@ -82,7 +82,7 @@
   (규칙 표에 예외를 달면 "어떤 파일에도 안 맞는 예외" 검사가 오래된 예외로 잡는다).
 - 월드 공간 워프(MegaFiers World Space Warp)는 `World Warp` 모디파이어(`worldwarp`, `Modifiers/WorldWarpModifier`)다. "어디에" 는 씬 오브젝트(공간 기준 `Space Reference`),
   "무엇을" 은 공유 정의 파일(`.mfwarp`, 스택 저장 문서 글 — `WorldWarpModifier::writeWarpFile`)이다. 여러 메시가 같은 오브젝트 · 파일을 가리키면 함께 휜다.
-  하위 스택에게는 워프 공간이 메시 로컬이다(`DeformableModifier` 와 같은 규칙). 남은 것: 패널에서 묶음을 `.mfwarp` 로 내보내는 단추가 없다(지금은 코드 · 손으로 쓴 파일).
+  하위 스택에게는 워프 공간이 메시 로컬이다(`DeformableModifier` 와 같은 규칙). 묶음의 하위 스택 칸 아래 경로 칸과 "Export as World Warp" 단추가 보이는 하위 스택을 `.mfwarp` 로 쓴다(`MeshModifiersPanel::drawWarpExport`, 확장자가 다르면 단추가 꺼진다).
 
 ## 셰이딩 미리보기 (GPU 컴퓨트 · CPU 정점)
 

@@ -82,10 +82,6 @@
   남은 것: 화면 확인(천을 쓰는 씬이 없다 — 테스트 씬을 하나 두고 `gpu-verifier` 로 앞뒤 면 · 노멀 캡처), 새 메시 대신 제자리 갱신 정점 버퍼(정점 풀 부분 갱신 `C-43` 과 같이),
   헤어 카드 · 옷처럼 스킨드 메시 뼈에 고정하는 길(Jolt `Skinned` 구속).
 
-- `D1-5` [기능] **중첩 프리팹 뒤에 남은 것**(형식 · 스폰 · 순환 오류 · 쿠킹 펼치기 · 부품 오버라이드 `<Part>` 는 `PrefabOverrides.h` · `PrefabAsset.h`).
-  에디터 연결(바깥 프리팹에 적용 · 부품 Unlink 는 맨 바깥 인스턴스 풀기)은 `EditorInspectorCommands`. 남은 것: `PrefabInstanceRegistry` 의 기록은 오브젝트가 없어져도
-  씬을 비울 때까지 남는다(되돌리기 · 플레이 종료 복원 때문) — 되돌리기 이력의 수명에 맞춰 비운다(결정 기록 5-12 `D1-5.3`).
-
 - `D1-6` [기능] **Linux 창 계층이 X11 뿐이다 — Wayland.** `Engine/Window/Linux` 가 X11 이고 Wayland 를 찾지 못했다. 리눅스 확인은 CI 잡에서만 한다(결정 기록 5-12). 창 생성 · 입력 · 디스플레이 모드 · 클립보드(`D6-2` (4))가 대상이다.
 
 - `D1-7` [기능] **월드 스트리밍 · 월드 파티션이 없다.** 씬 단위 로딩만 있고 큰 월드(지형 + 식생 + 도시)를 구역별로 올리고 내리는 구조가 없다. 텍스처 밉 스트리밍(`D4-7.5`)은 별도. 언리얼 World Partition · HLOD, 유니티 Scene Streaming 에 해당한다. 설계와 단위는 [WorldStreaming.md](../plans/WorldStreaming.md)(`design-reviewer` 검토 전). 선행 `C-43`(정점 · 모프 풀 부분 갱신)과 W1(`WorldCellGrid`)은 feat16 에 있다(빌드 · 전후 측정은 통합 때). 남은 것: W2 씬 데이터 · W3 쿠커 셀 분할 · W4 런타임 서브시스템 · W5 서버 · W6 에디터 · W7 WildWest 측정.

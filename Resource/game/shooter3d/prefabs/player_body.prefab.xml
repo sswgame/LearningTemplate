@@ -39,9 +39,6 @@
 			<ShooterAvatarComponent _componentName="ShooterAvatarComponent"
 			                        _bActive="true"
 			                        _player="0"
-			                        _aimLayerClip="1H_Ranged_Aiming"
-			                        _shootLayerClip="1H_Ranged_Shooting"
-			                        _upperBodyBone="spine"
 			                        _walkThreshold="0.4"
 			                        _runThreshold="3"
 			                        _hitPause="0.45" />

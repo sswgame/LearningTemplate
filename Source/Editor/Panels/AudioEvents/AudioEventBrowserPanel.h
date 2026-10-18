@@ -27,7 +27,8 @@ namespace sw::editor
     /**
      * @class AudioEventBrowserPanel
      * @brief 언리얼 Sound Cue 에디터의 속성 보기 · 오디오 디버거, FMOD Studio 이벤트 속성 · 프로파일러에 해당합니다.
-     * @details 이벤트 속성은 기본이 읽기 보기다. "고치기" 를 누르면 그 이벤트가 든 라이브러리 파일을 사본(`_editLibrary`)으로 다시 읽어 속성 그리드로 고치고,
+     * @details 이벤트 속성은 기본이 읽기 보기다. "고치기" 를 누르면 그 이벤트가 든 라이브러리 파일을 사본(`_editLibrary`)으로 다시 읽어 속성 그리드로 고치고
+     *          (이벤트 복제 · 지우기, 라이브러리의 파라미터 · 감쇠 프리셋 포함 — FMOD Studio 의 이벤트 · 파라미터 편집 자리),
      *          "저장" 은 검사를 통과할 때만 파일에 쓴다(`AudioEventLibrary::saveToResource`). 엔진에 올라간 라이브러리는 저장한 파일을 에셋 핫 리로드
      *          (`IAudioService` 의 라이브러리 다시 읽기)가 바꾼다 — 창은 엔진 사본을 직접 고치지 않는다(오디오 스레드가 설명자를 참조한다).
      *          재생 중 인스턴스와 보이스 수는 오디오 스레드가 블록마다 게시한 사본이다.
@@ -52,9 +53,12 @@ namespace sw::editor
         void beginEditing();
         /** @brief 고치기를 끝내고 사본을 버립니다. */
         void endEditing();
-        /** @brief 사본 라이브러리의 이벤트 @p event 를 속성 그리드로 그리고, 저장 · 되돌리기 단추를 둡니다. 같은 파일의 다른 이벤트도 같은 사본에서 고칩니다. */
-        void drawEventEditor( AudioEventDesc& event );
-        /** @brief 속성 그리드가 사본을 고쳤다는 알림입니다. 저장 전 상태로 표시합니다. */
+        /**
+         * @brief 고치는 라이브러리 사본을 그립니다 — 저장 · 그만두기, 고칠 이벤트 고르기 · 복제 · 지우기, 이벤트 속성 그리드, 라이브러리의 파라미터 · 감쇠 프리셋 그리드.
+         * @details 고칠 이벤트(`_editEvent`)는 사본에서 고른다. 복제 · 지운 이벤트는 저장 뒤 핫 리로드가 엔진 목록에 올리기 전까지 사본에만 있다.
+         */
+        void drawLibraryEditor();
+        /** @brief 속성 그리드가 사본을 고쳤다는 알림입니다(이벤트 · 라이브러리 그리드 둘 다). 저장 전 상태로 표시합니다. */
         void onEventEdited( const PropertyInfo& prop );
         void drawPlayingInstances();
         void drawVoiceProfiler( const AudioEngineStats& stats );
@@ -62,6 +66,7 @@ namespace sw::editor
     private:
         AudioEventLibrary                     _editLibrary;      ///< 고치는 중인 라이브러리 사본(파일에서 다시 읽음)
         EditorPropertyGrid                    _grid;             ///< 사본 이벤트의 속성 그리드
+        EditorPropertyGrid                    _libraryGrid;      ///< 사본 라이브러리의 파라미터 · 감쇠 프리셋 그리드
         vector<hashed_string>                 _listEventName;    ///< 엔진이 준 이벤트 이름(순서 없음)
         vector<hashed_string>                 _listVisibleEvent; ///< 필터를 거친 사전순 이름
         vector<AudioEventFieldRow>            _listFieldRow;
@@ -70,6 +75,7 @@ namespace sw::editor
         hashed_string                         _selectedEvent;
         hashed_string                         _selectedLibrary; ///< 고른 이벤트가 들어 있는 라이브러리(리소스 경로)
         hashed_string                         _editLibraryName; ///< `_editLibrary` 를 읽은 리소스 경로(저장할 곳)입니다. 비면 고치기 중이 아닙니다.
+        hashed_string                         _editEvent;       ///< 사본에서 고치는 이벤트 이름(복제한 새 이벤트일 수 있다)
         fixed_string<constant::kMaxBuffer128> _filter;
         bool                                  _bOnlySelectedEvent; ///< 재생 중 목록을 고른 이벤트로 거른다.
         bool                                  _bEditDirty;         ///< 사본을 고친 뒤 아직 저장하지 않았다.

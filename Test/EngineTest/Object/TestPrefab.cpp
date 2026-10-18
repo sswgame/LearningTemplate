@@ -10,6 +10,10 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Scene/ObjectUndoUtil.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -835,6 +839,48 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSpawnAttachedWithTheirOverrides )
     SW_EXPECT_TRUE( pLeftAgain->getPrimarySceneComponent()->getLocalScale() == sw::float3( 3.0f, 3.0f, 3.0f ) );
     SW_EXPECT_TRUE( pRightAgain->getPrimarySceneComponent()->getLocalScale() == sw::float3( 3.0f, 3.0f, 3.0f ) );
     SW_EXPECT_TRUE( pLeftAgain->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 0.0f, 0.0f ) ); // 덮어쓴 값은 남는다
+}
+
+/**
+ * @brief [PrefabTest] 부품 표시의 수명은 오브젝트의 수명이다 — 놓인 부품의 표시는 거두고, 되돌리기가 같은 id 로 되살릴 때 명령이 든 표시를 기록 순서째 되돌린다
+ * @details 표시를 씬을 비울 때까지 남기면 지운 부품이 쌓이고, 되살릴 때 새 순서를 주면 프리팹으로 저장할 때 부품 순서가 바뀐다(결정 기록 5-12 `D1-5.3`).
+ */
+SW_TEST_CASE( PrefabTest, NestedPartRecordFollowsTheObjectAndComesBackWithUndo )
+{
+    sw::SceneManager sceneManager;
+    sw::Scene*       pScene = sceneManager.createEmptyActiveScene( "PartLifetime" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager&      objects  = *pScene->getObjectManager();
+    sw::PrefabInstanceRegistry& registry = objects.getSubsystem<sw::PrefabInstanceRegistry>();
+
+    sw::GameObject* pPost = objects.createGameObject( sw::hashed_string( "Post" ) );
+    sw::GameObject* pLamp = objects.createGameObject( sw::hashed_string( "Lamp" ) );
+    sw::GameObject* pSign = objects.createGameObject( sw::hashed_string( "Sign" ) );
+    objects.mergePendingAdds();
+    registry.registerNestedPart( pLamp->getObjectID(), pPost->getObjectID(), "game/prefabs/lamp.prefab.xml", "0" );
+    registry.registerNestedPart( pSign->getObjectID(), pPost->getObjectID(), "game/prefabs/sign.prefab.xml", "1" );
+    const uint64 lampID = pLamp->getObjectID();
+    const uint64 signID = pSign->getObjectID();
+
+    sw::CommandStack                stack;
+    const sw::CommandStack::Command deleteLamp = sw::ObjectUndoUtil::makeLifetime( stack, sceneManager, pLamp, sw::ObjectLifetimeEdit::Destroyed, "Delete Lamp" );
+    objects.destroyObject( pLamp );
+    SW_EXPECT_NOT_NULL( registry.findNestedPart( lampID ) ); // 아직 놓지 않았다
+    objects.update( 0.0f );
+    SW_EXPECT_NULL( registry.findNestedPart( lampID ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getNestedPartCount() );
+
+    deleteLamp._undo();
+    objects.mergePendingAdds();
+    const sw::PrefabNestedPart* pRestored = registry.findNestedPart( lampID );
+    SW_ASSERT_NOT_NULL( pRestored );
+    SW_EXPECT_EQUAL( pPost->getObjectID(), pRestored->_ownerObjectID );
+    SW_EXPECT_TRUE( pRestored->_partKey == "0" );
+    sw::vector<uint64> listPart;
+    registry.collectNestedPartsOf( pPost->getObjectID(), listPart );
+    SW_ASSERT_EQUAL( size_t( 2 ), listPart.size() );
+    SW_EXPECT_EQUAL( lampID, listPart[0] ); // 처음 기록한 순서 그대로
+    SW_EXPECT_EQUAL( signID, listPart[1] );
 }
 
 /**

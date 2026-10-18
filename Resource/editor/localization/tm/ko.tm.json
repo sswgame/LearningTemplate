@@ -442,6 +442,10 @@
             "text": "기본값"
         },
         {
+            "source": "Delete Event",
+            "text": "이벤트 지우기"
+        },
+        {
             "source": "Delete this saved layout.",
             "text": "저장된 레이아웃을 지웁니다."
         },
@@ -534,12 +538,20 @@
             "text": "강조색과 둥글기 변경을 버리고 현재 테마의 값을 씁니다"
         },
         {
+            "source": "Duplicate Event",
+            "text": "이벤트 복제"
+        },
+        {
             "source": "Edit",
             "text": "편집"
         },
         {
             "source": "Edit the selected prefab on its own in isolation mode",
             "text": "고른 프리팹을 격리 모드에서 따로 편집합니다"
+        },
+        {
+            "source": "Edited Event",
+            "text": "고치는 이벤트"
         },
         {
             "source": "Editor",
@@ -920,6 +932,10 @@
         {
             "source": "Left, top, right, bottom (UI units)",
             "text": "왼쪽, 위, 오른쪽, 아래(UI 단위)"
+        },
+        {
+            "source": "Library Parameters and Attenuation",
+            "text": "라이브러리 파라미터와 감쇠"
         },
         {
             "source": "Line speed in KB/s (0 = unlimited)",
@@ -1712,6 +1728,10 @@
         {
             "source": "Remove this track's keys at the current frame on every channel.",
             "text": "현재 프레임에 있는 이 트랙의 키를 모든 채널에서 지웁니다."
+        },
+        {
+            "source": "Removes the event from the edited copy; saving writes the library file",
+            "text": "고치는 사본에서 이벤트를 지웁니다. 저장하면 라이브러리 파일에 씁니다"
         },
         {
             "source": "RenderDoc is not attached to this process - start with -renderdoc or launch from RenderDoc",

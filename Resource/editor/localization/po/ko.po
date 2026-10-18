@@ -883,6 +883,21 @@ msgid "Voices"
 msgstr "보이스"
 
 #: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.DeleteEvent"
+msgid "Delete Event"
+msgstr "이벤트 지우기"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.DeleteEventTip"
+msgid "Removes the event from the edited copy; saving writes the library file"
+msgstr "고치는 사본에서 이벤트를 지웁니다. 저장하면 라이브러리 파일에 씁니다"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.DuplicateEvent"
+msgid "Duplicate Event"
+msgstr "이벤트 복제"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
 msgctxt "EditorAudioEvents.EditEvent"
 msgid "Edit"
 msgstr "편집"
@@ -891,6 +906,11 @@ msgstr "편집"
 msgctxt "EditorAudioEvents.EditEventTip"
 msgid "Edits a copy of this event's library file; Save writes it only when it passes validation, and hot reload applies it"
 msgstr "이 이벤트의 라이브러리 파일 사본을 고칩니다. 저장은 검사를 통과할 때만 파일에 쓰고, 핫 리로드가 적용합니다"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.EditedEvent"
+msgid "Edited Event"
+msgstr "고치는 이벤트"
 
 #: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldBus"
@@ -966,6 +986,11 @@ msgstr "볼륨"
 msgctxt "EditorAudioEvents.Instances"
 msgid "Instances"
 msgstr "인스턴스"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.LibrarySettings"
+msgid "Library Parameters and Attenuation"
+msgstr "라이브러리 파라미터와 감쇠"
 
 #: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
 msgctxt "EditorAudioEvents.NoLibrary"

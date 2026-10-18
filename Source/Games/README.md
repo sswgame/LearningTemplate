@@ -125,7 +125,7 @@ ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly --output-on-failure
 | 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(`GameDirectorComponent` 파생) |
 | 엔티티의 모습 | 뷰 컴포넌트. 디렉터를 읽기만 하고 자기 오브젝트에만 씁니다(`TickGroup::PostUpdate`) |
 | 엔티티 하나의 입력이나 AI | 폰과 조종자. 몸 컴포넌트는 폰의 의도만 읽습니다 |
-| 장르 무관 카메라와 장식 | GameFramework `Camera/`(`OrthoCameraRigComponent`), `World/`(`PropScatterComponent`) |
+| 장르 무관 카메라와 장식 | GameFramework `Camera/`(`CameraDirectorComponent` + 팩의 `data/*.cameras.xml` 프리셋), `World/`(`PropScatterComponent`) |
 | 게임 클래스 | `requestFirstScene()` 과, 생성자의 `registerDirector<디렉터>()` 한 줄 |
 
 ### 디렉터가 구현하는 것
