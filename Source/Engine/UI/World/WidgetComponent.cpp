@@ -169,7 +169,7 @@ namespace sw
             return;
         if ( _space == WidgetSpace::World )
         {
-            // World: 자기 트리(화면 스택 밖이라 포커스와 포인터가 없으며, 입력은 백로그에 있다)에 배치하고 렌더 텍스처로 칠한다.
+            // World: 자기 트리(화면 스택 밖이라 포커스와 포인터가 없으며, 입력은 후보 절 UiInputRemaining 에 있다)에 배치하고 렌더 텍스처로 칠한다.
             if ( _worldTree == nullptr )
                 _worldTree = make_unique<WidgetTree>();
             _worldTree->setRoot( std::move( _pendingContent ) );

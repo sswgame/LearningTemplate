@@ -3,7 +3,7 @@
 Claude Code 안내. 이 저장소의 에이전트 규칙.
 
 ## 시작 전 필수 읽기
-- **남은 일**: [docs/backlog/README.md](docs/backlog/README.md) — 백로그는 영역별 파일로 나뉘어 있고 통째로 읽지 않는다. 안내 문서에서 상태 태그와 일을 고르는 순서를 보고, 내 일의 항목은 `py -3 -m Scripts backlog --id <번호>`(예: `C-2`)로 본문만 읽는다. 끝나면 항목을 지우고 교훈은 해당 코드의 헤더 주석 / Decisions / Verification으로 옮긴다.
+- **남은 일**: [docs/plans/NEXT.md](docs/plans/NEXT.md)(지금 상태) → [docs/plans/Roadmap.md](docs/plans/Roadmap.md)(순서) → 내 일의 계획 문서(`py -3 -m Scripts plans`로 목록, `--file <이름>`으로 한 문서, `--find <옛번호>`로 옛 번호 풀기). 백로그는 없다. 착수한 일은 계획 문서, 착수 전 후보는 `docs/plans/Candidates-<영역>.md`의 절이다. 일의 식별자는 번호가 아니라 이름이다. 끝나면 **직접** 그 계획 문서의 단위와 `진행`을 고치고 후보는 계획 문서로 옮기며, 교훈은 해당 코드의 헤더 주석 / Decisions / Verification으로 옮긴다([작업 방식](docs/11_Workflow.md) 6절). 최상단 README의 진행 표는 생성물이라 고치지 않는다.
 - **작업 방식**: [docs/11_Workflow.md](docs/11_Workflow.md) — 워크트리, 동시 빌드 제한(최대 2), 검증 단계, push 규칙, 커밋 형식.
 - **코딩 규칙**: [AGENTS.md](AGENTS.md) — 이름·함수 어휘·헤더 순서 등. 51KB이므로 `grep -n '^#'`로 절을 찾아 일에 맞는 절만 읽는다: 이름은 `Naming`(CMake · C++ · Python · HLSL), 새 파일 · include는 `C++ structure and includes`, 상수는 `Constants`, 도우미는 `Helpers`, 스타일은 `C++ style`, 스크립트 편집은 `Editing traps`. (`docs/04_CodingGuidelines.md`는 예시만)
 - **스크립트로 파일을 고칠 때**: heredoc 금지 — [AGENTS.md](AGENTS.md) "Editing traps" 첫 항목.
@@ -20,7 +20,7 @@ Claude Code 안내. 이 저장소의 에이전트 규칙.
 ## 에이전트 · 토큰 예산
 `.claude/agents/`에 정의됨. **일에 맞는 가장 싼 모델을 고른다.** 일과 에이전트 · effort 표는 [docs/11_Workflow.md](docs/11_Workflow.md) 9절.
 
-에이전트 지시문에는 **읽을 문서와 절을 이름으로 적는다**(예: "AGENTS.md `Naming`과 `Editing traps`만", "백로그 `C-2` 항목만"). 에이전트는 문서를 통째로 읽기 쉽고, 작업자마다 같은 수만 토큰이 반복된다. 찾기만 하는 일은 `scout`, 결과 보고는 열 줄 안쪽으로 받는다.
+에이전트 지시문에는 **읽을 문서와 절을 이름으로 적고, 끝낼 때 직접 고칠 문서도 적는다**(예: "AGENTS.md `Naming`과 `Editing traps`만", "계획 문서 `Vfx`의 V1 절만"; 틀은 [작업자 규칙](docs/plans/WorkerRules.md) 5절). 에이전트는 문서를 통째로 읽기 쉽고, 작업자마다 같은 수만 토큰이 반복된다. 찾기만 하는 일은 `scout`, 결과 보고는 열 줄 안쪽으로 받는다. 에이전트를 맡길 때는 `model`과 `effort`를 [작업 방식](docs/11_Workflow.md) 9절 표대로 **지정하고**, 사용자에게 종류 · 모델 · 레벨을 한 줄로 알린다.
 
 요청이 규칙과 충돌하거나 한도에 닿으면 **실행 전에 한 줄로 알린다**.
 긴 세션은 `docs/plans/NEXT.md`에 인계 후 새 세션 권장.

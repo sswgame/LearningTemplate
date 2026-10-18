@@ -70,7 +70,7 @@ class ServerPackExclusionTest(unittest.TestCase):
         self.assertTrue(any(rel.endswith(".animclip") for rel in listServer))
 
     def testServerPackKeepsTerrainData(self) -> None:
-        """지형 높이장과 레이어 가중치는 서버에 남는다 — 서버의 높이 · 레이어 질의(발소리 · 표면 재질 · 이동 속도)가 읽는다(백로그 F-1)."""
+        """지형 높이장과 레이어 가중치는 서버에 남는다 — 서버의 높이 · 레이어 질의(발소리 · 표면 재질 · 이동 속도)가 읽는다(옛 F-1)."""
         listServer = self.mapPackFilesByTarget["Server"]
         self.assertIn("empty/heightfields/valley.heightfield", listServer)
         self.assertIn("empty/heightfields/valley.layerweights", listServer)

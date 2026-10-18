@@ -6,7 +6,7 @@
     py -3 -m Scripts scene-load-bench --app build/Ninja-Release/Bin/App.exe                    # 엔티티 4000, XML 3 판 → 쿠킹 → 쿠킹본 3 판
     py -3 -m Scripts scene-load-bench --app build/Ninja-Release/Bin/App.exe --count 8000 --runs 5 --asset-report
 
-무엇을 재는가(백로그 1-8 "직렬화기와 리소스 로드의 리플렉션 비용, 비동기 씬 로드 중 최악 프레임"):
+무엇을 재는가(옛 1-8 "직렬화기와 리소스 로드의 리플렉션 비용, 비동기 씬 로드 중 최악 프레임"):
   - 로드 자체: 로그 `'Scene.load.parse': N ms`(문서 읽기 — XML 이면 이름 대조 · 텍스트 파싱, 쿠킹본이면 바이너리)와
     `'Scene.load.instantiate': N ms`(오브젝트 · 컴포넌트 생성과 리플렉션 적용).
   - 로드 중 프레임: Empty 벤치 탐침 `-gv_benchSceneLoadPath` 가 `-gv_benchProbeFrame`(기본 180, 워밍업 60 뒤)에 비동기 로드를 걸고,

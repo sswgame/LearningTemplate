@@ -14,8 +14,9 @@ Scripts/common/Plans.py
 일의 이름은 계획 문서 파일 이름(`ClusteredLighting`)이고, 문서 안 단위는 `<문서이름>.<단위기호>` 다. `옛번호` 는 코드 주석 · 결정 기록 · 커밋에
 박힌 옛 번호(`C-30`)로, 어느 문서로 옮겨졌는지 찾는 데만 쓴다.
 
-아직 시작하지 않은 후보는 영역별 `Candidates-<영역>.md`(상태 `후보`)에 ``### <PascalCase영어이름> — <한글 제목>`` 절로 모은다.
-절 아래 첫 비어 있지 않은 줄은 ``옛번호: C-30, D2-13`` 이고 없으면 ``옛번호: 없음`` 이다.
+아직 시작하지 않은 후보는 영역별 `Candidates-<영역>.md`(상태 `후보`)에 ``### <PascalCase영어이름>`` 절로 모은다.
+절 제목에는 이름만 둔다 — 한글 제목을 같은 줄에 두면 GitHub 앵커가 `#이름--한글-제목` 이 되어 `#이름` 링크가 깨진다.
+절 아래 첫 비어 있지 않은 줄은 ``제목: <한글 제목>``, 그다음 줄은 ``옛번호: C-30, D2-13`` 이고 없으면 ``옛번호: 없음`` 이다.
 
 머리 줄이나 후보 절이 틀리면 건너뛰지 않고 `PlanFormatError` 로 멈춘다(파일 이름을 담는다).
 안내 · 규칙 문서(`kPlanNonDocumentName`)는 계획 문서가 아니다.
@@ -49,7 +50,8 @@ _kNoProgress = "해당없음"
 _kOldNumberRe = re.compile(r"^[A-Z]\d*-\d+(?:\.\d+)*$")
 _kHeadingRe = re.compile(r"^(#{1,6}) +(.+?)\s*$")
 _kFenceRe = re.compile(r"^\s*(```|~~~)")
-_kCandidateHeadingRe = re.compile(r"^### ([A-Z][A-Za-z0-9]*) — (.+?)\s*$")
+_kCandidateHeadingRe = re.compile(r"^### ([A-Z][A-Za-z0-9]*)\s*$")
+_kCandidateTitleRe = re.compile(r"^제목: (.+?)\s*$")
 _kCandidateOldRe = re.compile(r"^옛번호: (.+?)\s*$")
 
 
@@ -126,7 +128,7 @@ def parsePlanText(text: str, fileName: str) -> PlanDoc:
 
 
 def parseCandidatesInternal(listLine: list[str], fileName: str) -> list[Candidate]:
-    """후보 문서의 `### 이름 — 제목` 절들. 절 아래 첫 비어 있지 않은 줄이 `옛번호: …` 가 아니면 오류."""
+    """후보 문서의 `### 이름` 절들. 절 아래 비어 있지 않은 첫 두 줄이 `제목: …` · `옛번호: …` 가 아니면 오류."""
     listCandidate: list[Candidate] = []
     bFence = False
     for index, line in enumerate(listLine):
@@ -138,12 +140,15 @@ def parseCandidatesInternal(listLine: list[str], fileName: str) -> list[Candidat
         where = f"{fileName}:{index + 1}"
         match = _kCandidateHeadingRe.match(line)
         if match is None:
-            raise PlanFormatError(f"{where}: 후보 절 제목이 `### <PascalCase영어이름> — <한글 제목>` 모양이 아닙니다: {line}")
-        listBody = [body for body in listLine[index + 1:] if body.strip()]
-        oldMatch = _kCandidateOldRe.match(listBody[0]) if listBody else None
+            raise PlanFormatError(f"{where}: 후보 절 제목이 `### <PascalCase영어이름>`(이름만) 모양이 아닙니다: {line}")
+        listBody = [body for body in listLine[index + 1:] if body.strip()][:2]
+        titleMatch = _kCandidateTitleRe.match(listBody[0]) if listBody else None
+        if titleMatch is None:
+            raise PlanFormatError(f"{where}: 후보 절 `{match.group(1)}` 아래 첫 줄이 `제목: <한글 제목>` 이 아닙니다")
+        oldMatch = _kCandidateOldRe.match(listBody[1]) if len(listBody) > 1 else None
         if oldMatch is None:
-            raise PlanFormatError(f"{where}: 후보 절 `{match.group(1)}` 아래 첫 줄이 `옛번호: …`(없으면 `옛번호: {_kNone}`) 이 아닙니다")
-        listCandidate.append(Candidate(match.group(1), match.group(2), parseOldNumbersInternal(oldMatch.group(1), where), index + 1))
+            raise PlanFormatError(f"{where}: 후보 절 `{match.group(1)}` 아래 둘째 줄이 `옛번호: …`(없으면 `옛번호: {_kNone}`) 이 아닙니다")
+        listCandidate.append(Candidate(match.group(1), titleMatch.group(1), parseOldNumbersInternal(oldMatch.group(1), where), index + 1))
     return listCandidate
 
 

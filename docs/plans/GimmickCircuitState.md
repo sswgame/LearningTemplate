@@ -185,7 +185,7 @@ GimmickCircuitState (REFLECT, PROPERTY)
   게임이 나중에 번들을 디스크에 저장하려면 같은 타입을 `BinarySerializer` 로 쓰면 됩니다. 형식을 하나 더 만들지 않습니다.
 - **넷 스냅샷.** `GimmickSnapshotUtil` 은 지금처럼 회로마다 조각을 만들지만 조각에 싣는 바이트는 그 항목의 `GimmickCircuitState` 를 `FixedLayout::write` 한 것입니다(스키마 해시 64 비트 머리 포함).
   받는 쪽은 조각을 합친 뒤 `FixedLayout::read` 하고, `SchemaMismatch` 를 포함한 실패는 그 회로만 건너뛰고 셉니다(지금 의미와 같습니다).
-  회로마다 해시 8 바이트가 붙지만, 넷 채널이 핸드셰이크에서 해시를 섞는 경로(백로그 `D7-7`)가 생기기 전까지는 이 머리가 다른 빌드의 바이트를 거절하는 유일한 장치이므로 남깁니다.
+  회로마다 해시 8 바이트가 붙지만, 넷 채널이 핸드셰이크에서 해시를 섞는 경로(후보 `NetChannelSchemaHashHandshake`)가 생기기 전까지는 이 머리가 다른 빌드의 바이트를 거절하는 유일한 장치이므로 남깁니다.
 - **컴포넌트 API.** `getStateBytes` 는 `const GimmickCircuitState& getState() const`, `restoreStateBytes( const vector<uint8>& )` 는 `[[nodiscard]] bool restoreState( const GimmickCircuitState& )` 가 됩니다. 바이트를 해석하는 일은 번들 하나만 맡습니다.
 
 ### 2.4 체크포인트
@@ -236,7 +236,7 @@ B 는 개수 상한이 정적이어야 합니다(3.5). 지금 `populate` 에는 
 |---|---|---|---|---|
 | 2-a | 상태 구조체와 회로 API | 새 `Gimmick/GimmickCircuitState.h`, `GimmickCircuit.h` · `.cpp`, `Test/EngineTest/GameFramework/Gimmick/TestGimmick.cpp` | 없음 | `worker`(opus) |
 | 2-b | 컴포넌트 필드 · API, 체크포인트 값, XML 18 요소 삭제 | `GimmickCircuitComponent.h` · `.cpp`, XML 14 개, `TestGimmickScene.cpp`(주석 줄 91 포함) | 같은 컴포넌트를 고치는 다른 기믹 작업 | 2-a 와 같은 `worker` |
-| 2-c | 번들을 `REFLECT` + `FixedLayout` 로, 넷 조각 바이트를 B 로 | `GimmickStateBundle.h` · `.cpp`, `Kits/Feature/Network/NetClientServer/GimmickSnapshotUtil.h` · `.cpp`, `TestGimmickState.cpp` | 넷 채널 등록(백로그 `D7-7`)을 하는 작업과 `GimmickSnapshotUtil` 이 겹침 | 2-a 와 같은 `worker` |
+| 2-c | 번들을 `REFLECT` + `FixedLayout` 로, 넷 조각 바이트를 B 로 | `GimmickStateBundle.h` · `.cpp`, `Kits/Feature/Network/NetClientServer/GimmickSnapshotUtil.h` · `.cpp`, `TestGimmickState.cpp` | 넷 채널 등록(후보 `NetChannelSchemaHashHandshake`)을 하는 작업과 `GimmickSnapshotUtil` 이 겹침 | 2-a 와 같은 `worker` |
 | 2-d | GPU 확인: 쇼케이스 씬 실행 · 캡처 | 없음(실행만) | GPU 잠금 | `gpu-verifier` |
 | 2-e | 문서: `ReflectionFormats.md` 9절 단계 2 행과 보류 문단 갱신, `09_Decisions.md` 에 결정 기록, 헤더 주석(`GimmickCircuit.h`, `GimmickCircuitComponent.h:14-15`, `GimmickStateBundle.h:3-9`, `GimmickSnapshotUtil.h:4-6`) | 문서 2 개, 위 헤더 | 다른 단계 행을 고치는 작업과 `ReflectionFormats.md` 가 겹침 | 헤더 주석은 2-a~2-c 의 `worker`, 문서는 병합하는 쪽 |
 
@@ -302,6 +302,6 @@ B 는 개수 상한이 정적이어야 합니다(3.5). 지금 `populate` 에는 
   `PropertyInfo` 에 `MaxCount` 메타데이터가 없어(6.2 확인) C++ 상수를 함께 두고, 상한에서 B 쓰기가 성공하고 하나 넘으면 실패하는지를 `GimmickTest.StateLimitsMatchDeclaredMaxCount` 가 대조합니다.
 - **저장 상태 적용은 한 함수.** `GimmickCircuitComponent::applySavedState` 를 `onPostLoad` · `onBeginPlay` · `restoreCheckpoint` 가 지납니다. `NodeSetChanged` 는 경고 뒤 이어 가고, `Mismatch` 는 오류를 남기고 회로를 비워 돌지 않습니다(6.3 의 두 번째 결정: 조용한 처음 상태 시작을 없앰).
   롤백 · 넷은 `restoreState`(`Exact` 만, 아니면 바꾸지 않고 false)이고 `GimmickStateBundle::apply` 는 건너뛴 수를 돌려 의미를 부르는 쪽이 정합니다. 체크포인트는 값입니다(6.3 의 첫 결정).
-- **저작 저장 문맥(검토 ⓕ)은 백로그 `C-53`.** 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 하고 리플렉션 작업과 파일이 겹쳐 이 단계에서 하지 않았습니다.
+- **저작 저장 문맥(검토 ⓕ)은 옛 `C-53`.** 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 하고 리플렉션 작업과 파일이 겹쳐 이 단계에서 하지 않았습니다.
 - **측정 방법(통합 때, Release).** 쇼케이스 씬 회로 5 개와 프리팹 13 개를 0 · 600 · 36,000 스텝 돌린 뒤 `FixedLayout::write( state )` 바이트 수와 조각 수(`kChunkPayloadBytes` 로 나눔)를 기록하고 가장 큰 값이 `kMaxCircuitBytes` 안인지 봅니다
   (Delay 의 절대 스텝 번호가 varuint 길이를 늘립니다). `storeState` 는 스텝을 돈 틱마다 부르므로 같은 판에서 `saveState` 의 시간 · 할당을 3~5 회 중앙값으로 잽니다(목록 용량을 이어 쓰므로 첫 틱 뒤 할당 0 이 기대값).

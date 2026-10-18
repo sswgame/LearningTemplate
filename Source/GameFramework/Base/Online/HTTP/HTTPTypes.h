@@ -9,7 +9,7 @@
  *          - 연결 하나에 요청 하나(`Connection: close`)만 처리한다. 연결 유지, 파이프라인, 리다이렉트, 압축 응답은 지원하지 않는다.
  *            몸은 `Content-Length` 나 chunked 로 읽고, 둘 다 없으면 연결이 닫힐 때까지 읽는다.
  *          - 머리 이름은 대소문자를 가리지 않고 찾는다. 상한(머리 16 KiB, 몸은 설정값)을 넘으면 파서가 실패한다.
- *          - 호스트는 IPv4 글자나 `localhost` 만 쓸 수 있다. Core 주소에 이름 해석이 없기 때문이며, 실제 제공자 호스트 이름은 백로그에 있다.
+ *          - 호스트는 IPv4 글자나 `localhost` 만 쓸 수 있다. Core 주소에 이름 해석이 없기 때문이며, 실제 제공자 호스트 이름은 후보 절(`Candidates-network.md`)에 있다.
  */
 #pragma once
 #include "Core/Common/Defines.h"

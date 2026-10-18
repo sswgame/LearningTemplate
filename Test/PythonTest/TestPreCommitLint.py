@@ -89,7 +89,7 @@ class PreCommitLintRealGateTest(unittest.TestCase):
         return selectGatesForStaged(kRepositoryRoot, listStagedPath, listStagedPath, listScript)[0].skipReason
 
     def testDataFileReferencesSkipsDocumentOnlyCommit(self) -> None:
-        self.assertTrue(self.plan("CheckDataFileReferences", ["docs/backlog/engine.md", "Resource/engine/a.xml"]))
+        self.assertTrue(self.plan("CheckDataFileReferences", ["docs/plans/Candidates-engine.md", "Resource/engine/a.xml"]))
 
     def testDataFileReferencesRunsForListFile(self) -> None:
         self.assertEqual(self.plan("CheckDataFileReferences", ["Source/Core/Predefined/X.xxx"]), "")

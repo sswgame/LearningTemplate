@@ -46,7 +46,7 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 | Horror 스냅샷(옛 `HorrorSnapshot.cpp`, 단계 4-a 에서 지움) | `BitWriter`, 양자화 | `kMagic = "DBD1"` | 같은 개수 자르기 |
 | 온라인 `*Protocol.cpp` 12 파일, 2,046 줄(단계 5-b 에서 B 로 옮김) | `BitWriter` | 키트마다 손 `kVersion`(`ChatProtocol.h:69` 등) | 와이어를 바꾸면 버전을 높이라는 주석(`ChatProtocol.h:23`)이 유일한 장치 |
 
-`BitWriter::writeInt` 는 범위 밖 정수를 경고 없이 잘라 썼습니다. 지금은 `writeInt` · `writeQuantizedFloat` 가 `[[nodiscard]] bool` 이고 범위 밖이면 쓰지 않으며, 읽기는 범위 밖 칸을 깨진 데이터로 거절합니다(백로그 `A-14` 해결, 2026-10-17).
+`BitWriter::writeInt` 는 범위 밖 정수를 경고 없이 잘라 썼습니다. 지금은 `writeInt` · `writeQuantizedFloat` 가 `[[nodiscard]] bool` 이고 범위 밖이면 쓰지 않으며, 읽기는 범위 밖 칸을 깨진 데이터로 거절합니다(옛 `A-14` 해결, 2026-10-17).
 `FighterRuntime`(`FightingMatch.h:117`)에는 `REFLECT` · `PROPERTY` 가 없습니다. Mech · Horror 스냅샷 구조체는 단계 4-a 에서 `REFLECT` · `PROPERTY` 를 받았습니다.
 
 손으로 쓴 `operator==` 는 `Source` 에 75 개입니다. 이 가운데 같은 파일에 `PROPERTY` 가 있는 것은 4 파일(`atomic.h`, `Component.h`, `DataPath.h`, `WidgetTypes.h`)뿐입니다.
@@ -481,7 +481,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 6. **해시에 들어가지 않는 의미 변경**: 단위를 미터에서 센티미터로 바꾸는 변경은 해시를 바꾸지 않습니다. 이 경우를 위해 넷 손 버전 상수는 지우지 않습니다.
 7. **`REFLECT` 를 처음 붙이는 타입**: 스냅샷 구조체에 `REFLECT` 를 붙이면 `TypeRegistry` 에 등록되고 인스펙터 · A 직렬화 대상이 됩니다. 의도한 결과이지만 등록 수가 늘어납니다.
 
-### 8.2 백로그로 넘긴 것
+### 8.2 후보로 넘긴 것
 
 - `A-13`(모르는 타입 1 바이트 건너뛰기)과 `A-14`(`BitStream` 범위 자르기)는 단계 6 과 함께 해결했습니다(1.2, 1.4).
 
@@ -510,7 +510,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 |---|---|---|---|---|
 | 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록 | 없음(읽기) | 없음 | `scout`(haiku) |
 | 2 | (구현, 빌드 검증 대기) `GimmickCircuitState` 하나에서 컴포넌트는 A, 묶음 · 넷 조각은 B. 아래 문단 | `GimmickCircuit*`, `GimmickStateBundle.*`, `GimmickSnapshotUtil.*`, 기믹 XML 14 개 | 없음 | `worker`(opus) |
-| 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 백로그 `D7-7` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
+| 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 후보 `NetChannelSchemaHashHandshake` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게(끝남, 3.8 끝 문단). 같은 타입의 필드 하나만 읽고, 바깥 타입 · 성분 목록은 코덱만 쓴다 | `ReflectionTypes.h`, `CodeGenerator.cpp`, `InspectorPropertyLayout.*` | 없음 | `worker`(opus) |
 | 7-c | 매니저의 타입별 컴포넌트 목록 | `GameObjectManager.*`, `GameObjectStore.*` | 7-d 와 같은 파일, 7-c 먼저 | `integrator`(opus) |
 | 7-d | 타입 핸들 `TComponentHandle<T>` | `ComponentHandle.h`, `GameObjectManager.*`, 호출부, 인스펙터 | 7-c 뒤 같은 손 | `integrator`(opus) |
@@ -541,7 +541,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 단계 4-a 가운데 스냅샷을 B 로 옮기는 일은 끝났습니다(2026-10-17). Mech · Horror 스냅샷은 `PROPERTY` 범위 키만 갖고 손 코덱 · `kMagic` 이 없습니다.
 두 스냅샷은 디스크에 남지 않습니다(세이브는 `Archive` 의 `writeState` 가 따로 씁니다). Horror 발전기의 진행 · 표시 두 목록은 원소 하나(`HorrorGeneratorSnapshot`)로 합쳤고, 위치는 높이까지 싣습니다.
 메시지는 스트림 머리 해시를 그대로 실어, 배치가 다른 빌드의 바이트는 읽기가 `SchemaMismatch` 로 거절합니다. 테스트는 `MechArenaTest` · `AsymmetricHorrorTest` 의 `SnapshotRoundTripsAndRefusesOutOfRangeValues` 입니다.
-채널 등록 API(`registerMessage<T>` 로 등록하면 해시가 핸드셰이크 버전에 섞이는 구조)와 3.10 의 본문만 쓰는 경로는 이 스냅샷을 싣는 게임이 아직 없어 백로그 `D7-7` 로 넘겼습니다.
+채널 등록 API(`registerMessage<T>` 로 등록하면 해시가 핸드셰이크 버전에 섞이는 구조)와 3.10 의 본문만 쓰는 경로는 이 스냅샷을 싣는 게임이 아직 없어 후보 `NetChannelSchemaHashHandshake` 로 넘겼습니다.
 
 **단계 7-c · 7-d 상세.**
 

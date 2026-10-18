@@ -15,23 +15,21 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 <!-- status-board:start -->
 | 순위 | 업무(계획 문서) | 상태 | 진행 | 선행 | 영역 | 옛번호 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 5/15 | 없음 | engine | C-30 |
+| 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 5/15 | 없음 | engine | C-30, C-36 |
 | 2 | [GimmickCircuitState](docs/plans/GimmickCircuitState.md) — 기믹 회로 상태 구조 계획 (2026-10-17) | 구현중 | 3/5 | ReflectionFormats | engine | 없음 |
 | 3 | [Vfx](docs/plans/Vfx.md) — 파티클 · VFX 구현 단위 (`D2-11`) | 구현대기 | 0/7 | 없음 | graphics | D2-11 |
-| 5 | 파일이 겹쳐 미룬 정리: engine C-4 C-13 C-22, project C-16 C-17 C-18 — 위 1~2 뒤에. (C-5 C-1… | | | | | |
-| 6 | 새로 쓴 정리 항목(C-65 ~ C-76)은 백로그 안내의 순서(정리 → 기능)를 따른다. | | | | | |
 | 7 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
 | - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 설계 | 0/7 | ClusteredLighting | graphics | D2-12 |
 | - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 설계 | 1/7 | 없음 | engine | D1-7 |
 | - | [EditorCharacterEditor](docs/plans/EditorCharacterEditor.md) — 캐릭터 편집 창 구현 계획 (D4-8 ⑥) | 구현대기 | 0/6 | EditorMultiWorld | gameplay | D4-8 |
 | - | [EnginePartition](docs/plans/EnginePartition.md) — 엔진 분할 계획 | 구현대기 | 2/6 | 없음 | engine | C-1 |
 | - | [ServerBusFormat](docs/plans/ServerBusFormat.md) — 서버 버스 메시지 형식 계획 (2026-10-17) | 구현대기 | 7/7 | ReflectionFormats | network | F-2 |
-| - | [TypedComponents](docs/plans/TypedComponents.md) — 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17) | 구현대기 | 2/6 | ReflectionFormats | engine | C-49 |
+| - | [TypedComponents](docs/plans/TypedComponents.md) — 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17) | 구현대기 | 2/6 | ReflectionFormats | engine | C-52 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 2/6 | 없음 | graphics | D2-13 |
 | - | [EditorMultiWorld](docs/plans/EditorMultiWorld.md) — 다중 월드 · 에디터 툴 창 구현 계획 (D3-7) | 구현중 | 4/6 | 없음 | editor | D3-7 |
-| - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18, 백로그 C-41) | 구현중 | 1/2 | 없음 | quality | C-41 |
-| - | [IncrementalCook](docs/plans/IncrementalCook.md) — 증분 쿠킹과 파생 데이터 캐시 계획 (2026-10-18, 백로그 C-42) | 구현중 | 5/6 | 없음 | quality | C-42 |
-| - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18, 백로그 C-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
+| - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/2 | 없음 | quality | C-41 |
+| - | [IncrementalCook](docs/plans/IncrementalCook.md) — 증분 쿠킹과 파생 데이터 캐시 계획 (2026-10-18) | 구현중 | 5/6 | 없음 | quality | C-42 |
+| - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
 | - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 구현중 | 3/5 | 없음 | gameplay | D4-6 |
 | - | [ReflectionFormats](docs/plans/ReflectionFormats.md) — 리플렉션 직렬화 형식 계획 (2026-10-17) | 구현중 | 9/11 | 없음 | engine | 없음 |
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 3/15 | 없음 | network | D7-3 |
@@ -39,7 +37,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 0개 · 후보 절 0개
+후보 문서 9개 · 후보 절 153개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.
@@ -103,6 +101,6 @@ CI가 무엇을 빌드하고 어떤 테스트를 돌리는지는 `.github/workfl
 - [문서 지도](docs/02_DocumentMap.md)는 문서마다 다루는 주제와 모든 모듈 README의 목록입니다.
 - [AGENTS.md](AGENTS.md)는 코드 규칙의 원본입니다. [코딩 규칙 예시](docs/04_CodingGuidelines.md)는 같은 규칙을 예시와 함께 한국어로 풀어 씁니다.
 - [설정](docs/07_Configuration.md)은 설정 값을 어느 파일에 두는지 설명합니다. 필드별 표는 생성 문서 [docs/Config](docs/Config/README.md)에 있습니다.
-- [백로그](docs/backlog/README.md)는 영역별로 나눈 남은 작업 목록입니다. 작업을 시작하기 전에 읽습니다.
+- [작업 방식](docs/11_Workflow.md) 6절은 할 일을 다루는 방식입니다. 남은 일은 `docs/plans/` 의 계획 문서와 `Candidates-<영역>.md` 에 있고, 목록은 `py -3 -m Scripts plans` 로 봅니다. 작업을 시작하기 전에 읽습니다.
 - [검증과 측정](docs/08_Verification.md)은 작업을 끝내기 전에 돌릴 것과 측정 방법입니다. [결정 기록](docs/09_Decisions.md)은 정한 방향과 기각한 안입니다.
 - [문서 쓰기 지침](docs/10_WritingDocs.md)은 문서를 쓰거나 고칠 때 따르는 규칙입니다.

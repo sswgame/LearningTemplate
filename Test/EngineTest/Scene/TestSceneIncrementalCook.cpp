@@ -17,7 +17,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 씬 · 프리팹 쿠킹이 작업마다 입력을 기록하고(`CookJob`), 기록이 새것이면 DDC 의 출력을 다시 쓰는지 본다(백로그 C-42 K2).
+// 씬 · 프리팹 쿠킹이 작업마다 입력을 기록하고(`CookJob`), 기록이 새것이면 DDC 의 출력을 다시 쓰는지 본다(계획 문서 IncrementalCook K2).
 
 namespace
 {

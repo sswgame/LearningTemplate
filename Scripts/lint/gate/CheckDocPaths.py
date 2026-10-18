@@ -22,7 +22,7 @@ Scripts/lint/gate/CheckDocPaths.py
 `.gitignore` 가 무시하는 자리(내려받은 도구 · 생성 파일 — `Config/Environment/toolchain_config.json`)와 설정 목록
 (`Scripts/common/ConfigCatalog.py`)이 `bOptional` 로 적은 설정 파일은 없어도 맞다.
 `<` · `*` · `{` · `…` · `$` 가 든 것은 모양이지 경로가 아니라 보지 않는다.
-백로그(`docs/backlog/`)와 `docs/plans/` 의 계획 문서는 규칙 1 만 본다 — 할 일 목록과 계획은 아직 없는 파일 · 옛 경로를 적는 자리다.
+`docs/plans/` 의 계획 문서는 규칙 1 만 본다 — 계획은 아직 없는 파일 · 옛 경로를 적는 자리다.
 """
 
 from __future__ import annotations
@@ -31,7 +31,6 @@ import argparse
 import os
 import re
 import sys
-import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -40,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 from common import kNotOurDirNames, runProcess  # noqa: E402
 from common.ConfigCatalog import kListConfigFile  # noqa: E402
+from common.MarkdownAnchor import collectAnchors  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 경로로 읽는 최상위 폴더.
@@ -53,8 +53,8 @@ _kSourceFolderName: frozenset[str] = frozenset({"Core", "Engine", "Editor", "Gam
 #: 줄기만 적은 경로(`Graphics/RHI/IRenderSurface`)를 풀 때 붙여 보는 확장자.
 _kStemExtension: tuple[str, ...] = (".h", ".cpp", ".xxx", ".inl", ".py", ".md", ".cmake", ".json", ".xml", ".hlsl", ".hlsli")
 
-#: 규칙 1 만 보는 폴더 — 백로그(`docs/backlog/`)와 다음 세션 계획(`docs/plans/`)은 만들 파일을 적는다.
-_kLinkOnlyFolder: tuple[str, ...] = ("docs/backlog/", "docs/plans/")
+#: 규칙 1 만 보는 폴더 — 계획 문서(`docs/plans/`)는 만들 파일을 적는다.
+_kLinkOnlyFolder: tuple[str, ...] = ("docs/plans/",)
 
 #: 없어도 맞는 설정 파일 — 설정 목록(`ConfigCatalog`)이 `bOptional` 로 적은 줄(기본값과 다른 값이 있을 때만 만드는 파일 등).
 #: 목록이 원본이라 여기에 따로 적지 않는다.
@@ -71,40 +71,6 @@ _kPathTokenRe = re.compile(r"[A-Za-z0-9_.\-/]+")
 _kShapeCharRe = re.compile(r"[<>*{}…$%|]|\.\.\.")
 _kIncludeRe = re.compile(r'#include\s+"([^"]+)"')
 _kPythonScriptRe = re.compile(r"py -3 (?:-m )?(Scripts/[A-Za-z0-9_./\-]+\.py)")
-_kHeadingRe = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
-
-
-def slugifyHeadingInternal(heading: str) -> str:
-    """GitHub 의 제목 앵커 — 소문자, 글자 · 숫자 · `_` · `-` 만 남기고 공백은 `-`."""
-    text = re.sub(r"[`*~]", "", heading.strip().lower())
-    listChar: list[str] = []
-    for ch in text:
-        if ch == " ":
-            listChar.append("-")
-        elif ch in "-_" or unicodedata.category(ch)[0] in "LN":
-            listChar.append(ch)
-    return "".join(listChar)
-
-
-def collectAnchorInternal(text: str) -> set[str]:
-    """문서의 제목 앵커 전부(같은 제목은 `-1` · `-2` …)."""
-    setAnchor: set[str] = set()
-    mapCount: dict[str, int] = {}
-    bInFence = False
-    for line in text.splitlines():
-        if line.lstrip().startswith("```"):
-            bInFence = not bInFence
-            continue
-        if bInFence:
-            continue
-        match = _kHeadingRe.match(line)
-        if match is None:
-            continue
-        slug = slugifyHeadingInternal(match.group(2))
-        count = mapCount.get(slug, 0)
-        mapCount[slug] = count + 1
-        setAnchor.add(slug if count == 0 else f"{slug}-{count}")
-    return setAnchor
 
 
 class CheckDocPathsGate(LintGate):
@@ -116,7 +82,7 @@ class CheckDocPathsGate(LintGate):
     preCommitPattern = ("*.md",)
     preCommitFileArgument = "--files"
     violationHeader = "문서가 없는 자리를 가리킵니다"
-    hint = ("  파일을 옮겼으면 문서의 경로를 새 자리로, 지웠으면 그 문장을 지우세요. 아직 없는 파일을 적는 것은 백로그와 계획 문서(docs/plans/)의 일입니다.\n"
+    hint = ("  파일을 옮겼으면 문서의 경로를 새 자리로, 지웠으면 그 문장을 지우세요. 아직 없는 파일을 적는 것은 계획 문서(docs/plans/)의 일입니다.\n"
             "  파일을 옮기거나 지운 커밋은 문서를 건드리지 않아 훅이 이 게이트를 돌리지 않습니다 — `ctest -L lint` 가 전체를 봅니다.")
     # 없는 자리를 `git check-ignore` 로 묻는 게이트라 조각마다 임시 트리를 git 저장소로 만든다(`git`).
     selfTestCases = [
@@ -186,7 +152,7 @@ class CheckDocPathsGate(LintGate):
 
         def anchorsOfInternal(path: Path) -> set[str]:
             if path not in mapAnchor:
-                mapAnchor[path] = collectAnchorInternal(path.read_text(encoding="utf-8", errors="replace"))
+                mapAnchor[path] = collectAnchors(path.read_text(encoding="utf-8", errors="replace"))
             return mapAnchor[path]
 
         for documentPath in listDocument:

@@ -48,7 +48,7 @@ B ② · ③ 은 이 묶음에서 하지 않았고(빌드 없이 컨테이너를
 - **B 컨테이너 · 네트워크.** 보류: `NetConnection` 수신 아레나(출처가 틀렸던 "측정 기각 `C-4`" 가 아니라 측정 없이 `a108c1adf` 로 들어간 것), `NetPrioritizer` 힙, UDP `recvmmsg`(`B-10`). `sw::deque` 직접 구현은 주소 안정에 기대는 곳(`NetTransport.h:121`)을 먼저 본다.
 - **C 리플렉션.** 설계는 [리플렉션 직렬화 형식 계획](ReflectionFormats.md)이 단계 표를 가진다(자기 기술형 유지 + 고정 배치형 신설, 스키마 해시 1개, 코드젠이 타입별 write/read · `==` 생성). 리플렉션 코드젠은 헤더만 읽으므로 `.cpp` 내부(익명 namespace) 형식에는 못 쓴다 → 모듈 내부 헤더로 옮겨 쓴다.
 - **D 셰이더 bindless 입문.** `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정한다(`C-76`).
-- **공통화 2단계**는 백로그 `C-68` 이다.
+- **공통화 2단계**는 후보 `FunctorLambdaCommonization` 이다.
 
 재평가(2026-10-17, 읽기만으로 대조):
 - 유지 확정: `notify_all` 금지, `-gv_tickCostDispatch` 기본 0(결정 기록 5-6), `PostUpdate` · `TickPhase`.

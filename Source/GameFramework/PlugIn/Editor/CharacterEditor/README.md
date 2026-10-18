@@ -1,7 +1,7 @@
 # CharacterEditor — 캐릭터 편집 에디터 플러그인
 
 `GF_EditorPlugIn_CharacterEditor` 는 캐릭터 편집 창(`docs/plans/EditorCharacterEditor.md`)의 **첫 단계**입니다. 화면 없이 테스트할 수 있는 편집 모델과, 그 모델을 그리는 도구 패널 뼈대까지 들어 있습니다.
-미리보기 씬이 필요한 부분(캐릭터 스폰, 뷰포트 기즈모, 피팅 표시, 애니메이션 재생, 썸네일)은 `EditorMultiWorld` 단계가 끝난 뒤 이어 붙입니다 — 남은 일은 `docs/backlog/gameplay.md` 의 `D4-8` ⑥ 에 있습니다.
+미리보기 씬이 필요한 부분(캐릭터 스폰, 뷰포트 기즈모, 피팅 표시, 애니메이션 재생, 썸네일)은 `EditorMultiWorld` 단계가 끝난 뒤 이어 붙입니다 — 남은 일은 `docs/plans/EditorCharacterEditor.md` 의 옛 `D4-8` ⑥ 에 있습니다.
 
 ## 구조
 
@@ -32,4 +32,4 @@
 - 부모 본 검증은 스켈레톤을 읽은 뒤에 켜진다(`Load skeleton` → `SocketEditModel::setBoneNames`).
 - 스켈레톤은 재임포트가 다시 쓴다 — 포즈 편집은 `*.refpose.xml` 에만 간다. 좌우 대칭은 덮어쓰기가 있는 본만 된다.
 - 프리셋 저장소는 프리셋을 공유 코드로 싣기 때문에 외형 데이터(`Load data`)가 있어야 저장 · 읽기가 된다.
-- 화면 확인은 `Resource/engine/automation/editor/charactereditor.scenario.xml` 이 탭마다 스크린샷을 남긴다. 미리보기 씬이 필요한 일(기즈모 · 썸네일 · 피팅 계산 연결)은 백로그 `D4-8` ⑥ (a).
+- 화면 확인은 `Resource/engine/automation/editor/charactereditor.scenario.xml` 이 탭마다 스크린샷을 남긴다. 미리보기 씬이 필요한 일(기즈모 · 썸네일 · 피팅 계산 연결)은 `EditorCharacterEditor.md` 의 옛 `D4-8` ⑥ (a).

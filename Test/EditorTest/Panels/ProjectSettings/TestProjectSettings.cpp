@@ -18,7 +18,7 @@
 
 namespace
 {
-    /** @brief `EngineConfig` 처럼 명시 생성자가 없는 타입은 리플렉션 표에 `$ctor` 가 없어 설정 창이 열지 못한다(백로그 A: 파서가 기본 생성 가능 타입에 `$ctor` 를 합성하면 풀린다). */
+    /** @brief `EngineConfig` 처럼 명시 생성자가 없는 타입은 리플렉션 표에 `$ctor` 가 없어 설정 창이 열지 못한다(옛 A: 파서가 기본 생성 가능 타입에 `$ctor` 를 합성하면 풀린다). */
     bool hasReflectedDefaultConstructor( const sw::TypeInfo& type )
     {
         const sw::FunctionInfo* pConstructor = type.findMethod( sw::hashed_string( "$ctor" ) );

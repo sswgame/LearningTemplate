@@ -314,7 +314,7 @@ SW_TEST_CASE( AutomationScenarioTest, WaitUntilHoldsTheScenarioClock )
 
 /**
  * @brief [AutomationScenarioTest] 차례 함수가 `holdUntilReady` 로 대상이 생길 때까지 시계를 붙잡는다 — 늦게 그려진 대상도 그 단계에서 누르고, 끝내 없으면 시한 뒤 단계가 실패를 적는다
- * @details 에디터 입력 단계(`EditorClick` · `EditorDrag` · `EditorHover`)가 레이블을 기다리는 방식이다(백로그 A-3 이던 Vulkan 1 회 "레이블 없음").
+ * @details 에디터 입력 단계(`EditorClick` · `EditorDrag` · `EditorHover`)가 레이블을 기다리는 방식이다(옛 A-3 이던 Vulkan 1 회 "레이블 없음").
  *          변이: `holdUntilReady` 가 늘 Run 을 돌려주면 첫 시나리오가 "not there yet" 으로 진다.
  */
 SW_TEST_CASE( AutomationScenarioTest, HoldUntilReadyWaitsForALateTarget )

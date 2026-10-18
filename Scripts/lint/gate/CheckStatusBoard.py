@@ -34,7 +34,7 @@ class CheckStatusBoardGate(LintGate):
     description = "README.md 의 '지금 진행 상황' 표가 계획 문서 · 로드맵 · 후보 문서에서 만든 결과와 같은지 검사"
     buildComment = "Checking README status board is up to date..."
     timeoutSeconds = 30
-    preCommitPattern = ("README.md", "docs/plans/*", "docs/backlog/*")
+    preCommitPattern = ("README.md", "docs/plans/*")
     preCommitFileArgument = ""
     violationHeader = "진행 상황 표 위반"
     hint = "  표를 손으로 고치지 말고 `py -3 -m Scripts status-board --write README.md` 로 다시 만듭니다."
@@ -42,8 +42,7 @@ class CheckStatusBoardGate(LintGate):
         {
             "name": "낡은 표",
             "expectedViolation": "README.md: 표가 낡았습니다",
-            "files": {"README.md": _kStaleReadme, "docs/plans/A.md": _kPlanHeader, "docs/plans/Roadmap.md": _kRoadmap,
-                      "docs/backlog/a.md": "# A\n\n- `C-1` [정리] **하나.**\n"},
+            "files": {"README.md": _kStaleReadme, "docs/plans/A.md": _kPlanHeader, "docs/plans/Roadmap.md": _kRoadmap},
         },
         {
             "name": "머리 줄이 없는 계획 문서",

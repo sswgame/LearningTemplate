@@ -5,7 +5,7 @@
 #if defined( SW_PLATFORM_LINUX )
 namespace sw
 {
-    // X11 클립보드는 선택(CLIPBOARD) 소유와 SelectionRequest 응답이 창 메시지 루프에 있어야 한다 — 아직 없다(백로그 D6-2).
+    // X11 클립보드는 선택(CLIPBOARD) 소유와 SelectionRequest 응답이 창 메시지 루프에 있어야 한다 — 아직 없다(후보 UiInputRemaining).
     // UI 는 엔진 안 클립보드를 쓰고, 호스트는 `isAvailable` 을 보고 끼우지 않는다.
     bool PlatformClipboard::isAvailable()
     {

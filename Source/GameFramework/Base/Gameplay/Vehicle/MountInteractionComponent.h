@@ -18,7 +18,7 @@ namespace sw
      * @class MountInteractionComponent
      * @brief 탑승자 폰 오브젝트에 붙습니다. PrePhysics 틱에서 폰의 의도만 읽고(InputMap 은 읽지 않음), 타기와 내리기는 틱 뒤로 미룹니다(`executeOrDeferPostTick`).
      * @details 운전석에서 내리는 것은 탈것 쪽(`VehicleExitComponent`)이 처리한다. 빙의가 탈것에 있기 때문이다. 플레이어든 AI 든 같은 버튼 의도로 탄다.
-     *          상호작용 프레임워크(`Interaction/`)의 프롬프트와 길게 누르기로 옮기는 일은 백로그에 있다.
+     *          상호작용 프레임워크(`Interaction/`)의 프롬프트와 길게 누르기로 옮기는 일은 후보 절에 있다.
      */
     REFLECT( Category = "Vehicle", DisplayName = "Mount Interaction", Tooltip = "Rider side: the Interact intent button gets on the nearest free seat (or off a passenger seat)" )
     class SW_GF_API MountInteractionComponent : public Component

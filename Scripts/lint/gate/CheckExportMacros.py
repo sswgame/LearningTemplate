@@ -10,7 +10,7 @@
 
 키트 TU 는 `SW_GF_EXPORTS` 를 정의하지 않으므로 키트 헤더에 `SW_GF_API` 를 쓰면 Base 클래스가 아니라 키트 클래스가 import 로 풀려 링크가 깨진다.
 서버 키트 TU 는 `SW_KIT_EXPORTS` 를 정의하지 않으므로 서버 헤더에 `SW_KIT_API` 를 쓰면 클래스가 import 로 풀리고, 반대로 서버가 include 한 공유 키트
-헤더의 `SW_KIT_API` 는 import 로 남아 공유 키트 심볼을 서버 DLL 이 다시 내보내지 않는다(백로그 C-3).
+헤더의 `SW_KIT_API` 는 import 로 남아 공유 키트 심볼을 서버 DLL 이 다시 내보내지 않는다(옛 C-3).
 
 순수 인터페이스(순수 가상 · `= default` · `= delete` · `using` 만 든 클래스)는 내보낼 멤버가 없다. 인라인 `= default` 생성자 · 소멸자는 그 헤더를 include 하는
 `.cpp` 가 DLL 에 있을 때만 내보내져서, 키트가 파생할 때 import 로 풀려 `??0` · `??1` 링크 오류가 난다 — 매크로를 달지 않는다.

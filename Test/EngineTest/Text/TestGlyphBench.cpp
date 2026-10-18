@@ -42,7 +42,7 @@ namespace
 /**
  * @brief [GlyphBenchTest] 새 한글 글리프 400 개를 한 프레임에 처음 그릴 때의 CPU 시간(다섯 판, 판마다 다른 음절) — 시스템 한글 글꼴이 없으면 건너뛴다
  * @details 판마다 같은 FontService 를 쓰되 음절이 겹치지 않으므로 모두 새로 래스터화한다(글꼴 열기는 첫 판 앞에서 끝낸다).
- *          판정하지 않는다(측정값). p50 이 4 ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 정한다(백로그).
+ *          판정하지 않는다(측정값). p50 이 4 ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 정한다(후보 절).
  */
 SW_TEST_CASE( GlyphBenchTest, HangulFirstFrameRasterize )
 {

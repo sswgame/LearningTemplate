@@ -77,9 +77,8 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("shared-lock", "dev.RunSharedLock", "워크트리가 나눠 쓰는 자원(vcpkg 설치 폴더 · 빌드 칸 · GPU)을 쓰기 전에 사용 중인지 묻고 잡는 잠금(status · acquire · release · run)"),
     Subcommand("full-build", "dev.RunFullBuild", "빌드 칸을 잡고 all AllTests 전체 빌드 — 성공하면 그 트리의 증거를 남긴다(main push 가 요구한다)"),
     Subcommand("ci-jobs", "dev.ListCiJobs", "GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로 읽는다"),
-    Subcommand("backlog", "dev.ListBacklog", "영역별 백로그(docs/backlog)를 상태 · 영역 · 번호로 골라 보인다(--status · --area · --id)"),
     Subcommand("plans", "dev.ListPlans", "계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(--status · --area · --file)"),
-    Subcommand("status-board", "dev.RunStatusBoard", "README 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 백로그에서 만든다(--write · --check)"),
+    Subcommand("status-board", "dev.RunStatusBoard", "README 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 후보 문서에서 만든다(--write · --check)"),
     Subcommand("deps-outdated", "dev.ListOutdatedDeps", "vcpkg 의존성의 지금 판과 레지스트리 최신 판을 견준다(오버레이 포함)"),
     Subcommand("defender", "setup.AddDefenderExclusions", "Windows Defender 빌드 디렉터리 제외 등록"),
 )

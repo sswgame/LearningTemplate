@@ -18,10 +18,12 @@ sys.path.insert(0, str(kScriptsRoot / "dev"))
 sys.path.insert(0, str(kScriptsRoot / "lint"))
 sys.path.insert(0, str(kScriptsRoot / "lint" / "gate"))
 
+import CheckDocPaths  # noqa: E402
 import CheckStatusBoard  # noqa: E402
 import ListPlans  # noqa: E402
 import RunStatusBoard  # noqa: E402
-from common.StatusBoard import StatusBoardError, anchorsOfTextInternal, parseRoadmap  # noqa: E402
+from common.MarkdownAnchor import collectAnchors  # noqa: E402
+from common.StatusBoard import StatusBoardError, parseRoadmap  # noqa: E402
 from common.Plans import PlanFormatError, kListPlanStatus, parsePlanText, readPlans  # noqa: E402
 
 kGoodText = (
@@ -106,8 +108,8 @@ class ListPlansTest(unittest.TestCase):
 
 kCandidateText = (
     "# 후보 모음\n\n> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 해당없음\n\n"
-    "### Wayland — Linux 창 계층의 Wayland 지원\n\n옛번호: C-30, D2-13\n\n본문.\n\n"
-    "### Plain — 번호 없는 후보\n\n옛번호: 없음\n"
+    "### Wayland\n제목: Linux 창 계층의 Wayland 지원\n옛번호: C-30, D2-13\n\n본문.\n\n"
+    "### Plain\n제목: 번호 없는 후보\n옛번호: 없음\n"
 )
 kRoadmapText = (
     "# 로드맵\n\n## 배경\n\n1. [무시](Hold.md) 다른 절의 번호는 순서가 아니다.\n\n## 지금 순서\n\n"
@@ -141,16 +143,23 @@ def runPlansInternal(root: str, listArg: list[str]) -> tuple[int, str, str]:
 class CandidateTest(unittest.TestCase):
     def testCandidateSectionsAreRead(self) -> None:
         plan = parsePlanText(kCandidateText, "Candidates-engine.md")
-        self.assertEqual([("Wayland", ["C-30", "D2-13"]), ("Plain", [])], [(c.name, c.listOldNumber) for c in plan.listCandidate])
+        self.assertEqual([("Wayland", "Linux 창 계층의 Wayland 지원", ["C-30", "D2-13"]), ("Plain", "번호 없는 후보", [])],
+                         [(c.name, c.title, c.listOldNumber) for c in plan.listCandidate])
 
     def testCandidateNeedsZeroProgressNameAndOldNumberLine(self) -> None:
         header = "# 후보\n\n> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 해당없음\n\n"
         with self.assertRaisesRegex(PlanFormatError, "C.md"):
             parsePlanText(kCandidateText.replace("해당없음", "1/2"), "C.md")
         with self.assertRaisesRegex(PlanFormatError, "C.md:5"):
-            parsePlanText(header + "### 한글이름 — 제목\n\n옛번호: 없음\n", "C.md")
+            parsePlanText(header + "### 한글이름\n제목: 제목\n옛번호: 없음\n", "C.md")
         with self.assertRaisesRegex(PlanFormatError, "C.md:5"):
-            parsePlanText(header + "### Name — 제목\n\n본문만.\n", "C.md")
+            parsePlanText(header + "### Name — 제목\n옛번호: 없음\n", "C.md")
+        with self.assertRaisesRegex(PlanFormatError, "C.md:5"):
+            parsePlanText(header + "### Name\n옛번호: 없음\n", "C.md")
+        with self.assertRaisesRegex(PlanFormatError, "C.md:5"):
+            parsePlanText(header + "### Name\n제목: 제목\n본문만.\n", "C.md")
+        with self.assertRaisesRegex(PlanFormatError, "C.md:5"):
+            parsePlanText(header + "### Name\n제목: \n옛번호: 없음\n", "C.md")
 
 
 class StatusBoardTest(unittest.TestCase):
@@ -220,10 +229,10 @@ class StatusBoardTest(unittest.TestCase):
 
 
 class PlansCheckAndFindTest(unittest.TestCase):
-    def testAnchorRuleForCandidateAndPlainHeadings(self) -> None:
-        setAnchor = anchorsOfTextInternal("## 지금 순서\n### Wayland — 창 지원\n## 두 낱말 제목\n", "Candidates-engine.md")
+    def testCandidateAnchorsAreSharedWithTheDocPathsGate(self) -> None:
+        setAnchor = collectAnchors("## 지금 순서\n### Wayland\n제목: 창 지원\n## 두 낱말 제목\n")
         self.assertTrue({"지금-순서", "wayland", "두-낱말-제목"} <= setAnchor)
-        self.assertNotIn("wayland", anchorsOfTextInternal("### Wayland — 창 지원\n", "Other.md"))
+        self.assertIs(collectAnchors, CheckDocPaths.collectAnchors)
 
     def testCheckAcceptsGoodRoadmapLinks(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -58,7 +58,6 @@ Scripts/
   │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
   │     ├── EditorIconFont.py         # 에디터 아이콘 99 개의 그리기 함수 + 표준 라이브러리만으로 TrueType 폰트 · C++ 헤더 쓰기
-  │     ├── Backlog.py                # 영역별 백로그(docs/backlog) 항목 읽기 — 목록 명령(dev/ListBacklog.py)과 게이트(CheckBacklog)가 같이 쓴다
   │     ├── Plans.py                  # 계획 문서(docs/plans)의 머리 줄 · 후보 절 읽기 — 목록 명령(dev/ListPlans.py)이 쓴다
   │     ├── StatusBoard.py            # 진행 상황 표 만들기 · 표지 사이 바꾸기 — 명령(dev/RunStatusBoard.py)과 게이트(CheckStatusBoard)가 같이 쓴다
   │     ├── ReflectionAnnotationKeys.py # 편집기용 리플렉션 어노테이션 키 헤더 내용(AnnotationMeta.txt · 단위 표에서) — 생성기와 게이트가 같이 쓴다
@@ -167,7 +166,6 @@ Scripts/
   │     │     ├── CheckDocPaths.py            # 문서(.md)의 링크 · 앵커 · 저장소 경로가 실재하는지, 모든 README 가 문서 지도에 있는지
   │     │     ├── CheckDataDrivenStructure.py # 코드의 에셋 경로 · 조용한 폴백 · 버린 읽기 결과가 기준선(rules 의 [baseline])을 넘지 않는지 — --summary 가 진척 표
   │     │     ├── CheckStatusBoard.py         # README 의 진행 상황 표가 계획 문서 · 로드맵 · 후보 문서에서 만든 결과와 같은지
-  │     │     ├── CheckBacklog.py             # 백로그 항목 번호가 하나뿐인지, 상태 태그가 허용값인지, 백로그를 가리키는 글이 맞는 파일 · 항목을 가리키는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 이름 · 모양 규칙
   │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8) · main(argv) 로 인자를 받는지
   │     │     ├── CheckScriptCommonHelpers.py # common 의 한 자리(runProcess · BuildTree · writeGeneratedFile · 콘솔)를 비켜 가는 호출
@@ -230,7 +228,6 @@ Scripts/
   │     ├── RunSharedLock.py          # 나눠 쓰는 자원 잠금(vcpkg · 빌드 칸 · GPU) — `run` 은 잡고 명령을 돌린 뒤 놓는다
   │     ├── RunFullBuild.py           # 검증 빌드(all AllTests, 빌드 칸) · 트리 증거 — main push 의 pre-push 훅이 증거를 요구한다
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
-  │     ├── ListBacklog.py            # 영역별 백로그를 상태 · 영역 · 번호로 골라 보인다(`py -3 -m Scripts backlog`, --id 는 항목 본문만)
   │     ├── ListPlans.py              # 계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(`py -3 -m Scripts plans`, --file 은 머리 줄과 절 제목, --find 는 옛 번호 · 이름의 위치, --check 는 로드맵 링크)
   │     ├── RunStatusBoard.py         # README 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 후보 문서에서 만든다(`py -3 -m Scripts status-board`, --write · --check)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
@@ -492,7 +489,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 - **문서의 경로는 `CheckDocPaths` 가 본다** — 상대 링크 · 제목 앵커 · 백틱 안 저장소 경로 · 코드 블록의 `#include` · `py -3 Scripts/…`,
   그리고 모든 README · `docs/*.md` 가 `docs/02_DocumentMap.md` 에 있는지. 파일을 옮기거나 지우는 커밋은 .md 를 건드리지 않아 훅이 이 게이트를 돌리지 않으므로
   `ctest -L lint` 가 잡는다. CI 는 문서만 바뀐 push 에도 린트 잡을 돌리고 빌드 잡만 건너뛴다(`ci.yml` 린트 잡의 `changes` 단계).
-  자리만 보이는 예시는 `<게임>` 처럼 꺾쇠로 쓰고(게이트가 경로로 읽지 않는다), 아직 없는 파일은 백로그에만 적는다(백로그는 링크만 본다).
+  자리만 보이는 예시는 `<게임>` 처럼 꺾쇠로 쓰고(게이트가 경로로 읽지 않는다), 아직 없는 파일은 계획 문서에만 적는다(계획 문서는 링크만 본다).
 - **`#!` 스크립트는 git 모드 100755 로 커밋한다**(`CheckExecutableBits`) — Windows 에서 만든 파일은 100644 로 들어가 리눅스에서만 `Permission denied` 가 난다
   (오버레이 포트 `openssl/unix/configure` 가 리눅스 CI 다섯 잡을 Configure 에서 세웠다). 새 스크립트는 `git update-index --chmod=+x <경로>`.
 - **규칙 데이터(`lint/rules/*.toml`)는 TOML 부분 집합으로만 쓴다** — CI 린트 잡의 `python3`(ubuntu-22.04)은 3.10 이라 `tomllib` 이 없고,

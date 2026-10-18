@@ -163,9 +163,9 @@ cd build/Ninja-Debug/Bin
 - **렌더 성능은 디스크에서 읽은 씬으로 배치 수를 먼저 셉니다.** 인스턴스 수와 배치 수가 비슷하면 인스턴싱이 꺼진 것입니다.
 - **측정 표에는 측정한 PC 이름과 CPU 를 적습니다.** 다른 빌드가 도는 동안 잰 값은 오염되므로, 측정하는 동안은 다른 빌드를 막습니다(아래 "빌드 속도" 의 슬롯 잠금).
 
-### 영역별 측정값 (백로그 항목의 기준선)
+### 영역별 측정값 (계획 문서 · 후보의 기준선)
 
-백로그 항목이 근거로 삼는 측정값입니다. 다시 잴 때는 같은 명령과 구성으로 잽니다.
+계획 문서 · 후보 절이 근거로 삼는 측정값입니다. 다시 잴 때는 같은 명령과 구성으로 잽니다.
 
 - **지형 LOD 교체**(`TerrainBenchTest.LODSweepWorstFrame`, Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개에서 updateLODs(청크 메시) p50 0.1 ms · 최악 4.0 ~ 5.1 ms,
   GPUScene 수집 p50 0.95 ms · 최악 5.0 ~ 5.2 ms 입니다. 기준은 GT 2 ms 입니다.
@@ -196,7 +196,7 @@ cd build/Ninja-Debug/Bin
   클라이언트 500 은 받기 10.7k · 보내기 10.7k pkt/s, 서버 스레드 14 %, 패킷당 6.6 us, RTT p50 48 · p99 48 ms 입니다.
   클라이언트 2000 은 42.1k · 42.5k pkt/s, 54 %(51 ~ 82 %), 패킷당 6.5 us, RTT p50 68 · p99 70 ms, 커널 버림 0 입니다. RTT 는 대부분 같은 PC 의 클라이언트 드라이버 지연입니다.
 - **온라인 부하 봇 참고값**(2026-10-06, Debug, `--local-server` — 봇과 서버가 한 스레드라 서로의 시간을 잰다): `quick_check` 봇 300 이 4200 동작을 28 초에 오류 0 으로 끝냈고,
-  chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548 건이었습니다. 판단 근거로 쓸 값은 Release 서버 한 대 측정입니다(백로그 `D7-5`).
+  chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548 건이었습니다. 판단 근거로 쓸 값은 Release 서버 한 대 측정입니다(후보 `EpollAndRealStoreVerification`).
 - **`DynamicBitset` 연산**(2026-10-17, `DynamicBitsetBenchTest`, Release, PC SW · Ryzen 7 6800H, 전 · 후 바이너리를 번갈아 세 번, 판 15 개 p50 의 가운데 값, ns):
   `--load_suites=only --test_filter=DynamicBitsetBenchTest.*` 를 `Bin` 에서 돌린다. 비트당 연산은 비트당 ns, 나머지는 한 번당 ns 다.
 
@@ -365,8 +365,8 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 | aiskirmish × Mid* | 6461 → 1114 | 394 → 309 | 18632 (17173..19571) → 14301 (14281..14655) | 2 → 0 | 35 → 5 |
 | aiskirmish × LowEnd* | 6976 → 3550 | 394 → 309 | 25805 (20784..26055) → 4136 (3909..4322) | 3 → 0 | 65 → 5 |
 
-  최악 프레임의 13 ~ 20 ms 한 프레임은 디스크 · 이 변경과 무관합니다 — 측정 창 안 파일 열기가 0 이고, 디스크 흉내를 끈 LowEnd 도 14.0 ms 였으며, `.meta` 변경만 뺀 같은 빌드와 3 판씩 견준 가운데 값이 3.2 ms 로 같았습니다(판마다 나오다 말다 한다 — 백로그 `C-29` ②).
-  기동의 나머지 열기는 개발 배치에만 있는 것입니다 — 키트 DLL 섀도 복사 61 · 모듈 매니페스트 70 · 셰이더 원본 해시 약 30(Shipping 은 셋 다 없다, 백로그 `C-29` ①).
+  최악 프레임의 13 ~ 20 ms 한 프레임은 디스크 · 이 변경과 무관합니다 — 측정 창 안 파일 열기가 0 이고, 디스크 흉내를 끈 LowEnd 도 14.0 ms 였으며, `.meta` 변경만 뺀 같은 빌드와 3 판씩 견준 가운데 값이 3.2 ms 로 같았습니다(판마다 나오다 말다 한다 — 후보 `RuntimeQualityAdjust` ②).
+  기동의 나머지 열기는 개발 배치에만 있는 것입니다 — 키트 DLL 섀도 복사 61 · 모듈 매니페스트 70 · 셰이더 원본 해시 약 30(Shipping 은 셋 다 없다, 후보 `RuntimeQualityAdjust` ①).
   부하 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`)은 같은 날 Release 세 번 중 최대 케이스 시간의 네 배입니다(`TaskManagerBenchTest` 3.2 s · `PackReadBenchTest` 3.1 s · `NetSimLoadTest` 2.5 s 가 가장 길다).
 - **CI 야간 잡**(`.github/workflows/load.yml`, 리눅스 `CI-Release`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터 — GPU 가 없어 App 드라이버 제외)를 돌리고 진 조합을 주석으로 올립니다(`CiFailureReport.py load`). 러너는 측정 기계가 아니므로 기준선은 알림뿐입니다. 첫 실행(2026-10-15, 실행 38813564584)은 connect × Mid, replication × Mid · LowEnd 가 통과했고 tick p99 는 약 15 ms 였습니다.
 
@@ -378,7 +378,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **`-gv_fixedFrameDelta=<초>` 는 프레임마다 그 시간만 흘린다**(벽시계 무시) — 시나리오 · 픽셀 비교 · 벤치 재현이 기계와 상관없이 같은 게임 시간을 본다.
   App 의 종료 코드는 `Engine::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
 - **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 그 게임 프리셋의 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다
-  손 확인 목록을 백로그에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
+  손 확인 목록을 후보 절에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
   `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
   문서를 여는 시나리오는 `WaitUntil` 이 기본 문서와 **구별되는** 값을 기다려야 한다 — 기본 문서와 같은 값을 기다리면 파일이 뒤늦게 열려 클릭이 어긋난다.
 - **게임 로직은 기반 탐침으로 단언하고 결정성은 백엔드끼리 비교한다** — 입력은 액션 이름(`Action` · `ActionAxis`), NPC 일정은 `AdvanceGameTime` + `Schedule.*`, AI 는 `AI.State` + `ExpectVisited`,
@@ -512,4 +512,4 @@ py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 �
   테스트가 자식 셸을 띄우면 `exec` 를 붙인다 — dash 의 `sh -c` 는 SIGTERM 에 먼저 죽어 종료 코드 143 이 된다.
   단조 시계로 잰 캐시 TTL 은 느린 빌드에서 임대를 풀어 버린다 — 서버 틱 시각을 쓴다. epoll 전송은 멈춘 동안 읽지 않으므로 전송 모델마다 테스트 기대를 나눈다.
   경합 검출기는 비 const `operator[]` 와 공유 읽기 버퍼를 쓰기로 보므로 읽기 경로는 const 로 둔다. ASan 은 스택 객체 수명(OpenSSL 스택)과 테스트 지역 변수의 선언 순서를 잡는다.
-- **Windows STL containers 잡은 sw 할당자와 기록 해시에 기대는 테스트를 건너뛴다**(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`). 기본 컨테이너 구성에서 같은 테스트가 가끔 지는지는 백로그 `E-1` 에서 지켜본다.
+- **Windows STL containers 잡은 sw 할당자와 기록 해시에 기대는 테스트를 건너뛴다**(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`). 기본 컨테이너 구성에서 같은 테스트가 가끔 지는지는 후보 `NightlyCiFollowups` 에서 지켜본다.

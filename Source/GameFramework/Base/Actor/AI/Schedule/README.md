@@ -59,7 +59,7 @@ HarvestValley 의 `FarmVillageDirectorComponent` 가 첫 사용처입니다. 데
 - **목록 함수는 같은 스레드에서 읽는다고 가정합니다.** `collectLiveSystems` 는 생성자 · 소멸자가 올리고 내리는 전역 목록을 잠그지 않고 돌려줍니다. 에디터 디버그 창과 자동화 탐침은 게임 스레드에서만 부릅니다.
 - **시각은 정수 분입니다.** 시계의 분 아래는 `_minuteFraction` 으로 쌓였다가 넘어갑니다. 시나리오가 시계를 감으면(`AdvanceGameTime`) 다음 `update` 에서 그 사이의 사건이 시각 순으로 처리됩니다.
 - **잠은 `skipTo` 입니다.** 끼어들기를 모두 지우고 사이의 사건을 버린 뒤 NPC 마다 `Snapped` 를 냅니다. 몸을 그 자리에 놓는 것은 게임의 몫입니다(HarvestValley 는 몸이 `_bodySnapDistance` 넘게 떨어지면 놓는다).
-- 에디터 디버그 창(`ScheduleDebugPanel`)은 실물로 열어 보지 않았습니다. 에디터 쪽 일이라 백로그에 남아 있습니다.
+- 에디터 디버그 창(`ScheduleDebugPanel`)은 실물로 열어 보지 않았습니다. 에디터 쪽 일이라 후보 절(`Candidates-editor.md`)에 남아 있습니다.
 
 ## 더 볼 곳
 

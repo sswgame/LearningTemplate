@@ -24,7 +24,7 @@ using namespace sw;
 using namespace sw::editor;
 
 // 창 범위 선택 — 선택은 메인 씬의 것과 미리보기 창마다의 것이 따로 있고, 호출부는 이름 있는 접근자로 어느 것인지 고른다.
-// 메인 선택만 타입으로 찾던 때는 미리보기 창이 겨누는데 명령이 메인 선택을 고쳤다(백로그 D3-7 (2)).
+// 메인 선택만 타입으로 찾던 때는 미리보기 창이 겨누는데 명령이 메인 선택을 고쳤다(옛 D3-7 (2), EditorMultiWorld).
 
 static_assert( kIsAccessorOnlySubsystem<EditorSelection>, "the selection must not be reachable by type lookup - several instances exist" );
 static_assert( kIsAccessorOnlySubsystem<const EditorSelection>, "a const lookup must be blocked too" );

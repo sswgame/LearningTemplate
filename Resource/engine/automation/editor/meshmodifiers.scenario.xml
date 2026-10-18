@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 메시 모디파이어 패널(GF_EditorPlugIn_MeshModifiers, 백로그 D3-10): 파괴 쇼케이스의 왼쪽 상자(CrateLeft, crate_medium.mesh - 통은 벽 뒤라 씬 뷰 그림에서 가려진다)을 골라 패널 대상으로 삼고
+  에디터 시나리오 — 메시 모디파이어 패널(GF_EditorPlugIn_MeshModifiers, 후보 MeshModifierStack): 파괴 쇼케이스의 왼쪽 상자(CrateLeft, crate_medium.mesh - 통은 벽 뒤라 씬 뷰 그림에서 가려진다)을 골라 패널 대상으로 삼고
   모디파이어를 쌓는다. ① 휘기(Bend)를 더하고 각을 넣으면 GPU 미리보기(모프 풀 + 변형 프로그램)가 대상 메시에 걸리고 씬 뷰 그림이 레스트와 달라진다.
   ② 뷰포트의 이동 화살표(시각화 meshmodifiers.preview)를 끌면 기즈모 중심이 움직이고 **선택은 그대로다** — 손잡이를 집는 첫 클릭이 뷰포트 클릭 선택으로 새지 않는다.
   ③ 곡선 목록(Curve Sculpt Layered "Layer Curves") 항목 추가 · 항목마다 곡선 편집기 팝업에서 키 추가, ④ 참조 목록(Conform Multi "Targets") 항목 추가 · 선택 사용,

@@ -3,7 +3,7 @@
 > 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 3/5
 
 활과 화살, 잡기 · 처형, 말 타기, 문 열기처럼 **여러 개체가 한 타임라인에 묶여 같이 도는 애니메이션**(언리얼의 Contextual Animation, 흔히 페어드 · 싱크드 · 인터랙션 애니메이션)의 일반 구조다.
-백로그 `D4-6` 아래에 있다. 첫 단위(P0 ~ P2)는 `feat22` 브랜치에 코드와 테스트로 들어갔고, **빌드 없이** 썼다(통합 담당이 한 워크트리에 모아 빌드 한 번으로 검증한다).
+애니메이션 영역의 한 단위다([게임플레이 후보](Candidates-gameplay.md) 의 애니메이션 절과 이웃). 첫 단위(P0 ~ P2)는 `feat22` 브랜치에 코드와 테스트로 들어갔고, **빌드 없이** 썼다(통합 담당이 한 워크트리에 모아 빌드 한 번으로 검증한다).
 
 ## 1. 지금 엔진에 있는 것과 없는 것
 
@@ -123,9 +123,17 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 | P0 | `PairedAnimationDef` 로더와 검사(필수 역할 · 클립 없음 · NaN · 모르는 속성 · 앵커 규칙 · 알림 역할) | feat22, 빌드 전 |
 | P1 | `PairedAnimationSession` · `PairedAnimationSystem` · `PairedAnimationComponent`, `AnimationNotifyComponent::processExternalNotify` | feat22, 빌드 전 |
 | P2 | 정렬 `snap` · `warp`(`MotionWarpingComponent` 재사용, 새 노드 없음) | feat22, 빌드 전 |
-| P3 | 네트워크 재현(7절) | 백로그 `D4-6` |
-| M3 | 에디터 미리보기(8절) | 백로그 `D4-6` |
-| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립), 상호작용(`InteractableComponent`)에서 세션 시작, 에셋 캐시(`CharacterDataCache` 처럼 핫 리로드), 상대 위치로 세트 고르기 | 백로그 `D4-6` |
+| P3 | 네트워크 재현(7절) | 아래 "남은 것" |
+| M3 | 에디터 미리보기(8절) | 아래 "남은 것" |
+| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립), 상호작용(`InteractableComponent`)에서 세션 시작, 에셋 캐시(`CharacterDataCache` 처럼 핫 리로드), 상대 위치로 세트 고르기 | 아래 "남은 것" |
+
+## 남은 것
+
+- 에디터 미리보기(M3): 역할마다 메시를 놓고 한 시계로 스크럽 · 오프셋 기즈모 · 알림 시각 편집.
+- 네트워크 재현(P3): 서버가 세션 id · 시작 틱 · 역할 → 오브젝트를 복제한다. 클라이언트 따라잡기에는 애니메이터 시각 지정 훅이 필요하다(feat20 · feat21 병합 뒤). 롤백은 feat17 `setOwnerState` 에 세션 상태를 소유 상태로 싣는다.
+- 시나리오 테스트: Shooter3D 궁수 · 활 · 화살 실제 클립과 활 메시(`data/anim/bow_shoot.pairedanim.xml` 은 형식 검사만 돈다).
+- 상호작용(`InteractableComponent`)에서 세션 시작, 에셋 캐시(핫 리로드), 상대 위치로 처형 세트 고르기.
+- 세션 중 `LocomotionWarpingComponent` 가 재생 속도를 쓰지 않게(`PairedAnimationSystem::isParticipant`).
 
 ## 11. 알려진 한계
 

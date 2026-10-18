@@ -2095,7 +2095,7 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFrame )
 
 /**
  * @brief [RHIDeviceTest] Vulkan — 장치를 잃은 뒤(`debugRemoveDevice`, 개발 명령 `rhi.removeDevice`)에는 프레임이 GPU 완료를 기다리거나 주장하지 않고, `waitIdle` 은 기다리지 않고 해제 큐를 비운다
- * @details 손실 뒤에도 펜스를 기다리면 TDR 중의 드라이버 안에서 멈출 수 있다(백로그 A-2 이던 것). 손실 뒤에 맡긴 해제는 프레임을 몇 번 돌려도 불리지 않아야 하고(완료를 본 프레임이 없다),
+ * @details 손실 뒤에도 펜스를 기다리면 TDR 중의 드라이버 안에서 멈출 수 있다(후보 DeviceLossHangRepro). 손실 뒤에 맡긴 해제는 프레임을 몇 번 돌려도 불리지 않아야 하고(완료를 본 프레임이 없다),
  *          `waitIdle` 이 부른다. 변이: `VulkanRHIDevice::beginFrame` 의 손실 검사를 빼면 손실 뒤 제출하지 않은 프레임 펜스를 끝없이 기다려 멈춘다(CTest 시한이 끊는다) — 실제 TDR 뒤 행과 같은 모양이다.
  */
 SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )

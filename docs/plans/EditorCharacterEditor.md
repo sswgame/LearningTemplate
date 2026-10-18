@@ -2,7 +2,7 @@
 
 > 상태: 구현대기 · 선행: EditorMultiWorld · 영역: gameplay · 옛번호: D4-8 · 진행: 0/6
 
-백로그 `D4-8` ⑥ 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
+캐릭터 외형 편집 창의 설계 근거입니다(외형 통합 쪽은 [게임플레이 후보](Candidates-gameplay.md) 의 `CharacterAppearanceIntegration`). 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
 
 ## 1. 선행 조건
@@ -66,7 +66,7 @@ Engine 은 GameFramework 를 모르므로, 창은 **에디터 쪽에서 GameFram
 - 확인: 소켓 쓰기 → 읽기 왕복 단위 테스트, Undo 시나리오.
 
 ### 단계 3 — 체형 · 얼굴 슬라이더
-- 선행: `D4-8` 통합의 GPU 모프 풀 연결.
+- 선행: `CharacterAppearanceIntegration`(옛 D4-8)의 GPU 모프 풀 연결.
 - 파일: 패널, `CustomizationSchema` 를 읽어 슬라이더 생성(GameFramework 는 바꾸지 않음).
 - 확인: 슬라이더 값 → 프리셋 값 왕복, 이미지 비교(값을 바꾸면 이미지가 달라야 함).
 
@@ -89,3 +89,11 @@ Engine 은 GameFramework 를 모르므로, 창은 **에디터 쪽에서 GameFram
 - **피팅 표시는 보기 전용**입니다. 보정 조각 작성은 이 창의 범위 밖(DCC 도구)입니다.
 - **좌우 대칭은 이름 규칙으로** 짝을 찾습니다. 위치 기반 짝 찾기는 비대칭 리그에서 틀리므로 쓰지 않습니다.
 - 위험: 스켈레톤 `.skeleton.json` 은 임포트 산출물이라, 레퍼런스 포즈를 여기에 직접 쓰면 다시 임포트할 때 덮어씁니다 — 그래서 `ReferencePoseOverride` 파일에 씁니다.
+
+## 남은 것
+
+첫 단계(소켓 파일 · 외형 선택 편집 모델과 패널, 스켈레톤 본 트리 · 레퍼런스 포즈 숫자 편집 `BonePoseEditModel`, 좌우 이름 표, 장비 칸 콤보 · 세트 입히기 · 규칙 설명, 프리셋 파일 저장, 피팅 요약 `FitCheckSummary`, 자기 저장 뒤 핫 리로드 무시 `SaveReloadGuard`)는 `GameFramework/PlugIn/Editor/CharacterEditor` 에 들어갔다. 기본 경로는 shooter3d 데이터다(경로 칸에서 바꾼다).
+
+- 미리보기 씬 위로 옮기기: `EditorMultiWorld` 단계 1~4 의 `EditorPreviewPanel` 이 main 에 들어온 뒤에 `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해 `EditorDocumentPanel` 계약으로 더티 · 저장 · 되돌리기 이관.
+- 그때 같이 할 것: 뷰포트 기즈모 포즈 편집 · 뷰포트 소켓 축 표시 · 제약 리그 미리보기 · 애니메이션 재생 · 썸네일 렌더(`UserAppearancePresetStore::setThumbnailPath` 에 경로만 넣으면 된다) · 피팅 계산 연결(`CharacterEditorPanel::setFitResult` 로 푼 결과를 넘긴다 — 슬라이더를 놓을 때 한 번 풀고, 몸 메시 → `AppearanceGeometry` 변환은 외형 통합 항목) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만).
+- 체형 · 얼굴 슬라이더 UI(`CustomizationSchema` 로 슬라이더를 만든다)는 GPU 모프 풀 통합 뒤 — 꾸미기 값 모델 · 직렬화는 있다.

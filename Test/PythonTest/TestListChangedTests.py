@@ -50,7 +50,7 @@ class ListChangedTestsTest(unittest.TestCase):
         return ListChangedTests.selectTests(listPath, self.root, _kTestExecutable, makeGraphInternal())
 
     def testDocumentsRunOnlyLint(self) -> None:
-        selection = self.select(["docs/06_Backlog.md", "Source/Engine/README.md"])
+        selection = self.select(["docs/11_Workflow.md", "Source/Engine/README.md"])
         self.assertFalse(selection.bFull)
         self.assertTrue(selection.isEmpty())
 
@@ -80,7 +80,7 @@ class ListChangedTestsTest(unittest.TestCase):
     def testPathOutsideTheTableIsAnError(self) -> None:
         # 전체로 물러서지 않는다 — 까닭에 경로가 든다.
         with self.assertRaises(ListChangedTests.ChangedTestsError) as context:
-            self.select(["docs/06_Backlog.md", "Unknown/thing.txt", "Test/Golden/a.ppm"])
+            self.select(["docs/11_Workflow.md", "Unknown/thing.txt", "Test/Golden/a.ppm"])
         self.assertEqual(2, len(context.exception.listReason))
 
     def testMissingGraphIsAnErrorForSourcePaths(self) -> None:

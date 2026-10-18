@@ -1,35 +1,39 @@
 # 로드맵 — 앞으로 할 일의 순서
 
-이 문서는 앞으로 할 일의 **순서의 정본**입니다. [백로그](../backlog/README.md)는 닫을 수 있는 항목을, 각 계획 문서는 설계와 단위를 가집니다. 이 문서는 순서만 가지고, 항목 설명을 복사하지 않으며 번호와 문서 이름으로만 가리킵니다.
+이 문서는 앞으로 할 일의 **순서의 정본**입니다. 일의 식별자는 이름입니다 — 계획 문서의 파일 이름, 또는 `Candidates-<영역>.md` 의 `### 이름 — 제목` 절입니다. 옛 번호(`C-30` 등)는 `py -3 -m Scripts plans --find <옛번호>` 가 새 이름을 찾아 줍니다. 이 문서는 순서만 가지고, 항목 설명을 복사하지 않으며 링크로만 가리킵니다.
 끝난 단위는 이 목록에서 지웁니다. 작업 전에 항목의 현재 완성도를 코드로 확인합니다. 같은 파일을 건드리는 단위는 같은 작업자에게 묶고, 동시 빌드는 둘까지입니다([작업 방식](../11_Workflow.md)). GPU 확인이 필요한 단위는 구현만 하고 `gpu-verifier` 로 캡처합니다.
+항목 끝의 `[병렬 가능]` 은 다른 작업자와 같은 시간대에 병합해도 건드리는 파일이 겹치지 않는다는 뜻이고, `[단독: 이유]` 는 혼자 하는 시간대가 필요하다는 뜻입니다. 근거는 그 일이 건드리는 파일 영역입니다.
 
 ## 지금 순서
 
-1. **`integrator` 설계의 미구현 13단위**(설계는 끝났고 코드가 없음).
-   - 데이터화 `C-30`: D6 → D7 → D8 → D9, 이어서 P1 · P2 → P4(D9, P1 뒤), G1 · G2 — [DataDriven](DataDriven.md) 7.5.
-   - `C-1` E3(E4 가 뒤따름) — [EnginePartition](EnginePartition.md) 6.4. `GameObjectManager.h` 를 바꿔 모든 모듈이 다시 빌드되므로 단독 시간대.
-   - `C-52` T3(→ T4) — [TypedComponents](TypedComponents.md) 8.5.
-   - `C-42` K0 — [IncrementalCook](IncrementalCook.md).
-   - `C-41` V2 — [GpuVerification](GpuVerification.md) 2절.
-   - 측정이 든 단위(T3, K0)는 Release 에서 혼자 돌린다.
+1. **`integrator` 설계의 미구현 단위**(설계는 끝났고 코드가 없음).
+   - 데이터화: D6 → D7 → D8 → D9, 이어서 P1 · P2 → P4(D9, P1 뒤), G1 · G2 — [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
+   - E3(E4 가 뒤따름) — [EnginePartition](EnginePartition.md) 6.4. `GameObjectManager.h` 를 바꿔 모든 모듈이 다시 빌드된다. [단독: 모든 모듈 재빌드]
+   - T3(→ T4) — [TypedComponents](TypedComponents.md) 8.5. [단독: 측정이 든 단위라 Release 에서 혼자]
+   - K0 — [IncrementalCook](IncrementalCook.md). [단독: 측정이 든 단위라 Release 에서 혼자]
+   - V2 — [GpuVerification](GpuVerification.md) 2절. [병렬 가능]
 2. **구현 대기 설계**(구현 전에 `design-reviewer` 검토 결과를 반영).
-   - `GimmickCircuit` 단계 2 — [GimmickCircuitState](GimmickCircuitState.md).
-   - 서버 버스 A 전환 — [ServerBusFormat](ServerBusFormat.md) 단계 0~6.
-   - 타입별 컴포넌트 7-c → 7-d — [TypedComponents](TypedComponents.md).
-   - 인스펙터 4-b — [ReflectionFormats](ReflectionFormats.md).
-3. **새 시스템**: `D2-11` Vfx V0 → V3 먼저 — [Vfx](Vfx.md). `D2-13` 클러스터드 라이팅 S2 → S5 — [ClusteredLighting](ClusteredLighting.md). `D2-12` 간접 조명 P0 부터(ClusteredLighting 뒤) — [IndirectLighting](IndirectLighting.md). `D1-7` 월드 스트리밍 W2 → W7 — [WorldStreaming](WorldStreaming.md).
+   - `GimmickCircuit` 단계 2 — [GimmickCircuitState](GimmickCircuitState.md). [병렬 가능]
+   - 서버 버스 A 전환 — [ServerBusFormat](ServerBusFormat.md) 단계 0~6. [단독: 메시지 형식을 바꿔 서버 · 클라이언트 모듈이 다시 빌드됨]
+   - 타입별 컴포넌트 7-c → 7-d — [TypedComponents](TypedComponents.md). [단독: 위 T3 와 같은 파일]
+   - 인스펙터 4-b — [ReflectionFormats](ReflectionFormats.md). [병렬 가능]
+3. **새 시스템**:
+   - Vfx V0 → V3 먼저 — [Vfx](Vfx.md). [병렬 가능]
+   - 클러스터드 라이팅 S2 → S5 — [ClusteredLighting](ClusteredLighting.md). [단독: 셰이더 재베이크]
+   - 간접 조명 P0 부터(ClusteredLighting 뒤) — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
+   - 월드 스트리밍 W2 → W7 — [WorldStreaming](WorldStreaming.md). [확인 필요]
 4. **기능 묶음**(분류는 결정 기록 5-12, 한 묶음에 단위가 여럿):
-   1. 카메라 디렉터 · 직교 리그 `D4-5.5 → 5.1 → 3.1 → 3.2`, 에디터 시나리오 `D3-5.1` `8.1` `8.6` — [EditorScenarios](EditorScenarios.md).
-   2. 프리팹 오버라이드 `D1-5.1` `5.2`, 미리보기 창 `D3-7.2 → 7.3 → 7.1 → 7.7`(같은 파일은 한 작업자), 프리팹 창 `D3-7` (1) → 스카이 컴포넌트 `D3-7.4`.
-   3. 지형 · 식생 `D2-5.6 → 5.7 → 5.8 → 5.4`, `F-1.2` `1.3`, 서버 파괴 호스트 `D7-1.3 → 1.4 → D7-6.1`.
-   4. 오디오 `D5-1.*` `D6-3.1`, 온라인 키트 `D7-5.1 → 5.10 → 5.3 → 5.6`.
-   5. 애니메이션 `D4-6.*` — [PairedAnimation](PairedAnimation.md), 천 동적 메시 `D1-4.*`, Shooter3D `D4-10.*`, `GameNetSession` `D7-5.2` + `D7-3.7`(한 작업자).
-   6. 그래픽스 형식 묶음(한 작업자, 순서대로, 셰이더 재베이크 · 에셋 재작성): `D2-6.1 → D2-6.3` `D2-5.5` 칸 16개 `→ D2-6.4 → D2-10.2 → D2-10.3`.
-   7. 뒤 순서: 센서 이식 `D1-2.1`, 서버 렌더러 제거 `D7-2.1`, Core 이전 `D3-1.1`(단독 시간대), 워프 분리 `D3-10.3`.
-5. **파일이 겹쳐 미룬 정리**: engine `C-4` `C-13` `C-22`, project `C-16` `C-17` `C-18` — 위 1~2 뒤에. (`C-5` `C-19` `C-34` 는 정리 브랜치로 병합됨 — 남은 조각이 있는지 항목 본문으로 확인.)
-6. **새로 쓴 정리 항목**(`C-65` ~ `C-76`)은 백로그 안내의 순서(정리 → 기능)를 따른다.
-7. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) — [BuildSpeed](BuildSpeed.md). 빌드가 도는 동안은 측정이 무효라 다른 작업이 모두 끝난 뒤 혼자 한다.
+   1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](Candidates-gameplay.md#camerarendererintegration)(다중 뷰의 예산 · 보임 판정, 컷 프레임 신호, 렌더러 쪽) → [GamepadVirtualCursor](Candidates-gameplay.md#gamepadvirtualcursor), 에디터 시나리오 [GraphSaveScenarioRun](Candidates-editor.md#graphsavescenariorun) · [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps) (하위 번호와 불릿의 대응은 확인 필요). [병렬 가능]
+   2. 미리보기 창 · 프리팹 창 · 스카이 — [EditorMultiWorld](EditorMultiWorld.md) 6절 (1) 프리팹 창 → (3) 스카이, (4) 풀 공유 · (5) 내리기 안전 · (6) 백엔드 교체(같은 파일은 한 작업자, 옛 미리보기 창 하위 번호와의 대응은 확인 필요). [병렬 가능]
+   3. 지형 · 식생 [TerrainWaterVegetationRemainders](Candidates-graphics.md#terrainwatervegetationremainders)(지형 LOD 교체 프레임 시간 → 지형 쓰기 남은 것 → 식생), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 지형 · 식생이 셰이더 재베이크를 부르고 측정은 Release 에서 혼자]
+   4. 오디오 [AudioEngineExtensions](Candidates-audio-ai-localization.md#audioengineextensions), 온라인 키트 [OnlineAccountProviders](Candidates-network.md#onlineaccountproviders) · [OnlineChatModeration](Candidates-network.md#onlinechatmoderation) · [OnlineServerDirectoryAdmin](Candidates-network.md#onlineserverdirectoryadmin) · [OnlineFriendsGuild](Candidates-network.md#onlinefriendsguild) · [OnlineLeaderboardExtras](Candidates-network.md#onlineleaderboardextras) · [OnlineMatchmakingIntegration](Candidates-network.md#onlinematchmakingintegration) · [OnlineLiveOps](Candidates-network.md#onlineliveops) · [OnlineEconomyReceipts](Candidates-network.md#onlineeconomyreceipts) · [OnlineEconomyItems](Candidates-network.md#onlineeconomyitems)(옛 하위 번호 5.1 → 5.10 → 5.3 → 5.6 이 어느 절인지 확인 필요). [병렬 가능]
+   5. 애니메이션 — [PairedAnimation](PairedAnimation.md) · [AnimationGraphLayers](Candidates-gameplay.md#animationgraphlayers) · [RigEditing](Candidates-gameplay.md#rigediting) · [AnimationLodAndCrowd](Candidates-gameplay.md#animationlodandcrowd), 천 동적 메시 [ClothFollowups](Candidates-engine.md#clothfollowups), Shooter3D [ShooterCharacterIntegration](Candidates-gameplay.md#shootercharacterintegration), `GameNetSession` [OnlineNetworkBaseRename](Candidates-network.md#onlinenetworkbaserename) + [ServerDebug](ServerDebug.md)(한 작업자). [병렬 가능]
+   6. 그래픽스 형식 묶음(한 작업자, 순서대로, 셰이더 재베이크 · 에셋 재작성): [ToonShadingCompletion](Candidates-graphics.md#toonshadingcompletion)(디퍼드의 계단 셰이딩) → [ViewModeCompletion](Candidates-graphics.md#viewmodecompletion). 머티리얼 텍스처 칸 16개는 들어갔다(`TerrainWaterVegetationRemainders` 의 함정). [단독: 셰이더 재베이크 · 에셋 재작성]
+   7. 뒤 순서: 서버 렌더러 제거 [DedicatedServerNoRenderer](Candidates-network.md#dedicatedservernorenderer), 워프 분리 [MeshModifierStack](Candidates-editor.md#meshmodifierstack)(확인 필요: 워프 내보내기는 `4174d9b8c` · `c82a29a77` 로 들어갔다). [병렬 가능]
+5. **파일이 겹쳐 미룬 정리**: [GameFrameworkStructureCleanup](Candidates-engine.md#gameframeworkstructurecleanup) · [HeaderIncludeSlimming](Candidates-engine.md#headerincludeslimming) · [PreludeAndFwdCleanup](Candidates-engine.md#preludeandfwdcleanup) · [CommentRewriteRemaining](Candidates-project.md#commentrewriteremaining) · [NamingAuditNext](Candidates-project.md#namingauditnext) · [LongFunctions](LongFunctions.md) — 위 1~2 뒤에. 앞서 병합된 [EngineServiceInjection](Candidates-engine.md#engineserviceinjection) · [NameReferenceAudit](Candidates-engine.md#namereferenceaudit) 는 남은 조각이 있는지 절 본문으로 확인한다. [단독: 헤더 · include 를 바꿔 여러 모듈이 다시 빌드됨]
+6. **새로 쓴 정리**: [RealElapsedTime](Candidates-engine.md#realelapsedtime) · [SerializerSilentSkips](Candidates-engine.md#serializersilentskips) · [WorkspaceImGuiSplit](Candidates-engine.md#workspaceimguisplit) · [FunctorLambdaCommonization](Candidates-engine.md#functorlambdacommonization) · [NameLookupAndWatchMask](Candidates-engine.md#namelookupandwatchmask) · [DiskPathVsResourceId](Candidates-engine.md#diskpathvsresourceid) · [NetSettingsRemaining](Candidates-engine.md#netsettingsremaining) · [InternalErasureRemaining](Candidates-engine.md#internalerasureremaining) · [WorktreeVcpkgInstalledDir](Candidates-project.md#worktreevcpkginstalleddir) · [InvalidMeasurementCleanup](Candidates-project.md#invalidmeasurementcleanup) · [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) — 순서는 정리 → 기능. [병렬 가능]
+7. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) — [BuildSpeed](BuildSpeed.md). [단독: 빌드가 도는 동안은 측정이 무효라 다른 작업이 모두 끝난 뒤 혼자]
 
 ## 지금 하지 않는 것
 
-조건부 · 보류 · 관찰 항목과 조건이 붙은 기능은 조건이 올 때 백로그 안내의 순서를 따른다. 끝난 단위는 이 목록에서 지운다.
+조건부 · 보류 · 관찰 항목과 조건이 붙은 기능은 영역별 후보 문서의 `## 조건부` / `## 보류` / `## 관찰` 절에 있고 순서에 올리지 않는다. 조건이 오면 해당 후보 문서에서 골라 온다: [engine](Candidates-engine.md) · [graphics](Candidates-graphics.md) · [gameplay](Candidates-gameplay.md) · [editor](Candidates-editor.md) · [network](Candidates-network.md) · [ui](Candidates-ui.md) · [quality](Candidates-quality.md) · [project](Candidates-project.md) · [audio-ai-localization](Candidates-audio-ai-localization.md). 끝난 단위는 이 목록에서 지운다.

@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: editor · 옛번호: D3-7 · 진행: 4/6
 
-백로그 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1~4 와 단계 5 의 머티리얼 창이 코드로 들어갔습니다(2026-10-15, 각 단계의 "구현됨" 참고).
+옛 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1~4 와 단계 5 의 머티리얼 창이 코드로 들어갔습니다(2026-10-15, 각 단계의 "구현됨" 참고).
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
 
 ## 1. 현재 구조
@@ -146,7 +146,7 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 - 위험: 프리팹 저장 경로가 바뀝니다 — 중첩 격리 스택(`PrefabIsolationFrame`)의 의미를 유지해야 합니다.
 - 확인: 프리팹 격리 기존 테스트, 머티리얼 미리보기 이미지 비교(끈 판과 달라야 함도 확인).
 - **구현됨(2026-10-15, 머티리얼만)**: `MaterialPanel` 이 `EditorPreviewPanel` 을 상속해 미리보기 씬에 구(`PreviewSubject`)를 놓고 문서의 머티리얼(캐시 사본)을 건다. CPU 구(`MaterialPreviewShading`)는 탐침 · 폴백으로 옆에 남겼다.
-  시나리오 `editor/previewscene.scenario.xml` + `-gv_editorPreviewScreenshot`. 프리팹 창은 남았다(백로그 `D3-7`).
+  시나리오 `editor/previewscene.scenario.xml` + `-gv_editorPreviewScreenshot`. 프리팹 창은 남았다.
 
 ### 단계 6 이후 — 나머지 창
 메시/모델(LOD 비교) · 애니메이션 · 카메라 프리셋 · 래그돌 · 이펙트 · 장르 도구 · 캐릭터 편집 창([EditorCharacterEditor.md](EditorCharacterEditor.md)). 창마다 단위 하나.
@@ -158,3 +158,18 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 3. **패킷 형식에 씬 목록** — `RenderFramePacket` 은 GT/RT 계약이라 형식을 바꾸면 캡처 · 리플레이 도구도 따라 바뀝니다.
 4. **창마다 Undo 스택** — 전역 스택으로 돌아가려면 명령에 대상 씬을 붙이는 작업이 다시 필요합니다.
 5. **`HostViewTargets` 두 슬롯을 남기고 목록을 더함** — 게임 · 씬 뷰는 특별 취급이 남습니다. 모두 목록으로 합치면 깔끔하지만 에디터 없는 실행 경로까지 바뀝니다.
+
+## 6. 남은 것
+
+(번호는 옛 `D3-7` 항목의 (1)~(6) 을 그대로 둔다. (2)는 단계 2 로 들어갔다.)
+
+단계 1~4 와 머티리얼 창은 들어갔습니다(각 단계의 "구현됨"). 규모가 XL 이라 에디터 보강 묶음에서 뺐고 설계부터 따로 짰습니다(2026-10-14 사용자 결정).
+
+1. **프리팹 창** — `EditorPrefabIsolationCommands` 가 활성 씬 대신 `EditorPreviewPanel` 의 씬에 프리팹을 스폰한다(더티 막기 제거, 중첩 격리 스택 `PrefabIsolationFrame` 의 의미 유지, 저장 경로 테스트).
+   선행: 워크스페이스의 놓인 프리팹 표(`EditorWorkspace::setPlacedPrefabPath`)가 활성 씬의 오브젝트 id 로만 키를 잡아 미리보기 씬에 스폰한 인스턴스 · 중첩 격리(`matchesPrefabPath`)를 찾지 못하니 씬별 표로 바꾼다.
+   창은 지금의 `PrefabPanel`(메인 씬에 놓인 인스턴스의 오버라이드 도구, 메인 선택을 본다)과 따로 `EditorPreviewPanel` 파생으로 둔다(머티리얼 창처럼 문서 패널).
+3. **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
+4. **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 결정 2 대로 공유한다.
+5. **미리보기 렌더러 내리기의 GPU 안전** — 창을 닫으면 렌더 스레드가 `FrameRenderer::shutdown` 으로 그 렌더러를 바로 내린다. 디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대며,
+   네 백엔드에서 창을 연 채 여닫기를 반복하는 시나리오로 확인하지 않았다(DX12 · Vulkan 검증 레이어로 볼 것).
+6. 미리보기 씬의 백엔드 교체(`-gv_rhiSwapAtFrame`) 확인, 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기([EditorCharacterEditor](EditorCharacterEditor.md), 헤더 계약을 따른다).

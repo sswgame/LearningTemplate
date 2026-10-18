@@ -9,5 +9,5 @@
   바꿀 원본이다. 씬 · 데이터 · 입력 맵 · HUD 문서는 저장소에서 새로 썼다.
 - 원본은 `models_raw/` 에 두고, 엔진이 읽는 `models/*.mesh` 는 `App --import-models` 가 만든다(스탬프는 `models_raw/import.stamp`).
   씬에서 쓰려면 `MeshComponent::_meshID` 를 `game/wildwest/models/<이름>.mesh` 로 바꾼다. 파일 이름은 원본의 camelCase 를 소문자 `_` 로 바꾼 것이다.
-- 목장 건물(`Ranch`)과 말 · 기수는 아직 자리 표시다. 말은 CC0 로 걸음새 애니메이션을 갖춘 모델이 없어 넣지 않았다(백로그 `H-1`).
+- 목장 건물(`Ranch`)과 말 · 기수는 아직 자리 표시다. 말은 CC0 로 걸음새 애니메이션을 갖춘 모델이 없어 넣지 않았다(후보 `CcZeroAssetsMechArena`).
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).

@@ -441,7 +441,7 @@ SW_TEST_CASE( ShadowSetupTest, FittedVolumeSizeIgnoresCameraRotation )
 
 /**
  * @brief [ShadowSetupTest] 추가 뷰의 그림자는 그 뷰의 카메라에 맞춘다 — 주 시점에서 먼 곳을 보는 뷰의 바닥이 그 뷰 볼륨 안이고 주 시점 볼륨 밖이다
- * @details 주 시점 볼륨을 쓰면 CCTV · 분할 화면이 다른 곳을 볼 때 그림자가 빠진다(백로그 1-3 방향광 (3)).
+ * @details 주 시점 볼륨을 쓰면 CCTV · 분할 화면이 다른 곳을 볼 때 그림자가 빠진다(옛 1-3 방향광 (3)).
  */
 SW_TEST_CASE( ShadowSetupTest, ExtraViewShadowFollowsItsOwnCamera )
 {

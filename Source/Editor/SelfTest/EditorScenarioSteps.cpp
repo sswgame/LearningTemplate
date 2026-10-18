@@ -252,7 +252,7 @@ namespace sw::editor
 
             /**
              * @brief 단계가 누를 레이블(`mark` · `toMark`)이 아직 그려지지 않았으면 시나리오 시계를 붙잡고 기다립니다(최대 `kMarkWaitFrames`). 넘기면 단계가 돌며 "no editor widget" 실패를 적습니다.
-             * @details 레이블은 직전 프레임에 그려져야 한다. 패널이 프레임을 건너뛰었거나(로딩 · 리사이즈) 콤보 팝업이 한 프레임 늦게 열리면 고정 프레임 단계가 가끔 진다(백로그 A-3 이던 것).
+             * @details 레이블은 직전 프레임에 그려져야 한다. 패널이 프레임을 건너뛰었거나(로딩 · 리사이즈) 콤보 팝업이 한 프레임 늦게 열리면 고정 프레임 단계가 가끔 진다(옛 A-3 이던 것).
              *          언리얼 Automation Driver 의 "보일 때까지 기다리기" · Playwright 의 자동 대기와 같다. 기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다.
              */
             static AutomationStepHold holdUntilMarked( AutomationRunner& runner, const AutomationStep& step, InputManager& input )

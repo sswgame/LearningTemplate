@@ -20,10 +20,10 @@ from __future__ import annotations
 
 import difflib
 import re
-import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
+from common.MarkdownAnchor import collectAnchors
 from common.Plans import PlanDoc, kCandidateStatus, kListPlanStatus, kPlansRelDir, readPlans
 
 kBoardStart = "<!-- status-board:start -->"
@@ -41,7 +41,6 @@ _kRoadmapHeading = "## 지금 순서"
 _kNumberedRe = re.compile(r"^\d+[.)] ")
 _kPlanLinkRe = re.compile(r"\[[^\]]*\]\(([A-Za-z0-9_\-]+)\.md(?:#[^)]*)?\)")
 _kLinkRe = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
-_kHeadingRe = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 _kFenceRe = re.compile(r"^\s*(```|~~~)")
 
 
@@ -134,24 +133,6 @@ def buildBoard(repositoryRoot: Path) -> str:
     return renderBoard(readPlans(repositoryRoot), listEntry)
 
 
-def anchorsOfTextInternal(text: str, fileName: str) -> set[str]:
-    """마크다운 글의 제목 앵커들(GitHub 규칙 근사: 소문자, 글자 · 숫자 · `_` · `-` 만, 공백은 `-`).
-    후보 문서(`Candidates-*.md`)의 `### 이름 — 제목` 절은 첫 낱말(영어 이름)도 앵커다."""
-    setAnchor: set[str] = set()
-    bFence = False
-    for line in text.splitlines():
-        if _kFenceRe.match(line):
-            bFence = not bFence
-        match = None if bFence else _kHeadingRe.match(line)
-        if match is None:
-            continue
-        heading = re.sub(r"[`*~]", "", match.group(2).strip().lower())
-        setAnchor.add("".join("-" if ch == " " else ch for ch in heading if ch in " -_" or unicodedata.category(ch)[0] in "LN"))
-        if fileName.startswith("Candidates-") and match.group(1) == "###":
-            setAnchor.add(heading.split()[0])
-    return setAnchor
-
-
 def checkRoadmap(repositoryRoot: Path) -> list[str]:
     """로드맵을 점검한다: (a) `## 지금 순서` 의 문서 링크가 계획 문서를 가리키는가 (b) 모든 마크다운 링크의 파일 · `#앵커` 가 있는가.
     위반 줄(`파일:줄: 내용`)들. 계획 문서 머리 줄이 틀리면 `PlanFormatError`."""
@@ -181,7 +162,7 @@ def checkRoadmap(repositoryRoot: Path) -> list[str]:
                 listViolation.append(f"{where}: 링크 `{target}` 의 파일이 없습니다")
             elif anchor and path.suffix == ".md":
                 if path not in mapAnchorCache:
-                    mapAnchorCache[path] = anchorsOfTextInternal(path.read_text(encoding="utf-8"), path.name)
+                    mapAnchorCache[path] = collectAnchors(path.read_text(encoding="utf-8"))
                 if anchor.lower() not in mapAnchorCache[path]:
                     listViolation.append(f"{where}: 링크 `{target}` 의 제목(앵커)이 {path.name} 에 없습니다")
     return listViolation

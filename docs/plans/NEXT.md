@@ -4,7 +4,7 @@
 
 | 알고 싶은 것 | 어디 |
 |---|---|
-| 남은 일 한 건 한 건 | [백로그](../backlog/README.md) — `py -3 -m Scripts backlog`(목록), `--id <번호>`(본문) |
+| 남은 일 한 건 한 건 | 후보 문서 `Candidates-<영역>.md` — `py -3 -m Scripts plans --area <영역>`(목록), `--file <이름>`(머리 줄과 절 목록) |
 | 설계와 구현 단위 | 계획 문서 — `py -3 -m Scripts plans`(목록) |
 | 앞으로 할 일의 순서 | [로드맵](Roadmap.md) |
 | 결정과 근거 | [결정 기록](../09_Decisions.md) |
@@ -15,16 +15,17 @@
 
 ## 1. 지금 상태 (2026-10-19)
 
-- main 은 push 했다(`332fae747`). 원격 CI 실행 39143580252 가 진행 중이었다 — `py -3 -m Scripts ci-jobs --runs` 로 결과를 본다.
-- 구성 검증: Shipping · Shipping-Server · CI-Debug-STL 의 빌드 + nogpu 통과, Debug `full-build` 증거 기록됨.
+- main 은 `332fae747` 까지 push 했고, 그 CI(실행 39143580252)는 열 잡 중 아홉이 통과했다. 이전에 졌던 Shipping · 서버 Shipping · Windows Debug 가 고쳐졌다. 남은 하나는 Linux TSan 의 `EditorNetPlaySessionTest.DedicatedServerAndTwoClientsConnectPauseAndMergeTraces` → 후보 `TsanNetPlayTraceMerge`(`Candidates-quality.md` 결함).
+- 이후 문서 개편(커밋됨, **아직 push 안 함**): 백로그를 없애고 계획 문서(머리 줄) + `Candidates-<영역>.md`(후보 절 152개) + `Roadmap.md`(순서) + `NEXT.md`(상태) 로 일원화했다. 일의 식별자는 이름이고 옛 번호는 `plans --find`. README 의 진행 표는 `status-board --write README.md` 로 만든 생성물이다. 코드는 바꾸지 않았다(`Scripts` 도구와 린트 게이트만). push 전에 [작업 방식](../11_Workflow.md) 3절대로 `full-build` 증거를 남긴다(Scripts 변경이라 Python 테스트 38개는 통과했다).
+- 구성 검증: Shipping · Shipping-Server · CI-Debug-STL 의 빌드 + nogpu 통과, Debug `full-build` 증거는 문서 개편 이전 커밋의 것이다.
 - 측정 · GPU 묶음(작업자 `meas`)은 한도(429)로 중단했다. 워크트리 없음, 임시 탐침은 지웠다. 다시 하면 임시 쿠킹 폴더에서 한다(main 체크아웃에 탐침 파일을 만들지 않는다).
 - 워크트리: `feat-pv` · `feat-net` 은 추적 안 된 로그 때문에 `worktree-remove` 가 건너뛴다(사용자가 `--force`). `cifix2` · `rootword` 는 병합이 끝나 지워도 된다.
-- 근본 원인 후보(미해결): 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다 → 백로그 `C-70`. 워크트리가 `vcpkg_installed` 를 나눠 쓴다 → `C-73`.
+- 근본 원인 후보(미해결): 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다 → 후보 `DiskPathVsResourceId`. 워크트리가 `vcpkg_installed` 를 나눠 쓴다 → 후보 `WorktreeVcpkgInstalledDir`.
 - 사용자 결정 대기: 없음.
 
 ## 2. 첫 일
 
-1. 위 CI 결과를 확인하고 실패가 있으면 `ci-jobs` 로 읽는다.
+1. 문서 개편 push 뒤 CI 를 확인한다(`py -3 -m Scripts ci-jobs --runs`). TSan 실패는 후보 `TsanNetPlayTraceMerge` 부터.
 2. 남은 워크트리를 정리한다(`git worktree list`, 병합 확인 뒤 `worktree-remove`).
 3. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터.
 
@@ -47,6 +48,6 @@
 
 ## 4. 새 세션 시작 절차
 
-1. 이 문서, [작업 방식](../11_Workflow.md), [작업자 규칙](WorkerRules.md) 순서로 읽는다. 목록은 `py -3 -m Scripts plans`(계획 문서) · `py -3 -m Scripts backlog`(백로그)로 보고, 내 항목만 `--id <번호>` 로 읽는다. C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md) 의 해당 절.
+1. 이 문서, [작업 방식](../11_Workflow.md), [작업자 규칙](WorkerRules.md) 순서로 읽는다. 목록은 `py -3 -m Scripts plans`(계획 문서 · 후보)로 보고, 내 문서만 `--file <이름>` 으로 읽는다. C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md) 의 해당 절.
 2. `git worktree list` 로 남은 워크트리를 보고 병합이 끝난 것을 지운다.
 3. 큰 일은 사용자와 순서를 확인한 뒤 시작한다. 시작 전에 graphify 그래프를 갱신한다(`graphify update Source`, 약 4 분).
