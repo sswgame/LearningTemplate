@@ -60,6 +60,7 @@ Scripts/
   │     ├── EditorIconFont.py         # 에디터 아이콘 99 개의 그리기 함수 + 표준 라이브러리만으로 TrueType 폰트 · C++ 헤더 쓰기
   │     ├── Backlog.py                # 영역별 백로그(docs/backlog) 항목 읽기 — 목록 명령(dev/ListBacklog.py)과 게이트(CheckBacklog)가 같이 쓴다
   │     ├── Plans.py                  # 계획 문서(docs/plans)의 머리 줄 읽기 — 목록 명령(dev/ListPlans.py)이 쓴다
+  │     ├── StatusBoard.py            # 진행 상황 표 만들기 · 표지 사이 바꾸기 — 명령(dev/RunStatusBoard.py)과 게이트(CheckStatusBoard)가 같이 쓴다
   │     ├── ReflectionAnnotationKeys.py # 편집기용 리플렉션 어노테이션 키 헤더 내용(AnnotationMeta.txt · 단위 표에서) — 생성기와 게이트가 같이 쓴다
   │     ├── ImageMetrics.py           # 스크린샷 비교 — PPM · PNG 읽기/쓰기, 축소, 배경을 뺀 지표 · 잡음 바닥에서 정한 허용 오차
   │     ├── XmlAssetMerge.py          # XML 에셋 의미 비교 · 3-way 병합(엔티티 id · 컴포넌트 · 속성 단위), 엔진 저장기와 같은 서식으로 쓰기
@@ -165,6 +166,7 @@ Scripts/
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckDocPaths.py            # 문서(.md)의 링크 · 앵커 · 저장소 경로가 실재하는지, 모든 README 가 문서 지도에 있는지
   │     │     ├── CheckDataDrivenStructure.py # 코드의 에셋 경로 · 조용한 폴백 · 버린 읽기 결과가 기준선(rules 의 [baseline])을 넘지 않는지 — --summary 가 진척 표
+  │     │     ├── CheckStatusBoard.py         # README 의 진행 상황 표가 계획 문서 · 로드맵 · 백로그에서 만든 결과와 같은지
   │     │     ├── CheckBacklog.py             # 백로그 항목 번호가 하나뿐인지, 상태 태그가 허용값인지, 백로그를 가리키는 글이 맞는 파일 · 항목을 가리키는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 이름 · 모양 규칙
   │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8) · main(argv) 로 인자를 받는지
@@ -230,6 +232,7 @@ Scripts/
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListBacklog.py            # 영역별 백로그를 상태 · 영역 · 번호로 골라 보인다(`py -3 -m Scripts backlog`, --id 는 항목 본문만)
   │     ├── ListPlans.py              # 계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(`py -3 -m Scripts plans`, --file 은 머리 줄과 절 제목)
+  │     ├── RunStatusBoard.py         # README 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 백로그에서 만든다(`py -3 -m Scripts status-board`, --write · --check)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MakeEditorTheme.py        # 에디터 테마 토큰(tokens.json) ↔ Figma 변수 · DTCG: import-figma · export-figma · check (`py -3 -m Scripts editor-theme`)
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 테스트까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
