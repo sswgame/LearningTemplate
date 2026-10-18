@@ -612,30 +612,34 @@ SW_TEST_CASE( ServerBootTest, DebugChannelRefusesToStartWithoutAToken )
 #endif
 }
 
-/**
- * @brief [ServerBootTest] 두 서버의 틱별 상태 해시를 비교해 처음 어긋난 틱을 맞게 짚는다(서버 디버깅 S7)
- * @details 서버 A 는 그대로 두고, 서버 B 는 멈춘 틱 T 에서 4 틱 진행한 뒤 오브젝트를 옮기고 6 틱을 더 돈다. 어긋난 첫 틱은 T + 5 여야 하고, 그 앞 틱들은 두 서버가 같아야 한다
- *          (씬은 결정적이다). 채널의 `pause` · `step` 으로 틱을 정확히 세므로 시간에 기대지 않는다.
- */
-SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
+#if !defined( SW_SHIPPING )
+namespace
 {
-#if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
-#else
-    if ( findServerPath().empty() )
-        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
-    ProcessOptions options;
-    options._bPipeStandardInput = true;
-    struct Result
+    /** @brief 상태 해시 이력 비교에서 서버 하나를 돌린 결과입니다. */
+    struct StateHashRun
     {
         string _hashes;
         uint64 _pausedTick{ 0 };
+        uint64 _endTick{ 0 }; ///< `step` 으로 돌려 멈춘 마지막 틱
         bool   _bOk{ false };
     };
-    // 한 서버를 돌려 멈춘 틱과 이력을 얻는다. @p bPerturb 이면 4 틱 뒤 오브젝트를 옮긴다.
-    auto runOne = [&options]( bool bPerturb, uint32 totalSteps ) -> Result
+
+    /** @brief 옮기는 서버는 멈춘 틱에서 이만큼 돈 뒤 오브젝트를 옮긴다 — 첫 어긋난 틱은 멈춘 틱 + 이 값 + 1 이다. */
+    constexpr uint64 kPerturbAfterSteps = 4;
+    /** @brief 옮기는 서버가 멈춘 틱에서 모두 도는 틱 수입니다. */
+    constexpr uint64 kPerturbedRunSteps = 12;
+
+    /**
+     * @brief 디버그 채널을 연 서버 하나를 띄워 씬이 선 뒤 멈추고, `step` 으로 정한 틱까지 돌린 뒤 이력을 받습니다.
+     * @param bPerturb 멈춘 틱 + `kPerturbAfterSteps` 에서 첫 오브젝트를 옮기고 멈춘 틱 + `kPerturbedRunSteps` 까지 돈다.
+     * @param minEndTick 옮기지 않는 서버가 적어도 이 틱까지 돈다(멈춘 틱이 이미 넘었으면 더 돌지 않는다 — 멈추기 전 틱도 이력에 있다).
+     * @param pauseDelayMilli 씬이 선 뒤 멈추기 전에 기다리는 시간. 멈춘 틱은 벽시계에 달려 있으므로 느린 러너의 지연을 테스트가 이것으로 만든다.
+     */
+    StateHashRun runStateHashServer( bool bPerturb, uint64 minEndTick, uint32 pauseDelayMilli )
     {
-        Result          result;
+        ProcessOptions options;
+        options._bPipeStandardInput = true;
+        StateHashRun    result;
         const uint16    port = findFreeStreamPort();
         const ServerRun run  = runServer( makeDebugServerArguments( port ), options, [&]( Process& process )
          {
@@ -644,39 +648,93 @@ SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
             {
                 string reply;
                 // 씬이 선 뒤에 멈춘다 - 그 전의 틱은 해시를 남기지 않는다
-                if ( requestUntilOk( client, "scene.tree", reply ) && client.request( "pause", 5000, reply ) )
+                bool bGood = requestUntilOk( client, "scene.tree", reply );
+                std::this_thread::sleep_for( std::chrono::milliseconds( pauseDelayMilli ) );
+                bGood              = bGood && client.request( "pause", 5000, reply );
+                result._pausedTick = bGood ? parsePausedTick( reply ) : 0;
+                uint64 currentTick = result._pausedTick;
+                // 틱 수가 정본이다 - 목표 틱까지 `step` 하고 그 틱의 해시가 남을 때까지 기다린다(시한은 멈춤을 잡는 그물이라 틱 수에 비례).
+                auto stepTo = [&]( uint64 targetTick ) -> bool
                 {
-                    result._pausedTick      = parsePausedTick( reply );
-                    const uint32 firstSteps = bPerturb ? 4 : totalSteps;
-                    bool         bGood      = client.request( "step " + to_string( firstSteps ), 5000, reply ) && waitForTick( client, result._pausedTick + firstSteps, 10000 );
-                    if ( bGood && bPerturb )
-                    {
-                        const string name = findFirstPoseName( client );
-                        bGood             = client.request( "teleport " + name + " 50 0 0", 5000, reply ) && client.request( "step " + to_string( totalSteps - firstSteps ), 5000, reply ) &&
-                                waitForTick( client, result._pausedTick + totalSteps, 10000 );
-                    }
-                    result._bOk = bGood && client.request( "state.hashes 0 100000", 5000, result._hashes );
+                    if ( targetTick <= currentTick )
+                        return true;
+                    const uint64 steps = targetTick - currentTick;
+                    currentTick        = targetTick;
+                    return client.request( "step " + to_string( steps ), 5000, reply ) && waitForTick( client, targetTick, 10000 + static_cast<int32>( steps ) * 50 );
+                };
+                if ( bPerturb )
+                {
+                    bGood = bGood && stepTo( result._pausedTick + kPerturbAfterSteps );
+                    bGood = bGood && client.request( "teleport " + findFirstPoseName( client ) + " 50 0 0", 5000, reply );
+                    bGood = bGood && stepTo( result._pausedTick + kPerturbedRunSteps );
                 }
+                else
+                {
+                    bGood = bGood && stepTo( minEndTick );
+                }
+                result._endTick = currentTick;
+                result._bOk     = bGood && result._pausedTick > 0 && client.request( "state.hashes 0 100000", 5000, result._hashes );
             }
             (void)process.writeInput( "quit\n" ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
         } );
         expectCleanExit( run, "ConsoleCommand" );
         return result;
-    };
-    const Result serverA = runOne( false, 40 );
-    const Result serverB = runOne( true, 12 );
-    SW_ASSERT_TRUE_MSG( serverA._bOk && serverB._bOk, "a server run could not be driven through the debug channel" );
-    SW_ASSERT_TRUE( serverA._pausedTick > 0 && serverB._pausedTick > 0 );
-    vector<StateHashSample> listA;
-    vector<StateHashSample> listB;
-    StateHashHistory::parseReport( serverA._hashes, listA );
-    StateHashHistory::parseReport( serverB._hashes, listB );
-    SW_ASSERT_TRUE_MSG( listA.size() >= 40 && listB.size() >= 12, "a server recorded fewer tick hashes than it was stepped" );
-    uint64 firstDivergentTick = 0;
-    SW_ASSERT_TRUE_MSG( StateHashHistory::findFirstDivergence( listA, listB, firstDivergentTick ), "the two servers never diverged" );
-    // 옮긴 뒤 처음 도는 틱이 첫 어긋난 틱이다. 두 서버가 멈춘 틱은 다를 수 있으므로 서버 B 기준 T_B + 5 이다.
-    SW_EXPECT_EQUAL( serverB._pausedTick + 5, firstDivergentTick );
-    SW_EXPECT_TRUE_MSG( serverB._pausedTick + 5 <= serverA._pausedTick + 40, "server A did not run far enough to compare" );
+    }
+
+    /**
+     * @brief 옮기는 서버(B)를 먼저 돌리고, 그대로 둔 서버(A)를 B 가 돈 마지막 틱까지 돌려 첫 어긋난 틱이 B 가 옮긴 다음 틱인지 봅니다.
+     * @details 두 서버가 멈추는 틱은 벽시계에 달려 서로 다르다. 그래서 A 가 돌 틱 수를 고정하지 않고 B 의 마지막 틱에서 정한다 — 두 이력이 늘
+     *          B 의 어긋난 틱을 함께 담는다.
+     */
+    void expectFirstDivergenceAtPerturbedTick( uint32 pauseDelayMilliA, uint32 pauseDelayMilliB )
+    {
+        const StateHashRun serverB = runStateHashServer( true, 0, pauseDelayMilliB );
+        SW_ASSERT_TRUE_MSG( serverB._bOk, "the perturbed server could not be driven through the debug channel" );
+        const StateHashRun serverA = runStateHashServer( false, serverB._endTick, pauseDelayMilliA );
+        SW_ASSERT_TRUE_MSG( serverA._bOk, "the reference server could not be driven through the debug channel" );
+        vector<StateHashSample> listA;
+        vector<StateHashSample> listB;
+        StateHashHistory::parseReport( serverA._hashes, listA );
+        StateHashHistory::parseReport( serverB._hashes, listB );
+        SW_ASSERT_TRUE_MSG( listA.empty() == false && listA.back()._tick >= serverB._endTick, "the reference server did not record up to the perturbed server's last tick" );
+        uint64 firstDivergentTick = 0;
+        SW_ASSERT_TRUE_MSG( StateHashHistory::findFirstDivergence( listA, listB, firstDivergentTick ), "the two servers never diverged" );
+        // 옮긴 뒤 처음 도는 틱이 첫 어긋난 틱이다 - 그 앞 틱은 두 서버가 같다(씬은 결정적이다).
+        SW_EXPECT_EQUAL( serverB._pausedTick + kPerturbAfterSteps + 1, firstDivergentTick );
+    }
+} // namespace
+#endif
+
+/**
+ * @brief [ServerBootTest] 두 서버의 틱별 상태 해시를 비교해 처음 어긋난 틱을 맞게 짚는다(서버 디버깅 S7)
+ * @details 서버 B 는 멈춘 틱 T 에서 4 틱 진행한 뒤 오브젝트를 옮기고 8 틱을 더 돈다. 서버 A 는 그대로 두고 B 의 마지막 틱까지 돈다.
+ *          어긋난 첫 틱은 T + 5 여야 하고, 그 앞 틱들은 두 서버가 같아야 한다(씬은 결정적이다). 틱은 채널의 `pause` · `step` 으로 센다.
+ */
+SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+#else
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    expectFirstDivergenceAtPerturbedTick( 0, 0 );
+#endif
+}
+
+/**
+ * @brief [ServerBootTest] 두 서버가 멈추는 틱이 크게 벌어져도(느린 러너) 첫 어긋난 틱을 짚는다
+ * @details 멈추는 틱은 씬이 선 뒤의 벽시계 시점에 달려 있다. 한 서버가 수 초 늦게 멈추는 경우를 양쪽으로 만든다 — B 가 늦으면 A 는 더 돌아
+ *          B 의 마지막 틱을 따라가고, A 가 늦으면 A 의 멈추기 전 이력이 B 의 틱을 담는다. 고정 틱 수만 돌리면 앞의 경우가 "never diverged" 로 진다.
+ */
+SW_TEST_CASE( ServerBootTest, StateHashHistoryToleratesServersPausingAtDistantTicks )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+#else
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    expectFirstDivergenceAtPerturbedTick( 0, 3000 );
+    expectFirstDivergenceAtPerturbedTick( 3000, 0 );
 #endif
 }
 
