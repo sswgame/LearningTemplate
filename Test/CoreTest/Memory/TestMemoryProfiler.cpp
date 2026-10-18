@@ -325,6 +325,8 @@ SW_TEST_CASE( MemoryProfilerTest, DisabledTrackingRecordsNothing )
  */
 SW_TEST_CASE( MemoryProfilerTest, FreeCountsOnlyBlocksTheTrackerCounted )
 {
+    // 할당기가 기록기에 넘기는 것은 블록 헤더가 있는 구성뿐이다(배포본은 헤더도 태그 스코프도 없다 — `Memory::getAllocationHeaderSize` 가 0).
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     MemoryProfiler* pProfiler = MemoryProfiler::getActive();
     if ( pProfiler == nullptr )
         SW_TEST_SKIP( "no active memory profiler in this host" );
