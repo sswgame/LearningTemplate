@@ -228,7 +228,9 @@ Scripts/
   │     ├── RunSharedLock.py          # 나눠 쓰는 자원 잠금(vcpkg · 빌드 칸 · GPU) — `run` 은 잡고 명령을 돌린 뒤 놓는다
   │     ├── RunFullBuild.py           # 검증 빌드(all AllTests, 빌드 칸) · 트리 증거 — main push 의 pre-push 훅이 증거를 요구한다
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
-  │     ├── ListPlans.py              # 계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(`py -3 -m Scripts plans`, --file 은 머리 줄과 절 제목, --find 는 옛 번호 · 이름의 위치, --check 는 로드맵 링크)
+  │     ├── ListPlans.py              # 계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(`py -3 -m Scripts plans`, --file 은 머리 줄과 절 제목, --find 는 옛 번호 · 이름의 위치, --check 는 로드맵 링크, --section 은 --file 문서의 한 절 본문)
+  │     ├── RunEditFile.py            # 파일의 한 곳을 정확히 한 번 바꾼다(`py -3 -m Scripts edit-file`, 줄 끝 · BOM 보존, NUL 거부, --changes 로 여러 곳을 원자적으로)
+  │     ├── RunAgentLog.py            # docs/12_Agents.md '토큰 측정값' 표에 한 줄을 더한다(`py -3 -m Scripts agent-log`)
   │     ├── RunStatusBoard.py         # README 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 후보 문서에서 만든다(`py -3 -m Scripts status-board`, --write · --check)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MakeEditorTheme.py        # 에디터 테마 토큰(tokens.json) ↔ Figma 변수 · DTCG: import-figma · export-figma · check (`py -3 -m Scripts editor-theme`)

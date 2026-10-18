@@ -8,6 +8,7 @@
     py -3 -m Scripts plans --status 구현중      # 그 상태의 문서만
     py -3 -m Scripts plans --area editor        # 그 영역의 문서만
     py -3 -m Scripts plans --file Vfx           # 그 문서의 머리 줄과 절 제목 목록(`Vfx.md` 도 된다)
+    py -3 -m Scripts plans --file Vfx --section V2   # 제목에 `V2` 가 든 절의 본문만(다음 같은 수준 제목 전까지)
     py -3 -m Scripts plans --find C-30          # 옛 번호가 어느 문서 · 절로 옮겨졌는지(이름이면 위치)
     py -3 -m Scripts plans --check              # 로드맵의 문서 링크 · 파일 · #앵커가 맞는지(틀리면 종료 1)
 
@@ -17,6 +18,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import unicodedata
 from pathlib import Path
@@ -53,6 +55,38 @@ def formatPlanDetail(plan: PlanDoc) -> str:
     return "\n".join([f"<!-- docs/plans/{plan.fileName} -->", plan.headerLine, *plan.listHeading])
 
 
+_kSectionHeadingRe = re.compile(r"^(#{1,6}) +(.+?)\s*$")
+_kSectionFenceRe = re.compile(r"^\s*(```|~~~)")
+
+
+def extractSection(listLine: list[str], titlePart: str) -> list[str]:
+    """제목에 `titlePart` 가 든 절의 줄들(제목 줄 포함, 다음 같은 수준 이상 제목 전까지). 하위 절은 든다.
+
+    코드 울타리 안의 `#` 줄은 제목이 아니다. 맞는 절이 없거나 둘 이상이면 ValueError(메시지에 후보 제목).
+    """
+    listHeading: list[tuple[int, int, str]] = []  # (줄 번호, 수준, 제목 줄)
+    bFence = False
+    for index, line in enumerate(listLine):
+        if _kSectionFenceRe.match(line):
+            bFence = not bFence
+            continue
+        match = None if bFence else _kSectionHeadingRe.match(line)
+        if match:
+            listHeading.append((index, len(match.group(1)), line.rstrip()))
+    listMatch = [position for position, heading in enumerate(listHeading) if titlePart.lower() in heading[2].lower()]
+    if len(listMatch) != 1:
+        listCandidate = [listHeading[position][2] for position in listMatch] if listMatch else [heading[2] for heading in listHeading]
+        reason = "여럿에 맞습니다" if listMatch else "없습니다"
+        raise ValueError(f"절 `{titlePart}` 이 {reason}. 후보:\n" + "\n".join(listCandidate))
+    start, level, _ = listHeading[listMatch[0]]
+    end = len(listLine)
+    for index, nextLevel, _ in listHeading[listMatch[0] + 1:]:
+        if nextLevel <= level:
+            end = index
+            break
+    return [line.rstrip() for line in listLine[start:end]]
+
+
 def findPlace(listPlan: list[PlanDoc], query: str) -> list[str]:
     """옛 번호(`C-30`)나 이름(문서 `Vfx` · 단위 `Vfx.V2` · 후보 `Wayland`)이 있는 곳. 모르면 빈 목록."""
     listPlace: list[str] = []
@@ -74,6 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--status", choices=kListPlanStatus, help="이 상태의 문서만")
     parser.add_argument("--area", choices=kListPlanArea, help="이 영역의 문서만")
     parser.add_argument("--file", dest="fileName", help="이 문서(이름 줄기, 예: Vfx)의 머리 줄과 절 제목 목록")
+    parser.add_argument("--section", metavar="TITLE", help="--file 과 함께: 제목에 TITLE 이 든 절의 본문만(없거나 여럿에 맞으면 오류와 후보)")
     parser.add_argument("--find", metavar="QUERY", help="옛 번호(C-30) 또는 이름(Vfx · Vfx.V2 · 후보 이름)이 있는 곳")
     parser.add_argument("--check", action="store_true", help="로드맵의 문서 링크 · 파일 · #앵커가 맞는지 본다(틀리면 종료 1)")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 이 스크립트의 저장소)")
@@ -105,8 +140,19 @@ def main(argv: list[str] | None = None) -> int:
         if not listMatch:
             print(f"[plans] `{args.fileName}` 문서가 없습니다: {' · '.join(plan.fileName for plan in listPlan)}", file=sys.stderr)
             return 1
+        if args.section:
+            planPath = (args.root or getProjectRoot()) / kPlansRelDir / listMatch[0].fileName
+            try:
+                print("\n".join(extractSection(planPath.read_text(encoding="utf-8").splitlines(), args.section)))
+            except ValueError as error:
+                print(f"[plans] 오류: {error}", file=sys.stderr)
+                return 1
+            return 0
         print(formatPlanDetail(listMatch[0]))
         return 0
+    if args.section:
+        print("[plans] 오류: --section 은 --file 과 함께 씁니다", file=sys.stderr)
+        return 1
 
     listSelected = selectPlans(listPlan, args.status, args.area)
     print(formatPlanTable(listSelected))
