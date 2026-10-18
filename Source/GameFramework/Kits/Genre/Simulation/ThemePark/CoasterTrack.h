@@ -15,6 +15,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -27,6 +29,7 @@ namespace sw
     // 1) 조각과 구간 표시
     // ------------------------------------------------------------------------------
     /** @brief 트랙 조각의 종류입니다. 데이터(XML)에는 열거자 이름 그대로 적습니다(대소문자 무시). */
+    ENUM()
     enum class CoasterPieceType : uint8
     {
         Station = 0, ///< 수평 직선에 스테이션 표시가 붙는다(열차를 정해진 속도로 맞춘다)
@@ -54,16 +57,26 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 조각 하나입니다. 종류마다 쓰는 값이 다르며, 쓰지 않는 값은 무시합니다. */
+    /** @brief 조각 하나입니다. 종류마다 쓰는 값이 다르며, 쓰지 않는 값은 무시합니다. `<Piece>` 의 스키마이기도 합니다. */
+    REFLECT()
     struct CoasterTrackPiece
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         CoasterPieceType _type{ CoasterPieceType::Straight };
-        float32          _length{ 10.0f }; ///< 수평 길이(m)이다. Station, Straight, LiftHill, Drop, Hill, Brakes, Booster 가 쓴다
-        float32          _height{ 0.0f };  ///< 높이 변화(m)이다. LiftHill 은 +, Drop 은 양수로 적으면 내려가고, Hill 은 꼭대기 높이, Turn 은 헬릭스이며 부호를 그대로 따른다
-        float32          _radius{ 10.0f }; ///< 반지름(m)이다. Turn 이 쓰며, Loop 는 높이의 절반이다
-        float32          _angle{ 90.0f };  ///< 회전각(도)이다. Turn 이 쓴다
-        float32          _bank{ 0.0f };    ///< 뱅크(도)이다. 회전 안쪽으로 기울며 Turn 이 쓴다
-        float32          _width{ 3.0f };   ///< 옆 비킴(m)이다. Loop 가 쓴다
+        PROPERTY( Min = 0.1 )
+        float32 _length{ 10.0f }; ///< 수평 길이(m)이다. Station, Straight, LiftHill, Drop, Hill, Brakes, Booster 가 쓴다
+        PROPERTY()
+        float32 _height{ 0.0f }; ///< 높이 변화(m)이다. LiftHill 은 +, Drop 은 양수로 적으면 내려가고, Hill 은 꼭대기 높이, Turn 은 헬릭스이며 부호를 그대로 따른다
+        PROPERTY( Min = 1.0 )
+        float32 _radius{ 10.0f }; ///< 반지름(m)이다. Turn 이 쓰며, Loop 는 높이의 절반이다
+        PROPERTY()
+        float32 _angle{ 90.0f }; ///< 회전각(도)이다. Turn 이 쓴다
+        PROPERTY()
+        float32 _bank{ 0.0f }; ///< 뱅크(도)이다. 회전 안쪽으로 기울며 Turn 이 쓴다
+        PROPERTY( Min = 0.0 )
+        float32 _width{ 3.0f }; ///< 옆 비킴(m)이다. Loop 가 쓴다
     };
 } // namespace sw
 
@@ -195,12 +208,19 @@ namespace sw
     // 4) 레이아웃 카탈로그: XML 의 조각 목록
     // ------------------------------------------------------------------------------
     /** @brief 이름 붙은 조각 목록 하나입니다. */
+    REFLECT()
     struct CoasterLayoutDef
     {
-        hashed_string             _id{};
-        string                    _name{};
-        vector<CoasterTrackPiece> _listPiece{};
-        float32                   _startHeight{ 1.0f }; ///< 스테이션 높이(m)
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        float32 _startHeight{ 1.0f }; ///< 스테이션 높이(m)
+
+        vector<CoasterTrackPiece> _listPiece{}; ///< `<Piece>` 자식에서 읽는다
     };
 } // namespace sw
 
@@ -209,7 +229,7 @@ namespace sw
     /**
      * @class CoasterLayoutCatalog
      * @brief `<CoasterCatalog><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
-     * @details 모르는 조각 이름은 경고하고 그 조각만 건너뛴다. 같은 id 는 뒤의 것이 이긴다.
+     * @details 조각 하나라도 틀리면(모르는 종류 · 범위 밖 값) 그 레이아웃 전체를 넣지 않는 오류다 — 조각을 빼고 이으면 다른 트랙이 된다.
      */
     class SW_KIT_API CoasterLayoutCatalog : public XMLCatalog<CoasterLayoutCatalog>, public GameCatalog<CoasterLayoutDef>
     {
@@ -224,5 +244,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "CoasterCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief `<Layout>` 과 그 `<Piece>` 를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadLayout( const XMLNode& node, string_view sourceName );
     };
 } // namespace sw

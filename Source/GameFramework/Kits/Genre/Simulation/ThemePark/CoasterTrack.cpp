@@ -467,45 +467,39 @@ namespace sw
 
     uint32 CoasterLayoutCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
-        for ( XMLNode layoutNode = root.findChild( "Layout" ); layoutNode; layoutNode = layoutNode.findNextSibling( "Layout" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( layoutNode, sourceName );
-            if ( pID == nullptr )
-                continue;
-            CoasterLayoutDef layout;
-            layout._id          = hashed_string( pID );
-            const utf8* pName   = layoutNode.findAttribute( "name" );
-            layout._name        = pName != nullptr ? pName : pID;
-            layout._startHeight = layoutNode.getAttributeFloat( "startHeight", 1.0f );
-
-            for ( XMLNode pieceNode = layoutNode.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
-            {
-                CoasterTrackPiece piece;
-                const utf8*       pType = pieceNode.findAttribute( "type" );
-                if ( pType == nullptr || parseCoasterPieceType( string_view( pType ), piece._type ) == false )
-                {
-                    SW_LOG_WARNING( "%#: layout '%#' has an unknown piece type '%#' - skipped", sourceName, pID, pType != nullptr ? pType : "" );
-                    continue;
-                }
-                piece._length = pieceNode.getAttributeFloat( "length", piece._length );
-                piece._height = pieceNode.getAttributeFloat( "height", piece._height );
-                piece._radius = pieceNode.getAttributeFloat( "radius", piece._radius );
-                piece._angle  = pieceNode.getAttributeFloat( "angle", piece._angle );
-                piece._bank   = pieceNode.getAttributeFloat( "bank", piece._bank );
-                piece._width  = pieceNode.getAttributeFloat( "width", piece._width );
-                layout._listPiece.push_back( piece );
-            }
-            if ( layout._listPiece.empty() )
-            {
-                SW_LOG_WARNING( "%#: layout '%#' has no pieces - skipped", sourceName, pID );
-                continue;
-            }
-            add( layout );
-            ++loadedCount;
+            if ( StringUtil::equals( node.getName(), "Layout", true ) == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+            else if ( loadLayout( node, sourceName ) )
+                ++loadedCount;
         }
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Layout> entries", sourceName );
         return loadedCount;
+    }
+
+    bool CoasterLayoutCatalog::loadLayout( const XMLNode& node, string_view sourceName )
+    {
+        CoasterLayoutDef layout;
+        bool             bValid = GameDataXML::readFields( node, layout, sourceName );
+        for ( XMLNode pieceNode = node.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
+        {
+            CoasterTrackPiece piece;
+            if ( GameDataXML::readFields( pieceNode, piece, sourceName ) )
+                layout._listPiece.push_back( piece );
+            else
+                bValid = false;
+        }
+        if ( layout._listPiece.empty() )
+        {
+            SW_LOG_ERROR( "%#: layout '%#' has no pieces", sourceName, layout._id.c_str() );
+            bValid = false;
+        }
+        if ( bValid )
+            add( layout ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 } // namespace sw

@@ -45,7 +45,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `<FlatRide>` 한 줄의 스키마입니다. 색(`color`, "r g b [a]")은 칸 하나가 아니라 따로 읽습니다. */
+    /** @brief `<FlatRide>` 한 줄의 스키마입니다. */
     REFLECT()
     struct ParkFlatRideDef
     {
@@ -89,12 +89,14 @@ namespace sw
         float32 _sizeZ{};
         PROPERTY()
         float32 _spin{ 0.0f }; ///< 운행 중 도는 빠르기(rad/s) — 적지 않으면 돌지 않는다
+        PROPERTY( Required, Meta = "Color" )
+        float4 _color{}; ///< `r,g,b,a` 네 성분을 모두 적는다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief `<Coaster>` 한 줄의 스키마입니다. 레이아웃은 코스터 카탈로그의 id 입니다. 색은 따로 읽습니다. */
+    /** @brief `<Coaster>` 한 줄의 스키마입니다. 레이아웃은 코스터 카탈로그의 id 입니다. */
     REFLECT()
     struct ParkCoasterDef
     {
@@ -114,6 +116,8 @@ namespace sw
         float32 _loadTime{};
         PROPERTY( Required, Min = 0 )
         int32 _cost{};
+        PROPERTY( Required, Meta = "Color" )
+        float4 _color{}; ///< `r,g,b,a` 네 성분을 모두 적는다
     };
 } // namespace sw
 

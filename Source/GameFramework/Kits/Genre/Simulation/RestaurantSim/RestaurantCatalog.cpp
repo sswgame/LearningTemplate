@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -29,9 +30,9 @@ namespace sw
         , _customerCatalog{}
         , _weatherCatalog{}
         , _arrArrivalRate{}
-        , _openHour{ 11 }
-        , _closeHour{ 21 }
-        , _ratingWindow{ 10 }
+        , _openHour{ RestaurantCatalogRootDef{}._openHour }
+        , _closeHour{ RestaurantCatalogRootDef{}._closeHour }
+        , _ratingWindow{ RestaurantCatalogRootDef{}._ratingWindow }
     {
     }
 
@@ -56,87 +57,92 @@ namespace sw
 
     uint32 RestaurantCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _openHour     = MathUtil::clamp( root.getAttributeInt( "open", _openHour ), 0, kHoursPerDay - 1 );
-        _closeHour    = MathUtil::clamp( root.getAttributeInt( "close", _closeHour ), _openHour + 1, kHoursPerDay );
-        _ratingWindow = MathUtil::max( 1, root.getAttributeInt( "window", _ratingWindow ) );
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        RestaurantCatalogRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) == false )
+            return 0;
+        if ( rootDef._closeHour <= rootDef._openHour )
+        {
+            SW_LOG_ERROR( "%#: close=\"%#\" must be later than open=\"%#\"", sourceName, rootDef._closeHour, rootDef._openHour );
+            return 0;
+        }
+        _openHour     = rootDef._openHour;
+        _closeHour    = rootDef._closeHour;
+        _ratingWindow = rootDef._ratingWindow;
 
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Dish" ); node; node = node.findNextSibling( "Dish" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            DishDef dish;
-            dish._id            = hashed_string( pID );
-            const utf8* pName   = node.findAttribute( "name" );
-            dish._name          = pName != nullptr ? pName : pID;
-            const utf8* pRecipe = node.findAttribute( "recipe" );
-            dish._recipeID      = hashed_string( pRecipe != nullptr ? pRecipe : pID );
-            dish._category      = hashed_string( node.getAttributeText( "category" ) );
-            dish._basePrice     = node.getAttributeInt( "price", dish._basePrice );
-            if ( dish._basePrice <= 0 )
+            const utf8* pElement = node.getName();
+            if ( StringUtil::equals( pElement, "Dish", true ) )
             {
-                SW_LOG_WARNING( "%#: dish '%#' has no positive price - skipped", sourceName, pID );
-                continue;
+                if ( loadDish( node, sourceName ) )
+                    ++loadedCount;
             }
-            StringUtil::forEachToken( node.getAttributeText( "quality" ), ",;| ", [&]( string_view token )
+            else if ( StringUtil::equals( pElement, "Customer", true ) )
             {
-                float32 level = 0.0f;
-                if ( GameDataXML::parseFloats( token, &level, 1 ) == 1 )
-                    dish._listQualityLevel.push_back( static_cast<int32>( level ) );
-            } );
-            std::sort( dish._listQualityLevel.begin(), dish._listQualityLevel.end() );
-            addDish( dish );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "Ingredient" ); node; node = node.findNextSibling( "Ingredient" ) )
-        {
-            const utf8* pItem = node.findAttribute( "item" );
-            if ( pItem == nullptr )
-            {
-                SW_LOG_WARNING( "%#: <Ingredient> without an item - skipped", sourceName );
-                continue;
+                if ( loadCustomer( node, sourceName ) )
+                    ++loadedCount;
             }
-            (void)_ingredientCatalog.add( IngredientDef{ hashed_string( pItem ), MathUtil::max( 0, node.getAttributeInt( "shelfLife", 0 ) ) } );
-        }
-
-        for ( XMLNode node = root.findChild( "Customer" ); node; node = node.findNextSibling( "Customer" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            CustomerTypeDef customerType;
-            customerType._id         = hashed_string( pID );
-            customerType._weight     = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", customerType._weight ) );
-            customerType._patience   = MathUtil::max( 1.0f, node.getAttributeFloat( "patience", customerType._patience ) );
-            customerType._budget     = MathUtil::max( 0.0f, node.getAttributeFloat( "budget", customerType._budget ) );
-            customerType._tipRate    = MathUtil::max( 0.0f, node.getAttributeFloat( "tipRate", customerType._tipRate ) );
-            customerType._eatMinutes = MathUtil::max( 0.0f, node.getAttributeFloat( "eat", customerType._eatMinutes ) );
-            GameDataXML::parseNameList( node.getAttributeText( "categories" ), ",;| ", customerType._listCategory );
-            addCustomerType( customerType );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "Arrival" ); node; node = node.findNextSibling( "Arrival" ) )
-        {
-            const int32 hour = node.getAttributeInt( "hour", -1 );
-            if ( hour < 0 || hour >= kHoursPerDay )
+            else if ( StringUtil::equals( pElement, "Ingredient", true ) )
             {
-                SW_LOG_WARNING( "%#: <Arrival> hour %# is out of 0..23 - skipped", sourceName, hour );
-                continue;
+                IngredientDef ingredient;
+                if ( GameDataXML::readFields( node, ingredient, sourceName ) )
+                    (void)_ingredientCatalog.add( ingredient ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             }
-            _arrArrivalRate[hour] = MathUtil::max( 0.0f, node.getAttributeFloat( "rate", 0.0f ) );
-        }
-
-        for ( XMLNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID != nullptr )
-                (void)_weatherCatalog.add( RestaurantWeatherDef{ hashed_string( pID ), MathUtil::max( 0.0f, node.getAttributeFloat( "arrival", 1.0f ) ) } );
+            else if ( StringUtil::equals( pElement, "Arrival", true ) )
+            {
+                RestaurantArrivalDef arrival;
+                if ( GameDataXML::readFields( node, arrival, sourceName ) )
+                    _arrArrivalRate[arrival._hour] = arrival._rate;
+            }
+            else if ( StringUtil::equals( pElement, "Weather", true ) )
+            {
+                RestaurantWeatherDef weather;
+                if ( GameDataXML::readFields( node, weather, sourceName ) )
+                    (void)_weatherCatalog.add( weather );
+            }
+            else
+            {
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, pElement );
+            }
         }
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Dish> / <Customer> entries", sourceName );
         return loadedCount;
+    }
+
+    bool RestaurantCatalog::loadDish( const XMLNode& node, string_view sourceName )
+    {
+        DishDef dish;
+        bool    bValid = GameDataXML::readFields( node, dish, sourceName, { "quality" } );
+        // 품질 임계값은 정수 레벨이다. 읽지 못한 토큰은 건너뛰지 않고 오류다.
+        StringUtil::forEachToken( node.getAttributeText( "quality" ), ",;| ", [&]( string_view token )
+        {
+            int32 level = 0;
+            if ( StringUtil::parseInt( token, level ) && level >= 1 )
+            {
+                dish._listQualityLevel.push_back( level );
+            }
+            else
+            {
+                SW_LOG_ERROR( "%#: dish '%#' has a quality level '%#' that is not a positive integer", sourceName, dish._id.c_str(), token );
+                bValid = false;
+            }
+        } );
+        std::sort( dish._listQualityLevel.begin(), dish._listQualityLevel.end() );
+        if ( bValid )
+            addDish( dish );
+        return bValid;
+    }
+
+    bool RestaurantCatalog::loadCustomer( const XMLNode& node, string_view sourceName )
+    {
+        CustomerTypeDef customerType;
+        const bool      bValid = GameDataXML::readFields( node, customerType, sourceName, { "categories" } );
+        GameDataXML::parseNameList( node.getAttributeText( "categories" ), ",;| ", customerType._listCategory );
+        if ( bValid )
+            addCustomerType( customerType );
+        return bValid;
     }
 } // namespace sw

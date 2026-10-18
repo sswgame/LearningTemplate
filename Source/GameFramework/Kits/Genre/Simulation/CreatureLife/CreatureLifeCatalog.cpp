@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -40,7 +39,7 @@ namespace sw
                     const string_view symbol = keyNode.getAttributeText( "symbol" );
                     if ( symbol.size() != 1 || symbol[0] == '.' )
                     {
-                        SW_LOG_WARNING( "%#: habitat '%#' has a key whose symbol is not one character (or is '.')", sourceName, pHabitatID );
+                        SW_LOG_ERROR( "%#: habitat '%#' has a key whose symbol is not one character (or is '.')", sourceName, pHabitatID );
                         return false;
                     }
                     listKey.push_back( SymbolKey{ parseObject( keyNode.getAttributeText( "object" ) ), symbol[0] } );
@@ -55,7 +54,7 @@ namespace sw
                         outHabitat._width = static_cast<int32>( cells.size() );
                     if ( cells.empty() || static_cast<int32>( cells.size() ) != outHabitat._width )
                     {
-                        SW_LOG_WARNING( "%#: habitat '%#' has rows of different length", sourceName, pHabitatID );
+                        SW_LOG_ERROR( "%#: habitat '%#' has rows of different length", sourceName, pHabitatID );
                         return false;
                     }
                     for ( const utf8 symbol : cells )
@@ -79,7 +78,7 @@ namespace sw
                             }
                             if ( bKnown == false )
                             {
-                                SW_LOG_WARNING( "%#: habitat '%#' uses an unknown symbol in row '%#'", sourceName, pHabitatID, cells );
+                                SW_LOG_ERROR( "%#: habitat '%#' uses an unknown symbol in row '%#'", sourceName, pHabitatID, cells );
                                 return false;
                             }
                         }
@@ -89,7 +88,7 @@ namespace sw
                 }
                 if ( outHabitat._height == 0 || outHabitat.countClaimedCells() == 0 )
                 {
-                    SW_LOG_WARNING( "%#: habitat '%#' has no cells to match", sourceName, pHabitatID );
+                    SW_LOG_ERROR( "%#: habitat '%#' has no cells to match", sourceName, pHabitatID );
                     return false;
                 }
                 return true;
@@ -190,103 +189,139 @@ namespace sw
 
     uint32 CreatureLifeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 종은 능력 · 서식지를 가리키므로 원소 종류마다 따로 돌고, 가리키는 id 는 모두 읽은 뒤 확인한다.
         uint32 loadedCount = 0;
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+        {
+            const string_view elementName( node.getName() != nullptr ? node.getName() : "" );
+            const bool        bKnown = elementName == "Habitat" || elementName == "Ability" || elementName == "Species" || elementName == "Appeal";
+            if ( bKnown == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, elementName );
+        }
         for ( XMLNode node = root.findChild( "Habitat" ); node; node = node.findNextSibling( "Habitat" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            HabitatDef habitat;
-            habitat._id       = hashed_string( pID );
-            const utf8* pName = node.findAttribute( "name" );
-            habitat._name     = pName != nullptr ? pName : pID;
-            habitat._capacity = MathUtil::max( 1, node.getAttributeInt( "capacity", habitat._capacity ) );
-            if ( CreatureLifeCatalogInternal::parsePattern( node, sourceName, pID, habitat ) == false )
-                continue;
-            (void)_habitatCatalog.add( habitat );
-            ++loadedCount;
+            if ( loadHabitat( node, sourceName ) )
+                ++loadedCount;
         }
         rebuildHabitatOrder();
-
         for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            CreatureAbilityDef ability;
-            ability._id         = hashed_string( pID );
-            ability._usesPerDay = MathUtil::max( 1, node.getAttributeInt( "uses", ability._usesPerDay ) );
-            for ( XMLNode ruleNode = node.findChild( "Rule" ); ruleNode; ruleNode = ruleNode.findNextSibling( "Rule" ) )
-            {
-                CreatureTileRule rule;
-                rule._from         = CreatureLifeCatalogInternal::parseObject( ruleNode.getAttributeText( "from" ) );
-                rule._to           = CreatureLifeCatalogInternal::parseObject( ruleNode.getAttributeText( "to" ) );
-                const utf8* pYield = ruleNode.findAttribute( "yield" );
-                rule._yieldItem    = pYield != nullptr ? hashed_string( pYield ) : hashed_string{};
-                rule._yieldCount   = MathUtil::max( 1, ruleNode.getAttributeInt( "count", rule._yieldCount ) );
-                if ( rule._from == rule._to )
-                {
-                    SW_LOG_WARNING( "%#: ability '%#' has a rule that changes nothing", sourceName, pID );
-                    continue;
-                }
-                ability._listRule.push_back( rule );
-            }
-            if ( ability._listRule.empty() )
-            {
-                SW_LOG_WARNING( "%#: ability '%#' has no <Rule> - skipped", sourceName, pID );
-                continue;
-            }
-            (void)_abilityCatalog.add( ability );
-            ++loadedCount;
+            if ( loadAbility( node, sourceName ) )
+                ++loadedCount;
         }
-
         for ( XMLNode node = root.findChild( "Species" ); node; node = node.findNextSibling( "Species" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            CreatureSpeciesDef species;
-            species._id       = hashed_string( pID );
-            const utf8* pName = node.findAttribute( "name" );
-            species._name     = pName != nullptr ? pName : pID;
-            species._chance   = MathUtil::clamp( node.getAttributeFloat( "chance", species._chance ), 0.0f, 1.0f );
-            GameDataXML::parseNameList( node.getAttributeText( "habitats" ), ",;| ", species._listHabitat );
-            GameDataXML::parseNameList( node.getAttributeText( "foods" ), ",;| ", species._listFood );
-            GameDataXML::parseNameList( node.getAttributeText( "gifts" ), ",;| ", species._listGift );
-            ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), species._visitCondition._listWeather );
-            GameDataXML::parseNameList( node.getAttributeText( "abilities" ), ",;| ", species._listAbility );
-            GameDataXML::parseNameList( node.getAttributeText( "requests" ), ",;| ", species._listRequest );
-            species._visitCondition._phaseMask = ScheduleCondition::parsePhaseMask( node.getAttributeText( "phases" ), sourceName, pID );
-            if ( species._listHabitat.empty() )
-                SW_LOG_WARNING( "%#: species '%#' likes no habitat - it will never come", sourceName, pID );
+            if ( loadSpecies( node, sourceName ) )
+                ++loadedCount;
+        }
+        const XMLNode appealNode = root.findChild( "Appeal" );
+        if ( appealNode && loadAppeal( appealNode, sourceName ) == false )
+            SW_LOG_ERROR( "%#: <Appeal> is invalid - the town appeal keeps its previous tiers", sourceName );
+
+        for ( const CreatureSpeciesDef& species : _speciesCatalog.getAll() )
+        {
+            for ( const hashed_string& habitatID : species._listHabitat )
+            {
+                if ( _habitatCatalog.find( habitatID ) == nullptr )
+                    SW_LOG_ERROR( "%#: species '%#' likes an unknown habitat '%#'", sourceName, species._id.c_str(), habitatID.c_str() );
+            }
             for ( const hashed_string& abilityID : species._listAbility )
             {
                 if ( _abilityCatalog.find( abilityID ) == nullptr )
-                    SW_LOG_WARNING( "%#: species '%#' has an unknown ability '%#'", sourceName, pID, abilityID.c_str() );
+                    SW_LOG_ERROR( "%#: species '%#' has an unknown ability '%#'", sourceName, species._id.c_str(), abilityID.c_str() );
             }
-            (void)_speciesCatalog.add( species );
-            ++loadedCount;
-        }
-
-        const XMLNode appealNode = root.findChild( "Appeal" );
-        if ( appealNode )
-        {
-            _appeal._diversityWeight  = appealNode.getAttributeFloat( "diversity", _appeal._diversityWeight );
-            _appeal._creatureWeight   = appealNode.getAttributeFloat( "creature", _appeal._creatureWeight );
-            _appeal._friendshipWeight = appealNode.getAttributeFloat( "friendship", _appeal._friendshipWeight );
-            _appeal._listTier.clear();
-            for ( XMLNode tierNode = appealNode.findChild( "Tier" ); tierNode; tierNode = tierNode.findNextSibling( "Tier" ) )
-            {
-                const utf8* pTierName = tierNode.findAttribute( "name" );
-                if ( pTierName != nullptr )
-                    _appeal._listTier.push_back( TownAppealTier{ hashed_string( pTierName ), tierNode.getAttributeFloat( "min", 0.0f ) } );
-            }
-            std::stable_sort( _appeal._listTier.begin(), _appeal._listTier.end(),
-                              []( const TownAppealTier& lhs, const TownAppealTier& rhs )
-            { return lhs._minScore < rhs._minScore; } );
         }
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Habitat> / <Ability> / <Species> entries", sourceName );
         return loadedCount;
+    }
+
+    bool CreatureLifeCatalog::loadHabitat( const XMLNode& node, string_view sourceName )
+    {
+        HabitatDef habitat;
+        bool       bValid = GameDataXML::readFields( node, habitat, sourceName );
+        bValid            = bValid && CreatureLifeCatalogInternal::parsePattern( node, sourceName, habitat._id.c_str(), habitat );
+        if ( bValid )
+            (void)_habitatCatalog.add( habitat ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
+    }
+
+    bool CreatureLifeCatalog::loadAbility( const XMLNode& node, string_view sourceName )
+    {
+        CreatureAbilityDef ability;
+        bool               bValid = GameDataXML::readFields( node, ability, sourceName );
+        for ( XMLNode ruleNode = node.findChild( "Rule" ); ruleNode; ruleNode = ruleNode.findNextSibling( "Rule" ) )
+        {
+            CreatureTileRule rule;
+            if ( GameDataXML::readFields( ruleNode, rule, sourceName ) == false )
+            {
+                bValid = false;
+                continue;
+            }
+            rule._from = CreatureLifeCatalogInternal::parseObject( rule._from.view() );
+            rule._to   = CreatureLifeCatalogInternal::parseObject( rule._to.view() );
+            if ( rule._from == rule._to )
+            {
+                SW_LOG_ERROR( "%#: ability '%#' has a rule that changes nothing", sourceName, ability._id.c_str() );
+                bValid = false;
+                continue;
+            }
+            ability._listRule.push_back( rule );
+        }
+        if ( ability._listRule.empty() )
+        {
+            SW_LOG_ERROR( "%#: ability '%#' has no <Rule> - skipped", sourceName, ability._id.c_str() );
+            bValid = false;
+        }
+        if ( bValid )
+            (void)_abilityCatalog.add( ability );
+        return bValid;
+    }
+
+    bool CreatureLifeCatalog::loadSpecies( const XMLNode& node, string_view sourceName )
+    {
+        CreatureSpeciesDef species;
+        bool               bValid = GameDataXML::readFields( node, species, sourceName, { "habitats", "foods", "gifts", "weathers", "abilities", "requests", "phases" } );
+        GameDataXML::parseNameList( node.getAttributeText( "habitats" ), ",;| ", species._listHabitat );
+        GameDataXML::parseNameList( node.getAttributeText( "foods" ), ",;| ", species._listFood );
+        GameDataXML::parseNameList( node.getAttributeText( "gifts" ), ",;| ", species._listGift );
+        ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), species._visitCondition._listWeather );
+        GameDataXML::parseNameList( node.getAttributeText( "abilities" ), ",;| ", species._listAbility );
+        GameDataXML::parseNameList( node.getAttributeText( "requests" ), ",;| ", species._listRequest );
+        species._visitCondition._phaseMask = ScheduleCondition::parsePhaseMask( node.getAttributeText( "phases" ), sourceName, species._id.view() );
+        if ( species._listHabitat.empty() )
+        {
+            SW_LOG_ERROR( "%#: species '%#' likes no habitat - it would never come", sourceName, species._id.c_str() );
+            bValid = false;
+        }
+        if ( bValid )
+            (void)_speciesCatalog.add( species );
+        return bValid;
+    }
+
+    bool CreatureLifeCatalog::loadAppeal( const XMLNode& node, string_view sourceName )
+    {
+        TownAppealDef appeal;
+        bool          bValid = GameDataXML::readFields( node, appeal, sourceName );
+        for ( XMLNode tierNode = node.findChild( "Tier" ); tierNode; tierNode = tierNode.findNextSibling( "Tier" ) )
+        {
+            TownAppealTier tier;
+            if ( GameDataXML::readFields( tierNode, tier, sourceName ) )
+                appeal._listTier.push_back( tier );
+            else
+                bValid = false;
+        }
+        if ( appeal._listTier.empty() )
+        {
+            SW_LOG_ERROR( "%#: <Appeal> has no <Tier>", sourceName );
+            bValid = false;
+        }
+        if ( bValid == false )
+            return false;
+        std::stable_sort( appeal._listTier.begin(), appeal._listTier.end(), []( const TownAppealTier& lhs, const TownAppealTier& rhs )
+        { return lhs._minScore < rhs._minScore; } );
+        _appeal = appeal;
+        return true;
     }
 } // namespace sw

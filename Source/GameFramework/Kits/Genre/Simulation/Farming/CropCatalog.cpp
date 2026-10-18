@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 
-#include "Core/Math/MathUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -17,20 +17,27 @@ namespace sw
 
     namespace
     {
-        /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 경고하고 뺍니다. */
-        void parseSeasons( string_view text, const vector<hashed_string>& listKnown, string_view sourceName, const utf8* pCropID,
-                           vector<hashed_string>& outListSeason )
+        /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 오류이고 false 를 반환합니다. */
+        [[nodiscard]] bool parseSeasons( string_view text, const vector<hashed_string>& listKnown, string_view sourceName, const utf8* pCropID,
+                                         vector<hashed_string>& outListSeason )
         {
             outListSeason.clear();
+            bool bValid = true;
             StringUtil::forEachToken( text, ",;| ", [&]( string_view token )
             {
                 const hashed_string season( token );
                 const bool          bKnown = listKnown.empty() || std::find( listKnown.begin(), listKnown.end(), season ) != listKnown.end();
                 if ( bKnown )
+                {
                     outListSeason.push_back( season );
+                }
                 else
-                    SW_LOG_WARNING( "%#: crop '%#' names an unknown season '%#'", sourceName, pCropID, season.c_str() );
+                {
+                    SW_LOG_ERROR( "%#: crop '%#' names an unknown season '%#'", sourceName, pCropID, season.c_str() );
+                    bValid = false;
+                }
             } );
+            return bValid;
         }
     } // namespace
 } // namespace sw
@@ -85,47 +92,46 @@ namespace sw
 
     uint32 CropCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Crop" ); node; node = node.findNextSibling( "Crop" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            CropDef crop;
-            crop._id             = hashed_string( pID );
-            const utf8* pName    = node.findAttribute( "name" );
-            crop._name           = pName != nullptr ? pName : pID;
-            const utf8* pSeed    = node.findAttribute( "seed" );
-            const utf8* pProduce = node.findAttribute( "produce" );
-            crop._seedItem       = hashed_string( pSeed != nullptr ? pSeed : pID );
-            crop._produceItem    = hashed_string( pProduce != nullptr ? pProduce : pID );
-            crop._growthDays     = MathUtil::max( 1, node.getAttributeInt( "days", crop._growthDays ) );
-            crop._regrowDays     = MathUtil::max( 0, node.getAttributeInt( "regrow", crop._regrowDays ) );
-            crop._seedPrice      = MathUtil::max( 0, node.getAttributeInt( "seedPrice", crop._seedPrice ) );
-            crop._sellPrice      = MathUtil::max( 0, node.getAttributeInt( "sellPrice", crop._sellPrice ) );
-            crop._harvestCount   = MathUtil::max( 1, node.getAttributeInt( "harvest", crop._harvestCount ) );
-            const utf8* pColor   = node.findAttribute( "color" );
-            if ( pColor != nullptr )
-                crop._color = GameDataXML::parseFloat4( string_view( pColor ), crop._color );
-            const utf8* pSeasons = node.findAttribute( "seasons" );
-            if ( pSeasons != nullptr )
-                parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, pID, crop._listSeason );
-            else
-                crop._listSeason.push_back( hashed_string( "Spring" ) );
-            if ( crop._listSeason.empty() )
-            {
-                SW_LOG_WARNING( "%#: crop '%#' grows in no season - skipped", sourceName, pID );
-                continue;
-            }
-            if ( crop._regrowDays > crop._growthDays )
-                SW_LOG_WARNING( "%#: crop '%#' regrows slower (%#) than it first grows (%#)", sourceName, pID, crop._regrowDays, crop._growthDays );
-            (void)_catalog.add( crop ); // 인덱스는 한 번에 만들고, 작물마다 다시 만들지 않는다
-            ++loadedCount;
+            if ( StringUtil::equals( node.getName(), "Crop", true ) == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+            else if ( loadCrop( node, sourceName ) )
+                ++loadedCount;
         }
-        rebuildItemIndex();
+        rebuildItemIndex(); // 인덱스는 한 번에 만들고, 작물마다 다시 만들지 않는다
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Crop> entries", sourceName );
         return loadedCount;
+    }
+
+    bool CropCatalog::loadCrop( const XMLNode& node, string_view sourceName )
+    {
+        CropDef crop;
+        bool    bValid = GameDataXML::readFields( node, crop, sourceName, { "seasons" } );
+        // 자라는 계절은 반드시 적는다 — 적지 않은 작물을 봄 작물로 읽지 않는다.
+        const utf8* pSeasons = node.findAttribute( "seasons" );
+        if ( pSeasons == nullptr )
+        {
+            SW_LOG_ERROR( "%#: crop '%#' needs seasons=\"...\"", sourceName, crop._id.c_str() );
+            bValid = false;
+        }
+        else if ( parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, crop._id.c_str(), crop._listSeason ) == false )
+        {
+            bValid = false;
+        }
+        else if ( crop._listSeason.empty() )
+        {
+            SW_LOG_ERROR( "%#: crop '%#' grows in no season", sourceName, crop._id.c_str() );
+            bValid = false;
+        }
+        if ( crop._regrowDays > crop._growthDays )
+            SW_LOG_WARNING( "%#: crop '%#' regrows slower (%#) than it first grows (%#)", sourceName, crop._id.c_str(), crop._regrowDays, crop._growthDays );
+        if ( bValid )
+            (void)_catalog.add( crop ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 
     void CropCatalog::fillItemCatalog( ItemCatalog& inoutItems, int32 maxStack ) const

@@ -48,9 +48,9 @@ namespace sw
 )";
         static constexpr const utf8* kCreatureXML   = R"(
 <CreatureLifeCatalog>
-  <Habitat id="meadow"><Key symbol="G" object="grass"/><Row cells="GG"/></Habitat>
-  <Habitat id="orchard"><Key symbol="T" object="tree"/><Row cells="TT"/></Habitat>
-  <Species id="sprout" habitats="meadow" phases="Dawn,Day" weathers="sunny" chance="1" requests="meadow_request"/>
+  <Habitat id="meadow" name="Meadow"><Key symbol="G" object="grass"/><Row cells="GG"/></Habitat>
+  <Habitat id="orchard" name="Orchard"><Key symbol="T" object="tree"/><Row cells="TT"/></Habitat>
+  <Species id="sprout" name="Sprout" habitats="meadow" phases="Dawn,Day" weathers="sunny" chance="1" requests="meadow_request"/>
   <Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal>
 </CreatureLifeCatalog>
 )";

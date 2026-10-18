@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 
-#include "Core/Math/MathUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -18,6 +18,20 @@ namespace sw
         {
             /** @brief 블록 번호의 상한입니다(`VoxelBlockIndex` 가 uint8). */
             static constexpr size_t kMaxBlockCount = 255;
+
+            /** @brief 면 칸 속성 @p pName 을 정수로 읽습니다. 없으면 false 이고, 있는데 정수가 아니면 오류를 남기고 @p inoutbValid 를 false 로 바꿉니다. */
+            [[nodiscard]] static bool readTile( const XMLNode& node, const utf8* pName, string_view sourceName, int32& outTile, bool& inoutbValid )
+            {
+                const utf8* pText = node.findAttribute( pName );
+                if ( pText == nullptr )
+                    return false;
+                if ( StringUtil::parseInt( pText, outTile ) == false )
+                {
+                    SW_LOG_ERROR( "%#: block '%#' has %#=\"%#\" that is not an integer", sourceName, node.findAttribute( "id" ), pName, pText );
+                    inoutbValid = false;
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -46,9 +60,9 @@ namespace sw
 
     VoxelBlockCatalog::VoxelBlockCatalog()
         : _catalog{}
-        , _atlasColumns{ 8 }
-        , _atlasRows{ 8 }
-        , _tileTexels{ 16 }
+        , _atlasColumns{ VoxelBlockCatalogRootDef{}._atlasColumns }
+        , _atlasRows{ VoxelBlockCatalogRootDef{}._atlasRows }
+        , _tileTexels{ VoxelBlockCatalogRootDef{}._tileTexels }
     {
     }
 
@@ -107,34 +121,19 @@ namespace sw
 
     uint32 VoxelBlockCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _atlasColumns      = MathUtil::max( 1, root.getAttributeInt( "atlasColumns", _atlasColumns ) );
-        _atlasRows         = MathUtil::max( 1, root.getAttributeInt( "atlasRows", _atlasRows ) );
-        _tileTexels        = MathUtil::max( 1, root.getAttributeInt( "tileTexels", _tileTexels ) );
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        VoxelBlockCatalogRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) == false )
+            return 0;
+        _atlasColumns      = rootDef._atlasColumns;
+        _atlasRows         = rootDef._atlasRows;
+        _tileTexels        = rootDef._tileTexels;
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Block" ); node; node = node.findNextSibling( "Block" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            VoxelBlockDef block;
-            block._id                                                      = hashed_string( pID );
-            const utf8* pName                                              = node.findAttribute( "name" );
-            block._name                                                    = pName != nullptr ? pName : pID;
-            const int32 baseTile                                           = node.getAttributeInt( "tile", 0 );
-            const int32 sideTile                                           = node.getAttributeInt( "side", baseTile );
-            block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveX )] = sideTile;
-            block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeX )] = sideTile;
-            block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveZ )] = sideTile;
-            block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeZ )] = sideTile;
-            block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveY )] = node.getAttributeInt( "top", baseTile );
-            block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeY )] = node.getAttributeInt( "bottom", baseTile );
-            block._color                                                   = GameDataXML::parseFloat4( node.getAttributeText( "color" ), block._color );
-            block._hardness                                                = MathUtil::max( 0.0f, node.getAttributeFloat( "hardness", block._hardness ) );
-            block._bSolid                                                  = node.getAttributeBool( "solid", true ) ? SW_TRUE : SW_FALSE;
-            block._bOpaque                                                 = node.getAttributeBool( "opaque", true ) ? SW_TRUE : SW_FALSE;
-            block._bBreakable                                              = node.getAttributeBool( "breakable", true ) ? SW_TRUE : SW_FALSE;
-            block._dropID                                                  = GameDataXML::readName( node, "drop" );
-            if ( addBlock( block ) != kVoxelAirBlock )
+            if ( StringUtil::equals( node.getName(), "Block", true ) == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+            else if ( loadBlock( node, sourceName ) )
                 ++loadedCount;
         }
         // 얻는 블록은 같은 카탈로그의 블록이어야 한다 — 모든 블록을 읽은 뒤에 본다(앞 블록이 뒤 블록을 가리킬 수 있다).
@@ -147,5 +146,48 @@ namespace sw
             bDropsKnown = false;
         }
         return bDropsKnown ? loadedCount : 0;
+    }
+
+    bool VoxelBlockCatalog::loadBlock( const XMLNode& node, string_view sourceName )
+    {
+        using Internal = VoxelBlockInternal;
+        VoxelBlockDef block;
+        bool          bValid = GameDataXML::readFields( node, block, sourceName, { "tile", "top", "bottom", "side" } );
+        // 면은 `tile` 하나 또는 `top` · `bottom` · `side` 셋이다. 빠진 면을 다른 면 값으로 채우지 않는다.
+        int32      tile    = 0;
+        int32      top     = 0;
+        int32      bottom  = 0;
+        int32      side    = 0;
+        const bool bTile   = Internal::readTile( node, "tile", sourceName, tile, bValid );
+        const bool bTop    = Internal::readTile( node, "top", sourceName, top, bValid );
+        const bool bBottom = Internal::readTile( node, "bottom", sourceName, bottom, bValid );
+        const bool bSide   = Internal::readTile( node, "side", sourceName, side, bValid );
+        if ( bTile && ( bTop || bBottom || bSide ) == false )
+        {
+            top    = tile;
+            bottom = tile;
+            side   = tile;
+        }
+        else if ( bTile || ( bTop && bBottom && bSide ) == false )
+        {
+            SW_LOG_ERROR( "%#: block '%#' needs either tile=\"...\" alone or all of top, bottom and side", sourceName, block._id.c_str() );
+            bValid = false;
+        }
+        const int32 tileCount = _atlasColumns * _atlasRows;
+        for ( const int32 faceTile : { top, bottom, side } )
+        {
+            if ( faceTile < 0 || faceTile >= tileCount )
+            {
+                SW_LOG_ERROR( "%#: block '%#' uses tile %# outside the %#x%# atlas", sourceName, block._id.c_str(), faceTile, _atlasColumns, _atlasRows );
+                bValid = false;
+            }
+        }
+        block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveX )] = side;
+        block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeX )] = side;
+        block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveZ )] = side;
+        block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeZ )] = side;
+        block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveY )] = top;
+        block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeY )] = bottom;
+        return bValid && addBlock( block ) != kVoxelAirBlock;
     }
 } // namespace sw
