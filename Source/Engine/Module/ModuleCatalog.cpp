@@ -112,16 +112,25 @@ namespace sw
         context.setIgnoreCaseKeys( false );
         ModuleManifestFile        file;
         vector<SchemaOrphanValue> listOrphan;
-        if ( JSONSerializer::deserializeSoft( &file, *ModuleManifestFile::StaticType(), jsonText, &listOrphan, nullptr, context ) == false )
+        const SoftReadResult      result = JSONSerializer::deserializeSoft( &file, *ModuleManifestFile::StaticType(), jsonText, &listOrphan, nullptr, context );
+        if ( result == SoftReadResult::NotParsed )
         {
             outError = where + ": not valid JSON, or the root is not an object";
             return false;
         }
-        if ( listOrphan.empty() == false )
+        // 범위 밖 값(`Rejected`)이 있어도 모은 키를 모두 적는다 — 첫 실패에서 돌아가면 같은 파일의 오타가 다음 수정까지 숨는다(C-60).
+        string problem;
+        for ( const SchemaOrphanValue& orphan : listOrphan )
         {
-            const SchemaOrphanValue& orphan = listOrphan.front();
-            outError                        = where + ": unknown key '" + string( orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str() ) +
-                       "' or a value that cannot be read (" + orphan._text + ")";
+            problem += problem.empty() ? string() : string( "; " );
+            problem += "unknown key '" + string( orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str() ) + "' or a value that cannot be read (" +
+                       orphan._text + ")";
+        }
+        if ( result == SoftReadResult::Rejected )
+            problem += problem.empty() ? string( "a value outside its PROPERTY( Min, Max )" ) : string( "; a value outside its PROPERTY( Min, Max )" );
+        if ( problem.empty() == false )
+        {
+            outError = where + ": " + problem;
             return false;
         }
 

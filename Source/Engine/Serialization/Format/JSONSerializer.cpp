@@ -414,7 +414,7 @@ namespace sw
     bool JSONSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                       const SerializeContext& context )
     {
-        return deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, context );
+        return deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, context ) == SoftReadResult::Read;
     }
 
     bool JSONSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
@@ -528,14 +528,16 @@ namespace sw
         return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
     }
 
-    bool JSONSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
-                                          vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
-                                          const SerializeContext& context )
+    SoftReadResult JSONSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
+                                                    vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
+                                                    const SerializeContext& context )
     {
         JSONDocument doc;
-        if ( doc.parse( jsonStr ) == false )
-            return false;
-        return readObject( doc.getRoot(), pInstance, typeInfo, pOutListOrphan, pOutVersion, context );
+        const bool   bNotObject = pInstance == nullptr || doc.parse( jsonStr ) == false || doc.getRoot().isObject() == false;
+        if ( bNotObject )
+            return SoftReadResult::NotParsed;
+        // 객체를 읽은 뒤의 실패는 칸 값이다(범위 밖 · orphan 목록 없이 읽지 못한 칸). `readObject` 는 그 전에 모든 키를 지난다.
+        return readObject( doc.getRoot(), pInstance, typeInfo, pOutListOrphan, pOutVersion, context ) ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
     string JSONSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
@@ -565,7 +567,7 @@ namespace sw
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, jsonStr, &listOrphan, &outSoftVersion, context );
+            return deserializeSoft( pTarget, targetType, jsonStr, &listOrphan, &outSoftVersion, context ) == SoftReadResult::Read;
         } ) );
     }
 

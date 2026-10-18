@@ -92,33 +92,23 @@ namespace sw
                 return true;
             }
 
-            /** @brief @p value 가 @p meta 의 `Min` · `Max` 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
-            static void appendRangeError( const string& path, const float64 value, const PropertyMetadata& meta, vector<string>& outListError )
+            /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
+            static void appendRangeError( const string& path, const float64 value, const PropertyAllowedRange& range, vector<string>& outListError )
             {
-                const bool bBelow = meta._bHasMinRange == SW_TRUE && value < static_cast<float64>( meta._minRange );
-                const bool bAbove = meta._bHasMaxRange == SW_TRUE && value > static_cast<float64>( meta._maxRange );
-                if ( bBelow == false && bAbove == false )
+                if ( range.contains( value ) )
                     return;
-                const string lower = meta._bHasMinRange == SW_TRUE ? to_string( meta._minRange ) : string( "-" );
-                const string upper = meta._bHasMaxRange == SW_TRUE ? to_string( meta._maxRange ) : string( "-" );
+                const string lower = range._bHasMin ? to_string( range._min ) : string( "-" );
+                const string upper = range._bHasMax ? to_string( range._max ) : string( "-" );
                 outListError.push_back( path + " = " + to_string( value ) + " is outside [" + lower + ", " + upper + "]" );
             }
 
-            /** @brief 프로퍼티가 `Min` 이나 `Max` 를 선언했는지입니다. 선언이 없으면 숫자를 읽지 않습니다. */
-            static bool hasDeclaredRange( const PropertyMetadata& meta )
-            {
-                return meta._bHasMinRange == SW_TRUE || meta._bHasMaxRange == SW_TRUE;
-            }
-
-            /** @brief @p pValue(@p typeName 의 숫자)가 @p meta 의 범위 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
-            static bool isNumberWithinRange( const string_view typeName, const void* pValue, const PropertyMetadata& meta )
+            /** @brief @p pValue(@p typeName 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
+            static bool isNumberWithinRange( const string_view typeName, const void* pValue, const PropertyAllowedRange& range )
             {
                 float64 value = 0.0;
                 if ( readRangeNumber( typeName, pValue, value ) == false )
                     return true;
-                const bool bBelow = meta._bHasMinRange == SW_TRUE && value < static_cast<float64>( meta._minRange );
-                const bool bAbove = meta._bHasMaxRange == SW_TRUE && value > static_cast<float64>( meta._maxRange );
-                return bBelow == false && bAbove == false;
+                return range.contains( value );
             }
 
             /**
@@ -140,16 +130,18 @@ namespace sw
                         if ( bSequence == false )
                             continue;
                         const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault() );
-                        const bool      bNumberRange = pElement == nullptr && hasDeclaredRange( prop._metadata );
+                        const bool      bNumberRange = pElement == nullptr && prop._metadata.hasAllowedRange();
                         if ( pElement == nullptr && bNumberRange == false )
                             continue;
+                        // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
+                        const PropertyAllowedRange range        = bNumberRange ? prop._metadata.computeAllowedRange( pInstance ) : PropertyAllowedRange{};
                         ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                         const size_t               elementCount = pSequence->getSize( pValue );
                         for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                         {
                             const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
                             const bool        bWithin       = pElement != nullptr ? isEveryValueWithinRange( *pElement, pElementValue )
-                                                                                  : isNumberWithinRange( prop._elementTypeName.view(), pElementValue, prop._metadata );
+                                                                                  : isNumberWithinRange( prop._elementTypeName.view(), pElementValue, range );
                             if ( bWithin == false )
                                 return false;
                         }
@@ -159,7 +151,7 @@ namespace sw
                     float64 value = 0.0;
                     if ( readRangeNumber( prop._typeName.view(), pValue, value ) )
                     {
-                        if ( hasDeclaredRange( prop._metadata ) && isNumberWithinRange( prop._typeName.view(), pValue, prop._metadata ) == false )
+                        if ( prop._metadata.hasAllowedRange() && prop._metadata.computeAllowedRange( pInstance ).contains( value ) == false )
                             return false;
                         continue;
                     }
@@ -1108,6 +1100,8 @@ namespace sw
                 ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                 const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault() );
                 const size_t               elementCount = pSequence->getSize( pValue );
+                // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
+                const PropertyAllowedRange range = prop._metadata.hasAllowedRange() ? prop._metadata.computeAllowedRange( pInstance ) : PropertyAllowedRange{};
                 for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                 {
                     const string      elementPath   = path + "[" + to_string( elementIndex ) + "]";
@@ -1116,7 +1110,7 @@ namespace sw
                     if ( pElement != nullptr )
                         collectRangeErrors( *pElement, pElementValue, elementPath, outListError );
                     else if ( Internal::readRangeNumber( prop._elementTypeName.view(), pElementValue, value ) )
-                        Internal::appendRangeError( elementPath, value, prop._metadata, outListError );
+                        Internal::appendRangeError( elementPath, value, range, outListError );
                 }
                 continue;
             }
@@ -1127,8 +1121,8 @@ namespace sw
                 continue;
             }
             float64 value = 0.0;
-            if ( Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
-                Internal::appendRangeError( path, value, prop._metadata, outListError );
+            if ( prop._metadata.hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
+                Internal::appendRangeError( path, value, prop._metadata.computeAllowedRange( pInstance ), outListError );
         }
     }
 

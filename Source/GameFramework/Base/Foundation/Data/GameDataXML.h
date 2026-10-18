@@ -102,7 +102,7 @@ namespace sw
 
         /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */
         static const utf8* findRequiredID( const XMLNode& node, string_view sourceName );
-        /** @brief 속성 @p pAttribute 를 앞뒤 공백을 뺀 이름으로 읽습니다. 속성이 없거나 비어 있으면(공백뿐이어도) 빈 이름입니다. */
+        /** @brief 속성 @p pAttribute 를 앞뒤 공백을 뺀 이름으로 읽습니다. 속성이 없거나 비어 있으면(공백뿐이어도) 빈 이름이고, 글 `none` 은 오류입니다(`XMLReadUtil::readName`). */
         static hashed_string readName( const XMLNode& node, const utf8* pAttribute );
 
         /**

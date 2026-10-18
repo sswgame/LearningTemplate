@@ -154,8 +154,6 @@ namespace sw
         , _fileFilter{}
         , _uiMinRange{ 0.0f }
         , _uiMaxRange{ 1.0f }
-        , _pReadMinRange{ nullptr }
-        , _pReadMaxRange{ nullptr }
         , _bHasUIMinRange{ SW_FALSE }
         , _bHasUIMaxRange{ SW_FALSE }
         , _bEditConditionHides{ SW_FALSE }
@@ -169,6 +167,8 @@ namespace sw
         , _assetType{}
         , _repNotify{}
         , _validate{}
+        , _pReadMinRange{ nullptr }
+        , _pReadMaxRange{ nullptr }
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
         , _bHasMinRange{ SW_FALSE }
@@ -190,6 +190,19 @@ namespace sw
         , _bInterp{ SW_FALSE }
         , _reservedRoles{ 0 }
     {
+    }
+
+    PropertyAllowedRange PropertyMetadata::computeAllowedRange( const void* pOwner ) const noexcept
+    {
+        // 경계 하나는 숫자이거나 필드다(둘이 함께 있지 않다). 필드 경계는 그 객체의 지금 값이다.
+        [[maybe_unused]] const bool bFieldBound = _pReadMinRange != nullptr || _pReadMaxRange != nullptr;
+        SW_ASSERT( bFieldBound == false || pOwner != nullptr );
+        PropertyAllowedRange range;
+        range._bHasMin = _bHasMinRange != SW_FALSE || _pReadMinRange != nullptr;
+        range._bHasMax = _bHasMaxRange != SW_FALSE || _pReadMaxRange != nullptr;
+        range._min     = _pReadMinRange != nullptr ? _pReadMinRange( pOwner ) : static_cast<float64>( _minRange );
+        range._max     = _pReadMaxRange != nullptr ? _pReadMaxRange( pOwner ) : static_cast<float64>( _maxRange );
+        return range;
     }
 
     FunctionMetadata::FunctionMetadata() noexcept

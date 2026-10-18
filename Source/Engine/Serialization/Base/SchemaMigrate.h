@@ -52,6 +52,20 @@ namespace sw
          */
         string _writtenName;
     };
+
+    /**
+     * @enum SoftReadResult
+     * @brief 소프트 읽기(`JSONSerializer` · `XMLSerializer` · `BinarySerializer` 의 `deserializeSoft`)의 결과입니다. 실패를 둘로 가릅니다.
+     * @details 예전에는 `bool` 하나라 "본문을 못 읽음"과 "읽었지만 범위 밖 값"이 같았다. 그래서 호출부가 실패에서 바로 돌아가며 이미 모은 orphan
+     *          (모르는 키 · 읽지 못한 값)을 알리지 않았고, 범위 밖 값을 "JSON 이 아니다"로 알렸다(C-60).
+     *          부르는 쪽의 한 모양: `NotParsed` 만 바로 돌아간다(모은 것이 없다). `Rejected` 는 orphan 을 모두 알린 뒤 실패로 돌려준다.
+     */
+    enum class SoftReadResult : uint8
+    {
+        NotParsed, ///< 본문을 읽지 못했다(문서 구문 · 루트 · 스트림 머리). orphan 은 모이지 않았다.
+        Rejected,  ///< 본문은 읽었으나 값이 계약을 어겼다(`Min` · `Max` 밖 — 읽기 공통 끝이 칸마다 알렸다 · 읽지 못한 칸). orphan 은 끝까지 모였다.
+        Read,      ///< 읽었다. orphan 이 있으면 그 판단은 부르는 쪽이 한다.
+    };
 } // namespace sw
 
 namespace sw

@@ -193,6 +193,7 @@ namespace sw
          * @details 구조체 칸과 시퀀스(vector, 고정 배열) 원소는 늘 들어가 본다(구조체 원소는 그 칸, 숫자 원소는 그 프로퍼티의 범위). 비트필드 · 접근자 칸은 보지 않는다.
          *          맵과 중첩 컨테이너는 원소 경로를 하나로 정할 수 없어 보지 않는다.
          *          범위를 어디까지 보는지 부르는 쪽이 고르지 않는다. 고르게 하면 읽기 경로마다 계약이 달라진다(설정 JSON · 데이터 XML · 세이브가 같은 `Min` · `Max` 를 다르게 지켰다).
+         *          경계는 인스펙터와 같은 함수로 푼다(`PropertyMetadata::computeAllowedRange`) — 숫자 경계와 필드 경계(`Min = "-_halfSize"`)를 함께 지킨다.
          */
         SW_API static void collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError );
         /**

@@ -254,8 +254,8 @@ namespace sw
                     if ( bMatched == false && bOutsideSaveGame == false )
                         SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, context );
                 }
-                // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
-                return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
+                // 선언된 범위는 부르는 두 쪽(`deserialize` · `deserializeSoft`)이 읽기 공통 끝으로 본다 — 소프트 읽기가 "스트림이 깨짐"과 "범위 밖 값"을 가르게.
+                return true;
             }
 
             /**
@@ -453,16 +453,21 @@ namespace sw
     bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                         const SerializeContext& context )
     {
-        return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true );
+        // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
+        return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true ) &&
+               SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
     }
 
-    bool BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                            vector<SchemaOrphanValue>* pOutOrphans, const SerializeContext& context )
+    SoftReadResult BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
+                                                      vector<SchemaOrphanValue>* pOutOrphans, const SerializeContext& context )
     {
         const bool bInvalidDeserializeInput = pInstance == nullptr || pData == nullptr || dataSize == 0;
         if ( bInvalidDeserializeInput )
-            return false;
-        return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false );
+            return SoftReadResult::NotParsed;
+        // 소프트 읽기의 태그 루프는 스트림이 깨졌을 때만 실패한다(모르는 · 읽지 못한 칸은 orphan 이다).
+        if ( BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false ) == false )
+            return SoftReadResult::NotParsed;
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance ) ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
     bool BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
@@ -497,7 +502,7 @@ namespace sw
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, pBody, bodySize, &listOrphan, context );
+            return deserializeSoft( pTarget, targetType, pBody, bodySize, &listOrphan, context ) == SoftReadResult::Read;
         } ) );
     }
 

@@ -100,8 +100,8 @@ namespace sw
         // 키는 대소문자까지 맞아야 한다 — 기본 문맥은 대소문자를 무시해 `_Width` 오타를 그대로 받아들인다.
         SerializeContext context = SerializeContext::deriveFromDefault();
         context.setIgnoreCaseKeys( false );
-        // JSON 객체가 아닌 본문만 여기서 멈춘다. 소프트 읽기의 실패는 그 둘(본문 · 범위 밖 값)을 가르지 않으므로, 실패에서 바로 돌아가면
-        // 범위 밖 값 하나가 모르는 키 · 빠진 필수 칸의 오류를 삼킨다 — 모두 알린다는 계약(헤더)이 깨진다.
+        // JSON 객체가 아닌 본문(`SoftReadResult::NotParsed`)만 여기서 멈춘다. 범위 밖 값(`Rejected`)에서 바로 돌아가면
+        // 그 값 하나가 모르는 키 · 빠진 필수 칸의 오류를 삼킨다 — 모두 알린다는 계약(헤더)이 깨진다.
         JSONDocument document;
         if ( document.parse( jsonStr ) == false || document.getRoot().isObject() == false )
         {
@@ -109,8 +109,8 @@ namespace sw
             return false;
         }
         vector<SchemaOrphanValue> listOrphan;
-        // 여기서의 실패는 범위 밖 값이다 — 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
-        const bool bWithinRange = JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context );
+        // 본문은 위에서 객체로 읽혔으므로 `Read` 가 아니면 범위 밖 값이다 — 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
+        const bool bWithinRange = JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context ) == SoftReadResult::Read;
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {
             const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();

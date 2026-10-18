@@ -46,7 +46,11 @@ namespace sw
         [[nodiscard]] static XMLRootStatus parseRoot( XMLDocument& outDocument, string_view xmlText, string_view sourceName, const utf8* pRootName,
                                                       XMLNode& outRoot );
 
-        /** @brief 이름 속성을 앞뒤 공백을 뺀 이름으로 읽습니다. 없거나 비었으면(공백뿐이어도) 빈 이름입니다. */
+        /**
+         * @brief 이름 속성을 앞뒤 공백을 뺀 이름으로 읽습니다. 없거나 비었으면(공백뿐이어도) 빈 이름입니다.
+         * @details 글이 빈 이름의 철자(`none`, 대소문자 무시)이면 오류를 알리고 빈 이름을 돌려준다 — 이름은 "적지 않음"과 값 "none" 을 가를 수 없다.
+         *          그 글이 뜻을 가지는 속성(열거형 · 경로)은 이름이 아니라 글(`XMLNode::findAttribute`)로 읽는다. 빈 이름의 `c_str()` 도 "None" 이라 경로로 쓰면 안 된다.
+         */
         static hashed_string readName( const XMLNode& node, const utf8* pAttribute );
     };
 } // namespace sw

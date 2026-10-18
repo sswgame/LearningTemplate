@@ -4,6 +4,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -481,7 +482,6 @@ SW_TEST_CASE( FixedLayoutTest, BitsetFieldRoundTripsSelfDescribingFormats )
     SW_EXPECT_TRUE( fromBadJSON._listBit == parseBits( "11" ) );
 }
 
-#if !defined( SW_SHIPPING )
 /**
  * @brief [FixedLayoutTest] 같은 타입의 필드를 가리키는 범위는 생성 코드가 그 필드를 읽는 함수로 내고, 바깥 타입의 필드는 내지 않는다
  * @details 인스펙터가 `Min = "-_halfSize"` 를 그 객체의 지금 값으로 막는 근거다(`PropertyMetadata::_pReadMinRange`). 숫자 경계는 숫자로만 남고,
@@ -514,7 +514,47 @@ SW_TEST_CASE( FixedLayoutTest, OwnFieldRangeBecomesAReaderForTheInspector )
     SW_EXPECT_TRUE( pY->_metadata._pReadMinRange == nullptr && pY->_metadata._pReadMaxRange == nullptr );
     SW_EXPECT_TRUE( pY->_metadata._bHasMinRange == SW_FALSE );
 }
-#endif
+
+/**
+ * @brief [FixedLayoutTest] 읽기 공통 끝은 필드 경계(`Min = "-_halfSize"`)도 그 객체의 읽은 값으로 지킵니다(C-62)
+ * @details 예전에는 숫자 경계만 봐서 인스펙터가 막는 값이 파일로는 그대로 들어왔다. 두 쪽이 `PropertyMetadata::computeAllowedRange` 하나로 범위를 푼다.
+ */
+SW_TEST_CASE( FixedLayoutTest, ReadsKeepTheFieldBoundTheInspectorKeeps )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "reads reject a value outside a field bound" );
+    const sw::TypeInfo&   typeInfo = *sw::FixedScalarSample::StaticType();
+    sw::FixedScalarSample source   = makeScalarSample();
+    source._speed                  = 1.0f;
+    source._halfSize               = 2.0f;
+    source._offset                 = 2.5f; // Max = "_halfSize"
+
+    const sw::PropertyInfo* pOffset = typeInfo.findProperty( sw::hashed_string( "_offset" ) );
+    SW_ASSERT_NOT_NULL( pOffset );
+    const sw::PropertyAllowedRange range = pOffset->_metadata.computeAllowedRange( &source );
+    SW_EXPECT_TRUE( range._bHasMin && range._bHasMax );
+    SW_EXPECT_FALSE( range.contains( 2.5 ) );
+    SW_EXPECT_TRUE( range.contains( -2.0 ) );
+
+    sw::FixedScalarSample fromXML;
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &fromXML, typeInfo, sw::XMLSerializer::serialize( &source, typeInfo ) ) );
+    sw::FixedScalarSample fromJSON;
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromJSON, typeInfo, sw::JSONSerializer::serialize( &source, typeInfo ) ) );
+
+    sw::vector<sw::string> listRangeError;
+    sw::SerializerUtil::collectRangeErrors( typeInfo, &source, sw::string(), listRangeError );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listRangeError.size() );
+    SW_EXPECT_TRUE( listRangeError[0].find( "_offset" ) != sw::string::npos );
+
+    // 경계 값은 읽힌다(경계는 같은 파일에서 읽은 `_halfSize` 다).
+    source._offset = 2.0f;
+    sw::FixedScalarSample fromBound;
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &fromBound, typeInfo, sw::XMLSerializer::serialize( &source, typeInfo ) ) );
+    source._offset = -2.0f;
+    sw::FixedScalarSample fromInRange;
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &fromInRange, typeInfo, sw::XMLSerializer::serialize( &source, typeInfo ) ) );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, fromInRange._offset, 1e-6f );
+}
+
 /**
  * @brief [FixedLayoutTest] 자기 기술형 세 포맷의 일반 읽기도 `Min` · `Max` 밖 값을 성공으로 돌려주지 않습니다(A-19)
  * @details 예전에는 설정 · 데이터 · 격투 세이브처럼 `collectRangeErrors` 를 직접 부른 호출부만 범위를 봤습니다. 이제 읽기 공통 끝이 봅니다.
@@ -545,4 +585,57 @@ SW_TEST_CASE( FixedLayoutTest, SelfDescribingFormatsRejectValuesOutsideDeclaredR
     sw::FixedScalarSample fromInRange;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromInRange, typeInfo, inRange.data(), inRange.size() ) );
     SW_EXPECT_EQUAL( 100, fromInRange._hp );
+}
+
+/**
+ * @brief [FixedLayoutTest] 소프트 읽기는 범위 밖 값에서 멈추지 않고 orphan 을 끝까지 모은 뒤 `Rejected` 로 돌아오고, 본문을 못 읽은 것만 `NotParsed` 입니다(C-60)
+ * @details 예전에는 결과가 `bool` 하나라 부르는 쪽이 실패에서 바로 돌아가 같은 파일의 모르는 키를 알리지 않았고, 범위 밖 값을 "JSON 이 아니다"로 알렸다.
+ */
+SW_TEST_CASE( FixedLayoutTest, SoftReadsCollectEveryOrphanBeforeRejecting )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "soft reads with a value outside PROPERTY( Min, Max ) and an unknown key" );
+    const sw::TypeInfo&   typeInfo = *sw::FixedScalarSample::StaticType();
+    sw::FixedScalarSample source   = makeScalarSample();
+    source._hp                     = 101; // Max = 100
+    source._speed                  = 1.0f;
+
+    sw::string json = sw::JSONSerializer::serialize( &source, typeInfo );
+    SW_ASSERT_TRUE( json.empty() == false && json.front() == '{' );
+    json.insert( 1, R"("_bogus":1,)" );
+    sw::FixedScalarSample             fromJSON;
+    sw::vector<sw::SchemaOrphanValue> listJSONOrphan;
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &fromJSON, typeInfo, json, &listJSONOrphan ) == sw::SoftReadResult::Rejected );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listJSONOrphan.size() );
+    SW_EXPECT_EQUAL( 101, fromJSON._hp ); // 자르지 않는다
+
+    // 칸이 모두 속성이면 루트가 `<FixedScalarSample .../>` 로 닫힌다 — 그때는 자식을 넣을 자리를 연다.
+    sw::string   xml        = sw::XMLSerializer::serialize( &source, typeInfo );
+    const size_t closeIndex = xml.rfind( "</" );
+    if ( closeIndex != sw::string::npos )
+        xml.insert( closeIndex, "<_bogusChild>1</_bogusChild>" );
+    else
+    {
+        const size_t selfCloseIndex = xml.rfind( "/>" );
+        SW_ASSERT_TRUE_MSG( selfCloseIndex != sw::string::npos, xml.c_str() );
+        xml.replace( selfCloseIndex, 2, sw::string( "><_bogusChild>1</_bogusChild></" ) + typeInfo._name.c_str() + ">" );
+    }
+    sw::FixedScalarSample             fromXML;
+    sw::vector<sw::SchemaOrphanValue> listXMLOrphan;
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &fromXML, typeInfo, xml, &listXMLOrphan ) == sw::SoftReadResult::Rejected );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listXMLOrphan.size() );
+
+    sw::vector<uint8> binary;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &source, typeInfo, binary ) );
+    sw::FixedScalarSample             fromBinary;
+    sw::vector<sw::SchemaOrphanValue> listBinaryOrphan;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromBinary, typeInfo, binary.data(), binary.size(), &listBinaryOrphan ) == sw::SoftReadResult::Rejected );
+
+    // 본문을 못 읽은 것만 `NotParsed` 다.
+    sw::FixedScalarSample             notRead;
+    sw::vector<sw::SchemaOrphanValue> listNotReadOrphan;
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &notRead, typeInfo, "[1, 2]", &listNotReadOrphan ) == sw::SoftReadResult::NotParsed );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &notRead, typeInfo, "<FixedScalarSample>", &listNotReadOrphan ) == sw::SoftReadResult::NotParsed );
+    const uint8 arrTruncated[2] = { 1, 2 };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &notRead, typeInfo, arrTruncated, 2, &listNotReadOrphan ) == sw::SoftReadResult::NotParsed );
+    SW_EXPECT_TRUE( listNotReadOrphan.empty() );
 }

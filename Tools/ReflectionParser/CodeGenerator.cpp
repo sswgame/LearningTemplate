@@ -52,7 +52,7 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 필드 이름 꼴 경계를 인스턴스에서 읽는 함수(`PropertyMetadata::_pReadMinRange` 등)를 냅니다. 에디터 메타라 Shipping 에는 없습니다. */
+            /** @brief 필드 이름 꼴 경계를 인스턴스에서 읽는 함수(`PropertyMetadata::_pReadMinRange` 등)를 냅니다. 읽기 공통 끝도 지키므로 Shipping 에도 냅니다. */
             static void emitRangeReader( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const string& text, const utf8* pMemberName )
             {
                 bool                      bNegate = false;
@@ -61,10 +61,8 @@ namespace sw
                     return;
                 // 접근자 프로퍼티는 메서드를 부른다(`_pValueAccessor` 와 같은 규칙). 이름이 틀리거나 숫자가 아닌 필드면 생성된 코드가 컴파일되지 않는다.
                 const utf8* pCall = pField->_bIsAccessor == SW_TRUE ? "()" : "";
-                emit.line( "#if !defined( SW_SHIPPING )" );
                 emit.linef( "p._metadata.%# = []( const void* pInstance ) -> ::float64 { return %#static_cast<::float64>( static_cast<const %#*>( pInstance )->%#%# ); };",
                             pMemberName, bNegate ? "-" : "", typeInfo._fullyQualifiedName, pField->_memberName, pCall );
-                emit.line( "#endif" );
             }
 
             /**
@@ -341,7 +339,7 @@ namespace sw
             emit.linef( "p._metadata._maxRange     = %#;", formatRangeLiteral( prop._maxRange ).c_str() );
             emit.assign( "p._metadata._bHasMaxRange", "SW_TRUE" );
         }
-        // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터가 그 값으로 막는다).
+        // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._maxRangeExpr._text, "_pReadMaxRange" );
         // 슬라이더 범위는 에디터 메타다(Shipping 에 멤버가 없다).

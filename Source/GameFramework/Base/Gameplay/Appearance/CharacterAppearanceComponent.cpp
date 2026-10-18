@@ -344,8 +344,10 @@ namespace sw
             if ( part._owner.empty() == false || part._kind != AppearancePartKind::Skinned )
                 continue;
             // 스켈레톤을 먼저 적용한다. 메시의 스킨 사본이 그 본 수를 참조하기 때문이다.
-            if ( string_view( body.getSkeletonPath() ) != string_view( part._skeleton.c_str() ) )
-                body.setSkeletonPath( part._skeleton.c_str() );
+            // 적지 않은 스켈레톤은 빈 경로(암묵 스켈레톤)다 — 빈 이름의 `c_str()` 은 "None" 이라 그대로 넘기면 경로 "None" 이 된다(C-59).
+            const string_view skeletonPath = part._skeleton.empty() ? string_view{} : string_view( part._skeleton.c_str() );
+            if ( string_view( body.getSkeletonPath() ) != skeletonPath )
+                body.setSkeletonPath( skeletonPath );
             if ( string_view( body.getMeshID() ) != string_view( part._asset.c_str() ) )
                 body.setMeshID( part._asset.c_str() );
             if ( part._material.empty() == false && body.getMaterialPath() != part._material )

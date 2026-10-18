@@ -83,19 +83,6 @@
   런타임 상태 필드(예: `PROPERTY( RuntimeState )`)를 그 문맥에서 빼는 형식을 둔다. 리플렉션 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 해 이 단계 범위 밖으로 남겼다.
   `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
 
-- `C-59` [정리] **빈 `hashed_string` 이 글 "None" 으로 읽혀 "적지 않음"과 값 "none" 이 같아진다**(2026-10-18 통합 — 페어드 애니메이션의 `align="none"` 이 필수 값 없음으로, 적지 않은 스켈레톤 경로가 "None" 으로 읽혔다).
-  열거형 글이나 경로를 `readName` → `hashed_string` 으로 받는 읽기를 찾아 글 그대로(`findAttribute`) 견주게 하거나, 이름 형식이 빈 값과 "none" 을 가르게 한다(언리얼 `NAME_None` 과 같은 함정).
-
-- `C-60` [정리] **읽기가 첫 실패에서 바로 돌아가 이미 모은 오류를 버리는 경로를 찾는다.** 2026-10-18 통합에서 `readConfigJSON` · `ReflectedXMLFile` 이 범위 밖 값 하나에서 돌아가
-  같은 파일의 모르는 키를 알리지 않았다(고침). `GameDataXML` 과 다른 `deserializeSoft` 호출부는 보지 않았다 — 오류를 모두 모은 뒤 실패를 돌려주는 한 모양으로 맞춘다.
-
-- `C-62` [정리] **통합 `integ6` 코드 리뷰가 남긴 정본 둘 · 폴백 모양**(2026-10-18 `code-reviewer`, 깨지는 것은 없음). 뿌리는 "범위 · 이름 · 목록의 정본이 둘"이다.
-  ① 읽기 공통 범위 검사(`SerializerUtil::isWithinDeclaredRanges`)가 숫자 경계만 보고 필드 경계(`Min = "-_halfSize"`, `_pReadMinRange`)는 보지 않아 인스펙터와 읽기의 규칙이 갈린다 — 같은 함수가 둘 다 보게 한다.
-  ② float32 로 보관하는 경계를 float64 칸과 견주면 `Min = 0.1` 자체가 범위 밖일 수 있다(의심, 그런 칸이 있는지 미확인) — 경계를 칸의 형식으로 보관하거나 칸 형식으로 견준다.
-
-- `C-56` [정리] **`GameDataXML` 이 범위를 따로 검사한다.** 2026-10-18 `feat18` 로 바이너리 · JSON · XML 읽기 공통 끝이 `PROPERTY( Min · Max )` 를 보게 됐는데
-  게임 데이터 XML 읽기는 자체 범위 검사를 그대로 들고 있다. 공통 끝에 맡기고 자체 검사를 지운다(범위의 원본을 `PROPERTY` 하나로 — `C-39` 와 같은 뿌리).
-
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다
   (지형 높이장은 종류별 기하 레지스트리로 들어갔다) (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크
   (6) 다른 테스트 게임(AbilityArena 등)의 적도 내비메시로 — 행동 트리 `MoveTo` 노드가 `INavMover` 를 쓴다.

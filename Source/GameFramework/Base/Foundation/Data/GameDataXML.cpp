@@ -162,12 +162,11 @@ namespace sw
             }
         }
 
-        // 3) 범위는 자르지 않고 알린다 — 잘라 쓰면 데이터의 실수가 다른 값으로 조용히 돈다.
-        vector<string> listRangeError;
-        SerializerUtil::collectRangeErrors( typeInfo, pInstance, string(), listRangeError );
-        for ( const string& rangeError : listRangeError )
+        // 3) 범위는 자르지 않고 알린다 — 잘라 쓰면 데이터의 실수가 다른 값으로 조용히 돈다. 범위의 원본은 `PROPERTY( Min · Max )` 하나이고,
+        //    바이너리 · JSON · XML 과 같은 읽기 공통 끝이 칸마다 알린다. 여기서는 어느 파일 · 원소인지만 덧붙인다.
+        if ( SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance ) == false )
         {
-            SW_LOG_ERROR( "%#: <%#> %#", sourceName, pElement, rangeError.c_str() );
+            SW_LOG_ERROR( "%#: <%#> has values outside PROPERTY( Min, Max ) of %# (listed above)", sourceName, pElement, typeInfo._name.c_str() );
             bOk = false;
         }
         return bOk;
