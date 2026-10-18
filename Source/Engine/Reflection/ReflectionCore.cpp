@@ -995,7 +995,6 @@ namespace sw
         }
     }
 
-#if !defined( SW_SHIPPING )
     void TypeRegistry::unregisterTypesByModule( string_view moduleName )
     {
         std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -1063,7 +1062,6 @@ namespace sw
         }
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
-#endif
 
     void TypeRegistry::registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName )
     {

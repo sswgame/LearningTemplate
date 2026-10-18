@@ -633,9 +633,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
                         "로드 도중에 등록된 모듈의 컴포넌트가 씬에서 빠졌습니다" );
 
     manager.shutdown();
-#if !defined( SW_SHIPPING )
     sw::engine::getSubsystem<sw::TypeRegistry>().unregisterTypesByModule( "LateModule" );
-#endif
 }
 
 /**
@@ -674,9 +672,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
     SW_EXPECT_EQUAL( manager.getActiveScene(), second.get() );
 
     manager.shutdown();
-#if !defined( SW_SHIPPING )
     sw::engine::getSubsystem<sw::TypeRegistry>().unregisterTypesByModule( "LateModuleQueued" );
-#endif
 }
 
 /**

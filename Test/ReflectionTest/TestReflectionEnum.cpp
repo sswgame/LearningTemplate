@@ -390,7 +390,6 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
     SW_ASSERT_NOT_NULL( pByAlias );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pByAlias->_mapValueToName.size() ) );
 
-#if !defined( SW_SHIPPING )
     // 모듈이 내려가면 이름으로는 못 찾고, 다시 오르면 같은 자리에 되살아난다.
     registry.unregisterTypesByModule( "TestEnumGrowth" );
     SW_EXPECT_NULL( registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) ) );
@@ -398,7 +397,6 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
     registry.registerEnum( makeEnum( "swtest::GrowthEnum0", 2 ) );
     SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "swtest::GrowthEnum0" ) ) == pGrowth );
     registry.unregisterTypesByModule( "TestEnumGrowth" );
-#endif
 }
 
 /**
@@ -441,9 +439,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumeratorsWhoseNameHashesClashAreReported
         } ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "swtest::ClashingEnum has enumerators" ) == 1, logs.joined().c_str() );
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestEnumClash" );
-#endif
 }
 
 /**
@@ -548,12 +544,10 @@ SW_TEST_CASE( ReflectionEnumInfoTest, DenseEnumNamesAreOwnedByTheRegisteredInfo 
     SW_EXPECT_EQUAL( size_t( 2 ), pInfo->_listDenseName.size() );
     SW_EXPECT_STREQ( "Second", pInfo->valueToCString( 1 ) );
 
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestOwnedDenseEnum" );
     SW_EXPECT_NULL( registry.findEnum( fqn ) );
     SW_EXPECT_STREQ( "Second", pInfo->valueToCString( 1 ) );
     SW_EXPECT_TRUE( pInfo->valueToCString( 1 ) == sw::hashed_string( "Second" ).c_str() );
-#endif
 }
 
 /**
@@ -589,8 +583,6 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumNameCacheFollowsRegistryGeneration )
     SW_EXPECT_TRUE( pFound == registry.findEnum( fqn ) );
     SW_EXPECT_TRUE( cache.find( fqn ) == pFound );
 
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestEnumNameCache" );
     SW_EXPECT_NULL( cache.find( fqn ) );
-#endif
 }
