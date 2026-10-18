@@ -552,6 +552,8 @@
 
   실행 파일 크기(Debug, 단계 전후)는 `Engine.dll` +153,088 B(+0.7 %), `GameFramework.dll` +81,408 B(+1.0 %)입니다. 이때 `REFLECT` 타입 454 개 가운데 적격은 173 개,
   적격이 아닌 것은 281 개였습니다(대부분 `MaxCount` 없는 가변 길이와 표 밖 타입). 기존 `.gen.cpp` · `.gen.h` 1069 개는 덧붙은 줄만 있고, 바뀐 줄은 ABI 스탬프 하나였습니다.
+  대상 타입을 사용 자리에서 모으는 길(`.cpp` 를 생성기 입력에 넣기, 등록 목록 파일)은 `.cpp` 수정마다 생성기가 다시 돌고 키트 `.gen.cpp` 가 게임 소스에 의존해 계층이 거꾸로 되며 타입 목록의 원본이 둘이 되어 기각했습니다.
+  필드 속성(`Replicated` 등)에서 도출하는 길도 기각했습니다. 그 속성은 "어느 필드를 보내는가"만 말하고 롤백은 모든 필드가 필요합니다. `.gen.cpp` 도우미는 이름 없는 네임스페이스에 타입 식별자를 붙여 두므로 유니티 제외가 풀려도 충돌하지 않습니다.
 - **이름 변경 리다이렉트는 선언 옆에 적고, 리다이렉트 표는 그 이름의 주인이 듭니다**(2026-10-17, [이름 변경 리다이렉트 계획](plans/RenameRedirects.md) R1~R4). 선언은 기존 키를 그대로 씁니다.
   타입 · 열거형의 옛 FQN 은 `REFLECT( Alias )` · `ENUM( Alias )`, 열거자의 옛 이름은 `ENUM( ValueAlias = "Old:New" )`, 지운 열거자의 대체는 새 키 `ENUM( Removed = "Old:Replacement" )`, 필드의 옛 이름은 `PROPERTY( Alias )` 입니다.
   유니티 `FormerlySerializedAs` 처럼 이력이 선언 옆에 있고, 언리얼 `CoreRedirects` 처럼 호출부는 모릅니다. 다만 표를 전역 하나로 모으지 않고 `EnumInfo::_mapRedirectNameToValue`, `PropertyInfo::_listAlias`,
