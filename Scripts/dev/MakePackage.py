@@ -33,7 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import BuildTree, getProjectRoot, runProcess  # noqa: E402
+from common import BuildTree, getProjectRoot, kPackRecordSuffix, runProcess  # noqa: E402
 
 #: 단계 이름 — 창이 `[package] step k/n <이름>` 으로 읽는다. 순서가 진행 순서다.
 kListStepName: tuple[str, ...] = ("build", "cook", "stage", "verify")
@@ -132,7 +132,8 @@ def stagePackage(request: PackageRequest, projectRoot: Path, binDir: Path, stagi
     for entry in selectStagedEntries(binDir, request.target):
         destination = stagingDir / entry.name
         if entry.is_dir():
-            shutil.copytree(entry, destination)
+            # 팩 옆의 증분 쿠킹 기록은 쿠킹 상태다 — 패키지에 싣지 않는다.
+            shutil.copytree(entry, destination, ignore=shutil.ignore_patterns(f"*{kPackRecordSuffix}"))
         else:
             shutil.copy2(entry, destination)
         request.listCopied.append(destination)
