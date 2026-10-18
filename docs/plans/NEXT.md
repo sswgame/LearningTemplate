@@ -27,7 +27,7 @@
   - 남은 후보: `Scripts/README.md` 분할, 남은 래퍼 출력 요약(`Scripts/generate` 등 미확인), 12 문서 측정값 표에 이번 작업의 토큰을 `agent-log` 로 적기(분할 약 10만 · 도구 약 9만 · 훅 약 12만 · Read 훅 약 9만 · 래퍼 약 7만 · 결정 압축 셋 약 17만씩).
 - 측정 · GPU 묶음(`meas`)은 한도(429)로 중단했다. 다시 하면 임시 쿠킹 폴더에서 한다(main 체크아웃에 탐침 파일을 만들지 않는다).
 - 근본 원인 후보(미해결): `DiskPathVsResourceId`(디스크 경로와 리소스 id 가 같은 `string_view` 입구), `WorktreeVcpkgInstalledDir`(워크트리가 `vcpkg_installed` 를 나눠 씀).
-- 사용자 결정 대기: 세션 길이 하드 한도(`SessionGuard`, `UserPromptSubmit` 훅이 압축 3회 또는 기록 20MB 를 넘으면 프롬프트를 막고 `NEXT.md` 인계와 새 세션을 안내) — 임계값과 도입 여부. 지금은 6MB · 12MB 에서 경고만 해서 무시된다.
+- 세션 길이 하드 한도: 도입함(8MB · 16MB · 32MB 단계마다 한 번 차단, 압축 2회). `SessionGuard` 가 `NEXT.md` 인계와 새 세션을 안내하고, 같은 입력을 다시 보내면 통과한다.
 
 ## 2. 첫 일
 

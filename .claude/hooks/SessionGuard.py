@@ -4,7 +4,7 @@ Claude Code 훅이 부른다(.claude/settings.json). 표준 입력으로 훅 JSO
 알릴 것이 있을 때만 JSON 을 출력한다. 알릴 것이 없으면 아무것도 출력하지 않아 토큰을 쓰지 않는다.
 
 - SessionStart     : 인계 문서(docs/plans/NEXT.md)가 있으면 먼저 읽으라고 알린다. 남은 워크트리 수와, main CI 가 실패 중인지(잡과 연속 실패 수)도 본다.
-- UserPromptSubmit : 대화 기록 크기 · 압축 횟수(새 세션 권장), 동시 빌드 수, 규칙과 부딪히는 요청 낱말을 본다.
+- UserPromptSubmit : 대화 기록 크기 · 압축 횟수(새 세션 권장, 하드 한도는 단계마다 한 번 프롬프트 차단), 동시 빌드 수, 규칙과 부딪히는 요청 낱말을 본다.
 - PreCompact       : 컨텍스트 한도에 닿았다고 사용자에게 알린다.
 - StopFailure      : 사용량 · 요청 한도 같은 API 실패로 멈췄다고 알린다.
 
@@ -16,10 +16,15 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 kTranscriptWarnBytes = 6 * 1024 * 1024    # 대화 기록이 이만큼 크면 묶음 경계에서 새 세션을 권한다
 kTranscriptStrongBytes = 12 * 1024 * 1024 # 이만큼이면 지금 인계 문서를 쓰고 새 세션으로 가라고 권한다
-kMaxConcurrentBuilds = 2                  # docs/11_Workflow.md: 동시에 빌드하는 에이전트는 최대 둘
+kHardLimitStepsBytes = ( 8 * 1024 * 1024, 16 * 1024 * 1024, 32 * 1024 * 1024 )  # 단계마다 한 번 프롬프트를 막는다(비용이 세션 길이에 비례 — 경고만으로는 무시됐다)
+kHardLimitCompactions = 2                 # 압축이 이만큼이면 최소 1단계
+kHardBlockDirName = "sw-session-guard"    # 공통 .git 아래. 세션 아이디별 <id>.json 에 마지막으로 막은 단계를 남긴다
+kExitBlockPrompt = 2                      # UserPromptSubmit 에서 종료 코드 2 는 프롬프트를 지우고 표준 오류를 사용자에게 보인다
+kMaxConcurrentBuilds = 2                 # docs/11_Workflow.md: 동시에 빌드하는 에이전트는 최대 둘
 kMaxWorktrees = 4                         # 메인 + 통합 + 도우미 둘을 넘으면 정리할 때
 kHandoffPath = os.path.join( "docs", "plans", "NEXT.md" )
 kCiSummaryTimeoutSeconds = 10             # 훅 한도(15 s, settings.json) 안에서 끝낸다
@@ -102,6 +107,87 @@ def readFailingCi( root ):
         return ""
 
 
+def hardLimitStage( size, compactCount ):
+    """넘은 단계 수(0 = 한도 아래). 압축이 한도 이상이면 최소 1단계."""
+    stage = sum( 1 for step in kHardLimitStepsBytes if size >= step )
+    return max( stage, 1 ) if compactCount >= kHardLimitCompactions else stage
+
+
+def markerPath( markerDir, sessionId ):
+    """세션 아이디가 파일 이름으로 안전하지 않으면 빈 글(차단하지 않는다)."""
+    if not sessionId or not all( c.isalnum() or c in "-_" for c in sessionId ):
+        return ""
+    return os.path.join( markerDir, sessionId + ".json" )
+
+
+def fileMtime( path ):
+    try:
+        return os.path.getmtime( path )
+    except OSError:
+        return 0
+
+
+def readMarker( markerDir, sessionId ):
+    """표시 내용(dict). 아이디가 없거나 · 표시가 없거나 · 손상됐으면 None."""
+    path = markerPath( markerDir, sessionId )
+    if not path or not os.path.exists( path ):
+        return None
+    try:
+        with open( path, "r", encoding = "utf-8" ) as f:
+            marker = json.load( f )
+        int( marker[ "stage" ] )
+        return marker
+    except Exception:
+        return None
+
+
+def isHandoffPending( markerDir, sessionId, handoffPath ):
+    """차단한 뒤 인계 문서가 아직 갱신되지 않았으면 True. 프롬프트는 더 막지 않고 모델에게 지시만 낸다."""
+    marker = readMarker( markerDir, sessionId )
+    return marker is not None and fileMtime( handoffPath ) <= marker.get( "handoffMtime", 0 )
+
+
+def handoffInstruction():
+    return ( f"한도: 세션이 길어 차단했다. 먼저 {kHandoffPath} 의 지금 상태에 (a) 진행 중인 일과 브랜치 · 워크트리, (b) 남은 일과 첫 일, "
+             "(c) 사용자 결정 대기, (d) 병합 · 푸시하지 못한 변경을 적고(끝난 항목은 지운다), 사용자에게 새 세션을 권한 뒤에 요청을 이어라." )
+
+
+def shouldBlockPrompt( markerDir, sessionId, size, compactCount, handoffPath ):
+    """이 세션에서 막은 적 없는 더 높은 단계에 닿았으면 표시를 남기고 그 단계(1~)를, 아니면 0 을 돌려준다.
+    아이디가 없거나 · 표시가 손상됐거나 · 표시를 못 쓰면 0 — 잠그지 않는다."""
+    stage = hardLimitStage( size, compactCount )
+    path = markerPath( markerDir, sessionId )
+    if stage == 0 or not path:
+        return 0
+    marker = readMarker( markerDir, sessionId )
+    if marker is None and os.path.exists( path ):
+        return 0    # 손상
+    if marker is not None and stage <= int( marker[ "stage" ] ):
+        return 0
+    try:
+        os.makedirs( markerDir, exist_ok = True )
+        with open( path, "w", encoding = "utf-8" ) as f:
+            json.dump( { "stage": stage, "size": size, "compactions": compactCount,
+                         "blockedAt": time.time(), "handoffMtime": fileMtime( handoffPath ) }, f )
+    except Exception:
+        return 0
+    return stage
+
+
+def findMarkerDir( root ):
+    try:
+        text = subprocess.run( [ "git", "-C", root, "rev-parse", "--path-format=absolute", "--git-common-dir" ],
+                               capture_output = True, text = True, timeout = 5 ).stdout.strip()
+        return os.path.join( text, kHardBlockDirName ) if text else ""
+    except Exception:
+        return ""
+
+
+def blockMessage( size, compactCount, stage ):
+    return ( f"[세션 가드] 세션이 너무 깁니다({size / ( 1024 * 1024 ):.0f} MB, 압축 {compactCount} 회, {stage}/{len( kHardLimitStepsBytes )} 단계). "
+             f"{kHandoffPath} 에 상태를 적고 새 세션을 시작하세요. 그래도 이어 가려면 같은 입력을 한 번 더 보내세요(이번 입력은 지워졌으니 다시 보내야 합니다)." )
+
+
 def onSessionStart( data, root ):
     notes = []
     if os.path.isfile( os.path.join( root, kHandoffPath ) ):
@@ -122,6 +208,15 @@ def onUserPromptSubmit( data, root ):
 
     size, compactCount = inspectTranscript( data.get( "transcript_path", "" ) )
     mb = size / ( 1024 * 1024 )
+    markerDir = findMarkerDir( root ) if hardLimitStage( size, compactCount ) else ""
+    sessionId = data.get( "session_id", "" )
+    handoffPath = os.path.join( root, kHandoffPath )
+    stage = shouldBlockPrompt( markerDir, sessionId, size, compactCount, handoffPath ) if markerDir else 0
+    if stage:
+        sys.stderr.buffer.write( blockMessage( size, compactCount, stage ).encode( "utf-8" ) )
+        sys.exit( kExitBlockPrompt )
+    if markerDir and isHandoffPending( markerDir, sessionId, handoffPath ):
+        modelNotes.append( handoffInstruction() )
     if size >= kTranscriptStrongBytes or compactCount >= 2:
         userNotes.append( f"대화가 매우 깁니다({mb:.0f} MB, 압축 {compactCount} 회). 인계 문서({kHandoffPath})를 쓰고 새 세션을 시작하는 편이 토큰이 덜 듭니다." )
         modelNotes.append( "한도: 대화가 매우 길다. 지금 하던 일을 끊기 좋은 곳에서 멈추고, docs/plans/NEXT.md 에 인계를 쓴 뒤 사용자에게 새 세션을 권할 것." )
