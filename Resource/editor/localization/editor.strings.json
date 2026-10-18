@@ -2430,8 +2430,14 @@
                 "Source/Editor/Panels/Material/MaterialPanel.cpp"
             ]
         },
+        "EditorMultiplayer.ArrangeWindows": {
+            "source": "Place the client windows side by side (window size and position per App process) instead of letting them overlap",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
         "EditorMultiplayer.ClientArgumentsHint": {
-            "source": "client arguments (e.g. -vulkan -width=960 -height=540)",
+            "source": "client arguments (e.g. -vk)",
             "origins": [
                 "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
@@ -2502,6 +2508,12 @@
                 "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
             ]
         },
+        "EditorMultiplayer.DeletePreset": {
+            "source": "Delete the selected preset from your preset file",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
         "EditorMultiplayer.FollowLog": {
             "source": "Keep scrolling to the newest log line",
             "origins": [
@@ -2534,6 +2546,18 @@
         },
         "EditorMultiplayer.Play": {
             "source": "Start the server and clients for the selected Net Mode",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.Preset": {
+            "source": "Saved multiplayer setups (Saved/Editor/NetPlayPresets.json, not committed). Picking one replaces the setup below and is restored when the editor starts",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.PresetNameHint": {
+            "source": "preset name",
             "origins": [
                 "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
@@ -2634,6 +2658,12 @@
                 "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
+        "EditorMultiplayer.SavePreset": {
+            "source": "Save the setup below under the typed name (empty: overwrite the selected preset)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
         "EditorMultiplayer.StepServer": {
             "source": "Run the server game tick as many times as the field on the left says, then pause again (dedicated server Dev command step N)",
             "origins": [
@@ -2656,6 +2686,18 @@
             "source": "Process the tabs act on: the server or one client",
             "origins": [
                 "Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.WindowColumns": {
+            "source": "Windows per row before the next row starts",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.WindowSize": {
+            "source": "Client area size of each App window (pixels)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorPackaging.Game": {

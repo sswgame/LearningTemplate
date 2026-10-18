@@ -196,6 +196,43 @@ SW_TEST_CASE( EditorNetPlaySessionTest, StandaloneLaunchesNothing )
 }
 
 /**
+ * @brief [EditorNetPlaySessionTest] `App` 창마다 크기와 나란한 위치 인자를 준다 — 한 줄에 열 수만큼 놓고 다음 줄로 내려가며, 칸 사이는 창 틀만큼 띄운다
+ * @details 언리얼 PIE 가 클라이언트 창을 겹치지 않게 놓는 자리다. 창 배치를 끈 구성은 인자를 주지 않는다(창은 플랫폼이 놓는다).
+ */
+SW_TEST_CASE( EditorNetPlaySessionTest, WindowArgumentsTileTheAppWindows )
+{
+    EditorNetPlaySettings settings;
+    settings._windowWidth       = 800;
+    settings._windowHeight      = 450;
+    settings._windowColumnCount = 2;
+    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 0 ) == "-W=800 -H=450 -WinX=0 -WinY=0" );
+    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 1 ) == "-W=800 -H=450 -WinX=816 -WinY=0" );
+    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 2 ) == "-W=800 -H=450 -WinX=0 -WinY=490" );
+    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 3 ) == "-W=800 -H=450 -WinX=816 -WinY=490" );
+    settings._bArrangeWindows = false;
+    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 1 ).empty() );
+}
+
+/**
+ * @brief [EditorNetPlaySessionTest] 쓸 수 없는 창 배치(열 0 · 너무 작은 창)는 띄우기 전에 멈춘다 — 조용히 1 열로 고치지 않는다
+ */
+SW_TEST_CASE( EditorNetPlaySessionTest, UnusableWindowLayoutLaunchesNothing )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "an unusable window layout stops the launch" );
+    EditorNetPlaySettings settings;
+    settings._mode              = EditorNetMode::DedicatedServer;
+    settings._bRecordTraces     = false;
+    settings._windowColumnCount = 0;
+    EditorNetPlaySession session;
+    SW_EXPECT_FALSE( session.start( settings ) );
+    SW_EXPECT_EQUAL( 0, session.getProcessCount() );
+    settings._windowColumnCount = 2;
+    settings._windowWidth       = 10;
+    SW_EXPECT_FALSE( session.start( settings ) );
+    SW_EXPECT_EQUAL( 0, session.getProcessCount() );
+}
+
+/**
  * @brief [EditorNetPlaySessionTest] 없는 실행 파일이면 띄우지 않고 false — 반쯤 띄운 프로세스를 남기지 않는다
  */
 SW_TEST_CASE( EditorNetPlaySessionTest, MissingExecutableFailsWithoutLeavingProcesses )

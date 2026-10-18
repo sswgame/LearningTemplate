@@ -314,6 +314,10 @@
             "text": "클릭하여 기본값으로 초기화합니다"
         },
         {
+            "source": "Client area size of each App window (pixels)",
+            "text": "App 창마다의 클라이언트 영역 크기(픽셀)"
+        },
+        {
             "source": "Clipboard is empty",
             "text": "클립보드가 비어 있습니다"
         },
@@ -440,6 +444,10 @@
         {
             "source": "Default",
             "text": "기본값"
+        },
+        {
+            "source": "Delete the selected preset from your preset file",
+            "text": "고른 프리셋을 프리셋 파일에서 지웁니다"
         },
         {
             "source": "Delete this saved layout.",
@@ -1474,6 +1482,10 @@
             "text": "피치"
         },
         {
+            "source": "Place the client windows side by side (window size and position per App process) instead of letting them overlap",
+            "text": "클라이언트 창을 겹치지 않게 나란히 놓습니다(App 프로세스마다 창 크기와 위치를 줍니다)"
+        },
+        {
             "source": "Play",
             "text": "플레이"
         },
@@ -1922,6 +1934,10 @@
             "text": "씬 뷰 그림(에디터 카메라)을 Saved/Screenshots/<시각>.png 로 저장합니다 — 격자 · 기즈모는 ImGui 오버레이라 들지 않습니다"
         },
         {
+            "source": "Save the setup below under the typed name (empty: overwrite the selected preset)",
+            "text": "아래 구성을 적은 이름으로 저장합니다(비우면 고른 프리셋을 덮습니다)"
+        },
+        {
             "source": "Save this object's changes to the source prefab file",
             "text": "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
         },
@@ -1932,6 +1948,10 @@
         {
             "source": "Saved in the engine user settings (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)",
             "text": "엔진 사용자 설정에 저장됩니다 (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)"
+        },
+        {
+            "source": "Saved multiplayer setups (Saved/Editor/NetPlayPresets.json, not committed). Picking one replaces the setup below and is restored when the editor starts",
+            "text": "저장한 멀티플레이 구성입니다(Saved/Editor/NetPlayPresets.json, 커밋하지 않음). 고르면 아래 구성을 바꾸고, 에디터를 다시 띄우면 돌아옵니다"
         },
         {
             "source": "Saved {path}",
@@ -2642,6 +2662,10 @@
             "text": "너비 덮어쓰기"
         },
         {
+            "source": "Windows per row before the next row starts",
+            "text": "다음 줄로 넘어가기 전에 한 줄에 놓는 창 수"
+        },
+        {
             "source": "World space: the gizmo follows the world axes. Click to switch to local space.",
             "text": "월드 공간: 기즈모가 월드 축을 따릅니다. 클릭하면 로컬 공간으로 바뀝니다."
         },
@@ -2706,6 +2730,10 @@
             "text": "모든 노드가 보이도록 캔버스를 확대 · 이동합니다."
         },
         {
+            "source": "client arguments (e.g. -vk)",
+            "text": "클라이언트 인자 (예: -vk)"
+        },
+        {
             "source": "client arguments (e.g. -vulkan -width=960 -height=540)",
             "text": "클라이언트 인자 (예: -vulkan -width=960 -height=540)"
         },
@@ -2740,6 +2768,10 @@
         {
             "source": "new key (Enter)",
             "text": "새 키 (Enter)"
+        },
+        {
+            "source": "preset name",
+            "text": "프리셋 이름"
         },
         {
             "source": "stale - the source changed after this translation",

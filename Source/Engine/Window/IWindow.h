@@ -12,6 +12,8 @@ namespace sw
 {
     struct NativeWindowEvent;
 
+    class CommandLineManager;
+
     SW_DECLARE_DELEGATE( bool, WindowMessageHandlerDelegate, const NativeWindowEvent& event );
     SW_DECLARE_DELEGATE( void, WindowResizeDelegate, uint32 width, uint32 height );
     SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate, void );
@@ -129,6 +131,20 @@ namespace sw
          * @details 제목은 `_title` 에 남아 `recreate` 가 같은 제목으로 다시 만듭니다(빈 제목은 `recreate` 가 거절하므로 받지 않습니다).
          */
         void setTitle( const utf8* pTitle );
+        /**
+         * @brief 다음 `initializeWindow` 가 창 틀의 왼쪽 위를 놓을 화면 좌표를 정합니다. 부르지 않으면 플랫폼이 놓습니다(Win32 `CW_USEDEFAULT`).
+         * @details 다시 만들기(`recreate`)는 그때의 창 위치를 다시 잡으므로 이 값은 처음 만들 때만 뜻이 있다.
+         */
+        void setInitialPosition( int32 x, int32 y )
+        {
+            _restoreX = x;
+            _restoreY = y;
+        }
+        /**
+         * @brief 명령줄 `-WinX` · `-WinY` 를 `setInitialPosition` 으로 겁니다. `initializeWindow` 앞에서 부릅니다.
+         * @return 둘 다 없거나 둘 다 있으면 true 입니다. 하나만 있으면 오류를 남기고 false 입니다 — 반쪽 좌표를 플랫폼 값으로 채우지 않습니다.
+         */
+        [[nodiscard]] bool applyCommandLinePosition( const CommandLineManager& commandLine );
         /** @brief 지금 제목입니다(UTF-16이며 플랫폼 창이 쓰는 그대로입니다). */
         const wstring& getTitle() const { return _title; }
         /**

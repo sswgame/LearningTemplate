@@ -1617,9 +1617,13 @@
             "text": "이 머티리얼이 렌더링에 쓰는 HLSL 셰이더입니다. .hlsl 파일을 여기에 놓거나 콘텐츠 브라우저에서 고릅니다.",
             "sourceHash": "94bbffb6145f5c46"
         },
+        "EditorMultiplayer.ArrangeWindows": {
+            "text": "클라이언트 창을 겹치지 않게 나란히 놓습니다(App 프로세스마다 창 크기와 위치를 줍니다)",
+            "sourceHash": "a5d0ffde56d21ff0"
+        },
         "EditorMultiplayer.ClientArgumentsHint": {
-            "text": "클라이언트 인자 (예: -vulkan -width=960 -height=540)",
-            "sourceHash": "d2c0b06e2ae86a4e"
+            "text": "클라이언트 인자 (예: -vk)",
+            "sourceHash": "c24fefb663087b87"
         },
         "EditorMultiplayer.ConditionsApplyToAll": {
             "text": "고른 프로세스 대신 세션의 모든 프로세스에 보냅니다",
@@ -1665,6 +1669,10 @@
             "text": "이 프로세스가 보내는 패킷입니다(클라이언트면 클라이언트 → 서버)",
             "sourceHash": "0d84e281be31a5e9"
         },
+        "EditorMultiplayer.DeletePreset": {
+            "text": "고른 프리셋을 프리셋 파일에서 지웁니다",
+            "sourceHash": "90f9d726a54db1a1"
+        },
         "EditorMultiplayer.FollowLog": {
             "text": "가장 최근 로그 줄을 따라 스크롤합니다",
             "sourceHash": "ee7ed38c9f8e1ebd"
@@ -1688,6 +1696,14 @@
         "EditorMultiplayer.Play": {
             "text": "고른 Net Mode 로 서버와 클라이언트를 시작합니다",
             "sourceHash": "6a5be5838aced527"
+        },
+        "EditorMultiplayer.Preset": {
+            "text": "저장한 멀티플레이 구성입니다(Saved/Editor/NetPlayPresets.json, 커밋하지 않음). 고르면 아래 구성을 바꾸고, 에디터를 다시 띄우면 돌아옵니다",
+            "sourceHash": "938e45e9aed9ef3e"
+        },
+        "EditorMultiplayer.PresetNameHint": {
+            "text": "프리셋 이름",
+            "sourceHash": "14edb97df7e47b21"
         },
         "EditorMultiplayer.ProfilerClear": {
             "text": "모은 기록을 지웁니다",
@@ -1753,6 +1769,10 @@
             "text": "멈춘 서버의 게임 틱을 다시 돌립니다",
             "sourceHash": "e64bf44644ee2ea9"
         },
+        "EditorMultiplayer.SavePreset": {
+            "text": "아래 구성을 적은 이름으로 저장합니다(비우면 고른 프리셋을 덮습니다)",
+            "sourceHash": "ee38878636d8cde9"
+        },
         "EditorMultiplayer.StepServer": {
             "text": "서버 게임 틱을 왼쪽 칸의 수만큼 돌리고 다시 멈춥니다 (전용 서버 Dev 명령 step N)",
             "sourceHash": "e593d42f0ad0e452"
@@ -1768,6 +1788,14 @@
         "EditorMultiplayer.Target": {
             "text": "탭이 다루는 프로세스입니다(서버 또는 클라이언트 하나)",
             "sourceHash": "c760d2b8ee9eea94"
+        },
+        "EditorMultiplayer.WindowColumns": {
+            "text": "다음 줄로 넘어가기 전에 한 줄에 놓는 창 수",
+            "sourceHash": "725c31198012ea35"
+        },
+        "EditorMultiplayer.WindowSize": {
+            "text": "App 창마다의 클라이언트 영역 크기(픽셀)",
+            "sourceHash": "9328b054689ddf9d"
         },
         "EditorPackaging.Game": {
             "text": "패키징할 게임입니다",
