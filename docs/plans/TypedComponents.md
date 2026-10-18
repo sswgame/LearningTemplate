@@ -418,7 +418,10 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
   `ObjectStateBatch::finish` 의 핸들 처리(`ObjectStateSerializer.cpp:630-659`)에서 대상을 찾고, 대상이 있는데 `isDerivedFrom( X )` 가 아니면 **로드 오류**로 멈춥니다. 오류에는 타입, 필드, 오브젝트, 기대 타입, 실제 타입을 적습니다.
   대상이 없으면 핸들을 그대로 둡니다. 핸들은 약한 참조라서 대상이 사라진 핸들은 정상 값이고, 찾으면 nullptr 을 받습니다.
 - **파일 상태의 핸들.** 저장된 컴포넌트 id 를 이 실행의 컴포넌트로 옮길 테이블이 없습니다. 그래서 7-d-1 은 `PROPERTY` 의 컴포넌트 핸들을 모두 막습니다(위 ⓔ).
-  타입 핸들을 파일에 실으려면 오브젝트 저장 id 와 컴포넌트 안정 키(`타입#n`)로 쓰는 형태가 필요하고, 이는 형식 변경입니다. 7-d-3 을 시작할 때 따로 정합니다(결정 필요).
+  타입 핸들을 파일에 실으려면 오브젝트 저장 id 와 컴포넌트 안정 키(`타입#n`)로 쓰는 형태가 필요하고, 이는 형식 변경입니다.
+- **결정됨 (2026-10-19, 사용자): `PROPERTY` 의 타입 핸들을 허용합니다.** 한 `GameObject` 에 컴포넌트가 여럿 들어 있을 때 서로를 가리키는 값이 저장되어야 하기 때문입니다. 막아 둔 이유였던 "옮길 테이블 없음"은 8.2 로 풀렸습니다.
+  `ComponentStateStore::appendComponentIDRemap` 이 안정 키(`이름#n`)와 타입으로 저장 id 를 이 실행의 컴포넌트에 잇고, 오브젝트 id 묶음이 키를 싣습니다.
+  그래서 7-d-3 은 ⓔ 의 생성 오류를 풀고(타입 핸들 먼저, 타입 없는 `ComponentHandle` 은 따로 판단), 위 "타입 확인은 배치가 끝날 때" 규칙과 이 짝짓기를 `ObjectStateBatch::finish` 에 잇는 일입니다. 바이너리 형태와 인스펙터 선택기(3.8)는 구현 때 정합니다.
 
 ### 3.8 인스펙터
 
@@ -434,7 +437,7 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 | 7-c | 버킷, 갱신 규칙, 비템플릿 순회, 쿠커 정렬, 테스트 | `GameObjectStore.*`, `GameObjectManager.h`, `GameObject.cpp`, `Component.h`, `SceneNavigationCooker.cpp`, 새 테스트 | 헤더 템플릿이 바뀌어 모든 모듈을 다시 빌드 | `integrator`(opus) |
 | 7-d-1 | 타입 핸들 형식, 확인 변환, 찾기, `executeOrDeferPostTickOnComponent` 와 호출부 23곳, 복원 키 FQN, 파서의 `PROPERTY` 금지(타입 없는 핸들 포함), 비우기 폴백 제거 | `ComponentHandle.h`, `GameObjectManager.h`, `GameObject.cpp`, `ObjectStateSerializer.*`, `Tools/ReflectionParser`, 호출부 파일, `finish` 호출부 | 7-c 와 같은 헤더, 7-c 뒤 | `integrator`(opus) |
 | 7-d-2 | 호출부 마이그레이션(그룹 A ~ E) | 3.4 와 3.6 의 파일 | 그룹끼리 파일이 겹치지 않음 | 그룹마다 `worker`(sonnet), 병합은 `integrator`(opus) |
-| 7-d-3 | (사용처가 생길 때) `PROPERTY` 타입 핸들, 배치 끝 타입 확인, 인스펙터 선택기 | `SerializeContext.cpp`, `ObjectStateSerializer.cpp`, 파서, `InspectorPropertyManager.cpp`, `InspectorBuiltinValue.*` | 파일 상태 형태 결정이 먼저 | `worker`(opus) |
+| 7-d-3 | `PROPERTY` 타입 핸들 허용(2026-10-19 결정, 3.7), 배치 끝 타입 확인, 인스펙터 선택기 | `SerializeContext.cpp`, `ObjectStateSerializer.cpp`, 파서, `InspectorPropertyManager.cpp`, `InspectorBuiltinValue.*` | 없음(8.2 의 짝짓기가 있음) | `worker`(opus) |
 
 **7-d-2 그룹.** 그룹은 파일을 나눠 가지며, 접근자 반환형을 바꾸면 그 호출부가 있는 파일도 같은 그룹에 넣었습니다. 7-d-1 이 병합된 뒤 시작하며, ⓖ 그룹 A(조종)를 먼저 합니다.
 ⓓ 의 비교 호출부는 섞은 비교를 허용하므로(3.1) 고치지 않아도 컴파일되지만, 반환형이 바뀌는 접근자의 호출부라 A 가 함께 읽고 확인합니다.
@@ -487,7 +490,7 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 ## 7. 확인하지 못한 것과 결정이 필요한 것
 
 - **결정됨**: 7-c 의 자료구조는 ReflectionFormats.md 7.2 의 조상 목록 대신 정확한 타입 버킷이고, 버킷은 풀 항목에 합칩니다(2.2, `design-reviewer` 검토). 언리얼 `GetObjectsOfClass` 의 "정확한 클래스 버킷과 파생 열거"와 같은 계열입니다. `09_Decisions.md` 에 한 줄로 남깁니다.
-- **결정 필요**: 7-d-3 에서 파일 상태의 타입 핸들을 어떤 형태로 쓸지(3.7). 그 전까지 `PROPERTY` 타입 핸들은 생성 오류입니다.
+- **결정됨 (2026-10-19)**: `PROPERTY` 의 타입 핸들을 허용합니다(3.7). 구현 전까지는 생성 오류입니다.
 - 미확인: 씬의 실제 버킷 수 K, `Component` 패딩, `AnimationSystem.cpp:299` 와 `Fracture*` 핸들의 출처, `ComponentHandle` 의 바이너리 형태와 해시 특수화, 주석 줄이 낀 `PROPERTY` 의 `ComponentHandle`.
 - 후보 절: `ComponentStateStore` 가 다른 실행의 세이브를 열거 순서로 맞추는 구조(2.7), 리플렉션 구조체 필드 안의 `GameObjectHandle` 이 옮겨지지 않는 것(3.7 ⓕ), 등록형 목록을 버킷으로 옮기는 기준(2.5 ⓗ).
 - 측정 질문(Release, VSync 끔, 3~5판 번갈아, p50 과 p99): 오브젝트 1만과 10만 × 정확한 타입 수 K = 50, 200, 500 합성의 `forEachComponentOfType`(말단 타입 대 기반 타입), 실제 8게임의 K,
@@ -610,11 +613,11 @@ GPU 를 쓰지 않는 벤치라 셰이더 베이크와 VSync 는 해당하지 �
 8.3절 기준을 통과한 목록 가운데 **K 가 작은 씬에서 쓰이고 호출부가 이미 삭제 대기를 거르는 목록**은 옮겨도 프레임 경로가 느려지지 않습니다. 호출부가 삭제 대기를 거르지 않는 목록은 옮기면 그 검사 몫(10만 · 50 에서 약 1.7 µs)만큼 느려지므로, 표에 "호출부가 삭제 대기를 거르는가" 열을 더해 고릅니다.
 K 가 수백인 씬에서 자주 묻는 질의는 2.5절의 B 안(조회 타입마다 맞는 버킷 목록 캐시)이 먼저 필요합니다.
 
-컴포넌트 핸들은 여전히 `PROPERTY` 에서 막혀 있습니다(7-d-3 결정 대기).
+컴포넌트 핸들은 여전히 `PROPERTY` 에서 막혀 있습니다(7-d-3 은 허용으로 결정, 구현 대기).
 
 ### 8.6 사용자 결정
 
-없습니다. 7절의 "7-d-3 파일 상태 형태" 는 C-52 범위 밖이고 그대로 열려 있습니다.
+없습니다. 7-d-3 은 2026-10-19 에 `PROPERTY` 허용으로 결정됐습니다(3.7).
 
 ## 구현 전에 반영할 검토 결과
 

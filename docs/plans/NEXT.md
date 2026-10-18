@@ -16,7 +16,7 @@
 ## 1. 지금 상태 (2026-10-19)
 
 - main 은 `332fae747` 까지 push 했고, 그 CI(실행 39143580252)는 열 잡 중 아홉이 통과했다. 이전에 졌던 Shipping · 서버 Shipping · Windows Debug 가 고쳐졌다. 남은 하나였던 Linux TSan 의 `EditorNetPlaySessionTest.DedicatedServerAndTwoClientsConnectPauseAndMergeTraces` 는 고쳤다(원인: 느린 구성에서 Client1 이 첫 틱 안에 `quit` 을 받아 종료 트레이스가 "끝난 프레임 없음" 으로 빠짐 — 테스트가 이제 프로세스마다 틱 하나가 끝나길 기다린다). 다음 main CI 의 TSan 잡으로 확인한다.
-- 타입별 컴포넌트(`TypedComponents`)는 T3 · T4 까지 끝났다(**아직 push 안 함**). 삭제 대기 불변식을 형식으로 지키고 버킷 순회가 등록형 목록 이하가 됐다. 등록형 목록은 대부분 등록 순서에 기대서 옮기지 않기로 닫았다(8.3). 남은 것은 7-d-3(파일 상태 형태 결정 대기)과 앱 측정 넷(8.4). 새 후보 `StableAddressMap`(`Candidates-engine.md`).
+- 타입별 컴포넌트(`TypedComponents`)는 T3 · T4 까지 끝났다(**아직 push 안 함**). 삭제 대기 불변식을 형식으로 지키고 버킷 순회가 등록형 목록 이하가 됐다. 등록형 목록은 대부분 등록 순서에 기대서 옮기지 않기로 닫았다(8.3). 남은 것은 7-d-3(`PROPERTY` 타입 핸들 허용, 2026-10-19 사용자 결정, 구현 대기 — `integrator`)과 앱 측정 넷(8.4). 새 후보 `StableAddressMap`(`Candidates-engine.md`).
 - 이후 문서 개편(커밋됨, **아직 push 안 함**): 백로그를 없애고 계획 문서(머리 줄) + `Candidates-<영역>.md`(후보 절 152개) + `Roadmap.md`(순서) + `NEXT.md`(상태) 로 일원화했다. 일의 식별자는 이름이고 옛 번호는 `plans --find`. README 의 진행 표는 `status-board --write README.md` 로 만든 생성물이다. 코드는 바꾸지 않았다(`Scripts` 도구와 린트 게이트만). push 전에 [작업 방식](../11_Workflow.md) 3절대로 `full-build` 증거를 남긴다(Scripts 변경이라 Python 테스트 38개는 통과했다).
 - 구성 검증: Shipping · Shipping-Server · CI-Debug-STL 의 빌드 + nogpu 통과, Debug `full-build` 증거는 문서 개편 이전 커밋의 것이다.
 - 측정 · GPU 묶음(작업자 `meas`)은 한도(429)로 중단했다. 워크트리 없음, 임시 탐침은 지웠다. 다시 하면 임시 쿠킹 폴더에서 한다(main 체크아웃에 탐침 파일을 만들지 않는다).
