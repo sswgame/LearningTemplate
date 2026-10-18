@@ -74,8 +74,9 @@
   ④ 소프트웨어 렌더러 묶음(라벨 `swrender`, `<타깃>_SoftwareRender` — 정책 `softwareRenderCases` · `softwareRequiredBackends`, CI-Debug 잡이 WARP · lavapipe+xvfb 로 돈다).
   남은 것: 설계 완료, 단위는 [Linux 와 GPU 검증 계획](../plans/GpuVerification.md) 3절(V2 CI 보고 전용 해제)이다.
 
-- `C-42` [정리] **증분 쿠킹 · 파생 데이터 캐시(DDC).** 리소스를 100MB 이상 들이는 중이라 에셋이 늘면 쿠킹 시간이 병목이 된다. 설계 완료, 단위는 [증분 쿠킹 계획](../plans/IncrementalCook.md) 4절(K0 측정부터)이다.
-  공유 DDC 위치(K6)는 사용자 결정이 필요하다(같은 문서 5절).
+- `C-42` [정리] **증분 쿠킹 · 파생 데이터 캐시(DDC) — 남은 것은 측정(K0)과 공유 DDC(K6).** `--cook-scenes` 의 다섯 쿠커와 팩은 기록 · 로컬 DDC 로 바뀐 것만 굽는다([증분 쿠킹 계획](../plans/IncrementalCook.md) 4절).
+  K0: 단계별 쿠킹 시간(셰이더, 씬, 프리팹, 레지스트리, VAT, 내비메시, 팩)을 Release App 3 회로 깨끗한 실행 · 바뀐 것 없는 실행에서 재어 `docs/08_Verification.md` 에 표로 남긴다.
+  K6: 공유 DDC 읽기 층은 위치(GitHub Actions 캐시 · 개인 네트워크 폴더 · 두지 않음)를 사용자가 정해야 시작한다(같은 문서 5절).
 
 - `C-44` [정리] **임포트 규칙(`ModelImportConfig.json`)이 아직 "넓은 와일드카드 + 첫 매칭"이다.** 새 팩 파일에 다른 팩의 배치 오프셋이 적용돼도 경고가 없다(2026-10-17 `res3` 도입에서 확인; 새 줄을 표 앞에 두어 피했다). credits 표는 2026-10-18 에 고쳤다 — `CheckResourceCredits` 의 패턴은 경로 마디 단위(`*` 는 폴더를 넘지 않고 `**` 만 넘는다)이고 한 파일에 줄이 둘 이상 맞으면 오류다. 출처 목록(`*.sources.json`)의 해시 · 목록 밖 파일도 그 게이트가 본다.
   남은 것: ① 임포트 규칙도 같은 마디 단위 매칭 + 둘 이상 맞으면 오류로(C++ `ModelImportConfig` · `TextureImportConfig` 매칭기, 지금은 순서가 뜻을 가진 규칙이 있어 — `StarSkirmish_KayKitSpaceBase` 가 `StarSkirmish_KitLayoutOffset` 보다 먼저 맞아야 한다 — 규칙 데이터를 겹치지 않게 다시 써야 한다).

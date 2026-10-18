@@ -10,6 +10,7 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
@@ -601,7 +602,7 @@ SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJSONPrefabs )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourceRoot + "/notes.xml", "<Notes/>" ) );
 
     uint32       failedCount  = 0;
-    const uint32 writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
+    const uint32 writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount );
     SW_EXPECT_EQUAL( 4u, writtenCount ); // crate · barrel · deep · twin 둘 중 하나
     SW_EXPECT_EQUAL( 2u, failedCount );  // broken · twin 의 나머지 하나
     SW_EXPECT_FALSE( sw::FileUtil::exists( cookedRoot + "/broken.prefab.bin" ) );
@@ -638,7 +639,7 @@ SW_TEST_CASE( PrefabTest, CookedPrefabMatchesItsSource )
     SW_ASSERT_TRUE( crate.saveToJSONFile( sourceRoot + "/barrel.prefab.json" ) );
 
     uint32       failedCount  = 0;
-    const uint32 writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
+    const uint32 writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount );
     SW_EXPECT_EQUAL( 2u, writtenCount );
     SW_EXPECT_EQUAL( 0u, failedCount );
 
@@ -945,7 +946,7 @@ SW_TEST_CASE( PrefabTest, CookFlattensNestedInstancesSoTheOriginalIsNotRead )
     uint32 writtenCount = 0;
     {
         SW_TEST_DEFENSIVE_SCOPE( "a prefab whose nested prefab is missing" );
-        writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
+        writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount );
     }
     SW_EXPECT_EQUAL( 3u, writtenCount ); // wheel · cart · train
     SW_EXPECT_EQUAL( 1u, failedCount );  // broken_cart

@@ -14,9 +14,11 @@
 
 namespace sw
 {
+    struct CookJobDesc;
     struct ObjectIdentity;
     struct PrefabPartOverride;
 
+    class CookStore;
     class GameObject;
     class GameObjectManager;
     class PrefabCache;
@@ -236,8 +238,13 @@ namespace sw
          * @details 씬처럼 엔진이 쿠킹한다(`App --cook-scenes` 가 리소스 루트로 함께 부른다. 언리얼의 쿡 커맨드렛에 해당한다). 형식을 쓰는 곳은
          *          `PrefabAsset::saveToBinaryFile` 하나다. 중첩 인스턴스는 펼쳐서 싣는다(`flattenNestedInstances`). 펼치지 못한 프리팹(원본 없음 · 순환)은
          *          쓰지 않고 실패로 센다 — 배포본이 부품 없이 스폰하는 것을 쿠킹에서 막는다.
+         *          프리팹마다 작업(`CookJob`) 하나로 굽고 @p store 의 기록이 새것이면 DDC 의 출력을 다시 쓴다(`CookStore::cookFile`). 중첩 원본도 그 작업의 입력이다.
          */
-        static uint32 cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
+        static uint32 cookAllPrefabs( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount );
+        /** @brief 프리팹 쿠킹 작업의 키 값입니다. */
+        static CookJobDesc makeCookJobDesc();
+        /** @brief 프리팹 쿠커 버전입니다. 쿠킹본 형식(`saveToBinaryFile`)이나 펼치기 규칙을 바꾸면 올립니다 — 모든 프리팹이 다시 구워집니다. */
+        static constexpr uint32 kCookVersion = 1;
 
     private:
         /** @brief 스폰한 오브젝트에 프리팹 상태와 이름을 쓰고 중첩 인스턴스를 스폰합니다. 바로 하는 스폰과 틱 뒤로 미룬 스폰, 부품 기준 스폰이 같이 씁니다. 실패하면 false 입니다. */

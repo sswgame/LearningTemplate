@@ -27,6 +27,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/ObjectUndoUtil.h"
@@ -1002,7 +1003,7 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
     uint32 failedCount = 0;
     {
         test::ScopedDefensiveTestLog expected( "a scene file that is not XML" );
-        SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, failedCount ) );
+        SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount ) );
     }
     SW_EXPECT_EQUAL( 1u, failedCount );
     SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( cooked, "game/demo/maps/good.scene.bin" ) ) );
@@ -1031,7 +1032,7 @@ SW_TEST_CASE( SceneTest, SceneCookSkipsEditorOnlyScenes )
     }
 
     uint32 failedCount = 0;
-    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, failedCount ) );
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
     SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( cooked, "editor/maps/preview.scene.bin" ) ) );
 }
@@ -1074,7 +1075,7 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
         SW_ASSERT_FALSE( sw::engine::getSubsystem<sw::TypeRegistry>().areAllModuleTypesRegistered() );
         test::ScopedDefensiveTestLog expected( "a scene read before the ModuleTypes startup step" );
         bRequestAccepted = manager.requestLoadFuture( scenePath ).isValid();
-        earlyCookedCount = sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, earlyFailedCount );
+        earlyCookedCount = sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), earlyFailedCount );
     }
 
     SW_EXPECT_FALSE( bRequestAccepted );
@@ -1084,7 +1085,7 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 
     // 단계를 지난 레지스트리로는 같은 쿠킹이 된다.
     uint32 failedCount{ 0 };
-    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, failedCount ) );
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
     SW_EXPECT_TRUE( sw::FileUtil::exists( cookedPath ) );
     manager.shutdown();
@@ -1187,7 +1188,7 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
         test::ScopedDefensiveTestLog expected( "a scene with a component type that is not loaded" );
         sw::SceneDocument            direct = doc;
         (void)sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), direct, &missingComponentCount ); // 돌려준 수 대신 빠진 컴포넌트 수를 아래 단언이 본다
-        cookedCount = sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, failedCount );
+        cookedCount = sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount );
     }
     SW_EXPECT_EQUAL( 1u, missingComponentCount );
     SW_EXPECT_EQUAL( 0u, cookedCount );

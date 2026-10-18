@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -116,6 +117,98 @@ namespace sw
                     }
                 }
                 return false;
+            }
+
+            /**
+             * @brief 등록된 타입 · 프로퍼티 · 열거자의 지문입니다. 쿠킹된 상태의 바이트가 이 표로 정해지므로 작업 키의 설정 해시로 쓴다.
+             * @details 이름순으로 늘어놓아 등록 순서(링크 순서)와 관계없다. 프로퍼티는 선언 순서 그대로다.
+             */
+            static uint64 computeReflectionFingerprint( const TypeRegistry& registry )
+            {
+                vector<string> listTypeText;
+                registry.forEachType( [&listTypeText]( const TypeInfo& type )
+                {
+                    string text( type._fullyQualifiedName.view() );
+                    for ( const PropertyInfo& property : type._listProperty )
+                    {
+                        text.append( "|" ).append( property._name.view() ).append( ":" ).append( property._typeName.view() );
+                        text.append( "<" ).append( property._keyTypeName.view() ).append( "," ).append( property._elementTypeName.view() ).append( ">" );
+                    }
+                    listTypeText.push_back( std::move( text ) );
+                } );
+                registry.forEachEnum( [&listTypeText]( const EnumInfo& info )
+                {
+                    vector<string> listEntry;
+                    for ( const auto& [name, value] : info._mapNameToValue )
+                    {
+                        listEntry.push_back( string( name.view() ) + "=" + sw::to_string( value ) );
+                    }
+                    std::sort( listEntry.begin(), listEntry.end() );
+                    string text = "enum " + string( info._fullyQualifiedName.view() );
+                    for ( const string& entry : listEntry )
+                    {
+                        text.append( "|" ).append( entry );
+                    }
+                    listTypeText.push_back( std::move( text ) );
+                } );
+                std::sort( listTypeText.begin(), listTypeText.end() );
+                string canonical;
+                for ( const string& text : listTypeText )
+                {
+                    canonical.append( text ).append( "\n" );
+                }
+                return StringUtil::computeHash64( canonical.c_str(), canonical.size(), false );
+            }
+
+            /** @brief 씬 하나를 쿠킹해 @p outputPath 에 씁니다. 작업 범위 안에서 부릅니다 — 씬 · 프리팹 · 그 밖의 읽기가 모두 입력이 된다. */
+            static CookStep cookScene( const SceneEngineServices& services, const TypeRegistry& registry, const string& scenePath, string_view relativeScene,
+                                       string_view activePackRoot, const string& outputPath )
+            {
+                SceneDocument doc{};
+                if ( doc.loadXML( scenePath ) == false )
+                {
+                    SW_LOG_ERROR( "Scene cook failed to read '%#'.", scenePath );
+                    return CookStep::Failed;
+                }
+                // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
+                // 엔진 · 공용 타입만 쓰는 씬은 그대로 쿠킹한다(활성 팩의 모르는 타입은 아래에서 실패로 센다).
+                if ( isInInactiveGamePack( relativeScene, activePackRoot ) && usesUnregisteredComponentTypes( registry, doc ) )
+                {
+                    SW_LOG_INFO( "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
+                    return CookStep::Skipped;
+                }
+
+                // 쿠킹 전에 "상태가 있는 엔티티" 수를 세 둔다. 쿠킹하고 나면 XML 이 비워져 셀 수 없다.
+                uint32 statefulCount{ 0 };
+                for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
+                {
+                    if ( entity._embeddedXML.empty() == false )
+                        ++statefulCount;
+                }
+
+                uint32       missingComponentCount{ 0 };
+                const uint32 cookedCount = SceneCooker::cookEntityState( services, doc, &missingComponentCount );
+                // 모르는 타입의 컴포넌트는 원문 그대로 쿠킹돼 배포본에서도 동작하지 않는다. 그 씬은 쓰지 않고 실패로 센다 — 빌드가 선다.
+                if ( missingComponentCount > 0 )
+                {
+                    SW_LOG_ERROR( "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath, missingComponentCount );
+                    return CookStep::Failed;
+                }
+                // 이 비교는 **모든 빌드에서** 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
+                // 통째로 사라지는데, "쿠킹했다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
+                if ( cookedCount < statefulCount )
+                {
+                    SW_LOG_WARNING( "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.", scenePath, statefulCount - cookedCount,
+                                    statefulCount );
+                }
+                if ( doc.saveBinary( outputPath ) == false )
+                {
+                    SW_LOG_ERROR( "Scene cook failed to write '%#'.", outputPath );
+                    return CookStep::Failed;
+                }
+                SW_LOG_INFO( "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath, outputPath, static_cast<uint32>( doc._listSceneObjectNode.size() ),
+                             cookedCount );
+                return CookStep::Written;
             }
         };
     } // namespace
@@ -221,7 +314,8 @@ namespace sw
         return cookedCount;
     }
 
-    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
+    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, const CookStore& store,
+                                       uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( cookedDir.empty() )
@@ -256,12 +350,14 @@ namespace sw
 
         vector<string> listSceneFile;
         FileUtil::collectFiles( resourceRoot, ".xml", listSceneFile, true );
+        std::sort( listSceneFile.begin(), listSceneFile.end() );
 
-        const string normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        const string normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
-        const string activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot ) );
+        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
+        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot ) );
+        const CookJobDesc desc           = makeCookJobDesc( registry );
 
-        uint32 writtenCount{ 0 };
+        CookTally tally;
         for ( const string& scenePath : listSceneFile )
         {
             if ( StringUtil::endsWith( scenePath, ".scene.xml", true ) == false )
@@ -270,76 +366,32 @@ namespace sw
             if ( SceneCookerInternal::isEditorOnlyScene( relativeScene ) )
                 continue;
 
-            SceneDocument doc{};
-            if ( doc.loadXML( scenePath ) == false )
-            {
-                SW_LOG_ERROR( "Scene cook failed to read '%#'.", scenePath );
-                ++outFailedCount;
-                continue;
-            }
-            // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
-            // 엔진 · 공용 타입만 쓰는 씬은 그대로 쿠킹한다(활성 팩의 모르는 타입은 아래에서 실패로 센다).
-            if ( SceneCookerInternal::isInInactiveGamePack( relativeScene, activePackRoot ) && SceneCookerInternal::usesUnregisteredComponentTypes( registry, doc ) )
-            {
-                SW_LOG_INFO( "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
-                continue;
-            }
-
-            // 쿠킹 전에 "상태가 있는 엔티티" 수를 세 둔다. 쿠킹하고 나면 XML 이 비워져 셀 수 없다.
-            uint32 statefulCount{ 0 };
-            for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
-            {
-                if ( entity._embeddedXML.empty() == false )
-                    ++statefulCount;
-            }
-
-            uint32       missingComponentCount{ 0 };
-            const uint32 cookedCount = cookEntityState( services, doc, &missingComponentCount );
-            // 모르는 타입의 컴포넌트는 원문 그대로 쿠킹돼 배포본에서도 동작하지 않는다. 그 씬은 쓰지 않고 실패로 센다 — 빌드가 선다.
-            if ( missingComponentCount > 0 )
-            {
-                SW_LOG_ERROR( "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath, missingComponentCount );
-                ++outFailedCount;
-                continue;
-            }
-            // 이 비교는 **모든 빌드에서** 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
-            // 통째로 사라지는데, "쿠킹했다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
-            if ( cookedCount < statefulCount )
-            {
-                SW_LOG_WARNING( "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.",
-                                scenePath, statefulCount - cookedCount, statefulCount );
-            }
-
             // 출력은 `<cookedDir>/<Resource 기준 상대 경로>` 에 같은 이름으로, 확장자만 .bin 이다.
-            const string normalizedScene = FileUtil::normalizeSeparators( scenePath );
-            string       relativePath    = normalizedScene;
-            if ( normalizedScene.size() > normalizedRoot.size() && StringUtil::startsWith( normalizedScene, normalizedRoot ) )
-            {
-                relativePath = normalizedScene.substr( normalizedRoot.size() );
-                while ( relativePath.empty() == false && relativePath.front() == '/' )
-                {
-                    relativePath.erase( relativePath.begin() );
-                }
-            }
-
-            string outputPath = normalizedOut;
+            const string outputID   = AssetCookPath::toCookedPath( relativeScene );
+            string       outputPath = normalizedOut;
             if ( outputPath.empty() == false && outputPath.back() != '/' )
                 outputPath += '/';
-            outputPath = AssetCookPath::toCookedPath( outputPath + relativePath );
+            outputPath += outputID;
 
-            if ( doc.saveBinary( outputPath ) == false )
-            {
-                SW_LOG_ERROR( "Scene cook failed to write '%#'.", outputPath );
-                ++outFailedCount;
-                continue;
-            }
-
-            SW_LOG_INFO( "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath, outputPath,
-                         static_cast<uint32>( doc._listSceneObjectNode.size() ), cookedCount );
-            ++writtenCount;
+            const CookOutcome outcome = store.cookFile( desc, outputID, outputPath, [&]()
+            { return SceneCookerInternal::cookScene( services, registry, scenePath, relativeScene, activePackRoot, outputPath ); } );
+            outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;
+            tally.add( outcome );
         }
 
-        return writtenCount;
+        SW_LOG_INFO( "Scene cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        return tally.getWrittenCount();
+    }
+
+    CookJobDesc SceneCooker::makeCookJobDesc( const TypeRegistry& registry )
+    {
+        CookJobDesc desc;
+        desc._cookerName    = "Scene";
+        desc._cookerVersion = kCookVersion;
+        desc._target        = "Any";
+        // 쿠킹된 상태는 리플렉션 표로 쓴다 — 타입 · 프로퍼티가 바뀌면 같은 XML 이라도 다시 굽는다.
+        desc._settingsHash = SceneCookerInternal::computeReflectionFingerprint( registry );
+        return desc;
     }
 
 } // namespace sw

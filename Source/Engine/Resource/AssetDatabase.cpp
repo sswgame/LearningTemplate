@@ -10,6 +10,7 @@
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Common/EngineDefines.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -282,10 +283,10 @@ namespace sw
 
     string AssetDatabase::makeRegistryText( string_view resourceRoot, string_view domain, uint32& outFailedCount )
     {
-        const string   domainRoot = FileUtil::joinPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) ), domain );
+        const string domainRoot = FileUtil::joinPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) ), domain );
+        // 목록과 각 .meta 는 쿠킹 작업 안이면 그 작업의 입력이다 — .meta 가 생기거나 사라져도 레지스트리를 다시 만든다.
         vector<string> listMeta;
-        FileUtil::collectFiles( domainRoot, path::kMetaExtension, listMeta, true );
-        std::sort( listMeta.begin(), listMeta.end() );
+        CookJob::collectFiles( domainRoot, path::kMetaExtension, listMeta );
 
         const string_view                       metaExtension( path::kMetaExtension );
         const string                            domainPrefix = FileUtil::normalizePath( domain );
@@ -302,7 +303,8 @@ namespace sw
             KeyValueMap mapData;
             UUID        guid{};
             const utf8* pGuidText = nullptr;
-            if ( KeyValueFile::loadFile( metaAbs, mapData ) )
+            string      metaText;
+            if ( ResourceIO::readTextFile( metaAbs, metaText ) && KeyValueFile::parse( metaText, mapData ) )
                 pGuidText = KeyValueFile::get( mapData, "guid", nullptr );
             const bool bUnreadableGuid = pGuidText == nullptr || UUID::tryParse( pGuidText, guid ) == false || guid.isNull();
             if ( bUnreadableGuid )
@@ -317,7 +319,17 @@ namespace sw
         return lineCount > 0 ? string( sb.view() ) : string{};
     }
 
-    uint32 AssetDatabase::writeRegistryFiles( string_view resourceRoot, string_view cookedDir, uint32& outFailedCount )
+    CookJobDesc AssetDatabase::makeCookJobDesc()
+    {
+        CookJobDesc desc;
+        desc._cookerName    = "AssetRegistry";
+        desc._cookerVersion = kCookVersion;
+        desc._target        = "Any";
+        desc._settingsHash  = 0; // 레지스트리에는 설정이 없다
+        return desc;
+    }
+
+    uint32 AssetDatabase::writeRegistryFiles( string_view resourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount )
     {
         // 도메인 = 루트의 폴더 하나, `game` 은 그 아래 폴더 하나씩(팩 하나가 도메인 하나다 — `CookAssets.py` `cookAllPacks` 와 같은 나눔).
         vector<string> listDomain;
@@ -341,23 +353,36 @@ namespace sw
             }
         }
 
-        uint32 writtenCount{ 0 };
+        const CookJobDesc desc = makeCookJobDesc();
+        CookTally         tally;
+        uint32            partialWrittenCount = 0; // 읽지 못한 .meta 를 뺀 채 쓴 레지스트리 수
         for ( const string& domain : listDomain )
         {
-            const string text = makeRegistryText( resourceRoot, domain, outFailedCount );
-            if ( text.empty() )
-                continue;
-            const string outputPath = FileUtil::joinPath( FileUtil::joinPath( cookedDir, domain ), "assetregistry.txt" );
-            FileUtil::ensureParentDirectoryExists( outputPath );
-            if ( FileUtil::writeTextFile( outputPath, text ) == false )
-            {
-                SW_LOG_ERROR( "Asset registry: could not write '%#'", outputPath );
-                ++outFailedCount;
-                continue;
-            }
-            ++writtenCount;
+            const string      outputID         = FileUtil::joinPath( domain, "assetregistry.txt" );
+            const string      outputPath       = FileUtil::joinPath( cookedDir, outputID );
+            uint32            unreadableCount  = 0; // 읽지 못한 .meta 는 하나씩 센다
+            bool              bPartialWritten  = false;
+            const CookOutcome outcome          = store.cookFile( desc, outputID, outputPath, [&]()
+                     {
+                const string text = makeRegistryText( resourceRoot, domain, unreadableCount );
+                if ( text.empty() )
+                    return unreadableCount == 0 ? CookStep::Skipped : CookStep::Failed;
+                if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeTextFile( outputPath, text ) == false )
+                {
+                    SW_LOG_ERROR( "Asset registry: could not write '%#'", outputPath );
+                    return CookStep::Failed;
+                }
+                // 읽지 못한 .meta 가 있으면 레지스트리는 쓰되 기록은 남기지 않는다 — 다음 쿠킹도 그 실패를 다시 센다.
+                bPartialWritten = unreadableCount > 0;
+                return bPartialWritten ? CookStep::Failed : CookStep::Written;
+            } );
+            const bool        bFailedOtherwise = outcome == CookOutcome::Failed && unreadableCount == 0;
+            outFailedCount += unreadableCount + ( bFailedOtherwise ? 1u : 0u );
+            partialWrittenCount += bPartialWritten ? 1u : 0u;
+            tally.add( outcome );
         }
-        return writtenCount;
+        SW_LOG_INFO( "Asset registry cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        return tally.getWrittenCount() + partialWrittenCount;
     }
 
     uint32 AssetDatabase::loadRegistryText( string_view text )

@@ -22,7 +22,7 @@ namespace sw
     struct SW_API CookRecord
     {
         /** @brief 기록 파일 머리 줄입니다. 형식을 바꾸면 버전을 올린다 — 옛 기록은 다시 굽는 이유가 된다. */
-        static constexpr string_view kHeader{ "SWCOOKREC 1" };
+        static constexpr string_view kHeader{ "SWCOOKREC 2" };
 
         uint64            _key{ 0 };
         uint64            _outputHash{ 0 };
@@ -43,6 +43,8 @@ namespace sw
          * @details 키 비교가 쿠커 버전 · 대상 · 설정이 바뀐 것을 잡는다. 입력 경로는 리소스 id 라 워크트리가 달라도 같은 기록이 맞는다.
          */
         bool isFresh( const CookJobDesc& desc ) const;
+        /** @brief 지금 해시가 기록과 다른 첫 입력입니다. 모두 같으면 nullptr 입니다(다시 굽는 이유를 알릴 때). */
+        const CookInput* findChangedInput() const;
     };
 } // namespace sw
 

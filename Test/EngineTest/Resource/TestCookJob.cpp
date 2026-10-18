@@ -1,10 +1,13 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/UUID/UUID.h"
 
+#include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/Cook/ContentHash.h"
 #include "Engine/Resource/Cook/CookJob.h"
 #include "Engine/Resource/Cook/CookRecord.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
 
 #include "TestFramework/TestFramework.h"
@@ -138,4 +141,60 @@ SW_TEST_CASE( CookJobTest, RecordIsFreshOnlyWhileInputsAndVersionHold )
     SW_ASSERT_TRUE( cache.find( record._key, found ) );
     SW_EXPECT_TRUE( found == output );
     SW_EXPECT_FALSE( cache.find( record._key + 1, found ) );
+}
+
+/**
+ * @brief [CookJobTest] 레지스트리 쿠킹은 도메인마다 기록을 남긴다 — `.meta` 를 고치거나 더하면 그 도메인만 다시 굽고, 쿠커 버전을 올리면 기록이 낡는다
+ * @details 레지스트리는 폴더를 훑어 정해지므로 읽은 `.meta` 만으로는 새 `.meta` 를 알 수 없다 — `.meta` 목록이 입력(`CookInputKind::Listing`)이다.
+ *          DDC 와 기록을 지우고 다시 구워도 같은 바이트다.
+ */
+SW_TEST_CASE( CookJobTest, RegistryCookFollowsTheMetaListing )
+{
+    const sw::string root      = test::makeTempDirectory( "registry_incremental_root" );
+    const sw::string cooked    = test::makeTempDirectory( "registry_incremental_out" );
+    const sw::string recordDir = test::makeTempDirectory( "registry_incremental_record" );
+    const sw::string ddcDir    = test::makeTempDirectory( "registry_incremental_ddc" );
+    const auto       writeMeta = []( const sw::string& path )
+    {
+        SW_ASSERT( sw::FileUtil::ensureParentDirectoryExists( path ) );
+        TestCookJobInternal::writeText( path, sw::string( "guid=" ) + sw::UUID::generate().toString() + "\n" );
+    };
+    writeMeta( sw::FileUtil::joinPath( root, "engine/materials/a.material.meta" ) );
+    writeMeta( sw::FileUtil::joinPath( root, "game/demo/prefabs/b.prefab.xml.meta" ) );
+
+    const sw::CookStore store( recordDir, ddcDir );
+    uint32              failedCount = 0;
+    SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
+    SW_EXPECT_EQUAL( 2u, store.getTally()._cookedCount );
+    SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
+    SW_EXPECT_EQUAL( 2u, store.getTally()._reusedCount );
+
+    // 새 .meta 하나 — 읽은 파일은 그대로지만 목록이 바뀌어 그 도메인만 다시 굽는다.
+    writeMeta( sw::FileUtil::joinPath( root, "game/demo/prefabs/c.prefab.xml.meta" ) );
+    SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
+    SW_EXPECT_EQUAL( 3u, store.getTally()._cookedCount );
+    SW_EXPECT_EQUAL( 3u, store.getTally()._reusedCount );
+    // 있던 .meta 를 고쳐도 그 도메인만 다시 굽는다.
+    writeMeta( sw::FileUtil::joinPath( root, "engine/materials/a.material.meta" ) );
+    SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
+    SW_EXPECT_EQUAL( 4u, store.getTally()._cookedCount );
+    SW_EXPECT_EQUAL( 4u, store.getTally()._reusedCount );
+    SW_EXPECT_EQUAL( 0u, failedCount );
+
+    sw::CookRecord record;
+    SW_ASSERT_TRUE( sw::CookRecord::read( store.makeRecordPath( "game/demo/assetregistry.txt" ), record ) );
+    sw::CookJobDesc desc = sw::AssetDatabase::makeCookJobDesc();
+    SW_EXPECT_TRUE( record.isFresh( desc ) );
+    desc._cookerVersion += 1;
+    SW_EXPECT_FALSE( record.isFresh( desc ) );
+
+    sw::vector<uint8> before;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( sw::FileUtil::joinPath( cooked, "game/demo/assetregistry.txt" ), before ) );
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( ddcDir ) );
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( recordDir ) );
+    SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
+    SW_EXPECT_EQUAL( 6u, store.getTally()._cookedCount );
+    sw::vector<uint8> after;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( sw::FileUtil::joinPath( cooked, "game/demo/assetregistry.txt" ), after ) );
+    SW_EXPECT_TRUE( before == after );
 }

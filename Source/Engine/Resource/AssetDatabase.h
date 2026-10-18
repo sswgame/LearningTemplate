@@ -10,6 +10,10 @@
 
 namespace sw
 {
+    struct CookJobDesc;
+
+    class CookStore;
+
     /**
      * @class AssetDatabase
      * @brief 메모리에 올린 에셋 식별 표(GUID ↔ 경로)입니다. 사이드카는 `relativePath + ".meta"` 입니다.
@@ -105,8 +109,14 @@ namespace sw
         /**
          * @brief 리소스 루트의 도메인마다(`engine` · `common` · `game/<이름>` …) `<cookedDir>/<domain>/assetregistry.txt` 를 씁니다. 쓴 파일 수를 돌려줍니다.
          * @details 팩 하나가 도메인 하나이고, 런타임은 도메인마다 이 파일을 읽습니다(`AssetManager::loadAssetRegistries`). `.meta` 가 없는 도메인은 건너뜁니다.
+         *          도메인마다 작업 하나로 만들고 — `.meta` 목록과 각 `.meta` 가 입력이다 — @p store 의 기록이 새것이면 DDC 의 출력을 다시 씁니다.
+         *          읽지 못한 `.meta` 가 있는 도메인은 레지스트리를 쓰되 기록을 남기지 않습니다(다음 쿠킹도 실패를 다시 센다).
          */
-        static uint32 writeRegistryFiles( string_view resourceRoot, string_view cookedDir, uint32& outFailedCount );
+        static uint32 writeRegistryFiles( string_view resourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount );
+        /** @brief 레지스트리 쿠킹 작업의 키 값입니다. */
+        static CookJobDesc makeCookJobDesc();
+        /** @brief 레지스트리 쿠커 버전입니다. 레지스트리 형식(`makeRegistryText`)을 바꾸면 올립니다. */
+        static constexpr uint32 kCookVersion = 1;
 
         /** @brief 경로↔GUID 맵을 비웁니다. */
         void clear();
