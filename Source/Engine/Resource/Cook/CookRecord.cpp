@@ -53,6 +53,12 @@ namespace sw
         text.append( "\noutput " ).append( CookRecordInternal::toHex( _outputHash ) );
         for ( const CookInput& input : _listInput )
         {
+            if ( input._kind == CookInputKind::Listing )
+            {
+                text.append( "\nlisting " ).append( CookRecordInternal::toHex( input._contentHash ) ).append( " " ).append( input._extension ).append( " " );
+                text.append( input._resourceID );
+                continue;
+            }
             text.append( "\ninput " ).append( CookRecordInternal::toHex( input._contentHash ) ).append( " " ).append( input._resourceID );
         }
         text.append( "\n" );
@@ -91,19 +97,31 @@ namespace sw
             const string_view line = StringUtil::trim( listLine[lineIndex] );
             if ( line.empty() )
                 continue;
-            const size_t      firstSpace = line.find( ' ' );
-            const string_view field      = line.substr( 0, firstSpace );
-            const string_view rest       = firstSpace == string_view::npos ? string_view{} : line.substr( firstSpace + 1 );
-            bool              bParsed    = false;
-            const bool        bInputLine = field == "input" && rest.size() > 17 && rest[16] == ' '; // 16 자리 해시, 빈칸, 리소스 id
+            const size_t      firstSpace   = line.find( ' ' );
+            const string_view field        = line.substr( 0, firstSpace );
+            const string_view rest         = firstSpace == string_view::npos ? string_view{} : line.substr( firstSpace + 1 );
+            bool              bParsed      = false;
+            const bool        bHashed      = rest.size() > 17 && rest[16] == ' '; // 16 자리 해시, 빈칸, 나머지
+            const string_view afterHash    = bHashed ? rest.substr( 17 ) : string_view{};
+            const size_t      extensionEnd = afterHash.find( ' ' ); // 목록: 확장자, 빈칸, 폴더 id
+            const bool        bHasFolder   = extensionEnd != string_view::npos && extensionEnd + 1 < afterHash.size();
             if ( field == "key" )
                 bParsed = bHasKey = CookRecordInternal::parseHex( rest, outRecord._key );
             else if ( field == "output" )
                 bParsed = bHasOutput = CookRecordInternal::parseHex( rest, outRecord._outputHash );
-            else if ( bInputLine )
+            else if ( field == "input" && bHashed )
             {
                 CookInput input;
-                input._resourceID = string( rest.substr( 17 ) );
+                input._resourceID = string( afterHash );
+                bParsed           = CookRecordInternal::parseHex( rest.substr( 0, 16 ), input._contentHash );
+                outRecord._listInput.push_back( std::move( input ) );
+            }
+            else if ( field == "listing" && bHasFolder )
+            {
+                CookInput input;
+                input._kind       = CookInputKind::Listing;
+                input._extension  = string( afterHash.substr( 0, extensionEnd ) );
+                input._resourceID = string( afterHash.substr( extensionEnd + 1 ) );
                 bParsed           = CookRecordInternal::parseHex( rest.substr( 0, 16 ), input._contentHash );
                 outRecord._listInput.push_back( std::move( input ) );
             }
@@ -127,7 +145,7 @@ namespace sw
     {
         for ( const CookInput& input : _listInput )
         {
-            if ( ContentHash::computeFile( ResourcePaths::makeAbsolutePath( input._resourceID ) ) != input._contentHash )
+            if ( input.computeCurrentHash() != input._contentHash )
                 return false;
         }
         return CookJob::computeKey( desc, _listInput ) == _key;

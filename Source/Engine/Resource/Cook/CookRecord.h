@@ -22,7 +22,7 @@ namespace sw
     struct SW_API CookRecord
     {
         /** @brief 기록 파일 머리 줄입니다. 형식을 바꾸면 버전을 올린다 — 옛 기록은 다시 굽는 이유가 된다. */
-        static constexpr string_view kHeader{ "SWCOOKREC 1" };
+        static constexpr string_view kHeader{ "SWCOOKREC 2" };
 
         uint64            _key{ 0 };
         uint64            _outputHash{ 0 };

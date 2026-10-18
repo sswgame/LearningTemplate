@@ -642,10 +642,11 @@ namespace sw
 
     bool XMLDocument::loadFile( string_view absPath )
     {
+        // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`ResourceIO::readTextFile`).
         string text;
-        if ( FileUtil::readTextFile( absPath, text ) == false )
+        if ( ResourceIO::readTextFile( absPath, text ) == false )
         {
-            _lastError = string( absPath ) + ": cannot read the file";
+            _lastError = string( absPath ) + ": cannot read the file (or it was read during cooking outside a cook job)";
             return false;
         }
         return parse( text, absPath );

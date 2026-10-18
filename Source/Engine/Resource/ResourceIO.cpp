@@ -127,7 +127,23 @@ namespace sw
             [&outText]( string_view key, string& outPackPath )
         { return getPackManager().readTextFile( key, outText, &outPackPath ); } );
         // 쿠킹 작업 안의 읽기는 그 작업의 입력이다. 쿠킹 세션 안인데 작업 밖이면 기록이 빠지므로 읽기가 실패한다(`CookJob`).
-        return bRead && CookJob::admitRead( relativePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
+        // 찾지 못한 것도 입력이다(해시 0) — 그 파일이 생기면 다시 굽는다.
+        if ( bRead == false )
+        {
+            CookJob::admitMissingRead( relativePath );
+            return false;
+        }
+        return CookJob::admitRead( relativePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
+    }
+
+    bool ResourceIO::readTextFile( string_view filePath, string& outText )
+    {
+        if ( FileUtil::readTextFile( filePath, outText ) == false )
+        {
+            CookJob::admitMissingRead( filePath );
+            return false;
+        }
+        return CookJob::admitRead( filePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
     bool ResourceIO::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
@@ -138,7 +154,12 @@ namespace sw
         { return FileUtil::readFile( absPath, outBytes ); },
             [&outBytes]( string_view key, string& )
         { return getPackManager().readFile( key, outBytes ); } );
-        return bRead && CookJob::admitRead( relativePath, outBytes.data(), outBytes.size() );
+        if ( bRead == false )
+        {
+            CookJob::admitMissingRead( relativePath );
+            return false;
+        }
+        return CookJob::admitRead( relativePath, outBytes.data(), outBytes.size() );
     }
 
     AsyncReadHandle ResourceIO::readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
