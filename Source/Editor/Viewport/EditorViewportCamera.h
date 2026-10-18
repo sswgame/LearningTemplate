@@ -67,6 +67,12 @@ namespace sw::editor
         /** @brief 회전(도)입니다. x 는 피치, y 는 요, z 는 롤입니다. */
         const float3& getRotation() const { return _rotation; }
         bool          isOrthographicView() const { return _bOrthographicView == SW_TRUE; }
+        /**
+         * @brief 지금(또는 막 끝난) 오른쪽 단추 누름 동안 비행 키(WASD · QE)로 카메라를 옮겼는가입니다. 단추를 누르는 프레임에 지워집니다.
+         * @details 오른쪽 단추를 놓을 때 여는 맥락 메뉴가 이것과 끌기 거리로 "비행이었다" 를 가린다. 마우스를 끌지 않고 WASD 로만 날아도 비행이다 —
+         *          끌기 거리(GetMouseDragDelta)만 보면 키로 난 비행 끝에 메뉴가 열려 다음 클릭을 삼킨다(언리얼 · 유니티도 비행 뒤에는 메뉴를 열지 않는다).
+         */
+        bool hasFlownThisRightHold() const { return _bFlownThisRightHold == SW_TRUE; }
 
     private:
         void applyBookmark( const CameraBookmark& bookmark );
@@ -82,7 +88,8 @@ namespace sw::editor
         float32                _nearZ;
         float32                _farZ;
         float32                _orthoHeight; ///< 직교 보기의 화면 높이(월드 단위). 휠로 바꾼다
-        uint8                  _bOrthographicView : 1;
-        [[maybe_unused]] uint8 _reserved          : 7;
+        uint8                  _bOrthographicView   : 1;
+        uint8                  _bFlownThisRightHold : 1; ///< 이번 오른쪽 단추 누름 동안 비행이 카메라를 옮기거나 돌렸다
+        [[maybe_unused]] uint8 _reserved            : 6;
     };
 } // namespace sw::editor

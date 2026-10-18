@@ -54,6 +54,7 @@ namespace sw::editor
         , _farZ{ 1000.0f }
         , _orthoHeight{ 10.0f }
         , _bOrthographicView{ SW_FALSE }
+        , _bFlownThisRightHold{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -95,6 +96,14 @@ namespace sw::editor
 
         const float32 speed = inoutCameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
         _position += moveDir * speed;
+
+        // 누르는 프레임에 새 누름으로 지우고, 키로 옮긴 프레임이 하나라도 있으면 비행이다(맥락 메뉴가 놓을 때 본다).
+        // 마우스로 돌린 것은 맥락 메뉴가 끌기 거리(끌기 문턱)로 가린다 — 누를 때의 손떨림 한 픽셀로 메뉴가 막히지 않게 여기서는 세지 않는다.
+        if ( ImGui::IsMouseClicked( ImGuiMouseButton_Right ) )
+            _bFlownThisRightHold = SW_FALSE;
+        const bool bMoved = moveDir._x != 0.0f || moveDir._y != 0.0f || moveDir._z != 0.0f;
+        if ( bMoved )
+            _bFlownThisRightHold = SW_TRUE;
     }
 
     void EditorViewportCamera::processOrbitInput()
