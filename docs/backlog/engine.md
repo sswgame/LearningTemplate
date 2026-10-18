@@ -60,10 +60,6 @@
   읽기가 옛 키를 별칭으로 찾는 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)와 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절이 씁니다.
   쓰는 곳을 세어 데이터를 새 이름으로 다시 쓰고 별칭을 없앱니다([데이터 주도 구조 정리 계획](../plans/DataDriven.md) 의 Alias 항목과 같은 일). 값 계산이 필요한 경우만 `SW_SCHEMA_MIGRATION` 입니다.
 
-- `C-40` [정리] **Shipping 에서 빠지는 API 를 부르는 쪽마다 `#if !defined( SW_SHIPPING )` 을 기억해야 한다.** `TypeRegistry::unregisterTypesByModule` 등을 테스트가 부르면
-  Shipping 컴파일이 깨지고(리눅스 CI 에서 실제로 깨짐, `b206e2a26`), 가드를 잊은 곳은 Shipping 빌드에서야 드러난다.
-  테스트 전용 RAII 도우미(등록 범위 객체)로 감싸거나 늘 컴파일되는 API 로 바꿔 호출부가 구성을 몰라도 되게 한다.
-
 - `C-47` [정리] **합성 리그 벤치가 드러낸 애니메이션 갱신의 비정상 셋.** 기준표는 [검증과 측정](../08_Verification.md) "영역별 측정값"의 `SyntheticRigBenchTest` 표(2026-10-17, Release).
   (1) 캐릭터 1000 에서 본 150 → 300 이 2.5 배로 선형(2 배)보다 크다 — 캐시 · 워커 분배를 본다. (2) 본 300 + 리그 노드의 p99 40.6 ms 가 p50 의 3 배다 — 히치 원인을 찾는다.
   (3) 네 발 60 본이 실행마다 흔들린다(캐릭터 1000 p50 1223 ~ 3162 us). GPU 스키닝 시간은 런타임 .mesh 가 인덱스 없는 삼각형 목록이라 벤치 씬에 싣지 못해 재지 않았다.
@@ -84,8 +80,12 @@
   `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
 
 - `C-63` [정리] **`SW_ENABLE_STL_CONTAINER` 가 이름이 같은 `sw::` 형식을 구성마다 다른 형식으로 바꾼다**(2026-10-18 `A-20`). 해시 컨테이너는 두 구성이 같은 구현을 쓰게 했고 `CompressedPair` 로 `pair` 차이를 막았다.
-  남은 것: ① 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다) ② `Source/sw.natvis` 의 `unordered_map` · `unordered_set` · `vector` 항목이 std 형식으로 캐스트해 지금 구조와 맞지 않는다
-  ③ `TestDestructionDamage` 의 해시 기준값 테스트가 STL 구성에서 건너뛰던 이유가 해시 컨테이너 순서였다면 다시 켤 수 있다(확인 안 함). `map` · `set` 은 두 구성 모두 키 순서지만 주소 · 반복자 보장은 기본 구성 쪽이 약하다.
+  natvis 는 자체 구현의 배치를 읽게 고쳤고, `TestDestructionDamage` 의 해시 기준값 테스트는 STL 구성에서도 돈다.
+  남은 것: 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다). 설계 판단이 커서 따로 한다 —
+  `vector` · `array` · `string` · `list` · `deque` · `map` · `set` · `pair` · `span` 이 모두 구성에 따라 std 별칭과 자체 형식 사이를 오가고, `string` · `list` · `deque` 는 자체 형식도 std 를 상속한다.
+  할당자만 바꾸려면 ⓐ STL 구성의 목적(표준 컨테이너로 비교 · 디버그 STL 검사를 쓰는 것인가, `std::allocator` 로 메모리 추적을 빼는 것인가)을 먼저 정하고
+  ⓑ 그 목적이 할당자뿐이면 자체 `vector` · `array` · `map` · `set` · `pair` 를 두 구성에 늘 쓰고 `string` · `list` · `deque` 는 `std::*<T, 구성별 할당자>` 하나로 둔다.
+  ⓒ 이때 STL 구성에서만 건너뛰는 테스트(`TestVector` · `TestDataStructure` · `TestMemory` · `TestMemoryTag`)를 다시 본다. `map` · `set` 은 두 구성 모두 키 순서지만 주소 · 반복자 보장은 기본 구성 쪽이 약하다.
 
 - `C-64` [정리] **조용한 기본값이 남은 곳(A-26 · C-62 후속).** ① 씬 직접 경로에서 그림자 맞춤 행렬은 출력 설정의 비율(출력 크기 0 이면 16/9)을, 그리는 행렬은 풀의 비율을 써서 어긋날 수 있다
   ② 패킷의 `_cameraPos` 기본값(`FrameRendererUtil::kDefaultCameraPos`) ③ `GameInstanceBase` 의 `UserSettingsManager` · `InputManager` · `UISystem` 조회가 `GameNetSession` 과 같은 "없으면 조용히 건너뛰기" 모양이다

@@ -32,11 +32,18 @@
     </Expand>
   </Type>
 
-  <!-- sw::vector<T, Alloc> (디버그 래퍼인 경우 Base 상속) -->
+  <!-- 아래 항목은 기본 구성(자체 구현)의 배치를 읽는다. SW_ENABLE_STL_CONTAINER 구성에서 sw::vector · array · string · list · deque 는
+       std 형식의 별칭이라 이름이 std:: 로 보여 이 항목에 걸리지 않고 디버거의 std 시각화를 쓴다. 해시 컨테이너는 두 구성 모두 자체 구현이다. -->
+
+  <!-- sw::vector<T, Alloc> — 자체 구현(_pData · _size · _capacity). std::vector 로 캐스트하면 배치가 달라 엉뚱한 값을 보인다 -->
   <Type Name="sw::vector&lt;*,*&gt;">
-    <DisplayString>{*(std::vector&lt;$T1,$T2&gt;*)this}</DisplayString>
+    <DisplayString>{{ size={_size} }}</DisplayString>
     <Expand>
-      <ExpandedItem>*(std::vector&lt;$T1,$T2&gt;*)this</ExpandedItem>
+      <Item Name="[capacity]" ExcludeView="simple">_capacity</Item>
+      <ArrayItems>
+        <Size>_size</Size>
+        <ValuePointer>_pData</ValuePointer>
+      </ArrayItems>
     </Expand>
   </Type>
 
@@ -56,19 +63,45 @@
     </Expand>
   </Type>
 
-  <!-- sw::unordered_map<K, V, ...> -->
+  <!-- sw::unordered_map<K, V, ...> — 밀집 배열(_listDenseData)의 노드를 넣은 순서로 [키] = 값 으로 보인다 -->
   <Type Name="sw::unordered_map&lt;*,*,*,*,*&gt;">
-    <DisplayString>{*(std::unordered_map&lt;$T1,$T2,$T3,$T4,$T5&gt;*)this}</DisplayString>
+    <DisplayString>{{ size={_listDenseData._size} }}</DisplayString>
     <Expand>
-      <ExpandedItem>*(std::unordered_map&lt;$T1,$T2,$T3,$T4,$T5&gt;*)this</ExpandedItem>
+      <Item Name="[bucket_count]" ExcludeView="simple">_listBucket._size</Item>
+      <CustomListItems MaxItemsPerView="5000">
+        <Variable Name="i" InitialValue="0"/>
+        <Size>_listDenseData._size</Size>
+        <Loop>
+          <Break Condition="i == _listDenseData._size"/>
+          <Item Name="[{_listDenseData._pData[i]._keyValuePair.first}]">_listDenseData._pData[i]._keyValuePair.second</Item>
+          <Exec>i++</Exec>
+        </Loop>
+      </CustomListItems>
+    </Expand>
+  </Type>
+  <!-- SW_ENABLE_STL_CONTAINER 구성은 안쪽 vector 가 std::vector 라 위 항목의 식이 풀리지 않는다 — 그때 이 항목으로 노드 배열을 그대로 보인다 -->
+  <Type Name="sw::unordered_map&lt;*,*,*,*,*&gt;" Priority="Low">
+    <DisplayString>{_listDenseData}</DisplayString>
+    <Expand>
+      <ExpandedItem>_listDenseData</ExpandedItem>
     </Expand>
   </Type>
 
-  <!-- sw::unordered_set<K, ...> -->
+  <!-- sw::unordered_set<K, ...> — 밀집 배열(_listDenseData)의 키를 넣은 순서로 보인다 -->
   <Type Name="sw::unordered_set&lt;*,*,*,*&gt;">
-    <DisplayString>{*(std::unordered_set&lt;$T1,$T2,$T3,$T4&gt;*)this}</DisplayString>
+    <DisplayString>{{ size={_listDenseData._size} }}</DisplayString>
     <Expand>
-      <ExpandedItem>*(std::unordered_set&lt;$T1,$T2,$T3,$T4&gt;*)this</ExpandedItem>
+      <Item Name="[bucket_count]" ExcludeView="simple">_listBucket._size</Item>
+      <IndexListItems>
+        <Size>_listDenseData._size</Size>
+        <ValueNode>_listDenseData._pData[$i]._key</ValueNode>
+      </IndexListItems>
+    </Expand>
+  </Type>
+  <Type Name="sw::unordered_set&lt;*,*,*,*&gt;" Priority="Low">
+    <DisplayString>{_listDenseData}</DisplayString>
+    <Expand>
+      <ExpandedItem>_listDenseData</ExpandedItem>
     </Expand>
   </Type>
 
