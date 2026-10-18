@@ -42,7 +42,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common import BuildTree, getProjectRoot, kTestBuildTargets, runGit, runProcess  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from MakeWorktree import findMainRoot, kWorktreeFolderName  # noqa: E402
+from MakeWorktree import findMainRoot, getDefaultWorktreeRoot  # noqa: E402
 
 kScenarioNames: tuple[str, ...] = ("full", "header", "cpp", "worktree")
 kDefaultHeader = "Source/Core/Container/vector.h"
@@ -158,8 +158,8 @@ def measureLocalScenarios(repositoryRoot: Path, preset: str, listScenario: list[
 def measureWorktreeScenario(repositoryRoot: Path, preset: str, args: argparse.Namespace, listTarget: list[str]) -> ScenarioResult:
     """같은 커밋의 새 워크트리에서 구성 + 빌드. 첫 회는 데우기라 세지 않는다."""
     commit = readHeadInternal(repositoryRoot, [])
-    # worktree-make 은 main 체크아웃의 부모 아래에 만든다 — 이 스크립트를 워크트리에서 불러도 같은 자리를 본다.
-    worktreeRoot = findMainRoot(repositoryRoot).parent / kWorktreeFolderName / kWorktreeName
+    # 위치는 worktree-make 와 같은 함수(getDefaultWorktreeRoot)로 구한다 — 이 스크립트를 워크트리에서 불러도 같은 자리를 본다.
+    worktreeRoot = getDefaultWorktreeRoot(findMainRoot(repositoryRoot)) / kWorktreeName
     scriptsCommand = [sys.executable, "-m", "Scripts"]
     if not worktreeRoot.is_dir():
         # 주인은 이 측정 프로세스다 — 측정이 끝나면 지운다.

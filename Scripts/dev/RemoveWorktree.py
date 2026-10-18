@@ -67,7 +67,7 @@ def removeDirectoryLink(path: Path) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="MakeWorktree 로 만든 워크트리를 나눠 쓰는 링크를 먼저 끊고 지운다.")
     parser.add_argument("names", nargs="+", help="지울 워크트리 이름(브랜치 wt/<이름>)")
-    parser.add_argument("--worktree-root", type=Path, default=None, help="워크트리를 둔 폴더(기본: main 체크아웃의 부모/LT-wt)")
+    parser.add_argument("--worktree-root", type=Path, default=None, help="워크트리를 둔 폴더(기본: MakeWorktree 와 같은 위치 — Windows 는 드라이브 루트의 w)")
     parser.add_argument("--keep-branch", action="store_true", help="브랜치 wt/<이름> 을 지우지 않는다")
     parser.add_argument("--force", action="store_true", help="커밋하지 않은 변경이 있어도 지운다")
     parser.add_argument("--even-if-owned", dest="evenIfOwned", action="store_true",

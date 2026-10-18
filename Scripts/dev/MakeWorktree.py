@@ -4,7 +4,7 @@
 @file MakeWorktree.py
 @brief 작업 단위 하나를 위한 git 워크트리를 만들고, 내려받은 도구 · vcpkg 설치 폴더를 main 체크아웃과 나눠 쓰게 연결합니다.
 
-    py -3 -m Scripts worktree-make <이름>                       # <main 의 부모>/LT-wt/<이름>, 브랜치 wt/<이름>, 기준 origin/main
+    py -3 -m Scripts worktree-make <이름>                       # <드라이브>:/w/<이름>(Windows) · <main 의 부모>/LT-wt/<이름>, 브랜치 wt/<이름>, 기준 origin/main
     py -3 -m Scripts worktree-make <이름> --base wt/apply5      # 다른 브랜치에서 갈라 만든다
     py -3 -m Scripts worktree-make <이름> --dry-run             # 무엇을 할지만 보인다
     py -3 -m Scripts worktree-make <이름> --pid $PID            # 사람 셸 — 주인 프로세스를 직접 준다(에이전트는 CLAUDE_PID 를 쓴다)

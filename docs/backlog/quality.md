@@ -5,9 +5,6 @@
 - `A-23` [결함] **Shipping `-L nogpu` 에서 합성 리그 테스트 둘이 `game/empty/rigs_raw/*.rig.json` 을 못 읽는다.** `ResourceDataSchemaTest.EveryResourceDataFileLoadsWithoutUnknownNames` ·
   `SyntheticRigImportTest.RepresentativesImportAndBindTheirRig`(2026-10-18 `pixel2` Shipping 에서 확인, PixelTown 과 무관 — `rigbench` 병합 뒤 Shipping 을 돌리지 않았다). 원본 폴더(`rigs_raw`)가 Shipping 마운트에 없는 것으로 보인다(미확인).
 
-- `A-27` [결함] **`RunBuildBaseline` 이 워크트리 경로를 옛 `LT-wt` 로 가정한다.** Windows 워크트리는 드라이브 루트의 `w`(`D:\w\<이름>`)로 옮겼는데 기준선 스크립트가
-  옛 경로를 찾는다(2026-10-18 `feat8` 작업에서 확인). 워크트리 루트를 `MakeWorktree` 와 같은 함수 하나에서 받게 한다.
-
 - `B-5` [검증대기] **`LoaderFuzzer` `Compression` 타임아웃은 고쳤고 퍼저 재확인과 씨앗이 남았다**(실행 38806424034). 원인은 헤더의 원본 크기(620 MB)를 압축 크기(0)와 견주지 않고 할당한 것이었다 —
   코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 `vector` 소멸 루프 생략으로 고쳤다(결정 기록 5-3, 2026-10-17). 퍼저는 리눅스 전용이라 로컬에서는 `CompressionTest.FuzzTimeoutInputIsRejectedBeforeAllocating` 이
   그 입력을 그대로 재현해 할당 전에 끊기는지(용량 0)만 본다. 남은 일: ① 다음 야간 퍼징에서 `Compression` 이 통과하는지 확인 ② 그 입력을 `Test/EngineTest/LoaderFuzzTargets.cpp` `seedCompression` 씨앗에 더하기
