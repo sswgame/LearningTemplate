@@ -68,7 +68,7 @@ function(sw_computeTestTimeout OUT_VAR TOTAL_SECONDS SHARD_COUNT MAX_CASE_SECOND
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_getTestTimeoutScale — 이 구성의 제한 시간 배율(정책 `timeoutScale`). 새니타이저면 sanitizer, 아니면 리눅스는 linux, 그 밖은 1.
+# sw_getTestTimeoutScale — 이 구성의 제한 시간 배율(정책 `timeoutScale`). 새니타이저면 sanitizer, 아니면 리눅스는 linux · 윈도는 windows, 그 밖은 1.
 #   CTest 제한 시간과 테스트가 띄우는 자식 프로세스의 시한(`SW_TEST_TIMEOUT_SCALE` → `test::ProcessDeadlineWatch`)이 같은 값을 쓴다.
 # ------------------------------------------------------------------------------
 function(sw_getTestTimeoutScale OUT_VAR)
@@ -77,6 +77,8 @@ function(sw_getTestTimeoutScale OUT_VAR)
 		sw_requireJsonValue(swScale "${SW_TEST_POLICY_FILE}" timeoutScale sanitizer)
 	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 		sw_requireJsonValue(swScale "${SW_TEST_POLICY_FILE}" timeoutScale linux)
+	elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+		sw_requireJsonValue(swScale "${SW_TEST_POLICY_FILE}" timeoutScale windows)
 	endif()
 	set(${OUT_VAR} ${swScale} PARENT_SCOPE)
 endfunction()

@@ -9,7 +9,7 @@
     "hostSplit 이면 <타깃>_NoGPU(nogpu) · <타깃>_HostOnly(hostgpu, GPU 칸 하나 — gpuSlots, hostSeconds · hostShards, hostResourceLock) 로 가른다. loadSeconds 가 있으면 <타깃>_Load(load, 직렬, --load_suites=only --enforce_budgets)를 더한다.",
     "raceCases 가 있으면 Debug 에서만 <타깃>_Race(race, --host_suites=all, 그 케이스 · 스위트만)를 더한다. raceSeconds 는 그 한 실행의 Debug 초이고, hostSplit 이면 호스트 조각과 같은 GPU 칸 · 잠금을 받는다.",
     "shards 는 계산한 샤드 수를 덮는다 — 이유를 _shardsReason 에 적는다. 새 실행 파일은 여기 한 줄을 더하고 폴더 이름을 실행 파일 이름과 같게 둔다(CheckTestSuites).",
-    "timeoutScale 은 위 제한 시간에 곱하는 배율이다. 새니타이저 구성은 sanitizer 하나만, 아니면 리눅스는 linux 를 곱한다(곱을 겹치지 않는다). 테스트가 띄우는 자식 프로세스의 시한도 같은 배율이다(test::ProcessDeadlineWatch)."
+    "timeoutScale 은 위 제한 시간에 곱하는 배율이다. 새니타이저 구성은 sanitizer 하나만, 아니면 리눅스는 linux · 윈도는 windows 를 곱한다(곱을 겹치지 않는다). 테스트가 띄우는 자식 프로세스의 시한도 같은 배율이다(test::ProcessDeadlineWatch)."
   ],
   "gpuSlots": 2,
   "_gpuSlotsReason": "hostgpu 항목이 동시에 받는 GPU 칸 수(ctest 자원 gpu). 결정적 기능 확인은 GPU 공유 잠금(shared-lock gpu --shared)과 같은 두 프로세스까지 겹쳐도 된다 — 결정 기록 5-2.",
@@ -18,8 +18,10 @@
   "targetShardSeconds": 30,
   "timeoutScale": {
     "linux": 2,
+    "windows": 2,
     "sanitizer": 10
   },
+  "_timeoutScaleWindowsReason": "windows: CI Windows Debug 러너의 EngineTest_NoGPU 조각은 계획값(26 s)의 2.1 배(실행 39160434493, 54~64 s)가 보통이고, 러너가 느린 날은 3.9 배(실행 39155999378 · 39157285831, 100 s)라 한도 104 s 에서 조각 셋이 시간 초과로 졌다(엔진 코드는 같았다). 2 배면 한도 208 s 로 느린 날에도 두 배 여유다. 계획값은 부하 걸린 개발 PC 의 값이라 CI 러너에 맞춰 다시 재지 않고 리눅스와 같은 배율을 쓴다.",
   "_timeoutScaleReason": "linux: CI 리눅스 Debug 러너의 EngineTest_NoGPU 조각은 Windows 값으로 계산한 조각(26 s)의 1.9 배(실행 38748985852, 50 s)에서 러너가 통째로 느린 날 4 배(38728893862, 104 s 한도에서 둘이 죽고 셋째가 99 s)까지 갔다. 2 배면 한도 208 s 로 느린 날에도 두 배 여유다. 조각 값이 러너에 맞는지는 CI 리눅스 Debug 의 가장 느린 EngineTest_NoGPU 조각(실행 38682436123, 101 s)이 한도의 절반(104 s) 안쪽인 것으로 확인했다 — 절반을 넘으면 러너에서 다시 잰다. sanitizer: ASan · TSan 은 한 자릿수 배로 느리다(실행 38728893862 의 TSan EngineTest 조각 440 s, 한도 1040 s).",
   "requiredBackends": {
     "windows": ["dx11", "dx12", "vk", "gl"],
