@@ -73,9 +73,9 @@ namespace sw
         notifyHealthChanged( true );
     }
 
-    void UnitStatsComponent::setStats( const MonsterDef& monsterDef )
+    void UnitStatsComponent::setStats( const MonsterStatsDef& monsterStats )
     {
-        setStats( monsterDef._hp, monsterDef._maxHp, monsterDef._atk, monsterDef._def, monsterDef._speed, monsterDef._invincibility );
+        setStats( monsterStats._hp, monsterStats._maxHp, monsterStats._atk, monsterStats._def, monsterStats._speed, monsterStats._invincibility );
     }
 
     void UnitStatsComponent::onBeginPlay()

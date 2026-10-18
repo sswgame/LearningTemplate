@@ -1697,11 +1697,11 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
         SW_EXPECT_FALSE( catalog.loadFromResource( "non_existent_monster.xml" ) );
     }
     SW_EXPECT_TRUE( catalog.getAllMonsters().empty() );
-    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"slime\"><Stats hp=\"100\" atk=\"10\"/></Monster></MonsterCatalog>", "slime" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"slime\" name=\"Slime\"><Stats hp=\"100\" atk=\"10\"/></Monster></MonsterCatalog>", "slime" ) );
     const MonsterDef* pMonster = catalog.findMonster( "slime" );
     SW_ASSERT_NOT_NULL( pMonster );
-    SW_EXPECT_EQUAL( 100, pMonster->_hp );
-    SW_EXPECT_EQUAL( 10, pMonster->_atk );
+    SW_EXPECT_EQUAL( 100, pMonster->_stats._hp );
+    SW_EXPECT_EQUAL( 10, pMonster->_stats._atk );
 
     // 2) UnitStatsComponent 기본 수명주기 및 대미지/회복 로직 검증
     UnitStatsComponent stats;
@@ -1745,23 +1745,29 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
 /**
  * @brief [GameFrameworkTest] 몬스터 카탈로그는 미터 단위이고, 한 종의 스탯이 UnitStatsComponent 로 1:1 옮겨진다
  * @details 카탈로그 기본값이 픽셀 단위 값(속도 150 · 순찰 200 · 감지 400 · 공격 50)이면 m/s · m 로 읽는 유닛 스탯에서 150 m/s 가 된다 — 유닛 스탯의
- *          Move Speed 상한(50)보다 크다. 그 값을 쓰는 데이터 파일은 로드가 경고해야 한다.
+ *          Move Speed 상한(50)보다 크다. 그 값을 쓰는 데이터 파일은 로드 오류이고 그 몬스터는 빠진다.
  */
 SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReachUnitStats )
 {
-    // 스키마 기본값(`MonsterDef` 의 초기값)이 미터 단위다.
-    const MonsterDef defaultDef{};
-    SW_EXPECT_TRUE( 0.0f < defaultDef._speed && defaultDef._speed <= MonsterDef::kMaxSpeed );
-    SW_EXPECT_TRUE( defaultDef._attackRange < defaultDef._detectRange && defaultDef._detectRange <= MonsterDef::kMaxSpeed );
-
-    // 카탈로그의 상한은 유닛 스탯 Move Speed 의 상한과 같다.
-    const TypeInfo* pStatsType = engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::UnitStatsComponent" ) );
+    // 카탈로그 스키마(`MonsterStatsDef::_speed`)의 상한은 유닛 스탯 Move Speed 의 상한과 같다.
+    const TypeRegistry& registry          = engine::getSubsystem<TypeRegistry>();
+    const TypeInfo*     pMonsterStatsType = registry.findType( hashed_string( "sw::MonsterStatsDef" ) );
+    const TypeInfo*     pStatsType        = registry.findType( hashed_string( "sw::UnitStatsComponent" ) );
+    SW_ASSERT_NOT_NULL( pMonsterStatsType );
     SW_ASSERT_NOT_NULL( pStatsType );
-    const PropertyInfo* pMoveSpeed = pStatsType->findProperty( hashed_string( "_moveSpeed" ) );
+    const PropertyInfo* pMonsterSpeed = pMonsterStatsType->findProperty( hashed_string( "_speed" ) );
+    const PropertyInfo* pMoveSpeed    = pStatsType->findProperty( hashed_string( "_moveSpeed" ) );
+    SW_ASSERT_NOT_NULL( pMonsterSpeed );
     SW_ASSERT_NOT_NULL( pMoveSpeed );
-    SW_EXPECT_NEAR_EQUAL( MonsterDef::kMaxSpeed, pMoveSpeed->_metadata._maxRange, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( pMonsterSpeed->_metadata._maxRange, pMoveSpeed->_metadata._maxRange, 1e-4f );
 
-    MonsterDef slime{};
+    // 스키마 기본값(`MonsterStatsDef` · `MonsterAIDef` 의 초기값)이 미터 단위다.
+    const MonsterDef defaultDef{};
+    const float32    maxSpeed = static_cast<float32>( pMonsterSpeed->_metadata._maxRange );
+    SW_EXPECT_TRUE( 0.0f < defaultDef._stats._speed && defaultDef._stats._speed <= maxSpeed );
+    SW_EXPECT_TRUE( defaultDef._ai._attackRange < defaultDef._ai._detectRange && defaultDef._ai._detectRange <= maxSpeed );
+
+    MonsterStatsDef slime{};
     slime._hp            = 30;
     slime._maxHp         = 40;
     slime._atk           = 7;
@@ -1781,22 +1787,26 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
     stats.takeDamage( 12 );
     SW_EXPECT_EQUAL( 20, stats.getHp() );
 
-    // 픽셀로 적은 속도는 경고하고 값은 그대로 둔다.
+    // 픽셀로 적은 속도는 로드 오류이고 그 몬스터는 넣지 않는다(오류 줄에 몬스터 id 가 있다).
     const string path = test::makeTempPath( "pixel_monsters.xml" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n  <Monster id=\"bat\"><Stats speed=\"150\"/></Monster>\n</MonsterCatalog>\n" ) );
-    SW_TEST_DEFENSIVE_SCOPE( "a pixel-era speed is reported" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path,
+                                             "<MonsterCatalog>\n  <Monster id=\"bat\" name=\"Bat\"><Stats speed=\"150\"/></Monster>\n"
+                                             "  <Monster id=\"rat\" name=\"Rat\"><Stats speed=\"2\"/></Monster>\n</MonsterCatalog>\n" ) );
+    SW_TEST_DEFENSIVE_SCOPE( "a pixel-era speed is rejected" );
     test::ScopedLogCollector logCollector;
     MonsterCatalog           pixelCatalog;
     SW_ASSERT_TRUE( pixelCatalog.loadFromResource( path ) );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'bat': speed 150" ) == 1u, logCollector.joined().c_str() );
+    SW_EXPECT_NULL( pixelCatalog.findMonster( "bat" ) );
+    SW_EXPECT_NOT_NULL( pixelCatalog.findMonster( "rat" ) );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "<Monster id=\"bat\">" ) >= 1u, logCollector.joined().c_str() );
 }
 
 /**
- * @brief [GameFrameworkTest] monsters.xml 의 archetype 은 열거자 이름 그대로 읽히고, 모르는 이름은 경고한다
- * @details 이름은 리플렉션된 `MonsterArchetype` 하나다 — 열거자를 늘려도 파서를 고치지 않는다. 오타("Ranged")는 MeleePatrol 로
- *          물러나되 몬스터 id 와 함께 경고가 남아야 한다. 조용히 물러나면 원거리 몬스터가 근접 순찰로 도는 이유를 찾을 길이 없다.
+ * @brief [GameFrameworkTest] monsters.xml 의 archetype 은 열거자 이름 그대로 읽히고, 모르는 이름은 그 몬스터를 넣지 않는 오류다
+ * @details 이름은 리플렉션된 `MonsterArchetype` 하나다 — 열거자를 늘려도 파서를 고치지 않는다. 오타("Ranged")를 MeleePatrol 로 물러나게 두면
+ *          원거리 몬스터가 근접 순찰로 도는 이유를 찾을 길이 없다. 그래서 몬스터 id 와 함께 오류를 남기고 그 몬스터를 뺀다.
  */
-SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknownWarning )
+SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknownIsRejected )
 {
     const uint32 kArchetypeCount = static_cast<uint32>( MonsterArchetype::ChargerRush ) + 1;
     string       xml             = "<MonsterCatalog>\n";
@@ -1804,10 +1814,10 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
     {
         const utf8* pName = engine::getSubsystem<TypeRegistry>().enumToString( static_cast<MonsterArchetype>( value ) );
         SW_ASSERT_NOT_NULL( pName );
-        xml += string( "  <Monster id=\"m" ) + to_string( value ) + "\" archetype=\"" + pName + "\"/>\n";
+        xml += string( "  <Monster id=\"m" ) + to_string( value ) + "\" name=\"M\" archetype=\"" + pName + "\"/>\n";
     }
-    xml += "  <Monster id=\"typo\" archetype=\"Ranged\"/>\n";
-    xml += "  <Monster id=\"plain\"/>\n";
+    xml += "  <Monster id=\"typo\" name=\"Typo\" archetype=\"Ranged\"/>\n";
+    xml += "  <Monster id=\"plain\" name=\"Plain\"/>\n";
     xml += "</MonsterCatalog>\n";
     const string path = test::makeTempPath( "monsters.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, xml ) );
@@ -1824,10 +1834,10 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
         SW_EXPECT_TRUE( pMonster->_archetype == static_cast<MonsterArchetype>( value ) );
     }
 
-    const MonsterDef* pTypo = catalog.findMonster( "typo" );
-    SW_ASSERT_NOT_NULL( pTypo );
-    SW_EXPECT_TRUE( pTypo->_archetype == MonsterArchetype::MeleePatrol );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "unknown archetype 'Ranged'" ) == 1u, logCollector.joined().c_str() );
+    // 모르는 이름은 첫 열거자로 물러나지 않는다 — 그 몬스터를 넣지 않고 id 와 함께 오류를 남긴다.
+    SW_EXPECT_NULL( catalog.findMonster( "typo" ) );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Ranged" ) >= 1u, logCollector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "<Monster id=\"typo\"" ) >= 1u, logCollector.joined().c_str() );
 
     // 속성이 없으면 기본값이고 경고하지 않는다.
     const MonsterDef* pPlain = catalog.findMonster( "plain" );

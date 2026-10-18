@@ -129,7 +129,7 @@ namespace sw
         for ( const Actor& actor : _listActor )
         {
             hp += actor._hp;
-            hpMax += static_cast<float32>( _listMonsterDef[actor._defIndex]._maxHp );
+            hpMax += static_cast<float32>( _listMonsterDef[actor._defIndex]._stats._maxHp );
         }
         if ( hpMax <= 0.0f )
             return 0.0f;
@@ -188,7 +188,7 @@ namespace sw
         {
             if ( actor._bAlive == SW_FALSE )
                 continue;
-            const float32 radius = _listMonsterDef[actor._defIndex]._radius;
+            const float32 radius = _listMonsterDef[actor._defIndex]._stats._radius;
             pDbg->drawSphere( float3( actor._position._x, 0.5f, actor._position._y ), radius, actorColor );
         }
         for ( const Projectile& projectile : _listProjectile )
@@ -216,11 +216,11 @@ namespace sw
 
         Actor actor{};
         actor._position = position;
-        actor._hp       = static_cast<float32>( def._hp );
+        actor._hp       = static_cast<float32>( def._stats._hp );
         actor._defIndex = static_cast<uint16>( defIndex );
         // 쏘는 종만 시간을 측정한다. 첫 발은 나타난 뒤 `_firstAttackDelay` 가 지나야 나간다.
         if ( def._listShot.empty() == false )
-            actor._attackTimer.start( def._firstAttackDelay );
+            actor._attackTimer.start( def._ai._firstAttackDelay );
         _listActor.push_back( actor );
     }
 
@@ -265,7 +265,7 @@ namespace sw
             if ( queryOverlaps( atk, kLayerPlayerAtk, computeActorBounds( actor ), kLayerEnemy, _layers ) == false )
                 continue;
             // 방어 공식은 유닛 스탯과 같다(고정 방어를 빼고 최소 1을 보장한다). 같은 몬스터 정의를 두 곳이 다르게 읽지 않는다.
-            const float32 defense = static_cast<float32>( _listMonsterDef[actor._defIndex]._def );
+            const float32 defense = static_cast<float32>( _listMonsterDef[actor._defIndex]._stats._def );
             actor._hp -= DamageMath::applyArmor( _settings._playerAttackDamage, defense, 0.0f, 1.0f );
             if ( actor._hp <= 0.0f )
             {
@@ -284,8 +284,8 @@ namespace sw
             const MonsterDef& def = _listMonsterDef[actor._defIndex];
 
             const float2 toPlayer = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
-            actor._position._x += toPlayer._x * def._speed * deltaTime;
-            actor._position._y += toPlayer._y * def._speed * deltaTime;
+            actor._position._x += toPlayer._x * def._stats._speed * deltaTime;
+            actor._position._y += toPlayer._y * def._stats._speed * deltaTime;
 
             if ( def._listShot.empty() )
                 continue;
@@ -293,7 +293,7 @@ namespace sw
             if ( actor._attackTimer.isActive() )
                 continue;
             // 늦은 시간을 이어서 발사 빈도가 fps 에 묶이지 않게 한다(최대 한 간격까지만 이어 가므로, 멈춘 프레임 뒤에 몰아 쏘지 않는다).
-            actor._attackTimer.restart( def._attackCoolTime );
+            actor._attackTimer.restart( def._ai._attackCoolTime );
             ++outResult._enemyVolleyCount;
 
             // 탄은 정의의 줄마다 한 발이다. 겨냥 방향을 `_angleDegrees` 만큼 돌린 쪽으로 난다(0은 겨냥 방향, 90은 (−y, x) 방향).
@@ -350,7 +350,7 @@ namespace sw
                 continue;
             if ( queryOverlaps( hurt, kLayerPlayer, computeActorBounds( actor ), kLayerEnemy, _layers ) == false )
                 continue;
-            outResult._damageToPlayer += _listMonsterDef[actor._defIndex]._atk;
+            outResult._damageToPlayer += _listMonsterDef[actor._defIndex]._stats._atk;
             _invulnerable.start( _settings._hitInvulnerableSeconds );
             return;
         }
@@ -388,7 +388,7 @@ namespace sw
 
     AABB ActionRoom::computeActorBounds( const Actor& actor ) const
     {
-        const float32 radius = _listMonsterDef[actor._defIndex]._radius;
+        const float32 radius = _listMonsterDef[actor._defIndex]._stats._radius;
         return AABB{
             float3{actor._position._x - radius, 0.0f, actor._position._y - radius},
             float3{actor._position._x + radius, 1.0f, actor._position._y + radius}

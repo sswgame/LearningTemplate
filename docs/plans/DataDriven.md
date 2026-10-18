@@ -140,7 +140,6 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| D2 | RPG 키트 카탈로그를 `readFields` 로 옮깁니다(Western 64, Witcher 41, MonsterCollector 23, JRPG 19). `MonsterCatalog` 의 `MonsterDef` 를 Stats 와 AI 하위 Def 로 나눕니다 | `GameFramework/Kits/Genre/RPG/`, 그 키트를 쓰는 팩의 데이터 | D1 | 키트 테스트, 해당 게임 기동 | 없음 |
 | D3 | 호러 키트(AsymmetricHorrorRules 51, Scavenger 39, Horror 32, Ghost 24) | `GameFramework/Kits/Genre/Horror/`, 데이터 | D1 | 위와 같음 | 없음 |
 | D4 | 액션 키트(Mech 38, BattleRoyale 33, ActionPlatformer 29, Metroidvania 26, Fighter 20, ActionAdventure) | `GameFramework/Kits/Genre/Action/`, 데이터 | D1 | 위와 같음 | 없음 |
 | D5 | 전략, 캐주얼, 시뮬레이션 장르와 Feature 키트 | `GameFramework/Kits/Genre/{Strategy,Casual,Simulation}/`, `GameFramework/Kits/Feature/`, 데이터 | D1 | 위와 같음 | 없음 |

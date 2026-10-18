@@ -23,32 +23,32 @@ namespace
     constexpr const utf8* kJRPGCatalogXML = R"(
 <JRPGCatalog>
   <ExperienceCurve base="10" exponent="1" linear="0" maxLevel="50"/>
-  <Class id="hero" hp="30" mp="5" str="12" agi="8" vit="10" intellect="5" luck="5" growHp="6" growMp="2" growStr="3" growAgi="2" growVit="2" growIntellect="1" growLuck="1" attackType="Sword">
+  <Class id="hero" name="hero" hp="30" mp="5" str="12" agi="8" vit="10" intellect="5" luck="5" growHp="6" growMp="2" growStr="3" growAgi="2" growVit="2" growIntellect="1" growLuck="1" attackType="Sword">
     <Learn level="3" spell="heal"/>
   </Class>
-  <Class id="warrior" hp="35" mp="0" str="14" agi="5" vit="12" intellect="1" luck="3" growHp="7" growMp="0" growStr="4" growAgi="1" growVit="3" growIntellect="0" growLuck="1" attackType="Sword"/>
-  <Class id="mage" hp="18" mp="15" str="4" agi="7" vit="5" intellect="14" luck="5" growHp="3" growMp="4" growStr="1" growAgi="2" growVit="1" growIntellect="3" growLuck="1" attackType="Blunt">
+  <Class id="warrior" name="warrior" hp="35" mp="0" str="14" agi="5" vit="12" intellect="1" luck="3" growHp="7" growMp="0" growStr="4" growAgi="1" growVit="3" growIntellect="0" growLuck="1" attackType="Sword"/>
+  <Class id="mage" name="mage" hp="18" mp="15" str="4" agi="7" vit="5" intellect="14" luck="5" growHp="3" growMp="4" growStr="1" growAgi="2" growVit="1" growIntellect="3" growLuck="1" attackType="Blunt">
     <Learn level="1" spell="frizz"/><Learn level="5" spell="sizz"/>
   </Class>
-  <Class id="sage" hp="25" mp="20" str="8" agi="8" vit="8" intellect="12" requires="book_of_satori"/>
-  <Class id="sunblade" hp="40" mp="10" str="14" agi="10" vit="10" intellect="6" attackType="Sword"><Learn level="1" spell="sunball"/></Class>
-  <Class id="moonstaff" hp="36" mp="12" str="10" agi="9" vit="9" intellect="8" attackType="Blunt"><Learn level="1" spell="moonerang"/></Class>
-  <Class id="swordsman" hp="60" mp="0" str="12" agi="9" vit="12" intellect="4" attackType="Sword"/>
-  <Spell id="frizz" kind="Damage" mp="2" power="12" type="Fire" target="One"/>
-  <Spell id="sizz" kind="Damage" mp="5" power="10" type="Fire" target="All"/>
-  <Spell id="heal" kind="Heal" mp="3" power="30" target="One"/>
-  <Spell id="zing" kind="Revive" mp="10" target="One"/>
-  <Spell id="sunball" kind="Damage" mp="3" power="15" type="Sun"/>
-  <Spell id="moonerang" kind="Damage" mp="3" power="15" type="Moon"/>
-  <Spell id="eclipse" kind="Damage" power="60" type="Moon"/>
-  <Spell id="pine_cut" manual="pine_sword" inner="20" power="20" type="Sword" proficiency="15"/>
-  <Spell id="pine_storm" manual="pine_sword" inner="40" power="40" type="Sword" target="All" proficiency="5"/>
-  <Combo id="solstice" members="zale,valere" points="3" power="30" types="Sun,Moon" target="All"/>
-  <Manual id="pine_sword"><Stage proficiency="0" technique="pine_cut"/><Stage proficiency="30" technique="pine_storm"/></Manual>
-  <Enemy id="slime" hp="10" str="8" agi="3" vit="2" exp="6" gold="4" attackType="Blunt" weak="Fire"/>
-  <Enemy id="golem" hp="300" str="20" agi="1" vit="20" exp="50" gold="30" attackType="Blunt" weak="Sun"/>
-  <Enemy id="wyrd" hp="500" str="10" agi="2" vit="10" intellect="0" exp="100" gold="50" cast="eclipse" castTurns="2" castEvery="1" locks="Sword,Moon,Sword"/>
-  <Enemy id="dweller" hp="999" str="6" agi="1" vit="10" exp="500" gold="300" boss="true"/>
+  <Class id="sage" name="sage" hp="25" mp="20" str="8" agi="8" vit="8" intellect="12" requires="book_of_satori"/>
+  <Class id="sunblade" name="sunblade" hp="40" mp="10" str="14" agi="10" vit="10" intellect="6" attackType="Sword"><Learn level="1" spell="sunball"/></Class>
+  <Class id="moonstaff" name="moonstaff" hp="36" mp="12" str="10" agi="9" vit="9" intellect="8" attackType="Blunt"><Learn level="1" spell="moonerang"/></Class>
+  <Class id="swordsman" name="swordsman" hp="60" mp="0" str="12" agi="9" vit="12" intellect="4" attackType="Sword"/>
+  <Spell id="frizz" name="frizz" kind="Damage" mp="2" power="12" type="Fire" target="One"/>
+  <Spell id="sizz" name="sizz" kind="Damage" mp="5" power="10" type="Fire" target="All"/>
+  <Spell id="heal" name="heal" kind="Heal" mp="3" power="30" target="One"/>
+  <Spell id="zing" name="zing" kind="Revive" mp="10" target="One"/>
+  <Spell id="sunball" name="sunball" kind="Damage" mp="3" power="15" type="Sun"/>
+  <Spell id="moonerang" name="moonerang" kind="Damage" mp="3" power="15" type="Moon"/>
+  <Spell id="eclipse" name="eclipse" kind="Damage" power="60" type="Moon"/>
+  <Spell id="pine_cut" name="pine_cut" manual="pine_sword" inner="20" power="20" type="Sword" proficiency="15"/>
+  <Spell id="pine_storm" name="pine_storm" manual="pine_sword" inner="40" power="40" type="Sword" target="All" proficiency="5"/>
+  <Combo id="solstice" name="solstice" members="zale,valere" points="3" power="30" types="Sun,Moon" target="All"/>
+  <Manual id="pine_sword" name="pine_sword"><Stage proficiency="0" technique="pine_cut"/><Stage proficiency="30" technique="pine_storm"/></Manual>
+  <Enemy id="slime" name="slime" hp="10" str="8" agi="3" vit="2" exp="6" gold="4" attackType="Blunt" weak="Fire"/>
+  <Enemy id="golem" name="golem" hp="300" str="20" agi="1" vit="20" exp="50" gold="30" attackType="Blunt" weak="Sun"/>
+  <Enemy id="wyrd" name="wyrd" hp="500" str="10" agi="2" vit="10" intellect="0" exp="100" gold="50" cast="eclipse" castTurns="2" castEvery="1" locks="Sword,Moon,Sword"/>
+  <Enemy id="dweller" name="dweller" hp="999" str="6" agi="1" vit="10" exp="500" gold="300" boss="true"/>
   <Area id="field" rate="0.25" grace="3"><Group enemies="slime,slime" weight="3"/><Group enemies="golem" weight="1"/></Area>
 </JRPGCatalog>
 )";

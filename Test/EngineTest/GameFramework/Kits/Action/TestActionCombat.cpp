@@ -1283,8 +1283,8 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomReadsItsMonstersFromTheCatalogService 
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
     const string                       path = test::makeTempPath( "room_monsters.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n"
-                                                   "  <Monster id=\"grunt\"><Stats hp=\"60\" maxHp=\"60\" atk=\"5\" def=\"4\" speed=\"1.8\" radius=\"0.32\"/></Monster>\n"
-                                                   "  <Monster id=\"boss\"><Stats hp=\"100\" maxHp=\"100\" atk=\"12\" def=\"0\" speed=\"0.9\" radius=\"0.7\"/>\n"
+                                                   "  <Monster id=\"grunt\" name=\"Grunt\"><Stats hp=\"60\" maxHp=\"60\" atk=\"5\" def=\"4\" speed=\"1.8\" radius=\"0.32\"/></Monster>\n"
+                                                   "  <Monster id=\"boss\" name=\"Boss\"><Stats hp=\"100\" maxHp=\"100\" atk=\"12\" def=\"0\" speed=\"0.9\" radius=\"0.7\"/>\n"
                                                    "    <AI coolTime=\"1.6\" firstDelay=\"0.5\"/>\n"
                                                    "    <Shot angle=\"0\" speed=\"4.5\" life=\"2.5\" radius=\"0.22\" damage=\"7\"/>\n"
                                                    "  </Monster>\n"
@@ -1343,7 +1343,7 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomReportsAMonsterMissingFromTheCatalog )
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
     const string                       path = test::makeTempPath( "bat_monsters.xml" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n  <Monster id=\"bat\"/>\n</MonsterCatalog>\n" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n  <Monster id=\"bat\" name=\"Bat\"/>\n</MonsterCatalog>\n" ) );
     MonsterCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromResource( path ) );
     const ScopedMonsterCatalogService scopedCatalog{ catalog };
