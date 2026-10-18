@@ -1899,7 +1899,7 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
 
         ++prefabCount;
         sw::PrefabAsset prefab;
-        SW_ASSERT_TRUE_MSG( bJSON ? prefab.loadFromJSONFile( path ) : prefab.loadFromXMLFile( path ), path.c_str() );
+        SW_ASSERT_TRUE_MSG( prefab.loadFromDiskFile( path ), path.c_str() );
         sw::GameObjectManager authoring;
         sw::GameObject*       pAuthored = authoring.createGameObject( sw::hashed_string( "RepositoryPrefab" ) );
         SW_ASSERT_TRUE_MSG( prefab.applyStateTo( pAuthored ), path.c_str() );
@@ -1913,7 +1913,7 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
         const sw::string savedPath = test::makeTempPath( tempTag + ( bJSON ? ".prefab.json" : ".prefab.xml" ) );
         SW_ASSERT_TRUE( resaved.saveToFile( savedPath ) );
         sw::PrefabAsset reread;
-        SW_ASSERT_TRUE( bJSON ? reread.loadFromJSONFile( savedPath ) : reread.loadFromXMLFile( savedPath ) );
+        SW_ASSERT_TRUE( reread.loadFromDiskFile( savedPath ) );
         sw::GameObjectManager rebuilt;
         sw::GameObject*       pRebuilt = rebuilt.createGameObject( sw::hashed_string( "RepositoryPrefab" ) );
         SW_ASSERT_TRUE( reread.applyStateTo( pRebuilt ) );

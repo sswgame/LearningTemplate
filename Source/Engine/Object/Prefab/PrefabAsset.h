@@ -70,6 +70,12 @@ namespace sw
         [[nodiscard]] bool loadFromXMLFile( string_view assetRelativePath );
         /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 에 중첩 인스턴스 배열 `_listPrefabInstance` 를 더한 것이며, `saveToJSONFile` 이 쓰는 형태 하나만 받습니다). */
         [[nodiscard]] bool loadFromJSONFile( string_view assetRelativePath );
+        /**
+         * @brief **디스크 파일**에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
+         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
+         *          게임 런타임 코드는 쓰지 않습니다(`CheckRuntimeResourceDiskAccess`).
+         */
+        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). 다른 버전의 쿠킹본은 거절합니다(다시 쿠킹합니다). */
         [[nodiscard]] bool loadFromBinaryFile( string_view assetRelativePath );
         /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). 쿠킹본 형식(펼친 중첩 인스턴스)은 저작 파일로 쓸 수 없어 false 입니다. */
@@ -124,6 +130,18 @@ namespace sw
         bool hasResolvedNestedInstances() const;
 
     private:
+        /** @brief 원본 본문을 어디서 읽는지입니다. 리소스 id(낱개 파일 정책 · 팩) 또는 디스크 파일. */
+        enum class ReadSource : uint8
+        {
+            Resource,
+            DiskFile,
+        };
+
+        /** @brief XML 원본 읽기 입구 둘(`loadFromXMLFile` · `loadFromDiskFile`)의 본문입니다. */
+        [[nodiscard]] bool loadFromXMLSource( string_view path, ReadSource source );
+        /** @brief JSON 원본 읽기 입구 둘(`loadFromJSONFile` · `loadFromDiskFile`)의 본문입니다. */
+        [[nodiscard]] bool loadFromJSONSource( string_view path, ReadSource source );
+
         /**
          * @brief 상태를 다른 형식의 텍스트로 옮깁니다(XML ↔ JSON). 매니저가 있는 임시 오브젝트를 거칩니다.
          * @details 매니저 없는 `GameObject` 를 거치면 컴포넌트를 만들 팩토리가 없어 **컴포넌트를 모두 버린** 본문이 나온다.
