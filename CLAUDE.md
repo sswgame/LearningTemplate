@@ -4,6 +4,7 @@ Claude Code 안내. 이 저장소의 에이전트 규칙.
 
 ## 시작 전 필수 읽기
 - **남은 일**: [docs/plans/NEXT.md](docs/plans/NEXT.md)(지금 상태) → [docs/plans/Roadmap.md](docs/plans/Roadmap.md)(순서) → 내 일의 계획 문서(`py -3 -m Scripts plans`로 목록, `--file <이름>`으로 한 문서, `--find <옛번호>`로 옛 번호 풀기). 백로그는 없다. 착수한 일은 계획 문서, 착수 전 후보는 `docs/plans/Candidates-<영역>.md`의 절이다. 일의 식별자는 번호가 아니라 이름이다. 끝나면 **직접** 그 계획 문서의 단위와 `진행`을 고치고 후보는 계획 문서로 옮기며, 교훈은 해당 코드의 헤더 주석 / Decisions / Verification으로 옮긴다([작업 방식](docs/11_Workflow.md) 6절). 최상단 README의 진행 표는 생성물이라 고치지 않는다.
+- **큰 문서는 절만 읽는다**: `py -3 -m Scripts doc <파일>`(목차) → `--section <제목 일부 또는 5-4 같은 번호>`. 훅이 30KB 넘는 `.md` 의 통째 읽기를 거절한다.
 - **작업 방식**: [docs/11_Workflow.md](docs/11_Workflow.md) — 워크트리, 동시 빌드 제한(최대 2), 검증 단계, push 규칙, 커밋 형식.
 - **코딩 규칙**: [AGENTS.md](AGENTS.md)는 공통 규칙과 목차(5KB)다. 일에 맞는 파일만 `docs/agents/`에서 읽는다: 이름은 `NamingCpp`(C++) · `NamingScripts`(CMake · Python · HLSL), 새 파일 · include는 `Includes`, 상수는 `Constants`, 도우미는 `Helpers`, 스타일은 `CppStyle`, 스크립트 편집은 `EditingTraps`. (`docs/04_CodingGuidelines.md`는 예시만)
 - **스크립트로 파일을 고칠 때**: heredoc 금지 — [EditingTraps](docs/agents/EditingTraps.md) 첫 항목.

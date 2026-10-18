@@ -58,6 +58,7 @@ Scripts/
   │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
   │     ├── EditorIconFont.py         # 에디터 아이콘 99 개의 그리기 함수 + 표준 라이브러리만으로 TrueType 폰트 · C++ 헤더 쓰기
+  │     ├── MarkdownSections.py       # 마크다운을 제목 절로 가르는 유일한 구현 — plans --section · doc 이 쓴다
   │     ├── Plans.py                  # 계획 문서(docs/plans)의 머리 줄 · 후보 절 읽기 — 목록 명령(dev/ListPlans.py)이 쓴다
   │     ├── StatusBoard.py            # 진행 상황 표 만들기 · 표지 사이 바꾸기 — 명령(dev/RunStatusBoard.py)과 게이트(CheckStatusBoard)가 같이 쓴다
   │     ├── ReflectionAnnotationKeys.py # 편집기용 리플렉션 어노테이션 키 헤더 내용(AnnotationMeta.txt · 단위 표에서) — 생성기와 게이트가 같이 쓴다
@@ -230,6 +231,7 @@ Scripts/
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListPlans.py              # 계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(`py -3 -m Scripts plans`, --file 은 머리 줄과 절 제목, --find 는 옛 번호 · 이름의 위치, --check 는 로드맵 링크, --section 은 --file 문서의 한 절 본문)
   │     ├── RunEditFile.py            # 파일의 한 곳을 정확히 한 번 바꾼다(`py -3 -m Scripts edit-file`, 줄 끝 · BOM 보존, NUL 거부, --changes 로 여러 곳을 원자적으로)
+  │     ├── RunDoc.py                 # 큰 마크다운 문서의 목차(제목 · 행 번호 · 절 크기)나 한 절만 보인다(`py -3 -m Scripts doc`)
   │     ├── RunAgentLog.py            # docs/12_Agents.md '토큰 측정값' 표에 한 줄을 더한다(`py -3 -m Scripts agent-log`)
   │     ├── RunStatusBoard.py         # README 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 후보 문서에서 만든다(`py -3 -m Scripts status-board`, --write · --check)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
