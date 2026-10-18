@@ -42,9 +42,10 @@ namespace sw::editor
     {
         if ( handle.isValid() == false )
             return InspectorHandleState::Empty;
-        // 타입 없는 판은 삭제 예정이면 nullptr 이다. 타입 핸들 판은 타입이 틀리면 단언하므로 쓰지 않는다.
+        // 타입 핸들 판은 타입이 틀리면 단언하므로 쓰지 않는다. 타입 없는 판은 삭제 대기 컴포넌트도 돌려주므로(`GameObjectStore::resolveComponent` 가
+        // 삭제 대기를 포함해 찾는다) 표시를 따로 본다. 순회(`collectChoices`)가 건너뛰는 대상과 같은 기준이다.
         const Component* pComp = manager.resolveComponent( handle );
-        if ( pComp == nullptr )
+        if ( pComp == nullptr || pComp->isPendingDestroy() )
             return InspectorHandleState::Missing;
         const TypeInfo* pType = pComp->findCachedTypeInfo();
         if ( pType == nullptr || pType->isDerivedFrom( &targetType ) == false )
