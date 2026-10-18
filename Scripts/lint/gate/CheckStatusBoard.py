@@ -4,9 +4,9 @@
 Scripts/lint/gate/CheckStatusBoard.py
 
 최상단 README.md 의 '지금 진행 상황' 표(`<!-- status-board:start -->` ~ `<!-- status-board:end -->` 사이)가 계획 문서 머리 줄 ·
-로드맵 · 백로그에서 만든 결과와 같은지 검사합니다. 표는 `py -3 -m Scripts status-board --write README.md` 로 채웁니다.
+로드맵 · 후보 문서에서 만든 결과와 같은지 검사합니다. 표는 `py -3 -m Scripts status-board --write README.md` 로 채웁니다.
 
-게이트를 두는 이유: 생성물은 원본(머리 줄 · 로드맵 · 백로그)이 바뀐 뒤 다시 만들지 않으면 낡는데, 이것을 형식으로 막을 방법이 없다.
+게이트를 두는 이유: 생성물은 원본(머리 줄 · 로드맵 · 후보 문서)이 바뀐 뒤 다시 만들지 않으면 낡는데, 이것을 형식으로 막을 방법이 없다.
 계획 문서 머리 줄이 틀리거나 로드맵이 가리키는 문서가 없을 때도 같은 오류로 멈춘다(건너뛰지 않는다).
 """
 
@@ -23,15 +23,15 @@ from common.Plans import PlanFormatError  # noqa: E402
 from common.StatusBoard import StatusBoardError, buildBoard, diffBoard, kReadmeName  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-_kPlanHeader = "# 계획\n\n> 상태: 구현중 · 선행: 없음 · 영역: engine · 백로그: 없음 · 진행: 1/2\n"
+_kPlanHeader = "# 계획\n\n> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 1/2\n"
 _kRoadmap = "# 로드맵\n\n## 지금 순서\n\n1. [계획](A.md) 먼저.\n"
 _kStaleReadme = "# R\n\n<!-- status-board:start -->\n| 낡은 표 |\n<!-- status-board:end -->\n"
 
 
 class CheckStatusBoardGate(LintGate):
-    """README.md 의 진행 상황 표가 계획 문서 머리 줄 · 로드맵 · 백로그에서 만든 결과와 같은지."""
+    """README.md 의 진행 상황 표가 계획 문서 머리 줄 · 로드맵 · 후보 문서에서 만든 결과와 같은지."""
 
-    description = "README.md 의 '지금 진행 상황' 표가 계획 문서 · 로드맵 · 백로그에서 만든 결과와 같은지 검사"
+    description = "README.md 의 '지금 진행 상황' 표가 계획 문서 · 로드맵 · 후보 문서에서 만든 결과와 같은지 검사"
     buildComment = "Checking README status board is up to date..."
     timeoutSeconds = 30
     preCommitPattern = ("README.md", "docs/plans/*", "docs/backlog/*")
