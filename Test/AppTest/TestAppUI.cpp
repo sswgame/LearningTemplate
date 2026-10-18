@@ -273,20 +273,14 @@ SW_TEST_CASE( AppUITest, DemoScreenMatchesAcrossBackends )
     #undef SW_APP_UI_BACKEND_SWITCH
 #endif
     sw::vector<AppUICapture> listCapture;
+    bool                     bAnyRan = false;
     for ( const utf8* pSwitch : kArrBackendSwitch )
     {
-        sw::string       scenarioLines;
-        const int32      exitCode = test::AppTestUtil::runScenario( Internal::kScenarioPath, pSwitch, scenarioLines );
-        const sw::string label    = sw::string( Internal::kScenarioPath ) + " " + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
-        SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
-        if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
-        {
-            SW_LOG_INFO( "[AppUITest] skipped %#", label.c_str() );
-            continue;
-        }
-        SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
-        if ( exitCode != 0 )
-            continue;
+        sw::string                scenarioLines;
+        const test::AppRunOutcome outcome = test::AppTestUtil::runScenario( Internal::kScenarioPath, pSwitch, scenarioLines );
+        bAnyRan                           = bAnyRan || test::hasRunHere( outcome );
+        if ( outcome != test::AppRunOutcome::Passed )
+            continue; // 실패는 runScenario 가 기록했다
         AppUICapture capture{};
         capture._backend            = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
         const sw::string imagePath  = sw::FileUtil::joinPath( Internal::kOutputFolder, "uidemo.ppm" );
@@ -307,7 +301,7 @@ SW_TEST_CASE( AppUITest, DemoScreenMatchesAcrossBackends )
         Internal::expectKnownRegions( capture );
         listCapture.push_back( std::move( capture ) );
     }
-    if ( listCapture.empty() )
+    if ( bAnyRan == false )
         SW_TEST_SKIP( "no backend could run the UI demo scenario on this machine" );
     for ( size_t index = 1; index < listCapture.size(); ++index )
     {
