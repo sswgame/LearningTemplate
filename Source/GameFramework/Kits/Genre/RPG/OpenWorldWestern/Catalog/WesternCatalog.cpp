@@ -17,15 +17,62 @@ namespace sw
     {
         struct WesternCatalogInternal
         {
-            static uint8 readFlag( const XMLNode& node, const utf8* pAttribute, bool bFallback )
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
             {
-                return node.getAttributeBool( pAttribute, bFallback ) ? SW_TRUE : SW_FALSE;
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+                return true;
             }
 
-            static uint8 parseSizeMask( string_view text )
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
             {
-                uint8 mask = 0;
-                StringUtil::forEachToken( text, ",; ", [&]( string_view token )
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outList.push_back( def );
+                return true;
+            }
+
+            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
+            template <typename TDef>
+            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outSetting = def;
+                return true;
+            }
+
+            /** @brief `<PeltGrade scales="0,0.3,0.6,1">` — 0..3 성 네 값이 모두 있어야 합니다. 모자라면 오류이고 표를 바꾸지 않습니다. */
+            [[nodiscard]] static bool readGradeScales( const XMLNode& node, string_view sourceName, vector<float32>& outListScale )
+            {
+                float32      arrScale[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                const uint32 count       = GameDataXML::parseFloats( node.getAttributeText( "scales" ), arrScale, 4 );
+                if ( count != 4 )
+                {
+                    SW_LOG_ERROR( "%#: <PeltGrade scales> needs four values (0..3 stars), got %#", sourceName, count );
+                    return false;
+                }
+                outListScale.assign( arrScale, arrScale + 4 );
+                return true;
+            }
+
+            /** @brief `sizes="Small,Medium"` 를 크기 비트로 읽습니다. 적지 않으면 모든 크기(스키마 초기값)이고, 모르는 이름은 오류입니다. */
+            [[nodiscard]] static bool readSizeMask( const XMLNode& node, string_view sourceName, uint8& inoutMask )
+            {
+                const string_view sizes = node.getAttributeText( "sizes" );
+                if ( sizes.empty() )
+                    return true;
+                uint8 mask   = 0;
+                bool  bValid = true;
+                StringUtil::forEachToken( sizes, ",; ", [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, string_view( "Small" ), true ) )
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Small );
@@ -33,24 +80,18 @@ namespace sw
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Medium );
                     else if ( StringUtil::equals( token, string_view( "Large" ), true ) )
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Large );
+                    else
+                    {
+                        SW_LOG_ERROR( "%#: <HuntWeapon sizes> has an unknown size '%#' (Small, Medium, Large)", sourceName, token );
+                        bValid = false;
+                    }
                 } );
-                return mask;
-            }
-
-            static WesternAnimalSize parseSize( string_view text )
-            {
-                if ( StringUtil::equals( text, string_view( "Small" ), true ) )
-                    return WesternAnimalSize::Small;
-                if ( StringUtil::equals( text, string_view( "Large" ), true ) )
-                    return WesternAnimalSize::Large;
-                return WesternAnimalSize::Medium;
+                inoutMask = mask;
+                return bValid;
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
     SW_LOG_CALLER( "WesternCatalog" );
 
     WesternCatalog::WesternCatalog()
@@ -118,192 +159,74 @@ namespace sw
         return _listGradeScale[index];
     }
 
+    bool WesternCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        using Internal = WesternCatalogInternal;
+        const auto is  = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        bool bAdd = false;
+        if ( is( "Pursuit" ) )
+            bAdd = Internal::readInto( node, sourceName, _listPursuit );
+        else if ( is( "Honor" ) )
+            bAdd = loadHonor( node, sourceName );
+        else if ( is( "Bond" ) )
+        {
+            WesternBondLevelDef bond;
+            bAdd = GameDataXML::readFields( node, bond, sourceName, { "unlocks" } );
+            StringUtil::forEachToken( node.getAttributeText( "unlocks" ), ",; ", [&bond]( string_view token )
+            { bond._listUnlock.push_back( hashed_string( token ) ); } );
+            if ( bAdd )
+                _listBondLevel.push_back( bond );
+        }
+        else if ( is( "BondExperience" ) )
+            bAdd = Internal::readSetting( node, sourceName, _bondExperience );
+        else if ( is( "Survival" ) )
+            bAdd = Internal::readSetting( node, sourceName, _survival );
+        else if ( is( "DeadEye" ) )
+            bAdd = Internal::readInto( node, sourceName, _listDeadEyeLevel );
+        else if ( is( "PeltGrade" ) )
+            bAdd = Internal::readGradeScales( node, sourceName, _listGradeScale );
+        else if ( is( "Crime" ) )
+            bAdd = Internal::readInto( node, sourceName, _crimeCatalog );
+        else if ( is( "Region" ) )
+            bAdd = Internal::readInto( node, sourceName, _regionCatalog );
+        else if ( is( "Horse" ) )
+            bAdd = Internal::readInto( node, sourceName, _horseCatalog );
+        else if ( is( "Food" ) )
+            bAdd = Internal::readInto( node, sourceName, _foodCatalog );
+        else if ( is( "Clothing" ) )
+            bAdd = Internal::readInto( node, sourceName, _clothingCatalog );
+        else if ( is( "Animal" ) )
+            bAdd = Internal::readInto( node, sourceName, _animalCatalog );
+        else if ( is( "HitZone" ) )
+            bAdd = Internal::readInto( node, sourceName, _hitZoneCatalog );
+        else if ( is( "HuntWeapon" ) )
+        {
+            WesternHuntWeaponDef weapon;
+            bAdd = GameDataXML::readFields( node, weapon, sourceName, { "sizes" } ) && Internal::readSizeMask( node, sourceName, weapon._sizeMask );
+            if ( bAdd )
+                (void)_huntWeaponCatalog.add( weapon );
+        }
+        else
+            SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return bAdd;
+    }
+
     uint32 WesternCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const hashed_string currency = GameDataXML::readName( root, "currency" );
-        if ( currency.empty() == false )
-            _currency = currency;
-        _extraHitPenalty   = MathUtil::max( 0, root.getAttributeInt( "extraHitPenalty", _extraHitPenalty ) );
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        WesternCatalogRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+        {
+            _currency        = rootDef._currency;
+            _extraHitPenalty = rootDef._extraHitPenalty;
+        }
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( StringUtil::equals( name, string_view( "Pursuit" ), true ) )
-            {
-                WesternPursuitDef pursuit;
-                pursuit._name          = GameDataXML::readName( node, "name" );
-                pursuit._level         = MathUtil::max( 1, node.getAttributeInt( "level", pursuit._level ) );
-                pursuit._lawmen        = MathUtil::max( 0, node.getAttributeInt( "lawmen", pursuit._lawmen ) );
-                pursuit._bShootOnSight = WesternCatalogInternal::readFlag( node, "shootOnSight", false );
-                pursuit._bBountyHunter = WesternCatalogInternal::readFlag( node, "bountyHunter", false );
-                _listPursuit.push_back( pursuit );
+            if ( loadElement( node, name, sourceName ) )
                 ++loadedCount;
-                continue;
-            }
-            if ( StringUtil::equals( name, string_view( "Honor" ), true ) )
-            {
-                loadHonor( node );
-                ++loadedCount;
-                continue;
-            }
-            if ( StringUtil::equals( name, string_view( "Bond" ), true ) )
-            {
-                WesternBondLevelDef bond;
-                bond._level        = MathUtil::max( 1, node.getAttributeInt( "level", bond._level ) );
-                bond._experience   = MathUtil::max( 0.0f, node.getAttributeFloat( "xp", bond._experience ) );
-                bond._staminaBonus = node.getAttributeFloat( "stamina", 0.0f );
-                bond._healthBonus  = node.getAttributeFloat( "health", 0.0f );
-                bond._fearResist   = node.getAttributeFloat( "fearResist", 0.0f );
-                StringUtil::forEachToken( node.getAttributeText( "unlocks" ), ",; ", [&]( string_view token )
-                { bond._listUnlock.push_back( hashed_string( token ) ); } );
-                _listBondLevel.push_back( bond );
-                ++loadedCount;
-                continue;
-            }
-            if ( StringUtil::equals( name, string_view( "BondExperience" ), true ) )
-            {
-                _bondExperience._ridePerSecond      = MathUtil::max( 0.0f, node.getAttributeFloat( "ride", _bondExperience._ridePerSecond ) );
-                _bondExperience._brush              = MathUtil::max( 0.0f, node.getAttributeFloat( "brush", _bondExperience._brush ) );
-                _bondExperience._feed               = MathUtil::max( 0.0f, node.getAttributeFloat( "feed", _bondExperience._feed ) );
-                _bondExperience._calm               = MathUtil::max( 0.0f, node.getAttributeFloat( "calm", _bondExperience._calm ) );
-                _bondExperience._brushCooldownHours = MathUtil::max( 0.0f, node.getAttributeFloat( "brushCooldown", _bondExperience._brushCooldownHours ) );
-                continue;
-            }
-            if ( StringUtil::equals( name, string_view( "Survival" ), true ) )
-            {
-                WesternSurvivalDef& survival = _survival;
-                survival._comfortMin         = node.getAttributeFloat( "comfortMin", survival._comfortMin );
-                survival._comfortMax         = MathUtil::max( survival._comfortMin, node.getAttributeFloat( "comfortMax", survival._comfortMax ) );
-                survival._coreDrainPerHour   = MathUtil::max( 0.0f, node.getAttributeFloat( "coreDrain", survival._coreDrainPerHour ) );
-                survival._temperatureDrain   = MathUtil::max( 0.0f, node.getAttributeFloat( "temperatureDrain", survival._temperatureDrain ) );
-                survival._minRegenScale      = MathUtil::saturate( node.getAttributeFloat( "minRegenScale", survival._minRegenScale ) );
-                survival._health             = MathUtil::max( 1.0f, node.getAttributeFloat( "health", survival._health ) );
-                survival._stamina            = MathUtil::max( 1.0f, node.getAttributeFloat( "stamina", survival._stamina ) );
-                survival._deadEye            = MathUtil::max( 1.0f, node.getAttributeFloat( "deadEye", survival._deadEye ) );
-                survival._healthRegen        = MathUtil::max( 0.0f, node.getAttributeFloat( "healthRegen", survival._healthRegen ) );
-                survival._staminaRegen       = MathUtil::max( 0.0f, node.getAttributeFloat( "staminaRegen", survival._staminaRegen ) );
-                survival._deadEyeRegen       = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeRegen", survival._deadEyeRegen ) );
-                survival._deadEyeDrain       = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeDrain", survival._deadEyeDrain ) );
-                survival._deadEyeMinimum     = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeMinimum", survival._deadEyeMinimum ) );
-                continue;
-            }
-            if ( StringUtil::equals( name, string_view( "DeadEye" ), true ) )
-            {
-                WesternDeadEyeLevelDef deadEye;
-                deadEye._level     = MathUtil::max( 1, node.getAttributeInt( "level", deadEye._level ) );
-                deadEye._timeScale = MathUtil::clamp( node.getAttributeFloat( "timeScale", deadEye._timeScale ), 0.01f, 1.0f );
-                deadEye._markCount = MathUtil::max( 0, node.getAttributeInt( "marks", deadEye._markCount ) );
-                _listDeadEyeLevel.push_back( deadEye );
-                ++loadedCount;
-                continue;
-            }
-            if ( StringUtil::equals( name, string_view( "PeltGrade" ), true ) )
-            {
-                float32      arrScale[4] = { 0.0f, 0.3f, 0.6f, 1.0f };
-                const uint32 count       = GameDataXML::parseFloats( node.getAttributeText( "scales" ), arrScale, 4 );
-                if ( count < 4 )
-                    SW_LOG_WARNING( "%#: <PeltGrade> needs four scales (0..3 stars) - missing ones keep the default", sourceName );
-                _listGradeScale.assign( arrScale, arrScale + 4 );
-                continue;
-            }
-
-            const bool bKnown = StringUtil::equals( name, string_view( "Crime" ), true ) || StringUtil::equals( name, string_view( "Region" ), true ) ||
-                                StringUtil::equals( name, string_view( "Horse" ), true ) || StringUtil::equals( name, string_view( "Food" ), true ) ||
-                                StringUtil::equals( name, string_view( "Clothing" ), true ) || StringUtil::equals( name, string_view( "Animal" ), true ) ||
-                                StringUtil::equals( name, string_view( "HuntWeapon" ), true ) || StringUtil::equals( name, string_view( "HitZone" ), true );
-            if ( bKnown == false )
-            {
-                SW_LOG_WARNING( "%#: unknown element <%#> - skipped", sourceName, name );
-                continue;
-            }
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            const hashed_string id( pID );
-            ++loadedCount;
-            if ( StringUtil::equals( name, string_view( "Crime" ), true ) )
-            {
-                WesternCrimeDef crime;
-                crime._id         = id;
-                crime._reportTime = MathUtil::max( 0.0f, node.getAttributeFloat( "reportTime", crime._reportTime ) );
-                crime._bounty     = MathUtil::max( 0, node.getAttributeInt( "bounty", crime._bounty ) );
-                crime._wanted     = MathUtil::max( 0, node.getAttributeInt( "wanted", crime._wanted ) );
-                crime._honor      = node.getAttributeInt( "honor", crime._honor );
-                (void)_crimeCatalog.add( crime );
-            }
-            else if ( StringUtil::equals( name, string_view( "Region" ), true ) )
-            {
-                WesternRegionDef region;
-                region._id                = id;
-                region._wantedCooldown    = MathUtil::max( 0.1f, node.getAttributeFloat( "wantedCooldown", region._wantedCooldown ) );
-                region._disguiseScale     = MathUtil::max( 1.0f, node.getAttributeFloat( "disguiseScale", region._disguiseScale ) );
-                region._maskedBountyScale = MathUtil::max( 0.0f, node.getAttributeFloat( "maskedBountyScale", region._maskedBountyScale ) );
-                region._bountyDecayPerDay = MathUtil::max( 0, node.getAttributeInt( "bountyDecayPerDay", region._bountyDecayPerDay ) );
-                region._maxWanted         = MathUtil::max( 1, node.getAttributeInt( "maxWanted", region._maxWanted ) );
-                (void)_regionCatalog.add( region );
-            }
-            else if ( StringUtil::equals( name, string_view( "Horse" ), true ) )
-            {
-                WesternHorseDef horse;
-                horse._id                     = id;
-                horse._health                 = MathUtil::max( 1.0f, node.getAttributeFloat( "health", horse._health ) );
-                horse._stamina                = MathUtil::max( 1.0f, node.getAttributeFloat( "stamina", horse._stamina ) );
-                horse._speed                  = MathUtil::max( 0.0f, node.getAttributeFloat( "speed", horse._speed ) );
-                horse._courage                = MathUtil::saturate( node.getAttributeFloat( "courage", horse._courage ) );
-                horse._gallopDrain            = MathUtil::max( 0.0f, node.getAttributeFloat( "gallopDrain", horse._gallopDrain ) );
-                horse._coreDrainPerHour       = MathUtil::max( 0.0f, node.getAttributeFloat( "coreDrain", horse._coreDrainPerHour ) );
-                horse._gallopCoreDrainPerHour = MathUtil::max( 0.0f, node.getAttributeFloat( "gallopCoreDrain", horse._gallopCoreDrainPerHour ) );
-                horse._fearDecayPerSecond     = MathUtil::max( 0.0f, node.getAttributeFloat( "fearDecay", horse._fearDecayPerSecond ) );
-                horse._buckChanceScale        = MathUtil::saturate( node.getAttributeFloat( "buckChance", horse._buckChanceScale ) );
-                (void)_horseCatalog.add( horse );
-            }
-            else if ( StringUtil::equals( name, string_view( "Food" ), true ) )
-            {
-                WesternFoodDef food;
-                food._id          = id;
-                food._healthCore  = node.getAttributeFloat( "healthCore", 0.0f );
-                food._staminaCore = node.getAttributeFloat( "staminaCore", 0.0f );
-                food._deadEyeCore = node.getAttributeFloat( "deadEyeCore", 0.0f );
-                food._health      = node.getAttributeFloat( "health", 0.0f );
-                food._stamina     = node.getAttributeFloat( "stamina", 0.0f );
-                food._bond        = MathUtil::max( 0.0f, node.getAttributeFloat( "bond", 0.0f ) );
-                (void)_foodCatalog.add( food );
-            }
-            else if ( StringUtil::equals( name, string_view( "Clothing" ), true ) )
-            {
-                WesternClothingDef clothing;
-                clothing._id     = id;
-                clothing._warmth = node.getAttributeFloat( "warmth", 0.0f );
-                (void)_clothingCatalog.add( clothing );
-            }
-            else if ( StringUtil::equals( name, string_view( "Animal" ), true ) )
-            {
-                WesternAnimalDef animal;
-                animal._id           = id;
-                animal._lootTable    = GameDataXML::readName( node, "loot" );
-                animal._size         = WesternCatalogInternal::parseSize( node.getAttributeText( "size" ) );
-                animal._quality      = MathUtil::clamp( node.getAttributeInt( "quality", animal._quality ), 1, 3 );
-                animal._peltPrice    = MathUtil::max( 0.0f, node.getAttributeFloat( "pelt", animal._peltPrice ) );
-                animal._carcassPrice = MathUtil::max( 0.0f, node.getAttributeFloat( "carcass", animal._carcassPrice ) );
-                animal._decayHours   = MathUtil::max( 0.1f, node.getAttributeFloat( "decayHours", animal._decayHours ) );
-                (void)_animalCatalog.add( animal );
-            }
-            else if ( StringUtil::equals( name, string_view( "HuntWeapon" ), true ) )
-            {
-                WesternHuntWeaponDef weapon;
-                weapon._id              = id;
-                const string_view sizes = node.getAttributeText( "sizes" );
-                weapon._sizeMask        = sizes.empty() ? static_cast<uint8>( 0x7 ) : WesternCatalogInternal::parseSizeMask( sizes );
-                weapon._bRuinsPelt      = WesternCatalogInternal::readFlag( node, "ruinsPelt", false );
-                (void)_huntWeaponCatalog.add( weapon );
-            }
-            else
-            {
-                WesternHitZoneDef zone;
-                zone._id      = id;
-                zone._penalty = MathUtil::max( 0, node.getAttributeInt( "penalty", zone._penalty ) );
-                (void)_hitZoneCatalog.add( zone );
-            }
         }
 
         const auto byPursuitLevel = []( const WesternPursuitDef& lhs, const WesternPursuitDef& rhs )
@@ -326,39 +249,46 @@ namespace sw
         return loadedCount;
     }
 
-    void WesternCatalog::loadHonor( const XMLNode& node )
+    bool WesternCatalog::loadHonor( const XMLNode& node, string_view sourceName )
     {
-        FactionDef faction;
+        WesternHonorRangeDef range;
+        bool                 bValid = GameDataXML::readFields( node, range, sourceName );
+        FactionDef           faction;
         faction._id         = hashed_string( kHonorFactionID );
         faction._name       = "Honor";
-        faction._minValue   = node.getAttributeInt( "min", faction._minValue );
-        faction._maxValue   = MathUtil::max( faction._minValue, node.getAttributeInt( "max", faction._maxValue ) );
-        faction._startValue = MathUtil::clamp( node.getAttributeInt( "start", 0 ), faction._minValue, faction._maxValue );
+        faction._minValue   = range._min;
+        faction._maxValue   = range._max;
+        faction._startValue = range._start;
         _listHonorTier.clear();
         for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
         {
+            // 한 원소가 두 스키마(경계와 효과)로 읽힌다 — 서로의 칸은 손으로 읽는 칸으로 넘긴다.
+            WesternHonorTierBoundDef bound;
+            WesternHonorTierDef      effect;
+            const bool               bBound  = GameDataXML::readFields( child, bound, sourceName, { "name", "flag", "discount" } );
+            const bool               bEffect = GameDataXML::readFields( child, effect, sourceName, { "min" } );
+            if ( bBound == false || bEffect == false )
+            {
+                bValid = false;
+                continue;
+            }
             ReputationTier tier;
-            tier._name     = GameDataXML::readName( child, "name" );
-            tier._minValue = child.getAttributeInt( "min", faction._minValue );
+            tier._name     = effect._name;
+            tier._minValue = bound._min;
             faction._listTier.push_back( tier );
-            WesternHonorTierDef effect;
-            effect._name         = tier._name;
-            effect._dialogueFlag = GameDataXML::readName( child, "flag" );
-            effect._shopDiscount = MathUtil::clamp( child.getAttributeFloat( "discount", 0.0f ), -1.0f, 1.0f );
             _listHonorTier.push_back( effect );
         }
         std::stable_sort( faction._listTier.begin(), faction._listTier.end(), []( const ReputationTier& lhs, const ReputationTier& rhs )
         { return lhs._minValue < rhs._minValue; } );
         for ( XMLNode child = node.findChild( "Action" ); child; child = child.findNextSibling( "Action" ) )
         {
-            const utf8* pID = child.findAttribute( "id" );
-            if ( pID == nullptr || pID[0] == '\0' )
-                continue;
             WesternHonorActionDef action;
-            action._id    = hashed_string( pID );
-            action._delta = child.getAttributeInt( "delta", 0 );
-            (void)_honorActionCatalog.add( action );
+            if ( GameDataXML::readFields( child, action, sourceName ) )
+                (void)_honorActionCatalog.add( action );
+            else
+                bValid = false;
         }
         _honorReputation.add( faction );
+        return bValid;
     }
 } // namespace sw
