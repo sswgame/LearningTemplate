@@ -4,11 +4,14 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import re
 import sys
 import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
@@ -16,7 +19,8 @@ sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
 from LintCatalog import LintScript, discoverLintScripts, discoverLintTargets  # noqa: E402
 from LintGate import LintGate  # noqa: E402
-from PreCommitLint import StagedContentProbe, selectGatesForStaged  # noqa: E402
+import PreCommitLint  # noqa: E402
+from PreCommitLint import GateOutcome, StagedContentProbe, formatGateSummary, selectGatesForStaged  # noqa: E402
 
 
 def makeScript(name: str, **mapAttribute: object) -> LintScript:
@@ -151,6 +155,58 @@ class PreCommitLintContentRuleTest(unittest.TestCase):
         listScript = [script for script in discoverLintScripts("gate") if script.name == "CheckConfigReference"]
         listStaged = [kRepositoryRoot / "Source/Core/A.cpp"]
         self.assertEqual(selectGatesForStaged(kRepositoryRoot, listStaged, listStaged, listScript)[0].skipReason, "")
+
+
+class PreCommitLintSummaryTest(unittest.TestCase):
+    """기본 출력은 통과 · 건너뜀을 한 줄로 접고, 실패한 게이트의 상세만 그대로 보인다."""
+
+    @staticmethod
+    def makeGate(name: str, returnCode: int, text: str) -> LintScript:
+        def run(cls, argv: list[str] | None = None) -> int:
+            print(text)
+            return returnCode
+        # 파일 인자를 받는 게이트는 하위 프로세스가 아니라 이 프로세스에서 돈다(그래야 가짜 `run` 이 불린다).
+        return makeScript(name, run=classmethod(run), preCommitFileArgument="--files")
+
+    def runHook(self, listScript: list[LintScript], bVerbose: bool) -> tuple[bool, str]:
+        listPlan = [PreCommitLint.GateRunPlan(script) for script in listScript]
+        buffer = io.StringIO()
+        with mock.patch.object(PreCommitLint, "discoverLintScripts", return_value=listScript), \
+                mock.patch.object(PreCommitLint, "selectGatesForStaged", return_value=listPlan), \
+                mock.patch.object(PreCommitLint, "StagedContentProbe", return_value=None), \
+                contextlib.redirect_stdout(buffer):
+            bFailed = PreCommitLint.runGatesInternal(kRepositoryRoot, [], [], bVerbose)
+        return bFailed, buffer.getvalue()
+
+    def testSummaryLineCountsEachStatus(self) -> None:
+        line = formatGateSummary([GateOutcome("A", PreCommitLint.kGatePassed, 0.5), GateOutcome("B", PreCommitLint.kGateSkipped),
+                                  GateOutcome("C", PreCommitLint.kGatePassed, 1.25), GateOutcome("D", PreCommitLint.kGateFailed, 0.1)])
+        self.assertEqual(line, "[PreCommitLint] 게이트 4개: 통과 2 · 건너뜀 1 · 실패 1 (가장 긴 것 C 1.25 s)")
+
+    def testSummaryWithOnlySkippedGatesHasNoSlowest(self) -> None:
+        self.assertEqual(formatGateSummary([GateOutcome("B", PreCommitLint.kGateSkipped)]),
+                         "[PreCommitLint] 게이트 1개: 통과 0 · 건너뜀 1 · 실패 0")
+
+    def testPassingGatesPrintOnlyTheSummary(self) -> None:
+        bFailed, output = self.runHook([self.makeGate("PassA", 0, "[PassA] OK (많은 줄)"), self.makeGate("PassB", 0, "[PassB] OK")], False)
+        self.assertFalse(bFailed)
+        self.assertNotIn("PassA", output.replace("가장 긴 것 PassA", "").replace("가장 긴 것 PassB", ""))
+        self.assertEqual(len(output.strip().splitlines()), 1)
+
+    def testFailingGateKeepsItsHeaderAndDetail(self) -> None:
+        bFailed, output = self.runHook([self.makeGate("PassA", 0, "[PassA] OK"), self.makeGate("BadGate", 1, "  - Source/A.cpp:3 위반 상세")], False)
+        self.assertTrue(bFailed)
+        self.assertIn("[2/2] BadGate ... 실패", output)
+        self.assertIn("  - Source/A.cpp:3 위반 상세", output)
+        self.assertIn("실패 1", output)
+        self.assertNotIn("[PassA] OK", output)
+
+    def testVerboseShowsEveryGateLine(self) -> None:
+        # 이 프로세스에서 도는 게이트의 출력은 verbose 에서 붙잡히지 않고 그대로 흐른다 — 여기서는 redirect 한 버퍼로 들어온다.
+        bFailed, output = self.runHook([self.makeGate("PassA", 0, "[PassA] OK (많은 줄)")], True)
+        self.assertFalse(bFailed)
+        self.assertIn("[1/1] PassA ...", output)
+        self.assertIn("[PassA] OK (많은 줄)", output)
 
 
 if __name__ == "__main__":

@@ -21,12 +21,18 @@ C++ 파일이 staged 됐을 때만 돌리면 **`.cmake` 나 `.py` 만 커밋할 
 **트리 전체 게이트는 하위 프로세스로 먼저 띄운다**(`runGatesInternal`). staged 파일 수와 상관없이 저장소를 훑는 게이트가 차례로 돌면
 C++ 파일 하나짜리 커밋도 그 합만큼 걸린다. 파일 단위 게이트는 이 프로세스에서 차례로 돈다(기동이 게이트보다 비싸다).
 찍히는 순서는 게이트 순서 그대로다.
+
+**통과한 것은 찍지 않는다.** 에이전트와 세션이 훅 출력을 매번 입력으로 다시 읽는다. 기본 출력은 통과 · 건너뜀 게이트의 줄을 모두 접어 한 줄
+요약(`formatGateSummary`)으로 보이고, 실패한 게이트는 머리말과 상세를 그대로 찍는다. 이 프로세스에서 도는 게이트도 출력을 붙잡아 두었다가
+실패일 때만 찍는다. 전부 보려면 `--verbose`(인자 — 환경 변수 같은 숨은 스위치는 없다). 훅이 부르는 `Scripts lint` 는 요약이 기본이다.
 """
 
 from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import contextlib
+import io
 import os
 import re
 import sys
@@ -226,6 +232,50 @@ def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScop
     return listPlan
 
 
+kGatePassed = "passed"
+kGateSkipped = "skipped"
+kGateFailed = "failed"
+
+
+@dataclass(frozen=True)
+class GateOutcome:
+    """게이트 하나의 결과 — 요약 한 줄(`formatGateSummary`)의 재료."""
+
+    name: str
+    status: str
+    seconds: float = 0.0
+
+
+def formatGateSummary(listOutcome: list[GateOutcome]) -> str:
+    """게이트 결과들 → 한 줄 요약. 통과 · 건너뜀 · 실패 수와 가장 오래 걸린 게이트(건너뛴 것은 뺀다)."""
+    passedCount = sum(1 for outcome in listOutcome if outcome.status == kGatePassed)
+    skippedCount = sum(1 for outcome in listOutcome if outcome.status == kGateSkipped)
+    failedCount = sum(1 for outcome in listOutcome if outcome.status == kGateFailed)
+    listRan = [outcome for outcome in listOutcome if outcome.status != kGateSkipped]
+    slowest = max(listRan, key=lambda outcome: outcome.seconds) if listRan else None
+    tail = f" (가장 긴 것 {slowest.name} {slowest.seconds:.2f} s)" if slowest else ""
+    return f"[PreCommitLint] 게이트 {len(listOutcome)}개: 통과 {passedCount} · 건너뜀 {skippedCount} · 실패 {failedCount}{tail}"
+
+
+def runGateInProcessInternal(plan: GateRunPlan, bVerbose: bool) -> tuple[int, str, float]:
+    """
+    게이트를 이 프로세스에서 돌려 (종료 코드, 붙잡은 출력, 걸린 초). `bVerbose` 면 출력을 붙잡지 않고 그대로 흘린다(출력은 빈 문자열).
+    붙잡는 동안 예외가 나면 그때까지의 출력을 먼저 찍고 예외를 다시 던진다.
+    """
+    start = time.perf_counter()
+    if bVerbose:
+        returnCode = plan.script.gateClass.run(plan.listArgument)
+        return returnCode, "", time.perf_counter() - start
+    buffer = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+            returnCode = plan.script.gateClass.run(plan.listArgument)
+    except BaseException:
+        sys.stdout.write(buffer.getvalue())
+        raise
+    return returnCode, buffer.getvalue(), time.perf_counter() - start
+
+
 def runGateProcessInternal(plan: GateRunPlan, projectRoot: Path) -> tuple[int, str, float]:
     """
     게이트를 하위 프로세스로 돌려 (종료 코드, 출력, 걸린 초)를 돌려준다. 출력은 UTF-8, stderr 를 stdout 에 섞고 버퍼 없이 써서 — 위반 머리말(stderr)과
@@ -237,7 +287,7 @@ def runGateProcessInternal(plan: GateRunPlan, projectRoot: Path) -> tuple[int, s
     return result.returnCode, result.stdout, time.perf_counter() - start
 
 
-def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path]) -> bool:
+def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path], bVerbose: bool = False) -> bool:
     """
     `gate/` 에 있는 게이트를 **전부** 훑어 계획대로 돌립니다 — 목록이 아니라 자리가 규칙이다(`selectGatesForStaged`).
 
@@ -249,8 +299,8 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
     listPlan = selectGatesForStaged(projectRoot, listStaged, listFileScoped, listScript, StagedContentProbe(projectRoot))
     listBackground = [plan for plan in listPlan if plan.bBackground]
     bFailed = False
-    # 게이트마다 걸린 초 — 훅의 바닥(가장 긴 트리 전체 게이트)을 따로 도구 없이 보이게 끝에 찍는다.
-    listTiming: list[tuple[float, str, bool]] = []
+    # 게이트마다의 결과 — 끝에 한 줄 요약으로 접는다(가장 긴 게이트가 훅의 바닥이다).
+    listOutcome: list[GateOutcome] = []
 
     # 하위 프로세스를 기다리는 일이라 스레드로 띄운다(기다리는 동안 GIL 을 놓는다). 코어 수보다 많이 띄우면 경합만 는다.
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(listBackground), getCpuCount()))) as executor:
@@ -258,46 +308,48 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
         for plan in listPlan:
             head = f"[{mapIndex[plan.script.name]}/{len(listScript)}] {plan.script.name}"
             if plan.skipReason:
-                print(f"\n{head} ... 건너뜀 ({plan.skipReason})")
+                listOutcome.append(GateOutcome(plan.script.name, kGateSkipped))
+                if bVerbose:
+                    print(f"\n{head} ... 건너뜀 ({plan.skipReason})")
                 continue
-            print(f"\n{head} ...", flush=True)
             future = mapFuture.get(plan.script.name)
             if future is None:
-                start = time.perf_counter()
-                if plan.script.gateClass.run(plan.listArgument) != 0:
-                    bFailed = True
-                listTiming.append((time.perf_counter() - start, plan.script.name, False))
-                sys.stdout.flush()
-                sys.stderr.flush()
-                continue
-            returnCode, output, seconds = future.result()
-            listTiming.append((seconds, plan.script.name, True))
-            sys.stdout.write(output)
+                if bVerbose:
+                    print(f"\n{head} ...", flush=True)
+                returnCode, output, seconds = runGateInProcessInternal(plan, bVerbose)
+            else:
+                returnCode, output, seconds = future.result()
+            listOutcome.append(GateOutcome(plan.script.name, kGatePassed if returnCode == 0 else kGateFailed, seconds))
+            if bVerbose or returnCode != 0:
+                # 실패한 게이트는 머리말과 상세를 그대로 보인다. 이 프로세스에서 돈 게이트의 verbose 출력은 이미 흘렀다(output 이 비어 있다).
+                if not bVerbose:
+                    print(f"\n{head} ... 실패")
+                sys.stdout.write(output)
             sys.stdout.flush()
+            sys.stderr.flush()
             if returnCode != 0:
                 bFailed = True
-    if listTiming:
-        listTiming.sort(reverse=True)
-        foregroundSeconds = sum(seconds for seconds, _, bBackground in listTiming if not bBackground)
-        slowest = ", ".join(f"{name} {seconds:.2f} s{'(트리 전체)' if bBackground else ''}" for seconds, name, bBackground in listTiming[:3])
-        print(f"\n[PreCommitLint] 게이트 시간: 가장 긴 것 {slowest} · 파일 단위 합 {foregroundSeconds:.2f} s")
+    if listOutcome:
+        print(("\n" if bVerbose else "") + formatGateSummary(listOutcome))
     return bFailed
 
 
-def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bool:
+def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path], bVerbose: bool = False) -> bool:
     """Staged HLSL/HLSLI 파일이 있을 경우 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증 및 바이너리 갱신을 확인합니다."""
     stagedShaders = [f for f in stagedFiles if f.suffix.lower() in (".hlsl", ".hlsli")]
     if not stagedShaders:
-        print("  - Staged 셰이더 없음 (HLSL 검증 생략)")
+        if bVerbose:
+            print("  - Staged 셰이더 없음 (HLSL 검증 생략)")
         return True
 
-    print(f"  - {len(stagedShaders)}개의 Staged 셰이더 소스 발견. 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증 진행...")
-    for s in stagedShaders:
-        try:
-            rel = s.relative_to(projectRoot)
-        except ValueError:
-            rel = s
-        print(f"    * {rel}")
+    if bVerbose:
+        print(f"  - {len(stagedShaders)}개의 Staged 셰이더 소스 발견. 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증 진행...")
+        for s in stagedShaders:
+            try:
+                rel = s.relative_to(projectRoot)
+            except ValueError:
+                rel = s
+            print(f"    * {rel}")
 
     # 후보 목록은 `common.AppBinary` 한 곳이다 — 여기서 따로 들면 프리셋 하나를 빼먹어(예: Ninja-Shipping)
     # 그 프리셋만 빌드해 둔 사람은 이 검증을 통째로 건너뛴다.
@@ -324,7 +376,7 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
         print("  [Error] 하나 이상의 RHI 백엔드에서 셰이더 컴파일 실패가 발생했습니다. HLSL 문법을 수정하세요.")
         return False
 
-    print("  - 모든 RHI 백엔드 컴파일 검증 통과.")
+    print(f"  - 모든 RHI 백엔드 컴파일 검증 통과 (셰이더 {len(stagedShaders)}개)." if not bVerbose else "  - 모든 RHI 백엔드 컴파일 검증 통과.")
 
     gitCmd = runGit(["status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
     if gitCmd.returnCode == 0 and gitCmd.stdout.strip():
@@ -338,7 +390,10 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
 
 
 def main(argv: list[str] | None = None) -> int:
-    argparse.ArgumentParser(description="Git staged 파일에 커밋 전 검사(게이트 · 픽서 · clang-format · 셰이더)를 돌린다 — 인자 없음").parse_args(argv)
+    parser = argparse.ArgumentParser(description="Git staged 파일에 커밋 전 검사(게이트 · 픽서 · clang-format · 셰이더)를 돌린다")
+    parser.add_argument("--verbose", dest="bVerbose", action="store_true",
+                        help="통과 · 건너뜀 게이트의 줄까지 전부 찍는다(기본: 실패한 게이트만 상세, 나머지는 한 줄 요약)")
+    bVerbose = parser.parse_args(argv).bVerbose
 
     projectRoot = getProjectRoot()
     allStagedFiles = getAllStagedFiles(projectRoot)
@@ -353,19 +408,21 @@ def main(argv: list[str] | None = None) -> int:
     #
     # 폴더를 훑고, 무엇이 staged 되었을 때 도는지는 게이트가 스스로 답한다(모듈 독스트링 참고).
     listFileScoped = selectFileScopedStagedInternal(projectRoot, allStagedFiles)
-    if runGatesInternal(projectRoot, allStagedFiles, listFileScoped):
+    if runGatesInternal(projectRoot, allStagedFiles, listFileScoped, bVerbose):
         hasErrors = True
 
     # --- staged HLSL 이 있으면 전 백엔드 컴파일 검증 ----------------------------
-    print("\n[셰이더] Staged 셰이더 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증...")
-    if not checkStagedShadersInternal(projectRoot, allStagedFiles):
+    if bVerbose:
+        print("\n[셰이더] Staged 셰이더 전 RHI 백엔드(쿠킹 표의 넷: DX11 · DX12 · Vulkan · OpenGL) 컴파일 검증...")
+    if not checkStagedShadersInternal(projectRoot, allStagedFiles, bVerbose):
         hasErrors = True
 
     # --- 픽서 — 게이트가 아니라 고쳐 주는 쪽이라 `--check` 로만 부른다 -----------
     setFileScoped = set(listFileScoped)
     stagedCppFiles = [path for path in getStagedCppFiles(projectRoot) if path in setFileScoped]
     if stagedCppFiles:
-        print("\n[픽서] 전방 선언 순서 · 분기 중괄호 검사...")
+        if bVerbose:
+            print("\n[픽서] 전방 선언 순서 · 분기 중괄호 검사...")
         listFixer = (
             (FormatForwardDeclarations.FormatForwardDeclarationsFixer(), "전방 선언"),
             (FormatBranchBraces.FormatBranchBracesFixer(), "분기 중괄호"),
@@ -385,16 +442,19 @@ def main(argv: list[str] | None = None) -> int:
                     for violation in listViolation:
                         print(f"    - {violation}")
 
-        print("\n[포맷] clang-format 포맷팅 검사...")
+        if bVerbose:
+            print("\n[포맷] clang-format 포맷팅 검사...")
         if runClangFormatBatch(stagedCppFiles, checkOnly=True, cwd=projectRoot) != 0:
             hasErrors = True
             print(
                 "  [Error] 포맷팅 규칙에 어긋나는 파일이 있습니다. "
                 "'python Scripts/lint/fixer/FormatModified.py'를 실행하여 자동 수정한 뒤 다시 git add 하세요."
             )
-        else:
+        elif bVerbose:
             print("  - 포맷팅 OK")
-    else:
+        else:
+            print(f"[픽서·포맷] C++ 파일 {len(stagedCppFiles)}개 통과")
+    elif bVerbose:
         print("\n  - 검사 대상 C++ 파일 없음 (Resource/데이터 파일만 변경됨)")
 
     if hasErrors:

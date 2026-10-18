@@ -16,6 +16,7 @@
 cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다(테스트 제외 — 테스트까지는 --target all AllTests)
 cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다(테스트까지)
 ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · 린트 자기 테스트
+# 커밋 훅(py -3 -m Scripts lint) · full-build · Scripts test 의 출력은 요약이다 — 통과는 한 줄 · 끝 몇 줄, 실패만 상세. 전부는 --verbose (빌드 · 테스트는 로그 파일 경로도 알린다)
 py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반(코드의 에셋 경로 · 조용한 폴백 · 버린 읽기 결과) 영역별 표 — 기준선은 0 으로 수렴해야 하고, 형식으로 막힌 종류는 게이트에서 뺀다
 # -j 는 값 없이 준다(CMake 3.29+: 이 PC 의 스레드 수). 테스트 프리셋은 CTEST_PARALLEL_LEVEL="" 로 같은 뜻이다(CMakePresets.json 의 parallel).
 # 항목끼리는 병렬로 돌 수 있다 — 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 칸(gpuSlots)만큼. 도우미는 -j 2(11_Workflow.md 2절).
