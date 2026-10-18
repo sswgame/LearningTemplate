@@ -27,7 +27,8 @@ kExitBlockPrompt = 2                      # UserPromptSubmit 에서 종료 코�
 kMaxConcurrentBuilds = 2                 # docs/11_Workflow.md: 동시에 빌드하는 에이전트는 최대 둘
 kMaxWorktrees = 4                         # 메인 + 통합 + 도우미 둘을 넘으면 정리할 때
 kHandoffPath = os.path.join( "docs", "plans", "NEXT.md" )
-kPonytailPath = os.path.join( ".claude", "skills", "ponytail", "SKILL.md" )
+kRoadmapPath = os.path.join( "docs", "plans", "Roadmap.md" )
+kPonytailPath =os.path.join( ".claude", "skills", "ponytail", "SKILL.md" )
 kCiSummaryTimeoutSeconds = 10             # 훅 한도(15 s, settings.json) 안에서 끝낸다
 kCiFailingExitCode = 4                    # Scripts/dev/ListCiJobs.py 의 kExitCiFailing — CI 가 죽어도 보이지 않던 것(C-41 1단계)을 세션 시작에 알린다
 
@@ -150,7 +151,7 @@ def isHandoffPending( markerDir, sessionId, handoffPath ):
 
 def handoffInstruction():
     return ( f"한도: 세션이 길어 차단했다. 먼저 {kHandoffPath} 의 지금 상태에 (a) 진행 중인 일과 브랜치 · 워크트리, (b) 남은 일과 첫 일, "
-             "(c) 사용자 결정 대기, (d) 병합 · 푸시하지 못한 변경을 적고(끝난 항목은 지운다), 사용자에게 새 세션을 권한 뒤에 요청을 이어라." )
+             "(c) 사용자 결정 대기, (d) 병합 · 푸시하지 못한 변경, (e) 로드맵의 [병렬 가능] 표시를 확인해 다음 세션이 병렬로 띄울 묶음을 적고(끝난 항목은 지운다), 사용자에게 새 세션을 권한 뒤에 요청을 이어라." )
 
 
 def shouldBlockPrompt( markerDir, sessionId, size, compactCount, handoffPath ):
@@ -189,12 +190,32 @@ def blockMessage( size, compactCount, stage ):
              f"{kHandoffPath} 에 상태를 적고 새 세션을 시작하세요. 그래도 이어 가려면 같은 입력을 한 번 더 보내세요(이번 입력은 지워졌으니 다시 보내야 합니다)." )
 
 
+def readParallelItems( root ):
+    """로드맵 `## 지금 순서` 에서 `[병렬 가능]` 표시가 붙은 줄의 이름(` — ` 앞)을 모은다. 표시가 정본이라 손으로 옮겨 적지 않는다."""
+    try:
+        with open( os.path.join( root, kRoadmapPath ), encoding = "utf-8" ) as file:
+            listLine = file.read().splitlines()
+    except OSError:
+        return []
+    bInOrder = False
+    listItem = []
+    for line in listLine:
+        if line.startswith( "## " ):
+            bInOrder = line.startswith( "## 지금 순서" )
+        elif bInOrder and "[병렬 가능]" in line:
+            listItem.append( line.strip().lstrip( "-* " ).split( " — " )[ 0 ][ :40 ] )
+    return listItem
+
+
 def onSessionStart( data, root ):
     notes = []
     if os.path.isfile( os.path.join( root, kHandoffPath ) ):
         notes.append( f"인계 문서 {kHandoffPath} 가 있다 — 일을 시작하기 전에 읽고, 끝난 항목은 지울 것." )
     if os.path.isfile( os.path.join( root, kPonytailPath ) ):
         notes.append( "ponytail 스킬을 지금 Skill 로 호출할 것(모든 작업에 켠다는 CLAUDE.md 규칙, 자동으로 켜지지 않는다)." )
+    listParallel = readParallelItems( root )
+    if listParallel:
+        notes.append( "로드맵에서 [병렬 가능] 표시된 일: " + " / ".join( listParallel ) + " — 파일 소유가 겹치지 않으면 한 번에 병렬로 띄울 것(작업자 규칙)." )
     failingCi = readFailingCi( root )
     if failingCi:
         notes.append( failingCi )
