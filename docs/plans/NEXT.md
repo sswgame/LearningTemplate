@@ -26,7 +26,7 @@
 ## 2. 첫 일
 
 1. 문서 개편 push 뒤 CI 를 확인한다(`py -3 -m Scripts ci-jobs --runs`). TSan 실패는 후보 `TsanNetPlayTraceMerge` 부터.
-3. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터.
+2. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터.
 
 ## 3. 함정
 
