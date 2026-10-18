@@ -12,6 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Match/RoundSeries.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -21,11 +23,17 @@ namespace sw
     class XMLNode;
 
     /** @brief 라운드 하나입니다. */
+    REFLECT()
     struct PartyRoundDef
     {
-        hashed_string _id{};              ///< 미니 게임 이름이다(게임이 읽는다)
-        float32       _timeLimit{ 0.0f }; ///< 0 이면 제한이 없다
-        int32         _scoreLimit{ 0 };   ///< 0 이면 제한이 없다
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{}; ///< 미니 게임 이름이다(게임이 읽는다)
+        PROPERTY( Name = "time", Min = 0.0 )
+        float32 _timeLimit{ 0.0f }; ///< 0 이면 제한이 없다
+        PROPERTY( Min = 0 )
+        int32 _scoreLimit{ 0 }; ///< 0 이면 제한이 없다
     };
 } // namespace sw
 

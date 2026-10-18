@@ -9,6 +9,8 @@
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
+#include <optional>
+
 namespace sw
 {
     SW_LOG_CALLER( "PartyRoundSeries" );
@@ -85,35 +87,47 @@ namespace sw
 
     uint32 PartyRoundSeries::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        setWinScore( root.getAttributeInt( "winScore", _seriesSettings._winScore ) );
+        // 승리 점수와 순위 점수는 적지 않으면 지금 설정 그대로다. 적었으면 모두 읽혀야 한다(깨진 값을 건너뛰어 순위가 밀리지 않게).
+        std::optional<int32> winScore;
+        if ( root.readOptionalAttribute( "winScore", winScore ) == false )
+            SW_LOG_ERROR( "%#: <%# winScore> is not a number", sourceName, root.getName() );
+        else if ( winScore.has_value() )
+            setWinScore( *winScore );
         const string_view points = root.getAttributeText( "placementPoints" );
         if ( points.empty() == false )
         {
-            vector<int32>& listPlacementPoint = _seriesSettings._listPlacementPoint;
-            listPlacementPoint.clear();
-            StringUtil::forEachToken( points, ",; ",
-                                      [&]( string_view token )
+            vector<int32> listPlacementPoint;
+            bool          bPoints = true;
+            StringUtil::forEachToken( points, ",; ", [&]( string_view token )
             {
-                int32 value = 0;
-                if ( StringUtil::parseInt( token, value ) )
-                    listPlacementPoint.push_back( MathUtil::max( 0, value ) );
+                int32      value  = 0;
+                const bool bValue = StringUtil::parseInt( token, value ) && value >= 0;
+                if ( bValue )
+                    listPlacementPoint.push_back( value );
+                else
+                    bPoints = false;
             } );
+            if ( bPoints )
+                _seriesSettings._listPlacementPoint = listPlacementPoint;
+            else
+                SW_LOG_ERROR( "%#: <%# placementPoints=\"%#\"> needs integers of 0 or more", sourceName, root.getName(), points );
         }
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Round" ); node; node = node.findNextSibling( "Round" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
+            if ( StringUtil::equals( node.getName(), "Round", true ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
                 continue;
+            }
             PartyRoundDef round;
-            round._id         = hashed_string( pID );
-            round._timeLimit  = MathUtil::max( 0.0f, node.getAttributeFloat( "time", 0.0f ) );
-            round._scoreLimit = MathUtil::max( 0, node.getAttributeInt( "scoreLimit", 0 ) );
+            if ( GameDataXML::readFields( node, round, sourceName ) == false )
+                continue; // 오류는 readFields 가 남겼고, 그 판만 빠진다
             _listRound.push_back( round );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Round>", sourceName );
+            SW_LOG_ERROR( "%#: no <Round>", sourceName );
         return loadedCount;
     }
 

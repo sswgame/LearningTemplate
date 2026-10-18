@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include <algorithm>
+#include <optional>
 
 namespace sw
 {
@@ -18,9 +19,17 @@ namespace sw
     {
         struct RhythmChartInternal
         {
-            static constexpr float32 kDefaultBpm   = 120.0f;
-            static constexpr float32 kMinBpm       = 1.0f;
-            static constexpr int32   kMaxLaneCount = 16;
+
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outList.push_back( def );
+                return true;
+            }
 
             static bool isNoteBefore( const RhythmNote& lhs, const RhythmNote& rhs )
             {
@@ -77,7 +86,7 @@ namespace sw
         , _title{}
         , _artist{}
         , _offset{ 0.0f }
-        , _baseBpm{ RhythmChartInternal::kDefaultBpm }
+        , _baseBpm{ RhythmChartRootDef{}._bpm }
         , _endTime{ 0.0f }
         , _level{ 0 }
         , _laneCount{ 7 }
@@ -164,83 +173,82 @@ namespace sw
 
     bool RhythmChart::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const utf8* pTitle  = root.findAttribute( "title" );
-        _title              = pTitle != nullptr ? pTitle : "";
-        const utf8* pArtist = root.findAttribute( "artist" );
-        _artist             = pArtist != nullptr ? pArtist : "";
-        _level              = MathUtil::max( 0, root.getAttributeInt( "level", 0 ) );
-        _laneCount          = MathUtil::clamp( root.getAttributeInt( "lanes", 7 ), 1, RhythmChartInternal::kMaxLaneCount );
-        _offset             = root.getAttributeFloat( "offset", 0.0f );
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 차트를 읽지 못한 것으로 본다(반쪽 차트를 치게 하지 않는다).
+        RhythmChartRootDef rootDef;
+        bool               bValid = GameDataXML::readFields( root, rootDef, sourceName, { "baseBpm" } );
+        _title                    = rootDef._title;
+        _artist                   = rootDef._artist;
+        _level                    = rootDef._level;
+        _laneCount                = rootDef._laneCount;
+        _offset                   = rootDef._offset;
 
         vector<RhythmBpmChange> listBpmChange;
-        for ( XMLNode node = root.findChild( "Bpm" ); node; node = node.findNextSibling( "Bpm" ) )
+        vector<RhythmStop>      listStop;
+        vector<RhythmNoteDef>   listNoteDef;
+        vector<float32>         listNoteEnd;
+        _listMeasureChange.clear();
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            RhythmBpmChange change;
-            change._beat = node.getAttributeFloat( "beat", 0.0f );
-            change._bpm  = node.getAttributeFloat( "bpm", RhythmChartInternal::kDefaultBpm );
-            if ( change._beat < 0.0f || change._bpm < RhythmChartInternal::kMinBpm )
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( name == "Bpm" )
+                bValid = RhythmChartInternal::readInto( node, sourceName, listBpmChange ) && bValid;
+            else if ( name == "Stop" )
+                bValid = RhythmChartInternal::readInto( node, sourceName, listStop ) && bValid;
+            else if ( name == "Measure" )
+                bValid = RhythmChartInternal::readInto( node, sourceName, _listMeasureChange ) && bValid;
+            else if ( name == "Note" )
             {
-                SW_LOG_WARNING( "%#: <Bpm beat=\"%#\" bpm=\"%#\"> is out of range - skipped", sourceName, change._beat, change._bpm );
-                continue;
+                RhythmNoteDef          noteDef;
+                std::optional<float32> endBeat;
+                const bool             bFields = GameDataXML::readFields( node, noteDef, sourceName, { "endBeat" } );
+                const bool             bEnd    = node.readOptionalAttribute( "endBeat", endBeat );
+                const bool             bLane   = noteDef._lane < _laneCount;
+                const bool             bOrder  = endBeat.has_value() == false || *endBeat >= noteDef._beat;
+                if ( bLane == false )
+                    SW_LOG_ERROR( "%#: note at beat %# is on lane %# outside 0..%#", sourceName, noteDef._beat, noteDef._lane, _laneCount - 1 );
+                if ( bOrder == false )
+                    SW_LOG_ERROR( "%#: note at beat %# ends at %# before it starts", sourceName, noteDef._beat, *endBeat );
+                const bool bNote = bFields && bEnd && bLane && bOrder;
+                bValid           = bNote && bValid;
+                if ( bNote )
+                {
+                    listNoteDef.push_back( noteDef );
+                    listNoteEnd.push_back( endBeat.has_value() ? *endBeat : noteDef._beat ); // 적지 않으면 탭 노트다
+                }
             }
-            listBpmChange.push_back( change );
+            else
+            {
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+                bValid = false;
+            }
         }
+        // `<Bpm>` 이 없으면 루트의 bpm 하나가 처음부터 끝까지의 빠르기다.
         if ( listBpmChange.empty() )
         {
             RhythmBpmChange change;
-            change._bpm = MathUtil::max( RhythmChartInternal::kMinBpm, root.getAttributeFloat( "bpm", RhythmChartInternal::kDefaultBpm ) );
+            change._bpm = rootDef._bpm;
             listBpmChange.push_back( change );
         }
-
-        vector<RhythmStop> listStop;
-        for ( XMLNode node = root.findChild( "Stop" ); node; node = node.findNextSibling( "Stop" ) )
-        {
-            RhythmStop stop;
-            stop._beat    = node.getAttributeFloat( "beat", 0.0f );
-            stop._seconds = node.getAttributeFloat( "seconds", 0.0f );
-            if ( stop._beat < 0.0f || stop._seconds <= 0.0f )
-            {
-                SW_LOG_WARNING( "%#: <Stop beat=\"%#\" seconds=\"%#\"> is out of range - skipped", sourceName, stop._beat, stop._seconds );
-                continue;
-            }
-            listStop.push_back( stop );
-        }
         makeTimingPoints( listBpmChange, listStop );
-        _baseBpm = MathUtil::max( RhythmChartInternal::kMinBpm, root.getAttributeFloat( "baseBpm", findBpmAt( 0.0f ) ) );
-
-        _listMeasureChange.clear();
-        for ( XMLNode node = root.findChild( "Measure" ); node; node = node.findNextSibling( "Measure" ) )
+        // 스크롤 기준 BPM 은 적지 않으면 0 박의 BPM 이다(곡의 첫 빠르기를 기준으로 흐른다).
+        std::optional<float32> baseBpm;
+        const bool             bBaseBpm = root.readOptionalAttribute( "baseBpm", baseBpm ) && ( baseBpm.has_value() == false || *baseBpm >= 1.0f );
+        if ( bBaseBpm == false )
         {
-            RhythmMeasureChange change;
-            change._beat            = node.getAttributeFloat( "beat", 0.0f );
-            change._beatsPerMeasure = node.getAttributeFloat( "beatsPerMeasure", 4.0f );
-            if ( change._beat < 0.0f || change._beatsPerMeasure <= 0.0f )
-            {
-                SW_LOG_WARNING( "%#: <Measure beat=\"%#\"> is out of range - skipped", sourceName, change._beat );
-                continue;
-            }
-            _listMeasureChange.push_back( change );
+            SW_LOG_ERROR( "%#: <Chart baseBpm=\"%#\"> needs a number of 1 or more", sourceName, root.getAttributeText( "baseBpm" ) );
+            bValid = false;
         }
+        _baseBpm = baseBpm.has_value() ? *baseBpm : findBpmAt( 0.0f );
         std::stable_sort( _listMeasureChange.begin(), _listMeasureChange.end(), &RhythmChartInternal::isMeasureChangeBefore );
 
         _listNote.clear();
-        for ( XMLNode node = root.findChild( "Note" ); node; node = node.findNextSibling( "Note" ) )
+        for ( size_t index = 0; index < listNoteDef.size(); ++index )
         {
             RhythmNote note;
-            note._lane    = node.getAttributeInt( "lane", -1 );
-            note._beat    = node.getAttributeFloat( "beat", 0.0f );
-            note._endBeat = node.getAttributeFloat( "endBeat", note._beat );
-            if ( note._lane < 0 || note._lane >= _laneCount )
-            {
-                SW_LOG_WARNING( "%#: note at beat %# is on lane %# outside 0..%# - skipped", sourceName, note._beat, note._lane, _laneCount - 1 );
-                continue;
-            }
-            if ( note._endBeat < note._beat )
-            {
-                SW_LOG_WARNING( "%#: note at beat %# ends before it starts - treated as a tap", sourceName, note._beat );
-                note._endBeat = note._beat;
-            }
-            note._bLong = note._endBeat > note._beat ? SW_TRUE : SW_FALSE;
+            note._lane    = listNoteDef[index]._lane;
+            note._beat    = listNoteDef[index]._beat;
+            note._endBeat = listNoteEnd[index];
+            note._bLong   = note._endBeat > note._beat ? SW_TRUE : SW_FALSE;
             _listNote.push_back( note );
         }
         std::stable_sort( _listNote.begin(), _listNote.end(), &RhythmChartInternal::isNoteBefore );
@@ -257,7 +265,8 @@ namespace sw
             float32& freeBeat = listLaneFreeBeat[static_cast<size_t>( note._lane )];
             if ( note._beat <= freeBeat )
             {
-                SW_LOG_WARNING( "%#: note at beat %# on lane %# overlaps the previous note - skipped", sourceName, note._beat, note._lane );
+                SW_LOG_ERROR( "%#: note at beat %# on lane %# overlaps the previous note", sourceName, note._beat, note._lane );
+                bValid = false;
                 continue;
             }
             freeBeat      = note._endBeat;
@@ -269,8 +278,8 @@ namespace sw
         }
         _listNote.swap( listKeptNote );
         if ( _listNote.empty() )
-            SW_LOG_WARNING( "%#: chart has no playable notes", sourceName );
-        return _listNote.empty() == false;
+            SW_LOG_ERROR( "%#: chart has no playable notes", sourceName );
+        return bValid && _listNote.empty() == false;
     }
 
     void RhythmChart::makeTimingPoints( const vector<RhythmBpmChange>& listBpmChange, const vector<RhythmStop>& listStop )
@@ -281,7 +290,7 @@ namespace sw
         std::stable_sort( listSortedStop.begin(), listSortedStop.end(), &RhythmChartInternal::isStopBefore );
 
         // 박 0 의 BPM 은 박 0 이하의 마지막 변화이고, 없으면 첫 변화이다.
-        float32 bpm = listSortedBpm.empty() ? RhythmChartInternal::kDefaultBpm : listSortedBpm.front()._bpm;
+        float32 bpm = listSortedBpm.empty() ? RhythmChartRootDef{}._bpm : listSortedBpm.front()._bpm;
         _listTimingPoint.clear();
         RhythmTimingPoint first;
         first._beat = 0.0f;

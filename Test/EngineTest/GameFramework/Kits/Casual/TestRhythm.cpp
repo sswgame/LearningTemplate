@@ -41,16 +41,27 @@ namespace
     }
 } // namespace
 
+/**
+ * @brief [RhythmTest] 레인 밖 노트 · 끝이 앞선 롱노트가 있는 채보는 노트를 버린 반쪽 채보가 아니라 로드 실패다
+ */
+SW_TEST_CASE( RhythmTest, ChartWithABrokenNoteFailsToLoad )
+{
+    RhythmChart chart;
+    SW_TEST_DEFENSIVE_SCOPE( "a note outside the lanes fails the chart" );
+    SW_EXPECT_FALSE( chart.loadFromXMLText( R"(<Chart lanes="4"><Note lane="0" beat="1"/><Note lane="9" beat="2"/></Chart>)", "RhythmTest" ) );
+    SW_EXPECT_FALSE( chart.loadFromXMLText( R"(<Chart lanes="4"><Note lane="0" beat="4" endBeat="2"/></Chart>)", "RhythmTest" ) );
+}
+
 SW_TEST_CASE( RhythmTest, BeatSecondsRoundTripAcrossBpmChangesStopsAndMeasures )
 {
     RhythmChart chart;
     SW_ASSERT_TRUE( chart.loadFromXMLText( R"(<Chart title="Shift" lanes="7" offset="0.05">
         <Bpm beat="0" bpm="120"/><Bpm beat="8" bpm="240"/><Stop beat="12" seconds="0.5"/><Bpm beat="16" bpm="60"/>
         <Measure beat="4" beatsPerMeasure="3"/>
-        <Note lane="0" beat="12"/><Note lane="1" beat="13"/><Note lane="9" beat="1"/>
+        <Note lane="0" beat="12"/><Note lane="1" beat="13"/>
       </Chart>)",
                                            "RhythmTest" ) );
-    SW_EXPECT_EQUAL( 2, static_cast<int32>( chart.getNotes().size() ) ); // 레인 9 는 버린다
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( chart.getNotes().size() ) );
 
     SW_EXPECT_NEAR_EQUAL( 0.05f, chart.convertBeatToSeconds( 0.0f ), 1.0e-5f ); // 오프셋 = 박 0 의 시각
     SW_EXPECT_NEAR_EQUAL( 2.05f, chart.convertBeatToSeconds( 4.0f ), 1.0e-5f );

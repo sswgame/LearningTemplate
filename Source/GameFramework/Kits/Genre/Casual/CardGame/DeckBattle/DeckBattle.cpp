@@ -56,18 +56,17 @@ namespace sw
 
     uint32 DeckBattleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 카드는 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Card" ); node; node = node.findNextSibling( "Card" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
+            if ( StringUtil::equals( node.getName(), "Card", true ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
                 continue;
+            }
             DeckBattleCardDef def;
-            def._id           = hashed_string( pID );
-            const utf8* pName = node.findAttribute( "name" );
-            def._name         = pName != nullptr ? pName : pID;
-            def._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", 1 ) );
-            def._bExhaust     = node.getAttributeBool( "exhaust", false ) ? SW_TRUE : SW_FALSE;
+            bool              bValid = GameDataXML::readFields( node, def, sourceName, { "effects" } );
             GameDataXML::forEachNamedNumber( node.getAttributeText( "effects" ), ",; ", 0, GameDataXML::MissingValue::Reject,
                                              [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
             {
@@ -77,9 +76,12 @@ namespace sw
                 if ( bKind && bAmount )
                     def._listEffect.push_back( effect );
                 else
-                    SW_LOG_WARNING( "%#: card '%#' has an unreadable effect '%#'", sourceName, pID, token );
+                {
+                    SW_LOG_ERROR( "%#: card '%#' has an unreadable effect '%#'", sourceName, def._id.c_str(), token );
+                    bValid = false;
+                }
             } );
-            if ( add( def ) >= 0 )
+            if ( bValid && add( def ) >= 0 )
                 ++loadedCount;
         }
         return loadedCount;
@@ -215,7 +217,7 @@ namespace sw
         {
             applyEffect( effect );
         }
-        if ( pDef->_bExhaust == SW_TRUE )
+        if ( pDef->_bExhaust )
             _exhaustPile.push( card );
         else
             _discardPile.push( card );
