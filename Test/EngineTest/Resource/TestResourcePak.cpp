@@ -303,8 +303,7 @@ SW_TEST_CASE( ResourcePakTest, PackReaderUsesTheActiveCodecRegistry )
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_codec_registry.pack" );
     SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::RLE, {
                                                                                                                   { "text/long.txt", sw::string( 4096, 'B' ) }
-    },
-                                                                   false ) );
+    } ) );
 
     sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
@@ -1009,11 +1008,13 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesUnionsLooseFolderAndPacks )
     SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, ".xml", listUnion ) == sw::ResourceFolderListing::Listed );
     SW_ASSERT_EQUAL( listLoose.size() + 1, listUnion.size() ); // SLOTS.xml 은 디스크의 slots.xml 과 같은 항목이다
     SW_EXPECT_EQUAL( folder + "/zz_packonly.xml", listUnion.back() );
-    bool bDiskSpelling = false;
+    const sw::string packSpelling  = folder + "/SLOTS.xml";
+    const sw::string diskSpelling  = folder + "/slots.xml";
+    bool             bDiskSpelling = false;
     for ( const sw::string& path : listUnion )
     {
-        SW_EXPECT_TRUE_MSG( path != folder + "/SLOTS.xml", "디스크 표기(slots.xml)가 남아야 한다" );
-        bDiskSpelling = bDiskSpelling || path == folder + "/slots.xml";
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::equals( path, packSpelling, false ) == false, "디스크 표기(slots.xml)가 남아야 한다" );
+        bDiskSpelling = bDiskSpelling || sw::StringUtil::equals( path, diskSpelling, false );
     }
     SW_EXPECT_TRUE( bDiskSpelling );
     for ( size_t index = 1; index < listUnion.size(); ++index )
@@ -1045,7 +1046,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesTellsMissingFolderFromFailure )
 // 디스크 전용 해석 결과는 문자열로 저절로 바뀌지 않는다 — 바뀌면 `FileUtil` 로 그대로 흘러가 팩 빌드에서 조용히 "없음" 이 된다.
 static_assert( std::is_convertible_v<sw::LooseFilePath, sw::string> == false );
 static_assert( std::is_convertible_v<sw::LooseFilePath, sw::string_view> == false );
-static_assert( std::is_constructible_v<sw::string, sw::LooseFilePath> == false );
+// `sw::string` 은 제약 없는 explicit 템플릿 생성자(StringViewLike)가 있어 is_constructible 로는 볼 수 없다 — 암시 변환 금지 둘과 string_view 로 본다.
 static_assert( std::is_constructible_v<sw::string_view, sw::LooseFilePath> == false );
 static_assert( std::is_constructible_v<sw::LooseFilePath, sw::string> == false ); // 만드는 쪽은 ResourcePaths 하나다
 
