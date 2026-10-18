@@ -52,7 +52,7 @@ namespace sw
         [[nodiscard]] static bool loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration, string& outError );
         /**
          * @brief 원본 폴더 @p folder 가 디스크에 있으면 그 안의 방언 분기 파일(`NNNN_이름.<드라이버>.sql`)이 가리키는 드라이버 이름을 @p inoutListName 에 겹치지 않게 더합니다.
-         * @details 팩에는 폴더가 없어 더할 것이 없다. 드라이버 등록 표(`SQLDriverRegistry`)에 아직 오르지 않은 드라이버(서버 키트가 처음 쓸 때 올리는 PostgreSQL)의
+         * @details 팩에는 폴더가 없어 더할 것이 없다. 드라이버 등록 표(`SQLDriverRegistry`)에 없는 드라이버(서버 키트가 실리지 않은 실행 파일의 PostgreSQL)의
          *          방언 분기도 목록 검사가 보게 한다.
          * @return 폴더를 읽지 못하면 false 를 반환합니다.
          */

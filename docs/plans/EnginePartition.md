@@ -51,7 +51,7 @@
 ## 5. 모듈 확장 진입점과 상태 규칙
 
 - 모듈이 서비스, 렌더 패스, 레지스트리를 등록하는 공식 진입점을 둡니다. 리로드되는 모듈의 변경 가능한 정적 변수를 막는 게이트(허용 목록 + 이유)를 두고,
-  `GameDataCache` · `SQLDriverRegistry` · `LocalStoreFactory` 의 등록 테이블을 서비스로 올립니다.
+  `SQLDriverRegistry` · `LocalStoreFactory` 는 E6 에서 옮겼습니다(정적 등록 객체 + 모듈 언로드 리스너인 표, [결정 기록](../09_Decisions.md) 5-8). `GameDataCache` 가 남았습니다.
 
 ## 건드리지 않는 것
 
@@ -105,9 +105,8 @@
 | E3 | 프리미티브 개념을 코어 기반 타입으로 바꿉니다 | `Engine/Object/GameObject/Registry/`, `Engine/Object/Component/3D/Mesh*`, `Engine/Object/Component/2D/SpriteInstanceBatch.cpp`, `Engine/Environment/{Foliage,Terrain,Water}/`, `Engine/Renderer/Scene/GPUSceneBuilder.cpp` | 없음 | `TestGPUScene`, 인스턴스 배치 테스트, 네 백엔드 × 대표 셋 | 필요합니다. 큐브 20,000 개 벤치의 `GT.Frame` p50 · p99 를 Release, VSync 끔, 3 ~ 5 판으로 전후 비교합니다 |
 | E4 | 코어 금지 목록에 기능 컴포넌트 폴더를 더합니다 | `Scripts/lint/rules/CheckEngineLayers.toml` | E3 | `-L lint`, `RunEngineLayerGraph.py` 의 코어 → 기능 화살표 0 | 없음 |
 | E5 | 0-3 의 남은 판단을 적용합니다. `CommandStack` → `Scene`, `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling`, 렌더러 테스트 → `Test/EngineTest/Renderer` | `Engine/Utility/`, 옮길 곳, include 하는 파일, `Test/EngineTest/Graphics/` | 없음 | `RunEngineLayerGraph.py --apply` 뒤 `-L lint`, 전 프리셋 컴파일 | 없음 |
-| E6 | 모듈 확장 진입점(5 단계)을 만듭니다. `SQLDriverRegistry` 와 `LocalStoreFactory` 의 정적 등록 테이블을 모듈이 로드할 때 등록하고 언로드할 때 지우는 서비스로 옮깁니다 | `GameFramework/Base/Online/Local/`, `GameFramework/Kits/Feature/Storage/SQLStore/`, `ModuleHost/` | 없음 | 핫 리로드 테스트, 서버 저장소 테스트 | 없음 |
 
-E5 는 판단이 거의 없어 `mech-worker` 에 맡깁니다. E6 에서 남는 정적 변수를 막는 게이트(허용 목록과 이유)는 서비스로 옮긴 뒤에도 남은 틈에만 둡니다.
+E5 는 판단이 거의 없어 `mech-worker` 에 맡깁니다.
 
 ### 6.5 사용자 결정
 

@@ -5,6 +5,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/String/StringBuilder.h"
 
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.h"
+
 #include <cstdlib>
 #include <libpq-fe.h>
 
@@ -338,4 +340,10 @@ namespace sw
         }
         return make_unique<PostgresDriverInternal::PostgresConnection>( pConnection );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 모듈이 로드되면 이 드라이버를 레지스트리에 올리고, 언로드되면 내린다.
+    const SQLDriverRegistration s_postgresDriverRegistration{ PostgresDriver::getInstance() };
 } // namespace sw
