@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/DebugOverlayState.h"
+#include "Engine/Profiling/DebugOverlayState.h"
 
 #include "Core/Common/Defines.h"
 #include "Core/Container/CompareUtil.h"

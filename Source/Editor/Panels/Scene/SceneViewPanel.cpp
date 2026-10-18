@@ -15,9 +15,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
 

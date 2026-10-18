@@ -43,12 +43,14 @@
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Profiling/DebugOverlayState.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Telemetry/CrashReportService.h"
@@ -56,8 +58,6 @@
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/DebugOverlayState.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 

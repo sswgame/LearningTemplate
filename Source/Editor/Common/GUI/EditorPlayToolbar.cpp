@@ -17,12 +17,12 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Config/GameAutoplay.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
-#include "Engine/Utility/GameAutoplay.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

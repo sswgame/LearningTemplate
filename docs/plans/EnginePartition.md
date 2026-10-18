@@ -15,11 +15,8 @@
 
 티어 표는 `py -3 Scripts/lint/report/RunEngineLayerGraph.py --apply` 가 게이트 표와 `Source/Engine/` 티어 표를 함께 맞춥니다.
 
-- `Utility` 루트 파일(`CommandStack` · `DebugOverlayState` · `GameAutoplay` · `GameTimeScale`)은 이름만 보고 두었습니다. 후보는 `CommandStack` → `Scene`(에디터 실행 취소),
-  `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling` 입니다.
 - `Character/AnimationNotify`(처리기, 테이블, 컴포넌트)는 `CharacterHit` · `SocketSetComponent` 를 써서 `Object/SceneAnimation` 으로 내릴 수 없습니다. 알림 계약은 `Animation/Notify` 에,
   컴포넌트 모델 코어가 값으로 드는 알림 종류(`AnimationNotifyPhase`)는 `Common/` 에 있습니다.
-- `Test/EngineTest/Graphics` 의 렌더러 테스트(`TestGpuScene` · `TestRenderGraph` 등)는 아직 `Graphics` 폴더에 있습니다(`Test/EngineTest/Renderer` 로 옮길 후보).
 
 ## 2. 컴포넌트 모델을 코어와 기능으로 가르기 (중간 위험, 가장 큰 효과)
 
@@ -104,9 +101,6 @@
 |---|---|---|---|---|---|
 | E3 | 프리미티브 개념을 코어 기반 타입으로 바꿉니다 | `Engine/Object/GameObject/Registry/`, `Engine/Object/Component/3D/Mesh*`, `Engine/Object/Component/2D/SpriteInstanceBatch.cpp`, `Engine/Environment/{Foliage,Terrain,Water}/`, `Engine/Renderer/Scene/GPUSceneBuilder.cpp` | 없음 | `TestGPUScene`, 인스턴스 배치 테스트, 네 백엔드 × 대표 셋 | 필요합니다. 큐브 20,000 개 벤치의 `GT.Frame` p50 · p99 를 Release, VSync 끔, 3 ~ 5 판으로 전후 비교합니다 |
 | E4 | 코어 금지 목록에 기능 컴포넌트 폴더를 더합니다 | `Scripts/lint/rules/CheckEngineLayers.toml` | E3 | `-L lint`, `RunEngineLayerGraph.py` 의 코어 → 기능 화살표 0 | 없음 |
-| E5 | 0-3 의 남은 판단을 적용합니다. `CommandStack` → `Scene`, `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling`, 렌더러 테스트 → `Test/EngineTest/Renderer` | `Engine/Utility/`, 옮길 곳, include 하는 파일, `Test/EngineTest/Graphics/` | 없음 | `RunEngineLayerGraph.py --apply` 뒤 `-L lint`, 전 프리셋 컴파일 | 없음 |
-
-E5 는 판단이 거의 없어 `mech-worker` 에 맡깁니다.
 
 ### 6.5 사용자 결정
 

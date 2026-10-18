@@ -35,7 +35,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Utility/CommandStack.h"
+#include "Engine/Scene/CommandStack.h"
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
 

@@ -3720,7 +3720,7 @@
    "default": "1.0",
    "kind": "일반",
    "description": "게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤)",
-   "source": "Source/Engine/Utility/GameTimeScale.cpp"
+   "source": "Source/Engine/Config/GameTimeScale.cpp"
   },
   {
    "name": "gv_traceSaveOnExit",

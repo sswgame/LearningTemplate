@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -22,7 +23,6 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include "GameFramework/Base/Foundation/Data/GamePackDataUtil.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/LoadingScreenController.h"

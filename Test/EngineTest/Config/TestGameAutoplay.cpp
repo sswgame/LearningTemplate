@@ -4,7 +4,7 @@
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/GameAutoplay.h"
+#include "Engine/Config/GameAutoplay.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -56,10 +56,10 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/FloatCurve.h"
 #include "Engine/Window/IWindow.h"
 
