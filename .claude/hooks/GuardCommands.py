@@ -4,6 +4,8 @@ Claude Code PreToolUse 훅이 Bash · PowerShell 도구 호출마다 부른다(.
 규칙을 어기면 이유를 표준 오류에 쓰고 종료 코드 2 로 끝낸다(호출이 막히고 이유가 모델에 전달된다). 그 밖에는 아무것도 하지 않고 0 으로 끝난다.
 
 - 커밋 훅 우회 금지: `git commit --no-verify`. 커밋 훅(PreCommitLint)은 우회하지 않는다(CLAUDE.md · docs/11_Workflow.md).
+- 큰 마크다운의 셸 통째 읽기 금지(2026-10-19 토큰 절감): `cat` · `Get-Content` · 넓은 `sed -n` 으로 kMaxUnboundedReadBytes 를 넘는 `.md` 를 읽는 것.
+  ReadGuard 는 Read 도구만 막아서 셸로 읽으면 지나갔다. 절만 읽는 길은 `py -3 -m Scripts doc <파일> --section <제목>` 이다.
 - 링크가 든 폴더의 재귀 삭제 금지: 워크트리는 main 의 도구(`Tools/LLVM` 등)를 정션으로 나눠 쓴다. 링크를 끊지 않고 재귀로 지우면
   도구에 따라 링크 너머의 공유 도구까지 지워진다. 워크트리는 `py -3 -m Scripts worktree-remove <이름>` 으로 지운다.
 
@@ -24,6 +26,8 @@ kBlockExitCode = 2
 kReparseAttribute = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
 kMaxScanEntries = 20000
 kMaxScanDepth = 4
+kMaxUnboundedReadBytes = 30 * 1024  # ReadGuard.py 와 같은 값(훅은 서로 import 하지 않는 독립 스크립트라 두 곳이다 - 바꿀 때 함께)
+kMaxSedRangeLines = 300  # 이 줄 수 이하의 `sed -n 'a,bp'` 는 절 읽기로 보고 통과시킨다
 
 # 재귀 삭제 명령. 한 줄 안에 이 낱말이 있고 아래 경로가 가리키는 곳에 링크가 있으면 막는다.
 kRecursiveDeletePattern = re.compile(
@@ -32,6 +36,9 @@ kNoVerifyPattern = re.compile(r"(?i)\bgit\b[^\n;&|]*\bcommit\b[^\n;&|]*--no-veri
 kQuotedPattern = re.compile(r"\"[^\"\n]*\"|'[^'\n]*'")
 kWindowsPathPattern = re.compile(r"[A-Za-z]:[\\/][^\s\"'|;&<>]*")
 kMsysPathPattern = re.compile(r"(?<![\w.])/([a-zA-Z])/([^\s\"'|;&<>]*)")
+kShellReadPattern = re.compile(r"(?i)(?:^|[;&]|&&)\s*(?:cat|Get-Content|gc|type)\s+[^|;&\n]*?(?P<path>[^\s\"'|;&<>]+\.md)\b(?!\s*\|)")
+kSedRangePattern = re.compile(r"\bsed\s+-n\s+['\"]?(\d+),(\d+)p")
+kSedReadPattern = re.compile(r"\bsed\s+-n\s+[^|;&\n]*?(?P<path>[^\s\"'|;&<>]+\.md)\b")
 
 
 def readInput() -> dict:
@@ -106,13 +113,52 @@ def checkRecursiveDelete(command: str) -> str:
     return ""
 
 
+def resolveRepositoryFile(token: str, root: Path) -> Path | None:
+    """저장소 안의 실제 파일이면 그 경로, 아니면 None. 상대 경로는 root 기준이다."""
+    candidate = Path(token.replace("\\", "/"))
+    for candidateText in findPaths(token) or [str(root / candidate)]:
+        try:
+            resolved = Path(candidateText).resolve()
+            resolved.relative_to(root.resolve())
+            if resolved.is_file():
+                return resolved
+        except (ValueError, OSError):
+            continue
+    return None
+
+
+def checkShellBigDocRead(command: str, root: Path | None = None, maxBytes: int = kMaxUnboundedReadBytes) -> str:
+    """셸로 큰 .md 를 통째(또는 넓은 범위로) 읽으려 하면 막을 이유를, 아니면 빈 문자열을 돌려준다."""
+    root = root or Path(__file__).resolve().parents[2]
+    bare = stripQuoted(command)
+    token = ""
+    match = kShellReadPattern.search(bare)
+    if match:
+        token = match.group("path")
+    else:
+        sedMatch = kSedReadPattern.search(bare)
+        if sedMatch:
+            rangeMatch = kSedRangePattern.search(command)
+            if rangeMatch and int(rangeMatch.group(2)) - int(rangeMatch.group(1)) <= kMaxSedRangeLines:
+                return ""
+            token = sedMatch.group("path")
+    if not token:
+        return ""
+    resolved = resolveRepositoryFile(token, root)
+    if resolved is None or resolved.stat().st_size <= maxBytes:
+        return ""
+    return (f"{resolved.name} 은 {resolved.stat().st_size // 1024}KB 라 셸로 통째 읽지 못한다(한도 {maxBytes // 1024}KB, 토큰 절감). 절만 읽는다.\n"
+            f"(a) `py -3 -m Scripts doc {resolved.name}` 로 목차를 보고 `--section <제목 일부>` 로 한 절만 읽는다.\n"
+            f"(b) 또는 `sed -n 'a,bp'` 로 {kMaxSedRangeLines}줄 이하 범위만 읽는다.")
+
+
 def main() -> int:
     try:
         data = readInput()
         if data.get("tool_name") not in ("Bash", "PowerShell"):
             return 0
         command = (data.get("tool_input") or {}).get("command") or ""
-        for reason in (checkNoVerify(command), checkRecursiveDelete(command)):
+        for reason in (checkNoVerify(command), checkRecursiveDelete(command), checkShellBigDocRead(command)):
             if reason:
                 # 콘솔 인코딩(cp949)이 아니라 UTF-8 바이트로 쓴다 - 모델이 받는 문구가 깨지지 않게 한다.
                 sys.stderr.buffer.write(("[GuardCommands] " + reason + "\n").encode("utf-8"))
