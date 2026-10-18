@@ -17,9 +17,8 @@
 
 #include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
-
-#include <imgui.h>
 
 namespace sw::editor
 {
@@ -90,14 +89,14 @@ namespace sw::editor
                     SW_LOG_WARNING( "%#", reply.c_str() );
             }
 
-            /** @brief 프레임 단계 — 녹화 중이면 이번 입력 프레임의 이벤트를 넘깁니다. */
+            /** @brief 프레임 단계 — 녹화 중이면 이번 입력 프레임의 이벤트를 엔진 프레임의 실제 경과(재생과 같은 시계)와 함께 넘깁니다. */
             static void runFrame( EditorContext& /*context*/ )
             {
                 if ( s_recorder.isRecording() == false )
                     return;
                 InputManager* pInput = findSubsystem<InputManager>();
                 if ( pInput != nullptr )
-                    s_recorder.update( *pInput, ImGui::GetIO().DeltaTime );
+                    s_recorder.update( *pInput, GameTimeScale::getUnscaledDeltaTime() );
             }
         };
     } // namespace
