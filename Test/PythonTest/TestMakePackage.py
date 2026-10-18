@@ -4,7 +4,7 @@
 패키징 진입점(`Scripts/dev/MakePackage.py`)의 단위 테스트 — 빌드와 쿠킹을 건너뛰고 스테이징과 검사만 돌린다.
 
 가짜 Bin(실행 파일 둘 · DLL · 팩 · Dev 산출물)을 임시 폴더에 깔고, 패키지에 그 타깃의 실행 파일 · DLL · 팩 · 고지만 들고
-Dev 산출물(`Saved/` · `Symbols/` · `Modules/`)과 다른 타깃의 실행 파일은 들지 않는지 본다. 단계 줄과 끝 줄의 모양은 에디터 창이 읽는 계약이다.
+Dev 산출물(`Saved/` · `Symbols/` · `Modules/`)과 다른 타깃의 실행 파일, 다른 게임의 팩은 들지 않는지 본다. 단계 줄과 끝 줄의 모양은 에디터 창이 읽는 계약이다.
 """
 
 from __future__ import annotations
@@ -34,9 +34,13 @@ class MakePackageTest(unittest.TestCase):
         for name in (MakePackage.kMapTargetExecutable["Client"], MakePackage.kMapTargetExecutable["Server"], "OnlineLoadBot.exe",
                      "Engine" + MakePackage.kListLibrarySuffix[0], MakePackage.kNoticeFileName):
             (self.binDir / name).write_bytes(b"x")
-        for folder in (MakePackage.kPackFolderName, "Saved", "Symbols", "Modules"):
+        for folder in ("Saved", "Symbols", "Modules"):
             (self.binDir / folder).mkdir()
             (self.binDir / folder / "item.bin").write_bytes(b"y")
+        # Bin/Packs 에는 빌드가 모든 게임의 팩을 굽는다 — 패키지에는 공용 팩과 그 게임(Empty → game/empty)의 팩만 든다.
+        (self.binDir / MakePackage.kPackFolderName).mkdir()
+        for name in ("engine.pack", "common.pack", "game_empty.pack", "game_shooter3d.pack"):
+            (self.binDir / MakePackage.kPackFolderName / name).write_bytes(b"p")
 
     def tearDown(self) -> None:
         self._tempDir.cleanup()
@@ -55,7 +59,15 @@ class MakePackageTest(unittest.TestCase):
         listName = sorted(path.name for path in stagingDir.iterdir())
         self.assertEqual(sorted([MakePackage.kMapTargetExecutable["Client"], "Engine" + MakePackage.kListLibrarySuffix[0], MakePackage.kNoticeFileName,
                                  MakePackage.kPackFolderName]), listName)
-        self.assertTrue((stagingDir / MakePackage.kPackFolderName / "item.bin").is_file())
+        self.assertEqual(["common.pack", "engine.pack", "game_empty.pack"],
+                         sorted(path.name for path in (stagingDir / MakePackage.kPackFolderName).iterdir()))
+
+    def testMissingGamePackFailsTheStageStep(self) -> None:
+        (self.binDir / MakePackage.kPackFolderName / "game_empty.pack").unlink()
+        exitCode, output = self.runMain("Client")
+        self.assertEqual(1, exitCode)
+        self.assertIn("[package] FAILED stage ", output)
+        self.assertIn("game_empty.pack", output)
 
     def testServerPackageCarriesTheServerConfig(self) -> None:
         exitCode, output = self.runMain("Server")

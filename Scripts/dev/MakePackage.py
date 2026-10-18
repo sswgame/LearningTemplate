@@ -13,7 +13,8 @@
 | `Client` | `Ninja-Shipping` | `App.exe` | 없음 |
 | `Server` | `Ninja-Shipping-Server` | `Server.exe` | `CookContract.json` 의 `target_excluded_asset_kinds`(텍스처 · 셰이더 바이너리 · 오디오) |
 
-스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL 과 그 타깃의 실행 파일, `Packs/`, `THIRD_PARTY_NOTICES.txt` 만 베낀다.
+스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL 과 그 타깃의 실행 파일, `THIRD_PARTY_NOTICES.txt`, 그리고 `Packs/` 가운데 공용 팩과 그 게임의 팩만 베낀다
+(`Bin/Packs` 에는 모든 게임의 팩이 구워져 있다 — 이름은 `CookAssets.listPackNameOfGame` 이 게임 프리셋의 `_packRoot` 로 정한다).
 Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테스트 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
 (서버는 Shipping 에서도 운영 설정을 디스크에서 읽는다).
 
@@ -33,7 +34,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import BuildTree, getProjectRoot, runProcess  # noqa: E402
+from common import BuildTree, ConfigError, getProjectRoot, runProcess  # noqa: E402
+from generate.CookAssets import listPackNameOfGame  # noqa: E402
 
 #: 단계 이름 — 창이 `[package] step k/n <이름>` 으로 읽는다. 순서가 진행 순서다.
 kListStepName: tuple[str, ...] = ("build", "cook", "stage", "verify")
@@ -79,7 +81,7 @@ def makeStagingDir(outputRoot: Path, game: str, target: str) -> Path:
 
 
 def selectStagedEntries(binDir: Path, target: str) -> list[Path]:
-    """스테이징이 베끼는 Bin 의 항목입니다(그 타깃의 실행 파일, 맨 위 공유 라이브러리, 팩 폴더, 서드파티 고지)."""
+    """스테이징이 베끼는 Bin 의 항목입니다(그 타깃의 실행 파일, 맨 위 공유 라이브러리, 서드파티 고지). 팩은 `selectStagedPacks` 가 고른다."""
     listEntry: list[Path] = []
     executable = binDir / kMapTargetExecutable[target]
     if executable.is_file():
@@ -87,11 +89,26 @@ def selectStagedEntries(binDir: Path, target: str) -> list[Path]:
     for path in sorted(binDir.iterdir()):
         if path.is_file() and path.suffix.lower() in kListLibrarySuffix:
             listEntry.append(path)
-    for name in (kPackFolderName, kNoticeFileName):
-        path = binDir / name
-        if path.exists():
-            listEntry.append(path)
+    notice = binDir / kNoticeFileName
+    if notice.exists():
+        listEntry.append(notice)
     return listEntry
+
+
+def selectStagedPacks(projectRoot: Path, packDir: Path, game: str) -> list[Path]:
+    """패키지에 담는 팩입니다 — 공용 팩과 그 게임의 팩만(`listPackNameOfGame`).
+
+    Bin/Packs 는 Dev · Shipping 빌드가 모든 게임의 팩을 굽고 지난 쿠킹의 팩도 남는 폴더라 통째로 베끼지 않는다.
+    이름은 게임 프리셋에서 고르고, 그 팩이 없으면 실패다(빠진 팩을 둔 패키지는 기동하지 못한다).
+    """
+    try:
+        listName = listPackNameOfGame(projectRoot, game)
+    except ConfigError as error:
+        raise PackageError(str(error)) from error
+    listMissing = [name for name in listName if (packDir / name).is_file() is False]
+    if listMissing:
+        raise PackageError(f"{packDir} has no {', '.join(listMissing)} for game {game} - cook first")
+    return [packDir / name for name in listName]
 
 
 def measureBytes(path: Path) -> int:
@@ -115,7 +132,7 @@ def runCook(request: PackageRequest, projectRoot: Path, binDir: Path) -> None:
     """리소스 팩을 그 타깃 · 백엔드로 다시 쿠킹해 Bin/Packs 에 둔다(빌드를 건너뛰고 쿠킹만 새로 할 때)."""
     executable = binDir / kMapTargetExecutable[request.target]
     listCommand = [sys.executable, str(projectRoot / "Scripts" / "generate" / "CookAssets.py"), "--all", "--out", str(binDir / kPackFolderName),
-                   "--cooked-dir", str(binDir.parent / "Cooked"), "--build-target", request.target]
+                   "--cooked-dir", str(binDir.parent / "Cooked"), "--build-target", request.target, "--game", request.game]
     if executable.is_file():
         listCommand += ["--app", str(executable)]
     if request.rhi:
@@ -125,18 +142,22 @@ def runCook(request: PackageRequest, projectRoot: Path, binDir: Path) -> None:
 
 
 def stagePackage(request: PackageRequest, projectRoot: Path, binDir: Path, stagingDir: Path) -> None:
-    """스테이징 폴더를 비우고 Bin 의 배포 항목과 서버 설정을 베낀다."""
+    """스테이징 폴더를 비우고 Bin 의 배포 항목, 그 게임의 팩, 서버 설정을 베낀다."""
     if stagingDir.exists():
         shutil.rmtree(stagingDir)
     stagingDir.mkdir(parents=True)
     for entry in selectStagedEntries(binDir, request.target):
         destination = stagingDir / entry.name
-        if entry.is_dir():
-            shutil.copytree(entry, destination)
-        else:
-            shutil.copy2(entry, destination)
+        shutil.copy2(entry, destination)
         request.listCopied.append(destination)
-    if (binDir / kPackFolderName).is_dir() is False:
+    packDir = binDir / kPackFolderName
+    if packDir.is_dir():
+        (stagingDir / kPackFolderName).mkdir()
+        for pack in selectStagedPacks(projectRoot, packDir, request.game):
+            destination = stagingDir / kPackFolderName / pack.name
+            shutil.copy2(pack, destination)
+            request.listCopied.append(destination)
+    else:
         print(f"[package] warning: no {kPackFolderName}/ in {binDir} - the package runs only with loose Resource/ next to it", flush=True)
     if request.target == "Server":
         serverConfig = projectRoot / "Config" / "Server" / f"{request.game}.json"

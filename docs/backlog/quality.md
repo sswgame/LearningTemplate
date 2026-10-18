@@ -83,11 +83,8 @@
 - `C-44` [정리] **credits 표와 임포트 규칙이 "넓은 와일드카드 + 첫 매칭"이다.** 새 팩 파일이 다른 팩의 출처로 붙거나 다른 팩의 배치 오프셋(`ModelImportConfig.json`)이 적용돼도 경고가 없다(2026-10-17 `res3` 도입에서 확인; 이번엔 새 줄을 표 앞에 두어 피했다). 팩마다 하위 폴더를 하나씩 두고 패턴이 하위 폴더를 넘지 못하게 하거나, 파일 하나에 규칙이 둘 이상 맞으면 오류로 낸다. `CheckResourceCredits` 가 출처 목록(해시) 형식(`audio.sources.json` 의 모양)을 모든 리소스 도메인에서 읽게 넓히는 일을 포함한다.
   출처 목록의 해시가 맞으려면 산출물이 결정적이어야 하므로, 인코더가 만드는 다른 산출물(텍스처 DDS 변환 등)의 비결정 바이트도 점검한다.
   이미지 출처 목록(TOML, `textures_raw/cc0_sources.toml`)과 오디오 출처 목록(JSON)의 형식이 갈렸다 — 도구 데이터를 `Resource/` 에 둘 형식 · 위치를 한 번에 정한다. 이미지 쪽 스크립트(`Scripts/dev/MakeCc0Import.py`)는 파이썬 3.11 이상(`tomllib`)이 필요하다.
-- `C-46` [정리] **게임 패키지에 다른 게임의 팩까지 모두 들어간다.** 확인한 사실(2026-10-18, 코드로 — 쿠킹한 팩은 이 PC 에 없어 크기는 원본으로 쟀다):
-  `cookAllPacks`(`Scripts/generate/CookAssets.py`)는 `engine.pack` · `common.pack` 과 함께 `Resource/game/` 아래 **모든** 폴더를 `game_<이름>.pack` 으로 한 출력 폴더에 굽는다 — `SW_ACTIVE_GAME` 을 보지 않는다.
-  `MakePackage --game <이름>` 은 그 `Bin/Packs` 폴더를 통째로 담는다. 그래서 `common`(원본 33.6MB, 그중 오디오 33.1MB)은 모든 패키지에 들어가지만, 런타임이 `game` → `common` → `engine` 순으로 늘 올리는 공용 도메인이라 이것은 설계대로다.
-  서버 패키지는 `--build-target Server` 가 오디오를 빼므로(`CookContract.json`) 공용 오디오가 들지 않는다.
-  판단: `common` 만 고르는 팩 선언은 지금 필요 없다. 더 큰 낭비는 다른 게임의 팩이다(원본 `empty` 73.5MB · `shooter3d` 39.1MB 가 모든 게임 패키지에 든다) — 쿠커가 패키지의 게임(`SW_ACTIVE_GAME`)의 `game_` 팩만 굽게 하는 것이 먼저다.
+- `C-46` [정리] **Shipping 빌드의 쿠킹이 아직 모든 게임의 팩을 굽는다.** 패키지 내용은 고쳤다(2026-10-18): `MakePackage` 가 `Bin/Packs` 에서 공용 팩과 그 게임의 팩만 고르고(`CookAssets.listPackNameOfGame`, 게임 프리셋의 `_packRoot`), 그 팩이 없으면 실패한다. `CookAssets --game <게임>` 은 그 게임의 팩만 굽는다.
+  남은 것: `cmake/Engine/AssetAndToolTargets.cmake` 의 `swCookArgs` 가 Shipping(`SW_SHIPPING_BUILD`)일 때 `--game ${SW_ACTIVE_GAME}` 을 넘기게 한다 — 지금은 쓰지 않는 게임 팩을 굽느라 쿠킹 시간만 든다. Dev 프리셋은 `-game=` 으로 고르므로 계속 모두 굽는다.
   공용 오디오를 일부 게임만 쓰게 되면 그때 `Config/Game/<게임>.json` 에 쓰는 공용 팩을 적는 선언을 들인다.
 - `C-50` [정리] **리소스 도입 용량 예산을 원본이 아니라 쿠킹 DDS 까지 합쳐 잡는다.** 2026-10-17 `res1` 에서 재질 31MB 가 57MB 로, 파티클 4.8MB 가 27MB 로 늘었다.
   현재 이미지 도입분은 120.7MB(원본 44.2MB + DDS 76.4MB)이며 110MB 이하로 줄이려면 재질 10 → 8(약 -12MB), HDRI 4 → 3(약 -7.5MB), 파티클 40 → 20(약 -8MB) 중 둘쯤.
