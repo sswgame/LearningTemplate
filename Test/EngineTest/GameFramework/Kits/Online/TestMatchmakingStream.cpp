@@ -54,7 +54,7 @@ namespace
             SW_EXPECT_TRUE( server._host.registerHostService( &_binding ) );
             server.start();
             server.addKit( this );
-            _partyLobby.initialize( server._host.getEphemeralRouter(), server.getServerID() );
+            SW_EXPECT_TRUE( _partyLobby.initialize( server._host.getEphemeralRouter(), server.getServerID() ) );
             MatchModeDefinition mode;
             mode._modeID    = "pair";
             mode._teamCount = 2;

@@ -303,9 +303,8 @@ namespace sw
 
     void PushNotificationDispatcher::registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag )
     {
-        const bool bValid = accountID != kInvalidAccountID && PushLimit::isValidProviderID( registration._providerID ) && registration._token.empty() == false &&
-                            registration._token.size() <= static_cast<size_t>( PushLimit::kMaxTokenSize ) &&
-                            registration._locale.size() <= static_cast<size_t>( PushLimit::kMaxLocaleSize );
+        // 길이 상한(토큰 · 언어)은 `PushDeviceRegistration` 의 `PROPERTY( MaxCount )` 가 원본이다. 요청 본문 읽기(고정 배치형)와 레코드 쓰기(`encodeDevice`)가 막으므로 여기 다시 적지 않는다.
+        const bool bValid = accountID != kInvalidAccountID && PushLimit::isValidProviderID( registration._providerID ) && registration._token.empty() == false;
         if ( bValid == false || _pStore == nullptr )
         {
             if ( requestTag != 0 )

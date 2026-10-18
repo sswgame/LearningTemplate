@@ -89,7 +89,11 @@ namespace sw
                     outError = "matchmaking needs a cache (authority leases and server lists)";
                     return false;
                 }
-                _partyLobby.initialize( context._pRouter, context._serverID, _maxPartySize );
+                if ( _partyLobby.initialize( context._pRouter, context._serverID, _maxPartySize ) == false )
+                {
+                    outError = "matchmaking option maxPartySize is out of range (the party lobby service logged the range)";
+                    return false;
+                }
                 MatchQueueDependencies dependencies;
                 dependencies._pRouter     = context._pRouter;
                 dependencies._pBus        = context._pBus;

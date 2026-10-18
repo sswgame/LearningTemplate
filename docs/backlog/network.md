@@ -11,15 +11,16 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
   ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUDPBenchTest` 숫자로 전후를 측정한다.
 
-- `C-39` [정리] **범위를 `PROPERTY` 선언과 서비스 손 규칙에 두 번 적는다.** `isValidLobbyRequest` · `registerDevice` 확인 같은 손 검사가 `PROPERTY( Min · Max )` 와 같은 범위를 따로 적고,
-  `PartyLobbyService::initialize` 는 파티 크기를 `std::clamp` 로 조용히 맞춘다(폴백). 뿌리: 범위의 원본이 `PROPERTY` 하나가 아니다.
-  손 규칙을 지우고 메시지 읽기의 범위 검사(`A-19`)에 맡기며, 설정 범위 밖 값은 오류로 멈춘다.
-
 - `C-61` [정리] **서버 버스 본문 타입의 모듈 내보내기 누락이 링크 오류로만 드러난다.** `ServerBusTopic<T>` 가 `T::StaticType()` 을 부르는데 `REFLECT` 구조체에 `SW_KIT_API` · `SW_GF_API` 가 없으면
-  다른 모듈(서버 키트)에서 링크가 깨진다(2026-10-18 통합에서 열여덟 타입에 붙였다). 주제 정의를 만드는 쪽에서 컴파일 때 막을 형식(예: 생성기가 버스 타입에 내보내기를 요구)을 찾는다.
+  다른 모듈(서버 키트)에서 링크가 깨진다(2026-10-18 통합에서 열여덟 타입에 붙였다). C++ 형식만으로는 막지 못한다 — 내보내기 여부를 보는 타입 특성이 없고, 쓰는 모듈에서 `dllimport` 가 아닌 것은
+  같은 모듈의 정상 사용과 구별되지 않으며, 리눅스의 visibility 는 컴파일에 드러나지 않는다(2026-10-18 netkit 조사). 막을 자리는 생성기다: `Tools/ReflectionParser/AstVisitor.cpp` 는 clang AST 를 보므로
+  `REFLECT` 레코드에 `kBusVersion` 이 있는데 `DLLExportAttr` · `DLLImportAttr`(리눅스는 `VisibilityAttr`)가 없으면 생성을 오류로 멈출 수 있다(생성기 소유 작업). 그 전의 최소 게이트는
+  `Scripts/lint/gate/CheckExportMacros.py` 에 "`kBusVersion` 을 가진 `struct` 는 `SW_*_API` 를 단다" 한 규칙이다.
 
-- `C-54` [정리] **키트 설정 구조체가 범위 밖 값을 조용히 clamp 한다**(`LockstepSession` · `TurnRelay` · `ReplicationServer`). 2026-10-18 `feat17` 이 `RollbackConfig` 를
-  "검증하고 거절"로 바꿨다. 나머지 키트 설정도 같은 공통 형식(설정 구조체의 `PROPERTY( Min · Max )` + 받을 때 `validate` 가 오류를 돌려주고 시작을 거절)으로 옮긴다. `C-39` 와 같은 뿌리.
+- `C-54` [정리] **키트 · 게임 규칙 설정이 범위 밖 값을 조용히 맞춘다.** 2026-10-18 넷 키트 넷(`RollbackConfig` · `LockstepConfig` · `TurnRelayConfig` · `ReplicationServerConfig`)과
+  `PartyLobbyService::initialize` 는 "선언된 범위 + 받을 때 거절"로 옮겼다(공통 형식은 `NetKitConfig.h` 머리 주석). 같은 모양이 남은 곳: `ReplicationClient`(기록 수 `max( 4, … )`) · `MMOReplicator`(떠남 반경) ·
+  `MatchMaker`(팀 수 · 인원 `std::clamp`) · Base 의 `ScheduleSystem` · `RoundSeries` · `Vitality` · `WorldClock` · `SessionStateComponent`, 장르 키트(`AdventureVitals` · `AdventureElementGrid` · `KlondikeGame` · `RTSWorld` · `TrampolineArena` 등).
+  뿌리: 설정 구조체가 범위를 선언하지 않아 받는 쪽마다 손으로 맞춘다. `NetKitConfigUtil` 을 키트 공통 자리(Base)로 옮겨 함께 쓴다.
 
 - `D7-1` [기능] **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도

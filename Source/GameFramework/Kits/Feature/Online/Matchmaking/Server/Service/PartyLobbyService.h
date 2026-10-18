@@ -117,8 +117,12 @@ namespace sw
         PartyLobbyService( const PartyLobbyService& )            = delete;
         PartyLobbyService& operator=( const PartyLobbyService& ) = delete;
 
-        /** @brief @p pRouter 는 빌려 씁니다. 새 파티와 로비의 id 는 @p serverID 를 32비트 왼쪽으로 민 값에 순번을 합친 것이며 서버끼리 겹치지 않습니다. */
-        void initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize = 4 );
+        /**
+         * @brief @p pRouter 는 빌려 씁니다. 새 파티와 로비의 id 는 @p serverID 를 32비트 왼쪽으로 민 값에 순번을 합친 것이며 서버끼리 겹치지 않습니다.
+         * @details @p maxPartySize 가 [`PartyLobbyLimit::kMinPartySize`, `kMaxPartySize`] 밖이면 오류를 남기고 false 를 반환하며 라우터를 잡지 않는다.
+         *          예전에는 범위 안으로 조용히 맞췄다(폴백 금지 원칙).
+         */
+        [[nodiscard]] bool initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize = 4 );
         /** @brief 기다리던 캐시 요청을 취소합니다. 라우터보다 먼저 종료될 때 부릅니다. */
         void shutdown();
 

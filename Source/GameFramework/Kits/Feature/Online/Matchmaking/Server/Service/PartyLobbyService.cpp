@@ -6,17 +6,16 @@
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
-#include <algorithm>
-
 namespace sw
 {
     namespace
     {
         struct PartyLobbyServiceInternal
         {
+            /** @brief 키가 비지 않았고 `[0-9a-z_.]` 만 쓰는지입니다. 길이 상한은 `LobbySetting::_key` 의 `PROPERTY( MaxCount )` 를 읽기가 본다. */
             static bool isValidSettingKey( string_view key )
             {
-                if ( key.empty() || key.size() > static_cast<size_t>( PartyLobbyLimit::kMaxSettingKeySize ) )
+                if ( key.empty() )
                     return false;
                 for ( const utf8 ch : key )
                 {
@@ -27,17 +26,19 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 만들기 요청이 `PROPERTY` 로 적을 수 없는 규칙(이름 있음, 정원 하한, 모드 id, 설정 키 글자)을 지키는지입니다.
+             * @details 상한(이름 · 설정 수 · 값 길이 · 정원 위)은 `LobbySnapshot` 의 `PROPERTY( Max · MaxCount )` 가 원본이고, 요청 본문을 읽는 고정 배치형 코덱이 막는다(`MatchmakingServer`).
+             *          여기 다시 적으면 범위가 두 곳이 된다. 정원 하한은 와이어 범위(`Min = 0`)가 와이어 형식이라 바꾸지 않고 여기서 본다.
+             */
             static bool isValidLobbyRequest( const LobbySnapshot& request )
             {
-                const bool bNameOk              = request._name.empty() == false && request._name.size() <= static_cast<size_t>( PartyLobbyLimit::kMaxLobbyNameSize );
-                const bool bSizeOk              = PartyLobbyLimit::kMinLobbySize <= request._maxMemberCount && request._maxMemberCount <= PartyLobbyLimit::kMaxLobbySize;
-                const bool bCountOk             = static_cast<int32>( request._listSetting.size() ) <= PartyLobbyLimit::kMaxLobbySetting;
-                const bool bInvalidLobbyRequest = bNameOk == false || bSizeOk == false || bCountOk == false || isValidMatchModeID( request._modeID ) == false;
+                const bool bInvalidLobbyRequest = request._name.empty() || request._maxMemberCount < PartyLobbyLimit::kMinLobbySize || isValidMatchModeID( request._modeID ) == false;
                 if ( bInvalidLobbyRequest )
                     return false;
                 for ( const LobbySetting& setting : request._listSetting )
                 {
-                    if ( isValidSettingKey( setting._key ) == false || setting._value.size() > static_cast<size_t>( PartyLobbyLimit::kMaxSettingValueSize ) )
+                    if ( isValidSettingKey( setting._key ) == false )
                         return false;
                 }
                 return true;
@@ -338,12 +339,22 @@ namespace sw
         shutdown();
     }
 
-    void PartyLobbyService::initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize )
+    bool PartyLobbyService::initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize )
     {
+        // 실패하면 라우터 없는 서비스로 남긴다. 값을 범위 안으로 맞춰 돌지 않는다.
+        _pRouter                = nullptr;
+        const bool bPartySizeOk = PartyLobbyLimit::kMinPartySize <= maxPartySize && maxPartySize <= PartyLobbyLimit::kMaxPartySize;
+        if ( bPartySizeOk == false )
+        {
+            SW_LOG_ERROR( "PartyLobbyService: refused to start - max party size %# is outside [%#, %#]", maxPartySize, PartyLobbyLimit::kMinPartySize,
+                          PartyLobbyLimit::kMaxPartySize );
+            return false;
+        }
         _pRouter      = pRouter;
         _serverID     = serverID;
-        _maxPartySize = std::clamp( maxPartySize, 2, PartyLobbyLimit::kMaxPartySize );
+        _maxPartySize = maxPartySize;
         _updater.initialize( pRouter );
+        return true;
     }
 
     void PartyLobbyService::shutdown()

@@ -359,7 +359,7 @@ namespace
         void start()
         {
             NetHost& host = _pWorld->getHost();
-            _session.initialize( &host, _playerCount, _pWorld->isServer() ? 0 : host.getClientIndex() + 1, 3 );
+            SW_EXPECT_TRUE( _session.initialize( &host, _playerCount, _pWorld->isServer() ? 0 : host.getClientIndex() + 1, LockstepConfig{ 3 } ) );
             _bStarted = true;
         }
 
@@ -482,7 +482,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
     for ( int32 index = 0; index < 3; ++index )
     {
         const int32 player = index == 0 ? 0 : cluster.getHost( index ).getClientIndex() + 1;
-        listSession[static_cast<size_t>( index )].initialize( &cluster.getHost( index ), 3, player, 4 );
+        SW_ASSERT_TRUE( listSession[static_cast<size_t>( index )].initialize( &cluster.getHost( index ), 3, player, LockstepConfig{ 4 } ) );
     }
     vector<uint8> buffer;
     for ( int32 frame = 0; frame < 60 * 6; ++frame )
@@ -710,10 +710,39 @@ SW_TEST_CASE( NetLockstepTest, RollbackRefusesOutOfRangeSettings )
     SW_EXPECT_FALSE( session.initialize( nullptr, &game, 2, 2, RollbackConfig{} ) ); // 내 번호가 플레이어 수 밖
     SW_EXPECT_FALSE( session.initialize( nullptr, &game, 0, 0, RollbackConfig{} ) );
     SW_EXPECT_FALSE( session.initialize( nullptr, nullptr, 2, 0, RollbackConfig{} ) );
+    RollbackConfig tooLongPrediction;
+    tooLongPrediction._maxPrediction = RollbackSession::kMaxPrediction + 1;
+    SW_EXPECT_FALSE( session.initialize( nullptr, &game, 2, 0, tooLongPrediction ) );
     SW_EXPECT_EQUAL( 0, session.getFrame() );
+    // 경계 값은 받는다. `PROPERTY( Max )` 리터럴과 세션 상수가 어긋나면 여기서 드러난다.
+    RollbackConfig atLimit;
+    atLimit._inputDelay    = RollbackSession::kMaxInputDelay;
+    atLimit._maxPrediction = RollbackSession::kMaxPrediction;
+    SW_EXPECT_TRUE( session.initialize( nullptr, &game, 2, 0, atLimit ) );
     // 맞는 설정이면 시작한다.
     SW_ASSERT_TRUE( session.initialize( nullptr, &game, 2, 0, RollbackConfig{} ) );
     SW_EXPECT_TRUE( session.advanceFrame( 0 ) );
+}
+
+/**
+ * @brief [NetLockstepTest] 범위 밖 락스텝 설정과 맞지 않는 플레이어 번호는 오류로 거절하며, 거절된 세션은 입력을 예약하지 않고 틱도 넘기지 않는다
+ * @details 예전에는 지연 65 를 64 로, 플레이어 수 0 을 1 로 바꿔 돌았다. 경계 값(`kMaxInputDelay`)은 받는다 — `PROPERTY( Max )` 리터럴과 상수가 어긋나면 여기서 드러난다.
+ */
+SW_TEST_CASE( NetLockstepTest, LockstepRefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range lockstep settings are refused" );
+    LockstepSession              session;
+    SW_EXPECT_FALSE( session.initialize( nullptr, 2, 0, LockstepConfig{ LockstepSession::kMaxInputDelay + 1 } ) );
+    SW_EXPECT_FALSE( session.isStarted() );
+    SW_EXPECT_FALSE( session.submitLocalInput( vector<uint8>{} ) );
+    vector<vector<uint8>> listInput;
+    SW_EXPECT_FALSE( session.tryAdvance( listInput ) );
+    SW_EXPECT_FALSE( session.initialize( nullptr, 2, 0, LockstepConfig{ -1 } ) );
+    SW_EXPECT_FALSE( session.initialize( nullptr, 0, 0, LockstepConfig{} ) );
+    SW_EXPECT_FALSE( session.initialize( nullptr, 2, 2, LockstepConfig{} ) ); // 내 번호가 플레이어 수 밖
+    SW_EXPECT_EQUAL( 0u, session.getCurrentTick() );
+    SW_EXPECT_TRUE( session.initialize( nullptr, 2, 0, LockstepConfig{ LockstepSession::kMaxInputDelay } ) );
+    SW_EXPECT_TRUE( session.isStarted() );
 }
 
 /**
@@ -769,7 +798,7 @@ SW_TEST_CASE( NetLockstepTest, ChecksumHistoryStaysBounded )
 SW_TEST_CASE( NetLockstepTest, FarFutureInputIsIgnored )
 {
     LockstepSession session;
-    session.initialize( nullptr, 2, 0, 2 );
+    SW_ASSERT_TRUE( session.initialize( nullptr, 2, 0, LockstepConfig{ 2 } ) );
     const int32      queuedBefore = session.getQueuedTickCount();
     NetMessageWriter writer;
     for ( uint32 tick = 100; tick < 100000; tick += 997 )
@@ -820,7 +849,7 @@ SW_TEST_CASE( NetLockstepTest, FarFutureInputIsIgnored )
 SW_TEST_CASE( NetLockstepTest, OversizeInputIsRefusedOnBothEnds )
 {
     LockstepSession session;
-    session.initialize( nullptr, 2, 0, 2 );
+    SW_ASSERT_TRUE( session.initialize( nullptr, 2, 0, LockstepConfig{ 2 } ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "an input over the lockstep limit is refused with an error" );
         SW_EXPECT_FALSE( session.submitLocalInput( vector<uint8>( static_cast<size_t>( NetLockstepMessage::kMaxInputBytes ) + 1, 0x5A ) ) );
@@ -845,7 +874,7 @@ SW_TEST_CASE( NetLockstepTest, OversizeInputIsRefusedOnBothEnds )
 SW_TEST_CASE( NetLockstepTest, PendingChecksumsExpireOneTickAtATime )
 {
     LockstepSession session;
-    session.initialize( nullptr, 2, 0, 0 );
+    SW_ASSERT_TRUE( session.initialize( nullptr, 2, 0, LockstepConfig{ 0 } ) );
     for ( uint32 tick = 0; tick < 10; ++tick )
     {
         session.reportChecksum( tick, 7u ); // 상대(플레이어 1)는 알리지 않는다 — 열 틱이 기다린다

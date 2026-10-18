@@ -65,7 +65,7 @@ namespace
                 const string name = string{ "Crate" } + sw::to_string( index );
                 _listCrate.push_back( spawnBox( manager, name.c_str(), position, float3{ 0.5f, 0.5f, 0.5f }, PhysicsBodyType::Dynamic ) );
             }
-            _server.initialize( &world.getHost(), ReplicationServerConfig{}, nullptr );
+            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), ReplicationServerConfig{}, nullptr ) );
             world.getRouter().registerHandler( &_server );
         }
 
@@ -254,7 +254,7 @@ namespace
             NetHost& host = world.getHost();
             if ( world.isServer() && host.getConnectedCount() < _playerCount - 1 )
                 return;
-            _session.initialize( &host, _playerCount, world.isServer() ? 0 : host.getClientIndex() + 1, kLockstepDelay );
+            SW_EXPECT_TRUE( _session.initialize( &host, _playerCount, world.isServer() ? 0 : host.getClientIndex() + 1, LockstepConfig{ kLockstepDelay } ) );
             _bStarted = true;
         }
 

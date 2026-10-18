@@ -8,6 +8,7 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
 
+#include "GameFramework/Kits/Feature/Network/NetKitConfig.h"
 #include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
 
 namespace sw
@@ -36,18 +37,15 @@ namespace sw
     bool RollbackSession::initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings )
     {
         // 실패하면 시작하지 않은 세션으로 남긴다. 값을 범위 안으로 맞춰 돌지 않는다.
-        _pGame                      = nullptr;
-        const bool bPlayersValid    = playerCount >= 1 && localPlayer >= 0 && localPlayer < playerCount;
-        const bool bInputDelayValid = settings._inputDelay >= 0 && settings._inputDelay <= kMaxInputDelay;
-        const bool bPredictionValid = settings._maxPrediction >= 1 && settings._maxPrediction <= kMaxPrediction;
-        const bool bAdvantageValid  = settings._maxFrameAdvantage >= 0;
-        const bool bSettingsValid   = bInputDelayValid && bPredictionValid && bAdvantageValid;
-        const bool bCanStart        = pGame != nullptr && bPlayersValid && bSettingsValid;
+        // 설정 칸의 범위는 `RollbackConfig` 의 `PROPERTY( Min · Max )` 가 원본이다. 여기서는 칸 사이의 관계(내 번호 < 플레이어 수)만 따로 본다.
+        _pGame                     = nullptr;
+        const bool   bPlayersValid = playerCount >= 1 && localPlayer >= 0 && localPlayer < playerCount;
+        const string rangeError    = NetKitConfigUtil::describeRangeErrors( settings );
+        const bool   bCanStart     = pGame != nullptr && bPlayersValid && rangeError.empty();
         if ( bCanStart == false )
         {
-            SW_LOG_ERROR( "RollbackSession: refused to start - game %#, players %#, local player %#, input delay %# (0 ~ %#), max prediction %# (1 ~ %#), max frame advantage %# (0 or more)",
-                          pGame != nullptr ? "set" : "missing", playerCount, localPlayer, settings._inputDelay, kMaxInputDelay, settings._maxPrediction, kMaxPrediction,
-                          settings._maxFrameAdvantage );
+            SW_LOG_ERROR( "RollbackSession: refused to start - game %#, players %#, local player %#, settings '%#'", pGame != nullptr ? "set" : "missing", playerCount,
+                          localPlayer, rangeError.empty() ? "within range" : rangeError.c_str() );
             return false;
         }
         _pHost       = pHost;

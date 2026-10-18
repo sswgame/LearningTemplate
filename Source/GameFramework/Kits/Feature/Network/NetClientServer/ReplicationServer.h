@@ -15,6 +15,8 @@
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
@@ -63,14 +65,24 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버 설정입니다. */
-    struct ReplicationServerConfig
+    /**
+     * @brief 서버 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `ReplicationServer::initialize` 가 오류로 거절합니다(`NetKitConfigUtil`).
+     * @details 예전에는 기록 수와 입력 버퍼 크기를 쓸 때 조용히 2 · 1 로 올렸다(폴백 금지 원칙).
+     *          예산의 `Max` 는 리터럴만 받으므로 `NetConnection::kMaxSingleMessageSize` 와 같은 값을 적는다. 경계 값 테스트(`ServerRefusesOutOfRangeSettings`)가 둘이 어긋나지 않는지 본다.
+     */
+    REFLECT()
+    struct SW_KIT_API ReplicationServerConfig
     {
-        int32 _snapshotBudgetBytes{ 1000 };    ///< 클라이언트 한 명당 틱마다 보내는 스냅샷 메시지의 상한 바이트. 종류 바이트, 헤더, 사라진 목록을 포함하며 `NetConnection::kMaxSingleMessageSize` 로 잘린다.
-                                               ///< 연결 상한에서 나온 할당량(`NetSendBudget::computeTickBudget`)이 더 작으면 그 값을 쓴다
+        REFLECT_BODY();
+        PROPERTY( Min = 1, Max = 1024 )
+        int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 한 명당 틱마다 보내는 스냅샷 메시지의 상한 바이트(1 ~ `NetConnection::kMaxSingleMessageSize`). 종류 바이트, 헤더, 사라진 목록을 포함한다.
+                                            ///< 연결 상한에서 나온 할당량(`NetSendBudget::computeTickBudget`)이 더 작으면 그 값을 쓴다
+        PROPERTY( Min = 0.001, Units = s )
         float32 _tickInterval{ 1.0f / 30.0f }; ///< `sendSnapshots` 를 부르는 간격(초). 연결 상한에서 스냅샷 하나의 할당량을 계산할 때 쓰며, 클라이언트 설정의 같은 이름과 맞춘다
-        int32   _historySize{ 64 };            ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보)의 수
-        int32   _inputBufferSize{ 64 };        ///< 클라이언트마다 받아 두는 입력 틱 수. 받은 가장 새 틱에서 이만큼 뒤까지 보관하고 더 오래된 입력은 버린다
+        PROPERTY( Min = 2 )
+        int32 _historySize{ 64 }; ///< 클라이언트마다 기억하는 보낸 스냅샷(기준 후보)의 수
+        PROPERTY( Min = 1 )
+        int32 _inputBufferSize{ 64 }; ///< 클라이언트마다 받아 두는 입력 틱 수. 받은 가장 새 틱에서 이만큼 뒤까지 보관하고 더 오래된 입력은 버린다
     };
 } // namespace sw
 
@@ -93,8 +105,12 @@ namespace sw
     public:
         ReplicationServer();
 
-        void initialize( NetHost* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy = nullptr );
-        void beginTick( uint32 tick );
+        /**
+         * @brief 복제를 시작합니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
+         * @details 거절된 서버는 호스트가 없는 서버와 같다. `sendSnapshots` 가 아무것도 보내지 않는다.
+         */
+        [[nodiscard]] bool initialize( NetHost* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy = nullptr );
+        void               beginTick( uint32 tick );
         /** @brief 이 틱의 엔티티를 등록합니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않으며, 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer );
         /** @brief 이 틱의 엔티티를 확정하고 id 순으로 정렬합니다. 그 전까지 월드에는 지난 틱의 엔티티가 남아 있으므로 `sendSnapshots` 와 `getWorldSnapshot` 은 이 함수 뒤에 씁니다. */

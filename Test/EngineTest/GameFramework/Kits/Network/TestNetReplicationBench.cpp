@@ -57,7 +57,7 @@ namespace
             , _listEntity{}
             , _pProbe{ pProbe }
         {
-            _server.initialize( &world.getHost(), ReplicationServerConfig{} );
+            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), ReplicationServerConfig{} ) );
             world.getRouter().registerHandler( &_server );
             for ( uint32 index = 0; index < NetReplicationBenchInternal::kEntityCount; ++index )
             {

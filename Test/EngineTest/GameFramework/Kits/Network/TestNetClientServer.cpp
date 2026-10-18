@@ -215,7 +215,7 @@ SW_TEST_CASE( NetClientServerTest, DeltaReconstructionMatchesAfterSlotReuse )
 SW_TEST_CASE( NetClientServerTest, RedundantInputsSkipKnownTicksAndKeepLaterPayloads )
 {
     ReplicationServer server;
-    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
+    SW_ASSERT_TRUE( server.initialize( nullptr, ReplicationServerConfig{}, nullptr ) );
 
     // 틱 5 를 먼저 받는다. 다음 메시지는 4(새) · 5(이미 가짐) · 6(새) — 오래된 것부터.
     SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeInputMessage( 5, {
@@ -265,7 +265,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     ReplicationClient       client;
     ReplicationClientConfig clientSettings;
     clientSettings._tickInterval = 1.0f / 30.0f;
-    server.initialize( &serverHost, ReplicationServerConfig{}, &policy );
+    SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{}, &policy ) );
     client.initialize( &clientHost, clientSettings );
 
     // 30 Hz 서버 틱, 60 Hz 프레임. 엔티티 1 은 x = 틱 × 0.1 로 움직인다.
@@ -401,7 +401,7 @@ SW_TEST_CASE( NetClientServerTest, OwnerStateSlotTravelsOutsideTheEntityBudget )
     // 서버는 넘는 상태를 정하지 않는다.
     test::ScopedDefensiveTestLog expected( "an owner state larger than the snapshot limit is refused" );
     ReplicationServer            server;
-    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
+    SW_ASSERT_TRUE( server.initialize( nullptr, ReplicationServerConfig{}, nullptr ) );
     SW_EXPECT_FALSE( server.setOwnerState( 0, 1, vector<uint8>( NetSnapshot::kMaxEntityBytes + 1, 0 ) ) );
 }
 
@@ -509,7 +509,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
     ReplicationClient       client;
     ReplicationClientConfig clientSettings;
     clientSettings._tickInterval = 1.0f / 30.0f;
-    server.initialize( &serverHost, ReplicationServerConfig{} );
+    SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{} ) );
     client.initialize( &clientHost, clientSettings );
 
     float64       time         = 0.0;
@@ -618,7 +618,7 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
     second.initialize( network.createEndpoint( 5002 ), settings );
     SW_ASSERT_TRUE( serverHost.listen() );
     ReplicationServer server;
-    server.initialize( &serverHost, ReplicationServerConfig{}, nullptr );
+    SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{}, nullptr ) );
     NetMessageRouter router;
     router.registerHandler( &server );
     float64    time   = 0.0;
@@ -677,7 +677,7 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
 SW_TEST_CASE( NetClientServerTest, KindMaskRoutesSharedRange )
 {
     ReplicationServer server;
-    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
+    SW_ASSERT_TRUE( server.initialize( nullptr, ReplicationServerConfig{}, nullptr ) );
     ReplicationClient client;
     client.initialize( nullptr, ReplicationClientConfig{} );
     const uint8         otherKind = NetKitMessageRange::kClientServer + 7;
@@ -766,7 +766,7 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
 
     // 손으로 지은 메시지 — 틱 4 는 1 B, 틱 5 는 300 B(상한 넘음).
     ReplicationServer server;
-    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
+    SW_ASSERT_TRUE( server.initialize( nullptr, ReplicationServerConfig{}, nullptr ) );
     SW_EXPECT_TRUE( NetHandleResult::Malformed == server.handleMessage( 0, makeInputMessage( 4, { vector<uint8>{ 9 }, vector<uint8>( 300, 7 ) } ) ) );
     vector<uint8> input;
     bool          bExact = false;
@@ -784,7 +784,7 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4000 ) ) );
     ReplicationServer liveServer;
     ReplicationClient liveClient;
-    liveServer.initialize( &serverHost, ReplicationServerConfig{}, nullptr );
+    SW_ASSERT_TRUE( liveServer.initialize( &serverHost, ReplicationServerConfig{}, nullptr ) );
     liveClient.initialize( &clientHost, ReplicationClientConfig{} );
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
@@ -854,7 +854,7 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
 
     ReplicationServer server;
     ReplicationClient client;
-    server.initialize( &serverHost, ReplicationServerConfig{} );
+    SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{} ) );
     client.initialize( &clientHost, ReplicationClientConfig{} );
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
@@ -945,4 +945,34 @@ SW_TEST_CASE( NetClientServerTest, RenderTickNeverGoesBackAcrossASnapshotGap )
     SW_EXPECT_TRUE( bMonotonic );
     SW_EXPECT_TRUE( bBehindNewest );
     SW_EXPECT_TRUE( lastRenderTick > 110.0f ); // 끝(받은 틱 119) 근처까지 따라왔다 — 지연 3 틱
+}
+
+/**
+ * @brief [NetClientServerTest] 범위 밖 서버 설정은 조용히 맞추지 않고 오류로 거절한다. 예산 경계(`NetConnection::kMaxSingleMessageSize`)는 받는다
+ * @details 예전에는 기록 수 0 을 2 로, 입력 버퍼 0 을 1 로 올려 돌았다. 경계 값 확인은 `PROPERTY( Max )` 리터럴과 상수가 어긋나지 않는지 본다.
+ */
+SW_TEST_CASE( NetClientServerTest, ServerRefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range replication server settings are refused" );
+    ReplicationServer            server;
+    ReplicationServerConfig      noHistory;
+    noHistory._historySize = 1;
+    SW_EXPECT_FALSE( server.initialize( nullptr, noHistory ) );
+    ReplicationServerConfig noInputBuffer;
+    noInputBuffer._inputBufferSize = 0;
+    SW_EXPECT_FALSE( server.initialize( nullptr, noInputBuffer ) );
+    ReplicationServerConfig tooLargeBudget;
+    tooLargeBudget._snapshotBudgetBytes = NetConnection::kMaxSingleMessageSize + 1;
+    SW_EXPECT_FALSE( server.initialize( nullptr, tooLargeBudget ) );
+    ReplicationServerConfig noBudget;
+    noBudget._snapshotBudgetBytes = 0;
+    SW_EXPECT_FALSE( server.initialize( nullptr, noBudget ) );
+    ReplicationServerConfig noTickInterval;
+    noTickInterval._tickInterval = 0.0f;
+    SW_EXPECT_FALSE( server.initialize( nullptr, noTickInterval ) );
+    ReplicationServerConfig atLimit;
+    atLimit._snapshotBudgetBytes = NetConnection::kMaxSingleMessageSize;
+    atLimit._historySize         = 2;
+    atLimit._inputBufferSize     = 1;
+    SW_EXPECT_TRUE( server.initialize( nullptr, atLimit ) );
 }

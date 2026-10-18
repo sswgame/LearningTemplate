@@ -9,6 +9,8 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/UUID/UUID.h"
 
+#include "GameFramework/Kits/Feature/Network/NetKitConfig.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "TurnRelay" );
@@ -49,16 +51,25 @@ namespace sw
     {
     }
 
-    void TurnRelayServer::initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy, uint64 tokenSeed )
+    bool TurnRelayServer::initialize( NetHost* pHost, const TurnRelayConfig& settings, const ITurnPolicy* pPolicy, uint64 tokenSeed )
     {
+        // 실패하면 호스트 없는 중계기로 남긴다. 메시지와 `update` 가 아무것도 하지 않는다. 값을 범위 안으로 맞춰 돌지 않는다.
+        _pHost                  = nullptr;
+        const string rangeError = NetKitConfigUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "TurnRelayServer: refused to start - settings '%#'", rangeError.c_str() );
+            return false;
+        }
         _pHost       = pHost;
-        _seatCount   = MathUtil::max( 1, seatCount );
+        _seatCount   = settings._seatCount;
         _pPolicy     = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
         _tokenSecret = tokenSeed != 0 ? tokenSeed : makeTurnRelayTokenSeed();
         _tokenCount  = 0;
         _listRoom.clear();
         _listPending.clear();
         _eventBuffer.clear();
+        return true;
     }
 
     uint32 TurnRelayServer::nextToken()
