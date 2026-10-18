@@ -89,8 +89,8 @@ namespace sw
         if ( _pCatalog == nullptr )
             return false;
         const GhostFlashlightDef& flashlight = _pCatalog->getFlashlight();
-        return bStrobe ? RayMath::isInFlatCone( eye, forward, flashlight._strobeHalfAngle, flashlight._strobeRange, position )
-                       : RayMath::isInFlatCone( eye, forward, flashlight._halfAngle, flashlight._range, position );
+        return bStrobe ? RayMath::isInFlatCone( eye, forward, MathUtil::toDegree( flashlight._strobeHalfAngle ), flashlight._strobeRange, position )
+                       : RayMath::isInFlatCone( eye, forward, MathUtil::toDegree( flashlight._halfAngle ), flashlight._range, position );
     }
 
     int32 GhostEncounter::shineBeam( const float3& eye, const float3& forward )

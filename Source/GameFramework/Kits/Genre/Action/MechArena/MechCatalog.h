@@ -157,8 +157,8 @@ namespace sw
         float32 _wakeInvulnerable{ 1.5f }; ///< 일어난 뒤의 무적 시간
         PROPERTY( Name = "lockOn", Min = 0.0 )
         float32 _lockOnRange{ 60.0f };
-        PROPERTY( Min = 1.0, Max = 180.0 )
-        float32 _lockOnAngle{ 60.0f };
+        PROPERTY( Min = 0.0175, Max = 3.1416, Units = "rad" )
+        float32 _lockOnAngle{ 1.0471976f }; ///< 락온 원뿔의 각(라디안, 60°)
         PROPERTY( Min = 0.0 )
         float32 _transformTime{ 1.0f }; ///< 변형한 뒤 다시 변형할 수 있을 때까지의 시간
         PROPERTY( Min = 0 )

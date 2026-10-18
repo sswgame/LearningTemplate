@@ -8,7 +8,7 @@
  *         <Stats hp="220" maxHp="220" atk="12" def="16" speed="0.9" radius="0.7" invincibility="0"/>
  *         <AI patrolRange="4" detectRange="8" attackRange="1" coolTime="1.6" firstDelay="1.2" projectilePrefab=""/>
  *         <Shot angle="0" speed="4.5" life="2.5" radius="0.22" damage="10"/>
- *         <Shot angle="90" speed="3.2" life="1.8" radius="0.22" damage="10"/>
+ *         <Shot angle="1.5708" speed="3.2" life="1.8" radius="0.22" damage="10"/>
  *         <Prefab path=""/>
  *         <Drop exp="10" gold="5"/>
  *       </Monster>
@@ -47,15 +47,15 @@ namespace sw
 {
     /**
      * @brief 몬스터가 한 번 쏠 때 나가는 탄 하나입니다. 한 번에 여러 발을 쏘려면 `MonsterDef::_listShot` 에 여러 개를 적습니다(겨냥한 한 발과 옆으로 한 발 같은 패턴).
-     * @details monsters.xml 의 `<Shot angle="90" speed="3.2" life="1.8" radius="0.22" damage="10"/>` 한 줄에 해당한다. 단위는 각도(도), m/s, s, m 이다.
+     * @details monsters.xml 의 `<Shot angle="1.5708" speed="3.2" life="1.8" radius="0.22" damage="10"/>` 한 줄에 해당한다. 단위는 각도(라디안), m/s, s, m 이다.
      */
     REFLECT()
     struct MonsterShotDef
     {
         REFLECT_BODY();
 
-        PROPERTY( Name = "angle" )
-        float32 _angleDegrees{ 0.0f }; ///< 겨냥 방향에서 돌린 각도(도). 0은 겨냥 방향이고, 90은 겨냥 방향 (x, y) 를 (−y, x) 로 돌린 쪽이다
+        PROPERTY( Units = "rad" )
+        float32 _angle{ 0.0f }; ///< 겨냥 방향에서 돌린 각도(라디안). 0은 겨냥 방향이고, π/2 는 겨냥 방향 (x, y) 를 (−y, x) 로 돌린 쪽이다
         PROPERTY( Min = 0.0 )
         float32 _speed{ 4.5f }; ///< 탄속(m/s)
         PROPERTY( Name = "life", Min = 0.0 )

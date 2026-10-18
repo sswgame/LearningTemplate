@@ -317,7 +317,7 @@ namespace sw
         if ( bKillerNotReady )
             return KillerAttackResult::NotReady;
         const HorrorKillerDef& def    = *_killer._pDef;
-        const float32          minDot = MathUtil::cos( MathUtil::toRadian( def._lungeAngle * 0.5f ) );
+        const float32          minDot = MathUtil::cos( def._lungeAngle * 0.5f );
         int32                  victim = -1;
         float32                best   = MathUtil::kMaxFloat;
         for ( int32 index = 0; index < getSurvivorCount(); ++index )

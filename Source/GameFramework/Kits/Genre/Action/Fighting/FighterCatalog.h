@@ -104,8 +104,8 @@ namespace sw
         float32 _standHeight{ 1.8f }; ///< 서 있을 때 허트 높이
         PROPERTY( Min = 0.1, Max = "_standHeight" )
         float32 _crouchHeight{ 1.1f }; ///< 앉았을 때 허트 높이
-        PROPERTY()
-        float32 _sidestepAngle{ 40.0f }; ///< 횡이동 한 번에 상대를 축으로 도는 각도(도 단위)
+        PROPERTY( Min = 0.0, Max = 3.1416, Units = "rad" )
+        float32 _sidestepAngle{ 0.6981317f }; ///< 횡이동 한 번에 상대를 축으로 도는 각도(라디안, 40°)
         PROPERTY( Min = 0.0 )
         float32 _jumpHeight{ 1.0f };
         PROPERTY()

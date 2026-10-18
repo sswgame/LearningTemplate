@@ -115,7 +115,7 @@ namespace
                                             "  <Monster id=\"boss\" name=\"Boss\"><Stats hp=\"220\" maxHp=\"220\" atk=\"12\" def=\"16\" speed=\"0.9\" radius=\"0.7\"/>\n"
                                             "    <AI coolTime=\"1.6\" firstDelay=\"1.2\"/>\n"
                                             "    <Shot angle=\"0\" speed=\"4.5\" life=\"2.5\" radius=\"0.22\" damage=\"10\"/>\n"
-                                            "    <Shot angle=\"90\" speed=\"3.2\" life=\"1.8\" radius=\"0.22\" damage=\"10\"/>\n"
+                                            "    <Shot angle=\"1.5707964\" speed=\"3.2\" life=\"1.8\" radius=\"0.22\" damage=\"10\"/>\n"
                                             "  </Monster>\n"
                                             "</MonsterCatalog>\n";
 

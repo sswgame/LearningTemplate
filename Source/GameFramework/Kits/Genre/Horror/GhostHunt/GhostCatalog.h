@@ -18,7 +18,7 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 손전등 수치입니다. 각은 원뿔의 절반(도)입니다. */
+    /** @brief 손전등 수치입니다. 각은 원뿔의 절반(라디안)입니다. */
     REFLECT()
     struct GhostFlashlightDef
     {
@@ -26,12 +26,12 @@ namespace sw
 
         PROPERTY( Min = 0.1 )
         float32 _range{ 8.0f };
-        PROPERTY( Name = "angle", Min = 1.0, Max = 89.0 )
-        float32 _halfAngle{ 25.0f };
+        PROPERTY( Name = "angle", Min = 0.0175, Max = 1.553, Units = "rad" )
+        float32 _halfAngle{ 0.4363323f }; ///< 원뿔의 절반 각(라디안, 25°)
         PROPERTY( Min = 0.1 )
         float32 _strobeRange{ 10.0f };
-        PROPERTY( Name = "strobeAngle", Min = 1.0, Max = 89.0 )
-        float32 _strobeHalfAngle{ 40.0f };
+        PROPERTY( Name = "strobeAngle", Min = 0.0175, Max = 1.553, Units = "rad" )
+        float32 _strobeHalfAngle{ 0.6981317f }; ///< 스트로브 원뿔의 절반 각(라디안, 40°)
         PROPERTY( Name = "strobeCharge", Min = 0.0 )
         float32 _strobeChargeTime{ 1.0f }; ///< 이만큼 모아야 스트로브가 터진다(덜 모으면 헛번쩍한다)
     };
@@ -195,7 +195,7 @@ namespace sw
 {
     /**
      * @class GhostCatalog
-     * @brief `<GhostHunt><Flashlight range="8" angle="25" strobeRange="10" strobeAngle="40" strobeCharge="1"/>
+     * @brief `<GhostHunt><Flashlight range="8" angle="0.436" strobeRange="10" strobeAngle="0.698" strobeCharge="1"/>
      *        <Vacuum range="4" stages="10 16 24" alignThreshold="0.7" alignBonus="1.5" surgeFill="2" surgeDamage="40" dragSpeed="2" dragReduction="0.75"/>
      *        <Ghost id="goob" hp="40" .../><Room id="foyer" ghosts="goob,goob" key="parlorKey" lightFlag="lit.foyer"/><Door id="parlorDoor" key="parlorKey" flag="door.parlor"/>
      *        <Furniture id="dresser" room="foyer" loot="dresserLoot" search="Shake"/><Boo id="booA" room="foyer" furniture="dresser" hp="30" escapeTime="5"/></GhostHunt>`

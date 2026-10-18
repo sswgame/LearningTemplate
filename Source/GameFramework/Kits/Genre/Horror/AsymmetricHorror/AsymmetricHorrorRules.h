@@ -226,8 +226,8 @@ namespace sw
         float32 _speedRatio{ 1.15f }; ///< 생존자 속도에 대한 비율이다
         PROPERTY( Min = 0.1 )
         float32 _lungeRange{ 2.5f };
-        PROPERTY( Min = 1.0, Max = 180.0 )
-        float32 _lungeAngle{ 60.0f }; ///< 앞에서 이 각(도) 안의 대상만 맞는다
+        PROPERTY( Min = 0.0175, Max = 3.1416, Units = "rad" )
+        float32 _lungeAngle{ 1.0471976f }; ///< 앞에서 이 각(라디안, 60°) 안의 대상만 맞는다
         PROPERTY( Min = 0.0 )
         float32 _hitCooldown{ 2.7f }; ///< 맞힌 뒤 칼을 닦는 시간이다
         PROPERTY( Min = 0.0 )

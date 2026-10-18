@@ -296,11 +296,11 @@ namespace sw
             actor._attackTimer.restart( def._ai._attackCoolTime );
             ++outResult._enemyVolleyCount;
 
-            // 탄은 정의의 줄마다 한 발이다. 겨냥 방향을 `_angleDegrees` 만큼 돌린 쪽으로 난다(0은 겨냥 방향, 90은 (−y, x) 방향).
+            // 탄은 정의의 줄마다 한 발이다. 겨냥 방향을 `_angle`(라디안)만큼 돌린 쪽으로 난다(0은 겨냥 방향, π/2 는 (−y, x) 방향).
             const float2 aim = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
             for ( const MonsterShotDef& shot : def._listShot )
             {
-                const float32 radian = MathUtil::toRadian( shot._angleDegrees );
+                const float32 radian = shot._angle;
                 const float32 cosine = MathUtil::cos( radian );
                 const float32 sine   = MathUtil::sin( radian );
 

@@ -2195,7 +2195,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability
 {
     // 룸의 적은 게임이 건 카탈로그와 배치에서 온다(코드 폴백이 없다).
     MonsterCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"grunt\"><Stats hp=\"30\" maxHp=\"30\" atk=\"8\" speed=\"1.8\" radius=\"0.32\"/></Monster></MonsterCatalog>",
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"grunt\" name=\"grunt\"><Stats hp=\"30\" maxHp=\"30\" atk=\"8\" speed=\"1.8\" radius=\"0.32\"/></Monster></MonsterCatalog>",
                                              "dash_grunt" ) );
     SubsystemScope        scope;
     game::ScopedGameScope activeScope( scope );

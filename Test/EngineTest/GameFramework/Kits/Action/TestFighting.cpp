@@ -52,7 +52,7 @@ namespace
 
     // 방향이 붙은 한 단계 커맨드는 우선도 1 — 기반 규칙은 단계 수만 보므로 "d/f+1" 과 "1" 이 같은 길이다.
     constexpr const utf8* kFightingFighterXML = R"(<FighterCatalog>
-        <Fighter id="tester" name="Tester" health="100" sidestepFrames="20" sidestepAngle="40" sidestep="u" sidestepDown="d,n" jump="u/f">
+        <Fighter id="tester" name="Tester" health="100" sidestepFrames="20" sidestepAngle="0.6981317" sidestep="u" sidestepDown="d,n" jump="u/f">
           <Move id="jab" command="1"/>
           <Move id="jab2" command="2" stringOnly="true"/>
           <Move id="two" command="2"/>
