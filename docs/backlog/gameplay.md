@@ -9,16 +9,15 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 
 - `D4-3` [기능] **패드 가상 커서(명령형 게임)의 남은 것.** 켜고 끄기는 입력 맵의 `virtualCursor`(`InputMapVirtualCursor`)가 정하고, 커서가 마우스로 바꾸는 패드 A · B · 그 스틱을
-  액션에 따로 묶은 맵은 읽기가 거절한다(Nile · StarSkirmish 맵은 `RightStick`). 남은 것: 결정 `D4-3.3`(커서는 왼쪽 스틱, 오른쪽 스틱은 카메라 이동 · 줌)대로 두 맵을 바꾸기,
-  실제 패드로 확인하기(시나리오 동안 가상 커서는 쉬어 패드 길을 시나리오가 보지 않는다), 사용자 키 바인딩(`loadUserBindings`)이 커서 버튼을 다시 묶는 것도 거절하기.
+  액션에 따로 묶은 바인딩은 맵 읽기 · 사용자 바인딩(`loadUserBindings`) · 리바인딩(`rebindSlot`)이 같은 검사(`reportVirtualCursorConflict`)로 거절한다.
+  Nile · StarSkirmish 는 결정 `D4-3.3` 대로 커서가 왼쪽 스틱, 오른쪽 스틱이 카메라 이동이다. 남은 것: 오른쪽 스틱 줌(1D 축 액션이 스틱의 Y 를 읽는 바인딩이 없고,
+  확대는 칸 단위라 스틱 값을 매 프레임 넣으면 너무 빠르다 — 지금은 D 패드 위 · 아래), 실제 패드로 확인하기(시나리오 동안 가상 커서는 쉬어 패드 길을 시나리오가 보지 않는다).
 
 - `D4-4` [기능] **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
   들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 남은 것 — 둘째 조립(RTS + City)의 테스트 게임(필요해지면 MeadowVillage 모양 — 조건부라 남김). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
   `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
 - `D4-5` [기능] **카메라의 남은 것.** 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일은 들어갔다(`Source/GameFramework/` "카메라" 절, `Source/Engine/Renderer/` "다중 뷰").
-  - 직교 리그(`OrthoCameraRigComponent`)를 쓰는 남은 둘(MeadowVillage 씬, WildWest 디렉터 · 씬)도 디렉터 + 프리셋 XML(`setFocusPoint`)로 옮기고 리그 컴포넌트와 `TestOrthoCameraRig` 를 지운다.
-    ThemePark · Harvest · Nile · StarSkirmish 는 옮겼다(`data/*.cameras.xml`).
   - 다중 뷰의 예산 · 보임 판정이 거칠다 — 보임은 "지정한 오브젝트가 주 카메라 절두체 안" 하나(가려짐 · 화면 크기 안 봄), 예산은 프레임당 뷰 수(`gv_renderViewBudget`)지 시간이 아니다.
     화면 사각형 뷰는 에디터 GameView(ImGui 이미지)에서 검증하지 않았다.
   - 컷 프레임 신호(`RenderViewSettings::_bCut`)는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다.

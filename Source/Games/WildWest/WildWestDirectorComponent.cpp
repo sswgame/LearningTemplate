@@ -12,7 +12,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Vehicle/MountMovementComponent.h"
@@ -198,15 +198,15 @@ namespace sw
 
     void WildWestDirectorComponent::updateCameraFocus( const PawnComponent& playerPawn )
     {
-        // 리그는 PostUpdate 에서 이 초점을 읽고, 리그의 오브젝트에는 다른 쓰기가 없다. 탔으면 기수 루트가 말 좌석에 붙어 있으므로 같은 자리를 따라간다.
+        // 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽고, 카메라 오브젝트에는 다른 쓰기가 없다. 탔으면 기수 루트가 말 좌석에 붙어 있으므로 같은 자리를 따라간다.
         const GameObjectManager* pManager    = getObjectManager();
         const GameObject*        pRigObject  = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        OrthoCameraRigComponent* pRig        = pRigObject != nullptr ? pRigObject->getComponent<OrthoCameraRigComponent>() : nullptr;
+        CameraDirectorComponent* pRig        = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
         const SceneComponent*    pPlayerRoot = playerPawn.getOwner() != nullptr ? playerPawn.getOwner()->getPrimarySceneComponent() : nullptr;
         if ( pRig == nullptr || pPlayerRoot == nullptr )
             return;
         const float3 position = pPlayerRoot->getWorldPosition();
-        pRig->setFocus( float3{ position._x, 0.0f, position._z } );
+        pRig->setFocusPoint( float3{ position._x, 0.0f, position._z } );
     }
 
     void WildWestDirectorComponent::whistleHorses()

@@ -18,21 +18,14 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<OrthoCameraRigComponent _componentName="OrthoCameraRigComponent"
+					<CameraDirectorComponent _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _focus="6,0,1.5"
-					                         _yaw="0"
-					                         _pitch="0.9272952"
-					                         _distance="20"
-					                         _orthoHeight="15"
-					                         _minOrthoHeight="15"
-					                         _maxOrthoHeight="15"
-					                         _zoomStep="0.85"
-					                         _panSpeed="40"
-					                         _panReferenceHeight="15"
-					                         _rotateStep="1.5707964"
-					                         _farPlaneScale="4"
-					                         _bInputEnabled="false" />
+					                         _catalogPath="game/meadowvillage/data/meadow.cameras.xml"
+					                         _initialPreset="meadow"
+					                         _focusPoint="6,0,1.5"
+					                         _bReadInput="false">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
