@@ -39,6 +39,12 @@ namespace sw
     class SW_API ResourcePakManager
     {
     public:
+#if defined( SW_SHIPPING )
+        static constexpr bool kAllowLooseFilesByDefault = false; ///< 배포 구성은 팩만 읽는다
+#else
+        static constexpr bool kAllowLooseFilesByDefault = true; ///< 개발 구성은 낱개 파일을 먼저 읽는다
+#endif
+
         ResourcePakManager();
         ~ResourcePakManager();
 

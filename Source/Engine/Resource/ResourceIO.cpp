@@ -30,9 +30,24 @@ namespace sw
         }
 
         /**
+         * @brief 마운트된 팩을 든 매니저입니다. 엔진 서비스가 바인딩되지 않았으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
+         * @details 낱개 파일 정책은 이 함수와 `isLooseFileAllowed` 한 곳에서만 본다 — 부르는 쪽이 `ResourceIO` 가 실패한 뒤 디스크를 다시 읽지 않게.
+         */
+        const ResourcePakManager* findPackManager()
+        {
+            return engine::areEngineServicesBound() ? &ResourceIO::getPackManager() : nullptr;
+        }
+
+        /** @brief 낱개 파일을 읽어도 되는지입니다. 팩 매니저가 정하고, 엔진 밖이면 팩 매니저를 만들 때의 빌드 기본값과 같다(배포 구성은 금지). */
+        bool isLooseFileAllowed( const ResourcePakManager* pPackManager )
+        {
+            return pPackManager != nullptr ? pPackManager->isAllowLooseFiles() : ResourcePakManager::kAllowLooseFilesByDefault;
+        }
+
+        /**
          * @brief 리소스 하나를 찾아 읽습니다. **순서는 텍스트 · 바이너리가 같습니다.**
          * @param readFromDisk 디스크 절대 경로에서 읽는 방법.
-         * @param readFromPack 마운트된 팩에서 읽는 방법(찾았으면 팩 경로를 `outPackPath` 에 담습니다).
+         * @param readFromPack 마운트된 팩에서 읽는 방법(팩 매니저를 받고, 찾았으면 팩 경로를 `outPackPath` 에 담습니다).
          * @details 순서는 넷입니다. (0) OS 절대 경로면 디스크에서 바로, (1) 낱개 파일 우선이 켜져
          *          있으면 디스크, (2) 마운트된 팩, (3) 낱개 경로를 풀지 못한 경우의 마지막 폴백입니다.
          *
@@ -53,9 +68,11 @@ namespace sw
 
             // 0. OS 절대 경로(임시 파일, 외부 세이브 등)면 디스크에서 바로 읽는다. 단, 팩 전용 모드(낱개 파일 금지 — 배포 구성)에서 리소스 루트
             //    **안**을 가리키면 거절한다 — 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽게 된다.
+            const ResourcePakManager* pPackManager = findPackManager();
+            const bool                bLooseFirst  = isLooseFileAllowed( pPackManager );
             if ( FileUtil::isAbsolutePath( relativePath ) )
             {
-                if ( ResourceIO::getPackManager().isAllowLooseFiles() == false && isInsideResourceRoot( relativePath ) )
+                if ( bLooseFirst == false && isInsideResourceRoot( relativePath ) )
                 {
                     SW_LOG_WARNING( "Refusing a loose read of '%#' — this build reads resources from packs only", relativePath );
                     return false;
@@ -73,9 +90,6 @@ namespace sw
                 return false;
             }
 
-            ResourcePakManager& packManager = ResourceIO::getPackManager();
-            const bool          bLooseFirst = packManager.isAllowLooseFiles();
-
             // 낱개 경로는 **여기서 한 번만** 푼다.
             string loosePath;
             if ( bLooseFirst )
@@ -89,10 +103,10 @@ namespace sw
                 }
             }
 
-            // 2. 마운트된 팩에서 O(1) 해시로 찾아 압축을 풀어 읽는다
+            // 2. 마운트된 팩에서 O(1) 해시로 찾아 압축을 풀어 읽는다(엔진 밖이면 마운트된 팩이 없다)
             const string normalizedKey = FileUtil::normalizePath( relativePath );
             string       mountedPackPath;
-            if ( readFromPack( normalizedKey, mountedPackPath ) )
+            if ( pPackManager != nullptr && readFromPack( *pPackManager, normalizedKey, mountedPackPath ) )
             {
                 if ( pOutAbsPath != nullptr )
                     *pOutAbsPath = "[" + FileUtil::getFileNamePart( mountedPackPath ) + "]:" + normalizedKey;
@@ -125,8 +139,8 @@ namespace sw
             relativePath, pOutAbsPath,
             [&outText]( string_view absPath )
         { return FileUtil::readTextFile( absPath, outText ); },
-            [&outText]( string_view key, string& outPackPath )
-        { return getPackManager().readTextFile( key, outText, &outPackPath ); } );
+            [&outText]( const ResourcePakManager& packManager, string_view key, string& outPackPath )
+        { return packManager.readTextFile( key, outText, &outPackPath ); } );
     }
 
     bool ResourceIO::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
@@ -135,8 +149,8 @@ namespace sw
             relativePath, nullptr,
             [&outBytes]( string_view absPath )
         { return FileUtil::readFile( absPath, outBytes ); },
-            [&outBytes]( string_view key, string& )
-        { return getPackManager().readFile( key, outBytes ); } );
+            [&outBytes]( const ResourcePakManager& packManager, string_view key, string& )
+        { return packManager.readFile( key, outBytes ); } );
     }
 
     AsyncReadHandle ResourceIO::readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
@@ -155,9 +169,9 @@ namespace sw
             } ) );
             return handle.isValid();
         },
-            [&io, &handle, priority, &onComplete]( string_view key, string& )
+            [&io, &handle, priority, &onComplete]( const ResourcePakManager& packManager, string_view key, string& )
         {
-            handle = getPackManager().readFileAsync( io, key, priority, onComplete );
+            handle = packManager.readFileAsync( io, key, priority, onComplete );
             return handle.isValid();
         } );
         return handle;
@@ -173,13 +187,12 @@ namespace sw
         if ( FileUtil::isAbsolutePath( relativePath ) )
             return FileUtil::exists( relativePath );
 
-        const string        normalizedKey = FileUtil::normalizePath( relativePath );
-        ResourcePakManager& packManager   = getPackManager();
-
-        if ( packManager.hasFile( normalizedKey ) )
+        const string              normalizedKey = FileUtil::normalizePath( relativePath );
+        const ResourcePakManager* pPackManager  = findPackManager();
+        if ( pPackManager != nullptr && pPackManager->hasFile( normalizedKey ) )
             return true;
 
-        if ( packManager.isAllowLooseFiles() )
+        if ( isLooseFileAllowed( pPackManager ) )
         {
             const string absPath = ResourcePaths::findLooseFile( relativePath ).getDiskPath();
             if ( absPath.empty() == false && FileUtil::exists( absPath ) )
@@ -203,10 +216,10 @@ namespace sw
         const string folder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( relativeFolder ) );
 
         // 찾는 순서는 읽기와 같다 — 낱개 파일을 허용하면 디스크가 먼저(같은 이름이면 그 표기가 남는다), 그다음 우선순위 순서의 팩.
-        vector<string>      listCandidate;
-        bool                bFolderFound = false;
-        ResourcePakManager& packManager  = getPackManager();
-        if ( packManager.isAllowLooseFiles() )
+        vector<string>            listCandidate;
+        bool                      bFolderFound = false;
+        const ResourcePakManager* pPackManager = findPackManager();
+        if ( isLooseFileAllowed( pPackManager ) )
         {
             const string diskFolder = ResourcePaths::findLooseFile( folder ).getDiskPath();
             if ( diskFolder.empty() == false && FileUtil::isDirectory( diskFolder ) )
@@ -225,7 +238,8 @@ namespace sw
             }
         }
         const size_t diskCount = listCandidate.size();
-        packManager.collectFolderEntries( folder, listCandidate );
+        if ( pPackManager != nullptr )
+            pPackManager->collectFolderEntries( folder, listCandidate );
         bFolderFound = bFolderFound || listCandidate.size() > diskCount;
         if ( bFolderFound == false )
             return ResourceFolderListing::FolderMissing;

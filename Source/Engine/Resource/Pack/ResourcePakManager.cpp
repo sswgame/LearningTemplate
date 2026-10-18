@@ -180,11 +180,7 @@ namespace sw
         : _vfsMutex{}
         , _listMountedPack{}
         , _dlcValidator{}
-#if defined( SW_SHIPPING )
-        , _bAllowLooseFiles{ false }
-#else
-        , _bAllowLooseFiles{ true }
-#endif
+        , _bAllowLooseFiles{ kAllowLooseFilesByDefault }
     {
     }
 
