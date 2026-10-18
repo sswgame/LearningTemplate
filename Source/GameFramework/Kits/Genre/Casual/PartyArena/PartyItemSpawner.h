@@ -13,6 +13,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
@@ -38,15 +40,24 @@ namespace sw
 namespace sw
 {
     /** @brief 아이템이 나오는 규칙입니다. */
+    REFLECT()
     struct PartyItemSpawnSettings
     {
-        float3  _center{};
+        REFLECT_BODY();
+
+        float3 _center{};
+        PROPERTY( Min = 0.0 )
         float32 _minInterval{ 4.0f };
+        PROPERTY( Min = "_minInterval" )
         float32 _maxInterval{ 8.0f };
-        float32 _lifetime{ 10.0f };   ///< 0 이면 주울 때까지 남는다
+        PROPERTY( Min = 0.0 )
+        float32 _lifetime{ 10.0f }; ///< 0 이면 주울 때까지 남는다
+        PROPERTY( Name = "radius", Min = 0.0 )
         float32 _spawnRadius{ 6.0f }; ///< 가운데에서 이 반지름의 원판 안에 고르게 나온다
-        float32 _height{ 1.5f };      ///< 아이템이 놓이는 높이
-        int32   _maxActive{ 2 };
+        PROPERTY()
+        float32 _height{ 1.5f }; ///< 아이템이 놓이는 높이
+        PROPERTY( Min = 1 )
+        int32 _maxActive{ 2 };
     };
 } // namespace sw
 

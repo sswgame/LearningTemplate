@@ -15,6 +15,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
 #include "Engine/Module/EngineAbiStamp.h"
@@ -23,11 +24,10 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/WindowEvents.h"
 

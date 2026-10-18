@@ -10,8 +10,8 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
 
 namespace sw::editor
 {

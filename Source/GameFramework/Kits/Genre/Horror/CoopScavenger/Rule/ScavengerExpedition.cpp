@@ -126,7 +126,7 @@ namespace sw
 
         _indoorDirector.initialize( nullptr, 1u );
         _outdoorDirector.initialize( nullptr, 1u );
-        if ( _data._pThreatTable != nullptr && _pMoon->_bCompany == SW_FALSE )
+        if ( _data._pThreatTable != nullptr && _pMoon->_bCompany == false )
         {
             _indoorDirector.initialize( _data._pThreatTable, makeDaySeed( _seed, dayIndex, 0x49u ) );
             _indoorDirector.setAllowedTags( vector<hashed_string>{ hashed_string( "Indoor" ) } );
@@ -160,7 +160,7 @@ namespace sw
             if ( member.isDead() == false )
                 member._vitality.update( deltaTime );
         }
-        if ( _pMoon->_bCompany == SW_FALSE )
+        if ( _pMoon->_bCompany == false )
         {
             const float32 threatTime = deltaTime * computeThreatScale();
             (void)_indoorDirector.update( threatTime );
@@ -286,7 +286,7 @@ namespace sw
             outResult = ScavengerActionResult::WrongPhase;
             return 0;
         }
-        if ( _pMoon == nullptr || _pMoon->_bCompany == SW_FALSE )
+        if ( _pMoon == nullptr || _pMoon->_bCompany == false )
         {
             outResult = ScavengerActionResult::NotCompany;
             return 0;
@@ -639,7 +639,7 @@ namespace sw
             return false;
 
         // 위협 감독은 내려 있는 동안만 테이블을 가진다(궤도와 회사에서는 비어 있다). 같은 테이블로 열고 나머지를 읽는다.
-        const bool bThreatActive = restored._phase == ScavengerPhase::Landed && restored._pMoon->_bCompany == SW_FALSE && _data._pThreatTable != nullptr;
+        const bool bThreatActive = restored._phase == ScavengerPhase::Landed && restored._pMoon->_bCompany == false && _data._pThreatTable != nullptr;
         restored._indoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
         restored._outdoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
         const bool bPartRead = restored._quota.readState( archive ) && restored._facility.readState( archive ) &&

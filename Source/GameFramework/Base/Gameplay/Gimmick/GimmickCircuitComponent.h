@@ -193,9 +193,9 @@ namespace sw
         vector<GameObjectHandle> _listNodeTarget;
         PROPERTY( Category = "Circuit", DisplayName = "Wires" )
         vector<GimmickWireDesc> _listWire;
-        PROPERTY( Category = "Circuit", DisplayName = "Rest Poses", Tooltip = "Actuator rest poses captured at first play (runtime)" )
+        PROPERTY( RuntimeState, Category = "Circuit", DisplayName = "Rest Poses", Tooltip = "Actuator rest poses captured at first play (runtime)" )
         vector<GimmickRestPose> _listRestPose;
-        PROPERTY( HideInInspector )
+        PROPERTY( RuntimeState, HideInInspector )
         GimmickCircuitState _state;
         PROPERTY( Category = "Circuit", DisplayName = "Step Time", Min = 0.001, Tooltip = "Fixed simulation step", Units = s )
         float32 _stepTime;

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -9,6 +10,8 @@
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -188,29 +191,43 @@ namespace sw
 
     uint32 PartyItemSpawner::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _settings._minInterval = root.getAttributeFloat( "minInterval", _settings._minInterval );
-        _settings._maxInterval = root.getAttributeFloat( "maxInterval", _settings._maxInterval );
-        _settings._lifetime    = root.getAttributeFloat( "lifetime", _settings._lifetime );
-        _settings._spawnRadius = root.getAttributeFloat( "radius", _settings._spawnRadius );
-        _settings._height      = root.getAttributeFloat( "height", _settings._height );
-        _settings._maxActive   = root.getAttributeInt( "maxActive", _settings._maxActive );
-        uint32 loadedCount     = 0;
-        for ( XMLNode itemNode = root.findChild( "Item" ); itemNode; itemNode = itemNode.findNextSibling( "Item" ) )
+        // 루트 속성은 `PartyItemSpawnSettings` 스키마다(기본값 = 초기값, 범위 = PROPERTY). 가운데(`_center`)는 게임이 정한다.
+        PartyItemSpawnSettings settings;
+        if ( GameDataXML::readFields( root, settings, sourceName ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( itemNode, sourceName );
-            if ( pID == nullptr )
+            settings._center = _settings._center;
+            _settings        = settings;
+        }
+        uint32 loadedCount = 0;
+        for ( XMLNode itemNode = root.findChild(); itemNode; itemNode = itemNode.findNextSibling() )
+        {
+            if ( StringUtil::equals( itemNode.getName(), "Item", true ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, itemNode.getName() );
                 continue;
+            }
+            // 아이템의 효과 수치는 속성 이름이 곧 스탯 이름이라 스키마가 없다 — id · effect · weight 만 형식이 있다.
+            const utf8*                 pID    = GameDataXML::findRequiredID( itemNode, sourceName );
+            const std::optional<string> effect = itemNode.readRequiredAttribute<string>( "effect" );
+            std::optional<float32>      weight;
+            const bool                  bWeight = itemNode.readOptionalAttribute( "weight", weight ) && ( weight.has_value() == false || *weight >= 0.0f );
+            const bool                  bItem   = pID != nullptr && effect.has_value() && bWeight;
+            if ( bItem == false )
+            {
+                SW_LOG_ERROR( "%#: <Item> needs id, effect and a weight of 0 or more - skipped", sourceName );
+                continue;
+            }
             PartyItemDef def;
-            def._id             = hashed_string( pID );
-            const utf8* pEffect = itemNode.findAttribute( "effect" );
-            def._effect         = hashed_string( pEffect != nullptr ? pEffect : pID );
-            def._weight         = itemNode.getAttributeFloat( "weight", def._weight );
+            def._id     = hashed_string( pID );
+            def._effect = hashed_string( effect->c_str() );
+            if ( weight.has_value() )
+                def._weight = *weight;
             (void)def._stats.loadFromAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려주므로, 속성이 없으면 빈 스탯이다
             addItem( def );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Item> entries", sourceName );
+            SW_LOG_ERROR( "%#: no <Item> entries", sourceName );
         return loadedCount;
     }
 } // namespace sw

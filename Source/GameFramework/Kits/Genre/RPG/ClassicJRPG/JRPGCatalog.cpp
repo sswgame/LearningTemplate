@@ -3,11 +3,12 @@
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -18,24 +19,60 @@ namespace sw
             static constexpr const utf8* kArrStatName[kJRPGStatCount]   = { "hp", "mp", "str", "agi", "vit", "intellect", "luck" };
             static constexpr const utf8* kArrGrowthName[kJRPGStatCount] = { "growHp", "growMp", "growStr", "growAgi", "growVit", "growIntellect", "growLuck" };
 
-            static void parseStats( const XMLNode& node, const utf8* const ( &arrName )[kJRPGStatCount], int32 ( &inoutArrValue )[kJRPGStatCount] )
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
             {
-                for ( int32 index = 0; index < kJRPGStatCount; ++index )
-                {
-                    inoutArrValue[index] = MathUtil::max( 0, node.getAttributeInt( arrName[index], inoutArrValue[index] ) );
-                }
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+                return true;
             }
 
-            static JRPGTargetKind parseTarget( string_view text )
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
             {
-                return StringUtil::equals( text, string_view( "All" ), true ) ? JRPGTargetKind::All : JRPGTargetKind::One;
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outList.push_back( def );
+                return true;
+            }
+
+            /** @brief 능력치 일곱 칸을 이름(@p arrName)으로 읽습니다. 적지 않은 칸은 Def 의 초기값이고, 깨졌거나 0 보다 작으면 오류입니다. */
+            [[nodiscard]] static bool readStats( const XMLNode& node, const utf8* const ( &arrName )[kJRPGStatCount], string_view sourceName,
+                                                 int32 ( &inoutArrValue )[kJRPGStatCount] )
+            {
+                bool bValid = true;
+                for ( int32 index = 0; index < kJRPGStatCount; ++index )
+                {
+                    std::optional<int32> value;
+                    const bool           bRead     = node.readOptionalAttribute( arrName[index], value );
+                    const bool           bNegative = value.has_value() && *value < 0;
+                    if ( bRead == false || bNegative )
+                    {
+                        SW_LOG_ERROR( "%#: <%# %#=\"%#\"> needs an integer of 0 or more", sourceName, node.getName(), arrName[index], node.getAttributeText( arrName[index] ) );
+                        bValid = false;
+                    }
+                    else if ( value.has_value() )
+                        inoutArrValue[index] = *value;
+                }
+                return bValid;
+            }
+
+            /** @brief 최대 HP 는 1 이상이어야 합니다(0 이면 처음부터 쓰러진 상태다). */
+            [[nodiscard]] static bool checkMaxHp( const int32 ( &arrStat )[kJRPGStatCount], const XMLNode& node, string_view sourceName )
+            {
+                if ( arrStat[static_cast<size_t>( JRPGStat::MaxHp )] >= 1 )
+                    return true;
+                SW_LOG_ERROR( "%#: <%# id=\"%#\"> needs hp of 1 or more", sourceName, node.getName(), node.getAttributeText( "id" ) );
+                return false;
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
     SW_LOG_CALLER( "JRPGCatalog" );
 
     JRPGCatalog::JRPGCatalog()
@@ -62,86 +99,13 @@ namespace sw
 
     uint32 JRPGCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const XMLNode curve = root.findChild( "ExperienceCurve" );
-        if ( curve )
-            _curve.loadFromNode( curve );
-
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pName   = node.getName();
-            const bool  bClass  = StringUtil::equals( pName, "Class", true );
-            const bool  bSpell  = StringUtil::equals( pName, "Spell", true );
-            const bool  bCombo  = StringUtil::equals( pName, "Combo", true );
-            const bool  bManual = StringUtil::equals( pName, "Manual", true );
-            const bool  bEnemy  = StringUtil::equals( pName, "Enemy", true );
-            const bool  bArea   = StringUtil::equals( pName, "Area", true );
-            if ( ( bClass || bSpell || bCombo || bManual || bEnemy || bArea ) == false )
-                continue;
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-
-            if ( bClass )
-            {
-                loadClass( node, pID );
-            }
-            else if ( bSpell )
-            {
-                loadSpell( node, pID, sourceName );
-            }
-            else if ( bCombo )
-            {
-                JRPGComboDef def;
-                def._id           = hashed_string( pID );
-                const utf8* pText = node.findAttribute( "name" );
-                def._name         = pText != nullptr ? pText : pID;
-                def._points       = MathUtil::max( 0, node.getAttributeInt( "points", def._points ) );
-                def._power        = MathUtil::max( 0, node.getAttributeInt( "power", def._power ) );
-                def._target       = JRPGCatalogInternal::parseTarget( node.getAttributeText( "target" ) );
-                GameDataXML::appendNameList( node.getAttributeText( "members" ), ",; \t", def._listMemberID );
-                GameDataXML::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listDamageType );
-                if ( def._listMemberID.size() < 2 )
-                    SW_LOG_WARNING( "%#: combo '%#' names fewer than two members", sourceName, pID );
-                (void)_comboCatalog.add( def );
-            }
-            else if ( bManual )
-            {
-                JRPGManualDef def;
-                def._id           = hashed_string( pID );
-                const utf8* pText = node.findAttribute( "name" );
-                def._name         = pText != nullptr ? pText : pID;
-                for ( XMLNode stage = node.findChild( "Stage" ); stage; stage = stage.findNextSibling( "Stage" ) )
-                {
-                    JRPGManualStage entry;
-                    entry._techniqueID = hashed_string( stage.getAttributeText( "technique" ) );
-                    entry._proficiency = MathUtil::max( 0, stage.getAttributeInt( "proficiency", 0 ) );
-                    if ( entry._techniqueID.empty() == false )
-                        def._listStage.push_back( entry );
-                }
-                (void)_manualCatalog.add( def );
-            }
-            else if ( bEnemy )
-            {
-                loadEnemy( node, pID );
-            }
-            else
-            {
-                JRPGAreaDef def;
-                def._id         = hashed_string( pID );
-                def._rate       = MathUtil::clamp( node.getAttributeFloat( "rate", def._rate ), 0.0f, 1.0f );
-                def._graceSteps = MathUtil::max( 0, node.getAttributeInt( "grace", def._graceSteps ) );
-                for ( XMLNode group = node.findChild( "Group" ); group; group = group.findNextSibling( "Group" ) )
-                {
-                    JRPGEncounterGroup entry;
-                    GameDataXML::appendNameList( group.getAttributeText( "enemies" ), ",; \t", entry._listEnemyID );
-                    entry._weight = MathUtil::max( 0, group.getAttributeInt( "weight", 1 ) );
-                    if ( entry._listEnemyID.empty() == false )
-                        def._listGroup.push_back( entry );
-                }
-                (void)_areaCatalog.add( def );
-            }
-            ++loadedCount;
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( loadElement( node, name, sourceName ) )
+                ++loadedCount;
         }
 
         // 서로 가리키는 id 는 모두 읽은 뒤에 확인한다.
@@ -150,7 +114,7 @@ namespace sw
             for ( const JRPGLearnEntry& learn : def._listLearn )
             {
                 if ( _spellCatalog.find( learn._spellID ) == nullptr )
-                    SW_LOG_WARNING( "%#: class '%#' learns unknown spell '%#'", sourceName, def._id.c_str(), learn._spellID.c_str() );
+                    SW_LOG_ERROR( "%#: class '%#' learns unknown spell '%#'", sourceName, def._id.c_str(), learn._spellID.c_str() );
             }
         }
         for ( const JRPGManualDef& def : _manualCatalog.getAll() )
@@ -158,7 +122,7 @@ namespace sw
             for ( const JRPGManualStage& stage : def._listStage )
             {
                 if ( _spellCatalog.find( stage._techniqueID ) == nullptr )
-                    SW_LOG_WARNING( "%#: manual '%#' unlocks unknown technique '%#'", sourceName, def._id.c_str(), stage._techniqueID.c_str() );
+                    SW_LOG_ERROR( "%#: manual '%#' unlocks unknown technique '%#'", sourceName, def._id.c_str(), stage._techniqueID.c_str() );
             }
         }
         for ( const JRPGAreaDef& def : _areaCatalog.getAll() )
@@ -168,75 +132,119 @@ namespace sw
                 for ( const hashed_string& enemyID : group._listEnemyID )
                 {
                     if ( _enemyCatalog.find( enemyID ) == nullptr )
-                        SW_LOG_WARNING( "%#: area '%#' names unknown enemy '%#'", sourceName, def._id.c_str(), enemyID.c_str() );
+                        SW_LOG_ERROR( "%#: area '%#' names unknown enemy '%#'", sourceName, def._id.c_str(), enemyID.c_str() );
                 }
             }
         }
         return loadedCount;
     }
 
-    void JRPGCatalog::loadClass( const XMLNode& node, const utf8* pID )
+    bool JRPGCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
+        const auto is = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        if ( is( "ExperienceCurve" ) )
+        {
+            _curve.loadFromNode( node );
+            return true;
+        }
+        if ( is( "Class" ) )
+            return loadClass( node, sourceName );
+        if ( is( "Spell" ) )
+            return JRPGCatalogInternal::readInto( node, sourceName, _spellCatalog );
+        if ( is( "Combo" ) )
+            return loadCombo( node, sourceName );
+        if ( is( "Manual" ) )
+            return loadManual( node, sourceName );
+        if ( is( "Enemy" ) )
+            return loadEnemy( node, sourceName );
+        if ( is( "Area" ) )
+            return loadArea( node, sourceName );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool JRPGCatalog::loadClass( const XMLNode& node, string_view sourceName )
+    {
+        using Internal = JRPGCatalogInternal;
         JRPGClassDef def;
-        def._id           = hashed_string( pID );
-        const utf8* pName = node.findAttribute( "name" );
-        def._name         = pName != nullptr ? pName : pID;
-        def._attackType   = hashed_string( node.getAttributeText( "attackType" ) );
-        def._requiredItem = hashed_string( node.getAttributeText( "requires" ) );
-        JRPGCatalogInternal::parseStats( node, JRPGCatalogInternal::kArrStatName, def._arrBase );
-        JRPGCatalogInternal::parseStats( node, JRPGCatalogInternal::kArrGrowthName, def._arrGrowth );
-        def._arrBase[static_cast<size_t>( JRPGStat::MaxHp )] = MathUtil::max( 1, def._arrBase[static_cast<size_t>( JRPGStat::MaxHp )] );
+        bool         bValid = GameDataXML::readFields( node, def, sourceName,
+                                                       { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "growHp", "growMp", "growStr", "growAgi", "growVit",
+                                                         "growIntellect", "growLuck" } );
+        bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrBase ) && bValid;
+        bValid              = Internal::readStats( node, Internal::kArrGrowthName, sourceName, def._arrGrowth ) && bValid;
+        bValid              = Internal::checkMaxHp( def._arrBase, node, sourceName ) && bValid;
         for ( XMLNode learn = node.findChild( "Learn" ); learn; learn = learn.findNextSibling( "Learn" ) )
         {
-            JRPGLearnEntry entry;
-            entry._spellID = hashed_string( learn.getAttributeText( "spell" ) );
-            entry._level   = MathUtil::max( 1, learn.getAttributeInt( "level", 1 ) );
-            if ( entry._spellID.empty() == false )
-                def._listLearn.push_back( entry );
+            bValid = Internal::readInto( learn, sourceName, def._listLearn ) && bValid;
         }
-        (void)_classCatalog.add( def );
+        if ( bValid )
+            (void)_classCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 
-    void JRPGCatalog::loadSpell( const XMLNode& node, const utf8* pID, string_view sourceName )
+    bool JRPGCatalog::loadCombo( const XMLNode& node, string_view sourceName )
     {
-        JRPGSpellDef def;
-        def._id                = hashed_string( pID );
-        const utf8* pName      = node.findAttribute( "name" );
-        def._name              = pName != nullptr ? pName : pID;
-        def._damageType        = hashed_string( node.getAttributeText( "type" ) );
-        def._manualID          = hashed_string( node.getAttributeText( "manual" ) );
-        def._power             = MathUtil::max( 0, node.getAttributeInt( "power", def._power ) );
-        def._mpCost            = MathUtil::max( 0, node.getAttributeInt( "mp", def._mpCost ) );
-        def._innerCost         = MathUtil::max( 0, node.getAttributeInt( "inner", def._innerCost ) );
-        def._proficiencyGain   = MathUtil::max( 0, node.getAttributeInt( "proficiency", def._proficiencyGain ) );
-        def._target            = JRPGCatalogInternal::parseTarget( node.getAttributeText( "target" ) );
-        const string_view kind = node.getAttributeText( "kind" );
-        if ( StringUtil::equals( kind, string_view( "Heal" ), true ) )
-            def._kind = JRPGSpellKind::Heal;
-        else if ( StringUtil::equals( kind, string_view( "Revive" ), true ) )
-            def._kind = JRPGSpellKind::Revive;
-        else if ( kind.empty() == false && StringUtil::equals( kind, string_view( "Damage" ), true ) == false )
-            SW_LOG_WARNING( "%#: spell '%#' has an unknown kind '%#' - read as damage", sourceName, pID, kind );
-        (void)_spellCatalog.add( def );
+        JRPGComboDef def;
+        if ( GameDataXML::readFields( node, def, sourceName, { "members", "types" } ) == false )
+            return false;
+        GameDataXML::appendNameList( node.getAttributeText( "members" ), ",; \t", def._listMemberID );
+        GameDataXML::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listDamageType );
+        if ( def._listMemberID.size() < 2 )
+        {
+            SW_LOG_ERROR( "%#: combo '%#' needs two or more members", sourceName, def._id.c_str() );
+            return false;
+        }
+        (void)_comboCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
     }
 
-    void JRPGCatalog::loadEnemy( const XMLNode& node, const utf8* pID )
+    bool JRPGCatalog::loadManual( const XMLNode& node, string_view sourceName )
     {
+        JRPGManualDef def;
+        bool          bValid = GameDataXML::readFields( node, def, sourceName );
+        for ( XMLNode stage = node.findChild( "Stage" ); stage; stage = stage.findNextSibling( "Stage" ) )
+        {
+            bValid = JRPGCatalogInternal::readInto( stage, sourceName, def._listStage ) && bValid;
+        }
+        if ( bValid )
+            (void)_manualCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
+    }
+
+    bool JRPGCatalog::loadEnemy( const XMLNode& node, string_view sourceName )
+    {
+        using Internal = JRPGCatalogInternal;
         JRPGEnemyDef def;
-        def._id           = hashed_string( pID );
-        const utf8* pName = node.findAttribute( "name" );
-        def._name         = pName != nullptr ? pName : pID;
-        def._attackType   = hashed_string( node.getAttributeText( "attackType" ) );
-        def._castSpellID  = hashed_string( node.getAttributeText( "cast" ) );
-        JRPGCatalogInternal::parseStats( node, JRPGCatalogInternal::kArrStatName, def._arrStat );
-        def._arrStat[static_cast<size_t>( JRPGStat::MaxHp )] = MathUtil::max( 1, def._arrStat[static_cast<size_t>( JRPGStat::MaxHp )] );
+        bool         bValid = GameDataXML::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "weak", "locks" } );
+        bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrStat ) && bValid;
+        bValid              = Internal::checkMaxHp( def._arrStat, node, sourceName ) && bValid;
         GameDataXML::appendNameList( node.getAttributeText( "weak" ), ",; \t", def._listWeakness );
         GameDataXML::appendNameList( node.getAttributeText( "locks" ), ",; \t", def._listLock );
-        def._exp       = MathUtil::max( 0, node.getAttributeInt( "exp", def._exp ) );
-        def._gold      = MathUtil::max( 0, node.getAttributeInt( "gold", def._gold ) );
-        def._castTurns = MathUtil::max( 1, node.getAttributeInt( "castTurns", def._castTurns ) );
-        def._castEvery = MathUtil::max( 1, node.getAttributeInt( "castEvery", def._castEvery ) );
-        def._bBoss     = node.getAttributeBool( "boss", false );
-        (void)_enemyCatalog.add( def );
+        if ( bValid )
+            (void)_enemyCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
+    }
+
+    bool JRPGCatalog::loadArea( const XMLNode& node, string_view sourceName )
+    {
+        JRPGAreaDef def;
+        bool        bValid = GameDataXML::readFields( node, def, sourceName );
+        for ( XMLNode groupNode = node.findChild( "Group" ); groupNode; groupNode = groupNode.findNextSibling( "Group" ) )
+        {
+            JRPGEncounterGroup group;
+            bValid = GameDataXML::readFields( groupNode, group, sourceName, { "enemies" } ) && bValid;
+            GameDataXML::appendNameList( groupNode.getAttributeText( "enemies" ), ",; \t", group._listEnemyID );
+            if ( group._listEnemyID.empty() )
+            {
+                SW_LOG_ERROR( "%#: area '%#' has a <Group> without enemies", sourceName, def._id.c_str() );
+                bValid = false;
+                continue;
+            }
+            def._listGroup.push_back( group );
+        }
+        if ( bValid )
+            (void)_areaCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 } // namespace sw

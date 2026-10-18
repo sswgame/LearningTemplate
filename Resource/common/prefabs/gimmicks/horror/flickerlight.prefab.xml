@@ -15,8 +15,7 @@
 			<FlickerLightComponent _componentName="FlickerLightComponent"
 			                       _bActive="true"
 			                       _pattern="mmamammmmammamamaaamammma"
-			                       _rate="10"
-			                       _step="0" />
+			                       _rate="10" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

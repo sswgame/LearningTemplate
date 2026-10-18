@@ -31,6 +31,7 @@ namespace sw
     };
 
     /** @brief 거점 종류입니다. */
+    ENUM()
     enum class ConquestSiteKind : uint8
     {
         Village = 0, ///< 일꾼과 건물 슬롯을 준다
@@ -39,6 +40,7 @@ namespace sw
     };
 
     /** @brief 병종의 공성 역할입니다. */
+    ENUM()
     enum class ConquestSiegeRole : uint8
     {
         None = 0,
@@ -49,34 +51,56 @@ namespace sw
     [[nodiscard]] SW_KIT_API bool parseConquestTeam( string_view text, ConquestTeam& outTeam );
 
     /** @brief 건물 하나입니다. */
+    REFLECT()
     struct ConquestBuildingDef
     {
-        hashed_string         _id{};
-        StatBlock             _cost{};
-        hashed_string         _produces{};           ///< 만드는 자원이다(비어 있으면 생산하지 않는다)
-        vector<hashed_string> _listTrainable{};      ///< 훈련할 수 있는 병종
-        float32               _cycleTime{ 10.0f };   ///< 생산 한 주기의 길이(초)
-        int32                 _amountPerWorker{ 1 }; ///< 주기마다 일꾼 한 명이 만드는 양
-        int32                 _workerSlots{ 0 };
-        int32                 _housing{ 0 }; ///< 늘려 주는 인구 한도
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        StatBlock     _cost{};
+        PROPERTY()
+        hashed_string         _produces{};      ///< 만드는 자원이다(비어 있으면 생산하지 않는다)
+        vector<hashed_string> _listTrainable{}; ///< 훈련할 수 있는 병종
+        PROPERTY( Min = 0.1 )
+        float32 _cycleTime{ 10.0f }; ///< 생산 한 주기의 길이(초)
+        PROPERTY( Name = "amount", Min = 0 )
+        int32 _amountPerWorker{ 1 }; ///< 주기마다 일꾼 한 명이 만드는 양
+        PROPERTY( Min = 0 )
+        int32 _workerSlots{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _housing{ 0 }; ///< 늘려 주는 인구 한도
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 병종 하나입니다. */
+    REFLECT()
     struct ConquestUnitDef
     {
-        hashed_string     _id{};
-        StatBlock         _cost{};
-        float32           _health{ 30.0f };
-        float32           _damage{ 5.0f };
-        float32           _range{ 1.0f }; ///< 1.5 이하이면 근접, 더 길면 원거리이다
-        float32           _attackInterval{ 1.0f };
-        float32           _speed{ 2.0f }; ///< 초당 이동하는 x 거리
-        float32           _trainTime{ 5.0f };
-        float32           _structureScale{ 0.2f }; ///< 성문과 성벽에 주는 피해 배율이다(충차는 크다)
-        int32             _population{ 1 };
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        StatBlock     _cost{};
+        PROPERTY( Name = "hp", Min = 1.0 )
+        float32 _health{ 30.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _damage{ 5.0f };
+        PROPERTY( Min = 0.1 )
+        float32 _range{ 1.0f }; ///< 1.5 이하이면 근접, 더 길면 원거리이다
+        PROPERTY( Min = 0.05 )
+        float32 _attackInterval{ 1.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _speed{ 2.0f }; ///< 초당 이동하는 x 거리
+        PROPERTY( Name = "train", Min = 0.0 )
+        float32 _trainTime{ 5.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _structureScale{ 0.2f }; ///< 성문과 성벽에 주는 피해 배율이다(충차는 크다)
+        PROPERTY( Name = "pop", Min = 0 )
+        int32 _population{ 1 };
+        PROPERTY( Name = "siege" )
         ConquestSiegeRole _siegeRole{ ConquestSiegeRole::None };
     };
 } // namespace sw
@@ -94,51 +118,89 @@ namespace sw
 namespace sw
 {
     /** @brief 거점 하나입니다. */
+    REFLECT()
     struct ConquestSiteDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string               _id{};
         StatBlock                   _income{}; ///< 수입 주기마다 주인에게 준다(경제가 있는 쪽은 플레이어뿐이다)
         vector<ConquestGarrisonDef> _listGarrison{};
-        float32                     _x{ 0.0f };
-        float32                     _captureRadius{ 4.0f };
-        float32                     _gateHealth{ 0.0f }; ///< 0 이면 성문이 없다
-        float32                     _wallHealth{ 0.0f }; ///< 0 이면 성벽이 없다
-        int32                       _workers{ 0 };       ///< 점령하면 쓸 수 있는 일꾼 수
-        int32                       _housing{ 0 };       ///< 점령하면 늘어나는 인구 한도
-        int32                       _buildSlots{ 0 };
-        ConquestSiteKind            _kind{ ConquestSiteKind::Village };
-        ConquestTeam                _owner{ ConquestTeam::Neutral };
+        PROPERTY()
+        float32 _x{ 0.0f };
+        PROPERTY( Min = 0.5 )
+        float32 _captureRadius{ 4.0f };
+        PROPERTY( Name = "gate", Min = 0.0 )
+        float32 _gateHealth{ 0.0f }; ///< 0 이면 성문이 없다
+        PROPERTY( Name = "wall", Min = 0.0 )
+        float32 _wallHealth{ 0.0f }; ///< 0 이면 성벽이 없다
+        PROPERTY( Min = 0 )
+        int32 _workers{ 0 }; ///< 점령하면 쓸 수 있는 일꾼 수
+        PROPERTY( Min = 0 )
+        int32 _housing{ 0 }; ///< 점령하면 늘어나는 인구 한도
+        PROPERTY( Name = "slots", Min = 0 )
+        int32 _buildSlots{ 0 };
+        PROPERTY()
+        ConquestSiteKind _kind{ ConquestSiteKind::Village };
+        PROPERTY()
+        ConquestTeam _owner{ ConquestTeam::Neutral };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 규칙 수치입니다. 시간 단위는 초, 거리 단위는 x 입니다. */
+    REFLECT()
     struct ConquestRules
     {
-        StatBlock     _startResources{};
+        REFLECT_BODY();
+
+        StatBlock _startResources{};
+        PROPERTY()
         hashed_string _waveUnit{}; ///< 반격 웨이브를 이루는 병종
-        float32       _fixedStep{ 0.1f };
-        float32       _incomeInterval{ 10.0f };
-        float32       _captureTime{ 3.0f };        ///< 지키는 편 없이 이만큼 머물면 점령한다
-        float32       _moraleRadius{ 6.0f };       ///< 지휘관에게서 이 거리 안의 부대원이 사기 버프를 받는다
-        float32       _moraleDamageBonus{ 0.25f }; ///< 사기 버프가 주는 피해 증가량
-        float32       _wallProtection{ 0.5f };     ///< 성벽이 서 있는 거점의 수비대가 덜 받는 피해 비율
-        float32       _commanderHealth{ 100.0f };
-        float32       _commanderDamage{ 8.0f };
-        float32       _commanderStructureRate{ 0.25f }; ///< 지휘관이 성문과 성벽에 주는 피해 배율
-        float32       _commanderRange{ 1.5f };
-        float32       _commanderSpeed{ 4.0f };
-        float32       _commanderAttackInterval{ 0.8f };
-        float32       _commanderRespawnTime{ 10.0f };
-        float32       _formationSpacing{ 1.0f }; ///< 부대원 사이의 간격
-        float32       _followLeash{ 8.0f };      ///< 따라오기 상태에서 지휘관에게서 이 거리까지만 적을 쫓는다
-        float32       _aggroRange{ 8.0f };       ///< 이 거리 안의 적을 알아챈다
-        float32       _waveInterval{ 60.0f };
-        float32       _waveCountPerMinute{ 1.0f }; ///< 지난 분마다 웨이브에 더하는 수
-        int32         _waveBaseCount{ 2 };
-        int32         _waveCountPerSite{ 1 }; ///< 플레이어 거점(첫 마을 제외)마다 더하는 수
-        int32         _basePopulation{ 5 };
+        PROPERTY( Min = 0.01, Max = 1.0 )
+        float32 _fixedStep{ 0.1f };
+        PROPERTY( Min = 0.1 )
+        float32 _incomeInterval{ 10.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _captureTime{ 3.0f }; ///< 지키는 편 없이 이만큼 머물면 점령한다
+        PROPERTY( Min = 0.0 )
+        float32 _moraleRadius{ 6.0f }; ///< 지휘관에게서 이 거리 안의 부대원이 사기 버프를 받는다
+        PROPERTY( Min = 0.0 )
+        float32 _moraleDamageBonus{ 0.25f }; ///< 사기 버프가 주는 피해 증가량
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _wallProtection{ 0.5f }; ///< 성벽이 서 있는 거점의 수비대가 덜 받는 피해 비율
+        PROPERTY( Min = 1.0 )
+        float32 _commanderHealth{ 100.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _commanderDamage{ 8.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _commanderStructureRate{ 0.25f }; ///< 지휘관이 성문과 성벽에 주는 피해 배율
+        PROPERTY( Min = 0.1 )
+        float32 _commanderRange{ 1.5f };
+        PROPERTY( Min = 0.0 )
+        float32 _commanderSpeed{ 4.0f };
+        PROPERTY( Min = 0.05 )
+        float32 _commanderAttackInterval{ 0.8f };
+        PROPERTY( Name = "commanderRespawn", Min = 0.0 )
+        float32 _commanderRespawnTime{ 10.0f };
+        PROPERTY( Min = 0.1 )
+        float32 _formationSpacing{ 1.0f }; ///< 부대원 사이의 간격
+        PROPERTY( Min = 0.0 )
+        float32 _followLeash{ 8.0f }; ///< 따라오기 상태에서 지휘관에게서 이 거리까지만 적을 쫓는다
+        PROPERTY( Min = 0.0 )
+        float32 _aggroRange{ 8.0f }; ///< 이 거리 안의 적을 알아챈다
+        PROPERTY( Min = 0.0 )
+        float32 _waveInterval{ 60.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _waveCountPerMinute{ 1.0f }; ///< 지난 분마다 웨이브에 더하는 수
+        PROPERTY( Min = 0 )
+        int32 _waveBaseCount{ 2 };
+        PROPERTY( Min = 0 )
+        int32 _waveCountPerSite{ 1 }; ///< 플레이어 거점(첫 마을 제외)마다 더하는 수
+        PROPERTY( Min = 0 )
+        int32 _basePopulation{ 5 };
     };
 } // namespace sw
 
@@ -171,6 +233,11 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "ConquestCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief 원소 하나를 이름에 맞는 스키마로 읽습니다. 오류면 그 원소를 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
+        [[nodiscard]] bool loadUnit( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadBuilding( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadSite( const XMLNode& node, string_view sourceName );
 
         GameCatalog<ConquestBuildingDef> _buildingCatalog;
         GameCatalog<ConquestUnitDef>     _unitCatalog;

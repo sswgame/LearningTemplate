@@ -23,7 +23,6 @@
 				<_listWire>
 					<GimmickWireDesc _from="every.OnTick" _to="spawn.Spawn" _bInvert="false" />
 				</_listWire>
-				<_listRestPose />
 			</GimmickCircuitComponent>
 		</_listComponent>
 	</GameObject>

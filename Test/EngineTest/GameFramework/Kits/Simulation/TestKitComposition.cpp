@@ -48,9 +48,9 @@ namespace sw
 )";
         static constexpr const utf8* kCreatureXML   = R"(
 <CreatureLifeCatalog>
-  <Habitat id="meadow"><Key symbol="G" object="grass"/><Row cells="GG"/></Habitat>
-  <Habitat id="orchard"><Key symbol="T" object="tree"/><Row cells="TT"/></Habitat>
-  <Species id="sprout" habitats="meadow" phases="Dawn,Day" weathers="sunny" chance="1" requests="meadow_request"/>
+  <Habitat id="meadow" name="Meadow"><Key symbol="G" object="grass"/><Row cells="GG"/></Habitat>
+  <Habitat id="orchard" name="Orchard"><Key symbol="T" object="tree"/><Row cells="TT"/></Habitat>
+  <Species id="sprout" name="Sprout" habitats="meadow" phases="Dawn,Day" weathers="sunny" chance="1" requests="meadow_request"/>
   <Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal>
 </CreatureLifeCatalog>
 )";
@@ -370,17 +370,17 @@ namespace sw
     {
         static constexpr const utf8* kCityXML          = R"(
 <CityCatalog roadCost="1">
-  <Building id="house" kind="House" size="1" cost="5"/>
-  <Building id="temple" kind="Decoration" size="4" cost="40"/>
+  <Building id="house" name="house" kind="House" size="1" cost="5"/>
+  <Building id="temple" name="temple" kind="Decoration" size="4" cost="40"/>
   <HouseLevel name="Hut" population="4" tax="1"/>
 </CityCatalog>
 )";
         static constexpr const utf8* kRTSCatalogXML    = R"(
 <RTSCatalog supplyMax="200">
-  <Unit id="base" kind="Building" hp="1500" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60"/>
-  <Unit id="worker" hp="40" speed="3" radius="0.35" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12"/>
-  <Unit id="barracks" kind="Building" hp="1000" footprint="3" producedBy="worker" minerals="150" buildTime="20"/>
-  <Unit id="marine" hp="40" speed="2.25" radius="0.35" producedBy="barracks" minerals="50" supply="1" buildTime="18"/>
+  <Unit id="base" name="base" kind="Building" hp="1500" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60"/>
+  <Unit id="worker" name="worker" hp="40" speed="3" radius="0.35" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12"/>
+  <Unit id="barracks" name="barracks" kind="Building" hp="1000" footprint="3" producedBy="worker" minerals="150" buildTime="20"/>
+  <Unit id="marine" name="marine" hp="40" speed="2.25" radius="0.35" producedBy="barracks" minerals="50" supply="1" buildTime="18"/>
 </RTSCatalog>
 )";
         static constexpr int32       kLandSize         = 32;

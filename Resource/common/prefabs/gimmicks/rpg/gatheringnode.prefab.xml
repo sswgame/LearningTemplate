@@ -45,9 +45,7 @@
 			                        _item="Herb"
 			                        _count="1"
 			                        _uses="3"
-			                        _respawnDelay="30"
-			                        _usesLeft="3"
-			                        _respawnStepsLeft="0" />
+			                        _respawnDelay="30" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

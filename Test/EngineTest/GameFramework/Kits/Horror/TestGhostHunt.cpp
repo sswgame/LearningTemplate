@@ -22,13 +22,13 @@ namespace
 {
     constexpr const utf8* kGhostHuntXML = R"(
 <GhostHunt>
-  <Flashlight range="8" angle="25" strobeRange="10" strobeAngle="40" strobeCharge="1"/>
+  <Flashlight range="8" angle="0.4363323" strobeRange="10" strobeAngle="0.6981317" strobeCharge="1"/>
   <Vacuum range="4" stages="10 20 30" alignThreshold="0.7" alignBonus="2" surgeFill="1" surgeDamage="40" dragSpeed="2" dragReduction="0.75"/>
   <Ghost id="goob" hp="40" hideTime="2" appearTime="1.5" attackTime="1" attackDamage="8" stunTime="3" pull="1" fleeInterval="1" coins="10"/>
   <Ghost id="shy" hp="40" hideTime="2" appearTime="1.5" attackTime="1" stunTime="3" strobeOnly="true"/>
-  <Room id="foyer" ghosts="goob,goob" key="parlorKey"/>
-  <Room id="parlor" ghosts="goob"/>
-  <Room id="hall"/>
+  <Room id="foyer" ghosts="goob,goob" key="parlorKey" lightFlag="lit.foyer"/>
+  <Room id="parlor" ghosts="goob" lightFlag="lit.parlor"/>
+  <Room id="hall" lightFlag="lit.hall"/>
   <Door id="parlorDoor" key="parlorKey" flag="door.parlor"/>
   <Furniture id="dresser" room="foyer" loot="dresserLoot" search="Shake"/>
   <Furniture id="curtain" room="foyer" loot="curtainLoot" search="Vacuum"/>

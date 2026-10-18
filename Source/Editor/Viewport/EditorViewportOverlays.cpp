@@ -258,6 +258,46 @@ namespace sw::editor
                            ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding,
                            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings );
 
+        drawBarGrip( state, runtime, position, canvasSize, innerSize, margin, scale );
+
+        // 접기 · 펴기(접으면 손잡이와 이름만)
+        ImGui::SameLine();
+        if ( ImGui::ArrowButton( "##collapse", state._bCollapsed ? ImGuiDir_Right : ImGuiDir_Down ) )
+        {
+            state._bCollapsed = state._bCollapsed == false;
+            save();
+        }
+        EditorSelfTestMarks::note( ( "overlay.collapse." + state._id ).c_str() );
+        EditorWidgets::drawTooltip( state._bCollapsed ? SW_LOCKEY( "EdCommon", "OverlayExpand" ) : SW_LOCKEY( "EdCommon", "OverlayCollapse" ) );
+        if ( state._bCollapsed )
+        {
+            ImGui::SameLine();
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextDisabled( "%s", pDesc != nullptr ? pDesc->_pTitle : state._id.c_str() );
+        }
+        else
+        {
+            EditorViewportToolbar::nextItem( bVertical );
+            if ( state._id == "view" )
+                EditorViewportToolbar::drawViewBar( settings, bVertical );
+            else if ( state._id == "transform" )
+                EditorViewportToolbar::drawTransformBar( settings, bVertical, bHasSelection );
+            else if ( state._id == "display" )
+                EditorViewportToolbar::drawDisplayBar( settings, bVertical );
+            else if ( state._id == "tools" )
+                EditorViewportToolbar::drawToolsBar( settings, bVertical );
+        }
+
+        const ImVec2 size = ImGui::GetWindowSize();
+        runtime._lastSize = float2{ size.x, size.y };
+        ImGui::EndChild();
+        ImGui::PopStyleVar( 3 );
+        ImGui::PopStyleColor();
+    }
+
+    void EditorViewportOverlays::drawBarGrip( EditorOverlayBarState& state, EditorOverlayBarRuntime& runtime, const float2& position, const float2& canvasSize,
+                                              const float2& innerSize, float32 margin, float32 scale )
+    {
         // 손잡이: 끌면 옮기고, 놓으면 가까운 가장자리에 붙인다. 오른쪽 클릭은 바 메뉴.
         const ImVec2 gripSize{ 10.0f * scale, ImGui::GetFrameHeight() };
         ImGui::InvisibleButton( "##grip", gripSize );
@@ -302,40 +342,6 @@ namespace sw::editor
             drawBarMenuItems();
             ImGui::EndPopup();
         }
-
-        // 접기 · 펴기(접으면 손잡이와 이름만)
-        ImGui::SameLine();
-        if ( ImGui::ArrowButton( "##collapse", state._bCollapsed ? ImGuiDir_Right : ImGuiDir_Down ) )
-        {
-            state._bCollapsed = state._bCollapsed == false;
-            save();
-        }
-        EditorSelfTestMarks::note( ( "overlay.collapse." + state._id ).c_str() );
-        EditorWidgets::drawTooltip( state._bCollapsed ? SW_LOCKEY( "EdCommon", "OverlayExpand" ) : SW_LOCKEY( "EdCommon", "OverlayCollapse" ) );
-        if ( state._bCollapsed )
-        {
-            ImGui::SameLine();
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextDisabled( "%s", pDesc != nullptr ? pDesc->_pTitle : state._id.c_str() );
-        }
-        else
-        {
-            EditorViewportToolbar::nextItem( bVertical );
-            if ( state._id == "view" )
-                EditorViewportToolbar::drawViewBar( settings, bVertical );
-            else if ( state._id == "transform" )
-                EditorViewportToolbar::drawTransformBar( settings, bVertical, bHasSelection );
-            else if ( state._id == "display" )
-                EditorViewportToolbar::drawDisplayBar( settings, bVertical );
-            else if ( state._id == "tools" )
-                EditorViewportToolbar::drawToolsBar( settings, bVertical );
-        }
-
-        const ImVec2 size = ImGui::GetWindowSize();
-        runtime._lastSize = float2{ size.x, size.y };
-        ImGui::EndChild();
-        ImGui::PopStyleVar( 3 );
-        ImGui::PopStyleColor();
     }
 
     float2 EditorViewportOverlays::computeTopRightInset() const

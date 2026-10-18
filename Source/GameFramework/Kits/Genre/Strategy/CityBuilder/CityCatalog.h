@@ -42,6 +42,7 @@ namespace sw
     };
 
     /** @brief 집이 받는 서비스입니다. 선언 순서가 비트 번호입니다. */
+    ENUM()
     enum class CityService : uint8
     {
         Water = 0,
@@ -54,6 +55,7 @@ namespace sw
     };
 
     /** @brief 서비스를 전달하는 방법입니다. */
+    ENUM()
     enum class CityDelivery : uint8
     {
         Walker = 0, ///< 일꾼이 도로를 돌아다니며 지나는 집에 전달한다(파라오의 순회 일꾼)
@@ -68,52 +70,97 @@ namespace sw
     }
 
     /** @brief 물자 하나입니다. */
+    REFLECT()
     struct CityGoodDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        string        _name{};
-        int32         _price{ 10 }; ///< 무역과 표시에 쓰는 가격
-        uint8         _bFood{ SW_FALSE };
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY( Min = 0 )
+        int32 _price{ 10 }; ///< 무역과 표시에 쓰는 가격
+        PROPERTY()
+        bool _bFood{ false };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 건물 하나입니다. */
+    REFLECT()
     struct CityBuildingDef
     {
-        hashed_string         _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
         string                _name{};
-        vector<hashed_string> _listGood{};              ///< 생산자는 만드는 물자(첫 항목), 창고는 받는 물자, 시장은 파는 물자
-        float32               _productionTime{ 20.0f }; ///< 생산자가 쓴다. 일꾼이 다 찼을 때 물자 하나를 만드는 데 걸리는 시간(초)
-        float32               _walkerInterval{ 6.0f };  ///< 일꾼을 내보내는 간격(초)
-        int32                 _size{ 1 };
-        int32                 _cost{ 10 };
-        int32                 _workers{ 0 };
-        int32                 _range{ 24 }; ///< 걷는 일꾼의 걸음 수 또는 반경 서비스의 셀 수
-        int32                 _productionAmount{ 5 };
-        int32                 _capacity{ 0 };     ///< 창고와 시장이 담을 수 있는 물자 상한
-        int32                 _desirability{ 0 }; ///< 둘레에 주는 매력도(음수이면 이웃이 싫어하는 건물)
-        int32                 _desirabilityRadius{ 0 };
-        CityBuildingKind      _kind{ CityBuildingKind::Decoration };
-        CityService           _service{ CityService::Count };
-        CityDelivery          _delivery{ CityDelivery::Walker };
-        CityTerrain           _requiredTerrain{ CityTerrain::Grass }; ///< `_bRequiresTerrain` 이 켜져 있으면 건물 발밑이 모두 이 땅이어야 한다
-        uint8                 _bRequiresTerrain{ SW_FALSE };
+        vector<hashed_string> _listGood{}; ///< 생산자는 만드는 물자(첫 항목), 창고는 받는 물자, 시장은 파는 물자
+        PROPERTY( Min = 0.5 )
+        float32 _productionTime{ 20.0f }; ///< 생산자가 쓴다. 일꾼이 다 찼을 때 물자 하나를 만드는 데 걸리는 시간(초)
+        PROPERTY( Min = 0.5 )
+        float32 _walkerInterval{ 6.0f }; ///< 일꾼을 내보내는 간격(초)
+        PROPERTY( Min = 1, Max = 6 )
+        int32 _size{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _cost{ 10 };
+        PROPERTY( Min = 0 )
+        int32 _workers{ 0 };
+        PROPERTY( Min = 1 )
+        int32 _range{ 24 }; ///< 걷는 일꾼의 걸음 수 또는 반경 서비스의 셀 수
+        PROPERTY( Name = "amount", Min = 1 )
+        int32 _productionAmount{ 5 };
+        PROPERTY( Min = 0 )
+        int32 _capacity{ 0 }; ///< 창고와 시장이 담을 수 있는 물자 상한
+        PROPERTY()
+        int32 _desirability{ 0 }; ///< 둘레에 주는 매력도(음수이면 이웃이 싫어하는 건물)
+        PROPERTY( Min = 0, Max = 8 )
+        int32 _desirabilityRadius{ 0 };
+        PROPERTY( Required )
+        CityBuildingKind _kind{ CityBuildingKind::Decoration };
+        PROPERTY()
+        CityService _service{ CityService::Count };
+        PROPERTY()
+        CityDelivery _delivery{ CityDelivery::Walker };
+        CityTerrain  _requiredTerrain{ CityTerrain::Grass }; ///< `_bRequiresTerrain` 이 켜져 있으면 건물 발밑이 모두 이 땅이어야 한다
+        bool         _bRequiresTerrain{ false };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 집 한 단계입니다. 단계 번호가 곧 배열 index 입니다(0 은 처음 짓는 오두막). */
+    REFLECT()
     struct CityHouseLevelDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         string                _name{};
         vector<hashed_string> _listRequiredGood{};
-        int32                 _population{ 5 };   ///< 수용 인구
-        int32                 _taxPerPerson{ 1 }; ///< 한 달마다 내는 세금(세리가 지나간 집만 낸다)
-        int32                 _minDesirability{ -100 };
-        uint8                 _serviceMask{ 0 }; ///< `makeCityServiceBit` 값을 OR 한 것
+        PROPERTY( Min = 1 )
+        int32 _population{ 5 }; ///< 수용 인구
+        PROPERTY( Name = "tax", Min = 0 )
+        int32 _taxPerPerson{ 1 }; ///< 한 달마다 내는 세금(세리가 지나간 집만 낸다)
+        PROPERTY( Name = "desirability" )
+        int32 _minDesirability{ -100 };
+        uint8 _serviceMask{ 0 }; ///< `makeCityServiceBit` 값을 OR 한 것
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<CityCatalog>` 루트 속성의 스키마입니다. */
+    REFLECT()
+    struct CityCatalogRootDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0 )
+        int32 _roadCost{ 2 }; ///< 도로 한 칸의 값
     };
 } // namespace sw
 
@@ -148,6 +195,10 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "CityCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief 원소 하나를 이름에 맞는 스키마로 읽습니다. 오류면 그 원소를 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
+        [[nodiscard]] bool loadBuilding( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadHouseLevel( const XMLNode& node, string_view sourceName );
 
         GameCatalog<CityBuildingDef> _buildingCatalog;
         GameCatalog<CityGoodDef>     _goodCatalog;

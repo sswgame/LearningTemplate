@@ -31,7 +31,6 @@ namespace
     <BoostPad at="0.05" offset="0" length="6" width="10" duration="1"/>
     <Offroad from="0.3" to="0.35" minOffset="-6" maxOffset="0" scale="0.3"/>
   </Track>
-  <Track id="broken" width="12"><Point x="0" z="0"/><Point x="0" z="10"/></Track>
 </KartTrackCatalog>)";
 
     const utf8* const kKartRacingItemXML = R"(<KartItemCatalog places="8">
@@ -136,11 +135,24 @@ namespace
     }
 } // namespace
 
+/**
+ * @brief [KartRacingTest] 조절점이 셋보다 적은 트랙은 그 트랙을 넣지 않는 오류다
+ */
+SW_TEST_CASE( KartRacingTest, TrackWithFewerThanThreePointsIsRejected )
+{
+    KartTrackCatalog catalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a track with two points is rejected" );
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( "<KartTrackCatalog><Track id=\"broken\" name=\"Broken\"><Point x=\"0\" z=\"0\"/><Point x=\"0\" z=\"10\"/></Track></KartTrackCatalog>",
+                                                  "KartRacingTest" ) ); // 트랙이 하나도 없으니 로드 실패다
+    }
+    SW_EXPECT_TRUE( catalog.find( "broken" ) == nullptr );
+}
+
 SW_TEST_CASE( KartRacingTest, TrackSplineGatesAndOffroad )
 {
     KartTrackCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kTrackXML, "test" ) );
-    SW_EXPECT_TRUE( catalog.find( "broken" ) == nullptr ); // 점 둘은 건너뛴다
 
     KartTrack track;
     SW_ASSERT_TRUE( loadTestTrack( track, 3 ) );

@@ -141,59 +141,69 @@ namespace sw
 
     uint32 KartItemCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _referencePlaceCount = root.getAttributeInt( "places", _referencePlaceCount );
-        uint32 loadedCount   = 0;
-        for ( XMLNode itemNode = root.findChild( "Item" ); itemNode; itemNode = itemNode.findNextSibling( "Item" ) )
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        KartItemsRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+            _referencePlaceCount = rootDef._referencePlaceCount;
+        uint32 loadedCount = 0;
+        // 순위 표는 아이템을 가리키므로 아이템을 모두 읽은 뒤에 읽는다(적힌 순서와 상관없게).
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( itemNode, sourceName );
-            if ( pID == nullptr )
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( name == "RankTable" )
                 continue;
-            KartItemDef def;
-            def._id = hashed_string( pID );
-            if ( parseKartItemKind( itemNode.getAttributeText( "kind" ), def._kind ) == false )
+            if ( name != "Item" )
             {
-                SW_LOG_WARNING( "%#: item '%#' has an unknown kind '%#' - skipped", sourceName, pID, itemNode.getAttributeText( "kind" ) );
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
                 continue;
             }
-            def._speed          = itemNode.getAttributeFloat( "speed", def._speed );
-            def._lifetime       = itemNode.getAttributeFloat( "lifetime", def._lifetime );
-            def._radius         = itemNode.getAttributeFloat( "radius", def._radius );
-            def._turnRate       = itemNode.getAttributeFloat( "turnRate", def._turnRate );
-            def._spinTime       = itemNode.getAttributeFloat( "spin", def._spinTime );
-            def._hitSpeedScale  = itemNode.getAttributeFloat( "hitSpeedScale", def._hitSpeedScale );
-            def._boostTime      = itemNode.getAttributeFloat( "boost", def._boostTime );
-            def._shieldTime     = itemNode.getAttributeFloat( "shield", def._shieldTime );
-            def._blastRadius    = itemNode.getAttributeFloat( "blastRadius", def._blastRadius );
-            def._bIgnoresShield = itemNode.getAttributeBool( "ignoresShield", false ) ? SW_TRUE : SW_FALSE;
+            KartItemDef def;
+            if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                continue; // 오류는 readFields 가 남겼고, 그 아이템만 빠진다
             add( def );
             ++loadedCount;
         }
-        for ( XMLNode rankNode = root.findChild( "RankTable" ); rankNode; rankNode = rankNode.findNextSibling( "RankTable" ) )
+        for ( XMLNode node = root.findChild( "RankTable" ); node; node = node.findNextSibling( "RankTable" ) )
         {
-            vector<LootEntry> listEntry;
-            for ( XMLNode entryNode = rankNode.findChild( "Entry" ); entryNode; entryNode = entryNode.findNextSibling( "Entry" ) )
-            {
-                const utf8* pItem = entryNode.findAttribute( "item" );
-                if ( pItem == nullptr || find( hashed_string( pItem ) ) == nullptr )
-                {
-                    SW_LOG_WARNING( "%#: rank table entry names an unknown item '%#' - skipped", sourceName, pItem != nullptr ? pItem : "" );
-                    continue;
-                }
-                LootEntry entry;
-                entry._itemID = hashed_string( pItem );
-                entry._weight = entryNode.getAttributeFloat( "weight", 1.0f );
-                listEntry.push_back( entry );
-            }
-            if ( listEntry.empty() )
-            {
-                SW_LOG_WARNING( "%#: <RankTable> without entries - skipped", sourceName );
-                continue;
-            }
-            const int32 fromPlace = rankNode.getAttributeInt( "from", 1 );
-            addRankTable( fromPlace, rankNode.getAttributeInt( "to", fromPlace ), listEntry );
+            if ( loadRankTable( node, sourceName ) == false )
+                SW_LOG_ERROR( "%#: a <RankTable> was not loaded (see above)", sourceName );
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Item> entries", sourceName );
+            SW_LOG_ERROR( "%#: no <Item> entries", sourceName );
         return loadedCount;
+    }
+
+    bool KartItemCatalog::loadRankTable( const XMLNode& node, string_view sourceName )
+    {
+        KartRankRangeDef  range;
+        bool              bValid = GameDataXML::readFields( node, range, sourceName );
+        vector<LootEntry> listEntry;
+        for ( XMLNode entryNode = node.findChild( "Entry" ); entryNode; entryNode = entryNode.findNextSibling( "Entry" ) )
+        {
+            KartRankEntryDef entry;
+            if ( GameDataXML::readFields( entryNode, entry, sourceName ) == false )
+            {
+                bValid = false;
+                continue;
+            }
+            if ( find( entry._itemID ) == nullptr )
+            {
+                SW_LOG_ERROR( "%#: rank table entry names an unknown item '%#'", sourceName, entry._itemID.c_str() );
+                bValid = false;
+                continue;
+            }
+            LootEntry loot;
+            loot._itemID = entry._itemID;
+            loot._weight = entry._weight;
+            listEntry.push_back( loot );
+        }
+        if ( listEntry.empty() )
+        {
+            SW_LOG_ERROR( "%#: <RankTable from=\"%#\"> needs <Entry> children", sourceName, range._fromPlace );
+            bValid = false;
+        }
+        if ( bValid )
+            addRankTable( range._fromPlace, range._toPlace, listEntry );
+        return bValid;
     }
 } // namespace sw

@@ -28,7 +28,7 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<BoostPadComponent _componentName="BoostPadComponent" _bActive="true" _duration="1" _strength="1.5" _boostCount="0">
+			<BoostPadComponent _componentName="BoostPadComponent" _bActive="true" _duration="1" _strength="1.5">
 				<_requiredTags>
 					<_listTag />
 				</_requiredTags>

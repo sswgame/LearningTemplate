@@ -51,12 +51,12 @@ namespace
   <SlotGroup level="8" slots="3"/>
   <Contract id="griffin" quest="contract_griffin" reward="200" limit="1.4" angerMax="1" angerScale="2" angerPerRound="0.1">
     <Step id="tracks">
-      <Clue id="blood" x="0" z="0" radius="2" order="0"/>
-      <Clue id="feathers" x="10" z="0" radius="2" order="1"/>
-      <Clue id="carcass" x="10" z="10" radius="2" order="1"/>
+      <Clue id="blood" position="0,0,0" radius="2" order="0"/>
+      <Clue id="feathers" position="10,0,0" radius="2" order="1"/>
+      <Clue id="carcass" position="10,0,10" radius="2" order="1"/>
     </Step>
     <Step id="lair">
-      <Clue id="nest" x="50" z="50" radius="3"/>
+      <Clue id="nest" position="50,0,50" radius="3"/>
     </Step>
   </Contract>
 </WitcherCatalog>
@@ -161,6 +161,28 @@ SW_TEST_CASE( WitcherRPGTest, CatalogReadsMonstersAlchemySignsMutagensAndContrac
     SW_ASSERT_NOT_NULL( pContract );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( pContract->_listStep.size() ) );
     SW_EXPECT_NEAR_EQUAL( 10.0f, pContract->_listStep[0]._listClue[2]._position._z, 1.0e-5f );
+}
+
+SW_TEST_CASE( WitcherRPGTest, CatalogRejectsElementsThatBreakTheSchemaInsteadOfFillingDefaults )
+{
+    // 오일의 적중 횟수 빠짐, 모르는 종류, 최대 지식보다 높은 약점, 필수 readLevel 빠짐은 그 원소만 넣지 않는다.
+    constexpr const utf8* kBrokenXML = R"(<WitcherCatalog>
+  <Item id="dry_oil" kind="Oil" element="NecrophageOil"/>
+  <Item id="odd" kind="Elixir"/>
+  <Item id="swallow" kind="Potion" toxicity="30"/>
+  <Monster id="ghoul" category="Necrophage" maxKnowledge="2" readLevel="2"><Weakness kind="Oil" id="swallow" knowledge="3"/></Monster>
+  <Monster id="nekker" category="Ogroid"/>
+</WitcherCatalog>)";
+    WitcherCatalog        catalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "elements that break the schema are skipped with an error" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrokenXML, "WitcherRPGTest" ) );
+    }
+    SW_EXPECT_NULL( catalog.findAlchemy( hashed_string( "dry_oil" ) ) );
+    SW_EXPECT_NULL( catalog.findAlchemy( hashed_string( "odd" ) ) );
+    SW_EXPECT_NOT_NULL( catalog.findAlchemy( hashed_string( "swallow" ) ) );
+    SW_EXPECT_NULL( catalog.findMonster( hashed_string( "ghoul" ) ) );
+    SW_EXPECT_NULL( catalog.findMonster( hashed_string( "nekker" ) ) );
 }
 
 SW_TEST_CASE( WitcherRPGTest, BestiaryShowsOnlyUnlockedWeaknessesWhileMultipliersAlwaysApply )

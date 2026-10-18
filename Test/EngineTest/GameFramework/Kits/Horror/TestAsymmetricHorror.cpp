@@ -33,7 +33,7 @@ namespace
         <Window fastTime="0.5" mediumTime="1.2" killerTime="1.7" fastSpeedRatio="0.9" noiseRadius="40" blockCount="3" blockTime="15"/>
         <Locker searchTime="1"/>
         <Endgame gateTime="3" collapseTime="10" slowScale="0.5" hatchRemaining="1"/>
-        <Killer id="trapper" speedRatio="1.15" lungeRange="2.5" lungeAngle="90" hitCooldown="2.7" missCooldown="1.5" cooldownSpeedScale="0.3" terrorRadius="32"
+        <Killer id="trapper" speedRatio="1.15" lungeRange="2.5" lungeAngle="1.5707964" hitCooldown="2.7" missCooldown="1.5" cooldownSpeedScale="0.3" terrorRadius="32"
                 abilityCooldown="10" carrySpeedScale="0.8"/>
         <Category id="Objectives" cap="5000"/>
         <Category id="Brutality" cap="0"/>
@@ -98,7 +98,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, RepairScalesWithHelpersAndPowersGates )
 {
     AsymmetricHorrorRulesCatalog catalog;
     SW_ASSERT_TRUE( loadRules( catalog ) );
-    SW_EXPECT_NEAR_EQUAL( catalog.getRules()._listRepairScale[1], 1.5f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( catalog.getRules()._generator._listScale[1], 1.5f, 0.001f );
     SW_ASSERT_NOT_NULL( catalog.findKiller( hashed_string( "trapper" ) ) );
 
     HorrorMatch match;

@@ -61,7 +61,6 @@
 				<_listWire>
 					<GimmickWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
 				</_listWire>
-				<_listRestPose />
 			</GimmickCircuitComponent>
 		</_listComponent>
 	</GameObject>

@@ -60,18 +60,6 @@ namespace sw
         PROPERTY()
         string _audioEvents{}; ///< 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstanceBase` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음
 
-        PROPERTY()
-        map<string, string> _mapCustomProperty{}; ///< 범용 커스텀 키-값 프로퍼티 저장소
-
-        /** @brief 커스텀 문자열 프로퍼티를 조회합니다. 없으면 fallback 을 반환합니다. */
-        string_view getCustomProperty( string_view key, string_view fallback = {} ) const;
-        /** @brief 커스텀 정수 프로퍼티를 조회합니다. */
-        int32 getCustomPropertyInt( string_view key, int32 fallback = 0 ) const;
-        /** @brief 커스텀 실수 프로퍼티를 조회합니다. */
-        float32 getCustomPropertyFloat( string_view key, float32 fallback = 0.0f ) const;
-        /** @brief 커스텀 부울 프로퍼티를 조회합니다. */
-        bool getCustomPropertyBool( string_view key, bool bFallback = false ) const;
-
         /** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
         /** @brief `loadFromResource` 의 XML 문자열 버전이며 테스트가 씁니다. 먼저 비우고 읽습니다. */

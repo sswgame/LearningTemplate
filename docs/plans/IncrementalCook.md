@@ -26,7 +26,7 @@
 
 - 작업 키 = 해시(쿠커 이름, 쿠커 버전 상수, 대상 플랫폼과 백엔드, 쿠킹 설정 해시, 기록된 입력의 경로와 내용 해시 목록)입니다.
 - 쿠커 버전은 쿠커 소스 옆의 상수입니다. 셰이더 도구 지문과 같은 원칙으로, 바이너리 해시가 아니라 사람이 올리는 버전입니다(결정 기록 5-5). 형식을 바꾸면 버전을 올리고, 그 쿠커의 결과가 모두 다시 구워집니다.
-- 작업마다 기록 파일(`<출력>.cookrec`)을 남깁니다. 내용은 키, 입력 목록(경로와 내용 해시), 출력 해시입니다.
+- 작업마다 기록 파일(`Saved/CookRecord/<출력 id>.cookrec`)을 남깁니다. 쿠킹 폴더의 파일은 모두 팩에 들어가므로 기록을 그 옆에 두지 않습니다. 내용은 키, 입력 목록(경로와 내용 해시, 폴더를 훑은 목록), 출력 해시입니다.
 - 다음 쿠킹은 기록의 입력만 다시 해시합니다. 내용 해시는 셰이더 스탬프가 쓰는 캐시(파일 크기와 쓰기 시각이 같으면 다시 읽지 않음)를 공용으로 옮겨 씁니다. 모두 같으면 출력을 다시 씁니다. 하나라도 다르면 다시 굽고 기록을 새로 씁니다.
   판정에 파일 시각만 쓰지 않습니다. `git pull` 이 시각을 임의의 순서로 바꾸기 때문입니다(`ShaderCookStamp.cpp` 머리말).
 
@@ -49,16 +49,15 @@
 
 ## 4. 단위
 
-동시 빌드는 둘까지입니다. K1 이 공용 형식을 만들고, K2 ~ K4 는 쿠커별로 나눕니다.
+동시 빌드는 둘까지입니다. K1(공용 형식: `Engine/Resource/Cook/` 의 `CookJob` · `CookSession` · `CookRecord` · `DerivedDataCache` · `ContentHash`, `ResourceIO` 의 읽기 기록)과 K4(팩 증분, `.packrec`)는 들어갔습니다.
+K2(씬 · 프리팹)와 K3(레지스트리, VAT, 내비메시)도 들어갔습니다. `--cook-scenes` 의 모든 쿠커가 쿠킹 세션 안에서 출력마다 `CookStore::cookFile` 을 부르고, 작업은 빈 에셋 캐시로 시작하며, 기록은 `Saved/CookRecord`, DDC 는 `Saved/DDC` 에 둡니다.
+레지스트리는 `.meta` 목록을 입력(`CookJob::collectFiles`)으로 남기고, VAT 는 무엇을 구울지 정하려고 목록을 먼저 읽은 뒤 클립 작업마다 다시 읽어 입력으로 남깁니다.
+K5 는 셰이더 스탬프를 옮기지 않기로 정했습니다(결정 기록 5-5). 남은 것은 K0(측정)과 K6(공유 DDC, 5 절 사용자 결정)입니다.
 팩 증분(K4)은 들어갔습니다. `CookAssets.PackWriter` 가 팩 옆 `<팩>.packrec` 에 키(쿠커 버전, 팩 계약 지문, 압축 · DLC · 디버그 문자열, 항목마다 경로와 내용 해시)와 팩 바이트 해시를 남기고, 같으면 다시 쓰지 않습니다.
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
 | K0 | 단계별 쿠킹 시간(셰이더, 씬, 프리팹, 레지스트리, VAT, 내비메시, 팩)을 깨끗한 실행과 바뀐 것 없는 실행에서 측정하고, 같은 입력을 두 번 구워 바이트가 같은지 봅니다 | 코드 변경 없음. 결과는 `docs/08_Verification.md` | 없음 | 표가 나옵니다 | 필요합니다. Release App, 3 회, 단계별 초 |
-| K1 | `CookJob` 범위, `ResourceIO` 의 읽기 기록, 키와 `.cookrec` 형식, 공용 내용 해시 캐시(셰이더 스탬프의 캐시를 옮김), 로컬 DDC | `Engine/Resource/`(새 `Cook/` 하위 폴더), `Engine/Graphics/Shader/Compile/ShaderCookStamp.cpp`(캐시를 공용으로 옮기는 부분만) | K0 | 단위 테스트: 입력 하나를 바꾸면 키가 바뀌고, 범위 밖 읽기가 오류이고, 같은 입력은 같은 키입니다 | 없음 |
-| K2 | 씬과 프리팹 쿠킹을 작업 범위로 감싸고 DDC 를 거치게 합니다. K0 에서 찾은 비결정 출력을 고칩니다 | `Engine/Scene/SceneCooker.*`, `Engine/Object/Prefab/PrefabAsset.cpp`(`PrefabCache::cookAllPrefabs`), `Engine/HeadlessSubsystem.cpp` | K1 | 임시 리소스 루트 테스트: 프리팹 하나를 바꾸면 그 프리팹을 쓰는 씬만 다시 굽습니다. 쿠커 버전을 올리면 전부 다시 굽습니다. DDC 를 지우고 구운 결과가 같습니다 | K0 과 같은 표로 전후 비교 |
-| K3 | 레지스트리, VAT, 내비메시 쿠킹 | `Engine/Resource/AssetDatabase.cpp`, `Engine/Object/SceneAnimation/VertexAnimationCooker.*`, `Engine/Scene/SceneNavigationCooker.*` | K1(K2 와 병렬 가능) | 위와 같은 구조의 테스트 | K0 과 같은 표 |
-| K5 | 셰이더 스탬프를 같은 기록 형식으로 옮길지 판단합니다. 커밋된 스탬프와 `CheckShaderStamps` 게이트가 있으므로 K2 · K3 과 팩 증분(K4)의 결과를 본 뒤 정합니다 | `Engine/Graphics/Shader/Compile/`, `Scripts/` | K2 | 셰이더 쿠킹 테스트, 네 백엔드 | 없음 |
 | K6 | 공유 DDC 읽기 층 | `Engine/Resource/Cook/`, 설정 데이터 | K2, 5절 결정 | 공유 층에서 찾은 결과가 로컬 쿠킹과 같습니다 | 공유 층 적중률과 시간 |
 
 K0 은 측정만 하는 일이라 다른 단위보다 먼저 합니다. 이득이 씬에서 나오는지에 따라 K2 와 K3 의 순서를 정합니다.

@@ -11,7 +11,7 @@
 namespace sw
 {
     struct DamageAppliedEvent;
-    struct MonsterDef;
+    struct MonsterStatsDef;
 
     REFLECT( Category = "Gameplay", DisplayName = "Unit Stats Component", Tooltip = "Manages HP, Attack, Defense, Movement Speed, and Invincibility" )
     class SW_KIT_API UnitStatsComponent : public HealthSourceComponent
@@ -61,8 +61,8 @@ namespace sw
 
         /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(변화 연출 없이). */
         void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
-        /** @brief 몬스터 카탈로그의 한 종(`MonsterCatalog::findMonster`)으로 스탯을 정합니다. 단위는 같습니다(이동 속도는 m/s, 무적 시간은 s). */
-        void setStats( const MonsterDef& monsterDef );
+        /** @brief 몬스터 카탈로그의 한 종의 스탯(`MonsterDef::_stats`)으로 정합니다. 단위는 같습니다(이동 속도는 m/s, 무적 시간은 s). */
+        void setStats( const MonsterStatsDef& monsterStats );
 
         /** @brief 깎인 피해를 데미지 숫자로 띄울지 정합니다(기본은 끔). 숫자는 `getDamageNumberOffset()` 만큼 위에 새 오브젝트로 뜹니다. */
         void setShowDamageNumbers( bool bShow ) { _bShowDamageNumbers = bShow; }

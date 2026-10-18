@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/String/EnumNameTable.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -33,14 +32,9 @@ namespace sw
                 {          CityService::Tax,           "Tax"},
             };
 
-            static constexpr const utf8*                     kArrKindName[] = { "House", "Service", "Producer", "Storage", "Market", "Decoration" };
-            static constexpr EnumNameTable<CityBuildingKind> kKindTable{ kArrKindName };
-            static constexpr const utf8*                     kArrTerrainName[] = { "Grass", "Sand", "Floodplain", "Water", "Rock" };
-            static constexpr EnumNameTable<CityTerrain>      kTerrainTable{ kArrTerrainName };
-            static_assert( kKindTable.getCount() == static_cast<size_t>( CityBuildingKind::Decoration ) + 1, "kind names must cover every CityBuildingKind" );
+            static constexpr const utf8*                kArrTerrainName[] = { "Grass", "Sand", "Floodplain", "Water", "Rock" };
+            static constexpr EnumNameTable<CityTerrain> kTerrainTable{ kArrTerrainName };
             static_assert( kTerrainTable.getCount() == static_cast<size_t>( CityTerrain::Rock ) + 1, "terrain names must cover every CityTerrain" );
-
-            [[nodiscard]] static bool parseKind( string_view text, CityBuildingKind& outKind ) { return kKindTable.parse( text, outKind ); }
 
             [[nodiscard]] static bool parseTerrain( string_view text, CityTerrain& outTerrain ) { return kTerrainTable.parse( text, outTerrain ); }
         };
@@ -76,7 +70,7 @@ namespace sw
         : _buildingCatalog{}
         , _goodCatalog{}
         , _listHouseLevel{}
-        , _roadCost{ 2 }
+        , _roadCost{ CityCatalogRootDef{}._roadCost }
     {
     }
 
@@ -93,95 +87,105 @@ namespace sw
 
     uint32 CityCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _roadCost = MathUtil::max( 0, root.getAttributeInt( "roadCost", _roadCost ) );
-        for ( XMLNode node = root.findChild( "Good" ); node; node = node.findNextSibling( "Good" ) )
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        CityCatalogRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+            _roadCost = rootDef._roadCost;
+        _listHouseLevel.clear();
+        uint32 buildingCount = 0;
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            CityGoodDef good;
-            good._id          = hashed_string( pID );
-            const utf8* pName = node.findAttribute( "name" );
-            good._name        = pName != nullptr ? pName : pID;
-            good._price       = MathUtil::max( 0, node.getAttributeInt( "price", good._price ) );
-            good._bFood       = node.getAttributeBool( "food", false ) ? SW_TRUE : SW_FALSE;
-            (void)_goodCatalog.add( good );
+            const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            const bool        bLoaded = loadElement( node, name, sourceName );
+            if ( bLoaded && StringUtil::equals( name, string_view( "Building" ), true ) )
+                ++buildingCount;
         }
 
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Building" ); node; node = node.findNextSibling( "Building" ) )
+        // 건물이 가리키는 물자는 모두 읽은 뒤에 확인한다(건물이 물자보다 앞에 적혀도 된다).
+        for ( const CityBuildingDef& building : _buildingCatalog.getAll() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            CityBuildingDef building;
-            building._id               = hashed_string( pID );
-            const utf8* pName          = node.findAttribute( "name" );
-            building._name             = pName != nullptr ? pName : pID;
-            const string_view kindText = node.getAttributeText( "kind" );
-            if ( kindText.empty() == false && CityCatalogInternal::parseKind( kindText, building._kind ) == false )
-                SW_LOG_WARNING( "%#: building '%#' has an unknown kind '%#'", sourceName, pID, kindText );
-            const string_view serviceText = node.getAttributeText( "service" );
-            if ( serviceText.empty() == false && parseCityService( serviceText, building._service ) == false )
-                SW_LOG_WARNING( "%#: building '%#' has an unknown service '%#'", sourceName, pID, serviceText );
-            building._delivery            = StringUtil::equals( node.getAttributeText( "delivery" ), string_view( "Radius" ), true ) ? CityDelivery::Radius : CityDelivery::Walker;
-            const string_view terrainText = node.getAttributeText( "terrain" );
-            if ( terrainText.empty() == false )
-            {
-                if ( CityCatalogInternal::parseTerrain( terrainText, building._requiredTerrain ) )
-                    building._bRequiresTerrain = SW_TRUE;
-                else
-                    SW_LOG_WARNING( "%#: building '%#' needs an unknown terrain '%#'", sourceName, pID, terrainText );
-            }
-            GameDataXML::parseNameList( node.getAttributeText( "goods" ), ",; ", building._listGood );
             for ( const hashed_string& goodID : building._listGood )
             {
                 if ( _goodCatalog.find( goodID ) == nullptr )
-                    SW_LOG_WARNING( "%#: building '%#' names an unknown good '%#'", sourceName, pID, goodID.c_str() );
+                    SW_LOG_ERROR( "%#: building '%#' names an unknown good '%#'", sourceName, building._id.c_str(), goodID.c_str() );
             }
-            building._size               = MathUtil::clamp( node.getAttributeInt( "size", building._size ), 1, 6 );
-            building._cost               = MathUtil::max( 0, node.getAttributeInt( "cost", building._cost ) );
-            building._workers            = MathUtil::max( 0, node.getAttributeInt( "workers", building._workers ) );
-            building._range              = MathUtil::max( 1, node.getAttributeInt( "range", building._range ) );
-            building._walkerInterval     = MathUtil::max( 0.5f, node.getAttributeFloat( "walkerInterval", building._walkerInterval ) );
-            building._productionTime     = MathUtil::max( 0.5f, node.getAttributeFloat( "productionTime", building._productionTime ) );
-            building._productionAmount   = MathUtil::max( 1, node.getAttributeInt( "amount", building._productionAmount ) );
-            building._capacity           = MathUtil::max( 0, node.getAttributeInt( "capacity", building._capacity ) );
-            building._desirability       = node.getAttributeInt( "desirability", building._desirability );
-            building._desirabilityRadius = MathUtil::clamp( node.getAttributeInt( "desirabilityRadius", building._desirabilityRadius ), 0, 8 );
-            if ( building._kind == CityBuildingKind::Service && building._service == CityService::Count )
-                SW_LOG_WARNING( "%#: service building '%#' names no service", sourceName, pID );
-            (void)_buildingCatalog.add( building );
-            ++loadedCount;
         }
-
-        _listHouseLevel.clear();
-        for ( XMLNode node = root.findChild( "HouseLevel" ); node; node = node.findNextSibling( "HouseLevel" ) )
-        {
-            CityHouseLevelDef level;
-            const utf8*       pName = node.findAttribute( "name" );
-            level._name             = pName != nullptr ? pName : "House";
-            level._population       = MathUtil::max( 1, node.getAttributeInt( "population", level._population ) );
-            level._taxPerPerson     = MathUtil::max( 0, node.getAttributeInt( "tax", level._taxPerPerson ) );
-            level._minDesirability  = node.getAttributeInt( "desirability", level._minDesirability );
-            StringUtil::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
-            {
-                CityService service = CityService::Count;
-                if ( parseCityService( token, service ) )
-                    level._serviceMask = static_cast<uint8>( level._serviceMask | makeCityServiceBit( service ) );
-                else
-                    SW_LOG_WARNING( "%#: house level '%#' needs an unknown service '%#'", sourceName, level._name.c_str(), token );
-            } );
-            GameDataXML::parseNameList( node.getAttributeText( "goods" ), ",; ", level._listRequiredGood );
-            _listHouseLevel.push_back( level );
-        }
+        // 집 단계가 없으면 집이 자랄 곳이 없다 — 기본 단계를 지어내지 않고 로드 실패로 본다.
         if ( _listHouseLevel.empty() )
         {
-            SW_LOG_WARNING( "%#: no <HouseLevel> entries - houses stay at one default level", sourceName );
-            _listHouseLevel.push_back( CityHouseLevelDef{} );
+            SW_LOG_ERROR( "%#: no <HouseLevel> entries - houses have no level to live at", sourceName );
+            return 0;
         }
         if ( findHouseBuilding() == nullptr )
-            SW_LOG_WARNING( "%#: no building has kind=\"House\" - nobody can live in this city", sourceName );
-        return loadedCount;
+            SW_LOG_ERROR( "%#: no building has kind=\"House\" - nobody can live in this city", sourceName );
+        return buildingCount;
+    }
+
+    bool CityCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        const auto is = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        if ( is( "Good" ) )
+        {
+            CityGoodDef good;
+            if ( GameDataXML::readFields( node, good, sourceName ) == false )
+                return false;
+            (void)_goodCatalog.add( good ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+            return true;
+        }
+        if ( is( "Building" ) )
+            return loadBuilding( node, sourceName );
+        if ( is( "HouseLevel" ) )
+            return loadHouseLevel( node, sourceName );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool CityCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
+    {
+        CityBuildingDef building;
+        bool            bValid = GameDataXML::readFields( node, building, sourceName, { "terrain", "goods" } );
+        // 땅 조건은 적었을 때만 있다(적지 않으면 아무 땅). 모르는 땅 이름은 오류다.
+        const string_view terrainText = node.getAttributeText( "terrain" );
+        if ( terrainText.empty() == false )
+        {
+            building._bRequiresTerrain = CityCatalogInternal::parseTerrain( terrainText, building._requiredTerrain );
+            if ( building._bRequiresTerrain == false )
+            {
+                SW_LOG_ERROR( "%#: building '%#' needs an unknown terrain '%#'", sourceName, building._id.c_str(), terrainText );
+                bValid = false;
+            }
+        }
+        GameDataXML::parseNameList( node.getAttributeText( "goods" ), ",; ", building._listGood );
+        const bool bServiceWithoutService = building._kind == CityBuildingKind::Service && building._service == CityService::Count;
+        if ( bServiceWithoutService )
+        {
+            SW_LOG_ERROR( "%#: service building '%#' needs service=\"...\"", sourceName, building._id.c_str() );
+            bValid = false;
+        }
+        if ( bValid )
+            (void)_buildingCatalog.add( building ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
+    }
+
+    bool CityCatalog::loadHouseLevel( const XMLNode& node, string_view sourceName )
+    {
+        CityHouseLevelDef level;
+        bool              bValid = GameDataXML::readFields( node, level, sourceName, { "services", "goods" } );
+        StringUtil::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
+        {
+            CityService service = CityService::Count;
+            if ( parseCityService( token, service ) )
+                level._serviceMask = static_cast<uint8>( level._serviceMask | makeCityServiceBit( service ) );
+            else
+            {
+                SW_LOG_ERROR( "%#: house level '%#' needs an unknown service '%#'", sourceName, level._name.c_str(), token );
+                bValid = false;
+            }
+        } );
+        GameDataXML::parseNameList( node.getAttributeText( "goods" ), ",; ", level._listRequiredGood );
+        if ( bValid )
+            _listHouseLevel.push_back( level ); // 적힌 순서가 단계다(0 = 처음 짓는 집)
+        return bValid;
     }
 } // namespace sw

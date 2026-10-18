@@ -21,6 +21,7 @@
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Resource/AssetDatabase.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneManager.h"
@@ -114,25 +115,31 @@ namespace sw
             string cookedDir;
             commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
             SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
-            const string& resourceRoot     = ResourcePaths::getRootFolderPath();
-            uint32        sceneFailedCount = 0;
-            // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
-            const uint32 sceneCount = SceneCooker::cookAllScenes( engine::getSubsystem<SceneManager>().getEngineServices(), resourceRoot, cookedDir, sceneFailedCount );
-            // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
-            uint32                        prefabFailedCount   = 0;
-            [[maybe_unused]] const uint32 prefabCount         = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
-            uint32                        registryFailedCount = 0;
-            [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
+            const string& resourceRoot = ResourcePaths::getRootFolderPath();
             // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
-            // 군중 표를 못 읽으면 코드 기본 프레임율로 굽지 않고 VAT 굽기를 실패로 센다.
-            AnimationCrowdSettings        crowdSettings{};
-            const bool                    bCrowdSettingsLoaded       = crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
+            // 군중 표를 못 읽으면 코드 기본 프레임율로 굽지 않고 VAT 굽기를 실패로 센다. 쿠킹 세션 전에 읽는다 — 프레임율은 VAT 작업 키의 설정이다.
+            AnimationCrowdSettings crowdSettings{};
+            const bool             bCrowdSettingsLoaded = crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
+            const CookStore        cookStore            = CookStore::makeLocal();
+            // 세션 안에서는 작업(`CookJob`) 밖의 리소스 읽기가 실패한다 — 쿠커가 읽은 것이 모두 그 출력의 입력으로 기록된다.
+            const CookSession cookSession;
+            uint32            sceneFailedCount = 0;
+            // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
+            const uint32 sceneCount =
+                SceneCooker::cookAllScenes( engine::getSubsystem<SceneManager>().getEngineServices(), resourceRoot, cookedDir, cookStore, sceneFailedCount );
+            // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
+            uint32                        prefabFailedCount          = 0;
+            [[maybe_unused]] const uint32 prefabCount                = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, cookStore, prefabFailedCount );
+            uint32                        registryFailedCount        = 0;
+            [[maybe_unused]] const uint32 registryCount              = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, cookStore, registryFailedCount );
             uint32                        vertexAnimationFailedCount = bCrowdSettingsLoaded ? 0u : 1u;
             [[maybe_unused]] const uint32 vertexAnimationCount =
-                bCrowdSettingsLoaded ? VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount ) : 0u;
+                bCrowdSettingsLoaded
+                    ? VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, cookStore, vertexAnimationFailedCount )
+                    : 0u;
             // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
             uint32                        navMeshFailedCount = 0;
-            [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, navMeshFailedCount );
+            [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, cookStore, navMeshFailedCount );
             SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
                          "%# navmeshes (%# failures).",
                          sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,

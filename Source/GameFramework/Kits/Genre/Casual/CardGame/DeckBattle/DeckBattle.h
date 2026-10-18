@@ -11,6 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -41,13 +43,20 @@ namespace sw
 namespace sw
 {
     /** @brief 카드 정의입니다. */
+    REFLECT()
     struct DeckBattleCardDef
     {
-        hashed_string            _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
         string                   _name{};
         vector<DeckBattleEffect> _listEffect{};
-        int32                    _cost{ 1 };
-        uint8                    _bExhaust{ SW_FALSE }; ///< 쓰면 소멸 더미로 간다(이번 전투에서 다시 나오지 않는다)
+        PROPERTY( Min = 0 )
+        int32 _cost{ 1 };
+        PROPERTY()
+        bool _bExhaust{ false }; ///< 쓰면 소멸 더미로 간다(이번 전투에서 다시 나오지 않는다)
     };
 } // namespace sw
 

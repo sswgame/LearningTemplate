@@ -22,7 +22,6 @@ namespace sw
      */
     struct SW_KIT_SERVER_API ServiceStoreFactory
     {
-
         /**
          * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.
          * @param secret 비밀번호(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
@@ -30,7 +29,5 @@ namespace sw
          */
         static unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, int64 nowMs,
                                                              string& outError );
-        /** @brief 이 모듈이 등록한 드라이버를 레지스트리에서 해제합니다. 모듈 언로드 때 드라이버 테이블 묶기(`OnlineStoreDriverBinding`)가 부릅니다. */
-        static void shutdown();
     };
 } // namespace sw

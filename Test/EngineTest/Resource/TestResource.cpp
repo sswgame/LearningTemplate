@@ -12,6 +12,7 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourceIO.h"
@@ -861,7 +862,8 @@ SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
     uint32 failedCount = 0;
     {
         test::ScopedDefensiveTestLog expected( "a .meta whose guid cannot be read" );
-        SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, failedCount ) );
+        const sw::CookStore          store( test::makeTempDirectory( "registry_record" ), test::makeTempDirectory( "registry_ddc" ) );
+        SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
     }
     SW_EXPECT_EQUAL( 1u, failedCount );
 

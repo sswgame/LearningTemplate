@@ -34,14 +34,14 @@
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
 
+#include "Engine/Config/GameAutoplay.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevConsole.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Utility/GameAutoplay.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

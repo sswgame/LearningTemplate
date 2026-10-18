@@ -35,12 +35,12 @@ namespace
   <Stamina max="100" regenRate="50" regenDelay="0.5"/>
   <Parry><Window grade="Perfect" early="0.04" late="0.02"/><Window grade="Parry" early="0.12" late="0.04"/></Parry>
   <Ability id="dash" name="Mothwing Cloak" flag="has_dash"><Motor dash="1" airDashCount="1"/></Ability>
-  <Ability id="doubleJump" name="Monarch Wings"><Motor extraJumpCount="1"/></Ability>
-  <Ability id="wallJump" name="Mantis Claw"><Motor wallJump="1"/></Ability>
-  <Ability id="grapple" name="Grapple"/>
-  <Charm id="strength" cost="2"><Stats damage="0.5"/></Charm>
-  <Charm id="quickSlash" cost="2"><Stats attackSpeed="0.3"/></Charm>
-  <Charm id="compass" cost="1"><Stats mapPin="1"/></Charm>
+  <Ability id="doubleJump" name="Monarch Wings" flag="ability.doubleJump"><Motor extraJumpCount="1"/></Ability>
+  <Ability id="wallJump" name="Mantis Claw" flag="ability.wallJump"><Motor wallJump="1"/></Ability>
+  <Ability id="grapple" name="Grapple" flag="ability.grapple"/>
+  <Charm id="strength" name="Strength" cost="2"><Stats damage="0.5"/></Charm>
+  <Charm id="quickSlash" name="Quick Slash" cost="2"><Stats attackSpeed="0.3"/></Charm>
+  <Charm id="compass" name="Compass" cost="1"><Stats mapPin="1"/></Charm>
   <Map region="crossroads" price="30"/>
   <Map region="greenpath" price="60"/>
   <Site id="bench_town" area="town" rest="true"/>
@@ -50,7 +50,7 @@ namespace
   <Pickup id="mask_cross1" area="cross1"/>
   <Pickup id="wings" area="green1" ability="doubleJump"/>
   <Enemy id="husk" currency="5" loot="husk"/>
-  <Enemy id="falseKnight" boss="true" currency="200"/>
+  <Enemy id="falseKnight" boss="true" flag="boss.falseKnight" currency="200"/>
 </Metroidvania>
 )";
 
@@ -564,7 +564,7 @@ SW_TEST_CASE( MetroidvaniaTest, CharmNotchesOvercharmOnceAndStatsMerge )
     SW_EXPECT_FALSE( loadout.isOvercharmed() );
 
     // 규칙을 끄면 넘겨 끼기는 없다.
-    scene._catalog.getRules()._bAllowOvercharm = SW_FALSE;
+    scene._catalog.getRules()._bAllowOvercharm = false;
     MetroCharmLoadout strict;
     strict.initialize( &scene._catalog );
     SW_EXPECT_TRUE( strict.grantCharm( "strength" ) && strict.grantCharm( "quickSlash" ) );

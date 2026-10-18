@@ -256,7 +256,42 @@ namespace sw
                     SW_LOG_WARNING( "%# '%#' has an unreadable boolean '%#' - using %#", pKind, pName, pText, fallback ? "true" : "false" );
                 return value;
             }
+
+            /** @brief 값 글 하나를 타입으로 읽습니다. 글이 타입이 아니면 false 입니다(없음은 부르는 쪽이 nullptr 로 먼저 가른다). */
+            [[nodiscard]] static bool parseText( const utf8* pText, int32& outValue ) { return StringUtil::parseInt( StringUtil::trim( pText ), outValue ); }
+            [[nodiscard]] static bool parseText( const utf8* pText, uint32& outValue )
+            {
+                uint64     wide{ 0 };
+                const bool bParsed = StringUtil::parseUint64( StringUtil::trim( pText ), wide ) && wide <= MathUtil::kMaxUInt32;
+                outValue           = static_cast<uint32>( wide );
+                return bParsed;
+            }
+            [[nodiscard]] static bool parseText( const utf8* pText, float32& outValue ) { return StringUtil::parseFloat( StringUtil::trim( pText ), outValue ); }
+            [[nodiscard]] static bool parseText( const utf8* pText, bool& outValue ) { return StringUtil::tryParseBool( StringUtil::trim( pText ), outValue ); }
+            [[nodiscard]] static bool parseText( const utf8* pText, string& outValue )
+            {
+                outValue = pText;
+                return true;
+            }
+
+            static const utf8* getTypeLabel( const int32& ) { return "integer"; }
+            static const utf8* getTypeLabel( const uint32& ) { return "unsigned integer"; }
+            static const utf8* getTypeLabel( const float32& ) { return "number"; }
+            static const utf8* getTypeLabel( const bool& ) { return "boolean"; }
+            static const utf8* getTypeLabel( const string& ) { return "text"; }
         };
+
+        /** @brief 속성 · 자식 글 하나를 읽고, 깨졌으면 원소 · 이름 · 글과 함께 오류를 남깁니다. 결과는 0 읽음 · 1 없음 · 2 깨짐입니다. */
+        template <typename T>
+        uint8 readNodeValueText( const utf8* pElementName, const utf8* pKind, const utf8* pName, const utf8* pText, T& outValue )
+        {
+            if ( pText == nullptr )
+                return 1;
+            if ( XMLDocumentInternal::parseText( pText, outValue ) )
+                return 0;
+            SW_LOG_ERROR( "<%#> %# '%#' is not a %#: '%#'", pElementName, pKind, pName, XMLDocumentInternal::getTypeLabel( outValue ), pText );
+            return 2;
+        }
     } // namespace
 } // namespace sw
 
@@ -371,6 +406,27 @@ namespace sw
     bool XMLNode::getAttributeBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
     {
         return XMLDocumentInternal::parseNodeBool( "Attribute", pName, findAttribute( pName, bIgnoreCaseKeys ), fallback );
+    }
+
+#define SW_XML_NODE_VALUE_READERS( Type )                                                                                         \
+    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, Type& outValue ) const                                 \
+    {                                                                                                                             \
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", pName, findAttribute( pName ), outValue ) ); \
+    }                                                                                                                             \
+    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, Type& outValue ) const                                     \
+    {                                                                                                                             \
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", pName, findChildText( pName ), outValue ) );     \
+    }
+    SW_XML_NODE_VALUE_READERS( int32 )
+    SW_XML_NODE_VALUE_READERS( uint32 )
+    SW_XML_NODE_VALUE_READERS( float32 )
+    SW_XML_NODE_VALUE_READERS( bool )
+    SW_XML_NODE_VALUE_READERS( string )
+#undef SW_XML_NODE_VALUE_READERS
+
+    void XMLNode::reportMissing( const utf8* pKind, const utf8* pName ) const
+    {
+        SW_LOG_ERROR( "<%#> has no required %# '%#'", getName(), pKind, pName );
     }
 
     XMLNode XMLNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
@@ -642,10 +698,11 @@ namespace sw
 
     bool XMLDocument::loadFile( string_view absPath )
     {
+        // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`ResourceIO::readTextFile`).
         string text;
-        if ( FileUtil::readTextFile( absPath, text ) == false )
+        if ( ResourceIO::readTextFile( absPath, text ) == false )
         {
-            _lastError = string( absPath ) + ": cannot read the file";
+            _lastError = string( absPath ) + ": cannot read the file (or it was read during cooking outside a cook job)";
             return false;
         }
         return parse( text, absPath );

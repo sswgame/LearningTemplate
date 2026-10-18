@@ -28,7 +28,7 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<LaunchPadComponent _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,18,6" _launchCount="0">
+			<LaunchPadComponent _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,18,6">
 				<_requiredTags>
 					<_listTag />
 				</_requiredTags>

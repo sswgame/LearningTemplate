@@ -382,6 +382,11 @@
   목록 밖 문화권(엔진 `ja`, PO 만 낸 것)은 번역 중으로 보고 개수만 보고합니다. 게임 설정 하나에 두는 안은 엔진 · 에디터 프로젝트가 팩 설정이 없어 버렸습니다.
   CI 는 App 을 띄우지 않으므로 같은 판정을 `LocalizationGatherTest.RepositoryProjectsAreUpToDate`(EditorTest, nogpu)가 합니다.
 - **증분 쿠킹은 쿠커가 의존을 적지 않고, 작업 범위 안의 리소스 읽기를 내용 해시와 함께 기록해 판정합니다**(2026-10-18 설계, 구현 전). 유니티 Asset Database v2 의 동적 의존 기록과 같은 계열이고, 파일 시각은 쓰지 않습니다([증분 쿠킹 계획](plans/IncrementalCook.md)).
+- **쿠킹 작업은 빈 에셋 캐시로 시작하고, 기록(`.cookrec`)은 쿠킹 폴더 밖(`Saved/CookRecord`)에 둡니다**(2026-10-18, C-42 K2). 앞 작업이 캐시에 둔 프리팹을 쓰면 그 읽기가 이 작업의 입력에서 빠지는데,
+  캐시마다 조회 기록을 남기게 하면 캐시를 하나 빠뜨릴 때 낡은 결과가 조용히 쓰입니다. 유니티는 임포트 워커가 결과를 아티팩트 단위로 따로 만들어 같은 문제를 피합니다 [기억].
+  씬 쿠킹 키의 설정 해시는 리플렉션 표(타입 · 프로퍼티 · 열거자)의 지문이고, 입력을 기록하지 않은 작업은 실패입니다(`CookStore::cookFile`).
+- **폴더를 훑어 출력을 정하는 쿠킹(GUID 레지스트리)은 파일 목록을 입력으로 기록합니다**(2026-10-18, C-42 K3, `CookInputKind::Listing`). 읽은 `.meta` 만 기록하면 새 `.meta` 가 생겨도 기록이 새것으로 보입니다.
+  유니티의 폴더 단위 의존(디렉터리 내용 해시)과 같은 자리입니다 [기억]. 없는 파일을 찾은 읽기도 해시 0 으로 남겨, 그 파일이 생기면 다시 굽습니다.
 - **100 줄 넘는 함수는 보고 도구(`RunFunctionSize.py`)로만 보고 게이트를 두지 않습니다**(2026-10-18 설계). 줄 수 상한은 이유 없는 분할을 부릅니다. 나누는 기준은 중복, 다시 읽기, 단계 경계, 분기 사다리입니다([긴 함수 정리 기준](plans/LongFunctions.md)).
 
 ### 5-3. Core 와 플랫폼
@@ -619,7 +624,6 @@
   값은 `enginedefaultassets.xml` 에만 있고, 표는 `EngineDefaultAssets::load` · 서브시스템만 만든다(`ConstructKey`, `REFLECT( Abstract )`). 못 읽으면 기동 · 쿠킹이 멈춘다. 테스트는
   `test::getEngineDefaultAssets()`(하네스가 읽은 표)로 경로를 얻는다. 언리얼 `FSoftObjectPath` 가 ini 에서만 채워지는 설정 칸과 같은 자리이고, 게이트가 아니라 형식으로 막는다.
 - **읽기 API 는 폴백 인자를 받지 않습니다**(2026-10-18 설계, 구현 전). `XMLNode` · `JSONValue` · `KeyValueFile` 의 값 읽기는 스키마 읽기(`readFields`), 필수 읽기(`std::optional` 반환), 선택 읽기(`std::optional` 출력) 셋만 남기고 폴백 인자 함수를 지웁니다. 기본값의 원본은 Def 초기값 하나입니다([데이터 주도 구조 정리 계획](plans/DataDriven.md) 7절).
-- **저장 문맥은 목적(`SerializePurpose`: Authoring · Snapshot · SaveGame)을 필수로 가지고, `PROPERTY( RuntimeState )` 는 저작 저장에서 빠집니다**(2026-10-18 설계, 구현 전). 언리얼 아카이브 목적 플래그와 목적별 Transient 와 같은 계열입니다. 에디터 되돌리기와 복사는 Authoring 입니다([저작 저장 계획](plans/AuthoringState.md)).
 - **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼의 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
 - **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다. 언리얼의 `UWorld::GetGravityZ` 에 해당합니다.
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
@@ -653,6 +657,8 @@
 
 - **저장 목적은 문맥의 필수 값이다(2026-10-18, C-53).** `SerializeContext` 는 `SerializePurpose`(Authoring · Snapshot · SaveGame)를 생성자로만 받고, 기본 문맥도 `getDefault( purpose )` 로 목적을 말해야 얻는다. 필드 규칙(`Transient` · `RuntimeState` · `SaveGame`)은 `SerializerUtil::shouldSerializeProperty` 한 곳이 세 형식(XML · JSON · 바이너리)에 같게 정한다.
   리플렉션 직렬화기(`XMLSerializer` · `JSONSerializer` · `BinarySerializer`)의 문맥 기본 인자는 `getDefault( SerializePurpose::Authoring )` 이다 — 그 함수들은 파일 입출력 도우미라 저작 형식이 계약이고, 기본 인자가 시그니처에 목적을 적는다. 오브젝트 상태(`ObjectStateSerializer`)는 기본 인자 없이 목적을 받는 `ObjectSaveOptions` · `ObjectLoadContext` 로만 쓰고 읽는다. 아카이브(`Archive::serializeObject`)도 문맥 없는 겹지정을 지웠다(언리얼도 평범한 아카이브가 영속 저장이고 PIE 복제 · 세이브는 플래그로 따로 고른다).
+  에디터 되돌리기 · 복사 · 복제 · "시뮬레이션 변경 남기기" 는 Authoring 이다(사용자가 고치는 대상은 저작 데이터 — 언리얼 복사도 `TextExportTransient` 를 뺀다). 게임 상태 봉투는 핫 리로드(Snapshot)와 세이브 파일(SaveGame)이 함께 쓰므로 부르는 쪽이 목적을 넘긴다.
+  컴포넌트 필드에는 `RuntimeState` 만 붙이고 `SaveGame` 을 함께 붙이지 않는다 — 붙이면 그 타입이 옵트인 세이브가 되어, 씬 오브젝트 전체를 싣는 세이브에서 나머지 필드가 빠진다. 런타임 값이 저작 값에서 시작하면 "남은 수" 가 아니라 "쓴 수" 를 둔다(`GatheringNodeComponent::_usesTaken`) — 저작 값이 바뀌어도 첫 플레이가 따른다.
 
 ### 5-5. 그래픽스와 RHI
 
@@ -665,6 +671,8 @@
   컴파일러 라이브러리 파일의 내용 해시로 만들었더니 Windows 에서 쿠킹해 커밋한 스탬프가 리눅스(다른 라이브러리 파일)에서 모두 낡은 것으로 판정돼 리눅스 CI 다섯 잡이 졌다.
   언리얼은 셰이더 DDC 키에 컴파일러 바이너리 해시가 아니라 셰이더 포맷 · 컴파일러 버전 식별자를 넣는 것으로 알고 있다(기억에 의존 — 단정하지 않는다). 같은 원칙을 따르고,
   사람이 고치는 상수가 실제 설치와 어긋나지 않게 `TestShaderCompilerVersionPin.py` 가 vcpkg 설치 기록과 대조한다(언리얼보다 한 겹 더 지킨다).
+- **셰이더 쿠킹 스탬프(`cook.stamp`)는 쿠킹 기록(`.cookrec`) 형식으로 옮기지 않습니다**(2026-10-18, C-42 K5). 스탬프는 커밋되는 산출물 곁에 있고 App 없이 파이썬(`CheckShaderStamps`, CI)이 같은 규칙으로 판정하는 계약인데,
+  쿠킹 기록은 체크아웃마다의 `Saved/` 캐시이고 판정에 엔진의 읽기 기록이 필요하다. 내용 해시는 이미 같은 함수(`ContentHash`)를 쓰므로 판정 기준은 하나다. 언리얼도 셰이더는 DDC 키를 따로 만들고 에셋 쿠킹과 섞지 않는다 [기억].
 
 - **런타임 UI 를 위해 RHI 에 R8 텍스처, 영역 업로드, 프리멀티플라이 블렌드, 가위 사각형을 더했습니다**(2026-10-06). 사각형 클리핑은 가위로 합니다. Slate, Dear ImGui, Godot 모두 같은 방식이고, 배치가 끊기지 않습니다.
   둥근 모서리 클리핑만 셰이더에서 합니다.
@@ -899,6 +907,9 @@
   옵션을 리플렉션 구조체로 옮기는 안은 기각했습니다. 키트 옵션은 같은 키를 여러 번 적는 목록이 있고 키트마다 타입이 달라, 설정 파일 하나의 고정 스키마로 읽을 수 없습니다.
 - **저장 드라이버는 키트 `.cpp` 의 정적 묶기 객체(`OnlineStoreDriverBinding`)로 서버 조립에 붙습니다**(2026-10-17, D7-5). 묶기 함수만 있고 부르는 곳이 없어 SQLite · PostgreSQL · RESP 를 고른 서버가 늘 기동을 멈췄고, 언로드 정리(`ServiceStoreFactory::shutdown`)도 불리지 않았습니다.
   모듈 수명과 같은 정적 객체가 묶고 풀어서 "실렸는데 안 묶임" · "풀지 않은 함수" 를 쓸 수 없게 했습니다. 키트 조립의 `SW_REGISTER_ONLINE_SERVER_KIT`, 언리얼 모듈의 `IModularFeatures` 등록과 같은 모양입니다.
+- **키트가 기반 표에 올리는 것(로컬 저장 바닥, SQL 드라이버)은 정적 등록 객체가 모듈 로드 때 올리고, 표는 모듈 언로드 리스너로서 내려가는 이미지의 항목을 지웁니다**(2026-10-18, [엔진 분할 계획](plans/EnginePartition.md) E6). 등록 함수는 비공개이고 창구는 등록 객체(`LocalStoreBackendRegistration`, `SQLDriverRegistration`) 하나라 "실렸는데 안 올림"(제품에서 "sqlite" 로컬 저장이 한 번도 오르지 않았다)과 "처음 쓸 때 올림"(PostgreSQL)을 쓸 수 없습니다.
+  핫 리로드는 옛 이미지의 언로드(정적 소멸자)를 미루므로 소멸자만으로 내리면 옛 항목이 남거나 새 이미지의 같은 이름을 지웁니다. 그래서 표가 `IModuleUnloadListener` 로 이미지 범위의 항목을 지우고, 등록 객체의 소멸자는 자기 항목만(함수 · 객체 주소로) 지웁니다. 같은 이름의 두 번째 등록은 단언과 오류입니다.
+  표를 서브시스템으로 두는 안은 기각했습니다. Shipping 은 정적 링크라 등록이 `main` 전 정적 초기화에서 돌고, 그때는 범위가 없습니다(언리얼 `IModularFeatures` 도 전역 표입니다 [기억]). 남는 정적 변수를 막는 게이트는 두지 않았습니다 — 두 표는 등록 창구가 형식으로 하나라 남은 틈이 없습니다.
 - **호스트 이름은 Core 의 막는 해석(`PlatformSocketUtil::resolveAddress`, `getaddrinfo` IPv4)으로 기동 때 한 번 풉니다**(2026-10-17, D7-5). `localhost` 만 손으로 바꾸던 자리(캐시 엔드포인트)를 이 함수로 바꿨고, 풀리지 않으면 기동 오류입니다.
   틱 · 요청 경로는 DNS 왕복만큼 막히므로 그대로 부르지 않습니다 — HTTP 클라이언트는 전용 해석 스레드(처음 이름을 받을 때 띄움)에 맡기고 `update` 가 연결을 겁니다. TaskManager 워커는 막는 일을 받지 않아 쓰지 않습니다.
   언리얼 `ISocketSubsystem::GetAddressInfo`(막는 판 + 비동기 판), libcurl 의 스레드 해석기와 같은 나눔입니다.

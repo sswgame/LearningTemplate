@@ -11,6 +11,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/Cook/CookJob.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -135,28 +136,55 @@ namespace sw
     bool ResourceIO::readTextResource( string_view relativePath, string& outText,
                                        string* pOutAbsPath )
     {
-        return readResourceCommon(
+        const bool bRead = readResourceCommon(
             relativePath, pOutAbsPath,
             [&outText]( string_view absPath )
         { return FileUtil::readTextFile( absPath, outText ); },
             [&outText]( const ResourcePakManager& packManager, string_view key, string& outPackPath )
         { return packManager.readTextFile( key, outText, &outPackPath ); } );
+        // 쿠킹 작업 안의 읽기는 그 작업의 입력이다. 쿠킹 세션 안인데 작업 밖이면 기록이 빠지므로 읽기가 실패한다(`CookJob`).
+        // 찾지 못한 것도 입력이다(해시 0) — 그 파일이 생기면 다시 굽는다.
+        if ( bRead == false )
+        {
+            CookJob::admitMissingRead( relativePath );
+            return false;
+        }
+        return CookJob::admitRead( relativePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
+    }
+
+    bool ResourceIO::readTextFile( string_view filePath, string& outText )
+    {
+        if ( FileUtil::readTextFile( filePath, outText ) == false )
+        {
+            CookJob::admitMissingRead( filePath );
+            return false;
+        }
+        return CookJob::admitRead( filePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
     bool ResourceIO::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
     {
-        return readResourceCommon(
+        const bool bRead = readResourceCommon(
             relativePath, nullptr,
             [&outBytes]( string_view absPath )
         { return FileUtil::readFile( absPath, outBytes ); },
             [&outBytes]( const ResourcePakManager& packManager, string_view key, string& )
         { return packManager.readFile( key, outBytes ); } );
+        if ( bRead == false )
+        {
+            CookJob::admitMissingRead( relativePath );
+            return false;
+        }
+        return CookJob::admitRead( relativePath, outBytes.data(), outBytes.size() );
     }
 
     AsyncReadHandle ResourceIO::readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
     {
         AsyncFileIO&    io = engine::getSubsystem<AsyncFileIO>();
         AsyncReadHandle handle;
+        // 완료가 다른 스레드에서 오므로 쿠킹 작업의 입력으로 기록할 수 없다 — 쿠킹 중이면 걸지 않는다.
+        if ( CookJob::admitAsyncRead( relativePath ) == false )
+            return handle;
         // 찾는 순서는 동기 읽기와 같은 함수 하나다 — 두 벌이면 한쪽만 고쳐 동기와 비동기가 다른 파일을 읽는다.
         (void)readResourceCommon(
             relativePath, nullptr,

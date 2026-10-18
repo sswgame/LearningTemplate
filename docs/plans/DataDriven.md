@@ -136,16 +136,10 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 ### 7.5 단위
 
-동시 빌드는 둘까지입니다. D1 은 읽기 API 의 헤더를 바꾸므로 먼저 혼자 합니다. D2 ~ D7 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
+동시 빌드는 둘까지입니다. D1(새 읽기 함수 `readRequiredAttribute` · `readOptionalAttribute` · `readRequiredChild` · `readOptionalChild`, `JSONValue::readRequired` · `readOptional`, `KeyValueFile::readRequired` · `readOptional`, `GameSettings` 커스텀 모음 삭제)은 들어갔습니다. D2 ~ D7 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| D0 | 줄어든 기준선(`TuningConstexpr` 48, `GameTimeScale`)을 낮춥니다 | `Scripts/lint/rules/` | 없음 | `-L lint` | 없음 |
-| D1 | 새 읽기 함수(필수, 선택)를 `XMLNode`, `JSONValue`, `KeyValueFile` 에 더하고 `GameSettings` 의 커스텀 속성 모음을 지웁니다 | `Engine/Serialization/XML/`, `Engine/Serialization/JSON/`, `Core/File/KeyValueFile.*`, `GameFramework/Base/Foundation/Data/GameSettings.*`, 해당 테스트 | 없음 | 새 읽기 함수의 단위 테스트(없음, 깨짐, 범위), `-L nogpu` | 없음 |
-| D2 | RPG 키트 카탈로그를 `readFields` 로 옮깁니다(Western 64, Witcher 41, MonsterCollector 23, JRPG 19). `MonsterCatalog` 의 `MonsterDef` 를 Stats 와 AI 하위 Def 로 나눕니다 | `GameFramework/Kits/Genre/RPG/`, 그 키트를 쓰는 팩의 데이터 | D1 | 키트 테스트, 해당 게임 기동 | 없음 |
-| D3 | 호러 키트(AsymmetricHorrorRules 51, Scavenger 39, Horror 32, Ghost 24) | `GameFramework/Kits/Genre/Horror/`, 데이터 | D1 | 위와 같음 | 없음 |
-| D4 | 액션 키트(Mech 38, BattleRoyale 33, ActionPlatformer 29, Metroidvania 26, Fighter 20, ActionAdventure) | `GameFramework/Kits/Genre/Action/`, 데이터 | D1 | 위와 같음 | 없음 |
-| D5 | 전략, 캐주얼, 시뮬레이션 장르와 Feature 키트 | `GameFramework/Kits/Genre/{Strategy,Casual,Simulation}/`, `GameFramework/Kits/Feature/`, 데이터 | D1 | 위와 같음 | 없음 |
 | D6 | Base 의 카탈로그(CameraPreset 43, Combat 36, AI 35, Ability 22, Inventory 17 등)와 이름으로 찾는 값 모음(블랙보드, 스탯, 어빌리티 속성, SetByCaller, 원소 규칙) | `GameFramework/Base/`, 데이터 | D1 | Base 테스트, 대표 셋 실행 | 없음 |
 | D7 | 엔진의 손 읽기(Input 33, TileMap 15, Telemetry 10, Character Fit, `FloatCurve`, Sprite 클립) | `Engine/Input/`, `Engine/TileMap/`, `Engine/Telemetry/`, `Engine/Character/Fit/`, `Engine/Utility/FloatCurve.*`, `Engine/Animation/Sprite/` | D1 | 입력 맵, 타일맵, 텔레메트리 테스트 | 없음 |
 | D8 | 로드 결과 세 값과 자동화 단계 한 번 읽기, 임포터 접근자 읽기, 에디터 명령의 결과 보고 | `Engine/Automation/`, `Engine/Serialization/Reflected*`, `Editor/Common/`, `Editor/Panels/` | D1 | 자동화 시나리오 전체, 에디터 시나리오, 임포트 테스트 | 없음 |
@@ -153,7 +147,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 | P1 | 경로 상수와 컴포넌트 기본 머티리얼을 `EngineDefaultAssets` 로 옮깁니다 | `Engine/UI/`, `Engine/Config/EngineDefaultAssets.*`, `Engine/Environment/`, `Engine/Object/Component/2D/TileMapRendererComponent.*`, 엔진 데이터 | 없음 | 기동, UI 테스트, 대표 셋 | 없음 |
 | P2 | 렌더러 첨부를 파이프라인 XML 이 모두 선언합니다(W7 과 함께) | `Engine/Renderer/Frame/`, 파이프라인 XML | 셰이더 묶음 | 네 백엔드 × 대표 셋, 골든 이미지 | 없음 |
 | P4 | 테스트가 원본을 거치게 합니다(W6) | `Test/` | D9, P1 | `-L nogpu` | 없음 |
-| R1 | `REFLECT( Alias )` 와 별칭 읽기 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)를 지웁니다. 제품 데이터 사용은 0 이고, 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절을 지웁니다. 값 계산이 필요한 이행만 `SW_SCHEMA_MIGRATION` 으로 남습니다 | `Tools/ReflectionParser/`, `Engine/Reflection/`, 해당 테스트 | 없음 | 파서 테스트, `-L nogpu` | 없음 |
+| R1(사용자 결정 대기 — 결정 기록 5-4 의 "별칭과 이관 등록은 미리 갖춘다" 와 부딪힌다) | `REFLECT( Alias )` 와 별칭 읽기 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)를 지웁니다. 제품 데이터 사용은 0 이고, 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절을 지웁니다. 값 계산이 필요한 이행만 `SW_SCHEMA_MIGRATION` 으로 남습니다 | `Tools/ReflectionParser/`, `Engine/Reflection/`, 해당 테스트 | 없음 | 파서 테스트, `-L nogpu` | 없음 |
 | G1 | 게임 코드의 튜닝 리터럴(C-30 ②)을 데이터로 옮깁니다. NileCity 자동 계획표 좌표, HarvestValley 작물 → 모델 테이블, StarSkirmish `makeAISettings`, FarmSun 라이트 곡선 | 게임마다 `Source/Games/<게임>/`, 그 팩 데이터 | 없음 | 게임별 기동과 스크린샷 비교 | 없음 |
 | G2 | Shipping 의 그림 비교(C-30 ⑤)를 구운 팩의 시나리오 스크린샷으로 둡니다 | `Test/AppTest/`, 팩 시나리오 | 없음 | Shipping 빌드와 `-L hostgpu` | 없음 |
 

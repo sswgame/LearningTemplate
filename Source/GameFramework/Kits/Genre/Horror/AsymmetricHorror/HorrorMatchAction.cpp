@@ -177,12 +177,12 @@ namespace sw
         leaveActivity( survivor );
         _listPalletState[static_cast<size_t>( pallet )] = PalletState::Dropped;
         pushEvent( AsymmetricHorrorEvent::Kind::PalletDropped, survivor, pallet, 0.0f, position );
-        if ( _killer._stunRemaining.isActive() == false && isNear( _killer._position, position, rules._palletStunRange ) )
+        if ( _killer._stunRemaining.isActive() == false && isNear( _killer._position, position, rules._pallet._stunRange ) )
         {
             // 판자에 맞은 살인마는 기절하고, 들고 있던 생존자를 떨어뜨린다.
             if ( _killer._carrying >= 0 )
                 dropCarried( false, 0.0f );
-            stunKiller( rules._palletStunTime );
+            stunKiller( rules._pallet._stunTime );
             awardScore( target._score, "PalletStun", 1.0f );
         }
         return true;
@@ -200,25 +200,25 @@ namespace sw
         if ( bCannotVault )
             return false;
         leaveActivity( survivor );
-        const bool bFast       = target._lastMoveSpeed >= rules._survivorSpeed * rules._fastVaultSpeedRatio;
+        const bool bFast       = target._lastMoveSpeed >= rules._survivorSpeed * rules._window._fastSpeedRatio;
         target._activity       = SurvivorActivity::Vaulting;
         target._activityTarget = window;
-        target._vaultRemaining.start( bFast ? rules._fastVaultTime : rules._mediumVaultTime );
+        target._vaultRemaining.start( bFast ? rules._window._fastTime : rules._window._mediumTime );
         target._vaultExit = HorrorMatchActionInternal::computeVaultExit( target._position, frame._position );
         pushEvent( AsymmetricHorrorEvent::Kind::Vaulted, survivor, window, bFast ? 1.0f : 0.0f, frame._position );
         awardScore( target._score, "Vault", 1.0f );
         if ( bFast )
-            makeNoise( survivor, rules._vaultNoiseRadius, frame._position );
+            makeNoise( survivor, rules._window._noiseRadius, frame._position );
 
         // 추격 중(위협 반경 안) 같은 창을 여러 번 넘으면 창이 막힌다.
         if ( isNear( _killer._position, frame._position, _killer._pDef->_terrorRadius ) )
         {
             ++frame._chaseVaultCount;
-            if ( frame._chaseVaultCount >= rules._windowBlockCount )
+            if ( frame._chaseVaultCount >= rules._window._blockCount )
             {
                 frame._chaseVaultCount  = 0;
-                frame._blockedRemaining = rules._windowBlockTime;
-                pushEvent( AsymmetricHorrorEvent::Kind::WindowBlocked, survivor, window, rules._windowBlockTime, frame._position );
+                frame._blockedRemaining = rules._window._blockTime;
+                pushEvent( AsymmetricHorrorEvent::Kind::WindowBlocked, survivor, window, rules._window._blockTime, frame._position );
             }
         }
         return true;
@@ -317,7 +317,7 @@ namespace sw
         if ( bKillerNotReady )
             return KillerAttackResult::NotReady;
         const HorrorKillerDef& def    = *_killer._pDef;
-        const float32          minDot = MathUtil::cos( MathUtil::toRadian( def._lungeAngle * 0.5f ) );
+        const float32          minDot = MathUtil::cos( def._lungeAngle * 0.5f );
         int32                  victim = -1;
         float32                best   = MathUtil::kMaxFloat;
         for ( int32 index = 0; index < getSurvivorCount(); ++index )
@@ -403,7 +403,7 @@ namespace sw
         target._struggleIdle = 0.0f;
         awardScore( _killer._score, "Hook", 1.0f );
         pushEvent( AsymmetricHorrorEvent::Kind::Hooked, survivor, hook, static_cast<float32>( target._hookStage ), position );
-        if ( target._hookStage >= rules._maxHookStage )
+        if ( target._hookStage >= rules._hook._stages )
         {
             sacrifice( survivor, false ); // 마지막 걸림이면 바로 희생된다
             return true;
@@ -423,7 +423,7 @@ namespace sw
                                gen._progress.getParticipantCount() == 0;
         if ( bKickable == false || isNear( _killer._position, gen._position, rules._interactRange ) == false )
             return false;
-        const float32 progress = MathUtil::max( 0.0f, gen._progress.getProgress() - rules._kickPenalty );
+        const float32 progress = MathUtil::max( 0.0f, gen._progress.getProgress() - rules._generator._kickPenalty );
         configureGenerator( generator, true );
         gen._progress.setProgress( progress );
         gen._bKicked = SW_TRUE;
@@ -440,7 +440,7 @@ namespace sw
         if ( _listPalletState[static_cast<size_t>( pallet )] != PalletState::Dropped ||
              isNear( _killer._position, _listPallet[static_cast<size_t>( pallet )], _pCatalog->getRules()._interactRange ) == false )
             return false;
-        _killer._busyRemaining.start( _pCatalog->getRules()._palletBreakTime );
+        _killer._busyRemaining.start( _pCatalog->getRules()._pallet._breakTime );
         _killer._breakingPallet = pallet;
         return true;
     }
@@ -453,7 +453,7 @@ namespace sw
         const HorrorWindow& frame = _listWindow[static_cast<size_t>( window )];
         if ( isNear( _killer._position, frame._position, _pCatalog->getRules()._interactRange ) == false )
             return false;
-        _killer._busyRemaining.start( _pCatalog->getRules()._killerVaultTime );
+        _killer._busyRemaining.start( _pCatalog->getRules()._window._killerTime );
         _killer._busyExit  = HorrorMatchActionInternal::computeVaultExit( _killer._position, frame._position );
         _killer._bVaulting = SW_TRUE;
         pushEvent( AsymmetricHorrorEvent::Kind::Vaulted, -1, window, 0.0f, frame._position );
@@ -468,7 +468,7 @@ namespace sw
         const float3& position = _listLocker[static_cast<size_t>( locker )];
         if ( isNear( _killer._position, position, _pCatalog->getRules()._interactRange ) == false )
             return false;
-        _killer._busyRemaining.start( _pCatalog->getRules()._lockerSearchTime );
+        _killer._busyRemaining.start( _pCatalog->getRules()._locker._searchTime );
         const int32 occupant = _listLockerOccupant[static_cast<size_t>( locker )];
         if ( occupant < 0 )
             return false;

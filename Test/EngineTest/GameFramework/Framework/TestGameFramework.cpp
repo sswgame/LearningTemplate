@@ -10,6 +10,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
@@ -26,7 +27,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/TileMap/TileSetAsset.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -1257,6 +1257,45 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceStopsWithoutGameNetSession )
 }
 
 /**
+ * @brief [GameFrameworkTest] 다른 실행의 세이브는 같은 타입 컴포넌트 둘을 안정 키(`이름#n`)로 잇는다 — 저장된 순서가 바뀌어도 상태가 서로 바뀌지 않는다
+ * @details 같은 오브젝트에 같은 타입 디렉터 둘(Alpha · Beta)을 두고, 저장된 id 묶음은 순서를 바꿔(Beta · Alpha) 둔다. 타입 차례로 이으면 Alpha 가 Beta 의 상태를 받는다.
+ *          키가 맞지 않는 저장 항목은 표에 들지 않아 `remapComponentIDs` 가 지운다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SavedComponentStatePairsByStableKeyNotTypeOrder )
+{
+    RegisterMockComponents();
+    GameObjectManager          manager;
+    GameObject*                pDirector = manager.createGameObject( hashed_string( "Directors" ) );
+    MockRuntimeStateComponent* pAlpha    = pDirector->addComponent<MockRuntimeStateComponent>();
+    MockRuntimeStateComponent* pBeta     = pDirector->addComponent<MockRuntimeStateComponent>();
+    SW_ASSERT_TRUE( pAlpha != nullptr && pBeta != nullptr );
+    pAlpha->setComponentName( hashed_string( "Alpha" ) );
+    pBeta->setComponentName( hashed_string( "Beta" ) );
+
+    const hashed_string typeFqn = MockRuntimeStateComponent::StaticType()->_fullyQualifiedName;
+    ObjectIdentity      saved;
+    saved._listComponent.push_back( ObjectIdentity::ComponentEntry{ typeFqn, 200, "Beta#0" } );
+    saved._listComponent.push_back( ObjectIdentity::ComponentEntry{ typeFqn, 100, "Alpha#0" } );
+    saved._listComponent.push_back( ObjectIdentity::ComponentEntry{ typeFqn, 300, "Gamma#0" } ); // 다시 만들지 않은 컴포넌트
+
+    vector<ComponentStateStore::SavedComponentID> listRemap;
+    ComponentStateStore::appendComponentIDRemap( saved, *pDirector, listRemap );
+    SW_ASSERT_EQUAL( size_t( 2 ), listRemap.size() );
+
+    ComponentStateStore store;
+    store.add( MockRuntimeStateComponent::StaticType()->_name, 100, vector<uint8>{ 1 } );
+    store.add( MockRuntimeStateComponent::StaticType()->_name, 200, vector<uint8>{ 2 } );
+    store.add( MockRuntimeStateComponent::StaticType()->_name, 300, vector<uint8>{ 3 } );
+    store.remapComponentIDs( listRemap );
+    const ComponentStateStore::Entry* pAlphaEntry = store.findEntry( MockRuntimeStateComponent::StaticType()->_name, pAlpha->getComponentID() );
+    const ComponentStateStore::Entry* pBetaEntry  = store.findEntry( MockRuntimeStateComponent::StaticType()->_name, pBeta->getComponentID() );
+    SW_ASSERT_TRUE( pAlphaEntry != nullptr && pBetaEntry != nullptr );
+    SW_EXPECT_EQUAL( uint8( 1 ), pAlphaEntry->_bytes[0] );
+    SW_EXPECT_EQUAL( uint8( 2 ), pBetaEntry->_bytes[0] );
+    SW_EXPECT_EQUAL( size_t( 2 ), store.getEntries().size() ); // Gamma 는 지운다
+}
+
+/**
  * @brief [GameFrameworkTest] 컴포넌트 상태 섹션의 형식이 맞지 않거나 잘렸으면 읽지 않고 비워 둔다 — 개수를 그대로 잡지 않는다
  */
 SW_TEST_CASE( GameFrameworkTest, ComponentStateStoreRejectsBrokenBytes )
@@ -1630,7 +1669,7 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )
 }
 
 /**
- * @brief [GameFrameworkTest] gamesettings 의 표준 칸 철자가 틀린 원소는 커스텀 값이 되지 않고 로드 오류다 — `<custom>` · `<Defaults>` 는 읽힌다
+ * @brief [GameFrameworkTest] gamesettings 의 표준 칸 철자가 틀린 원소와 자유 키-값 `<custom>` 은 로드 오류다 — `<Defaults>` 는 읽힌다
  */
 SW_TEST_CASE( GameFrameworkTest, GameSettingsUnknownElementIsALoadError )
 {
@@ -1638,42 +1677,12 @@ SW_TEST_CASE( GameFrameworkTest, GameSettingsUnknownElementIsALoadError )
         SW_TEST_DEFENSIVE_SCOPE( "철자가 틀린 gamesettings 를 일부러 읽는다" );
         GameSettings settings;
         SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><startmap>game/x/maps/a.scene.xml</startmap></GameSettings>", "typo" ) );
-        SW_EXPECT_TRUE( settings._mapCustomProperty.empty() );
+        SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><custom><prop key=\"party\">3</prop></custom></GameSettings>", "custom" ) );
     }
     GameSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromXMLText( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap><custom><prop key=\"party\">3</prop></custom>"
-                                              "<Defaults /></GameSettings>",
+    SW_ASSERT_TRUE( settings.loadFromXMLText( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap><Defaults /></GameSettings>",
                                               "ok" ) );
     SW_EXPECT_EQUAL( sw::string( "game/x/maps/a.scene.xml" ), settings._startMap );
-    SW_EXPECT_EQUAL( 3, settings.getCustomPropertyInt( "party", 0 ) );
-}
-
-/**
- * @brief [GameFrameworkTest] GameSettings 범용 커스텀 프로퍼티 저장소 및 타입별 조회 헬퍼 검증
- */
-SW_TEST_CASE( GameFrameworkTest, GameSettings_CustomPropertyParsingAndQuery )
-{
-    GameSettings gameSettings;
-    gameSettings._mapCustomProperty["dungeonBgm"]    = "audio/bgm_dungeon.mp3";
-    gameSettings._mapCustomProperty["maxPartySize"]  = "8";
-    gameSettings._mapCustomProperty["encounterRate"] = "0.45";
-    gameSettings._mapCustomProperty["enableShadows"] = "true";
-
-    // 문자열 조회
-    SW_EXPECT_EQUAL( sw::string_view( "audio/bgm_dungeon.mp3" ), gameSettings.getCustomProperty( "dungeonBgm" ) );
-    SW_EXPECT_EQUAL( sw::string_view( "fallback_value" ), gameSettings.getCustomProperty( "non_existent_key", "fallback_value" ) );
-
-    // 정수 조회
-    SW_EXPECT_EQUAL( 8, gameSettings.getCustomPropertyInt( "maxPartySize", 6 ) );
-    SW_EXPECT_EQUAL( 10, gameSettings.getCustomPropertyInt( "non_existent_int", 10 ) );
-
-    // 실수 조회
-    SW_EXPECT_NEAR_EQUAL( 0.45f, gameSettings.getCustomPropertyFloat( "encounterRate", 0.1f ), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, gameSettings.getCustomPropertyFloat( "non_existent_float", 1.0f ), 1e-4f );
-
-    // 부울 조회
-    SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "enableShadows", false ) );
-    SW_EXPECT_FALSE( gameSettings.getCustomPropertyBool( "non_existent_bool", false ) );
 }
 
 /**
@@ -1688,11 +1697,11 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
         SW_EXPECT_FALSE( catalog.loadFromResource( "non_existent_monster.xml" ) );
     }
     SW_EXPECT_TRUE( catalog.getAllMonsters().empty() );
-    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"slime\"><Stats hp=\"100\" atk=\"10\"/></Monster></MonsterCatalog>", "slime" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"slime\" name=\"Slime\"><Stats hp=\"100\" atk=\"10\"/></Monster></MonsterCatalog>", "slime" ) );
     const MonsterDef* pMonster = catalog.findMonster( "slime" );
     SW_ASSERT_NOT_NULL( pMonster );
-    SW_EXPECT_EQUAL( 100, pMonster->_hp );
-    SW_EXPECT_EQUAL( 10, pMonster->_atk );
+    SW_EXPECT_EQUAL( 100, pMonster->_stats._hp );
+    SW_EXPECT_EQUAL( 10, pMonster->_stats._atk );
 
     // 2) UnitStatsComponent 기본 수명주기 및 대미지/회복 로직 검증
     UnitStatsComponent stats;
@@ -1736,23 +1745,29 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
 /**
  * @brief [GameFrameworkTest] 몬스터 카탈로그는 미터 단위이고, 한 종의 스탯이 UnitStatsComponent 로 1:1 옮겨진다
  * @details 카탈로그 기본값이 픽셀 단위 값(속도 150 · 순찰 200 · 감지 400 · 공격 50)이면 m/s · m 로 읽는 유닛 스탯에서 150 m/s 가 된다 — 유닛 스탯의
- *          Move Speed 상한(50)보다 크다. 그 값을 쓰는 데이터 파일은 로드가 경고해야 한다.
+ *          Move Speed 상한(50)보다 크다. 그 값을 쓰는 데이터 파일은 로드 오류이고 그 몬스터는 빠진다.
  */
 SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReachUnitStats )
 {
-    // 스키마 기본값(`MonsterDef` 의 초기값)이 미터 단위다.
-    const MonsterDef defaultDef{};
-    SW_EXPECT_TRUE( 0.0f < defaultDef._speed && defaultDef._speed <= MonsterDef::kMaxSpeed );
-    SW_EXPECT_TRUE( defaultDef._attackRange < defaultDef._detectRange && defaultDef._detectRange <= MonsterDef::kMaxSpeed );
-
-    // 카탈로그의 상한은 유닛 스탯 Move Speed 의 상한과 같다.
-    const TypeInfo* pStatsType = engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::UnitStatsComponent" ) );
+    // 카탈로그 스키마(`MonsterStatsDef::_speed`)의 상한은 유닛 스탯 Move Speed 의 상한과 같다.
+    const TypeRegistry& registry          = engine::getSubsystem<TypeRegistry>();
+    const TypeInfo*     pMonsterStatsType = registry.findType( hashed_string( "sw::MonsterStatsDef" ) );
+    const TypeInfo*     pStatsType        = registry.findType( hashed_string( "sw::UnitStatsComponent" ) );
+    SW_ASSERT_NOT_NULL( pMonsterStatsType );
     SW_ASSERT_NOT_NULL( pStatsType );
-    const PropertyInfo* pMoveSpeed = pStatsType->findProperty( hashed_string( "_moveSpeed" ) );
+    const PropertyInfo* pMonsterSpeed = pMonsterStatsType->findProperty( hashed_string( "_speed" ) );
+    const PropertyInfo* pMoveSpeed    = pStatsType->findProperty( hashed_string( "_moveSpeed" ) );
+    SW_ASSERT_NOT_NULL( pMonsterSpeed );
     SW_ASSERT_NOT_NULL( pMoveSpeed );
-    SW_EXPECT_NEAR_EQUAL( MonsterDef::kMaxSpeed, pMoveSpeed->_metadata._maxRange, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( pMonsterSpeed->_metadata._maxRange, pMoveSpeed->_metadata._maxRange, 1e-4f );
 
-    MonsterDef slime{};
+    // 스키마 기본값(`MonsterStatsDef` · `MonsterAIDef` 의 초기값)이 미터 단위다.
+    const MonsterDef defaultDef{};
+    const float32    maxSpeed = static_cast<float32>( pMonsterSpeed->_metadata._maxRange );
+    SW_EXPECT_TRUE( 0.0f < defaultDef._stats._speed && defaultDef._stats._speed <= maxSpeed );
+    SW_EXPECT_TRUE( defaultDef._ai._attackRange < defaultDef._ai._detectRange && defaultDef._ai._detectRange <= maxSpeed );
+
+    MonsterStatsDef slime{};
     slime._hp            = 30;
     slime._maxHp         = 40;
     slime._atk           = 7;
@@ -1772,22 +1787,26 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
     stats.takeDamage( 12 );
     SW_EXPECT_EQUAL( 20, stats.getHp() );
 
-    // 픽셀로 적은 속도는 경고하고 값은 그대로 둔다.
+    // 픽셀로 적은 속도는 로드 오류이고 그 몬스터는 넣지 않는다(오류 줄에 몬스터 id 가 있다).
     const string path = test::makeTempPath( "pixel_monsters.xml" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n  <Monster id=\"bat\"><Stats speed=\"150\"/></Monster>\n</MonsterCatalog>\n" ) );
-    SW_TEST_DEFENSIVE_SCOPE( "a pixel-era speed is reported" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path,
+                                             "<MonsterCatalog>\n  <Monster id=\"bat\" name=\"Bat\"><Stats speed=\"150\"/></Monster>\n"
+                                             "  <Monster id=\"rat\" name=\"Rat\"><Stats speed=\"2\"/></Monster>\n</MonsterCatalog>\n" ) );
+    SW_TEST_DEFENSIVE_SCOPE( "a pixel-era speed is rejected" );
     test::ScopedLogCollector logCollector;
     MonsterCatalog           pixelCatalog;
     SW_ASSERT_TRUE( pixelCatalog.loadFromResource( path ) );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'bat': speed 150" ) == 1u, logCollector.joined().c_str() );
+    SW_EXPECT_NULL( pixelCatalog.findMonster( "bat" ) );
+    SW_EXPECT_NOT_NULL( pixelCatalog.findMonster( "rat" ) );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "<Monster id=\"bat\">" ) >= 1u, logCollector.joined().c_str() );
 }
 
 /**
- * @brief [GameFrameworkTest] monsters.xml 의 archetype 은 열거자 이름 그대로 읽히고, 모르는 이름은 경고한다
- * @details 이름은 리플렉션된 `MonsterArchetype` 하나다 — 열거자를 늘려도 파서를 고치지 않는다. 오타("Ranged")는 MeleePatrol 로
- *          물러나되 몬스터 id 와 함께 경고가 남아야 한다. 조용히 물러나면 원거리 몬스터가 근접 순찰로 도는 이유를 찾을 길이 없다.
+ * @brief [GameFrameworkTest] monsters.xml 의 archetype 은 열거자 이름 그대로 읽히고, 모르는 이름은 그 몬스터를 넣지 않는 오류다
+ * @details 이름은 리플렉션된 `MonsterArchetype` 하나다 — 열거자를 늘려도 파서를 고치지 않는다. 오타("Ranged")를 MeleePatrol 로 물러나게 두면
+ *          원거리 몬스터가 근접 순찰로 도는 이유를 찾을 길이 없다. 그래서 몬스터 id 와 함께 오류를 남기고 그 몬스터를 뺀다.
  */
-SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknownWarning )
+SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknownIsRejected )
 {
     const uint32 kArchetypeCount = static_cast<uint32>( MonsterArchetype::ChargerRush ) + 1;
     string       xml             = "<MonsterCatalog>\n";
@@ -1795,10 +1814,10 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
     {
         const utf8* pName = engine::getSubsystem<TypeRegistry>().enumToString( static_cast<MonsterArchetype>( value ) );
         SW_ASSERT_NOT_NULL( pName );
-        xml += string( "  <Monster id=\"m" ) + to_string( value ) + "\" archetype=\"" + pName + "\"/>\n";
+        xml += string( "  <Monster id=\"m" ) + to_string( value ) + "\" name=\"M\" archetype=\"" + pName + "\"/>\n";
     }
-    xml += "  <Monster id=\"typo\" archetype=\"Ranged\"/>\n";
-    xml += "  <Monster id=\"plain\"/>\n";
+    xml += "  <Monster id=\"typo\" name=\"Typo\" archetype=\"Ranged\"/>\n";
+    xml += "  <Monster id=\"plain\" name=\"Plain\"/>\n";
     xml += "</MonsterCatalog>\n";
     const string path = test::makeTempPath( "monsters.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, xml ) );
@@ -1815,10 +1834,10 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
         SW_EXPECT_TRUE( pMonster->_archetype == static_cast<MonsterArchetype>( value ) );
     }
 
-    const MonsterDef* pTypo = catalog.findMonster( "typo" );
-    SW_ASSERT_NOT_NULL( pTypo );
-    SW_EXPECT_TRUE( pTypo->_archetype == MonsterArchetype::MeleePatrol );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "unknown archetype 'Ranged'" ) == 1u, logCollector.joined().c_str() );
+    // 모르는 이름은 첫 열거자로 물러나지 않는다 — 그 몬스터를 넣지 않고 id 와 함께 오류를 남긴다.
+    SW_EXPECT_NULL( catalog.findMonster( "typo" ) );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Ranged" ) >= 1u, logCollector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "<Monster id=\"typo\"" ) >= 1u, logCollector.joined().c_str() );
 
     // 속성이 없으면 기본값이고 경고하지 않는다.
     const MonsterDef* pPlain = catalog.findMonster( "plain" );
@@ -2176,7 +2195,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability
 {
     // 룸의 적은 게임이 건 카탈로그와 배치에서 온다(코드 폴백이 없다).
     MonsterCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"grunt\"><Stats hp=\"30\" maxHp=\"30\" atk=\"8\" speed=\"1.8\" radius=\"0.32\"/></Monster></MonsterCatalog>",
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"grunt\" name=\"grunt\"><Stats hp=\"30\" maxHp=\"30\" atk=\"8\" speed=\"1.8\" radius=\"0.32\"/></Monster></MonsterCatalog>",
                                              "dash_grunt" ) );
     SubsystemScope        scope;
     game::ScopedGameScope activeScope( scope );
@@ -2617,52 +2636,6 @@ SW_TEST_CASE( GameFrameworkTest, TransitionActionCanStartAnotherTransition )
 }
 
 /**
- * @brief [GameFrameworkTest] 못 읽은 값은 **fallback 이 된다** — 조용히 0 이 되지 않는다
- * @details 세 조회 헬퍼는 `StringUtil` 의 파서를 쓴다. `strtol` · `strtof` 로 손수 풀면 실패를 0 으로 돌려주므로
- *          `maxPartySize=six` 같은 오타가 조용히 0 이 된다 — fallback 이 있는데도 쓰이지 않는다. bool 도 `true`/`True`/`1` 만
- *          알면 `TRUE` · `yes` · `on` 은 전부 fallback 으로 떨어진다.
- */
-SW_TEST_CASE( GameFrameworkTest, GameSettings_UnreadableValueFallsBackInsteadOfBecomingZero )
-{
-    GameSettings gameSettings;
-    gameSettings._mapCustomProperty["brokenInt"]   = "six";
-    gameSettings._mapCustomProperty["brokenFloat"] = "half";
-    gameSettings._mapCustomProperty["emptyInt"]    = "";
-    gameSettings._mapCustomProperty["upperBool"]   = "TRUE";
-    gameSettings._mapCustomProperty["yesBool"]     = "yes";
-    gameSettings._mapCustomProperty["offBool"]     = "OFF";
-    gameSettings._mapCustomProperty["paddedInt"]   = "  12  ";
-    gameSettings._mapCustomProperty["typoBool"]    = "ture";
-
-    // 못 읽은 값은 fallback 이 되고 **알린다**. 빈 값 · 없는 키는 조용하다.
-    test::ScopedLogCollector logs;
-    {
-        test::ScopedDefensiveTestLog expected( "custom properties that do not parse" );
-        SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyInt( "brokenInt", 6 ) == 6, "못 읽은 정수가 0 이 됐습니다" );
-        SW_EXPECT_NEAR_EQUAL( 0.5f, gameSettings.getCustomPropertyFloat( "brokenFloat", 0.5f ), 1e-4f );
-        SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "typoBool", true ) );
-    }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'brokenInt' has an unreadable integer 'six'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'brokenFloat' has an unreadable number 'half'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'typoBool' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyInt( "emptyInt", 6 ) == 6, "빈 값이 0 이 됐습니다" );
-    SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "missingBool", true ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "unreadable" ) == 3, logs.joined().c_str() );
-
-    // 대소문자와 흔한 철자를 모두 안다 — 반만 아는 사본이 아니다.
-    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "upperBool", false ), "TRUE 를 못 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "yesBool", false ), "yes 를 못 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "offBool", true ) == false, "OFF 를 못 읽었습니다" );
-
-    // 앞뒤 공백도 파서가 다룬다.
-    SW_EXPECT_EQUAL( 12, gameSettings.getCustomPropertyInt( "paddedInt", 6 ) );
-
-    // 멀쩡한 값은 그대로다.
-    gameSettings._mapCustomProperty["goodInt"] = "8";
-    SW_EXPECT_EQUAL( 8, gameSettings.getCustomPropertyInt( "goodInt", 6 ) );
-}
-
-/**
  * @brief [GameFrameworkTest] 움직이는 컴포넌트는 월드 값으로 움직인다 — 부모 아래에서도 월드 땅에 서고, 월드 방향으로 난다
  * @details 중력 · 투사체 · 피해 숫자 · 카메라 컨트롤러가 월드 값(땅 높이 · 속도 · 목표)을 **로컬** 위치에 더하고 비교하면, 루트 오브젝트에서는 같아
  *          드러나지 않지만 발판 위 캐릭터는 부모 높이만큼 떠서 멈추고, 돌아간 부모 아래 투사체는 부모의 축을 따라 난다.
@@ -2910,15 +2883,14 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     protected:
         void configureBootstrap( BootstrapConfig& outConfig ) override
         {
-            GameSettings& data                      = outConfig._data;
-            data._startMap                          = "game/test/maps/start.scene.xml";
-            data._titleScene                        = "game/test/maps/title.scene.xml";
-            data._inputMap                          = "engine/input/default.input.xml";
-            data._localizationProject               = FileUtil::joinPath( _localeDir, "boot.locproject.json" );
-            data._defaultLanguage                   = "ko_KR"; // 파일 이름(ko_kr)과 철자가 다르다
-            data._fallbackLanguage                  = "en-US";
-            data._defaultSavePath                   = _savePath;
-            data._mapCustomProperty["maxPartySize"] = "3";
+            GameSettings& data        = outConfig._data;
+            data._startMap            = "game/test/maps/start.scene.xml";
+            data._titleScene          = "game/test/maps/title.scene.xml";
+            data._inputMap            = "engine/input/default.input.xml";
+            data._localizationProject = FileUtil::joinPath( _localeDir, "boot.locproject.json" );
+            data._defaultLanguage     = "ko_KR"; // 파일 이름(ko_kr)과 철자가 다르다
+            data._fallbackLanguage    = "en-US";
+            data._defaultSavePath     = _savePath;
         }
     };
 
@@ -2927,10 +2899,10 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     instance._savePath  = test::makeTempPath( "bootstrap_default.sav" );
     SW_ASSERT_TRUE( instance.initialize( nullptr, nullptr ) );
 
-    // 1) 서비스 — 커스텀 칸이 데이터의 값으로 읽힌다
+    // 1) 서비스 — 데이터의 값으로 읽힌다
     const GameSettings* pBoundSettings = game::findSubsystem<GameSettings>();
     SW_ASSERT_NOT_NULL( pBoundSettings );
-    SW_EXPECT_EQUAL( 3, pBoundSettings->getCustomPropertyInt( "maxPartySize", 6 ) );
+    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), pBoundSettings->_defaultLanguage );
 
     // 2) 입력 맵 — 통합 맵에 읽혔다
     SW_EXPECT_TRUE( runState._input.getInputMap().hasAction( "Confirm" ) );

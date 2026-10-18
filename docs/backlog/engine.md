@@ -35,7 +35,7 @@
 - `C-22` [정리] **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
 - `C-30` [정리] **유지보수성을 위한 데이터화의 남은 것**(기준은 [결정 기록](../09_Decisions.md) 5-4). 설계 완료, 단위는 [데이터 주도 구조 정리 계획](../plans/DataDriven.md) 7절이다(C-36 과 한 순서).
-  뿌리는 읽기 API(`XMLNode` · `JSONValue` · `KeyValueFile`)의 폴백 인자라서 D1 ~ D9 가 그 인자를 없앤다. ② 게임 리터럴은 G1, ⑤ Shipping 그림 비교는 G2, ④ 에디터 색 · 크기는 editorux 묶음이 맡는다.
+  뿌리는 읽기 API(`XMLNode` · `JSONValue` · `KeyValueFile`)의 폴백 인자라서 D1 ~ D9 가 그 인자를 없앤다. D0 ~ D5(장르 키트 카탈로그 전부)는 끝났고 남은 단위는 D6 ~ D9 · P1 · P2 · P4 · G1 · G2 다. ② 게임 리터럴은 G1, ⑤ Shipping 그림 비교는 G2, ④ 에디터 색 · 크기는 editorux 묶음이 맡는다.
 
 - `C-25` [정리] **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
@@ -57,10 +57,7 @@
   다른 컨테이너의 블록 루프와 `sw::vector::operator==` 에 같은 모양이 있을 수 있다. 호출부와 이득을 Release 로 잰 뒤에 한다.
 
 - `C-52` [정리] **타입별 버킷(7-c)과 타입 핸들(7-d) 뒤의 남은 정리.** 설계 완료, 단위는 [타입별 컴포넌트 계획](../plans/TypedComponents.md) 8절(T1 ~ T4)이다.
-  ① 핸들 옮기기의 값 방문(T1) ② 상태 저장소 짝짓기를 안정 키로(T2, 전역 순서 문제는 7c577ec27 이 풀었다) ③ 등록형 목록 → 버킷(T4) ④ 측정(T3).
-
-- `C-53` [정리] **씬 · 프리팹 저작 저장에 런타임 상태가 들어간다**(2026-10-17 `GimmickCircuitState` 검토 ⓕ). 남은 단위는 [저작 저장과 런타임 상태 분리 계획](../plans/AuthoringState.md) 4절의 A4(런타임 필드에 `PROPERTY( RuntimeState )` 를 붙이고 데이터를 다시 쓰기)다.
-  저장 목적(`SerializePurpose`)은 필수 값이 됐고, `RuntimeState` 필드는 저작 저장에서 빠진다.
+  남은 것: ③ 등록형 목록 → 버킷(T4, T3 측정 뒤) ④ 측정(T3). ① 값 방문(T1)과 ② 상태 저장소의 안정 키 짝짓기(T2)는 들어갔다.
 
 - `C-63` [정리] **`SW_ENABLE_STL_CONTAINER` 가 이름이 같은 `sw::` 형식을 구성마다 다른 형식으로 바꾼다**(2026-10-18 `A-20`). 해시 컨테이너는 두 구성이 같은 구현을 쓰게 했고 `CompressedPair` 로 `pair` 차이를 막았다.
   natvis 는 자체 구현의 배치를 읽게 고쳤고, `TestDestructionDamage` 의 해시 기준값 테스트는 STL 구성에서도 돈다.

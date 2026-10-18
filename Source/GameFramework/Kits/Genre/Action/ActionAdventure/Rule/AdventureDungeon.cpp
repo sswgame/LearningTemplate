@@ -2,9 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureDungeon.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
-
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -22,43 +19,6 @@ namespace sw
     {
         struct AdventureDungeonInternal
         {
-            static hashed_string readName( const XMLNode& node, const utf8* pName, const hashed_string& fallback )
-            {
-                const utf8* pValue = node.findAttribute( pName );
-                return pValue != nullptr && pValue[0] != '\0' ? hashed_string( pValue ) : fallback;
-            }
-
-            /** @brief 비어 있을 때 쓰는 플래그 이름 `<종류>.<id>` 를 만듭니다. 공유 플래그에서 다른 키트의 같은 id 와 겹치지 않게 종류를 붙입니다. */
-            static hashed_string makeDefaultFlag( const utf8* pKind, const hashed_string& id ) { return hashed_string( string( pKind ) + "." + id.c_str() ); }
-
-            static bool isKind( string_view text, const utf8* pKind ) { return StringUtil::equals( text, string_view( pKind ), true ); }
-
-            static AdventureDoorKind parseDoorKind( string_view text, string_view sourceName, const utf8* pID )
-            {
-                if ( text.empty() || isKind( text, "SmallKey" ) )
-                    return AdventureDoorKind::SmallKey;
-                if ( isKind( text, "BossKey" ) )
-                    return AdventureDoorKind::BossKey;
-                if ( isKind( text, "Condition" ) )
-                    return AdventureDoorKind::Condition;
-                SW_LOG_WARNING( "%#: door '%#' has an unknown kind '%#' - read as SmallKey", sourceName, pID, text );
-                return AdventureDoorKind::SmallKey;
-            }
-
-            static AdventureDeviceKind parseDeviceKind( string_view text, string_view sourceName, const utf8* pID )
-            {
-                if ( text.empty() || isKind( text, "Switch" ) )
-                    return AdventureDeviceKind::Switch;
-                if ( isKind( text, "PressurePlate" ) )
-                    return AdventureDeviceKind::PressurePlate;
-                if ( isKind( text, "TimedSwitch" ) )
-                    return AdventureDeviceKind::TimedSwitch;
-                if ( isKind( text, "TorchGroup" ) )
-                    return AdventureDeviceKind::TorchGroup;
-                SW_LOG_WARNING( "%#: device '%#' has an unknown kind '%#' - read as Switch", sourceName, pID, text );
-                return AdventureDeviceKind::Switch;
-            }
-
             static const hashed_string& getSmallKeyName()
             {
                 static const hashed_string name( "SmallKey" );
@@ -117,66 +77,61 @@ namespace sw
 
     uint32 AdventureDungeonCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 던전을 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
         for ( XMLNode dungeonNode = root.findChild( "Dungeon" ); dungeonNode; dungeonNode = dungeonNode.findNextSibling( "Dungeon" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( dungeonNode, sourceName );
-            if ( pID == nullptr )
-                continue;
-            AdventureDungeonDef dungeon;
-            dungeon._id     = hashed_string( pID );
-            dungeon._region = AdventureDungeonInternal::readName( dungeonNode, "region", dungeon._id );
-            for ( XMLNode node = dungeonNode.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
-            {
-                const utf8* pDoorID = GameDataXML::findRequiredID( node, sourceName );
-                if ( pDoorID == nullptr )
-                    continue;
-                AdventureDoorDef door;
-                door._id                       = hashed_string( pDoorID );
-                door._flag                     = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "door", door._id ) );
-                door._kind                     = AdventureDungeonInternal::parseDoorKind( node.getAttributeText( "kind" ), sourceName, pDoorID );
-                const string_view requiresText = node.getAttributeText( "requires" );
-                door._requires                 = string( requiresText.data(), requiresText.size() );
-                if ( door._kind == AdventureDoorKind::Condition && door._requires.empty() )
-                    SW_LOG_WARNING( "%#: condition door '%#' has no requires - it always opens", sourceName, pDoorID );
-                dungeon._listDoor.push_back( door );
-            }
-            for ( XMLNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
-            {
-                const utf8* pTreasureID = GameDataXML::findRequiredID( node, sourceName );
-                if ( pTreasureID == nullptr )
-                    continue;
-                AdventureTreasureDef treasure;
-                treasure._id    = hashed_string( pTreasureID );
-                treasure._area  = AdventureDungeonInternal::readName( node, "area", hashed_string{} );
-                treasure._item  = AdventureDungeonInternal::readName( node, "item", hashed_string{} );
-                treasure._flag  = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "treasure", treasure._id ) );
-                treasure._count = MathUtil::max( 1, node.getAttributeInt( "count", 1 ) );
-                dungeon._listTreasure.push_back( treasure );
-            }
-            for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
-            {
-                const utf8* pDeviceID = GameDataXML::findRequiredID( node, sourceName );
-                if ( pDeviceID == nullptr )
-                    continue;
-                AdventureDeviceDef device;
-                device._id         = hashed_string( pDeviceID );
-                device._flag       = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "device", device._id ) );
-                device._kind       = AdventureDungeonInternal::parseDeviceKind( node.getAttributeText( "kind" ), sourceName, pDeviceID );
-                device._duration   = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", 0.0f ) );
-                device._torchCount = MathUtil::max( 1, node.getAttributeInt( "torches", 1 ) );
-                device._bLatch     = node.getAttributeBool( "latch", false ) ? SW_TRUE : SW_FALSE;
-                if ( device._kind == AdventureDeviceKind::TimedSwitch && device._duration <= 0.0f )
-                {
-                    SW_LOG_WARNING( "%#: timed switch '%#' has no duration - 5 seconds", sourceName, pDeviceID );
-                    device._duration = 5.0f;
-                }
-                dungeon._listDevice.push_back( device );
-            }
-            (void)add( dungeon );
-            ++loadedCount;
+            if ( loadDungeon( dungeonNode, sourceName ) )
+                ++loadedCount;
         }
         return loadedCount;
+    }
+
+    bool AdventureDungeonCatalog::loadDungeon( const XMLNode& dungeonNode, string_view sourceName )
+    {
+        AdventureDungeonDef dungeon;
+        bool                bValid = GameDataXML::readFields( dungeonNode, dungeon, sourceName );
+        for ( XMLNode node = dungeonNode.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
+        {
+            AdventureDoorDef door;
+            bool             bDoorValid = GameDataXML::readFields( node, door, sourceName );
+            if ( door._kind == AdventureDoorKind::Condition && door._requires.empty() )
+            {
+                SW_LOG_ERROR( "%#: condition door '%#' needs requires=\"...\"", sourceName, door._id.c_str() );
+                bDoorValid = false;
+            }
+            if ( bDoorValid )
+                dungeon._listDoor.push_back( door );
+            bValid = bDoorValid && bValid;
+        }
+        for ( XMLNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
+        {
+            AdventureTreasureDef treasure;
+            if ( GameDataXML::readFields( node, treasure, sourceName ) )
+                dungeon._listTreasure.push_back( treasure );
+            else
+                bValid = false;
+        }
+        for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
+        {
+            AdventureDeviceDef device;
+            bool               bDeviceValid = GameDataXML::readFields( node, device, sourceName );
+            if ( device._kind == AdventureDeviceKind::TimedSwitch && device._duration <= 0.0f )
+            {
+                SW_LOG_ERROR( "%#: timed switch '%#' needs duration=\"...\" above 0", sourceName, device._id.c_str() );
+                bDeviceValid = false;
+            }
+            if ( bDeviceValid )
+                dungeon._listDevice.push_back( device );
+            bValid = bDeviceValid && bValid;
+        }
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "%#: <Dungeon id=\"%#\"> has errors - not added", sourceName, dungeon._id.c_str() );
+            return false;
+        }
+        (void)add( dungeon ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
     }
 
     AdventureDungeonState::AdventureDungeonState()
@@ -349,7 +304,7 @@ namespace sw
         const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
         if ( def._kind != AdventureDeviceKind::PressurePlate )
             return;
-        const bool bLatched = def._bLatch == SW_TRUE && pRuntime->_listDevice[static_cast<size_t>( index )]._bActive == SW_TRUE;
+        const bool bLatched = def._bLatch && pRuntime->_listDevice[static_cast<size_t>( index )]._bActive == SW_TRUE;
         if ( bPressed == false && bLatched )
             return;
         setDeviceActive( *pDungeon, index, bPressed, flags );

@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -12,7 +13,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"

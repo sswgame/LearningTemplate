@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -7,7 +8,6 @@
 #include "Engine/UI/Base/UIFocusManager.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include "EngineTest/UI/UITestWidgets.h"
 

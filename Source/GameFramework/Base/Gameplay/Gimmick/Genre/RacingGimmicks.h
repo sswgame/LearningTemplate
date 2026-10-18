@@ -53,7 +53,7 @@ namespace sw
         float32 _strength;
         PROPERTY( Category = "Boost", DisplayName = "Required Tags" )
         TagContainer _requiredTags;
-        PROPERTY( Category = "Boost", DisplayName = "Boost Count", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Boost", DisplayName = "Boost Count", Tooltip = "Runtime" )
         int32 _boostCount;
     };
 } // namespace sw
@@ -94,9 +94,9 @@ namespace sw
         float32 _respawnDelay;
         PROPERTY( Category = "Item Box", DisplayName = "Seed" )
         uint32 _seed;
-        PROPERTY( Category = "Item Box", DisplayName = "Open Count", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Item Box", DisplayName = "Open Count", Tooltip = "Runtime" )
         int32 _openCount;
-        PROPERTY( Category = "Item Box", DisplayName = "Respawn Steps Left", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Item Box", DisplayName = "Respawn Steps Left", Tooltip = "Runtime" )
         int32 _respawnStepsLeft;
 
         FixedStepTimer _clock;

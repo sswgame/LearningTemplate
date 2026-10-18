@@ -10,6 +10,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -62,18 +64,46 @@ namespace sw
      *          색은 정점 색에 곱해지는 틴트입니다. 그래서 같은 회색 타일을 돌과 자갈에 다른 색으로 나눠 쓸 수 있습니다.
      *          `_bOpaque` 가 아니면 이웃 면을 가리지 않습니다. 잎과 유리가 해당합니다.
      */
+    REFLECT()
     struct VoxelBlockDef
     {
-        hashed_string   _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
         string          _name{};
-        VoxelBlockIndex _index{ kVoxelAirBlock };
-        int32           _arrFaceTile[kVoxelFaceCount]{ 0, 0, 0, 0, 0, 0 };
-        float4          _color{ 1.0f, 1.0f, 1.0f, 1.0f };
-        float32         _hardness{ 0.5f };   ///< 맨손으로 부수는 데 걸리는 시간(초)
-        uint8           _bSolid{ SW_TRUE };  ///< 몸이 통과하지 못한다
-        uint8           _bOpaque{ SW_TRUE }; ///< 이웃 면을 가린다
-        uint8           _bBreakable{ SW_TRUE };
-        hashed_string   _dropID{}; ///< 부수면 얻는 블록 id(`drop`). 비면 자기 자신이다. 같은 카탈로그의 블록이어야 한다(읽을 때 본다)
+        VoxelBlockIndex _index{ kVoxelAirBlock };                          ///< 카탈로그가 붙인다(읽은 순서)
+        int32           _arrFaceTile[kVoxelFaceCount]{ 0, 0, 0, 0, 0, 0 }; ///< `tile` 하나 또는 `top` · `bottom` · `side` 셋을 손으로 읽는다
+        PROPERTY( Meta = "Color" )
+        float4 _color{ 1.0f, 1.0f, 1.0f, 1.0f }; ///< `r,g,b,a` 네 성분을 모두 적는다
+        PROPERTY( Min = 0.0 )
+        float32 _hardness{ 0.5f }; ///< 맨손으로 부수는 데 걸리는 시간(초)
+        PROPERTY()
+        bool _bSolid{ true }; ///< 몸이 통과하지 못한다
+        PROPERTY()
+        bool _bOpaque{ true }; ///< 이웃 면을 가린다
+        PROPERTY()
+        bool _bBreakable{ true };
+        PROPERTY( Name = "drop" )
+        hashed_string _dropID{}; ///< 부수면 얻는 블록 id(`drop`). 비면 자기 자신이다. 같은 카탈로그의 블록이어야 한다(읽을 때 본다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<BlockCatalog>` 루트 속성의 스키마입니다. */
+    REFLECT()
+    struct VoxelBlockCatalogRootDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1 )
+        int32 _atlasColumns{ 8 };
+        PROPERTY( Min = 1 )
+        int32 _atlasRows{ 8 };
+        PROPERTY( Min = 1 )
+        int32 _tileTexels{ 16 }; ///< 아틀라스 타일 한 변의 텍셀 수
     };
 } // namespace sw
 
@@ -82,9 +112,10 @@ namespace sw
     /**
      * @class VoxelBlockCatalog
      * @brief 블록 카탈로그입니다. 아래 형식의 XML 을 읽습니다.
-     *        `<BlockCatalog atlasColumns="8" atlasRows="8"><Block id="grass" name="Grass" tile="2" top="0" bottom="2" side="1" hardness="0.6"
-     *        color="1 1 1 1" solid="true" opaque="true" breakable="true" drop="dirt"/></BlockCatalog>`
-     * @details 블록 번호는 읽은 순서대로 1부터 붙으며 최대 255입니다. `tile` 은 여섯 면의 기본값이고, `top`, `bottom`, `side` 가 해당 면의 값을 덮어씁니다.
+     *        `<BlockCatalog atlasColumns="8" atlasRows="8"><Block id="grass" name="Grass" top="0" bottom="2" side="1" hardness="0.6"
+     *        color="1,1,1,1" solid="true" opaque="true" breakable="true" drop="dirt"/><Block id="dirt" name="Dirt" tile="2"/></BlockCatalog>`
+     * @details 블록 번호는 읽은 순서대로 1부터 붙으며 최대 255입니다. 면은 `tile` 하나(여섯 면이 같다)로 적거나 `top` · `bottom` · `side` 셋을 모두 적습니다.
+     *          둘을 섞거나 셋 중 하나를 빼면 다른 면 값으로 채우지 않고 그 블록을 넣지 않는 오류입니다. 칸 번호는 아틀라스 안이어야 합니다.
      */
     class SW_KIT_API VoxelBlockCatalog : public XMLCatalog<VoxelBlockCatalog>
     {
@@ -119,6 +150,8 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "BlockCatalog"; ///< 루트 요소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief `<Block>` 하나를 스키마와 면 칸으로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadBlock( const XMLNode& node, string_view sourceName );
 
         GameCatalog<VoxelBlockDef> _catalog; ///< 인덱스가 블록 번호 - 1 이다. id 조회는 해시 한 번으로 끝난다
         int32                      _atlasColumns;

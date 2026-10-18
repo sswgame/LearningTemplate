@@ -6,11 +6,11 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Base/Actor/Control/ControlSystem.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"

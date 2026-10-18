@@ -1273,15 +1273,6 @@
        "max": "",
        "units": "",
        "description": "게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstanceBase` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음"
-      },
-      {
-       "name": "_mapCustomProperty",
-       "type": "map<string, string>",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "범용 커스텀 키-값 프로퍼티 저장소"
       }
      ]
     }
@@ -3720,7 +3711,7 @@
    "default": "1.0",
    "kind": "일반",
    "description": "게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤)",
-   "source": "Source/Engine/Utility/GameTimeScale.cpp"
+   "source": "Source/Engine/Config/GameTimeScale.cpp"
   },
   {
    "name": "gv_traceSaveOnExit",

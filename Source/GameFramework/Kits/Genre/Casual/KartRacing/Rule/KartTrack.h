@@ -13,6 +13,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
@@ -22,10 +24,45 @@ namespace sw
 {
     class XMLNode;
 
+    /** @brief `<Point x="0" y="0" z="100"/>` — 길 중심선의 조절점 하나입니다(y 는 적지 않으면 0). */
+    REFLECT()
+    struct KartTrackPointDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        float32 _x{ 0.0f };
+        PROPERTY()
+        float32 _y{ 0.0f };
+        PROPERTY( Required )
+        float32 _z{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<Checkpoint at="0.5"/>` — 체크포인트 하나입니다(비율 0..1). */
+    REFLECT()
+    struct KartCheckpointDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _at{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 아이템 상자의 위치입니다. `_at` 은 한 바퀴에 대한 비율(0..1)입니다. */
+    REFLECT()
     struct KartItemBoxDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
         float32 _at{ 0.0f };
+        PROPERTY()
         float32 _offset{ 0.0f }; ///< 옆 비킴이다(m, 오른쪽이 +)
     };
 } // namespace sw
@@ -33,12 +70,20 @@ namespace sw
 namespace sw
 {
     /** @brief 부스트 패드입니다. 중심선 거리 `_at` 을 가운데로 하고 길이 `_length`, 폭 `_width` 인 사각형입니다. */
+    REFLECT()
     struct KartBoostPadDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
         float32 _at{ 0.0f };
+        PROPERTY()
         float32 _offset{ 0.0f };
+        PROPERTY( Min = 0.0 )
         float32 _length{ 4.0f };
+        PROPERTY( Min = 0.0 )
         float32 _width{ 4.0f };
+        PROPERTY( Min = 0.0 )
         float32 _duration{ 1.0f }; ///< 부스트 시간(초)
     };
 } // namespace sw
@@ -46,12 +91,20 @@ namespace sw
 namespace sw
 {
     /** @brief 오프로드 구간입니다. 거리 `_from`..`_to`(비율이며 결승선을 넘어 감겨도 됩니다)와 옆 비킴 범위 안의 속도 배율을 정합니다(모래, 잔디, 물웅덩이). */
+    REFLECT()
     struct KartOffroadZoneDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
         float32 _from{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
         float32 _to{ 0.0f };
+        PROPERTY()
         float32 _minOffset{ -1000.0f };
+        PROPERTY( Min = "_minOffset" )
         float32 _maxOffset{ 1000.0f };
+        PROPERTY( Name = "scale", Min = 0.0 )
         float32 _speedScale{ 0.5f };
     };
 } // namespace sw
@@ -59,20 +112,30 @@ namespace sw
 namespace sw
 {
     /** @brief 트랙 정의 하나입니다(XML 의 `<Track>` 하나에 해당합니다). */
+    REFLECT()
     struct KartTrackDef
     {
-        hashed_string              _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
         string                     _name{};
         vector<float3>             _listControlPoint{}; ///< 닫힌 곡선의 조절점이다(3개 이상, 진행 순서)
         vector<float32>            _listCheckpoint{};   ///< 체크포인트 위치이다(비율 0..1이며 오름차순으로 정리된다)
         vector<KartItemBoxDef>     _listItemBox{};
         vector<KartBoostPadDef>    _listBoostPad{};
         vector<KartOffroadZoneDef> _listOffroadZone{};
-        float32                    _width{ 12.0f };       ///< 길 폭(m)이다. 밖은 오프로드이다
-        float32                    _offroadScale{ 0.5f }; ///< 길 밖의 속도 배율
-        float32                    _gateMargin{ 6.0f };   ///< 문이 길 가장자리 밖으로 더 뻗는 길이(m)이다. 길을 살짝 벗어나도 지나간 것으로 본다
-        int32                      _lapCount{ 3 };
-        int32                      _samplesPerSegment{ 16 }; ///< 조절점 사이의 샘플 수
+        PROPERTY( Min = 0.1 )
+        float32 _width{ 12.0f }; ///< 길 폭(m)이다. 밖은 오프로드이다
+        PROPERTY( Min = 0.0 )
+        float32 _offroadScale{ 0.5f }; ///< 길 밖의 속도 배율
+        PROPERTY( Min = 0.0 )
+        float32 _gateMargin{ 6.0f }; ///< 문이 길 가장자리 밖으로 더 뻗는 길이(m)이다. 길을 살짝 벗어나도 지나간 것으로 본다
+        PROPERTY( Name = "laps", Min = 1 )
+        int32 _lapCount{ 3 };
+        PROPERTY( Name = "samples", Min = 1 )
+        int32 _samplesPerSegment{ 16 }; ///< 조절점 사이의 샘플 수
     };
 } // namespace sw
 
@@ -216,5 +279,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "KartTrackCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        /** @brief `<Track>` 하나를 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadTrack( const XMLNode& node, string_view sourceName );
     };
 } // namespace sw

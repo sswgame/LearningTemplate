@@ -8,6 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -35,10 +37,53 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `<Chart>` 루트 속성의 스키마입니다. `bpm` 은 `<Bpm>` 원소가 하나도 없을 때의 한 박자 빠르기입니다. */
+    REFLECT()
+    struct RhythmChartRootDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _title{};
+        PROPERTY()
+        string _artist{};
+        PROPERTY( Min = 1.0 )
+        float32 _bpm{ 120.0f };
+        PROPERTY()
+        float32 _offset{ 0.0f }; ///< 첫 박의 시각(초)
+        PROPERTY( Min = 0 )
+        int32 _level{ 0 };
+        PROPERTY( Name = "lanes", Min = 1, Max = 16 )
+        int32 _laneCount{ 7 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<Note lane="0" beat="4" endBeat="6"/>` — 노트 하나입니다. `endBeat` 를 적으면 롱노트이고 `beat` 보다 앞일 수 없습니다. */
+    REFLECT()
+    struct RhythmNoteDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0 )
+        int32 _lane{ 0 };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _beat{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief BPM 변화입니다. */
+    REFLECT()
     struct RhythmBpmChange
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0.0 )
         float32 _beat{ 0.0f };
+        PROPERTY( Required, Min = 1.0 )
         float32 _bpm{ 120.0f };
     };
 } // namespace sw
@@ -46,9 +91,14 @@ namespace sw
 namespace sw
 {
     /** @brief 정지입니다. 이 박에서 음악은 흐르지만 박은 `_seconds` 동안 멈춥니다. */
+    REFLECT()
     struct RhythmStop
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0.0 )
         float32 _beat{ 0.0f };
+        PROPERTY( Required, Min = 0.001 )
         float32 _seconds{ 0.0f };
     };
 } // namespace sw
@@ -56,9 +106,14 @@ namespace sw
 namespace sw
 {
     /** @brief 변박입니다. 이 박에서 새 마디가 시작되고 마디 길이가 `_beatsPerMeasure` 박이 됩니다. */
+    REFLECT()
     struct RhythmMeasureChange
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0.0 )
         float32 _beat{ 0.0f };
+        PROPERTY( Min = 0.001 )
         float32 _beatsPerMeasure{ 4.0f };
     };
 } // namespace sw

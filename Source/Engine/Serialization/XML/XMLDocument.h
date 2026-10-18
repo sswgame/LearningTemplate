@@ -10,6 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/String/StringBuilder.h"
 
+#include <optional>
+
 namespace sw
 {
     class XMLDocument; // Windows SDK msxml.h 의 전역 XMLDocument 대신 이것을 friend 로 찾게 먼저 선언한다
@@ -114,6 +116,51 @@ namespace sw
         /** @brief 비어 있지 않은 자식 텍스트를 dst 에 복사합니다. 복사했으면 true 입니다. */
         bool takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys = true ) const;
 
+        // ------------------------------------------------------------------------------
+        // 1-1) 값 읽기 — 폴백 인자 없이(결정 기록 5-4, 데이터 주도 계획 7.3)
+        //      필수: 없거나 깨지면 원소 · 속성 이름으로 오류를 남기고 nullopt.
+        //      선택: 없으면 `out` 이 비고 true(기본값은 Def 초기값이 정한다 — 여기서 정하지 않는다), 깨지면 오류와 false.
+        //      T 는 int32 · uint32 · float32 · bool · string 입니다.
+        // ------------------------------------------------------------------------------
+        /** @brief 반드시 있어야 하는 속성을 읽습니다. */
+        template <typename T>
+        [[nodiscard]] std::optional<T> readRequiredAttribute( const utf8* pName ) const
+        {
+            T                  value{};
+            const XMLValueRead read = parseAttributeValue( pName, value );
+            if ( read == XMLValueRead::Absent )
+                reportMissing( "attribute", pName );
+            return read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+        }
+        /** @brief 없어도 되는 속성을 읽습니다. 없으면 @p outValue 를 비우고 true, 깨졌으면 false 입니다. */
+        template <typename T>
+        [[nodiscard]] bool readOptionalAttribute( const utf8* pName, std::optional<T>& outValue ) const
+        {
+            T                  value{};
+            const XMLValueRead read = parseAttributeValue( pName, value );
+            outValue                = read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            return read != XMLValueRead::Invalid;
+        }
+        /** @brief 반드시 있어야 하는 자식 원소의 글을 읽습니다. */
+        template <typename T>
+        [[nodiscard]] std::optional<T> readRequiredChild( const utf8* pName ) const
+        {
+            T                  value{};
+            const XMLValueRead read = parseChildValue( pName, value );
+            if ( read == XMLValueRead::Absent )
+                reportMissing( "child", pName );
+            return read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+        }
+        /** @brief 없어도 되는 자식 원소의 글을 읽습니다. 없으면 @p outValue 를 비우고 true, 깨졌으면 false 입니다. */
+        template <typename T>
+        [[nodiscard]] bool readOptionalChild( const utf8* pName, std::optional<T>& outValue ) const
+        {
+            T                  value{};
+            const XMLValueRead read = parseChildValue( pName, value );
+            outValue                = read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            return read != XMLValueRead::Invalid;
+        }
+
         /** @brief 첫 속성을 반환합니다. */
         XMLAttribute getFirstAttribute() const;
 
@@ -193,6 +240,26 @@ namespace sw
         }
 
     private:
+        /** @brief 값 글 하나를 읽은 결과입니다. 깨진 값은 읽는 함수가 원소 · 이름과 함께 오류로 남깁니다. */
+        enum class XMLValueRead : uint8
+        {
+            Read,
+            Absent,
+            Invalid,
+        };
+        XMLValueRead parseAttributeValue( const utf8* pName, int32& outValue ) const;
+        XMLValueRead parseAttributeValue( const utf8* pName, uint32& outValue ) const;
+        XMLValueRead parseAttributeValue( const utf8* pName, float32& outValue ) const;
+        XMLValueRead parseAttributeValue( const utf8* pName, bool& outValue ) const;
+        XMLValueRead parseAttributeValue( const utf8* pName, string& outValue ) const;
+        XMLValueRead parseChildValue( const utf8* pName, int32& outValue ) const;
+        XMLValueRead parseChildValue( const utf8* pName, uint32& outValue ) const;
+        XMLValueRead parseChildValue( const utf8* pName, float32& outValue ) const;
+        XMLValueRead parseChildValue( const utf8* pName, bool& outValue ) const;
+        XMLValueRead parseChildValue( const utf8* pName, string& outValue ) const;
+        /** @brief 필수 속성 · 자식이 없다고 원소 이름과 함께 오류로 남깁니다. */
+        void reportMissing( const utf8* pKind, const utf8* pName ) const;
+
         friend class XMLDocument;
         /** @brief pugixml 노드 포인터로 핸들을 만듭니다. */
         explicit XMLNode( void* pNode )

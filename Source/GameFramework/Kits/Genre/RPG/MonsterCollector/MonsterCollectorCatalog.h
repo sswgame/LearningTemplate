@@ -23,6 +23,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 능력치 여섯 가지입니다. XML 의 `stats="HP 공격 방어 특공 특방 스피드"` 가 이 순서입니다. */
+    ENUM()
     enum class MonsterStat : uint8
     {
         Hp = 0,
@@ -38,6 +39,7 @@ namespace sw
     static constexpr int32 kMonsterStatCount = static_cast<int32>( MonsterStat::Count );
 
     /** @brief 경험치 그룹입니다. 레벨 n 까지의 총 경험치가 빠름은 4n³/5, 보통은 n³, 느림은 5n³/4 입니다. */
+    ENUM()
     enum class MonsterExpGroup : uint8
     {
         Fast = 0,
@@ -46,6 +48,7 @@ namespace sw
     };
 
     /** @brief 기술 분류입니다. 물리는 공격과 방어, 특수는 특공과 특방을 쓰고, 변화는 피해가 없습니다. */
+    ENUM()
     enum class MonsterMoveCategory : uint8
     {
         Physical = 0,
@@ -67,6 +70,7 @@ namespace sw
     };
 
     /** @brief 능력 변화가 누구에게 걸리는지 나타냅니다. */
+    ENUM()
     enum class MonsterEffectTarget : uint8
     {
         Foe = 0,
@@ -74,10 +78,15 @@ namespace sw
     };
 
     /** @brief 레벨에 배우는 기술 하나입니다. */
+    REFLECT()
     struct MonsterLearnEntry
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "move", Required )
         hashed_string _moveID{};
-        int32         _level{ 1 };
+        PROPERTY( Min = 1, Max = 100 )
+        int32 _level{ 1 };
     };
 } // namespace sw
 
@@ -87,30 +96,45 @@ namespace sw
      * @brief 진화 분기 하나입니다. 적힌 조건이 **모두** 맞아야 합니다.
      * @details 아이템 조건이 있으면 그 아이템을 쓸 때만 보고, 없으면 레벨업할 때만 본다(돌 진화, 레벨 진화, 친밀도 진화).
      */
+    REFLECT()
     struct MonsterEvolutionDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "to", Required )
         hashed_string _targetID{};
-        hashed_string _itemID{};        ///< 비어 있지 않으면 그 아이템을 썼을 때
-        int32         _level{ 0 };      ///< 0이면 레벨 조건이 없다
-        int32         _friendship{ 0 }; ///< 0이면 친밀도 조건이 없다
+        PROPERTY( Name = "item" )
+        hashed_string _itemID{}; ///< 비어 있지 않으면 그 아이템을 썼을 때
+        PROPERTY( Min = 0 )
+        int32 _level{ 0 }; ///< 0이면 레벨 조건이 없다
+        PROPERTY( Min = 0 )
+        int32 _friendship{ 0 }; ///< 0이면 친밀도 조건이 없다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 종 하나입니다. */
+    REFLECT()
     struct SW_KIT_API MonsterSpeciesDef
     {
-        hashed_string               _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
         string                      _name{};
         vector<hashed_string>       _listType{};  ///< 1~2개
         vector<MonsterLearnEntry>   _listLearn{}; ///< 레벨 오름차순
         vector<MonsterEvolutionDef> _listEvolution{};
         int32                       _arrBaseStat[kMonsterStatCount]{ 50, 50, 50, 50, 50, 50 };
         int32                       _arrEvYield[kMonsterStatCount]{ 0, 0, 0, 0, 0, 0 }; ///< 쓰러뜨린 쪽이 받는 노력치
-        int32                       _catchRate{ 45 };                                   ///< 1..255
-        int32                       _baseExp{ 64 };                                     ///< 경험치 공식의 b
-        MonsterExpGroup             _expGroup{ MonsterExpGroup::Medium };
+        PROPERTY( Min = 1, Max = 255 )
+        int32 _catchRate{ 45 }; ///< 1..255
+        PROPERTY( Min = 1 )
+        int32 _baseExp{ 64 }; ///< 경험치 공식의 b
+        PROPERTY()
+        MonsterExpGroup _expGroup{ MonsterExpGroup::Medium };
 
         bool hasType( const hashed_string& type ) const;
     };
@@ -119,23 +143,42 @@ namespace sw
 namespace sw
 {
     /** @brief 기술 하나입니다. */
+    REFLECT()
     struct MonsterMoveDef
     {
-        hashed_string       _id{};
-        string              _name{};
-        hashed_string       _type{};
-        hashed_string       _weatherID{}; ///< 비어 있지 않으면 날씨를 부른다(비바라기)
-        int32               _power{ 0 };
-        int32               _accuracy{ 100 }; ///< 0이면 반드시 맞는다
-        int32               _pp{ 10 };
-        int32               _priority{ 0 };
-        int32               _statusChance{ 0 }; ///< 상태이상 확률(%). 변화 기술은 100
-        int32               _statStages{ 0 };   ///< 능력 변화 단계(−6..+6, 0이면 없음)
-        int32               _statChance{ 100 }; ///< 능력 변화 확률(%)
-        int32               _critStage{ 0 };    ///< 급소 단계(0은 1/24, 1은 1/8, 2는 1/2, 3 이상은 항상)
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        hashed_string _type{};
+        PROPERTY( Name = "weather" )
+        hashed_string _weatherID{}; ///< 비어 있지 않으면 날씨를 부른다(비바라기)
+        PROPERTY( Min = 0 )
+        int32 _power{ 0 };
+        PROPERTY( Min = 0, Max = 100 )
+        int32 _accuracy{ 100 }; ///< 0이면 반드시 맞는다
+        PROPERTY( Min = 1 )
+        int32 _pp{ 10 };
+        PROPERTY( Min = -7, Max = 5 )
+        int32 _priority{ 0 };
+        PROPERTY( Min = 0, Max = 100 )
+        int32 _statusChance{ 0 }; ///< 상태이상 확률(%). 변화 기술은 100
+        PROPERTY( Name = "stages", Min = -6, Max = 6 )
+        int32 _statStages{ 0 }; ///< 능력 변화 단계(−6..+6, 0이면 없음)
+        PROPERTY( Min = 0, Max = 100 )
+        int32 _statChance{ 100 }; ///< 능력 변화 확률(%)
+        PROPERTY( Min = 0 )
+        int32 _critStage{ 0 }; ///< 급소 단계(0은 1/24, 1은 1/8, 2는 1/2, 3 이상은 항상)
+        PROPERTY()
         MonsterMoveCategory _category{ MonsterMoveCategory::Physical };
-        MonsterStatus       _status{ MonsterStatus::None };
-        MonsterStat         _stat{ MonsterStat::Attack }; ///< 능력 변화가 걸리는 능력치
+        PROPERTY()
+        MonsterStatus _status{ MonsterStatus::None };
+        PROPERTY( Name = "stat" )
+        MonsterStat _changedStat{ MonsterStat::Attack }; ///< 능력 변화가 걸리는 능력치(HP 는 안 된다 · `_stat` 은 Windows CRT 매크로라 쓰지 않는다)
+        PROPERTY( Name = "target" )
         MonsterEffectTarget _statTarget{ MonsterEffectTarget::Foe };
 
         bool isDamaging() const { return _category != MonsterMoveCategory::Status && _power > 0; }
@@ -145,11 +188,17 @@ namespace sw
 namespace sw
 {
     /** @brief 성격 하나입니다. 올리는 능력치는 ×1.1, 내리는 능력치는 ×0.9이고, 같으면 보정이 없습니다. HP 는 받지 않습니다. */
+    REFLECT()
     struct SW_KIT_API MonsterNatureDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        MonsterStat   _raised{ MonsterStat::Attack };
-        MonsterStat   _lowered{ MonsterStat::Attack };
+        PROPERTY( Name = "up" )
+        MonsterStat _raised{ MonsterStat::Attack };
+        PROPERTY( Name = "down" )
+        MonsterStat _lowered{ MonsterStat::Attack };
 
         /** @brief 이 능력치의 성격 보정(%)입니다. 110, 100, 90 중 하나입니다. */
         int32 computePercent( MonsterStat stat ) const;
@@ -159,35 +208,55 @@ namespace sw
 namespace sw
 {
     /** @brief 날씨 하나입니다. */
+    REFLECT()
     struct MonsterWeatherDef
     {
-        hashed_string         _id{};
-        hashed_string         _boostedType{};        ///< 이 타입 기술은 ×1.5
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Name = "boost" )
+        hashed_string _boostedType{}; ///< 이 타입 기술은 ×1.5
+        PROPERTY( Name = "weaken" )
         hashed_string         _weakenedType{};       ///< 이 타입 기술은 ×0.5
         vector<hashed_string> _listChipImmuneType{}; ///< 턴 끝 피해를 받지 않는 타입
-        int32                 _chipDivisor{ 0 };     ///< 턴 끝에 최대 HP 를 이 값으로 나눈 만큼 잃는다(0이면 없음)
-        int32                 _turns{ 5 };           ///< 기술로 부를 때의 지속 턴
+        PROPERTY( Name = "chip", Min = 0 )
+        int32 _chipDivisor{ 0 }; ///< 턴 끝에 최대 HP 를 이 값으로 나눈 만큼 잃는다(0이면 없음)
+        PROPERTY( Min = 1 )
+        int32 _turns{ 5 }; ///< 기술로 부를 때의 지속 턴
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 조우 슬롯 하나입니다. */
+    REFLECT()
     struct MonsterEncounterSlot
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "species", Required )
         hashed_string _speciesID{};
-        int32         _minLevel{ 2 };
-        int32         _maxLevel{ 2 };
-        int32         _weight{ 1 };
+        PROPERTY( Name = "min", Required, Min = 1, Max = 100 )
+        int32 _minLevel{ 2 };
+        PROPERTY( Name = "max", Required, Min = "_minLevel", Max = 100 )
+        int32 _maxLevel{ 2 };
+        PROPERTY( Min = 0 )
+        int32 _weight{ 1 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 조우 테이블 하나(지역 하나와 시간대 그룹)입니다. 한 지역에 시간대별로 여러 개를 둘 수 있습니다. */
+    REFLECT()
     struct MonsterEncounterDef
     {
-        hashed_string                _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
         hashed_string                _area{};
         vector<hashed_string>        _listTime{}; ///< 비어 있으면 아무 때나
         vector<MonsterEncounterSlot> _listSlot{};
@@ -199,12 +268,13 @@ namespace sw
     /**
      * @class MonsterCollectorCatalog
      * @brief `<MonsterCollectorCatalog>` 아래의 `<Move>`, `<Nature>`, `<Weather>`, `<StatusImmunity>`, `<Species>`(`<Learn>`, `<Evolve>`), `<Encounter>`(`<Slot>`)를 읽는 카탈로그입니다.
-     * @details 예시는 다음과 같다.
-     *          `<Move id="ember" type="Fire" category="Special" power="40" accuracy="100" pp="25" status="Burn" statusChance="10"/>`
-     *          `<Move id="growl" type="Normal" category="Status" pp="40" stat="Attack" stages="-1" target="Foe"/>`
+     * @details 칸은 각 Def 의 `PROPERTY` 가 스키마다(기본값 = 초기값, 범위 = Min · Max). 예시는 다음과 같다.
+     *          `<Move id="ember" name="Ember" type="Fire" category="Special" power="40" accuracy="100" pp="25" status="Burn" statusChance="10"/>`
+     *          `<Move id="growl" name="Growl" type="Normal" category="Status" pp="40" stat="Attack" stages="-1" target="Foe"/>`
+     *          상태이상을 거는 기술은 `statusChance` 를 적어야 한다(변화 기술도 100 을 적는다).
      *          `<Nature id="Adamant" up="Attack" down="SpecialAttack"/>`, `<Weather id="Rain" boost="Water" weaken="Fire" turns="5"/>`
      *          `<StatusImmunity status="Burn" types="Fire"/>`
-     *          `<Species id="charmander" types="Fire" stats="39 52 43 60 50 65" catchRate="45" baseExp="62" expGroup="Medium" evYield="0 0 0 0 0 1">`
+     *          `<Species id="charmander" name="Charmander" types="Fire" stats="39 52 43 60 50 65" catchRate="45" baseExp="62" expGroup="Medium" evYield="0 0 0 0 0 1">`
      *          `<Learn level="1" move="scratch"/><Evolve to="charmeleon" level="16"/></Species>`
      *          `<Encounter id="route1_night" area="route1" time="Night"><Slot species="hoothoot" min="2" max="4" weight="30"/></Encounter>`
      */
@@ -254,9 +324,11 @@ namespace sw
 
         static constexpr const utf8* kXMLRootName = "MonsterCollectorCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-        void                         loadMove( const XMLNode& node, const utf8* pID, string_view sourceName );
-        void                         loadSpecies( const XMLNode& node, const utf8* pID, string_view sourceName );
-        void                         loadEncounter( const XMLNode& node, const utf8* pID );
+        /** @brief 원소 하나를 이름에 맞는 스키마로 읽습니다. 오류면 그 원소를 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
+        [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
+        [[nodiscard]] bool loadMove( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadSpecies( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool loadEncounter( const XMLNode& node, string_view sourceName );
 
         GameCatalog<MonsterSpeciesDef>   _speciesCatalog;
         GameCatalog<MonsterMoveDef>      _moveCatalog;

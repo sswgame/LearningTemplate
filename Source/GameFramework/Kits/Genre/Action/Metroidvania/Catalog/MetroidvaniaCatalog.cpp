@@ -2,8 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
@@ -17,22 +15,27 @@ namespace sw
     {
         struct MetroidvaniaCatalogInternal
         {
-            static string readText( const XMLNode& node, const utf8* pName, const utf8* pFallback )
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
             {
-                const utf8* pValue = node.findAttribute( pName );
-                return pValue != nullptr ? string( pValue ) : string( pFallback );
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+                return true;
             }
 
-            static uint8 readFlag( const XMLNode& node, const utf8* pName, uint8 fallback )
+            /** @brief 없어도 되는 원소 @p pName 을 스키마 @p TDef 로 읽습니다. 없으면 @p outDef 는 스키마 초기값이고 true 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readOptionalChild( const XMLNode& root, const utf8* pName, string_view sourceName, TDef& outDef )
             {
-                return node.getAttributeBool( pName, fallback != SW_FALSE ) ? SW_TRUE : SW_FALSE;
+                const XMLNode node = root.findChild( pName );
+                return node ? GameDataXML::readFields( node, outDef, sourceName ) : true;
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
     MetroidvaniaCatalog::MetroidvaniaCatalog()
         : _abilityCatalog{}
         , _charmCatalog{}
@@ -44,174 +47,150 @@ namespace sw
     {
     }
 
-    void MetroidvaniaCatalog::loadRules( const XMLNode& root )
+    bool MetroidvaniaCatalog::loadRules( const XMLNode& root, string_view sourceName )
     {
-        const utf8* pCurrency = root.findAttribute( "currency" );
-        if ( pCurrency != nullptr )
-            _rules._currency = hashed_string( pCurrency );
+        using Internal = MetroidvaniaCatalogInternal;
+        // 규칙은 파일마다 통째로 정한다 — 칸의 기본값은 스키마 초기값이고 앞의 값을 이어받지 않는다.
+        MetroCatalogRootDef rootDef;
+        MetroRules          rules;
+        MetroHealthDef      health;
+        MetroStaminaDef     stamina;
+        bool                bValid = GameDataXML::readFields( root, rootDef, sourceName );
+        bValid                     = Internal::readOptionalChild( root, "Rules", sourceName, rules ) && bValid;
+        bValid                     = Internal::readOptionalChild( root, "Health", sourceName, health ) && bValid;
+        bValid                     = Internal::readOptionalChild( root, "Stamina", sourceName, stamina ) && bValid;
+        rules._currency            = rootDef._currency;
 
-        const XMLNode rules = root.findChild( "Rules" );
-        if ( rules )
-        {
-            _rules._flaskCharges              = MathUtil::max( 0, rules.getAttributeInt( "flaskCharges", _rules._flaskCharges ) );
-            _rules._flaskMaxCharges           = MathUtil::max( _rules._flaskCharges, rules.getAttributeInt( "flaskMaxCharges", _rules._flaskMaxCharges ) );
-            _rules._flaskHeal                 = MathUtil::max( 0.0f, rules.getAttributeFloat( "flaskHeal", _rules._flaskHeal ) );
-            _rules._flaskHealPerUpgrade       = MathUtil::max( 0.0f, rules.getAttributeFloat( "flaskHealPerUpgrade", _rules._flaskHealPerUpgrade ) );
-            _rules._riposteMultiplier         = MathUtil::max( 1.0f, rules.getAttributeFloat( "riposteMultiplier", _rules._riposteMultiplier ) );
-            _rules._riposteTime               = MathUtil::max( 0.0f, rules.getAttributeFloat( "riposteTime", _rules._riposteTime ) );
-            _rules._attackStaminaCost         = MathUtil::max( 0.0f, rules.getAttributeFloat( "attackStamina", _rules._attackStaminaCost ) );
-            _rules._dodgeStaminaCost          = MathUtil::max( 0.0f, rules.getAttributeFloat( "dodgeStamina", _rules._dodgeStaminaCost ) );
-            _rules._guardStaminaPerDamage     = MathUtil::max( 0.0f, rules.getAttributeFloat( "guardStaminaPerDamage", _rules._guardStaminaPerDamage ) );
-            _rules._guardChipRatio            = MathUtil::saturate( rules.getAttributeFloat( "guardChip", _rules._guardChipRatio ) );
-            _rules._corpseRecoverRadius       = MathUtil::max( 0.0f, rules.getAttributeFloat( "corpseRadius", _rules._corpseRecoverRadius ) );
-            _rules._overcharmDamageTakenScale = MathUtil::max( 1.0f, rules.getAttributeFloat( "overcharmDamageScale", _rules._overcharmDamageTakenScale ) );
-            _rules._charmNotches              = MathUtil::max( 0, rules.getAttributeInt( "charmNotches", _rules._charmNotches ) );
-            _rules._bAllowOvercharm           = MetroidvaniaCatalogInternal::readFlag( rules, "overcharm", _rules._bAllowOvercharm );
-        }
+        VitalitySettings& vitality   = rules._health;
+        vitality._maxHealth          = health._maxHealth;
+        vitality._poiseMax           = health._poiseMax;
+        vitality._poiseRegenDelay    = health._poiseRegenDelay;
+        vitality._poiseRegenRate     = health._poiseRegenRate;
+        vitality._poiseBreakDuration = health._poiseBreakDuration;
+        vitality._healthRegenRate    = health._healthRegenRate;
+        vitality._bDownedEnabled     = SW_FALSE; // 소울라이크는 기절이 없다. 체력이 0이 되면 죽는다
+        ResourceGaugeSettings& gauge = rules._stamina;
+        gauge._max                   = stamina._max;
+        gauge._regenRate             = stamina._regenRate;
+        gauge._regenDelay            = stamina._regenDelay;
+        gauge._exhaustThreshold      = stamina._exhaustThreshold;
+        gauge._bOverheatMode         = SW_FALSE;
 
-        const XMLNode health = root.findChild( "Health" );
-        if ( health )
-        {
-            VitalitySettings& settings   = _rules._health;
-            settings._maxHealth          = MathUtil::max( 1.0f, health.getAttributeFloat( "max", settings._maxHealth ) );
-            settings._poiseMax           = MathUtil::max( 0.0f, health.getAttributeFloat( "poise", settings._poiseMax ) );
-            settings._poiseRegenDelay    = MathUtil::max( 0.0f, health.getAttributeFloat( "poiseRegenDelay", settings._poiseRegenDelay ) );
-            settings._poiseRegenRate     = MathUtil::max( 0.0f, health.getAttributeFloat( "poiseRegenRate", settings._poiseRegenRate ) );
-            settings._poiseBreakDuration = MathUtil::max( 0.0f, health.getAttributeFloat( "poiseBreakDuration", settings._poiseBreakDuration ) );
-            settings._healthRegenRate    = MathUtil::max( 0.0f, health.getAttributeFloat( "regenRate", settings._healthRegenRate ) );
-        }
-        _rules._health._bDownedEnabled = SW_FALSE; // 소울라이크는 기절이 없다. 체력이 0이 되면 죽는다
-
-        const XMLNode stamina = root.findChild( "Stamina" );
-        if ( stamina )
-        {
-            ResourceGaugeSettings& settings = _rules._stamina;
-            settings._max                   = MathUtil::max( 1.0f, stamina.getAttributeFloat( "max", settings._max ) );
-            settings._regenRate             = MathUtil::max( 0.0f, stamina.getAttributeFloat( "regenRate", settings._regenRate ) );
-            settings._regenDelay            = MathUtil::max( 0.0f, stamina.getAttributeFloat( "regenDelay", settings._regenDelay ) );
-            settings._exhaustThreshold      = MathUtil::max( 0.0f, stamina.getAttributeFloat( "exhaustThreshold", settings._exhaustThreshold ) );
-            settings._bOverheatMode         = SW_FALSE;
-        }
-
+        // 패리 창은 판정의 유일한 근거다 — 코드가 대신 정한 창을 쓰지 않는다.
         const XMLNode parry = root.findChild( "Parry" );
         if ( parry )
-            _rules._parryJudge.loadFromNode( parry );
-        if ( _rules._parryJudge.getWindows().empty() )
+            rules._parryJudge.loadFromNode( parry );
+        if ( rules._parryJudge.getWindows().empty() )
         {
-            TimingWindow window;
-            window._grade      = hashed_string( "Parry" );
-            window._earlyWidth = 0.1f;
-            window._lateWidth  = 0.03f;
-            _rules._parryJudge.setWindows( vector<TimingWindow>{ window } );
+            SW_LOG_ERROR( "%#: needs <Parry> with at least one <Window grade=\"..\" early=\"..\" late=\"..\"/>", sourceName );
+            bValid = false;
         }
+        if ( bValid == false )
+            return false;
+        _rules = rules;
+        return true;
     }
 
     uint32 MetroidvaniaCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        loadRules( root );
+        using Internal = MetroidvaniaCatalogInternal;
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        if ( loadRules( root, sourceName ) == false )
+            return 0;
         uint32 loadedCount = 0;
-
+        // 줍는 것이 능력 · 부적을 가리키므로 종류 순서대로 읽는다.
         for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            MetroAbilityDef ability;
-            ability._id         = hashed_string( pID );
-            ability._name       = MetroidvaniaCatalogInternal::readText( node, "name", pID );
-            ability._flag       = GameDataXML::readName( node, "flag" );
-            const XMLNode motor = node.findChild( "Motor" );
-            if ( motor )
-                (void)ability._motor.loadFromAttributes( motor ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
-            for ( const StatValue& value : ability._motor.getValues() )
-            {
-                if ( MetroAbilitySet::isMotorSettingName( value._name ) == false )
-                    SW_LOG_WARNING( "%#: ability '%#' changes an unknown motor setting '%#' - ignored", sourceName, pID, value._name.c_str() );
-            }
-            (void)_abilityCatalog.add( ability );
-            ++loadedCount;
+            loadedCount += loadAbility( node, sourceName ) ? 1 : 0;
         }
-
         for ( XMLNode node = root.findChild( "Charm" ); node; node = node.findNextSibling( "Charm" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            MetroCharmDef charm;
-            charm._id           = hashed_string( pID );
-            charm._name         = MetroidvaniaCatalogInternal::readText( node, "name", pID );
-            charm._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", charm._cost ) );
-            const XMLNode stats = node.findChild( "Stats" );
-            if ( stats )
-                (void)charm._stats.loadFromAttributes( stats ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
-            (void)_charmCatalog.add( charm );
-            ++loadedCount;
+            loadedCount += loadCharm( node, sourceName ) ? 1 : 0;
         }
-
         for ( XMLNode node = root.findChild( "Map" ); node; node = node.findNextSibling( "Map" ) )
         {
-            MetroRegionMapDef regionMap;
-            regionMap._id = GameDataXML::readName( node, "region" );
-            if ( regionMap._id.empty() )
-            {
-                SW_LOG_WARNING( "%#: <Map> without a region - skipped", sourceName );
-                continue;
-            }
-            regionMap._price = MathUtil::max( 0, node.getAttributeInt( "price", regionMap._price ) );
-            (void)_mapCatalog.add( regionMap );
-            ++loadedCount;
+            loadedCount += Internal::readInto( node, sourceName, _mapCatalog ) ? 1 : 0;
         }
-
         for ( XMLNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            MetroSiteDef site;
-            site._id          = hashed_string( pID );
-            site._area        = GameDataXML::readName( node, "area" );
-            site._bRest       = MetroidvaniaCatalogInternal::readFlag( node, "rest", SW_FALSE );
-            site._bFastTravel = MetroidvaniaCatalogInternal::readFlag( node, "fastTravel", SW_FALSE );
-            if ( site._area.empty() )
-                SW_LOG_WARNING( "%#: site '%#' has no area - it never shows on the map", sourceName, pID );
-            (void)_siteCatalog.add( site );
-            ++loadedCount;
+            loadedCount += Internal::readInto( node, sourceName, _siteCatalog ) ? 1 : 0;
         }
-
         for ( XMLNode node = root.findChild( "Pickup" ); node; node = node.findNextSibling( "Pickup" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            MetroPickupDef pickup;
-            pickup._id      = hashed_string( pID );
-            pickup._area    = GameDataXML::readName( node, "area" );
-            pickup._ability = GameDataXML::readName( node, "ability" );
-            pickup._charm   = GameDataXML::readName( node, "charm" );
-            if ( pickup._ability.empty() == false && _abilityCatalog.find( pickup._ability ) == nullptr )
-                SW_LOG_WARNING( "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pID, pickup._ability.c_str() );
-            if ( pickup._charm.empty() == false && _charmCatalog.find( pickup._charm ) == nullptr )
-                SW_LOG_WARNING( "%#: pickup '%#' grants an unknown charm '%#'", sourceName, pID, pickup._charm.c_str() );
-            (void)_pickupCatalog.add( pickup );
-            ++loadedCount;
+            loadedCount += loadPickup( node, sourceName ) ? 1 : 0;
         }
-
         for ( XMLNode node = root.findChild( "Enemy" ); node; node = node.findNextSibling( "Enemy" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            MetroEnemyDef enemy;
-            enemy._id        = hashed_string( pID );
-            enemy._currency  = MathUtil::max( 0, node.getAttributeInt( "currency", enemy._currency ) );
-            enemy._lootTable = GameDataXML::readName( node, "loot" );
-            enemy._bBoss     = MetroidvaniaCatalogInternal::readFlag( node, "boss", SW_FALSE );
-            enemy._flag      = GameDataXML::readName( node, "flag" );
-            if ( enemy._bBoss == SW_TRUE && enemy._flag.empty() )
-                enemy._flag = hashed_string( string( "boss." ) + pID );
-            (void)_enemyCatalog.add( enemy );
-            ++loadedCount;
+            loadedCount += loadEnemy( node, sourceName ) ? 1 : 0;
         }
         return loadedCount;
+    }
+
+    bool MetroidvaniaCatalog::loadAbility( const XMLNode& node, string_view sourceName )
+    {
+        MetroAbilityDef ability;
+        bool            bValid = GameDataXML::readFields( node, ability, sourceName );
+        const XMLNode   motor  = node.findChild( "Motor" );
+        if ( motor )
+            ability._motor.loadFromAttributes( motor ); // 속성이 없으면 빈 스탯이다
+        for ( const StatValue& value : ability._motor.getValues() )
+        {
+            if ( MetroAbilitySet::isMotorSettingName( value._name ) == false )
+            {
+                SW_LOG_ERROR( "%#: ability '%#' changes an unknown motor setting '%#'", sourceName, ability._id.c_str(), value._name.c_str() );
+                bValid = false;
+            }
+        }
+        if ( bValid == false )
+            return false;
+        (void)_abilityCatalog.add( ability );
+        return true;
+    }
+
+    bool MetroidvaniaCatalog::loadCharm( const XMLNode& node, string_view sourceName )
+    {
+        MetroCharmDef charm;
+        if ( GameDataXML::readFields( node, charm, sourceName ) == false )
+            return false;
+        const XMLNode stats = node.findChild( "Stats" );
+        if ( stats )
+            charm._stats.loadFromAttributes( stats ); // 속성이 없으면 빈 스탯이다
+        (void)_charmCatalog.add( charm );
+        return true;
+    }
+
+    bool MetroidvaniaCatalog::loadPickup( const XMLNode& node, string_view sourceName )
+    {
+        MetroPickupDef pickup;
+        bool           bValid = GameDataXML::readFields( node, pickup, sourceName );
+        if ( pickup._ability.empty() == false && _abilityCatalog.find( pickup._ability ) == nullptr )
+        {
+            SW_LOG_ERROR( "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pickup._id.c_str(), pickup._ability.c_str() );
+            bValid = false;
+        }
+        if ( pickup._charm.empty() == false && _charmCatalog.find( pickup._charm ) == nullptr )
+        {
+            SW_LOG_ERROR( "%#: pickup '%#' grants an unknown charm '%#'", sourceName, pickup._id.c_str(), pickup._charm.c_str() );
+            bValid = false;
+        }
+        if ( bValid == false )
+            return false;
+        (void)_pickupCatalog.add( pickup );
+        return true;
+    }
+
+    bool MetroidvaniaCatalog::loadEnemy( const XMLNode& node, string_view sourceName )
+    {
+        MetroEnemyDef enemy;
+        bool          bValid = GameDataXML::readFields( node, enemy, sourceName );
+        if ( enemy._bBoss && enemy._flag.empty() )
+        {
+            SW_LOG_ERROR( "%#: boss '%#' needs flag=\"...\" (set when it is defeated)", sourceName, enemy._id.c_str() );
+            bValid = false;
+        }
+        if ( bValid == false )
+            return false;
+        (void)_enemyCatalog.add( enemy );
+        return true;
     }
 } // namespace sw

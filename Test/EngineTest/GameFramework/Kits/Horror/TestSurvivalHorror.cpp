@@ -53,7 +53,6 @@ namespace
   <Item id="case" kind="None" w="2" h="2"/>
   <Item id="junk" kind="None"/>
   <Item id="keyRed" kind="Key"/>
-  <Item id="oddThing" kind="Spaceship"/>
   <Combine id="mixGR" a="herbGreen" b="herbRed" out="herbMix"/>
   <Combine id="mixSuper" a="herbMix" b="herbGreen" out="herbSuper"/>
   <Monster id="zombie" sanityLoss="30" toughness="4" damage="1" horror="1"/>
@@ -91,6 +90,18 @@ namespace
     }
 } // namespace
 
+SW_TEST_CASE( SurvivalHorrorTest, CatalogRejectsAnUnknownItemKindInsteadOfReadingNone )
+{
+    // 모르는 종류를 None 으로 읽으면 쓰지 못하는 아이템이 조용히 생긴다 — 그 원소를 넣지 않고 오류로 알린다.
+    HorrorCatalog catalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown item kind is rejected" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( "<HorrorCatalog><Item id=\"oddThing\" kind=\"Spaceship\"/><Item id=\"junk\" kind=\"None\"/></HorrorCatalog>", "SurvivalHorrorTest" ) );
+    }
+    SW_EXPECT_NULL( catalog.findItem( "oddThing" ) );
+    SW_EXPECT_NOT_NULL( catalog.findItem( "junk" ) );
+}
+
 SW_TEST_CASE( SurvivalHorrorTest, CatalogReadsItemsCombinesPuzzlesAndRules )
 {
     HorrorCatalog catalog;
@@ -101,7 +112,6 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogReadsItemsCombinesPuzzlesAndRules )
     SW_EXPECT_EQUAL( 1, pRifle->_height );
     SW_EXPECT_TRUE( pRifle->_kind == HorrorItemKind::Weapon );
     SW_EXPECT_EQUAL( 10, catalog.findItem( "ammo" )->_maxStack );
-    SW_EXPECT_TRUE( catalog.findItem( "oddThing" )->_kind == HorrorItemKind::None ); // 모르는 종류는 경고하고 기본값
 
     // 조합은 순서가 없다 — 기반 RecipeCatalog 의 Combine 작업대 레시피.
     const RecipeDef* pMix = catalog.findCombine( "herbRed", "herbGreen" );

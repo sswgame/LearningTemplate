@@ -30,7 +30,7 @@
     #include "Engine/Profiling/FrameProfiler.h"
     #include "Engine/Scene/Scene.h"
     #include "Engine/Scene/SceneManager.h"
-    #include "Engine/Utility/DebugOverlayState.h"
+    #include "Engine/Profiling/DebugOverlayState.h"
 
 namespace sw
 {

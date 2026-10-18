@@ -23,21 +23,20 @@ namespace
 {
     constexpr const utf8* kRTSTestXML = R"(
 <RTSCatalog supplyMax="200">
-  <Unit id="minerals" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
-  <Unit id="shard" kind="Resource" resource="Minerals" amount="10" footprint="1"/>
-  <Unit id="geyser" kind="Resource" resource="Gas" amount="500" footprint="2"/>
-  <Unit id="base" kind="Building" hp="1500" armor="1" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60" sight="10"/>
-  <Unit id="worker" hp="40" speed="3" radius="0.35" damage="5" range="0.2" cooldown="1.1" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12" gatherTime="2" cargo="5" sight="7"/>
-  <Unit id="depot" kind="Building" hp="400" footprint="2" provides="8" producedBy="worker" minerals="100" buildTime="20"/>
-  <Unit id="barracks" kind="Building" hp="1000" footprint="3" producedBy="worker" minerals="150" buildTime="40" requires="base"/>
-  <Unit id="academy" kind="Building" hp="600" footprint="3" producedBy="worker" minerals="150" buildTime="40"/>
-  <Unit id="refinery" kind="Building" extractor="true" hp="500" footprint="2" producedBy="worker" minerals="75" buildTime="20"/>
-  <Unit id="turret" kind="Building" hp="200" footprint="2" damage="10" range="7" cooldown="1" targets="Air" producedBy="worker" minerals="100" buildTime="20" sight="9"/>
-  <Unit id="wall" kind="Building" hp="300" armor="10" footprint="2" producedBy="worker" minerals="50" buildTime="10"/>
-  <Unit id="marine" hp="40" speed="2.25" radius="0.35" damage="6" range="4" cooldown="0.86" targets="Ground,Air" producedBy="barracks" minerals="50" supply="1" buildTime="18" sight="9"/>
-  <Unit id="zealot" hp="60" armor="1" speed="2.75" radius="0.45" damage="16" range="0.2" cooldown="1.2" producedBy="barracks" minerals="100" supply="2" buildTime="27" requires="academy"/>
-  <Unit id="wraith" air="true" hp="120" speed="4" radius="0.5" damage="8" range="5" cooldown="1.5" targets="Ground,Air" producedBy="barracks" minerals="150" gas="100" supply="2" buildTime="40"/>
-  <Unit id="tank" kind="Vehicle" hp="150"/>
+  <Unit id="minerals" name="minerals" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
+  <Unit id="shard" name="shard" kind="Resource" resource="Minerals" amount="10" footprint="1"/>
+  <Unit id="geyser" name="geyser" kind="Resource" resource="Gas" amount="500" footprint="2"/>
+  <Unit id="base" name="base" kind="Building" hp="1500" armor="1" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60" sight="10"/>
+  <Unit id="worker" name="worker" hp="40" speed="3" radius="0.35" damage="5" range="0.2" cooldown="1.1" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12" gatherTime="2" cargo="5" sight="7"/>
+  <Unit id="depot" name="depot" kind="Building" hp="400" footprint="2" provides="8" producedBy="worker" minerals="100" buildTime="20"/>
+  <Unit id="barracks" name="barracks" kind="Building" hp="1000" footprint="3" producedBy="worker" minerals="150" buildTime="40" requires="base"/>
+  <Unit id="academy" name="academy" kind="Building" hp="600" footprint="3" producedBy="worker" minerals="150" buildTime="40"/>
+  <Unit id="refinery" name="refinery" kind="Building" extractor="true" hp="500" footprint="2" producedBy="worker" minerals="75" buildTime="20"/>
+  <Unit id="turret" name="turret" kind="Building" hp="200" footprint="2" damage="10" range="7" cooldown="1" targets="Air" producedBy="worker" minerals="100" buildTime="20" sight="9"/>
+  <Unit id="wall" name="wall" kind="Building" hp="300" armor="10" footprint="2" producedBy="worker" minerals="50" buildTime="10"/>
+  <Unit id="marine" name="marine" hp="40" speed="2.25" radius="0.35" damage="6" range="4" cooldown="0.86" targets="Ground,Air" producedBy="barracks" minerals="50" supply="1" buildTime="18" sight="9"/>
+  <Unit id="zealot" name="zealot" hp="60" armor="1" speed="2.75" radius="0.45" damage="16" range="0.2" cooldown="1.2" producedBy="barracks" minerals="100" supply="2" buildTime="27" requires="academy"/>
+  <Unit id="wraith" name="wraith" air="true" hp="120" speed="4" radius="0.5" damage="8" range="5" cooldown="1.5" targets="Ground,Air" producedBy="barracks" minerals="150" gas="100" supply="2" buildTime="40"/>
 </RTSCatalog>
 )";
 
@@ -103,11 +102,28 @@ namespace
     };
 } // namespace
 
+/**
+ * @brief [RealTimeStrategyTest] 카탈로그 — 모르는 종류 · 공격 대상은 유닛 · 지상으로 물러나지 않고 그 원소를 넣지 않는 오류다
+ */
+SW_TEST_CASE( RealTimeStrategyTest, CatalogRejectsUnknownKindAndTargetInsteadOfReadingDefaults )
+{
+    RTSCatalog catalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "unknown kind and target names are rejected" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( "<RTSCatalog><Unit id=\"tank\" name=\"Tank\" kind=\"Vehicle\"/><Unit id=\"flak\" name=\"Flak\" targets=\"Sky\"/>"
+                                                 "<Unit id=\"marine\" name=\"Marine\" speed=\"2\"/></RTSCatalog>",
+                                                 "RealTimeStrategyTest" ) );
+    }
+    SW_EXPECT_NULL( catalog.find( hashed_string( "tank" ) ) );
+    SW_EXPECT_NULL( catalog.find( hashed_string( "flak" ) ) );
+    SW_EXPECT_NOT_NULL( catalog.find( hashed_string( "marine" ) ) );
+}
+
 SW_TEST_CASE( RealTimeStrategyTest, CatalogReadsUnitsBuildingsAndResources )
 {
     RTSCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kRTSTestXML, "RealTimeStrategyTest" ) );
-    SW_EXPECT_EQUAL( 15, static_cast<int32>( catalog.getAll().size() ) );
+    SW_EXPECT_EQUAL( 14, static_cast<int32>( catalog.getAll().size() ) );
     SW_EXPECT_EQUAL( 200, catalog.getSupplyMax() );
 
     const RTSUnitDef* pBase = catalog.find( hashed_string( "base" ) );
@@ -127,7 +143,6 @@ SW_TEST_CASE( RealTimeStrategyTest, CatalogReadsUnitsBuildingsAndResources )
     SW_EXPECT_TRUE( pZealot->_requires == hashed_string( "academy" ) );
     SW_EXPECT_TRUE( catalog.find( hashed_string( "turret" ) )->_bTargetsGround == SW_FALSE );
     SW_EXPECT_TRUE( catalog.find( hashed_string( "geyser" ) )->_resourceType == RTSResourceType::Gas );
-    SW_EXPECT_TRUE( catalog.find( hashed_string( "tank" ) )->_kind == RTSUnitKind::Unit ); // 모르는 종류는 유닛으로 읽는다
 
     vector<const RTSUnitDef*> listProduct;
     catalog.findProducts( hashed_string( "barracks" ), listProduct );
@@ -677,8 +692,8 @@ SW_TEST_CASE( RealTimeStrategyTest, AttackRateFollowsTheCooldownNotTheStepGrid )
 {
     constexpr const utf8* kRateXML = R"(
 <RTSCatalog supplyMax="200">
-  <Unit id="cannon" kind="Building" hp="500" footprint="2" damage="10" range="8" cooldown="1.2" targets="Ground" sight="10"/>
-  <Unit id="block" kind="Building" hp="100000" footprint="2" sight="2"/>
+  <Unit id="cannon" name="cannon" kind="Building" hp="500" footprint="2" damage="10" range="8" cooldown="1.2" targets="Ground" sight="10"/>
+  <Unit id="block" name="block" kind="Building" hp="100000" footprint="2" sight="2"/>
 </RTSCatalog>
 )";
     RTSCatalog            catalog;

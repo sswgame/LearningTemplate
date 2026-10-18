@@ -51,8 +51,7 @@
 			                      _bActive="true"
 			                      _openRadius="2"
 			                      _bStaysOpen="true"
-			                      _bPlanar="true"
-			                      _bOpen="false">
+			                      _bPlanar="true">
 				<_requiredTags>
 					<_listTag>
 						<item>Ability.Bomb</item>

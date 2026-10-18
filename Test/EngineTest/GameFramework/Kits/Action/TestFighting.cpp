@@ -52,7 +52,7 @@ namespace
 
     // 방향이 붙은 한 단계 커맨드는 우선도 1 — 기반 규칙은 단계 수만 보므로 "d/f+1" 과 "1" 이 같은 길이다.
     constexpr const utf8* kFightingFighterXML = R"(<FighterCatalog>
-        <Fighter id="tester" name="Tester" health="100" sidestepFrames="20" sidestepAngle="40">
+        <Fighter id="tester" name="Tester" health="100" sidestepFrames="20" sidestepAngle="0.6981317" sidestep="u" sidestepDown="d,n" jump="u/f">
           <Move id="jab" command="1"/>
           <Move id="jab2" command="2" stringOnly="true"/>
           <Move id="two" command="2"/>
@@ -74,7 +74,6 @@ namespace
           <Move id="toFlamingo" command="f+3" enterStance="flamingo" priority="1"/>
           <Move id="flamingoKick" command="4" stance="flamingo" priority="1"/>
           <Move id="rageArt" command="f+1+2" rageArt="true" priority="3"/>
-          <Move id="missing" command="1"/>
         </Fighter>
       </FighterCatalog>)";
 
@@ -218,13 +217,38 @@ namespace
     }
 } // namespace
 
+SW_TEST_CASE( FightingTest, CatalogSkipsBrokenMovesAndRejectsFightersWithoutMovementCommands )
+{
+    // 프레임 데이터가 없는 기술, 모르는 자세, 모르는 속성은 그 기술만 버린다. 횡이동 · 점프 커맨드를 적지 않은 캐릭터는 넣지 않는다(코드가 대신 정한 커맨드를 쓰지 않는다).
+    constexpr const utf8* kBrokenXML = R"(<FighterCatalog>
+        <Fighter id="broken" name="Broken" sidestep="u" sidestepDown="d,n" jump="u/f">
+          <Move id="jab" command="1"/>
+          <Move id="missing" command="1"/>
+          <Move id="two" command="2" from="Sitting"/>
+          <Move id="df1" command="d/f+1" priorty="1"/>
+        </Fighter>
+        <Fighter id="still" name="Still"><Move id="jab" command="1"/></Fighter>
+      </FighterCatalog>)";
+    MoveCatalog           moveCatalog;
+    FighterCatalog        fighterCatalog;
+    SW_ASSERT_TRUE( moveCatalog.loadFromXMLText( kFightingMoveXML, "FightingTest" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "moves and fighters that break the schema are skipped with an error" );
+        SW_ASSERT_TRUE( fighterCatalog.loadFromXMLText( kBrokenXML, moveCatalog, "FightingTest" ) );
+    }
+    const FighterDef* pBroken = fighterCatalog.find( "broken" );
+    SW_ASSERT_NOT_NULL( pBroken );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( pBroken->_listMove.size() ) );
+    SW_EXPECT_NULL( fighterCatalog.find( "still" ) );
+}
+
 SW_TEST_CASE( FightingTest, CommandPriorityStringWindowPostureAndConditions )
 {
     FightingFixture fixture;
     SW_ASSERT_TRUE( fixture._bLoaded );
     const FighterDef* pTester = fixture.findTester();
     SW_ASSERT_NOT_NULL( pTester );
-    SW_EXPECT_EQUAL( 21, static_cast<int32>( pTester->_listMove.size() ) ); // 프레임 데이터가 없는 "missing" 은 버린다
+    SW_EXPECT_EQUAL( 21, static_cast<int32>( pTester->_listMove.size() ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( pTester->_listStance.size() ) );
 
     FightingMatch         match;

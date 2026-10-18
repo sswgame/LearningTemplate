@@ -79,7 +79,6 @@
 					<GimmickWireDesc _from="use.OnUsed" _to="unlocked.Set" _bInvert="false" />
 					<GimmickWireDesc _from="unlocked.Out" _to="door.Open" _bInvert="false" />
 				</_listWire>
-				<_listRestPose />
 			</GimmickCircuitComponent>
 		</_listComponent>
 	</GameObject>

@@ -255,7 +255,7 @@ namespace sw
                 else
                 {
                     const FighterMove* pMove                = fighter.findCurrentMove();
-                    const bool         bShouldAimAtOpponent = bAdvanced && pMove != nullptr && pMove->_bTracking == SW_TRUE;
+                    const bool         bShouldAimAtOpponent = bAdvanced && pMove != nullptr && pMove->_bTracking;
                     if ( bShouldAimAtOpponent )
                         aimAtOpponent( player );
                 }
@@ -265,7 +265,7 @@ namespace sw
             {
                 // 상대를 축으로 돈다. 상대의 직선 기술은 시작 방향에 묶여 있어서 옆으로 벌어진 각도만큼 빗나간다.
                 const FighterRuntime& other = _arrFighter[opponent];
-                const float32         step  = MathUtil::toRadian( fighter._pDef->_sidestepAngle ) / static_cast<float32>( fighter._pDef->_sidestepFrames );
+                const float32         step  = fighter._pDef->_sidestepAngle / static_cast<float32>( fighter._pDef->_sidestepFrames );
                 const float32         angle = step * static_cast<float32>( fighter._sidestepSign );
                 const float32         relX  = fighter._x - other._x;
                 const float32         relZ  = fighter._z - other._z;
@@ -461,7 +461,7 @@ namespace sw
         {
             const bool bFree = bAsIfFree || fighter._state == FighterState::Neutral || fighter._state == FighterState::Sidestep ||
                                fighter._state == FighterState::Jump;
-            if ( bFree == false || ( move._bStringOnly == SW_TRUE && isUpcomingCancelTarget( player, moveIndex ) == false ) )
+            if ( bFree == false || ( move._bStringOnly && isUpcomingCancelTarget( player, moveIndex ) == false ) )
                 return false;
             const FighterPosture posture =
                 fighter._bAirborne == SW_TRUE ? FighterPosture::Airborne : ( fighter._state == FighterState::Sidestep ? FighterPosture::Standing : fighter._posture );
@@ -474,13 +474,13 @@ namespace sw
                     return false;
             }
         }
-        if ( move._bGroundHit == SW_TRUE && other._state != FighterState::Down )
+        if ( move._bGroundHit && other._state != FighterState::Down )
             return false;
-        if ( move._bNearWall == SW_TRUE && isNearWall( 1 - player ) == false )
+        if ( move._bNearWall && isNearWall( 1 - player ) == false )
             return false;
-        if ( move._bRageArt == SW_TRUE && fighter._bRage == SW_FALSE )
+        if ( move._bRageArt && fighter._bRage == SW_FALSE )
             return false;
-        if ( move._bHeatBurst == SW_TRUE && ( _settings._bHeatEnabled == SW_FALSE || fighter._bHeatUsed == SW_TRUE ) )
+        if ( move._bHeatBurst && ( _settings._bHeatEnabled == SW_FALSE || fighter._bHeatUsed == SW_TRUE ) )
             return false;
         return true;
     }
@@ -529,13 +529,13 @@ namespace sw
                                                                                                                                 : FighterPosture::Standing;
         aimAtOpponent( player ); // 공격 방향은 여기서 고정한다(추적 기술만 다시 겨눈다)
         pushEvent( FightingEvent::Kind::MoveStarted, player, moveIndex, move._frame._id );
-        if ( move._bRageArt == SW_TRUE )
+        if ( move._bRageArt )
         {
             fighter._bRage     = SW_FALSE;
             fighter._bRageUsed = SW_TRUE;
             pushEvent( FightingEvent::Kind::RageArt, player, 0, move._frame._id );
         }
-        if ( move._bHeatBurst == SW_TRUE )
+        if ( move._bHeatBurst )
         {
             fighter._bHeatUsed  = SW_TRUE;
             fighter._heatFrames = _settings._heatFrames;
@@ -754,7 +754,7 @@ namespace sw
             }
             case FighterState::Down:
             {
-                if ( pMove->_bGroundHit == SW_FALSE )
+                if ( pMove->_bGroundHit == false )
                     return false;
                 break;
             }
@@ -901,7 +901,7 @@ namespace sw
         const bool bWallSplat = frameData._bWallSplat == SW_TRUE && isNearWall( defender ) && other._bWallSplatUsed == SW_FALSE;
         if ( other._state == FighterState::Juggle )
         {
-            if ( move._bScrew == SW_TRUE && other._bScrewUsed == SW_FALSE )
+            if ( move._bScrew && other._bScrewUsed == SW_FALSE )
             {
                 // 스크류는 상대를 다시 띄워 멀리 밀어낸다. 한 콤보에 한 번만 쓸 수 있다.
                 other._bScrewUsed = SW_TRUE;
@@ -910,7 +910,7 @@ namespace sw
                 other._carryZ     = fighter._dirZ * _settings._screwCarrySpeed;
                 pushEvent( FightingEvent::Kind::Screw, attacker, 0, frameData._id );
             }
-            else if ( move._bBound == SW_TRUE && other._bBoundUsed == SW_FALSE )
+            else if ( move._bBound && other._bBoundUsed == SW_FALSE )
             {
                 other._bBoundUsed = SW_TRUE;
                 other._velocityY  = _settings._boundVelocity;

@@ -908,6 +908,17 @@ namespace sw
                 return listToken;
             }
 
+            /** @brief 커서 선언의 소스 토큰에 식별자 @p name 이 그대로 적혀 있는지 봅니다(매크로가 만든 이름이면 false). */
+            [[nodiscard]] static bool isSpelledInSource( const CXCursor cursor, const string& name )
+            {
+                for ( const SourceToken& token : tokenizeCursor( cursor ) )
+                {
+                    if ( token._kind == CXToken_Identifier && token._spelling == name )
+                        return true;
+                }
+                return false;
+            }
+
             /** @brief 여는 괄호류면 +1, 닫는 괄호류면 -1 입니다. `<` · `>` 도 셉니다(템플릿 인자 안의 쉼표를 가르지 않게). */
             static int32 getBracketDelta( const string_view spelling ) noexcept
             {
@@ -1207,6 +1218,15 @@ namespace sw
                 ParsedPropertyInfo   prop;
                 prop._memberName = getCursorSpelling( cursor );
                 prop._name       = prop._memberName;
+                // 칸 이름이 매크로로 바뀌면(Windows CRT 의 `_stat` → `_stat64i32`) 리플렉션 이름 · 데이터 속성 이름이 소스와 조용히 어긋난다.
+                // 선언의 소스 토큰에 그 이름이 없으면 매크로가 만든 이름이다 — 칸 이름을 바꾸게 멈춘다.
+                if ( isSpelledInSource( cursor, prop._memberName ) == false )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY() '%#' in '%#' is renamed by a macro (the source spells another name) - rename the field",
+                                  prop._memberName.c_str(), makeFullyQualifiedName( clang_getCursorSemanticParent( cursor ) ).c_str() );
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
                 // 템플릿 인자 안의 별칭까지 벗긴 이름이다. 별칭이 없으면 `fieldType` 의 표기 그대로다.
                 string resolvedSpelling;
                 (void)tryResolveAliasSpelling( clang_getCursorType( cursor ), session, resolvedSpelling ); // 벗겼든 아니든 표기를 쓴다

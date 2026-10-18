@@ -200,7 +200,7 @@ namespace sw
         if ( _bCollapseStarted == SW_TRUE )
             return;
         _bCollapseStarted = SW_TRUE;
-        _collapseRemaining.start( _pCatalog->getRules()._collapseTime );
+        _collapseRemaining.start( _pCatalog->getRules()._endgame._collapseTime );
         pushEvent( AsymmetricHorrorEvent::Kind::CollapseStarted, -1, -1, _collapseRemaining.getRemaining(), float3{} );
     }
 
@@ -253,14 +253,14 @@ namespace sw
     {
         const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         InteractionConfig            config;
-        config._duration             = rules._repairTime;
-        config._listParticipantScale = rules._listRepairScale;
-        config._gradeBonus           = rules._skillCheckBonus;
-        config._regressionRate       = bRegressing ? rules._kickRegression : 0.0f;
-        config._skillCheckInterval   = rules._repairSkillCheckInterval;
-        config._skillCheckLeadTime   = rules._skillCheckLeadTime;
-        config._skillCheckPenalty    = rules._skillCheckFailPenalty;
-        config._maxParticipants      = rules._repairMaxParticipants;
+        config._duration             = rules._generator._time;
+        config._listParticipantScale = rules._generator._listScale;
+        config._gradeBonus           = rules._skillCheck._bonus;
+        config._regressionRate       = bRegressing ? rules._generator._kickRegression : 0.0f;
+        config._skillCheckInterval   = rules._generator._skillCheckInterval;
+        config._skillCheckLeadTime   = rules._skillCheck._leadTime;
+        config._skillCheckPenalty    = rules._skillCheck._failPenalty;
+        config._maxParticipants      = rules._generator._maxRepairers;
 
         // 다시 설정해도 진행량은 남긴다(걷어차기 퇴행을 켜고 끄는 데 쓴다).
         HorrorGenerator& target   = _listGenerator[static_cast<size_t>( generator )];

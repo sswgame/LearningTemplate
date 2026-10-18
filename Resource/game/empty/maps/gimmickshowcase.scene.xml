@@ -109,7 +109,6 @@
 							<item>0</item>
 						</_listNodeTarget>
 						<_listWire />
-						<_listRestPose />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>
@@ -147,7 +146,6 @@
 							<item>0</item>
 						</_listNodeTarget>
 						<_listWire />
-						<_listRestPose />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>
@@ -243,7 +241,6 @@
 						<_listWire>
 							<GimmickWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
 						</_listWire>
-						<_listRestPose />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>
@@ -311,7 +308,6 @@
 						<_listWire>
 							<GimmickWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
 						</_listWire>
-						<_listRestPose />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>
@@ -387,9 +383,7 @@
 					                          _bActive="true"
 					                          _health="30"
 					                          _radius="4"
-					                          _damage="80"
-					                          _damageTaken="0"
-					                          _bExploded="false" />
+					                          _damage="80" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -423,12 +417,7 @@
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<ItemBoxComponent _componentName="ItemBoxComponent"
-					                  _bActive="true"
-					                  _respawnDelay="3"
-					                  _seed="1"
-					                  _openCount="0"
-					                  _respawnStepsLeft="0">
+					<ItemBoxComponent _componentName="ItemBoxComponent" _bActive="true" _respawnDelay="3" _seed="1">
 						<_listChoice>
 							<GimmickItemChoice _item="Banana" _weight="3" _count="1" />
 							<GimmickItemChoice _item="Shell" _weight="2" _count="1" />
@@ -471,7 +460,7 @@
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
-					<LaunchPadComponent _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,14,0" _launchCount="0">
+					<LaunchPadComponent _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,14,0">
 						<_requiredTags>
 							<_listTag />
 						</_requiredTags>
@@ -513,7 +502,6 @@
 							<GimmickWireDesc _from="flip.Out" _to="lift.Call1" _bInvert="false" />
 							<GimmickWireDesc _from="flip.Out" _to="lift.Call0" _bInvert="true" />
 						</_listWire>
-						<_listRestPose />
 					</GimmickCircuitComponent>
 				</_listComponent>
 			</GameObject>

@@ -62,7 +62,7 @@ namespace
             SW_EXPECT_TRUE( _service.registerBoard( serverOnly ) );
             LeaderboardDefinition casual;
             casual._boardID       = "casual";
-            casual._bClientSubmit = SW_TRUE;
+            casual._bClientSubmit = true;
             SW_EXPECT_TRUE( _service.registerBoard( casual ) );
             AchievementDefinition achievement;
             achievement._achievementID = "first_win";

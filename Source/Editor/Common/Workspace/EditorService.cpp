@@ -9,9 +9,9 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
 
 SW_LOG_CALLER( "EditorService" );
 namespace sw::editor

@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -41,11 +40,10 @@ namespace sw
         _startingCash         = rootDef._startingCash;
 
         _listPlacement.clear();
-        const float4 opaqueWhite{ 1.0f, 1.0f, 1.0f, 1.0f }; // 색의 알파를 적지 않으면 불투명이다(색 형식의 규칙)
         for ( XMLNode node = root.findChild( "FlatRide" ); node; node = node.findNextSibling( "FlatRide" ) )
         {
             ParkFlatRideDef def;
-            if ( GameDataXML::readFields( node, def, sourceName, { "color" } ) == false )
+            if ( GameDataXML::readFields( node, def, sourceName ) == false )
             {
                 bOk = false;
                 continue;
@@ -66,14 +64,14 @@ namespace sw
             placement._buildCost       = def._cost;
             placement._shape           = def._shape;
             placement._size            = float3{ def._sizeX, def._sizeY, def._sizeZ };
-            placement._color           = GameDataXML::parseFloat4( node.getAttributeText( "color" ), opaqueWhite );
+            placement._color           = def._color;
             placement._spin            = def._spin;
             _listPlacement.push_back( placement );
         }
         for ( XMLNode node = root.findChild( "Coaster" ); node; node = node.findNextSibling( "Coaster" ) )
         {
             ParkCoasterDef def;
-            if ( GameDataXML::readFields( node, def, sourceName, { "color" } ) == false )
+            if ( GameDataXML::readFields( node, def, sourceName ) == false )
             {
                 bOk = false;
                 continue;
@@ -94,7 +92,7 @@ namespace sw
             placement._heading        = def._heading;
             placement._loadTime       = def._loadTime;
             placement._buildCost      = def._cost;
-            placement._color          = GameDataXML::parseFloat4( node.getAttributeText( "color" ), opaqueWhite );
+            placement._color          = def._color;
             _listPlacement.push_back( placement );
         }
         return bOk && _listPlacement.empty() == false;

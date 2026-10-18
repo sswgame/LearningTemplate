@@ -13,19 +13,6 @@ namespace sw
 {
     SW_LOG_CALLER( "MatchModeCatalog" );
 
-    namespace
-    {
-        /** @brief 빈 글이면 그대로 두고 true, 정수가 아니면 false 입니다. */
-        [[nodiscard]] bool readInt64( const XMLNode& node, const utf8* pName, int64& inoutValue )
-        {
-            const string_view text = node.getAttributeText( pName );
-            return text.empty() || StringUtil::parseInt64( text, inoutValue );
-        }
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     bool MatchModeCatalog::parseCompactMode( string_view text, MatchModeDefinition& outMode )
     {
         const size_t colon = text.find( ':' );
@@ -48,41 +35,34 @@ namespace sw
 
     uint32 MatchModeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 `MatchModeDefinition` 의 초기값, 범위는 그 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Mode" ); node; node = node.findNextSibling( "Mode" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            MatchModeDefinition mode;
-            mode._modeID                 = pID;
-            mode._teamCount              = node.getAttributeInt( "teamCount", mode._teamCount );
-            mode._teamSize               = node.getAttributeInt( "teamSize", mode._teamSize );
-            mode._baseRatingWindow       = node.getAttributeInt( "baseRatingWindow", mode._baseRatingWindow );
-            mode._ratingWindowPerSecond  = node.getAttributeInt( "ratingWindowPerSecond", mode._ratingWindowPerSecond );
-            mode._maxRatingWindow        = node.getAttributeInt( "maxRatingWindow", mode._maxRatingWindow );
-            mode._buildVersion           = static_cast<uint32>( node.getAttributeInt( "buildVersion", 0 ) );
-            const string_view serverKind = node.getAttributeText( "serverKind" );
-            if ( serverKind.empty() == false )
-                mode._serverKind = string( serverKind );
-            const bool bTimesOk = readInt64( node, "regionRelaxMs", mode._regionRelaxMs ) &&
-                                  readInt64( node, "maxWaitMs", mode._maxWaitMs );
-            if ( bTimesOk == false )
-            {
-                SW_LOG_WARNING( "%#: mode '%#' needs integer times - skipped", sourceName, pID );
-                continue;
-            }
-            const string rangeError = ConfigRangeUtil::describeRangeErrors( mode ); // 범위의 정본은 `MatchModeDefinition` 의 `PROPERTY` 다
-            if ( rangeError.empty() == false )
-            {
-                SW_LOG_WARNING( "%#: mode '%#' is out of range - %# - skipped", sourceName, pID, rangeError.c_str() );
-                continue;
-            }
-            _listMode.push_back( std::move( mode ) );
-            ++loadedCount;
+            if ( StringUtil::equals( node.getName(), "Mode", true ) == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+            else if ( loadMode( node, sourceName ) )
+                ++loadedCount;
         }
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Mode> entries", sourceName );
         return loadedCount;
+    }
+
+    bool MatchModeCatalog::loadMode( const XMLNode& node, string_view sourceName )
+    {
+        // 정의의 id 칸(`_modeID`)은 와이어 · 저장 이름이라 데이터의 `id` 속성은 손으로 읽는다.
+        MatchModeDefinition mode;
+        bool                bValid = GameDataXML::readFields( node, mode, sourceName, { "id" } );
+        const utf8*         pID    = node.findAttribute( "id" );
+        if ( StringUtil::isNullOrEmpty( pID ) )
+        {
+            SW_LOG_ERROR( "%#: <Mode> needs id=\"...\"", sourceName );
+            return false;
+        }
+        mode._modeID = pID;
+        if ( bValid )
+            _listMode.push_back( std::move( mode ) );
+        return bValid;
     }
 } // namespace sw

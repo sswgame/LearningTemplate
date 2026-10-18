@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Resource/ResourceIO.h"
@@ -169,6 +170,90 @@ namespace sw
                 return sw::string( message.c_str() );
             }
         };
+
+        /** @brief 멤버 값 하나를 타입으로 읽습니다. 정수 칸은 실수 · 범위 밖을 받지 않는다(조용히 자르지 않는다). 결과는 0 읽음 · 1 없음 · 2 깨짐입니다. */
+        struct JSONMemberReader
+        {
+            [[nodiscard]] static bool parse( const JSONDocumentInternal::JSONImpl& json, int64& outValue )
+            {
+                const bool bSignedFits = json.is_number_integer() && ( json.is_number_unsigned() == false || json.get<uint64>() <= static_cast<uint64>( MathUtil::kMaxInt64 ) );
+                if ( bSignedFits )
+                    outValue = json.is_number_unsigned() ? static_cast<int64>( json.get<uint64>() ) : json.get<int64>();
+                return bSignedFits;
+            }
+            [[nodiscard]] static bool parse( const JSONDocumentInternal::JSONImpl& json, uint64& outValue )
+            {
+                const bool bUnsigned = json.is_number_unsigned() || ( json.is_number_integer() && json.get<int64>() >= 0 );
+                if ( bUnsigned )
+                    outValue = json.is_number_unsigned() ? json.get<uint64>() : static_cast<uint64>( json.get<int64>() );
+                return bUnsigned;
+            }
+            [[nodiscard]] static bool parse( const JSONDocumentInternal::JSONImpl& json, int32& outValue )
+            {
+                int64      wide{ 0 };
+                const bool bFits = parse( json, wide ) && MathUtil::kMinInt32 <= wide && wide <= MathUtil::kMaxInt32;
+                outValue         = static_cast<int32>( wide );
+                return bFits;
+            }
+            [[nodiscard]] static bool parse( const JSONDocumentInternal::JSONImpl& json, uint32& outValue )
+            {
+                uint64     wide{ 0 };
+                const bool bFits = parse( json, wide ) && wide <= MathUtil::kMaxUInt32;
+                outValue         = static_cast<uint32>( wide );
+                return bFits;
+            }
+            [[nodiscard]] static bool parse( const JSONDocumentInternal::JSONImpl& json, float64& outValue )
+            {
+                if ( json.is_number() == false )
+                    return false;
+                outValue = json.is_number_float()    ? json.get<float64>()
+                         : json.is_number_unsigned() ? static_cast<float64>( json.get<uint64>() )
+                                                     : static_cast<float64>( json.get<int64>() );
+                return true;
+            }
+            [[nodiscard]] static bool parse( const JSONDocumentInternal::JSONImpl& json, float32& outValue )
+            {
+                float64    wide{ 0.0 };
+                const bool bNumber = parse( json, wide );
+                outValue           = static_cast<float32>( wide );
+                return bNumber;
+            }
+            [[nodiscard]] static bool parse( const JSONDocumentInternal::JSONImpl& json, bool& outValue )
+            {
+                if ( json.is_boolean() == false )
+                    return false;
+                outValue = json.get<bool>();
+                return true;
+            }
+            [[nodiscard]] static bool parse( const JSONDocumentInternal::JSONImpl& json, string& outValue )
+            {
+                if ( json.is_string() == false )
+                    return false;
+                const JSONDocumentInternal::JSONString& text = json.get_ref<const JSONDocumentInternal::JSONString&>();
+                outValue                                     = string( text.data(), text.size() );
+                return true;
+            }
+
+            static const utf8* getTypeLabel( const int32& ) { return "32-bit integer"; }
+            static const utf8* getTypeLabel( const uint32& ) { return "32-bit unsigned integer"; }
+            static const utf8* getTypeLabel( const int64& ) { return "integer"; }
+            static const utf8* getTypeLabel( const uint64& ) { return "unsigned integer"; }
+            static const utf8* getTypeLabel( const float32& ) { return "number"; }
+            static const utf8* getTypeLabel( const float64& ) { return "number"; }
+            static const utf8* getTypeLabel( const bool& ) { return "boolean"; }
+            static const utf8* getTypeLabel( const string& ) { return "string"; }
+
+            template <typename T>
+            static uint8 read( const JSONDocumentInternal::JSONImpl* pMember, const JSONValue& member, string_view key, T& outValue )
+            {
+                if ( pMember == nullptr || pMember->is_null() )
+                    return 1;
+                if ( parse( *pMember, outValue ) )
+                    return 0;
+                SW_LOG_ERROR( "JSON member '%#' is not a %#: %#", key, getTypeLabel( outValue ), member.dump() );
+                return 2;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -263,6 +348,27 @@ namespace sw
         if ( pValue == nullptr || pValue->is_boolean() == false )
             return fallback;
         return pValue->get<bool>();
+    }
+
+#define SW_JSON_MEMBER_READER( Type )                                                                                                         \
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, Type& outValue ) const                                                  \
+    {                                                                                                                                         \
+        const JSONValue member = get( key );                                                                                                  \
+        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( member._pValue ), member, key, outValue ) ); \
+    }
+    SW_JSON_MEMBER_READER( int32 )
+    SW_JSON_MEMBER_READER( uint32 )
+    SW_JSON_MEMBER_READER( int64 )
+    SW_JSON_MEMBER_READER( uint64 )
+    SW_JSON_MEMBER_READER( float32 )
+    SW_JSON_MEMBER_READER( float64 )
+    SW_JSON_MEMBER_READER( bool )
+    SW_JSON_MEMBER_READER( string )
+#undef SW_JSON_MEMBER_READER
+
+    void JSONValue::reportMissing( string_view key ) const
+    {
+        SW_LOG_ERROR( "JSON object has no required member '%#'", key );
     }
 
     size_t JSONValue::size() const
@@ -480,10 +586,11 @@ namespace sw
 
     bool JSONDocument::loadFile( string_view absPath )
     {
+        // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`ResourceIO::readTextFile`).
         string text;
-        if ( FileUtil::readTextFile( absPath, text ) == false )
+        if ( ResourceIO::readTextFile( absPath, text ) == false )
         {
-            _lastError = string( absPath ) + ": cannot read the file";
+            _lastError = string( absPath ) + ": cannot read the file (or it was read during cooking outside a cook job)";
             return false;
         }
         return parse( text, absPath );

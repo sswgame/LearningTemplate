@@ -36,6 +36,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Profiling/DebugOverlayState.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackendSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -47,14 +48,13 @@
 #include "Engine/Renderer/SceneRHISubsystem.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/DebugOverlayState.h"
 
 #include "TestFramework/TestFramework.h"
 

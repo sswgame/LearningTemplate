@@ -36,18 +36,18 @@ namespace
 
     constexpr const utf8* kMonsterCatalogXML = R"(
 <MonsterCollectorCatalog>
-  <Move id="tackle" type="Normal" category="Physical" power="40" accuracy="100" pp="35"/>
-  <Move id="scratch" type="Normal" category="Physical" power="40" accuracy="100" pp="35"/>
-  <Move id="quickattack" type="Normal" category="Physical" power="40" accuracy="100" pp="30" priority="1"/>
-  <Move id="growl" type="Normal" category="Status" accuracy="100" pp="40" stat="Attack" stages="-1" target="Foe"/>
-  <Move id="swordsdance" type="Normal" category="Status" pp="20" stat="Attack" stages="2" target="Self"/>
-  <Move id="ember" type="Fire" category="Special" power="40" accuracy="100" pp="25" status="Burn" statusChance="10"/>
-  <Move id="willowisp" type="Fire" category="Status" accuracy="0" pp="15" status="Burn"/>
-  <Move id="watergun" type="Water" category="Special" power="40" accuracy="100" pp="25"/>
-  <Move id="vinewhip" type="Grass" category="Physical" power="45" accuracy="100" pp="25"/>
-  <Move id="thundershock" type="Electric" category="Special" power="40" accuracy="100" pp="30" status="Paralysis" statusChance="10"/>
-  <Move id="thunderwave" type="Electric" category="Status" accuracy="90" pp="20" status="Paralysis"/>
-  <Move id="raindance" type="Water" category="Status" pp="5" weather="Rain"/>
+  <Move id="tackle" name="tackle" type="Normal" category="Physical" power="40" accuracy="100" pp="35"/>
+  <Move id="scratch" name="scratch" type="Normal" category="Physical" power="40" accuracy="100" pp="35"/>
+  <Move id="quickattack" name="quickattack" type="Normal" category="Physical" power="40" accuracy="100" pp="30" priority="1"/>
+  <Move id="growl" name="growl" type="Normal" category="Status" accuracy="100" pp="40" stat="Attack" stages="-1" target="Foe"/>
+  <Move id="swordsdance" name="swordsdance" type="Normal" category="Status" pp="20" stat="Attack" stages="2" target="Self"/>
+  <Move id="ember" name="ember" type="Fire" category="Special" power="40" accuracy="100" pp="25" status="Burn" statusChance="10"/>
+  <Move id="willowisp" name="willowisp" type="Fire" category="Status" accuracy="0" pp="15" status="Burn" statusChance="100"/>
+  <Move id="watergun" name="watergun" type="Water" category="Special" power="40" accuracy="100" pp="25"/>
+  <Move id="vinewhip" name="vinewhip" type="Grass" category="Physical" power="45" accuracy="100" pp="25"/>
+  <Move id="thundershock" name="thundershock" type="Electric" category="Special" power="40" accuracy="100" pp="30" status="Paralysis" statusChance="10"/>
+  <Move id="thunderwave" name="thunderwave" type="Electric" category="Status" accuracy="90" pp="20" status="Paralysis" statusChance="100"/>
+  <Move id="raindance" name="raindance" type="Water" category="Status" pp="5" weather="Rain"/>
   <Nature id="Hardy" up="Attack" down="Attack"/>
   <Nature id="Adamant" up="Attack" down="SpecialAttack"/>
   <Nature id="Timid" up="Speed" down="Attack"/>
@@ -55,28 +55,28 @@ namespace
   <Weather id="Sandstorm" chip="16" immune="Rock,Ground" turns="5"/>
   <StatusImmunity status="Burn" types="Fire"/>
   <StatusImmunity status="Paralysis" types="Electric"/>
-  <Species id="charmander" types="Fire" stats="39 52 43 60 50 65" catchRate="45" baseExp="62" expGroup="Medium" evYield="0 0 0 0 0 1">
+  <Species id="charmander" name="charmander" types="Fire" stats="39 52 43 60 50 65" catchRate="45" baseExp="62" expGroup="Medium" evYield="0 0 0 0 0 1">
     <Learn level="1" move="scratch"/><Learn level="1" move="growl"/><Learn level="7" move="ember"/>
     <Evolve to="charmeleon" level="16"/>
   </Species>
-  <Species id="charmeleon" types="Fire" stats="58 64 58 80 65 80" catchRate="45" baseExp="142"/>
-  <Species id="squirtle" types="Water" stats="44 48 65 50 64 43" baseExp="63">
+  <Species id="charmeleon" name="charmeleon" types="Fire" stats="58 64 58 80 65 80" catchRate="45" baseExp="142"/>
+  <Species id="squirtle" name="squirtle" types="Water" stats="44 48 65 50 64 43" baseExp="63">
     <Learn level="1" move="tackle"/><Learn level="7" move="watergun"/>
   </Species>
-  <Species id="bulbasaur" types="Grass" stats="45 49 49 65 65 45" baseExp="64">
+  <Species id="bulbasaur" name="bulbasaur" types="Grass" stats="45 49 49 65 65 45" baseExp="64">
     <Learn level="1" move="tackle"/><Learn level="7" move="vinewhip"/>
   </Species>
-  <Species id="pikachu" types="Electric" stats="35 55 40 50 50 90" catchRate="190" baseExp="112" evYield="0 0 0 0 0 2">
+  <Species id="pikachu" name="pikachu" types="Electric" stats="35 55 40 50 50 90" catchRate="190" baseExp="112" evYield="0 0 0 0 0 2">
     <Learn level="1" move="thundershock"/><Learn level="1" move="growl"/><Learn level="5" move="quickattack"/>
     <Learn level="15" move="swordsdance"/><Learn level="9" move="thunderwave"/>
     <Evolve to="raichu" item="thunderstone"/>
   </Species>
-  <Species id="raichu" types="Electric" stats="60 90 55 90 80 110" baseExp="218"/>
-  <Species id="eevee" types="Normal" stats="55 55 50 45 65 55" baseExp="65"><Evolve to="espeon" friendship="220"/></Species>
-  <Species id="espeon" types="Normal" stats="65 65 60 130 95 110" baseExp="184"/>
-  <Species id="geodude" types="Rock,Ground" stats="40 80 100 30 30 20" catchRate="255" baseExp="86" evYield="0 0 1 0 0 0"/>
-  <Species id="rattata" types="Normal" stats="30 56 35 25 35 72" catchRate="255" baseExp="57" expGroup="Fast"/>
-  <Species id="pidgey" types="Normal,Flying" stats="40 45 40 35 35 56" catchRate="255" baseExp="55"/>
+  <Species id="raichu" name="raichu" types="Electric" stats="60 90 55 90 80 110" baseExp="218"/>
+  <Species id="eevee" name="eevee" types="Normal" stats="55 55 50 45 65 55" baseExp="65"><Evolve to="espeon" friendship="220"/></Species>
+  <Species id="espeon" name="espeon" types="Normal" stats="65 65 60 130 95 110" baseExp="184"/>
+  <Species id="geodude" name="geodude" types="Rock,Ground" stats="40 80 100 30 30 20" catchRate="255" baseExp="86" evYield="0 0 1 0 0 0"/>
+  <Species id="rattata" name="rattata" types="Normal" stats="30 56 35 25 35 72" catchRate="255" baseExp="57" expGroup="Fast"/>
+  <Species id="pidgey" name="pidgey" types="Normal,Flying" stats="40 45 40 35 35 56" catchRate="255" baseExp="55"/>
   <Encounter id="route1_day" area="route1" time="Morning,Day">
     <Slot species="pidgey" min="2" max="4" weight="70"/><Slot species="rattata" min="2" max="3" weight="30"/>
   </Encounter>

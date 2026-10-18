@@ -43,7 +43,7 @@ namespace sw
         bool _bStaysOpen;
         PROPERTY( Category = "Gate", DisplayName = "Planar", Tooltip = "2D distance (ignore Z)" )
         bool _bPlanar;
-        PROPERTY( Category = "Gate", DisplayName = "Open", Tooltip = "Runtime / progress" )
+        PROPERTY( RuntimeState, Category = "Gate", DisplayName = "Open", Tooltip = "Runtime / progress" )
         bool _bOpen;
 
         FixedStepTimer _clock;
@@ -71,8 +71,9 @@ namespace sw
         /** @brief @p who 가 한 번 채집합니다. 상호작용이 부르는 것과 같은 동작입니다. 다 써서 없으면 false 입니다. */
         bool gather( GameObject& who );
 
-        bool  isDepleted() const { return _usesLeft <= 0; }
-        int32 getUsesLeft() const { return _usesLeft; }
+        /** @brief 저작 값 `_uses` 만큼 다 썼으면 true 입니다. 남은 횟수를 따로 저장하지 않고 쓴 횟수(런타임)와 견준다 — 저작 값이 바뀌어도 첫 플레이가 그 값을 따른다. */
+        bool  isDepleted() const { return _usesTaken >= _uses; }
+        int32 getUsesLeft() const { return _uses - _usesTaken; }
 
     private:
         PROPERTY( Category = "Gathering", DisplayName = "Item" )
@@ -83,9 +84,9 @@ namespace sw
         int32 _uses;
         PROPERTY( Category = "Gathering", DisplayName = "Respawn Delay", Min = 0.0, Units = s )
         float32 _respawnDelay;
-        PROPERTY( Category = "Gathering", DisplayName = "Uses Left", Tooltip = "Runtime" )
-        int32 _usesLeft;
-        PROPERTY( Category = "Gathering", DisplayName = "Respawn Steps Left", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Gathering", DisplayName = "Uses Taken", Tooltip = "Runtime" )
+        int32 _usesTaken;
+        PROPERTY( RuntimeState, Category = "Gathering", DisplayName = "Respawn Steps Left", Tooltip = "Runtime" )
         int32 _respawnStepsLeft;
 
         FixedStepTimer _clock;

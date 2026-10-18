@@ -63,7 +63,7 @@ namespace sw
         if ( context._method == LeaderboardMethod::kSubmitScore )
         {
             const LeaderboardDefinition* pBoard = _pService->findBoard( request._boardID );
-            if ( pBoard == nullptr || pBoard->_bClientSubmit == SW_FALSE )
+            if ( pBoard == nullptr || pBoard->_bClientSubmit == false )
             {
                 LeaderboardReply reply;
                 reply._result = pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::NotAllowed; // 점수는 서버가 낸다. 클라이언트가 낼 수 있는 보드가 아니면 거절한다

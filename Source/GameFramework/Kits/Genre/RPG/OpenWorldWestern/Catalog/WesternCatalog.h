@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
@@ -21,105 +23,170 @@ namespace sw
     class XMLNode;
 
     /** @brief 범죄 한 종류입니다. */
+    REFLECT()
     struct WesternCrimeDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        float32       _reportTime{ 15.0f }; ///< 시민 목격자가 신고하기까지 걸리는 시간(초). 보안관은 그 자리에서 신고한다
-        int32         _bounty{ 5 };         ///< 신고되면 그 지역 현상금에 더하는 금액(달러)
-        int32         _wanted{ 1 };         ///< 신고되면 오르는 수배 단계
-        int32         _honor{ 0 };          ///< 저지르면 바뀌는 명예(목격과 상관없이 적용한다)
+        PROPERTY( Min = 0.0 )
+        float32 _reportTime{ 15.0f }; ///< 시민 목격자가 신고하기까지 걸리는 시간(초). 보안관은 그 자리에서 신고한다
+        PROPERTY( Min = 0 )
+        int32 _bounty{ 5 }; ///< 신고되면 그 지역 현상금에 더하는 금액(달러)
+        PROPERTY( Min = 0 )
+        int32 _wanted{ 1 }; ///< 신고되면 오르는 수배 단계
+        PROPERTY()
+        int32 _honor{ 0 }; ///< 저지르면 바뀌는 명예(목격과 상관없이 적용한다)
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 지역(주, 마을) 하나의 법 집행 규칙입니다. */
+    REFLECT()
     struct WesternRegionDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        float32       _wantedCooldown{ 60.0f };   ///< 법에 보이지 않고 이 시간(초)이 지나면 수배 단계가 하나 내려간다
-        float32       _disguiseScale{ 2.0f };     ///< 변장(옷 바꾸기)하면 수배가 이 배수만큼 빨리 식는다
-        float32       _maskedBountyScale{ 0.5f }; ///< 복면을 쓰고 저지른 범죄의 현상금 배율(얼굴을 못 봤다)
-        int32         _bountyDecayPerDay{ 0 };    ///< 하루마다 줄어드는 현상금
-        int32         _maxWanted{ 5 };
+        PROPERTY( Min = 0.1 )
+        float32 _wantedCooldown{ 60.0f }; ///< 법에 보이지 않고 이 시간(초)이 지나면 수배 단계가 하나 내려간다
+        PROPERTY( Min = 1.0 )
+        float32 _disguiseScale{ 2.0f }; ///< 변장(옷 바꾸기)하면 수배가 이 배수만큼 빨리 식는다
+        PROPERTY( Min = 0.0 )
+        float32 _maskedBountyScale{ 0.5f }; ///< 복면을 쓰고 저지른 범죄의 현상금 배율(얼굴을 못 봤다)
+        PROPERTY( Min = 0 )
+        int32 _bountyDecayPerDay{ 0 }; ///< 하루마다 줄어드는 현상금
+        PROPERTY( Min = 1 )
+        int32 _maxWanted{ 5 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 수배 단계에 따른 보안관 추적입니다. */
+    REFLECT()
     struct WesternPursuitDef
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _name{};
-        int32         _level{ 1 };  ///< 이 수배 단계 이상이면 적용한다
-        int32         _lawmen{ 2 }; ///< 보내는 보안관 수
-        uint8         _bShootOnSight{ SW_FALSE };
-        uint8         _bBountyHunter{ SW_FALSE }; ///< 지역을 떠나도 현상금 사냥꾼이 온다
+        PROPERTY( Min = 1 )
+        int32 _level{ 1 }; ///< 이 수배 단계 이상이면 적용한다
+        PROPERTY( Min = 0 )
+        int32 _lawmen{ 2 }; ///< 보내는 보안관 수
+        PROPERTY()
+        bool _bShootOnSight{ false };
+        PROPERTY()
+        bool _bBountyHunter{ false }; ///< 지역을 떠나도 현상금 사냥꾼이 온다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 명예 단계 하나의 효과입니다(값 범위는 `ReputationTier` 입니다). */
+    REFLECT()
     struct WesternHonorTierDef
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         hashed_string _name{};
-        hashed_string _dialogueFlag{};       ///< 이 단계에서 켜지는 플래그(대사 분기에 쓰며 `GameFlags` 에 켠다)
-        float32       _shopDiscount{ 0.0f }; ///< 상점 값 할인 비율(음수면 웃돈)
+        PROPERTY( Name = "flag" )
+        hashed_string _dialogueFlag{}; ///< 이 단계에서 켜지는 플래그(대사 분기에 쓰며 `GameFlags` 에 켠다)
+        PROPERTY( Name = "discount", Min = -1.0, Max = 1.0 )
+        float32 _shopDiscount{ 0.0f }; ///< 상점 값 할인 비율(음수면 웃돈)
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 명예가 바뀌는 행동 하나입니다. */
+    REFLECT()
     struct WesternHonorActionDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        int32         _delta{ 0 };
+        PROPERTY()
+        int32 _delta{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 말 품종 하나입니다. */
+    REFLECT()
     struct WesternHorseDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        float32       _health{ 100.0f };
-        float32       _stamina{ 100.0f };
-        float32       _speed{ 1.0f };
-        float32       _courage{ 0.5f };                ///< 0..1 범위이며, 클수록 겁을 덜 먹는다
-        float32       _gallopDrain{ 12.0f };           ///< 질주할 때 초당 소모하는 스태미나
-        float32       _coreDrainPerHour{ 2.0f };       ///< 게임 시간 한 시간마다 코어가 줄어드는 양
-        float32       _gallopCoreDrainPerHour{ 6.0f }; ///< 질주 중에는 이만큼 더 줄어든다
-        float32       _fearDecayPerSecond{ 0.25f };    ///< 쌓인 겁이 식는 속도(초당)
-        float32       _buckChanceScale{ 0.8f };        ///< 저항이 0일 때 탄 사람을 떨어뜨릴 확률
+        PROPERTY( Min = 1.0 )
+        float32 _health{ 100.0f };
+        PROPERTY( Min = 1.0 )
+        float32 _stamina{ 100.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _speed{ 1.0f };
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _courage{ 0.5f }; ///< 0..1 범위이며, 클수록 겁을 덜 먹는다
+        PROPERTY( Min = 0.0 )
+        float32 _gallopDrain{ 12.0f }; ///< 질주할 때 초당 소모하는 스태미나
+        PROPERTY( Name = "coreDrain", Min = 0.0 )
+        float32 _coreDrainPerHour{ 2.0f }; ///< 게임 시간 한 시간마다 코어가 줄어드는 양
+        PROPERTY( Name = "gallopCoreDrain", Min = 0.0 )
+        float32 _gallopCoreDrainPerHour{ 6.0f }; ///< 질주 중에는 이만큼 더 줄어든다
+        PROPERTY( Name = "fearDecay", Min = 0.0 )
+        float32 _fearDecayPerSecond{ 0.25f }; ///< 쌓인 겁이 식는 속도(초당)
+        PROPERTY( Name = "buckChance", Min = 0.0, Max = 1.0 )
+        float32 _buckChanceScale{ 0.8f }; ///< 저항이 0일 때 탄 사람을 떨어뜨릴 확률
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 말 유대 단계 하나입니다. */
+    REFLECT()
     struct WesternBondLevelDef
     {
-        vector<hashed_string> _listUnlock{};       ///< 이 단계에서 열리는 능력(뒷발 들기, 드리프트, 피아페 등)
-        float32               _experience{ 0.0f }; ///< 이 단계가 되는 누적 경험치(정수로 반올림해 `getBondCurve` 의 테이블이 된다)
-        float32               _staminaBonus{ 0.0f };
-        float32               _healthBonus{ 0.0f };
-        float32               _fearResist{ 0.0f }; ///< 겁 저항에 더하는 값
-        int32                 _level{ 1 };
+        REFLECT_BODY();
+
+        vector<hashed_string> _listUnlock{}; ///< 이 단계에서 열리는 능력(뒷발 들기, 드리프트, 피아페 등)
+        PROPERTY( Name = "xp", Min = 0.0 )
+        float32 _experience{ 0.0f }; ///< 이 단계가 되는 누적 경험치(정수로 반올림해 `getBondCurve` 의 테이블이 된다)
+        PROPERTY( Name = "stamina" )
+        float32 _staminaBonus{ 0.0f };
+        PROPERTY( Name = "health" )
+        float32 _healthBonus{ 0.0f };
+        PROPERTY()
+        float32 _fearResist{ 0.0f }; ///< 겁 저항에 더하는 값
+        PROPERTY( Min = 1 )
+        int32 _level{ 1 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 말의 유대 경험치를 주는 행동입니다. */
+    REFLECT()
     struct WesternBondExperience
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "ride", Min = 0.0 )
         float32 _ridePerSecond{ 0.1f };
+        PROPERTY( Min = 0.0 )
         float32 _brush{ 15.0f };
+        PROPERTY( Min = 0.0 )
         float32 _feed{ 10.0f };
+        PROPERTY( Min = 0.0 )
         float32 _calm{ 5.0f };
+        PROPERTY( Name = "brushCooldown", Min = 0.0 )
         float32 _brushCooldownHours{ 6.0f }; ///< 다시 손질해도 경험치가 붙기까지의 시간(게임 시간)
     };
 } // namespace sw
@@ -127,45 +194,76 @@ namespace sw
 namespace sw
 {
     /** @brief 먹을 것 하나입니다. 말 먹이와 사람 음식이 같은 구조입니다(코어 회복, 바로 회복, 유대). */
+    REFLECT()
     struct WesternFoodDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        float32       _healthCore{ 0.0f };
-        float32       _staminaCore{ 0.0f };
-        float32       _deadEyeCore{ 0.0f };
-        float32       _health{ 0.0f }; ///< 게이지를 바로 채우는 양
-        float32       _stamina{ 0.0f };
-        float32       _bond{ 0.0f }; ///< 말 먹이일 때의 유대 경험치(비어 있으면 `WesternBondExperience::_feed`)
+        PROPERTY()
+        float32 _healthCore{ 0.0f };
+        PROPERTY()
+        float32 _staminaCore{ 0.0f };
+        PROPERTY()
+        float32 _deadEyeCore{ 0.0f };
+        PROPERTY()
+        float32 _health{ 0.0f }; ///< 게이지를 바로 채우는 양
+        PROPERTY()
+        float32 _stamina{ 0.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _bond{ 0.0f }; ///< 말 먹이일 때의 유대 경험치(비어 있으면 `WesternBondExperience::_feed`)
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 옷 한 벌입니다(겹쳐 입습니다). */
+    REFLECT()
     struct WesternClothingDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        float32       _warmth{ 0.0f }; ///< 체감 온도에 더한다
+        PROPERTY()
+        float32 _warmth{ 0.0f }; ///< 체감 온도에 더한다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 플레이어 생존 수치입니다. 온도는 섭씨이고, 코어는 0..100 입니다. */
+    REFLECT()
     struct WesternSurvivalDef
     {
-        float32 _comfortMin{ 5.0f };       ///< 체감 온도가 이보다 낮으면 춥다고 보고, 체력 코어가 더 준다
-        float32 _comfortMax{ 30.0f };      ///< 체감 온도가 이보다 높으면 덥다고 보고, 스태미나 코어가 더 준다
+        REFLECT_BODY();
+
+        PROPERTY()
+        float32 _comfortMin{ 5.0f }; ///< 체감 온도가 이보다 낮으면 춥다고 보고, 체력 코어가 더 준다
+        PROPERTY( Min = "_comfortMin" )
+        float32 _comfortMax{ 30.0f }; ///< 체감 온도가 이보다 높으면 덥다고 보고, 스태미나 코어가 더 준다
+        PROPERTY( Name = "coreDrain", Min = 0.0 )
         float32 _coreDrainPerHour{ 1.5f }; ///< 게임 한 시간마다 모든 코어가 줄어드는 양
+        PROPERTY( Min = 0.0 )
         float32 _temperatureDrain{ 0.5f }; ///< 편한 범위를 1도 벗어날 때마다 한 시간에 더 줄어드는 양
-        float32 _minRegenScale{ 0.2f };    ///< 코어가 0일 때의 게이지 회복 배율(가득이면 1)
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _minRegenScale{ 0.2f }; ///< 코어가 0일 때의 게이지 회복 배율(가득이면 1)
+        PROPERTY( Min = 1.0 )
         float32 _health{ 100.0f };
+        PROPERTY( Min = 1.0 )
         float32 _stamina{ 100.0f };
+        PROPERTY( Min = 1.0 )
         float32 _deadEye{ 100.0f };
-        float32 _healthRegen{ 2.0f };     ///< 초당 회복량
-        float32 _staminaRegen{ 15.0f };   ///< 초당 회복량
-        float32 _deadEyeRegen{ 1.0f };    ///< 초당 회복량
-        float32 _deadEyeDrain{ 20.0f };   ///< 데드아이를 켜 둔 동안 초당 소모량
+        PROPERTY( Min = 0.0 )
+        float32 _healthRegen{ 2.0f }; ///< 초당 회복량
+        PROPERTY( Min = 0.0 )
+        float32 _staminaRegen{ 15.0f }; ///< 초당 회복량
+        PROPERTY( Min = 0.0 )
+        float32 _deadEyeRegen{ 1.0f }; ///< 초당 회복량
+        PROPERTY( Min = 0.0 )
+        float32 _deadEyeDrain{ 20.0f }; ///< 데드아이를 켜 둔 동안 초당 소모량
+        PROPERTY( Min = 0.0 )
         float32 _deadEyeMinimum{ 10.0f }; ///< 이만큼 있어야 켤 수 있다
     };
 } // namespace sw
@@ -173,17 +271,24 @@ namespace sw
 namespace sw
 {
     /** @brief 데드아이 단계 하나입니다. */
+    REFLECT()
     struct WesternDeadEyeLevelDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.01, Max = 1.0 )
         float32 _timeScale{ 0.5f }; ///< 켜 둔 동안의 시간 배율
-        int32   _level{ 1 };
-        int32   _markCount{ 0 }; ///< 표시할 수 있는 개수(0이면 표시 없이 느려지기만 한다)
+        PROPERTY( Min = 1 )
+        int32 _level{ 1 };
+        PROPERTY( Name = "marks", Min = 0 )
+        int32 _markCount{ 0 }; ///< 표시할 수 있는 개수(0이면 표시 없이 느려지기만 한다)
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 동물 크기입니다. 크기마다 알맞은 무기가 다릅니다. */
+    ENUM()
     enum class WesternAnimalSize : uint8
     {
         Small = 0,
@@ -192,14 +297,24 @@ namespace sw
     };
 
     /** @brief 동물 한 종입니다. */
+    REFLECT()
     struct WesternAnimalDef
     {
-        hashed_string     _id{};
-        hashed_string     _lootTable{};          ///< 손질하면 굴리는 전리품 테이블(고기, 깃털 등이며 `LootCatalog` 의 것이다)
-        float32           _peltPrice{ 1.0f };    ///< 3성 가죽 값(달러)
-        float32           _carcassPrice{ 2.0f }; ///< 3성 사체 값
-        float32           _decayHours{ 48.0f };  ///< 사체가 다 썩는 게임 시간(반이 지나면 한 단계 떨어진다)
-        int32             _quality{ 3 };         ///< 이 개체의 원래 품질(1..3)
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Name = "loot" )
+        hashed_string _lootTable{}; ///< 손질하면 굴리는 전리품 테이블(고기, 깃털 등이며 `LootCatalog` 의 것이다)
+        PROPERTY( Name = "pelt", Min = 0.0 )
+        float32 _peltPrice{ 1.0f }; ///< 3성 가죽 값(달러)
+        PROPERTY( Name = "carcass", Min = 0.0 )
+        float32 _carcassPrice{ 2.0f }; ///< 3성 사체 값
+        PROPERTY( Min = 0.1 )
+        float32 _decayHours{ 48.0f }; ///< 사체가 다 썩는 게임 시간(반이 지나면 한 단계 떨어진다)
+        PROPERTY( Min = 1, Max = 3 )
+        int32 _quality{ 3 }; ///< 이 개체의 원래 품질(1..3)
+        PROPERTY()
         WesternAnimalSize _size{ WesternAnimalSize::Medium };
     };
 } // namespace sw
@@ -207,21 +322,76 @@ namespace sw
 namespace sw
 {
     /** @brief 사냥에 쓴 무기 하나의 규칙입니다. */
+    REFLECT()
     struct WesternHuntWeaponDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        uint8         _sizeMask{ 0x7 };        ///< 알맞은 크기(비트는 `WesternAnimalSize`)이며, 아니면 한 단계 떨어진다
-        uint8         _bRuinsPelt{ SW_FALSE }; ///< 폭발물이라 가죽을 못 쓴다
+        uint8         _sizeMask{ 0x7 }; ///< 알맞은 크기(비트는 `WesternAnimalSize`)이며, 아니면 한 단계 떨어진다
+        PROPERTY()
+        bool _bRuinsPelt{ false }; ///< 폭발물이라 가죽을 못 쓴다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 명중 부위 하나입니다. */
+    REFLECT()
     struct WesternHitZoneDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        int32         _penalty{ 0 }; ///< 떨어지는 등급
+        PROPERTY( Min = 0 )
+        int32 _penalty{ 0 }; ///< 떨어지는 등급
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<WesternCatalog>` 루트 속성의 스키마입니다. */
+    REFLECT()
+    struct WesternCatalogRootDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _currency{ "Dollar" };
+        PROPERTY( Min = 0 )
+        int32 _extraHitPenalty{ 1 }; ///< 첫 발 뒤 한 발마다 떨어지는 등급
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<Honor>` 의 값 범위(최소 · 최대 · 시작)입니다. 시작은 범위 안이어야 합니다. */
+    REFLECT()
+    struct WesternHonorRangeDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _min{ -1000 };
+        PROPERTY( Min = "_min" )
+        int32 _max{ 1000 };
+        PROPERTY( Min = "_min", Max = "_max" )
+        int32 _start{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<Honor><Tier>` 하나의 경계입니다(효과는 `WesternHonorTierDef`). */
+    REFLECT()
+    struct WesternHonorTierBoundDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        int32 _min{ 0 }; ///< 이 단계가 시작하는 명예 값
     };
 } // namespace sw
 
@@ -292,7 +462,10 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "WesternCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-        void                         loadHonor( const XMLNode& node );
+        /** @brief 원소 하나를 읽습니다. 개수에 넣는 원소(단계 · id 가 있는 정의)를 읽었으면 true 입니다. */
+        [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
+        /** @brief `<Honor>` 를 읽습니다. 스키마 오류가 있으면 그 단계 · 행동을 빼고 false 입니다. */
+        [[nodiscard]] bool loadHonor( const XMLNode& node, string_view sourceName );
 
         GameCatalog<WesternCrimeDef>       _crimeCatalog;
         GameCatalog<WesternRegionDef>      _regionCatalog;

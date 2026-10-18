@@ -341,7 +341,7 @@ class CheckEngineLayersGate(LintGate):
         {
             # 액터 층이 월드 관리자를 아는 방향 — 가장 되돌아오기 쉬운 엣지다.
             "name": "Object 가 Scene 을 include (아래층이 위층을)",
-            "expectedViolation": "Source/Engine/Object/Probe.cpp: #include \"Engine/Scene/SceneManager.h\"  (티어 Object(T9) -> Scene(T10))",
+            "expectedViolation": "Source/Engine/Object/Probe.cpp: #include \"Engine/Scene/SceneManager.h\"",
             "files": {
                 "Source/Engine/Object/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Scene/SceneManager.h"\n',
             },
@@ -349,7 +349,7 @@ class CheckEngineLayersGate(LintGate):
         {
             # 디바이스 · 셰이더가 그리는 쪽을 알면 안 된다.
             "name": "Graphics(RHI)가 Renderer 를 include",
-            "expectedViolation": "Source/Engine/Graphics/RHI/Probe.cpp: #include \"Engine/Renderer/Frame/FrameRenderer.h\"  (티어 Graphics(T8) -> Renderer(T13))",
+            "expectedViolation": "Source/Engine/Graphics/RHI/Probe.cpp: #include \"Engine/Renderer/Frame/FrameRenderer.h\"",
             "files": {
                 "Source/Engine/Graphics/RHI/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Renderer/Frame/FrameRenderer.h"\n',
             },

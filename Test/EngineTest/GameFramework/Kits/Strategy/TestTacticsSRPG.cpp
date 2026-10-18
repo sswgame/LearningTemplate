@@ -24,27 +24,27 @@ namespace
 <SRPGCatalog>
   <PilotCurve base="100" exponent="1" linear="0" maxLevel="20"/>
   <UnitCurve base="50" exponent="1" linear="0" maxLevel="10"/>
-  <Terrain id="plain" cost="1 1 - 2" domain="Ground"/>
-  <Terrain id="forest" cost="2 1 - 3" defense="20" evasion="15" domain="Ground"/>
-  <Terrain id="mountain" cost="- 1 - -" defense="30" evasion="20" domain="Ground"/>
-  <Terrain id="sea" cost="- 1 - 1" domain="Water"/>
-  <Weapon id="vulcan" kind="Shooting" minRange="1" maxRange="2" power="600" hit="10" ammo="2"/>
-  <Weapon id="rifle" kind="Shooting" minRange="2" maxRange="4" power="1500" en="10"/>
-  <Weapon id="saber" kind="Melee" minRange="1" maxRange="1" power="1800" hit="5" crit="10" en="5"/>
-  <Weapon id="cannon" minRange="3" maxRange="6" power="2200" en="20" postMove="false" counter="false"/>
-  <Weapon id="funnel" kind="Awaken" minRange="2" maxRange="5" power="1600" en="15" morale="120"/>
-  <Weapon id="megabeam" map="Self" pattern="1,0 2,0 3,0 4,0" power="2500" en="50" maxRange="4"/>
-  <Weapon id="bomb" map="Target" pattern="0,0 1,0 -1,0 0,1 0,-1" minRange="2" maxRange="5" power="1200" ammo="1"/>
-  <Unit id="gm" hp="3000" en="100" move="4" moveType="Ground" size="M" armor="600" mobility="5" aptitude="A B - C" weapons="vulcan,rifle,saber" developsTo="gmcustom:3 gundam:5"/>
-  <Unit id="gmcustom" hp="3600" en="120" move="5" armor="700" mobility="10" weapons="vulcan,rifle,saber"/>
-  <Unit id="gundam" hp="4000" en="150" move="5" armor="800" mobility="15" weapons="rifle,saber,funnel"/>
-  <Unit id="core" hp="1500" en="80" move="6" moveType="Air" size="S" armor="300" mobility="20" aptitude="B A - -" weapons="vulcan"/>
-  <Unit id="zaku" hp="2800" en="80" move="4" size="M" armor="500" mobility="5" aptitude="A - - -" weapons="vulcan,rifle"/>
-  <Unit id="tank" hp="2000" en="60" move="3" size="L" armor="400" mobility="0" weapons="cannon"/>
-  <Unit id="whitebase" hp="9000" en="200" move="3" moveType="Air" size="LL" armor="900" weapons="megabeam,bomb,vulcan"/>
-  <Unit id="gogg" hp="2500" en="60" move="4" moveType="Water" aptitude="B - - A" weapons="vulcan"/>
-  <Pilot id="ace" shooting="20" melee="18" reaction="20" awaken="10" defense="10" growShooting="2" growMelee="2" growReaction="1" growAwaken="1" growDefense="1"/>
-  <Pilot id="grunt" shooting="10" melee="10" reaction="10" awaken="0" defense="5"/>
+  <Terrain id="plain" name="plain" cost="1 1 - 2" domain="Ground"/>
+  <Terrain id="forest" name="forest" cost="2 1 - 3" defense="20" evasion="15" domain="Ground"/>
+  <Terrain id="mountain" name="mountain" cost="- 1 - -" defense="30" evasion="20" domain="Ground"/>
+  <Terrain id="sea" name="sea" cost="- 1 - 1" domain="Water"/>
+  <Weapon id="vulcan" name="vulcan" kind="Shooting" minRange="1" maxRange="2" power="600" hit="10" ammo="2"/>
+  <Weapon id="rifle" name="rifle" kind="Shooting" minRange="2" maxRange="4" power="1500" en="10"/>
+  <Weapon id="saber" name="saber" kind="Melee" minRange="1" maxRange="1" power="1800" hit="5" crit="10" en="5"/>
+  <Weapon id="cannon" name="cannon" minRange="3" maxRange="6" power="2200" en="20" postMove="false" counter="false"/>
+  <Weapon id="funnel" name="funnel" kind="Awaken" minRange="2" maxRange="5" power="1600" en="15" morale="120"/>
+  <Weapon id="megabeam" name="megabeam" map="Self" pattern="1,0 2,0 3,0 4,0" power="2500" en="50" maxRange="4"/>
+  <Weapon id="bomb" name="bomb" map="Target" pattern="0,0 1,0 -1,0 0,1 0,-1" minRange="2" maxRange="5" power="1200" ammo="1"/>
+  <Unit id="gm" name="gm" hp="3000" en="100" move="4" moveType="Ground" size="M" armor="600" mobility="5" aptitude="A B - C" weapons="vulcan,rifle,saber" developsTo="gmcustom:3 gundam:5"/>
+  <Unit id="gmcustom" name="gmcustom" hp="3600" en="120" move="5" armor="700" mobility="10" weapons="vulcan,rifle,saber"/>
+  <Unit id="gundam" name="gundam" hp="4000" en="150" move="5" armor="800" mobility="15" weapons="rifle,saber,funnel"/>
+  <Unit id="core" name="core" hp="1500" en="80" move="6" moveType="Air" size="S" armor="300" mobility="20" aptitude="B A - -" weapons="vulcan"/>
+  <Unit id="zaku" name="zaku" hp="2800" en="80" move="4" size="M" armor="500" mobility="5" aptitude="A - - -" weapons="vulcan,rifle"/>
+  <Unit id="tank" name="tank" hp="2000" en="60" move="3" size="L" armor="400" mobility="0" weapons="cannon"/>
+  <Unit id="whitebase" name="whitebase" hp="9000" en="200" move="3" moveType="Air" size="LL" armor="900" weapons="megabeam,bomb,vulcan"/>
+  <Unit id="gogg" name="gogg" hp="2500" en="60" move="4" moveType="Water" aptitude="B - - A" weapons="vulcan"/>
+  <Pilot id="ace" name="ace" shooting="20" melee="18" reaction="20" awaken="10" defense="10" growShooting="2" growMelee="2" growReaction="1" growAwaken="1" growDefense="1"/>
+  <Pilot id="grunt" name="grunt" shooting="10" melee="10" reaction="10" awaken="0" defense="5"/>
 </SRPGCatalog>
 )";
 

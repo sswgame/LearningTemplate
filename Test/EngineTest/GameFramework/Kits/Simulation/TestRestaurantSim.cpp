@@ -25,10 +25,9 @@ namespace
 {
     constexpr const utf8* kRestaurantTestXML = R"(
 <RestaurantCatalog open="11" close="14" window="5">
-  <Dish id="ramen" recipe="ramen" category="Noodle" price="40" quality="1,3,5"/>
-  <Dish id="omelette" category="Breakfast" price="20" quality="1,4"/>
-  <Dish id="cake" category="Dessert" price="30" quality="3,6"/>
-  <Dish id="free" price="0"/>
+  <Dish id="ramen" name="ramen" recipe="ramen" category="Noodle" price="40" quality="1,3,5"/>
+  <Dish id="omelette" name="omelette" recipe="omelette" category="Breakfast" price="20" quality="1,4"/>
+  <Dish id="cake" name="cake" recipe="cake" category="Dessert" price="30" quality="3,6"/>
   <Ingredient item="egg" shelfLife="2"/>
   <Ingredient item="noodle" shelfLife="5"/>
   <Ingredient item="broth" shelfLife="1"/>
@@ -183,7 +182,36 @@ namespace
 } // namespace
 
 /**
- * @brief [RestaurantSimTest] 카탈로그 — 값이 없는 요리는 빠지고, 품질은 요리사 레벨이 넘은 임계값 수(최소 1), 시간대 도착 · 날씨 배율 · 유통 기한을 읽는다
+ * @brief [RestaurantSimTest] 카탈로그 — 값이 0 인 요리 · 레시피가 빠진 요리 · 깨진 품질 레벨 · 범위 밖 시각은 기본값으로 물러나지 않고 그 원소를 넣지 않는 오류다
+ */
+SW_TEST_CASE( RestaurantSimTest, CatalogRejectsBrokenElementsInsteadOfReadingDefaults )
+{
+    RestaurantCatalog catalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "broken restaurant elements are rejected" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( "<RestaurantCatalog open=\"11\" close=\"14\">"
+                                                 "<Dish id=\"free\" name=\"Free\" recipe=\"free\" price=\"0\"/>"
+                                                 "<Dish id=\"orphan\" name=\"Orphan\" price=\"10\"/>"
+                                                 "<Dish id=\"fuzzy\" name=\"Fuzzy\" recipe=\"fuzzy\" price=\"10\" quality=\"1,x\"/>"
+                                                 "<Dish id=\"ramen\" name=\"Ramen\" recipe=\"ramen\" price=\"40\"/>"
+                                                 "<Arrival hour=\"24\" rate=\"5\"/>"
+                                                 "</RestaurantCatalog>",
+                                                 "RestaurantSimTest" ) );
+    }
+    SW_EXPECT_NULL( catalog.findDish( "free" ) );
+    SW_EXPECT_NULL( catalog.findDish( "orphan" ) );
+    SW_EXPECT_NULL( catalog.findDish( "fuzzy" ) );
+    SW_EXPECT_NOT_NULL( catalog.findDish( "ramen" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "closing before opening is rejected" );
+        RestaurantCatalog backwards;
+        SW_EXPECT_FALSE( backwards.loadFromXMLText( "<RestaurantCatalog open=\"14\" close=\"11\"><Dish id=\"ramen\" name=\"Ramen\" recipe=\"ramen\"/></RestaurantCatalog>",
+                                                    "RestaurantSimTest" ) );
+    }
+}
+
+/**
+ * @brief [RestaurantSimTest] 카탈로그 — 품질은 요리사 레벨이 넘은 임계값 수(최소 1), 시간대 도착 · 날씨 배율 · 유통 기한을 읽는다
  */
 SW_TEST_CASE( RestaurantSimTest, CatalogReadsMenuQualityAndArrivals )
 {

@@ -20,6 +20,7 @@
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -1558,7 +1559,7 @@ namespace sw
         return true;
     }
 
-    uint32 PrefabCache::cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
+    uint32 PrefabCache::cookAllPrefabs( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )
@@ -1576,10 +1577,9 @@ namespace sw
         string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );
         out += '/';
 
-        // 중첩 인스턴스의 원본을 읽는 캐시다. 쿠킹 한 번 동안 원본마다 한 번 읽는다.
-        PrefabCache    nestedPrefabs;
-        vector<string> listWrittenKey;
-        uint32         writtenCount = 0;
+        vector<string>    listWrittenKey;
+        CookTally         tally;
+        const CookJobDesc desc = makeCookJobDesc();
         for ( const string& filePath : listFile )
         {
             const string normalized = FileUtil::normalizeSeparators( filePath );
@@ -1589,7 +1589,8 @@ namespace sw
                 continue;
 
             // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 의 쿠킹본 이름이다 — 런타임 `loadPrefab` 과 같은 규칙 하나(`AssetCookPath`).
-            const string outputPath = AssetCookPath::toCookedPath( out + normalized.substr( root.size() + 1 ) );
+            const string outputID   = AssetCookPath::toCookedPath( normalized.substr( root.size() + 1 ) );
+            const string outputPath = out + outputID;
             const string outputKey  = StringUtil::toLower( outputPath.c_str() );
             if ( std::find( listWrittenKey.begin(), listWrittenKey.end(), outputKey ) != listWrittenKey.end() )
             {
@@ -1598,19 +1599,40 @@ namespace sw
                 continue;
             }
 
-            PrefabAsset asset;
-            const bool  bLoaded    = bJSON ? asset.loadFromJSONFile( normalized ) : asset.loadFromXMLFile( normalized );
-            const bool  bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
-            if ( bFlattened == false || asset.saveToBinaryFile( outputPath ) == false )
+            const CookOutcome outcome = store.cookFile( desc, outputID, outputPath, [&]()
             {
-                SW_LOG_WARNING( "Prefab cook failed for '%#'", normalized );
+                // 중첩 인스턴스의 원본을 읽는 캐시는 작업마다 새로 둔다 — 앞 작업이 읽어 둔 원본을 쓰면 그 읽기가 이 작업의 입력에서 빠진다.
+                PrefabCache nestedPrefabs;
+                PrefabAsset asset;
+                const bool  bLoaded    = bJSON ? asset.loadFromJSONFile( normalized ) : asset.loadFromXMLFile( normalized );
+                const bool  bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
+                if ( bFlattened == false || asset.saveToBinaryFile( outputPath ) == false )
+                {
+                    SW_LOG_WARNING( "Prefab cook failed for '%#'", normalized );
+                    return CookStep::Failed;
+                }
+                return CookStep::Written;
+            } );
+            if ( outcome == CookOutcome::Failed )
+            {
                 ++outFailedCount;
                 continue;
             }
             listWrittenKey.push_back( outputKey );
-            ++writtenCount;
+            tally.add( outcome );
         }
-        return writtenCount;
+        SW_LOG_INFO( "Prefab cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        return tally.getWrittenCount();
+    }
+
+    CookJobDesc PrefabCache::makeCookJobDesc()
+    {
+        CookJobDesc desc;
+        desc._cookerName    = "Prefab";
+        desc._cookerVersion = kCookVersion;
+        desc._target        = "Any";
+        desc._settingsHash  = 0; // 프리팹 쿠킹에는 설정이 없다
+        return desc;
     }
 } // namespace sw
 

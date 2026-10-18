@@ -19,9 +19,9 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw::editor

@@ -9,6 +9,8 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 
+#include <optional>
+
 namespace sw
 {
     /**
@@ -67,6 +69,28 @@ namespace sw
         /** @brief 키의 bool 값을 반환합니다 (1/true/yes/on). */
         static bool getBool( const KeyValueMap& mapData, string_view key, bool fallback = false );
 
+        /**
+         * @brief 반드시 있어야 하는 키 @p key 를 타입 T 로 읽습니다. 없거나 비었거나 깨지면 키와 함께 오류를 남기고 nullopt 입니다.
+         * @details 폴백 인자를 받지 않는다(결정 기록 5-4). T 는 int32 · float32 · bool · string 입니다.
+         */
+        template <typename T>
+        [[nodiscard]] static std::optional<T> readRequired( const KeyValueMap& mapData, string_view key )
+        {
+            T           value{};
+            const uint8 read = parseValue( mapData, key, value );
+            if ( read == kValueAbsent )
+                reportMissing( key );
+            return read == kValueRead ? std::optional<T>{ value } : std::nullopt;
+        }
+        /** @brief 없어도 되는 키를 읽습니다. 없으면(또는 빈 값) @p outValue 를 비우고 true, 깨졌으면 오류와 false 입니다. */
+        template <typename T>
+        [[nodiscard]] static bool readOptional( const KeyValueMap& mapData, string_view key, std::optional<T>& outValue )
+        {
+            T           value{};
+            const uint8 read = parseValue( mapData, key, value );
+            outValue         = read == kValueRead ? std::optional<T>{ value } : std::nullopt;
+            return read != kValueInvalid;
+        }
         // ------------------------------------------------------------------------------
         // 4) 쓰기
         // ------------------------------------------------------------------------------
@@ -94,5 +118,15 @@ namespace sw
                     callback( line );
             } );
         }
+
+    private:
+        static constexpr uint8 kValueRead    = 0;
+        static constexpr uint8 kValueAbsent  = 1;
+        static constexpr uint8 kValueInvalid = 2;
+        static uint8           parseValue( const KeyValueMap& mapData, string_view key, int32& outValue );
+        static uint8           parseValue( const KeyValueMap& mapData, string_view key, float32& outValue );
+        static uint8           parseValue( const KeyValueMap& mapData, string_view key, bool& outValue );
+        static uint8           parseValue( const KeyValueMap& mapData, string_view key, string& outValue );
+        static void            reportMissing( string_view key );
     };
 } // namespace sw

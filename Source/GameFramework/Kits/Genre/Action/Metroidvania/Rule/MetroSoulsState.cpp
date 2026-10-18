@@ -51,7 +51,7 @@ namespace sw
         if ( _pCatalog == nullptr )
             return false;
         const MetroSiteDef* pSite = _pCatalog->findSite( siteID );
-        if ( pSite == nullptr || pSite->_bRest == SW_FALSE )
+        if ( pSite == nullptr || pSite->_bRest == false )
             return false;
         _respawnSite = pSite->_id;
         refreshWorld( vitality );
@@ -136,14 +136,14 @@ namespace sw
             return -1;
         MetroKillRecord record;
         record._spawnID = spawnID;
-        record._bBoss   = pEnemy->_bBoss;
+        record._bBoss   = pEnemy->_bBoss ? SW_TRUE : SW_FALSE;
         _listKill.push_back( record );
         if ( _pWallet != nullptr )
             _pWallet->add( getCurrencyName(), pEnemy->_currency );
         if ( pLoot != nullptr && pEnemy->_lootTable.empty() == false )
             (void)pLoot->roll( pEnemy->_lootTable, random, outDrops );
         pushEvent( MetroSoulsEventType::EnemyKilled, pEnemy->_id, pEnemy->_currency );
-        if ( pEnemy->_bBoss == SW_TRUE )
+        if ( pEnemy->_bBoss )
         {
             flags.setFlag( pEnemy->_flag, 1 );
             pushEvent( MetroSoulsEventType::BossDefeated, pEnemy->_flag, 0 );

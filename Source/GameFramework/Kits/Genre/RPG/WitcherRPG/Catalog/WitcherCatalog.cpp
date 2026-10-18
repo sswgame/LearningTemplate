@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Catalog/WitcherCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -13,15 +12,46 @@ namespace sw
 {
     namespace
     {
-        bool isNamed( string_view name, const utf8* pExpected )
+        struct WitcherCatalogInternal
         {
-            return StringUtil::equals( name, string_view( pExpected ), true );
-        }
-    } // namespace
-} // namespace sw
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+                return true;
+            }
 
-namespace sw
-{
+            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
+            template <typename TDef>
+            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting,
+                                                   std::initializer_list<string_view> listHandRead = {} )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName, listHandRead ) == false )
+                    return false;
+                outSetting = def;
+                return true;
+            }
+
+            /** @brief 연금술 물건 하나를 읽습니다. 오일은 칼에 바른 뒤 적중 횟수(`hits`)가 1 이상이어야 합니다. */
+            [[nodiscard]] static bool readAlchemyItem( const XMLNode& node, string_view sourceName, WitcherAlchemyDef& outItem )
+            {
+                if ( GameDataXML::readFields( node, outItem, sourceName ) == false )
+                    return false;
+                if ( outItem._kind == WitcherAlchemyKind::Oil && outItem._hits < 1 )
+                {
+                    SW_LOG_ERROR( "%#: oil '%#' needs hits=\"...\" of 1 or more", sourceName, outItem._id.c_str() );
+                    return false;
+                }
+                return true;
+            }
+        };
+    } // namespace
+
     SW_LOG_CALLER( "WitcherCatalog" );
 
     WitcherCatalog::WitcherCatalog()
@@ -45,120 +75,13 @@ namespace sw
 
     uint32 WitcherCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( isNamed( name, "Alchemy" ) )
-            {
-                _alchemy._maxToxicity   = MathUtil::max( 1.0f, node.getAttributeFloat( "maxToxicity", _alchemy._maxToxicity ) );
-                _alchemy._toxicityDecay = MathUtil::max( 0.0f, node.getAttributeFloat( "toxicityDecay", _alchemy._toxicityDecay ) );
-                GameDataXML::parseNameList( node.getAttributeText( "alcohol" ), ",; ", _alchemy._listAlcohol );
-                continue;
-            }
-            if ( isNamed( name, "Combat" ) )
-            {
-                WitcherCombatDef&   combat = _combat;
-                const hashed_string stat   = GameDataXML::readName( node, "intensityStat" );
-                if ( stat.empty() == false )
-                    combat._intensityStat = stat;
-                combat._stamina               = MathUtil::max( 1.0f, node.getAttributeFloat( "stamina", combat._stamina ) );
-                combat._staminaRegen          = MathUtil::max( 0.0f, node.getAttributeFloat( "regen", combat._staminaRegen ) );
-                combat._staminaDelay          = MathUtil::max( 0.0f, node.getAttributeFloat( "delay", combat._staminaDelay ) );
-                combat._fastCost              = MathUtil::max( 0.0f, node.getAttributeFloat( "fast", combat._fastCost ) );
-                combat._strongCost            = MathUtil::max( 0.0f, node.getAttributeFloat( "strong", combat._strongCost ) );
-                combat._dodgeCost             = MathUtil::max( 0.0f, node.getAttributeFloat( "dodge", combat._dodgeCost ) );
-                combat._rollCost              = MathUtil::max( 0.0f, node.getAttributeFloat( "roll", combat._rollCost ) );
-                combat._adrenalineMax         = MathUtil::max( 0.0f, node.getAttributeFloat( "adrenalineMax", combat._adrenalineMax ) );
-                combat._adrenalinePerHit      = MathUtil::max( 0.0f, node.getAttributeFloat( "adrenalinePerHit", combat._adrenalinePerHit ) );
-                combat._adrenalineLossOnHit   = MathUtil::max( 0.0f, node.getAttributeFloat( "adrenalineLoss", combat._adrenalineLossOnHit ) );
-                combat._adrenalineDamageBonus = MathUtil::max( 0.0f, node.getAttributeFloat( "adrenalineBonus", combat._adrenalineDamageBonus ) );
-                continue;
-            }
-            if ( isNamed( name, "SlotGroup" ) )
-            {
-                WitcherSlotGroupDef group;
-                group._requiredLevel = MathUtil::max( 0, node.getAttributeInt( "level", group._requiredLevel ) );
-                group._slotCount     = MathUtil::clamp( node.getAttributeInt( "slots", group._slotCount ), 1, 16 );
-                _listSlotGroup.push_back( group );
+            if ( loadElement( node, name, sourceName ) )
                 ++loadedCount;
-                continue;
-            }
-            if ( isNamed( name, "SkillColor" ) )
-            {
-                WitcherSkillColorDef color;
-                color._id    = GameDataXML::readName( node, "skill" );
-                color._color = GameDataXML::readName( node, "color" );
-                if ( color._id.empty() )
-                    SW_LOG_WARNING( "%#: <SkillColor> without a skill - skipped", sourceName );
-                else
-                    (void)_skillColorCatalog.add( color );
-                continue;
-            }
-
-            const bool bKnown = isNamed( name, "Monster" ) || isNamed( name, "Item" ) ||
-                                isNamed( name, "Sign" ) || isNamed( name, "Mutagen" ) ||
-                                isNamed( name, "Contract" );
-            if ( bKnown == false )
-            {
-                SW_LOG_WARNING( "%#: unknown element <%#> - skipped", sourceName, name );
-                continue;
-            }
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            const hashed_string id( pID );
-            ++loadedCount;
-            if ( isNamed( name, "Monster" ) )
-            {
-                loadMonster( node, id, sourceName );
-            }
-            else if ( isNamed( name, "Item" ) )
-            {
-                WitcherAlchemyDef item;
-                item._id               = id;
-                item._element          = GameDataXML::readName( node, "element" );
-                const string_view kind = node.getAttributeText( "kind" );
-                if ( isNamed( kind, "Decoction" ) )
-                    item._kind = WitcherAlchemyKind::Decoction;
-                else if ( isNamed( kind, "Oil" ) )
-                    item._kind = WitcherAlchemyKind::Oil;
-                else if ( isNamed( kind, "Bomb" ) )
-                    item._kind = WitcherAlchemyKind::Bomb;
-                else if ( kind.empty() == false && isNamed( kind, "Potion" ) == false )
-                    SW_LOG_WARNING( "%#: '%#' has an unknown kind '%#' - read as a potion", sourceName, pID, kind );
-                item._toxicity = MathUtil::max( 0.0f, node.getAttributeFloat( "toxicity", item._toxicity ) );
-                item._duration = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", item._duration ) );
-                item._charges  = MathUtil::max( 1, node.getAttributeInt( "charges", item._charges ) );
-                item._hits     = MathUtil::max( 0, node.getAttributeInt( "hits", item._kind == WitcherAlchemyKind::Oil ? 20 : 0 ) );
-                (void)_alchemyCatalog.add( item );
-            }
-            else if ( isNamed( name, "Sign" ) )
-            {
-                WitcherSignDef sign;
-                sign._id            = id;
-                sign._element       = GameDataXML::readName( node, "element" );
-                sign._altSkill      = GameDataXML::readName( node, "altSkill" );
-                sign._cost          = MathUtil::max( 0.0f, node.getAttributeFloat( "cost", sign._cost ) );
-                sign._altCost       = MathUtil::max( 0.0f, node.getAttributeFloat( "altCost", sign._altCost ) );
-                sign._basePower     = MathUtil::max( 0.0f, node.getAttributeFloat( "power", sign._basePower ) );
-                sign._altPowerScale = MathUtil::max( 0.0f, node.getAttributeFloat( "altPowerScale", sign._altPowerScale ) );
-                (void)_signCatalog.add( sign );
-            }
-            else if ( isNamed( name, "Mutagen" ) )
-            {
-                WitcherMutagenDef mutagen;
-                mutagen._id         = id;
-                mutagen._color      = GameDataXML::readName( node, "color" );
-                mutagen._stat       = GameDataXML::readName( node, "stat" );
-                mutagen._value      = node.getAttributeFloat( "value", 0.0f );
-                mutagen._matchValue = node.getAttributeFloat( "matchValue", 0.0f );
-                (void)_mutagenCatalog.add( mutagen );
-            }
-            else
-            {
-                loadContract( node, id );
-            }
         }
         for ( const WitcherMonsterDef& monster : _monsterCatalog.getAll() )
         {
@@ -166,71 +89,107 @@ namespace sw
             {
                 const bool bSign = weakness._kind == WitcherWeaknessKind::Sign;
                 if ( bSign ? _signCatalog.find( weakness._id ) == nullptr : _alchemyCatalog.find( weakness._id ) == nullptr )
-                    SW_LOG_WARNING( "%#: monster '%#' names an unknown weakness '%#'", sourceName, monster._id.c_str(), weakness._id.c_str() );
+                    SW_LOG_ERROR( "%#: monster '%#' names an unknown weakness '%#'", sourceName, monster._id.c_str(), weakness._id.c_str() );
             }
         }
         return loadedCount;
     }
 
-    void WitcherCatalog::loadMonster( const XMLNode& node, const hashed_string& id, string_view sourceName )
+    bool WitcherCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        using Internal = WitcherCatalogInternal;
+        const auto is  = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        if ( is( "Alchemy" ) )
+        {
+            WitcherAlchemyRuleDef rule;
+            if ( Internal::readSetting( node, sourceName, rule, { "alcohol" } ) == false )
+                return false;
+            GameDataXML::parseNameList( node.getAttributeText( "alcohol" ), ",; ", rule._listAlcohol );
+            _alchemy = rule;
+            return true;
+        }
+        if ( is( "Combat" ) )
+            return Internal::readSetting( node, sourceName, _combat );
+        if ( is( "SlotGroup" ) )
+        {
+            WitcherSlotGroupDef group;
+            if ( GameDataXML::readFields( node, group, sourceName ) == false )
+                return false;
+            _listSlotGroup.push_back( group );
+            return true;
+        }
+        if ( is( "SkillColor" ) )
+            return Internal::readInto( node, sourceName, _skillColorCatalog );
+        if ( is( "Monster" ) )
+            return loadMonster( node, sourceName );
+        if ( is( "Item" ) )
+        {
+            WitcherAlchemyDef item;
+            if ( Internal::readAlchemyItem( node, sourceName, item ) == false )
+                return false;
+            (void)_alchemyCatalog.add( item ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+            return true;
+        }
+        if ( is( "Sign" ) )
+            return Internal::readInto( node, sourceName, _signCatalog );
+        if ( is( "Mutagen" ) )
+            return Internal::readInto( node, sourceName, _mutagenCatalog );
+        if ( is( "Contract" ) )
+            return loadContract( node, sourceName );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool WitcherCatalog::loadMonster( const XMLNode& node, string_view sourceName )
     {
         WitcherMonsterDef monster;
-        monster._id       = id;
-        monster._category = GameDataXML::readName( node, "category" );
+        bool              bValid = GameDataXML::readFields( node, monster, sourceName, { "elements" } );
         GameDataXML::parseNameList( node.getAttributeText( "elements" ), ",; ", monster._listElement );
         if ( monster._listElement.empty() && monster._category.empty() == false )
-            monster._listElement.push_back( monster._category );
-        monster._maxKnowledge     = MathUtil::max( 1, node.getAttributeInt( "maxKnowledge", monster._maxKnowledge ) );
-        monster._readLevel        = MathUtil::clamp( node.getAttributeInt( "readLevel", monster._maxKnowledge ), 0, monster._maxKnowledge );
-        monster._killsPerLevel    = MathUtil::max( 1, node.getAttributeInt( "killsPerLevel", monster._killsPerLevel ) );
-        monster._killCap          = MathUtil::clamp( node.getAttributeInt( "killCap", monster._killCap ), 0, monster._maxKnowledge );
-        monster._investigateLevel = MathUtil::clamp( node.getAttributeInt( "investigateLevel", monster._investigateLevel ), 0, monster._maxKnowledge );
+            monster._listElement.push_back( monster._category ); // 방어 속성을 적지 않으면 분류 하나다(`_listElement` 의 정의)
         for ( XMLNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )
         {
             WitcherWeakness weakness;
-            weakness._id           = GameDataXML::readName( child, "id" );
-            weakness._knowledge    = MathUtil::clamp( child.getAttributeInt( "knowledge", weakness._knowledge ), 0, monster._maxKnowledge );
-            const string_view kind = child.getAttributeText( "kind" );
-            if ( isNamed( kind, "Bomb" ) )
-                weakness._kind = WitcherWeaknessKind::Bomb;
-            else if ( isNamed( kind, "Sign" ) )
-                weakness._kind = WitcherWeaknessKind::Sign;
-            if ( weakness._id.empty() )
+            if ( GameDataXML::readFields( child, weakness, sourceName ) == false )
             {
-                SW_LOG_WARNING( "%#: monster '%#' has a weakness without an id - skipped", sourceName, id.c_str() );
+                bValid = false;
+                continue;
+            }
+            if ( weakness._knowledge > monster._maxKnowledge )
+            {
+                SW_LOG_ERROR( "%#: monster '%#' weakness '%#' needs knowledge %# above maxKnowledge %#", sourceName, monster._id.c_str(),
+                              weakness._id.c_str(), weakness._knowledge, monster._maxKnowledge );
+                bValid = false;
                 continue;
             }
             monster._listWeakness.push_back( weakness );
         }
-        (void)_monsterCatalog.add( monster );
+        if ( bValid )
+            (void)_monsterCatalog.add( monster ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 
-    void WitcherCatalog::loadContract( const XMLNode& node, const hashed_string& id )
+    bool WitcherCatalog::loadContract( const XMLNode& node, string_view sourceName )
     {
         WitcherContractDef contract;
-        contract._id            = id;
-        contract._questID       = GameDataXML::readName( node, "quest" );
-        contract._reward        = MathUtil::max( 0, node.getAttributeInt( "reward", contract._reward ) );
-        contract._limitRatio    = MathUtil::max( 1.0f, node.getAttributeFloat( "limit", contract._limitRatio ) );
-        contract._angerMax      = MathUtil::max( 0.01f, node.getAttributeFloat( "angerMax", contract._angerMax ) );
-        contract._angerScale    = MathUtil::max( 0.0f, node.getAttributeFloat( "angerScale", contract._angerScale ) );
-        contract._angerPerRound = MathUtil::max( 0.0f, node.getAttributeFloat( "angerPerRound", contract._angerPerRound ) );
+        bool               bValid = GameDataXML::readFields( node, contract, sourceName );
         for ( XMLNode stepNode = node.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
         {
             WitcherContractStepDef step;
-            step._id = GameDataXML::readName( stepNode, "id" );
+            bValid = GameDataXML::readFields( stepNode, step, sourceName ) && bValid;
             for ( XMLNode clueNode = stepNode.findChild( "Clue" ); clueNode; clueNode = clueNode.findNextSibling( "Clue" ) )
             {
                 WitcherClueDef clue;
-                clue._id       = GameDataXML::readName( clueNode, "id" );
-                clue._position = float3{ clueNode.getAttributeFloat( "x", 0.0f ), clueNode.getAttributeFloat( "y", 0.0f ), clueNode.getAttributeFloat( "z", 0.0f ) };
-                clue._radius   = MathUtil::max( 0.0f, clueNode.getAttributeFloat( "radius", clue._radius ) );
-                clue._order    = MathUtil::max( 0, clueNode.getAttributeInt( "order", clue._order ) );
-                if ( clue._id.empty() == false )
+                if ( GameDataXML::readFields( clueNode, clue, sourceName ) )
                     step._listClue.push_back( clue );
+                else
+                    bValid = false;
             }
             contract._listStep.push_back( step );
         }
-        (void)_contractCatalog.add( contract );
+        if ( bValid )
+            (void)_contractCatalog.add( contract ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 } // namespace sw

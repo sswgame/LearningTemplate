@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -16,7 +17,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"

@@ -98,11 +98,11 @@ namespace sw
             case SurvivorState::Carried:
             {
                 if ( survivor._bWiggling == SW_TRUE )
-                    survivor._wiggleProgress += deltaTime / rules._wiggleTime;
+                    survivor._wiggleProgress += deltaTime / rules._hook._wiggleTime;
                 if ( survivor._wiggleProgress >= 1.0f )
                 {
                     pushEvent( AsymmetricHorrorEvent::Kind::WiggledFree, survivorIndex, -1, 0.0f, survivor._position );
-                    dropCarried( true, rules._wiggleStunTime );
+                    dropCarried( true, rules._hook._wiggleStunTime );
                 }
                 break;
             }
@@ -113,17 +113,17 @@ namespace sw
                 {
                     // 몸부림 단계에서는 멈추면 희생이 앞당겨진다.
                     survivor._struggleIdle = survivor._bStruggling == SW_TRUE ? 0.0f : survivor._struggleIdle + deltaTime;
-                    if ( survivor._struggleIdle > rules._struggleGrace )
+                    if ( survivor._struggleIdle > rules._hook._struggleGrace )
                     {
                         sacrifice( survivorIndex, false );
                         return;
                     }
                 }
-                if ( survivor._hookTimer >= rules._hookStageTime )
+                if ( survivor._hookTimer >= rules._hook._stageTime )
                 {
                     survivor._hookTimer = 0.0f;
                     survivor._hookStage += 1;
-                    if ( survivor._hookStage >= rules._maxHookStage )
+                    if ( survivor._hookStage >= rules._hook._stages )
                     {
                         sacrifice( survivorIndex, false );
                         return;
@@ -236,7 +236,7 @@ namespace sw
     {
         const AsymmetricHorrorRules& rules            = _pCatalog->getRules();
         const int32                  standing         = countStandingSurvivors();
-        const bool                   bShouldOpenHatch = _bHatchPlaced == SW_TRUE && _bHatchOpen == SW_FALSE && _bHatchClosed == SW_FALSE && standing > 0 && standing <= rules._hatchSurvivorCount;
+        const bool                   bShouldOpenHatch = _bHatchPlaced == SW_TRUE && _bHatchOpen == SW_FALSE && _bHatchClosed == SW_FALSE && standing > 0 && standing <= rules._endgame._hatchRemaining;
         if ( bShouldOpenHatch )
         {
             _bHatchOpen = SW_TRUE;
@@ -250,7 +250,7 @@ namespace sw
             const bool bHelpless = survivor._state == SurvivorState::Dying || survivor._state == SurvivorState::Carried || survivor._state == SurvivorState::Hooked;
             bSlowed              = bSlowed || bHelpless;
         }
-        _collapseRemaining.update( deltaTime * ( bSlowed ? rules._collapseSlowScale : 1.0f ) );
+        _collapseRemaining.update( deltaTime * ( bSlowed ? rules._endgame._slowScale : 1.0f ) );
         if ( _collapseRemaining.isActive() )
             return;
         // 붕괴가 끝났다. 아직 남은 생존자는 모두 희생된다.
@@ -287,7 +287,7 @@ namespace sw
                 {
                     pushEvent( AsymmetricHorrorEvent::Kind::SkillCheckResult, actor, -1, 0.0f, position );
                     if ( event._bNoise == SW_TRUE )
-                        makeNoise( actor, _pCatalog->getRules()._skillCheckNoiseRadius, position );
+                        makeNoise( actor, _pCatalog->getRules()._generator._noiseRadius, position );
                     break;
                 }
                 case InteractionEvent::Kind::Completed:

@@ -24,15 +24,14 @@ namespace
 {
     constexpr const utf8* kVoxelTestBlockXML = R"(
 <BlockCatalog atlasColumns="4" atlasRows="4" tileTexels="16">
-  <Block id="grass" name="Grass" tile="2" top="0" side="1" hardness="0.6"/>
-  <Block id="dirt" tile="2"/>
-  <Block id="stone" tile="3" hardness="1.5" color="0.9 0.9 0.9 1"/>
-  <Block id="sand" tile="4"/>
-  <Block id="water" tile="5" solid="false" opaque="false" color="0.4 0.6 1 0.6" breakable="false"/>
-  <Block id="bedrock" tile="6" breakable="false"/>
-  <Block id="log" tile="7" top="8" bottom="8"/>
-  <Block id="leaves" tile="9" opaque="false"/>
-  <Block name="NoId"/>
+  <Block id="grass" name="Grass" top="0" bottom="2" side="1" hardness="0.6"/>
+  <Block id="dirt" name="dirt" tile="2"/>
+  <Block id="stone" name="stone" tile="3" hardness="1.5" color="0.9,0.9,0.9,1"/>
+  <Block id="sand" name="sand" tile="4"/>
+  <Block id="water" name="water" tile="5" solid="false" opaque="false" color="0.4,0.6,1,0.6" breakable="false"/>
+  <Block id="bedrock" name="bedrock" tile="6" breakable="false"/>
+  <Block id="log" name="log" top="8" bottom="8" side="7"/>
+  <Block id="leaves" name="leaves" tile="9" opaque="false"/>
 </BlockCatalog>
 )";
 
@@ -84,7 +83,29 @@ namespace
 } // namespace
 
 /**
- * @brief [VoxelTest] 블록 번호는 읽은 순서로 1 부터, 면마다 아틀라스 칸(tile 기본 · top · bottom · side 덮어쓰기) · 물은 통과 · 반투명, UV 는 반 텍셀 들인다
+ * @brief [VoxelTest] 카탈로그 — id 없는 블록 · 면을 일부만 적은 블록 · tile 과 면을 섞은 블록 · 아틀라스 밖 칸 · 세 성분 색은 다른 값으로 채우지 않고 그 블록을 넣지 않는 오류다
+ */
+SW_TEST_CASE( VoxelTest, CatalogRejectsBrokenBlocksInsteadOfReadingDefaults )
+{
+    VoxelBlockCatalog catalog;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "broken blocks are rejected" );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( "<BlockCatalog atlasColumns=\"4\" atlasRows=\"4\" tileTexels=\"16\">"
+                                                 "<Block name=\"NoId\" tile=\"1\"/>"
+                                                 "<Block id=\"half\" name=\"Half\" top=\"0\" side=\"1\"/>"
+                                                 "<Block id=\"mixed\" name=\"Mixed\" tile=\"2\" top=\"0\" bottom=\"2\" side=\"1\"/>"
+                                                 "<Block id=\"far\" name=\"Far\" tile=\"16\"/>"
+                                                 "<Block id=\"rgb\" name=\"Rgb\" tile=\"1\" color=\"1 1 1\"/>"
+                                                 "<Block id=\"dirt\" name=\"Dirt\" tile=\"2\"/>"
+                                                 "</BlockCatalog>",
+                                                 "VoxelTest" ) );
+    }
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), catalog.getBlocks().size() );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( catalog.findBlockIndex( hashed_string( "dirt" ) ) ) );
+}
+
+/**
+ * @brief [VoxelTest] 블록 번호는 읽은 순서로 1 부터, 면마다 아틀라스 칸(tile 하나 또는 top · bottom · side 셋) · 물은 통과 · 반투명, UV 는 반 텍셀 들인다
  */
 SW_TEST_CASE( VoxelTest, CatalogReadsFacesAndAssignsIndices )
 {

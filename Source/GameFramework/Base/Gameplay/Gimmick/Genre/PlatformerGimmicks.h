@@ -53,9 +53,9 @@ namespace sw
         float32 _crumbleDelay;
         PROPERTY( Category = "Crumble", DisplayName = "Respawn Delay", Min = 0.0, Tooltip = "0 never respawns", Units = s )
         float32 _respawnDelay;
-        PROPERTY( Category = "Crumble", DisplayName = "Steps In State", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Crumble", DisplayName = "Steps In State", Tooltip = "Runtime" )
         int32 _stepsInState;
-        PROPERTY( Category = "Crumble", DisplayName = "State", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Crumble", DisplayName = "State", Tooltip = "Runtime" )
         CrumbleState _state;
 
         FixedStepTimer _clock;
@@ -114,7 +114,7 @@ namespace sw
         float3 _launchVelocity;
         PROPERTY( Category = "Launch", DisplayName = "Required Tags" )
         TagContainer _requiredTags;
-        PROPERTY( Category = "Launch", DisplayName = "Launch Count", Tooltip = "Runtime" )
+        PROPERTY( RuntimeState, Category = "Launch", DisplayName = "Launch Count", Tooltip = "Runtime" )
         int32 _launchCount;
     };
 } // namespace sw
