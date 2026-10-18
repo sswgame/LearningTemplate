@@ -340,7 +340,7 @@ namespace sw
     bool Material::loadFromFile( string_view assetRelativePath )
     {
         XMLDocument doc;
-        if ( doc.loadPath( assetRelativePath ) == false )
+        if ( doc.loadResource( assetRelativePath ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
     }
@@ -370,9 +370,7 @@ namespace sw
 
     bool Material::saveToFile( string_view assetRelativePath ) const
     {
-        string absPath = ResourcePaths::getResourcePath( assetRelativePath );
-        if ( absPath.empty() )
-            absPath = assetRelativePath;
+        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
 
         XMLDocument doc;
         if ( doc.parse( saveToString() ) == false )

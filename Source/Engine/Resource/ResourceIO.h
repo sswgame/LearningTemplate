@@ -16,6 +16,14 @@ namespace sw
     class AsyncReadHandle;
     class ResourcePakManager;
 
+    /** @brief 리소스 폴더 나열(`ResourceIO::collectResources`)의 결과입니다. 폴더가 없는 것과 나열에 실패한 것을 가릅니다. */
+    enum class ResourceFolderListing : uint8
+    {
+        Listed,        ///< 폴더가 있었다(낱개 폴더 또는 팩 항목). 거른 결과가 비어 있을 수 있다
+        FolderMissing, ///< 어느 팩에도, (낱개 파일을 허용하면) 디스크에도 그 폴더가 없다
+        Failed,        ///< 폴더 인자가 리소스 id 가 아니거나 디스크 폴더를 읽지 못했다(오류 로그를 남겼다)
+    };
+
     /** @brief 리소스 하나의 비동기 읽기가 끝났을 때 불립니다. 성공이면 다 읽은(팩이면 풀고 CRC 까지 맞춘) 바이트이고, 옮겨 가져도 됩니다. */
     using ResourceReadCompleteDelegate = Delegate<void( bool bSuccess, vector<uint8>& bytes )>;
 
@@ -61,6 +69,17 @@ namespace sw
          * @return 있으면 true 입니다.
          */
         static bool hasResource( string_view relativePath );
+
+        /**
+         * @brief 리소스 폴더 바로 아래 파일(하위 폴더 안은 빼고)의 리소스 id 를 모읍니다. 런타임 코드가 리소스 폴더를 훑는 길은 이것 하나입니다 —
+         *        `FileUtil::collectFiles` 는 디스크만 보므로 팩으로 쿠킹한 빌드에서 폴더가 비어 보입니다.
+         * @param relativeFolder 리소스 폴더 id(예: "game/shooter3d/data/appearance/presets"). OS 절대 경로와 `..` 는 받지 않습니다.
+         * @param extension 이름 끝 거르기(대소문자 무시, 예: ".appearance.xml"). 빈 값이면 모두입니다.
+         * @param outListPath 찾은 리소스 id. 마운트된 모든 팩과, 낱개 파일을 허용하면 디스크 폴더의 합집합입니다. 대소문자를 무시해 중복을 없애고
+         *                    (디스크 · 높은 우선순위 팩의 표기가 남는다) 소문자 기준 이름순으로 정렬합니다 — 실행마다 같습니다.
+         * @return 폴더가 없으면 `FolderMissing`, 인자가 잘못됐거나 디스크 폴더를 읽지 못하면 `Failed` 입니다. 그 둘이면 @p outListPath 는 비어 있습니다.
+         */
+        [[nodiscard]] static ResourceFolderListing collectResources( string_view relativeFolder, string_view extension, vector<string>& outListPath );
 
         /** @brief VFS 팩 매니저를 반환합니다. */
         static ResourcePakManager& getPackManager();

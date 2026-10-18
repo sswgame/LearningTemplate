@@ -103,7 +103,7 @@ namespace sw
 
     SW_LOG_CALLER( "DDSLoader" );
 
-    bool DDSLoader::loadFromFile( string_view filePath, DDSImageData& outImage )
+    bool DDSLoader::loadFromDiskFile( string_view filePath, DDSImageData& outImage )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )

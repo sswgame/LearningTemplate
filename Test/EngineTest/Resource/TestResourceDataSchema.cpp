@@ -638,7 +638,7 @@ namespace
             if ( endsWith( resourceID, ".xml" ) == false )
                 return false;
             sw::XMLDocument document;
-            if ( document.loadPath( resourceID ) == false )
+            if ( document.loadResource( resourceID ) == false )
                 return false;
             const sw::XMLNode root = document.getRoot( nullptr, false );
             if ( root.isValid() == false || root.getName() == nullptr )

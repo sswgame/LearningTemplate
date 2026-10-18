@@ -429,7 +429,7 @@ namespace sw
     bool JSONSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         JSONDocument doc;
-        if ( doc.loadPath( path ) == false )
+        if ( doc.loadResource( path ) == false )
             return false;
         return readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, context );
     }

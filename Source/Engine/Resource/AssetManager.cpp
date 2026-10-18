@@ -137,6 +137,13 @@ namespace sw
         {
             SW_LOG_INFO( "에셋 레지스트리 %# 항목 (팩 assetregistry.txt)", registered );
         }
+        else if ( getPackManager().isAllowLooseFiles() == false )
+        {
+            // 팩 전용 구성은 디스크의 .meta 를 훑지 않는다(배포본은 .meta 를 싣지 않고, 훑으면 낱개 파일 금지를 지나간다). 레지스트리가 빠진 팩은
+            // 쿠킹이 막는다(CookAssets.py — .meta 가 있는 도메인에 assetregistry.txt 가 없으면 그 팩을 실패로 한다). 그래서 0 항목은 .meta 가 하나도
+            // 없는 콘텐츠라는 뜻이고, 그 사실을 남긴다.
+            SW_LOG_INFO( "에셋 레지스트리 0 항목 (팩에 assetregistry.txt 없음 - .meta 없는 콘텐츠)" );
+        }
         else if ( ResourcePaths::getRootFolderPath().empty() == false )
         {
             // 쿠킹한 팩과 같은 도메인만 훑는다 — 다른 게임 팩의 .meta 는 이 게임이 닿지 않는다(느린 디스크에서 파일 하나가 읽기 한 번이다).

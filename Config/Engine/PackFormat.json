@@ -62,7 +62,7 @@
             { "name": "_fileCount", "type": "uint32", "doc": "팩에 포함된 파일 총 개수" },
             { "name": "_indexOffset", "type": "uint64", "doc": "FAT 인덱스 테이블 시작 오프셋" },
             { "name": "_indexSize", "type": "uint64", "doc": "FAT 인덱스 테이블 바이트 크기" },
-            { "name": "_stringPoolOffset", "type": "uint64", "doc": "디버그용 원본 경로 스트링 풀 시작 오프셋" },
+            { "name": "_stringPoolOffset", "type": "uint64", "doc": "항목 경로 목록(스트링 풀) 시작 오프셋 — 필수다. 런타임 폴더 나열이 이것으로 항목 이름을 알고, 리더는 없는 팩을 거절한다" },
             { "name": "_stringPoolSize", "type": "uint64", "doc": "스트링 풀 바이트 크기" },
             { "name": "_totalDataSize", "type": "uint64", "doc": "정렬 패딩을 포함한 페이로드 총 크기" },
             { "name": "_reserved", "type": "uint8[2]", "doc": "예약 패딩 (총 64바이트 정렬)" }
@@ -79,7 +79,7 @@
             { "name": "_compressedSize", "type": "uint32", "doc": "압축된 데이터 크기" },
             { "name": "_uncompressedSize", "type": "uint32", "doc": "압축 해제 후 원본 크기" },
             { "name": "_crc32", "type": "uint32", "doc": "원본 데이터 CRC32 체크섬" },
-            { "name": "_stringPoolOffset", "type": "uint32", "doc": "스트링 풀 내 원본 경로 오프셋 (풀 없을 시 0)" }
+            { "name": "_stringPoolOffset", "type": "uint32", "doc": "스트링 풀 내 항목 경로 오프셋 (NUL 종료, 해시가 _pathHash 와 같아야 한다)" }
         ]
     }
 }

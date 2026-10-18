@@ -73,7 +73,7 @@ namespace sw::editor
 {
     string EditorThemeTokens::getFolderPath()
     {
-        return ResourcePaths::getDomainFolderPath( path::kEditorPack, kFolderName );
+        return ResourcePaths::findLooseDomainFolder( path::kEditorPack, kFolderName ).getDiskPath();
     }
 
     void EditorThemeTokens::listThemeNames( vector<string>& outListName )

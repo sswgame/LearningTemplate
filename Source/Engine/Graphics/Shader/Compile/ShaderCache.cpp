@@ -59,7 +59,7 @@ namespace sw
         // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 쿠커가 쿠킹하는 이름과 글자 단위로 같아야
         // 하기 때문이다(규칙이 둘이면 그중 하나가 기준을 이긴다. `ShaderCookerTest` 가 지키는 계약이다).
         const string_view rhiFolder  = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const string      absPath    = ResourcePaths::getResourcePath( desc._filePath );
+        const string      absPath    = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
         const uint64      sourceHash = absPath.empty() ? 0u : ShaderCooker::computeEffectiveSourceHash( absPath );
 
         StringBuilder<constant::kMaxBuffer64> sb;
@@ -112,7 +112,7 @@ namespace sw
         string cacheKey;
         uint64 currentSourceHash{ 0 };
 
-        absPath = ResourcePaths::getResourcePath( desc._filePath );
+        absPath = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
 
         StringBuilder<constant::kMaxBuffer256> sb;
         sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
@@ -173,7 +173,7 @@ namespace sw
         // (CookAssets.py --verify-shaders).
         if ( absPath.empty() == false )
         {
-            const string precookedAbsPath = ResourcePaths::getResourcePath( precookedRelPath );
+            const string precookedAbsPath = ResourcePaths::findLooseFile( precookedRelPath ).getDiskPath();
             if ( precookedAbsPath.empty() == false && FileUtil::exists( precookedAbsPath ) )
             {
                 const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( precookedAbsPath ) );

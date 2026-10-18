@@ -1012,7 +1012,7 @@ namespace sw
             return false;
 
         XMLDocument doc;
-        if ( doc.loadPath( filePath ) == false )
+        if ( doc.loadResource( filePath ) == false )
             return false;
 
         XMLNode root = doc.getRoot( "UserBindings" );

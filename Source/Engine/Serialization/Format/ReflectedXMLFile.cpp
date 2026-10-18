@@ -2,8 +2,6 @@
 
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
-#include "Core/File/FileUtil.h"
-
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -25,7 +23,8 @@ namespace sw
         // PROPERTY 그래프를 그대로 읽는다 — 필드를 손으로 읽으면 필드를 더할 때마다 파서와 라이터를 같이 고쳐야 하고,
         // 하나만 빠뜨리면 조용히 빈 값이 된다. 모르는 이름 · 읽지 못한 값 · `Min`/`Max` 밖 값은 이름과 함께 오류다(설정 JSON 과 같은 계약).
         string text;
-        if ( ResourceIO::readTextResource( assetRelativePath, text ) == false && FileUtil::readTextFile( assetRelativePath, text ) == false )
+        // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 읽으면 팩 전용 구성의 거절을 지나간다.
+        if ( ResourceIO::readTextResource( assetRelativePath, text ) == false )
         {
             SW_LOG_ERROR( "XML 로드 실패: %# (%#) — 파일을 찾지 못했습니다", assetRelativePath, pTypeInfo->_name.c_str() );
             return false;
@@ -55,11 +54,8 @@ namespace sw
             return false;
         }
 
-        // 아직 없는 파일이면 `getResourcePath` 가 빈 문자열을 준다(존재할 때만 해석한다). 그때는
-        // 받은 경로를 그대로 쓴다. 새로 저장하는 길이 막히면 안 되기 때문이다.
-        string absPath = ResourcePaths::getResourcePath( assetRelativePath );
-        if ( absPath.empty() )
-            absPath = assetRelativePath;
+        // 쓰기 경로는 `getWritePath` 하나가 정한다(아직 없는 파일도 도메인 루트 아래로 — 작업 디렉터리에 떨어지지 않게).
+        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
 
         if ( XMLSerializer::saveFile( absPath, pDesc, *pTypeInfo ) == false )
         {

@@ -21,7 +21,7 @@ SW_TEST_CASE( ConfigReferenceTest, FieldsMatchReflection )
 {
     const sw::string path = sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), "docs/Config/ConfigReference.json" );
     sw::JSONDocument doc;
-    SW_ASSERT_TRUE_MSG( doc.loadPath( path ), path.c_str() );
+    SW_ASSERT_TRUE_MSG( doc.loadResource( path ), path.c_str() );
 
     uint32              comparedCount{ 0 };
     const sw::JSONValue listFile = doc.getRoot().get( "files" );

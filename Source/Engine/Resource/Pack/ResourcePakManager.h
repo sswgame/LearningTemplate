@@ -39,6 +39,12 @@ namespace sw
     class SW_API ResourcePakManager
     {
     public:
+#if defined( SW_SHIPPING )
+        static constexpr bool kAllowLooseFilesByDefault = false; ///< 배포 구성은 팩만 읽는다
+#else
+        static constexpr bool kAllowLooseFilesByDefault = true; ///< 개발 구성은 낱개 파일을 먼저 읽는다
+#endif
+
         ResourcePakManager();
         ~ResourcePakManager();
 
@@ -70,6 +76,14 @@ namespace sw
          * @brief 마운트된 팩 전체에서 가상 상대 경로의 파일이 있는지 확인합니다.
          */
         bool hasFile( string_view relativePath ) const;
+
+        /**
+         * @brief 마운트된 팩 전체에서 @p relativeFolder 바로 아래 항목(하위 폴더 안은 빼고)의 리소스 경로를 @p outListPath 뒤에 덧붙입니다.
+         * @param relativeFolder 가상 상대 폴더(구분자 '/', 끝 '/' 없음. 예: "game/shooter3d/data/appearance/presets")
+         * @details 찾는 두 형식은 `hasFile` 과 같습니다 — 전체 경로로 담긴 항목, 그리고 도메인 팩(`engine.pack`)에 도메인을 떼고 담긴 항목.
+         *          뒤의 것은 질의의 도메인을 다시 붙여 돌려주므로 결과는 그대로 `readFile` 에 넣을 수 있습니다. 중복 제거 · 정렬은 부르는 쪽(`ResourceIO::collectResources`)이 합니다.
+         */
+        void collectFolderEntries( string_view relativeFolder, vector<string>& outListPath ) const;
 
         /**
          * @brief 마운트된 팩을 우선순위 순서대로 찾아 파일의 바이너리 데이터를 로드합니다.

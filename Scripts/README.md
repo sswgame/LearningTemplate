@@ -138,6 +138,7 @@ Scripts/
   │     │     ├── CheckPostTickThisBinding.py # 틱 뒤 실행에 this 메서드 델리게이트 금지(핸들로 다시 찾는 executeOrDeferPostTickOnComponent 로)
   │     │     ├── CheckResourceCasing.py      # 리소스 소문자 명명
   │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
+  │     │     ├── CheckRuntimeResourceDiskAccess.py # GameFramework · Games 는 리소스를 디스크로 훑거나 풀지 않고 ResourceIO 를 쓴다
   │     │     ├── CheckClockReads.py          # std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline
   │     │     ├── CheckStdThread.py           # Source 의 스레드는 std::thread 가 아니라 sw::thread(합류 대기 관찰 · 로더 락 안 join 단언)
   │     │     ├── CheckExportMacros.py        # GameFramework 헤더의 내보내기 매크로(Base · 키트 · 서버 키트)와 순수 인터페이스에 매크로 금지

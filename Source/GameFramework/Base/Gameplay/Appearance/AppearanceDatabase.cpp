@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -74,7 +74,7 @@ namespace sw
             const string path = FileUtil::joinPath( folder, file._pFileName );
             XMLDocument  doc;
             string       absolutePath;
-            if ( doc.loadPath( path, &absolutePath ) == false )
+            if ( doc.loadResource( path, &absolutePath ) == false )
             {
                 if ( file._bRequired == SW_TRUE || AppearanceDatabaseInternal::isNotFound( doc.getLastError() ) == false )
                     _report.addError( "%#: cannot read appearance data (%#)", path, doc.getLastError() );
@@ -83,18 +83,20 @@ namespace sw
             // 실패는 각 섹션이 _report 에 오류로 남긴다
             (void)loadSectionFromNode( doc.getRoot(), absolutePath.empty() ? string_view( path ) : string_view( absolutePath ) );
         }
-        // 프리셋 에셋 — 폴더가 없으면 없는 것이다(선택). 이름순으로 읽어 같은 id 는 뒤 파일이 이긴다(실행마다 같다).
-        const string   presetFolder = ResourcePaths::getResourcePath( FileUtil::joinPath( folder, kPresetFolder ) );
-        vector<string> listPresetFile;
-        bool           bPresetsRead = true;
-        if ( presetFolder.empty() == false && FileUtil::collectFiles( presetFolder, ".xml", listPresetFile, false ) )
+        // 프리셋 에셋 — 폴더가 없으면 없는 것이다(선택). 나열은 팩을 아는 `ResourceIO` 로 한다(디스크만 훑으면 팩 빌드에서 0개로 읽힌다).
+        // 나열이 이름순이라 같은 id 는 뒤 파일이 이긴다(실행마다 같다). 폴더가 있는데 나열에 실패하면 오류다.
+        const string                presetFolder = FileUtil::joinPath( folder, kPresetFolder );
+        vector<string>              listPresetFile;
+        bool                        bPresetsRead = true;
+        const ResourceFolderListing listing      = ResourceIO::collectResources( presetFolder, kPresetExtension, listPresetFile );
+        if ( listing == ResourceFolderListing::Failed )
         {
-            std::sort( listPresetFile.begin(), listPresetFile.end() );
-            for ( const string& presetFile : listPresetFile )
-            {
-                if ( StringUtil::endsWith( presetFile, kPresetExtension, true ) )
-                    bPresetsRead = readPresetFile( presetFile ) && bPresetsRead; // 검사는 아래 finishLoad 가 한 번 한다
-            }
+            _report.addError( "%#: cannot list the appearance preset folder", presetFolder );
+            bPresetsRead = false;
+        }
+        for ( const string& presetFile : listPresetFile )
+        {
+            bPresetsRead = readPresetFile( presetFile ) && bPresetsRead; // 검사는 아래 finishLoad 가 한 번 한다
         }
         return finishLoad( pItemCatalog ) && bPresetsRead;
     }
@@ -111,7 +113,7 @@ namespace sw
     bool AppearanceDatabase::readPresetFile( string_view path )
     {
         XMLDocument doc;
-        if ( doc.loadPath( path ) == false )
+        if ( doc.loadResource( path ) == false )
         {
             _report.addError( "%#: cannot read the appearance preset (%#)", path, doc.getLastError() );
             return false;

@@ -86,7 +86,7 @@ namespace sw
             if ( FileUtil::exists( request._shaderPath ) )
                 absPath = request._shaderPath;
             else
-                absPath = ResourcePaths::getResourcePath( request._shaderPath );
+                absPath = ResourcePaths::findLooseFile( request._shaderPath ).getDiskPath();
 
             if ( FileUtil::exists( absPath ) == false )
                 continue;

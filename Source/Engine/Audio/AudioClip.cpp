@@ -225,8 +225,7 @@ namespace sw
         if ( AudioClipDecoder::isSupportedExtension( pathView ) )
         {
             vector<uint8> bytes;
-            const bool    bRead = ResourceIO::readBinaryResource( pathView, bytes ) ||
-                               ( FileUtil::exists( pathView ) && FileUtil::readFile( pathView, bytes ) );
+            const bool    bRead = ResourceIO::readBinaryResource( pathView, bytes ); // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
             if ( bRead )
             {
                 // 긴 소리는 풀지 않고 압축 바이트로 스트리밍한다(음수 기준이면 끈다). 짧거나 스트리밍할 수 없는 형식이면 바이트가 그대로 남아 아래에서 통째로 푼다.

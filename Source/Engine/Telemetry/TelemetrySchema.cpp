@@ -87,7 +87,7 @@ namespace sw
     {
         XMLDocument doc;
         string      sourceName( path );
-        if ( doc.loadPath( path, &sourceName ) == false )
+        if ( doc.loadResource( path, &sourceName ) == false )
         {
             SW_LOG_WARNING( "Failed to read telemetry schema %#", path );
             return false;

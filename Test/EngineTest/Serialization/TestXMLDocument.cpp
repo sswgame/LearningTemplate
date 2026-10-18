@@ -115,7 +115,7 @@ SW_TEST_CASE( XMLDocumentTest, ParseErrorNamesSourceLineAndColumn )
     }
     SW_EXPECT_TRUE_MSG( sw::StringUtil::startsWith( doc.getLastError(), "scene.xml:3:" ), doc.getLastError().c_str() );
 
-    SW_EXPECT_FALSE( doc.loadPath( "no/such/dir/missing.xml" ) );
+    SW_EXPECT_FALSE( doc.loadResource( "no/such/dir/missing.xml" ) );
     SW_EXPECT_TRUE_MSG( doc.getLastError().find( "missing.xml: not found" ) != sw::string::npos, doc.getLastError().c_str() );
 
     SW_EXPECT_TRUE( doc.parse( "<Root/>" ) );

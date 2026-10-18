@@ -43,7 +43,7 @@ namespace sw
                 const string underRoot = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), path );
                 if ( FileUtil::exists( underRoot ) || FileUtil::isDirectory( underRoot ) )
                     return FileUtil::normalizeSeparators( underRoot );
-                const string resolved = ResourcePaths::getResourcePath( path );
+                const string resolved = ResourcePaths::findLooseFile( path ).getDiskPath();
                 return resolved.empty() ? string( path ) : FileUtil::normalizeSeparators( resolved );
             }
 
@@ -360,7 +360,7 @@ namespace sw
             }
         }
         else
-            listGameFolder.push_back( ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, localizationFolder ) );
+            listGameFolder.push_back( ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot, localizationFolder ).getDiskPath() );
 
         for ( const string& gameFolder : listGameFolder )
         {

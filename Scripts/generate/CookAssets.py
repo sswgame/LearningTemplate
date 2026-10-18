@@ -423,7 +423,7 @@ def hasStagedAssetRegistryInternal(stagedDir: Path | None) -> bool:
 
 
 #: 팩 쿠커 버전 — `PackWriter` 가 내는 바이트를 바꾸면 올린다(모든 팩의 키가 바뀌어 다시 쓴다). 쿠커 소스 옆에서 사람이 올리는 상수다(결정 기록 5-5 와 같은 원칙).
-kPackCookerVersion = 1
+kPackCookerVersion = 2  # 2: 항목 경로 목록(스트링 풀)을 늘 담는다 — 지운 옛 팩은 리더가 거절한다
 #: 팩 기록 파일(`<팩>.packrec`)의 형식 버전 — 다르면 낡은 기록으로 보고 팩을 다시 쓴다(옛 형식을 읽는 길은 두지 않는다).
 kPackRecordFormatVersion = 1
 
@@ -486,13 +486,11 @@ class PackWriter:
         compression: int,
         compressionLevel: int = 0,
         dlcAppID: int = 0,
-        bStripDebugStrings: bool = True,
     ) -> None:
         self._spec = spec
         self._compression = compression
         self._compressionLevel = compressionLevel
         self._dlcAppID = dlcAppID
-        self._bStripDebugStrings = bStripDebugStrings
         self._listEntry: list[tuple[int, str, Path | bytes]] = []
 
     def addFile(self, relPath: str, sourcePath: Path) -> None:
@@ -511,7 +509,7 @@ class PackWriter:
         """
         담긴 항목으로 팩을 쿠킹합니다. 옆의 기록(`<팩>.packrec`)의 키가 이번 키와 같고 팩 바이트가 기록과 같으면 다시 쓰지 않는다.
 
-        키 = 해시(쿠커 버전, 팩 계약 지문, 압축 코덱 · 레벨, DLC, 디버그 문자열 여부, 항목마다 경로와 내용 해시). 판정에 파일 시각을 쓰지 않는다 —
+        키 = 해시(쿠커 버전, 팩 계약 지문, 압축 코덱 · 레벨, DLC, 항목마다 경로와 내용 해시). 판정에 파일 시각을 쓰지 않는다 —
         `git pull` 이 시각을 임의의 순서로 바꾼다. 기록이 없거나 형식이 낡았거나 깨졌으면 그 이유를 돌려주고 다시 쓴다(조용히 넘기지 않는다).
         """
         # 리더는 경로 해시로 TOC 를 이진 탐색한다 — 반드시 해시 오름차순이다.
@@ -541,7 +539,7 @@ class PackWriter:
         """팩 바이트를 정하는 모든 것의 해시입니다. 하나라도 다르면 다른 바이트가 나올 수 있다."""
         digest = hashlib.sha256()
         digest.update(f"cooker={kPackCookerVersion}\ncontract={self._spec.contractDigest}\ncompression={self._compression}:{self._compressionLevel}\n"
-                      f"dlc={self._dlcAppID}\nstrip={self._bStripDebugStrings}\n".encode("utf-8"))
+                      f"dlc={self._dlcAppID}\n".encode("utf-8"))
         for _, relPath, rawBytes in listLoaded:
             digest.update(relPath.encode("utf-8") + b"\x00" + hashlib.sha256(rawBytes).digest())
         return digest.hexdigest()
@@ -560,10 +558,9 @@ class PackWriter:
         dataOffset = dataStartOffset
 
         for pathHash, relPath, rawBytes in listLoaded:
-            stringOffset = 0
-            if not self._bStripDebugStrings:
-                stringOffset = len(stringPool)
-                stringPool.extend(relPath.encode("utf-8") + b"\x00")
+            # 항목 경로 목록은 늘 담는다 — 런타임 폴더 나열(`ResourceIO::collectResources`)이 이것으로 항목 이름을 알고, 리더는 없는 팩을 거절한다.
+            stringOffset = len(stringPool)
+            stringPool.extend(relPath.encode("utf-8") + b"\x00")
 
             # 압축 코덱은 팩 단위다(계약 파일 compression.scope="pack"). 리더가 헤더의 코덱
             # 하나로 모든 항목을 해제하므로, 압축 이득이 없는 파일도 같은 코덱으로 넣어야 한다.
@@ -587,14 +584,12 @@ class PackWriter:
             listDataBlob.append(payload)
             dataOffset += len(payload)
 
-        flags = spec.mapFlag["HasCrc32"]
+        flags = spec.mapFlag["HasCrc32"] | spec.mapFlag["HasStringPool"]
         stringPoolOffset = 0
         stringPoolSize = 0
-        if not self._bStripDebugStrings:
-            flags |= spec.mapFlag["HasStringPool"]
-            if stringPool:
-                stringPoolOffset = spec.alignOffset(dataOffset)
-                stringPoolSize = len(stringPool)
+        if stringPool:
+            stringPoolOffset = spec.alignOffset(dataOffset)
+            stringPoolSize = len(stringPool)
 
         header = spec.header.pack(
             _magic=spec.magic,
@@ -654,7 +649,6 @@ def cookPack(
     compression: int,
     compressionLevel: int,
     dlcAppID: int = 0,
-    stripDebugStrings: bool = True,
     targetRhi: str = "dx12",
     extraEntries: list[tuple[str, bytes]] | None = None,
     stagedDir: Path | None = None,
@@ -676,7 +670,6 @@ def cookPack(
         compression=compression,
         compressionLevel=compressionLevel,
         dlcAppID=dlcAppID,
-        bStripDebugStrings=stripDebugStrings,
     )
 
     listPackFile, staleCooked = collectPackFiles(sourceDir, packConfig, targetRhi=targetRhi, buildTarget=buildTarget)
@@ -735,7 +728,6 @@ def cookAllPacks(
     projectRoot: Path,
     outputDir: Path,
     packConfig: dict,
-    isShipping: bool = True,
     targetRhi: str = "dx12",
     cookedDir: Path | None = None,
     buildTarget: str = "",
@@ -785,7 +777,7 @@ def cookAllPacks(
             allSuccess = False
             continue
         success = cookPack(src, out, packConfig, dlcAppID=dlcId, compression=packCompression, compressionLevel=packCompressionLevel,
-                           stripDebugStrings=isShipping, targetRhi=targetRhi,
+                           targetRhi=targetRhi,
                            stagedDir=staged, buildTarget=buildTarget)
         if not success:
             allSuccess = False
@@ -806,7 +798,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=str, default="", help="팩 출력 디렉터리")
     parser.add_argument("--cooked-dir", type=str, default="", help="프리팹·씬 쿠킹 산출물 스테이징 디렉터리 (기본: build/*/Bin/Cooked)")
     parser.add_argument("--config", type=str, default="", help="PackConfig.json 경로")
-    parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
     parser.add_argument("--target-rhi", type=str, default="", help=f"타깃 RHI 백엔드 ({', '.join(backend.commandLineName for backend in _gCookContract.listBackend)} 또는 백엔드 이름)")
     parser.add_argument("--cook-shaders", action="store_true", help="패킹 전 App.exe --cook-shaders 를 실행하여 셰이더 일괄 사전 빌드")
     parser.add_argument("--verify-shaders", action="store_true", help="쿠킹된 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
@@ -842,7 +833,6 @@ def cookInternal(args: argparse.Namespace) -> int:
     if doPrefabs or doScenes:
         exitCode = cookScenes(cookedDir=cookedDir, appExePath=appExePath) or exitCode
     if doPacks:
-        stripNames = not args.include_debug_names
         configPath = Path(args.config) if args.config else (projectRoot / kFilePackConfig)
         try:
             packConfig = requireConfig(configPath, kFilePackConfig)
@@ -872,7 +862,7 @@ def cookInternal(args: argparse.Namespace) -> int:
             listExcluded = _gCookContract.mapExcludedKindByTarget.get(args.build_target, ())
             print(f"[CookAssets] Build target: {args.build_target} (excluded asset kinds: {', '.join(listExcluded) or 'none'})")
         try:
-            success = cookAllPacks(projectRoot, outDir, packConfig, isShipping=stripNames, targetRhi=targetRhi, cookedDir=cookedDir,
+            success = cookAllPacks(projectRoot, outDir, packConfig, targetRhi=targetRhi, cookedDir=cookedDir,
                                    buildTarget=args.build_target, game=args.game)
         except ConfigError as error:
             print(f"[CookAssets Error] {error}", file=sys.stderr)

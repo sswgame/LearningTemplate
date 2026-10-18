@@ -194,6 +194,25 @@ namespace sw
         return getFileEntry( StringUtil::computeHash64( relativePath ), outEntry );
     }
 
+    void ResourcePakReader::collectFolderEntries( string_view folder, vector<string>& outListPath ) const
+    {
+        std::scoped_lock<mutex> lock( _fileMutex );
+        for ( const auto& mapItem : _mapEntry )
+        {
+            const string_view path( mapItem.second._relativePath );
+            size_t            nameStart = 0;
+            if ( folder.empty() == false )
+            {
+                const bool bUnderFolder = path.size() > folder.size() + 1 && path[folder.size()] == '/' && StringUtil::startsWith( path, folder, true );
+                if ( bUnderFolder == false )
+                    continue;
+                nameStart = folder.size() + 1;
+            }
+            if ( path.find( '/', nameStart ) == string_view::npos )
+                outListPath.emplace_back( path );
+        }
+    }
+
     bool ResourcePakReader::makeReadPlan( uint64 pathHash, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
@@ -341,19 +360,19 @@ namespace sw
         if ( validateHeaderGeometry( fileSize ) == false )
             return false;
 
-        // 스트링 풀을 읽는다(들어 있으면)
-        const bool bHasStringPool = engine::areEngineServicesBound()
-                                      ? engine::getSubsystem<TypeRegistry>().hasFlag( static_cast<PackFlag>( _header._flags ), PackFlag::HasStringPool )
-                                      : ( ( _header._flags & static_cast<uint16>( PackFlag::HasStringPool ) ) != 0 );
-
-        if ( bHasStringPool && _header._stringPoolSize > 0 )
+        // 항목 경로 목록(스트링 풀)은 필수다 — 폴더 나열(`collectFolderEntries`)이 이것 말고는 항목 이름을 알 길이 없다. 해시만 든 팩을
+        // 받아 주면 그 팩의 폴더는 조용히 비어 보인다.
+        const bool bHasStringPool = ( _header._flags & static_cast<uint16>( PackFlag::HasStringPool ) ) != 0;
+        if ( bHasStringPool == false || _header._stringPoolSize == 0 )
         {
-            _stringPoolBytes.resize( _header._stringPoolSize );
-            if ( _file.readAt( _header._stringPoolOffset, _stringPoolBytes.data(), _stringPoolBytes.size() ) == false )
-            {
-                SW_LOG_ERROR( "Failed to read string pool from pack: %#", _packFilePath );
-                return false;
-            }
+            SW_LOG_ERROR( "Pack has no entry path list (string pool) - cook it again with Scripts/generate/CookAssets.py: %#", _packFilePath );
+            return false;
+        }
+        _stringPoolBytes.resize( _header._stringPoolSize );
+        if ( _file.readAt( _header._stringPoolOffset, _stringPoolBytes.data(), _stringPoolBytes.size() ) == false )
+        {
+            SW_LOG_ERROR( "Failed to read string pool from pack: %#", _packFilePath );
+            return false;
         }
 
         // FAT 인덱스 테이블(32B x FileCount)을 읽는다
@@ -387,15 +406,20 @@ namespace sw
             memEntry._crc32            = diskEntry._crc32;
             memEntry._stringPoolOffset = diskEntry._stringPoolOffset;
 
-            if ( _stringPoolBytes.empty() == false && diskEntry._stringPoolOffset < _stringPoolBytes.size() )
+            // **풀 안에서만 읽는다.** `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아 풀 **밖까지** 훑는다. 종결자가 풀 안에 없거나
+            // (끊긴 다운로드 · 손상) 경로의 해시가 항목과 다르면 이 팩의 나열이 읽을 수 없는 이름을 내놓으므로 팩을 거절한다.
+            const string_view pool{ reinterpret_cast<const utf8*>( _stringPoolBytes.data() ), _stringPoolBytes.size() };
+            const size_t      terminator = diskEntry._stringPoolOffset < pool.size() ? pool.find( '\0', diskEntry._stringPoolOffset ) : string_view::npos;
+            if ( terminator == string_view::npos || terminator == diskEntry._stringPoolOffset )
             {
-                // **풀 안에서만 읽는다.** `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아
-                // 풀 **밖까지** 훑는다. 마지막 문자열이 잘린 팩(끊긴 다운로드 · 손상)이면
-                // 버퍼 밖 읽기다. 시작 오프셋만 검사해서는 끝을 보장하지 못한다.
-                const utf8*       pPool = reinterpret_cast<const utf8*>( _stringPoolBytes.data() );
-                const string_view raw{ pPool + diskEntry._stringPoolOffset, _stringPoolBytes.size() - diskEntry._stringPoolOffset };
-                const size_t      terminator = raw.find( '\0' );
-                memEntry._debugRelativePath.assign( raw.data(), terminator == string_view::npos ? raw.size() : terminator );
+                SW_LOG_ERROR( "Pack entry path lies outside the string pool or is empty (offset %#): %#", static_cast<uint32>( diskEntry._stringPoolOffset ), _packFilePath );
+                return false;
+            }
+            memEntry._relativePath.assign( pool.substr( diskEntry._stringPoolOffset, terminator - diskEntry._stringPoolOffset ) );
+            if ( StringUtil::computeHash64( memEntry._relativePath ) != diskEntry._pathHash )
+            {
+                SW_LOG_ERROR( "Pack entry path '%#' does not match its path hash: %#", memEntry._relativePath, _packFilePath );
+                return false;
             }
 
             _mapEntry.insert_or_assign( diskEntry._pathHash, std::move( memEntry ) );

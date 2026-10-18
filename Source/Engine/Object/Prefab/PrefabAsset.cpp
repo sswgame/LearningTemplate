@@ -20,6 +20,7 @@
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -611,7 +612,7 @@ namespace sw
         AssetLoadScope loadScope( "Prefab", assetRelativePath );
         string         absPath;
         XMLDocument    doc;
-        if ( doc.loadPath( assetRelativePath, &absPath ) == false )
+        if ( doc.loadResource( assetRelativePath, &absPath ) == false )
         {
             SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
             return false;
@@ -664,7 +665,7 @@ namespace sw
         _bValid = SW_FALSE;
         string       absPath;
         JSONDocument doc;
-        if ( doc.loadPath( assetRelativePath, &absPath ) == false )
+        if ( doc.loadResource( assetRelativePath, &absPath ) == false )
         {
             SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
             return false;
@@ -711,12 +712,13 @@ namespace sw
 
     bool PrefabAsset::loadFromBinaryFile( string_view assetRelativePath )
     {
-        _bValid        = SW_FALSE;
-        string absPath = ResourcePaths::getResourcePath( assetRelativePath );
-        if ( absPath.empty() )
-            absPath = assetRelativePath;
-
-        Archive arch( absPath, true );
+        _bValid = SW_FALSE;
+        // 쿠킹한 프리팹은 팩에 든다 — 디스크 경로로 열지 않고 `ResourceIO` 로 읽는다(낱개 파일 허용 정책도 거기서 본다).
+        const string  absPath{ assetRelativePath };
+        vector<uint8> bytes;
+        Archive       arch;
+        if ( ResourceIO::readBinaryResource( assetRelativePath, bytes ) )
+            arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
             SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );

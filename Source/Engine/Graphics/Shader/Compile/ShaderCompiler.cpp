@@ -40,7 +40,7 @@ namespace sw
                 // 쿠킹 스탬프도 같은 표의 헤더를 본다(`ShaderCooker::kArrIncludeRootDomain`).
                 for ( const utf8* pDomain : ShaderCooker::kArrIncludeRootDomain )
                 {
-                    const string domainShaders = ResourcePaths::getDomainFolderPath( pDomain, "shaders" );
+                    const string domainShaders = ResourcePaths::findLooseDomainFolder( pDomain, "shaders" ).getDiskPath();
                     if ( domainShaders.empty() == false )
                         outListDir.push_back( domainShaders );
                 }
@@ -278,7 +278,7 @@ namespace sw
         if ( FileUtil::exists( desc._filePath ) )
             absPathStr = desc._filePath;
         else
-            absPathStr = ResourcePaths::getResourcePath( desc._filePath );
+            absPathStr = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
 
         if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
         {

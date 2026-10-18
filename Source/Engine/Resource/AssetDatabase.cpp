@@ -19,7 +19,7 @@ namespace sw
     {
         string absoluteForRelative( string_view relativePath )
         {
-            string result = ResourcePaths::getResourcePath( relativePath );
+            string result = ResourcePaths::findLooseFile( relativePath ).getDiskPath();
             if ( result.empty() )
             {
                 // 쓰기 쪽: 도메인을 포함한 전역 ID 만으로 절대 경로를 만든다.
@@ -127,7 +127,7 @@ namespace sw
                 return result;
 #else
                 // 에셋 파일이 없는 경로에는 식별자를 지어내지 않는다. 지어 쓰면 없는 머티리얼을 acquire 만 해도 Resource/ 에 고아 `.meta` 가 생긴다.
-                if ( ResourcePaths::getResourcePath( path ).empty() )
+                if ( ResourcePaths::findLooseFile( path ).getDiskPath().empty() )
                     return result;
                 result = UUID::generate();
                 if ( writeMetaFile( path, result, bImported ) == false )

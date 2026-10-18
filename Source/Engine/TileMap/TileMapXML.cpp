@@ -73,7 +73,7 @@ namespace sw
 
         string text;
         string absPath;
-        if ( ResourceIO::readTextResource( path, text, &absPath ) == false && FileUtil::readTextFile( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text, &absPath ) == false ) // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
         {
             SW_LOG_ERROR( "TileMap file not found: %#", path );
             return false;
@@ -347,9 +347,7 @@ namespace sw
 
     bool TileMapXMLData::save( string_view path ) const
     {
-        string absPath = ResourcePaths::getResourcePath( path );
-        if ( absPath.empty() )
-            absPath = path;
+        const string absPath = ResourcePaths::getWritePath( path );
 
         const string xml = toXML();
         if ( xml.empty() )
