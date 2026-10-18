@@ -127,4 +127,52 @@ namespace sw
             return false;
         return FileUtil::writeTextFile( absPath, dump( mapData, headerComment, sectionName ) );
     }
+
+    namespace
+    {
+        /** @brief 키 하나의 글을 타입으로 읽습니다. 없거나 빈 값은 1(없음), 깨지면 키와 함께 오류를 남기고 2 입니다. */
+        template <typename T, typename ParseFn>
+        uint8 readKeyValue( const KeyValueMap& mapData, string_view key, T& outValue, const utf8* pTypeLabel, ParseFn&& parse )
+        {
+            const auto iter = mapData.find( key );
+            if ( iter == mapData.end() || StringUtil::trim( iter->second ).empty() )
+                return 1;
+            if ( parse( StringUtil::trim( iter->second ), outValue ) )
+                return 0;
+            SW_LOG_ERROR( "Key '%#' is not a %#: '%#'", key, pTypeLabel, iter->second );
+            return 2;
+        }
+    } // namespace
+
+    uint8 KeyValueFile::parseValue( const KeyValueMap& mapData, string_view key, int32& outValue )
+    {
+        return readKeyValue( mapData, key, outValue, "integer", []( string_view text, int32& value )
+        { return StringUtil::parseInt( text, value ); } );
+    }
+
+    uint8 KeyValueFile::parseValue( const KeyValueMap& mapData, string_view key, float32& outValue )
+    {
+        return readKeyValue( mapData, key, outValue, "number", []( string_view text, float32& value )
+        { return StringUtil::parseFloat( text, value ); } );
+    }
+
+    uint8 KeyValueFile::parseValue( const KeyValueMap& mapData, string_view key, bool& outValue )
+    {
+        return readKeyValue( mapData, key, outValue, "boolean", []( string_view text, bool& value )
+        { return StringUtil::tryParseBool( text, value ); } );
+    }
+
+    uint8 KeyValueFile::parseValue( const KeyValueMap& mapData, string_view key, string& outValue )
+    {
+        return readKeyValue( mapData, key, outValue, "text", []( string_view text, string& value )
+        {
+            value = string( text );
+            return true;
+        } );
+    }
+
+    void KeyValueFile::reportMissing( string_view key )
+    {
+        SW_LOG_ERROR( "Required key '%#' is missing", key );
+    }
 } // namespace sw

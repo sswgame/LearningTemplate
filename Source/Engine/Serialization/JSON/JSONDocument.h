@@ -9,6 +9,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include <optional>
+
 namespace sw
 {
     /**
@@ -86,6 +88,29 @@ namespace sw
         /** @brief 배열 원소를 반환합니다. 범위 밖이면 무효 핸들을 반환합니다. */
         JSONValue at( size_t index ) const;
 
+        /**
+         * @brief 반드시 있어야 하는 객체 멤버 @p key 를 타입 T 로 읽습니다. 없거나 타입이 다르면(정수 칸의 실수 · 범위 밖 포함) 키와 함께 오류를 남기고 nullopt 입니다.
+         * @details 폴백 인자를 받지 않는다(결정 기록 5-4). T 는 int32 · uint32 · int64 · uint64 · float32 · float64 · bool · string 입니다.
+         */
+        template <typename T>
+        [[nodiscard]] std::optional<T> readRequired( string_view key ) const
+        {
+            T                   value{};
+            const JSONValueRead read = parseMember( key, value );
+            if ( read == JSONValueRead::Absent )
+                reportMissing( key );
+            return read == JSONValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+        }
+        /** @brief 없어도 되는 객체 멤버 @p key 를 읽습니다. 없으면(또는 null) @p outValue 를 비우고 true, 타입이 다르면 오류와 false 입니다. */
+        template <typename T>
+        [[nodiscard]] bool readOptional( string_view key, std::optional<T>& outValue ) const
+        {
+            T                   value{};
+            const JSONValueRead read = parseMember( key, value );
+            outValue                 = read == JSONValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            return read != JSONValueRead::Invalid;
+        }
+
         /** @brief 이 서브트리를 JSON 문자열로 직렬화합니다. indent 가 음수이면 한 줄로 만듭니다. */
         string dump( int32 indent = -1 ) const;
         /** @brief 다른 핸들의 값을 이 노드에 복사합니다. */
@@ -120,6 +145,24 @@ namespace sw
         JSONValue pushBack() const;
 
     private:
+        /** @brief 멤버 하나를 읽은 결과입니다. 타입이 다르면 읽는 함수가 키와 함께 오류로 남깁니다. */
+        enum class JSONValueRead : uint8
+        {
+            Read,
+            Absent,
+            Invalid,
+        };
+        JSONValueRead parseMember( string_view key, int32& outValue ) const;
+        JSONValueRead parseMember( string_view key, uint32& outValue ) const;
+        JSONValueRead parseMember( string_view key, int64& outValue ) const;
+        JSONValueRead parseMember( string_view key, uint64& outValue ) const;
+        JSONValueRead parseMember( string_view key, float32& outValue ) const;
+        JSONValueRead parseMember( string_view key, float64& outValue ) const;
+        JSONValueRead parseMember( string_view key, bool& outValue ) const;
+        JSONValueRead parseMember( string_view key, string& outValue ) const;
+        /** @brief 필수 멤버가 없다고 오류로 남깁니다. */
+        void reportMissing( string_view key ) const;
+
         friend class JSONDocument;
         /** @brief 내부 JSON 노드 포인터로 핸들을 만듭니다. */
         explicit JSONValue( void* pValue )

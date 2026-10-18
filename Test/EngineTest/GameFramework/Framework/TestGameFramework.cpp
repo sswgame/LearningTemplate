@@ -1669,7 +1669,7 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )
 }
 
 /**
- * @brief [GameFrameworkTest] gamesettings 의 표준 칸 철자가 틀린 원소는 커스텀 값이 되지 않고 로드 오류다 — `<custom>` · `<Defaults>` 는 읽힌다
+ * @brief [GameFrameworkTest] gamesettings 의 표준 칸 철자가 틀린 원소와 자유 키-값 `<custom>` 은 로드 오류다 — `<Defaults>` 는 읽힌다
  */
 SW_TEST_CASE( GameFrameworkTest, GameSettingsUnknownElementIsALoadError )
 {
@@ -1677,42 +1677,12 @@ SW_TEST_CASE( GameFrameworkTest, GameSettingsUnknownElementIsALoadError )
         SW_TEST_DEFENSIVE_SCOPE( "철자가 틀린 gamesettings 를 일부러 읽는다" );
         GameSettings settings;
         SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><startmap>game/x/maps/a.scene.xml</startmap></GameSettings>", "typo" ) );
-        SW_EXPECT_TRUE( settings._mapCustomProperty.empty() );
+        SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><custom><prop key=\"party\">3</prop></custom></GameSettings>", "custom" ) );
     }
     GameSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromXMLText( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap><custom><prop key=\"party\">3</prop></custom>"
-                                              "<Defaults /></GameSettings>",
+    SW_ASSERT_TRUE( settings.loadFromXMLText( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap><Defaults /></GameSettings>",
                                               "ok" ) );
     SW_EXPECT_EQUAL( sw::string( "game/x/maps/a.scene.xml" ), settings._startMap );
-    SW_EXPECT_EQUAL( 3, settings.getCustomPropertyInt( "party", 0 ) );
-}
-
-/**
- * @brief [GameFrameworkTest] GameSettings 범용 커스텀 프로퍼티 저장소 및 타입별 조회 헬퍼 검증
- */
-SW_TEST_CASE( GameFrameworkTest, GameSettings_CustomPropertyParsingAndQuery )
-{
-    GameSettings gameSettings;
-    gameSettings._mapCustomProperty["dungeonBgm"]    = "audio/bgm_dungeon.mp3";
-    gameSettings._mapCustomProperty["maxPartySize"]  = "8";
-    gameSettings._mapCustomProperty["encounterRate"] = "0.45";
-    gameSettings._mapCustomProperty["enableShadows"] = "true";
-
-    // 문자열 조회
-    SW_EXPECT_EQUAL( sw::string_view( "audio/bgm_dungeon.mp3" ), gameSettings.getCustomProperty( "dungeonBgm" ) );
-    SW_EXPECT_EQUAL( sw::string_view( "fallback_value" ), gameSettings.getCustomProperty( "non_existent_key", "fallback_value" ) );
-
-    // 정수 조회
-    SW_EXPECT_EQUAL( 8, gameSettings.getCustomPropertyInt( "maxPartySize", 6 ) );
-    SW_EXPECT_EQUAL( 10, gameSettings.getCustomPropertyInt( "non_existent_int", 10 ) );
-
-    // 실수 조회
-    SW_EXPECT_NEAR_EQUAL( 0.45f, gameSettings.getCustomPropertyFloat( "encounterRate", 0.1f ), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, gameSettings.getCustomPropertyFloat( "non_existent_float", 1.0f ), 1e-4f );
-
-    // 부울 조회
-    SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "enableShadows", false ) );
-    SW_EXPECT_FALSE( gameSettings.getCustomPropertyBool( "non_existent_bool", false ) );
 }
 
 /**
@@ -2656,52 +2626,6 @@ SW_TEST_CASE( GameFrameworkTest, TransitionActionCanStartAnotherTransition )
 }
 
 /**
- * @brief [GameFrameworkTest] 못 읽은 값은 **fallback 이 된다** — 조용히 0 이 되지 않는다
- * @details 세 조회 헬퍼는 `StringUtil` 의 파서를 쓴다. `strtol` · `strtof` 로 손수 풀면 실패를 0 으로 돌려주므로
- *          `maxPartySize=six` 같은 오타가 조용히 0 이 된다 — fallback 이 있는데도 쓰이지 않는다. bool 도 `true`/`True`/`1` 만
- *          알면 `TRUE` · `yes` · `on` 은 전부 fallback 으로 떨어진다.
- */
-SW_TEST_CASE( GameFrameworkTest, GameSettings_UnreadableValueFallsBackInsteadOfBecomingZero )
-{
-    GameSettings gameSettings;
-    gameSettings._mapCustomProperty["brokenInt"]   = "six";
-    gameSettings._mapCustomProperty["brokenFloat"] = "half";
-    gameSettings._mapCustomProperty["emptyInt"]    = "";
-    gameSettings._mapCustomProperty["upperBool"]   = "TRUE";
-    gameSettings._mapCustomProperty["yesBool"]     = "yes";
-    gameSettings._mapCustomProperty["offBool"]     = "OFF";
-    gameSettings._mapCustomProperty["paddedInt"]   = "  12  ";
-    gameSettings._mapCustomProperty["typoBool"]    = "ture";
-
-    // 못 읽은 값은 fallback 이 되고 **알린다**. 빈 값 · 없는 키는 조용하다.
-    test::ScopedLogCollector logs;
-    {
-        test::ScopedDefensiveTestLog expected( "custom properties that do not parse" );
-        SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyInt( "brokenInt", 6 ) == 6, "못 읽은 정수가 0 이 됐습니다" );
-        SW_EXPECT_NEAR_EQUAL( 0.5f, gameSettings.getCustomPropertyFloat( "brokenFloat", 0.5f ), 1e-4f );
-        SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "typoBool", true ) );
-    }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'brokenInt' has an unreadable integer 'six'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'brokenFloat' has an unreadable number 'half'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'typoBool' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyInt( "emptyInt", 6 ) == 6, "빈 값이 0 이 됐습니다" );
-    SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "missingBool", true ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "unreadable" ) == 3, logs.joined().c_str() );
-
-    // 대소문자와 흔한 철자를 모두 안다 — 반만 아는 사본이 아니다.
-    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "upperBool", false ), "TRUE 를 못 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "yesBool", false ), "yes 를 못 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "offBool", true ) == false, "OFF 를 못 읽었습니다" );
-
-    // 앞뒤 공백도 파서가 다룬다.
-    SW_EXPECT_EQUAL( 12, gameSettings.getCustomPropertyInt( "paddedInt", 6 ) );
-
-    // 멀쩡한 값은 그대로다.
-    gameSettings._mapCustomProperty["goodInt"] = "8";
-    SW_EXPECT_EQUAL( 8, gameSettings.getCustomPropertyInt( "goodInt", 6 ) );
-}
-
-/**
  * @brief [GameFrameworkTest] 움직이는 컴포넌트는 월드 값으로 움직인다 — 부모 아래에서도 월드 땅에 서고, 월드 방향으로 난다
  * @details 중력 · 투사체 · 피해 숫자 · 카메라 컨트롤러가 월드 값(땅 높이 · 속도 · 목표)을 **로컬** 위치에 더하고 비교하면, 루트 오브젝트에서는 같아
  *          드러나지 않지만 발판 위 캐릭터는 부모 높이만큼 떠서 멈추고, 돌아간 부모 아래 투사체는 부모의 축을 따라 난다.
@@ -2949,15 +2873,14 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     protected:
         void configureBootstrap( BootstrapConfig& outConfig ) override
         {
-            GameSettings& data                      = outConfig._data;
-            data._startMap                          = "game/test/maps/start.scene.xml";
-            data._titleScene                        = "game/test/maps/title.scene.xml";
-            data._inputMap                          = "engine/input/default.input.xml";
-            data._localizationProject               = FileUtil::joinPath( _localeDir, "boot.locproject.json" );
-            data._defaultLanguage                   = "ko_KR"; // 파일 이름(ko_kr)과 철자가 다르다
-            data._fallbackLanguage                  = "en-US";
-            data._defaultSavePath                   = _savePath;
-            data._mapCustomProperty["maxPartySize"] = "3";
+            GameSettings& data        = outConfig._data;
+            data._startMap            = "game/test/maps/start.scene.xml";
+            data._titleScene          = "game/test/maps/title.scene.xml";
+            data._inputMap            = "engine/input/default.input.xml";
+            data._localizationProject = FileUtil::joinPath( _localeDir, "boot.locproject.json" );
+            data._defaultLanguage     = "ko_KR"; // 파일 이름(ko_kr)과 철자가 다르다
+            data._fallbackLanguage    = "en-US";
+            data._defaultSavePath     = _savePath;
         }
     };
 
@@ -2966,10 +2889,10 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     instance._savePath  = test::makeTempPath( "bootstrap_default.sav" );
     SW_ASSERT_TRUE( instance.initialize( nullptr, nullptr ) );
 
-    // 1) 서비스 — 커스텀 칸이 데이터의 값으로 읽힌다
+    // 1) 서비스 — 데이터의 값으로 읽힌다
     const GameSettings* pBoundSettings = game::findSubsystem<GameSettings>();
     SW_ASSERT_NOT_NULL( pBoundSettings );
-    SW_EXPECT_EQUAL( 3, pBoundSettings->getCustomPropertyInt( "maxPartySize", 6 ) );
+    SW_EXPECT_EQUAL( sw::string( "ko_KR" ), pBoundSettings->_defaultLanguage );
 
     // 2) 입력 맵 — 통합 맵에 읽혔다
     SW_EXPECT_TRUE( runState._input.getInputMap().hasAction( "Confirm" ) );

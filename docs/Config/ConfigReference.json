@@ -1273,15 +1273,6 @@
        "max": "",
        "units": "",
        "description": "게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstanceBase` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음"
-      },
-      {
-       "name": "_mapCustomProperty",
-       "type": "map<string, string>",
-       "default": "",
-       "min": "",
-       "max": "",
-       "units": "",
-       "description": "범용 커스텀 키-값 프로퍼티 저장소"
       }
      ]
     }

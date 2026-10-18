@@ -136,11 +136,10 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 ### 7.5 단위
 
-동시 빌드는 둘까지입니다. D1 은 읽기 API 의 헤더를 바꾸므로 먼저 혼자 합니다. D2 ~ D7 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
+동시 빌드는 둘까지입니다. D1(새 읽기 함수 `readRequiredAttribute` · `readOptionalAttribute` · `readRequiredChild` · `readOptionalChild`, `JSONValue::readRequired` · `readOptional`, `KeyValueFile::readRequired` · `readOptional`, `GameSettings` 커스텀 모음 삭제)은 들어갔습니다. D2 ~ D7 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| D1 | 새 읽기 함수(필수, 선택)를 `XMLNode`, `JSONValue`, `KeyValueFile` 에 더하고 `GameSettings` 의 커스텀 속성 모음을 지웁니다 | `Engine/Serialization/XML/`, `Engine/Serialization/JSON/`, `Core/File/KeyValueFile.*`, `GameFramework/Base/Foundation/Data/GameSettings.*`, 해당 테스트 | 없음 | 새 읽기 함수의 단위 테스트(없음, 깨짐, 범위), `-L nogpu` | 없음 |
 | D2 | RPG 키트 카탈로그를 `readFields` 로 옮깁니다(Western 64, Witcher 41, MonsterCollector 23, JRPG 19). `MonsterCatalog` 의 `MonsterDef` 를 Stats 와 AI 하위 Def 로 나눕니다 | `GameFramework/Kits/Genre/RPG/`, 그 키트를 쓰는 팩의 데이터 | D1 | 키트 테스트, 해당 게임 기동 | 없음 |
 | D3 | 호러 키트(AsymmetricHorrorRules 51, Scavenger 39, Horror 32, Ghost 24) | `GameFramework/Kits/Genre/Horror/`, 데이터 | D1 | 위와 같음 | 없음 |
 | D4 | 액션 키트(Mech 38, BattleRoyale 33, ActionPlatformer 29, Metroidvania 26, Fighter 20, ActionAdventure) | `GameFramework/Kits/Genre/Action/`, 데이터 | D1 | 위와 같음 | 없음 |
