@@ -41,8 +41,8 @@
 
 - `C-48` [정리] **소스 게이트 공유 훑기(`SourceScan`)로 못 옮긴 게이트와 픽서.** 파일마다 보는 소스 게이트 28 개는 `SourceScan` · `RunSourceGates`(CTest · CI 의 `CheckSourceFiles`)로 옮겼다(2026-10-17 `lintspeed`).
   못 옮긴 것: `NamespaceBlocks` · `IncludeOrder`(줄 끝 · utf-8-sig 를 따로 다루고 픽서와 판정이 나뉨), `ThirdPartyIsolation` · `SuppressionReasons`(C++ 와 CMake 두 파일 집합), `KitNamespaces`.
-  픽서(`FormatBranchBraces` 등)도 파일마다 따로 읽고 주석을 가리는 같은 틀이다. `ConditionParts` · `EditorStyleLiterals` · `DataDrivenLiterals` 는 추가 줄 · 기준선 로직을 저마다 중복해 든다 —
-  공유 드라이버가 판정 단위(줄 끝 · 인코딩 · 파일 집합)와 추가 줄 · 기준선을 형식으로 갖게 한다.
+  픽서(`FormatBranchBraces` 등)도 파일마다 따로 읽고 주석을 가리는 같은 틀이다 — 공유 드라이버가 판정 단위(줄 끝 · 인코딩 · 파일 집합)를 형식으로 갖게 한다.
+  (추가 줄 · 기준선은 `LintGate.BaselineSourceGate` · `SourceScan.LineScope` 로 옮겼다, 2026-10-18.)
 
 - `C-15` [정리] **`dev/MoveEditorState.py`**(옛 위치의 에디터 로컬 상태를 옮기는 PC 마다 한 번짜리 이동기, 2026-10-13 들임)는 모든 PC 가 돌렸으면 지운다 — 추적되지 않는 파일을 옮기므로 돌렸는지 저장소에서는 알 수 없다.
   이 PC 는 `--dry-run` 에 옮길 것이 없다(2026-10-16). 다른 PC 는 사용자가 확인한 뒤에 지운다.

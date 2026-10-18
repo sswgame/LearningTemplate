@@ -44,6 +44,7 @@
   ① 입력 액션 이름의 생성자 기본값(`PawnComponent` 의 `Move` · `Look`, 카메라 액션)은 게임마다 맵이 달라 검증 함수로 못 본다 — 빙의 · 프리셋 때 런타임 경고가 본다.
   ② 카탈로그 안 id 참조는 팩 둘(`starskirmish-unit-tree` · `nilecity-goods`)만 규칙이 있다 — 나머지 키트 카탈로그는 로더 경고(스키마 테스트)에 기댄다.
   ③ 시나리오 `<DevCommand line="editor <명령>">` 의 에디터 명령 id(`EditorCommandRegistry` 는 실행 중 등록), UI 바인딩 경로(`UIBindingSet::bind` 오류 로그), 동적으로 지은 액션 이름은 런타임 경고 게이트(logwarn)에 맡긴다.
+  린트로는 더 풀 것이 없다(2026-10-18 판단) — ③ 의 에디터 명령 id 를 정적으로 보려면 `SW_DEV_COMMAND` 처럼 선언으로 등록하는 형식이 먼저다(C++ 구조 변경, 결정 필요). ② 는 에셋 검증 규칙 쪽 일이다.
 
 - `C-36` [정리] **데이터 주도 구조 정리(2026-10-16, 사용자 지시 "원천적인 문제 해결").** 설계 완료, 단위는 [데이터 주도 구조 정리 계획](../plans/DataDriven.md) 7절이다(C-30 과 한 순서, 별칭 제거는 R1).
   진행 표는 게이트 `CheckDataDrivenStructure` 의 `--summary` 이고, 형식으로 막힌 종류는 단위가 끝날 때 게이트에서 뺀다.
