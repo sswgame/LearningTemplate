@@ -73,3 +73,94 @@
 - 게이트 `CheckDataDrivenStructure` 기준선에서 고친 23 파일을 지웠다.
 
 빌드 때 볼 것: 새 `PROPERTY` 의 리플렉션 생성물, 모든 게임의 기동(필수 데이터가 하나라도 없으면 이제 멈춘다), 에디터 캐릭터 편집 · 공원 배치 시나리오.
+
+## 7. 남은 순서 (2026-10-18 설계, 백로그 C-30 과 C-36)
+
+C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용한 폴백, 버린 로드 결과)은 뿌리가 겹칩니다. 그래서 한 순서로 묶습니다.
+
+### 7.1 지금 수치
+
+2026-10-18 에 두 게이트로 센 값입니다. 진행 표의 원본은 각 게이트의 출력입니다.
+
+| 게이트 | 종류 | 기준선 | 지금 |
+|---|---|---|---|
+| `CheckDataDrivenLiterals` | `AttributeFallback` | 886 | 886 |
+| `CheckDataDrivenLiterals` | `TuningConstexpr` | 60 | 48 |
+| `CheckDataDrivenStructure` | `AssetPathLiteral` | 40 | 40 |
+| `CheckDataDrivenStructure` | `SilentFallback` | 124 | 122 |
+| `CheckDataDrivenStructure` | `DiscardedLoadResult` | 164 | 164 |
+| `CheckDataDrivenStructure` | `MagicNameLiteral`(보고만) | 없음 | 75 |
+| `CheckDataDrivenStructure` | `LiteralGetDefault`(보고만) | 없음 | 47 |
+
+`TuningConstexpr` 와 `GameTimeScale` 의 `SilentFallback` 은 이미 줄었으므로 기준선만 낮춥니다(D0).
+끝난 묶음은 W0, W1 의 엔진 기본 에셋 경로, W2, W3 의 에디터 경로, W4, W8 입니다.
+
+### 7.2 뿌리: 읽기 API 가 폴백을 형식으로 가지고 있다
+
+886 줄을 호출부마다 고치면, 다음 호출부가 같은 실수를 할 수 있는 구조가 남습니다. 폴백은 호출부가 아니라 읽기 API 의 시그니처에 있습니다.
+
+- `XMLNode::getAttributeInt` · `getAttributeFloat` · `getAttributeBool` 과 `getChildInt` · `getChildFloat` · `getChildBool`(`Engine/Serialization/XML/XMLDocument.h`)은 `fallback = 0` 기본 인자를 받습니다.
+  속성이 없으면 폴백을 돌려주고, 값이 숫자가 아니어도 경고만 남기고 폴백을 돌려줍니다. 인자를 적지 않은 `getAttributeFloat( "x" )` 도 조용히 0 이 됩니다. 이 API 를 부르는 줄은 약 1,010 개입니다(Engine 69, GameFramework 944).
+- `JSONValue::asInt` · `asUint` · `asFloat` · `asBool`(`fallback = 0`)과 `KeyValueFile::getInt` · `getFloat` · `getBool` 이 같은 구조입니다.
+- 이름으로 찾는 값 모음도 같은 구조입니다. `Blackboard::getFloat`, `StatBlock::getValue`, `AbilitySystemComponent::getAttributeValue`, `GameplayAbility::getParameter`, `GameplayEffectSpec::getSetByCallerMagnitude`, `ElementMaterialDef::getParam`, `FitInteractionDef::findArgument`, `FloatCurve::evaluate` 가 모르는 이름이나 빈 곡선에 호출부의 폴백을 돌려줍니다.
+- `GameSettings::getCustomProperty*` 는 제품 코드 호출 0, 데이터 사용 0 이고 테스트(`TestGameFramework.cpp:1641-1658`)만 씁니다.
+
+버린 로드 결과 164 줄도 대부분 뿌리가 하나입니다. `bool` 하나가 서로 다른 세 결과를 섞어서, 호출부가 정상인 결과까지 버리려고 `(void)` 를 씁니다.
+
+- **검사하고 다시 읽기.** 자동화 실행기(`Engine/Automation`, 31 줄)는 검사 함수가 단계 인자를 읽고, 실행할 때 같은 인자를 다시 읽으며 결과를 버립니다("검사에서 확인했다").
+- **없음과 실패를 섞기.** 선택 설정 파일(`ModelImportConfig`, `TextureImportConfig`)과 핫 리로드(`reloadChangedAsset`, `reloadChangedFile`)는 "파일이 없다"와 "내 파일이 아니다"를 실패와 같은 `false` 로 돌려줍니다.
+- **원소마다 읽기.** 모델 임포터(`ModelImportAnimation.cpp`, `ModelImportGeometry.cpp`)가 키 하나, 정점 하나마다 `readFloats` 를 부르고 실패를 0 으로 남깁니다.
+
+### 7.3 해법
+
+- **읽기 API 에서 폴백 인자를 없앱니다.** 값을 읽는 길은 셋만 남깁니다.
+  1. 스키마 읽기: `GameDataXML::readFields` 가 리플렉션 Def 를 읽습니다. 기본값은 Def 의 초기값이고, `PROPERTY( Required )` 와 `Min` · `Max` 가 검사됩니다. 데이터 카탈로그는 모두 이 길로 갑니다.
+  2. 필수 손 읽기: `[[nodiscard]] std::optional<T> readRequiredAttribute<T>( name )` 입니다. 없거나 값이 깨지면 원소와 속성 이름으로 오류를 남기고 `nullopt` 를 돌려줍니다.
+  3. 선택 손 읽기: `[[nodiscard]] bool readOptionalAttribute<T>( name, std::optional<T>& out )` 입니다. 없으면 `out` 이 비고 true 이며, 깨진 값은 오류와 false 입니다. "없음"은 기본값이 아니라 형식(`std::optional` 필드)으로 남습니다.
+  `JSONValue` 와 `KeyValueFile` 도 같은 세 길로 맞춥니다. 마지막 단위(D9)에서 폴백 인자를 받는 함수를 지우면 남은 호출부는 컴파일 오류가 됩니다. 그 뒤 `AttributeFallback` 종류와 해당 `fallbackParameter` 줄은 게이트에서 뺍니다.
+- **이름으로 찾는 값은 로드할 때 키를 확인합니다.** 데이터가 이름을 적은 곳은 로드할 때 이름을 핸들로 바꾸고, 대상 테이블에 없으면 로드 오류입니다. 실행 중 찾기는 핸들로 하므로 "모르는 이름"이 생기지 않습니다.
+  핸들로 바꿀 수 없는 찾기(블랙보드처럼 실행 중에 키가 생기는 것)는 `std::optional<T>` 을 돌려주고, 호출부가 없음을 직접 처리합니다.
+- **로드 결과는 세 값입니다.** `[[nodiscard]] enum class LoadOutcome { Loaded, Absent, Failed }` 와 `ReloadOutcome { Reloaded, NotTracked, Failed }` 를 둡니다. 정상인 `Absent` · `NotTracked` 가 따로 있으므로 `(void)` 로 버릴 이유가 없어집니다.
+  `Failed` 는 함수 안에서 오류를 한 번 남기고, 호출부는 멈출지 이어 갈지를 `switch` 로 고릅니다.
+- **자동화 단계는 한 번만 읽습니다.** 검사 단계가 인자를 타입 있는 단계 값(`std::variant` 의 단계별 구조체)으로 만들고 실행기는 그 값을 씁니다. 다시 읽는 코드가 없으므로 버릴 결과도 없습니다. 언리얼 자동화의 잠복 명령(latent command)도 인자를 가진 객체로 만든 뒤 실행합니다 [기억].
+- **임포터는 접근자 단위로 읽습니다.** `cgltf_accessor_unpack_floats` 로 접근자 하나를 통째로 읽고, 실패하면 임포트가 실패합니다. 원소마다 성공을 따질 이유가 없어집니다.
+- **남은 경로 상수는 엔진 기본 에셋 테이블로 옮깁니다.** `Engine/UI` 의 문서 경로 17 줄(`DebugHUD`, `OptionsMenuScreen`, `UINotificationService`, `UISubtitleService`, `UISystem`, `UIResolutionPresetTable`)과 설정 테이블의 `kResourcePath` 상수, 컴포넌트 기본 머티리얼(`TileMapRendererComponent`, `FoliageComponent`, `TerrainComponent`, `WaterBodyComponent`)은 `EngineDefaultAssets` 의 `DataPath` 필드가 됩니다. 이미 있는 형식(W0)을 쓰므로 새 형식은 없습니다.
+- **렌더러 첨부는 파이프라인 XML 이 모두 선언합니다.** `attachmentFormatOrDefault` 와 `getAttachmentClearColorOrDefault`(18 줄)의 뿌리는 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것입니다. 선언하지 않은 첨부 이름은 오류로 바꾸고, 포맷과 클리어 색은 XML 에만 둡니다.
+
+### 7.4 대안과 기각 이유
+
+- **게이트 기준선만 낮춰 가며 호출부를 고치는 방법.** 기각합니다. API 가 폴백 인자를 받는 한, 새 코드가 같은 줄을 다시 씁니다. 게이트는 리터럴 인자만 보므로 변수로 넘긴 폴백은 놓칩니다.
+- **`readOptionalAttribute( name, absentValue )` 처럼 없을 때의 값을 받는 선택 읽기.** 기각합니다. W2 의 `CharacterDataReader::readOptionalXxx` 가 이 형태인데, 결국 호출부에 리터럴 기본값이 다시 생깁니다. 기본값의 원본은 Def 초기값 하나여야 합니다. `CharacterDataReader` 도 D9 에서 같은 형태로 맞춥니다.
+- **언리얼 `FJsonObject::TryGetNumberField` 와 같은 `bool try*( name, out )`.** 부분적으로 받아들입니다. 없음과 깨짐을 가르지 못하므로 선택 읽기의 반환을 `bool` 로 두되 "없음"은 `std::optional` 이 비는 것으로 구분합니다 [기억].
+- **블랙보드도 핸들만 쓰게 하는 방법.** 기각합니다. 블랙보드 키는 실행 중에 행동 트리가 만듭니다. 언리얼 블랙보드는 키 선언 에셋이 있지만 `GetValueAsFloat` 은 없는 키에 0 을 돌려줍니다 [기억]. 여기서는 그 0 대신 `std::optional` 을 돌려줍니다.
+
+### 7.5 단위
+
+동시 빌드는 둘까지입니다. D1 은 읽기 API 의 헤더를 바꾸므로 먼저 혼자 합니다. D2 ~ D7 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
+
+| 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
+|---|---|---|---|---|---|
+| D0 | 줄어든 기준선(`TuningConstexpr` 48, `GameTimeScale`)을 낮춥니다 | `Scripts/lint/rules/` | 없음 | `-L lint` | 없음 |
+| D1 | 새 읽기 함수(필수, 선택)를 `XMLNode`, `JSONValue`, `KeyValueFile` 에 더하고 `GameSettings` 의 커스텀 속성 모음을 지웁니다 | `Engine/Serialization/XML/`, `Engine/Serialization/JSON/`, `Core/File/KeyValueFile.*`, `GameFramework/Base/Foundation/Data/GameSettings.*`, 해당 테스트 | 없음 | 새 읽기 함수의 단위 테스트(없음, 깨짐, 범위), `-L nogpu` | 없음 |
+| D2 | RPG 키트 카탈로그를 `readFields` 로 옮깁니다(Western 64, Witcher 41, MonsterCollector 23, JRPG 19). `MonsterCatalog` 의 `MonsterDef` 를 Stats 와 AI 하위 Def 로 나눕니다 | `GameFramework/Kits/Genre/RPG/`, 그 키트를 쓰는 팩의 데이터 | D1 | 키트 테스트, 해당 게임 기동 | 없음 |
+| D3 | 호러 키트(AsymmetricHorrorRules 51, Scavenger 39, Horror 32, Ghost 24) | `GameFramework/Kits/Genre/Horror/`, 데이터 | D1 | 위와 같음 | 없음 |
+| D4 | 액션 키트(Mech 38, BattleRoyale 33, ActionPlatformer 29, Metroidvania 26, Fighter 20, ActionAdventure) | `GameFramework/Kits/Genre/Action/`, 데이터 | D1 | 위와 같음 | 없음 |
+| D5 | 전략, 캐주얼, 시뮬레이션 장르와 Feature 키트 | `GameFramework/Kits/Genre/{Strategy,Casual,Simulation}/`, `GameFramework/Kits/Feature/`, 데이터 | D1 | 위와 같음 | 없음 |
+| D6 | Base 의 카탈로그(CameraPreset 43, Combat 36, AI 35, Ability 22, Inventory 17 등)와 이름으로 찾는 값 모음(블랙보드, 스탯, 어빌리티 속성, SetByCaller, 원소 규칙) | `GameFramework/Base/`, 데이터 | D1 | Base 테스트, 대표 셋 실행 | 없음 |
+| D7 | 엔진의 손 읽기(Input 33, TileMap 15, Telemetry 10, Character Fit, `FloatCurve`, Sprite 클립) | `Engine/Input/`, `Engine/TileMap/`, `Engine/Telemetry/`, `Engine/Character/Fit/`, `Engine/Utility/FloatCurve.*`, `Engine/Animation/Sprite/` | D1 | 입력 맵, 타일맵, 텔레메트리 테스트 | 없음 |
+| D8 | 로드 결과 세 값과 자동화 단계 한 번 읽기, 임포터 접근자 읽기, 에디터 명령의 결과 보고 | `Engine/Automation/`, `Engine/Serialization/Reflected*`, `Editor/Common/`, `Editor/Panels/` | D1 | 자동화 시나리오 전체, 에디터 시나리오, 임포트 테스트 | 없음 |
+| D9 | 폴백 인자를 받는 읽기 함수를 지우고, 형식으로 막힌 게이트 종류를 뺍니다 | D1 의 폴더, `Engine/Character/CharacterDataReader.*`, `Scripts/lint/` | D2 ~ D8 | 전 프리셋 컴파일, `-L lint`, `-L nogpu` | 없음 |
+| P1 | 경로 상수와 컴포넌트 기본 머티리얼을 `EngineDefaultAssets` 로 옮깁니다 | `Engine/UI/`, `Engine/Config/EngineDefaultAssets.*`, `Engine/Environment/`, `Engine/Object/Component/2D/TileMapRendererComponent.*`, 엔진 데이터 | 없음 | 기동, UI 테스트, 대표 셋 | 없음 |
+| P2 | 렌더러 첨부를 파이프라인 XML 이 모두 선언합니다(W7 과 함께) | `Engine/Renderer/Frame/`, 파이프라인 XML | 셰이더 묶음 | 네 백엔드 × 대표 셋, 골든 이미지 | 없음 |
+| P3 | 도구의 `.get( "키", 기본값 )` 47 줄과 삼킨 예외(W5) | `Scripts/` | 없음 | `-L lint`, 스크립트 테스트 | 없음 |
+| P4 | 테스트가 원본을 거치게 합니다(W6) | `Test/` | D9, P1 | `-L nogpu` | 없음 |
+| R1 | `REFLECT( Alias )` 와 별칭 읽기 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)를 지웁니다. 제품 데이터 사용은 0 이고, 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절을 지웁니다. 값 계산이 필요한 이행만 `SW_SCHEMA_MIGRATION` 으로 남습니다 | `Tools/ReflectionParser/`, `Engine/Reflection/`, 해당 테스트 | 없음 | 파서 테스트, `-L nogpu` | 없음 |
+| G1 | 게임 코드의 튜닝 리터럴(C-30 ②)을 데이터로 옮깁니다. NileCity 자동 계획표 좌표, HarvestValley 작물 → 모델 테이블, StarSkirmish `makeAISettings`, FarmSun 라이트 곡선 | 게임마다 `Source/Games/<게임>/`, 그 팩 데이터 | 없음 | 게임별 기동과 스크린샷 비교 | 없음 |
+| G2 | Shipping 의 그림 비교(C-30 ⑤)를 구운 팩의 시나리오 스크린샷으로 둡니다 | `Test/AppTest/`, 팩 시나리오 | 없음 | Shipping 빌드와 `-L hostgpu` | 없음 |
+
+C-30 ④(에디터 색과 아이콘 테이블, UI 크기 리터럴)는 디자인 토큰 작업(editorux 묶음)이 맡으므로 이 표에 넣지 않습니다.
+D2 ~ D6 의 데이터 다시 쓰기는 키트가 읽는 데이터 파일만 건드립니다. 두 키트가 한 파일을 읽으면 같은 단위에 넣습니다. 맡기기 전에 `grep` 으로 확인합니다.
+
+### 7.6 사용자 결정
+
+없습니다. 폴백 인자를 지우는 것은 방침(결정 기록 5-4)의 적용이고, 데이터는 다시 쓰면 됩니다.

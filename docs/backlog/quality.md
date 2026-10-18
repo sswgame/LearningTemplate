@@ -73,11 +73,12 @@
 
 - `C-41` [정리] **Linux · GPU 검증 구조.** 새 기능의 Linux 결함이 늦게 드러난다(2026-10-17: Linux 잡이 며칠 configure 에서 죽어 있었고 소프트 바디는 처음 돌자마자 발산). CI 에 GPU 가 없어 hostgpu 테스트는 로컬뿐이다. 순서는 결정 기록 5-12 `C-41` 행이다(GPU 러너 · 자체 호스트 러너는 하지 않는다).
   끝난 것: ① 세션 시작에 main CI 실패를 알린다(`ci-jobs --summary`, 세션 가드). ② 셰이더 전 백엔드 확인(`CheckShaderStamps` 게이트 — 쿠킹 표의 네 백엔드 폴더마다 `cook.stamp` 가 지금 소스와 같은지, 빌드 없이 린트 잡에서).
-  ③ 요구 백엔드(`Test/TestPolicy.json` 의 `requiredBackends` → hostgpu 항목의 `--required_backends=`)가 서지 못하면 건너뛰지 않고 진다(`RHITestDevice` · AppSmoke 의 `runApp`). App 시나리오 러너(`TestAppScenario` · `TestAppUI`)의 "아무 백엔드도 못 돌렸다" 건너뜀은 아직 이 형식을 거치지 않는다.
+  ③ 요구 백엔드(`Test/TestPolicy.json` 의 `requiredBackends` → hostgpu 항목의 `--required_backends=`)가 서지 못하면 건너뛰지 않고 진다(`RHITestDevice` · AppSmoke 의 `runApp`).
   ④ 소프트웨어 렌더러 묶음(라벨 `swrender`, `<타깃>_SoftwareRender` — 정책 `softwareRenderCases` · `softwareRequiredBackends`, CI-Debug 잡이 WARP · lavapipe+xvfb 로 돈다).
-  남은 것: CI 의 `Test on software renderer` 단계는 보고만 한다(continue-on-error) — 첫 실행들이 초록이면 떼고 `softwareRenderSeconds` 를 잰 값으로 고친다. App 시나리오 러너(`TestAppScenario` · `TestAppUI`)의 "아무 백엔드도 못 돌렸다" 건너뜀을 `test::reportUnusableBackend` 로 옮긴다.
+  남은 것: 설계 완료, 단위는 [Linux 와 GPU 검증 계획](../plans/GpuVerification.md) 3절(V1 앱 러너 건너뜀을 한 함수로, V2 CI 보고 전용 해제)이다.
 
-- `C-42` [정리] **증분 쿠킹 · 파생 데이터 캐시(DDC).** 리소스를 100MB 이상 들이는 중이라 에셋이 늘면 쿠킹 시간이 병목이 된다. 현재 쿠킹의 입력 해시 · 재사용 범위를 확인하고 증분 쿠킹과 공유 캐시를 설계한다(셰이더는 입력 해시 스탬프가 있다 — 결정 기록 5-5).
+- `C-42` [정리] **증분 쿠킹 · 파생 데이터 캐시(DDC).** 리소스를 100MB 이상 들이는 중이라 에셋이 늘면 쿠킹 시간이 병목이 된다. 설계 완료, 단위는 [증분 쿠킹 계획](../plans/IncrementalCook.md) 4절(K0 측정부터)이다.
+  공유 DDC 위치(K6)는 사용자 결정이 필요하다(같은 문서 5절).
 
 - `C-44` [정리] **credits 표와 임포트 규칙이 "넓은 와일드카드 + 첫 매칭"이다.** 새 팩 파일이 다른 팩의 출처로 붙거나 다른 팩의 배치 오프셋(`ModelImportConfig.json`)이 적용돼도 경고가 없다(2026-10-17 `res3` 도입에서 확인; 이번엔 새 줄을 표 앞에 두어 피했다). 팩마다 하위 폴더를 하나씩 두고 패턴이 하위 폴더를 넘지 못하게 하거나, 파일 하나에 규칙이 둘 이상 맞으면 오류로 낸다. `CheckResourceCredits` 가 출처 목록(해시) 형식(`audio.sources.json` 의 모양)을 모든 리소스 도메인에서 읽게 넓히는 일을 포함한다.
   출처 목록의 해시가 맞으려면 산출물이 결정적이어야 하므로, 인코더가 만드는 다른 산출물(텍스처 DDS 변환 등)의 비결정 바이트도 점검한다.

@@ -12,7 +12,7 @@
     Shipping(단일 백엔드 정적 링크, `SW_PROFILE_COMPILED` 꺼짐), Linux(GLX 컨텍스트 · 다중 상속 경고), `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했다), 에디터 실기동(Present 훅),
     `assertdialog.scenario.xml`, `-gv_reloadGameAtFrame`, `-gv_standardInputCommands`. S18 의 새 클래스는 ImGui 에 의존해 단위 테스트가 없다 — 에디터 자체 테스트 · `AppScenarioTest` 에디터 케이스가 본다.
 
-- `C-1` [정리] **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](../plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
+- `C-1` [정리] **엔진 분할.** 설계 완료, 단위는 [엔진 분할 계획](../plans/EnginePartition.md) 6절(E1 ~ E6)이다. 단위를 끝내면 계획 문서에서 지운다.
 
 - `C-4` [정리] **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 든다) · `Habitat`(CreatureLife) · NetConnection 메시지 버퍼 재사용 ·
@@ -37,14 +37,8 @@
 
 - `C-22` [정리] **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
-- `C-30` [정리] **유지보수성을 위한 데이터화(2026-10-15 `wt/datadriven`)의 남은 것.** 기준과 모양은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화", 새 줄은 `CheckDataDrivenLiterals` 가 막는다(전체는 `[baseline]`).
-  ① **데이터 속성의 리터럴 기본값 · 조용한 자르기가 904 곳 남았다**(기준선 `AttributeFallback`)(`py -3 Scripts/lint/gate/CheckDataDrivenLiterals.py --list`). 많은 순: WesternCatalog 64 · AsymmetricHorrorRules 51 · CameraPreset 43 · WitcherCatalog 41 ·
-  ConquestCatalog 39 · ScavengerCatalog 39 · MechCatalog 38 · BrCatalog 33 · HorrorCatalog 32 · ActionPlatformerCatalog 29. 원소마다 리플렉션 Def(초기값 = 기본값, `Required`, `Min`/`Max`)를 두고 `GameDataXML::readFields` 로 바꾸며,
-  데이터 속성 이름이 칸 이름과 다르면(`xp` ↔ `_experience`) 데이터를 다시 쓴다. 고칠 때마다 기준선을 낮춘다. `MonsterCatalog` 의 Stats · AI 원소는 `MonsterDef` 한 구조체라 하위 Def 로 나눠야 한다(필드 사용 130 곳).
-  ② 게임 코드의 실수 리터럴 줄 약 700(constexpr 아닌 것), NileCity 자동 계획표의 좌표(27 · 37 · 집 줄 — 도로 x · 농장 x 만 PROPERTY), HarvestValley 작물 → 모델 표, StarSkirmish AI 성향 표(`makeAISettings`), FarmSun 빛 곡선. `TuningConstexpr` 기준선은 게임 · 키트의 나머지 실수 상수다.
-  ③ `GameSettings::getCustomPropertyFloat( key, fallback )` 처럼 호출부가 기본값을 넘기는 API 는 스키마 선언으로 바꿀 후보다.
-  ④ 에디터 색 · 아이콘 표(`EditorComponentIcon.cpp`)와 에디터 UI 크기 리터럴은 디자인 토큰 작업(editorux 묶음)이 맡는다.
-  ⑤ 배포본(Shipping)은 벤치 · 자동 플레이 스위치가 없어 `AppSmokeTest.BenchFrameMatchesGoldenImage` 와 `QaGoldenImages`(캡처 인자가 버려지면 건너뜀)를 건너뛴다(Debug · Release 는 그대로). 배포 구성의 그림 비교가 필요하면 구운 게임의 팩 시나리오 스크린샷으로 기준을 둔다.
+- `C-30` [정리] **유지보수성을 위한 데이터화의 남은 것**(기준은 [결정 기록](../09_Decisions.md) 5-4). 설계 완료, 단위는 [데이터 주도 구조 정리 계획](../plans/DataDriven.md) 7절이다(C-36 과 한 순서).
+  뿌리는 읽기 API(`XMLNode` · `JSONValue` · `KeyValueFile`)의 폴백 인자라서 D1 ~ D9 가 그 인자를 없앤다. ② 게임 리터럴은 G1, ⑤ Shipping 그림 비교는 G2, ④ 에디터 색 · 크기는 editorux 묶음이 맡는다.
 
 - `C-25` [정리] **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
@@ -54,11 +48,8 @@
   ② 카탈로그 안 id 참조는 팩 둘(`starskirmish-unit-tree` · `nilecity-goods`)만 규칙이 있다 — 나머지 키트 카탈로그는 로더 경고(스키마 테스트)에 기댄다.
   ③ 시나리오 `<DevCommand line="editor <명령>">` 의 에디터 명령 id(`EditorCommandRegistry` 는 실행 중 등록), UI 바인딩 경로(`UIBindingSet::bind` 오류 로그), 동적으로 지은 액션 이름은 런타임 경고 게이트(logwarn)에 맡긴다.
 
-- `C-36` [정리] **데이터 주도 구조 정리(2026-10-16, 사용자 지시 "원천적인 문제 해결").** 6 영역 조사가 경로 리터럴 약 200곳 · 조용한 폴백 약 60곳 · 이중 정본 약 30곳을 드러냈다. 뿌리 원인 · 형식으로 막는 해법 · 작업 묶음 W0~W8 은 [데이터 주도 구조 정리 계획](../plans/DataDriven.md).
-  기준은 "게이트는 최후의 수단" — 위반을 쓸 수 없는 형식(`DataPath` · `Optional` · `[[nodiscard]]` 로더 결과)이 먼저고 린트 `CheckDataDrivenStructure` 는 틈을 지키는 안전망이다. 진행 표는 그 게이트의 `--summary`.
-
-  읽기가 옛 키를 별칭으로 찾는 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)와 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절이 씁니다.
-  쓰는 곳을 세어 데이터를 새 이름으로 다시 쓰고 별칭을 없앱니다([데이터 주도 구조 정리 계획](../plans/DataDriven.md) 의 Alias 항목과 같은 일). 값 계산이 필요한 경우만 `SW_SCHEMA_MIGRATION` 입니다.
+- `C-36` [정리] **데이터 주도 구조 정리(2026-10-16, 사용자 지시 "원천적인 문제 해결").** 설계 완료, 단위는 [데이터 주도 구조 정리 계획](../plans/DataDriven.md) 7절이다(C-30 과 한 순서, 별칭 제거는 R1).
+  진행 표는 게이트 `CheckDataDrivenStructure` 의 `--summary` 이고, 형식으로 막힌 종류는 단위가 끝날 때 게이트에서 뺀다.
 
 - `C-40` [정리] **Shipping 에서 빠지는 API 를 부르는 쪽마다 `#if !defined( SW_SHIPPING )` 을 기억해야 한다.** `TypeRegistry::unregisterTypesByModule` 등을 테스트가 부르면
   Shipping 컴파일이 깨지고(리눅스 CI 에서 실제로 깨짐, `b206e2a26`), 가드를 잊은 곳은 Shipping 빌드에서야 드러난다.
@@ -71,17 +62,11 @@
 - `C-49` [정리] **`sw::vector` 의 `_list[i]` 루프는 쓰기가 벡터 내부를 가려(별칭) 벡터화되지 않는다**(2026-10-17 `DynamicBitset` 측정에서 확인 — 원시 포인터 루프로 고쳤다).
   다른 컨테이너의 블록 루프와 `sw::vector::operator==` 에 같은 모양이 있을 수 있다. 호출부와 이득을 Release 로 잰 뒤에 한다.
 
-- `C-52` [정리] **타입별 버킷(7-c)과 타입 핸들(7-d) 뒤의 남은 정리**(`docs/plans/TypedComponents.md` 7절). ① 핸들 옮기기(`ObjectStateBatch::resolveObjectReferences`)가
-  컴포넌트 타입의 최상위 `PROPERTY` 만 봐서 리플렉션 구조체 필드 안의 `GameObjectHandle` 은 다시 매겨지지 않는다 — 구조체와 컨테이너를 재귀로 내려가는 값 방문으로 바꾼다.
-  ② `ComponentStateStore` 가 다른 실행의 세이브를 같은 타입 안의 열거 순서로 맞춘다 — 오브젝트 저장 id 와 `ComponentStableKey` 로 맞춘다.
-  ③ `ComponentRegistry` · `TickBatchRegistry` 가운데 버킷으로 충분한 목록을 옮긴다. 기준은 등록 순서가 결과에 나오는가, 채널이 있는가, 잠금 없이 읽어야 하는가이다.
-  ④ 측정(Release, VSync 끔, 3~5판, p50 · p99): 오브젝트 1만 · 10만 × 타입 수 50 · 200 · 500 의 `forEachComponentOfType`, 추가 · 제거 잠금, `sizeof( Component )` 전후와 큐브 20,000 개 `GT.Frame`,
-  개발 빌드의 `resolveComponent<T>` 확인 비용.
+- `C-52` [정리] **타입별 버킷(7-c)과 타입 핸들(7-d) 뒤의 남은 정리.** 설계 완료, 단위는 [타입별 컴포넌트 계획](../plans/TypedComponents.md) 8절(T1 ~ T4)이다.
+  ① 핸들 옮기기의 값 방문(T1) ② 상태 저장소 짝짓기를 안정 키로(T2, 전역 순서 문제는 7c577ec27 이 풀었다) ③ 등록형 목록 → 버킷(T4) ④ 측정(T3).
 
-- `C-53` [정리] **씬 · 프리팹 저작 저장에 런타임 상태가 들어간다**(2026-10-17 `GimmickCircuitState` 검토 ⓕ). 씬 저장과 레벨 세이브가 같은 `ObjectStateSerializer` 문맥이라 `Transient` 만 빠지고,
-  `GimmickCircuitComponent::_state` 같은 플레이 상태가 에디터가 다음에 저장하는 씬 XML 로 들어갈 수 있다(지금 빈 요소는 우연). 언리얼 `SaveGame` 처럼 저장 문맥에 "저작 저장"을 표시하고
-  런타임 상태 필드(예: `PROPERTY( RuntimeState )`)를 그 문맥에서 빼는 형식을 둔다. 리플렉션 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 해 이 단계 범위 밖으로 남겼다.
-  `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
+- `C-53` [정리] **씬 · 프리팹 저작 저장에 런타임 상태가 들어간다**(2026-10-17 `GimmickCircuitState` 검토 ⓕ). 설계 완료, 단위는 [저작 저장과 런타임 상태 분리 계획](../plans/AuthoringState.md) 4절(A1 ~ A4)이다.
+  저장 목적(`SerializePurpose`)을 필수 값으로 두고 `PROPERTY( RuntimeState )` 를 저작 저장에서 뺀다.
 
 - `C-63` [정리] **`SW_ENABLE_STL_CONTAINER` 가 이름이 같은 `sw::` 형식을 구성마다 다른 형식으로 바꾼다**(2026-10-18 `A-20`). 해시 컨테이너는 두 구성이 같은 구현을 쓰게 했고 `CompressedPair` 로 `pair` 차이를 막았다.
   남은 것: ① 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다) ② `Source/sw.natvis` 의 `unordered_map` · `unordered_set` · `vector` 항목이 std 형식으로 캐스트해 지금 구조와 맞지 않는다

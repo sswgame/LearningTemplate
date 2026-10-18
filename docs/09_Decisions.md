@@ -381,6 +381,8 @@
   지금은 언리얼 패키징 설정의 Cultures to Stage 처럼 출시 목록을 명시하고(`cultures` 의 부분 집합, 아니면 로드 오류), 목록에 있는데 테이블이 없으면 전부 빠진 번역으로 집니다.
   목록 밖 문화권(엔진 `ja`, PO 만 낸 것)은 번역 중으로 보고 개수만 보고합니다. 게임 설정 하나에 두는 안은 엔진 · 에디터 프로젝트가 팩 설정이 없어 버렸습니다.
   CI 는 App 을 띄우지 않으므로 같은 판정을 `LocalizationGatherTest.RepositoryProjectsAreUpToDate`(EditorTest, nogpu)가 합니다.
+- **증분 쿠킹은 쿠커가 의존을 적지 않고, 작업 범위 안의 리소스 읽기를 내용 해시와 함께 기록해 판정합니다**(2026-10-18 설계, 구현 전). 유니티 Asset Database v2 의 동적 의존 기록과 같은 계열이고, 파일 시각은 쓰지 않습니다([증분 쿠킹 계획](plans/IncrementalCook.md)).
+- **100 줄 넘는 함수는 보고 도구(`RunFunctionSize.py`)로만 보고 게이트를 두지 않습니다**(2026-10-18 설계). 줄 수 상한은 이유 없는 분할을 부릅니다. 나누는 기준은 중복, 다시 읽기, 단계 경계, 분기 사다리입니다([긴 함수 정리 기준](plans/LongFunctions.md)).
 
 ### 5-3. Core 와 플랫폼
 
@@ -616,6 +618,8 @@
   리플렉션 데이터 읽기("DataPath" 텍스트 처리기)만 값을 넣는다. 칸은 `PROPERTY( Required )` 로 두고 읽기가 빠진 칸을 오류로 알린다. 첫 적용은 `EngineDefaultAssets` 의 경로 42 칸 —
   값은 `enginedefaultassets.xml` 에만 있고, 표는 `EngineDefaultAssets::load` · 서브시스템만 만든다(`ConstructKey`, `REFLECT( Abstract )`). 못 읽으면 기동 · 쿠킹이 멈춘다. 테스트는
   `test::getEngineDefaultAssets()`(하네스가 읽은 표)로 경로를 얻는다. 언리얼 `FSoftObjectPath` 가 ini 에서만 채워지는 설정 칸과 같은 자리이고, 게이트가 아니라 형식으로 막는다.
+- **읽기 API 는 폴백 인자를 받지 않습니다**(2026-10-18 설계, 구현 전). `XMLNode` · `JSONValue` · `KeyValueFile` 의 값 읽기는 스키마 읽기(`readFields`), 필수 읽기(`std::optional` 반환), 선택 읽기(`std::optional` 출력) 셋만 남기고 폴백 인자 함수를 지웁니다. 기본값의 원본은 Def 초기값 하나입니다([데이터 주도 구조 정리 계획](plans/DataDriven.md) 7절).
+- **저장 문맥은 목적(`SerializePurpose`: Authoring · Snapshot · SaveGame)을 필수로 가지고, `PROPERTY( RuntimeState )` 는 저작 저장에서 빠집니다**(2026-10-18 설계, 구현 전). 언리얼 아카이브 목적 플래그와 목적별 Transient 와 같은 계열입니다. 에디터 되돌리기와 복사는 Authoring 입니다([저작 저장 계획](plans/AuthoringState.md)).
 - **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼의 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
 - **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다. 언리얼의 `UWorld::GetGravityZ` 에 해당합니다.
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
