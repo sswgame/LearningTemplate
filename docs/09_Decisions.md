@@ -8,37 +8,38 @@
 - **쪼개기보다 공통부 추출.** 긴 함수를 나누면 코드가 옮겨 갈 뿐 총량은 그대로다. 중복은 증상이고 원인은 "매번 다시 만들어야
   하는 구조" 다. 원인을 없앤다.
 - **추가 · 변경이 쉬운 구조를 먼저 만든다.** 판단 기준은 "하나 더하려면 몇 곳을 고쳐야 하는가" 다. 복사해야 할 것이 남아 있으면 그
-  자리가 다음 리팩터 대상이다. 목록이 여럿이면 한쪽만 늘어난다 — 목록은 하나(표 · X-macro · 폴더 열거)로 둔다.
-  여러 파일이 같은 enum 을 `switch` 하는 자리를 셀 때는 "백엔드 · 스테이지마다 정말 다른 일을 하는가" 를 먼저 묻는다(그러면 정당하다).
-- **한 곳에 넣은 고침은 형제에게도 넣는다.** 지금까지 가장 잦았던 결함 모양이다(한 함수만 상한을 안 봄 · 셋 중 하나만 폴백 없음).
-  고칠 때 같은 일을 하는 형제를 grep 으로 찾는다. 원인이 같은 결함이 여럿이면 그 원인을 구조(한 창구 · 단언 · 게이트)로 막는다.
+  자리가 다음 리팩터 대상이다. 목록은 하나(표 · X-macro · 폴더 열거)로 둔다. 여러 파일이 같은 enum 을 `switch` 하는 자리는
+  "백엔드 · 스테이지마다 정말 다른 일을 하는가" 를 먼저 묻는다(그러면 정당하다).
+- **한 곳에 넣은 고침은 형제에게도 넣는다.** 가장 잦은 결함 모양이다(한 함수만 상한을 안 봄 · 셋 중 하나만 폴백 없음).
+  고칠 때 같은 일을 하는 형제를 grep 으로 찾고, 원인이 같은 결함이 여럿이면 구조(한 창구 · 단언 · 게이트)로 막는다.
 - **실패는 조용하면 안 된다.** 버린 값 · 못 읽은 칸 · 못 만든 폴더는 그 자리에서 무엇이 왜인지 알린다. 실패할 수 있는 bool 은
-  `[[nodiscard]]` 이고, 일부러 버릴 때는 `(void)호출(); // 이유` — 실패 가능 동사(load · read · apply …)의 결과만 이유가 필수다(`CheckDiscardReason`). 그 밖의 `(void)` 는 이유를 요구하지 않는다.
-- **상용 엔진의 같은 자리와 견준다.** 새 구조를 정할 때 언리얼 · 유니티 · Godot 의 같은 자리를 먼저 보고 그 모양을 따르되, 일부러
+  `[[nodiscard]]` 이고, 일부러 버릴 때는 `(void)호출(); // 이유` — 실패 가능 동사(load · read · apply …)의 결과만 이유가 필수다(`CheckDiscardReason`).
+- **상용 엔진의 같은 자리와 견준다.** 새 구조는 언리얼 · 유니티 · Godot 의 같은 자리를 먼저 보고 따르되, 일부러
   다르게 한 것은 이유를 적는다(예: `hashed_string` 은 FName 규칙이지만 숫자 꼬리는 없다).
 - **성능 주장은 Release 숫자로만 한다.** 숫자 없는 최적화는 하지 않는다. 이전 · 이후를 같은 조건에서 번갈아 재고, 평균이 아니라
-  p50 · p99 · 최악 프레임을 본다([검증과 측정](08_Verification.md) 2절 참고).
+  p50 · p99 · 최악 프레임을 본다([검증과 측정](08_Verification.md) 2절).
 - **주석 · 커밋 메시지는 한국어.** 문서 주석(`/** */` · `///<`)은 "~합니다" 체, 함수 본문 `//` 주석은 "~다" 체로 한 블록 안에서 통일한다.
   직역어 대신 표준 용어(thundering herd · 락 컨보이 · 브로드캐스트 · 조인 · continuation · 오버플로 · 분기)를 쓴다. 식별자 · 로그 ·
   assert 문자열 · `NOLINT` 줄은 그대로 둔다. 주석을 고치기 전에 구현을 읽는다 — 복사해 붙인 설명이 실제 동작과 다른 곳이 많았다.
-  규칙은 [AGENTS.md](../AGENTS.md)(목차)와 `docs/agents/` 의 주제별 파일, [04_CodingGuidelines.md](04_CodingGuidelines.md).
+  규칙은 [AGENTS.md](../AGENTS.md)와 `docs/agents/`, [04_CodingGuidelines.md](04_CodingGuidelines.md).
 - **자산 처리 용어는 넷이다(상용 엔진 기준).** Cook = 배포 · 실행용 플랫폼 데이터로 바꾸기(셰이더 · 씬 · 프리팹 · 팩, `--cook-*`), Import = 원본 → 엔진 형식(텍스처, `--import-textures`), Generate = 빌드가 만드는 코드 · 헤더, Bake = 미리 계산한 결과(라이트맵 · 내비 — 지금은 없다). 한국어 "굽다" 는 쓰지 않는다. 이름을 바꿀 때 별칭(`Alias` · 옛 CLI 철자 · 옛 형식 리더)을 두지 않고 데이터를 다시 쓴다.
 - **새 기능 로드맵보다 백로그의 결함 · 정리 · 성능 · 테스트 · CI 항목을 먼저 닫습니다**(2026-10-06, 사용자 결정). 온라인 서비스 키트는 함께 진행합니다. 보류로 정한 것(`hashed_string` 숫자 꼬리, CC0 리소스 배치와 MechArena)은 그대로 둡니다.
 
 ## 2. 안 하기로 한 것 (다시 제안하지 말 것)
 
-- **PIX 캡처(DX12 전용 — WinPixGpuCapturer.dll)는 하지 않았다**(2026-10-10) — RenderDoc in-app API(`RenderDocCapture`, `-renderdoc`)가 네 백엔드를 덮는다(언리얼 RenderDoc 플러그인 · 유니티 Frame Capture 자리). DX12 타이밍 분석이 필요해지면 다시 본다.
-- **지금 하지 않는 구조 후보 — 다시 볼 조건과 함께**(2026-10-03 상용 엔진 비교로 결정): 트랜스폼 SoA 2 단계(UE 액터도 AoS, 측정 근거가 생기면) ·
-  선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite` 모양. 2026-10-06 키트 조립 점검: 키트 디렉터 사이 순서는 한 오브젝트에
-  붙인 순서가 주고 — `TickRegistry` 가 한 오브젝트의 항목을 한 워커가 붙은 순서로 돌린다 — 다른 오브젝트 사이는 디렉터의 `_tickAfter`(규칙 서브틱 + 선행 조건),
-  키트 코드끼리의 의존은 0 곳이라 스케줄러의 근거가 아직 없다) · 에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`) ·
-  참조 카운트 RHI 핸들(한 리소스를 여럿이 나눠 들기 시작하면 — UE `TRefCountPtr`) · Mesh/Material `SlotHandle`(하지 않는다 — `shared_ptr` 이 수명과 RT 안전을 한 번에
-  준다) · `ResourceUtil` 소유 객체화(하지 않는다 — UE `FPaths` 도 정적) · 링크 단위 분할(증분 링크 시간이 문제가 되면 별도 PR) — GameFramework 기반(약 58k 줄)을 `GFS_*` DLL 여럿으로 쪼개는 안도 같은 이유로 하지 않는다(2026-10-05 재확인). 기반 폴더의
-  층은 폴더 층 게이트(`CheckGameFrameworkLayers`)로 지킨다. · `UnitStatsComponent` 를 기반(`Combat/`)으로(2026-10-05 — 쓰는 게임 · 씬 · 프리팹 0, 옮기면 데미지 숫자(UI 층 4) · `MonsterDef` · `DamageAppliedEvent` 셋을 끊어야 층이 맞는다. 체력 읽기는 `Combat/HealthSourceComponent` 가 맡는다. 다시 볼 조건: 다른 키트 · 게임이 피해 입구(`takeDamage` · 무적 · `DamageAppliedEvent`)를 이 키트 없이 쓰려 할 때 — 그때는 `DamageAppliedEvent` 도 기반으로, `setStats( MonsterDef )` 는 키트의 도우미로, 데미지 숫자는 `HealthListenerComponent` 파생으로 내리고, `CheckGameFrameworkLayers` 자가 시험의 키트 헤더 예를 바꾸고, `generated/GF_ActionCombat/UnitStatsComponent.gen.*` 을 지운 뒤 re-configure) · 피해 입구 인터페이스(19 곳 — 인자 모양이 넷이다. 키트 투사체 · 공격 판정을 다른 체력 모델(어빌리티 시스템 · 게임 컴포넌트)에 쓰는 게임이 생기면 `Combat/` 에 `takeDamage( 양, 쏜 쪽 )` 하나를 `HealthSourceComponent` 옆에 — 언리얼 `AActor::TakeDamage`)
-  · 키트 아이템/효과 처리기 등록부(2026-10-05 전수: enum switch 4 곳 · 19 case, 두 키트가 나누는 종류 enum 0 — 키트마다 하는 일이 다르고 `-Werror=switch` 를
-  잃는다. 데이터로 효과를 더할 게임은 기반 GAS 의 `registerExecutionClass` — 언리얼 GameplayEffect 자리 — 를 쓴다. 두 키트가 같은 종류 집합을 나누게 되면 다시 본다) ·
-  `TimedModifierSet`(시간 제한 수정자는 이름 붙은 `Countdown` 슬롯이고 쌓기는 `extendTo` · `start` 로 이미 정해져 있다, 목록형은 위쳐 물약 한 곳 — 일반형은 GAS 의
-  지속 이펙트 · 스택 정책. GAS 밖 키트 둘 이상에 목록형이 생기면 다시 본다) · API 통합 남은 판단(다음 훑기).
+- **PIX 캡처(DX12 전용 — WinPixGpuCapturer.dll)는 하지 않았다**(2026-10-10) — RenderDoc in-app API(`RenderDocCapture`, `-renderdoc`)가 네 백엔드를 덮는다. DX12 타이밍 분석이 필요해지면 다시 본다.
+- **지금 하지 않는 구조 후보 — 다시 볼 조건과 함께**(2026-10-03 상용 엔진 비교로 결정):
+  - 트랜스폼 SoA 2 단계(UE 액터도 AoS, 측정 근거가 생기면).
+  - 선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite`). 2026-10-06 키트 조립 점검: 키트 디렉터 사이 순서는 한 오브젝트에 붙인 순서가 주고(`TickRegistry` 가 한 오브젝트의 항목을 한 워커가 붙은 순서로 돌린다), 다른 오브젝트 사이는 디렉터의 `_tickAfter`(규칙 서브틱 + 선행 조건)가 준다. 키트 코드끼리의 의존은 0 곳이라 근거가 아직 없다.
+  - 에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`).
+  - 참조 카운트 RHI 핸들(한 리소스를 여럿이 나눠 들기 시작하면 — UE `TRefCountPtr`).
+  - Mesh/Material `SlotHandle`(하지 않는다 — `shared_ptr` 이 수명과 RT 안전을 한 번에 준다). `ResourceUtil` 소유 객체화(하지 않는다 — UE `FPaths` 도 정적).
+  - 링크 단위 분할(증분 링크 시간이 문제가 되면 별도 PR). GameFramework 기반(약 58k 줄)을 `GFS_*` DLL 여럿으로 쪼개는 안도 같은 이유로 하지 않는다(2026-10-05 재확인). 기반 폴더의 층은 폴더 층 게이트(`CheckGameFrameworkLayers`)로 지킨다.
+  - `UnitStatsComponent` 를 기반(`Combat/`)으로(2026-10-05 — 쓰는 게임 · 씬 · 프리팹 0, 옮기면 데미지 숫자(UI 층 4) · `MonsterDef` · `DamageAppliedEvent` 셋을 끊어야 층이 맞는다. 체력 읽기는 `Combat/HealthSourceComponent` 가 맡는다). 다시 볼 조건: 다른 키트 · 게임이 피해 입구(`takeDamage` · 무적 · `DamageAppliedEvent`)를 이 키트 없이 쓰려 할 때. 그때는 `DamageAppliedEvent` 도 기반으로, `setStats( MonsterDef )` 는 키트의 도우미로, 데미지 숫자는 `HealthListenerComponent` 파생으로 내리고, `CheckGameFrameworkLayers` 자가 시험의 키트 헤더 예를 바꾸고, `generated/GF_ActionCombat/UnitStatsComponent.gen.*` 을 지운 뒤 re-configure 한다.
+  - 피해 입구 인터페이스(19 곳 — 인자 모양이 넷이다. 키트 투사체 · 공격 판정을 다른 체력 모델(어빌리티 시스템 · 게임 컴포넌트)에 쓰는 게임이 생기면 `Combat/` 에 `takeDamage( 양, 쏜 쪽 )` 하나를 `HealthSourceComponent` 옆에 — 언리얼 `AActor::TakeDamage`).
+  - 키트 아이템/효과 처리기 등록부(2026-10-05 전수: enum switch 4 곳 · 19 case, 두 키트가 나누는 종류 enum 0 — 키트마다 하는 일이 다르고 `-Werror=switch` 를 잃는다. 데이터로 효과를 더할 게임은 기반 GAS 의 `registerExecutionClass` — 언리얼 GameplayEffect 자리 — 를 쓴다. 두 키트가 같은 종류 집합을 나누게 되면 다시 본다).
+  - `TimedModifierSet`(시간 제한 수정자는 이름 붙은 `Countdown` 슬롯이고 쌓기는 `extendTo` · `start` 로 이미 정해져 있다, 목록형은 위쳐 물약 한 곳 — 일반형은 GAS 의 지속 이펙트 · 스택 정책. GAS 밖 키트 둘 이상에 목록형이 생기면 다시 본다).
+  - API 통합 남은 판단(다음 훑기).
 
 - **도구 버전을 "최신 자동" 으로 두는 것.** 네트워크 의존이 생기고 빌드 재현성이 떨어진다. 버전 키 하나로 고정하고 올릴 때만 의도적으로
   올린다. clang-format 은 버전이 곧 출력이라 고정이 아니면 안 된다.
@@ -79,25 +80,25 @@
   - 에디터 셸의 프레임 앞 정리 · 프레임 열기 · 프레임 닫기(S12): ImGui 순서와 렌더 스레드 인계(`DrawSnapshotHandoff`)가 위치를 정하는 프레임 계약이라 `updateUI` 에 둡니다.
   - 분해에서 남긴 것: 모달 · 결과 창 플래그와 이름 입력 버퍼(S19, ImGui 팝업 시점), `verifyModuleBindings` · `isBoundTo`(S20, 모든 컨텍스트 핸들을 함께 보는 검사), `ModuleShadowCopy` 인스턴스화(S20, 번호가 프로세스 전역이어야 섀도 폴더 이름이 겹치지 않음),
     `UserSettingsManager` 의 키 바인딩 겹침 · 품질 번들 맞추기(`setPendingAt` 상태 기계와 안 떨어짐), `SceneNavigation` 의 에이전트 루프 · 런타임 찾기 · 설정 로드, `App` 의 `updateShellActions` · 모듈 카탈로그 해석,
-    `IRHIDevice` 의 `supportsNativeBindlessSampling` · `applyVSyncInternal`, `FractureComponentBase` 의 그룹 재구성 · 물리 어댑터(S15, 반쪽 이전), `FrameRenderer` 의 트랜지언트 계획(S16),
+    `IRHIDevice` 의 `supportsNativeBindlessSampling` · `applyVSyncInternal`, `FractureComponentBase` 의 그룹 재구성 · 물리 어댑터(S15), `FrameRenderer` 의 트랜지언트 계획(S16),
     `Engine::update` 의 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프(S13, 수명 계약 · 순서가 뜻).
   - S16 의 **동작 변화**: 엔진 서비스가 묶이지 않은 실행은 GPU 계측이 꺼집니다(전에는 단언).
 - **폴더 · 파일 구조는 기계적으로 합치지 않습니다**(2026-10-12 감사, R8). 25 줄 이하 파일이 97 / 2,932 개이고 큰 클래스를 나눈 가족 대부분이 파일마다 120 줄을 넘으며, 작은 조각(`EditorAssetTypeFocus.cpp` 36 줄)은 의존을 분리한 것입니다.
   합치면 층 규칙(`CheckEngineLayers`)과 그래픽스 구조 재편의 파일 분할 기준을 해칩니다. 한다면 `Scripts/lint/report/` 에 같은 접두 `.cpp` 가족과 줄 수를 보고하는 스크립트를 두고,
   120 줄 이하 조각이 의존 분리가 아닌 가족만 사람이 봅니다(지금 후보는 `RenderView.cpp` 13 줄 정도).
 - **파일이 40 개를 넘는 평면 폴더는 기능 묶음 하위 폴더로 나누고, 한 클래스를 나눈 파일 가족은 가르지 않습니다**(2026-10-15). 언리얼 모듈의 `Private/` 하위 폴더,
-  유니티 `Runtime/` 하위, Godot `scene/`(`2d` · `3d` · `main` · `resources` · `gui`)가 기능 묶음으로 나누는 것과 같은 단위로 알고 있습니다.
+  유니티 `Runtime/` 하위, Godot `scene/` 이 기능 묶음으로 나누는 것과 같은 단위로 알고 있습니다.
   `Editor/Common/Commands` 는 `Asset` · `Scene` · `Play` · `Dev`(등록부 · 백그라운드 입출력은 루트), `Engine/Object/GameObject` 는 `Registry` · `Tick` · `Service` · `Serialization`
   (`GameObject` · `GameObjectManager` · `GameObjectStore` 는 루트), `Engine/Renderer/Frame` 은 `View` · `Packet` · `Resource` · `Capture` · `Timeline`(`FrameRenderer*` 가족은 루트)입니다.
-  층 규칙은 그대로 따라갑니다. 에디터 층은 `Common/<폴더>` 단위로 읽고, 오브젝트 모델 코어 규칙은 `GameObject` 트리 전체(`CheckEngineLayers.toml` 의 `coreTree`)입니다.
+  에디터 층 규칙은 `Common/<폴더>` 단위로 읽고, 오브젝트 모델 코어 규칙은 `GameObject` 트리 전체(`CheckEngineLayers.toml` 의 `coreTree`)입니다.
 - **스크립팅 언어 층(Lua · C# · 비주얼 스크립팅)은 두지 않는다**(2026-10-17, 사용자 결정). 게임 로직은 C++ 모듈과 핫리로드로 짠다. 비프로그래머용 층이 필요해지는 게임이 생기면 다시 연다. 백로그 `D4-9` 의 비주얼 스크립팅은 순위 목록에만 둔다.
 
 ## 3. 기각한 것 — 측정값과 함께 (다시 제안하지 말 것)
 
-- **`runParallelByCost` 를 모든 병렬 호출처로 넓히기**(2026-10-16): 트랜스폼 계층의 고정 임계값(쓰기 1024 · 플러시 2048)과 GPU 씬(2048 / 4096)은 손익분기에 맞춘 값이라, 트랜스폼 세 곳을 바꿔 재니 쓰기 적용은 61 ~ 66 → 64 ~ 67 us 로 같고 틱 8000 은 86 ~ 99 → 105 ~ 107 us 로 조금 느려져(앞 항목마다 본문을 여러 번 부르는 비용) 되돌렸다. 항목당 비용이 크고 개수가 달라지는 곳에만 쓴다 — 씬 틱(작은 씬)과 애니메이션 평가(아래).
+- **`runParallelByCost` 를 모든 병렬 호출처로 넓히기**(2026-10-16): 트랜스폼 계층의 고정 임계값(쓰기 1024 · 플러시 2048)과 GPU 씬(2048 / 4096)은 손익분기에 맞춘 값이라, 트랜스폼 세 곳을 바꿔 재니 쓰기 적용은 61 ~ 66 → 64 ~ 67 us 로 같고 틱 8000 은 86 ~ 99 → 105 ~ 107 us 로 조금 느려져 되돌렸다. 항목당 비용이 크고 개수가 달라지는 곳에만 쓴다 — 씬 틱(작은 씬)과 애니메이션 평가.
 
-- **`common` 지연 import(PEP 562 `__getattr__`)**(2026-10-06, 12 회 중앙값): `import common` 누적 81.0 → 1.8 ms 이지만 `GenerateCookContract.py` 한 번이 110.5 → 110.1 ms — 생성기는 결국 같은 하위 모듈(GeneratedFile · CookContract · 그 앞의 탐색 순서)을 다 올린다.
-  기준(생성기 30 % 이상)에 한참 못 미치고, 하위 모듈 이름과 같은 공개 이름(`BuildTree`)이 하위 모듈 import 순서에 따라 모듈로 바뀌는 함정이 생긴다.
+- **`common` 지연 import(PEP 562 `__getattr__`)**(2026-10-06, 12 회 중앙값): `import common` 누적 81.0 → 1.8 ms 이지만 `GenerateCookContract.py` 한 번이 110.5 → 110.1 ms — 생성기는 결국 같은 하위 모듈을 다 올린다.
+  기준(생성기 30 % 이상)에 한참 못 미치고, 하위 모듈 이름과 같은 공개 이름(`BuildTree`)이 import 순서에 따라 모듈로 바뀌는 함정이 생긴다.
 - **N18c 메시지 버퍼 풀**(2026-10-06, Release `NetReplicationBenchTest` 16 × 1000, 3 회): N18b 뒤 틱당 할당 1133 중 서버 복제 544 — "전체 − 서버 복제" 589 < 문턱 1 000.
   (N18b 전 25182 · 서버 복제 16886, ReplicationServer tick p50 5.4 → 3.5 ms.)
 - **TaskManager 후보 셋**(Release, 큐브 8000, 16 스레드, 5~8 회 번갈아): 스핀 워커 2 개 제한 + 적응 예산(GT 839→846, RT.ExecutePacket 395→436 us), 워커별 노드
@@ -128,9 +129,8 @@
   할당이 5 % 를 넘으면 다시 잰다.
 - **파일 시스템을 플랫폼 API 로 다시 짜기**(2026-10-06, Release 스크래치 · 2920 파일): 존재 확인 p50 10.9 vs 10.3 us · 순회 6.5~9.4 vs 7.6~10.0 ms — 시간은 같고
   할당만 준다(존재 확인 1 → 0, 순회 항목당 3.1 → 1.0). 그 할당은 기동 때만이고 상주가 아니다. `Core/File/Std` 로 감싼 뒤(Debug `FileUtilBenchTest`): 존재 확인 호출당 sw 할당자 밖 2 · sw 4
-  (구분자 정규화 · UTF-16 변환 문자열), 순회 파일당 밖 2.3 · sw 6.5 — 감싸기 전 밖 1 · 순회 3.1(스크래치). 줄이려면 `toPath` 를 스택 버퍼 변환으로(sw 0).
-  다시 재는 법: App Debug `-gv_memoryReport=1` 의 "cumulative since start" 줄 · `FileUtilBenchTest`. `std::filesystem` 은 `Core/File/Std` 뒤에 감췄으니 한 경로가 프로파일에 보이면 그 함수만
-  `File/Windows` · `File/Linux` 로 옮긴다(기준: Release 기동이나 프레임에서 1 ms 이상 · 프레임마다 부르는 경로).
+  (구분자 정규화 · UTF-16 변환 문자열), 순회 파일당 밖 2.3 · sw 6.5. 줄이려면 `toPath` 를 스택 버퍼 변환으로(sw 0).
+  다시 재는 법: App Debug `-gv_memoryReport=1` 의 "cumulative since start" 줄 · `FileUtilBenchTest`. 한 경로가 프로파일에 보이면(Release 기동이나 프레임에서 1 ms 이상 · 프레임마다 부르는 경로) 그 함수만 `File/Windows` · `File/Linux` 로 옮긴다.
 - **물리**: 파괴 잎 볼록 껍질을 워커로 나눠 짓기(Jolt 잡 시스템, 2026-10-06) — `FractureBenchTest` p50 20.7 → 24.4 ms 로 느려졌다. 워커 15 개가 청크(잎 13 개)마다
   ~10 ms(잎당 ~750 us — 직렬 55 us 의 14 배)를 썼다: 껍질 짓기는 할당이 많고 Jolt 할당이 엔진 `Memory::allocate` 로 가서 경합한다. 할당을 풀어 주지 않는 한 다시 하지 말 것.
   주의: Jolt 백엔드 TU(`Physics/Jolt/*.cpp`, PCH 없이 Jolt 정의 · 대상 기능으로 컴파일)에 `Engine/Common/EngineParallel.h` 를 넣자 물리 전체가 깨졌다(질량 · 자세가 쓰레기) —
@@ -158,24 +158,21 @@
   어느 구성도 이기지 못한다. PCH + 유니티는 145.2 s 로 개발보다 느리다.
 - **`Engine.dll` 을 층 DLL 로 쪼개 증분 빌드를 줄이는 안**(BuildSpeed 9, 2026-10-16, PC `SW`, Debug): `.cpp` 하나를 고친 증분 13.9 s 중 `Engine.dll` 링크는 1.9 s, 컴파일 1.6 s 였고 나머지 약 10 s 는
   임포트 라이브러리 수정 시각 때문에 킷 · 게임 DLL 84 개가 다시 링크된 것이었다(`sw_keepImportLibraryIfUnchanged` 로 해결, 5 s). 헤더를 고친 비용은 DLL 경계가 아니라 PCH 에 든 헤더가 정하므로
-  (`GameObject.h` 가 TU 약 2,200 개) 분할로 줄지 않는다. 언리얼은 모듈 DLL 을 쪼개되 헤더는 모듈 공개 헤더로 좁혀 팬아웃을 줄이는 쪽이 본체로 알고 있다. 링크 단위 분할은 엔진 분할 계획 3 단계의 다른 이유가 생길 때만 한다.
-- **킷 밖 묶음의 PCH 공유**(BuildSpeed 3 단계, 2026-10-11): 컴파일 정의 차이를 `compile_commands.json` 에서 타깃별로 모으면 PCH 를 따로 짓는 것은
-  시험 9(`SW_TEST_INTERNAL` 공통, EngineTest 는 `SW_GF_IMPORTS` · 킷 `FlagOps.gen.h` 강제 포함, EditorTest · EditorUITest 는 서드파티 정의가 더 붙는다) · RHI 백엔드 4(`<타깃>_EXPORTS` 만 다름) ·
-  App · Server · ModuleHost 3 · 에디터 확장 · `SWGame` 이다. PCH 하나가 약 2.7 CPU 초라 다 합쳐도 16 스레드에서 2 ~ 3 s(측정 편차 ±3 s 안) — 킷(PCH 60 개 → 1, −20.6 s)만 했다.
+  (`GameObject.h` 가 TU 약 2,200 개) 분할로 줄지 않는다(언리얼도 헤더를 모듈 공개 헤더로 좁혀 팬아웃을 줄이는 쪽이 본체로 알고 있다). 링크 단위 분할은 엔진 분할 계획 3 단계의 다른 이유가 생길 때만 한다.
+- **킷 밖 묶음의 PCH 공유**(BuildSpeed 3 단계, 2026-10-11): PCH 를 따로 짓는 것은 시험 9 · RHI 백엔드 4(`<타깃>_EXPORTS` 만 다름) · App · Server · ModuleHost 3 · 에디터 확장 · `SWGame` 이다.
+  PCH 하나가 약 2.7 CPU 초라 다 합쳐도 16 스레드에서 2 ~ 3 s(측정 편차 ±3 s 안) — 킷(PCH 60 개 → 1, −20.6 s)만 했다.
 - **ReflectionParser 강제 include PCH**(2026-10-06): Debug `ReflectionParserTest` 35 케이스 25.8 초(여섯 조각, 조각당 약 4.3 초 · 한도 30 초), 파서 한 번
   1.1~1.3 초 중 공통 include 0.5 초 — 조각당 약 2 초를 위해 depfile 의존(PCH 안 헤더를 `clang_getInclusions` 가 내는가) 재검증을 떠안지 않는다.
 - **롤백에 파괴 상태 싣기**(사용자 결정 2026-10-06): 롤백 키트(격투)에 파괴물이 없고 조각 물리(Jolt)는 되감지 못한다(Chaos GC 도 롤백 없음). 롤백 게임이
   파괴물을 쓰면 `saveState` 에 `makeNetworkSnapshot` 을 싣고(바뀐 사건 수일 때만) `loadState` 가 즉시 적용하는 창구를 더한다.
 - **훅의 `CheckHeaderSelfContained` 를 하위 프로세스로 띄우기**(`preCommitRunsInBackground` 같은 선언, 2026-10-10): 파일 단위 게이트 중 시간을 내는 것은 이것 하나(헤더 10 개 ~2 s 벽)이고,
-  트리 전체 게이트(`CheckConfigReference` 5~14 s)는 이미 먼저 띄워져 있어 그 시간 안에 겹친다. 이 게이트가 홀로 남는 커밋(내용 규칙으로 트리 전체 게이트가 선 경우)에서는 겹칠 상대가
-  파일 단위 게이트들(합 <0.5 s)뿐이라 벌 수 있는 것이 그만큼이고, 기동 0.2 s 를 낸다. 넣지 않았다.
+  트리 전체 게이트(`CheckConfigReference` 5~14 s)는 이미 먼저 띄워져 있어 그 시간 안에 겹친다. 홀로 남는 커밋에서는 겹칠 상대가 파일 단위 게이트들(합 <0.5 s)뿐이고 기동 0.2 s 를 낸다. 넣지 않았다.
 - **GPUScene 배치 키 중복 계산 제거**(투명 배치 헤드 키 재계산, 인스턴스마다 셰이더 경로 해시): `GT.GPUScene.build` 3670 → 3761 us 로 차이가 없었습니다.
 - **`CheckConfigReference` 를 파일 단위(바뀐 구조체만)로 나누기**(2026-10-11, Scripts 개편 1 단계 뒤). 커밋 훅의 바닥은 트리 전체 게이트 여섯이 각자 `Source/` 를 읽는 값(조용할 때 1 ~ 1.4 s)이 만듭니다.
-  도구 비용을 줄인 뒤 단독 실행 중앙값(5 회)은 `CheckConfigReference` 1.49 → 0.99 s, `CheckDuplicateTypeNames` 1.35 → 1.03 s, `CheckEngineLayers` 2.00 → 1.09 s, `CheckModuleTargets` 1.44 → 1.21 s,
-  커밋 훅(`REFLECT` 헤더 하나) 2.31 → 1.92 s 였습니다. 그래서 하나만 0 으로 만들어도 나머지 다섯이 같은 높이로 남습니다.
-  더 내리려면 트리 전체 게이트들이 파일 읽기를 나누는 구조(한 프로세스가 읽고 여럿이 훑기)가 필요한데, 파이썬 GIL 때문에 지금의 동시 실행을 잃습니다.
-  파일마다 보는 소스 게이트는 그 구조로 옮겼습니다(2026-10-17, `SourceScan` — 트리를 한 번 걷고 파일을 코어 수만큼 프로세스에 나눠 읽고 가린 뒤 게이트 전부가 훑는다, GIL 은 프로세스로 피함).
-  위의 트리 전체 대조 게이트 중 무거운 `CheckNameReferences` · `CheckKitNamespaces` 는 커밋 훅에서 빼 CI 린트 잡으로 넘겼습니다([검증과 측정](08_Verification.md) 4절 "커밋 훅과 린트 잡의 나눔").
+  단독 실행 중앙값(5 회): `CheckConfigReference` 1.49 → 0.99 s, `CheckDuplicateTypeNames` 1.35 → 1.03 s, `CheckEngineLayers` 2.00 → 1.09 s, `CheckModuleTargets` 1.44 → 1.21 s, 커밋 훅(`REFLECT` 헤더 하나) 2.31 → 1.92 s.
+  하나만 0 으로 만들어도 나머지 다섯이 같은 높이로 남습니다. 더 내리려면 한 프로세스가 읽고 여럿이 훑는 구조가 필요한데 파이썬 GIL 때문에 지금의 동시 실행을 잃습니다.
+  파일마다 보는 소스 게이트는 그 구조로 옮겼습니다(2026-10-17, `SourceScan` — 트리를 한 번 걷고 파일을 코어 수만큼 프로세스에 나눠 읽고 가린 뒤 게이트 전부가 훑는다).
+  트리 전체 대조 게이트 중 무거운 `CheckNameReferences` · `CheckKitNamespaces` 는 커밋 훅에서 빼 CI 린트 잡으로 넘겼습니다([검증과 측정](08_Verification.md) 4절).
 
 ## 4. 옛 이름 → 지금 이름 (`git log` 을 읽을 때)
 
@@ -202,7 +199,7 @@
 
 ## 5. 영역별 결정
 
-결정마다 결정한 날, 근거, 상용 엔진에서 같은 기능을 어떻게 하는지를 적습니다. 이미 코드와 헤더 주석에 반영된 결정은 한두 문장으로만 적고, 자세한 계약은 그 코드의 헤더 주석(주의 · 계약)에 있습니다.
+결정마다 결정한 날, 근거, 상용 엔진의 방식을 적습니다. 코드와 헤더 주석에 반영된 결정은 한두 문장으로만 적고, 자세한 계약은 그 코드의 헤더 주석에 있습니다.
 결정을 바꾸려면 여기 적힌 근거와 상용 엔진의 방식을 먼저 확인하고, 바꾼 결정은 같은 커밋에서 이 절을 고칩니다.
 
 ### 5-1. 문서와 저장소
@@ -210,123 +207,104 @@
 - **약어는 대문자로 쓴다**(사용자 결정 2026-10-10 — 이미 대문자인 `AABB` · `RHI` · `TagID` 와 철자가 하나가 되고, 함수 이름에서도 약어가 보인다). 목록은 `Scripts/lint/rules/AcronymRegistry.toml` 한 자리(읽기 · 철자 판정은 `Scripts/lint/AcronymRegistry.py`), 대문자 약어가 이어 붙으면 낱말을 사이에 두거나 뜻이 같은 쪽을 뺀다(`RTSCommanderAI` · `HTTPAddress` · `kRTSCatalogXML` · `RHITimestamp` · `OpenSSLContext`). `SSL` 은 제품 이름표(`OpenSSL`)로 둔다 — 약어로 올리면 `_pSsl` 같은 OpenSSL 핸들 이름까지 바뀌고 이어 붙음은 이름 하나뿐이었다. 파이썬 · CMake 식별자는 대상이 아니다.
 - **클래스 접미어는 하는 일로 고릅니다**(사용자 결정 2026-10-13 — 상용 엔진이 같은 접미어를 같은 뜻으로 쓴다). `…Manager` 는 런타임 오브젝트 집합의 수명과 생성 · 파괴 · 로드 정책을 소유하고(유니티 SceneManager, 언리얼 AssetManager),
   `…Registry` 는 등록으로 채우는 이름 · ID 조회 테이블이며 수명 정책이 없습니다(언리얼 AssetRegistry). `…System` 은 매 프레임 많은 오브젝트 · 컴포넌트에 같은 로직을 돌리고(유니티 DOTS System),
-  `…Service` 는 서비스 바인딩이나 원격 엔드포인트로 닿는 교체 가능한 기능 창구(PlayFab · EOS · Nakama 서비스), `…Backend` 는 인터페이스의 플랫폼 · 라이브러리 구현(`JoltPhysicsBackend`, `XAudio2AudioBackend`)입니다.
-  C 함수 테이블은 `…API`(`GameAPI` · `EditorAPI` · `ModuleAPI`)입니다. 함께 정한 규칙 셋: `Anim` 은 `Animation` 으로 풀어 씁니다(Anim 접두 식별자는 개명 중이며 새로 만들지 않고, 언리얼 `AnimInstance` 같은 외부 용어를 가리킬 때만 예외).
+  `…Service` 는 서비스 바인딩이나 원격 엔드포인트로 닿는 교체 가능한 기능 창구(PlayFab · EOS · Nakama), `…Backend` 는 인터페이스의 플랫폼 · 라이브러리 구현(`JoltPhysicsBackend`, `XAudio2AudioBackend`),
+  `…API` 는 C 함수 테이블(`GameAPI` · `EditorAPI` · `ModuleAPI`)입니다. 함께 정한 규칙: `Anim` 은 `Animation` 으로 풀어 씁니다(Anim 접두 식별자는 개명 중이며 새로 만들지 않고, 언리얼 `AnimInstance` 같은 외부 용어만 예외).
   불린 변수 · 멤버의 `b` 접두(`bVisible`)는 언리얼 관습으로 허용하고 불린을 돌려주는 함수만 is · has · can · should 규칙을 따릅니다.
   `Scene` 은 씬 하나의 데이터를 소유하고(언리얼 Level/World · 유니티 Scene), `GameObjectManager` 는 그 씬 오브젝트의 수명을, `GameObjectStore` 는 저장소를 맡습니다. 규칙 원문은 [docs/agents/NamingCpp.md](agents/NamingCpp.md) "Class suffixes" 절입니다.
-- **같은 기준으로 바꾼 이름**(2026-10-13): 온라인 호스트 쪽 인터페이스는 클라이언트 쪽 `IOnlineClientService` · `registerClientService` 와 짝을 맞춰 `IOnlineHostService` · `registerHostService` 로 했습니다.
-  키트가 나눠 쓰는 공유 상태는 언리얼 GameState(월드 단위 복제 상태)와 뜻이 달라 `SessionStateComponent` · `SessionStateRefs` 로 했습니다.
+- **같은 기준으로 바꾼 이름**(2026-10-13): 온라인 호스트 쪽 인터페이스는 클라이언트 쪽과 짝을 맞춰 `IOnlineHostService` · `registerHostService`. 키트가 나눠 쓰는 공유 상태는 언리얼 GameState(월드 단위 복제 상태)와 뜻이 달라 `SessionStateComponent` · `SessionStateRefs`.
 - **저장소에 LICENSE 파일을 두지 않습니다**(2026-10-06). 라이선스를 정하는 것은 사용자의 일이라, README 의 MIT 배지와 develop 배지도 뺐습니다.
-- **코딩 규칙의 원본은 `AGENTS.md` 와 `docs/agents/` 입니다**(2026-10-06). [04 코딩 규칙 예시](04_CodingGuidelines.md)는 규칙을 다시 적지 않는 한국어 예시 모음입니다.
-  언리얼도 Coding Standard 한 문서에 규칙을 두고 예시는 따로 둡니다. `CLAUDE.md` 는 에이전트가 매번 읽는 한국어 요약이고, 원본이 따로 있는 규칙(에이전트 표, 편집 함정, 작업 방식)은 한 줄과 링크로만 가리킵니다.
-- **모듈 폴더마다 README 를 강제하지 않습니다**(2026-10-06). 있는 README 는 모두 [문서 지도](02_DocumentMap.md)에 있어야 하고, `CheckDocPaths` 가 이것을 확인합니다.
-- **문서만 바뀐 커밋에서도 CI 린트 잡은 돌고, 빌드 잡만 건너뜁니다**(2026-10-06). 바뀐 파일은 git 으로 직접 판정하고, 비교할 기준 커밋을 얻지 못하면 안전하게 빌드합니다.
-- **백로그는 할 일 목록만 둡니다**(2026-10-07). 끝낸 일의 교훈은 그 코드의 헤더 주석(주의 · 계약)에, 결정과 기각한 안은 이 문서에, 검증 방법은 [검증과 측정](08_Verification.md)에 둡니다.
-  대형 저장소가 할 일은 이슈 트래커에, 설계 결정은 결정 기록(ADR)에, 지식은 코드 옆 문서에 두는 방식과 같습니다.
+- **코딩 규칙의 원본은 `AGENTS.md` 와 `docs/agents/` 입니다**(2026-10-06). [04 코딩 규칙 예시](04_CodingGuidelines.md)는 규칙을 다시 적지 않는 예시 모음입니다(언리얼도 규칙 문서와 예시를 따로 둔다).
+  `CLAUDE.md` 는 에이전트가 매번 읽는 요약이고, 원본이 따로 있는 규칙은 한 줄과 링크로만 가리킵니다.
+- **모듈 폴더마다 README 를 강제하지 않습니다**(2026-10-06). 있는 README 는 모두 [문서 지도](02_DocumentMap.md)에 있어야 하고, `CheckDocPaths` 가 확인합니다.
+- **문서만 바뀐 커밋에서도 CI 린트 잡은 돌고, 빌드 잡만 건너뜁니다**(2026-10-06). 바뀐 파일은 git 으로 직접 판정하고, 기준 커밋을 얻지 못하면 안전하게 빌드합니다.
+- **백로그는 할 일 목록만 둡니다**(2026-10-07). 끝낸 일의 교훈은 그 코드의 헤더 주석에, 결정과 기각한 안은 이 문서에, 검증 방법은 [검증과 측정](08_Verification.md)에 둡니다.
 - **게임 리소스는 상업적 사용 가능, 출처 표기 의무 없음, 재배포 허용(CC0 · 퍼블릭 도메인 급)만 넣습니다**(사용자 결정). 저장소가 GitHub 에 공개되기 때문입니다.
   CC BY 처럼 표기 의무가 있거나 재배포를 막는 리소스는 내려받기 스크립트로 저장소 밖에 두는 방식으로도 쓰지 않습니다. 후보는 라이선스 원문으로 확인하고, `credits.md` 에는 감사 표기만 합니다.
   쓸 수 있는 예는 Kenney, KayKit, VRoid 의 CC0 샘플입니다. Quaternius 는 쓰지 않습니다(5-12). 게임별 CC0 리소스 배치와 MechArena 는 "안정화된 뒤" 로 보류했습니다([후보 문서](plans/Candidates-project.md) `H-1`).
 - **문서는 사람이 읽는 순서로, 한국 개발자가 쓰는 말로 씁니다**(2026-10-07, 사용자 결정). 모듈 README 는 무엇이고 왜 있나, 머릿속 그림, 따라 해 보기, 작동 원리, 확장하는 법, 함정과 주의, 더 볼 곳 순서이고 폴더 트리와 클래스 표는 쓰지 않습니다.
-  버전, 빌드, 베이크, 테이블, 슬롯, 레지스트리, 엔드포인트 같은 업계 용어를 그대로 쓰고 순우리말 조어를 만들지 않습니다. 지침 전문은 [문서 쓰기 지침](10_WritingDocs.md)이고, 코드 주석과 커밋 메시지에도 같은 기준을 씁니다.
+  업계 용어(버전, 빌드, 베이크, 테이블, 슬롯, 레지스트리, 엔드포인트)를 그대로 쓰고 순우리말 조어를 만들지 않습니다. 전문은 [문서 쓰기 지침](10_WritingDocs.md)이고 코드 주석과 커밋 메시지에도 같은 기준을 씁니다.
 
 ### 5-2. 빌드, 스크립트, CI
 
 - **GPU 잠금은 공유(두 프로세스)와 독점으로 나눈다 — 기능 확인 실행은 공유로 병렬, 측정 · 장치 제거 실험은 독점**(2026-10-15, `shared-lock acquire gpu --shared`). 결정적 시나리오와 hostgpu 는 서로의 수치를 오염시키지 않아
-  직렬로 돌 까닭이 없었고 GPU 실행이 검증의 병목이었다. 리더 · 라이터 잠금과 같은 모양이며 독점이 먼저다(독점이 기다리는 동안 새 공유는 물러난다) — 측정이 공유 실행에 굶지 않는다.
+  직렬로 돌 까닭이 없었다. 독점이 먼저다(독점이 기다리는 동안 새 공유는 물러난다) — 측정이 공유 실행에 굶지 않는다.
 
 - **게임 여럿을 한 빌드에서 짓습니다 — 모듈 이름 `SWGame` 은 그대로, 타깃은 게임마다 `SWGame_<게임>`(활성 게임도), 산출물은 `Bin/Modules/SWGame`(활성) · `Bin/Games/<게임>/SWGame`, 고르기는 `SW_GAMES`(Dev 전용)입니다**(2026-10-13, `C-25`).
   게임 팩끼리 PCH 하나(`sw_game_pch`)를 나눠 씁니다. 실행 중에 키트를 더하고 빼는 경로는 만들지 않습니다(2026-10-14 사용자 결정 — 키트 조합은 빌드 · 기동 때 정한다). 게임별 CMake 프리셋(`Ninja-Debug-<게임>`)도 두지 않습니다(2026-10-14 사용자 결정 — `Ninja-Debug` 하나 + `-game=`).
-  기동 때 고른 게임이 닿지 않고 다른 게임 팩만 닿는 키트는 호스트 로더가 매니페스트를 카탈로그에 넣지 않습니다 — CMake 가 쓰지 않는 키트의 매니페스트를 `Bin/Modules` 에 두지 않는 것과 같은 기준이고,
-  카탈로그(`ModuleCatalog`)는 다른 게임을 모릅니다(유니티 패키지가 프로젝트 manifest 에 없으면 오르지 않는 것과 같다). 아무 게임도 닿지 않는 키트는 언리얼 `EnabledByDefault` 처럼 켜진 채 둡니다(온라인 서버 키트).
+  기동 때 고른 게임이 닿지 않고 다른 게임 팩만 닿는 키트는 호스트 로더가 매니페스트를 카탈로그에 넣지 않습니다(CMake 가 쓰지 않는 키트의 매니페스트를 `Bin/Modules` 에 두지 않는 것과 같은 기준, 유니티 패키지와 같다). `ModuleCatalog` 는 다른 게임을 모릅니다. 아무 게임도 닿지 않는 키트는 언리얼 `EnabledByDefault` 처럼 켜진 채 둡니다(온라인 서버 키트).
   전용 서버는 오디오를 디코드하지 않습니다 — 서버 패키지가 오디오를 빼므로(`target_excluded_asset_kinds`) 클립 캐시가 `ResourcePaths::isExcludedForHost` 를 보고 경고 없이 건너뜁니다(언리얼 전용 서버와 같다).
   언리얼은 엔진 바이너리를 한 번 짓고 프로젝트 모듈만 프로젝트 폴더에 내며, 유니티 · Godot 도 에디터 하나가 여러 프로젝트를 엽니다. 키트는 고른 게임들의 의존 합집합(`SW_BUILD_UNUSED_KITS=OFF`, 프리셋 `Ninja-Debug-Lean`),
-  Dev 는 실행할 때 `-game=<이름>` 으로 고르고(언리얼이 프로젝트를 명령줄로 받는 것과 같다, `GameSelection`), 기본은 `Bin/Modules/ActiveGame.txt` 라 게임 이름이 엔진 TU 에 구워지지 않습니다.
-  Shipping 은 활성 게임 하나를 정적으로 링크하고 게임 정체성을 빌드 시점에 굽습니다(실행 시점 선택의 비용을 배포본에 지우지 않는다). Debug 깨끗한 빌드 게임 1개 148초 → 8개 152초,
-  활성 게임을 바꾼 뒤 다시 짓기 5.5초(게임 모듈 22 TU 만).
+  Dev 는 실행할 때 `-game=<이름>`(`GameSelection`)으로 고르고 기본은 `Bin/Modules/ActiveGame.txt` 라 게임 이름이 엔진 TU 에 구워지지 않습니다.
+  Shipping 은 활성 게임 하나를 정적으로 링크하고 게임 정체성을 빌드 시점에 굽습니다. Debug 깨끗한 빌드 게임 1개 148초 → 8개 152초, 활성 게임을 바꾼 뒤 다시 짓기 5.5초(게임 모듈 22 TU 만).
 
 - **Windows 지연 로드(`/DELAYLOAD`)를 쓰지 않습니다 — 모듈끼리는 일반 import 이고 핫 리로드가 섀도 복사본의 import 이름을 세대 이름으로 바꿉니다**(2026-10-12).
   lld 20.1.8 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)가 xmm0~3 을 `__delayLoadHelper2` 호출의 홈 공간에 저장해, 처음 묶는 호출의 float 인자가 망가졌습니다
-  (LLVM 이슈 51941 · bz52599, 고침은 #149521 로 LLVM 21.x 에 들어감). 모든 지연 import 를 코드가 돌기 전에 미리 묶는 우회는 이미지 목록을 놓치면(DbgHelp 열거 실패)
-  조용히 다시 망가졌습니다. 후보와 결론:
-  (a) 도구 사슬을 LLVM 21 로 올리기 — 근본이지만 clang-format · 컴파일러 · 경고 전부가 같이 움직여 이 결함 하나로는 크고, 올린 뒤에도 지연 로드가 필요한 자리가 없어 하지 않음.
-  (b) 다시 올리지 않는 의존(GameFramework — App 은 `loadSharedModule` 로 원본을 한 번 올린다)만 일반 import 로 — 고친 CI 실패는 모두 이것이었지만 키트 → 키트 · SWGame → 키트 ·
-  에디터 확장 → EditorModule 은 다시 올리는 의존이라 썽크가 남는다. (c) 모듈이 자기 첫 진입점 · DllMain 에서 스스로 묶기 — DllMain 은 로더 락 안이라 다른 DLL 을 올릴 수 없고,
-  첫 진입점보다 먼저 도는 정적 초기화가 이미 썽크를 지난다. (d) 첫 호출을 float 인자 없는 함수로 만드는 프라이머 — 썽크는 import 마다라 함수마다 프라이머가 필요해 지킬 수 없다.
+  (LLVM 이슈 51941 · bz52599, 고침은 #149521 로 LLVM 21.x). 모든 지연 import 를 코드가 돌기 전에 미리 묶는 우회는 이미지 목록을 놓치면(DbgHelp 열거 실패) 조용히 다시 망가졌습니다. 후보와 결론:
+  (a) 도구 사슬을 LLVM 21 로 올리기 — 전부가 같이 움직여 이 결함 하나로는 크고, 올린 뒤에도 지연 로드가 필요한 자리가 없어 하지 않음.
+  (b) 다시 올리지 않는 의존(GameFramework)만 일반 import 로 — 고친 CI 실패는 모두 이것이었지만 키트 → 키트 · SWGame → 키트 · 에디터 확장 → EditorModule 은 다시 올리는 의존이라 썽크가 남는다.
+  (c) 모듈이 첫 진입점 · DllMain 에서 스스로 묶기 — DllMain 은 로더 락 안이라 다른 DLL 을 올릴 수 없고, 첫 진입점보다 먼저 도는 정적 초기화가 이미 썽크를 지난다.
+  (d) 첫 호출을 float 인자 없는 함수로 만드는 프라이머 — 썽크는 import 마다라 함수마다 필요해 지킬 수 없다.
   (e) **고른 것**: 리눅스 SONAME 바꾸기와 같은 장치를 Windows 에 — 복사본 파일 이름을 같은 길이의 세대 이름(`GF_Mai0003.dll`, 복사본마다 제 폴더)으로 하고 의존하는 복사본의
   import 표 이름을 제자리에서 바꾼다. 로더가 이미 올라온 같은 이름의 이미지를 쓰므로 원본이 두 번 올라오지 않고, 썽크 자체가 없다. 없을 수 있는 시스템 DLL(Media Foundation ·
   XAudio2 · TracyClient)은 LoadLibrary + 함수 표, 늘 있는 d3dcompiler_47 은 일반 import.
-  상용 엔진 비교: 언리얼은 모듈 DLL 을 정적 import 하고 핫 리로드 때 번호 붙은 새 이름으로 다시 링크하며(지연 로드 없음 — 이 방식은 그 다시 링크를 복사 시점에 한다),
-  유니티는 관리 코드를 도메인 리로드로 갈아 네이티브 import 를 건드리지 않고, Godot GDExtension 은 `get_proc_address` 함수 표로 엔진 API 를 받아 import 자체가 없다(시스템 DLL 쪽이 이 방식).
+  상용 엔진: 언리얼은 모듈 DLL 을 정적 import 하고 핫 리로드 때 번호 붙은 새 이름으로 다시 링크하며(이 방식은 그 다시 링크를 복사 시점에 한다), 유니티는 도메인 리로드로 네이티브 import 를 건드리지 않고, Godot GDExtension 은 `get_proc_address` 함수 표라 import 자체가 없다(시스템 DLL 쪽이 이 방식).
   가드는 빌드 `CheckNoDelayLoad`, 런타임 `LiveReloadManager` 의 지연 import 이미지 거절(Debug 단언), 산출물 `ArchitectureTest.NoBuiltImageHasDelayLoadedImports` 입니다.
 
-- **Shipping 의 RHI 백엔드는 쿠킹 테이블의 이름(`DirectX11`, `DirectX12`, `Vulkan`, `OpenGL`)으로만 고릅니다**(2026-10-06). 별칭이나 그 플랫폼에 없는 백엔드를 주면 configure 가 멈춥니다.
-  언리얼의 TargetRules 도 플랫폼에 없는 RHI 를 빌드 전에 거부합니다.
+- **Shipping 의 RHI 백엔드는 쿠킹 테이블의 이름(`DirectX11`, `DirectX12`, `Vulkan`, `OpenGL`)으로만 고릅니다**(2026-10-06). 별칭이나 그 플랫폼에 없는 백엔드를 주면 configure 가 멈춥니다(언리얼 TargetRules 도 같다).
 - **App 의 백엔드 명령줄 철자는 백엔드마다 하나입니다**(2026-10-07). `-dx11` · `-dx12` · `-vk` · `-gl` 이고, 쿠킹 표의 `command_line_name` 칸이 정본입니다.
   `-vulkan` · `-directx12` · `-d3d11` · `-spirv` · `-opengl` 같은 다른 철자는 받지 않습니다. 셰이더 폴더 이름(`dx11` · `dx12` · `vulkan` · `opengl`)은 따로 있는 칸이라 그대로입니다.
-- **vcpkg 라이브러리 등록 함수는 `sw_addVcpkgPackage`(못 찾으면 configure 실패)와 `sw_addVcpkgHeaderOnly` 두 가지입니다**(2026-10-06). 언리얼 ThirdParty 모듈의 두 종류(라이브러리, 헤더 전용)와 같습니다.
-- **서드파티 헤더는 그 라이브러리 타깃을 링크해서만 얻습니다. vcpkg include 폴더를 모든 타깃에 거는 전역 경로는 두지 않습니다**(2026-10-15). 언리얼 Build.cs 의 명시 의존과 같습니다.
-  전역 경로는 project() 전(설치 전)에 폴더가 있을 때만 걸려, 설치가 남은 PC 에서만 통과하고 새 CI 러너에서 지는 include 누락을 만들었습니다.
-- **키트 빌드 순서는 모듈 매니페스트 의존 관계의 위상 정렬입니다**(2026-10-06). 폴더 이름 순서로는 공유 키트가 먼저 정의된다는 보장이 없습니다. UBT 도 모듈 의존 그래프로 순서를 정합니다.
+- **vcpkg 라이브러리 등록 함수는 `sw_addVcpkgPackage`(못 찾으면 configure 실패)와 `sw_addVcpkgHeaderOnly` 두 가지입니다**(2026-10-06). 언리얼 ThirdParty 모듈의 두 종류와 같습니다.
+- **서드파티 헤더는 그 라이브러리 타깃을 링크해서만 얻습니다. vcpkg include 폴더를 모든 타깃에 거는 전역 경로는 두지 않습니다**(2026-10-15). 전역 경로는 project() 전(설치 전)에 폴더가 있을 때만 걸려,
+  설치가 남은 PC 에서만 통과하고 새 CI 러너에서 지는 include 누락을 만들었습니다(언리얼 Build.cs 의 명시 의존과 같다).
+- **키트 빌드 순서는 모듈 매니페스트 의존 관계의 위상 정렬입니다**(2026-10-06). 폴더 이름 순서로는 공유 키트가 먼저 정의된다는 보장이 없습니다(UBT 도 의존 그래프로 정한다).
 - **스크립트 이름과 도움말 규칙**(2026-10-06): 도움말은 한국어로 씁니다. `Scripts/dev/` 의 이름은 동사로 시작하고(`Make*`, `Run*`), "Generate" 는 빌드가 만드는 생성물에만 씁니다.
   `py -3 -m Scripts gate|fix|report|selftest <이름>` 은 폴더를 찾아 부르고, CMake와 커밋 훅과 CI 는 경로로 부릅니다.
-- **게이트는 파일을 고치지 않습니다**(2026-10-06). include 순서와 namespace 블록을 고치는 일은 픽서(`FormatIncludeOrder`, `FormatNamespaceBlocks`)가 하고, 픽서의 대상 파일은 `--files` 하나로 고릅니다.
-  포맷터는 내용 밖의 바이트(BOM, 줄끝)를 바꾸지 않습니다. clang-format 과 같은 원칙입니다.
-- **configure 중의 파이썬 생성기는 한 프로세스로 돌립니다**(2026-10-06). configure 시간의 29 % 가 파이썬 기동이었고, 한 프로세스로 묶자 configure 가 3,486 ms 에서 2,898 ms 로 줄었습니다.
-- **커밋 훅의 트리 전체 게이트는 코어 수만큼만 동시에 띄우고, 린트 CTest 는 동시에 4 개씩 돌립니다**(2026-10-06). ninja 와 UBT 의 ParallelExecutor 도 동시 작업 수를 프로세서 수로 묶습니다.
-  린트 CTest 는 4 와 8 이 측정 오차 안에서 같고 4 가 CPU 를 절반만 씁니다. CI 린트 잡은 처음부터 실패를 막는 단계입니다.
+- **게이트는 파일을 고치지 않습니다**(2026-10-06). include 순서와 namespace 블록은 픽서(`FormatIncludeOrder`, `FormatNamespaceBlocks`)가 고치고, 대상 파일은 `--files` 하나로 고릅니다. 포맷터는 내용 밖의 바이트(BOM, 줄끝)를 바꾸지 않습니다.
+- **configure 중의 파이썬 생성기는 한 프로세스로 돌립니다**(2026-10-06). configure 시간의 29 % 가 파이썬 기동이었고, 묶자 3,486 ms 에서 2,898 ms 로 줄었습니다.
+- **커밋 훅의 트리 전체 게이트는 코어 수만큼만 동시에 띄우고, 린트 CTest 는 동시에 4 개씩 돌립니다**(2026-10-06). 린트 CTest 는 4 와 8 이 측정 오차 안에서 같고 4 가 CPU 를 절반만 씁니다. CI 린트 잡은 처음부터 실패를 막는 단계입니다.
 - **Release 와 Shipping 도 디버그 정보를 만들고, 기본은 줄 정보만(`SW_RELEASE_DEBUG_INFO=lines`)입니다**(2026-10-06). 배포물의 PDB 는 `Symbols/`, 테스트 실행 파일의 PDB 는 `TestBin/` 에 둡니다.
-- **vcpkg 포트를 고칠 때는 트리플릿이 아니라 오버레이 포트(`ThirdParty/<pkg>/vcpkg-port/`)를 씁니다**(2026-10-06). 트리플릿 파일의 해시는 모든 포트의 ABI 에 들어가므로, 트리플릿을 고치면 공유 설치 트리 전체를 다시 빌드합니다.
+- **vcpkg 포트를 고칠 때는 트리플릿이 아니라 오버레이 포트(`ThirdParty/<pkg>/vcpkg-port/`)를 씁니다**(2026-10-06). 트리플릿 파일의 해시는 모든 포트의 ABI 에 들어가므로, 고치면 공유 설치 트리 전체를 다시 빌드합니다.
   포트 버전을 올릴 때는 오버레이도 같이 올립니다.
 - **의존성 기준선은 vcpkg 레지스트리 커밋 하나(`builtin-baseline`)로 올리고, 같은 커밋으로 `Tools/vcpkg` 를 맞춥니다**(2026-10-10). 남은 판은 `py -3 -m Scripts deps-outdated` 가 보입니다.
   OpenSSL 4(폐기 API 삭제 — libpq 의 `openssl` 기능이 따라오는지 먼저 본다), glad2(로더 생성기 · 헤더 모양이 바뀌어 GL 백엔드 초기화를 다시 쓴다), DXC 최신(구운 셰이더 전부와 네 백엔드 그림이 바뀐다)은
-  기준선과 따로 올립니다. 언리얼도 엔진 판과 함께 ThirdParty 를 올리고 셰이더 컴파일러는 따로 올립니다.
+  기준선과 따로 올립니다.
 - **Dev `Bin` 은 실행 파일 · 엔진 · 서드파티 DLL 만 두고, 모듈은 `Bin/Modules`, PDB 는 `Bin/Symbols`, 시험은 `TestBin` 에 냅니다**(2026-10-10). 언리얼이 플러그인 DLL 을
   플러그인의 `Binaries/` 에, 유니티가 네이티브 플러그인을 `Plugins/` 에 따로 두는 것과 같습니다. 서드파티 DLL 폴더 · Vulkan 레이어 json 은 옮기지 않았습니다.
-  모듈이 쓰는 서드파티 DLL 도 `Bin` 한 벌입니다(vcpkg applocal 이 모듈 옆에 사본을 두지 않게 한다 — 언리얼이 서드파티 DLL 을 `Binaries/ThirdParty` 한 자리에 모으는 것과 같은 방향).
+  모듈이 쓰는 서드파티 DLL 도 `Bin` 한 벌입니다(vcpkg applocal 이 모듈 옆에 사본을 두지 않게 한다).
 - **개발 기본 빌드(`all`)는 시험을 짓지 않습니다**(2026-10-10). Debug CPU 시간의 26 %(시험 614 TU)가 시험이었습니다. `Test/` 는 `EXCLUDE_FROM_ALL` 이고,
   시험 실행 파일은 `AllTests` 타깃이 모읍니다. CI · 검증 프리셋(`CI-*`, `*-Shipping*`, `Ninja-Debug-ASAN`)은 build 프리셋의 `targets`(`all` · `AllTests`)로 시험까지 짓습니다.
-  `ctest` 는 셋업 픽스처(`BuildTestBinaries` — `all` · `AllTests` 를 짓는 항목, 실행 파일 시험이 요구한다)로 먼저 짓습니다. 이미 지은 트리면 몇 초이고, 옛 실행 파일로 통과하는 일도 막습니다.
-  `py -3 -m Scripts test` 도 먼저 짓습니다. 비교한 다른 길은 둘입니다. 캐시 옵션으로 `all` 에 넣고 빼면 프리셋마다 configure 가 갈리고, 같은 폴더에서 바꿀 때 재구성이 돕니다.
-  `all-with-tests` 를 `all` 전부에 의존시키려면 디렉터리를 훑어야 하고, `ALL` 없는 사용자 타깃을 가려낼 수 없습니다(CMake 가 알려 주지 않는다).
-  언리얼은 시험을 별도 타깃으로 짓고, CMake 관례(`BUILD_TESTING`)도 시험을 따로 켭니다.
+  `ctest` 는 셋업 픽스처(`BuildTestBinaries`)로, `py -3 -m Scripts test` 도 먼저 짓습니다(이미 지은 트리면 몇 초이고, 옛 실행 파일로 통과하는 일도 막는다).
+  기각한 길: 캐시 옵션으로 `all` 에 넣고 빼기(프리셋마다 configure 가 갈리고 같은 폴더에서 바꿀 때 재구성이 돈다), `all-with-tests` 를 `all` 전부에 의존시키기(디렉터리를 훑어야 하고 `ALL` 없는 사용자 타깃을 가려낼 수 없다).
 - **게이트가 나눠 쓰는 글 읽기(include 줄 · 층 폴더 · include → 파일 · 주석 가리기 · 줄 번호)는 `Scripts/common/CodeText.py` 한 자리이고, 3,000 줄이 넘는 게이트는 규칙 묶음 패키지(`Scripts/lint/conventions/`)로 나눕니다**(2026-10-10).
-  clang-tidy 가 검사를 모듈(`bugprone` · `readability` …)별 파일로 두고 공용 매처를 `utils/` 에 두는 것과 같은 모양입니다. 층 게이트 다섯(Core · Core/Network · Engine · GameFramework · ModuleTargets)을
-  표 하나로 구동하는 한 구현은 하지 않았습니다 — 판정이 서로 다르고(같은 층 허용 · 배선 예외 · 대상 집합) CTest 이름 · 자기 시험이 게이트마다 달려 있어, 도우미만 나눴습니다.
+  층 게이트 다섯(Core · Core/Network · Engine · GameFramework · ModuleTargets)을 표 하나로 구동하는 한 구현은 하지 않았습니다 — 판정이 서로 다르고(같은 층 허용 · 배선 예외 · 대상 집합) CTest 이름 · 자기 시험이 게이트마다 달려 있어, 도우미만 나눴습니다.
 - **`cmake/Engine/` 은 책임 하나에 파일 하나입니다**(2026-10-10). 677 줄 `ModuleTargets.cmake` 를 컴파일 규칙 · 지연 로드 · ABI 도장 · 모듈 레지스트리 · 모듈 팩토리 · 실행 파일 링크로,
-  613 줄 `ModuleManifest.cmake` 를 해석 · 켜짐 조회로 나누고 옛 산출물 지우기는 `BuildLayout.cmake` 로 옮겼습니다. UBT 가 ModuleRules · TargetRules · 링크 규칙을 따로 두는 것과 같습니다.
-  구성 결과(네 프리셋의 TU 별 명령 · 링크 엣지 · ninja 타깃 · File API 답)는 전과 같고, 다른 것은 EditorTest 의 오브젝트 순서(폴더 훑기)뿐입니다.
-  하지 않은 정리: 시험 폴더 머리의 "Server 타깃이면 건너뛴다" 세 줄(`return()` 은 부른 파일에 있어야 해 함수로 줄지 않는다), App · Server · ModuleHost · 도구 타깃의 공통 기본값 함수
-  (타깃마다 정의 · PCH · 링크가 달라 두세 줄을 줄이고 링크 순서를 흔든다), QA 스크립트 시험 등록 함수(셋의 인자가 달라 풀어 쓴 것이 읽기 쉽다), `ConfigConstants.h.in` 을 파이썬 생성기로
-  옮기기(손으로 고른 C++ 상수 묶음이라 얻는 것이 없다), zlib · LZ4 · Zstd 를 ThirdParty 래퍼 타깃으로(리눅스 CI 에서 비었던 임포트 타깃을 받치는 `ZLIB_LIBRARIES` 링크가 빠진다).
-- **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 CMake 컴파일 정의입니다**(2026-10-10). 헤더에서만 정의하면 그보다 먼저 `windows.h` 를 include 한 TU 에 min/max 매크로가 생깁니다.
-  Godot 도 빌드 정의(`platform/windows/detect.py`)로 줍니다. 헤더의 `#if !defined` 정의는 빌드 플래그 없이 헤더를 읽는 도구를 위해 남깁니다.
+  613 줄 `ModuleManifest.cmake` 를 해석 · 켜짐 조회로 나누고 옛 산출물 지우기는 `BuildLayout.cmake` 로 옮겼습니다(UBT 가 ModuleRules · TargetRules · 링크 규칙을 따로 두는 것과 같다).
+  구성 결과(네 프리셋의 TU 별 명령 · 링크 엣지 · ninja 타깃 · File API 답)는 전과 같고, 다른 것은 EditorTest 의 오브젝트 순서뿐입니다.
+  하지 않은 정리: 시험 폴더 머리의 "Server 타깃이면 건너뛴다" 세 줄(`return()` 은 부른 파일에 있어야 한다), App · Server · ModuleHost · 도구 타깃의 공통 기본값 함수(정의 · PCH · 링크가 달라 링크 순서를 흔든다),
+  QA 스크립트 시험 등록 함수(인자가 달라 풀어 쓴 것이 읽기 쉽다), `ConfigConstants.h.in` 을 파이썬 생성기로(얻는 것이 없다), zlib · LZ4 · Zstd 를 ThirdParty 래퍼 타깃으로(리눅스 CI 에서 비었던 임포트 타깃을 받치는 `ZLIB_LIBRARIES` 링크가 빠진다).
+- **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 CMake 컴파일 정의입니다**(2026-10-10). 헤더에서만 정의하면 그보다 먼저 `windows.h` 를 include 한 TU 에 min/max 매크로가 생깁니다(Godot 도 빌드 정의로 준다).
+  헤더의 `#if !defined` 정의는 빌드 플래그 없이 헤더를 읽는 도구를 위해 남깁니다.
 - **서드파티 고지(`THIRD_PARTY_NOTICES.txt`)는 빌드가 모읍니다**(2026-10-06). 대상은 매니페스트가 끌어오는 의존 전부이고 개발 전용 라이브러리도 넣습니다. 고지가 넘치는 것은 해가 없지만 빠지면 라이선스 위반입니다.
 - **규칙 예외 감사에서 정한 넷**(2026-10-07, 아직 적용 전 — [후보 문서](plans/Candidates-project.md) `C-11`): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다).
   ② `(void)` 와 이유 주석은 `[[nodiscard]]` 가 붙은 실패 가능 함수에만 요구합니다. ③ 백엔드 명령줄 철자는 `-dx12`, `-dx11`, `-vk`, `-gl` 하나씩만 둡니다.
   ④ 출처를 모르는 리소스는 저장소에서 생성한 것이나 CC0 로 확인한 것으로 바꿉니다.
-- **린트의 규칙 데이터는 `Scripts/lint/rules/<이름>.toml` 에 두고 `Scripts/common/RuleData.py` 하나가 읽습니다**(2026-10-11). clang-tidy 가 검사 설정을 `.clang-tidy`(YAML)로,
-  언리얼이 금지 API · 예외를 `.ini` 로 코드 밖에 두는 것과 같습니다. 형식은 TOML 입니다 — 주석이 되고, 표 · 배열만으로 예외 표와 목록이 그대로 적히며, JSON 은 주석이 없고
-  YAML 은 표준 라이브러리에 읽기가 없습니다. CI 린트 잡의 파이썬은 3.10 이라 `tomllib`(3.11+)이 없어, 쓰는 문법만 아는 부분 집합 읽기를 같이 두고
-  `CheckExemptionTables` 가 두 읽기의 결과를 견줍니다(파이썬을 올리면 CI 잡마다 `setup-python` 이 붙고 WSL 클론도 따라 올려야 한다).
-  - 게이트 예외는 크기와 상관없이 모두 옮겼습니다(한 줄짜리 넷 포함) — "예외는 한 자리" 를 셀프테스트가 지키려면 게이트 소스에 표가 하나도 없어야 합니다.
-  - 목록은 사람이 늘리는 데이터만 옮겼습니다: Core · Engine · GameFramework 티어, 제품 낱말, 금지 동사 · 줄임말, 약어 등록부, 엔진 루트 파일, Win32 일반 이름, 내장 매크로,
-    실패 가능 동사, 입력 장치 조회 · 폰 쪽 파일, 셰이더 줄임말.
+- **린트의 규칙 데이터는 `Scripts/lint/rules/<이름>.toml` 에 두고 `Scripts/common/RuleData.py` 하나가 읽습니다**(2026-10-11). clang-tidy 의 `.clang-tidy`, 언리얼의 `.ini` 처럼 코드 밖에 두는 것입니다.
+  형식은 TOML 입니다 — 주석이 되고, 표 · 배열만으로 예외 표와 목록이 그대로 적히며, JSON 은 주석이 없고 YAML 은 표준 라이브러리에 읽기가 없습니다. CI 린트 잡의 파이썬은 3.10 이라 `tomllib`(3.11+)이 없어,
+  쓰는 문법만 아는 부분 집합 읽기를 같이 두고 `CheckExemptionTables` 가 두 읽기의 결과를 견줍니다(파이썬을 올리면 CI 잡마다 `setup-python` 이 붙고 WSL 클론도 따라 올려야 한다).
+  - 게이트 예외는 크기와 상관없이 모두 옮겼습니다 — "예외는 한 자리" 를 셀프테스트가 지키려면 게이트 소스에 표가 하나도 없어야 합니다.
+  - 목록은 사람이 늘리는 데이터만 옮겼습니다: Core · Engine · GameFramework 티어, 제품 낱말, 금지 동사 · 줄임말, 약어 등록부, 엔진 루트 파일, Win32 일반 이름, 내장 매크로, 실패 가능 동사, 입력 장치 조회 · 폰 쪽 파일, 셰이더 줄임말.
   - 옮기지 않은 것: 정규식이 든 표(`RunDocStyle.kListCoinedTerm` · `CheckWellKnownConstants` · `CheckScriptLayout` · `CheckScriptCommonHelpers` 의 규칙 — 정규식은 쓰는 코드 옆에),
     여러 칸짜리 레코드(`CheckThirdPartyIsolation._kListLibraryRule` — 두 게이트가 읽고 부분 집합에 표 배열이 없다, `CheckModuleTargets._kListFolderTarget` 7 줄),
-    `Constants.py` 의 경로로 짓는 표(`CheckEngineLayers` 의 금지 규칙), 언어가 정한 낱말(HLSL 키워드 · 한정자, C++ 내장 타입), 명명 판정 표(`conventions/NamingVocabulary` —
-    주체 × 컨테이너 칸이 판정 코드의 일부), 확장자 목록(파일 고르기 설정이지 규칙이 아니다).
+    `Constants.py` 의 경로로 짓는 표(`CheckEngineLayers` 의 금지 규칙), 언어가 정한 낱말(HLSL 키워드 · 한정자, C++ 내장 타입), 명명 판정 표(`conventions/NamingVocabulary` — 주체 × 컨테이너 칸이 판정 코드의 일부), 확장자 목록.
 - **Python 모양 규칙은 이미 80 % 넘게 쓰던 관습만 올렸습니다**(2026-10-11, [agents/NamingScripts › Python](agents/NamingScripts.md#python)). 새 취향은 만들지 않고 소수를 고친 뒤 `CheckPythonConventions` 에 걸었습니다.
   Ruff 의 같은 규칙(`D100` · `FA102` · `ANN` · `UP007` · `PLW1514` · `PTH`)과 같은 내용이지만, 외부 도구를 CI · 커밋 훅에 깔지 않고 규칙 데이터 · 예외 표가 있는 AST 게이트 하나로 둡니다.
-  - 올린 것(추적 파일 218 개 기준): 모듈 docstring 217, `from __future__ import annotations` 207(빠진 열하나는 코드 없는 `__init__` 여섯 · 스크립트 넷 · 세션 훅),
-    반환 타입 표기 1,590/1,754 함수 · 매개변수 2,185/2,419(빠진 것의 3/4 이 `EditorIconFont` 한 파일), `X | None` 314 대 `Optional` 2,
-    글 입출력의 `encoding=` 243 호출 대 0, `pathlib` 198 파일 대 `os.path` 17 파일(그중 `join` · `dirname` · `isfile` 을 쓰던 아홉 개만 고쳤다 — `normpath` · `relpath` 같은 글자 연산은 pathlib 에 없다),
-    `sys.exit` 134 파일 대 `raise SystemExit` 9 파일, `__main__` 가드 `sys.exit(main())` 132 대 `raise SystemExit(main())` 4, `ArgumentParser(description=…)` 50/51.
-  - 종료는 `sys.exit` 하나입니다. `raise SystemExit` 와 동작이 같아(같은 예외를 던진다) 고르는 기준은 수뿐이고, 쿠커의 `raise SystemExit(…) from exc` 는 `SystemExit` 이 트레이스백을 찍지 않아 `from` 이 보이지 않습니다.
-  - 출력은 `print` 그대로입니다(72 파일). 공용 콘솔 도우미는 없고(`common` 은 import 때 콘솔을 UTF-8 로 맞출 뿐이다), 로깅 래퍼를 새로 들이면 새 취향입니다. 게이트 · 픽서 · 보고서는 기반 클래스가 찍습니다.
-  - 걸지 않은 것: 지역 컨테이너 접두어(`list` · `map` · `unique`) 368/533 = 69 %(맵은 46 %), 셔뱅 78 % · `coding` 줄 76 %(라이브러리 모듈에는 없는 것이 맞다), 광범위 `except Exception`
-    13/169 처리기(모두 설정 단계 · 세션 훅처럼 계속 가야 하는 경계라 산문 규칙만 둔다), `subprocess` 직접 호출(`Scripts/` 는 `CheckScriptCommonHelpers` 가 이미 막고, 밖은 스크립트를 자식 프로세스로 띄워
-    보는 시험 · Blender 안에서 도는 애드온 · VS Code 확장 도구라 `common` 을 쓸 수 없다), 모듈 상수 위치(이미 159 파일이 모듈 수준 — 함수 안 `kSize` 는 C++ 의 지역 `const` 와 같다).
-  - 예외 하나: `.claude/hooks/SessionGuard.py` 는 Claude Code 세션 설정이라 에이전트가 고치지 않고, 어떤 예외에도 세션을 막지 않게 0 으로 끝나는 모양을 따로 둡니다.
+  - 올린 것(추적 파일 218 개 기준): 모듈 docstring 217, `from __future__ import annotations` 207, 반환 타입 표기 1,590/1,754 · 매개변수 2,185/2,419, `X | None` 314 대 `Optional` 2,
+    `encoding=` 243 호출 대 0, `pathlib` 198 파일 대 `os.path` 17(`join` · `dirname` · `isfile` 아홉 개만 고쳤다 — `normpath` · `relpath` 는 pathlib 에 없다), `sys.exit` 134 파일 대 `raise SystemExit` 9, `ArgumentParser(description=…)` 50/51.
+  - 종료는 `sys.exit` 하나입니다. 동작이 같아 고르는 기준은 수뿐이고, `raise SystemExit(…) from exc` 는 트레이스백이 안 찍혀 `from` 이 보이지 않습니다.
+  - 출력은 `print` 그대로입니다(72 파일). 로깅 래퍼를 새로 들이면 새 취향입니다. 게이트 · 픽서 · 보고서는 기반 클래스가 찍습니다.
+  - 걸지 않은 것: 지역 컨테이너 접두어 368/533 = 69 %(맵은 46 %), 셔뱅 78 % · `coding` 줄 76 %, 광범위 `except Exception` 13/169 처리기(설정 단계 · 세션 훅처럼 계속 가야 하는 경계라 산문 규칙만 둔다),
+    `subprocess` 직접 호출(`Scripts/` 는 `CheckScriptCommonHelpers` 가 막고, 밖은 자식 프로세스 시험 · Blender 애드온 · VS Code 확장 도구라 `common` 을 쓸 수 없다), 모듈 상수 위치(159 파일이 이미 모듈 수준).
+  - 예외 하나: `.claude/hooks/SessionGuard.py` 는 세션 설정이라 에이전트가 고치지 않고, 어떤 예외에도 세션을 막지 않게 0 으로 끝나는 모양을 따로 둡니다.
 
 - **빌드 속도 개선은 계획의 1 ~ 6 단계까지 하고, 7 ~ 9 단계는 필요할 때만 합니다**(2026-10-10, 사용자 결정). 7 은 헤더 영향 범위(팬아웃) 감시 보고서, 8 은 Debug 디버그 정보 줄이기(`-gline-tables-only` 계열),
   9 는 링크 단위 분할(엔진 분할 계획 3 단계 뒤)입니다. Release 기준선은 측정하지 않습니다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있습니다.
@@ -334,17 +312,17 @@
   모두 vcpkg 로 들이고, 라이선스는 MIT · zlib(Recast) · BSD-3(Tracy) · Apache-2.0(OpenSSL) · 퍼블릭 도메인(SQLite) · PostgreSQL License(libpq, `openssl` 기능만)입니다.
   엔진 인터페이스 뒤에 감싸고(`IPhysicsScene3D` · `IPhysicsScene2D`, ACL 은 `Engine/Animation/Codec/ACL`, OpenSSL 은 `GameFramework/Base/Online/Security/OpenSSL`) 헤더 경계는 `CheckThirdPartyIsolation.py` 가 지킵니다.
   Recast & Detour 는 정적 링크(`RecastNavigation::Recast` · `Detour` · `DetourCrowd` · `DetourTileCache`)이고, Tracy 는 클라이언트만 쓰며 Windows 에서는 공유 `TracyClient.dll` 하나를 씁니다.
-  Tracy 는 clang-cl 트리플릿의 C++14 기본값으로 빌드되지 않아 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 두고, Shipping 은 링크하지 않으며, 뷰어(tracy-profiler.exe)는 저장소에 넣지 않습니다.
-  OpenSSL 은 Windows 에서 지금 트리플릿대로 DLL 이고, SQLite 는 `GF_SQLStore`, libpq 는 `GF_Server_SQLStore` 의 CMakeLists 에서만 링크합니다.
+  Tracy 는 C++14 기본값으로 빌드되지 않아 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 두고, Shipping 은 링크하지 않으며, 뷰어(tracy-profiler.exe)는 저장소에 넣지 않습니다.
+  OpenSSL 은 Windows 에서 DLL 이고, SQLite 는 `GF_SQLStore`, libpq 는 `GF_Server_SQLStore` 의 CMakeLists 에서만 링크합니다.
 - **테스트 골든 기준은 기계별로 만들지 않습니다**(2026-10-06, 사용자 결정). 기준은 그린 장치(GPU 이름, 드라이버)를 함께 적고, 다른 기계에서 지면 그 기계에서 `--record` 해 드라이버 차이인지 회귀인지 가릅니다.
 - **조건 세 부분 이상은 이름을 붙이고 기준선은 0 입니다**(2026-10-15, `CheckConditionParts`). 언리얼 코딩 표준의 "복잡한 식은 이름 있는 지역 변수로" 와 같은 쪽입니다.
   `if` 는 바로 앞에 `const bool` 을 두어 평가 순서와 횟수를 그대로 둡니다. `else if` 는 식에 부작용이 없고 앞 조건의 보호(널 검사)가 필요 없을 때만
   체인 앞으로 올리고, 부작용이 있으면(`++` · 출력 인자를 채우는 호출) `else { const bool …; if ( … ) }` 로 감쌉니다. `while` 은 `while ( true )` 와
-  이름 붙인 `break` 로 바꾸고, 숫자 범위 검사는 `StringUtil::isDigitChar` 로 한 부분으로 줄입니다(언리얼 `FChar::IsDigit` 에 해당). 이름 없는 괄호 묶기로 부분 수만 줄이지 않습니다.
+  이름 붙인 `break` 로 바꾸고, 숫자 범위 검사는 `StringUtil::isDigitChar` 로 한 부분으로 줄입니다(언리얼 `FChar::IsDigit`). 이름 없는 괄호 묶기로 부분 수만 줄이지 않습니다.
 - **구성마다 없는 기능의 테스트는 등록한 채 `SW_TEST_REQUIRES_FEATURE( 기능 )` 으로 선언합니다**(2026-10-15, 테스트 틀 개편 — 같은 날 정한 "등록하지 않는다" 를 바꿨습니다). 언리얼은 `WITH_DEV_AUTOMATION_TESTS` 로 컴파일에서 빼는 것으로 알고 있는데, 그러면 구성마다 무엇이 빠졌는지가 보이지 않습니다. 선언으로 건너뛰면 요약이 기능별로 세고(`Skipped because this build lacks a feature`), 그것만 남은 스위트는 빈 스위트 판정에서 빠지며, 환경 탓 건너뜀(`SW_TEST_SKIP`)만 그 판정에 듭니다. 본문이 쓰는 심볼이 없으면 본문만 `#if` 로 감쌉니다.
-- **테스트 실행 파일의 라벨 · 샤드 · 제한 시간 · 호스트 분리는 `Test/TestPolicy.json` 한 곳에 둡니다**(2026-10-15). 언리얼 Gauntlet 이 테스트 구성을 데이터로 들고 유니티가 카테고리를 속성으로 다는 것으로 알고 있습니다. CMake 인자로 흩어 두면 이 PC 에서 시간 초과가 날 때마다 폴더마다 숫자를 손으로 올렸습니다. 이제 한 실행 시간(`seconds`)에서 샤드 수(30 초 단위)와 제한 시간(네 배, 최소 60 초)을 계산하고, 라벨 표에 없는 라벨은 configure 가 멈추며, 폴더 · 줄 · 비용표의 짝은 `CheckTestSuites` 가 봅니다.
-- **제한 시간은 멈춤을 잡는 그물이고 느려짐은 시간 예산이 판정합니다**(2026-10-15). 빌드가 겹치면 같은 케이스가 두세 배 느려지는 PC 에서 제한 시간을 빠듯하게 두면 가짜 실패가 납니다. `SW_TEST_TIME_BUDGET` 은 `--enforce_budgets` 실행(부하 검증 `<타깃>_Load`, 직렬)에서만 케이스를 지게 하고, 평소에는 넘은 케이스를 요약에 찍습니다. 언리얼 `PerfFilter` · 유니티 Performance 처럼 부하 스위트(`SW_TEST_LOAD_SUITE`)는 기본 집합에서 빠집니다.
-- **제한 시간의 구성별 배율도 `Test/TestPolicy.json` 의 `timeoutScale` 데이터입니다**(2026-10-16). 리눅스 ×2, 새니타이저 ×10 이고 겹쳐 곱하지 않습니다. 근거는 CI 실측(리눅스 Debug EngineTest 조각이 Windows 계산값의 1.9~4 배)이고 `_timeoutScaleReason` 에 실행 id 와 함께 둡니다. 언리얼 Gauntlet 이 플랫폼별 타임아웃 배수를 구성 데이터로 두는 것과 같은 자리입니다. 테스트가 띄우는 자식 프로세스 시한도 같은 값(`SW_TEST_TIMEOUT_SCALE`)을 씁니다.
+- **테스트 실행 파일의 라벨 · 샤드 · 제한 시간 · 호스트 분리는 `Test/TestPolicy.json` 한 곳에 둡니다**(2026-10-15). 언리얼 Gauntlet 이 테스트 구성을 데이터로 들고 유니티가 카테고리를 속성으로 다는 것으로 알고 있습니다. CMake 인자로 흩어 두면 시간 초과가 날 때마다 폴더마다 숫자를 손으로 올렸습니다. 한 실행 시간(`seconds`)에서 샤드 수(30 초 단위)와 제한 시간(네 배, 최소 60 초)을 계산하고, 라벨 표에 없는 라벨은 configure 가 멈추며, 폴더 · 줄 · 비용표의 짝은 `CheckTestSuites` 가 봅니다.
+- **제한 시간은 멈춤을 잡는 그물이고 느려짐은 시간 예산이 판정합니다**(2026-10-15). 빌드가 겹치면 같은 케이스가 두세 배 느려지는 PC 에서 제한 시간을 빠듯하게 두면 가짜 실패가 납니다. `SW_TEST_TIME_BUDGET` 은 `--enforce_budgets` 실행(부하 검증 `<타깃>_Load`, 직렬)에서만 케이스를 지게 하고, 평소에는 넘은 케이스를 요약에 찍습니다. 부하 스위트(`SW_TEST_LOAD_SUITE`)는 기본 집합에서 빠집니다(언리얼 `PerfFilter` · 유니티 Performance 와 같다).
+- **제한 시간의 구성별 배율도 `Test/TestPolicy.json` 의 `timeoutScale` 데이터입니다**(2026-10-16). 리눅스 ×2, 새니타이저 ×10 이고 겹쳐 곱하지 않습니다. 근거는 CI 실측(리눅스 Debug EngineTest 조각이 Windows 계산값의 1.9~4 배)이고 `_timeoutScaleReason` 에 실행 id 와 함께 둡니다. 테스트가 띄우는 자식 프로세스 시한도 같은 값(`SW_TEST_TIMEOUT_SCALE`)을 씁니다.
 - **Jolt 잡 시스템 어댑터는 `WaitForJobs` 에서 실행 중이던 잡이 나오기를 기다립니다**(2026-10-16). Jolt 는 장벽에 붙기 전에 끝난 잡과 스텝 스레드 사이에 선후를 만들지 않아(relaxed `SetBarrier`, 업스트림 master 도 같다) TSan 이 다음 스텝의 `Step` 생성을 경쟁으로 봅니다. vcpkg 포트 패치 대신 어댑터에서 스레드 칸별 들어감 · 나옴 수로 그 순간 실행 중이던 것만 기다립니다(전체 수가 0 이 되기를 기다리면 다른 씬이 계속 잡을 내는 동안 끝나지 않습니다).
 - **바깥 빌드(터미널 · IDE)의 핫 리로드는 빌드 성공 스탬프가 바뀔 때만 올립니다**(2026-10-17). 언리얼 Live Coding · 유니티 도메인 리로드는 컴파일이 끝난 뒤에 올리는데, 바깥 빌드는 DLL mtime 디바운스만 있어 연쇄 빌드가 모듈을 하나씩 다시 쓰는 도중의 반쯤 링크된 집합을 올릴 수 있었습니다(실제로는 감시 시작 줄이 빠져 바깥 빌드는 아예 올리지 않고 있었습니다).
   `ModuleBuildStamp`(ALL) 가 동적 모듈 산출물에 파일 단위로 의존해 모두 링크된 뒤에만 `Bin/Modules/ModuleBuild.stamp` 를 다시 쓰고, `LiveReloadManager` 는 모듈 폴더를 감시하다 스탬프가 바뀌면 원본이 로드한 것보다 새 모듈을 연쇄 교체합니다. DLL 쓰기 자체는 리로드를 부르지 않습니다.
@@ -357,28 +335,26 @@
 - **테스트가 띄우는 프로세스는 공용 하네스 하나(`test::runProcessWithDeadline`)로 시한을 지킵니다**(2026-10-15). 자식 테스트 · 서버 · App 이 시한 감시를 저마다 짰고 AppSmoke · AppCook 은 시한이 없었습니다. 새니타이저 배수도 이 한 곳입니다.
 - **판정과 보고는 실행기 밖의 창구로 더합니다**(2026-10-15). 케이스를 지게 하는 규칙은 `ITestCaseJudge`, 출력 형식은 `ITestRunListener` 입니다(gtest `TestEventListener` 와 같은 자리). 호스트 스위트의 예상 밖 Error · 시간 예산 · 콘솔 출력이 첫 구현입니다.
 - **부하 검증은 밖의 실행기(`py -3 -m Scripts load`) + 엔진 측정 보고 + 데이터 넷(`Test/Load` 의 프로필 · 예산 · 기준선 · 묶음)입니다**(2026-10-15). 언리얼 Gauntlet 이 밖에서 띄우고 CSV 프로파일러를 읽어 판정하고, 유니티 Performance Testing 이 측정 그룹을 기준선과 견주는 것으로 알고 있습니다.
-  우리는 같은 자리에 둘을 더했습니다 — 예산 실패를 병목 갈래(CPU 게임 스레드 · 렌더 스레드 · GPU · 메모리 · IO · 서버)로 나눠 적고(같은 판의 `RT.BeginFrame` · `GT.Packet.submit` 비율로 누가 누구를 기다렸는지 가른다), 판정은 평균이 아니라 p50 · p99 · max 의 여러 판 가운데 값으로만 합니다.
+  더한 것: 예산 실패를 병목 갈래(CPU 게임 스레드 · 렌더 스레드 · GPU · 메모리 · IO · 서버)로 나눠 적고(같은 판의 `RT.BeginFrame` · `GT.Packet.submit` 비율로 가른다), 판정은 p50 · p99 · max 의 여러 판 가운데 값으로만 합니다.
   예산(제품 목표)과 기준선(이 기계의 회귀)은 따로 둡니다. 판정은 Release 만(Debug 는 경합 검출기가 부풀리고 Shipping 은 보고가 없다) — `<타깃>_Load` 도 Release 에서만 `--enforce_budgets` 를 받습니다.
-- **부하 시나리오는 자동화 시나리오 형식에 `<Load>` 한 줄을 더한 것이고, 서버 쪽(`<LoadScenario driver="loadbot|cluster">`)도 같은 줄을 씁니다**(2026-10-15). 형식을 하나 더 만들면 App · 봇 · 클러스터가 클라이언트 수 · 램프업 · 시간 · 회선을 저마다 다른 이름으로 받게 됩니다(Nakama 부하 도구 · Locust 는 봇 쪽만 압니다).
+- **부하 시나리오는 자동화 시나리오 형식에 `<Load>` 한 줄을 더한 것이고, 서버 쪽(`<LoadScenario driver="loadbot|cluster">`)도 같은 줄을 씁니다**(2026-10-15). 형식을 하나 더 만들면 App · 봇 · 클러스터가 클라이언트 수 · 램프업 · 시간 · 회선을 저마다 다른 이름으로 받게 됩니다.
   엔진은 `<Load>` 를 읽어 형식을 검사하고 시작 프레임에 측정 창(`gv_profileSeconds`, 늦게 건 목표를 `FrameProfileSession` 이 읽는다)을 열 뿐, 메시 · 회선 같은 값은 실행기가 명령줄로 옮깁니다(`-gv_benchMeshes`, `-gv_netEmuPreset` — 회선 프리셋 표를 밖에 다시 적지 않으려고 프리셋 이름 변수를 더했다).
   부하 시나리오는 `<Pass/>` 를 두지 않고 프레임 시한 대신 벽시계 그물만 봅니다. `automation/load/` 하위라 `AppScenarioTest` 가 줍지 않습니다.
 - **하드웨어 프로필(LowEnd · Mid · HighEnd)은 기기 없이 소프트웨어로 흉내 내고 결과에 `emulated` 를 적어 실제 기기 측정(Native)과 기준선 키를 가릅니다**(2026-10-15). 언리얼 Device Profiles 는 실제 기기를 고르는 자리로 알고 있는데, 기기가 없을 때 같은 판정을 미리 돌리는 길이 없습니다.
-  CPU 코어 · 메모리는 Job Object(멈춘 채 만든 뒤 넣는다 — 워커 수가 정해지는 순간과 겨루지 않게), 워커 풀은 친화도를 따르게 엔진을 고쳤고(`thread::getUsableProcessorCount` — `hardware_concurrency` 는 친화도 · 컨테이너 제한을 못 본다), 디스크는 `gv_ioEmuRead*`, VRAM 은 사양 조사가 보고하는 값(`gv_emulatedGPUMemoryMb`)입니다.
-  품질 단계는 이미 있는 Scalability(`graphics.quality` 프리셋 — 그림자 · 시야 거리 · 식생 밀도 · 후처리 · 렌더 스케일)를 프로필이 고르거나(`quality`) 흉내 낸 사양으로 엔진 자동 선택이 고릅니다(`auto`). 자동 조정은 먼저 밖에서 단계를 내려 가며 예산을 지키는 첫 단계를 찾는 `load scale` 로 두었고, 실행 중 동적 조정(언리얼 Dynamic Resolution · 유니티 Adaptive Performance)은 측정으로 이득이 보일 때 들입니다(백로그 `C-29`).
+  CPU 코어 · 메모리는 Job Object(멈춘 채 만든 뒤 넣는다), 워커 풀은 친화도를 따르게 고쳤고(`thread::getUsableProcessorCount` — `hardware_concurrency` 는 친화도 · 컨테이너 제한을 못 본다), 디스크는 `gv_ioEmuRead*`, VRAM 은 `gv_emulatedGPUMemoryMb` 입니다.
+  품질 단계는 기존 Scalability(`graphics.quality` 프리셋)를 프로필이 고르거나(`quality`) 흉내 낸 사양으로 엔진이 고릅니다(`auto`). 자동 조정은 밖에서 단계를 내려 가며 예산을 지키는 첫 단계를 찾는 `load scale` 로 두었고, 실행 중 동적 조정(언리얼 Dynamic Resolution · 유니티 Adaptive Performance)은 측정으로 이득이 보일 때 들입니다(백로그 `C-29`).
 - **디스크 흉내는 장치 하나 · 큐 깊이 1 · 고해상도 마감 대기입니다**(2026-10-15). 스레드마다 `sleep_for` 하던 첫 판은 Windows 타이머 주기(약 15.6 ms)로 반올림돼 1 ms(SATA SSD) 와 8 ms(HDD) 가 같은 지연이 됐고, 첫 측정의 "기동 6.4 s" 는 그 착시였습니다(열기 385 번 × 15.6 ms).
-  여러 스레드가 나눠 읽으면 빨라지는 것처럼 보이지 않게 모든 읽기가 한 장치 시각(`busy until`)에 줄을 섭니다 — 병렬 읽기로 얻는 이득은 실제 기기에서 따로 잽니다. 언리얼 · 유니티에는 같은 흉내가 없고(실기기 Device Profile), 우리는 기기 없이 기동 · 히치 예산을 먼저 거는 쪽을 골랐습니다.
+  여러 스레드가 나눠 읽으면 빨라지는 것처럼 보이지 않게 모든 읽기가 한 장치 시각(`busy until`)에 줄을 섭니다 — 병렬 읽기로 얻는 이득은 실제 기기에서 따로 잽니다.
 - **느슨한 트리의 `.meta` 스캔은 쿠킹한 팩과 같은 도메인(engine · common · 활성 게임)만 훑습니다**(2026-10-15). 다른 게임 팩의 GUID 는 이 게임이 닿지 않고, 팩 경로(`assetregistry.txt`)도 그 셋만 읽습니다. 기동의 파일 열기 385 → 316(렌더 벤치)입니다.
 - **플레이 중 처음 쓰는 메시는 판을 열 때 워커로 미리 읽어 쥡니다(`MeshPreloadSet`)**(2026-10-15). 언리얼 `FStreamableManager::RequestAsyncLoad` 의 핸들, 유니티 Addressables 의 미리 읽기와 같은 자리입니다. 메시 캐시가 약한 참조라 묶음이 쥐어야 남습니다.
   `MeshComponent` 를 비동기로 바꾸는 길(로드 동안 안 그림)은 모든 게임 · 테스트의 "지정하면 바로 그린다" 계약을 깨므로 두지 않았습니다. StarSkirmish LowEnd 최악 프레임 25.8 → 4.1 ms.
-- **Warning 은 조치가 필요한 것만 남기고, 예상된 상황(지원하는 사용법 · 정상 폴백)은 Info 입니다**(2026-10-15). 언리얼 verbosity 관례(Warning 은 고칠 것, 예상된 일은 Log · Verbose)와 같습니다.
-  같은 이름 오브젝트에 번호 붙이기(`GameObjectStore`, 언리얼 `MakeUniqueObjectName` 도 조용하다), 씬 없는 상태 스냅샷(`GameInstanceBase`)을 Info 로 내렸습니다.
+- **Warning 은 조치가 필요한 것만 남기고, 예상된 상황(지원하는 사용법 · 정상 폴백)은 Info 입니다**(2026-10-15). 같은 이름 오브젝트에 번호 붙이기(`GameObjectStore`), 씬 없는 상태 스냅샷(`GameInstanceBase`)을 Info 로 내렸습니다.
 - **자동화 시나리오와 호스트 스위트는 선언하지 않은 Warning · Error 한 줄로 실패합니다**(2026-10-15). 언리얼 Automation 의 `AddExpectedError` 와 "경고를 실패로" 설정을 합친 자리입니다.
   시나리오는 실행기(`AutomationRunner::applyLogGate`, 시나리오 구간 + 프로세스 전체의 빠진 현지화 키)와 `AppScenarioTest`(출력 전체, 기동 · 종료 포함) 두 겹이고,
   허용은 시나리오의 `<ExpectLog>` 와 전역 목록 `Resource/engine/automation/allowedlogs.json`(항목마다 이유 필수) 둘뿐입니다. 호스트 스위트는 `SW_TEST_DEFENSIVE_SCOPE` · `SW_TEST_KNOWN_LOG` 입니다.
   CPU 단위 테스트(nogpu)는 아직 Error 도 세지 않습니다 — 일부러 깨진 픽스처가 많아 경고 1,500 줄 남짓이 표식 없이 나옵니다(백로그).
-- **`--check-text` 는 빠진 번역도 실패로 봅니다 — 프로젝트의 출시 문화권(`*.locproject.json` 의 `stagedCultures`)만**(2026-10-15, 2026-10-16 기준 변경). 언리얼 Localization Dashboard 는 완성도만 보여 주지만,
-  런타임이 원문으로 대체하며 아무 경고도 내지 않아 한국어 실행에서도 빠진 번역이 드러나지 않았습니다. 처음에는 "번역 테이블 파일이 있는가" 로 대상을 정했는데, 파일 하나를 지우면 게이트가 조용히 꺼졌습니다.
-  지금은 언리얼 패키징 설정의 Cultures to Stage 처럼 출시 목록을 명시하고(`cultures` 의 부분 집합, 아니면 로드 오류), 목록에 있는데 테이블이 없으면 전부 빠진 번역으로 집니다.
+- **`--check-text` 는 빠진 번역도 실패로 봅니다 — 프로젝트의 출시 문화권(`*.locproject.json` 의 `stagedCultures`)만**(2026-10-15, 2026-10-16 기준 변경). 런타임이 원문으로 대체하며 아무 경고도 내지 않아 한국어 실행에서도 빠진 번역이 드러나지 않았습니다(언리얼 Localization Dashboard 는 완성도만 보여 준다).
+  처음에는 "번역 테이블 파일이 있는가" 로 대상을 정했는데, 파일 하나를 지우면 게이트가 조용히 꺼졌습니다. 지금은 언리얼 Cultures to Stage 처럼 출시 목록을 명시하고(`cultures` 의 부분 집합, 아니면 로드 오류), 목록에 있는데 테이블이 없으면 전부 빠진 번역으로 집니다.
   목록 밖 문화권(엔진 `ja`, PO 만 낸 것)은 번역 중으로 보고 개수만 보고합니다. 게임 설정 하나에 두는 안은 엔진 · 에디터 프로젝트가 팩 설정이 없어 버렸습니다.
   CI 는 App 을 띄우지 않으므로 같은 판정을 `LocalizationGatherTest.RepositoryProjectsAreUpToDate`(EditorTest, nogpu)가 합니다.
 - **증분 쿠킹은 쿠커가 의존을 적지 않고, 작업 범위 안의 리소스 읽기를 내용 해시와 함께 기록해 판정합니다**(2026-10-18 설계, 구현 전). 유니티 Asset Database v2 의 동적 의존 기록과 같은 계열이고, 파일 시각은 쓰지 않습니다([증분 쿠킹 계획](plans/IncrementalCook.md)).
