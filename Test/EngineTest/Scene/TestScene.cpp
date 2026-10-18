@@ -1875,7 +1875,7 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
         {
             ++sceneCount;
             sw::SceneDocument opened;
-            SW_ASSERT_TRUE_MSG( opened.loadXML( path ), path.c_str() );
+            SW_ASSERT_TRUE_MSG( opened.loadXMLFromDiskFile( path ), path.c_str() );
             sw::Scene* pOpened = manager.createScene( "RepositoryScene" );
             SW_ASSERT_TRUE_MSG( pOpened->instantiate( opened ), path.c_str() );
             const uint32 sceneLabelCount = sw::SceneTestInternal::renameEveryComponent( pOpened->getObjectManager() );

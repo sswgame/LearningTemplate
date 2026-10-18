@@ -64,13 +64,27 @@ namespace sw
 
     bool SceneDocument::loadXML( string_view path )
     {
+        return loadXMLSource( path, ReadSource::Resource );
+    }
+
+    bool SceneDocument::loadXMLFromDiskFile( string_view diskPath )
+    {
+        return loadXMLSource( diskPath, ReadSource::DiskFile );
+    }
+
+    bool SceneDocument::loadXMLSource( string_view path, ReadSource source )
+    {
         *this       = {};
         _sourcePath = path;
 
         AssetLoadScope loadScope( "Scene", path );
         XMLDocument    doc;
         string         absPath;
-        if ( doc.loadResource( path, &absPath ) == false )
+        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( path, &absPath );
+        if ( source == ReadSource::DiskFile )
+            absPath = string( path );
+        if ( bRead == false )
         {
             // 없는 파일과 깨진 파일을 가른다(구문 오류를 "File not found" 로 알리지 않는다).
             SW_LOG_ERROR( "Scene not loaded - %#", doc.getLastError() );
