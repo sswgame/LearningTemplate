@@ -286,15 +286,34 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
     colorVar._size   = 16;
     colorVar._type   = "Float4";
     cb._listVariable.push_back( colorVar );
+    // 셰이더 구조체는 XML(color · roughness · albedoMap)과 순서가 다르다 — 텍스처 인덱스가 먼저다.
+    sw::ShaderVariableInfo albedoVar{};
+    albedoVar._name   = "albedoMap";
+    albedoVar._offset = 16;
+    albedoVar._size   = 4;
+    albedoVar._type   = "Uint";
+    cb._listVariable.push_back( albedoVar );
     sw::ShaderVariableInfo roughVar{};
     roughVar._name   = "roughness";
-    roughVar._offset = 16;
+    roughVar._offset = 20;
     roughVar._size   = 4;
     roughVar._type   = "Float";
     cb._listVariable.push_back( roughVar );
     reflection._listConstantBuffer.push_back( cb );
 
     SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );
+    // 텍스처 프로퍼티도 리플렉션 오프셋을 받는다 — XML 순서로 쌓은 자리(20)에 남으면 셰이더의 albedoMap 칸이 0(첫 실제 텍스처)이 된다.
+    const sw::MaterialProperty* pAlbedo = material->findProperty( sw::hashed_string( "albedoMap" ) );
+    SW_ASSERT_NOT_NULL( pAlbedo );
+    SW_EXPECT_EQUAL( 16u, pAlbedo->_offset );
+    const sw::vector<uint8>& bytes = material->getBuffer();
+    SW_ASSERT_TRUE( bytes.size() >= 24u );
+    uint32  albedoWord{ 0 };
+    float32 roughness{ 0.0f };
+    sw::Memory::copy( &albedoWord, bytes.data() + 16, sizeof( albedoWord ) );
+    sw::Memory::copy( &roughness, bytes.data() + 20, sizeof( roughness ) );
+    SW_EXPECT_EQUAL( sw::kInvalidDescriptorIndex, albedoWord );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, roughness, 1e-6f );
 
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
     sw::float4                           colorOverride{ 0.1f, 0.2f, 0.3f, 1.0f };

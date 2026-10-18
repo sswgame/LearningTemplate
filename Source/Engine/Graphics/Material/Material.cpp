@@ -466,8 +466,10 @@ namespace sw
         bool bAllPacked{ true };
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            // 텍스처 · 키워드 · UI 전용 필드는 MaterialCB 변수가 아니다.
-            if ( MaterialUtil::isNonBufferType( prop._type ) || MaterialUtil::isTextureType( prop._type ) )
+            // 키워드 · UI 전용 필드는 머티리얼 원소의 멤버가 아니다.
+            // 텍스처는 멤버다(`uint ...Map` — 인덱스 · 서수). 다른 프로퍼티처럼 리플렉션 오프셋을 받는다 — 건너뛰면 XML 순서로 쌓은 자리에
+            // 남아, XML 순서가 셰이더 구조체와 다른 머티리얼(toon)에서 인덱스가 남의 칸에 들어가고 제 칸은 0(첫 실제 텍스처)이 된다.
+            if ( MaterialUtil::isNonBufferType( prop._type ) )
                 continue;
 
             bool found{ false };
