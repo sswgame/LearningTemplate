@@ -187,6 +187,25 @@ class FullBuildEvidenceTest(unittest.TestCase):
         listNeeded = RunFullBuild.listPushedTreesNeedingEvidence(pushInput, lambda commit: "tree-of-" + commit[:1])
         self.assertEqual(listNeeded, [("refs/heads/main", "tree-of-a")])
 
+    @staticmethod
+    def makeLsTree(mapPathToBlob: dict[str, str]) -> str:
+        return "\0".join(f"100644 blob {blob}\t{path}" for path, blob in mapPathToBlob.items()) + "\0"
+
+    def testMarkdownAndClaudeFolderDoNotChangeTheEvidenceKey(self) -> None:
+        base = {"Source/Core/A.cpp": "1" * 40, "docs/Config/ConfigReference.json": "2" * 40}
+        docsOnly = {**base, "README.md": "3" * 40, "docs/11_Workflow.md": "4" * 40, "Scripts/README.md": "5" * 40,
+                    "cmake/README.md": "6" * 40, ".claude/settings.json": "7" * 40, ".claude/agents/scout.md": "8" * 40}
+        self.assertEqual(RunFullBuild.hashBuildInputs(self.makeLsTree(base)), RunFullBuild.hashBuildInputs(self.makeLsTree(docsOnly)))
+
+    def testBuildInputsChangeTheEvidenceKey(self) -> None:
+        base = {"Source/Core/A.cpp": "1" * 40, "docs/Config/ConfigReference.json": "2" * 40}
+        keyBase = RunFullBuild.hashBuildInputs(self.makeLsTree(base))
+        for changed in ({**base, "Source/Core/A.cpp": "9" * 40},
+                        {**base, "docs/Config/ConfigReference.json": "9" * 40},
+                        {**base, "Source/Kits/README.md": "9" * 40},
+                        {**base, "Scripts/generate/GenerateCMakeConstants.py": "9" * 40}):
+            self.assertNotEqual(keyBase, RunFullBuild.hashBuildInputs(self.makeLsTree(changed)))
+
 
 class ListCiJobsTest(unittest.TestCase):
     def testRepositoryIsReadFromBothRemoteForms(self) -> None:

@@ -12,7 +12,8 @@
 (2026-10-17 integ5). 검증 빌드는 늘 `kTestBuildTargets`(`all AllTests`)다 — 타깃을 고르는 인자를 두지 않는다.
 
 **증거.** 커밋하지 않은 변경이 없을 때만 짓고(증거는 커밋 트리에 붙는다), 빌드가 성공하고 그동안 HEAD 트리가 그대로면
-`<공통 .git>/sw-build-evidence/<트리 해시>.json` 을 쓴다. 키가 트리 해시라 같은 내용이면 어느 워크트리 · 어느 커밋에서 지었든 같다
+`<공통 .git>/sw-build-evidence/<빌드 입력 해시>.json` 을 쓴다. 키는 트리에서 빌드 · 테스트가 읽지 않는 파일(`isBuildInputPath`: 마크다운과 `.claude/`)을
+뺀 **빌드 입력 해시**라서, 문서만 바꾼 커밋은 직전 증거가 그대로 맞고 다시 짓지 않는다. 같은 입력이면 어느 워크트리 · 어느 커밋에서 지었든 같다
 (통합 워크트리에서 지은 병합 결과를 main 체크아웃에서 push 해도 맞는다). 공통 .git 은 모든 워크트리가 나눠 쓰고 추적되지 않는다.
 
 **막는 자리.** `Scripts/setup/InstallGitHooks.py` 가 설치하는 pre-push 훅이 `check-push` 를 부른다. `refs/heads/main` 으로 가는 커밋의
@@ -22,6 +23,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -45,6 +47,11 @@ kBuildLockResource = "build"
 kProtectedRemoteRefs: tuple[str, ...] = ("refs/heads/main",)
 #: git 이 "없음" 을 적는 해시(지우는 push 의 로컬 쪽).
 kZeroHash = "0" * 40
+#: 빌드 · 테스트가 읽지 않아 증거 키에서 빼는 최상위 폴더.
+kNonBuildInputFolders: tuple[str, ...] = (".claude",)
+#: 그 아래(와 저장소 최상단)의 마크다운은 빌드 입력이 아니다. 다른 폴더의 .md 는 빌드가 읽을 수 있어 입력으로 둔다
+#: (`docs/Config/ConfigReference.json` 처럼 docs 아래 데이터는 테스트가 읽으므로 .md 만 뺀다).
+kNonBuildInputMarkdownFolders: tuple[str, ...] = ("docs", "Scripts", "cmake")
 
 
 def getEvidenceDirectory(repositoryRoot: Path) -> Path:
@@ -63,6 +70,30 @@ def readTreeHash(repositoryRoot: Path, revision: str) -> str:
     return result.stdout.strip()
 
 
+def isBuildInputPath(path: str) -> bool:
+    """저장소 기준 경로가 빌드 · 테스트의 입력인가. 마크다운(최상단 · docs · Scripts · cmake 아래)과 `.claude/` 는 아니다."""
+    listPart = path.split("/")
+    if listPart[0] in kNonBuildInputFolders:
+        return False
+    if path.endswith(".md") and (len(listPart) == 1 or listPart[0] in kNonBuildInputMarkdownFolders):
+        return False
+    return True
+
+
+def hashBuildInputs(lsTreeOutput: str) -> str:
+    """`git ls-tree -r -z` 출력에서 빌드 입력 항목만 모아 해시한다. 항목은 `<모드> <종류> <해시>\t<경로>` 라 파일 내용이 해시에 들어간다."""
+    listKept = [entry for entry in lsTreeOutput.split("\0") if entry and isBuildInputPath(entry.partition("\t")[2])]
+    return hashlib.sha1("\0".join(listKept).encode("utf-8")).hexdigest()
+
+
+def readBuildInputHash(repositoryRoot: Path, revision: str) -> str:
+    """커밋의 빌드 입력 해시 — 증거 파일의 키입니다."""
+    result = runGit(["ls-tree", "-r", "-z", revision], cwd=repositoryRoot)
+    if not result.bSucceeded:
+        raise RuntimeError(f"{revision} 의 파일 목록을 읽지 못했습니다: {result.stderr.strip()}")
+    return hashBuildInputs(result.stdout)
+
+
 def listUncommittedFiles(repositoryRoot: Path) -> list[str]:
     """추적하는 파일 가운데 커밋하지 않은 변경(staged 포함). 추적하지 않는 파일은 빌드 입력이 아니라 세지 않는다."""
     result = runGit(["status", "--porcelain", "--untracked-files=no"], cwd=repositoryRoot)
@@ -71,22 +102,22 @@ def listUncommittedFiles(repositoryRoot: Path) -> list[str]:
     return [line[3:] for line in result.stdout.splitlines() if line.strip()]
 
 
-def getEvidencePath(evidenceDirectory: Path, treeHash: str) -> Path:
-    return evidenceDirectory / f"{treeHash}.json"
+def getEvidencePath(evidenceDirectory: Path, inputHash: str) -> Path:
+    return evidenceDirectory / f"{inputHash}.json"
 
 
-def writeEvidence(evidenceDirectory: Path, treeHash: str, record: dict) -> Path:
-    """트리 하나의 증거를 씁니다."""
+def writeEvidence(evidenceDirectory: Path, inputHash: str, record: dict) -> Path:
+    """빌드 입력 하나의 증거를 씁니다."""
     evidenceDirectory.mkdir(parents=True, exist_ok=True)
-    path = getEvidencePath(evidenceDirectory, treeHash)
+    path = getEvidencePath(evidenceDirectory, inputHash)
     path.write_text(json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8")
     return path
 
 
 def listPushedTreesNeedingEvidence(pushInput: str, readTree: Callable[[str], str]) -> list[tuple[str, str]]:
     """
-    pre-push 입력(`<로컬 ref> <로컬 해시> <원격 ref> <원격 해시>` 줄들)에서 증거가 필요한 (원격 ref, 트리 해시).
-    보호한 원격 ref 로 가는 줄만, 지우는 push(로컬 해시 0)는 뺀다. `readTree` 는 커밋 해시 → 트리 해시.
+    pre-push 입력(`<로컬 ref> <로컬 해시> <원격 ref> <원격 해시>` 줄들)에서 증거가 필요한 (원격 ref, 증거 키).
+    보호한 원격 ref 로 가는 줄만, 지우는 push(로컬 해시 0)는 뺀다. `readTree` 는 커밋 해시 → 증거 키(빌드 입력 해시).
     """
     listNeeded: list[tuple[str, str]] = []
     for line in pushInput.splitlines():
@@ -101,12 +132,12 @@ def listPushedTreesNeedingEvidence(pushInput: str, readTree: Callable[[str], str
 
 
 def checkPush(repositoryRoot: Path, pushInput: str) -> int:
-    """pre-push — main 으로 가는 커밋의 트리에 전체 빌드 증거가 없으면 1."""
+    """pre-push — main 으로 가는 커밋의 빌드 입력에 전체 빌드 증거가 없으면 1."""
     evidenceDirectory = getEvidenceDirectory(repositoryRoot)
-    listMissing = [(ref, tree) for ref, tree in listPushedTreesNeedingEvidence(pushInput, lambda commit: readTreeHash(repositoryRoot, commit))
+    listMissing = [(ref, tree) for ref, tree in listPushedTreesNeedingEvidence(pushInput, lambda commit: readBuildInputHash(repositoryRoot, commit))
                    if not getEvidencePath(evidenceDirectory, tree).is_file()]
     for ref, tree in listMissing:
-        print(f"[FullBuild] {ref} 로 가는 트리 {tree[:12]} 에 전체 빌드(all AllTests) 증거가 없습니다 — "
+        print(f"[FullBuild] {ref} 로 가는 빌드 입력 {tree[:12]} 에 전체 빌드(all AllTests) 증거가 없습니다(마크다운 · .claude 만 바뀐 커밋은 직전 증거를 쓴다) — "
               f"그 커밋에서 `py -3 -m Scripts full-build --owner <이름>` 을 돌린 뒤 push 합니다.", file=sys.stderr)
     return 1 if listMissing else 0
 
@@ -118,13 +149,14 @@ def runFullBuild(repositoryRoot: Path, args: argparse.Namespace) -> int:
         print(f"[FullBuild] 커밋하지 않은 변경이 있어 짓지 않습니다 — 증거는 커밋 트리에 붙는다: {', '.join(listDirty[:10])}", file=sys.stderr)
         return 2
     treeHash = readTreeHash(repositoryRoot, "HEAD")
+    inputHash = readBuildInputHash(repositoryRoot, "HEAD")
     tree = BuildTree.fromPreset(args.preset, repositoryRoot)
     if not tree.bConfigured:
         print(f"[FullBuild] 구성되지 않은 빌드 폴더입니다: {tree.path} — `cmake --preset {args.preset}` 를 먼저(vcpkg 잠금을 잡고) 돌립니다",
               file=sys.stderr)
         return 2
     lockArgs = argparse.Namespace(resource=kBuildLockResource, owner=args.owner, shared=True, slots=getSharedSlotCount(kBuildLockResource),
-                                  purpose=f"full-build {args.preset} {treeHash[:12]}", wait=args.wait, belowNormal=args.belowNormal)
+                                  purpose=f"full-build {args.preset} {inputHash[:12]}", wait=args.wait, belowNormal=args.belowNormal)
     startTime = time.time()
     returnCode = runHolding(findMainRoot(repositoryRoot), lockArgs, tree.buildCommand(kTestBuildTargets, args.jobs))
     if returnCode != 0:
@@ -133,10 +165,10 @@ def runFullBuild(repositoryRoot: Path, args: argparse.Namespace) -> int:
     if listUncommittedFiles(repositoryRoot) or readTreeHash(repositoryRoot, "HEAD") != treeHash:
         print("[FullBuild] 빌드하는 동안 트리가 바뀌었습니다 — 지은 것이 지금 커밋과 같다고 말할 수 없어 증거를 남기지 않습니다.", file=sys.stderr)
         return 2
-    record = {"tree": treeHash, "commit": runGit(["rev-parse", "HEAD"], cwd=repositoryRoot).stdout.strip(), "preset": args.preset,
+    record = {"inputs": inputHash, "tree": treeHash, "commit": runGit(["rev-parse", "HEAD"], cwd=repositoryRoot).stdout.strip(), "preset": args.preset,
               "targets": list(kTestBuildTargets), "worktree": str(repositoryRoot), "owner": args.owner,
               "startTime": startTime, "endTime": time.time()}
-    path = writeEvidence(getEvidenceDirectory(repositoryRoot), treeHash, record)
+    path = writeEvidence(getEvidenceDirectory(repositoryRoot), inputHash, record)
     print(f"[FullBuild] 전체 빌드 성공 — 증거 {path}")
     return 0
 

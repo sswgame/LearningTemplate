@@ -61,8 +61,8 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 **검증 빌드는 늘 전체입니다 — `py -3 -m Scripts full-build --owner <이름>`(`all AllTests`, 빌드 칸을 잡는다).** 바꾼 영역의 테스트만 지으면 다른 영역의 테스트가 쓰는
 헤더 · 매크로를 바꾼 것이 병합 뒤에야 깨집니다. 고치는 동안의 빌드는 단일 타깃이어도 되지만, "검증했다" 고 보고하는 빌드는 `full-build` 입니다.
-`full-build` 는 커밋하지 않은 변경이 없을 때만 짓고, 성공하면 그 커밋 트리의 증거를 공통 `.git` 에 남깁니다. **main 으로의 push 는 pre-push 훅이 그 증거를 요구합니다**
-(`Scripts/setup/InstallGitHooks.py` 가 설치한다 — 훅이 없는 체크아웃은 그 스크립트를 한 번 돌린다). 그래서 병합 결과 트리를 `full-build` 하지 않은 main 은 나가지 않습니다.
+`full-build` 는 커밋하지 않은 변경이 없을 때만 짓고, 성공하면 그 커밋의 **빌드 입력**(트리에서 마크다운과 `.claude/` 를 뺀 것)의 증거를 공통 `.git` 에 남깁니다. 문서만 바꾼 커밋은 직전 증거가 그대로 맞아 다시 짓지 않습니다. **main 으로의 push 는 pre-push 훅이 그 증거를 요구합니다**
+(`Scripts/setup/InstallGitHooks.py` 가 설치한다 — 훅이 없는 체크아웃은 그 스크립트를 한 번 돌린다). 그래서 병합 결과의 빌드 입력을 `full-build` 하지 않은 main 은 나가지 않습니다.
 
 | 단계 | Debug | Shipping | 그 밖 |
 |---|---|---|---|
