@@ -34,8 +34,15 @@ namespace sw
     bool CookStore::reuseFreshOutput( const CookJobDesc& desc, string_view outputID, string_view outputPath ) const
     {
         CookRecord record;
-        if ( CookRecord::read( makeRecordPath( outputID ), record ) == false || record.isFresh( desc ) == false )
+        if ( CookRecord::read( makeRecordPath( outputID ), record ) == false )
             return false;
+        if ( record.isFresh( desc ) == false )
+        {
+            const CookInput* pChanged = record.findChangedInput();
+            SW_LOG_INFO( "Cook: '%#' is cooked again - %#%#", outputID, pChanged != nullptr ? "input changed: " : "cooker version or settings changed",
+                         pChanged != nullptr ? pChanged->_resourceID : string{} );
+            return false;
+        }
         vector<uint8> bytes;
         if ( _derivedDataCache.find( record._key, bytes ) == false )
         {

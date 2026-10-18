@@ -10,6 +10,8 @@
 #include "Engine/Object/Component/Navigation/NavMeshSurfaceComponent.h"
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/Cook/CookStore.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -85,7 +87,7 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const string& resourceRoot, const string& cookedDir, uint32& outFailedCount )
+    uint32 SceneNavigationCooker::cookAll( const string& resourceRoot, const string& cookedDir, const CookStore& store, uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;
         if ( cookedDir.empty() )
@@ -95,9 +97,11 @@ namespace sw
         }
         vector<string> listFile;
         FileUtil::collectFiles( resourceRoot, ".xml", listFile, true );
-        const string normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        const string activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot ) );
-        uint32       writtenCount   = 0;
+        std::sort( listFile.begin(), listFile.end() );
+        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot ) );
+        const CookJobDesc desc           = makeCookJobDesc();
+        CookTally         tally;
         for ( const string& filePath : listFile )
         {
             if ( StringUtil::endsWith( filePath, Internal::kSceneSuffix, true ) == false )
@@ -106,28 +110,41 @@ namespace sw
             const string relativePath   = normalizedFile.substr( std::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( Internal::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
-            // 표면이 없는 씬은 세우지 않는다 — 글에 컴포넌트 이름이 없으면 넘긴다.
-            string text;
-            if ( FileUtil::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
-                continue;
-            NavMeshAsset asset;
-            if ( cookScene( relativePath, asset ) == false )
-            {
-                ++outFailedCount;
-                continue;
-            }
-            if ( asset.getEntries().empty() )
-                continue;
-            const string cookedPath = FileUtil::joinPath( cookedDir, NavMeshAsset::makeCookedPath( relativePath ) );
-            if ( asset.saveToFile( cookedPath ) == false )
-            {
-                SW_LOG_ERROR( "Navmesh cook could not write '%#'", cookedPath.c_str() );
-                ++outFailedCount;
-                continue;
-            }
-            SW_LOG_INFO( "Cooked navmesh '%#' (%# agent types)", cookedPath.c_str(), asset.getEntries().size() );
-            ++writtenCount;
+            const string      outputID   = NavMeshAsset::makeCookedPath( relativePath );
+            const string      cookedPath = FileUtil::joinPath( cookedDir, outputID );
+            const CookOutcome outcome    = store.cookFile( desc, outputID, cookedPath, [&]()
+               {
+                // 표면이 없는 씬은 세우지 않는다 — 글에 컴포넌트 이름이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.
+                string text;
+                if ( ResourceIO::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
+                    return CookStep::Skipped;
+                NavMeshAsset asset;
+                if ( cookScene( relativePath, asset ) == false )
+                    return CookStep::Failed;
+                if ( asset.getEntries().empty() )
+                    return CookStep::Skipped;
+                if ( asset.saveToFile( cookedPath ) == false )
+                {
+                    SW_LOG_ERROR( "Navmesh cook could not write '%#'", cookedPath.c_str() );
+                    return CookStep::Failed;
+                }
+                SW_LOG_INFO( "Cooked navmesh '%#' (%# agent types)", cookedPath.c_str(), asset.getEntries().size() );
+                return CookStep::Written;
+            } );
+            outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;
+            tally.add( outcome );
         }
-        return writtenCount;
+        SW_LOG_INFO( "Navmesh cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        return tally.getWrittenCount();
+    }
+
+    CookJobDesc SceneNavigationCooker::makeCookJobDesc()
+    {
+        CookJobDesc desc;
+        desc._cookerName    = "NavMesh";
+        desc._cookerVersion = kCookVersion;
+        desc._target        = "Any";
+        desc._settingsHash  = 0; // 베이크 설정은 리소스(내비 설정 표)라 읽기로 입력에 든다
+        return desc;
     }
 } // namespace sw

@@ -115,8 +115,9 @@ namespace sw
         if ( pJob == nullptr )
             return;
         CookInput input;
-        input._kind        = CookInputKind::Listing;
-        input._resourceID  = CookJobInternal::makeInputID( folderPath );
+        input._kind = CookInputKind::Listing;
+        // 폴더는 받은 경로 그대로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
+        input._resourceID  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folderPath ) );
         input._extension   = string( extension );
         input._contentHash = computeListingHash( folderPath, extension );
         pJob->recordInput( input );

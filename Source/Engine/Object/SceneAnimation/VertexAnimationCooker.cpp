@@ -14,8 +14,11 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Object/SceneAnimation/MeshVertexAnimationBaker.h"
+#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+
+#include <cstring>
 
 namespace sw
 {
@@ -110,32 +113,40 @@ namespace sw
         return _clipFolder.empty() ? fileName : FileUtil::joinPath( _clipFolder, fileName );
     }
 
-    uint32 VertexAnimationCooker::cookList( const VertexAnimationCookList& list, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount )
+    bool VertexAnimationCooker::cookClip( const VertexAnimationCookList& list, const hashed_string& clipName, const string& outputPath, float32 framesPerSecond )
     {
         MeshAssetData meshData;
         Skeleton      skeleton;
         if ( MeshAssetFormat::loadFromResource( list._meshPath, meshData ) == false || skeleton.loadFromResource( list._skeletonPath ) == false )
         {
             SW_LOG_ERROR( "Vertex animation cook: could not read mesh '%#' or skeleton '%#'", list._meshPath.c_str(), list._skeletonPath.c_str() );
-            ++outFailedCount;
-            return 0;
+            return false;
         }
         shared_ptr<Mesh> mesh = Mesh::create();
         mesh->setVertices( std::move( meshData._listVertex ) );
         mesh->setSkin( std::move( meshData._listSkinVertex ), meshData._skinBoneCount );
 
+        AnimationClip       clip;
+        MeshVertexAnimation animation;
+        const bool          bBaked =
+            clip.loadFromResource( list.makeClipPath( clipName ) ) && MeshVertexAnimationBaker::bake( *mesh, skeleton, clip, framesPerSecond, false, animation );
+        if ( bBaked == false || animation.saveToFile( outputPath ) == false )
+        {
+            SW_LOG_ERROR( "Vertex animation cook failed for '%#' clip '%#'", list._meshPath.c_str(), clipName.c_str() );
+            return false;
+        }
+        return true;
+    }
+
+    uint32 VertexAnimationCooker::cookList( const VertexAnimationCookList& list, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount )
+    {
         uint32 writtenCount = 0;
         for ( const hashed_string& clipName : list._listClip )
         {
-            AnimationClip       clip;
-            MeshVertexAnimation animation;
-            const string        cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
-            const string        outputPath = cookedDir.empty() ? cookedPath : FileUtil::joinPath( cookedDir, cookedPath );
-            const bool          bBaked     = clip.loadFromResource( list.makeClipPath( clipName ) ) &&
-                                MeshVertexAnimationBaker::bake( *mesh, skeleton, clip, framesPerSecond, false, animation );
-            if ( bBaked == false || animation.saveToFile( outputPath ) == false )
+            const string cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
+            const string outputPath = cookedDir.empty() ? cookedPath : FileUtil::joinPath( cookedDir, cookedPath );
+            if ( cookClip( list, clipName, outputPath, framesPerSecond ) == false )
             {
-                SW_LOG_ERROR( "Vertex animation cook failed for '%#' clip '%#'", list._meshPath.c_str(), clipName.c_str() );
                 ++outFailedCount;
                 continue;
             }
@@ -144,13 +155,29 @@ namespace sw
         return writtenCount;
     }
 
-    uint32 VertexAnimationCooker::cookAll( const string& resourceRoot, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount )
+    CookJobDesc VertexAnimationCooker::makeCookJobDesc( float32 framesPerSecond )
+    {
+        CookJobDesc desc;
+        desc._cookerName           = "VertexAnimation";
+        desc._cookerVersion        = kCookVersion;
+        desc._target               = "Any";
+        uint32 framesPerSecondBits = 0; // 설정 해시는 프레임율의 비트 그대로다
+        static_assert( sizeof( framesPerSecondBits ) == sizeof( framesPerSecond ) );
+        std::memcpy( &framesPerSecondBits, &framesPerSecond, sizeof( framesPerSecondBits ) );
+        desc._settingsHash = framesPerSecondBits;
+        return desc;
+    }
+
+    uint32 VertexAnimationCooker::cookAll( const string& resourceRoot, const string& cookedDir, float32 framesPerSecond, const CookStore& store,
+                                           uint32& outFailedCount )
     {
         vector<string> listFile;
         FileUtil::collectFiles( resourceRoot, ".json", listFile, true );
-        const string normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        const string activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot ) );
-        uint32       writtenCount   = 0;
+        std::sort( listFile.begin(), listFile.end() );
+        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot ) );
+        const CookJobDesc desc           = makeCookJobDesc( framesPerSecond );
+        CookTally         tally;
         for ( const string& filePath : listFile )
         {
             if ( StringUtil::endsWith( filePath, VertexAnimationCookList::kExtension, true ) == false )
@@ -159,14 +186,33 @@ namespace sw
             const string relativePath   = normalizedFile.substr( std::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
+            // 목록은 무엇을 구울지 정하려고 먼저 읽는다. 이 읽기는 기록하지 않는다 — 클립 작업마다 목록을 다시 읽어 그 작업의 입력으로 남긴다.
             VertexAnimationCookList list;
-            if ( list.loadFromResource( relativePath ) == false )
+            bool                    bListLoaded = false;
+            {
+                const CookJob discovery( desc );
+                bListLoaded = list.loadFromResource( relativePath );
+            }
+            if ( bListLoaded == false )
             {
                 ++outFailedCount;
                 continue;
             }
-            writtenCount += cookList( list, cookedDir, framesPerSecond, outFailedCount );
+            for ( const hashed_string& clipName : list._listClip )
+            {
+                const string      outputID = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
+                const CookOutcome outcome  = store.cookFile( desc, outputID, FileUtil::joinPath( cookedDir, outputID ), [&]()
+                 {
+                    VertexAnimationCookList jobList;
+                    const bool              bCooked =
+                        jobList.loadFromResource( relativePath ) && cookClip( jobList, clipName, FileUtil::joinPath( cookedDir, outputID ), framesPerSecond );
+                    return bCooked ? CookStep::Written : CookStep::Failed;
+                } );
+                outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;
+                tally.add( outcome );
+            }
         }
-        return writtenCount;
+        SW_LOG_INFO( "Vertex animation cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        return tally.getWrittenCount();
     }
 } // namespace sw

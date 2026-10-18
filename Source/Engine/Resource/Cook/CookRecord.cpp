@@ -143,12 +143,17 @@ namespace sw
 
     bool CookRecord::isFresh( const CookJobDesc& desc ) const
     {
+        return findChangedInput() == nullptr && CookJob::computeKey( desc, _listInput ) == _key;
+    }
+
+    const CookInput* CookRecord::findChangedInput() const
+    {
         for ( const CookInput& input : _listInput )
         {
             if ( input.computeCurrentHash() != input._contentHash )
-                return false;
+                return &input;
         }
-        return CookJob::computeKey( desc, _listInput ) == _key;
+        return nullptr;
     }
 
     DerivedDataCache::DerivedDataCache( string rootPath )
