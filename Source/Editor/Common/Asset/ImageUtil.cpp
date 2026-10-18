@@ -87,7 +87,7 @@ namespace sw::editor
             &width,
             &height,
             &channels,
-            4 );
+            RawImageData::kChannelCount );
 
         if ( pDecoded == nullptr )
         {
@@ -95,12 +95,20 @@ namespace sw::editor
             return false;
         }
 
-        const size_t totalBytes = static_cast<size_t>( width ) * static_cast<size_t>( height ) * 4;
+        // stb 는 요청한 채널 수로 펼쳐 주고 `channels` 에는 원본 파일의 채널 수를 돌려준다. 범위 밖이면 원본을 알 수 없으므로 실패로 멈춘다.
+        if ( channels < 1 || RawImageData::kChannelCount < channels )
+        {
+            SW_LOG_ERROR( "stbi_load_from_memory reported %# source channels (expected 1..%#).", channels, RawImageData::kChannelCount );
+            stbi_image_free( pDecoded );
+            return false;
+        }
+
+        const size_t totalBytes = static_cast<size_t>( width ) * static_cast<size_t>( height ) * RawImageData::kChannelCount;
         outImage._bytes.resize( totalBytes );
         Memory::copy( outImage._bytes.data(), pDecoded, totalBytes );
-        outImage._width    = width;
-        outImage._height   = height;
-        outImage._channels = 4;
+        outImage._width              = width;
+        outImage._height             = height;
+        outImage._sourceChannelCount = channels;
 
         stbi_image_free( pDecoded );
         return true;

@@ -244,7 +244,7 @@ namespace sw::editor
         SW_EXPECT_TRUE( rawImage.isValid() );
         SW_EXPECT_EQUAL( 1376, rawImage._width );
         SW_EXPECT_EQUAL( 768, rawImage._height );
-        SW_EXPECT_EQUAL( 4, rawImage._channels );
+        SW_EXPECT_EQUAL( 4, rawImage._sourceChannelCount ); // splash.png 는 RGBA PNG 다
 
         // 2. Import to DDS via TextureImporter
         TextureImportRule rule;
@@ -275,6 +275,65 @@ namespace sw::editor
 
         // 4. Cleanup
         SW_EXPECT_TRUE( FileUtil::removeFile( tempOutDDS ) );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 디코더는 늘 RGBA 로 펼치지만 원본 채널 수(회색 1 · RGB 3 · RGBA 4)를 결과에 남긴다
+     * @details 버퍼만 보면 회색도 RGB 도 네 채널이라, 쿠커가 압축 형식(BC4 · BC7)과 알파 유무를 원본에서 고를 수 없다. 임포트 결과도 같은 값을 들고 나온다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, DecodeReportsSourceChannelCount )
+    {
+        struct ChannelCase
+        {
+            uint8       _imageType;    ///< TGA 머리의 이미지 형식(2 트루컬러 · 3 회색)
+            uint8       _bitsPerPixel; ///< TGA 머리의 픽셀당 비트
+            uint8       _descriptor;   ///< 알파 비트 수 · 왼쪽 위 원점
+            int32       _expectedSourceChannelCount;
+            const utf8* _pName;
+        };
+        const ChannelCase arrCase[] = {
+            {3,  8, 0x20, 1, "gray"},
+            {2, 24, 0x20, 3,  "rgb"},
+            {2, 32, 0x28, 4, "rgba"},
+        };
+
+        constexpr uint32 kSide = 4;
+        for ( const ChannelCase& testCase : arrCase )
+        {
+            const size_t  pixelBytes = static_cast<size_t>( kSide ) * kSide * ( testCase._bitsPerPixel / 8u );
+            vector<uint8> tgaBytes( 18 + pixelBytes, uint8{ 0x40 } );
+            Memory::set( tgaBytes.data(), 0, 18 );
+            tgaBytes[2]  = testCase._imageType;
+            tgaBytes[12] = static_cast<uint8>( kSide );
+            tgaBytes[14] = static_cast<uint8>( kSide );
+            tgaBytes[16] = testCase._bitsPerPixel;
+            tgaBytes[17] = testCase._descriptor;
+
+            RawImageData image;
+            SW_ASSERT_TRUE_MSG( ImageUtil::loadImageFromMemory( tgaBytes.data(), tgaBytes.size(), image ), testCase._pName );
+            SW_EXPECT_TRUE_MSG( testCase._expectedSourceChannelCount == image._sourceChannelCount, testCase._pName );
+            SW_EXPECT_TRUE_MSG( image._bytes.size() == static_cast<size_t>( kSide ) * kSide * RawImageData::kChannelCount, testCase._pName );
+            SW_EXPECT_TRUE_MSG( image.hasSourceAlpha() == ( testCase._expectedSourceChannelCount == 4 ), testCase._pName );
+
+            const string sourcePath = test::makeTempPath( string( "channels_" ) + testCase._pName + ".tga" );
+            FileUtil::ensureParentDirectoryExists( sourcePath );
+            SW_ASSERT_TRUE_MSG( FileUtil::writeFile( sourcePath, tgaBytes.data(), tgaBytes.size() ), testCase._pName );
+            TextureImportRule rule;
+            rule._format        = "R8G8B8A8_UNORM";
+            rule._bSrgb         = SW_FALSE;
+            rule._bGenerateMips = SW_FALSE;
+            TextureImportResult result;
+            SW_ASSERT_TRUE_MSG( TextureImporter::importTexture( sourcePath, test::makeTempPath( string( "channels_" ) + testCase._pName + ".dds" ), rule, &result ),
+                                testCase._pName );
+            SW_EXPECT_TRUE_MSG( static_cast<uint32>( testCase._expectedSourceChannelCount ) == result._sourceChannelCount, testCase._pName );
+        }
+
+        // 디코드하지 않은 값은 원본 채널 수가 0 이라 유효하지 않다 — 채널 수를 4 로 추측하지 않는다.
+        RawImageData empty;
+        empty._width  = 1;
+        empty._height = 1;
+        empty._bytes.assign( RawImageData::kChannelCount, uint8{ 0 } );
+        SW_EXPECT_FALSE( empty.isValid() );
     }
 
     /**
