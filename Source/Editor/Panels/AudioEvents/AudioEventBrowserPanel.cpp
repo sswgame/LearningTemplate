@@ -59,6 +59,7 @@ namespace sw::editor
         : IEditorPanel( false )
         , _editLibrary{}
         , _grid{}
+        , _libraryGrid{}
         , _listEventName{}
         , _listVisibleEvent{}
         , _listFieldRow{}
@@ -67,6 +68,7 @@ namespace sw::editor
         , _selectedEvent{}
         , _selectedLibrary{}
         , _editLibraryName{}
+        , _editEvent{}
         , _filter{}
         , _bOnlySelectedEvent{ false }
         , _bEditDirty{ false }
@@ -82,6 +84,7 @@ namespace sw::editor
             return;
         }
         _editLibraryName = _selectedLibrary;
+        _editEvent       = _selectedEvent;
         _bEditDirty      = false;
     }
 
@@ -89,6 +92,7 @@ namespace sw::editor
     {
         _editLibrary     = AudioEventLibrary{};
         _editLibraryName = hashed_string{};
+        _editEvent       = hashed_string{};
         _bEditDirty      = false;
     }
 
@@ -97,7 +101,7 @@ namespace sw::editor
         _bEditDirty = true;
     }
 
-    void AudioEventBrowserPanel::drawEventEditor( AudioEventDesc& event )
+    void AudioEventBrowserPanel::drawLibraryEditor()
     {
         ImGui::BeginDisabled( _bEditDirty == false );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "SaveEdits" ) ) )
@@ -122,11 +126,59 @@ namespace sw::editor
             EditorThemeUtil::textMuted( SW_LOCKEY( "EditorAudioEvents", "Unsaved" ) );
         }
 
-        EditorPropertyGridTarget target{};
-        target._pInstance = &event;
-        target._pType     = AudioEventDesc::StaticType();
-        target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &AudioEventBrowserPanel::onEventEdited, this );
-        _grid.drawProperties( target, nullptr, {} );
+        // 고칠 이벤트 — 사본의 이벤트에서 고른다(복제한 새 이벤트는 저장 전에는 엔진 목록에 없다).
+        if ( ImGui::BeginCombo( SW_LOCKEY( "EditorAudioEvents", "EditedEvent" ), _editEvent.c_str() ) )
+        {
+            for ( const AudioEventDesc& candidate : _editLibrary._listEvent )
+            {
+                if ( ImGui::Selectable( candidate._name.c_str(), candidate._name == _editEvent ) )
+                    _editEvent = candidate._name;
+            }
+            ImGui::EndCombo();
+        }
+        EditorSelfTestMarks::note( "audioevents.editedEvent" );
+        AudioEventDesc* pEvent = _editLibrary.findEvent( _editEvent );
+        ImGui::BeginDisabled( pEvent == nullptr );
+        if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DuplicateEvent" ) ) )
+        {
+            _editEvent  = AudioEventBrowserUtil::duplicateEvent( _editLibrary, _editEvent );
+            _bEditDirty = true;
+            pEvent      = _editLibrary.findEvent( _editEvent ); // 목록이 다시 잡혔을 수 있다
+        }
+        EditorSelfTestMarks::note( "audioevents.duplicate" );
+        ImGui::SameLine();
+        if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) && AudioEventBrowserUtil::removeEvent( _editLibrary, _editEvent ) )
+        {
+            _editEvent  = _editLibrary._listEvent.empty() ? hashed_string{} : _editLibrary._listEvent.front()._name;
+            _bEditDirty = true;
+            pEvent      = _editLibrary.findEvent( _editEvent );
+        }
+        EditorSelfTestMarks::note( "audioevents.delete" );
+        ImGui::EndDisabled();
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "DeleteEventTip" ) );
+
+        const Delegate<void( const PropertyInfo& )> onEdited = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &AudioEventBrowserPanel::onEventEdited, this );
+        if ( pEvent != nullptr )
+        {
+            EditorPropertyGridTarget target{};
+            target._pInstance = pEvent;
+            target._pType     = AudioEventDesc::StaticType();
+            target._onEdited  = onEdited;
+            _grid.drawProperties( target, nullptr, {} );
+        }
+
+        // 라이브러리의 파라미터 · 감쇠 프리셋 — 이벤트 목록은 위에서 고르고 고치므로 이 그리드에서 뺀다.
+        if ( ImGui::CollapsingHeader( SW_LOCKEY( "EditorAudioEvents", "LibrarySettings" ) ) )
+        {
+            EditorPropertyGridTarget target{};
+            target._pInstance = &_editLibrary;
+            target._pType     = AudioEventLibrary::StaticType();
+            target._onEdited  = onEdited;
+            ImGui::PushID( "##AudioLibraryGrid" );
+            _libraryGrid.drawProperties( target, nullptr, { hashed_string( "_listEvent" ) } );
+            ImGui::PopID();
+        }
+        EditorSelfTestMarks::note( "audioevents.librarySettings" );
     }
 
     void AudioEventBrowserPanel::drawEventList()
@@ -178,18 +230,17 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) )
         {
-            // 그리드에 없는 편집(이벤트 추가 · 파라미터 · 감쇠 프리셋)은 데이터 파일에서 한다. 여는 도구가 없으면 경로를 클립보드에 둔다.
+            // 데이터 파일을 직접 연다(고치기 창 밖의 편집 — 예: 새 클립 경로를 여러 개 붙여 넣기). 여는 도구가 없으면 경로를 클립보드에 둔다.
             if ( EditorAssetCommands::openPath( _selectedLibrary.view() ) == false )
                 ImGui::SetClipboardText( _selectedLibrary.c_str() );
         }
         EditorSelfTestMarks::note( "audioevents.openDataFile" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "OpenDataFileTip" ) );
 
-        // 고치기 — 같은 파일의 사본이 있으면 그 사본의 이벤트를 고친다. 다시 읽어 이벤트가 사라졌으면 읽기 보기로 둔다.
-        AudioEventDesc* pEditEvent = _editLibraryName == _selectedLibrary ? _editLibrary.findEvent( _selectedEvent ) : nullptr;
-        if ( pEditEvent != nullptr )
+        // 고치기 — 같은 파일의 사본이 있으면 그 사본을 고친다(고칠 이벤트는 사본에서 고른다).
+        if ( _editLibraryName.empty() == false && _editLibraryName == _selectedLibrary )
         {
-            drawEventEditor( *pEditEvent );
+            drawLibraryEditor();
             return;
         }
         ImGui::SameLine();
