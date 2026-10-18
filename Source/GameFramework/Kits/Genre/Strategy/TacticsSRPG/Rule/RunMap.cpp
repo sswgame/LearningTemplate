@@ -21,35 +21,52 @@ namespace sw
         XMLNode     root;
         if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "RunMap", root ) == false )
             return false;
-        outSettings._floorCount  = MathUtil::max( 2, root.getAttributeInt( "floors", outSettings._floorCount ) );
-        outSettings._columnCount = MathUtil::max( 1, root.getAttributeInt( "columns", outSettings._columnCount ) );
-        outSettings._pathCount   = MathUtil::max( 1, root.getAttributeInt( "paths", outSettings._pathCount ) );
-        outSettings._listRule.clear();
-        for ( XMLNode node = root.findChild( "Node" ); node; node = node.findNextSibling( "Node" ) )
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 설정 전체를 읽지 못한 것으로 본다(반쪽 지도를 만들지 않는다).
+        RunMapSettings settings;
+        bool           bValid = GameDataXML::readFields( root, settings, sourceName );
+        settings._listForcedFloor.assign( static_cast<size_t>( settings._floorCount ), hashed_string{} );
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pKind = node.findAttribute( "kind" );
-            if ( pKind == nullptr )
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( name == "Node" )
+            {
+                RunNodeRule rule;
+                if ( GameDataXML::readFields( node, rule, sourceName ) )
+                    settings._listRule.push_back( rule );
+                else
+                    bValid = false;
                 continue;
-            RunNodeRule rule;
-            rule._kind      = hashed_string( pKind );
-            rule._weight    = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", 1.0f ) );
-            rule._minFloor  = node.getAttributeInt( "minFloor", 0 );
-            rule._maxFloor  = node.getAttributeInt( "maxFloor", 1000 );
-            rule._bNoRepeat = node.getAttributeBool( "noRepeat", false ) ? SW_TRUE : SW_FALSE;
-            outSettings._listRule.push_back( rule );
+            }
+            if ( name != "Floor" )
+            {
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+                bValid = false;
+                continue;
+            }
+            RunForcedFloorDef forced;
+            if ( GameDataXML::readFields( node, forced, sourceName ) == false )
+            {
+                bValid = false;
+                continue;
+            }
+            const int32 index        = forced._index < 0 ? forced._index + settings._floorCount : forced._index; // −1 은 마지막 층이다
+            const bool  bInsideFloor = index >= 0 && index < settings._floorCount;
+            if ( bInsideFloor == false )
+            {
+                SW_LOG_ERROR( "%#: <Floor index=\"%#\"> is outside the %# floors", sourceName, forced._index, settings._floorCount );
+                bValid = false;
+                continue;
+            }
+            settings._listForcedFloor[static_cast<size_t>( index )] = forced._kind;
         }
-        outSettings._listForcedFloor.assign( static_cast<size_t>( outSettings._floorCount ), hashed_string{} );
-        for ( XMLNode node = root.findChild( "Floor" ); node; node = node.findNextSibling( "Floor" ) )
+        if ( settings._listRule.empty() )
         {
-            int32       index = node.getAttributeInt( "index", 0 );
-            const utf8* pKind = node.findAttribute( "kind" );
-            if ( index < 0 )
-                index += outSettings._floorCount; // −1 은 마지막 층이다
-            const bool bValidForcedFloor = pKind != nullptr && index >= 0 && index < outSettings._floorCount;
-            if ( bValidForcedFloor )
-                outSettings._listForcedFloor[static_cast<size_t>( index )] = hashed_string( pKind );
+            SW_LOG_ERROR( "%#: <RunMap> needs at least one <Node kind=\"...\"/>", sourceName );
+            bValid = false;
         }
-        return outSettings._listRule.empty() == false;
+        if ( bValid )
+            outSettings = settings;
+        return bValid;
     }
 
     int32 RunMap::findOrAddNode( int32 floor, int32 column )

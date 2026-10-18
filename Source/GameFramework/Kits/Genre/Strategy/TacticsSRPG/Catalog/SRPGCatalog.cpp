@@ -9,6 +9,8 @@
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
+#include <optional>
+
 namespace sw
 {
     namespace
@@ -18,62 +20,94 @@ namespace sw
             static constexpr const utf8* kArrPilotStatName[kSRPGPilotStatCount]   = { "shooting", "melee", "reaction", "awaken", "defense" };
             static constexpr const utf8* kArrPilotGrowthName[kSRPGPilotStatCount] = { "growShooting", "growMelee", "growReaction", "growAwaken", "growDefense" };
 
-            [[nodiscard]] static bool parseMoveType( string_view text, SRPGMoveType& outMoveType )
+            /** @brief 토큰 하나를 이동 비용으로 읽습니다. `-` 는 들어갈 수 없음(-1)이고, 숫자는 0 이상이어야 합니다. */
+            [[nodiscard]] static bool parseMoveCost( string_view token, int32& outCost )
             {
-                if ( StringUtil::equals( text, string_view( "Ground" ), true ) )
-                    outMoveType = SRPGMoveType::Ground;
-                else if ( StringUtil::equals( text, string_view( "Air" ), true ) )
-                    outMoveType = SRPGMoveType::Air;
-                else if ( StringUtil::equals( text, string_view( "Space" ), true ) )
-                    outMoveType = SRPGMoveType::Space;
-                else if ( StringUtil::equals( text, string_view( "Water" ), true ) )
-                    outMoveType = SRPGMoveType::Water;
-                else
+                if ( StringUtil::equals( token, string_view( "-" ) ) )
+                {
+                    outCost = -1;
+                    return true;
+                }
+                int32 value = 0;
+                if ( StringUtil::parseInt( token, value ) == false || value < 0 )
                     return false;
+                outCost = value;
                 return true;
             }
 
-            /** @brief "1 1 - 2" 처럼 이동 타입 순서의 정수 네 개를 읽습니다. `-` 는 @p dashValue 로 읽습니다. */
-            static void parseFourInts( string_view text, int32 dashValue, int32 ( &inoutArrValue )[kSRPGMoveTypeCount], bool bAptitude )
+            /**
+             * @brief "1 1 - 2" 처럼 이동 타입 순서(지상 · 공중 · 우주 · 수중)의 값 네 개를 읽습니다. 적지 않으면 Def 의 초기값입니다.
+             * @details 적었으면 네 값이 모두 읽혀야 합니다. 모자라거나 깨진 값은 오류이고 표를 바꾸지 않습니다.
+             */
+            template <typename TParse>
+            [[nodiscard]] static bool readFour( const XMLNode& node, const utf8* pName, string_view sourceName, TParse parse,
+                                                int32 ( &inoutArrValue )[kSRPGMoveTypeCount] )
             {
-                int32 slot = 0;
+                const string_view text = node.getAttributeText( pName );
+                if ( text.empty() )
+                    return true;
+                int32 arrValue[kSRPGMoveTypeCount] = {};
+                int32 count                        = 0;
+                bool  bValid                       = true;
                 StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
                 {
-                    if ( slot >= kSRPGMoveTypeCount )
-                        return;
-                    int32 value = inoutArrValue[slot];
-                    if ( bAptitude )
-                        value = SRPGCatalog::parseAptitude( token, value );
-                    else if ( StringUtil::equals( token, string_view( "-" ) ) )
-                        value = dashValue;
-                    else if ( StringUtil::parseInt( token, value ) == false )
-                        value = inoutArrValue[slot];
-                    inoutArrValue[slot] = value;
-                    ++slot;
+                    const bool bRoom = count < kSRPGMoveTypeCount;
+                    if ( bRoom == false || parse( token, arrValue[count] ) == false )
+                        bValid = false;
+                    ++count;
                 } );
+                if ( bValid == false || count != kSRPGMoveTypeCount )
+                {
+                    SW_LOG_ERROR( "%#: <%# %#=\"%#\"> needs four values (Ground Air Space Water)", sourceName, node.getName(), pName, text );
+                    return false;
+                }
+                std::copy( arrValue, arrValue + kSRPGMoveTypeCount, inoutArrValue );
+                return true;
             }
 
-            static int32 parseSize( string_view text, int32 fallback )
+            /** @brief `size` 를 S · M · L · LL 또는 0..3 으로 읽습니다. 적지 않으면 Def 의 초기값이고, 모르는 값은 오류입니다. */
+            [[nodiscard]] static bool readSize( const XMLNode& node, string_view sourceName, int32& inoutSize )
             {
-                if ( StringUtil::equals( text, string_view( "S" ), true ) )
-                    return 0;
-                if ( StringUtil::equals( text, string_view( "M" ), true ) )
-                    return 1;
-                if ( StringUtil::equals( text, string_view( "L" ), true ) )
-                    return 2;
-                if ( StringUtil::equals( text, string_view( "LL" ), true ) )
-                    return 3;
-                int32 value = fallback;
-                if ( StringUtil::parseInt( text, value ) == false )
-                    return fallback;
-                return MathUtil::clamp( value, 0, 3 );
+                static constexpr const utf8* kArrSizeName[] = { "S", "M", "L", "LL" };
+                const string_view            text           = node.getAttributeText( "size" );
+                if ( text.empty() )
+                    return true;
+                for ( int32 index = 0; index < static_cast<int32>( std::size( kArrSizeName ) ); ++index )
+                {
+                    if ( StringUtil::equals( text, string_view( kArrSizeName[index] ), true ) )
+                    {
+                        inoutSize = index;
+                        return true;
+                    }
+                }
+                int32      value  = 0;
+                const bool bValue = StringUtil::parseInt( text, value ) && 0 <= value && value <= 3;
+                if ( bValue == false )
+                {
+                    SW_LOG_ERROR( "%#: <%# size=\"%#\"> needs S, M, L, LL or 0..3", sourceName, node.getName(), text );
+                    return false;
+                }
+                inoutSize = value;
+                return true;
+            }
+
+            /** @brief 파일럿 능력치 다섯 칸을 이름으로 읽습니다. 적지 않은 칸은 Def 의 초기값이고, 깨진 값은 오류입니다. */
+            [[nodiscard]] static bool readPilotStats( const XMLNode& node, const utf8* const ( &arrName )[kSRPGPilotStatCount], int32 ( &inoutArrValue )[kSRPGPilotStatCount] )
+            {
+                bool bValid = true;
+                for ( int32 stat = 0; stat < kSRPGPilotStatCount; ++stat )
+                {
+                    std::optional<int32> value;
+                    if ( node.readOptionalAttribute( arrName[stat], value ) == false )
+                        bValid = false;
+                    else if ( value.has_value() )
+                        inoutArrValue[stat] = *value;
+                }
+                return bValid;
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
     SW_LOG_CALLER( "SRPGCatalog" );
 
     int32 SRPGPilotDef::computeStat( SRPGPilotStat stat, int32 level ) const
@@ -94,180 +128,173 @@ namespace sw
     {
     }
 
-    int32 SRPGCatalog::parseAptitude( string_view token, int32 fallback )
+    bool SRPGCatalog::parseAptitude( string_view token, int32& outAptitude )
     {
-        if ( StringUtil::equals( token, string_view( "S" ), true ) )
-            return 120;
-        if ( StringUtil::equals( token, string_view( "A" ), true ) )
-            return 100;
-        if ( StringUtil::equals( token, string_view( "B" ), true ) )
-            return 90;
-        if ( StringUtil::equals( token, string_view( "C" ), true ) )
-            return 80;
-        if ( StringUtil::equals( token, string_view( "D" ), true ) )
-            return 60;
-        if ( StringUtil::equals( token, string_view( "-" ) ) )
-            return 0;
-        int32 value = fallback;
-        if ( StringUtil::parseInt( token, value ) == false )
-            return fallback;
-        return MathUtil::max( 0, value );
+        struct NamedAptitude
+        {
+            const utf8* _pName;
+            int32       _percent;
+        };
+        static constexpr NamedAptitude kArrNamed[] = {
+            {"S", 120},
+            {"A", 100},
+            {"B",  90},
+            {"C",  80},
+            {"D",  60},
+            {"-",   0},
+        };
+        for ( const NamedAptitude& named : kArrNamed )
+        {
+            if ( StringUtil::equals( token, string_view( named._pName ), true ) )
+            {
+                outAptitude = named._percent;
+                return true;
+            }
+        }
+        int32 value = 0;
+        if ( StringUtil::parseInt( token, value ) == false || value < 0 )
+            return false;
+        outAptitude = value;
+        return true;
     }
 
     uint32 SRPGCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const XMLNode pilotCurve = root.findChild( "PilotCurve" );
-        if ( pilotCurve )
-            _pilotCurve.loadFromNode( pilotCurve );
-        const XMLNode unitCurve = root.findChild( "UnitCurve" );
-        if ( unitCurve )
-            _unitCurve.loadFromNode( unitCurve );
-
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pName       = node.getName();
-            const bool  bTerrain    = StringUtil::equals( pName, "Terrain", true );
-            const bool  bWeapon     = StringUtil::equals( pName, "Weapon", true );
-            const bool  bUnit       = StringUtil::equals( pName, "Unit", true );
-            const bool  bPilot      = StringUtil::equals( pName, "Pilot", true );
-            const bool  bDefinition = bTerrain || bWeapon || bUnit || bPilot;
-            if ( bDefinition == false )
-                continue;
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            if ( bTerrain )
-                loadTerrain( node, pID );
-            else if ( bWeapon )
-                loadWeapon( node, pID, sourceName );
-            else if ( bUnit )
-                loadUnit( node, pID, sourceName );
-            else
-                loadPilot( node, pID );
-            ++loadedCount;
+            const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            const bool        bLoaded = loadElement( node, name, sourceName );
+            const bool        bCurve  = name == "PilotCurve" || name == "UnitCurve";
+            if ( bLoaded && bCurve == false )
+                ++loadedCount;
         }
 
+        // 다른 정의를 가리키는 id 는 모두 읽은 뒤에 확인한다.
         for ( const SRPGUnitDef& def : _unitCatalog.getAll() )
         {
             for ( const hashed_string& weaponID : def._listWeaponID )
             {
                 if ( _weaponCatalog.find( weaponID ) == nullptr )
-                    SW_LOG_WARNING( "%#: unit '%#' has unknown weapon '%#'", sourceName, def._id.c_str(), weaponID.c_str() );
+                    SW_LOG_ERROR( "%#: unit '%#' has unknown weapon '%#'", sourceName, def._id.c_str(), weaponID.c_str() );
             }
             for ( const SRPGDevelopTarget& target : def._listDevelop )
             {
                 if ( _unitCatalog.find( target._unitID ) == nullptr )
-                    SW_LOG_WARNING( "%#: unit '%#' develops into unknown '%#'", sourceName, def._id.c_str(), target._unitID.c_str() );
+                    SW_LOG_ERROR( "%#: unit '%#' develops into unknown '%#'", sourceName, def._id.c_str(), target._unitID.c_str() );
             }
         }
         return loadedCount;
     }
 
-    void SRPGCatalog::loadTerrain( const XMLNode& node, const utf8* pID )
+    bool SRPGCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        SRPGTerrainDef def;
-        def._id           = hashed_string( pID );
-        const utf8* pName = node.findAttribute( "name" );
-        def._name         = pName != nullptr ? pName : pID;
-        SRPGCatalogInternal::parseFourInts( node.getAttributeText( "cost" ), -1, def._arrMoveCost, false );
-        def._defenseBonus = node.getAttributeInt( "defense", def._defenseBonus );
-        def._evasionBonus = node.getAttributeInt( "evasion", def._evasionBonus );
-        SRPGMoveType domain{ SRPGMoveType::Ground };
-        if ( SRPGCatalogInternal::parseMoveType( node.getAttributeText( "domain" ), domain ) )
-            def._domain = domain;
-        (void)_terrainCatalog.add( def );
+        if ( name == "PilotCurve" )
+        {
+            _pilotCurve.loadFromNode( node );
+            return true;
+        }
+        if ( name == "UnitCurve" )
+        {
+            _unitCurve.loadFromNode( node );
+            return true;
+        }
+        if ( name == "Terrain" )
+            return loadTerrain( node, sourceName );
+        if ( name == "Weapon" )
+            return loadWeapon( node, sourceName );
+        if ( name == "Unit" )
+            return loadUnit( node, sourceName );
+        if ( name == "Pilot" )
+            return loadPilot( node, sourceName );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
     }
 
-    void SRPGCatalog::loadWeapon( const XMLNode& node, const utf8* pID, string_view sourceName )
+    bool SRPGCatalog::loadTerrain( const XMLNode& node, string_view sourceName )
+    {
+        SRPGTerrainDef def;
+        bool           bValid = GameDataXML::readFields( node, def, sourceName, { "cost" } );
+        bValid                = SRPGCatalogInternal::readFour( node, "cost", sourceName, &SRPGCatalogInternal::parseMoveCost, def._arrMoveCost ) && bValid;
+        if ( bValid )
+            (void)_terrainCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
+    }
+
+    bool SRPGCatalog::loadWeapon( const XMLNode& node, string_view sourceName )
     {
         SRPGWeaponDef def;
-        def._id                = hashed_string( pID );
-        const utf8* pName      = node.findAttribute( "name" );
-        def._name              = pName != nullptr ? pName : pID;
-        def._minRange          = MathUtil::max( 0, node.getAttributeInt( "minRange", def._minRange ) );
-        def._maxRange          = MathUtil::max( def._minRange, node.getAttributeInt( "maxRange", def._maxRange ) );
-        def._power             = MathUtil::max( 0, node.getAttributeInt( "power", def._power ) );
-        def._hitBonus          = node.getAttributeInt( "hit", def._hitBonus );
-        def._critBonus         = node.getAttributeInt( "crit", def._critBonus );
-        def._enCost            = MathUtil::max( 0, node.getAttributeInt( "en", def._enCost ) );
-        def._ammo              = MathUtil::max( 0, node.getAttributeInt( "ammo", def._ammo ) );
-        def._moraleRequired    = MathUtil::max( 0, node.getAttributeInt( "morale", def._moraleRequired ) );
-        def._bCounter          = node.getAttributeBool( "counter", true ) ? SW_TRUE : SW_FALSE;
-        def._bPostMove         = node.getAttributeBool( "postMove", true ) ? SW_TRUE : SW_FALSE;
-        const string_view kind = node.getAttributeText( "kind" );
-        if ( StringUtil::equals( kind, string_view( "Melee" ), true ) )
-            def._kind = SRPGWeaponKind::Melee;
-        else if ( StringUtil::equals( kind, string_view( "Awaken" ), true ) )
-            def._kind = SRPGWeaponKind::Awaken;
-        else if ( kind.empty() == false && StringUtil::equals( kind, string_view( "Shooting" ), true ) == false )
-            SW_LOG_WARNING( "%#: weapon '%#' has an unknown kind '%#' - read as shooting", sourceName, pID, kind );
-
-        const string_view mapAnchor = node.getAttributeText( "map" );
-        if ( StringUtil::equals( mapAnchor, string_view( "Self" ), true ) )
-            def._mapAnchor = SRPGMapAnchor::Self;
-        else if ( StringUtil::equals( mapAnchor, string_view( "Target" ), true ) )
-            def._mapAnchor = SRPGMapAnchor::Target;
+        bool          bValid = GameDataXML::readFields( node, def, sourceName, { "pattern" } );
         if ( def.isMap() )
         {
+            // MAP 병기의 범위는 "x,y x,y ..." 이고 반드시 적는다(기준 셀 하나로 물러나지 않는다).
             StringUtil::forEachToken( node.getAttributeText( "pattern" ), " ;\t", [&]( string_view token )
             {
                 float32 arrValue[2]{ 0.0f, 0.0f };
                 if ( GameDataXML::parseFloats( token, arrValue, 2 ) == 2 )
                     def._listMapOffset.push_back( int2{ static_cast<int32>( arrValue[0] ), static_cast<int32>( arrValue[1] ) } );
+                else
+                {
+                    SW_LOG_ERROR( "%#: MAP weapon '%#' has a bad pattern cell '%#' (x,y)", sourceName, def._id.c_str(), token );
+                    bValid = false;
+                }
             } );
             if ( def._listMapOffset.empty() )
             {
-                SW_LOG_WARNING( "%#: MAP weapon '%#' has no pattern - hits only the anchor cell", sourceName, pID );
-                def._listMapOffset.push_back( int2{ 0, 0 } );
+                SW_LOG_ERROR( "%#: MAP weapon '%#' needs pattern=\"x,y ...\"", sourceName, def._id.c_str() );
+                bValid = false;
             }
-            def._bCounter = SW_FALSE; // MAP 병기로는 반격하지 않는다
+            def._bCounter = false; // MAP 병기로는 반격하지 않는다(규칙이다)
         }
-        (void)_weaponCatalog.add( def );
+        else if ( node.getAttributeText( "pattern" ).empty() == false )
+        {
+            SW_LOG_ERROR( "%#: weapon '%#' has a pattern but no map=\"Self|Target\"", sourceName, def._id.c_str() );
+            bValid = false;
+        }
+        if ( bValid )
+            (void)_weaponCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 
-    void SRPGCatalog::loadUnit( const XMLNode& node, const utf8* pID, string_view sourceName )
+    bool SRPGCatalog::loadUnit( const XMLNode& node, string_view sourceName )
     {
+        using Internal = SRPGCatalogInternal;
         SRPGUnitDef def;
-        def._id                    = hashed_string( pID );
-        const utf8* pName          = node.findAttribute( "name" );
-        def._name                  = pName != nullptr ? pName : pID;
-        def._hp                    = MathUtil::max( 1, node.getAttributeInt( "hp", def._hp ) );
-        def._en                    = MathUtil::max( 0, node.getAttributeInt( "en", def._en ) );
-        def._move                  = MathUtil::max( 0, node.getAttributeInt( "move", def._move ) );
-        def._armor                 = MathUtil::max( 0, node.getAttributeInt( "armor", def._armor ) );
-        def._mobility              = node.getAttributeInt( "mobility", def._mobility );
-        def._size                  = SRPGCatalogInternal::parseSize( node.getAttributeText( "size" ), def._size );
-        const string_view moveType = node.getAttributeText( "moveType" );
-        if ( moveType.empty() == false && SRPGCatalogInternal::parseMoveType( moveType, def._moveType ) == false )
-            SW_LOG_WARNING( "%#: unit '%#' has an unknown moveType '%#' - read as ground", sourceName, pID, moveType );
-        SRPGCatalogInternal::parseFourInts( node.getAttributeText( "aptitude" ), 0, def._arrAptitude, true );
-        StringUtil::forEachToken( node.getAttributeText( "weapons" ), ",; \t", [&]( string_view token )
-        { def._listWeaponID.push_back( hashed_string( token ) ); } );
+        bool        bValid = GameDataXML::readFields( node, def, sourceName, { "size", "aptitude", "weapons", "developsTo" } );
+        bValid             = Internal::readSize( node, sourceName, def._size ) && bValid;
+        bValid             = Internal::readFour( node, "aptitude", sourceName, &SRPGCatalog::parseAptitude, def._arrAptitude ) && bValid;
+        GameDataXML::parseNameList( node.getAttributeText( "weapons" ), ",; \t", def._listWeaponID );
         GameDataXML::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, GameDataXML::MissingValue::UseDefault,
-                                         [&]( string_view token, string_view unitName, int32 requiredLevel, bool bValid )
+                                         [&]( string_view token, string_view unitName, int32 requiredLevel, bool bLevel )
         {
+            if ( bLevel == false || requiredLevel < 1 )
+            {
+                SW_LOG_ERROR( "%#: unit '%#' has a bad develop level in '%#'", sourceName, def._id.c_str(), token );
+                bValid = false;
+                return;
+            }
             SRPGDevelopTarget target;
-            target._unitID = hashed_string( unitName );
-            if ( bValid == false )
-                SW_LOG_WARNING( "%#: unit '%#' has a bad develop level in '%#'", sourceName, pID, token );
-            target._requiredLevel = MathUtil::max( 1, requiredLevel );
+            target._unitID        = hashed_string( unitName );
+            target._requiredLevel = requiredLevel;
             def._listDevelop.push_back( target );
         } );
-        (void)_unitCatalog.add( def );
+        if ( bValid )
+            (void)_unitCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 
-    void SRPGCatalog::loadPilot( const XMLNode& node, const utf8* pID )
+    bool SRPGCatalog::loadPilot( const XMLNode& node, string_view sourceName )
     {
+        using Internal = SRPGCatalogInternal;
         SRPGPilotDef def;
-        def._id           = hashed_string( pID );
-        const utf8* pName = node.findAttribute( "name" );
-        def._name         = pName != nullptr ? pName : pID;
-        for ( int32 stat = 0; stat < kSRPGPilotStatCount; ++stat )
-        {
-            def._arrStat[stat]   = node.getAttributeInt( SRPGCatalogInternal::kArrPilotStatName[stat], def._arrStat[stat] );
-            def._arrGrowth[stat] = node.getAttributeInt( SRPGCatalogInternal::kArrPilotGrowthName[stat], def._arrGrowth[stat] );
-        }
-        (void)_pilotCatalog.add( def );
+        bool         bValid = GameDataXML::readFields( node, def, sourceName,
+                                                       { "shooting", "melee", "reaction", "awaken", "defense", "growShooting", "growMelee", "growReaction",
+                                                         "growAwaken", "growDefense" } );
+        bValid              = Internal::readPilotStats( node, Internal::kArrPilotStatName, def._arrStat ) && bValid;
+        bValid              = Internal::readPilotStats( node, Internal::kArrPilotGrowthName, def._arrGrowth ) && bValid;
+        if ( bValid )
+            (void)_pilotCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 } // namespace sw

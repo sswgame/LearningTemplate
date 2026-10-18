@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -17,26 +19,55 @@ namespace sw
     class GameRandom;
 
     /** @brief 노드 종류의 규칙입니다. */
+    REFLECT()
     struct RunNodeRule
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _kind{};
-        float32       _weight{ 1.0f };
-        int32         _minFloor{ 0 };
-        int32         _maxFloor{ 1000 };
-        uint8         _bNoRepeat{ SW_FALSE }; ///< 바로 앞 노드와 같은 종류가 되지 않는다. 휴식이나 상점이 연달아 나오지 않게 한다
+        PROPERTY( Min = 0.0 )
+        float32 _weight{ 1.0f };
+        PROPERTY()
+        int32 _minFloor{ 0 };
+        PROPERTY( Min = "_minFloor" )
+        int32 _maxFloor{ 1000 };
+        PROPERTY()
+        bool _bNoRepeat{ false }; ///< 바로 앞 노드와 같은 종류가 되지 않는다. 휴식이나 상점이 연달아 나오지 않게 한다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `<Floor index="-1" kind="Boss"/>` — 층 하나를 종류 하나로 고정합니다. 음수 번호는 끝에서 셉니다(-1 이 마지막 층). */
+    REFLECT()
+    struct RunForcedFloorDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _kind{};
+        PROPERTY( Required )
+        int32 _index{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 지도 설정입니다. */
+    REFLECT()
     struct RunMapSettings
     {
+        REFLECT_BODY();
+
         vector<RunNodeRule>   _listRule{};
         vector<hashed_string> _listForcedFloor{}; ///< 층 번호별로 그 층 전체를 이 종류로 고정한다. 비어 있으면 규칙대로 정한다. 첫 층은 전투, 마지막 층은 보스에 쓴다
-        int32                 _floorCount{ 15 };
-        int32                 _columnCount{ 7 };
-        int32                 _pathCount{ 6 }; ///< 아래에서 위로 그을 길의 수. 길이 지나간 노드만 남는다
+        PROPERTY( Name = "floors", Min = 2 )
+        int32 _floorCount{ 15 };
+        PROPERTY( Name = "columns", Min = 1 )
+        int32 _columnCount{ 7 };
+        PROPERTY( Name = "paths", Min = 1 )
+        int32 _pathCount{ 6 }; ///< 아래에서 위로 그을 길의 수. 길이 지나간 노드만 남는다
     };
 } // namespace sw
 
