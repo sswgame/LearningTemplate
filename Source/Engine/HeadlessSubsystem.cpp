@@ -116,7 +116,8 @@ namespace sw
             SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
             const string& resourceRoot     = ResourcePaths::getRootFolderPath();
             uint32        sceneFailedCount = 0;
-            const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
+            // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
+            const uint32 sceneCount = SceneCooker::cookAllScenes( engine::getSubsystem<SceneManager>().getEngineServices(), resourceRoot, cookedDir, sceneFailedCount );
             // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
             uint32                        prefabFailedCount   = 0;
             [[maybe_unused]] const uint32 prefabCount         = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );

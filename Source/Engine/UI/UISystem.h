@@ -167,7 +167,7 @@ namespace sw
          */
         void          setPauseMenuDocument( string_view documentPath );
         const string& getPauseMenuDocument() const { return _pauseMenuDocument; }
-        /** @brief 설정 출처입니다. `setUserSettings` 로 받은 것이고, 없으면 엔진 서비스이며, 그것도 없으면 nullptr 입니다. 옵션 메뉴와 설정 바인딩이 씁니다. */
+        /** @brief 설정 출처입니다. `setUserSettings` 로 받은 것(기동이 엔진 서비스를 넘긴다)이고, 받지 않았으면 nullptr 입니다. 옵션 메뉴와 설정 바인딩이 씁니다. */
         UserSettingsManager* findUserSettings() const;
         /**
          * @brief 화면이 처리하지 않은 UI 명령의 전역 표입니다. 게임 흐름이 `ReturnToTitle` · 호스트가 `QuitGame` 같은 명령을 등록하면 일시정지 메뉴가 그 버튼을 보입니다.
@@ -322,9 +322,12 @@ namespace sw
          * @details 실기동 테스트(`AppUITest`, 시나리오 단계 `UILayoutDump`)가 위젯 이름으로 스크린샷 안의 사각형을 찾는 경로다.
          */
         string makeLayoutDump() const;
-        /** @brief 문화권 출처를 정합니다. 테스트가 자기 것을 넘겨 전역 문화권을 건드리지 않게 합니다. nullptr 이면 바인딩된 엔진 서비스를 씁니다. */
+        /**
+         * @brief 문화권 출처를 정합니다. 기동(`initializeSubsystem`)이 엔진 서비스를 넘기고, 테스트는 자기 것을 넘겨 전역 문화권을 건드리지 않게 합니다.
+         * @details nullptr 이면 문화권이 없다(기본 문화권 · 원문). 전역 표로 물러나 찾지 않는다.
+         */
         void setLocalization( const LocalizationManager* pLocalization ) { _pLocalization = pLocalization; }
-        /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다. 테스트가 자기 것을 넘길 수 있고, nullptr 이면 바인딩된 엔진 서비스를 씁니다. 화면 바인딩은 다시 연결됩니다. */
+        /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다. 기동이 엔진 서비스를 넘기고 테스트는 자기 것을 넘깁니다. nullptr 이면 설정 바인딩이 없습니다. 화면 바인딩은 다시 연결됩니다. */
         void setUserSettings( UserSettingsManager* pSettings );
 
         const utf8* getModuleUnloadListenerName() const override { return "ui screens"; }
@@ -353,7 +356,7 @@ namespace sw
         void updateBindings();
         /** @brief 입력 장치 종류(글리프)가 바뀌었으면 화면 위젯마다 `onInputGlyphsChanged` 를 부릅니다(액션 태그가 있는 텍스트를 다시 배치합니다). */
         void refreshInputGlyphs();
-        /** @brief 지금 문화권 출처입니다. `setLocalization` 으로 받은 것이고, 없으면 엔진 서비스이며, 그것도 없으면 nullptr 입니다. */
+        /** @brief 지금 문화권 출처입니다. `setLocalization` 으로 받은 것(기동이 엔진 서비스를 넘긴다)이고, 받지 않았으면 nullptr 입니다. */
         const LocalizationManager* findLocalization() const;
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
@@ -393,8 +396,8 @@ namespace sw
         UIActionGlyphSource          _actionGlyphs; ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
         UIInputRouter                _input;        ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
         FontService*                 _pFontService;
-        const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(nullptr 이면 엔진 서비스).
-        UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(nullptr 이면 엔진 서비스).
+        const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
+        UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
         unique_ptr<TextLayoutEngine> _textLayout;
 #if SW_DEV_COMMANDS_ENABLED
         unique_ptr<DebugHUD> _debugHUD; ///< 서브시스템이 붙인 디버그 HUD 입니다(Dev 전용).
