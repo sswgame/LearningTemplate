@@ -21,10 +21,9 @@ Claude Code 안내. 이 저장소의 에이전트 규칙.
 ## 에이전트 · 토큰 예산
 `.claude/agents/`에 정의됨. **일에 맞는 가장 싼 모델을 고른다.** 일과 에이전트 · effort 표는 [docs/12_Agents.md](docs/12_Agents.md).
 
-에이전트 지시문에는 **읽을 문서와 절을 이름으로 적고, 끝낼 때 직접 고칠 문서도 적는다**(예: "`docs/agents/NamingCpp.md`와 `EditingTraps.md`만", "계획 문서 `Vfx`의 V1 절만"; 틀은 [작업자 규칙](docs/plans/WorkerRules.md) 5절). 에이전트는 문서를 통째로 읽기 쉽고, 작업자마다 같은 수만 토큰이 반복된다. 찾기만 하는 일은 `scout`, 결과 보고는 열 줄 안쪽으로 받는다. 에이전트를 맡길 때는 `model`과 `effort`를 [에이전트와 토큰](docs/12_Agents.md) 표대로 **지정하고**, 사용자에게 종류 · 모델 · 레벨을 한 줄로 알린다.
+에이전트 지시문에는 **읽을 문서와 절을 이름으로 적고, 끝낼 때 직접 고칠 문서도 적는다**(틀은 [작업자 규칙](docs/plans/WorkerRules.md) 5절). 찾기만 하는 일은 `scout`, 보고는 열 줄 안쪽. `model`과 `effort`를 표대로 **지정하고**, 사용자에게 종류 · 모델 · 레벨을 한 줄로 알린다.
 
-요청이 규칙과 충돌하거나 한도에 닿으면 **실행 전에 한 줄로 알린다**.
-긴 세션은 `docs/plans/NEXT.md`에 인계 후 새 세션 권장.
+요청이 규칙과 충돌하거나 한도에 닿으면 **실행 전에 한 줄로 알린다**. 긴 세션은 `docs/plans/NEXT.md`에 인계 후 새 세션.
 
 ## 빌드 (자주 쓰는 것만)
 ```powershell
@@ -39,8 +38,6 @@ cmake --build --preset Ninja-Debug --target all AllTests  # +테스트
 - **graphify**: 항상 켠다. 코드 질문은 저장소 루트에서 `graphify query "<질문>"`, `graphify path "<A>" "<B>"`, `graphify explain "<개념>"`으로 범위를 먼저 좁힌다(작업자 워크트리는 MCP `query_graph`). 코드를 고친 뒤에는 `graphify update Source`로 갱신한다(약 4분). PreToolUse · git 훅은 공유 설정에 넣지 않는다.
 - **ponytail**: `.claude/skills/ponytail/SKILL.md`가 있으면 코딩 작업마다 켜진다(2026-10-15 사용자 결정). "기존 구조를 유지한다"는 지침이 "구조는 장기 이득이면 과감히 바꾼다"는 방침과 부딪힐 수 있으니, 구조 개편을 시킬 때는 요청에 그 뜻을 적는다.
 
-## 가드 훅과 보조 에이전트
-- **`.claude/hooks/GuardCommands.py`**: Bash · PowerShell 호출 직전에 두 가지를 막는다. `git commit --no-verify`(커밋 훅은 우회하지 않는다)와, 링크(정션)가 든 폴더의 재귀 삭제다. 후자는 `Tools/LLVM` 같은 공유 도구가 함께 지워지는 것을 막는다. 워크트리는 `py -3 -m Scripts worktree-remove <이름>`으로 지운다. 훅이 실패하면 호출을 막지 않는다.
-- **`.claude/hooks/SessionGuard.py`**: 기록 4MB · 8MB · 16MB 단계(또는 압축 2회)를 넘을 때마다 프롬프트를 한 번 막고(같은 입력을 다시 보내면 통과, 표시는 `.git/sw-session-guard/`), 그 아래는 경고만 한다.
-- **`gpu-verifier`** 에이전트: GPU · 창 실행을 `py -3 -m Scripts shared-lock acquire gpu`로 직렬화해 맡고 캡처를 눈으로 확인해 보고한다. **`code-reviewer`** 에이전트: 병합 전에 브랜치 diff를 읽기 전용으로 검토한다. 작업자끼리 부딪히는 결정과 이 저장소의 규칙 위반을 찾는다. **`design-reviewer`** 에이전트: 구현 전에 설계 문서 · 구조 결정을 읽기 전용으로 검토해 현재 구조 · 유지보수 · 성능 · 상용 엔진과 출시작 선례를 근거 수준([코드] · [문서] · [기억] · [추정])과 함께 비교하고 대안을 낸다. **`ux-reviewer`** 에이전트: 에디터 UI 캡처(PNG)를 읽기 전용으로 보고 UX 결함 표를 낸다. 기준은 [docs/plans/EditorUX.md](docs/plans/EditorUX.md).
+## 가드 훅
+훅(`GuardCommands` · `SessionGuard` · `ReadGuard`)이 `git commit --no-verify`, 링크가 든 폴더의 재귀 삭제, 너무 긴 세션, 큰 파일의 통째 읽기를 막는다. 내용과 보조 에이전트(gpu-verifier · code-reviewer · design-reviewer · ux-reviewer)는 [에이전트와 토큰](docs/12_Agents.md). 워크트리는 `py -3 -m Scripts worktree-remove <이름>`으로 지운다.
 - 워크트리는 손으로 정션을 걸지 말고 `py -3 -m Scripts worktree-make <이름> --base main`으로 만든다. 기준 브랜치를 `main`으로 주지 않으면 `origin/main`에서 갈라진다.
