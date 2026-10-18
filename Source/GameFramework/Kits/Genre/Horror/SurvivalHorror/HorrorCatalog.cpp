@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/String/EnumNameTable.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -22,30 +21,65 @@ namespace sw
             static constexpr EnumNameTable<HorrorItemKind> kItemKindTable{ kArrItemKindName };
             static_assert( kItemKindTable.getCount() == static_cast<size_t>( HorrorItemKind::Document ) + 1, "item kind names must cover every HorrorItemKind" );
 
-            static void parseDigits( string_view text, vector<int32>& outListDigit, string_view sourceName, const utf8* pID )
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+                return true;
+            }
+
+            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
+            template <typename TDef>
+            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outSetting = def;
+                return true;
+            }
+
+            /** @brief `code="3 1 4"` 를 숫자 목록으로 읽습니다. 비었거나 깨진 숫자가 있으면 오류입니다. */
+            [[nodiscard]] static bool readDigits( string_view text, vector<int32>& outListDigit, string_view sourceName, const hashed_string& id )
             {
                 outListDigit.clear();
+                bool bValid = true;
                 StringUtil::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     int32 digit = 0;
                     if ( StringUtil::parseInt( token, digit ) )
                         outListDigit.push_back( digit );
                     else
-                        SW_LOG_WARNING( "%#: dial lock '%#' has a bad digit '%#'", sourceName, pID, token );
+                    {
+                        SW_LOG_ERROR( "%#: dial lock '%#' has a bad digit '%#'", sourceName, id.c_str(), token );
+                        bValid = false;
+                    }
                 } );
+                if ( outListDigit.empty() )
+                {
+                    SW_LOG_ERROR( "%#: dial lock '%#' needs code=\"...\"", sourceName, id.c_str() );
+                    bValid = false;
+                }
+                return bValid;
             }
 
-            /** @brief "a-b,c-d" 를 연결 목록으로 읽습니다. */
-            static void parseLinks( string_view text, vector<HorrorClueLink>& outListLink, string_view sourceName, const utf8* pID )
+            /** @brief "a-b,c-d" 를 연결 목록으로 읽습니다. 모양이 틀린 연결은 오류입니다. */
+            [[nodiscard]] static bool readLinks( string_view text, vector<HorrorClueLink>& outListLink, string_view sourceName, const hashed_string& id )
             {
                 outListLink.clear();
+                bool bValid = true;
                 StringUtil::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     const size_t dash           = token.find( '-' );
                     const bool   bMalformedLink = dash == string_view::npos || dash == 0 || dash + 1 >= token.size();
                     if ( bMalformedLink )
                     {
-                        SW_LOG_WARNING( "%#: deduction '%#' has a bad link '%#' (expected clueA-clueB)", sourceName, pID, token );
+                        SW_LOG_ERROR( "%#: deduction '%#' has a bad link '%#' (expected clueA-clueB)", sourceName, id.c_str(), token );
+                        bValid = false;
                         return;
                     }
                     HorrorClueLink link;
@@ -53,42 +87,11 @@ namespace sw
                     link._second = hashed_string( token.substr( dash + 1 ) );
                     outListLink.push_back( link );
                 } );
-            }
-
-            static void loadRules( const XMLNode& node, SurvivalHorrorRules& outRules, string_view sourceName )
-            {
-                outRules._maxHealth              = MathUtil::max( 1.0f, node.getAttributeFloat( "maxHealth", outRules._maxHealth ) );
-                outRules._maxSanity              = MathUtil::max( 1.0f, node.getAttributeFloat( "maxSanity", outRules._maxSanity ) );
-                outRules._darknessDrain          = MathUtil::max( 0.0f, node.getAttributeFloat( "darknessDrain", outRules._darknessDrain ) );
-                outRules._sanityRegen            = MathUtil::max( 0.0f, node.getAttributeFloat( "sanityRegen", outRules._sanityRegen ) );
-                outRules._sanityRegenDelay       = MathUtil::max( 0.0f, node.getAttributeFloat( "sanityRegenDelay", outRules._sanityRegenDelay ) );
-                outRules._repeatSightingScale    = MathUtil::saturate( node.getAttributeFloat( "repeatSightingScale", outRules._repeatSightingScale ) );
-                outRules._hallucinationThreshold = MathUtil::saturate( node.getAttributeFloat( "hallucinationThreshold", outRules._hallucinationThreshold ) );
-                outRules._maxAimSway             = MathUtil::max( 0.0f, node.getAttributeFloat( "maxAimSway", outRules._maxAimSway ) );
-                outRules._maxBattery             = MathUtil::max( 1.0f, node.getAttributeFloat( "maxBattery", outRules._maxBattery ) );
-                outRules._batteryDrain           = MathUtil::max( 0.0f, node.getAttributeFloat( "batteryDrain", outRules._batteryDrain ) );
-                outRules._gridWidth              = MathUtil::clamp( node.getAttributeInt( "gridWidth", outRules._gridWidth ), 1, 32 );
-                outRules._gridHeight             = MathUtil::clamp( node.getAttributeInt( "gridHeight", outRules._gridHeight ), 1, 32 );
-                outRules._maxSaves               = MathUtil::max( 0, node.getAttributeInt( "maxSaves", outRules._maxSaves ) );
-                outRules._bClearLinksOnWrong     = node.getAttributeBool( "clearLinksOnWrong", outRules._bClearLinksOnWrong == SW_TRUE ) ? SW_TRUE : SW_FALSE;
-                const string_view modeText       = node.getAttributeText( "saveMode" );
-                if ( modeText.empty() )
-                    return;
-                if ( StringUtil::equals( modeText, string_view( "Unlimited" ), true ) )
-                    outRules._saveMode = HorrorSaveMode::Unlimited;
-                else if ( StringUtil::equals( modeText, string_view( "Limited" ), true ) )
-                    outRules._saveMode = HorrorSaveMode::Limited;
-                else if ( StringUtil::equals( modeText, string_view( "InkRibbon" ), true ) )
-                    outRules._saveMode = HorrorSaveMode::InkRibbon;
-                else
-                    SW_LOG_WARNING( "%#: unknown saveMode '%#'", sourceName, modeText );
+                return bValid;
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
     bool parseHorrorItemKind( string_view text, HorrorItemKind& outKind )
     {
         return HorrorCatalogInternal::kItemKindTable.parse( text, outKind );
@@ -133,154 +136,110 @@ namespace sw
 
     uint32 HorrorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
-        if ( const XMLNode rulesNode = root.findChild( "Rules" ) )
-            HorrorCatalogInternal::loadRules( rulesNode, _rules, sourceName );
-
-        for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            HorrorItemDef item;
-            item._id                   = hashed_string( pID );
-            const utf8* pName          = node.findAttribute( "name" );
-            item._name                 = pName != nullptr ? pName : pID;
-            const string_view kindText = node.getAttributeText( "kind" );
-            if ( kindText.empty() == false && parseHorrorItemKind( kindText, item._kind ) == false )
-                SW_LOG_WARNING( "%#: item '%#' has an unknown kind '%#'", sourceName, pID, kindText );
-            item._width         = MathUtil::clamp( node.getAttributeInt( "w", item._width ), 1, 8 );
-            item._height        = MathUtil::clamp( node.getAttributeInt( "h", item._height ), 1, 8 );
-            item._maxStack      = MathUtil::max( 1, node.getAttributeInt( "maxStack", item._maxStack ) );
-            item._healAmount    = MathUtil::max( 0.0f, node.getAttributeFloat( "heal", item._healAmount ) );
-            item._sanityAmount  = MathUtil::max( 0.0f, node.getAttributeFloat( "sanity", item._sanityAmount ) );
-            item._batteryAmount = MathUtil::max( 0.0f, node.getAttributeFloat( "battery", item._batteryAmount ) );
-            (void)_itemCatalog.add( item );
-            ++loadedCount;
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( loadElement( node, name, sourceName ) )
+                ++loadedCount;
         }
-
-        for ( XMLNode node = root.findChild( "Combine" ); node; node = node.findNextSibling( "Combine" ) )
+        // 열쇠 자물쇠가 가리키는 열쇠는 모두 읽은 뒤에 확인한다(자물쇠가 아이템보다 앞에 적혀도 된다).
+        for ( const HorrorKeyLockDef& lock : _keyLockCatalog.getAll() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            const hashed_string firstItem( node.getAttributeText( "a" ) );
-            const hashed_string secondItem( node.getAttributeText( "b" ) );
-            const hashed_string outItem( node.getAttributeText( "out" ) );
-            const bool          bIncompleteCombine = firstItem.empty() || secondItem.empty() || outItem.empty();
-            if ( bIncompleteCombine )
-            {
-                SW_LOG_WARNING( "%#: combine '%#' needs a, b and out - skipped", sourceName, pID );
-                continue;
-            }
-            RecipeDef recipe;
-            recipe._id      = hashed_string( pID );
-            recipe._station = getCombineStation();
-            recipe._inputs.addItem( firstItem, 1 );
-            recipe._inputs.addItem( secondItem, 1 );
-            recipe._outputs.addItem( outItem, MathUtil::max( 1, node.getAttributeInt( "count", 1 ) ) );
-            _recipeCatalog.add( recipe );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "Monster" ); node; node = node.findNextSibling( "Monster" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            HorrorMonsterDef monster;
-            monster._id         = hashed_string( pID );
-            monster._sanityLoss = MathUtil::max( 0.0f, node.getAttributeFloat( "sanityLoss", monster._sanityLoss ) );
-            monster._speed      = MathUtil::max( 0.01f, node.getAttributeFloat( "speed", monster._speed ) );
-            monster._toughness  = MathUtil::max( 1, node.getAttributeInt( "toughness", monster._toughness ) );
-            monster._damage     = MathUtil::max( 0, node.getAttributeInt( "damage", monster._damage ) );
-            monster._horror     = MathUtil::max( 0, node.getAttributeInt( "horror", monster._horror ) );
-            (void)_monsterCatalog.add( monster );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "KeyLock" ); node; node = node.findNextSibling( "KeyLock" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            HorrorKeyLockDef lock;
-            lock._id          = hashed_string( pID );
-            lock._keyItem     = hashed_string( node.getAttributeText( "key" ) );
-            lock._flag        = hashed_string( node.getAttributeText( "flag" ) );
-            lock._bConsumeKey = node.getAttributeBool( "consumeKey", true ) ? SW_TRUE : SW_FALSE;
-            if ( lock._keyItem.empty() || lock._flag.empty() )
-                SW_LOG_WARNING( "%#: key lock '%#' needs key and flag", sourceName, pID );
-            else if ( _itemCatalog.find( lock._keyItem ) == nullptr )
-                SW_LOG_WARNING( "%#: key lock '%#' names an unknown key item '%#'", sourceName, pID, lock._keyItem.c_str() );
-            (void)_keyLockCatalog.add( lock );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "DialLock" ); node; node = node.findNextSibling( "DialLock" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            HorrorDialLockDef lock;
-            lock._id          = hashed_string( pID );
-            lock._flag        = hashed_string( node.getAttributeText( "flag" ) );
-            lock._maxAttempts = MathUtil::max( 0, node.getAttributeInt( "attempts", 0 ) );
-            HorrorCatalogInternal::parseDigits( node.getAttributeText( "code" ), lock._listDigit, sourceName, pID );
-            if ( lock._listDigit.empty() )
-                SW_LOG_WARNING( "%#: dial lock '%#' has no code", sourceName, pID );
-            (void)_dialLockCatalog.add( lock );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "Sequence" ); node; node = node.findNextSibling( "Sequence" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            HorrorSequenceDef sequence;
-            sequence._id            = hashed_string( pID );
-            sequence._flag          = hashed_string( node.getAttributeText( "flag" ) );
-            sequence._mistakeSanity = MathUtil::max( 0.0f, node.getAttributeFloat( "mistakeSanity", 0.0f ) );
-            GameDataXML::parseNameList( node.getAttributeText( "steps" ), ",; ", sequence._listStep );
-            if ( sequence._listStep.empty() )
-                SW_LOG_WARNING( "%#: sequence '%#' has no steps", sourceName, pID );
-            (void)_sequenceCatalog.add( sequence );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "Document" ); node; node = node.findNextSibling( "Document" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            HorrorDocumentDef document;
-            document._id       = hashed_string( pID );
-            const utf8* pTitle = node.findAttribute( "title" );
-            document._title    = pTitle != nullptr ? pTitle : pID;
-            GameDataXML::parseNameList( node.getAttributeText( "clues" ), ",; ", document._listClue );
-            (void)_documentCatalog.add( document );
-            ++loadedCount;
-        }
-
-        for ( XMLNode node = root.findChild( "Deduction" ); node; node = node.findNextSibling( "Deduction" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            HorrorDeductionDef deduction;
-            deduction._id          = hashed_string( pID );
-            deduction._answer      = hashed_string( node.getAttributeText( "answer" ) );
-            deduction._flag        = hashed_string( node.getAttributeText( "flag" ) );
-            deduction._wrongSanity = MathUtil::max( 0.0f, node.getAttributeFloat( "wrongSanity", deduction._wrongSanity ) );
-            HorrorCatalogInternal::parseLinks( node.getAttributeText( "links" ), deduction._listRequiredLink, sourceName, pID );
-            if ( deduction._answer.empty() )
-                SW_LOG_WARNING( "%#: deduction '%#' has no answer", sourceName, pID );
-            (void)_deductionCatalog.add( deduction );
-            ++loadedCount;
+            if ( _itemCatalog.find( lock._keyItem ) == nullptr )
+                SW_LOG_ERROR( "%#: key lock '%#' names an unknown key item '%#'", sourceName, lock._id.c_str(), lock._keyItem.c_str() );
         }
         return loadedCount;
     }
+
+    bool HorrorCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        using Internal = HorrorCatalogInternal;
+        const auto is  = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        if ( is( "Rules" ) )
+            return Internal::readSetting( node, sourceName, _rules );
+        if ( is( "Item" ) )
+            return Internal::readInto( node, sourceName, _itemCatalog );
+        if ( is( "Combine" ) )
+            return loadCombine( node, sourceName );
+        if ( is( "Monster" ) )
+            return Internal::readInto( node, sourceName, _monsterCatalog );
+        if ( is( "KeyLock" ) )
+            return Internal::readInto( node, sourceName, _keyLockCatalog );
+        if ( is( "DialLock" ) )
+            return loadDialLock( node, sourceName );
+        if ( is( "Sequence" ) )
+            return loadSequence( node, sourceName );
+        if ( is( "Document" ) )
+            return loadDocument( node, sourceName );
+        if ( is( "Deduction" ) )
+            return loadDeduction( node, sourceName );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool HorrorCatalog::loadCombine( const XMLNode& node, string_view sourceName )
+    {
+        HorrorCombineDef combine;
+        if ( GameDataXML::readFields( node, combine, sourceName ) == false )
+            return false;
+        RecipeDef recipe;
+        recipe._id      = combine._id;
+        recipe._station = getCombineStation();
+        recipe._inputs.addItem( combine._firstItem, 1 );
+        recipe._inputs.addItem( combine._secondItem, 1 );
+        recipe._outputs.addItem( combine._outItem, combine._count );
+        _recipeCatalog.add( recipe );
+        return true;
+    }
+
+    bool HorrorCatalog::loadDialLock( const XMLNode& node, string_view sourceName )
+    {
+        HorrorDialLockDef lock;
+        bool              bValid = GameDataXML::readFields( node, lock, sourceName, { "code" } );
+        bValid                   = HorrorCatalogInternal::readDigits( node.getAttributeText( "code" ), lock._listDigit, sourceName, lock._id ) && bValid;
+        if ( bValid )
+            (void)_dialLockCatalog.add( lock ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
+    }
+
+    bool HorrorCatalog::loadSequence( const XMLNode& node, string_view sourceName )
+    {
+        HorrorSequenceDef sequence;
+        if ( GameDataXML::readFields( node, sequence, sourceName, { "steps" } ) == false )
+            return false;
+        GameDataXML::parseNameList( node.getAttributeText( "steps" ), ",; ", sequence._listStep );
+        if ( sequence._listStep.empty() )
+        {
+            SW_LOG_ERROR( "%#: sequence '%#' needs steps=\"a,b,...\"", sourceName, sequence._id.c_str() );
+            return false;
+        }
+        (void)_sequenceCatalog.add( sequence ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
+    }
+
+    bool HorrorCatalog::loadDocument( const XMLNode& node, string_view sourceName )
+    {
+        HorrorDocumentDef document;
+        if ( GameDataXML::readFields( node, document, sourceName, { "clues" } ) == false )
+            return false;
+        GameDataXML::parseNameList( node.getAttributeText( "clues" ), ",; ", document._listClue );
+        (void)_documentCatalog.add( document ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
+    }
+
+    bool HorrorCatalog::loadDeduction( const XMLNode& node, string_view sourceName )
+    {
+        HorrorDeductionDef deduction;
+        bool               bValid = GameDataXML::readFields( node, deduction, sourceName, { "links" } );
+        bValid                    = HorrorCatalogInternal::readLinks( node.getAttributeText( "links" ), deduction._listRequiredLink, sourceName, deduction._id ) && bValid;
+        if ( bValid )
+            (void)_deductionCatalog.add( deduction ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
+    }
+
     GridInventory::ShapeDelegate HorrorCatalog::makeShapeLookup() const
     {
         const HorrorCatalog* pCatalog = this;

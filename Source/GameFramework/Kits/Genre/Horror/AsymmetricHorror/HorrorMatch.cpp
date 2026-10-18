@@ -119,13 +119,13 @@ namespace sw
         vitality._bDamageInterruptsRevive = SW_FALSE;
 
         InteractionConfig heal;
-        heal._duration             = rules._healTime;
-        heal._listParticipantScale = rules._listHealScale;
-        heal._gradeBonus           = rules._skillCheckBonus;
-        heal._skillCheckInterval   = rules._healSkillCheckInterval;
-        heal._skillCheckLeadTime   = rules._skillCheckLeadTime;
-        heal._skillCheckPenalty    = rules._skillCheckFailPenalty;
-        heal._maxParticipants      = rules._healMaxParticipants;
+        heal._duration             = rules._heal._time;
+        heal._listParticipantScale = rules._heal._listScale;
+        heal._gradeBonus           = rules._skillCheck._bonus;
+        heal._skillCheckInterval   = rules._heal._skillCheckInterval;
+        heal._skillCheckLeadTime   = rules._skillCheck._leadTime;
+        heal._skillCheckPenalty    = rules._skillCheck._failPenalty;
+        heal._maxParticipants      = rules._heal._maxHealers;
 
         HorrorSurvivor survivor;
         survivor._vitality.initialize( vitality );
@@ -186,7 +186,7 @@ namespace sw
             return -1;
         const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         InteractionConfig            config;
-        config._duration        = rules._gateOpenTime;
+        config._duration        = rules._endgame._gateTime;
         config._maxParticipants = 1;
         HorrorGate gate;
         gate._position    = float3{ position._x, 0.0f, position._z };

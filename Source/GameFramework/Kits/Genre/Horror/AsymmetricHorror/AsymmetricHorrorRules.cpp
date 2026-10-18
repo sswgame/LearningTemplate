@@ -2,11 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 
-#include "Core/Math/MathUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -14,28 +16,42 @@ namespace sw
     {
         struct AsymmetricHorrorRulesInternal
         {
-            static constexpr uint32 kMaxScaleCount = 8;
-
-            /** @brief "1,1.7,2.1" 을 읽습니다. 비어 있으면 @p outListScale 을 그대로 둡니다. */
-            static void readScales( const XMLNode& node, vector<float32>& outListScale )
+            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
+            template <typename TDef>
+            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
             {
-                const string_view text = node.getAttributeText( "scales" );
-                if ( text.empty() )
-                    return;
-                float32      arrScale[kMaxScaleCount] = {};
-                const uint32 count                    = GameDataXML::parseFloats( text, arrScale, kMaxScaleCount );
-                outListScale.clear();
-                for ( uint32 index = 0; index < count; ++index )
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outSetting = def;
+                return true;
+            }
+
+            /** @brief `scales` 가 있는 설정 원소를 읽습니다. `scales="1,1.7,2.1"` 는 적었으면 모두 0 이상의 수여야 합니다(적지 않으면 빈 목록). */
+            template <typename TDef>
+            [[nodiscard]] static bool readScaledSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
+            {
+                TDef def;
+                bool bValid = GameDataXML::readFields( node, def, sourceName, { "scales" } );
+                StringUtil::forEachToken( node.getAttributeText( "scales" ), ",; ", [&]( string_view token )
                 {
-                    outListScale.push_back( MathUtil::max( 0.0f, arrScale[index] ) );
-                }
+                    float32    scale  = 0.0f;
+                    const bool bScale = GameDataXML::parseNumber( token, scale ) && scale >= 0.0f;
+                    if ( bScale )
+                        def._listScale.push_back( scale );
+                    else
+                    {
+                        SW_LOG_ERROR( "%#: <%# scales> has '%#' - needs numbers of 0 or more", sourceName, node.getName(), token );
+                        bValid = false;
+                    }
+                } );
+                if ( bValid )
+                    outSetting = def;
+                return bValid;
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
     SW_LOG_CALLER( "AsymmetricHorrorRulesCatalog" );
 
     AsymmetricHorrorRulesCatalog::AsymmetricHorrorRulesCatalog()
@@ -59,124 +75,92 @@ namespace sw
 
     uint32 AsymmetricHorrorRulesCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        AsymmetricHorrorRules& rules = _rules;
-        rules._survivorSpeed         = MathUtil::max( 0.1f, root.getAttributeFloat( "survivorSpeed", rules._survivorSpeed ) );
-        rules._crawlSpeed            = MathUtil::max( 0.0f, root.getAttributeFloat( "crawlSpeed", rules._crawlSpeed ) );
-        rules._hitHasteScale         = MathUtil::max( 1.0f, root.getAttributeFloat( "hitHasteScale", rules._hitHasteScale ) );
-        rules._hitHasteTime          = MathUtil::max( 0.0f, root.getAttributeFloat( "hitHasteTime", rules._hitHasteTime ) );
-        rules._bleedoutTime          = MathUtil::max( 0.1f, root.getAttributeFloat( "bleedoutTime", rules._bleedoutTime ) );
-        rules._interactRange         = MathUtil::max( 0.1f, root.getAttributeFloat( "interactRange", rules._interactRange ) );
-        rules._generatorsRequired    = MathUtil::max( 1, root.getAttributeInt( "generatorsRequired", rules._generatorsRequired ) );
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        AsymmetricHorrorRules rules;
+        if ( GameDataXML::readFields( root, rules, sourceName ) )
+            _rules = rules;
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+        {
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( loadElement( node, name, sourceName ) == false )
+                SW_LOG_ERROR( "%#: <%#> was not loaded (see above)", sourceName, name );
+        }
+        if ( _catalogKiller.isEmpty() )
+            SW_LOG_ERROR( "%#: no <Killer> - the rules need at least one", sourceName );
+        return static_cast<uint32>( _catalogKiller.getAll().size() );
+    }
 
-        if ( const XMLNode node = root.findChild( "Generator" ) )
+    bool AsymmetricHorrorRulesCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        using Internal = AsymmetricHorrorRulesInternal;
+        const auto is  = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        if ( is( "Generator" ) )
+            return Internal::readScaledSetting( node, sourceName, _rules._generator );
+        if ( is( "Heal" ) )
+            return Internal::readScaledSetting( node, sourceName, _rules._heal );
+        if ( is( "SkillCheck" ) )
+            return loadSkillCheck( node, sourceName );
+        if ( is( "Hook" ) )
+            return Internal::readSetting( node, sourceName, _rules._hook );
+        if ( is( "Pallet" ) )
+            return Internal::readSetting( node, sourceName, _rules._pallet );
+        if ( is( "Window" ) )
+            return Internal::readSetting( node, sourceName, _rules._window );
+        if ( is( "Locker" ) )
+            return Internal::readSetting( node, sourceName, _rules._locker );
+        if ( is( "Endgame" ) )
+            return Internal::readSetting( node, sourceName, _rules._endgame );
+        if ( is( "Killer" ) )
         {
-            rules._repairTime               = MathUtil::max( 0.1f, node.getAttributeFloat( "time", rules._repairTime ) );
-            rules._repairMaxParticipants    = MathUtil::max( 1, node.getAttributeInt( "maxRepairers", rules._repairMaxParticipants ) );
-            rules._repairSkillCheckInterval = MathUtil::max( 0.0f, node.getAttributeFloat( "skillCheckInterval", rules._repairSkillCheckInterval ) );
-            rules._kickPenalty              = MathUtil::saturate( node.getAttributeFloat( "kickPenalty", rules._kickPenalty ) );
-            rules._kickRegression           = MathUtil::max( 0.0f, node.getAttributeFloat( "kickRegression", rules._kickRegression ) );
-            rules._skillCheckNoiseRadius    = MathUtil::max( 0.0f, node.getAttributeFloat( "noiseRadius", rules._skillCheckNoiseRadius ) );
-            AsymmetricHorrorRulesInternal::readScales( node, rules._listRepairScale );
-        }
-        if ( const XMLNode node = root.findChild( "Heal" ) )
-        {
-            rules._healTime               = MathUtil::max( 0.1f, node.getAttributeFloat( "time", rules._healTime ) );
-            rules._healMaxParticipants    = MathUtil::max( 1, node.getAttributeInt( "maxHealers", rules._healMaxParticipants ) );
-            rules._healSkillCheckInterval = MathUtil::max( 0.0f, node.getAttributeFloat( "skillCheckInterval", rules._healSkillCheckInterval ) );
-            AsymmetricHorrorRulesInternal::readScales( node, rules._listHealScale );
-        }
-        if ( const XMLNode node = root.findChild( "SkillCheck" ) )
-        {
-            rules._skillCheckLeadTime    = MathUtil::max( 0.0f, node.getAttributeFloat( "leadTime", rules._skillCheckLeadTime ) );
-            rules._skillCheckFailPenalty = MathUtil::saturate( node.getAttributeFloat( "failPenalty", rules._skillCheckFailPenalty ) );
-            _judge.loadFromNode( node );
-            rules._skillCheckBonus.clear();
-            for ( XMLNode window = node.findChild( "Window" ); window; window = window.findNextSibling( "Window" ) )
-            {
-                const utf8* pGrade = window.findAttribute( "grade" );
-                if ( pGrade != nullptr )
-                    rules._skillCheckBonus.setValue( hashed_string( pGrade ), window.getAttributeFloat( "bonus", 0.0f ) );
-            }
-        }
-        if ( const XMLNode node = root.findChild( "Hook" ) )
-        {
-            rules._hookStageTime  = MathUtil::max( 0.1f, node.getAttributeFloat( "stageTime", rules._hookStageTime ) );
-            rules._maxHookStage   = MathUtil::max( 1, node.getAttributeInt( "stages", rules._maxHookStage ) );
-            rules._struggleGrace  = MathUtil::max( 0.0f, node.getAttributeFloat( "struggleGrace", rules._struggleGrace ) );
-            rules._wiggleTime     = MathUtil::max( 0.1f, node.getAttributeFloat( "wiggleTime", rules._wiggleTime ) );
-            rules._wiggleStunTime = MathUtil::max( 0.0f, node.getAttributeFloat( "wiggleStunTime", rules._wiggleStunTime ) );
-        }
-        if ( const XMLNode node = root.findChild( "Pallet" ) )
-        {
-            rules._palletStunTime  = MathUtil::max( 0.0f, node.getAttributeFloat( "stunTime", rules._palletStunTime ) );
-            rules._palletStunRange = MathUtil::max( 0.0f, node.getAttributeFloat( "stunRange", rules._palletStunRange ) );
-            rules._palletBreakTime = MathUtil::max( 0.0f, node.getAttributeFloat( "breakTime", rules._palletBreakTime ) );
-        }
-        if ( const XMLNode node = root.findChild( "Window" ) )
-        {
-            rules._fastVaultTime       = MathUtil::max( 0.0f, node.getAttributeFloat( "fastTime", rules._fastVaultTime ) );
-            rules._mediumVaultTime     = MathUtil::max( rules._fastVaultTime, node.getAttributeFloat( "mediumTime", rules._mediumVaultTime ) );
-            rules._killerVaultTime     = MathUtil::max( 0.0f, node.getAttributeFloat( "killerTime", rules._killerVaultTime ) );
-            rules._fastVaultSpeedRatio = MathUtil::max( 0.0f, node.getAttributeFloat( "fastSpeedRatio", rules._fastVaultSpeedRatio ) );
-            rules._vaultNoiseRadius    = MathUtil::max( 0.0f, node.getAttributeFloat( "noiseRadius", rules._vaultNoiseRadius ) );
-            rules._windowBlockCount    = MathUtil::max( 1, node.getAttributeInt( "blockCount", rules._windowBlockCount ) );
-            rules._windowBlockTime     = MathUtil::max( 0.0f, node.getAttributeFloat( "blockTime", rules._windowBlockTime ) );
-        }
-        if ( const XMLNode node = root.findChild( "Locker" ) )
-            rules._lockerSearchTime = MathUtil::max( 0.0f, node.getAttributeFloat( "searchTime", rules._lockerSearchTime ) );
-        if ( const XMLNode node = root.findChild( "Endgame" ) )
-        {
-            rules._gateOpenTime       = MathUtil::max( 0.1f, node.getAttributeFloat( "gateTime", rules._gateOpenTime ) );
-            rules._collapseTime       = MathUtil::max( 0.1f, node.getAttributeFloat( "collapseTime", rules._collapseTime ) );
-            rules._collapseSlowScale  = MathUtil::max( 0.0f, node.getAttributeFloat( "slowScale", rules._collapseSlowScale ) );
-            rules._hatchSurvivorCount = MathUtil::max( 0, node.getAttributeInt( "hatchRemaining", rules._hatchSurvivorCount ) );
-        }
-
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Killer" ); node; node = node.findNextSibling( "Killer" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
             HorrorKillerDef killer;
-            killer._id                 = hashed_string( pID );
-            const utf8* pName          = node.findAttribute( "name" );
-            killer._name               = pName != nullptr ? pName : pID;
-            killer._speedRatio         = MathUtil::max( 0.1f, node.getAttributeFloat( "speedRatio", killer._speedRatio ) );
-            killer._lungeRange         = MathUtil::max( 0.1f, node.getAttributeFloat( "lungeRange", killer._lungeRange ) );
-            killer._lungeAngle         = MathUtil::clamp( node.getAttributeFloat( "lungeAngle", killer._lungeAngle ), 1.0f, 180.0f );
-            killer._hitCooldown        = MathUtil::max( 0.0f, node.getAttributeFloat( "hitCooldown", killer._hitCooldown ) );
-            killer._missCooldown       = MathUtil::max( 0.0f, node.getAttributeFloat( "missCooldown", killer._missCooldown ) );
-            killer._cooldownSpeedScale = MathUtil::max( 0.0f, node.getAttributeFloat( "cooldownSpeedScale", killer._cooldownSpeedScale ) );
-            killer._terrorRadius       = MathUtil::max( 0.0f, node.getAttributeFloat( "terrorRadius", killer._terrorRadius ) );
-            killer._abilityCooldown    = MathUtil::max( 0.0f, node.getAttributeFloat( "abilityCooldown", killer._abilityCooldown ) );
-            killer._carrySpeedScale    = MathUtil::max( 0.0f, node.getAttributeFloat( "carrySpeedScale", killer._carrySpeedScale ) );
-            (void)_catalogKiller.add( killer );
-            ++loadedCount;
+            if ( GameDataXML::readFields( node, killer, sourceName ) == false )
+                return false;
+            (void)_catalogKiller.add( killer ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+            return true;
         }
-        for ( XMLNode node = root.findChild( "Category" ); node; node = node.findNextSibling( "Category" ) )
+        if ( is( "Category" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID != nullptr )
-                _categoryCap.setValue( hashed_string( pID ), MathUtil::max( 0.0f, node.getAttributeFloat( "cap", 0.0f ) ) );
+            HorrorScoreCategoryDef category;
+            if ( GameDataXML::readFields( node, category, sourceName ) == false )
+                return false;
+            _categoryCap.setValue( category._id, category._cap );
+            return true;
         }
-        for ( XMLNode node = root.findChild( "Score" ); node; node = node.findNextSibling( "Score" ) )
+        if ( is( "Score" ) )
         {
-            const utf8* pAction   = node.findAttribute( "action" );
-            const utf8* pCategory = node.findAttribute( "category" );
-            if ( pAction == nullptr || pCategory == nullptr )
+            HorrorScoreRule rule;
+            if ( GameDataXML::readFields( node, rule, sourceName ) == false )
+                return false;
+            _listScoreRule.push_back( rule );
+            return true;
+        }
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool AsymmetricHorrorRulesCatalog::loadSkillCheck( const XMLNode& node, string_view sourceName )
+    {
+        HorrorSkillCheckDef skillCheck;
+        bool                bValid = GameDataXML::readFields( node, skillCheck, sourceName );
+        // 창의 판정 폭(early · late · score)은 기반 TimingJudge 가 읽고, 등급마다 더하는 진행량(bonus)은 여기서 읽는다.
+        for ( XMLNode window = node.findChild( "Window" ); window; window = window.findNextSibling( "Window" ) )
+        {
+            const std::optional<string> grade = window.readRequiredAttribute<string>( "grade" );
+            std::optional<float32>      bonus;
+            const bool                  bBonus = window.readOptionalAttribute( "bonus", bonus );
+            if ( grade.has_value() == false || bBonus == false )
             {
-                SW_LOG_WARNING( "%#: <Score> needs action and category - skipped", sourceName );
+                bValid = false;
                 continue;
             }
-            HorrorScoreRule rule;
-            rule._action   = hashed_string( pAction );
-            rule._category = hashed_string( pCategory );
-            rule._points   = node.getAttributeFloat( "points", 1.0f );
-            _listScoreRule.push_back( rule );
+            if ( bonus.has_value() )
+                skillCheck._bonus.setValue( hashed_string( grade->c_str() ), *bonus );
         }
-        if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Killer> - the rules need at least one", sourceName );
-        return loadedCount;
+        if ( bValid == false )
+            return false;
+        _judge.loadFromNode( node );
+        _rules._skillCheck = skillCheck;
+        return true;
     }
 } // namespace sw

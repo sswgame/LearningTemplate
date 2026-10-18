@@ -356,7 +356,7 @@ namespace sw
             return HorrorPuzzleResult::AlreadySolved;
         if ( _pInventory->hasItem( pLock->_keyItem ) == false )
             return HorrorPuzzleResult::MissingItem;
-        if ( pLock->_bConsumeKey == SW_TRUE )
+        if ( pLock->_bConsumeKey )
             (void)_pInventory->removeItem( pLock->_keyItem, 1 ); // 열쇠는 위의 hasItem 이 확인했다
         (void)markSolved( lockID, pLock->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::DoorUnlocked, lockID );
@@ -497,7 +497,7 @@ namespace sw
         {
             ++_wrongDeductionCount;
             loseSanity( pDeduction->_wrongSanity, deductionID );
-            if ( _pCatalog->getRules()._bClearLinksOnWrong == SW_TRUE )
+            if ( _pCatalog->getRules()._bClearLinksOnWrong )
                 _listClueLink.clear();
             pushEvent( SurvivalHorrorEvent::Kind::DeductionFailed, deductionID );
             return HorrorPuzzleResult::Wrong;

@@ -98,7 +98,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, RepairScalesWithHelpersAndPowersGates )
 {
     AsymmetricHorrorRulesCatalog catalog;
     SW_ASSERT_TRUE( loadRules( catalog ) );
-    SW_EXPECT_NEAR_EQUAL( catalog.getRules()._listRepairScale[1], 1.5f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( catalog.getRules()._generator._listScale[1], 1.5f, 0.001f );
     SW_ASSERT_NOT_NULL( catalog.findKiller( hashed_string( "trapper" ) ) );
 
     HorrorMatch match;
