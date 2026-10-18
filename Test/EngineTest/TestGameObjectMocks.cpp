@@ -22,24 +22,27 @@ namespace sw
     const TypeInfo* makeMockComponentTypeInfo( Component* ( *addComponent )(GameObject*), hashed_string shortName, hashed_string fqn, size_t size, hashed_string parentFqn )
     {
         // 테스트 로컬 TypeInfo (RTTI 없음). 생성 함수도 여기 실려 리플렉션 표에 오른다 — 이름으로 만드는 길이 코드젠 타입과 같다.
-        static mutex                                  s_mutex;
-        std::lock_guard<mutex>                        lock( s_mutex );
-        static unordered_map<hashed_string, TypeInfo> s_types;
-        auto                                          it = s_types.find( shortName );
-        if ( it != s_types.end() )
-            return &it->second;
+        // **값은 `unique_ptr` 로 둔다.** `sw::unordered_map` 은 밀집 배열이라 타입이 늘면 값이 옮겨진다. 값을 그대로 두면 앞서 돌려준 포인터
+        // (각 모의 타입의 `StaticType()` 가 정적 변수로 쥔다)가 매달린다(타입 500 개 벤치에서 버킷 하나가 사라졌다). 힙 객체의 주소는 옮겨지지 않는다.
+        static mutex                                              s_mutex;
+        std::lock_guard<mutex>                                    lock( s_mutex );
+        static unordered_map<hashed_string, unique_ptr<TypeInfo>> s_mapNameToType;
+        auto                                                      it = s_mapNameToType.find( shortName );
+        if ( it != s_mapNameToType.end() )
+            return it->second.get();
 
-        TypeInfo info{};
-        info._name               = shortName;
-        info._typeID             = static_cast<uint32>( shortName.getHash() );
-        info._fullyQualifiedName = fqn;
-        info._parentFQN          = parentFqn;
-        info._size               = size;
-        info._addComponent       = addComponent;
-        it                       = s_types.emplace( shortName, std::move( info ) ).first;
+        unique_ptr<TypeInfo> pInfo  = make_unique<TypeInfo>();
+        pInfo->_name                = shortName;
+        pInfo->_typeID              = static_cast<uint32>( shortName.getHash() );
+        pInfo->_fullyQualifiedName  = fqn;
+        pInfo->_parentFQN           = parentFqn;
+        pInfo->_size                = size;
+        pInfo->_addComponent        = addComponent;
+        const TypeInfo* pStableInfo = pInfo.get();
+        s_mapNameToType.emplace( shortName, std::move( pInfo ) );
         if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<TypeRegistry>().registerClass( it->second );
-        return &it->second;
+            engine::getSubsystem<TypeRegistry>().registerClass( *pStableInfo );
+        return pStableInfo;
     }
 
     /** @brief 모의 컴포넌트 TypeInfo(생성 함수 포함)를 리플렉션 표에 올립니다. */

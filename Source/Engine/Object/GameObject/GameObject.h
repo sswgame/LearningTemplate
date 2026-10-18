@@ -101,20 +101,12 @@ namespace sw
         /** @brief 소유 매니저를 반환합니다. */
         GameObjectManager* getManager() const { return _pOwnerManager; }
 
-        /** @brief 삭제 예정(묘비) 표시를 합니다. */
-        void markPendingDestroy();
-
         /**
-         * @brief 삭제 예정 표시를 **이 호출이 처음으로 했는지** 반환합니다.
-         * @details `isPendingDestroy()` 로 확인한 뒤 `markPendingDestroy()` 를 부르는 두 단계는 원자적이지
-         *          않다. 두 스레드가 그 사이를 동시에 통과하면 파괴 목록에 같은 포인터가 **두 번**
-         *          들어가고, 풀이 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 실행되므로
-         *          (총알 둘이 같은 적을 같은 프레임에 맞히는 경우처럼) 흔히 일어난다. 없애는 쪽은 반드시
-         *          이 함수가 `true` 를 반환한 스레드 **하나만** 진행해야 한다.
+         * @brief 삭제 예정인지 확인합니다.
+         * @details **삭제 예정 오브젝트의 컴포넌트는 항상 삭제 예정이다**(불변식). 표시는 `tryMarkPendingDestroy` 하나뿐이고 그 함수가 컴포넌트를 먼저
+         *          표시하며, 삭제 예정 오브젝트에 새로 붙는 컴포넌트는 삭제 예정으로 시작한다(`attachCreatedComponent`). 그래서 컴포넌트 목록을 도는 곳은
+         *          `pComp->isPendingDestroy()` 하나만 보면 되고, 소유 오브젝트(다른 메모리)를 다시 읽지 않는다.
          */
-        [[nodiscard]] bool tryMarkPendingDestroy();
-
-        /** @brief 삭제 예정인지 확인합니다. */
         bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }
 
         /**
@@ -338,12 +330,33 @@ namespace sw
             ComponentPoolEntry* _pPoolEntry{ nullptr };
         };
 
+        /**
+         * @brief 삭제 예정 표시를 **이 호출이 처음으로 했는지** 반환합니다. 표시하기 전에 모든 컴포넌트를 삭제 예정으로 표시합니다.
+         * @details `isPendingDestroy()` 로 확인한 뒤 표시하는 두 단계는 원자적이지 않다. 두 스레드가 그 사이를 동시에 통과하면 파괴 목록에 같은
+         *          포인터가 **두 번** 들어가고, 풀이 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 실행되므로(총알 둘이 같은 적을 같은 프레임에
+         *          맞히는 경우처럼) 흔히 일어난다. 없애는 쪽은 반드시 이 함수가 `true` 를 반환한 스레드 **하나만** 진행해야 한다.
+         *
+         *          **컴포넌트가 먼저다.** 컴포넌트 표시(release)가 오브젝트 표시보다 먼저라, 오브젝트가 삭제 예정인 것을 본(acquire) 스레드는 그
+         *          컴포넌트들이 삭제 예정인 것도 본다. 반대 순서면 그 사이에 다른 스레드의 순회(`GameObjectStore::forEachComponentOfType`)가
+         *          "오브젝트는 삭제 예정, 컴포넌트는 아님" 을 보게 되어 소유 오브젝트를 다시 읽어야 했다. 컴포넌트 표시는 몇 번 해도 같으므로
+         *          선점에 진 스레드가 먼저 표시해도 해가 없다. 저장소(`GameObjectStore::destroyObject`)만 부른다. 표시만 하고 파괴 목록에 넣지 않으면
+         *          오브젝트가 사라지지 않으므로 공개하지 않는다.
+         */
+        [[nodiscard]] bool tryMarkPendingDestroy();
         /** @brief 매니저가 구조 변경을 막고 있으면(병렬 틱 중) true 를 반환합니다. 매니저가 없으면 false 입니다. */
         bool isComponentMutationFrozen() const;
-        /** @brief 타입 `pTypeInfo` 의 풀(없으면 만듭니다)에서 슬롯 하나를, 풀을 만들 수 없으면 힙에서 `typeSize` 바이트를 잡습니다. 실패하면 빈 슬롯을 반환합니다. */
+        /**
+         * @brief 타입 `pTypeInfo` 의 풀(없으면 만듭니다)에서 슬롯 하나를, 풀을 만들 수 없으면 힙에서 `typeSize` 바이트를 잡습니다. 실패하면 빈 슬롯을 반환합니다.
+         * @details **해체 중인 오브젝트(소멸자 안)에는 잡지 않는다.** 오류를 남기고 빈 슬롯을 돌려 `addComponent` 가 nullptr 를 반환한다. 해체가 부르는
+         *          `onEndPlay` · `onUnregister` · `onDestroy` 에서 붙인 컴포넌트는 이미 비운 목록에 남아 파괴되지 않고, 버킷에 해제된 소유자를 가리킨 채
+         *          남는다(유니티 "game object is being destroyed" 와 같은 거절). 모든 붙이기(`addComponent`, 이름으로 붙이는 `addComponentTo`)가 생성 전에
+         *          이 함수를 지나므로 여기 하나에서 막는다.
+         */
         ComponentStorage allocateComponentStorage( const TypeInfo* pTypeInfo, size_t typeSize );
         /**
          * @brief 막 만든 컴포넌트를 이 오브젝트에 붙입니다. 소유자, 풀, 이름, 기본값, 목록, primary 캐시, 등록, 틱 표시를 처리합니다.
+         * @details 이 오브젝트가 삭제 예정이면 컴포넌트를 **삭제 예정으로 시작한다**(목록과 버킷에 넣기 전에). 오브젝트와 함께 파괴되며, 순회에 보이지 않는다
+         *          (유니티에서 `Destroy` 를 부른 같은 프레임의 `AddComponent` 와 같다). `isPendingDestroy` 의 불변식이 이것으로 성립한다.
          * @param bOverridesTick 타입이 `onTick` 을 오버라이드했는지 나타냅니다(`HasOnTickOverride_v`). 아니면 실행할 것이 없으므로 주 틱을 끕니다.
          */
         void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick );
@@ -420,6 +433,7 @@ namespace sw
         uint32 _tickPrerequisiteCount;
         /** @brief 틱 멤버십이 바뀌어 레지스트리의 더티 목록에 올라 있는지 나타냅니다. 워커에서 표시하므로 원자값입니다. */
         atomic<uint8> _bTickDirty;
+        bool          _bBeingDestroyed; ///< 소멸자 안이다. 컴포넌트를 새로 붙이지 않는다(`allocateComponentStorage`). 소유 스레드만 읽고 쓴다
         /**
          * @brief 형제 사이의 표시 순서입니다(`getSiblingIndex`). 클래스 끝의 꼬리 패딩에 들어가 오브젝트 크기를 늘리지 않으므로, 앞쪽으로 옮기지 않는다.
          */

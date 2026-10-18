@@ -44,11 +44,9 @@ namespace sw
 
     bool CameraRegistry::isUsableCamera( const CameraComponent* pCamera )
     {
+        // 소유 오브젝트의 삭제 대기는 다시 보지 않는다. 그 오브젝트의 컴포넌트는 항상 삭제 대기다(`GameObject::isPendingDestroy`).
         const bool bUnusableCamera = pCamera == nullptr || pCamera->isPendingDestroy() || pCamera->isActive() == false;
-        if ( bUnusableCamera )
-            return false;
-        const GameObject* pOwner = pCamera->getOwner();
-        return pOwner != nullptr && pOwner->isPendingDestroy() == false;
+        return bUnusableCamera == false && pCamera->getOwner() != nullptr;
     }
 
     CameraComponent* CameraRegistry::selectCamera( CameraRole role ) const

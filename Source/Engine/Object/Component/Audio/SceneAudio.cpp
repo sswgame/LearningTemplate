@@ -28,11 +28,9 @@ namespace sw
             /** @brief 켜져 있고 삭제 대기가 아닌 컴포넌트인지입니다. */
             static bool isUsable( const Component* pComponent )
             {
+                // 소유 오브젝트의 삭제 대기는 다시 보지 않는다. 그 오브젝트의 컴포넌트는 항상 삭제 대기다(`GameObject::isPendingDestroy`).
                 const bool bUnusableComponent = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isActive() == false;
-                if ( bUnusableComponent )
-                    return false;
-                const GameObject* pOwner = pComponent->getOwner();
-                return pOwner != nullptr && pOwner->isPendingDestroy() == false;
+                return bUnusableComponent == false && pComponent->getOwner() != nullptr;
             }
 
             /** @brief 지난 자리와 지금 자리로 속도를 측정합니다(한계로 묶음). 첫 프레임은 0 입니다. */

@@ -172,8 +172,9 @@ namespace sw
                         const bool      bInactiveComponent = pComp == nullptr || pComp->isPendingDestroy() || pComp->isActive() == false;
                         if ( bInactiveComponent )
                             continue;
+                        // 소유 오브젝트의 삭제 대기는 다시 보지 않는다. 그 오브젝트의 컴포넌트는 항상 삭제 대기다(`GameObject::isPendingDestroy`).
                         GameObject* pOwner = pComp->getOwner();
-                        if ( pOwner == nullptr || pOwner->isPendingDestroy() )
+                        if ( pOwner == nullptr )
                             continue;
                         threadState._pTickingObject = pOwner;
                         threadState._pTickWriter    = pOwner;

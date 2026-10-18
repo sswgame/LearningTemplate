@@ -359,8 +359,8 @@ namespace sw
             SW_LOG_WARNING( "attachToComponent: the parent belongs to another object manager (scene) - a hierarchy cannot span two scenes" );
             return false;
         }
-        const GameObject* pParentOwner = pParent->getOwner();
-        if ( pParent->isPendingDestroy() || ( pParentOwner != nullptr && pParentOwner->isPendingDestroy() ) )
+        // 부모 오브젝트의 삭제 대기는 다시 보지 않는다. 그 오브젝트의 컴포넌트는 항상 삭제 대기다(`GameObject::isPendingDestroy`).
+        if ( pParent->isPendingDestroy() )
             return false;
 
         // 컴포넌트 사슬의 순환.
@@ -373,6 +373,7 @@ namespace sw
         // 오브젝트 사슬의 순환. 오브젝트의 부모는 "primary 가 붙은 컴포넌트의 소유자" 라, 붙는 것이 소유자의 primary 일 때만 오브젝트의
         // 부모가 바뀐다. 소켓을 거치면 위의 컴포넌트 검사는 통과한다(A 의 primary → B 의 소켓, B 의 primary → A 의 소켓).
         const GameObject* pOwner            = getOwner();
+        const GameObject* pParentOwner      = pParent->getOwner();
         const bool        bWouldCreateCycle = pOwner != nullptr && pParentOwner != nullptr && pParentOwner != pOwner && pOwner->getPrimarySceneComponent() == this &&
                                        pParentOwner->isDescendantOf( pOwner );
         if ( bWouldCreateCycle )

@@ -154,6 +154,11 @@ namespace sw
         /**
          * @brief @p pToType 이나 그 파생 타입의 컴포넌트를 모두 방문합니다. 오브젝트를 훑지 않고 타입별 버킷(`ComponentPoolEntry`)을 돕니다.
          * @details 비용은 씬에 있는 정확한 타입 수 K 와 맞는 컴포넌트 수의 합이다. 삭제 대기 컴포넌트와 삭제 대기 오브젝트의 컴포넌트는 건너뛴다(오브젝트 순회와 같은 결과).
+         *          **컴포넌트의 표시 하나만 본다.** 삭제 대기 오브젝트의 컴포넌트는 항상 삭제 대기라서(`GameObject::isPendingDestroy` 의 불변식) 소유 오브젝트를
+         *          읽지 않는다. 그 읽기가 컴포넌트 풀과 다른 메모리를 건드려 이 순회를 등록형 목록보다 4 ~ 6 배 느리게 했다(TypedComponents 8.4절).
+         *          병렬 틱의 `destroyObject` 는 저장소 잠금 밖에서 표시하므로 이 순회와 겹칠 수 있다. 그때 표시 전에 읽은 컴포넌트는 방문하는데, 그것은
+         *          파괴가 방문 뒤에 일어난 것과 같은 답이다(옛 이중 검사도 같은 창이 있었다). 해체는 틱 뒤 게임 스레드의 지연 파괴에서 배타 잠금으로 하므로
+         *          방문한 포인터는 콜백 동안 유효하다.
          *          **순서는 약속하지 않는다.** 버킷은 타입이 처음 나온 순서, 버킷 안은 추가 순서지만 제거가 마지막 원소를 빈 자리로 옮긴다.
          *          런타임 `TypeInfo` 로 부를 수 있으므로 타입을 템플릿으로 모르는 곳(인스펙터 선택기)도 쓴다. @p pToType 이 nullptr 이면 아무것도 방문하지 않는다.
          * @note `forEachGameObject` 와 같이 공유 잠금과 `WalkScope` 안에서 콜백을 부른다. 콜백 안에서 구조를 바꾸면 안 된다.
@@ -171,7 +176,10 @@ namespace sw
                     continue;
                 for ( Component* pComp : pEntry->_listComponent )
                 {
-                    if ( pComp->isPendingDestroy() || pComp->getOwner()->isPendingDestroy() )
+                    // Debug 에서만 불변식을 확인한다. 소유자를 **먼저** 읽어야 한다. 컴포넌트 표시가 오브젝트 표시보다 먼저라, 오브젝트가 삭제 대기인 것을
+                    // 본 뒤에는 컴포넌트도 삭제 대기로 보인다. 순서를 바꾸면 그 사이에 표시한 다른 스레드 때문에 거짓으로 걸린다.
+                    SW_ASSERT( pComp->getOwner()->isPendingDestroy() == false || pComp->isPendingDestroy() );
+                    if ( pComp->isPendingDestroy() )
                         continue;
                     func( pComp );
                 }

@@ -243,6 +243,7 @@ namespace sw
         int32*                 _pUnregisterCount{ nullptr }; ///< 해제 콜백 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
         int32*                 _pDestroyCount{ nullptr };
         MockCallbackComponent* _pSiblingToRemoveOnUnregister{ nullptr }; ///< 설정되면 해제 콜백이 이 형제를 곧바로 지운다(한 번)
+        int32*                 _pAddOnUnregisterResult{ nullptr };       ///< 설정되면 해제 콜백이 소유 오브젝트에 컴포넌트를 붙여 본다. 붙었으면 1, 거절되면 0 을 적는다
 
         /** @brief 변경된 프로퍼티 이름을 기록합니다. */
         virtual void onPropertyChanged( hashed_string propertyName ) override
@@ -263,6 +264,9 @@ namespace sw
                 pSibling->_pSiblingToRemoveOnUnregister = nullptr;
                 (void)getOwner()->removeComponent( pSibling ); // 지워졌는지는 테스트가 본다
             }
+            // 해체 콜백에서 붙이는 자리다. 해체 중인 오브젝트면 `addComponent` 가 거절해야 한다(붙으면 비운 목록에 남아 파괴되지 않는다).
+            if ( _pAddOnUnregisterResult != nullptr && getOwner() != nullptr )
+                *_pAddOnUnregisterResult = getOwner()->addComponent<MockMeshComponent>() != nullptr ? 1 : 0;
             Component::onUnregister( manager );
         }
 

@@ -7,6 +7,7 @@
  *          측정하는 것:
  *          - 오브젝트 1만 · 10만 × 정확한 타입 수 K = 50 · 200 · 500 장면에서 말단 타입과 기반 타입의 질의 한 번 비용(ns).
  *            같은 장면에서 기존 등록형 목록(`ComponentRegistry::getAll`)과 옛 방식(오브젝트 훑기 + `castTo`)도 함께 측정한다.
+ *            등록형 목록에 삭제 대기 검사를 더한 두 가지(컴포넌트 표시 하나 · 컴포넌트와 소유 오브젝트 둘)로 검사의 몫을 가른다.
  *          - 오브젝트 하나를 만들고 지우는 비용(버킷 넣기 · 빼기의 배타 잠금 두 번이 든다)과, 경합 없는 `std::shared_mutex` 배타 잠금 한 쌍의 비용.
  *          - `sizeof( Component )`.
  *
@@ -16,8 +17,9 @@
  *          코드젠 파서가 템플릿 인스턴스마다 `TypeInfo` 를 만들지는 않으므로, 실제 게임 코드에서 템플릿 컴포넌트를 쓰려면 인스턴스마다 이름 있는 타입이 필요하다.
  *
  *          교훈:
- *          - `makeMockComponentTypeInfo` 의 포인터를 담아 두면 안 된다. 그 캐시는 밀집 배열 해시맵(`sw::unordered_map`)이라 타입이 늘면 값이 옮겨지고
- *            앞서 준 포인터가 매달린다(타입 500 개에서 버킷 하나가 사라지고 `isDerivedFrom` 이 죽었다). 그래서 레지스트리의 고정 주소를 쓴다.
+ *          - 타입 표의 값 주소를 오래 쥐려면 그 주소가 고정이어야 한다. 처음에는 `makeMockComponentTypeInfo` 의 캐시가 밀집 배열 해시맵(`sw::unordered_map`)의
+ *            값을 그대로 담아, 타입이 늘면 값이 옮겨지고 앞서 준 포인터가 매달렸다(타입 500 개에서 버킷 하나가 사라지고 `isDerivedFrom` 이 죽었다).
+ *            그 캐시는 이제 `unique_ptr` 값이다. 여기서는 리플렉션 표(`TypeRegistry::registerClass`)의 고정 주소를 쓴다.
  *          - 접기 식(fold)은 인자 500 개에서 clang 의 식 중첩 한도(256)에 걸린다. 중괄호 목록의 팩 전개로 등록한다.
  *          - `REFLECT_BODY` 타입을 익명 네임스페이스에 두면 `swReflectSelf` 가 쓰이지 않는다는 경고가 난다. 모의 컴포넌트처럼 `sw` 에 둔다.
  *          - `ComponentRegistry` 를 기반 타입으로 등록하면 `add` 의 중복 검사와 순서를 지키는 `remove` 가 목록 길이에 비례해, 오브젝트 10만에서
@@ -305,7 +307,23 @@ SW_TEST_CASE( TypedComponentBenchTest, BucketQueryByObjectAndTypeCount )
             } );
             SW_EXPECT_EQUAL( leafCount, registryLeaf._visitCount );
 
-            // 등록형 목록에 버킷 순회와 같은 삭제 대기 검사(컴포넌트 · 소유 오브젝트)를 더한다. 둘의 차가 어디서 오는지 가른다.
+            // 등록형 목록에 지금 버킷 순회가 하는 삭제 대기 검사(컴포넌트 표시 하나)를 더한다.
+            const QueryResult registryLeafComponentChecked = measureQuery( makeQueryLabel( objectCount, typeCount, "registry leaf + component check" ).c_str(), leafCount,
+                                                                           [&constManager]()
+            {
+                QueryResult result{};
+                for ( const BenchLeafComponent* pComp : constManager.getComponentRegistry().getAll<BenchLeafComponent>() )
+                {
+                    if ( pComp->isPendingDestroy() )
+                        continue;
+                    ++result._visitCount;
+                    result._payloadSum += pComp->_payload;
+                }
+                return result;
+            } );
+            SW_EXPECT_EQUAL( leafCount, registryLeafComponentChecked._visitCount );
+
+            // 7-c 의 첫 버킷 순회가 하던 검사(컴포넌트 · 소유 오브젝트)다. 위와 견주어 소유 오브젝트 읽기의 몫을 같은 바이너리에서 가른다(TypedComponents 8.4절).
             const QueryResult registryLeafChecked = measureQuery( makeQueryLabel( objectCount, typeCount, "registry leaf + pending checks" ).c_str(), leafCount,
                                                                   [&constManager]()
             {

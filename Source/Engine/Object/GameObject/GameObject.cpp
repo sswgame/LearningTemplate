@@ -63,7 +63,7 @@ namespace sw
     static_assert( sizeof( GameObject ) <=
                        ( sizeof( void* ) + sizeof( uint64 ) + sizeof( hashed_string ) + sizeof( GameObjectManager* ) + sizeof( atomic<bool> ) * 3 + sizeof( uint32 ) +
                          sizeof( vector<Component*, InlineAllocator<Component*, 4>> ) + sizeof( atomic<Component*> ) + sizeof( TickItemList ) +
-                         sizeof( uint32 ) * TickRegistry::kGroupCount + sizeof( uint32 ) + sizeof( atomic<uint8> ) + sizeof( uint16 ) + alignof( GameObject ) - 1 ) /
+                         sizeof( uint32 ) * TickRegistry::kGroupCount + sizeof( uint32 ) + sizeof( atomic<uint8> ) + sizeof( bool ) + sizeof( uint16 ) + alignof( GameObject ) - 1 ) /
                            alignof( GameObject ) * alignof( GameObject ),
                    "GameObject has padding between fields (or a field was added without adding its size here)" );
 
@@ -87,6 +87,7 @@ namespace sw
         , _arrTickIndex{ TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList }
         , _tickPrerequisiteCount{ 0 }
         , _bTickDirty{ SW_FALSE }
+        , _bBeingDestroyed{ false }
         , _siblingIndex{ 0 }
     {
     }
@@ -96,6 +97,8 @@ namespace sw
      */
     GameObject::~GameObject()
     {
+        // 지금부터 컴포넌트를 붙이지 않는다. 아래 해체 콜백이 붙이면 비운 목록에 남아 파괴되지 않는다(`allocateComponentStorage`).
+        _bBeingDestroyed = true;
         // 컴포넌트를 파괴하기 전에 부모-자식 계층 연결을 끊는다(자식 오브젝트들은 루트가 되어 살아남는다).
         detachFromParent();
 
@@ -115,6 +118,7 @@ namespace sw
         }
 
         clearComponents();
+        SW_ASSERT( _listComponent.empty() );
 
         // 검증 결과는 이 오브젝트가 출처다. 오브젝트와 함께 사라진다(파괴 · 씬 언로드 · 매니저 소멸이 모두 여기를 지난다).
         ValidationIssueLog* const pIssueLog = ValidationIssueLog::find();
@@ -173,13 +177,11 @@ namespace sw
         _pOwnerManager->destroyObject( this );
     }
 
-    void GameObject::markPendingDestroy()
-    {
-        (void)tryMarkPendingDestroy(); // 이미 표시돼 있어도 된다
-    }
-
     bool GameObject::tryMarkPendingDestroy()
     {
+        // 컴포넌트를 먼저 표시한다(헤더 설명). 이미 표시된 것은 건너뛰는 `forEachComponent` 라 두 번째 호출은 아무것도 하지 않는다.
+        forEachComponent( []( Component* pComp )
+        { pComp->markPendingDestroy(); } );
         return _bIsPendingDestroy.exchange( true, std::memory_order_acq_rel ) == false;
     }
 
@@ -565,6 +567,11 @@ namespace sw
         ComponentStorage storage{};
         if ( _pOwnerManager == nullptr )
             return storage;
+        if ( _bBeingDestroyed )
+        {
+            SW_LOG_ERROR( "Cannot add component '%#' to '%#' while it is being destroyed", pTypeInfo != nullptr ? pTypeInfo->_name.c_str() : "?", getName().c_str() );
+            return storage;
+        }
 
         // 타입마다 항목(풀과 버킷) 하나다. 파괴가 그 풀로 돌아간다(`Component::_pPoolEntry`). 항목을 만들 수 없는 타입(리플렉션 없음)은 힙에서 잡는다.
         if ( pTypeInfo != nullptr )
@@ -604,6 +611,10 @@ namespace sw
             Component::_s_nextComponentID.fetch_max( restoredComponentID + 1, std::memory_order_relaxed );
         }
 
+        // 삭제 예정 오브젝트에 붙으면 삭제 예정으로 시작한다(목록 · 버킷에 넣기 전에). "삭제 예정 오브젝트의 컴포넌트는 삭제 예정" 이라
+        // 순회가 컴포넌트만 본다(`isPendingDestroy` 설명). 오브젝트를 파괴할 때 함께 해체되므로 지연 파괴 목록에는 넣지 않는다.
+        if ( isPendingDestroy() )
+            pComp->markPendingDestroy();
         _listComponent.push_back( pComp );
         // 오브젝트 목록에 넣는 바로 그 시점에 매니저의 타입별 목록(버킷)에도 넣는다. `onRegister` 안에서 씬을 찾는 코드가 둘 중 어느 순회로든 같은 답을 받는다.
         _pOwnerManager->registerTypedComponent( pComp );

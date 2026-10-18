@@ -374,16 +374,15 @@ namespace sw
         // 없애는 두 스레드가 나란히 통과해 파괴 목록에 같은 포인터가 두 번 들어가고
         // `_poolGameObject.destroy` 가 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 실행되므로
         // (총알 둘이 같은 적을 맞히는) 그 경우는 흔하다. 선점한 스레드만 진행한다.
+        // 컴포넌트 표시는 선점 안에서 오브젝트 표시보다 먼저 한다(`GameObject::tryMarkPendingDestroy`). 이 함수는 저장소 잠금 밖에서 돌고
+        // 다른 스레드의 순회(`forEachComponentOfType`)는 공유 잠금 안에서 컴포넌트 표시만 읽으므로, 그 순서가 순회의 답을 정한다(헤더 설명).
+        // 계층 활성은 다시 맞추지 않는다. 삭제 대기는 그 값의 입력이 아니다.
         if ( pObj->tryMarkPendingDestroy() == false )
             return;
 
         vector<GameObject*> listChildren;
         if ( bDestroyChildren )
             pObj->getChildren( listChildren );
-
-        // 계층 활성은 다시 맞추지 않는다. 삭제 대기는 그 값의 입력이 아니다.
-        pObj->forEachComponent( []( Component* pComp )
-        { pComp->markPendingDestroy(); } );
 
         if ( bDestroyChildren )
         {
@@ -539,6 +538,14 @@ namespace sw
         {
             if ( pObj == nullptr )
                 continue;
+#if defined( SW_DEBUG )
+            // 순회가 컴포넌트 표시만 보는 근거(`GameObject::isPendingDestroy` 의 불변식)를 파괴 직전에 확인한다. 깨졌으면 그 프레임 동안 순회가
+            // 삭제 예정 오브젝트의 컴포넌트를 방문했다.
+            for ( const Component* pComp : pObj->getComponents() )
+            {
+                SW_ASSERT( pComp == nullptr || pComp->isPendingDestroy() );
+            }
+#endif
             // 메모리를 해제하기 전에 레지스트리의 그룹 목록에서 뺀다. 제거한 컴포넌트 쪽은 소유 오브젝트가 표시되어 틱 전에 다시 만들어진다.
             _pTickRegistry->unregisterObject( pObj );
             _poolGameObject.destroy( pObj );
