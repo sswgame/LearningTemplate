@@ -354,7 +354,7 @@ namespace sw
         if ( bStatusProcs )
             applyStatus( foeSide, pMove->_status );
         if ( pMove->_statStages != 0 && _random.nextInt( 1, 100 ) <= pMove->_statChance )
-            applyStatChange( pMove->_statTarget == MonsterEffectTarget::Self ? side : foeSide, pMove->_stat, pMove->_statStages );
+            applyStatChange( pMove->_statTarget == MonsterEffectTarget::Self ? side : foeSide, pMove->_changedStat, pMove->_statStages );
     }
 
     void MonsterBattle::executeBall( float32 ballMultiplier )

@@ -111,10 +111,10 @@ namespace sw
         {
             const hashed_string      mutagenID    = getMutagen( group );
             const WitcherMutagenDef* pMutagen     = mutagenID.empty() ? nullptr : _pCatalog->findMutagen( mutagenID );
-            const bool               bSkipMutagen = pMutagen == nullptr || pMutagen->_stat.empty() || isGroupOpen( group ) == false;
+            const bool               bSkipMutagen = pMutagen == nullptr || pMutagen->_statID.empty() || isGroupOpen( group ) == false;
             if ( bSkipMutagen )
                 continue;
-            outStats.addValue( pMutagen->_stat, pMutagen->_value + static_cast<float32>( countMatches( group ) ) * pMutagen->_matchValue );
+            outStats.addValue( pMutagen->_statID, pMutagen->_value + static_cast<float32>( countMatches( group ) ) * pMutagen->_matchValue );
         }
     }
 
