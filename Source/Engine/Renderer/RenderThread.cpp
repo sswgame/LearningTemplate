@@ -447,12 +447,14 @@ namespace sw
             pFrameStream->beginRenderPass( gameViewPass );
         }
 
+        // 그래프가 이 프레임을 실제로 그렸는가. 그리지 않은 프레임(렌더러 준비 전, 주 시점이 없는 패킷)은 백버퍼를 아무도 건드리지 않았다.
+        bool bGraphDrew = false;
         if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
         {
             // 그래프 실행 바깥의 준비 작업(업로드 큐 정리 등)도 여기에 포함된다. 안쪽의
             // `RT.Graph.executeParallel` 만으로는 그 차이가 테이블에서 사라진다.
             SW_PROFILE_SCOPE( "RT.ExecutePacket" );
-            _pFrameRenderer->executePacket( _pDevice, packet );
+            bGraphDrew = _pFrameRenderer->executePacket( _pDevice, packet );
         }
 
         // 에디터가 게임 뷰 텍스처를 샘플링한다. 읽기 상태로 바꾼다(열려 있는 렌더 패스도 여기서 닫힌다).
@@ -490,7 +492,8 @@ namespace sw
             backbufferPass._arrColorTarget[0] = 0; // 0 = 백버퍼
             // 오프스크린 경로에서는 그래프가 게임 RT 에만 그렸으므로 백버퍼는 아직 아무도 건드리지 않았다.
             // 그래서 여기서 클리어한다. 백버퍼 경로에서는 그래프가 이미 그렸으므로 보존해야 한다.
-            backbufferPass._arrLoadOp[0]     = bOffscreen ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
+            // 그래프가 그리지 않은 프레임도 백버퍼는 받은 그대로(Vulkan 은 레이아웃 UNDEFINED)라 Load 로 열 수 없다 — 클리어한다.
+            backbufferPass._arrLoadOp[0]     = ( bOffscreen || bGraphDrew == false ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
             backbufferPass._arrClearColor[0] = packet._clearColor;
             pFrameStream->beginRenderPass( backbufferPass );
         }
