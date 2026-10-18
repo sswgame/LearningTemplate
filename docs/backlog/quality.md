@@ -2,9 +2,6 @@
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 빌드 속도, 간헐 실패 관찰의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `A-23` [결함] **Shipping `-L nogpu` 에서 합성 리그 테스트 둘이 `game/empty/rigs_raw/*.rig.json` 을 못 읽는다.** `ResourceDataSchemaTest.EveryResourceDataFileLoadsWithoutUnknownNames` ·
-  `SyntheticRigImportTest.RepresentativesImportAndBindTheirRig`(2026-10-18 `pixel2` Shipping 에서 확인, PixelTown 과 무관 — `rigbench` 병합 뒤 Shipping 을 돌리지 않았다). 원본 폴더(`rigs_raw`)가 Shipping 마운트에 없는 것으로 보인다(미확인).
-
 - `B-5` [검증대기] **`LoaderFuzzer` `Compression` 타임아웃은 고쳤고 퍼저 재확인과 씨앗이 남았다**(실행 38806424034). 원인은 헤더의 원본 크기(620 MB)를 압축 크기(0)와 견주지 않고 할당한 것이었다 —
   코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 `vector` 소멸 루프 생략으로 고쳤다(결정 기록 5-3, 2026-10-17). 퍼저는 리눅스 전용이라 로컬에서는 `CompressionTest.FuzzTimeoutInputIsRejectedBeforeAllocating` 이
   그 입력을 그대로 재현해 할당 전에 끊기는지(용량 0)만 본다. 남은 일: ① 다음 야간 퍼징에서 `Compression` 이 통과하는지 확인 ② 그 입력을 `Test/EngineTest/LoaderFuzzTargets.cpp` `seedCompression` 씨앗에 더하기

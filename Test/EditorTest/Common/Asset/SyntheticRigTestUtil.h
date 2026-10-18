@@ -47,7 +47,7 @@ namespace test
     }
 
     /**
-     * @brief `.glb` 하나를 임포트해 런타임 자산을 만듭니다. 클립은 임시 폴더에 쓰고(애니메이터가 폴더에서 읽는다), 리그는 옆 `.rig.json` 을 읽습니다.
+     * @brief `.glb` 하나를 임포트해 런타임 자산을 만듭니다. 클립은 임시 폴더에 쓰고(애니메이터가 폴더에서 읽는다), 리그는 옆 `.rig.json` 을 디스크에서 읽습니다.
      * @return 임포트 · 클립 쓰기 · 리그 읽기 가운데 하나라도 실패하면 false 입니다.
      */
     [[nodiscard]] inline bool loadSyntheticRig( const sw::string& glbPath, SyntheticRig& outRig )
@@ -68,8 +68,14 @@ namespace test
             if ( imported._clip.saveToFile( clipPath ) == false )
                 return false;
         }
+        // 리그도 `.glb` 처럼 그 옆 디스크 파일을 임포터처럼 파일로 읽는다. 둘 다 쿠킹에서 빠지는 원본(`rigs_raw`)이라 `ResourceIO` 로 읽으면 배포본(팩만 읽고
+        // 절대 경로의 낱개 읽기도 거절한다)에서 찾지 못한다. 한 경로에서 둘을 끌어내므로 임포트 입력과 리그 입력이 다른 곳을 볼 수 없다.
+        const sw::string rigPath = glbPath.substr( 0, glbPath.size() - 4 ) + ".rig.json";
+        sw::string       rigText;
+        if ( sw::FileUtil::readTextFile( rigPath, rigText ) == false )
+            return false;
         sw::shared_ptr<sw::RigAsset> rig = sw::make_shared<sw::RigAsset>();
-        if ( rig->loadFromResource( sw::string( kSyntheticRigFolder ) + "/" + outRig._stem + ".rig.json" ) == false )
+        if ( rig->parseJSON( rigText, rigPath ) == false )
             return false;
         outRig._rig = rig;
         return true;
