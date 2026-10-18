@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -12,7 +13,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"

@@ -10,6 +10,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -38,7 +39,6 @@
 #include "Engine/UI/World/WidgetComponent.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 namespace sw
 {

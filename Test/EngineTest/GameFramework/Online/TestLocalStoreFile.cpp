@@ -89,5 +89,11 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
     error.clear();
     SW_EXPECT_TRUE( LocalStoreFactory::createLocalStore( "UnitGame", settings, context, error ) == nullptr );
     SW_EXPECT_TRUE( error.find( "cloud" ) != string::npos );
-    SW_EXPECT_FALSE( LocalStoreFactory::registerBackend( LocalStoreFactory::kFileBackendName, nullptr ) );
+    {
+        // 기반 이름은 키트가 덮지 못한다 — 등록은 단언으로 멈추고 표에 오르지 않는다.
+        test::ScopedAssertCapture           assertCapture;
+        const LocalStoreBackendRegistration reserved{ LocalStoreFactory::kFileBackendName, nullptr };
+        if ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
 }

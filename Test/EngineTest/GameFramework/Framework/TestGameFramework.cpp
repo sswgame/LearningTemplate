@@ -10,6 +10,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
@@ -26,7 +27,6 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/TileMap/TileSetAsset.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 

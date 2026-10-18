@@ -4,6 +4,8 @@
 
 #include "Core/Container/unordered_map.h"
 
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.h"
+
 #include <sqlite3.h>
 
 namespace sw
@@ -257,4 +259,10 @@ namespace sw
         }
         return make_unique<SQLiteDriverInternal::SQLiteConnection>( pDatabase );
     }
+} // namespace sw
+
+namespace sw
+{
+    // 모듈이 로드되면 이 드라이버를 레지스트리에 올리고, 언로드되면 내린다.
+    const SQLDriverRegistration s_sqliteDriverRegistration{ SQLiteDriver::getInstance() };
 } // namespace sw

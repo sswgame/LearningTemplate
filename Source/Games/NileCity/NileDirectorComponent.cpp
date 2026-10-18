@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/InputManager.h"
@@ -19,7 +20,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"

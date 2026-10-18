@@ -2,7 +2,7 @@
  * @file SQLLocalSlotStorage.h
  * @brief 로컬 저장소 백엔드의 SQLite 구현입니다. 테이블 `sw_local_slot( slot, bytes, written_at_ms )` 을 쓰며, 쓰기는 upsert 문 하나로 처리해 SQLite 의 원자성에 맡깁니다.
  * @details 마이그레이션은 `Resource/common/sql/localstore/` 에 있다. 서버 저장소와는 다른 DB 이고 번호 체계도 다르다. DB 파일은 `<루트>/localstore.db` 이다.
- *          기반 계층의 `LocalStoreFactory` 에 "sqlite" 이름으로 등록한다. 이 키트를 쓰는 게임이 시작할 때 `registerLocalStoreBackend` 를 부르고, 종료할 때 `unregister…` 를 부른다.
+ *          기반 계층의 `LocalStoreFactory` 에 "sqlite" 이름으로 등록한다. 등록은 모듈 수명을 따른다(`.cpp` 의 정적 `LocalStoreBackendRegistration`).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -38,9 +38,6 @@ namespace sw
         LocalStoreResult eraseSlot( const string& slot ) override;
         LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) override;
 
-        /** @brief 기반 팩토리에 "sqlite" 백엔드를 등록하거나 해제합니다. */
-        [[nodiscard]] static bool registerLocalStoreBackend();
-        static void               unregisterLocalStoreBackend();
         /** @brief 팩토리가 부르는 생성 함수입니다. `<rootPath>/localstore.db` 를 엽니다. */
         static unique_ptr<ILocalSlotStorage> createForRoot( string_view rootPath, string& outError );
 

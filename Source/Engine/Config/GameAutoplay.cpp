@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/GameAutoplay.h"
+#include "Engine/Config/GameAutoplay.h"
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"

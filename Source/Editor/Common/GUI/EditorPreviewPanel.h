@@ -11,7 +11,7 @@
 #include "Editor/Common/GUI/EditorPreviewViewport.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 
-#include "Engine/Utility/CommandStack.h"
+#include "Engine/Scene/CommandStack.h"
 
 namespace sw
 {

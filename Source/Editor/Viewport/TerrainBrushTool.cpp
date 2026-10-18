@@ -19,12 +19,12 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include <cmath>
 #include <imgui.h>

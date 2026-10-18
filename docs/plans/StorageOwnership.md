@@ -49,7 +49,7 @@ LocalizedTextArena* const pArena = s_localizedTextArena.getOrCreate();
 | `AutomationStepRegistry::releaseUnusedStorage` | `Engine/Automation/AutomationStepRegistry.cpp` | ① | 등록한 모듈 | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
 | `AutomationProbes::releaseUnusedStorage` | `Engine/Automation/AutomationProbe.cpp` | ① | 등록한 모듈 | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
 | `DevCommandRegistry::releaseUnusedStorage` | `Core/Console/DevCommandRegistry.cpp` | ① | 등록한 모듈 | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
-| `GameAutoplay::unregisterAutoplay` 의 `shrinkToFit` | `Engine/Utility/GameAutoplay.cpp` | ① | 등록한 모듈 | 등록 해제 때(목록이 비면) | 이미 반응형 — 위 넷의 본보기 |
+| `GameAutoplay::unregisterAutoplay` 의 `shrinkToFit` | `Engine/Config/GameAutoplay.cpp` | ① | 등록한 모듈 | 등록 해제 때(목록이 비면) | 이미 반응형 — 위 넷의 본보기 |
 | `SceneTransformStorage::releaseStorage` | `Engine/Object/Component/SceneTransformStorage.cpp` | ① + ④ 검출 | 엔진 수명 범위(소멸자에서 남은 칸 경고) | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
 | `RHIRenderResource::releaseRegistryStorage` | `Engine/Graphics/RHI/RHIRenderResource.cpp` | ① + ④ 검출 | 엔진 수명 범위(소멸자에서 남은 등록 경고) | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
 | `ResourcePaths::clearPathCache` | `Engine/Resource/ResourcePaths.cpp` | ① | 엔진 수명 범위(`initialize` 의 비우기는 남는다) | `StaticStorageSubsystem::shutdownSubsystem`, `ResourcePaths::initialize` | 다음 단위 |

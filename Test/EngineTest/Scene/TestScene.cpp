@@ -28,12 +28,12 @@
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 

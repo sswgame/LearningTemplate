@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Utility/CommandStack.h"
+#include "Engine/Scene/CommandStack.h"
 
 namespace sw
 {

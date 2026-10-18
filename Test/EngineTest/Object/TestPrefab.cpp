@@ -10,10 +10,10 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/GameTimeScale.h"
+#include "Engine/Config/GameTimeScale.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Console/DevCommandRegistry.h"

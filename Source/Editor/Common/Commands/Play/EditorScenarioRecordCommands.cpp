@@ -16,8 +16,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Automation/ScenarioRecorder.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw::editor

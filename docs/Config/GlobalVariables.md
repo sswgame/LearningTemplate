@@ -93,6 +93,12 @@
 |---|---|---|---|---|---|
 | `gv_automationHashDump` | `int32` | `0` | 시험 | Scene.TransformHash 를 읽을 때 오브젝트마다 이름 · 위치를 로그로 (1=켜기, 결정성 진단) | [AutomationRunner.cpp](../../Source/Engine/Automation/AutomationRunner.cpp) |
 
+## `Source/Engine/Config`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_timeScale` | `float32` | `1.0` | 일반 | 게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤) | [GameTimeScale.cpp](../../Source/Engine/Config/GameTimeScale.cpp) |
+
 ## `Source/Engine/Destruction`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
@@ -241,12 +247,6 @@
 | `gv_upscaler` | `int32` | `0` | 일반 | 업스케일러 (0 끔, 사용자 설정 graphics.upscaler) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_userSettingsFile` | `string` | — | 시험 | 사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 (사용자 설정 graphics.viewDistance) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-
-## `Source/Engine/Utility`
-
-| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
-|---|---|---|---|---|---|
-| `gv_timeScale` | `float32` | `1.0` | 일반 | 게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤) | [GameTimeScale.cpp](../../Source/Engine/Utility/GameTimeScale.cpp) |
 
 ## `Source/GameFramework/Base`
 

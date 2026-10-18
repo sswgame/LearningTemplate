@@ -25,9 +25,9 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Utility/CommandStack.h"
 
 namespace sw
 {
