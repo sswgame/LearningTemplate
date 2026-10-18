@@ -10,6 +10,7 @@
 namespace sw
 {
     struct SceneDocument;
+    struct SceneEngineServices;
 
     /**
      * @class SceneCooker
@@ -22,6 +23,9 @@ namespace sw
      *
      *          `.scene.bin` 이 XML 문자열을 담으면 런타임이 엔티티마다 XML 을 다시 파싱합니다. 바이너리 상태는 엔티티당
      *          4254 ns -> 1602 ns 입니다.
+     *
+     *          엔진 서비스는 부르는 쪽이 묶음(`SceneEngineServices`)으로 넘깁니다 — 쿠킹용 씬도 런타임 씬과 같은 묶음으로 짓고, 전역 표를 다시 찾지 않습니다.
+     *          타입 표(`_pTypeRegistry`)가 비어 있으면 쿠킹하지 않고 실패합니다.
      */
     class SceneCooker
     {
@@ -36,7 +40,7 @@ namespace sw
          *          모르는 컴포넌트 타입(이 프로세스에 올라오지 않은 모듈의 것 · 이름이 바뀐 타입)은 `MissingComponent` 가 원문을 맡아 왕복을
          *          통과하므로 검증으로는 걸러지지 않습니다 — 그 수를 @p pOutMissingComponentCount 로 받아 쿠킹을 실패시킵니다(`cookAllScenes`).
          */
-        SW_API static uint32 cookEntityState( SceneDocument& inoutDoc, uint32* pOutMissingComponentCount = nullptr );
+        SW_API static uint32 cookEntityState( const SceneEngineServices& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount = nullptr );
 
         /**
          * @brief @p sourceRoot 아래의 모든 `*.scene.xml` 을 `<cookedDir>/<상대경로>/<이름>.scene.bin` 으로 쿠킹합니다(이름은 `AssetCookPath`).
@@ -52,7 +56,7 @@ namespace sw
          *          프리팹은 같은 실행에서 `PrefabCache::cookAllPrefabs` 가 쿠킹합니다. 실패를 세지 않으면 배포본이 그 씬을 열 때에야
          *          "Shipping requires cooked binary scene" 으로 멈춘다.
          */
-        SW_API static uint32 cookAllScenes( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
+        SW_API static uint32 cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
     };
 
 } // namespace sw

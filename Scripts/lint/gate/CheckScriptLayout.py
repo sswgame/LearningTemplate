@@ -7,7 +7,7 @@ Scripts/lint/gate/CheckScriptLayout.py
 이름만 보고 그 스크립트가 실패하는지 · 고쳐 쓰는지 · 찍기만 하는지 안다. 린트 폴더는 기반 클래스까지 본다 — `report/` 에 놓았는데
 `LintReport` 가 아니면 `--out` · `--preset` 같은 껍데기가 없고, `CheckReportsRun` · `py -3 -m Scripts report` 가 그것을 부를 수 없다.
 
-기반 클래스는 **import 없이** AST 로 본다(`class X(LintGate)`) — 게이트가 다른 스크립트를 import 하면 훅이 느려지고, 고장 난 파일이 이 게이트를 죽인다.
+기반 클래스는 **import 없이** AST 로 본다(`class X(LintGate)`, 기반 모듈이 정의한 중간 기반 `class X(BaselineSourceGate)` 도) — 게이트가 다른 스크립트를 import 하면 훅이 느려지고, 고장 난 파일이 이 게이트를 죽인다.
 
   python Scripts/lint/gate/CheckScriptLayout.py [--files <path> ...]
 """
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import functools
 import re
 import sys
 from dataclasses import dataclass
@@ -59,15 +60,35 @@ _kRule: tuple[FolderRule, ...] = (
 )
 
 
+def baseNameInternal(base: ast.expr) -> str:
+    """기반 식의 이름(맨 이름 또는 `x.이름`의 끝). 그 밖의 식은 빈 글."""
+    if isinstance(base, ast.Name):
+        return base.id
+    return base.attr if isinstance(base, ast.Attribute) else ""
+
+
+@functools.cache
+def collectAcceptedBasesInternal(baseClass: str) -> frozenset[str]:
+    """
+    `baseClass` 와, 그 클래스를 정의한 모듈(`Scripts/lint/<baseClass>.py`)이 그것을 상속해 정의한 중간 기반들(`BaselineSourceGate`).
+    중간 기반의 이름을 여기 따로 적지 않는다 — 기반 모듈이 정의하는 대로 따라간다. 모듈은 이 스크립트 옆에서 읽는다(자가 테스트의 임시 트리에는 없다).
+    """
+    tree = ast.parse((Path(__file__).resolve().parents[1] / f"{baseClass}.py").read_text(encoding="utf-8"))
+    setAccepted = {baseClass}
+    bGrew = True
+    while bGrew:
+        bGrew = False
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and node.name not in setAccepted and any(baseNameInternal(base) in setAccepted for base in node.bases):
+                setAccepted.add(node.name)
+                bGrew = True
+    return frozenset(setAccepted)
+
+
 def inheritsInternal(tree: ast.Module, baseClass: str) -> bool:
-    """모듈 수준 클래스 하나가 `baseClass`(맨 이름 또는 `x.baseClass`)를 바로 상속하는가."""
-    for node in tree.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        for base in node.bases:
-            if (isinstance(base, ast.Name) and base.id == baseClass) or (isinstance(base, ast.Attribute) and base.attr == baseClass):
-                return True
-    return False
+    """모듈 수준 클래스 하나가 `baseClass` 나 기반 모듈이 정의한 그 하위 기반을 바로 상속하는가."""
+    setAccepted = collectAcceptedBasesInternal(baseClass)
+    return any(isinstance(node, ast.ClassDef) and any(baseNameInternal(base) in setAccepted for base in node.bases) for node in tree.body)
 
 
 def definesNameInternal(tree: ast.Module, name: str) -> bool:

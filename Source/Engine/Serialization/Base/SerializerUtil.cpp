@@ -114,6 +114,7 @@ namespace sw
             /**
              * @brief `collectRangeErrors` 와 같은 칸을 같은 규칙으로 보되 글을 만들지 않고 첫 위반에서 멈춥니다. 읽기마다 도는 빠른 길입니다.
              * @details 범위를 선언하지 않은 숫자 칸은 값을 읽지 않습니다. 위반이 있을 때만 `collectRangeErrors` 가 경로가 붙은 글을 만듭니다.
+             *          범위는 저장 목적과 관계없이 모든 칸을 본다 — 중첩 타입 판정(`findNestedObjectType`)에 내장 핸들러 표만 쓰므로 저작 목적의 기본 문맥을 쓴다.
              */
             static bool isEveryValueWithinRange( const TypeInfo& typeInfo, const void* pInstance )
             {
@@ -129,7 +130,7 @@ namespace sw
                         const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
                         if ( bSequence == false )
                             continue;
-                        const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault() );
+                        const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                         const bool      bNumberRange = pElement == nullptr && prop._metadata.hasAllowedRange();
                         if ( pElement == nullptr && bNumberRange == false )
                             continue;
@@ -155,7 +156,7 @@ namespace sw
                             return false;
                         continue;
                     }
-                    const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, SerializeContext::getDefault() );
+                    const TypeInfo* pNested = SerializerUtil::findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                     if ( pNested != nullptr && isEveryValueWithinRange( *pNested, pValue ) == false )
                         return false;
                 }
@@ -600,6 +601,13 @@ namespace sw
 
 namespace sw
 {
+    void SerializerUtil::reportForbiddenProperty( const TypeInfo& owner, const PropertyInfo& prop )
+    {
+        SW_LOG_ERROR( "%#::%# is PROPERTY( RuntimeState ) but the authoring file writes it - the read fails. Rewrite the file without the field "
+                      "(authoring files never hold runtime state).",
+                      owner._fullyQualifiedName.c_str(), prop._name.c_str() );
+    }
+
     const TypeInfo* SerializerUtil::findNestedObjectType( hashed_string typeName, const SerializeContext& context )
     {
         if ( context.findTextWriter( typeName ) != nullptr )
@@ -1098,7 +1106,7 @@ namespace sw
                 if ( bSequence == false )
                     continue;
                 ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
-                const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault() );
+                const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                 const size_t               elementCount = pSequence->getSize( pValue );
                 // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
                 const PropertyAllowedRange range = prop._metadata.hasAllowedRange() ? prop._metadata.computeAllowedRange( pInstance ) : PropertyAllowedRange{};
@@ -1114,7 +1122,7 @@ namespace sw
                 }
                 continue;
             }
-            const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault() );
+            const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
             if ( pNested != nullptr )
             {
                 collectRangeErrors( *pNested, pValue, path, outListError );

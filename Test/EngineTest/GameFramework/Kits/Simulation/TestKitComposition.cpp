@@ -927,14 +927,14 @@ SW_TEST_CASE( KitCompositionTest, SaveFromAnotherRunRestoresBothKitsAndTheShared
 
     KitCompositionGameInstance instance;
     vector<uint8>              snapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     // 다른 실행의 세이브를 흉내 — 봉투 머리(매직 4 · 판 4) 뒤의 프로세스 표 8 바이트를 바꾼다(`GameInstanceBase::deserializeState`).
     SW_ASSERT_TRUE( 16 <= snapshot.size() );
     for ( size_t byteIndex = 8; byteIndex < 16; ++byteIndex )
     {
         snapshot[byteIndex] = static_cast<uint8>( snapshot[byteIndex] ^ 0xFFu );
     }
-    SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     pManager->mergePendingAdds();
     pManager->update( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
 
@@ -978,8 +978,8 @@ SW_TEST_CASE( KitCompositionTest, HotReloadSnapshotContinuesLikeAnUninterruptedR
         runCompositionTicks( *pManager, KitCompositionTestInternal::kHalfRunTicks );
         KitCompositionGameInstance instance;
         vector<uint8>              snapshot;
-        SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
-        SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+        SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
+        SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
         pManager->mergePendingAdds();
         pManager->update( 0.0f );
         runCompositionTicks( *pManager, KitCompositionTestInternal::kHalfRunTicks );
@@ -1071,13 +1071,13 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishSurviveSaveFromAnotherRun )
 
     LandCompositionGameInstance instance;
     vector<uint8>               snapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     SW_ASSERT_TRUE( 16 <= snapshot.size() );
     for ( size_t byteIndex = 8; byteIndex < 16; ++byteIndex )
     {
         snapshot[byteIndex] = static_cast<uint8>( snapshot[byteIndex] ^ 0xFFu ); // 다른 실행 — 프로세스 표를 바꾼다
     }
-    SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     pManager->mergePendingAdds();
     pManager->update( 0.0f );
 
@@ -1104,8 +1104,8 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishHotReloadContinuesLikeAnUninter
         runCompositionTicks( *pManager, KitCompositionTestInternal::kLandHalfRunTicks / 2 ); // 막사를 짓는 중
         LandCompositionGameInstance instance;
         vector<uint8>               snapshot;
-        SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
-        SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+        SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
+        SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
         pManager->mergePendingAdds();
         pManager->update( 0.0f );
         runCompositionTicks( *pManager, KitCompositionTestInternal::kLandHalfRunTicks );

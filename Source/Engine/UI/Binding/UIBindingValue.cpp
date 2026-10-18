@@ -136,7 +136,7 @@ namespace sw
 
             static UIBindingValue readOther( const PropertyInfo& leaf, const void* pOwner, const void*, int32 )
             {
-                UIBindingValue value = UIBindingValue::makeText( SerializerUtil::formatPropertyText( leaf, pOwner, SerializeContext::getDefault() ) );
+                UIBindingValue value = UIBindingValue::makeText( SerializerUtil::formatPropertyText( leaf, pOwner, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
                 value._kind          = UIBindingValueKind::Other;
                 return value;
             }
@@ -144,7 +144,7 @@ namespace sw
             {
                 if ( value._kind != UIBindingValueKind::Other && value._kind != UIBindingValueKind::Text )
                     return false;
-                const SerializeContext& context = SerializeContext::getDefault();
+                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
                 if ( SerializerUtil::formatPropertyText( leaf, pOwner, context ) == value._text )
                     return false;
                 return SerializerUtil::applyPropertyText( leaf, pOwner, value._text, context );

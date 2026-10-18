@@ -80,9 +80,9 @@ def isStale(lockDirectory: Path, now: float) -> bool:
     프로세스 번호가 재사용되면 살아 있다고 보아 안전한 쪽(놓지 않음)으로만 틀린다.
     """
     owner = readOwner(lockDirectory)
-    if owner is None:
+    if owner is None or "pid" not in owner:
         return now - lockDirectory.stat().st_mtime > kStaleSeconds
-    return not isProcessAlive(int(owner.get("pid", 0)))
+    return not isProcessAlive(int(owner["pid"]))
 
 
 def release(lockDirectory: Path, owner: str | None) -> bool:

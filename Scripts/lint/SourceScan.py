@@ -15,12 +15,16 @@
 
 **예외 기록.** 게이트는 `XxxGate.seeExemption` · `useExemption`(클래스 집합)을 부른다. 자식 프로세스의 집합은 부모로 오지 않으므로
 파일마다 집합을 비우고 부른 뒤 `FileFindings` 에 담아 돌려주고, 부모가 합쳐 게이트 클래스에 다시 넣는다.
+
+**추가한 줄.** 커밋 훅에서 이번 커밋이 추가한 줄만 세는 게이트는 그 범위를 `LineScope`(`parseAddedLines`)로 받는다 — 덩어리 머리 해석 ·
+병합 커밋 건너뛰기 · 기준선 비교를 게이트마다 베끼지 않는다(`LintGate.BaselineSourceGate`).
 """
 
 from __future__ import annotations
 
 import argparse
 import functools
+import re
 import sys
 import time
 from dataclasses import dataclass, field
@@ -31,6 +35,9 @@ from typing import Any, Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 from common import blankComments, blankCommentsAndLiterals, collectRepositoryFiles, flatMapInProcesses, resolveFileArguments  # noqa: E402
+
+#: `git diff -U0` 의 덩어리 머리 — 새 쪽 시작 줄과 줄 수(없으면 1).
+_kHunkRe = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
 
 @dataclass(eq=False)
@@ -192,6 +199,44 @@ def scanSourceGates(repositoryRoot: Path, listJob: list[tuple[Any, argparse.Name
     return listResult
 
 
+@dataclass(frozen=True)
+class LineScope:
+    """
+    줄 단위로 세는 게이트(`LintGate.BaselineSourceGate`)가 볼 줄의 범위 — 판정 단위를 게이트마다 다시 짓지 않게 형식으로 둔다.
+
+    - `mapAdded` 가 None 이면 파일 전체(전체 훑기 · `--whole-files`)
+    - 아니면 파일(저장소 기준 POSIX 경로) → 이번 커밋이 추가한 줄 번호(`git diff --cached -U0` 의 + 줄, `parseAddedLines`).
+      표에 없는 파일은 추가한 줄이 없다
+    """
+
+    mapAdded: dict[str, frozenset[int]] | None = None
+
+    def touches(self, relative: str, firstLine: int, lastLine: int) -> bool:
+        """`relative` 의 `firstLine` ~ `lastLine`(1 부터, 닫힌 구간)에 이 범위의 줄이 하나라도 있는지."""
+        if self.mapAdded is None:
+            return True
+        setAdded = self.mapAdded.get(relative, frozenset())
+        return any(number in setAdded for number in range(firstLine, lastLine + 1))
+
+
+def parseAddedLines(diffText: str) -> LineScope:
+    """`git diff --cached -U0` 출력 → 파일마다 추가된 줄의 `LineScope`."""
+    mapAdded: dict[str, set[int]] = {}
+    current = ""
+    for line in diffText.splitlines():
+        if line.startswith("+++ "):
+            current = line[6:] if line.startswith("+++ b/") else ""
+            if current:
+                mapAdded.setdefault(current, set())
+            continue
+        hunk = _kHunkRe.match(line)
+        if hunk and current:
+            start = int(hunk.group(1))
+            count = 1 if hunk.group(2) is None else int(hunk.group(2))
+            mapAdded[current].update(range(start, start + count))
+    return LineScope({relative: frozenset(setLine) for relative, setLine in mapAdded.items()})
+
+
 def joinFindings(listFindings: Iterable[FileFindings]) -> tuple[list[str], list[str]]:
     """파일마다의 위반 · 참고를 파일 순서대로 이어 붙입니다."""
     listViolation: list[str] = []
@@ -202,4 +247,5 @@ def joinFindings(listFindings: Iterable[FileFindings]) -> tuple[list[str], list[
     return listViolation, listNote
 
 
-__all__ = ["FileFindings", "SourceFile", "SourceScanResult", "SourceTarget", "collectSourceTargets", "joinFindings", "scanSourceGates"]
+__all__ = ["FileFindings", "LineScope", "SourceFile", "SourceScanResult", "SourceTarget", "collectSourceTargets", "joinFindings", "parseAddedLines",
+           "scanSourceGates"]

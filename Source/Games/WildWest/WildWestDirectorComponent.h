@@ -70,7 +70,7 @@ namespace sw
         string _westernDataPath;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Rider object (pawn with Mount Interaction)" )
         GameObjectHandle _player;
-        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the Ortho Camera Rig that follows the rider" )
+        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent that follows the rider" )
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "Control", DisplayName = "Whistle Button", Tooltip = "Intent button on the rider pawn that calls the horses" )
         hashed_string _whistleButton;

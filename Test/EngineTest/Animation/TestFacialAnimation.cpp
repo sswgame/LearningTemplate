@@ -302,7 +302,7 @@ SW_TEST_CASE( FacialAnimationTest, ExpressionsAndCurvesDriveMorphWeights )
 
     SW_EXPECT_TRUE( pFace->setExpressionWeight( hashed_string( "Happy" ), 1.0f ) );
     SW_EXPECT_FALSE( pFace->setExpressionWeight( hashed_string( "Anger" ), 1.0f ) );
-    manager.getAnimationSystem().evaluate( 0.5f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.5f );
     // Talk 클립은 일곱 타깃 모두의 커브를 싣는다 — 기대값은 표정 몫 + 그 커브다.
     const SkeletalAnimatorComponent* pAnimator = pUnit->getOwner()->getComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_NOT_NULL( pAnimator );
@@ -316,7 +316,7 @@ SW_TEST_CASE( FacialAnimationTest, ExpressionsAndCurvesDriveMorphWeights )
 
     // 표정을 내리면 다음 평가에서 빠진다(가중치는 프레임마다 새로 만든다).
     SW_EXPECT_TRUE( pFace->setExpressionWeight( hashed_string( "Happy" ), 0.0f ) );
-    manager.getAnimationSystem().evaluate( 0.1f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.1f );
     SW_EXPECT_NEAR_EQUAL( pAnimator->getCurveValue( hashed_string( "smile" ) ), TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
 }
 
@@ -333,7 +333,7 @@ SW_TEST_CASE( FacialAnimationTest, SpeechOpensTheMouthFromTrackOrAmplitude )
     LipSyncSettings settings;
     SW_ASSERT_TRUE( settings.loadFromResource( LipSyncSettings::kResourcePath ) );
     pFace->setLipSyncSettings( settings );
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
 
     VisemeTrack track;
     track._frameRate  = 10.0f;
@@ -388,7 +388,7 @@ SW_TEST_CASE( FacialAnimationTest, BlinkFollowsTheRigIntervals )
     float32       maxWeight   = 0.0f;
     for ( uint32 frame = 0; frame < 600; ++frame )
     {
-        manager.getAnimationSystem().evaluate( stepSeconds );
+        manager.getSubsystem<AnimationSystem>().evaluate( stepSeconds );
         const float32 left  = TestFacialAnimationInternal::getWeight( *pUnit, "blinkLeft" );
         const float32 right = TestFacialAnimationInternal::getWeight( *pUnit, "blinkRight" );
         SW_EXPECT_NEAR_EQUAL( left, right, 0.0f );
@@ -412,7 +412,7 @@ SW_TEST_CASE( FacialAnimationTest, GazeTurnsEyesTowardTheTargetWithinTheLimit )
     SkeletalMeshComponent*    pUnit = nullptr;
     FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit );
     SW_ASSERT_NOT_NULL( pFace );
-    AnimationSystem& system      = manager.getAnimationSystem();
+    AnimationSystem& system      = manager.getSubsystem<AnimationSystem>();
     const float3     forwardAxis = pFace->getFacialRig().getGaze()._forwardAxis;
 
     system.evaluate( 0.0f );
@@ -465,7 +465,7 @@ SW_TEST_CASE( FacialAnimationTest, AnimatorExpressionCurvesDriveExpressions )
     SkeletalMeshComponent*    pUnit = nullptr;
     FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit, "Grin", folder );
     SW_ASSERT_NOT_NULL( pFace );
-    manager.getAnimationSystem().evaluate( 0.5f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.5f );
     const SkeletalAnimatorComponent* pAnimator = pUnit->getOwner()->getComponent<SkeletalAnimatorComponent>();
     SW_ASSERT_NOT_NULL( pAnimator );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pAnimator->getCurveValue( hashed_string( "Happy" ) ), 0.0001f );

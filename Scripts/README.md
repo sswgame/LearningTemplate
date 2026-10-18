@@ -195,6 +195,7 @@ Scripts/
   │     │     ├── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음 · 티어 (`--apply` 는 티어 표 둘을 고쳐 쓴다)
   │     │     ├── RunCoreLayerGraph.py        # Core 폴더 간 include 그래프 · 묶음 · 거꾸로 가는 include(파일 단위)
   │     │     ├── RunFolderFileCount.py       # 너무 큰 평면 폴더 · 파일 하나짜리 폴더
+  │     │     ├── RunFunctionSize.py          # 함수마다 본문 줄 · 중첩 · return · 람다 줄 (`--group-depth` 는 영역별 수, 게이트 아님)
   │     │     ├── RunRepeatedConstants.py     # 같은 뜻이 여러 곳에 따로 적힌 상수 · 리터럴
   │     │     ├── RunBuildScriptInventory.py  # 빌드 스크립트 재고 — 죽은 CMake 함수 · 큰 CMake 파일 · 손 목록 · common 을 비켜 간 파이썬 호출
   │     │     ├── RunDiscardReasons.py        # (void) 로 버린 실패 가능 결과의 목록과 이유
@@ -229,7 +230,6 @@ Scripts/
   │     ├── ListBacklog.py            # 영역별 백로그를 상태 · 영역 · 번호로 골라 보인다(`py -3 -m Scripts backlog`, --id 는 항목 본문만)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MakeEditorTheme.py        # 에디터 테마 토큰(tokens.json) ↔ Figma 변수 · DTCG: import-figma · export-figma · check (`py -3 -m Scripts editor-theme`)
-  │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 테스트까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳

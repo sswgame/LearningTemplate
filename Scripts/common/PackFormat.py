@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import struct
 from dataclasses import dataclass
@@ -22,6 +23,9 @@ from .Paths import getProjectRoot, normalizePath
 
 #: 계약 파일 (저장소 기준 경로).
 kPackFormatConfigRelative = "Config/Engine/PackFormat.json"
+
+#: 팩 옆의 증분 쿠킹 기록(`<팩>.packrec`, `CookAssets.PackRecord`)의 접미사 — 쿠킹 상태라 패키지에 싣지 않는다(`MakePackage`).
+kPackRecordSuffix = ".packrec"
 
 #: 계약 파일의 타입 이름 → (struct 포맷 문자, 바이트 크기). C++ 타입 이름은 같은 철자를 쓴다.
 _kScalarType: dict[str, tuple[str, int]] = {
@@ -137,6 +141,8 @@ class PackFormatSpec:
     _mapCached: dict[Path, PackFormatSpec] = {}
 
     def __init__(self, spec: dict) -> None:
+        #: 계약 내용의 지문(키 순서를 맞춘 JSON 의 SHA-256) — 팩 증분 쿠킹의 키에 든다. 계약이 바뀌면 모든 팩을 다시 쓴다.
+        self.contractDigest: str = hashlib.sha256(json.dumps(spec, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
         self.magicText: str = str(spec["magic"])
         if len(self.magicText) != 4:
             raise ValueError(f"magic 은 4글자여야 합니다: {self.magicText}")

@@ -115,6 +115,12 @@ namespace sw
      */
     struct SW_API SchemaMigrateContext
     {
+        /** @brief 읽기의 직렬화 문맥(@p serializeContext)으로 만듭니다. 이관이 값을 옮기고 읽을 때 같은 문맥(목적 · 핸들러)을 씁니다. */
+        explicit SchemaMigrateContext( const SerializeContext& serializeContext )
+            : _serializeContext{ serializeContext }
+        {
+        }
+
         uint32                           _fromVersion{ 0 };
         uint32                           _toVersion{ 0 };
         void*                            _pInstance{ nullptr };
@@ -122,7 +128,7 @@ namespace sw
         void*                            _pLegacyInstance{ nullptr };
         const TypeInfo*                  _pLegacyTypeInfo{ nullptr };
         const vector<SchemaOrphanValue>* _pOrphans{ nullptr };
-        const SerializeContext*          _pSerializeContext{ nullptr };
+        const SerializeContext&          _serializeContext; ///< 읽기 문맥이다(필수 — 없으면 기본 문맥으로 대신하지 않는다)
 
         // ------------------------------------------------------------------------------
         // 3) orphan 조회와 현재 인스턴스에 적용

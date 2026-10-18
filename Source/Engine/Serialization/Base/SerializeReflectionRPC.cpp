@@ -201,7 +201,7 @@ namespace sw
         outEnvelope._netRole     = static_cast<uint8>( pFunc->_metadata._netRole );
         outEnvelope._bReliable   = pFunc->_metadata._bReliable;
 
-        const SerializeContext& serializeContext = SerializeContext::getDefault();
+        const SerializeContext& serializeContext = SerializeContext::getDefault( SerializePurpose::Snapshot );
         const uint32            count            = args.getCount();
         const uint8*            pCountBytes      = reinterpret_cast<const uint8*>( &count );
 
@@ -246,7 +246,7 @@ namespace sw
         }
 
         TaskArgs                unpacked;
-        const SerializeContext& serializeContext = SerializeContext::getDefault();
+        const SerializeContext& serializeContext = SerializeContext::getDefault( SerializePurpose::Snapshot );
         size_t                  offset{ 0 };
         if ( envelope._argumentBytes.size() < sizeof( uint32 ) )
             return {};

@@ -44,7 +44,8 @@ def parseWorktreeList(text: str) -> list[WorktreeEntry]:
             mapField[key] = value
         if "worktree" not in mapField:
             continue
-        branch = mapField.get("branch", "").removeprefix("refs/heads/") or "(detached)"
+        # `git worktree list --porcelain` 은 분리된 HEAD 에 branch 줄 대신 detached 줄을 쓴다.
+        branch = mapField["branch"].removeprefix("refs/heads/") if "branch" in mapField else "(detached)"
         listEntry.append(WorktreeEntry(path=Path(mapField["worktree"]), branch=branch))
     return listEntry
 

@@ -247,11 +247,11 @@ namespace sw
         return ( _pTypeRegistry != nullptr ) ? *_pTypeRegistry : engine::getSubsystem<TypeRegistry>();
     }
 
-    SerializeContext SerializeContext::deriveFromDefault()
+    SerializeContext SerializeContext::deriveFromDefault( SerializePurpose purpose )
     {
-        const SerializeContext& defaultContext = getDefault();
+        const SerializeContext& defaultContext = getDefault( purpose );
 
-        SerializeContext derived;
+        SerializeContext derived{ purpose };
         derived._pHandlerFallback = &defaultContext;
         // 표만 빌리고 **설정은 물려받는다**(`= getDefault()` 와 같은 동작).
         derived.setIgnoreCaseKeys( defaultContext.ignoresCaseKeys() );
@@ -260,11 +260,9 @@ namespace sw
         return derived;
     }
 
-    const SerializeContext& SerializeContext::getDefault()
+    SerializeContext SerializeContext::makeDefault( SerializePurpose purpose )
     {
-        static SerializeContext s_defaultContext = []()
-        {
-            SerializeContext context;
+        SerializeContext context{ purpose };
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SerializeContextInternal::regBuiltinBin<CppType>( context, #Canon );
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -273,84 +271,84 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
 
-            BinaryWriteFn strWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
-            {
-                BinaryStreamWriter writer{ listBuf };
-                writer.writeString( *static_cast<const string*>( pPtr ) );
-            };
+        BinaryWriteFn strWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
+        {
+            BinaryStreamWriter writer{ listBuf };
+            writer.writeString( *static_cast<const string*>( pPtr ) );
+        };
 
-            BinaryReadFn strReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-            {
-                BinaryStreamReader reader{ pData, size };
-                if ( reader.skip( offset ) == false )
-                    return false;
-                if ( reader.readString( *static_cast<string*>( pPtr ) ) == false )
-                    return false;
-                offset = reader.getOffset();
-                return true;
-            };
+        BinaryReadFn strReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
+        {
+            BinaryStreamReader reader{ pData, size };
+            if ( reader.skip( offset ) == false )
+                return false;
+            if ( reader.readString( *static_cast<string*>( pPtr ) ) == false )
+                return false;
+            offset = reader.getOffset();
+            return true;
+        };
 
-            context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteBin, strReadBin );
+        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteBin, strReadBin );
 
-            BinaryWriteFn hashedStrWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
-            {
-                BinaryStreamWriter writer{ listBuf };
-                writer.writeString( static_cast<const hashed_string*>( pPtr )->c_str() );
-            };
+        BinaryWriteFn hashedStrWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
+        {
+            BinaryStreamWriter writer{ listBuf };
+            writer.writeString( static_cast<const hashed_string*>( pPtr )->c_str() );
+        };
 
-            BinaryReadFn hashedStrReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-            {
-                BinaryStreamReader reader{ pData, size };
-                if ( reader.skip( offset ) == false )
-                    return false;
-                string_view text;
-                if ( reader.readStringView( text ) == false )
-                    return false;
-                *static_cast<hashed_string*>( pPtr ) = hashed_string( text.data(), static_cast<uint32>( text.size() ) );
-                offset                               = reader.getOffset();
-                return true;
-            };
+        BinaryReadFn hashedStrReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
+        {
+            BinaryStreamReader reader{ pData, size };
+            if ( reader.skip( offset ) == false )
+                return false;
+            string_view text;
+            if ( reader.readStringView( text ) == false )
+                return false;
+            *static_cast<hashed_string*>( pPtr ) = hashed_string( text.data(), static_cast<uint32>( text.size() ) );
+            offset                               = reader.getOffset();
+            return true;
+        };
 
-            context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteBin, hashedStrReadBin );
+        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteBin, hashedStrReadBin );
 
-            BinaryWriteFn atomicBoolWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
-            {
-                const uint8 flag = static_cast<const atomic<bool>*>( pPtr )->load() ? 1 : 0;
-                listBuf.push_back( flag );
-            };
-            BinaryReadFn atomicBoolReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-            {
-                if ( offset + sizeof( uint8 ) > size )
-                    return false;
-                static_cast<atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
-                offset += sizeof( uint8 );
-                return true;
-            };
-            context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWriteBin, atomicBoolReadBin );
+        BinaryWriteFn atomicBoolWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
+        {
+            const uint8 flag = static_cast<const atomic<bool>*>( pPtr )->load() ? 1 : 0;
+            listBuf.push_back( flag );
+        };
+        BinaryReadFn atomicBoolReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
+        {
+            if ( offset + sizeof( uint8 ) > size )
+                return false;
+            static_cast<atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
+            offset += sizeof( uint8 );
+            return true;
+        };
+        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWriteBin, atomicBoolReadBin );
 
-            BinaryWriteFn tagIDWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
-            {
-                const TagID&       tag  = *static_cast<const TagID*>( pPtr );
-                const utf8*        pStr = tag._pString != nullptr ? tag._pString : "";
-                BinaryStreamWriter writer{ listBuf };
-                writer.writeString( pStr );
-            };
-            BinaryReadFn tagIDReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-            {
-                BinaryStreamReader reader{ pData, size };
-                if ( reader.skip( offset ) == false )
-                    return false;
-                string_view text;
-                if ( reader.readStringView( text ) == false )
-                    return false;
-                if ( text.empty() )
-                    *static_cast<TagID*>( pPtr ) = TagID{};
-                else
-                    *static_cast<TagID*>( pPtr ) = TagID::request( text );
-                offset = reader.getOffset();
-                return true;
-            };
-            context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWriteBin, tagIDReadBin );
+        BinaryWriteFn tagIDWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
+        {
+            const TagID&       tag  = *static_cast<const TagID*>( pPtr );
+            const utf8*        pStr = tag._pString != nullptr ? tag._pString : "";
+            BinaryStreamWriter writer{ listBuf };
+            writer.writeString( pStr );
+        };
+        BinaryReadFn tagIDReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
+        {
+            BinaryStreamReader reader{ pData, size };
+            if ( reader.skip( offset ) == false )
+                return false;
+            string_view text;
+            if ( reader.readStringView( text ) == false )
+                return false;
+            if ( text.empty() )
+                *static_cast<TagID*>( pPtr ) = TagID{};
+            else
+                *static_cast<TagID*>( pPtr ) = TagID::request( text );
+            offset = reader.getOffset();
+            return true;
+        };
+        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWriteBin, tagIDReadBin );
 
 #define SW_BUILTIN_TEXT_none( Canon, CppType )
 #define SW_BUILTIN_TEXT_stoi( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
@@ -374,138 +372,145 @@ namespace sw
 #undef SW_BUILTIN_TEXT_stof
 #undef SW_BUILTIN_TEXT_stod
 
-            auto boolWrite = []( const void* pPtr )
-            { return *static_cast<const bool*>( pPtr ) ? "true" : "false"; };
-            // 불리언 글이 아니면 실패다(값은 그대로) — "ture" 가 조용히 false 가 되지 않게. 읽는 쪽이 고아 · 실패로 알린다.
-            auto boolRead = []( void* pPtr, string_view strView )
-            {
-                return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) );
-            };
-            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
+        auto boolWrite = []( const void* pPtr )
+        { return *static_cast<const bool*>( pPtr ) ? "true" : "false"; };
+        // 불리언 글이 아니면 실패다(값은 그대로) — "ture" 가 조용히 false 가 되지 않게. 읽는 쪽이 고아 · 실패로 알린다.
+        auto boolRead = []( void* pPtr, string_view strView )
+        {
+            return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) );
+        };
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
 
-            auto atomicBoolWrite = []( const void* pPtr )
-            { return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; };
-            auto atomicBoolRead = []( void* pPtr, string_view strView )
+        auto atomicBoolWrite = []( const void* pPtr )
+        { return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; };
+        auto atomicBoolRead = []( void* pPtr, string_view strView )
+        {
+            bool bValue = false;
+            if ( StringUtil::tryParseBool( strView, bValue ) == false )
+                return false;
+            static_cast<atomic<bool>*>( pPtr )->store( bValue );
+            return true;
+        };
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );
+
+        auto tagIDWrite = []( const void* pPtr ) -> string
+        {
+            const TagID& tag = *static_cast<const TagID*>( pPtr );
+            return tag._pString != nullptr ? string( tag._pString ) : string{};
+        };
+        auto tagIDRead = []( void* pPtr, string_view strView ) -> bool
+        {
+            string_view text = StringUtil::trim( strView );
+            if ( StringUtil::startsWith( text, "str:" ) )
+                text.remove_prefix( 4 );
+            if ( text.empty() )
             {
-                bool bValue = false;
-                if ( StringUtil::tryParseBool( strView, bValue ) == false )
-                    return false;
-                static_cast<atomic<bool>*>( pPtr )->store( bValue );
+                *static_cast<TagID*>( pPtr ) = TagID{};
                 return true;
-            };
-            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );
+            }
+            *static_cast<TagID*>( pPtr ) = TagID::request( text );
+            return true;
+        };
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWrite, tagIDRead );
 
-            auto tagIDWrite = []( const void* pPtr ) -> string
-            {
-                const TagID& tag = *static_cast<const TagID*>( pPtr );
-                return tag._pString != nullptr ? string( tag._pString ) : string{};
-            };
-            auto tagIDRead = []( void* pPtr, string_view strView ) -> bool
-            {
-                string_view text = StringUtil::trim( strView );
-                if ( StringUtil::startsWith( text, "str:" ) )
-                    text.remove_prefix( 4 );
-                if ( text.empty() )
-                {
-                    *static_cast<TagID*>( pPtr ) = TagID{};
-                    return true;
-                }
-                *static_cast<TagID*>( pPtr ) = TagID::request( text );
-                return true;
-            };
-            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWrite, tagIDRead );
+        TextWriteFn strWriteTxt = []( const void* pPtr )
+        { return string( static_cast<const string*>( pPtr )->c_str() ); };
+        TextReadFn strReadTxt = []( void* pPtr, string_view strView )
+        {
+            *static_cast<string*>( pPtr ) = string( SerializeContextInternal::stripQuotes( strView ) );
+            return true;
+        };
 
-            TextWriteFn strWriteTxt = []( const void* pPtr )
-            { return string( static_cast<const string*>( pPtr )->c_str() ); };
-            TextReadFn strReadTxt = []( void* pPtr, string_view strView )
-            {
-                *static_cast<string*>( pPtr ) = string( SerializeContextInternal::stripQuotes( strView ) );
-                return true;
-            };
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteTxt, strReadTxt );
 
-            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteTxt, strReadTxt );
+        TextWriteFn hashedStrWriteTxt = []( const void* pPtr )
+        { return string( static_cast<const hashed_string*>( pPtr )->c_str() ); };
+        TextReadFn hashedStrReadTxt = []( void* pPtr, string_view strView )
+        {
+            const string_view sv                 = SerializeContextInternal::unquote( strView );
+            *static_cast<hashed_string*>( pPtr ) = hashed_string( sv.data(), static_cast<uint32>( sv.size() ) );
+            return true;
+        };
 
-            TextWriteFn hashedStrWriteTxt = []( const void* pPtr )
-            { return string( static_cast<const hashed_string*>( pPtr )->c_str() ); };
-            TextReadFn hashedStrReadTxt = []( void* pPtr, string_view strView )
-            {
-                const string_view sv                 = SerializeContextInternal::unquote( strView );
-                *static_cast<hashed_string*>( pPtr ) = hashed_string( sv.data(), static_cast<uint32>( sv.size() ) );
-                return true;
-            };
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteTxt, hashedStrReadTxt );
 
-            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteTxt, hashedStrReadTxt );
+        auto packedWrite = []( const void* pPtr ) -> string
+        {
+            const uint64 packed = static_cast<const SlotHandle*>( pPtr )->packed();
+            return sw::to_string( packed );
+        };
+        auto packedRead = []( void* pPtr, string_view strView ) -> bool
+        {
+            uint64 packed{ 0 };
+            if ( StringUtil::parseUint64( StringUtil::trim( strView ), packed, 10 ) == false )
+                return false;
+            *static_cast<SlotHandle*>( pPtr ) = SlotHandle::fromPacked( packed );
+            return true;
+        };
+        context.registerTextHandler( hashed_string( "SlotHandle" ), packedWrite, packedRead );
 
-            auto packedWrite = []( const void* pPtr ) -> string
-            {
-                const uint64 packed = static_cast<const SlotHandle*>( pPtr )->packed();
-                return sw::to_string( packed );
-            };
-            auto packedRead = []( void* pPtr, string_view strView ) -> bool
-            {
-                uint64 packed{ 0 };
-                if ( StringUtil::parseUint64( StringUtil::trim( strView ), packed, 10 ) == false )
-                    return false;
-                *static_cast<SlotHandle*>( pPtr ) = SlotHandle::fromPacked( packed );
-                return true;
-            };
-            context.registerTextHandler( hashed_string( "SlotHandle" ), packedWrite, packedRead );
+        DataPath::registerSerializeHandler( context );
 
-            DataPath::registerSerializeHandler( context );
+        context.registerTextHandler(
+            hashed_string( "ComponentHandle" ),
+            []( const void* pPtr )
+        {
+            const auto&                           handle = *static_cast<const ComponentHandle*>( pPtr );
+            StringBuilder<constant::kMaxBuffer64> sb;
+            sb.append( handle.objectID() ).append( ':' ).append( handle.componentID() );
+            return string{ sb.c_str(), sb.size() };
+        },
+            []( void* pPtr, string_view strView )
+        {
+            const string_view trimmed = StringUtil::trim( strView );
+            const size_t      sep     = trimmed.find( ':' );
+            if ( sep == string_view::npos )
+                return false;
+            uint64 objectID{ 0 };
+            uint64 componentID{ 0 };
+            if ( StringUtil::parseUint64( trimmed.substr( 0, sep ), objectID, 10 ) == false ||
+                 StringUtil::parseUint64( trimmed.substr( sep + 1 ), componentID, 10 ) == false )
+                return false;
+            *static_cast<ComponentHandle*>( pPtr ) =
+                ComponentHandle::makeOwned( objectID, componentID );
+            return true;
+        } );
 
-            context.registerTextHandler(
-                hashed_string( "ComponentHandle" ),
-                []( const void* pPtr )
-            {
-                const auto&                           handle = *static_cast<const ComponentHandle*>( pPtr );
-                StringBuilder<constant::kMaxBuffer64> sb;
-                sb.append( handle.objectID() ).append( ':' ).append( handle.componentID() );
-                return string{ sb.c_str(), sb.size() };
-            },
-                []( void* pPtr, string_view strView )
-            {
-                const string_view trimmed = StringUtil::trim( strView );
-                const size_t      sep     = trimmed.find( ':' );
-                if ( sep == string_view::npos )
-                    return false;
-                uint64 objectID{ 0 };
-                uint64 componentID{ 0 };
-                if ( StringUtil::parseUint64( trimmed.substr( 0, sep ), objectID, 10 ) == false ||
-                     StringUtil::parseUint64( trimmed.substr( sep + 1 ), componentID, 10 ) == false )
-                    return false;
-                *static_cast<ComponentHandle*>( pPtr ) =
-                    ComponentHandle::makeOwned( objectID, componentID );
-                return true;
-            } );
+        context.registerTextHandler(
+            hashed_string( "GameObjectHandle" ),
+            []( const void* pPtr )
+        { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectID() ); },
+            []( void* pPtr, string_view strView )
+        {
+            uint64 objectID{ 0 };
+            if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectID, 10 ) == false )
+                return false;
+            *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectID );
+            return true;
+        } );
 
-            context.registerTextHandler(
-                hashed_string( "GameObjectHandle" ),
-                []( const void* pPtr )
-            { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectID() ); },
-                []( void* pPtr, string_view strView )
-            {
-                uint64 objectID{ 0 };
-                if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectID, 10 ) == false )
-                    return false;
-                *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectID );
-                return true;
-            } );
+        // 비트 목록은 '0' · '1' 글 하나로 값째 쓰고 읽는다(맨 왼쪽이 가장 높은 비트, `DynamicBitset::to_string`). 원소 주소가 없으므로 컨테이너 래퍼를 쓰지 않는다.
+        // 다른 글자가 섞이면 실패다(값은 그대로, `DynamicBitset::parse`).
+        context.registerTextHandler(
+            hashed_string( "DynamicBitset" ),
+            []( const void* pPtr )
+        { return static_cast<const DynamicBitset*>( pPtr )->to_string(); },
+            []( void* pPtr, string_view strView )
+        { return DynamicBitset::parse( SerializeContextInternal::stripQuotes( StringUtil::trim( strView ) ), *static_cast<DynamicBitset*>( pPtr ) ); } );
 
-            // 비트 목록은 '0' · '1' 글 하나로 값째 쓰고 읽는다(맨 왼쪽이 가장 높은 비트, `DynamicBitset::to_string`). 원소 주소가 없으므로 컨테이너 래퍼를 쓰지 않는다.
-            // 다른 글자가 섞이면 실패다(값은 그대로, `DynamicBitset::parse`).
-            context.registerTextHandler(
-                hashed_string( "DynamicBitset" ),
-                []( const void* pPtr )
-            { return static_cast<const DynamicBitset*>( pPtr )->to_string(); },
-                []( void* pPtr, string_view strView )
-            { return DynamicBitset::parse( SerializeContextInternal::stripQuotes( StringUtil::trim( strView ) ), *static_cast<DynamicBitset*>( pPtr ) ); } );
+        SerializeContextInternal::registerFloatVectorTextHandlers( context );
+        registerReflectAnyHandlers( context );
+        return context;
+    }
 
-            SerializeContextInternal::registerFloatVectorTextHandlers( context );
-            registerReflectAnyHandlers( context );
-            return context;
-        }();
-
-        return s_defaultContext;
+    const SerializeContext& SerializeContext::getDefault( SerializePurpose purpose )
+    {
+        // 목적마다 표 한 벌이다. 빌려 쓰는 문맥(`deriveFromDefault`)이 목적만 바꿔 다른 표를 가리키지 않게, 표와 목적을 함께 둔다.
+        // 칸 순서가 열거 값 순서다 — 값을 더하면 아래 단언이 멈춘다.
+        static_assert( static_cast<uint8>( SerializePurpose::SaveGame ) == 2, "목적마다 칸 하나" );
+        static const SerializeContext s_arrContext[] = { makeDefault( SerializePurpose::Authoring ), makeDefault( SerializePurpose::Snapshot ),
+                                                         makeDefault( SerializePurpose::SaveGame ) };
+        return s_arrContext[static_cast<uint8>( purpose )];
     }
 
 } // namespace sw

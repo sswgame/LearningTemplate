@@ -14,6 +14,7 @@ namespace sw
 {
     struct AudioAttenuationDesc;
     struct AudioEventDesc;
+    struct AudioEventLibrary;
 } // namespace sw
 
 namespace sw::editor
@@ -68,5 +69,14 @@ namespace sw::editor
         static AudioVoiceProfile makeVoiceProfile( const AudioEngineStats& stats );
         /** @brief 남은 시간 칸의 글입니다. 음수면 "loop" 계열 표시(현지화)이고, 아니면 "1.25 s" 입니다. */
         static string formatRemainingSeconds( float32 seconds );
+
+        /**
+         * @brief 라이브러리 사본에서 이벤트 @p source 를 복제해 뒤에 더하고 새 이름을 돌려줍니다(`<원본>_Copy`, 겹치면 `<원본>_Copy2` …).
+         * @details 새 이벤트는 원본의 클립 · 곡선 · 설정을 그대로 가져 검사(`AudioEventLibrary::validate`)를 바로 통과한다 — 클립 없는 빈 이벤트를 만들면
+         *          저장이 막힌다. 원본이 없으면 아무것도 하지 않고 빈 이름입니다(FMOD 의 Duplicate Event 와 같은 자리).
+         */
+        static hashed_string duplicateEvent( AudioEventLibrary& inoutLibrary, const hashed_string& source );
+        /** @brief 라이브러리 사본에서 이벤트 @p name 을 지웁니다. 없으면 false 입니다. */
+        [[nodiscard]] static bool removeEvent( AudioEventLibrary& inoutLibrary, const hashed_string& name );
     };
 } // namespace sw::editor

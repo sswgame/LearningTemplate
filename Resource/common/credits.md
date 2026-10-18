@@ -9,7 +9,7 @@
 | `sounds/kenney_scifi_sounds/*.ogg` | Kenney "Sci-fi Sounds" (<https://kenney.nl/assets/sci-fi-sounds>) — `Audio/*.ogg` 73 개 | CC0 1.0 |
 | `music/subspaceaudio_chiptune_adventures/*.ogg` | OpenGameArt "4 Chiptunes (Adventure)" — 만든 이 Juhani Junkala(SubspaceAudio) (<https://opengameart.org/content/4-chiptunes-adventure>) — OGG 묶음의 네 곡 | CC0 1.0 |
 | `music/yd_out_there/out_there.ogg` | OpenGameArt "Space Music: Out There" — 만든 이 yd (<https://opengameart.org/content/space-music-out-there>) — `OutThere_0.ogg` | CC0 1.0 |
-| `sounds/subspaceaudio_512_sfx/*.ogg` | OpenGameArt "512 Sound Effects (8-bit style)" — 만든 이 Juhani Junkala(SubspaceAudio) (<https://opengameart.org/content/512-sound-effects-8-bit-style>) — wav 512 개 가운데 `General Sounds/Weird Sounds` 16 개를 뺀 496 개를 Ogg Vorbis 로 바꿈(원본 폴더 구조 유지) | CC0 1.0 |
+| `sounds/subspaceaudio_512_sfx/**/*.ogg` | OpenGameArt "512 Sound Effects (8-bit style)" — 만든 이 Juhani Junkala(SubspaceAudio) (<https://opengameart.org/content/512-sound-effects-8-bit-style>) — wav 512 개 가운데 `General Sounds/Weird Sounds` 16 개를 뺀 496 개를 Ogg Vorbis 로 바꿈(원본 폴더 구조 유지) | CC0 1.0 |
 | `music/subspaceaudio_chiptunes_action/*.ogg` | OpenGameArt "5 Chiptunes (Action)" — 만든 이 Juhani Junkala(SubspaceAudio) (<https://opengameart.org/content/5-chiptunes-action>) — wav 다섯 곡을 Ogg Vorbis 로 바꿈 | CC0 1.0 |
 | `music/cynicmusic_town_theme/town_theme.ogg` | OpenGameArt "Town Theme RPG" — 만든 이 cynicmusic (<https://opengameart.org/content/town-theme-rpg>) — `TownTheme.mp3` 를 Ogg Vorbis 로 바꿈 | CC0 1.0 |
 | `music/ville_nousiainen_fast_fight/fight.ogg` | OpenGameArt "Fast fight / battle music" — 만든 이 Ville Nousiainen (<https://opengameart.org/content/fast-fight-battle-music>) — `fight.ogg` | CC0 1.0 |

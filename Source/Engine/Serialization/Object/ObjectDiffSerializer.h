@@ -11,6 +11,8 @@ namespace sw
 {
     struct TypeInfo;
 
+    class SerializeContext;
+
     /**
      * @class ObjectDiffSerializer
      * @brief CDO 기본값과 다른 프로퍼티만 델타로 씁니다
@@ -21,9 +23,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) Diff: CDO 대비 변경분만. 레이아웃은 nameHash + size + payload
         // ------------------------------------------------------------------------------
-        /** @brief CDO 와 변경된 객체를 비교해 델타 바이너리를 뽑습니다. */
+        /** @brief CDO 와 변경된 객체를 비교해 델타 바이너리를 뽑습니다. 견주는 필드는 @p context 의 저장 목적이 정합니다(`SerializerUtil::shouldSerializeProperty`). */
         [[nodiscard]] static bool serializeDiff( vector<uint8>& outDiffBytes, const void* pCdoInstance, const void* pModifiedInstance,
-                                                 const TypeInfo& typeInfo );
+                                                 const TypeInfo& typeInfo, const SerializeContext& context );
 
         /**
          * @brief serializeDiff 가 만든 델타 바이너리를 적용합니다.
@@ -32,7 +34,8 @@ namespace sw
          *          모르는 프로퍼티 해시가 나오면 적용에 실패합니다(false). 값은 이 빌드의 판(`kCurrentBinaryWireVersion` — enum 은 열거자 이름 해시)으로
          *          적고 읽습니다. 판을 싣는 머리가 없으므로 같은 실행 안에서만 주고받습니다(파일에 남기지 않는다).
          */
-        [[nodiscard]] static bool deserializeDiff( void* pTargetInstance, const TypeInfo& typeInfo, const uint8* pDiffData, size_t diffSize );
+        [[nodiscard]] static bool deserializeDiff( void* pTargetInstance, const TypeInfo& typeInfo, const uint8* pDiffData, size_t diffSize,
+                                                   const SerializeContext& context );
     };
 
 } // namespace sw

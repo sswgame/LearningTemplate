@@ -54,8 +54,10 @@ def formatVersionInternal(entry: dict | None) -> str:
     if not entry:
         return "-"
     version = entry.get("baseline") or entry.get("version") or entry.get("version-string") or entry.get("version-semver") or entry.get("version-date") or "?"
-    portVersion = entry.get("port-version", 0)
-    return f"{version}#{portVersion}" if portVersion else str(version)
+    # port-version 은 vcpkg 형식에서 선택 칸이다 — 없으면 포트판을 붙이지 않는다.
+    if "port-version" not in entry or not entry["port-version"]:
+        return str(version)
+    return f"{version}#{entry['port-version']}"
 
 
 def readBaselineInternal(vcpkgRoot: Path, revision: str) -> dict[str, dict]:
@@ -89,8 +91,10 @@ def collectInstalledPortsInternal(projectRoot: Path) -> list[str]:
     listName: list[str] = []
     for block in status.read_text(encoding="utf-8").split("\n\n"):
         fields = dict(line.split(": ", 1) for line in block.splitlines() if ": " in line)
-        name = fields.get("Package", "")
-        if not name or "Feature" in fields or name.startswith("vcpkg-") or "install ok installed" not in fields.get("Status", ""):
+        if not fields:
+            continue   # 파일 끝 · 단락 사이의 빈 덩어리
+        name = fields["Package"]
+        if "Feature" in fields or name.startswith("vcpkg-") or "install ok installed" not in fields["Status"]:
             continue
         if name not in listName:
             listName.append(name)
@@ -108,7 +112,7 @@ def fetchGithubLatestInternal(repository: str) -> str:
     try:
         request = urllib.request.Request(f"https://api.github.com/repos/{repository}/releases/latest", headers=headers)
         with urllib.request.urlopen(request, timeout=30) as response:
-            return str(json.load(response).get("tag_name", "?")).lstrip("v")
+            return str(json.load(response)["tag_name"]).lstrip("v")   # 릴리스가 없으면 404 — 아래 OSError
     except OSError:
         return "?"
 

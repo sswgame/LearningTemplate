@@ -100,7 +100,7 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
     sw::vector<sw::ValidationIssue> listIssue;
     {
         SW_TEST_DEFENSIVE_SCOPE( "validation warning while saving a component with a negative speed" );
-        const sw::string state = sw::ObjectStateSerializer::saveToXMLString( pObject ); // 저장 — 결과를 남기고 저장은 한다
+        const sw::string state = sw::ObjectStateSerializer::saveToXMLString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ); // 저장 — 결과를 남기고 저장은 한다
         SW_EXPECT_FALSE( state.empty() );
         sw::ValidationIssueLog::get().collectIssues( listIssue );
         SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listIssue.size() );
@@ -112,7 +112,7 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
         sw::GameObject* pLoaded = manager.createGameObject( sw::hashed_string( "LoadedMover" ) );
         SW_ASSERT_NOT_NULL( pLoaded );
         sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Live );
-        sw::ObjectLoadContext context{};
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
         context._pBatch = &batch;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLoaded, state, context ) );
         SW_EXPECT_TRUE( batch.finish() );

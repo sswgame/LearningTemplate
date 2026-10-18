@@ -356,7 +356,7 @@ namespace sw
         if ( StringUtil::trim( prefab.getStateData() ).empty() == false && prefab.applyStateTo( pBase ) == false )
             return false;
 
-        ObjectSaveOptions options{};
+        ObjectSaveOptions options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = true;
         outStateXML                  = ObjectStateSerializer::saveToXMLString( pBase, options );
         return outStateXML.empty() == false;

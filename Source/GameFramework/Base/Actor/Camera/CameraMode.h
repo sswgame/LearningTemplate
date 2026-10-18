@@ -5,7 +5,7 @@
  *          컴포넌트와 씬을 모르는 순수 계산이라 씬 없이 테스트할 수 있다.
  *          모드는 `CameraPresetMode` 하나이고 거기에 프리셋의 섹션(입력, 제약, 프레이밍, 충돌, 훑기)이 얹힌다.
  *          프레임 사이에 남는 것(입력이 돌린 각, 줌, 팬, 스프링 암 길이, 조준, look-ahead)은 `CameraModeState` 에 있다.
- *          직교 리그(`OrthoCameraRigComponent`), 1인칭(`FirstPersonCameraComponent`), 디렉터(`CameraDirectorComponent`)가 같은 계산을 부른다.
+ *          1인칭(`FirstPersonCameraComponent`), 디렉터(`CameraDirectorComponent`)가 같은 계산을 부른다. 직교 시점도 디렉터의 모드(`OrthoTopDown`)다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

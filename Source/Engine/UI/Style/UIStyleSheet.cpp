@@ -210,7 +210,7 @@ namespace sw
                     return fail( context, node, string( "Rule uses unknown variable '" ) + pValue + "'" );
                 WidgetStyle scratch{};
                 void*       pTarget = pNested != nullptr ? property.getRawPtr( &scratch ) : &scratch;
-                const bool  bRead   = SerializerUtil::applyPropertyText( pNested != nullptr ? *pNested : property, pTarget, assignment._text, SerializeContext::getDefault() );
+                const bool  bRead   = SerializerUtil::applyPropertyText( pNested != nullptr ? *pNested : property, pTarget, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                 if ( bRead == false )
                     return fail( context, node, string( "Rule value '" ) + assignment._text + "' cannot be read as '" + pName + "'" );
                 if ( field == UIStyleField::Transition )
@@ -254,7 +254,7 @@ namespace sw
                     const utf8*         pName = child.getName();
                     UIStyleField        field{};
                     const PropertyInfo* pProperty = findProperty( styleType, pName );
-                    const TypeInfo*     pNested   = pProperty != nullptr ? SerializerUtil::findNestedObjectType( pProperty->_typeName, SerializeContext::getDefault() ) : nullptr;
+                    const TypeInfo*     pNested   = pProperty != nullptr ? SerializerUtil::findNestedObjectType( pProperty->_typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ) : nullptr;
                     if ( pNested == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
                         return fail( context, child, string( "Rule has unknown style element <" ) + pName + ">" );
                     for ( XMLAttribute attribute = child.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
@@ -407,10 +407,10 @@ namespace sw
             return;
         if ( assignment._pNestedProperty == nullptr )
         {
-            (void)SerializerUtil::applyPropertyText( *assignment._pProperty, &inoutStyle, assignment._text, SerializeContext::getDefault() ); // 읽을 때 이미 확인했다
+            (void)SerializerUtil::applyPropertyText( *assignment._pProperty, &inoutStyle, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
             return;
         }
         void* pNested = assignment._pProperty->getRawPtr( &inoutStyle );
-        (void)SerializerUtil::applyPropertyText( *assignment._pNestedProperty, pNested, assignment._text, SerializeContext::getDefault() ); // 읽을 때 이미 확인했다
+        (void)SerializerUtil::applyPropertyText( *assignment._pNestedProperty, pNested, assignment._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ); // 읽을 때 이미 확인했다
     }
 } // namespace sw

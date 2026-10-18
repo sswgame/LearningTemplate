@@ -173,9 +173,9 @@ namespace sw
                 return ( token != 0 ) ? token : 1;
             }
 
-            static SerializeContext makeGameObjectXMLContext( GameObject* pGameObject )
+            static SerializeContext makeGameObjectXMLContext( GameObject* pGameObject, SerializePurpose purpose )
             {
-                SerializeContext serializeContext = SerializeContext::deriveFromDefault();
+                SerializeContext serializeContext = SerializeContext::deriveFromDefault( purpose );
                 serializeContext.setOuterInstance( pGameObject );
                 serializeContext.setOwnedPointerFactory( &createOwnedComponent );
                 serializeContext.setRuntimeTypeInfoFn( &getComponentRuntimeTypeInfo );
@@ -237,12 +237,12 @@ namespace sw
             /** @brief 오브젝트 상태를 쓰는 컨텍스트에 핸들 텍스트와 바이너리 처리기를 등록합니다. 읽기는 기본 처리기를 그대로 쓰며, 옮기는 일은 배치가 모두 읽은 뒤 합니다(`ObjectStateBatch::finish`). */
             static void registerReferenceWriter( SerializeContext& serializeContext, const ReferenceWriter& writer )
             {
-                const SerializeContext::TextReadFn* pReader = SerializeContext::getDefault().findTextReader( getObjectHandleTypeName() );
+                const SerializeContext::TextReadFn* pReader = serializeContext.findTextReader( getObjectHandleTypeName() );
                 if ( pReader == nullptr )
                     return;
                 serializeContext.registerTextHandler( getObjectHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::write, &writer ),
                                                       *pReader );
-                const SerializeContext::BinaryReadFn* pBinaryReader = SerializeContext::getDefault().findBinaryReader( getObjectHandleTypeName() );
+                const SerializeContext::BinaryReadFn* pBinaryReader = serializeContext.findBinaryReader( getObjectHandleTypeName() );
                 if ( pBinaryReader != nullptr )
                     serializeContext.registerBinaryHandler( getObjectHandleTypeName(),
                                                             SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeBinary, &writer ), *pBinaryReader );
@@ -268,7 +268,7 @@ namespace sw
         // 텍스트로 저장하는 경로(씬과 프리팹 저작)는 쓰기 전에 검증한다. 결과만 남기고 저장은 그대로 한다. 바이너리(플레이, 되돌리기 스냅샷)는 검증하지 않는다.
         (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
-        SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ) );
+        SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ), options.getPurpose() );
         const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
         ObjectStateSerializerInternal::registerReferenceWriter( serializeContext, referenceWriter );
         return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, serializeContext );
@@ -296,13 +296,13 @@ namespace sw
         if ( context._bRestorePreviousOnFailure && pGameObject->getComponents().empty() == false )
         {
             previousIdentity = captureIdentity( pGameObject );
-            if ( saveToBinaryBuffer( pGameObject, previousBytes ) == false )
+            if ( saveToBinaryBuffer( pGameObject, previousBytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) == false )
                 previousBytes.clear();
         }
         pGameObject->clearComponents();
 
         const GameObject::ComponentIDRestoreScope restoreScope( pGameObject, context._pIdentity );
-        const SerializeContext                    serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( pGameObject );
+        const SerializeContext                    serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( pGameObject, context.getPurpose() );
         uint32                                    version{ 0 };
         const bool                                bLoaded = deserializeState( version, serializeContext );
         if ( bLoaded )
@@ -328,7 +328,7 @@ namespace sw
         else if ( previousBytes.empty() == false )
         {
             SW_LOG_WARNING( "State of '%#' could not be read - it is restored to what it was before the load", oldName.c_str() );
-            ObjectLoadContext restoreContext{};
+            ObjectLoadContext restoreContext{ SerializePurpose::Snapshot };
             restoreContext._pIdentity                 = &previousIdentity;
             restoreContext._bRestorePreviousOnFailure = false;
             if ( loadFromBinaryBuffer( pGameObject, previousBytes.data(), previousBytes.size(), restoreContext ) == 0 )
@@ -383,7 +383,7 @@ namespace sw
         writer.write( static_cast<uint32>( 0 ) );
 
         const size_t                                         bodyStart        = writer.getOffset();
-        SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ) );
+        SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ), options.getPurpose() );
         const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
         ObjectStateSerializerInternal::registerReferenceWriter( serializeContext, referenceWriter );
         if ( BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, serializeContext ) == false )

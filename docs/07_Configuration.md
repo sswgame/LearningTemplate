@@ -32,9 +32,7 @@
 - **게임 프리셋**(`GameConfig`)에는 어떤 게임인지, 팩 루트, 창 제목, 게임이 덧붙이는 스키마처럼 팩을 마운트하기 전에 알아야 하는 것만 둡니다.
   나머지 게임 데이터는 팩 안의 `gamesettings.xml`(`GameSettings`)이나 키트 자신의 데이터 파일에 둡니다.
 - **옵션 메뉴 값**은 스키마(`UserSettingsSchema`)가 팩에 실리고, 플레이어가 고른 값은 플레이어 PC의 `usersettings.json` 에 저장됩니다.
-- **에디터 상태**는 도킹, 레이아웃, 캔버스, 테마, gv 프리셋처럼 에디터가 직접 쓰는 값입니다. git이 무시하고 사람이 고치지 않습니다.
-  예전 위치(`Config/Editor/` 의 imgui.ini 등)에 상태가 남은 체크아웃은 PC마다 한 번 `py -3 Scripts/dev/MoveEditorState.py` 를 실행합니다.
-- **개발 PC의 경로**는 LLVM, SDK, 파서 플래그 같은 값입니다. 로컬 파일은 git이 무시하고, 커밋하는 것은 시드 파일(`*.defaults.json`)뿐입니다.
+- **에디터 상태**는 도킹, 레이아웃, 캔버스, 테마, gv 프리셋처럼 에디터가 직접 쓰는 값입니다. git이 무시하고 사람이 고치지 않습니다.- **개발 PC의 경로**는 LLVM, SDK, 파서 플래그 같은 값입니다. 로컬 파일은 git이 무시하고, 커밋하는 것은 시드 파일(`*.defaults.json`)뿐입니다.
 - **전용 서버 운영 값**(`ServerConfig`)은 주소, 포트, 틱, 저장소, TLS입니다. 운영자가 고치는 파일이라 배포본도 디스크에서 읽습니다.
 - **비밀**은 DB 비밀번호, 캐시 AUTH, 키 암호입니다. 설정 파일에는 그 환경 변수의 이름만 적습니다(`_secretEnvironment` 필드).
 - **빌드 형태**는 Shipping 여부, 새니타이저, 링크할 백엔드, 활성 게임입니다. Dev 에서 돌릴 게임은 실행 인자 `-game=<게임>` 으로 고르고(`Ninja-Debug` 가 게임 전부를 짓는다), `SW_ACTIVE_GAME` 은 기본 게임 · Shipping 이 굽는 게임입니다. 표는 [`BuildOptions.md`](Config/BuildOptions.md)에 있습니다.

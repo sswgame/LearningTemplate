@@ -189,7 +189,9 @@ def sampleLinuxInternal(pid: int, elapsed: float) -> ResourceSample | None:
         parts = line.split()
         if len(parts) >= 2 and parts[0] in ("VmRSS:", "RssAnon:"):
             values[parts[0]] = int(parts[1]) * 1024
-    return ResourceSample(elapsed, values.get("RssAnon:", 0), values.get("VmRSS:", 0), handleCount, 0)
+    if "RssAnon:" not in values or "VmRSS:" not in values:
+        return None   # 끝나는 중(좀비)인 프로세스의 status 에는 메모리 줄이 없다 — 0 이 아니라 "표본 없음" 이다
+    return ResourceSample(elapsed, values["RssAnon:"], values["VmRSS:"], handleCount, 0)
 
 
 # ------------------------------------------------------------------------------

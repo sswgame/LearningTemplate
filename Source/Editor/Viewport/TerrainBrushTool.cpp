@@ -347,12 +347,12 @@ namespace sw::editor
                     SW_LOG_ERROR( "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
                     bSaved = false;
                 }
-                if ( pTerrain->getSplatTexturePath().empty() == false )
+                if ( pTerrain->getLayerWeightsPath().empty() == false )
                 {
-                    const string splatPath = ResourcePaths::findLooseFile( pTerrain->getSplatTexturePath() ).getDiskPath();
+                    const string splatPath = ResourcePaths::findLooseFile( pTerrain->getLayerWeightsPath() ).getDiskPath();
                     if ( splatPath.empty() || pTerrain->saveSplat( splatPath ) == false )
                     {
-                        SW_LOG_ERROR( "Terrain splat '%#' was not saved", pTerrain->getSplatTexturePath().c_str() );
+                        SW_LOG_ERROR( "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
                         bSaved = false;
                     }
                 }

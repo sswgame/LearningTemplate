@@ -63,7 +63,7 @@ namespace sw
             static AnimationSystem* findActiveAnimationSystem()
             {
                 GameObjectManager* pManager = engine::findActiveObjectManager();
-                return pManager != nullptr ? &pManager->getAnimationSystem() : nullptr;
+                return pManager != nullptr ? &pManager->getSubsystem<AnimationSystem>() : nullptr;
             }
 
             /** @brief 되감기 상태 한 줄입니다. */

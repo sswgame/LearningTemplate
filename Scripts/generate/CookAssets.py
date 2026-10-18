@@ -9,6 +9,7 @@ SW Engine 통합 에셋 쿠커:
        Resource/**/*.prefab.xml · *.prefab.json -> <cooked-dir>/**/<name>.prefab.bin (PFB2 바이너리)
      (산출물은 소스 옆이 아니라 스테이징 폴더에 쓰고, 팩에는 같은 상대 경로로 병합한다)
   2. Packs:   Resource/ 폴더 내 에셋을 4KB 섹터 정렬 .pack 아카이브로 패킹 (SWPK)
+     팩마다 옆의 <팩>.packrec 에 키(항목 경로 · 내용 해시와 설정)를 남기고, 키와 팩 바이트가 같으면 다시 쓰지 않는다(PackWriter.writeTo).
 
 사용법:
   py -3 Scripts/generate/CookAssets.py [--all] [--out <dir>]
@@ -22,7 +23,9 @@ from __future__ import annotations
 import argparse
 import binascii
 import fnmatch
+import hashlib
 import json
+from typing import NamedTuple
 from pathlib import Path
 import sys
 import zlib
@@ -34,6 +37,7 @@ from common import (
     PackFormatSpec,
     findAppExecutable,
     getProjectRoot,
+    kDirRuntimeGamePreset,
     kFilePackConfig,
     kFileRuntimeEngineConfig,
     kKeyExcludeDirs,
@@ -42,6 +46,7 @@ from common import (
     kKeyGlobalExcludePatterns,
     kKeyRecursive,
     kKeyRules,
+    kPackRecordSuffix,
     normalizePath,
     readOptionalConfig,
     requireConfig,
@@ -417,6 +422,53 @@ def hasStagedAssetRegistryInternal(stagedDir: Path | None) -> bool:
     return stagedDir is not None and (stagedDir / _kAssetRegistryFileName).is_file()
 
 
+#: 팩 쿠커 버전 — `PackWriter` 가 내는 바이트를 바꾸면 올린다(모든 팩의 키가 바뀌어 다시 쓴다). 쿠커 소스 옆에서 사람이 올리는 상수다(결정 기록 5-5 와 같은 원칙).
+kPackCookerVersion = 2  # 2: 항목 경로 목록(스트링 풀)을 늘 담는다 — 지운 옛 팩은 리더가 거절한다
+#: 팩 기록 파일(`<팩>.packrec`)의 형식 버전 — 다르면 낡은 기록으로 보고 팩을 다시 쓴다(옛 형식을 읽는 길은 두지 않는다).
+kPackRecordFormatVersion = 1
+
+
+class PackWriteResult(NamedTuple):
+    """`PackWriter.writeTo` 의 결과 — 다시 썼는지와 그 이유(다시 쓰지 않았으면 빈 글).
+
+    dataclass 가 아니라 NamedTuple 이다 — 테스트가 이 스크립트를 `sys.modules` 에 올리지 않고 불러오면 dataclass 는 제 모듈을 찾지 못한다.
+    """
+
+    packSize: int
+    bWritten: bool
+    reason: str
+
+
+class PackRecord(NamedTuple):
+    """팩 옆의 증분 기록 — 그 팩을 만든 키와 팩 바이트의 해시입니다. JSON 키는 파이썬이 가진 계약이라 snake_case 다."""
+
+    key: str
+    packSha256: str
+
+    @staticmethod
+    def pathFor(outPackPath: Path) -> Path:
+        return outPackPath.with_name(outPackPath.name + kPackRecordSuffix)
+
+    @classmethod
+    def read(cls, recordPath: Path) -> tuple[PackRecord | None, str]:
+        """기록을 읽습니다. 못 쓰는 기록이면 (None, 이유) — 이유는 팩을 다시 쓰는 까닭으로 찍힌다."""
+        if not recordPath.is_file():
+            return None, "기록이 없습니다"
+        try:
+            data = json.loads(recordPath.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            return None, f"기록을 읽지 못했습니다({error})"
+        if not isinstance(data, dict) or "record_format" not in data or data["record_format"] != kPackRecordFormatVersion:
+            return None, f"기록 형식이 낡았습니다(지금 형식 {kPackRecordFormatVersion})"
+        if "key" not in data or "pack_sha256" not in data:
+            return None, "기록에 key · pack_sha256 이 없습니다"
+        return cls(key=str(data["key"]), packSha256=str(data["pack_sha256"])), ""
+
+    def write(self, recordPath: Path) -> None:
+        payload = {"record_format": kPackRecordFormatVersion, "key": self.key, "pack_sha256": self.packSha256}
+        recordPath.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
 class PackWriter:
     """
     팩 하나를 쌓아 올리는 동안의 상태 — 담긴 항목 · 데이터 커서 · TOC · 스트링 풀.
@@ -453,15 +505,51 @@ class PackWriter:
     def entryCount(self) -> int:
         return len(self._listEntry)
 
-    def writeTo(self, outPackPath: Path) -> int:
-        """담긴 항목으로 팩을 쿠킹하고 만들어진 파일 크기를 돌려줍니다."""
-        spec = self._spec
+    def writeTo(self, outPackPath: Path) -> PackWriteResult:
+        """
+        담긴 항목으로 팩을 쿠킹합니다. 옆의 기록(`<팩>.packrec`)의 키가 이번 키와 같고 팩 바이트가 기록과 같으면 다시 쓰지 않는다.
 
+        키 = 해시(쿠커 버전, 팩 계약 지문, 압축 코덱 · 레벨, DLC, 항목마다 경로와 내용 해시). 판정에 파일 시각을 쓰지 않는다 —
+        `git pull` 이 시각을 임의의 순서로 바꾼다. 기록이 없거나 형식이 낡았거나 깨졌으면 그 이유를 돌려주고 다시 쓴다(조용히 넘기지 않는다).
+        """
         # 리더는 경로 해시로 TOC 를 이진 탐색한다 — 반드시 해시 오름차순이다.
         self._listEntry.sort(key=lambda entry: entry[0])
+        listLoaded = [(pathHash, relPath, source if isinstance(source, bytes) else source.read_bytes()) for pathHash, relPath, source in self._listEntry]
+        key = self.computeKeyInternal(listLoaded)
+
+        recordPath = PackRecord.pathFor(outPackPath)
+        record, reason = PackRecord.read(recordPath)
+        if record is not None:
+            if record.key != key:
+                reason = "항목 · 설정이 바뀌었습니다"
+            elif not outPackPath.is_file() or hashlib.sha256(outPackPath.read_bytes()).hexdigest() != record.packSha256:
+                reason = "팩 파일이 없거나 바이트가 기록과 다릅니다"
+            else:
+                return PackWriteResult(packSize=outPackPath.stat().st_size, bWritten=False, reason="")
+
+        # 쓰는 도중에 멈추면 옛 기록이 새 팩을 가리지 않게 기록부터 지운다.
+        recordPath.unlink(missing_ok=True)
+        packBytes = self.buildInternal(listLoaded)
+        outPackPath.parent.mkdir(parents=True, exist_ok=True)
+        outPackPath.write_bytes(packBytes)
+        PackRecord(key=key, packSha256=hashlib.sha256(packBytes).hexdigest()).write(recordPath)
+        return PackWriteResult(packSize=len(packBytes), bWritten=True, reason=reason)
+
+    def computeKeyInternal(self, listLoaded: list[tuple[int, str, bytes]]) -> str:
+        """팩 바이트를 정하는 모든 것의 해시입니다. 하나라도 다르면 다른 바이트가 나올 수 있다."""
+        digest = hashlib.sha256()
+        digest.update(f"cooker={kPackCookerVersion}\ncontract={self._spec.contractDigest}\ncompression={self._compression}:{self._compressionLevel}\n"
+                      f"dlc={self._dlcAppID}\n".encode("utf-8"))
+        for _, relPath, rawBytes in listLoaded:
+            digest.update(relPath.encode("utf-8") + b"\x00" + hashlib.sha256(rawBytes).digest())
+        return digest.hexdigest()
+
+    def buildInternal(self, listLoaded: list[tuple[int, str, bytes]]) -> bytes:
+        """해시 순으로 정렬해 읽어 둔 항목으로 팩 바이트를 만듭니다."""
+        spec = self._spec
 
         tocStartOffset = spec.alignOffset(spec.header.size)
-        tocTotalSize = len(self._listEntry) * spec.entry.size
+        tocTotalSize = len(listLoaded) * spec.entry.size
         dataStartOffset = spec.alignOffset(tocStartOffset + tocTotalSize)
 
         stringPool = bytearray()
@@ -469,12 +557,10 @@ class PackWriter:
         listDataBlob: list[bytes] = []
         dataOffset = dataStartOffset
 
-        for pathHash, relPath, source in self._listEntry:
+        for pathHash, relPath, rawBytes in listLoaded:
             # 항목 경로 목록은 늘 담는다 — 런타임 폴더 나열(`ResourceIO::collectResources`)이 이것으로 항목 이름을 알고, 리더는 없는 팩을 거절한다.
             stringOffset = len(stringPool)
             stringPool.extend(relPath.encode("utf-8") + b"\x00")
-
-            rawBytes = source if isinstance(source, bytes) else source.read_bytes()
 
             # 압축 코덱은 팩 단위다(계약 파일 compression.scope="pack"). 리더가 헤더의 코덱
             # 하나로 모든 항목을 해제하므로, 압축 이득이 없는 파일도 같은 코덱으로 넣어야 한다.
@@ -513,7 +599,7 @@ class PackWriter:
             _encryptionType=spec.encryptionNone,
             _sectorAlignment=spec.sectorAlignment,
             _flags=flags,
-            _fileCount=len(self._listEntry),
+            _fileCount=len(listLoaded),
             _indexOffset=tocStartOffset,
             _indexSize=tocTotalSize,
             _stringPoolOffset=stringPoolOffset,
@@ -521,20 +607,17 @@ class PackWriter:
             _totalDataSize=dataOffset - dataStartOffset,
         )
 
-        outPackPath.parent.mkdir(parents=True, exist_ok=True)
-        with open(outPackPath, "wb") as packFile:
-            packFile.write(header)
-            packFile.write(b"\x00" * (tocStartOffset - len(header)))
-            for record in listTocRecord:
-                packFile.write(record)
-            packFile.write(b"\x00" * (dataStartOffset - (tocStartOffset + tocTotalSize)))
-            for blob in listDataBlob:
-                packFile.write(blob)
-            if stringPoolSize:
-                packFile.write(b"\x00" * (stringPoolOffset - dataOffset))
-                packFile.write(stringPool)
-
-        return outPackPath.stat().st_size
+        packBytes = bytearray(header)
+        packBytes += b"\x00" * (tocStartOffset - len(header))
+        for tocRecord in listTocRecord:
+            packBytes += tocRecord
+        packBytes += b"\x00" * (dataStartOffset - (tocStartOffset + tocTotalSize))
+        for blob in listDataBlob:
+            packBytes += blob
+        if stringPoolSize:
+            packBytes += b"\x00" * (stringPoolOffset - dataOffset)
+            packBytes += stringPool
+        return bytes(packBytes)
 
 
 def collectPackFiles(sourceDir: Path, packConfig: dict, targetRhi: str = "dx12",
@@ -606,9 +689,39 @@ def cookPack(
         writer.addBytes(rel, data)
 
     fileCount = writer.entryCount
-    packSize = writer.writeTo(outPackPath)
-    print(f"[PackCooker] Cooked {outPackPath.name} ({fileCount} files, {packSize:,} bytes, DLC: {dlcAppID})")
+    result = writer.writeTo(outPackPath)
+    if result.bWritten:
+        print(f"[PackCooker] Cooked {outPackPath.name} ({fileCount} files, {result.packSize:,} bytes, DLC: {dlcAppID}) - {result.reason}")
+    else:
+        print(f"[PackCooker] Up to date {outPackPath.name} ({fileCount} files, {result.packSize:,} bytes) - 항목 · 설정이 기록과 같습니다")
     return True
+
+
+#: 런타임이 늘 올리는 공용 팩(game → common → engine 순). 게임 팩 이름은 `makeGamePackName` 이다.
+kListSharedPackName: tuple[str, ...] = ("engine.pack", "common.pack")
+
+
+def makeGamePackName(packFolderName: str) -> str:
+    """`Resource/game/<폴더>` 를 굽는 팩 파일 이름입니다."""
+    return f"game_{packFolderName}.pack"
+
+
+def resolveGamePackFolder(projectRoot: Path, game: str) -> str:
+    """게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<폴더>`)에서 팩 폴더 이름을 읽습니다.
+
+    게임 이름과 폴더 이름이 다른 팩이 있어(ThemeParkTycoon → themepark) 이름을 바꿔 추측하지 않는다. 프리셋이나 키가 없으면 ConfigError.
+    """
+    presetPath = projectRoot / kDirRuntimeGamePreset / f"{game}.json"
+    packRoot = str(requireConfig(presetPath, presetPath.name).get("_packRoot", ""))
+    folderName = packRoot.removeprefix("game/")
+    if not packRoot.startswith("game/") or not folderName or "/" in folderName:
+        raise ConfigError(f"{presetPath}: `_packRoot` 는 `game/<폴더>` 입니다 (`{packRoot}`)")
+    return folderName
+
+
+def listPackNameOfGame(projectRoot: Path, game: str) -> list[str]:
+    """그 게임의 배포 패키지가 담는 팩 파일 이름들입니다 — 공용 팩과 그 게임의 팩 하나(다른 게임의 팩은 들지 않는다)."""
+    return [*kListSharedPackName, makeGamePackName(resolveGamePackFolder(projectRoot, game))]
 
 
 def cookAllPacks(
@@ -618,10 +731,12 @@ def cookAllPacks(
     targetRhi: str = "dx12",
     cookedDir: Path | None = None,
     buildTarget: str = "",
+    game: str = "",
 ) -> bool:
     """
     engine, common, 그리고 game 에셋 디렉터리들을 일괄 패킹합니다. cookedDir 은 프리팹·씬 산출물의 스테이징 루트다.
     buildTarget 이 빼는 에셋 종류(전용 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 넣지 않는다.
+    game 이 있으면 그 게임 프리셋의 팩만 굽는다(배포 패키지). 비면 `Resource/game/` 의 모든 게임을 굽는다(Dev 는 `-game=` 으로 고른다).
     """
     resourceDir = projectRoot / "Resource"
     cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
@@ -643,10 +758,15 @@ def cookAllPacks(
         targets.append((commonDir, outputDir / "common.pack", 0))
 
     gameDir = resourceDir / "game"
-    if gameDir.is_dir():
+    if game:
+        gamePackDir = gameDir / resolveGamePackFolder(projectRoot, game)
+        if not gamePackDir.is_dir():
+            raise ConfigError(f"게임 {game} 의 팩 폴더가 없습니다: {gamePackDir}")
+        targets.append((gamePackDir, outputDir / makeGamePackName(gamePackDir.name), 0))
+    elif gameDir.is_dir():
         for sub in sorted(gameDir.iterdir()):
             if sub.is_dir():
-                targets.append((sub, outputDir / f"game_{sub.name}.pack", 0))
+                targets.append((sub, outputDir / makeGamePackName(sub.name), 0))
 
     for src, out, dlcId in targets:
         staged = cookedDir / src.relative_to(resourceDir)
@@ -683,6 +803,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--verify-shaders", action="store_true", help="쿠킹된 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
     parser.add_argument("--build-target", type=str, default="",
                         help="빌드 타깃(Game · Client · Server — CMake SW_TARGET_TYPE). 그 타깃이 빼는 에셋 종류를 팩에 넣지 않는다")
+    parser.add_argument("--game", type=str, default="",
+                        help="게임 프리셋 이름(Config/Game/<이름>.json). 주면 그 게임의 팩만 굽는다(배포 패키지). 없으면 모든 게임")
     parser.add_argument("--app", type=str, default="", help="씬 쿠킹·셰이더 쿠킹에 쓸 App 실행 파일 (CMake 가 $<TARGET_FILE:App> 을 넘긴다; 없으면 빌드 폴더를 뒤진다)")
 
     args = parser.parse_args(argv)
@@ -739,8 +861,12 @@ def cookInternal(args: argparse.Namespace) -> int:
         if args.build_target:
             listExcluded = _gCookContract.mapExcludedKindByTarget.get(args.build_target, ())
             print(f"[CookAssets] Build target: {args.build_target} (excluded asset kinds: {', '.join(listExcluded) or 'none'})")
-        success = cookAllPacks(projectRoot, outDir, packConfig, targetRhi=targetRhi, cookedDir=cookedDir,
-                               buildTarget=args.build_target)
+        try:
+            success = cookAllPacks(projectRoot, outDir, packConfig, targetRhi=targetRhi, cookedDir=cookedDir,
+                                   buildTarget=args.build_target, game=args.game)
+        except ConfigError as error:
+            print(f"[CookAssets Error] {error}", file=sys.stderr)
+            return 1
         if not success:
             exitCode = 1
 

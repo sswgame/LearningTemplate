@@ -119,7 +119,7 @@ namespace sw
     {
         using Internal                       = GameDataXMLInternal;
         const utf8* const       pElement     = node.getName() != nullptr ? node.getName() : "?";
-        const SerializeContext& context      = SerializeContext::getDefault();
+        const SerializeContext& context      = SerializeContext::getDefault( SerializePurpose::Authoring );
         const auto&             listProperty = typeInfo.getPropertiesWithBase();
         bool                    bOk          = true;
 

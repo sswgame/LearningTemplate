@@ -65,9 +65,15 @@ namespace sw::editor
                         continue;
 
                     PlaySessionData::ObjectSnapshot entry;
-                    entry._identity                  = ObjectStateSerializer::captureIdentity( pObj );
-                    entry._name                      = pObj->getName().c_str();
-                    entry._prefabPath                = pScene->getEntityPrefabPath( entry._identity._objectID );
+                    entry._identity               = ObjectStateSerializer::captureIdentity( pObj );
+                    entry._name                   = pObj->getName().c_str();
+                    entry._prefabPath             = pScene->getEntityPrefabPath( entry._identity._objectID );
+                    const PrefabNestedPart* pPart = pObj->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( entry._identity._objectID );
+                    if ( pPart != nullptr )
+                    {
+                        entry._nestedPart  = *pPart;
+                        entry._bNestedPart = true;
+                    }
                     const TerrainComponent* pTerrain = pObj->getComponent<TerrainComponent>();
                     if ( pTerrain != nullptr && pTerrain->hasWrittenEdits() )
                     {
@@ -76,7 +82,7 @@ namespace sw::editor
                         entry._listTerrainEdit.assign( archive.getData(), archive.getData() + archive.getSize() );
                     }
 
-                    if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) )
+                    if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) )
                         data._listSnapshot.push_back( std::move( entry ) );
                 }
 
@@ -156,8 +162,10 @@ namespace sw::editor
 
                     if ( snap._prefabPath.empty() == false && pScene != nullptr )
                         pScene->setEntityPrefabPath( pObj->getObjectID(), snap._prefabPath );
+                    if ( snap._bNestedPart )
+                        pObjects->getSubsystem<PrefabInstanceRegistry>().restoreNestedPart( pObj->getObjectID(), snap._nestedPart );
 
-                    ObjectLoadContext context{};
+                    ObjectLoadContext context{ SerializePurpose::Snapshot };
                     context._pIdentity = &snap._identity;
                     context._pBatch    = &batch;
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), context ) == 0 )
@@ -214,7 +222,7 @@ namespace sw::editor
                     }
                     const ObjectSnapshot before = EditorTransaction::captureSnapshot( pObj );
                     ObjectStateBatch     batch( ObjectIDSpace::Live );
-                    ObjectLoadContext    context{};
+                    ObjectLoadContext    context{ SerializePurpose::Authoring };
                     context._pIdentity = &kept._identity;
                     context._pBatch    = &batch;
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, kept._bytes.data(), kept._bytes.size(), context ) == 0 )
@@ -530,7 +538,7 @@ namespace sw::editor
         PlaySessionData::ObjectSnapshot entry;
         entry._identity = ObjectStateSerializer::captureIdentity( pObject );
         entry._name     = pObject->getName().c_str();
-        if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, entry._bytes ) == false )
+        if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, entry._bytes, ObjectSaveOptions{ SerializePurpose::Authoring } ) == false )
             return false;
         for ( PlaySessionData::ObjectSnapshot& kept : data._listKept )
         {

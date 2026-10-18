@@ -1,7 +1,7 @@
 /**
  * @file AbilityDevCommands.cpp
- * @brief 어빌리티 시스템의 치트 개발 명령(`cheat.heal` · `cheat.attribute` · `cheat.resetCooldowns`)입니다. Shipping 에는 없습니다.
- * @details 대상은 활성 씬의 모든 `AbilitySystemComponent` 입니다(플레이어를 따로 가리지 않는다). 명령은 게임 스레드에서 돈다.
+ * @brief 어빌리티 시스템의 치트 개발 명령(`cheat.heal` · `cheat.attribute` · `cheat.god` · `cheat.resetCooldowns`)입니다. Shipping 에는 없습니다.
+ * @details 대상은 활성 씬의 모든 `AbilitySystemComponent` 입니다(플레이어를 따로 가리지 않는다). `cheat.god` 만 플레이어 조종 폰으로 거른다. 명령은 게임 스레드에서 돈다.
  *          순회 콜백 안(매니저 잠금 안)에서는 어트리뷰트를 바꾸지 않는다 — 알림이 오브젝트를 건드릴 수 있어서 포인터를 모은 뒤 바꾼다.
  */
 #include "pch.h"
@@ -14,6 +14,8 @@
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
 
+    #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
+    #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
     #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
     #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
     #include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
@@ -90,6 +92,59 @@ namespace sw
                 return true;
             }
 
+            /** @brief @p pComponent 의 주인이 플레이어 조종자(`PlayerControllerComponent`)가 쥔 폰이면 true 입니다. */
+            static bool isPlayerControlled( const GameObjectManager& manager, const AbilitySystemComponent& component )
+            {
+                const GameObject*    pOwner = component.getOwner();
+                const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                if ( pPawn == nullptr || pPawn->isPossessed() == false )
+                    return false;
+                const ControllerComponent* pController = manager.resolveComponent( pPawn->getController() );
+                // 종류 거르기는 타입 정보로 한다(`castTo` 는 늘 성공한다).
+                return pController != nullptr && pController->getTypeInfo()->isDerivedFrom( PlayerControllerComponent::StaticType() );
+            }
+
+            /**
+             * @brief `cheat.god [on|off]` — 플레이어가 쥔 폰의 어빌리티 시스템에 무적 태그를 붙이거나 뗍니다. 인자가 없으면 뒤집습니다.
+             * @details 무적은 태그(`AbilitySystemComponent::getInvulnerableTag`) 하나이고 이펙트 없이 붙인다 — 체력 base 가 내려가지 않는다.
+             *          대상은 플레이어 조종 폰뿐이다(다른 치트처럼 모든 시스템에 걸면 적도 죽지 않는다).
+             */
+            static bool runGod( const vector<string>& listArgument, string& outReply )
+            {
+                const bool bExplicit = listArgument.size() == 1;
+                if ( listArgument.size() > 1 || ( bExplicit && listArgument[0] != "on" && listArgument[0] != "off" ) )
+                    return false;
+                vector<AbilitySystemComponent*> listComponent;
+                if ( collectAbilitySystems( listComponent, outReply ) == false )
+                    return true;
+                const GameObjectManager* pManager = GameInstanceBase::findActiveObjectManager();
+                // 무적 태그의 하위 태그로 붙인다 — 무적 판정(`hasMatchingTag`)은 하위를 함께 보고, 치트의 몫은 이펙트가 준 무적과 따로 센다.
+                const TagID tag         = "State.Invulnerable.Cheat"_tag;
+                int32       playerCount = 0;
+                int32       godCount    = 0;
+                for ( AbilitySystemComponent* pComponent : listComponent )
+                {
+                    if ( isPlayerControlled( *pManager, *pComponent ) == false )
+                        continue;
+                    ++playerCount;
+                    GameplayTagCountContainer& tags     = pComponent->getOwnedTagCounts();
+                    const bool                 bCheatOn = tags.getCount( tag ) > 0;
+                    const bool                 bWantOn  = bExplicit ? listArgument[0] == "on" : bCheatOn == false;
+                    if ( bWantOn && bCheatOn == false )
+                        tags.updateCount( tag, 1 );
+                    else if ( bWantOn == false && bCheatOn )
+                        tags.updateCount( tag, -1 );
+                    godCount += pComponent->isInvulnerable() ? 1 : 0;
+                }
+                if ( playerCount == 0 )
+                {
+                    outReply = "cheat.god: no player-controlled ability system in the active scene";
+                    return true;
+                }
+                outReply = "cheat.god invulnerable " + to_string( godCount ) + " of " + to_string( playerCount ) + " player ability system(s)";
+                return true;
+            }
+
             /** @brief `cheat.resetCooldowns` — 부여된 어빌리티마다 쿨다운 이펙트의 부여 태그와 일치하는 이펙트를 지웁니다. */
             static bool runResetCooldowns( const vector<string>& listArgument, string& outReply )
             {
@@ -131,6 +186,8 @@ namespace sw
     SW_DEV_COMMAND( CheatHeal, "cheat.heal", "cheat.heal", "Fill health to max health on every ability system in the active scene", &AbilityDevCommandsInternal::runHeal );
     SW_DEV_COMMAND( CheatAttribute, "cheat.attribute", "cheat.attribute <name> <value>", "Set an attribute's base value on every ability system in the active scene that has it",
                     &AbilityDevCommandsInternal::runAttribute );
+    SW_DEV_COMMAND( CheatGod, "cheat.god", "cheat.god [on|off]", "Toggle invulnerability (health never goes down) on every player-controlled ability system",
+                    &AbilityDevCommandsInternal::runGod );
     SW_DEV_COMMAND( CheatResetCooldowns, "cheat.resetCooldowns", "cheat.resetCooldowns", "Remove the cooldown effects of every granted ability in the active scene",
                     &AbilityDevCommandsInternal::runResetCooldowns );
 } // namespace sw

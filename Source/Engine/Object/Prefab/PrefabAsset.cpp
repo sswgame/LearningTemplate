@@ -567,7 +567,7 @@ namespace sw
                                         node._name );
                         continue;
                     }
-                    ObjectSaveOptions options{};
+                    ObjectSaveOptions options{ SerializePurpose::Authoring };
                     options._bOmitExternalParent = true; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
                     // 부품 아래 부품(원본이 스폰하는 것)을 고친 것은 노드의 `<Part>` 로 싣는다 — 노드로 담지 않으므로 싣지 않으면 Apply 가 버린다.
                     vector<PrefabPartOverride> listDeepPart;
@@ -920,7 +920,7 @@ namespace sw
         }
         // 프리팹 루트에는 부모가 없다 — 자식 인스턴스로 프리팹을 만들어도 원래 부모를 싣지 않는다. 실으면 그 프리팹을 스폰할 때마다
         // 그 이름의 오브젝트에 붙는다(언리얼 · 유니티의 프리팹 루트도 부모를 들지 않는다).
-        ObjectSaveOptions options{};
+        ObjectSaveOptions options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = true;
         _name                        = pGameObject->getName().c_str();
         _stateData                   = ObjectStateSerializer::saveToXMLString( pGameObject, options );
@@ -938,7 +938,7 @@ namespace sw
         if ( pTarget == nullptr || _stateData.empty() )
             return false;
         // 프리팹 본문에 남은 다른 오브젝트로의 부착은 읽지 않는다(위 `setFromGameObject`). 오브젝트 안의 부착은 그대로 잇는다.
-        ObjectLoadContext context{};
+        ObjectLoadContext context{ SerializePurpose::Authoring };
         context._pIdentity              = pIdentity;
         context._bExternalParentAllowed = false;
         return ( _stateFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::loadFromJSONString( pTarget, _stateData, context )
@@ -952,7 +952,7 @@ namespace sw
         GameObject*       pTemp = scratch.createGameObject( hashed_string( _name.c_str() ) );
         if ( applyStateTo( pTemp ) == false )
             return {};
-        return ( targetFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::saveToJSONString( pTemp ) : ObjectStateSerializer::saveToXMLString( pTemp );
+        return ( targetFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::saveToJSONString( pTemp, ObjectSaveOptions{ SerializePurpose::Authoring } ) : ObjectStateSerializer::saveToXMLString( pTemp, ObjectSaveOptions{ SerializePurpose::Authoring } );
     }
 
     void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outListPath ) const
@@ -1206,7 +1206,7 @@ namespace sw
         if ( bNoNewBase )
             return false;
         // 덮어쓴 것은 옛 원형과 견줘 뽑는다. 새 원형과 견주면 프리팹에서 바뀐 칸이 모두 "인스턴스가 덮어쓴 값" 으로 보여 퍼지지 않는다.
-        const string instanceState = ObjectStateSerializer::saveToXMLString( pInstance );
+        const string instanceState = ObjectStateSerializer::saveToXMLString( pInstance, ObjectSaveOptions{ SerializePurpose::Authoring } );
         string       overrideXML;
         string       newInstanceState;
         const bool   bStateMade = PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML ) &&
@@ -1214,7 +1214,7 @@ namespace sw
         if ( bStateMade == false )
             return false;
         const ObjectIdentity identity = ObjectStateSerializer::captureIdentity( pInstance );
-        ObjectLoadContext    context{};
+        ObjectLoadContext    context{ SerializePurpose::Authoring };
         context._pIdentity = &identity;
         return ObjectStateSerializer::loadFromXMLString( pInstance, newInstanceState, context );
     }
@@ -1396,7 +1396,7 @@ namespace sw
             GameObject*   pPart      = pManager->createGameObject( hashed_string( StringUtil::isNullOrEmpty( pName ) ? PrefabAssetInternal::kDefaultInstance : pName ) );
             if ( pPart == nullptr )
                 continue;
-            ObjectLoadContext context{};
+            ObjectLoadContext context{ SerializePurpose::Authoring };
             context._bExternalParentAllowed = false; // 부모는 노드의 자리가 정한다(아래에서 붙인다)
             if ( ObjectStateSerializer::loadFromXMLString( pPart, state, context ) == false )
             {
@@ -1450,7 +1450,7 @@ namespace sw
         const PrefabInstanceRegistry& scratchRegistry = scratch.getSubsystem<PrefabInstanceRegistry>();
         vector<uint64>                listScratchPartID;
         PrefabAssetInternal::collectPartTree( scratchRegistry, pScratchRoot->getObjectID(), listScratchPartID );
-        ObjectSaveOptions options{};
+        ObjectSaveOptions options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = true; // 부모는 노드의 자리가 정한다
         unordered_map<string, string> mapBaseState;
         for ( const uint64 scratchPartID : listScratchPartID )

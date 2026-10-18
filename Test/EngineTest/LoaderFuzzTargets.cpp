@@ -170,7 +170,7 @@ namespace test
             static void runGameObjectXML( const uint8* pData, size_t size )
             {
                 GameObject object( hashed_string( "FuzzObject" ) );
-                (void)ObjectStateSerializer::loadFromXMLString( &object, asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)ObjectStateSerializer::loadFromXMLString( &object, asText( pData, size ), sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runMaterial( const uint8* pData, size_t size )
             {

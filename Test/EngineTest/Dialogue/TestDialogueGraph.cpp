@@ -451,11 +451,11 @@ SW_TEST_CASE( DialogueGraphTest, RunnerReopensItsGraphAfterStateLoad )
     SW_ASSERT_NOT_NULL( pSourceRunner );
     pSourceRunner->_graphPath = filePath;
 
-    const string xml = ObjectStateSerializer::saveToXMLString( pSource );
+    const string xml = ObjectStateSerializer::saveToXMLString( pSource, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     SW_ASSERT_FALSE( xml.empty() );
     GameObject* pTarget = manager.createGameObject( hashed_string( "LoadedNpc" ) );
     SW_ASSERT_NOT_NULL( pTarget );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pTarget, xml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pTarget, xml, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
 
     DialogueRunnerComponent* pLoaded = pTarget->getComponent<DialogueRunnerComponent>();
     SW_ASSERT_NOT_NULL( pLoaded );

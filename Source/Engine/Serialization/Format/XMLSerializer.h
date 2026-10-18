@@ -205,25 +205,25 @@ namespace sw
         /** @brief 지정한 백엔드로 객체를 XML 로 직렬화합니다. */
         static string serialize( const void* pInstance, const TypeInfo& typeInfo,
                                  IXMLBackend&            backend,
-                                 const SerializeContext& context = SerializeContext::getDefault() );
+                                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /** @brief 지정한 백엔드로 XML 에서 객체를 역직렬화합니다. */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo,
                                                IXMLBackend& backend, string_view xmlStr,
-                                               const SerializeContext& context = SerializeContext::getDefault() );
+                                               const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 기본 XMLDocumentBackend 로 객체를 XML 로 직렬화합니다. */
         static string serialize( const void* pInstance, const TypeInfo& typeInfo,
-                                 const SerializeContext& context = SerializeContext::getDefault() );
+                                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /** @brief 기본 XMLDocumentBackend 로 XML 에서 객체를 역직렬화합니다. */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-                                               const SerializeContext& context = SerializeContext::getDefault() );
+                                               const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief XML 을 절대 경로에 씁니다. */
         [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
-                                            const SerializeContext& context = SerializeContext::getDefault() );
+                                            const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /** @brief 절대 경로나 리소스 경로에서 XML 을 읽어 역직렬화합니다. */
         [[nodiscard]] static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
-                                            const SerializeContext& context = SerializeContext::getDefault() );
+                                            const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         // ------------------------------------------------------------------------------
         // 5) Soft 역직렬화와 버전: orphan 수집, 루트 _schemaVersion
@@ -234,21 +234,21 @@ namespace sw
          */
         [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                                              vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
-                                                             const SerializeContext& context = SerializeContext::getDefault() );
+                                                             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 루트 속성 `_schemaVersion` 을 붙여 XML 로 직렬화합니다. */
         static string serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
-                                          const SerializeContext& context = SerializeContext::getDefault() );
+                                          const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 이미 열린 부모 요소에 `_schemaVersion` 과 PROPERTY 를 씁니다. 스칼라는 속성으로 씁니다. */
         static void serializeVersionedInto( IXMLBackend& backend, uint32 version, const void* pInstance, const TypeInfo& typeInfo,
-                                            const SerializeContext& context = SerializeContext::getDefault() );
+                                            const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 버전을 읽고 soft 역직렬화한 뒤, 필요하면 등록된 이관(`SchemaMigrationRegistry`)을 부릅니다. */
         [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                                         uint32                  currentVersion  = 0,
                                                         const TypeInfo*         pLegacyTypeInfo = nullptr,
-                                                        const SerializeContext& context         = SerializeContext::getDefault() );
+                                                        const SerializeContext& context         = SerializeContext::getDefault( SerializePurpose::Authoring ) );
     };
 
 } // namespace sw

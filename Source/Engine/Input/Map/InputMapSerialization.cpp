@@ -777,13 +777,7 @@ namespace sw
 
     uint32 InputMap::countVirtualCursorConflicts( string_view sourceName ) const
     {
-        if ( _virtualCursorStick == InputMapVirtualCursor::Off )
-            return 0;
-        const VirtualCursorSettings cursor{};
-        const GamepadStick          cursorStick       = _virtualCursorStick == InputMapVirtualCursor::RightStick ? GamepadStick::Right : GamepadStick::Left;
-        const InputSlot             arrCursorButton[] = { InputSlot::fromGamepadButton( cursor._primaryButton, cursor._padIndex ),
-                                                          InputSlot::fromGamepadButton( cursor._secondaryButton, cursor._padIndex ) };
-        uint32                      conflictCount     = 0;
+        uint32 conflictCount = 0;
         for ( const hashed_string& actionName : _listActionName )
         {
             const ActionEntry* pEntry = findAction( actionName );
@@ -791,24 +785,35 @@ namespace sw
                 continue;
             for ( const ActionBinding& binding : pEntry->_listBinding )
             {
-                const bool bCursorStick  = binding._kind == BindingKind::GamepadStick2D && binding._stick == cursorStick && binding._deviceIndex == cursor._padIndex;
-                bool       bCursorButton = false;
-                for ( const InputSlot& slot : binding._arrSlot )
-                {
-                    for ( const InputSlot& button : arrCursorButton )
-                    {
-                        bCursorButton = bCursorButton || slot == button;
-                    }
-                }
-                if ( bCursorStick == false && bCursorButton == false )
-                    continue;
-                SW_LOG_ERROR( "InputMap %#: action '%#' binds the %# the virtual cursor (%#) turns into the mouse - one press would fire twice; bind the mouse only",
-                              sourceName, actionName.c_str(), bCursorStick ? "stick" : "gamepad button",
-                              InputMapSerializationInternal::toVirtualCursorName( _virtualCursorStick ) );
-                ++conflictCount;
+                if ( reportVirtualCursorConflict( sourceName, actionName, binding ) )
+                    ++conflictCount;
             }
         }
         return conflictCount;
+    }
+
+    bool InputMap::reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const
+    {
+        if ( _virtualCursorStick == InputMapVirtualCursor::Off )
+            return false;
+        const VirtualCursorSettings cursor{};
+        const GamepadStick          cursorStick       = _virtualCursorStick == InputMapVirtualCursor::RightStick ? GamepadStick::Right : GamepadStick::Left;
+        const InputSlot             arrCursorButton[] = { InputSlot::fromGamepadButton( cursor._primaryButton, cursor._padIndex ),
+                                                          InputSlot::fromGamepadButton( cursor._secondaryButton, cursor._padIndex ) };
+        const bool                  bCursorStick      = binding._kind == BindingKind::GamepadStick2D && binding._stick == cursorStick && binding._deviceIndex == cursor._padIndex;
+        bool                        bCursorButton     = false;
+        for ( const InputSlot& slot : binding._arrSlot )
+        {
+            for ( const InputSlot& button : arrCursorButton )
+            {
+                bCursorButton = bCursorButton || slot == button;
+            }
+        }
+        if ( bCursorStick == false && bCursorButton == false )
+            return false;
+        SW_LOG_ERROR( "InputMap %#: action '%#' binds the %# the virtual cursor (%#) turns into the mouse - one press would fire twice; bind the mouse only",
+                      sourceName, action.c_str(), bCursorStick ? "stick" : "gamepad button", InputMapSerializationInternal::toVirtualCursorName( _virtualCursorStick ) );
+        return true;
     }
 
     bool InputMap::saveToResource( string_view relativePath ) const
@@ -1014,6 +1019,7 @@ namespace sw
         if ( root.isValid() == false )
             return false;
 
+        bool bCursorConflict = false;
         for ( XMLNode bindNode = root.findChild( "bind" ); bindNode.isValid(); bindNode = bindNode.findNextSibling( "bind" ) )
         {
             const utf8*       pAction   = bindNode.findAttribute( "action" );
@@ -1164,8 +1170,23 @@ namespace sw
                 }
             }
             InputMapSerializationInternal::readBindingModifier( *this, actionName, previousCount, bindNode );
+
+            // 맵 읽기와 같은 검사 — 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 다시 묶은 바인딩은 넣지 않고 읽기를 실패로 돌린다.
+            ActionEntry* pEntry = findAction( actionName );
+            if ( pEntry == nullptr )
+                continue;
+            for ( uint32 bindIndex = static_cast<uint32>( pEntry->_listBinding.size() ); bindIndex > previousCount; --bindIndex )
+            {
+                const uint32 removeIndex = bindIndex - 1;
+                if ( reportVirtualCursorConflict( filePath, actionName, pEntry->_listBinding[removeIndex] ) == false )
+                    continue;
+                pEntry->_listBinding.erase( pEntry->_listBinding.begin() + removeIndex );
+                pEntry->_listDefaultBinding.erase( pEntry->_listDefaultBinding.begin() + removeIndex );
+                pEntry->_listBindingState.erase( pEntry->_listBindingState.begin() + removeIndex );
+                bCursorConflict = true;
+            }
         }
-        return true;
+        return bCursorConflict == false;
     }
 
     ActionTrigger InputMap::actionTriggerFromName( string_view name )

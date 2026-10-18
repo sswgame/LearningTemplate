@@ -207,8 +207,9 @@ namespace sw
         uint8 _bHasStep                : 1;
         uint8 _bHasMaxCount            : 1;
         /** @brief 공개 멤버입니다. 다른 타입의 코덱이 이 필드를 직접 읽고 쓸 수 있는지(중첩 타입 펼치기) 정합니다. */
-        uint8                   _bPublic  : 1;
-        [[maybe_unused]] uint8  _reserved : 1;
+        uint8 _bPublic : 1;
+        /** @brief 플레이 중에만 의미가 있는 상태입니다(PROPERTY(RuntimeState)). 저작 저장(`SerializePurpose::Authoring`)이 쓰지 않습니다. */
+        uint8                   _bRuntimeState : 1;
         [[maybe_unused]] uint16 _padding;
 
         ParsedPropertyInfo() noexcept
@@ -267,7 +268,7 @@ namespace sw
             , _bHasStep{ SW_FALSE }
             , _bHasMaxCount{ SW_FALSE }
             , _bPublic{ SW_FALSE }
-            , _reserved{ 0 }
+            , _bRuntimeState{ SW_FALSE }
             , _padding{ 0 }
         {
         }

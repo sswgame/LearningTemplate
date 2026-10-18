@@ -256,7 +256,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchFailsOnHandlesItCannotRemap )
     pHolderComp->_mapSlotToTarget = {
         { 1, pTarget->getHandle() }
     };
-    const sw::string state = sw::ObjectStateSerializer::saveToXMLString( pHolder );
+    const sw::string state = sw::ObjectStateSerializer::saveToXMLString( pHolder, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     SW_ASSERT_TRUE( state.empty() == false );
 
     // 같은 실행 상태 — 묶음 밖의 오브젝트도 런타임 id 그대로다.
@@ -264,7 +264,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchFailsOnHandlesItCannotRemap )
         sw::GameObject* pLive = manager.createGameObject( sw::hashed_string( "LiveCopy" ) );
         SW_ASSERT_NOT_NULL( pLive );
         sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Live );
-        sw::ObjectLoadContext context{};
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
         context._pBatch = &batch;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLive, state, context ) );
         SW_EXPECT_TRUE( batch.finish() );
@@ -279,7 +279,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchFailsOnHandlesItCannotRemap )
         sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "FromFile" ) );
         SW_ASSERT_NOT_NULL( pFresh );
         sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
-        sw::ObjectLoadContext context{};
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
         context._pBatch  = &batch;
         context._savedID = 900000001; // 런타임 id 와 겹치지 않는 파일 id
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, state, context ) );
@@ -297,14 +297,14 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchFailsOnHandlesItCannotRemap )
     sw::TestUnremappableHandleHolderComponent* pRowComp = pRowHolder->addComponent<sw::TestUnremappableHandleHolderComponent>();
     SW_ASSERT_NOT_NULL( pRowComp );
     pRowComp->_uniqueRow       = { { pTarget->getHandle() } };
-    const sw::string rowState  = sw::ObjectStateSerializer::saveToXMLString( pRowHolder );
+    const sw::string rowState  = sw::ObjectStateSerializer::saveToXMLString( pRowHolder, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     sw::GameObject*  pRowFresh = manager.createGameObject( sw::hashed_string( "RowFromFile" ) );
     SW_ASSERT_NOT_NULL( pRowFresh );
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "unremappable handle property" );
         sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
-        sw::ObjectLoadContext context{};
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
         context._pBatch  = &batch;
         context._savedID = 900000002;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pRowFresh, rowState, context ) );
@@ -348,9 +348,9 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
     };
 
     sw::vector<uint8> binaryState;
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pHolder, binaryState ) );
-    const sw::string xmlState  = sw::ObjectStateSerializer::saveToXMLString( pHolder );
-    const sw::string jsonState = sw::ObjectStateSerializer::saveToJSONString( pHolder );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pHolder, binaryState, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
+    const sw::string xmlState  = sw::ObjectStateSerializer::saveToXMLString( pHolder, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
+    const sw::string jsonState = sw::ObjectStateSerializer::saveToJSONString( pHolder, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
 
     for ( uint32 formatIndex = 0; formatIndex < 3; ++formatIndex )
     {
@@ -361,7 +361,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
 
         sw::ObjectStateBatch batch( sw::ObjectIDSpace::Saved );
         batch.add( pNewTarget, pTarget->getObjectID(), sw::hashed_string( "RemapTarget" ), false );
-        sw::ObjectLoadContext context{};
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Snapshot };
         context._pBatch  = &batch;
         context._savedID = 900000101 + formatIndex;
         bool bLoaded     = false;

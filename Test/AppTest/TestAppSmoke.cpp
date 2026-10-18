@@ -15,7 +15,6 @@
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/GameSelection.h"
-#include "Engine/Graphics/RHI/RHIInitResult.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -51,112 +50,102 @@ SW_TEST_REQUIRES_HOST( AppSmokeTest, "launches the real App.exe, which needs a G
 
 namespace
 {
-    /** @brief App 한 판의 결과. */
-    struct AppRunResult
+    /** @brief App 한 판이 남긴 출력에서 케이스가 보는 것. */
+    struct AppOutput
     {
-        int32  _exitCode{ -1 };
         uint32 _errorCount{ 0 };
         uint32 _lineCount{ 0 };
         string _firstErrorLine{};
         /** @brief `runApp` 에 준 표식으로 시작하는 줄들(표식부터 줄 끝까지). 표식을 주지 않으면 비어 있습니다. */
         vector<string> _listMarkedLine{};
-        uint32         _missingComponentLineCount{ 0 }; /**< `MissingComponent` 가 든 줄 수 — 씬이 모르는 타입을 만났다. */
-        bool           _bLaunched{ false };
-        bool           _bBackendUnusableHere{ false };     /**< App 이 종료 코드 kRHIUnusableHereExitCode 로 "이 기계에서 그 백엔드를 못 돌린다" 고 알렸다(RHIInitResult). */
+        uint32         _missingComponentLineCount{ 0 };    /**< `MissingComponent` 가 든 줄 수 — 씬이 모르는 타입을 만났다. */
         bool           _bVulkanValidationEnabled{ false }; /**< Vulkan 디바이스가 검증 레이어를 켜고 섰다(그래야 잘못된 사용이 [Error] 로 나온다). */
     };
 
-    /**
-     * @brief App 이 "이 기계에서 그 백엔드를 못 돌린다" 로 끝났을 때, 명령줄이 고른 백엔드(`-dx11` · `-dx12` · `-vk` · `-gl`)가 이 실행의
-     *        요구 백엔드(`--required_backends=`)면 케이스를 실패로 기록합니다. 건너뜀으로 초록이 되지 않게 한다(C-41 3단계).
-     */
-    void reportUnusableBackendSwitch( string_view arguments )
+    /** @brief 백엔드를 고른 App 한 판의 결과 — 판정(`AppRunOutcome`)과 출력입니다. 종료 코드는 판정이 해석했다. */
+    struct AppRunResult : AppOutput
     {
-        for ( const RHIBackend backend : { RHIBackend::DirectX11, RHIBackend::DirectX12, RHIBackend::Vulkan, RHIBackend::OpenGL } )
+        test::AppRunOutcome _outcome{ test::AppRunOutcome::Failed };
+    };
+
+    /** @brief 렌더러를 세우지 않는 App 한 판(`--check-*`)의 결과 — 배포본은 그 명령이 없어 0 이 아닌 종료가 기대값이라 종료 코드를 그대로 둔다. */
+    struct HeadlessRunResult : AppOutput
+    {
+        int32 _exitCode{ -1 };
+        bool  _bLaunched{ false };
+    };
+
+    /** @brief 출력 한 줄 @p line 을 @p output 에 셉니다. @p pMarker 가 nullptr 가 아니면 그 글이 든 줄을 표식부터 잘라 `_listMarkedLine` 에 모읍니다. */
+    void collectLine( AppOutput& output, const utf8* pMarker, const string& line )
+    {
+        ++output._lineCount;
+        if ( line.find( "MissingComponent" ) != string::npos )
+            ++output._missingComponentLineCount;
+        if ( line.find( "(Validation Layers: ENABLED)" ) != string::npos )
+            output._bVulkanValidationEnabled = true;
+
+        const size_t markerIndex = pMarker == nullptr ? string::npos : line.find( pMarker );
+        if ( markerIndex != string::npos )
         {
-            const string switchText = string( "-" ) + test::TestRunOptions::getBackendName( backend );
-            size_t       position   = arguments.find( switchText.c_str() );
-            while ( position != string_view::npos )
+            string markedLine = line.substr( markerIndex );
+            while ( markedLine.empty() == false && ( markedLine.back() == '\r' || markedLine.back() == ' ' ) )
             {
-                const size_t end         = position + switchText.size();
-                const bool   bTokenStart = position == 0 || arguments[position - 1] == ' ';
-                const bool   bTokenEnd   = end == arguments.size() || arguments[end] == ' ';
-                if ( bTokenStart && bTokenEnd )
-                {
-                    (void)test::reportUnusableBackend( backend, "App exited with the RHI-unusable-here code", __FILE__, __LINE__ ); // 요구하지 않았으면 케이스가 건너뛴다
-                    return;
-                }
-                position = arguments.find( switchText.c_str(), end );
+                markedLine.pop_back();
             }
+            output._listMarkedLine.push_back( std::move( markedLine ) );
         }
+
+        if ( line.find( "[Error]" ) == string::npos )
+            return;
+
+        ++output._errorCount;
+        if ( output._firstErrorLine.empty() )
+            output._firstErrorLine = line;
     }
 
     /**
-     * @brief App 을 한 판 돌리고 종료 코드와 `[Error]` 줄 수를 돌려줍니다.
+     * @brief 백엔드 스위치가 든 @p arguments 로 App 을 한 판 돌려 판정과 출력을 돌려줍니다(`AppTestUtil::runAppOnBackend`).
      * @details 작업 디렉터리는 **바꾸지 않는다** — 테스트의 작업 폴더가 이미 `Bin` 이고(ctest 가 그렇게
      *          돌린다) App 도 거기서 `Resource/` 를 찾아 올라간다. 배포본에서는 테스트 바이너리만
      *          `TestBin` 에 있고 작업 폴더는 여전히 `Bin` 이라 이 전제가 양쪽에서 같다.
+     *          `Failed` 이면 실패가 이미 기록됐다. 요구하지 않은 백엔드가 서지 못하면 `BackendUnusable` 이다.
      * @param pMarker nullptr 가 아니면 이 글이 든 줄을 표식부터 잘라 `_listMarkedLine` 에 모읍니다.
      */
     AppRunResult runApp( string_view arguments, const utf8* pMarker = nullptr )
     {
-        AppRunResult                 result{};
+        AppRunResult result{};
+        result._outcome = test::AppTestUtil::runAppOnBackend( arguments, test::AppTestUtil::kAppRunTimeoutSeconds, [&result, pMarker]( Process&, const string& line )
+        {
+            collectLine( result, pMarker, line );
+        } );
+        return result;
+    }
+
+    /** @brief 렌더러를 세우지 않는 명령(`--check-*`)으로 App 을 한 판 돌립니다. 종료 코드는 케이스가 본다. */
+    HeadlessRunResult runHeadless( string_view arguments, const utf8* pMarker )
+    {
+        HeadlessRunResult            result{};
         const test::ProcessRunResult run = test::AppTestUtil::runApp( arguments, test::AppTestUtil::kAppRunTimeoutSeconds, [&result, pMarker]( Process&, const string& line )
         {
-            ++result._lineCount;
-            if ( line.find( "MissingComponent" ) != string::npos )
-                ++result._missingComponentLineCount;
-            if ( line.find( "(Validation Layers: ENABLED)" ) != string::npos )
-                result._bVulkanValidationEnabled = true;
-
-            const size_t markerIndex = pMarker == nullptr ? string::npos : line.find( pMarker );
-            if ( markerIndex != string::npos )
-            {
-                string markedLine = line.substr( markerIndex );
-                while ( markedLine.empty() == false && ( markedLine.back() == '\r' || markedLine.back() == ' ' ) )
-                {
-                    markedLine.pop_back();
-                }
-                result._listMarkedLine.push_back( std::move( markedLine ) );
-            }
-
-            if ( line.find( "[Error]" ) == string::npos )
-                return;
-
-            ++result._errorCount;
-            if ( result._firstErrorLine.empty() )
-                result._firstErrorLine = line;
+            collectLine( result, pMarker, line );
         } );
         result._bLaunched                = run._bLaunched;
         result._exitCode                 = run._bTimedOut ? -1 : run._exitCode;
-        // App 이 RHI 를 세우다 환경 탓(이 빌드에 없다 · 드라이버가 기능을 안 준다)으로 물러나면 이 코드로 끝난다. 로그 문구는 보지 않는다.
-        result._bBackendUnusableHere = ( result._exitCode == kRHIUnusableHereExitCode );
-        if ( result._bBackendUnusableHere )
-            reportUnusableBackendSwitch( arguments );
         return result;
     }
 
     /**
      * @brief 한 판을 돌리고 계약(종료 코드 0 · 에러 0 · 출력 있음)을 검사합니다.
-     * @return 실제로 검사했으면 true, 그 백엔드가 이 기계에 없어 건너뛰었으면 false.
+     * @return 이 기계에서 돌았으면(통과든 실패든) true, 요구하지 않은 백엔드가 서지 못해 건너뛰었으면 false.
      */
     bool expectCleanRun( string_view arguments )
     {
         const AppRunResult result = runApp( arguments );
+        if ( test::hasRunHere( result._outcome ) == false )
+            return false; // 어느 백엔드가 빠졌는지는 runAppOnBackend 가 로그로 남겼다
+        if ( result._outcome == test::AppRunOutcome::Failed )
+            return true; // 실패와 출력 끝은 runAppOnBackend 가 기록했다 — 못 띄우거나 서지 못한 판의 출력을 더 따지면 같은 실패가 겹친다
 
-        SW_EXPECT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-        if ( result._bLaunched == false )
-            return false;
-
-        if ( result._bBackendUnusableHere )
-        {
-            // 어느 백엔드가 빠졌는지 **눈에 보이게** 남긴다. 조용히 건너뛰면 윈도우에서 백엔드 하나가
-            // 진짜로 죽은 날에도 초록으로 보인다.
-            SW_LOG_WARNING( "Skipping smoke run '%#' — no usable RHI backend on this machine.", string( arguments ).c_str() );
-            return false;
-        }
-
-        SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
         SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
 #if !defined( SW_SHIPPING )
         // 출력이 한 줄도 없으면 "조용히 성공" 이 아니라 아무것도 안 한 것이다.
@@ -478,10 +467,8 @@ SW_TEST_CASE( AppSmokeTest, EditorStartupSceneIsTheSceneThatOpens )
 {
     const AppRunResult result = runApp( "-gv_profileFrames=20 -EnableEditor -dx12 \"-gv_editorStartupScene=game/empty/maps/spriteui.scene.xml\"",
                                         "Active scene swapped to" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-    if ( result._bBackendUnusableHere )
+    if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
-    SW_EXPECT_EQUAL( 0, result._exitCode );
     SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.c_str() );
     SW_EXPECT_EQUAL( 0u, result._missingComponentLineCount );
     SW_ASSERT_TRUE_MSG( result._listMarkedLine.empty() == false, "no scene became active" );
@@ -499,10 +486,8 @@ SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
     SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -gv_memoryTracking=1 -EnableEditor -dx12", "[Memory]   " );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-    if ( result._bBackendUnusableHere )
+    if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
-    SW_EXPECT_EQUAL( 0, result._exitCode );
 
     const uint64 editorKilobytes  = findMemoryTagKilobytes( result, "Editor" );
     const uint64 unknownKilobytes = findMemoryTagKilobytes( result, "Unknown" );
@@ -521,10 +506,8 @@ SW_TEST_CASE( AppSmokeTest, RuntimeMemoryIsAttributedByTag )
     SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -gv_memoryTracking=1 -dx12", "[Memory]   " );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-    if ( result._bBackendUnusableHere )
+    if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
-    SW_EXPECT_EQUAL( 0, result._exitCode );
 
     const uint64 unknownKilobytes = findMemoryTagKilobytes( result, "Unknown" );
     SW_EXPECT_TRUE_MSG( unknownKilobytes < kMaxUnknownTagKilobytes, ( string( "Unknown KB = " ) + to_string( unknownKilobytes ) ).c_str() );
@@ -543,8 +526,7 @@ SW_TEST_CASE( AppSmokeTest, UnwritableScreenshotIsReported )
     arguments += blockedPath;
     arguments += "\"";
     const AppRunResult result = runApp( arguments, "Screenshot was not written" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-    if ( result._bBackendUnusableHere )
+    if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( result._listMarkedLine.size() ) );
 }
@@ -566,11 +548,9 @@ SW_TEST_CASE( AppSmokeTest, BackendSwapFollowsTheNewDevice )
         string arguments{ "-gv_profileFrames=30 -gv_rhiSwapAtFrame=10 " };
         arguments += pSwapArgument;
         const AppRunResult result = runApp( arguments, "Active backend is now" );
-        SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-        if ( result._bBackendUnusableHere )
+        if ( test::hasRunHere( result._outcome ) == false )
             continue;
         ++checkedCount;
-        SW_EXPECT_TRUE_MSG( result._exitCode == 0, arguments.c_str() );
         SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? arguments.c_str() : result._firstErrorLine.c_str() );
         SW_ASSERT_TRUE_MSG( result._listMarkedLine.size() == 1, arguments.c_str() );
 
@@ -607,11 +587,9 @@ SW_TEST_CASE( AppSmokeTest, BackendSwapRebuildsGameBeforeEditor )
         string arguments{ "-gv_profileFrames=30 -gv_rhiSwapAtFrame=10 -EnableEditor " };
         arguments += pSwapArgument;
         const AppRunResult result = runApp( arguments, "Module instance initialized: " );
-        SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-        if ( result._bBackendUnusableHere )
+        if ( test::hasRunHere( result._outcome ) == false )
             continue;
         ++checkedCount;
-        SW_EXPECT_TRUE_MSG( result._exitCode == 0, arguments.c_str() );
         SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? arguments.c_str() : result._firstErrorLine.c_str() );
         SW_ASSERT_TRUE_MSG( result._listMarkedLine.size() == std::size( kArrExpectedLabel ), arguments.c_str() );
         for ( size_t lineIndex = 0; lineIndex < std::size( kArrExpectedLabel ); ++lineIndex )
@@ -687,10 +665,8 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
     };
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -EnableEditor -dx12 -gv_editorRegistryDump=1", "EditorExtensionRegistry|" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-    if ( result._bBackendUnusableHere )
+    if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
-    SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
     SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
 
     // 기대 줄을 순서대로 찾는다. 하나라도 없거나 순서가 뒤바뀌면 그 줄을 이름으로 알린다.
@@ -796,10 +772,8 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
     string arguments{ "-gv_profileFrames=1200 -EnableEditor -dx12 -gv_editorSelfTest=* -gv_editorSelfTestReport=" };
     arguments += reportPath;
     const AppRunResult result = runApp( arguments, "EditorSelfTest|" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-    if ( result._bBackendUnusableHere )
+    if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
-    SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
     SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
 
     for ( const utf8* pExpected : kArrExpectedPass )
@@ -832,10 +806,8 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
 SW_TEST_CASE( AppSmokeTest, KitExtensionSelfTestsPassInTheirGame )
 {
     const AppRunResult result = runApp( "-gv_profileFrames=1200 -EnableEditor -dx12 -game=ThemeParkTycoon -gv_editorSelfTest=themepark.*", "EditorSelfTest|" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-    if ( result._bBackendUnusableHere )
+    if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
-    SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
     SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
     constexpr const utf8* kArrExpectedPass[] = { "EditorSelfTest|PASS|themepark.extensionPanelDraws", "EditorSelfTest|PASS|themepark.layoutPreviewLoads",
                                                  "EditorSelfTest|DONE|2|0" };
@@ -862,11 +834,9 @@ SW_TEST_CASE( AppSmokeTest, KitExtensionSelfTestsPassInTheirGame )
 SW_TEST_CASE( AppSmokeTest, VulkanEditorSceneViewResizeLeavesNoValidationError )
 {
     const AppRunResult result = runApp( "-gv_profileFrames=1200 -EnableEditor -vk -gv_editorSelfTest=sceneView.*", "EditorSelfTest|" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
-    if ( result._bBackendUnusableHere )
+    if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "Vulkan is not usable on this machine" );
     SW_EXPECT_TRUE_MSG( result._bVulkanValidationEnabled, "the Vulkan validation layer was not enabled - nothing would report a misuse" );
-    SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
     SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
 
     bool bPassed{ false };
@@ -886,7 +856,7 @@ SW_TEST_CASE( AppSmokeTest, VulkanEditorSceneViewResizeLeavesNoValidationError )
  */
 SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
 {
-    const AppRunResult result = runApp( "--check-textures", "Texture check:" );
+    const HeadlessRunResult result = runHeadless( "--check-textures", "Texture check:" );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
 #if defined( SW_SHIPPING )
     SW_EXPECT_TRUE( result._exitCode != 0 );
@@ -905,7 +875,7 @@ SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
  */
 SW_TEST_CASE( AppSmokeTest, ModelCheckRunsHeadlessThroughTheEditorModule )
 {
-    const AppRunResult result = runApp( "--check-models", "Model check:" );
+    const HeadlessRunResult result = runHeadless( "--check-models", "Model check:" );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
 #if defined( SW_SHIPPING )
     SW_EXPECT_TRUE( result._exitCode != 0 );
@@ -926,7 +896,7 @@ SW_TEST_CASE( AppSmokeTest, ModelCheckRunsHeadlessThroughTheEditorModule )
  */
 SW_TEST_CASE( AppSmokeTest, HeadlessRunReportsLeaksAgainstABaseline )
 {
-    const AppRunResult result = runApp( "--check-textures", "[MemoryLeak]" );
+    const HeadlessRunResult result = runHeadless( "--check-textures", "[MemoryLeak]" );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
     SW_EXPECT_TRUE_MSG( result._exitCode == 0, result._firstErrorLine.c_str() );
 
@@ -955,10 +925,8 @@ SW_TEST_CASE( AppSmokeTest, ShutdownReturnsEveryTagToTheBaseline )
     for ( const utf8* pArgument : kArrArgument )
     {
         const AppRunResult result = runApp( pArgument, "[MemoryLeak]" );
-        SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
-        if ( result._bBackendUnusableHere )
+        if ( test::hasRunHere( result._outcome ) == false )
             SW_TEST_SKIP( "DX12 is not usable on this machine" );
-        SW_EXPECT_TRUE_MSG( result._exitCode == 0, pArgument );
 
         bool bComparedTags = false;
         for ( const string& line : result._listMarkedLine )
@@ -1062,10 +1030,8 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
             arguments += backend._pSwitch;
 
             const AppRunResult result = runApp( arguments );
-            SW_EXPECT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
-            if ( result._bLaunched == false || result._bBackendUnusableHere )
-                continue;
-            SW_EXPECT_TRUE_MSG( result._exitCode == 0, imageName.c_str() );
+            if ( result._outcome != test::AppRunOutcome::Passed )
+                continue; // 실패는 runAppOnBackend 가 기록했고, 요구하지 않은 백엔드가 서지 못한 판은 건너뛴다
 
             vector<uint8> screenshotBytes;
             PpmImage      actual{};

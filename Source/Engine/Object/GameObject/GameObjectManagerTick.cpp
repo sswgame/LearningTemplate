@@ -114,8 +114,8 @@ namespace sw
 
     void GameObjectManager::runFrameStepAnimation( float32 deltaTime )
     {
-        // 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
-        _animationSystem.evaluate( deltaTime );
+        // 애니메이션 평가(`AnimationSystem`)는 이 단계에 등록된 씬 서비스다. 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
+        updateSceneServices( SceneFrameStep::Animation, deltaTime );
     }
 
     void GameObjectManager::runFrameStepFlushPostAnimation( float32 /*deltaTime*/ )
@@ -159,6 +159,8 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
         processDeferredDestruction();
+        // 놓은 오브젝트의 기록을 거두는 서비스(`PrefabInstanceRegistry`)가 여기서 돈다 — 파괴를 처리한 뒤라야 무엇이 없어졌는지 안다.
+        updateSceneServices( SceneFrameStep::DestroyPost, 0.0f );
     }
 
     const utf8* getSceneFrameStepName( SceneFrameStep step )

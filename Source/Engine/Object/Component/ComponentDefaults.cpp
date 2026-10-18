@@ -295,7 +295,7 @@ namespace sw
             if ( ComponentDefaultsInternal::isMemcpyProperty( registry, prop, fieldSize ) )
             {
                 patch._arrByte.assign( fieldSize, 0 );
-                if ( parseTextValueCoerced( patch._arrByte.data(), prop._typeName, patch._text, SerializeContext::getDefault() ) )
+                if ( parseTextValueCoerced( patch._arrByte.data(), prop._typeName, patch._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
                     patch._bMemcpy = SW_TRUE;
                 else
                     patch._arrByte.clear();
@@ -312,7 +312,7 @@ namespace sw
             Memory::copy( pPropPtr, patch._arrByte.data(), patch._arrByte.size() );
             return;
         }
-        if ( parseTextValueCoerced( pPropPtr, patch._pProperty->_typeName, patch._text, SerializeContext::getDefault() ) == false )
+        if ( parseTextValueCoerced( pPropPtr, patch._pProperty->_typeName, patch._text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
             SW_LOG_WARNING( "Component default '%#' of '%#' cannot be read - the field keeps its constructor value", patch._text, patch._pProperty->_name.c_str() );
     }
 

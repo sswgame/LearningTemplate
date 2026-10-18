@@ -52,10 +52,10 @@ def ensureGitOnPath() -> str | None:
         return None
 
     gitDir = str(Path(gitPath).parent)
-    pathParts = os.environ.get("PATH", "").split(os.pathsep)
+    pathParts = os.environ["PATH"].split(os.pathsep)
     pathLower = {part.lower() for part in pathParts if part}
     if gitDir.lower() not in pathLower:
-        os.environ["PATH"] = gitDir + os.pathsep + os.environ.get("PATH", "")
+        os.environ["PATH"] = gitDir + os.pathsep + os.environ["PATH"]
     return gitPath
 
 

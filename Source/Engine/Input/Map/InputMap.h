@@ -464,6 +464,7 @@ namespace sw
          * @brief 런타임에 액션의 키 바인딩을 바꿉니다. 바인딩 종류는 그대로이며, Chord 는 방아쇠만 바뀌고 수식 키는 남습니다.
          * @details 키 하나로 바꿀 수 없는 종류(합성 축, 스틱 등)면 바꾸지 않고 경고를 남긴 뒤 false 를 반환한다(`BindingKinds::getRebindSlotIndex`).
          *          단일 키로 바꿔 버리면 에디터에서 `Ctrl+S` 를 다시 잡을 때 수식 키가, A/D 축을 다시 잡을 때 축이 사라지기 때문이다.
+         *          가상 커서가 마우스로 바꾸는 패드 버튼으로 바꾸려 해도 거절한다(맵 읽기와 같은 검사, `reportVirtualCursorConflict`).
          */
         bool rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex = 0 );
         bool rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex = 0 );
@@ -485,7 +486,10 @@ namespace sw
         void resetAllBindingsToDefault();
         /** @brief 유저 키 바인딩을 XML 파일로 저장합니다. */
         [[nodiscard]] bool saveUserBindings( string_view filePath ) const;
-        /** @brief 저장된 유저 키 바인딩 XML 파일을 로드해 적용합니다. */
+        /**
+         * @brief 저장된 유저 키 바인딩 XML 파일을 로드해 적용합니다.
+         * @return 가상 커서가 마우스로 바꾸는 스틱 · 패드 버튼을 다시 묶은 바인딩이 있으면 그 바인딩은 넣지 않고 false 입니다(맵 읽기와 같은 거절).
+         */
         [[nodiscard]] bool loadUserBindings( string_view filePath );
 
         // ------------------------------------------------------------------------------
@@ -711,6 +715,11 @@ namespace sw
          * @details 가상 커서가 꺼져 있으면 0 이다. 읽기(`loadFromResource`)가 0 이 아니면 실패로 돌린다.
          */
         [[nodiscard]] uint32 countVirtualCursorConflicts( string_view sourceName ) const;
+        /**
+         * @brief 바인딩 하나가 가상 커서가 마우스로 바꾸는 스틱 · 패드 버튼을 묶는지 보고, 묶으면 알리고 true 를 반환합니다.
+         * @details 맵 읽기(`countVirtualCursorConflicts`)와 사용자 바인딩 읽기(`loadUserBindings`)가 같은 검사를 쓴다 — 한쪽만 고치면 다른 길로 같은 충돌이 들어온다.
+         */
+        [[nodiscard]] bool reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const;
 
     private:
         InputManager*                        _pInput;

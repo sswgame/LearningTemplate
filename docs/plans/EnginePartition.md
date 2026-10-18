@@ -27,16 +27,13 @@
 `CheckEngineLayers` 의 코어 규칙(`coreFolder` · `coreBannedLayer`, 예외 키 `core:`)이 지킵니다. 물리 · 오디오 · 내비는 씬 서비스(`ISceneService`)이고, 씬 위의 애니메이션은 `Object/SceneAnimation` 입니다.
 남은 일은 Object 폴더 **안의** 방향입니다.
 
-- 코어가 기능 컴포넌트 폴더(`Object/Component/{2D,3D,...}` · `Object/SceneAnimation`)를 아직 include 합니다. `GameObjectManager` 가 `AnimationSystem` 을 값으로 들고,
-  `PrimitiveRegistry` 가 `MeshComponent` · `MeshInstanceBatch` 를 압니다. 3 단계에서 Object 를 링크 단위 둘로 가르려면 이 방향도 뒤집어야 합니다 —
-  애니메이션은 씬 서비스로, 프리미티브 등록은 기능 컴포넌트가 코어에 인터페이스로 등록하는 방향(`ISceneListener` 형태)으로 바꿉니다. 규칙은 코어 금지 목록에 `Object/Component/*` 하위 폴더를 더하는 식으로 걸 수 있습니다.
+- 코어가 기능 컴포넌트 폴더(`Object/Component/3D`)를 아직 include 합니다. `PrimitiveRegistry` 가 `MeshComponent` · `MeshInstanceBatch` 를 압니다(애니메이션은 씬 서비스로 옮겼습니다).
+  3 단계에서 Object 를 링크 단위 둘로 가르려면 이 방향도 뒤집어야 합니다. 규칙은 코어 금지 목록에 `Object/Component/*` 하위 폴더를 더하는 식으로 걸 수 있습니다.
 - 확인: `RunEngineLayerGraph.py` 에서 코어 폴더가 기능 폴더를 가리키는 화살표가 0 입니다.
-- 2026-10-18 에 센 남은 줄은 넷입니다. 작업 단위는 6절 E1 ~ E4 입니다.
+- 2026-10-18 에 센 남은 줄은 둘입니다. 작업 단위는 6절 E3 · E4 입니다.
 
 | 파일 | include | 쓰임 |
 |---|---|---|
-| `GameObject/GameObject.cpp:8` | `Component/3D/MeshComponent.h` | 본문에 쓰는 곳이 없습니다(죽은 include 로 보입니다) |
-| `GameObject/GameObjectManager.h:31` | `SceneAnimation/AnimationSystem.h` | 값 멤버 `_animationSystem`, 프레임 단계 `Animation` 의 본문, `getAnimationSystem()` 호출 파일 7개 |
 | `GameObject/Registry/PrimitiveRegistry.cpp:8` | `Component/3D/MeshComponent.h` | 레지스트리가 `MeshComponent*` 를 보관하고 `kInvalidPrimitiveIndex` 와 프리미티브 번호 접근자를 씁니다 |
 | `GameObject/Registry/PrimitiveRegistry.cpp:9` | `Component/3D/MeshInstanceBatch.h` | 인스턴스 배치의 `_pRegistry` 와 항목 번호를 씁니다 |
 
@@ -78,15 +75,12 @@
 ### 6.1 뿌리
 
 코어가 기능 객체를 값으로 소유하는 것은, 그 객체를 등록할 진입점이 없던 때의 구조가 남은 것입니다.
-물리와 내비게이션과 오디오는 이미 씬 서비스(`SW_SCENE_SERVICE( 타입, 프레임 단계 )`)로 옮겼고, 매니저는 레지스트리만 봅니다.
-애니메이션과 프리미티브 레지스트리만 이 진입점을 거치지 않습니다. 그래서 같은 구조로 옮기면 코어가 기능 폴더를 include 할 이유가 없어집니다.
+물리와 내비게이션과 오디오와 애니메이션(`AnimationSystem`)은 씬 서비스(`SW_SCENE_SERVICE( 타입, 프레임 단계 )`)로 옮겼고, 매니저는 레지스트리만 봅니다.
+프리미티브 레지스트리만 이 진입점을 거치지 않습니다. 그래서 같은 구조로 옮기면 코어가 기능 폴더를 include 할 이유가 없어집니다.
 게이트에 금지 폴더를 더하는 것은 그 뒤에 하는 마지막 단계입니다.
 
 ### 6.2 해법
 
-- **애니메이션은 씬 서비스입니다.** `AnimationSystem` 의 .cpp 에 `SW_SCENE_SERVICE( AnimationSystem, Animation )` 한 줄을 두고, 매니저의 값 멤버와 `getAnimationSystem()` 을 지웁니다.
-  프레임 단계 목록(`SceneFrameStepList.xxx`)에는 `Animation` 이 이미 있으므로 실행 순서는 그대로입니다. `runFrameStepAnimation` 은 `Navigation` 단계처럼 그 단계에 등록된 서비스를 부릅니다.
-  호출부는 `getSubsystem<AnimationSystem>()` 으로 찾습니다. 언리얼이 애니메이션 평가를 월드가 아닌 스켈레탈 메시 컴포넌트 틱과 병렬 태스크에 두는 것과 방향이 같습니다 [기억].
 - **프리미티브 개념은 코어의 데이터 슬롯입니다.** 코어(`Object/GameObject/Registry/`)에 가상 함수 없는 기반 `ScenePrimitive`(프리미티브 번호 하나)와 `ScenePrimitiveBatch`(레지스트리 포인터와 항목 수)를 둡니다.
   `MeshComponent` 와 `MeshInstanceBatch` 가 이 기반을 상속하고, `PrimitiveRegistry` 는 기반 타입만 압니다. 트랜스폼 전파가 레지스트리에 더티를 알리는 핫 패스는 지금처럼 가상 호출 없이 슬롯 번호로 갑니다.
   `MeshComponent*` 가 필요한 곳(`GPUSceneBuilder`, `PixelPerfectCameraComponent`)은 기능 층 위라서 그쪽에서 `static_cast` 합니다. 레지스트리에 들어오는 타입이 메시 계열뿐이라는 불변식은 등록 함수의 시그니처가 지킵니다.
@@ -104,16 +98,14 @@
 
 ### 6.4 단위
 
-동시 빌드는 둘까지입니다. `GameObjectManager.h` 를 바꾸는 단위는 모든 모듈을 다시 빌드하므로 E2 와 E3 를 같은 사람이 차례로 합니다.
+동시 빌드는 둘까지입니다. E3 은 `GameObjectManager.h` 를 바꿔 모든 모듈을 다시 빌드합니다.
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| E1 | 죽은 include 하나를 지웁니다 | `Engine/Object/GameObject/GameObject.cpp` | 없음 | 전 프리셋 컴파일 | 없음 |
-| E2 | 애니메이션을 씬 서비스로 옮깁니다 | `Engine/Object/GameObject/`, `Engine/Object/SceneAnimation/`, 호출 파일 7개(`AnimationRewindPanel.cpp`, `SpriteAnimatorComponent.cpp`, `SkeletalMeshComponent.cpp`, `RenderPacketBuilder.cpp`, `GPUSceneBuilder.cpp`, `SceneDevCommands.cpp`, `BenchSceneRig.cpp`) | E1 | `SceneFrameStepTest`, 애니메이션 EngineTest, 래그돌 순서 테스트, Shooter3D 와 NileCity 실행 | 없음 |
-| E3 | 프리미티브 개념을 코어 기반 타입으로 바꿉니다 | `Engine/Object/GameObject/Registry/`, `Engine/Object/Component/3D/Mesh*`, `Engine/Object/Component/2D/SpriteInstanceBatch.cpp`, `Engine/Environment/{Foliage,Terrain,Water}/`, `Engine/Renderer/Scene/GPUSceneBuilder.cpp` | E2 | `TestGPUScene`, 인스턴스 배치 테스트, 네 백엔드 × 대표 셋 | 필요합니다. 큐브 20,000 개 벤치의 `GT.Frame` p50 · p99 를 Release, VSync 끔, 3 ~ 5 판으로 전후 비교합니다 |
+| E3 | 프리미티브 개념을 코어 기반 타입으로 바꿉니다 | `Engine/Object/GameObject/Registry/`, `Engine/Object/Component/3D/Mesh*`, `Engine/Object/Component/2D/SpriteInstanceBatch.cpp`, `Engine/Environment/{Foliage,Terrain,Water}/`, `Engine/Renderer/Scene/GPUSceneBuilder.cpp` | 없음 | `TestGPUScene`, 인스턴스 배치 테스트, 네 백엔드 × 대표 셋 | 필요합니다. 큐브 20,000 개 벤치의 `GT.Frame` p50 · p99 를 Release, VSync 끔, 3 ~ 5 판으로 전후 비교합니다 |
 | E4 | 코어 금지 목록에 기능 컴포넌트 폴더를 더합니다 | `Scripts/lint/rules/CheckEngineLayers.toml` | E3 | `-L lint`, `RunEngineLayerGraph.py` 의 코어 → 기능 화살표 0 | 없음 |
-| E5 | 0-3 의 남은 판단을 적용합니다. `CommandStack` → `Scene`, `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling`, 렌더러 테스트 → `Test/EngineTest/Renderer` | `Engine/Utility/`, 옮길 곳, include 하는 파일, `Test/EngineTest/Graphics/` | 없음(E2 와 병렬 가능) | `RunEngineLayerGraph.py --apply` 뒤 `-L lint`, 전 프리셋 컴파일 | 없음 |
-| E6 | 모듈 확장 진입점(5 단계)을 만듭니다. `SQLDriverRegistry` 와 `LocalStoreFactory` 의 정적 등록 테이블을 모듈이 로드할 때 등록하고 언로드할 때 지우는 서비스로 옮깁니다 | `GameFramework/Base/Online/Local/`, `GameFramework/Kits/Feature/Storage/SQLStore/`, `ModuleHost/` | 없음(E2 와 병렬 가능) | 핫 리로드 테스트, 서버 저장소 테스트 | 없음 |
+| E5 | 0-3 의 남은 판단을 적용합니다. `CommandStack` → `Scene`, `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling`, 렌더러 테스트 → `Test/EngineTest/Renderer` | `Engine/Utility/`, 옮길 곳, include 하는 파일, `Test/EngineTest/Graphics/` | 없음 | `RunEngineLayerGraph.py --apply` 뒤 `-L lint`, 전 프리셋 컴파일 | 없음 |
+| E6 | 모듈 확장 진입점(5 단계)을 만듭니다. `SQLDriverRegistry` 와 `LocalStoreFactory` 의 정적 등록 테이블을 모듈이 로드할 때 등록하고 언로드할 때 지우는 서비스로 옮깁니다 | `GameFramework/Base/Online/Local/`, `GameFramework/Kits/Feature/Storage/SQLStore/`, `ModuleHost/` | 없음 | 핫 리로드 테스트, 서버 저장소 테스트 | 없음 |
 
 E5 는 판단이 거의 없어 `mech-worker` 에 맡깁니다. E6 에서 남는 정적 변수를 막는 게이트(허용 목록과 이유)는 서비스로 옮긴 뒤에도 남은 틈에만 둡니다.
 

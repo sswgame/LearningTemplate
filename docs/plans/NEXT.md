@@ -2,7 +2,19 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법은 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../backlog/README.md)(영역별 파일 · 상태 태그, `py -3 -m Scripts backlog` 로 목록), 작업 방식은 [작업 방식](../11_Workflow.md), 병렬 작업자 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다. 이 문서에는 지금 상태 · 다음 할 일 · 함정 · 시작 절차만 둡니다.
 
-## 00. 2026-10-18 오후 세션 인계 (가장 먼저 읽는다)
+## 000. 2026-10-18 저녁 통합 `integ7` 인계 (가장 먼저 읽는다)
+
+- **main 에 병합**: 정리 여덟(`cl-a` C-37 · `cl-b` C-5 · `cl-c` C-40 · C-63 · `cl-d` C-46 일부 · `cl-f` C-34 · C-48 · `cl-g` C-19 · C-64 · `cl-h` C-44 일부 · C-50 · `cl-i` C-12 · C-15)과 아직 진행 중인 `impl` · `impl-h` · `feat` · `feat-net` 의 그때 tip. `resl`(대규모 개명)은 미완이라 합치지 않았다.
+  진행 중인 네 워크트리와 `resl` 은 지우지 않았다 — 그 작업자는 main 을 병합한 뒤 이어 간다.
+- **푼 충돌**: 백로그 `quality.md` C-44 · C-46(cl-h · cl-d 쪽을 각각), `MakePackage.py` 스테이징(cl-d 의 이름으로 팩 고르기를 택해 impl-h 의 `.packrec` 제외가 필요 없어짐), `ko.tm.json` 번역 항목 둘 다.
+- **합친 상태에서 드러난 환경 결함(고침)**: 프리셋이 `VCPKG_OVERLAY_TRIPLETS` 를 환경 변수로만 넘겨 ninja 재구성 · ctest `BuildTestBinaries` · `ModuleCompiler` 가 기본 triplet(MSVC)으로 공유 vcpkg 설치를 덮었다 — DirectXTex 가 OpenMP 판으로 바뀌어 `Could NOT find OpenMP_C`.
+  `Vcpkg.cmake` 가 처음 구성의 값을 캐시에 박는다. **main 병합 전의 워크트리는 여전히 MSVC 판을 깔 수 있다** — 구성이 OpenMP 로 서면 main 을 병합하고 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 한 번 구성한다.
+  `imgui-node-editor` 는 오버레이(옛 main)와 내장 포트(cl-i) 사이에서 워크트리마다 다시 깔리므로, 진행 중인 워크트리도 main 을 병합해야 멈춘다.
+- **검증**: Debug · Release · STL(`SW_ENABLE_STL_CONTAINER`) `all AllTests` 경고 0, 두 구성 `-L lint` 47 · `-L nogpu` 57 통과, Debug `-L race` 5 통과, STL `-L nogpu` 57 통과. GPU(hostgpu · 네 백엔드 × 대표 셋)는 이번 묶음에서 돌리지 않았다.
+- **남은 일**: ① GPU 확인(`-L hostgpu`, 네 백엔드 × Empty · 에디터 · Shooter3D · NileCity — 카메라 디렉터로 옮긴 MeadowVillage · WildWest 포함) ② 아래 00절의 남은 일 ③ `resl` 통합(다음 라운드).
+- **사용자 결정 대기**: 없음.
+
+## 00. 2026-10-18 오후 세션 인계
 
 - **main 은 `4979c0144` 까지 push 했다**(전체 빌드 증거 있음). 아래 0절의 `A-23`(Shipping 합성 리그) · `C-14`(린트 잡 확인)는 **해소됐다** — 이 절을 우선한다.
 - **한 일**: 결함 `A-20` `A-23` `A-24` `A-25` `A-26` `A-27`, 정리 `C-39` `C-54`(일부) `C-56` `C-58` `C-59` `C-60` `C-62` 전부, `C-14` 확인. 워크트리 8곳(`fixci` `fixengine` `fixgfx` `fixscripts` `scr2` `rangesrc` `netkit` `miscfix`)을 병합했다. 워크트리는 아직 지우지 않았다 —
@@ -32,7 +44,7 @@
 
 - **이 세션이 한 것**: 결함 4건(`A-15` `A-16` `A-17` `A-18`)과 Linux 빌드 결함 둘, 소프트 바디 발산(Jolt 이면각 구속 → 거리 구속), 러너 이미지 `ubuntu-24.04` · `windows-2025` 와 라벨 정본 `.github/runners.json`(`runners.yml` 재사용 워크플로, `dependabot.yml`), 린트 실행 구조 개선(전체 49.7 → 26.6 s, 훅 1개 9 → 약 3 s), `DynamicBitset` 개선(`parse` · 인라인 · 블록 루프), CC0 오디오 913개 35MB · 3D 135개 5.2MB · 합성 리그 생성기, 결정 기록 4절 정리.
 - **결정은 [결정 기록](../09_Decisions.md) 5-12 표가 정본**(약 33행: 머티리얼 텍스처 칸 16, G버퍼 확장, 간접 조명 · 클러스터드 라이팅 · 월드 스트리밍 · 예측 설계, VFX CPU + GPU 둘 다 Shipping GPU 고정, DX11 · GL 은 DX12 · Vulkan 과 최대한 같게 등). 스크립팅 층은 두지 않는다(2절). Quaternius 는 쓰지 않는다. 비공개 전환 · GPU 러너 · 자체 호스트 러너는 하지 않는다(사용자 결정). WSL 검증은 사용자가 요청할 때만.
-- **`res1` 은 병합 완료**(이미지 · HDRI · UI · 파티클 CC0 도입, 출처 목록 `textures_raw/cc0_sources.toml`; 파일 2035개 · 약 115.4MiB(121MB) 증가 — 용량 예산 `C-50`, 남은 확인 `B-15`, 출처 목록 형식 통일 `C-44`).
+- **`res1` 은 병합 완료**(이미지 · HDRI · UI · 파티클 CC0 도입, 출처 목록 `engine/textures.sources.json`; 파일 2035개 · 약 115.4MiB(121MB) 증가 — 용량 예산 150MB 안(결정 기록 5-12), 남은 확인 `B-15`).
 - **픽셀 아트 · 탑다운 RPG 는 병합 완료**(`pixel2`): 1단계 CC0 16 px 세트 13.7 MB(`engine/textures_raw/pixel/`, 비압축 · 밉 없음, `texture-limits` 는 밉 있는 텍스처에만 2 의 거듭제곱), 2단계 새 게임 `PixelTown`(`GF_Overworld` 키트의 첫 사용 게임 — 한 칸 걸음 · 땅 + 소품 타일 레이어 충돌 · 촌장 대화 · 4 방향 애니메이션, 시나리오 `talk.scenario.xml` 네 백엔드 바이트 동일). 이어 할 만한 것: 주민이 주인공 쪽을 보기, 선택지 UI, `PixelTown` 골든 이미지(`py -3 -m Scripts golden --record`).
 - **남은 워크트리**: `editordata` `enginefallback` `toolfollowup` `reflect7ab` `perfbase` `perfbase2`(다른 세션 몫, 건드리지 않는다), `gamesdata` `testisolation`(병합됐지만 커밋 안 된 변경이 남음).
 - **다음 일(순서)**: ① main CI 확인 ② (`res1` 병합 완료) ③ (픽셀 아트 · `PixelTown` 병합 완료) ④ 결함 `A-22`(린트 음성 테스트가 종료 1 만 인정) ⑤ 기능 대기열 2-2절 8묶음 ⑥ 설계가 끝난 큰 항목의 구현 단위화 `D2-13`(클러스터드 라이팅, S0 = 키라이트 폴백 제거 + 커서 API 가 선행) `D2-12` `D2-11` `D1-7`(선행 `C-43` 정점 풀 부분 갱신) `D7-8`(먼저 잠복 결함 셋: 소유자 상태 칸 · `reconcile` 결과 열거형 · `RollbackConfig` 폴백) `C-41`(1~4단계).

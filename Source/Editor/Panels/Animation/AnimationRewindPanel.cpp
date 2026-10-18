@@ -91,7 +91,7 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationRewind", "NoActiveScene" ) );
             return;
         }
-        AnimationRewindRecorder& rewind = pScene->getObjectManager()->getAnimationSystem().getRewind();
+        AnimationRewindRecorder& rewind = pScene->getObjectManager()->getSubsystem<AnimationSystem>().getRewind();
         drawRecordingControls( rewind );
         if ( rewind.getTracks().empty() )
         {

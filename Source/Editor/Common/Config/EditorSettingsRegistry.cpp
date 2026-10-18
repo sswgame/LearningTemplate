@@ -31,7 +31,7 @@ namespace sw::editor
                 {
                     if ( EditorPreferencesStore::isPropertyModified( prop, pCurrent, pDefault ) == false )
                         continue;
-                    object.set( prop._name.c_str() ).setString( SerializerUtil::formatPropertyText( prop, pCurrent, SerializeContext::getDefault() ) );
+                    object.set( prop._name.c_str() ).setString( SerializerUtil::formatPropertyText( prop, pCurrent, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
                     ++writtenCount;
                 }
                 return writtenCount;
@@ -49,7 +49,7 @@ namespace sw::editor
                         continue;
                     }
                     const string text = object.get( key ).asString();
-                    if ( SerializerUtil::applyPropertyText( *pProperty, pInstance, text, SerializeContext::getDefault() ) == false )
+                    if ( SerializerUtil::applyPropertyText( *pProperty, pInstance, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
                         SW_LOG_WARNING( "Editor preference %#.%# = '%#' could not be applied - kept the current value", type._name.c_str(), key.c_str(), text.c_str() );
                 }
             }
@@ -250,7 +250,7 @@ namespace sw::editor
 
     bool EditorPreferencesStore::isPropertyModified( const PropertyInfo& prop, const void* pCurrent, const void* pDefault )
     {
-        const SerializeContext& context = SerializeContext::getDefault();
+        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         return SerializerUtil::formatPropertyText( prop, pCurrent, context ) != SerializerUtil::formatPropertyText( prop, pDefault, context );
     }
 
@@ -261,7 +261,7 @@ namespace sw::editor
             return;
         void*                   pInstance = registration._pfnGetInstance();
         const void*             pDefault  = registration._pfnGetDefault();
-        const SerializeContext& context   = SerializeContext::getDefault();
+        const SerializeContext& context   = SerializeContext::getDefault( SerializePurpose::Authoring );
         for ( const PropertyInfo& prop : pType->getPropertiesWithBase() )
         {
             if ( SerializerUtil::applyPropertyText( prop, pInstance, SerializerUtil::formatPropertyText( prop, pDefault, context ), context ) == false )

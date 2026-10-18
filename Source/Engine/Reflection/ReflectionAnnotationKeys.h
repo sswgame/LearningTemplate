@@ -227,8 +227,10 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey Replicated{};
         /** @brief string.RepNotify — `RepNotify = "…"`. 받은 값으로 바꾼 뒤 부를 같은 타입의 메서드 — void fn() 또는 void fn( const T& oldValue ). 없거나 모양이 다르면 파서 오류 */
         static constexpr AnnotationKey RepNotify{};
-        /** @brief flag.SaveGame — 단독 토큰 `SaveGame` 또는 `SaveGame = true`. 타입(기반 포함)에 하나라도 있으면 세이브(`SerializeContext::setSaveGameOnly`)가 이것만 쓴다. 하나도 없는 타입은 전부 쓴다 */
+        /** @brief flag.SaveGame — 단독 토큰 `SaveGame` 또는 `SaveGame = true`. 타입(기반 포함)에 하나라도 있으면 세이브(`SerializePurpose::SaveGame`)가 이것만 쓴다. 하나도 없는 타입은 전부 쓴다 */
         static constexpr AnnotationKey SaveGame{};
+        /** @brief flag.RuntimeState — 단독 토큰 `RuntimeState` 또는 `RuntimeState = true`. 플레이 중에만 의미가 있는 상태 — 저작 저장(`SerializePurpose::Authoring`)이 쓰지 않고, 저작 파일에 있으면 로드 오류다. Transient · Required 와 함께 쓰면 파서 오류 */
+        static constexpr AnnotationKey RuntimeState{};
         /** @brief flag.Interp — 단독 토큰 `Interp` 또는 `Interp = true`. 시퀀서 값 트랙이 섞을 수 있다 — 실수 · 정수 · float2/3/4 · quaternion 만(그 밖의 타입은 파서 오류) */
         static constexpr AnnotationKey Interp{};
         /** @brief string.Validate — `Validate = "…"`. 프로퍼티 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 문제는 context.addError · addWarning 으로 적는다 */
@@ -315,6 +317,7 @@ namespace sw::reflect::attr
         "Replicated",
         "RepNotify",
         "SaveGame",
+        "RuntimeState",
         "Interp",
         "Validate",
         nullptr,

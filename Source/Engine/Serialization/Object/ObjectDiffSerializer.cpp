@@ -10,20 +10,19 @@ namespace sw
     SW_LOG_CALLER( "ObjectDiff" );
 
     bool ObjectDiffSerializer::serializeDiff( vector<uint8>& outDiffBytes, const void* pCdoInstance, const void* pModifiedInstance,
-                                              const TypeInfo& typeInfo )
+                                              const TypeInfo& typeInfo, const SerializeContext& context )
     {
         if ( pCdoInstance == nullptr || pModifiedInstance == nullptr )
             return false;
 
         outDiffBytes.clear();
-        const SerializeContext& context = SerializeContext::getDefault();
-        vector<uint8>           cdoBytes;
-        vector<uint8>           modifiedBytes;
-        bool                    bAllWritten = true;
+        vector<uint8> cdoBytes;
+        vector<uint8> modifiedBytes;
+        bool          bAllWritten = true;
 
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
-            if ( prop._metadata._bTransient == SW_TRUE || bAllWritten == false )
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false || bAllWritten == false )
                 return;
             const void* pCdoPtr        = prop.getRawPtr( pCdoInstance );
             const void* pModifiedValue = prop.getRawPtr( pModifiedInstance );
@@ -75,13 +74,13 @@ namespace sw
         return bAllWritten;
     }
 
-    bool ObjectDiffSerializer::deserializeDiff( void* pTargetInstance, const TypeInfo& typeInfo, const uint8* pDiffData, size_t diffSize )
+    bool ObjectDiffSerializer::deserializeDiff( void* pTargetInstance, const TypeInfo& typeInfo, const uint8* pDiffData, size_t diffSize,
+                                                const SerializeContext& context )
     {
         if ( pTargetInstance == nullptr || pDiffData == nullptr )
             return false;
 
-        const SerializeContext& context = SerializeContext::getDefault();
-        size_t                  offset{ 0 };
+        size_t offset{ 0 };
         while ( offset + sizeof( uint32 ) * 2 <= diffSize )
         {
             uint32 nameHash{ 0 };
@@ -95,7 +94,7 @@ namespace sw
 
             const vector<PropertyInfo>& listProp     = typeInfo.getPropertiesWithBase();
             const size_t                matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, nameHash );
-            const bool                  bMatched     = matchedIndex < listProp.size() && listProp[matchedIndex]._metadata._bTransient == SW_FALSE;
+            const bool                  bMatched     = matchedIndex < listProp.size() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[matchedIndex], context );
             const PropertyInfo*         pProp        = bMatched ? &listProp[matchedIndex] : nullptr;
             if ( pProp != nullptr )
             {

@@ -199,9 +199,13 @@ namespace sw
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
         if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontService>(), defaultAssets._uiInputMap.get() ) == false )
             return SubsystemInitResult::Failed;
+        // 문화권 · 설정 출처는 기동 때 한 번 받아 든다(언리얼 `InitializeDependency`) — 프레임마다 전역 표로 물러나 찾지 않는다.
+        UserSettingsManager& userSettings = engine::getSubsystem<UserSettingsManager>();
+        setLocalization( &engine::getSubsystem<LocalizationManager>() );
+        setUserSettings( &userSettings );
         // UI 행동(일시정지 · 확인 · 뒤로 …)도 키 바인딩 설정의 대상이다 — 사용자 파일의 UI 키를 지금 넣고, 옵션 메뉴가 바꿀 수 있게 한다.
         if ( InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr )
-            engine::getSubsystem<UserSettingsManager>().addKeyBindingInputMap( *pUIInputMap );
+            userSettings.addKeyBindingInputMap( *pUIInputMap );
         // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
         AssetManager& assetManager = engine::getSubsystem<AssetManager>();
         assetManager.registerAssetCache( &_documentCache );
@@ -218,7 +222,7 @@ namespace sw
             setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu.get() ) : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
 #if SW_DEV_COMMANDS_ENABLED
         _debugHUD = make_unique<DebugHUD>();
-        _debugHUD->initialize( *this, &engine::getSubsystem<UserSettingsManager>() );
+        _debugHUD->initialize( *this, &userSettings );
 #endif
         return SubsystemInitResult::Succeeded;
     }
@@ -233,9 +237,11 @@ namespace sw
         AssetManager& assetManager = engine::getSubsystem<AssetManager>();
         assetManager.unregisterAssetCache( &_styleSheetCache );
         assetManager.unregisterAssetCache( &_documentCache );
-        if ( const InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr )
-            engine::getSubsystem<UserSettingsManager>().removeKeyBindingInputMap( *pUIInputMap );
+        if ( const InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr && _pUserSettings != nullptr )
+            _pUserSettings->removeKeyBindingInputMap( *pUIInputMap );
         shutdown();
+        setLocalization( nullptr );
+        setUserSettings( nullptr );
     }
 
     void UISystem::processInput( float32 deltaSeconds )
@@ -792,7 +798,7 @@ namespace sw
 
     const LocalizationManager* UISystem::findLocalization() const
     {
-        return _pLocalization != nullptr ? _pLocalization : engine::findSubsystem<LocalizationManager>();
+        return _pLocalization;
     }
 
     void UISystem::refreshInputGlyphs()
@@ -1085,7 +1091,7 @@ namespace sw
 
     UserSettingsManager* UISystem::findUserSettings() const
     {
-        return _pUserSettings != nullptr ? _pUserSettings : engine::findSubsystem<UserSettingsManager>();
+        return _pUserSettings;
     }
 
     void UISystem::paintScreens()
@@ -1156,7 +1162,7 @@ namespace sw
         context._uiScale       = _viewport._uiScale;
         context._textScale     = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
         context._pLocalization = findLocalization();
-        context._bRightToLeft  = UILayoutPass::isCultureRightToLeft( context._pLocalization ); // 세터를 안 부른 운영 경로도 엔진 서비스의 문화권을 본다
+        context._bRightToLeft  = UILayoutPass::isCultureRightToLeft( context._pLocalization ); // 운영 경로는 기동 때 받은 엔진 서비스의 문화권이다
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         context._pActionGlyphs = &_actionGlyphs;
         return context;

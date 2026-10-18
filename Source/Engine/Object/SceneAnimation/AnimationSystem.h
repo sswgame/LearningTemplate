@@ -1,6 +1,7 @@
 /**
  * @file AnimationSystem.h
- * @brief 애니메이션 유닛(`SkeletalMeshComponent`)을 의존 순서와 단계별로 평가하는 시스템입니다. `GameObjectManager` 가 소유하고 틱 뒤에 부릅니다.
+ * @brief 애니메이션 유닛(`SkeletalMeshComponent`)을 의존 순서와 단계별로 평가하는 시스템입니다. 씬 서비스(`ISceneService`)라 매니저마다 하나 있고,
+ *        `SceneFrameStep::Animation` 단계에서 돕니다. 얻기는 `manager.getSubsystem<AnimationSystem>()` 입니다 — 코어(`Object/GameObject`)는 이 타입을 모릅니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -10,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/SceneAnimation/AnimationCrowd.h"
 #include "Engine/Object/SceneAnimation/AnimationDebugState.h"
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"
@@ -168,17 +170,27 @@ namespace sw
      *          (3) 게임 스레드에서 `finishAnimationFrame` 을 부른다. 쉬는 유닛(할 일 없음, 포즈 깨끗함)은 (1) 에서 빠지므로 비용이 없다.
      *          "상태를 가진 시스템 타입, `engine::runParallel` · `runParallelByCost`, 매니저 tick 의 단계 한 줄"이라는 구조를 따른다(`SceneTransformHierarchy` 와 같다).
      */
-    class SW_API AnimationSystem
+    class SW_API AnimationSystem final : public ISceneService
     {
     public:
-        AnimationSystem();
-        ~AnimationSystem() = default;
+        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
+        static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "AnimationSystem";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief @p manager 의 유닛을 평가하는 시스템을 만듭니다(서비스 레지스트리가 매니저마다 부른다). 의존 핸들은 이 매니저로 해석합니다. */
+        explicit AnimationSystem( GameObjectManager& manager );
+        ~AnimationSystem() override = default;
 
         AnimationSystem( const AnimationSystem& )            = delete;
         AnimationSystem& operator=( const AnimationSystem& ) = delete;
 
-        /** @brief 의존 핸들을 해석할 매니저를 지정합니다(매니저가 생성자에서 부릅니다). */
-        void setObjectManager( GameObjectManager* pManager ) { _pManager = pManager; }
+        /** @brief 프레임 단계 `Animation` 에서 한 프레임을 평가합니다(`evaluate`). */
+        void update( float32 deltaTime ) override { evaluate( deltaTime ); }
+        /** @brief 씬을 비울 때 놓을 것이 없습니다 — 유닛과 LOD 클라이언트는 컴포넌트가 떨어질 때 스스로 해제합니다. 뷰와 테이블은 다음 씬에서도 씁니다. */
+        void onSceneCleared() override {}
+
         /** @brief 유닛을 등록합니다(컴포넌트 등록 때 부릅니다). */
         void registerUnit( SkeletalMeshComponent* pUnit );
         /** @brief 유닛을 해제합니다. 여러 번 불러도 안전합니다. */
@@ -281,7 +293,7 @@ namespace sw
         Pose                    _rewindScratchPose; ///< 되감기 포즈를 해석할 임시 포즈다(재사용)
         uint8                   _bRewindApplied;    ///< 지난 프레임에 되감기 포즈를 적용했다는 표시다. 되감기가 끝나면 다시 평가하게 한다
 #endif
-        GameObjectManager* _pManager;
+        GameObjectManager* _pManager; ///< 의존 핸들을 해석할 매니저다(이 서비스를 소유한다)
         float3             _lodViewPosition;
         uint64             _frameIndex;
         float32            _deltaSeconds;

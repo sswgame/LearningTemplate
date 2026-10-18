@@ -288,10 +288,10 @@ SW_TEST_CASE( GameDirectorTest, RegisteredDirectorRidesTheSnapshot )
 
     MockDirectorGameInstance instance;
     vector<uint8>            snapshot;
-    SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.captureSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     SW_EXPECT_TRUE( pManager->resolveGameObject( view ) == nullptr ); // 걷었다 — 모습은 스냅샷에 실리지 않는다
 
-    SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
+    SW_ASSERT_TRUE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, snapshot ) );
     pManager->mergePendingAdds();
     pManager->update( 1.0f / 60.0f ); // 복원한 디렉터가 시작하며(또는 다음 틱에) 지금 상태대로 다시 세운다
     MockGameDirectorComponent* pRestored = static_cast<MockGameDirectorComponent*>( pManager->resolveComponent( handle ) );

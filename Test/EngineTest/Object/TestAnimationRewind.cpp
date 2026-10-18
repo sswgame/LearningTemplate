@@ -151,7 +151,7 @@ SW_TEST_CASE( AnimationRewindTest, RecordsStateWithinTheWindow )
     GameObjectManager      manager;
     SkeletalMeshComponent* pUnit = TestAnimationRewindInternal::createCharacter( manager, skeleton, folder );
     SW_ASSERT_NOT_NULL( pUnit );
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
 
     // 꺼져 있으면 아무것도 남기지 않는다(요청이 프로세스 전역이라 테스트가 직접 확인한다).
     SW_ASSERT_FALSE( AnimationRewindRecorder::isRecordingRequested() );
@@ -210,7 +210,7 @@ SW_TEST_CASE( AnimationRewindTest, ScrubFreezesEvaluationAndAppliesRecordedPose 
     GameObjectManager      manager;
     SkeletalMeshComponent* pUnit = TestAnimationRewindInternal::createCharacter( manager, skeleton, folder );
     SW_ASSERT_NOT_NULL( pUnit );
-    AnimationSystem&                             system = manager.getAnimationSystem();
+    AnimationSystem&                             system = manager.getSubsystem<AnimationSystem>();
     TestAnimationRewindInternal::ScopedRecording recording( 5.0f );
 
     quaternion recordedRotation{};
@@ -259,7 +259,7 @@ SW_TEST_CASE( AnimationRewindTest, TrackOutlivesItsUnitUntilTheWindowPasses )
     GameObjectManager      manager;
     SkeletalMeshComponent* pUnit = TestAnimationRewindInternal::createCharacter( manager, skeleton, folder );
     SW_ASSERT_NOT_NULL( pUnit );
-    AnimationSystem&                             system = manager.getAnimationSystem();
+    AnimationSystem&                             system = manager.getSubsystem<AnimationSystem>();
     TestAnimationRewindInternal::ScopedRecording recording( 1.0f );
     for ( uint32 frame = 0; frame < 10; ++frame )
     {

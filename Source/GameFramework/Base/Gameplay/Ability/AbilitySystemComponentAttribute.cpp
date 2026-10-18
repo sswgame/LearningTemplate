@@ -153,9 +153,22 @@ namespace sw
 
         float32 newBase = value;
         pAttributeSet->preAttributeBaseChange( name, newBase );
+        guardHealthBaseChange( name, pData->_baseValue, newBase );
         pData->_baseValue = newBase;
         recomputeAttribute( name );
         return true;
+    }
+
+    TagID AbilitySystemComponent::getInvulnerableTag()
+    {
+        return "State.Invulnerable"_tag;
+    }
+
+    void AbilitySystemComponent::guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase ) const
+    {
+        const bool bHealthGoesDown = name == _healthAttribute && inoutNewBase < oldBase;
+        if ( bHealthGoesDown && isInvulnerable() )
+            inoutNewBase = oldBase;
     }
 
     DelegateHandle AbilitySystemComponent::registerAttributeChanged( const hashed_string& name, const AttributeChangedDelegate& delegate )
