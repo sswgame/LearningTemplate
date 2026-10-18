@@ -11,72 +11,35 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 **원칙: 마이그레이션은 언제나 가능해야 합니다.** 세이브 · 에셋(A)의 스키마 진화는 그대로 두고, B 에도 변환을 넣을 확장 지점을 남깁니다(3.14, 5절). 지금 변환할 옛 데이터가 없으므로 현 단계에서 변환 코드는 만들지 않습니다.
 
 7절은 리플렉션 캐스트(`castTo`)의 비용을 같은 기준(측정이 아니라 구조와 원리)으로 따집니다.
+이 문서는 B 형식의 계약(2 ~ 6절)과 캐스트 비용(7절), 남은 단계(9절)를 담습니다. 끝난 단계의 설계 서술은 지우고 구현 위치만 1절 표와 9절에 남겼습니다. 줄 번호는 구현이 옮겨 가서 적지 않습니다.
+결정은 [결정 기록](../09_Decisions.md) 5-4 · 5-9 에 있습니다.
 
-이 문서는 다음 세션 작업자가 이것만 읽고 단계 1 을 시작할 수 있게 쓴 명세입니다. 근거는 실제로 읽은 코드만 `파일:줄` 로 적고, 읽지 않은 것은 "미확인"으로 적습니다.
-줄 번호는 main `920db2ac7` 기준입니다. 단계가 끝나면 그 단계를 지우고, 결정은 [결정 기록](../09_Decisions.md)으로 옮깁니다.
+## 1. 구현 위치
 
-## 1. 지금 구조
+단계 1 ~ 6 · 7-a · 7-b 는 들어갔습니다(9절). 왜 이 구조인지의 근거는 [결정 기록](../09_Decisions.md) 5-4 · 5-9 와 각 코드 헤더 주석에 있고, 아래 2 ~ 6절은 구현이 따르는 계약입니다.
 
-### 1.1 자기 기술형 바이너리(`BinarySerializer`)
+| 무엇 | 어디에 |
+|---|---|
+| 런타임(`write` · `read` · `equals` · `getSchemaHash` · `findCodec`) | `Source/Engine/Serialization/Fixed/FixedLayout.h` · `.cpp` |
+| 코덱 생성기 | `Tools/ReflectionParser/FixedCodecGenerator.*`, 필드 분류는 `AstVisitor.cpp`, 키는 `AnnotationFields.cpp` |
+| 코덱 테이블 포인터 | `TypeInfo::_pFixedCodec`(`ReflectionTypes.h`) |
+| 롤백(B) · 세이브(A) 나눔 | `FightingMatch`, 상태 필드는 `FrameData.h` · `InputCommandBuffer.h` · `RoundSeries.h` |
+| 장르 스냅샷 | `MechArenaSnapshot.h`, `HorrorSnapshot.h` |
+| 기믹 회로 상태 | `GimmickCircuitState.h`, `GimmickStateBundle.*` |
+| 온라인 스키마 해시 · 거절 | `OnlineProtocolRegistry.*`, 공통 처리 `OnlineReplyUtil::markError`, 키트 `XxxProtocol::MessageTypes` |
+| 영속 값(A) | `ServiceRecordUtil.h` |
+| 범위 읽기 공통 끝 | `SerializerUtil::isWithinDeclaredRanges`, 인스펙터는 `InspectorPropertyLayout.*` |
+| 열거형 이름 | `EnumName.*`, `EnumInfo::_listDenseName` |
+| 테스트 | `Test/ReflectionTest/TestFixedLayout.cpp` · `TestFixedLayoutTypes.h`, `ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` |
 
-- 스트림 머리는 `uint32` 하나입니다. 위 8 비트가 값 인코딩 버전, 아래 24 비트가 프로퍼티 수입니다(`Source/Engine/Serialization/Format/BinarySerializer.cpp:30-36`). 버전은 현재 버전 하나만 읽습니다(`:45-48`).
-- 프로퍼티마다 이름 해시, 기록 타입 해시, 크기를 앞에 붙입니다. 읽는 쪽은 프로퍼티마다 타입의 프로퍼티 목록을 선형으로 훑어 이름 해시로 대상을 찾습니다(`:176-200`).
-- 모르는 필드는 엄격 읽기에서 실패하거나 건너뛰고, 소프트 읽기에서는 orphan 으로 보관합니다(`:202-212`). 기록 타입이 다르면 `tryCoerceBinaryPayload` 로 값을 변환합니다(`:226-252`).
-- 스트림에 없던 프로퍼티는 기본값으로 채웁니다(`:271-283`). 중복 확인은 프로퍼티가 64 개 이하면 비트마스크, 넘으면 `unordered_set` 입니다(`:27`, `:168-171`).
-- 값 하나를 읽을 때마다 `SerializerUtil::deserializeValueBinary` 가 타입 이름으로 핸들러를 찾고, 없으면 열거형 레지스트리, 그다음 타입 레지스트리를 찾습니다(`Source/Engine/Serialization/Base/SerializerUtil.cpp:596-616`).
-  열거형은 열거자 이름 해시와 값을 같이 씁니다(`SerializerUtil.cpp:117-123`).
+`PROPERTY` 키 하나는 `PredefinedAnnotationField.xxx` 한 줄, `ParsedReflection.h` 멤버, `AnnotationMeta.txt` 의 철자로 정하고, 셋이 맞지 않으면 파서가 시작할 때 멈춥니다.
+`.gen.h` 는 비트 플래그 트레이트만 담고, `.gen.cpp` 는 유니티 배치에서 빠집니다(ODR). C++17 이라 `operator== = default` 는 쓸 수 없습니다.
 
-이 비용은 스키마가 바뀐 뒤에도 예전 데이터를 읽기 위한 것입니다. 디스크 세이브, 에셋, 핫 리로드, 에디터 복사 · 붙여넣기에는 꼭 필요합니다.
-같은 빌드의 같은 프로세스 안에서 쓰고 읽는 데이터에는 필요 없는 비용입니다.
+**근본 원인(끝남).** 바이트 배치의 원본이 선언과 따로 손 코드에 있어서, 필드를 더하고 손 버전 상수를 안 높이면 조용히 잘못 읽었습니다(롤백 · 스냅샷 · 회로 상태 · 온라인 12 파일).
+지금은 선언에서 생성한 코덱의 스키마 해시가 형식 변경을 잡습니다. 컴팩트 모드(스키마 확인 없는 순서 기반)와 호출부 없는 `cloneObject` 는 단계 6 에서 지웠고, `writeInt` 의 범위 자르기는 쓰기 실패(`[[nodiscard]] bool`)로, 모르는 타입 1 바이트 건너뛰기는 읽기 실패로 바뀌었습니다(옛 `A-13` · `A-14`).
+자기 기술형(A)의 읽기 방식(이름 해시 대조, 기록 타입 변환, 누락 필드 기본값)은 그대로입니다.
 
-같은 파일에 **적응형 컴팩트 모드**(`serializeCompact`)가 있었습니다. 이름 대신 프로퍼티 순서로 짝을 맞추고 스키마를 확인하는 장치가 없어, 순서를 바꾼 스키마로 읽으면 엉뚱한 필드에 들어갔습니다.
-디스크 경로가 없고 호출은 테스트뿐이었습니다. 단계 6 에서 `serializeCompact` · `deserializeCompact` · `Archive::serializeCompactObject` · `PresenceMaskUtil` 과 그 테스트를 지웠습니다. 같은 빌드끼리의 짧은 바이트는 B 가 맡습니다.
-
-`cloneObject`(POD 가 아니면 자기 기술형으로 쓰고 다시 읽어 복제)는 `Source` 안에 호출이 없어 B 로 옮기지 않고 단계 6 에서 지웠습니다. 복제가 필요해지면 B 의 `FixedLayout` 왕복으로 만듭니다.
-`BinarySerializer::` 를 직접 부르는 곳은 Serialization 밖에 세 파일뿐입니다. 에디터 컴포넌트 복사(`EditorWorkspace.cpp:275`, `EditorTransformCommands.cpp:103,150`)와 세이브의 커스텀 상태(`GameInstanceBase.cpp:454,537`)이며 모두 A 에 남습니다.
-
-### 1.2 손으로 쓴 코덱(옮길 후보)
-
-| 위치 | 형식 | 버전 관리 | 구조 결함 |
-|---|---|---|---|
-| `FightingMatch.cpp:1089-1203` 롤백 | `BitWriter`, 필드 나열 | 손 상수 `kStateVersion = 2`(`:18`) | 필드를 더하고 버전을 안 높이면 조용히 잘못 읽음 |
-| `FightingMatch.cpp:1214-1229` 세이브 | 롤백 바이트를 그대로 섹션에 저장 | 위와 같음 | 빌드가 바뀌면 진행 중 대전 세이브를 읽지 못함 |
-| `GimmickCircuit.cpp:461-515` 상태 | `memcpy` 바이트 | `kStateTag`, `kStateVersion`, 회로 구조 해시 | 기대 크기를 손으로 계산(노드당 `16`, `:492`) |
-| Mech 스냅샷(옛 `MechArenaSnapshot.cpp`, 단계 4-a 에서 지움) | `BitWriter`, 양자화 | `kMagic` 만 | 개수를 255 로 잘라 조용히 버림 |
-| Horror 스냅샷(옛 `HorrorSnapshot.cpp`, 단계 4-a 에서 지움) | `BitWriter`, 양자화 | `kMagic = "DBD1"` | 같은 개수 자르기 |
-| 온라인 `*Protocol.cpp` 12 파일, 2,046 줄(단계 5-b 에서 B 로 옮김) | `BitWriter` | 키트마다 손 `kVersion`(`ChatProtocol.h:69` 등) | 와이어를 바꾸면 버전을 높이라는 주석(`ChatProtocol.h:23`)이 유일한 장치 |
-
-`BitWriter::writeInt` 는 범위 밖 정수를 경고 없이 잘라 썼습니다. 지금은 `writeInt` · `writeQuantizedFloat` 가 `[[nodiscard]] bool` 이고 범위 밖이면 쓰지 않으며, 읽기는 범위 밖 칸을 깨진 데이터로 거절합니다(옛 `A-14` 해결, 2026-10-17).
-`FighterRuntime`(`FightingMatch.h:117`)에는 `REFLECT` · `PROPERTY` 가 없습니다. Mech · Horror 스냅샷 구조체는 단계 4-a 에서 `REFLECT` · `PROPERTY` 를 받았습니다.
-
-손으로 쓴 `operator==` 는 `Source` 에 75 개입니다. 이 가운데 같은 파일에 `PROPERTY` 가 있는 것은 4 파일(`atomic.h`, `Component.h`, `DataPath.h`, `WidgetTypes.h`)뿐입니다.
-나머지는 `Core/Container`(12), `Core/Math`(8), `Engine/Graphics`(7), `Core/String`(6) 같은 값 형식이 대부분이고, 필드를 하나씩 비교하는 데이터 레코드인지는 분류하지 않았습니다(미확인, 단계 0).
-그래서 생성 비교가 대신할 수 있는 범위는 "B 로 옮기는 타입의 비교"로 한정합니다. 나머지 `operator==` 를 바꾸려고 타입에 리플렉션을 붙이지 않습니다.
-
-### 1.3 코드 생성 파이프라인
-
-- 생성기는 `Tools/ReflectionParser` 의 C++ 콘솔 도구이며 libclang 으로 헤더를 파싱합니다(`Tools/ReflectionParser/README.md`). 파이썬 생성기는 없습니다.
-- CMake 단계는 `cmake/Engine/ReflectionCodeGen.cmake` 의 `sw_addReflectionStep` 입니다. `REFLECT(` · `ENUM(` · `REFLECT_CONTAINER(` 가 있는 헤더를 모아(`:41-58`) 헤더마다 `<이름>.gen.cpp` 와 `<이름>.gen.h` 를 만듭니다(`:127-128`).
-  템플릿은 `Tools/ReflectionParser/Templates/*.tpl` 이고 의존성으로 등록되어 있습니다(`:82`).
-- `.gen.cpp` 는 유니티 배치에서 빠집니다(`:183`, 주석 `:25` "ODR"). `.gen.cpp` 는 원본 헤더를 include 합니다(`Templates/FileHeader.tpl`).
-- 프로퍼티 하나는 `CodeGenerator::emitPropertyInfoEntry`(`CodeGenerator.cpp:328-430`)가 `PropertyInfo` 생성 식으로 씁니다. 이름 해시, 정규화한 타입 이름 해시, `offsetof`, 컨테이너 래퍼입니다.
-  읽기 · 쓰기는 생성하지 않고, 실행 시간에 이 정보로 값을 찾아 씁니다.
-- `REFLECT_BODY()` 는 `template <typename> friend struct ::sw::generated::Registrar;` 를 선언합니다(`Source/Engine/Reflection/ReflectionMacros.h:57-79`). 생성 코드는 이 friend 로 private 필드에 접근합니다.
-  파서 빌드에서는 `annotate( "REFLECT_BODY" )` 가 붙은 멤버 함수로 바뀌어 파서가 표시를 읽습니다(`:57-61`).
-- `.gen.h` 는 지금 비트 플래그 열거형의 트레이트 특수화만 담고, 원본 헤더를 include 하지 않습니다. 대상의 모든 TU 에 `/FI` 로 들어가는 우산 헤더(`FlagOps.gen.h`)가 모으기 때문입니다(`CodeGenerator.cpp:733-745`).
-- 어노테이션 키 하나는 `PredefinedAnnotationField.xxx` 한 줄, `ParsedReflection.h` 멤버, `Source/Core/Predefined/AnnotationMeta.txt` 의 철자로 정합니다. 셋이 맞지 않으면 파서가 시작할 때 멈춥니다(`PredefinedAnnotationField.xxx:25-27`).
-- 언어 표준은 C++17 이상입니다(`cmake/Modules/Options/CppStandard.cmake:6-7`). 그래서 `operator== = default` 를 쓸 수 없습니다.
-
-### 1.4 같은 결함이 있는 곳
-
-모두 "형식이 바뀌었는지를 사람이 기억해야 하는" 구조입니다. 근본 원인은 **바이트 배치의 원본이 선언과 따로 손 코드에 있다**는 점입니다.
-
-- 손 버전 상수: `FightingMatch` `kStateVersion`, `GimmickCircuit` `kStateVersion`, 온라인 키트 `kVersion` 12 개(단계 5-b 에서 지움), `NetWireVersion::kCore`(`Source/Core/Network/NetTypes.h:42`).
-- 손으로 계산한 크기: `GimmickCircuit.cpp:465,492` 의 `_listNode.size() * 16`.
-- 조용히 버리는 값: `writeInt` 의 범위 자르기(쓰기 실패로 바뀜, 1.2). Mech · Horror 의 개수 255 자르기와 Mech 의 `max( 1.0f, halfSize )` 는 단계 4-a 에서 쓰기 실패로 바뀌었습니다.
-- 스키마 확인 없는 순서 기반 형식: 컴팩트 모드(1.1, 단계 6 에서 지움).
-- 모르는 타입 폴백: `deserializeValueBinary` 는 어느 핸들러도 없으면 1 바이트를 건너뛰고 성공을 반환했습니다. 지금은 쓰기가 아무것도 쓰지 않고 읽기가 실패를 돌려줍니다(타입마다 오류 한 번).
-  그 길을 타던 실제 경우는 생성기가 컨테이너 원소의 별칭을 벗기지 않던 것(`vector<AccountID>`)이라 `AstVisitor.cpp` 의 `resolveTemplateArgName` 이 원소 · 키도 `resolvePropertyAlias` 로 벗깁니다. B 에서는 인코딩 테이블 밖의 타입에 코덱이 생기지 않습니다(3.1, 3.4).
+손으로 쓴 `operator==` 75 개 중 리플렉션 타입은 4 파일뿐이고 나머지는 값 형식입니다. 생성 비교는 B 로 옮긴 타입의 비교로 한정하며, 비교를 대신하려고 타입에 `REFLECT` 를 붙이지 않습니다(분류는 단계 0, 아직 안 함).
 
 ## 2. 두 형식의 역할
 
@@ -94,9 +57,8 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 | 장르 스냅샷 · 넷 복제 | B | 핸드셰이크가 같은 빌드를 보장 |
 | 온라인 서비스 프로토콜 | B | 서버 · 클라이언트 같은 빌드 배포(5절) |
 
-진행 중인 대전을 세이브하는 경우(`FightingMatch::writeState`)는 세이브이므로 A 입니다. 지금은 롤백 바이트를 그대로 저장해 같은 상태를 한 형식으로만 씁니다(`FightingMatch.cpp:1214`).
-B 로 옮기면 롤백은 B, 세이브는 A 로 나눕니다. 두 형식이 같은 선언에서 생성되므로 "형식을 둘로 따로 관리한다"는 예전 걱정은 없어집니다.
-세이브 섹션이 A 이므로 버전 머리와 등록된 변환으로 마이그레이션하는 경로가 열려 있습니다. 지금 변환할 옛 세이브가 없으므로 옛 롤백 바이트 섹션을 읽는 변환 코드는 현 단계에서 두지 않습니다.
+진행 중인 대전을 세이브하는 경우(`FightingMatch::writeState`)는 세이브이므로 A, 롤백은 B 입니다. 두 형식이 같은 선언에서 생성되므로 형식을 둘로 따로 관리하는 걱정은 없습니다.
+세이브 섹션이 A 이므로 버전 머리와 등록된 변환으로 마이그레이션하는 경로가 열려 있습니다. 변환할 옛 세이브가 없으므로 변환 코드는 두지 않습니다.
 
 ## 3. 고정 배치형(B) 명세
 
@@ -106,46 +68,17 @@ B 로 옮기면 롤백은 B, 세이브는 A 로 나눕니다. 두 형식이 같�
 적격이란 B 에 들어가는 필드(`Transient` 가 아닌 모든 `PROPERTY`)의 타입이 3.4 의 인코딩 테이블 안에 있다는 뜻입니다. 기반 클래스가 있으면 기반도 적격이어야 합니다.
 적격이 아닌 타입은 코덱 없이 등록되고, 생성기는 그 이유(필드 이름과 타입)를 `.gen.cpp` 주석과 `--dump` 출력에 남깁니다. 오류로 멈추지 않습니다. 포인터나 길이 상한 없는 `vector` 를 가진 `REFLECT` 타입이 많아서, 적격이 아니라는 사실 자체는 결함이 아니기 때문입니다.
 
-**B 가 필요한 곳은 사용하는 자리가 정합니다.** B 를 쓰는 진입점(3.10 의 롤백 저장, 넷 채널 등록, 온라인 메서드 등록)이 처음 그 타입을 볼 때 코덱이 있는지 확인합니다.
-코덱이 없으면 그 자리에서 이유를 담은 오류로 멈춥니다. 진입점은 모두 기동 때 한 번 실행하는 등록 코드이므로, 실행 파일을 켜는 순간 드러납니다(8.1 위험 1).
+**B 가 필요한 곳은 사용하는 자리가 정합니다.** B 를 쓰는 진입점(3.10 의 롤백 저장, 넷 채널 등록, 온라인 메서드 등록)이 처음 그 타입을 볼 때 코덱이 있는지 확인하고, 없으면 그 자리에서 이유를 담은 오류로 멈춥니다.
+진입점은 모두 기동 때 한 번 실행하는 등록 코드이므로 실행 파일을 켜는 순간 드러납니다(8.1 위험 1). 사용 자리 스캔 · 등록 목록 · 필드 속성 도출을 기각한 이유는 [결정 기록](../09_Decisions.md) 5-4 입니다.
 
-후보 셋을 비교한 결과는 아래와 같습니다.
-
-| 후보 | 판단 |
-|---|---|
-| ① 모든 `REFLECT` 타입(적격만) | 채택 |
-| ② 사용 자리 스캔 · 등록 목록 파일 | 기각 |
-| ③ 기존 필드 속성(`Replicated` 등)에서 도출 | 기각, 나중의 부분 집합 용도로만 |
-
-**① 의 비용.** `Source` 에 `REFLECT(` 줄이 378 개, `PROPERTY(` 가 2,097 개, 반사 헤더가 317 개입니다(grep).
-생성 코드는 필드당 쓰기 · 읽기 · 비교 · 해시 문자열을 합쳐 6 ~ 10 줄이므로, 모두 적격이라 해도 약 1 만 3 천 ~ 2 만 1 천 줄이 317 개 `.gen.cpp` 에 나뉘어 붙습니다. 파일당 평균 40 ~ 70 줄입니다.
-빌드 시간 영향은 구조로 보면 작습니다. 근거는 아래 넷입니다. 측정은 하지 않았습니다.
-
-- 새 번역 단위가 없습니다. 이미 있는 `.gen.cpp` 에 덧붙습니다.
-- `.gen.cpp` 의 컴파일 비용 대부분은 PCH 와 원본 헤더 include 이고, 덧붙는 것은 템플릿 없는 직선 코드입니다.
-- 팬아웃이 늘지 않습니다. `.gen.cpp` 만 `FixedLayout.h` · `BitStream.h`(Core 의 작은 헤더)를 include 합니다. 모든 TU 에 강제 include 되는 우산 헤더 `FlagOps.gen.h` 는 건드리지 않습니다.
-- `ReflectionTypes.h` 는 한 번만 바뀝니다. `TypeInfo` 에 코덱 테이블 포인터 하나를 더하고, 테이블 구조체는 전방 선언만 합니다. [빌드 속도 계획](BuildSpeed.md) 12 절의 문제는 이 헤더가 **자주** 바뀌는 것이고, 한 번의 변경은 그 문제를 키우지 않습니다.
-
-남는 비용은 실행 파일 크기입니다. 코덱 함수는 등록 테이블이 참조하므로 링커가 지우지 않습니다. 적격 타입만 생성하는 것으로 줄이고, 단계 1 끝에 늘어난 크기를 기록합니다.
-
-**② 를 기각한 이유.** 생성기의 입력은 헤더뿐입니다(`ReflectionCodeGen.cmake:41-58`, 파서 `--input`). 사용 자리는 `.cpp` 에 있습니다.
-
-- `.cpp` 를 생성기 입력에 넣으면 `.cpp` 를 고칠 때마다 그 대상의 생성기가 다시 돕니다(depfile 의존).
-- 사용 자리가 다른 대상에 있으면 방향이 거꾸로 됩니다. 게임 `.cpp` 가 키트 타입을 B 로 쓰면 키트의 `.gen.cpp` 가 게임 소스에 의존하게 되어 계층 순서를 깹니다.
-- 별도 등록 목록 파일은 사용자가 쓰는 선언이 다른 곳으로 옮겨 간 것일 뿐이고, 타입 목록의 원본이 둘이 됩니다.
-
-**③ 을 기각한 이유.** 지금 필드 속성은 `Replicated`, `RepNotify`, `SaveGame`, `Transient` 가 있습니다(`Source/Core/Predefined/AnnotationMeta.txt`).
-
-- `Replicated` 는 선언만 있고 소비자가 없습니다. `collectReplicatedProperties` 를 부르는 곳이 정의 파일(`PropertyRoleUtil.cpp`) 밖에 없습니다(grep).
-- 필드 속성은 "어느 필드를 보내는가"를 말하고 "어느 타입이 B 인가"를 말하지 않습니다. 롤백은 모든 필드가 필요하므로 필드 속성으로는 정할 수 없습니다.
-- 나중에 변경분 복제를 만들면 `Replicated` 를 B 필드의 부분 집합으로 쓰는 것은 자연스럽습니다. 이 계획에서는 하지 않습니다.
+**비용.** 새 번역 단위가 없고(기존 `.gen.cpp` 에 덧붙음), 덧붙는 것은 템플릿 없는 직선 코드이며, `.gen.cpp` 만 `FixedLayout.h` · `BitStream.h` 를 include 합니다(`FlagOps.gen.h` 는 건드리지 않음).
+`ReflectionTypes.h` 는 `TypeInfo` 에 포인터 하나를 더할 때 한 번 바뀌었습니다. 실행 파일 크기 증가는 결정 기록 5-4 에 있습니다.
 
 ### 3.2 생성 코드의 위치와 호출 경로
 
-- 코덱 함수는 이미 있는 `sw::generated::Registrar<T>` 특수화의 정적 멤버로 `.gen.cpp` 안에 만듭니다. `REFLECT_BODY()` 가 이 등록기를 friend 로 선언하므로(`ReflectionMacros.h:57-79`) private 필드에도 접근합니다.
-  `REFLECT_BODY()` 가 없는 타입은 `offsetof` 를 쓰는 지금의 등록 코드가 이미 공개 필드만 다루므로 같은 조건으로 접근합니다.
-- 등록기 `RegisterType` 가 `info._pFixedCodec` 에 정적 코덱 테이블(쓰기, 읽기, 비교, 스키마 해시 함수 포인터) 주소를 넣습니다. 함수 템플릿 특수화를 다른 TU 에서 부르는 구조(진단 없는 위반)나 DLL 데이터 export 가 필요 없습니다.
-- 진입점은 타입 정보를 `typeFqn<T>()`(`TypeRegistry.h:74-79`, 컴파일러 시그니처에서 얻은 FQN)와 함수 지역 `TypeLookupCache` 로 한 번 찾고 캐시합니다. 이후 호출은 원자 로드 하나와 간접 호출 하나입니다.
+- 코덱 함수는 이미 있는 `sw::generated::Registrar<T>` 특수화의 정적 멤버로 `.gen.cpp` 안에 만듭니다. `REFLECT_BODY()` 가 이 등록기를 friend 로 선언하므로 private 필드에도 접근합니다.
+- 등록기 `RegisterType` 가 `info._pFixedCodec` 에 정적 코덱 테이블(쓰기, 읽기, 비교, 스키마 해시 함수 포인터) 주소를 넣습니다. 함수 템플릿 특수화를 다른 TU 에서 부르는 구조나 DLL 데이터 export 가 필요 없습니다.
+- 진입점은 타입 정보를 `typeFqn<T>()` 와 함수 지역 `TypeLookupCache` 로 한 번 찾고 캐시합니다. 이후 호출은 원자 로드 하나와 간접 호출 하나입니다.
 - 중첩 타입이 같은 헤더에 있고 필드가 공개이면 생성기가 부모 코덱 안에 그 필드 코드를 **펼쳐** 씁니다. 다른 헤더나 private 필드이면 중첩 타입의 코덱 테이블을 FQN 캐시로 찾아 간접 호출합니다.
 
 ### 3.3 쓰는 쪽 모양
@@ -158,17 +91,13 @@ _rollback.saveFrame( frame, _matchState );                 // 안에서 FixedLay
 if ( _rollback.loadFrame( frame, _matchState ) == false )  // 스키마 불일치 · 잘림이면 false 와 이유 로그
     return false;
 
-// 게임 넷: 스냅샷 타입을 채널에 등록하면 그 타입의 스키마 해시가 핸드셰이크 해시에 들어간다.
+// 게임 넷: 스냅샷 타입을 채널에 등록하면 그 타입의 스키마 해시가 핸드셰이크 해시에 들어간다(후보 NetChannelSchemaHashHandshake).
 _netChannel.registerMessage<MechArenaSnapshot>( kSnapshotMessage );
-_netChannel.send( kSnapshotMessage, snapshot );
 
-// 온라인: 공유 프로토콜 코드가 메서드와 요청 · 응답 타입을 한 번 등록한다(서버 · 클라이언트가 같은 함수를 부른다).
-ChatProtocol::describe( registry );                        // registry.method<ChatSendRequest, ChatSendReply>( ChatMethod::kSend )
-_client.call( ChatMethod::kSend, request, onReply );
+// 온라인: 키트의 MessageTypes 목록으로만 쓰고 읽는다(5절).
 ```
 
-`FixedLayout::write` · `read` 는 저수준 진입점입니다. 게임 · 키트 코드는 위의 등록 API 를 쓰고 직접 부르지 않습니다.
-등록 API 가 B 진입점이라 코덱 확인(3.1)이 등록 시점에 일어납니다. 진입점이 등록 API 몇 개로 모이면 확인하는 위치도 그만큼으로 줄어듭니다.
+`FixedLayout::write` · `read` 는 저수준 진입점입니다. 게임 · 키트 코드는 등록 API 를 쓰고 직접 부르지 않습니다. 진입점이 등록 API 몇 개로 모이므로 코덱 확인(3.1)도 그만큼의 자리에서만 일어납니다.
 
 ### 3.4 필드 타입별 인코딩
 
@@ -187,8 +116,8 @@ _client.call( ChatMethod::kSend, request, onReply );
 | 적격 `REFLECT` 타입 | 그 타입의 필드(3.6) |
 
 위에 없는 타입이 하나라도 있으면 그 타입은 적격이 아닙니다. 포인터, 참조, 핸들, 접근자 프로퍼티, `unordered_*` 컨테이너, `MaxCount` 없는 가변 길이, 적격이 아닌 구조체가 해당합니다.
-`unordered_*` 를 빼는 이유는 순회 순서가 결정적이지 않아 같은 값이 다른 바이트가 되기 때문입니다. 롤백 해시 비교가 깨집니다.
-핸들(`ComponentHandle` 등)이 필요해지면 그 형식에 B 코덱을 하나 등록하는 일을 별도 단계로 둡니다. 지금 후보에는 핸들 필드가 없습니다.
+`unordered_*` 를 빼는 이유는 순회 순서가 결정적이지 않아 같은 값이 다른 바이트가 되기 때문입니다(롤백 해시 비교가 깨집니다).
+핸들(`ComponentHandle` 등)이 필요해지면 그 형식에 B 코덱을 하나 등록하는 일을 별도 단계로 둡니다.
 
 **기존 속성의 확장.** B 전용 메타데이터는 새 선언 형식 없이 기존 `PROPERTY()` 키로 표현합니다.
 
@@ -198,44 +127,41 @@ _client.call( ChatMethod::kSend, request, onReply );
 | `Step` | 없음(새 키) | 양자화 간격. 값의 의미 있는 최소 단위 |
 | `MaxCount` | 없음(새 키, `count` 종류) | 문자열 · 컨테이너 최대 길이. 1 이상의 정수로 읽음 |
 
-- `Min` · `Max` 를 재사용하는 근거는 이 키가 이미 "허용 범위"라는 점입니다. 인스펙터 슬라이더 범위는 `UIMin` · `UIMax` 로 따로 있습니다(`AnnotationMeta.txt` 의 `float.UIMinRange` 주석).
-  허용 범위 밖의 값은 이미 잘못된 값이므로 와이어 범위로 써도 뜻이 바뀌지 않습니다.
-- `Min` · `Max` 는 지금 `float32` 로 보관합니다. 정수 경계는 `float32` 로 정확히 나타나는 값이어야 하고, 아니면 생성 오류입니다(2e9 는 정확하고 16777217 은 아닙니다).
+- `Min` · `Max` 는 이미 "허용 범위"라는 뜻이라 와이어 범위로 써도 뜻이 바뀌지 않습니다. 인스펙터 슬라이더 범위는 `UIMin` · `UIMax` 로 따로 있습니다.
+- `Min` · `Max` 는 `float32` 로 보관하므로 정수 경계는 `float32` 로 정확히 나타나는 값이어야 하고, 아니면 생성 오류입니다(2e9 는 정확하고 16777217 은 아닙니다).
   숫자가 아닌 필드(bool, 열거형, 문자열, 구조체)의 `Min` · `Max` 도 생성 오류입니다. 정수 필드는 실수 필드 이름을 범위로 쓸 수 없습니다(소수부가 잘립니다).
-- 범위 밖 정수는 **쓰기가 실패**합니다. `writeInt` 처럼 자르지 않습니다(`BitStream.cpp:70-74`). 실수 양자화는 `Step` 를 적는 순간 손실 인코딩이므로 경계로 자릅니다. `Step` 이 붙은 필드만 손실이 있습니다.
+- 범위 밖 정수는 **쓰기가 실패**합니다. 자르지 않습니다. 실수 양자화는 `Step` 을 적는 순간 손실 인코딩이므로 경계로 자릅니다. `Step` 이 붙은 필드만 손실이 있습니다.
 - 쓰기 실패는 결함이므로 `FixedLayout::write` 는 `[[nodiscard]] bool` 을 반환하고, 등록 API 는 단언하거나 오류로 멈춥니다.
 
 ### 3.5 가변 길이
 
 - 문자열과 `vector` 는 `MaxCount` 가 있어야 적격입니다. 넷에서 받은 길이로 메모리를 잡기 전에 상한이 있어야 하기 때문입니다.
-- 개수는 `[0, MaxCount]` 범위 정수로 씁니다. 쓸 때 개수가 `MaxCount` 를 넘으면 쓰기가 실패합니다. Mech 스냅샷처럼 255 개로 자르지 않습니다.
-- 읽을 때 개수가 `MaxCount` 를 넘으면 `FixedReadResult::OutOfRange`, 잘린 스트림은 `Truncated` 입니다(`BitReader::hasOverflowed`, `BitStream.h:136`).
+- 개수는 `[0, MaxCount]` 범위 정수로 씁니다. 쓸 때 개수가 `MaxCount` 를 넘으면 쓰기가 실패합니다(조용히 자르지 않습니다).
+- 읽을 때 개수가 `MaxCount` 를 넘으면 `FixedReadResult::OutOfRange`, 잘린 스트림은 `Truncated` 입니다.
 - 상한은 정적 값입니다. 런타임 설정이 상한이면, 데이터가 정하는 최대값보다 크거나 같은 정적 상한을 적고 데이터 쪽 검증을 따로 둡니다.
 
 ### 3.6 중첩 형식과 필드 순서
 
 - 필드는 `PROPERTY()` 가 붙은 멤버를 **선언 순서대로** 씁니다. 기반 클래스의 필드가 먼저입니다. 크기 접두는 없습니다. 같은 빌드가 읽으므로 끝을 알 필요가 없습니다.
 - 다중 상속 타입은 생성 오류입니다(7.4 와 같은 이유, 생성기 `collectBase`).
-- 다른 헤더 · 다른 대상의 중첩 타입이 적격인지는 생성기가 libclang AST 에서 그 타입의 `PROPERTY` 를 읽어 판정합니다. AST 순회가 입력 헤더 밖의 선언도 보는지는 미확인이며 단계 1 의 첫 확인입니다(8.1 위험 2).
+- 다른 헤더의 중첩 타입은 같은 번역 단위의 선언에서 열거자 · `ENUM` · `REFLECT()` 표시만 읽고, `PROPERTY` 는 다시 모으지 않습니다. 실행 시간에 그 코덱을 찾아 의존을 확인합니다(`FixedLayout::findCodec`, 8.1 위험 2).
 
 ### 3.7 열거형
 
 - 값만 씁니다. 이름 해시는 쓰지 않습니다. 열거자를 바꾸면 스키마 해시가 바뀌므로 이름이 필요 없습니다.
-- `ENUM( Count = … )` 가 있으면 `[최소 열거자, Count - 1]`, 없으면 `[최소 열거자, 최대 열거자]` 범위 비트 수로 씁니다. 기반 타입 전체 폭으로 쓰지 않습니다(인코딩 버전 2). 범위가 32 비트를 넘는 열거형은 생성 오류입니다.
-- 읽을 때 등록된 열거자 값이 아니면 `OutOfRange` 입니다. 생성기가 열거자 값 목록을 `switch` 로 만들어 실행 시간 조회가 없습니다. `FightingMatch.cpp:1174-1175` 의 `bBadEnum` 손 검사가 여기에 해당합니다.
+- `ENUM( Count = … )` 가 있으면 `[최소 열거자, Count - 1]`, 없으면 `[최소 열거자, 최대 열거자]` 범위 비트 수로 씁니다. 기반 타입 전체 폭으로 쓰지 않습니다. 범위가 32 비트를 넘는 열거형은 생성 오류입니다.
+- 읽을 때 등록된 열거자 값이 아니면 `OutOfRange` 입니다. 생성기가 열거자 값 목록을 `switch` 로 만들어 실행 시간 조회가 없습니다.
 - `ENUM( Flags )` 는 기반 타입 폭의 비트로 쓰고, 등록된 비트 밖의 비트가 켜져 있으면 쓰기와 읽기가 모두 실패합니다.
 
 ### 3.8 런타임 범위 양자화
 
-`MechArenaSnapshot` 은 위치 범위를 같은 스냅샷의 `_arenaHalfSize` · `_ceiling` 로 정하고 그 값도 바이트에 싣습니다(`MechArenaSnapshot.h`).
-`Min` · `Max` 가 **필드 이름**을 받게 해서 표현합니다. 벡터 타입은 원소마다 쉼표로 나눠 적습니다.
+`MechArenaSnapshot` 은 위치 범위를 같은 스냅샷의 `_arenaHalfSize` · `_ceiling` 로 정하고 그 값도 바이트에 싣습니다. `Min` · `Max` 가 **필드 이름**을 받게 해서 표현합니다. 벡터 타입은 원소마다 쉼표로 나눠 적습니다.
 
 ```cpp
 struct MechPilotSnapshot
 {
     PROPERTY( Step = 0.01, Min = "-_arenaHalfSize, 0, -_arenaHalfSize", Max = "_arenaHalfSize, _ceiling, _arenaHalfSize" )
     float3 _position{};
-    // ...
 };
 
 struct MechArenaSnapshot
@@ -243,27 +169,22 @@ struct MechArenaSnapshot
     PROPERTY( Min = 1, Max = 100000 ) float32 _arenaHalfSize{ 200.0f };  // 범위 필드를 앞에 둔다
     PROPERTY( Min = 1, Max = 100000 ) float32 _ceiling{ 60.0f };
     PROPERTY( MaxCount = 255 ) vector<MechPilotSnapshot> _listPilot{};
-    // ...
 };
 ```
 
 - 이름은 선언 위치에서 바깥으로 찾습니다. 자기 타입의 앞선 필드를 먼저 보고, 없으면 그 타입을 필드로 가진 바깥 타입의 앞선 필드를 봅니다.
-  읽기는 선언 순서이므로 범위 필드가 **앞에** 있어야 읽는 쪽이 범위를 압니다. 뒤에 있으면 생성 오류입니다. `MechArenaSnapshot` 은 단계 4-a 에서 `_arenaHalfSize` · `_ceiling` 을 목록 앞으로 옮겼습니다.
+  읽기는 선언 순서이므로 범위 필드가 **앞에** 있어야 읽는 쪽이 범위를 압니다. 뒤에 있으면 생성 오류입니다.
 - 바깥 타입으로 이름을 찾는 경우는 생성기가 중첩 타입을 부모 코덱 안에 펼칠 수 있을 때(3.2, 같은 헤더 · 공개 필드)만 됩니다. 펼칠 수 없거나 같은 중첩 타입을 이름이 다른 두 부모가 쓰면 생성 오류입니다.
-- 범위 필드는 자기 `Min` 으로 하한을 강제합니다. Mech 의 `>= 1.0f` 검사가 그것이고, 자르지 않고 읽기 실패입니다. 옛 손 코덱이 쓰던 `max( 1.0f, … )` 는 쓰기 실패로 바뀌었습니다.
-- 인스펙터는 같은 타입의 필드 하나를 가리키는 경계(`Min = "-_halfSize"`)를 그 객체의 지금 값으로 막습니다(단계 4-b, 끝남). 메타가 숫자 하나(`_minRange`)뿐이던 형식이 근본 원인이었으므로,
-  생성기가 그 필드를 읽는 함수(`PropertyMetadata::_pReadMinRange` · `_pReadMaxRange`)를 냅니다. 실행 시간에 이름을 찾지 않으므로 이름이 틀리면 생성된 코드가 컴파일되지 않습니다.
-  읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)도 같은 경계를 지킵니다. 인스펙터와 읽기가 `PropertyMetadata::computeAllowedRange` 하나로 범위를 풀고, 그래서 이 함수는 Shipping 에도 있습니다(C-62).
-  바깥 타입의 필드를 가리키는 경계와 성분 목록(`"-_a, 0, -_a"`)은 읽기 함수가 없습니다. 인스펙터는 그 객체를 가진 바깥 객체를 모르고, 벡터 성분에는 범위를 두지 않기 때문입니다.
+- 범위 필드는 자기 `Min` 으로 하한을 강제합니다(자르지 않고 읽기 실패).
+- 인스펙터는 같은 타입의 필드 하나를 가리키는 경계(`Min = "-_halfSize"`)를 그 객체의 지금 값으로 막습니다(단계 4-b). 생성기가 그 필드를 읽는 함수(`PropertyMetadata::_pReadMinRange` · `_pReadMaxRange`)를 내므로 이름이 틀리면 생성된 코드가 컴파일되지 않습니다.
+  인스펙터와 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 `PropertyMetadata::computeAllowedRange` 하나로 범위를 풀어서 이 함수는 Shipping 에도 있습니다. 바깥 타입의 필드를 가리키는 경계와 성분 목록은 읽기 함수가 없습니다(인스펙터는 바깥 객체를 모르고 벡터 성분에는 범위를 두지 않음).
 
 **한계.** 키 값은 리터럴이나 필드 이름만 받고 C++ 상수(`kMaxCount`)는 받지 않습니다. 파서가 상수 식을 계산하지 않기 때문입니다. 같은 값이 여러 필드에 반복될 수 있습니다(8.1 위험 4).
-데이터(카탈로그 크기 등)로 정해지는 범위는 키로 표현하지 않습니다. `FightingMatch` 의 `_moveIndex < moveCount`(`:1176-1177`)가 그 예이며 3.10 의 검증 훅에 둡니다.
+데이터(카탈로그 크기 등)로 정해지는 범위는 키로 표현하지 않고 3.10 의 검증 훅에 둡니다.
 
 ### 3.9 엔디언과 정렬
 
-- `BitWriter` 는 낮은 비트부터 채우고 정수는 시프트로 씁니다(`BitStream.h:1-6` 머리 주석). 실수는 `memcpy` 로 `uint32` 비트를 얻은 뒤 같은 경로로 씁니다(`BitStream.cpp:76-80`). 그래서 호스트 엔디언과 무관합니다.
-- 비트 단위이므로 정렬이 없고 구조체의 패딩 바이트를 쓰지 않습니다. `writeBytes` · `writeBlob` 의 원본 바이트는 B 에서 쓰지 않습니다.
-- `GimmickCircuit` 의 `memcpy` 방식은 호스트 엔디언에 의존했지만 같은 프로세스 안이라 문제가 없었습니다. B 로 옮기면 그 의존도 사라집니다.
+`BitWriter` 는 낮은 비트부터 채우고 정수는 시프트로, 실수는 `memcpy` 로 얻은 `uint32` 비트를 같은 경로로 씁니다. 그래서 호스트 엔디언과 무관하고, 비트 단위라 정렬과 패딩이 없습니다. `writeBytes` · `writeBlob` 의 원본 바이트는 B 에서 쓰지 않습니다.
 
 ### 3.10 스트림 구성과 읽기 의미
 
@@ -273,14 +194,11 @@ struct MechArenaSnapshot
 
 - 해시는 최상위 한 번만 씁니다. 중첩 타입과 컨테이너 원소는 해시 없이 바로 필드입니다.
 - 넷 채널은 핸드셰이크가 해시를 이미 확인했으므로 메시지마다 해시를 싣지 않습니다(5절). 본문만 쓰는 경로는 확인을 마친 채널 객체 안에만 있고 공개 API 로 내보내지 않습니다.
-  온라인 연결은 메시지마다 타입 해시를 그대로 싣습니다(단계 5-b). 메서드 번호는 메서드 표(`OnlineMethodTable`)의 이름 순서로 핸드셰이크 해시에 들어가지만, 표가 메서드마다 받는 타입은 담지 않으므로
-  한 메서드가 받는 타입이 바뀐 빌드끼리의 어긋남은 이 머리 해시가 `SchemaMismatch` 로 거절합니다.
-- **원자성**: 읽기는 대상 객체를 복사한 임시 객체에 읽고, 끝까지 성공했을 때만 옮깁니다. 실패하면 대상은 그대로입니다.
-  복사본에서 시작하는 이유는 B 에 없는 필드(`FighterRuntime::_pDef` 같은 정의 포인터)를 보존하기 위해서입니다. `FightingMatch::loadState` 의 `arrLoaded` 복사(`:1147`)를 생성 코드가 대신합니다.
-- **결과 형식**: `FixedReadResult` 는 `[[nodiscard]]` 열거형입니다. 값은 `Ok`, `SchemaMismatch`, `Truncated`, `OutOfRange`, `ValidateFailed`, `TrailingData` 입니다. 호출부가 이유를 로그에 남길 수 있습니다.
-- **코덱이 없는 타입**: `write` · `read` · `equals` · `getSchemaHash` 에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성). 0 해시 같은 대체 값을 돌려주지 않습니다. 등록 API 는 기동 때 `findCodec` 으로 이유를 미리 보입니다.
-- **검증 훅**: 타입에 기존 `REFLECT( Validate = 함수 )`(`CodeGenerator.cpp:572-576`)가 있으면 읽기 끝에 부르고, 오류가 있으면 `ValidateFailed` 입니다. 새 훅을 만들지 않습니다.
-  데이터 범위 검사(`_moveIndex` 등)와 "같은 캐릭터인가" 대조 값(`FightingMatch.cpp:1100`)이 이 훅으로 갑니다.
+  온라인 연결은 메시지마다 타입 해시를 그대로 싣습니다. 메서드 표(`OnlineMethodTable`)는 메서드마다 받는 타입을 담지 않으므로, 한 메서드가 받는 타입이 바뀐 빌드끼리의 어긋남은 이 머리 해시가 `SchemaMismatch` 로 거절합니다.
+- **원자성**: 읽기는 대상 객체를 복사한 임시 객체에 읽고, 끝까지 성공했을 때만 옮깁니다. 실패하면 대상은 그대로입니다. 복사본에서 시작하는 이유는 B 에 없는 필드(`FighterRuntime::_pDef` 같은 정의 포인터)를 보존하기 위해서입니다.
+- **결과 형식**: `FixedReadResult` 는 `[[nodiscard]]` 열거형입니다. 값은 `Ok`, `SchemaMismatch`, `Truncated`, `OutOfRange`, `ValidateFailed`, `TrailingData` 입니다.
+- **코덱이 없는 타입**: `write` · `read` · `equals` · `getSchemaHash` 에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성). 0 해시 같은 대체 값을 돌려주지 않습니다.
+- **검증 훅**: 타입에 기존 `REFLECT( Validate = 함수 )` 가 있으면 읽기 끝에 부르고, 오류가 있으면 `ValidateFailed` 입니다. 새 훅을 만들지 않습니다. 데이터 범위 검사(`_moveIndex` 등)와 "같은 캐릭터인가" 대조 값이 이 훅으로 갑니다.
 - 남은 비트가 있으면 실패입니다. 바이트 경계까지의 패딩 비트만 허용합니다.
 
 ### 3.11 스키마 해시
@@ -293,116 +211,66 @@ struct MechArenaSnapshot
 4. 필드 타입이 열거형이면 FQN, 기반 타입, 모든 열거자의 `이름=값`.
 5. 필드 타입이 다른 `REFLECT` 타입이면 그 타입의 해시. 다른 헤더의 타입일 수 있으므로 실행 시간에 그 타입의 코덱 테이블에서 얻어 섞고, 함수 지역 `static` 으로 한 번만 계산합니다.
 
-필드 이름을 넣는 이유는 같은 타입 필드 둘의 순서를 바꾸는 변경(`_x` 와 `_z`)을 잡기 위해서입니다. 이름만 바꿔도 해시가 바뀌지만, 같은 빌드끼리만 읽으므로 비용이 없습니다.
-멤버 초기값, `DisplayName` · `Tooltip` 같은 표시 키는 넣지 않습니다. 바이트 배치와 무관하기 때문입니다.
-
-생성기는 대상마다 정규 문자열 목록을 `FixedSchemas.gen.txt` 로 생성 폴더에 남깁니다. 해시가 왜 바뀌었는지 사람이 비교해 볼 수 있게 하는 진단용 파일이며, 빌드는 이 파일을 읽지 않습니다.
+필드 이름을 넣는 이유는 같은 타입 필드 둘의 순서를 바꾸는 변경(`_x` 와 `_z`)을 잡기 위해서입니다. 멤버 초기값, `DisplayName` · `Tooltip` 같은 표시 키, 이름 변경 리다이렉트는 바이트 배치와 무관하므로 넣지 않습니다.
+생성기는 대상마다 정규 문자열 목록을 `FixedSchemas.gen.txt` 로 남깁니다. 해시가 왜 바뀌었는지 비교하는 진단용이며 빌드는 읽지 않습니다.
 
 ### 3.12 생성 비교
 
-- 비교 함수는 B 와 같은 필드 집합을 선언 순서로 비교합니다. 실수는 **비트 패턴**으로 비교합니다. 그래서 `NaN == NaN` 은 참, `-0.0f == +0.0f` 는 거짓입니다.
-  "같은 바이트를 만드는가"와 뜻이 같아야 롤백 불일치 검사에 쓸 수 있기 때문입니다.
-- 선언을 더하지 않으므로 `operator==` 를 생성할 수는 없습니다. 비교는 `FixedLayout::equals( a, b )` 로 부릅니다. 손 `operator==` 가 필드를 하나씩 비교하는 타입이면 본문을 이 호출 한 줄로 바꿀 수 있습니다.
-- 손 `operator==` 75 개 가운데 리플렉션 타입은 거의 없어서(1.2) 대신할 수 있는 범위는 B 로 옮기는 타입뿐입니다. 비교를 대신하려고 타입에 `REFLECT` 를 붙이지는 않습니다.
+- 비교 함수는 B 와 같은 필드 집합을 선언 순서로 비교합니다. 실수는 **비트 패턴**으로 비교하므로 `NaN == NaN` 은 참, `-0.0f == +0.0f` 는 거짓입니다. "같은 바이트를 만드는가"와 뜻이 같아야 롤백 불일치 검사에 쓸 수 있기 때문입니다.
+- 선언을 더하지 않으므로 `operator==` 를 생성할 수는 없습니다. 비교는 `FixedLayout::equals( a, b )` 로 부릅니다.
 
 ### 3.13 열거형 이름 조회
 
-B 는 열거자 이름을 쓰지 않습니다. 로그와 진단용 `getEnumName` 은 FQN 해시로 `TypeRegistry` 를 찾고, 없으면 `"Unknown"` 을 반환합니다(`Source/Engine/Reflection/EnumName.h`). API 는 그대로 두고 내부만 바꿨습니다(단계 7-a, 끝남).
-
-- 생성기가 표식(`Invalid`, `Count`)을 뺀 열거자 값이 `0..N-1` 로 빈틈없는 열거형의 이름을 `EnumInfo::_listDenseName` 에 채웁니다. 조회는 목록 인덱스입니다.
-  목록은 `EnumInfo` 가 값으로 가집니다(C-51). 모듈의 정적 배열을 가리키면 핫 리로드 해제와 겹친 렌더 · 오디오 · 로거 스레드의 조회가 해제된 저장소를 읽습니다.
-  배열 순서는 libclang 이 읽은 값이므로 열거자마다 `static_assert` 로 컴파일러의 값과 대조합니다. 비트 플래그 · 음수 · 빈틈 · 같은 값의 별명이 있으면 배열 없이 이름 맵을 씁니다.
-- 템플릿 `getEnumName<E>` 는 `EnumInfo` 포인터를 함수 지역 캐시(`EnumNameCache`)에 둡니다. 호출마다 잠금과 해시 맵을 찾지 않고, 타입 테이블 세대가 바뀌면(등록 · 별칭 · 모듈 해제 · 레지스트리 파괴) 다시 찾습니다.
-  답과 세대는 `TypeCacheSlot`(`TypeRegistry.h`) 한 칸에 한 쌍으로 기록합니다. 따로 저장하면 두 스레드가 세대 경계에서 겹쳐 쓸 때 새 세대에 옛 포인터가 붙습니다.
-  `TypeLookupCache` 도 같은 칸을 써서 레지스트리 파괴(엔진 재생성) 뒤 해제된 `TypeInfo` 를 내주지 않습니다.
-- 이름에서 값을 찾는 경로(`_mapNameToValue`)는 에디터와 데이터 파서만 씁니다. 그대로 둡니다.
-- `"Unknown"` 반환은 로그용 표시라 폴백 금지 원칙의 대상이 아닙니다. 데이터 읽기는 이 함수를 쓰지 않습니다(`EnumName.h:6` 주석).
+B 는 열거자 이름을 쓰지 않습니다. 로그와 진단용 `getEnumName` 은 FQN 해시로 `TypeRegistry` 를 찾고 없으면 `"Unknown"` 을 반환합니다(`EnumName.h`, 단계 7-a). 이 값은 로그용 표시라 폴백 금지의 대상이 아니고 데이터 읽기는 쓰지 않습니다.
+빈틈 없는 열거형의 이름은 `EnumInfo::_listDenseName`(값으로 보관, 모듈 해제와 겹친 스레드 조회를 막기 위함)에, 템플릿 `getEnumName<E>` 의 포인터는 세대와 한 쌍으로 `TypeCacheSlot` 한 칸에 둡니다(따로 저장하면 세대 경계에서 새 세대에 옛 포인터가 붙음). 근거는 결정 기록 5-4 입니다.
 
 ### 3.14 마이그레이션 확장 지점
 
 B 의 기본 동작은 스키마 해시가 다르면 거절입니다. 다만 구조가 변환을 막지 않게 확장 지점을 남깁니다. **지금은 구현하지 않습니다.**
 
 - 읽기가 `SchemaMismatch` 를 내기 직전에 변환 레지스트리를 봅니다. 키는 (기록된 해시, 대상 타입)이고 값은 "옛 바이트 → 새 객체" 변환 함수입니다. 레지스트리가 비어 있으면 거절합니다.
-- 옛 바이트를 해석하려면 옛 정규 문자열이 있어야 합니다. `FixedSchemas.gen.txt`(3.11)를 배포본과 함께 보관하면 범용 디코더를 만들 수 있습니다. 이것도 필요해질 때 만듭니다.
-- 지금 변환할 옛 B 데이터가 없으므로, 현 단계에서는 레지스트리의 조회 위치(읽기 함수 안 한 곳)만 비워 두고 변환 코드는 두지 않습니다.
+- 옛 바이트를 해석하려면 옛 정규 문자열이 있어야 합니다. `FixedSchemas.gen.txt`(3.11)를 배포본과 함께 보관하면 범용 디코더를 만들 수 있습니다. 필요해질 때 만듭니다.
+- 지금 변환할 옛 B 데이터가 없으므로 레지스트리의 조회 위치(읽기 함수 안 한 곳)만 비워 두고 변환 코드는 두지 않습니다.
 
 ## 4. 코드 생성 변경 범위
 
-| 파일 | 변경 |
-|---|---|
-| `Tools/ReflectionParser/AstVisitor.cpp` | 필드 순서 보존 확인, 기반 · 중첩 타입의 필드 읽기 |
-| `Tools/ReflectionParser/ParsedReflection.h` | 적격 판정 결과와 이유, 범위 식(필드 이름 형태) |
-| `Tools/ReflectionParser/AnnotationFields.cpp` | `Min` · `Max` 가 필드 이름 · 쉼표 목록을 받게 |
-| `PredefinedAnnotationField.xxx`, `Source/Core/Predefined/AnnotationMeta.txt` | `Step`, `MaxCount` 두 키 |
-| `Tools/ReflectionParser/CodeGenerator.cpp` · `.h` | `emitFixedCodec`, 정규 문자열, 적격 판정, 펼치기 |
-| `Tools/ReflectionParser/Templates/FixedCodec*.tpl` | 코덱 테이블 머리 · 꼬리 |
-| `Tools/ReflectionParser/ParserDefines.h` | 템플릿 파일 · 키 상수(미확인: 상수 위치) |
-| `Source/Engine/Reflection/ReflectionTypes.h` | `TypeInfo::_pFixedCodec` 포인터 하나, 테이블 전방 선언 |
-| `Source/Engine/Serialization/Fixed/FixedLayout.h` · `.cpp` | `write` · `read` · `equals` · `FixedReadResult` · 변환 레지스트리 조회 위치 |
-| `Source/Engine/Reflection/EnumName.cpp` · 생성기 열거형 등록 | 3.13 |
-
-`ReflectionMacros.h` 는 바뀌지 않습니다. 사용자가 쓰는 매크로가 늘지 않습니다.
-
-- 함수 본문은 템플릿보다 `CodeEmit` 로 쓰는 편이 맞습니다. 필드마다 분기가 많아서입니다. 머리와 꼬리만 템플릿으로 두어 `TypeRegistrarBegin.tpl` · `End.tpl` 과 맞춥니다.
-- 리플렉션 타입의 인코딩은 Serialization 이 가진다는 기존 원칙(`SerializeReflectionRPC.cpp` 머리 주석)을 따라 런타임은 `Engine/Serialization/Fixed` 에 둡니다.
-- 생성 오류(범위 필드가 뒤에 있음, `float32` 로 정확하지 않은 정수 경계, 이름을 찾지 못한 범위, 숫자가 아닌 필드의 `Min` · `Max`)는 헤더 경로, 줄, 필드 이름을 담고 생성기를 실패로 끝냅니다. 적격이 아닌 것은 오류가 아닙니다(3.1).
-
-**유니티 빌드 ODR.** `.gen.cpp` 는 유니티 배치에서 빠집니다(`ReflectionCodeGen.cmake:183`). 코덱 함수는 `Registrar<T>` 특수화의 멤버이고 정의가 하나뿐입니다.
-`.gen.cpp` 안 도우미는 이름 없는 네임스페이스에 두고 이름에 타입 식별자(`sanitizeIdentifier`)를 붙입니다. 나중에 유니티 제외가 풀려도 충돌하지 않습니다.
-
-빌드 시간 · 크기 영향은 3.1 의 "① 의 비용"에 있습니다.
+생성기 쪽 변경은 `AstVisitor.cpp`(필드 순서 · 중첩 타입 읽기), `ParsedReflection.h`(적격 판정과 이유, 범위 식), `AnnotationFields.cpp`(`Min` · `Max` 가 필드 이름 · 쉼표 목록을 받음), `Step` · `MaxCount` 두 키, `FixedCodecGenerator.*`(`CodeEmit` 로 함수 본문, 머리와 꼬리만 `Templates/FixedCodec*.tpl`)입니다.
+런타임은 Serialization 이 리플렉션 타입의 인코딩을 가진다는 기존 원칙에 따라 `Engine/Serialization/Fixed` 에 둡니다. `ReflectionMacros.h` 는 바뀌지 않아 사용자가 쓰는 매크로가 늘지 않았습니다.
+생성 오류(범위 필드가 뒤에 있음, `float32` 로 정확하지 않은 정수 경계, 이름을 찾지 못한 범위, 숫자가 아닌 필드의 `Min` · `Max`)는 헤더 경로, 줄, 필드 이름을 담고 생성기를 실패로 끝냅니다. 적격이 아닌 것은 오류가 아닙니다(3.1).
 
 ## 5. 호환 정책
 
-**A 의 스키마 진화는 그대로 둡니다.** 세이브와 에셋은 지금처럼 태그, 기록 타입 변환(`tryCoerceBinaryPayload`), 버전 머리와 (타입, 기록된 버전)에 등록한 `SchemaMigrateFn`(`SchemaMigrationRegistry.h`, `SW_SCHEMA_MIGRATION`)으로 옛 데이터를 읽습니다.
-B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지 않습니다. 마이그레이션이 언제나 가능해야 한다는 것은 구조 요구이고, A 가 그 요구를 맡습니다.
+**A 의 스키마 진화는 그대로 둡니다.** 세이브와 에셋은 태그, 기록 타입 변환(`tryCoerceBinaryPayload`), 버전 머리와 (타입, 기록된 버전)에 등록한 `SchemaMigrateFn`(`SW_SCHEMA_MIGRATION`)으로 옛 데이터를 읽습니다.
+B 를 더한다고 A 의 이 경로를 줄이거나 B 와 공유하게 바꾸지 않습니다. 마이그레이션이 언제나 가능해야 한다는 요구는 A 가 맡습니다.
 
 - **롤백 · 결정성 스냅샷 · 프로세스 안 복제**: 같은 프로세스, 같은 빌드입니다. 해시 불일치는 결함이며 `SW_ASSERT` 와 오류 로그로 멈춥니다.
-- **`FightingMatch`**: 롤백은 B, 세이브 섹션은 A 로 나눕니다. 세이브 섹션은 버전 머리와 등록된 변환(`SW_SCHEMA_MIGRATION`)을 쓰는 A 경로이므로 앞으로 필드가 바뀌어도 마이그레이션 경로가 열려 있습니다.
-  지금 세이브 섹션은 롤백 바이트이고 변환할 옛 세이브가 없으므로, 현 단계에서는 옛 롤백 바이트 섹션을 읽는 변환 코드를 두지 않습니다.
-- **게임 넷 연결**: 지금도 정확히 같은 버전만 받습니다(`NetTypes.h:35-57`). 채널에 등록된 메시지 타입의 스키마 해시를 모두 `NetWireVersion::combine` 에 섞습니다.
-  손 버전을 높이지 않아도 바이트 배치가 바뀌면 핸드셰이크가 `VersionMismatch` 로 거절합니다. 손 버전은 의미만 바뀌고 배치는 그대로인 경우에만 높입니다.
-- **온라인 서비스(사용자 결정: B 로 옮김)**: 서버와 클라이언트는 같은 빌드로 배포합니다. 단계 5-a 에서 키트마다 `getProtocolVersion()` 을 대조하던 협상을 아래 해시 비교로 바꿨습니다(2026-10-17).
-  - 접속 핸드셰이크의 **첫 필드**를 "온라인 스키마 해시"로 바꿉니다. 서버는 다른 어떤 바이트보다 먼저 이것을 비교합니다.
-    해시는 빌드에 올라온 키트 프로토콜 항목(`OnlineProtocolEntry`, 키트 Shared `.cpp` 의 `XxxProtocol::kOnlineEntry`) 전부의 영역과 메시지 스키마 해시, `kBaseVersion` 을 섞습니다(`OnlineProtocolRegistry::computeSchemaHash`).
-    키트 서비스는 `getProtocol` 로 그 항목을 돌려줘야 하므로 항목 없는 키트는 서비스를 만들 수 없습니다. 클라이언트가 올린 키트만 섞으면 키트 일부만 쓰는 클라이언트가 어긋나므로 빌드 전체를 섞습니다.
-    메시지 스키마 해시는 키트의 메시지 타입 목록(`XxxProtocol::MessageTypes`, `OnlineMessageTypes<...>`)이 항목을 만들 때 넘겨져 타입마다의 `FixedLayout::getSchemaHash` 를 섞은 값입니다(단계 5-b).
-    키트는 이 목록으로만 메시지를 쓰고 읽으므로(목록에 없는 타입은 컴파일이 멈춥니다) 해시용 목록을 따로 적는 곳이 없습니다.
-    의미만 바뀌고 배치가 그대로인 변경(8.1 위험 6)은 손 버전이 아니라 `OnlineProtocolConstant::kBaseVersion` 하나를 올립니다.
-  - 다르면 연결을 `kVersionMismatch` 로 거절하고 응답에 서버 해시를 실어 보냅니다. 클라이언트는 이 오류를 "업데이트 필요" 화면으로 보이고 다시 접속하지 않습니다. 메시지를 하나라도 B 로 해석하기 전에 멈추므로 조용히 잘못 읽는 경로가 없습니다.
-    확인한 결과(단계 5-a): 이 오류를 화면으로 보이는 게임 UI 는 아직 없습니다. 신호는 `OnlineServiceClient::getState() == VersionMismatch` 와 응답의 `_errorCode` 이고,
-    계정 키트는 이것을 `LoginResult::UpdateRequired` 로 바꿉니다(전에는 표에 없어 `StoreUnavailable` 이 되어 재시도를 불렀습니다). 서버는 거절한 뒤 연결을 닫습니다.
-  - 이 첫 필드와 거절 응답은 B 가 아니라 고정된 작은 형식(해시 64 비트 + 오류 코드)입니다. B 스키마가 바뀌어도 이 비교 자체는 항상 읽힐 수 있어야 하기 때문입니다.
-  - 나중에 옛 클라이언트를 받아야 하면 로그인 · 버전 확인 같은 소수 메시지만 A 로 남기는 탈출구가 있습니다. 지금은 열지 않습니다(8.3).
-- 타입 ID(`TypeInfo::_typeID`)는 실행 순서에 따라 정해지는 로컬 인덱스이므로(`ReflectionCore.cpp:657`) 와이어에 싣지 않습니다. B 의 해시는 이름과 구조에서만 나오므로 빌드가 같으면 프로세스가 달라도 같습니다.
+- **`FightingMatch`**: 롤백은 B, 세이브 섹션은 A(버전 머리와 등록된 변환)입니다. 변환할 옛 세이브가 없으므로 옛 롤백 바이트 섹션을 읽는 변환 코드는 두지 않습니다.
+- **게임 넷 연결**: 정확히 같은 버전만 받습니다(`NetTypes.h`). 채널에 등록된 메시지 타입의 스키마 해시를 모두 `NetWireVersion::combine` 에 섞으면 손 버전을 높이지 않아도 바이트 배치가 바뀔 때 핸드셰이크가 `VersionMismatch` 로 거절합니다(후보 `NetChannelSchemaHashHandshake`).
+  손 버전은 의미만 바뀌고 배치는 그대로인 경우에만 높입니다.
+- **온라인 서비스(B, 서버 · 클라이언트 같은 빌드 배포)**: 접속 핸드셰이크의 **첫 필드**가 "온라인 스키마 해시"이고 서버는 다른 어떤 바이트보다 먼저 이것을 비교합니다(단계 5-a).
+  - 해시는 빌드에 올라온 키트 프로토콜 항목(`OnlineProtocolEntry`) 전부의 영역과 메시지 스키마 해시, `kBaseVersion` 을 섞습니다(`OnlineProtocolRegistry::computeSchemaHash`). 클라이언트가 올린 키트만 섞으면 키트 일부만 쓰는 클라이언트가 어긋나므로 빌드 전체를 섞습니다.
+    메시지 스키마 해시는 키트의 `XxxProtocol::MessageTypes` 가 타입마다의 `FixedLayout::getSchemaHash` 를 섞은 값입니다. 키트는 이 목록으로만 메시지를 쓰고 읽으므로(목록 밖 타입은 컴파일이 멈춥니다) 해시용 목록을 따로 적는 곳이 없습니다.
+    의미만 바뀌고 배치가 그대로인 변경(8.1 위험 6)은 `OnlineProtocolConstant::kBaseVersion` 하나를 올립니다.
+  - 다르면 연결을 `kVersionMismatch` 로 거절하고 응답에 서버 해시를 실어 보냅니다. 클라이언트는 "업데이트 필요"로 끝나고 다시 접속하지 않으며, 서버는 거절한 뒤 연결을 닫습니다. 메시지를 하나라도 B 로 해석하기 전에 멈춥니다.
+    이 오류를 화면으로 보이는 게임 UI 는 아직 없습니다. 신호는 `OnlineServiceClient::getState() == VersionMismatch` 와 응답의 `_errorCode` 이고, 계정 키트는 `LoginResult::UpdateRequired` 로 바꿉니다.
+  - 이 첫 필드와 거절 응답은 B 가 아니라 고정된 작은 형식(해시 64 비트 + 오류 코드)입니다. B 스키마가 바뀌어도 이 비교 자체는 항상 읽혀야 하기 때문입니다.
+  - 나중에 옛 클라이언트를 받아야 하면 로그인 · 버전 확인 같은 소수 메시지만 A 로 남기는 탈출구가 있습니다. 지금은 열지 않습니다.
+- 타입 ID(`TypeInfo::_typeID`)는 실행 순서에 따라 정해지는 로컬 인덱스이므로 와이어에 싣지 않습니다. B 의 해시는 이름과 구조에서만 나오므로 빌드가 같으면 프로세스가 달라도 같습니다.
 
-## 6. 옮기는 순서와 검증
+## 6. 테스트
 
-순서는 바이트가 프로세스 안에만 머무는 것부터입니다. 롤백과 회로 상태가 먼저이고, 와이어를 바꾸는 스냅샷과 프로토콜이 나중입니다. 단계 번호는 9절과 같습니다.
-
-1. 생성기와 런타임(단계 1). 손 코덱은 건드리지 않습니다.
-2. `GimmickCircuit` 상태(단계 2). 손 크기 계산을 없애는 효과가 가장 분명합니다. 회로 구조 해시(`_layoutHash`)는 없앴고, 저장 상태는 노드 id 로 짝지어 같은 id 의 종류 · 상태 버전이 바뀐 노드만 거절합니다([기믹 회로 상태 구조 계획](GimmickCircuitState.md) 8절).
-3. `FightingMatch` 롤백 B, 세이브 A(단계 3).
-4. Mech · Horror 스냅샷과 게임 넷 채널 등록(단계 4). 핸드셰이크에 해시를 섞습니다.
-5. 온라인: 핸드셰이크 첫 필드 해시와 "업데이트 필요" 거절을 먼저(단계 5-a), 그다음 프로토콜 12 파일(단계 5-b).
-6. 컴팩트 모드 삭제(단계 6, 끝남). `cloneObject` 는 호출부가 없어 B 로 옮기지 않고 지웠습니다.
-
-단계마다 아래 테스트를 둡니다. 성능 수치는 요구하지 않습니다.
+단계마다 아래 테스트를 둡니다(`TestFixedLayout.cpp` 가 첫 구현). 성능 수치는 요구하지 않습니다.
 
 - **왕복**: 값을 채운 객체를 쓰고 읽어 `FixedLayout::equals` 로 비교합니다. 경계값(범위 최소 · 최대, 빈 컨테이너, `MaxCount` 개)을 포함합니다.
-- **스키마 변경 거부**: 테스트 전용 헤더에 필드 순서만 다른 두 타입을 두고 정규 문자열 해시를 비교합니다. 해시가 달라야 하고, 한쪽이 쓴 바이트를 다른 쪽이 읽으면 `SchemaMismatch` 여야 합니다.
-  같은 방법으로 필드 이름 변경, 열거자 추가, `Step` · `Min` 변경, `FixedLayout::kVersion` 변경을 각각 확인합니다.
+- **스키마 변경 거부**: 필드 순서만 다른 두 타입의 정규 문자열 해시가 달라야 하고, 한쪽이 쓴 바이트를 다른 쪽이 읽으면 `SchemaMismatch` 여야 합니다. 필드 이름 변경, 열거자 추가, `Step` · `Min` 변경, `FixedLayout::kVersion` 변경도 각각 확인합니다.
 - **적격 판정**: 포인터 필드, `MaxCount` 없는 `vector` 를 가진 타입에 코덱이 없고, 그 타입을 등록 API 에 넘기면 이유를 담은 오류로 멈추는지 확인합니다.
-- **잘림 · 범위**: 바이트를 한 개씩 줄인 모든 접두에 대해 `Truncated` 가 나오는지, 범위 밖 개수와 열거자가 `OutOfRange` 인지 확인합니다. 실패 뒤 대상 객체가 그대로인지도 확인합니다.
+- **잘림 · 범위**: 바이트를 한 개씩 줄인 모든 접두에 대해 `Truncated` 가 나오는지, 범위 밖 개수와 열거자가 `OutOfRange` 인지, 실패 뒤 대상 객체가 그대로인지 확인합니다.
 - **쓰기 실패**: 범위 밖 정수, `MaxCount` 초과에서 `FixedLayout::write` 가 `false` 인지 확인합니다.
-- **이전 · 이후 동작 비교**: 손 코덱을 지우기 전에, 같은 시뮬레이션을 손 코덱과 B 로 각각 저장 · 복원해 이후 프레임의 상태 해시가 같은지 비교합니다.
-  롤백은 기존 롤백 테스트(되감아 다시 실행한 결과가 같다)를 그대로 통과해야 합니다. 해시 머리와 인코딩이 바뀌므로 바이트가 아니라 동작을 비교합니다.
+- **이전 · 이후 동작 비교**: 손 코덱을 지우기 전에 같은 시뮬레이션을 손 코덱과 B 로 저장 · 복원해 이후 프레임의 상태 해시가 같은지 비교합니다. 바이트가 아니라 동작을 비교합니다.
 - **넷 · 온라인 거절**: 메시지 타입 하나의 필드를 바꾼 빌드가 핸드셰이크에서 거절되는지, 온라인은 그 거절이 다른 메시지보다 먼저 오고 클라이언트가 "업데이트 필요"로 끝나는지 확인합니다.
 
-**손 코드와 같은 수준이라는 구조상 근거.** 생성 코드는 손 코덱과 같은 `BitWriter` 호출을 같은 순서로 부르는 직선 코드입니다.
-프로퍼티 목록 순회, 이름 해시 비교, 기록 타입 변환이 없고, 필드 주소는 멤버 접근이라 컴파일러가 상수 오프셋으로 만듭니다.
-손 코드보다 많은 일은 셋입니다. 최상위 해시 64 비트 한 번, 최상위 간접 호출 한 번(3.2), 읽기의 임시 복사 한 번입니다. 임시 복사는 `FightingMatch` 손 코드도 하고 있습니다(`:1147`).
-펼칠 수 없는 중첩 타입(다른 헤더 · private 필드)은 원소마다 간접 호출이 하나 더 있습니다. 지금 후보(Mech · Horror · Fighting)는 중첩 타입이 같은 헤더에 있어 펼칠 수 있습니다.
+**손 코드와 같은 수준이라는 구조상 근거.** 생성 코드는 손 코덱과 같은 `BitWriter` 호출을 같은 순서로 부르는 직선 코드입니다. 프로퍼티 목록 순회, 이름 해시 비교, 기록 타입 변환이 없고 필드 주소는 컴파일러가 상수 오프셋으로 만듭니다.
+손 코드보다 많은 일은 최상위 해시 64 비트 한 번, 최상위 간접 호출 한 번(3.2), 읽기의 임시 복사 한 번입니다. 펼칠 수 없는 중첩 타입(다른 헤더 · private 필드)은 원소마다 간접 호출이 하나 더 있습니다.
 
 ## 7. 리플렉션 캐스트 비용
 
@@ -465,83 +333,47 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 - **유니티 빌드**: 캐스트 경로는 헤더 인라인과 `.gen.cpp` 정의뿐이라 영향이 없습니다.
 - **ID 결정성**: `_typeID` 는 등록 순서 카운터입니다(`ReflectionCore.cpp:657`). 네트워크 · 디스크에 싣지 않습니다. 타입을 와이어에 실어야 하면 FQN 해시를 씁니다.
 
-## 8. 위험과 구현 중 확인할 것
+## 8. 위험과 남은 확인
 
 ### 8.1 위험과 완화
 
-1. **적격이 아닌 타입을 B 로 쓰려는 경우가 빌드 시간이 아니라 기동 시간에 드러납니다.** 사용자가 선언하지 않으므로 사용 자리의 컴파일러는 코덱 유무를 모릅니다(3.1).
-   완화: B 진입점을 등록 API 몇 개로 모아 기동 때 한 번 확인하고, 오류 메시지에 적격이 아닌 필드와 이유를 담습니다. 게임마다 기동하는 기존 자동화 시나리오가 이 확인을 지나갑니다.
-2. **AST 범위**: 다른 헤더의 중첩 타입 필드를 생성기가 읽을 수 있는지 확인하지 않았습니다(3.6). 읽지 못하면 그런 중첩은 간접 호출로만 처리하고, 적격 판정은 그 타입의 코덱 테이블 유무를 실행 시간에 확인합니다.
-3. **의도하지 않은 와이어 변경**: 선언이 없으므로 `REFLECT` 타입의 필드를 정리하거나 순서를 바꾸면 B 형식이 바뀝니다.
-   롤백 · 스냅샷은 같은 빌드끼리라 영향이 없습니다. 넷 · 온라인은 해시가 달라져 옛 빌드와의 연결이 거절됩니다. 조용히 잘못 읽지는 않습니다.
-   사용자가 알 수 있는 수단은 셋입니다. ① 거절 로그와 "업데이트 필요" 화면이 양쪽 해시를 보입니다. ② `FixedSchemas.gen.txt` 를 비교하면 무엇이 바뀌었는지 보입니다. ③ 필드 순서가 와이어에 영향을 준다는 사실을 `PROPERTY` 헤더 주석과 Reflection README 에 한 줄로 적습니다.
-   온라인 배포 전 확인용으로 온라인 스키마 해시를 커밋된 기준 파일과 비교하는 테스트를 두는 안은 정확성 장치가 아니라 알림이므로 이 계획에 넣지 않습니다. 해시 거절이 이미 정확성을 보장합니다.
+1. **적격이 아닌 타입을 B 로 쓰려는 경우가 빌드 시간이 아니라 기동 시간에 드러납니다.** 사용자가 선언하지 않으므로 사용 자리의 컴파일러는 코덱 유무를 모릅니다(3.1). 완화: B 진입점을 등록 API 몇 개로 모아 기동 때 한 번 확인하고, 오류 메시지에 적격이 아닌 필드와 이유를 담습니다.
+2. **다른 헤더의 중첩 타입**: 생성기는 그 타입의 `PROPERTY` 를 다시 모으지 않고 실행 시간에 코덱 테이블 유무를 확인합니다(3.6).
+3. **의도하지 않은 와이어 변경**: 선언이 없으므로 `REFLECT` 타입의 필드를 정리하거나 순서를 바꾸면 B 형식이 바뀝니다. 롤백 · 스냅샷은 같은 빌드끼리라 영향이 없고, 넷 · 온라인은 해시가 달라져 옛 빌드와의 연결이 거절될 뿐 조용히 잘못 읽지는 않습니다.
+   알 수 있는 수단은 거절 로그의 양쪽 해시, `FixedSchemas.gen.txt` 비교, `PROPERTY` 헤더 주석과 Reflection README 의 "선언 순서는 와이어 형식" 문단입니다. 온라인 스키마 해시를 커밋된 기준 파일과 비교하는 테스트는 알림이지 정확성 장치가 아니라 두지 않습니다.
 4. **리터럴 반복**: 3.8 의 키 값이 C++ 상수를 참조하지 못해 같은 값이 여러 필드에 반복됩니다. 값이 어긋나도 해시가 바뀌므로 잘못 읽지는 않지만, 의도와 다른 범위가 됩니다.
-5. **`Min` · `Max` 의 뜻이 강해집니다.** 허용 범위가 와이어 범위가 되므로, 게임 코드가 허용 범위 밖 값을 잠깐 쓰던 곳은 B 쓰기 실패로 드러납니다. 결함이 드러나는 것이므로 의도한 결과입니다. 단계 2 ~ 4 에서 해당 필드의 범위를 실제 값으로 다시 정합니다.
-6. **해시에 들어가지 않는 의미 변경**: 단위를 미터에서 센티미터로 바꾸는 변경은 해시를 바꾸지 않습니다. 이 경우를 위해 넷 손 버전 상수는 지우지 않습니다.
+5. **`Min` · `Max` 의 뜻이 강해집니다.** 허용 범위가 와이어 범위가 되므로, 게임 코드가 허용 범위 밖 값을 잠깐 쓰던 곳은 B 쓰기 실패로 드러납니다. 결함이 드러나는 것이므로 의도한 결과입니다.
+6. **해시에 들어가지 않는 의미 변경**: 단위를 미터에서 센티미터로 바꾸는 변경은 해시를 바꾸지 않습니다. 넷은 손 버전 상수를, 온라인은 `kBaseVersion` 을 남겨 이 경우에 올립니다.
 7. **`REFLECT` 를 처음 붙이는 타입**: 스냅샷 구조체에 `REFLECT` 를 붙이면 `TypeRegistry` 에 등록되고 인스펙터 · A 직렬화 대상이 됩니다. 의도한 결과이지만 등록 수가 늘어납니다.
 
-### 8.2 후보로 넘긴 것
+### 8.2 남은 확인
 
-- `A-13`(모르는 타입 1 바이트 건너뛰기)과 `A-14`(`BitStream` 범위 자르기)는 단계 6 과 함께 해결했습니다(1.2, 1.4).
-
-### 8.3 정한 것
-
-사용자 결정은 모두 끝났습니다. 결정 기록에는 단계 1 을 병합할 때 함께 옮깁니다.
-
-- 사용자는 B 를 선언하지 않습니다. 적격 `REFLECT` 타입 전부에 생성하고 사용 자리의 등록 API 가 확인합니다(3.1).
-- 온라인 서비스 프로토콜도 B 로 옮기고 서버 · 클라이언트를 같은 빌드로 배포합니다. 핸드셰이크 첫 필드에서 스키마 해시를 비교하고 다르면 "업데이트 필요"로 거절합니다(5절).
-  나중에 옛 클라이언트를 받아야 하면 로그인 · 버전 확인 같은 소수 메시지만 A 로 남기는 탈출구를 엽니다. 지금은 열지 않습니다.
-- `FightingMatch` 는 롤백 B, 세이브 A 입니다. 지금 변환할 옛 세이브가 없으므로 현 단계에서 변환 코드를 두지 않고, A 의 마이그레이션 경로는 그대로 열려 있습니다(5절).
-- B 의 스키마 불일치는 거절이 기본이고, 변환 레지스트리 조회 위치만 남겨 둡니다(3.14).
-- 타입 핸들(7-d)과 매니저의 타입별 컴포넌트 목록(7-c)을 도입합니다.
-
-### 8.4 구현 중 확인할 기술 질문
-
-- 단계 1 에서 답한 것(2026-10-17): `_listProperty` 는 `clang_visitChildren` 순서, 곧 선언 순서입니다. 다른 헤더의 선언도 같은 번역 단위에 있어
-  열거자 · `ENUM( Count, Flags )` · `REFLECT()` 표시를 읽습니다(`AstVisitor.cpp` `collectFixedEnum` · `isReflectedRecord`). 다만 다른 헤더 타입의 `PROPERTY` 를
-  다시 모으지는 않고 실행 시간에 그 코덱을 찾아 의존을 확인합니다(`FixedLayout::findCodec`). 템플릿 · 키 상수는 `ParserDefines.h` 의 `templatekey` · `fixedlayout` 입니다.
-  `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 입니다. 명세와 다르게 정한 것은 [결정 기록](../09_Decisions.md) 5-4 에 있습니다.
-- 지금 `ComponentHandle` 필드가 A 에서 어떤 바이트로 직렬화되는가(단계 7-d).
+- `getComponent<` 413 건 가운데 틱 안에서 부르는 비율은 세지 않았습니다(단계 0, 7.3).
+- 단계 2 의 빌드 검증(9절 단계 2 행).
 
 ## 9. 단계
 
-| 단계 | 내용 | 건드릴 파일 | 겹침 주의 | 에이전트(모델) |
-|---|---|---|---|---|
-| 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록 | 없음(읽기) | 없음 | `scout`(haiku) |
-| 2 | (구현, 빌드 검증 대기) `GimmickCircuitState` 하나에서 컴포넌트는 A, 묶음 · 넷 조각은 B. 아래 문단 | `GimmickCircuit*`, `GimmickStateBundle.*`, `GimmickSnapshotUtil.*`, 기믹 XML 14 개 | 없음 | `worker`(opus) |
-| 4-a | Mech · Horror 스냅샷을 B 로(끝남). 넷 채널 등록 · 해시 섞기는 후보 `NetChannelSchemaHashHandshake` | `MechArenaSnapshot.*`, `HorrorSnapshot.*` | 두 스냅샷 한 손 | `worker`(opus) |
-| 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 쓰게(끝남, 3.8 끝 문단). 같은 타입의 필드 하나만 읽고, 바깥 타입 · 성분 목록은 코덱만 쓴다 | `ReflectionTypes.h`, `CodeGenerator.cpp`, `InspectorPropertyLayout.*` | 없음 | `worker`(opus) |
-| 7-c | 매니저의 타입별 컴포넌트 목록 | `GameObjectManager.*`, `GameObjectStore.*` | 7-d 와 같은 파일, 7-c 먼저 | `integrator`(opus) |
-| 7-d | 타입 핸들 `TComponentHandle<T>` | `ComponentHandle.h`, `GameObjectManager.*`, 호출부, 인스펙터 | 7-c 뒤 같은 손 | `integrator`(opus) |
+완료한 단계는 한 줄(무엇이 어디에)만 남깁니다. 설계 근거는 결정 기록과 코드 헤더 주석, 위치는 1절 표입니다.
 
-단계 1(생성기 · `TypeInfo::_pFixedCodec` · `FixedLayout` 런타임 · 테스트)은 끝났습니다(2026-10-17). 런타임은 `Source/Engine/Serialization/Fixed/FixedLayout.h`,
-생성기는 `Tools/ReflectionParser/FixedCodecGenerator.*`, 테스트는 `Test/ReflectionTest/TestFixedLayout.cpp` · `TestFixedLayoutTypes.h` 와
-`ReflectionParserTest.FixedLayoutAnnotationMistakesStopTheBuild` 입니다. 단계 2 ~ 5 는 서로 파일이 겹치지 않아 도우미 하나와 나눠 진행할 수 있습니다.
-단계 5-a(Hello 첫 필드 스키마 해시, `OnlineProtocolRegistry`, "업데이트 필요" 거절 뒤 재접속 없음)는 끝났습니다(2026-10-17). 테스트는 `OnlineServiceHostTest` 의 `RequestsBeforeHelloAreRefusedAndSchemaHashIsComparedFirst` · `HelloRefusalsReadOnlyTheFixedHashFieldFirst` · `SameSchemaHashConnects` · `SchemaHashMismatchStopsTheClientWithoutReconnecting`, `OnlineProtocolTest.VersionMismatchBecomesUpdateRequiredBeforeTheKitTable` 입니다.
-키트 결과 열거형은 모두 `UpdateRequired` 를 가지며, 공통 처리(`OnlineReplyUtil::markError`)가 키트 표보다 먼저 `kVersionMismatch` 를 그 값으로 바꿉니다.
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록(`scout`, haiku) | 아직 안 함 |
+| 1 | 생성기 · `TypeInfo::_pFixedCodec` · `FixedLayout` 런타임 · 테스트 | 끝남(2026-10-17, `a01e7a79a`) |
+| 2 | `GimmickCircuitState` 하나에서 컴포넌트는 A, 묶음 · 넷 조각은 B. 설계는 [기믹 회로 상태 구조 계획](GimmickCircuitState.md) 8절 | 구현함(`e6ae53938`), 빌드 검증 대기 |
+| 3 | `FightingMatch` 롤백 B · 세이브 A, 두 읽기가 같은 `validateState`. 손 코덱 · 손 버전 상수 · `RoundSeries` · `InputCommandBuffer` 의 손 `writeState` · `readState` 삭제 | 끝남(`88add323a`, `5a14ccb39`) |
+| 4-a | Mech · Horror 스냅샷을 B 로(`PROPERTY` 범위 키만, 손 코덱 · `kMagic` 없음, 스냅샷은 디스크에 남지 않음). 넷 채널 등록 · 해시 섞기는 후보 `NetChannelSchemaHashHandshake` | 끝남(`7fa9a9c70`, `016656bc2`) |
+| 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 씀(3.8). `ReflectionTypes.h`, `CodeGenerator.cpp`, `InspectorPropertyLayout.*` | 끝남(`7ce9eafe2`) |
+| 5-a | Hello 첫 필드 스키마 해시, `OnlineProtocolRegistry`, "업데이트 필요" 거절 뒤 재접속 없음(5절). 키트 결과 열거형은 모두 `UpdateRequired` 를 가지며 `OnlineReplyUtil::markError` 가 키트 표보다 먼저 `kVersionMismatch` 를 그 값으로 바꿉니다 | 끝남(`5a1305dc3`) |
+| 5-b | 온라인 11 키트를 B 로(`XxxProtocol::MessageTypes`, 손 코덱 · 손 `kVersion` 삭제, 영속 값은 `ServiceRecordUtil` 의 A). 결정 기록 5-9 | 끝남(`78b5affa3`) |
+| 6 | 컴팩트 모드와 호출부 없는 `cloneObject` 삭제, `A-13` · `A-14` 해결 | 끝남(`626210330`) |
+| 7-a | 열거형 이름 조회를 `EnumInfo::_listDenseName` · `EnumNameCache` 로(3.13) | 끝남(`58a651537`) |
+| 7-b | `REFLECT` 둘째 · 가상 베이스를 생성 오류로(7.4, 결정 기록 5-4) | 끝남(`58a651537`) |
+| 7-c | 매니저의 타입별 컴포넌트 목록 | 아래 상세, 계획은 [TypedComponents](TypedComponents.md) |
+| 7-d | 타입 핸들 `TComponentHandle<T>` | 아래 상세, 계획은 [TypedComponents](TypedComponents.md) |
 
-단계 5-b(온라인 11 키트를 B 로)는 끝났습니다(2026-10-17). 키트마다 요청 · 응답 · 알림 · 서버 버스 본문이 `REFLECT` 구조체이고 `XxxProtocol::MessageTypes` 로만 쓰고 읽으며,
-손 코덱(`AccountWire`, `TradeWire`, 키트 `writeX` · `readX`)과 손 `kVersion` 은 지웠습니다. 저장소(영속, 캐시)에 남는 값은 A(`ServiceRecordUtil`)입니다. 결정은 [결정 기록](../09_Decisions.md) 5-9 에 있습니다.
-테스트는 키트마다 `<Kit>ProtocolTest`(왕복, 모든 앞부분 거절, 다른 타입 거절, 범위 밖 쓰기 실패)와 `OnlineProtocolTest.MessageTypesHashFollowsTheTypes` 입니다.
-
-단계 3 은 끝났습니다(2026-10-17). `FightingMatch` 가 `REFLECT` 타입이고 상태 필드(`FighterRuntime`, `MoveTimeline`, `InputCommandBuffer`, `RoundSeries`)가 `PROPERTY` 입니다.
-롤백은 `FixedLayout`, 세이브는 `BinarySerializer::serializeVersioned` 이고, 두 읽기가 같은 `validateState` 를 씁니다. 손 코덱과 손 버전 상수는 지웠습니다.
-같은 상태를 두 벌 두지 않도록 `RoundSeries` · `InputCommandBuffer` 의 손 코덱(`writeState(BitWriter)` · `readState(BitReader)`)과 그 테스트도 지웠습니다.
-기반 헤더 셋이 바뀌었습니다. `FrameData.h`(`MoveTimeline` 의 `REFLECT`, `GuardStance` 의 `ENUM`), `InputCommandBuffer.h`(`InputFrame` · `InputCommandBuffer` 의 `REFLECT`, `clear` 가 칸을 비움),
-`RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.
-세이브 읽기의 `Min` · `Max` 는 자기 기술형 세 포맷의 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 봅니다. 호출부가 따로 부르지 않습니다.
-이 함수는 시퀀스 원소까지 늘 보고, 범위를 어디까지 볼지 부르는 쪽이 고르는 인자를 두지 않습니다(설정 JSON · 데이터 XML · 세이브가 같은 계약).
-
-단계 6 은 끝났습니다(2026-10-17). 컴팩트 모드와 호출부 없는 `cloneObject` 를 지웠고(1.1), 같은 묶음으로 `A-13` · `A-14` 를 고쳤습니다(1.2, 1.4).
-
-단계 2 는 구현했고 빌드 검증을 기다립니다(2026-10-18, 브랜치 `wt/feat10`). 상태를 `REFLECT` 구조체 `GimmickCircuitState` 로 꺼내 컴포넌트에는 A(씬 · 프리팹 · 레벨 세이브)로,
-롤백 묶음 · 넷 스냅샷에는 B 로 싣고, 체크포인트는 프로세스 안 값입니다. 설계와 `design-reviewer` 검토 반영은 [기믹 회로 상태 구조 계획](GimmickCircuitState.md) 8절입니다.
-
-단계 4-a 가운데 스냅샷을 B 로 옮기는 일은 끝났습니다(2026-10-17). Mech · Horror 스냅샷은 `PROPERTY` 범위 키만 갖고 손 코덱 · `kMagic` 이 없습니다.
-두 스냅샷은 디스크에 남지 않습니다(세이브는 `Archive` 의 `writeState` 가 따로 씁니다). Horror 발전기의 진행 · 표시 두 목록은 원소 하나(`HorrorGeneratorSnapshot`)로 합쳤고, 위치는 높이까지 싣습니다.
-메시지는 스트림 머리 해시를 그대로 실어, 배치가 다른 빌드의 바이트는 읽기가 `SchemaMismatch` 로 거절합니다. 테스트는 `MechArenaTest` · `AsymmetricHorrorTest` 의 `SnapshotRoundTripsAndRefusesOutOfRangeValues` 입니다.
-채널 등록 API(`registerMessage<T>` 로 등록하면 해시가 핸드셰이크 버전에 섞이는 구조)와 3.10 의 본문만 쓰는 경로는 이 스냅샷을 싣는 게임이 아직 없어 후보 `NetChannelSchemaHashHandshake` 로 넘겼습니다.
+단계 3 에서 바뀐 기반 헤더 셋은 `FrameData.h`(`MoveTimeline` 의 `REFLECT`, `GuardStance` 의 `ENUM`), `InputCommandBuffer.h`(`InputFrame` · `InputCommandBuffer` 의 `REFLECT`), `RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.
+세이브 읽기의 `Min` · `Max` 는 자기 기술형 세 포맷의 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 봅니다. 시퀀스 원소까지 늘 보고, 범위를 어디까지 볼지 고르는 인자를 두지 않습니다(설정 JSON · 데이터 XML · 세이브가 같은 계약).
+단계 4-a: Horror 발전기의 진행 · 표시 두 목록은 원소 하나(`HorrorGeneratorSnapshot`)로 합쳤고, 메시지는 스트림 머리 해시를 그대로 실어 배치가 다른 빌드의 바이트를 `SchemaMismatch` 로 거절합니다.
 
 **단계 7-c · 7-d 상세.**
 
