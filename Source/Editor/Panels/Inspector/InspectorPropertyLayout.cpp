@@ -90,6 +90,16 @@ namespace sw::editor
         return bUsable ? string( "Edit " ) + pPropertyLabel : string( "Edit Property" );
     }
 
+    PropertyInfo InspectorPropertyLayout::makeElementProperty( const PropertyInfo& containerProp )
+    {
+        PropertyInfo elementProp{};
+        elementProp._typeName             = containerProp._elementTypeName;
+        elementProp._name                 = containerProp._name;
+        elementProp._metadata             = containerProp._metadata;
+        elementProp._handleTargetTypeName = containerProp._handleTargetTypeName;
+        return elementProp;
+    }
+
     InspectorDisplayUnit InspectorPropertyLayout::getDisplayUnit( const PropertyInfo& prop )
     {
         InspectorDisplayUnit unit{};

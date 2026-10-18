@@ -302,4 +302,28 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, UndoLabelNamesTheProperty )
     SW_EXPECT_EQUAL( string( "Edit Property" ), InspectorPropertyLayout::makeUndoLabel( nullptr ) );
 }
 
+/**
+ * @brief [InspectorPropertyLayoutTest] 시퀀스 원소 프로퍼티는 타입 핸들의 대상 타입을 잃지 않는다
+ * @details 원소 프로퍼티를 손으로 필드 몇 개만 복사하면 대상 타입이 빠져 `vector<TComponentHandle<T>>` 의 원소가 선택기 대신 정수 입력으로 떨어진다.
+ */
+SW_TEST_CASE( InspectorPropertyLayoutTest, ElementPropertyKeepsHandleTarget )
+{
+    PropertyInfo container;
+    container._typeName             = hashed_string( "vector<ComponentHandle>" );
+    container._elementTypeName      = hashed_string( "ComponentHandle" );
+    container._name                 = hashed_string( "_listLink" );
+    container._handleTargetTypeName = hashed_string( "X" );
+    container._bIsContainer         = SW_TRUE;
+    container._offset               = 24;
+    container._metadata._tooltip    = "tip";
+
+    const PropertyInfo element = InspectorPropertyLayout::makeElementProperty( container );
+    SW_EXPECT_TRUE( element._typeName == hashed_string( "ComponentHandle" ) );
+    SW_EXPECT_TRUE( element._handleTargetTypeName == hashed_string( "X" ) );
+    SW_EXPECT_TRUE( element._name == hashed_string( "_listLink" ) );
+    SW_EXPECT_TRUE( element._metadata._tooltip == container._metadata._tooltip );
+    SW_EXPECT_EQUAL( size_t{ 0 }, static_cast<size_t>( element._offset ) );
+    SW_EXPECT_TRUE( element._bIsContainer == SW_FALSE );
+}
+
 #endif // !SW_SHIPPING

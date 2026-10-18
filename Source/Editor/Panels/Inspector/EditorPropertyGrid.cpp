@@ -93,7 +93,7 @@ namespace sw::editor
                     applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
             }
 
-            /** @brief 키나 원소 하나를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 텍스트 변환(`SerializerUtil::formatPropertyText`, `applyPropertyText`)에 씁니다. */
+            /** @brief 키나 맵 값 하나를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 시퀀스 원소는 `InspectorPropertyLayout::makeElementProperty` 입니다. 텍스트 변환(`SerializerUtil::formatPropertyText`, `applyPropertyText`)에 씁니다. */
             static PropertyInfo makeValueProperty( const hashed_string& typeName )
             {
                 PropertyInfo valueProp{};
@@ -366,7 +366,9 @@ namespace sw::editor
                         }
                         if ( ImGui::MenuItem( "Copy Value" ) )
                             ImGui::SetClipboardText( SerializerUtil::formatPropertyText( *prop, pInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
-                        if ( ImGui::MenuItem( "Paste Value", nullptr, false, ImGui::GetClipboardText() != nullptr ) )
+                        // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
+                        const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop->_handleTargetTypeName.empty();
+                        if ( ImGui::MenuItem( "Paste Value", nullptr, false, bPasteAllowed ) )
                             applyPropertyTextAsEdit( pInstance, *prop, ImGui::GetClipboardText(), "Paste Value" );
                         if ( ImGui::MenuItem( "Copy Property Name" ) )
                             ImGui::SetClipboardText( prop->_name.c_str() );
@@ -679,10 +681,7 @@ namespace sw::editor
                 ImGui::Text( "[%zu]", elemIndex );
                 ImGui::SameLine();
 
-                PropertyInfo elemProp{};
-                elemProp._typeName = prop._elementTypeName;
-                elemProp._name     = prop._name;
-                elemProp._metadata = prop._metadata;
+                const PropertyInfo elemProp = InspectorPropertyLayout::makeElementProperty( prop );
 
                 ImGui::SetNextItemWidth( -FLT_MIN );
                 drawPropertyWidget( pElem, elemProp );
@@ -778,7 +777,7 @@ namespace sw::editor
         if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
             return;
 
-        const PropertyInfo elementProp      = EditorPropertyGridInternal::makeValueProperty( prop._elementTypeName );
+        const PropertyInfo elementProp      = InspectorPropertyLayout::makeElementProperty( prop );
         const bool         bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
         size_t             eraseIndex       = static_cast<size_t>( -1 );
         size_t             replaceIndex     = static_cast<size_t>( -1 );

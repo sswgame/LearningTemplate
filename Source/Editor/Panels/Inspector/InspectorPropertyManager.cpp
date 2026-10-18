@@ -24,15 +24,19 @@
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
+#include "Editor/Panels/Inspector/InspectorComponentPicker.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -493,6 +497,131 @@ namespace sw::editor
             }
         };
 
+        /**
+         * @brief 컴포넌트 핸들의 위젯입니다. 대상 타입이 있는 핸들(`TComponentHandle<T>`)은 선택기만 그리고, 없는 핸들은 `ValueProperty` 와 같이 그립니다.
+         * @details 선택기가 쓰는 값은 **열거한 컴포넌트의 `getHandle()`** 뿐이라 타입이 틀린 값이 들어갈 수 없다(`docs/plans/TypedComponents.md` 3.8).
+         *          대상 타입, 레지스트리, 편집 대상의 씬 중 하나라도 없으면 선택기를 그리지 않고 오류 글과 한 번의 로그로 멈춘다. 활성 씬이나 모든 컴포넌트로
+         *          넓히는 것은 폴백이다.
+         */
+        class ComponentHandleProperty : public BuiltinPropertyBase
+        {
+        public:
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            {
+                if ( prop._handleTargetTypeName.empty() )
+                    return _untyped.draw( pInstance, prop, grid );
+
+                const TypeRegistry*      pRegistry   = findSubsystem<TypeRegistry>();
+                const TypeInfo*          pTargetType = pRegistry != nullptr ? InspectorComponentPickerUtil::findTargetType( *pRegistry, prop ) : nullptr;
+                const GameObject*        pOwner      = grid.getEditOwner();
+                const GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                if ( pTargetType == nullptr || pManager == nullptr )
+                {
+                    drawUnavailable( prop, pRegistry != nullptr && pTargetType == nullptr );
+                    return true;
+                }
+
+                ComponentHandle* pValue = prop.getValuePtr<ComponentHandle>( pInstance );
+                if ( pValue == nullptr )
+                    return true;
+
+                const InspectorHandleState            state = InspectorComponentPickerUtil::computeHandleState( *pManager, *pTargetType, *pValue );
+                fixed_string<constant::kMaxBuffer512> preview;
+                makePreview( *pManager, *pValue, state, preview );
+
+                if ( prop._metadata._bReadOnly != SW_FALSE )
+                {
+                    drawReadOnlyText( prop, preview.c_str() );
+                    return true;
+                }
+
+                const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
+                if ( bColored )
+                    EditorThemeUtil::pushTextColor( state == InspectorHandleState::Missing ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getErrorColor() );
+                const bool bOpen = ImGui::BeginCombo( _pLabel, preview.c_str() );
+                if ( bColored )
+                    EditorThemeUtil::popTextColor();
+                if ( bOpen )
+                {
+                    // 열린 프레임에만 모은다. 닫혀 있을 때 비용은 0 이다.
+                    InspectorComponentPickerUtil::collectChoices( *pManager, *pTargetType, _listChoice );
+                    ComponentHandle picked{};
+                    bool            bPicked = false;
+                    if ( ImGui::Selectable( "(none)", pValue->isValid() == false ) )
+                        bPicked = true;
+                    if ( _listChoice.empty() )
+                        ImGui::TextDisabled( "No %s in this scene", pTargetType->_name.c_str() );
+                    for ( const InspectorComponentChoice& choice : _listChoice )
+                    {
+                        if ( ImGui::Selectable( choice._label.c_str(), choice._handle == *pValue ) )
+                        {
+                            picked  = choice._handle;
+                            bPicked = true;
+                        }
+                    }
+                    ImGui::EndCombo();
+
+                    // 쓰기는 그리드 한곳(통지 · 되돌리기)이 맡는다. Selectable 은 ImGui 편집 플래그를 세우지 않으므로 trackPod 도 부르지 않는다.
+                    if ( bPicked && picked != *pValue )
+                    {
+                        const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
+                        grid.applyPropertyTextAsEdit( pInstance, prop,
+                                                      SerializerUtil::formatPropertyText( prop, &picked, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
+                                                      undoLabel.c_str() );
+                    }
+                }
+                showTooltipIfHovered( prop );
+                return true;
+            }
+
+        private:
+            /** @brief 현재 값의 미리보기 글입니다. */
+            static void makePreview( const GameObjectManager& manager, ComponentHandle value, InspectorHandleState state, fixed_string<constant::kMaxBuffer512>& outPreview )
+            {
+                switch ( state )
+                {
+                    case InspectorHandleState::Empty:
+                    {
+                        formatstring( outPreview.data(), outPreview.capacity(), "(none)" );
+                        return;
+                    }
+                    case InspectorHandleState::Missing:
+                    {
+                        formatstring( outPreview.data(), outPreview.capacity(), "(missing) object %# / component %#", value.objectID(), value.componentID() );
+                        return;
+                    }
+                    case InspectorHandleState::Valid:
+                    case InspectorHandleState::WrongType:
+                    {
+                        break;
+                    }
+                }
+                const Component* pComp = manager.resolveComponent( value );
+                const string     label = pComp != nullptr ? InspectorComponentPickerUtil::makeLabel( *pComp ) : string();
+                formatstring( outPreview.data(), outPreview.capacity(), "%#%#", state == InspectorHandleState::WrongType ? "(wrong type) " : "", label );
+            }
+
+            /** @brief 선택기를 그릴 수 없을 때의 오류 글입니다. 필드마다 한 번만 로그를 남깁니다. */
+            void drawUnavailable( const PropertyInfo& prop, bool bUnknownType )
+            {
+                fixed_string<constant::kMaxBuffer512> text;
+                if ( bUnknownType )
+                    formatstring( text.data(), text.capacity(), "(unknown component type '%#')", prop._handleTargetTypeName.c_str() );
+                else
+                    formatstring( text.data(), text.capacity(), "(no scene: cannot pick a component)" );
+                ImGui::TextDisabled( "%s", _pLabel );
+                ImGui::SameLine();
+                EditorThemeUtil::textError( text.c_str() );
+                if ( _uniqueReported.insert( static_cast<uint32>( prop._name.getHash() ) ).second )
+                    SW_LOG_ERROR( "Inspector: component handle '%#' cannot be edited: %#", prop._name.c_str(), text.c_str() );
+                showTooltipIfHovered( prop );
+            }
+
+            ValueProperty<ComponentHandle>   _untyped;
+            vector<InspectorComponentChoice> _listChoice;     ///< 콤보가 열린 프레임에만 채운다
+            unordered_set<uint32>            _uniqueReported; ///< 오류를 이미 남긴 필드(이름 해시)
+        };
+
         class StringProperty : public BuiltinPropertyBase
         {
         public:
@@ -666,7 +795,9 @@ namespace sw::editor
         unique_ptr<IInspectorProperty> createBuiltinProperty()
         {
             constexpr InspectorValueWidget kWidget = InspectorWidgetFor<T>::kWidget;
-            if constexpr ( kWidget == InspectorValueWidget::Number )
+            if constexpr ( std::is_same_v<T, ComponentHandle> )
+                return make_unique<ComponentHandleProperty>();
+            else if constexpr ( kWidget == InspectorValueWidget::Number )
                 return make_unique<NumericProperty<T>>();
             else if constexpr ( kWidget == InspectorValueWidget::Checkbox )
                 return make_unique<CheckboxProperty<T>>();

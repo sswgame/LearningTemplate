@@ -106,6 +106,13 @@ namespace sw::editor
          */
         void drawFavoriteProperties( const EditorPropertyGridTarget& target );
 
+        /**
+         * @brief 현재 그리는 프로퍼티의 주인 오브젝트입니다. 되돌리기를 기록할 대상이며, 없으면 nullptr 입니다.
+         * @details 타입 핸들 선택기가 편집 대상의 씬(`getManager()`)을 얻는 길이다. 전역의 활성 씬에서 찾으면 플레이 세션 · 프리팹 편집처럼 그리드 대상과
+         *          활성 씬이 다를 때 다른 씬의 컴포넌트가 목록에 섞인다.
+         */
+        GameObject* getEditOwner() const;
+
     private:
         void beginTarget( const EditorPropertyGridTarget& target );
         /** @brief 프로퍼티 하나를 기본값으로 되돌립니다. 기본값은 @p pDefaultInstance 의 값이고, 없으면 메타 텍스트입니다. 알림과 되돌리기 기록은 일반 편집과 같습니다. */
@@ -133,8 +140,6 @@ namespace sw::editor
         void drawKeyedSequenceContainer( void* pContainer, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly );
         /** @brief 컨테이너 끝의 "추가" 텍스트 입력란입니다. Enter 로 비어 있지 않은 값을 입력했으면 true 를 반환하고, @p outText 에 담은 뒤 입력란을 비웁니다. */
         bool drawContainerAddRow( const utf8* pHint, string& outText );
-        /** @brief 현재 그리는 프로퍼티의 주인 오브젝트입니다. 되돌리기를 기록할 대상이며, 없으면 nullptr 입니다. */
-        GameObject* getEditOwner() const;
         /** @brief 구조체와 문자열 프로퍼티 위젯을 그립니다. */
         void drawStructOrStringProperty( void* pInstance, const PropertyInfo& prop, const TypeInfo* pFieldType );
         /**

@@ -74,6 +74,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorFavorites.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorComponentManager.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorComponentPicker.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/InputMap/InputMapConflicts.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
