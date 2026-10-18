@@ -34,6 +34,12 @@
 
 ## 정리
 
+### StableAddressMap
+제목: 값 주소가 옮겨지는 맵이 `&value` 를 내주는 길을 형식으로 막기
+옛번호: 없음
+왜 필요한가: `sw::unordered_map`(밀집 배열)은 삽입 때 값 주소가 옮겨지는데, 형식이 그것을 드러내지 않고 `&it->second` 를 내줍니다. TypedComponents T3 에서 테스트용 `makeMockComponentTypeInfo` 가 그 주소를 쥐어 타입이 늘자 매달렸습니다(`unique_ptr<TypeInfo>` 로 고침). 같은 모양이 다른 곳에 남을 수 있습니다.
+남은 것: 확인된 위험 위치는 `LiveReloadManager.cpp:873`(연쇄 리로드 동안 `ModuleContext*` 를 쥠, 그 사이 `_mapModule` 에 삽입이 들어오면 매달림). `&it->second` 를 돌려주는 `find` 계열(`AbilityCatalog` · `CultureInfo` · `ReflectionTypes` 등)은 호출부가 결과를 오래 쥐면 같은 결함입니다. 근본 해법은 주소가 고정된 맵 형식(값을 `unique_ptr` 로 두는 형식)을 따로 두고, 주소를 오래 쥐는 자리는 그 형식만 쓰게 하는 것입니다. 호출부 전수 조사가 먼저입니다.
+
 ### GameFrameworkStructureCleanup
 제목: GameFramework 구조 정리의 남은 것
 옛번호: C-4

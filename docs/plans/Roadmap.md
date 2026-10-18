@@ -9,13 +9,11 @@
 1. **`integrator` 설계의 미구현 단위**(설계는 끝났고 코드가 없음).
    - 데이터화: D6 → D7 → D8 → D9, 이어서 P1 · P2 → P4(D9, P1 뒤), G1 · G2 — [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
    - E3(E4 가 뒤따름) — [EnginePartition](EnginePartition.md) 6.4. `GameObjectManager.h` 를 바꿔 모든 모듈이 다시 빌드된다. [단독: 모든 모듈 재빌드]
-   - T3(→ T4) — [TypedComponents](TypedComponents.md) 8.5. [단독: 측정이 든 단위라 Release 에서 혼자]
    - K0 — [IncrementalCook](IncrementalCook.md). [단독: 측정이 든 단위라 Release 에서 혼자]
    - V2 — [GpuVerification](GpuVerification.md) 2절. [병렬 가능]
 2. **구현 대기 설계**(구현 전에 `design-reviewer` 검토 결과를 반영).
    - `GimmickCircuit` 단계 2 — [GimmickCircuitState](GimmickCircuitState.md). [병렬 가능]
    - 서버 버스 A 전환 — [ServerBusFormat](ServerBusFormat.md) 단계 0~6. [단독: 메시지 형식을 바꿔 서버 · 클라이언트 모듈이 다시 빌드됨]
-   - 타입별 컴포넌트 7-c → 7-d — [TypedComponents](TypedComponents.md). [단독: 위 T3 와 같은 파일]
    - 인스펙터 4-b — [ReflectionFormats](ReflectionFormats.md). [병렬 가능]
 3. **새 시스템**:
    - Vfx V0 → V3 먼저 — [Vfx](Vfx.md). [병렬 가능]

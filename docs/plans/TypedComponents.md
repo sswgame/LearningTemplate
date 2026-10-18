@@ -1,6 +1,6 @@
 # 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17)
 
-> 상태: 구현대기 · 선행: ReflectionFormats · 영역: engine · 옛번호: C-52 · 진행: 3/6
+> 상태: 구현대기 · 선행: ReflectionFormats · 영역: engine · 옛번호: C-52 · 진행: 4/6
 
 [리플렉션 직렬화 형식 계획](ReflectionFormats.md) 9절의 단계 7-c 와 7-d 를 구현할 수 있는 수준으로 나눈 계획입니다.
 배경과 판단은 그 문서의 7절(리플렉션 캐스트 비용)에 있고, 여기서는 반복하지 않습니다.
@@ -504,7 +504,26 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 
 `ComponentStateStore::appendComponentIDRemap` 이 안정 키(`이름#n`)와 타입으로 잇습니다. 오브젝트 id 묶음이 키를 싣습니다(게임 상태 봉투 4 판).
 
-### 8.3 등록형 목록을 버킷으로 (③)
+### 8.3 등록형 목록을 버킷으로 (③, 끝: 옮기지 않는다)
+
+**결론 (2026-10-19).** 옮길 목록이 없습니다. 호출부 전수 조사(`scout`)에서 `ComponentRegistry` 의 타입 대부분이 등록 순서에 기대는 것으로 나왔습니다. 버킷 순회는 순서를 약속하지 않으므로 옮기면 동작이 바뀝니다.
+
+| 타입 | 순서에 기댐 | 근거 |
+|---|---|---|
+| `LightComponent`(종류별 칸) | 예 | `ComponentRegistry.h:17`, `LightComponent.cpp:66` |
+| `PlayerControllerComponent` · `ControllerComponent` · `PawnComponent` | 예(첫 일치 또는 마지막 일치) | `ControlSystem.cpp:99,149,159`, `ShooterPlayerComponent.cpp:144` |
+| `CameraDirectorComponent` | 예(마지막 일치가 이김) | `ShooterPlayerComponent.cpp:646`, `ShooterDirectorComponent.cpp:748` |
+| `WaterBodyComponent` · `TerrainComponent` · `WindComponent` · `FoliageInfluencerComponent` | 예(첫 일치 · 동률 순서) | `WaterBodyComponent.cpp:451`, `TerrainComponent.cpp:640`, `WindComponent.cpp:47` |
+| `VehicleSeatComponent`(대부분) · `GimmickCircuitComponent` · `ClimbZoneComponent` · `ShadowCaster2DComponent` | 예 | `MountUtil.cpp:249`, `GimmickStateBundle.cpp:44`, `PlatformerGimmicks.cpp:208`, `GPULightBuffer.cpp:67` |
+| `InteractableComponent` · `SmartObjectComponent` | 미확인 | `InteractorComponent.cpp:137`, `SmartObjectScheduleLocator.cpp:77` |
+| `TerrainComponent`(개수만) · `VehicleSeatComponent`(존재 검사) | 아니요 | `AutomationRunner.cpp:447`, `WesternHorseMountComponent.cpp:95` |
+
+- 세 번째 기준(잠금 없이 읽는가)은 전 타입 미확인입니다. 그래서 "세 기준 모두 아니요"로 확인된 타입은 0 개입니다.
+- 조건부 후보 둘(개수, 존재 검사)은 질의 한 번에 몇 ns 도 안 되는 호출이라 옮겨도 얻는 것이 없고, 순서에 기대는 같은 타입의 다른 호출부와 목록이 둘로 갈라집니다. 옮기지 않습니다.
+- `TickBatchRegistry` 의 표는 타입에서 일괄 틱 함수를 찾는 표이지 컴포넌트 목록이 아닙니다. 버킷 순회로 바꿀 대상이 아닙니다.
+- 같은 모양의 약점: 마지막 일치가 이기는 루프와 최근접 동률(`MountUtil.cpp:249`)은 등록 순서에 기댄 코드입니다. 순서를 형식으로 드러내는 일(예: 우선순위 값을 받는 질의)은 이 계획 밖이라 후보로 두지 않았습니다.
+
+기준 설명:
 
 `ComponentRegistry` 와 `TickBatchRegistry` 의 목록마다 세 기준을 표로 적고, 셋 다 "아니요" 인 목록만 7-c 의 타입 버킷 순회로 옮깁니다.
 1. 등록 순서가 결과에 나오는가(예: 활성인 첫 방향광, `ComponentRegistry.h:17`).
@@ -585,7 +604,7 @@ GPU 를 쓰지 않는 벤치라 셰이더 베이크와 VSync 는 해당하지 �
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
 | T3 | 합성 장면 벤치를 만들고 ④ 를 측정합니다(끝, 2026-10-19: `TypedComponentBenchTest`, 결과는 8.4. 앱 측정 넷은 남음) | `Test/EngineTest/Object/`, `docs/08_Verification.md` | 없음 | 벤치가 Release 에서 돕니다 | 필요합니다(위 8.4) |
-| T4 | ③ 의 표를 만들고, 기준을 통과한 목록을 버킷 순회로 옮깁니다. **선결 구조는 끝**(2026-10-19: 삭제 대기 불변식과 버킷 순회의 검사 하나, 결과는 8.4 "선결 구조 뒤") | `Engine/Object/GameObject/Registry/`, 옮길 목록의 호출부 | T3 | 기존 레지스트리 테스트, 전후 결과 집합 비교 테스트 | T3 의 같은 벤치로 전후 비교 |
+| T4 | ③ 의 표를 만들고, 기준을 통과한 목록을 버킷 순회로 옮깁니다. **끝**(2026-10-19: 선결 구조 — 삭제 대기 불변식과 버킷 순회의 검사 하나, 결과는 8.4 "선결 구조 뒤". 표는 8.3, **옮길 목록 없음**) | `Engine/Object/GameObject/Registry/`, 옮길 목록의 호출부 | T3 | 기존 레지스트리 테스트, 전후 결과 집합 비교 테스트 | T3 의 같은 벤치로 전후 비교 |
 
 **T4 에 넘기는 결론.** 같은 답(삭제 대기 제외) 기준으로 버킷 순회는 등록형 목록 이하가 됐습니다(10만 · 50 말단 2.95 대 3.18 µs). 남은 차는 K 에 비례하는 버킷 훑기(버킷 하나에 약 2 ns)뿐이라,
 8.3절 기준을 통과한 목록 가운데 **K 가 작은 씬에서 쓰이고 호출부가 이미 삭제 대기를 거르는 목록**은 옮겨도 프레임 경로가 느려지지 않습니다. 호출부가 삭제 대기를 거르지 않는 목록은 옮기면 그 검사 몫(10만 · 50 에서 약 1.7 µs)만큼 느려지므로, 표에 "호출부가 삭제 대기를 거르는가" 열을 더해 고릅니다.
