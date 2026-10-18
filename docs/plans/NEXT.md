@@ -2,81 +2,36 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법은 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../backlog/README.md)(영역별 파일 · 상태 태그, `py -3 -m Scripts backlog` 로 목록), 작업 방식은 [작업 방식](../11_Workflow.md), 병렬 작업자 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다. 이 문서에는 지금 상태 · 다음 할 일 · 함정 · 시작 절차만 둡니다.
 
-## 000. 2026-10-18 저녁 통합 `integ7` · `integ8` 인계 (가장 먼저 읽는다)
+## 000. 2026-10-18 세션 인계 — 통합 `integ7` · `integ8` · `integ9` (가장 먼저 읽는다)
 
-- **`integ8`(2차)**: `resl`(c6f3217a0, `LooseFilePath` · `ResourceIO` 개편)과 `feat`(1dcbfd864)를 충돌 없이 합쳤다. Debug · Release · STL `all AllTests` 경고 0, 두 구성 `-L lint` 47 · `-L nogpu` 57, Debug `-L race` 5, STL `-L nogpu` 57 통과.
-  `CheckRuntimeResourceDiskAccess` 는 소스 게이트 묶음 안에서 돌고 합친 트리에서 통과한다. Debug `-L nogpu -j 8` 에서 `EngineTest_NoGPU_Shard4` 가 104 s 예산을 넘었다 — 혼자 40 s, `-j 6` 65 s 로 통과하고 `ResourceDataSchemaTest` 시간이 main 과 같아(9.7 s) 부하로 본다.
-  **확인 못 한 것**: 쿠킹 팩으로 앱을 띄워 외형 프리셋이 팩에서 로드되는지(GPU · 창 필요) — 다음 GPU 확인 묶음에서 본다. 합치지 않은 것: `feat-pv`(D3-7) · `impl` · `impl-h2`(작업 중).
-
-- **main 에 병합**: 정리 여덟(`cl-a` C-37 · `cl-b` C-5 · `cl-c` C-40 · C-63 · `cl-d` C-46 일부 · `cl-f` C-34 · C-48 · `cl-g` C-19 · C-64 · `cl-h` C-44 일부 · C-50 · `cl-i` C-12 · C-15)과 아직 진행 중인 `impl` · `impl-h` · `feat` · `feat-net` 의 그때 tip. `resl`(대규모 개명)은 미완이라 합치지 않았다.
-  진행 중인 네 워크트리와 `resl` 은 지우지 않았다 — 그 작업자는 main 을 병합한 뒤 이어 간다.
-- **푼 충돌**: 백로그 `quality.md` C-44 · C-46(cl-h · cl-d 쪽을 각각), `MakePackage.py` 스테이징(cl-d 의 이름으로 팩 고르기를 택해 impl-h 의 `.packrec` 제외가 필요 없어짐), `ko.tm.json` 번역 항목 둘 다.
-- **합친 상태에서 드러난 환경 결함(고침)**: 프리셋이 `VCPKG_OVERLAY_TRIPLETS` 를 환경 변수로만 넘겨 ninja 재구성 · ctest `BuildTestBinaries` · `ModuleCompiler` 가 기본 triplet(MSVC)으로 공유 vcpkg 설치를 덮었다 — DirectXTex 가 OpenMP 판으로 바뀌어 `Could NOT find OpenMP_C`.
-  `Vcpkg.cmake` 가 처음 구성의 값을 캐시에 박는다. **main 병합 전의 워크트리는 여전히 MSVC 판을 깔 수 있다** — 구성이 OpenMP 로 서면 main 을 병합하고 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 한 번 구성한다.
-  `imgui-node-editor` 는 오버레이(옛 main)와 내장 포트(cl-i) 사이에서 워크트리마다 다시 깔리므로, 진행 중인 워크트리도 main 을 병합해야 멈춘다.
-- **검증**: Debug · Release · STL(`SW_ENABLE_STL_CONTAINER`) `all AllTests` 경고 0, 두 구성 `-L lint` 47 · `-L nogpu` 57 통과, Debug `-L race` 5 통과, STL `-L nogpu` 57 통과. GPU(hostgpu · 네 백엔드 × 대표 셋)는 이번 묶음에서 돌리지 않았다.
-- **남은 일**: ① GPU 확인(`-L hostgpu`, 네 백엔드 × Empty · 에디터 · Shooter3D · NileCity — 카메라 디렉터로 옮긴 MeadowVillage · WildWest 포함) ② 아래 00절의 남은 일 ③ `resl` 통합(다음 라운드).
+- **main 에 들어간 것**(이 세션 전체):
+  - 정리 여덟 브랜치: `cl-a` C-37, `cl-b` C-5, `cl-c` C-40 · C-63, `cl-d` C-46 일부, `cl-f` C-34 · C-48, `cl-g` C-19 · C-64, `cl-h` C-44 일부 · C-50, `cl-i` C-12 · C-15(imgui-node-editor 오버레이 제거).
+  - 설계 구현 `impl` · `impl-h` 39 단위 중 26: C-1 E1 · E2 · E5 · E6, C-53 A1 ~ A4, C-52 T1 · T2, C-42 K1 ~ K5(작업 입력 기록 · 로컬 DDC · 팩 증분), C-30 D0 · D1 · D2 ~ D5(키트 카탈로그를 리플렉션 스키마로 — 각도 칸 일곱은 라디안 `Units=rad`, 도 단위 API 와 섞이는 곳 없음을 확인), C-18 L3, C-41 V1, 함수 크기 보고.
+  - 기능 `feat` · `feat-net` · `feat-pv`: F-1, D1-5.3, D7-3 ①②③⑥, D3-10 워프 내보내기, D4-5.1, D4-3, D4-6 ①, D5-1 (2), D3-4 `cheat.god`, D3-7 (2) 선택 접근자.
+  - 리소스 `resl`: 리소스 나열은 `ResourceIO::collectResources` 하나, 디스크 경로는 `LooseFilePath` 형식(문자열로 저절로 바뀌지 않음), 런타임 게임 코드의 디스크 접근은 `CheckRuntimeResourceDiskAccess` 가 막는다.
+  - vcpkg 환경 수정 `dcdc813e2`: 프리셋이 `VCPKG_OVERLAY_TRIPLETS` 를 환경 변수로만 넘겨, 재구성(ninja · ctest `BuildTestBinaries` · `ModuleCompiler`)이 기본 triplet(MSVC)으로 공유 설치를 덮던 결함이다. 이제 캐시에 박는다.
+- **통합에서 푼 것**: 백로그 C-44 · C-46, `MakePackage.py` 스테이징(cl-d 의 이름으로 팩 고르기), `ko.tm.json`, `ResourceIO.cpp`(resl 의 팩 람다 형식 + impl 의 쿠킹 입력 기록), feat-pv 테스트의 옮겨진 `CommandStack.h` 경로.
+- **사용자 결정(2026-10-18, 반영함)**: R1 — 리플렉션 별칭(`Alias` · `ValueAlias`)과 별칭 읽기 경로는 기능을 두되 출시 데이터가 이관할 것이 생기기 전에는 쓰지 않는다(결정 기록 5-4). 지금 쓰는 곳은 `Test/ReflectionTest` 의 테스트 타입뿐이다. C-42 — 공유 DDC(옛 K6)는 하지 않고 로컬 캐시만 둔다.
+- **다음 일**:
+  1. 측정 · GPU 묶음(한 에이전트): E3, T3, K0(단계별 쿠킹 시간), V2(CI 소프트웨어 렌더러 보고 전용 해제). 함께 볼 것: 팩 빌드에서 외형 프리셋 로드, 미리보기 창 UI, 기능 쪽 화면 확인(넷 재생 창 배치 · 합친 트레이스 Timeline, 오디오 이벤트 창, 워프 단추, Shooter3D 상체 레이어), `-L hostgpu`, 네 백엔드 × Empty · 에디터 · Shooter3D · NileCity.
+  2. 데이터화: C-30 D6 ~ D9, 계획의 P1 · P2 · P4 · G1 · G2.
+  3. `feat-pv` 의 남은 D3-7 (1) 프리팹 창과 그 선행 둘.
+  4. 기존 문서의 "뿌리"를 "근본 원인"으로 일괄 치환(`mech-worker` 별도 작업, 용어 대조표 `docs/10_WritingDocs.md`).
+- **백로그 후보**: 워크트리마다 `VCPKG_INSTALLED_DIR` 를 나눈다. `dcdc813e2` 로 triplet 은 맞췄지만, 매니페스트가 다른 워크트리(오버레이 포트가 다른 옛 main 기준 등)가 같은 `build/vcpkg_installed` 에 서로 다른 포트를 번갈아 깐다.
+- **함정**:
+  - `feat-net` 워크트리는 추적하지 않는 로그만 남아 `worktree-remove` 가 건너뛰었다. 사용자가 `py -3 -m Scripts worktree-remove feat-net --force` 를 직접 실행한다.
+  - EngineTest 샤드는 `-j 8` 에서 104 s 시한을 넘길 수 있다(혼자 40 s). `-j 6` 이하로 돌린다.
+- **작업 방식(이 세션에서 정함)**: 준비된 브랜치부터 통합한다. 작업자 최종 검증은 생략하고, 통합 워크트리에서는 빌드만 한 뒤 main 에 합치고 main 에서 한 번에 검증한다(검증 전에는 push 하지 않는다 — [작업 방식](../11_Workflow.md)).
 - **사용자 결정 대기**: 없음.
 
-## 00. 2026-10-18 오후 세션 인계
+## 이전 인계 요약 (2026-10-17 ~ 10-18 오후)
 
-- **main 은 `4979c0144` 까지 push 했다**(전체 빌드 증거 있음). 아래 0절의 `A-23`(Shipping 합성 리그) · `C-14`(린트 잡 확인)는 **해소됐다** — 이 절을 우선한다.
-- **한 일**: 결함 `A-20` `A-23` `A-24` `A-25` `A-26` `A-27`, 정리 `C-39` `C-54`(일부) `C-56` `C-58` `C-59` `C-60` `C-62` 전부, `C-14` 확인. 워크트리 8곳(`fixci` `fixengine` `fixgfx` `fixscripts` `scr2` `rangesrc` `netkit` `miscfix`)을 병합했다. 워크트리는 아직 지우지 않았다 —
-  `py -3 -m Scripts worktree-remove <이름>` 으로 지운다(병합 여부는 `git merge-base --is-ancestor` 로 확인).
-- **합친 뒤 검증이 잡은 회귀 셋**(작업자 단독 검증이 놓친 것 — 브랜치마다 린트와 자기 C++ 빌드만 돌려 인터페이스를 쓰는 곳을 다 못 봤다): ① `scr2` 가 `FixPass` 필드 · 공유 잠금 규칙을 바꾸고 PythonTest 둘을 안 고침 ② `fixgfx` 가 시점 없는 프레임을 그리지 않게 하자
-  `RenderThread` 가 그래프가 그렸다는 가정으로 백버퍼를 `Load` 로 열던 결함이 Vulkan 에서 드러남(고침) ③ STL 구성 `make_unique` ADL 모호성(`SkeletalAnimatorComponent`, 고침). **교훈**: 병합 묶음은 개별 보고만 믿지 말고 합친 상태에서 Debug · Release · STL 구성 전체 빌드와 `-L lint|nogpu|race` 를 돌린다.
-- **CI**: push 한 실행을 `py -3 -m Scripts ci-jobs --runs` 로 본다. 이번 실행에서 확인할 것: Shipping 4 잡(Linux · Windows, 클라이언트 · 전용 서버)이 `A-23` 수정으로 초록인지(전용 서버 Shipping 은 로컬에서 짓지 못했다), Windows Debug 의 `StateHashHistory` 와 `EngineTest_NoGPU` 샤드 타임아웃(104 s, 러너 부하로 보인다 — `Test/TestPolicy.json` 이 시간 예산 정본),
-  새 지연 테스트 하나가 약 31 s 라 서버 샤드 예산을 넘지 않는지, STL 잡. **야간 `Load (Linux | Release, nightly)` 는 `d8037cd` 부터 "load run did not finish"(1 s)로 진다** — 이번 변경과 무관해 보이며 조사하지 않았다.
-- **새로 적은 백로그**: `C-63`(STL 별칭 뿌리) `C-64`(조용한 기본값 남은 곳) `B-16`(다른 백엔드 · UI 전용 화면 확인), `C-46` 은 "다른 게임의 팩도 모든 패키지에 들어간다"로 고쳐 씀, `C-61` 은 형식으로 못 막는 이유와 두 안, `C-54` 는 남은 키트 목록.
-- **빌드 환경 함정**: main 체크아웃의 `build/Ninja-Debug` 에 낡은 `CMAKE_*_COMPILER_LAUNCHER`(`Tools/Sccache`, 현재 소스에는 없음)가 남아 첫 `full-build` 가 `CreateProcess failed` 로 멈췄다 — `cmake -UCMAKE_CXX_COMPILER_LAUNCHER -UCMAKE_C_COMPILER_LAUNCHER -USW_USE_SCCACHE --preset <프리셋>` 으로 캐시 항목을 지웠다.
-  `full-build` 를 에이전트 셸에서 백그라운드로 돌리면 `ninja: ReadFile: The handle is invalid` 가 나므로 `cmd /c "… < NUL > 로그 2>&1"` 로 돌린다. 빌드 동안에는 커밋하지 않는다(증거는 빌드 시작과 끝의 HEAD 트리가 같을 때만 쓴다). 동시 빌드 한도(2)는 이 PC 에서 강제되지 않아 작업자 여섯이 겹치면 린트 게이트(`CheckTextureFolders` 75 s)가 시간 초과한다.
-- **남은 일(우선순위)**: ① CI 결과 확인 ② `B-16` GPU 확인 ③ `C-61` 생성기 규칙 ④ `C-57` 백로그 하위 번호 정리(다른 작업자가 같은 백로그 파일을 고쳐 충돌 위험이라 미뤘다) ⑤ 0절의 측정 못 한 네 가지 ⑥ 기능 대기열.
-- **사용자 결정 대기**: 없음.
-
-## 0. 2026-10-18 새벽 통합 `integ6` 인계
-
-- **main 에 병합한 브랜치 21개**(빌드 없이 준비된 것들): feat2 ~ feat22(feat1 은 앞서 병합). 통합 커밋으로 컴파일 · 의미 충돌을 풀었다 — 자세한 것은 `git log --grep='^통합\|^되돌림\|^시간\|^로그\|^테스트\|^빌드'` 의 커밋 메시지.
-- **검증**: Debug · Release · Shipping `all AllTests` 경고 0, 두 구성 `-L lint` · `-L nogpu` 통과, Debug `-L race` 통과, Shipping `-L nogpu` 는 `A-23`(rigs_raw) 만 실패. 셰이더 네 백엔드 재쿠킹, `.mesh` 형식 3 재임포트, 쿠킹 팩에 `.bonemask.json` · `bow_shoot.pairedanim.xml` · `migrations.json` 확인. GPU(네 백엔드 × 대표 셋, `-L hostgpu`)와 코드 리뷰 결과는 아래 "남은 일"에 적었다.
-- **측정**: 구조 최적화 A · B 표(`StructuralOptimization.md`) — A ④ · B ⑤ 되돌림, 나머지 유지. feat16 `RT.GPUScene.vertexPool` · `RT.Deform.rebuildMorphPool`, feat10 `saveState` 시간 · B 바이트 크기(`GimmickCircuitState.md` 8절 방법), feat9 캐스트 적중 경로는 **재지 못했다**(하니스가 없거나 GPU 잠금이 겹침) — 다음 측정 묶음의 첫 일.
-- **새로 드러난 뿌리**: 브랜치를 빌드 · 테스트 없이 커밋하면 새 테스트가 한 번도 돌지 않는다(feat6 · feat13 · feat15 · feat18 · feat19 · feat22 의 결함이 모두 여기서). 구조로 고친 것: 키트 DLL 복사 타깃(옛 `A-21`), 메시 판의 정본(`MeshAssetFormat.h`), 범위 경계 9 자리, `broadcastSnapshot`, 실제 경과를 적지 않으면 모든 구성에서 멈춤. 후속은 `C-59`(빈 이름 "None") · `C-60`(오류 수집 읽기) · `C-61`(버스 타입 내보내기) · `A-24` ~ `A-27` · `C-54` ~ `C-58`.
-- **남은 일**: GPU 확인 — Release `-L hostgpu` 의 EngineTest · QaGoldenImages 통과(머티리얼 텍스처 칸 오프셋 결함 · 라이트 없는 GPU 테스트 · 넷 세션 종료 경고 · 씬 뷰 맥락 메뉴를 고침). 남은 실패 editorstartup `PanelCount` 41/42 와 AppSmoke themepark 둘은 Ninja-Release 프리셋에 `SW_GAMES` 가 비어 키트 집합이 Debug 와 다른 구성 문제다(병합 원인 아님 — hostgpu 는 `-DSW_GAMES=ALL` 구성에서 돈다, 프리셋에 둘지는 다음 결정). 네 백엔드 × Empty · 에디터 · Shooter3D · NileCity 스크린샷 이상 없음, `gv_lightCulling` 0/1 네 백엔드 바이트 동일(방향광 장면만), 게임 시나리오 26 개 dx12 통과. Shooter3D 는 1 인칭이라 캐릭터 걷기 · 조준 · 발 IK · 마스크 레이어는 화면에서 보지 못했다 — 3 인칭 확인 장면이 필요. 리뷰 지적은 `C-62`.
-- **사용자 결정 대기**: 없음.
-
-## 0-1. 2026-10-17 저녁 세션 인계
-
-**main 은 `948f76e27` 까지 push 됐다.** 아래 1절 첫 단락들("main 은 push 하지 않았습니다" 등)은 그 전 세션 기록이다. PR #1(러너 이미지 · Linux 수정 · 소프트 바디, `e68ba5c4c`)은 CI 11개 잡 전부 통과를 확인했다. 그 뒤 병합(`res2` 오디오, `res3` 3D, `rigbench` 합성 리그, `bitset` · `bitsetperf`, `lintspeed`, 결정 기록 정리)은 Debug 전체 빌드 · `-L nogpu` · `-L lint` 로 확인했지만 **push 뒤 CI 는 아직 보지 않았다** — 첫 일은 `py -3 -m Scripts ci-jobs --runs`.
-
-- **이 세션이 한 것**: 결함 4건(`A-15` `A-16` `A-17` `A-18`)과 Linux 빌드 결함 둘, 소프트 바디 발산(Jolt 이면각 구속 → 거리 구속), 러너 이미지 `ubuntu-24.04` · `windows-2025` 와 라벨 정본 `.github/runners.json`(`runners.yml` 재사용 워크플로, `dependabot.yml`), 린트 실행 구조 개선(전체 49.7 → 26.6 s, 훅 1개 9 → 약 3 s), `DynamicBitset` 개선(`parse` · 인라인 · 블록 루프), CC0 오디오 913개 35MB · 3D 135개 5.2MB · 합성 리그 생성기, 결정 기록 4절 정리.
-- **결정은 [결정 기록](../09_Decisions.md) 5-12 표가 정본**(약 33행: 머티리얼 텍스처 칸 16, G버퍼 확장, 간접 조명 · 클러스터드 라이팅 · 월드 스트리밍 · 예측 설계, VFX CPU + GPU 둘 다 Shipping GPU 고정, DX11 · GL 은 DX12 · Vulkan 과 최대한 같게 등). 스크립팅 층은 두지 않는다(2절). Quaternius 는 쓰지 않는다. 비공개 전환 · GPU 러너 · 자체 호스트 러너는 하지 않는다(사용자 결정). WSL 검증은 사용자가 요청할 때만.
-- **`res1` 은 병합 완료**(이미지 · HDRI · UI · 파티클 CC0 도입, 출처 목록 `engine/textures.sources.json`; 파일 2035개 · 약 115.4MiB(121MB) 증가 — 용량 예산 150MB 안(결정 기록 5-12), 남은 확인 `B-15`).
-- **픽셀 아트 · 탑다운 RPG 는 병합 완료**(`pixel2`): 1단계 CC0 16 px 세트 13.7 MB(`engine/textures_raw/pixel/`, 비압축 · 밉 없음, `texture-limits` 는 밉 있는 텍스처에만 2 의 거듭제곱), 2단계 새 게임 `PixelTown`(`GF_Overworld` 키트의 첫 사용 게임 — 한 칸 걸음 · 땅 + 소품 타일 레이어 충돌 · 촌장 대화 · 4 방향 애니메이션, 시나리오 `talk.scenario.xml` 네 백엔드 바이트 동일). 이어 할 만한 것: 주민이 주인공 쪽을 보기, 선택지 UI, `PixelTown` 골든 이미지(`py -3 -m Scripts golden --record`).
-- **남은 워크트리**: `editordata` `enginefallback` `toolfollowup` `reflect7ab` `perfbase` `perfbase2`(다른 세션 몫, 건드리지 않는다), `gamesdata` `testisolation`(병합됐지만 커밋 안 된 변경이 남음).
-- **다음 일(순서)**: ① main CI 확인 ② (`res1` 병합 완료) ③ (픽셀 아트 · `PixelTown` 병합 완료) ④ 결함 `A-22`(린트 음성 테스트가 종료 1 만 인정) ⑤ 기능 대기열 2-2절 8묶음 ⑥ 설계가 끝난 큰 항목의 구현 단위화 `D2-13`(클러스터드 라이팅, S0 = 키라이트 폴백 제거 + 커서 API 가 선행) `D2-12` `D2-11` `D1-7`(선행 `C-43` 정점 풀 부분 갱신) `D7-8`(먼저 잠복 결함 셋: 소유자 상태 칸 · `reconcile` 결과 열거형 · `RollbackConfig` 폴백) `C-41`(1~4단계).
-- **엔진의 남은 기능적 빈칸(우선순위 추정)**: 클러스터드 라이팅 → Linux · GPU 검증 구조(CI 가 며칠 죽어도 안 보인 것이 뿌리) → 월드 스트리밍 → 디자이너용 데이터 도구(`D3-13`, 머티리얼 그래프 · 상태 머신 편집기가 있는지 먼저 확인) → 실시간 GI · 볼륨(`D2-14`). 그 밖에 `D1-8` 물리 확장, `D4-16` 애니메이션 고급, `D7-9` 네트워크 확장, `C-42` 증분 쿠킹, `D1-6` Wayland, `G-15` ~ `G-17` 스토어 · 패치 · 다른 플랫폼.
-- **함정**: 에이전트가 "waiting on its own background work" 알림을 여러 번 보내도 진행 중이다 — 진짜 진행은 `git log origin/main..<브랜치>` 와 워크트리 `git status` 로 본다. 세션 한도(429)로 끊긴 에이전트는 `SendMessage` 로 이어 가게 하면 이전 컨텍스트가 유지된다. 동시 빌드 한도(2)의 잠금 폴더가 이 PC 에 없어 강제되지 않는다(`C-45`). 공유 scratchpad 의 가상환경 `python.exe` 가 작업 중 사라진 적이 있어 작업자는 전용 가상환경을 쓴다. 오디오 변환은 `soundfile`(전용 가상환경)이 필요하고 없으면 `MakeCommonAudio.py fetch` 가 설치 안내를 내고 멈춘다.
-- **사용자 결정 대기**: 없음.
-
-**(2026-10-17 밤, `integ5`) 위 "남은 워크트리" 가운데 `toolfollowup` · `reflect7ab` · `enginefallback` · `editordata` · `testisolation`(남은 변경) 을 main 에 병합했다.** `reflect7ab` 의 `GameObject` 타입 캐시(`46ee16248`)는 되돌렸다(결정 기록 5-4), 열거형 이름 캐시의 낮은 위험 둘은 `C-51`.
-`gamesdata` 의 커밋 안 된 변경(약 120 파일, W4 게임 데이터화 — `GamePackDataUtil` · `CharacterEditorPackData` · `InputActionCheckUtil` 새 파일, 기믹 프리팹 `_catalogPath` 채우기)은 **적용하지 않았다**: 마지막 수정(10-16 05:47)이 마지막 빌드(05:26) 뒤라 검증되지 않았고 main 과 8파일 이상 충돌한다. 이어 할 때는 `git -C D:\w\gamesdata diff` 를 읽고 W4(`DataDriven.md` 3절)로 다시 맡긴다. 워크트리는 남겨 두었다.
-병합에서 드러난 것: 브랜치 단독 검증이 EditorTest 를 빌드하지 않아 옛 필드 이름(`_pSourcePath`)이 남았고, 실수 벡터 글은 쉼표 형식만 읽으므로 데이터에 공백으로 적으면 읽기 오류다.
-
-## 1. 지금 상태 (2026-10-17 밤)
-
-**(2026-10-17 밤, `integ2`) `res2`(공용 팩 CC0 오디오) · `res3`(여섯 게임 CC0 모델 원본) · `rigbench`(합성 리그 생성기 · 벤치) · `bitset`(DynamicBitset parse) 을 main 에 병합했습니다.**
-남은 일: 씬 연결 `D4-17`, 리그 벤치 비정상 `C-47`, 산출물 결정성 `C-44`, 공용 팩 용량 `C-46`.
-
-**(2026-10-17 새벽) 지금 main 은 push 하지 않았습니다(마지막 push `97dfd14fd`). 병합 후 전체 검증도 하지 않았습니다 — 사용자 지시로 이 세션의 검증은 다음 세션으로 넘깁니다.**
-마지막으로 검증한 것은 `59a9e7d38`(Release · Debug `all AllTests` 경고 0, 두 구성 `-L lint` 73 · `-L nogpu` 53, Debug `-L race` 5 통과)입니다. 그 뒤 main 에 병합한 것은 검증하지 않았습니다: `reflectstage5b` 의 검토 반영 뒤 병합본, `renameredirect`(이름 변경 리다이렉트 R1~R4, `764049e47` — 별칭은 영구 금지가 아니라 지금 이관할 출시 데이터가 없어서 둔 조건부 규칙이라는 사용자 확인으로 병합, 결정 기록 5-4), `scenariorelease`(`72c0608aa`), `serialcleanup`(`d2c4766fc` — 컴팩트 모드 · `cloneObject` 삭제, `A-13` · `A-14`, `serializeValueBinary` 류를 `[[nodiscard]] bool` 로, 컨테이너 타입 이름의 C++ 별칭 벗기기). 각 브랜치는 자기 워크트리에서 Debug · Release 전체 빌드 경고 0 과 `-L lint` · `-L nogpu` 를 통과했지만 합친 상태는 처음입니다.
-**다음 세션 첫 일 — 검증**: ① 새 `REFLECT` 헤더가 들어왔으니 두 구성을 `shared-lock acquire vcpkg` 아래에서 `cmake --preset` 으로 다시 구성 ② Release · Debug `all AllTests` 경고 0 ③ 두 구성 `-L lint` `-L nogpu`, Debug `-L race` ④ `-L hostgpu`(Release, `-DSW_GAMES=ALL` 로 구성된 main 빌드에서) — 실패 4건 중 에디터 시나리오 셋(`netconditions` · `profilercapture` · `terrainbrush`)과 Vulkan 검증 테스트는 `scenariorelease` 로 고쳤고, `shooter3d.closewindow`(Vulkan · GL)는 실제 창 포커스를 쓰는 시나리오라 세션 이전부터 불안정합니다 ⑤ Shipping 빌드와 네 백엔드 × 대표 셋(Empty · 에디터 · Shooter3D · NileCity). 통과하면 push 여부를 사용자에게 묻습니다.
-**사용자 결정 대기**: ① push 여부 ② 나머지는 제가 정했습니다 — `GimmickCircuit` 은 컴포넌트에 A, 체크포인트 · 넷 스냅샷에 B(체크포인트는 바이트가 아니라 값으로 보관, 회로 구조 해시가 다르면 읽기 실패), 서버 버스는 혼합 빌드를 견디도록 A(버전 머리 + 이관)로 되돌립니다(`F-2` 해소). 설계는 `GimmickCircuitState.md` · `ServerBusFormat.md` 에 있고 구현은 안 했습니다.
-**`reflect7ab` 는 병합했다**(2026-10-17 밤, `integ5`). `GameObject` 타입 캐시 커밋 `46ee16248` 은 되돌렸다(결정 기록 5-4). 남은 낮은 위험 둘(`_pArrDenseName` 이 원자가 아닌 포인터, `EnumNameCache` 의 두 저장)은 백로그 `C-51`.
-**새 에이전트**: `design-reviewer`(`.claude/agents/design-reviewer.md`, opus, 읽기 전용) — 구현 전 설계 · 구조 결정을 현재 구조 · 유지보수 · 성능 · 상용 엔진 · 출시작 선례와 근거 수준으로 비교합니다. 측정을 항상 옳다고 보지 않고 구조적 문제와 잠재적 결함을 먼저 봅니다(이 엔진 위의 게임이 아직 적어 측정이 작은 워크로드이기 때문). 설계 문서 셋(`ServerBusFormat.md` · `TypedComponents.md` · `GimmickCircuitState.md`)을 구현 전에 이 에이전트로 한 번 검토시킵니다 — 세션 도중 에이전트가 보이면서 이 세션에서 세 건을 시작했으나 결과를 이 문서에 옮기지 못했으면 다시 돌립니다.
-새 `REFLECT` 헤더가 들어오면 두 구성 모두 `cmake --preset` 으로 다시 구성해야 `CheckReflectionCandidates` 가 통과합니다(`shared-lock acquire vcpkg` 아래에서).
-
-아래는 그 전 기록입니다. main 에 병합한 워크트리: `tickfollowup` `gamescn` `smallfix` `internalrule` `mountgame` `qualitycleanup` `terrainserver` `editorscn2` `corefuzz` `enginefeature` `netfeature` `uifollow` `gfxfeature` `gameplayfeature`. 병합마다 전체 Release 빌드와 관련 스위트를 돌렸다(병합 중 의미 충돌 · Release 전용 실패 4 건을 main 에서 고쳤다: WildWest 탐침, `PhysicsSoftBodyTest` 허용치, 셰이더 쿠킹의 낡은 바이너리 80 개, `WildWest` 데이터 종류 등록).
-Debug `-L lint` · `-L nogpu` · `-L race` 를 통과시키고(고친 둘: `WildWestHorseComponent` 의 단일 함수 `Internal`, 한 줄로 쓴 `prairie.scene.xml`) 2026-10-17 에 main 을 push 했다(`b21bf6c4f`).
-
-**(2026-10-17 오후) 아래가 모두 main 에 병합돼 push 됐다(`97dfd14fd`).** Release · Debug 모두 `-L lint` `-L nogpu` 통과, Debug `-L race` 통과(Release 에는 `race` 가 없다). 병합한 것: `netfeature`(HTTP 이름 해석 스레드) `internalgf` `internalrest` `internaltest`(`Internal` 소거 끝 — `internalHelperBaseline` 은 빈 목록) `serverport`(전용 서버가 `ServerConfig::_gamePort` 로 포트를 연다, `_gamePort` 0 = OS 가 고름) `containers`(`VectorUtil::findBy` 등 · `CompareUtil.h` · `DefaultHash`) `reflectfmt`(`ReflectionFormats.md` 설계) `c6graphics`(`C-16` 주석, Graphics · Renderer) `smalldebt`(이름 조회 한 곳 · `IFileWatcher` 끊김 · HUD 뷰모델 게임별) `visualizer`(시각화 색 테마 토큰 · LootTable/QuestCatalog 스키마) `shaderdoc`(bindless 입문 절) `loaders`(`C-19` R4: 스프라이트 · 시퀀스 · 스켈레톤 · 대화를 리플렉션으로). 병합 뒤 Debug 빌드가 낸 회귀 둘을 고쳤다(`TestLatticeModifier` 의 `static` 누락 — 지역 배열 주소 반환, `@struct` 문서 태그).
+- 2026-10-18 오후: 결함 A-20 · A-23 ~ A-27, 정리 C-39 · C-54(일부) · C-56 · C-58 ~ C-60 · C-62 를 병합했다. 합친 뒤 검증이 작업자 단독 검증이 놓친 회귀 셋(PythonTest 둘, Vulkan 백버퍼 `Load`, STL `make_unique` 모호성)을 잡았다.
+  남은 것: CI 결과 확인(`py -3 -m Scripts ci-jobs --runs`; 야간 `Load (Linux | Release, nightly)` 가 `d8037cd` 부터 1 s 로 진다, 조사 안 함), `B-16` GPU 확인, `C-61` 생성기 규칙, `C-57` 백로그 하위 번호 정리.
+- 2026-10-18 새벽 `integ6`: feat2 ~ feat22 를 병합했다. 재지 못한 측정 — feat16 `RT.GPUScene.vertexPool` · `RT.Deform.rebuildMorphPool`, feat10 `saveState` 시간 · B 바이트 크기, feat9 캐스트 적중 경로. Ninja-Release 프리셋에 `SW_GAMES` 가 비어 hostgpu 의 editorstartup `PanelCount` 41/42 · AppSmoke themepark 둘이 진다(구성 문제, 프리셋에 둘지는 다음 결정).
+  Shooter3D 는 1 인칭이라 캐릭터 걷기 · 조준 · 발 IK · 마스크 레이어를 화면에서 보지 못했다.
+- 2026-10-17: 러너 이미지 `ubuntu-24.04` · `windows-2025`(라벨 정본 `.github/runners.json`), CC0 오디오 · 3D · 이미지 도입(`res1` ~ `res3`, 남은 확인 `B-15`), 새 게임 `PixelTown`. `gamesdata` 워크트리의 커밋 안 된 W4 변경은 적용하지 않았다(검증 안 됨, 충돌) — 이어 할 때는 W4(`DataDriven.md` 3절)로 다시 맡긴다.
+  결정의 정본은 [결정 기록](../09_Decisions.md) 5-12 표다. 스크립팅 층은 두지 않는다. 비공개 전환 · GPU 러너 · 자체 호스트 러너는 하지 않는다.
 
 ## 2. 다음 할 일
 
@@ -129,7 +84,7 @@ Debug `-L lint` · `-L nogpu` · `-L race` 를 통과시키고(고친 둘: `Wild
 백로그 `기능` 50건을 영역별로 읽기 전용 분류했다. 결정은 [결정 기록](../09_Decisions.md) 5-12. 막힘 없음 약 75, 결정 약 30(대부분 5-12에서 정함), 조건부 · 보류 · GPU 확인 약 35. 한 번에 빌드는 둘까지라 묶음을 두 개씩 돌린다. 끝난 단위는 백로그에서 지운다.
 
 **2026-10-18 `wt/feat` 진행.** 끝낸 것: `F-1`, `D1-5.3`, `D7-3` ①②③⑥, `D3-10` 워프 내보내기, `D4-5.1`, `D4-3`(오른쪽 스틱 줌은 남음), `D4-6` ①, `D5-1` (2), `D3-4` `cheat.god`(Shooter3D 는 남음).
-작업 중: `wt/feat-pv`(`D3-7` (2) 선택 접근자, (1) 프리팹 창) — 이 브랜치를 병합하고 검증한다. 화면 확인(GPU)이 필요한 것: 넷 재생 창 배치 · 합친 트레이스 Timeline, 오디오 이벤트 창, 워프 단추, Shooter3D 상체 레이어.
+`wt/feat-pv` 의 `D3-7` (2) 선택 접근자는 병합했다(integ9). (1) 프리팹 창과 그 선행 둘이 남았다. 화면 확인은 000절 다음 일 1.
 EngineTest 샤드는 기계가 붐비면 병렬에서 104 초 시한을 넘긴다. `-j 1` 로 다시 돌리면 통과한다.
 
 1. (끝남) 포토 모드 + UI 소소한 것 — 2026-10-17 밤 feat1 이 넣었다(포토 모드 전용 엔진 입력 맵 · 롤, 끝내기 · 타이틀로 명령, UI 맵 키 바인딩, Windows 클립보드, 상태 브러시 전환, 알림 글 키, 15 초 되돌림 시나리오).
