@@ -1,8 +1,8 @@
 # 데이터 주도 구조 정리 계획 (2026-10-16)
 
-값의 정본은 데이터 파일이고 코드 · 헤더는 형식만 가진다. 필수 값이 없으면 조용히 기본값 · 대체로 가지 않고 오류로 멈춘다. 결정은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화"이고, 이 문서는 6 영역 조사(2026-10-16)가 드러낸 위반을 뿌리부터 없애는 순서다. 진행 표는 린트 게이트 `CheckDataDrivenStructure`의 `--summary` 가 정본이다(기준선이 줄면 진척).
+값의 정본은 데이터 파일이고 코드 · 헤더는 형식만 가진다. 필수 값이 없으면 조용히 기본값 · 대체로 가지 않고 오류로 멈춘다. 결정은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화"이고, 이 문서는 6 영역 조사(2026-10-16)가 드러낸 위반을 근본 원인부터 없애는 순서다. 진행 표는 린트 게이트 `CheckDataDrivenStructure`의 `--summary` 가 정본이다(기준선이 줄면 진척).
 
-## 1. 뿌리 원인
+## 1. 근본 원인
 
 1. **기본값이 C++ 멤버 초기값에 산다.** `EngineDefaultAssets.h` 경로 약 35개, 컴포넌트 `_materialPath{ "engine/materials/…" }`, 패널의 처음 문서, 게임 `*Game.cpp` 의 카탈로그 · 오디오 경로, 디렉터 생성자. 데이터 파일(`enginedefaultassets.xml`)은 비어 있고 "기본값과 다른 것만 적는다"고 되어 있어 정본이 코드다.
 2. **읽기 결과를 버릴 수 있다.** 로더가 `bool` 을 돌려주고 호출부가 `(void)load…` 로 버리거나 경고만 남기고 `return true`. "필수" 라는 뜻이 형식에 없다.
@@ -57,7 +57,7 @@
 
 남긴 것(이유):
 - 팩 키의 도메인 떼고 재조회 — 도메인 없는 리소스 id(검색 우선순위로 푸는 형식)가 떼어 낸 키를 1단계에서 맞히는 데 기대고 있다. 키를 전역 경로로 바꾸려면 도메인 없는 id 쓰는 곳을 먼저 없애야 한다.
-- `attachmentFormatOrDefault` · `getAttachmentClearColorOrDefault` — 뿌리는 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것이다. 선언 필수화는 파이프라인 XML(셰이더 작업 소관)과 함께 한다.
+- `attachmentFormatOrDefault` · `getAttachmentClearColorOrDefault` — 근본 원인은 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것이다. 선언 필수화는 파이프라인 XML(셰이더 작업 소관)과 함께 한다.
 - `REFLECT( Alias )` — 제품 데이터 사용 0, 테스트 4. 리더 제거는 리플렉션 파서 · 코드젠 변경이라 따로 한다. 프리팹 JSON 리더는 데이터 0 이지만 에디터가 쓴다(에디터 작업 소관).
 - XML 저작본 ↔ bin 쿠킹본 두 리더(`PrefabAsset` · `SceneDocument`)는 옛 형식이 아니라 쿠킹 파이프라인이다.
 - 같은 모양이 더 있는 곳: `NavMeshSettings::ensureDefaults`, `PhysicsDesc` 의 모르는 재질 → 첫 재질, `MaterialUtil::parseBlendMode` 의 모르는 이름 → Opaque, `GameDataXML` · `CameraPreset`(GameFramework 작업 소관).
@@ -76,7 +76,7 @@
 
 ## 7. 남은 순서 (2026-10-18 설계, 백로그 C-30 과 C-36)
 
-C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용한 폴백, 버린 로드 결과)은 뿌리가 겹칩니다. 그래서 한 순서로 묶습니다.
+C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용한 폴백, 버린 로드 결과)은 근본 원인이 겹칩니다. 그래서 한 순서로 묶습니다.
 
 ### 7.1 지금 수치
 
@@ -95,7 +95,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 `TuningConstexpr` 와 `GameTimeScale` 의 `SilentFallback` 은 이미 줄었으므로 기준선만 낮춥니다(D0).
 끝난 묶음은 W0, W1 의 엔진 기본 에셋 경로, W2, W3 의 에디터 경로, W4, W8 입니다.
 
-### 7.2 뿌리: 읽기 API 가 폴백을 형식으로 가지고 있다
+### 7.2 근본 원인: 읽기 API 가 폴백을 형식으로 가지고 있다
 
 886 줄을 호출부마다 고치면, 다음 호출부가 같은 실수를 할 수 있는 구조가 남습니다. 폴백은 호출부가 아니라 읽기 API 의 시그니처에 있습니다.
 
@@ -105,7 +105,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 - 이름으로 찾는 값 모음도 같은 구조입니다. `Blackboard::getFloat`, `StatBlock::getValue`, `AbilitySystemComponent::getAttributeValue`, `GameplayAbility::getParameter`, `GameplayEffectSpec::getSetByCallerMagnitude`, `ElementMaterialDef::getParam`, `FitInteractionDef::findArgument`, `FloatCurve::evaluate` 가 모르는 이름이나 빈 곡선에 호출부의 폴백을 돌려줍니다.
 - `GameSettings::getCustomProperty*` 는 제품 코드 호출 0, 데이터 사용 0 이고 테스트(`TestGameFramework.cpp:1641-1658`)만 씁니다.
 
-버린 로드 결과 164 줄도 대부분 뿌리가 하나입니다. `bool` 하나가 서로 다른 세 결과를 섞어서, 호출부가 정상인 결과까지 버리려고 `(void)` 를 씁니다.
+버린 로드 결과 164 줄도 대부분 근본 원인이 하나입니다. `bool` 하나가 서로 다른 세 결과를 섞어서, 호출부가 정상인 결과까지 버리려고 `(void)` 를 씁니다.
 
 - **검사하고 다시 읽기.** 자동화 실행기(`Engine/Automation`, 31 줄)는 검사 함수가 단계 인자를 읽고, 실행할 때 같은 인자를 다시 읽으며 결과를 버립니다("검사에서 확인했다").
 - **없음과 실패를 섞기.** 선택 설정 파일(`ModelImportConfig`, `TextureImportConfig`)과 핫 리로드(`reloadChangedAsset`, `reloadChangedFile`)는 "파일이 없다"와 "내 파일이 아니다"를 실패와 같은 `false` 로 돌려줍니다.
@@ -125,7 +125,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 - **자동화 단계는 한 번만 읽습니다.** 검사 단계가 인자를 타입 있는 단계 값(`std::variant` 의 단계별 구조체)으로 만들고 실행기는 그 값을 씁니다. 다시 읽는 코드가 없으므로 버릴 결과도 없습니다. 언리얼 자동화의 잠복 명령(latent command)도 인자를 가진 객체로 만든 뒤 실행합니다 [기억].
 - **임포터는 접근자 단위로 읽습니다.** `cgltf_accessor_unpack_floats` 로 접근자 하나를 통째로 읽고, 실패하면 임포트가 실패합니다. 원소마다 성공을 따질 이유가 없어집니다.
 - **남은 경로 상수는 엔진 기본 에셋 테이블로 옮깁니다.** `Engine/UI` 의 문서 경로 17 줄(`DebugHUD`, `OptionsMenuScreen`, `UINotificationService`, `UISubtitleService`, `UISystem`, `UIResolutionPresetTable`)과 설정 테이블의 `kResourcePath` 상수, 컴포넌트 기본 머티리얼(`TileMapRendererComponent`, `FoliageComponent`, `TerrainComponent`, `WaterBodyComponent`)은 `EngineDefaultAssets` 의 `DataPath` 필드가 됩니다. 이미 있는 형식(W0)을 쓰므로 새 형식은 없습니다.
-- **렌더러 첨부는 파이프라인 XML 이 모두 선언합니다.** `attachmentFormatOrDefault` 와 `getAttachmentClearColorOrDefault`(18 줄)의 뿌리는 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것입니다. 선언하지 않은 첨부 이름은 오류로 바꾸고, 포맷과 클리어 색은 XML 에만 둡니다.
+- **렌더러 첨부는 파이프라인 XML 이 모두 선언합니다.** `attachmentFormatOrDefault` 와 `getAttachmentClearColorOrDefault`(18 줄)의 근본 원인은 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것입니다. 선언하지 않은 첨부 이름은 오류로 바꾸고, 포맷과 클리어 색은 XML 에만 둡니다.
 
 ### 7.4 대안과 기각 이유
 

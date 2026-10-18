@@ -35,7 +35,7 @@
 - `C-22` [정리] **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
 - `C-30` [정리] **유지보수성을 위한 데이터화의 남은 것**(기준은 [결정 기록](../09_Decisions.md) 5-4). 설계 완료, 단위는 [데이터 주도 구조 정리 계획](../plans/DataDriven.md) 7절이다(C-36 과 한 순서).
-  뿌리는 읽기 API(`XMLNode` · `JSONValue` · `KeyValueFile`)의 폴백 인자라서 D1 ~ D9 가 그 인자를 없앤다. D0 ~ D5(장르 키트 카탈로그 전부)는 끝났고 남은 단위는 D6 ~ D9 · P1 · P2 · P4 · G1 · G2 다. ② 게임 리터럴은 G1, ⑤ Shipping 그림 비교는 G2, ④ 에디터 색 · 크기는 editorux 묶음이 맡는다.
+  근본 원인은 읽기 API(`XMLNode` · `JSONValue` · `KeyValueFile`)의 폴백 인자라서 D1 ~ D9 가 그 인자를 없앤다. D0 ~ D5(장르 키트 카탈로그 전부)는 끝났고 남은 단위는 D6 ~ D9 · P1 · P2 · P4 · G1 · G2 다. ② 게임 리터럴은 G1, ⑤ Shipping 그림 비교는 G2, ④ 에디터 색 · 크기는 editorux 묶음이 맡는다.
 
 - `C-25` [정리] **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
@@ -61,7 +61,7 @@
 
 - `C-63` [정리] **`SW_ENABLE_STL_CONTAINER` 가 이름이 같은 `sw::` 형식을 구성마다 다른 형식으로 바꾼다**(2026-10-18 `A-20`). 해시 컨테이너는 두 구성이 같은 구현을 쓰게 했고 `CompressedPair` 로 `pair` 차이를 막았다.
   natvis 는 자체 구현의 배치를 읽게 고쳤고, `TestDestructionDamage` 의 해시 기준값 테스트는 STL 구성에서도 돈다.
-  남은 것: 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다). 설계 판단이 커서 따로 한다 —
+  남은 것: 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 근본 원인의 둘째 경우였다). 설계 판단이 커서 따로 한다 —
   `vector` · `array` · `string` · `list` · `deque` · `map` · `set` · `pair` · `span` 이 모두 구성에 따라 std 별칭과 자체 형식 사이를 오가고, `string` · `list` · `deque` 는 자체 형식도 std 를 상속한다.
   할당자만 바꾸려면 ⓐ STL 구성의 목적(표준 컨테이너로 비교 · 디버그 STL 검사를 쓰는 것인가, `std::allocator` 로 메모리 추적을 빼는 것인가)을 먼저 정하고
   ⓑ 그 목적이 할당자뿐이면 자체 `vector` · `array` · `map` · `set` · `pair` 를 두 구성에 늘 쓰고 `string` · `list` · `deque` 는 `std::*<T, 구성별 할당자>` 하나로 둔다.
