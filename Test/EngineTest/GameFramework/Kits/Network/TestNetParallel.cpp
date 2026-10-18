@@ -72,7 +72,7 @@ namespace
         ReplicationServer       server;
         ReplicationServerConfig serverSettings;
         serverSettings._snapshotBudgetBytes = 400; // 예산이 모자라 우선도 순서가 결과를 바꾼다
-        server.initialize( &cluster.getServer(), serverSettings, &policy );
+        SW_EXPECT_TRUE( server.initialize( &cluster.getServer(), serverSettings, &policy ) );
         server.setTaskManager( pTaskManager, 1 );
         deque<ReplicationClient> listReplication;
         for ( int32 index = 0; index < cluster.getClientCount(); ++index )

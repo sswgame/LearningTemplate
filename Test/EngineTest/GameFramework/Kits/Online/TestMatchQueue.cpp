@@ -77,7 +77,7 @@ namespace
                 _bus      = make_unique<LocalServerBus>( pHub, serverID );
                 _busFront = make_unique<ServerBus>( *_bus );
             }
-            _partyLobby.initialize( &_router, serverID );
+            SW_EXPECT_TRUE( _partyLobby.initialize( &_router, serverID ) );
             MatchQueueDependencies dependencies;
             dependencies._pRouter     = &_router;
             dependencies._pBus        = _busFront.get();

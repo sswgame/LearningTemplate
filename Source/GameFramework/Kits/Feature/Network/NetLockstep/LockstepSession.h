@@ -22,6 +22,8 @@
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
 
@@ -38,6 +40,22 @@ namespace sw
         static constexpr uint8 kLeave         = NetKitMessageRange::kLockstep + 3; ///< 서버 → 모두. 플레이어와, 그 플레이어가 빈 입력이 되는 틱을 알린다
         static constexpr int32 kMaxInputBytes = 1000;                              ///< 틱 하나의 입력 상한. 종류, 플레이어, 틱, 길이와 함께 메시지 하나(1024 B)에 들어간다. 넘는 입력은 예약하지 않는다
         static_assert( NetMessageRange::isInRange( kLeave, NetKitMessageRange::kLockstep ), "message kinds must stay inside the kit's range" );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 락스텝 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `LockstepSession::initialize` 가 오류로 거절합니다(`NetKitConfigUtil`).
+     * @details 예전에는 지연을 범위 안으로 조용히 맞췄다(폴백 금지 원칙). `Max` 는 리터럴만 받으므로 `LockstepSession::kMaxInputDelay` 와 같은 값을 적는다.
+     *          경계 값 테스트(`LockstepRefusesOutOfRangeSettings`)가 둘이 어긋나지 않는지 본다.
+     */
+    REFLECT()
+    struct SW_KIT_API LockstepConfig
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 0, Max = 64 )
+        int32 _inputDelay{ 2 }; ///< 내 입력을 이만큼 뒤 틱에 예약한다(0 ~ `LockstepSession::kMaxInputDelay`). 그동안 입력이 망을 건넌다
     };
 } // namespace sw
 
@@ -73,7 +91,11 @@ namespace sw
 
         LockstepSession();
 
-        void initialize( NetHost* pHost, int32 playerCount, int32 localPlayer, int32 inputDelay );
+        /**
+         * @brief 세션을 시작합니다. 플레이어 수가 1보다 작거나, 내 번호가 범위 밖이거나, 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
+         * @details 실패한 세션은 시작하지 않은 것과 같다. 입력을 예약하지 않고(`submitLocalInput` 이 false) 틱도 넘기지 않는다.
+         */
+        [[nodiscard]] bool initialize( NetHost* pHost, int32 playerCount, int32 localPlayer, const LockstepConfig& settings );
         /**
          * @brief 내 다음 입력을 다음 빈 틱에 예약해 보냅니다.
          * @details 이미 (지금 틱 + `kMaxInputLead`)까지 예약했으면 false 를 반환하므로 틱이 넘어간 뒤 다시 낸다.
@@ -96,6 +118,8 @@ namespace sw
         /** @brief 서버가 클라이언트 연결이 닫혔을 때 호출합니다. 그 플레이어의 이탈 틱을 정해 모두에게 알립니다. */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
+        /** @brief `initialize` 가 성공했는가입니다. 거절된 세션은 입력을 예약하지 않고 틱을 넘기지 않습니다. */
+        bool   isStarted() const { return _playerCount > 0; }
         uint32 getCurrentTick() const { return _currentTick; }
         /** @brief 입력을 기다리며 멈춘 틱 수입니다. 누가 느린지 알려 주므로 화면의 "기다리는 중" 표시에 씁니다. */
         int32  getStallCount() const { return _stallCount; }

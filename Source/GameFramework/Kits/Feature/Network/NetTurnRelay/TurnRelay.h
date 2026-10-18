@@ -21,6 +21,8 @@
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
 
@@ -153,6 +155,21 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 서버 쪽 중계기 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `TurnRelayServer::initialize` 가 오류로 거절합니다(`NetKitConfigUtil`).
+     * @details 예전에는 자리 수 0을 조용히 1로 바꿨다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API TurnRelayConfig
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 1 )
+        int32 _seatCount{ 2 }; ///< 방 하나의 자리 수
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 서버 쪽 중계기입니다. 방은 처음 들어오는 클라이언트가 만듭니다. */
     class SW_KIT_API TurnRelayServer : public INetMessageHandler
     {
@@ -162,8 +179,11 @@ namespace sw
 
         TurnRelayServer();
 
-        /** @param tokenSeed 자리 토큰의 비밀 값입니다. 0이면 운영체제 난수를 쓰며, 테스트에서는 고정해도 됩니다. */
-        void initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy = nullptr, uint64 tokenSeed = 0 );
+        /**
+         * @brief 중계를 시작합니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환하며, 거절된 중계기는 메시지를 처리하지 않습니다.
+         * @param tokenSeed 자리 토큰의 비밀 값입니다. 0이면 운영체제 난수를 쓰며, 테스트에서는 고정해도 됩니다.
+         */
+        [[nodiscard]] bool initialize( NetHost* pHost, const TurnRelayConfig& settings, const ITurnPolicy* pPolicy = nullptr, uint64 tokenSeed = 0 );
         /** @brief 매 틱 호스트 `update` 뒤에 부릅니다. 신뢰 창이 차서 못 보낸 행동과 알림을 이어서 보냅니다. */
         void  update();
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }

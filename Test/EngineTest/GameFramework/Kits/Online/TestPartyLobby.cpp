@@ -30,7 +30,7 @@ namespace
         {
             _pCacheDatabase = pCacheDatabase;
             _router.initialize( &_cache );
-            _service.initialize( &_router, serverID );
+            SW_EXPECT_TRUE( _service.initialize( &_router, serverID ) );
         }
 
         ~PartyNode()
@@ -303,4 +303,24 @@ SW_TEST_CASE( PartyLobbyTest, RemoveAccountLeavesPartyAndLobby )
     SW_EXPECT_FALSE( node.hasKey( PartyLobbyService::makeAccountPartyKey( 10 ) ) );
     SW_EXPECT_FALSE( node.hasKey( PartyLobbyService::makeLobbyKey( lobbyID ) ) );
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
+}
+
+/**
+ * @brief [PartyLobbyTest] 파티 최대 인원이 [`kMinPartySize`, `kMaxPartySize`] 밖이면 조용히 맞추지 않고 시작을 거절한다
+ * @details 예전에는 `std::clamp` 로 범위 안으로 맞춰 돌았다. 서버 키트 옵션 `maxPartySize` 를 잘못 적어도 아무도 몰랐다.
+ */
+SW_TEST_CASE( PartyLobbyTest, InitializeRefusesOutOfRangePartySize )
+{
+    test::ScopedDefensiveTestLog expected( "an out-of-range max party size is refused" );
+    MemoryEphemeralDatabase      cacheDatabase;
+    MemoryEphemeralStore         cache{ &cacheDatabase };
+    EphemeralStoreRouter         router;
+    router.initialize( &cache );
+    PartyLobbyService service;
+    SW_EXPECT_FALSE( service.initialize( &router, 1, PartyLobbyLimit::kMinPartySize - 1 ) );
+    SW_EXPECT_FALSE( service.initialize( &router, 1, PartyLobbyLimit::kMaxPartySize + 1 ) );
+    SW_EXPECT_TRUE( service.initialize( &router, 1, PartyLobbyLimit::kMaxPartySize ) );
+    SW_EXPECT_EQUAL( service.getMaxPartySize(), PartyLobbyLimit::kMaxPartySize );
+    service.shutdown();
+    router.shutdown();
 }

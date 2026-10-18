@@ -7,6 +7,8 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
 
+#include "GameFramework/Kits/Feature/Network/NetKitConfig.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "LockstepSession" );
@@ -28,12 +30,26 @@ namespace sw
     {
     }
 
-    void LockstepSession::initialize( NetHost* pHost, int32 playerCount, int32 localPlayer, int32 inputDelay )
+    bool LockstepSession::initialize( NetHost* pHost, int32 playerCount, int32 localPlayer, const LockstepConfig& settings )
     {
+        // 실패하면 시작하지 않은 세션(플레이어 0명)으로 남긴다. 값을 범위 안으로 맞춰 돌지 않는다.
+        // 설정 칸의 범위는 `LockstepConfig` 의 `PROPERTY( Min · Max )` 가 원본이고, 여기서는 칸 사이의 관계(내 번호 < 플레이어 수)만 따로 본다.
+        _pHost       = nullptr;
+        _playerCount = 0;
+        _listNextInputTick.clear();
+        _listLeaveTick.clear();
+        const bool   bPlayersValid = playerCount >= 1 && localPlayer >= 0 && localPlayer < playerCount;
+        const string rangeError    = NetKitConfigUtil::describeRangeErrors( settings );
+        if ( bPlayersValid == false || rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "LockstepSession: refused to start - players %#, local player %#, settings '%#'", playerCount, localPlayer,
+                          rangeError.empty() ? "within range" : rangeError.c_str() );
+            return false;
+        }
         _pHost       = pHost;
-        _playerCount = MathUtil::max( 1, playerCount );
+        _playerCount = playerCount;
         _localPlayer = localPlayer;
-        _inputDelay  = MathUtil::clamp( inputDelay, 0, kMaxInputDelay );
+        _inputDelay  = settings._inputDelay;
         _listTickInput.initialize( static_cast<int32>( kInputWindow ) );
         _listTickChecksum.initialize( static_cast<int32>( 2 * kChecksumWindow ) );
         _listNextInputTick.assign( static_cast<size_t>( _playerCount ), 0u );
@@ -51,6 +67,7 @@ namespace sw
                 (void)storeInput( player, tick, listEmpty );
             }
         }
+        return true;
     }
 
     uint32 LockstepSession::getLeaveTick( int32 player ) const
@@ -86,6 +103,8 @@ namespace sw
 
     bool LockstepSession::submitLocalInput( const vector<uint8>& listInput )
     {
+        if ( isStarted() == false )
+            return false;
         if ( static_cast<int32>( listInput.size() ) > NetLockstepMessage::kMaxInputBytes )
         {
             SW_LOG_ERROR( "Lockstep input of %# bytes exceeds the limit of %# bytes - not scheduled", listInput.size(), NetLockstepMessage::kMaxInputBytes );
@@ -105,6 +124,8 @@ namespace sw
 
     bool LockstepSession::tryAdvance( vector<vector<uint8>>& outListInput )
     {
+        if ( isStarted() == false )
+            return false;
         TickInput* pTickInput = _listTickInput.find( _currentTick );
         bool       bReady     = true;
         for ( int32 player = 0; player < _playerCount && bReady; ++player )

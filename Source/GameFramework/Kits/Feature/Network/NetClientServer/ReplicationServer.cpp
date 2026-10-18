@@ -2,10 +2,11 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 
-#include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
+
+#include "GameFramework/Kits/Feature/Network/NetKitConfig.h"
 
 namespace sw
 {
@@ -28,14 +29,23 @@ namespace sw
     {
     }
 
-    void ReplicationServer::initialize( NetHost* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy )
+    bool ReplicationServer::initialize( NetHost* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy )
     {
+        // 실패하면 호스트 없는 서버로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
+        _pHost                  = nullptr;
+        const string rangeError = NetKitConfigUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "ReplicationServer: refused to start - settings '%#'", rangeError.c_str() );
+            return false;
+        }
         _pHost    = pHost;
         _settings = settings;
         _pPolicy  = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
         _listClient.clear();
         _world            = NetSnapshot{};
         _worldEntityCount = 0;
+        return true;
     }
 
     ReplicationServer::ClientState& ReplicationServer::acquireClient( int32 connectionID )
@@ -47,8 +57,8 @@ namespace sw
         {
             client          = ClientState{};
             client._bActive = SW_TRUE;
-            client._listSent.initialize( MathUtil::max( 2, _settings._historySize ) );
-            client._input.initialize( MathUtil::max( 1, _settings._inputBufferSize ), NetClientServerMessage::kInputFormat, NetInputWindowMode::FollowNewest );
+            client._listSent.initialize( _settings._historySize ); // 범위(2 이상 · 1 이상)는 `initialize` 가 봤다
+            client._input.initialize( _settings._inputBufferSize, NetClientServerMessage::kInputFormat, NetInputWindowMode::FollowNewest );
         }
         return client;
     }

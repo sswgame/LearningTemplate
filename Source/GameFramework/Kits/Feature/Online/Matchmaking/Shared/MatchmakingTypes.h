@@ -262,6 +262,7 @@ namespace sw
     struct PartyLobbyLimit
     {
         static constexpr int32 kMaxPartySize        = 8;
+        static constexpr int32 kMinPartySize        = 2; ///< 서버 설정 파티 최대 인원(`PartyLobbyService::initialize`)의 하한
         static constexpr int32 kMaxLobbySize        = 32;
         static constexpr int32 kMinLobbySize        = 2;
         static constexpr int32 kLobbyTeamCount      = 2; ///< 로비는 두 팀이며, 들어오면 인원이 적은 팀에 들어간다

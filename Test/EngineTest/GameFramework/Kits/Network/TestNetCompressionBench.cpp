@@ -182,7 +182,7 @@ namespace
             : _server{}
             , _listEntity{}
         {
-            _server.initialize( &world.getHost(), ReplicationServerConfig{} );
+            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), ReplicationServerConfig{} ) );
             world.getRouter().registerHandler( &_server );
             for ( uint32 index = 0; index < NetCompressionBenchInternal::kEntityCount; ++index )
             {

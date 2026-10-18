@@ -97,7 +97,7 @@ namespace
         {
             if ( world.isServer() )
             {
-                _server.initialize( &world.getHost(), _seatCount, _pPolicy, _tokenSeed );
+                SW_EXPECT_TRUE( _server.initialize( &world.getHost(), TurnRelayConfig{ _seatCount }, _pPolicy, _tokenSeed ) );
                 return make_unique<TurnRelayNetSimSession>( world, &_server, nullptr );
             }
             return make_unique<TurnRelayNetSimSession>( world, nullptr, _pNextClient );
@@ -484,4 +484,17 @@ SW_TEST_CASE( NetTurnRelayTest, LargeActionsCatchUpThroughAFullWindow )
     }
     SW_EXPECT_EQUAL( 0, mismatchCount );
     SW_EXPECT_EQUAL( kActionBytes, static_cast<int32>( clientB.getActions().back()._buffer.size() ) );
+}
+
+/**
+ * @brief [NetTurnRelayTest] 자리 수가 범위(1 이상) 밖인 설정은 조용히 1 로 바꾸지 않고 오류로 거절하며, 거절된 중계기는 아무것도 보내지 않는다
+ */
+SW_TEST_CASE( NetTurnRelayTest, ServerRefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range turn relay settings are refused" );
+    TurnRelayServer              server;
+    SW_EXPECT_FALSE( server.initialize( nullptr, TurnRelayConfig{ 0 } ) );
+    SW_EXPECT_FALSE( server.initialize( nullptr, TurnRelayConfig{ -3 } ) );
+    server.update(); // 호스트가 없으므로 아무것도 하지 않는다
+    SW_EXPECT_TRUE( server.initialize( nullptr, TurnRelayConfig{ 1 } ) );
 }

@@ -34,7 +34,7 @@ namespace
             : _server{}
             , _pTable{ pTable }
         {
-            _server.initialize( &world.getHost(), pTable->_settings, pTable->_pPolicy );
+            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), pTable->_settings, pTable->_pPolicy ) );
             world.getRouter().registerHandler( &_server );
         }
 
