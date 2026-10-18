@@ -14,7 +14,7 @@
 - **새로 적은 백로그**: `C-63`(STL 별칭 뿌리) `C-64`(조용한 기본값 남은 곳) `B-16`(다른 백엔드 · UI 전용 화면 확인), `C-46` 은 "다른 게임의 팩도 모든 패키지에 들어간다"로 고쳐 씀, `C-61` 은 형식으로 못 막는 이유와 두 안, `C-54` 는 남은 키트 목록.
 - **빌드 환경 함정**: main 체크아웃의 `build/Ninja-Debug` 에 낡은 `CMAKE_*_COMPILER_LAUNCHER`(`Tools/Sccache`, 현재 소스에는 없음)가 남아 첫 `full-build` 가 `CreateProcess failed` 로 멈췄다 — `cmake -UCMAKE_CXX_COMPILER_LAUNCHER -UCMAKE_C_COMPILER_LAUNCHER -USW_USE_SCCACHE --preset <프리셋>` 으로 캐시 항목을 지웠다.
   `full-build` 를 에이전트 셸에서 백그라운드로 돌리면 `ninja: ReadFile: The handle is invalid` 가 나므로 `cmd /c "… < NUL > 로그 2>&1"` 로 돌린다. 빌드 동안에는 커밋하지 않는다(증거는 빌드 시작과 끝의 HEAD 트리가 같을 때만 쓴다). 동시 빌드 한도(2)는 이 PC 에서 강제되지 않아 작업자 여섯이 겹치면 린트 게이트(`CheckTextureFolders` 75 s)가 시간 초과한다.
-- **남은 일(우선순위)**: ① CI 결과 확인 ② `B-16` GPU 확인 ③ `C-54` 의 남은 키트 설정(`NetKitConfigUtil` 을 Base 의 키트 공통 자리로) ④ `C-61` 생성기 규칙 ⑤ `C-57` 백로그 하위 번호 정리(다른 작업자가 같은 백로그 파일을 고쳐 충돌 위험이라 미뤘다) ⑥ 0절의 측정 못 한 네 가지 ⑦ 기능 대기열.
+- **남은 일(우선순위)**: ① CI 결과 확인 ② `B-16` GPU 확인 ③ `C-61` 생성기 규칙 ④ `C-57` 백로그 하위 번호 정리(다른 작업자가 같은 백로그 파일을 고쳐 충돌 위험이라 미뤘다) ⑤ 0절의 측정 못 한 네 가지 ⑥ 기능 대기열.
 - **사용자 결정 대기**: 없음.
 
 ## 0. 2026-10-18 새벽 통합 `integ6` 인계

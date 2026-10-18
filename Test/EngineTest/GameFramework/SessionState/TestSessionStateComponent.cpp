@@ -370,7 +370,7 @@ SW_TEST_CASE( SessionStateComponentTest, LandIsLentOnlyWhenSizedAndRidesTheSnaps
 }
 
 /**
- * @brief [SessionStateComponentTest] 범위 밖 설정(음수 슬롯 · 음수 땅 · 시계 안의 계절 0 일)은 조용히 0 으로 맞추지 않고 `Refused` 로 거절하며, 열리지 않은 채로 남는다
+ * @brief [SessionStateComponentTest] 범위 밖 설정(음수 슬롯 · 음수 땅 · 칸 크기 0 · 시계 안의 계절 0 일)은 조용히 0 으로 맞추지 않고 `Refused` 로 거절하며, 열리지 않은 채로 남는다
  */
 SW_TEST_CASE( SessionStateComponentTest, RefusesOutOfRangeSettings )
 {
@@ -381,7 +381,9 @@ SW_TEST_CASE( SessionStateComponentTest, RefusesOutOfRangeSettings )
     negativeLand._landWidth = -1;
     SessionStateSettings noSeasonDay;
     noSeasonDay._clock._daysPerSeason = 0;
-    for ( const SessionStateSettings* pSettings : { &negativeSlots, &negativeLand, &noSeasonDay } )
+    SessionStateSettings noCellSize;
+    noCellSize._landCellSize = 0.0f;
+    for ( const SessionStateSettings* pSettings : { &negativeSlots, &negativeLand, &noSeasonDay, &noCellSize } )
     {
         SessionStateComponent state;
         SW_EXPECT_TRUE( state.initialize( *pSettings ) == SessionStateInitResult::Refused );

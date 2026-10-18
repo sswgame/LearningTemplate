@@ -22,11 +22,12 @@ namespace sw
 
     void LandRegistry::initialize( int32 width, int32 height, float32 cellSize, const float3& origin )
     {
+        SW_ASSERT( cellSize > 0.0f ); // 전제 조건이다. 맞춰 돌지 않는다(판 상태는 받을 때 거절한다)
         _topology = GridTopology( width, height );
         _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), Cell{} );
         _listOwnerName.clear();
         _origin   = origin;
-        _cellSize = cellSize > 0.0f ? cellSize : 1.0f;
+        _cellSize = cellSize;
         ++_revision;
     }
 

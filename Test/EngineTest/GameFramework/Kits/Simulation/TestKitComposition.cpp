@@ -133,7 +133,10 @@ namespace sw
             const KitCompositionCatalogs& catalogs = KitCompositionCatalogs::get();
             if ( pState == nullptr || catalogs._bLoaded == SW_FALSE )
                 return false;
-            (void)pState->initialize( catalogs.makeStateSettings() ); // 이 오브젝트의 첫 디렉터가 판을 연다
+            const SessionStateInitResult initResult = pState->initialize( catalogs.makeStateSettings() ); // 이 오브젝트의 첫 디렉터가 판을 연다
+            SW_EXPECT_TRUE( initResult != SessionStateInitResult::Refused );
+            if ( initResult == SessionStateInitResult::Refused )
+                return false;
             _field.initialize( kFieldWidth, 1, &catalogs._crops );
             for ( int32 x = 0; x < kFieldWidth; ++x )
             {
@@ -259,7 +262,10 @@ namespace sw
             const KitCompositionCatalogs& catalogs = KitCompositionCatalogs::get();
             if ( pState == nullptr || catalogs._bLoaded == SW_FALSE )
                 return false;
-            (void)pState->initialize( catalogs.makeStateSettings() ); // 이미 열렸으면 아무것도 하지 않는다
+            const SessionStateInitResult initResult = pState->initialize( catalogs.makeStateSettings() ); // 이미 열렸으면 아무것도 하지 않는다
+            SW_EXPECT_TRUE( initResult != SessionStateInitResult::Refused );
+            if ( initResult == SessionStateInitResult::Refused )
+                return false;
             initializeTown( _town, *pState );
             if ( pState->isFreshGame() )
             {
@@ -554,7 +560,10 @@ namespace sw
             SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr || LandCompositionCatalogs::get()._bLoaded == SW_FALSE )
                 return false;
-            (void)pState->initialize( LandCompositionCatalogs::makeStateSettings() ); // 이미 열렸으면 아무것도 하지 않는다
+            const SessionStateInitResult initResult = pState->initialize( LandCompositionCatalogs::makeStateSettings() ); // 이미 열렸으면 아무것도 하지 않는다
+            SW_EXPECT_TRUE( initResult != SessionStateInitResult::Refused );
+            if ( initResult == SessionStateInitResult::Refused )
+                return false;
             initializeWorld( _world, *pState );
             if ( pState->isFreshGame() )
             {

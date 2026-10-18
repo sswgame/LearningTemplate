@@ -1,7 +1,7 @@
 /**
  * @file MatchModeCatalog.h
  * @brief 매칭 모드 정의 데이터입니다. 서버 조립이 기동 때 읽어 매칭 대기열에 넘깁니다.
- * @details 형식은 다음과 같습니다. 속성을 빼면 `MatchModeDefinition` 의 기본값입니다. 규칙(id 형식, 팀 수)은 대기열이 등록할 때 봅니다.
+ * @details 형식은 다음과 같습니다. 속성을 빼면 `MatchModeDefinition` 의 기본값입니다. 팀 수 · 인원은 읽을 때 `MatchModeDefinition` 의 선언된 범위(`ConfigRangeUtil`)로 거절하고, id 형식은 대기열이 등록할 때 봅니다.
  * @code
  *     <MatchModeCatalog>
  *         <Mode id="duo" teamCount="2" teamSize="2" serverKind="game" regionRelaxMs="30000" maxWaitMs="120000"

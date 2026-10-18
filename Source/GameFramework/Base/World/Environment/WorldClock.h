@@ -32,7 +32,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY()
-        vector<hashed_string> _listSeason{}; ///< 비면 계절 하나("Default")
+        vector<hashed_string> _listSeason{}; ///< 비면 계절 하나("Default"). 계약이다 — 빈 목록은 틀린 값이 아니라 "계절을 쓰지 않는 게임"의 뜻이고, 계절 번호 · 이름 계산이 늘 한 칸 이상을 보게 한다
         PROPERTY( Min = 1, Units = s )
         float32 _secondsPerDay{ 1440.0f }; ///< 실제 초 — 기본은 하루 24 분
         PROPERTY( Min = 0, Max = 24 )

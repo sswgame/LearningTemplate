@@ -213,7 +213,7 @@ namespace sw
         shutdown();
         _pCatalog = pCatalog;
         _settings = settings;
-        if ( _settings._clock._listSeason.empty() )
+        if ( _settings._clock._listSeason.empty() ) // `WorldClockSettings::_listSeason` 의 계약(계절 없음 = 이름 하나)을 시계와 똑같이 따른다
             _settings._clock._listSeason.push_back( hashed_string( "Default" ) );
         _minute = absoluteMinute;
         _defaultLocator.initialize( pCatalog );

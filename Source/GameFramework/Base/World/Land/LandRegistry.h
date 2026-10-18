@@ -37,7 +37,7 @@ namespace sw
 
         LandRegistry();
 
-        /** @brief 땅을 엽니다. 모든 칸이 빈 땅이 되고 주인 등록도 비웁니다. 칸 크기는 0 보다 커야 합니다. */
+        /** @brief 땅을 엽니다. 모든 칸이 빈 땅이 되고 주인 등록도 비웁니다. 칸 크기는 0 보다 커야 합니다(전제 조건이며 맞추지 않습니다. 판 상태는 `SessionStateSettings::_landCellSize` 의 `Min` 으로 받을 때 거절합니다). */
         void initialize( int32 width, int32 height, float32 cellSize, const float3& origin );
         /** @brief 주인(키트) 하나를 등록하고 번호를 줍니다. 같은 이름이면 같은 번호이며, 빈 이름이거나 땅이 안 열렸으면 `kNoOwner` 입니다. */
         uint16 registerOwner( const hashed_string& ownerName );

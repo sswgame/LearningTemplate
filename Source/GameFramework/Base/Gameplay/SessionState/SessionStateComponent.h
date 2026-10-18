@@ -52,8 +52,8 @@ namespace sw
         int32 _landWidth{ 0 }; ///< 공유 땅의 셀 수. 0 이면 땅이 없고 `makeRefs` 의 땅 포인터가 nullptr 이다. 격자 키트는 단독으로 쓴다
         PROPERTY( Min = 0 )
         int32 _landHeight{ 0 };
-        PROPERTY()
-        float32 _landCellSize{ 1.0f };
+        PROPERTY( Min = 0.001 )
+        float32 _landCellSize{ 1.0f }; ///< 칸 한 변의 월드 길이. 0 보다 커야 한다(`LandRegistry::initialize` 의 전제 조건)
         PROPERTY()
         float3 _landOrigin{};
     };

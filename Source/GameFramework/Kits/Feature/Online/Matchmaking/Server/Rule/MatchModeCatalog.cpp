@@ -7,6 +7,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
 {
@@ -34,15 +35,14 @@ namespace sw
         const size_t      cross = shape.find( 'x' );
         if ( cross == string_view::npos )
             return false;
-        int32      teamCount     = 0;
-        int32      teamSize      = 0;
-        const bool bNumbers      = StringUtil::parseInt( shape.substr( 0, cross ), teamCount ) && StringUtil::parseInt( shape.substr( cross + 1 ), teamSize );
-        const bool bInvalidShape = bNumbers == false || teamCount <= 0 || teamSize <= 0;
-        if ( bInvalidShape )
+        MatchModeDefinition mode;
+        const bool          bNumbers = StringUtil::parseInt( shape.substr( 0, cross ), mode._teamCount ) && StringUtil::parseInt( shape.substr( cross + 1 ), mode._teamSize );
+        // 팀 수 · 인원의 범위는 `MatchModeDefinition` 의 `PROPERTY` 하나가 정본이다. 손으로 다시 적지 않는다.
+        if ( bNumbers == false || ConfigRangeUtil::describeRangeErrors( mode ).empty() == false )
             return false;
         outMode._modeID    = string( text.substr( 0, colon ) );
-        outMode._teamCount = teamCount;
-        outMode._teamSize  = teamSize;
+        outMode._teamCount = mode._teamCount;
+        outMode._teamSize  = mode._teamSize;
         return true;
     }
 
@@ -67,10 +67,15 @@ namespace sw
                 mode._serverKind = string( serverKind );
             const bool bTimesOk = readInt64( node, "regionRelaxMs", mode._regionRelaxMs ) &&
                                   readInt64( node, "maxWaitMs", mode._maxWaitMs );
-            const bool bInvalidModeValues = bTimesOk == false || mode._teamCount <= 0 || mode._teamSize <= 0;
-            if ( bInvalidModeValues )
+            if ( bTimesOk == false )
             {
-                SW_LOG_WARNING( "%#: mode '%#' needs positive team counts and integer times - skipped", sourceName, pID );
+                SW_LOG_WARNING( "%#: mode '%#' needs integer times - skipped", sourceName, pID );
+                continue;
+            }
+            const string rangeError = ConfigRangeUtil::describeRangeErrors( mode ); // 범위의 정본은 `MatchModeDefinition` 의 `PROPERTY` 다
+            if ( rangeError.empty() == false )
+            {
+                SW_LOG_WARNING( "%#: mode '%#' is out of range - %# - skipped", sourceName, pID, rangeError.c_str() );
                 continue;
             }
             _listMode.push_back( std::move( mode ) );

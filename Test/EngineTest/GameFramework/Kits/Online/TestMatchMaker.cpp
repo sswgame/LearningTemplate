@@ -206,3 +206,31 @@ SW_TEST_CASE( MatchMakerTest, RefusesOutOfRangeMode )
     SW_EXPECT_TRUE( maker.initialize( makeMode( MatchmakingLimit::kMaxTeamCount, MatchmakingLimit::kMaxTeamSize ), 1 ) );
     SW_EXPECT_EQUAL( maker.getDefinition()._teamCount, MatchmakingLimit::kMaxTeamCount );
 }
+
+/**
+ * @brief [MatchMakerTest] 권한을 잃어 표를 비워도(`clearTickets` — 대기열이 권한을 잃을 때 부른다) 경기 id 는 처음으로 돌아가지 않고 이어진다
+ * @details 예전에는 권한을 잃으면 매처를 다시 초기화해 경기 id 를 시드로 되돌렸다. 권한을 되찾은 뒤의 첫 경기가 앞 경기와 같은 id 를 받을 수 있었다.
+ */
+SW_TEST_CASE( MatchMakerTest, MatchIDsContinueAcrossLostAuthority )
+{
+    MatchMaker maker;
+    SW_ASSERT_TRUE( maker.initialize( makeMode( 2, 1 ), 5 ) );
+    vector<MatchFormed> listMatch;
+    vector<MatchTicket> listTimedOut;
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 1, { 1500 } ) ) == MatchmakingResult::Ok );
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 2, { 1500 } ) ) == MatchmakingResult::Ok );
+    maker.process( 0, listMatch, listTimedOut );
+    SW_ASSERT_EQUAL( listMatch.size(), size_t( 1 ) );
+
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 3, { 1500 } ) ) == MatchmakingResult::Ok );
+    maker.clearTickets(); // 권한을 잃었다 — 남은 표는 사라진다
+    SW_EXPECT_EQUAL( maker.getTicketCount(), 0 );
+    SW_EXPECT_EQUAL( maker.getDefinition()._teamCount, 2 ); // 규칙은 그대로
+
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 4, { 1500 } ) ) == MatchmakingResult::Ok ); // 권한을 되찾았다
+    SW_ASSERT_TRUE( maker.addTicket( makeTicket( 5, { 1500 } ) ) == MatchmakingResult::Ok );
+    maker.process( 1000, listMatch, listTimedOut );
+    SW_ASSERT_EQUAL( listMatch.size(), size_t( 2 ) );
+    SW_EXPECT_EQUAL( listMatch[1]._matchID >> 32, uint64( 5 ) );
+    SW_EXPECT_TRUE( listMatch[1]._matchID > listMatch[0]._matchID );
+}
