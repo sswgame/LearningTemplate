@@ -19,14 +19,13 @@
 - 이후 문서 개편(커밋됨, **아직 push 안 함**): 백로그를 없애고 계획 문서(머리 줄) + `Candidates-<영역>.md`(후보 절 152개) + `Roadmap.md`(순서) + `NEXT.md`(상태) 로 일원화했다. 일의 식별자는 이름이고 옛 번호는 `plans --find`. README 의 진행 표는 `status-board --write README.md` 로 만든 생성물이다. 코드는 바꾸지 않았다(`Scripts` 도구와 린트 게이트만). push 전에 [작업 방식](../11_Workflow.md) 3절대로 `full-build` 증거를 남긴다(Scripts 변경이라 Python 테스트 38개는 통과했다).
 - 구성 검증: Shipping · Shipping-Server · CI-Debug-STL 의 빌드 + nogpu 통과, Debug `full-build` 증거는 문서 개편 이전 커밋의 것이다.
 - 측정 · GPU 묶음(작업자 `meas`)은 한도(429)로 중단했다. 워크트리 없음, 임시 탐침은 지웠다. 다시 하면 임시 쿠킹 폴더에서 한다(main 체크아웃에 탐침 파일을 만들지 않는다).
-- 워크트리: `feat-pv` · `feat-net` 은 추적 안 된 로그 때문에 `worktree-remove` 가 건너뛴다(사용자가 `--force`). `cifix2` · `rootword` 는 병합이 끝나 지워도 된다.
+- 워크트리: main 하나뿐이다(병합이 끝난 `cifix2` · `rootword` · `plans` 는 지웠다). `feat-pv` · `feat-net` 은 이미 없다.
 - 근본 원인 후보(미해결): 디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다 → 후보 `DiskPathVsResourceId`. 워크트리가 `vcpkg_installed` 를 나눠 쓴다 → 후보 `WorktreeVcpkgInstalledDir`.
 - 사용자 결정 대기: 없음.
 
 ## 2. 첫 일
 
 1. 문서 개편 push 뒤 CI 를 확인한다(`py -3 -m Scripts ci-jobs --runs`). TSan 실패는 후보 `TsanNetPlayTraceMerge` 부터.
-2. 남은 워크트리를 정리한다(`git worktree list`, 병합 확인 뒤 `worktree-remove`).
 3. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터.
 
 ## 3. 함정
