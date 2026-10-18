@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -11,19 +10,36 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GhostCatalog" );
-
     namespace
     {
         struct GhostCatalogInternal
         {
-            static constexpr uint32 kMaxStageCount = 16;
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+                return true;
+            }
+
+            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
+            template <typename TDef>
+            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outSetting = def;
+                return true;
+            }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
+    SW_LOG_CALLER( "GhostCatalog" );
+
     GhostCatalog::GhostCatalog()
         : _flashlight{}
         , _vacuum{}
@@ -32,145 +48,120 @@ namespace sw
         , _doorCatalog{}
         , _furnitureCatalog{}
         , _booCatalog{}
-        , _currency{ "Coins" }
+        , _currency{ GhostHuntRootDef{}._currency }
     {
-        _vacuum._listStagePower.push_back( 10.0f );
     }
 
     uint32 GhostCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const utf8* pCurrency = root.findAttribute( "currency" );
-        if ( pCurrency != nullptr && pCurrency[0] != '\0' )
-            _currency = hashed_string( pCurrency );
-        const XMLNode flashlight = root.findChild( "Flashlight" );
-        if ( flashlight )
-        {
-            _flashlight._range            = MathUtil::max( 0.1f, flashlight.getAttributeFloat( "range", _flashlight._range ) );
-            _flashlight._halfAngle        = MathUtil::clamp( flashlight.getAttributeFloat( "angle", _flashlight._halfAngle ), 1.0f, 89.0f );
-            _flashlight._strobeRange      = MathUtil::max( 0.1f, flashlight.getAttributeFloat( "strobeRange", _flashlight._strobeRange ) );
-            _flashlight._strobeHalfAngle  = MathUtil::clamp( flashlight.getAttributeFloat( "strobeAngle", _flashlight._strobeHalfAngle ), 1.0f, 89.0f );
-            _flashlight._strobeChargeTime = MathUtil::max( 0.0f, flashlight.getAttributeFloat( "strobeCharge", _flashlight._strobeChargeTime ) );
-        }
-        const XMLNode vacuum = root.findChild( "Vacuum" );
-        if ( vacuum )
-        {
-            float32      arrStage[GhostCatalogInternal::kMaxStageCount] = {};
-            const uint32 stageCount                                     = GameDataXML::parseFloats( vacuum.getAttributeText( "stages" ), arrStage, GhostCatalogInternal::kMaxStageCount );
-            if ( stageCount > 0 )
-            {
-                _vacuum._listStagePower.clear();
-                for ( uint32 stage = 0; stage < stageCount; ++stage )
-                {
-                    _vacuum._listStagePower.push_back( MathUtil::max( 0.0f, arrStage[stage] ) );
-                }
-            }
-            _vacuum._range          = MathUtil::max( 0.1f, vacuum.getAttributeFloat( "range", _vacuum._range ) );
-            _vacuum._alignThreshold = MathUtil::clamp( vacuum.getAttributeFloat( "alignThreshold", _vacuum._alignThreshold ), -1.0f, 1.0f );
-            _vacuum._alignBonus     = MathUtil::max( 0.0f, vacuum.getAttributeFloat( "alignBonus", _vacuum._alignBonus ) );
-            _vacuum._surgeFillTime  = MathUtil::max( 0.01f, vacuum.getAttributeFloat( "surgeFill", _vacuum._surgeFillTime ) );
-            _vacuum._surgeDamage    = MathUtil::max( 0.0f, vacuum.getAttributeFloat( "surgeDamage", _vacuum._surgeDamage ) );
-            _vacuum._dragSpeed      = MathUtil::max( 0.0f, vacuum.getAttributeFloat( "dragSpeed", _vacuum._dragSpeed ) );
-            _vacuum._dragReduction  = MathUtil::clamp( vacuum.getAttributeFloat( "dragReduction", _vacuum._dragReduction ), 0.0f, 1.0f );
-        }
-
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        GhostHuntRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+            _currency = rootDef._currency;
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Ghost" ); node; node = node.findNextSibling( "Ghost" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            GhostDef ghost;
-            ghost._id           = hashed_string( pID );
-            ghost._hp           = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", ghost._hp ) );
-            ghost._hideTime     = MathUtil::max( 0.0f, node.getAttributeFloat( "hideTime", ghost._hideTime ) );
-            ghost._appearTime   = MathUtil::max( 0.0f, node.getAttributeFloat( "appearTime", ghost._appearTime ) );
-            ghost._attackTime   = MathUtil::max( 0.05f, node.getAttributeFloat( "attackTime", ghost._attackTime ) );
-            ghost._attackDamage = MathUtil::max( 0.0f, node.getAttributeFloat( "attackDamage", ghost._attackDamage ) );
-            ghost._stunTime     = MathUtil::max( 0.1f, node.getAttributeFloat( "stunTime", ghost._stunTime ) );
-            ghost._pull         = MathUtil::max( 0.0f, node.getAttributeFloat( "pull", ghost._pull ) );
-            ghost._fleeInterval = MathUtil::max( 0.1f, node.getAttributeFloat( "fleeInterval", ghost._fleeInterval ) );
-            ghost._coins        = MathUtil::max( 0, node.getAttributeInt( "coins", ghost._coins ) );
-            ghost._bStrobeOnly  = node.getAttributeBool( "strobeOnly", false ) ? SW_TRUE : SW_FALSE;
-            (void)_ghostCatalog.add( ghost );
-            ++loadedCount;
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( loadElement( node, name, sourceName ) )
+                ++loadedCount;
         }
-        for ( XMLNode node = root.findChild( "Room" ); node; node = node.findNextSibling( "Room" ) )
+        // 방이 가리키는 유령은 모두 읽은 뒤에 확인한다(방이 유령보다 앞에 적혀도 된다).
+        for ( const GhostRoomDef& room : _roomCatalog.getAll() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            GhostRoomDef room;
-            room._id        = hashed_string( pID );
-            room._keyReward = GameDataXML::readName( node, "key" );
-            room._lightFlag = GameDataXML::readName( node, "lightFlag" );
-            if ( room._lightFlag.empty() )
+            for ( const hashed_string& ghostID : room._listGhost )
             {
-                string flag( "lit." );
-                flag += pID;
-                room._lightFlag = hashed_string( flag.c_str() );
-            }
-            StringUtil::forEachToken( node.getAttributeText( "ghosts" ), ",; ", [&]( string_view token )
-            {
-                const hashed_string ghostID( string( token.data(), token.size() ).c_str() );
                 if ( _ghostCatalog.find( ghostID ) == nullptr )
-                    SW_LOG_WARNING( "%#: room '%#' has an unknown ghost '%#' - skipped", sourceName, pID, token );
-                else
-                    room._listGhost.push_back( ghostID );
-            } );
-            (void)_roomCatalog.add( room );
-        }
-        for ( XMLNode node = root.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            GhostDoorDef door;
-            door._id   = hashed_string( pID );
-            door._key  = GameDataXML::readName( node, "key" );
-            door._flag = GameDataXML::readName( node, "flag" );
-            if ( door._flag.empty() )
-                door._flag = hashed_string( string( "door." ) + pID );
-            (void)_doorCatalog.add( door );
-        }
-        for ( XMLNode node = root.findChild( "Furniture" ); node; node = node.findNextSibling( "Furniture" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            GhostFurnitureDef furniture;
-            furniture._id                = hashed_string( pID );
-            furniture._room              = GameDataXML::readName( node, "room" );
-            furniture._lootTable         = GameDataXML::readName( node, "loot" );
-            const string_view searchText = node.getAttributeText( "search" );
-            if ( searchText.empty() == false )
-            {
-                furniture._bVacuum = SW_FALSE;
-                furniture._bShake  = SW_FALSE;
-                StringUtil::forEachToken( searchText, ",; ", [&]( string_view token )
-                {
-                    if ( StringUtil::equals( token, string_view( "Vacuum" ), true ) )
-                        furniture._bVacuum = SW_TRUE;
-                    else if ( StringUtil::equals( token, string_view( "Shake" ), true ) )
-                        furniture._bShake = SW_TRUE;
-                    else
-                        SW_LOG_WARNING( "%#: furniture '%#' has an unknown search mode '%#'", sourceName, pID, token );
-                } );
+                    SW_LOG_ERROR( "%#: room '%#' names an unknown ghost '%#'", sourceName, room._id.c_str(), ghostID.c_str() );
             }
-            (void)_furnitureCatalog.add( furniture );
-        }
-        for ( XMLNode node = root.findChild( "Boo" ); node; node = node.findNextSibling( "Boo" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            GhostBooDef boo;
-            boo._id         = hashed_string( pID );
-            boo._room       = GameDataXML::readName( node, "room" );
-            boo._furniture  = GameDataXML::readName( node, "furniture" );
-            boo._hp         = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", boo._hp ) );
-            boo._escapeTime = MathUtil::max( 0.1f, node.getAttributeFloat( "escapeTime", boo._escapeTime ) );
-            (void)_booCatalog.add( boo );
         }
         return loadedCount;
+    }
+
+    bool GhostCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        using Internal = GhostCatalogInternal;
+        const auto is  = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        if ( is( "Flashlight" ) )
+            return Internal::readSetting( node, sourceName, _flashlight );
+        if ( is( "Vacuum" ) )
+            return loadVacuum( node, sourceName );
+        if ( is( "Ghost" ) )
+            return Internal::readInto( node, sourceName, _ghostCatalog );
+        if ( is( "Room" ) )
+            return loadRoom( node, sourceName );
+        if ( is( "Door" ) )
+            return Internal::readInto( node, sourceName, _doorCatalog );
+        if ( is( "Furniture" ) )
+            return loadFurniture( node, sourceName );
+        if ( is( "Boo" ) )
+            return Internal::readInto( node, sourceName, _booCatalog );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool GhostCatalog::loadVacuum( const XMLNode& node, string_view sourceName )
+    {
+        GhostVacuumDef vacuum;
+        bool           bValid = GameDataXML::readFields( node, vacuum, sourceName, { "stages" } );
+        // 단계 위력은 적었으면 모두 0 이상의 수여야 한다(적지 않으면 스키마 초기값 한 단계).
+        const string_view stages = node.getAttributeText( "stages" );
+        if ( stages.empty() == false )
+        {
+            vacuum._listStagePower.clear();
+            StringUtil::forEachToken( stages, ",; ", [&]( string_view token )
+            {
+                float32    power  = 0.0f;
+                const bool bPower = GameDataXML::parseNumber( token, power ) && power >= 0.0f;
+                if ( bPower )
+                    vacuum._listStagePower.push_back( power );
+                else
+                {
+                    SW_LOG_ERROR( "%#: <Vacuum stages> has '%#' - needs numbers of 0 or more", sourceName, token );
+                    bValid = false;
+                }
+            } );
+        }
+        if ( bValid )
+            _vacuum = vacuum;
+        return bValid;
+    }
+
+    bool GhostCatalog::loadRoom( const XMLNode& node, string_view sourceName )
+    {
+        GhostRoomDef room;
+        if ( GameDataXML::readFields( node, room, sourceName, { "ghosts" } ) == false )
+            return false;
+        GameDataXML::parseNameList( node.getAttributeText( "ghosts" ), ",; ", room._listGhost );
+        (void)_roomCatalog.add( room ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
+    }
+
+    bool GhostCatalog::loadFurniture( const XMLNode& node, string_view sourceName )
+    {
+        GhostFurnitureDef furniture;
+        bool              bValid = GameDataXML::readFields( node, furniture, sourceName, { "search" } );
+        // 뒤지는 방법은 적었으면 그것만 된다(적지 않으면 둘 다). 모르는 이름은 오류다.
+        const string_view search = node.getAttributeText( "search" );
+        if ( search.empty() == false )
+        {
+            furniture._bVacuum = false;
+            furniture._bShake  = false;
+            StringUtil::forEachToken( search, ",; ", [&]( string_view token )
+            {
+                if ( StringUtil::equals( token, string_view( "Vacuum" ), true ) )
+                    furniture._bVacuum = true;
+                else if ( StringUtil::equals( token, string_view( "Shake" ), true ) )
+                    furniture._bShake = true;
+                else
+                {
+                    SW_LOG_ERROR( "%#: furniture '%#' has an unknown search mode '%#' (Vacuum, Shake)", sourceName, furniture._id.c_str(), token );
+                    bValid = false;
+                }
+            } );
+        }
+        if ( bValid )
+            (void)_furnitureCatalog.add( furniture ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return bValid;
     }
 } // namespace sw

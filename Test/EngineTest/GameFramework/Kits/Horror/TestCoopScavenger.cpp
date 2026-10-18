@@ -38,10 +38,10 @@ namespace
   <Scrap id="bolt" min="20" max="40" weight="5" spawnWeight="5"/>
   <Scrap id="bell" min="60" max="90" weight="30" spawnWeight="2" twoHanded="true"/>
   <Scrap id="ring" min="80" max="120" weight="1" spawnWeight="1"/>
-  <Moon id="experimentation" risk="1" cost="0" scrap="8" scrapMax="12"/>
-  <Moon id="titan" risk="3" cost="50" scrap="20" scrapMax="25" valueMin="1.2" valueMax="1.5" scraps="bell,ring"/>
-  <Moon id="rend" risk="1" cost="0" scrap="8" scrapMax="12"/>
-  <Moon id="company" company="true"/>
+  <Moon id="experimentation" name="experimentation" risk="1" cost="0" scrap="8" scrapMax="12"/>
+  <Moon id="titan" name="titan" risk="3" cost="50" scrap="20" scrapMax="25" valueMin="1.2" valueMax="1.5" scraps="bell,ring"/>
+  <Moon id="rend" name="rend" risk="1" cost="0" scrap="8" scrapMax="12"/>
+  <Moon id="company" name="company" company="true"/>
 </ScavengerCatalog>
 )";
 

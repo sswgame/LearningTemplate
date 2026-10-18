@@ -98,7 +98,7 @@ namespace sw
         int32 stunnedCount = 0;
         for ( GhostInstance& ghost : _listGhost )
         {
-            const bool bNotStunnable = ghost._state != GhostState::Attacking || ghost._pDef->_bStrobeOnly == SW_TRUE || isInCone( eye, forward, ghost._position, false ) == false;
+            const bool bNotStunnable = ghost._state != GhostState::Attacking || ghost._pDef->_bStrobeOnly || isInCone( eye, forward, ghost._position, false ) == false;
             if ( bNotStunnable )
                 continue;
             enterState( ghost, GhostState::Stunned );

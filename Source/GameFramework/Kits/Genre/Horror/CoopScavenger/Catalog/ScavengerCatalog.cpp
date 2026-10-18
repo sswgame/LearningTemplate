@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -12,6 +13,23 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct ScavengerCatalogInternal
+        {
+            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
+            template <typename TDef>
+            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outSetting = def;
+                return true;
+            }
+        };
+    } // namespace
+
     SW_LOG_CALLER( "ScavengerCatalog" );
 
     ScavengerCatalog::ScavengerCatalog()
@@ -23,9 +41,9 @@ namespace sw
         , _carry{}
         , _penalty{}
         , _facility{}
-        , _terminalShopID{ "terminal" }
-        , _currency{ "Credits" }
-        , _crewHealth{ 100.0f }
+        , _terminalShopID{ ScavengerRootDef{}._terminalShopID }
+        , _currency{ ScavengerRootDef{}._currency }
+        , _crewHealth{ ScavengerRootDef{}._crewHealth }
     {
     }
 
@@ -49,120 +67,94 @@ namespace sw
 
     uint32 ScavengerCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const string_view shopID = root.getAttributeText( "terminalShop" );
-        if ( shopID.empty() == false )
-            _terminalShopID = hashed_string( shopID );
-        const string_view currency = root.getAttributeText( "currency" );
-        if ( currency.empty() == false )
-            _currency = hashed_string( currency );
-
-        _crewHealth = MathUtil::max( 1.0f, root.getAttributeFloat( "crewHealth", _crewHealth ) );
-
-        if ( const XMLNode node = root.findChild( "Quota" ) )
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        ScavengerRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
         {
-            _quota._startQuota      = MathUtil::max( 1, node.getAttributeInt( "start", _quota._startQuota ) );
-            _quota._daysPerCycle    = MathUtil::max( 0, node.getAttributeInt( "days", _quota._daysPerCycle ) );
-            _quota._increase        = MathUtil::max( 0.0f, node.getAttributeFloat( "increase", _quota._increase ) );
-            _quota._steepness       = MathUtil::max( 0.01f, node.getAttributeFloat( "steepness", _quota._steepness ) );
-            _quota._randomness      = MathUtil::clamp( node.getAttributeFloat( "randomness", _quota._randomness ), 0.0f, 2.0f );
-            _quota._overtimeDivisor = MathUtil::max( 0.0f, node.getAttributeFloat( "overtime", _quota._overtimeDivisor ) );
-            _quota._startCredits    = MathUtil::max( 0, node.getAttributeInt( "credits", _quota._startCredits ) );
+            _terminalShopID = rootDef._terminalShopID;
+            _currency       = rootDef._currency;
+            _crewHealth     = rootDef._crewHealth;
         }
         _listBuyRate.clear();
-        for ( XMLNode node = root.findChild( "BuyRate" ); node; node = node.findNextSibling( "BuyRate" ) )
+        uint32 loadedCount = 0;
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            ScavengerBuyRatePoint point;
-            point._daysLeft = MathUtil::max( 0, node.getAttributeInt( "daysLeft", point._daysLeft ) );
-            point._rate     = MathUtil::max( 0.0f, node.getAttributeFloat( "rate", point._rate ) );
-            _listBuyRate.push_back( point );
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( loadElement( node, name, sourceName ) )
+                ++loadedCount;
         }
-        std::sort( _listBuyRate.begin(), _listBuyRate.end(), []( const ScavengerBuyRatePoint& lhs, const ScavengerBuyRatePoint& rhs )
+
+        // 매입률 점은 남은 날 순서로 둔다. 같은 날이 두 번이면 어느 값인지 모르므로 오류이고 뒤의 것을 버린다.
+        std::stable_sort( _listBuyRate.begin(), _listBuyRate.end(), []( const ScavengerBuyRatePoint& lhs, const ScavengerBuyRatePoint& rhs )
         { return lhs._daysLeft < rhs._daysLeft; } );
         for ( size_t index = 1; index < _listBuyRate.size(); ++index )
         {
             if ( _listBuyRate[index]._daysLeft == _listBuyRate[index - 1]._daysLeft )
-                SW_LOG_WARNING( "%#: buy rate for %# days left is given twice - the first one wins", sourceName, _listBuyRate[index]._daysLeft );
+                SW_LOG_ERROR( "%#: buy rate for %# days left is given twice - the later one is dropped", sourceName, _listBuyRate[index]._daysLeft );
         }
         _listBuyRate.erase( std::unique( _listBuyRate.begin(), _listBuyRate.end(),
                                          []( const ScavengerBuyRatePoint& lhs, const ScavengerBuyRatePoint& rhs )
         { return lhs._daysLeft == rhs._daysLeft; } ),
                             _listBuyRate.end() );
 
-        if ( const XMLNode node = root.findChild( "Day" ) )
+        // 위성이 가리키는 고철은 모두 읽은 뒤에 확인한다(위성이 고철보다 앞에 적혀도 된다).
+        for ( const ScavengerMoonDef& moon : _moonCatalog.getAll() )
         {
-            _day._secondsPerDay = MathUtil::max( 1.0f, node.getAttributeFloat( "secondsPerDay", _day._secondsPerDay ) );
-            _day._arrivalHour   = MathUtil::clamp( node.getAttributeFloat( "arrival", _day._arrivalHour ), 0.0f, 23.0f );
-            _day._duskHour      = MathUtil::clamp( node.getAttributeFloat( "dusk", _day._duskHour ), _day._arrivalHour, 24.0f );
-            _day._departHour    = MathUtil::clamp( node.getAttributeFloat( "depart", _day._departHour ), _day._arrivalHour + 0.5f, 48.0f );
-        }
-        if ( const XMLNode node = root.findChild( "Carry" ) )
-        {
-            _carry._slotCount      = MathUtil::clamp( node.getAttributeInt( "slots", _carry._slotCount ), 1, 16 );
-            _carry._speedPerWeight = MathUtil::max( 0.0f, node.getAttributeFloat( "speedPerWeight", _carry._speedPerWeight ) );
-            _carry._minSpeedScale  = MathUtil::saturate( node.getAttributeFloat( "minSpeed", _carry._minSpeedScale ) );
-            _carry._bodyWeight     = MathUtil::max( 0.0f, node.getAttributeFloat( "bodyWeight", _carry._bodyWeight ) );
-        }
-        if ( const XMLNode node = root.findChild( "Penalty" ) )
-        {
-            _penalty._deathFine        = MathUtil::saturate( node.getAttributeFloat( "deathFine", _penalty._deathFine ) );
-            _penalty._recoveredFine    = MathUtil::saturate( node.getAttributeFloat( "recoveredFine", _penalty._recoveredFine ) );
-            _penalty._allDeadLossRatio = MathUtil::saturate( node.getAttributeFloat( "allDeadLoss", _penalty._allDeadLossRatio ) );
-            _penalty._allDeadMaxKept   = MathUtil::max( 0, node.getAttributeInt( "allDeadKeep", _penalty._allDeadMaxKept ) );
-        }
-        if ( const XMLNode node = root.findChild( "Facility" ) )
-        {
-            _facility._minRooms     = MathUtil::clamp( node.getAttributeInt( "rooms", _facility._minRooms ), 1, 256 );
-            _facility._maxRooms     = MathUtil::clamp( node.getAttributeInt( "roomsMax", _facility._minRooms ), _facility._minRooms, 256 );
-            _facility._lockedChance = MathUtil::saturate( node.getAttributeFloat( "lockedChance", _facility._lockedChance ) );
-            _facility._loopChance   = MathUtil::saturate( node.getAttributeFloat( "loopChance", _facility._loopChance ) );
-            _facility._fireExits    = MathUtil::max( 0, node.getAttributeInt( "fireExits", _facility._fireExits ) );
-        }
-
-        uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Scrap" ); node; node = node.findNextSibling( "Scrap" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            ScavengerScrapDef def;
-            def._id          = hashed_string( pID );
-            def._minValue    = MathUtil::max( 0, node.getAttributeInt( "min", def._minValue ) );
-            def._maxValue    = MathUtil::max( def._minValue, node.getAttributeInt( "max", def._minValue ) );
-            def._weight      = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", def._weight ) );
-            def._spawnWeight = MathUtil::max( 0.0f, node.getAttributeFloat( "spawnWeight", def._spawnWeight ) );
-            def._bTwoHanded  = node.getAttributeBool( "twoHanded", false ) ? SW_TRUE : SW_FALSE;
-            (void)_scrapCatalog.add( def );
-            ++loadedCount;
-        }
-        for ( XMLNode node = root.findChild( "Moon" ); node; node = node.findNextSibling( "Moon" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            ScavengerMoonDef def;
-            def._id            = hashed_string( pID );
-            const utf8* pName  = node.findAttribute( "name" );
-            def._name          = pName != nullptr ? pName : pID;
-            def._risk          = MathUtil::max( 0.0f, node.getAttributeFloat( "risk", def._risk ) );
-            def._routeCost     = MathUtil::max( 0, node.getAttributeInt( "cost", def._routeCost ) );
-            def._minScrap      = MathUtil::max( 0, node.getAttributeInt( "scrap", def._minScrap ) );
-            def._maxScrap      = MathUtil::max( def._minScrap, node.getAttributeInt( "scrapMax", def._minScrap ) );
-            def._minValueScale = MathUtil::max( 0.0f, node.getAttributeFloat( "valueMin", def._minValueScale ) );
-            def._maxValueScale = MathUtil::max( def._minValueScale, node.getAttributeFloat( "valueMax", def._minValueScale ) );
-            def._bCompany      = node.getAttributeBool( "company", false ) ? SW_TRUE : SW_FALSE;
-            StringUtil::forEachToken( node.getAttributeText( "scraps" ), ",; ", [&]( string_view token )
+            for ( const hashed_string& scrapID : moon._listScrap )
             {
-                const hashed_string scrapID( token );
                 if ( _scrapCatalog.find( scrapID ) == nullptr )
-                    SW_LOG_WARNING( "%#: moon '%#' lists unknown scrap '%#' - skipped", sourceName, pID, token );
-                else
-                    def._listScrap.push_back( scrapID );
-            } );
-            (void)_moonCatalog.add( def );
-            ++loadedCount;
+                    SW_LOG_ERROR( "%#: moon '%#' lists an unknown scrap '%#'", sourceName, moon._id.c_str(), scrapID.c_str() );
+            }
         }
         if ( _moonCatalog.isEmpty() )
-            SW_LOG_WARNING( "%#: no moons - nowhere to land", sourceName );
+            SW_LOG_ERROR( "%#: no moons - nowhere to land", sourceName );
         return loadedCount;
+    }
+
+    bool ScavengerCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        using Internal = ScavengerCatalogInternal;
+        const auto is  = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        if ( is( "Quota" ) )
+            return Internal::readSetting( node, sourceName, _quota );
+        if ( is( "BuyRate" ) )
+        {
+            ScavengerBuyRatePoint point;
+            if ( GameDataXML::readFields( node, point, sourceName ) == false )
+                return false;
+            _listBuyRate.push_back( point );
+            return true;
+        }
+        if ( is( "Day" ) )
+            return Internal::readSetting( node, sourceName, _day );
+        if ( is( "Carry" ) )
+            return Internal::readSetting( node, sourceName, _carry );
+        if ( is( "Penalty" ) )
+            return Internal::readSetting( node, sourceName, _penalty );
+        if ( is( "Facility" ) )
+            return Internal::readSetting( node, sourceName, _facility );
+        if ( is( "Scrap" ) )
+        {
+            ScavengerScrapDef def;
+            if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                return false;
+            (void)_scrapCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+            return true;
+        }
+        if ( is( "Moon" ) )
+            return loadMoon( node, sourceName );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool ScavengerCatalog::loadMoon( const XMLNode& node, string_view sourceName )
+    {
+        ScavengerMoonDef def;
+        if ( GameDataXML::readFields( node, def, sourceName, { "scraps" } ) == false )
+            return false;
+        GameDataXML::parseNameList( node.getAttributeText( "scraps" ), ",; ", def._listScrap );
+        (void)_moonCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        return true;
     }
 } // namespace sw

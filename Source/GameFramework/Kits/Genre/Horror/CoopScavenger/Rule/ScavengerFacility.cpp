@@ -126,7 +126,7 @@ namespace sw
         string                      xml      = "<AreaGraph>";
         ScavengerFacilityInternal::appendArea( xml, "outside", 0, "Outside", 0, 0 );
         ScavengerFacilityInternal::appendArea( xml, "ship", 0, "Ship", -1, 0 );
-        if ( moon._bCompany == SW_FALSE )
+        if ( moon._bCompany == false )
         {
             _roomCount = random.nextInt( settings._minRooms, settings._maxRooms );
             vector<int32> listDepth( static_cast<size_t>( _roomCount ), 0 );
