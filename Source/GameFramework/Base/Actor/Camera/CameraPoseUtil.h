@@ -15,7 +15,7 @@ namespace sw
 
     /**
      * @struct CameraPoseUtil
-     * @brief 디렉터 · 카메라 매니저 · 직교 리그 · 1인칭 카메라가 같은 규칙으로 카메라를 둡니다.
+     * @brief 디렉터 · 카메라 매니저 · 1인칭 카메라가 같은 규칙으로 카메라를 둡니다.
      */
     struct SW_GF_API CameraPoseUtil
     {

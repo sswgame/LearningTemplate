@@ -18,7 +18,6 @@
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 #include "GameFramework/Base/Actor/Camera/CameraShake.h"
 #include "GameFramework/Base/Actor/Camera/CameraUserSettings.h"
-#include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
@@ -32,6 +31,13 @@ namespace
     struct CameraModeTestInternal
     {
         static float3 computeForward( const quaternion& rotation ) { return float3::transform( float3{ 0.0f, 0.0f, 1.0f }, rotation ); }
+
+        /** @brief 직교 포즈의 화면 점에서 쏜 광선이 땅(Y = 0)에 닿는 점입니다. */
+        static float3 hitGround( const CameraPose& pose, float32 aspect, const float2& mouse )
+        {
+            const GameRay ray = computeCameraScreenRay( pose, aspect, mouse );
+            return ray._origin + ray._direction * ( -ray._origin._y / ray._direction._y );
+        }
 
         static CameraPresetDef makeThirdPerson()
         {
@@ -663,41 +669,56 @@ SW_TEST_CASE( CameraModeTest, DollyRailFollowsTheNearestPoint )
 }
 
 /**
- * @brief [CameraModeTest] 포즈의 화면 광선은 직교 리그의 광선과 같고, 원근 포즈는 화면 가운데가 앞 방향이다
+ * @brief [CameraModeTest] 직교 포즈의 화면 광선 — 가운데는 초점에, 오른쪽 끝은 화면 반너비만큼 오른쪽, 위쪽 끝은 반높이 ÷ sin(피치)만큼 앞의 땅에 닿는다.
+ *        원근 포즈는 화면 가운데가 앞 방향이다
+ * @details 요 0(앞이 +Z)에서 화면 위쪽으로 h 옮긴 광선은 땅에서 h / sin(피치) 만큼 멀리 닿는다(위 벡터 (0, cos p, sin p) · 앞 (0, −sin p, cos p) 로 손으로 푼 값).
+ *          요 90° 면 앞이 +X 이고 오른쪽은 −Z 다.
  */
-SW_TEST_CASE( CameraModeTest, ScreenRayFromAPoseMatchesTheOrthoRig )
+SW_TEST_CASE( CameraModeTest, ScreenRayFromAnOrthoPoseHitsTheGroundUnderTheScreenPoint )
 {
-    const float32   yaw   = 30.0f * MathUtil::kDegreeToRadian;
-    const float32   pitch = 40.0f * MathUtil::kDegreeToRadian;
-    CameraPresetDef def;
+    using Internal                = CameraModeTestInternal;
+    constexpr float32 kAspect     = 1.5f;
+    constexpr float32 kHalfHeight = 20.0f;
+    const float32     pitch       = 40.0f * MathUtil::kDegreeToRadian;
+    CameraPresetDef   def;
     def._view._mode        = CameraPresetMode::OrthoTopDown;
-    def._view._yaw         = yaw;
+    def._view._yaw         = 0.0f;
     def._view._pitch       = pitch;
     def._view._distance    = 100.0f;
-    def._lens._orthoHeight = 40.0f;
+    def._lens._orthoHeight = kHalfHeight * 2.0f;
     CameraTarget target;
     target._focus          = float3{ 3.0f, 0.0f, -2.0f };
     const CameraPose ortho = evaluatePreset( def, target );
-    const float2     mouse{ 0.8f, 0.3f };
-    const GameRay    fromPose = computeCameraScreenRay( ortho, 1.5f, mouse );
-    const GameRay    fromRig  = OrthoCameraRigMath::computeScreenRay( target._focus, yaw, pitch, 100.0f, 40.0f, 1.5f, mouse );
-    SW_EXPECT_NEAR_EQUAL( fromRig._origin._x, fromPose._origin._x, 1.0e-3f );
-    SW_EXPECT_NEAR_EQUAL( fromRig._origin._y, fromPose._origin._y, 1.0e-3f );
-    SW_EXPECT_NEAR_EQUAL( fromRig._origin._z, fromPose._origin._z, 1.0e-3f );
-    SW_EXPECT_NEAR_EQUAL( fromRig._direction._x, fromPose._direction._x, 1.0e-4f );
-    SW_EXPECT_NEAR_EQUAL( fromRig._direction._y, fromPose._direction._y, 1.0e-4f );
+
+    const float3 center = Internal::hitGround( ortho, kAspect, float2{ 0.5f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, center._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, center._z, 1.0e-3f );
+    const float3 rightEdge = Internal::hitGround( ortho, kAspect, float2{ 1.0f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( 3.0f + kHalfHeight * kAspect, rightEdge._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, rightEdge._z, 1.0e-3f );
+    const float3 topEdge = Internal::hitGround( ortho, kAspect, float2{ 0.5f, 0.0f } );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, topEdge._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f + kHalfHeight / MathUtil::sin( pitch ), topEdge._z, 1.0e-3f );
+
+    def._view._yaw                = MathUtil::kHalfPi;
+    const CameraPose turned       = evaluatePreset( def, target );
+    const float3     turnedCenter = Internal::hitGround( turned, kAspect, float2{ 0.5f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, turnedCenter._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, turnedCenter._z, 1.0e-3f );
+    const float3 turnedRight = Internal::hitGround( turned, kAspect, float2{ 1.0f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( -2.0f - kHalfHeight * kAspect, turnedRight._z, 1.0e-3f );
 
     CameraPose perspective;
     perspective._rotation     = quaternion::makeFromYawPitchRoll( 0.0f, 0.0f, 0.0f );
     perspective._fieldOfViewY = MathUtil::kHalfPi;
-    const GameRay center      = computeCameraScreenRay( perspective, 1.0f, float2{ 0.5f, 0.5f } );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, center._direction._z, 1.0e-5f );
-    const GameRay rightEdge = computeCameraScreenRay( perspective, 1.0f, float2{ 1.0f, 0.5f } );
-    SW_EXPECT_NEAR_EQUAL( rightEdge._direction._x, rightEdge._direction._z, 1.0e-5f ); // 시야각 90° 의 가장자리는 45°
+    const GameRay centerRay   = computeCameraScreenRay( perspective, 1.0f, float2{ 0.5f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, centerRay._direction._z, 1.0e-5f );
+    const GameRay rightEdgeRay = computeCameraScreenRay( perspective, 1.0f, float2{ 1.0f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( rightEdgeRay._direction._x, rightEdgeRay._direction._z, 1.0e-5f ); // 시야각 90° 의 가장자리는 45°
 }
 
 /**
- * @brief [CameraModeTest] 디렉터 컴포넌트의 땅 고르기와 시점 덮어쓰기 — 직교 리그를 쓰는 네 게임이 디렉터로 옮길 때 쓰는 함수
+ * @brief [CameraModeTest] 디렉터 컴포넌트의 땅 고르기와 시점 덮어쓰기 — 직교 시점 게임이 마우스 고르기 · 탑승 시점에 쓰는 함수
  * @details 위에서 내려다보는 직교 프리셋에서 화면 가운데는 초점 아래 땅이고, 덮어쓴 원근 시점은 그 시점으로 고르며, 덮어쓰기를 풀면 원래 프리셋으로 돌아간다.
  */
 SW_TEST_CASE( CameraModeTest, DirectorComponentPicksTheGroundAndHonoursTheOverride )
@@ -740,24 +761,31 @@ SW_TEST_CASE( CameraModeTest, DirectorComponentPicksTheGroundAndHonoursTheOverri
 }
 
 /**
- * @brief [CameraModeTest] 직교 리그(직교 모드 + 디렉터)는 시작 요에서 바로 시작하고(0 에서 돌아 들어오지 않는다) 초점을 블렌드 없이 따라간다
+ * @brief [CameraModeTest] 직교 프리셋의 디렉터는 프리셋의 요에서 바로 시작하고(0 에서 돌아 들어오지 않는다) 초점 점(`setFocusPoint`)을 블렌드 없이 따라간다
  */
-SW_TEST_CASE( CameraModeTest, OrthoRigStartsAtItsYawAndFollowsTheFocus )
+SW_TEST_CASE( CameraModeTest, OrthoDirectorStartsAtItsYawAndFollowsTheFocusPoint )
 {
     GameObjectManager manager;
-    GameObject*       pObject = manager.createGameObject( hashed_string( "RigCamera" ) );
+    GameObject*       pObject = manager.createGameObject( hashed_string( "TopDownCamera" ) );
     SW_ASSERT_NOT_NULL( pObject );
-    CameraComponent*         pCamera = pObject->addComponent<CameraComponent>();
-    OrthoCameraRigComponent* pRig    = pObject->addComponent<OrthoCameraRigComponent>();
-    SW_ASSERT_TRUE( pCamera != nullptr && pRig != nullptr );
-    pRig->applyToCamera();
-    const float32 startYaw = pRig->getShownYaw();
-    SW_EXPECT_NEAR_EQUAL( pRig->getYaw(), startYaw, 1.0e-6f ); // 시작은 돌아 들어오지 않는다
+    CameraComponent*         pCamera   = pObject->addComponent<CameraComponent>();
+    CameraDirectorComponent* pDirector = pObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_TRUE( pCamera != nullptr && pDirector != nullptr );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
+        <Preset id="park"><View mode="OrthoTopDown" pitch="30" yaw="45" distance="250"/><Lens orthographic="true" orthoHeight="110" far="625"/></Preset>
+    </CameraPresets>)",
+                                                             "ortho-follow-test" ) );
+    pDirector->setInputEnabled( false );
+    manager.beginPlay();
+    // 카메라는 초점의 반대쪽 위 — 요 45° · 피치 30° 로 보는 방향의 반대쪽으로 250 m.
+    const float32 backX = -MathUtil::sin( 45.0f * MathUtil::kDegreeToRadian ) * MathUtil::cos( 30.0f * MathUtil::kDegreeToRadian ) * 250.0f;
+    SW_EXPECT_NEAR_EQUAL( backX, pCamera->getWorldPosition()._x, 1.0e-2f ); // 시작은 돌아 들어오지 않는다
 
-    pRig->setFocus( float3{ 1.0f, 0.0f, 0.0f } ); // 같은 리그 · 다른 초점은 블렌드 없이 그대로 따라간다
-    pRig->updateCamera( 0.016f );
-    const OrthoCameraView view = OrthoCameraRigMath::computeView( float3{ 1.0f, 0.0f, 0.0f }, pRig->getYaw(), 30.0f * MathUtil::kDegreeToRadian, 250.0f );
-    SW_EXPECT_NEAR_EQUAL( view._position._x, pCamera->getWorldPosition()._x, 1.0e-2f );
+    pDirector->setFocusPoint( float3{ 1.0f, 0.0f, 0.0f } ); // 같은 프리셋 · 다른 초점은 블렌드 없이 그대로 따라간다
+    pDirector->updateCamera( 0.016f );
+    SW_EXPECT_FALSE( pDirector->isBlending() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f + backX, pCamera->getWorldPosition()._x, 1.0e-2f );
+    manager.endPlay();
 }
 
 /**
