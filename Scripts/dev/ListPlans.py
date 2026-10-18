@@ -18,7 +18,6 @@
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 import unicodedata
 from pathlib import Path
@@ -27,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common import getProjectRoot  # noqa: E402
 from common.Plans import PlanDoc, PlanFormatError, kListPlanArea, kListPlanStatus, kPlansRelDir, readPlans  # noqa: E402
+from common.MarkdownSections import extractSection  # noqa: E402
 from common.StatusBoard import checkRoadmap  # noqa: E402
 
 
@@ -53,38 +53,6 @@ def selectPlans(listPlan: list[PlanDoc], status: str | None, area: str | None) -
 def formatPlanDetail(plan: PlanDoc) -> str:
     """한 문서의 머리 줄과 절 제목 목록."""
     return "\n".join([f"<!-- docs/plans/{plan.fileName} -->", plan.headerLine, *plan.listHeading])
-
-
-_kSectionHeadingRe = re.compile(r"^(#{1,6}) +(.+?)\s*$")
-_kSectionFenceRe = re.compile(r"^\s*(```|~~~)")
-
-
-def extractSection(listLine: list[str], titlePart: str) -> list[str]:
-    """제목에 `titlePart` 가 든 절의 줄들(제목 줄 포함, 다음 같은 수준 이상 제목 전까지). 하위 절은 든다.
-
-    코드 울타리 안의 `#` 줄은 제목이 아니다. 맞는 절이 없거나 둘 이상이면 ValueError(메시지에 후보 제목).
-    """
-    listHeading: list[tuple[int, int, str]] = []  # (줄 번호, 수준, 제목 줄)
-    bFence = False
-    for index, line in enumerate(listLine):
-        if _kSectionFenceRe.match(line):
-            bFence = not bFence
-            continue
-        match = None if bFence else _kSectionHeadingRe.match(line)
-        if match:
-            listHeading.append((index, len(match.group(1)), line.rstrip()))
-    listMatch = [position for position, heading in enumerate(listHeading) if titlePart.lower() in heading[2].lower()]
-    if len(listMatch) != 1:
-        listCandidate = [listHeading[position][2] for position in listMatch] if listMatch else [heading[2] for heading in listHeading]
-        reason = "여럿에 맞습니다" if listMatch else "없습니다"
-        raise ValueError(f"절 `{titlePart}` 이 {reason}. 후보:\n" + "\n".join(listCandidate))
-    start, level, _ = listHeading[listMatch[0]]
-    end = len(listLine)
-    for index, nextLevel, _ in listHeading[listMatch[0] + 1:]:
-        if nextLevel <= level:
-            end = index
-            break
-    return [line.rstrip() for line in listLine[start:end]]
 
 
 def findPlace(listPlan: list[PlanDoc], query: str) -> list[str]:
