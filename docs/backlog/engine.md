@@ -99,9 +99,6 @@
 - `C-62` [정리] **통합 `integ6` 코드 리뷰가 남긴 정본 둘 · 폴백 모양**(2026-10-18 `code-reviewer`, 깨지는 것은 없음). 뿌리는 "범위 · 이름 · 목록의 정본이 둘"이다.
   ① 읽기 공통 범위 검사(`SerializerUtil::isWithinDeclaredRanges`)가 숫자 경계만 보고 필드 경계(`Min = "-_halfSize"`, `_pReadMinRange`)는 보지 않아 인스펙터와 읽기의 규칙이 갈린다 — 같은 함수가 둘 다 보게 한다.
   ② float32 로 보관하는 경계를 float64 칸과 견주면 `Min = 0.1` 자체가 범위 밖일 수 있다(의심, 그런 칸이 있는지 미확인) — 경계를 칸의 형식으로 보관하거나 칸 형식으로 견준다.
-  ③ `SkeletalAnimatorComponent` 의 inertialization 속도가 포즈를 건너뛴 프레임(숨김 · 화면 밖, feat6)을 모른다(의심 — 다시 보일 때 튐) — 건너뛰면 지난 포즈를 무효로 표시한다. 클립 없는 레이어 · 포즈 노드는 로그만 남기고 계속 돈다 — 그래프 로드 실패로 올린다.
-  ④ `GameInstanceBase` 가 필수 엔진 서비스 `GameNetSession` 을 `findSubsystem` 의 nullptr 로 조용히 건너뛴다 — 필수 조회로. ⑤ `SequenceBuffer` 의 `resetForReuse` 를 SFINAE 로 골라 이름을 틀리면 `T{}` 로 돌아간다 — 명시 특성으로.
-  ⑥ `SQLMigrationListDataKind` 의 드라이버 이름 목록이 손으로 적은 사본이다 — 드라이버 등록 표에서 받는다. ⑦ StarSkirmish 의 관전 프리셋 이름 `"watch"` 가 코드 리터럴이다 — `PROPERTY` 데이터로.
 
 - `C-56` [정리] **`GameDataXML` 이 범위를 따로 검사한다.** 2026-10-18 `feat18` 로 바이너리 · JSON · XML 읽기 공통 끝이 `PROPERTY( Min · Max )` 를 보게 됐는데
   게임 데이터 XML 읽기는 자체 범위 검사를 그대로 들고 있다. 공통 끝에 맡기고 자체 검사를 지운다(범위의 원본을 `PROPERTY` 하나로 — `C-39` 와 같은 뿌리).

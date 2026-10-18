@@ -154,6 +154,7 @@ namespace sw
         , _unitPrefab{}
         , _cameraRig{}
         , _watchFocus{ 32.0f, 0.0f, 30.0f }
+        , _watchCameraPreset{}
         , _huntIntervalSeconds{ 4.0f }
         , _arrivedRadius{ 10.0f }
         , _startMinerals{ 50 }
@@ -227,7 +228,7 @@ namespace sw
         // 처음 짓는 건물 · 유닛의 모델을 게임 스레드가 플레이 중에 디스크에서 읽지 않게 판을 열 때 워커로 미리 읽는다(느린 디스크의 히치).
         if ( _unitModels.isComplete() && _unitModels.getLoadedCount() == 0 )
             _unitModels.request( SkirmishUnitComponent::makeAllModelPaths() );
-        // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러선 프리셋(watch)으로 시작하고 WASD 도 카메라를 움직인다.
+        // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러선 프리셋(`_watchCameraPreset`, 씬 데이터)으로 시작하고 WASD 도 카메라를 움직인다.
         // 프리셋 고르기는 카메라 오브젝트의 시작 순서에 기대지 않는다(`startWithPreset` — 시작 전이면 시작 프리셋, 뒤면 컷).
         CameraDirectorComponent* pRig = findCameraRig();
         if ( pRig != nullptr )
@@ -236,7 +237,7 @@ namespace sw
             if ( _bHuman == SW_FALSE )
             {
                 pRig->setFocusPoint( _watchFocus );
-                pRig->startWithPreset( hashed_string( "watch" ) );
+                pRig->startWithPreset( _watchCameraPreset );
             }
         }
         if ( _bHuman == SW_TRUE )
@@ -672,6 +673,12 @@ namespace sw
             if ( _catalog.find( unitID ) != nullptr )
                 continue;
             SW_LOG_ERROR( "%#: build unit '%#' is not in %#", kOwner, unitID.c_str(), _unitDataPath.c_str() );
+            bValid = false;
+        }
+        // 관전 카메라 프리셋은 씬 데이터가 준다(코드에 기본 이름이 없다). 카탈로그에 있는지는 카메라가 시작할 때 본다(`CameraDirectorComponent::startWithPreset`).
+        if ( _watchCameraPreset.empty() )
+        {
+            SW_LOG_ERROR( "%#: _watchCameraPreset is empty - the scene must name the camera preset for AI vs AI", kOwner );
             bValid = false;
         }
         // 입력 액션은 입력 맵에 있어야 한다. 입력이 없는 실행(전용 서버 · 헤드리스)은 보지 않는다.

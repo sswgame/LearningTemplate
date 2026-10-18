@@ -50,6 +50,13 @@ namespace sw
          * @return 목록을 못 읽거나, 번호가 1 부터 빈틈없이 이어지지 않거나, 그 드라이버의 파일이 없거나, 디스크 폴더에 목록에 없는 `.sql` 이 있으면 false 를 반환합니다.
          */
         [[nodiscard]] static bool loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration, string& outError );
+        /**
+         * @brief 원본 폴더 @p folder 가 디스크에 있으면 그 안의 방언 분기 파일(`NNNN_이름.<드라이버>.sql`)이 가리키는 드라이버 이름을 @p inoutListName 에 겹치지 않게 더합니다.
+         * @details 팩에는 폴더가 없어 더할 것이 없다. 드라이버 등록 표(`SQLDriverRegistry`)에 아직 오르지 않은 드라이버(서버 키트가 처음 쓸 때 올리는 PostgreSQL)의
+         *          방언 분기도 목록 검사가 보게 한다.
+         * @return 폴더를 읽지 못하면 false 를 반환합니다.
+         */
+        [[nodiscard]] static bool collectDialectDriverNames( string_view folder, vector<string>& inoutListName, string& outError );
         /** @brief 아직 적용하지 않은 마이그레이션을 적용하고, 적용된 것은 체크섬을 확인합니다. 실패하면 아무것도 적용하지 않고 false 를 반환합니다. */
         [[nodiscard]] static bool apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, int64 nowMs, string& outError );
         static string             substituteTokens( string_view sql, const SQLDialect& dialect );

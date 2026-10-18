@@ -152,6 +152,13 @@ namespace sw
 
     bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
     {
+        // 네트워크 세션은 필수 엔진 서비스다(`EngineServiceList.xxx` 의 `Required` 행). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
+        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
+        if ( pNetSession == nullptr )
+        {
+            SW_LOG_ERROR( "Game instance cannot start - the required engine service GameNetSession is not bound to the game services" );
+            return false;
+        }
         _pWindow        = pWindow;
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
@@ -172,9 +179,7 @@ namespace sw
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
         // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
-        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
-        if ( pNetSession != nullptr )
-            pNetSession->openFromLaunch();
+        pNetSession->openFromLaunch();
         // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다).
         const bool bInitialized = loadAudioEvents() && onInitialize();
         registerSessionCommands();
@@ -375,10 +380,8 @@ namespace sw
         getSubsystem<LoadingScreenController>().update( realDeltaTime, bLoading, screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
-        // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다.
-        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
-        if ( pNetSession != nullptr )
-            pNetSession->update();
+        // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.
+        game::getSubsystem<GameNetSession>().update();
         onUpdate( deltaTime );
     }
 

@@ -173,7 +173,7 @@ namespace sw
          * @return 그 이름의 레이어가 없거나, 가중치를 파라미터("weight_param")가 정하는 레이어면 오류를 남기고 false 입니다(값의 출처는 하나다).
          */
         bool setGraphLayerWeight( const hashed_string& layerName, float32 weight );
-        /** @brief 그래프 레이어 수입니다(읽은 그래프의 "layers" 중 클립을 찾은 것). */
+        /** @brief 그래프 레이어 수입니다(읽은 그래프의 "layers"). 클립을 못 찾은 레이어가 있으면 그래프를 쓰지 않으므로 0 입니다. */
         uint32 getGraphLayerCount() const { return static_cast<uint32>( _listGraphLayer.size() ); }
 
         /**
@@ -222,6 +222,51 @@ namespace sw
         SkeletalAnimatorBinding& getBinding() { return _binding; }
 
     private:
+        /**
+         * @brief 화면에 보인 지난 두 포즈입니다. inertialization · 이어 섞기의 출발 포즈와 출발 속도가 여기서 나옵니다.
+         * @details 출발 포즈는 "지금 화면에 보이는 포즈" 여야 한다. 화면 밖 · 숨김으로 포즈를 건너뛴 프레임이 끼면(`AnimationFrameContext::_bOnScreen` 거짓) 아무도 보지 않은
+         *          옛 포즈라 무효로 표시한다(`invalidate`) — 다시 보일 때 옛 포즈에서 출발해 튀지 않는다. LOD 주기로 건너뛴 화면 안 프레임은 지난 포즈가 그대로
+         *          보이므로 남기고, 속도는 두 포즈 사이의 실제 시간(`getIntervalSeconds`)으로 구한다(한 프레임 시간으로 나누면 주기 배만큼 빠르다).
+         */
+        struct PoseHistory
+        {
+            /** @brief 시간 단계마다 흐른 시간을 셉니다(배율 적용). */
+            void advance( float32 deltaSeconds ) { _secondsSinceLast += deltaSeconds; }
+            /** @brief 이번 프레임에 만든 포즈를 기록합니다. 지난 포즈는 한 칸 뒤로 밀립니다. */
+            void record( const Pose& pose )
+            {
+                std::swap( _previous, _last );
+                _last             = pose;
+                _intervalSeconds  = _secondsSinceLast;
+                _secondsSinceLast = 0.0f;
+                _bPreviousValid   = _bLastValid;
+                _bLastValid       = SW_TRUE;
+            }
+            /** @brief 기록을 무효로 표시합니다(포즈가 화면에 보이지 않은 프레임이 끼었다). */
+            void invalidate()
+            {
+                _bLastValid     = SW_FALSE;
+                _bPreviousValid = SW_FALSE;
+            }
+            /** @brief 출발 포즈입니다. 무효면 nullptr 입니다. */
+            const Pose* findLast() const { return _bLastValid == SW_TRUE ? &_last : nullptr; }
+            /** @brief 출발 포즈의 한 기록 전 포즈입니다(출발 속도). 무효이거나 본 수가 다르면 nullptr 입니다. */
+            const Pose* findPrevious() const
+            {
+                return ( _bLastValid == SW_TRUE && _bPreviousValid == SW_TRUE && _previous.getBoneCount() == _last.getBoneCount() ) ? &_previous : nullptr;
+            }
+            /** @brief 두 기록 사이의 시간(초)입니다. 출발 속도를 구할 때 씁니다. */
+            float32 getIntervalSeconds() const { return _intervalSeconds; }
+
+        private:
+            Pose    _last{};
+            Pose    _previous{};
+            float32 _intervalSeconds{ 0.0f };
+            float32 _secondsSinceLast{ 0.0f };
+            uint8   _bLastValid{ SW_FALSE };
+            uint8   _bPreviousValid{ SW_FALSE };
+        };
+
         /** @brief 레이어 하나의 실행 상태입니다. */
         struct LayerState
         {
@@ -234,8 +279,7 @@ namespace sw
             const AnimationBoneMaskDef*     _pBoneMask{ nullptr };        ///< 그래프 레이어의 본 마스크다(`_graph` 안). nullptr 이면 `_desc._maskRootBone` 을 쓴다
             Pose                            _additiveReference;           ///< 가산 기준(클립 시각 0, 본 포즈)
             PoseInertializer                _inertializer;                ///< 다시 시작할 때 끊긴 레이어 포즈에서 이어 간다(`_desc._halfLifeSeconds` 가 0 보다 클 때)
-            Pose                            _lastLayerPose;               ///< 지난 평가에서 얹은 레이어 포즈다(inertialization 의 출발)
-            Pose                            _previousLayerPose;           ///< 그 한 프레임 전 포즈다(출발 속도)
+            PoseHistory                     _history;                     ///< 화면에 얹힌 지난 레이어 포즈다(inertialization 의 출발 · 속도)
             uint8                           _bRestartPending{ SW_FALSE }; ///< 다음 평가에서 inertialization 을 시작한다
         };
 
@@ -243,10 +287,18 @@ namespace sw
         void bindToUnit();
         /** @brief 그래프를 다시 읽고 노드의 클립을 미리 읽습니다. 그래프 레이어와 블렌드 스페이스 상태도 다시 만듭니다. */
         void loadGraph();
-        /** @brief 노드의 클립(블렌드 스페이스면 표본 클립)을 미리 읽고 블렌드 스페이스 상태를 다시 만듭니다. */
-        void rebuildGraphPlayables();
-        /** @brief 그래프의 "layers" 로 그래프 레이어를 다시 만듭니다. 클립을 못 찾은 레이어는 오류를 남기고 뺍니다. */
-        void rebuildGraphLayers();
+        /**
+         * @brief 그래프의 재생할 것을 다시 만듭니다(`rebuildGraphPlayables`). 이 애니메이터가 재생할 수 없는 것을 그래프가 적었으면 파일을 못 읽은 것과 같이
+         *        그래프를 쓰지 않습니다 — 빠진 노드 · 레이어만 빼고 도는 그래프는 데이터가 말한 것과 다른 포즈를 낸다.
+         */
+        void applyGraphPlayables();
+        /**
+         * @brief 노드의 클립(블렌드 스페이스면 표본 클립)을 미리 읽고 블렌드 스페이스 상태와 그래프 레이어를 다시 만듭니다.
+         * @return 포즈 노드(아직 평가하지 않는다), 표본 클립이 없는 블렌드 스페이스, 클립이 없는 레이어가 있으면 각각 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool rebuildGraphPlayables();
+        /** @brief 그래프의 "layers" 로 그래프 레이어를 다시 만듭니다. 클립을 못 찾은 레이어가 있으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool rebuildGraphLayers();
         /** @brief 블렌드 스페이스 상태의 가중치를 파라미터로 다시 구합니다. 현재 슬롯의 상태는 길이가 바뀌어도 위상을 지킵니다. */
         void updateBlendSpaceWeights();
         /** @brief 재생할 것이 이 애니메이터의 블렌드 스페이스 상태면 그것을, 아니면(클립) nullptr 을 반환합니다. */
@@ -322,9 +374,8 @@ namespace sw
         Pose                                                          _scratchTrackPose;
         Pose                                                          _scratchLayerPose;
         vector<uint8>                                                 _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
-        Pose                                                          _lastBasePose;         ///< 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 여기서 이어 섞는다
+        PoseHistory                                                   _baseHistory;          ///< 화면에 보인 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 · inertialization 이 여기서 출발한다
         Pose                                                          _carryOverPose;        ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
-        Pose                                                          _previousBasePose;     ///< `_lastBasePose` 의 한 프레임 전 포즈다(inertialization 의 시작 속도)
         PoseInertializer                                              _inertializer;         ///< inertialization 전이의 남은 차이다(기본 포즈에 더한다)
         shared_ptr<const AnimationClip>                               _sequencerClip;
         BoneTransform                                                 _rootMotionDelta;
@@ -338,6 +389,7 @@ namespace sw
         float32                                                       _carryOverDuration;
         uint32                                                        _seenInterruptCount;       ///< 플레이어의 중단 횟수를 마지막으로 확인한 값
         uint32                                                        _seenInertializationCount; ///< 플레이어의 inertialization 횟수를 마지막으로 확인한 값
+        uint64                                                        _lastTimeFrameIndex;       ///< 마지막 시간 단계의 프레임 번호다. 사이가 비면(쉬었다) 지난 포즈가 낡았다
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )
         uint8 _bExtractRootMotion : 1;
         PROPERTY( Category = "Animation", DisplayName = "Play On Begin", Tooltip = "Start the initial state at begin play" )
@@ -345,7 +397,7 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Root Motion Through Controller",
                   Tooltip = "Move by root motion through the sibling character controller (collides, climbs steps) instead of writing the transform" )
         uint8                  _bRootMotionThroughController : 1;
-        uint8                  _bLastBasePoseValid           : 1;
+        uint8                  _bPoseShownThisFrame          : 1; ///< 이번 프레임에 포즈를 만들었거나 지난 포즈가 화면에 그대로 보인다(다음 시간 단계가 기록의 유효를 판정한다)
         uint8                  _bCarryingOver                : 1;
         uint8                  _bInertializationPending      : 1; ///< 새 inertialization 이 다음 포즈 계산에서 시작되기를 기다린다
         [[maybe_unused]] uint8 _reserved                     : 2;

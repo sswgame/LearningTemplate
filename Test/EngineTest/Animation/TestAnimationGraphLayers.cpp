@@ -325,3 +325,103 @@ SW_TEST_CASE( AnimationGraphLayersTest, RestartedLayerInertializesFromInterrupte
     }
     SW_EXPECT_NEAR_EQUAL( 0.601f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 0.03f );
 }
+
+/**
+ * @brief [AnimationGraphLayersTest] 화면 밖에서 포즈를 건너뛰는 동안 일어난 inertialization 전이는 다시 보일 때 옛 포즈에서 출발하지 않는다 — 새 포즈다
+ * @details Idle(x 0) → Walk(x 2) 링크가 inertialization 이다. 보이는 동안 전이하면 첫 프레임은 끊긴 포즈(x 0)에서 이어 간다.
+ *          숨긴 채 전이하고 몇 프레임 뒤 다시 보이면, 지난 기록(x 0)은 아무도 보지 않은 옛 포즈라 출발점이 아니다 — 바로 x 2 다(예전에는 x 0 으로 튀었다).
+ */
+SW_TEST_CASE( AnimationGraphLayersTest, InertializationSkipsPoseNobodySaw )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const Skeleton skeleton = test::makeChainSkeleton( 2 );
+    const string   folder   = test::makeTempDirectory( "graph_inertialization_hidden" );
+    SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Idle", 0.0f, 31 ) );
+    SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Walk", 2.0f, 31 ) );
+    AnimationGraphAsset graph;
+    SW_ASSERT_TRUE( graph.parseJSON( R"({ "nodes": [ { "id": 1, "name": "Idle" }, { "id": 2, "name": "Walk" } ],
+        "links": [ { "id": 1, "from": 1, "to": 2, "blend_mode": "inertialization", "half_life": 0.2, "condition": { "param": "Speed", "op": ">", "value": 0.5 } } ] })" ) );
+    const string graphPath = FileUtil::joinPath( folder, "walk.animgraph.json" );
+    SW_ASSERT_TRUE( graph.saveToFile( graphPath ) );
+
+    for ( const bool bHiddenDuringTransition : { false, true } )
+    {
+        GameObjectManager manager;
+        GameObject*       pObject = manager.createGameObject( hashed_string( "Walker" ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        SkeletalMeshComponent*     pUnit     = pObject->addComponent<SkeletalMeshComponent>();
+        SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
+        SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
+        pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
+        pAnimator->setClipFolder( folder );
+        pAnimator->setAnimationGraphPath( graphPath );
+        pAnimator->setInitialState( "Idle" );
+        pAnimator->dispatchBeginPlay();
+        for ( uint32 frameIndex = 0; frameIndex < 4; ++frameIndex )
+        {
+            manager.getAnimationSystem().evaluate( 0.05f );
+        }
+        SW_EXPECT_NEAR_EQUAL( 0.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 1e-3f );
+
+        pAnimator->getParameters().setFloat( hashed_string( "Speed" ), 1.0f );
+        if ( bHiddenDuringTransition )
+        {
+            pUnit->setVisibleHint( false );
+            for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+            {
+                manager.getAnimationSystem().evaluate( 0.05f );
+            }
+            SW_EXPECT_TRUE( pAnimator->getCurrentStateName() == hashed_string( "Walk" ) );
+            pUnit->setVisibleHint( true );
+            manager.getAnimationSystem().evaluate( 0.05f );
+            SW_EXPECT_NEAR_EQUAL( 2.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 1e-3f ); // 옛 포즈(x 0)로 튀지 않았다
+        }
+        else
+        {
+            manager.getAnimationSystem().evaluate( 0.05f );
+            SW_EXPECT_TRUE( pAnimator->getCurrentStateName() == hashed_string( "Walk" ) );
+            SW_EXPECT_NEAR_EQUAL( 0.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 1e-3f ); // 보인 포즈에서 이어 간다
+        }
+    }
+}
+
+/**
+ * @brief [AnimationGraphLayersTest] 이 애니메이터가 재생할 수 없는 것을 적은 그래프는 쓰지 않는다 — 클립 없는 레이어 · 포즈 노드만 빼고 돌지 않는다
+ * @details 빠진 것만 빼고 돌면 데이터가 말한 것과 다른 포즈가 나온다. 파일을 못 읽은 그래프와 같이 플레이어에 그래프를 걸지 않는다.
+ */
+SW_TEST_CASE( AnimationGraphLayersTest, UnplayableGraphIsNotUsed )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const Skeleton skeleton = test::makeChainSkeleton( 2 );
+    const string   folder   = test::makeTempDirectory( "graph_unplayable" );
+    SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Base", 0.0f, 31 ) );
+
+    AnimationGraphAsset layerGraph;
+    AnimationGraphNode  node{};
+    node._id   = 1;
+    node._name = "Base";
+    layerGraph._listNode.push_back( node );
+    AnimationGraphLayerDef layer{};
+    layer._name     = hashed_string( "Missing" );
+    layer._clipName = hashed_string( "NoSuchClip" );
+    layer._weight   = 1.0f;
+    layer._blend    = AnimationLayerBlend::Override;
+    layerGraph._listLayer.push_back( layer );
+    const string layerGraphPath = FileUtil::joinPath( folder, "missing_layer.animgraph.json" );
+    SW_ASSERT_TRUE( layerGraph.saveToFile( layerGraphPath ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Broken" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SkeletalMeshComponent*     pUnit     = pObject->addComponent<SkeletalMeshComponent>();
+    SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
+    SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
+    pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
+    pAnimator->setClipFolder( folder );
+    {
+        test::ScopedDefensiveTestLog expected( "a graph layer without its clip fails the graph" );
+        pAnimator->setAnimationGraphPath( layerGraphPath );
+    }
+    SW_EXPECT_EQUAL( 0u, pAnimator->getGraphLayerCount() );
+    SW_EXPECT_TRUE( pAnimator->getGraphPlayer().getGraph() == nullptr );
+}

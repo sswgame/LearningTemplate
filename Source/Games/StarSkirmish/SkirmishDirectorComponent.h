@@ -124,8 +124,10 @@ namespace sw
         string _unitPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse is picked through" )
         GameObjectHandle _cameraRig;
-        PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map); the height is the 'watch' camera preset", Units = m )
+        PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map); the height is the Watch Camera Preset", Units = m )
         float3 _watchFocus;
+        PROPERTY( Category = "Scene", DisplayName = "Watch Camera Preset", Tooltip = "Camera preset id (camera rig catalog) the match starts with when both players are AI; required" )
+        hashed_string _watchCameraPreset;
         PROPERTY( Category = "Rules", DisplayName = "Hunt Interval", Tooltip = "Seconds between sending idle army at the enemy start to the nearest enemy building", Min = 0.1 )
         float32 _huntIntervalSeconds;
         PROPERTY( Category = "Rules", DisplayName = "Arrived Radius", Tooltip = "Army within this distance of the enemy start counts as arrived", Min = 0.0, Units = m )

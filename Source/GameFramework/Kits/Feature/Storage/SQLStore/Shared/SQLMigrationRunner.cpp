@@ -218,6 +218,28 @@ namespace sw
         return true;
     }
 
+    bool SQLMigrationRunner::collectDialectDriverNames( string_view folder, vector<string>& inoutListName, string& outError )
+    {
+        const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : ResourcePaths::makeAbsolutePath( folder );
+        if ( diskFolder.empty() || FileUtil::isDirectory( diskFolder ) == false )
+            return true;
+        vector<string> listFilePath;
+        if ( FileUtil::collectFiles( diskFolder, ".sql", listFilePath, false ) == false )
+        {
+            outError = SQLMigrationRunnerInternal::formatText( "cannot read the migration folder '%#'", diskFolder );
+            return false;
+        }
+        for ( const string& filePath : listFilePath )
+        {
+            SQLMigrationRunnerInternal::MigrationFile file;
+            if ( SQLMigrationRunnerInternal::parseFileName( FileUtil::getFileNamePart( filePath ), file ) == false || file._driverName.empty() )
+                continue; // 이름이 틀린 파일은 `loadMigrations` 가 오류로 멈춘다
+            if ( std::find( inoutListName.begin(), inoutListName.end(), file._driverName ) == inoutListName.end() )
+                inoutListName.push_back( file._driverName );
+        }
+        return true;
+    }
+
     bool SQLMigrationRunner::apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, int64 nowMs, string& outError )
     {
         const SQLDialect& dialect = connection.getDialect();
