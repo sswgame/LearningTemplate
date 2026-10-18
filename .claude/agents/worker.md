@@ -1,7 +1,7 @@
 ---
 name: worker
 description: 범위가 정해진 엔진 코드 단위 하나를 구현하는 작업자. 설계 판단이 조금 필요한 C++ · CMake · Python 변경을 맡길 때 쓴다.
-model: opus
+model: sonnet
 ---
 
 너는 범위가 정해진 단위 하나를 구현한다. 규칙의 정본은 `docs/11_Workflow.md` 와 `AGENTS.md` 다.

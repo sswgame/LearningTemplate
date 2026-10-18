@@ -138,8 +138,8 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 | 규칙이 정해진 반복 편집(이름 바꾸기 · 이동 · 머리 줄 채우기 · 용어 치환 · 링크 고치기) | `mech-worker`(sonnet) | low |
 | 문서 이관 · 정리처럼 항목마다 분류 판단이 드는 일(정본이 이미 지정돼 있을 때) | `mech-worker`(sonnet) | medium |
 | 읽기 전용 대조 점검(낡은 문장 · 겹침 찾기, 모르면 "판단 불가"로 표시) | `Explore` 또는 `general-purpose`(sonnet) | medium |
-| 범위가 정해진 C++ · CMake · 파이썬 변경, 새 도구 스크립트 + 테스트(변경이 국소적이고 명세가 있을 때) | `worker`(sonnet으로 낮춤) | medium |
-| 설계 판단이 드는 C++ · CMake · 파이썬 변경(공개 형식 · 모듈 경계에 닿음) | `worker`(opus) | medium |
+| 범위가 정해진 C++ · CMake · 파이썬 변경, 새 도구 스크립트 + 테스트(변경이 국소적이고 명세가 있을 때) | `worker`(정의의 기본, sonnet) | medium |
+| 설계 판단이 드는 C++ · CMake · 파이썬 변경(공개 형식 · 모듈 경계에 닿음) | `worker`(`model: opus` 를 지정해 올림) | medium |
 | 설계 · 모듈을 넘는 리팩터 · GPU/스레드 결함 · 배치 통합 | `integrator`(opus) | high |
 | GPU · 창을 쓰는 실행과 캡처 확인 | `gpu-verifier`(sonnet) | low |
 | 에디터 UI 캡처의 UX 점검(읽기 전용, 기준은 [EditorUX](plans/EditorUX.md)) | `ux-reviewer`(sonnet) | medium |
