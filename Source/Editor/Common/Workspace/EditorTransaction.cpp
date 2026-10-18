@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -11,8 +12,10 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/CommandStack.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
+SW_LOG_CALLER( "EditorTransaction" );
 namespace sw::editor
 {
     namespace
@@ -47,7 +50,8 @@ namespace sw::editor
                 GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectID ) );
                 if ( pContext != nullptr && pTarget != nullptr )
                 {
-                    EditorSelection& selection = pContext->getSubsystem<EditorSelection>();
+                    // 이 처리기는 전역 스택에만 걸린다 — 전역 스택은 메인 씬 오브젝트만 받는다(미리보기 씬 것은 창의 스택, `findPreviewScopeOf`).
+                    EditorSelection& selection = editor::getMainSceneSelection();
                     if ( notice._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
                         selection.selectObject( pTarget, SelectionMode::Remove );
                     else if ( notice._kind == ObjectEditKind::Recreated )
@@ -69,6 +73,43 @@ namespace sw::editor
                 }
                 markActiveSceneDirty();
             }
+
+            /**
+             * @brief @p obj 가 미리보기 씬에 살면 그 씬에 묶인 선택(창의 범위)입니다. 메인 씬 오브젝트면 nullptr 입니다.
+             * @details 기록이 갈 스택은 부른 쪽의 포커스가 아니라 **오브젝트가 사는 씬**이 정한다 — 명령이 창 선택의 오브젝트를 고쳐도 전역 스택 ·
+             *          메인 씬 dirty 로 새지 않는다(창을 닫으면 그 기록도 함께 사라진다, 계획의 되돌리기 어려운 결정 4).
+             */
+            static EditorSelection* findPreviewScopeOf( const GameObject& obj )
+            {
+                const GameObjectManager* pManager = obj.getManager();
+                if ( pManager == nullptr )
+                    return nullptr;
+                for ( EditorSelection* pSelection : editor::getPreviewSelections() )
+                {
+                    const Scene* pScene = pSelection->getScene();
+                    if ( pScene != nullptr && pScene->getObjectManager() == pManager )
+                        return pSelection;
+                }
+                return nullptr;
+            }
+
+            /**
+             * @brief 묶음(`beginTransaction` …)을 걸 스택들 — 전역 스택과 미리보기 창의 스택입니다.
+             * @details 묶음은 어느 씬의 기록이 들어올지 모른다(기록마다 오브젝트의 씬이 스택을 고른다). 모두에 걸고, 기록이 들지 않은 빈 묶음은 스택이 버린다.
+             */
+            static void collectRecordStacks( vector<CommandStack*>& outListStack )
+            {
+                outListStack.clear();
+                CommandStack* pGlobal = getCommandStack();
+                if ( pGlobal != nullptr )
+                    outListStack.push_back( pGlobal );
+                for ( EditorSelection* pSelection : editor::getPreviewSelections() )
+                {
+                    CommandStack* pStack = pSelection->findPreviewCommandStack();
+                    if ( pStack != nullptr && pStack != pGlobal )
+                        outListStack.push_back( pStack );
+                }
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -77,26 +118,32 @@ namespace sw::editor
 {
     void EditorTransaction::beginTransaction( string_view label )
     {
-        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
-        if ( pStack == nullptr )
-            return;
-        pStack->beginTransaction( label );
+        vector<CommandStack*> listStack;
+        EditorTransactionInternal::collectRecordStacks( listStack );
+        for ( CommandStack* pStack : listStack )
+        {
+            pStack->beginTransaction( label );
+        }
     }
 
     void EditorTransaction::endTransaction()
     {
-        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
-        if ( pStack == nullptr )
-            return;
-        pStack->endTransaction();
+        vector<CommandStack*> listStack;
+        EditorTransactionInternal::collectRecordStacks( listStack );
+        for ( CommandStack* pStack : listStack )
+        {
+            pStack->endTransaction();
+        }
     }
 
     void EditorTransaction::cancelTransaction()
     {
-        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
-        if ( pStack == nullptr )
-            return;
-        pStack->cancelTransaction();
+        vector<CommandStack*> listStack;
+        EditorTransactionInternal::collectRecordStacks( listStack );
+        for ( CommandStack* pStack : listStack )
+        {
+            pStack->cancelTransaction();
+        }
     }
 
     void EditorTransaction::bindObjectEditListener( CommandStack& stack )
@@ -115,6 +162,13 @@ namespace sw::editor
         if ( pObj == nullptr || before._xml == after._xml )
             return;
 
+        const EditorSelection* pPreviewScope = EditorTransactionInternal::findPreviewScopeOf( *pObj );
+        if ( pPreviewScope != nullptr )
+        {
+            pPreviewScope->recordModify( *pObj, before, after, label ); // 창의 스택 — 메인 씬은 dirty 가 아니다
+            return;
+        }
+
         CommandStack* pStack        = EditorTransactionInternal::getCommandStack();
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pStack == nullptr || pSceneManager == nullptr )
@@ -130,8 +184,22 @@ namespace sw::editor
         if ( pObj == nullptr )
             return;
 
-        CommandStack* pStack        = EditorTransactionInternal::getCommandStack();
-        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
+        SceneManager*          pSceneManager = editor::findSubsystem<SceneManager>();
+        const EditorSelection* pPreviewScope = EditorTransactionInternal::findPreviewScopeOf( *pObj );
+        if ( pPreviewScope != nullptr )
+        {
+            // 창의 스택에 남긴다 — 메인 씬은 dirty 가 아니다. 미리보기 스택에는 메인 선택을 고치는 처리기(`onObjectEdit`)를 걸지 않는다.
+            CommandStack* pPreviewStack = pPreviewScope->findPreviewCommandStack();
+            if ( pSceneManager == nullptr || pPreviewStack == nullptr )
+            {
+                SW_LOG_ERROR( "No SceneManager - the lifetime edit of '%#' in the preview scene is not recorded", pObj->getName().c_str() );
+                return;
+            }
+            pPreviewStack->push( ObjectUndoUtil::makeLifetime( *pPreviewStack, *pSceneManager, pObj, edit, label ) );
+            return;
+        }
+
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
         if ( pStack == nullptr || pSceneManager == nullptr )
         {
             EditorTransactionInternal::markActiveSceneDirty();

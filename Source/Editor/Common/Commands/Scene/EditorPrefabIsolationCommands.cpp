@@ -202,8 +202,8 @@ namespace sw::editor
         const bool bDiscardSpawnedRoot = frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pManager != nullptr && pRoot != nullptr;
         if ( bDiscardSpawnedRoot )
         {
-            if ( pContext->getSubsystem<EditorSelection>().hasObject( pRoot ) )
-                pContext->getSubsystem<EditorSelection>().selectObject( pRoot, SelectionMode::Remove );
+            if ( editor::getMainSceneSelection().hasObject( pRoot ) )
+                editor::getMainSceneSelection().selectObject( pRoot, SelectionMode::Remove );
             pManager->destroyObject( pRoot );
             pRoot = nullptr;
         }

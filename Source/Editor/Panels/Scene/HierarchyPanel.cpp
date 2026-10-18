@@ -144,7 +144,7 @@ namespace sw::editor
             {
                 EditorContext*     pContext = EditorContext::get();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
-                GameObject*        pObject  = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
+                GameObject*        pObject  = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
                 if ( pManager != nullptr && pObject != nullptr )
                     (void)EditorSiblingOrder::moveStep( *pManager, pObject, bDown, findEditorCameraObject() ); // 끝이면 아무것도 하지 않는다
             }
@@ -166,7 +166,7 @@ namespace sw::editor
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
                     return;
-                GameObject* pSelected = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
+                GameObject* pSelected = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
                 GameObject* pParent   = pSelected != nullptr && EditorSiblingOrder::isFolder( *pSelected ) ? pSelected : nullptr;
                 (void)EditorSiblingOrder::createFolder( *pManager, pParent ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
             }
@@ -528,7 +528,7 @@ namespace sw::editor
                 }
 
                 const uint64 objectID  = pObj->getObjectID();
-                const bool   bSelected = pContext->getSubsystem<EditorSelection>().hasObject( pObj );
+                const bool   bSelected = editor::getMainSceneSelection().hasObject( pObj );
 
                 ImGui::PushID( static_cast<int32>( objectID ) );
 
@@ -624,7 +624,7 @@ namespace sw::editor
                             const size_t first = MathUtil::min( anchorIndex, clickIndex );
                             const size_t last  = MathUtil::max( anchorIndex, clickIndex );
                             if ( io.KeyCtrl == false )
-                                pContext->getSubsystem<EditorSelection>().clearObjectSelection();
+                                editor::getMainSceneSelection().clearObjectSelection();
                             for ( size_t rowIndex = first; rowIndex <= last; ++rowIndex )
                             {
                                 GameObject* pRow = pManager->findGameObjectByID( listRow[rowIndex] );
@@ -772,7 +772,7 @@ namespace sw::editor
         rowState._listDrawnRow.clear();
         {
             EditorContext*    pContext             = EditorContext::get();
-            const GameObject* pPrimary             = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
+            const GameObject* pPrimary             = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
             const uint64      primaryID            = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
             const bool        bRevealPrimaryObject = primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0;
             if ( bRevealPrimaryObject )
@@ -911,8 +911,10 @@ namespace sw::editor
         // 단축키는 Ctrl+D 복제, Ctrl+C 와 Ctrl+V 복사와 붙여 넣기, Ctrl+A 모두 선택, ↑↓ 이동, F2 이름 바꾸기, Delete 삭제다
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
+            // 메인 월드를 보여 주는 창이 포커스다 — 인스펙터 · 전역 명령이 다시 메인 선택을 겨눈다(미리보기 창이 걸어 둔 것을 푼다).
+            editor::setFocusedSelection( nullptr );
             const ImGuiIO&   io              = ImGui::GetIO();
-            EditorSelection& editorSelection = pContext->getSubsystem<EditorSelection>();
+            EditorSelection& editorSelection = editor::getMainSceneSelection();
             // 복사본으로 받는다. 아래 삭제가 순회 도중 선택 목록에서 항목을 빼기 때문이다.
             vector<GameObject*> listSel;
             editorSelection.getSelectedObjects( listSel );

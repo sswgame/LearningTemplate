@@ -7,6 +7,7 @@
  *          파일들을 한 번역 단위로 합칠 때 재정의가 됩니다.
  */
 #pragma once
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw
@@ -77,6 +78,28 @@ namespace sw::editor
 
         ScopedSceneManagerService( const ScopedSceneManagerService& )            = delete;
         ScopedSceneManagerService& operator=( const ScopedSceneManagerService& ) = delete;
+
+    private:
+        SubsystemScope    _scope;       ///< 이 서비스만 든 범위
+        ScopedEditorScope _activeScope; ///< 사는 동안 지금 에디터 범위로 건다(앞 범위를 상위로 잇는다)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 스코프 동안 선택을 메인 씬의 선택으로 걸어 둡니다 — `editor::getMainSceneSelection` · `getFocusedSelection` 이 이것을 돌려줍니다. */
+    class ScopedMainSceneSelectionService
+    {
+    public:
+        explicit ScopedMainSceneSelectionService( EditorSelection& selection )
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.bind( &selection ); // 새 범위라 겹치지 않는다
+        }
+
+        ScopedMainSceneSelectionService( const ScopedMainSceneSelectionService& )            = delete;
+        ScopedMainSceneSelectionService& operator=( const ScopedMainSceneSelectionService& ) = delete;
 
     private:
         SubsystemScope    _scope;       ///< 이 서비스만 든 범위

@@ -156,7 +156,7 @@ namespace sw::editor
         GameObject* pObject = MapCheckPanelInternal::findIssueObject( _listRow[rowIndex] );
         if ( pObject == nullptr )
             return false;
-        pContext->getSubsystem<EditorSelection>().selectObject( pObject );
+        editor::getMainSceneSelection().selectObject( pObject );
         return true;
     }
 
@@ -233,7 +233,7 @@ namespace sw::editor
         ImGui::TableHeadersRow();
 
         EditorContext*    pContext = EditorContext::get();
-        const GameObject* pPrimary = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
+        const GameObject* pPrimary = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
         for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( _listRow.size() ); ++rowIndex )
         {
             const ValidationIssue& issue   = _listRow[rowIndex];

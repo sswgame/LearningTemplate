@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Localization/LocText.h"
@@ -28,12 +29,13 @@ namespace sw::editor
         {
             static constexpr Color kIsolationText{ 1.0f, 0.75f, 0.2f, 1.0f };
 
+            /** @brief 오버라이드를 볼 프리팹 인스턴스 — 메인 씬에 놓인 인스턴스다(언리얼 레벨의 프리팹 · 블루프린트 인스턴스 패널처럼 레벨 선택). */
             static GameObject* getPrefabTargetInstance()
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                return editor::getMainSceneSelection().getPrimaryObject();
             }
         };
     } // namespace
@@ -70,7 +72,7 @@ namespace sw::editor
         uint64         objectID{ 0 };
         if ( pContext != nullptr )
         {
-            GameObject* pPrimary       = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+            GameObject* pPrimary       = editor::getMainSceneSelection().getPrimaryObject();
             objectID                   = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
             const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::Prefab );
             if ( matching.empty() == false )

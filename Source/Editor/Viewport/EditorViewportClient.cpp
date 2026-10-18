@@ -167,7 +167,7 @@ namespace sw::editor
     void EditorViewportClient::drawOverlays( const float2& canvasMin, const float2& canvasSize )
     {
         EditorContext* pContext      = EditorContext::get();
-        const bool     bHasSelection = pContext != nullptr && pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() > 0;
+        const bool     bHasSelection = pContext != nullptr && editor::getMainSceneSelection().getSelectedObjectCount() > 0;
         _overlays.draw( canvasMin, canvasSize, _toolbarSettings, bHasSelection );
     }
 
@@ -182,6 +182,9 @@ namespace sw::editor
         // 캔버스(이미지)의 호버와 클릭은 지금 읽는다. 뒤에서 시각화가 레이블 위치에 항목을 추가하면(빌보드) "마지막 항목" 이 바뀐다.
         const bool bCanvasHovered = ImGui::IsItemHovered();
         const bool bCanvasClicked = ImGui::IsItemClicked( ImGuiMouseButton_Left );
+        // 씬 뷰(메인 월드)가 포커스면 인스펙터 · 전역 명령이 다시 메인 선택을 겨눈다 — 미리보기 창이 걸어 둔 것을 푼다(`editor::getFocusedSelection`).
+        if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) )
+            editor::setFocusedSelection( nullptr );
 
         CameraComponent* pCamera = getSceneViewCamera();
         const float2     canvasPos{ imagePos.x, imagePos.y };
@@ -245,7 +248,7 @@ namespace sw::editor
                 EditorContext* pGizmoContext = EditorContext::get();
                 const bool     bGizmoYields  = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
                 if ( pGizmoContext != nullptr && bGizmoYields == false )
-                    _gizmo.draw( pGizmoContext->getSubsystem<EditorSelection>(), arrView, arrProj, canvasPos, canvasSize, _toolbarSettings ); // 메인 뷰포트는 메인 선택
+                    _gizmo.draw( editor::getMainSceneSelection(), arrView, arrProj, canvasPos, canvasSize, _toolbarSettings ); // 메인 뷰포트는 메인 선택
             }
 
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );

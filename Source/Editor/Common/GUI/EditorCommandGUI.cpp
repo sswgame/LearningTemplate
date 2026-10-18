@@ -170,18 +170,18 @@ namespace sw::editor
                 EditorPlaySession::play();
             }
 
+            /** @brief 전역 명령이 고칠 오브젝트 — 겨누는 창의 선택의 주 오브젝트입니다(언리얼은 포커스된 툴킷의 명령 목록이 받는다). */
             static GameObject* primaryObject()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return nullptr;
-                return pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                const EditorSelection* pSelection = editor::getFocusedSelection();
+                return pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
             }
 
+            /** @brief 인스펙터에서 고른 컴포넌트입니다. 컴포넌트 고르기는 메인 워크스페이스의 것이라 메인 씬의 선택에서 찾는다. */
             static Component* selectedComponent()
             {
                 EditorContext* pContext = EditorContext::get();
-                GameObject*    pObj     = primaryObject();
+                GameObject*    pObj     = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
                 if ( pContext == nullptr || pObj == nullptr )
                     return nullptr;
                 const uint64 componentID = pContext->getSubsystem<EditorWorkspace>().getSelectedComponentID();
@@ -309,11 +309,11 @@ namespace sw::editor
                 EditorTransformCommands::distributeSelectedObjects( TAxis );
             }
 
-            /** @brief 선택한 오브젝트를 스폰한 프리팹의 경로입니다. 프리팹 인스턴스가 아니면 비어 있습니다. */
+            /** @brief 선택한 오브젝트를 스폰한 프리팹의 경로입니다. 프리팹 인스턴스가 아니면 비어 있습니다. 놓인 프리팹 표는 메인 씬의 것이라 메인 선택을 본다. */
             static string findSelectedPrefabPath( GameObject*& pOutObj )
             {
                 EditorContext* pContext = EditorContext::get();
-                pOutObj                 = ( pContext != nullptr ) ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
+                pOutObj                 = ( pContext != nullptr ) ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
                 if ( pOutObj == nullptr )
                     return {};
                 return string{ pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pOutObj ) };
@@ -355,12 +355,11 @@ namespace sw::editor
                 return pCompiler != nullptr && pCompiler->isCompiling();
             }
 
+            /** @brief 전역 명령(정렬 · 분배 · 바닥에 붙이기)의 활성 조건 — 명령이 고칠 겨누는 창의 선택 수입니다. */
             static size_t selectedObjectCount()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return 0;
-                return pContext->getSubsystem<EditorSelection>().getSelectedObjectCount();
+                const EditorSelection* pSelection = editor::getFocusedSelection();
+                return pSelection != nullptr ? pSelection->getSelectedObjectCount() : 0;
             }
 
             static bool hasSelection()

@@ -41,7 +41,7 @@ namespace sw::editor
                 const bool     bInvalidProbeSetup = pContext == nullptr || pRegistry == nullptr || dot == string::npos;
                 if ( bInvalidProbeSetup )
                     return false;
-                GameObject* pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 if ( pObject == nullptr )
                     return false;
                 Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorProbeProperty.substr( 0, dot ).c_str() ) );

@@ -42,7 +42,8 @@ namespace sw::editor
      *          **범위**: 에디터 컨텍스트가 가진 하나(메인 선택)는 편집 중인 씬(`editor::findGameObject`)과 전역 Undo 스택을 쓴다. 미리보기 창
      *          (`EditorPreviewPanel`)은 자기 인스턴스를 자기 씬 · 자기 스택에 묶는다(`bindPreviewScope`, `docs/plans/EditorMultiWorld.md` 2.3).
      *          인스펙터 · 기즈모처럼 "지금 겨누는 선택" 을 쓰는 곳은 `editor::getFocusedSelection` 하나로 묻는다 — 가장 최근에 바뀌거나 포커스를 얻은
-     *          선택이다(메인 선택이 바뀌면 메인으로 돌아온다).
+     *          선택이다(메인 선택이 바뀌거나 메인 씬 창이 포커스를 얻으면 메인으로 돌아온다). 타입 조회로는 얻지 못한다(`kAccessorOnly`) —
+     *          `EditorService.h` 의 세 접근자 중 하나를 골라 호출부에 어느 선택인지 적는다.
      */
     class SW_EDITOR_API EditorSelection : public EditorSubsystem
     {
@@ -50,12 +51,15 @@ namespace sw::editor
         EditorSelection()                                    = default;
         EditorSelection( const EditorSelection& )            = delete;
         EditorSelection& operator=( const EditorSelection& ) = delete;
-        ~EditorSelection() override                          = default;
+        /** @brief 미리보기 씬에 묶인 채 사라지면 묶음을 풉니다(`unbindPreviewScope`) — 목록(`editor::getPreviewSelections`)에 빈 포인터를 남기지 않는다. */
+        ~EditorSelection() override;
 
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorSelection";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 타입으로 찾지 못한다 — 메인 · 창마다 여럿이라 `editor::getMainSceneSelection` · `getFocusedSelection` · `findSelectionOf` 로 얻는다(`kIsAccessorOnlySubsystem`). */
+        static constexpr bool kAccessorOnly = true;
+        const utf8*           getSubsystemName() const override { return kSubsystemName; }
 
         // ------------------------------------------------------------------------------
         // 멤버 메서드
@@ -96,6 +100,8 @@ namespace sw::editor
         void unbindPreviewScope();
         /** @brief 미리보기 씬에 묶인 선택이면 true 입니다. */
         bool isPreviewScope() const { return _pPreviewScene != nullptr; }
+        /** @brief 묶인 창의 Undo 스택입니다. 메인 선택이면 nullptr 입니다(메인은 에디터 전역 스택 — `EditorTransaction`). */
+        CommandStack* findPreviewCommandStack() const { return _pPreviewStack; }
         /** @brief 이 선택의 오브젝트가 사는 씬입니다 — 묶인 미리보기 씬, 아니면 편집 중인 씬입니다. 없으면 nullptr 입니다. */
         Scene* getScene() const;
         /** @brief 이 선택의 범위에서 핸들을 풉니다. 사라졌으면 nullptr 입니다. */

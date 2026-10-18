@@ -32,7 +32,7 @@ namespace sw::editor
             static bool canKeepChanges()
             {
                 EditorContext* pContext = EditorContext::get();
-                return isSessionRunning() && pContext != nullptr && pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() > 0;
+                return isSessionRunning() && pContext != nullptr && editor::getMainSceneSelection().getSelectedObjectCount() > 0;
             }
 
             static void runToggleEject() { EditorPlayCommands::toggleEject(); }
@@ -122,13 +122,14 @@ namespace sw::editor
 
     uint32 EditorPlayCommands::keepSelectedChanges()
     {
+        // 플레이 세션은 메인 월드에서 돈다 — 남길 변경은 메인 씬의 선택이다.
         EditorContext*   pContext             = EditorContext::get();
         PlaySessionData* pData                = EditorPlaySession::findData();
         const bool       bNoActivePlaySession = pContext == nullptr || pData == nullptr || pData->_state == PlaySessionState::Stopped;
         if ( bNoActivePlaySession )
             return 0;
         vector<GameObject*> listSelected;
-        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+        editor::getMainSceneSelection().getSelectedObjects( listSelected );
         uint32 keptCount{ 0 };
         for ( const GameObject* pObject : listSelected )
         {

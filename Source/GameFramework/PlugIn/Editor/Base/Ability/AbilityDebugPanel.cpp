@@ -21,12 +21,12 @@ namespace sw::editor
 {
     AbilitySystemComponent* AbilityDebugPanel::findTarget()
     {
-        // 선택한 오브젝트에 컴포넌트가 있으면 그것을 본다
+        // 선택한 오브젝트에 컴포넌트가 있으면 그것을 본다 — 도는 월드(메인 씬)를 디버그하는 창이라 메인 씬의 선택이다
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
         {
             vector<GameObject*> listSelected;
-            pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+            editor::getMainSceneSelection().getSelectedObjects( listSelected );
             for ( GameObject* pObject : listSelected )
             {
                 AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;

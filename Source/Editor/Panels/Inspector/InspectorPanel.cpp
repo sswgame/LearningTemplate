@@ -155,7 +155,7 @@ namespace sw::editor
 
         EditorWorkspace&    ws = pContext->getSubsystem<EditorWorkspace>();
         vector<GameObject*> listSelected;
-        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+        editor::getMainSceneSelection().getSelectedObjects( listSelected );
         if ( listSelected.size() > 1 && _lockedObjectID == 0 )
         {
             drawMultiSelection( listSelected );
@@ -355,17 +355,48 @@ namespace sw::editor
         ImGui::TextUnformatted( pObj->getName().c_str() );
         ImGui::Separator();
         _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
-        for ( Component* pComp : pObj->getComponents() )
+        // 구조 편집(추가 · 제거)도 메인과 같은 명령(`EditorSceneCommands`)이다 — 기록은 오브젝트가 사는 씬이 고른 창의 스택에 간다(`EditorTransaction`).
+        // 복사한다. 아래에서 컴포넌트를 제거할 수 있어 원본을 순회할 수 없다.
+        const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
+        for ( Component* pComp : listComponent )
         {
             if ( pComp == nullptr || pComp->getTypeInfo() == nullptr )
                 continue;
             ImGui::PushID( pComp );
-            if ( ImGui::CollapsingHeader( pComp->getTypeInfo()->getDisplayName(), ImGuiTreeNodeFlags_DefaultOpen ) )
+            bool       bRemove{ false };
+            const bool bOpen = ImGui::CollapsingHeader( pComp->getTypeInfo()->getDisplayName(), ImGuiTreeNodeFlags_DefaultOpen );
+            if ( ImGui::BeginPopupContextItem( "PreviewCompCtx" ) )
+            {
+                bRemove = ImGui::MenuItem( "Remove Component" );
+                ImGui::EndPopup();
+            }
+            if ( bOpen && bRemove == false )
             {
                 const EditorPropertyGridTarget target{ pComp, pComp->getTypeInfo(), pComp, pObj, {}, {} };
                 _propertyGrid.drawProperties( target, nullptr, {} );
             }
             ImGui::PopID();
+            if ( bRemove )
+            {
+                (void)EditorSceneCommands::destroyComponent( pObj->getManager(), pObj, pComp ); // 막혔으면(플레이 중) 그대로 남고 카드가 보인다
+                break;
+            }
+        }
+
+        ImGui::Spacing();
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add Component" ) ) )
+        {
+            _addComponentSearch.clear();
+            ImGui::OpenPopup( "PreviewAddComponent" );
+        }
+        if ( ImGui::BeginPopup( "PreviewAddComponent" ) )
+        {
+            bool bFailed{ false };
+            if ( EditorComponentMenu::drawAddComponentList( pObj, _addComponentSearch, "inspector.previewAddComponent", ImGui::IsWindowAppearing(), bFailed ) )
+                ImGui::CloseCurrentPopup();
+            if ( bFailed )
+                SW_LOG_WARNING( "Could not add the component to '%#'", pObj->getName().c_str() );
+            ImGui::EndPopup();
         }
     }
 

@@ -163,7 +163,7 @@ namespace sw::editor
                 if ( pSession == nullptr || pSceneManager == nullptr )
                     return;
                 const EditorWorkspace&     workspace = context.getSubsystem<EditorWorkspace>();
-                const EditorSelection&     selection = context.getSubsystem<EditorSelection>();
+                const EditorSelection&     selection = editor::getMainSceneSelection();
                 EditSessionState::Snapshot snapshot{};
                 // 워크스페이스가 아직 이 세대를 보지 못했으면 선택 · 표시는 옛 씬의 것이다 — 세대를 그대로 적어 다음 인스턴스가 버리게 한다.
                 snapshot._sceneGeneration = workspace.getObservedSceneGeneration();
@@ -202,7 +202,7 @@ namespace sw::editor
                     if ( GameObject* pObject = editor::findGameObject( GameObjectHandle::make( objectID ) ) )
                         listObject.push_back( pObject );
                 }
-                EditorSelection& selection = context.getSubsystem<EditorSelection>();
+                EditorSelection& selection = editor::getMainSceneSelection();
                 if ( listObject.empty() == false )
                     selection.selectObjects( listObject, SelectionMode::Replace );
                 if ( snapshot._listSelectedAsset.empty() == false )

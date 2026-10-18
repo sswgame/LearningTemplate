@@ -110,7 +110,7 @@ namespace sw::editor
                 if ( pContext == nullptr )
                     return;
                 vector<GameObject*> listSelected;
-                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+                editor::getMainSceneSelection().getSelectedObjects( listSelected );
                 // 주황(유니티 선택 외곽선 색) — 테마 강조색은 파랑 계열이라 격자 · 카메라 프러스텀과 섞인다.
                 const ImU32 color = EditorColorUtil::toImU32( EditorThemeUtil::getSelectionOutlineColor() );
                 for ( const GameObject* pObject : listSelected )

@@ -268,7 +268,7 @@ namespace sw::editor
                 vector<GameObject*> listMatch;
                 EditorSceneCommands::collectObjectsWithTag( *pManager, tag, listMatch );
                 (void)context.expect( EditorSceneCommands::selectObjects( listMatch ) == 2, "selectObjects did not take both tagged objects" );
-                (void)context.expect( pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() == 2, "the editor selection does not hold both tagged objects" );
+                (void)context.expect( editor::getMainSceneSelection().getSelectedObjectCount() == 2, "the editor selection does not hold both tagged objects" );
 
                 pContext->getSubsystem<EditorWorkspace>().clearSelection();
                 pManager->destroyObject( pFirst );

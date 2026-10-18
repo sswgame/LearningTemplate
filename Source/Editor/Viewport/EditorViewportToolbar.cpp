@@ -218,7 +218,7 @@ namespace sw::editor
 
         // 정렬은 둘 이상 골랐을 때만 쓴다 — 단추는 늘 두고 막아 둔다(바 크기가 선택마다 바뀌지 않게).
         EditorContext* pContext  = EditorContext::get();
-        const bool     bCanAlign = pContext != nullptr && pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() >= 2;
+        const bool     bCanAlign = pContext != nullptr && editor::getMainSceneSelection().getSelectedObjectCount() >= 2;
         nextItem( bVertical );
         ImGui::BeginDisabled( bCanAlign == false );
         if ( ImGui::Button( editoricon::kAlign, ImVec2{ side, side } ) )

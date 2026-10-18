@@ -1,6 +1,6 @@
 /**
  * @file EditorPreviewGizmo.h
- * @brief 미리보기 창(`EditorPreviewPanel`)의 뷰포트 위에 창 선택의 트랜스폼 기즈모를 놓습니다.
+ * @brief 미리보기 창(`EditorPreviewPanel`)의 뷰포트 위에 창 선택의 트랜스폼 기즈모를 놓고, 클릭 피킹을 창 선택에 놓습니다.
  */
 #pragma once
 #include "Editor/Common/EditorExports.h"
@@ -24,7 +24,10 @@ namespace sw::editor
 
         /** @brief 지난 프레임에 기즈모가 마우스를 가졌으면(위 · 드래그 중) true 입니다. 뷰포트의 오빗 입력을 막는 데 씁니다. */
         bool hasMouse() const { return _gizmo.isHovered() || _gizmo.isDragging(); }
-        /** @brief @p panel 의 뷰포트 이미지 위에 창 선택의 기즈모를 그리고 조작합니다. 창 선택이 묶이지 않았거나 이미지가 없으면 하지 않습니다. */
+        /**
+         * @brief @p panel 의 뷰포트 이미지 위에 창 선택의 기즈모를 그리고 조작합니다. 창 선택이 묶이지 않았거나 이미지가 없으면 하지 않습니다.
+         * @details 이미지를 끌지 않고 누른 클릭은 미리보기 씬을 집어 창 선택에 놓는다(Ctrl 은 토글, 빈 곳은 비움 — `EditorPreviewPickUtil`).
+         */
         void draw( EditorPreviewPanel& panel );
 
     private:

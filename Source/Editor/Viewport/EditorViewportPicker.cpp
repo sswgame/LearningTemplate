@@ -98,7 +98,7 @@ namespace sw::editor
         _hoveredObjectID       = findObjectUnderMouse( canvasPos, canvasSize, pCamera, settings, pObject, pComponent ) ? pObject->getObjectID() : 0;
         // 이미 선택한 오브젝트는 호버로 취급하지 않는다. 선택 상자와 기즈모가 이미 있다. 그 위의 기즈모 핸들과 겹치는 판정도 여기서 없어진다.
         EditorContext* pContext              = EditorContext::get();
-        const bool     bHoverAlreadySelected = pObject != nullptr && pContext != nullptr && pContext->getSubsystem<EditorSelection>().hasObject( pObject );
+        const bool     bHoverAlreadySelected = pObject != nullptr && pContext != nullptr && editor::getMainSceneSelection().hasObject( pObject );
         if ( bHoverAlreadySelected )
             _hoveredObjectID = 0;
         _lastHoverPickSeconds = static_cast<float64>( MonotonicClock::nowNanoseconds() - startNanos ) * 1e-9;

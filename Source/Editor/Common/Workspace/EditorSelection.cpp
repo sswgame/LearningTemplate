@@ -261,17 +261,25 @@ namespace sw::editor
             notifyChanged();
     }
 
+    EditorSelection::~EditorSelection()
+    {
+        if ( isPreviewScope() )
+            unbindPreviewScope();
+    }
+
     void EditorSelection::bindPreviewScope( Scene& scene, CommandStack& stack )
     {
         _listSelectedObject.clear();
         _pPreviewScene = &scene;
         _pPreviewStack = &stack;
+        editor::registerPreviewSelection( *this );
     }
 
     void EditorSelection::unbindPreviewScope()
     {
         if ( editor::getFocusedSelection() == this )
             editor::setFocusedSelection( nullptr );
+        editor::unregisterPreviewSelection( *this );
         _listSelectedObject.clear();
         _pPreviewScene = nullptr;
         _pPreviewStack = nullptr;

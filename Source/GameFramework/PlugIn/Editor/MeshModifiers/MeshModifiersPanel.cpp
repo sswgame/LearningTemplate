@@ -174,8 +174,8 @@ namespace sw::editor
                 noteMark( pMarkKey, "useSelection" );
                 if ( bUseSelection )
                 {
-                    EditorSelection* pSelection = findSubsystem<EditorSelection>();
-                    GameObject*      pObject    = pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
+                    // 모델링 도구는 레벨의 오브젝트를 고친다(언리얼 Modeling Mode 는 레벨 선택) — 메인 씬의 선택이다.
+                    GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                     if ( pObject == nullptr )
                         SW_LOG_WARNING( "Select an object in the scene first" );
                     else if ( MeshModifierParamEdit::matchesComponentHint( *pObject, def._pRequiredComponentHint ) == false )
@@ -247,8 +247,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "meshmodifiers.useSelection" );
         if ( bUseSelection )
         {
-            EditorSelection* pSelection = findSubsystem<EditorSelection>();
-            GameObject*      pObject    = pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
+            GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject(); // 메인 씬의 선택(위 `UseSelectionForParam` 과 같다)
             if ( session.setTarget( pObject ) == false )
                 SW_LOG_WARNING( "Mesh modifiers need an object whose mesh component uses a .mesh asset" );
         }
