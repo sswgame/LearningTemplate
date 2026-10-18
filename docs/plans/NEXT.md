@@ -2,7 +2,11 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법은 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../backlog/README.md)(영역별 파일 · 상태 태그, `py -3 -m Scripts backlog` 로 목록), 작업 방식은 [작업 방식](../11_Workflow.md), 병렬 작업자 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다. 이 문서에는 지금 상태 · 다음 할 일 · 함정 · 시작 절차만 둡니다.
 
-## 000. 2026-10-18 저녁 통합 `integ7` 인계 (가장 먼저 읽는다)
+## 000. 2026-10-18 저녁 통합 `integ7` · `integ8` 인계 (가장 먼저 읽는다)
+
+- **`integ8`(2차)**: `resl`(c6f3217a0, `LooseFilePath` · `ResourceIO` 개편)과 `feat`(1dcbfd864)를 충돌 없이 합쳤다. Debug · Release · STL `all AllTests` 경고 0, 두 구성 `-L lint` 47 · `-L nogpu` 57, Debug `-L race` 5, STL `-L nogpu` 57 통과.
+  `CheckRuntimeResourceDiskAccess` 는 소스 게이트 묶음 안에서 돌고 합친 트리에서 통과한다. Debug `-L nogpu -j 8` 에서 `EngineTest_NoGPU_Shard4` 가 104 s 예산을 넘었다 — 혼자 40 s, `-j 6` 65 s 로 통과하고 `ResourceDataSchemaTest` 시간이 main 과 같아(9.7 s) 부하로 본다.
+  **확인 못 한 것**: 쿠킹 팩으로 앱을 띄워 외형 프리셋이 팩에서 로드되는지(GPU · 창 필요) — 다음 GPU 확인 묶음에서 본다. 합치지 않은 것: `feat-pv`(D3-7) · `impl` · `impl-h2`(작업 중).
 
 - **main 에 병합**: 정리 여덟(`cl-a` C-37 · `cl-b` C-5 · `cl-c` C-40 · C-63 · `cl-d` C-46 일부 · `cl-f` C-34 · C-48 · `cl-g` C-19 · C-64 · `cl-h` C-44 일부 · C-50 · `cl-i` C-12 · C-15)과 아직 진행 중인 `impl` · `impl-h` · `feat` · `feat-net` 의 그때 tip. `resl`(대규모 개명)은 미완이라 합치지 않았다.
   진행 중인 네 워크트리와 `resl` 은 지우지 않았다 — 그 작업자는 main 을 병합한 뒤 이어 간다.
