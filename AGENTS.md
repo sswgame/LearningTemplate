@@ -550,6 +550,10 @@ namespace sw
 - Apply `const` wherever it is appropriate unless doing so harms performance.
 - For range comparisons, place the variable in the middle (between lower and upper bounds) to reflect mathematical range notation: write `kMin <= value && value <= kMax` instead of `value >= kMin && value <= kMax`.
 
+- Build strings with `formatstring` and its `%#` placeholder, never by chaining `to_string` or `+`.
+- Do not add a wrapper function that has one caller. Change the existing function's shape instead of adding a new dedicated one.
+- A static registration table is a `RegistrationList`. On the user-configuration side the name is `Handler`.
+
 ## Editing traps (편집 함정)
 
 - 한 함수에서 **여러 구간을 빼낼 때는 뒤쪽 구간부터** 한다. 앞쪽을 먼저 빼면 뒤쪽 줄 번호가 밀린다.

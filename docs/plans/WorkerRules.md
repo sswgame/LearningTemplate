@@ -1,39 +1,27 @@
 # 작업자 규칙
 
-병렬 작업자(에이전트)에게 일을 시킬 때 지시문 맨 앞에 "이 문서를 읽고 따른다"를 넣습니다. 작업 방식의 정본은 [작업 방식](../11_Workflow.md)이고, 이 문서는 그중
-작업자가 매번 어기기 쉬웠던 것을 모았습니다. 글은 한국어입니다. 로그와 assert 문자열의 언어는 정하지 않으며, 한 파일 안에서는 통일합니다. 용어는 [문서 쓰기 지침](../10_WritingDocs.md) 대조표를 따릅니다.
+병렬 작업자(에이전트)에게 일을 시킬 때 지시문 맨 앞에 "이 문서를 읽고 따른다"를 넣습니다. 규칙의 원본은 다른 문서에 있고, 이 문서는 작업자가 매번 어기기 쉬웠던 것을 그곳으로 연결합니다.
+글은 한국어이고 용어는 [문서 쓰기 지침](../10_WritingDocs.md) 대조표를 따릅니다. 로그와 assert 문자열의 언어는 [AGENTS.md](../../AGENTS.md) "Writing" 이 정합니다.
 
-먼저 읽을 것은 `CLAUDE.md`, 작업 방식, `AGENTS.md`(C++ · CMake · Python 을 쓰기 전), 맡은 일의 백로그 항목과 계획 문서입니다.
+먼저 읽을 것은 `CLAUDE.md`, [작업 방식](../11_Workflow.md), `AGENTS.md`(C++ · CMake · Python 을 쓰기 전), 맡은 일의 백로그 항목과 계획 문서입니다.
 main 체크아웃은 읽기만 합니다. 편집과 빌드는 하지 않습니다.
 
 ## 1. 워크트리
+
+워크트리를 만들고 지우는 법, 링크 폴더와 vcpkg 잠금, 도우미의 push 금지는 [작업 방식](../11_Workflow.md) 1절 · 4절이 원본입니다. 만드는 명령은 이렇습니다.
 
 ```
 py -3 -m Scripts worktree-make <이름> --base main
 ```
 
-- `--base main` 을 반드시 줍니다. 주지 않으면 `origin/main` 에서 갈라지는데 로컬 main 이 push 전이면 낡은 기준입니다.
-- 브랜치는 `wt/<이름>`, 폴더는 `D:\w\<이름>` 에 생기고 `Tools/LLVM` · `Ninja` · `vcpkg` · `_cache` 와 `build/vcpkg_installed` · `vcpkg_cache` 가 main 의 것으로 링크됩니다.
-  이 링크는 지우거나 고치지 않습니다. 직접 정션을 걸지 않습니다.
-- `.claude/skills` 는 추적하지 않아 새 워크트리에 없습니다. 에이전트가 ponytail · graphify 스킬을 쓰려면 세션을 시작하기 전에 복사합니다.
-  `Copy-Item -Recurse -Force D:\Projects\Personal\LearningTemplate\.claude\skills D:\w\<이름>\.claude\skills`
-- `cmake --preset` 처럼 vcpkg 를 부르는 일은 먼저 `py -3 -m Scripts shared-lock acquire vcpkg --owner <이름>` 으로 잠금을 잡고, 끝나면 `release` 합니다.
-- 다른 워크트리와 main 을 건드리지 않습니다. push 하지 않습니다.
-- 지울 때는 병합이 맞는지 `git merge-base --is-ancestor wt/<이름> main` 으로 확인한 뒤 `py -3 -m Scripts worktree-remove <이름>` 을 씁니다. 이 도구는 브랜치도 지웁니다.
-
 ## 2. 빌드와 테스트
 
-- 동시 빌드는 최대 둘이고 빌드 칸 잠금이 강제합니다. 빌드는 `py -3 -m Scripts shared-lock run build --shared --owner <이름> --below-normal -- cmake --build --preset Ninja-Debug --target <타깃>` 으로 돌립니다.
-  고치는 동안은 필요한 단일 타깃(EngineTest · EditorTest · CoreTest · 모듈 DLL)만 짓고, "검증했다" 고 보고하는 빌드는 `py -3 -m Scripts full-build --owner <이름> --below-normal`(`all AllTests`)입니다.
+- 동시 빌드 한도, 빌드 칸 명령, `full-build`, GPU 잠금 모드(공유와 독점)는 [작업 방식](../11_Workflow.md) 2절 · 3절이 원본입니다. 도우미의 빌드와 테스트는 `--below-normal` 로 돌립니다.
   빌드를 맡지 않은 작업자는 "빌드 미확인" 으로 보고합니다.
 - ctest 전체를 돌리지 않습니다. 테스트 실행 파일을 필터로 돌립니다. PATH 에 `build\Ninja-Debug\Bin` 을 넣고 `TestBin\<이름>.exe --test_filter=...` 입니다.
 - 코드를 먼저 쓰고 빌드는 아껴서 합니다. 빌드가 겹쳐 시간 제한에 걸리면 단독으로 다시 돌려 구분합니다.
 - **빌드 로그를 UTF-8 로 쓰고 경고를 `Select-String | Measure-Object` 로 셉니다.** `Start-Process` 의 `*>` 로 쓴 로그는 UTF-16 이라 bash `grep` 이 항상 0 을 돌려줍니다.
   `cmake --build ... 2>&1 | Out-File -Encoding utf8 <로그>` 로 씁니다.
-- GPU 와 창을 쓰는 실행(앱 시나리오, 스크린샷, `hostgpu` 테스트)은 GPU 잠금을 잡고 합니다. 기능 확인(결정적 설정)은 공유 모드로 동시에 두 프로세스까지,
-  Release 측정 · 부하 기준선 · 실제 장치 제거 실험 · 실제 마우스와 창 포커스에 기대는 시나리오는 독점으로 혼자 돌립니다.
-  `py -3 -m Scripts shared-lock acquire gpu --owner <이름> --shared`(독점은 `--shared` 없이)로 잠그고, 끝나면(실패해도) 같은 모드로 `release` 합니다. 잠금을 쥔 채 오래 있지 않습니다.
-  GPU 실행만 맡기려면 `gpu-verifier` 에이전트를 씁니다.
 
 ## 3. 화면을 확인하는 방법
 
@@ -47,23 +35,11 @@ py -3 -m Scripts worktree-make <이름> --base main
 
 ## 4. 코드 규칙
 
-- **구조로 푼다.** 같은 결함이 다른 곳에 또 날 수 있으면 증상만 고치지 말고 그 모양을 쓸 수 없는 형식 · API · 데이터 구조로 바꾼다. 린트 게이트 · 주석 · 문서 규칙은 최후의 수단이다(형식이 못 막는 틈에만, 이유와 함께). 폴백을 두지 않는다 — 필수 값이 없으면 오류로 멈춘다. 보고에 "근본 원인이 무엇이고 같은 모양이 어디에 더 있는가"를 한 줄 적는다([CLAUDE.md](../../CLAUDE.md) "해결 원칙").
-
-새로 생기는 위반은 커밋 훅이 막습니다.
-
-- 조건 세 부분 이상: `if` · `while` 조건이 `&&` · `||` 로 세 부분 이상이면 먼저 의미 있는 `const bool bXxx = ...;` 로 이름을 붙입니다(`CheckConditionParts`).
-- 상수: 시간 · 바이트 단위는 `constant::kNanosecondsPerSecond` · `kMillisecondsPerSecond` · `kSecondsPerMinute` · `kBytesPerKilobyte` · `kBytesPerMegabyte` 등(`Core/Common/Defines.h`)입니다.
-  새 상수의 자리는 `AGENTS.md` "Constants" 절을 따릅니다.
-- `std::thread` 를 직접 쓰지 않고 `sw::thread` 를 씁니다. 정적 등록 표는 `RegistrationList` 입니다. 사용자 설정 쪽 이름은 `Handler` 입니다.
-- 별칭과 옛 이름 호환을 두지 않고 데이터를 다시 씁니다. 새 전용 함수를 늘리기보다 기존 모양을 고칩니다.
-- ponytail 은 항상 켜져 있어 가장 작은 완전한 변경을 요구합니다. 요청이 구조 개편이면 그 요청을 따릅니다.
-- 코드 질문은 먼저 `graphify query "<질문>" --graph D:\Projects\Personal\LearningTemplate\graphify-out\graph.json`(PATH 에 사용자 Scripts 폴더)로 범위를 좁힙니다.
-  그래프는 낡았을 수 있으니 결과는 파일을 열어 확인합니다.
-- 줄 끝: Edit 도구와 `sed -i` 가 CRLF 파일을 LF 로 바꾼 적이 있습니다. 수정 뒤 `git diff --stat` 로 파일 전체가 바뀌지 않았는지 봅니다.
-  스크립트가 필요하면 heredoc 대신 Write 도구로 scratchpad 파일에 쓰고 `py -3 -I` 로 실행합니다.
-- 서식은 `py -3 Scripts/lint/fixer/FormatModified.py` 입니다. **커밋 훅을 우회하지 않습니다(`--no-verify` 금지).** 실패하면 고칩니다.
-- 커밋은 단계별로 나누고, 메시지는 문제점 → 해결방안 → 결과 순으로 프로그래머 용어로 씁니다. 끝에 `Co-Authored-By` 줄을 모델에 맞게 답니다.
-- 끝난 백로그 · 인계 항목은 지우고 교훈은 코드 헤더 주석이나 결정 기록으로 옮깁니다. 못 한 것은 구체 항목으로 백로그에 남깁니다.
+- 해결 원칙(구조로 푼다, 폴백 금지, 근본 원인 보고)은 [CLAUDE.md](../../CLAUDE.md) "해결 원칙" 이 원본입니다. 보고에 "근본 원인이 무엇이고 같은 모양이 어디에 더 있는가"를 한 줄 적습니다.
+- 이름, 조건, 상수, 스레드, 문자열 서식, 헬퍼, 줄 끝과 스크립트 편집은 [AGENTS.md](../../AGENTS.md) 가 원본입니다. 새로 생기는 위반은 커밋 훅이 막습니다.
+- 커밋과 훅 규칙은 [작업 방식](../11_Workflow.md) 7절, 에이전트 모델 고르기는 같은 문서 9절이 원본입니다.
+- ponytail 과 graphify 사용법은 [CLAUDE.md](../../CLAUDE.md) "보조 도구" 가 원본입니다. 작업자 워크트리에는 그래프 폴더가 없으므로 MCP `query_graph` 로 질의하고, 결과는 파일을 열어 확인합니다.
+- 끝난 백로그 · 인계 항목을 지우는 법은 [백로그 안내](../backlog/README.md) 가 원본입니다. 못 한 것은 구체 항목으로 백로그에 남깁니다.
 
 ## 5. 보고
 
@@ -72,7 +48,15 @@ py -3 -m Scripts worktree-make <이름> --base main
 
 ## 6. 병합 담당이 하는 일
 
-- 끝난 브랜치를 통합 브랜치에 모아 병합 결과를 `full-build` 하고, UTF-8 로그로 경고와 오류를 센 뒤 main 에 병합합니다. main push 는 pre-push 훅이 그 트리의 `full-build` 증거를 요구합니다.
-  병합 성공을 확인한 뒤에만 워크트리를 지웁니다. 주인이 살아 있는 워크트리는 `worktree-remove` 가 건너뜁니다(`worktree-list` 로 본다).
+- 병합 절차(통합 브랜치, `full-build`, push 증거, 워크트리 지우기)는 [작업 방식](../11_Workflow.md) 1절 · 3절 · 4절이 원본입니다. 경고와 오류는 UTF-8 로그로 셉니다.
 - 병합 전에 `code-reviewer` 에이전트로 읽기 전용 검토를 시킬 수 있습니다. 작업자끼리 부딪히는 결정과 규칙 위반을 찾습니다.
 - 문서 충돌은 양쪽을 남기는 것이 보통입니다. 생성 문서(`docs/Config/*`)가 충돌하면 `GenerateConfigReference.py` 로 다시 만듭니다.
+
+## 7. 재현 명령 (이 PC)
+
+- Release 빌드 폴더는 `-DSW_GAMES=ALL` 로 구성돼 있습니다(구성은 `shared-lock acquire vcpkg --owner <이름>` 안에서). 게임 모듈만: `cmake --build build/Ninja-Release --target SWGame_<게임>`.
+- 벤치: `cd build/Ninja-Release/Bin && ../TestBin/EngineTest.exe --test_filter=GameObjectBenchTest.<이름> --load_suites=only --host_suites=all`. 합성 A/B: `py -3 -m Scripts perf-compare --app build/Ninja-Release/Bin/App.exe --cases tickCostMovers tickCostSmallScene tickCostChurn tickCostRagdolls --runs 5`.
+- 시나리오: `App.exe -game=<게임> -dx12 -scenario=game/<게임>/automation/<이름>.scenario.xml`(종료 코드 0 = 통과). GPU 잠금은 [작업 방식](../11_Workflow.md) 2절.
+- 셰이더를 바꾸거나 병합이 `reflection.manifest` 에서 충돌하면 `App.exe --cook-shaders` 후 `ShaderCookRequestTest` 가 알리는 낡은 바이너리를 지웁니다(한 번에 8 개씩 알립니다 — 0 이 될 때까지 반복).
+- 린트가 막으면 `py -3 Scripts/lint/fixer/FormatModified.py`, 설정 문서는 `py -3 Scripts/generate/GenerateConfigReference.py`.
+- 검증 스크립트는 빌드 종료 코드와 `ctest` 가 읽는 바이너리의 갱신 시각을 함께 봅니다(구성 이름 오타로 옛 바이너리가 "통과"한 적이 있습니다).

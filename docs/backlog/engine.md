@@ -71,6 +71,31 @@
   ④ `ConfigManager::isWithinRange` 가 `collectRangeErrors` 로 범위를 따로 검사한다(`C-56` 과 같은 모양, Config 영역) ⑤ `readName` 호출부 357 곳을 전수로 보지 못했다 — 이름을 경로 글로 바꿔 쓰는 `.c_str()`
   (`hashed_string` 의 FName 규칙: none = 빈 이름, 빈 이름의 `c_str()` = "None")은 형식으로 막지 못하고 이름 읽기 창구에서 글 none 만 막았다.
 
+- `C-65` [정리] **실제 경과 시간을 엔진 한 곳에서 받게 하는 일의 남은 것(확인 필요).** `Engine::beginFrame` 인자 전환과 `FrameStall` 의 개발 명령 구성 한정은 들어갔다(`dd8f4c2c3`).
+  남은 후보: 녹화는 벽시계 · 재생은 `fixedDelta` 인 `EditorScenarioRecordCommands.cpp:100` · `InputMapPanel.cpp:299`, 미리보기 패널 넷(`SequencerPanel` · `AnimationGraphPanel` · `DialogueGraphPanel` · `InputMapPanel`).
+  `Automation/README.md:30` 의 "에디터 코드는 unscaled 경과" 범위, 검증 레이어 조건에 `AND NOT SW_SHIPPING_BUILD`. 근본 해법은 플랫폼 `NewFrame` 뒤 `ImGui::NewFrame` 앞에서 `io.DeltaTime` 을 엔진 경과로 맞추기다(프로파일러 성능 탭은 벽시계를 따로 읽어야 한다).
+
+- `C-66` [정리] **직렬화가 조용히 넘기는 곳.** (1) B 코덱이 `Count` 없는 열거형을 8비트 전폭으로 쓴다 — 생성기가 오류로 멈출지 정한다(온라인 키트 열거형 폭은 미확인; 옛 `G-14`).
+  (2) 일반 바이너리 · JSON · XML 읽기가 범위 검사를 하지 않는다(옛 `A-19`, `A-15` 잔여). 두 번호는 백로그에 없다 — 이미 지웠는지 `git log -S` 로 확인한다.
+  (3) 프로세스 정적 "한 번만" 경고(`warnUnknownEnumeratorOnce` · `warnSkippedFieldOnce` · `warnUnreadableFieldOnce`)가 테스트 순서에 따라 `HostLogJudge` 결과를 바꾼다.
+  (4) 소프트 경로가 기록 타입이 달라 변환이 실패해도 읽힌 만큼 받는다(`BinarySerializer.cpp:229-231`, 끝까지 읽었는지 보지 않음).
+
+- `C-67` [정리] **`Common/Workspace` 의 ImGui 17개를 분리한다.** `EditorAssetType.h` · `EditorContext.h` · `EditorLayoutStore.*` · `EditorRenderViews.*` 등. `EditorModel` 경계를 이 폴더로 넓히는 선행이다.
+
+- `C-68` [정리] **함수 객체 · 람다 공통화 2단계.** `containers` 가 남긴 후보 58 파일 80 건(`find_if` · `remove_if` · 해시 구조체)을 디렉터리별로 한다.
+  손 멤버 루프를 못 쓰게 하는 형식 또는 린트(형식으로 못 막는 이유를 적는다).
+
+- `C-69` [정리] **이름 조회가 흩어진 곳과 감시 마스크.** `SceneDevCommands` · Sequencer 의 이름 조회가 곳곳에 따로 있다. `IFileWatcher` 를 쓰는 곳은 조용히 실패한다(리눅스 감시 마스크에 `IN_ATTRIB` 없음).
+  `HUDViewModel` 의 슈터 전용 칸은 `D4-15` 가 맡는다.
+
+- `C-70` [정리] **디스크 경로와 리소스 id 가 같은 `string_view` 입구를 쓴다**(2026-10-19 CI 실패의 근본 원인).
+  쿠커 · 테스트가 디스크로 훑은 절대 경로를 리소스 id 입구에 넣어 Shipping(낱개 파일 불허)이 거절했다. `loadFromDiskFile` 계열로 고쳤으나 입구가 같아 같은 모양이 또 날 수 있다.
+  `DiskFilePath` 형식으로 막는 안은 하지 않았다 — Shipping App 이 쿠킹 호스트라 디스크 입구를 컴파일에서 뺄 수는 없고, 경계는 "런타임 읽기만 배포에서 막는다"이다. 이 경계를 형식으로 표현할 방법을 찾는다.
+
+- `C-71` [정리] **넷 설정의 남은 것.** `gv_netLoopbackOnly` 도 테스트 전역 변수에서만 읽는 같은 모양이다. Shipping 클라이언트에는 `gv_netConnectAddress` 가 없다. `_gamePortShardCount` 는 `D7-3` ⑤ 가 맡는다.
+
+- `C-72` [정리] **`Internal` 소거의 남은 것.** `-DSW_ENABLE_UNITY_BUILD` 로 익명 함수 이름 충돌을 한 번 본다(`DuplicateAnonymousFunction` 은 `Source/` 만 보므로 `Test/` 는 직접 확인). 병합 때 작업자끼리 겹친 익명 함수 이름이 한 건 났다(`makeRandomSeed`).
+
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다
   (지형 높이장은 종류별 기하 레지스트리로 들어갔다) (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크
   (6) 다른 테스트 게임(AbilityArena 등)의 적도 내비메시로 — 행동 트리 `MoveTo` 노드가 `INavMover` 를 쓴다.

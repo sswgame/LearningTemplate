@@ -1,9 +1,11 @@
 # 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17)
 
+> 상태: 구현대기 · 선행: ReflectionFormats · 영역: engine · 백로그: C-49 · 진행: 2/6
+
 [리플렉션 직렬화 형식 계획](ReflectionFormats.md) 9절의 단계 7-c 와 7-d 를 구현할 수 있는 수준으로 나눈 계획입니다.
 배경과 판단은 그 문서의 7절(리플렉션 캐스트 비용)에 있고, 여기서는 반복하지 않습니다.
 사용자 결정은 끝났습니다. 7-d(타입 핸들)를 도입하고, 7-c(매니저의 타입별 컴포넌트 목록)를 7-d 보다 먼저 합니다.
-구현 전에 `design-reviewer` 검토(결론: 고쳐서 진행, `NEXT.md` 2절 0번의 ⓐ~ⓗ)를 반영했습니다. 반영한 자리는 본문에 ⓐ 처럼 표시합니다.
+구현 전에 `design-reviewer` 검토(결론: 고쳐서 진행, 이 문서 끝의 "구현 전에 반영할 검토 결과" ⓐ~ⓗ)를 반영했습니다. 반영한 자리는 본문에 ⓐ 처럼 표시합니다.
 
 이 문서에서 쓰는 말은 다음과 같습니다.
 
@@ -521,3 +523,30 @@ Release, VSync 끔, 3 ~ 5 판 번갈아 실행, p50 과 p99 로 적습니다. �
 ### 8.6 사용자 결정
 
 없습니다. 7절의 "7-d-3 파일 상태 형태" 는 C-52 범위 밖이고 그대로 열려 있습니다.
+
+## 구현 전에 반영할 검토 결과
+
+`design-reviewer` 검토 결과입니다. 결론: 고쳐서 진행합니다.
+7-c 의 "정확한 타입마다 버킷 + 조회 때 버킷마다 `isDerivedFrom`"은 이 규모(오브젝트 1만~10만, 타입 수백)에서 조상 목록 원안보다 낫고, 언리얼 `GetObjectsOfClass` 의 "정확한 클래스 버킷 + 파생 열거"와 같은 계열입니다. 단 구현 전에 고칠 것이 있습니다.
+
+- **ⓐ 버킷을 컴포넌트 풀 항목(`_mapComponentPool`, 이미 FQN 키)에 합칩니다**(`{ 풀, 버킷 목록, _pType }`, `Component::_pPool` 을 그 항목 포인터로).
+  맵 하나가 줄고 추가 때 해시 조회가 없으며, `Component` 에는 위치 `uint32` 하나만 늘어 패딩에 들어갈 가능성이 큽니다(`_pPool` 사용처는 `GameObjectStore.cpp:441`, `GameObject.cpp:570-588`, `GameObject.h:468`뿐, `sizeof` 미측정).
+  `Component.h` 와 `GameObjectStore.h` 가 바뀌므로 7-c 도 전체 빌드가 필요합니다.
+- **ⓑ 7-d 전제 "한 핸들이 가리키는 타입은 바뀌지 않는다"에 구멍이 있습니다.**
+  id 복원(`takeRestoredComponentID`)이 FQN 이 아니라 `TypeInfo::_name` 으로 맞춥니다(`GameObject.cpp:36-52`, `Component.cpp:351-355`, `ObjectStateSerializer.cpp:469`, `_name` 이 짧은 이름인지는 미확인).
+  복원 키를 FQN 으로 바꾸고(7-d-1 보다 먼저 또는 함께) `resolveComponent<T>` 확인을 Debug 만이 아니라 Shipping 이 아닌 모든 구성에 둡니다(타입이 바뀌는 길인 핫 리로드는 Shipping 에 없음).
+- **ⓒ 7-d-1 API.** `executeOrDeferPostTickOnComponent` 를 `( TComponent& self, func )` 로 바꾸고 `TComponent` 는 추론하게 합니다.
+  호출부 23곳(약 20파일: WildWest, VoxelPlayer, VoxelChunk, ShooterPlayer, Water, Terrain, Foliage, AnimationNotify, PropScatter, Vehicle 3, WesternHorseMount, TileMapRenderer, CharacterAppearance, GameDirector, CameraDirector, CameraManager)에서 `getHandle()` 과 템플릿 인자가 함께 사라지고, 둘이 어긋나는 일이 형식으로 막힙니다.
+  이 파일들이 7-d-2 그룹과 겹치므로 7-d-1 에서 한 번에 끝내고 그룹은 그 뒤에 시작합니다.
+- **ⓓ 그룹 A(조종)의 파일 목록에 `getPawn()` 비교 호출부가 빠졌습니다.** `VoxelDirectorComponent.cpp:118,125`, `ShooterDirectorComponent.cpp:510,519`, `ShooterPlayerComponent.cpp:150`(그 밖에 `FarmDirectorComponent.cpp:513`, `ArenaDirectorComponent.cpp:548`).
+  타입 핸들과 타입 없는 `getHandle()` 의 비교를 섞은 `==` 허용으로 할지 `untyped()` 명시로 할지 3.1 에 정합니다(비교가 주소를 쓰지 않아 섞은 비교는 안전하다고 추정).
+- **ⓔ 저장 id 공간의 비우기 폴백(`ObjectStateSerializer.cpp:651-658`).** 사용처가 0 이므로 7-d-3 의 형식 결정을 기다리지 말고 7-d-1 에서 처리합니다.
+  `PROPERTY` 의 타입 없는 `ComponentHandle`(컨테이너 원소 · 키 · 중첩 구조체 필드 포함)을 파서 생성 오류로 막고(`Source` 사용처 0, 테스트 `TestSampleActor.h:607` 하나), 남는 "옮길 수 없는 컨테이너 모양의 `GameObjectHandle`" 비우기는 경고 대신 로드 오류로 바꿉니다.
+- **ⓕ 같은 근본 원인.** `resolveObjectReferences` 가 컴포넌트 타입의 최상위 `PROPERTY` 만 봅니다(`ObjectStateSerializer.cpp:623-643`, `holdsComponentHandle` `:210-221`).
+  리플렉션 구조체 안의 핸들은 다시 매겨지지도 비워지지도 않을 수 있습니다(그런 필드가 실제로 있는지는 미확인).
+- **ⓖ 7-d-2 는 API 경계를 넘는 핸들(인자 · 대기 항목 · 접근자 반환값)이 결함이 숨을 곳입니다.**
+  그룹 A(조종: `ControlSystem::queuePossess( const ComponentHandle& controller, const ComponentHandle& pawn )` 가 서로 다른 타입의 핸들 둘을 같은 형식으로 받아 인자 바꿔치기가 실제 후보)부터 하고, 3.4 표에 "핸들이 `T*` 에서 만들어졌는가" 열을 더합니다.
+- **ⓗ 타입별 목록이 `ComponentRegistry` · `TickBatchRegistry` · 버킷 셋이 되어** `09_Decisions.md:731` 의 근거(훑기 190 µs)가 약해집니다. 어느 등록형 목록을 버킷으로 옮길지 기준은 8.3(`C-52` ③)에서 정합니다.
+  B 안(조회 타입마다 맞는 버킷 목록 캐시)은 측정 뒤로 미룹니다. 넣을 때는 타입 레지스트리 세대로 무효화합니다.
+- **측정 질문**(Release, VSync 끔, 3~5판 번갈아, p50 · p99): 오브젝트 1만 · 10만 × 정확한 타입 수 K = 50 · 200 · 500 합성의 `forEachComponentOfType`(말단 타입 대 기반 타입), 실제 8게임의 K, 추가 · 제거 잠금(`tickCostChurn`, 비동기 씬 로드 중 조회) A/D 비교, `sizeof(Component)` 전후와 큐브 20,000 개 `GT.Frame`, 개발 빌드 `resolveComponent<T>` 확인 비용(`BenchScene.cpp:1341`). 8.4 와 같은 항목입니다.
+- **확인하지 못한 것.** 7-b(다중 상속 금지)가 7-c 보다 먼저인지는 `reflect7ab` 병합으로 충족될 전제입니다(버킷에서 꺼낸 포인터를 `static_cast` 로 바꾸는 전제, 병합 여부는 확인 필요). 비동기 씬 로드 워커가 `_listComponent` 에 넣는 동안 게임 스레드 순회가 같은 목록을 읽는지도 미확인입니다.

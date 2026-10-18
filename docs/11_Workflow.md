@@ -11,7 +11,7 @@
 큰 작업 배치는 단위로 나누어 워크트리 하나에 브랜치 하나씩 진행합니다. 워크트리는 main 체크아웃과 같은 저장소를 공유하는 별도 작업 폴더입니다.
 
 ```powershell
-py -3 -m Scripts worktree-make <이름>                  # <드라이브>:/w/<이름>(Windows) · <main 의 부모>/LT-wt/<이름>, 브랜치 wt/<이름>, 기준 origin/main
+py -3 -m Scripts worktree-make <이름> --base main      # <드라이브>:\w\<이름>(Windows) · <main 의 부모>/LT-wt/<이름>, 브랜치 wt/<이름>
 py -3 -m Scripts worktree-make <이름> --base wt/apply5 # 다른 브랜치에서 갈라 만든다
 py -3 -m Scripts worktree-remove <이름>                # 나눠 쓰는 링크를 먼저 끊고 지운다 — 다른 세션이 쓰는 중이면 건너뛴다
 py -3 -m Scripts worktree-list                         # 워크트리마다 브랜치와 주인(쓰는 중 · 주인 프로세스 끝남 · 기록 없음)
@@ -22,6 +22,8 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 - **워크트리에는 주인이 있습니다.** `worktree-make` 가 주인 이름 · 프로세스 번호(`CLAUDE_PID`, 사람 셸은 `--pid $PID`) · 세션 · 시작 시각을 워크트리의 git 디렉터리에 적습니다.
   `worktree-remove` 는 주인 프로세스가 살아 있고 내 것이 아니면 지우지 않습니다(`--even-if-owned` 는 사용자가 시킨 때만). 주인 기록이 없는 워크트리(이 기능 전)는 누가 쓰는지 모르므로 지우기 전에 사용자에게 묻습니다.
 
+- **`--base` 를 반드시 줍니다.** 주지 않으면 `origin/main` 에서 갈라지는데, 로컬 main 이 push 전이면 낡은 기준입니다. 지울 때는 `git merge-base --is-ancestor wt/<이름> main` 으로 병합을 확인한 뒤 `worktree-remove` 를 씁니다(브랜치도 지웁니다).
+- `.claude/skills` 는 추적하지 않아 새 워크트리에 없습니다. 에이전트가 ponytail · graphify 스킬을 쓰려면 세션을 시작하기 전에 main 체크아웃의 `.claude/skills` 를 워크트리의 같은 위치로 복사합니다. 사용법은 [CLAUDE.md](../CLAUDE.md) "보조 도구" 가 원본입니다.
 - 워크트리는 내려받은 도구(LLVM, Ninja, vcpkg)와 vcpkg 설치 폴더를 main 체크아웃과 링크로 나눠 씁니다. 이 링크 폴더(`Tools/*`, `build/vcpkg_*`)는 지우거나 고치지 않습니다.
   그래서 `vcpkg.json`, 포트, `cmake/Modules/Toolchain/Vcpkg/*` 를 바꿔야 하면 워크트리에서 바꾸지 않고 main 에서 먼저 바꿉니다.
 - **공유 설치 폴더를 건드리기 전에 쓰는 쪽이 있는지 묻습니다.** `cmake --preset`, `--clean-first` 빌드, vcpkg 설치처럼 vcpkg 를 부르는 일은 먼저 `shared-lock acquire vcpkg` 로 잡고 끝나면 놓습니다.
@@ -31,7 +33,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
   적용 담당은 충돌을 풀지 않고 되돌려 보냅니다. 셰이더 매니페스트, 쿠킹 바이너리, `import.stamp` 같은 생성 산출물이 충돌하면 한쪽을 고르지 않고 `App --cook-shaders` 나 `--import-models` 로 다시 만듭니다.
 - 같은 파일을 건드리는 단위는 한 도우미에게 몰아 줍니다. 끝난 워크트리는 바로 지웁니다.
 - 기계적 변경(이동, 이름 바꾸기, 일괄 재작성)은 커밋만 단계별로 나누고 빌드와 테스트는 끝에 한 번 합니다.
-- **병렬 작업은 준비된 브랜치부터 통합합니다.** 작업자의 최종 검증은 생략하고 통합이 한 번에 검증합니다. 통합 워크트리에서는 합치고 빌드(Debug `all AllTests` 경고 0)만 하고, main 에 합친 뒤 main 에서 3절의 검증을 돌립니다. 검증이 통과하기 전에는 push 하지 않습니다(2026-10-18 사용자 결정).
+- **병렬 작업은 준비된 브랜치부터 통합합니다.** 작업자의 최종 검증은 생략하고 통합이 한 번에 검증합니다. 통합 워크트리에서는 합치고 빌드(Debug `all AllTests` 경고 0)만 하고, main 에 합친 뒤 main 에서 3절의 검증을 돌립니다. 검증이 통과하기 전에는 push 하지 않습니다.
 - 결함을 고치는 순서(재현 테스트, 고침, 변이 검사)는 [검증과 측정](08_Verification.md) 1절이 원본입니다.
 - `main` 체크아웃에서는 편집하지 않습니다. 빌드는 통합 뒤 검증과 `full-build` 만 합니다. 도우미는 워크트리에서 일합니다.
 - vcpkg 가 갑자기 포트 전체를 다시 빌드하면(20 분 넘게) `Tools/vcpkg/packages/*/share/*/vcpkg_abi_info.txt` 의 `triplet_abi` 가 흔들리는지 봅니다. 바이너리 캐시 경로(`VCPKG_BINARY_SOURCES`)는 `Vcpkg.cmake` 가 정하므로 ninja 재구성에서도 빠지지 않습니다. 설치 도중에는 건드리지 않습니다.
@@ -49,6 +51,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 - **GPU 실행은 잠금 모드로 나눕니다.** 결정적 설정으로 기능만 보는 시나리오 · `hostgpu` · 캡처는 `shared-lock acquire gpu --shared`(공유, 동시에 두 프로세스 — 백엔드를 나눠 병렬로 돌린다),
   Release 측정 · 부하 기준선 · 실제 장치 제거(TDR) 실험과 실제 마우스 · 창 포커스에 기대는 시나리오(가상 입력으로 도는지 확인하지 못한 것)는 독점(`--shared` 없이)으로 혼자 돌립니다.
   독점은 공유 보유자가 모두 놓을 때까지 기다리고, 그동안 새 공유는 들어오지 못합니다.
+  잠금은 `py -3 -m Scripts shared-lock acquire gpu --owner <이름> --shared`(독점은 `--shared` 없이)로 잡고, 끝나면(실패해도) 같은 모드로 `release` 합니다. 쥔 채 오래 있지 않습니다. GPU 실행만 맡기려면 `gpu-verifier` 에이전트를 씁니다.
 - 스크립트로 파일을 고칠 때의 규칙(heredoc 금지 등)은 [AGENTS.md](../AGENTS.md) "Editing traps" 가 원본입니다. 임시 파일은 scratchpad 에 두고 이름 앞에 에이전트 이름을 붙입니다.
 - 컴파일러 경고 전체 조사(`Scripts/lint/report/RunBuildWarnings.py`, 세 프리셋)는 사용자가 요청할 때만 돌립니다. 내 변경이 만든 경고는 그 빌드가 이미 보여 줍니다.
 
@@ -57,7 +60,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 어떤 명령으로 무엇을 보는지는 [검증과 측정](08_Verification.md) 이 원본입니다. 여기에는 언제 어디까지 돌리는지만 적습니다.
 
 **검증 빌드는 늘 전체입니다 — `py -3 -m Scripts full-build --owner <이름>`(`all AllTests`, 빌드 칸을 잡는다).** 바꾼 영역의 테스트만 지으면 다른 영역의 테스트가 쓰는
-헤더 · 매크로를 바꾼 것이 병합 뒤에야 깨집니다(2026-10-17 integ5). 고치는 동안의 빌드는 단일 타깃이어도 되지만, "검증했다" 고 보고하는 빌드는 `full-build` 입니다.
+헤더 · 매크로를 바꾼 것이 병합 뒤에야 깨집니다. 고치는 동안의 빌드는 단일 타깃이어도 되지만, "검증했다" 고 보고하는 빌드는 `full-build` 입니다.
 `full-build` 는 커밋하지 않은 변경이 없을 때만 짓고, 성공하면 그 커밋 트리의 증거를 공통 `.git` 에 남깁니다. **main 으로의 push 는 pre-push 훅이 그 증거를 요구합니다**
 (`Scripts/setup/InstallGitHooks.py` 가 설치한다 — 훅이 없는 체크아웃은 그 스크립트를 한 번 돌린다). 그래서 병합 결과 트리를 `full-build` 하지 않은 main 은 나가지 않습니다.
 
@@ -93,15 +96,16 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 ## 6. 백로그를 다루는 방식
 
-- 백로그 갱신은 묻지 않고 작업 커밋에 함께 넣습니다. 새로 알아낸 남은 일과 함정은 더하고, 끝난 항목은 "완료" 표시 없이 그 자리에서 지웁니다.
-- 끝난 일의 교훈은 그 코드의 헤더 주석(주의 · 계약)에, 결정은 [결정 기록](09_Decisions.md) 에, 검증법은 [검증과 측정](08_Verification.md) 에 옮깁니다. 백로그에 "참고" 절을 다시 만들지 않습니다.
+- 백로그 쓰는 법(상태 태그, 항목 쓰기와 지우기, 교훈 옮기기)은 [백로그 안내](backlog/README.md) 가 원본입니다. 갱신은 묻지 않고 작업 커밋에 함께 넣습니다.
 - 여러 PC 에서 고치는 파일이라 작업 중에 pull 과 충돌이 날 수 있습니다. 병합 중이면(`.git/MERGE_HEAD`) 충돌 파일이 내가 만진 것인지부터 봅니다.
   커밋 훅 없이 올라온 커밋은 포맷 위반을 달고 올 수 있으므로, `.clang-format` 과 `Tools/LLVM` 버전이 같은지 확인한 뒤 `py -3 Scripts/lint/fixer/FormatModified.py` 로 정리합니다.
 
 ## 7. 커밋 메시지와 글
 
 - **커밋 제목은 `<영역> - <요약>` 입니다.** 본문은 `문제점:`(증상과 원인), `해결방안:`(바꾼 타입, 함수, 파일), `결과:`(통과한 테스트, 동작, 측정값) 세 절이고, 맨 끝에 `Co-Authored-By` 줄을 둡니다.
-  병합 커밋 메시지도 한국어로 씁니다(`병합 - main(<해시>)을 wt/<이름> 으로(<무엇이 들어왔나>)`).
+  병합 커밋 메시지도 한국어로 씁니다(`병합 - main(<해시>)을 wt/<이름> 으로(<무엇이 들어왔나>)`). 모델에 맞는 `Co-Authored-By` 줄을 답니다.
+- **커밋 훅을 우회하지 않습니다(`--no-verify` 금지).** 훅이 린트를 돌리므로 `git commit -m x` 같은 임시 커밋으로 린트를 시험하지 않습니다. 서식은 `py -3 Scripts/lint/fixer/FormatModified.py` 로 맞춥니다.
+- 코딩 규칙은 [AGENTS.md](../AGENTS.md), 해결 원칙(구조로 푼다, 폴백 금지, 근본 원인 보고)은 [CLAUDE.md](../CLAUDE.md) "해결 원칙" 이 원본입니다.
 - 커밋 메시지는 프로그래머 용어로 씁니다. "쥔 쪽", "길을 탄다" 같은 문학적 표현을 쓰지 않습니다. 경위와 배경은 커밋 메시지에 쓰고, 주석과 문서에는 현재형의 계약과 주의만 씁니다.
 - 사용자에게 보이는 모든 글은 한국어로 씁니다. 답변, 진행 한 줄, 표, 질문, 계획, 에이전트 프롬프트와 보고가 모두 해당합니다. 식별자, 경로, 명령, 로그 문자열은 원문 그대로 둡니다.
 - 문서와 주석의 문체는 [문서 쓰기 지침](10_WritingDocs.md)을 따릅니다. 업계에서 굳은 용어를 그대로 쓰고 순우리말 조어를 만들지 않습니다.
@@ -128,6 +132,6 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 - 사용자가 요청을 넘기면, 지금 세션과 다른 모델 · effort 가 맞을 때 한 줄로 권하고 진행합니다. 질문 · 상태 확인 · 진행 보고는 low 로 충분합니다.
 - 요청이 이 문서의 규칙과 부딪히거나 한도에 닿으면 실행 전에 한 줄로 알립니다(규칙 이름 · 비용 · 권하는 행동).
-- 세션 가드 훅 `.claude/hooks/SessionGuard.py`(`.claude/settings.json` 의 SessionStart · UserPromptSubmit · PreCompact · StopFailure)는 알릴 것이 있을 때만 출력합니다. 긴 대화 · 압축, 둘을 넘는 동시 빌드, 남은 워크트리, main CI 실패(세션 시작), 규칙과 부딪히는 낱말(제안서 단계 · 전체 매트릭스 · CI 기다리기 · WSL · 별칭), 압축 · API 한도로 멈춘 것입니다.
+- 세션 가드 훅 `.claude/hooks/SessionGuard.py` 는 알릴 것이 있을 때만 출력합니다. 무엇을 알리는지는 훅 파일이 원본입니다.
 - **인계 문서는 [docs/plans/NEXT.md](plans/NEXT.md) 입니다.** 대화가 길어지면 배치 경계에서 그 문서에 다음 일과 상태를 적고 새 세션을 권합니다. 새 세션은 그 문서가 있으면 먼저 읽습니다.
 - `.gitignore` 는 `.claude` 에서 에이전트 정의 · 훅 · 공유 설정만 추적합니다. 개인 권한 목록은 `.claude/settings.local.json` 에 둡니다.

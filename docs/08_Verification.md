@@ -163,7 +163,7 @@ cd build/Ninja-Debug/Bin
 - **렌더 성능은 디스크에서 읽은 씬으로 배치 수를 먼저 셉니다.** 인스턴스 수와 배치 수가 비슷하면 인스턴싱이 꺼진 것입니다.
 - **측정 표에는 측정한 PC 이름과 CPU 를 적습니다.** 다른 빌드가 도는 동안 잰 값은 오염되므로, 측정하는 동안은 다른 빌드를 막습니다(아래 "빌드 속도" 의 슬롯 잠금).
 
-### 영역별 측정값 (남은 일의 기준선)
+### 영역별 측정값 (백로그 항목의 기준선)
 
 백로그 항목이 근거로 삼는 측정값입니다. 다시 잴 때는 같은 명령과 구성으로 잽니다.
 
@@ -210,7 +210,7 @@ cd build/Ninja-Debug/Bin
   | `==` · 8 / 65536 | 1.6 / 481 | 2.0 / 63 | 0.4 / 88 |
   | 사본 연산(`&` · `~` · `<<`) · `resize` · 8 | 45 ~ 49 | 45 ~ 50 | 0.2 |
 
-  남은 격차: 사본을 돌려주는 연산 · `resize` 는 작은 크기에서 힙 할당(약 45 ns)이 전부다. `count` · `any` · `all` 은 8 비트에서 2 ns(DLL 호출),
+  격차의 원인: 사본을 돌려주는 연산 · `resize` 는 작은 크기에서 힙 할당(약 45 ns)이 전부다. `count` · `any` · `all` 은 8 비트에서 2 ns(DLL 호출),
   `push_back` 은 비트당 3 ns(수작업 0.6 ns)다. 호출부(직렬화 `to_string` · `parse` · `set` · `test`)가 쓰지 않아 두었다.
 - **Vulkan VSync 프레임 놓침**(2026-10-06 조사, Release 큐브 100, 165 Hz): 46 회 중 4 회에서 600 프레임 창 안에 한 프레임이 12 ~ 24 ms 였고, DXGI(DX12 · DX11)는 같은 조건에서 회당 한 주기 이하였습니다.
   평소 Vulkan 은 `vkAcquireNextImageKHR` 에서 약 5.2 ms 를 기다립니다(DXGI 는 Present 안에서 기다린다). 느린 프레임은 둘로 갈렸습니다.
@@ -244,7 +244,7 @@ cd build/Ninja-Debug/Bin
   `<queue>` · `<stack>` · `<bitset>` 을 빼고 쓰는 파일이 직접 include(`MathUtil::getRandom` 의 엔진은 `MathUtil.cpp` 로). PCH 없이 `-fsyntax-only` 5 회 중앙값: `GameObjectManager.cpp` 1.36 → 1.03 s ·
   `Scene.cpp` 1.34 → 1.19 s · `AudioClip.cpp` 1.17 → 0.94 s · `AnimationClip.cpp` 1.13 → 0.92 s(합 5.02 → 4.08 s, −19 %). 실제 컴파일(`-ftime-trace`, 1 회) 합 8.39 → 7.57 s, 헤더 파싱 비율 53 → 51 %.
   (위 OS 헤더 항목의 2.18 s 와 이 표의 1.36 s 차이는 그때 다른 빌드가 겹친 탓이다 — 같은 세션의 전후만 견준다.)
-  남은 헤더 시간의 바닥: UCRT `wchar.h` → clang `intrin.h` → `immintrin.h`(AVX-512 하위 헤더 전부)가 TU 하나에 약 0.25 s 다(`__SCE__` 가 아니면 늘 전부 읽는다 — 엔진이 피할 수 없다).
+  헤더 시간의 바닥: UCRT `wchar.h` → clang `intrin.h` → `immintrin.h`(AVX-512 하위 헤더 전부)가 TU 하나에 약 0.25 s 다(`__SCE__` 가 아니면 늘 전부 읽는다 — 엔진이 피할 수 없다).
   명령 다루는 법: 정규식으로 토큰만 지운다(문자열을 다시 쪼개면 `-DSW_LOG_TAG=\"…\"` 의 따옴표가 깨진다). `-ftime-trace` 는 구문 검사만으로는 파일을 쓰지 않으므로 `/Fo<임시>.obj` 로 실제 컴파일한다.
 - **킷 PCH**(2026-10-11, PC `SW`, Debug): 첫 시도(131.1 → 113.0 s, PCH 컴파일 154 → 94)는 실제로는 킷이 **PCH 없이** 지어진 결과였다 — `REUSE_PRECOMPILE_HEADERS_FROM`
   속성이 무시돼 킷 PCH 60 개를 안 지은 이득이 킷 TU 약 420 개의 헤더 파싱 손해보다 컸다. 진짜 공유(`sw_useSharedPch`)를 같은 날 별도 폴더(`build/Ninja-Debug-Bench`)에서
@@ -259,7 +259,7 @@ cd build/Ninja-Debug/Bin
   의존 TU 수(`/clang:-M`, 테스트 포함 3,230 중): `Component.h` 3,094 → 848, `GameObject.h` → 784, `RHITypes.h` → 512, `SceneComponent.h` → 403, `Scene.h` → 164, `SceneManager.h` → 143.
   비용: 풀 빌드(`--clean-first`)는 원래 PCH 176 · 161 s 대 줄인 PCH 185 · 214 · 198 s 로 **약 +15 %**(이 PC 가 이날 기준선 131 s 보다 느려 절대값은 다르다 — 같은 날 번갈아 잰 값끼리만 견준다).
   PCH 를 끈 CI 구성은 원래 이 헤더를 TU 마다 읽으므로 변화가 없다. Debug · Shipping `all AllTests` 경고 0 · 오류 0. 실패한 파일은 열한 개(include 누락)뿐이었다 — `ninja -k 0` 으로 한 번에 모았다.
-  남은 큰 팬아웃은 Reflection 헤더(`ReflectionTypes.h` · `TypeRegistry.h` · `ReflectionCore.h`, 후보 PCH 에서도 TU 1,150 ~ 1,250 개)다.
+  큰 팬아웃은 Reflection 헤더(`ReflectionTypes.h` · `TypeRegistry.h` · `ReflectionCore.h`, 후보 PCH 에서도 TU 1,150 ~ 1,250 개)다.
 - **구성별 풀 빌드**(2026-10-11, PC `SW`, Debug, 킷 PCH 공유 뒤, `build/Ninja-Debug-Bench` 에서 `--clean-first`, 세 슬롯을 잡고 다른 빌드 없음):
 
   | 구성 | 회차(s) | 중앙값(s) |
