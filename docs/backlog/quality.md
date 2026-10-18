@@ -44,9 +44,6 @@
   픽서(`FormatBranchBraces` 등)도 파일마다 따로 읽고 주석을 가리는 같은 틀이다 — 공유 드라이버가 판정 단위(줄 끝 · 인코딩 · 파일 집합)를 형식으로 갖게 한다.
   (추가 줄 · 기준선은 `LintGate.BaselineSourceGate` · `SourceScan.LineScope` 로 옮겼다, 2026-10-18.)
 
-- `C-15` [정리] **`dev/MoveEditorState.py`**(옛 위치의 에디터 로컬 상태를 옮기는 PC 마다 한 번짜리 이동기, 2026-10-13 들임)는 모든 PC 가 돌렸으면 지운다 — 추적되지 않는 파일을 옮기므로 돌렸는지 저장소에서는 알 수 없다.
-  이 PC 는 `--dry-run` 에 옮길 것이 없다(2026-10-16). 다른 PC 는 사용자가 확인한 뒤에 지운다.
-
 - `C-28` [정리] **테스트 틀 개편(2026-10-15)의 남은 것.** 틀 · 정책 · 확장 지점은 들어갔다(`Test/README.md`, 결정 기록 5-2 끝). 남은 것 —
   ① 벤치 스위트는 부하 스위트로 옮겼다(2026-10-15). 옮긴 뒤의 `CoreTest` · `EngineTest` `seconds` 와 `loadSeconds` 는 뺄셈 어림이라 다음 정책 재측정 때 실제 값으로 맞춘다.
   `NetSimDestructionMatrixTest` 는 손실 회선의 수렴(정확성) 테스트라 nogpu 에 남겼고, 호스트 벤치(`NetUDPBenchTest` · `GlyphBenchTest`)는 스위트 종류가 하나뿐이라 호스트로 남겼다.

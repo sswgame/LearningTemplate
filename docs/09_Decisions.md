@@ -1054,7 +1054,8 @@
 - **임포터(`Editor/Common/Asset`)를 라이브러리로 떼지 않습니다**(2026-10-11). 명령 줄 임포트(`App --import-*` · `--check-*`)는 App 이 에디터 모듈을 인스턴스 없이 로드해 C-ABI 진입점 `importEditorAssets` 를 부르고,
   쿠킹은 임포트 산출물만 읽으며, 전용 서버와 Shipping 은 임포트하지 않습니다. 상용 엔진도 에디터 바이너리를 머리 없이 돌립니다(언리얼 커맨드릿, 유니티 `-batchmode`, Godot `--headless --import`).
   `Common/Asset` 은 이미 ImGui 를 모르는 층 1 이라, 에디터 없는 빌드 팜이나 쿠킹 서버에서 임포트할 일이 생기면 그때 정적 라이브러리로 묶는 비용이 작습니다.
-- **imgui-node-editor 의 vcpkg 수정은 업스트림에 PR 을 내지 않고 오버레이로 유지합니다**(2026-10-06). 외부에 공개하는 일은 사용자가 요청할 때만 합니다.
+- **imgui-node-editor 는 vcpkg 내장 포트를 그대로 씁니다**(2026-10-18). `<exception>` 패치 오버레이는 libc++ 19+(macOS) 때문이었고 macOS 는 지원 대상이 아니어서 지웠습니다.
+  다른 세 패치는 내장 포트(0.9.3#4)에 이미 있습니다. 업스트림에 PR 은 내지 않습니다(2026-10-06 사용자 결정).
 - **DPI 150 % 는 대체 테스트로 확인하고, 글자 래스터 선명도만 실제 모니터에서 확인합니다**(2026-10-06). 남은 확인은 [백로그](backlog/ui.md) `B-8` 에 있습니다.
 - **에디터 보강의 결정 열다섯 개(D1 ~ D15)**(2026-10-06, 사용자 지시 "특별한 의도가 없으면 상용 엔진과 비교해 나은 쪽"으로 추천을 정함). 단위는 모두 적용했고 계획 문서는 지웠습니다(남은 로드맵은 [백로그](backlog/editor.md) `D3-1`).
   - **확장 지점**(D1 ~ D4): EditorModule 을 SHARED DLL 로 바꾸고 `SW_EDITOR_API` 로 내보냅니다. GameFramework · 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Editor/<이름>/` 의 `GF_EditorPlugIn_<이름>`(2026-10-13 `Base/Editor` · 키트 안 `Editor/` 에서 옮김 — 런타임 층 `Base/` 밖의 별도 축이라 한 곳에 모읍니다), 게임의 것은 `SWGameEditor` 이고 매니페스트 종류는 `EditorExtension`(Dev 전용)입니다.
