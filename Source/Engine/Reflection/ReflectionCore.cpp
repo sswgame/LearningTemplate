@@ -188,6 +188,7 @@ namespace sw
         , _bRequired{ SW_FALSE }
         , _bSaveGame{ SW_FALSE }
         , _bInterp{ SW_FALSE }
+        , _bRuntimeState{ SW_FALSE }
         , _reservedRoles{ 0 }
     {
     }
@@ -897,6 +898,7 @@ namespace sw
                     { prop._metadata._bPolymorphic != SW_FALSE,  "Polymorphic"},
                     { prop._metadata._bSkipIfEmpty != SW_FALSE,  "SkipIfEmpty"},
                     {    prop._metadata._bRequired != SW_FALSE,     "Required"},
+                    {prop._metadata._bRuntimeState != SW_FALSE, "RuntimeState"},
                 };
                 for ( const auto& [bSet, pFlagName] : arrFlag )
                 {
