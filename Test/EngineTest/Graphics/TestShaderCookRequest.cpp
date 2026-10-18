@@ -470,7 +470,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
     for ( const sw::string& materialPath : listMaterialFile )
     {
         const sw::shared_ptr<sw::Material> material = sw::Material::create();
-        if ( material->loadFromFile( materialPath ) == false || material->getShaderPath().empty() )
+        if ( material->loadFromDiskFile( materialPath ) == false || material->getShaderPath().empty() )
             continue;
         sw::vector<sw::string> listRuntimeSwitch;
         for ( const sw::MaterialStaticSwitch& entry : material->getPermutations()._listStaticSwitch )

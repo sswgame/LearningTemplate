@@ -8,7 +8,8 @@
 
 형식이 먼저 막는다 — `findLoose*` 의 결과(`LooseFilePath`)는 `string` 으로 저절로 바뀌지 않는다. 그래도 남는 틈이 둘이라 이 게이트를 둔다.
 ① `FileUtil` 의 훑기 함수는 평범한 문자열을 받아야 한다(Saved · 설정 · 로그 · 쿠커 · 에디터의 정당한 디스크 폴더). 그래서 형식으로는 리소스 폴더만
-골라 막을 수 없다. ② `getDiskPath()` 는 쿠커 · 에디터 · 도구가 써야 하므로 있어야 한다. 런타임 게임 코드만 그 둘을 쓰지 않게 여기서 막는다.
+골라 막을 수 없다. ② `getDiskPath()` 와 디스크 입구(`loadFromDiskFile` · `loadDescFromDiskFile` — 소스 트리를 디스크로 훑은 경로를 팩 정책 없이
+읽는다)는 쿠커 · 에디터 · 도구 · 테스트가 써야 하므로 있어야 한다. 런타임 게임 코드만 이것들을 쓰지 않게 여기서 막는다.
 에디터 확장(`Source/GameFramework/PlugIn/`)은 Dev 전용 에디터 코드라 보지 않는다. 엔진(`Source/Engine`)은 쿠커와 런타임이 한 폴더에 섞여 있어
 파일 단위로 가를 기준이 없다 — 엔진 쪽은 `getDiskPath()` 가 보이는 호출 자리로 남는 것이 형식의 몫이다.
 
@@ -39,7 +40,8 @@ _kExcludedPrefix = f"{kDirSourceGameFramework}/PlugIn/"
 _kDiskAccessRe = re.compile(
     r"(FileUtil::(?:collectFiles|collectFolders|isDirectory)"
     r"|ResourcePaths::(?:findLooseFile|findLooseDomainFolder|makeAbsolutePath)"
-    r"|\.getDiskPath\s*\()")
+    r"|\.getDiskPath\s*\("
+    r"|\b(?:loadFromDiskFile|loadDescFromDiskFile)\s*\()")
 
 
 def findDiskAccess(source: SourceFile) -> list[str]:

@@ -36,7 +36,20 @@ namespace sw
         template <typename DescType>
         [[nodiscard]] static bool loadDesc( string_view assetRelativePath, DescType& outDesc )
         {
-            return loadDescInternal( assetRelativePath, &outDesc, DescType::StaticType() );
+            return loadDescInternal( assetRelativePath, ReadSource::Resource, &outDesc, DescType::StaticType() );
+        }
+
+        /**
+         * @brief 리플렉션 desc 를 **디스크 파일**에서 읽습니다. 리소스 id 로 풀지 않고 마운트된 팩도 보지 않습니다.
+         * @param diskPath 디스크 경로(쿠커가 소스 트리를 훑어 얻은 경로 · 테스트의 임시 파일).
+         * @details 소스 트리를 디스크로 훑은 쿠커 · 도구 · 테스트용 입구입니다. 같은 경로를 `loadDesc` 에 넣으면 리소스 루트 안 절대 경로라
+         *          팩 전용 구성(Shipping)의 낱개 파일 거절에 걸립니다 — 디스크를 읽는다는 뜻을 이름으로 드러내 런타임 읽기와 가릅니다.
+         *          게임 런타임 코드는 쓰지 않습니다(`CheckRuntimeResourceDiskAccess`).
+         */
+        template <typename DescType>
+        [[nodiscard]] static bool loadDescFromDiskFile( string_view diskPath, DescType& outDesc )
+        {
+            return loadDescInternal( diskPath, ReadSource::DiskFile, &outDesc, DescType::StaticType() );
         }
 
         /**
@@ -51,8 +64,15 @@ namespace sw
         }
 
     private:
+        /** @brief 본문을 어디서 읽는지입니다. 리소스 id(낱개 파일 정책 · 팩) 또는 디스크 파일. */
+        enum class ReadSource : uint8
+        {
+            Resource,
+            DiskFile,
+        };
+
         /** @brief 템플릿을 얇게 두려고 타입을 지운 실제 구현입니다(`XMLSerializer` 는 .cpp 에서만 봅니다). */
-        [[nodiscard]] static bool loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo );
+        [[nodiscard]] static bool loadDescInternal( string_view path, ReadSource source, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 쓰기 쪽의 같은 구현입니다. */
         [[nodiscard]] static bool saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo );
     };

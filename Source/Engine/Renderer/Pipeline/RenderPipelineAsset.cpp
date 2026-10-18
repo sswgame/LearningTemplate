@@ -23,12 +23,25 @@ namespace sw
         _desc = {};
         if ( ReflectedXMLFile::loadDesc( assetRelativePath, _desc ) == false )
             return false;
+        finishLoad( assetRelativePath );
+        return true;
+    }
 
-        validate( assetRelativePath );
+    bool RenderPipelineAsset::loadFromDiskFile( string_view diskPath )
+    {
+        _desc = {};
+        if ( ReflectedXMLFile::loadDescFromDiskFile( diskPath, _desc ) == false )
+            return false;
+        finishLoad( diskPath );
+        return true;
+    }
+
+    void RenderPipelineAsset::finishLoad( string_view sourcePath )
+    {
+        validate( sourcePath );
 
         SW_LOG_INFO( "Loaded '%#' (model=%#, attachments=%#, passes=%#)",
                      _desc._name, _desc._shadingModel, _desc._listAttachment.size(), _desc._listPass.size() );
-        return true;
     }
 
     uint32 RenderPipelineAsset::validate( string_view sourcePath )

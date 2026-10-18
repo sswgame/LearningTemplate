@@ -68,6 +68,11 @@ namespace sw
 
         /** @brief 리소스 상대 경로에서 파이프라인 XML 을 로드합니다. */
         [[nodiscard]] bool loadFromXMLFile( string_view assetRelativePath );
+        /**
+         * @brief 디스크 파일에서 파이프라인 XML 을 로드합니다. 팩을 보지 않습니다(`ReflectedXMLFile::loadDescFromDiskFile`).
+         * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
+         */
+        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 파이프라인 XML 을 저장합니다. */
         [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
         /** @brief 파이프라인 XML 을 비동기로 로드합니다. */
@@ -90,6 +95,8 @@ namespace sw
         const vector<RenderGraphPassDesc>& getGraphPass() const { return _desc._listPass; }
 
     private:
+        /** @brief 읽기 입구 둘(리소스 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(검사 · 로그). */
+        void finishLoad( string_view sourcePath );
         /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 는 this 와 경로 문자열입니다. */
         static void loadFromXMLFileAsyncJob( const TaskArgs& args );
 

@@ -11,7 +11,7 @@ namespace sw
 {
     SW_LOG_CALLER( "ReflectedXMLFile" );
 
-    bool ReflectedXMLFile::loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::loadDescInternal( string_view assetRelativePath, ReadSource source, void* pDesc, const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo == nullptr )
         {
@@ -24,7 +24,10 @@ namespace sw
         // 하나만 빠뜨리면 조용히 빈 값이 된다. 모르는 이름 · 읽지 못한 값 · `Min`/`Max` 밖 값은 이름과 함께 오류다(설정 JSON 과 같은 계약).
         string text;
         // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 읽으면 팩 전용 구성의 거절을 지나간다.
-        if ( ResourceIO::readTextResource( assetRelativePath, text ) == false )
+        // 디스크 파일은 부르는 쪽이 이름(`loadDescFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        const bool bRead = source == ReadSource::DiskFile ? ResourceIO::readTextFile( assetRelativePath, text )
+                                                          : ResourceIO::readTextResource( assetRelativePath, text );
+        if ( bRead == false )
         {
             SW_LOG_ERROR( "XML 로드 실패: %# (%#) — 파일을 찾지 못했습니다", assetRelativePath, pTypeInfo->_name.c_str() );
             return false;

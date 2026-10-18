@@ -345,6 +345,14 @@ namespace sw
         return loadFromXML( doc.saveToString() );
     }
 
+    bool Material::loadFromDiskFile( string_view diskPath )
+    {
+        XMLDocument doc;
+        if ( doc.loadFile( diskPath ) == false )
+            return false;
+        return loadFromXML( doc.saveToString() );
+    }
+
     TaskHandle Material::loadFromFileAsync( string_view assetRelativePath )
     {
         TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(

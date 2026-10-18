@@ -179,7 +179,8 @@ namespace sw
                         continue;
 
                     RenderPipelineAsset pipelineResource;
-                    if ( pipelineResource.loadFromXMLFile( xmlPath ) == false )
+                    // 디스크로 훑은 소스 파일이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
+                    if ( pipelineResource.loadFromDiskFile( xmlPath ) == false )
                         continue;
 
                     for ( const RenderGraphPassDesc& pass : pipelineResource.getGraphPass() )
@@ -318,7 +319,7 @@ namespace sw
                     // 손으로 긁으면 런타임이 얹는 품질 · SHADER_LOD · usage · 정적 스위치 · 멀티 컴파일이 빠져,
                     // 쿠킹된 변형이 런타임이 **한 번도 요청하지 않는** 해시가 된다. 같은 함수를 부르면 어긋날 자리가 없다.
                     const shared_ptr<Material> material = Material::create();
-                    if ( material->loadFromFile( matPath ) == false )
+                    if ( material->loadFromDiskFile( matPath ) == false )
                         continue;
                     if ( material->getShaderPath().empty() )
                         continue;
