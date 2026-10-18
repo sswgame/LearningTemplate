@@ -41,6 +41,6 @@ cmake --build --preset Ninja-Debug --target all AllTests  # +테스트
 
 ## 가드 훅과 보조 에이전트
 - **`.claude/hooks/GuardCommands.py`**: Bash · PowerShell 호출 직전에 두 가지를 막는다. `git commit --no-verify`(커밋 훅은 우회하지 않는다)와, 링크(정션)가 든 폴더의 재귀 삭제다. 후자는 `Tools/LLVM` 같은 공유 도구가 함께 지워지는 것을 막는다. 워크트리는 `py -3 -m Scripts worktree-remove <이름>`으로 지운다. 훅이 실패하면 호출을 막지 않는다.
-- **`.claude/hooks/SessionGuard.py`**: 기록 8MB · 16MB · 32MB 단계(또는 압축 2회)를 넘을 때마다 프롬프트를 한 번 막고(같은 입력을 다시 보내면 통과, 표시는 `.git/sw-session-guard/`), 그 아래는 경고만 한다.
+- **`.claude/hooks/SessionGuard.py`**: 기록 4MB · 8MB · 16MB 단계(또는 압축 2회)를 넘을 때마다 프롬프트를 한 번 막고(같은 입력을 다시 보내면 통과, 표시는 `.git/sw-session-guard/`), 그 아래는 경고만 한다.
 - **`gpu-verifier`** 에이전트: GPU · 창 실행을 `py -3 -m Scripts shared-lock acquire gpu`로 직렬화해 맡고 캡처를 눈으로 확인해 보고한다. **`code-reviewer`** 에이전트: 병합 전에 브랜치 diff를 읽기 전용으로 검토한다. 작업자끼리 부딪히는 결정과 이 저장소의 규칙 위반을 찾는다. **`design-reviewer`** 에이전트: 구현 전에 설계 문서 · 구조 결정을 읽기 전용으로 검토해 현재 구조 · 유지보수 · 성능 · 상용 엔진과 출시작 선례를 근거 수준([코드] · [문서] · [기억] · [추정])과 함께 비교하고 대안을 낸다. **`ux-reviewer`** 에이전트: 에디터 UI 캡처(PNG)를 읽기 전용으로 보고 UX 결함 표를 낸다. 기준은 [docs/plans/EditorUX.md](docs/plans/EditorUX.md).
 - 워크트리는 손으로 정션을 걸지 말고 `py -3 -m Scripts worktree-make <이름> --base main`으로 만든다. 기준 브랜치를 `main`으로 주지 않으면 `origin/main`에서 갈라진다.

@@ -27,6 +27,7 @@ kReparseAttribute = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
 kMaxScanEntries = 20000
 kMaxScanDepth = 4
 kMaxUnboundedReadBytes = 30 * 1024  # ReadGuard.py 와 같은 값(훅은 서로 import 하지 않는 독립 스크립트라 두 곳이다 - 바꿀 때 함께)
+kMaxUnboundedCodeBytes = 48 * 1024  # 코드 파일의 한도. ReadGuard.py 와 같은 값(바꿀 때 함께)
 kMaxSedRangeLines = 300  # 이 줄 수 이하의 `sed -n 'a,bp'` 는 절 읽기로 보고 통과시킨다
 
 # 재귀 삭제 명령. 한 줄 안에 이 낱말이 있고 아래 경로가 가리키는 곳에 링크가 있으면 막는다.
@@ -36,9 +37,9 @@ kNoVerifyPattern = re.compile(r"(?i)\bgit\b[^\n;&|]*\bcommit\b[^\n;&|]*--no-veri
 kQuotedPattern = re.compile(r"\"[^\"\n]*\"|'[^'\n]*'")
 kWindowsPathPattern = re.compile(r"[A-Za-z]:[\\/][^\s\"'|;&<>]*")
 kMsysPathPattern = re.compile(r"(?<![\w.])/([a-zA-Z])/([^\s\"'|;&<>]*)")
-kShellReadPattern = re.compile(r"(?i)(?:^|[;&]|&&)\s*(?:cat|Get-Content|gc|type)\s+[^|;&\n]*?(?P<path>[^\s\"'|;&<>]+\.md)\b(?!\s*\|)")
+kShellReadPattern = re.compile(r"(?i)(?:^|[;&]|&&)\s*(?:cat|Get-Content|gc|type)\s+[^|;&\n]*?(?P<path>[^\s\"'|;&<>]+\.(?:md|cpp|h|hpp|inl|py|hlsl|hlsli|cmake))\b(?!\s*\|)")
 kSedRangePattern = re.compile(r"\bsed\s+-n\s+['\"]?(\d+),(\d+)p")
-kSedReadPattern = re.compile(r"\bsed\s+-n\s+[^|;&\n]*?(?P<path>[^\s\"'|;&<>]+\.md)\b")
+kSedReadPattern = re.compile(r"\bsed\s+-n\s+[^|;&\n]*?(?P<path>[^\s\"'|;&<>]+\.(?:md|cpp|h|hpp|inl|py|hlsl|hlsli|cmake))\b")
 
 
 def readInput() -> dict:
@@ -145,8 +146,15 @@ def checkShellBigDocRead(command: str, root: Path | None = None, maxBytes: int =
     if not token:
         return ""
     resolved = resolveRepositoryFile(token, root)
-    if resolved is None or resolved.stat().st_size <= maxBytes:
+    if resolved is None:
         return ""
+    isDoc = resolved.suffix.lower() == ".md"
+    if resolved.stat().st_size <= (maxBytes if isDoc else kMaxUnboundedCodeBytes):
+        return ""
+    if not isDoc:
+        return (f"{resolved.name} 은 {resolved.stat().st_size // 1024}KB 라 셸로 통째 읽지 못한다(한도 {kMaxUnboundedCodeBytes // 1024}KB, 토큰 절감).\n"
+                '`graphify query "<질문>"` 으로 범위를 좁히고, `grep -n` 으로 행을 찾아 Read 의 offset · limit 나 '
+                f"`sed -n 'a,bp'`({kMaxSedRangeLines}줄 이하)로 그 범위만 읽는다.")
     return (f"{resolved.name} 은 {resolved.stat().st_size // 1024}KB 라 셸로 통째 읽지 못한다(한도 {maxBytes // 1024}KB, 토큰 절감). 절만 읽는다.\n"
             f"(a) `py -3 -m Scripts doc {resolved.name}` 로 목차를 보고 `--section <제목 일부>` 로 한 절만 읽는다.\n"
             f"(b) 또는 `sed -n 'a,bp'` 로 {kMaxSedRangeLines}줄 이하 범위만 읽는다.")

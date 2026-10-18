@@ -3,7 +3,7 @@
 """
 Scripts/lint/gate/CheckScriptLayout.py
 
-`Scripts/` 의 **자리 규칙** — 폴더가 성격이고, 파일 이름의 앞머리가 그 폴더를 말한다(`Scripts/README.md` 의 Layout 표).
+`Scripts/` 의 **자리 규칙** — 폴더가 성격이고, 파일 이름의 앞머리가 그 폴더를 말한다(`Scripts/docs/Layout.md` 의 Layout 표).
 이름만 보고 그 스크립트가 실패하는지 · 고쳐 쓰는지 · 찍기만 하는지 안다. 린트 폴더는 기반 클래스까지 본다 — `report/` 에 놓았는데
 `LintReport` 가 아니면 `--out` · `--preset` 같은 껍데기가 없고, `CheckReportsRun` · `py -3 -m Scripts report` 가 그것을 부를 수 없다.
 
@@ -48,7 +48,7 @@ class FolderRule:
     bLibraryExempt: bool = False
 
 
-#: `Scripts/README.md` 의 Layout 표 그대로.
+#: `Scripts/docs/Layout.md` 의 Layout 표 그대로.
 _kRule: tuple[FolderRule, ...] = (
     FolderRule("lint/gate", r"^Check[A-Z]\w+$", "LintGate"),
     FolderRule("lint/selftest", r"^Check[A-Z]\w+$", "LintGate"),
@@ -111,7 +111,7 @@ def checkScriptInternal(relPath: str, text: str) -> list[str]:
     listViolation: list[str] = []
     bLibrary = not hasMainGuardInternal(text)
     if rule.namePattern and not re.match(rule.namePattern, stem) and not (rule.bLibraryExempt and bLibrary):
-        listViolation.append(f"{relPath}: {folder}/ 의 파일 이름은 {rule.namePattern} — Scripts/README.md 의 Layout 표")
+        listViolation.append(f"{relPath}: {folder}/ 의 파일 이름은 {rule.namePattern} — Scripts/docs/Layout.md 의 Layout 표")
     if rule.baseClass:
         try:
             tree = ast.parse(text, filename=relPath)
@@ -124,12 +124,12 @@ def checkScriptInternal(relPath: str, text: str) -> list[str]:
 
 
 class CheckScriptLayoutGate(LintGate):
-    description = "Scripts/ 의 폴더마다 파일 이름 앞머리 · 린트 기반 클래스(Scripts/README.md 의 Layout 표)"
+    description = "Scripts/ 의 폴더마다 파일 이름 앞머리 · 린트 기반 클래스(Scripts/docs/Layout.md 의 Layout 표)"
     buildComment = "Checking that scripts sit in the folder their name prefix says..."
     timeoutSeconds = 30
     preCommitPattern = ("Scripts/*.py",)
     preCommitFileArgument = "--files"
-    hint = "  폴더에 맞는 이름으로 옮기거나(git mv) 기반 클래스를 상속합니다 — Scripts/README.md 의 Layout 표."
+    hint = "  폴더에 맞는 이름으로 옮기거나(git mv) 기반 클래스를 상속합니다 — Scripts/docs/Layout.md 의 Layout 표."
     selfTestCases = [
         {"name": "report/ 의 접두 어긋남", "expectedViolation": "Scripts/lint/report/ProbeReport.py: lint/report/ 의 파일 이름은 ^Run[A-Z]\\w+$",
          "files": {"Scripts/lint/report/ProbeReport.py": "from LintReport import LintReport\n\n\nclass ProbeReport(LintReport):\n    pass\n"}},

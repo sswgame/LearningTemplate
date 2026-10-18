@@ -18,9 +18,9 @@ import subprocess
 import sys
 import time
 
-kTranscriptWarnBytes = 6 * 1024 * 1024    # 대화 기록이 이만큼 크면 묶음 경계에서 새 세션을 권한다
-kTranscriptStrongBytes = 12 * 1024 * 1024 # 이만큼이면 지금 인계 문서를 쓰고 새 세션으로 가라고 권한다
-kHardLimitStepsBytes = ( 8 * 1024 * 1024, 16 * 1024 * 1024, 32 * 1024 * 1024 )  # 단계마다 한 번 프롬프트를 막는다(비용이 세션 길이에 비례 — 경고만으로는 무시됐다)
+kTranscriptWarnBytes = 2 * 1024 * 1024    # 대화 기록이 이만큼 크면 묶음 경계에서 새 세션을 권한다
+kTranscriptStrongBytes = 3 * 1024 * 1024 # 이만큼이면 지금 인계 문서를 쓰고 새 세션으로 가라고 권한다
+kHardLimitStepsBytes = ( 4 * 1024 * 1024, 8 * 1024 * 1024, 16 * 1024 * 1024 )  # 단계마다 한 번 프롬프트를 막는다(비용이 세션 길이에 비례 — 경고만으로는 무시됐다)
 kHardLimitCompactions = 2                 # 압축이 이만큼이면 최소 1단계
 kHardBlockDirName = "sw-session-guard"    # 공통 .git 아래. 세션 아이디별 <id>.json 에 마지막으로 막은 단계를 남긴다
 kExitBlockPrompt = 2                      # UserPromptSubmit 에서 종료 코드 2 는 프롬프트를 지우고 표준 오류를 사용자에게 보인다

@@ -34,6 +34,13 @@ class BigDocShellReadTest(unittest.TestCase):
         self.assertIn("Big.md", self.check("cd x && cat docs/Big.md"))
         self.assertIn("Big.md", self.check("Get-Content docs/Big.md"))
 
+    def testBigCodeFileUsesCodeLimit(self) -> None:
+        (self.root / "docs" / "Big.cpp").write_bytes(b"x" * (GuardCommands.kMaxUnboundedCodeBytes + 1))
+        (self.root / "docs" / "Mid.cpp").write_bytes(b"x" * (kLimit * 3))  # md 한도는 넘지만 코드 한도 아래
+        self.assertIn("graphify query", self.check("cat docs/Big.cpp"))
+        self.assertEqual(self.check("cat docs/Mid.cpp"), "")
+        self.assertEqual(self.check("sed -n '1,100p' docs/Big.cpp"), "")
+
     def testWideSedRangeIsBlockedButNarrowRangeIsAllowed(self) -> None:
         self.assertIn("Big.md", self.check("sed -n '1,900p' docs/Big.md"))
         self.assertIn("Big.md", self.check("sed -n 1,p docs/Big.md") or "Big.md")

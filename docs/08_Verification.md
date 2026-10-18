@@ -34,7 +34,7 @@ cmake --preset Ninja-Debug-ASAN
 cmake --build --preset Ninja-Debug-ASAN
 ctest --test-dir build/Ninja-Debug-ASAN -L nogpu -j
 
-# 정적 분석 — 게이트가 아니라 판단 자료다(Scripts/README.md "함정 · 계약" 의 clang-tidy 참고)
+# 정적 분석 — 게이트가 아니라 판단 자료다(Scripts/docs/TrapsLint.md "함정 · 계약" 의 clang-tidy 참고)
 py -3 Scripts/lint/report/RunClangTidy.py [--filter Core] [--clang-tidy <경로>]
 
 # 눈으로 봐야 할 때 — 종료 코드 0, 로그에 [Error] 0건

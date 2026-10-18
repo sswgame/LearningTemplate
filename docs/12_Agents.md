@@ -25,7 +25,7 @@
 - 지시문에 읽을 문서와 절을 이름으로 적습니다([작업자 규칙](plans/WorkerRules.md) 5절). 찾기만 하는 일은 `scout` 로, 결과는 열 줄 안쪽으로 받습니다.
 - **코드를 찾는 지시문에는 `graphify query "<질문>"` 을 먼저 쓰라고 적습니다**(`py -3 -m graphify query ...`, 저장소 루트의 `graphify-out/` 필요. 작업자 워크트리에서는 MCP `query_graph`). 파일 · 심볼 이름을 좁힌 뒤에 그 파일만 읽게 합니다.
   그래프는 `graphify update Source` 로 만든 시점의 코드입니다. **행 번호는 늘 실제 파일에서 다시 확인하게 하고**, 큰 구조 변경 뒤에는 그래프를 갱신합니다. 갱신은 `main` 체크아웃에서 `py -3 -m graphify update Source` 입니다(`graphify` 가 PATH 에 없을 수 있다).
-- **큰 문서는 `py -3 -m Scripts doc <파일>` 로 목차를 보고 `--section <제목 일부>` 로 절만 읽습니다.** 훅(`.claude/hooks/ReadGuard.py`)이 30KB 를 넘는 `.md` 의 `limit` · `offset` 없는 통째 읽기를 거절합니다.
+- **큰 문서는 `py -3 -m Scripts doc <파일>` 로 목차를 보고 `--section <제목 일부>` 로 절만 읽습니다.** 훅(`.claude/hooks/ReadGuard.py`)이 30KB 를 넘는 `.md` 와 48KB 를 넘는 코드(`.cpp` · `.h` · `.py` 등)의 `limit` · `offset` 없는 통째 읽기를 거절합니다(셸 `cat` · 넓은 `sed -n` 은 `GuardCommands.py`). 코드는 `graphify query` 로 좁힌 뒤 범위만 읽습니다.
 - 같은 에이전트에게 이어 시키는 것(`SendMessage`)은 같은 파일을 계속 만질 때만 합니다. 이어 시킬 때마다 지난 대화가 다시 입력으로 들어가고, 무관한 일이면 새로 띄우는 쪽이 쌉니다.
 - 읽기 전용 점검은 Sonnet 이하로 하고, 결론에 닿는 판단(무엇을 지울지, 무엇을 합칠지)은 맡긴 쪽이 합니다.
 - 병렬로 띄우는 수는 파일 소유가 겹치지 않는 만큼만 둡니다. 한 일의 보고에는 쓴 토큰 수가 찍히므로, 같은 종류의 일에서 더 싼 조합이 통했는지 다음 배치 때 이 표를 고칩니다.
@@ -45,6 +45,7 @@
 | 2026-10-19 | 인스펙터 선택기 | 구현 + 테스트 | `worker`(sonnet, medium) | 약 16만 | 65 | 명세 파일만 읽게 함. 13분. 명세의 사실 하나(`resolveComponent` 의 삭제 대기 처리)가 틀려 구현이 보정함 |
 | 2026-10-19 | 인스펙터 선택기 | (참고) 통째로 맡겼다면 | `worker`(opus, high) | 측정 못 함 | | 1분 만에 세워 값이 없다. 위 두 조각 합 약 30만이 기준선 |
 | 2026-10-19 | 토큰 줄이기 | AGENTS.md 를 `docs/agents/` 7개 파일로 분할 + 링크 약 60곳 | `mech-worker`(sonnet, medium) | 약 10만 | 24 | 4분. 줄 단위 비교로 내용 불변 확인. 읽는 분량: AGENTS.md 52.7KB 통째 → 목차 4.9KB + 일에 맞는 파일 |
+| 2026-10-19 | 토큰 줄이기 | Scripts/README 분할 | worker(Sonnet 5.5, low) | 약 8만 | 22 |  |
 
 표의 새 줄은 `py -3 -m Scripts agent-log --task <일> --piece <조각> --agent "<종류(모델, effort)>" --tokens "약 N만" --calls <수> [--note ..]` 로 더합니다(날짜는 오늘, 줄 끝 보존). 계획 문서는 통째로 읽지 말고 `py -3 -m Scripts plans --file <이름> --section <절 제목 일부>` 로 필요한 절 본문만 읽습니다.
 
@@ -63,6 +64,6 @@
 
 - 사용자가 요청을 넘기면, 지금 세션과 다른 모델 · effort 가 맞을 때 한 줄로 권하고 진행합니다. 질문 · 상태 확인 · 진행 보고는 low 로 충분합니다.
 - 요청이 이 문서의 규칙과 부딪히거나 한도에 닿으면 실행 전에 한 줄로 알립니다(규칙 이름 · 비용 · 권하는 행동).
-- 세션 가드 훅 `.claude/hooks/SessionGuard.py` 는 알릴 것이 있을 때만 출력하고, 기록이 8MB · 16MB · 32MB 에 닿을 때마다(또는 압축 2회 이상) 단계마다 한 번 프롬프트를 막습니다. 무엇을 알리는지는 훅 파일이 원본입니다.
+- 세션 가드 훅 `.claude/hooks/SessionGuard.py` 는 알릴 것이 있을 때만 출력하고, 기록이 4MB · 8MB · 16MB 에 닿을 때마다(또는 압축 2회 이상) 단계마다 한 번 프롬프트를 막습니다. 무엇을 알리는지는 훅 파일이 원본입니다.
 - **인계 문서는 [docs/plans/NEXT.md](plans/NEXT.md) 입니다.** 대화가 길어지면 배치 경계에서 그 문서에 다음 일과 상태를 적고 새 세션을 권합니다. 새 세션은 그 문서가 있으면 먼저 읽습니다.
 - `.gitignore` 는 `.claude` 에서 에이전트 정의 · 훅 · 공유 설정만 추적합니다. 개인 권한 목록은 `.claude/settings.local.json` 에 둡니다.

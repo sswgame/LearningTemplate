@@ -53,6 +53,12 @@ class ReadGuardTest(unittest.TestCase):
         self.assertEqual(self.checkInternal({"file_path": self.writeInternal(self.outside, "Big.md", kLimit * 5)}), "")
         self.assertEqual(self.checkInternal({"file_path": str(self.root / "None.md")}), "")
 
+    def testCodeFilesUseCodeLimit(self) -> None:
+        big = self.writeInternal(self.root, "Big.cpp", kLimit * 5)
+        self.assertEqual(ReadGuard.checkRead({"file_path": big}, self.root, kLimit, kLimit * 5), "")
+        self.assertIn("graphify query", ReadGuard.checkRead({"file_path": big}, self.root, kLimit, kLimit * 5 - 1))
+        self.assertEqual(ReadGuard.checkRead({"file_path": big, "limit": 50}, self.root, kLimit, 1), "")
+
     def testBrokenInputPasses(self) -> None:
         self.assertEqual(self.checkInternal({}), "")
         self.assertEqual(self.checkInternal({"file_path": 3}), "")
