@@ -15,11 +15,13 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
+#include "Engine/Reflection/ReflectedValueWalk.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
 #include "Engine/Serialization/Base/Serializer.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -195,17 +197,6 @@ namespace sw
                 return s_typeName;
             }
 
-            /** @brief 컨테이너의 어느 단계(키, 원소)에 `GameObjectHandle` 이 들어 있는지 확인합니다. */
-            static bool holdsObjectHandle( const NestedContainerInfo& shape )
-            {
-                for ( const NestedContainerInfo* pLevel = &shape; pLevel != nullptr; pLevel = pLevel->_elementNested.get() )
-                {
-                    if ( pLevel->_elementTypeName == getObjectHandleTypeName() || pLevel->_keyTypeName == getObjectHandleTypeName() )
-                        return true;
-                }
-                return false;
-            }
-
             /**
              * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 바꿔 쓰는 텍스트와 바이너리 처리기입니다. 부착과 같은 규칙입니다(`ObjectSaveOptions::getSavedObjectID`).
              * @details 세 형식이 모두 이 처리기를 거친다. 런타임 id 를 그대로 적으면 씬 파일을 다시 열 때 같은 값을 받은 다른 오브젝트를 가리킬 수 있다.
@@ -313,13 +304,13 @@ namespace sw
             const uint64 savedID = ObjectStateSerializerInternal::resolveSavedID( context );
             if ( context._pBatch != nullptr )
             {
-                context._pBatch->addLoadedState( pGameObject, savedID, savedName, context._bExternalParentAllowed );
+                context._pBatch->addLoadedState( pGameObject, savedID, savedName, context.getPurpose(), context._bExternalParentAllowed );
             }
             else
             {
                 // 혼자 읽는 상태도 같은 규칙으로 연결한다. 같은 실행의 상태라 다른 오브젝트는 매니저의 런타임 id 로 찾는다.
                 ObjectStateBatch single( ObjectIDSpace::Live );
-                single.addLoadedState( pGameObject, savedID, savedName, context._bExternalParentAllowed );
+                single.addLoadedState( pGameObject, savedID, savedName, context.getPurpose(), context._bExternalParentAllowed );
                 // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
                 [[maybe_unused]] const bool bLinked = single.finish();
                 SW_ASSERT( bLinked );
@@ -446,7 +437,8 @@ namespace sw
             // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊기고, 짧은 타입 이름을 적으면 이름이 같은 다른 타입이 id 를 가져간다.
             // 타입 정보가 없으면(모듈이 내려감) 빈 값이고, 복원은 빈 값을 맞추지 않는다(그 컴포넌트는 새 id 를 받는다).
             const TypeInfo* pTypeInfo = pComp->findCachedTypeInfo();
-            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{}, pComp->getComponentID() } );
+            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{}, pComp->getComponentID(),
+                                                                               ComponentStableKey::makeKey( pComp ) } );
         }
         return identity;
     }
@@ -460,6 +452,7 @@ namespace sw
         {
             writer.writeString( entry._typeFqn.c_str() );
             writer.write( entry._componentID );
+            writer.writeString( entry._stableKey.c_str() );
         }
     }
 
@@ -474,9 +467,9 @@ namespace sw
         if ( reader.read( outIdentity._objectID ) == false || reader.read( componentCount ) == false )
             return 0;
 
-        // 항목 하나는 적어도 이름 길이(4)와 ID(8)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
+        // 항목 하나는 적어도 이름 길이(4)와 ID(8)와 키 길이(4)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
         // 그대로 `reserve` 하면 그 한 줄이 먼저 터진다(`GameInstanceBase::deserializeSceneObjects` 가 같은 이유로 같은 계산을 한다).
-        constexpr size_t kMinBytesPerEntry = sizeof( uint32 ) + sizeof( uint64 );
+        constexpr size_t kMinBytesPerEntry = sizeof( uint32 ) + sizeof( uint64 ) + sizeof( uint32 );
         if ( componentCount > ( size - reader.getOffset() ) / kMinBytesPerEntry )
             return 0;
 
@@ -485,7 +478,8 @@ namespace sw
         {
             string                         typeName;
             ObjectIdentity::ComponentEntry entry;
-            if ( reader.readString( typeName ) == false || reader.read( entry._componentID ) == false )
+            const bool                     bEntryRead = reader.readString( typeName ) && reader.read( entry._componentID ) && reader.readString( entry._stableKey );
+            if ( bEntryRead == false )
                 return 0;
             entry._typeFqn = hashed_string( typeName.data(), static_cast<uint32>( typeName.size() ) );
             outIdentity._listComponent.push_back( entry );
@@ -521,22 +515,23 @@ namespace sw
 
     void ObjectStateBatch::add( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed )
     {
-        addEntry( pObject, savedID, savedName, bExternalParentAllowed, false );
+        addEntry( pObject, savedID, savedName, bExternalParentAllowed, std::nullopt );
     }
 
-    void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed )
+    void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed )
     {
-        addEntry( pObject, savedID, savedName, bExternalParentAllowed, true );
+        addEntry( pObject, savedID, savedName, bExternalParentAllowed, purpose );
     }
 
-    void ObjectStateBatch::addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed, bool bLoadedState )
+    void ObjectStateBatch::addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed,
+                                     std::optional<SerializePurpose> loadedPurpose )
     {
         if ( pObject == nullptr )
             return;
         SW_ASSERT( _bFinished == false );
 
         const uint32 entryIndex = static_cast<uint32>( _listEntry.size() );
-        _listEntry.push_back( Entry{ pObject, savedID, savedName, bExternalParentAllowed, bLoadedState } );
+        _listEntry.push_back( Entry{ pObject, savedID, savedName, bExternalParentAllowed, loadedPurpose } );
         // 같은 id 나 이름이 둘이면 먼저 기록된 것을 쓴다(문서에 이름이 겹친 엔티티가 있을 수 있다).
         if ( savedID != 0 )
             _mapSavedIDToObject.emplace( savedID, pObject );
@@ -577,7 +572,7 @@ namespace sw
         //    이 실행의 오브젝트다(언리얼의 `PostLoad` 도 패키지의 오브젝트를 모두 읽고 연결한 뒤에 온다). 상태 없이 만든 항목(프리팹 스폰)은 스폰이 이미 불렀다.
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._bLoadedState == false || entry._pObject->isPendingDestroy() )
+            if ( entry._loadedPurpose.has_value() == false || entry._pObject->isPendingDestroy() )
                 continue;
             for ( Component* pComp : entry._pObject->getComponents() )
             {
@@ -589,7 +584,7 @@ namespace sw
         // 5) 읽은 값을 검증한다(`Validate = fn`). 결과는 `ValidationIssueLog` 로 간다(맵 검사). 값을 고치거나 로드를 멈추지 않는다.
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._bLoadedState == true && entry._pObject->isPendingDestroy() == false )
+            if ( entry._loadedPurpose.has_value() && entry._pObject->isPendingDestroy() == false )
                 (void)ObjectValidation::reportGameObject( *entry._pObject, true );
         }
         return _bReferencesResolved;
@@ -598,151 +593,39 @@ namespace sw
     bool ObjectStateBatch::resolveObjectReferences( const Entry& entry ) const
     {
         GameObject* pObject = entry._pObject;
-        if ( pObject->isPendingDestroy() )
+        // 상태를 읽지 않은 항목(`add`)의 값은 이 배치가 읽은 것이 아니다. 옮기면 살아 있는 참조를 망친다.
+        if ( pObject->isPendingDestroy() || entry._loadedPurpose.has_value() == false )
             return true;
-        bool bAllRemapped = true;
 
-        const hashed_string& handleTypeName = ObjectStateSerializerInternal::getObjectHandleTypeName();
+        // 읽지 않은 필드(Transient, 저작 읽기의 RuntimeState)는 현재 실행의 값이다 — 읽기와 같은 판정(`shouldSerializeProperty`)으로 거른다.
+        const SerializeContext& context = SerializeContext::getDefault( *entry._loadedPurpose );
+        auto                    filter  = [&context]( const TypeInfo& owner, const PropertyInfo& prop )
+        { return SerializerUtil::shouldSerializeProperty( owner, prop, context ); };
+        auto remap = [this]( const GameObjectHandle& savedHandle )
+        { return resolveObjectReference( savedHandle ); };
+        ReflectedValueWalk<GameObjectHandle, decltype( filter ), decltype( remap )> walk( context.getTypeRegistry(), ObjectStateSerializerInternal::getObjectHandleTypeName(),
+                                                                                          filter, remap );
+        bool                                                                        bAllRemapped = true;
         for ( Component* pComp : pObject->getComponents() )
         {
             const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
-            if ( pTypeInfo == nullptr )
+            if ( pTypeInfo == nullptr || walk.holdsLeaf( *pTypeInfo ) == false )
                 continue;
             for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
             {
-                // 읽지 않은 필드(Transient)는 현재 실행의 값이다. 옮기면 살아 있는 참조를 망친다.
-                if ( prop._metadata._bTransient == SW_TRUE )
-                    continue;
-                if ( prop._bIsContainer == SW_FALSE )
-                {
-                    if ( prop._typeName == handleTypeName )
-                    {
-                        GameObjectHandle* pHandle = static_cast<GameObjectHandle*>( prop.getRawPtr( pComp ) );
-                        *pHandle                  = resolveObjectReference( *pHandle );
-                    }
-                    continue;
-                }
-                if ( prop._containerWrapper == nullptr )
-                    continue;
-                const NestedContainerInfo shape = prop.getContainerShape();
-                if ( ObjectStateSerializerInternal::holdsObjectHandle( shape ) == false || remapContainerHandles( prop.getRawPtr( pComp ), shape ) )
+                if ( walk.walkProperty( pComp, *pTypeInfo, prop ) )
                     continue;
                 // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못한 것은 로드 오류다.
-                // 비우지 않는다 — 값이 조용히 사라지는 폴백이다(`docs/plans/TypedComponents.md` 3.7).
+                // 비우지 않는다 — 값이 조용히 사라지는 폴백이다.
                 if ( _idSpace != ObjectIDSpace::Saved )
                     continue;
-                SW_LOG_ERROR( "Property '%#::%#' of '%#' holds object handles a load batch cannot remap (a set of containers, or a copy failed) - the load fails",
+                SW_LOG_ERROR( "Property '%#::%#' of '%#' holds object handles a load batch cannot remap (inside a set element or a map key that is a struct or "
+                              "container, or a copy failed) - the load fails",
                               pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str() );
                 bAllRemapped = false;
             }
         }
         return bAllRemapped;
-    }
-
-    bool ObjectStateBatch::remapContainerHandles( void* pContainer, const NestedContainerInfo& shape ) const
-    {
-        if ( pContainer == nullptr || shape._wrapper == nullptr )
-            return true;
-        const hashed_string& handleTypeName = ObjectStateSerializerInternal::getObjectHandleTypeName();
-
-        ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence();
-        if ( pSequence != nullptr )
-        {
-            const size_t elementCount = pSequence->getSize( pContainer );
-            if ( shape._elementNested != nullptr )
-            {
-                // 원소가 곧 정렬 키인 set 은 원소를 제자리에서 고칠 수 없다. 컨테이너를 원소로 가진 set 은 옮기지 못한다.
-                if ( pSequence->allowsInPlaceElementWrite() == false )
-                    return ObjectStateSerializerInternal::holdsObjectHandle( *shape._elementNested ) == false;
-                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
-                {
-                    if ( remapContainerHandles( pSequence->getElement( pContainer, elementIndex ), *shape._elementNested ) == false )
-                        return false;
-                }
-                return true;
-            }
-            if ( shape._elementTypeName != handleTypeName )
-                return true;
-            if ( pSequence->allowsInPlaceElementWrite() )
-            {
-                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
-                {
-                    GameObjectHandle* pHandle = static_cast<GameObjectHandle*>( pSequence->getElement( pContainer, elementIndex ) );
-                    *pHandle                  = resolveObjectReference( *pHandle );
-                }
-                return true;
-            }
-            // set 은 옮긴 값으로 빼고 다시 넣는다(위치는 컨테이너가 정한다).
-            vector<GameObjectHandle> listHandle;
-            listHandle.reserve( elementCount );
-            for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
-            {
-                listHandle.push_back( resolveObjectReference( *static_cast<const GameObjectHandle*>( pSequence->getElementConst( pContainer, elementIndex ) ) ) );
-            }
-            pSequence->clear( pContainer );
-            for ( size_t elementIndex = 0; elementIndex < listHandle.size(); ++elementIndex )
-            {
-                const GameObjectHandle handle = listHandle[elementIndex];
-                (void)pSequence->appendElement( pContainer, elementIndex, ElementFillDelegate::create( [handle]( void* pElement )
-                {
-                    *static_cast<GameObjectHandle*>( pElement ) = handle;
-                    return true;
-                } ) );
-            }
-            return true;
-        }
-
-        IMapContainerWrapper* pMap = shape._wrapper->asMap();
-        if ( pMap == nullptr )
-            return true;
-        // 값부터 제자리에서 옮긴다(핸들 값, 중첩 컨테이너).
-        bool bValueRemapped = true;
-        if ( shape._elementNested != nullptr || shape._elementTypeName == handleTypeName )
-        {
-            pMap->forEachMutable( pContainer, MapForEachMutableDelegate::create( [this, &shape, &bValueRemapped, &handleTypeName]( const void*, void* pValue )
-            {
-                if ( shape._elementNested != nullptr )
-                    bValueRemapped = remapContainerHandles( pValue, *shape._elementNested ) && bValueRemapped;
-                else if ( shape._elementTypeName == handleTypeName )
-                    *static_cast<GameObjectHandle*>( pValue ) = resolveObjectReference( *static_cast<GameObjectHandle*>( pValue ) );
-            } ) );
-        }
-        if ( bValueRemapped == false || shape._keyTypeName != handleTypeName )
-            return bValueRemapped;
-
-        // 키는 정렬과 해시의 기준이라 제자리에서 고칠 수 없다. 값을 밖에 복사해 두고, 비운 뒤 옮긴 키로 다시 넣는다.
-        constexpr size_t kAlignment  = 64;
-        const size_t     valueStride = ( pMap->getValueSize() + kAlignment - 1 ) / kAlignment * kAlignment;
-        const size_t     entryCount  = pMap->getSize( pContainer );
-        if ( entryCount == 0 )
-            return true;
-        uint8* pValueBlock = static_cast<uint8*>( Memory::allocateAligned( valueStride * entryCount, kAlignment ) );
-        if ( pValueBlock == nullptr )
-            return false;
-        vector<GameObjectHandle> listKey;
-        listKey.reserve( entryCount );
-        bool bCopied = true;
-        pMap->forEach( pContainer, MapForEachDelegate::create( [this, pMap, pValueBlock, valueStride, &listKey, &bCopied]( const void* pKey, const void* pValue )
-        {
-            void* pSlot = pValueBlock + valueStride * listKey.size();
-            pMap->defaultConstructValue( pSlot );
-            bCopied = pMap->copyValue( pSlot, pValue ) && bCopied;
-            listKey.push_back( resolveObjectReference( *static_cast<const GameObjectHandle*>( pKey ) ) );
-        } ) );
-        if ( bCopied )
-        {
-            pMap->clear( pContainer );
-            for ( size_t entryIndex = 0; entryIndex < listKey.size(); ++entryIndex )
-            {
-                pMap->insertKeyValue( pContainer, &listKey[entryIndex], pValueBlock + valueStride * entryIndex );
-            }
-        }
-        for ( size_t entryIndex = 0; entryIndex < listKey.size(); ++entryIndex )
-        {
-            pMap->destroyValue( pValueBlock + valueStride * entryIndex );
-        }
-        Memory::freeAligned( pValueBlock );
-        return bCopied;
     }
 
     GameObjectHandle ObjectStateBatch::resolveObjectReference( GameObjectHandle savedHandle ) const

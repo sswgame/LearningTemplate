@@ -528,6 +528,25 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 핸들을 품은 리플렉션 구조체입니다 — 묶음이 구조체 필드 안의 핸들도 옮기는지 봅니다(`ReflectedValueWalk`). */
+    REFLECT()
+    struct TestHandleWaypoint
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _order{ 0 };
+
+        PROPERTY()
+        GameObjectHandle _target; ///< 옮긴다(구조체 필드)
+
+        PROPERTY()
+        vector<GameObjectHandle> _listWatcher; ///< 옮긴다(구조체 안의 시퀀스)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 오브젝트 상태 묶음이 핸들을 옮기는 자리와 옮기지 못하는 자리를 한 컴포넌트에 둔 샘플입니다(`ObjectStateBatch::finish`). */
     REFLECT()
     struct TestHandleHolderComponent : public Component
@@ -554,6 +573,15 @@ namespace sw
 
         PROPERTY()
         map<string, vector<GameObjectHandle>> _mapGroupToTarget; ///< 옮긴다(맵 값의 시퀀스)
+
+        PROPERTY()
+        TestHandleWaypoint _waypoint; ///< 옮긴다(구조체 필드 안)
+
+        PROPERTY()
+        vector<TestHandleWaypoint> _listWaypoint; ///< 옮긴다(구조체 벡터 안)
+
+        PROPERTY()
+        map<GameObjectHandle, TestHandleWaypoint> _mapTargetToWaypoint; ///< 옮긴다(핸들 키와 구조체 값 안)
     };
 } // namespace sw
 

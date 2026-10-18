@@ -320,7 +320,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchFailsOnHandlesItCannotRemap )
 /**
  * @brief [ReflectionComponentTest] 파일 상태 묶음은 컨테이너 안의 핸들을 모두 이 실행의 오브젝트로 옮긴다 — 시퀀스 · set · 맵 값 · 맵 키 · 중첩, 세 형식 모두
  * @details 대상 오브젝트를 저장된 id 로 묶음에 넣고(`ObjectStateBatch::add`) 핸들을 든 오브젝트를 읽으면, 어느 자리의 핸들이든 새 대상을 가리켜야 한다.
- *          set 원소와 맵 키는 정렬 · 해시 자리라 제자리에서 고칠 수 없어 빼고 다시 넣는다(`ObjectStateBatch::remapContainerHandles`).
+ *          set 원소와 맵 키는 정렬 · 해시 자리라 제자리에서 고칠 수 없어 빼고 다시 넣는다. 구조체 필드 · 구조체 벡터 · 핸들 키 맵의 구조체 값 안의 핸들도 옮긴다(`ReflectedValueWalk`).
  */
 SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
 {
@@ -345,6 +345,16 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
     };
     pHolderComp->_mapGroupToTarget = {
         { "squad", { target } }
+    };
+    pHolderComp->_waypoint._order       = 1;
+    pHolderComp->_waypoint._target      = target;
+    pHolderComp->_waypoint._listWatcher = { target };
+    sw::TestHandleWaypoint second;
+    second._order                     = 2;
+    second._target                    = target;
+    pHolderComp->_listWaypoint        = { second };
+    pHolderComp->_mapTargetToWaypoint = {
+        { target, second }
     };
 
     sw::vector<uint8> binaryState;
@@ -388,6 +398,13 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
                             arrFormatName[formatIndex] );
         SW_EXPECT_TRUE_MSG( pLoaded->_mapGroupToTarget.size() == 1 && pLoaded->_mapGroupToTarget.at( "squad" ).size() == 1 &&
                                 pLoaded->_mapGroupToTarget.at( "squad" )[0] == moved,
+                            arrFormatName[formatIndex] );
+        // 구조체 필드 안 · 구조체 벡터 안 · 핸들 키 맵의 구조체 값 안 — 쓰기 처리기가 모든 깊이에서 저장 id 로 적으므로 읽기도 같은 깊이를 옮긴다.
+        SW_EXPECT_TRUE_MSG( pLoaded->_waypoint._target == moved && pLoaded->_waypoint._order == 1, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_waypoint._listWatcher.size() == 1 && pLoaded->_waypoint._listWatcher[0] == moved, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_listWaypoint.size() == 1 && pLoaded->_listWaypoint[0]._target == moved, arrFormatName[formatIndex] );
+        SW_EXPECT_TRUE_MSG( pLoaded->_mapTargetToWaypoint.size() == 1 && pLoaded->_mapTargetToWaypoint.begin()->first == moved &&
+                                pLoaded->_mapTargetToWaypoint.begin()->second._target == moved && pLoaded->_mapTargetToWaypoint.begin()->second._order == 2,
                             arrFormatName[formatIndex] );
     }
 }

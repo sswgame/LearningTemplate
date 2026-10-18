@@ -46,37 +46,7 @@ namespace sw
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              */
-            static constexpr uint32 kVersion = 3;
-
-            /**
-             * @brief 다른 실행의 세이브에서 오브젝트 하나의 저장된 컴포넌트 id 를 다시 만든 컴포넌트 id 에 잇습니다.
-             * @details 같은 오브젝트 안에서 타입이 같은 것끼리 차례대로 잇는다(`takeRestoredComponentID` 와 같은 규칙). 차례는 스트림 하나가 정하므로
-             *          실행마다 같다 — 매니저의 전역 순회 순서(실행마다 다르다)에 기대지 않는다.
-             */
-            static void appendComponentIDRemap( const ObjectIdentity& identity, const GameObject& object, vector<ComponentStateStore::SavedComponentID>& outListRemap )
-            {
-                const vector<ObjectIdentity::ComponentEntry>& listSaved = identity._listComponent;
-                size_t                                        cursor    = 0;
-                for ( const Component* pComponent : object.getComponents() )
-                {
-                    if ( pComponent == nullptr || pComponent->isPendingDestroy() )
-                        continue;
-                    if ( pComponent->getTypeInfo() == nullptr )
-                        continue;
-                    const hashed_string typeFqn = pComponent->getTypeInfo()->_fullyQualifiedName;
-                    for ( size_t savedIndex = cursor; savedIndex < listSaved.size(); ++savedIndex )
-                    {
-                        if ( listSaved[savedIndex]._typeFqn != typeFqn )
-                            continue;
-                        cursor = savedIndex + 1;
-                        ComponentStateStore::SavedComponentID remap;
-                        remap._savedID = listSaved[savedIndex]._componentID;
-                        remap._liveID  = pComponent->getComponentID();
-                        outListRemap.push_back( remap );
-                        break;
-                    }
-                }
-            }
+            static constexpr uint32 kVersion = 4; // 4: 오브젝트 id 묶음에 컴포넌트 안정 키가 실린다
         };
     } // namespace
 } // namespace sw
@@ -515,7 +485,7 @@ namespace sw
             listRestoredObject.push_back( pObj );
             offset += readBytes;
             if ( bRestoreIdentity == false )
-                StateEnvelopeInternal::appendComponentIDRemap( identity, *pObj, outListRemap );
+                ComponentStateStore::appendComponentIDRemap( identity, *pObj, outListRemap );
         }
 
         // 씬 계층 구조(부모와 소켓)를 한 번에 잇는다. 자식이 부모보다 먼저 읽혔어도 부모를 찾을 수 있다.
