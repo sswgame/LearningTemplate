@@ -1198,11 +1198,11 @@ SW_TEST_CASE( ResourcePakTest, EmptyCompressedPayloadIsNotSuccess )
 
     const uint64 indexOffset = sw::readIndexOffsetInternal( packPath );
     SW_ASSERT_TRUE( indexOffset != 0 );
-    // CRC 없는 팩으로 만든다 — CRC 가 있으면 0 으로 찬 데이터를 그것이 먼저 잡아, 이 수정만 따로 측정할 수 없다.
+    // CRC 없는 팩으로 만든다 — CRC 가 있으면 0 으로 찬 데이터를 그것이 먼저 잡아, 이 수정만 따로 측정할 수 없다. 항목 경로 목록은 필수라 남긴다.
     const uint32 zero{ 0 };
-    const uint16 noFlags{ 0 };
-    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, indexOffset + 16, &zero, sizeof( zero ) ) ); // _compressedSize
-    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, 16, &noFlags, sizeof( noFlags ) ) );         // PackHeader::_flags
+    const uint16 pathListOnlyFlags = static_cast<uint16>( sw::PackFlag::HasStringPool );
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, indexOffset + 16, &zero, sizeof( zero ) ) );             // _compressedSize
+    SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, 16, &pathListOnlyFlags, sizeof( pathListOnlyFlags ) ) ); // PackHeader::_flags
 
     sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
