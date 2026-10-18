@@ -27,8 +27,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
 
 - `D4-6` [기능] **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/`(임포트 · 코덱 · 재생 · 상태 기계 · 블렌드 스페이스 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생),
   알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/`. 남은 것 —
-  ① 그래프 레이어 · 본 마스크(`AnimationGraphAsset` "layers" · "bone_masks", 프리셋 `*.bonemask.json`)와 블렌드 스페이스 상태 재생은 들어갔다. 남은 것: Shooter3D 상체 레이어(`ShooterAvatarComponent::ensureLayers` 의 `addLayer`)를
-    그래프 데이터(`data/anim/masks/upper_body.bonemask.json`)로 옮기기, 블렌드 스페이스 표본 클립의 알림(지금은 내지 않는다), 그래프 에디터의 레이어 · 마스크 편집 화면
+  ① 그래프 레이어 · 본 마스크(`AnimationGraphAsset` "layers" · "bone_masks", 프리셋 `*.bonemask.json`)와 블렌드 스페이스 상태 재생은 들어갔다. Shooter3D 상체 레이어도 그래프 데이터(`Aim` · `Shoot`)다. 남은 것:
+    블렌드 스페이스 표본 클립의 알림(지금은 내지 않는다), 그래프 에디터의 레이어 · 마스크 편집 화면
   ② 후처리 리그(`PoseModifierComponent`): 시퀀서 `RigSlot` 트랙(`setSlotWeight` 에 키 찍기)과 리그 디버그 창(`RigDebugPanel` — 노드 가중치 · 켜짐 · 쓰는 본 표시)은 들어갔다. 남은 것: 창에서 고친 가중치 · 켜짐은
     런타임 인스턴스의 복제본에만 들어가 저장되지 않는다(리그 에셋에 쓰는 길), 노드 대상 본 기즈모 편집,
     `Engine/Sequencer` 가 `Engine/Character` 헤더를 새로 include 한다(레이어 검사 확인)

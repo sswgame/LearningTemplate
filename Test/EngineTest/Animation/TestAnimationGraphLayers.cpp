@@ -142,6 +142,27 @@ SW_TEST_CASE( AnimationGraphLayersTest, LayersAndBoneMasksRoundTripThroughJSON )
 }
 
 /**
+ * @brief [AnimationGraphLayersTest] Shooter3D 플레이어 그래프는 상체 레이어 둘(Aim · Shoot)을 데이터로 갖는다 — 프리셋 마스크 파일을 읽고, 게임 코드는 가중치 파라미터만 쓴다
+ * @details 예전에는 `ShooterAvatarComponent` 가 코드로 레이어를 더했다(`addLayer`, 마스크 루트 본 프로퍼티). 이름이 게임의 `ShooterAnimationParameter`
+ *          (`AimWeight` · `ShootWeight`)와 어긋나면 레이어가 0 가중치로 남아 상체가 조용히 사라진다 — 그 계약을 여기서 지킨다.
+ */
+SW_TEST_CASE( AnimationGraphLayersTest, Shooter3DPlayerGraphCarriesTheUpperBodyLayers )
+{
+    AnimationGraphAsset graph;
+    SW_ASSERT_TRUE( graph.loadFromFile( "game/shooter3d/data/anim/adventurer.animgraph.json" ) );
+    const AnimationBoneMaskDef* pMask = graph.findBoneMask( "UpperBody" );
+    SW_ASSERT_NOT_NULL( pMask );
+    SW_EXPECT_FALSE( pMask->_listEntry.empty() );
+    const AnimationGraphLayerDef* pAim   = graph.findLayer( "Aim" );
+    const AnimationGraphLayerDef* pShoot = graph.findLayer( "Shoot" );
+    SW_ASSERT_TRUE( pAim != nullptr && pShoot != nullptr );
+    SW_EXPECT_TRUE( pAim->_weightParameter == hashed_string( "AimWeight" ) );
+    SW_EXPECT_TRUE( pShoot->_weightParameter == hashed_string( "ShootWeight" ) );
+    SW_EXPECT_TRUE( pAim->_maskName == hashed_string( "UpperBody" ) && pShoot->_maskName == hashed_string( "UpperBody" ) );
+    SW_EXPECT_TRUE( pAim->_bLoop == SW_FALSE ); // 겨누기 클립은 겨눈 자세로 끝난다 — 돌리면 끝에서 처음으로 팔이 튄다
+}
+
+/**
  * @brief [AnimationGraphLayersTest] 잘못된 레이어 데이터는 조용히 기본값이 되지 않고 그래프 전체가 로드 오류다
  * @details 없는 마스크 이름, 모르는 합치기, 가중치 없음 · 범위 밖, 프리셋 파일과 본문을 함께 적은 마스크, 겹친 이름, 빈 마스크.
  */
