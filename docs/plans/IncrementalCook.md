@@ -52,12 +52,12 @@
 동시 빌드는 둘까지입니다. K1(공용 형식: `Engine/Resource/Cook/` 의 `CookJob` · `CookSession` · `CookRecord` · `DerivedDataCache` · `ContentHash`, `ResourceIO` 의 읽기 기록)과 K4(팩 증분, `.packrec`)는 들어갔습니다.
 K2(씬 · 프리팹)와 K3(레지스트리, VAT, 내비메시)도 들어갔습니다. `--cook-scenes` 의 모든 쿠커가 쿠킹 세션 안에서 출력마다 `CookStore::cookFile` 을 부르고, 작업은 빈 에셋 캐시로 시작하며, 기록은 `Saved/CookRecord`, DDC 는 `Saved/DDC` 에 둡니다.
 레지스트리는 `.meta` 목록을 입력(`CookJob::collectFiles`)으로 남기고, VAT 는 무엇을 구울지 정하려고 목록을 먼저 읽은 뒤 클립 작업마다 다시 읽어 입력으로 남깁니다.
+K5 는 셰이더 스탬프를 옮기지 않기로 정했습니다(결정 기록 5-5). 남은 것은 K0(측정)과 K6(공유 DDC, 5 절 사용자 결정)입니다.
 팩 증분(K4)은 들어갔습니다. `CookAssets.PackWriter` 가 팩 옆 `<팩>.packrec` 에 키(쿠커 버전, 팩 계약 지문, 압축 · DLC · 디버그 문자열, 항목마다 경로와 내용 해시)와 팩 바이트 해시를 남기고, 같으면 다시 쓰지 않습니다.
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
 | K0 | 단계별 쿠킹 시간(셰이더, 씬, 프리팹, 레지스트리, VAT, 내비메시, 팩)을 깨끗한 실행과 바뀐 것 없는 실행에서 측정하고, 같은 입력을 두 번 구워 바이트가 같은지 봅니다 | 코드 변경 없음. 결과는 `docs/08_Verification.md` | 없음 | 표가 나옵니다 | 필요합니다. Release App, 3 회, 단계별 초 |
-| K5 | 셰이더 스탬프를 같은 기록 형식으로 옮길지 판단합니다. 커밋된 스탬프와 `CheckShaderStamps` 게이트가 있으므로 K2 · K3 과 팩 증분(K4)의 결과를 본 뒤 정합니다 | `Engine/Graphics/Shader/Compile/`, `Scripts/` | K2 | 셰이더 쿠킹 테스트, 네 백엔드 | 없음 |
 | K6 | 공유 DDC 읽기 층 | `Engine/Resource/Cook/`, 설정 데이터 | K2, 5절 결정 | 공유 층에서 찾은 결과가 로컬 쿠킹과 같습니다 | 공유 층 적중률과 시간 |
 
 K0 은 측정만 하는 일이라 다른 단위보다 먼저 합니다. 이득이 씬에서 나오는지에 따라 K2 와 K3 의 순서를 정합니다.
