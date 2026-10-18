@@ -2,7 +2,9 @@
 
 #include "Engine/Resource/ResourceIO.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -78,7 +80,7 @@ namespace sw
             string loosePath;
             if ( bLooseFirst )
             {
-                loosePath = ResourcePaths::getResourcePath( relativePath );
+                loosePath = ResourcePaths::findLooseFile( relativePath ).getDiskPath();
                 if ( loosePath.empty() == false && FileUtil::isRegularFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
@@ -179,7 +181,7 @@ namespace sw
 
         if ( packManager.isAllowLooseFiles() )
         {
-            const string absPath = ResourcePaths::getResourcePath( relativePath );
+            const string absPath = ResourcePaths::findLooseFile( relativePath ).getDiskPath();
             if ( absPath.empty() == false && FileUtil::exists( absPath ) )
                 return true;
 
@@ -187,6 +189,64 @@ namespace sw
         }
 
         return false;
+    }
+
+    ResourceFolderListing ResourceIO::collectResources( string_view relativeFolder, string_view extension, vector<string>& outListPath )
+    {
+        outListPath.clear();
+        const bool bNotResourceID = relativeFolder.empty() || FileUtil::isAbsolutePath( relativeFolder ) || ResourcePaths::hasParentDirectoryComponent( relativeFolder );
+        if ( bNotResourceID )
+        {
+            SW_LOG_ERROR( "Cannot list '%#' - a resource folder is a relative resource id without '..'", relativeFolder );
+            return ResourceFolderListing::Failed;
+        }
+        const string folder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( relativeFolder ) );
+
+        // 찾는 순서는 읽기와 같다 — 낱개 파일을 허용하면 디스크가 먼저(같은 이름이면 그 표기가 남는다), 그다음 우선순위 순서의 팩.
+        vector<string>      listCandidate;
+        bool                bFolderFound = false;
+        ResourcePakManager& packManager  = getPackManager();
+        if ( packManager.isAllowLooseFiles() )
+        {
+            const string diskFolder = ResourcePaths::findLooseFile( folder ).getDiskPath();
+            if ( diskFolder.empty() == false && FileUtil::isDirectory( diskFolder ) )
+            {
+                vector<string> listDiskFile;
+                if ( FileUtil::collectFiles( diskFolder, {}, listDiskFile, false ) == false )
+                {
+                    SW_LOG_ERROR( "Cannot list the resource folder '%#' (%#)", folder, diskFolder );
+                    return ResourceFolderListing::Failed;
+                }
+                bFolderFound = true;
+                for ( const string& filePath : listDiskFile )
+                {
+                    listCandidate.push_back( FileUtil::joinPath( folder, FileUtil::getFileNamePart( filePath ) ) );
+                }
+            }
+        }
+        const size_t diskCount = listCandidate.size();
+        packManager.collectFolderEntries( folder, listCandidate );
+        bFolderFound = bFolderFound || listCandidate.size() > diskCount;
+        if ( bFolderFound == false )
+            return ResourceFolderListing::FolderMissing;
+
+        // (소문자 키, 표기) — 키로 안정 정렬해 같은 키의 첫 표기(디스크 · 높은 우선순위 팩)를 남긴다.
+        vector<pair<string, string>> listKeyed;
+        listKeyed.reserve( listCandidate.size() );
+        for ( string& path : listCandidate )
+        {
+            const bool bSkip = ( extension.empty() == false && StringUtil::endsWith( path, extension, true ) == false ) || ResourcePaths::isExcludedForHost( path );
+            if ( bSkip == false )
+                listKeyed.emplace_back( StringUtil::toLower( path.c_str() ), std::move( path ) );
+        }
+        std::stable_sort( listKeyed.begin(), listKeyed.end(), []( const pair<string, string>& lhs, const pair<string, string>& rhs )
+        { return lhs.first < rhs.first; } );
+        for ( size_t index = 0; index < listKeyed.size(); ++index )
+        {
+            if ( index == 0 || listKeyed[index].first != listKeyed[index - 1].first )
+                outListPath.push_back( std::move( listKeyed[index].second ) );
+        }
+        return ResourceFolderListing::Listed;
     }
 
     ResourcePakManager& ResourceIO::getPackManager()

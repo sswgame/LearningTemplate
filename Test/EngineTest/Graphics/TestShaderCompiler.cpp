@@ -155,7 +155,7 @@ SW_TEST_CASE( ShaderCompilerTest, ClearCacheAndNonExistentCompile )
     desc._stage        = sw::ShaderStage::Pixel;
     desc._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
 
-    const sw::string absPath = sw::ResourcePaths::getResourcePath( desc._filePath );
+    const sw::string absPath = sw::ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
     SW_EXPECT_TRUE( absPath.empty() || sw::FileUtil::exists( absPath ) == false );
 
     sw::ShaderCompileResult result = sw::ShaderCompiler::compileHlsl( desc );

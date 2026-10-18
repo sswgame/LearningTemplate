@@ -197,17 +197,14 @@ namespace sw
          */
         [[nodiscard]] bool tryParse( string_view jsonText );
 
-        /** @brief 절대 경로를 읽고 파싱합니다. */
+        /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
         [[nodiscard]] bool loadFile( string_view absPath );
 
-        /** @brief 리소스 상대 경로를 해석한 뒤 읽고 파싱합니다. */
-        [[nodiscard]] bool loadResource( string_view relativePath, string* pOutAbsPath = nullptr );
-
         /**
-         * @brief 절대 경로나 작업 경로에 파일이 있으면 loadFile 로, 없으면 loadResource 로 읽습니다.
-         * @details 에셋 상대 경로와 에디터 절대 경로를 한 번의 호출로 처리한다.
+         * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `ResourceIO::readTextResource` 로 읽고 파싱합니다(낱개 파일 · 팩).
+         * @details 디스크를 먼저 보는 별도 입구를 두지 않는다 — 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다.
          */
-        [[nodiscard]] bool loadPath( string_view path, string* pOutAbsPath = nullptr );
+        [[nodiscard]] bool loadResource( string_view relativePath, string* pOutAbsPath = nullptr );
 
         /**
          * @brief 마지막 parse 나 load 가 실패한 이유입니다. 성공했으면 빈 문자열입니다. `XMLDocument::getLastError` 와 같은 형태입니다.

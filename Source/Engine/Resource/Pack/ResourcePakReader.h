@@ -56,6 +56,13 @@ namespace sw
         bool getFileEntry( string_view relativePath, PackFileEntry& outEntry ) const;
 
         /**
+         * @brief @p folder 바로 아래 항목(하위 폴더 안은 빼고)의 팩 안 경로를 @p outListPath 뒤에 덧붙입니다. 폴더 비교는 대소문자를 가리지 않습니다.
+         * @param folder 팩 안 폴더(구분자 '/', 끝 '/' 없음). 빈 값이면 팩 맨 위 항목입니다.
+         * @details 항목 경로 목록(스트링 풀)은 `open` 이 필수로 읽고 해시와 맞춰 두었으므로 나열은 실패하지 않습니다. 순서는 정하지 않습니다.
+         */
+        void collectFolderEntries( string_view folder, vector<string>& outListPath ) const;
+
+        /**
          * @brief 팩 안의 파일 데이터를 읽어 CRC32 를 검증하고 압축을 풀어 반환합니다.
          * @param pathHash 64비트 경로 해시
          * @param outBytes 압축을 푼 원본 데이터 버퍼

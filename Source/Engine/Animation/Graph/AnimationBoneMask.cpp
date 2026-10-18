@@ -109,7 +109,7 @@ namespace sw
     {
         _listEntry.clear();
         JSONDocument doc;
-        if ( path.empty() || doc.loadPath( path ) == false )
+        if ( path.empty() || doc.loadResource( path ) == false )
         {
             SW_LOG_ERROR( "Bone mask file '%#' could not be read", path );
             return false;

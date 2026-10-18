@@ -33,7 +33,7 @@
 SW_TEST_CASE( ResourceTest, GetResourcePathEmptyForNonexistent )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::string nonExistent = sw::ResourcePaths::getResourcePath( "non_existent_file_xyz_12345.dat" );
+    sw::string nonExistent = sw::ResourcePaths::findLooseFile( "non_existent_file_xyz_12345.dat" ).getDiskPath();
     SW_EXPECT_TRUE( nonExistent.empty() );
 }
 
@@ -43,7 +43,7 @@ SW_TEST_CASE( ResourceTest, GetResourcePathEmptyForNonexistent )
 SW_TEST_CASE( ResourceTest, GetResourcePathWithFolderNameEmptyForNonexistent )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::string nonExistent = sw::ResourcePaths::getResourcePath( "non_existent_file_xyz_12345.dat", "textures" );
+    sw::string nonExistent = sw::ResourcePaths::findLooseFile( "non_existent_file_xyz_12345.dat", "textures" ).getDiskPath();
     SW_EXPECT_TRUE( nonExistent.empty() );
 }
 
@@ -56,15 +56,15 @@ SW_TEST_CASE( ResourceTest, FolderRootsAndKnownShaderPath )
 
     const sw::string& root = sw::ResourcePaths::getRootFolderPath();
     SW_EXPECT_TRUE_MSG( root.empty() == false, "Resource root should be resolved (display only)" );
-    SW_EXPECT_TRUE_MSG( sw::ResourcePaths::getDomainFolderPath( "game" ).empty() == false, "Games resource folder should exist" );
-    SW_EXPECT_TRUE_MSG( sw::ResourcePaths::getDomainFolderPath( "engine" ).empty() == false, "Engine resource folder should exist" );
-    SW_EXPECT_TRUE_MSG( sw::ResourcePaths::getDomainFolderPath( "editor" ).empty() == false, "Editor resource folder should exist" );
+    SW_EXPECT_TRUE_MSG( sw::ResourcePaths::findLooseDomainFolder( "game" ).getDiskPath().empty() == false, "Games resource folder should exist" );
+    SW_EXPECT_TRUE_MSG( sw::ResourcePaths::findLooseDomainFolder( "engine" ).getDiskPath().empty() == false, "Engine resource folder should exist" );
+    SW_EXPECT_TRUE_MSG( sw::ResourcePaths::findLooseDomainFolder( "editor" ).getDiskPath().empty() == false, "Editor resource folder should exist" );
 
-    const sw::string engineShaders = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
+    const sw::string engineShaders = sw::ResourcePaths::findLooseDomainFolder( "engine", "shaders" ).getDiskPath();
     SW_EXPECT_TRUE_MSG( engineShaders.empty() == false, "Expected engine shaders folder under domain root" );
 
     // 팩 상대 키(engine/common/game/editor 팩 아래 — Resource/ 자체가 아님).
-    const sw::string shaderPath = sw::ResourcePaths::getResourcePath( "shaders/samplecompute.hlsl" );
+    const sw::string shaderPath = sw::ResourcePaths::findLooseFile( "shaders/samplecompute.hlsl" ).getDiskPath();
     if ( shaderPath.empty() )
         SW_TEST_SKIP( "samplecompute.hlsl not found under domain roots; skip path resolution check" );
 
@@ -79,13 +79,13 @@ SW_TEST_CASE( ResourceTest, FolderRootsAndKnownShaderPath )
     SW_EXPECT_TRUE_MSG( sw::FileUtil::readFile( shaderPath, bytes ), shaderPath.c_str() );
     SW_EXPECT_TRUE( bytes.empty() == false );
 
-    const sw::string shaderPathAgain = sw::ResourcePaths::getResourcePath( "shaders/samplecompute.hlsl" );
+    const sw::string shaderPathAgain = sw::ResourcePaths::findLooseFile( "shaders/samplecompute.hlsl" ).getDiskPath();
     SW_EXPECT_STREQ( shaderPath.c_str(), shaderPathAgain.c_str() );
 
     // 전역 ID 는 도메인 루트로 간다(Resource/ + 전체 키가 아님).
-    const sw::string viaGlobal = sw::ResourcePaths::getResourcePath( "engine/pipeline/forwardpipeline.xml" );
+    const sw::string viaGlobal = sw::ResourcePaths::findLooseFile( "engine/pipeline/forwardpipeline.xml" ).getDiskPath();
     SW_EXPECT_TRUE_MSG( viaGlobal.empty() == false, "engine/... global ID should resolve under engine root" );
-    const sw::string viaPack = sw::ResourcePaths::getResourcePath( "pipeline/forwardpipeline.xml" );
+    const sw::string viaPack = sw::ResourcePaths::findLooseFile( "pipeline/forwardpipeline.xml" ).getDiskPath();
     SW_EXPECT_TRUE_MSG( viaPack.empty() == false, "pack-relative pipeline key should resolve" );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( viaGlobal, viaPack ) );
 }
@@ -97,7 +97,7 @@ SW_TEST_CASE( ResourceTest, GetResourcePathEmptyWhenMissingUnderDomains )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     // Resource/ 자체가 검색 루트일 때만 "동작"한다.
-    SW_EXPECT_TRUE( sw::ResourcePaths::getResourcePath( "this_file_does_not_exist_anywhere.bin" ).empty() );
+    SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( "this_file_does_not_exist_anywhere.bin" ).getDiskPath().empty() );
 }
 
 /**
@@ -107,7 +107,7 @@ SW_TEST_CASE( ResourceTest, MakeSavePathLowercasesRelativeFolders )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    const sw::string gameRoot = sw::ResourcePaths::getDomainFolderPath( "game" );
+    const sw::string gameRoot = sw::ResourcePaths::findLooseDomainFolder( "game" ).getDiskPath();
     SW_EXPECT_TRUE( gameRoot.empty() == false );
 
     const sw::string saveFolder = sw::ResourcePaths::makeSaveFolderPath( gameRoot + "/shaders/nested" );
@@ -292,13 +292,13 @@ SW_TEST_CASE( ResourceTest, ResourcePathCaseInsensitiveLookupAndLowerCaseNormali
     SW_EXPECT_STREQ( "resource/engine/pipeline/forwardpipeline.xml", normalized.c_str() );
 
     // 2. 대문자/혼합 대소문자 전역 ID로 조회 시 소문자 물리 파일 매핑 검증
-    const sw::string pathUpperGlobal = sw::ResourcePaths::getResourcePath( "ENGINE/MATERIALS/DEFAULTMATERIAL.MATERIAL" );
+    const sw::string pathUpperGlobal = sw::ResourcePaths::findLooseFile( "ENGINE/MATERIALS/DEFAULTMATERIAL.MATERIAL" ).getDiskPath();
     SW_EXPECT_FALSE( pathUpperGlobal.empty() );
     SW_EXPECT_TRUE( sw::FileUtil::exists( pathUpperGlobal ) );
     SW_EXPECT_TRUE( sw::StringUtil::endsWith( pathUpperGlobal, "defaultmaterial.material", true ) );
 
     // 3. 엔진 파이프라인 대문자 조회 검증
-    const sw::string pathEnginePipeline = sw::ResourcePaths::getResourcePath( "ENGINE/PIPELINE/FORWARDPIPELINE.XML" );
+    const sw::string pathEnginePipeline = sw::ResourcePaths::findLooseFile( "ENGINE/PIPELINE/FORWARDPIPELINE.XML" ).getDiskPath();
     SW_EXPECT_FALSE( pathEnginePipeline.empty() );
     SW_EXPECT_TRUE( sw::FileUtil::exists( pathEnginePipeline ) );
 
@@ -309,14 +309,14 @@ SW_TEST_CASE( ResourceTest, ResourcePathCaseInsensitiveLookupAndLowerCaseNormali
     packConfig._packRoot            = "engine";
     sw::GameConfig::setActive( packConfig );
 
-    const sw::string pathMixedPack = sw::ResourcePaths::getResourcePath( "Pipeline/ForwardPipeline.xml" );
+    const sw::string pathMixedPack = sw::ResourcePaths::findLooseFile( "Pipeline/ForwardPipeline.xml" ).getDiskPath();
     SW_EXPECT_FALSE( pathMixedPack.empty() );
     SW_EXPECT_TRUE( sw::FileUtil::exists( pathMixedPack ) );
 
     sw::GameConfig::setActive( oldActive );
 
     // 5. 다른 엔진 리소스의 대문자 키 조회 검증
-    const sw::string pathUpperOther = sw::ResourcePaths::getResourcePath( "ENGINE/PIPELINE/DEFERREDPIPELINE.XML" );
+    const sw::string pathUpperOther = sw::ResourcePaths::findLooseFile( "ENGINE/PIPELINE/DEFERREDPIPELINE.XML" ).getDiskPath();
     SW_EXPECT_FALSE( pathUpperOther.empty() );
     SW_EXPECT_TRUE( sw::FileUtil::exists( pathUpperOther ) );
 
@@ -362,7 +362,7 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     SW_EXPECT_TRUE( sw::ResourcePaths::setSearchPriority( listDlcFirstPriority ) );
 
     // 4. 팩 상대 키 "test_asset/priority_test.xml" 조회 시 게임 팩이 아닌 DLC 폴더의 파일로 매핑되는지 검증
-    const sw::string resolvedDlcPath = sw::ResourcePaths::getResourcePath( "test_asset/priority_test.xml" );
+    const sw::string resolvedDlcPath = sw::ResourcePaths::findLooseFile( "test_asset/priority_test.xml" ).getDiskPath();
     SW_EXPECT_FALSE( resolvedDlcPath.empty() );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedDlcPath, dlcFile ) );
 
@@ -370,7 +370,7 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     const sw::vector<sw::string>& listRestoredPriority = sw::ResourcePaths::getDefaultSearchPriority();
     SW_EXPECT_TRUE( sw::ResourcePaths::setSearchPriority( listRestoredPriority ) );
 
-    const sw::string resolvedGamePath = sw::ResourcePaths::getResourcePath( "test_asset/priority_test.xml" );
+    const sw::string resolvedGamePath = sw::ResourcePaths::findLooseFile( "test_asset/priority_test.xml" ).getDiskPath();
     SW_EXPECT_FALSE( resolvedGamePath.empty() );
     SW_EXPECT_FALSE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, dlcFile ) );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( resolvedGamePath, gameFile ) );
@@ -382,11 +382,11 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
 SW_TEST_CASE( ResourceTest, DDSLoaderValidHeaderAndPixelLoading )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string splashDDSPath = sw::ResourcePaths::getResourcePath( "textures/splash.dds" );
+    const sw::string splashDDSPath = sw::ResourcePaths::findLooseFile( "textures/splash.dds" ).getDiskPath();
     SW_ASSERT_FALSE( splashDDSPath.empty() );
 
     sw::DDSImageData image;
-    SW_ASSERT_TRUE( sw::DDSLoader::loadFromFile( splashDDSPath, image ) );
+    SW_ASSERT_TRUE( sw::DDSLoader::loadFromDiskFile( splashDDSPath, image ) );
 
     SW_EXPECT_TRUE( image.isValid() );
     SW_EXPECT_EQUAL( 1376u, image._width );
@@ -637,26 +637,26 @@ SW_TEST_CASE( ResourceTest, AssetManagerPackManagerOwnership )
 }
 
 /**
- * @brief [ResourceTest] ResourcePaths::getDomainFolderPath 동적 도메인 및 서브폴더 해석 검증
+ * @brief [ResourceTest] ResourcePaths::findLooseDomainFolder 동적 도메인 및 서브폴더 해석 검증
  */
 SW_TEST_CASE( ResourceTest, DynamicDomainFolderPathResolution )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    const sw::string engineRoot = sw::ResourcePaths::getDomainFolderPath( "engine" );
+    const sw::string engineRoot = sw::ResourcePaths::findLooseDomainFolder( "engine" ).getDiskPath();
     SW_EXPECT_TRUE( engineRoot.empty() == false );
 
-    const sw::string engineShaders = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
+    const sw::string engineShaders = sw::ResourcePaths::findLooseDomainFolder( "engine", "shaders" ).getDiskPath();
     SW_EXPECT_TRUE( engineShaders.empty() == false );
     SW_EXPECT_TRUE( engineShaders.find( "shaders" ) != sw::string::npos );
 
-    const sw::string commonRoot = sw::ResourcePaths::getDomainFolderPath( "common" );
+    const sw::string commonRoot = sw::ResourcePaths::findLooseDomainFolder( "common" ).getDiskPath();
     SW_EXPECT_TRUE( commonRoot.empty() == false );
 
-    const sw::string nonExistent = sw::ResourcePaths::getDomainFolderPath( "invalid_domain_xyz_999" );
+    const sw::string nonExistent = sw::ResourcePaths::findLooseDomainFolder( "invalid_domain_xyz_999" ).getDiskPath();
     SW_EXPECT_TRUE( nonExistent.empty() );
 
-    const sw::string nonExistentSub = sw::ResourcePaths::getDomainFolderPath( "engine", "invalid_subfolder_xyz_999" );
+    const sw::string nonExistentSub = sw::ResourcePaths::findLooseDomainFolder( "engine", "invalid_subfolder_xyz_999" ).getDiskPath();
     SW_EXPECT_TRUE( nonExistentSub.empty() );
 }
 
@@ -673,7 +673,7 @@ SW_TEST_CASE( ResourceTest, AbsolutePathPreservation )
     const sw::string winAbs = "C:/Projects/Game/scene.xml";
     SW_EXPECT_STREQ( winAbs.c_str(), sw::ResourcePaths::makeAbsolutePath( winAbs ).c_str() );
 
-    SW_EXPECT_TRUE( sw::ResourcePaths::getResourcePath( posixAbs ).empty() );
+    SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( posixAbs ).getDiskPath().empty() );
 }
 
 /**
@@ -719,7 +719,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const utf8*      pAsset      = "engine/materials/defaultmaterial.material";
-    const sw::string metaAbsPath = sw::ResourcePaths::getResourcePath( "engine/materials/defaultmaterial.material.meta" );
+    const sw::string metaAbsPath = sw::ResourcePaths::findLooseFile( "engine/materials/defaultmaterial.material.meta" ).getDiskPath();
     const uint64     mtimeBefore = metaAbsPath.empty() ? 0 : sw::FileUtil::getFileTimestamp( metaAbsPath );
 
     sw::AssetDatabase db;
@@ -771,7 +771,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityToAMissingAsset )
     SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/materials/placeholder.txt", "" ) ); // 도메인 폴더가 있어야 경로가 풀린다
     const utf8*      pMissing      = "engine/materials/ensuremeta_missing_probe.material";
     const sw::string metaWritePath = resourceRoot.makePath( "engine/materials/ensuremeta_missing_probe.material.meta" );
-    SW_ASSERT_TRUE_MSG( sw::ResourcePaths::getResourcePath( pMissing ).empty(), "탐침 경로에 실제 파일이 있다 — 시험 전제가 깨졌다" );
+    SW_ASSERT_TRUE_MSG( sw::ResourcePaths::findLooseFile( pMissing ).getDiskPath().empty(), "탐침 경로에 실제 파일이 있다 — 시험 전제가 깨졌다" );
 
     sw::AssetDatabase db;
     SW_EXPECT_TRUE_MSG( db.ensureMeta( pMissing ).isNull(), "없는 에셋에 GUID 를 지었다" );
@@ -789,7 +789,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsID )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const utf8*      pAsset   = "engine/materials/defaultmaterial.material";
-    const sw::string absolute = sw::ResourcePaths::getResourcePath( pAsset );
+    const sw::string absolute = sw::ResourcePaths::findLooseFile( pAsset ).getDiskPath();
     SW_ASSERT_FALSE( absolute.empty() );
 
     sw::AssetDatabase db;
@@ -937,7 +937,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const utf8*      pAsset  = "game/empty/materials/toonshowcase_ground.material";
-    const sw::string metaAbs = sw::ResourcePaths::getResourcePath( "game/empty/materials/toonshowcase_ground.material.meta" );
+    const sw::string metaAbs = sw::ResourcePaths::findLooseFile( "game/empty/materials/toonshowcase_ground.material.meta" ).getDiskPath();
     SW_EXPECT_TRUE_MSG( metaAbs.empty() == false, "toonshowcase_ground.material.meta 를 찾지 못했다 — 검증이 비었다" );
     if ( metaAbs.empty() )
         return;
@@ -998,7 +998,7 @@ SW_TEST_CASE( ResourceTest, ParentDirectoryIDsAreRefused )
         test::ScopedLogSuppressor suppressor;
         SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( escapingID, content ) );
     }
-    SW_EXPECT_TRUE( sw::ResourcePaths::getResourcePath( escapingID ).empty() );
+    SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( escapingID ).getDiskPath().empty() );
 }
 
 /**

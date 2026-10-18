@@ -105,7 +105,7 @@ SW_TEST_CASE( ImageFileWriterTest, DDSIsReadBackByTheEngineLoader )
     const string        path  = test::makeTempPath( "portrait.dds" );
     SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( path, image, 3, 2 ) );
     DDSImageData loaded;
-    SW_ASSERT_TRUE( DDSLoader::loadFromFile( path, loaded ) );
+    SW_ASSERT_TRUE( DDSLoader::loadFromDiskFile( path, loaded ) );
     SW_EXPECT_EQUAL( 3u, loaded._width );
     SW_EXPECT_EQUAL( 2u, loaded._height );
     SW_EXPECT_EQUAL( 28u, loaded._dxgiFormat ); // DXGI_FORMAT_R8G8B8A8_UNORM

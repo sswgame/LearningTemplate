@@ -211,7 +211,7 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
 
     sw::ResourcePaths::clearPathCache();
     const uint64     assetBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Asset );
-    const sw::string resolved    = sw::ResourcePaths::getResourcePath( "engine/pipeline/forwardpipeline.xml" );
+    const sw::string resolved    = sw::ResourcePaths::findLooseFile( "engine/pipeline/forwardpipeline.xml" ).getDiskPath();
     SW_ASSERT_FALSE( resolved.empty() );
     // 캐시 표가 실제로 자랐어야 아래 비교가 뜻이 있다.
     SW_ASSERT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Asset ) > assetBefore );

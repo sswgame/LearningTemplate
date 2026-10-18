@@ -316,6 +316,37 @@ namespace sw
         { return true; } );
     }
 
+    void ResourcePakManager::collectFolderEntries( string_view relativeFolder, vector<string>& outListPath ) const
+    {
+        if ( relativeFolder.empty() )
+            return;
+
+        std::scoped_lock<mutex> lock( _vfsMutex );
+        for ( const MountedPack& mounted : _listMountedPack )
+        {
+            if ( mounted._pReader != nullptr )
+                mounted._pReader->collectFolderEntries( relativeFolder, outListPath );
+        }
+
+        // 도메인 팩은 도메인을 뗀 경로로 담겨 있다(`visitPacksWithFile` 의 둘째 단계와 같은 규칙).
+        string_view queryDomain;
+        string_view subFolder;
+        if ( ResourcePakManagerInternal::trySplitDomainPrefix( relativeFolder, queryDomain, subFolder ) == false )
+            return;
+        vector<string> listPathInPack;
+        for ( const MountedPack& mounted : _listMountedPack )
+        {
+            if ( mounted._pReader == nullptr || ResourcePakManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) == false )
+                continue;
+            listPathInPack.clear();
+            mounted._pReader->collectFolderEntries( subFolder, listPathInPack );
+            for ( const string& pathInPack : listPathInPack )
+            {
+                outListPath.push_back( FileUtil::joinPath( queryDomain, pathInPack ) );
+            }
+        }
+    }
+
     shared_ptr<ResourcePakReader> ResourcePakManager::findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const
     {
         shared_ptr<ResourcePakReader> pFound;

@@ -7,7 +7,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Common/EnginePlatformHeaders.h"
-    #include "Engine/Resource/ResourcePaths.h"
+    #include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -28,22 +28,27 @@ namespace sw
              */
             struct SystemAudioAPI
             {
-                using PFN_MFStartup                   = HRESULT( WINAPI* )( ULONG, DWORD );
-                using PFN_MFShutdown                  = HRESULT( WINAPI* )();
-                using PFN_MFCreateMediaType           = HRESULT( WINAPI* )( IMFMediaType** );
-                using PFN_MFCreateSourceReaderFromURL = HRESULT( WINAPI* )( LPCWSTR, IMFAttributes*, IMFSourceReader** );
-                using PFN_XAudio2Create               = HRESULT( WINAPI* )( IXAudio2**, UINT32, XAUDIO2_PROCESSOR );
+                using PFN_MFStartup                          = HRESULT( WINAPI* )( ULONG, DWORD );
+                using PFN_MFShutdown                         = HRESULT( WINAPI* )();
+                using PFN_MFCreateMediaType                  = HRESULT( WINAPI* )( IMFMediaType** );
+                using PFN_MFCreateSourceReaderFromByteStream = HRESULT( WINAPI* )( IMFByteStream*, IMFAttributes*, IMFSourceReader** );
+                using PFN_MFCreateMFByteStreamOnStream       = HRESULT( WINAPI* )( IStream*, IMFByteStream** );
+                using PFN_SHCreateMemStream                  = IStream*(WINAPI*)( const BYTE*, UINT );
+                using PFN_XAudio2Create                      = HRESULT( WINAPI* )( IXAudio2**, UINT32, XAUDIO2_PROCESSOR );
 
-                PFN_MFStartup                   _pfnMFStartup{ nullptr };
-                PFN_MFShutdown                  _pfnMFShutdown{ nullptr };
-                PFN_MFCreateMediaType           _pfnMFCreateMediaType{ nullptr };
-                PFN_MFCreateSourceReaderFromURL _pfnMFCreateSourceReaderFromURL{ nullptr };
-                PFN_XAudio2Create               _pfnXAudio2Create{ nullptr };
+                PFN_MFStartup                          _pfnMFStartup{ nullptr };
+                PFN_MFShutdown                         _pfnMFShutdown{ nullptr };
+                PFN_MFCreateMediaType                  _pfnMFCreateMediaType{ nullptr };
+                PFN_MFCreateSourceReaderFromByteStream _pfnMFCreateSourceReaderFromByteStream{ nullptr };
+                PFN_MFCreateMFByteStreamOnStream       _pfnMFCreateMFByteStreamOnStream{ nullptr };
+                PFN_SHCreateMemStream                  _pfnSHCreateMemStream{ nullptr };
+                PFN_XAudio2Create                      _pfnXAudio2Create{ nullptr };
 
                 /** @brief Media Foundation 디코드에 필요한 함수가 모두 있으면 true 입니다. */
                 bool hasMediaFoundation() const
                 {
-                    return _pfnMFStartup != nullptr && _pfnMFShutdown != nullptr && _pfnMFCreateMediaType != nullptr && _pfnMFCreateSourceReaderFromURL != nullptr;
+                    return _pfnMFStartup != nullptr && _pfnMFShutdown != nullptr && _pfnMFCreateMediaType != nullptr && _pfnMFCreateSourceReaderFromByteStream != nullptr &&
+                           _pfnMFCreateMFByteStreamOnStream != nullptr && _pfnSHCreateMemStream != nullptr;
                 }
             };
 
@@ -63,11 +68,14 @@ namespace sw
             static SystemAudioAPI loadSystemAudioAPI()
             {
                 SystemAudioAPI api{};
-                api._pfnMFStartup                   = findSystemFunction<SystemAudioAPI::PFN_MFStartup>( L"mfplat.dll", "MFStartup" );
-                api._pfnMFShutdown                  = findSystemFunction<SystemAudioAPI::PFN_MFShutdown>( L"mfplat.dll", "MFShutdown" );
-                api._pfnMFCreateMediaType           = findSystemFunction<SystemAudioAPI::PFN_MFCreateMediaType>( L"mfplat.dll", "MFCreateMediaType" );
-                api._pfnMFCreateSourceReaderFromURL = findSystemFunction<SystemAudioAPI::PFN_MFCreateSourceReaderFromURL>( L"mfreadwrite.dll", "MFCreateSourceReaderFromURL" );
-                api._pfnXAudio2Create               = findSystemFunction<SystemAudioAPI::PFN_XAudio2Create>( L"xaudio2_9.dll", "XAudio2Create" );
+                api._pfnMFStartup         = findSystemFunction<SystemAudioAPI::PFN_MFStartup>( L"mfplat.dll", "MFStartup" );
+                api._pfnMFShutdown        = findSystemFunction<SystemAudioAPI::PFN_MFShutdown>( L"mfplat.dll", "MFShutdown" );
+                api._pfnMFCreateMediaType = findSystemFunction<SystemAudioAPI::PFN_MFCreateMediaType>( L"mfplat.dll", "MFCreateMediaType" );
+                api._pfnMFCreateSourceReaderFromByteStream =
+                    findSystemFunction<SystemAudioAPI::PFN_MFCreateSourceReaderFromByteStream>( L"mfreadwrite.dll", "MFCreateSourceReaderFromByteStream" );
+                api._pfnMFCreateMFByteStreamOnStream = findSystemFunction<SystemAudioAPI::PFN_MFCreateMFByteStreamOnStream>( L"mfplat.dll", "MFCreateMFByteStreamOnStream" );
+                api._pfnSHCreateMemStream            = findSystemFunction<SystemAudioAPI::PFN_SHCreateMemStream>( L"shlwapi.dll", "SHCreateMemStream" );
+                api._pfnXAudio2Create                = findSystemFunction<SystemAudioAPI::PFN_XAudio2Create>( L"xaudio2_9.dll", "XAudio2Create" );
                 return api;
             }
 
@@ -112,20 +120,36 @@ namespace sw
 
             /**
              * @brief 공통 디코더가 다루지 않는 형식(MP3, ADPCM WAV 등)을 Media Foundation 으로 16 비트 PCM 으로 디코드합니다. 클립 캐시의 대체 디코더입니다.
+             * @details 바이트는 `ResourceIO` 로 읽어 메모리 스트림으로 넘긴다 — 디스크 경로(URL)로 열면 팩으로 쿠킹한 빌드에서 열 파일이 없다.
              */
             static bool decodeWithMediaFoundation( string_view path, AudioPcm& outPcm )
             {
-                string absPath = ResourcePaths::getResourcePath( path );
-                if ( absPath.empty() )
-                    absPath = string( path );
-
                 const SystemAudioAPI& api = getSystemAudioAPI();
                 if ( api.hasMediaFoundation() == false )
                     return false; // Media Foundation 이 없는 Windows(N 에디션) — 공통 디코더가 못 푸는 형식은 재생하지 않는다
+                vector<uint8> bytes;
+                if ( ResourceIO::readBinaryResource( path, bytes ) == false || bytes.empty() )
+                    return false;
                 ScopedThreadComAndMf threadComScope;
-                IMFSourceReader*     pReader{ nullptr };
-                const wstring        wpath = StringUtil::utf8ToUtf16( absPath.c_str() );
-                HRESULT              hr    = api._pfnMFCreateSourceReaderFromURL( wpath.c_str(), nullptr, &pReader );
+                IStream*             pMemoryStream = api._pfnSHCreateMemStream( bytes.data(), static_cast<UINT>( bytes.size() ) );
+                if ( pMemoryStream == nullptr )
+                    return false;
+                IMFByteStream* pByteStream{ nullptr };
+                HRESULT        hr = api._pfnMFCreateMFByteStreamOnStream( pMemoryStream, &pByteStream );
+                pMemoryStream->Release();
+                if ( FAILED( hr ) || pByteStream == nullptr )
+                    return false;
+                // 원본 이름을 알려 주면 소스 리졸버가 확장자로 형식을 고른다(내용 추측만으로는 일부 형식을 못 고른다).
+                IMFAttributes* pStreamAttributes{ nullptr };
+                if ( SUCCEEDED( pByteStream->QueryInterface( IID_PPV_ARGS( &pStreamAttributes ) ) ) && pStreamAttributes != nullptr )
+                {
+                    const wstring originName = StringUtil::utf8ToUtf16( string( path ).c_str() );
+                    pStreamAttributes->SetString( MF_BYTESTREAM_ORIGIN_NAME, originName.c_str() );
+                    pStreamAttributes->Release();
+                }
+                IMFSourceReader* pReader{ nullptr };
+                hr = api._pfnMFCreateSourceReaderFromByteStream( pByteStream, nullptr, &pReader );
+                pByteStream->Release();
                 if ( FAILED( hr ) || pReader == nullptr )
                     return false;
 

@@ -227,7 +227,7 @@ namespace sw::editor
     SW_TEST_CASE( EditorTexturePipelineTest, ImageUtilAndTextureImporterEndToEnd )
     {
         SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-        const string rawSplashPath = sw::ResourcePaths::getResourcePath( "textures_raw/splash.png" );
+        const string rawSplashPath = sw::ResourcePaths::findLooseFile( "textures_raw/splash.png" ).getDiskPath();
         if ( rawSplashPath.empty() )
         {
             // If textures_raw is not yet set in Resource priority, test direct path
@@ -265,7 +265,7 @@ namespace sw::editor
 
         // 3. Verify generated DDS with Engine DDSLoader
         DDSImageData ddsData;
-        SW_ASSERT_TRUE( DDSLoader::loadFromFile( tempOutDDS, ddsData ) );
+        SW_ASSERT_TRUE( DDSLoader::loadFromDiskFile( tempOutDDS, ddsData ) );
         SW_EXPECT_TRUE( ddsData.isValid() );
         SW_EXPECT_EQUAL( 1376u, ddsData._width );
         SW_EXPECT_EQUAL( 768u, ddsData._height );
@@ -393,7 +393,7 @@ namespace sw::editor
             SW_ASSERT_TRUE_MSG( TextureImporter::importTexture( sourcePath, ddsPath, rule ), testCase._pName );
 
             DDSImageData dds;
-            SW_ASSERT_TRUE_MSG( DDSLoader::loadFromFile( ddsPath, dds ), testCase._pName );
+            SW_ASSERT_TRUE_MSG( DDSLoader::loadFromDiskFile( ddsPath, dds ), testCase._pName );
             SW_EXPECT_TRUE_MSG( testCase._expectedDxgiFormat == dds._dxgiFormat, testCase._pName );
             SW_ASSERT_TRUE_MSG( dds._bytes.size() == 4, testCase._pName );
             for ( size_t channel = 0; channel < 4; ++channel )
@@ -569,7 +569,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, bgraPath, rule ) );
 
         DDSImageData bgraImage;
-        SW_ASSERT_TRUE( DDSLoader::loadFromFile( bgraPath, bgraImage ) );
+        SW_ASSERT_TRUE( DDSLoader::loadFromDiskFile( bgraPath, bgraImage ) );
         SW_EXPECT_EQUAL( 91u, bgraImage._dxgiFormat ); // B8G8R8A8_UNORM_SRGB
         SW_ASSERT_TRUE( bgraImage._bytes.size() >= 4 );
         SW_EXPECT_EQUAL( 200, static_cast<int32>( bgraImage._bytes[0] ) );
@@ -757,7 +757,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, ddsPath, rule ) );
 
         DDSImageData dds;
-        SW_ASSERT_TRUE( DDSLoader::loadFromFile( ddsPath, dds ) );
+        SW_ASSERT_TRUE( DDSLoader::loadFromDiskFile( ddsPath, dds ) );
         SW_EXPECT_EQUAL( static_cast<uint32>( DXGI_FORMAT_BC6H_UF16 ), dds._dxgiFormat );
         SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( dds._dxgiFormat ) == RHIFormat::BC6H_UF16 );
         SW_ASSERT_TRUE( dds._bytes.size() >= 16 );
@@ -781,7 +781,7 @@ namespace sw::editor
         const string halfDDSPath = test::makeTempPath( "bright_rgba16f.dds" );
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, halfDDSPath, rule ) );
         DDSImageData halfDDS;
-        SW_ASSERT_TRUE( DDSLoader::loadFromFile( halfDDSPath, halfDDS ) );
+        SW_ASSERT_TRUE( DDSLoader::loadFromDiskFile( halfDDSPath, halfDDS ) );
         SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( halfDDS._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
 
         // 8 비트 포맷 규칙은 거절한다(자르지 않는다).

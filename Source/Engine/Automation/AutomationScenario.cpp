@@ -133,7 +133,7 @@ namespace sw
     bool AutomationScenario::loadFromPath( string_view path, string& outError )
     {
         XMLDocument doc;
-        if ( doc.loadPath( path ) == false )
+        if ( doc.loadResource( path ) == false )
         {
             outError = string( path ) + ": " + ( doc.getLastError().empty() ? string( "could not read the scenario file" ) : doc.getLastError() );
             return false;

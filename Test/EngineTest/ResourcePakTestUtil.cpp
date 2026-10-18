@@ -12,7 +12,7 @@
 
 namespace sw::test
 {
-    bool ResourcePakTestUtil::createPackFile( const string& packPath, uint32 dlcAppID, PackCompressionType compression, const vector<pair<string, string>>& listFileContent, bool bIncludeDebugStringPool )
+    bool ResourcePakTestUtil::createPackFile( const string& packPath, uint32 dlcAppID, PackCompressionType compression, const vector<pair<string, string>>& listFileContent )
     {
         FileUtil::ensureParentDirectoryExists( packPath );
 
@@ -27,10 +27,8 @@ namespace sw::test
         header._compressionType = static_cast<uint8>( compression );
         header._encryptionType  = static_cast<uint8>( PackEncryptionType::None );
         header._sectorAlignment = kPackSectorAlignment;
-        header._flags           = static_cast<uint16>( PackFlag::HasCrc32 );
-        if ( bIncludeDebugStringPool )
-            header._flags |= static_cast<uint16>( PackFlag::HasStringPool );
-        header._fileCount = static_cast<uint32>( listFileContent.size() );
+        header._flags           = static_cast<uint16>( PackFlag::HasCrc32 ) | static_cast<uint16>( PackFlag::HasStringPool ); // 경로 목록은 필수다(쿠커와 같다)
+        header._fileCount       = static_cast<uint32>( listFileContent.size() );
 
         // 페이로드 임시 버퍼 준비
         vector<uint8>               dataStreamBytes;
@@ -85,12 +83,9 @@ namespace sw::test
             diskEntry._uncompressedSize = uncompSize;
             diskEntry._crc32            = crc;
 
-            if ( bIncludeDebugStringPool )
-            {
-                diskEntry._stringPoolOffset = static_cast<uint32>( stringPoolBytes.size() );
-                stringPoolBytes.insert( stringPoolBytes.end(), relPath.begin(), relPath.end() );
-                stringPoolBytes.push_back( '\0' );
-            }
+            diskEntry._stringPoolOffset = static_cast<uint32>( stringPoolBytes.size() );
+            stringPoolBytes.insert( stringPoolBytes.end(), relPath.begin(), relPath.end() );
+            stringPoolBytes.push_back( '\0' );
 
             listDiskEntry.push_back( diskEntry );
         }
@@ -127,7 +122,7 @@ namespace sw::test
             std::fwrite( listDiskEntry.data(), 1, listDiskEntry.size() * sizeof( PackFileEntryOnDisk ), pFile );
 
         // 6. 스트링 풀 기록
-        if ( bIncludeDebugStringPool && stringPoolBytes.empty() == false )
+        if ( stringPoolBytes.empty() == false )
             std::fwrite( stringPoolBytes.data(), 1, stringPoolBytes.size(), pFile );
 
         std::fclose( pFile );

@@ -66,6 +66,12 @@ namespace sw
             vector<string> _listSearchPriority;
         };
 
+        /** @brief 폴더 나열 테스트가 쓰는 팩 항목 하나입니다(본문은 경로 그대로 — 읽어서 어느 항목인지 맞춘다). */
+        pair<string, string> makeListingEntry( const string& path )
+        {
+            return { path, path };
+        }
+
         /** @brief 같은 키를 텍스트 · 바이너리로 둘 다 읽습니다. 둘 다 읽었으면 true. */
         [[nodiscard]] bool readTextAndBinaryResource( const utf8* pKey, string& outText, string& outBinary )
         {
@@ -198,7 +204,7 @@ SW_TEST_CASE( ResourcePakTest, SinglePackMountAndHashLookup )
         {     "data/items.json", "{\"sword\": {\"atk\": 50, \"durability\": 100}}"}
     };
 
-    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( testPackPath, 0, sw::PackCompressionType::RLE, listFile, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( testPackPath, 0, sw::PackCompressionType::RLE, listFile ) );
 
     sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( testPackPath ) );
@@ -254,7 +260,7 @@ SW_TEST_CASE( ResourcePakTest, EveryPackCodecRoundTrips )
         SW_EXPECT_TRUE_MSG( sw::ResourcePakCompressionUtil::findCodecType( type, codecType ), name.c_str() );
         const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), sw::string( "test_codec_" ) + name.c_str() + ".pack" );
 
-        SW_EXPECT_TRUE_MSG( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, type, listFile, false ), name.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, type, listFile ), name.c_str() );
 
         sw::ResourcePakReader reader;
         SW_EXPECT_TRUE_MSG( reader.open( packPath ), name.c_str() );
@@ -731,18 +737,18 @@ SW_TEST_CASE( ResourcePakTest, PathCacheZeroAllocationAndInvalidation )
     sw::ResourcePaths::clearPathCache();
 
     // 1. 존재하지 않는 경로 룩업
-    const sw::string nonExistent = sw::ResourcePaths::getResourcePath( "non_existent_folder/file.unknown" );
+    const sw::string nonExistent = sw::ResourcePaths::findLooseFile( "non_existent_folder/file.unknown" ).getDiskPath();
     SW_EXPECT_TRUE( nonExistent.empty() );
 
     // 2. 엔진 폴더 내 알려진 경로 룩업 및 캐싱 확인
-    const sw::string engineFolder = sw::ResourcePaths::getDomainFolderPath( "engine" );
+    const sw::string engineFolder = sw::ResourcePaths::findLooseDomainFolder( "engine" ).getDiskPath();
     if ( engineFolder.empty() == false )
     {
-        const sw::string pathFirst = sw::ResourcePaths::getResourcePath( "shaders" );
+        const sw::string pathFirst = sw::ResourcePaths::findLooseFile( "shaders" ).getDiskPath();
         // 캐시 히트 상태에서 100회 반복 룩업 일관성 검증
         for ( uint32 index = 0; index < 100; ++index )
         {
-            const sw::string pathRepeat = sw::ResourcePaths::getResourcePath( "shaders" );
+            const sw::string pathRepeat = sw::ResourcePaths::findLooseFile( "shaders" ).getDiskPath();
             SW_EXPECT_EQUAL( pathFirst, pathRepeat );
         }
     }
@@ -814,7 +820,7 @@ SW_TEST_CASE( ResourcePakTest, CorruptHeaderGeometryIsRejected )
         {"data/items.json", "{\"sword\": 1}"},
         { "maps/title.xml",       "<Scene/>"},
     };
-    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile ) );
 
     // 멀쩡한 상태에서는 열린다 — 아래 거부가 손상 때문임을 못 박는다.
     {
@@ -869,36 +875,179 @@ SW_TEST_CASE( ResourcePakTest, CorruptHeaderGeometryIsRejected )
 }
 
 /**
- * @brief [ResourcePakTest] 스트링 풀의 마지막 문자열이 잘려 있어도 풀 밖을 읽지 않는다
- * @details 엔트리의 디버그 경로는 풀 안의 **NUL 종료 문자열**로 저장된다. 시작 오프셋이 풀 안인지만
- *          보고 `const utf8*` 를 그대로 `string` 에 넘기면 string 이 NUL 을 찾아 **풀 밖까지** 훑는다.
- *          종결자를 지워 그 경계를 확인한다.
+ * @brief [ResourcePakTest] 항목 경로 목록(스트링 풀)이 없거나 손상된 팩은 열리지 않는다
+ * @details 폴더 나열(`collectFolderEntries`)은 이 목록으로만 항목 이름을 안다. 목록이 없는 팩을 받아 주면 그 팩의 폴더는 조용히 비어 보인다.
+ *          경로는 풀 안의 **NUL 종료 문자열**이다 — 종결자가 풀 안에 없으면 `const utf8*` 를 그대로 넘기는 읽기는 풀 밖까지 훑으므로 거절한다.
+ *          경로의 해시가 항목과 다르면 나열이 읽을 수 없는 이름을 내놓으므로 그것도 거절한다.
  */
-SW_TEST_CASE( ResourcePakTest, StringPoolReadStopsAtPoolEnd )
+SW_TEST_CASE( ResourcePakTest, MissingOrCorruptEntryPathListIsRejected )
 {
-    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_unterminated_pool.pack" );
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_entry_path_list.pack" );
 
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         { "data/items.json", "{\"sword\": 1}" },
     };
-    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, true ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile ) );
+    {
+        sw::ResourcePakReader reader;
+        SW_ASSERT_TRUE( reader.open( packPath ) );
+        sw::PackFileEntry entry{};
+        SW_ASSERT_TRUE( reader.getFileEntry( "data/items.json", entry ) );
+        SW_EXPECT_EQUAL( sw::string( "data/items.json" ), entry._relativePath );
+    }
 
-    // 스트링 풀은 파일 맨 끝에 온다 — 마지막 바이트(종결자)를 글자로 바꿔 종료를 없앤다.
-    sw::vector<uint8> bytes;
-    SW_ASSERT_TRUE( sw::FileUtil::readFile( packPath, bytes ) );
-    SW_ASSERT_TRUE( bytes.empty() == false );
-    SW_ASSERT_EQUAL( uint8( 0 ), bytes.back() );
-    bytes.back() = static_cast<uint8>( 'X' );
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) ) );
+    sw::vector<uint8> original;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( packPath, original ) );
+    SW_ASSERT_TRUE( original.empty() == false );
+    SW_ASSERT_EQUAL( uint8( 0 ), original.back() ); // 스트링 풀은 파일 맨 끝에 온다
 
-    sw::ResourcePakReader reader;
-    SW_ASSERT_TRUE( reader.open( packPath ) );
+    // 1) 종결자를 글자로 바꿔 경로가 풀 끝을 넘게 한다.
+    {
+        sw::vector<uint8> bytes = original;
+        bytes.back()            = static_cast<uint8>( 'X' );
+        SW_ASSERT_TRUE( sw::FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) ) );
+        test::ScopedLogSuppressor suppressor;
+        sw::ResourcePakReader     reader;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+    }
 
-    sw::PackFileEntry entry{};
-    SW_ASSERT_TRUE( reader.getFileEntry( "data/items.json", entry ) );
-    // 풀 전체가 이 한 문자열이고 종결자가 없다 — 풀 길이만큼만 읽고 멈춰야 한다.
-    SW_EXPECT_EQUAL( sw::string( "data/items.jsonX" ), entry._debugRelativePath );
+    // 2) 경로 한 글자를 바꿔 해시와 어긋나게 한다("data/items.json" → "data/itemz.json").
+    {
+        sw::vector<uint8> bytes = original;
+        bytes[bytes.size() - 7] = static_cast<uint8>( 'z' );
+        SW_ASSERT_TRUE( sw::FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) ) );
+        test::ScopedLogSuppressor suppressor;
+        sw::ResourcePakReader     reader;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+    }
+
+    // 3) 헤더에서 경로 목록 플래그를 지운다(옛 쿠커가 Shipping 에서 하던 것).
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( packPath, original.data(), static_cast<uint64>( original.size() ) ) );
+    {
+        sw::PackHeader header{};
+        SW_ASSERT_TRUE( sw::readPackHeaderFromDisk( packPath, header ) );
+        header._flags = static_cast<uint16>( header._flags & ~static_cast<uint16>( sw::PackFlag::HasStringPool ) );
+        SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, header ) );
+        test::ScopedLogSuppressor suppressor;
+        sw::ResourcePakReader     reader;
+        SW_EXPECT_FALSE( reader.open( packPath ) );
+    }
 }
+
+/**
+ * @brief [ResourcePakTest] 낱개 파일을 허용하지 않고 팩만 마운트해도 `collectResources` 가 폴더 항목을 돌려주고, 그 id 로 읽힌다
+ * @details 팩으로 쿠킹한 배포본의 모양이다 — 디스크를 훑는 나열은 여기서 0개가 된다. 전체 경로로 담긴 항목과 도메인 팩(`game_<이름>.pack`)에
+ *          도메인을 떼고 담긴 항목이 함께 나오고, 하위 폴더 안 · 확장자가 다른 항목은 빠지며, 결과는 이름순이다.
+ */
+SW_TEST_CASE( ResourcePakTest, CollectResourcesListsPackOnlyFolder )
+{
+    const sw::GlobalVfsScope vfsScope;
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const sw::string folder       = "game/listingprobe/data/presets";
+    const sw::string fullPathPack = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "listing_fullpath.pack" );
+    const sw::string domainPack   = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "game_listingprobe.pack" );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( fullPathPack, 0, sw::PackCompressionType::None,
+                                                                   { sw::makeListingEntry( folder + "/b.appearance.xml" ), sw::makeListingEntry( folder + "/A.appearance.xml" ),
+                                                                     sw::makeListingEntry( folder + "/sub/c.appearance.xml" ), sw::makeListingEntry( folder + "/readme.txt" ),
+                                                                     sw::makeListingEntry( "game/listingprobe/data/presets_other/x.appearance.xml" ) } ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( domainPack, 0, sw::PackCompressionType::None,
+                                                                   { sw::makeListingEntry( "data/presets/d.appearance.xml" ) } ) );
+
+    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    packManager.unmountAll();
+    packManager.setAllowLooseFiles( false );
+    SW_ASSERT_TRUE( packManager.mountPack( fullPathPack, 1000 ) );
+    SW_ASSERT_TRUE( packManager.mountPack( domainPack, 1000 ) );
+
+    sw::vector<sw::string> listPath;
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, ".appearance.xml", listPath ) == sw::ResourceFolderListing::Listed );
+    SW_ASSERT_EQUAL( size_t( 3 ), listPath.size() );
+    SW_EXPECT_EQUAL( folder + "/A.appearance.xml", listPath[0] ); // 이름순은 대소문자를 가리지 않는다
+    SW_EXPECT_EQUAL( folder + "/b.appearance.xml", listPath[1] );
+    SW_EXPECT_EQUAL( folder + "/d.appearance.xml", listPath[2] ); // 도메인 팩 항목은 도메인을 다시 붙여 돌려준다
+    for ( const sw::string& path : listPath )
+    {
+        sw::string text;
+        SW_ASSERT_TRUE_MSG( sw::ResourceIO::readTextResource( path, text ), path.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::endsWith( text, sw::FileUtil::getFileNamePart( path ), true ), text.c_str() ); // 본문은 담을 때의 경로다
+    }
+
+    // 거르지 않으면 같은 폴더의 다른 파일도 나오고, 하위 폴더 안은 여전히 빠진다.
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder + "/", {}, listPath ) == sw::ResourceFolderListing::Listed );
+    SW_EXPECT_EQUAL( size_t( 4 ), listPath.size() );
+
+    // 같은 입력이면 실행마다 같은 순서다.
+    sw::vector<sw::string> listAgain;
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, {}, listAgain ) == sw::ResourceFolderListing::Listed );
+    SW_EXPECT_TRUE( listAgain == listPath );
+}
+
+/**
+ * @brief [ResourcePakTest] 낱개 파일을 허용하면 디스크 폴더와 팩 항목의 합집합을 돌려준다. 같은 이름(대소문자 무시)은 하나만 남고 디스크 표기가 이긴다
+ */
+SW_TEST_CASE( ResourcePakTest, CollectResourcesUnionsLooseFolderAndPacks )
+{
+    const sw::GlobalVfsScope vfsScope;
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    // 디스크에 실제로 있는 폴더(슈터 외형 데이터)를 쓴다 — 여섯 파일이 있다.
+    const sw::string        folder      = "game/shooter3d/data/appearance";
+    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    packManager.setAllowLooseFiles( true );
+
+    sw::vector<sw::string> listLoose;
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, ".xml", listLoose ) == sw::ResourceFolderListing::Listed );
+    SW_ASSERT_TRUE( listLoose.empty() == false );
+
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "listing_union.pack" );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None,
+                                                                   { sw::makeListingEntry( folder + "/zz_packonly.xml" ), sw::makeListingEntry( folder + "/SLOTS.xml" ) } ) );
+    SW_ASSERT_TRUE( packManager.mountPack( packPath, 1000 ) );
+
+    sw::vector<sw::string> listUnion;
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, ".xml", listUnion ) == sw::ResourceFolderListing::Listed );
+    SW_ASSERT_EQUAL( listLoose.size() + 1, listUnion.size() ); // SLOTS.xml 은 디스크의 slots.xml 과 같은 항목이다
+    SW_EXPECT_EQUAL( folder + "/zz_packonly.xml", listUnion.back() );
+    bool bDiskSpelling = false;
+    for ( const sw::string& path : listUnion )
+    {
+        SW_EXPECT_TRUE_MSG( path != folder + "/SLOTS.xml", "디스크 표기(slots.xml)가 남아야 한다" );
+        bDiskSpelling = bDiskSpelling || path == folder + "/slots.xml";
+    }
+    SW_EXPECT_TRUE( bDiskSpelling );
+    for ( size_t index = 1; index < listUnion.size(); ++index )
+    {
+        SW_EXPECT_TRUE( sw::StringUtil::toLower( listUnion[index - 1].c_str() ) < sw::StringUtil::toLower( listUnion[index].c_str() ) );
+    }
+}
+
+/**
+ * @brief [ResourcePakTest] 폴더가 어디에도 없으면 `FolderMissing`, 폴더 인자가 리소스 id 가 아니면(OS 절대 경로 · `..`) `Failed` 다 — 둘을 섞지 않는다
+ */
+SW_TEST_CASE( ResourcePakTest, CollectResourcesTellsMissingFolderFromFailure )
+{
+    const sw::GlobalVfsScope vfsScope;
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    sw::vector<sw::string> listPath{ "stale" };
+    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( "game/shooter3d/data/no_such_folder_xyz", ".xml", listPath ) == sw::ResourceFolderListing::FolderMissing );
+    SW_EXPECT_TRUE( listPath.empty() );
+
+    test::ScopedLogSuppressor suppressor;
+    listPath = { "stale" };
+    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( "game/shooter3d/../../escape", ".xml", listPath ) == sw::ResourceFolderListing::Failed );
+    SW_EXPECT_TRUE( listPath.empty() );
+    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourcePaths::getRootFolderPath(), {}, listPath ) == sw::ResourceFolderListing::Failed );
+    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( "", {}, listPath ) == sw::ResourceFolderListing::Failed );
+}
+
+// 디스크 전용 해석 결과는 문자열로 저절로 바뀌지 않는다 — 바뀌면 `FileUtil` 로 그대로 흘러가 팩 빌드에서 조용히 "없음" 이 된다.
+static_assert( std::is_convertible_v<sw::LooseFilePath, sw::string> == false );
+static_assert( std::is_convertible_v<sw::LooseFilePath, sw::string_view> == false );
+static_assert( std::is_constructible_v<sw::string, sw::LooseFilePath> == false );
+static_assert( std::is_constructible_v<sw::string_view, sw::LooseFilePath> == false );
+static_assert( std::is_constructible_v<sw::LooseFilePath, sw::string> == false ); // 만드는 쪽은 ResourcePaths 하나다
 
 /**
  * @brief [ResourcePakTest] FAT 항목이 적어 둔 크기도 파일로 검증되는지 확인
@@ -917,7 +1066,7 @@ SW_TEST_CASE( ResourcePakTest, CorruptEntrySizeIsRejected )
         {"data/items.json", "{\"sword\": 1}"},
         { "maps/title.xml",       "<Scene/>"},
     };
-    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile ) );
 
     // 멀쩡한 상태에서는 열리고 읽힌다 — 아래 거부가 손상 때문임을 못 박는다.
     {
@@ -977,8 +1126,8 @@ SW_TEST_CASE( ResourcePakTest, MovedReaderKeepsTheOpenPack )
         {"data/b.txt", "pack-b"},
         {"data/c.txt", "pack-c"}
     };
-    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPathA, 0, sw::PackCompressionType::None, listFileA, false ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPathB, 0, sw::PackCompressionType::None, listFileB, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPathA, 0, sw::PackCompressionType::None, listFileA ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPathB, 0, sw::PackCompressionType::None, listFileB ) );
 
     sw::ResourcePakReader source;
     SW_ASSERT_TRUE( source.open( packPathA ) );

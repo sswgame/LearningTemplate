@@ -293,7 +293,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Load" ) )
         {
-            const string readPath = ResourcePaths::getResourcePath( string_view( _path.c_str() ) );
+            const string readPath = ResourcePaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath();
             if ( readPath.empty() || _sockets.loadFromFile( readPath ) == false )
                 _status = "Socket file could not be loaded (see log)";
             else
@@ -476,7 +476,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Load pose" ) )
         {
-            const string readPath = ResourcePaths::getResourcePath( string_view( _refPosePath.c_str() ) );
+            const string readPath = ResourcePaths::findLooseFile( string_view( _refPosePath.c_str() ) ).getDiskPath();
             if ( readPath.empty() )
                 _status = "Reference pose file was not found - edit bones and Save to create it";
             else if ( _pose.loadFromFile( readPath ) == false )
@@ -833,7 +833,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Load presets" ) )
         {
-            const string readPath = ResourcePaths::getResourcePath( string_view( _presetPath.c_str() ) );
+            const string readPath = ResourcePaths::findLooseFile( string_view( _presetPath.c_str() ) ).getDiskPath();
             if ( readPath.empty() || AppearanceEditModel::loadPresetFile( _presetStore, readPath ) == false )
                 _status = "Preset file could not be loaded (needs appearance data; see log)";
             else

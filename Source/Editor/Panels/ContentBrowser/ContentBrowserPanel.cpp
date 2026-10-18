@@ -809,11 +809,11 @@ namespace sw::editor
         }
         const string& packRoot = GameConfig::getActive()._packRoot;
         if ( packRoot.empty() == false )
-            addRoot( packRoot, ResourcePaths::getDomainFolderPath( packRoot ) );
+            addRoot( packRoot, ResourcePaths::findLooseDomainFolder( packRoot ).getDiskPath() );
         if ( _bShowAllPacks == SW_TRUE || packRoot.empty() )
         {
             vector<string> listPackFolder;
-            (void)FileUtil::collectFolders( ResourcePaths::getDomainFolderPath( "game" ), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
+            (void)FileUtil::collectFolders( ResourcePaths::findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
             std::sort( listPackFolder.begin(), listPackFolder.end() );
             for ( const string& packFolder : listPackFolder )
             {
@@ -822,9 +822,9 @@ namespace sw::editor
                     addRoot( packName, packFolder );
             }
         }
-        addRoot( "engine", ResourcePaths::getDomainFolderPath( "engine" ) );
-        addRoot( "common", ResourcePaths::getDomainFolderPath( "common" ) );
-        addRoot( "editor", ResourcePaths::getDomainFolderPath( "editor" ) );
+        addRoot( "engine", ResourcePaths::findLooseDomainFolder( "engine" ).getDiskPath() );
+        addRoot( "common", ResourcePaths::findLooseDomainFolder( "common" ).getDiskPath() );
+        addRoot( "editor", ResourcePaths::findLooseDomainFolder( "editor" ).getDiskPath() );
 
         // 현재 폴더가 숨긴 팩 안에 있으면 첫 루트로 이동한다.
         bool bSelectedIsUnderRoot = false;
@@ -1059,8 +1059,8 @@ namespace sw::editor
         for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? ResourcePaths::getDomainFolderPath( "engine", kArrFavorites[favIdx]._pRelPath )
-                                         : ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, kArrFavorites[favIdx]._pRelPath );
+                                         ? ResourcePaths::findLooseDomainFolder( "engine", kArrFavorites[favIdx]._pRelPath ).getDiskPath()
+                                         : ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot, kArrFavorites[favIdx]._pRelPath ).getDiskPath();
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )

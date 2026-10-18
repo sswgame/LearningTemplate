@@ -478,7 +478,7 @@ SW_TEST_CASE( ShaderCookerTest, DepthOnlyPassesHaveNoPixelStage )
     const utf8* arrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
     for ( const utf8* pPipeline : arrPipeline )
     {
-        const sw::string absPath = sw::ResourcePaths::getResourcePath( pPipeline );
+        const sw::string absPath = sw::ResourcePaths::findLooseFile( pPipeline ).getDiskPath();
         SW_EXPECT_TRUE_MSG( absPath.empty() == false, pPipeline );
         if ( absPath.empty() )
             continue;
@@ -693,10 +693,10 @@ SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
  */
 SW_TEST_CASE( ShaderCookStampTest, CommittedCookedOutputIsCurrent )
 {
-    const sw::string arrShaderPath[] = { sw::ResourcePaths::getResourcePath( test::getEngineDefaultAssets()._shaderForwardLit.get() ),
-                                         sw::ResourcePaths::getResourcePath( test::getEngineDefaultAssets()._shaderProbeSampleCompute.get() ) };
-    const sw::string arrBinDir[]     = { sw::ResourcePaths::getResourcePath( "engine/shaders/bin/dx12" ),
-                                         sw::ResourcePaths::getResourcePath( "common/shaders/bin/dx12" ) };
+    const sw::string arrShaderPath[] = { sw::ResourcePaths::findLooseFile( test::getEngineDefaultAssets()._shaderForwardLit.get() ).getDiskPath(),
+                                         sw::ResourcePaths::findLooseFile( test::getEngineDefaultAssets()._shaderProbeSampleCompute.get() ).getDiskPath() };
+    const sw::string arrBinDir[]     = { sw::ResourcePaths::findLooseFile( "engine/shaders/bin/dx12" ).getDiskPath(),
+                                         sw::ResourcePaths::findLooseFile( "common/shaders/bin/dx12" ).getDiskPath() };
     for ( uint32 index = 0; index < 2u; ++index )
     {
         // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.

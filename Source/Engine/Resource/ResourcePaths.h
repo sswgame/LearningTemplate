@@ -2,7 +2,7 @@
  * @file ResourcePaths.h
  * @brief 엔진, 공통, 게임, 에디터 리소스의 루트 경로를 해석합니다.
  * @note
- *   - `Resource/` 는 표시와 감시용 최상위일 뿐, getResourcePath 의 검색 루트가 아닙니다.
+ *   - `Resource/` 는 표시와 감시용 최상위일 뿐, findLooseFile 의 검색 루트가 아닙니다.
  *   - 검색 루트는 `game/<pack>/`, `common/`, `engine/`, `editor/` 이고, 파일은 항상 이들 아래에 있습니다.
  *   - 키(소문자 정규형)는 두 종류입니다.
  *     - 팩 상대 키: `pipeline/foo.xml`, `shaders/bar.hlsl` 같은 키는 검색 루트를 차례로 봅니다.
@@ -16,6 +16,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Resource/LooseFilePath.h"
 
 namespace sw
 {
@@ -34,20 +36,21 @@ namespace sw
         static bool initialize();
 
         /**
-         * @brief 상대 리소스 경로를 절대 경로로 해석합니다(파일이 있을 때만).
+         * @brief 상대 리소스 경로를 **디스크의 낱개 파일**로 풉니다(파일이 있을 때만). 팩은 보지 않습니다.
          * @param filePath 팩 상대 키 또는 `engine/`/`common/`/`game/<pack>/`/`editor/` 전역 ID
          * @param folderName 검색 루트마다 이 하위 폴더로 범위를 좁힙니다(비우면 루트 바로 아래부터)
-         * @return I/O 에 쓸 수 있는 절대 경로입니다. 못 찾으면 빈 문자열입니다.
+         * @return 디스크 경로입니다. 못 찾으면 `isEmpty()` 입니다. 런타임 리소스 읽기 · 나열은 이 결과가 아니라 `ResourceIO` 를 씁니다 —
+         *         결과 형식(`LooseFilePath`)이 `string` 으로 저절로 바뀌지 않는 까닭입니다.
          * @note 소문자 키로 먼저 찾고, 못 찾으면 원래 표기로 한 번 더 찾습니다(대소문자를 가리는 파일시스템).
          */
-        static string getResourcePath( string_view filePath, string_view folderName = "" );
+        static LooseFilePath findLooseFile( string_view filePath, string_view folderName = "" );
 
         /**
          * @brief 논리 경로를 절대 경로로 바꿉니다(파일이 아직 없어도 도메인 루트 기준으로 조합합니다).
          * @param relativePath 전역 ID 또는 이미 있는 팩 상대 키
          * @return 절대 경로입니다. 전역 ID 가 아니면서 파일도 없으면 빈 문자열입니다.
          * @details 저장과 .meta 생성에 씁니다. 전역 ID(`engine/`/`common/`/`game/<pack>/`/`editor/`…)만 파일이 없어도 경로를 정할 수 있습니다.
-         *          팩 상대 키는 이미 있는 경우에만 getResourcePath 결과를 반환합니다.
+         *          팩 상대 키는 이미 있는 경우에만 findLooseFile 결과를 반환합니다.
          */
         static string makeAbsolutePath( string_view relativePath );
 
@@ -55,7 +58,7 @@ namespace sw
          * @brief 아직 없는 파일을 **쓰기 위한** 절대 경로를 정합니다.
          * @param path 절대 경로, 전역 ID, 이미 있는 팩 상대 키 중 무엇이든 받습니다.
          * @return 쓰기에 쓸 절대 경로입니다. 아무것도 해석되지 않으면 인자를 그대로 반환합니다.
-         * @details 저장하는 쪽은 `getResourcePath` 만으로는 안 된다. 그 함수는 **이미 있는** 파일만
+         * @details 저장하는 쪽은 `findLooseFile` 만으로는 안 된다. 그 함수는 **이미 있는** 파일만
          *          찾으므로 새 파일에는 빈 문자열을 반환하고, 그러면 부르는 쪽이 상대 경로로 파일을 써서
          *          `Resource/` 가 아니라 **실행 파일의 작업 디렉터리**에 떨어진다. 예를 들어 `PrefabAsset` 이 이 방식으로 저장하면
          *          에셋은 Bin 아래로, `.meta` 는 `Resource/` 아래로 갈라진다.
@@ -74,7 +77,7 @@ namespace sw
 
         /**
          * @brief 리소스 id 에 `..` 성분이 있으면 true 입니다. 리소스 루트 밖으로 나가는 id 입니다.
-         * @details `getResourcePath` 와 `ResourceIO` 의 읽기가 이런 id 를 해석하지 않는 기준 하나다.
+         * @details `findLooseFile` 과 `ResourceIO` 의 읽기가 이런 id 를 해석하지 않는 기준 하나다.
          */
         static bool hasParentDirectoryComponent( string_view path );
 
@@ -93,9 +96,9 @@ namespace sw
          * @brief 도메인의 하위 폴더 절대 경로를 반환합니다(`Resource/<domainName>/<subFolder>`).
          * @param domainName 예: "engine", "common", "game/empty", "editor", "dlc/winter"
          * @param subFolder  예: "shaders", "textures", "prefabs"(비우면 도메인 루트)
-         * @return 디렉터리가 있으면 정규화한 절대 경로, 없으면 빈 문자열
+         * @return 디스크에 디렉터리가 있으면 정규화한 절대 경로, 없으면 `isEmpty()`. 팩은 보지 않습니다(에디터 · 쿠커 · 도구용).
          */
-        static string getDomainFolderPath( string_view domainName, string_view subFolder = {} );
+        static LooseFilePath findLooseDomainFolder( string_view domainName, string_view subFolder = {} );
 
         /** @brief `Resource/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. */
         static const string& getRootFolderPath();
@@ -158,7 +161,7 @@ namespace sw
         static string         _s_projectFolderPath;         ///< 프로젝트 루트
         static string         _s_resourceRootFolderPath;    ///< Resource/ 최상위 루트(유일한 기준점)
         static vector<string> _s_listSearchPriority;        ///< 검색 우선순위 토큰 목록
-        static vector<string> _s_listResourceFolder;        ///< getResourcePath 의 검색 루트 목록
+        static vector<string> _s_listResourceFolder;        ///< findLooseFile 의 검색 루트 목록
         static vector<string> _s_listHostExcludedExtension; ///< 이 호스트가 읽지 않는 확장자(소문자, `.dds`)
         static vector<string> _s_listHostExcludedFolder;    ///< 이 호스트가 읽지 않는 폴더 조각(소문자, `shaders/bin`)
     };

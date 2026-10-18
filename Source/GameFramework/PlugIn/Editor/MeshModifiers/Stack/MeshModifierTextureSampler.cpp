@@ -64,7 +64,7 @@ namespace sw::editor
                 if ( FileUtil::exists( assetPath ) )
                     resolved = string( assetPath );
                 else
-                    resolved = ResourcePaths::getResourcePath( assetPath );
+                    resolved = ResourcePaths::findLooseFile( assetPath ).getDiskPath();
                 return resolved;
             }
 

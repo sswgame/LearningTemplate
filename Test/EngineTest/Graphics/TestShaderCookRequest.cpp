@@ -397,7 +397,7 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
     for ( const sw::ShaderCookRequest& request : listRequest )
     {
         const sw::string absPath = sw::FileUtil::exists( request._shaderPath ) ? request._shaderPath
-                                                                               : sw::ResourcePaths::getResourcePath( request._shaderPath );
+                                                                               : sw::ResourcePaths::findLooseFile( request._shaderPath ).getDiskPath();
         if ( sw::FileUtil::exists( absPath ) == false )
             continue;
         const sw::string normPath  = sw::FileUtil::normalizeSeparators( absPath );

@@ -13,7 +13,7 @@ namespace sw
 
     XMLRootStatus XMLReadUtil::loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot, string* pOutAbsPath )
     {
-        if ( outDocument.loadPath( path, pOutAbsPath ) == false )
+        if ( outDocument.loadResource( path, pOutAbsPath ) == false )
             return XMLRootStatus::NotLoaded;
         outRoot = outDocument.getRoot( pRootName );
         return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;

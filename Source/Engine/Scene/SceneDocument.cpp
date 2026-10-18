@@ -70,7 +70,7 @@ namespace sw
         AssetLoadScope loadScope( "Scene", path );
         XMLDocument    doc;
         string         absPath;
-        if ( doc.loadPath( path, &absPath ) == false )
+        if ( doc.loadResource( path, &absPath ) == false )
         {
             // 없는 파일과 깨진 파일을 가른다(구문 오류를 "File not found" 로 알리지 않는다).
             SW_LOG_ERROR( "Scene not loaded - %#", doc.getLastError() );
@@ -231,27 +231,12 @@ namespace sw
         *this       = {};
         _sourcePath = path;
 
+        // 낱개 파일 허용 정책(OS 절대 경로 · 작업 경로 포함)은 `ResourceIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 열지 않는다.
         vector<uint8> bytes;
-        string        absPath;
+        const string  absPath{ path };
         Archive       arch;
-
         if ( ResourceIO::readBinaryResource( path, bytes ) )
-        {
-            arch    = Archive( bytes.data(), bytes.size() );
-            absPath = path;
-        }
-        else
-        {
-            if ( FileUtil::isAbsolutePath( path ) )
-                absPath = FileUtil::normalizeSeparators( path );
-            else
-            {
-                absPath = ResourcePaths::getResourcePath( path );
-                if ( absPath.empty() )
-                    absPath = path;
-            }
-            arch = Archive( absPath, true );
-        }
+            arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
             SW_LOG_ERROR( "Binary read failed or too small: %#", absPath );

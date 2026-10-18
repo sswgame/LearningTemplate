@@ -267,7 +267,7 @@ SW_TEST_CASE( UINavigationScriptTest, ModalKeepsFocusInsideAndReturnsOnCancel )
  */
 SW_TEST_CASE( UINavigationScriptTest, EveryEngineDocumentIsReachableByGamepad )
 {
-    const sw::string directory = sw::ResourcePaths::getDomainFolderPath( "engine", "ui" );
+    const sw::string directory = sw::ResourcePaths::findLooseDomainFolder( "engine", "ui" ).getDiskPath();
     SW_ASSERT_TRUE_MSG( directory.empty() == false, "engine/ui folder not found" );
     sw::vector<sw::string> listPath;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( directory, ".xml", listPath, false ) );

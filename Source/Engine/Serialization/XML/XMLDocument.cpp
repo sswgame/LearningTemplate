@@ -653,6 +653,11 @@ namespace sw
 
     bool XMLDocument::loadResource( string_view relativePath, string* pOutAbsPath )
     {
+        if ( relativePath.empty() )
+        {
+            _lastError = "empty path";
+            return false;
+        }
         string text;
         string absPath;
         if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
@@ -663,22 +668,6 @@ namespace sw
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = absPath;
         return parse( text, absPath );
-    }
-
-    bool XMLDocument::loadPath( string_view path, string* pOutAbsPath )
-    {
-        if ( path.empty() )
-        {
-            _lastError = "empty path";
-            return false;
-        }
-        if ( FileUtil::exists( path ) )
-        {
-            if ( pOutAbsPath != nullptr )
-                *pOutAbsPath = string{ path };
-            return loadFile( path );
-        }
-        return loadResource( path, pOutAbsPath );
     }
 
     uint32 XMLDocument::computeLineNumber( string_view text, int64 offset )

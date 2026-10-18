@@ -491,6 +491,11 @@ namespace sw
 
     bool JSONDocument::loadResource( string_view relativePath, string* pOutAbsPath )
     {
+        if ( relativePath.empty() )
+        {
+            _lastError = "empty path";
+            return false;
+        }
         string text;
         string absPath;
         if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
@@ -501,22 +506,6 @@ namespace sw
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = absPath;
         return parse( text, absPath );
-    }
-
-    bool JSONDocument::loadPath( string_view path, string* pOutAbsPath )
-    {
-        if ( path.empty() )
-        {
-            _lastError = "empty path";
-            return false;
-        }
-        if ( FileUtil::exists( path ) )
-        {
-            if ( pOutAbsPath != nullptr )
-                *pOutAbsPath = string{ path };
-            return loadFile( path );
-        }
-        return loadResource( path, pOutAbsPath );
     }
 
     JSONValue JSONDocument::getRoot() const

@@ -149,7 +149,7 @@ namespace sw
             return true;
 
         XMLDocument doc;
-        if ( doc.loadPath( filePath ) == false )
+        if ( doc.loadResource( filePath ) == false )
         {
             SW_LOG_WARNING( "Shell user bindings '%#' could not be read - the default keys are used", filePath );
             return false;

@@ -310,7 +310,7 @@ namespace sw::editor
         if ( FileUtil::exists( clipDataPath ) == false )
             return true;
         JSONDocument document;
-        if ( document.loadPath( clipDataPath ) == false )
+        if ( document.loadResource( clipDataPath ) == false )
         {
             SW_LOG_ERROR( "Clip data '%#' is not valid JSON", clipDataPath.c_str() );
             return false;

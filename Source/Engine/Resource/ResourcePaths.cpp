@@ -129,7 +129,7 @@ namespace sw
 
             /**
              * @brief 검색 루트 목록을 돌며 tryUnderRoot 를 부릅니다.
-             * @param listRoot getResourcePath 검색 루트들
+             * @param listRoot findLooseFile 검색 루트들
              * @param relFile 상대 파일 키
              * @param relFolder 선택적 하위 폴더
              * @return 처음 찾은 절대 경로입니다. 없으면 빈 문자열입니다.
@@ -255,7 +255,7 @@ namespace sw
         return _s_bInitialize.load( std::memory_order_acquire );
     }
 
-    string ResourcePaths::getResourcePath( string_view filePath, string_view folderName )
+    LooseFilePath ResourcePaths::findLooseFile( string_view filePath, string_view folderName )
     {
         if ( filePath.empty() )
             return {};
@@ -263,7 +263,7 @@ namespace sw
         if ( FileUtil::isAbsolutePath( filePath ) )
         {
             if ( FileUtil::exists( filePath ) )
-                return FileUtil::normalizeSeparators( filePath );
+                return LooseFilePath( FileUtil::normalizeSeparators( filePath ) );
             return {};
         }
         // 루트 밖으로 나가는 id 는 풀지 않는다(`readResourceCommon` 과 같은 규칙).
@@ -278,7 +278,7 @@ namespace sw
             std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
             auto                    it = ResourcePathsInternal::_s_mapResolvedPath.find( cacheKeyHash );
             if ( it != ResourcePathsInternal::_s_mapResolvedPath.end() )
-                return it->second;
+                return LooseFilePath( it->second );
         }
 
         const string lowerFile   = FileUtil::normalizePath( filePath );
@@ -320,7 +320,7 @@ namespace sw
             ResourcePathsInternal::_s_mapResolvedPath.insert_or_assign( cacheKeyHash, found );
         }
 
-        return found;
+        return LooseFilePath( std::move( found ) );
     }
 
     string ResourcePaths::getWritePath( string_view path )
@@ -336,7 +336,7 @@ namespace sw
         }
 
         // NRVO 가 걸리도록 이름 있는 값 하나로 모아 한 번만 반환한다.
-        string result = getResourcePath( path );
+        string result = findLooseFile( path ).getDiskPath();
         if ( result.empty() )
             result = makeAbsolutePath( path );
         if ( result.empty() )
@@ -383,7 +383,7 @@ namespace sw
         if ( FileUtil::isAbsolutePath( relativePath ) )
             return FileUtil::normalizeSeparators( relativePath );
 
-        string result = getResourcePath( relativePath );
+        string result = findLooseFile( relativePath ).getDiskPath();
         if ( result.empty() )
         {
             const string lowerRel = FileUtil::normalizePath( relativePath );
@@ -395,7 +395,7 @@ namespace sw
         return result;
     }
 
-    string ResourcePaths::getDomainFolderPath( string_view domainName, string_view subFolder )
+    LooseFilePath ResourcePaths::findLooseDomainFolder( string_view domainName, string_view subFolder )
     {
         if ( _s_resourceRootFolderPath.empty() || domainName.empty() )
             return {};
@@ -405,11 +405,11 @@ namespace sw
             return {};
 
         if ( subFolder.empty() )
-            return FileUtil::normalizeSeparators( domainDir );
+            return LooseFilePath( FileUtil::normalizeSeparators( domainDir ) );
 
         const string targetDir = FileUtil::joinPath( domainDir, subFolder );
         if ( FileUtil::isDirectory( targetDir ) )
-            return FileUtil::normalizeSeparators( targetDir );
+            return LooseFilePath( FileUtil::normalizeSeparators( targetDir ) );
 
         return {};
     }
@@ -442,14 +442,14 @@ namespace sw
             const string token = FileUtil::normalizePath( tokenRaw );
             if ( token == "game" )
             {
-                const string activePack = getDomainFolderPath( GameConfig::getActive()._packRoot );
+                const string activePack = findLooseDomainFolder( GameConfig::getActive()._packRoot ).getDiskPath();
                 if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
                 {
                     const string normPack = FileUtil::normalizeSeparators( activePack );
                     if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), normPack ) == _s_listResourceFolder.end() )
                         _s_listResourceFolder.push_back( normPack );
                 }
-                const string gameDir = getDomainFolderPath( path::kGamePack );
+                const string gameDir = findLooseDomainFolder( path::kGamePack ).getDiskPath();
                 if ( gameDir.empty() == false && FileUtil::isDirectory( gameDir ) )
                 {
                     vector<string> listPackFolder;
@@ -467,7 +467,7 @@ namespace sw
             else
             {
                 // 모든 도메인 · 커스텀 팩 · DLC · 모드를 이름으로 푼다("engine", "common", "editor", "dlc/expansion1", "mods/pack1")
-                const string domainDir = getDomainFolderPath( token );
+                const string domainDir = findLooseDomainFolder( token ).getDiskPath();
                 if ( domainDir.empty() == false )
                 {
                     if ( std::find( _s_listResourceFolder.begin(), _s_listResourceFolder.end(), domainDir ) == _s_listResourceFolder.end() )
@@ -520,10 +520,10 @@ namespace sw
         {
             ResourcePathsInternal::updateLongestSaveRoot( folderNorm, root, physicalRoot, rootNorm );
         }
-        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kGamePack ), physicalRoot, rootNorm );
-        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kEnginePack ), physicalRoot, rootNorm );
-        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kCommonPack ), physicalRoot, rootNorm );
-        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kEditorPack ), physicalRoot, rootNorm );
+        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, findLooseDomainFolder( path::kGamePack ).getDiskPath(), physicalRoot, rootNorm );
+        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, findLooseDomainFolder( path::kEnginePack ).getDiskPath(), physicalRoot, rootNorm );
+        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, findLooseDomainFolder( path::kCommonPack ).getDiskPath(), physicalRoot, rootNorm );
+        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, findLooseDomainFolder( path::kEditorPack ).getDiskPath(), physicalRoot, rootNorm );
 
         if ( physicalRoot.empty() )
             return FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( string{ absoluteFolder } ) );

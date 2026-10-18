@@ -22,7 +22,7 @@ namespace sw
     enum class PackFlag : uint16
     {
         None          = 0,
-        HasStringPool = SW_BIT( 0 ), ///< 디버그용 원본 경로 스트링 풀을 담았는지(Shipping 은 담지 않음)
+        HasStringPool = SW_BIT( 0 ), ///< 항목 경로 목록(스트링 풀)을 담았는지. 폴더 나열이 이 목록을 읽으므로 쿠커는 늘 담고, 리더는 없는 팩을 거절한다
         HasCrc32      = SW_BIT( 1 ), ///< 파일별 CRC32 체크섬을 담았는지
         Encrypted     = SW_BIT( 2 ), ///< FAT 와 페이로드를 암호화했는지
     };
@@ -83,7 +83,7 @@ namespace sw
         uint32 _uncompressedSize{ 0 };
         uint32 _crc32{ 0 };
         uint32 _stringPoolOffset{ 0 };
-        string _debugRelativePath; ///< 디버그 스트링 풀에서 읽은 원본 경로(Shipping 은 빈 문자열)
+        string _relativePath; ///< 스트링 풀에서 읽은 팩 안 경로(해시가 `_pathHash` 와 맞는 것을 열 때 확인했다)
     };
 
 } // namespace sw

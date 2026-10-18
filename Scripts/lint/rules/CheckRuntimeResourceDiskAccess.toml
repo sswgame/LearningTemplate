@@ -1,0 +1,5 @@
+# CheckRuntimeResourceDiskAccess 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckRuntimeResourceDiskAccess.py.
+
+# 게임 런타임 코드인데 디스크 폴더를 훑어도 되는 파일 → 이유.
+[exemption]
+"Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQLMigrationRunner.cpp" = "서버가 배포 옆에 둔 SQL 마이그레이션 폴더(디스크)를 훑는다 — 리소스 팩에 들지 않는 서버 설정 데이터다"

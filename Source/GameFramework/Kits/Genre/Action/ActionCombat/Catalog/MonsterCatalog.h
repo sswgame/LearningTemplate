@@ -128,7 +128,7 @@ namespace sw
         MonsterCatalog& operator=( const MonsterCatalog& ) = delete;
 
         /**
-         * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 에셋 상대 경로나 실제 파일 경로를 받습니다(`XMLDocument::loadPath`).
+         * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 에셋 상대 경로나 실제 파일 경로를 받습니다(`XMLDocument::loadResource`).
          * @return 하나라도 읽었으면 true 입니다. 하나도 못 읽었으면 오류를 남기고 빈 카탈로그로 false 를 반환합니다(코드 폴백 정의는 없습니다).
          * @details 실패는 세 가지이고 모두 같게 다룬다. 파일이 없는 경우, 루트가 `<MonsterCatalog>` 가 아닌 경우, **읽었는데 `<Monster>` 가 하나도 없는** 경우다.
          *          마지막 경우를 성공으로 취급하면 태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다.

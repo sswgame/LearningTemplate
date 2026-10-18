@@ -103,13 +103,13 @@ namespace sw::editor
                 EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
 
                 const string activePack = GameConfig::getActive()._packRoot;
-                const string mapsDir    = ResourcePaths::getDomainFolderPath( activePack, path::kMapsFolder );
+                const string mapsDir    = ResourcePaths::findLooseDomainFolder( activePack, path::kMapsFolder ).getDiskPath();
                 if ( FileUtil::isDirectory( mapsDir ) )
                     params._initialDirectory = mapsDir;
-                else if ( ResourcePaths::getDomainFolderPath( activePack ).empty() == false )
-                    params._initialDirectory = ResourcePaths::getDomainFolderPath( activePack );
-                else if ( ResourcePaths::getDomainFolderPath( path::kGamePack ).empty() == false )
-                    params._initialDirectory = ResourcePaths::getDomainFolderPath( path::kGamePack );
+                else if ( ResourcePaths::findLooseDomainFolder( activePack ).getDiskPath().empty() == false )
+                    params._initialDirectory = ResourcePaths::findLooseDomainFolder( activePack ).getDiskPath();
+                else if ( ResourcePaths::findLooseDomainFolder( path::kGamePack ).getDiskPath().empty() == false )
+                    params._initialDirectory = ResourcePaths::findLooseDomainFolder( path::kGamePack ).getDiskPath();
 
                 FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
             }

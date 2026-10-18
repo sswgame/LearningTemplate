@@ -1,9 +1,14 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
+#include "Engine/Resource/Pack/ResourcePakManager.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "EngineTest/AppearanceTestFixture.h"
+#include "EngineTest/ResourcePakTestUtil.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
@@ -251,7 +256,7 @@ SW_TEST_CASE( AppearanceTest, ExportedPresetRoundTripsAndOverlaysItsParent )
     SW_ASSERT_TRUE_MSG( AppearanceSelectionUtil::makePresetDef( fixture._database, selection, hashed_string( "Exported" ), def, reason ), reason.c_str() );
     XMLDocument doc;
     SW_ASSERT_TRUE_MSG( CharacterAppearanceCatalog::writePresetToNode( def, doc.appendRoot( "CharacterAppearance" ), reason ), reason.c_str() );
-    const string path = test::makeTempPath( "exported.appearance.xml" );
+    const string path = ::test::makeTempPath( "exported.appearance.xml" );
     SW_ASSERT_TRUE( doc.saveFile( path ) );
 
     const size_t presetCount = fixture._database.getPresets().getPresets().size();
@@ -817,6 +822,32 @@ SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
     equipment.setSetLookup( &database.getSets() );
     SW_EXPECT_TRUE( equipment.canEquip( hashed_string( "MainHand" ), hashed_string( "blaster_rifle" ) ) );
     SW_EXPECT_FALSE( equipment.canEquip( hashed_string( "MainHand" ), hashed_string( "shield_round" ) ) );
+}
+
+/**
+ * @brief [AppearanceTest] 프리셋 에셋 폴더(`presets/`)가 팩에만 있어도 읽힌다
+ * @details 팩으로 쿠킹한 빌드에는 그 폴더가 디스크에 없다. 디스크를 훑던 나열은 여기서 프리셋을 0개로 읽고도 오류를 내지 않았다.
+ */
+SW_TEST_CASE( AppearanceTest, PresetFolderInPackIsRead )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    ItemCatalog items;
+    SW_ASSERT_TRUE( items.loadFromResource( "game/shooter3d/data/items.xml" ) );
+
+    const string presetPath = string( "game/shooter3d/data/appearance/" ) + AppearanceDatabase::kPresetFolder + "/packonlyprobe" + AppearanceDatabase::kPresetExtension;
+    const string packPath   = FileUtil::joinPath( ::test::makeTempDirectory( "packs" ), "appearance_preset_probe.pack" );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, PackCompressionType::None,
+                                                                   {
+                                                                       { presetPath, R"(<CharacterAppearance id="PackOnlyProbe" parent="ShooterPlayer"/>)" }
+    } ) );
+    ResourcePakManager& packManager = ResourceIO::getPackManager();
+    SW_ASSERT_TRUE( packManager.mountPack( packPath, 1000 ) );
+
+    AppearanceDatabase database;
+    const bool         bLoaded = database.loadFromFolder( "game/shooter3d/data/appearance", &items );
+    (void)packManager.unmountPack( packPath ); // 결과는 아래가 본다 — 판을 먼저 되돌려 뒤 테스트에 남기지 않는다
+    SW_ASSERT_TRUE_MSG( bLoaded, database.getReport().joined().c_str() );
+    SW_EXPECT_TRUE( database.getPresets().findPreset( hashed_string( "PackOnlyProbe" ) ) != nullptr );
 }
 
 /**

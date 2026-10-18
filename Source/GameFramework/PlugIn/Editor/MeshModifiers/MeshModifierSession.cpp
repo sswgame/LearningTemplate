@@ -526,7 +526,7 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        const string path = ResourcePaths::getResourcePath( MeshModifierStack::makeSidecarPath( _meshPath ) );
+        const string path = ResourcePaths::findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) ).getDiskPath();
         if ( path.empty() )
             return false;
         if ( _stack.loadFile( path ) == false )

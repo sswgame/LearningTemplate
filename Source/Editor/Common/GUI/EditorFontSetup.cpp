@@ -52,7 +52,7 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pFileName ) )
                     return {};
 
-                const string editorRoot = ResourcePaths::getDomainFolderPath( path::kEditorPack );
+                const string editorRoot = ResourcePaths::findLooseDomainFolder( path::kEditorPack ).getDiskPath();
                 if ( editorRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, editor::EditorPaths::kFontsFolderName ), pFileName );
