@@ -600,7 +600,7 @@
   리플렉션 데이터 읽기("DataPath" 텍스트 처리기)만 값을 넣는다. 칸은 `PROPERTY( Required )` 로 두고 읽기가 빠진 칸을 오류로 알린다. 첫 적용은 `EngineDefaultAssets` 의 경로 42 칸 —
   값은 `enginedefaultassets.xml` 에만 있고, 표는 `EngineDefaultAssets::load` · 서브시스템만 만든다(`ConstructKey`, `REFLECT( Abstract )`). 못 읽으면 기동 · 쿠킹이 멈춘다. 테스트는
   `test::getEngineDefaultAssets()`(하네스가 읽은 표)로 경로를 얻는다. 언리얼 `FSoftObjectPath` 가 ini 에서만 채워지는 설정 칸과 같은 자리이고, 게이트가 아니라 형식으로 막는다.
-- **읽기 API 는 폴백 인자를 받지 않습니다**(2026-10-18 설계, 구현 전). `XMLNode` · `JSONValue` · `KeyValueFile` 의 값 읽기는 스키마 읽기(`readFields`), 필수 읽기(`std::optional` 반환), 선택 읽기(`std::optional` 출력) 셋만 남기고 폴백 인자 함수를 지웁니다. 기본값의 원본은 Def 초기값 하나입니다([데이터 주도 구조 정리 계획](plans/DataDriven.md) 7절).
+- **읽기 API 는 폴백 인자를 받지 않습니다**(2026-10-18 설계, 구현 전). `XMLNode` · `JSONValue` · `KeyValueFile` 의 값 읽기는 스키마 읽기(`readFields`), 필수 읽기(`std::optional` 반환), 선택 읽기(`std::optional` 출력) 셋만 남기고 폴백 인자 함수를 지웁니다. 기본값의 원본은 Def 초기값 하나입니다([데이터 주도 구조 정리 계획](plans/DataDriven.md) 7절). 새 읽기 함수와 키트 카탈로그의 스키마 읽기(D1 ~ D5)는 들어갔고, 폴백 인자 함수를 지우는 일은 D9 입니다.
 - **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
 - **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다(언리얼 `UWorld::GetGravityZ`).
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
