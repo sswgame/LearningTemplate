@@ -25,9 +25,9 @@ namespace sw
             if ( pObject == nullptr )
                 return false;
             vector<uint8> bytes;
-            if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, bytes ) == false )
+            if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, bytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) == false )
                 return false;
-            if ( ObjectStateSerializer::loadFromBinaryBuffer( pObject, bytes.data(), bytes.size() ) == 0 )
+            if ( ObjectStateSerializer::loadFromBinaryBuffer( pObject, bytes.data(), bytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } ) == 0 )
                 return false;
             for ( Component* pComp : pObject->getComponents() )
             {

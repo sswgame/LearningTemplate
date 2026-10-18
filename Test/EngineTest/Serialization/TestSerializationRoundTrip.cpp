@@ -200,9 +200,9 @@ SW_TEST_CASE( SerializationRoundTripTest, DumpEveryResourceObjectState )
             const sw::GameObject* pObject = loaded._listObject[objectIndex];
             const sw::string      stem    = sw::string( pDumpDir ) + "/" + resourceID + "/" + sw::to_string( static_cast<uint32>( objectIndex ) );
             sw::vector<uint8>     bytes;
-            SW_EXPECT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pObject, bytes ) );
-            SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".xml", sw::ObjectStateSerializer::saveToXMLString( pObject ) ) );
-            SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".json", sw::ObjectStateSerializer::saveToJSONString( pObject ) ) );
+            SW_EXPECT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pObject, bytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
+            SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".xml", sw::ObjectStateSerializer::saveToXMLString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ) ) );
+            SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".json", sw::ObjectStateSerializer::saveToJSONString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ) ) );
             SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpFile( stem + ".bin", bytes.data(), bytes.size() ) );
             fileCount += 3;
         }

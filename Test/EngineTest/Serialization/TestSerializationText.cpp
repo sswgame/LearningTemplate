@@ -16,7 +16,7 @@
  */
 SW_TEST_CASE( SerializationTextTest, StringKeepsTrailingWhitespaceButNamesAreTrimmed )
 {
-    const sw::SerializeContext context = sw::SerializeContext::deriveFromDefault();
+    const sw::SerializeContext context = sw::SerializeContext::deriveFromDefault( sw::SerializePurpose::Authoring );
 
     const sw::SerializeContext::TextReadFn* pReadString = context.findTextReader( sw::hashed_string( sw::PredefinedNameType::NameType_string ) );
     SW_ASSERT_NOT_NULL( pReadString );
@@ -44,7 +44,7 @@ SW_TEST_CASE( SerializationTextTest, MalformedOwnedPointerElementDropsOnlyThatEl
     sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "MalformedElementHost" ) );
     pObject->addComponent<sw::SceneComponent>();
 
-    sw::string state = sw::ObjectStateSerializer::saveToJSONString( pObject );
+    sw::string state = sw::ObjectStateSerializer::saveToJSONString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     size_t     pos   = state.find( "\"SceneComponent\"" );
     SW_ASSERT_TRUE( pos != sw::string::npos );
     while ( pos > 0 && ( state[pos - 1] == ' ' || state[pos - 1] == '\n' || state[pos - 1] == '\r' || state[pos - 1] == '\t' ) )
@@ -54,6 +54,6 @@ SW_TEST_CASE( SerializationTextTest, MalformedOwnedPointerElementDropsOnlyThatEl
     SW_ASSERT_TRUE( pos > 0 && state[pos - 1] == '{' );
     state.insert( pos - 1, "42," );
 
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pObject, state ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pObject, state, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     SW_EXPECT_NOT_NULL( pObject->getComponent<sw::SceneComponent>() );
 }

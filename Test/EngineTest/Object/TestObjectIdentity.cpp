@@ -87,7 +87,7 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIDs )
     const sw::ComponentHandle meshHandle  = pMesh->getHandle();
 
     sw::vector<uint8> bytes;
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
 
     // 같은 오브젝트를 복원하는 길 — 지우고, 같은 id 로 만들고, id 와 함께 읽는다(핫 리로드 · 되돌리기와 같은 순서).
     manager.destroyObject( pSource );
@@ -96,7 +96,7 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIDs )
 
     sw::GameObject* pRestored = manager.createGameObjectWithID( sw::hashed_string( "Source" ), identity._objectID );
     SW_ASSERT_NOT_NULL( pRestored );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), { &identity } ) > 0 );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot, &identity } ) > 0 );
 
     sw::Component* pRestoredScene = manager.resolveComponent( sceneHandle );
     sw::Component* pRestoredMesh  = manager.resolveComponent( meshHandle );
@@ -110,7 +110,7 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIDs )
     {
         sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "Copy" ) );
         SW_ASSERT_NOT_NULL( pCopy );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pCopy, bytes.data(), bytes.size() ) > 0 );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pCopy, bytes.data(), bytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } ) > 0 );
 
         uint32 sameIDCount = 0;
         for ( const sw::Component* pComp : pCopy->getComponents() )
@@ -176,8 +176,8 @@ SW_TEST_CASE( ObjectIdentityTest, RestoreMatchesTypeFullyQualifiedName )
     sw::ObjectIdentity wrongType         = identity;
     wrongType._listComponent[0]._typeFqn = sw::SceneComponent::StaticType()->_fullyQualifiedName;
     sw::vector<uint8> bytes;
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pSource, bytes.data(), bytes.size(), { &wrongType } ) > 0 );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pSource, bytes.data(), bytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot, &wrongType } ) > 0 );
     const sw::MeshComponent* pReloaded = pSource->getComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pReloaded );
     SW_EXPECT_TRUE( pReloaded->getComponentID() != identity._listComponent[0]._componentID );

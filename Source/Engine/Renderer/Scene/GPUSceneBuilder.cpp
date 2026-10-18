@@ -21,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Resource/AssetManager.h"
@@ -403,7 +404,7 @@ namespace sw
 
         // 아래 건너뛰기 판단(퍼뮤테이션 세대) 전에 처리한다. 바뀐 머티리얼이 있으면 그 세대가 오른다.
         refreshReloadedTextures();
-        _skinPaletteCollector.collect( pObjects->getAnimationSystem(), _snapshot );
+        _skinPaletteCollector.collect( pObjects->getSubsystem<AnimationSystem>(), _snapshot );
 
         const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
         const uint64             setGeneration = primitives.getSetGeneration();

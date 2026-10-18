@@ -287,14 +287,14 @@ SW_TEST_CASE( AnimationLODTest, AnimatorSkipsRemovedBoneTracks )
     state._boneLODLevel = 1;
     pUnit->applyAnimationLOD( state );
     SW_ASSERT_NOT_NULL( pUnit->findBoneLODMask() );
-    manager.getAnimationSystem().evaluate( 0.3f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, MathUtil::abs( pUnit->getLocalPose().getBoneTransform( 3 )._rotation.dot( referenceTilt ) ), 1e-6f );
     SW_EXPECT_TRUE( MathUtil::abs( pUnit->getLocalPose().getBoneTransform( 2 )._rotation._w ) < 0.9999f );
 
     // 단계 0 이면 bone3 도 클립을 받는다.
     pUnit->applyAnimationLOD( AnimationLODState{} );
     SW_EXPECT_NULL( pUnit->findBoneLODMask() );
-    manager.getAnimationSystem().evaluate( 0.05f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     SW_EXPECT_TRUE( MathUtil::abs( pUnit->getLocalPose().getBoneTransform( 3 )._rotation.dot( referenceTilt ) ) < 0.9999f );
 }
 
@@ -309,7 +309,7 @@ SW_TEST_CASE( AnimationLODTest, FrustumVisibilityAcrossViews )
     manager.flushSceneTransforms();
     TestAnimationLODInternal::CountingTask task( 0.1f );
     pUnit->registerAnimationPhaseTask( &task );
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     system.setLODSettings( AnimationLODSettings::makeDefault() );
     system.evaluate( 0.016f ); // 처음은 포즈가 더러워 늘 만든다(뷰도 아직 없다)
 
@@ -350,7 +350,7 @@ SW_TEST_CASE( AnimationLODTest, HiddenUnitSkipsPoseUntilShown )
     manager.flushSceneTransforms();
     TestAnimationLODInternal::CountingTask task( 0.1f );
     pUnit->registerAnimationPhaseTask( &task );
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     system.setLODSettings( AnimationLODSettings::makeDefault() );
     system.evaluate( 0.016f ); // 처음은 포즈가 더러워 늘 만든다
     system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
@@ -390,7 +390,7 @@ SW_TEST_CASE( AnimationLODTest, UpdateRateFromScreenSizeInterpolates )
         manager.flushSceneTransforms();
         TestAnimationLODInternal::CountingTask task( 0.2f );
         pUnit->registerAnimationPhaseTask( &task );
-        AnimationSystem& system = manager.getAnimationSystem();
+        AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
         system.setLODSettings( TestAnimationLODInternal::makeTwoLevelSettings( bInterpolate ) );
         system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
 
@@ -444,7 +444,7 @@ SW_TEST_CASE( AnimationLODTest, BudgetAllocatorThrottlesSmallUnits )
     settings._listRateLevel.push_back( AnimationLODRateLevel{ 0.0f, 1u, static_cast<uint8>( SW_FALSE ) } );
     settings._budgetMilliseconds   = 0.15f; // 150 us
     settings._maxUpdateRateDivisor = 8;
-    AnimationSystem& system        = manager.getAnimationSystem();
+    AnimationSystem& system        = manager.getSubsystem<AnimationSystem>();
     system.setLODSettings( settings );
     system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
     system.setAverageEvaluationMicroseconds( 100.0f ); // 둘이면 200 us — 예산을 넘는다

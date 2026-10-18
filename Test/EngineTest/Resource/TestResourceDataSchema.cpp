@@ -842,8 +842,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, UnknownComponentAttributeIsNamed )
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "a component attribute the type does not have" );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString(
-            pObject, "<GameObject _name=\"Probe\"><_listComponent><SceneComponent _localScale=\"2,2,2\" _noSuchField=\"1\" /></_listComponent></GameObject>" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pObject, "<GameObject _name=\"Probe\"><_listComponent><SceneComponent _localScale=\"2, 2, 2\" _noSuchField=\"1\" /></_listComponent></GameObject>", sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "SceneComponent._noSuchField" ) == 1, logs.joined().c_str() );
 }

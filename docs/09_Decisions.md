@@ -651,6 +651,9 @@
 
 약어 철자 · 어휘표 · 접미사는 AGENTS.md "Function names" 와 [코딩 규칙 예시](04_CodingGuidelines.md) 2 절에 있다.
 
+- **저장 목적은 문맥의 필수 값이다(2026-10-18, C-53).** `SerializeContext` 는 `SerializePurpose`(Authoring · Snapshot · SaveGame)를 생성자로만 받고, 기본 문맥도 `getDefault( purpose )` 로 목적을 말해야 얻는다. 필드 규칙(`Transient` · `RuntimeState` · `SaveGame`)은 `SerializerUtil::shouldSerializeProperty` 한 곳이 세 형식(XML · JSON · 바이너리)에 같게 정한다.
+  리플렉션 직렬화기(`XMLSerializer` · `JSONSerializer` · `BinarySerializer`)의 문맥 기본 인자는 `getDefault( SerializePurpose::Authoring )` 이다 — 그 함수들은 파일 입출력 도우미라 저작 형식이 계약이고, 기본 인자가 시그니처에 목적을 적는다. 오브젝트 상태(`ObjectStateSerializer`)는 기본 인자 없이 목적을 받는 `ObjectSaveOptions` · `ObjectLoadContext` 로만 쓰고 읽는다. 아카이브(`Archive::serializeObject`)도 문맥 없는 겹지정을 지웠다(언리얼도 평범한 아카이브가 영속 저장이고 PIE 복제 · 세이브는 플래그로 따로 고른다).
+
 ### 5-5. 그래픽스와 RHI
 
 - **RHI 디바이스 안은 서브시스템으로 만들지 않는다 — 부품은 타입 있는 멤버로 명시 소유하고, 종료 순서는 `IRHIDevice::shutdown` 의 네 단계가 정한다**(2026-10-14, 백로그 C-26 을 닫음).

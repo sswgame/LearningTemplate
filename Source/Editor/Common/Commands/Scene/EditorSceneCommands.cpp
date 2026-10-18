@@ -106,7 +106,7 @@ namespace sw::editor
         vector<vector<uint8>> listState( listSource.size() );
         for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
         {
-            if ( ObjectStateSerializer::saveToBinaryBuffer( listSource[sourceIndex], listState[sourceIndex] ) == false )
+            if ( ObjectStateSerializer::saveToBinaryBuffer( listSource[sourceIndex], listState[sourceIndex], ObjectSaveOptions{ SerializePurpose::Authoring } ) == false )
                 return nullptr;
         }
 
@@ -126,7 +126,7 @@ namespace sw::editor
                 break;
             }
             listCopy.push_back( pCopy );
-            ObjectLoadContext context{};
+            ObjectLoadContext context{ SerializePurpose::Authoring };
             context._pBatch            = &batch;
             context._savedID           = listSource[sourceIndex]->getObjectID();
             const vector<uint8>& state = listState[sourceIndex];
@@ -622,7 +622,7 @@ namespace sw::editor
                 copied._name    = pObj->getName();
                 copied._savedID = pObj->getObjectID();
                 copied._bRoot   = pObj == pRoot;
-                if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, copied._stateBytes ) == false )
+                if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, copied._stateBytes, ObjectSaveOptions{ SerializePurpose::Authoring } ) == false )
                     return 0;
                 if ( pContext != nullptr )
                     copied._prefabPath = pContext->getSubsystem<EditorWorkspace>().getPlacedPrefabPath( pObj->getObjectID() );
@@ -662,7 +662,7 @@ namespace sw::editor
                 break;
             }
             listCopy.push_back( pCopy );
-            ObjectLoadContext context{};
+            ObjectLoadContext context{ SerializePurpose::Authoring };
             context._pBatch  = &batch;
             context._savedID = copied._savedID;
             bAllLoaded       = ObjectStateSerializer::loadFromBinaryBuffer( pCopy, copied._stateBytes.data(), copied._stateBytes.size(), context ) != 0;

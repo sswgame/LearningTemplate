@@ -210,7 +210,7 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     const sw::string path = test::makeTempPath( "component.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, makeTestTriangles( 2, 1.0f ) ) );
 
-    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
     sw::GameObjectManager       manager;
     sw::GameObject*             pProp = manager.createGameObject( sw::hashed_string( "Model" ) );
     sw::MeshComponent*          pMesh = pProp->addComponent<sw::MeshComponent>();

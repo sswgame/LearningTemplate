@@ -72,7 +72,7 @@ namespace sw
                     continue;
                 }
                 const bool      bContainer = prop._bIsContainer == SW_TRUE;
-                const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault() );
+                const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                 if ( pNested == nullptr )
                     continue;
                 if ( bContainer == false && value.isObject() )
@@ -98,7 +98,7 @@ namespace sw
     bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
     {
         // 키는 대소문자까지 맞아야 한다 — 기본 문맥은 대소문자를 무시해 `_Width` 오타를 그대로 받아들인다.
-        SerializeContext context = SerializeContext::deriveFromDefault();
+        SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
         context.setIgnoreCaseKeys( false );
         // JSON 객체가 아닌 본문(`SoftReadResult::NotParsed`)만 여기서 멈춘다. 범위 밖 값(`Rejected`)에서 바로 돌아가면
         // 그 값 하나가 모르는 키 · 빠진 필수 칸의 오류를 삼킨다 — 모두 알린다는 계약(헤더)이 깨진다.

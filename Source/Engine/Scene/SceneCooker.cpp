@@ -45,7 +45,7 @@ namespace sw
             {
                 ObjectSavedIDMap mapSavedID;
                 scene.collectSavedIDMap( mapSavedID );
-                ObjectSaveOptions options{};
+                ObjectSaveOptions options{ SerializePurpose::Authoring };
                 options._pSavedIDMap = &mapSavedID;
                 return ObjectStateSerializer::saveToXMLString( pObject, options );
             }
@@ -159,7 +159,7 @@ namespace sw
 
         ObjectSavedIDMap mapSourceSavedID;
         source.collectSavedIDMap( mapSourceSavedID );
-        ObjectSaveOptions saveOptions{};
+        ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
         saveOptions._pSavedIDMap = &mapSourceSavedID;
 
         SceneDocument cooked = inoutDoc;

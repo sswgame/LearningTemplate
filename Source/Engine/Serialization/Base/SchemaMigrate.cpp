@@ -442,7 +442,7 @@ namespace sw
         if ( bCannotApplyOrphan )
             return false;
 
-        const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
+        const SerializeContext& context = _serializeContext;
         return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, propName.c_str(), *pOrphan, wireTypeHint, context );
     }
 
@@ -464,7 +464,7 @@ namespace sw
         if ( pOrphan == nullptr )
             return false;
 
-        const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
+        const SerializeContext& context = _serializeContext;
         return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, pDottedPath, *pOrphan, wireTypeHint, context );
     }
 
@@ -479,7 +479,7 @@ namespace sw
         if ( bCannotMovePath )
             return false;
 
-        const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
+        const SerializeContext& context = _serializeContext;
 
         void*               pSrcPtr{ nullptr };
         const PropertyInfo* pSrcProp = nullptr;
@@ -506,7 +506,7 @@ namespace sw
         const PropertyInfo* pProp = nullptr;
         if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
             return false;
-        const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
+        const SerializeContext& context = _serializeContext;
         return parseTextValueCoerced( pPtr, pProp->_typeName, text, context );
     }
 
@@ -694,15 +694,14 @@ namespace sw
         const SchemaMigrateFn migrate = bMigrateApplies ? SchemaMigrationRegistry::find( typeInfo, fromVersion ) : nullptr;
         if ( migrate != nullptr )
         {
-            SchemaMigrateContext migrateContext;
-            migrateContext._fromVersion       = fromVersion;
-            migrateContext._toVersion         = currentVersion;
-            migrateContext._pInstance         = pInstance;
-            migrateContext._pTypeInfo         = &typeInfo;
-            migrateContext._pLegacyInstance   = pLegacyInstance;
-            migrateContext._pLegacyTypeInfo   = pLegacyTypeInfo;
-            migrateContext._pOrphans          = &listOrphan;
-            migrateContext._pSerializeContext = &context;
+            SchemaMigrateContext migrateContext{ context };
+            migrateContext._fromVersion     = fromVersion;
+            migrateContext._toVersion       = currentVersion;
+            migrateContext._pInstance       = pInstance;
+            migrateContext._pTypeInfo       = &typeInfo;
+            migrateContext._pLegacyInstance = pLegacyInstance;
+            migrateContext._pLegacyTypeInfo = pLegacyTypeInfo;
+            migrateContext._pOrphans        = &listOrphan;
             if ( migrate( migrateContext ) == false )
                 return false;
             // 이관이 받아 준 로드다. 이관이 찾아 보지 않은 orphan 은 버려진다.

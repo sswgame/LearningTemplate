@@ -196,7 +196,7 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
         SW_ASSERT_NOT_NULL( pMesh );
         pMesh->setLocalPosition( sw::float3{ 7.0f, 8.0f, 9.0f } );
 
-        sourceXML = sw::ObjectStateSerializer::saveToXMLString( pSource );
+        sourceXML = sw::ObjectStateSerializer::saveToXMLString( pSource, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
         SW_ASSERT_TRUE( sourceXML.empty() == false );
     }
 
@@ -618,7 +618,7 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
     // 진 쪽을 제자리에서 다시 읽어도(되돌리기 · 플레이 종료 복원 — 다시 등록돼 목록 끝으로 간다) 선택은 그대로다. 등록 순서로 가르면
     // 여기서 뒤집힌다.
     const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pDefaultObj );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pDefaultObj, sw::ObjectStateSerializer::saveToXMLString( pDefaultObj ), { &identity } ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pDefaultObj, sw::ObjectStateSerializer::saveToXMLString( pDefaultObj, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ), sw::ObjectLoadContext{ sw::SerializePurpose::Authoring, &identity } ) );
     scene.ensureDefaultCameras();
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pTie );
 }
@@ -1161,7 +1161,7 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
         sw::GameObjectManager scratch;
         sw::GameObject*       pSource = scratch.createGameObject( sw::hashed_string( "Lamp" ) );
         SW_ASSERT_TRUE( pSource->addComponent<sw::SceneComponent>() != nullptr );
-        xml                   = sw::ObjectStateSerializer::saveToXMLString( pSource );
+        xml                   = sw::ObjectStateSerializer::saveToXMLString( pSource, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
         const size_t listOpen = xml.find( "<_listComponent>" );
         SW_ASSERT_TRUE( listOpen != sw::string::npos );
         xml.insert( listOpen + sw::string_view( "<_listComponent>" ).size(), "<NotLoadedCookLampDriver _flicker=\"0.25\" />" );
@@ -1627,7 +1627,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
         SW_ASSERT_TRUE( asset.saveToXMLFile( prefabPath ) );
         // 배포본은 쿠킹본만 읽는다.
         SW_ASSERT_TRUE( asset.saveToBinaryFile( sw::FileUtil::replaceExtension( prefabPath, ".bin" ) ) );
-        savedState = sw::ObjectStateSerializer::saveToXMLString( pSource );
+        savedState = sw::ObjectStateSerializer::saveToXMLString( pSource, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     }
 
     sw::SceneManager manager;

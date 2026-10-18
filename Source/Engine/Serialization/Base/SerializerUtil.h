@@ -214,39 +214,55 @@ namespace sw
          */
         static size_t findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash );
 
-        /** @brief 프로퍼티가 직렬화 대상인지 검사합니다(Transient 제외). */
-        static bool shouldSerializeProperty( const PropertyInfo& prop )
-        {
-            return prop._metadata._bTransient == SW_FALSE;
-        }
-
         /**
-         * @brief 이 문맥에서 이 타입의 프로퍼티를 쓰고 읽는지 판정합니다. Transient 를 빼고, 세이브 직렬화(`isSaveGameOnly`)이면 옵트인 타입의 `SaveGame` 만 포함합니다.
+         * @brief 이 문맥의 저장 목적에서 이 타입의 프로퍼티를 쓰고 읽는지 판정합니다. 세 형식(XML · JSON · 바이너리)과 diff 가 모두 이 함수를 지납니다.
+         * @details 표는 `SerializePurpose` 설명에 있다. `Transient` 는 어느 목적도 쓰지 않고, `RuntimeState` 는 저작(Authoring)만 쓰지 않으며,
+         *          세이브(SaveGame)는 `SaveGame` 필드가 하나라도 있는 타입(옵트인)이면 그 필드만 쓴다. 읽을 때 이 함수가 false 인 필드는 지금 값 그대로 둔다.
          * @param owner 프로퍼티를 가진 타입(상속 목록을 순회하는 그 타입). 옵트인 판정은 상속분까지 봅니다(`TypeInfo::hasSaveGameProperty`).
          */
         static bool shouldSerializeProperty( const TypeInfo& owner, const PropertyInfo& prop, const SerializeContext& context )
         {
             if ( prop._metadata._bTransient == SW_TRUE )
                 return false;
-            if ( context.isSaveGameOnly() == false || prop._metadata._bSaveGame == SW_TRUE )
-                return true;
-            return owner.hasSaveGameProperty() == false;
+            switch ( context.getPurpose() )
+            {
+                case SerializePurpose::Authoring:
+                    return prop._metadata._bRuntimeState == SW_FALSE;
+                case SerializePurpose::Snapshot:
+                    return true;
+                case SerializePurpose::SaveGame:
+                    return prop._metadata._bSaveGame == SW_TRUE || owner.hasSaveGameProperty() == false;
+            }
+            return false;
         }
+
+        /**
+         * @brief 읽는 파일에 이 필드가 있으면 로드 오류인지 판정합니다. 저작 읽기(Authoring)의 `RuntimeState` 필드입니다.
+         * @details 조용히 건너뛰면 저작 파일에 섞인 런타임 상태가 다음 저장까지 남아 있는 것처럼 보인다. 옛 데이터는 다시 쓴다(옛 형식 리더를 두지 않는다).
+         *          부르는 쪽은 `reportForbiddenProperty` 로 이름을 남기고 읽기를 실패로 끝낸다.
+         */
+        static bool isForbiddenInFile( const PropertyInfo& prop, const SerializeContext& context )
+        {
+            return context.getPurpose() == SerializePurpose::Authoring && prop._metadata._bTransient == SW_FALSE && prop._metadata._bRuntimeState == SW_TRUE;
+        }
+
+        /** @brief 저작 파일에 있으면 안 되는 필드(`isForbiddenInFile`)를 타입과 필드 이름으로 오류 로그에 남깁니다. */
+        SW_API static void reportForbiddenProperty( const TypeInfo& owner, const PropertyInfo& prop );
 
         /** @brief JSON 문자열을 바이너리 버퍼로 트랜스코딩합니다. */
         SW_API static bool transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                                  const SerializeContext& context = SerializeContext::getDefault() );
+                                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 바이너리 데이터를 JSON 문자열로 트랜스코딩합니다. */
         SW_API static string transcodeBinaryToJSON( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty = false,
-                                                    const SerializeContext& context = SerializeContext::getDefault() );
+                                                    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief XML 문자열을 바이너리 버퍼로 트랜스코딩합니다. */
         SW_API static bool transcodeXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                                 const SerializeContext& context = SerializeContext::getDefault() );
+                                                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 바이너리 데이터를 XML 문자열로 트랜스코딩합니다. */
         SW_API static string transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
-                                                   const SerializeContext& context = SerializeContext::getDefault() );
+                                                   const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
     };
 } // namespace sw

@@ -58,7 +58,7 @@ namespace
         static bool measure( const test::SyntheticRig& rig, uint32 characterCount, Mode mode, sw::vector<int64>& outListMicro )
         {
             sw::GameObjectManager manager;
-            sw::AnimationSystem&  system = manager.getAnimationSystem();
+            sw::AnimationSystem&  system = manager.getSubsystem<sw::AnimationSystem>();
             system.setCrowdSettings( sw::AnimationCrowdSettings{} );
             const float32 duration = rig._import._listClip[0]._clip.getDuration();
             for ( uint32 index = 0; index < characterCount; ++index )

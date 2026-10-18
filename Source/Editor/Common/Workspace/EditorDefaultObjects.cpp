@@ -52,7 +52,7 @@ namespace sw::editor
 
     bool EditorDefaultObjects::isDefaultValue( const PropertyInfo& prop, const void* pInstance, const void* pDefaultInstance )
     {
-        const SerializeContext& context = SerializeContext::getDefault();
+        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         const string            current = SerializerUtil::formatPropertyText( prop, pInstance, context );
         if ( pDefaultInstance != nullptr )
             return current == SerializerUtil::formatPropertyText( prop, pDefaultInstance, context );

@@ -92,8 +92,10 @@ string.FileFilter = FileFilter
 flag.Replicated = Replicated
 # 받은 값으로 바꾼 뒤 부를 같은 타입의 메서드 — void fn() 또는 void fn( const T& oldValue ). 없거나 모양이 다르면 파서 오류
 string.RepNotify = RepNotify
-# 타입(기반 포함)에 하나라도 있으면 세이브(`SerializeContext::setSaveGameOnly`)가 이것만 쓴다. 하나도 없는 타입은 전부 쓴다
+# 타입(기반 포함)에 하나라도 있으면 세이브(`SerializePurpose::SaveGame`)가 이것만 쓴다. 하나도 없는 타입은 전부 쓴다
 flag.SaveGame = SaveGame
+# 플레이 중에만 의미가 있는 상태 — 저작 저장(`SerializePurpose::Authoring`)이 쓰지 않고, 저작 파일에 있으면 로드 오류다. Transient · Required 와 함께 쓰면 파서 오류
+flag.RuntimeState = RuntimeState
 # 시퀀서 값 트랙이 섞을 수 있다 — 실수 · 정수 · float2/3/4 · quaternion 만(그 밖의 타입은 파서 오류)
 flag.Interp = Interp
 # 프로퍼티 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 문제는 context.addError · addWarning 으로 적는다

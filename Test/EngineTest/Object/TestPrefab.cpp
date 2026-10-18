@@ -537,7 +537,7 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
 
     // 부모를 실은 프리팹 파일(프리팹을 쓰는 쪽은 만들지 않는다) — 붙이지 않고 경고한다.
     const sw::string parentedPath = test::makeTempPath( "gun_parented.prefab.xml" );
-    const sw::string parentedText = sw::string( "<Prefab formatVersion=\"0\" name=\"Gun\">" ) + sw::ObjectStateSerializer::saveToXMLString( pGun ) + "</Prefab>";
+    const sw::string parentedText = sw::string( "<Prefab formatVersion=\"0\" name=\"Gun\">" ) + sw::ObjectStateSerializer::saveToXMLString( pGun, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ) + "</Prefab>";
     SW_ASSERT_TRUE( parentedText.find( "Player" ) != sw::string::npos );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( parentedPath, parentedText ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( parentedPath, false ) );

@@ -31,6 +31,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
@@ -2387,10 +2388,10 @@ SW_TEST_CASE( GPUSceneTest, SkinPalettesSurviveAUnitLeavingTheFrame )
         arrUnit[unitIndex]->setMesh( skinned );
         arrUnit[unitIndex]->setVisible( true );
     }
-    objects->getAnimationSystem().evaluate( 0.016f );
+    objects->getSubsystem<sw::AnimationSystem>().evaluate( 0.016f );
 
     // 시체를 걷는 프레임 — 평가 뒤에 유닛이 빠지고, 그 다음에 렌더 스냅샷을 짓는다.
-    objects->getAnimationSystem().unregisterUnit( arrUnit[1] );
+    objects->getSubsystem<sw::AnimationSystem>().unregisterUnit( arrUnit[1] );
     sw::GPUSceneBuilder gpuScene;
     gpuScene.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, -5.0f } );
     sw::GPUSceneSnapshot snapshot;
@@ -2401,7 +2402,7 @@ SW_TEST_CASE( GPUSceneTest, SkinPalettesSurviveAUnitLeavingTheFrame )
         bHeroHasPalette = bHeroHasPalette || ( palette._pMesh == arrUnit[0]->getRawMesh() && palette._boneCount == 1u );
     }
     SW_EXPECT_TRUE( bHeroHasPalette );
-    objects->getAnimationSystem().registerUnit( arrUnit[1] );
+    objects->getSubsystem<sw::AnimationSystem>().registerUnit( arrUnit[1] );
 }
 
 /**

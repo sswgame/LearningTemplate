@@ -116,7 +116,7 @@ namespace sw
                 outReply += " id=";
                 appendNumber( outReply, pObject->getObjectID() );
                 outReply += pObject->isActive() ? " active=1\n" : " active=0\n";
-                const SerializeContext& context = SerializeContext::getDefault();
+                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Snapshot );
                 pObject->forEachComponent( [&outReply, &context]( Component* pComponent )
                 {
                     const TypeInfo* pType = pComponent->getTypeInfo();

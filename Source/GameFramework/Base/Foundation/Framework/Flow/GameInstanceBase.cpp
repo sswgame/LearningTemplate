@@ -413,7 +413,7 @@ namespace sw
         onUpdate( deltaTime );
     }
 
-    bool GameInstanceBase::serializeSceneObjects( vector<uint8>& outBytes )
+    bool GameInstanceBase::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes )
     {
         GameObjectManager* pObjectManager = findActiveObjectManager();
         if ( pObjectManager == nullptr )
@@ -436,7 +436,7 @@ namespace sw
         {
             ObjectStateSerializer::writeIdentity( ObjectStateSerializer::captureIdentity( pObj ), outBytes );
             // 개수를 이미 앞에 적었으므로 하나라도 못 쓰면 개수와 본문이 어긋난다. 그래서 통째로 실패로 처리한다.
-            if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes ) == false )
+            if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes, ObjectSaveOptions{ purpose } ) == false )
             {
                 SW_LOG_ERROR( "Scene object '%#' could not be serialized - the snapshot is not taken", pObj->getName().c_str() );
                 outBytes.clear();
@@ -447,7 +447,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format,
+    bool GameInstanceBase::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
                                                     vector<ComponentStateStore::SavedComponentID>& outListRemap )
     {
         outListRemap.clear();
@@ -501,8 +501,7 @@ namespace sw
 
             GameObject*       pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithID( hashed_string( GameObject::kDefaultName ), identity._objectID )
                                                       : pObjectManager->createGameObject();
-            ObjectLoadContext context{};
-            context._pIdentity     = bRestoreIdentity ? &identity : nullptr;
+            ObjectLoadContext context{ purpose, bRestoreIdentity ? &identity : nullptr };
             context._pBatch        = &batch;
             context._savedID       = identity._objectID;
             const size_t readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, context );
@@ -567,6 +566,16 @@ namespace sw
 
     bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
     {
+        return writeStateEnvelope( SerializePurpose::Snapshot, pOutBuffer, pInOutSize );
+    }
+
+    bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
+    {
+        return readStateEnvelope( SerializePurpose::Snapshot, pInBuffer, size );
+    }
+
+    bool GameInstanceBase::writeStateEnvelope( SerializePurpose purpose, void* pOutBuffer, uint32* pInOutSize )
+    {
         if ( pInOutSize == nullptr )
             return false;
 
@@ -586,7 +595,7 @@ namespace sw
         // 다만 반환값을 흔적 없이 버리면, 씬이 있어야 할 상황에서 오브젝트가 하나도 없는 세이브가 나와도
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
         vector<uint8> bytesScene;
-        if ( serializeSceneObjects( bytesScene ) == false )
+        if ( serializeSceneObjects( purpose, bytesScene ) == false )
             SW_LOG_INFO( "씬 오브젝트 스냅샷이 비었습니다 — 활성 씬이 없거나 게임 서비스가 바인딩되지 않았습니다. 커스텀 상태만 저장됩니다." );
         arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
 
@@ -597,7 +606,7 @@ namespace sw
         {
             // 값 하나라도 싣지 못하면 세이브 전체를 실패로 돌려준다. 써 두면 로드에서 그 값이 빠진다. 이유는 직렬화기가 알린다.
             vector<uint8> bytesState;
-            if ( BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState ) == false )
+            if ( BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState, SerializeContext::getDefault( purpose ) ) == false )
             {
                 _pComponentStateStore->clear();
                 return false;
@@ -630,7 +639,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
+    bool GameInstanceBase::readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size )
     {
         if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
             return false;
@@ -669,7 +678,7 @@ namespace sw
             return false;
 
         vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
-        if ( bytesScene.empty() == false && deserializeSceneObjects( bytesScene.data(), bytesScene.size(), format, listComponentIDRemap ) == false )
+        if ( bytesScene.empty() == false && deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, listComponentIDRemap ) == false )
             return false;
 
         // 2) 파생 클래스 커스텀 리플렉션 상태 복원
@@ -683,7 +692,7 @@ namespace sw
             void*           pStateInstance = getStateInstance();
             if ( pStateTypeInfo != nullptr && pStateInstance != nullptr )
             {
-                if ( BinarySerializer::deserialize( pStateInstance, *pStateTypeInfo, bytesState.data(), bytesState.size() ) == false )
+                if ( BinarySerializer::deserialize( pStateInstance, *pStateTypeInfo, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
                     return false;
             }
         }
@@ -712,21 +721,21 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::captureSnapshot( vector<uint8>& outBytes )
+    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
         uint32 size = 0;
-        if ( serializeState( nullptr, &size ) == false || size == 0 )
+        if ( writeStateEnvelope( purpose, nullptr, &size ) == false || size == 0 )
             return false;
 
         outBytes.resize( size );
-        return serializeState( outBytes.data(), &size );
+        return writeStateEnvelope( purpose, outBytes.data(), &size );
     }
 
-    bool GameInstanceBase::restoreSnapshot( const vector<uint8>& inBytes )
+    bool GameInstanceBase::restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes )
     {
         if ( inBytes.empty() )
             return false;
-        return deserializeState( inBytes.data(), static_cast<uint32>( inBytes.size() ) );
+        return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) );
     }
 
     bool GameInstanceBase::saveStateToFile( string_view filePath )
@@ -738,7 +747,7 @@ namespace sw
             return false;
         }
         vector<uint8> snapshotBytes;
-        const bool    bSaved = captureSnapshot( snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
+        const bool    bSaved = captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
 
         SaveGameSavedEvent event{};
         event._savePath = string( path );
@@ -756,7 +765,7 @@ namespace sw
             return false;
         }
         vector<uint8> snapshotBytes;
-        const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( snapshotBytes );
+        const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( SerializePurpose::SaveGame, snapshotBytes );
 
         SaveGameLoadedEvent event{};
         event._savePath = string( path );

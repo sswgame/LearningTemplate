@@ -430,7 +430,7 @@ namespace sw::editor
                     pCamera->setRole( CameraRole::Custom );
                     pCamera->setOrthographic( true );
                     probe._objectID  = pObj->getObjectID();
-                    probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj );
+                    probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
                     (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<InspectorPanel>( true );
                     pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj );
                     return EditorSelfTestStep::Continue;
@@ -445,7 +445,7 @@ namespace sw::editor
                     const CameraComponent* pCamera = pObj->getComponent<CameraComponent>();
                     (void)context.expect( pCamera != nullptr && pCamera->getRole() == CameraRole::Custom, "the inspector changed the camera role" );
                     (void)context.expect( pCamera != nullptr && pCamera->isOrthographic(), "the inspector cleared the bool next to the enum" );
-                    (void)context.expect( ObjectStateSerializer::saveToXMLString( pObj ) == probe._xmlBefore, "drawing the inspector changed the object" );
+                    (void)context.expect( ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } ) == probe._xmlBefore, "drawing the inspector changed the object" );
                 }
                 const ImGuiWindow* pInspector = ImGui::FindWindowByName( "Inspector" );
                 (void)context.expect( pInspector != nullptr && pInspector->Hidden == false, "the inspector was not drawn" );

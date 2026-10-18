@@ -450,7 +450,7 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
     pRetarget->setSource( pSource );
     pRetarget->dispatchBeginPlay();
 
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     system.evaluate( 1.0f / 60.0f );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( system.getLevels().size() ) );
     SW_EXPECT_TRUE( system.getLevels()[0][0] == pSource );

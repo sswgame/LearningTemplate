@@ -145,7 +145,7 @@ namespace sw
                 _componentCountAfterTickClear = _pTickClearOwner->getComponents().size(); // 삭제 대기도 센다 — 해제됐으면 목록에서 빠졌다
             }
             if ( _pTickLoadTarget != nullptr )
-                _tickLoadResult = ObjectStateSerializer::loadFromXMLString( _pTickLoadTarget, _tickLoadXML ) ? 1 : 0;
+                _tickLoadResult = ObjectStateSerializer::loadFromXMLString( _pTickLoadTarget, _tickLoadXML, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) ? 1 : 0;
             if ( _pTickRenameTarget != nullptr )
             {
                 _pTickRenameTarget->setName( hashed_string( "TickRenamed" ) );

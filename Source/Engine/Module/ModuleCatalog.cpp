@@ -108,7 +108,7 @@ namespace sw
         const string where      = sourcePath.empty() ? string( "<module manifest>" ) : string( sourcePath );
 
         // 키는 대소문자까지 맞아야 한다(기본 문맥은 대소문자를 무시해 오타를 삼킨다). 모르는 키 · 읽지 못한 값은 orphan 으로 남는다.
-        SerializeContext context = SerializeContext::deriveFromDefault();
+        SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
         context.setIgnoreCaseKeys( false );
         ModuleManifestFile        file;
         vector<SchemaOrphanValue> listOrphan;

@@ -31,9 +31,7 @@ namespace sw
          */
         static SerializeContext makeSaveContext()
         {
-            SerializeContext context = SerializeContext::deriveFromDefault();
-            context.setSaveGameOnly( true );
-            return context;
+            return SerializeContext::deriveFromDefault( SerializePurpose::SaveGame );
         }
 
         /** @brief 리플렉션 객체를 세이브 바이트로 씁니다. */

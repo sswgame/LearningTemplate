@@ -74,7 +74,7 @@ namespace sw
     {
         static const SerializeContext s_context = []()
         {
-            SerializeContext context = SerializeContext::deriveFromDefault();
+            SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Snapshot );
             context.setSkipUnknownProperties( true );
             context.setSkipUnreadableProperties( false );
             return context;
