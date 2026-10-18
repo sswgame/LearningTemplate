@@ -229,8 +229,10 @@ namespace sw
         _window.reset( IWindow::getActiveWindow() );
         if ( _window == nullptr )
         {
-            _window = IWindow::createPlatformWindow();
-            if ( _window == nullptr || _window->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), width, height ) == false )
+            _window             = IWindow::createPlatformWindow();
+            const bool bCreated = _window != nullptr && _window->applyCommandLinePosition( commandLineManager ) &&
+                                  _window->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), width, height );
+            if ( bCreated == false )
             {
                 SW_LOG_ERROR( "Failed to create platform window!" );
                 return false;

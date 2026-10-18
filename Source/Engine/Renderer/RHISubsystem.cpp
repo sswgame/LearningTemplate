@@ -61,7 +61,9 @@ namespace sw
             commandLine.getArgument( CommandLineArgument::HEIGHT, windowHeight );
 
             unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
-            if ( defaultWindow != nullptr && defaultWindow->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), windowWidth, windowHeight ) )
+            const bool          bCreated      = defaultWindow != nullptr && defaultWindow->applyCommandLinePosition( commandLine ) &&
+                                  defaultWindow->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), windowWidth, windowHeight );
+            if ( bCreated )
             {
                 // 전체 화면은 스왑체인을 만들기 전에 고른다. 스왑체인이 처음부터 모니터 크기다.
                 if ( display._bHasMode && display._mode != WindowDisplayMode::Windowed )

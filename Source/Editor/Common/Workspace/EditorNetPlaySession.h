@@ -8,12 +8,15 @@
  *          |---|---|
  *          | 서버 | `-gv_netListenPort=<포트>` (+ 트레이스면 `-gv_traceSaveOnExit=<폴더>/server.trace.json`) |
  *          | 클라이언트 | `-gv_netConnectAddress=127.0.0.1:<포트> -gv_standardInputCommands=1` (+ `-gv_traceSaveOnExit=<폴더>/clientN.trace.json`) |
+ *          | `App` 마다(창 배치를 켜면) | `-W=<너비> -H=<높이> -WinX=<x> -WinY=<y>` — 리슨 호스트 · 클라이언트 순서로 나란히(`makeWindowArguments`) |
  *
  *          - 로그: 프로세스마다 읽기 스레드가 줄을 모은다. `update` 가 게임 스레드에서 `[Server]`, `[Client1]` 같은 태그를 붙여 에디터 로그에 다시 쓰므로
  *            Output Log 하나에 모인다. 패널에서 출처별로 거를 수 있도록 최근 줄도 보관한다.
  *          - Stop: 모든 프로세스의 표준 입력에 `quit` 를 보내 정상 종료시키고(트레이스는 이때 쓰인다), 시한 안에 끝나지 않으면 강제 종료한다.
  *            트레이스를 켠 세션이면 남은 파일을 `ProfilerTraceExport::mergeTraceJSON` 으로 `<폴더>/merged.trace.json` 에 합친다.
- *            같은 PC 이므로 단조 시계를 그대로 맞출 수 있어 정확하다.
+ *            같은 PC 이므로 단조 시계를 그대로 맞출 수 있어 정확하다. 어느 길(툴바 · Session 탭 · `netplay.stop`)로 멈춰도 합친 트레이스는
+ *            `takeUnopenedMergedTrace` 가 한 번 내주고, Profiler 창의 프레임 단계(`SW_EDITOR_FRAME_STEP`)가 그것을 Timeline 탭에 연다.
+ *          - 사용자 프리셋(`EditorNetPlayPresetStore`, `Saved/Editor/NetPlayPresets.json`)은 초기화 때 읽고, 마지막으로 고른 프리셋을 다음 세션의 구성으로 둔다.
  *          - 하나가 먼저 죽으면 `update` 가 종료 코드와 마지막 줄을 함께 경고한다.
  *          - 서버 일시정지와 한 틱 진행은 서버 표준 입력에 `pause`, `step N`, `resume` 을 보내서 처리한다(전용 서버의 Dev 명령).
  *          - 회선 조절은 그 프로세스의 표준 입력에 `net.emulation …` 을 보낸다(`sendProcessCommand`). 답 줄 가운데 `NetEmulationReport` 줄은 프로세스마다 마지막 것을 보관한다.
@@ -30,39 +33,11 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/EditorNetPlayPresetStore.h"
+#include "Editor/Common/Workspace/EditorNetPlaySettings.h"
 
 #include <chrono>
 #include <thread>
-
-namespace sw::editor
-{
-    /** @brief 재생의 네트워크 모드입니다(언리얼 PIE 의 Net Mode). */
-    enum class EditorNetMode : uint8
-    {
-        Standalone = 0,  ///< 에디터 안에서 재생한다. 이 세션을 쓰지 않으며 `start` 가 false 를 반환한다
-        DedicatedServer, ///< `Server` 하나와 `App` 클라이언트 N 개
-        ListenHost       ///< 첫 `App` 이 리슨 호스트이고 나머지가 `App` 클라이언트이다. 플레이어 수에 호스트가 포함된다
-    };
-
-    const utf8* toString( EditorNetMode mode );
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /** @brief 세션 하나의 구성입니다. 패널의 프리셋이 이 구성을 저장합니다. */
-    struct EditorNetPlaySettings
-    {
-        string        _serverExecutablePath{}; ///< 비어 있으면 에디터 실행 파일 옆의 `Server`
-        string        _clientExecutablePath{}; ///< 비어 있으면 에디터 실행 파일 옆의 `App`
-        string        _clientArguments{};      ///< 클라이언트마다 붙이는 인자(백엔드 스위치, 창 크기)
-        string        _traceDirectory{};       ///< 비어 있으면 `Saved/Traces/netplay_<유닉스 밀리초>`
-        float32       _stopTimeoutSeconds{ 15.0f };
-        int32         _clientCount{ 2 }; ///< 플레이어 수. 전용 서버이면 클라이언트 수이고, 리슨 호스트이면 호스트를 포함한 수이다
-        uint16        _port{ 0 };        ///< 0 이면 비어 있는 UDP 포트를 고른다
-        EditorNetMode _mode{ EditorNetMode::Standalone };
-        bool          _bRecordTraces{ true };
-    };
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -119,6 +94,8 @@ namespace sw::editor
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorNetPlaySession";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 사용자 프리셋 파일을 읽고, 마지막으로 고른 프리셋이 있으면 다음 세션의 구성(`getSettings`)으로 둡니다. 깨진 파일은 치우고 기동은 잇습니다. */
+        SubsystemInitResult initializeSubsystem() override;
 
         EditorNetPlaySession( const EditorNetPlaySession& )            = delete;
         EditorNetPlaySession& operator=( const EditorNetPlaySession& ) = delete;
@@ -170,9 +147,22 @@ namespace sw::editor
         const vector<EditorNetPlayLogLine>& getLogLines() const { return _listLogLine; }
         /** @brief 지난 `stop` 이 합친 트레이스 경로입니다. 없으면 빈 문자열입니다. */
         const string& getMergedTracePath() const { return _mergedTracePath; }
+        /**
+         * @brief 지난 `stop` 이 합쳤고 아직 아무도 열지 않은 트레이스 경로를 한 번 내줍니다. 다음 호출부터는 빈 문자열입니다.
+         * @details 멈추는 길이 셋(툴바 · Session 탭 · `netplay.stop`)이라 여는 일을 각 길에 두지 않는다 — Profiler 창의 프레임 단계가 프레임마다 이것을 묻고 연다.
+         */
+        [[nodiscard]] string takeUnopenedMergedTrace();
+        /** @brief 사용자 프리셋입니다. 패널이 저장 · 고르기 · 지우기를 하고, 고른 구성을 `getSettings` 에 복사합니다. */
+        EditorNetPlayPresetStore& getPresetStore() { return _presetStore; }
 
         /** @brief 이 플랫폼의 기본 실행 파일 경로입니다. 에디터 실행 파일 옆이며, Windows 에서는 @p pBaseName 에 `.exe` 를 붙입니다. */
         static string makeDefaultExecutablePath( const utf8* pBaseName );
+        /**
+         * @brief `App` 창 @p windowIndex 번째(0 부터 — 리슨 호스트가 있으면 호스트가 0)의 창 크기 · 위치 인자(`-W=… -H=… -WinX=… -WinY=…`)입니다.
+         * @details 창은 왼쪽 위부터 `_windowColumnCount` 개씩 한 줄에 놓고 다음 줄로 내려간다. 칸 사이는 창 틀(제목 줄 · 테두리)만큼 띄운다 — 위치는 틀의 왼쪽 위이고
+         *          크기는 클라이언트 영역이기 때문이다. 창 배치를 끈 구성이면 빈 문자열이다.
+         */
+        static string makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex );
         /** @brief 비어 있는 UDP 포트 하나를 고릅니다. 포트를 잠깐 열었다 닫으므로 고른 뒤에 다른 프로세스가 가져갈 수 있습니다. 고르지 못하면 0 입니다. */
         static uint16 findFreeUDPPort();
 
@@ -195,6 +185,8 @@ namespace sw::editor
         string                           _mergedTracePath;
         EditorNetPlaySettings            _settings;        ///< 실행 중인 세션의 구성
         EditorNetPlaySettings            _pendingSettings; ///< 다음 세션의 구성(`getSettings`)
+        EditorNetPlayPresetStore         _presetStore;
         uint16                           _port;
+        bool                             _bMergedTraceUnopened; ///< `_mergedTracePath` 를 아직 `takeUnopenedMergedTrace` 가 내주지 않았다
     };
 } // namespace sw::editor
