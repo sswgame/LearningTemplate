@@ -3,7 +3,7 @@
 Claude Code 훅이 부른다(.claude/settings.json). 표준 입력으로 훅 JSON 을 받아,
 알릴 것이 있을 때만 JSON 을 출력한다. 알릴 것이 없으면 아무것도 출력하지 않아 토큰을 쓰지 않는다.
 
-- SessionStart     : 인계 문서(docs/plans/NEXT.md)가 있으면 먼저 읽으라고 알린다. 남은 워크트리 수와, main CI 가 실패 중인지(잡과 연속 실패 수)도 본다.
+- SessionStart     : 인계 문서(docs/plans/NEXT.md)가 있으면 먼저 읽으라고, ponytail 스킬이 있으면 호출하라고 알린다. 남은 워크트리 수와, main CI 가 실패 중인지(잡과 연속 실패 수)도 본다.
 - UserPromptSubmit : 대화 기록 크기 · 압축 횟수(새 세션 권장, 하드 한도는 단계마다 한 번 프롬프트 차단), 동시 빌드 수, 규칙과 부딪히는 요청 낱말을 본다.
 - PreCompact       : 컨텍스트 한도에 닿았다고 사용자에게 알린다.
 - StopFailure      : 사용량 · 요청 한도 같은 API 실패로 멈췄다고 알린다.
@@ -27,6 +27,7 @@ kExitBlockPrompt = 2                      # UserPromptSubmit 에서 종료 코�
 kMaxConcurrentBuilds = 2                 # docs/11_Workflow.md: 동시에 빌드하는 에이전트는 최대 둘
 kMaxWorktrees = 4                         # 메인 + 통합 + 도우미 둘을 넘으면 정리할 때
 kHandoffPath = os.path.join( "docs", "plans", "NEXT.md" )
+kPonytailPath = os.path.join( ".claude", "skills", "ponytail", "SKILL.md" )
 kCiSummaryTimeoutSeconds = 10             # 훅 한도(15 s, settings.json) 안에서 끝낸다
 kCiFailingExitCode = 4                    # Scripts/dev/ListCiJobs.py 의 kExitCiFailing — CI 가 죽어도 보이지 않던 것(C-41 1단계)을 세션 시작에 알린다
 
@@ -192,6 +193,8 @@ def onSessionStart( data, root ):
     notes = []
     if os.path.isfile( os.path.join( root, kHandoffPath ) ):
         notes.append( f"인계 문서 {kHandoffPath} 가 있다 — 일을 시작하기 전에 읽고, 끝난 항목은 지울 것." )
+    if os.path.isfile( os.path.join( root, kPonytailPath ) ):
+        notes.append( "ponytail 스킬을 지금 Skill 로 호출할 것(모든 작업에 켠다는 CLAUDE.md 규칙, 자동으로 켜지지 않는다)." )
     failingCi = readFailingCi( root )
     if failingCi:
         notes.append( failingCi )

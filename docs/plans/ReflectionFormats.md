@@ -1,6 +1,6 @@
 # 리플렉션 직렬화 형식 계획 (2026-10-17)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 9/11
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 11/13
 
 같은 `PROPERTY` 선언 하나에서 쓰임새가 다른 두 바이너리 형식을 만듭니다. 오래 남는 데이터는 지금의 **자기 기술형**(A)으로, 같은 빌드 안에서만 오가는 데이터는 새 **고정 배치형**(B)으로 씁니다.
 B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록을 훑지 않고, 빌드 시간에 코드 생성기가 타입마다 만듭니다. 손으로 쓴 코덱(롤백, 장르 스냅샷, 온라인 프로토콜)은 단계적으로 B 로 옮깁니다.
@@ -368,19 +368,9 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 6 | 컴팩트 모드와 호출부 없는 `cloneObject` 삭제, `A-13` · `A-14` 해결 | 끝남(`626210330`) |
 | 7-a | 열거형 이름 조회를 `EnumInfo::_listDenseName` · `EnumNameCache` 로(3.13) | 끝남(`58a651537`) |
 | 7-b | `REFLECT` 둘째 · 가상 베이스를 생성 오류로(7.4, 결정 기록 5-4) | 끝남(`58a651537`) |
-| 7-c | 매니저의 타입별 컴포넌트 목록 | 아래 상세, 계획은 [TypedComponents](TypedComponents.md) |
-| 7-d | 타입 핸들 `TComponentHandle<T>` | 아래 상세, 계획은 [TypedComponents](TypedComponents.md) |
+| 7-c | 매니저의 타입별 컴포넌트 목록 | 끝남(2026-10-19, 계획은 [TypedComponents](TypedComponents.md)) |
+| 7-d | 타입 핸들 `TComponentHandle<T>` | 끝남(2026-10-19, 계획은 [TypedComponents](TypedComponents.md)) |
 
 단계 3 에서 바뀐 기반 헤더 셋은 `FrameData.h`(`MoveTimeline` 의 `REFLECT`, `GuardStance` 의 `ENUM`), `InputCommandBuffer.h`(`InputFrame` · `InputCommandBuffer` 의 `REFLECT`), `RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.
 세이브 읽기의 `Min` · `Max` 는 자기 기술형 세 포맷의 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 봅니다. 시퀀스 원소까지 늘 보고, 범위를 어디까지 볼지 고르는 인자를 두지 않습니다(설정 JSON · 데이터 XML · 세이브가 같은 계약).
 단계 4-a: Horror 발전기의 진행 · 표시 두 목록은 원소 하나(`HorrorGeneratorSnapshot`)로 합쳤고, 메시지는 스트림 머리 해시를 그대로 실어 배치가 다른 빌드의 바이트를 `SchemaMismatch` 로 거절합니다.
-
-**단계 7-c · 7-d 상세.**
-
-- 7-c: 매니저가 타입별 컴포넌트 목록을 보관하고 컴포넌트 추가 · 제거 때 그 타입과 조상 타입 목록을 갱신합니다(7.2). `forEachComponentOfType` 의 API 는 그대로이고 내부만 바뀝니다.
-  검증은 기존 `forEachComponentOfType` 호출 28 곳의 테스트와 함께, 추가 · 제거 · 모듈 해제(묘비) 뒤 목록이 맞는지 보는 테스트입니다.
-- 7-d: `TComponentHandle<T>` 는 `ComponentHandle` 에 타입을 더한 형식입니다. `T*` 에서 만들면 타입이 확정되고, 타입 없는 핸들에서 만들 때만 `isDerivedFrom` 확인을 한 번 하며 실패하면 빈 핸들이 아니라 오류입니다.
-  찾기는 `static_cast` 와 Debug 단언(`GameObjectManager.h:279-281` 과 같은 단언)입니다. 7.2 의 "찾고 바로 캐스트" 호출부를 바꿉니다.
-  - `PROPERTY` 필드인 핸들은 A 직렬화와 인스펙터가 함께 바뀝니다. A 의 바이트 형태는 가능하면 지금 `ComponentHandle` 과 같게 두고, 읽을 때 대상 컴포넌트 타입이 `T` 가 아니면 읽기 오류입니다. 인스펙터의 컴포넌트 선택기는 `T` 로 거릅니다.
-  - 바이트 형태를 바꿔야 하면 씬 데이터는 새로 저장합니다. 지금 변환할 옛 데이터가 없으므로 변환 코드는 두지 않고, A 의 마이그레이션 경로(5절)는 그대로 둡니다.
-  - 검증은 바뀐 호출부의 기존 테스트, 씬 저장 · 로드 왕복, 잘못된 타입의 핸들을 담은 씬이 로드 오류로 멈추는 테스트, 네 백엔드 × 대표 셋입니다.

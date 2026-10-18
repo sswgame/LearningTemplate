@@ -36,7 +36,7 @@ cmake --build --preset Ninja-Debug --target all AllTests  # +테스트
 설치 방법은 [보조 도구 설치](docs/13_LocalTools.md). 쓰는 규칙만 여기 둔다.
 
 - **graphify**: 항상 켠다. 코드 질문은 저장소 루트에서 `graphify query "<질문>"`, `graphify path "<A>" "<B>"`, `graphify explain "<개념>"`으로 범위를 먼저 좁힌다(작업자 워크트리는 MCP `query_graph`). 코드를 고친 뒤에는 `graphify update Source`로 갱신한다(약 4분). PreToolUse · git 훅은 공유 설정에 넣지 않는다.
-- **ponytail**: `.claude/skills/ponytail/SKILL.md`가 있으면 코딩 · 문서 · 설정 등 모든 작업마다 켜진다(2026-10-15 사용자 결정). "기존 구조를 유지한다"는 지침이 "구조는 장기 이득이면 과감히 바꾼다"는 방침과 부딪힐 수 있으니, 구조 개편을 시킬 때는 요청에 그 뜻을 적는다.
+- **ponytail**: `.claude/skills/ponytail/SKILL.md`가 있으면 코딩 · 문서 · 설정 등 모든 작업마다 켠다. 자동이 아니라서 세션 시작 훅이 `Skill` 로 호출하라고 알린다(2026-10-15 사용자 결정). "기존 구조를 유지한다"는 지침이 "구조는 장기 이득이면 과감히 바꾼다"는 방침과 부딪힐 수 있으니, 구조 개편을 시킬 때는 요청에 그 뜻을 적는다.
 
 ## 가드 훅
 훅(`GuardCommands` · `SessionGuard` · `ReadGuard`)이 `git commit --no-verify`, 링크가 든 폴더의 재귀 삭제, 너무 긴 세션, 큰 파일의 통째 읽기를 막는다. 내용과 보조 에이전트(gpu-verifier · code-reviewer · design-reviewer · ux-reviewer)는 [에이전트와 토큰](docs/12_Agents.md). 워크트리는 `py -3 -m Scripts worktree-remove <이름>`으로 지운다.
