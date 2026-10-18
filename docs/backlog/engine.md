@@ -32,8 +32,8 @@
   씬 서비스(`ISceneService`)로 옮겨 코어 헤더가 Physics · Audio · Navigation 을 퍼뜨리지 않는다(엔진 분할 2 단계).
 
 - `C-19` [정리] **구조 리팩토링의 남은 후보.**
-  - **씬 · UI 쪽의 엔진 창구 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `WidgetComponent`(`engine::findSubsystem<UISystem>()`) · `UISystem` · `FontService`,
-    `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성. 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
+  - **씬 · UI 쪽의 엔진 창구 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `FontService`, `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성
+    (`WidgetComponent` · `UISystem` · `SceneCooker` 는 끝났다 — 씬의 엔진 범위 · 기동 때 받은 출처 · 넘겨받은 묶음을 쓴다). 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
 
 - `C-22` [정리] **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
@@ -87,8 +87,7 @@
   남은 것: ① 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다) ② `Source/sw.natvis` 의 `unordered_map` · `unordered_set` · `vector` 항목이 std 형식으로 캐스트해 지금 구조와 맞지 않는다
   ③ `TestDestructionDamage` 의 해시 기준값 테스트가 STL 구성에서 건너뛰던 이유가 해시 컨테이너 순서였다면 다시 켤 수 있다(확인 안 함). `map` · `set` 은 두 구성 모두 키 순서지만 주소 · 반복자 보장은 기본 구성 쪽이 약하다.
 
-- `C-64` [정리] **조용한 기본값이 남은 곳(A-26 · C-62 후속).** ① 씬 직접 경로에서 그림자 맞춤 행렬은 출력 설정의 비율(출력 크기 0 이면 16/9)을, 그리는 행렬은 풀의 비율을 써서 어긋날 수 있다
-  ② 패킷의 `_cameraPos` 기본값(`FrameRendererUtil::kDefaultCameraPos`) ③ `GameInstanceBase` 의 `UserSettingsManager` · `InputManager` · `UISystem` 조회가 `GameNetSession` 과 같은 "없으면 조용히 건너뛰기" 모양이다
+- `C-64` [정리] **조용한 기본값이 남은 곳(A-26 · C-62 후속).**
   ④ `ConfigManager::isWithinRange` 가 `collectRangeErrors` 로 범위를 따로 검사한다(`C-56` 과 같은 모양, Config 영역) ⑤ `readName` 호출부 357 곳을 전수로 보지 못했다 — 이름을 경로 글로 바꿔 쓰는 `.c_str()`
   (`hashed_string` 의 FName 규칙: none = 빈 이름, 빈 이름의 `c_str()` = "None")은 형식으로 막지 못하고 이름 읽기 창구에서 글 none 만 막았다.
 

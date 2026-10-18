@@ -184,7 +184,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     Check::run( pReopened, "xml" );
 
     // 쿠킹한 씬도 같은 뜻이다 — 프리팹 엔티티는 덮어쓴 것을 SCN1 에 싣고, 로드가 쿠킹한 프리팹 위에 얹는다.
-    (void)sw::SceneCooker::cookEntityState( reopened ); // 프리팹 엔티티는 쿠킹하지 않는다(덮어쓴 것 그대로 실린다)
+    (void)sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), reopened ); // 프리팹 엔티티는 쿠킹하지 않는다(덮어쓴 것 그대로 실린다)
     const sw::string binPath = test::makeTempPath( "prefab_edit.scene.bin" );
     SW_ASSERT_TRUE( reopened.saveBinary( binPath ) );
     sw::SceneDocument cooked;

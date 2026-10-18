@@ -5,7 +5,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/MissingComponent.h"
@@ -102,9 +101,8 @@ namespace sw
              * @brief 문서의 엔티티 상태에 지금 등록되지 않은 컴포넌트 타입이 있으면 true 입니다(짓지 않고 원소 이름만 본다).
              * @details 다른 게임의 팩은 그 게임 모듈의 컴포넌트를 쓴다 — 이 빌드에는 없는 모듈이다. 그런 씬을 지으면 모르는 타입마다 오류가 난다.
              */
-            static bool usesUnregisteredComponentTypes( const SceneDocument& doc )
+            static bool usesUnregisteredComponentTypes( const TypeRegistry& registry, const SceneDocument& doc )
             {
-                const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
                 for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
                 {
                     XMLDocument xml;
@@ -127,10 +125,15 @@ namespace sw
 {
     SW_LOG_CALLER( "SceneCooker" );
 
-    uint32 SceneCooker::cookEntityState( SceneDocument& inoutDoc, uint32* pOutMissingComponentCount )
+    uint32 SceneCooker::cookEntityState( const SceneEngineServices& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount )
     {
         if ( pOutMissingComponentCount != nullptr )
             *pOutMissingComponentCount = 0;
+        if ( services._pTypeRegistry == nullptr )
+        {
+            SW_LOG_ERROR( "Scene cook: '%#' is not cooked - the engine services have no type registry", inoutDoc._name );
+            return 0;
+        }
         // **런타임이 읽는 그대로 짓고 쿠킹한다.** 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
         // 그 연결을 지운다(배포본에서 자식이 루트가 된다). 그래서 문서 전체를 `Scene::instantiate`(프리팹 스폰 · 묶음 부착까지 런타임과
         // 같은 길)로 짓고, 쿠킹된 문서를 다시 지어 엔티티마다 상태 전체를 견준다(컴포넌트 타입 목록만 보면 값이 어긋나도 통과한다).
@@ -145,7 +148,7 @@ namespace sw
         }
 
         // 쿠킹 전용 씬이다. 실제 씬 매니저의 것을 쓰면 쿠킹하는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
-        Scene source{ "SceneCooker.Source" };
+        Scene source{ "SceneCooker.Source", services };
         if ( source.instantiate( inoutDoc ) == false )
             return 0;
         const uint32 missingComponentCount = SceneCookerInternal::reportMissingComponents( source );
@@ -178,7 +181,7 @@ namespace sw
 
         // **쿠킹된 것을 다시 지어 본다.** 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
         // 엔티티는 XML 로 남는다. 쿠킹이 조용히 무언가를 떨어뜨리지 않는다.
-        Scene verify{ "SceneCooker.Verify" };
+        Scene verify{ "SceneCooker.Verify", services };
         if ( verify.instantiate( cooked ) == false )
             return 0;
         unordered_map<uint64, GameObject*> mapVerifyByFileID;
@@ -218,7 +221,7 @@ namespace sw
         return cookedCount;
     }
 
-    uint32 SceneCooker::cookAllScenes( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
+    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( cookedDir.empty() )
@@ -237,7 +240,14 @@ namespace sw
         }
 
         // 쿠킹하는 것은 씬을 짓는 일이다 — 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)라야 컴포넌트가 제 타입으로 지어진다.
-        if ( engine::getSubsystem<TypeRegistry>().areAllModuleTypesRegistered() == false )
+        if ( services._pTypeRegistry == nullptr )
+        {
+            SW_LOG_ERROR( "Scene cook has no type registry in the engine services - nothing is cooked" );
+            ++outFailedCount;
+            return 0;
+        }
+        const TypeRegistry& registry = *services._pTypeRegistry;
+        if ( registry.areAllModuleTypesRegistered() == false )
         {
             SW_LOG_ERROR( "Scene cook ran before every module registered its types - nothing is cooked (cook after the ModuleTypes startup step)" );
             ++outFailedCount;
@@ -269,7 +279,7 @@ namespace sw
             }
             // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
             // 엔진 · 공용 타입만 쓰는 씬은 그대로 쿠킹한다(활성 팩의 모르는 타입은 아래에서 실패로 센다).
-            if ( SceneCookerInternal::isInInactiveGamePack( relativeScene, activePackRoot ) && SceneCookerInternal::usesUnregisteredComponentTypes( doc ) )
+            if ( SceneCookerInternal::isInInactiveGamePack( relativeScene, activePackRoot ) && SceneCookerInternal::usesUnregisteredComponentTypes( registry, doc ) )
             {
                 SW_LOG_INFO( "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
                 continue;
@@ -284,7 +294,7 @@ namespace sw
             }
 
             uint32       missingComponentCount{ 0 };
-            const uint32 cookedCount = cookEntityState( doc, &missingComponentCount );
+            const uint32 cookedCount = cookEntityState( services, doc, &missingComponentCount );
             // 모르는 타입의 컴포넌트는 원문 그대로 쿠킹돼 배포본에서도 동작하지 않는다. 그 씬은 쓰지 않고 실패로 센다 — 빌드가 선다.
             if ( missingComponentCount > 0 )
             {
