@@ -1257,6 +1257,45 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceStopsWithoutGameNetSession )
 }
 
 /**
+ * @brief [GameFrameworkTest] 다른 실행의 세이브는 같은 타입 컴포넌트 둘을 안정 키(`이름#n`)로 잇는다 — 저장된 순서가 바뀌어도 상태가 서로 바뀌지 않는다
+ * @details 같은 오브젝트에 같은 타입 디렉터 둘(Alpha · Beta)을 두고, 저장된 id 묶음은 순서를 바꿔(Beta · Alpha) 둔다. 타입 차례로 이으면 Alpha 가 Beta 의 상태를 받는다.
+ *          키가 맞지 않는 저장 항목은 표에 들지 않아 `remapComponentIDs` 가 지운다.
+ */
+SW_TEST_CASE( GameFrameworkTest, SavedComponentStatePairsByStableKeyNotTypeOrder )
+{
+    RegisterMockComponents();
+    GameObjectManager          manager;
+    GameObject*                pDirector = manager.createGameObject( hashed_string( "Directors" ) );
+    MockRuntimeStateComponent* pAlpha    = pDirector->addComponent<MockRuntimeStateComponent>();
+    MockRuntimeStateComponent* pBeta     = pDirector->addComponent<MockRuntimeStateComponent>();
+    SW_ASSERT_TRUE( pAlpha != nullptr && pBeta != nullptr );
+    pAlpha->setComponentName( hashed_string( "Alpha" ) );
+    pBeta->setComponentName( hashed_string( "Beta" ) );
+
+    const hashed_string typeFqn = MockRuntimeStateComponent::StaticType()->_fullyQualifiedName;
+    ObjectIdentity      saved;
+    saved._listComponent.push_back( ObjectIdentity::ComponentEntry{ typeFqn, 200, "Beta#0" } );
+    saved._listComponent.push_back( ObjectIdentity::ComponentEntry{ typeFqn, 100, "Alpha#0" } );
+    saved._listComponent.push_back( ObjectIdentity::ComponentEntry{ typeFqn, 300, "Gamma#0" } ); // 다시 만들지 않은 컴포넌트
+
+    vector<ComponentStateStore::SavedComponentID> listRemap;
+    ComponentStateStore::appendComponentIDRemap( saved, *pDirector, listRemap );
+    SW_ASSERT_EQUAL( size_t( 2 ), listRemap.size() );
+
+    ComponentStateStore store;
+    store.add( MockRuntimeStateComponent::StaticType()->_name, 100, vector<uint8>{ 1 } );
+    store.add( MockRuntimeStateComponent::StaticType()->_name, 200, vector<uint8>{ 2 } );
+    store.add( MockRuntimeStateComponent::StaticType()->_name, 300, vector<uint8>{ 3 } );
+    store.remapComponentIDs( listRemap );
+    const ComponentStateStore::Entry* pAlphaEntry = store.findEntry( MockRuntimeStateComponent::StaticType()->_name, pAlpha->getComponentID() );
+    const ComponentStateStore::Entry* pBetaEntry  = store.findEntry( MockRuntimeStateComponent::StaticType()->_name, pBeta->getComponentID() );
+    SW_ASSERT_TRUE( pAlphaEntry != nullptr && pBetaEntry != nullptr );
+    SW_EXPECT_EQUAL( uint8( 1 ), pAlphaEntry->_bytes[0] );
+    SW_EXPECT_EQUAL( uint8( 2 ), pBetaEntry->_bytes[0] );
+    SW_EXPECT_EQUAL( size_t( 2 ), store.getEntries().size() ); // Gamma 는 지운다
+}
+
+/**
  * @brief [GameFrameworkTest] 컴포넌트 상태 섹션의 형식이 맞지 않거나 잘렸으면 읽지 않고 비워 둔다 — 개수를 그대로 잡지 않는다
  */
 SW_TEST_CASE( GameFrameworkTest, ComponentStateStoreRejectsBrokenBytes )

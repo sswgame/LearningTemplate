@@ -5,6 +5,12 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Reflection/ReflectionCore.h"
+
 namespace sw
 {
     namespace
@@ -99,6 +105,25 @@ namespace sw
             }
         }
         _listEntry = std::move( listRemapped );
+    }
+
+    void ComponentStateStore::appendComponentIDRemap( const ObjectIdentity& identity, const GameObject& object, vector<SavedComponentID>& outListRemap )
+    {
+        for ( const Component* pComponent : object.getComponents() )
+        {
+            const bool bSkipComponent = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->getTypeInfo() == nullptr;
+            if ( bSkipComponent )
+                continue;
+            const hashed_string typeFqn   = pComponent->getTypeInfo()->_fullyQualifiedName;
+            const string        stableKey = ComponentStableKey::makeKey( pComponent );
+            for ( const ObjectIdentity::ComponentEntry& saved : identity._listComponent )
+            {
+                if ( saved._typeFqn != typeFqn || saved._stableKey != stableKey )
+                    continue;
+                outListRemap.push_back( SavedComponentID{ saved._componentID, pComponent->getComponentID() } );
+                break;
+            }
+        }
     }
 
     void ComponentStateStore::write( Archive& outArchive ) const

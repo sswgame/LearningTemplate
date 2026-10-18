@@ -437,7 +437,8 @@ namespace sw
             // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊기고, 짧은 타입 이름을 적으면 이름이 같은 다른 타입이 id 를 가져간다.
             // 타입 정보가 없으면(모듈이 내려감) 빈 값이고, 복원은 빈 값을 맞추지 않는다(그 컴포넌트는 새 id 를 받는다).
             const TypeInfo* pTypeInfo = pComp->findCachedTypeInfo();
-            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{}, pComp->getComponentID() } );
+            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{}, pComp->getComponentID(),
+                                                                               ComponentStableKey::makeKey( pComp ) } );
         }
         return identity;
     }
@@ -451,6 +452,7 @@ namespace sw
         {
             writer.writeString( entry._typeFqn.c_str() );
             writer.write( entry._componentID );
+            writer.writeString( entry._stableKey.c_str() );
         }
     }
 
@@ -465,9 +467,9 @@ namespace sw
         if ( reader.read( outIdentity._objectID ) == false || reader.read( componentCount ) == false )
             return 0;
 
-        // 항목 하나는 적어도 이름 길이(4)와 ID(8)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
+        // 항목 하나는 적어도 이름 길이(4)와 ID(8)와 키 길이(4)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
         // 그대로 `reserve` 하면 그 한 줄이 먼저 터진다(`GameInstanceBase::deserializeSceneObjects` 가 같은 이유로 같은 계산을 한다).
-        constexpr size_t kMinBytesPerEntry = sizeof( uint32 ) + sizeof( uint64 );
+        constexpr size_t kMinBytesPerEntry = sizeof( uint32 ) + sizeof( uint64 ) + sizeof( uint32 );
         if ( componentCount > ( size - reader.getOffset() ) / kMinBytesPerEntry )
             return 0;
 
@@ -476,7 +478,8 @@ namespace sw
         {
             string                         typeName;
             ObjectIdentity::ComponentEntry entry;
-            if ( reader.readString( typeName ) == false || reader.read( entry._componentID ) == false )
+            const bool                     bEntryRead = reader.readString( typeName ) && reader.read( entry._componentID ) && reader.readString( entry._stableKey );
+            if ( bEntryRead == false )
                 return 0;
             entry._typeFqn = hashed_string( typeName.data(), static_cast<uint32>( typeName.size() ) );
             outIdentity._listComponent.push_back( entry );

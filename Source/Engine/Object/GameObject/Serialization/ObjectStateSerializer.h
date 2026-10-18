@@ -152,6 +152,7 @@ namespace sw
         {
             hashed_string _typeFqn;
             uint64        _componentID{ 0 };
+            string        _stableKey{}; ///< 오브젝트 안의 안정 키(`ComponentStableKey`, `이름#n`)다. 다른 실행의 세이브가 컴포넌트 상태를 다시 만든 컴포넌트에 잇는다
         };
 
         uint64                 _objectID{ 0 };
