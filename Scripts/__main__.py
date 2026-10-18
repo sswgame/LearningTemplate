@@ -78,6 +78,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("full-build", "dev.RunFullBuild", "빌드 칸을 잡고 all AllTests 전체 빌드 — 성공하면 그 트리의 증거를 남긴다(main push 가 요구한다)"),
     Subcommand("ci-jobs", "dev.ListCiJobs", "GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로 읽는다"),
     Subcommand("backlog", "dev.ListBacklog", "영역별 백로그(docs/backlog)를 상태 · 영역 · 번호로 골라 보인다(--status · --area · --id)"),
+    Subcommand("plans", "dev.ListPlans", "계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(--status · --area · --file)"),
     Subcommand("deps-outdated", "dev.ListOutdatedDeps", "vcpkg 의존성의 지금 판과 레지스트리 최신 판을 견준다(오버레이 포함)"),
     Subcommand("defender", "setup.AddDefenderExclusions", "Windows Defender 빌드 디렉터리 제외 등록"),
 )

@@ -59,6 +59,7 @@ Scripts/
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
   │     ├── EditorIconFont.py         # 에디터 아이콘 99 개의 그리기 함수 + 표준 라이브러리만으로 TrueType 폰트 · C++ 헤더 쓰기
   │     ├── Backlog.py                # 영역별 백로그(docs/backlog) 항목 읽기 — 목록 명령(dev/ListBacklog.py)과 게이트(CheckBacklog)가 같이 쓴다
+  │     ├── Plans.py                  # 계획 문서(docs/plans)의 머리 줄 읽기 — 목록 명령(dev/ListPlans.py)이 쓴다
   │     ├── ReflectionAnnotationKeys.py # 편집기용 리플렉션 어노테이션 키 헤더 내용(AnnotationMeta.txt · 단위 표에서) — 생성기와 게이트가 같이 쓴다
   │     ├── ImageMetrics.py           # 스크린샷 비교 — PPM · PNG 읽기/쓰기, 축소, 배경을 뺀 지표 · 잡음 바닥에서 정한 허용 오차
   │     ├── XmlAssetMerge.py          # XML 에셋 의미 비교 · 3-way 병합(엔티티 id · 컴포넌트 · 속성 단위), 엔진 저장기와 같은 서식으로 쓰기
@@ -228,6 +229,7 @@ Scripts/
   │     ├── RunFullBuild.py           # 검증 빌드(all AllTests, 빌드 칸) · 트리 증거 — main push 의 pre-push 훅이 증거를 요구한다
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListBacklog.py            # 영역별 백로그를 상태 · 영역 · 번호로 골라 보인다(`py -3 -m Scripts backlog`, --id 는 항목 본문만)
+  │     ├── ListPlans.py              # 계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(`py -3 -m Scripts plans`, --file 은 머리 줄과 절 제목)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MakeEditorTheme.py        # 에디터 테마 토큰(tokens.json) ↔ Figma 변수 · DTCG: import-figma · export-figma · check (`py -3 -m Scripts editor-theme`)
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 테스트까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
