@@ -53,6 +53,11 @@ kNonBuildInputFolders: tuple[str, ...] = (".claude",)
 #: 그 아래(와 저장소 최상단)의 마크다운은 빌드 입력이 아니다. 다른 폴더의 .md 는 빌드가 읽을 수 있어 입력으로 둔다
 #: (`docs/Config/ConfigReference.json` 처럼 docs 아래 데이터는 테스트가 읽으므로 .md 만 뺀다).
 kNonBuildInputMarkdownFolders: tuple[str, ...] = ("docs", "Scripts", "cmake")
+#: 빌드가 실행하는 Scripts 폴더(cmake 가 부른다: generate · setup, 그것이 가져오는 common). 그 밖의 Scripts 아래(dev · lint · qa …)와
+#: Scripts 바로 아래 파일은 빌드 · AllTests 와 무관한 도구라 입력이 아니다. lint 는 cmake 가 파일 이름 목록으로만 읽는다.
+kBuildInputScriptFolders: tuple[str, ...] = ("generate", "setup", "common")
+#: 파이썬 단위 테스트(ctest 의 파이썬 묶음)는 AllTests 가 아니라 입력이 아니다. CMakeLists.txt 등 다른 파일은 입력이다.
+kNonBuildInputPythonTestFolder = "Test/PythonTest/"
 
 
 def getEvidenceDirectory(repositoryRoot: Path) -> Path:
@@ -72,9 +77,13 @@ def readTreeHash(repositoryRoot: Path, revision: str) -> str:
 
 
 def isBuildInputPath(path: str) -> bool:
-    """저장소 기준 경로가 빌드 · 테스트의 입력인가. 마크다운(최상단 · docs · Scripts · cmake 아래)과 `.claude/` 는 아니다."""
+    """저장소 기준 경로가 빌드 · 테스트의 입력인가. 마크다운(최상단 · docs · Scripts · cmake 아래), `.claude/`, 빌드가 실행하지 않는 Scripts 폴더, 파이썬 단위 테스트는 아니다."""
     listPart = path.split("/")
     if listPart[0] in kNonBuildInputFolders:
+        return False
+    if listPart[0] == "Scripts" and (len(listPart) < 3 or listPart[1] not in kBuildInputScriptFolders):
+        return False
+    if path.startswith(kNonBuildInputPythonTestFolder) and path.endswith(".py"):
         return False
     if path.endswith(".md") and (len(listPart) == 1 or listPart[0] in kNonBuildInputMarkdownFolders):
         return False

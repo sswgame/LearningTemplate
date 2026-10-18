@@ -194,7 +194,9 @@ class FullBuildEvidenceTest(unittest.TestCase):
     def testMarkdownAndClaudeFolderDoNotChangeTheEvidenceKey(self) -> None:
         base = {"Source/Core/A.cpp": "1" * 40, "docs/Config/ConfigReference.json": "2" * 40}
         docsOnly = {**base, "README.md": "3" * 40, "docs/11_Workflow.md": "4" * 40, "Scripts/README.md": "5" * 40,
-                    "cmake/README.md": "6" * 40, ".claude/settings.json": "7" * 40, ".claude/agents/scout.md": "8" * 40}
+                    "cmake/README.md": "6" * 40, ".claude/settings.json": "7" * 40, ".claude/agents/scout.md": "8" * 40,
+                    "Scripts/dev/RunFullBuild.py": "a" * 40, "Scripts/lint/gate/CheckX.py": "b" * 40, "Scripts/__main__.py": "c" * 40,
+                    "Test/PythonTest/TestX.py": "d" * 40}
         self.assertEqual(RunFullBuild.hashBuildInputs(self.makeLsTree(base)), RunFullBuild.hashBuildInputs(self.makeLsTree(docsOnly)))
 
     def testBuildInputsChangeTheEvidenceKey(self) -> None:
@@ -203,7 +205,10 @@ class FullBuildEvidenceTest(unittest.TestCase):
         for changed in ({**base, "Source/Core/A.cpp": "9" * 40},
                         {**base, "docs/Config/ConfigReference.json": "9" * 40},
                         {**base, "Source/Kits/README.md": "9" * 40},
-                        {**base, "Scripts/generate/GenerateCMakeConstants.py": "9" * 40}):
+                        {**base, "Scripts/generate/GenerateCMakeConstants.py": "9" * 40},
+                        {**base, "Scripts/setup/SetupVcpkg.py": "9" * 40},
+                        {**base, "Scripts/common/Constants.py": "9" * 40},
+                        {**base, "Test/PythonTest/CMakeLists.txt": "9" * 40}):
             self.assertNotEqual(keyBase, RunFullBuild.hashBuildInputs(self.makeLsTree(changed)))
 
 
