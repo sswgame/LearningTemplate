@@ -107,7 +107,7 @@ SW_TEST_CASE( PoseModifierTest, RunsInPostProcessBeforeSkinning )
     SW_EXPECT_TRUE( pModifier->isRigReady() );
     SW_EXPECT_TRUE( pModifier->isTargetBound( "Ball" ) );
 
-    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 0.0f, 1.5f, 1.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
     // 팔레트 = 역 바인드 × 모델 — 리그가 옮긴 본의 팔레트 이동 칸이 레퍼런스(0, 2, 0) 에서 대상까지의 차이다.
     const float4x4& palette = pUnit->getSkinPalette()[2];
@@ -117,10 +117,10 @@ SW_TEST_CASE( PoseModifierTest, RunsInPostProcessBeforeSkinning )
 
     pUnit->unregisterAnimationPhaseTask( &turn );
     pModifier->setRigEnabled( false );
-    manager.getAnimationSystem().evaluate( 1.0f / 60.0f ); // 끈 프레임 — 리그 없는 포즈를 한 번 다시 만든다
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f ); // 끈 프레임 — 리그 없는 포즈를 한 번 다시 만든다
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 0.0f, 2.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
-    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
-    SW_EXPECT_EQUAL( 0u, manager.getAnimationSystem().getActiveUnitCount() );
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 0u, manager.getSubsystem<AnimationSystem>().getActiveUnitCount() );
 }
 
 /**
@@ -141,7 +141,7 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
     pFollow->dispatchBeginPlay();
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( pProp->getAnimationDependencies().size() ) );
 
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     for ( uint32 frame = 0; frame < 3; ++frame )
     {
         turn._angle = 0.4f * static_cast<float32>( frame + 1 ); // 몸이 프레임마다 다르게 돈다 — 한 프레임 늦으면 어긋난다
@@ -188,7 +188,7 @@ SW_TEST_CASE( PoseModifierTest, SpaceTargetRidesOwnBoneWithoutDependency )
     SW_EXPECT_TRUE( pBody->getAnimationDependencies().empty() );
 
     // 게임 코드가 손잡이를 "지난 프레임 본 1 기준 (0.3, 0.5, 0)" 자리에 둔다 — 붙어 다니는 무기처럼.
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     const float3     gripInBone{ 0.3f, 0.5f, 0.0f };
     for ( uint32 frame = 0; frame < 4; ++frame )
     {
@@ -231,7 +231,7 @@ SW_TEST_CASE( PoseModifierTest, SocketTargetsResolveOnOwnAndOtherUnits )
     SW_ASSERT_TRUE( pModifier->isRigReady() );
     SW_EXPECT_TRUE( pModifier->isTargetBound( "Grip" ) );
 
-    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
     // 뿌리가 가슴 소켓(노드가 돌 때의 본 1 (0, 1, 0) + 소켓 로컬 (0, 0, 0.2))으로 갔다.
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 0.0f, 1.0f, 0.2f }, TestPoseModifierInternal::getBoneModel( *pBody, 0 ), 1e-4f ) );
     // 무기 손잡이 = 무기 유닛 본 2 (월드 2, 2, 0) + (0.1, 0, 0) — 몸 유닛 모델 공간 그대로(몸은 원점).
@@ -317,12 +317,12 @@ SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
     SW_ASSERT_NOT_NULL( pModifier );
     pModifier->setRigPath( path );
     pModifier->dispatchBeginPlay();
-    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 1.0f, 0.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
 
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, secondJSON ) );
     SW_ASSERT_TRUE( RigAssetCache::reloadShared( path ) );
-    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ -1.0f, 0.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
 }
 
@@ -359,7 +359,7 @@ SW_TEST_CASE( PoseModifierTest, PhysicsAssetShapesBecomeSpringColliders )
         SW_EXPECT_EQUAL( bShared == 1 ? 3u : 0u, static_cast<uint32>( pModifier->getRigInstance().getSharedColliders().size() ) );
         for ( uint32 frame = 0; frame < 120; ++frame )
         {
-            manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+            manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
         }
         // 머리 구: 머리 본(y 1.0) + (0, 0.15, 0), 반지름 0.15. 꼬리 끝(본 4)은 꼬리 뿌리(y 1.5)에서 0.4 아래로 매달려 그 안을 지난다.
         arrClearance[bShared] = ( TestPoseModifierInternal::getBoneModel( *pUnit, 4 ) - float3{ 0.0f, 1.15f, 0.0f } ).getLength();
@@ -417,13 +417,13 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
     SW_ASSERT_NOT_NULL( pModifier );
     pModifier->dispatchBeginPlay();
 
-    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
     SW_ASSERT_EQUAL( size_t( 1 ), pUnit->getMorphWeights().size() );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pUnit->getMorphWeights()[0], 1e-4f );
 
     elbow._degrees = 0.0f;
     pUnit->markPoseDirty();
-    manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pUnit->getMorphWeights()[0], 1e-4f );
     pUnit->unregisterAnimationPhaseTask( &elbow );
 }

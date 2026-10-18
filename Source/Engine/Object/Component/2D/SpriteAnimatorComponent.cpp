@@ -9,6 +9,7 @@
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 
 namespace sw
 {
@@ -144,7 +145,7 @@ namespace sw
     void SpriteAnimatorComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        _pAnimationSystem = &manager.getAnimationSystem();
+        _pAnimationSystem = &manager.getSubsystem<AnimationSystem>();
         _pAnimationSystem->registerLODClient( &_lodClient );
         const uint64 mixed = getHandle().componentID() * HashUtil::kGoldenRatio64;
         _updatePhase       = static_cast<uint32>( ( mixed ^ ( mixed >> 29 ) ) & 0xFFFFu );
@@ -152,7 +153,7 @@ namespace sw
 
     void SpriteAnimatorComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getAnimationSystem().unregisterLODClient( &_lodClient );
+        manager.getSubsystem<AnimationSystem>().unregisterLODClient( &_lodClient );
         _pAnimationSystem = nullptr;
         SceneComponent::onUnregister( manager );
     }

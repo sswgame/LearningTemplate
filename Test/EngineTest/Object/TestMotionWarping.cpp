@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Object/SceneAnimation/LocomotionWarpingComponent.h"
 #include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -135,10 +136,10 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     constexpr float32 kStep = 0.125f;
     for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
     {
-        manager.getAnimationSystem().evaluate( kStep );
+        manager.getSubsystem<AnimationSystem>().evaluate( kStep );
     }
     SW_EXPECT_EQUAL( 1u, pWarping->getOpenWindowCount() );
-    manager.getAnimationSystem().evaluate( kStep );
+    manager.getSubsystem<AnimationSystem>().evaluate( kStep );
     const float3 position = pRoot->getWorldPosition();
     SW_EXPECT_NEAR_EQUAL( 0.5f, position._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, position._y, 1e-3f );
@@ -147,7 +148,7 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     SW_EXPECT_EQUAL( 0u, pWarping->getOpenWindowCount() );
 
     // 창 밖 — 클립 그대로(요 90° 라 +Z 루트 모션이 월드 +X 로 0.125 m).
-    manager.getAnimationSystem().evaluate( kStep );
+    manager.getSubsystem<AnimationSystem>().evaluate( kStep );
     SW_EXPECT_NEAR_EQUAL( 0.625f, pRoot->getWorldPosition()._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pRoot->getWorldPosition()._z, 1e-3f );
 }
@@ -248,7 +249,7 @@ SW_TEST_CASE( MotionWarpingTest, LocomotionWarpingScalesRateAndTurnsLowerBody )
     for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
     {
         pRoot->setWorldPosition( pRoot->getWorldPosition() + step );
-        manager.getAnimationSystem().evaluate( TestMotionWarpingInternal::kFrame );
+        manager.getSubsystem<AnimationSystem>().evaluate( TestMotionWarpingInternal::kFrame );
     }
     SW_EXPECT_NEAR_EQUAL( 1.5f, pAnimator->getPlayRate(), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pLocomotion->getStrideScale(), 1e-3f );
@@ -256,7 +257,7 @@ SW_TEST_CASE( MotionWarpingTest, LocomotionWarpingScalesRateAndTurnsLowerBody )
 
     // 한 프레임 더 — 후처리가 지난 프레임의 각으로 뼈 1 을 돌렸다(모델 공간의 앞이 45°).
     pRoot->setWorldPosition( pRoot->getWorldPosition() + step );
-    manager.getAnimationSystem().evaluate( TestMotionWarpingInternal::kFrame );
+    manager.getSubsystem<AnimationSystem>().evaluate( TestMotionWarpingInternal::kFrame );
     float4x4 boneModel;
     SW_ASSERT_TRUE( pObject->getComponent<SkeletalMeshComponent>()->findBoneModelTransform( hashed_string( "bone1" ), boneModel ) );
     const float3 boneForward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, boneModel ).normalize();

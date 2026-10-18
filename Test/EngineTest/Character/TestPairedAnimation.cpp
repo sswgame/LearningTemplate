@@ -18,6 +18,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -99,7 +100,7 @@ namespace
         static void step( GameObjectManager& manager, PairedAnimationSystem& system )
         {
             system.runBeforeTick( manager, kStep );
-            manager.getAnimationSystem().evaluate( kStep );
+            manager.getSubsystem<AnimationSystem>().evaluate( kStep );
         }
 
         /** @brief 애니메이터의 현재 슬롯 시각입니다. */
@@ -180,7 +181,7 @@ SW_TEST_CASE( PairedAnimationTest, SessionSnapsAndPlaysOnOneClock )
     {
         system.runBeforeTick( manager, TestPairedAnimationInternal::kStep );
         SW_EXPECT_EQUAL( frameIndex == 2 ? 1u : 0u, TestPairedAnimationInternal::countRelease( *pNotify ) );
-        manager.getAnimationSystem().evaluate( TestPairedAnimationInternal::kStep );
+        manager.getSubsystem<AnimationSystem>().evaluate( TestPairedAnimationInternal::kStep );
         SW_EXPECT_NEAR_EQUAL( TestPairedAnimationInternal::getCurrentTime( *pLeader ), TestPairedAnimationInternal::getCurrentTime( *pFollower ), 1e-5f );
     }
     const PairedAnimationSession* pSession = system.findSession( sessionID );

@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
@@ -211,7 +212,7 @@ namespace sw
                 if ( view._bRender == SW_TRUE )
                     _listAnimationLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
             }
-            pActiveScene->getObjectManager()->getAnimationSystem().setLODViews( _listAnimationLODView );
+            pActiveScene->getObjectManager()->getSubsystem<AnimationSystem>().setLODViews( _listAnimationLODView );
         }
         _gpuSceneBuilder->populateFromScene( pActiveScene, packet._cameraPos );
         // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
@@ -297,7 +298,7 @@ namespace sw
             {
                 _listPreviewLODView.clear();
                 _listPreviewLODView.push_back( AnimationLODView::make( preview._viewProj, preview._cameraPos ) );
-                pScene->getObjectManager()->getAnimationSystem().setLODViews( _listPreviewLODView );
+                pScene->getObjectManager()->getSubsystem<AnimationSystem>().setLODViews( _listPreviewLODView );
             }
 
             ScenePreviewBuilder& entry = getOrCreateScenePreviewBuilder( request._sceneKey );
