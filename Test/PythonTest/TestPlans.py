@@ -70,6 +70,13 @@ class ParsePlanTest(unittest.TestCase):
             with self.assertRaisesRegex(PlanFormatError, "P.md"):
                 parsePlanText(f"# 제목\n\n> 상태: 끝 · 선행: 없음 · 영역: editor · 옛번호: 없음 · 진행: {progress}\n", "P.md")
 
+    def testTableProgressIsCountedFromStepTable(self) -> None:
+        header = "# 표 계획\n\n> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 표\n\n"
+        table = "| 단계 | 내용 | 상태 |\n|---|---|---|\n| 0 | a | 아직 안 함 |\n| 1 | b | 끝남(`abc`) |\n| 2 | c | 끝남 |\n\n본문\n| x | y |\n"
+        self.assertEqual("2/3", parsePlanText(header + table, "T.md").progress)
+        with self.assertRaisesRegex(PlanFormatError, "T.md"):
+            parsePlanText(header + "표 없음\n", "T.md")
+
     def testNonDocumentFilesAreSkipped(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             writePlansInternal(Path(temp), {"README.md": "머리 줄 없음\n", "NEXT.md": "x\n", "WorkerRules.md": "x\n", "Roadmap.md": "x\n", "Vfx.md": kGoodText})

@@ -10,6 +10,8 @@ Scripts/common/Plans.py
 
     > 상태: <설계|구현대기|구현중|측정대기|보류|참고|끝|후보> · 선행: <없음 또는 문서 이름/단위> · 영역: <영역> · 옛번호: <ID,ID 또는 없음> · 진행: <n/m 또는 해당없음>
     (n = 끝난 단위 수, m = 전체 단위 수. 상태 `후보` 는 진행이 반드시 `해당없음`)
+진행에 `표` 를 쓰면 문서의 첫 `| 단계 | … | 상태 |` 표에서 센다(상태 칸이 `끝남` 으로 시작하는 행이 n, 전체 행이 m). 끝난 단위 절을 지우지 않고
+단계 표를 두는 문서는 `표` 를 써서 손으로 고치는 값이 표와 어긋나지 않게 한다.
 
 일의 이름은 계획 문서 파일 이름(`ClusteredLighting`)이고, 문서 안 단위는 `<문서이름>.<단위기호>` 다. `옛번호` 는 코드 주석 · 결정 기록 · 커밋에
 박힌 옛 번호(`C-30`)로, 어느 문서로 옮겨졌는지 찾는 데만 쓴다.
@@ -47,6 +49,7 @@ _kNone = "없음"
 _kHeaderRe = re.compile(r"^> 상태: (.+?) · 선행: (.+?) · 영역: (.+?) · 옛번호: (.+?) · 진행: (.+)$")
 _kProgressRe = re.compile(r"^(\d+)/(\d+)$")
 _kNoProgress = "해당없음"
+_kTableProgress = "표"
 _kOldNumberRe = re.compile(r"^[A-Z]\d*-\d+(?:\.\d+)*$")
 _kHeadingRe = re.compile(r"^(#{1,6}) +(.+?)\s*$")
 _kFenceRe = re.compile(r"^\s*(```|~~~)")
@@ -118,13 +121,33 @@ def parsePlanText(text: str, fileName: str) -> PlanDoc:
     listOldNumber = parseOldNumbersInternal(oldNumberText, fileName)
     if status == kCandidateStatus and progress != _kNoProgress:
         raise PlanFormatError(f"{fileName}: 상태 `{kCandidateStatus}` 문서의 진행은 `{_kNoProgress}` 이어야 합니다: '{progress}'")
-    if progress != _kNoProgress:
+    if progress == _kTableProgress:
+        progress = deriveTableProgressInternal(listLine, fileName)
+    elif progress != _kNoProgress:
         progressMatch = _kProgressRe.match(progress)
         if progressMatch is None or not 0 < int(progressMatch.group(2)) >= int(progressMatch.group(1)):
             raise PlanFormatError(f"{fileName}: 진행 '{progress}' 는 `n/m`(0 ≤ n ≤ m, m > 0) 또는 `{_kNoProgress}` 이어야 합니다")
     listCandidate = parseCandidatesInternal(listLine, fileName) if status == kCandidateStatus else []
     return PlanDoc(fileName, listNonBlank[0][2:].strip(), status, prerequisite, area, listOldNumber, progress, headerLine,
                    listHeadingInternal(listLine), listCandidate)
+
+
+def deriveTableProgressInternal(listLine: list[str], fileName: str) -> str:
+    """`진행: 표` — 첫 `| 단계 | … | 상태 |` 표에서 `n/m` 을 센다(n = 상태 칸이 `끝남` 으로 시작하는 행, m = 전체 행).
+    손으로 고치는 값이 표와 어긋날 수 없게 하려고 값을 표에서 만든다."""
+    listRow: list[str] = []
+    bInTable = False
+    for line in listLine:
+        listCell = [cell.strip() for cell in line.strip().strip("|").split("|")] if line.lstrip().startswith("|") else []
+        if not bInTable:
+            bInTable = len(listCell) >= 2 and listCell[0] == "단계" and listCell[-1] == "상태"
+        elif not listCell:
+            break
+        elif not all(set(cell) <= set("-: ") for cell in listCell):
+            listRow.append(listCell[-1])
+    if not listRow:
+        raise PlanFormatError(f"{fileName}: 진행 `{_kTableProgress}` 인데 `| 단계 | … | 상태 |` 표의 행이 없습니다")
+    return f"{sum(row.startswith('끝남') for row in listRow)}/{len(listRow)}"
 
 
 def parseCandidatesInternal(listLine: list[str], fileName: str) -> list[Candidate]:
