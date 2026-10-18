@@ -411,6 +411,7 @@ namespace sw
         const float32 oldBase = pData->_baseValue;
         float32       newBase = AbilitySystemComponentEffectInternal::applyToBase( oldBase, modifier, stackScale );
         pAttributeSet->preAttributeBaseChange( modifier._attribute, newBase );
+        guardHealthBaseChange( modifier._attribute, oldBase, newBase );
         pData->_baseValue = newBase;
         recomputeAttribute( modifier._attribute );
 

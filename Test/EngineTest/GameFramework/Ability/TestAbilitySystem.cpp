@@ -539,6 +539,47 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
 }
 
 /**
+ * @brief [AbilitySystemTest] 무적 태그(또는 그 하위 태그)를 가진 동안 체력 base 는 내려가지 않는다 — 메타 피해 · 직접 모디파이어 · 직접 쓰기 모두, 회복은 그대로
+ * @details `cheat.god` 은 하위 태그 `State.Invulnerable.Cheat` 를 붙인다. 태그를 떼면 다시 깎인다(결정 기록 5-12 `D3-4.2`).
+ */
+SW_TEST_CASE( AbilitySystemTest, InvulnerableTagKeepsHealthFromGoingDown )
+{
+    EventDispatcher                   dispatcher;
+    const AbilityTestScopedDispatcher scopedDispatcher{ dispatcher };
+    GameObjectManager                 manager;
+    AbilitySystemComponent*           pAttacker = spawnCombatant( manager, "Attacker", 100.0f, 0.0f, 20.0f );
+    AbilitySystemComponent*           pTarget   = spawnCombatant( manager, "Target", 100.0f, 100.0f, 0.0f );
+    SW_ASSERT_TRUE( pAttacker != nullptr && pTarget != nullptr );
+
+    shared_ptr<GameplayEffectDef> pDamage  = make_shared<GameplayEffectDef>();
+    pDamage->_id                           = hashed_string( "Damage" );
+    shared_ptr<DamageExecution> pExecution = make_shared<DamageExecution>();
+    pExecution->setParameters( "Damage", 1.0f, 0.0f );
+    pDamage->_listExecution.push_back( pExecution );
+    GameplayEffectSpec spec = pAttacker->makeOutgoingSpec( pDamage );
+    spec.setSetByCallerMagnitude( "Damage", 30.0f );
+
+    const TagID cheatTag = "State.Invulnerable.Cheat"_tag;
+    pTarget->getOwnedTagCounts().updateCount( cheatTag, 1 );
+    SW_EXPECT_TRUE( pTarget->isInvulnerable() );
+    (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeBaseValue( CombatAttributes::incomingDamage() ), 0.001f ); // 메타 값은 늘 0 으로 돌아온다
+    SW_EXPECT_TRUE( pTarget->setAttributeBaseValue( CombatAttributes::health(), 10.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+    SW_EXPECT_FALSE( pTarget->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) );
+
+    pTarget->getOwnedTagCounts().updateCount( cheatTag, -1 );
+    SW_EXPECT_FALSE( pTarget->isInvulnerable() );
+    (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
+    SW_EXPECT_NEAR_EQUAL( 75.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+    // 무적이어도 회복(올라가는 쓰기)은 막지 않는다.
+    pTarget->getOwnedTagCounts().updateCount( AbilitySystemComponent::getInvulnerableTag(), 1 );
+    SW_EXPECT_TRUE( pTarget->setAttributeBaseValue( CombatAttributes::health(), 90.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 90.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
+}
+
+/**
  * @brief [AbilitySystemTest] 체력이 0 에 닿으면 HP 바가 쓰러짐을 받는다 — `_bHideWhenDead` 인 바는 숨는다
  * @details 어빌리티 시스템은 체력 원천(`HealthSourceComponent`)이고 알림 종류를 읽기(체력 0 = 쓰러짐)에서 정한다. 바뀜(`Changed`)으로만 알리면 쓰러져도 숨지 않는다.
  */

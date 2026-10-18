@@ -29,8 +29,8 @@
 
 - `D3-4` [기능] **콘솔 · 치트의 남은 것** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(지금 게임 · 키트 쪽 명령은 `GameNetSession` 하나뿐 — 레지스트리 · 콘솔 ·
   엔진 명령은 `Source/Engine/` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았고, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
-  어빌리티 · 판 상태 · Shooter3D 의 `cheat.*` 는 들어갔다(`AbilityDevCommands` · `SessionStateDevCommands` · `ShooterDevCommands`). **무적(`cheat.god`)은 못 달았다** — 어빌리티 시스템에
-  무적 API 가 없고, Shooter3D 의 `Vitality::setInvulnerable` 은 private 멤버 `_vitality` 뒤에 있다. API 를 열면 단다. `cheat.heal` · `cheat.attribute` 는 적을 포함한 모든 어빌리티 시스템에 적용된다
+  어빌리티 · 판 상태 · Shooter3D 의 `cheat.*` 는 들어갔다(`AbilityDevCommands` · `SessionStateDevCommands` · `ShooterDevCommands`). 무적(`cheat.god`)은 어빌리티 시스템의
+  태그(`State.Invulnerable`, 치트는 하위 `.Cheat`)로 플레이어 조종 폰에만 건다. 남은 것: Shooter3D 는 어빌리티 시스템이 아니라 `Vitality` 라 `cheat.god` 이 닿지 않는다(`Vitality::setInvulnerable` 이 private 멤버 `_vitality` 뒤). `cheat.heal` · `cheat.attribute` 는 적을 포함한 모든 어빌리티 시스템에 적용된다
   (플레이어만 가리는 길이 필요하면 태그나 팀을 본다). `Vitality` 를 직접 쓰는 다른 키트의 치트는 아직 없다.
 
 - `D3-5` [기능] **그래프 패널 저장 시나리오를 실제로 돌려 확인하기.** 임시 에셋으로 저장하는 길(`asset.open` · `asset.removeTemp` · 탐침 `Editor.TempAssetExists`, `Saved/Automation/` 밖과 리소스 트리는 거절)과
