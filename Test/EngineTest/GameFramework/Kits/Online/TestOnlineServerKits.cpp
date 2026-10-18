@@ -133,14 +133,13 @@ SW_TEST_CASE( OnlineServerKitsTest, LeaderboardAndMatchModeDataAreRead )
                     <Reward from="1" to="10" asset="cur.gem" amount="100" mailTitle="mail.season_reward"/>
                 </Season>
             </Board>
-            <Board id="broken" order="sideways"/>
             <Achievement id="first_blood" stat="kills" threshold="1" rewardAsset="cur.gold" rewardAmount="100" mailTitle="mail.achievement"/>
         </LeaderboardCatalog>)" ) );
-    SW_ASSERT_EQUAL( boards.getBoards().size(), size_t( 2 ) ); // 모르는 정렬의 보드는 건너뛴다(경고)
+    SW_ASSERT_EQUAL( boards.getBoards().size(), size_t( 2 ) );
     const LeaderboardDefinition& kills = boards.getBoards()[0];
     SW_EXPECT_TRUE( kills._update == LeaderboardUpdate::Sum && kills._reset == LeaderboardReset::Weekly );
     SW_EXPECT_EQUAL( kills._resetMinuteOfDay, 60 );
-    SW_EXPECT_TRUE( kills._bClientSubmit == SW_TRUE );
+    SW_EXPECT_TRUE( kills._bClientSubmit );
     const LeaderboardDefinition& race = boards.getBoards()[1];
     SW_EXPECT_TRUE( race._order == LeaderboardOrder::Ascending );
     SW_ASSERT_EQUAL( race._listSeason.size(), size_t( 1 ) );
@@ -150,7 +149,7 @@ SW_TEST_CASE( OnlineServerKitsTest, LeaderboardAndMatchModeDataAreRead )
     SW_EXPECT_EQUAL( boards.getAchievements()[0]._rewardAmount, int64( 100 ) );
 
     MatchModeCatalog modes;
-    SW_ASSERT_TRUE( modes.loadFromXMLText( R"(<MatchModeCatalog><Mode id="duo" teamCount="2" teamSize="2" maxWaitMs="60000"/><Mode id="bad" teamSize="0"/></MatchModeCatalog>)" ) );
+    SW_ASSERT_TRUE( modes.loadFromXMLText( R"(<MatchModeCatalog><Mode id="duo" teamCount="2" teamSize="2" maxWaitMs="60000"/></MatchModeCatalog>)" ) );
     SW_ASSERT_EQUAL( modes.getModes().size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( modes.getModes()[0]._maxWaitMs, int64( 60000 ) );
     MatchModeDefinition compact;
@@ -163,4 +162,36 @@ SW_TEST_CASE( OnlineServerKitsTest, LeaderboardAndMatchModeDataAreRead )
     SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:17x4", compact ) );
     SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:2x17", compact ) );
     SW_EXPECT_TRUE( MatchModeCatalog::parseCompactMode( "squad:16x16", compact ) );
+}
+
+/**
+ * @brief [OnlineServerKitsTest] 모르는 정렬 · 순위 구간이 뒤집힌 보상 · 범위 밖 팀 인원 · 모르는 속성은 기본값으로 물러나지 않고 그 원소를 넣지 않는 오류다
+ */
+SW_TEST_CASE( OnlineServerKitsTest, LeaderboardAndMatchModeRejectBrokenElements )
+{
+    LeaderboardCatalog boards;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "broken boards and achievements are rejected" );
+        SW_ASSERT_TRUE( boards.loadFromXMLText( R"(<LeaderboardCatalog>
+            <Board id="kills"/>
+            <Board id="broken" order="sideways"/>
+            <Board id="flipped" reset="season">
+                <Season id="1"><Reward from="10" to="1" asset="cur.gem" amount="100" mailTitle="mail.season_reward"/></Season>
+            </Board>
+            <Board id="late" resetMinute="1440"/>
+            <Achievement id="nostat" threshold="1"/>
+        </LeaderboardCatalog>)" ) );
+    }
+    SW_ASSERT_EQUAL( boards.getBoards().size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( boards.getBoards()[0]._boardID == "kills" );
+    SW_EXPECT_TRUE( boards.getAchievements().empty() );
+
+    MatchModeCatalog modes;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "broken match modes are rejected" );
+        SW_ASSERT_TRUE( modes.loadFromXMLText( R"(<MatchModeCatalog><Mode id="duo" teamCount="2" teamSize="2"/><Mode id="bad" teamSize="0"/>)"
+                                               R"(<Mode id="typo" teamSzie="2"/><Mode teamSize="2"/></MatchModeCatalog>)" ) );
+    }
+    SW_ASSERT_EQUAL( modes.getModes().size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( modes.getModes()[0]._modeID == "duo" );
 }

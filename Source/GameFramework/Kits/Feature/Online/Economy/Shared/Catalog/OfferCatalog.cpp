@@ -17,16 +17,27 @@ namespace sw
     {
         struct OfferCatalogInternal
         {
-            [[nodiscard]] static bool readAmount( const XMLNode& node, int64& outAmount )
+            /** @brief 자산 id 가 원장 형식이고 양이 1 ~ 원장 다리 하나(`LedgerConstant::kMaxAmount`)이면 true 입니다. */
+            static bool isValidLeg( const string& assetID, int64 amount )
             {
-                return StringUtil::parseInt64( node.getAttributeText( "amount" ), outAmount ) && 1 <= outAmount && outAmount <= LedgerConstant::kMaxAmount;
+                const bool bAmountOk = 1 <= amount && amount <= LedgerConstant::kMaxAmount;
+                return bAmountOk && LedgerUtil::isValidAssetID( assetID );
             }
 
-            /** @brief 비어 있으면 0으로 두고 true 를 반환하고, 숫자가 아니면 false 를 반환합니다. */
-            [[nodiscard]] static bool readOptionalTime( const XMLNode& node, const utf8* pName, int64& outTimeMs )
+            /** @brief 원소 @p parent 의 @p pElement 자식을 모두 스키마로 읽어 @p outListDef 뒤에 붙입니다. 하나라도 틀리면 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readChildren( const XMLNode& parent, const utf8* pElement, string_view sourceName, vector<TDef>& outListDef )
             {
-                const string_view text = node.getAttributeText( pName );
-                return text.empty() || StringUtil::parseInt64( text, outTimeMs );
+                bool bValid = true;
+                for ( XMLNode node = parent.findChild( pElement ); node; node = node.findNextSibling( pElement ) )
+                {
+                    TDef def;
+                    if ( GameDataXML::readFields( node, def, sourceName ) )
+                        outListDef.push_back( def );
+                    else
+                        bValid = false;
+                }
+                return bValid;
             }
         };
     } // namespace
@@ -41,14 +52,15 @@ namespace sw
         const bool bInvalidOffer    = bShapeOk == false || LedgerUtil::isValidAssetID( def._id ) == false || findOffer( def._id ) != nullptr;
         if ( bInvalidOffer )
             return false;
+        // 양의 상한(원장 다리 하나)은 float32 로 정확히 적을 수 없어 `PROPERTY( Max )` 대신 여기서 원장 상수로 본다.
         for ( const OfferGrant& grant : def._listGrant )
         {
-            if ( LedgerUtil::isValidAssetID( grant._assetID ) == false )
+            if ( OfferCatalogInternal::isValidLeg( grant._assetID, grant._amount ) == false )
                 return false;
         }
         for ( const OfferPrice& price : def._listPrice )
         {
-            if ( LedgerUtil::isValidAssetID( price._currencyID ) == false )
+            if ( OfferCatalogInternal::isValidLeg( price._currencyID, price._amount ) == false )
                 return false;
         }
         _listOffer.push_back( def );
@@ -80,45 +92,35 @@ namespace sw
 
     uint32 OfferCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Offer" ); node; node = node.findNextSibling( "Offer" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            OfferDef def;
-            def._id                  = pID;
-            def._limitPerAccount     = node.getAttributeInt( "limit", 0 );
-            def._maxCountPerPurchase = node.getAttributeInt( "maxCount", 1 );
-            bool bOk                 = OfferCatalogInternal::readOptionalTime( node, "startMs", def._startMs ) && OfferCatalogInternal::readOptionalTime( node, "endMs", def._endMs );
-            for ( XMLNode priceNode = node.findChild( "Price" ); bOk && priceNode; priceNode = priceNode.findNextSibling( "Price" ) )
-            {
-                OfferPrice& price = def._listPrice.emplace_back();
-                price._currencyID = string( priceNode.getAttributeText( "currency" ) );
-                bOk               = OfferCatalogInternal::readAmount( priceNode, price._amount );
-            }
-            for ( XMLNode grantNode = node.findChild( "Grant" ); bOk && grantNode; grantNode = grantNode.findNextSibling( "Grant" ) )
-            {
-                OfferGrant& grant = def._listGrant.emplace_back();
-                grant._assetID    = string( grantNode.getAttributeText( "asset" ) );
-                bOk               = OfferCatalogInternal::readAmount( grantNode, grant._amount );
-            }
-            for ( XMLNode productNode = node.findChild( "Product" ); bOk && productNode; productNode = productNode.findNextSibling( "Product" ) )
-            {
-                OfferProduct& product = def._listProduct.emplace_back();
-                product._storeName    = string( productNode.getAttributeText( "store" ) );
-                product._productID    = string( productNode.getAttributeText( "id" ) );
-                bOk                   = product._storeName.empty() == false && product._productID.empty() == false;
-            }
-            if ( bOk == false || addOffer( def ) == false )
-            {
-                SW_LOG_WARNING( "%#: offer '%#' is malformed (needs grants and either prices or products, amounts 1..1e15, lowercase ids) - skipped", sourceName, pID );
-                continue;
-            }
-            ++loadedCount;
+            if ( StringUtil::equals( node.getName(), "Offer", true ) == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+            else if ( loadOffer( node, sourceName ) )
+                ++loadedCount;
         }
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Offer> entries", sourceName );
         return loadedCount;
+    }
+
+    bool OfferCatalog::loadOffer( const XMLNode& node, string_view sourceName )
+    {
+        using Internal = OfferCatalogInternal;
+        OfferDef def;
+        bool     bValid = GameDataXML::readFields( node, def, sourceName );
+        bValid          = Internal::readChildren( node, "Price", sourceName, def._listPrice ) && bValid;
+        bValid          = Internal::readChildren( node, "Grant", sourceName, def._listGrant ) && bValid;
+        bValid          = Internal::readChildren( node, "Product", sourceName, def._listProduct ) && bValid;
+        if ( bValid == false )
+            return false;
+        if ( addOffer( def ) == false )
+        {
+            SW_LOG_ERROR( "%#: offer '%#' is malformed (needs grants and either prices or products, amounts 1..1e15, lowercase ids, a unique id) - skipped", sourceName, def._id );
+            return false;
+        }
+        return true;
     }
 } // namespace sw

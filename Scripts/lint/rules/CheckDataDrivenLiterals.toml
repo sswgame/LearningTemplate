@@ -2,5 +2,5 @@
 
 # 전체 훑기의 기준선 — 규칙마다 지금 남은 수(백로그 C-30 이 줄인다). 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
 [baseline]
-AttributeFallback = 329
+AttributeFallback = 286
 TuningConstexpr = 47
