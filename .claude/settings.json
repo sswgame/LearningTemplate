@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(py -3 -m Scripts ci-jobs *)",
+      "Bash(py -3 -m Scripts plans *)",
+      "Bash(py -3 -m Scripts worktree-list)",
+      "Bash(git merge-base *)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
