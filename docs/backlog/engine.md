@@ -2,13 +2,6 @@
 
 엔진과 GameFramework 의 구조 정리, 오브젝트와 씬, 물리와 내비게이션, 핫 리로드와 모듈의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `A-20` [결함] **`SW_ENABLE_STL_CONTAINER` 로 뜻이 바뀌는 다른 컨테이너 별칭을 전수 점검한다.** `vector<bool>`(`A-18`)처럼 `map` · `set` · `unordered_*` 도
-  구성에 따라 반복자 무효화 규칙과 원소 주소 안정성이 다를 수 있다. 기본 구성 구현이 주는 보장(노드 주소 안정, 삽입 뒤 반복자 유효)에 기대는 호출부를 찾아,
-  두 구성이 같은 계약을 갖게 하거나 계약이 다른 별칭을 쓰지 못하게 막는다(`DynamicBitset` 처럼 형식으로).
-
-- `A-24` [결함] **메모리 태그 통계가 추적을 켜기 전에 잡은 블록의 해제도 센다.** 추적 전에 할당한 블록을 추적 중에 놓으면 태그 바이트가 그만큼 빠져 값이 음수 쪽으로 어긋난다
-  (2026-10-18 `feat19` 의 태그 통계 샤딩 작업에서 확인). 해제가 "이 블록을 셌는가"를 알 수 없는 것이 뿌리다 — 할당 헤더에 "추적 중 할당" 비트를 두고 해제는 그 비트가 선 블록만 뺀다.
-
 - `B-11` [검증대기] **어노테이션 키 완성을 Visual Studio IntelliSense(EDG)에서 손으로 확인하지 못했다.** `ReflectionMacros.h` 는 `__INTELLISENSE__` 에서도 풀이(`ReflectionIntellisense.h`)를 읽는다.
   풀이는 MS 호환 모드의 dependent base 찾기 · `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다 — EDG 가 오류 없이 읽는지 본다.
   DTE `ErrorList.ErrorItems` 로는 IntelliSense 오류가 나오지 않아 자동 확인 길이 없다. 손 확인: VS 로 저장소 폴더를 연다 → `CameraComponent.h` 의 `PROPERTY( ` 안에서

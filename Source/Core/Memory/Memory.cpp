@@ -24,7 +24,7 @@ namespace sw
         uint64    _hash;      ///< 할당 시점 콜 스택의 해시
         uint64    _magic;     ///< 유효성 검증용 매직 넘버
         void*     _pRawPtr;   ///< OS 가 준 원래 할당 시작 주소(정렬 패딩 이전)
-        void*     _pReserved; ///< 헤더를 48바이트(16의 배수)로 맞추는 패딩
+        uint64    _trackerID; ///< 이 블록을 센 기록기의 번호(`IAllocationTracker::getTrackerID`). 0 이면 아무도 세지 않았고 해제도 알리지 않는다
     };
 
     static_assert( sizeof( AllocHeader ) == 48, "AllocHeader must stay 48 bytes (a multiple of 16)" );
@@ -37,6 +37,8 @@ namespace sw
     {
         /** @brief 걸린 할당 기록기(`MemoryProfiler`)입니다. 할당마다 acquire 읽기 하나입니다. */
         atomic<IAllocationTracker*> s_pAllocationTracker{ nullptr };
+        /** @brief 마지막으로 나눠 준 기록기 번호입니다(`IAllocationTracker` 생성자). 0 은 "세지 않음" 이라 1 부터 나눈다. */
+        atomic<uint64> s_nextTrackerID{ 0 };
         /** @brief 이 스레드의 현재 할당 태그입니다(`Memory::setCurrentMemoryTag`). */
         thread_local MemoryTag t_currentMemoryTag{ MemoryTag::Unknown };
 
@@ -69,11 +71,19 @@ namespace sw
                 pHeader->_magic      = kAllocMagic;
                 pHeader->_hash       = 0;
                 pHeader->_pRawPtr    = pRawPtr;
+                pHeader->_trackerID  = 0;
                 pHeader->_bObserved  = SW_FALSE;
 
                 IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
                 if ( pTracker != nullptr )
-                    pHeader->_hash = pTracker->recordAllocation( pUserPtr, size, pHeader->_tag );
+                {
+                    const AllocationRecord record = pTracker->recordAllocation( pUserPtr, size, pHeader->_tag );
+                    if ( record._bCounted )
+                    {
+                        pHeader->_hash      = record._callStackHash;
+                        pHeader->_trackerID = pTracker->getTrackerID();
+                    }
+                }
 
                 const MemoryAllocationObserver* pObserver = s_pAllocationObserver.load( std::memory_order_acquire );
                 if ( pObserver != nullptr )
@@ -104,9 +114,13 @@ namespace sw
                 if ( pHeader->_magic != kAllocMagic )
                     return nullptr;
 
-                IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
-                if ( pTracker != nullptr )
-                    pTracker->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
+                // 센 블록을 센 기록기에만 알린다. 기록기가 떨어졌거나 다른 기록기로 바뀌었으면 알릴 곳이 없다.
+                if ( pHeader->_trackerID != 0 )
+                {
+                    IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
+                    if ( pTracker != nullptr && pTracker->getTrackerID() == pHeader->_trackerID )
+                        pTracker->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
+                }
 
                 // 관찰 중에 할당된 블록만 알린다. 관찰자가 그 사이 떨어졌으면 알릴 곳이 없다.
                 if ( pHeader->_bObserved == SW_TRUE )
@@ -323,6 +337,11 @@ namespace sw
 
 namespace sw
 {
+    IAllocationTracker::IAllocationTracker()
+        : _trackerID{ s_nextTrackerID.fetch_add( 1, std::memory_order_relaxed ) + 1 }
+    {
+    }
+
     void Memory::registerAllocationTracker( IAllocationTracker* pTracker )
     {
         IAllocationTracker* pExpected{ nullptr };

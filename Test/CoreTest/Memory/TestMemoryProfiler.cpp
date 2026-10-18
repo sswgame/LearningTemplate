@@ -28,7 +28,7 @@ SW_TEST_CASE( MemoryProfilerTest, BasicTracking )
     uint64      initialBytes = beforeStats._currentAllocatedBytes;
 
     void*  dummyPtr = reinterpret_cast<void*>( 0x12345678 );
-    uint64 hash     = profiler.recordAllocation( dummyPtr, 1024, MemoryTag::Game );
+    uint64 hash     = profiler.recordAllocation( dummyPtr, 1024, MemoryTag::Game )._callStackHash;
 
     const auto& afterStats = profiler.getStats( MemoryTag::Game );
     uint64      afterBytes = afterStats._currentAllocatedBytes;
@@ -42,40 +42,6 @@ SW_TEST_CASE( MemoryProfilerTest, BasicTracking )
 
     const auto& finalStats = profiler.getStats( MemoryTag::Game );
     SW_EXPECT_EQUAL( initialBytes, finalStats._currentAllocatedBytes );
-
-    profiler.shutdown();
-}
-
-/**
- * @brief [MemoryProfilerTest] 세지 않은 해제가 카운터를 0 아래로 접지 않는지 검증
- * @details 두 카운터(`_currentAllocatedBytes` · `_currentAllocationCount`)는 `uint64` 다.
- *          그냥 `fetch_sub` 하면 0 아래가 **1.8e19** 로 접힌다. 할당은 세지 않았는데 해제만
- *          세는 경우가 실제로 있다 — 에디터의 프로파일러 패널에 **추적 켜기 체크박스**가
- *          있어서, 켜기 전에 잡힌 블록들이 켠 뒤에 풀리면 정확히 그 일이 난다.
- */
-SW_TEST_CASE( MemoryProfilerTest, FreeWithoutMatchingAllocationDoesNotWrap )
-{
-    MemoryProfiler profiler;
-    profiler.initialize();
-
-    // 추적을 **끈 채** 할당한다 — 카운터는 올라가지 않는다.
-    profiler.setTrackingEnabled( false );
-    void* pDummy = reinterpret_cast<void*>( 0x1234'5678 );
-    profiler.recordAllocation( pDummy, 4096, MemoryTag::Game );
-
-    const uint64 beforeBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes;
-    const uint64 beforeCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount;
-
-    // 켜고 해제한다 — 세지 않은 것을 빼게 된다.
-    profiler.setTrackingEnabled( true );
-    profiler.recordFree( pDummy, 4096, MemoryTag::Game, 0 );
-
-    const uint64 afterBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes;
-    const uint64 afterCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount;
-
-    // 0 아래로 접히면 여기가 1.8e19 가 된다.
-    SW_EXPECT_TRUE( afterBytes <= beforeBytes );
-    SW_EXPECT_TRUE( afterCount <= beforeCount );
 
     profiler.shutdown();
 }
@@ -96,7 +62,7 @@ SW_TEST_CASE( MemoryProfilerTest, TotalAllocationCountSurvivesFrees )
     void*        pDummy      = reinterpret_cast<void*>( 0x2468'ACE0 );
     for ( uint32 round = 0; round < 3; ++round )
     {
-        const uint64 hash = profiler.recordAllocation( pDummy, 256, MemoryTag::EngineMisc );
+        const uint64 hash = profiler.recordAllocation( pDummy, 256, MemoryTag::EngineMisc )._callStackHash;
         profiler.recordFree( pDummy, 256, MemoryTag::EngineMisc, hash );
     }
 
@@ -226,9 +192,9 @@ SW_TEST_CASE( MemoryProfilerTest, TagOrderFollowsLiveBytes )
     profiler.setTrackingEnabled( true );
 
     void* pDummy = reinterpret_cast<void*>( 0x1357'9BDF );
-    profiler.recordAllocation( pDummy, 1024, MemoryTag::Texture );
-    profiler.recordAllocation( pDummy, 4096, MemoryTag::Mesh );
-    profiler.recordAllocation( pDummy, 256, MemoryTag::Audio );
+    (void)profiler.recordAllocation( pDummy, 1024, MemoryTag::Texture );
+    (void)profiler.recordAllocation( pDummy, 4096, MemoryTag::Mesh );
+    (void)profiler.recordAllocation( pDummy, 256, MemoryTag::Audio );
 
     const array<MemoryTag, kMemoryTagCount> arrOrder = profiler.makeTagOrderByLiveBytes();
     SW_EXPECT_TRUE( arrOrder[0] == MemoryTag::Mesh );
@@ -330,7 +296,8 @@ SW_TEST_CASE( MemoryProfilerTest, BudgetWarnsOnceAndRearmsBelowNinetyPercent )
 }
 
 /**
- * @brief [MemoryProfilerTest] 추적을 끄면 할당 · 해제를 세지 않는다(콜 스택 해시도 0) — 꺼진 길은 분기 하나다
+ * @brief [MemoryProfilerTest] 추적을 끄면 할당을 세지 않고 "세지 않았다" 고 답한다(콜 스택 해시도 0) — 꺼진 길은 분기 하나다
+ * @details 세지 않은 블록의 해제는 할당기가 넘기지 않는다(`AllocationRecord::_bCounted`). 그 길은 아래 실제 할당기 케이스가 본다.
  */
 SW_TEST_CASE( MemoryProfilerTest, DisabledTrackingRecordsNothing )
 {
@@ -339,17 +306,75 @@ SW_TEST_CASE( MemoryProfilerTest, DisabledTrackingRecordsNothing )
     profiler.setTrackingEnabled( false );
     profiler.setDetailedTrackingEnabled( true );
 
-    void* const  pBlock = reinterpret_cast<void*>( 0x5000 );
-    const uint64 hash   = profiler.recordAllocation( pBlock, 4096, MemoryTag::Physics );
-    SW_EXPECT_EQUAL( uint64{ 0 }, hash );
+    void* const            pBlock = reinterpret_cast<void*>( 0x5000 );
+    const AllocationRecord record = profiler.recordAllocation( pBlock, 4096, MemoryTag::Physics );
+    SW_EXPECT_FALSE( record._bCounted );
+    SW_EXPECT_EQUAL( uint64{ 0 }, record._callStackHash );
     const MemoryProfileStats& stats = profiler.getStats( MemoryTag::Physics );
     SW_EXPECT_EQUAL( uint64{ 0 }, stats._currentAllocatedBytes );
     SW_EXPECT_EQUAL( uint64{ 0 }, stats._totalAllocationCount );
     SW_EXPECT_EQUAL( uint64{ 0 }, stats._peakAllocatedBytes );
     SW_EXPECT_TRUE( profiler.getTopCallStacks().empty() );
-    profiler.recordFree( pBlock, 4096, MemoryTag::Physics );
-    SW_EXPECT_EQUAL( uint64{ 0 }, profiler.getStats( MemoryTag::Physics )._totalFreedBytes );
     profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 해제는 센 블록만 뺀다 — 추적을 켜기 전에 잡은 블록을 켠 뒤에 풀어도, 켠 동안 잡은 블록을 끈 뒤에 풀어도 태그 통계가 어긋나지 않는다
+ * @details 블록 헤더에 센 기록기의 번호가 남고 할당기는 그 블록의 해제만 기록기에 넘긴다. 에디터 프로파일러 패널의 추적 켜기 체크박스가 이 두 순서를 만든다.
+ *          다른 스레드가 이 태그(`Navigation`)로 잡지 않는다는 가정으로 정확히 비교한다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, FreeCountsOnlyBlocksTheTrackerCounted )
+{
+    MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+    if ( pProfiler == nullptr )
+        SW_TEST_SKIP( "no active memory profiler in this host" );
+    const bool       bWasTracking = pProfiler->isTrackingEnabled();
+    constexpr size_t kBlockBytes  = 4096;
+    constexpr auto   kTag         = MemoryTag::Navigation;
+
+    // 1) 끈 채 잡고 켠 뒤에 푼다 — 할당도 해제도 세지 않는다.
+    pProfiler->setTrackingEnabled( false );
+    void* pUncounted = Memory::allocate( kBlockBytes, kTag );
+    SW_ASSERT_TRUE( pUncounted != nullptr );
+    pProfiler->setTrackingEnabled( true );
+    const MemoryProfileStats beforeUncounted = pProfiler->getStats( kTag );
+    Memory::free( pUncounted );
+    const MemoryProfileStats afterUncounted = pProfiler->getStats( kTag );
+    SW_EXPECT_EQUAL( beforeUncounted._totalFreedBytes, afterUncounted._totalFreedBytes );
+    SW_EXPECT_EQUAL( beforeUncounted._currentAllocatedBytes, afterUncounted._currentAllocatedBytes );
+    SW_EXPECT_EQUAL( beforeUncounted._currentAllocationCount, afterUncounted._currentAllocationCount );
+
+    // 2) 켠 채 잡고 끈 뒤에 푼다 — 센 블록이라 끈 동안에도 뺀다.
+    void* pCounted = Memory::allocate( kBlockBytes, kTag );
+    SW_ASSERT_TRUE( pCounted != nullptr );
+    const MemoryProfileStats afterAllocate = pProfiler->getStats( kTag );
+    SW_EXPECT_EQUAL( afterUncounted._currentAllocatedBytes + kBlockBytes, afterAllocate._currentAllocatedBytes );
+    pProfiler->setTrackingEnabled( false );
+    Memory::free( pCounted );
+    pProfiler->setTrackingEnabled( true );
+    const MemoryProfileStats afterFree = pProfiler->getStats( kTag );
+    SW_EXPECT_EQUAL( afterAllocate._totalFreedBytes + kBlockBytes, afterFree._totalFreedBytes );
+    SW_EXPECT_EQUAL( afterUncounted._currentAllocatedBytes, afterFree._currentAllocatedBytes );
+    SW_EXPECT_EQUAL( afterUncounted._currentAllocationCount, afterFree._currentAllocationCount );
+
+    pProfiler->setTrackingEnabled( bWasTracking );
+}
+
+/**
+ * @brief [MemoryProfilerTest] 기록기 번호는 인스턴스마다 다르고 0 이 아니다
+ * @details 블록 헤더에는 기록기 주소가 아니라 이 번호가 남는다 — 같은 스택 주소에 새로 만든 프로파일러도 번호가 달라, 다른 기록기가 센 블록의 해제를 받지 않는다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, TrackerIDsAreUniquePerInstance )
+{
+    uint64 firstID{ 0 };
+    {
+        MemoryProfiler first;
+        firstID = first.getTrackerID();
+    }
+    MemoryProfiler second;
+    SW_EXPECT_TRUE( firstID != 0 );
+    SW_EXPECT_TRUE( second.getTrackerID() != 0 );
+    SW_EXPECT_TRUE( second.getTrackerID() != firstID );
 }
 
 /**

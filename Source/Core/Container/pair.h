@@ -18,16 +18,6 @@
 
 namespace sw
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename T1, typename T2>
-    using pair = std::pair<T1, T2>;
-
-    template <typename T1, typename T2>
-    constexpr std::pair<std::decay_t<T1>, std::decay_t<T2>> make_pair( T1&& a, T2&& b )
-    {
-        return std::make_pair( std::forward<T1>( a ), std::forward<T2>( b ) );
-    }
-#else
     namespace internal
     {
         template <typename Type, size_t Index, bool = std::is_empty_v<Type> && std::is_final_v<Type> == false>
@@ -67,6 +57,34 @@ namespace sw
             constexpr const Type& get() const noexcept { return _value; }
         };
     } // namespace internal
+
+    /**
+     * @brief 빈 함수 객체(해시 · 비교자)를 0 바이트로 담는 쌍입니다. 두 구성에서 같은 형식입니다.
+     * @details `sw::pair` 는 `SW_ENABLE_STL_CONTAINER` 에서 `std::pair` 라 EBO 접근자(`first()`)가 없습니다. 구성과 상관없이 같은 구현을 쓰는
+     *          컨테이너(`unordered_map` · `unordered_set`)는 함수 객체를 이 형식에 담습니다.
+     */
+    template <typename T1, typename T2>
+    struct CompressedPair : private internal::EmptyElementTag<T1, 0>, private internal::EmptyElementTag<T2, 1>
+    {
+        using FirstBase  = internal::EmptyElementTag<T1, 0>;
+        using SecondBase = internal::EmptyElementTag<T2, 1>;
+
+        constexpr T1&       first() noexcept { return FirstBase::get(); }
+        constexpr const T1& first() const noexcept { return FirstBase::get(); }
+        constexpr T2&       second() noexcept { return SecondBase::get(); }
+        constexpr const T2& second() const noexcept { return SecondBase::get(); }
+    };
+
+#if defined( SW_ENABLE_STL_CONTAINER )
+    template <typename T1, typename T2>
+    using pair = std::pair<T1, T2>;
+
+    template <typename T1, typename T2>
+    constexpr std::pair<std::decay_t<T1>, std::decay_t<T2>> make_pair( T1&& a, T2&& b )
+    {
+        return std::make_pair( std::forward<T1>( a ), std::forward<T2>( b ) );
+    }
+#else
 
     // ------------------------------------------------------------------------------
     // 1) Case 1: T1, T2 모두 일반 타입(비어 있지 않음) -> first, second 를 직접 멤버로 둔다

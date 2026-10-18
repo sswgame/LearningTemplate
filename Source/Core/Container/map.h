@@ -1,6 +1,8 @@
 /**
  * @file map.h
  * @brief 정렬 맵입니다. 기본은 정렬된 벡터와 이진 검색이고, SW_ENABLE_STL_CONTAINER 이면 std::map 래퍼입니다.
+ * @details 두 구성 모두 키 순서로 돕니다. 원소 주소 · 반복자는 기본 구성(정렬된 벡터)이 더 약해 삽입 · 삭제마다 무효가 될 수 있습니다.
+ *          기본 구성에서 맞는 코드는 std::map 에서도 맞으므로 구현을 나눠 둡니다(`vector<bool>` · 해시 컨테이너와 달리 약한 쪽이 기본 구성이다).
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"

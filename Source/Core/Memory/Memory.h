@@ -25,13 +25,30 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief `IAllocationTracker::recordAllocation` 의 결과입니다. 할당기는 이 값을 블록 헤더에 적고, 해제 때 세었던 블록만 기록기에 돌려줍니다.
+     * @details 기록기는 추적을 끈 동안 · 자기 안에서 잡힌 블록을 세지 않습니다. "세었는가" 를 할당 때 정해 블록에 남겨야 해제가
+     *          세지 않은 블록을 빼지 않습니다(추적을 켜기 전에 잡은 블록을 켠 뒤에 풀면 태그 바이트가 음수 쪽으로 어긋났다).
+     */
+    struct AllocationRecord
+    {
+        uint64 _callStackHash{ 0 }; ///< 해제 때 그대로 돌려받는 콜 스택 해시(세부 추적이 꺼져 있으면 0)
+        bool   _bCounted{ false };  ///< 기록기가 이 블록을 세었으면 true. 그때만 해제를 기록기에 알린다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 할당마다 불리는 기록기입니다(`MemoryProfiler` 가 구현합니다). `Memory::registerAllocationTracker` 로 겁니다.
      * @details 프로파일러는 컨테이너 · 호출 스택을 쓰므로 위층(Diagnostics)에 있고, 할당기는 이 인터페이스만 압니다. 배포본에서는 불리지 않습니다(헤더가 없다).
+     *          **해제는 이 기록기가 세었다고 답한 블록만 받습니다**(`AllocationRecord::_bCounted`). 블록 헤더에는 센 기록기의 번호(`getTrackerID`)가
+     *          남으므로, 기록기를 바꿔 걸어도 다른 기록기가 센 블록의 해제는 오지 않습니다.
      */
     class SW_API IAllocationTracker
     {
     public:
-        IAllocationTracker() = default;
+        /** @brief 프로세스 안에서 겹치지 않는 기록기 번호(0 이 아님)를 받습니다. */
+        IAllocationTracker();
         /** @brief 가상 소멸자입니다. */
         virtual ~IAllocationTracker() = default;
 
@@ -42,11 +59,17 @@ namespace sw
 
         /**
          * @brief 할당 하나를 기록합니다. 할당한 스레드에서 바로 불립니다.
-         * @return 할당 헤더에 적어 둘 콜 스택 해시(해제 때 그대로 돌려받는다)
+         * @return 센 여부와 할당 헤더에 적어 둘 콜 스택 해시(해제 때 그대로 돌려받는다)
          */
-        virtual uint64 recordAllocation( void* pPtr, size_t size, MemoryTag tag ) = 0;
-        /** @brief 해제 하나를 기록합니다. @p callStackHash 는 할당 때 돌려준 값입니다. */
+        [[nodiscard]] virtual AllocationRecord recordAllocation( void* pPtr, size_t size, MemoryTag tag ) = 0;
+        /** @brief 해제 하나를 기록합니다. 이 기록기가 센(`_bCounted`) 블록만 옵니다. @p callStackHash 는 할당 때 돌려준 값입니다. */
         virtual void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash ) = 0;
+
+        /** @brief 이 기록기의 번호입니다. 같은 주소에 새로 만든 기록기도 번호가 다릅니다. */
+        uint64 getTrackerID() const { return _trackerID; }
+
+    private:
+        const uint64 _trackerID;
     };
 } // namespace sw
 

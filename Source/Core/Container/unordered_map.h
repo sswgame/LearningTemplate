@@ -14,6 +14,9 @@
  *    따로 두지 않습니다.
  *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너를 쓸 때만 이종 검색이 컴파일되지 않아,
  *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
+ * 6. 구성: 두 구성이 같은 구현입니다.
+ *          `SW_ENABLE_STL_CONTAINER` 구성도 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자뿐입니다. 순회 순서(넣은 순서, `erase` 는 마지막 원소를
+ *          빈 자리로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -27,57 +30,11 @@
 
 namespace sw
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    /**
-     * @brief std::unordered_map 에 밀집 구현과 같은 조회 API(이종 키 `find` · `count` · `contains`)를 더한 것입니다(`SW_ENABLE_STL_CONTAINER`).
-     * @details C++17 의 std 해시 컨테이너에는 이종 조회와 `contains` 가 없다. 이종 키(`string_view` 등)는 키 타입으로 바꿔 찾는다 — 임시 키 하나가
-     *          생기지만 STL 모드는 할당자 · 레이스 탐지를 빼고 표준 구현과 비교하는 진단 구성이다.
-     */
-    template <typename Key, typename T, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<pair<const Key, T>>>
-    class unordered_map : public std::unordered_map<Key, T, Hash, KeyEqual, Allocator>
-    {
-        using Base = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
-        template <typename K>
-        using EnableIfOtherKey = std::enable_if_t<std::is_same_v<std::decay_t<K>, Key> == false && std::is_constructible_v<Key, const K&>>;
-
-    public:
-        using typename Base::const_iterator;
-        using typename Base::iterator;
-        using typename Base::size_type;
-        using Base::Base;
-        using Base::count;
-        using Base::find;
-
-        template <typename K, typename = EnableIfOtherKey<K>>
-        iterator find( const K& key )
-        {
-            return Base::find( Key( key ) );
-        }
-        template <typename K, typename = EnableIfOtherKey<K>>
-        const_iterator find( const K& key ) const
-        {
-            return Base::find( Key( key ) );
-        }
-        template <typename K, typename = EnableIfOtherKey<K>>
-        size_type count( const K& key ) const
-        {
-            return Base::count( Key( key ) );
-        }
-        bool contains( const Key& key ) const { return Base::find( key ) != Base::end(); }
-        template <typename K, typename = EnableIfOtherKey<K>>
-        bool contains( const K& key ) const
-        {
-            return Base::find( Key( key ) ) != Base::end();
-        }
-        /** @brief 밀집 구현과 같은 이름으로 남는 버킷을 놓는다. */
-        void shrink_to_fit() { Base::rehash( 0 ); }
-    };
-#else
     /**
      * @class unordered_map
      * @brief 데이터 지향(DoD) 밀집 배열 기반의 해시맵입니다.
      *
-     * 주의: `erase` 는 마지막 원소를 빈 자리로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다.
+     * 주의: `erase` 는 마지막 원소를 빈 자리로 옮기는 방식(swap-and-pop)이라, 기존 이터레이터가 무효화될 수 있습니다(두 구성 같음).
      */
     template <typename Key, typename T, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<pair<const Key, T>>>
     class unordered_map
@@ -108,9 +65,9 @@ namespace sw
             size_t       _next;
         };
 
-        vector<size_t>          _listBucket;    ///< 버킷마다 체인 첫 노드의 인덱스
-        vector<Node>            _listDenseData; ///< 연속 메모리에 놓인 밀집 데이터 배열
-        pair<hasher, key_equal> _traits;        ///< 해시 · 키 비교 함수 객체(EBO 로 압축 보관)
+        vector<size_t>                    _listBucket;    ///< 버킷마다 체인 첫 노드의 인덱스
+        vector<Node>                      _listDenseData; ///< 연속 메모리에 놓인 밀집 데이터 배열
+        CompressedPair<hasher, key_equal> _traits;        ///< 해시 · 키 비교 함수 객체(EBO 로 압축 보관)
 
         const hasher&    get_hasher() const noexcept { return _traits.first(); }
         const key_equal& get_equal() const noexcept { return _traits.second(); }
@@ -774,5 +731,4 @@ namespace sw
             }
         }
     };
-#endif
 } // namespace sw
