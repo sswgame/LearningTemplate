@@ -6,6 +6,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -200,6 +201,13 @@ namespace
             return result;
         }
 
+        /** @brief 기본 방향광 하나를 씬에 더합니다. 두 씬이 같은 빛을 받아야 그림을 견줄 수 있습니다. */
+        static bool addKeyLight( Scene& scene )
+        {
+            GameObject* pObject = scene.getObjectManager()->createGameObject( hashed_string( "KeyLight" ) );
+            return pObject != nullptr && pObject->addComponent<DirectionalLightComponent>() != nullptr;
+        }
+
         static MeshComponent* addMeshObject( Scene& scene, const utf8* pName )
         {
             GameObject* pObject = scene.getObjectManager()->createGameObject( hashed_string( pName ) );
@@ -289,7 +297,9 @@ SW_TEST_CASE( MeshModifierGPUTest, ProgramMatchesCPU )
 
         Scene gpuScene( "MeshModifierGPUScene" );
         Scene cpuScene( "MeshModifierCPUScene" );
-        bOk                     = bOk && gpuScene.ensureDefaultCameras() && cpuScene.ensureDefaultCameras();
+        bOk = bOk && gpuScene.ensureDefaultCameras() && cpuScene.ensureDefaultCameras();
+        // 빛은 씬 데이터로 둔다 — 라이트가 없으면 앰비언트만 남아(키 라이트 폴백 없음, D2-13) 노멀만 바꾸는 변형(crumple)이 그림에 안 보인다.
+        bOk                     = bOk && Internal::addKeyLight( gpuScene ) && Internal::addKeyLight( cpuScene );
         MeshComponent* pGPUMesh = bOk ? Internal::addMeshObject( gpuScene, "GPUModified" ) : nullptr;
         MeshComponent* pCPUMesh = bOk ? Internal::addMeshObject( cpuScene, "CPUModified" ) : nullptr;
         bOk                     = pGPUMesh != nullptr && pCPUMesh != nullptr;

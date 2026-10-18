@@ -1874,6 +1874,12 @@ SW_TEST_CASE( RenderPassGPUTest, PerBatchMaterialColorsReachShader )
         sw::Scene scene( "PerBatchMaterialColorScene" );
         if ( bOk )
             bOk = scene.ensureDefaultCameras();
+        // 빛은 씬 데이터로 둔다 — 라이트가 없으면 앰비언트만 남아(키 라이트 폴백 없음, D2-13) 두 큐브가 다 검게 그려져 색을 가를 수 없다.
+        if ( bOk )
+        {
+            sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            bOk                          = pLightObject != nullptr && pLightObject->addComponent<sw::DirectionalLightComponent>() != nullptr;
+        }
 
         // 머티리얼은 **실제 에셋**을 읽어 색만 바꾼다 — 손으로 지은 XML 은 퍼뮤테이션 선언이 빠져 쿠킹해 둔
         // 셰이더 변형과 맞지 않는다(그러면 드로우가 통째로 사라져 검증이 무의미해진다).
