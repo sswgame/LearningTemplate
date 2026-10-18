@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -381,68 +382,70 @@ namespace sw
 
     uint32 KartTrackCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 트랙을 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
-        for ( XMLNode trackNode = root.findChild( "Track" ); trackNode; trackNode = trackNode.findNextSibling( "Track" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( trackNode, sourceName );
-            if ( pID == nullptr )
-                continue;
-            KartTrackDef def;
-            def._id                = hashed_string( pID );
-            const utf8* pName      = trackNode.findAttribute( "name" );
-            def._name              = pName != nullptr ? pName : pID;
-            def._width             = trackNode.getAttributeFloat( "width", def._width );
-            def._offroadScale      = trackNode.getAttributeFloat( "offroadScale", def._offroadScale );
-            def._gateMargin        = trackNode.getAttributeFloat( "gateMargin", def._gateMargin );
-            def._lapCount          = MathUtil::max( 1, trackNode.getAttributeInt( "laps", def._lapCount ) );
-            def._samplesPerSegment = MathUtil::max( 1, trackNode.getAttributeInt( "samples", def._samplesPerSegment ) );
-
-            for ( XMLNode pointNode = trackNode.findChild( "Point" ); pointNode; pointNode = pointNode.findNextSibling( "Point" ) )
-            {
-                def._listControlPoint.push_back(
-                    float3{ pointNode.getAttributeFloat( "x", 0.0f ), pointNode.getAttributeFloat( "y", 0.0f ), pointNode.getAttributeFloat( "z", 0.0f ) } );
-            }
-            for ( XMLNode node = trackNode.findChild( "Checkpoint" ); node; node = node.findNextSibling( "Checkpoint" ) )
-            {
-                def._listCheckpoint.push_back( node.getAttributeFloat( "at", 0.0f ) );
-            }
-            for ( XMLNode node = trackNode.findChild( "ItemBox" ); node; node = node.findNextSibling( "ItemBox" ) )
-            {
-                KartItemBoxDef box;
-                box._at     = node.getAttributeFloat( "at", 0.0f );
-                box._offset = node.getAttributeFloat( "offset", 0.0f );
-                def._listItemBox.push_back( box );
-            }
-            for ( XMLNode node = trackNode.findChild( "BoostPad" ); node; node = node.findNextSibling( "BoostPad" ) )
-            {
-                KartBoostPadDef pad;
-                pad._at       = node.getAttributeFloat( "at", 0.0f );
-                pad._offset   = node.getAttributeFloat( "offset", 0.0f );
-                pad._length   = node.getAttributeFloat( "length", pad._length );
-                pad._width    = node.getAttributeFloat( "width", pad._width );
-                pad._duration = node.getAttributeFloat( "duration", pad._duration );
-                def._listBoostPad.push_back( pad );
-            }
-            for ( XMLNode node = trackNode.findChild( "Offroad" ); node; node = node.findNextSibling( "Offroad" ) )
-            {
-                KartOffroadZoneDef zone;
-                zone._from       = node.getAttributeFloat( "from", 0.0f );
-                zone._to         = node.getAttributeFloat( "to", 0.0f );
-                zone._minOffset  = node.getAttributeFloat( "minOffset", zone._minOffset );
-                zone._maxOffset  = node.getAttributeFloat( "maxOffset", zone._maxOffset );
-                zone._speedScale = node.getAttributeFloat( "scale", zone._speedScale );
-                def._listOffroadZone.push_back( zone );
-            }
-            if ( def._listControlPoint.size() < 3 )
-            {
-                SW_LOG_WARNING( "%#: track '%#' has fewer than 3 points - skipped", sourceName, pID );
-                continue;
-            }
-            add( def );
-            ++loadedCount;
+            if ( StringUtil::equals( node.getName(), "Track", true ) == false )
+                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
+            else if ( loadTrack( node, sourceName ) )
+                ++loadedCount;
         }
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Track> entries", sourceName );
+            SW_LOG_ERROR( "%#: no <Track> entries", sourceName );
         return loadedCount;
+    }
+
+    bool KartTrackCatalog::loadTrack( const XMLNode& trackNode, string_view sourceName )
+    {
+        KartTrackDef def;
+        bool         bValid = GameDataXML::readFields( trackNode, def, sourceName );
+        for ( XMLNode node = trackNode.findChild(); node; node = node.findNextSibling() )
+        {
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( name == "Point" )
+            {
+                KartTrackPointDef point;
+                bValid = GameDataXML::readFields( node, point, sourceName ) && bValid;
+                def._listControlPoint.push_back( float3{ point._x, point._y, point._z } );
+            }
+            else if ( name == "Checkpoint" )
+            {
+                KartCheckpointDef checkpoint;
+                bValid = GameDataXML::readFields( node, checkpoint, sourceName ) && bValid;
+                def._listCheckpoint.push_back( checkpoint._at );
+            }
+            else if ( name == "ItemBox" )
+            {
+                KartItemBoxDef box;
+                bValid = GameDataXML::readFields( node, box, sourceName ) && bValid;
+                def._listItemBox.push_back( box );
+            }
+            else if ( name == "BoostPad" )
+            {
+                KartBoostPadDef pad;
+                bValid = GameDataXML::readFields( node, pad, sourceName ) && bValid;
+                def._listBoostPad.push_back( pad );
+            }
+            else if ( name == "Offroad" )
+            {
+                KartOffroadZoneDef zone;
+                bValid = GameDataXML::readFields( node, zone, sourceName ) && bValid;
+                def._listOffroadZone.push_back( zone );
+            }
+            else
+            {
+                SW_LOG_ERROR( "%#: track '%#' has an unknown child <%#>", sourceName, def._id.c_str(), name );
+                bValid = false;
+            }
+        }
+        if ( def._listControlPoint.size() < 3 )
+        {
+            SW_LOG_ERROR( "%#: track '%#' needs 3 or more <Point>", sourceName, def._id.c_str() );
+            bValid = false;
+        }
+        if ( bValid )
+            add( def );
+        return bValid;
     }
 } // namespace sw
