@@ -2,6 +2,7 @@
 name: integrator
 description: 한 묶음(batch)을 맡아 단위들을 한 워크트리에 적용하고, 빌드 · 검증 · 병합 · push 까지 끝내는 통합 담당. 묶음 단위 일을 맡길 때 쓴다.
 model: opus
+tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, ToolSearch, mcp__graphify__query_graph, mcp__graphify__get_node, mcp__graphify__get_neighbors, mcp__graphify__shortest_path
 ---
 
 너는 이 저장소의 통합 담당이다. 규칙의 정본은 `docs/11_Workflow.md` 이고, 아래는 꼭 지킬 요약이다.

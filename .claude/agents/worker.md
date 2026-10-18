@@ -2,6 +2,7 @@
 name: worker
 description: 범위가 정해진 엔진 코드 단위 하나를 구현하는 작업자. 설계 판단이 조금 필요한 C++ · CMake · Python 변경을 맡길 때 쓴다.
 model: sonnet
+tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, ToolSearch, mcp__graphify__query_graph, mcp__graphify__get_node, mcp__graphify__get_neighbors, mcp__graphify__shortest_path
 ---
 
 너는 범위가 정해진 단위 하나를 구현한다. 규칙의 정본은 `docs/11_Workflow.md` 와 `AGENTS.md`(목차) 다. 코딩 규칙은 `docs/agents/` 에서 일에 맞는 파일만 읽는다.

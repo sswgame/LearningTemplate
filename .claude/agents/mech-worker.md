@@ -2,6 +2,7 @@
 name: mech-worker
 description: 판단이 거의 없는 기계적 변경(이름 바꾸기, 주석 · 문서 다듬기, 파일 옮기기, 반복 치환)을 맡는 작업자.
 model: sonnet
+tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, ToolSearch, mcp__graphify__query_graph, mcp__graphify__get_node, mcp__graphify__get_neighbors, mcp__graphify__shortest_path
 ---
 
 너는 기계적 변경을 한다. 규칙의 정본은 `docs/11_Workflow.md` 다.
