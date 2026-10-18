@@ -93,6 +93,10 @@
 - `B-15` [검증대기] **`res1` 이미지 도입의 확인 둘.** ① normal 맵 G 채널 방향 — 기존 `invert_green` 규칙으로 구웠을 뿐 렌더로 확인하지 않았다(Poly Haven `_nor_gl`).
   ② Kenney "Smoke Particles" 팩은 362x336 등 2의 거듭제곱이 아니라 `texture-limits` 규칙 위반이다 — 들이려면 변환(2의 거듭제곱으로 맞춤)이 필요하다. 지금 들인 Particle Pack 의 `smoke_*.png` 는 512x512 라 해당 없다(통합 때 확인).
 
+- `B-16` [검증대기] **2026-10-18 `A-25` · `A-26` · 렌더 스레드 수정의 다른 백엔드와 UI 전용 화면 확인.** `fixgfx` 는 GPU 테스트를 DX12 호스트에서만 돌렸고, 활성 씬이 없는 프레임을 그리지 않게 한 변경이
+  Vulkan 에서 `UNDEFINED` 백버퍼를 `Load` 로 여는 결함을 드러냈다(`RenderThread::executeFrameBody` 가 그래프가 그렸을 때만 `Load` 하게 고침, Debug `race` 5/5 로 확인). 남은 확인: ① DX11 · GL · Vulkan 의 `-L hostgpu`
+  (`-DSW_GAMES=ALL` 구성의 Release) ② **씬 없이 UI 만 보이는 화면**(타이틀 · 로딩 · 에디터가 씬을 닫은 상태)이 이제 캔버스까지 그려지지 않는지 — 이전에는 이런 프레임에도 캔버스 UI 가 그려졌다. 둘 다 `gpu-verifier` 로 캡처한다.
+
 - `E-1` [관찰] **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](../08_Verification.md) 4절).
   고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),
   ASan 둘(OpenSSL 스택 수명, `NetRequestTest` 선언 순서), `ServerBootTest` 접속 로그, Linux Debug `EngineTest_NoGPU` 샤드의 180 초 초과(멈춤이 아니라 느림 — 샤드를 여섯으로 늘렸다).

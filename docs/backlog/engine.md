@@ -83,6 +83,15 @@
   런타임 상태 필드(예: `PROPERTY( RuntimeState )`)를 그 문맥에서 빼는 형식을 둔다. 리플렉션 애노테이션 · 파서 · `SerializeContext` · 씬 저장 경로를 함께 고쳐야 해 이 단계 범위 밖으로 남겼다.
   `SerializeContext::setSaveGameOnly` 와 `PROPERTY( SaveGame )` 이 반대쪽(세이브만 쓰는 옵트인)으로 이미 있으니 같은 축의 값으로 설계한다.
 
+- `C-63` [정리] **`SW_ENABLE_STL_CONTAINER` 가 이름이 같은 `sw::` 형식을 구성마다 다른 형식으로 바꾼다**(2026-10-18 `A-20`). 해시 컨테이너는 두 구성이 같은 구현을 쓰게 했고 `CompressedPair` 로 `pair` 차이를 막았다.
+  남은 것: ① 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다) ② `Source/sw.natvis` 의 `unordered_map` · `unordered_set` · `vector` 항목이 std 형식으로 캐스트해 지금 구조와 맞지 않는다
+  ③ `TestDestructionDamage` 의 해시 기준값 테스트가 STL 구성에서 건너뛰던 이유가 해시 컨테이너 순서였다면 다시 켤 수 있다(확인 안 함). `map` · `set` 은 두 구성 모두 키 순서지만 주소 · 반복자 보장은 기본 구성 쪽이 약하다.
+
+- `C-64` [정리] **조용한 기본값이 남은 곳(A-26 · C-62 후속).** ① 씬 직접 경로에서 그림자 맞춤 행렬은 출력 설정의 비율(출력 크기 0 이면 16/9)을, 그리는 행렬은 풀의 비율을 써서 어긋날 수 있다
+  ② 패킷의 `_cameraPos` 기본값(`FrameRendererUtil::kDefaultCameraPos`) ③ `GameInstanceBase` 의 `UserSettingsManager` · `InputManager` · `UISystem` 조회가 `GameNetSession` 과 같은 "없으면 조용히 건너뛰기" 모양이다
+  ④ `ConfigManager::isWithinRange` 가 `collectRangeErrors` 로 범위를 따로 검사한다(`C-56` 과 같은 모양, Config 영역) ⑤ `readName` 호출부 357 곳을 전수로 보지 못했다 — 이름을 경로 글로 바꿔 쓰는 `.c_str()`
+  (`hashed_string` 의 FName 규칙: none = 빈 이름, 빈 이름의 `c_str()` = "None")은 형식으로 막지 못하고 이름 읽기 창구에서 글 none 만 막았다.
+
 - `D1-3` [기능] **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다
   (지형 높이장은 종류별 기하 레지스트리로 들어갔다) (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크
   (6) 다른 테스트 게임(AbilityArena 등)의 적도 내비메시로 — 행동 트리 `MoveTo` 노드가 `INavMover` 를 쓴다.

@@ -2,7 +2,22 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법은 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../backlog/README.md)(영역별 파일 · 상태 태그, `py -3 -m Scripts backlog` 로 목록), 작업 방식은 [작업 방식](../11_Workflow.md), 병렬 작업자 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다. 이 문서에는 지금 상태 · 다음 할 일 · 함정 · 시작 절차만 둡니다.
 
-## 0. 2026-10-18 새벽 통합 `integ6` 인계 (가장 먼저 읽는다)
+## 00. 2026-10-18 오후 세션 인계 (가장 먼저 읽는다)
+
+- **main 은 `4979c0144` 까지 push 했다**(전체 빌드 증거 있음). 아래 0절의 `A-23`(Shipping 합성 리그) · `C-14`(린트 잡 확인)는 **해소됐다** — 이 절을 우선한다.
+- **한 일**: 결함 `A-20` `A-23` `A-24` `A-25` `A-26` `A-27`, 정리 `C-39` `C-54`(일부) `C-56` `C-58` `C-59` `C-60` `C-62` 전부, `C-14` 확인. 워크트리 8곳(`fixci` `fixengine` `fixgfx` `fixscripts` `scr2` `rangesrc` `netkit` `miscfix`)을 병합했다. 워크트리는 아직 지우지 않았다 —
+  `py -3 -m Scripts worktree-remove <이름>` 으로 지운다(병합 여부는 `git merge-base --is-ancestor` 로 확인).
+- **합친 뒤 검증이 잡은 회귀 셋**(작업자 단독 검증이 놓친 것 — 브랜치마다 린트와 자기 C++ 빌드만 돌려 인터페이스를 쓰는 곳을 다 못 봤다): ① `scr2` 가 `FixPass` 필드 · 공유 잠금 규칙을 바꾸고 PythonTest 둘을 안 고침 ② `fixgfx` 가 시점 없는 프레임을 그리지 않게 하자
+  `RenderThread` 가 그래프가 그렸다는 가정으로 백버퍼를 `Load` 로 열던 결함이 Vulkan 에서 드러남(고침) ③ STL 구성 `make_unique` ADL 모호성(`SkeletalAnimatorComponent`, 고침). **교훈**: 병합 묶음은 개별 보고만 믿지 말고 합친 상태에서 Debug · Release · STL 구성 전체 빌드와 `-L lint|nogpu|race` 를 돌린다.
+- **CI**: push 한 실행을 `py -3 -m Scripts ci-jobs --runs` 로 본다. 이번 실행에서 확인할 것: Shipping 4 잡(Linux · Windows, 클라이언트 · 전용 서버)이 `A-23` 수정으로 초록인지(전용 서버 Shipping 은 로컬에서 짓지 못했다), Windows Debug 의 `StateHashHistory` 와 `EngineTest_NoGPU` 샤드 타임아웃(104 s, 러너 부하로 보인다 — `Test/TestPolicy.json` 이 시간 예산 정본),
+  새 지연 테스트 하나가 약 31 s 라 서버 샤드 예산을 넘지 않는지, STL 잡. **야간 `Load (Linux | Release, nightly)` 는 `d8037cd` 부터 "load run did not finish"(1 s)로 진다** — 이번 변경과 무관해 보이며 조사하지 않았다.
+- **새로 적은 백로그**: `C-63`(STL 별칭 뿌리) `C-64`(조용한 기본값 남은 곳) `B-16`(다른 백엔드 · UI 전용 화면 확인), `C-46` 은 "다른 게임의 팩도 모든 패키지에 들어간다"로 고쳐 씀, `C-61` 은 형식으로 못 막는 이유와 두 안, `C-54` 는 남은 키트 목록.
+- **빌드 환경 함정**: main 체크아웃의 `build/Ninja-Debug` 에 낡은 `CMAKE_*_COMPILER_LAUNCHER`(`Tools/Sccache`, 현재 소스에는 없음)가 남아 첫 `full-build` 가 `CreateProcess failed` 로 멈췄다 — `cmake -UCMAKE_CXX_COMPILER_LAUNCHER -UCMAKE_C_COMPILER_LAUNCHER -USW_USE_SCCACHE --preset <프리셋>` 으로 캐시 항목을 지웠다.
+  `full-build` 를 에이전트 셸에서 백그라운드로 돌리면 `ninja: ReadFile: The handle is invalid` 가 나므로 `cmd /c "… < NUL > 로그 2>&1"` 로 돌린다. 빌드 동안에는 커밋하지 않는다(증거는 빌드 시작과 끝의 HEAD 트리가 같을 때만 쓴다). 동시 빌드 한도(2)는 이 PC 에서 강제되지 않아 작업자 여섯이 겹치면 린트 게이트(`CheckTextureFolders` 75 s)가 시간 초과한다.
+- **남은 일(우선순위)**: ① CI 결과 확인 ② `B-16` GPU 확인 ③ `C-54` 의 남은 키트 설정(`NetKitConfigUtil` 을 Base 의 키트 공통 자리로) ④ `C-61` 생성기 규칙 ⑤ `C-57` 백로그 하위 번호 정리(다른 작업자가 같은 백로그 파일을 고쳐 충돌 위험이라 미뤘다) ⑥ 0절의 측정 못 한 네 가지 ⑦ 기능 대기열.
+- **사용자 결정 대기**: 없음.
+
+## 0. 2026-10-18 새벽 통합 `integ6` 인계
 
 - **main 에 병합한 브랜치 21개**(빌드 없이 준비된 것들): feat2 ~ feat22(feat1 은 앞서 병합). 통합 커밋으로 컴파일 · 의미 충돌을 풀었다 — 자세한 것은 `git log --grep='^통합\|^되돌림\|^시간\|^로그\|^테스트\|^빌드'` 의 커밋 메시지.
 - **검증**: Debug · Release · Shipping `all AllTests` 경고 0, 두 구성 `-L lint` · `-L nogpu` 통과, Debug `-L race` 통과, Shipping `-L nogpu` 는 `A-23`(rigs_raw) 만 실패. 셰이더 네 백엔드 재쿠킹, `.mesh` 형식 3 재임포트, 쿠킹 팩에 `.bonemask.json` · `bow_shoot.pairedanim.xml` · `migrations.json` 확인. GPU(네 백엔드 × 대표 셋, `-L hostgpu`)와 코드 리뷰 결과는 아래 "남은 일"에 적었다.
