@@ -139,6 +139,8 @@ class FixPass:
     - `problem`   : `--check` 에서 이 변환이 걸렸을 때 할 말 (무엇이 어긋났는가)
     - `done`      : 실제로 고쳤을 때 할 말
     - `badSample` : 이 변환이 **반드시 고쳐야 하는** 조각
+    - `fixedSample`: `badSample` 을 고친 **글자 그대로의** 결과 — 게이트 `selfTestCases` 의 `expectedViolation` 과 같은 축이다.
+      "바뀌었는가" 만 보면 엉뚱하게 고쳐도(글을 지우거나 다른 자리를 고쳐도) 살아 있는 것으로 보인다.
     - `goodSample`: 이 변환이 **건드리면 안 되는** 조각
     - `bNeedsPath`: 참이면 변환이 `(텍스트, 저장소 기준 경로)` 를 받는다(include 순서처럼 파일 자리로 판정하는 규칙)
     - `samplePath`: 그때 조각 둘을 돌릴 가상의 저장소 기준 경로
@@ -156,10 +158,19 @@ class FixPass:
     transform: Callable[..., tuple[str, bool]]
     problem: str
     done: str
-    badSample: str = ""
-    goodSample: str = ""
+    badSample: str
+    fixedSample: str
+    goodSample: str
     bNeedsPath: bool = False
     samplePath: str = ""
+
+    def __post_init__(self) -> None:
+        """조각 셋은 필수다 — 비었거나 고친 결과가 원래 조각과 같으면 픽서를 만들 때 `TypeError` 로 멈춘다(`CheckFixersAreAlive` 가 돌릴 증거가 없다)."""
+        for fieldName in ("badSample", "fixedSample", "goodSample"):
+            if not getattr(self, fieldName):
+                raise TypeError(f"FixPass '{self.done}': `{fieldName}` 이 비었습니다 — 조각 셋(badSample · fixedSample · goodSample)은 필수입니다")
+        if self.fixedSample == self.badSample:
+            raise TypeError(f"FixPass '{self.done}': `fixedSample` 이 `badSample` 과 같습니다 — 고친 결과를 적습니다")
 
     def apply(self, text: str, relativePath: str) -> tuple[str, bool]:
         """변환 한 번 — 경로가 필요한 변환에는 저장소 기준 경로를 함께 넘긴다."""

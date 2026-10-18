@@ -180,6 +180,11 @@ class FormatForwardDeclarationsFixer(LintFixer):
                 "#pragma once\n\nnamespace sw\n{\n"
                 "    class Alpha;\n    enum class Beta;\n    struct Gamma;\n\n    void probe();\n}\n"
             ),
+            # 고친 결과는 아래 goodSample 과 글자까지 같다.
+            fixedSample=(
+                "#pragma once\n\nnamespace sw\n{\n"
+                "    enum class Beta;\n\n    struct Gamma;\n\n    class Alpha;\n\n    void probe();\n}\n"
+            ),
             # 이미 정렬된 것은 건드리지 않는다 (건드리면 포맷이 매번 흔들린다).
             goodSample=(
                 "#pragma once\n\nnamespace sw\n{\n"

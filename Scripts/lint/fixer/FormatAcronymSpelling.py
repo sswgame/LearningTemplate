@@ -512,12 +512,14 @@ class FormatAcronymSpellingFixer(LintFixer):
                 problem="타입 · 이름공간 · 열거형 이름의 약어가 Pascal 철자입니다(UiSystem → UISystem)",
                 done="타입 이름의 약어를 대문자로 고쳤습니다",
                 badSample="class UiSystem;\nenum class EGpuMode { Cpu, Gpu };\n",
+                fixedSample="class UISystem;\nenum class EGPUMode { CPU, GPU };\n",
                 goodSample='class UISystem;\nclass ImGuiLayer;\nconst char* kName = "UiSystem"; // UiSystem\n#include "UI/UiSystem.h"\n'
                            "#define SW_UI_ENABLED 1\nVkPhysicalDeviceIDProperties props;\nstd::Idle x;\nclass Guid;\n"),
         FixPass(transformValueNamesInternal,
                 problem="함수 · 변수 · 멤버 이름의 약어가 Pascal 철자입니다(updateUi → updateUI)",
                 done="함수 · 변수 이름의 약어를 대문자로 고쳤습니다",
                 badSample="void updateUi();\nint _pGpuScene = getOwnerId();\n",
+                fixedSample="void updateUI();\nint _pGPUScene = getOwnerID();\n",
                 goodSample='void updateUI();\nint uiScale = 0;\nint gv_uiScale = 0;\nint _gpuScene = 0;\nauto s = "updateUi"; // updateUi\n'
                            "void drawImGuiPanel();\nint idx = 0;\n"),
     )

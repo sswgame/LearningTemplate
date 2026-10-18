@@ -74,6 +74,7 @@ class FormatCmakeIndentFixer(LintFixer):
     listPass = (
         FixPass(transform=indentWithTabs, problem="줄머리에 공백 들여쓰기가 있다", done="들여쓰기를 탭으로 바꿨다",
                 badSample="if(A)\n    set(x 1)\nendif()\n",
+                fixedSample="if(A)\n\tset(x 1)\nendif()\n",
                 goodSample='if(A)\n\tset(x 1)\n\tfile(CONFIGURE OUTPUT y CONTENT "\n    keep me\n")\nendif()\n'),
     )
 

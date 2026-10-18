@@ -26,7 +26,7 @@ class FormatNamespaceBlocksFixer(LintFixer):
     listScopeRelDir = common.kLintTargetRelDirs   # 게이트가 보는 범위
     listPass = (
         FixPass(transform=CheckNamespaceBlocks.fixText, problem="한 namespace 블록에 정의가 여럿이다", done="정의마다 namespace 블록을 나눴다",
-                badSample=CheckNamespaceBlocks.kFixBadSample, goodSample=CheckNamespaceBlocks.kFixGoodSample),
+                badSample=CheckNamespaceBlocks.kFixBadSample, fixedSample=CheckNamespaceBlocks.kFixGoodSample, goodSample=CheckNamespaceBlocks.kFixGoodSample),
     )
 
 

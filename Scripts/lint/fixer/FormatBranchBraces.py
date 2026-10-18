@@ -517,6 +517,10 @@ class FormatBranchBracesFixer(LintFixer):
                 '#include "pch.h"\n\nvoid probe( int32 count )\n{\n'
                 "    if ( count > 0 )\n    {\n        return;\n    }\n}\n"
             ),
+            fixedSample=(
+                '#include "pch.h"\n\nvoid probe( int32 count )\n{\n'
+                "    if ( count > 0 )\n        return;\n}\n"
+            ),
             # for 는 본문이 한 줄이어도 유지한다 — 이 조각이 바뀌면 규칙이 너무 넓어진 것이다.
             goodSample=(
                 '#include "pch.h"\n\nvoid probe( int32 count )\n{\n'
@@ -531,6 +535,10 @@ class FormatBranchBracesFixer(LintFixer):
             badSample=(
                 '#include "pch.h"\n\nvoid probe( int32 mode )\n{\n    switch ( mode )\n    {\n'
                 "    case 0:\n        doThing();\n        break;\n    }\n}\n"
+            ),
+            fixedSample=(
+                '#include "pch.h"\n\nvoid probe( int32 mode )\n{\n    switch ( mode )\n    {\n'
+                "    case 0:\n    {\n        doThing();\n        break;\n    }\n    }\n}\n"
             ),
             # 한 문장짜리 본문은 그대로 둔다.
             goodSample=(
@@ -548,6 +556,13 @@ class FormatBranchBracesFixer(LintFixer):
                 "    case 0:\n    {\n        doThing();\n        return 1;\n    }\n"
                 "    case 1:\n        return 2;\n"
                 "    case Mode::Two: return 3;\n"
+                "    }\n    return 0;\n}\n"
+            ),
+            fixedSample=(
+                '#include "pch.h"\n\nint32 probe( int32 mode )\n{\n    switch ( mode )\n    {\n'
+                "    case 0:\n    {\n        doThing();\n        return 1;\n    }\n"
+                "    case 1:\n    {\n        return 2;\n    }\n"
+                "    case Mode::Two:\n    {\n        return 3;\n    }\n"
                 "    }\n    return 0;\n}\n"
             ),
             # 모든 case 가 한 문장인 표 모양 switch · 본문 없는 폴스루 라벨은 그대로 둔다.
@@ -568,6 +583,13 @@ class FormatBranchBracesFixer(LintFixer):
                 "    for ( int32 index = 0; index < count; ++index )\n        doThing( index );\n"
                 "    for ( int32 value : listValue ) doThing( value );\n"
                 "    while ( poll() );\n}\n"
+            ),
+            # 줄 끝 공백(`listValue ) `)과 `){}` 의 띄어쓰기는 뒤의 clang-format 이 맞춘다(`insertLoopBraces`) — 이 패스의 결과는 그 앞 글이다.
+            fixedSample=(
+                '#include "pch.h"\n\nvoid probe( int32 count )\n{\n'
+                "    for ( int32 index = 0; index < count; ++index )\n    {\n        doThing( index );\n    }\n"
+                "    for ( int32 value : listValue ) \n    {\n        doThing( value );\n    }\n"
+                "    while ( poll() ){}\n}\n"
             ),
             # 중괄호가 있는 반복문 · do-while 꼬리 · 머리와 본문 사이에 주석이 낀 반복문(손으로 고친다)은 그대로 둔다.
             goodSample=(

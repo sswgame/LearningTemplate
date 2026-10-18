@@ -10,10 +10,12 @@
 - 픽서가 죽으면 마찬가지로 조용하다. 그런데 픽서가 **너무 많이 잡으면** 빨간 줄이 뜨는 게 아니라
   **소스가 바뀐다.** `py -3 -m Scripts format` 은 969개 파일을 한 번에 고쳐 쓴다.
 
-그래서 변환마다 조각을 **둘** 요구한다:
+그래서 변환마다 조각을 **셋** 요구한다:
 
-- `badSample`  — 이 변환이 반드시 고쳐야 하는 것. 안 고치면 그 변환은 죽었다.
-- `goodSample` — 이 변환이 건드리면 안 되는 것. 고치면 규칙이 너무 넓어진 것이다.
+- `badSample`   — 이 변환이 반드시 고쳐야 하는 것. 안 고치면 그 변환은 죽었다.
+- `fixedSample` — `badSample` 을 고친 글자 그대로의 결과. 게이트의 `expectedViolation` 과 같은 축이다 —
+  "바뀌었는가" 만 보면 엉뚱한 자리를 고치거나 글을 지워도 살아 있는 것으로 보인다.
+- `goodSample`  — 이 변환이 건드리면 안 되는 것. 고치면 규칙이 너무 넓어진 것이다.
 
 조각은 `FixPass` 안, 변환 바로 옆에 있다 — 게이트가 `selfTestCases` 를 드는 것과 같은 이유다.
 
@@ -76,24 +78,22 @@ class CheckFixersAreAliveGate(LintGate):
                 checkedPasses += 1
                 label = f"{script.name}/{fixPass.done}"
 
-                if not fixPass.badSample:
-                    errors.append(f"{label}: `badSample` 이 없습니다 — 이 변환이 죽어도 아무도 모릅니다")
-                else:
-                    _, bChanged = fixPass.apply(fixPass.badSample, fixPass.samplePath)
-                    if args.verbose:
-                        print(f"  [{label}] badSample changed={bChanged}")
-                    if not bChanged:
-                        errors.append(f"{label}: 고쳐야 할 조각을 그냥 뒀습니다 — 이 변환은 죽었습니다")
+                # 조각 셋이 비지 않았다는 것은 `FixPass.__post_init__` 가 이미 지켰다 — 여기서는 돌려서 글자로 맞춰 본다.
+                fixed, bChanged = fixPass.apply(fixPass.badSample, fixPass.samplePath)
+                if args.verbose:
+                    print(f"  [{label}] badSample changed={bChanged} matches={fixed == fixPass.fixedSample}")
+                if not bChanged and fixed == fixPass.badSample:
+                    errors.append(f"{label}: 고쳐야 할 조각을 그냥 뒀습니다 — 이 변환은 죽었습니다")
+                elif fixed != fixPass.fixedSample:
+                    errors.append(f"{label}: 고친 결과가 `fixedSample` 과 다릅니다 — 받은 결과 {fixed!r}")
+                elif not bChanged:
+                    errors.append(f"{label}: 글을 고쳤는데 '바뀌었다' 를 돌려주지 않습니다 — --check 가 이 위반을 놓칩니다")
 
-                if not fixPass.goodSample:
-                    errors.append(f"{label}: `goodSample` 이 없습니다 — 오탐이 나도 아무도 모릅니다 "
-                                  f"(픽서의 오탐은 빨간 줄이 아니라 소스 변경입니다)")
-                else:
-                    _, bChanged = fixPass.apply(fixPass.goodSample, fixPass.samplePath)
-                    if args.verbose:
-                        print(f"  [{label}] goodSample changed={bChanged}")
-                    if bChanged:
-                        errors.append(f"{label}: 건드리면 안 되는 조각을 고쳤습니다 — 규칙이 너무 넓습니다")
+                kept, bChanged = fixPass.apply(fixPass.goodSample, fixPass.samplePath)
+                if args.verbose:
+                    print(f"  [{label}] goodSample changed={bChanged}")
+                if bChanged or kept != fixPass.goodSample:
+                    errors.append(f"{label}: 건드리면 안 되는 조각을 고쳤습니다 — 규칙이 너무 넓습니다")
 
         return GateResult(listViolation=errors, summary=f"{checkedPasses} passes across {len(listScript)} files")
 

@@ -27,7 +27,7 @@ class FormatIncludeOrderFixer(LintFixer):
     listPass = (
         FixPass(transform=CheckIncludeOrder.fixText, bNeedsPath=True, samplePath="Source/Engine/Probe/Probe.cpp",
                 problem="include 순서 · 중복이 규칙과 다르다", done="include 순서를 고쳤다",
-                badSample=CheckIncludeOrder.kFixBadSample, goodSample=CheckIncludeOrder.kFixGoodSample),
+                badSample=CheckIncludeOrder.kFixBadSample, fixedSample=CheckIncludeOrder.kFixGoodSample, goodSample=CheckIncludeOrder.kFixGoodSample),
     )
 
 

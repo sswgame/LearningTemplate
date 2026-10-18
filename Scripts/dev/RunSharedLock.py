@@ -17,8 +17,12 @@
 기능 확인용 시나리오 · hostgpu 실행은 공유로, Release 측정 · 부하 기준선 · 실제 장치 제거 실험은 독점으로 잡습니다(작업 방식 2 절).
 
 잠금은 main 체크아웃의 `build/.shared-locks/<자원>/` 디렉터리입니다(mkdir 이 원자적이라 먼저 만든 쪽이 잡는다). 안의 `owner.json` 에
-소유자 · 프로세스 번호 · 시각 · 하려는 일을 적어 두므로 `status` 로 누가 왜 잡았는지 볼 수 있습니다. 소유자 프로세스가 죽었고 마지막 기록이
-`kStaleSeconds` 보다 오래되면 버려진 잠금으로 보고 가져옵니다.
+소유자 · 프로세스 번호 · 시각 · 하려는 일을 적어 두므로 `status` 로 누가 왜 잡았는지 볼 수 있습니다. 소유자 프로세스가 죽었으면 버려진 잠금으로
+보고 가져옵니다(기록이 없으면 `kStaleSeconds` 가 지난 뒤).
+
+`acquire` 의 소유 프로세스는 `--pid`, 없으면 세션 프로세스(`CLAUDE_PID` — `worktree-make` 의 주인과 같은 값)다. 둘 다 없으면 오류로 멈춘다.
+부른 셸이나 py 런처(`os.getppid()`)는 명령이 끝나면 바로 죽어 쓸 수 없다 — 그것을 기본값으로 두었을 때는 잡자마자 주인이 죽은 잠금이 되어,
+죽은 주인을 버려진 잠금으로 볼 수 없어 시간(6 시간)으로만 풀렸다. 사람 셸은 `--pid $PID` 를 준다.
 
 의존성 정의가 다른 워크트리가 같은 `build/vcpkg_installed` 에 설치하면 main 의 라이브러리가 지워지고 다시 깔립니다. vcpkg 를 부르는
 작업(`cmake --preset`, `--clean-first` 빌드, 설치)은 먼저 `vcpkg` 를 잡습니다.
@@ -41,11 +45,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common import getProjectRoot, isProcessAlive, runProcess  # noqa: E402
-from MakeWorktree import findMainRoot  # noqa: E402
+from MakeWorktree import findMainRoot, kOwnerPidEnvironment, resolveOwnerProcessId  # noqa: E402
 
 #: main 체크아웃 기준 잠금 폴더.
 kLockRoot = "build/.shared-locks"
-#: 소유자 프로세스가 없고 이만큼 지나면 버려진 잠금이다(초).
+#: 소유자 기록이 없는(쓰다 만) 잠금이 이만큼 지나면 버려진 잠금이다(초).
 kStaleSeconds = 6 * 3600
 #: 기다리는 최대 시간 기본값(초)과 폴링 간격(초).
 kDefaultWaitSeconds = 1800
@@ -71,13 +75,14 @@ def readOwner(lockDirectory: Path) -> dict | None:
 
 
 def isStale(lockDirectory: Path, now: float) -> bool:
-    """버려진 잠금인지 — 기록이 없고 오래됐거나, 소유자 프로세스가 없고 오래됐다."""
+    """
+    버려진 잠금인지 — 기록이 없고 오래됐거나, 소유자 프로세스가 죽었다. 소유자는 오래 사는 프로세스(`run` 자신 · 세션)라 죽었으면 끝난 것이다.
+    프로세스 번호가 재사용되면 살아 있다고 보아 안전한 쪽(놓지 않음)으로만 틀린다.
+    """
     owner = readOwner(lockDirectory)
     if owner is None:
         return now - lockDirectory.stat().st_mtime > kStaleSeconds
-    if isProcessAlive(int(owner.get("pid", 0))):
-        return False
-    return now - float(owner.get("time", 0)) > kStaleSeconds
+    return not isProcessAlive(int(owner.get("pid", 0)))
 
 
 def release(lockDirectory: Path, owner: str | None) -> bool:
@@ -281,7 +286,8 @@ def main(argv: list[str] | None = None) -> int:
     for subParser in (acquireParser, runParser):
         subParser.add_argument("--purpose", default="", help="하려는 일(다른 쪽이 status 로 본다)")
         subParser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"기다릴 최대 초(기본 {kDefaultWaitSeconds}). 넘으면 실패(종료 코드 3)")
-    acquireParser.add_argument("--pid", type=int, default=os.getppid(), help="소유 프로세스 번호(기본: 부모). 죽으면 버려진 잠금이 된다")
+    acquireParser.add_argument("--pid", type=int, default=None,
+                               help=f"소유 프로세스 번호 — 세션처럼 오래 사는 프로세스(기본: 환경 변수 {kOwnerPidEnvironment}). 죽으면 버려진 잠금이 된다. 사람 셸이면 PowerShell 의 $PID")
     runParser.add_argument("--below-normal", dest="belowNormal", action="store_true", help="명령을 낮은 우선순위로 띄운다(도우미 빌드 — 작업 방식 2 절)")
     # `run` 의 명령은 `--` 뒤 전부다 — argparse 의 REMAINDER 는 자원 이름 뒤의 옵션(--owner …)까지 삼키므로 먼저 가른다.
     listArgument = list(sys.argv[1:] if argv is None else argv)
@@ -299,6 +305,10 @@ def main(argv: list[str] | None = None) -> int:
             return releaseHeld(mainRoot, args)
         if args.command == "run":
             return runHolding(mainRoot, args, listRunCommand)
+        args.pid = resolveOwnerProcessId(args.pid)
+        if args.pid is None:
+            raise ValueError(f"소유 프로세스를 정할 수 없습니다 — --pid 를 줍니다(환경 변수 {kOwnerPidEnvironment} 가 없다). "
+                             "부른 셸 · py 런처는 바로 끝나 잠금이 곧바로 버려지므로 기본값으로 쓰지 않는다")
         return acquire(mainRoot, args)
     except (RuntimeError, ValueError) as error:
         print(f"[SharedLock] {error}", file=sys.stderr)

@@ -93,7 +93,7 @@ py -3 -m Scripts backlog --id C-28           # 그 항목의 본문만
 - **1-6** 게임프레임워크 · 킷 · 게임: [engine.md](engine.md) `C-4` `C-5` `D1-4`, [editor.md](editor.md) `D3-7`, [gameplay.md](gameplay.md) `D4-2` `D4-3` `D4-4` `D4-5` `D4-6` `D4-7` `D4-8` `D4-9` `D4-10` `D4-11` `D4-12` `D4-13`, [audio-ai-localization.md](audio-ai-localization.md) `D5-1` `D5-2` `D5-3`, [ui.md](ui.md) `D6-1` `D6-2` `D6-4` `D6-5` `D6-6`, [network.md](network.md) `G-2`, [project.md](project.md) `H-1`
 - **1-7** Core · 태스크 · 네트워크: [network.md](network.md) `B-9` `B-10` `D7-1` `D7-2` `D7-3` `D7-5` `D7-6`
 - **1-8** 성능: [engine.md](engine.md) `C-7`, [ui.md](ui.md) `C-8` `C-9`
-- **1-9** 빌드 · 린트 · CI · 테스트: [quality.md](quality.md) `B-5` `C-14` `C-15` `E-2`, [project.md](project.md) `C-11` `C-12` `C-16` `C-17`, [engine.md](engine.md) `C-13`
+- **1-9** 빌드 · 린트 · CI · 테스트: [quality.md](quality.md) `B-5` `C-15` `E-2`, [project.md](project.md) `C-11` `C-12` `C-16` `C-17`, [engine.md](engine.md) `C-13`
 - **1-10** 관찰 중: [quality.md](quality.md) `B-6` `B-7` `E-1` `E-4` `E-5` `E-6` `E-7` `E-8`, [graphics.md](graphics.md) `E-3`
 - **1-11** 결정이 필요한 것: [engine.md](engine.md) `H-2`
 - **1-12** 낮은 우선순위: [ui.md](ui.md) `B-8` `G-3` `G-9` `G-10`, [project.md](project.md) `C-18` `G-11`, [gameplay.md](gameplay.md) `G-4` `G-6` `G-7`, [engine.md](engine.md) `G-5`, [network.md](network.md) `G-8`, [graphics.md](graphics.md) `G-12`
