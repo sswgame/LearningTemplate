@@ -785,6 +785,39 @@ SW_TEST_CASE( ReflectionParserTest, RenameRedirectMistakesStopTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] 매크로가 이름을 바꾼 PROPERTY 칸은 생성이 멈춥니다
+ * @details Windows CRT 의 `#define _stat _stat64i32` 처럼 칸 이름이 매크로면 리플렉션 이름이 소스와 달라져 데이터 속성 이름이 조용히 어긋난다.
+ */
+SW_TEST_CASE( ReflectionParserTest, PropertyRenamedByAMacroStopsTheBuild )
+{
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "MacroRenamedSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "#define _renamed _renamedByMacro\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct MacroRenamed\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tint32 _renamed{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "'_renamedByMacro' in 'sw::MacroRenamed' is renamed by a macro" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp.empty() || run._listGeneratedCpp[0].empty(), "an errored header must not emit code" );
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] `RuntimeState` 를 `Transient` 나 `Required` 와 함께 붙이면 생성이 멈추고, 혼자 붙이면 메타데이터 비트로 나갑니다
  * @details `RuntimeState` 는 저작 저장만 빼는 필드다. 어디에도 쓰지 않는 `Transient`, 데이터 파일이 반드시 적는 `Required` 와는 뜻이 모순이다.
  */
