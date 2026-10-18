@@ -24,14 +24,104 @@
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| L2 | 목록을 뽑아 영역별 수와 상위 함수를 이 문서 3절에 적고, 함수마다 1절의 기준 번호를 붙입니다 | `docs/plans/LongFunctions.md` | L1 | 없음 | 없음 |
-| L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | L2, 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
+| L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
 
-L2 의 영역 분류는 판단이 조금 필요해 `worker` 에 맡기고, L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다.
+L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
 
 ## 3. 목록
 
-L2 에서 채웁니다.
+`py -3 Scripts/lint/report/RunFunctionSize.py --group-depth 3 --top 3` 로 뽑았습니다(2026-10-18, `Source`, 본문 100 줄 초과 234개).
+기준 번호는 줄 수 · 중첩 · `return` · 람다 줄만 보고 붙인 예비 판정입니다. L3 에서 그 영역을 맡은 작업자가 본문을 읽고 확정하며, 기준 1(중복)은 어느 함수든 먼저 봅니다.
+
+| 영역 | 수 | 함수(본문 줄 · 중첩 · return · 람다 줄) | 기준 |
+|---|---|---|---|
+| `Source/GameFramework/Kits` | 35 | `RTSWorld::readState` (`Genre/Strategy/RealTimeStrategy/RTSWorldState.cpp:110`) 216 · 3 · 17 · 0 | 2 · 3 |
+|  |  | `WesternCatalog::loadRoot` (`Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.cpp:122`) 205 · 3 · 1 · 0 | 2 · 3 |
+|  |  | `FightingMatch::updateFighter` (`Genre/Action/Fighting/FightingMatch.cpp:218`) 172 · 4 · 2 · 0 | 3 |
+| `Source/Engine/Graphics` | 34 | `ShaderReflectionUtil::reflectSpirv` (`Shader/Reflection/ShaderReflectionSpirv.cpp:124`) 416 · 6 · 3 · 46 | 4 |
+|  |  | `ShaderCompiler::compileHlsl` (`Shader/Compile/ShaderCompiler.cpp:272`) 405 · 5 · 9 · 27 | 4 |
+|  |  | `OpenGLRHIDevice::initializeInternal` (`RHI/GL/OpenGLRHIDeviceInit.cpp:48`) 229 · 3 · 7 · 0 | 유지(순서가 곧 의미) |
+| `Source/Editor/Panels` | 27 | `drawGameObjectNode` (`Scene/HierarchyPanel.cpp:516`) 210 · 4 · 3 · 0 | 3 |
+|  |  | `UIPreviewPanel::drawSlotSection` (`UIPreview/UIPreviewPanel.cpp:1385`) 181 · 4 · 3 · 84 | 3 |
+|  |  | `CatalogXMLText::parseInternal` (`Catalog/CatalogXMLText.cpp:109`) 174 · 3 · 18 · 0 | 2 · 3 |
+| `Source/Engine/Renderer` | 22 | `FrameRenderer::executePass` (`Frame/FrameRendererPassExecute.cpp:237`) 460 · 6 · 1 · 20 | 4 |
+|  |  | `GPUSceneBuilder::populateFromScene` (`Scene/GPUSceneBuilder.cpp:382`) 385 · 8 · 5 · 0 | 4 |
+|  |  | `RenderPipelineAsset::validate` (`Pipeline/RenderPipelineAsset.cpp:35`) 319 · 4 · 1 · 30 | 4 |
+| `Source/GameFramework/Base` | 14 | `CameraModeInternal::evaluateView` (`Actor/Camera/CameraMode.cpp:171`) 213 · 4 · 4 · 0 | 3 |
+|  |  | `AppearanceResolver::resolve` (`Gameplay/Appearance/AppearanceResolver.cpp:565`) 204 · 4 · 0 · 3 | 2 · 3 |
+|  |  | `GimmickCircuit::populate` (`Gameplay/Gimmick/GimmickCircuit.cpp:93`) 189 · 4 · 3 · 0 | 2 · 3 |
+| `Source/Engine/Input` | 13 | `InputMap::loadFromResource` (`Map/InputMapSerialization.cpp:436`) 340 · 5 · 5 · 252 | 3(람다를 단계 함수로) |
+|  |  | `InputKeyTable::mapWin32VirtualKey` (`Windows/InputKeyTableWin32.cpp:188`) 302 · 2 · 75 · 0 | 유지(switch 디스패처) |
+|  |  | `InputKeyTable::mapX11KeySym` (`Linux/InputKeyTableX11.cpp:13`) 252 · 1 · 105 · 0 | 유지(switch 디스패처) |
+| `Source/Editor/Common` | 12 | `VrmMaterialImporter::readVrm0Material` (`Asset/VrmMaterialImporter.cpp:290`) 220 · 3 · 16 · 7 | 2 · 3 |
+|  |  | `ImGuiVulkanRendererBackend::initialize` (`Backend/Render/ImGuiVulkanRendererBackend.cpp:83`) 123 · 3 · 7 · 38 | 3 |
+|  |  | `LocalizationTools::gatherProject` (`Localization/LocalizationTools.cpp:411`) 116 · 3 · 3 · 0 | 3 |
+| `Source/Engine/Destruction` | 9 | `simplifyCaps` (`MeshFracture.cpp:606`) 272 · 5 · 3 · 2 | 4 |
+|  |  | `MeshFractureUtil::fracture` (`MeshFracture.cpp:1223`) 233 · 5 · 5 · 17 | 4 |
+|  |  | `PolygonFractureUtil::fracture` (`PolygonFracture.cpp:180`) 199 · 3 · 4 · 0 | 3 |
+| `Source/Engine/Object` | 5 | `SceneAudio::update` (`Component/Audio/SceneAudio.cpp:131`) 136 · 3 · 1 · 0 | 3 |
+|  |  | `DirectionalLightComponent::computeShadowProjectionForView` (`Component/3D/DirectionalLightComponent.cpp:285`) 127 · 2 · 3 · 0 | 3 |
+|  |  | `TickRegistry::applyStageDelta` (`GameObject/Tick/TickRegistry.cpp:609`) 119 · 5 · 3 · 4 | 4 |
+| `Source/Core/Network` | 4 | `NetHost::handlePacket` (`Connection/NetHost.cpp:691`) 213 · 4 · 32 · 0 | 3 |
+|  |  | `NetRequestServer::handleFrame` (`Message/NetRequest.cpp:353`) 133 · 4 · 5 · 0 | 3 |
+|  |  | `NetConnection::writePacket` (`Connection/NetConnection.cpp:262`) 117 · 2 · 0 · 48 | 3 |
+| `Source/Editor/Viewport` | 4 | `ViewportInputOverlay::draw` (`ViewportInputOverlay.cpp:61`) 140 · 3 · 1 · 0 | 3 |
+|  |  | `EditorViewportGizmo::draw` (`EditorViewportGizmo.cpp:40`) 118 · 3 · 5 · 0 | 3 |
+|  |  | `EditorViewportCanvasOverlay::drawAdaptiveGrid` (`EditorViewportCanvasOverlay.cpp:149`) 108 · 4 · 1 · 66 | 3(람다를 단계 함수로) |
+| `Source/Engine/Character` | 4 | `FitSolver::solve` (`Fit/FitSolver.cpp:254`) 148 · 4 · 3 · 0 | 3 |
+|  |  | `PairedAnimationSession::start` (`PairedAnimation/PairedAnimationSession.cpp:160`) 122 · 3 · 13 · 0 | 3 |
+|  |  | `PairedAnimationSession::update` (`PairedAnimation/PairedAnimationSession.cpp:428`) 103 · 3 · 7 · 0 | 3 |
+| `Source/Engine` | 3 | `Engine::initialize` (`Engine.cpp:183`) 250 · 3 · 8 · 0 | 유지(순서가 곧 의미) |
+|  |  | `Engine::update` (`Engine.cpp:606`) 160 · 3 · 2 · 0 | 유지(순서가 곧 의미) |
+|  |  | `HeadlessSubsystem::initializeSubsystem` (`HeadlessSubsystem.cpp:42`) 155 · 3 · 8 · 0 | 유지(순서가 곧 의미) |
+| `Source/Engine/Audio` | 3 | `AudioEngine::applyCommand` (`AudioEngine.cpp:624`) 212 · 4 · 0 · 0 | 3 |
+|  |  | `AudioEngine::applyPostEvent` (`AudioEngineEvents.cpp:153`) 170 · 4 · 4 · 0 | 3 |
+|  |  | `AudioMixerDesc::validate` (`AudioMixerDesc.cpp:36`) 123 · 4 · 1 · 0 | 4 |
+| `Source/Engine/Localization` | 3 | `applyFields` (`CultureInfo.cpp:239`) 121 · 2 · 12 · 0 | 3 |
+|  |  | `PortableObjectFile::parse` (`PortableObjectFile.cpp:133`) 119 · 3 · 2 · 0 | 2 · 3 |
+|  |  | `CultureInfo::formatDateTime` (`CultureInfo.cpp:599`) 101 · 3 · 1 · 0 | 3 |
+| `Source/Engine/Physics` | 3 | `JoltPhysicsScene::createJoint` (`Jolt/JoltPhysicsSceneQuery.cpp:136`) 120 · 3 · 3 · 0 | 3 |
+|  |  | `Box2DPhysicsScene::attachShape` (`Box2D/Box2DPhysicsScene.cpp:210`) 109 · 4 · 5 · 0 | 3 |
+|  |  | `Box2DPhysicsScene::createJoint` (`Box2D/Box2DPhysicsSceneQuery.cpp:199`) 102 · 3 · 5 · 0 | 3 |
+| `Source/Games/Empty` | 3 | `BenchScene::spawn` (`BenchScene.cpp:388`) 181 · 3 · 5 · 0 | 3 |
+|  |  | `BenchScene::spawnRigCharacters` (`BenchSceneRig.cpp:120`) 135 · 3 · 1 · 0 | 3 |
+|  |  | `BenchScene::update` (`BenchScene.cpp:1167`) 105 · 3 · 4 · 0 | 3 |
+| `Source/Core/File` | 2 | `WindowsFileWatcher::workerThreadMain` (`Windows/WindowsFileWatcher.cpp:113`) 120 · 5 · 2 · 0 | 4 |
+|  |  | `LinuxFileWatcher::workerThreadMain` (`Linux/LinuxFileWatcher.cpp:151`) 116 · 5 · 3 · 0 | 4 |
+| `Source/Core/Process` | 2 | `Process::launch` (`Posix/PosixProcess.cpp:91`) 120 · 2 · 5 · 0 | 3 |
+|  |  | `Process::launch` (`Windows/WindowsProcess.cpp:59`) 118 · 2 · 5 · 0 | 3 |
+| `Source/Core/Spatial` | 2 | `BVHTree3D::balance` (`BVHTree3D.cpp:320`) 114 · 2 · 4 · 0 | 3 |
+|  |  | `BVHTree3D::insertLeaf` (`BVHTree3D.cpp:162`) 105 · 2 · 1 · 0 | 3 |
+| `Source/Engine/Animation` | 2 | `PoseRetargeter::initialize` (`Retarget/PoseRetargeter.cpp:64`) 124 · 3 · 4 · 0 | 3 |
+|  |  | `AnimationGraphAsset::parseLayers` (`Graph/AnimationGraphAsset.cpp:243`) 112 · 3 · 1 · 0 | 2 · 3 |
+| `Source/Engine/Automation` | 2 | `appendFrameSteps` (`ScenarioRecorder.cpp:140`) 186 · 4 · 0 · 25 | 3 |
+|  |  | `AutomationScenario::parse` (`AutomationScenario.cpp:145`) 178 · 4 · 11 · 2 | 2 · 3 |
+| `Source/Engine/Module` | 2 | `ModuleCatalog::resolve` (`ModuleCatalog.cpp:317`) 141 · 3 · 6 · 0 | 2 · 3 |
+|  |  | `ModuleCatalog::parseManifest` (`ModuleCatalog.cpp:105`) 136 · 2 · 16 · 0 | 2 · 3 |
+| `Source/Engine/Profiling` | 2 | `ProfilerTraceExport::mergeTraceJSON` (`ProfilerTraceExport.cpp:597`) 159 · 3 · 5 · 0 | 3 |
+|  |  | `ProfilerTraceExport::parseTraceJSON` (`ProfilerTraceExport.cpp:171`) 141 · 3 · 4 · 19 | 2 · 3 |
+| `Source/Engine/Scene` | 2 | `Scene::instantiate` (`Scene.cpp:249`) 123 · 3 · 3 · 0 | 3 |
+|  |  | `SceneCooker::cookAllScenes` (`SceneCooker.cpp:222`) 111 · 3 · 4 · 0 | 2 · 3 |
+| `Source/Engine/Serialization` | 2 | `SerializeContext::getDefault` (`Base/SerializeContext.cpp:264`) 245 · 4 · 1 · 240 | 3(람다를 단계 함수로) |
+|  |  | `deserializeTagged` (`Format/BinarySerializer.cpp:139`) 120 · 3 · 7 · 0 | 3 |
+| `Source/Engine/UserSettings` | 2 | `UserSettingsSchema::loadRoot` (`UserSettingsSchema.cpp:312`) 221 · 6 · 3 · 0 | 4 |
+|  |  | `UserSettingsSchema::validate` (`UserSettingsSchema.cpp:665`) 202 · 5 · 1 · 0 | 4 |
+| `Source/GameFramework/PlugIn` | 2 | `MeshModifiersPanel::drawNumberListParam` (`Editor/MeshModifiers/MeshModifiersPanel.cpp:796`) 145 · 6 · 0 · 0 | 4 |
+|  |  | `MeshModifiersPanel::drawParam` (`Editor/MeshModifiers/MeshModifiersPanel.cpp:565`) 116 · 3 · 0 · 0 | 3 |
+| `Source/ModuleHost` | 2 | `ModuleCompiler::runBuildThread` (`ModuleCompiler.cpp:122`) 106 · 2 · 2 · 0 | 2 · 3 |
+|  |  | `LiveReloadManager::reloadCascade` (`LiveReloadManager.cpp:846`) 105 · 3 · 7 · 0 | 2 · 3 |
+| `Source/Core/Container` | 1 | `parseFormatSpec` (`formatString.h:395`) 129 · 3 · 3 · 0 | 2 · 3 |
+| `Source/Core/LogSink` | 1 | `AsyncLogSink::writeLogInternal` (`AsyncLogSink.cpp:349`) 158 · 3 · 2 · 0 | 3 |
+| `Source/Editor` | 1 | `ImGuiEditor::updateUI` (`ImGuiEditor.cpp:764`) 101 · 3 · 1 · 0 | 3 |
+| `Source/Editor/Popups` | 1 | `QuickLauncherPopup::drawContent` (`QuickLauncherPopup.cpp:169`) 146 · 3 · 1 · 0 | 3 |
+| `Source/Editor/SelfTest` | 1 | `TestRunnerPanel::drawUnitTestTab` (`TestRunnerPanel.cpp:284`) 112 · 4 · 0 · 0 | 3 |
+| `Source/Engine/Navigation` | 1 | `RecastNavMesh::bakeTile` (`Recast/RecastNavMesh.cpp:237`) 231 · 3 · 15 · 0 | 2 · 3 |
+| `Source/Engine/Resource` | 1 | `DDSLoader::loadFromMemory` (`Image/DDSLoader.cpp:134`) 174 · 3 · 7 · 0 | 2 · 3 |
+| `Source/Engine/Text` | 1 | `TextLayoutEngine::layout` (`TextLayout.cpp:326`) 286 · 4 · 3 · 0 | 3 |
+| `Source/Engine/TileMap` | 1 | `TileMapXMLData::loadFromXML` (`TileMapXML.cpp:89`) 177 · 5 · 7 · 0 | 4 |
+| `Source/Engine/UI` | 1 | `UIStyleTransition::onStyleChanged` (`Animation/UIStyleTransition.cpp:428`) 104 · 3 · 3 · 0 | 3 |
+| `Source/Engine/Window` | 1 | `Win32Window::wndProc` (`Windows/Win32Window.cpp:201`) 121 · 5 · 8 · 0 | 4 |
+| `Source/Games/HarvestValley` | 1 | `FarmAutoFarmerAIComponent::think` (`FarmAutoFarmerAIComponent.cpp:135`) 177 · 5 · 4 · 0 | 4 |
 
 ## 4. 사용자 결정
 
