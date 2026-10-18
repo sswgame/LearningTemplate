@@ -486,22 +486,9 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 
 ## 8. 7-c 와 7-d 뒤의 남은 정리 (2026-10-18 설계, 백로그 C-52)
 
-### 8.1 핸들 옮기기를 값 방문으로 (①)
+### 8.1 핸들 옮기기를 값 방문으로 (①, 끝)
 
-**지금 구조와 뿌리.** 쓰기와 읽기가 대칭이 아닙니다. 쓰기는 `GameObjectHandle` 타입 처리기(`ReferenceWriter`, `ObjectStateSerializer.cpp:215-249`)라서 구조체 필드 안이든 컨테이너 안이든 어느 깊이에서나 저장 id 로 바뀝니다.
-읽은 뒤 옮기기(`ObjectStateBatch::resolveObjectReferences`, 같은 파일 598-640)는 컴포넌트 타입의 최상위 `PROPERTY` 와 그 컨테이너만 봅니다. 그래서 리플렉션 구조체 필드 안의 핸들은 파일 id 를 그대로 가진 채 남습니다.
-같은 실행의 상태(`ObjectIDSpace::Live`)에서는 우연히 맞고, 다른 실행의 세이브와 씬 파일에서만 틀립니다. 그래서 테스트에 잘 드러나지 않습니다.
-
-**해법.** 리플렉션 층에 값 방문 하나(`Engine/Reflection/ReflectedValueWalk.h`, 가칭)를 둡니다. 시작 주소와 타입을 받아 구조체 필드와 컨테이너 단계를 재귀로 내려가고, 지정한 타입 이름의 잎마다 콜백을 부릅니다.
-- 각 깊이에서 `Transient` 필드를 건너뜁니다. 지금 최상위에서만 하는 규칙을 방문이 한 곳에서 지킵니다.
-- 순서 컨테이너는 제자리에서 고치고, set 의 원소와 map 의 키는 빼고 다시 넣습니다. 지금 `remapContainerHandles` 가 하는 일을 방문 안으로 옮깁니다.
-- 제자리에서 고칠 수 없는 잎(컨테이너를 원소로 가진 set 안의 핸들 등)이면 `[[nodiscard]] bool` 이 false 이고, 부르는 쪽(`resolveObjectReferences`)이 지금처럼 로드 오류로 처리합니다.
-`resolveObjectReferences` 는 "컴포넌트마다 방문을 부르고 잎을 `resolveObjectReference` 로 바꾼다" 는 몇 줄이 됩니다. 쓰기와 읽기가 같은 깊이를 보게 되므로 비대칭이 형식으로 사라집니다.
-같은 방문은 쿠킹 의존성 수집(C-42, 에셋 경로 잎)과 저작 저장 테스트(C-53)에도 씁니다.
-
-**대안과 기각 이유.**
-- **읽을 때 핸들 주소를 기록해 두었다가 배치 끝에 고치는 방법.** 언리얼 링커가 임포트를 로드 뒤에 고치는 방식과 비슷합니다 [기억]. 기각합니다. 같은 컨테이너를 읽는 도중 재할당이 일어나면 앞서 기록한 원소 주소가 무효가 되고, set 과 map 키는 제자리에서 고칠 수 없습니다.
-- **구조체 안의 `GameObjectHandle` 을 파서가 막는 방법.** 기각합니다. 구조체로 묶인 대상 목록(예: 웨이포인트와 대상)은 정상적인 데이터 모델입니다. 막으면 컴포넌트에 평평한 필드가 늘어납니다.
+`ObjectStateBatch::resolveObjectReferences` 가 리플렉션 값 방문(`Engine/Reflection/ReflectedValueWalk.h`)으로 구조체 필드 · 컨테이너의 모든 깊이를 옮깁니다. 같은 방문은 쿠킹 의존성 수집(C-42)에도 씁니다.
 
 ### 8.2 컴포넌트 상태 저장소 짝짓기 (②)
 
@@ -528,12 +515,11 @@ Release, VSync 끔, 3 ~ 5 판 번갈아 실행, p50 과 p99 로 적습니다. �
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| T1 | 구조체 필드 안 `GameObjectHandle` 이 실제로 있는지 세고, 값 방문을 만들어 `resolveObjectReferences` 를 바꿉니다 | `Engine/Reflection/`, `Engine/Object/GameObject/Serialization/`, 새 테스트 | 없음 | 구조체 안 핸들, 구조체 벡터 안 핸들, 핸들 키 map 의 구조체 값 안 핸들의 씬 왕복과 다른 실행 세이브 왕복 테스트, `-L nogpu` | 없음 |
-| T2 | 상태 저장소 짝짓기를 안정 키로 바꿉니다 | `GameFramework/Base/Foundation/Framework/Save/`, `GameInstanceBase.cpp` | 없음(T1 과 병렬 가능) | 한 오브젝트에 같은 타입 디렉터 둘을 두고 순서를 바꾼 세이브 테스트 | 없음 |
+| T2 | 상태 저장소 짝짓기를 안정 키로 바꿉니다 | `GameFramework/Base/Foundation/Framework/Save/`, `GameInstanceBase.cpp` | 없음 | 한 오브젝트에 같은 타입 디렉터 둘을 두고 순서를 바꾼 세이브 테스트 | 없음 |
 | T3 | 합성 장면 벤치를 만들고 ④ 를 측정합니다 | `Test/Benchmark/`(또는 기존 벤치 실행 파일), `docs/08_Verification.md` | 없음 | 벤치가 Release 에서 돕니다 | 필요합니다(위 8.4) |
 | T4 | ③ 의 표를 만들고, 기준을 통과한 목록을 버킷 순회로 옮깁니다 | `Engine/Object/GameObject/Registry/`, 옮길 목록의 호출부 | T3 | 기존 레지스트리 테스트, 전후 결과 집합 비교 테스트 | T3 의 같은 벤치로 전후 비교 |
 
-T1 은 7-d-3(파일 상태의 타입 핸들) 결정과 관계없이 할 수 있습니다. 컴포넌트 핸들은 여전히 `PROPERTY` 에서 막혀 있습니다.
+컴포넌트 핸들은 여전히 `PROPERTY` 에서 막혀 있습니다(7-d-3 결정 대기).
 
 ### 8.6 사용자 결정
 

@@ -15,9 +15,10 @@
 
 #include "Engine/Serialization/Base/SerializePurpose.h"
 
+#include <optional>
+
 namespace sw
 {
-    struct NestedContainerInfo;
     struct ObjectIdentity;
 
     class GameObject;
@@ -173,7 +174,8 @@ namespace sw
      *            필드를 다시 만들면 연결이 지워지기 때문이다. 쿠커는 자식이 부모보다 앞에 있는 씬의 연결을 모두 잃는다.
      *          언리얼은 레벨 안 오브젝트를 경로로, 유니티는 파일 안 fileID 로 가리킨다. 이 배치의 저장된 id 가 그에 해당한다.
      *
-     *          컴포넌트의 `GameObjectHandle` PROPERTY(단일 값, 순서 컨테이너의 원소)도 같은 규칙으로 바꾼다(`resolveObjectReference`).
+     *          컴포넌트의 `GameObjectHandle` PROPERTY 도 같은 규칙으로 바꾼다(`resolveObjectReference`). 어느 깊이에 있든(구조체 필드, 컨테이너 원소 · 키 · 값, 중첩) 바꾼다 —
+     *          쓰기 처리기가 모든 깊이에서 저장 id 로 적으므로 읽기도 같은 깊이를 본다(`ReflectedValueWalk`). 상태를 읽은 항목만, 그 읽기의 목적이 다룬 필드만 바꾼다.
      *          배치의 저장된 id 면 그 오브젝트로, `Live` 면 런타임 id 를 그대로(핫 리로드와 되돌리기에서는 id 가 다시 쓰이지 않는다), `Saved` 인데 배치에 없으면 없음으로 처리한다.
      *          컨테이너(시퀀스, set, 맵의 키와 값, 중첩)의 핸들도 옮긴다. 옮기지 못하는 모양(원소가 컨테이너인 set)이나 옮기다 실패한 것은 `Saved` 면
      *          **로드 오류**다(`finish` 가 false). 파일 id 를 그대로 두면 이 실행에서 같은 값을 받은 다른 오브젝트를 가리키고, 비우면 값이 조용히 사라진다.
@@ -199,7 +201,7 @@ namespace sw
          * @brief 상태를 읽은 오브젝트 하나를 기록합니다. `add` 와 같지만 `finish` 가 이 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 로더가 부릅니다.
          * @details `onPostLoad` 는 부착과 핸들 PROPERTY 가 해석된 **뒤에** 온다. 읽는 시점에 부르면 다른 오브젝트를 가리키는 필드가 아직 저장된 id 다.
          */
-        void addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed = true );
+        void addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed = true );
 
         /**
          * @brief 기록한 오브젝트들의 부착과 핸들 PROPERTY 를 연결하고, 상태를 읽은 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 모두 읽은 뒤 한 번 부릅니다.
@@ -220,33 +222,28 @@ namespace sw
     private:
         struct Entry
         {
-            GameObject*   _pObject{ nullptr };
-            uint64        _savedID{ 0 };
-            hashed_string _savedName{};
-            bool          _bExternalParentAllowed{ true };
-            bool          _bLoadedState{ false }; ///< 상태를 읽었다는 표시다. `finish` 가 `onPostLoad` 를 부른다
+            GameObject*                     _pObject{ nullptr };
+            uint64                          _savedID{ 0 };
+            hashed_string                   _savedName{};
+            bool                            _bExternalParentAllowed{ true };
+            std::optional<SerializePurpose> _loadedPurpose{}; ///< 상태를 읽었으면 그 읽기의 목적이다. `finish` 가 `onPostLoad` 를 부르고 이 목적이 다룬 필드의 핸들을 옮긴다
         };
 
         /** @brief `add` 와 `addLoadedState` 의 본체입니다. */
-        void addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed, bool bLoadedState );
+        void addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed, std::optional<SerializePurpose> loadedPurpose );
 
         /** @brief 항목 하나의 씬 컴포넌트마다 부모를 찾아 붙이고, 못 찾으면 참조를 남깁니다. */
         void resolveEntry( const Entry& entry ) const;
         /** @brief 부착 참조의 소유자 필드가 가리키는 오브젝트를 반환합니다. 자기 자신이면 항목의 오브젝트이고, 못 찾으면 nullptr 입니다. */
         GameObject* findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerID ) const;
         /**
-         * @brief 항목 하나의 컴포넌트마다 `GameObjectHandle` PROPERTY 를 이 실행의 오브젝트로 바꿉니다. `Transient` 는 읽지 않았으므로 건드리지 않습니다.
-         * @return `Saved` 배치에서 옮기지 못한 컨테이너가 있으면 오류 로그와 함께 false 입니다.
+         * @brief 상태를 읽은 항목 하나의 컴포넌트마다 `GameObjectHandle` 을 모든 깊이에서 이 실행의 오브젝트로 바꿉니다. 그 읽기의 목적이 다루지 않은 필드(`Transient`,
+         *        저작 읽기의 `RuntimeState`)는 읽지 않았으므로 건드리지 않습니다. 상태 없이 기록한 항목(`add`)은 읽은 값이 없어 바꾸지 않습니다.
+         * @return `Saved` 배치에서 옮기지 못한 자리(구조체 · 컨테이너를 원소로 가진 set 안, 구조체 키 안)가 있으면 필드 이름과 함께 오류 로그를 남기고 false 입니다.
          */
         [[nodiscard]] bool resolveObjectReferences( const Entry& entry ) const;
         /** @brief 저장된 핸들 하나가 이 실행에서 가리키는 오브젝트를 반환합니다(클래스 설명의 규칙). */
         GameObjectHandle resolveObjectReference( GameObjectHandle savedHandle ) const;
-        /**
-         * @brief 컨테이너 안의 `GameObjectHandle` 을 모두 바꿉니다. 시퀀스 원소(제자리), set 원소(빼고 다시 넣기), 맵 값(제자리), 맵 키(빼고 다시 넣기),
-         *        중첩 컨테이너(재귀)를 처리합니다.
-         * @return 바꿀 수 없는 구조(값을 복사할 줄 모르는 맵 래퍼, 컨테이너를 원소로 가진 set)이면 false 입니다. 이때 부르는 쪽이 로드 오류로 알립니다.
-         */
-        [[nodiscard]] bool remapContainerHandles( void* pContainer, const NestedContainerInfo& shape ) const;
 
         vector<Entry>                        _listEntry;
         unordered_map<uint64, GameObject*>   _mapSavedIDToObject;
