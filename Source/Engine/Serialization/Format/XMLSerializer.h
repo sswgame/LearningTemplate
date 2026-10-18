@@ -228,10 +228,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 5) Soft 역직렬화와 버전: orphan 수집, 루트 _schemaVersion
         // ------------------------------------------------------------------------------
-        /** @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다. */
-        [[nodiscard]] static bool deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-                                                   vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
-                                                   const SerializeContext& context = SerializeContext::getDefault() );
+        /**
+         * @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다.
+         * @return 문서나 루트를 읽지 못하면 `NotParsed`, 읽지 못한 칸이나 범위 밖 값이 있으면 `Rejected`(루트의 orphan 과 범위는 끝까지 본다)입니다(`SoftReadResult`).
+         */
+        [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
+                                                             vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
+                                                             const SerializeContext& context = SerializeContext::getDefault() );
 
         /** @brief 루트 속성 `_schemaVersion` 을 붙여 XML 로 직렬화합니다. */
         static string serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,

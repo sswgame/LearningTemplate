@@ -219,6 +219,17 @@ SW_TEST_CASE( XMLReadUtilTest, RootStatusAndTrimmedName )
     SW_EXPECT_TRUE( sw::XMLReadUtil::readName( row, "blank" ).empty() );
     SW_EXPECT_TRUE( sw::XMLReadUtil::readName( row, "missing" ).empty() );
 
+    // 글 "none" 은 빈 이름과 같아 이름으로 담지 못한다 — 오류로 알리고, 글 그대로는 속성에 남아 있다(C-59).
+    sw::XMLDocument noneDoc;
+    sw::XMLNode     noneRoot;
+    SW_EXPECT_TRUE( sw::XMLReadUtil::parseRoot( noneDoc, R"(<Table><row align=" None "/></Table>)", "test", "Table", noneRoot ) == sw::XMLRootStatus::Found );
+    const sw::XMLNode noneRow = noneRoot.findChild( "row" );
+    {
+        test::ScopedDefensiveTestLog expected( "a name attribute spelled 'none' is a data error" );
+        SW_EXPECT_TRUE( sw::XMLReadUtil::readName( noneRow, "align" ).empty() );
+    }
+    SW_EXPECT_TRUE( sw::string_view( noneRow.getAttributeText( "align" ) ).find( "None" ) != sw::string_view::npos );
+
     SW_EXPECT_TRUE( sw::XMLReadUtil::parseRoot( doc, "<Other/>", "test", "Table", root ) == sw::XMLRootStatus::RootMissing );
     SW_EXPECT_FALSE( root.isValid() );
     {

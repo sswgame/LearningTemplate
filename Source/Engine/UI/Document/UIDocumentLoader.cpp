@@ -202,12 +202,8 @@ namespace sw
             [[nodiscard]] static bool parseScreenDesc( const ParseContext& context, const XMLNode& element )
             {
                 vector<SchemaOrphanValue> listOrphan;
-                const bool                bRead = XMLSerializer::deserializeSoft( &context._pAsset->_screenDesc, *UIScreenDesc::StaticType(), element.toString(), &listOrphan );
-                if ( bRead == false )
-                    return fail( context, element, "UIScreenDesc cannot be read" );
-                if ( listOrphan.empty() == false )
-                    return fail( context, element, "UIScreenDesc has unknown or unreadable '" + describeOrphan( listOrphan.front() ) + "'" );
-                return true;
+                const SoftReadResult      result = XMLSerializer::deserializeSoft( &context._pAsset->_screenDesc, *UIScreenDesc::StaticType(), element.toString(), &listOrphan );
+                return acceptSoftRead( context, element, "UIScreenDesc", result, listOrphan );
             }
 
             /** @brief 스타일 시트 목록(`<item>경로</item>`)을 읽습니다. */
@@ -230,12 +226,10 @@ namespace sw
             {
                 UIAnimationList           list{};
                 vector<SchemaOrphanValue> listOrphan;
-                const string              text  = string( "<UIAnimationList>" ) + element.toString() + "</UIAnimationList>";
-                const bool                bRead = XMLSerializer::deserializeSoft( &list, *UIAnimationList::StaticType(), text, &listOrphan );
-                if ( bRead == false )
-                    return fail( context, element, "_listAnimation cannot be read" );
-                if ( listOrphan.empty() == false )
-                    return fail( context, element, "_listAnimation has unknown or unreadable '" + describeOrphan( listOrphan.front() ) + "'" );
+                const string              text   = string( "<UIAnimationList>" ) + element.toString() + "</UIAnimationList>";
+                const SoftReadResult      result = XMLSerializer::deserializeSoft( &list, *UIAnimationList::StaticType(), text, &listOrphan );
+                if ( acceptSoftRead( context, element, "_listAnimation", result, listOrphan ) == false )
+                    return false;
                 vector<UIAnimation>& listAnimation = context._pAsset->_listAnimation;
                 for ( UIAnimation& animation : list._listAnimation )
                 {
@@ -258,6 +252,34 @@ namespace sw
                 if ( orphan._text.empty() == false )
                     description += "' = '" + orphan._text;
                 return description;
+            }
+
+            /**
+             * @brief 소프트 읽기 결과에서 문제를 모두 한 줄로 적습니다. 문제가 없으면 빈 글입니다.
+             * @details 첫 문제에서 멈추지 않는다 — 범위 밖 값 하나가 같은 요소의 모르는 이름 · 읽지 못한 값을 삼키지 않게(C-60).
+             */
+            static string describeSoftReadProblem( const string_view what, const SoftReadResult result, const vector<SchemaOrphanValue>& listOrphan )
+            {
+                if ( result == SoftReadResult::NotParsed )
+                    return string( what ) + " cannot be read";
+                string problem;
+                for ( const SchemaOrphanValue& orphan : listOrphan )
+                {
+                    problem += problem.empty() ? string( what ) + " has unknown or unreadable '" : string( ", '" );
+                    problem += describeOrphan( orphan ) + "'";
+                }
+                // 읽지 못한 칸 · 범위 밖 값은 읽기 공통 끝이 칸마다 로그로 알렸다.
+                if ( result == SoftReadResult::Rejected )
+                    problem += ( problem.empty() ? string( what ) + " has" : string( "; and" ) ) + " a field that cannot be read or is outside its PROPERTY( Min, Max )";
+                return problem;
+            }
+
+            /** @brief 소프트 읽기에 문제가 없으면 true 입니다. 있으면 모두 적어 실패로 남기고 false 입니다(`describeSoftReadProblem`). */
+            [[nodiscard]] static bool acceptSoftRead( const ParseContext& context, const XMLNode& element, const string_view what, const SoftReadResult result,
+                                                      const vector<SchemaOrphanValue>& listOrphan )
+            {
+                const string problem = describeSoftReadProblem( what, result, listOrphan );
+                return problem.empty() || fail( context, element, problem );
             }
 
             static unique_ptr<Widget> failInstantiate( InstantiateContext& context, const UIDocumentAsset& document, const UIDocumentNode& node, string_view message )
@@ -293,15 +315,11 @@ namespace sw
                 }
 
                 vector<SchemaOrphanValue> listOrphan;
-                if ( XMLSerializer::deserializeSoft( widget.get(), *pType, node._propertyXML, &listOrphan ) == false )
+                const SoftReadResult      result  = XMLSerializer::deserializeSoft( widget.get(), *pType, node._propertyXML, &listOrphan );
+                const string              problem = describeSoftReadProblem( string( "'" ) + node._typeName.c_str() + "'", result, listOrphan );
+                if ( problem.empty() == false )
                 {
-                    widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' cannot be read" );
-                    return widget;
-                }
-                if ( listOrphan.empty() == false )
-                {
-                    widget = failInstantiate( context, document, node,
-                                              string( "'" ) + node._typeName.c_str() + "' has unknown or unreadable '" + describeOrphan( listOrphan.front() ) + "'" );
+                    widget = failInstantiate( context, document, node, problem );
                     return widget;
                 }
 

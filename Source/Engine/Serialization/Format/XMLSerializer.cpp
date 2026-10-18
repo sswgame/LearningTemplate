@@ -780,9 +780,7 @@ namespace sw
         if ( xmlStr.empty() )
             return false;
         vector<SchemaOrphanValue> listOrphan;
-        if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, context ) == false )
-            return false;
-        return listOrphan.empty();
+        return deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, context ) == SoftReadResult::Read && listOrphan.empty();
     }
 
     bool XMLSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
@@ -801,12 +799,12 @@ namespace sw
         return deserialize( pInstance, typeInfo, text, context );
     }
 
-    bool XMLSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-                                         vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
-                                         const SerializeContext& context )
+    SoftReadResult XMLSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
+                                                   vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
+                                                   const SerializeContext& context )
     {
         if ( xmlStr.empty() )
-            return false;
+            return SoftReadResult::NotParsed;
 
         // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기 — 같은 문자열을 두 번 파싱하지 않는다.
         // 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다(형제 `JSONSerializer::deserializeSoft` 도 문서 하나만 쓴다).
@@ -814,11 +812,11 @@ namespace sw
         XMLDocumentBackend backend;
         backend.setIgnoreCaseKeys( bIgnore );
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
-            return false;
+            return SoftReadResult::NotParsed;
 
         const XMLNode root = backend.getDeserializationRoot();
         if ( root.isValid() == false )
-            return false;
+            return SoftReadResult::NotParsed;
 
         if ( pOutVersion != nullptr )
         {
@@ -833,14 +831,15 @@ namespace sw
             }
         }
 
-        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan ) == false )
-            return false;
+        // 칸 하나를 읽지 못해도 멈추지 않는다 — 루트의 모르는 자식과 범위 밖 값까지 모아야 부르는 쪽이 한 번에 다 알린다(C-60).
+        const bool bFieldsRead = XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan );
 
         if ( pOutListOrphan != nullptr )
             XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
 
         // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
+        const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, pInstance );
+        return bFieldsRead && bWithinRange ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
     string XMLSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
@@ -872,7 +871,7 @@ namespace sw
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, xmlStr, &listOrphan, &outSoftVersion, context );
+            return deserializeSoft( pTarget, targetType, xmlStr, &listOrphan, &outSoftVersion, context ) == SoftReadResult::Read;
         } ) );
     }
 

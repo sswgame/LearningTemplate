@@ -1096,7 +1096,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorFailsOnlyItsField )
     WireShiftHost                     softTarget;
     {
         test::ScopedDefensiveTestLog expected( "saved enumerators this build no longer has" );
-        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &softTarget, info, bytes.data(), bytes.size(), &listOrphan ) );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &softTarget, info, bytes.data(), bytes.size(), &listOrphan ) == sw::SoftReadResult::Read );
     }
     SW_EXPECT_EQUAL( size_t( 3 ), listOrphan.size() ); // _color · _flags · _mapColorToCount(키가 Green)
     SW_EXPECT_EQUAL( 9, softTarget._after );
@@ -1321,7 +1321,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldAddRemoveRenameBinaryRoundTrip )
 
     sw::vector<sw::SchemaOrphanValue> listOrphan;
     FieldEvolutionHost                fromSoft;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromSoft, declared, bytes.data(), bytes.size(), &listOrphan ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromSoft, declared, bytes.data(), bytes.size(), &listOrphan ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
     SW_EXPECT_TRUE( listOrphan.empty() == false && listOrphan[0]._nameHash == sw::hashed_string( "_gone" ).getHash() );
     SW_EXPECT_EQUAL( 2, fromSoft._renamed );
@@ -1337,7 +1337,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldAddRemoveRenameBinaryRoundTrip )
     SW_EXPECT_EQUAL( -1, fromUndeclared._renamed );
     sw::vector<sw::SchemaOrphanValue> listUndeclaredOrphan;
     FieldEvolutionHost                fromUndeclaredSoft;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromUndeclaredSoft, undeclared, bytes.data(), bytes.size(), &listUndeclaredOrphan ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromUndeclaredSoft, undeclared, bytes.data(), bytes.size(), &listUndeclaredOrphan ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( size_t( 2 ), listUndeclaredOrphan.size() );
 
     // 같은 빌드끼리는 그대로 왕복한다.
@@ -1394,7 +1394,7 @@ SW_TEST_CASE( ReflectionSerializationTest, EnumFieldWithANewTypeReadsTheEnumerat
     const sw::TypeInfo                asText = makeWireShiftRetypedType( true );
     WireShiftRetypedHost              textTarget;
     sw::vector<sw::SchemaOrphanValue> listTextOrphan;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &textTarget, asText, bytes.data(), bytes.size(), &listTextOrphan ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &textTarget, asText, bytes.data(), bytes.size(), &listTextOrphan ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( sw::string( "Green" ), textTarget._colorText );
     SW_EXPECT_EQUAL( 9, textTarget._after );
 
@@ -1403,7 +1403,7 @@ SW_TEST_CASE( ReflectionSerializationTest, EnumFieldWithANewTypeReadsTheEnumerat
     sw::vector<sw::SchemaOrphanValue> listNumberOrphan;
     {
         test::ScopedDefensiveTestLog expected( "an enumerator name does not read as a number" );
-        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &numberTarget, asNumber, bytes.data(), bytes.size(), &listNumberOrphan ) );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &numberTarget, asNumber, bytes.data(), bytes.size(), &listNumberOrphan ) == sw::SoftReadResult::Read );
     }
     SW_EXPECT_TRUE_MSG( numberTarget._colorNumber == -1, "열거자 이름 해시가 수 칸에 그대로 들어갔습니다" );
     SW_EXPECT_EQUAL( 9, numberTarget._after );
@@ -1469,7 +1469,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
     sw::vector<sw::SchemaOrphanValue> listOrphan;
     {
         test::ScopedDefensiveTestLog expected( "a saved field whose type no longer exists" );
-        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &softTarget, asNumber, bytes.data(), bytes.size(), &listOrphan ) );
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &softTarget, asNumber, bytes.data(), bytes.size(), &listOrphan ) == sw::SoftReadResult::Read );
     }
     SW_EXPECT_TRUE_MSG( softTarget._colorNumber == -1, "지운 enum 의 열거자 이름 해시가 수 칸에 그대로 들어갔습니다(soft)" );
     SW_EXPECT_EQUAL( 9, softTarget._after );
@@ -1479,7 +1479,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
     withoutColor._listProperty.erase( withoutColor._listProperty.begin() );
     WireShiftRetypedHost              partial;
     sw::vector<sw::SchemaOrphanValue> listColorOrphan;
-    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeSoft( &partial, withoutColor, bytes.data(), bytes.size(), &listColorOrphan ) );
+    SW_ASSERT_TRUE( sw::BinarySerializer::deserializeSoft( &partial, withoutColor, bytes.data(), bytes.size(), &listColorOrphan ) == sw::SoftReadResult::Read );
     SW_ASSERT_EQUAL( size_t( 1 ), listColorOrphan.size() );
     WireShiftRetypedHost     migrated;
     sw::SchemaMigrateContext migrateContext;
@@ -1743,7 +1743,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
     SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &binUnknown, *typeInfo, binBuf.data(), binBuf.size() ) );
     sw::vector<sw::SchemaOrphanValue> binOrphans;
     SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &binUnknown, *typeInfo, binBuf.data(), binBuf.size(),
-                                                           &binOrphans ) );
+                                                           &binOrphans ) == sw::SoftReadResult::Read );
     SW_EXPECT_TRUE( binOrphans.empty() == false );
 }
 
@@ -2002,7 +2002,7 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
     fromBin._hp   = -1;
     fromBin._mana = -1;
     sw::vector<sw::SchemaOrphanValue> binOrphans;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromBin, infoV2, bin.data(), bin.size(), &binOrphans ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &fromBin, infoV2, bin.data(), bin.size(), &binOrphans ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( 40, fromBin._hp );
     SW_EXPECT_EQUAL( 9, fromBin._mana );
     SW_EXPECT_TRUE( binOrphans.empty() == false );
@@ -2014,7 +2014,7 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
     const utf8* oldXML =
         R"(<?xml version="1.0"?><LayoutActor health="55" _score="1"/>)";
     sw::vector<sw::SchemaOrphanValue> xmlOrphans;
-    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &fromXML, infoV2, oldXML, &xmlOrphans ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &fromXML, infoV2, oldXML, &xmlOrphans ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( 55, fromXML._hp );
     SW_EXPECT_EQUAL( 9, fromXML._mana );
     SW_EXPECT_TRUE( xmlOrphans.empty() == false );
@@ -2024,7 +2024,7 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
     fromJSON._hp   = -1;
     fromJSON._mana = -1;
     sw::vector<sw::SchemaOrphanValue> jsonOrphans;
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &fromJSON, infoV2, R"({"health":66,"_score":2})", &jsonOrphans ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &fromJSON, infoV2, R"({"health":66,"_score":2})", &jsonOrphans ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( 66, fromJSON._hp );
     SW_EXPECT_EQUAL( 9, fromJSON._mana );
     SW_EXPECT_TRUE( jsonOrphans.empty() == false );
@@ -4036,7 +4036,7 @@ SW_TEST_CASE( ReflectionSerializationTest, SoftReadKeepsAFieldOfAnotherShapeAsAn
     ListSlot target;
     target._listValue = { 5 };
     sw::vector<sw::SchemaOrphanValue> listOrphan;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &target, listInfo, bytes.data(), bytes.size(), &listOrphan ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &target, listInfo, bytes.data(), bytes.size(), &listOrphan ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
     SW_EXPECT_TRUE_MSG( target._listValue.size() == 1 && target._listValue[0] == 5, "다른 모양으로 기록된 값을 제 타입으로 읽어 목록을 비웠습니다" );
 

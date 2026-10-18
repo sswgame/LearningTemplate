@@ -140,13 +140,12 @@ namespace sw::editor
     {
         const PropertyMetadata& meta = prop._metadata;
         InspectorNumericRange   range;
-        // 경계 하나는 숫자이거나 필드다(둘이 함께 있지 않다). 필드 경계는 그 객체의 지금 값이다.
-        [[maybe_unused]] const bool bFieldBound = meta._pReadMinRange != nullptr || meta._pReadMaxRange != nullptr;
-        SW_ASSERT( bFieldBound == false || pInstance != nullptr );
-        range._bHasClampMin = meta._bHasMinRange != SW_FALSE || meta._pReadMinRange != nullptr;
-        range._bHasClampMax = meta._bHasMaxRange != SW_FALSE || meta._pReadMaxRange != nullptr;
-        range._clampMin     = meta._pReadMinRange != nullptr ? meta._pReadMinRange( pInstance ) : static_cast<float64>( meta._minRange );
-        range._clampMax     = meta._pReadMaxRange != nullptr ? meta._pReadMaxRange( pInstance ) : static_cast<float64>( meta._maxRange );
+        // 허용 범위는 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)과 같은 함수로 푼다 — 필드 경계는 그 객체의 지금 값이다.
+        const PropertyAllowedRange allowed = meta.computeAllowedRange( pInstance );
+        range._bHasClampMin                = allowed._bHasMin;
+        range._bHasClampMax                = allowed._bHasMax;
+        range._clampMin                    = allowed._min;
+        range._clampMax                    = allowed._max;
 
         range._bHasWidgetMin = meta._bHasUIMinRange != SW_FALSE || range._bHasClampMin;
         range._bHasWidgetMax = meta._bHasUIMaxRange != SW_FALSE || range._bHasClampMax;

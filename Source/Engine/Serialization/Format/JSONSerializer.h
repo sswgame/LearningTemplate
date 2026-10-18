@@ -59,10 +59,11 @@ namespace sw
         /**
          * @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다.
          * @param pOutVersion nullptr 가 아니면 kSchemaVersionKey 값을 적습니다(없으면 0).
+         * @return 본문이 JSON 객체가 아니면 `NotParsed`, 범위 밖 값이 있으면 `Rejected`(orphan 은 끝까지 모은다)입니다(`SoftReadResult`).
          */
-        [[nodiscard]] static bool deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
-                                                   vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
-                                                   const SerializeContext& context = SerializeContext::getDefault() );
+        [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
+                                                             vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
+                                                             const SerializeContext& context = SerializeContext::getDefault() );
 
         /** @brief 루트에 `_schemaVersion` 을 붙여 JSON 으로 직렬화합니다. */
         static string serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,

@@ -31,20 +31,20 @@ namespace sw
             return false;
         }
         vector<SchemaOrphanValue> listOrphan;
-        const bool                bRead = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan );
-        if ( bRead == false )
+        const SoftReadResult      result = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan );
+        if ( result == SoftReadResult::NotParsed )
         {
-            // 범위 밖 값도 여기로 온다 — 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
-            SW_LOG_ERROR( "XML 로드 실패: %# (%#) — <%#> 문서가 아니거나 선언된 범위 밖 값이 있습니다", assetRelativePath, pTypeInfo->_name.c_str(),
-                          pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML 로드 실패: %# (%#) — <%#> 문서가 아닙니다", assetRelativePath, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
+            return false;
         }
-        // 실패해도 모은 이름은 알린다 — 범위 밖 값 하나가 모르는 이름 · 읽지 못한 값의 오류를 삼키지 않게(모두 알린다는 계약).
+        // 범위 밖 값(`Rejected`)은 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
+        // 그래도 모은 이름은 알린다 — 범위 밖 값 하나가 모르는 이름 · 읽지 못한 값의 오류를 삼키지 않게(모두 알린다는 계약).
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {
             const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
             SW_LOG_ERROR( "%#: '%#' is unknown to %# or its value '%#' cannot be read", assetRelativePath, pName, pTypeInfo->_name.c_str(), orphan._text.c_str() );
         }
-        return bRead && listOrphan.empty();
+        return result == SoftReadResult::Read && listOrphan.empty();
     }
 
     bool ReflectedXMLFile::saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo )

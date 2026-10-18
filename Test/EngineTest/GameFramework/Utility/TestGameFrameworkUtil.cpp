@@ -2,6 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Utility/FloatCurve.h"
@@ -20,6 +22,7 @@
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/Base/Foundation/Utility/Time/LifeSpanUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -422,6 +425,34 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
         SW_EXPECT_FALSE( token.empty() );
     } );
     SW_EXPECT_EQUAL( 2, tokenCount );
+}
+
+/**
+ * @brief [GameFrameworkUtilTest] 데이터 XML 의 칸 읽기(`GameDataXML::readFields`)는 범위를 읽기 공통 끝(`PROPERTY( Min · Max )`)에 맡기고, 범위 밖 값이 있어도 다른 오류까지 다 본다(C-56)
+ * @details 값은 자르지 않고 읽은 그대로 남는다. 모르는 속성과 범위 밖 값이 함께 있어도 실패 하나로 돌아오되 읽을 수 있는 칸은 채운다.
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadFieldsLeavesRangesToTheCommonReadEnd )
+{
+    // 이 Def 는 모듈 밖으로 내보내지 않아 `StaticType()` 을 링크하지 못한다 — 타입 표에서 찾는다.
+    const TypeInfo* pStageType = engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::QuestStageRowDef" ) );
+    SW_ASSERT_NOT_NULL( pStageType );
+    sw::XMLDocument doc;
+    XMLNode         root;
+    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Stage text="go" time="2.5"/>)", "GameFrameworkUtilTest", "Stage", root ) );
+    QuestStageRowDef inRange;
+    SW_EXPECT_TRUE( GameDataXML::readFields( root, &inRange, *pStageType, "GameFrameworkUtilTest" ) );
+    SW_EXPECT_NEAR_EQUAL( 2.5f, inRange._time, 1.0e-6f );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a value below PROPERTY( Min ) and an unknown attribute are data errors" );
+    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Stage time="-1" complete="true" bogus="1"/>)", "GameFrameworkUtilTest", "Stage", root ) );
+    QuestStageRowDef outOfRange;
+    SW_EXPECT_FALSE( GameDataXML::readFields( root, &outOfRange, *pStageType, "GameFrameworkUtilTest" ) );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, outOfRange._time, 1.0e-6f ); // 자르지 않는다
+    SW_EXPECT_TRUE( outOfRange._bComplete );                  // 뒤의 칸도 읽는다
+
+    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Stage time="-1"/>)", "GameFrameworkUtilTest", "Stage", root ) );
+    QuestStageRowDef onlyRange;
+    SW_EXPECT_FALSE( GameDataXML::readFields( root, &onlyRange, *pStageType, "GameFrameworkUtilTest" ) );
 }
 
 /**

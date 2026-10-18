@@ -532,6 +532,14 @@
   자기 기술형은 '0' · '1' 글(텍스트 처리기), 고정 배치형은 `MaxCount` 가 필요한 `bits`(개수 + 비트마다 1 비트)이고, 원소 주소를 쓰는 컨테이너 래퍼를 거치지 않습니다.
 - **`Min` · `Max` 범위 검사는 시퀀스 원소까지 늘 봅니다**(2026-10-17, A-15). `SerializerUtil::collectRangeErrors` 에서 범위를 고르는 인자(`RangeCheckScope`)를 지웠습니다.
   설정 JSON · 데이터 XML · 세이브가 같은 `Min` · `Max` 를 다르게 지키던 것을 한 계약으로 합쳤고, 프리셋 표가 원소마다 따로 부르던 검사도 지웠습니다.
+- **범위는 인스펙터와 읽기가 한 함수로 풀고, 소프트 읽기는 실패를 둘로 가릅니다**(2026-10-18, C-56 · C-60 · C-62).
+  `PropertyMetadata::computeAllowedRange` 가 숫자 경계와 필드 경계(`Min = "-_halfSize"`)를 함께 풀어 인스펙터와 읽기 공통 끝이 같은 규칙을 지킵니다(필드 경계 읽기 함수는 그래서 Shipping 에도 있습니다).
+  게임 데이터 XML(`GameDataXML::readFields`)의 자체 범위 검사는 지우고 공통 끝에 맡겼습니다. `deserializeSoft` 는 `bool` 대신 `SoftReadResult`(`NotParsed` · `Rejected` · `Read`)를 돌려줍니다.
+  `bool` 하나일 때는 부르는 쪽이 범위 밖 값에서 바로 돌아가 같은 파일의 모르는 키를 알리지 않았고, 범위 밖 값을 "JSON 이 아니다"로 알렸습니다. 이제 `NotParsed` 만 바로 돌아가고 `Rejected` 는 orphan 을 모두 알린 뒤 실패합니다.
+  float32 로 보관하는 숫자 경계를 float64 칸과 견주는 어긋남(`Min = 0.1`)은 조사 시점에 그런 칸이 없어(float64 칸의 경계는 `MemoryBudgetMonitor::_megabytes` 의 `Min = 0.0` 하나) 형식을 바꾸지 않았습니다.
+- **이름 읽기(`XMLReadUtil::readName`)는 글 `none` 을 오류로 알립니다**(2026-10-18, C-59). `hashed_string` 은 언리얼 `FName` 처럼 `none` 을 빈 이름과 같게 보고 빈 이름의 `c_str()` 은 "None" 이라,
+  이름으로 받은 열거형 글(`align="none"`)이 "적지 않음"이 되고 적지 않은 경로가 "None" 이 됐습니다. 이름 형식을 바꾸면 리플렉션이 빈 이름을 "None" 으로 쓴 씬 · 프리팹(100 곳 넘음)과 열거자 `None` 이 함께 바뀌므로,
+  이름 읽기의 한 창구가 그 글을 오류로 막고 그런 속성은 글로 읽습니다. 경로로 쓰는 이름은 비었는지 먼저 봅니다(`CharacterAppearanceComponent::applyBodyPart`).
 - **열거자 이름의 정본은 리플렉션 `ENUM()` 입니다**(2026-10-15, 같은 해 10-12 의 "enum 이름 테이블 45 곳 유지" 를 뒤집음). 철자가 열거자 이름과 같은 손 이름 표 · `toString( Enum )` 은 지우고
   `getEnumName( value )`(`Engine/Reflection/EnumName.h`)로 읽습니다. 언리얼은 `UENUM` + `UEnum::GetValueAsString`, Godot 은 ClassDB 열거 상수가 이름의 유일한 출처로 알고 있습니다(기억에 의존).
   손 표는 `static_assert` 가 개수만 지키고 순서 · 철자의 어긋남은 못 막았고, 쓰는 곳이 거의 로그였으므로 "배열 인덱스가 빠르다" 는 이득이 없습니다.
