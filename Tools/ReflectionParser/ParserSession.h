@@ -23,10 +23,11 @@ namespace sw
      */
     struct ParserSession
     {
-        ParserConfig      _config;            ///< parser_config · toolchain_config 에서 읽은 설정(clang 인자 · 코드젠 표식 · 규칙)
-        TypeNameMap       _typeNameMap;       ///< clang 표기 → canonical
-        ContainerTypeMap  _containerTypeMap;  ///< 컨테이너 판별 규칙
-        AnnotationMeta    _annotationMeta;    ///< 어노테이션 별칭 → 정규 필드명
-        EmitTemplateStore _emitTemplateStore; ///< 코드 방출 템플릿
+        ParserConfig      _config;                     ///< parser_config · toolchain_config 에서 읽은 설정(clang 인자 · 코드젠 표식 · 규칙)
+        TypeNameMap       _typeNameMap;                ///< clang 표기 → canonical
+        ContainerTypeMap  _containerTypeMap;           ///< 컨테이너 판별 규칙
+        AnnotationMeta    _annotationMeta;             ///< 어노테이션 별칭 → 정규 필드명
+        EmitTemplateStore _emitTemplateStore;          ///< 코드 방출 템플릿
+        bool              _bExecutableTarget{ false }; ///< `--executable`: 대상이 실행 파일이라 버스 본문 타입의 내보내기 검사를 하지 않는다(`AstVisitor`)
     };
 } // namespace sw

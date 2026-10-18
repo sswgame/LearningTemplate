@@ -182,6 +182,27 @@ namespace
                             "\t};\n"
                             "}\n";
     }
+
+    /** @brief 서버 버스 본문 타입(`kBusVersion`) 하나짜리 헤더입니다. exportMacro 가 `struct` 와 이름 사이에 들어갑니다(빈 문자열이면 내보내기 없음). */
+    [[maybe_unused]] sw::string makeBusBodyHeader( const sw::string& typeName, const sw::string& exportMacro )
+    {
+        return "#pragma once\n"
+               "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+               "#include \"RuntimeAPI/Export/GameFrameworkAPI.h\"\n"
+               "namespace sw\n"
+               "{\n"
+               "\tREFLECT()\n"
+               "\tstruct " +
+               exportMacro + " " + typeName +
+               "\n"
+               "\t{\n"
+               "\t\tREFLECT_BODY();\n"
+               "\t\tstatic constexpr uint32 kBusVersion = 1;\n"
+               "\t\tPROPERTY()\n"
+               "\t\tint32 _value{ 0 };\n"
+               "\t};\n"
+               "}\n";
+    }
 } // namespace
 
 /**
@@ -976,6 +997,35 @@ SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     const bool bNamesTheType = run._log.find( "REFLECT_BODY() is used in class/struct 'sw::OrphanBodySampleActor'" ) != sw::string::npos;
     SW_EXPECT_TRUE_MSG( bNamesTheType, run._log.c_str() );
+#endif
+}
+
+/**
+ * @brief [ReflectionParserTest] 서버 버스 본문 타입(`kBusVersion`)에 모듈 내보내기 매크로가 없으면 빌드를 세운다
+ * @details 다른 모듈의 `ServerBusTopic<T>` 가 `T::StaticType()` 을 부르므로, 내보내기가 없으면 서버 키트의 링크에서야 드러났다(C-61).
+ *          모듈 매크로(`SW_KIT_API`)를 단 타입과, 타입이 모듈 경계를 넘지 않는 실행 파일 대상(`--executable`)은 받는다.
+ */
+SW_TEST_CASE( ReflectionParserTest, BusBodyWithoutExportStopsTheBuild )
+{
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "BusNoExportSample", makeBusBodyHeader( "BusNoExportSampleNotice", "" ) );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    const bool bNamesTheType = run._log.find( "'sw::BusNoExportSampleNotice' declares 'kBusVersion'" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNamesTheType, run._log.c_str() );
+
+    const ParserRunResult exportedRun = runParserOnTempHeader( parserExe, "BusExportSample", makeBusBodyHeader( "BusExportSampleNotice", "SW_KIT_API" ) );
+    SW_EXPECT_TRUE_MSG( exportedRun._exitCode == 0, exportedRun._log.c_str() );
+
+    sw::vector<TempHeader> listExecutableHeader;
+    listExecutableHeader.push_back( TempHeader{ "BusExecutableSample", makeBusBodyHeader( "BusExecutableSampleNotice", "" ) } );
+    const ParserRunResult executableRun = runParserOnTempHeaders( parserExe, listExecutableHeader, "--executable" );
+    SW_EXPECT_TRUE_MSG( executableRun._exitCode == 0, executableRun._log.c_str() );
 #endif
 }
 

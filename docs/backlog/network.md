@@ -11,12 +11,6 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
   ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUDPBenchTest` 숫자로 전후를 측정한다.
 
-- `C-61` [정리] **서버 버스 본문 타입의 모듈 내보내기 누락이 링크 오류로만 드러난다.** `ServerBusTopic<T>` 가 `T::StaticType()` 을 부르는데 `REFLECT` 구조체에 `SW_KIT_API` · `SW_GF_API` 가 없으면
-  다른 모듈(서버 키트)에서 링크가 깨진다(2026-10-18 통합에서 열여덟 타입에 붙였다). C++ 형식만으로는 막지 못한다 — 내보내기 여부를 보는 타입 특성이 없고, 쓰는 모듈에서 `dllimport` 가 아닌 것은
-  같은 모듈의 정상 사용과 구별되지 않으며, 리눅스의 visibility 는 컴파일에 드러나지 않는다(2026-10-18 netkit 조사). 막을 자리는 생성기다: `Tools/ReflectionParser/AstVisitor.cpp` 는 clang AST 를 보므로
-  `REFLECT` 레코드에 `kBusVersion` 이 있는데 `DLLExportAttr` · `DLLImportAttr`(리눅스는 `VisibilityAttr`)가 없으면 생성을 오류로 멈출 수 있다(생성기 소유 작업). 그 전의 최소 게이트는
-  `Scripts/lint/gate/CheckExportMacros.py` 에 "`kBusVersion` 을 가진 `struct` 는 `SW_*_API` 를 단다" 한 규칙이다.
-
 - `C-54` [정리] **키트 · 게임 규칙 설정이 범위 밖 값을 조용히 맞춘다(남은 곳).** 넷 키트 전부 · `MatchMaker` · Base 의 `ScheduleSystem` · `RoundSeries` · `WorldClock` · `SessionStateComponent` 는
   "선언된 범위 + 받을 때 거절"로 옮겼다(공통 형식은 `Base/Foundation/Utility/ConfigRangeUtil.h` 머리 주석). 남은 곳:
   ① Base 의 `Vitality` — `initialize` 가 실패를 돌려주면 받는 장르 키트 여섯(`BrMatch` · `HorrorMatch` · `MechArenaWorld` · `ScavengerExpedition` · `MetroDuelist` · `AdventureVitals`)과

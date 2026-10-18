@@ -79,6 +79,13 @@ function(sw_addReflectionStep TARGET_NAME)
 	# 모듈 판별을 소스 루트 기준 상대 경로로 하게 한다. 절대 경로로 매칭하면
 	# 리포지토리를 담은 상위 폴더 이름(.../AppData/..., D:/Games/... 등)에 걸려 오분류된다.
 	list(APPEND parserArgs "--source-root" "${CMAKE_SOURCE_DIR}/Source")
+
+	# 실행 파일의 타입은 모듈 경계를 넘지 않는다 — 생성기가 서버 버스 본문 타입(`kBusVersion`)에 내보내기 매크로를 요구하지 않게 알린다.
+	# 라이브러리(SHARED · MODULE · STATIC 배포)는 늘 검사한다. 정적 배포에서도 같은 헤더가 DLL 빌드로 쓰이기 때문이다.
+	get_target_property(swTargetType ${TARGET_NAME} TYPE)
+	if(swTargetType STREQUAL "EXECUTABLE")
+		list(APPEND parserArgs "--executable")
+	endif()
 	file(GLOB swEmitTpls "${swEmitTemplatesDir}/*.tpl")
 
 	# 리플렉션 대상 헤더가 생성 헤더(sw/config/*.gen.h 등)를 include 할 수 있으므로 항상 넣어준다.

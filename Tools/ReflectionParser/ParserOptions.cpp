@@ -44,9 +44,10 @@ namespace sw
         };
 
         constexpr SwitchRow kArrSwitchRow[] = {
-            {"--dump", &ParserOptions::_bDump, "re-parse even up-to-date inputs and print what was extracted per header"},
-            {"--help", &ParserOptions::_bHelp,                                               "print this usage and exit"},
-            {    "-h", &ParserOptions::_bHelp,                                                          "same as --help"},
+            {        "--dump",       &ParserOptions::_bDump,                                      "re-parse even up-to-date inputs and print what was extracted per header"},
+            {cli::kExecutable, &ParserOptions::_bExecutable, "the target is an executable: its types never cross a module boundary, so bus body types need no export macro"},
+            {        "--help",       &ParserOptions::_bHelp,                                                                                    "print this usage and exit"},
+            {            "-h",       &ParserOptions::_bHelp,                                                                                               "same as --help"},
         };
 
         struct ParserOptionsInternal

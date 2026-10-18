@@ -90,6 +90,7 @@ ENUM sw::CameraRole : unsigned char
 | `--emit-builtins-gen <file.cpp>` | `ReflectBuiltins.gen.cpp` 만 쓰고 끝냅니다 |
 | `--depfile <file.d>` | 입력이 include 한 헤더를 Makefile 형식 의존 파일로 씁니다 |
 | `--dump` | 최신이어도 다시 파싱하고 읽은 내용을 찍습니다 |
+| `--executable` | 대상이 실행 파일입니다. 서버 버스 본문 타입의 내보내기 검사를 하지 않습니다 |
 | `--help`, `-h` | 사용법을 찍고 0 으로 끝납니다 |
 
 `--annotation-meta` 가 없으면 모든 토큰이 "모르는 토큰"이 되므로 필수입니다. 인자 정의는 `ParserOptions.cpp` 의 `kArrOptionRow` 와 `kArrSwitchRow` 에 있고, 사용법도 거기서 만듭니다.
@@ -259,6 +260,11 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 
 **`REFLECT` 타입은 비가상 베이스를 하나까지만 둡니다.** 둘째 베이스나 가상 베이스가 있으면 헤더 · 줄 · 타입 이름과 함께 생성 오류입니다(`AstVisitor.cpp` `collectBase`).
 `castTo` 는 리플렉션 부모 사슬로 파생을 판단하고 `reinterpret_cast` 로 내려가므로, 부모가 offset 0 에 있지 않으면 잘못된 주소가 됩니다. 베이스가 `REFLECT()` 없는 인터페이스여도 막습니다.
+
+**서버 버스 본문 타입은 모듈 내보내기 매크로를 답니다.** `static constexpr uint32 kBusVersion` 이 있는 `REFLECT` 타입에 dllexport · dllimport · visibility 속성이 없으면 생성 오류입니다(`AstVisitor.cpp` `validateBusBodyExport`).
+다른 모듈의 `ServerBusTopic<T>` 가 `T::StaticType()` 을 부르므로, 내보내기가 없으면 서버 키트의 링크에서야 미해결 기호로 드러납니다.
+파서가 매크로를 속성으로 읽도록 Windows 인자(`parser_args.platform.windows`)에 `SW_GF_IMPORTS` · `SW_KIT_IMPORTS` 를 정의합니다. 리눅스에서는 매크로가 늘 visibility 입니다.
+`SW_API` 는 파서에서 비워 두므로 Engine 타입에는 이 검사가 맞지 않습니다(버스 본문 타입은 Base · 키트에만 있습니다). 실행 파일 타깃은 CMake 가 `--executable` 을 넘겨 검사하지 않습니다. 타입이 모듈 경계를 넘지 않기 때문입니다.
 
 **모르는 토큰은 빌드를 멈춥니다.** `PROPERTY( Color )` 처럼 철자 목록에 없는 토큰이 있으면 그 헤더의 생성이 실패합니다.
 에디터 힌트는 `Meta = "Color"` 로 적고, 단위는 `Units = m` 으로 적습니다. 목록에 있는 단위를 `Meta = "Units=m"` 으로 적으면 철자 검사를 건너뛰게 되므로 거절합니다.

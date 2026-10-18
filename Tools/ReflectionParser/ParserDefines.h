@@ -57,6 +57,12 @@ namespace sw
         inline constexpr const utf8* kConstructorCategory   = "Constructor";
 
         /**
+         * @brief 서버 버스 본문 타입의 표식 멤버(`static constexpr uint32 kBusVersion`)입니다(`ServerBusTopic.h` 의 `HasServerBusVersion`).
+         * @details 이 멤버가 있는 `REFLECT` 타입은 다른 모듈의 `ServerBusTopic<T>` 가 `T::StaticType()` 을 부르므로 모듈 내보내기 매크로가 있어야 합니다.
+         */
+        inline constexpr const utf8* kBusVersionMember = "kBusVersion";
+
+        /**
          * @brief 리플렉션 이벤트가 되는 필드 타입입니다 — `PROPERTY()` 가 붙은 멀티캐스트 델리게이트는 값이 아니라 이벤트로 수집합니다.
          * @details 판정은 정규 타입 철자의 머리(`kEventTemplatePrefix`)로, 인자 이름은 소스 토큰의 템플릿 이름(`kEventTemplateLeaf`)부터 읽습니다.
          */
@@ -127,6 +133,7 @@ namespace sw
         inline constexpr const utf8* kEmitTemplates   = "--emit-templates";
         inline constexpr const utf8* kEmitBuiltinsGen = "--emit-builtins-gen";
         inline constexpr const utf8* kDepfile         = "--depfile";
+        inline constexpr const utf8* kExecutable      = "--executable";
     } // namespace cli
 
     // ------------------------------------------------------------------------------

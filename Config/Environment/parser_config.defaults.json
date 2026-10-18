@@ -17,7 +17,9 @@
             "windows": [
                 "-fms-compatibility",
                 "-fms-compatibility-version=19",
-                "-fms-extensions"
+                "-fms-extensions",
+                "-DSW_GF_IMPORTS",
+                "-DSW_KIT_IMPORTS"
             ],
             "linux": []
         },

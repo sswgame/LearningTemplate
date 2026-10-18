@@ -783,7 +783,9 @@ namespace sw
                 uint8                         _bSkipConstructors : 1; ///< Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract))
                 uint8                         _bBodyFound        : 1;
                 uint8                         _bHasError         : 1;
-                [[maybe_unused]] uint8        _reserved          : 5;
+                uint8                         _bBusBody          : 1; ///< `kBusVersion` 멤버가 있다(서버 버스 본문 타입)
+                uint8                         _bExported         : 1; ///< 레코드에 dllexport · dllimport · visibility 속성이 있다(모듈 내보내기 매크로)
+                [[maybe_unused]] uint8        _reserved          : 3;
 
                 MemberCollector( ParsedTypeInfo& type, const ParserSession& session )
                     : _pType{ &type }
@@ -793,6 +795,8 @@ namespace sw
                     , _bSkipConstructors{ SW_FALSE }
                     , _bBodyFound{ SW_FALSE }
                     , _bHasError{ SW_FALSE }
+                    , _bBusBody{ SW_FALSE }
+                    , _bExported{ SW_FALSE }
                     , _reserved{ 0 }
                 {
                     if ( type._bAbstract == SW_TRUE || type._bStatic == SW_TRUE )
@@ -1787,13 +1791,39 @@ namespace sw
                 const CXCursorKind kind      = clang_getCursorKind( cursor );
                 const bool         bFunction = kind == CXCursor_CXXMethod || kind == CXCursor_Constructor || kind == CXCursor_FunctionTemplate ||
                                        kind == CXCursor_FunctionDecl || kind == CXCursor_Destructor;
+                const bool bExportAttr = kind == CXCursor_DLLExport || kind == CXCursor_DLLImport || kind == CXCursor_VisibilityAttr;
+                const bool bBusVersion = kind == CXCursor_VarDecl && isStringEqual( clang_getCursorSpelling( cursor ), annotation::kBusVersionMember );
                 if ( kind == CXCursor_CXXBaseSpecifier )
                     collectBase( cursor, collector );
                 else if ( kind == CXCursor_FieldDecl )
                     collectField( cursor, collector );
                 else if ( bFunction )
                     collectFunctionMember( cursor, kind, collector );
+                else if ( bBusVersion )
+                    collector._bBusBody = SW_TRUE;
+                else if ( bExportAttr )
+                    collector._bExported = SW_TRUE;
                 return CXChildVisit_Continue;
+            }
+
+            /**
+             * @brief 서버 버스 본문 타입(`kBusVersion`)이 모듈 내보내기 매크로를 달았는지 봅니다. 아니면 알리고 `_bHasError` 를 켭니다.
+             * @details `ServerBusTopic<T>` 는 `T::StaticType()` 을 부르고, 그 정의는 `T` 를 선언한 모듈의 `.gen.cpp` 에 있다. 내보내기가 없으면
+             *          다른 모듈(서버 키트)의 링크에서야 미해결 기호로 드러난다. C++ 형식으로는 막을 수 없다 — 내보내기 여부를 보는 타입 특성이 없고,
+             *          리눅스의 visibility 는 컴파일에 드러나지 않는다. 생성기는 AST 의 속성을 보므로 여기서 막는다.
+             *          파서는 Base · 키트 매크로를 속성으로 읽는다(Windows 는 `parser_config` 가 `SW_GF_IMPORTS` · `SW_KIT_IMPORTS` 를 정의하고, 리눅스는 늘 visibility 다).
+             *          실행 파일 대상(`--executable`)은 타입이 모듈 경계를 넘지 않으므로 보지 않는다.
+             */
+            static void validateBusBodyExport( MemberCollector& collector )
+            {
+                const bool bMissingExport = collector._bBusBody == SW_TRUE && collector._bExported == SW_FALSE;
+                if ( bMissingExport == false || collector._pSession->_bExecutableTarget )
+                    return;
+                SW_LOG_ERROR( "ERROR: '%#' declares '%#' (a server bus body type) but has no module export macro. "
+                              "Another module's ServerBusTopic<T> calls T::StaticType(), which then fails to link. "
+                              "Write the module's macro before the name: 'struct SW_KIT_API %#' (SW_GF_API in Base, SW_KIT_SERVER_API in a server kit).",
+                              collector._pType->_fullyQualifiedName, annotation::kBusVersionMember, collector._pType->_name );
+                collector._bHasError = SW_TRUE;
             }
 
             // ------------------------------------------------------------------------------
@@ -2070,6 +2100,7 @@ namespace sw
             // 메서드는 프로퍼티 뒤에 선언될 수 있다 — 이름으로 가리키는 애노테이션은 멤버를 다 모은 뒤에 대조한다.
             AstVisitorInternal::validateMemberFunctions( collector );
             AstVisitorInternal::validatePropertyRedirects( collector );
+            AstVisitorInternal::validateBusBodyExport( collector );
             if ( collector._bHasError == SW_TRUE )
             {
                 markHeaderError( outHeader );
