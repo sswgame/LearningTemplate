@@ -22,13 +22,13 @@ namespace
         static sw::string makeTempPath( const utf8* pFileName )
         {
             const sw::string folder = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_cookjob_test" );
-            SW_ASSERT( sw::FileUtil::ensureDirectoryExists( folder ) );
+            SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
             return sw::FileUtil::joinPath( folder, pFileName );
         }
 
         static void writeText( const sw::string& path, sw::string_view text )
         {
-            SW_ASSERT( sw::FileUtil::writeTextFile( path, text ) );
+            SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, text ) );
             sw::ContentHash::clearCache(); // 같은 시각에 다시 쓴 파일도 새로 해시하게
         }
 
@@ -48,8 +48,8 @@ namespace
             sw::CookJob           job( makeDesc( version ) );
             sw::vector<uint8>     bytes;
             [[maybe_unused]] bool bRead = sw::ResourceIO::readBinaryResource( path, bytes );
-            SW_ASSERT( bRead );
-            SW_ASSERT( job.getInputs().size() == 1 );
+            SW_EXPECT_TRUE( bRead );
+            SW_EXPECT_TRUE( job.getInputs().size() == 1 );
             return job.computeKey();
         }
     };
@@ -156,7 +156,7 @@ SW_TEST_CASE( CookJobTest, RegistryCookFollowsTheMetaListing )
     const sw::string ddcDir    = test::makeTempDirectory( "registry_incremental_ddc" );
     const auto       writeMeta = []( const sw::string& path )
     {
-        SW_ASSERT( sw::FileUtil::ensureParentDirectoryExists( path ) );
+        SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) );
         TestCookJobInternal::writeText( path, sw::string( "guid=" ) + sw::UUID::generate().toString() + "\n" );
     };
     writeMeta( sw::FileUtil::joinPath( root, "engine/materials/a.material.meta" ) );

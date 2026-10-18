@@ -32,8 +32,8 @@ namespace
             pRoot->setLocalPosition( sw::float3( x, 0.0f, 0.0f ) );
             sw::PrefabAsset asset;
             asset.setFromGameObject( pSource );
-            SW_ASSERT( sw::FileUtil::ensureParentDirectoryExists( path ) );
-            SW_ASSERT( asset.saveToXMLFile( path ) );
+            SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) );
+            SW_EXPECT_TRUE( asset.saveToXMLFile( path ) );
             sw::ContentHash::clearCache(); // 같은 크기 · 시각으로 다시 쓴 파일도 새로 해시하게
         }
 
@@ -51,18 +51,18 @@ namespace
             {
                 sw::GameObjectManager scratch;
                 sw::GameObject*       pObject = scratch.createGameObject( sw::hashed_string( "Entity" ) );
-                SW_ASSERT( pObject->addComponent<sw::SceneComponent>() != nullptr );
+                SW_EXPECT_TRUE( pObject->addComponent<sw::SceneComponent>() != nullptr );
                 node._embeddedXML = sw::ObjectStateSerializer::saveToXMLString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
             }
             doc._listSceneObjectNode.push_back( node );
-            SW_ASSERT( sw::FileUtil::ensureParentDirectoryExists( path ) );
-            SW_ASSERT( doc.saveXML( path ) );
+            SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) );
+            SW_EXPECT_TRUE( doc.saveXML( path ) );
         }
 
         static sw::vector<uint8> readBytes( const sw::string& path )
         {
             sw::vector<uint8> bytes;
-            SW_ASSERT( sw::FileUtil::readFile( path, bytes ) );
+            SW_EXPECT_TRUE( sw::FileUtil::readFile( path, bytes ) );
             return bytes;
         }
     };
