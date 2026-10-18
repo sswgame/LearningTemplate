@@ -266,7 +266,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     ReplicationClientConfig clientSettings;
     clientSettings._tickInterval = 1.0f / 30.0f;
     SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{}, &policy ) );
-    client.initialize( &clientHost, clientSettings );
+    SW_EXPECT_TRUE( client.initialize( &clientHost, clientSettings ) );
 
     // 30 Hz 서버 틱, 60 Hz 프레임. 엔티티 1 은 x = 틱 × 0.1 로 움직인다.
     float64       time          = 0.0;
@@ -510,7 +510,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
     ReplicationClientConfig clientSettings;
     clientSettings._tickInterval = 1.0f / 30.0f;
     SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{} ) );
-    client.initialize( &clientHost, clientSettings );
+    SW_EXPECT_TRUE( client.initialize( &clientHost, clientSettings ) );
 
     float64       time         = 0.0;
     uint32        serverTick   = 0;
@@ -679,7 +679,7 @@ SW_TEST_CASE( NetClientServerTest, KindMaskRoutesSharedRange )
     ReplicationServer server;
     SW_ASSERT_TRUE( server.initialize( nullptr, ReplicationServerConfig{}, nullptr ) );
     ReplicationClient client;
-    client.initialize( nullptr, ReplicationClientConfig{} );
+    SW_EXPECT_TRUE( client.initialize( nullptr, ReplicationClientConfig{} ) );
     const uint8         otherKind = NetKitMessageRange::kClientServer + 7;
     const vector<uint8> message{ otherKind, 1 };
     SW_EXPECT_TRUE( NetHandleResult::NotMine == server.handleMessage( 0, message ) );
@@ -760,7 +760,7 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
 SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
 {
     ReplicationClient offline;
-    offline.initialize( nullptr, ReplicationClientConfig{} );
+    SW_EXPECT_TRUE( offline.initialize( nullptr, ReplicationClientConfig{} ) );
     SW_EXPECT_FALSE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes + 1, 1 ) ) );
     SW_EXPECT_TRUE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes, 1 ) ) );
 
@@ -785,7 +785,7 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     ReplicationServer liveServer;
     ReplicationClient liveClient;
     SW_ASSERT_TRUE( liveServer.initialize( &serverHost, ReplicationServerConfig{}, nullptr ) );
-    liveClient.initialize( &clientHost, ReplicationClientConfig{} );
+    SW_EXPECT_TRUE( liveClient.initialize( &clientHost, ReplicationClientConfig{} ) );
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
     serverRouter.registerHandler( &liveServer );
@@ -855,7 +855,7 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
     ReplicationServer server;
     ReplicationClient client;
     SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{} ) );
-    client.initialize( &clientHost, ReplicationClientConfig{} );
+    SW_EXPECT_TRUE( client.initialize( &clientHost, ReplicationClientConfig{} ) );
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
     serverRouter.registerHandler( &server );
@@ -917,7 +917,7 @@ SW_TEST_CASE( NetClientServerTest, RenderTickNeverGoesBackAcrossASnapshotGap )
     ReplicationClient       client;
     ReplicationClientConfig clientSettings;
     clientSettings._tickInterval = 1.0f / 30.0f;
-    client.initialize( nullptr, clientSettings );
+    SW_EXPECT_TRUE( client.initialize( nullptr, clientSettings ) );
     float32    lastRenderTick = -1.0e9f; // 첫 스냅숏의 렌더 틱(0 − 지연 = −3)은 받기 전 값보다 작다 — 받은 뒤부터 본다
     bool       bMonotonic     = true;
     bool       bBehindNewest  = true;
@@ -975,4 +975,26 @@ SW_TEST_CASE( NetClientServerTest, ServerRefusesOutOfRangeSettings )
     atLimit._historySize         = 2;
     atLimit._inputBufferSize     = 1;
     SW_EXPECT_TRUE( server.initialize( nullptr, atLimit ) );
+}
+
+/**
+ * @brief [NetClientServerTest] 범위 밖 클라이언트 설정은 조용히 맞추지 않고 오류로 거절한다
+ * @details 예전에는 기록 수 3 을 4 로 올려 돌았다.
+ */
+SW_TEST_CASE( NetClientServerTest, ClientRefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range replication client settings are refused" );
+    ReplicationClient            client;
+    ReplicationClientConfig      shortHistory;
+    shortHistory._historySize = 3;
+    SW_EXPECT_FALSE( client.initialize( nullptr, shortHistory ) );
+    ReplicationClientConfig noTickInterval;
+    noTickInterval._tickInterval = 0.0f;
+    SW_EXPECT_FALSE( client.initialize( nullptr, noTickInterval ) );
+    ReplicationClientConfig negativeDelay;
+    negativeDelay._interpolationDelay = -0.1f;
+    SW_EXPECT_FALSE( client.initialize( nullptr, negativeDelay ) );
+    ReplicationClientConfig atLimit;
+    atLimit._historySize = 4;
+    SW_EXPECT_TRUE( client.initialize( nullptr, atLimit ) );
 }

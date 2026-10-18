@@ -245,7 +245,7 @@ namespace
         {
             ReplicationClientConfig settings;
             settings._tickInterval = 1.0f / 60.0f;
-            _client.initialize( &world.getHost(), settings );
+            SW_EXPECT_TRUE( _client.initialize( &world.getHost(), settings ) );
             world.getRouter().registerHandler( &_client );
         }
 

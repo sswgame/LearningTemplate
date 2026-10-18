@@ -110,7 +110,7 @@ namespace
         void initialize( RestaurantSimulation& sim, const RestaurantSettings& settings, RestaurantTestBorrowed& outBorrowed ) const
         {
             outBorrowed._pantry.initialize( &_items, 40 );
-            outBorrowed._clock.initialize( WorldClockSettings{} );
+            SW_EXPECT_TRUE( outBorrowed._clock.initialize( WorldClockSettings{} ) );
             outBorrowed._reputation.initialize( &_reputation );
             sim.initialize( &_catalog, &_recipes, &_items, &_shops, &_curve, outBorrowed.makeRefs(), outBorrowed._pantry, settings );
         }

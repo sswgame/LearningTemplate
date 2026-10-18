@@ -143,13 +143,13 @@ SW_TEST_CASE( SharedStateArchiveTest, ChargeMakesDebtThatBlocksSpending )
 SW_TEST_CASE( SharedStateArchiveTest, ClockRoundTripKeepsTimeAndRejectsOutOfDay )
 {
     WorldClock clock;
-    clock.initialize( makeSharedStateClockSettings( 24.0f ) );
+    SW_EXPECT_TRUE( clock.initialize( makeSharedStateClockSettings( 24.0f ) ) );
     clock.update( 30.0f ); // 6 시에서 30 시간 — 다음 날 12 시
     SW_EXPECT_EQUAL( 1, clock.getDay() );
     const vector<uint8> bytes = captureStateBytes( clock );
 
     WorldClock restored;
-    restored.initialize( makeSharedStateClockSettings( 24.0f ) );
+    SW_ASSERT_TRUE( restored.initialize( makeSharedStateClockSettings( 24.0f ) ) );
     SW_ASSERT_TRUE( restoreStateBytes( restored, bytes ) );
     SW_EXPECT_EQUAL( clock.getDay(), restored.getDay() );
     SW_EXPECT_EQUAL( clock.getHour(), restored.getHour() );
@@ -158,7 +158,7 @@ SW_TEST_CASE( SharedStateArchiveTest, ClockRoundTripKeepsTimeAndRejectsOutOfDay 
     SW_EXPECT_TRUE( listEvent.empty() );
 
     WorldClock shortDay;
-    shortDay.initialize( makeSharedStateClockSettings( 10.0f ) ); // 하루 안의 초 12 가 하루(10 초) 밖이다
+    SW_ASSERT_TRUE( shortDay.initialize( makeSharedStateClockSettings( 10.0f ) ) ); // 하루 안의 초 12 가 하루(10 초) 밖이다
     SW_EXPECT_FALSE( restoreStateBytes( shortDay, bytes ) );
     SW_EXPECT_EQUAL( 0, shortDay.getDay() );
 }

@@ -81,7 +81,10 @@ namespace sw
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == SessionStateInitResult::Fresh )
+        const SessionStateInitResult initResult = pState->initialize( MeadowVillageData::makeStateSettings() );
+        if ( initResult == SessionStateInitResult::Refused )
+            return false; // 범위 밖 설정은 판 상태가 오류를 남겼다
+        if ( initResult == SessionStateInitResult::Fresh )
             pState->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
         _field.initialize( kFieldWidth, kFieldHeight, pCrops );
         const hashed_string season = pState->getClock().getSeasonName();

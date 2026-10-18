@@ -31,7 +31,7 @@ namespace sw
     struct FightingSettings
     {
         int32   _roundFrames{ 60 * 60 };     ///< 라운드 시간(1 보다 작으면 1)
-        int32   _roundsToWin{ 2 };           ///< 이만큼 이기면 대전 끝(1 보다 작으면 1, 둘이 함께 닿으면 무승부)
+        int32   _roundsToWin{ 2 };           ///< 이만큼 이기면 대전 끝(1 이상, 아니면 `initialize` 가 거절한다. 둘이 함께 닿으면 무승부)
         int32   _roundOverFrames{ 90 };      ///< 라운드가 끝나고 다음 라운드까지(1 보다 작으면 1)
         int32   _downFrames{ 30 };           ///< 다운 상태로 바닥에 누워 있는 시간
         int32   _wakeupFrames{ 20 };         ///< 기상 중 무적으로 일어나는 시간
@@ -239,8 +239,8 @@ namespace sw
 
         FightingMatch();
 
-        /** @brief 두 캐릭터로 대전을 새로 시작합니다(1라운드부터). */
-        void initialize( const FighterDef& fighter0, const FighterDef& fighter1, const FightingSettings& settings = FightingSettings{} );
+        /** @brief 두 캐릭터로 대전을 새로 시작합니다(1라운드부터). 라운드 규칙이 `RoundSeriesSettings` 의 범위 밖이면(이길 라운드 수 0 등) 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool initialize( const FighterDef& fighter0, const FighterDef& fighter1, const FightingSettings& settings = FightingSettings{} );
         /** @brief 한 프레임 진행합니다. 입력 방향은 화면 기준입니다. */
         void advanceFrame( const InputFrame& input0, const InputFrame& input1 );
         /** @brief 롤백 어댑터용 `advanceFrame` 입니다. 플레이어 순서대로 1바이트 입력(`encodeInput`)을 받고, 모자란 플레이어는 중립으로 처리합니다. */

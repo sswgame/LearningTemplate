@@ -75,7 +75,7 @@ namespace
         {
             ReplicationClientConfig settings;
             settings._tickInterval = kReplicationTickSeconds;
-            _client.initialize( &world.getHost(), settings );
+            SW_EXPECT_TRUE( _client.initialize( &world.getHost(), settings ) );
             world.getRouter().registerHandler( &_client );
         }
 

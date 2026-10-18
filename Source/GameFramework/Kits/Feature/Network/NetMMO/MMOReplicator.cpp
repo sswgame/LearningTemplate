@@ -2,12 +2,13 @@
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
-#include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
+
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 #include <algorithm>
 
@@ -79,17 +80,30 @@ namespace sw
     {
     }
 
-    void MMOReplicator::initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy )
+    bool MMOReplicator::initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy )
     {
-        _pHost                 = pHost;
-        _settings              = settings;
-        _settings._leaveRadius = MathUtil::max( _settings._leaveRadius, _settings._enterRadius );
-        _pPolicy               = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _grid                  = SpatialHashGrid2D{ settings._cellSize };
+        // 실패하면 호스트 없는 복제기로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
+        _pHost                  = nullptr;
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "MMOReplicator: refused to start - settings '%#'", rangeError.c_str() );
+            return false;
+        }
+        if ( settings._leaveRadius < settings._enterRadius )
+        {
+            SW_LOG_ERROR( "MMOReplicator: refused to start - leave radius %# is smaller than enter radius %#", settings._leaveRadius, settings._enterRadius );
+            return false;
+        }
+        _pHost    = pHost;
+        _settings = settings;
+        _pPolicy  = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
+        _grid     = SpatialHashGrid2D{ settings._cellSize };
         _mapEntity.clear();
         _listObserver.clear();
         _sentUpdateCount = 0;
         _tick            = 0;
+        return true;
     }
 
     void MMOReplicator::setEntity( const MMOEntity& entity )

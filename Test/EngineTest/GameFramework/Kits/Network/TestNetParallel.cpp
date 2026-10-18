@@ -78,7 +78,7 @@ namespace
         for ( int32 index = 0; index < cluster.getClientCount(); ++index )
         {
             listReplication.emplace_back();
-            listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientConfig{} );
+            SW_EXPECT_TRUE( listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientConfig{} ) );
         }
 
         vector<uint64> listHash( kClientCount, sw::HashUtil::kFnvOffset64 );
@@ -133,7 +133,7 @@ namespace
         mmoSettings._leaveRadius       = 60.0f;
         mmoSettings._updateBudgetBytes = 120;
         mmoSettings._maxEnterPerTick   = 6;
-        server.initialize( &cluster.getServer(), mmoSettings );
+        SW_EXPECT_TRUE( server.initialize( &cluster.getServer(), mmoSettings ) );
         server.setTaskManager( pTaskManager, 1 );
         const auto placeEntities = [&server]( uint32 tick )
         {

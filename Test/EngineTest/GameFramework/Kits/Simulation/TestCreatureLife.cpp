@@ -90,7 +90,7 @@ namespace
                                  _quests.loadFromXMLText( kCreatureLifeTestQuestXML, "CreatureLifeTest" );
             _questLog.initialize( &_quests );
             _friendship.initialize( &_reputation );
-            _clock.initialize( WorldClockSettings{} );
+            SW_EXPECT_TRUE( _clock.initialize( WorldClockSettings{} ) );
             return bLoaded;
         }
 
@@ -274,7 +274,7 @@ SW_TEST_CASE( CreatureLifeTest, VisitorsFollowPhaseWeatherAndAreDeterministic )
     WeatherSystem weather;
     weather.initialize( &weatherCatalog, 11u, "Default" );
     WorldClock clock;
-    clock.initialize( WorldClockSettings{} );
+    SW_EXPECT_TRUE( clock.initialize( WorldClockSettings{} ) );
 
     CreatureTown town;
     town.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} );

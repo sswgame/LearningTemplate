@@ -115,7 +115,7 @@ namespace
             (void)spawnBox( world.getObjectManager(), "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 20.0f, 0.5f, 20.0f }, PhysicsBodyType::Static );
             ReplicationClientConfig settings;
             settings._tickInterval = kTickSeconds;
-            _client.initialize( &world.getHost(), settings );
+            SW_EXPECT_TRUE( _client.initialize( &world.getHost(), settings ) );
             world.getRouter().registerHandler( &_client );
         }
 

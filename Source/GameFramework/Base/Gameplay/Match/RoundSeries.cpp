@@ -2,9 +2,9 @@
 
 #include "GameFramework/Base/Gameplay/Match/RoundSeries.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Engine/Reflection/ReflectionValidation.h"
+
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
 {
@@ -19,18 +19,22 @@ namespace sw
     {
     }
 
-    void RoundSeries::initialize( const RoundSeriesSettings& settings )
+    bool RoundSeries::initialize( const RoundSeriesSettings& settings )
     {
-        _settings                    = settings;
-        _settings._winScore          = MathUtil::max( 1, settings._winScore );
-        _settings._roundTicks        = MathUtil::max( 0, settings._roundTicks );
-        _settings._intermissionTicks = MathUtil::max( 0, settings._intermissionTicks );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "RoundSeries: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        _settings = settings;
         _listTotal.clear();
         _roundIndex                 = 0;
         _roundTicksRemaining        = 0;
         _intermissionTicksRemaining = 0;
         _winner                     = kNoWinner;
         _phase                      = RoundSeriesPhase::Waiting;
+        return true;
     }
 
     bool RoundSeries::start( int32 participantCount )

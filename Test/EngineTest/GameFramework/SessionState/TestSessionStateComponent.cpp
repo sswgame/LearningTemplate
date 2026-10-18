@@ -368,3 +368,23 @@ SW_TEST_CASE( SessionStateComponentTest, LandIsLentOnlyWhenSizedAndRidesTheSnaps
     SW_EXPECT_TRUE( restored.getLand().getOwnerName( 2, 2 ) == hashed_string( "Farming" ) );
     SW_EXPECT_TRUE( restored.getLand().isBlockedFor( restored.getLand().registerOwner( "CityBuilder" ), 1, 1 ) );
 }
+
+/**
+ * @brief [SessionStateComponentTest] 범위 밖 설정(음수 슬롯 · 음수 땅 · 시계 안의 계절 0 일)은 조용히 0 으로 맞추지 않고 `Refused` 로 거절하며, 열리지 않은 채로 남는다
+ */
+SW_TEST_CASE( SessionStateComponentTest, RefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range session state settings are refused" );
+    SessionStateSettings         negativeSlots;
+    negativeSlots._inventorySlotCount = -1;
+    SessionStateSettings negativeLand;
+    negativeLand._landWidth = -1;
+    SessionStateSettings noSeasonDay;
+    noSeasonDay._clock._daysPerSeason = 0;
+    for ( const SessionStateSettings* pSettings : { &negativeSlots, &negativeLand, &noSeasonDay } )
+    {
+        SessionStateComponent state;
+        SW_EXPECT_TRUE( state.initialize( *pSettings ) == SessionStateInitResult::Refused );
+        SW_EXPECT_FALSE( state.isInitialized() );
+    }
+}

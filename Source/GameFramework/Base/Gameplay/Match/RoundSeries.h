@@ -29,6 +29,7 @@ namespace sw
     };
 
     /** @brief 목표에 닿은 참가자 둘 이상이 총점까지 같을 때의 처리 방식입니다. */
+    ENUM()
     enum class RoundSeriesTieRule : uint8
     {
         Draw = 0,   ///< 무승부로 끝난다(격투에서 마지막 라운드가 무승부인 경우)
@@ -55,13 +56,23 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 라운드 시리즈 설정입니다. 시간은 정수 스텝이고 0 은 "없음" 입니다. */
-    struct RoundSeriesSettings
+    /**
+     * @brief 라운드 시리즈 설정입니다. 시간은 정수 스텝이고 0 은 "없음" 입니다.
+     * @details 범위는 칸의 `PROPERTY( Min )` 이고, 벗어난 값은 `RoundSeries::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 예전에는 조용히 1 · 0 으로 올렸다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_GF_API RoundSeriesSettings
     {
-        vector<int32>      _listPlacementPoint{};   ///< 순위 점수([0] 이 1 위). 비어 있으면 1 위만 1 점(선승제)이고, 목록보다 낮은 순위는 0 점이다
-        int32              _winScore{ 1 };          ///< 먼저 이만큼 모으면 우승한다. 1 보다 작으면 1 로 본다
-        int32              _roundTicks{ 0 };        ///< 라운드 시간
-        int32              _intermissionTicks{ 0 }; ///< 라운드 사이의 대기. 0 이면 결과를 넣자마자 다음 라운드가 열린다
+        REFLECT_BODY();
+        PROPERTY()
+        vector<int32> _listPlacementPoint{}; ///< 순위 점수([0] 이 1 위). 비어 있으면 1 위만 1 점(선승제)이고, 목록보다 낮은 순위는 0 점이다
+        PROPERTY( Min = 1 )
+        int32 _winScore{ 1 }; ///< 먼저 이만큼 모으면 우승한다
+        PROPERTY( Min = 0 )
+        int32 _roundTicks{ 0 }; ///< 라운드 시간
+        PROPERTY( Min = 0 )
+        int32 _intermissionTicks{ 0 }; ///< 라운드 사이의 대기. 0 이면 결과를 넣자마자 다음 라운드가 열린다
+        PROPERTY()
         RoundSeriesTieRule _tieRule{ RoundSeriesTieRule::SuddenDeath };
     };
 } // namespace sw
@@ -87,8 +98,8 @@ namespace sw
 
         RoundSeries();
 
-        /** @brief 설정을 받고 `Waiting` 상태로 초기화합니다. */
-        void initialize( const RoundSeriesSettings& settings );
+        /** @brief 설정을 받고 `Waiting` 상태로 초기화합니다. 설정이 선언된 범위 밖이면 오류를 남기고 false 를 반환하며, 상태는 그대로입니다. */
+        [[nodiscard]] bool initialize( const RoundSeriesSettings& settings );
         /** @brief @p participantCount 명으로 총점을 비우고 첫 라운드(0)를 엽니다. 1 명보다 적으면 false 입니다. */
         [[nodiscard]] bool start( int32 participantCount );
         /** @brief 한 스텝 진행합니다. 라운드 중이면 라운드 시간을, 대기 중이면 대기 시간을 셉니다. */

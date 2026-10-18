@@ -169,7 +169,7 @@ namespace
         vector<uint8> bytes;
         written.writeData( bytes );
         FightingMatch target;
-        target.initialize( fighterDef, fighterDef );
+        SW_EXPECT_TRUE( target.initialize( fighterDef, fighterDef ) );
         vector<uint8> bytesBefore;
         target.saveState( bytesBefore );
         Archive    reader( bytes.data(), bytes.size() );
@@ -193,7 +193,7 @@ namespace
         match.saveState( bytes );
         SW_EXPECT_TRUE( bytes.empty() == false );
         FightingMatch copy;
-        copy.initialize( fighterDef, fighterDef, settings );
+        SW_EXPECT_TRUE( copy.initialize( fighterDef, fighterDef, settings ) );
         SW_EXPECT_TRUE( copy.loadState( bytes ) );
         SW_EXPECT_TRUE( FixedLayout::equals( match, copy ) );
         vector<uint8> copyBytes;
@@ -232,7 +232,7 @@ SW_TEST_CASE( FightingTest, CommandPriorityStringWindowPostureAndConditions )
     const InputFrame      idle1 = makeInput( 1, 5 );
 
     // 우선도 — "d/f+1"(우선도 1)이 같은 틱에 완성된 "1" 을 이긴다. 같은 우선도면 단계가 많은 "f,f+2" 가 "2" 를 이긴다.
-    match.initialize( *pTester, *pTester );
+    SW_EXPECT_TRUE( match.initialize( *pTester, *pTester ) );
     match.setFighterPosition( 1, 3.0f, 0.0f ); // 닿지 않게 멀리
     pressAndWait( match, makeInput( 0, 3, kFightingButton1 ), idle1, 40, listEvent );
     SW_EXPECT_TRUE( findLastStartedMove( listEvent, 0 ) == hashed_string( "df1" ) );
@@ -244,7 +244,7 @@ SW_TEST_CASE( FightingTest, CommandPriorityStringWindowPostureAndConditions )
     SW_EXPECT_TRUE( findLastStartedMove( listEvent, 0 ) == hashed_string( "two" ) );
 
     // 스트링 — 잽의 캔슬 창(12~18 프레임) 안에 2 를 누르면 jab2, 창이 지난 뒤에 누르면 선입력된 단독 "2" 가 잽이 끝나고 나간다.
-    match.initialize( *pTester, *pTester );
+    SW_EXPECT_TRUE( match.initialize( *pTester, *pTester ) );
     match.setFighterPosition( 1, 3.0f, 0.0f );
     listEvent.clear();
     runFrames( match, 1, makeInput( 0, 5, kFightingButton1 ), idle1, listEvent );
@@ -305,24 +305,24 @@ SW_TEST_CASE( FightingTest, GuardHeightLowHitsStandingHighWhiffsCrouching )
     vector<FightingEvent> listEvent;
 
     // 하단 — 서서(중립) 가드하면 맞는다.
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     pressAndWait( match, makeInput( 0, 2, kButton4 ), makeInput( 1, 5 ), 30, listEvent );
     SW_EXPECT_EQUAL( 10, findHitDamage( listEvent, 0, "sweep" ) );
     SW_EXPECT_EQUAL( 90, match.getFighter( 1 )._health );
 
     // 하단 — 앉아 가드(뒤아래)하면 막는다.
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     listEvent.clear();
     pressAndWait( match, makeInput( 0, 2, kButton4 ), makeInput( 1, 1 ), 30, listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::Blocked, 0 ) );
     SW_EXPECT_EQUAL( 100, match.getFighter( 1 )._health );
 
     // 상단 — 서서 가드하면 막고, 앉으면 머리 위로 헛친다(맞지도 막히지도 않는다).
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     listEvent.clear();
     pressAndWait( match, makeInput( 0, 5, kFightingButton1 ), makeInput( 1, 5 ), 30, listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::Blocked, 0 ) );
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     listEvent.clear();
     pressAndWait( match, makeInput( 0, 5, kFightingButton1 ), makeInput( 1, 1 ), 30, listEvent );
     SW_EXPECT_EQUAL( 0, countEvents( listEvent, FightingEvent::Kind::Blocked, 0 ) );
@@ -330,11 +330,11 @@ SW_TEST_CASE( FightingTest, GuardHeightLowHitsStandingHighWhiffsCrouching )
     SW_EXPECT_EQUAL( 100, match.getFighter( 1 )._health );
 
     // 중단 — 앉아 가드를 뚫고, 서서 가드에는 막힌다.
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     listEvent.clear();
     pressAndWait( match, makeInput( 0, 5, kButton3 ), makeInput( 1, 1 ), 30, listEvent );
     SW_EXPECT_EQUAL( 10, findHitDamage( listEvent, 0, "filler" ) );
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     listEvent.clear();
     pressAndWait( match, makeInput( 0, 5, kButton3 ), makeInput( 1, 4 ), 30, listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::Blocked, 0 ) );
@@ -357,7 +357,7 @@ SW_TEST_CASE( FightingTest, FrameAdvantageDecidesGuaranteedPunish )
     {
         FightingMatch         match;
         vector<FightingEvent> listEvent;
-        match.initialize( tester, tester );
+        SW_EXPECT_TRUE( match.initialize( tester, tester ) );
         runFrames( match, 1, makeInput( 0, 4, arrButton[index] ), makeInput( 1, 5 ), listEvent );
         bool bPressed = false;
         for ( int32 frame = 0; frame < 90; ++frame )
@@ -391,7 +391,7 @@ SW_TEST_CASE( FightingTest, LauncherJuggleScalesDamageAndScrewOncePerCombo )
     const FighterDef&     tester = *fixture.findTester();
     FightingMatch         match;
     vector<FightingEvent> listEvent;
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
 
     // 띄우기 — 상대는 앞으로 걷는 중(가드 없음).
     const InputFrame walk1 = makeInput( 1, 6 );
@@ -453,7 +453,7 @@ SW_TEST_CASE( FightingTest, LauncherJuggleScalesDamageAndScrewOncePerCombo )
     SW_EXPECT_TRUE( findHitDamage( listEvent, 0, "groundHit" ) > 0 );
 
     // 벽꽝 — 벽 근처의 상대를 벽꽝 기술로 붙이고, 벽 조건 기술(u/b+3)이 그제야 나간다.
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     match.setFighterPosition( 1, 4.6f, 0.0f );
     match.setFighterPosition( 0, 3.4f, 0.0f );
     SW_EXPECT_TRUE( match.isNearWall( 1 ) );
@@ -481,7 +481,7 @@ SW_TEST_CASE( FightingTest, ThrowBreaksOnlyWithMatchingButtonInWindow )
     {
         FightingMatch         match;
         vector<FightingEvent> listEvent;
-        match.initialize( tester, tester );
+        SW_EXPECT_TRUE( match.initialize( tester, tester ) );
         runFrames( match, 1, makeInput( 0, 5, kFightingButton1 | kButton3 ), makeInput( 1, 5 ), listEvent );
         while ( match.getFighter( 1 )._state != FighterState::ThrowBreak && match.getFrame() < 30 )
         {
@@ -516,7 +516,7 @@ SW_TEST_CASE( FightingTest, ThrowBreaksOnlyWithMatchingButtonInWindow )
     // 앉으면 잡기는 머리 위로 헛친다.
     FightingMatch         match;
     vector<FightingEvent> listEvent;
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     runFrames( match, 2, makeInput( 0, 5 ), makeInput( 1, 2 ), listEvent );
     runFrames( match, 1, makeInput( 0, 5, kFightingButton1 | kButton3 ), makeInput( 1, 2 ), listEvent );
     runFrames( match, 40, makeInput( 0, 5 ), makeInput( 1, 2 ), listEvent );
@@ -535,7 +535,7 @@ SW_TEST_CASE( FightingTest, SidestepDodgesLinearButNotTracking )
     {
         FightingMatch         match;
         vector<FightingEvent> listEvent;
-        match.initialize( tester, tester );
+        SW_EXPECT_TRUE( match.initialize( tester, tester ) );
         const bool       bSidestep = scenario != 0;
         const InputFrame attack    = scenario == 2 ? makeInput( 0, 6, kButton4 ) : makeInput( 0, 4, kButton3 );
         // 상대는 앞으로 걷기(가드 없음) 대신 제자리 — 횡이동이 아니면 중립에서 앞을 누른 채 맞는다.
@@ -559,7 +559,7 @@ SW_TEST_CASE( FightingTest, RoundsTimeOutKnockoutRageAndDraw )
     settings._roundOverFrames = 10;
     FightingMatch         match;
     vector<FightingEvent> listEvent;
-    match.initialize( tester, tester, settings );
+    SW_EXPECT_TRUE( match.initialize( tester, tester, settings ) );
 
     // 1 라운드 — 잽 하나 맞히고 시간 초과: 체력 비율이 높은 0 이 이긴다.
     pressAndWait( match, makeInput( 0, 5, kFightingButton1 ), makeInput( 1, 6 ), 250, listEvent );
@@ -634,7 +634,7 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
     FightingMatch         match;
     vector<FightingEvent> listEvent;
     vector<uint8>         savedBuffer;
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     int32 eventCount = 0;
     for ( int32 frame = 0; frame < kFrameCount; ++frame )
     {
@@ -670,7 +670,7 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
 
     // 처음부터 따로 돌린 대전도 같다.
     FightingMatch fresh;
-    fresh.initialize( tester, tester );
+    SW_EXPECT_TRUE( fresh.initialize( tester, tester ) );
     for ( int32 frame = 0; frame < kFrameCount; ++frame )
     {
         listInput[0] = listScript[static_cast<size_t>( frame * 2 )];
@@ -703,7 +703,7 @@ SW_TEST_CASE( FightingTest, RollbackStateMovesToAFreshMatchAndRejectsForeignByte
     const FightingSettings settings = makeRoundPinSettings();
     FightingMatch          match;
     vector<FightingEvent>  listEvent;
-    match.initialize( tester, tester, settings );
+    SW_EXPECT_TRUE( match.initialize( tester, tester, settings ) );
     expectRollbackTransfer( match, tester, settings );
 
     // 1 라운드 시간 초과(체력이 많은 0 승) 바로 뒤 — 대기 10.
@@ -735,7 +735,7 @@ SW_TEST_CASE( FightingTest, RollbackStateMovesToAFreshMatchAndRejectsForeignByte
     FighterDef impostorDef = tester;
     impostorDef._id        = hashed_string( "impostor" );
     FightingMatch impostor;
-    impostor.initialize( impostorDef, impostorDef, settings );
+    SW_EXPECT_TRUE( impostor.initialize( impostorDef, impostorDef, settings ) );
     vector<uint8> impostorBefore;
     impostor.saveState( impostorBefore );
     SW_EXPECT_FALSE( impostor.loadState( bytes ) );
@@ -745,7 +745,7 @@ SW_TEST_CASE( FightingTest, RollbackStateMovesToAFreshMatchAndRejectsForeignByte
 
     // 잘린 바이트(빈 것, 한 바이트, 절반, 한 바이트 모자란 것)는 거절하고 그대로다.
     FightingMatch target;
-    target.initialize( tester, tester, settings );
+    SW_EXPECT_TRUE( target.initialize( tester, tester, settings ) );
     vector<uint8> targetBefore;
     target.saveState( targetBefore );
     const size_t arrLength[] = { 0, 1, bytes.size() / 2, bytes.size() - 1 };
@@ -773,7 +773,7 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
     FightingSettings      settings = makeRoundPinSettings();
     FightingMatch         match;
     vector<FightingEvent> listEvent;
-    match.initialize( tester, tester, settings );
+    SW_EXPECT_TRUE( match.initialize( tester, tester, settings ) );
     SW_EXPECT_EQUAL( 1, match.getRound() );
     SW_EXPECT_EQUAL( 240, match.getRoundFramesRemaining() );
 
@@ -821,7 +821,7 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
 
     // 대기 0 은 1 프레임 — 무승부 라운드(같은 체력) 뒤 다음 프레임에 2 라운드.
     settings._roundOverFrames = 0;
-    match.initialize( tester, tester, settings );
+    SW_EXPECT_TRUE( match.initialize( tester, tester, settings ) );
     runFrames( match, 240, neutral0, neutral1, listEvent );
     SW_EXPECT_EQUAL( FightingMatch::kDraw, match.getLastRoundWinner() );
     SW_EXPECT_EQUAL( 1, match.getRoundWins( 0 ) );
@@ -861,7 +861,7 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
     };
 
     FightingMatch match;
-    match.initialize( tester, tester );
+    SW_EXPECT_TRUE( match.initialize( tester, tester ) );
     runScript( match, 0, 150 );
     vector<uint8> codecBytes;
     match.saveState( codecBytes );
@@ -883,7 +883,7 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
     SW_EXPECT_TRUE( std::search( archiveBytes.begin(), archiveBytes.end(), codecBytes.begin(), codecBytes.end() ) == archiveBytes.end() );
 
     FightingMatch restored;
-    restored.initialize( tester, tester );
+    SW_EXPECT_TRUE( restored.initialize( tester, tester ) );
     Archive reader( archiveBytes.data(), archiveBytes.size() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -899,7 +899,7 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
     SW_EXPECT_TRUE( codecBytes == restoredBytes );
 
     FightingMatch truncated;
-    truncated.initialize( tester, tester );
+    SW_EXPECT_TRUE( truncated.initialize( tester, tester ) );
     Archive cut( archiveBytes.data(), archiveBytes.size() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_EQUAL( 0, truncated.getFrame() );
@@ -907,7 +907,7 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
     FighterDef impostorDef = tester;
     impostorDef._id        = hashed_string( "impostor" );
     FightingMatch impostor;
-    impostor.initialize( impostorDef, impostorDef );
+    SW_EXPECT_TRUE( impostor.initialize( impostorDef, impostorDef ) );
     Archive foreignReader( archiveBytes.data(), archiveBytes.size() );
     SW_EXPECT_FALSE( impostor.readState( foreignReader ) );
     SW_EXPECT_EQUAL( 0, impostor.getFrame() );
@@ -924,7 +924,7 @@ SW_TEST_CASE( FightingTest, SaveStateWithOutOfRangeValuesIsRejected )
     SW_ASSERT_TRUE( fixture._bLoaded );
     const FighterDef& tester = *fixture.findTester();
     FightingMatch     source;
-    source.initialize( tester, tester );
+    SW_EXPECT_TRUE( source.initialize( tester, tester ) );
     SW_EXPECT_TRUE( readsSaveOf( source, tester ) );
 
     const PropertyInfo* pLastWinner = FightingMatch::StaticType()->findProperty( "_lastRoundWinner" );

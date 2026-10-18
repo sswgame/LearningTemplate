@@ -54,7 +54,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 롤백 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `RollbackSession::initialize` 가 오류로 거절합니다(`NetKitConfigUtil`).
+     * @brief 롤백 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `RollbackSession::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
      * @details 예전에는 범위 안으로 조용히 맞췄다. 그러면 지연 20을 준 게임이 8로 돌면서도 아무도 몰랐다(폴백 금지 원칙).
      *          `Max` 는 리터럴만 받으므로 `RollbackSession::kMaxInputDelay` · `kMaxPrediction` 과 같은 값을 적는다. 경계 값 테스트(`RollbackRefusesOutOfRangeSettings`)가 둘이 어긋나지 않는지 본다.
      */

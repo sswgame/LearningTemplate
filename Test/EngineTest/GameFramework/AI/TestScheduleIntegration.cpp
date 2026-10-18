@@ -237,7 +237,7 @@ SW_TEST_CASE( ScheduleIntegrationTest, ScheduleSystemUsesTheSmartObjectLocator )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kXML, "town" ) );
     ScheduleSystem system;
     system.setActivityLocator( &locator );
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 6 ) ) );
     const int32 abigail = system.findNpcIndex( "abigail" );
     const int32 emily   = system.findNpcIndex( "emily" );
     system.advanceTo( Internal::makeMinute( 19 ) );
@@ -266,7 +266,7 @@ SW_TEST_CASE( ScheduleIntegrationTest, InteractionInterruptionSystemPushesAndPop
     ScheduleCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kXML, "town" ) );
     ScheduleSystem system;
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 6 ) ) );
     const int32 abigail = system.findNpcIndex( "abigail" );
     system.advanceTo( Internal::makeMinute( 18, 30 ) );
 
@@ -305,7 +305,7 @@ SW_TEST_CASE( ScheduleIntegrationTest, InterruptionResolverAndClear )
     ScheduleCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kXML, "town" ) );
     ScheduleSystem system;
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 6 ) ) );
     const int32 emily = system.findNpcIndex( "emily" );
     system.advanceTo( Internal::makeMinute( 18, 30 ) );
 

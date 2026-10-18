@@ -403,13 +403,16 @@ namespace sw
         _itemCatalog = ItemCatalog{};
         _cropCatalog.fillItemCatalog( _itemCatalog, _itemStackSize );
         SessionStateSettings settings;
-        settings._clock._listSeason    = FarmDirectorComponentInternal::makeSeasons();
-        settings._clock._secondsPerDay = _secondsPerDay;
-        settings._clock._startHour     = _wakeHour;
-        settings._clock._daysPerSeason = _daysPerSeason;
-        settings._pItemCatalog         = &_itemCatalog;
-        settings._inventorySlotCount   = kBagSlotCount;
-        const bool bFresh              = pState->initialize( settings ) == SessionStateInitResult::Fresh;
+        settings._clock._listSeason             = FarmDirectorComponentInternal::makeSeasons();
+        settings._clock._secondsPerDay          = _secondsPerDay;
+        settings._clock._startHour              = _wakeHour;
+        settings._clock._daysPerSeason          = _daysPerSeason;
+        settings._pItemCatalog                  = &_itemCatalog;
+        settings._inventorySlotCount            = kBagSlotCount;
+        const SessionStateInitResult initResult = pState->initialize( settings );
+        if ( initResult == SessionStateInitResult::Refused )
+            return false; // 범위 밖(하루 길이 · 계절 날 수 등)은 판 상태가 오류를 남겼다
+        const bool bFresh = initResult == SessionStateInitResult::Fresh;
         _field.initialize( kFieldWidth, kFieldHeight, &_cropCatalog );
         _shipment = FarmShippingBin{};
         _listSeed.clear();

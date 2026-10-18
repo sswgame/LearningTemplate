@@ -22,17 +22,31 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 시계 설정입니다. 시각은 0..24 시입니다. */
-    struct WorldClockSettings
+    /**
+     * @brief 시계 설정입니다. 시각은 0..24 시입니다.
+     * @details 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `WorldClock::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
+     *          예전에는 하루 길이와 계절 날 수를 조용히 1 로 올렸다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_GF_API WorldClockSettings
     {
-        vector<hashed_string> _listSeason{};             ///< 비면 계절 하나("Default")
-        float32               _secondsPerDay{ 1440.0f }; ///< 실제 초 — 기본은 하루 24 분
-        float32               _startHour{ 6.0f };
-        float32               _dawnHour{ 5.0f };
-        float32               _dayHour{ 7.0f };
-        float32               _duskHour{ 18.0f };
-        float32               _nightHour{ 20.0f };
-        int32                 _daysPerSeason{ 28 };
+        REFLECT_BODY();
+        PROPERTY()
+        vector<hashed_string> _listSeason{}; ///< 비면 계절 하나("Default")
+        PROPERTY( Min = 1, Units = s )
+        float32 _secondsPerDay{ 1440.0f }; ///< 실제 초 — 기본은 하루 24 분
+        PROPERTY( Min = 0, Max = 24 )
+        float32 _startHour{ 6.0f };
+        PROPERTY( Min = 0, Max = 24 )
+        float32 _dawnHour{ 5.0f };
+        PROPERTY( Min = 0, Max = 24 )
+        float32 _dayHour{ 7.0f };
+        PROPERTY( Min = 0, Max = 24 )
+        float32 _duskHour{ 18.0f };
+        PROPERTY( Min = 0, Max = 24 )
+        float32 _nightHour{ 20.0f };
+        PROPERTY( Min = 1 )
+        int32 _daysPerSeason{ 28 };
     };
 } // namespace sw
 
@@ -78,10 +92,11 @@ namespace sw
 
         WorldClock();
 
-        void initialize( const WorldClockSettings& settings );
-        void update( float32 deltaTime );
-        void setPaused( bool bPaused ) { _bPaused = bPaused ? SW_TRUE : SW_FALSE; }
-        void setTimeScale( float32 timeScale );
+        /** @brief 설정을 받고 시작 시각으로 옮깁니다. 설정이 선언된 범위 밖이면 오류를 남기고 false 를 반환하며, 시계는 그대로입니다. */
+        [[nodiscard]] bool initialize( const WorldClockSettings& settings );
+        void               update( float32 deltaTime );
+        void               setPaused( bool bPaused ) { _bPaused = bPaused ? SW_TRUE : SW_FALSE; }
+        void               setTimeScale( float32 timeScale );
         /** @brief 그 날 그 시각으로 옮깁니다. 알림은 없으며 로드에 씁니다. */
         void setTime( int32 day, float32 hour );
         /** @brief 다음 @p hour 시까지 건너뜁니다. 잠에 씁니다. 지나간 경계는 알립니다. */

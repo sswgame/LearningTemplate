@@ -233,7 +233,7 @@ SW_TEST_CASE( ScheduleTest, BlockSelectionFollowsTimeConditionsAndPriority )
     GameFlags      flags;
     ScheduleSystem system;
     system.setFlags( &flags );
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) ) );
     const int32 pierre = system.findNpcIndex( "pierre" );
     SW_ASSERT_TRUE( pierre >= 0 );
 
@@ -285,7 +285,7 @@ SW_TEST_CASE( ScheduleTest, FestivalOverridesOnlyItsHoursOnItsDay )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem system;
     const int32    kFestivalDay = 12; // 봄 13 일 토요일
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( kFestivalDay, 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( kFestivalDay, 6 ) ) );
     const int32 pierre  = system.findNpcIndex( "pierre" );
     const int32 abigail = system.findNpcIndex( "abigail" );
 
@@ -325,7 +325,7 @@ SW_TEST_CASE( ScheduleTest, LeavesEarlyByEstimatedTravelTime )
     ScheduleCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem system;
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) ) );
     const int32 pierre = system.findNpcIndex( "pierre" );
 
     const ScheduleSegment* pWork = nullptr;
@@ -364,7 +364,7 @@ SW_TEST_CASE( ScheduleTest, InterruptionStackResumesToTheCurrentBlock )
     ScheduleCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem system;
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) ) );
     const int32 pierre = system.findNpcIndex( "pierre" );
 
     system.advanceTo( Internal::makeMinute( Internal::kMonday, 9, 30 ) );
@@ -420,7 +420,7 @@ SW_TEST_CASE( ScheduleTest, AppointmentBringsTwoNpcsTogetherOrBreaks )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     {
         ScheduleSystem system;
-        system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
+        SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) ) );
         const int32 pierre  = system.findNpcIndex( "pierre" );
         const int32 abigail = system.findNpcIndex( "abigail" );
         system.advanceTo( Internal::makeMinute( Internal::kWednesday, 11, 59 ) );
@@ -448,7 +448,7 @@ SW_TEST_CASE( ScheduleTest, AppointmentBringsTwoNpcsTogetherOrBreaks )
     }
     {
         ScheduleSystem system;
-        system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
+        SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) ) );
         const int32 pierre  = system.findNpcIndex( "pierre" );
         const int32 abigail = system.findNpcIndex( "abigail" );
         system.advanceTo( Internal::makeMinute( Internal::kWednesday, 11 ) );
@@ -491,7 +491,7 @@ SW_TEST_CASE( ScheduleTest, OffScreenCatchUpMatchesOnScreenSimulation )
     for ( ScheduleSystem* pSystem : arrSystem )
     {
         pSystem->setPathing( &planningPathing, &finePathing );
-        pSystem->initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
+        SW_ASSERT_TRUE( pSystem->initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) ) );
     }
     for ( int32 npcIndex = 0; npcIndex < onScreen.getNpcCount(); ++npcIndex )
     {
@@ -559,8 +559,8 @@ SW_TEST_CASE( ScheduleTest, TimeSkipJumpsEveryNpcToTheirScheduledPlace )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem flowing;
     ScheduleSystem sleeping;
-    flowing.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
-    sleeping.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
+    SW_ASSERT_TRUE( flowing.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) ) );
+    SW_ASSERT_TRUE( sleeping.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) ) );
     const int32 pierre = sleeping.findNpcIndex( "pierre" );
 
     const int32 morning = Internal::makeMinute( Internal::kWednesday + 1, 9, 10 );
@@ -591,7 +591,7 @@ SW_TEST_CASE( ScheduleTest, SaveStateRoundTripsThroughTheArchive )
     ScheduleCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem original;
-    original.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
+    SW_ASSERT_TRUE( original.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) ) );
     const int32 pierre  = original.findNpcIndex( "pierre" );
     const int32 abigail = original.findNpcIndex( "abigail" );
     original.advanceTo( Internal::makeMinute( Internal::kWednesday, 11 ) );
@@ -611,7 +611,7 @@ SW_TEST_CASE( ScheduleTest, SaveStateRoundTripsThroughTheArchive )
     SW_ASSERT_TRUE( reader.deserializeObject( loaded ) );
 
     ScheduleSystem restored;
-    restored.initialize( &catalog, Internal::makeSettings( 99u ), Internal::makeMinute( 0, 6 ) );
+    SW_ASSERT_TRUE( restored.initialize( &catalog, Internal::makeSettings( 99u ), Internal::makeMinute( 0, 6 ) ) );
     restored.restoreSaveState( loaded );
     SW_EXPECT_EQUAL( original.getMinute(), restored.getMinute() );
     SW_EXPECT_TRUE( restored.isAppointmentBroken( "lunch" ) );
@@ -638,9 +638,9 @@ SW_TEST_CASE( ScheduleTest, DeterminismHashAndNetSummary )
     ScheduleSystem first;
     ScheduleSystem second;
     ScheduleSystem otherSeed;
-    first.initialize( &catalog, Internal::makeSettings( 1u ), Internal::makeMinute( Internal::kSaturday, 6 ) );
-    second.initialize( &catalog, Internal::makeSettings( 1u ), Internal::makeMinute( Internal::kSaturday, 6 ) );
-    otherSeed.initialize( &catalog, Internal::makeSettings( 2u ), Internal::makeMinute( Internal::kSaturday, 6 ) );
+    SW_ASSERT_TRUE( first.initialize( &catalog, Internal::makeSettings( 1u ), Internal::makeMinute( Internal::kSaturday, 6 ) ) );
+    SW_ASSERT_TRUE( second.initialize( &catalog, Internal::makeSettings( 1u ), Internal::makeMinute( Internal::kSaturday, 6 ) ) );
+    SW_ASSERT_TRUE( otherSeed.initialize( &catalog, Internal::makeSettings( 2u ), Internal::makeMinute( Internal::kSaturday, 6 ) ) );
     const int32 noon = Internal::makeMinute( Internal::kSaturday, 12, 10 );
     first.advanceTo( noon );
     for ( int32 minute = second.getMinute() + 7; minute <= noon; minute += 7 )
@@ -706,7 +706,7 @@ SW_TEST_CASE( ScheduleTest, RunsOnA2DTileGridInTheXyPlane )
 
     ScheduleSystem system;
     system.setPathing( &pathing, &pathing );
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 0, 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 0, 6 ) ) );
     system.setNpcLOD( 0, ScheduleLOD::Near );
     const ScheduleSegment* pWork = nullptr;
     for ( const ScheduleSegment& segment : system.getPlan( 0 ) )
@@ -745,7 +745,7 @@ SW_TEST_CASE( ScheduleTest, SpotLocatorReservesDistinctBenchesIdempotently )
     ScheduleCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem system;
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) ) );
     const int32 abigail = system.findNpcIndex( "abigail" );
     const int32 emily   = system.findNpcIndex( "emily" );
     system.advanceTo( Internal::makeMinute( Internal::kMonday, 19 ) );
@@ -776,7 +776,7 @@ SW_TEST_CASE( ScheduleTest, AnimatorHookPlaysOnlyForNearNpcs )
     Internal::RecordingAnimator animator;
     ScheduleSystem              system;
     system.setActivityAnimator( &animator );
-    system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 8 ) );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 8 ) ) );
     const int32 pierre = system.findNpcIndex( "pierre" );
     system.setNpcLOD( pierre, ScheduleLOD::Near );
     animator._listStarted.clear();
@@ -789,4 +789,21 @@ SW_TEST_CASE( ScheduleTest, AnimatorHookPlaysOnlyForNearNpcs )
     {
         SW_EXPECT_EQUAL( pierre, cue._npcIndex );
     }
+}
+
+/**
+ * @brief [ScheduleTest] 범위 밖 설정(화면 밖 간격 0 · 시계 안의 계절 0 일)과 음수 시각은 조용히 맞추지 않고 오류로 거절한다
+ */
+SW_TEST_CASE( ScheduleTest, RefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range schedule settings are refused" );
+    ScheduleSystem               system;
+    ScheduleSystemSettings       noFarStep;
+    noFarStep._farStepMinutes = 0;
+    SW_EXPECT_FALSE( system.initialize( nullptr, noFarStep, 0 ) );
+    ScheduleSystemSettings noSeasonDay;
+    noSeasonDay._clock._daysPerSeason = 0;
+    SW_EXPECT_FALSE( system.initialize( nullptr, noSeasonDay, 0 ) );
+    SW_EXPECT_FALSE( system.initialize( nullptr, ScheduleSystemSettings{}, -1 ) );
+    SW_EXPECT_TRUE( system.initialize( nullptr, ScheduleSystemSettings{}, 0 ) );
 }

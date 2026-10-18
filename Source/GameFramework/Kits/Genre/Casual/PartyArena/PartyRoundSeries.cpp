@@ -41,8 +41,7 @@ namespace sw
     {
         if ( playerCount < 2 || _listRound.empty() )
             return false;
-        _series.initialize( _seriesSettings );
-        if ( _series.start( playerCount ) == false )
+        if ( _series.initialize( _seriesSettings ) == false || _series.start( playerCount ) == false )
             return false;
         _eventBuffer.clear();
         pushEvent( PartySeriesEvent::Kind::RoundStarted, -1, 0, 0 );

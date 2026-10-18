@@ -45,18 +45,34 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모드 하나의 규칙입니다. 게임이 등록하는 데이터입니다. */
-    struct MatchModeDefinition
+    /**
+     * @brief 모드 하나의 규칙입니다. 게임이 등록하는 데이터입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 모드는 `MatchMaker::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
+     * @details 예전에는 팀 수와 팀 인원을 조용히 1 ~ 16 으로 맞췄다(폴백 금지 원칙). `Max` 는 리터럴만 받으므로 `MatchmakingLimit` 과 같은 값을 적는다.
+     *          경계 값 테스트(`MatchMakerTest.RefusesOutOfRangeMode`)가 둘이 어긋나지 않는지 본다.
+     */
+    REFLECT()
+    struct SW_KIT_API MatchModeDefinition
     {
-        string _modeID{};               ///< `[0-9a-z_]` 형식이며 32바이트 이하이다. 버스 주제와 캐시 키에 들어간다
-        string _serverKind{ "game" };   ///< 전용 서버 종류이다. 기반 계층의 서버 선택에 쓴다
-        int64  _regionRelaxMs{ 30000 }; ///< 앵커나 후보가 이만큼 기다렸으면 지역을 따지지 않는다
-        int64  _maxWaitMs{ 120000 };    ///< 넘으면 티켓을 뺀다. 매칭에 실패한 것이며 다시 줄을 서야 한다
-        int32  _teamCount{ 2 };
-        int32  _teamSize{ 3 };
-        int32  _baseRatingWindow{ 100 }; ///< 실력 허용 범위는 기본값에 초당 넓힘을 기다린 초만큼 곱해 더한 값이며 상한이 있다
-        int32  _ratingWindowPerSecond{ 25 };
-        int32  _maxRatingWindow{ 1000 };
+        REFLECT_BODY();
+        PROPERTY()
+        string _modeID{}; ///< `[0-9a-z_]` 형식이며 32바이트 이하이다. 버스 주제와 캐시 키에 들어간다
+        PROPERTY()
+        string _serverKind{ "game" }; ///< 전용 서버 종류이다. 기반 계층의 서버 선택에 쓴다
+        PROPERTY()
+        int64 _regionRelaxMs{ 30000 }; ///< 앵커나 후보가 이만큼 기다렸으면 지역을 따지지 않는다
+        PROPERTY()
+        int64 _maxWaitMs{ 120000 }; ///< 넘으면 티켓을 뺀다. 매칭에 실패한 것이며 다시 줄을 서야 한다
+        PROPERTY( Min = 1, Max = 16 )
+        int32 _teamCount{ 2 }; ///< 1 ~ `MatchmakingLimit::kMaxTeamCount`
+        PROPERTY( Min = 1, Max = 16 )
+        int32 _teamSize{ 3 }; ///< 1 ~ `MatchmakingLimit::kMaxTeamSize`
+        PROPERTY()
+        int32 _baseRatingWindow{ 100 }; ///< 실력 허용 범위는 기본값에 초당 넓힘을 기다린 초만큼 곱해 더한 값이며 상한이 있다
+        PROPERTY()
+        int32 _ratingWindowPerSecond{ 25 };
+        PROPERTY()
+        int32 _maxRatingWindow{ 1000 };
+        PROPERTY()
         uint32 _buildVersion{ 0 }; ///< 전용 서버 빌드 버전이다. 0이면 상관없다
     };
 } // namespace sw

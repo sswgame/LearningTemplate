@@ -7,7 +7,7 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
 
-#include "GameFramework/Kits/Feature/Network/NetKitConfig.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
 {
@@ -39,7 +39,7 @@ namespace sw
         _listNextInputTick.clear();
         _listLeaveTick.clear();
         const bool   bPlayersValid = playerCount >= 1 && localPlayer >= 0 && localPlayer < playerCount;
-        const string rangeError    = NetKitConfigUtil::describeRangeErrors( settings );
+        const string rangeError    = ConfigRangeUtil::describeRangeErrors( settings );
         if ( bPlayersValid == false || rangeError.empty() == false )
         {
             SW_LOG_ERROR( "LockstepSession: refused to start - players %#, local player %#, settings '%#'", playerCount, localPlayer,

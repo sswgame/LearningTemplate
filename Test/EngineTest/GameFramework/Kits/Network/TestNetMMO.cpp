@@ -49,7 +49,7 @@ namespace
             : _server{}
             , _pTable{ pTable }
         {
-            _server.initialize( &world.getHost(), pTable->_settings );
+            SW_EXPECT_TRUE( _server.initialize( &world.getHost(), pTable->_settings ) );
             world.getRouter().registerHandler( &_server );
         }
 
@@ -226,7 +226,7 @@ SW_TEST_CASE( NetMMOTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
     settings._enterRadius       = 50.0f;
     settings._leaveRadius       = 60.0f;
     settings._updateBudgetBytes = 150;
-    server.initialize( &serverHost, settings, &policy );
+    SW_EXPECT_TRUE( server.initialize( &serverHost, settings, &policy ) );
 
     // 400 개를 400 × 400 에 고르게. 플레이어(1000)는 (100, 100). 파티원(1001)은 멀리.
     for ( uint32 index = 0; index < 400; ++index )
@@ -610,4 +610,31 @@ SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheAck )
     SW_LOG_INFO( "[NetMMO] far entity changed during a 30-tick downstream blackout: seen %# ticks after the link came back", ticksToSee );
     // 판정 없이(보낸 순간 "안 바뀜") 13 틱, 확인으로 판정하면 4 틱. 고친 값 + 3.
     SW_EXPECT_TRUE( ticksToSee <= 7u );
+}
+
+/**
+ * @brief [NetMMOTest] 범위 밖 설정과 들어오는 반경보다 작은 나가는 반경은 조용히 맞추지 않고 오류로 거절한다. 예산 경계(`NetConnection::kMaxSingleMessageSize`)는 받는다
+ * @details 예전에는 나가는 반경을 들어오는 반경으로 올려 돌았다. 경계 값 확인은 `PROPERTY( Max )` 리터럴과 상수가 어긋나지 않는지 본다.
+ */
+SW_TEST_CASE( NetMMOTest, MMORefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range MMO replicator settings are refused" );
+    MMOReplicator                server;
+    MMOReplicatorConfig          shrinkingLeave;
+    shrinkingLeave._enterRadius = 60.0f;
+    shrinkingLeave._leaveRadius = 50.0f;
+    SW_EXPECT_FALSE( server.initialize( nullptr, shrinkingLeave ) );
+    MMOReplicatorConfig noCell;
+    noCell._cellSize = 0.0f;
+    SW_EXPECT_FALSE( server.initialize( nullptr, noCell ) );
+    MMOReplicatorConfig tooLargeBudget;
+    tooLargeBudget._updateBudgetBytes = NetConnection::kMaxSingleMessageSize + 1;
+    SW_EXPECT_FALSE( server.initialize( nullptr, tooLargeBudget ) );
+    MMOReplicatorConfig noEnter;
+    noEnter._maxEnterPerTick = 0;
+    SW_EXPECT_FALSE( server.initialize( nullptr, noEnter ) );
+    MMOReplicatorConfig atLimit;
+    atLimit._updateBudgetBytes = NetConnection::kMaxSingleMessageSize;
+    atLimit._leaveRadius       = atLimit._enterRadius;
+    SW_EXPECT_TRUE( server.initialize( nullptr, atLimit ) );
 }

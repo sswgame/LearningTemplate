@@ -46,7 +46,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 락스텝 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `LockstepSession::initialize` 가 오류로 거절합니다(`NetKitConfigUtil`).
+     * @brief 락스텝 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `LockstepSession::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
      * @details 예전에는 지연을 범위 안으로 조용히 맞췄다(폴백 금지 원칙). `Max` 는 리터럴만 받으므로 `LockstepSession::kMaxInputDelay` 와 같은 값을 적는다.
      *          경계 값 테스트(`LockstepRefusesOutOfRangeSettings`)가 둘이 어긋나지 않는지 본다.
      */

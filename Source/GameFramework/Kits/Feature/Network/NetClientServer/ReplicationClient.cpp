@@ -8,6 +8,8 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/Replication/InterpolationBuffer.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
+
 namespace sw
 {
     ReplicationClient::ReplicationClient()
@@ -22,8 +24,16 @@ namespace sw
     {
     }
 
-    void ReplicationClient::initialize( NetHost* pHost, const ReplicationClientConfig& settings )
+    bool ReplicationClient::initialize( NetHost* pHost, const ReplicationClientConfig& settings )
     {
+        // 실패하면 호스트 없는 클라이언트로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
+        _pHost                  = nullptr;
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "ReplicationClient: refused to start - settings '%#'", rangeError.c_str() );
+            return false;
+        }
         _pHost    = pHost;
         _settings = settings;
         NetClockConfig clockSettings;
@@ -32,10 +42,11 @@ namespace sw
         clockSettings._sampleInterval     = settings._tickInterval; // 스냅샷은 서버 틱마다 온다
         _clock.initialize( clockSettings );
 
-        _listSnapshot.initialize( MathUtil::max( 4, settings._historySize ) );
+        _listSnapshot.initialize( settings._historySize ); // 범위(4 이상)는 위에서 봤다
         _inputWindow.initialize( NetClientServerMessage::kMaxInputCount, NetClientServerMessage::kInputFormat );
         _decodeFailureCount = 0;
         resetHistory();
+        return true;
     }
 
     void ReplicationClient::resetHistory()

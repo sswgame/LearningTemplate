@@ -156,7 +156,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 서버 쪽 중계기 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `TurnRelayServer::initialize` 가 오류로 거절합니다(`NetKitConfigUtil`).
+     * @brief 서버 쪽 중계기 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `TurnRelayServer::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
      * @details 예전에는 자리 수 0을 조용히 1로 바꿨다(폴백 금지 원칙).
      */
     REFLECT()

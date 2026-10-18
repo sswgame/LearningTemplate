@@ -29,20 +29,33 @@ namespace sw
     class ReputationCatalog;
     class WeatherCatalog;
 
-    /** @brief 판 상태를 여는 데 필요한 설정입니다. 카탈로그는 소유하지 않고 참조만 하므로 컴포넌트보다 오래 살아 있어야 합니다. 보통 게임 인스턴스가 카탈로그를 보관합니다. */
-    struct SessionStateSettings
+    /**
+     * @brief 판 상태를 여는 데 필요한 설정입니다. 카탈로그는 소유하지 않고 참조만 하므로 컴포넌트보다 오래 살아 있어야 합니다. 보통 게임 인스턴스가 카탈로그를 보관합니다.
+     * @details 숫자 칸의 범위는 `PROPERTY( Min )` 이고(시계 설정 안까지), 벗어나면 `SessionStateComponent::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
+     *          예전에는 음수 슬롯 수와 땅 크기를 조용히 0 으로 올렸다(폴백 금지 원칙). 카탈로그 포인터는 리플렉션 칸이 아니다.
+     */
+    REFLECT()
+    struct SW_GF_API SessionStateSettings
     {
+        REFLECT_BODY();
+        PROPERTY()
         WorldClockSettings       _clock{};
         const QuestCatalog*      _pQuestCatalog{ nullptr };
         const ReputationCatalog* _pReputationCatalog{ nullptr };
         const ItemCatalog*       _pItemCatalog{ nullptr };
-        int32                    _inventorySlotCount{ 0 };    ///< 플레이어 가방의 슬롯 수. 0 이면 가방이 없고 `makeRefs` 의 가방 포인터가 nullptr 이다
-        const WeatherCatalog*    _pWeatherCatalog{ nullptr }; ///< 없으면 날씨가 없고 `makeRefs` 의 날씨 포인터가 nullptr 이다
-        uint32                   _weatherSeed{ 0 };
-        int32                    _landWidth{ 0 }; ///< 공유 땅의 셀 수. 0 이면 땅이 없고 `makeRefs` 의 땅 포인터가 nullptr 이다. 격자 키트는 단독으로 쓴다
-        int32                    _landHeight{ 0 };
-        float32                  _landCellSize{ 1.0f };
-        float3                   _landOrigin{};
+        PROPERTY( Min = 0 )
+        int32                 _inventorySlotCount{ 0 };    ///< 플레이어 가방의 슬롯 수. 0 이면 가방이 없고 `makeRefs` 의 가방 포인터가 nullptr 이다
+        const WeatherCatalog* _pWeatherCatalog{ nullptr }; ///< 없으면 날씨가 없고 `makeRefs` 의 날씨 포인터가 nullptr 이다
+        PROPERTY()
+        uint32 _weatherSeed{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _landWidth{ 0 }; ///< 공유 땅의 셀 수. 0 이면 땅이 없고 `makeRefs` 의 땅 포인터가 nullptr 이다. 격자 키트는 단독으로 쓴다
+        PROPERTY( Min = 0 )
+        int32 _landHeight{ 0 };
+        PROPERTY()
+        float32 _landCellSize{ 1.0f };
+        PROPERTY()
+        float3 _landOrigin{};
     };
 } // namespace sw
 
@@ -51,9 +64,10 @@ namespace sw
     /** @brief `SessionStateComponent::initialize` 의 결과입니다. */
     enum class SessionStateInitResult : uint8
     {
-        Fresh = 0,         ///< 새 판이다. 여는 디렉터가 시작값(시작 돈, 첫 플래그)을 넣는다
-        Restored,          ///< 보관하고 있던 세이브나 핫 리로드 바이트로 복원했다. 시작값은 넣지 않는다
-        AlreadyInitialized ///< 같은 오브젝트의 앞 디렉터가 이미 열었다. 설정은 무시하며, 새 판인지는 `isFreshGame` 으로 확인한다
+        Fresh = 0,          ///< 새 판이다. 여는 디렉터가 시작값(시작 돈, 첫 플래그)을 넣는다
+        Restored,           ///< 보관하고 있던 세이브나 핫 리로드 바이트로 복원했다. 시작값은 넣지 않는다
+        AlreadyInitialized, ///< 같은 오브젝트의 앞 디렉터가 이미 열었다. 설정은 무시하며, 새 판인지는 `isFreshGame` 으로 확인한다
+        Refused             ///< 설정이 선언된 범위 밖이라 열지 않았다(오류를 남겼다). 여는 디렉터는 시작을 멈춘다
     };
 } // namespace sw
 
@@ -86,9 +100,10 @@ namespace sw
 
         /**
          * @brief 판 상태를 엽니다. 첫 호출만 설정을 쓰고, 보관하고 있던 복원 바이트가 있으면 그것으로 복원합니다.
-         * @return 새 판, 복원, 이미 열림 중 하나입니다. 복원하려던 바이트를 읽지 못했으면 경고를 남기고 새 판(`Fresh`)으로 엽니다.
+         * @return 새 판, 복원, 이미 열림, 거절 중 하나입니다. 복원하려던 바이트를 읽지 못했으면 경고를 남기고 새 판(`Fresh`)으로 엽니다.
+         *         설정이 범위 밖이면 오류를 남기고 `Refused` 이며, 열리지 않은 채로 남습니다.
          */
-        SessionStateInitResult initialize( const SessionStateSettings& settings );
+        [[nodiscard]] SessionStateInitResult initialize( const SessionStateSettings& settings );
 
         /** @brief 틱 그룹을 디렉터와 같은 `PrePhysics` 로 정합니다. */
         void onBeginPlay() override;

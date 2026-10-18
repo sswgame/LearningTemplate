@@ -106,7 +106,7 @@ namespace
             WorldClockSettings clockSettings;
             clockSettings._secondsPerDay = _catalog.getDaySettings()._secondsPerDay;
             clockSettings._startHour     = _catalog.getDaySettings()._arrivalHour;
-            _clock.initialize( clockSettings );
+            SW_EXPECT_TRUE( _clock.initialize( clockSettings ) );
             _weather.initialize( &_weatherCatalog, 1u, hashed_string{} );
             SessionStateRefs refs;
             refs._pWallet  = &_wallet;

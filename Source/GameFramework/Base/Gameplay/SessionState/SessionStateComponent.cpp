@@ -2,11 +2,10 @@
 
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -86,15 +85,23 @@ namespace sw
     {
         if ( _bInitialized == SW_TRUE )
             return SessionStateInitResult::AlreadyInitialized;
+        // 값을 범위 안으로 맞춰 열지 않는다. 시계 설정 안까지 보며, 상태를 바꾸기 전에 본다.
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "SessionState: refused to open - settings '%#'", rangeError.c_str() );
+            return SessionStateInitResult::Refused;
+        }
+        if ( _clock.initialize( settings._clock ) == false )
+            return SessionStateInitResult::Refused;
         _wallet.clear();
         _flags.clear();
-        _clock.initialize( settings._clock );
         _questLog.initialize( settings._pQuestCatalog );
         _reputation.initialize( settings._pReputationCatalog );
-        _inventory.initialize( settings._pItemCatalog, MathUtil::max( 0, settings._inventorySlotCount ) );
+        _inventory.initialize( settings._pItemCatalog, settings._inventorySlotCount );
         _weather.initialize( settings._pWeatherCatalog, settings._weatherSeed, _clock.getSeasonName() );
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
-        _land.initialize( MathUtil::max( 0, settings._landWidth ), MathUtil::max( 0, settings._landHeight ), settings._landCellSize, settings._landOrigin );
+        _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, settings._landOrigin );
         _listClockEvent.clear();
         _bInitialized = SW_TRUE;
         _bFreshGame   = SW_TRUE;

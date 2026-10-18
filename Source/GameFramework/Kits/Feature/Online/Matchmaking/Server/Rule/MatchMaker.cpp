@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
+
 #include <algorithm>
 #include <cstdlib>
 
@@ -69,13 +71,19 @@ namespace sw
     {
     }
 
-    void MatchMaker::initialize( const MatchModeDefinition& definition, uint64 matchIDSeed )
+    bool MatchMaker::initialize( const MatchModeDefinition& definition, uint64 matchIDSeed )
     {
-        _definition            = definition;
-        _definition._teamCount = std::clamp( definition._teamCount, 1, MatchmakingLimit::kMaxTeamCount );
-        _definition._teamSize  = std::clamp( definition._teamSize, 1, MatchmakingLimit::kMaxTeamSize );
-        _nextMatchID           = ( matchIDSeed << 32 ) | 1u;
+        // 값을 범위 안으로 맞춰 돌지 않는다. 팀 수 20 을 준 모드가 16 으로 돌면 아무도 모른다.
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( definition );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "MatchMaker: refused mode '%#' - %#", definition._modeID, rangeError.c_str() );
+            return false;
+        }
+        _definition  = definition;
+        _nextMatchID = ( matchIDSeed << 32 ) | 1u;
         _listTicket.clear();
+        return true;
     }
 
     int32 MatchMaker::computeRatingWindow( const MatchTicket& ticket, int64 nowMs ) const

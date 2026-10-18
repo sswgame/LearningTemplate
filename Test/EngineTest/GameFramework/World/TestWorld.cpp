@@ -31,7 +31,7 @@ SW_TEST_CASE( WorldTest, ClockCountsHoursDaysSeasonsAndYears )
     settings._startHour     = 4.0f;
     settings._listSeason    = { hashed_string( "Spring" ), hashed_string( "Winter" ) };
     WorldClock clock;
-    clock.initialize( settings );
+    SW_EXPECT_TRUE( clock.initialize( settings ) );
     SW_EXPECT_TRUE( clock.getDayPhase() == DayPhase::Night );
     SW_EXPECT_NEAR_EQUAL( 0.0f, clock.computeDaylight(), 1.0e-4f );
 
@@ -78,6 +78,28 @@ SW_TEST_CASE( WorldTest, ClockCountsHoursDaysSeasonsAndYears )
     clock.update( 240.0f );
     SW_EXPECT_EQUAL( 2, clock.getYear() );
     SW_EXPECT_TRUE( clock.getSeasonName() == hashed_string( "Spring" ) );
+}
+
+/**
+ * @brief [WorldTest] 범위 밖 시계 설정(하루 1 초 미만 · 계절 0 일 · 24 시 밖)은 조용히 맞추지 않고 오류로 거절하며, 시계는 그대로다
+ */
+SW_TEST_CASE( WorldTest, ClockRefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range world clock settings are refused" );
+    WorldClockSettings           settings;
+    settings._secondsPerDay = 240.0f;
+    WorldClock clock;
+    SW_ASSERT_TRUE( clock.initialize( settings ) );
+    WorldClockSettings noDay;
+    noDay._secondsPerDay = 0.5f;
+    SW_EXPECT_FALSE( clock.initialize( noDay ) );
+    WorldClockSettings noSeasonDay;
+    noSeasonDay._daysPerSeason = 0;
+    SW_EXPECT_FALSE( clock.initialize( noSeasonDay ) );
+    WorldClockSettings lateDusk;
+    lateDusk._duskHour = 25.0f;
+    SW_EXPECT_FALSE( clock.initialize( lateDusk ) );
+    SW_EXPECT_EQUAL( 240.0f, clock.getSettings()._secondsPerDay );
 }
 
 SW_TEST_CASE( WorldTest, WeatherFollowsSeasonWeightsBlendsAndForecasts )

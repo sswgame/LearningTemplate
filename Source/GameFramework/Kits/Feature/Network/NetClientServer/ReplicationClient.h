@@ -12,6 +12,8 @@
 #include "Core/Network/Replication/NetInputWindow.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
@@ -20,12 +22,20 @@ namespace sw
 {
     class NetHost;
 
-    /** @brief 클라이언트 설정입니다. */
-    struct ReplicationClientConfig
+    /**
+     * @brief 클라이언트 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `ReplicationClient::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
+     * @details 예전에는 기록 수를 쓸 때 조용히 4 로 올렸다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API ReplicationClientConfig
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 0.001, Units = s )
         float32 _tickInterval{ 1.0f / 30.0f }; ///< 서버 틱 간격. 스냅샷이 틱마다 오므로 표본 간격이기도 하다
-        float32 _interpolationDelay{ 0.1f };   ///< 렌더 지연의 최솟값. 실제 값은 이 값과 (틱 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이며, 스냅샷 하나를 잃어도 끊기지 않게 하려는 것이다
-        int32   _historySize{ 64 };
+        PROPERTY( Min = 0, Units = s )
+        float32 _interpolationDelay{ 0.1f }; ///< 렌더 지연의 최솟값. 실제 값은 이 값과 (틱 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이며, 스냅샷 하나를 잃어도 끊기지 않게 하려는 것이다
+        PROPERTY( Min = 4 )
+        int32 _historySize{ 64 }; ///< 받아 두는 스냅샷 수. 델타의 기준과 보간 구간을 이 안에서 찾는다
     };
 } // namespace sw
 
@@ -41,10 +51,14 @@ namespace sw
     public:
         ReplicationClient();
 
-        void            initialize( NetHost* pHost, const ReplicationClientConfig& settings );
-        uint8           getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
-        uint16          getMessageKindMask() const override { return 1u << ( NetClientServerMessage::kSnapshot - NetKitMessageRange::kClientServer ); }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        /**
+         * @brief 호스트와 설정을 받아 시작합니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
+         * @details 거절된 클라이언트는 호스트가 없는 클라이언트와 같다. 입력을 보내지 않는다.
+         */
+        [[nodiscard]] bool initialize( NetHost* pHost, const ReplicationClientConfig& settings );
+        uint8              getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
+        uint16             getMessageKindMask() const override { return 1u << ( NetClientServerMessage::kSnapshot - NetKitMessageRange::kClientServer ); }
+        NetHandleResult    handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 서버에 (다시) 연결되면 호출합니다. 받은 스냅샷과 렌더 시각을 초기화하며, 새 서버의 틱은 이전 서버보다 작을 수 있기 때문입니다. */
         void onConnectionOpened( int32 connectionID ) override;
         /** @brief 렌더 시각을 진행합니다. */

@@ -81,10 +81,13 @@ namespace sw
                 SW_LOG_ERROR( "MatchQueue: mode id '%#' breaks the id rule — skipped", mode._modeID );
                 continue;
             }
+            MatchMaker maker;
+            if ( maker.initialize( mode, dependencies._serverID ) == false )
+                continue; // 범위 밖 규칙은 `MatchMaker` 가 오류를 남겼다. 맞춰 돌리지 않고 이 모드를 등록하지 않는다
             _mapMode[mode._modeID] = mode;
             ModeState& state       = _mapModeState[mode._modeID];
-            state._maker.initialize( mode, dependencies._serverID );
-            state._reader = make_unique<ServerRegistryReader>();
+            state._maker           = std::move( maker );
+            state._reader          = make_unique<ServerRegistryReader>();
             state._reader->initialize( dependencies._pRouter, mode._serverKind, dependencies._registryRefreshPeriodMs );
             if ( dependencies._pBus == nullptr )
                 state._bAuthority = SW_TRUE; // 서버가 한 대이므로 항상 권한을 가진다
@@ -209,7 +212,7 @@ namespace sw
         if ( bHold == false )
         {
             // 권한을 잃었으므로 매처를 비운다. 티켓은 새 권한 서버가 모르는 채 사라지며, 티켓을 낸 서버의 시한이 이를 알린다.
-            pState->_maker.initialize( _mapMode[modeID], _dependencies._serverID );
+            pState->_maker.clearTickets();
             pState->_listUnplaced.clear();
         }
         SW_LOG_INFO( "MatchQueue: server %# %# authority for mode '%#'", _dependencies._serverID, bHold ? "took" : "lost", modeID );

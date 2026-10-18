@@ -151,7 +151,8 @@ namespace sw
         settings._clock = clock.getSettings();
         // 계획은 곧은 선(기본), 화면 안 걸음은 격자 길 — 도착 시각은 계획이 정하므로 격자를 바꿔도 일정이 갈리지 않는다.
         _schedule.setPathing( nullptr, &_finePathing );
-        _schedule.initialize( &_catalog, settings, FarmVillageDirectorComponentInternal::computeAbsoluteMinute( clock ) );
+        if ( _schedule.initialize( &_catalog, settings, FarmVillageDirectorComponentInternal::computeAbsoluteMinute( clock ) ) == false )
+            return false; // 범위 밖 설정은 일정 시스템이 오류를 남겼다
         _listPosition.assign( static_cast<size_t>( _schedule.getNpcCount() ), float3{} );
         _listBodySpeed.assign( static_cast<size_t>( _schedule.getNpcCount() ), 0.0f );
         for ( int32 npcIndex = 0; npcIndex < _schedule.getNpcCount(); ++npcIndex )

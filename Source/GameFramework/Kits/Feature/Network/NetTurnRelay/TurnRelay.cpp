@@ -9,7 +9,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/UUID/UUID.h"
 
-#include "GameFramework/Kits/Feature/Network/NetKitConfig.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
 {
@@ -55,7 +55,7 @@ namespace sw
     {
         // 실패하면 호스트 없는 중계기로 남긴다. 메시지와 `update` 가 아무것도 하지 않는다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
-        const string rangeError = NetKitConfigUtil::describeRangeErrors( settings );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
             SW_LOG_ERROR( "TurnRelayServer: refused to start - settings '%#'", rangeError.c_str() );

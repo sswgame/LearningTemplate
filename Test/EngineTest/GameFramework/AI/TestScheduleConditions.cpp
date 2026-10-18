@@ -241,7 +241,7 @@ SW_TEST_CASE( ScheduleConditionTest, AffinityReplansAndOvernightSleepRuns )
     ScheduleCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kXML, "town" ) );
     ScheduleSystem system;
-    system.initialize( &catalog, Internal::makeSettings(), 0 );
+    SW_ASSERT_TRUE( system.initialize( &catalog, Internal::makeSettings(), 0 ) );
     const int32 abigail = system.findNpcIndex( "abigail" );
     SW_ASSERT_TRUE( abigail >= 0 );
 
@@ -261,7 +261,7 @@ SW_TEST_CASE( ScheduleConditionTest, AffinityReplansAndOvernightSleepRuns )
     SW_EXPECT_EQUAL( 5, saved._listNpc[0]._affinity );
 
     ScheduleSystem restored;
-    restored.initialize( &catalog, Internal::makeSettings(), 0 );
+    SW_ASSERT_TRUE( restored.initialize( &catalog, Internal::makeSettings(), 0 ) );
     restored.restoreSaveState( saved );
     SW_EXPECT_EQUAL( 5, restored.getNpcAffinity( restored.findNpcIndex( "abigail" ) ) );
 

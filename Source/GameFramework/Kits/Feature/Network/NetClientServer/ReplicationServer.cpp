@@ -6,7 +6,7 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
 
-#include "GameFramework/Kits/Feature/Network/NetKitConfig.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
 {
@@ -33,7 +33,7 @@ namespace sw
     {
         // 실패하면 호스트 없는 서버로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
-        const string rangeError = NetKitConfigUtil::describeRangeErrors( settings );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
             SW_LOG_ERROR( "ReplicationServer: refused to start - settings '%#'", rangeError.c_str() );

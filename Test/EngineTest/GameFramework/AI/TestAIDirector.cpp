@@ -478,7 +478,7 @@ SW_TEST_CASE( AIDirectorTest, ContextConditionsGateEncounters )
     WorldClock         clock;
     WorldClockSettings settings;
     settings._startHour = 23.0f;
-    clock.initialize( settings );
+    SW_EXPECT_TRUE( clock.initialize( settings ) );
     AIDirectorContext context;
     context.fillFromClock( clock );
     context._listAreaTag = { hashed_string( "Forest" ) };

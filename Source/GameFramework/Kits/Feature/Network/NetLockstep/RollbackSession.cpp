@@ -8,7 +8,7 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
 
-#include "GameFramework/Kits/Feature/Network/NetKitConfig.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
 
 namespace sw
@@ -40,7 +40,7 @@ namespace sw
         // 설정 칸의 범위는 `RollbackConfig` 의 `PROPERTY( Min · Max )` 가 원본이다. 여기서는 칸 사이의 관계(내 번호 < 플레이어 수)만 따로 본다.
         _pGame                     = nullptr;
         const bool   bPlayersValid = playerCount >= 1 && localPlayer >= 0 && localPlayer < playerCount;
-        const string rangeError    = NetKitConfigUtil::describeRangeErrors( settings );
+        const string rangeError    = ConfigRangeUtil::describeRangeErrors( settings );
         const bool   bCanStart     = pGame != nullptr && bPlayersValid && rangeError.empty();
         if ( bCanStart == false )
         {

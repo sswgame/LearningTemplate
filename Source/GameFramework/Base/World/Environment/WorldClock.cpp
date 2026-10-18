@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -30,17 +31,22 @@ namespace sw
     {
     }
 
-    void WorldClock::initialize( const WorldClockSettings& settings )
+    bool WorldClock::initialize( const WorldClockSettings& settings )
     {
-        _settings                = settings;
-        _settings._secondsPerDay = MathUtil::max( 1.0f, _settings._secondsPerDay );
-        _settings._daysPerSeason = MathUtil::max( 1, _settings._daysPerSeason );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "WorldClock: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        _settings = settings;
         if ( _settings._listSeason.empty() )
             _settings._listSeason.push_back( hashed_string( "Default" ) );
         _eventBuffer.clear();
         _timeScale = 1.0f;
         _bPaused   = SW_FALSE;
         setTime( 0, _settings._startHour );
+        return true;
     }
 
     void WorldClock::setTimeScale( float32 timeScale )

@@ -37,7 +37,7 @@ SW_TEST_CASE( RoundSeriesTest, FirstToWinClockIntermissionAndTieRules )
     settings._intermissionTicks = 2;
     settings._tieRule           = RoundSeriesTieRule::Draw;
     RoundSeries series;
-    series.initialize( settings );
+    SW_ASSERT_TRUE( series.initialize( settings ) );
     SW_EXPECT_TRUE( series.getPhase() == RoundSeriesPhase::Waiting );
     SW_EXPECT_TRUE( series.reportRoundWinner( 0 ) == RoundSeriesOutcome::Rejected ); // 시작 전
     SW_EXPECT_FALSE( series.start( 0 ) );
@@ -78,7 +78,7 @@ SW_TEST_CASE( RoundSeriesTest, FirstToWinClockIntermissionAndTieRules )
     // 같은 흐름을 서든 데스로 — 2 : 2 에서 끝나지 않고 다음 라운드를 이긴 1 이 우승. 라운드 시간 0 은 제한 없음.
     settings._tieRule    = RoundSeriesTieRule::SuddenDeath;
     settings._roundTicks = 0;
-    series.initialize( settings );
+    SW_ASSERT_TRUE( series.initialize( settings ) );
     SW_ASSERT_TRUE( series.start( 2 ) );
     SW_EXPECT_TRUE( series.advanceTick() == RoundSeriesTick::None );
     SW_EXPECT_TRUE( series.reportRoundWinner( 0 ) == RoundSeriesOutcome::Intermission );
@@ -103,7 +103,7 @@ SW_TEST_CASE( RoundSeriesTest, PlacementPointsAndStateRoundTrip )
     settings._listPlacementPoint = { 3, 2, 1 };
     settings._winScore           = 5;
     RoundSeries series;
-    series.initialize( settings );
+    SW_ASSERT_TRUE( series.initialize( settings ) );
     SW_ASSERT_TRUE( series.start( 4 ) );
 
     // 순위 = 1 + 나보다 점수가 높은 수. 2 · 5 · 2 · 0 → 2 · 1 · 2 · 4, 4 위는 목록 밖이라 0 점.
@@ -126,7 +126,7 @@ SW_TEST_CASE( RoundSeriesTest, PlacementPointsAndStateRoundTrip )
     SW_ASSERT_TRUE( FixedLayout::write( series, writer ) );
     const vector<uint8> bytes = writer.releaseBytes();
     RoundSeries         restored;
-    restored.initialize( settings );
+    SW_ASSERT_TRUE( restored.initialize( settings ) );
     SW_ASSERT_TRUE( restored.start( 4 ) );
     SW_ASSERT_TRUE( FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), restored ) == FixedReadResult::Ok );
     SW_EXPECT_TRUE( FixedLayout::equals( series, restored ) );
@@ -138,7 +138,7 @@ SW_TEST_CASE( RoundSeriesTest, PlacementPointsAndStateRoundTrip )
 
     // 바이트가 모자라면 거절하고 바꾸지 않는다. 참가자 수 대조는 싣는 키트(`FightingMatch::validateState`)가 한다.
     RoundSeries fresh;
-    fresh.initialize( settings );
+    SW_ASSERT_TRUE( fresh.initialize( settings ) );
     SW_ASSERT_TRUE( fresh.start( 4 ) );
     SW_EXPECT_TRUE( FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ) - 2, fresh ) == FixedReadResult::Truncated );
     SW_EXPECT_EQUAL( 0, fresh.getRoundIndex() );
@@ -147,4 +147,26 @@ SW_TEST_CASE( RoundSeriesTest, PlacementPointsAndStateRoundTrip )
     // 2 라운드 0 · 0 · 9 · 9 → 2 · 3 번 공동 1 위(3 점씩), 총점 3 4 5 3 → 2 번 혼자 5 점으로 우승.
     SW_EXPECT_TRUE( series.reportRound( vector<int32>{ 0, 0, 9, 9 } ) == RoundSeriesOutcome::Finished );
     SW_EXPECT_EQUAL( 2, series.getWinner() );
+}
+
+/**
+ * @brief [RoundSeriesTest] 범위 밖 설정(목표 0 · 음수 시간)은 조용히 맞추지 않고 오류로 거절하며, 지난 설정과 상태를 그대로 둔다
+ */
+SW_TEST_CASE( RoundSeriesTest, RefusesOutOfRangeSettings )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range round series settings are refused" );
+    RoundSeriesSettings          settings;
+    settings._winScore = 3;
+    RoundSeries series;
+    SW_ASSERT_TRUE( series.initialize( settings ) );
+    RoundSeriesSettings noWinScore;
+    noWinScore._winScore = 0;
+    SW_EXPECT_FALSE( series.initialize( noWinScore ) );
+    RoundSeriesSettings negativeRound;
+    negativeRound._roundTicks = -1;
+    SW_EXPECT_FALSE( series.initialize( negativeRound ) );
+    RoundSeriesSettings negativeIntermission;
+    negativeIntermission._intermissionTicks = -1;
+    SW_EXPECT_FALSE( series.initialize( negativeIntermission ) );
+    SW_EXPECT_EQUAL( 3, series.getSettings()._winScore );
 }

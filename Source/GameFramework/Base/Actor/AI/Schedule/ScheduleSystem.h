@@ -195,12 +195,21 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 시스템 설정입니다. */
-    struct ScheduleSystemSettings
+    /**
+     * @brief 시스템 설정입니다.
+     * @details 범위는 칸의 `PROPERTY( Min )` 이고(시계 설정 안까지), 벗어나면 `ScheduleSystem::initialize` 가 오류로 거절한다(`ConfigRangeUtil`).
+     *          예전에는 계절 날 수와 화면 밖 간격을 조용히 1 로 올렸다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_GF_API ScheduleSystemSettings
     {
-        WorldClockSettings _clock{};              ///< 계절 · 하루의 때(조건이 쓴다) — 게임의 `WorldClock` 과 같은 값
-        uint32             _seed{ 0x5c4ed01eu };  ///< 확률 조건 · 돌아다니기 자리
-        int32              _farStepMinutes{ 15 }; ///< 화면 밖 NPC 의 상태 사건 간격(계획 · 판정에는 영향이 없다)
+        REFLECT_BODY();
+        PROPERTY()
+        WorldClockSettings _clock{}; ///< 계절 · 하루의 때(조건이 쓴다) — 게임의 `WorldClock` 과 같은 값
+        PROPERTY()
+        uint32 _seed{ 0x5c4ed01eu }; ///< 확률 조건 · 돌아다니기 자리
+        PROPERTY( Min = 1 )
+        int32 _farStepMinutes{ 15 }; ///< 화면 밖 NPC 의 상태 사건 간격(계획 · 판정에는 영향이 없다)
     };
 } // namespace sw
 
@@ -211,7 +220,8 @@ namespace sw
      * @brief 카탈로그의 NPC 모두의 하루 일정을 돌립니다.
      * @code
      *     ScheduleSystem schedules;
-     *     schedules.initialize( &catalog, settings, clock.getDay() * kScheduleMinutesPerDay + clockMinute );
+     *     if ( schedules.initialize( &catalog, settings, clock.getDay() * kScheduleMinutesPerDay + clockMinute ) == false )
+     *         return false; // 범위 밖 설정은 오류로 남았다
      *     schedules.setPathing( &areaPathing, &navPathing );           // 굵은 계획 경로 · 화면 안 고운 경로
      *     schedules.setFlags( &flags );
      *     // 매 프레임
@@ -229,9 +239,12 @@ namespace sw
         ScheduleSystem( const ScheduleSystem& )            = delete;
         ScheduleSystem& operator=( const ScheduleSystem& ) = delete;
 
-        /** @brief 카탈로그의 NPC 를 모두 집에 세우고 @p absoluteMinute(0 일 0:00 부터 센 분)의 계획을 세웁니다. */
-        void initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute );
-        void shutdown();
+        /**
+         * @brief 카탈로그의 NPC 를 모두 집에 세우고 @p absoluteMinute(0 일 0:00 부터 센 분)의 계획을 세웁니다.
+         * @return 설정이 선언된 범위 밖이거나 @p absoluteMinute 가 음수이면 오류를 남기고 false 입니다. 시스템은 그대로입니다.
+         */
+        [[nodiscard]] bool initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute );
+        void               shutdown();
 
         /** @brief 시계의 지금까지 시간을 흘립니다. 화면 밖 디버그 출력(`gv_scheduleTrace`)도 여기서 처리합니다. */
         void update( const WorldClock& clock );

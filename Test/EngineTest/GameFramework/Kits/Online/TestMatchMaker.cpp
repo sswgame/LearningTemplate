@@ -52,7 +52,7 @@ namespace
 SW_TEST_CASE( MatchMakerTest, FourSolosMakeABalancedTwoVersusTwo )
 {
     MatchMaker maker;
-    maker.initialize( makeMode( 2, 2 ), 7 );
+    SW_ASSERT_TRUE( maker.initialize( makeMode( 2, 2 ), 7 ) );
     for ( uint64 ticketID = 1; ticketID <= 4; ++ticketID )
     {
         SW_ASSERT_TRUE( maker.addTicket( makeTicket( ticketID, { static_cast<int32>( 1450 + ticketID * 20 ) } ) ) == MatchmakingResult::Ok );
@@ -77,7 +77,7 @@ SW_TEST_CASE( MatchMakerTest, FourSolosMakeABalancedTwoVersusTwo )
 SW_TEST_CASE( MatchMakerTest, PartyStaysTogetherAndUnsplittableMixIsSkipped )
 {
     MatchMaker maker;
-    maker.initialize( makeMode( 2, 3 ), 1 );
+    SW_ASSERT_TRUE( maker.initialize( makeMode( 2, 3 ), 1 ) );
     SW_ASSERT_TRUE( maker.addTicket( makeTicket( 1, { 1500, 1500 } ) ) == MatchmakingResult::Ok ); // 파티 셋
     SW_ASSERT_TRUE( maker.addTicket( makeTicket( 2, { 1500, 1500 } ) ) == MatchmakingResult::Ok );
     SW_ASSERT_TRUE( maker.addTicket( makeTicket( 3, { 1500, 1500 } ) ) == MatchmakingResult::Ok ); // 2+2+2 = 6 자리지만 3 인 팀 둘로 못 나눈다
@@ -109,7 +109,7 @@ SW_TEST_CASE( MatchMakerTest, PartyStaysTogetherAndUnsplittableMixIsSkipped )
     // 가장 오래 기다린 혼자(닻)가 혼자 둘 + 셋 파티를 뽑으면 셋 파티가 한 팀을 통째로 가져가야 한다 — 작은 표부터 나누면 셋 파티가 들 팀이 없어
     // 그 닻이 실패하고, 파티를 닻으로 한 다른 조합(늦게 온 혼자 5 를 넣고 오래 기다린 혼자 3 을 남김)이 대신 묶인다.
     MatchMaker stackMaker;
-    stackMaker.initialize( makeMode( 2, 3 ), 1 );
+    SW_ASSERT_TRUE( stackMaker.initialize( makeMode( 2, 3 ), 1 ) );
     for ( uint64 ticketID = 1; ticketID <= 3; ++ticketID )
     {
         SW_ASSERT_TRUE( stackMaker.addTicket( makeTicket( ticketID, { 1500 }, "kr", static_cast<int64>( ticketID ) ) ) == MatchmakingResult::Ok );
@@ -133,7 +133,7 @@ SW_TEST_CASE( MatchMakerTest, WindowWidensAndRegionRelaxesOverTime )
     mode._ratingWindowPerSecond = 50;
     mode._regionRelaxMs         = 20000;
     MatchMaker maker;
-    maker.initialize( mode, 1 );
+    SW_ASSERT_TRUE( maker.initialize( mode, 1 ) );
     SW_ASSERT_TRUE( maker.addTicket( makeTicket( 1, { 1500 }, "kr", 0 ) ) == MatchmakingResult::Ok );
     SW_ASSERT_TRUE( maker.addTicket( makeTicket( 2, { 1900 }, "kr", 0 ) ) == MatchmakingResult::Ok ); // 차 400
     SW_EXPECT_EQUAL( maker.computeRatingWindow( makeTicket( 1, { 1500 }, "kr", 0 ), 5000 ), 350 );
@@ -162,7 +162,7 @@ SW_TEST_CASE( MatchMakerTest, TimeoutAndDeterminism )
     for ( vector<MatchFormed>* pOut : { &firstRun, &secondRun } )
     {
         MatchMaker maker;
-        maker.initialize( mode, 3 );
+        SW_ASSERT_TRUE( maker.initialize( mode, 3 ) );
         for ( uint64 ticketID = 1; ticketID <= 9; ++ticketID )
         {
             SW_ASSERT_TRUE( maker.addTicket( makeTicket( ticketID, { static_cast<int32>( 1000 + ( ticketID * 37 ) % 400 ) }, "kr", static_cast<int64>( ticketID ) ) ) == MatchmakingResult::Ok );
@@ -183,10 +183,26 @@ SW_TEST_CASE( MatchMakerTest, TimeoutAndDeterminism )
     }
 
     MatchMaker maker;
-    maker.initialize( mode, 3 );
+    SW_ASSERT_TRUE( maker.initialize( mode, 3 ) );
     SW_EXPECT_TRUE( maker.addTicket( makeTicket( 1, { 1500 } ) ) == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( maker.addTicket( makeTicket( 1, { 1500 } ) ) == MatchmakingResult::AlreadyQueued );
     SW_EXPECT_TRUE( maker.hasTicket( 1 ) );
     SW_EXPECT_TRUE( maker.removeTicket( 1 ) );
     SW_EXPECT_FALSE( maker.removeTicket( 1 ) );
+}
+
+/**
+ * @brief [MatchMakerTest] 팀 수 · 팀 인원이 선언된 범위 밖인 모드는 조용히 맞추지 않고 오류로 거절한다. 경계(`MatchmakingLimit`)는 받는다
+ * @details 예전에는 팀 수 0 을 1 로, 17 을 16 으로 맞춰 돌았다. 경계 값 확인은 `PROPERTY( Max )` 리터럴과 상수가 어긋나지 않는지 본다.
+ */
+SW_TEST_CASE( MatchMakerTest, RefusesOutOfRangeMode )
+{
+    test::ScopedDefensiveTestLog expected( "out-of-range match modes are refused" );
+    MatchMaker                   maker;
+    SW_EXPECT_FALSE( maker.initialize( makeMode( 0, 2 ), 1 ) );
+    SW_EXPECT_FALSE( maker.initialize( makeMode( MatchmakingLimit::kMaxTeamCount + 1, 2 ), 1 ) );
+    SW_EXPECT_FALSE( maker.initialize( makeMode( 2, 0 ), 1 ) );
+    SW_EXPECT_FALSE( maker.initialize( makeMode( 2, MatchmakingLimit::kMaxTeamSize + 1 ), 1 ) );
+    SW_EXPECT_TRUE( maker.initialize( makeMode( MatchmakingLimit::kMaxTeamCount, MatchmakingLimit::kMaxTeamSize ), 1 ) );
+    SW_EXPECT_EQUAL( maker.getDefinition()._teamCount, MatchmakingLimit::kMaxTeamCount );
 }

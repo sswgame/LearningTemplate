@@ -65,7 +65,9 @@ namespace sw
             SW_LOG_WARNING( "[Meadow] the town cannot start - no SessionStateComponent in front of it on this object" );
             return false;
         }
-        (void)pState->initialize( MeadowVillageData::makeStateSettings() ); // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다
+        // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
+        if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == SessionStateInitResult::Refused )
+            return false;
         if ( initializeTown( _town, *pState ) == false )
             return false;
         if ( pState->isFreshGame() )

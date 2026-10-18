@@ -66,7 +66,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 서버 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `ReplicationServer::initialize` 가 오류로 거절합니다(`NetKitConfigUtil`).
+     * @brief 서버 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `ReplicationServer::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
      * @details 예전에는 기록 수와 입력 버퍼 크기를 쓸 때 조용히 2 · 1 로 올렸다(폴백 금지 원칙).
      *          예산의 `Max` 는 리터럴만 받으므로 `NetConnection::kMaxSingleMessageSize` 와 같은 값을 적는다. 경계 값 테스트(`ServerRefusesOutOfRangeSettings`)가 둘이 어긋나지 않는지 본다.
      */

@@ -11,6 +11,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
 
@@ -200,16 +201,21 @@ namespace sw
         }
     }
 
-    void ScheduleSystem::initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute )
+    bool ScheduleSystem::initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute )
     {
+        // 값을 범위 안으로 맞춰 돌지 않는다. 상태를 바꾸기 전에 본다.
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false || absoluteMinute < 0 )
+        {
+            SW_LOG_ERROR( "ScheduleSystem: refused to start - settings '%#', minute %#", rangeError.c_str(), absoluteMinute );
+            return false;
+        }
         shutdown();
-        _pCatalog                       = pCatalog;
-        _settings                       = settings;
-        _settings._clock._daysPerSeason = MathUtil::max( 1, _settings._clock._daysPerSeason );
-        _settings._farStepMinutes       = MathUtil::max( 1, _settings._farStepMinutes );
+        _pCatalog = pCatalog;
+        _settings = settings;
         if ( _settings._clock._listSeason.empty() )
             _settings._clock._listSeason.push_back( hashed_string( "Default" ) );
-        _minute = MathUtil::max( 0, absoluteMinute );
+        _minute = absoluteMinute;
         _defaultLocator.initialize( pCatalog );
         if ( _pLocator == nullptr )
             _pLocator = &_defaultLocator;
@@ -219,7 +225,7 @@ namespace sw
             _pFine = _pPlanning;
         _flagsRevision = _pFlags != nullptr ? _pFlags->getRevision() : 0;
         if ( _pCatalog == nullptr )
-            return;
+            return true;
 
         const vector<ScheduleNpcDef>& listDef = _pCatalog->getNpcs();
         for ( int32 defIndex = 0; defIndex < static_cast<int32>( listDef.size() ); ++defIndex )
@@ -244,6 +250,7 @@ namespace sw
         }
         _bSuppressEvents = SW_FALSE;
         rebuildAppointmentChecks( getDay() );
+        return true;
     }
 
     void ScheduleSystem::shutdown()

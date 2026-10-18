@@ -78,8 +78,10 @@ namespace sw
     {
     }
 
-    void FightingMatch::initialize( const FighterDef& fighter0, const FighterDef& fighter1, const FightingSettings& settings )
+    bool FightingMatch::initialize( const FighterDef& fighter0, const FighterDef& fighter1, const FightingSettings& settings )
     {
+        if ( _series.initialize( FightingMatchInternal::makeSeriesSettings( settings ) ) == false )
+            return false;
         _settings = settings;
         _eventBuffer.clear();
         _frame                                 = 0;
@@ -93,9 +95,9 @@ namespace sw
             _arrFighter[player]._side          = player == 0 ? 1 : -1;
             _arrFighter[player]._inputBuffer.clear();
         }
-        _series.initialize( FightingMatchInternal::makeSeriesSettings( settings ) );
         (void)_series.start( kPlayerCount ); // 참가자는 둘이라 실패하지 않는다
         startRound();
+        return true;
     }
 
     void FightingMatch::startRound()

@@ -28,8 +28,11 @@ namespace sw
     public:
         MatchMaker();
 
-        /** @brief 규칙과 경기 id 시드로 빈 대기열을 만듭니다. 시드는 권한 서버 id 의 아래쪽 32비트이며, 권한이 넘어가도 경기 id 가 겹치지 않습니다. */
-        void initialize( const MatchModeDefinition& definition, uint64 matchIDSeed );
+        /**
+         * @brief 규칙과 경기 id 시드로 빈 대기열을 만듭니다. 시드는 권한 서버 id 의 아래쪽 32비트이며, 권한이 넘어가도 경기 id 가 겹치지 않습니다.
+         * @return 규칙이 선언된 범위 밖이면 오류를 남기고 false 입니다. 대기열은 그대로입니다.
+         */
+        [[nodiscard]] bool initialize( const MatchModeDefinition& definition, uint64 matchIDSeed );
 
         /** @brief 경기를 만듭니다. 만든 경기는 @p outListMatch 뒤에, 시한을 넘긴 티켓은 @p outListTimedOut 뒤에 덧붙입니다. */
         void process( int64 nowMs, vector<MatchFormed>& outListMatch, vector<MatchTicket>& outListTimedOut );
@@ -38,6 +41,8 @@ namespace sw
         MatchmakingResult  addTicket( const MatchTicket& ticket );
         [[nodiscard]] bool removeTicket( uint64 ticketID );
         bool               hasTicket( uint64 ticketID ) const;
+        /** @brief 티켓을 모두 뺍니다. 규칙과 다음 경기 id 는 그대로라 권한을 되찾아도 경기 id 가 겹치지 않습니다. 권한을 잃은 대기열이 씁니다. */
+        void clearTickets() { _listTicket.clear(); }
 
         int32                      getTicketCount() const { return static_cast<int32>( _listTicket.size() ); }
         const MatchModeDefinition& getDefinition() const { return _definition; }

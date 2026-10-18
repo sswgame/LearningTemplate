@@ -283,10 +283,11 @@ namespace sw
             SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
         }
+        if ( _clock.initialize( makeClockSettings() ) == false )
+            return false; // 범위 밖(달 길이 `_secondsPerMonth` 등)은 시계가 오류를 남겼다
         const CitySettings citySettings = makeCitySettings();
         _wallet.clear();
         _wallet.add( citySettings._currency, _startingMoney );
-        _clock.initialize( makeClockSettings() );
         _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() );
         const NileCityLayout layout = makeCityLayout();
         NileCityPlanner::paintTerrain( _city, layout );
@@ -504,7 +505,8 @@ namespace sw
         Wallet          wallet;
         WorldClock      clock;
         planner.reset( makeCityLayout() );
-        clock.initialize( makeClockSettings() );
+        if ( clock.initialize( makeClockSettings() ) == false )
+            return false;
         city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() );
         const bool bStateReadFailed = city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false;
         if ( bStateReadFailed )
