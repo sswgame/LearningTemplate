@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BrCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -13,6 +12,34 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct BrCatalogInternal
+        {
+            /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
+            template <typename TDef>
+            [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                (void)outCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+                return true;
+            }
+
+            /** @brief 설정 원소 하나를 읽어 오류가 없을 때만 바꿉니다(기본값은 스키마 초기값 — 앞의 값을 이어받지 않는다). */
+            template <typename TDef>
+            [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
+            {
+                TDef def;
+                if ( GameDataXML::readFields( node, def, sourceName ) == false )
+                    return false;
+                outSetting = def;
+                return true;
+            }
+        };
+    } // namespace
+
     SW_LOG_CALLER( "BrCatalog" );
 
     BrCatalog::BrCatalog()
@@ -30,112 +57,85 @@ namespace sw
 
     uint32 BrCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _mapSize = MathUtil::max( 1.0f, root.getAttributeFloat( "mapSize", _mapSize ) );
-
-        if ( const XMLNode node = root.findChild( "Player" ) )
-        {
-            _player._maxHealth         = MathUtil::max( 1.0f, node.getAttributeFloat( "health", _player._maxHealth ) );
-            _player._downedHealth      = MathUtil::max( 0.0f, node.getAttributeFloat( "downedHealth", _player._downedHealth ) );
-            _player._bleedoutRate      = MathUtil::max( 0.0f, node.getAttributeFloat( "bleedout", _player._bleedoutRate ) );
-            _player._reviveTime        = MathUtil::max( 0.1f, node.getAttributeFloat( "reviveTime", _player._reviveTime ) );
-            _player._reviveHealthRatio = MathUtil::clamp( node.getAttributeFloat( "reviveHealthRatio", _player._reviveHealthRatio ), 0.01f, 1.0f );
-            _player._baseCarryWeight   = MathUtil::max( 0.0f, node.getAttributeFloat( "carryWeight", _player._baseCarryWeight ) );
-            _player._slotCount         = MathUtil::max( 1, node.getAttributeInt( "slots", _player._slotCount ) );
-            _player._maxRevivers       = MathUtil::max( 1, node.getAttributeInt( "revivers", _player._maxRevivers ) );
-        }
-        if ( const XMLNode node = root.findChild( "Flight" ) )
-        {
-            _flight._speed          = MathUtil::max( 1.0f, node.getAttributeFloat( "speed", _flight._speed ) );
-            _flight._altitude       = MathUtil::max( 1.0f, node.getAttributeFloat( "altitude", _flight._altitude ) );
-            _flight._jumpStartRatio = MathUtil::saturate( node.getAttributeFloat( "jumpStart", _flight._jumpStartRatio ) );
-            _flight._jumpEndRatio   = MathUtil::clamp( node.getAttributeFloat( "jumpEnd", _flight._jumpEndRatio ), _flight._jumpStartRatio, 1.0f );
-            _flight._offsetRatio    = MathUtil::clamp( node.getAttributeFloat( "offset", _flight._offsetRatio ), 0.0f, 0.95f );
-        }
-        if ( const XMLNode node = root.findChild( "Fall" ) )
-        {
-            _fall._freeFallSpeed            = MathUtil::max( 0.1f, node.getAttributeFloat( "freeFallSpeed", _fall._freeFallSpeed ) );
-            _fall._freeFallHorizontalSpeed  = MathUtil::max( 0.0f, node.getAttributeFloat( "freeFallHorizontal", _fall._freeFallHorizontalSpeed ) );
-            _fall._parachuteSpeed           = MathUtil::max( 0.1f, node.getAttributeFloat( "parachuteSpeed", _fall._parachuteSpeed ) );
-            _fall._parachuteHorizontalSpeed = MathUtil::max( 0.0f, node.getAttributeFloat( "parachuteHorizontal", _fall._parachuteHorizontalSpeed ) );
-            _fall._autoOpenHeight           = MathUtil::max( 0.0f, node.getAttributeFloat( "autoOpenHeight", _fall._autoOpenHeight ) );
-        }
-        if ( const XMLNode zoneNode = root.findChild( "Zone" ) )
-        {
-            _zone._startRadius    = MathUtil::max( 0.0f, zoneNode.getAttributeFloat( "startRadius", _zone._startRadius ) );
-            _zone._centerAttempts = MathUtil::max( 1, zoneNode.getAttributeInt( "centerAttempts", _zone._centerAttempts ) );
-            _zone._listPhase.clear();
-            for ( XMLNode node = zoneNode.findChild( "Phase" ); node; node = node.findNextSibling( "Phase" ) )
-            {
-                BrZonePhaseDef phase;
-                phase._waitTime        = MathUtil::max( 0.0f, node.getAttributeFloat( "wait", phase._waitTime ) );
-                phase._shrinkTime      = MathUtil::max( 0.0f, node.getAttributeFloat( "shrink", phase._shrinkTime ) );
-                phase._radiusRatio     = MathUtil::clamp( node.getAttributeFloat( "ratio", phase._radiusRatio ), 0.0f, 1.0f );
-                phase._damagePerSecond = MathUtil::max( 0.0f, node.getAttributeFloat( "damage", phase._damagePerSecond ) );
-                _zone._listPhase.push_back( phase );
-            }
-        }
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        BrCatalogRootDef rootDef;
+        if ( GameDataXML::readFields( root, rootDef, sourceName ) )
+            _mapSize = rootDef._mapSize;
 
         uint32 loadedCount = 0;
-        for ( XMLNode node = root.findChild( "Armor" ); node; node = node.findNextSibling( "Armor" ) )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            BrArmorDef def;
-            def._id                = hashed_string( pID );
-            const string_view slot = node.getAttributeText( "slot" );
-            def._slot              = hashed_string( slot.empty() ? string_view( "Vest" ) : slot );
-            def._tier              = MathUtil::clamp( node.getAttributeInt( "tier", def._tier ), 1, 9 );
-            def._reduction         = MathUtil::clamp( node.getAttributeFloat( "reduction", def._reduction ), 0.0f, 0.95f );
-            def._durability        = MathUtil::max( 1.0f, node.getAttributeFloat( "durability", def._durability ) );
-            (void)_armorCatalog.add( def );
-            ++loadedCount;
+            const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
+            if ( loadElement( node, name, sourceName ) )
+                ++loadedCount;
         }
-        for ( XMLNode node = root.findChild( "Backpack" ); node; node = node.findNextSibling( "Backpack" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            BrBackpackDef def;
-            def._id       = hashed_string( pID );
-            def._tier     = MathUtil::clamp( node.getAttributeInt( "tier", def._tier ), 1, 9 );
-            def._capacity = MathUtil::max( 0.0f, node.getAttributeFloat( "capacity", def._capacity ) );
-            (void)_backpackCatalog.add( def );
-            ++loadedCount;
-        }
-        for ( XMLNode node = root.findChild( "LootSpot" ); node; node = node.findNextSibling( "LootSpot" ) )
-        {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            BrLootSpotDef def;
-            def._id                 = hashed_string( pID );
-            const string_view table = node.getAttributeText( "table" );
-            def._tableID            = table.empty() ? def._id : hashed_string( table );
-            def._chance             = MathUtil::saturate( node.getAttributeFloat( "chance", def._chance ) );
-            def._minRolls           = MathUtil::max( 0, node.getAttributeInt( "rolls", def._minRolls ) );
-            def._maxRolls           = MathUtil::max( def._minRolls, node.getAttributeInt( "rollsMax", def._minRolls ) );
-            (void)_lootSpotCatalog.add( def );
-            ++loadedCount;
-        }
-        if ( const XMLNode node = root.findChild( "SupplyDrop" ) )
-        {
-            const string_view table = node.getAttributeText( "table" );
-            _supplyDrop._tableID    = hashed_string( table );
-            _supplyDrop._listTime.clear();
-            StringUtil::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
-            {
-                float32 time = 0.0f;
-                if ( StringUtil::parseFloat( token, time ) && time >= 0.0f )
-                    _supplyDrop._listTime.push_back( time );
-                else
-                    SW_LOG_WARNING( "%#: supply drop time '%#' is not a number - skipped", sourceName, token );
-            } );
-            std::sort( _supplyDrop._listTime.begin(), _supplyDrop._listTime.end() );
-        }
-
         if ( _zone._listPhase.empty() )
             SW_LOG_WARNING( "%#: no zone phases - the zone never shrinks", sourceName );
-        return loadedCount + static_cast<uint32>( _zone._listPhase.size() );
+        return loadedCount;
+    }
+
+    bool BrCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
+    {
+        using Internal = BrCatalogInternal;
+        const auto is  = [name]( const utf8* pName )
+        { return StringUtil::equals( name, string_view( pName ), true ); };
+        if ( is( "Armor" ) )
+            return Internal::readInto( node, sourceName, _armorCatalog );
+        if ( is( "Backpack" ) )
+            return Internal::readInto( node, sourceName, _backpackCatalog );
+        if ( is( "LootSpot" ) )
+            return Internal::readInto( node, sourceName, _lootSpotCatalog );
+        if ( is( "Player" ) )
+            return Internal::readSetting( node, sourceName, _player );
+        if ( is( "Flight" ) )
+            return Internal::readSetting( node, sourceName, _flight );
+        if ( is( "Fall" ) )
+            return Internal::readSetting( node, sourceName, _fall );
+        if ( is( "Zone" ) )
+            return loadZone( node, sourceName );
+        if ( is( "SupplyDrop" ) )
+            return loadSupplyDrop( node, sourceName );
+        SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+        return false;
+    }
+
+    bool BrCatalog::loadZone( const XMLNode& node, string_view sourceName )
+    {
+        BrZoneDef zone;
+        bool      bValid = GameDataXML::readFields( node, zone, sourceName );
+        for ( XMLNode phaseNode = node.findChild( "Phase" ); phaseNode; phaseNode = phaseNode.findNextSibling( "Phase" ) )
+        {
+            BrZonePhaseDef phase;
+            if ( GameDataXML::readFields( phaseNode, phase, sourceName ) )
+                zone._listPhase.push_back( phase );
+            else
+                bValid = false;
+        }
+        if ( bValid == false )
+            return false;
+        _zone = zone;
+        return true;
+    }
+
+    bool BrCatalog::loadSupplyDrop( const XMLNode& node, string_view sourceName )
+    {
+        BrSupplyDropDef supplyDrop;
+        bool            bValid = GameDataXML::readFields( node, supplyDrop, sourceName, { "times" } );
+        StringUtil::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
+        {
+            float32 time = 0.0f;
+            if ( StringUtil::parseFloat( token, time ) && time >= 0.0f )
+                supplyDrop._listTime.push_back( time );
+            else
+            {
+                SW_LOG_ERROR( "%#: <SupplyDrop times> has '%#', which is not a time of 0 or more", sourceName, token );
+                bValid = false;
+            }
+        } );
+        if ( bValid == false )
+            return false;
+        std::sort( supplyDrop._listTime.begin(), supplyDrop._listTime.end() );
+        _supplyDrop = supplyDrop;
+        return true;
     }
 } // namespace sw
