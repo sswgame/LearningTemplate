@@ -781,6 +781,7 @@
 - **매니저의 타입별 컴포넌트 목록은 정확한 타입마다 버킷 하나이고, 버킷은 컴포넌트 풀 항목(FQN 키)에 합칩니다**(2026-10-17, 7-c, `docs/plans/TypedComponents.md`). 조회는 버킷마다 `isDerivedFrom` 을 한 번 묻습니다.
   언리얼 `GetObjectsOfClass` 의 "정확한 클래스 버킷과 파생 열거"와 같은 계열이고, 조상 목록(컴포넌트당 깊이만큼의 위치)보다 메모리가 약 여덟 분의 일입니다. 순서는 약속하지 않습니다.
   핸들은 `TComponentHandle<T>` 로 타입을 싣고(7-d), 타입 없는 핸들에서 만들 때만 확인합니다. 찾기의 타입 확인은 Shipping 이 아닌 모든 구성에서 합니다.
+- **삭제 대기 오브젝트의 컴포넌트는 항상 삭제 대기이고, 컴포넌트 목록을 도는 곳은 컴포넌트 표시 하나만 본다**(2026-10-19, TypedComponents 8.4절). 오브젝트 표시는 비공개 하나이며 컴포넌트를 먼저 표시하고, 삭제 대기 오브젝트에 붙는 컴포넌트는 삭제 대기로 시작하며(유니티 `Destroy` 뒤 같은 프레임의 `AddComponent`), 해체 중 오브젝트에는 붙이기를 거절한다(유니티 "being destroyed", 언리얼 `IsActorBeingDestroyed`). 버킷에서 빼는 안은 지연 파괴 전까지 버킷과 목록이 어긋나고 병렬 틱 안에서 배타 잠금이 필요해 버렸다. 버킷 순회 10만 · 말단 8.3 → 3.0 µs.
 - **`runParallelByCost` 의 시계는 함수 포인터로 주입하고, 선행 조건 스테이지의 순서 키 비교는 한 곳에 둔다**(2026-10-16). 제품은 `MonotonicClock::nowNanoseconds` 를 넘기고(`runParallelByCostWithClock`), 테스트는 가짜 시계로 호출 스레드 선점 잡음 없이 직렬 · 분할 판단을 결정적으로 본다. 시계는 청크마다 한 번(로그 번)만 불려 핫 경로에 가상 호출이 없다. `TickRegistry` 의 재구축(`isBefore`)과 증분(`applyStageDelta`)은 `StageOrder` · `isOrderedBefore` 하나를 공유해 두 길의 순서가 어긋날 수 없다.
 
 ### 5-7. 런타임 UI 와 글자
