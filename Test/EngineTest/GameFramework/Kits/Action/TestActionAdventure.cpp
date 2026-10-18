@@ -46,21 +46,20 @@ namespace
     <Door id="cellDoor" kind="SmallKey" flag="forest.cell"/>
     <Door id="bossDoor" kind="BossKey" flag="forest.boss"/>
     <Door id="crack" kind="Condition" requires="bombs>=1" flag="forest.crack"/>
-    <Treasure id="keyChest" area="hall" item="SmallKey"/>
-    <Treasure id="bigChest" area="cell" item="BossKey"/>
-    <Treasure id="mapChest" area="hall" item="Map"/>
-    <Treasure id="compassChest" area="cell" item="Compass"/>
-    <Treasure id="rupeeChest" area="vault" item="rupee" count="20"/>
-    <Treasure id="pieceChest" area="vault" item="heartPiece"/>
+    <Treasure id="keyChest" area="hall" item="SmallKey" flag="treasure.keyChest"/>
+    <Treasure id="bigChest" area="cell" item="BossKey" flag="treasure.bigChest"/>
+    <Treasure id="mapChest" area="hall" item="Map" flag="treasure.mapChest"/>
+    <Treasure id="compassChest" area="cell" item="Compass" flag="treasure.compassChest"/>
+    <Treasure id="rupeeChest" area="vault" item="rupee" count="20" flag="treasure.rupeeChest"/>
+    <Treasure id="pieceChest" area="vault" item="heartPiece" flag="treasure.pieceChest"/>
     <Device id="eye" kind="Switch" flag="forest.gate"/>
-    <Device id="plate" kind="PressurePlate"/>
-    <Device id="heavyPlate" kind="PressurePlate" latch="true"/>
-    <Device id="timer" kind="TimedSwitch" duration="3"/>
-    <Device id="torches" kind="TorchGroup" torches="3" duration="5"/>
-    <Device id="mystery" kind="Lever"/>
+    <Device id="plate" kind="PressurePlate" flag="device.plate"/>
+    <Device id="heavyPlate" kind="PressurePlate" latch="true" flag="device.heavyPlate"/>
+    <Device id="timer" kind="TimedSwitch" duration="3" flag="device.timer"/>
+    <Device id="torches" kind="TorchGroup" torches="3" duration="5" flag="device.torches"/>
   </Dungeon>
   <Dungeon id="water" region="Water">
-    <Door id="waterDoor" kind="SmallKey"/>
+    <Door id="waterDoor" kind="SmallKey" flag="door.waterDoor"/>
   </Dungeon>
 </AdventureDungeons>
 )";

@@ -29,6 +29,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 문을 무엇으로 여는지 나타냅니다. */
+    ENUM()
     enum class AdventureDoorKind : uint8
     {
         SmallKey = 0, ///< 그 던전의 작은 열쇠 하나를 쓴다
@@ -37,11 +38,18 @@ namespace sw
     };
 
     /** @brief 문 하나입니다. 열리면 `_flag` 가 1이 됩니다. */
+    REFLECT()
     struct AdventureDoorDef
     {
-        hashed_string     _id{};
-        hashed_string     _flag{};     ///< 비어 있으면 `door.<id>` 를 쓴다
-        string            _requires{}; ///< `Condition` 문에 쓰는 조건식
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        hashed_string _flag{}; ///< 공유 플래그라 다른 키트의 같은 id 와 겹치지 않게 적는다(예: `forest.cell`)
+        PROPERTY()
+        string _requires{}; ///< `Condition` 문에 쓰는 조건식(`Condition` 이면 반드시 적는다)
+        PROPERTY()
         AdventureDoorKind _kind{ AdventureDoorKind::SmallKey };
     };
 } // namespace sw
@@ -49,19 +57,28 @@ namespace sw
 namespace sw
 {
     /** @brief 보물 상자 하나입니다. 아이템 `SmallKey`, `BossKey`, `Map`, `Compass` 는 던전이 가져가고, 나머지는 게임에 넘깁니다. */
+    REFLECT()
     struct AdventureTreasureDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
+        PROPERTY()
         hashed_string _area{}; ///< 상자가 놓인 방(나침반이 지도에 표시한다)
+        PROPERTY( Required )
         hashed_string _item{};
-        hashed_string _flag{}; ///< 열린 상자 플래그(비어 있으면 `treasure.<id>`)
-        int32         _count{ 1 };
+        PROPERTY( Required )
+        hashed_string _flag{}; ///< 열린 상자 플래그
+        PROPERTY( Min = 1 )
+        int32 _count{ 1 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 장치 종류입니다. */
+    ENUM()
     enum class AdventureDeviceKind : uint8
     {
         Switch = 0,    ///< 치면 켜진 채로 남는다(수정 스위치)
@@ -71,23 +88,37 @@ namespace sw
     };
 
     /** @brief 장치 하나입니다. 켜지면(풀리면) `_flag` 가 1, 꺼지면 0 입니다. */
+    REFLECT()
     struct AdventureDeviceDef
     {
-        hashed_string       _id{};
-        hashed_string       _flag{}; ///< 비어 있으면 `device.<id>` 를 쓴다
-        float32             _duration{ 0.0f };
-        int32               _torchCount{ 1 };
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        hashed_string _flag{};
+        PROPERTY( Min = 0.0 )
+        float32 _duration{ 0.0f }; ///< `TimedSwitch` 는 0 보다 커야 한다
+        PROPERTY( Name = "torches", Min = 1 )
+        int32 _torchCount{ 1 };
+        PROPERTY()
         AdventureDeviceKind _kind{ AdventureDeviceKind::Switch };
-        uint8               _bLatch{ SW_FALSE };
+        PROPERTY()
+        bool _bLatch{ false };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 던전 하나입니다. */
+    REFLECT()
     struct SW_KIT_API AdventureDungeonDef
     {
-        hashed_string                _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
         hashed_string                _region{}; ///< `AreaGraph` 의 지역(지도가 한 번에 드러내는 단위)
         vector<AdventureDoorDef>     _listDoor{};
         vector<AdventureTreasureDef> _listTreasure{};
@@ -115,6 +146,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "AdventureDungeons"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool           loadDungeon( const XMLNode& dungeonNode, string_view sourceName );
     };
 } // namespace sw
 
