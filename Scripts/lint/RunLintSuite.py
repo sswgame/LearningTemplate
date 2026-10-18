@@ -12,7 +12,10 @@ CTest 의 `lint` 라벨은 configure 한 빌드 폴더가 있어야 돈다. CI �
 `--hook-sample 1,10` 은 커밋 훅을 **임시 인덱스**(`GIT_INDEX_FILE`)로 흉내 내 staged 파일 수별 시간을 측정한다 — 진짜 인덱스 · 작업 트리는
 건드리지 않는다.
 
-  py -3 Scripts/lint/RunLintSuite.py [--root <repo>] [--build-dir <dir>] [--json <out>] [--hook-sample 1,10]
+**출력.** 기본은 한 줄 요약(개수 · 통과 · 실패 · 총 시간 · 가장 느린 셋)과 실패한 린트의 상세뿐이다 — 통과한 린트 수십 줄은 정보가 없고
+에이전트가 매번 다시 읽는다. `--verbose` 는 린트마다 한 줄을 모두 보인다. `--json` · CI 단계 요약은 어느 쪽이든 린트마다 전부 남긴다.
+
+  py -3 Scripts/lint/RunLintSuite.py [--root <repo>] [--build-dir <dir>] [--json <out>] [--hook-sample 1,10] [--verbose]
   py -3 -m Scripts lint-suite ...
 """
 
@@ -34,6 +37,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))      # Scripts — 
 from common import getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
 from LintCatalog import LintTarget, discoverLintTargets  # noqa: E402
 
+#: 요약 줄에 보이는 가장 느린 린트 수.
+kSlowestCount = 3
 #: 경고 임계값 — CTest TIMEOUT 의 이 비율을 넘기면 경고한다.
 kWarnTimeoutRatio = 0.5
 #: 훅 시간 경고 임계값(초) — staged 파일 수 → 상한. CI 리눅스 러너 기록(실행 38893227125: 1개 5.81 s · 10개 6.35 s)의 1.5 배다.
@@ -75,6 +80,19 @@ def runLintInternal(target: LintTarget, repositoryRoot: Path, listArgument: list
                         bMergeStderr=True)
     seconds = time.perf_counter() - start
     return LintTiming(target.name, seconds, result.returnCode, target.timeoutSeconds, "\n".join(result.stdout.strip().splitlines()[-15:]))
+
+
+def formatLintLineInternal(timing: LintTiming) -> str:
+    return f"  {timing.name:34} {timing.seconds:6.2f} s  (TIMEOUT {timing.timeoutSeconds:3})  {'OK' if timing.returnCode == 0 else 'FAIL'}"
+
+
+def formatSummaryInternal(listTiming: list[LintTiming], totalSeconds: float) -> str:
+    """기본 출력의 한 줄 — 개수 · 통과 · 실패 · 총 시간 · 가장 느린 셋. 순수 함수."""
+    failedCount = sum(1 for timing in listTiming if timing.returnCode != 0)
+    listSlowest = sorted(listTiming, key=lambda timing: -timing.seconds)[:kSlowestCount]
+    slowest = ", ".join(f"{timing.name} {timing.seconds:.1f} s" for timing in listSlowest)
+    return (f"[RunLintSuite] {len(listTiming)}개: 통과 {len(listTiming) - failedCount} · 실패 {failedCount} · 총 {totalSeconds:.1f} s (동시 실행)"
+            + (f" · 가장 느린 {slowest}" if slowest else ""))
 
 
 def measureHookInternal(repositoryRoot: Path, fileCount: int) -> float | None:
@@ -132,6 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
     parser.add_argument("--build-dir", type=Path, default=None, help="빌드 폴더가 필요한 린트(CheckSourceGlob)까지 돌릴 때 (상대 경로는 저장소 루트 기준)")
     parser.add_argument("--json", type=Path, default=None, help="시간 기록을 JSON 으로")
+    parser.add_argument("--verbose", action="store_true", help="린트마다 한 줄을 모두 보인다(기본은 한 줄 요약과 실패 상세)")
     parser.add_argument("--hook-sample", default="", help="커밋 훅을 staged 파일 수별로 잰다 (예: 1,10)")
     args = parser.parse_args(argv)
     repositoryRoot = (args.root or getProjectRoot()).resolve()
@@ -154,10 +173,11 @@ def main(argv: list[str] | None = None) -> int:
 
     listFailed = [timing for timing in listTiming if timing.returnCode != 0]
     for timing in listTiming:
-        print(f"  {timing.name:34} {timing.seconds:6.2f} s  (TIMEOUT {timing.timeoutSeconds:3})  {'OK' if timing.returnCode == 0 else 'FAIL'}")
+        if args.verbose:
+            print(formatLintLineInternal(timing))
         if timing.seconds > timing.timeoutSeconds * kWarnTimeoutRatio:
             emitWarningInternal(f"{timing.name} 가 {timing.seconds:.1f} s — CTest TIMEOUT {timing.timeoutSeconds} s 의 절반을 넘었습니다")
-    print(f"[RunLintSuite] {len(listTiming)}개, 총 {totalSeconds:.1f} s (동시 실행)")
+    print(formatSummaryInternal(listTiming, totalSeconds))
 
     mapHookSeconds: dict[int, float | None] = {}
     for item in filter(None, args.hook_sample.split(",")):
