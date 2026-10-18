@@ -77,7 +77,7 @@ class DocStyleTest(unittest.TestCase):
     def testSkipsGeneratedRuleAndBuildDocuments(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            for relativePath in ("README.md", "docs/Config/Generated.md", "docs/10_WritingDocs.md", "AGENTS.md",
+            for relativePath in ("README.md", "docs/Config/Generated.md", "docs/10_WritingDocs.md", "AGENTS.md", "docs/agents/NamingCpp.md",
                                  "Resource/credits.md", "build/Ninja-Debug/Note.md", "ThirdParty/Lib/README.md",
                                  "Source/Engine/README.md"):
                 (root / relativePath).parent.mkdir(parents=True, exist_ok=True)

@@ -7,10 +7,10 @@
 세지 않으면 `queryAABB` 와 `queryAabb`, `alloc*` 과 `allocate*`, `setup*` 과 `initialize*` 가 나란히
 생긴다. 읽는 사람은 둘 중 어느 쪽이 맞는지 알 수 없고, 다음 사람은 방금 본 쪽을 따라 쓴다.
 
-규칙은 AGENTS.md "Function names" 에 적혀 있고 여기서 강제한다.
+규칙은 docs/agents/NamingCpp.md "Function names" 에 적혀 있고 여기서 강제한다.
 
   1) AcronymRun  — 함수 이름의 대문자 묶음은 레지스트리(`Scripts/lint/AcronymRegistry.py`)의 강제 약어 하나여야 한다
-                   (`updateUI` · `queryAABB` — 약어는 대문자, AGENTS.md "Function names"). 레지스트리에 없거나 아직 강제하지 않은
+                   (`updateUI` · `queryAABB` — 약어는 대문자, docs/agents/NamingCpp.md "Function names"). 레지스트리에 없거나 아직 강제하지 않은
                    약어의 대문자 묶음(`bindComputeUAV`)은 잡는다. 마지막 대문자가 다음 낱말의 첫 글자면 묶음에서 뺀다
                    (`getHUDScale` 의 묶음은 `HUD`, `bindVector2DCallback` 의 `DC` 는 묶음이 아니다). 강제 약어를 Pascal 로 쓴 이름
                    (`updateHud`)과 이어 붙은 약어(`RHIUI`)는 `CheckAcronymSpelling.py` 가 본다.
@@ -199,7 +199,7 @@ class CheckFunctionVocabularyGate(LintGate):
     sourceScanRoots = _kScanRoots
     sourceSuffixes = _kHeaderSuffix
     violationHeader = "이름 규칙 위반"
-    hint = "\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다."
+    hint = "\n규칙은 docs/agents/NamingCpp.md 의 'Function names' 절에 있습니다."
     ruleSchema = _kRuleSchema
     selfTestCases = [
         {

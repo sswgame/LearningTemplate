@@ -186,7 +186,7 @@ class RunRepeatedConstantsReport(LintReport):
             rows = [f"{len(files):4} 파일  hashed_string( \"{value}\" )  " + ", ".join(sorted(files)[:3]) for value, files in sorted(mapHashed.items(), key=lambda item: -len(item[1])) if len(files) >= 2]
             printSection("4b) hashed_string 리터럴 반복(2 파일 이상)", rows, args.top)
 
-        print("\n  고르기 전에 **'같은 이유로 같은 값인가'** 를 먼저 물어보세요. 계약이면 한 곳으로, 우연이면 그대로 둡니다(AGENTS.md 상수 절).")
+        print("\n  고르기 전에 **'같은 이유로 같은 값인가'** 를 먼저 물어보세요. 계약이면 한 곳으로, 우연이면 그대로 둡니다(docs/agents/Constants.md 상수 절).")
         return 0  # 보고만 한다.
 
 

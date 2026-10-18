@@ -3,12 +3,12 @@
 """
 Scripts/lint/gate/CheckShaderConventions.py
 
-`AGENTS.md` 의 **HLSL** 명명 규칙을 검사합니다 — C++ 규칙을 셰이더에 옮긴 것이다.
+`docs/agents/NamingScripts.md` 의 **HLSL** 명명 규칙을 검사합니다 — C++ 규칙을 셰이더에 옮긴 것이다.
 
 `CheckCodeConventions` 는 C++ 확장자만 훑으므로 셰이더는 이 게이트가 맡는다. 원칙은 셰이더 이름도 가능하면 C++ 와 같은 규칙이다
 — 게이트가 없으면 셰이더는 제 나름의 모양(PascalCase 함수 · 한 글자 지역 변수 · `_t` 타입 · `pos`/`nrm`/`col` 필드)으로 쌓인다.
 
-검사 규칙 (`AGENTS.md` → "### HLSL"):
+검사 규칙 (`docs/agents/NamingScripts.md` → "### HLSL"):
 
 - 함수는 `camelCase`. 공유 헤더(`.hlsli`)의 함수는 네임스페이스 대신 `sw` 로 시작하고, 한 파일(`.hlsl`)의 함수는 접두어가 없다.
   약어는 한 단어(`RW` → `Rw`), 줄임말은 풀어 쓴다(`Tex` → `Texture`, `Cmp` → `Comparison`).
@@ -230,7 +230,7 @@ def checkShaderTextInternal(text: str, relPath: str) -> list[str]:
     listParamSpan: list[tuple[int, int]] = []
 
     def report(offset: int, message: str) -> None:
-        listViolation.append(f"{relPath}:{lineOf(code, offset)} {message} — AGENTS.md '### HLSL'")
+        listViolation.append(f"{relPath}:{lineOf(code, offset)} {message} — docs/agents/NamingScripts.md '### HLSL'")
 
     # 함수와 매개변수
     for match in kFunctionRe.finditer(codeBody):
@@ -369,17 +369,17 @@ kProbeHeader = "Resource/engine/shaders/probe.hlsli"
 
 
 class CheckShaderConventionsGate(LintGate):
-    """`AGENTS.md` 의 HLSL 규칙 — C++ 규칙을 셰이더에 옮긴 것이다."""
+    """`docs/agents/NamingScripts.md` 의 HLSL 규칙 — C++ 규칙을 셰이더에 옮긴 것이다."""
 
     ruleSchema = _kRuleSchema
 
-    description = "Resource/ 셰이더(HLSL) 명명 규칙 검사 (AGENTS.md '### HLSL')"
-    buildComment = "Checking HLSL naming conventions (AGENTS.md)..."
+    description = "Resource/ 셰이더(HLSL) 명명 규칙 검사 (docs/agents/NamingScripts.md '### HLSL')"
+    buildComment = "Checking HLSL naming conventions (docs/agents/NamingScripts.md)..."
     timeoutSeconds = 30
     preCommitPattern = ("*.hlsl", "*.hlsli")
     preCommitFileArgument = "--files"
     violationHeader = "HLSL 명명 규칙 위반"
-    hint = ("  AGENTS.md '### HLSL': 함수 camelCase(공유 헤더는 sw…, 한 파일은 접두어 없음, 진입점 VSMain/PSMain/CSMain 예외), 타입 PascalCase\n"
+    hint = ("  docs/agents/NamingScripts.md '### HLSL': 함수 camelCase(공유 헤더는 sw…, 한 파일은 접두어 없음, 진입점 VSMain/PSMain/CSMain 예외), 타입 PascalCase\n"
             "  (공유 헤더는 Sw…), 필드 · 지역 · 매개변수 camelCase(한 글자 · 줄임말 · 키워드 금지, out/inout 접두어, 배열 arr), static const\n"
             "  kPascalCase, #define SW_, groupshared s_, 전역 · cbuffer 멤버 g_Pascal(문자열로 묶인 이름이라 바꾸지 않는다).")
     # 조각마다 그 규칙 하나만 걸리게 짓는다 — 다른 위반이 섞이면 노리는 규칙이 죽어도 이 테스트는 통과한다.

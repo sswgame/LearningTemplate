@@ -21,7 +21,7 @@
 - **주석 · 커밋 메시지는 한국어.** 문서 주석(`/** */` · `///<`)은 "~합니다" 체, 함수 본문 `//` 주석은 "~다" 체로 한 블록 안에서 통일한다.
   직역어 대신 표준 용어(thundering herd · 락 컨보이 · 브로드캐스트 · 조인 · continuation · 오버플로 · 분기)를 쓴다. 식별자 · 로그 ·
   assert 문자열 · `NOLINT` 줄은 그대로 둔다. 주석을 고치기 전에 구현을 읽는다 — 복사해 붙인 설명이 실제 동작과 다른 곳이 많았다.
-  규칙은 [AGENTS.md](../AGENTS.md) 와 [04_CodingGuidelines.md](04_CodingGuidelines.md).
+  규칙은 [AGENTS.md](../AGENTS.md)(목차)와 `docs/agents/` 의 주제별 파일, [04_CodingGuidelines.md](04_CodingGuidelines.md).
 - **자산 처리 용어는 넷이다(상용 엔진 기준).** Cook = 배포 · 실행용 플랫폼 데이터로 바꾸기(셰이더 · 씬 · 프리팹 · 팩, `--cook-*`), Import = 원본 → 엔진 형식(텍스처, `--import-textures`), Generate = 빌드가 만드는 코드 · 헤더, Bake = 미리 계산한 결과(라이트맵 · 내비 — 지금은 없다). 한국어 "굽다" 는 쓰지 않는다. 이름을 바꿀 때 별칭(`Alias` · 옛 CLI 철자 · 옛 형식 리더)을 두지 않고 데이터를 다시 쓴다.
 - **새 기능 로드맵보다 백로그의 결함 · 정리 · 성능 · 테스트 · CI 항목을 먼저 닫습니다**(2026-10-06, 사용자 결정). 온라인 서비스 키트는 함께 진행합니다. 보류로 정한 것(`hashed_string` 숫자 꼬리, CC0 리소스 배치와 MechArena)은 그대로 둡니다.
 
@@ -213,11 +213,11 @@
   `…Service` 는 서비스 바인딩이나 원격 엔드포인트로 닿는 교체 가능한 기능 창구(PlayFab · EOS · Nakama 서비스), `…Backend` 는 인터페이스의 플랫폼 · 라이브러리 구현(`JoltPhysicsBackend`, `XAudio2AudioBackend`)입니다.
   C 함수 테이블은 `…API`(`GameAPI` · `EditorAPI` · `ModuleAPI`)입니다. 함께 정한 규칙 셋: `Anim` 은 `Animation` 으로 풀어 씁니다(Anim 접두 식별자는 개명 중이며 새로 만들지 않고, 언리얼 `AnimInstance` 같은 외부 용어를 가리킬 때만 예외).
   불린 변수 · 멤버의 `b` 접두(`bVisible`)는 언리얼 관습으로 허용하고 불린을 돌려주는 함수만 is · has · can · should 규칙을 따릅니다.
-  `Scene` 은 씬 하나의 데이터를 소유하고(언리얼 Level/World · 유니티 Scene), `GameObjectManager` 는 그 씬 오브젝트의 수명을, `GameObjectStore` 는 저장소를 맡습니다. 규칙 원문은 [AGENTS.md](../AGENTS.md) "Class suffixes" 절입니다.
+  `Scene` 은 씬 하나의 데이터를 소유하고(언리얼 Level/World · 유니티 Scene), `GameObjectManager` 는 그 씬 오브젝트의 수명을, `GameObjectStore` 는 저장소를 맡습니다. 규칙 원문은 [docs/agents/NamingCpp.md](agents/NamingCpp.md) "Class suffixes" 절입니다.
 - **같은 기준으로 바꾼 이름**(2026-10-13): 온라인 호스트 쪽 인터페이스는 클라이언트 쪽 `IOnlineClientService` · `registerClientService` 와 짝을 맞춰 `IOnlineHostService` · `registerHostService` 로 했습니다.
   키트가 나눠 쓰는 공유 상태는 언리얼 GameState(월드 단위 복제 상태)와 뜻이 달라 `SessionStateComponent` · `SessionStateRefs` 로 했습니다.
 - **저장소에 LICENSE 파일을 두지 않습니다**(2026-10-06). 라이선스를 정하는 것은 사용자의 일이라, README 의 MIT 배지와 develop 배지도 뺐습니다.
-- **코딩 규칙의 원본은 `AGENTS.md` 하나입니다**(2026-10-06). [04 코딩 규칙 예시](04_CodingGuidelines.md)는 규칙을 다시 적지 않는 한국어 예시 모음입니다.
+- **코딩 규칙의 원본은 `AGENTS.md` 와 `docs/agents/` 입니다**(2026-10-06). [04 코딩 규칙 예시](04_CodingGuidelines.md)는 규칙을 다시 적지 않는 한국어 예시 모음입니다.
   언리얼도 Coding Standard 한 문서에 규칙을 두고 예시는 따로 둡니다. `CLAUDE.md` 는 에이전트가 매번 읽는 한국어 요약이고, 원본이 따로 있는 규칙(에이전트 표, 편집 함정, 작업 방식)은 한 줄과 링크로만 가리킵니다.
 - **모듈 폴더마다 README 를 강제하지 않습니다**(2026-10-06). 있는 README 는 모두 [문서 지도](02_DocumentMap.md)에 있어야 하고, `CheckDocPaths` 가 이것을 확인합니다.
 - **문서만 바뀐 커밋에서도 CI 린트 잡은 돌고, 빌드 잡만 건너뜁니다**(2026-10-06). 바뀐 파일은 git 으로 직접 판정하고, 비교할 기준 커밋을 얻지 못하면 안전하게 빌드합니다.
@@ -315,7 +315,7 @@
     여러 칸짜리 레코드(`CheckThirdPartyIsolation._kListLibraryRule` — 두 게이트가 읽고 부분 집합에 표 배열이 없다, `CheckModuleTargets._kListFolderTarget` 7 줄),
     `Constants.py` 의 경로로 짓는 표(`CheckEngineLayers` 의 금지 규칙), 언어가 정한 낱말(HLSL 키워드 · 한정자, C++ 내장 타입), 명명 판정 표(`conventions/NamingVocabulary` —
     주체 × 컨테이너 칸이 판정 코드의 일부), 확장자 목록(파일 고르기 설정이지 규칙이 아니다).
-- **Python 모양 규칙은 이미 80 % 넘게 쓰던 관습만 올렸습니다**(2026-10-11, [AGENTS.md › Python](../AGENTS.md#python)). 새 취향은 만들지 않고 소수를 고친 뒤 `CheckPythonConventions` 에 걸었습니다.
+- **Python 모양 규칙은 이미 80 % 넘게 쓰던 관습만 올렸습니다**(2026-10-11, [agents/NamingScripts › Python](agents/NamingScripts.md#python)). 새 취향은 만들지 않고 소수를 고친 뒤 `CheckPythonConventions` 에 걸었습니다.
   Ruff 의 같은 규칙(`D100` · `FA102` · `ANN` · `UP007` · `PLW1514` · `PTH`)과 같은 내용이지만, 외부 도구를 CI · 커밋 훅에 깔지 않고 규칙 데이터 · 예외 표가 있는 AST 게이트 하나로 둡니다.
   - 올린 것(추적 파일 218 개 기준): 모듈 docstring 217, `from __future__ import annotations` 207(빠진 열하나는 코드 없는 `__init__` 여섯 · 스크립트 넷 · 세션 훅),
     반환 타입 표기 1,590/1,754 함수 · 매개변수 2,185/2,419(빠진 것의 3/4 이 `EditorIconFont` 한 파일), `X | None` 314 대 `Optional` 2,
@@ -418,7 +418,7 @@
 - **Win32 API 는 W 버전을 이름으로 부르고, A 버전도 막습니다**(2026-10-06). 전역 `UNICODE` 정의는 대상마다 정의가 빠지면 말없이 A 버전으로 돌아가서 택하지 않았습니다. 언리얼, 유니티, Godot 모두 Windows 경계에서는 W 버전만 씁니다.
   X11 창 제목은 `XStoreName` 과 `_NET_WM_NAME` 을 함께 적습니다. SDL2, GLFW, Godot 과 같은 방식입니다.
 - **벽시계는 `WallClock` 하나만 읽습니다**(2026-10-06). 서비스는 현재 시각을 매개변수로 받고, 테스트는 가짜 시각을 넣습니다.
-- **문자열 타입은 담는 것으로 고르고, `string` 을 `fixed_string` 으로 일괄 치환하지 않습니다**(2026-10-10). 규칙은 [AGENTS.md](../AGENTS.md#function-names) 에 있습니다.
+- **문자열 타입은 담는 것으로 고르고, `string` 을 `fixed_string` 으로 일괄 치환하지 않습니다**(2026-10-10). 규칙은 [agents/NamingCpp](agents/NamingCpp.md#function-names) 에 있습니다.
   `sw::string` 은 MSVC STL 의 SSO 라 15바이트까지 힙을 쓰지 않고, `sizeof` 는 32입니다. `fixed_string<N>` 은 4의 배수로 올린 (N+1) 에 4를 더한 크기이고,
   N 을 넘으면 잘라 내며 경고하고, `size()` 는 매번 `strlen` 입니다. 그래서 짧은 이름은 이득이 없고, 긴 텍스트는 잘리며 스택만 커집니다.
   후보를 조사했더니 프레임 경로를 지나는 것은 0건이었습니다. 프레임 경로의 이름은 `hashed_string` 이나 기존 저장소를 가리키는 `string_view` 로 넘깁니다
@@ -563,7 +563,7 @@
 - **같은 빌드끼리만 읽는 바이트는 고정 배치형(B) 코덱이고, 생성기가 모든 적격 `REFLECT` 타입에 만듭니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 1).
   사용자는 B 를 선언하지 않고, 등록 API 가 `FixedLayout::findCodec` 으로 확인합니다. 세이브와 에셋은 자기 기술형(A) 그대로입니다. 언리얼의 `NetSerialize` · Iris 디스크립터처럼
   선언(`UPROPERTY`)에서 와이어 형식을 도출하는 방식이고, 손 코덱의 손 버전 상수 대신 정규 문자열 해시가 형식 변경을 잡습니다. 단계 1 에서 정한 세부는 아래와 같습니다.
-  - 버전 상수 이름은 AGENTS "Constants" 를 따라 `FixedLayout::kVersion` 입니다(계획 초안의 `kFixedFormatVersion`).
+  - 버전 상수 이름은 docs/agents/Constants.md "Constants" 를 따라 `FixedLayout::kVersion` 입니다(계획 초안의 `kFixedFormatVersion`).
   - 읽기 결과에 `TrailingData` 를 더했습니다. 남은 비트를 `OutOfRange` 로 부르면 원인이 섞이기 때문입니다.
   - `float64` 는 64 비트 원본으로 씁니다. `Step` 은 float32 에만 붙습니다.
   - 수학 타입은 `ParserDefines.h` `fixedlayout::kArrMathType` 목록으로 정합니다. 구조에서 추측하면 핸들처럼 모양만 같은 타입까지 적격이 됩니다.
@@ -654,7 +654,7 @@
 | 열거형 `Auto` · `Normal` · `Custom` · `Count` | 열거형 안에서만 뜻이 서고 각자 문맥이 분명하다. `Misc = 0`(`HorrorCatalog.h`) `Misc = 0`(`HorrorCatalog.h`) 하나만 `None` 으로 바꿨다 |
 | 통지 동사(`notify` · `broadcast` · `publish` …) 규칙화 | 추정에 그친다 |
 
-약어 철자 · 어휘표 · 접미사는 AGENTS.md "Function names" 와 [코딩 규칙 예시](04_CodingGuidelines.md) 2 절에 있다.
+약어 철자 · 어휘표 · 접미사는 docs/agents/NamingCpp.md "Function names" 와 [코딩 규칙 예시](04_CodingGuidelines.md) 2 절에 있다.
 
 - **저장 목적은 문맥의 필수 값이다(2026-10-18, C-53).** `SerializeContext` 는 `SerializePurpose`(Authoring · Snapshot · SaveGame)를 생성자로만 받고, 기본 문맥도 `getDefault( purpose )` 로 목적을 말해야 얻는다. 필드 규칙(`Transient` · `RuntimeState` · `SaveGame`)은 `SerializerUtil::shouldSerializeProperty` 한 곳이 세 형식(XML · JSON · 바이너리)에 같게 정한다.
   리플렉션 직렬화기(`XMLSerializer` · `JSONSerializer` · `BinarySerializer`)의 문맥 기본 인자는 `getDefault( SerializePurpose::Authoring )` 이다 — 그 함수들은 파일 입출력 도우미라 저작 형식이 계약이고, 기본 인자가 시그니처에 목적을 적는다. 오브젝트 상태(`ObjectStateSerializer`)는 기본 인자 없이 목적을 받는 `ObjectSaveOptions` · `ObjectLoadContext` 로만 쓰고 읽는다. 아카이브(`Archive::serializeObject`)도 문맥 없는 겹지정을 지웠다(언리얼도 평범한 아카이브가 영속 저장이고 PIE 복제 · 세이브는 플래그로 따로 고른다).

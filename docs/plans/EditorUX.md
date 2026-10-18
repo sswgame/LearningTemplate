@@ -224,4 +224,4 @@ Figma 값이 필요하면 사용자가 변수 JSON을 내려받아 `import-figma
 | 점검 에이전트 | `.claude/agents/ux-reviewer.md` |
 | Figma MCP 설정 | `.mcp.json` |
 | 결정의 이유 | [결정 기록](../09_Decisions.md) 5-11절 |
-| 작업 방식과 에이전트 | [작업 방식](../11_Workflow.md) 9절 |
+| 작업 방식과 에이전트 | [에이전트와 토큰](../12_Agents.md) |

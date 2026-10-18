@@ -3,7 +3,7 @@
 """
 Scripts/lint/gate/CheckDataDrivenLiterals.py
 
-튜닝값 · 기본값이 코드로 다시 들어오지 못하게 막는다(결정 기록 5-4 "유지보수성을 위한 데이터화", AGENTS.md Constants 절).
+튜닝값 · 기본값이 코드로 다시 들어오지 못하게 막는다(결정 기록 5-4 "유지보수성을 위한 데이터화", docs/agents/Constants.md Constants 절).
 
 규칙 둘:
   - `AttributeFallback`: 데이터 속성을 읽으며 리터럴 기본값을 채우거나(`getAttributeFloat( "speed", 3.0f )`) 범위를 조용히 자르는 줄

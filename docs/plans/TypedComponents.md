@@ -467,7 +467,7 @@ Core 는 `Component` 를 모르지만, 템플릿 멤버는 인스턴스화될 �
 - 그룹 A 와 C 는 `GameplayAutomationSteps.cpp` 를 함께 볼 수 있습니다. `pAI->getPawn()` 의 반환형이 바뀌면 그 파일이 따라 바뀌므로 A 가 가집니다.
 - 그룹 B 의 `CharacterAppearanceComponent.cpp:421` 은 `SkeletalMeshComponent::setLeaderPose` 에 포인터를 넘깁니다. 핸들 API 가 아니므로 B 안에서 끝납니다.
 - 7-c 의 매니저 순회 호출부는 API 가 그대로라 고치지 않습니다. 7-c 와 7-d-2 는 `SceneNavigationCooker.cpp` 밖에서 파일이 겹치지 않습니다.
-- 그룹마다 지시문에 이 문서의 3.4 와 3.6 의 해당 줄, AGENTS.md 의 `Naming` 과 `C++ style` 절만 읽으라고 적습니다. "구조로 푼다" 원칙과 용어 대조표도 지시문에 넣습니다.
+- 그룹마다 지시문에 이 문서의 3.4 와 3.6 의 해당 줄, `docs/agents/NamingCpp.md` 와 `CppStyle.md` 만 읽으라고 적습니다. "구조로 푼다" 원칙과 용어 대조표도 지시문에 넣습니다.
 
 ## 5. 검증
 

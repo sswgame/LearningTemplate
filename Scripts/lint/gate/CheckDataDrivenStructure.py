@@ -3,7 +3,7 @@
 """
 Scripts/lint/gate/CheckDataDrivenStructure.py
 
-데이터 주도 구조를 어기는 줄이 새로 들어오지 못하게 막습니다(결정 기록 5-4 "유지보수성을 위한 데이터화" ①②, AGENTS.md Constants 절).
+데이터 주도 구조를 어기는 줄이 새로 들어오지 못하게 막습니다(결정 기록 5-4 "유지보수성을 위한 데이터화" ①②, docs/agents/Constants.md Constants 절).
 값의 정본은 데이터 파일이고 코드는 형식만 가진다. 필수 값이 없으면 조용히 기본값으로 가지 않고 오류로 멈춘다.
 
 이 게이트는 최후의 안전망이다. 위반을 못 쓰게 하는 것은 형식(경로 형식 · Optional · nodiscard 로더 — docs/plans/DataDriven.md 2절)이 먼저이고,
@@ -207,7 +207,7 @@ class CheckDataDrivenStructureGate(LintGate):
     ruleSchema = kRuleSchema
     maxNoteShown = 30
     hint = ("  경로 · 값은 데이터 파일(XML · JSON · TOML)에 두고 코드는 형식만 가진다. 필수 값이 없으면 기본값으로 가지 말고 오류로 멈춘다\n"
-            "  (AGENTS.md Constants 절, 결정 기록 5-4). 의도된 설계면 rules/CheckDataDrivenStructure.toml 의 [exemption] 에 \"<종류>:<경로>\" = \"이유\".")
+            "  (docs/agents/Constants.md Constants 절, 결정 기록 5-4). 의도된 설계면 rules/CheckDataDrivenStructure.toml 의 [exemption] 에 \"<종류>:<경로>\" = \"이유\".")
     selfTestCases = [
         {"name": "코드에 박힌 에셋 경로", "expectedViolation": "AssetPathLiteral:Source/Probe/A.cpp: 1줄이 기준선 0 을 넘었다", "files": {"Source/Probe/A.cpp": "static const char* kPath = \"engine/shaders/probe.hlsl\";\n"},
          "args": ["--files", "Source/Probe/A.cpp"]},

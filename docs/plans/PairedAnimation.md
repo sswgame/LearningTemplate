@@ -50,7 +50,7 @@
 | 공유 알림 | 에셋의 `<Notify name time role/>` 를 그 역할 오브젝트의 `AnimationNotifyComponent` 표로 보낸다(순간 알림만). 표에 항목이 없으면 **시작 거절** | 화살은 기존 경로(`SpawnPrefab` 처리기)로 생긴다. 이름 → 처리기는 캐릭터 데이터가 정한다 |
 | 중단 정책 | 필수 역할 · 앵커를 잃으면(오브젝트가 없어짐, 애니메이터가 다른 것을 재생함) 세션 중단 — 남은 역할은 각자 `exitState` 로 `exitBlend` 동안 블렌드. 선택 역할을 잃으면 그 역할만 빠진다 | 데이터 없이 규칙 하나. 잃은 역할의 애니메이터는 건드리지 않는다(게임플레이가 이미 다른 것을 재생 중) |
 | 데이터 형식 | `*.pairedanim.xml`(캐릭터 데이터 XML 관례, `CharacterDataReader` — 모르는 속성 · 원소는 오류) | 알림 표 · 소켓과 같은 사람이 같은 도구로 고친다 |
-| 에셋 이름 | `PairedAnimationDef`(+ `RoleDef` · `NotifyDef`) | 저작 데이터 정의는 `Def`(AGENTS.md `Naming`) |
+| 에셋 이름 | `PairedAnimationDef`(+ `RoleDef` · `NotifyDef`) | 저작 데이터 정의는 `Def`(`docs/agents/NamingCpp.md` `Naming`) |
 
 ## 4. 데이터 — `*.pairedanim.xml`
 

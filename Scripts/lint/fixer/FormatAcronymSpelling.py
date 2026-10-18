@@ -3,7 +3,7 @@
 """
 Scripts/lint/fixer/FormatAcronymSpelling.py
 
-약어 철자 코드모드 — Pascal 낱말로 쓴 약어를 대문자로 고칩니다(AGENTS.md "Function names", 규칙 원본은 `Scripts/lint/AcronymRegistry.py`).
+약어 철자 코드모드 — Pascal 낱말로 쓴 약어를 대문자로 고칩니다(docs/agents/NamingCpp.md "Function names", 규칙 원본은 `Scripts/lint/AcronymRegistry.py`).
 
 `UiSystem` → `UISystem`, `updateUi` → `updateUI`, `_pGpuScene` → `_pGPUScene`, `entityIds` → `entityIDs`. 이름 맨 앞의 소문자 약어(`uiSystem`)는 그대로다.
 문자열 리터럴 · 주석 · `#include` 줄 · `gv_` 전역 변수 · `SW_*` 매크로 · 서드파티 이름 · 제품 이름(`ImGui`)은 건드리지 않는다.

@@ -4,7 +4,7 @@
 `Source/` 의 class · struct 마다 **패딩이 몇 바이트이고, 필드 순서만 바꾸면 얼마나 줄어드는지**를 묻는다.
 
 [왜 필요한가 — 패딩은 아무도 세지 않는다]
-AGENTS.md 는 "Arrange fields to minimize byte padding" 을 요구하지만, 필드를 더하는 사람은 자기 필드가
+docs/agents/CppStyle.md 는 "Arrange fields to minimize byte padding" 을 요구하지만, 필드를 더하는 사람은 자기 필드가
 어디에 몇 바이트 구멍을 만드는지 보지 못한다. 컴파일러의 `-Wpadded` 는 clang-cl(MS ABI) 레이아웃에서는
 아무것도 내지 않고, `-fdump-record-layouts` 는 필드 크기와 선언 위치를 내지 않는다. 그래서 여기서는
 **libclang 으로 실제 빌드 플래그 그대로** TU 를 파싱해, 레코드마다 크기 · 정렬 · 필드 오프셋 · 필드 크기를

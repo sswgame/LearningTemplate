@@ -3,7 +3,7 @@
 """
 Scripts/lint/gate/CheckConditionParts.py
 
-`if` · `else if` · `while` 의 조건이 `&&` · `||` 로 세 부분 이상이면 먼저 이름 붙인 지역 변수에 담는다(AGENTS.md '분기문 규칙').
+`if` · `else if` · `while` 의 조건이 `&&` · `||` 로 세 부분 이상이면 먼저 이름 붙인 지역 변수에 담는다(docs/agents/CppStyle.md '분기문 규칙').
 
   나쁨:  if ( bArmed && bHasAmmo && bNotReloading )
   좋음:  const bool bCanFire = bArmed && bHasAmmo && bNotReloading;

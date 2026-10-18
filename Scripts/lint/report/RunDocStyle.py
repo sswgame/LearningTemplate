@@ -45,7 +45,7 @@ kDefaultMaxSentenceLength = 120
 kDefaultMaxCellLength = 60
 
 #: 세지 않는 문서 — 생성 문서(코드에서 만든다)와 영어 규칙 문서, 출처 표기, 그리고 나쁜 예를 일부러 싣는 지침 문서.
-_kSkippedPathPrefix: tuple[str, ...] = ("docs/Config/", "AGENTS.md", "CLAUDE.md", "docs/10_WritingDocs.md")
+_kSkippedPathPrefix: tuple[str, ...] = ("docs/Config/", "AGENTS.md", "docs/agents/", "CLAUDE.md", "docs/10_WritingDocs.md")
 _kSkippedFileName: frozenset[str] = frozenset({"credits.md"})
 
 #: 저장소 조어 — 용어 대조표의 왼쪽 열. (정규식, 쓸 말) 쌍. 쓸 말은 보고에만 쓴다.

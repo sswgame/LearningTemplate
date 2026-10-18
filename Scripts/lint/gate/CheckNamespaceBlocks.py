@@ -4,7 +4,7 @@
 한 파일에 클래스 · 구조체 정의가 여럿이면 **정의마다 namespace 블록을 따로** 둔다.
 
   한 블록에 클래스 여럿이 들어 있으면 에디터에서 블록을 접을 때 클래스 단위로 접히지 않고, 클래스 경계가 들여쓰기 하나로만 갈린다.
-  `.cpp` 의 내부 도우미를 클래스 구현과 다른 `namespace sw` 블록에 두는 규칙(AGENTS.md "Helpers: Util vs Internal")과 같은 이유다.
+  `.cpp` 의 내부 도우미를 클래스 구현과 다른 `namespace sw` 블록에 두는 규칙(docs/agents/Helpers.md "Helpers: Util vs Internal")과 같은 이유다.
 
   - 대상은 이름 있는 namespace 블록 바로 안의 `class` · `struct` **정의**다(전방 선언 · 한 줄 정의 · enum 은 아니다). 익명 namespace 는
     파일당 하나인 내부 도우미 블록이라 나누지 않는다(CheckCodeConventions `Structure/AnonymousNamespaceCount`).

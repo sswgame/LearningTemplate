@@ -47,7 +47,7 @@ _kIncludePathRe = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
 # [익명 네임스페이스 헬퍼 이름 중복 검사]
 # 정규식 패턴: r'^\s*struct\s+(\w+Internal)\s*$'
 #   - ^\s*struct\s+   : 줄 시작의 struct 선언
-#   - (\w+Internal)    : 컨벤션상 TU 전용 헬퍼 이름(AGENTS.md "Helpers: Util vs Internal") 캡처
+#   - (\w+Internal)    : 컨벤션상 TU 전용 헬퍼 이름(docs/agents/Helpers.md "Helpers: Util vs Internal") 캡처
 #   - \s*$             : 같은 줄에 다른 토큰이 없는 순수 선언만 (전방 선언/한 줄 정의 제외)
 # 용도: 유니티 빌드(SW_ENABLE_UNITY_BUILD, CI-Debug/CI-Shipping)는 .cpp 여러 개를 한 TU 로 묶는다.
 #       익명 네임스페이스라도 같은 TU 안에서는 같은 이름이 재정의로 충돌한다 — 같은 클래스를 여러 .cpp 로

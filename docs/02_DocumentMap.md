@@ -12,11 +12,13 @@
 | 문서 | 가지는 것 |
 |---|---|
 | [CLAUDE.md](../CLAUDE.md) | 에이전트의 입구, 해결 원칙, 도구 안내 |
-| [AGENTS.md](../AGENTS.md) | 코딩 규칙 |
-| [04 코딩 규칙 예시](04_CodingGuidelines.md) | AGENTS.md 규칙의 예시 |
+| [AGENTS.md](../AGENTS.md) | 코딩 규칙의 목차와 공통 규칙 |
+| [docs/agents/](agents/NamingCpp.md) | 코딩 규칙의 본문 — [NamingCpp](agents/NamingCpp.md) · [NamingScripts](agents/NamingScripts.md) · [Includes](agents/Includes.md) · [Constants](agents/Constants.md) · [Helpers](agents/Helpers.md) · [CppStyle](agents/CppStyle.md) · [EditingTraps](agents/EditingTraps.md) |
+| [04 코딩 규칙 예시](04_CodingGuidelines.md) | `docs/agents/` 규칙의 예시 |
 | [08 검증과 측정](08_Verification.md) | 검증 방법과 측정 기록 |
 | [09 결정 기록](09_Decisions.md) | 결정과 근거 |
 | [11 작업 방식](11_Workflow.md) | 작업 절차 |
+| [12 에이전트와 토큰](12_Agents.md) | 에이전트 · 모델 · 토큰 규칙 |
 | `docs/plans/` | 설계, [Roadmap](plans/Roadmap.md)(순서), [NEXT](plans/NEXT.md)(지금 상태) |
 
 ## 층마다 쓰는 것
@@ -24,7 +26,7 @@
 | 문서 | 쓰는 것 | 쓰지 않는 것 |
 |---|---|---|
 | [README.md](../README.md) | 이 엔진이 무엇인지, 빌드와 실행 명령, 폴더 소개, 다음에 읽을 문서 | 사용법, 설계, 측정값 |
-| [CLAUDE.md](../CLAUDE.md), [AGENTS.md](../AGENTS.md) | 에이전트가 매번 읽는 작업 규칙과 명령 요약(`CLAUDE.md` 는 한국어, `AGENTS.md` 는 영어 본문이고 `Editing traps` 절처럼 일부만 한국어) | 원본 문서가 따로 있는 설명의 전문 |
+| [CLAUDE.md](../CLAUDE.md), [AGENTS.md](../AGENTS.md) | 에이전트가 매번 읽는 작업 규칙과 명령 요약(`CLAUDE.md` 는 한국어, `AGENTS.md` 와 `docs/agents/` 는 영어 본문이고 `EditingTraps.md` 처럼 일부만 한국어) | 원본 문서가 따로 있는 설명의 전문 |
 | `docs/` | 계획, 결정, 검증, 작업 방식, 설정처럼 모듈 여럿에 걸친 주제 | 한 모듈의 규칙 |
 | 게임 · 도구 README | [문서 쓰기 지침](10_WritingDocs.md) 3절의 일곱 절 | 함수 레퍼런스(헤더 주석이 원본), 폴더 트리, 경위 |
 | [계획 문서](plans/Roadmap.md) | 설계, 구현 단위, 후보 절(남은 일, 결정을 기다리는 질문, 조건이 오면 할 일) | 결정([09](09_Decisions.md)), 검증([08](08_Verification.md)), 이력 |
@@ -41,12 +43,15 @@
 | 문서 | 내용 |
 |---|---|
 | [02 문서 지도](02_DocumentMap.md) | 이 문서 |
-| [04 코딩 규칙 예시](04_CodingGuidelines.md) | [AGENTS.md](../AGENTS.md) 규칙의 절마다 붙인 한국어 예시 |
+| [04 코딩 규칙 예시](04_CodingGuidelines.md) | `docs/agents/` 규칙의 절마다 붙인 한국어 예시 |
 | [07 설정](07_Configuration.md) | 설정 값을 어느 파일에 두는지, 우선순위, 배포본과 핫 리로드 |
 | [08 검증과 측정](08_Verification.md) | 작업을 끝내기 전에 돌릴 것, 측정값 읽는 법과 기준선, 검증할 때의 함정, CI 실패 읽기 |
 | [09 결정 기록](09_Decisions.md) | 정한 방향, 하지 않기로 한 것, 측정으로 기각한 안, 바뀐 이름 |
 | [10 문서 쓰기 지침](10_WritingDocs.md) | 문서 종류와 층, README의 틀, 문장 규칙, 용어 대조표 |
-| [11 작업 방식](11_Workflow.md) | 워크트리와 적용 담당, 동시 빌드, 검증 단계, push 와 CI, 결정 권한, 커밋 메시지, 에이전트 정의와 세션 가드 |
+| [11 작업 방식](11_Workflow.md) | 워크트리와 적용 담당, 동시 빌드, 검증 단계, push 와 CI, 결정 권한, 커밋 메시지 |
+| [12 에이전트와 토큰](12_Agents.md) | 일과 에이전트 · 모델 · effort 표, 토큰 규칙, 측정값, 일을 쪼개는 기준 |
+| [13 보조 도구 설치](13_LocalTools.md) | graphify · ponytail 설치 (새 PC 에서만) |
+| [14 함정](14_Pitfalls.md) | 빌드 · 환경 · 워크트리 · 코드의 자주 밟는 함정 |
 | [로드맵](plans/Roadmap.md) | 앞으로 할 일의 순서(순서의 원본) |
 | [다음 세션 인계](plans/NEXT.md) | 지금 상태. 진행 중인 배치와 다음 세션이 할 일(배치 경계마다 고쳐 쓴다) |
 

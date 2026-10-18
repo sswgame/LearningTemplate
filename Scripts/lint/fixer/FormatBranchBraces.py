@@ -3,7 +3,7 @@
 """
 Scripts/lint/fixer/FormatBranchBraces.py
 
-중괄호의 모양을 정리합니다 (AGENTS.md '분기문 규칙'). 두 가지를 본다.
+중괄호의 모양을 정리합니다 (docs/agents/CppStyle.md '분기문 규칙'). 두 가지를 본다.
 
 **1) 본문이 한 줄인 if / else if / else 의 중괄호를 제거한다.**
 

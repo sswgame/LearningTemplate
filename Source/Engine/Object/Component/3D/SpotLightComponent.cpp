@@ -14,7 +14,7 @@ namespace sw
         /**
          * @brief 이 TU 의 기본값 모음입니다. **익명 네임스페이스에 상수를 그냥 두면 안 됩니다.**
          *        유니티 빌드(CI-*)는 여러 .cpp 를 한 TU 로 합치고, 그러면 세 라이트 컴포넌트의
-         *        `kDefaultColor` 가 같은 익명 네임스페이스에서 재정의됩니다(AGENTS.md 의 Internal 규칙).
+         *        `kDefaultColor` 가 같은 익명 네임스페이스에서 재정의됩니다(docs/agents/Helpers.md 의 Internal 규칙).
          */
         struct SpotLightComponentInternal
         {

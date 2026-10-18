@@ -3,7 +3,7 @@
 """
 Scripts/lint/gate/CheckLoopBraces.py
 
-반복문(`for` · 범위 `for` · `while`)은 본문이 한 문장이어도 중괄호를 쓴다(AGENTS.md '분기문 규칙').
+반복문(`for` · 범위 `for` · `while`)은 본문이 한 문장이어도 중괄호를 쓴다(docs/agents/CppStyle.md '분기문 규칙').
 
 `if` 는 한 줄 본문의 중괄호를 벗기지만(`FormatBranchBraces`), 반복문은 늘 중괄호다 — 본문에 한 줄을 더할 때 반복 밖으로 새는 줄이 생기지 않게.
 `do { … } while ( … );` 의 꼬리 `while` 은 반복문 머리가 아니다. 본문이 `;` 하나(빈 본문)이면 `{}` 로 쓴다.

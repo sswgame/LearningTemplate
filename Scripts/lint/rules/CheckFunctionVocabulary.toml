@@ -1,4 +1,4 @@
-# CheckFunctionVocabulary 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckFunctionVocabulary.py, 규칙은 AGENTS.md "Function names".
+# CheckFunctionVocabulary 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckFunctionVocabulary.py, 규칙은 docs/agents/NamingCpp.md "Function names".
 
 # 금지 동사 → 써야 할 동사. 접두사 뒤에 대문자가 오거나 이름이 거기서 끝날 때만 본다
 # (`allocate` 는 `alloc` + 소문자라 걸리지 않고, `fetch_add` 는 `_` 라 걸리지 않는다).

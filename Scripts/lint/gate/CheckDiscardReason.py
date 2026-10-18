@@ -10,7 +10,7 @@ Scripts/lint/gate/CheckDiscardReason.py
 어느 줄 끝, 또는 바로 윗줄의 `//` 주석이다. 흔한 이유: 피호출자가 실패를 스스로 로그로 남긴다(`FileUtil::removeFile` 은 경고를 찍는다) ·
 없어도 되는 선택 파일이다 · 이미 같은 프레임에서 다른 길로 알렸다.
 
-그 밖의 `(void)` (값을 돌려주는 조회 · 쓰지 않는 인자 표시)는 이 규칙 밖이다(AGENTS.md).
+그 밖의 `(void)` (값을 돌려주는 조회 · 쓰지 않는 인자 표시)는 이 규칙 밖이다(docs/agents/NamingCpp.md).
 
   python Scripts/lint/gate/CheckDiscardReason.py [--root <repo>] [--files a.cpp b.h]
 """

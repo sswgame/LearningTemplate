@@ -3,12 +3,12 @@
 """
 Scripts/lint/gate/CheckCmakeConventions.py
 
-`AGENTS.md` 의 **CMake** 명명 규칙을 검사합니다.
+`docs/agents/NamingScripts.md` 의 **CMake** 명명 규칙을 검사합니다.
 
 Python 과 같은 이유로 여기 있다 — C++ 게이트는 `.cmake` 를 열지 않으므로, 이 게이트가 없으면 빌드 시스템
-수천 줄이 `AGENTS.md` 의 CMake 규칙 밖에 남는다.
+수천 줄이 `docs/agents/NamingScripts.md` 의 CMake 규칙 밖에 남는다.
 
-검사 규칙 (`AGENTS.md` → "### CMake", `cmake/README.md` → "네이밍 컨벤션"):
+검사 규칙 (`docs/agents/NamingScripts.md` → "### CMake", `cmake/README.md` → "네이밍 컨벤션"):
 
 - `function()` / `macro()` 이름은 `sw_camelCase`
 - `option()` 이름은 `SW_UPPER_SNAKE_CASE`
@@ -119,7 +119,7 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
             if not _kFunctionNameRe.match(name):
                 listViolation.append(
                     f"{relPath}:{lineNumber} {keyword} '{name}' 는 sw_camelCase 여야 합니다 "
-                    f"— AGENTS.md '### CMake'"
+                    f"— docs/agents/NamingScripts.md '### CMake'"
                 )
             continue
 
@@ -143,7 +143,7 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
             if not _kOptionNameRe.match(name):
                 listViolation.append(
                     f"{relPath}:{lineNumber} option '{name}' 는 SW_UPPER_SNAKE_CASE 여야 합니다 "
-                    f"— AGENTS.md '### CMake'"
+                    f"— docs/agents/NamingScripts.md '### CMake'"
                 )
             continue
 
@@ -172,15 +172,15 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
 
 
 class CheckCmakeConventionsGate(LintGate):
-    """`AGENTS.md` 의 CMake 규칙 — Python 과 함께, 지금까지 아무도 보지 않던 자리다."""
+    """`docs/agents/NamingScripts.md` 의 CMake 규칙 — Python 과 함께, 지금까지 아무도 보지 않던 자리다."""
 
-    description = "CMake 명명 규칙 검사 (AGENTS.md '### CMake')"
-    buildComment = "Checking CMake naming conventions (AGENTS.md)..."
+    description = "CMake 명명 규칙 검사 (docs/agents/NamingScripts.md '### CMake')"
+    buildComment = "Checking CMake naming conventions (docs/agents/NamingScripts.md)..."
     timeoutSeconds = 20
     preCommitPattern = ("*.cmake", "*CMakeLists.txt")
     preCommitFileArgument = "--files"
     violationHeader = "CMake 명명 규칙 위반"
-    hint = ("  AGENTS.md '### CMake': function/macro 는 sw_camelCase, option 은 SW_UPPER_SNAKE_CASE, 함수 내부 변수는 '_' 없는 camelCase,\n"
+    hint = ("  docs/agents/NamingScripts.md '### CMake': function/macro 는 sw_camelCase, option 은 SW_UPPER_SNAKE_CASE, 함수 내부 변수는 '_' 없는 camelCase,\n"
             "  모듈 라이브러리는 sw_addModuleLibrary, 내장 경로 별칭 · if(COMMAND sw_…) 가드 금지.")
     selfTestCases = [
         {

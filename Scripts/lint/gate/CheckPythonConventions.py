@@ -3,12 +3,12 @@
 """
 Scripts/lint/gate/CheckPythonConventions.py
 
-`AGENTS.md` 의 **Python** 규칙(이름 · 모양)을 검사합니다.
+`docs/agents/NamingScripts.md` 의 **Python** 규칙(이름 · 모양)을 검사합니다.
 
 `AGENTS.md` 는 세 언어(C++ · CMake · Python)의 규칙을 적어 두었는데 C++ 게이트는 `kCppAllExtensions` 만
 훑는다 — 이 게이트가 없으면 **린트를 만드는 코드가 린트를 받지 않는다**.
 
-검사 규칙 (`AGENTS.md` → "### Python"):
+검사 규칙 (`docs/agents/NamingScripts.md` → "### Python"):
 
 - 이름: 공개 함수는 `camelCase`, 내부 헬퍼는 `camelCaseInternal` · 모듈 상수는 `kPascalCase` 또는 `_kPascalCase` · 파일은 `PascalCase.py`
 - 모양(`_kStyleRule`): 모듈 docstring · `from __future__ import annotations` · 매개변수와 반환 타입 표기 · `X | None` 과 내장 제네릭 ·
@@ -73,7 +73,7 @@ def isTypeDeclarationInternal(node: ast.Assign | ast.AnnAssign) -> bool:
 
     `TItem = TypeVar("TItem")` 과 `PathLike = str | Path` 는 둘 다 타입이다. 파이썬에서 타입은
     `PascalCase` 로 쓰는 것이 표준이고 (`typing` 자신이 그렇게 한다), `kPathlike` 로 바꾸면
-    타입 힌트가 읽히지 않는다. `AGENTS.md` 의 "모듈 상수" 규칙이 겨누는 것은 값이지 타입이 아니다.
+    타입 힌트가 읽히지 않는다. `docs/agents/NamingScripts.md` 의 "모듈 상수" 규칙이 겨누는 것은 값이지 타입이 아니다.
     """
     if isinstance(node, ast.AnnAssign):
         annotation = node.annotation
@@ -132,7 +132,7 @@ def checkFunctionNameInternal(node: ast.FunctionDef | ast.AsyncFunctionDef, relP
 
     return [
         f"{relPath}:{node.lineno} 함수 '{name}' 는 camelCase 여야 합니다 "
-        f"(내부 헬퍼는 camelCaseInternal) — AGENTS.md '### Python'"
+        f"(내부 헬퍼는 camelCaseInternal) — docs/agents/NamingScripts.md '### Python'"
     ]
 
 
@@ -141,7 +141,7 @@ def checkModuleConstantInternal(node: ast.Assign | ast.AnnAssign, relPath: str) 
     모듈 수준 대입 하나를 봅니다.
 
     대문자로만 된 이름(`BACKENDS`)은 파이썬 관례상 상수지만 **이 저장소의 관례는 아니다** —
-    `AGENTS.md` 는 `kPascalCase` 를 쓴다. 소문자로 시작하는 모듈 변수는 상수가 아니라 상태이므로
+    `docs/agents/NamingScripts.md` 는 `kPascalCase` 를 쓴다. 소문자로 시작하는 모듈 변수는 상수가 아니라 상태이므로
     여기서 보지 않는다(그건 다른 규칙의 몫이다).
     """
     listTarget = node.targets if isinstance(node, ast.Assign) else [node.target]
@@ -173,7 +173,7 @@ def checkModuleConstantInternal(node: ast.Assign | ast.AnnAssign, relPath: str) 
         mark = "_" if isPrivateNameInternal(name) else ""
         listViolation.append(
             f"{relPath}:{node.lineno} 모듈 상수 '{name}' 는 kPascalCase 여야 합니다 "
-            f"('{mark}{suggestion}' 권장) — AGENTS.md '### Python'"
+            f"('{mark}{suggestion}' 권장) — docs/agents/NamingScripts.md '### Python'"
         )
 
     return listViolation
@@ -199,7 +199,7 @@ class StyleScanInternal:
         if key is not None:
             CheckPythonConventionsGate.useExemption(key)
             return
-        self.listViolation.append(f"{self.relPath}:{lineNumber} [{rule}] {message} — AGENTS.md '### Python'")
+        self.listViolation.append(f"{self.relPath}:{lineNumber} [{rule}] {message} — docs/agents/NamingScripts.md '### Python'")
 
     def run(self) -> list[str]:
         self.checkModuleHead()
@@ -332,7 +332,7 @@ def checkPythonFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
         CheckPythonConventionsGate.useExemption(f"module:{stem}")
     elif not _kModuleNameRe.match(stem):
         listViolation.append(
-            f"{relPath}:1 모듈 이름 '{path.name}' 는 PascalCase.py 여야 합니다 — AGENTS.md '### Python'"
+            f"{relPath}:1 모듈 이름 '{path.name}' 는 PascalCase.py 여야 합니다 — docs/agents/NamingScripts.md '### Python'"
         )
 
     try:
@@ -359,16 +359,16 @@ _kProbeHead = '"""조각."""\nfrom __future__ import annotations\n\n'
 
 
 class CheckPythonConventionsGate(LintGate):
-    """`AGENTS.md` 의 Python 규칙 — 지금까지 아무 게이트도 보지 않던 자리다."""
+    """`docs/agents/NamingScripts.md` 의 Python 규칙 — 지금까지 아무 게이트도 보지 않던 자리다."""
 
-    description = "저장소 파이썬의 이름 · 모양 규칙 검사 (AGENTS.md '### Python')"
-    buildComment = "Checking Python conventions (AGENTS.md)..."
+    description = "저장소 파이썬의 이름 · 모양 규칙 검사 (docs/agents/NamingScripts.md '### Python')"
+    buildComment = "Checking Python conventions (docs/agents/NamingScripts.md)..."
     timeoutSeconds = 30
     preCommitPattern = ("*.py",)
     preCommitFileArgument = "--files"
     ruleSchema = _kRuleSchema
     violationHeader = "Python 규칙 위반"
-    hint = ("  AGENTS.md '### Python': 함수는 camelCase(내부는 camelCaseInternal), 모듈 상수는 kPascalCase, 파일은 PascalCase.py. "
+    hint = ("  docs/agents/NamingScripts.md '### Python': 함수는 camelCase(내부는 camelCaseInternal), 모듈 상수는 kPascalCase, 파일은 PascalCase.py. "
             "[규칙] 머리가 붙은 줄은 같은 절의 모양 규칙이고, 정말 예외면 rules/CheckPythonConventions.toml 에 '<규칙>:<경로>' 와 이유를 적습니다.")
     selfTestCases = [
         {

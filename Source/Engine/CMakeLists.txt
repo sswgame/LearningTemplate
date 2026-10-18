@@ -198,7 +198,7 @@ endif()
 # 유니티가 꺼져 있어 CI 에서만 터진다.
 #
 # "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
-# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
+# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, docs/agents/Helpers.md). `CheckCodeConventions` 의
 # `Naming/DuplicateInternalHelper` 가 그것을 검사한다. 목록이 아니라 린트가 지킨다.
 #
 # 다시 넣고 싶어지면 먼저 `cmake --build --preset CI-Debug` 로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.

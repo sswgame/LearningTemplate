@@ -1,4 +1,4 @@
-# CheckConditionParts 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckConditionParts.py, 규칙은 AGENTS.md "분기문 규칙"(조건 세 부분 이상은 이름 붙이기).
+# CheckConditionParts 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckConditionParts.py, 규칙은 docs/agents/CppStyle.md "분기문 규칙"(조건 세 부분 이상은 이름 붙이기).
 
 # 전체 훑기의 기준선 — 0 이다(기존 위반을 모두 고쳤다). 하나라도 생기면 실패한다(커밋 훅은 추가한 줄만 본다).
 [baseline]

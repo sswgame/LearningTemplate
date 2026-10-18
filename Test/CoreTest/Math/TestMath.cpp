@@ -488,7 +488,7 @@ SW_TEST_CASE( MathTest, Double3VectorOperations )
 /**
  * @brief [MathTest] 네 벡터 타입의 `isInBounds` 가 **같은 답**을 낸다
  * @details 경계는 포함이고 범위는 `[-bound, +bound]` 다. `float4` 만 비교를 뒤집어 적고 있었는데
- *          (AGENTS 의 "값을 가운데 두는" 범위 비교 규칙과도 어긋난다) 결과는 같아야 한다 —
+ *          (docs/agents/CppStyle.md 의 "값을 가운데 두는" 범위 비교 규칙과도 어긋난다) 결과는 같아야 한다 —
  *          같은 이름의 함수가 타입마다 다르게 읽히면 그 자체가 다음 실수의 씨앗이다.
  */
 SW_TEST_CASE( MathTest, IsInBoundsAgreesAcrossVectorTypes )

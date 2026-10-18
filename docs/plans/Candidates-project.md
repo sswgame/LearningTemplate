@@ -30,13 +30,13 @@
 ### NamingAuditNext
 제목: 다음 이름 점검
 옛번호: C-17
-왜 필요한가: 2026-10-13 이름 점검에서 남긴 것입니다. 기준은 [AGENTS.md](../../AGENTS.md) "Class suffixes" 절과 [결정 기록](../09_Decisions.md) 5-1 입니다.
+왜 필요한가: 2026-10-13 이름 점검에서 남긴 것입니다. 기준은 [docs/agents/NamingCpp.md](../agents/NamingCpp.md) "Class suffixes" 절과 [결정 기록](../09_Decisions.md) 5-1 입니다.
 남은 것: 아직 보지 않은 네 가지.
 - Context 접미어: `Context` 접미어 타입이 무엇을 담는지.
 - Util 정적 클래스: `*Util` 정적 클래스 중 한 타입의 메서드가 된 것이 나은 것.
 - Unit 계열: `Unit` 계열(812 회).
 - 단독 value: 남은 지역 · 멤버 변수 단독 `value` 약 50 곳.
-함정: `Settings` · `Config` · `Def` 기준은 AGENTS.md "Type suffixes" 입니다.
+함정: `Settings` · `Config` · `Def` 기준은 docs/agents/NamingCpp.md "Type suffixes" 입니다.
 
 ### SubNumberReferenceCleanup
 제목: 정의 없는 하위 번호 참조 정리
@@ -88,13 +88,6 @@
 왜 필요한가: 한글이 든 `SW_LOG` 줄이 약 200 개(전체 3309 줄의 6 %)라 AGENTS.md 의 "로그 · assert 문자열은 영어" 규칙에 어긋납니다.
 남은 것: 한글 로그 줄을 찾아 영어로 바꾼다. 로그 문자열을 매칭하는 테스트가 있으면 함께 고친다.
 함정: 주석 문체 작업(CommentRewriteRemaining)과 같은 파일을 건드리므로 같은 작업자에게 묶는다.
-
-### AgentsMdSplit
-제목: AGENTS.md(약 52KB)를 주제별 파일로 나눈다
-옛번호: 없음
-왜 필요한가: 지시문에 절 이름을 적어도 작업자가 `grep -n '^#'` 에 실패하면 52KB 를 통째로 읽습니다(약 1.3만 토큰, 작업자마다 반복). 파일이 나뉘어 있으면 그 실수가 형식으로 불가능해집니다([해결 원칙](../../CLAUDE.md), 규칙 · 주석보다 구조).
-남은 것: 절을 주제(이름 · 파일 구조와 include · 상수 · 도우미 · 스타일 · 편집 함정)별 파일로 옮기고 AGENTS.md 는 목차로 둡니다. 링크와 `CheckDocPaths` 를 맞추고, 지시문 틀([작업자 규칙](WorkerRules.md) 5절)에 읽을 파일 이름을 적게 합니다.
-함정: AGENTS.md 의 절 번호 · 앵커를 가리키는 링크가 많습니다. 옮기기 전에 사용처를 `graphify` 가 아니라 `rg` 로 모두 찾습니다. 측정: 나눈 뒤 같은 종류의 일에서 작업자 토큰이 줄었는지 9절 측정값 표에 적습니다.
 
 ## 조건부
 

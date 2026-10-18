@@ -160,7 +160,7 @@ def checkContainerNamingInternal(
             )
         )
 
-    # 4) 단수형. `unique` 만 복수형을 허용한다 (`AGENTS.md`).
+    # 4) 단수형. `unique` 만 복수형을 허용한다 (`docs/agents/NamingCpp.md`).
     if vocabulary.bSingular and varName.startswith(listAllowed) and isPluralWordInternal(varName):
         singularFix = makeSingularInternal(varName)
         violations.append(

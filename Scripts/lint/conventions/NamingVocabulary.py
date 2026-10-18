@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 # --- 3. 명명 어휘 — 주체 셋이 함께 쓰는 단 하나의 표 -------------------------
 #
-# 멤버 · 매개변수 · 지역변수는 **같은 접두어 표**를 쓴다 (`AGENTS.md` 의 컨테이너/포인터 규칙).
+# 멤버 · 매개변수 · 지역변수는 **같은 접두어 표**를 쓴다 (`docs/agents/NamingCpp.md` 의 컨테이너/포인터 규칙).
 # 주의: 주체마다 표를 따로 적으면 반드시 어긋난다 — 같은 이름이 매개변수면 잡히고 지역변수면 통과하거나
 # (`inoutListActors`), 매개변수와 멤버에 정반대 판정이 나온다(`vector<uint8> listBuffer` / `_listBuffer`).
 #
@@ -23,11 +23,11 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class ContainerVocabulary:
     """
-    컨테이너 한 종류의 어휘. `AGENTS.md` 의 접두어 표를 그대로 옮긴 것이다.
+    컨테이너 한 종류의 어휘. `docs/agents/NamingCpp.md` 의 접두어 표를 그대로 옮긴 것이다.
 
     - `prefix`       : 요구하는 접두어 (`list` · `map` · `unique` · `arr`)
     - `noun`         : 위반 메시지에 쓰는 우리말 이름
-    - `bSingular`    : 단수형을 요구하는가. `unique` 만 예외다 (`AGENTS.md`: `outUniqueIDs` 허용)
+    - `bSingular`    : 단수형을 요구하는가. `unique` 만 예외다 (`docs/agents/NamingCpp.md`: `outUniqueIDs` 허용)
     - `bBanListSuffix`: `List` 접미어를 금지하는가 (`actorList` → `listActor`). `list` 만 해당
     - `bByteException`: 바이트 버퍼 이름이면 접두어를 **생략**해야 하는가. `list` 만 해당
     """

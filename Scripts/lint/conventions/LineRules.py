@@ -118,7 +118,7 @@ _kCountFirstRe = re.compile(r"\b(?:u?int(?:8|16|32|64)|size_t)\s+&?_?(count(?!(?
 
 
 class CountFirstNameRule( ConventionRule ):
-    """Naming/CountFirst — 개수를 담는 이름은 `xCount`(`itemCount`), `countX()` 는 훑어 세는 함수다(AGENTS.md "Function names")."""
+    """Naming/CountFirst — 개수를 담는 이름은 `xCount`(`itemCount`), `countX()` 는 훑어 세는 함수다(docs/agents/NamingCpp.md "Function names")."""
     category = "Naming/CountFirst"
     badSampleFile = "Source/Probe/CountFirst.cpp"
     badSample = '#include "pch.h"\n\nvoid probe()\n{\n    const int32 countItems = 0;\n    (void)countItems;\n}\n'
@@ -245,7 +245,7 @@ class SingleAnonymousNamespaceRule( ConventionRule ):
         self._stateByFile: dict[str, list[int]] = {}
 
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
-        # AGENTS.md "One anonymous namespace per file" — `.cpp` 하나에 익명 네임스페이스는 하나다.
+        # docs/agents/Helpers.md "One anonymous namespace per file" — `.cpp` 하나에 익명 네임스페이스는 하나다.
         # 여럿이면 번역 단위 지역 헬퍼가 흩어지고, 유니티 빌드에서 이름이 겹칠 자리가 는다.
         if ctx.isSource is False:
             return []
@@ -261,7 +261,7 @@ class SingleAnonymousNamespaceRule( ConventionRule ):
             return []
 
         # 서로 배타적인 전처리 분기 안의 블록들은 번역 단위마다 하나씩이라 정당한 예외다
-        # (AGENTS.md 가 그렇게 적고 있다). 그래서 분기 밖의 것만 센다.
+        # (docs/agents/Helpers.md 가 그렇게 적고 있다). 그래서 분기 밖의 것만 센다.
         if state[1] > 0:
             return []
 
@@ -654,7 +654,7 @@ class BareOutParameterRule( ConventionRule ):
     """
     Naming/BareOutParameter — 헤더 선언의 맨이름 `out` 매개변수.
 
-    out 매개변수는 `out` + 채우는 것(`outBody` · 포인터면 `pOutPath`)으로 쓴다(AGENTS.md "Naming › C++"). 맨이름 `out` 은 무엇을 채우는지가 빠져
+    out 매개변수는 `out` + 채우는 것(`outBody` · 포인터면 `pOutPath`)으로 쓴다(docs/agents/NamingCpp.md "Naming › C++"). 맨이름 `out` 은 무엇을 채우는지가 빠져
     같은 함수의 다른 out 과 구별되지 않는다. 선언이 여러 줄이면 매개변수 줄 앞에서 마지막으로 연 `이름(` 을 함수 이름으로 알린다 — 그래서 줄 규칙이
     아니라 파일 규칙이다.
     """
@@ -770,7 +770,7 @@ class MultipleInternalHelperRule( ConventionRule ):
     """
     Naming/MultipleInternalHelper — 한 .cpp 에 `XxxInternal` 구조체가 둘 이상.
 
-    번역 단위 전용 도우미는 파일마다 구조체 **하나**에 모은다(AGENTS.md "Helpers: Util vs Internal"). 구조체가 여럿이면 도우미를 어디서 찾을지
+    번역 단위 전용 도우미는 파일마다 구조체 **하나**에 모은다(docs/agents/Helpers.md "Helpers: Util vs Internal"). 구조체가 여럿이면 도우미를 어디서 찾을지
     정할 수 없고 이름만 늘어 유니티 빌드 충돌 면(`Naming/DuplicateInternalHelper`)도 는다. 규칙이 생길 때 이미 어기던 파일은
     `rules/CheckCodeConventions.toml` 의 `internalHelperBaseline` 에 있다 — 그 파일을 고치면 목록에서 지운다.
     """

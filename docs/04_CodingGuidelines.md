@@ -1,12 +1,12 @@
 # 📝 코딩 규칙 — 한국어 예시 모음
 
-**규칙의 원본은 [AGENTS.md](../AGENTS.md) 입니다.** 이 문서는 규칙을 다시 적지 않고, AGENTS.md 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를
+**규칙의 원본은 [AGENTS.md](../AGENTS.md) 의 목차가 가리키는 `docs/agents/` 파일들입니다.** 이 문서는 규칙을 다시 적지 않고, AGENTS.md 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를
 한국어 설명과 함께 모읍니다. 둘이 갈리면 AGENTS.md 가 맞습니다. 규칙을 더하거나 바꿀 때는 AGENTS.md 를 고치고, 예시가 필요하면 같은 커밋에서 여기에 더합니다.
 규칙은 `Scripts/lint/` 의 게이트 · 픽서가 강제합니다(목록은 [Scripts/README.md](../Scripts/README.md)).
 
 ---
 
-## 1. 이름 — [AGENTS.md › Naming](../AGENTS.md#naming)
+## 1. 이름 — [docs/agents › Naming](agents/NamingCpp.md#naming)
 
 ```cpp
 class TaskManager                                   // 타입 PascalCase, 인터페이스는 ITaskSource
@@ -42,7 +42,7 @@ SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchMeshes, 0, "..." );   // 벤치 
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 은 종류와 상관없이 이것 하나
 ```
 
-## 2. 함수 이름 어휘 — [AGENTS.md › Function names](../AGENTS.md#function-names)
+## 2. 함수 이름 어휘 — [docs/agents › Function names](agents/NamingCpp.md#function-names)
 
 | 쓰지 않는 것 | 쓰는 것 | 규칙 |
 | :--- | :--- | :--- |
@@ -78,7 +78,7 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 
 `RT` 는 render thread 다(`RT.Frame`). render target 은 `RenderTarget` 으로 풀어 쓴다.
 
-## 3. 헤더 · include — [AGENTS.md › C++ structure and includes](../AGENTS.md#c-structure-and-includes)
+## 3. 헤더 · include — [docs/agents › C++ structure and includes](agents/Includes.md#c-structure-and-includes)
 
 ```cpp
 // Source/Core/Concurrency/ThreadName.cpp
@@ -151,7 +151,7 @@ GameObjectHandle _targetHandle;                             // 프레임을 넘�
 GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때마다 풀고, 사라졌으면 nullptr
 ```
 
-## 4. 상수 — [AGENTS.md › Constants](../AGENTS.md#constants--where-a-constant-lives)
+## 4. 상수 — [docs/agents › Constants](agents/Constants.md#constants--where-a-constant-lives)
 
 | 쓰는 곳 | 예 |
 | :--- | :--- |
@@ -180,7 +180,7 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 | `(void)table.loadFromResource();` | 읽기 결과를 받아 실패를 알리거나 멈춘다 |
 | 파이썬 `except Exception: pass` · `os.environ.get( "X", "경로" )` | 예상한 예외만 잡고, 필수 설정이 없으면 `sys.exit` 로 멈춘다 |
 
-## 5. 헬퍼 · 이름공간 — [AGENTS.md › Helpers](../AGENTS.md#helpers-util-vs-internal)
+## 5. 헬퍼 · 이름공간 — [docs/agents › Helpers](agents/Helpers.md#helpers-util-vs-internal)
 
 ```cpp
 // VulkanRHIResourceFactoryPipeline.cpp — Internal 이름은 클래스가 아니라 번역 단위를 따른다(유니티 빌드에서 겹치지 않게)
@@ -204,7 +204,7 @@ namespace sw                                    // 구현은 다른 블록 — �
 
 여러 번역 단위가 쓰는 헬퍼는 `XxxUtil` 정적 구조체 헤더(`SerializerUtil` · `MaterialUtil`)이고, 파일에 클래스가 여럿이면 클래스마다 `namespace` 블록을 닫고 다시 엽니다.
 
-## 6. 문법 형태 — [AGENTS.md › C++ style](../AGENTS.md#c-style)
+## 6. 문법 형태 — [docs/agents › C++ style](agents/CppStyle.md#c-style)
 
 ```cpp
 if ( pObject == nullptr )                       // 한 줄 if 는 중괄호 없이, 포인터는 nullptr 와 비교
@@ -257,7 +257,7 @@ Foo::Foo()
 함수 본문은 줄을 나눠 씁니다. 클래스 본문 안에 정의한 짧은 함수(getter · 단순 접근자)만 한 줄이 허용됩니다(`AllowShortFunctionsOnASingleLine: InlineOnly`).
 클래스 밖의 `inline` 자유 함수(연산자 · 수학 도우미)와 클래스 밖 정의는 `{` 를 다음 줄에 두고 본문을 펼칩니다.
 
-## 7. HLSL — [AGENTS.md › HLSL](../AGENTS.md#hlsl)
+## 7. HLSL — [docs/agents › HLSL](agents/NamingScripts.md#hlsl)
 
 | 쓰지 않는 것 | 쓰는 것 |
 | :--- | :--- |
@@ -267,7 +267,7 @@ Foo::Foo()
 | `groupshared uint keys[256];` | `groupshared uint s_arrKey[256];` |
 | `g_ViewProj` 를 스타일 때문에 `g_viewProjection` 으로 | 그대로 — C++ 가 이름으로 묶는다(바꾸려면 같은 커밋에서 C++ 도) |
 
-## 8. CMake · Python · 리소스 — [AGENTS.md › CMake](../AGENTS.md#cmake) · [Python](../AGENTS.md#python) · [Resource Assets](../AGENTS.md#resource-assets)
+## 8. CMake · Python · 리소스 — [docs/agents › CMake](agents/NamingScripts.md#cmake) · [Python](agents/NamingScripts.md#python) · [Resource Assets](agents/NamingScripts.md#resource-assets)
 
 | 대상 | 예 |
 | :--- | :--- |

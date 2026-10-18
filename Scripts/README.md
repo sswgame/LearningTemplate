@@ -159,7 +159,7 @@ Scripts/
   │     │     ├── CheckTargetMacros.py        # 플랫폼 · 아키텍처 · 컴파일러를 SW_* 매크로로만 묻기 (컴파일러 내장 매크로 금지)
   │     │     ├── CheckX11Isolation.py        # X11 헤더는 X11 구현 .cpp 에서만 · 뒤에 매크로 지우기 · 서드파티와 한 TU 에 두지 않기
   │     │     ├── CheckCookContract.py        # 쿠커가 쿠킹 표대로 고르는지
-  │     │     ├── CheckShaderConventions.py   # HLSL 명명 규칙(AGENTS.md 의 HLSL 절)
+  │     │     ├── CheckShaderConventions.py   # HLSL 명명 규칙(docs/agents/NamingScripts.md 의 HLSL 절)
   │     │     ├── CheckShaderStamps.py        # 커밋된 셰이더 바이너리가 지금 소스에서 나온 것인지 쿠킹 표의 모든 백엔드에서(빌드 없이 cook.stamp 로)
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
@@ -365,7 +365,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 
 ## 함정 · 계약
 
-- **약어 코드모드(`FormatAcronymSpelling`)는 도구 자신과 비교하는 글도 고친다.** `--apply-files` · `--apply-text` 는 트리 전체를 돌고 `--files` 를 받지 않는다 — 치환 뒤 레지스트리 · 코드모드 · 테스트 · `AGENTS.md` 의 옛↔새 철자 예시와 인계 문서를 diff 로 보고 되돌린다(`_kTextExcludedRel` 에 오른 파일은 건너뛴다). `--check` 로 목록을 먼저 본다.
+- **약어 코드모드(`FormatAcronymSpelling`)는 도구 자신과 비교하는 글도 고친다.** `--apply-files` · `--apply-text` 는 트리 전체를 돌고 `--files` 를 받지 않는다 — 치환 뒤 레지스트리 · 코드모드 · 테스트 · `docs/agents/NamingCpp.md` 의 옛↔새 철자 예시와 인계 문서를 diff 로 보고 되돌린다(`_kTextExcludedRel` 에 오른 파일은 건너뛴다). `--check` 로 목록을 먼저 본다.
 - **코드모드를 다시 돌리면 남의 이름도 다시 바뀐다**(Vulkan `samplerInfo.maxLod`, Tracy `queryId`, Box2D `bodyIdA`) — 앞머리 규칙은 구조체 이름만 가리고 멤버는 못 가린다. 컴파일로 드러나면 `AcronymRegistry.kExternalName` 에 올린다. `--strings` 는 파일 · 전송 형식 키(`"buildId"` · 크래시 텍스트)도 바꾸니 그 자리는 되돌린다.
 - **이름 길이 · 대소문자가 바뀌면 include 정렬과 clang-format 정렬이 달라진다** — 치환 뒤 `fixer/FormatIncludeOrder` · `FormatModified` 를 돌린다. 에디터 아이콘 상수(`EditorIconGlyphs.h`)는 생성물이라 `generate/GenerateEditorIcons.py` 로 다시 만든다(생성기가 레지스트리의 강제 약어로 쓴다).
 - **약어를 줄기 여럿으로 나눠 치환한 뒤의 병합은 손으로 풀지 않는다** — 충돌 파일은 한쪽을 고르고(`git checkout --ours`) 다른 쪽 약어의 코드모드를 다시 돌린 뒤 그쪽 커밋 본문의 손 맞춤을 다시 적용한다. 옛 폴더 철자가 남은 include 는 대소문자만 다르므로 Windows 에서는 컴파일되고 리눅스에서만 깨진다 — 실제 파일 철자와 맞는지 따로 본다. 대소문자만 바뀐 리플렉션 헤더는 `generated/` 의 낡은 스탬프(옛 철자 경로)가 "Generated file name collision" 을 낸다 — 그 스탬프와 `.gen.*` 를 지운다.
@@ -481,7 +481,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 - **Scripts 규칙** — 폴더는 하는 일로(`generate/` 생성기 · `setup/` 외부 도구 · `lint/*`), 모두 `common` 만 import(`common` → `setup` 역방향 금지). `common` 은 무거운 표준
   모듈을 쓰는 함수 안에서 import 한다. 동시 처리는 `Scripts/common/Parallel.py` 한 자리 — 파일 읽기 · 하위 프로세스 대기는 스레드, 정규식이 무거우면 `flatMapInProcesses`
   (코어 수만큼의 덩어리). `App.exe` 찾기 · 실행은 `Scripts/common/AppBinary.py` 하나. 파일을 한 번 읽어 나눠 쓰는 캐시는 CRLF 를 LF 로 바꿔야 결과가 같다.
-- **상수의 자리는 `AGENTS.md` "Constants" 절** — 한 TU 는 Internal, 모듈은 소유 타입, 계약은 계약 헤더(`RHITypes` · `bindingslots.hlsli` · `Defines`), 잘 알려진 값은 집 하나
+- **상수의 자리는 `docs/agents/Constants.md` "Constants" 절** — 한 TU 는 Internal, 모듈은 소유 타입, 계약은 계약 헤더(`RHITypes` · `bindingslots.hlsli` · `Defines`), 잘 알려진 값은 집 하나
   (`CheckWellKnownConstants`), 반복은 `RunRepeatedConstants.py` 로 본다. "X 와 같아야 한다" 주석이 달린 사본이 결함의 모양이다(루트 상수 16/64, 모프 배치 넷).
   게임플레이 튜닝 값은 컴포넌트 `PROPERTY` · 키트 설정 구조체 칸, 중력은 `PhysicsSystem::getConfiguredGravity` 하나.
 - **커밋 훅은 staged 셰이더가 있으면 `App --cook-shaders` 결과(바이너리 · `cook.stamp`)를 자동으로 stage 한다** — 도우미처럼 바이너리를 커밋하지 않을 때는
