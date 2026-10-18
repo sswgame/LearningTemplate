@@ -34,6 +34,7 @@ from common import (
     PackFormatSpec,
     findAppExecutable,
     getProjectRoot,
+    kDirRuntimeGamePreset,
     kFilePackConfig,
     kFileRuntimeEngineConfig,
     kKeyExcludeDirs,
@@ -618,6 +619,33 @@ def cookPack(
     return True
 
 
+#: 런타임이 늘 올리는 공용 팩(game → common → engine 순). 게임 팩 이름은 `makeGamePackName` 이다.
+kListSharedPackName: tuple[str, ...] = ("engine.pack", "common.pack")
+
+
+def makeGamePackName(packFolderName: str) -> str:
+    """`Resource/game/<폴더>` 를 굽는 팩 파일 이름입니다."""
+    return f"game_{packFolderName}.pack"
+
+
+def resolveGamePackFolder(projectRoot: Path, game: str) -> str:
+    """게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<폴더>`)에서 팩 폴더 이름을 읽습니다.
+
+    게임 이름과 폴더 이름이 다른 팩이 있어(ThemeParkTycoon → themepark) 이름을 바꿔 추측하지 않는다. 프리셋이나 키가 없으면 ConfigError.
+    """
+    presetPath = projectRoot / kDirRuntimeGamePreset / f"{game}.json"
+    packRoot = str(requireConfig(presetPath, presetPath.name).get("_packRoot", ""))
+    folderName = packRoot.removeprefix("game/")
+    if not packRoot.startswith("game/") or not folderName or "/" in folderName:
+        raise ConfigError(f"{presetPath}: `_packRoot` 는 `game/<폴더>` 입니다 (`{packRoot}`)")
+    return folderName
+
+
+def listPackNameOfGame(projectRoot: Path, game: str) -> list[str]:
+    """그 게임의 배포 패키지가 담는 팩 파일 이름들입니다 — 공용 팩과 그 게임의 팩 하나(다른 게임의 팩은 들지 않는다)."""
+    return [*kListSharedPackName, makeGamePackName(resolveGamePackFolder(projectRoot, game))]
+
+
 def cookAllPacks(
     projectRoot: Path,
     outputDir: Path,
@@ -626,10 +654,12 @@ def cookAllPacks(
     targetRhi: str = "dx12",
     cookedDir: Path | None = None,
     buildTarget: str = "",
+    game: str = "",
 ) -> bool:
     """
     engine, common, 그리고 game 에셋 디렉터리들을 일괄 패킹합니다. cookedDir 은 프리팹·씬 산출물의 스테이징 루트다.
     buildTarget 이 빼는 에셋 종류(전용 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 넣지 않는다.
+    game 이 있으면 그 게임 프리셋의 팩만 굽는다(배포 패키지). 비면 `Resource/game/` 의 모든 게임을 굽는다(Dev 는 `-game=` 으로 고른다).
     """
     resourceDir = projectRoot / "Resource"
     cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
@@ -651,10 +681,15 @@ def cookAllPacks(
         targets.append((commonDir, outputDir / "common.pack", 0))
 
     gameDir = resourceDir / "game"
-    if gameDir.is_dir():
+    if game:
+        gamePackDir = gameDir / resolveGamePackFolder(projectRoot, game)
+        if not gamePackDir.is_dir():
+            raise ConfigError(f"게임 {game} 의 팩 폴더가 없습니다: {gamePackDir}")
+        targets.append((gamePackDir, outputDir / makeGamePackName(gamePackDir.name), 0))
+    elif gameDir.is_dir():
         for sub in sorted(gameDir.iterdir()):
             if sub.is_dir():
-                targets.append((sub, outputDir / f"game_{sub.name}.pack", 0))
+                targets.append((sub, outputDir / makeGamePackName(sub.name), 0))
 
     for src, out, dlcId in targets:
         staged = cookedDir / src.relative_to(resourceDir)
@@ -692,6 +727,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--verify-shaders", action="store_true", help="쿠킹된 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
     parser.add_argument("--build-target", type=str, default="",
                         help="빌드 타깃(Game · Client · Server — CMake SW_TARGET_TYPE). 그 타깃이 빼는 에셋 종류를 팩에 넣지 않는다")
+    parser.add_argument("--game", type=str, default="",
+                        help="게임 프리셋 이름(Config/Game/<이름>.json). 주면 그 게임의 팩만 굽는다(배포 패키지). 없으면 모든 게임")
     parser.add_argument("--app", type=str, default="", help="씬 쿠킹·셰이더 쿠킹에 쓸 App 실행 파일 (CMake 가 $<TARGET_FILE:App> 을 넘긴다; 없으면 빌드 폴더를 뒤진다)")
 
     args = parser.parse_args(argv)
@@ -749,8 +786,12 @@ def cookInternal(args: argparse.Namespace) -> int:
         if args.build_target:
             listExcluded = _gCookContract.mapExcludedKindByTarget.get(args.build_target, ())
             print(f"[CookAssets] Build target: {args.build_target} (excluded asset kinds: {', '.join(listExcluded) or 'none'})")
-        success = cookAllPacks(projectRoot, outDir, packConfig, isShipping=stripNames, targetRhi=targetRhi, cookedDir=cookedDir,
-                               buildTarget=args.build_target)
+        try:
+            success = cookAllPacks(projectRoot, outDir, packConfig, isShipping=stripNames, targetRhi=targetRhi, cookedDir=cookedDir,
+                                   buildTarget=args.build_target, game=args.game)
+        except ConfigError as error:
+            print(f"[CookAssets Error] {error}", file=sys.stderr)
+            return 1
         if not success:
             exitCode = 1
 
