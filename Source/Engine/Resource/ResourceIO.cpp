@@ -9,6 +9,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/Cook/CookJob.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -119,28 +120,34 @@ namespace sw
     bool ResourceIO::readTextResource( string_view relativePath, string& outText,
                                        string* pOutAbsPath )
     {
-        return readResourceCommon(
+        const bool bRead = readResourceCommon(
             relativePath, pOutAbsPath,
             [&outText]( string_view absPath )
         { return FileUtil::readTextFile( absPath, outText ); },
             [&outText]( string_view key, string& outPackPath )
         { return getPackManager().readTextFile( key, outText, &outPackPath ); } );
+        // 쿠킹 작업 안의 읽기는 그 작업의 입력이다. 쿠킹 세션 안인데 작업 밖이면 기록이 빠지므로 읽기가 실패한다(`CookJob`).
+        return bRead && CookJob::admitRead( relativePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
     bool ResourceIO::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
     {
-        return readResourceCommon(
+        const bool bRead = readResourceCommon(
             relativePath, nullptr,
             [&outBytes]( string_view absPath )
         { return FileUtil::readFile( absPath, outBytes ); },
             [&outBytes]( string_view key, string& )
         { return getPackManager().readFile( key, outBytes ); } );
+        return bRead && CookJob::admitRead( relativePath, outBytes.data(), outBytes.size() );
     }
 
     AsyncReadHandle ResourceIO::readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
     {
         AsyncFileIO&    io = engine::getSubsystem<AsyncFileIO>();
         AsyncReadHandle handle;
+        // 완료가 다른 스레드에서 오므로 쿠킹 작업의 입력으로 기록할 수 없다 — 쿠킹 중이면 걸지 않는다.
+        if ( CookJob::admitAsyncRead( relativePath ) == false )
+            return handle;
         // 찾는 순서는 동기 읽기와 같은 함수 하나다 — 두 벌이면 한쪽만 고쳐 동기와 비동기가 다른 파일을 읽는다.
         (void)readResourceCommon(
             relativePath, nullptr,

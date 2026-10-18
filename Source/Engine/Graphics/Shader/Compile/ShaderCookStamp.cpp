@@ -14,6 +14,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Resource/Cook/ContentHash.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
@@ -54,69 +55,6 @@ namespace sw
                     value = ( value << 4 ) | digit;
                 }
                 return value;
-            }
-
-            /** @brief 내용 해시 캐시 항목 하나입니다. 그 해시를 구했을 때의 파일 크기와 쓰기 시각을 함께 둡니다. */
-            struct ContentHashEntry
-            {
-                FileStamp _stamp{};
-                uint64    _hash{ 0 };
-            };
-            /**
-             * @brief 경로에서 내용 해시를 찾는 캐시입니다. 파일의 크기와 쓰기 시각이 그대로일 때만 씁니다.
-             * @details 셰이더 요청 하나가 같은 소스를 세 번 본다(`ShaderCache::getOrCompile` 의 메모리 캐시 확인, 로컬 캐시
-             *          경로, 쿠킹 신선도). 퍼뮤테이션과 단계마다 그렇다. 파일 하나 여는 데 약 200µs 라 매번 읽으면 시작 시간 중 게임
-             *          스레드의 큰 비중(12.6%)이 되므로, 두 번째부터는 파일을 열지 않고 크기와 시각만 본다(약 75µs). 실행 중에
-             */
-            inline static unordered_map<string, ContentHashEntry> _s_mapContentHash{};
-            /// @brief `_s_mapContentHash` 의 락입니다. 셰이더 컴파일은 워커에서도 돕니다. `_s_sharedHeaderMutex` 안에서 잡힐 수 있습니다(그 반대는 없습니다).
-            inline static mutex _s_contentHashMutex{};
-
-            /**
-             * @brief 소스 한 파일의 **내용 해시**입니다. CR 을 뺀 바이트의 FNV-1a 64 입니다.
-             * @details 쿠킹 스탬프, 쿠킹 판정, 컴파일 캐시 키가 **같은 값**을 써야 한다. 이 저장소는 쿠킹된 바이너리까지
-             *          커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 **임의의 순서**로 덮어쓴다. 어느 하나라도 파일 시간으로
-             *          판정하면 소스가 바뀌었는데도 "산출물이 더 새것" 이라 그대로 넘어가, 한 백엔드만 다른 이미지를 내는 것을
-             *          **백엔드 버그로 오인**하게 된다.
-             */
-            static uint64 computeContentHash( string_view absPath )
-            {
-                FileStamp  stamp{};
-                const bool bStamped = FileUtil::getFileStamp( absPath, stamp );
-                if ( bStamped )
-                {
-                    std::scoped_lock<mutex> lock{ _s_contentHashMutex };
-                    const auto              iter = _s_mapContentHash.find( absPath );
-                    if ( iter != _s_mapContentHash.end() && iter->second._stamp == stamp )
-                        return iter->second._hash;
-                }
-
-                const uint64 hash = readContentHash( absPath );
-                // 읽는 사이에 파일이 바뀌었으면 옛 시각에 새 해시가 붙는다. 다음 조회는 시각이 달라 다시 읽으므로 틀린 값이 남지 않는다.
-                if ( bStamped && hash != 0 )
-                {
-                    std::scoped_lock<mutex> lock{ _s_contentHashMutex };
-                    _s_mapContentHash[string( absPath )] = ContentHashEntry{ stamp, hash };
-                }
-                return hash;
-            }
-
-            /** @brief 파일을 읽어 CR 을 뺀 바이트의 FNV-1a 64 를 구합니다(`computeContentHash` 의 캐시 밖 본체). */
-            static uint64 readContentHash( string_view absPath )
-            {
-                vector<uint8> bytes;
-                if ( FileUtil::readFile( absPath, bytes ) == false )
-                    return 0;
-
-                // 줄 끝 정규화는 writeCookStamp 와 CookAssets.py 가 쓰는 것과 같아야 한다(스탬프 주석 참고).
-                vector<uint8> normalizedByte;
-                normalizedByte.reserve( bytes.size() );
-                for ( const uint8 byte : bytes )
-                {
-                    if ( byte != static_cast<uint8>( '\r' ) )
-                        normalizedByte.push_back( byte );
-                }
-                return StringUtil::computeHash64( reinterpret_cast<const utf8*>( normalizedByte.data() ), normalizedByte.size(), false );
             }
 
             /** @brief 스탬프 한 줄의 원천입니다. 키와 그 소스의 절대 경로를 가집니다. */
@@ -243,7 +181,7 @@ namespace sw
                 for ( const StampedSource& header : listHeader )
                 {
                     const auto iter = info._mapHash.find( header._key );
-                    if ( iter == info._mapHash.end() || iter->second != computeContentHash( header._absPath ) )
+                    if ( iter == info._mapHash.end() || iter->second != ContentHash::computeFile( header._absPath ) )
                     {
                         info._bHeadersCurrent = false;
                         break;
@@ -276,7 +214,7 @@ namespace sw
              *          것인가" 를 파일 시간이 아니라 내용으로 확인하기 위한 것이다. 파일 시간은
              *          `git clone` 이 모두 체크아웃 시각으로 덮어써서 비교 자체가 무의미해진다.
              *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 다. 해시는 CR 을
-             *          뺀 바이트로 계산한다(`computeContentHash`). 판정 쪽과 같은 함수다.
+             *          뺀 바이트로 계산한다(`ContentHash::computeFile`). 판정 쪽과 같은 함수다.
              * @param resourceRoot 다른 include 루트 도메인을 찾을 리소스 루트
              * @param binDirectory 매니페스트를 쓴 폴더(`<domain>/shaders/bin/<rhi>`)
              */
@@ -300,7 +238,7 @@ namespace sw
                         continue; // 이번에 쿠킹하지 못했으므로 최신이 아니다.
 
                     // 해싱과 키 만들기는 **판정 쪽과 같은 함수**를 쓴다(스탬프와 판정이 다른 규칙을 쓰면 낡은 산출물이 "최신" 이 된다).
-                    const uint64 hash = computeContentHash( source._absPath );
+                    const uint64 hash = ContentHash::computeFile( source._absPath );
                     if ( hash == 0 )
                         continue;
 
@@ -355,8 +293,7 @@ namespace sw
         ShaderCookStampInternal::_s_mapSharedHeaderHash.clear();
         ShaderCookStampInternal::_s_mapStamp.clear();
         // 내용 해시는 파일 시각으로 스스로 낡음을 알지만, 수동 리로드는 "전부 다시 본다" 는 약속이라 같이 버린다.
-        std::scoped_lock<mutex> contentLock{ ShaderCookStampInternal::_s_contentHashMutex };
-        ShaderCookStampInternal::_s_mapContentHash.clear();
+        ContentHash::clearCache();
     }
 
     uint64 ShaderCooker::getSharedHeaderContentHash()
@@ -382,7 +319,7 @@ namespace sw
             for ( const string& headerPath : listHeader )
             {
                 const string norm = StringUtil::toLower( FileUtil::normalizeSeparators( headerPath ).c_str() );
-                combined += StringUtil::computeHash64( norm, false, ShaderCookStampInternal::computeContentHash( headerPath ) );
+                combined += StringUtil::computeHash64( norm, false, ContentHash::computeFile( headerPath ) );
             }
         }
 
@@ -397,7 +334,7 @@ namespace sw
 
     uint64 ShaderCooker::computeEffectiveSourceHash( string_view resourceRoot, string_view absShaderPath )
     {
-        const uint64 sourceHash = ShaderCookStampInternal::computeContentHash( absShaderPath );
+        const uint64 sourceHash = ContentHash::computeFile( absShaderPath );
         if ( sourceHash == 0 )
             return 0;
         // 도구 지문도 섞는다. 디스크 캐시 키가 이 값을 쓰므로, 빠지면 DXC 를 바꿔도 옛 바이트를 돌려준다.
@@ -431,7 +368,7 @@ namespace sw
             return false;
 
         const string normSource = FileUtil::normalizeSeparators( absShaderPath );
-        const uint64 sourceHash = ShaderCookStampInternal::computeContentHash( normSource );
+        const uint64 sourceHash = ContentHash::computeFile( normSource );
         if ( sourceHash == 0 )
             return false;
 
