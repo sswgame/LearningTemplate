@@ -118,7 +118,7 @@ namespace sw
             return false;
         const MetroSiteDef* pFrom                  = _pCatalog->findSite( fromSiteID );
         const MetroSiteDef* pTo                    = _pCatalog->findSite( toSiteID );
-        const bool          bFastTravelUnavailable = pFrom == nullptr || pTo == nullptr || pFrom->_bFastTravel == SW_FALSE || pTo->_bFastTravel == SW_FALSE;
+        const bool          bFastTravelUnavailable = pFrom == nullptr || pTo == nullptr || pFrom->_bFastTravel == false || pTo->_bFastTravel == false;
         if ( bFastTravelUnavailable )
             return false;
         return isSiteActive( fromSiteID ) && isSiteActive( toSiteID );
