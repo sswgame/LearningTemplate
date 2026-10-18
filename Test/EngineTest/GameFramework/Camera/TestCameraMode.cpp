@@ -19,6 +19,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraShake.h"
 #include "GameFramework/Base/Actor/Camera/CameraUserSettings.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
 
