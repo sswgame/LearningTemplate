@@ -85,6 +85,8 @@ namespace sw
                     add( meta._repNotify.empty() ? string( "Replicated" ) : string( "RepNotify=" ) + meta._repNotify.c_str() );
                 if ( meta._bSaveGame == SW_TRUE )
                     add( "SaveGame" );
+                if ( meta._bRuntimeState == SW_TRUE )
+                    add( "RuntimeState" );
                 if ( meta._bInterp == SW_TRUE )
                     add( "Interp" );
                 if ( meta._validate.empty() == false )

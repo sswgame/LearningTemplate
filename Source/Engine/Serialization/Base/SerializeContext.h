@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Serialization/Base/SerializePurpose.h"
 
 namespace sw
 {
@@ -13,7 +14,7 @@ namespace sw
 
     /**
      * @class SerializeContext
-     * @brief 직렬화 한 번에 쓰는 설정 묶음입니다. 타입별 커스텀 바이너리/텍스트 핸들러, 키 정책,
+     * @brief 직렬화 한 번에 쓰는 설정 묶음입니다. 저장 목적(`SerializePurpose`, 필수), 타입별 커스텀 바이너리/텍스트 핸들러, 키 정책,
      *        소유 포인터 팩토리, 모르는 원소를 맡는 함수를 듭니다.
      */
     class SW_API SerializeContext
@@ -54,10 +55,10 @@ namespace sw
         using OpaqueElementQueryFn = bool ( * )( const void* pElement, OpaqueElementView& outElement );
 
         // ------------------------------------------------------------------------------
-        // 1) 수명: 기본은 키 대소문자 무시
+        // 1) 수명: 목적은 필수, 키 대소문자는 기본 무시
         // ------------------------------------------------------------------------------
-        /** @brief 기본 설정(키 대소문자 무시)으로 만듭니다. */
-        SerializeContext() noexcept
+        /** @brief 목적 @p purpose 의 빈 문맥(핸들러 없음, 키 대소문자 무시)을 만듭니다. 내장 핸들러가 필요하면 `getDefault` · `deriveFromDefault` 를 씁니다. */
+        explicit SerializeContext( SerializePurpose purpose ) noexcept
             : _mapBinaryWriter{}
             , _mapBinaryReader{}
             , _mapTextWriter{}
@@ -68,10 +69,10 @@ namespace sw
             , _pRuntimeTypeInfoFn{ nullptr }
             , _pOpaqueKeepFn{ nullptr }
             , _pOpaqueQueryFn{ nullptr }
+            , _purpose{ purpose }
             , _bIgnoreCaseKeys{ SW_TRUE }
             , _bSkipUnknownProperties{ SW_FALSE }
             , _bSkipUnreadableProperties{ SW_FALSE }
-            , _bSaveGameOnly{ SW_FALSE }
             , _reservedFlags{ 0 } {}
 
         // ------------------------------------------------------------------------------
@@ -86,16 +87,6 @@ namespace sw
         SerializeContext& setIgnoreCaseKeys( bool bIgnoreCaseKeys )
         {
             _bIgnoreCaseKeys = bIgnoreCaseKeys ? SW_TRUE : SW_FALSE;
-            return *this;
-        }
-
-        /**
-         * @brief 세이브 직렬화인지 설정합니다. 켜면 `SaveGame` 프로퍼티가 하나라도 있는 타입(옵트인)은 그것만 쓰고 읽으며, 읽을 때 나머지 프로퍼티에
-         *        기본값(`Default=`)을 채우지 않습니다 — 세이브에 없는 값은 지금 값 그대로입니다. 하나도 없는 타입은 이 설정과 무관하게 전부입니다.
-         */
-        SerializeContext& setSaveGameOnly( bool bSaveGameOnly )
-        {
-            _bSaveGameOnly = bSaveGameOnly ? SW_TRUE : SW_FALSE;
             return *this;
         }
 
@@ -145,15 +136,18 @@ namespace sw
         /**
          * @brief XML/JSON 의 키 · 태그 · 속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). 값 비교에는 영향이 없습니다.
          * @details XMLSerializer::deserialize 가 이 값을 IXMLBackend 에 넘깁니다.
-         *          끄려면: `SerializeContext context = SerializeContext::deriveFromDefault(); context.setIgnoreCaseKeys( false );`
+         *          끄려면: `SerializeContext context = SerializeContext::deriveFromDefault( purpose ); context.setIgnoreCaseKeys( false );`
          */
         bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
         /** @brief 타입에 없는 이름의 필드를 건너뛰고 계속하는지(`setSkipUnknownProperties`) 반환합니다. */
         bool skipsUnknownProperties() const { return _bSkipUnknownProperties == SW_TRUE; }
         /** @brief 타입에 있는데 값을 읽지 못한 필드를 건너뛰고 계속하는지(`setSkipUnreadableProperties`) 반환합니다. */
         bool skipsUnreadableProperties() const { return _bSkipUnreadableProperties == SW_TRUE; }
-        /** @brief 세이브 직렬화인지(`setSaveGameOnly`) 반환합니다. */
-        bool isSaveGameOnly() const { return _bSaveGameOnly == SW_TRUE; }
+        /**
+         * @brief 저장 목적입니다. 만들 때 정하고 바꾸지 않습니다.
+         * @details 목적이 쓰지 않는 필드는 읽을 때도 지금 값 그대로다(기본값을 채우지 않는다). 세이브는 옵트인 타입의 나머지 필드를, 저작 읽기는 `RuntimeState` 를 덮지 않는다.
+         */
+        SerializePurpose getPurpose() const { return _purpose; }
 
         /**
          * @brief 타입 · enum 을 찾을 레지스트리를 정합니다. nullptr 이면 엔진 전역 레지스트리입니다(기본).
@@ -226,20 +220,23 @@ namespace sw
             return _pOpaqueQueryFn != nullptr && pElement != nullptr && _pOpaqueQueryFn( pElement, outElement );
         }
 
-        /** @brief 기본 전역 직렬화 컨텍스트를 반환합니다. */
-        static const SerializeContext& getDefault();
+        /** @brief 목적 @p purpose 의 기본 전역 직렬화 컨텍스트(내장 핸들러를 모두 등록함)를 반환합니다. 목적마다 하나씩 있습니다. */
+        static const SerializeContext& getDefault( SerializePurpose purpose );
 
         /**
-         * @brief 기본 컨텍스트의 **핸들러를 빌려 쓰는** 빈 컨텍스트를 만듭니다.
+         * @brief 목적 @p purpose 의 기본 컨텍스트의 **핸들러를 빌려 쓰는** 빈 컨텍스트를 만듭니다.
          *
-         * `SerializeContext context = getDefault();` 는 등록된 핸들러 표 네 벌(`unordered_map`)을 통째로
+         * `SerializeContext context = getDefault( purpose );` 는 등록된 핸들러 표 네 벌(`unordered_map`)을 통째로
          * 복사합니다. 객체 하나당 659 ns 였고, 씬 로드는 그것을 엔티티마다 합니다(4000 개면 2.6 ms).
          * 표는 만들어진 뒤 바뀌지 않으므로 복사할 이유가 없습니다. 이쪽은 표를 가리키기만 하고,
          * 필요하면 자기 표에 더 등록합니다(조회는 자기 것 먼저, 없으면 빌려 온 쪽).
          */
-        static SerializeContext deriveFromDefault();
+        static SerializeContext deriveFromDefault( SerializePurpose purpose );
 
     private:
+        /** @brief 목적 @p purpose 의 문맥에 내장 핸들러를 모두 등록해 만듭니다(`getDefault` 가 목적마다 한 번). */
+        static SerializeContext makeDefault( SerializePurpose purpose );
+
         unordered_map<hashed_string, BinaryWriteFn> _mapBinaryWriter;
         unordered_map<hashed_string, BinaryReadFn>  _mapBinaryReader;
         unordered_map<hashed_string, TextWriteFn>   _mapTextWriter;
@@ -253,11 +250,11 @@ namespace sw
         RuntimeTypeInfoFn      _pRuntimeTypeInfoFn;
         OpaqueElementKeepFn    _pOpaqueKeepFn;
         OpaqueElementQueryFn   _pOpaqueQueryFn;
+        SerializePurpose       _purpose;
         uint8                  _bIgnoreCaseKeys           : 1;
         uint8                  _bSkipUnknownProperties    : 1;
         uint8                  _bSkipUnreadableProperties : 1;
-        uint8                  _bSaveGameOnly             : 1;
-        [[maybe_unused]] uint8 _reservedFlags             : 4;
+        [[maybe_unused]] uint8 _reservedFlags             : 5;
     };
 
 } // namespace sw

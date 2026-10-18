@@ -84,7 +84,7 @@ SW_TEST_CASE( SpriteAnimationLODTest, OffscreenSpriteKeepsTimeButSkipsFrames )
     GameObjectManager                            manager;
     const TestSpriteAnimationLODInternal::Walker walker = TestSpriteAnimationLODInternal::createWalker( manager, clipPath );
     SW_ASSERT_NOT_NULL( walker._pAnimator );
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     system.setLODSettings( AnimationLODSettings::makeDefault() );
     SW_EXPECT_EQUAL( 0, walker._pSprite->getClipFrame() );
 
@@ -114,7 +114,7 @@ SW_TEST_CASE( SpriteAnimationLODTest, UpdateRateDivisorThrottlesFramePushes )
     GameObjectManager                            manager;
     const TestSpriteAnimationLODInternal::Walker walker = TestSpriteAnimationLODInternal::createWalker( manager, clipPath );
     SW_ASSERT_NOT_NULL( walker._pAnimator );
-    AnimationSystem&     system = manager.getAnimationSystem();
+    AnimationSystem&     system = manager.getSubsystem<AnimationSystem>();
     AnimationLODSettings settings{};
     settings._listRateLevel.push_back( AnimationLODRateLevel{ 0.0f, 3u, SW_FALSE } );
     system.setLODSettings( settings );
@@ -143,7 +143,7 @@ SW_TEST_CASE( SpriteAnimationLODTest, RewindRecordsAndRestoresSpriteFrames )
     GameObjectManager                            manager;
     const TestSpriteAnimationLODInternal::Walker walker = TestSpriteAnimationLODInternal::createWalker( manager, clipPath );
     SW_ASSERT_NOT_NULL( walker._pAnimator );
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
 
     const bool    bWasOn          = AnimationRewindRecorder::isRecordingRequested();
     const float32 previousSeconds = AnimationRewindRecorder::getRequestedWindowSeconds();

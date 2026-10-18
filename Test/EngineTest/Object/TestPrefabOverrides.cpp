@@ -88,7 +88,7 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
 
     // 고치지 않은 인스턴스는 덮어쓴 것이 없다(이름은 엔티티가 든다).
     sw::string overrides;
-    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXMLString( pInstance ), baseState, overrides ) );
+    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXMLString( pInstance, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ), baseState, overrides ) );
     SW_EXPECT_TRUE_MSG( overrides.empty(), overrides.c_str() );
 
     // 루트를 옮기고, 메시를 지우고, 이름 단 컴포넌트를 더한다.
@@ -99,7 +99,7 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
     pExtra->setComponentName( sw::hashed_string( "Extra" ) );
     world.flushSceneTransforms();
 
-    const sw::string instanceState = sw::ObjectStateSerializer::saveToXMLString( pInstance );
+    const sw::string instanceState = sw::ObjectStateSerializer::saveToXMLString( pInstance, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( instanceState, baseState, overrides ) );
     // 루트의 덮어쓴 것은 위치 한 칸이다 — 같은 값(회전 · 스케일 · 부착)은 적지 않는다.
     SW_EXPECT_TRUE_MSG( overrides.find( "<Override key=\"SceneComponent#0\">\n\t\t<SceneComponent _localPosition=\"5,5,5\" />" ) != sw::string::npos,
@@ -113,8 +113,8 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateA", rebuiltState ) );
     sw::GameObjectManager rebuiltWorld;
     sw::GameObject*       pRebuilt = rebuiltWorld.createGameObject( sw::hashed_string( "Rebuilt" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pRebuilt, rebuiltState ) );
-    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pRebuilt ).c_str() );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pRebuilt, rebuiltState, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
+    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pRebuilt, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ).c_str() );
 }
 
 /**
@@ -184,7 +184,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     Check::run( pReopened, "xml" );
 
     // 쿠킹한 씬도 같은 뜻이다 — 프리팹 엔티티는 덮어쓴 것을 SCN1 에 싣고, 로드가 쿠킹한 프리팹 위에 얹는다.
-    (void)sw::SceneCooker::cookEntityState( reopened ); // 프리팹 엔티티는 쿠킹하지 않는다(덮어쓴 것 그대로 실린다)
+    (void)sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), reopened ); // 프리팹 엔티티는 쿠킹하지 않는다(덮어쓴 것 그대로 실린다)
     const sw::string binPath = test::makeTempPath( "prefab_edit.scene.bin" );
     SW_ASSERT_TRUE( reopened.saveBinary( binPath ) );
     sw::SceneDocument cooked;
@@ -240,7 +240,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     SW_ASSERT_NOT_NULL( pOld );
     SW_EXPECT_TRUE( pOld->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 7.0f, 7.0f, 7.0f ) );
     SW_EXPECT_TRUE( pOld->getComponent<sw::MeshComponent>() == nullptr ); // 그 상태가 기준 — 지운 메시는 없다
-    const sw::string openedState = sw::ObjectStateSerializer::saveToXMLString( pOld );
+    const sw::string openedState = sw::ObjectStateSerializer::saveToXMLString( pOld, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
 
     sw::SceneDocument resaved;
     SW_ASSERT_TRUE( pOpened->serializeToDocument( resaved ) );
@@ -260,7 +260,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     SW_ASSERT_TRUE( pReopened->instantiate( reread ) );
     sw::GameObject* pReopenedOld = pReopened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Old" ) );
     SW_ASSERT_NOT_NULL( pReopenedOld );
-    SW_EXPECT_STREQ( openedState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pReopenedOld ).c_str() );
+    SW_EXPECT_STREQ( openedState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pReopenedOld, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ).c_str() );
 
     manager.shutdown();
 }
@@ -315,7 +315,7 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlaceBetweenInheritedOn
     SW_ASSERT_NOT_NULL( pInstance->addComponent<sw::MeshComponent>() );
     world.flushSceneTransforms();
 
-    const sw::string instanceState = sw::ObjectStateSerializer::saveToXMLString( pInstance );
+    const sw::string instanceState = sw::ObjectStateSerializer::saveToXMLString( pInstance, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     sw::string       overrides;
     SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( instanceState, baseState, overrides ) );
     SW_EXPECT_TRUE_MSG( overrides.find( "<Add after=\"Socket#0\">" ) != sw::string::npos, overrides.c_str() );
@@ -325,8 +325,8 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlaceBetweenInheritedOn
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateMid", rebuiltState ) );
     sw::GameObjectManager rebuiltWorld;
     sw::GameObject*       pRebuilt = rebuiltWorld.createGameObject( sw::hashed_string( "Rebuilt" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pRebuilt, rebuiltState ) );
-    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pRebuilt ).c_str() );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pRebuilt, rebuiltState, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
+    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pRebuilt, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ).c_str() );
 
     // 앞의 물려받은 컴포넌트가 프리팹에서 사라진 더한 것은 버리지 않고 끝에 붙인다.
     const sw::string lostAnchor = "<PrefabOverrides><Add after=\"Gone#0\"><SceneComponent _componentName=\"Late\" /></Add></PrefabOverrides>";
@@ -367,7 +367,7 @@ SW_TEST_CASE( PrefabOverridesTest, RenamedInheritedComponentIsRecordedAsRemoveAn
     pSocket->setComponentName( sw::hashed_string( "Mount" ) );
 
     sw::string overrides;
-    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXMLString( pInstance ), baseState, overrides ) );
+    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXMLString( pInstance, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ), baseState, overrides ) );
     SW_EXPECT_TRUE_MSG( overrides.find( "<Remove key=\"Socket#0\"" ) != sw::string::npos, overrides.c_str() );
     SW_EXPECT_TRUE_MSG( overrides.find( "_componentName=\"Mount\"" ) != sw::string::npos, overrides.c_str() );
 }

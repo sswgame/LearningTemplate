@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
@@ -326,7 +327,7 @@ SW_TEST_CASE( AnimationNotifyTest, AnimatorDeliversClipNotifiesToDispatcher )
     // 0.05 초씩 열 번(0.5 초) — Ping(0.1) 한 번, Swing 은 0.2 에 열리고 0.5 에 닫힌다.
     for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
     {
-        manager.getAnimationSystem().evaluate( 0.05f );
+        manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     }
     SW_EXPECT_EQUAL( 1u, TestAnimationNotifyInternal::countLog( listLog, "Notify:Ping" ) );
     SW_EXPECT_EQUAL( 1u, TestAnimationNotifyInternal::countLog( listLog, "Begin:Swing" ) );
@@ -337,11 +338,11 @@ SW_TEST_CASE( AnimationNotifyTest, AnimatorDeliversClipNotifiesToDispatcher )
     listLog.clear();
     for ( uint32 frameIndex = 0; frameIndex < 16; ++frameIndex )
     {
-        manager.getAnimationSystem().evaluate( 0.05f );
+        manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     }
     SW_EXPECT_EQUAL( 1u, pNotify->getActiveStateCount() );
     pAnimator->stop();
-    manager.getAnimationSystem().evaluate( 0.05f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     SW_EXPECT_EQUAL( 0u, pNotify->getActiveStateCount() );
     SW_EXPECT_EQUAL( 1u, TestAnimationNotifyInternal::countLog( listLog, "End:Swing" ) );
 

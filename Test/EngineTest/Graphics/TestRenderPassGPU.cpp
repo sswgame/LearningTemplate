@@ -53,6 +53,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Renderer/Capture/PortraitRenderer.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
@@ -652,7 +653,7 @@ namespace
         constexpr uint32 kFrameCount = 4;
         for ( uint32 frame = 0; frame < kFrameCount; ++frame )
         {
-            scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
+            scene.getObjectManager()->getSubsystem<sw::AnimationSystem>().evaluate( 0.0f );
             if ( renderSceneFrame( renderer, pDevice, scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } ) == false )
                 return false;
         }
@@ -3419,7 +3420,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
         for ( uint32 frame = 0; frame < 4; ++frame )
         {
             // 팔레트는 애니메이션 시스템이 틱 뒤에 만든다 — 테스트는 틱 대신 평가만 부른다.
-            scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
+            scene.getObjectManager()->getSubsystem<sw::AnimationSystem>().evaluate( 0.0f );
             device.beginFrame( clear );
             if ( renderer.execute( &device, scene ) == false )
                 return result;
@@ -3608,7 +3609,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
         const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
         for ( uint32 frame = 0; frame < 4; ++frame )
         {
-            scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
+            scene.getObjectManager()->getSubsystem<sw::AnimationSystem>().evaluate( 0.0f );
             device.beginFrame( clear );
             if ( renderer.execute( &device, scene ) == false )
                 return result;
@@ -7438,7 +7439,7 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
         for ( uint32 frame = 0; frame < 4; ++frame )
         {
             // 팔레트 · 묶음은 애니메이션 시스템이 틱 뒤에 만든다 — 테스트는 틱 대신 평가만 부른다(시간은 흐르지 않는다).
-            manager.getAnimationSystem().evaluate( 0.0f );
+            manager.getSubsystem<sw::AnimationSystem>().evaluate( 0.0f );
             device->beginFrame( clear );
             if ( renderer.execute( device.get(), scene ) == false )
                 return result;

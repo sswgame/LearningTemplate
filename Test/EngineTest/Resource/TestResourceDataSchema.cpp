@@ -387,7 +387,7 @@ namespace
 
         static bool isSourceManifest( sw::string_view resourceID ) { return endsWith( resourceID, ".sources.json" ); }
         /**
-         * @brief 리소스 출처 목록(`common/audio.sources.json`) — 도구(`Scripts/dev/MakeCommonAudio.py`)가 읽고 쓰는 키 규칙(모르는 키는 오류)으로 본다.
+         * @brief 리소스 출처 목록(`common/audio.sources.json` · `engine/textures.sources.json`) — 도구(`Scripts/dev/MakeCommonAudio.py` · `MakeCc0Import.py`)가 읽고 쓰는 키 규칙(모르는 키는 오류)으로 본다.
          * @details 팩에 실리지 않는다(`PackConfig.json` 의 `*.sources.json`) — 원본 트리에서 파일로 읽는다.
          */
         [[nodiscard]] static bool loadSourceManifest( const sw::string& resourceID )
@@ -403,7 +403,7 @@ namespace
             {
                 const sw::JSONValue pack     = packs.at( packIndex );
                 const bool          bBadPack = sw::AnimationJSONUtil::hasOnlyKnownKeys(
-                                          pack, { "folder", "page", "page_license_marker", "download", "license", "license_source", "license_quote", "convert", "files" }, resourceID ) == false ||
+                                          pack, { "folder", "page", "page_license_marker", "download", "download_sha256", "license", "license_source", "license_quote", "convert", "files" }, resourceID ) == false ||
                                       pack.get( "files" ).isArray() == false;
                 if ( bBadPack )
                     return false;
@@ -417,7 +417,7 @@ namespace
                 const sw::JSONValue files = pack.get( "files" );
                 for ( size_t fileIndex = 0; fileIndex < files.size(); ++fileIndex )
                 {
-                    if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( files.at( fileIndex ), { "name", "member", "sha256", "source_sha256" }, resourceID ) == false )
+                    if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( files.at( fileIndex ), { "name", "member", "download", "sha256", "source_sha256" }, resourceID ) == false )
                         return false;
                 }
             }
@@ -842,8 +842,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, UnknownComponentAttributeIsNamed )
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "a component attribute the type does not have" );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString(
-            pObject, "<GameObject _name=\"Probe\"><_listComponent><SceneComponent _localScale=\"2,2,2\" _noSuchField=\"1\" /></_listComponent></GameObject>" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pObject, "<GameObject _name=\"Probe\"><_listComponent><SceneComponent _localScale=\"2, 2, 2\" _noSuchField=\"1\" /></_listComponent></GameObject>", sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "SceneComponent._noSuchField" ) == 1, logs.joined().c_str() );
 }

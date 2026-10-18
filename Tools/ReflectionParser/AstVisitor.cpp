@@ -1529,6 +1529,35 @@ namespace sw
             }
 
             /**
+             * @brief 뜻이 모순인 프로퍼티 플래그 조합을 멈춥니다.
+             * @details `RuntimeState` 는 저작 저장만 빼고 스냅샷 · 세이브에는 쓰는 필드다. `Transient`(어디에도 쓰지 않는다)와 함께면 어느 쪽이 이기는지
+             *          선언만 보고 알 수 없고, `Required`(데이터 파일이 반드시 적는다)와 함께면 저작 파일이 쓰지 않는 칸을 필수로 요구한다.
+             */
+            static void validatePropertyFlags( MemberCollector& collector )
+            {
+                for ( const ParsedPropertyInfo& prop : collector._pType->_listProperty )
+                {
+                    if ( prop._bRuntimeState == SW_FALSE )
+                        continue;
+                    const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name );
+                    if ( prop._bTransient == SW_TRUE )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY( RuntimeState, Transient ) on '%#' - RuntimeState is written to snapshots and saves, Transient is never "
+                                      "written. Keep one.",
+                                      owner );
+                        collector._bHasError = SW_TRUE;
+                    }
+                    if ( prop._bRequired == SW_TRUE )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY( RuntimeState, Required ) on '%#' - authoring files never write a RuntimeState field, so it cannot be "
+                                      "required.",
+                                      owner );
+                        collector._bHasError = SW_TRUE;
+                    }
+                }
+            }
+
+            /**
              * @brief 프로퍼티의 옛 이름(`PROPERTY( Alias = … )`)이 같은 타입의 지금 이름이나 다른 옛 이름과 겹치지 않는지 봅니다.
              * @details 이름 해시는 대소문자를 가리지 않으므로 비교도 그렇게 한다. 겹치면 저장된 칸이 어느 프로퍼티로 읽힐지 선언만 보고 알 수 없다.
              *          읽기는 지금 이름을 먼저 보지만(`SerializerUtil::findPropertyIndexByNameHash`), 그 순서에 기대는 선언은 여기서 멈춘다.
@@ -2099,6 +2128,7 @@ namespace sw
             clang_visitChildren( cursor, AstVisitorInternal::memberCollectVisitor, &collector );
             // 메서드는 프로퍼티 뒤에 선언될 수 있다 — 이름으로 가리키는 애노테이션은 멤버를 다 모은 뒤에 대조한다.
             AstVisitorInternal::validateMemberFunctions( collector );
+            AstVisitorInternal::validatePropertyFlags( collector );
             AstVisitorInternal::validatePropertyRedirects( collector );
             AstVisitorInternal::validateBusBodyExport( collector );
             if ( collector._bHasError == SW_TRUE )

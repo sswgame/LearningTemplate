@@ -66,9 +66,9 @@ from typing import Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parent))       # Scripts/lint — SourceScan
 
-from common import collectRepositoryFiles, getProjectRoot, kNotOurDirNames, readTextFiles, resolveFileArguments  # noqa: E402
-from common.RuleData import RuleDataError, kExemptionKey, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings, scanSourceGates  # noqa: E402
+from common import collectRepositoryFiles, getMergeHeadRevisions, getProjectRoot, kNotOurDirNames, readTextFiles, resolveFileArguments, runGit  # noqa: E402
+from common.RuleData import RuleDataError, kExemptionKey, kKindInteger, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
+from SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
 
 
 #: 음성 테스트 조각(`LintGate.selfTestCases`)이 가질 수 있는 키. `name` · `expectedViolation` 은 필수다.
@@ -254,9 +254,10 @@ class LintGate:
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
-        if not cls.name:
+        if "name" not in cls.__dict__:
             # 클래스 이름에서 `Gate` 를 뗀 것이 로그 태그다 — `CheckEngineLayersGate` -> `CheckEngineLayers`.
-            # 모듈 이름을 쓰지 않는 이유: 스크립트로 직접 돌리면 `__main__` 이 된다.
+            # 모듈 이름을 쓰지 않는 이유: 스크립트로 직접 돌리면 `__main__` 이 된다. 부모의 이름을 물려받지 않는다 —
+            # 중간 기반(`BaselineSourceGate`)을 상속한 게이트가 기반의 이름으로 규칙 파일을 읽게 된다.
             cls.name = cls.__name__.removesuffix("Gate")
         if cls.sourceScanRoots and not cls.sourceSuffixes:
             raise TypeError(f"{cls.__name__}: sourceScanRoots 를 채운 소스 게이트는 sourceSuffixes 도 적는다")
@@ -442,6 +443,122 @@ class LintGate:
             print(f"  - {line}")
         if len(lines) > len(shown):
             print(f"  ... +{len(lines) - len(shown)} more")
+
+
+@dataclass
+class CountedFinding:
+    """기준선 게이트(`BaselineSourceGate`)가 센 위반 하나. 줄은 1 부터, `lastLine` 은 여러 줄 구문의 끝(한 줄이면 `firstLine`)."""
+
+    rule: str        #: `[baseline]` 의 키(`BaselineSourceGate.baselineRules` 가운데 하나)
+    relative: str
+    firstLine: int
+    lastLine: int
+    message: str     #: 위반 줄의 `경로:줄:` 뒤에 붙는 글
+    text: str        #: 원문 첫 줄(앞뒤 공백을 뗀 것)
+
+
+class BaselineSourceGate(LintGate):
+    """
+    기존 위반을 **기준선**으로 세는 소스 게이트 — 판정 단위(추가한 줄 · 기준선)를 기반이 든다.
+
+    전에는 게이트 셋(`CheckConditionParts` · `CheckEditorStyleLiterals` · `CheckDataDrivenLiterals`)이 diff 해석 · 병합 커밋 판정 ·
+    기준선 비교를 저마다 베꼈고, 병합 판정은 셋 다 `.git/MERGE_HEAD` 를 경로로 만들어 워크트리(`.git` 이 파일)에서 병합을 못 알아봤다.
+    한 자리에 두면 그런 결함이 한 번에 고쳐지고 새 기준선 게이트가 같은 틀을 다시 짓지 않는다.
+
+    모드 둘:
+      - 커밋 훅(`--files`): 이번 커밋이 **추가한 줄**(`LineScope`)에 걸친 위반만 위반이다. 병합 커밋은 건너뛴다 — 상대 쪽 줄은 그 브랜치 커밋 때
+        검사됐다. `--whole-files` 면 파일 전체를 본다. git 이 추가한 줄을 답하지 못하면 `GateError` 다 — 파일 전체로 바꿔 보지 않는다(폴백 없음).
+      - 전체 훑기: `rules/<이름>.toml` 의 `[baseline]` 규칙마다 건수가 기준선을 **넘으면** 실패, 줄면 낮추라는 참고. `--list` 는 위반 전부를 찍는다.
+        `[baseline]` 에는 `baselineRules` 의 키가 모두 있고 그 밖의 키는 없어야 한다(없는 키를 0 으로 읽으면 새 규칙이 처음부터 전부 위반이 된다).
+
+    게이트가 채우는 것: `baselineRules` · `countedNoun`(요약의 낱말) · `baselineExceededHint`(기준선을 넘었을 때 고치는 법) ·
+    `findCounted( source )`(파일 하나의 위반 — None 이면 그 파일은 세지 않아 요약의 파일 수에서도 빠진다. 예외 표는 여기서 쓴다).
+    """
+
+    baselineRules: tuple[str, ...] = ("total",)
+    countedNoun: str = "findings"
+    baselineExceededHint: str = ""
+    preCommitFileArgument = "--files"
+    ruleSchema = {"baseline": kKindInteger}
+    maxNoteShown = 12
+
+    def findCounted(self, source: SourceFile) -> list[CountedFinding] | None:
+        """파일 하나의 위반(추가한 줄로 거르기 전). 자식 프로세스에서도 돈다."""
+        raise NotImplementedError
+
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        self.addFilesArgument(parser)
+        parser.add_argument("--whole-files", action="store_true", help="--files 에서 추가한 줄이 아니라 파일 전체를 본다")
+        parser.add_argument("--baseline", type=int, default=None, help="전체 훑기의 기준선을 규칙 모두 이 값으로(기본은 rules 의 [baseline])")
+        parser.add_argument("--list", action="store_true", help="전체 훑기에서 위반을 전부 찍는다")
+
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
+        args.bMergeSkip = False
+        args.lineScope = LineScope()
+        if not args.files or args.whole_files:
+            return
+        try:
+            args.bMergeSkip = bool(getMergeHeadRevisions(repositoryRoot))
+        except RuntimeError as exception:
+            raise GateError(str(exception)) from exception
+        if args.bMergeSkip:
+            return
+        result = runGit(["diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--no-renames", "--diff-filter=ACM"], cwd=repositoryRoot)
+        if result.returnCode != 0:
+            raise GateError(f"git diff --cached 실패 — 추가한 줄을 알 수 없다(--whole-files 로 파일 전체를 본다): {result.stderr.strip()}")
+        args.lineScope = parseAddedLines(result.stdout)
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if args.bMergeSkip:
+            return None
+        listFound = self.findCounted(source)
+        if listFound is None:
+            return None
+        scope: LineScope = args.lineScope
+        return FileFindings(value=[finding for finding in listFound if scope.touches(finding.relative, finding.firstLine, finding.lastLine)])
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        if args.bMergeSkip:
+            return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
+        fileCount = sum(1 for findings in result.listFindings if findings.value is not None)
+        listAll: list[CountedFinding] = [finding for findings in result.listFindings for finding in (findings.value or ())]
+        listDescribed = [f"{finding.relative}:{finding.firstLine}: {finding.message} | {finding.text}" for finding in listAll]
+        summary = f"{fileCount} files, {len(listAll)} {self.countedNoun}"
+        if args.files:
+            return GateResult(listViolation=listDescribed, summary=summary)
+
+        mapBaseline = self.readBaselineInternal(args)
+        mapPerFile: dict[str, int] = {}
+        for finding in listAll:
+            mapPerFile[finding.relative] = mapPerFile.get(finding.relative, 0) + 1
+        listNote: list[str] = []
+        listViolation: list[str] = []
+        for rule in self.baselineRules:
+            count = sum(1 for finding in listAll if finding.rule == rule)
+            baseline = mapBaseline[rule]
+            listNote.append(f"{rule}: 기준선 {baseline} · 지금 {count}")
+            if count < baseline:
+                listNote.append(f"  줄었다 — rules/{self.name}.toml 의 [baseline] {rule} 를 {count} 로 낮춘다")
+            if count > baseline:
+                listViolation.append(f"{rule} {count}건이 기준선 {baseline} 을 넘었다 — {self.baselineExceededHint}(--list 로 위치 확인), 정말 줄었다면 기준선을 맞춘다")
+        listTop = sorted(mapPerFile.items(), key=lambda item: (-item[1], item[0]))[:10]
+        listNote += [f"파일 {len(mapPerFile)}개, 많은 순:"] + [f"{count:4d}  {relative}" for relative, count in listTop]
+        if args.list:
+            self.maxNoteShown = 0
+            listNote += listDescribed
+        return GateResult(listViolation=listViolation, listNote=listNote, summary=summary)
+
+    def readBaselineInternal(self, args: argparse.Namespace) -> dict[str, int]:
+        """규칙마다의 기준선. `--baseline` 이 있으면 모두 그 값, 아니면 `[baseline]` — 키가 빠지거나 남으면 `GateError`."""
+        if args.baseline is not None:
+            return {rule: args.baseline for rule in self.baselineRules}
+        mapBaseline = self.readRules(self.name, self.ruleSchema).get("baseline", {})
+        listMissing = [rule for rule in self.baselineRules if rule not in mapBaseline]
+        listUnknown = sorted(set(mapBaseline) - set(self.baselineRules))
+        if listMissing or listUnknown:
+            raise GateError(f"rules/{self.name}.toml 의 [baseline] 이 규칙과 맞지 않는다 — 빠진 키 {listMissing} · 모르는 키 {listUnknown}"
+                            f"(규칙: {list(self.baselineRules)})")
+        return dict(mapBaseline)
 
 
 def findGateClass(module: ModuleType) -> type[LintGate] | None:

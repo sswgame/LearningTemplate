@@ -308,7 +308,7 @@ namespace sw
                 if ( entity._fileID != 0 )
                     _mapObjectIDToFileID[pGo->getObjectID()] = entity._fileID;
 
-                ObjectLoadContext context{};
+                ObjectLoadContext context{ SerializePurpose::Authoring };
                 context._pBatch  = &batch;
                 context._savedID = entity._fileID;
                 // **쿠킹된 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한
@@ -384,7 +384,7 @@ namespace sw
         // 파일 id 를 먼저 모두 정한다. 자식의 부착이 부모의 파일 id 를 적으므로, 쓰는 동안 부모의 id 가 이미 있어야 한다.
         ObjectSavedIDMap mapSavedID;
         collectSavedIDMap( mapSavedID );
-        ObjectSaveOptions saveOptions{};
+        ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
         saveOptions._pSavedIDMap = &mapSavedID;
         // 프리팹 원형은 순회 **밖에서** 미리 만든다. 원형은 임시 매니저에 오브젝트를 만들어 만드는데, `forEachGameObject` 콜백 안에서는 어느
         // 매니저에도 오브젝트를 만들 수 없다(`GameObjectManager::WalkScope`).

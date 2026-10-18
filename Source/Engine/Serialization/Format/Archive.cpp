@@ -522,11 +522,6 @@ namespace sw
         return *this;
     }
 
-    bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo )
-    {
-        return serializeObject( pInstance, typeInfo, SerializeContext::getDefault() );
-    }
-
     bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         if ( pInstance == nullptr )
@@ -546,11 +541,6 @@ namespace sw
         _pData    = _bytes.data();
         _dataSize = _bytes.size();
         return bWritten;
-    }
-
-    bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo )
-    {
-        return deserializeObject( pInstance, typeInfo, SerializeContext::getDefault() );
     }
 
     bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )

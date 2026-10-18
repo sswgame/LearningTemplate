@@ -204,22 +204,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) 기본 바이너리 직렬화/역직렬화 (BinarySerializer 연계)
         // ------------------------------------------------------------------------------
-        /** @brief 타입 정보를 이용해 객체를 직렬화합니다. */
-        [[nodiscard]] bool serializeObject( void* pInstance, const TypeInfo& typeInfo );
-        /** @brief 문맥(세이브 직렬화 등)을 주어 객체를 직렬화합니다. */
+        /**
+         * @brief 문맥을 주어 객체를 직렬화합니다. 아카이브는 세이브 · 스냅샷 · 네트워크가 함께 쓰므로 저장 목적(`SerializeContext::getPurpose`)을 늘 부르는 쪽이 정합니다.
+         */
         [[nodiscard]] bool serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context );
-        /** @brief 타입 정보를 이용해 객체를 역직렬화합니다. */
-        [[nodiscard]] bool deserializeObject( void* pInstance, const TypeInfo& typeInfo );
-        /** @brief 문맥(세이브 직렬화 등)을 주어 객체를 역직렬화합니다. */
+        /** @brief 문맥을 주어 객체를 역직렬화합니다. */
         [[nodiscard]] bool deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context );
-
-        /** @brief REFLECT 타입을 직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
-        template <typename T>
-        [[nodiscard]] bool serializeObject( const T& instance )
-        {
-            const TypeInfo* pTypeInfo = T::StaticType();
-            return pTypeInfo != nullptr && serializeObject( const_cast<T*>( &instance ), *pTypeInfo );
-        }
 
         /** @brief 문맥을 주어 REFLECT 타입을 직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
         template <typename T>
@@ -227,14 +217,6 @@ namespace sw
         {
             const TypeInfo* pTypeInfo = T::StaticType();
             return pTypeInfo != nullptr && serializeObject( const_cast<T*>( &instance ), *pTypeInfo, context );
-        }
-
-        /** @brief REFLECT 타입을 역직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
-        template <typename T>
-        [[nodiscard]] bool deserializeObject( T& instance )
-        {
-            const TypeInfo* pTypeInfo = T::StaticType();
-            return pTypeInfo != nullptr && deserializeObject( &instance, *pTypeInfo );
         }
 
         /** @brief 문맥을 주어 REFLECT 타입을 역직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */

@@ -53,7 +53,7 @@ namespace sw
             /** @brief 스냅샷을 오브젝트에 다시 읽습니다. 부모는 스냅샷의 런타임 id 로 찾습니다(같은 실행의 스냅샷이다). */
             static void loadSnapshot( GameObject* pTarget, const ObjectSnapshot& snapshot )
             {
-                ObjectLoadContext context{};
+                ObjectLoadContext context{ SerializePurpose::Authoring };
                 context._pIdentity = &snapshot._identity;
                 // 실패하면 로드가 오브젝트를 읽기 전 상태로 되돌린다 — 되돌리기 하나가 빠졌다고 알린다.
                 if ( ObjectStateSerializer::loadFromXMLString( pTarget, snapshot._xml, context ) == false )
@@ -114,7 +114,7 @@ namespace sw
         ObjectSnapshot snapshot;
         if ( pObj == nullptr )
             return snapshot;
-        snapshot._xml      = ObjectStateSerializer::saveToXMLString( pObj );
+        snapshot._xml      = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Authoring } );
         snapshot._identity = ObjectStateSerializer::captureIdentity( pObj );
         return snapshot;
     }

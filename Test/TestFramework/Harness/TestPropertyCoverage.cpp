@@ -12,7 +12,7 @@ namespace test
 {
     PropertyCarryReport makePropertyCarryReport()
     {
-        const sw::SerializeContext& context = sw::SerializeContext::getDefault();
+        const sw::SerializeContext& context = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
 
         sw::vector<const sw::TypeInfo*> listType;
         sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&listType]( const sw::TypeInfo& typeInfo )

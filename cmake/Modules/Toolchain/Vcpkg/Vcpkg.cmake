@@ -144,17 +144,8 @@ function(sw_vcpkgPlanManifestInstall swSrcDir OUT_STATUS OUT_REMOVE OUT_BUILD)
         list(APPEND swArgs "--overlay-ports=${overlayPort}")
     endforeach()
 
-    set(swOverlayTriplets "${VCPKG_OVERLAY_TRIPLETS}")
-
-    if(swOverlayTriplets STREQUAL "" AND DEFINED ENV{VCPKG_OVERLAY_TRIPLETS})
-        set(swOverlayTriplets "$ENV{VCPKG_OVERLAY_TRIPLETS}")
-    endif()
-
-    if(swOverlayTriplets STREQUAL "")
-        set(swOverlayTriplets "${swSrcDir}/cmake/Modules/Toolchain/Vcpkg")
-    endif()
-
-    foreach(overlayTriplet IN LISTS swOverlayTriplets)
+    # VCPKG_OVERLAY_TRIPLETS 는 아래 4) 절이 늘 캐시에 정해 둔다.
+    foreach(overlayTriplet IN LISTS VCPKG_OVERLAY_TRIPLETS)
         list(APPEND swArgs "--overlay-triplets=${overlayTriplet}")
     endforeach()
 
@@ -351,6 +342,17 @@ endif()
 if(NOT DEFINED ENV{VCPKG_BINARY_SOURCES} OR "$ENV{VCPKG_BINARY_SOURCES}" STREQUAL "")
     set(ENV{VCPKG_BINARY_SOURCES} "clear;files,${swSrcDir}/build/vcpkg_cache,readwrite")
     message(STATUS "[vcpkg] VCPKG_BINARY_SOURCES not set in the environment — using ${swSrcDir}/build/vcpkg_cache")
+endif()
+
+# 오버레이 triplet(clang-cl 포트 빌드)도 프리셋은 환경 변수로만 넘긴다. 같은 까닭으로 재구성에서 빠지면 vcpkg 가 기본 triplet(MSVC)으로
+# 공유 설치 폴더의 포트 전체를 다시 깔고(ABI 가 달라진다), DirectXTex 는 OpenMP 를 요구하는 판으로 바뀌어 다른 워크트리의 구성이
+# `Could NOT find OpenMP_C` 로 선다(2026-10-18 통합에서 확인). 처음 구성의 값을 캐시에 박아 모든 재구성이 같은 triplet 을 쓰게 한다.
+if("${VCPKG_OVERLAY_TRIPLETS}" STREQUAL "")
+    if(NOT "$ENV{VCPKG_OVERLAY_TRIPLETS}" STREQUAL "")
+        set(VCPKG_OVERLAY_TRIPLETS "$ENV{VCPKG_OVERLAY_TRIPLETS}" CACHE STRING "vcpkg 오버레이 triplet 경로(들)" FORCE)
+    else()
+        set(VCPKG_OVERLAY_TRIPLETS "${swSrcDir}/cmake/Modules/Toolchain/Vcpkg" CACHE STRING "vcpkg 오버레이 triplet 경로(들)" FORCE)
+    endif()
 endif()
 
 file(GLOB swVcpkgOverlayPorts "${swSrcDir}/ThirdParty/*/vcpkg-port")

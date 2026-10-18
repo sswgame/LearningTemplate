@@ -230,12 +230,12 @@ SW_TEST_CASE( AnimationGraphLayersTest, AnimatorPlaysBlendSpaceStateFromGraph )
     SW_ASSERT_NOT_NULL( pPlaying );
     SW_EXPECT_NEAR_EQUAL( 0.75f, pPlaying->getPlayLength(), 1e-4f );
 
-    manager.getAnimationSystem().evaluate( 0.1f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.1f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 0 ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 1e-3f );
 
     pAnimator->getParameters().setFloat( hashed_string( "Speed" ), 1.0f );
-    manager.getAnimationSystem().evaluate( 0.1f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.1f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 0 ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pPlaying->getPlayLength(), 1e-4f );
     SW_EXPECT_TRUE( pAnimator->getGraphPlayer().getPlayer().getCurrentTime() <= 0.5f );
@@ -289,13 +289,13 @@ SW_TEST_CASE( AnimationGraphLayersTest, GraphLayerMasksUpperBodyFromData )
     pAnimator->dispatchBeginPlay();
     SW_ASSERT_EQUAL( 1u, pAnimator->getGraphLayerCount() );
 
-    manager.getAnimationSystem().evaluate( 0.1f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.1f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 0 ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 2 ), 1e-3f );
 
     pAnimator->getParameters().setFloat( hashed_string( "UpperWeight" ), 0.0f );
-    manager.getAnimationSystem().evaluate( 0.1f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.1f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 2 ), 1e-3f );
     SW_EXPECT_FALSE( pAnimator->setGraphLayerWeight( hashed_string( "Upper" ), 0.5f ) );
     SW_EXPECT_FALSE( pAnimator->setGraphLayerWeight( hashed_string( "Missing" ), 0.5f ) );
@@ -331,18 +331,18 @@ SW_TEST_CASE( AnimationGraphLayersTest, RestartedLayerInertializesFromInterrupte
 
     for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
     {
-        manager.getAnimationSystem().evaluate( 0.05f );
+        manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     }
     const float32 beforeRestart = TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 );
     SW_EXPECT_NEAR_EQUAL( 0.5f, beforeRestart, 0.02f );
 
     pAnimator->restartLayer( static_cast<uint32>( layerIndex ) );
-    manager.getAnimationSystem().evaluate( 0.001f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.001f );
     SW_EXPECT_NEAR_EQUAL( beforeRestart, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 0.05f ); // 0 으로 튀지 않았다
 
     for ( uint32 frameIndex = 0; frameIndex < 12; ++frameIndex )
     {
-        manager.getAnimationSystem().evaluate( 0.05f );
+        manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     }
     SW_EXPECT_NEAR_EQUAL( 0.601f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 0.03f );
 }
@@ -380,7 +380,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, InertializationSkipsPoseNobodySaw )
         pAnimator->dispatchBeginPlay();
         for ( uint32 frameIndex = 0; frameIndex < 4; ++frameIndex )
         {
-            manager.getAnimationSystem().evaluate( 0.05f );
+            manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
         }
         SW_EXPECT_NEAR_EQUAL( 0.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 1e-3f );
 
@@ -390,16 +390,16 @@ SW_TEST_CASE( AnimationGraphLayersTest, InertializationSkipsPoseNobodySaw )
             pUnit->setVisibleHint( false );
             for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
             {
-                manager.getAnimationSystem().evaluate( 0.05f );
+                manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
             }
             SW_EXPECT_TRUE( pAnimator->getCurrentStateName() == hashed_string( "Walk" ) );
             pUnit->setVisibleHint( true );
-            manager.getAnimationSystem().evaluate( 0.05f );
+            manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
             SW_EXPECT_NEAR_EQUAL( 2.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 1e-3f ); // 옛 포즈(x 0)로 튀지 않았다
         }
         else
         {
-            manager.getAnimationSystem().evaluate( 0.05f );
+            manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
             SW_EXPECT_TRUE( pAnimator->getCurrentStateName() == hashed_string( "Walk" ) );
             SW_EXPECT_NEAR_EQUAL( 0.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 1 ), 1e-3f ); // 보인 포즈에서 이어 간다
         }

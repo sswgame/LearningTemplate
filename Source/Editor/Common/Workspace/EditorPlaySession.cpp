@@ -82,7 +82,7 @@ namespace sw::editor
                         entry._listTerrainEdit.assign( archive.getData(), archive.getData() + archive.getSize() );
                     }
 
-                    if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) )
+                    if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) )
                         data._listSnapshot.push_back( std::move( entry ) );
                 }
 
@@ -165,7 +165,7 @@ namespace sw::editor
                     if ( snap._bNestedPart )
                         pObjects->getSubsystem<PrefabInstanceRegistry>().restoreNestedPart( pObj->getObjectID(), snap._nestedPart );
 
-                    ObjectLoadContext context{};
+                    ObjectLoadContext context{ SerializePurpose::Snapshot };
                     context._pIdentity = &snap._identity;
                     context._pBatch    = &batch;
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), context ) == 0 )
@@ -222,7 +222,7 @@ namespace sw::editor
                     }
                     const ObjectSnapshot before = EditorTransaction::captureSnapshot( pObj );
                     ObjectStateBatch     batch( ObjectIDSpace::Live );
-                    ObjectLoadContext    context{};
+                    ObjectLoadContext    context{ SerializePurpose::Authoring };
                     context._pIdentity = &kept._identity;
                     context._pBatch    = &batch;
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, kept._bytes.data(), kept._bytes.size(), context ) == 0 )
@@ -538,7 +538,7 @@ namespace sw::editor
         PlaySessionData::ObjectSnapshot entry;
         entry._identity = ObjectStateSerializer::captureIdentity( pObject );
         entry._name     = pObject->getName().c_str();
-        if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, entry._bytes ) == false )
+        if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, entry._bytes, ObjectSaveOptions{ SerializePurpose::Authoring } ) == false )
             return false;
         for ( PlaySessionData::ObjectSnapshot& kept : data._listKept )
         {

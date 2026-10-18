@@ -119,12 +119,12 @@ SW_TEST_CASE( GimmickSceneTest, MoverFollowsSplineAndStateSurvivesSaveLoad )
     SW_EXPECT_NEAR_EQUAL( 10.0f, pPlatform->getPrimarySceneComponent()->getWorldPosition()._x, 0.1f );
 
     const uint64 savedHash = pCircuit->getCircuit().computeStateHash();
-    const string xml       = ObjectStateSerializer::saveToXMLString( pPlatform );
+    const string xml       = ObjectStateSerializer::saveToXMLString( pPlatform, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     SW_ASSERT_FALSE( xml.empty() );
 
     GameObjectManager restoredManager;
     GameObject*       pRestored = restoredManager.createGameObject( hashed_string( "Platform" ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pRestored, xml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pRestored, xml, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     GimmickCircuitComponent* pRestoredCircuit = pRestored->getComponent<GimmickCircuitComponent>();
     SW_ASSERT_NOT_NULL( pRestoredCircuit );
     SW_EXPECT_EQUAL( savedHash, pRestoredCircuit->getCircuit().computeStateHash() );
@@ -159,10 +159,10 @@ SW_TEST_CASE( GimmickSceneTest, StateSurvivesBinaryObjectStateAndContinues )
     test::updateFrames( manager, 47 ); // 지연 큐와 누적 시간이 비어 있지 않은 때
 
     vector<uint8> bytes;
-    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pLogic, bytes ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pLogic, bytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
     GameObjectManager restoredManager;
     GameObject*       pRestored = restoredManager.createGameObject( hashed_string( "Logic" ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size() ) > 0 );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } ) > 0 );
     GimmickCircuitComponent* pRestoredCircuit = pRestored->getComponent<GimmickCircuitComponent>();
     SW_ASSERT_NOT_NULL( pRestoredCircuit );
     SW_EXPECT_EQUAL( pCircuit->getCircuit().computeStateHash(), pRestoredCircuit->getCircuit().computeStateHash() );
@@ -190,7 +190,7 @@ SW_TEST_CASE( GimmickSceneTest, ChangedNodeKindStopsCircuitWithError )
     SW_ASSERT_TRUE( pCircuit->rebuild() );
     pCircuit->stepOnce(); // 상태가 저장된다
     SW_ASSERT_FALSE( pCircuit->getState().isEmpty() );
-    string       xml      = ObjectStateSerializer::saveToXMLString( pLogic );
+    string       xml      = ObjectStateSerializer::saveToXMLString( pLogic, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     const size_t kindText = xml.find( "Toggle" );
     SW_ASSERT_TRUE( kindText != string::npos );
     xml.replace( kindText, 6, "Pulse" ); // 디자이너가 같은 id 의 종류를 바꿨다 — 입력 이름과 정수 슬롯 수는 같다
@@ -198,7 +198,7 @@ SW_TEST_CASE( GimmickSceneTest, ChangedNodeKindStopsCircuitWithError )
     GameObject* pLoaded = manager.createGameObject( hashed_string( "Loaded" ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "gimmick saved state for a node whose kind changed" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, xml ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, xml, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     }
     const GimmickCircuitComponent* pLoadedCircuit = pLoaded->getComponent<GimmickCircuitComponent>();
     SW_ASSERT_NOT_NULL( pLoadedCircuit );
@@ -225,12 +225,12 @@ SW_TEST_CASE( GimmickSceneTest, InvalidWiringIsRejectedAtLoad )
     pCircuit->addWire( "button.OnUsed", "gate.Open" );
     pCircuit->addWire( "button.OnPushed", "door.Open" );
     pCircuit->addNode( "lamp", "Light", "startOn" ); // = 가 없는 매개변수
-    const string xml = ObjectStateSerializer::saveToXMLString( pLogic );
+    const string xml = ObjectStateSerializer::saveToXMLString( pLogic, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
 
     GameObject* pLoaded = manager.createGameObject( hashed_string( "Loaded" ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "gimmick circuit with unknown target node and output" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, xml ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, xml, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     }
     const GimmickCircuitComponent* pLoadedCircuit = pLoaded->getComponent<GimmickCircuitComponent>();
     SW_ASSERT_NOT_NULL( pLoadedCircuit );

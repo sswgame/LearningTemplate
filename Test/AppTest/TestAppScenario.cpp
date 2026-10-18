@@ -23,7 +23,7 @@ SW_TEST_REQUIRES_HOST( AppScenarioTest, "launches App.exe per automation scenari
 //
 // 시나리오 파일을 놓기만 하면 돈다(파일 목록을 CMake 에 적지 않는다). 게임은 프리셋마다 하나(`SW_ACTIVE_GAME`)이므로 그 프리셋의
 // `AppTest_HostOnly` 가 **엔진 시나리오 + 그 게임 팩의 시나리오**를 돈다. 에디터 시나리오(`engine/automation/editor/`)는 `-EnableEditor` 로 돈다.
-// 종료 코드 13(건너뜀 — 전경 창을 못 얻음 등) · 77(이 기계에 없는 백엔드)은 건너뛴다. 언리얼 Gauntlet 이 프로세스를 띄워 결과 코드 · 로그를 모으는 것과 같은 자리다.
+// 판정은 `AppTestUtil::runScenario` 가 한다 — 13(시나리오의 건너뜀 — 전경 창을 못 얻음 등)과 요구하지 않은 백엔드의 77 은 건너뛰고, 요구 백엔드(`--required_backends=`)의 77 은 실패다. 언리얼 Gauntlet 이 프로세스를 띄워 결과 코드 · 로그를 모으는 것과 같은 자리다.
 // ------------------------------------------------------------------------------
 
 namespace
@@ -111,16 +111,10 @@ namespace
                     sw::string scenarioArguments{ extraArguments };
                     if ( bRequiresEditor )
                         scenarioArguments += " " + makeEditorArguments( scenarioPath, pSwitch );
-                    sw::string       scenarioLines;
-                    const int32      exitCode = test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, scenarioArguments );
-                    const sw::string label    = scenarioPath + " " + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
-                    SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
-                    if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
-                    {
-                        SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
+                    sw::string                scenarioLines;
+                    const test::AppRunOutcome outcome = test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, scenarioArguments );
+                    if ( test::hasRunHere( outcome ) == false )
                         continue;
-                    }
-                    SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
                     ++ranCount;
                     // 결정적 재생: `<Record>` 줄은 백엔드마다 같아야 한다. 처음 돈 백엔드를 기준으로 비교한다.
                     const sw::vector<sw::string> listRecord = test::AppTestUtil::readReportRecords( test::AppTestUtil::makeReportPath( scenarioPath, pSwitch ) );
@@ -193,16 +187,10 @@ namespace
                 const sw::string arguments = "-EnableEditor -gv_editorStateDir=" + stateFolder;
                 for ( size_t index = begin; index < end; ++index )
                 {
-                    sw::string       scenarioLines;
-                    const int32      exitCode = test::AppTestUtil::runScenario( listScenario[index], pSwitch, scenarioLines, arguments );
-                    const sw::string label    = listScenario[index] + " " + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
-                    SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
-                    if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
-                    {
-                        SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
+                    sw::string                scenarioLines;
+                    const test::AppRunOutcome outcome = test::AppTestUtil::runScenario( listScenario[index], pSwitch, scenarioLines, arguments );
+                    if ( test::hasRunHere( outcome ) == false )
                         break; // 묶음의 뒤 실행은 앞 실행이 남긴 상태를 본다 — 앞이 건너뛰면 뒤도 건너뛴다
-                    }
-                    SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
                     ++ranCount;
                 }
                 begin = end;
@@ -281,18 +269,11 @@ namespace
                 sw::string       stateFolder;
                 SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/chain_" + backend, stateFolder ) );
                 SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
-                const sw::string arguments = "-EnableEditor -scenario-keep-going -gv_editorStateDir=" + stateFolder;
-                sw::string       scenarioLines;
-                const int32      exitCode = test::AppTestUtil::runScenarioChain( makeChain( listChained, kReloadEvery ), "editor", pSwitch, scenarioLines, arguments );
-                const sw::string label    = sw::string( "editor chain " ) + pSwitch + " -> exit " + sw::to_string( exitCode ) + " (log: Saved/Automation/chain_editor_" + backend + ".log)\n" + scenarioLines;
-                SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
-                if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
-                    SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
-                else
-                {
-                    SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
+                const sw::string          arguments = "-EnableEditor -scenario-keep-going -gv_editorStateDir=" + stateFolder;
+                sw::string                scenarioLines;
+                const test::AppRunOutcome outcome = test::AppTestUtil::runScenarioChain( makeChain( listChained, kReloadEvery ), "editor", pSwitch, scenarioLines, arguments );
+                if ( test::hasRunHere( outcome ) )
                     ++ranCount;
-                }
             }
             ranCount += runEditorGroups( listSeparate, pSwitch );
             if ( ranCount == 0 )
@@ -303,7 +284,7 @@ namespace
 } // namespace
 
 /**
- * @brief [AppScenarioTest] 엔진 · 활성 게임의 시나리오가 모든 백엔드에서 통과한다(종료 코드 0 — 13 건너뜀 · 77 이 기계에 없는 백엔드)
+ * @brief [AppScenarioTest] 엔진 · 활성 게임의 시나리오가 모든 백엔드에서 통과한다(종료 코드 0 — 13 건너뜀 · 요구하지 않은 백엔드의 77 은 건너뜀)
  * @details 사례가 하나라 실패 메시지에 시나리오 · 백엔드가 같이 나온다. 로그는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log`.
  */
 SW_TEST_CASE( AppScenarioTest, EveryScenarioPassesOnEveryBackend )
@@ -357,17 +338,19 @@ SW_TEST_CASE( AppScenarioTest, RecordedPlayReplaysOnEveryBackend )
         const sw::string backend      = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
         const sw::string recordedPath = "Saved/Automation/Recorded/roundtrip_" + backend + ".scenario.xml";
         (void)sw::FileUtil::tryRemoveFile( recordedPath ); // 지난 실행의 녹화를 읽지 않게 지운다
-        sw::string  sourceLines;
-        const int32 sourceExit = test::AppTestUtil::runScenario( kSource, pSwitch, sourceLines,
-                                                                 "-game=HarvestValley -scenario-record=" + recordedPath + " -scenario-record-probes=" + kProbes );
-        if ( test::AppTestUtil::isSkippedExitCode( sourceExit ) )
+        sw::string                sourceLines;
+        const test::AppRunOutcome sourceOutcome = test::AppTestUtil::runScenario( kSource, pSwitch, sourceLines,
+                                                                                  "-game=HarvestValley -scenario-record=" + recordedPath + " -scenario-record-probes=" + kProbes );
+        if ( test::hasRunHere( sourceOutcome ) == false )
             continue;
-        SW_EXPECT_TRUE_MSG( sourceExit == 0, ( sw::string( kSource ) + " " + pSwitch + " -> exit " + sw::to_string( sourceExit ) + "\n" + sourceLines ).c_str() );
-        SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( recordedPath ), ( recordedPath + " was not written" ).c_str() );
-        sw::string  replayLines;
-        const int32 replayExit = test::AppTestUtil::runScenario( recordedPath, pSwitch, replayLines, "-game=HarvestValley" );
-        SW_EXPECT_TRUE_MSG( replayExit == 0, ( recordedPath + " " + pSwitch + " -> exit " + sw::to_string( replayExit ) + "\n" + replayLines ).c_str() );
         ++ranCount;
+        if ( sourceOutcome == test::AppRunOutcome::Failed )
+            continue; // 실패는 runScenario 가 기록했다 — 녹화가 없으니 다시 돌릴 것이 없다
+        SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( recordedPath ), ( recordedPath + " was not written" ).c_str() );
+        sw::string                replayLines;
+        const test::AppRunOutcome replayOutcome = test::AppTestUtil::runScenario( recordedPath, pSwitch, replayLines, "-game=HarvestValley" );
+        // 녹화를 낸 백엔드가 다시 돌 때 서지 못하거나 건너뛰면 왕복을 확인하지 못한 것이다.
+        SW_EXPECT_TRUE_MSG( test::hasRunHere( replayOutcome ), ( recordedPath + " " + pSwitch + " did not run after the recording run did\n" + replayLines ).c_str() );
     }
     if ( ranCount == 0 )
         SW_TEST_SKIP( "no backend could run the round trip on this machine" );
@@ -384,16 +367,11 @@ SW_TEST_CASE( AppScenarioTest, ChainedScenariosShareOneProcess )
     uint32                       ranCount = 0;
     for ( const utf8* pSwitch : AppScenarioTestInternal::collectBackendSwitches() )
     {
-        sw::string       scenarioLines;
-        const int32      exitCode = test::AppTestUtil::runScenarioChain( listScenario, "reload_render_reload", pSwitch, scenarioLines );
-        const sw::string label    = sw::string( "chain " ) + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
-        SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
-        if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
-        {
-            SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
+        sw::string                scenarioLines;
+        const test::AppRunOutcome outcome = test::AppTestUtil::runScenarioChain( listScenario, "reload_render_reload", pSwitch, scenarioLines );
+        if ( test::hasRunHere( outcome ) == false )
             continue;
-        }
-        SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
+        const sw::string label = sw::string( "chain " ) + pSwitch + "\n" + scenarioLines;
         SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain stage 3/3 PASS" ) != sw::string::npos, label.c_str() );
         SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain PASS (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos, label.c_str() );
         ++ranCount;

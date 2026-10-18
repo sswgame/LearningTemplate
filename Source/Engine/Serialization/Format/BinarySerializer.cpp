@@ -195,7 +195,13 @@ namespace sw
                     else
                         uniqueMatchedPropHashes.insert( prop.getNameHash() );
 
-                    // 세이브 읽기에서 옵트인 타입의 SaveGame 이 아닌 필드는 읽지 않는다. 세이브가 현재 값을 덮지 않는다(쓰기도 적지 않는다).
+                    // 저작 파일의 런타임 상태는 로드 오류다(XML · JSON 과 같다).
+                    if ( SerializerUtil::isForbiddenInFile( prop, context ) )
+                    {
+                        SerializerUtil::reportForbiddenProperty( typeInfo, prop );
+                        return false;
+                    }
+                    // 이 목적이 다루지 않는 필드(옵트인 세이브의 나머지)는 읽지 않는다. 현재 값을 덮지 않는다(쓰기도 적지 않는다).
                     if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                     {
                         reader.skip( payloadSize );
@@ -249,9 +255,9 @@ namespace sw
                         bMatched = ( matchedBitmask & ( 1ULL << propIdx ) ) != 0;
                     else
                         bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
-                    // 세이브 읽기가 다루지 않는 필드(옵트인 타입의 SaveGame 이 아닌 것)는 현재 값 그대로다. 기본값으로 되돌리지 않는다.
-                    const bool bOutsideSaveGame = context.isSaveGameOnly() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
-                    if ( bMatched == false && bOutsideSaveGame == false )
+                    // 이 목적이 다루지 않는 필드(Transient, 저작의 RuntimeState, 옵트인 세이브의 나머지)는 현재 값 그대로다. 기본값으로 되돌리지 않는다.
+                    const bool bOutsidePurpose = SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
+                    if ( bMatched == false && bOutsidePurpose == false )
                         SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, context );
                 }
                 // 선언된 범위는 부르는 두 쪽(`deserialize` · `deserializeSoft`)이 읽기 공통 끝으로 본다 — 소프트 읽기가 "스트림이 깨짐"과 "범위 밖 값"을 가르게.

@@ -263,7 +263,7 @@ namespace sw::editor
     {
         if ( pInstance == nullptr || pCdo == nullptr )
             return;
-        const SerializeContext& context = SerializeContext::getDefault();
+        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         for ( Component* pInstanceComponent : pInstance->getComponents() )
         {
             if ( pInstanceComponent == nullptr || pInstanceComponent->getTypeInfo() == nullptr )
@@ -342,7 +342,7 @@ namespace sw::editor
 
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
         // 값을 옮기지 못했으면 되돌렸다고 표시하지 않고 되돌리기 기록도 남기지 않는다.
-        if ( SerializerUtil::copyPropertyValue( *pProp, pCdoComp, pInstanceComponent, SerializeContext::getDefault() ) == false )
+        if ( SerializerUtil::copyPropertyValue( *pProp, pCdoComp, pInstanceComponent, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
         {
             SW_LOG_WARNING( "Prefab override '%#.%#' could not be reverted", item._componentKey.c_str(), item._propertyName.c_str() );
             return false;

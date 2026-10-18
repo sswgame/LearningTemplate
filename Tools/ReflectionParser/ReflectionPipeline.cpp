@@ -97,6 +97,7 @@ namespace sw
                             {prop._bHideInInspector, "HideInInspector"},
                             {     prop._bReplicated,      "Replicated"},
                             {       prop._bSaveGame,        "SaveGame"},
+                            {   prop._bRuntimeState,    "RuntimeState"},
                             {         prop._bInterp,          "Interp"},
                             {       prop._bColorHdr,        "ColorHdr"},
                             {      prop._bMultiline,       "Multiline"},

@@ -450,7 +450,7 @@ SW_TEST_CASE( SkeletalAnimationTest, SystemEvaluatesDependenciesInOrder )
     pUnitB->registerAnimationPhaseTask( &taskB );
     pUnitC->registerAnimationPhaseTask( &taskC );
 
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     system.evaluate( 0.016f );
     SW_EXPECT_FALSE( system.hasDependencyCycle() );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( system.getLevels().size() ) );
@@ -486,7 +486,7 @@ SW_TEST_CASE( SkeletalAnimationTest, LODSkipsPoseEvaluation )
     SW_ASSERT_NOT_NULL( pUnit );
     TestSkeletalAnimationInternal::RecordingTask task( nullptr, 0.5f );
     pUnit->registerAnimationPhaseTask( &task );
-    AnimationSystem& system = manager.getAnimationSystem();
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     system.evaluate( 0.016f ); // 처음은 포즈가 더러워 늘 만든다
     const uint32 baseCount = pUnit->getPoseEvaluationCount();
 
@@ -532,7 +532,7 @@ SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderPose )
     pFollower->setLeaderPose( pLeader );
     SW_EXPECT_TRUE( pFollower->findLeaderPose() == pLeader );
 
-    manager.getAnimationSystem().evaluate( 0.016f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.016f );
     const quaternion expected = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, 0.7f );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected, pFollower->getLocalPose().getBoneTransform( 0 )._rotation, 1e-5f ) );
     float4x4 leaderBone{};
@@ -582,7 +582,7 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorPlaysClipFromFolder )
     pAnimator->dispatchBeginPlay();
     SW_EXPECT_TRUE( pAnimator->getCurrentStateName() == hashed_string( "Walk" ) );
 
-    manager.getAnimationSystem().evaluate( 0.25f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.25f );
     manager.flushSceneTransforms();
     SW_EXPECT_NEAR_EQUAL( 0.25f, pUnit->getLocalPosition()._z, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._z, 1e-4f ); // 루트 본은 시작 자리에 묶였다
@@ -658,25 +658,25 @@ SW_TEST_CASE( SkeletalAnimationTest, InterruptedCrossfadeContinuesFromThePreviou
     pAnimator->setClipFolder( folder );
     pAnimator->setInitialState( "A" );
     pAnimator->dispatchBeginPlay();
-    manager.getAnimationSystem().evaluate( 0.05f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._x, 1e-4f );
 
     // A → B 페이드의 가운데.
     SW_ASSERT_TRUE( pAnimator->play( hashed_string( "B" ), true, 0.2f ) );
-    manager.getAnimationSystem().evaluate( 0.1f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.1f );
     const float32 beforeInterrupt = pUnit->getLocalPose().getBoneTransform( 0 )._translation._x;
     SW_EXPECT_NEAR_EQUAL( 0.5f, beforeInterrupt, 0.05f );
 
     // 끊고 C 로 — 다음 프레임(아주 짧게)의 포즈는 끊긴 순간과 거의 같아야 한다.
     SW_ASSERT_TRUE( pAnimator->play( hashed_string( "C" ), true, 0.2f ) );
-    manager.getAnimationSystem().evaluate( 0.001f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.001f );
     const float32 afterInterrupt = pUnit->getLocalPose().getBoneTransform( 0 )._translation._x;
     SW_EXPECT_NEAR_EQUAL( beforeInterrupt, afterInterrupt, 0.05f );
 
     // 새 페이드가 끝나면 C 그대로다.
     for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
     {
-        manager.getAnimationSystem().evaluate( 0.05f );
+        manager.getSubsystem<AnimationSystem>().evaluate( 0.05f );
     }
     SW_EXPECT_NEAR_EQUAL( 2.0f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._x, 1e-3f );
 }

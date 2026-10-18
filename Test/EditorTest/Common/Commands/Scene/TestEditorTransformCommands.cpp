@@ -77,7 +77,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundPutsAParentedObjectOnWorl
  */
 SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTransformAndTheMesh )
 {
-    const SerializeContext& context = SerializeContext::getDefault();
+    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
     GameObjectManager       manager;
     GameObject*             pSource     = manager.createGameObject( hashed_string( "Source" ) );
     MeshComponent*          pSourceMesh = pSource->addComponent<MeshComponent>();

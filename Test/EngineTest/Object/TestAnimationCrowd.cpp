@@ -130,7 +130,7 @@ SW_TEST_CASE( AnimationCrowdTest, SameStateUnitsShareOneBucket )
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager manager;
-    AnimationSystem&  system = manager.getAnimationSystem();
+    AnimationSystem&  system = manager.getSubsystem<AnimationSystem>();
     system.setCrowdSettings( AnimationCrowdSettings{} );
     const float32          arrStart[5] = { 0.0f, 0.02f, 0.27f, 0.5f, 0.52f };
     SkeletalMeshComponent* arrUnit[6]  = {};
@@ -198,7 +198,7 @@ SW_TEST_CASE( AnimationCrowdTest, CrossfadeFallsBackToSoloThenRejoins )
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager manager;
-    AnimationSystem&  system = manager.getAnimationSystem();
+    AnimationSystem&  system = manager.getSubsystem<AnimationSystem>();
     system.setCrowdSettings( AnimationCrowdSettings{} );
     SkeletalMeshComponent* pUnit = TestAnimationCrowdInternal::createCharacter( manager, "Hero", skeleton, mesh, folder, "Wave", 0.0f );
     SW_ASSERT_NOT_NULL( pUnit );
@@ -247,7 +247,7 @@ SW_TEST_CASE( AnimationCrowdTest, FarUnitsSwitchToVertexAnimation )
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager manager;
-    AnimationSystem&  system = manager.getAnimationSystem();
+    AnimationSystem&  system = manager.getSubsystem<AnimationSystem>();
     system.setCrowdSettings( AnimationCrowdSettings{} );
     system.getCrowd().setClock( 10.0 );
     SkeletalMeshComponent* pFarA   = TestAnimationCrowdInternal::createCharacter( manager, "FarA", skeleton, mesh, folder, "Wave", 0.3f );
@@ -370,7 +370,7 @@ SW_TEST_CASE( AnimationCrowdTest, IdleBucketsRetireAfterKeepSeconds )
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager      manager;
-    AnimationSystem&       system   = manager.getAnimationSystem();
+    AnimationSystem&       system   = manager.getSubsystem<AnimationSystem>();
     AnimationCrowdSettings settings = {};
     settings._bucketKeepSeconds     = 1.0f;
     system.setCrowdSettings( settings );

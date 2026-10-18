@@ -173,13 +173,19 @@ namespace sw
         uint8 _bRequired : 1;
         /**
          * @brief 세이브 대상입니다(`SaveGame`).
-         * @details 타입(기반 포함)에 `SaveGame` 프로퍼티가 하나라도 있으면 세이브 직렬화(`SerializeContext::setSaveGameOnly`)는 그 프로퍼티만 쓴다.
+         * @details 타입(기반 포함)에 `SaveGame` 프로퍼티가 하나라도 있으면 세이브 직렬화(`SerializePurpose::SaveGame`)는 그 프로퍼티만 쓴다.
          *          하나도 없는 타입은 모든 프로퍼티를 쓴다(`TypeInfo::hasSaveGameProperty`).
          */
         uint8 _bSaveGame : 1;
         /** @brief 시퀀서 값 트랙이 섞을 수 있는 프로퍼티입니다(`Interp`). 숫자, float2, float3, float4, quaternion 만 허용하며 파서가 나머지를 막습니다. */
-        uint8                  _bInterp       : 1;
-        [[maybe_unused]] uint8 _reservedRoles : 4;
+        uint8 _bInterp : 1;
+        /**
+         * @brief 플레이 중에만 의미가 있는 상태입니다(`RuntimeState`). 저작 저장(`SerializePurpose::Authoring`)은 쓰지 않고, 스냅샷과 세이브는 씁니다.
+         * @details 판정 표는 `SerializerUtil::shouldSerializeProperty` 한 곳이다. 저작 파일을 읽을 때 이 칸이 있으면 로드 오류다(옛 데이터를 다시 쓴다).
+         *          `Transient` · `Required` 와 함께 붙이면 파서가 멈춘다.
+         */
+        uint8                  _bRuntimeState : 1;
+        [[maybe_unused]] uint8 _reservedRoles : 3;
 
         /** @brief 범위와 플래그를 끈 기본값으로 만듭니다. */
         PropertyMetadata() noexcept;

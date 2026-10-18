@@ -651,6 +651,9 @@
 
 약어 철자 · 어휘표 · 접미사는 AGENTS.md "Function names" 와 [코딩 규칙 예시](04_CodingGuidelines.md) 2 절에 있다.
 
+- **저장 목적은 문맥의 필수 값이다(2026-10-18, C-53).** `SerializeContext` 는 `SerializePurpose`(Authoring · Snapshot · SaveGame)를 생성자로만 받고, 기본 문맥도 `getDefault( purpose )` 로 목적을 말해야 얻는다. 필드 규칙(`Transient` · `RuntimeState` · `SaveGame`)은 `SerializerUtil::shouldSerializeProperty` 한 곳이 세 형식(XML · JSON · 바이너리)에 같게 정한다.
+  리플렉션 직렬화기(`XMLSerializer` · `JSONSerializer` · `BinarySerializer`)의 문맥 기본 인자는 `getDefault( SerializePurpose::Authoring )` 이다 — 그 함수들은 파일 입출력 도우미라 저작 형식이 계약이고, 기본 인자가 시그니처에 목적을 적는다. 오브젝트 상태(`ObjectStateSerializer`)는 기본 인자 없이 목적을 받는 `ObjectSaveOptions` · `ObjectLoadContext` 로만 쓰고 읽는다. 아카이브(`Archive::serializeObject`)도 문맥 없는 겹지정을 지웠다(언리얼도 평범한 아카이브가 영속 저장이고 PIE 복제 · 세이브는 플래그로 따로 고른다).
+
 ### 5-5. 그래픽스와 RHI
 
 - **RHI 디바이스 안은 서브시스템으로 만들지 않는다 — 부품은 타입 있는 멤버로 명시 소유하고, 종료 순서는 `IRHIDevice::shutdown` 의 네 단계가 정한다**(2026-10-14, 백로그 C-26 을 닫음).
@@ -1054,7 +1057,8 @@
 - **임포터(`Editor/Common/Asset`)를 라이브러리로 떼지 않습니다**(2026-10-11). 명령 줄 임포트(`App --import-*` · `--check-*`)는 App 이 에디터 모듈을 인스턴스 없이 로드해 C-ABI 진입점 `importEditorAssets` 를 부르고,
   쿠킹은 임포트 산출물만 읽으며, 전용 서버와 Shipping 은 임포트하지 않습니다. 상용 엔진도 에디터 바이너리를 머리 없이 돌립니다(언리얼 커맨드릿, 유니티 `-batchmode`, Godot `--headless --import`).
   `Common/Asset` 은 이미 ImGui 를 모르는 층 1 이라, 에디터 없는 빌드 팜이나 쿠킹 서버에서 임포트할 일이 생기면 그때 정적 라이브러리로 묶는 비용이 작습니다.
-- **imgui-node-editor 의 vcpkg 수정은 업스트림에 PR 을 내지 않고 오버레이로 유지합니다**(2026-10-06). 외부에 공개하는 일은 사용자가 요청할 때만 합니다.
+- **imgui-node-editor 는 vcpkg 내장 포트를 그대로 씁니다**(2026-10-18). `<exception>` 패치 오버레이는 libc++ 19+(macOS) 때문이었고 macOS 는 지원 대상이 아니어서 지웠습니다.
+  다른 세 패치는 내장 포트(0.9.3#4)에 이미 있습니다. 업스트림에 PR 은 내지 않습니다(2026-10-06 사용자 결정).
 - **DPI 150 % 는 대체 테스트로 확인하고, 글자 래스터 선명도만 실제 모니터에서 확인합니다**(2026-10-06). 남은 확인은 [백로그](backlog/ui.md) `B-8` 에 있습니다.
 - **에디터 보강의 결정 열다섯 개(D1 ~ D15)**(2026-10-06, 사용자 지시 "특별한 의도가 없으면 상용 엔진과 비교해 나은 쪽"으로 추천을 정함). 단위는 모두 적용했고 계획 문서는 지웠습니다(남은 로드맵은 [백로그](backlog/editor.md) `D3-1`).
   - **확장 지점**(D1 ~ D4): EditorModule 을 SHARED DLL 로 바꾸고 `SW_EDITOR_API` 로 내보냅니다. GameFramework · 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Editor/<이름>/` 의 `GF_EditorPlugIn_<이름>`(2026-10-13 `Base/Editor` · 키트 안 `Editor/` 에서 옮김 — 런타임 층 `Base/` 밖의 별도 축이라 한 곳에 모읍니다), 게임의 것은 `SWGameEditor` 이고 매니페스트 종류는 `EditorExtension`(Dev 전용)입니다.
@@ -1182,6 +1186,8 @@
 | 리소스 | 합성 리그는 생성기(`Scripts/dev/MakeSyntheticRig.py`, 결정적)가 원본이다. 임의 인자의 결과는 커밋하지 않고 명령으로 다시 만든다. 테스트 · 벤치가 읽는 대표 넷(본 20 · 150 biped, 60 quadruped, 300 multileg, 클립 둘 · 모프 둘, 합 953 KB)만 쿠킹에서 빠지는 원본 폴더 `Resource/game/empty/rigs_raw/` 에 커밋하고, PythonTest 가 생성기 출력과 커밋한 바이트를 견준다. 런타임 결과(.mesh)는 커밋하지 않고 테스트가 임포터로 그 자리에서 읽는다. 원본 폴더는 배포본 팩에 없으므로 테스트는 `.glb` · `.rig.json` 을 `ResourceIO` 가 아닌 파일 읽기(`FileUtil`)로 읽고, 데이터 스키마 테스트는 배포본에서 팩에 든 파일만 입력으로 삼는다. | 한도 1 MB 안이다. .mesh 는 인덱스 없는 삼각형 목록이라 몇 배 크다(2026-10-17). | 추 |
 | 리소스 | Quaternius 에셋은 쓰지 않는다. 팩 페이지는 CC0라 하지만 같은 사이트 `license.html`이 에셋 재배포를 제한해서, 공개 저장소에 넣는 것이 재배포일 수 있다. 한글 글꼴은 OFL이라 넣지 않고 OS 글꼴 대체를 유지한다. | 공개 저장소 포함은 재배포일 수 있다. 확인을 기다리지 않고 닫는다(2026-10-17). | 사 |
 | 리소스 | 픽셀 아트(16 px 세트, `engine/textures_raw/pixel/`)는 밉 없이 비압축 R8G8B8A8 sRGB 로 굽는다(`Pixel_Art` 임포트 규칙, `texture-pixel-art` 검사). `texture-limits` 의 2 의 거듭제곱은 밉이 있는 텍스처에만 요구한다(`mipped_power_of_two`) — 2 의 거듭제곱은 밉 사슬의 요구라, 밉 없는 UI 이미지 · 아틀라스를 제외 목록으로 하나씩 빼던 것을 규칙 자체로 바꿨다. | 유니티 픽셀 아트 권장(Filter Point · Compression None · 밉 끔), 언리얼 Paper2D 의 2D 픽셀 아트 설정과 같다. BC 는 4x4 블록이 이웃 색을 섞고 변이 4 의 배수여야 해 918x203 같은 아틀라스를 못 담는다. 도입 13.7 MB(원본 0.5 + DDS 13.2, 2026-10-17). | 추 |
+| 리소스 C-50 | 이미지 도입 용량 예산은 원본과 쿠킹 DDS 를 합쳐 150MB 까지다. 이 줄이 예산의 정본이다. 2026-10-17 도입분 120.7MB(원본 44.2 + DDS 76.4)는 그 안이라 에셋을 빼지 않는다. | 원본만 세면 재질 31 → 57MB, 파티클 4.8 → 27MB 처럼 DDS 가 몇 배로 불어난 것이 보이지 않는다(2026-10-18). | 사 |
+| 리소스 C-44 | 도구가 `Resource/` 에 두는 출처 목록은 JSON(`<도메인>/<종류>.sources.json`, 공용 오디오 · 엔진 이미지가 같은 키)으로 통일한다. TOML 은 쓸 이유가 없어 옛 리더 · 변환 없이 데이터를 다시 썼다. credits 표 패턴은 경로 마디 단위(`*` 는 폴더를 넘지 않고 `**` 만 넘는다)이고 한 파일에 줄이 둘 이상 맞으면 오류다. | 형식이 갈리면 게이트가 둘을 읽어야 하고 파이썬 3.11(`tomllib`)을 요구했다. 넓은 `*` + 첫 매칭은 새 팩 파일이 다른 팩의 출처로 조용히 붙게 했다(2026-10-17 `res3`). | 사 |
 | 게임 | 탑다운 RPG 2D 데모는 새 게임 `PixelTown`(쓰던 게임이 없던 `GF_Overworld` 키트를 씀)으로 둔다. 걷는 맵은 씬의 `TileMapRendererComponent` 가 읽은 맵 · 타일셋을 그대로 받고, 막힘의 정본은 타일셋 브러시 `solid` 하나다(소품 레이어도 `TileMap::addSolidLayer` 로 같은 규칙, 저장되는 `Walkable` 플래그와 섞지 않음). 주민은 대화 러너를 단 오브젝트이고 대화는 디렉터 플러시(게임 스레드)에서 돈다. 2D 픽셀 화면은 카메라 후처리를 끈다. | 2D 게임이 없었고 Empty 의 `twod` 는 플랫포머 쇼케이스라 RPG 규칙을 얹으면 템플릿이 흐려진다. 유니티 TilemapCollider2D · Godot TileSet physics layer 처럼 충돌을 타일 데이터 하나에 둔다. 톤 매핑이 픽셀 아트 원색을 바꿨다(풀 133,166,67 → 118,128,77). | 추 |
 | D2-13 | 빛 컬링은 2D 타일 대신 3D 클러스터 하나로 하고(16×9×24 지수 슬라이스에서 시작), 빛 목록 형식 `LightGrid`를 먼저 고정한다. 생산자는 CPU로 먼저 만들고 GPU 컴퓨트 생산자도 만든다(개발 빌드는 `gv`로 고르고 Shipping은 GPU 고정). 목표는 카메라당 1024개(현재 상한), 측정 뒤 조정. 칸 밴드 확장은 D2-6.3의 16칸 지도 재작성과 한 번에 한다. "빛이 없으면 키라이트" 셰이더 폴백은 없앤다 — 3D 씬은 방향광이나 스카이를 데이터로 갖고 없으면 어둡게 그린다. 빛 순회는 커서 API(`swBeginLights` · `swNextLight`) 하나로 모은다. 첫 단계(S0)는 폴백 제거 + 커서 API이며 골든 이미지가 바이트까지 같아야 한다. | 2D 타일은 렌더 그래프에 컴퓨트 패스 상태가 없고 반투명 · 파티클 · 프로브를 못 덮는다. 컬링을 넣으면 폴백이 빈 클러스터마다 켜진다. 학습용이라 CPU · GPU 두 경로를 둔다(D2-11과 같은 방침). | 추 |
 | D1-7 | 월드는 Scene을 유지하고 셀을 활성 씬에 더해 올린다(`World` 타입은 필요가 확인되면). 편집은 한 씬으로 하고 쿠킹 때 위치와 격자 설정으로 셀 파일을 나눈다(셀은 계산, 항상 올라 있을 것만 "공간 로드 안 함" 표시). 셀을 넘는 참조는 같은 셀이나 항상 올라 있는 오브젝트만 허용하고 그 밖은 쿠킹 오류로 멈춘다(조용히 null로 바꾸지 않는다). 서버도 플레이어 주변 셀만 스트리밍한다. 첫 대상은 WildWest. HLOD는 메시 LOD 뒤. 선행으로 정점 풀 부분 갱신(C-43)을 먼저 한다. | 언리얼 World Partition의 런타임 격자와 같은 자리. 셀별 매니저는 셀 사이 물리가 끊긴다. | 추 |

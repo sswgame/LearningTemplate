@@ -106,7 +106,6 @@ namespace sw
         , _primitiveRegistry{}
         , _componentRegistry{}
         , _cameraRegistry{}
-        , _animationSystem{}
         , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
         , _store{ *this, _tickScheduler, _structuralChangeBuffer }
         , _sceneScope{ services._pEngineSubsystems }
@@ -118,7 +117,6 @@ namespace sw
         , _bRunningFrameSystems{ false }
         , _bPhysicsStepEnabled{ true }
     {
-        _animationSystem.setObjectManager( this );
         // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`). 씬 범위가 소유하고 의존 순서로 세운다.
         const vector<const SceneServiceRegistration*>& listRegistration = SceneServiceRegistry::getAll();
         vector<SceneServiceEntry>                      listCreated;

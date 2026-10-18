@@ -24,7 +24,7 @@
 - **SaveGame**: 세이브 파일입니다(`SaveGame.h:35`).
 
 `SerializeContext` 는 목적을 생성자 인자로 받고 기본값이 없습니다. `setSaveGameOnly` 와 `isSaveGameOnly` 는 지우고 `getPurpose()` 하나로 바꿉니다.
-`ObjectSaveOptions` 도 기본 생성자를 지우고 `ObjectSaveOptions::forAuthoring( idMap )`, `forSnapshot()`, `forSaveGame()` 으로만 만듭니다. `saveTo*` 의 `options` 기본 인자를 지웁니다.
+`ObjectSaveOptions` 와 `ObjectLoadContext` 도 기본 생성자를 지우고 목적을 받는 생성자(`ObjectSaveOptions{ SerializePurpose::Authoring }`)로만 만듭니다. `saveTo*` 의 `options` 와 `loadFrom*` 의 `context` 기본 인자를 지웁니다.
 그러면 목적을 말하지 않은 저장은 컴파일되지 않습니다.
 
 ### 2.2 필드 플래그
@@ -61,17 +61,14 @@ Authoring 목적으로 읽을 때 파일에 `RuntimeState` 필드가 있으면 �
 
 ## 4. 단위
 
-동시 빌드는 둘까지입니다. A1 과 A2 는 폴더가 겹치지 않아 병렬로 할 수 있습니다. A3 은 둘이 병합된 뒤에 합니다.
+A1 ~ A3(애노테이션, 필수 목적 문맥과 판정 표, 오브젝트 상태 옵션의 목적 필수화)은 들어갔습니다. 게임 상태 봉투는 핫 리로드(`serializeState`, Snapshot)와 세이브 파일(`saveStateToFile`, SaveGame)이 함께 쓰므로 부르는 쪽이 목적을 넘깁니다(`captureSnapshot( purpose, … )`).
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| A1 | `RuntimeState` 애노테이션, 파서의 모순 조합 오류, 메타데이터 비트, 문서 생성 | `Tools/ReflectionParser/`, `Engine/Reflection/`(`ReflectionTypes.h`, `ReflectionAnnotationKeys.h`, `ReflectionCore.cpp`, `ReflectionDocWriter.cpp`), 파서 테스트 | 없음 | `ReflectionParserTest` 의 오류 테스트 패턴, `-L nogpu` | 없음 |
-| A2 | `SerializePurpose` 와 필수 목적 문맥, `shouldSerializeProperty` 표, `setSaveGameOnly` 제거, 저작 읽기의 런타임 필드 오류 | `Engine/Serialization/Base/`, `Engine/Serialization/Format/`, `GameFramework/Base/Foundation/Framework/Save/SaveGame.h`, 직렬화 테스트 | 없음 | 2.2 표의 네 행 × 세 목적 × 세 형식 테스트 | 없음 |
-| A3 | `ObjectSaveOptions` 의 목적 필수화와 호출부 약 25 곳 | `Engine/Object/GameObject/Serialization/`, `Engine/Scene/`, `Engine/Object/Prefab/`, `Editor/Common/Commands/Scene/`, `Editor/Common/Workspace/EditorPlaySession.cpp`, `Editor/SelfTest/`, `GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp` | A1, A2 | 씬 저장과 로드 왕복, 프리팹 오버라이드 테스트, 에디터 시나리오(플레이 뒤 저장), 쿠킹 결과가 전과 같은지 비교 | 없음 |
 | A4 | 런타임 필드에 `RuntimeState` 를 붙이고 데이터를 다시 씁니다. `GimmickCircuitComponent::_state` 부터 하고, 디렉터와 기믹 컴포넌트의 플레이 중 필드를 찾아 함께 붙입니다 | `GameFramework/Base/Gameplay/Gimmick/`, 찾은 컴포넌트, `Resource/` 의 씬과 프리팹 | A3 | 기믹 회로 세이브 테스트(결정 기록 5-12 리플렉션 행), 전 팩 쿠킹, 대표 셋 실행 | 없음 |
 
-A3 의 호출부 목록은 2026-10-18 `grep` 기준입니다. `GameInstanceBase` 의 게임 상태 봉투가 핫 리로드와 세이브에 함께 쓰이는지는 A3 작업자가 확인하고, 함께 쓰이면 부르는 쪽이 목적을 넘기게 합니다.
-A4 의 필드 찾기는 읽기만 하는 일이라 `scout` 에 맡깁니다.
+A4 의 필드 찾기는 읽기만 하는 일이라 `scout` 에 맡깁니다. `RuntimeState` 와 `SaveGame` 을 함께 붙이면 그 타입이 옵트인 세이브가 되어 나머지 필드가 세이브 파일에서 빠집니다.
+씬 오브젝트 전체를 세이브에 싣는 지금 구조에서는 컴포넌트 필드에 `SaveGame` 을 붙이지 않고 `RuntimeState` 만 붙입니다(세이브는 옵트인이 아닌 타입의 `RuntimeState` 를 씁니다).
 
 ## 5. 사용자 결정
 

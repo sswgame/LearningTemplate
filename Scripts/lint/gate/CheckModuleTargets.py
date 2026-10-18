@@ -114,8 +114,12 @@ def readManifests(repositoryRoot: Path) -> tuple[list[TargetOwner], dict[str, li
         except (OSError, ValueError) as error:
             listViolation.append(f"{relative}: JSON 을 읽지 못했습니다 ({error})")
             continue
-        name = str(data.get("_name", ""))
-        kind = str(data.get("_kind", ""))
+        listMissing = [key for key in ("_name", "_kind") if key not in data]
+        if listMissing:
+            listViolation.append(f"{relative}: 필수 키 {listMissing} 가 없습니다")
+            continue
+        name = str(data["_name"])
+        kind = str(data["_kind"])
         listTarget = data.get("_listTarget")
         if isinstance(listTarget, list) is False or len(listTarget) == 0:
             listViolation.append(f"{relative}: `_listTarget` 이 없습니다 — [\"Client\", \"Server\"](공유) · [\"Server\"] · [\"Client\"] 중 하나를 적습니다")
@@ -130,7 +134,10 @@ def readManifests(repositoryRoot: Path) -> tuple[list[TargetOwner], dict[str, li
         owner = TargetOwner(label=name, folder=folder, setTarget=setTarget)
         listOwner.append(owner)
         mapOwnerByName.setdefault(name, []).append(owner)
-        listDependencyName = [str(entry.get("_name", "")) for entry in data.get("_listDependency", []) if isinstance(entry, dict)]
+        listDependency = [entry for entry in data.get("_listDependency", []) if isinstance(entry, dict)]
+        if any("_name" not in entry for entry in listDependency):
+            listViolation.append(f"{relative}: `_listDependency` 의 항목에 `_name` 이 없습니다")
+        listDependencyName = [str(entry["_name"]) for entry in listDependency if "_name" in entry]
         listDependencyRow.append((relative, owner, listDependencyName))
     return listOwner, mapOwnerByName, listDependencyRow, listViolation
 

@@ -12,6 +12,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourceIO.h"
 
 namespace sw
@@ -150,7 +151,7 @@ namespace sw
     void SkeletalMeshComponent::onRegister( GameObjectManager& manager )
     {
         MeshComponent::onRegister( manager );
-        _pAnimationSystem = &manager.getAnimationSystem();
+        _pAnimationSystem = &manager.getSubsystem<AnimationSystem>();
         _pAnimationSystem->registerUnit( this );
         _pAnimationSystem->registerLODClient( &_lodClient );
         _updatePhase = SkeletalMeshComponentInternal::makeUpdatePhase( getHandle().componentID() );
@@ -158,9 +159,9 @@ namespace sw
 
     void SkeletalMeshComponent::onUnregister( GameObjectManager& manager )
     {
-        leaveCrowd( &manager.getAnimationSystem().getCrowd() );
-        manager.getAnimationSystem().unregisterLODClient( &_lodClient );
-        manager.getAnimationSystem().unregisterUnit( this );
+        leaveCrowd( &manager.getSubsystem<AnimationSystem>().getCrowd() );
+        manager.getSubsystem<AnimationSystem>().unregisterLODClient( &_lodClient );
+        manager.getSubsystem<AnimationSystem>().unregisterUnit( this );
         _pAnimationSystem = nullptr;
         MeshComponent::onUnregister( manager );
     }

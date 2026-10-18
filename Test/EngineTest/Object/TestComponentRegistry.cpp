@@ -220,12 +220,12 @@ SW_TEST_CASE( ComponentRegistryTest, HandlesOfRemovedComponentsAreNotRegistered 
     SW_EXPECT_FALSE( manager.getComponentRegistry().isRegistered<LightComponent>( oldHandle, shaderslot::kLightTypeSpot ) );
 
     // 상태를 받아 두고 컴포넌트를 모두 지운 뒤 복원한다 — 모듈 리로드가 컴포넌트를 내리고 다시 세우는 모양.
-    const string state = ObjectStateSerializer::saveToXMLString( pObject );
+    const string state = ObjectStateSerializer::saveToXMLString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } );
     pObject->clearComponents();
     SW_EXPECT_FALSE( manager.getComponentRegistry().isRegistered<LightComponent>( oldHandle, shaderslot::kLightTypePoint ) );
     SW_EXPECT_TRUE( manager.getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypePoint ).empty() );
 
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pObject, state ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pObject, state, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     const ComponentRegistry::View<LightComponent> listLamp = manager.getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypePoint );
     SW_ASSERT_EQUAL( size_t( 1 ), listLamp.size() );
     SW_EXPECT_TRUE( listLamp[0] == pObject->getComponent<PointLightComponent>() );

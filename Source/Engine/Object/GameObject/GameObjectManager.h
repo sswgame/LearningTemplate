@@ -28,7 +28,6 @@
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
-#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 
 namespace sw
 {
@@ -326,13 +325,6 @@ namespace sw
         const PrimitiveRegistry& getPrimitiveRegistry() const { return _primitiveRegistry; }
 
         /**
-         * @brief 애니메이션 유닛(`SkeletalMeshComponent`)을 평가하는 시스템입니다.
-         * @details PrimitiveRegistry 와 같은 자리입니다 — 유닛은 등록 때 이것을 받고, 매니저는 tick 의 단계(틱 뒤 · 트랜스폼 플러시 앞)만 정합니다.
-         */
-        AnimationSystem&       getAnimationSystem() { return _animationSystem; }
-        const AnimationSystem& getAnimationSystem() const { return _animationSystem; }
-
-        /**
          * @brief 타입별 컴포넌트 레지스트리입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
          * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 **찾지** 않고, 컴포넌트가 붙을 때 **등록받습니다** —
          *          `forEachComponentOfType` 은 타입별 버킷을 돌지만 공유 잠금을 잡고 순서를 약속하지 않으므로, 등록 순서 · 채널 · 잠금 없는 읽기가 필요한
@@ -423,7 +415,7 @@ namespace sw
         /**
          * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
          * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
-         *          (`manager.getSubsystem<sw::ScenePhysics>()` · `getSubsystem<sw::SceneAudio>()` · `getSubsystem<SceneNavigation>()`).
+         *          (`manager.getSubsystem<sw::ScenePhysics>()` · `getSubsystem<sw::SceneAudio>()` · `getSubsystem<SceneNavigation>()` · `getSubsystem<AnimationSystem>()`).
          */
         template <typename TService>
         TService& getSubsystem()
@@ -568,8 +560,6 @@ namespace sw
         ComponentRegistry _componentRegistry;
         /** @brief 카메라 컴포넌트의 레지스트리입니다. */
         CameraRegistry _cameraRegistry;
-        /** @brief 애니메이션 시스템입니다. */
-        AnimationSystem _animationSystem;
         /** @brief 컴포넌트 틱 디스패치(틱 레지스트리 · 그룹 포크-조인 · 선행 조건 스테이지)입니다. */
         SceneTickScheduler _tickScheduler;
         /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */

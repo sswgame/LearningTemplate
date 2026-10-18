@@ -94,6 +94,9 @@ namespace sw
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
         , _gameScope{}
         , _loadedAudioEvents{}
+        , _pUISystem{ nullptr }
+        , _pUserSettings{ nullptr }
+        , _pInput{ nullptr }
         , _bResumingWorld{ SW_FALSE }
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
@@ -150,15 +153,36 @@ namespace sw
         return pSceneManager->findActiveObjectManager();
     }
 
-    bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
+    bool GameInstanceBase::bindEngineServices( const IWindow* pWindow )
     {
+        _pUISystem     = nullptr;
+        _pUserSettings = nullptr;
+        _pInput        = nullptr;
         // 네트워크 세션은 필수 엔진 서비스다(`EngineServiceList.xxx` 의 `Required` 행). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
-        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
-        if ( pNetSession == nullptr )
+        if ( game::findSubsystem<GameNetSession>() == nullptr )
         {
             SW_LOG_ERROR( "Game instance cannot start - the required engine service GameNetSession is not bound to the game services" );
             return false;
         }
+        // UI · 사용자 설정은 Client 호스트 서비스다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
+        UISystem*            pUISystem     = game::findSubsystem<UISystem>();
+        UserSettingsManager* pUserSettings = game::findSubsystem<UserSettingsManager>();
+        if ( pWindow != nullptr && ( pUISystem == nullptr || pUserSettings == nullptr ) )
+        {
+            SW_LOG_ERROR( "Game instance cannot start - a windowed (client) host must bind the engine services UISystem and UserSettingsManager to the game services" );
+            return false;
+        }
+        _pUISystem     = pUISystem;
+        _pUserSettings = pUserSettings;
+        _pInput        = game::findSubsystem<InputManager>();
+        return true;
+    }
+
+    bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
+    {
+        // 엔진 서비스는 여기서 한 번 받아 든다 — 아래에서 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 다시 찾지 않는다. 필수 서비스가 없으면 아무것도 걸기 전에 멈춘다.
+        if ( bindEngineServices( pWindow ) == false )
+            return false;
         _pWindow        = pWindow;
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
@@ -174,21 +198,20 @@ namespace sw
             _gameScope.setParentScope( game::findGameScope() );
         game::setGameScope( &_gameScope );
         bindScopedService( &_bootstrap._data );
-        applyBootstrap();
+        const bool bBootstrapApplied = applyBootstrap();
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다 — 첫 씬 요청(onInitialize 안)이 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다.
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
         // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
-        pNetSession->openFromLaunch();
-        // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다).
-        const bool bInitialized = loadAudioEvents() && onInitialize();
+        game::getSubsystem<GameNetSession>().openFromLaunch(); // `bindEngineServices` 가 있음을 확인했다
+        // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
+        const bool bInitialized = bBootstrapApplied && loadAudioEvents() && onInitialize();
         registerSessionCommands();
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
-        // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다.
-        UserSettingsManager* pUserSettings = game::findSubsystem<UserSettingsManager>();
-        if ( pUserSettings != nullptr )
-            pUserSettings->reapplyAll();
+        // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다. 창이 없는 호스트는 사용자 설정이 없다.
+        if ( _pUserSettings != nullptr )
+            _pUserSettings->reapplyAll();
         return bInitialized;
     }
 
@@ -205,11 +228,14 @@ namespace sw
         _gameScope.getCollection().shutdownAll();
         detachGameScope();
         _listPendingSceneLoad.clear();
-        _pWindow    = nullptr;
-        _pRHIDevice = nullptr;
+        _pWindow       = nullptr;
+        _pRHIDevice    = nullptr;
+        _pUISystem     = nullptr;
+        _pUserSettings = nullptr;
+        _pInput        = nullptr;
     }
 
-    void GameInstanceBase::applyBootstrap()
+    bool GameInstanceBase::applyBootstrap()
     {
         const GameSettings& settings = _bootstrap._data;
 
@@ -218,14 +244,17 @@ namespace sw
             SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", settings._localizationProject.c_str() );
 
         // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
-        if ( settings._inputMap.empty() == false )
+        if ( settings._inputMap.empty() )
+            return true;
+        if ( _pInput == nullptr )
         {
-            InputManager* pInput = game::findSubsystem<InputManager>();
-            if ( pInput == nullptr )
-                SW_LOG_WARNING( "GameSettings input map '%#' is not loaded - no InputManager service", settings._inputMap.c_str() );
-            else if ( pInput->getInputMap().loadFromResource( settings._inputMap ) == false )
-                SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
+            SW_LOG_ERROR( "GameSettings input map '%#' needs the engine service InputManager, which is not bound to the game services - the game does not start",
+                          settings._inputMap.c_str() );
+            return false;
         }
+        if ( _pInput->getInputMap().loadFromResource( settings._inputMap ) == false )
+            SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
+        return true;
     }
 
     bool GameInstanceBase::loadAudioEvents()
@@ -298,19 +327,18 @@ namespace sw
 
     void GameInstanceBase::registerSessionCommands()
     {
-        UISystem* pUI = game::findSubsystem<UISystem>();
-        if ( pUI == nullptr || _bootstrap._data._titleScene.empty() )
+        // 창이 없는 호스트(전용 서버 · 테스트)는 UI 가 없다(`bindEngineServices`) — 타이틀로 돌아갈 메뉴도 없다.
+        if ( _pUISystem == nullptr || _bootstrap._data._titleScene.empty() )
             return;
-        pUI->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                  SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        _pUISystem->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                         SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
     }
 
     void GameInstanceBase::unregisterSessionCommands()
     {
-        UISystem* pUI = game::findSubsystem<UISystem>();
-        if ( pUI != nullptr )
-            pUI->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                        SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        if ( _pUISystem != nullptr )
+            _pUISystem->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                               SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
     }
 
     void GameInstanceBase::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
@@ -385,7 +413,7 @@ namespace sw
         onUpdate( deltaTime );
     }
 
-    bool GameInstanceBase::serializeSceneObjects( vector<uint8>& outBytes )
+    bool GameInstanceBase::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes )
     {
         GameObjectManager* pObjectManager = findActiveObjectManager();
         if ( pObjectManager == nullptr )
@@ -408,7 +436,7 @@ namespace sw
         {
             ObjectStateSerializer::writeIdentity( ObjectStateSerializer::captureIdentity( pObj ), outBytes );
             // 개수를 이미 앞에 적었으므로 하나라도 못 쓰면 개수와 본문이 어긋난다. 그래서 통째로 실패로 처리한다.
-            if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes ) == false )
+            if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes, ObjectSaveOptions{ purpose } ) == false )
             {
                 SW_LOG_ERROR( "Scene object '%#' could not be serialized - the snapshot is not taken", pObj->getName().c_str() );
                 outBytes.clear();
@@ -419,7 +447,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format,
+    bool GameInstanceBase::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
                                                     vector<ComponentStateStore::SavedComponentID>& outListRemap )
     {
         outListRemap.clear();
@@ -473,8 +501,7 @@ namespace sw
 
             GameObject*       pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithID( hashed_string( GameObject::kDefaultName ), identity._objectID )
                                                       : pObjectManager->createGameObject();
-            ObjectLoadContext context{};
-            context._pIdentity     = bRestoreIdentity ? &identity : nullptr;
+            ObjectLoadContext context{ purpose, bRestoreIdentity ? &identity : nullptr };
             context._pBatch        = &batch;
             context._savedID       = identity._objectID;
             const size_t readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, context );
@@ -539,6 +566,16 @@ namespace sw
 
     bool GameInstanceBase::serializeState( void* pOutBuffer, uint32* pInOutSize )
     {
+        return writeStateEnvelope( SerializePurpose::Snapshot, pOutBuffer, pInOutSize );
+    }
+
+    bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
+    {
+        return readStateEnvelope( SerializePurpose::Snapshot, pInBuffer, size );
+    }
+
+    bool GameInstanceBase::writeStateEnvelope( SerializePurpose purpose, void* pOutBuffer, uint32* pInOutSize )
+    {
         if ( pInOutSize == nullptr )
             return false;
 
@@ -558,7 +595,7 @@ namespace sw
         // 다만 반환값을 흔적 없이 버리면, 씬이 있어야 할 상황에서 오브젝트가 하나도 없는 세이브가 나와도
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
         vector<uint8> bytesScene;
-        if ( serializeSceneObjects( bytesScene ) == false )
+        if ( serializeSceneObjects( purpose, bytesScene ) == false )
             SW_LOG_INFO( "씬 오브젝트 스냅샷이 비었습니다 — 활성 씬이 없거나 게임 서비스가 바인딩되지 않았습니다. 커스텀 상태만 저장됩니다." );
         arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
 
@@ -569,7 +606,7 @@ namespace sw
         {
             // 값 하나라도 싣지 못하면 세이브 전체를 실패로 돌려준다. 써 두면 로드에서 그 값이 빠진다. 이유는 직렬화기가 알린다.
             vector<uint8> bytesState;
-            if ( BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState ) == false )
+            if ( BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState, SerializeContext::getDefault( purpose ) ) == false )
             {
                 _pComponentStateStore->clear();
                 return false;
@@ -602,7 +639,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
+    bool GameInstanceBase::readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size )
     {
         if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
             return false;
@@ -641,7 +678,7 @@ namespace sw
             return false;
 
         vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
-        if ( bytesScene.empty() == false && deserializeSceneObjects( bytesScene.data(), bytesScene.size(), format, listComponentIDRemap ) == false )
+        if ( bytesScene.empty() == false && deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, listComponentIDRemap ) == false )
             return false;
 
         // 2) 파생 클래스 커스텀 리플렉션 상태 복원
@@ -655,7 +692,7 @@ namespace sw
             void*           pStateInstance = getStateInstance();
             if ( pStateTypeInfo != nullptr && pStateInstance != nullptr )
             {
-                if ( BinarySerializer::deserialize( pStateInstance, *pStateTypeInfo, bytesState.data(), bytesState.size() ) == false )
+                if ( BinarySerializer::deserialize( pStateInstance, *pStateTypeInfo, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
                     return false;
             }
         }
@@ -684,21 +721,21 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::captureSnapshot( vector<uint8>& outBytes )
+    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
         uint32 size = 0;
-        if ( serializeState( nullptr, &size ) == false || size == 0 )
+        if ( writeStateEnvelope( purpose, nullptr, &size ) == false || size == 0 )
             return false;
 
         outBytes.resize( size );
-        return serializeState( outBytes.data(), &size );
+        return writeStateEnvelope( purpose, outBytes.data(), &size );
     }
 
-    bool GameInstanceBase::restoreSnapshot( const vector<uint8>& inBytes )
+    bool GameInstanceBase::restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes )
     {
         if ( inBytes.empty() )
             return false;
-        return deserializeState( inBytes.data(), static_cast<uint32>( inBytes.size() ) );
+        return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) );
     }
 
     bool GameInstanceBase::saveStateToFile( string_view filePath )
@@ -710,7 +747,7 @@ namespace sw
             return false;
         }
         vector<uint8> snapshotBytes;
-        const bool    bSaved = captureSnapshot( snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
+        const bool    bSaved = captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
 
         SaveGameSavedEvent event{};
         event._savePath = string( path );
@@ -728,7 +765,7 @@ namespace sw
             return false;
         }
         vector<uint8> snapshotBytes;
-        const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( snapshotBytes );
+        const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( SerializePurpose::SaveGame, snapshotBytes );
 
         SaveGameLoadedEvent event{};
         event._savePath = string( path );

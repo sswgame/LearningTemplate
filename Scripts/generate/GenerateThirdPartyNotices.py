@@ -121,12 +121,13 @@ def readStatusDependsInternal(statusPath: Path, triplet: str) -> dict[str, list[
             if ": " in line and line[0] != " ":
                 key, value = line.split(": ", 1)
                 mapField[key] = value
-        if mapField.get("Architecture") != triplet or mapField.get("Status", "").endswith("installed") is False:
+        if mapField.get("Architecture") != triplet or mapField["Status"].endswith("installed") is False:
             continue
-        if "not-installed" in mapField.get("Status", ""):
+        if "not-installed" in mapField["Status"]:
             continue
-        listDepends = mapDepends.setdefault(mapField.get("Package", ""), [])
-        for item in mapField.get("Depends", "").split(","):
+        listDepends = mapDepends.setdefault(mapField["Package"], [])
+        # 의존이 없는 포트에는 Depends 줄이 없다.
+        for item in (mapField["Depends"].split(",") if "Depends" in mapField else []):
             name = re.split(r"[\[:\s(]", item.strip(), maxsplit=1)[0]
             if name:
                 listDepends.append(name)

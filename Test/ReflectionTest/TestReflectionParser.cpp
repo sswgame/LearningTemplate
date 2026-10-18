@@ -785,6 +785,60 @@ SW_TEST_CASE( ReflectionParserTest, RenameRedirectMistakesStopTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] `RuntimeState` 를 `Transient` 나 `Required` 와 함께 붙이면 생성이 멈추고, 혼자 붙이면 메타데이터 비트로 나갑니다
+ * @details `RuntimeState` 는 저작 저장만 빼는 필드다. 어디에도 쓰지 않는 `Transient`, 데이터 파일이 반드시 적는 `Required` 와는 뜻이 모순이다.
+ */
+SW_TEST_CASE( ReflectionParserTest, RuntimeStateContradictionsStopTheBuild )
+{
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "RuntimeStateMistakeSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct RuntimeStateMistake\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( RuntimeState, Transient )\n"
+                                                       "\t\tint32 _hidden{ 0 };\n"
+                                                       "\t\tPROPERTY( RuntimeState, Required )\n"
+                                                       "\t\tint32 _needed{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "RuntimeState, Transient ) on 'sw::RuntimeStateMistake::_hidden'" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "RuntimeState, Required ) on 'sw::RuntimeStateMistake::_needed'" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp.empty() || run._listGeneratedCpp[0].empty(), "an errored header must not emit code" );
+
+    const ParserRunResult goodRun = runParserOnTempHeader( parserExe, "RuntimeStateGoodSample",
+                                                           "#pragma once\n"
+                                                           "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                           "namespace sw\n"
+                                                           "{\n"
+                                                           "\tREFLECT()\n"
+                                                           "\tstruct RuntimeStateGood\n"
+                                                           "\t{\n"
+                                                           "\t\tREFLECT_BODY();\n"
+                                                           "\t\tPROPERTY( RuntimeState, SaveGame )\n"
+                                                           "\t\tint32 _state{ 0 };\n"
+                                                           "\t};\n"
+                                                           "}\n" );
+    SW_ASSERT_TRUE_MSG( goodRun._exitCode == 0, goodRun._log.c_str() );
+    SW_ASSERT_TRUE( goodRun._listGeneratedCpp.empty() == false );
+    const sw::string& generated = goodRun._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bRuntimeState" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bSaveGame" ) != sw::string::npos, generated.c_str() );
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] 생성자 호출기는 받은 저장소에 `sw_placement_new` 로 만든다 — 맨 `new ( p )` 를 내지 않는다
  * @details 손으로 쓴 코드는 `Style/PlacementNew` 가 막지만 생성 코드는 그 린트 밖이다. 생성기가 같은 모양을 낸다.
  */

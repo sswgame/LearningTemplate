@@ -18,9 +18,6 @@
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 든다) · `Habitat`(CreatureLife) · NetConnection 메시지 버퍼 재사용 ·
     게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`, NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이.
 
-- `C-5` [정리] **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).**
-  ⑤ `Engine.cpp` 의 절반이 기동 단계 구조체(낮음).
-
 - `C-7` [정리] **조건부 후보 묶음.** 병렬 틱 임계값의 교차점 · GameObject 레이아웃 · 적응형 틱 임계값 · 스폰 비용(~1.1 us, 잠금 여섯) · 시퀀서 성능 수치. TickItem 인라인
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다. 무버 일괄 틱의 다음 단계는 무버 데이터를 타입 배열(SoA)로 옮겨 일괄 함수가 컴포넌트를 읽지 않게 하는 것(대상 씬 컴포넌트의 칸 번호를 원소에) — 일괄 틱은 `GT.Frame` p99 0.75 배로 들어갔고 더 줄일 필요가 보이면 한다. 파괴 잎 셰이프는 쿠킹 때 Jolt 셰이프를 `.fracture` 에 싣는 안(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리)을 Physics 에 셰이프 직렬화 함수가 생기면 다시 본다.
 
@@ -32,8 +29,8 @@
   씬 서비스(`ISceneService`)로 옮겨 코어 헤더가 Physics · Audio · Navigation 을 퍼뜨리지 않는다(엔진 분할 2 단계).
 
 - `C-19` [정리] **구조 리팩토링의 남은 후보.**
-  - **씬 · UI 쪽의 엔진 창구 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `WidgetComponent`(`engine::findSubsystem<UISystem>()`) · `UISystem` · `FontService`,
-    `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성. 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
+  - **씬 · UI 쪽의 엔진 창구 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `FontService`, `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성
+    (`WidgetComponent` · `UISystem` · `SceneCooker` 는 끝났다 — 씬의 엔진 범위 · 기동 때 받은 출처 · 넘겨받은 묶음을 쓴다). 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
 
 - `C-22` [정리] **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
@@ -47,13 +44,10 @@
   ① 입력 액션 이름의 생성자 기본값(`PawnComponent` 의 `Move` · `Look`, 카메라 액션)은 게임마다 맵이 달라 검증 함수로 못 본다 — 빙의 · 프리셋 때 런타임 경고가 본다.
   ② 카탈로그 안 id 참조는 팩 둘(`starskirmish-unit-tree` · `nilecity-goods`)만 규칙이 있다 — 나머지 키트 카탈로그는 로더 경고(스키마 테스트)에 기댄다.
   ③ 시나리오 `<DevCommand line="editor <명령>">` 의 에디터 명령 id(`EditorCommandRegistry` 는 실행 중 등록), UI 바인딩 경로(`UIBindingSet::bind` 오류 로그), 동적으로 지은 액션 이름은 런타임 경고 게이트(logwarn)에 맡긴다.
+  린트로는 더 풀 것이 없다(2026-10-18 판단) — ③ 의 에디터 명령 id 를 정적으로 보려면 `SW_DEV_COMMAND` 처럼 선언으로 등록하는 형식이 먼저다(C++ 구조 변경, 결정 필요). ② 는 에셋 검증 규칙 쪽 일이다.
 
 - `C-36` [정리] **데이터 주도 구조 정리(2026-10-16, 사용자 지시 "원천적인 문제 해결").** 설계 완료, 단위는 [데이터 주도 구조 정리 계획](../plans/DataDriven.md) 7절이다(C-30 과 한 순서, 별칭 제거는 R1).
   진행 표는 게이트 `CheckDataDrivenStructure` 의 `--summary` 이고, 형식으로 막힌 종류는 단위가 끝날 때 게이트에서 뺀다.
-
-- `C-40` [정리] **Shipping 에서 빠지는 API 를 부르는 쪽마다 `#if !defined( SW_SHIPPING )` 을 기억해야 한다.** `TypeRegistry::unregisterTypesByModule` 등을 테스트가 부르면
-  Shipping 컴파일이 깨지고(리눅스 CI 에서 실제로 깨짐, `b206e2a26`), 가드를 잊은 곳은 Shipping 빌드에서야 드러난다.
-  테스트 전용 RAII 도우미(등록 범위 객체)로 감싸거나 늘 컴파일되는 API 로 바꿔 호출부가 구성을 몰라도 되게 한다.
 
 - `C-47` [정리] **합성 리그 벤치가 드러낸 애니메이션 갱신의 비정상 셋.** 기준표는 [검증과 측정](../08_Verification.md) "영역별 측정값"의 `SyntheticRigBenchTest` 표(2026-10-17, Release).
   (1) 캐릭터 1000 에서 본 150 → 300 이 2.5 배로 선형(2 배)보다 크다 — 캐시 · 워커 분배를 본다. (2) 본 300 + 리그 노드의 p99 40.6 ms 가 p50 의 3 배다 — 히치 원인을 찾는다.
@@ -65,15 +59,18 @@
 - `C-52` [정리] **타입별 버킷(7-c)과 타입 핸들(7-d) 뒤의 남은 정리.** 설계 완료, 단위는 [타입별 컴포넌트 계획](../plans/TypedComponents.md) 8절(T1 ~ T4)이다.
   ① 핸들 옮기기의 값 방문(T1) ② 상태 저장소 짝짓기를 안정 키로(T2, 전역 순서 문제는 7c577ec27 이 풀었다) ③ 등록형 목록 → 버킷(T4) ④ 측정(T3).
 
-- `C-53` [정리] **씬 · 프리팹 저작 저장에 런타임 상태가 들어간다**(2026-10-17 `GimmickCircuitState` 검토 ⓕ). 설계 완료, 단위는 [저작 저장과 런타임 상태 분리 계획](../plans/AuthoringState.md) 4절(A1 ~ A4)이다.
-  저장 목적(`SerializePurpose`)을 필수 값으로 두고 `PROPERTY( RuntimeState )` 를 저작 저장에서 뺀다.
+- `C-53` [정리] **씬 · 프리팹 저작 저장에 런타임 상태가 들어간다**(2026-10-17 `GimmickCircuitState` 검토 ⓕ). 남은 단위는 [저작 저장과 런타임 상태 분리 계획](../plans/AuthoringState.md) 4절의 A4(런타임 필드에 `PROPERTY( RuntimeState )` 를 붙이고 데이터를 다시 쓰기)다.
+  저장 목적(`SerializePurpose`)은 필수 값이 됐고, `RuntimeState` 필드는 저작 저장에서 빠진다.
 
 - `C-63` [정리] **`SW_ENABLE_STL_CONTAINER` 가 이름이 같은 `sw::` 형식을 구성마다 다른 형식으로 바꾼다**(2026-10-18 `A-20`). 해시 컨테이너는 두 구성이 같은 구현을 쓰게 했고 `CompressedPair` 로 `pair` 차이를 막았다.
-  남은 것: ① 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다) ② `Source/sw.natvis` 의 `unordered_map` · `unordered_set` · `vector` 항목이 std 형식으로 캐스트해 지금 구조와 맞지 않는다
-  ③ `TestDestructionDamage` 의 해시 기준값 테스트가 STL 구성에서 건너뛰던 이유가 해시 컨테이너 순서였다면 다시 켤 수 있다(확인 안 함). `map` · `set` 은 두 구성 모두 키 순서지만 주소 · 반복자 보장은 기본 구성 쪽이 약하다.
+  natvis 는 자체 구현의 배치를 읽게 고쳤고, `TestDestructionDamage` 의 해시 기준값 테스트는 STL 구성에서도 돈다.
+  남은 것: 그 옵션이 **할당자만** 바꾸게 줄인다(ADL 로 `std::make_unique` 와 겹치던 것이 같은 뿌리의 둘째 경우였다). 설계 판단이 커서 따로 한다 —
+  `vector` · `array` · `string` · `list` · `deque` · `map` · `set` · `pair` · `span` 이 모두 구성에 따라 std 별칭과 자체 형식 사이를 오가고, `string` · `list` · `deque` 는 자체 형식도 std 를 상속한다.
+  할당자만 바꾸려면 ⓐ STL 구성의 목적(표준 컨테이너로 비교 · 디버그 STL 검사를 쓰는 것인가, `std::allocator` 로 메모리 추적을 빼는 것인가)을 먼저 정하고
+  ⓑ 그 목적이 할당자뿐이면 자체 `vector` · `array` · `map` · `set` · `pair` 를 두 구성에 늘 쓰고 `string` · `list` · `deque` 는 `std::*<T, 구성별 할당자>` 하나로 둔다.
+  ⓒ 이때 STL 구성에서만 건너뛰는 테스트(`TestVector` · `TestDataStructure` · `TestMemory` · `TestMemoryTag`)를 다시 본다. `map` · `set` 은 두 구성 모두 키 순서지만 주소 · 반복자 보장은 기본 구성 쪽이 약하다.
 
-- `C-64` [정리] **조용한 기본값이 남은 곳(A-26 · C-62 후속).** ① 씬 직접 경로에서 그림자 맞춤 행렬은 출력 설정의 비율(출력 크기 0 이면 16/9)을, 그리는 행렬은 풀의 비율을 써서 어긋날 수 있다
-  ② 패킷의 `_cameraPos` 기본값(`FrameRendererUtil::kDefaultCameraPos`) ③ `GameInstanceBase` 의 `UserSettingsManager` · `InputManager` · `UISystem` 조회가 `GameNetSession` 과 같은 "없으면 조용히 건너뛰기" 모양이다
+- `C-64` [정리] **조용한 기본값이 남은 곳(A-26 · C-62 후속).**
   ④ `ConfigManager::isWithinRange` 가 `collectRangeErrors` 로 범위를 따로 검사한다(`C-56` 과 같은 모양, Config 영역) ⑤ `readName` 호출부 357 곳을 전수로 보지 못했다 — 이름을 경로 글로 바꿔 쓰는 `.c_str()`
   (`hashed_string` 의 FName 규칙: none = 빈 이름, 빈 이름의 `c_str()` = "None")은 형식으로 막지 못하고 이름 읽기 창구에서 글 none 만 막았다.
 

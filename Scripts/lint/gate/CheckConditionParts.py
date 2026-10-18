@@ -9,12 +9,8 @@ Scripts/lint/gate/CheckConditionParts.py
   좋음:  const bool bCanFire = bArmed && bHasAmmo && bNotReloading;
          if ( bCanFire )
 
-기준선은 0 이다(기존 위반을 모두 고쳤다). 모드가 둘이다.
-  - 커밋 훅(`--files`): 이번 커밋이 **추가한 줄**(`git diff --cached -U0` 의 + 줄)이 속한 조건만 본다.
-    병합 커밋(`MERGE_HEAD` 가 있다)은 건너뛴다 — 상대 쪽 줄은 그 브랜치 커밋 때 이미 검사됐다.
-    `--whole-files` 를 더하면 추가한 줄이 아니라 파일 전체를 본다(고치는 중 확인용).
-  - 전체 훑기(`--files` 없음, `ctest -L lint`): 건수를 세어 `rules/CheckConditionParts.toml` 의 `[baseline] total` 을 **넘으면** 실패한다(늘면 실패).
-    줄어들면 기준선을 낮추라는 참고만 찍는다. `--list` 는 위반 전부를 찍는다.
+기준선은 0 이다(기존 위반을 모두 고쳤다, `rules/CheckConditionParts.toml` 의 `[baseline] total`). 커밋 훅은 추가한 줄이 속한 조건만,
+전체 훑기는 기준선을 넘을 때만 실패한다 — 두 모드 · 병합 커밋 · `--whole-files` · `--list` 는 기반(`LintGate.BaselineSourceGate`)이 정한다.
 
 판정(보수적으로 — 놓치는 쪽으로 틀린다):
   - 주석 · 문자열 · 문자 리터럴은 가린 글에서 본다. 조건은 `if` / `while` 뒤 `(` 부터 짝 `)` 까지(여러 줄 가능), 전처리기 줄(`#if`)은 뺀다.
@@ -28,7 +24,6 @@ Scripts/lint/gate/CheckConditionParts.py
 
 from __future__ import annotations
 
-import argparse
 import re
 import sys
 from dataclasses import dataclass
@@ -37,18 +32,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs, runGit  # noqa: E402
-from common.RuleData import kKindInteger  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
+from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs  # noqa: E402
+from LintGate import BaselineSourceGate, CountedFinding  # noqa: E402
+from SourceScan import SourceFile  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 _kConditionHeadRe = re.compile(r"\b(if|while)\b\s*(?:constexpr\b\s*)?\(")
-_kHunkRe = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 _kMinPartCount = 3
 #: 앞쪽 피연산자가 끝나는 글자 — 이 뒤의 `&&` 만 논리 연산자다(오른값 참조 `T&&` 는 앞이 타입 이름이라 식별자 끝으로 보이지만 뒤가 `> , )` 로 막힌다).
 _kOperandEnd = set("_)]\"'")
-_kBaselineSchema = {"baseline": kKindInteger}
 
 
 @dataclass
@@ -126,37 +118,18 @@ def findLongConditions(text: str, masked: str | None = None, noComment: str | No
     return listFound
 
 
-def parseAddedLines(diffText: str) -> dict[str, set[int]]:
-    """`git diff --cached -U0` 출력 → 파일(저장소 기준) → 추가된 줄 번호 집합."""
-    mapAdded: dict[str, set[int]] = {}
-    current = ""
-    for line in diffText.splitlines():
-        if line.startswith("+++ "):
-            current = line[6:] if line.startswith("+++ b/") else ""
-            if current:
-                mapAdded.setdefault(current, set())
-            continue
-        hunk = _kHunkRe.match(line)
-        if hunk and current:
-            start = int(hunk.group(1))
-            count = 1 if hunk.group(2) is None else int(hunk.group(2))
-            mapAdded[current].update(range(start, start + count))
-    return mapAdded
-
-
-class CheckConditionPartsGate(LintGate):
+class CheckConditionPartsGate(BaselineSourceGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
     description = "if · while 조건이 && · || 로 세 부분 이상이면 이름 붙인 지역 변수로(훅은 추가한 줄만, 전체는 기준선 초과만)"
     buildComment = "Checking that if / while conditions with three or more parts are named first..."
     timeoutSeconds = 120
     preCommitPattern = tuple(f"{root}/*" for root in kLintTargetRelDirs)
-    preCommitFileArgument = "--files"
     sourceScanRoots = kLintTargetRelDirs
     sourceSuffixes = _kSuffixes
     violationHeader = "조건 부분이 3 개 이상인 if / while"
-    ruleSchema = _kBaselineSchema
-    maxNoteShown = 12
+    countedNoun = "long conditions"
+    baselineExceededHint = "새 조건을 이름 붙인다"
     hint = ("  const bool bCanFire = bArmed && bHasAmmo && bNotReloading;\n  if ( bCanFire )\n  {\n      fire();\n  }\n"
             "  괄호 안 부분식은 한 부분이다 — 묶어서 `bool` 하나로 이름 붙여도 된다. 전체를 보려면 --whole-files 또는 --list.")
     selfTestCases = [
@@ -167,65 +140,11 @@ class CheckConditionPartsGate(LintGate):
          "args": ["--files", "Source/Probe/D.cpp", "--whole-files"]},
     ]
 
-    def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser)
-        parser.add_argument("--whole-files", action="store_true", help="--files 에서 추가한 줄이 아니라 파일 전체를 본다")
-        parser.add_argument("--baseline", type=int, default=None, help="전체 훑기의 기준선을 이 값으로(기본은 rules 의 [baseline] total)")
-        parser.add_argument("--list", action="store_true", help="전체 훑기에서 위반을 전부 찍는다")
-
-    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
-        args.bMergeSkip = False
-        args.mapAdded = None
-        if bool(args.files) and not args.whole_files:
-            if (repositoryRoot / ".git" / "MERGE_HEAD").exists():
-                args.bMergeSkip = True
-                return
-            result = runGit(["diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--no-renames", "--diff-filter=ACM"], cwd=repositoryRoot)
-            args.mapAdded = parseAddedLines(result.stdout) if result.returnCode == 0 else None   # git 이 답하지 못하면 파일 전체로 본다(놓치지 않는 쪽)
-
-    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
-        if args.bMergeSkip:
-            return None
+    def findCounted(self, source: SourceFile) -> list[CountedFinding] | None:
         listLine = source.text.split("\n")
-        listFound: list[tuple[str, LongCondition, str]] = []
-        for condition in findLongConditions(source.text, source.masked, source.noComment):
-            if args.mapAdded is not None:
-                setAdded = args.mapAdded.get(source.relative, set())
-                if not any(condition.firstLine <= number <= condition.lastLine for number in setAdded):
-                    continue
-            listFound.append((source.relative, condition, listLine[condition.firstLine - 1].strip()))
-        return FileFindings(value=listFound) if listFound else None
-
-    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
-        if args.bMergeSkip:
-            return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
-        bFiles = bool(args.files)
-        fileCount = result.fileCount
-        listAll: list[tuple[str, LongCondition, str]] = [item for findings in result.listFindings for item in (findings.value or ())]
-
-        def describe(item: tuple[str, LongCondition, str]) -> str:
-            relative, condition, line = item
-            return f"{relative}:{condition.firstLine}: {condition.keyword} 조건이 {condition.partCount} 부분 — 먼저 이름 붙인 `const bool` 로 | {line}"
-
-        summary = f"{fileCount} files, {len(listAll)} long conditions"
-        if bFiles:
-            return GateResult(listViolation=[describe(item) for item in listAll], summary=summary)
-
-        baseline = args.baseline if args.baseline is not None else self.readRules(self.name, self.ruleSchema)["baseline"]["total"]
-        mapPerFile: dict[str, int] = {}
-        for relative, _, _ in listAll:
-            mapPerFile[relative] = mapPerFile.get(relative, 0) + 1
-        listTop = sorted(mapPerFile.items(), key=lambda item: (-item[1], item[0]))[:10]
-        listNote = [f"기준선 {baseline} · 지금 {len(listAll)} · 파일 {len(mapPerFile)}개"] + [f"{count:4d}  {relative}" for relative, count in listTop]
-        if len(listAll) < baseline:
-            listNote.append(f"줄었다 — rules/{self.name}.toml 의 [baseline] total 을 {len(listAll)} 로 낮춘다")
-        if args.list:
-            self.maxNoteShown = 0
-            listNote += [describe(item) for item in listAll]
-        listViolation: list[str] = []
-        if len(listAll) > baseline:
-            listViolation.append(f"전체 {len(listAll)}건이 기준선 {baseline} 을 넘었다 — 새 조건을 이름 붙이거나 (--list 로 위치 확인) 정말 줄었다면 기준선을 맞춘다")
-        return GateResult(listViolation=listViolation, listNote=listNote, summary=summary)
+        return [CountedFinding("total", source.relative, condition.firstLine, condition.lastLine,
+                               f"{condition.keyword} 조건이 {condition.partCount} 부분 — 먼저 이름 붙인 `const bool` 로", listLine[condition.firstLine - 1].strip())
+                for condition in findLongConditions(source.text, source.masked, source.noComment)]
 
 
 main = CheckConditionPartsGate.run

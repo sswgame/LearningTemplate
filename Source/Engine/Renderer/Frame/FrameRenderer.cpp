@@ -547,22 +547,20 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
+        // 출력 크기(인자가 없으면 스왑체인)를 먼저 정한다 — 주 시점의 비율이 그것을 본다.
+        ensurePassResources();
+        ensureTransientResources( _directOutputWidth, _directOutputHeight );
+        // 주 시점 뷰-투영은 하나다. 그림자 맞춤과 그리기가 같은 행렬을 쓰고, 비율은 패킷 경로(`RenderPacketBuilder`)와 같은 규칙(출력 × 사각형)이다.
+        // 둘을 따로 재면 출력 설정의 비율과 풀의 비율이 어긋나 그림자 볼륨이 그리는 절두체를 덮지 못한다.
+        const float4x4 mainCameraViewProj = pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _outputWidth, _outputHeight ) );
         // 그림자 배치(볼륨 맞춤 · 아틀라스 칸 · 점광 · 스폿 타일)는 패킷 경로(Engine)와 같은 함수로 주 시점 카메라의 뷰-투영에 맞춘다.
-        const float4x4 mainCameraViewProj = pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) );
         ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, &mainCameraViewProj, getShadowMapResolution(), _listScratchShadowLightIndex, _listScratchLight,
                                         _frameShadow );
         applyFrameShadow();
         _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement );
-        ensurePassResources();
-        ensureTransientResources( _directOutputWidth, _directOutputHeight );
         resetPassCbRing();
         setIdentityWorld( _frameContext );
-
-        // 그리는 뷰-투영의 비율은 지금 풀의 크기다(위 그림자 배치의 비율은 출력 설정의 것).
-        const TransientAttachmentPool& pool       = activePool();
-        const float32                  poolAspect = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
-                                                                             : ( 16.0f / 9.0f );
-        updatePassConstants( _frameContext, pMainCamera->getViewProjectionMatrix( poolAspect ) );
+        updatePassConstants( _frameContext, mainCameraViewProj );
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 

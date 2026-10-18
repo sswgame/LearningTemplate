@@ -52,7 +52,9 @@ namespace sw
 
 namespace sw
 {
-    AnimationSystem::AnimationSystem()
+    SW_SCENE_SERVICE( AnimationSystem, Animation )
+
+    AnimationSystem::AnimationSystem( GameObjectManager& manager )
         : _listUnit{}
         , _listLevel{}
         , _listActive{}
@@ -68,7 +70,7 @@ namespace sw
         , _rewindScratchPose{}
         , _bRewindApplied{ SW_FALSE }
 #endif
-        , _pManager{ nullptr }
+        , _pManager{ &manager }
         , _lodViewPosition{}
         , _frameIndex{ 0 }
         , _deltaSeconds{ 0.0f }
