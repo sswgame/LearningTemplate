@@ -434,7 +434,7 @@ namespace sw
         {
             _listEventScratch.clear();
             _host.drainEvents( _listEventScratch );
-            logEvents();
+            logEvents( EventPhase::Closing );
         }
         _host.disconnectAll();
         if ( _role != GameNetRole::None )
@@ -455,10 +455,10 @@ namespace sw
         reportConnectResult();
         _listEventScratch.clear();
         (void)_router.pump( _host, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
-        logEvents();
+        logEvents( EventPhase::Running );
     }
 
-    void GameNetSession::logEvents() const
+    void GameNetSession::logEvents( EventPhase phase ) const
     {
         for ( const NetHostEvent& event : _listEventScratch )
         {
@@ -470,9 +470,14 @@ namespace sw
                 else
                     SW_LOG_INFO( "Net session client %# disconnected (%#, %# connected)", event._connectionID, toString( event._reason ), _host.getConnectedCount() );
             }
-            else if ( event._kind == NetHostEvent::Kind::Disconnected )
+            else if ( event._kind == NetHostEvent::Kind::Disconnected && phase == EventPhase::Running )
             {
                 SW_LOG_WARNING( "Net session lost the server %# (%#)", _serverAddress.toString(), toString( event._reason ) );
+            }
+            else if ( event._kind == NetHostEvent::Kind::Disconnected )
+            {
+                // 세션은 엔진 수명이라 종료의 끝에서 닫힌다 — 같이 끝나는 서버(에디터 netplay.stop)가 먼저 나간 끊김이 여기서 읽힌다. 이상이 아니다.
+                SW_LOG_INFO( "Net session closing after the server %# left (%#)", _serverAddress.toString(), toString( event._reason ) );
             }
         }
     }

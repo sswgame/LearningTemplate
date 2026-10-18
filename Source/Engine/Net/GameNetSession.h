@@ -160,8 +160,14 @@ namespace sw
     private:
         /** @brief 클라이언트 연결이 끝났으면 로그에 남깁니다. 시간 초과면 다시 시도하는데, 같이 띄운 서버가 아직 기동 중일 수 있기 때문입니다. */
         void reportConnectResult();
-        /** @brief `_listEventScratch` 의 연결과 끊김을 로그 한 줄씩 남깁니다. 서버는 둘 다 남기고, 클라이언트는 끊김만 남깁니다. */
-        void logEvents() const;
+        /** @brief 사건을 어느 때 읽었는가 — 클라이언트가 서버를 잃은 것이 이상인지가 이것으로 갈린다. */
+        enum class EventPhase : uint8
+        {
+            Running, ///< 세션이 도는 중(update) — 서버를 잃으면 이상이라 경고다
+            Closing, ///< 이 프로세스가 세션을 닫는 중(shutdown) — 같이 끝나는 서버가 먼저 나간 것이라 정보다
+        };
+        /** @brief `_listEventScratch` 의 연결과 끊김을 로그 한 줄씩 남깁니다. 서버는 둘 다 남기고, 클라이언트는 끊김만 남깁니다(@p phase 가 무게를 정한다). */
+        void logEvents( EventPhase phase ) const;
 
     private:
         NetHost                           _host;
