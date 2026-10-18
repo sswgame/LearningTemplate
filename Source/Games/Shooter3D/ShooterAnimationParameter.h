@@ -17,6 +17,9 @@ namespace sw
         static constexpr string_view kHit  = "Hit";  ///< 맞음(트리거)
         static constexpr string_view kDead = "Dead"; ///< 쓰러짐(bool)
 
+        static constexpr string_view kAimWeight   = "AimWeight";   ///< 상체 겨누기 레이어 가중치(float 0..1) — 그래프 "layers" 의 Aim `weight_param`
+        static constexpr string_view kShootWeight = "ShootWeight"; ///< 상체 사격 레이어 가중치(float 0..1) — 그래프 "layers" 의 Shoot `weight_param`
+
         static constexpr float32 kMoveIdle     = 0.0f;
         static constexpr float32 kMoveWalk     = 1.0f;
         static constexpr float32 kMoveRun      = 2.0f;

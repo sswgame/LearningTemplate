@@ -9,16 +9,15 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
   (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 
 - `D4-3` [기능] **패드 가상 커서(명령형 게임)의 남은 것.** 켜고 끄기는 입력 맵의 `virtualCursor`(`InputMapVirtualCursor`)가 정하고, 커서가 마우스로 바꾸는 패드 A · B · 그 스틱을
-  액션에 따로 묶은 맵은 읽기가 거절한다(Nile · StarSkirmish 맵은 `RightStick`). 남은 것: 결정 `D4-3.3`(커서는 왼쪽 스틱, 오른쪽 스틱은 카메라 이동 · 줌)대로 두 맵을 바꾸기,
-  실제 패드로 확인하기(시나리오 동안 가상 커서는 쉬어 패드 길을 시나리오가 보지 않는다), 사용자 키 바인딩(`loadUserBindings`)이 커서 버튼을 다시 묶는 것도 거절하기.
+  액션에 따로 묶은 바인딩은 맵 읽기 · 사용자 바인딩(`loadUserBindings`) · 리바인딩(`rebindSlot`)이 같은 검사(`reportVirtualCursorConflict`)로 거절한다.
+  Nile · StarSkirmish 는 결정 `D4-3.3` 대로 커서가 왼쪽 스틱, 오른쪽 스틱이 카메라 이동이다. 남은 것: 오른쪽 스틱 줌(1D 축 액션이 스틱의 Y 를 읽는 바인딩이 없고,
+  확대는 칸 단위라 스틱 값을 매 프레임 넣으면 너무 빠르다 — 지금은 D 패드 위 · 아래), 실제 패드로 확인하기(시나리오 동안 가상 커서는 쉬어 패드 길을 시나리오가 보지 않는다).
 
 - `D4-4` [기능] **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
   들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 남은 것 — 둘째 조립(RTS + City)의 테스트 게임(필요해지면 MeadowVillage 모양 — 조건부라 남김). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
   `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
 - `D4-5` [기능] **카메라의 남은 것.** 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일은 들어갔다(`Source/GameFramework/` "카메라" 절, `Source/Engine/Renderer/` "다중 뷰").
-  - 직교 리그(`OrthoCameraRigComponent`)를 쓰는 남은 둘(MeadowVillage 씬, WildWest 디렉터 · 씬)도 디렉터 + 프리셋 XML(`setFocusPoint`)로 옮기고 리그 컴포넌트와 `TestOrthoCameraRig` 를 지운다.
-    ThemePark · Harvest · Nile · StarSkirmish 는 옮겼다(`data/*.cameras.xml`).
   - 다중 뷰의 예산 · 보임 판정이 거칠다 — 보임은 "지정한 오브젝트가 주 카메라 절두체 안" 하나(가려짐 · 화면 크기 안 봄), 예산은 프레임당 뷰 수(`gv_renderViewBudget`)지 시간이 아니다.
     화면 사각형 뷰는 에디터 GameView(ImGui 이미지)에서 검증하지 않았다.
   - 컷 프레임 신호(`RenderViewSettings::_bCut`)는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다.
@@ -27,8 +26,8 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션의 남은 
 
 - `D4-6` [기능] **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/`(임포트 · 코덱 · 재생 · 상태 기계 · 블렌드 스페이스 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생),
   알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/`. 남은 것 —
-  ① 그래프 레이어 · 본 마스크(`AnimationGraphAsset` "layers" · "bone_masks", 프리셋 `*.bonemask.json`)와 블렌드 스페이스 상태 재생은 들어갔다. 남은 것: Shooter3D 상체 레이어(`ShooterAvatarComponent::ensureLayers` 의 `addLayer`)를
-    그래프 데이터(`data/anim/masks/upper_body.bonemask.json`)로 옮기기, 블렌드 스페이스 표본 클립의 알림(지금은 내지 않는다), 그래프 에디터의 레이어 · 마스크 편집 화면
+  ① 그래프 레이어 · 본 마스크(`AnimationGraphAsset` "layers" · "bone_masks", 프리셋 `*.bonemask.json`)와 블렌드 스페이스 상태 재생은 들어갔다. Shooter3D 상체 레이어도 그래프 데이터(`Aim` · `Shoot`)다. 남은 것:
+    블렌드 스페이스 표본 클립의 알림(지금은 내지 않는다), 그래프 에디터의 레이어 · 마스크 편집 화면
   ② 후처리 리그(`PoseModifierComponent`): 시퀀서 `RigSlot` 트랙(`setSlotWeight` 에 키 찍기)과 리그 디버그 창(`RigDebugPanel` — 노드 가중치 · 켜짐 · 쓰는 본 표시)은 들어갔다. 남은 것: 창에서 고친 가중치 · 켜짐은
     런타임 인스턴스의 복제본에만 들어가 저장되지 않는다(리그 에셋에 쓰는 길), 노드 대상 본 기즈모 편집,
     `Engine/Sequencer` 가 `Engine/Character` 헤더를 새로 include 한다(레이어 검사 확인)

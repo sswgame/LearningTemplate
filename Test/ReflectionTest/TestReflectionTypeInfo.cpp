@@ -647,9 +647,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
     typeStranger._fullyQualifiedName = sw::hashed_string( "swtest::LoopStranger" );
     SW_EXPECT_FALSE( pLoopA->isDerivedFrom( &typeStranger ) );
 
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestParentLoop" );
-#endif
 }
 
 /**
@@ -708,9 +706,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch 
     SW_EXPECT_TRUE( pLeaf->isDerivedFrom( sw::hashed_string( "ChainRoot" ) ) );
     SW_EXPECT_FALSE( pRoot->isDerivedFrom( sw::hashed_string( "swtest::ChainLeaf" ) ) );
 
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestParentChain" );
-#endif
 }
 
 /**
@@ -866,7 +862,6 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() );
     SW_EXPECT_TRUE( pOrphan->isDerivedFrom( find( "swtest::DispLateParent" ) ) );
 
-#if !defined( SW_SHIPPING )
     // (4) 모듈 해제는 남은 타입의 표도 비운다 — 이 바이너리의 픽스처(DummyActor → DummyBase)가 다시 세워 답한다.
     registry.unregisterTypesByModule( "TestAncestorDisplay" );
     const sw::TypeInfo* pActor = find( "sw::DummyActor" );
@@ -878,7 +873,6 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     SW_EXPECT_TRUE( pActor->hasAncestorDisplay() );
     SW_EXPECT_FALSE( pBase->isDerivedFrom( pActor ) );
     SW_EXPECT_NULL( find( "swtest::DispLeaf" ) );
-#endif
 }
 
 /**
@@ -974,9 +968,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLa
     SW_EXPECT_EQUAL( size_t( 8 ), pGamma->_offset );
     SW_EXPECT_NULL( pLeaf->findPropertyInHierarchy( sw::hashed_string( "_zeta" ) ) );
 
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestHierarchyMap" );
-#endif
 }
 
 /**
@@ -1007,7 +999,6 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGenerati
     SW_EXPECT_TRUE( pProbe == registry.findType( fqn ) );
     SW_EXPECT_TRUE( cache.find( fqn ) == pProbe );
 
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestLookupCache" );
     SW_EXPECT_NULL( cache.find( fqn ) );
     SW_EXPECT_NULL( registry.findType( fqn ) );
@@ -1019,7 +1010,6 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGenerati
     registry.unregisterTypesByModule( "TestLookupCache" );
     SW_EXPECT_NULL( cache.find( fqn ) );
     SW_EXPECT_FALSE( pProbe->isAlive() );
-#endif
 }
 
 /**
@@ -1148,7 +1138,6 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrat
     SW_EXPECT_EQUAL( size_t( 48 ), pFirst->_size );
     SW_EXPECT_TRUE( pFirst->isAlive() );
 
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestStableAddress" );
     SW_EXPECT_NULL( registry.findType( sw::hashed_string( "swtest::StableFirst" ) ) );
     SW_EXPECT_FALSE( pFirst->isAlive() );
@@ -1159,7 +1148,6 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrat
             ++aliveFillerCount;
     } );
     SW_EXPECT_EQUAL( 0u, aliveFillerCount );
-#endif
 }
 
 /**
@@ -1326,13 +1314,11 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     SW_EXPECT_EQUAL( 3u, pDerived->getPropertiesWithBase().size() );
     SW_EXPECT_NOT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_c" ) ) );
 
-#if !defined( SW_SHIPPING )
     // 기반 모듈만 내려간다 — 파생 쪽 목록에 내려간 모듈의 프로퍼티가 남지 않는다.
     registry.unregisterTypesByModule( "TestMergeBase" );
     SW_EXPECT_EQUAL( 1u, pDerived->getPropertiesWithBase().size() );
     SW_EXPECT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) );
     registry.unregisterTypesByModule( "TestMergeDerived" );
-#endif
 }
 
 /**
@@ -1384,7 +1370,5 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ShortNameCollisionIsReported )
     SW_ASSERT_NOT_NULL( pByShortName );
     SW_EXPECT_TRUE( pByShortName->_fullyQualifiedName == sw::hashed_string( ( "swtest::right::TwinType" + suffix ).c_str() ) );
 
-#if !defined( SW_SHIPPING )
     registry.unregisterTypesByModule( "TestShortNameCollision" );
-#endif
 }

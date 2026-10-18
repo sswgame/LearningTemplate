@@ -576,7 +576,12 @@ namespace sw
                             action.c_str(), BindingKinds::toName( binding._kind ) );
             return false;
         }
-        binding._arrSlot[slotIndex] = slot;
+        // 맵 읽기와 같은 검사 — 가상 커서가 마우스로 바꾸는 스틱 · 버튼으로는 다시 묶지 않는다(사용자 설정의 키 바인딩도 이 길이다).
+        ActionBinding candidate       = binding;
+        candidate._arrSlot[slotIndex] = slot;
+        if ( reportVirtualCursorConflict( "rebind", action, candidate ) )
+            return false;
+        binding = candidate;
         return true;
     }
 
@@ -595,6 +600,10 @@ namespace sw
                             action.c_str(), BindingKinds::toName( pEntry->_listBinding[bindIndex]._kind ) );
             return false;
         }
+        ActionBinding candidate        = pEntry->_listBinding[bindIndex];
+        candidate._arrSlot[targetSlot] = newSlot;
+        if ( reportVirtualCursorConflict( "rebind", action, candidate ) )
+            return false;
         const hashed_string targetLayer = pEntry->_listBinding[bindIndex]._layer;
 
         hashed_string conflictingAction{};

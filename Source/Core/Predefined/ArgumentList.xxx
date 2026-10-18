@@ -28,6 +28,10 @@
 SW_REGISTER_ARGUMENT( WIDTH, 0, false, "W" )
 SW_REGISTER_ARGUMENT( HEIGHT, 0, false, "H" )
 
+// 창 틀 왼쪽 위의 화면 좌표(픽셀) — 둘을 함께 준다(하나만 주면 창을 만들지 않고 멈춘다). 없으면 플랫폼이 놓는다. 에디터 멀티 프로세스 재생이 클라이언트 창을 나란히 놓는다
+SW_REGISTER_ARGUMENT( WINDOW_X, 0, false, "WinX" )
+SW_REGISTER_ARGUMENT( WINDOW_Y, 0, false, "WinY" )
+
 // 수직 동기화를 켠다 — EngineConfig · 플레이어 값보다 이긴다
 SW_REGISTER_ARGUMENT( VSYNC, false, false, "vsync" )
 

@@ -10,10 +10,6 @@
   스크린샷 토스트의 "Show in Explorer" 단추(알림 매니저에 동작 단추가 없다), `screenshotbutton` 시나리오가 `Bin/Saved/Screenshots` 에 남기는 PNG, Engine README 개발 명령 줄의 경로.
   RenderDoc 은 RHI 단계 맨 앞에서 로드하고, `ThirdParty/renderdoc` 에 원문 헤더를 두며 그 폴더의 `.clang-format` 은 `DisableFormat` 이다.
 
-- `C-37` [정리] **모델 층의 ImGui 사용 한 곳(`Common/Commands/Play/EditorScenarioRecordCommands.cpp`)을 EditorModel 안으로 들이기.** 모델 폴더(`Source/Editor/CMakeLists.txt` 의
-  `listEditorModelDir`)는 ImGui 없이 컴파일되는 OBJECT 라이브러리 `EditorModel` 인데, 이 파일만 `#include <imgui.h>` 와 `ImGui::GetIO().DeltaTime`(녹화 프레임 간격)을 써서 예외 목록에 남아 있습니다.
-  간격을 셸이 넘기거나 엔진 프레임 시간으로 바꾸면 예외 줄(`list(REMOVE_ITEM listEditorModelSource …)`)을 지웁니다.
-
 - `D3-1` [기능] **에디터 로드맵 — 미룬 영역 패널을 그 영역 옆에.** 엔진 영역 패널은 EditorModule, 기반 GameFramework 영역은 `GF_EditorPlugIn_Base`(`Source/GameFramework/PlugIn/Editor/Base/`),
   키트 영역은 `GF_EditorPlugIn_<이름>` 확장 모듈에 둔다. 남은 것 —
   ⑦ 카탈로그 편집기 뒤: 엔진 데이터 종류(장면 · 머티리얼 · 파이프라인 …)는 아직 `ResourceDataSchemaTest` 의 표에 있고, 카탈로그 밖(Engine 쪽) 열거자 이름 표는 `EnumNameTable` 로 모으지 않았다.
@@ -29,8 +25,8 @@
 
 - `D3-4` [기능] **콘솔 · 치트의 남은 것** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(지금 게임 · 키트 쪽 명령은 `GameNetSession` 하나뿐 — 레지스트리 · 콘솔 ·
   엔진 명령은 `Source/Engine/` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았고, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
-  어빌리티 · 판 상태 · Shooter3D 의 `cheat.*` 는 들어갔다(`AbilityDevCommands` · `SessionStateDevCommands` · `ShooterDevCommands`). **무적(`cheat.god`)은 못 달았다** — 어빌리티 시스템에
-  무적 API 가 없고, Shooter3D 의 `Vitality::setInvulnerable` 은 private 멤버 `_vitality` 뒤에 있다. API 를 열면 단다. `cheat.heal` · `cheat.attribute` 는 적을 포함한 모든 어빌리티 시스템에 적용된다
+  어빌리티 · 판 상태 · Shooter3D 의 `cheat.*` 는 들어갔다(`AbilityDevCommands` · `SessionStateDevCommands` · `ShooterDevCommands`). 무적(`cheat.god`)은 어빌리티 시스템의
+  태그(`State.Invulnerable`, 치트는 하위 `.Cheat`)로 플레이어 조종 폰에만 건다. 남은 것: Shooter3D 는 어빌리티 시스템이 아니라 `Vitality` 라 `cheat.god` 이 닿지 않는다(`Vitality::setInvulnerable` 이 private 멤버 `_vitality` 뒤). `cheat.heal` · `cheat.attribute` 는 적을 포함한 모든 어빌리티 시스템에 적용된다
   (플레이어만 가리는 길이 필요하면 태그나 팀을 본다). `Vitality` 를 직접 쓰는 다른 키트의 치트는 아직 없다.
 
 - `D3-5` [기능] **그래프 패널 저장 시나리오를 실제로 돌려 확인하기.** 임시 에셋으로 저장하는 길(`asset.open` · `asset.removeTemp` · 탐침 `Editor.TempAssetExists`, `Saved/Automation/` 밖과 리소스 트리는 거절)과
@@ -90,8 +86,6 @@
     - **들어감(2026-10-14)**: 공용 마우스 양보 창구 `EditorViewportMouseClaim`(뷰포트의 양보 판정 두 곳에 반영), 에셋 슬롯의 여러 확장자 필터(`EditorAssetFilter`, 쉼표 · 공백 · 탭 · 세미콜론)와 Point Cache(`.mfpc`) ·
       두 Displace 의 필터 채우기, 참조 걸러 보기의 파생 컴포넌트 판정(`TypeInfo::isDerivedFrom`), 회전 고리의 오일러 정확도(`applyRotationDelta`), 범위 · ffd2d 상자가 앞 모디파이어 결과를 반영.
     - **남은 한계**: 기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
-  - **정리**: 월드 공간 워프는 `World Warp` 모디파이어(씬 오브젝트 + 공유 `.mfwarp` 파일)로 들어갔다. 남은 것: 패널에서 묶음을 `.mfwarp` 로 내보내는 단추.
-
 - `D3-12` [기능] **첫 UX 감사에서 남은 결함(2026-10-15).** 목록 · 우선순위 · 캡처 번호는 [에디터 UX 기반](../plans/EditorUX.md) 8-1 절이 원본이다. 큰 것부터:
   ① 기본 배치의 아래 도크(Output Log · Content Browser)가 낮아 내용이 거의 안 보인다(도크 최소 높이 · 기본 비율). ② 씬 뷰 통계 오버레이가 뷰포트 절반을 덮는다(접기 · 앵커).
   ③ 탭 · 표 열 · 콤보의 말줄임 · 툴팁 · 가로 스크롤 정책을 공용 위젯으로(Hierarchy · Profiler · Keyboard Shortcuts · Global Variables · Data Table · Project Settings).

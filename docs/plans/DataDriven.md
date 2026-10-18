@@ -90,7 +90,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 | `CheckDataDrivenStructure` | `SilentFallback` | 124 | 122 |
 | `CheckDataDrivenStructure` | `DiscardedLoadResult` | 164 | 164 |
 | `CheckDataDrivenStructure` | `MagicNameLiteral`(보고만) | 없음 | 75 |
-| `CheckDataDrivenStructure` | `LiteralGetDefault`(보고만) | 없음 | 47 |
+| `CheckDataDrivenStructure` | `LiteralGetDefault`(보고만) | 없음 | 0(P3 — 필수 키는 `[]` 와 이름 있는 오류, 선택 키는 없음을 형식으로) |
 
 `TuningConstexpr` 와 `GameTimeScale` 의 `SilentFallback` 은 이미 줄었으므로 기준선만 낮춥니다(D0).
 끝난 묶음은 W0, W1 의 엔진 기본 에셋 경로, W2, W3 의 에디터 경로, W4, W8 입니다.
@@ -152,7 +152,6 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 | D9 | 폴백 인자를 받는 읽기 함수를 지우고, 형식으로 막힌 게이트 종류를 뺍니다 | D1 의 폴더, `Engine/Character/CharacterDataReader.*`, `Scripts/lint/` | D2 ~ D8 | 전 프리셋 컴파일, `-L lint`, `-L nogpu` | 없음 |
 | P1 | 경로 상수와 컴포넌트 기본 머티리얼을 `EngineDefaultAssets` 로 옮깁니다 | `Engine/UI/`, `Engine/Config/EngineDefaultAssets.*`, `Engine/Environment/`, `Engine/Object/Component/2D/TileMapRendererComponent.*`, 엔진 데이터 | 없음 | 기동, UI 테스트, 대표 셋 | 없음 |
 | P2 | 렌더러 첨부를 파이프라인 XML 이 모두 선언합니다(W7 과 함께) | `Engine/Renderer/Frame/`, 파이프라인 XML | 셰이더 묶음 | 네 백엔드 × 대표 셋, 골든 이미지 | 없음 |
-| P3 | 도구의 `.get( "키", 기본값 )` 47 줄과 삼킨 예외(W5) | `Scripts/` | 없음 | `-L lint`, 스크립트 테스트 | 없음 |
 | P4 | 테스트가 원본을 거치게 합니다(W6) | `Test/` | D9, P1 | `-L nogpu` | 없음 |
 | R1 | `REFLECT( Alias )` 와 별칭 읽기 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)를 지웁니다. 제품 데이터 사용은 0 이고, 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절을 지웁니다. 값 계산이 필요한 이행만 `SW_SCHEMA_MIGRATION` 으로 남습니다 | `Tools/ReflectionParser/`, `Engine/Reflection/`, 해당 테스트 | 없음 | 파서 테스트, `-L nogpu` | 없음 |
 | G1 | 게임 코드의 튜닝 리터럴(C-30 ②)을 데이터로 옮깁니다. NileCity 자동 계획표 좌표, HarvestValley 작물 → 모델 테이블, StarSkirmish `makeAISettings`, FarmSun 라이트 곡선 | 게임마다 `Source/Games/<게임>/`, 그 팩 데이터 | 없음 | 게임별 기동과 스크린샷 비교 | 없음 |

@@ -4,6 +4,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -83,7 +84,7 @@ namespace sw
 
             /** @brief 스냅샷으로 오브젝트를 **원래 id 로** 복원합니다. 그래야 그 오브젝트 · 컴포넌트를 가리키던 핸들이 이어진다. */
             static void recreate( CommandStack* pStack, SceneManager* pSceneManager, uint32 sceneKey, const string& name, const ObjectSnapshot& snapshot,
-                                  const string& prefabPath )
+                                  const string& prefabPath, const PrefabNestedPart* pNestedPart )
             {
                 const ActiveTarget target = findActiveTarget( pSceneManager, sceneKey );
                 if ( target._pManager == nullptr )
@@ -97,6 +98,9 @@ namespace sw
                 }
                 loadSnapshot( pCreated, snapshot );
                 target._pScene->setEntityPrefabPath( pCreated->getObjectID(), prefabPath );
+                // 중첩 프리팹 부품이었으면 표시도 같은 id 로 되살린다 — 레지스트리는 놓인 오브젝트의 표시를 거두므로 명령이 값으로 들고 있다.
+                if ( pNestedPart != nullptr )
+                    target._pManager->getSubsystem<PrefabInstanceRegistry>().restoreNestedPart( pCreated->getObjectID(), *pNestedPart );
                 pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ pCreated->getObjectID(), ObjectEditKind::Recreated } );
             }
         };
@@ -151,14 +155,17 @@ namespace sw
         const ObjectSnapshot snapshot = captureSnapshot( pObj );
         const Scene*         pScene   = ObjectUndoUtilInternal::findActiveTarget( pSceneManager, sceneKey )._pScene;
         const string         prefabPath{ ( pScene != nullptr ) ? pScene->getEntityPrefabPath( objectID ) : string_view{} };
+        // 부품 표시는 값으로 든다(없으면 nullptr). 공유 포인터라 명령 사본 · 트랜잭션 묶음이 한 벌을 나눠 쓴다.
+        const PrefabNestedPart*                  pFoundPart  = ( pObj->getManager() != nullptr ) ? pObj->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( objectID ) : nullptr;
+        const shared_ptr<const PrefabNestedPart> pNestedPart = ( pFoundPart != nullptr ) ? std::make_shared<const PrefabNestedPart>( *pFoundPart ) : nullptr;
 
         const Delegate<void()> destroyStep  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, sceneKey, objectID, name]()
          {
             ObjectUndoUtilInternal::destroy( pStack, pSceneManager, sceneKey, objectID, name );
         } );
-        const Delegate<void()> recreateStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, sceneKey, name, snapshot, prefabPath]()
+        const Delegate<void()> recreateStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, sceneKey, name, snapshot, prefabPath, pNestedPart]()
         {
-            ObjectUndoUtilInternal::recreate( pStack, pSceneManager, sceneKey, name, snapshot, prefabPath );
+            ObjectUndoUtilInternal::recreate( pStack, pSceneManager, sceneKey, name, snapshot, prefabPath, pNestedPart.get() );
         } );
 
         // 생성과 삭제는 같은 두 절차를 반대 순서로 잇는 것이다.

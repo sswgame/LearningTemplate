@@ -6,7 +6,6 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Light/ShadowSetup.h"
@@ -19,8 +18,9 @@ namespace sw
     {
         GPUSceneSnapshot _gpuScene; ///< GT 가 만든 것 모두. 소유권도 함께 실린다(GPUSceneSnapshot 참고)
         float4           _clearColor;
-        float3           _cameraPos;
-        float4x4         _viewProj;
+        /** @brief 주 시점의 눈 위치입니다. `_bHasViewProj` 가 0 이면 값이 없다(0 벡터) — 기본 카메라 위치로 채우지 않는다(그 패킷은 그리지 않는다). */
+        float3   _cameraPos;
+        float4x4 _viewProj;
         /**
          * @brief 이 프레임의 그림자 배치입니다. 아틀라스 슬롯, 주 시점의 방향광 캐스케이드(`_mainView`), 점광과 스폿 타일 및 그 라이트 버퍼 원소를 담습니다.
          * @details 주 시점 그림자는 그림자 빛이 없어도 유효합니다(그림자 없는 뷰). 씬을 그리지 않은 프레임만 비어 있고 렌더러가 그림자 없는 뷰로 둡니다. 렌더러가 맞바꾸기로 받습니다(저장소가 돕니다).
@@ -71,7 +71,7 @@ namespace sw
         RenderFramePacket()
             : _gpuScene{}
             , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
-            , _cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] }
+            , _cameraPos{}
             , _viewProj{}
             , _shadow{}
             , _lightDirIntensity{}
@@ -114,7 +114,7 @@ namespace sw
         void resetForFrame()
         {
             _clearColor = float4{ 0.12f, 0.15f, 0.18f, 1.0f };
-            _cameraPos  = float3{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
+            _cameraPos  = float3{};
             _viewProj   = float4x4{};
             _shadow.clear();
             _lightDirIntensity = float4{};

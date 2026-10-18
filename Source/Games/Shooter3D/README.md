@@ -114,10 +114,10 @@ cd build/Ninja-Debug/Bin
 | 몸 소켓 | `data/sockets/kaykit_humanoid.sockets.xml`. Helmet, Back, Gun, Blade, Shield 와 Eyes(1인칭 눈높이), Chest(히트박스 중심) |
 | 무기 소켓 | `data/sockets/blaster_*.sockets.xml` 의 `Muzzle`(탄도선, 섬광)과 `SupportHand`. 외형에서는 `MainHand.Muzzle` |
 | 애니메이션 그래프 | `data/anim/adventurer.animgraph.json`, `skeleton.animgraph.json` |
-| 상체 레이어 | `ShooterAvatarComponent` 가 `spine` 아래에 겨눈 자세와 막 쏜 자세를 덮습니다. 맞음과 쓰러짐 동안은 내립니다 |
+| 상체 레이어 | 그래프 `data/anim/adventurer.animgraph.json` 의 레이어 `Aim` · `Shoot`(마스크 `data/anim/masks/upper_body.bonemask.json`)이 겨눈 자세와 막 쏜 자세를 덮습니다. `ShooterAvatarComponent` 는 가중치 파라미터 `AimWeight` · `ShootWeight` 만 쓰고, 맞음과 쓰러짐 동안은 내립니다 |
 | 텍스처와 머티리얼 | 원본 GLB 의 아틀라스를 `textures_raw/kaykit_*.png` 로 꺼내 BC1 DDS 로 만들고, `materials/kaykit_*.material` 로 씁니다 |
 
-플레이어 그래프의 `Move` 파라미터는 0 서기, 1 걷기, 2 달리기, 3 뒷걸음, 4 와 5 옆걸음, 6 공중이고, `Hit` 와 `Dead` 가 있습니다. 스켈레톤 그래프는 땅에서 일어나기로 시작합니다.
+플레이어 그래프의 `Move` 파라미터는 0 서기, 1 걷기, 2 달리기, 3 뒷걸음, 4 와 5 옆걸음, 6 공중이고, `Hit` 와 `Dead`, 상체 레이어 가중치 `AimWeight` 와 `ShootWeight` 가 있습니다. 스켈레톤 그래프는 땅에서 일어나기로 시작합니다.
 
 **총구.** 1인칭이면 손에 든 총(카메라의 자식)과 그 무기 외형의 `Muzzle` 소켓을, 아니면 몸 외형의 `MainHand.Muzzle`(지난 프레임 포즈)을 씁니다.
 판정은 눈에서 쏘고, 탄도선은 총구에서 맞은 곳까지 잇습니다.

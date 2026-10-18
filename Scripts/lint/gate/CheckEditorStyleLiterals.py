@@ -14,18 +14,14 @@ Scripts/lint/gate/CheckEditorStyleLiterals.py
 
 테마 구현 파일(`_kThemeSourcePrefix`)은 값을 만드는 곳이라 보지 않는다.
 
-기준선은 현재 건수다. 모드가 둘이다.
-  - 커밋 훅(`--files`): 이번 커밋이 **추가한 줄**(`git diff --cached -U0` 의 + 줄)에 걸친 위반만 본다. 병합 커밋(`MERGE_HEAD`)은 건너뛴다.
-    `--whole-files` 를 더하면 파일 전체를 본다.
-  - 전체 훑기(`--files` 없음, `ctest -L lint`): 건수를 `rules/CheckEditorStyleLiterals.toml` 의 `[baseline] total` 과 비교해 **늘면** 실패한다.
-    줄면 기준선을 낮추라는 참고만 찍는다. `--list` 는 위반 전부를 찍는다.
+기준선은 현재 건수다(`rules/CheckEditorStyleLiterals.toml` 의 `[baseline] total`). 커밋 훅은 추가한 줄에 걸친 위반만, 전체 훑기는
+기준선을 넘을 때만 실패한다 — 두 모드 · 병합 커밋 · `--whole-files` · `--list` 는 기반(`LintGate.BaselineSourceGate`)이 정한다.
 
   python Scripts/lint/gate/CheckEditorStyleLiterals.py [--root <repo>] [--files a.cpp b.h] [--whole-files] [--baseline N] [--list]
 """
 
 from __future__ import annotations
 
-import argparse
 import re
 import sys
 from dataclasses import dataclass
@@ -34,17 +30,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, runGit  # noqa: E402
-from common.RuleData import kKindInteger  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
+from common import blankCommentsAndLiterals  # noqa: E402
+from LintGate import BaselineSourceGate, CountedFinding  # noqa: E402
+from SourceScan import SourceFile  # noqa: E402
 
 _kScanRoot = ("Source/Editor", "Source/GameFramework/PlugIn/Editor")
 _kSuffixes = (".h", ".hpp", ".inl", ".cc", ".cpp", ".cxx")
 #: 테마 값을 만드는 파일 — 이 경로 앞머리에 맞으면 검사하지 않는다.
 _kThemeSourcePrefix = ("Source/Editor/Common/GUI/EditorThemeUtil.", "Source/Editor/Common/GUI/EditorColorUtil.", "Source/Editor/Common/GUI/EditorThemeTokens.")
-_kHunkRe = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
-_kBaselineSchema = {"baseline": kKindInteger}
 _kNumberRe = re.compile(r"(?<![\w.])(?:0[xX][0-9A-Fa-f]+|\d+(?:\.\d*)?(?:[eE][-+]?\d+)?[fFuUlL]*|\.\d+[fF]?)(?![\w.])")
 _kHeadNumberRe = r"\s*[-+]?(?:0[xX]|\d|\.\d)"
 #: (이름, 머리 정규식, 인자 검사 방식) — "head": 머리만으로 위반, "second": 둘째 인자에 숫자 리터럴이 있으면 위반.
@@ -126,37 +119,18 @@ def findStyleLiterals(text: str, masked: str | None = None) -> list[StyleLiteral
     return sorted(listFound, key=lambda item: item.firstLine)
 
 
-def parseAddedLines(diffText: str) -> dict[str, set[int]]:
-    """`git diff --cached -U0` 출력 → 파일(저장소 기준) → 추가된 줄 번호 집합."""
-    mapAdded: dict[str, set[int]] = {}
-    current = ""
-    for line in diffText.splitlines():
-        if line.startswith("+++ "):
-            current = line[6:] if line.startswith("+++ b/") else ""
-            if current:
-                mapAdded.setdefault(current, set())
-            continue
-        hunk = _kHunkRe.match(line)
-        if hunk and current:
-            start = int(hunk.group(1))
-            count = 1 if hunk.group(2) is None else int(hunk.group(2))
-            mapAdded[current].update(range(start, start + count))
-    return mapAdded
-
-
-class CheckEditorStyleLiteralsGate(LintGate):
+class CheckEditorStyleLiteralsGate(BaselineSourceGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
     description = "에디터 코드의 숫자 리터럴 색 · 스타일 값(IM_COL32 · ImVec4 · PushStyleColor/Var)은 테마 토큰으로(훅은 추가한 줄만, 전체는 기준선 초과만)"
     buildComment = "Checking that editor code takes colors and style values from theme tokens..."
     timeoutSeconds = 120
     preCommitPattern = tuple(f"{root}/*" for root in _kScanRoot)
-    preCommitFileArgument = "--files"
     sourceScanRoots = _kScanRoot
     sourceSuffixes = _kSuffixes
     violationHeader = "에디터 코드의 숫자 리터럴 색 · 스타일 값"
-    ruleSchema = _kBaselineSchema
-    maxNoteShown = 12
+    countedNoun = "style literals"
+    baselineExceededHint = "새 값은 테마 토큰으로"
     hint = ("  테마 토큰(EditorThemeUtil 접근자)을 쓴다 — 색 · 간격 · 모서리의 원본은 Resource/editor/theme/*.tokens.json 이다.\n"
             "  없는 값이면 토큰을 더한다(docs/plans/EditorUX.md). 전체를 보려면 --whole-files 또는 --list.")
     selfTestCases = [
@@ -168,66 +142,13 @@ class CheckEditorStyleLiteralsGate(LintGate):
          "args": ["--files", "Source/GameFramework/PlugIn/Editor/C.cpp", "--whole-files"]},
     ]
 
-    def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser)
-        parser.add_argument("--whole-files", action="store_true", help="--files 에서 추가한 줄이 아니라 파일 전체를 본다")
-        parser.add_argument("--baseline", type=int, default=None, help="전체 훑기의 기준선을 이 값으로(기본은 rules 의 [baseline] total)")
-        parser.add_argument("--list", action="store_true", help="전체 훑기에서 위반을 전부 찍는다")
-
-    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
-        args.bMergeSkip = False
-        args.mapAdded = None
-        if bool(args.files) and not args.whole_files:
-            if (repositoryRoot / ".git" / "MERGE_HEAD").exists():
-                args.bMergeSkip = True
-                return
-            result = runGit(["diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--no-renames", "--diff-filter=ACM"], cwd=repositoryRoot)
-            args.mapAdded = parseAddedLines(result.stdout) if result.returnCode == 0 else None   # git 이 답하지 못하면 파일 전체로 본다(놓치지 않는 쪽)
-
-    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
-        relative = source.relative
-        if args.bMergeSkip or relative.startswith(_kThemeSourcePrefix):
+    def findCounted(self, source: SourceFile) -> list[CountedFinding] | None:
+        if source.relative.startswith(_kThemeSourcePrefix):
             return None
         listLine = source.text.split("\n")
-        listFound: list[tuple[str, StyleLiteral, str]] = []
-        for literal in findStyleLiterals(source.text, source.masked):
-            if args.mapAdded is not None:
-                setAdded = args.mapAdded.get(relative, set())
-                if not any(literal.firstLine <= number <= literal.lastLine for number in setAdded):
-                    continue
-            listFound.append((relative, literal, listLine[literal.firstLine - 1].strip()))
-        return FileFindings(value=listFound)      # 테마 파일이 아닌 파일은 결과가 없어도 센다(요약의 파일 수)
-
-    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
-        if args.bMergeSkip:
-            return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
-        bFiles = bool(args.files)
-        fileCount = sum(1 for findings in result.listFindings if findings.value is not None)
-        listAll: list[tuple[str, StyleLiteral, str]] = [item for findings in result.listFindings for item in (findings.value or ())]
-
-        def describe(item: tuple[str, StyleLiteral, str]) -> str:
-            relative, literal, line = item
-            return f"{relative}:{literal.firstLine}: {literal.kind} 에 숫자 리터럴 — 테마 토큰(EditorThemeUtil 접근자)을 쓴다 | {line}"
-
-        summary = f"{fileCount} files, {len(listAll)} style literals"
-        if bFiles:
-            return GateResult(listViolation=[describe(item) for item in listAll], summary=summary)
-
-        baseline = args.baseline if args.baseline is not None else self.readRules(self.name, self.ruleSchema)["baseline"]["total"]
-        mapPerFile: dict[str, int] = {}
-        for relative, _, _ in listAll:
-            mapPerFile[relative] = mapPerFile.get(relative, 0) + 1
-        listTop = sorted(mapPerFile.items(), key=lambda item: (-item[1], item[0]))[:10]
-        listNote = [f"기준선 {baseline} · 지금 {len(listAll)} · 파일 {len(mapPerFile)}개"] + [f"{count:4d}  {relative}" for relative, count in listTop]
-        if len(listAll) < baseline:
-            listNote.append(f"줄었다 — rules/{self.name}.toml 의 [baseline] total 을 {len(listAll)} 로 낮춘다")
-        if args.list:
-            self.maxNoteShown = 0
-            listNote += [describe(item) for item in listAll]
-        listViolation: list[str] = []
-        if len(listAll) > baseline:
-            listViolation.append(f"전체 {len(listAll)}건이 기준선 {baseline} 을 넘었다 — 새 값은 테마 토큰으로 (--list 로 위치 확인), 정말 줄었다면 기준선을 맞춘다")
-        return GateResult(listViolation=listViolation, listNote=listNote, summary=summary)
+        return [CountedFinding("total", source.relative, literal.firstLine, literal.lastLine,
+                               f"{literal.kind} 에 숫자 리터럴 — 테마 토큰(EditorThemeUtil 접근자)을 쓴다", listLine[literal.firstLine - 1].strip())
+                for literal in findStyleLiterals(source.text, source.masked)]
 
 
 main = CheckEditorStyleLiteralsGate.run

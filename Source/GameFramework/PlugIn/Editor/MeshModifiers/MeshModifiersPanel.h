@@ -59,6 +59,8 @@ namespace sw::editor
          * @details 번호 경로 모델은 `DeformableModifier::findByPath` 다. 되돌리기는 바깥 스택 문서째(하위 스택은 `extra.stack`) 기록되므로 따로 두지 않는다.
          */
         void drawNestedStack( MeshModifierSession& session, DeformableModifier& root );
+        /** @brief 보이는 하위 스택 @p shown 을 워프 정의 파일(`.mfwarp`)로 내보내는 경로 칸과 단추를 그립니다. */
+        void drawWarpExport( const MeshModifierStack& shown );
         void drawSelectedModifier( MeshModifierSession& session );
         void drawGizmo( MeshModifierSession& session, MeshModifier& modifier );
         /** @brief 매개변수를 구역(`_pGroup`)별 접히는 머리로 묶어 그립니다. 구역 없는 매개변수는 맨 위입니다. */
@@ -97,6 +99,7 @@ namespace sw::editor
         const MeshModifier*    _pNestedRoot;         ///< 하위 스택 편집을 연 묶음(비교만 한다 — 역참조하지 않는다)
         vector<int32>          _listNestedPath;      ///< 묶음의 하위 스택에서 들어간 묶음들의 번호 경로(비면 고른 묶음 자신의 하위 스택)
         int32                  _nestedSelectedIndex; ///< 보이는 하위 스택에서 고른 번호(-1 이면 없음)
+        string                 _warpExportPath;      ///< 보이는 하위 스택을 내보낼 워프 정의 파일 경로(`.mfwarp`, `WorldWarpModifier::writeWarpFile`)
         bool                   _bEditing;
     };
 } // namespace sw::editor

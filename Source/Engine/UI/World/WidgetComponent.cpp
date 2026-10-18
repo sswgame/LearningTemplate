@@ -3,8 +3,8 @@
 #include "Engine/UI/World/WidgetComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -44,10 +44,16 @@ namespace sw
             static constexpr float32 kDefaultWorldWidth  = 256.0f;
             static constexpr float32 kDefaultWorldHeight = 128.0f;
 
-            /** @brief 지금 UI 시스템입니다(서버처럼 없거나 시작 전이면 nullptr). */
-            static UISystem* findUISystem()
+            /**
+             * @brief @p pOwner 의 씬이 받은 엔진 범위(`SceneEngineServices::_pEngineSubsystems`)에서 찾은 UI 시스템입니다. 서버처럼 없거나 시작 전이면 nullptr 입니다.
+             * @details 전역 표(`engine::findSubsystem`)를 다시 찾지 않는다 — 씬 쪽은 만들 때 받은 묶음만 본다(`SceneEngineServices.h` 머리말).
+             */
+            static UISystem* findUISystem( const GameObject* pOwner )
             {
-                UISystem* pUI = engine::findSubsystem<UISystem>();
+                const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                if ( pManager == nullptr )
+                    return nullptr;
+                UISystem* pUI = locateSubsystem<UISystem>( pManager->getSceneEngineServices()._pEngineSubsystems );
                 return pUI != nullptr && pUI->isInitialized() ? pUI : nullptr;
             }
         };
@@ -94,7 +100,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->getPrimarySceneComponent() == nullptr )
             SW_LOG_ERROR( "[UI] WidgetComponent on '%#' has no scene component to follow - add a SceneComponent first; the widget is never shown", pOwner->getName().c_str() );
-        UISystem* pUI = WidgetComponentInternal::findUISystem();
+        UISystem* pUI = WidgetComponentInternal::findUISystem( pOwner );
         bindUISystem( pUI );
         if ( pUI != nullptr && _space == WidgetSpace::World )
             createWorldQuad();

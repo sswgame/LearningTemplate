@@ -256,10 +256,10 @@ def collectFailureStreaks(listJobPayload: list[dict]) -> list[tuple[str, int]]:
         return []
     listStreak = []
     for job in listFailedJobs(listJobPayload[0]):
-        name = job.get("name", "")
+        name = job["name"]
         count = 0
         for payload in listJobPayload:
-            listSameJob = [other for other in payload.get("jobs", []) if other.get("name", "") == name]
+            listSameJob = [other for other in payload.get("jobs", []) if other["name"] == name]
             if not listSameJob:
                 continue
             if listSameJob[0].get("conclusion") != "failure":
@@ -322,8 +322,8 @@ def formatJobLines(payload: dict, mapOutcome: dict[int, JobOutcome] | None = Non
                 listDetail.append(duration)
             if step.get("conclusion") == "failure" and listExitCode:
                 listDetail.append(f"exit {listExitCode.pop(0)}")
-            listFailedStep.append(step.get("name", "") + (f"({', '.join(listDetail)})" if listDetail else ""))
-        listPart = [str(job.get("id")), job.get("name", ""), str(job.get("conclusion") or job.get("status"))]
+            listFailedStep.append(step["name"] + (f"({', '.join(listDetail)})" if listDetail else ""))
+        listPart = [str(job["id"]), job["name"], str(job.get("conclusion") or job.get("status"))]
         duration = formatDuration(job.get("started_at"), job.get("completed_at"))
         if duration:
             listPart.append(duration)

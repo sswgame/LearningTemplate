@@ -2,11 +2,15 @@
 
 #include "Engine/Window/IWindow.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
+
 #include "Engine/Window/Linux/X11Window.h"
 #include "Engine/Window/Windows/Win32Window.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "Window" );
+
     namespace
     {
 
@@ -44,6 +48,24 @@ namespace sw
         const bool bSmaller = _width < width || _height < height;
         if ( _displayMode == WindowDisplayMode::Windowed && bSmaller )
             (void)setDisplayMode( WindowDisplayMode::Windowed, _width < width ? width : _width, _height < height ? height : _height );
+    }
+
+    bool IWindow::applyCommandLinePosition( const CommandLineManager& commandLine )
+    {
+        const bool bHasX = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_X );
+        const bool bHasY = commandLine.isArgumentProvided( CommandLineArgument::WINDOW_Y );
+        if ( bHasX == false && bHasY == false )
+            return true;
+        int32      x{ 0 };
+        int32      y{ 0 };
+        const bool bComplete = bHasX && bHasY && commandLine.getArgument( CommandLineArgument::WINDOW_X, x ) && commandLine.getArgument( CommandLineArgument::WINDOW_Y, y );
+        if ( bComplete == false )
+        {
+            SW_LOG_ERROR( "Window position needs both -WinX=<x> and -WinY=<y> as numbers - the window is not created" );
+            return false;
+        }
+        setInitialPosition( x, y );
+        return true;
     }
 
     void IWindow::setTitle( const utf8* pTitle )

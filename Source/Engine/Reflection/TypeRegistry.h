@@ -204,10 +204,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 모듈의 대기 중인 Type/Enum 등록기 체인을 등록합니다. */
         void registerPendingTypes( string_view moduleName, struct TypeRegistrar* pClassHead, struct EnumRegistrar* pEnumHead );
-#if !defined( SW_SHIPPING )
-        /** @brief 해당 모듈이 등록한 타입을 모두 해제합니다. */
+        /**
+         * @brief 해당 모듈이 등록한 타입을 모두 해제합니다.
+         * @details 엔진에서는 핫 리로드(개발 빌드)만 부르지만 **모든 구성에서 컴파일한다**. 구성마다 있고 없는 API 는 부르는 쪽(테스트)마다
+         *          `SW_SHIPPING` 가드를 기억해야 하고, 잊은 곳은 Shipping 빌드에서야 깨진다(`b206e2a26`). 레지스트리 연산이라 구성과 무관하게 맞다.
+         */
         void unregisterTypesByModule( string_view moduleName );
-#endif
         /**
          * @brief 호스트의 모든 타입 공급자(엔진, GameFramework, 킷, 게임 모듈)가 등록을 끝냈다고 기록합니다. 기동 단계 `ModuleTypes` 가 부릅니다.
          * @details 씬을 읽는 쪽(`SceneManager::requestLoadFuture`, `SceneCooker::cookAllScenes`)은 이 뒤에만 읽는다. 그 전에 읽으면 아직 올라오지

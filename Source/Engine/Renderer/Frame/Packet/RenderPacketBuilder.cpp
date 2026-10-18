@@ -126,7 +126,6 @@ namespace sw
         packet._outputRenderTarget       = mainOutput._renderTarget;
         packet._viewportWidth            = mainOutput._width;
         packet._viewportHeight           = mainOutput._height;
-        packet._cameraPos                = float3{ 0.0f, 1.2f, 3.2f };
 
         if ( pActiveScene == nullptr )
             return;

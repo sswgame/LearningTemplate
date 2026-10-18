@@ -89,7 +89,7 @@ namespace sw
     TerrainComponent::TerrainComponent()
         : _heightfieldPath{}
         , _materialPath{ "engine/materials/terrain.material" }
-        , _splatTexturePath{}
+        , _layerWeightsPath{}
         , _detailTexturePath{}
         , _listLayer{}
         , _size{ 256.0f, 256.0f }
@@ -471,12 +471,12 @@ namespace sw
     {
         _heightfield.setSplat( 0, 0, {} );
         // 경로가 비었으면 이 지형은 레이어를 칠하지 않는다(데이터가 정한 것이다). 정한 가중치를 읽지 못하면 레이어 0 으로 두지 않고 지형을 읽지 않는다.
-        if ( _splatTexturePath.empty() )
+        if ( _layerWeightsPath.empty() )
             return true;
         LayerWeightsData data;
-        if ( data.loadFromResource( _splatTexturePath ) == false )
+        if ( data.loadFromResource( _layerWeightsPath ) == false )
         {
-            SW_LOG_ERROR( "Terrain '%#': layer weights '%#' did not load - the terrain is not loaded (expected a %# asset)", _heightfieldPath.c_str(), _splatTexturePath.c_str(),
+            SW_LOG_ERROR( "Terrain '%#': layer weights '%#' did not load - the terrain is not loaded (expected a %# asset)", _heightfieldPath.c_str(), _layerWeightsPath.c_str(),
                           string( LayerWeightsData::kExtension ).c_str() );
             return false;
         }
@@ -487,7 +487,7 @@ namespace sw
         string path = TerrainComponentInternal::makeCPUSplatPath();
         if ( engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().createCPUTexture( path, data._width, data._height, std::move( data._bytes ) ) == false )
         {
-            SW_LOG_ERROR( "Terrain '%#': could not create the splat texture for '%#' (%#x%#)", _heightfieldPath.c_str(), _splatTexturePath.c_str(), data._width, data._height );
+            SW_LOG_ERROR( "Terrain '%#': could not create the splat texture for '%#' (%#x%#)", _heightfieldPath.c_str(), _layerWeightsPath.c_str(), data._width, data._height );
             return false;
         }
         _cpuSplatPath = std::move( path );

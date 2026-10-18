@@ -32,8 +32,8 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 로컬 WSL 빌드는 하지 않기로 해서(사용자 결정) CI 리눅스 잡 몫이다. 서버용 크래시 보고 전송 동의(운영 설정)는 `H-3`.
 
 - `D7-3` [기능] **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](../plans/ServerDebug.md).** S3 · S6 · S7 의 프로세스 쪽은 들어갔고 다음은 에디터 쪽(Inspector · Sync 탭)이다. 방향 결정은 [결정 기록](../09_Decisions.md) 5-10. 단위를 끝내면 계획 문서에서 지운다. 운영 단위 O1 ~ O7 은 `H-3` 참고.
-  S1 에서 남은 것: ① 사용자 프리셋 저장("서버 + 클라이언트 2" 를 이름 붙여 에디터 상태에 — 지금은 마지막 구성만 세션이 들고 있고 에디터를 다시 띄우면 Standalone) ② 리슨 호스트(App)의 줄에 틱 번호(전용 서버 줄에는 `[tick=N]` 이 붙는다 — 리슨 호스트는 고정 틱 루프가 없어 프레임 번호로 정해야 한다) ③ Stop 뒤 합친 트레이스를 Profiler 창 Timeline 탭에 저절로 열기(지금은 경로를 로그 · Session 탭에 남기고 Load Trace 로 연다) ⑤ 게임 포트 샤딩 — 전용 서버는 이제 서버 설정의 게임 포트를 늘 열지만(결정 기록 5-10) 소켓 하나뿐이라 `ServerConfig::_gamePortShardCount` 2 이상은 오류로 열지 않는다(샤드마다 NetHost · 로그인 토큰의 샤드 포트) ⑥ 클라이언트 창 배치(여러 App 창이 겹쳐 뜬다 — 언리얼은 창 위치를 나란히 둔다).
-  ①③⑥ 은 에디터(`Source/Editor`), ②⑤ 는 App · `GameNetSession`(`Engine/Net` — 엔진 수명이라 게임 모듈 리로드를 넘어 연결이 남는다) · 엔진 몫이라 2026-10-17 네트워크 작업(서버 · Core 네트워크 · 온라인 파일 소유)에서 남겼다.
+  S1 에서 남은 것: ⑤ 게임 포트 샤딩 — 전용 서버는 이제 서버 설정의 게임 포트를 늘 열지만(결정 기록 5-10) 소켓 하나뿐이라 `ServerConfig::_gamePortShardCount` 2 이상은 오류로 열지 않는다(샤드마다 NetHost · 로그인 토큰의 샤드 포트).
+  ⑤ 는 App · `GameNetSession`(`Engine/Net` — 엔진 수명이라 게임 모듈 리로드를 넘어 연결이 남는다) · 엔진 몫이라 2026-10-17 네트워크 작업(서버 · Core 네트워크 · 온라인 파일 소유)에서 남겼다.
 - `D7-5` [기능] **네트워크 서비스 계층(로그인 · 채팅 · 거래 키트)의 남은 것.** 구성과 원칙(공통 기반 · 드라이버 키트 · 기능 키트, DB 와 캐시)은 [결정 기록](../09_Decisions.md) 5-9, 들어간 기반 · 키트 · 서버 조립
   (`OnlineServerRuntime`, 키트마다 `<키트>OnlineServerKit.cpp`, 서버 설정 옆 `<이름>.online.json`)은 Online README. 운영 쪽(관측 출력 · 오케스트레이터 · 비밀 배포 · 부하 기준선)은 `H-3`.
   - **할 일**
@@ -74,10 +74,6 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   남은 것: ① `MMOReplicator` 의 관심 영역 격자를 Core 부품으로 빼 두 키트가 함께 쓴다 ② Shooter3D 의 내 폰을 `ClientPrediction` + `findOwnerState` 로 예측한다 ③ 보정 오차를 부드럽게 녹이는 시각 보정(언리얼 smoothing). 월드 전체 롤백은 `D7-9`.
 
 - `D7-9` [기능] **네트워크 확장 후보.** 물리 객체 예측(`D7-8` 5단계), 음성 채팅, 치팅 방어 체계(서버 검증 규칙 목록 · 이상 탐지), 서버 오케스트레이션(매칭 뒤 인스턴스 할당 · 확장). 쓰는 게임이 생기면 설계한다.
-
-- `F-1` [기능] **지형 가중치 에셋의 에디터 쪽 마무리** — 가중치는 `.layerweights` 데이터 에셋이 됐다([결정 기록](../09_Decisions.md) 5-10, 서버도 레이어 질의에 답한다).
-  남은 것(에디터 작업자와 겹쳐 미룸): ① 이름 `TerrainComponent::_splatTexturePath` · `get/setSplatTexturePath` 를 `_layerWeightsPath` 류로 바꾸고 `TerrainBrushTool` · 씬 XML 을 함께 고친다.
-  (에셋 종류 `EditorAssetType::LayerWeights` · 속성 칸 `FileFilter` 와 스플랫 PNG 임포트 `heightfields_raw/<이름>_splat.png` 는 들어갔다 — `HeightfieldImporter.h` 머리 주석.)
 
 - `F-3` [기능] **영속 레코드의 모르는 필드 보관.** 영속 레코드(`ServiceRecordUtil::readDurable`)는 배포 중 옛 빌드가 새 빌드의 레코드를 읽으면 모르는 필드 때문에 거절한다(조용히 지우지 않고 요청 실패).
   모르는 필드를 버리고 읽게 하면 옛 빌드가 고쳐 다시 쓸 때 새 빌드의 값이 지워지므로, 레코드가 orphan 바이트를 가지고 쓰기 때 그대로 다시 싣는 구조가 먼저다(언리얼 `FPropertyTag` 보관, protobuf unknown fields 보존과 같은 것).

@@ -18,21 +18,14 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="true" />
-					<OrthoCameraRigComponent _componentName="OrthoCameraRigComponent"
+					<CameraDirectorComponent _componentName="CameraDirectorComponent"
 					                         _bActive="true"
-					                         _focus="0,0,0"
-					                         _yaw="0"
-					                         _pitch="0.9272952"
-					                         _distance="25"
-					                         _orthoHeight="18"
-					                         _minOrthoHeight="18"
-					                         _maxOrthoHeight="18"
-					                         _zoomStep="0.85"
-					                         _panSpeed="40"
-					                         _panReferenceHeight="18"
-					                         _rotateStep="1.5707964"
-					                         _farPlaneScale="4"
-					                         _bInputEnabled="false" />
+					                         _catalogPath="game/wildwest/data/prairie.cameras.xml"
+					                         _initialPreset="prairie"
+					                         _focusPoint="0,0,0"
+					                         _bReadInput="false">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

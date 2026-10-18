@@ -65,9 +65,15 @@ namespace sw::editor
                         continue;
 
                     PlaySessionData::ObjectSnapshot entry;
-                    entry._identity                  = ObjectStateSerializer::captureIdentity( pObj );
-                    entry._name                      = pObj->getName().c_str();
-                    entry._prefabPath                = pScene->getEntityPrefabPath( entry._identity._objectID );
+                    entry._identity               = ObjectStateSerializer::captureIdentity( pObj );
+                    entry._name                   = pObj->getName().c_str();
+                    entry._prefabPath             = pScene->getEntityPrefabPath( entry._identity._objectID );
+                    const PrefabNestedPart* pPart = pObj->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( entry._identity._objectID );
+                    if ( pPart != nullptr )
+                    {
+                        entry._nestedPart  = *pPart;
+                        entry._bNestedPart = true;
+                    }
                     const TerrainComponent* pTerrain = pObj->getComponent<TerrainComponent>();
                     if ( pTerrain != nullptr && pTerrain->hasWrittenEdits() )
                     {
@@ -156,6 +162,8 @@ namespace sw::editor
 
                     if ( snap._prefabPath.empty() == false && pScene != nullptr )
                         pScene->setEntityPrefabPath( pObj->getObjectID(), snap._prefabPath );
+                    if ( snap._bNestedPart )
+                        pObjects->getSubsystem<PrefabInstanceRegistry>().restoreNestedPart( pObj->getObjectID(), snap._nestedPart );
 
                     ObjectLoadContext context{ SerializePurpose::Snapshot };
                     context._pIdentity = &snap._identity;

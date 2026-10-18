@@ -12,162 +12,567 @@ msgstr ""
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Already used by"
 msgid "Already used by"
-msgstr ""
+msgstr "이미 사용 중:"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 #: engine/ui/options.ui.xml
 msgctxt "Apply"
 msgid "Apply"
-msgstr ""
+msgstr "적용"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "취소"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 #: engine/ui/options.ui.xml
 msgctxt "Close"
 msgid "Close"
-msgstr ""
+msgstr "닫기"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Corner"
 msgid "Corner"
-msgstr ""
+msgstr "모서리"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Debug HUD"
 msgid "Debug HUD"
-msgstr ""
+msgstr "디버그 HUD"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
 msgctxt "Defaults"
 msgid "Defaults"
-msgstr ""
+msgstr "기본값"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 msgctxt "Discard"
 msgid "Discard"
-msgstr ""
+msgstr "버리기"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnActive"
+msgid "Active"
+msgstr "실행 중"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnBase"
+msgid "Base"
+msgstr "기본값"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnCooldown"
+msgid "Cooldown"
+msgstr "쿨다운"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnCount"
+msgid "Count"
+msgstr "개수"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnCurrent"
+msgid "Current"
+msgstr "현재값"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnName"
+msgid "Name"
+msgstr "이름"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnRemaining"
+msgid "Remaining"
+msgstr "남은 시간"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnStacks"
+msgid "Stacks"
+msgstr "스택"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.ColumnTag"
+msgid "Tag"
+msgstr "태그"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.HintNoTarget"
+msgid "Select an object with an AbilitySystemComponent, or pick one above."
+msgstr "AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.HintPlayOnly"
+msgid "Runtime ability state exists only during play. Press Play to inspect it."
+msgstr "어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요."
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.Infinite"
+msgid "Infinite"
+msgstr "무한"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.NoComponentsInScene"
+msgid "No AbilitySystemComponent in the active scene"
+msgstr "활성 씬에 AbilitySystemComponent 가 없습니다"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.PickTarget"
+msgid "Pick an ability system..."
+msgstr "어빌리티 시스템 고르기..."
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionAbilities"
+msgid "Granted Abilities"
+msgstr "부여된 어빌리티"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionAttributes"
+msgid "Attributes"
+msgstr "어트리뷰트"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionEffects"
+msgid "Active Effects"
+msgstr "걸린 이펙트"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+msgctxt "EdAbilityDebug.SectionTags"
+msgid "Owned Tags"
+msgstr "소유 태그"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.AddItem"
+msgid "Add Item"
+msgstr "항목 추가"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.AddModifier"
+msgid "Add Modifier"
+msgstr "모디파이어 추가"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Axis"
+msgid "Axis"
+msgstr "축"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Bake"
+msgid "Bake"
+msgstr "굽기"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.CPUOnly"
+msgid "(CPU only)"
+msgstr "(CPU 전용)"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Center"
+msgid "Center"
+msgstr "중심"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ControlPoints"
+msgid "Control Points"
+msgstr "제어점"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.CurveEditHint"
+msgid "Click to edit the curve"
+msgstr "눌러서 곡선 편집"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.DuplicateRow"
+msgid "Duplicate row"
+msgstr "행 복제"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.EnterNestedStack"
+msgid "Edit this group's nested stack"
+msgstr "이 묶음의 하위 스택 편집"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ExportWarp"
+msgid "Export as World Warp"
+msgstr "월드 워프로 내보내기"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.FitBounds"
+msgid "Fit to Bounds"
+msgstr "경계 상자에 맞추기"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.GPUPreviewBlockedBy"
+msgid "CPU only:"
+msgstr "CPU 전용:"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.GPUPreviewBlockedByStack"
+msgid "CPU only (Recompute Normals)"
+msgstr "CPU 전용(법선 다시 계산)"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.HintPickTarget"
+msgid "Select an object whose mesh component uses a .mesh asset, then press Use Selection."
+msgstr ".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요."
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.HintSelectModifier"
+msgid "Select a modifier in the stack."
+msgstr "스택에서 모디파이어를 고르세요."
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.HintTargetGone"
+msgid "The target object no longer exists."
+msgstr "대상 오브젝트가 더 이상 없습니다."
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Mirror"
+msgid "Mirror"
+msgstr "대칭"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.MoveRowDown"
+msgid "Move row down"
+msgstr "행을 아래로"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.MoveRowUp"
+msgid "Move row up"
+msgstr "행을 위로"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Name"
+msgid "Name"
+msgstr "이름"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NestedDepth"
+msgid "Depth"
+msgstr "깊이"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NestedEmpty"
+msgid "Empty - add modifiers to group them."
+msgstr "비어 있음 - 모디파이어를 더해 묶습니다."
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NestedStack"
+msgid "Nested Stack"
+msgstr "하위 스택"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NestedUp"
+msgid "Up"
+msgstr "위로"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.NoTarget"
+msgid "No target"
+msgstr "대상 없음"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.PointIndex"
+msgid "Point"
+msgstr "점"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.PointPosition"
+msgid "Position"
+msgstr "위치"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.PreviewTime"
+msgid "Preview Time"
+msgstr "미리보기 시간"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.RecomputeNormals"
+msgid "Recompute Normals"
+msgstr "법선 다시 계산"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Redo"
+msgid "Redo"
+msgstr "다시 하기"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ReferenceNoMatch"
+msgid "No object has component:"
+msgstr "이 컴포넌트를 가진 오브젝트가 없습니다:"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ReferenceNone"
+msgid "(None)"
+msgstr "(없음)"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ReloadStack"
+msgid "Reload Stack"
+msgstr "스택 다시 읽기"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.RemoveRow"
+msgid "Remove row"
+msgstr "행 삭제"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ResetLattice"
+msgid "Reset Lattice"
+msgstr "격자 초기화"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ResetParams"
+msgid "Reset Parameters"
+msgstr "매개변수 초기화"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Rotation"
+msgid "Rotation"
+msgstr "회전"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.SaveStack"
+msgid "Save Stack"
+msgstr "스택 저장"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ShadedPreview"
+msgid "Shaded Preview"
+msgstr "셰이딩 미리보기"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.ShadedPreviewTooltip"
+msgid "Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
+msgstr "대상 메시를 스택 결과로 셰이딩해 보입니다. 켜진 모디파이어가 모두 지원하면 컴퓨트 셰이더로, 아니면 CPU 결과를 정점으로 올립니다. 끄면 원래 메시와 와이어 미리보기만 남습니다."
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.SpaceReference"
+msgid "Reference Object"
+msgstr "기준 오브젝트"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.Undo"
+msgid "Undo"
+msgstr "되돌리기"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.UseSelection"
+msgid "Use Selection"
+msgstr "선택 사용"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.UseSelectionForParam"
+msgid "Use Selection"
+msgstr "선택 사용"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.WarpExportPath"
+msgid "Warp File (.mfwarp)"
+msgstr "워프 파일(.mfwarp)"
+
+#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+msgctxt "EdMeshModifiers.WorldSpace"
+msgid "World Space"
+msgstr "월드 공간"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnActivity"
+msgid "Activity"
+msgstr "행동"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnPlace"
+msgid "Place"
+msgstr "장소"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnSource"
+msgid "Source"
+msgstr "출처"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnTime"
+msgid "Time"
+msgstr "시각"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.ColumnTravel"
+msgid "Travel"
+msgstr "이동"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.EmptyHint"
+msgid "No schedule system is running. Start play with NPCs that have schedules."
+msgstr "실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요."
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.EmptyPlan"
+msgid "No plan for today"
+msgstr "오늘 계획이 없습니다"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.FollowClock"
+msgid "Follow game clock"
+msgstr "게임 시계 따라가기"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.GameTime"
+msgid "Game time"
+msgstr "게임 시각"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.NpcListTitle"
+msgid "NPCs"
+msgstr "NPC 목록"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.RawTimeline"
+msgid "Raw timeline"
+msgstr "타임라인 원문"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.SelectNpcHint"
+msgid "Select an NPC on the left"
+msgstr "왼쪽에서 NPC 를 고르세요"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.SystemIndex"
+msgid "Schedule system"
+msgstr "일정 시스템"
+
+#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+msgctxt "EdSchedule.WhyNow"
+msgid "Why this activity now"
+msgstr "지금 왜 이 행동인가"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Keep"
 msgid "Keep"
-msgstr ""
+msgstr "유지"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Keep these display settings?"
 msgid "Keep these display settings?"
-msgstr ""
+msgstr "이 디스플레이 설정을 유지할까요?"
 
 #. Context: TextWidget._text
 #: engine/ui/loading.ui.xml
 msgctxt "Loading"
 msgid "Loading"
-msgstr ""
+msgstr "로딩 중"
+
+#: Source/GameFramework/Base/Foundation/Framework/Save/Autosave.cpp
+msgctxt "Notification.GameSaved"
+msgid "Game saved"
+msgstr "게임을 저장했습니다"
+
+#: Source/Engine/UI/Screen/OptionsMenuScreen.cpp
+msgctxt "Notification.RestartRequired"
+msgid "Some changes take effect after a restart."
+msgstr "일부 변경은 다시 시작한 뒤 적용됩니다."
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Opacity"
 msgid "Opacity"
-msgstr ""
+msgstr "불투명도"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
 #: engine/ui/pause.ui.xml
 msgctxt "Options"
 msgid "Options"
-msgstr ""
+msgstr "옵션"
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Paused"
 msgid "Paused"
-msgstr ""
+msgstr "일시 정지"
 
 #. Context: TextWidget._text
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Press a key. Escape cancels; hold Escape for one second to bind it."
 msgid "Press a key. Escape cancels; hold Escape for one second to bind it."
-msgstr ""
+msgstr "키를 누르세요. Esc 는 취소, Esc 를 1초 누르고 있으면 Esc 를 지정합니다."
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Quit Game"
 msgid "Quit Game"
-msgstr ""
+msgstr "게임 종료"
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Resume"
 msgid "Resume"
-msgstr ""
+msgstr "계속하기"
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Return to Title"
 msgid "Return to Title"
-msgstr ""
+msgstr "타이틀로 돌아가기"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 #: engine/ui/options.ui.xml
 msgctxt "Revert"
 msgid "Revert"
-msgstr ""
+msgstr "되돌리기"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Reverting in"
 msgid "Reverting in"
-msgstr ""
+msgstr "되돌리기까지"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Sections"
 msgid "Sections"
-msgstr ""
+msgstr "섹션"
 
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Show HUD (Ctrl+F3)"
 msgid "Show HUD (Ctrl+F3)"
-msgstr ""
+msgstr "HUD 표시 (Ctrl+F3)"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
 msgctxt "Some changes take effect after a restart."
 msgid "Some changes take effect after a restart."
-msgstr ""
+msgstr "일부 변경은 다시 시작한 뒤 적용됩니다."
 
 #. Context: TextWidget._text
 #: engine/ui/key_rebind.ui.xml
 msgctxt "Swap"
 msgid "Swap"
-msgstr ""
+msgstr "맞바꾸기"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml
 msgctxt "You have changes that are not applied."
 msgid "You have changes that are not applied."
-msgstr ""
+msgstr "적용하지 않은 변경이 있습니다."
 
 #. Context: TextWidget._text
 #: engine/ui/parts/inputhint.ui.xml
 msgctxt "[action=UI.Accept] Select"
 msgid "[action=UI.Accept] Select"
-msgstr ""
+msgstr "[action=UI.Accept] 선택"
 
 #. Context: Options menu label
 #. Max length: 32
@@ -251,21 +656,21 @@ msgstr "UI 배율"
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.uiTheme"
 msgid "UI Theme"
-msgstr ""
+msgstr "UI 테마"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.uiTheme.default"
 msgid "Default"
-msgstr ""
+msgstr "기본"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.uiTheme.highcontrast"
 msgid "High Contrast"
-msgstr ""
+msgstr "고대비"
 
 #. Context: Options menu label
 #. Max length: 32
@@ -370,7 +775,7 @@ msgstr "언어"
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.privacy"
 msgid "Privacy"
-msgstr ""
+msgstr "개인 정보"
 
 #. Context: Options menu label
 #. Max length: 32
@@ -426,6 +831,13 @@ msgstr "상하 시점 반전"
 msgctxt "settings.controls.mouseSensitivity"
 msgid "Mouse Sensitivity"
 msgstr "마우스 감도"
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.pauseMenu"
+msgid "Pause Menu"
+msgstr "일시정지 메뉴"
 
 #. Context: Options menu label
 #. Max length: 32
@@ -509,7 +921,7 @@ msgstr "걸음 흔들림"
 #: engine/settings/engine.settings.xml
 msgctxt "settings.gameplay.showTutorials"
 msgid "Show Tutorials"
-msgstr ""
+msgstr "튜토리얼 표시"
 
 #. Context: Options menu label
 #. Max length: 32
@@ -635,35 +1047,35 @@ msgstr "표시 언어"
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.crashReports"
 msgid "Crash Reports"
-msgstr ""
+msgstr "크래시 보고"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.crashReports.ask"
 msgid "Ask Each Time"
-msgstr ""
+msgstr "매번 묻기"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.crashReports.local"
 msgid "Keep Local"
-msgstr ""
+msgstr "로컬에만 보관"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.crashReports.send"
 msgid "Send Automatically"
-msgstr ""
+msgstr "자동으로 보내기"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.privacy.telemetry"
 msgid "Share Usage Data"
-msgstr ""
+msgstr "사용 데이터 공유"
 
 #. Shown after applying settings marked apply=restart
 #. Max length: 80

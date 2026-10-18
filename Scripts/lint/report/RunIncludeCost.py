@@ -79,23 +79,24 @@ def readTraceSummary(tracePath: Path) -> TraceSummary:
         phase = event.get("ph")
         if name == _kSourceEventName:
             if phase == "b":
-                pendingDetail = str(event.get("args", {}).get("detail", "")).replace("\\", "/")
-                pendingStart = int(event.get("ts", 0) or 0)
+                pendingDetail = str(event["args"]["detail"]).replace("\\", "/")
+                pendingStart = int(event["ts"])
                 continue
-            duration = int(event.get("dur", 0) or 0)
-            detail = str(event.get("args", {}).get("detail", "")).replace("\\", "/")
             if phase == "e":
-                duration = int(event.get("ts", 0) or 0) - pendingStart
+                duration = int(event["ts"]) - pendingStart
                 detail = pendingDetail
                 pendingDetail = ""
+            else:
+                duration = int(event["dur"])
+                detail = str(event["args"]["detail"]).replace("\\", "/")
             if detail:
                 summary.mapHeaderMicroseconds[detail] = summary.mapHeaderMicroseconds.get(detail, 0) + max(duration, 0)
             continue
-        duration = int(event.get("dur", 0) or 0)
+        # 합계 사건(Total …)만 본다 — 메타 사건(M)에는 dur 가 없다.
         if name == _kTotalSourceName:
-            summary.sourceMicroseconds = duration
+            summary.sourceMicroseconds = int(event["dur"])
         elif name == _kTotalCompilerName:
-            summary.compilerMicroseconds = duration
+            summary.compilerMicroseconds = int(event["dur"])
     return summary
 
 

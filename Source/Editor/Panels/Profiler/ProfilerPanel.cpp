@@ -17,6 +17,8 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorFrameStep.h"
+#include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -100,6 +102,19 @@ namespace sw::editor
                 ImGui::ColorConvertHSVtoRGB( hue, 0.55f, 0.85f, red, green, blue );
                 return ImGui::GetColorU32( EditorColorUtil::toImVec4( Color{ red, green, blue, 1.0f } ) );
             }
+
+#if SW_PROFILER_TRACE_ENABLED
+            /**
+             * @brief 프레임 단계 — 멀티 프로세스 재생이 Stop 뒤에 합친 트레이스를 Profiler 창 Timeline 탭에 한 번 엽니다.
+             * @details 멈추는 길(툴바 · Session 탭 · `netplay.stop`)이 셋이고 툴바(GUI 층)는 이 창(Panels 층)을 include 하지 못하므로, 창이 닫혀 있어도 도는 단계에서 묻는다.
+             */
+            static void openMergedNetPlayTrace( EditorContext& context )
+            {
+                const string mergedTracePath = context.getSubsystem<EditorNetPlaySession>().takeUnopenedMergedTrace();
+                if ( mergedTracePath.empty() == false )
+                    (void)ProfilerPanel::openTraceInTimeline( context.getSubsystem<EditorPanelManager>(), mergedTracePath ); // 실패 이유는 그 함수가 로그에 남긴다
+            }
+#endif
         };
     } // namespace
 } // namespace sw::editor
@@ -107,6 +122,11 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( ProfilerPanel, ProfilerPanel::kPanelID, EditorPanelCategory::Core, 500 );
+#if SW_PROFILER_TRACE_ENABLED
+    // 패널보다 앞 — 이번 프레임에 연 창이 그대로 그려진다(`EditorFrameStepOrder::kCommands` 와 같은 자리).
+    SW_EDITOR_FRAME_STEP( ProfilerOpenMergedNetPlayTrace, "profiler.openMergedNetPlayTrace", EditorFrameStepOrder::kCommands + 10,
+                          &ProfilerPanelInternal::openMergedNetPlayTrace );
+#endif
 
     ProfilerPanel::ProfilerPanel()
         : IEditorPanel( false )
@@ -149,6 +169,7 @@ namespace sw::editor
         , _arrTraceSearch{}
         , _traceSearchMatched{ 0 }
         , _bLoadedTrace{ SW_FALSE }
+        , _bSelectTimelineTab{ SW_FALSE }
 #endif
     {
     }
@@ -182,7 +203,13 @@ namespace sw::editor
                 drawScopeTab( ProfilerScopeKind::Counter );
                 ImGui::EndTabItem();
             }
-            const bool bTimelineTab = ImGui::BeginTabItem( "Timeline" );
+#if SW_PROFILER_TRACE_ENABLED
+            const ImGuiTabItemFlags timelineFlags = _bSelectTimelineTab == SW_TRUE ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
+            _bSelectTimelineTab                   = SW_FALSE;
+#else
+            constexpr ImGuiTabItemFlags timelineFlags = ImGuiTabItemFlags_None;
+#endif
+            const bool bTimelineTab = ImGui::BeginTabItem( "Timeline", nullptr, timelineFlags );
             EditorSelfTestMarks::note( "profiler.timeline.tab" );
             if ( bTimelineTab )
             {
@@ -461,6 +488,20 @@ namespace sw::editor
         _traceStatus     = "Loaded " + FileUtil::getFileNamePart( path ) + " (" + to_string( _loadedTrace._listThread.size() ) + " threads, " +
                        to_string( _loadedTrace._listSlotName.size() ) + " scopes)";
         SW_LOG_INFO( "Trace loaded: %#", _traceStatus );
+        return true;
+    }
+
+    bool ProfilerPanel::openTraceInTimeline( EditorPanelManager& panelManager, string_view path )
+    {
+        ProfilerPanel* pPanel = panelManager.findPanel<ProfilerPanel>();
+        if ( pPanel == nullptr || panelManager.setPanelOpen<ProfilerPanel>( true ) == false )
+        {
+            SW_LOG_WARNING( "No Profiler window to open %# in", string( path ) );
+            return false;
+        }
+        if ( pPanel->loadTraceFile( path ) == false )
+            return false;
+        pPanel->_bSelectTimelineTab = SW_TRUE;
         return true;
     }
 

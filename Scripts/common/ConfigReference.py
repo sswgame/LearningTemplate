@@ -157,9 +157,9 @@ class FieldDoc:
     name: str
     typeName: str
     defaultText: str = ""
-    minText: str = ""
-    maxText: str = ""
-    units: str = ""
+    minText: str | None = None   # PROPERTY 메타의 Min — 적지 않았으면 None
+    maxText: str | None = None   # Max — 위와 같다
+    units: str | None = None     # Units — 위와 같다
     description: str = ""
 
 
@@ -356,12 +356,12 @@ def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str])
         description = trailingMatch.group(1).strip() if trailingMatch else ""
         if leadingDoc:
             description = f"{leadingDoc} {description}".strip() if description and description not in leadingDoc else leadingDoc
-        if not description:
-            description = mapMeta.get("Tooltip", "")
+        if not description and "Tooltip" in mapMeta:
+            description = mapMeta["Tooltip"]
         typeDoc.listField.append(FieldDoc(
             name=declMatch.group("name"), typeName=re.sub(r"\s+", " ", declMatch.group("type")).strip(),
             defaultText=formatDefaultInternal(declMatch.group("init") or "", mapMacro),
-            minText=mapMeta.get("Min", ""), maxText=mapMeta.get("Max", ""), units=mapMeta.get("Units", ""),
+            minText=mapMeta.get("Min"), maxText=mapMeta.get("Max"), units=mapMeta.get("Units"),
             description=description))
     return typeDoc
 
@@ -703,7 +703,7 @@ def makeFieldTableInternal(typeDoc: TypeDoc) -> list[str]:
         if fieldDoc.minText or fieldDoc.maxText:
             rangeText = f"{fieldDoc.minText or '-'} ~ {fieldDoc.maxText or '-'}"
         defaultText = f"`{escapeCellInternal(fieldDoc.defaultText)}`" if fieldDoc.defaultText else "—"
-        lines.append(f"| `{fieldDoc.name}` | `{escapeCellInternal(fieldDoc.typeName)}` | {defaultText} | {rangeText} | {fieldDoc.units} | "
+        lines.append(f"| `{fieldDoc.name}` | `{escapeCellInternal(fieldDoc.typeName)}` | {defaultText} | {rangeText} | {fieldDoc.units or ''} | "
                      f"{escapeCellInternal(fieldDoc.description)} |")
     return lines
 
@@ -801,11 +801,13 @@ def makeEntryPage(repositoryRoot: Path, entry: ConfigFileEntry, index: SourceInd
     if entry.ownerDoc:
         lines += [f"형식 설명: [`{entry.ownerDoc}`](../../{entry.ownerDoc})", ""]
 
+    # 메타데이터 JSON 의 계약(에디터 `ProjectSettingsCatalog` 가 읽는다)에서는 min · max · units 의 빈 글이 "적지 않음" 이다 — None 을 그 표기로 바꾸는 곳은 여기 하나다.
     outMetadata["files"].append({
         "page": entry.page, "path": entry.pathPattern, "layer": entry.layer, "type": entry.typeName,
         "types": [{"name": typeDoc.name, "source": typeDoc.source,
-                   "fields": [{"name": fieldDoc.name, "type": fieldDoc.typeName, "default": fieldDoc.defaultText, "min": fieldDoc.minText,
-                               "max": fieldDoc.maxText, "units": fieldDoc.units, "description": fieldDoc.description}
+                   "fields": [{"name": fieldDoc.name, "type": fieldDoc.typeName, "default": fieldDoc.defaultText,
+                               "min": fieldDoc.minText or "", "max": fieldDoc.maxText or "", "units": fieldDoc.units or "",
+                               "description": fieldDoc.description}
                               for fieldDoc in typeDoc.listField]} for typeDoc in listTypeDoc],
         "enums": [{"name": enumDoc.name, "values": [valueName for valueName, _ in enumDoc.listValue]} for enumDoc in listEnumDoc]})
     return "\n".join(lines).rstrip() + "\n"
