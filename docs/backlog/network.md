@@ -16,7 +16,7 @@ Core 네트워크, 전용 서버, 온라인 서비스 키트, 운영의 남은 �
   ① Base 의 `Vitality` — `initialize` 가 실패를 돌려주면 받는 장르 키트 여섯(`BrMatch` · `HorrorMatch` · `MechArenaWorld` · `ScavengerExpedition` · `MetroDuelist` · `AdventureVitals`)과
   `Shooter3D` 의 void 함수가 모두 바뀐다. `MetroidvaniaCatalog` 처럼 데이터에서 읽는 쪽은 카탈로그를 읽을 때 거절하는 편이 맞다. 쓰는 곳의 재생 속도 `max( 0, … )` 도 같은 모양이다.
   ② 장르 키트: `FightingSettings`(라운드 시간 · 대기 `max( 1, … )`) · `PartyRoundSeries`(`setWinScore` · 순위 점수 · 라운드 시간) · `AdventureVitals` · `AdventureElementGrid` · `KlondikeGame` · `RTSWorld` · `TrampolineArena` 등.
-  뿌리: 설정 구조체가 범위를 선언하지 않아 받는 쪽마다 손으로 맞춘다. 구조체를 `REFLECT` + `PROPERTY( Min · Max )` 로 바꾸고 `initialize` 가 `ConfigRangeUtil` 로 거절한다.
+  근본 원인: 설정 구조체가 범위를 선언하지 않아 받는 쪽마다 손으로 맞춘다. 구조체를 `REFLECT` + `PROPERTY( Min · Max )` 로 바꾸고 `initialize` 가 `ConfigRangeUtil` 로 거절한다.
 
 - `D7-1` [기능] **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
