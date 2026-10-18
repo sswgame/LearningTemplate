@@ -133,7 +133,11 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 - **구현됨(2026-10-15, 일부)**: `EditorPreviewViewport`(미리보기 씬 · 조명 환경 · 오빗 카메라 · 타깃)와 `EditorPreviewPanel`(문서 패널 + 뷰포트 + 창의 `CommandStack` · 선택 목록).
   창이 포커스를 얻으면 `SceneManager::focusScene` 과 `editor::setFocusedCommandStack` 을 걸고, Ctrl+Z · Ctrl+Y 는 `editor::getFocusedCommandStack` 을 되돌린다.
   `ObjectUndoUtil` 의 명령은 기록할 때의 씬 키를 기억해(`SceneManager::getPreviewSceneKeyOf`) 그 씬에서 되돌린다(테스트 `SceneTest.PreviewObjectUndoStaysInItsScene`).
-  전역 `EditorSelection` · 인스펙터 · 기즈모를 창의 것으로 바꾸는 일은 남았다(백로그 `D3-7`).
+  **창 범위 선택(2026-10-18)**: `EditorSelection` 은 타입으로 찾지 못한다(`kAccessorOnly` → `kIsAccessorOnlySubsystem` 이 `findSubsystem` · `EditorContext::getSubsystem` 을 컴파일에서 막는다).
+  호출부는 `editor::getMainSceneSelection`(메인 월드를 보여 주는 창 · 탐침) · `getFocusedSelection`(인스펙터 · 전역 명령) · `findSelectionOf`(오브젝트를 받아 고치는 명령) 중 하나로 어느 선택인지 적는다.
+  오브젝트 기록(`EditorTransaction::recordModify` · `recordObjectLifetime`)은 **오브젝트가 사는 씬**이 스택을 고른다 — 미리보기 씬이면 그 창의 스택, 메인 씬은 dirty 가 아니다.
+  묶음(`beginTransaction`)은 전역 · 창 스택 모두에 걸고 빈 묶음은 스택이 버린다. 씬 뷰 · 계층이 포커스를 얻으면 겨누는 선택이 메인으로 돌아온다.
+  인스펙터의 미리보기 갈래는 구조 편집(컴포넌트 추가 · 제거)도 내고, 미리보기 뷰포트의 클릭은 창 선택에 놓는다(`EditorPreviewPickUtil`). 테스트 `EditorSelectionScopeTest.*`.
 
 ### 단계 5 — 첫 창 두 개: 머티리얼 · 프리팹
 - 파일: `Panels/Material/MaterialPanel.*`(구 미리보기를 미리보기 씬으로, `MaterialPreviewShading` 은 썸네일 폴백으로 남김), `EditorPrefabIsolationCommands.*`(활성 씬 대신 미리보기 씬에 프리팹을 스폰, 더티 막기 제거).

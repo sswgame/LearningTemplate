@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -228,12 +229,13 @@ namespace sw::editor
 
     void EditorTransformCommands::snapSelectedToGround()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
+        // 전역 명령이라 겨누는 창의 선택이다 — 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 간다(`EditorTransaction`).
+        const EditorSelection* pSelection = editor::getFocusedSelection();
+        if ( pSelection == nullptr )
             return;
 
         vector<GameObject*> listSel;
-        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSel );
+        pSelection->getSelectedObjects( listSel );
         snapObjectsToGround( listSel );
     }
 
@@ -272,12 +274,13 @@ namespace sw::editor
 
     void EditorTransformCommands::alignSelectedObjects( AlignAxis axis, AlignType type )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
+        // 전역 명령이라 겨누는 창의 선택이다 — 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 간다(`EditorTransaction`).
+        const EditorSelection* pSelection = editor::getFocusedSelection();
+        if ( pSelection == nullptr )
             return;
 
         vector<GameObject*> listSel;
-        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSel );
+        pSelection->getSelectedObjects( listSel );
         alignObjects( listSel, axis, type );
     }
 
@@ -327,12 +330,13 @@ namespace sw::editor
 
     void EditorTransformCommands::distributeSelectedObjects( AlignAxis axis )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
+        // 전역 명령이라 겨누는 창의 선택이다 — 미리보기 창이면 그 씬의 오브젝트이고, 기록은 그 창의 스택에 간다(`EditorTransaction`).
+        const EditorSelection* pSelection = editor::getFocusedSelection();
+        if ( pSelection == nullptr )
             return;
 
         vector<GameObject*> listSel;
-        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSel );
+        pSelection->getSelectedObjects( listSel );
         distributeObjects( std::move( listSel ), axis );
     }
 

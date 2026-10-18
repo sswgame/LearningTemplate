@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 
@@ -211,7 +212,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        GameObject* pRaw = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+        GameObject* pRaw = editor::getMainSceneSelection().getPrimaryObject();
         if ( pRaw == nullptr )
             return;
 

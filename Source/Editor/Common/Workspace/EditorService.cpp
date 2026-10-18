@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -23,6 +24,14 @@ namespace sw::editor
         EditorToolDefaults*      s_pEditorToolDefaults{ nullptr };
         CommandStack*            s_pFocusedCommandStack{ nullptr }; ///< 포커스된 툴 창의 Undo 스택(`setFocusedCommandStack`)
         EditorSelection*         s_pFocusedSelection{ nullptr };    ///< 겨누는 미리보기 선택(`setFocusedSelection`). nullptr 이면 메인 선택
+        vector<EditorSelection*> s_listPreviewSelection;            ///< 미리보기 씬에 묶인 선택(`registerPreviewSelection`, 빌림)
+
+        /** @brief 메인 씬의 선택입니다 — 지금 에디터 범위(에디터 컨텍스트 또는 테스트가 건 범위)에 건 `EditorSelection`. 없으면 nullptr 입니다. */
+        EditorSelection* findMainSceneSelectionInScope()
+        {
+            // 타입 조회(`findSubsystem<EditorSelection>`)는 막혀 있다 — 범위를 직접 본다. 이 파일만 메인 선택이 어디 있는지 안다.
+            return locateSubsystem<EditorSelection>( s_pEditorScope );
+        }
     } // namespace
 
     void bindEditorService( const ISubsystemLocator& hostServices )
@@ -98,13 +107,46 @@ namespace sw::editor
     {
         if ( s_pFocusedSelection != nullptr )
             return s_pFocusedSelection;
-        EditorContext* pContext = EditorContext::get();
-        return pContext != nullptr ? &pContext->getSubsystem<EditorSelection>() : findSubsystem<EditorSelection>();
+        return findMainSceneSelectionInScope();
     }
 
     void setFocusedSelection( EditorSelection* pSelection )
     {
         s_pFocusedSelection = pSelection;
+    }
+
+    EditorSelection& getMainSceneSelection()
+    {
+        EditorSelection* pSelection = findMainSceneSelectionInScope();
+        SW_ASSERT( pSelection != nullptr );
+        return *pSelection;
+    }
+
+    EditorSelection* findSelectionOf( const GameObjectManager& manager )
+    {
+        for ( EditorSelection* pSelection : s_listPreviewSelection )
+        {
+            const Scene* pScene = pSelection->getScene();
+            if ( pScene != nullptr && pScene->getObjectManager() == &manager )
+                return pSelection;
+        }
+        return getActiveObjectManager() == &manager ? findMainSceneSelectionInScope() : nullptr;
+    }
+
+    const vector<EditorSelection*>& getPreviewSelections()
+    {
+        return s_listPreviewSelection;
+    }
+
+    void registerPreviewSelection( EditorSelection& selection )
+    {
+        if ( std::find( s_listPreviewSelection.begin(), s_listPreviewSelection.end(), &selection ) == s_listPreviewSelection.end() )
+            s_listPreviewSelection.push_back( &selection );
+    }
+
+    void unregisterPreviewSelection( EditorSelection& selection )
+    {
+        s_listPreviewSelection.erase( std::remove( s_listPreviewSelection.begin(), s_listPreviewSelection.end(), &selection ), s_listPreviewSelection.end() );
     }
 
     GameObjectManager* getActiveObjectManager()

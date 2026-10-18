@@ -281,14 +281,14 @@ namespace sw::editor
         vector<GameObject*> listSubtree;
         EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listSubtree );
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
+        // 지울 것은 그 씬의 선택에서 뺀다 — 미리보기 창의 오브젝트면 창의 선택이다(`findSelectionOf`).
+        EditorSelection* pSelection = editor::findSelectionOf( *pManager );
+        if ( pSelection != nullptr )
         {
-            EditorSelection& sel = pContext->getSubsystem<EditorSelection>();
             for ( GameObject* pDoomed : listSubtree )
             {
-                if ( sel.hasObject( pDoomed ) )
-                    sel.selectObject( pDoomed, SelectionMode::Remove );
+                if ( pSelection->hasObject( pDoomed ) )
+                    pSelection->selectObject( pDoomed, SelectionMode::Remove );
             }
         }
 
@@ -698,12 +698,14 @@ namespace sw::editor
             EditorTransaction::recordCreation( pCopy, label );
         }
         EditorTransaction::endTransaction();
-        if ( pContext != nullptr )
+        // 붙여 넣은 것은 그 씬의 선택에 놓는다 — 미리보기 창에 붙이면 창의 선택이다.
+        EditorSelection* pSelection = editor::findSelectionOf( *pManager );
+        if ( pSelection != nullptr )
         {
-            pContext->getSubsystem<EditorSelection>().clearObjectSelection();
+            pSelection->clearObjectSelection();
             for ( GameObject* pRoot : outListCreated )
             {
-                pContext->getSubsystem<EditorSelection>().selectObject( pRoot, SelectionMode::Add );
+                pSelection->selectObject( pRoot, SelectionMode::Add );
             }
         }
     }

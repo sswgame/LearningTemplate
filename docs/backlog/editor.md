@@ -44,9 +44,8 @@
   계획: docs/plans/EditorMultiWorld.md
   **2026-10-15 단계 1~4 와 머티리얼 창이 들어갔다**(계획 문서의 각 "구현됨"). 남은 것:
   (1) **프리팹 창** — `EditorPrefabIsolationCommands` 가 활성 씬 대신 `EditorPreviewPanel` 의 씬에 프리팹을 스폰(더티 막기 제거, 중첩 격리 스택 `PrefabIsolationFrame` 의 의미 유지, 저장 경로 테스트).
-  (2) **창 범위 선택의 나머지** — 창 선택(`EditorSelection::bindPreviewScope`)과 겨누는 선택 접근자(`editor::getFocusedSelection`), 인스펙터의 값 편집(창 스택)은 들어갔다.
-  남은 것: 메인 선택을 직접 부르는 나머지 패널(계층 · 시퀀서 등 약 25 파일)을 접근자로 옮기기, 인스펙터의 구조 편집(컴포넌트 추가 · 제거)을 미리보기 씬에도 내기,
-  미리보기 뷰포트의 클릭 피킹(기즈모는 창 선택에 놓인다 — `EditorViewportGizmo::draw` 가 선택을 받고 창은 `EditorPreviewGizmo` 를 든다).
+  선행 두 가지: 워크스페이스의 놓인 프리팹 표(`EditorWorkspace::setPlacedPrefabPath`)가 활성 씬의 오브젝트 id 로만 키를 잡아 미리보기 씬에 스폰한 인스턴스 · 중첩 격리(`matchesPrefabPath`)를 찾지 못하니 씬별 표로 바꾼다.
+  창은 지금의 `PrefabPanel`(메인 씬에 놓인 인스턴스의 오버라이드 도구, 메인 선택을 본다)과 따로 `EditorPreviewPanel` 파생으로 둔다(머티리얼 창처럼 문서 패널).
   (3) **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
   (4) **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 계획의 결정 2 대로 공유한다.
   (5) **미리보기 렌더러 내리기의 GPU 안전** — 창을 닫으면 렌더 스레드가 `FrameRenderer::shutdown` 으로 그 렌더러를 바로 내린다. 디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대며,

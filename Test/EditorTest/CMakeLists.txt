@@ -43,6 +43,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorShortcutOverrides.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorSiblingOrder.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportRayPick.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorPreviewPick.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorViewportPreview.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorTransformCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorToolAssetCommands.cpp"

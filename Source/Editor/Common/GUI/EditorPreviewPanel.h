@@ -35,7 +35,8 @@ namespace sw::editor
      *            이 스택만 되돌린다(`editor::getFocusedCommandStack`) — 메인 씬 기록은 그대로다. 창을 닫으면 스택도 사라진다(되돌리기 어려운 결정 4).
      *            문서 텍스트 편집(`notifyDocumentEdited`)은 지금처럼 에디터 전역 스택이다.
      *          - 선택은 창마다다(`getPreviewSelection`, 이 창의 씬 · 스택에 묶인 `EditorSelection`). 창이 포커스를 얻거나 선택이 바뀌면 인스펙터가
-     *            그것을 겨눈다(`editor::getFocusedSelection`). 인스펙터의 값 편집은 이 창의 스택에 남는다.
+     *            그것을 겨눈다(`editor::getFocusedSelection`). 인스펙터의 값 · 구조 편집과 전역 명령(삭제 · 정렬 …)의 기록은 이 창의 스택에 남는다
+     *            (`EditorTransaction` 이 오브젝트가 사는 씬으로 스택을 고른다).
      *          - 창을 내릴 때(`shutdown`) 씬 · 타깃 · 초점을 놓는다. 파생이 `shutdown` 을 재정의하면 기반의 것을 부른다.
      */
     class SW_EDITOR_API EditorPreviewPanel : public EditorDocumentPanel

@@ -137,11 +137,14 @@ namespace sw::editor
                 return track._kind == SequenceTrackKind::Transform && channelIndex >= 3 && channelIndex < 6;
             }
 
-            /** @brief 에디터에서 고른 오브젝트의 이름입니다. 고른 것이 없으면 빈 문자열입니다. */
+            /**
+             * @brief 에디터에서 고른 오브젝트의 이름입니다. 고른 것이 없으면 빈 문자열입니다.
+             * @details 트랙은 이름으로 레벨의 오브젝트에 묶여 레벨에서 재생된다 — 메인 씬의 선택이다(언리얼 시퀀서도 레벨 선택의 액터를 트랙에 더한다).
+             */
             static string findSelectedObjectName()
             {
                 EditorContext* pContext = EditorContext::get();
-                GameObject*    pObject  = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
+                GameObject*    pObject  = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
                 return pObject != nullptr ? string{ pObject->getName().c_str() } : string{};
             }
         };

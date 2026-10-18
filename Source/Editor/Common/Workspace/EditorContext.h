@@ -4,6 +4,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
 {
@@ -52,12 +53,14 @@ namespace sw::editor
         template <class T>
         T& getSubsystem() const
         {
+            static_assert( kIsAccessorOnlySubsystem<T> == false, "this subsystem has several instances - use its named accessor (e.g. getMainSceneSelection / getFocusedSelection)" );
             return _scope.get<T>();
         }
         /** @brief 에디터 범위의 하위 객체 @p T 입니다. 없으면 nullptr 입니다. */
         template <class T>
         T* findSubsystem() const
         {
+            static_assert( kIsAccessorOnlySubsystem<T> == false, "this subsystem has several instances - use its named accessor (e.g. getMainSceneSelection / getFocusedSelection)" );
             return _scope.find<T>();
         }
         /** @brief 셸이 도킹 레이아웃을 알립니다(범위에 빌려 건다 — `findSubsystem<EditorDockLayout>()` 로 찾는다). 종료할 때는 nullptr 을 넘깁니다. */

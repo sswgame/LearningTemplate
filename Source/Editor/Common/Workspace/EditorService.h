@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Container/vector.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -32,6 +33,27 @@ namespace sw::editor
         SW_EDITOR_API const ISubsystemLocator* findHostServices();
     } // namespace internal
 
+    /**
+     * @brief 타입으로 찾지 못하게 막은 서브시스템이면 true 입니다 — 클래스가 `static constexpr bool kAccessorOnly = true;` 를 적습니다.
+     * @details 인스턴스가 여럿이라 "어느 것" 인지가 뜻인 서브시스템(선택 — 메인 씬의 것과 미리보기 창마다의 것)은 타입 조회(`findSubsystem<T>` ·
+     *          `EditorContext::getSubsystem<T>`)가 늘 메인 것을 돌려주어, 창이 겨누는데 메인을 고치는 결함이 새 호출부마다 다시 생긴다.
+     *          조회를 컴파일에서 막고 뜻이 드러나는 접근자(`getMainSceneSelection` · `getFocusedSelection` · `findSelectionOf`)로만 얻게 한다.
+     */
+    template <typename T, typename = void>
+    struct IsAccessorOnlySubsystem : std::false_type
+    {
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    template <typename T>
+    struct IsAccessorOnlySubsystem<T, std::void_t<decltype( T::kAccessorOnly )>> : std::bool_constant<T::kAccessorOnly>
+    {
+    };
+    template <typename T>
+    inline constexpr bool kIsAccessorOnlySubsystem = IsAccessorOnlySubsystem<std::remove_cv_t<T>>::value;
+
     /** @brief App 이 넘긴 호스트 서비스 범위를 연결합니다. 범위는 `unbindEditorService` 까지 살아 있어야 합니다(호스트가 소유). */
     void bindEditorService( const ISubsystemLocator& hostServices );
     void unbindEditorService();
@@ -49,6 +71,7 @@ namespace sw::editor
     template <typename T>
     T* findSubsystem()
     {
+        static_assert( kIsAccessorOnlySubsystem<T> == false, "this subsystem has several instances - use its named accessor (e.g. getMainSceneSelection / getFocusedSelection)" );
         T* pScoped = locateSubsystem<T>( findEditorScope() );
         if ( pScoped != nullptr )
             return pScoped;
@@ -127,6 +150,25 @@ namespace sw::editor
      *          메인 선택이 바뀌거나 창이 내려가면 메인으로 돌아온다(`EditorSelection::notifyChanged` · `unbindPreviewScope`). 둘 다 없으면 nullptr 입니다.
      */
     SW_EDITOR_API EditorSelection* getFocusedSelection();
-    /** @brief 겨누는 선택을 겁니다(nullptr 이면 메인 선택). 미리보기 선택만 겁니다. */
+    /** @brief 겨누는 선택을 겁니다(nullptr 이면 메인 선택). 미리보기 선택만 겁니다. 메인 씬 창(씬 뷰 · 계층)이 포커스를 얻으면 nullptr 로 돌린다. */
     SW_EDITOR_API void setFocusedSelection( EditorSelection* pSelection );
+
+    // ------------------------------------------------------------------------------
+    // 선택을 얻는 길 — `EditorSelection` 은 타입으로 찾지 못한다(`kIsAccessorOnlySubsystem`). 호출부마다 어느 선택인지 이름으로 적는다.
+    //   getMainSceneSelection : 메인 씬(활성 씬)의 선택. 메인 월드를 보여 주는 창(씬 뷰 · 계층 · 맵 검사)과 셀프테스트 탐침
+    //   getFocusedSelection   : 지금 겨누는 창의 선택. 인스펙터 · 전역 명령(삭제 · 복제 · 정렬 · 붙여넣기)
+    //   findSelectionOf       : 오브젝트가 사는 씬의 선택. 오브젝트를 받아 고치는 명령(지운 것을 선택에서 빼기 · 복제본 고르기)
+    // ------------------------------------------------------------------------------
+    /** @brief 메인 씬의 선택(에디터 컨텍스트의 `EditorSelection`)입니다. 에디터 범위에 없으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다. */
+    SW_EDITOR_API EditorSelection& getMainSceneSelection();
+    /**
+     * @brief @p manager 의 씬에 묶인 선택입니다 — 미리보기 씬이면 그 창의 선택, 활성 씬이면 메인 선택입니다. 어느 쪽도 아니면(테스트가 만든 따로 선 씬) nullptr 입니다.
+     * @details 오브젝트를 받아 고치는 명령이 "포커스" 를 묻지 않고 대상이 사는 씬으로 선택을 고른다 — 창이 겨누는 것과 명령이 받은 대상이 달라도 어긋나지 않는다.
+     */
+    SW_EDITOR_API EditorSelection* findSelectionOf( const GameObjectManager& manager );
+    /** @brief 미리보기 씬에 묶인 선택들입니다(`EditorSelection::bindPreviewScope` 가 넣고 `unbindPreviewScope` 가 뺀다). */
+    SW_EDITOR_API const vector<EditorSelection*>& getPreviewSelections();
+    /** @brief 미리보기 씬에 묶인 선택을 목록에 넣습니다 · 뺍니다. `EditorSelection` 만 부릅니다. */
+    SW_EDITOR_API void registerPreviewSelection( EditorSelection& selection );
+    SW_EDITOR_API void unregisterPreviewSelection( EditorSelection& selection );
 } // namespace sw::editor

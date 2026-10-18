@@ -110,11 +110,12 @@ namespace sw::editor
 
     GimmickCircuitComponent* GimmickGraphPanel::findCircuit()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
+        // 고른 오브젝트의 컴포넌트를 고치는 창(디테일 패널의 확장)이라 겨누는 창의 선택이다 — 미리보기 창의 오브젝트도 편집한다.
+        const EditorSelection* pSelection = editor::getFocusedSelection();
+        if ( pSelection != nullptr )
         {
             vector<GameObject*> listSelected;
-            pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+            pSelection->getSelectedObjects( listSelected );
             for ( GameObject* pObject : listSelected )
             {
                 GimmickCircuitComponent* pCircuit = pObject != nullptr ? pObject->getComponent<GimmickCircuitComponent>() : nullptr;
@@ -581,10 +582,11 @@ namespace sw::editor
         }
         if ( ImGui::Button( "Use selected object" ) )
         {
-            EditorContext*      pContext = EditorContext::get();
-            vector<GameObject*> listSelected;
-            if ( pContext != nullptr )
-                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+            // 회로(`findCircuit`)와 같은 선택에서 고른다 — 대상은 회로와 같은 씬에 있어야 한다.
+            const EditorSelection* pSelection = editor::getFocusedSelection();
+            vector<GameObject*>    listSelected;
+            if ( pSelection != nullptr )
+                pSelection->getSelectedObjects( listSelected );
             if ( listSelected.empty() == false && listSelected[0] != nullptr )
             {
                 editSetTarget( circuit, node._graphID, listSelected[0]->getHandle() );

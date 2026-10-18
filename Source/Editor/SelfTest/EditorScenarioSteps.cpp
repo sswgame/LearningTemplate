@@ -573,7 +573,7 @@ namespace sw::editor
                     if ( bNameMismatch )
                         continue;
                     ++foundCount;
-                    if ( pContext != nullptr && pContext->getSubsystem<EditorSelection>().hasObject( pObj ) )
+                    if ( pContext != nullptr && editor::getMainSceneSelection().hasObject( pObj ) )
                         ++pickCount;
                 }
                 if ( foundCount != expectedCount )
@@ -734,7 +734,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                outValue = static_cast<float64>( pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() );
+                outValue = static_cast<float64>( editor::getMainSceneSelection().getSelectedObjectCount() );
                 return true;
             }
 
@@ -777,7 +777,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const GameObject*      pPrimary = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                const GameObject*      pPrimary = editor::getMainSceneSelection().getPrimaryObject();
                 const CameraComponent* pCamera  = pPrimary != nullptr ? pPrimary->getComponent<CameraComponent>() : nullptr;
                 outValue                        = ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport ) ? 1.0 : 0.0;
                 return true;
@@ -865,7 +865,7 @@ namespace sw::editor
                 if ( pContext == nullptr )
                     return false;
                 vector<GameObject*> listSelected;
-                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+                editor::getMainSceneSelection().getSelectedObjects( listSelected );
                 vector<string> listName;
                 for ( const GameObject* pObject : listSelected )
                 {
@@ -1120,7 +1120,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                GameObject*  pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                GameObject*  pObject = editor::getMainSceneSelection().getPrimaryObject();
                 const size_t dot     = gv_editorProbeProperty.find( '.' );
                 if ( pObject == nullptr || dot == string::npos )
                     return false;
@@ -1149,7 +1149,7 @@ namespace sw::editor
                 if ( pContext == nullptr || dot == string::npos )
                     return false;
                 vector<GameObject*> listSelected;
-                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+                editor::getMainSceneSelection().getSelectedObjects( listSelected );
                 const hashed_string typeName( gv_editorProbeProperty.substr( 0, dot ).c_str() );
                 const hashed_string propertyName( gv_editorProbeProperty.substr( dot + 1 ).c_str() );
                 float64             sum{ 0.0 };
@@ -1179,7 +1179,7 @@ namespace sw::editor
                 const size_t   dot      = gv_editorProbeProperty.find( '.' );
                 if ( pContext == nullptr || dot == string::npos )
                     return false;
-                GameObject* pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 if ( pObject == nullptr )
                     return false;
                 Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorProbeProperty.substr( 0, dot ).c_str() ) );
@@ -1256,7 +1256,7 @@ namespace sw::editor
             [[nodiscard]] static bool readSelectedComponentCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
-                GameObject*    pObject  = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
+                GameObject*    pObject  = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
                 if ( pObject == nullptr )
                     return false;
                 outValue = static_cast<float64>( pObject->getComponentCount() );

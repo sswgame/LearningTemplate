@@ -346,11 +346,12 @@ namespace sw::editor
             /** @brief 고른 오브젝트마다 컴포넌트 하나를 단다(되돌리기 한 줄씩). "Add Component" 메뉴에 숨긴 타입(`HideInMenu`)도 단다 — 시나리오가 테스트 컴포넌트를 단다. */
             static bool runAddComponent( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( listArgument.size() != 1 || pContext == nullptr )
+                // 사람이 인스펙터의 "Add Component" 로 하는 일과 같다 — 겨누는 창의 선택에 단다(미리보기 창이면 기록도 그 창의 스택).
+                const EditorSelection* pSelection = editor::getFocusedSelection();
+                if ( listArgument.size() != 1 || pSelection == nullptr )
                     return false;
                 vector<GameObject*> listSelected;
-                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+                pSelection->getSelectedObjects( listSelected );
                 uint32 addedCount{ 0 };
                 for ( GameObject* pObject : listSelected )
                 {
@@ -373,7 +374,8 @@ namespace sw::editor
                 const bool     bInvalidArguments = listArgument.size() != 1 || pContext == nullptr || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false;
                 if ( bInvalidArguments )
                     return false;
-                GameObject* pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                // 놓인 프리팹 표(워크스페이스)가 메인 씬의 것이라 메인 선택이다.
+                GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 if ( pObject == nullptr )
                 {
                     outReply = "select the object to turn into a prefab first";

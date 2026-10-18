@@ -414,7 +414,7 @@ namespace sw::editor
                     issue._typeName    = hashed_string( "sw::PointLightComponent" );
                     issue._severity    = ValidationSeverity::Error;
                     ValidationIssueLog::get().replaceIssues( probe._objectID, { issue } );
-                    pContext->getSubsystem<EditorSelection>().clearObjectSelection();
+                    editor::getMainSceneSelection().clearObjectSelection();
                     (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, true );
                     pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( pPanel->getPanelTitle() );
                     return EditorSelfTestStep::Continue;
@@ -428,13 +428,13 @@ namespace sw::editor
                 {
                     if ( pPanel->selectRowObject( rowIndex ) == false )
                         continue;
-                    const GameObject* pPrimary = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                    const GameObject* pPrimary = editor::getMainSceneSelection().getPrimaryObject();
                     bSelected                  = pPrimary != nullptr && pPrimary->getObjectID() == probe._objectID;
                 }
                 (void)context.expect( bSelected, "clicking the issue row did not select its object" );
 
                 ValidationIssueLog::get().removeSource( probe._objectID );
-                pContext->getSubsystem<EditorSelection>().clearObjectSelection();
+                editor::getMainSceneSelection().clearObjectSelection();
                 GameObject* pObject = pManager->findGameObjectByID( probe._objectID );
                 if ( pObject != nullptr )
                     pManager->destroyObject( pObject );
