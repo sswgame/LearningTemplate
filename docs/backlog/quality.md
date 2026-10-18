@@ -2,9 +2,6 @@
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 빌드 속도, 간헐 실패 관찰의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `A-23` [결함] **Shipping `-L nogpu` 에서 합성 리그 테스트 둘이 `game/empty/rigs_raw/*.rig.json` 을 못 읽는다.** `ResourceDataSchemaTest.EveryResourceDataFileLoadsWithoutUnknownNames` ·
-  `SyntheticRigImportTest.RepresentativesImportAndBindTheirRig`(2026-10-18 `pixel2` Shipping 에서 확인, PixelTown 과 무관 — `rigbench` 병합 뒤 Shipping 을 돌리지 않았다). 원본 폴더(`rigs_raw`)가 Shipping 마운트에 없는 것으로 보인다(미확인).
-
 - `A-27` [결함] **`RunBuildBaseline` 이 워크트리 경로를 옛 `LT-wt` 로 가정한다.** Windows 워크트리는 드라이브 루트의 `w`(`D:\w\<이름>`)로 옮겼는데 기준선 스크립트가
   옛 경로를 찾는다(2026-10-18 `feat8` 작업에서 확인). 워크트리 루트를 `MakeWorktree` 와 같은 함수 하나에서 받게 한다.
 
