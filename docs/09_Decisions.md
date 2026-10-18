@@ -925,6 +925,7 @@
     바이트 전송(`IServerBusTransport`)과 타입 있는 앞(`ServerBus`)을 나눠 키트는 바이트를 쓰지도 읽지도 못합니다. 버스 전용 타입은 키트 `MessageTypes` 에서 뺐습니다(클라이언트 해시에 섞이지 않음).
     push 중계는 알림 열거자 이름 · 본문 A 를 싣고 받는 서버가 등록 테이블(`OnlinePushRelayEntry`)로 자기 빌드의 번호와 B 를 만듭니다. 필수 필드 표시(`Required`)는 두지 않고(의미 버전을 높이는 것과 같다),
     `config.changed` 는 구독처가 없어 지웠고(서버는 주기로 다시 읽음), 캐시 레코드는 버스와 같은 읽기, 영속 레코드의 모르는 필드 보관은 백로그 `F-3` 입니다.
+    필드 변경의 호환 규칙(추가 · 삭제 · 이름 · 타입 · 열거자)과 "새 필드는 옛 빌드 홉을 지나면 기본값"이라는 중계 규칙은 [계획](plans/ServerBusFormat.md) 3.6 에 있습니다.
   - 가변 길이가 두 겹인 칸(`vector<string>`, `vector<vector<T>>`)은 원소를 구조체로 감쌌습니다(`AccountLinkedProvider`, `MatchFormedTeam`). 클라이언트에 보내지 않는 값은 형식으로 막았습니다: 점검 허용 목록은 상태 응답의 타입(`MaintenanceView`)에 없고, 서버 안에서만 쓰는 칸(`AdminReply::_bRevokeSessions`, 레코드 판 `_version`)은 `PROPERTY` 가 아닙니다.
   - 의미만 바뀌고 배치는 그대로인 변경(단위 변경 같은 것)은 해시가 잡지 못하므로 `OnlineProtocolConstant::kBaseVersion` 하나를 올립니다.
   - 남은 손 코덱(기반 계층의 제재 버스, 접속 상태 전달 봉투와 캐시 값, 원장 · 우편 · 감사 · 원격 설정 레코드, 계정 · 길드 · 거래의 id 레코드)은 키트 프로토콜이 아니어서 옮기지 않았습니다.

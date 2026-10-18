@@ -23,7 +23,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 설계 | 1/7 | 없음 | engine | D1-7 |
 | - | [EditorCharacterEditor](docs/plans/EditorCharacterEditor.md) — 캐릭터 편집 창 구현 계획 (D4-8 ⑥) | 구현대기 | 0/6 | EditorMultiWorld | gameplay | D4-8 |
 | - | [EnginePartition](docs/plans/EnginePartition.md) — 엔진 분할 계획 | 구현대기 | 2/6 | 없음 | engine | C-1 |
-| - | [ServerBusFormat](docs/plans/ServerBusFormat.md) — 서버 버스 메시지 형식 계획 (2026-10-17) | 구현대기 | 7/7 | ReflectionFormats | network | F-2 |
 | - | [TypedComponents](docs/plans/TypedComponents.md) — 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17) | 구현대기 | 6/6 | ReflectionFormats | engine | C-52 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 2/6 | 없음 | graphics | D2-13 |
 | - | [EditorMultiWorld](docs/plans/EditorMultiWorld.md) — 다중 월드 · 에디터 툴 창 구현 계획 (D3-7) | 구현중 | 4/6 | 없음 | editor | D3-7 |
@@ -37,7 +36,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 154개
+후보 문서 9개 · 후보 절 155개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.
