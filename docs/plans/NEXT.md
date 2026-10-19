@@ -14,21 +14,24 @@
 
 한 일은 `git log` 가 정본입니다.
 
-## 1. 지금 상태 (2026-10-19)
+## 1. 지금 상태 (2026-10-20)
 
-- main CI(실행 39157285831, 86370c0)는 두 잡이 실패했다. Linux TSan: `TaskManager::resolveDependency` 가 후속 노드의 `_callable` 을 읽다가 그 후속의 `completeTask` 와 레이스 — `_bParallelGroupParent` 원자 플래그로 가르게 고쳤다(커밋됨, push 전). TSan 잡으로 확인한다. Windows Debug: `EngineTest_NoGPU_Shard1·2·4` 가 리소스 전체를 훑는 테스트(`EveryResourceComponentRewritesToTheSameBytes` 등)에서 104 초 시간 초과 — 원인 미조사(러너 느림인지 리소스 증가인지 최근 통과 실행과 테스트 시간을 비교한다).
-- `TypedComponents`: 인스펙터 콤보 선택기(3.8)까지 구현했다. 남은 것은 선택기의 화면 확인(`gpu-verifier`: 콤보 · `(none)` · 되돌리기 · Paste 비활성)과 앱 측정 넷(8.4). 새 후보 `StableAddressMap`(`Candidates-engine.md`).
-- 문서 개편(커밋됨, **아직 push 안 함**): 백로그를 없애고 계획 문서 + `Candidates-<영역>.md` + `Roadmap.md` + `NEXT.md` 로 일원화했다. push 전에 [작업 방식](../11_Workflow.md) 3절대로 `full-build` 증거를 남긴다.
-- 토큰 줄이기(2026-10-19, 푸시함): 규칙과 측정(ccusage 43개 세션: 캐시 읽기 약 77% · 쓰기 약 20% · 출력 약 3%)은 [에이전트와 토큰](../12_Agents.md) 에 있다. 비용의 거의 전부가 세션 길이와 캐시 재생성이라 effort 를 더 내릴 이득은 작다. 압축은 효과가 작았다(`09_Decisions.md` -5.7%). 계획 문서는 끝난 단위 절을 지우는 쪽이 낫다(작업 방식 6절).
-  - 남은 후보: 래퍼 출력 요약(`Scripts/generate` 등, 크기 미측정), 다음 ccusage 측정으로 오늘 변경(세션 가드 · 읽기 가드 · 문서 분할 · MCP 정리)의 효과 확인. 사용자 수준 MCP · 계정 스킬은 저장소 밖 설정이다.
-- 측정 · GPU 묶음(`meas`)은 한도(429)로 중단했다. 다시 하면 임시 쿠킹 폴더에서 한다(main 체크아웃에 탐침 파일을 만들지 않는다).
-- 근본 원인 후보(미해결): `DiskPathVsResourceId`(디스크 경로와 리소스 id 가 같은 `string_view` 입구), `WorktreeVcpkgInstalledDir`(워크트리가 `vcpkg_installed` 를 나눠 씀).
-- 세션 길이 하드 한도: 도입함(4MB · 8MB · 16MB 단계마다 한 번 차단, 압축 2회). `SessionGuard` 가 `NEXT.md` 인계와 새 세션을 안내하고, 같은 입력을 다시 보내면 통과한다.
+- main 은 origin 보다 앞서 있다(**push 안 함**). 병합 결과의 `full-build` 는 성공했고 증거가 있다(Debug, 경고 0). push 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
+- 병합한 것: 야간 Load 대응(`Scripts/qa/Load.py`), GimmickCircuitState 검증과 측정, PairedAnimation P0 ~ P2 검증과 상호작용 시작 · 에셋 캐시 · 세트 고르기. 새 후보 `AsyncResourceLoading`(`Candidates-engine.md`, 방향 정함).
+- 야간 `Load (Linux | Release, nightly)` 근본 원인은 모른다. 다음 야간 실행의 주석(봇 종료 코드와 오류 줄)으로 읽는다. 다른 `Scripts/qa` 스크립트의 자식 산출물 읽기도 같은 모양인지 확인하지 않았다.
+- GpuVerification V2(보고 전용 해제)는 `swrender` 단계가 실제로는 실패라 못 했다. 먼저 `RHIDeviceTest.DeviceCreationAllBackends`(Linux) · `BackendSweepVisitsEveryBackendThatStandsUp`(Windows)를 고치거나 의도한 로그를 `SW_TEST_DEFENSIVE_SCOPE` 로 감싼다.
+- GPU 나 독점 측정이 필요해 못 한 것: TypedComponents 인스펙터 선택기 화면 확인과 앱 측정 넷(8.4), GimmickCircuitState 2-d 화면 확인, IncrementalCook K0 측정.
+- PairedAnimation 남은 것: P3(애니메이터 시각 지정 훅이 선행), 시나리오 테스트(Shooter3D 활 · 화살 리소스 없음), M3 에디터. 재생 속도 소유자를 `SkeletalAnimatorComponent` 에 두는 구조 개선 후보.
+- ReflectionFormats 는 진행 12/12 인데 상태가 구현중이다. 끝으로 바꿀지 사용자에게 확인한다.
+- 측정 후보: 게임 스레드의 직렬 구간(`StructuralChangeBuffer::drain`, 프레임 시스템, 그룹 경계)을 Release 로 재서 더 병렬화할 만한지 본다. 컴포넌트 틱 자체는 이미 포크-조인 병렬이다. 루트의 `Multithreaded_Game_Simulation_Architecture.md` 는 추적되지 않는 초안이며, 이미 있는 것(태스크 의존성 · 작업 훔치기 · 병렬 for · 명령 버퍼)을 처음부터 쌓는 순서라 그대로 계획으로 올리지 않는다.
+- 후보 아이디어: 메시 컴포넌트가 머티리얼 슬롯을 하나만 가져 서브메시별 염색이 안 된다(`CharacterAppearanceComponent` 는 부품을 별도 메시로 나눠 처리).
+- 근본 원인 후보(미해결): `DiskPathVsResourceId`, `WorktreeVcpkgInstalledDir`.
 
 ## 2. 첫 일
 
-1. push 뒤 CI 를 확인한다(`py -3 -m Scripts ci-jobs --runs`). TSan 잡이 통과하는지 본다.
-2. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터. **`[병렬 가능]` 표시된 일은 파일 소유가 겹치지 않으면 병렬로 띄운다**(세션 시작 훅이 그 목록을 알린다). `[단독: …]` 은 혼자, `[확인 필요]` 는 먼저 확인한다. 인계를 쓸 때 로드맵의 표시를 다시 확인하고, 일을 끝내면 그 줄의 표시도 맞춘다.
+1. push 전 CI 확인(`py -3 -m Scripts ci-jobs --runs`), 문제 없으면 push.
+2. `AsyncResourceLoading` 착수(핸들 형식 → 텍스처 · 메시 → 등장 비율과 디더 → 나머지). 시작 전에 비동기 씬 로드 워커와 `_listComponent` 순회가 겹치는지 확인한다.
+3. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터. `[병렬 가능]` 은 파일 소유가 겹치지 않으면 병렬로 띄운다.
 
 ## 3. 새 세션 시작 절차
 
