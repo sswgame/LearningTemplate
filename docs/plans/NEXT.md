@@ -16,12 +16,12 @@
 
 ## 1. 지금 상태 (2026-10-20)
 
-- **진행 중인 작업자 하나(`worktree-make` 워크트리, 병합 안 함)**: `D:/w/audiolayout`(`wt/audiolayout`, AudioChannelLayout U1). 보고가 오면 확인하고 `git merge --no-ff` 로 병합한다. README 진행 표 충돌은 `status-board --write README.md` 로 다시 만든다.
-- **이번 세션에 main 으로 병합함(push 안 함)**: GpuVerification V2 절반(`isBackendUnderTest`, Linux `gl` 원인은 모름, `continue-on-error` 그대로) · RealElapsedTime · EditorMultiWorld 프리팹 창(화면 미확인) · Vfx V0 · V1(V2 렌더 경로와 V3 는 GPU · 셰이더 굽기가 필요해 못 했다) · 캐릭터가 움직이는 바닥의 속도를 받음(3D · 2D, 후속은 `MovingGroundFollowUps`) · GimmickCircuitState 2-d 통과(5/5) · AsyncResourceLoading A1 조사 · 문서 정리(측정 조건 형식 등) · `PairedAnimationDef` 캐시가 늘려 CI 를 깨던 테스트 수정. `worktree-agent-*` 옛 브랜치 넷은 워크트리를 지웠고 브랜치만 남았다(내용은 모두 옮겼으니 `git branch -D` 해도 된다).
+- **진행 중인 작업자는 없다.** 워크트리는 모두 지웠다(`git worktree list` 로 확인).
+- **이번 세션에 main 으로 병합함(push 안 함)**: AudioChannelLayout U1(1/5, Release 벤치 미측정, 남은 U2~U5) · GpuVerification V2 절반(`isBackendUnderTest`, Linux `gl` 원인은 모름, `continue-on-error` 그대로) · RealElapsedTime · EditorMultiWorld 프리팹 창(화면 미확인) · Vfx V0 · V1(V2 렌더 경로와 V3 는 GPU · 셰이더 굽기가 필요해 못 했다) · 캐릭터가 움직이는 바닥의 속도를 받음(3D · 2D, 후속은 `MovingGroundFollowUps`) · GimmickCircuitState 2-d 통과(5/5) · AsyncResourceLoading A1 조사 · 문서 정리(측정 조건 형식 등) · `PairedAnimationDef` 캐시가 늘려 CI 를 깨던 테스트 수정. `worktree-agent-*` 옛 브랜치 넷은 워크트리를 지웠고 브랜치만 남았다(내용은 모두 옮겼으니 `git branch -D` 해도 된다).
 - **CI**: main CI 실행 `39295170988` 의 실패는 모두 `AssetCacheRegistryTest.BuiltInCachesAreReachableThroughTheRegistry` 하나였고 고쳤다(`4548c65d2`). push 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
 - **vcpkg**: 워크트리는 메인의 `Tools/vcpkg` · `build/vcpkg_installed` · `build/vcpkg_cache` 를 정션으로 공유하고 다시 설치하지 않는다(사용자 지시, 분리하지 않는다). 후보 `WorktreeVcpkgInstalledDir` 는 지웠다. 워크트리를 지울 때는 정션을 먼저 `rmdir` 로 끊는다. `git worktree remove` 는 긴 경로에서 실패할 수 있다.
 - **새 후보**: `UiTooltipAndCursor`(Candidates-ui), `ReflectionMaxCountConstant`(Candidates-engine). 런타임 UI 는 호버 경로 · `:hover` 스타일은 있고 툴팁 · 커서 모양 · 월드 위젯 입력(`WorldWidgetInput`)은 없다.
-- 새 계획 문서: [AsyncResourceLoading](AsyncResourceLoading.md)(1/6, A2 착수 전 `design-reviewer` 검토, 텍스처 GPU 업로드의 워커 안전성은 A3 앞에 확인), [AudioChannelLayout](AudioChannelLayout.md)(U1 진행 중).
+- 새 계획 문서: [AsyncResourceLoading](AsyncResourceLoading.md)(1/6, A2 착수 전 `design-reviewer` 검토, 텍스처 GPU 업로드의 워커 안전성은 A3 앞에 확인), [AudioChannelLayout](AudioChannelLayout.md)(1/5, 다음 U2).
 - 사용자 결정 대기: ReflectionFormats 는 진행 12/12 인데 상태가 구현중이다. 끝으로 바꿀지 확인한다. NetSettingsRemaining 은 설정 데이터 형식을 새로 정해야 해서 DataDriven 과 함께 다룬다.
 - 앱 실행 후 스스로 종료되지 않는 문제: `-gv_screenshot` 으로 띄운 `App.exe` 가 캡처 뒤에도 안 꺼져 타임아웃(종료 코드 124)으로 끊긴다. 고칠 후보.
 - GPU 나 독점 측정이 필요해 못 한 것: TypedComponents 인스펙터 선택기 화면 확인과 앱 측정 넷(8.4), IncrementalCook K0 측정, 프리팹 창 화면, Vfx V2 · V3.
@@ -30,10 +30,9 @@
 
 ## 2. 첫 일
 
-1. audiolayout 작업자 보고를 확인해 병합하고 `worktree-remove` 로 지운다.
-2. push 하기 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다. main 은 origin 보다 앞서 있다.
-3. 병렬로 띄울 묶음(파일 소유가 겹치지 않으면): Roadmap 의 `[병렬 가능]` — Vfx V2 · V3 는 GPU 가 있어야 하니 `gpu-verifier` 와 함께, 카메라 디렉터(CameraRendererIntegration), 애니메이션 묶음(PairedAnimation · AnimationGraphLayers), 새로 쓴 정리(SerializerSilentSkips 등), AsyncResourceLoading A2(설계 검토 뒤). 동시 빌드는 최대 2.
-4. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터.
+1. push 하기 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다. main 은 origin 보다 앞서 있다.
+2. 병렬로 띄울 묶음(파일 소유가 겹치지 않으면): Roadmap 의 `[병렬 가능]` — Vfx V2 · V3 는 GPU 가 있어야 하니 `gpu-verifier` 와 함께, 카메라 디렉터(CameraRendererIntegration), 애니메이션 묶음(PairedAnimation · AnimationGraphLayers), 새로 쓴 정리(SerializerSilentSkips 등), AsyncResourceLoading A2(설계 검토 뒤). 동시 빌드는 최대 2.
+3. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터.
 
 ## 3. 새 세션 시작 절차
 
