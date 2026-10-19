@@ -131,9 +131,9 @@ namespace sw
         static void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
                                  const SerializeContext& context );
 
-        /** @brief 텍스트 토큰을 값으로 파싱합니다. */
-        [[nodiscard]] static bool parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
-                                                  const SerializeContext& context );
+        /** @brief 텍스트 토큰을 값 하나 자체(객체 주소가 아니다)에 읽어 씁니다. 값 주소 쪽 텍스트 쓰기이며, 짝은 `formatValueText` 입니다. */
+        [[nodiscard]] SW_API static bool parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
+                                                         const SerializeContext& context );
 
         /**
          * @brief 프로퍼티에 선언된 기본값(PROPERTY `Default=`)이 있으면 적용합니다. 없으면 아무것도 하지 않습니다.
@@ -161,8 +161,17 @@ namespace sw
         /** @brief 값 타입 하나를 세 형식이 모두 실어 나를 수 있으면 true 입니다(텍스트 핸들러, enum, 리플렉션 구조체). */
         SW_API static bool canCarryValueType( hashed_string typeName, const SerializeContext& context );
 
-        /** @brief 프로퍼티 값을 사람이 읽을 수 있는 텍스트로 씁니다(XML 속성 값과 같은 형태). 비트필드는 `true` 나 `false`, 컨테이너는 `[n]`(원소 수)입니다. */
-        SW_API static string formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& context );
+        /**
+         * @brief 객체 안 프로퍼티 값을 사람이 읽을 수 있는 텍스트로 씁니다(XML 속성 값과 같은 형태). 비트필드는 `true` 나 `false`, 컨테이너는 `[n]`(원소 수)입니다.
+         * @param pInstance 프로퍼티를 가진 **객체**의 주소입니다. 프로퍼티 오프셋(또는 접근자)으로 값을 찾습니다. 값 자체의 주소는 `formatValueText` 로 넘깁니다.
+         */
+        [[nodiscard]] SW_API static string formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& context );
+        /**
+         * @brief 값 하나 자체를 텍스트로 씁니다. `formatPropertyText` 의 값 부분과 같은 형태이고, 짝은 `parseTextValue` 입니다.
+         * @details 객체 주소와 값 주소를 한 함수로 받으면 값 주소에 오프셋이 한 번 더 더해진다(인스펙터 핸들 선택기가 고른 값을 `0:0` 으로 썼다).
+         *          그래서 값 주소는 프로퍼티를 받지 않는 이 함수가 받는다. 오프셋 0 짜리 가짜 `PropertyInfo` 를 만들어 `formatPropertyText` 에 넘기지 않는다.
+         */
+        [[nodiscard]] SW_API static string formatValueText( const void* pValue, const hashed_string& typeName, const SerializeContext& context );
 
         /** @brief 키 문자열이 같은지 비교합니다(대소문자 무시 옵션 지원). */
         static bool keysEqual( string_view left, string_view right, bool bIgnoreCase );
