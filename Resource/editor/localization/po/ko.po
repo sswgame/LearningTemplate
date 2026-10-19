@@ -356,22 +356,17 @@ msgctxt "EdCommon.NotifyPlayUnsaved"
 msgid "The scene has unsaved changes. Use Play on the toolbar to confirm."
 msgstr "씬에 저장하지 않은 변경이 있습니다. 툴바의 Play 로 확인하십시오."
 
-#: Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp
+#: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
 msgctxt "EdCommon.NotifyPrefabIsolated"
-msgid "Isolated the prefab in the current scene"
-msgstr "현재 씬에서 프리팹을 격리했습니다"
+msgid "Opened the prefab in the Prefab Window"
+msgstr "프리팹 창에서 프리팹을 열었습니다"
 
-#: Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp
+#: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
 msgctxt "EdCommon.NotifyPrefabIsolationExited"
 msgid "Exited prefab isolation"
 msgstr "프리팹 격리를 마쳤습니다"
 
-#: Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp
-msgctxt "EdCommon.NotifyPrefabSaveFirst"
-msgid "Save the scene before opening prefab isolation"
-msgstr "프리팹 격리를 열기 전에 씬을 저장하십시오"
-
-#: Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp
+#: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
 msgctxt "EdCommon.NotifyPrefabTitle"
 msgid "Prefab"
 msgstr "프리팹"

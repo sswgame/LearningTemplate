@@ -17,7 +17,6 @@ namespace sw::editor
         workspace.clearSelection();
         if ( pCommandStack != nullptr )
             pCommandStack->clear();
-        workspace.clearPrefabIsolation();
         return true;
     }
 } // namespace sw::editor

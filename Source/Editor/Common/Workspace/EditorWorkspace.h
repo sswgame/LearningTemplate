@@ -40,28 +40,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief Isolation 에서 숨긴 오브젝트와 그 이전 활성 상태입니다. */
-    struct PrefabIsolationHiddenObject
-    {
-        uint64 _objectID{ 0 };
-        uint8  _bWasActive{ SW_FALSE };
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /** @brief 제자리(in-place) 프리팹 Isolation 의 한 단계입니다. */
-    struct PrefabIsolationFrame
-    {
-        string                              _prefabPath;
-        vector<PrefabIsolationHiddenObject> _listHidden;
-        uint64                              _rootObjectID{ 0 };
-        uint8                               _bSpawnedRoot{ SW_FALSE };
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
     /**
      * @class EditorWorkspace
      * @brief 에디터의 작업 공간 상태(선택, 포커스 애셋, 기즈모, 창 요청)를 관리합니다. `EditorContext` 가 소유합니다.
@@ -149,14 +127,17 @@ namespace sw::editor
         void   setScrollToComponentID( uint64 id ) { _scrollToComponentID = id; }
 
         // ------------------------------------------------------------------------------
-        // 7) 프리팹 인스턴스 경로. 인스턴스 기록은 둘이다 — 씬에 놓은 인스턴스(활성 씬의 `Scene::getEntityPrefabPath`)와,
+        // 7) 프리팹 인스턴스 경로. 인스턴스 기록은 둘이다 — 씬에 놓은 인스턴스(그 오브젝트가 사는 씬의 `Scene::getEntityPrefabPath`)와,
         //    다른 프리팹 인스턴스가 스폰한 중첩 부품(그 씬의 `PrefabInstanceRegistry`). "이 오브젝트는 어느 프리팹의 인스턴스인가" 는
         //    `findPrefabPath` 하나로 묻는다. 놓은 인스턴스 기록만 따로 보는 일(복사 · 중첩으로 옮기기)만 `getPlacedPrefabPath` 를 쓴다.
         // ------------------------------------------------------------------------------
-        /** @brief 활성 씬에 놓은 인스턴스의 프리팹 경로를 기록합니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
-        void setPlacedPrefabPath( uint64 objectID, string_view prefabPath );
-        /** @brief 활성 씬에 놓은 인스턴스로 기록된 프리팹 경로입니다. 중첩 부품은 여기 없습니다(`findPrefabPath`). 없거나 활성 씬이 없으면 빈 문자열입니다. */
-        string_view getPlacedPrefabPath( uint64 objectID ) const;
+        /**
+         * @brief 놓은 인스턴스의 프리팹 경로를 **오브젝트가 사는 씬**(활성 씬이나 미리보기 씬)에 기록합니다. 빈 경로는 연결을 끊습니다. 어느 씬에도 없으면 아무것도 하지 않습니다.
+         * @details 오브젝트 id 만 받으면 활성 씬으로 읽고 써서 미리보기 창(프리팹 창)의 인스턴스를 놓친다 — 그래서 id 가 아니라 오브젝트를 받는다.
+         */
+        void setPlacedPrefabPath( const GameObject& object, string_view prefabPath );
+        /** @brief 놓은 인스턴스로 기록된 프리팹 경로입니다(오브젝트가 사는 씬의 표). 중첩 부품은 여기 없습니다(`findPrefabPath`). 없으면 빈 문자열입니다. */
+        string_view getPlacedPrefabPath( const GameObject& object ) const;
         /**
          * @brief @p pObject 가 인스턴스인 프리팹의 경로입니다 — 아직 바깥 인스턴스 아래에 붙은 중첩 부품이면 그 부품의 원본 프리팹, 아니면 놓은 인스턴스 기록입니다.
          * @details 인스펙터의 프리팹 줄 · 계층의 파란 이름 · Apply/Revert 대상 · 프리팹 격리가 모두 이 판정을 쓴다. 프리팹 인스턴스가 아니면 빈 문자열입니다.
@@ -185,37 +166,25 @@ namespace sw::editor
         // 붙여 넣기, 프리셋, 정렬, 분배, 바닥 스냅은 여기에 전달 함수를 두지 않는다. 로직은 EditorTransformCommands 에 있고(작업 공간은 클립보드만 보관한다),
         // 커맨드 레지스트리(transform.*)를 거친다.
 
-        bool                        isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
-        const string&               getPrefabIsolationPrefabPath() const;
-        uint64                      getPrefabIsolationRootID() const;
-        const PrefabIsolationFrame* getPrefabIsolationFrame() const;
-        void                        pushPrefabIsolation( PrefabIsolationFrame frame );
-        /** @brief 한 단계를 나갑니다. 스택이 비면 true 입니다. */
-        bool popPrefabIsolation();
-        void clearPrefabIsolation();
-
     private:
-        EditorSelection*             _pEditorSelection;
-        uint64                       _selectedComponentID;
-        uint64                       _observedSceneGeneration;
-        uint64                       _scrollToComponentID;
-        string                       _selectedComponentKey;
-        string                       _focusedAssetPath;
-        string                       _pendingOpenPanelTitle;
-        string                       _pendingScenePath;
-        string                       _pendingSceneActionPath;
-        string                       _emptyString;
-        string                       _copiedComponentXML;
-        string                       _copiedComponentTypeName;
-        mutex                        _pendingSceneMutex;
-        array<CameraBookmark, 9>     _arrCameraBookmark;
-        vector<PrefabIsolationFrame> _listPrefabIsolationFrame;
-        vector<uint64>               _listLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id
-        int32                        _gizmoOperation;
-        EditorPendingSceneAction     _pendingSceneAction;
-        uint8                        _bGizmoLocalSpace  : 1;
-        uint8                        _bSceneDirty       : 1;
-        uint8                        _bPrefabIsolation  : 1;
-        [[maybe_unused]] uint8       _reservedWorkspace : 4;
+        EditorSelection*         _pEditorSelection;
+        uint64                   _selectedComponentID;
+        uint64                   _observedSceneGeneration;
+        uint64                   _scrollToComponentID;
+        string                   _selectedComponentKey;
+        string                   _focusedAssetPath;
+        string                   _pendingOpenPanelTitle;
+        string                   _pendingScenePath;
+        string                   _pendingSceneActionPath;
+        string                   _copiedComponentXML;
+        string                   _copiedComponentTypeName;
+        mutex                    _pendingSceneMutex;
+        array<CameraBookmark, 9> _arrCameraBookmark;
+        vector<uint64>           _listLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id
+        int32                    _gizmoOperation;
+        EditorPendingSceneAction _pendingSceneAction;
+        uint8                    _bGizmoLocalSpace  : 1;
+        uint8                    _bSceneDirty       : 1;
+        [[maybe_unused]] uint8   _reservedWorkspace : 5;
     };
 } // namespace sw::editor

@@ -1,7 +1,7 @@
 /**
  * @file EditorAssetCommands.h
  * @brief 애셋 열기와 프리팹 · 스프라이트 스폰 커맨드를 제공합니다.
- * @details 씬 문서 흐름은 `EditorSceneFileCommands`, 프리팹 격리는 `EditorPrefabIsolationCommands`, 디스크의 파일 작업은
+ * @details 씬 문서 흐름은 `EditorSceneFileCommands`, 프리팹 격리는 `EditorPrefabIsolation`(프리팹 창 `PrefabEditorPanel` 이 든다), 디스크의 파일 작업은
  *          `EditorAssetFileCommands`, 폴더 목록은 `EditorFolderListing` 이 맡습니다.
  */
 #pragma once

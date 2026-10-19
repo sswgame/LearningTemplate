@@ -126,6 +126,11 @@ namespace sw::editor
     /** @brief 지금 편집 중인 씬의 GameObjectManager 입니다. 씬이 없으면 nullptr 입니다. */
     SW_EDITOR_API GameObjectManager* getActiveObjectManager();
     /**
+     * @brief @p pManager 를 가진 씬입니다 — 활성 씬이거나 열린 미리보기 씬입니다. 어느 쪽도 아니면 nullptr 입니다.
+     * @details 오브젝트에 딸린 기록(프리팹 경로 …)은 활성 씬이 아니라 **오브젝트가 사는 씬**의 표에 둔다. 활성 씬으로 읽으면 미리보기 씬의 오브젝트를 찾지 못한다.
+     */
+    SW_EDITOR_API Scene* findSceneOf( const GameObjectManager* pManager );
+    /**
      * @brief 지금 편집 중인 씬에서 핸들이 가리키는 오브젝트를 찾습니다. 씬이 없거나 대상이 사라졌으면 nullptr 입니다.
      * @details 에디터가 프레임을 넘겨 드는 참조(선택 · 기즈모 대상 · 인스펙터 되돌리기)는 모두 핸들이고, 쓸 때마다 이것으로
      *          풉니다.

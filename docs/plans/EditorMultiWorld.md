@@ -1,8 +1,8 @@
 # 다중 월드 · 에디터 툴 창 구현 계획 (D3-7)
 
-> 상태: 구현중 · 선행: 없음 · 영역: editor · 옛번호: D3-7 · 진행: 4/6
+> 상태: 구현중 · 선행: 없음 · 영역: editor · 옛번호: D3-7 · 진행: 5/6
 
-옛 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1~4 와 단계 5 의 머티리얼 창이 코드로 들어갔습니다(2026-10-15, 각 단계의 "구현됨" 참고).
+옛 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1~4 와 단계 5 의 머티리얼 창 · 프리팹 창이 코드로 들어갔습니다(각 단계의 "구현됨" 참고).
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
 
 ## 1. 현재 구조
@@ -42,7 +42,7 @@
 ### 1.5 에디터
 
 - `EditorRenderViews`(`Editor/Common/Workspace/EditorRenderViews.h`)는 `EditorViewKind` 로 고른 고정 배열(`_arrViewTarget`)의 오프스크린 타깃을 관리합니다(`ensureViewTargetSize` · `markViewDrawn` · `wasViewDrawn`). 게임 뷰 · 씬 뷰만 있습니다.
-- 프리팹 격리 — `EditorPrefabIsolationCommands::enterPrefabIsolation( prefabPath )` · `exitPrefabIsolation( bSaveToPrefab )`. 활성 씬의 다른 오브젝트를 숨기고 스택은 워크스페이스의 `PrefabIsolationFrame` 이 가지고 있습니다. 활성 씬을 빌리므로 씬이 더티면 막습니다.
+- 프리팹 격리(단계 5 이전) — `EditorPrefabIsolationCommands::enterPrefabIsolation( prefabPath )` · `exitPrefabIsolation( bSaveToPrefab )`. 활성 씬의 다른 오브젝트를 숨기고 스택은 워크스페이스의 `PrefabIsolationFrame` 이 가지고 있었습니다. 활성 씬을 빌리므로 씬이 더티면 막았습니다. 단계 5 에서 프리팹 창으로 옮겼습니다.
 - 머티리얼 미리보기 — `Panels/Material/MaterialPreviewShading.h` 가 구의 한 점 색을 **CPU 에서** 셈합니다(렌더러를 쓰지 않음). 실제 렌더링 결과는 메인 뷰포트의 선택 오브젝트에 머티리얼을 입혀 봅니다.
 - 선택은 `EditorSelection`(EditorSubsystem 하나), Undo 는 `EditorTransaction` → `CommandStack` 하나로 에디터 전체에 하나입니다.
 - 애셋 문서 패널의 기반은 `EditorDocumentPanel`(포커스 경로 → 로드, 더티 확인 팝업)입니다. 카메라는 `EditorCamera`, 기즈모는 `Viewport/EditorViewportGizmo` 입니다.
@@ -146,7 +146,15 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 - 위험: 프리팹 저장 경로가 바뀝니다 — 중첩 격리 스택(`PrefabIsolationFrame`)의 의미를 유지해야 합니다.
 - 확인: 프리팹 격리 기존 테스트, 머티리얼 미리보기 이미지 비교(끈 판과 달라야 함도 확인).
 - **구현됨(2026-10-15, 머티리얼만)**: `MaterialPanel` 이 `EditorPreviewPanel` 을 상속해 미리보기 씬에 구(`PreviewSubject`)를 놓고 문서의 머티리얼(캐시 사본)을 건다. CPU 구(`MaterialPreviewShading`)는 탐침 · 폴백으로 옆에 남겼다.
-  시나리오 `editor/previewscene.scenario.xml` + `-gv_editorPreviewScreenshot`. 프리팹 창은 남았다.
+  시나리오 `editor/previewscene.scenario.xml` + `-gv_editorPreviewScreenshot`.
+- **구현됨(프리팹 창)**: `Panels/Prefab/PrefabEditorPanel`(`EditorPreviewPanel` 파생, id `prefab_window`, 제목 "Prefab Window")이 프리팹을 **자기 미리보기 씬**에 스폰해 편집한다. 메인 씬의 `PrefabPanel`(오버라이드 도구)과 따로 둔다.
+  - 격리 스택은 전역 워크스페이스가 아니라 **창이 든다**(`Common/Commands/Scene/EditorPrefabIsolation`, ImGui 없음). 맨 아래 단계 = 문서 루트, 그 위 = 중첩 프리팹. 중첩 단계는 문서 루트 아래의 다른 오브젝트만 숨기고
+    조명 · 바닥(문서 루트 밖)은 건드리지 않는다. 스택이 창의 씬과 함께 살고 죽으므로 메인 씬 세대가 바뀌어도(`EditorSceneGenerationSync`) 영향이 없다. `EditorPrefabIsolationCommands` 와 워크스페이스의 격리 상태, 더티 막기(`requiresCleanSceneForPrefabIsolation`)는 없앴다.
+  - 놓인 프리팹 표는 이미 씬마다였고(`Scene::setEntityPrefabPath`), 고친 것은 읽고 쓰는 쪽이다 — `EditorWorkspace::setPlacedPrefabPath` · `getPlacedPrefabPath` 가 오브젝트 id 대신 `GameObject` 를 받아 **오브젝트가 사는 씬**(`editor::findSceneOf`)의 표를 쓴다.
+    id 만 받던 옛 형태는 활성 씬으로 읽어 미리보기 씬의 인스턴스를 놓쳤다.
+  - 저장은 지금 단계의 루트를 그 단계의 프리팹 파일에 쓴다(`EditorInspectorCommands::applyToPrefab`). 창의 편집은 창의 Undo 스택 · 선택에 남는다. 열기는 `PrefabEditorPanel::openWindow`(문서 포커스)이고 중첩은 `requestNestedIsolation`.
+  - 테스트 `EditorPrefabIsolationTest.*` · `EditorWorkspaceTest.PrefabPathOfAPreviewSceneObjectLivesInThePreviewScene`(Debug 전체 빌드 경고 0, `Editor*` 스위트 EditorTest 300 · EditorUITest 6 통과). **확인 못 함**: 창을 실제로 연 화면(GPU)과 에디터 시나리오 — 아래 6절.
+  - 알려진 한계: 콘텐츠 브라우저의 프리팹 더블클릭은 아직 옛 "Prefab Editor"(`PrefabPanel`)를 연다(`EditorAssetCommands` 의 종류 → 패널 제목 경로). 저장하지 않은 편집은 문서를 바꿀 때 문서 패널이 묻지만 창을 X 로 닫을 때는 묻지 않는다.
 
 ### 단계 6 이후 — 나머지 창
 메시/모델(LOD 비교) · 애니메이션 · 카메라 프리셋 · 래그돌 · 이펙트 · 장르 도구 · 캐릭터 편집 창([EditorCharacterEditor.md](EditorCharacterEditor.md)). 창마다 단위 하나.
@@ -165,9 +173,7 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 
 단계 1~4 와 머티리얼 창은 들어갔습니다(각 단계의 "구현됨"). 규모가 XL 이라 에디터 보강 묶음에서 뺐고 설계부터 따로 짰습니다(2026-10-14 사용자 결정).
 
-1. **프리팹 창** — `EditorPrefabIsolationCommands` 가 활성 씬 대신 `EditorPreviewPanel` 의 씬에 프리팹을 스폰한다(더티 막기 제거, 중첩 격리 스택 `PrefabIsolationFrame` 의 의미 유지, 저장 경로 테스트).
-   선행: 워크스페이스의 놓인 프리팹 표(`EditorWorkspace::setPlacedPrefabPath`)가 활성 씬의 오브젝트 id 로만 키를 잡아 미리보기 씬에 스폰한 인스턴스 · 중첩 격리(`matchesPrefabPath`)를 찾지 못하니 씬별 표로 바꾼다.
-   창은 지금의 `PrefabPanel`(메인 씬에 놓인 인스턴스의 오버라이드 도구, 메인 선택을 본다)과 따로 `EditorPreviewPanel` 파생으로 둔다(머티리얼 창처럼 문서 패널).
+1. **프리팹 창의 남은 것** — 본체는 단계 5 의 "구현됨". 콘텐츠 브라우저의 프리팹 열기를 새 창으로 돌리기(`EditorAssetCommands` 의 종류 → 패널 제목 경로), 창을 연 화면을 보는 에디터 시나리오(GPU), 창을 X 로 닫을 때의 미저장 확인.
 3. **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
 4. **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 결정 2 대로 공유한다.
 5. **미리보기 렌더러 내리기의 GPU 안전** — 창을 닫으면 렌더 스레드가 `FrameRenderer::shutdown` 으로 그 렌더러를 바로 내린다. 디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대며,

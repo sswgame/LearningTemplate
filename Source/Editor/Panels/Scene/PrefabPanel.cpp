@@ -2,10 +2,10 @@
 
 #include "Editor/Panels/Scene/PrefabPanel.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
-#include "Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -15,6 +15,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/Prefab/PrefabEditorPanel.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -89,22 +90,22 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::Text( "%s", _selectedInstanceName.empty() ? "(none)" : _selectedInstanceName.c_str() );
 
-        if ( pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().isPrefabIsolationActive() )
+        PrefabEditorPanel* pWindow = PrefabEditorPanel::findIsolatingWindow(); // 프리팹 창이 열려 문서를 격리 중이면 그 창
+        if ( pWindow != nullptr )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "Isolation: %s",
-                                pContext->getSubsystem<EditorWorkspace>().getPrefabIsolationPrefabPath().c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "Prefab Window: %s", string{ pWindow->getIsolation().getPrefabPath() }.c_str() );
             if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
-                EditorPrefabIsolationCommands::exitPrefabIsolation( true );
+                (void)pWindow->exitIsolation( true ); // 실패는 창이 로그와 상태 줄로 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SavePrefabExitIsolation" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Exit Isolation" ) )
-                EditorPrefabIsolationCommands::exitPrefabIsolation( false );
+                (void)pWindow->exitIsolation( false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ExitIsolation" ) );
         }
         else if ( _selectedPrefabPath.empty() == false )
         {
-            if ( ImGui::Button( "Open Prefab Isolation" ) )
-                EditorPrefabIsolationCommands::enterPrefabIsolation( _selectedPrefabPath );
+            if ( ImGui::Button( "Open Prefab Window" ) )
+                (void)PrefabEditorPanel::openWindow( _selectedPrefabPath ); // 창이 없거나 플레이 중이면 열리지 않는다 — 버튼이 아무 일도 하지 않을 뿐이다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "OpenPrefabIsolation" ) );
         }
 
@@ -158,7 +159,15 @@ namespace sw::editor
                 ImGui::BulletText( "[Nested] %s", _listNestedPrefab[prefabIndex].c_str() );
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( "Edit" ) )
-                    EditorPrefabIsolationCommands::enterPrefabIsolation( _listNestedPrefab[prefabIndex] );
+                {
+                    // 창이 이 프리팹을 열고 있으면 그 안에서 중첩 부분만 보이게 하고, 아니면 중첩 프리팹을 창의 문서로 연다.
+                    PrefabEditorPanel* pNestedWindow          = PrefabEditorPanel::findIsolatingWindow();
+                    const bool         bWindowShowsThisPrefab = pNestedWindow != nullptr && FileUtil::pathsEqualNormalized( pNestedWindow->getIsolation().getPrefabPath(), _selectedPrefabPath );
+                    if ( bWindowShowsThisPrefab )
+                        pNestedWindow->requestNestedIsolation( _listNestedPrefab[prefabIndex] );
+                    else
+                        (void)PrefabEditorPanel::openWindow( _listNestedPrefab[prefabIndex] ); // 창이 없거나 플레이 중이면 열리지 않는다 — 버튼이 아무 일도 하지 않을 뿐이다
+                }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "EditNestedPrefab" ) );
                 ImGui::PopID();
             }
