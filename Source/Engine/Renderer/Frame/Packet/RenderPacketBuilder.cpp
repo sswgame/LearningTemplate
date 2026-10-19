@@ -185,7 +185,7 @@ namespace sw
         _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );
         if ( _renderViewScheduler != nullptr && pActiveScene->getObjectManager() != nullptr )
         {
-            RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, outputWidth, outputHeight, _renderViewClock,
+            RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, packet._cameraPos, outputWidth, outputHeight, _renderViewClock,
                                                     RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, packet._listView );
         }
         // 씬 뷰 — 주 출력이면 게임 화면의 일부(화면 사각형 뷰)를 빼고, 게임 뷰와 함께면 자기 RT 에 그리는 추가 뷰로 싣는다.

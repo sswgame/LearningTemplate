@@ -3,7 +3,6 @@
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Math/Frustum.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/2D/Render2DSettings.h"
@@ -12,8 +11,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/SceneAnimation/AnimationLOD.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 
 namespace sw
 {
@@ -21,7 +20,12 @@ namespace sw
      * @brief `-gv_renderViewBudget=<n>`: 한 프레임에 그리는 추가 뷰(CCTV, 백미러, PiP)의 최대 수입니다(0 = 제한 없음).
      * @details 넘치면 가장 오래 기다린 뷰부터 그리고 나머지는 다음 프레임으로 미룬다(굶지 않는다. `RenderViewScheduler`).
      */
-    SW_GLOBAL_VARIABLE( int32, gv_renderViewBudget, 4, "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)" );
+    SW_GLOBAL_VARIABLE( int32, gv_renderViewBudget, 4, "한 프레임에 그리는 렌더 텍스처 뷰(CCTV · 백미러)의 최대 수 (0 = 제한 없음)" );
+    /**
+     * @brief `-gv_renderViewMegapixelBudget=<n>`: 한 프레임에 그리는 렌더 텍스처 뷰들의 내부 해상도 픽셀 합의 상한(백만 픽셀, 0 = 제한 없음)입니다. 기본 2 는 1080p 한 장 남짓이다.
+     * @details 뷰 수 예산과 함께 건다. 가장 늦은 뷰 하나는 이 값보다 커도 그린다(`RenderViewScheduler`).
+     */
+    SW_GLOBAL_VARIABLE( float32, gv_renderViewMegapixelBudget, 2.0f, "한 프레임에 그리는 렌더 텍스처 뷰의 픽셀 합 상한, 백만 픽셀 (0 = 제한 없음)" );
 
     namespace
     {
@@ -29,6 +33,10 @@ namespace sw
         {
             /// 정수 업스케일 배율의 상한입니다(`CameraRenderOutput::_upscaleZoom` 의 Max 와 같다 — 넘는 값은 데이터 오류라 자른다).
             static constexpr uint32 kMaxUpscaleZoom = 16;
+            /// 백만 픽셀 단위 예산을 픽셀 수로 바꾸는 비율입니다.
+            static constexpr float64 kPixelsPerMegapixel = 1.0e6;
+            /// 보임을 재는 화면의 최대 수입니다(주 시점 + 화면 사각형 뷰).
+            static constexpr uint32 kMaxVisibilityView = kMaxExtraRenderView + 1;
 
             static RenderViewSettings makeSettings( const CameraRenderOutput& output )
             {
@@ -41,22 +49,30 @@ namespace sw
                 return settings;
             }
 
-            /** @brief 오브젝트의 메시 경계 구가 절두체와 겹치는지 확인합니다. 메시가 없으면 오브젝트 위치(반지름 1)로 봅니다. 오브젝트가 없으면 보인다고 칩니다. */
-            static bool isObjectVisible( const GameObjectManager& manager, const GameObjectHandle& handle, const Frustum& frustum )
+            /**
+             * @brief 보임 오브젝트(모니터)가 화면들 중 가장 크게 보이는 크기(경계 구 지름 / 화면 높이, 애니메이션 LOD 와 같은 식)입니다. 어느 화면에도 없으면 0 입니다.
+             * @details 메시가 없으면 오브젝트 위치(반지름 1)로 봅니다. 오브젝트가 없으면(파괴됐다) 볼 것이 없으니 0 입니다.
+             */
+            static float32 computeVisibleScreenSize( const GameObjectManager& manager, const GameObjectHandle& handle, const AnimationLODView* pView, uint32 viewCount )
             {
                 const GameObject* pObject = manager.resolveGameObject( handle );
                 if ( pObject == nullptr )
-                    return true;
+                    return 0.0f;
                 const MeshComponent*  pMesh  = pObject->getComponent<MeshComponent>();
                 const SceneComponent* pScene = pMesh != nullptr ? static_cast<const SceneComponent*>( pMesh ) : pObject->getComponent<SceneComponent>();
                 if ( pScene == nullptr )
-                    return true;
-                const float4x4 world  = pScene->getWorldMatrix();
-                const float32  scaleX = float3{ world._11, world._12, world._13 }.getLength();
-                const float32  scaleY = float3{ world._21, world._22, world._23 }.getLength();
-                const float32  scaleZ = float3{ world._31, world._32, world._33 }.getLength();
-                const float32  radius = ( pMesh != nullptr ? pMesh->getBoundsRadius() : 1.0f ) * MathUtil::max( scaleX, MathUtil::max( scaleY, scaleZ ) );
-                return frustum.overlapsSphere( world.getTranslation(), radius );
+                    return 0.0f;
+                const float4x4 world      = pScene->getWorldMatrix();
+                const float32  scaleX     = float3{ world._11, world._12, world._13 }.getLength();
+                const float32  scaleY     = float3{ world._21, world._22, world._23 }.getLength();
+                const float32  scaleZ     = float3{ world._31, world._32, world._33 }.getLength();
+                const float32  radius     = ( pMesh != nullptr ? pMesh->getBoundsRadius() : 1.0f ) * MathUtil::max( scaleX, MathUtil::max( scaleY, scaleZ ) );
+                float32        screenSize = 0.0f;
+                for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
+                {
+                    screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( pView[viewIndex], world.getTranslation(), radius ) );
+                }
+                return screenSize;
             }
         };
     } // namespace
@@ -87,18 +103,22 @@ namespace sw
         return ( width > 0.0f && height > 0.0f ) ? width / height : ( 16.0f / 9.0f );
     }
 
-    uint32 RenderViewCollector::getDefaultBudget()
+    RenderViewBudget RenderViewCollector::getDefaultBudget()
     {
-        return static_cast<uint32>( MathUtil::max( 0, static_cast<int32>( gv_renderViewBudget ) ) );
+        RenderViewBudget budget;
+        budget._maxViewCount  = static_cast<uint32>( MathUtil::max( 0, static_cast<int32>( gv_renderViewBudget ) ) );
+        budget._maxPixelCount = static_cast<uint32>( static_cast<float64>( MathUtil::max( 0.0f, static_cast<float32>( gv_renderViewMegapixelBudget ) ) ) *
+                                                     RenderViewCollectorInternal::kPixelsPerMegapixel );
+        return budget;
     }
 
     void RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
-                                                 uint32 outputWidth, uint32 outputHeight, float64 now, uint32 budget, RenderViewScheduler& scheduler,
-                                                 vector<RenderViewRequest>& outListView )
+                                                 const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float64 now, const RenderViewBudget& budget,
+                                                 RenderViewScheduler& scheduler, vector<RenderViewRequest>& outListView )
     {
         outListView.clear();
-        const Frustum                  mainFrustum = Frustum::fromViewProjection( mainViewProj );
         RenderViewScheduler::Candidate arrCandidate[kMaxExtraRenderView]{};
+        const CameraRenderOutput*      arrCameraOutput[kMaxExtraRenderView]{};
         uint32                         candidateCount = 0;
         for ( CameraComponent* pCamera : manager.getCameraRegistry().getAll() )
         {
@@ -145,11 +165,31 @@ namespace sw
             RenderViewScheduler::Candidate& candidate = arrCandidate[candidateCount];
             candidate._viewID                         = request._viewID;
             candidate._updateRate                     = MathUtil::max( 0.0f, output._updateRate );
-            candidate._bVisible                       = output._visibilityObject.isValid() == false || RenderViewCollectorInternal::isObjectVisible( manager, output._visibilityObject, mainFrustum )
-                                                          ? SW_TRUE
-                                                          : SW_FALSE;
+            candidate._pixelCount                     = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputWidth ), request._settings._resolutionScale, zoom ) *
+                                    FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputHeight ), request._settings._resolutionScale, zoom );
+            candidate._bBudgeted            = request._outputKind == RenderViewOutputKind::RenderTexture ? SW_TRUE : SW_FALSE;
+            arrCameraOutput[candidateCount] = &output;
             outListView.push_back( request );
             ++candidateCount;
+        }
+
+        // 보임은 사람이 보는 화면 전부에서 잰다 — 주 시점과 화면 사각형 뷰(분할 화면의 다른 칸에 모니터가 보일 수 있다). 렌더 텍스처 뷰 너머로 보이는 모니터는 세지 않는다.
+        AnimationLODView arrVisibilityView[RenderViewCollectorInternal::kMaxVisibilityView]{};
+        uint32           visibilityViewCount     = 0;
+        arrVisibilityView[visibilityViewCount++] = AnimationLODView::make( mainViewProj, mainPosition );
+        for ( const RenderViewRequest& request : outListView )
+        {
+            if ( request._outputKind == RenderViewOutputKind::ScreenRect )
+                arrVisibilityView[visibilityViewCount++] = AnimationLODView::make( request._viewProj, request._position );
+        }
+        for ( uint32 index = 0; index < candidateCount; ++index )
+        {
+            const CameraRenderOutput& output = *arrCameraOutput[index];
+            if ( output._visibilityObject.isValid() == false )
+                continue;
+            const float32 screenSize      = RenderViewCollectorInternal::computeVisibleScreenSize( manager, output._visibilityObject, arrVisibilityView, visibilityViewCount );
+            const bool    bVisible        = screenSize > 0.0f && screenSize >= output._minScreenSize;
+            arrCandidate[index]._bVisible = bVisible ? SW_TRUE : SW_FALSE;
         }
 
         uint8 arrRender[kMaxExtraRenderView]{};
