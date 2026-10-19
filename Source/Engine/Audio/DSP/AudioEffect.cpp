@@ -27,10 +27,10 @@ namespace sw
                 onParameterChanged();
             }
 
-            void process( float32* pInterleaved, uint32 frameCount ) override
+            void process( const AudioBlockView& block ) override
             {
                 if ( _bBypass == false )
-                    _filter.process( pInterleaved, frameCount );
+                    _filter.process( block );
             }
 
             void reset() override { _filter.reset(); }
@@ -68,17 +68,19 @@ namespace sw
                 onParameterChanged();
             }
 
-            void process( float32* pInterleaved, uint32 frameCount ) override
+            void process( const AudioBlockView& block ) override
             {
                 const float32 threshold = _listParameter[0];
                 const float32 ratio     = MathUtil::max( 1.0f, _listParameter[1] );
                 const float32 knee      = MathUtil::max( 0.0f, _listParameter[4] );
                 const float32 makeup    = _listParameter[5];
                 const float32 slope     = 1.0f / ratio - 1.0f;
-                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+                float32*      pLeft     = block.getChannel( 0 );
+                float32*      pRight    = block.getChannel( 1 );
+                for ( uint32 frameIndex = 0; frameIndex < block._frameCount; ++frameIndex )
                 {
-                    float32&      left    = pInterleaved[frameIndex * 2];
-                    float32&      right   = pInterleaved[frameIndex * 2 + 1];
+                    float32&      left    = pLeft[frameIndex];
+                    float32&      right   = pRight[frameIndex];
                     const float32 levelDb = AudioMath::linearToDb( MathUtil::max( MathUtil::abs( left ), MathUtil::abs( right ) ) );
                     const float32 over    = levelDb - threshold;
                     float32       outDb   = levelDb;
@@ -149,14 +151,16 @@ namespace sw
                 onParameterChanged();
             }
 
-            void process( float32* pInterleaved, uint32 frameCount ) override
+            void process( const AudioBlockView& block ) override
             {
                 const float32 ceiling = AudioMath::dbToLinear( _listParameter[0] );
                 const uint32  window  = _windowLength;
-                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+                float32*      pLeft   = block.getChannel( 0 );
+                float32*      pRight  = block.getChannel( 1 );
+                for ( uint32 frameIndex = 0; frameIndex < block._frameCount; ++frameIndex )
                 {
-                    const float32 left     = pInterleaved[frameIndex * 2];
-                    const float32 right    = pInterleaved[frameIndex * 2 + 1];
+                    const float32 left     = pLeft[frameIndex];
+                    const float32 right    = pRight[frameIndex];
                     const float32 peak     = MathUtil::max( MathUtil::abs( left ), MathUtil::abs( right ) );
                     const float32 required = peak > ceiling ? ceiling / peak : 1.0f;
 
@@ -186,14 +190,15 @@ namespace sw
                     _gain = smoothed < _gain ? smoothed : _gain + ( smoothed - _gain ) * ( 1.0f - _releaseCoefficient );
 
                     // window 샘플 늦춘 소리에 게인을 적용한다.
-                    const uint32  delaySlot          = static_cast<uint32>( index % window );
-                    const float32 delayedLeft        = _listDelay[delaySlot * 2];
-                    const float32 delayedRight       = _listDelay[delaySlot * 2 + 1];
-                    _listDelay[delaySlot * 2]        = left;
-                    _listDelay[delaySlot * 2 + 1]    = right;
-                    const bool bDirect               = window == 1;
-                    pInterleaved[frameIndex * 2]     = ( bDirect ? left : delayedLeft ) * _gain;
-                    pInterleaved[frameIndex * 2 + 1] = ( bDirect ? right : delayedRight ) * _gain;
+                    const uint32  delaySlot    = static_cast<uint32>( index % window );
+                    const size_t  delayBase    = static_cast<size_t>( delaySlot ) * audio::kStereoChannelCount;
+                    const float32 delayedLeft  = _listDelay[delayBase];
+                    const float32 delayedRight = _listDelay[delayBase + 1];
+                    _listDelay[delayBase]      = left;
+                    _listDelay[delayBase + 1]  = right;
+                    const bool bDirect         = window == 1;
+                    pLeft[frameIndex]          = ( bDirect ? left : delayedLeft ) * _gain;
+                    pRight[frameIndex]         = ( bDirect ? right : delayedRight ) * _gain;
                     ++_sampleIndex;
                 }
             }
@@ -201,7 +206,7 @@ namespace sw
             void reset() override
             {
                 const size_t window = _windowLength;
-                _listDelay.assign( window * 2, 0.0f );
+                _listDelay.assign( window * audio::kStereoChannelCount, 0.0f );
                 _listMinValue.assign( window + 2, 1.0f );
                 _listMinIndex.assign( window + 2, 0 );
                 _listAverage.assign( window, 1.0f );
@@ -226,7 +231,7 @@ namespace sw
             }
 
         private:
-            vector<float32> _listDelay;          /**< 늦춘 소리(스테레오 교차, 창 길이)입니다. */
+            vector<float32> _listDelay;          /**< 늦춘 소리(내부 상태는 스테레오 교차, 창 길이)입니다. */
             vector<float32> _listMinValue;       /**< 단조 덱의 값입니다. */
             vector<uint64>  _listMinIndex;       /**< 단조 덱의 샘플 번호입니다. */
             vector<float32> _listAverage;        /**< 상자 평균의 고리 버퍼입니다. */
@@ -262,7 +267,7 @@ namespace sw
                 static constexpr uint32 kArrCombTuning[kCombCount]       = { 1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617 };
                 static constexpr uint32 kArrAllpassTuning[kAllpassCount] = { 556, 441, 341, 225 };
                 static constexpr uint32 kStereoSpread                    = 23;
-                for ( uint32 channel = 0; channel < 2; ++channel )
+                for ( uint32 channel = 0; channel < audio::kStereoChannelCount; ++channel )
                 {
                     for ( uint32 combIndex = 0; combIndex < kCombCount; ++combIndex )
                     {
@@ -277,14 +282,16 @@ namespace sw
                 onParameterChanged();
             }
 
-            void process( float32* pInterleaved, uint32 frameCount ) override
+            void process( const AudioBlockView& block ) override
             {
                 constexpr float32 kFixedGain    = 0.015f;
                 const size_t      preDelaySlots = _listPreDelay.size() / 2;
-                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+                float32*          pLeft         = block.getChannel( 0 );
+                float32*          pRight        = block.getChannel( 1 );
+                for ( uint32 frameIndex = 0; frameIndex < block._frameCount; ++frameIndex )
                 {
-                    const float32 inLeft  = pInterleaved[frameIndex * 2];
-                    const float32 inRight = pInterleaved[frameIndex * 2 + 1];
+                    const float32 inLeft  = pLeft[frameIndex];
+                    const float32 inRight = pRight[frameIndex];
                     float32       input   = ( inLeft + inRight ) * kFixedGain;
                     if ( _preDelayLength > 0 )
                     {
@@ -295,8 +302,8 @@ namespace sw
                         input                          = delayed;
                     }
 
-                    float32 arrChannelOutput[2] = { 0.0f, 0.0f };
-                    for ( uint32 channel = 0; channel < 2; ++channel )
+                    float32 arrChannelOutput[audio::kStereoChannelCount] = { 0.0f, 0.0f };
+                    for ( uint32 channel = 0; channel < audio::kStereoChannelCount; ++channel )
                     {
                         float32 sum = 0.0f;
                         for ( Comb& comb : _arrComb[channel] )
@@ -317,14 +324,14 @@ namespace sw
                         }
                         arrChannelOutput[channel] = sum;
                     }
-                    pInterleaved[frameIndex * 2]     = arrChannelOutput[0] * _wetMain + arrChannelOutput[1] * _wetCross + inLeft * _dry;
-                    pInterleaved[frameIndex * 2 + 1] = arrChannelOutput[1] * _wetMain + arrChannelOutput[0] * _wetCross + inRight * _dry;
+                    pLeft[frameIndex]  = arrChannelOutput[0] * _wetMain + arrChannelOutput[1] * _wetCross + inLeft * _dry;
+                    pRight[frameIndex] = arrChannelOutput[1] * _wetMain + arrChannelOutput[0] * _wetCross + inRight * _dry;
                 }
             }
 
             void reset() override
             {
-                for ( uint32 channel = 0; channel < 2; ++channel )
+                for ( uint32 channel = 0; channel < audio::kStereoChannelCount; ++channel )
                 {
                     for ( Comb& comb : _arrComb[channel] )
                     {
@@ -374,16 +381,16 @@ namespace sw
                 uint32          _cursor{ 0 };
             };
 
-            Comb            _arrComb[2][kCombCount];       /**< 채널마다 콤 필터입니다. */
-            Allpass         _arrAllpass[2][kAllpassCount]; /**< 채널마다 올패스입니다. */
-            vector<float32> _listPreDelay;                 /**< 프리딜레이(모노 입력, 0.2 초)입니다. */
-            size_t          _preDelayCursor;               /**< 프리딜레이 쓰기 위치입니다. */
-            size_t          _preDelayLength;               /**< 프리딜레이 길이(샘플)입니다. */
-            float32         _feedback;                     /**< 콤 피드백입니다. */
-            float32         _damp;                         /**< 콤 안 로우패스 계수입니다. */
-            float32         _wetMain;                      /**< 같은 쪽 wet 게인입니다. */
-            float32         _wetCross;                     /**< 반대쪽 wet 게인입니다(폭이 좁을수록 크다). */
-            float32         _dry;                          /**< dry 게인입니다. */
+            Comb            _arrComb[audio::kStereoChannelCount][kCombCount];       /**< 채널마다 콤 필터입니다. */
+            Allpass         _arrAllpass[audio::kStereoChannelCount][kAllpassCount]; /**< 채널마다 올패스입니다. */
+            vector<float32> _listPreDelay;                                          /**< 프리딜레이(모노 입력, 0.2 초)입니다. */
+            size_t          _preDelayCursor;                                        /**< 프리딜레이 쓰기 위치입니다. */
+            size_t          _preDelayLength;                                        /**< 프리딜레이 길이(샘플)입니다. */
+            float32         _feedback;                                              /**< 콤 피드백입니다. */
+            float32         _damp;                                                  /**< 콤 안 로우패스 계수입니다. */
+            float32         _wetMain;                                               /**< 같은 쪽 wet 게인입니다. */
+            float32         _wetCross;                                              /**< 반대쪽 wet 게인입니다(폭이 좁을수록 크다). */
+            float32         _dry;                                                   /**< dry 게인입니다. */
         };
 
         /**
@@ -401,26 +408,28 @@ namespace sw
                 , _arrDampState{ 0.0f, 0.0f }
                 , _dampCoefficient{ 0.0f }
             {
-                _listBuffer.assign( static_cast<size_t>( audio::kSampleRate ) * 2 * 2, 0.0f );
+                _listBuffer.assign( static_cast<size_t>( audio::kSampleRate ) * 2 * audio::kStereoChannelCount, 0.0f );
                 onParameterChanged();
             }
 
-            void process( float32* pInterleaved, uint32 frameCount ) override
+            void process( const AudioBlockView& block ) override
             {
-                const float32 feedback  = _listParameter[1];
-                const float32 wet       = _listParameter[2];
-                const float32 dry       = _listParameter[3];
-                const uint32  slotCount = static_cast<uint32>( _listBuffer.size() / 2 );
-                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+                constexpr uint32 kChannelCount = audio::kStereoChannelCount;
+                const float32    feedback      = _listParameter[1];
+                const float32    wet           = _listParameter[2];
+                const float32    dry           = _listParameter[3];
+                const uint32     slotCount     = static_cast<uint32>( _listBuffer.size() / kChannelCount );
+                for ( uint32 frameIndex = 0; frameIndex < block._frameCount; ++frameIndex )
                 {
                     const uint32 readSlot = ( _cursor + slotCount - _delayFrames ) % slotCount;
-                    for ( uint32 channel = 0; channel < 2; ++channel )
+                    for ( uint32 channel = 0; channel < kChannelCount; ++channel )
                     {
-                        const float32 input                    = pInterleaved[frameIndex * 2 + channel];
-                        const float32 delayed                  = _listBuffer[readSlot * 2 + channel];
-                        _arrDampState[channel]                 = delayed + ( _arrDampState[channel] - delayed ) * _dampCoefficient;
-                        _listBuffer[_cursor * 2 + channel]     = input + _arrDampState[channel] * feedback;
-                        pInterleaved[frameIndex * 2 + channel] = input * dry + delayed * wet;
+                        float32*      pChannel                         = block.getChannel( channel );
+                        const float32 input                            = pChannel[frameIndex];
+                        const float32 delayed                          = _listBuffer[readSlot * kChannelCount + channel];
+                        _arrDampState[channel]                         = delayed + ( _arrDampState[channel] - delayed ) * _dampCoefficient;
+                        _listBuffer[_cursor * kChannelCount + channel] = input + _arrDampState[channel] * feedback;
+                        pChannel[frameIndex]                           = input * dry + delayed * wet;
                     }
                     _cursor = ( _cursor + 1 ) % slotCount;
                 }
@@ -436,7 +445,7 @@ namespace sw
         protected:
             void onParameterChanged() override
             {
-                const uint32 slotCount = static_cast<uint32>( _listBuffer.size() / 2 );
+                const uint32 slotCount = static_cast<uint32>( _listBuffer.size() / audio::kStereoChannelCount );
                 _delayFrames           = MathUtil::clamp( static_cast<uint32>( _listParameter[0] * 0.001f * static_cast<float32>( audio::kSampleRate ) ), 1u, slotCount - 1 );
                 const float32 cutoff   = _listParameter[4];
                 _dampCoefficient       = cutoff >= audio::kFilterOpenHz ? 0.0f
@@ -444,11 +453,11 @@ namespace sw
             }
 
         private:
-            vector<float32> _listBuffer;      /**< 지연선(스테레오 교차, 2 초)입니다. */
-            uint32          _cursor;          /**< 쓰기 위치입니다. */
-            uint32          _delayFrames;     /**< 지연(프레임)입니다. */
-            float32         _arrDampState[2]; /**< 피드백 로우패스 상태입니다. */
-            float32         _dampCoefficient; /**< 피드백 로우패스 계수입니다(0 이면 없음). */
+            vector<float32> _listBuffer;                               /**< 지연선(스테레오 교차, 2 초)입니다. */
+            uint32          _cursor;                                   /**< 쓰기 위치입니다. */
+            uint32          _delayFrames;                              /**< 지연(프레임)입니다. */
+            float32         _arrDampState[audio::kStereoChannelCount]; /**< 피드백 로우패스 상태입니다. */
+            float32         _dampCoefficient;                          /**< 피드백 로우패스 계수입니다(0 이면 없음). */
         };
 
         struct AudioEffectInternal

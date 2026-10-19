@@ -123,16 +123,17 @@ namespace sw
         _arrState2[1] = 0.0f;
     }
 
-    void AudioBiquadStereo::process( float32* pInterleaved, uint32 frameCount )
+    void AudioBiquadStereo::process( const AudioBlockView& block )
     {
         const AudioBiquadCoefficients coefficients = _coefficients;
-        for ( uint32 channel = 0; channel < 2; ++channel )
+        for ( uint32 channel = 0; channel < audio::kStereoChannelCount; ++channel )
         {
-            float32 state1 = _arrState1[channel];
-            float32 state2 = _arrState2[channel];
-            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+            float32  state1   = _arrState1[channel];
+            float32  state2   = _arrState2[channel];
+            float32* pChannel = block.getChannel( channel );
+            for ( uint32 frameIndex = 0; frameIndex < block._frameCount; ++frameIndex )
             {
-                float32&      sample = pInterleaved[frameIndex * 2 + channel];
+                float32&      sample = pChannel[frameIndex];
                 const float32 input  = sample;
                 const float32 output = coefficients._b0 * input + state1;
                 state1               = coefficients._b1 * input - coefficients._a1 * output + state2;

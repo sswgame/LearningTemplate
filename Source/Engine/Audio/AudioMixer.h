@@ -12,6 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Audio/AudioBlock.h"
+#include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/DSP/AudioEffect.h"
 
@@ -30,16 +32,20 @@ namespace sw
         AudioMixer( const AudioMixer& )            = delete;
         AudioMixer& operator=( const AudioMixer& ) = delete;
 
-        /** @brief 데이터로 버스를 만듭니다. 데이터가 검사를 통과하지 못하면(이름이나 고리 문제) false 를 반환하고 그래프는 비어 있습니다. */
-        [[nodiscard]] bool initialize( const AudioMixerDesc& desc );
+        /**
+         * @brief 데이터로 버스를 만듭니다. 데이터가 검사를 통과하지 못하면(이름이나 고리 문제) false 를 반환하고 그래프는 비어 있습니다.
+         * @param layout 모든 버스의 채널 구성입니다(장치가 정합니다). 버스 입력은 여기서 채널 수만큼 한 번에 잡습니다.
+         * @details 이펙트는 아직 스테레오만 처리해서, 스테레오가 아닌 레이아웃에 이펙트가 있는 그래프는 false 입니다(조용히 건너뛰지 않습니다).
+         */
+        [[nodiscard]] bool initialize( const AudioMixerDesc& desc, AudioChannelLayout layout );
 
         /** @brief 블록을 시작합니다. 모든 버스 입력을 0 으로 비웁니다. */
         void beginBlock( uint32 frameCount );
         /**
-         * @brief 처리 순서대로 버스를 처리하고 master 출력을 @p pOutput(스테레오 교차, @p frameCount 프레임)에 씁니다.
+         * @brief 처리 순서대로 버스를 처리하고 master 출력을 @p output(평면, 채널 수는 레이아웃과 같아야 합니다)에 씁니다. 프레임 수는 @p output 의 `_frameCount` 입니다.
          * @details 입력 버퍼는 처리 뒤에도 남지만 다음 `beginBlock` 이 비웁니다.
          */
-        void process( float32* pOutput, uint32 frameCount );
+        void process( const AudioBlockView& output );
 
         /** @brief 버스 수입니다. */
         uint32 getBusCount() const { return static_cast<uint32>( _listBusState.size() ); }
@@ -51,8 +57,10 @@ namespace sw
         int32 getBusParentIndex( uint32 busIndex ) const { return _listBusState[busIndex]._parentIndex; }
         /** @brief 데이터 볼륨(dB)입니다. 사용자 볼륨 · 스냅샷 오프셋은 들어 있지 않습니다. */
         float32 getBusVolumeDb( uint32 busIndex ) const { return _listBusState[busIndex]._volumeDb; }
-        /** @brief 버스의 입력 버퍼(스테레오 교차, 블록 길이)를 반환합니다. 보이스가 여기에 더합니다. */
-        float32* getBusInput( uint32 busIndex ) { return _listBusState[busIndex]._listInput.data(); }
+        /** @brief 버스의 입력 블록(평면, 이번 블록 길이)을 반환합니다. 보이스가 여기에 더합니다. */
+        AudioBlockView getBusInput( uint32 busIndex ) { return _listBusState[busIndex]._input.makeView( _blockFrameCount ); }
+        /** @brief 버스 입력의 채널 구성입니다. */
+        AudioChannelLayout getChannelLayout() const { return _layout; }
         /** @brief 데이터가 정한 보이스 상한과 들림 임계값을 반환합니다. */
         const AudioMixerDesc& getDesc() const { return _desc; }
 
@@ -117,7 +125,7 @@ namespace sw
         /** @brief 버스 하나의 실행 상태입니다. */
         struct Bus
         {
-            vector<float32>                  _listInput{};
+            AudioBlockBuffer                 _input{};
             vector<Send>                     _listSend{};
             vector<Duck>                     _listDuck{};
             vector<unique_ptr<IAudioEffect>> _listEffect{};
@@ -146,10 +154,11 @@ namespace sw
             }
         };
 
-        AudioMixerDesc _desc;            /**< 만든 데이터입니다. 엔진이 보이스 상한과 임계값을 읽습니다. */
-        vector<Bus>    _listBusState;    /**< 버스입니다(데이터 순서). */
-        vector<uint32> _listOrder;       /**< 처리 순서입니다. */
-        uint32         _masterIndex;     /**< master 버스 번호입니다. */
-        uint32         _blockFrameCount; /**< 이번 블록 길이입니다. */
+        AudioMixerDesc     _desc;            /**< 만든 데이터입니다. 엔진이 보이스 상한과 임계값을 읽습니다. */
+        vector<Bus>        _listBusState;    /**< 버스입니다(데이터 순서). */
+        vector<uint32>     _listOrder;       /**< 처리 순서입니다. */
+        uint32             _masterIndex;     /**< master 버스 번호입니다. */
+        uint32             _blockFrameCount; /**< 이번 블록 길이입니다. */
+        AudioChannelLayout _layout;          /**< 버스 입력과 출력의 채널 구성입니다. */
     };
 } // namespace sw

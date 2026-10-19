@@ -56,7 +56,7 @@ namespace
         static bool initializeEngine( sw::AudioEngine& engine )
         {
             sw::AudioMixerDesc mixerDesc;
-            if ( mixerDesc.loadFromXMLText( kMixerXML ) == false || engine.initialize( mixerDesc ) == false )
+            if ( mixerDesc.loadFromXMLText( kMixerXML ) == false || engine.initialize( mixerDesc, sw::AudioChannelLayout::Stereo ) == false )
                 return false;
             engine.getClipStore().addClip( sw::hashed_string( "test/one" ), test::AudioTestUtil::makeConstantClip( 1.0f, 4800 ) );
             engine.getClipStore().addClip( sw::hashed_string( "test/long" ), test::AudioTestUtil::makeConstantClip( 0.5f, 48000 ) );

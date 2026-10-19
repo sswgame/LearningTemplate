@@ -43,7 +43,7 @@ namespace
                 return false;
             mixerDesc._maxRealVoiceCount = realVoiceCount;
             mixerDesc._maxVoiceCount     = 1024;
-            if ( engine.initialize( mixerDesc ) == false )
+            if ( engine.initialize( mixerDesc, sw::AudioChannelLayout::Stereo ) == false )
                 return false;
             // 44.1 kHz 모노 톤 — 리샘플 경로를 탄다.
             engine.getClipStore().addClip( sw::hashed_string( "bench/tone" ), test::AudioTestUtil::makeSineClip( 220.0f, 0.05f, 44100, 44100 ) );
@@ -78,7 +78,7 @@ SW_TEST_CASE( AudioBenchTest, RenderCostPerVoice )
         (void)test::AudioTestUtil::render( engine, 4096 ); // 클립 시작 · 첫 블록 램프
 
         constexpr uint32    kFrameCount = sw::audio::kSampleRate;
-        sw::vector<float32> listOutput( static_cast<size_t>( kFrameCount ) * 2 );
+        sw::vector<float32> listOutput( static_cast<size_t>( kFrameCount ) * sw::audio::kStereoChannelCount );
         const sw::Stopwatch stopwatch;
         engine.render( listOutput.data(), kFrameCount );
         [[maybe_unused]] const int64 elapsedMicro = stopwatch.getElapsedMicroseconds();

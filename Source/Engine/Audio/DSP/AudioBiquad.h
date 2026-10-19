@@ -7,6 +7,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
+#include "Engine/Audio/AudioBlock.h"
+
 namespace sw
 {
     /** @brief 바이쿼드 형태입니다. */
@@ -43,17 +45,17 @@ namespace sw
 {
     /**
      * @struct AudioBiquadStereo
-     * @brief 계수 하나와 채널 둘의 상태입니다. 스테레오 교차 버퍼를 제자리에서 거릅니다.
+     * @brief 계수 하나와 채널 둘의 상태입니다. 스테레오 평면 블록을 제자리에서 거릅니다.
      */
     struct SW_API AudioBiquadStereo
     {
         AudioBiquadCoefficients _coefficients{};
-        float32                 _arrState1[2]{ 0.0f, 0.0f }; ///< 채널마다 z⁻¹ 상태를 가진다.
-        float32                 _arrState2[2]{ 0.0f, 0.0f }; ///< 채널마다 z⁻² 상태를 가진다.
+        float32                 _arrState1[audio::kStereoChannelCount]{ 0.0f, 0.0f }; ///< 채널마다 z⁻¹ 상태를 가진다.
+        float32                 _arrState2[audio::kStereoChannelCount]{ 0.0f, 0.0f }; ///< 채널마다 z⁻² 상태를 가진다.
 
         /** @brief 상태를 비웁니다. */
         void reset();
-        /** @brief @p frameCount 프레임(스테레오 교차)을 제자리에서 거릅니다. */
-        void process( float32* pInterleaved, uint32 frameCount );
+        /** @brief @p block(스테레오 평면, `_frameCount` 프레임)을 제자리에서 거릅니다. */
+        void process( const AudioBlockView& block );
     };
 } // namespace sw

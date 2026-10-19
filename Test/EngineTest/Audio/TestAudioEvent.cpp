@@ -98,7 +98,7 @@ namespace
         static bool initializeEngine( sw::AudioEngine& engine )
         {
             sw::AudioMixerDesc mixerDesc;
-            if ( mixerDesc.loadFromXMLText( kMixerXML ) == false || engine.initialize( mixerDesc ) == false )
+            if ( mixerDesc.loadFromXMLText( kMixerXML ) == false || engine.initialize( mixerDesc, sw::AudioChannelLayout::Stereo ) == false )
                 return false;
             sw::AudioClipCache& store = engine.getClipStore();
             store.addClip( sw::hashed_string( "test/a" ), test::AudioTestUtil::makeConstantClip( 0.1f, 2048 ) );

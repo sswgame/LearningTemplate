@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Audio/AudioBlock.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioStream.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
@@ -37,11 +38,10 @@ namespace sw
         void reset();
 
         /**
-         * @brief 블록 하나만큼 @p pBusInput(스테레오 교차)에 더하고 위치를 진행합니다. 끝나면(루프가 아니고 끝에 닿았거나 페이드아웃이 0 에 닿았을 때) 끝남으로 표시합니다.
-         * @param frameCount 블록 길이(프레임)입니다.
-         * @param pScratch 로우패스를 적용할 때 쓰는 블록 길이의 스테레오 작업 버퍼입니다. 없으면 필터를 건너뜁니다.
+         * @brief 블록 하나만큼 @p bus(스테레오 평면, 길이는 `_frameCount`)에 더하고 위치를 진행합니다. 끝나면(루프가 아니고 끝에 닿았거나 페이드아웃이 0 에 닿았을 때) 끝남으로 표시합니다.
+         * @param scratch 로우패스를 적용할 때 쓰는 스테레오 작업 블록입니다. 비어 있으면 필터를 건너뜁니다.
          */
-        void mix( float32* pBusInput, uint32 frameCount, float32* pScratch );
+        void mix( const AudioBlockView& bus, const AudioBlockView& scratch );
         /** @brief 섞지 않고 위치만 진행합니다(가상 보이스). 게인 램프 상태는 0 으로 두며, 다시 섞일 때 0 에서 오릅니다. */
         void advanceVirtual( uint32 frameCount );
 
@@ -84,10 +84,10 @@ namespace sw
         /** @brief 지연과 페이드를 한 프레임 진행합니다. 페이드가 끝나 보이스를 멈춰야 하면 false 를 반환합니다. */
         bool stepFade();
         /** @brief 거르지 않고 @p pTarget 에 더합니다. */
-        void mixInto( float32* pTarget, uint32 frameCount );
+        void mixInto( const AudioBlockView& target );
         /** @brief 게인 램프 · 페이드 · 위치 진행을 하며 @p sampler 가 주는 보간 샘플을 더합니다. 메모리 클립과 스트리밍 클립이 같은 본문을 쓴다. */
         template <typename TSampler>
-        void mixLoop( float32* pTarget, uint32 frameCount, TSampler& sampler );
+        void mixLoop( const AudioBlockView& target, TSampler& sampler );
         /** @brief 위치를 @p frameCount 출력 프레임만큼 진행합니다(루프와 끝 처리). */
         void advancePosition( uint32 frameCount );
 

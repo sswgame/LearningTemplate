@@ -58,7 +58,7 @@ namespace
             sw::vector<float32> listSample  = makeStereoSine( frequencyHz, 0.25f, kFrameCount );
             for ( uint32 offset = 0; offset < kFrameCount; offset += sw::audio::kBlockFrameCount )
             {
-                effect.process( listSample.data() + static_cast<size_t>( offset ) * 2, sw::MathUtil::min( sw::audio::kBlockFrameCount, kFrameCount - offset ) );
+                test::AudioTestUtil::processEffect( effect, listSample.data() + static_cast<size_t>( offset ) * 2, sw::MathUtil::min( sw::audio::kBlockFrameCount, kFrameCount - offset ) );
             }
             const float32 amplitude = test::AudioTestUtil::computeToneAmplitude( listSample, 0, 4800, 4800, frequencyHz );
             return sw::AudioMath::linearToDb( amplitude / 0.25f );
@@ -70,7 +70,7 @@ namespace
             const uint32 frameCount = static_cast<uint32>( inoutListSample.size() / 2 );
             for ( uint32 offset = 0; offset < frameCount; offset += sw::audio::kBlockFrameCount )
             {
-                effect.process( inoutListSample.data() + static_cast<size_t>( offset ) * 2, sw::MathUtil::min( sw::audio::kBlockFrameCount, frameCount - offset ) );
+                test::AudioTestUtil::processEffect( effect, inoutListSample.data() + static_cast<size_t>( offset ) * 2, sw::MathUtil::min( sw::audio::kBlockFrameCount, frameCount - offset ) );
             }
         }
 
@@ -268,7 +268,7 @@ SW_TEST_CASE( AudioDSPTest, BusEffectChainsComeFromData )
             <AudioEffectParameterDesc _name="frequencyHz" _value="200" /></_listParameter></AudioEffectDesc></_listEffect></AudioBusDesc>
         <AudioBusDesc _name="music" _parent="master" /></_listBus></AudioMixerDesc>)" ) );
     sw::AudioEngine engine;
-    SW_ASSERT_TRUE( engine.initialize( desc ) );
+    SW_ASSERT_TRUE( engine.initialize( desc, sw::AudioChannelLayout::Stereo ) );
     engine.getClipStore().addClip( sw::hashed_string( "test/tone" ), test::AudioTestUtil::makeSineClip( 4000.0f, 0.2f, 48000 ) );
 
     const sw::AudioPlayingID  musicID     = engine.playClip( sw::hashed_string( "test/tone" ), sw::hashed_string( "music" ), sw::AudioClipPlayParams{} );

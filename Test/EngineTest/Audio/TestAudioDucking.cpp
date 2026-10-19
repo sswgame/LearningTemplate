@@ -43,16 +43,20 @@ namespace
         /** @brief 블록 @p blockCount 개를 돌립니다. voice 버스 입력은 매 블록 @p voiceLevel 직류입니다. */
         static void runBlocks( sw::AudioMixer& mixer, uint32 voiceIndex, float32 voiceLevel, uint32 blockCount )
         {
-            sw::vector<float32> listOutput( static_cast<size_t>( sw::audio::kBlockFrameCount ) * sw::audio::kChannelCount, 0.0f );
+            sw::AudioBlockBuffer outputBuffer;
+            outputBuffer.allocate( sw::AudioChannelLayout::Stereo );
             for ( uint32 blockIndex = 0; blockIndex < blockCount; ++blockIndex )
             {
                 mixer.beginBlock( sw::audio::kBlockFrameCount );
-                float32* pVoice = mixer.getBusInput( voiceIndex );
-                for ( uint32 sampleIndex = 0; sampleIndex < sw::audio::kBlockFrameCount * sw::audio::kChannelCount; ++sampleIndex )
+                const sw::AudioBlockView voice = mixer.getBusInput( voiceIndex );
+                for ( uint32 channelIndex = 0; channelIndex < voice._channelCount; ++channelIndex )
                 {
-                    pVoice[sampleIndex] = voiceLevel;
+                    for ( uint32 frameIndex = 0; frameIndex < voice._frameCount; ++frameIndex )
+                    {
+                        voice.getChannel( channelIndex )[frameIndex] = voiceLevel;
+                    }
                 }
-                mixer.process( listOutput.data(), sw::audio::kBlockFrameCount );
+                mixer.process( outputBuffer.makeView( sw::audio::kBlockFrameCount ) );
             }
         }
 
@@ -74,7 +78,7 @@ SW_TEST_CASE( AudioDuckingTest, SourceBusPressesTheDuckedBusAndReleases )
     sw::AudioMixerDesc desc;
     SW_ASSERT_TRUE( desc.loadFromXMLText( AudioDuckingTestInternal::kInstantDuckXML ) );
     sw::AudioEngine engine;
-    SW_ASSERT_TRUE( engine.initialize( desc ) );
+    SW_ASSERT_TRUE( engine.initialize( desc, sw::AudioChannelLayout::Stereo ) );
     engine.getClipStore().addClip( sw::hashed_string( "test/dc_half" ), test::AudioTestUtil::makeConstantClip( 0.5f, 480000 ) );
     engine.getClipStore().addClip( sw::hashed_string( "test/dc_quarter" ), test::AudioTestUtil::makeConstantClip( 0.25f, 48000 ) );
 
@@ -96,7 +100,7 @@ SW_TEST_CASE( AudioDuckingTest, AttackAndReleaseAreSmooth )
     sw::AudioMixerDesc desc;
     SW_ASSERT_TRUE( desc.loadFromXMLText( AudioDuckingTestInternal::kSmoothDuckXML ) );
     sw::AudioMixer mixer;
-    SW_ASSERT_TRUE( mixer.initialize( desc ) );
+    SW_ASSERT_TRUE( mixer.initialize( desc, sw::AudioChannelLayout::Stereo ) );
     const uint32 musicIndex = static_cast<uint32>( mixer.findBusIndex( sw::hashed_string( "music" ) ) );
     const uint32 voiceIndex = static_cast<uint32>( mixer.findBusIndex( sw::hashed_string( "voice" ) ) );
 
@@ -122,7 +126,7 @@ SW_TEST_CASE( AudioDuckingTest, BelowThresholdDoesNotDuck )
     sw::AudioMixerDesc desc;
     SW_ASSERT_TRUE( desc.loadFromXMLText( AudioDuckingTestInternal::kInstantDuckXML ) );
     sw::AudioMixer mixer;
-    SW_ASSERT_TRUE( mixer.initialize( desc ) );
+    SW_ASSERT_TRUE( mixer.initialize( desc, sw::AudioChannelLayout::Stereo ) );
     const uint32 musicIndex = static_cast<uint32>( mixer.findBusIndex( sw::hashed_string( "music" ) ) );
     const uint32 voiceIndex = static_cast<uint32>( mixer.findBusIndex( sw::hashed_string( "voice" ) ) );
 
