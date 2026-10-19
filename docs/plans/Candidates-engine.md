@@ -111,7 +111,7 @@
 제목: 직렬화가 조용히 넘기는 곳
 옛번호: C-66
 왜 필요한가: 읽기 · 쓰기가 조용히 넘기면 데이터 결함이 숨습니다.
-남은 것: (1) B 코덱이 `Count` 없는 열거형을 8비트 전폭으로 씁니다 — 생성기가 오류로 멈출지 정합니다(온라인 키트 열거형 폭은 미확인; 옛 `G-14`). (2) 일반 바이너리 · JSON · XML 읽기가 범위 검사를 하지 않습니다(옛 `A-19`, `A-15` 잔여 — 이미 끝났는지 `git log -S` 로 확인). (3) 프로세스 정적 "한 번만" 경고(`warnUnknownEnumeratorOnce` · `warnSkippedFieldOnce` · `warnUnreadableFieldOnce`)가 테스트 순서에 따라 `HostLogJudge` 결과를 바꿉니다. (4) 소프트 경로가 기록 타입이 달라 변환이 실패해도 읽힌 만큼 받습니다(`BinarySerializer.cpp:229-231`, 끝까지 읽었는지 보지 않음).
+남은 것(2026-10-20 점검: 범위 검사와 한 번만 경고의 테스트 순서 의존은 isWithinDeclaredRanges · LogOnce 로 이미 풀렸습니다): (1) B 코덱이 `Count` 없는 열거형을 8비트 전폭으로 씁니다 — 생성기가 오류로 멈출지 정합니다(온라인 키트 열거형 폭은 미확인; 옛 `G-14`). (2) 소프트 경로가 기록 타입이 달라 변환이 실패해도 읽힌 만큼 받습니다(`BinarySerializer.cpp:229-231`, 끝까지 읽었는지 보지 않음).
 
 ### WorkspaceImGuiSplit
 제목: `Common/Workspace` 의 ImGui 17개를 분리한다
