@@ -29,7 +29,8 @@
 
 - **인스펙터 선택기 화면 확인**(`gpu-verifier`): 콤보 · `(none)` · 되돌리기 · Paste Value 비활성. 빈틈 둘(`set<TComponentHandle<T>>`, `FUNCTION` 인자)은 후보 `TypedHandleInspectorGaps`([Candidates-editor](Candidates-editor.md))입니다.
 - **앱 측정 넷**(8.4): `tickCostChurn` 전후(7-c 전 바이너리 필요), 비동기 씬 로드 중 조회, 큐브 20,000 개 `GT.Frame`, 개발 빌드 `resolveComponent<T>` 확인 비용(`BenchScene.cpp:1341`), 실제 8게임의 버킷 수 K.
-- **미확인**: 비동기 씬 로드 워커가 `_listComponent` 에 넣는 동안 게임 스레드 순회가 같은 목록을 읽는지. `destroyComponentInstance` 의 배타 잠금을 저장소 `_mutex` 를 쥔 채 부르는 경로가 없는지(Debug 단언이 드러냄). `ComponentHandle` 바이너리 형태. 7-b(다중 상속 금지)가 버킷의 `static_cast` 전제로 병합됐는지.
+- 확인함(2026-10-20): 비동기 씬 로드 워커는 자기 전용 새 씬(`SceneManager.cpp:298`)의 저장소에만 넣고, 게임 스레드가 `updateTransitions` 에서 슬롯 뮤텍스로 꺼낸 뒤 활성화하므로 `_listComponent` 순회와 겹치지 않는다.
+- **미확인**: `destroyComponentInstance` 의 배타 잠금을 저장소 `_mutex` 를 쥔 채 부르는 경로가 없는지(Debug 단언이 드러냄). `ComponentHandle` 바이너리 형태. 7-b(다중 상속 금지)가 버킷의 `static_cast` 전제로 병합됐는지.
 - **허용 여부 판단**: 타입 없는 `ComponentHandle` 의 `PROPERTY` 는 막혀 있습니다(3.7). 안정 키 `이름#n` 은 같은 이름의 컴포넌트 순서가 바뀌면 다른 컴포넌트를 가리킵니다(부착과 같은 한계).
 - 모든 헤더 템플릿이 멤버 위치를 컴파일해 넣으므로(`GameObjectStore.h`) 이 영역을 바꾸면 게임 · 킷 · 에디터 · RHI 를 함께 다시 빌드합니다. 부분 빌드로 확인하지 않습니다.
 
