@@ -28,3 +28,4 @@
 ### V2 계약
 
 - 입자 버퍼는 SRV 슬롯이 꽉 차 있어 `D2-6.3` 의 지도 재작성 전에는 캔버스 사각형 슬롯(t15)처럼 패스 전용 슬롯을 다시 쓰는 방법을 검토합니다. 결정은 그 단위에서 결정 기록에 남깁니다.
+- 착수 전 확인한 현황(2026-10-20): 투명 후보는 메시 배치(`GPUMeshBatch`, `GPUSceneBuilder::emitTransparentBatches`)뿐이라 입자 배치는 스냅샷 형식 · 업로드 · 드로우(`FrameRendererDraw`) · PSO 를 새로 더해야 합니다. 슬롯은 `bindingslots.hlsli` 가 t0..t11(`SW_SRV_SLOT_COUNT` 12, 캔버스 사각형이 t11)이고 머티리얼 텍스처가 t12..t27 입니다(위 t15 는 낡은 번호). 셰이더 굽기 · 네 백엔드 · `hostgpu` 확인이 필요해 GPU 없이는 닫을 수 없습니다.
