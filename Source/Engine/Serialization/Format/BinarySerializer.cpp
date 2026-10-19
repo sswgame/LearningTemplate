@@ -45,42 +45,6 @@ namespace sw
             }
 
             /**
-             * @brief 프로퍼티 하나의 페이로드를 인스턴스에 씁니다. 실패하면 false 입니다.
-             * @details 비트필드, 컨테이너, 그 외 값의 세 분기로 나눈다. 아카이브 경로 둘이 함께 쓴다. 따로 두면
-             *          분기를 하나 추가할 때(예: 새 컨테이너 구조) 한쪽만 고치기 쉽고,
-             *          그러면 **그 경로로 읽은 객체만 필드가 비는** 재현하기 어려운 차이가 된다.
-             */
-            [[nodiscard]] static bool applyPropertyPayload( void* pInstance, const PropertyInfo& prop, const uint8* pData,
-                                                            size_t payloadStart, size_t payloadSize, const SerializeContext& context,
-                                                            bool bRequireExactConsume, BinaryWireVersion wireVersion )
-            {
-                void* pPropPtr = prop.getRawPtr( pInstance );
-
-                if ( prop._bIsBitField == SW_TRUE )
-                {
-                    // 비트필드는 주소를 가질 수 없어 값으로 읽고 setter 로 넣는다.
-                    bool   bVal  = false;
-                    size_t local = payloadStart;
-                    if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, context, wireVersion ) == false )
-                        return false;
-                    prop.setValue<bool>( pInstance, bVal );
-                    return true;
-                }
-
-                // `bRequireExactConsume`: 엄격 역직렬화는 페이로드를 한 바이트도 남기지 않고 읽었는지까지 확인한다(남으면 스트림이
-                // 이 필드를 다른 형태로 적은 것이다). 소프트와 아카이브 경로는 읽힌 만큼만 믿는다.
-                size_t local = payloadStart;
-                bool   bRead = false;
-                if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                    bRead = SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, context, wireVersion );
-                else
-                    bRead = SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, context, wireVersion );
-                if ( bRead == false )
-                    return false;
-                return bRequireExactConsume == false || local == payloadStart + payloadSize;
-            }
-
-            /**
              * @brief 엄격한 읽기가 타입에 없는 필드를 건너뛸 때(`skipsUnknownProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
              * @details 바이너리는 필드 이름이 아니라 해시를 싣는다. 오브젝트마다 알리면 같은 타입 천 개가 천 줄을 쓴다.
              */
@@ -123,10 +87,10 @@ namespace sw
 
             /**
              * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
-             * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 세 가지뿐이다.
+             * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 두 가지뿐이다.
              *          (1) 모르는 프로퍼티: 엄격은 `skipsUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
-             *          (2) 읽지 못한 프로퍼티: 엄격은 `skipsUnreadableProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다) 아니면 실패하며, 소프트는 orphan 으로 담는다.
-             *          (3) 페이로드를 끝까지 읽었는지: 엄격만 확인한다.
+             *          (2) 읽지 못한 프로퍼티(페이로드를 끝까지 읽지 못한 것 포함): 엄격은 `skipsUnreadableProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다)
+             *          아니면 실패하며, 소프트는 orphan 으로 담는다.
              *          두 플래그는 따로다. 혼합 빌드 사이의 메시지는 (1) 만 켜서 새 빌드가 더한 필드는 건너뛰고 모르는 열거자는 거절한다. 중첩 구조체도
              *          같은 컨텍스트로 이 루프를 다시 지나므로(`SerializerUtil::deserializeValueBinary`) 모든 깊이에서 정책이 같다.
              *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 간다. 기록 타입을 아는 스칼라는 이관이 값으로
@@ -223,13 +187,8 @@ namespace sw
                     }
                     else
                     {
-                        bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, context, bStrict, wireVersion );
-                        if ( bApplied == false && bStrict == false )
-                        {
-                            void*               pPropPtr     = prop.getRawPtr( pInstance );
-                            const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
-                            bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
-                        }
+                        // 기록 타입이 같은데 끝까지 읽히지 않으면 손상이다. 소프트 읽기도 이관으로 짐작하지 않고 orphan 으로 넘긴다(이관은 크기로 짐작해 4 바이트 페이로드를 수의 텍스트로 문자열에 넣는다).
+                        bApplied = SerializerUtil::applyPropertyBinary( prop, pInstance, pData + payloadStart, payloadSize, context, wireVersion );
                     }
 
                     if ( bApplied == false )

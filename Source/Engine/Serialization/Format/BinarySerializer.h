@@ -65,7 +65,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief Soft 역직렬화입니다. 타입이 안 맞거나 모르는 필드는 orphan 으로 모으고 계속 진행합니다.
-         * @details 읽지 못한 필드도 payload 크기만큼 건너뜁니다. tryCoerceBinaryPayload 로 int32↔string 등의 변환을 자동으로 시도합니다.
+         * @details 읽지 못한 필드도 payload 크기만큼 건너뜁니다. 기록 타입이 다르면 tryCoerceBinaryPayload 로 int32↔string 등의 변환을 시도합니다.
+         *          기록 타입이 같은데 payload 를 끝까지 읽지 못한 필드는 이관하지 않고 orphan 입니다(엄격 읽기와 같은 판정).
          * @return 스트림이 비었거나 깨졌으면(머리 · 태그 · 크기) `NotParsed`, 범위 밖 값이 있으면 `Rejected`(orphan 은 끝까지 모은다)입니다(`SoftReadResult`).
          */
         [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
