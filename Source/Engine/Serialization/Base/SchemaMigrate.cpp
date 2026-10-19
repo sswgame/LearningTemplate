@@ -223,11 +223,11 @@ namespace sw
             {
                 const uint8* pPayload    = orphan._listBinary.data();
                 const size_t payloadSize = orphan._listBinary.size();
-                // 기록된 버전으로 읽는다. orphan 은 그것을 읽은 스트림의 버전을 가지고 있다.
+                // 기록된 버전으로 읽는다. orphan 은 그것을 읽은 스트림의 버전을 가지고 있다. 끝까지 읽혀야 받는다(본 경로의 `SerializerUtil::applyPropertyBinary` 와 같다).
                 if ( wireTypeName == propTypeName )
                 {
                     size_t offset{ 0 };
-                    if ( SerializerUtil::deserializeValueBinary( pPropPtr, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) )
+                    if ( SerializerUtil::deserializeValueBinary( pPropPtr, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) && offset == payloadSize )
                         return true;
                 }
                 return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion );

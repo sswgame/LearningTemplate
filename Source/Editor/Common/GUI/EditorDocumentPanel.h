@@ -38,8 +38,17 @@ namespace sw::editor
 
         /** @brief 포커스가 이 종류이고 현재 로드 경로와 다르면 true 입니다. */
         bool hasNewFocusedDocument() const;
-        /** @brief 매칭된 포커스 경로를 반환합니다. 매칭이 없으면 빈 문자열입니다. */
+        /** @brief 매칭된 포커스 경로를 반환합니다. 종류가 맞고 `acceptsDocumentPath` 가 받는 경로만이며, 매칭이 없으면 빈 문자열입니다. */
         string_view getMatchingFocusedPath() const;
+        /**
+         * @brief 이 패널이 @p assetPath(리소스 id)를 문서로 받으면 true 입니다. 기본은 종류만 맞으면 받습니다.
+         * @details 한 종류 안의 일부만 다루는 패널이 좁힌다(Data 종류 중 `*.vfx.xml` 만 보는 VFX 미리보기). 포커스 매칭과 "Open..." 목록이 같은 판정을 쓴다.
+         */
+        virtual bool acceptsDocumentPath( string_view assetPath ) const
+        {
+            (void)assetPath;
+            return true;
+        }
         /** @brief 포커스 경로를 로드 경로로 확정하고 로드가 필요함을 표시합니다. */
         void acceptFocusedDocument();
         /** @brief dirty 이면 확인 팝업을 띄우고, 아니면 포커스 경로를 받아들입니다. */

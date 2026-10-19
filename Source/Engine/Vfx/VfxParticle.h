@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    /** @brief 입자 하나의 렌더 입력입니다. 필드 순서가 셰이더 쪽 구조체와 같습니다. */
+    /** @brief 입자 하나의 렌더 입력입니다. 필드 순서가 셰이더 쪽 구조체(`particle.hlsl` 의 `GPUParticle`)와 같습니다. */
     struct GPUParticle
     {
         float4 _positionSize{}; ///< xyz = 방출기 로컬 위치, w = 크기

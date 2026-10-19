@@ -105,6 +105,8 @@ namespace sw
         , _outputRenderTarget{ 0 }
         , _capture{ _pDevice, _mainView._transientPool, _pipelineResource }
         , _canvasRenderer{}
+        , _particleRenderer{}
+        , _particlePSOKey{ 0 }
         , _canvasFrame{}
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
@@ -725,6 +727,9 @@ namespace sw
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
         _canvasRenderer.prepareFrame( *pDevice, _canvasFrame );
+        // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
+        ensureParticlePSO();
+        _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches() );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )
             return false;

@@ -24,6 +24,7 @@ namespace sw
     struct PrimitiveInstanceEntry;
     struct RenderViewRequest;
 
+    class GameObjectManager;
     class GPUUploadQueue;
     class Material;
     class MaterialInstance;
@@ -67,7 +68,7 @@ namespace sw
         /**
          * @brief 프리미티브(MeshComponent, 인스턴스 배치 항목)를 모아 CPU 스냅샷을 만듭니다(게임 스레드).
          * @details 내용과 카메라가 이전과 같으면 재구축을 건너뛴다. 카메라만 바뀌면
-         *          투명 재정렬과 배치 재구성만 한다.
+         *          투명 재정렬과 배치 재구성만 한다. 입자 그리기(`populateParticleBatches`)는 건너뛰기와 무관하게 매번 다시 모은다.
          * @note 인스턴스 채우기(`GT.GPUScene.build.fill`)는 이 스레드에서 한다. 워커로 나눠 봤지만 **모든 크기에서 졌다**.
          *       원소당 일이 필드 몇 개 복사라서 디스패치와 대기 비용이 일 자체보다 훨씬 크다
          *       (400개 358µs → 1µs, 20,000개 219µs → 99µs). 다시 나누자고 제안하기 전에 이 측정값을 확인한다.
@@ -118,6 +119,8 @@ namespace sw
         const vector<GPUMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
         /** @brief 투명 배치를 반환합니다. */
         const vector<GPUMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
+        /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
+        const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
         const vector<GPUMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
         /** @brief 퍼뮤테이션 하나를 반환합니다. 인덱스가 없으면 nullptr 입니다. */
@@ -130,6 +133,8 @@ namespace sw
         bool isCPUSnapshotDirty() const { return _snapshot._bCPUDirty != SW_FALSE; }
 
     private:
+        /** @brief `populateFromScene` 의 메시 쪽입니다(프리미티브 수집 · 나누기 · 투명 정렬). 바뀐 것이 없거나 후보가 없으면 일찍 끝난다. */
+        void populateMeshesFromScene( Scene* pScene, const float3& cameraPos );
         /** @brief 수집한 인스턴스를 배치로 묶습니다. */
         void populateBatches();
         /**
@@ -164,6 +169,11 @@ namespace sw
         void sortTransparent( const float3& cameraPos );
         /** @brief 불투명 인덱스 테이블과 투명 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
+        /**
+         * @brief 씬의 `VfxComponent` 가 낸 입자로 방출기마다 그리기 하나(`GPUParticleBatch`)를 채우고 주 시점에서 먼 것부터 놓습니다.
+         * @details 정렬 규칙은 메시 투명 후보와 같다(`GPUTransparentSorter::makeTransparentSortKey` · `isDrawnBefore`, 깊이는 방출기 위치). 입자가 없는 방출기는 싣지 않는다.
+         */
+        void populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos );
         /**
          * @brief 배치를 다시 나누지 않고 인스턴스 값만 제자리에서 갱신합니다.
          * @details 배치 키가 그대로일 때 쓴다. 그러면 불투명 접두부의 배치와 각 원소의
@@ -419,6 +429,10 @@ namespace sw
         /// @brief 정렬된 불투명 항목의 후보 인덱스만 뽑은 배열입니다. `emitBatch` 가 투명 쪽과 같은 형태로 받습니다.
         vector<uint32> _listScratchOpaqueIdx;
         vector<uint32> _listScratchTransparentIdx;
+        /// @brief 입자 그리기의 정렬 키(`populateParticleBatches`)입니다. 후보 번호는 정렬 전 `_listParticleBatch` 의 자리입니다.
+        vector<GPUTransparentSortKey> _listScratchParticleKey;
+        /// @brief 입자 그리기를 정렬 순서로 옮겨 담는 작업 배열입니다(`_snapshot._listParticleBatch` 와 맞바꾼다).
+        vector<GPUParticleBatch> _listScratchParticleBatch;
         /**
          * @brief 부분 업로드로 나눌 구간 수의 상한입니다. 넘으면 전체를 올립니다.
          *

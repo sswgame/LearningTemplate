@@ -38,6 +38,7 @@
                      _shaderCanvas="engine/shaders/canvas.hlsl"
                      _shaderSprite2D="engine/shaders/sprite2d.hlsl"
                      _shaderSprite2DLit="engine/shaders/sprite2dlit.hlsl"
+                     _shaderParticle="engine/shaders/particle.hlsl"
                      _shaderProbeProvokingVertex="common/shaders/provokingvertex.hlsl"
                      _shaderProbeInstanceSlot="common/shaders/instanceslotprobe.hlsl"
                      _shaderProbeSampleCompute="common/shaders/samplecompute.hlsl"

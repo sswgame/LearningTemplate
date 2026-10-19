@@ -31,7 +31,7 @@ struct CanvasQuad
 	uint   anchor;       // 화면 앵커 번호, 없음 = kInvalidIndex — 앵커는 버퍼 맨 앞 원소들이고 rect 가 (x, y, 배율, -) 다(C++ CanvasAnchor)
 };
 
-SW_DECLARE_STRUCTURED_BUFFER( CanvasQuad, g_SwCanvasQuads, SW_SLOT_CANVAS_QUAD_SRV );
+SW_DECLARE_STRUCTURED_BUFFER( CanvasQuad, g_SwCanvasQuads, SW_SLOT_PASS_SRV );
 
 SW_ROOT_CONSTANTS_BEGIN
 	uint  g_SwCanvasQuadBase;    // 이 일괄의 첫 사각형 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않아 시작을 여기로 받는다

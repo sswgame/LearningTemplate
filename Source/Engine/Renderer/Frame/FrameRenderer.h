@@ -34,6 +34,7 @@
 #include "Engine/Renderer/Scene/GPUScene.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
+#include "Engine/Renderer/Vfx/VfxParticleRenderer.h"
 
 namespace sw
 {
@@ -572,6 +573,11 @@ namespace sw
         void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief 풀스크린 삼각형을 그립니다. */
         void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
+        /**
+         * @brief 방출기마다의 입자 그리기(`GPUScene::getParticleBatches`)를 지금 열린 투명 패스에 그립니다. 메시 투명 배치 **뒤**에 부릅니다.
+         * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VfxParticleRenderer::drawBatches` 로 넘긴다. 순서는 주 시점의 정렬 순서다(추가 뷰도 같은 순서로 그린다).
+         */
+        void drawParticles( FramePassContext& context );
         /** @brief 뷰의 풀에서 트랜지언트 텍스처를 할당합니다. */
         void allocateTransient( TransientAttachmentPool& pool, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
                                 uint32 resolutionDivisor = 1 );
@@ -669,6 +675,14 @@ namespace sw
          *          병렬로 기록되므로 그때 만들면 백엔드마다 다른 방식으로 깨진다.
          */
         void ensureMaterialPSOs();
+        /**
+         * @brief 입자 그리기가 있는 프레임에 입자 PSO 를 **기록 시작 전에** 만들어 둡니다(머티리얼 변형 캐시에 둔다 — 해제 순서가 같다).
+         * @details 투명 패스 PSO 의 렌더 상태(블렌드 · 깊이 테스트 · RT 포맷)를 물려받고 셰이더만 `EngineDefaultAssets::_shaderParticle` 로 바꾼다. 컬링은 끄고
+         *          깊이 쓰기도 끄며, 블렌드는 프리멀티플라이로 고정한다(더하기는 셰이더가 알파 0 으로 낸다). define 은 비운다 — 쿠커가 VSMain · PSMain 을 define 없이 굽는다.
+         */
+        void ensureParticlePSO();
+        /** @brief 입자 PSO 입니다. 투명 패스 PSO 가 없거나 만들지 못했으면 0 입니다(`ensureParticlePSO` 가 이번 프레임에 만들었어야 한다). */
+        RHIPipelineStateHandle findParticlePSO() const;
         /**
          * @brief 패스 PSO 에 머티리얼 퍼뮤테이션, 뷰 모드, 컬 반전을 적용한 변형을 만듭니다. 적용할 것이 없으면 패스 PSO 를 그대로 반환합니다.
          * @details 렌더 상태(블렌드, 뎁스, RT 포맷)는 **패스의 것을 그대로 물려받고** 셰이더만 교체한다.
@@ -875,6 +889,10 @@ namespace sw
         FrameCapture _capture;
         /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.
         CanvasRenderer _canvasRenderer;
+        /// @brief 파티클 렌더러입니다. 입자 버퍼와 입자 텍스처를 렌더 스레드에서 처리하고, 투명 패스가 방출기마다 빌보드를 그립니다.
+        VfxParticleRenderer _particleRenderer;
+        /// @brief 이번 프레임 입자 PSO 의 변형 캐시 키입니다(`ensureParticlePSO` 가 기록 전에 정한다). 입자가 없거나 투명 패스가 없으면 0 입니다.
+        uint64 _particlePSOKey;
         /// @brief 그릴 캔버스입니다. 패킷과 `setCanvasFrame` 에서 맞바꾸기로 받으며, 기록 중에는 읽기만 합니다.
         CanvasFrameData _canvasFrame;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.

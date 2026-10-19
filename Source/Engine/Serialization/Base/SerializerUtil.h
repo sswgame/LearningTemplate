@@ -153,6 +153,13 @@ namespace sw
         /** @brief 텍스트 하나를 프로퍼티 값으로 씁니다(비트필드는 그 비트만). 읽지 못하면 false 이고 값은 그대로입니다. 컨테이너는 받지 않습니다. */
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, void* pInstance, string_view text, const SerializeContext& context );
         /**
+         * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 true 입니다.
+         * @details 바이트가 남으면 스트림이 이 필드를 다른 형태로 적은 것이다(`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공한다). 그래서 오프셋을
+         *          부른 쪽에 돌려주지 않고 여기서 끝을 본다 — 태그 스트림, diff, 값 복사가 "읽힌 만큼" 받는 사본을 따로 두지 않게.
+         */
+        [[nodiscard]] SW_API static bool applyPropertyBinary( const PropertyInfo& prop, void* pInstance, const uint8* pPayload, size_t payloadSize,
+                                                              const SerializeContext& context, BinaryWireVersion wireVersion = kCurrentBinaryWireVersion );
+        /**
          * @brief 이 프로퍼티의 값을 세 형식(XML, JSON, 바이너리)이 모두 실어 나를 수 있으면 true 입니다. 직렬화기의 분기와 같은 판정입니다.
          * @details 직렬화기는 다룰 줄 모르는 타입을 **조용히** 텍스트 `null`, 바이너리 0 바이트로 쓰고, 읽을 때는 그 필드가 기본값이 된다(저장한 줄 알았던
          *          값이 사라진다). 컨테이너는 원소와 키 타입을, 소유 포인터 원소는 런타임 팩토리를 믿는다. 모든 PROPERTY 를 이 함수로 훑는 테스트가 있다.
