@@ -90,10 +90,11 @@ namespace sw::editor
         UIPreviewPanel();
         ~UIPreviewPanel() override;
 
-        const utf8* getPanelTitle() const override { return "UI Preview"; }
-        void        drawContent() override;
-        float2      getInitialPanelSize() const override { return float2{ 1100.0f, 680.0f }; }
-        bool        isToolPanel() const override { return true; }
+        const utf8*    getPanelTitle() const override { return "UI Preview"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Center; }
+        void           drawContent() override;
+        float2         getInitialPanelSize() const override { return float2{ 1100.0f, 680.0f }; }
+        bool           isToolPanel() const override { return true; }
         /** @brief 미리보기 화면을 닫고 ImGui 텍스처를 놓습니다. */
         void shutdown( IRHIDevice* pRHIDevice ) override;
 

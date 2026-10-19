@@ -11,7 +11,6 @@
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -34,8 +33,6 @@ namespace sw::editor
             /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없기 때문입니다. */
             static constexpr float32 kMinScaledDockspaceSize = 64.0f;
 
-            /** @brief 기본 배치에서 가운데 영역의 앞 탭이 될 창입니다. 씬 뷰 패널의 제목입니다. */
-            static constexpr const utf8* kFrontTabWindowTitle = "Scene";
             /** @brief 기본 배치 뒤에 앞 탭을 고르려고 포커스를 주는 최대 프레임 수입니다. 창이 도킹되고 탭 막대가 만들어지는 데 한두 프레임이 걸립니다. */
             static constexpr uint8 kMaxFrontTabFrames = 8;
 
@@ -50,27 +47,48 @@ namespace sw::editor
                 scaleSizeRef( pNode->ChildNodes[1], scale );
             }
 
-            /**
-             * @brief 창을 도킹하고, 그 이름을 가진 패널이 실제로 등록되어 있는지 확인합니다.
-             * @details `DockBuilderDockWindow` 는 모르는 이름도 조용히 받는다. 그래서 패널 제목이 바뀌면 기본 배치만 말없이
-             *          깨진다. `EditorCommandRegistry::validate` 가 커맨드 테이블에 하는 일을 여기서도 한다.
-             */
-            static void dockCheckedWindow( const utf8* pTitle, ImGuiID dockID )
+            /** @brief 기본 배치가 나눈 영역의 도크 노드입니다. */
+            struct DefaultDockNodes
             {
-                ImGui::DockBuilderDockWindow( pTitle, dockID );
+                ImGuiID _left;
+                ImGuiID _right;
+                ImGuiID _center;
+                ImGuiID _bottom;
+            };
 
-                EditorContext* pContext = EditorContext::get();
+            /** @brief 패널이 밝힌 영역의 도크 노드입니다. 떠 있는 창이면 0 입니다. */
+            static ImGuiID findSlotDockID( EditorDockSlot slot, const DefaultDockNodes& nodes )
+            {
+                switch ( slot )
+                {
+                    case EditorDockSlot::Floating:
+                        return 0;
+                    case EditorDockSlot::Left:
+                        return nodes._left;
+                    case EditorDockSlot::Right:
+                        return nodes._right;
+                    case EditorDockSlot::Center:
+                    case EditorDockSlot::CenterFront:
+                        return nodes._center;
+                    case EditorDockSlot::Bottom:
+                        return nodes._bottom;
+                }
+                return 0;
+            }
+
+            /** @brief 가운데 영역의 앞 탭(`EditorDockSlot::CenterFront`)을 밝힌 패널의 창 제목입니다. 없으면 nullptr 입니다. */
+            static const utf8* findFrontTabTitle()
+            {
+                const EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
-                    return;
-
+                    return nullptr;
                 for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
                 {
-                    if ( entry._title == pTitle )
-                        return;
+                    const bool bFrontTab = entry._pInstance != nullptr && entry._pInstance->getDefaultDockSlot() == EditorDockSlot::CenterFront;
+                    if ( bFrontTab )
+                        return entry._title.c_str();
                 }
-                SW_LOG_WARNING( "기본 도킹 배치가 '%#' 를 찾지 못했습니다 — 패널 제목이 바뀌었습니까? "
-                                "그 패널은 도킹되지 않고 떠 있게 됩니다.",
-                                pTitle );
+                return nullptr;
             }
         };
     } // namespace
@@ -188,7 +206,7 @@ namespace sw::editor
         // 기본 배치를 다시 덮어쓰지 않게 한다. 읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다. 배치가 맞지 않으면 메뉴의 레이아웃 초기화로 되돌린다.
         _bApplied      = SW_TRUE;
         _bResetDefault = SW_FALSE;
-        // 다시 연 패널의 창은 처음 나타나면서 포커스를 받아 그 탭이 앞에 선다. 그대로 두면 씬 뷰 최대화를 풀 때 Prefab Editor 가 앞에 선다. 기본 배치처럼 Scene 탭을 앞으로 가져온다.
+        // 다시 연 패널의 창은 처음 나타나면서 포커스를 받아 그 탭이 앞에 선다. 그대로 두면 씬 뷰 최대화를 풀 때 Prefab Overrides 가 앞에 선다. 기본 배치처럼 Scene 탭을 앞으로 가져온다.
         _bFrontTabPending   = SW_TRUE;
         _frontTabFrameCount = 0;
         _pendingLayoutIni.clear();
@@ -371,7 +389,8 @@ namespace sw::editor
             return;
 
         // 숨은 탭의 창도 Active 다. Begin 은 호출되고 내용만 건너뛴다. 닫힌 패널의 창은 Active 가 아니므로 고를 탭이 없다.
-        ImGuiWindow* pWindow              = ImGui::FindWindowByName( EditorDockLayoutInternal::kFrontTabWindowTitle );
+        const utf8*  pFrontTabTitle       = EditorDockLayoutInternal::findFrontTabTitle();
+        ImGuiWindow* pWindow              = pFrontTabTitle != nullptr ? ImGui::FindWindowByName( pFrontTabTitle ) : nullptr;
         const bool   bFrontTabUnavailable = pWindow == nullptr || pWindow->Active == false || _frontTabFrameCount >= EditorDockLayoutInternal::kMaxFrontTabFrames;
         if ( bFrontTabUnavailable )
         {
@@ -440,24 +459,19 @@ namespace sw::editor
         ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.28f, &dockBottom, &dockMain );
         (void)dockTop;
 
-        // 기본 배치는 패널 제목 문자열로 붙인다. ImGui 의 API 가 그렇다. 그래서 제목이 패널 쪽에서 바뀌면 여기 적힌
-        // 이름과 어긋나고, 그 패널은 아무 말 없이 도킹되지 않는다. `DockBuilderDockWindow` 는 모르는 이름도 조용히 받기
-        // 때문이다. 등록된 패널 제목과 대조해 어긋나면 알린다. 도구 패널은 레지스트리에서 이름을 받아 온다.
-        EditorDockLayoutInternal::dockCheckedWindow( "Hierarchy", dockLeft );
-        EditorDockLayoutInternal::dockCheckedWindow( "Inspector", dockRight );
-
-        // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 앞 탭은 Scene 이다. 붙인 순서로는 정해지지 않는다. ImGui 는 새 탭 가운데
+        // 패널마다 제가 밝힌 영역(`IEditorPanel::getDefaultDockSlot`)에 등록된 제목으로 붙인다. 제목을 여기 따로 적으면 패널 쪽에서 제목이 바뀔 때
+        // `DockBuilderDockWindow` 가 모르는 이름을 조용히 받아 그 패널이 떠 있는 창이 된다(프리팹 오버라이드 도구가 씬 뷰를 덮었다).
+        // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 앞 탭은 Scene(`CenterFront`)이다. 붙인 순서로는 정해지지 않는다. ImGui 는 새 탭 가운데
         // 마지막 것을 고르기 때문이다. 그래서 패널을 그린 뒤 `updateDefaultTabSelection` 이 포커스로 고른다.
-        EditorDockLayoutInternal::dockCheckedWindow( EditorDockLayoutInternal::kFrontTabWindowTitle, dockMain );
-        EditorDockLayoutInternal::dockCheckedWindow( "Game", dockMain );
-        EditorDockLayoutInternal::dockCheckedWindow( "Profiler", dockMain );
-        EditorAssetTypeRegistry::forEachToolPanelTitle( [dockMain]( const utf8* pTitle )
+        const EditorDockLayoutInternal::DefaultDockNodes nodes{ dockLeft, dockRight, dockMain, dockBottom };
+        const EditorContext*                             pContext = EditorContext::get();
+        SW_ASSERT( pContext != nullptr ); // 도크스페이스는 에디터 프레임 안에서만 열린다
+        for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
         {
-            ImGui::DockBuilderDockWindow( pTitle, dockMain );
-        } );
-
-        EditorDockLayoutInternal::dockCheckedWindow( "Content Browser", dockBottom );
-        EditorDockLayoutInternal::dockCheckedWindow( "Output Log", dockBottom );
+            const ImGuiID slotDockID = entry._pInstance != nullptr ? EditorDockLayoutInternal::findSlotDockID( entry._pInstance->getDefaultDockSlot(), nodes ) : 0;
+            if ( slotDockID != 0 )
+                ImGui::DockBuilderDockWindow( entry._title.c_str(), slotDockID );
+        }
 
         ImGui::DockBuilderFinish( id );
         _bFrontTabPending   = SW_TRUE;

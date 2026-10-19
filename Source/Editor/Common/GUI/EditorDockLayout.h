@@ -29,7 +29,7 @@ namespace sw::editor
         void requestResetDefault();
         /**
          * @brief 기본 배치를 막 만들었으면 가운데 영역의 Scene 탭을 앞으로 가져옵니다. 패널을 모두 그린 뒤 프레임마다 호출합니다.
-         * @details ImGui 는 새로 붙은 탭 중 마지막 것을 고르고, 처음 나타난 창에 포커스를 준다. 그래서 열린 채 시작하는 도구 패널(Prefab Editor)이
+         * @details ImGui 는 새로 붙은 탭 중 마지막 것을 고르고, 처음 나타난 창에 포커스를 준다. 그래서 열린 채 시작하는 도구 패널(Prefab Overrides)이
          *          같은 영역에 붙으면 그 탭이 앞에 서고 씬 뷰는 그려지지 않는다. Scene 탭이 실제로 선택될 때까지 최대 몇 프레임 동안 포커스를 준다.
          */
         void updateDefaultTabSelection();

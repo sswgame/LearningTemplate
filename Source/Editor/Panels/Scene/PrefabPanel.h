@@ -24,8 +24,9 @@ namespace sw::editor
 
         bool isToolPanel() const override { return true; }
         /** @brief 종류 테이블의 프리팹 패널 제목은 프리팹 창(`PrefabEditorPanel`)이 쓴다. 이 도구는 다른 제목을 둔다. */
-        const utf8* getPanelTitle() const override { return "Prefab Overrides"; }
-        void        drawContent() override;
+        const utf8*    getPanelTitle() const override { return "Prefab Overrides"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Center; }
+        void           drawContent() override;
 
         /** @brief 중첩 프리팹·서브 애셋 섹션을 그립니다. */
         void drawNestedPrefabSection();

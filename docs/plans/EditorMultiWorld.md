@@ -176,6 +176,7 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 1. **프리팹 창의 남은 것** — 본체는 단계 5 의 "구현됨". 콘텐츠 브라우저의 프리팹 열기는 새 창으로 돌렸고(종류 테이블의 프리팹 패널 제목 = "Prefab Window", 오버라이드 도구 `PrefabPanel` 은 "Prefab Overrides" 로 따로 둠),
    X 로 닫을 때의 미저장 확인(Save / Don't Save / Cancel, 저장 실패면 열어 둠, Don't Save 는 디스크 프리팹으로 문서 루트를 다시 세움)도 들어갔다. 둘 다 GPU 없이 테스트(`EditorPrefabIsolationTest.CloseAsksOnlyWhenEditsRemain` · `EditorAssetType` 제목 단언)했다.
    확인함(2026-10-20, DX12, `editor.prefabwindow`): 콘텐츠 브라우저 더블클릭이 "Prefab Window" 탭(가운데 도크)을 열고, 편집 뒤 X 는 Save / Don't Save / Cancel 모달을 띄우며 Cancel 은 열어 두고 Don't Save 는 닫고 다시 열면 깨끗하고 그때의 X 는 묻지 않는다. 남은 것: 다른 세 백엔드 화면, 패널 메뉴 토글 등 X 가 아닌 닫는 길(확인하지 않는다).
+   고침(2026-10-20): 제목을 나눈 뒤 기본 배치가 종류 테이블 제목("Prefab Window")만 붙여 열린 채 시작하는 "Prefab Overrides" 가 떠 있는 큰 창으로 씬 뷰를 덮었다. 패널이 영역을 밝히게(`getDefaultDockSlot`) 바꿔 가운데 탭으로 돌렸다(결정 기록 5-11).
 3. **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
 4. **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 결정 2 대로 공유한다.
 5. **미리보기 렌더러 내리기의 GPU 안전** — 창을 닫으면 렌더 스레드가 `FrameRenderer::shutdown` 으로 그 렌더러를 바로 내린다. 디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대며,
