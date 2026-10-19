@@ -885,16 +885,9 @@ namespace sw
         if ( pSrc == nullptr || pDst == nullptr )
             return false;
         vector<uint8> bytes;
-        size_t        offset{ 0 };
-        if ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
-        {
-            if ( serializeNestedContainerBinary( pSrc, prop.getContainerShape(), bytes, context ) == false )
-                return false;
-            return deserializeNestedContainerBinary( pDst, prop.getContainerShape(), bytes.data(), bytes.size(), offset, context );
-        }
-        if ( serializeValueBinary( pSrc, prop._typeName, bytes, context ) == false )
-            return false;
-        return deserializeValueBinary( pDst, prop._typeName, bytes.data(), bytes.size(), offset, context );
+        const bool    bWritten = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() ) ? serializeNestedContainerBinary( pSrc, prop.getContainerShape(), bytes, context )
+                                                                                                 : serializeValueBinary( pSrc, prop._typeName, bytes, context );
+        return bWritten && applyPropertyBinary( prop, pDstInstance, bytes.data(), bytes.size(), context );
     }
 
     bool SerializerUtil::arePropertyValuesEqual( const PropertyInfo& prop, const void* pInstanceA, const void* pInstanceB, const SerializeContext& context )
@@ -943,6 +936,30 @@ namespace sw
         }
         void* pValue = prop.getRawPtr( pInstance );
         return pValue != nullptr && parseTextValue( pValue, prop._typeName, text, context );
+    }
+
+    bool SerializerUtil::applyPropertyBinary( const PropertyInfo& prop, void* pInstance, const uint8* pPayload, size_t payloadSize, const SerializeContext& context,
+                                              BinaryWireVersion wireVersion )
+    {
+        if ( pInstance == nullptr )
+            return false;
+        size_t offset{ 0 };
+        if ( prop._bIsBitField == SW_TRUE )
+        {
+            // 비트필드는 주소를 가질 수 없어 값으로 읽고 setter 로 넣는다.
+            bool bValue = false;
+            if ( deserializeValueBinary( &bValue, hashed_string( "bool" ), pPayload, payloadSize, offset, context, wireVersion ) == false || offset != payloadSize )
+                return false;
+            prop.setValue<bool>( pInstance, bValue );
+            return true;
+        }
+        void* pValue = prop.getRawPtr( pInstance );
+        if ( pValue == nullptr )
+            return false;
+        const bool bRead = ( prop._bIsContainer == SW_TRUE && prop.hasContainerWrapper() )
+                             ? deserializeNestedContainerBinary( pValue, prop.getContainerShape(), pPayload, payloadSize, offset, context, wireVersion )
+                             : deserializeValueBinary( pValue, prop._typeName, pPayload, payloadSize, offset, context, wireVersion );
+        return bRead && offset == payloadSize;
     }
 
     bool SerializerUtil::canCarryValueType( hashed_string typeName, const SerializeContext& context )

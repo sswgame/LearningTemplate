@@ -4064,6 +4064,48 @@ SW_TEST_CASE( ReflectionSerializationTest, SoftReadKeepsAFieldOfAnotherShapeAsAn
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 기록 타입이 같아도 페이로드를 끝까지 읽지 못한 필드는 소프트 읽기도 받지 않고 orphan 으로 남긴다
+ * @details 예전에는 엄격 읽기만 끝까지 읽었는지 봤고, 소프트 읽기는 "읽힌 만큼" 받았다. 목록 뒤에 바이트가 남은 페이로드(다른 형태로 적힌 필드)가
+ *          앞 원소만으로 성공했다. 지금은 두 경로가 한 함수(`SerializerUtil::applyPropertyBinary`)로 끝을 본다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, SoftReadRejectsAPayloadWithTrailingBytes )
+{
+    struct ListSlot
+    {
+        sw::vector<int32> _listValue;
+    };
+    sw::TypeInfo listInfo;
+    listInfo._name               = sw::hashed_string( "ProbeTrailingListSlot" );
+    listInfo._fullyQualifiedName = sw::hashed_string( "sw::ProbeTrailingListSlot" );
+    listInfo._size               = sizeof( ListSlot );
+    listInfo._listProperty       = {
+        { sw::hashed_string( "_listValue" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( ListSlot, _listValue ), true, sw::ContainerKind::Sequence, sw::hashed_string( "int32" ),
+         sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<int32>>>() }
+    };
+
+    ListSlot source;
+    source._listValue = { 1, 2 };
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &source, listInfo, bytes ) );
+
+    // 스트림: 머리(4), 이름 해시(4), 기록 타입 해시(4), 페이로드 크기(4), 페이로드. 필드가 하나라 페이로드가 끝에 있다 — 4 바이트를 덧붙이고 크기를 늘린다.
+    constexpr size_t kPayloadSizeOffset = sizeof( uint32 ) * 3;
+    uint32           payloadSize{ 0 };
+    sw::Memory::copy( &payloadSize, bytes.data() + kPayloadSizeOffset, sizeof( uint32 ) );
+    payloadSize += sizeof( uint32 );
+    sw::Memory::copy( bytes.data() + kPayloadSizeOffset, &payloadSize, sizeof( uint32 ) );
+    bytes.insert( bytes.end(), sizeof( uint32 ), uint8( 0 ) );
+
+    ListSlot                          target;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &target, listInfo, bytes.data(), bytes.size(), &listOrphan ) == sw::SoftReadResult::Read );
+    SW_EXPECT_TRUE_MSG( listOrphan.size() == 1, "뒤에 바이트가 남은 페이로드를 읽힌 만큼 받았습니다" );
+
+    ListSlot strictTarget;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &strictTarget, listInfo, bytes.data(), bytes.size() ) );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 정확한 버전 읽기는 버전이 다르면 이관을 찾지 않고 거절하고, 같으면 컨텍스트의 정책으로 엄격하게 읽는다
  * @details 혼합 빌드 사이의 메시지가 쓰는 읽기다(`BinarySerializer::deserializeExactVersion`). 의미 버전이 다르면 섞인 동안 버리는 것이 계약이라
  *          (타입, 기록된 버전)의 이관이 등록돼 있어도 보지 않는다. 그래서 레코드의 버전 수열과 묶이지 않는다(docs/plans/ServerBusFormat.md 3.4).

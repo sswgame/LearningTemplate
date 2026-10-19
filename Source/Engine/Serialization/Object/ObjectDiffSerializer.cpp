@@ -98,27 +98,8 @@ namespace sw
             const PropertyInfo*         pProp        = bMatched ? &listProp[matchedIndex] : nullptr;
             if ( pProp != nullptr )
             {
-                void*  pDest = pProp->getRawPtr( pTargetInstance );
-                size_t local{ 0 };
-                bool   bOk{ true };
-                if ( pProp->_bIsBitField == SW_TRUE )
-                {
-                    bool bVal = false;
-                    bOk       = SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pDiffData + offset, payload, local, context );
-                    if ( bOk )
-                        pProp->setValue<bool>( pTargetInstance, bVal );
-                }
-                else if ( pDest != nullptr )
-                {
-                    if ( pProp->_bIsContainer && pProp->hasContainerWrapper() )
-                    {
-                        bOk = SerializerUtil::deserializeNestedContainerBinary( pDest, pProp->getContainerShape(), pDiffData + offset, payload,
-                                                                                local, context );
-                    }
-                    else
-                        bOk = SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, pDiffData + offset, payload, local, context );
-                }
-                if ( bOk == false )
+                // 값 주소가 없거나 페이로드를 끝까지 읽지 못하면 diff 가 틀린 것이다. 건너뛰지 않고 실패한다.
+                if ( SerializerUtil::applyPropertyBinary( *pProp, pTargetInstance, pDiffData + offset, payload, context ) == false )
                     return false;
             }
             else
