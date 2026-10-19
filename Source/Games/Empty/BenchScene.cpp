@@ -266,7 +266,7 @@ namespace sw
 
     /**
      * @brief `-gv_benchViews=N`: 격자를 둘러보는 캡처 카메라(CCTV) N 개를 둡니다(렌더 텍스처 512², 프레임마다 그립니다).
-     * @details 추가 뷰의 비용(컬링 항목, 풀, 그림자 패스, 기록)을 측정한다. 한 프레임에 그리는 추가 뷰 수는 `gv_renderViewBudget` 이 제한한다.
+     * @details 추가 뷰의 비용(컬링 항목, 풀, 그림자 패스, 기록)을 측정한다. 한 프레임에 그리는 추가 뷰는 `gv_renderViewBudget`(뷰 수)과 `gv_renderViewMegapixelBudget`(픽셀 합)이 제한한다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchViews, 0, "격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함)" );
 

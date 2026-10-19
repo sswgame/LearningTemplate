@@ -572,7 +572,7 @@ namespace sw
         _listDirectViewScratch.clear();
         if ( scene.getObjectManager() != nullptr )
         {
-            RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, _outputWidth, _outputHeight,
+            RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, cameraPos, _outputWidth, _outputHeight,
                                                     static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
                                                     _listDirectViewScratch );
         }

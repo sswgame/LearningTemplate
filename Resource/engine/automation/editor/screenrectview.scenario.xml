@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 화면 사각형 뷰(PiP)가 에디터 게임 뷰(ImGui 이미지로 보이는 게임 뷰 RT) 안의 자기 사각형에 그려진다.
+  테스트 씬(engine/automation/editor/screenrectview/screenrectview.scene.xml): 주 카메라는 빈 곳을 보고, PiP 카메라(사각형 0.55,0.55,0.4,0.4)는 30 m 옆의 큐브를 본다.
+  게임 뷰를 앞으로 내고 주 출력(게임 뷰 RT)을 찍어, PiP 사각형 안만 큐브로 밝고 왼쪽 위는 배경 그대로인지 본다. 씬 뷰가 주 출력이면 PiP 는 빠진다(RenderPacketBuilder).
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/screenrectview.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
+-->
+<Scenario name="editor.screenrectview" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="5"><DevCommand line="layout.reset"/></At>
+	<At frame="10"><ResizeWindow width="1600" height="900"/></At>
+	<At frame="20"><DevCommand line="scene.open engine/automation/editor/screenrectview/screenrectview.scene.xml"/></At>
+	<At frame="60"><DevCommand line="panel.close prefab_editor"/><DevCommand line="panel.focus game_view"/></At>
+	<At frame="100">
+		<EditorExpectObject name="PipCamera"/>
+		<Expect probe="Editor.GameViewRequested" equals="1"/>
+		<Screenshot file="screenrectview.ppm"/>
+		<CaptureEditorUI file="screenrectview_editor.png"/>
+	</At>
+	<At frame="105">
+		<!-- PiP 사각형 안쪽에는 큐브가 있고(배경 약 0.13, 큐브가 든 칸 약 0.27 — DX12 측정), 왼쪽 위와 PiP 바로 위는 배경이다. 사각형이 게임 뷰 RT 가 아닌 곳(백버퍼)에 그려지면 안쪽이 배경이고, 위아래가 뒤집히면(GL 원점) 오른쪽 위가 밝다 -->
+		<ExpectImage file="screenrectview.ppm" region="0.6,0.6,0.9,0.9" metric="meanLuma" atLeast="0.2"/>
+		<ExpectImage file="screenrectview.ppm" region="0.05,0.05,0.45,0.45" metric="meanLuma" atMost="0.16"/>
+		<ExpectImage file="screenrectview.ppm" region="0.6,0.05,0.9,0.45" metric="meanLuma" atMost="0.16"/>
+	</At>
+	<!-- 다음 시나리오가 깨끗한 씬에서 시작하게 되돌린다 -->
+	<At frame="110"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="115"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>
+	<At frame="140"><Pass/></At>
+</Scenario>

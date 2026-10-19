@@ -43,8 +43,9 @@ namespace sw
         return _listEntry.back();
     }
 
-    uint32 RenderViewScheduler::schedule( float64 now, const Candidate* pCandidate, uint32 candidateCount, uint32 budget, uint8* pOutRender )
+    uint32 RenderViewScheduler::schedule( float64 now, const Candidate* pCandidate, uint32 candidateCount, const RenderViewBudget& budget, uint8* pOutRender )
     {
+        uint32 chosenCount = 0;
         for ( Entry& entry : _listEntry )
         {
             entry._bSeen = SW_FALSE;
@@ -69,40 +70,46 @@ namespace sw
                 if ( overdue + RenderViewSchedulerInternal::kTimeSlack < 0.0 )
                     continue; // 아직 때가 아니다
             }
+            if ( candidate._bBudgeted == SW_FALSE )
+            {
+                pOutRender[index] = SW_TRUE;
+                ++chosenCount;
+                continue;
+            }
             _listScratchDue.push_back( index );
             _listScratchOverdue.push_back( overdue );
             _listScratchRenderCount.push_back( entry._renderCount );
         }
 
-        // 예산이 모자라면 가장 늦은 것부터. 뽑지 못한 뷰는 시각이 그대로라 다음 프레임에 더 늦은 채로 다시 겨룬다.
-        uint32 chosenCount = static_cast<uint32>( _listScratchDue.size() );
-        if ( budget > 0 && chosenCount > budget )
+        // 가장 늦은 것부터 예산이 찰 때까지. 뽑지 못한 뷰는 시각이 그대로라 다음 프레임에 더 늦은 채로 다시 겨룬다.
+        _listScratchOrder.resize( _listScratchDue.size() );
+        for ( uint32 order = 0; order < static_cast<uint32>( _listScratchOrder.size() ); ++order )
         {
-            _listScratchOrder.resize( _listScratchDue.size() );
-            for ( uint32 order = 0; order < static_cast<uint32>( _listScratchOrder.size() ); ++order )
-            {
-                _listScratchOrder[order] = order;
-            }
-            std::stable_sort( _listScratchOrder.begin(), _listScratchOrder.end(),
-                              [this]( uint32 lhs, uint32 rhs )
-            {
-                if ( _listScratchOverdue[lhs] != _listScratchOverdue[rhs] )
-                    return _listScratchOverdue[lhs] > _listScratchOverdue[rhs];
-                return _listScratchRenderCount[lhs] < _listScratchRenderCount[rhs];
-            } );
-            for ( uint32 order = 0; order < budget; ++order )
-            {
-                pOutRender[_listScratchDue[_listScratchOrder[order]]] = SW_TRUE;
-            }
-            chosenCount = budget;
+            _listScratchOrder[order] = order;
         }
-        else
+        std::stable_sort( _listScratchOrder.begin(), _listScratchOrder.end(),
+                          [this]( uint32 lhs, uint32 rhs )
         {
-            for ( const uint32 index : _listScratchDue )
-            {
-                pOutRender[index] = SW_TRUE;
-            }
+            if ( _listScratchOverdue[lhs] != _listScratchOverdue[rhs] )
+                return _listScratchOverdue[lhs] > _listScratchOverdue[rhs];
+            return _listScratchRenderCount[lhs] < _listScratchRenderCount[rhs];
+        } );
+        uint32 budgetedCount = 0;
+        uint64 pixelCount    = 0;
+        for ( const uint32 order : _listScratchOrder )
+        {
+            const uint32 index         = _listScratchDue[order];
+            const uint64 nextPixel     = pixelCount + pCandidate[index]._pixelCount;
+            const bool   bCountFull    = budget._maxViewCount > 0 && budgetedCount >= budget._maxViewCount;
+            const bool   bPixelOver    = budget._maxPixelCount > 0 && budgetedCount > 0 && nextPixel > budget._maxPixelCount;
+            const bool   bBudgetIsFull = bCountFull || bPixelOver;
+            if ( bBudgetIsFull )
+                break; // 건너뛰어 작은 뷰로 채우지 않는다 — 큰 뷰가 굶는다
+            pOutRender[index] = SW_TRUE;
+            pixelCount        = nextPixel;
+            ++budgetedCount;
         }
+        chosenCount += budgetedCount;
 
         for ( uint32 index = 0; index < candidateCount; ++index )
         {
