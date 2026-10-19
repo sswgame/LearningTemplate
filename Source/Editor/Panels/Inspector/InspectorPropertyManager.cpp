@@ -549,6 +549,7 @@ namespace sw::editor
                     bool            bPicked = false;
                     if ( ImGui::Selectable( "(none)", pValue->isValid() == false ) )
                         bPicked = true;
+                    EditorSelfTestMarks::note( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
                     if ( _listChoice.empty() )
                         ImGui::TextDisabled( "No %s in this scene", pTargetType->_name.c_str() );
                     for ( const InspectorComponentChoice& choice : _listChoice )
@@ -558,15 +559,21 @@ namespace sw::editor
                             picked  = choice._handle;
                             bPicked = true;
                         }
+                        if ( EditorSelfTestMarks::isEnabled() )
+                            EditorSelfTestMarks::note( ( "inspector.handle.choice." + choice._label ).c_str() );
                     }
                     ImGui::EndCombo();
 
                     // 쓰기는 그리드 한곳(통지 · 되돌리기)이 맡는다. Selectable 은 ImGui 편집 플래그를 세우지 않으므로 trackPod 도 부르지 않는다.
                     if ( bPicked && picked != *pValue )
                     {
-                        const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
+                        // `picked` 는 값 자체의 주소다 — 프로퍼티의 오프셋을 그대로 쓰면 그 주소 뒤를 읽어 `0:0` 이 나온다(고른 값이 비워졌다). 값 위치(오프셋 0)의 프로퍼티로 쓴다.
+                        PropertyInfo valueProp    = prop;
+                        valueProp._offset         = 0;
+                        valueProp._pValueAccessor = nullptr;
+                        const string undoLabel    = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
                         grid.applyPropertyTextAsEdit( pInstance, prop,
-                                                      SerializerUtil::formatPropertyText( prop, &picked, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
+                                                      SerializerUtil::formatPropertyText( valueProp, &picked, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
                                                       undoLabel.c_str() );
                     }
                 }

@@ -7,8 +7,10 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
@@ -56,6 +58,25 @@ namespace sw::editor
                 if ( ( flags & EditorOverlayFlags::NoDecoration ) != EditorOverlayFlags::None )
                     imguiFlags |= ImGuiWindowFlags_NoDecoration;
                 return imguiFlags;
+            }
+
+            /**
+             * @brief 창의 X 단추를 시나리오가 누를 수 있게 `panel.close.<제목>` 으로 남긴다(ImGui 가 단추를 그린 자리와 같은 식으로 구한다).
+             * @details 떠 있는 창은 제목 표시줄 오른쪽 끝, 도킹된 창은 보이는 탭의 오른쪽 끝이다. 안 보이는 탭과 접힌 창은 남기지 않는다.
+             */
+            static void noteCloseButton( const utf8* pTitle, const bool* pOpen )
+            {
+                const ImGuiWindow* pWindow   = ImGui::GetCurrentWindow();
+                const bool         bDocked   = pWindow->DockIsActive;
+                const bool         bNoButton = pOpen == nullptr || pWindow->Collapsed || ( bDocked && pWindow->DockTabIsVisible == false );
+                if ( bNoButton || EditorSelfTestMarks::isEnabled() == false )
+                    return;
+                const ImVec2  padding = ImGui::GetStyle().FramePadding;
+                const float32 size    = ImGui::GetFontSize();
+                const ImRect  strip   = bDocked ? pWindow->DC.DockTabItemRect : pWindow->TitleBarRect();
+                const float32 left    = bDocked ? ImMax( strip.Min.x, strip.Max.x - padding.x * 2.0f - size ) : strip.Max.x - padding.x - size;
+                const float32 top     = strip.Min.y + padding.y;
+                EditorSelfTestMarks::noteRect( ( string{ "panel.close." } + pTitle ).c_str(), float2{ left, top }, float2{ left + size, top + size } );
             }
 
             static inline thread_local EditorSectionKind s_arrSectionStack[kMaxSectionDepth]{};
@@ -108,6 +129,7 @@ namespace sw::editor
         const bool bVisible = ImGui::Begin( pTitle, pOpen, EditorChromeInternal::toImGuiPanelFlags( flags ) );
         if ( bNoPadding )
             ImGui::PopStyleVar();
+        EditorChromeInternal::noteCloseButton( pTitle, pOpen );
         return bVisible;
     }
 

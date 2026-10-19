@@ -31,6 +31,7 @@
 #include "Editor/Panels/Animation/AnimationGraphPanel.h"
 #include "Editor/Panels/Animation/SequencerPanel.h"
 #include "Editor/Panels/InputMap/InputMapPanel.h"
+#include "Editor/Panels/Inspector/InspectorComponentPicker.h"
 #include "Editor/Panels/Profiler/ProfilerPanel.h"
 #include "Editor/Panels/RenderTarget/RenderTargetPanel.h"
 #include "Editor/Panels/Scene/HierarchyPanel.h"
@@ -1458,6 +1459,44 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 주 선택 오브젝트의 `-gv_editorProbeProperty`(`<컴포넌트 타입>.<프로퍼티>`) 컴포넌트 핸들이 가리키는 컴포넌트를 선택기와 같은 글(`<오브젝트> / <키>`)로 읽습니다.
+             * @details 비어 있으면 `(none)` 입니다. 선택 · 컴포넌트 · 프로퍼티가 없거나 핸들 프로퍼티가 아니면 값을 내지 않는다.
+             */
+            [[nodiscard]] static bool readSelectedHandle( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
+            {
+                GameObject*  pObject   = editor::getMainSceneSelection().getPrimaryObject();
+                const size_t dot       = gv_editorProbeProperty.find( '.' );
+                const bool   bNoObject = pObject == nullptr || pObject->getManager() == nullptr;
+                if ( bNoObject || dot == string::npos )
+                    return false;
+                Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorProbeProperty.substr( 0, dot ).c_str() ) );
+                if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                    return false;
+                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorProbeProperty.substr( dot + 1 ).c_str() ) );
+                if ( pProperty == nullptr || pProperty->_handleTargetTypeName.empty() )
+                    return false;
+                const ComponentHandle* pHandle = pProperty->getValuePtr<ComponentHandle>( pComponent );
+                if ( pHandle == nullptr )
+                    return false;
+                const Component* pTarget = pHandle->isValid() ? pObject->getManager()->resolveComponent( *pHandle ) : nullptr;
+                outValue.setText( pTarget != nullptr ? InspectorComponentPickerUtil::makeLabel( *pTarget ) : string{ "(none)" } );
+                return true;
+            }
+
+            /** @brief `-gv_editorProbePanel` 의 패널 문서에 저장하지 않은 편집이 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
+            [[nodiscard]] static bool readProbedPanelDirty( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorProbePanel );
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = pPanel->isDocumentDirty() ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief 환경설정 창의 섹션 목록에서 지난 프레임에 보인 섹션 수입니다. 검색이 거른 뒤의 수입니다. */
             [[nodiscard]] static bool readPreferencesVisibleSections( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1733,6 +1772,9 @@ namespace sw::editor
                                &EditorScenarioStepsInternal::readSceneHash, false, false );
     SW_AUTOMATION_QUERY_PROBE( editorSelectedNames, "Editor.SelectedNames", "Selected object names, sorted and comma separated ('(none)' when nothing is selected)",
                                &EditorScenarioStepsInternal::readSelectedNames, false, false );
+    SW_AUTOMATION_QUERY_PROBE( editorSelectedHandle, "Editor.SelectedHandle",
+                               "Component the typed handle property named by gv_editorProbeProperty points at, as '<object> / <key>' ('(none)' when empty)",
+                               &EditorScenarioStepsInternal::readSelectedHandle, false, false );
     SW_AUTOMATION_QUERY_PROBE( editorUndoState, "Editor.UndoState", "Undo stack as '<index>/<count>:<label>|<label>...' from the oldest command",
                                &EditorScenarioStepsInternal::readUndoState, false, false );
     SW_AUTOMATION_QUERY_PROBE( editorStateHash, "Editor.StateHash", "Hash of the edited scene content, the selection, the undo stack and the unsaved flag",
@@ -1810,6 +1852,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readAnimationGraphConditionCount );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
+    SW_AUTOMATION_PROBE( editorProbedPanelDirty, "Editor.PanelDirty", "1 when the document of the panel named by gv_editorProbePanel has unsaved edits",
+                         &EditorScenarioStepsInternal::readProbedPanelDirty );
     SW_AUTOMATION_PROBE( editorPreferencesVisibleSections, "Editor.PreferencesVisibleSections", "Sections the Preferences window listed in the last frame (after its search)",
                          &EditorScenarioStepsInternal::readPreferencesVisibleSections );
     SW_AUTOMATION_PROBE( editorPreferencesSavedKeyCount, "Editor.PreferencesSavedKeyCount", "Keys saved in EditorPreferences.json (only values that differ from the defaults)",

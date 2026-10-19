@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 인스펙터의 타입 컴포넌트 핸들 선택기(TComponentHandle<T>). 엔진 컴포넌트에는 이 모양의 PROPERTY 가 없어서 Empty 게임의 시험대 컴포넌트
+  TypedHandleProbeComponent(_target: TComponentHandle<MeshComponent>)로 본다. 값은 탐침 Editor.SelectedHandle 이 선택기와 같은 글로 읽는다.
+  ① 오브젝트 Prober 에 그 컴포넌트를 달면 값이 (none) 이다. ② 콤보를 열어 TestMesh 의 메시 컴포넌트를 고르면 값이 바뀌고 되돌리기 하나가 쌓인다.
+  ③ Ctrl+Z 로 비운다. ④ 다시 고른 뒤 `(none)` 을 고르면 비워진다. ⑤ 이름 글을 오른쪽 클릭한 행 메뉴에서 Paste Value 는 비활성이다(글로 붙이면 타입 확인이 빠진다).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/inspectorhandle.scenario.xml -dx12
+-->
+<Scenario name="editor.inspectorhandle" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>
+	<At frame="1"><WaitUntil probe="Scene.Transitioning" equals="0" timeoutFrames="900"/></At>
+	<At frame="5"><ResizeWindow width="2300" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="10"><DevCommand line="layout.reset"/><Variable name="gv_editorProbeProperty" value="TypedHandleProbeComponent._target"/></At>
+	<!-- 열린 채 시작하는 오버라이드 도구(prefab_editor)는 이 시나리오가 보지 않는다 — 닫아 화면이 가려지지 않게 한다 -->
+	<At frame="15"><DevCommand line="panel.close prefab_editor"/></At>
+
+	<!-- ① 오브젝트에 컴포넌트를 단다 -->
+	<At frame="30"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="45"><EditorClick mark="inspector.name"/></At>
+	<At frame="55"><EditorKey key="Ctrl+A"/></At>
+	<At frame="60"><EditorText value="Prober"/></At>
+	<At frame="65"><EditorKey key="Enter"/></At>
+	<At frame="80"><DevCommand line="component.add TypedHandleProbeComponent"/></At>
+	<At frame="100">
+		<Expect probe="Editor.SelectedNames" is="Prober"/>
+		<Expect probe="Editor.SelectedHandle" is="(none)"/>
+		<Remember probe="Editor.UndoIndex" as="undoBefore"/>
+		<CaptureEditorUI file="inspectorhandle/inspector.png"/>
+	</At>
+
+	<!-- ② 콤보로 고른다 -->
+	<At frame="110"><EditorClick mark="inspector.property.TypedHandleProbeComponent._target"/></At>
+	<At frame="130"><CaptureEditorUI file="inspectorhandle/combo.png"/></At>
+	<At frame="140"><EditorHover mark="inspector.handle.choice.TestMesh / MeshComponent#0"/></At>
+	<At frame="150"><EditorClick mark="inspector.handle.choice.TestMesh / MeshComponent#0"/></At>
+	<At frame="170">
+		<Expect probe="Editor.SelectedHandle" is="TestMesh / MeshComponent#0"/>
+		<Expect probe="Editor.UndoIndex" differsFrom="undoBefore"/>
+		<CaptureEditorUI file="inspectorhandle/picked.png"/>
+	</At>
+
+	<!-- ③ 되돌리기 -->
+	<At frame="180"><EditorKey key="Ctrl+Z"/></At>
+	<At frame="200">
+		<Expect probe="Editor.SelectedHandle" is="(none)"/>
+		<Expect probe="Editor.UndoIndex" sameAs="undoBefore"/>
+	</At>
+
+	<!-- ④ 다시 고르고 (none) -->
+	<At frame="210"><EditorClick mark="inspector.property.TypedHandleProbeComponent._target"/></At>
+	<At frame="230"><EditorHover mark="inspector.handle.choice.TestMesh / MeshComponent#0"/></At>
+	<At frame="240"><EditorClick mark="inspector.handle.choice.TestMesh / MeshComponent#0"/></At>
+	<At frame="260"><Expect probe="Editor.SelectedHandle" is="TestMesh / MeshComponent#0"/></At>
+	<At frame="270"><EditorClick mark="inspector.property.TypedHandleProbeComponent._target"/></At>
+	<At frame="290"><EditorHover mark="inspector.handle.none"/></At>
+	<At frame="300"><EditorClick mark="inspector.handle.none"/></At>
+	<At frame="320"><Expect probe="Editor.SelectedHandle" is="(none)"/></At>
+
+	<!-- ⑤ 행 메뉴의 Paste Value 는 비활성 -->
+	<At frame="330"><EditorClick mark="inspector.label.TypedHandleProbeComponent._target" button="1" state="down"/></At>
+	<At frame="333"><EditorClick mark="inspector.label.TypedHandleProbeComponent._target" button="1" state="up"/></At>
+	<At frame="350"><CaptureEditorUI file="inspectorhandle/menu.png"/></At>
+	<At frame="355"><EditorClick mark="inspector.menu.pasteValue"/></At>
+	<At frame="375">
+		<Expect probe="Editor.SelectedHandle" is="(none)"/>
+		<ExpectLog contains="[Error]" count="0"/>
+		<Variable name="gv_editorUiScale" value="0"/>
+		<Pass/>
+	</At>
+</Scenario>
