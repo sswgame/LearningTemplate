@@ -3,7 +3,7 @@
 > 상태: 구현중 · 선행: ReflectionFormats · 영역: engine · 옛번호: 없음 · 진행: 4/5
 
 [리플렉션 형식 계획](ReflectionFormats.md) 9절 단계 2(`GimmickCircuit` 을 B 로)의 설계입니다. 그 단계는 "상태 바이트가 씬 · 프리팹 · 레벨 세이브에 남는다"는 이유로 보류됐고, 이 문서는 그 보류를 푼 구조를 남깁니다.
-단계 2-a~2-c(상태 구조체 · 컴포넌트 · 번들)와 2-e(문서 · 헤더 주석)는 끝났고, 남은 단위는 2-d(GPU 확인)와 아래 "남은 확인"입니다.
+단계 2-a~2-c(상태 구조체 · 컴포넌트 · 번들)와 2-e(문서 · 헤더 주석)는 끝났고, 2026-10-20 에 Debug 테스트와 Release 측정도 끝냈습니다(아래 "검증 기록"). 남은 단위는 2-d(GPU 확인)뿐입니다.
 
 **정한 것(사용자 확정).**
 
@@ -57,9 +57,18 @@
 ## 남은 확인
 
 - **2-d GPU 확인.** `gpu-verifier` 가 쇼케이스 씬(`Resource/game/empty/maps/gimmickshowcase.scene.xml`)을 열고 캡처해 문 · 엘리베이터 · 무버가 움직이고 오류 로그가 없는지 봅니다. 실행 기록을 찾지 못했습니다.
-- **테스트 실행.** 위 테스트 파일과 `-L nogpu` 의 통과 기록을 찾지 못했습니다(커밋 메시지는 빌드 · 테스트를 통합 때로 미뤘습니다). CTest 로 한 번 돌려 확인합니다. 확인할 것: 노드 하나를 더한 회로가 옛 세이브를 이어 읽음, 같은 id 의 슬롯 수 변경이 거절됨, 플레이 중 저장 · 로드 뒤 N 스텝 상태 해시가 끊지 않은 쪽과 같음(XML 은 `float32` 가 비트까지 같은지: 텍스트 쓰기가 9 자리를 지켜야 합니다. 모자라면 직렬화 쪽 결함이라 범위 밖으로 보고).
-- **이전 · 이후 비교.** 같은 입력으로 옛 코드와 새 코드의 스텝마다 출력 비트 · 액추에이터 값이 같은지(바이트가 달라 해시 비교는 쓰지 않음). 옛 코드의 기록 테스트를 먼저 커밋한 기록은 찾지 못했습니다. 비교가 부담이면 `computeStateHash` 를 쓰는 결정성 테스트(`runA` · `runB`)가 통과하는 것으로 갈음할지 사용자에게 묻습니다.
-- **측정(통합 때, Release).** 쇼케이스 씬 회로 5 개와 프리팹 13 개를 0 · 600 · 36,000 스텝 돌린 뒤 `FixedLayout::write( state )` 바이트 수와 조각 수(`kChunkPayloadBytes` 로 나눔)를 기록하고, 가장 큰 값이 `kMaxCircuitBytes`(3,920 바이트) 안인지 봅니다(Delay 의 절대 스텝 번호가 varuint 길이를 늘립니다). 노드 하나가 대략 10~18 바이트라 노드 200 개 안팎에서 조각 상한에 닿고, 넘는 회로는 `appendEntities` 가 "싣지 못한 회로" 로 셉니다.
-  varuint 길이가 상태에 따라 달라 조각 수가 바뀌면 그 회로의 엔티티가 모두 다시 보내집니다. 기능은 맞고 대역폭만 늘어나므로 측정 결과를 보고 판단합니다. `storeState` 는 스텝을 돈 틱마다 부르므로 같은 판에서 `saveState` 의 시간 · 할당을 3~5 회 중앙값으로 잽니다(목록 용량을 이어 쓰므로 첫 틱 뒤 할당 0 이 기대값). 결과는 [검증 문서](../08_Verification.md)에 적습니다.
-- **XML 읽기의 모르는 요소.** 모르는 요소를 만나면 건너뛰는지 오류인지 확인하지 못했습니다. 쿠킹 산출물이나 다른 게임 폴더에 옛 `_stateBytes` 가 남아 있으면 드러납니다.
 - **같은 결함이 다른 곳에.** `ElementGrid.cpp:380` 의 `cellBytes` 가 읽는 쪽에서 크기를 손으로 계산하는 같은 구조입니다. 이 계획의 범위 밖이라 따로 조사합니다.
+
+## 검증 기록 (2026-10-20, `wt/gimmick-verify`)
+
+- **테스트(Debug).** main 에서 갈라진 이 브랜치에서 `full-build`(경고 0) 뒤 기믹 · 원소 규칙 45 케이스, `ReflectionTest`, `EngineTest_NoGPU_Shard1~5` 가 통과했습니다.
+  노드를 더한 회로가 옛 세이브를 이음(`GimmickTest.StateMatchesNodesByID`), 같은 id 의 종류 · 상태 버전 · 슬롯 수 변경 거절(같은 케이스와 `StateSaveLoadResetRoundTrip` 의 `shortSlot`),
+  저장 · 로드 뒤 N 스텝 해시가 같음(바이너리 `StateSurvivesBinaryObjectStateAndContinues`, XML 은 이번에 더한 `StateSurvivesXMLObjectStateAndContinues` — 타이머 누적 시간 `float32` 가 9 자리로 쓰여 120 스텝 뒤에도 같은 해시).
+  XML 은 따로 결함이 없었습니다(직렬화 쪽 범위 밖 보고 없음).
+- **이전 · 이후 비교는 결정성 테스트로 갈음했습니다.** 옛 코드의 기록 테스트가 없어 스텝마다 출력 비트를 옛 코드와 견줄 수 없고, 이 구조 변경은 상태를 저장 · 복원하는 길만 바꿨습니다.
+  같은 입력을 두 번 돌려 해시를 견주는 `GimmickTest.SameInputsSameStateHash`(`runA` · `runB`)와 위의 N 스텝 왕복 해시 일치가 통과해, 저장 · 복원이 스텝 결과를 바꾸지 않음은 확인했습니다. 옛 코드 대비 바이트 동일성은 보증하지 않습니다.
+- **측정(Release).** 쇼케이스 회로 5 개와 프리팹 13 개 모두 한 조각, 가장 큰 244 바이트(상한 3,920 의 6 %), `saveState` ≤ 60 ns, 첫 호출 뒤 할당 0. 표와 방법은 [검증 문서](../08_Verification.md)의 기믹 회로 상태 항목.
+  조각 수가 스텝에 따라 바뀌지 않아 "varuint 길이로 엔티티가 다시 보내짐" 걱정은 이 데이터에서 실현되지 않습니다. 측정 케이스는 `Test/EngineTest/GameFramework/Gimmick/TestGimmickStateBench.cpp`(`GimmickStateBenchTest`, 호스트 스위트).
+- **XML 읽기의 모르는 요소는 오류가 아니라 건너뜁니다**(코드 읽기로 확인, 실행 테스트는 따로 없음). 오브젝트 · 컴포넌트 읽기는 `setAllowUnknownProperties( true )` 로 모르는 요소를 건너뛰고 `runSchemaMigrateStep` 이 버린 이름을 로드마다 한 번 경고합니다
+  (`ObjectStateSerializer.cpp`, 정책 `SchemaOrphanPolicy::Ignore`, 고정 테스트 `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`). 그래서 옛 `_stateBytes` 가 남은 쿠킹 산출물이나 게임 폴더도 오류 없이 읽히고 그 요소만 버려집니다. 바이너리 오브젝트 상태도 같은 규칙입니다.
+  엄격한 `XMLSerializer::deserialize` 는 모르는 요소가 있으면 실패하지만 오브젝트 읽기는 그 경로가 아닙니다.

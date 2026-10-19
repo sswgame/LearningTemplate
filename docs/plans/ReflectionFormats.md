@@ -39,7 +39,7 @@ B 의 읽기 · 쓰기 · 비교 함수는 실행 시간에 프로퍼티 목록�
 지금은 선언에서 생성한 코덱의 스키마 해시가 형식 변경을 잡습니다. 컴팩트 모드(스키마 확인 없는 순서 기반)와 호출부 없는 `cloneObject` 는 단계 6 에서 지웠고, `writeInt` 의 범위 자르기는 쓰기 실패(`[[nodiscard]] bool`)로, 모르는 타입 1 바이트 건너뛰기는 읽기 실패로 바뀌었습니다(옛 `A-13` · `A-14`).
 자기 기술형(A)의 읽기 방식(이름 해시 대조, 기록 타입 변환, 누락 필드 기본값)은 그대로입니다.
 
-손으로 쓴 `operator==` 75 개 중 리플렉션 타입은 4 파일뿐이고 나머지는 값 형식입니다. 생성 비교는 B 로 옮긴 타입의 비교로 한정하며, 비교를 대신하려고 타입에 `REFLECT` 를 붙이지 않습니다(분류는 단계 0, 아직 안 함).
+손으로 쓴 `operator==` 75 개 중 리플렉션 타입은 4 파일뿐이고 나머지는 값 형식입니다. 생성 비교는 B 로 옮긴 타입의 비교로 한정하며, 비교를 대신하려고 타입에 `REFLECT` 를 붙이지 않습니다(생성 비교는 `FixedLayout::equals`, 나머지 `operator==` 는 값 형식이라 손대지 않습니다).
 
 ## 2. 두 형식의 역할
 
@@ -322,7 +322,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | `isDerivedFrom(` | 16 | 에디터 명령, 내비게이션, UI 문서 로더 |
 | `isA<` | 4 |  |
 
-`getComponent<` 413 건 가운데 틱 안에서 부르는 비율은 세지 않았습니다(미확인, 단계 0). `forEachComponentOfType<` 는 `HealthListenerComponent.cpp:15`, `FirstPersonCameraComponent.cpp:160` 처럼 게임플레이 이벤트 처리에서 부릅니다.
+`getComponent<` 413 건 가운데 틱 안에서 부르는 비율은 세지 않았습니다. 이 수와 상관없이 [TypedComponents](TypedComponents.md) 가 타입별 목록과 `TComponentHandle<T>` 로 풀었습니다. `forEachComponentOfType<` 는 `HealthListenerComponent.cpp:15`, `FirstPersonCameraComponent.cpp:160` 처럼 게임플레이 이벤트 처리에서 부릅니다.
 결론적으로 캐스트 자체는 이미 핫패스에 쓸 수 있는 구조입니다(잠금 · 해시 · 문자열 없음, O(1)). 남은 비용의 근본 원인은 캐스트가 아니라 **타입 없는 핸들**과 **씬 전체 순회**입니다.
 
 ### 7.4 위험
@@ -348,18 +348,16 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 
 ### 8.2 남은 확인
 
-- `getComponent<` 413 건 가운데 틱 안에서 부르는 비율은 세지 않았습니다(단계 0, 7.3).
-- 단계 2 의 빌드 검증(9절 단계 2 행).
+- 없음. `getComponent<` 413 건의 틱 안 비율(옛 단계 0)은 세지 않고 닫았습니다(7.3).
 
 ## 9. 단계
 
-완료한 단계는 한 줄(무엇이 어디에)만 남깁니다. 설계 근거는 결정 기록과 코드 헤더 주석, 위치는 1절 표입니다.
+완료한 단계는 한 줄(무엇이 어디에)만 남깁니다. 옛 단계 0(조사)은 다섯 항목이 각각 단계 1 · 3 · 7-b · 7-c · 7-d 로 풀려 쓸모가 없어 지웠습니다(번호는 비워 둡니다). 설계 근거는 결정 기록과 코드 헤더 주석, 위치는 1절 표입니다.
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| 0 | 조사: `operator==` 분류, 틱 안 `getComponent`, 다중 상속 `REFLECT`, `GameObject` 타입 캐시, `ComponentHandle` 필드 목록(`scout`, haiku) | 아직 안 함 |
 | 1 | 생성기 · `TypeInfo::_pFixedCodec` · `FixedLayout` 런타임 · 테스트 | 끝남(2026-10-17, `a01e7a79a`) |
-| 2 | `GimmickCircuitState` 하나에서 컴포넌트는 A, 묶음 · 넷 조각은 B. 설계는 [기믹 회로 상태 구조 계획](GimmickCircuitState.md) 8절 | 구현함(`e6ae53938`), 빌드 검증 대기 |
+| 2 | `GimmickCircuitState` 하나에서 컴포넌트는 A, 묶음 · 넷 조각은 B. 설계는 [기믹 회로 상태 구조 계획](GimmickCircuitState.md) 8절 | 끝남(`e6ae53938`, 2026-10-20 Debug `full-build` 경고 0 · 기믹 45 케이스 · `ReflectionTest` · `-L nogpu` 엔진 5 샤드 통과) |
 | 3 | `FightingMatch` 롤백 B · 세이브 A, 두 읽기가 같은 `validateState`. 손 코덱 · 손 버전 상수 · `RoundSeries` · `InputCommandBuffer` 의 손 `writeState` · `readState` 삭제 | 끝남(`88add323a`, `5a14ccb39`) |
 | 4-a | Mech · Horror 스냅샷을 B 로(`PROPERTY` 범위 키만, 손 코덱 · `kMagic` 없음, 스냅샷은 디스크에 남지 않음). 넷 채널 등록 · 해시 섞기는 후보 `NetChannelSchemaHashHandshake` | 끝남(`7fa9a9c70`, `016656bc2`) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 씀(3.8). `ReflectionTypes.h`, `CodeGenerator.cpp`, `InspectorPropertyLayout.*` | 끝남(`7ce9eafe2`) |
