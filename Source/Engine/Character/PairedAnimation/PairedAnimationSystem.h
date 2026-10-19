@@ -47,11 +47,19 @@ namespace sw
          */
         [[nodiscard]] PairedAnimationStartResult startSession( GameObjectManager& manager, shared_ptr<const PairedAnimationDef> def, const vector<PairedAnimationBinding>& listBinding,
                                                                uint32& outSessionID );
+        /**
+         * @brief 세트 가운데 지금 자리에 맞는 첫 에셋(`PairedAnimationDef::matchesSelect`)으로 세션을 시작합니다(게임 스레드, 틱 밖). 처형 · 잡기 세트 고르기입니다.
+         * @details 고르기 조건의 역할과 앵커가 바인딩에 없거나 풀리지 않으면 그 세트는 맞지 않는다. 맞는 세트가 없으면 `NoMatchingSet` 이고, 고른 세트의 시작이
+         *          거절되면 다음 세트로 넘어가지 않고 그 결과를 돌려준다(조건을 통과한 세트가 시작하지 못하는 것은 데이터 · 배치 결함이다).
+         * @param outSetIndex 고른 세트의 인덱스, 없으면 `invalid_index::kUint32` 입니다.
+         */
+        [[nodiscard]] PairedAnimationStartResult startMatchingSession( GameObjectManager& manager, const vector<shared_ptr<const PairedAnimationDef>>& listDef,
+                                                                       const vector<PairedAnimationBinding>& listBinding, uint32& outSessionID, uint32& outSetIndex );
         /** @brief 세션을 중단합니다. 없거나 끝났으면 할 일이 없습니다. */
         void abortSession( GameObjectManager& manager, uint32 sessionID );
         /** @brief id 의 세션입니다. 없으면(빠졌으면) nullptr 입니다. */
         const PairedAnimationSession* findSession( uint32 sessionID ) const;
-        /** @brief 그 애니메이터가 재생 중인 세션에 묶여 있으면 true 입니다(재생 속도를 쓰는 컴포넌트가 세션 동안 물러설 때 묻는다). */
+        /** @brief 그 애니메이터가 재생 중인 세션에 묶여 있으면 true 입니다. 같은 오브젝트의 보폭 보정(`LocomotionWarpingComponent`)은 묻지 않고 세션이 쥐어 둔다. */
         bool isParticipant( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const;
         /** @brief 세션 수입니다(끝났지만 아직 빠지지 않은 것 포함). */
         uint32 getSessionCount() const { return static_cast<uint32>( _listSession.size() ); }
@@ -62,6 +70,9 @@ namespace sw
         [[nodiscard]] bool unregisterUser();
 
     private:
+        /** @brief 세트의 고르기 조건이 지금 바인딩의 자리에 맞으면 true 입니다. */
+        static bool matchesSelect( GameObjectManager& manager, const PairedAnimationDef& def, const vector<PairedAnimationBinding>& listBinding );
+
         vector<unique_ptr<PairedAnimationSession>> _listSession;
         uint32                                     _nextSessionID;
         uint32                                     _userCount;

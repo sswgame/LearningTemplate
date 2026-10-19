@@ -23,8 +23,10 @@ namespace sw
         {
             static constexpr const utf8* kArrInteractionAttribute[] = { "id", "prompt", "mode", "duration", "presses", "decay",
                                                                         "maxParticipants", "maxDistance", "maxAngle", "lineOfSight", "cooldown", "requiredTags",
-                                                                        "forbiddenTags", "alignment", "highlight", "authority", "montage" };
-            static constexpr const utf8* kArrStepAttribute[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "montage" };
+                                                                        "forbiddenTags", "alignment", "highlight", "authority", "montage",
+                                                                        "pairedAnimation", "interactorRole", "interactableRole" };
+            static constexpr const utf8* kArrStepAttribute[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "montage",
+                                                                        "pairedAnimation", "interactorRole", "interactableRole" };
             static constexpr const utf8* kArrSmartObjectAttribute[] = { "id" };
             static constexpr const utf8* kArrSlotAttribute[]        = { "id", "offset", "yaw", "tags" };
 
@@ -56,7 +58,7 @@ namespace sw
                 { outTags.addTag( TagID::request( token ) ); } );
             }
 
-            /** @brief 단계 속성(mode, prompt, montage, duration, presses, decay, maxParticipants)을 읽습니다. 빠진 속성은 @p inoutStep 의 값을 그대로 둡니다. */
+            /** @brief 단계 속성(mode, prompt, montage, duration, presses, decay, maxParticipants, pairedAnimation, interactorRole, interactableRole)을 읽습니다. 빠진 속성은 @p inoutStep 의 값을 그대로 둡니다. */
             [[nodiscard]] static bool readStep( const XMLNode& node, InteractionStepDef& inoutStep, string_view sourceName )
             {
                 const bool  bValid  = readEnum( node, "mode", inoutStep._mode, sourceName );
@@ -66,10 +68,42 @@ namespace sw
                 const utf8* pMontage = node.findAttribute( "montage" );
                 if ( pMontage != nullptr )
                     inoutStep._montage = hashed_string( pMontage );
+                const utf8* pPairedAnimation = node.findAttribute( "pairedAnimation" );
+                if ( pPairedAnimation != nullptr )
+                {
+                    inoutStep._listPairedAnimationPath.clear();
+                    StringUtil::forEachToken( string_view( pPairedAnimation ), "; ", [&inoutStep]( string_view token )
+                    { inoutStep._listPairedAnimationPath.push_back( string{ token } ); } );
+                }
+                const utf8* pInteractorRole = node.findAttribute( "interactorRole" );
+                if ( pInteractorRole != nullptr )
+                    inoutStep._interactorRole = hashed_string( pInteractorRole );
+                const utf8* pInteractableRole = node.findAttribute( "interactableRole" );
+                if ( pInteractableRole != nullptr )
+                    inoutStep._interactableRole = hashed_string( pInteractableRole );
                 inoutStep._duration        = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", inoutStep._duration ) );
                 inoutStep._presses         = MathUtil::max( 1, node.getAttributeInt( "presses", inoutStep._presses ) );
                 inoutStep._decay           = MathUtil::max( 0.0f, node.getAttributeFloat( "decay", inoutStep._decay ) );
                 inoutStep._maxParticipants = MathUtil::max( 1, node.getAttributeInt( "maxParticipants", inoutStep._maxParticipants ) );
+                return bValid;
+            }
+
+            /** @brief 페어드 애니메이션을 쓰는 단계는 두 역할이 있어야 하고, 몽타주와 함께 쓰지 않습니다(둘 다 하는 쪽의 애니메이터를 재생한다). */
+            [[nodiscard]] static bool validateStep( const InteractionStepDef& step, const hashed_string& interactionID, string_view sourceName )
+            {
+                if ( step._listPairedAnimationPath.empty() )
+                    return true;
+                bool bValid = true;
+                if ( step._interactorRole.empty() || step._interactableRole.empty() )
+                {
+                    SW_LOG_WARNING( "%#: <Interaction id=\"%#\"> pairedAnimation needs interactorRole and interactableRole", sourceName, interactionID.c_str() );
+                    bValid = false;
+                }
+                if ( step._montage.empty() == false )
+                {
+                    SW_LOG_WARNING( "%#: <Interaction id=\"%#\"> has both montage and pairedAnimation on one step", sourceName, interactionID.c_str() );
+                    bValid = false;
+                }
                 return bValid;
             }
         };
@@ -125,6 +159,10 @@ namespace sw
         }
         if ( outDef._listStep.empty() )
             outDef._listStep.push_back( rootStep );
+        for ( const InteractionStepDef& step : outDef._listStep )
+        {
+            bValid = Internal::validateStep( step, outDef._id, sourceName ) && bValid;
+        }
         return bValid;
     }
 

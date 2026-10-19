@@ -3,6 +3,9 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
+#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
@@ -76,6 +79,48 @@ namespace sw
         ++_nextSessionID;
         _listSession.push_back( std::move( session ) );
         return result;
+    }
+
+    bool PairedAnimationSystem::matchesSelect( GameObjectManager& manager, const PairedAnimationDef& def, const vector<PairedAnimationBinding>& listBinding )
+    {
+        const PairedAnimationSelectDef* pSelect = def.findSelect();
+        if ( pSelect == nullptr )
+            return true;
+        const hashed_string&                        anchorRole = def.getRoles()[def.getAnchorRoleIndex()]._name;
+        TComponentHandle<SkeletalAnimatorComponent> anchor{};
+        TComponentHandle<SkeletalAnimatorComponent> selected{};
+        for ( const PairedAnimationBinding& binding : listBinding )
+        {
+            if ( binding._role == anchorRole )
+                anchor = binding._animator;
+            else if ( binding._role == pSelect->_role )
+                selected = binding._animator;
+        }
+        const SkeletalAnimatorComponent* pAnchor       = anchor.isValid() ? manager.resolveComponent( anchor ) : nullptr;
+        const SkeletalAnimatorComponent* pSelected     = selected.isValid() ? manager.resolveComponent( selected ) : nullptr;
+        const GameObject*                pAnchorOwner  = pAnchor != nullptr ? pAnchor->getOwner() : nullptr;
+        const GameObject*                pSelectOwner  = pSelected != nullptr ? pSelected->getOwner() : nullptr;
+        const SceneComponent*            pAnchorRoot   = pAnchorOwner != nullptr ? pAnchorOwner->getPrimarySceneComponent() : nullptr;
+        const SceneComponent*            pSelectedRoot = pSelectOwner != nullptr ? pSelectOwner->getPrimarySceneComponent() : nullptr;
+        if ( pAnchorRoot == nullptr || pSelectedRoot == nullptr )
+            return false;
+        return def.matchesSelect( pAnchorRoot->getWorldMatrix(), pSelectedRoot->getWorldPosition() );
+    }
+
+    PairedAnimationStartResult PairedAnimationSystem::startMatchingSession( GameObjectManager& manager, const vector<shared_ptr<const PairedAnimationDef>>& listDef,
+                                                                            const vector<PairedAnimationBinding>& listBinding, uint32& outSessionID, uint32& outSetIndex )
+    {
+        outSessionID = 0;
+        outSetIndex  = invalid_index::kUint32;
+        for ( size_t setIndex = 0; setIndex < listDef.size(); ++setIndex )
+        {
+            SW_ASSERT( listDef[setIndex] != nullptr );
+            if ( matchesSelect( manager, *listDef[setIndex], listBinding ) == false )
+                continue;
+            outSetIndex = static_cast<uint32>( setIndex );
+            return startSession( manager, listDef[setIndex], listBinding, outSessionID );
+        }
+        return PairedAnimationStartResult::NoMatchingSet;
     }
 
     void PairedAnimationSystem::abortSession( GameObjectManager& manager, uint32 sessionID )

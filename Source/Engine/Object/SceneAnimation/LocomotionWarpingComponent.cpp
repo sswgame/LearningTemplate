@@ -66,6 +66,7 @@ namespace sw
         , _strideScale{ 1.0f }
         , _lastDeltaSeconds{ 0.0f }
         , _bHasPrevious{ false }
+        , _bPlayRateHeld{ false }
     {
         setCanEverTick( false );
     }
@@ -127,7 +128,9 @@ namespace sw
 
         SkeletalAnimatorComponent* pAnimator = pOwner->getComponent<SkeletalAnimatorComponent>();
         _strideScale                         = 1.0f;
-        if ( _bStrideWarping && pAnimator != nullptr )
+        // 재생 속도를 쥔 쪽(페어드 애니메이션 세션)이 있으면 속도를 쓰지 않는다.
+        const bool bWritesPlayRate = _bStrideWarping && _bPlayRateHeld == false && pAnimator != nullptr;
+        if ( bWritesPlayRate )
         {
             const float32 authored = pAnimator->getCurveValue( _speedCurve );
             if ( authored > LocomotionWarpingComponentInternal::kMinAuthoredSpeed )

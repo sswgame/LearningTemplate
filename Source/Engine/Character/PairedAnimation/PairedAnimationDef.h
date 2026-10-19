@@ -11,8 +11,10 @@
  *            <Role name="Victim" required="true" clip="Grab_Victim" align="warp" offset="0 0 1" yaw="180" warpEnd="0.3" maxAlignDistance="1.5"
  *                  enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
  *            <Notify name="ReleaseArrow" time="0.9" role="Bow"/>
+ *            <Select role="Victim" minAngle="-45" maxAngle="45" maxDistance="2"/>
  *          </PairedAnimation>
  *          @endcode
+ *          `<Select>`(없거나 하나)는 세트 고르기 조건이다 — 그 역할이 앵커 앞에서 본 방위각(도) 구간과 수평 거리 안에 있어야 이 세트를 고른다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -78,6 +80,22 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 세트 고르기 조건입니다(`<Select>`). 여러 에셋 가운데 시작할 것을 고를 때(처형 · 잡기 세트), 그 역할 루트가 앵커 루트에서 보이는 자리가 맞아야 합니다.
+     * @details 방위각은 앵커 앞(+Z)에서 잰 수평 각(라디안, `atan2( x, z )`, 오른쪽 +X 가 양수)이고 거리는 수평 거리입니다. `_minBearingRadians > _maxBearingRadians` 면
+     *          ±180° 를 지나는 구간(뒤쪽)입니다.
+     */
+    struct PairedAnimationSelectDef
+    {
+        hashed_string _role{};
+        float32       _minBearingRadians{ 0.0f };
+        float32       _maxBearingRadians{ 0.0f };
+        float32       _maxDistance{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class PairedAnimationDef
      * @brief 페어드 애니메이션 에셋 하나입니다. 파일 머리말 참고.
      */
@@ -103,11 +121,18 @@ namespace sw
         uint32 getAnchorRoleIndex() const { return _anchorRoleIndex; }
         /** @brief 이름의 역할 인덱스입니다. 없으면 `invalid_index::kUint32` 입니다. */
         uint32 findRoleIndex( const hashed_string& roleName ) const;
+        /** @brief 세트 고르기 조건입니다. 적지 않았으면(어느 자리에서나 고를 수 있는 세트) nullptr 입니다. */
+        const PairedAnimationSelectDef* findSelect() const { return _bHasSelect ? &_select : nullptr; }
+        /**
+         * @brief 고르기 조건의 역할 루트가 @p rolePosition 이고 앵커 루트가 @p anchorWorld 일 때 이 세트를 고를 수 있으면 true 입니다. 조건이 없으면 늘 true 입니다.
+         */
+        bool matchesSelect( const float4x4& anchorWorld, const float3& rolePosition ) const;
 
     private:
         void readRoot( const XMLNode& root, CharacterDataReader& reader );
         void readRole( const XMLNode& node, CharacterDataReader& reader );
         void readNotify( const XMLNode& node, CharacterDataReader& reader );
+        void readSelect( const XMLNode& node, CharacterDataReader& reader );
         /** @brief 역할 사이 · 알림의 규칙을 검사합니다(앵커 하나, 겹친 이름, 알림 시각과 역할). */
         void validate( CharacterDataReader& reader );
         /** @brief 내용을 비웁니다. */
@@ -115,7 +140,9 @@ namespace sw
 
         vector<PairedAnimationRoleDef>   _listRole;
         vector<PairedAnimationNotifyDef> _listNotify;
+        PairedAnimationSelectDef         _select;
         float32                          _duration;
         uint32                           _anchorRoleIndex;
+        bool                             _bHasSelect;
     };
 } // namespace sw

@@ -44,6 +44,8 @@ namespace sw
      * @details 눈의 위치는 소유자의 월드 위치에 `_eyeOffset` 을 더한 값이고, 시선은 3D 이면 소유자의 앞(+Z), 2D 이면 `_facing2D` 이다. 진행 중에는 대상을 바꾸지 않고, 대상이 쓸 수 없게
      *          되거나 거리의 1.25 배 밖으로 나가면 취소한다. 완료하면 틱 뒤에 대상의 `completeInteraction` 을 부른다. 대상 상태를 게임 스레드에서 바꾸기 위해서다.
      *          권한이 `Server` 인 상호작용은 권한 훅(`IInteractionAuthority`)이 등록되어 있으면 시작 전에 허락을 묻는다.
+     *          단계에 페어드 애니메이션 세트가 있으면 단계가 시작될 때 틱 뒤에 하는 쪽과 대상의 애니메이터로 세션을 시작하고(`PairedAnimationSystem`), 거절되면 상호작용을
+     *          취소한다. 상호작용을 취소하면 그 세션도 중단하고, 완료하면 세션은 자기 타임라인 끝까지 간다.
      */
     REFLECT( Category = "Interaction", DisplayName = "Interactor", Tooltip = "Picks the best interactable in reach and view, drives press / hold / mash input" )
     class SW_GF_API InteractorComponent : public Component
@@ -77,6 +79,15 @@ namespace sw
         void gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer );
         void setFocus( GameObjectManager& manager, GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent );
         void finishSession( GameObjectManager& manager, const GameObject& owner );
+        /** @brief 단계의 페어드 애니메이션 세트를 틱 뒤(게임 스레드)에 시작하도록 미룹니다. */
+        void deferPairedAnimationStart( GameObjectManager& manager, const InteractionStepDef& step );
+        /**
+         * @brief 하는 쪽(`interactorRole`)과 대상(`interactableRole`)의 애니메이터로 자리에 맞는 첫 세트를 시작합니다(게임 스레드, 틱 밖).
+         * @details 애니메이터 · 에셋이 없거나 시작이 거절되면 상호작용을 취소한다 — 애니메이션 없이 진행하지 않는다.
+         */
+        void startPairedAnimation( GameObjectManager& manager, TComponentHandle<InteractableComponent> target, const InteractionStepDef& step );
+        /** @brief 이 상호작용이 시작한 페어드 애니메이션이 있으면 틱 뒤에 중단합니다. */
+        void deferPairedAnimationAbort( GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Interaction", DisplayName = "Space", Tooltip = "3D distance and view, or the 2D XY plane" )
@@ -91,8 +102,9 @@ namespace sw
         float32 _keepDistanceScale;
 
         InteractionSession                              _session;
-        hashed_string                                   _resumeState; ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
-        int32                                           _montageStep; ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 −1).
+        hashed_string                                   _resumeState;     ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
+        int32                                           _montageStep;     ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 −1).
+        uint32                                          _pairedSessionID; ///< 이번 상호작용이 시작한 페어드 애니메이션 세션 id 입니다(없으면 0). 취소하면 중단한다
         InteractionPrompt                               _prompt;
         vector<InteractionCandidate>                    _listCandidate;
         vector<TComponentHandle<InteractableComponent>> _listCandidateComponent;
@@ -102,5 +114,6 @@ namespace sw
         uint8                                           _bHeld;
         uint8                                           _bWasHeld;
         uint8                                           _bPressed;
+        uint8                                           _bPairedStartPending; ///< 페어드 애니메이션 시작을 틱 뒤로 미뤘다. 그 사이 취소되면 내려 시작하지 않는다
     };
 } // namespace sw

@@ -2,11 +2,18 @@
 // 상호작용 완료가 기믹 회로를 움직인다(2D 와 3D 같은 코드).
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 #include "Engine/Common/EngineScope.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
+#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
+#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -16,6 +23,8 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 #include "Engine/Resource/ResourcePaths.h"
+
+#include "EngineTest/AnimationTestUtil.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
@@ -129,6 +138,33 @@ namespace
                 pInteractor->setInput( bHeld );
                 manager.update( 1.0f / 60.0f );
             }
+        }
+
+        /** @brief 사슬 스켈레톤(3 뼈) 1 초 클립 하나를 @p folder 에 씁니다. */
+        [[nodiscard]] static bool writeClip( const string& folder, const utf8* pName, bool bLoop )
+        {
+            const Skeleton         skeleton = test::makeChainSkeleton( 3 );
+            const AnimationRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.0f );
+            AnimationClip          clip;
+            clip.setName( hashed_string( pName ) );
+            clip.setLooping( bLoop );
+            if ( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) == false )
+                return false;
+            return clip.saveToFile( FileUtil::joinPath( folder, StringUtil::toLower( pName ) + string( AnimationClip::kExtension ) ) );
+        }
+
+        /** @brief 유닛 · 애니메이터(처음엔 `Idle` 반복)를 단 오브젝트를 만듭니다. 시작은 `manager.beginPlay()` 가 한다. */
+        static SkeletalAnimatorComponent* addAnimatedObject( GameObjectManager& manager, const utf8* pName, const string& folder )
+        {
+            GameObject*                pObject   = manager.createGameObject( hashed_string( pName ) );
+            SkeletalMeshComponent*     pUnit     = pObject != nullptr ? pObject->addComponent<SkeletalMeshComponent>() : nullptr;
+            SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->addComponent<SkeletalAnimatorComponent>() : nullptr;
+            if ( pUnit == nullptr || pAnimator == nullptr )
+                return nullptr;
+            pUnit->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( 3 ) ) );
+            pAnimator->setClipFolder( folder );
+            pAnimator->setInitialState( "Idle" );
+            return pAnimator;
         }
     };
 } // namespace
@@ -475,6 +511,83 @@ SW_TEST_CASE( InteractionTest, BeginningInteractionSetsAlignmentWarpTarget )
     SW_ASSERT_NOT_NULL( pTarget );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pTarget->_position._x, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pTarget->_position._z, 1.0e-4f );
+    manager.endPlay();
+}
+
+/**
+ * @brief [InteractionTest] 단계의 pairedAnimation 은 `;` 로 나눈 세트 목록이고 두 역할이 필수이며, 몽타주와 함께 쓰면 읽기 오류다
+ */
+SW_TEST_CASE( InteractionTest, CatalogReadsStepPairedAnimations )
+{
+    InteractionCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText(
+        R"(<Interactions><Interaction id="Takedown" pairedAnimation="a.pairedanim.xml; b.pairedanim.xml" interactorRole="Attacker" interactableRole="Victim"/></Interactions>)",
+        "paired.interactions.xml" ) );
+    const InteractionDef* pTakedown = catalog.findInteraction( "Takedown" );
+    SW_ASSERT_NOT_NULL( pTakedown );
+    const InteractionStepDef& step = pTakedown->_listStep[0];
+    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), step._listPairedAnimationPath.size() );
+    SW_EXPECT_TRUE( step._listPairedAnimationPath[1] == "b.pairedanim.xml" );
+    SW_EXPECT_TRUE( step._interactorRole == hashed_string( "Attacker" ) );
+    SW_EXPECT_TRUE( step._interactableRole == hashed_string( "Victim" ) );
+
+    InteractionCatalog broken;
+    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<Interactions><Interaction id="X" pairedAnimation="a.pairedanim.xml" interactorRole="Attacker"/></Interactions>)", "role.interactions.xml" ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText(
+        R"(<Interactions><Interaction id="Y" montage="Grab" pairedAnimation="a.pairedanim.xml" interactorRole="Attacker" interactableRole="Victim"/></Interactions>)",
+        "montage.interactions.xml" ) );
+}
+
+/**
+ * @brief [InteractionTest] 단계의 페어드 애니메이션 — 누르면 틱 뒤에 하는 쪽 · 대상의 애니메이터로 자리에 맞는 세트가 시작되고 대상이 앵커 앞 1 m 로 맞춰진다.
+ *        자리에 맞는 세트가 없으면 시작하지 않는다
+ */
+SW_TEST_CASE( InteractionTest, PairedAnimationStepStartsSessionWithBothAnimators )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder   = test::makeTempPath( "interactionpaired" );
+    const bool   bWritten = InteractionTestInternal::writeClip( folder, "Lead", false ) && InteractionTestInternal::writeClip( folder, "Follow", false ) &&
+                          InteractionTestInternal::writeClip( folder, "Idle", true );
+    SW_ASSERT_TRUE( bWritten );
+    const string assetPath = FileUtil::joinPath( folder, "takedown.pairedanim.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( assetPath, R"(<PairedAnimation duration="1">
+        <Role name="Attacker" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="Victim" required="true" clip="Follow" align="snap" offset="0 0 1" yaw="180" maxAlignDistance="3" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Select role="Victim" minAngle="-45" maxAngle="45" maxDistance="3"/>
+    </PairedAnimation>)" ) );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pPlayerAnimator = InteractionTestInternal::addAnimatedObject( manager, "Player", folder );
+    SkeletalAnimatorComponent* pVictimAnimator = InteractionTestInternal::addAnimatedObject( manager, "Victim", folder );
+    SW_ASSERT_TRUE( pPlayerAnimator != nullptr && pVictimAnimator != nullptr );
+    InteractorComponent* pInteractor = pPlayerAnimator->getOwner()->addComponent<InteractorComponent>();
+    SW_ASSERT_NOT_NULL( pInteractor );
+    pInteractor->setEyeOffset( float3{} );
+    InteractionDef def                        = InteractionTestInternal::makeDef( "Takedown", InteractionInputMode::Press );
+    def._listStep[0]._listPairedAnimationPath = { assetPath };
+    def._listStep[0]._interactorRole          = hashed_string( "Attacker" );
+    def._listStep[0]._interactableRole        = hashed_string( "Victim" );
+    pVictimAnimator->getOwner()->addComponent<InteractableComponent>()->setDefinition( def );
+    SceneComponent* pVictimRoot = pVictimAnimator->getOwner()->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pVictimRoot );
+
+    // 옆(방위 90°) — 세트가 맞지 않아 시작하지 않는다.
+    pVictimRoot->setWorldPosition( float3{ 1.5f, 0.0f, 0.5f } );
+    manager.beginPlay();
+    InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 1, pInteractor, true );
+    PairedAnimationSystem* pSystem = PairedAnimationSystem::find( manager );
+    SW_ASSERT_NOT_NULL( pSystem );
+    SW_EXPECT_EQUAL( 0u, pSystem->getSessionCount() );
+
+    // 앞 1.5 m — 시작하고 대상이 앞 1 m 로 맞춰진다.
+    pVictimRoot->setWorldPosition( float3{ 0.0f, 0.0f, 1.5f } );
+    InteractionTestInternal::updateFrames( manager, 1, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 1, pInteractor, true );
+    SW_EXPECT_EQUAL( 1u, pSystem->getSessionCount() );
+    SW_EXPECT_TRUE( pSystem->isParticipant( TComponentHandle<SkeletalAnimatorComponent>( pPlayerAnimator ) ) );
+    SW_EXPECT_TRUE( pSystem->isParticipant( TComponentHandle<SkeletalAnimatorComponent>( pVictimAnimator ) ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pVictimRoot->getWorldPosition()._z, 1.0e-4f );
     manager.endPlay();
 }
 
