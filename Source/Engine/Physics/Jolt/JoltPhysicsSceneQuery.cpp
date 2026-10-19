@@ -371,9 +371,19 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
             return PhysicsCharacterState3D{};
         JPH::CharacterVirtual& virtualCharacter = *pRecord->_pCharacter;
+        // 결정: 움직이는 바닥의 속도는 호출하는 쪽이 아니라 여기서 더한다 — 호출 쪽이 빠뜨릴 수 없다. 직전 스텝에 디딘 바닥(`OnGround`)의 선속도와
+        // 회전이 발 밑에 만드는 속도를 합친 값(`GetGroundVelocity`)이다. 바닥이 직전 스텝 뒤에 속도를 바꿨을 수 있어 먼저 새로 읽는다(충돌 검사는 하지 않는다).
+        // 캐릭터의 방향(yaw)까지 바닥 회전을 따르게 하는 일은 하지 않는다(후속 후보).
+        float3 carriedVelocity{};
         if ( deltaTime > 0.0f )
         {
-            virtualCharacter.SetLinearVelocity( JoltUtil::toJolt( velocity ) );
+            // 순간이동(`setCharacterPosition`)이 `_groundBody` 를 비우므로, 옮긴 직후 한 스텝은 옛 바닥의 속도를 싣지 않는다.
+            if ( pRecord->_state._groundBody.isValid() && virtualCharacter.GetGroundState() == JPH::CharacterBase::EGroundState::OnGround )
+            {
+                virtualCharacter.UpdateGroundVelocity();
+                carriedVelocity = JoltUtil::toEngine( virtualCharacter.GetGroundVelocity() );
+            }
+            virtualCharacter.SetLinearVelocity( JoltUtil::toJolt( velocity + carriedVelocity ) );
             JPH::CharacterVirtual::ExtendedUpdateSettings updateSettings;
             updateSettings.mWalkStairsStepUp                                     = JPH::Vec3{ 0.0f, pRecord->_desc._stepHeight, 0.0f };
             updateSettings.mStickToFloorStepDown                                 = JPH::Vec3{ 0.0f, -pRecord->_desc._stepHeight, 0.0f };
@@ -385,9 +395,10 @@ namespace sw
         }
         PhysicsCharacterState3D& state = pRecord->_state;
         state._position                = JoltUtil::toEngine( virtualCharacter.GetPosition() );
-        state._velocity                = JoltUtil::toEngine( virtualCharacter.GetLinearVelocity() );
+        state._velocity                = JoltUtil::toEngine( virtualCharacter.GetLinearVelocity() ) - carriedVelocity;
         state._bGrounded               = virtualCharacter.GetGroundState() == JPH::CharacterBase::EGroundState::OnGround;
         state._groundNormal            = state._bGrounded ? JoltUtil::toEngine( virtualCharacter.GetGroundNormal() ) : float3{};
+        state._groundBody              = state._bGrounded ? findHandle( virtualCharacter.GetGroundBodyID() ) : PhysicsBodyHandle{};
         return state;
     }
 
@@ -397,7 +408,8 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
             return;
         pRecord->_pCharacter->SetPosition( JoltUtil::toJolt( position ) );
-        pRecord->_state._position = position;
+        pRecord->_state._position   = position;
+        pRecord->_state._groundBody = PhysicsBodyHandle{};
     }
 
     bool JoltPhysicsScene::getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState3D& outState ) const

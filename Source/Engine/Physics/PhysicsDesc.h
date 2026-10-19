@@ -171,10 +171,11 @@ namespace sw
     {
         using Vector = typename TDimension::Vector;
 
-        Vector _position{};     ///< 발 위치다.
-        Vector _velocity{};     ///< 이번 이동에서 실제로 난 속도다.
-        Vector _groundNormal{}; ///< 서 있으면 바닥 법선이다.
-        bool   _bGrounded{ false };
+        Vector            _position{};     ///< 발 위치다.
+        Vector            _velocity{};     ///< 이번 이동에서 실제로 난 속도다. 움직이는 바닥이 실어 나른 몫(`_groundBody` 의 속도)은 뺀 바닥 기준 속도다.
+        Vector            _groundNormal{}; ///< 서 있으면 바닥 법선이다.
+        PhysicsBodyHandle _groundBody{};   ///< 딛고 선 바디다. 서 있지 않으면 비어 있다. 이 바디가 움직이면 `moveCharacter` 가 그 속도를 실어 준다.
+        bool              _bGrounded{ false };
     };
 
     using PhysicsCharacterState3D = PhysicsCharacterState<PhysicsDimension3D>;

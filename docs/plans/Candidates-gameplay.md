@@ -175,6 +175,13 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 2026-10-17 `res3` 가 여섯 게임에 CC0 모델 팩(KayKit Dungeon · Space Base, Kenney Nature · Fantasy Town)의 원본을 배치했지만 씬 · 프리팹 · 코드는 아직 자리 표시 큐브를 쓴다.
 남은 것: 게임마다 씬이 새 메시를 부르게 바꿔 에셋 검증 `orphans` 경고를 없앤다. 배치 목록은 `ModelImportConfig.json` 과 게임별 `credits.md`.
 
+### MovingGroundFollowUps
+제목: 움직이는 바닥 위 캐릭터의 남은 일
+옛번호: 없음
+왜 필요한가: `moveCharacter` 가 딛은 바닥의 속도(선속도 + 회전)를 실어 주게 됐지만(2026-10-20, 결정은 `IPhysicsCharacterScene.h` 머리말과 `JoltPhysicsSceneQuery.cpp`), 아래 셋은 하지 않았다.
+남은 것: (1) 바닥이 돌 때 캐릭터의 방향(yaw)이 따라 돌지 않는다 — 위치만 돈다. (2) 점프로 바닥을 떠난 뒤의 관성이 없다 — 바닥 속도는 딛고 있는 스텝에만 얹히므로, 컴포넌트가 점프 순간의 바닥 속도를 `_airVelocity` 로 이어야 한다. (3) 네트워크 틱 동기: 서버와 클라이언트가 바닥 위치를 같은 틱에 맞춰야 캐릭터 예측이 어긋나지 않는다.
+함정: 큰 Kinematic 메시(공중 요새)는 캐릭터 쓸기 충돌 비용이 크다 — 측정 전에 단순 상자로 바닥을 대신할 수 있는지 먼저 본다.
+
 ## 조건부
 
 ### InteractionSpatialGrid

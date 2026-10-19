@@ -59,6 +59,7 @@ namespace sw
             struct MoverContext
             {
                 b2CollisionPlane* _pPlane{ nullptr };
+                b2ShapeId*        _pShape{ nullptr }; ///< `_pPlane` 과 같은 순서로, 면을 만든 셰이프다(딛고 선 바디를 찾는 데 쓴다).
                 int32             _planeCount{ 0 };
             };
 
@@ -123,6 +124,7 @@ namespace sw
                 if ( bSkipPlane )
                     return true;
                 context._pPlane[context._planeCount] = b2CollisionPlane{ pPlane->plane, FLT_MAX, 0.0f, true };
+                context._pShape[context._planeCount] = shapeID;
                 ++context._planeCount;
                 return true;
             }
@@ -427,13 +429,20 @@ namespace sw
         filter.maskBits     = static_cast<uint64_t>( _layers.getLayerMask( pRecord->_desc._layer ) );
 
         b2CollisionPlane                             arrPlane[Box2DPhysicsSceneQueryInternal::kMaxMoverPlaneCount];
-        Box2DPhysicsSceneQueryInternal::MoverContext context{ arrPlane, 0 };
+        b2ShapeId                                    arrShape[Box2DPhysicsSceneQueryInternal::kMaxMoverPlaneCount];
+        Box2DPhysicsSceneQueryInternal::MoverContext context{ arrPlane, arrShape, 0 };
         const float2                                 start    = state._position;
         float2                                       position = start;
+        // 결정: 움직이는 바닥의 속도는 호출하는 쪽이 아니라 여기서 더한다(3D 와 같다). 직전 스텝에 디딘 바디(`_groundBody`)의 발 밑 점 속도(선속도 + 회전)다.
+        // 바디가 사라졌으면(`findBody` 가 null) 실을 것이 없다.
+        float2            carriedVelocity{};
+        const BodyRecord* pGround = findBody( state._groundBody );
+        if ( pGround != nullptr )
+            carriedVelocity = Box2DUtil::toEngine( b2Body_GetWorldPointVelocity( pGround->_bodyID, Box2DUtil::toBox2D( start ) ) );
         if ( deltaTime > 0.0f )
         {
             // Box2D 무버는 겹친 면을 모아(`b2World_CollideMover`) 그 면들을 지키는 이동을 풀고(`b2SolvePlanes`), 그만큼 쓸어(`b2World_CastMover`) 옮긴다.
-            const float2 target = start + velocity * deltaTime;
+            const float2 target = start + ( velocity + carriedVelocity ) * deltaTime;
             for ( int32 iteration = 0; iteration < Box2DPhysicsSceneQueryInternal::kMoverIterationCount; ++iteration )
             {
                 const b2Capsule mover = makeMoverCapsule( *pRecord, position );
@@ -454,6 +463,7 @@ namespace sw
         const float32 minGroundNormalY = ::cosf( pRecord->_desc._maxSlopeAngle );
         state._bGrounded               = false;
         state._groundNormal            = float2{};
+        state._groundBody              = PhysicsBodyHandle{};
         for ( int32 planeIndex = 0; planeIndex < context._planeCount; ++planeIndex )
         {
             const b2Vec2 normal = arrPlane[planeIndex].plane.normal;
@@ -461,19 +471,22 @@ namespace sw
             {
                 state._bGrounded    = true;
                 state._groundNormal = Box2DUtil::toEngine( normal );
+                state._groundBody   = Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( arrShape[planeIndex] ) ) );
                 break;
             }
         }
         state._position = position;
-        state._velocity = deltaTime > 0.0f ? ( position - start ) * ( 1.0f / deltaTime ) : float2{};
+        state._velocity = deltaTime > 0.0f ? ( position - start ) * ( 1.0f / deltaTime ) - carriedVelocity : float2{};
         return state;
     }
 
     void Box2DPhysicsScene::setCharacterPosition( PhysicsCharacterHandle character, const float2& position )
     {
         CharacterRecord* pRecord = _characters.get( character.getSlot() );
-        if ( pRecord != nullptr )
-            pRecord->_state._position = position;
+        if ( pRecord == nullptr )
+            return;
+        pRecord->_state._position   = position;
+        pRecord->_state._groundBody = PhysicsBodyHandle{}; // 옮긴 직후 한 스텝은 옛 바닥의 속도를 싣지 않는다
     }
 
     bool Box2DPhysicsScene::getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const
