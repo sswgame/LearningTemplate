@@ -147,6 +147,11 @@ namespace sw
         void setInitialState( string_view stateName ) { _initialState = string{ stateName }; }
         /** @brief 시작 상태를 이 시각(초)부터 재생합니다(다음 시작부터 적용하며, 군중이 모두 같은 프레임으로 시작하지 않게 합니다). */
         void setInitialTime( float32 seconds ) { _initialTime = seconds > 0.0f ? seconds : 0.0f; }
+        /**
+         * @brief 재생 중인 클립(현재 슬롯)의 시각을 @p seconds 로 옮깁니다(네트워크 따라잡기, 프레임 지정). 건너뛴 구간의 알림은 울리지 않습니다.
+         * @return 재생 중인 것이 없거나, @p seconds 가 유한하지 않거나 음수이거나 클립 길이를 넘으면 오류를 남기고 false 입니다(자르지 않으며 시각은 그대로입니다).
+         */
+        [[nodiscard]] bool seekCurrentTime( float32 seconds );
         /** @brief 그래프 경로를 바꾸고 다시 읽습니다. */
         void setAnimationGraphPath( string_view path );
         /** @brief 클립을 미리 읽어 둡니다(게임 스레드). 워커의 전이는 읽어 둔 클립만 찾습니다. */

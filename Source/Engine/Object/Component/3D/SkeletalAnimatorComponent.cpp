@@ -399,6 +399,29 @@ namespace sw
         return bFound;
     }
 
+    bool SkeletalAnimatorComponent::seekCurrentTime( float32 seconds )
+    {
+        const IAnimationPlayable* pPlaying = _graphPlayer.getPlayer().getCurrentPlayable();
+        if ( pPlaying == nullptr )
+        {
+            SW_LOG_ERROR( "Cannot seek to %# s - nothing is playing", seconds );
+            return false;
+        }
+        const float32 playLength = pPlaying->getPlayLength();
+        const bool    bFinite    = MathUtil::isNan( seconds ) == false && MathUtil::isInfinite( seconds ) == false;
+        const bool    bInRange   = seconds >= 0.0f && seconds <= playLength;
+        if ( bFinite == false || bInRange == false )
+        {
+            SW_LOG_ERROR( "Cannot seek to %# s - the time must be within 0..%# s", seconds, playLength );
+            return false;
+        }
+        _graphPlayer.getPlayer().setCurrentTime( seconds );
+        _stateTime = seconds;
+        if ( _pUnit != nullptr )
+            _pUnit->markPoseDirty();
+        return true;
+    }
+
     void SkeletalAnimatorComponent::stop()
     {
         _graphPlayer.stop();

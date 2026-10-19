@@ -722,3 +722,57 @@ SW_TEST_CASE( SkeletalAnimationTest, LocomotionFootSpeedMatchesPlantedFoot )
     SW_EXPECT_NEAR_EQUAL( 2.0f, LocomotionSpeedUtil::computePlayRate( 5.0f, footSpeed, 0.5f, 2.0f ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, LocomotionSpeedUtil::computePlayRate( 5.0f, 0.0f, 0.5f, 2.0f ), 1e-6f );
 }
+/**
+ * @brief [SkeletalAnimationTest] 애니메이터 시각 지정 — 재생 중 클립의 시각을 옮기고, 잘못된 시각(음수 · 길이 초과 · NaN)과 재생 없음은 false 로 막는다
+ * @details 루트가 X 0 → 1 로 1 초 동안 움직이는 클립. 0.5 초로 옮기면 0 초 평가에서 X 는 0.5 이고, 잘못된 시각은 현재 시각을 바꾸지 않는다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, AnimatorSeeksCurrentTime )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const Skeleton   skeleton = test::makeChainSkeleton( 2 );
+    AnimationRawClip raw;
+    raw._sampleRate  = 30.0f;
+    raw._sampleCount = 31;
+    for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
+    {
+        raw._listTrackName.push_back( skeleton.getBone( boneIndex )._name );
+        raw._listTrackParent.push_back( skeleton.getBone( boneIndex )._parentIndex );
+    }
+    for ( uint32 sampleIndex = 0; sampleIndex < raw._sampleCount; ++sampleIndex )
+    {
+        for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
+        {
+            BoneTransform transform = skeleton.getBone( boneIndex )._referencePose;
+            if ( boneIndex == 0 )
+                transform._translation = float3{ static_cast<float32>( sampleIndex ) / 30.0f, 0.0f, 0.0f };
+            raw._listSample.push_back( transform );
+        }
+    }
+    AnimationClip clip;
+    clip.setName( hashed_string( "Slide" ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
+    const string folder = test::makeTempPath( "animclips_seek" );
+    SW_ASSERT_TRUE( clip.saveToFile( FileUtil::joinPath( folder, "slide.animclip" ) ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Slider" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SkeletalMeshComponent*     pUnit     = pObject->addComponent<SkeletalMeshComponent>();
+    SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
+    SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
+    pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
+    pAnimator->setClipFolder( folder );
+    pAnimator->setInitialState( "Slide" );
+    SW_EXPECT_FALSE( pAnimator->seekCurrentTime( 0.5f ) ); // 시작 전이라 재생 중인 것이 없다
+
+    pAnimator->dispatchBeginPlay();
+    SW_EXPECT_TRUE( pAnimator->seekCurrentTime( 0.5f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pAnimator->getGraphPlayer().getPlayer().getCurrentTime(), 1e-6f );
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._x, 1e-3f );
+
+    SW_EXPECT_FALSE( pAnimator->seekCurrentTime( -0.1f ) );
+    SW_EXPECT_FALSE( pAnimator->seekCurrentTime( 1.5f ) );
+    SW_EXPECT_FALSE( pAnimator->seekCurrentTime( std::numeric_limits<float32>::quiet_NaN() ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pAnimator->getGraphPlayer().getPlayer().getCurrentTime(), 1e-6f ); // 잘못된 시각은 시각을 바꾸지 않는다
+}
