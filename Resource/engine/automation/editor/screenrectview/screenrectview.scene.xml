@@ -48,8 +48,7 @@
 					                 _priority="0"
 					                 _role="Capture"
 					                 _bOrthographic="false">
-						<_renderOutput _screenRect="0.55,0.55,0.4,0.4"
-						               _target="ScreenRect" />
+						<_renderOutput _screenRect="0.55,0.55,0.4,0.4" _target="ScreenRect" />
 					</CameraComponent>
 				</_listComponent>
 			</GameObject>
