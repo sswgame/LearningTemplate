@@ -567,9 +567,13 @@ namespace sw::editor
                     // 쓰기는 그리드 한곳(통지 · 되돌리기)이 맡는다. Selectable 은 ImGui 편집 플래그를 세우지 않으므로 trackPod 도 부르지 않는다.
                     if ( bPicked && picked != *pValue )
                     {
-                        const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
+                        // `picked` 는 값 자체의 주소다 — 프로퍼티의 오프셋을 그대로 쓰면 그 주소 뒤를 읽어 `0:0` 이 나온다(고른 값이 비워졌다). 값 위치(오프셋 0)의 프로퍼티로 쓴다.
+                        PropertyInfo valueProp    = prop;
+                        valueProp._offset         = 0;
+                        valueProp._pValueAccessor = nullptr;
+                        const string undoLabel    = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
                         grid.applyPropertyTextAsEdit( pInstance, prop,
-                                                      SerializerUtil::formatPropertyText( prop, &picked, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
+                                                      SerializerUtil::formatPropertyText( valueProp, &picked, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
                                                       undoLabel.c_str() );
                     }
                 }
