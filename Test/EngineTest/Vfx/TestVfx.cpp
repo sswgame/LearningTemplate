@@ -2,19 +2,36 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Vfx/VfxCPUSimulation.h"
+#include "Engine/Vfx/VfxComponent.h"
 #include "Engine/Vfx/VfxEffectDef.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 파티클 · VFX — 데이터 형식(`*.vfx.xml`)의 읽기 · 검증과 CPU 시뮬레이션의 결정성 · 풀 · 수명.
+// 파티클 · VFX — 데이터 형식(`*.vfx.xml`)의 읽기 · 검증, CPU 시뮬레이션의 결정성 · 풀 · 수명, 컴포넌트의 재생과 씬 스냅샷의 입자 그리기.
 
 namespace sw
 {
     namespace
     {
         constexpr float32 kTestStepSeconds = VfxCPUSimulation::kFixedStepSeconds;
+        /** @brief 컴포넌트 테스트가 읽는 엔진 표본 효과입니다(방출기 둘 — 0 연기(알파), 1 불꽃(더하기), 둘 다 반복). */
+        constexpr const utf8* kVfxSampleEffectPath = "engine/vfx/sparks.vfx.xml";
+
+        /** @brief 컴포넌트를 @p seconds 동안 고정 간격 틱으로 돌립니다(한 틱이 단계 상한을 넘지 않게). */
+        void tickComponentFor( VfxComponent& component, float32 seconds )
+        {
+            const uint32 tickCount = static_cast<uint32>( seconds / kTestStepSeconds + 0.5f );
+            for ( uint32 tickIndex = 0; tickIndex < tickCount; ++tickIndex )
+            {
+                component.onTick( kTestStepSeconds );
+            }
+        }
 
         /** @brief 두 점(0, 1)으로 이은 직선 커브입니다. */
         FloatCurve makeLinearCurve( float32 startValue, float32 endValue )
@@ -311,4 +328,138 @@ SW_TEST_CASE( VfxCPUSimulationTest, WrittenParticlesFollowTheLifeCurves )
     SW_EXPECT_NEAR_EQUAL( 0.25f, listParticle[0]._color._y, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, listParticle[0]._color._w, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, listParticle[0]._positionSize._x, 0.0001f );
+}
+
+/**
+ * @brief [VfxComponentTest] 효과를 읽으면 방출기마다 시뮬레이션이 서고, 재생하면 방출기마다 입자 배열을 내며, 멈추면 비운다
+ */
+SW_TEST_CASE( VfxComponentTest, PlayPublishesParticlesPerEmitterAndStopClearsThem )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "Vfx" ) );
+    sw::VfxComponent*     pVfx    = pObject->addComponent<sw::VfxComponent>();
+    SW_ASSERT_NOT_NULL( pVfx );
+    pVfx->setEffectPath( sw::kVfxSampleEffectPath );
+    SW_ASSERT_EQUAL( uint32( 2 ), pVfx->getEmitterCount() );
+    SW_EXPECT_STREQ( "Smoke", pVfx->getEmitterDef( 0 )._name.c_str() );
+    SW_EXPECT_FALSE( pVfx->isPlaying() );
+    SW_EXPECT_TRUE( pVfx->getEmitterParticles( 0 ) == nullptr );
+
+    pVfx->play();
+    sw::tickComponentFor( *pVfx, 0.5f );
+    SW_EXPECT_TRUE( pVfx->isPlaying() );
+    uint32 publishedCount = 0;
+    for ( uint32 emitterIndex = 0; emitterIndex < pVfx->getEmitterCount(); ++emitterIndex )
+    {
+        const sw::shared_ptr<const sw::vector<sw::GPUParticle>>& pListParticle = pVfx->getEmitterParticles( emitterIndex );
+        SW_ASSERT_NOT_NULL( pListParticle.get() );
+        publishedCount += static_cast<uint32>( pListParticle->size() );
+    }
+    SW_EXPECT_TRUE( publishedCount > 0 );
+    SW_EXPECT_EQUAL( pVfx->getAliveParticleCount(), publishedCount );
+
+    // 낸 배열은 고쳐 쓰지 않는다 — 렌더 스레드가 들고 있는 사본은 다음 틱 뒤에도 그대로다.
+    const sw::shared_ptr<const sw::vector<sw::GPUParticle>> pHeld     = pVfx->getEmitterParticles( 1 );
+    const size_t                                            heldCount = pHeld->size();
+    sw::tickComponentFor( *pVfx, 0.25f );
+    SW_EXPECT_TRUE( pVfx->getEmitterParticles( 1 ) != pHeld );
+    SW_EXPECT_EQUAL( heldCount, pHeld->size() );
+
+    pVfx->stop();
+    SW_EXPECT_FALSE( pVfx->isPlaying() );
+    SW_EXPECT_EQUAL( uint32( 0 ), pVfx->getAliveParticleCount() );
+    SW_EXPECT_TRUE( pVfx->getEmitterParticles( 0 ) == nullptr );
+    SW_EXPECT_TRUE( pVfx->getEmitterParticles( 1 ) == nullptr );
+}
+
+/**
+ * @brief [VfxComponentTest] 같은 씨앗은 같은 입자를 내고, 다른 씨앗은 다른 입자를 낸다
+ */
+SW_TEST_CASE( VfxComponentTest, SameSeedReplaysTheSameParticles )
+{
+    sw::GameObjectManager manager;
+    sw::VfxComponent*     arrVfx[3]{};
+    const uint32          arrSeed[3] = { 7, 7, 8 };
+    for ( uint32 index = 0; index < 3; ++index )
+    {
+        arrVfx[index] = manager.createGameObject( sw::hashed_string( "Vfx" ) )->addComponent<sw::VfxComponent>();
+        SW_ASSERT_NOT_NULL( arrVfx[index] );
+        arrVfx[index]->setSeed( arrSeed[index] );
+        arrVfx[index]->setEffectPath( sw::kVfxSampleEffectPath );
+        arrVfx[index]->play();
+        sw::tickComponentFor( *arrVfx[index], 0.5f );
+    }
+    const sw::vector<sw::GPUParticle>& listFirst = *arrVfx[0]->getEmitterParticles( 1 );
+    const sw::vector<sw::GPUParticle>& listSame  = *arrVfx[1]->getEmitterParticles( 1 );
+    const sw::vector<sw::GPUParticle>& listOther = *arrVfx[2]->getEmitterParticles( 1 );
+    SW_ASSERT_EQUAL( listFirst.size(), listSame.size() );
+    SW_EXPECT_EQUAL( 0, sw::Memory::compare( listFirst.data(), listSame.data(), listFirst.size() * sizeof( sw::GPUParticle ) ) );
+    const bool bOtherDiffers = listOther.size() != listFirst.size() ||
+                               sw::Memory::compare( listFirst.data(), listOther.data(), listFirst.size() * sizeof( sw::GPUParticle ) ) != 0;
+    SW_EXPECT_TRUE( bOtherDiffers );
+}
+
+/**
+ * @brief [VfxComponentTest] 읽지 못한 효과는 방출기가 없고 재생해도 아무것도 내지 않는다(기본 효과로 대신하지 않는다)
+ */
+SW_TEST_CASE( VfxComponentTest, MissingEffectHasNoEmitters )
+{
+    sw::GameObjectManager manager;
+    sw::VfxComponent*     pVfx = manager.createGameObject( sw::hashed_string( "Vfx" ) )->addComponent<sw::VfxComponent>();
+    SW_ASSERT_NOT_NULL( pVfx );
+    {
+        test::ScopedLogSuppressor suppressor;
+        pVfx->setEffectPath( "engine/vfx/does_not_exist.vfx.xml" );
+    }
+    SW_EXPECT_EQUAL( uint32( 0 ), pVfx->getEmitterCount() );
+    pVfx->play();
+    SW_EXPECT_FALSE( pVfx->isPlaying() );
+}
+
+/**
+ * @brief [VfxComponentTest] 씬 스냅샷은 켜진 효과의 방출기마다 입자 그리기 하나를 싣고, 주 시점에서 먼 효과부터 놓는다
+ * @details 방출기 하나가 투명 정렬 후보 하나다(입자 단위 정렬은 없다). 꺼진 컴포넌트와 입자가 없는 방출기는 싣지 않는다.
+ */
+SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
+{
+    sw::Scene scene( "VfxSnapshot" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    const float32     arrDistance[3] = { 5.0f, 20.0f, 12.0f };
+    sw::VfxComponent* arrVfx[3]{};
+    for ( uint32 index = 0; index < 3; ++index )
+    {
+        arrVfx[index] = scene.getObjectManager()->createGameObject( sw::hashed_string( "Vfx" ) )->addComponent<sw::VfxComponent>();
+        SW_ASSERT_NOT_NULL( arrVfx[index] );
+        arrVfx[index]->setWorldPosition( sw::float3( 0.0f, 0.0f, arrDistance[index] ) );
+        arrVfx[index]->setEffectPath( sw::kVfxSampleEffectPath );
+        arrVfx[index]->play();
+        sw::tickComponentFor( *arrVfx[index], 0.5f );
+    }
+    arrVfx[2]->setActive( false );
+    SW_EXPECT_TRUE( arrVfx[0]->getAliveParticleCount() > 0 );
+    SW_EXPECT_TRUE( arrVfx[0]->isActive() );
+    SW_EXPECT_EQUAL( size_t( 3 ), scene.getObjectManager()->getComponentRegistry().getAll<sw::VfxComponent>().size() );
+
+    sw::GPUSceneBuilder builder;
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, 0.0f ) );
+    const sw::vector<sw::GPUParticleBatch>& listBatch = builder.getParticleBatches();
+    SW_ASSERT_EQUAL( size_t( 4 ), listBatch.size() ); // 켜진 효과 둘 × 방출기 둘
+    SW_EXPECT_NEAR_EQUAL( 20.0f, listBatch[0]._world.getTranslation()._z, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, listBatch[1]._world.getTranslation()._z, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, listBatch[2]._world.getTranslation()._z, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, listBatch[3]._world.getTranslation()._z, 0.001f );
+    uint32 additiveCount = 0;
+    for ( const sw::GPUParticleBatch& batch : listBatch )
+    {
+        SW_EXPECT_TRUE( batch._pListParticle != nullptr && batch._pListParticle->empty() == false );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, batch._sizeScale, 0.001f );
+        additiveCount += batch._bAdditive == SW_TRUE ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( uint32( 2 ), additiveCount ); // 효과마다 불꽃 방출기 하나
+
+    // 씬이 그대로인 프레임에도 입자는 다시 모은다(메시의 "바뀐 것 없음" 건너뛰기와 별개다).
+    sw::tickComponentFor( *arrVfx[0], 0.1f );
+    builder.populateFromScene( &scene, sw::float3( 0.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_TRUE( builder.getParticleBatches()[2]._pListParticle == arrVfx[0]->getEmitterParticles( 0 ) ||
+                    builder.getParticleBatches()[3]._pListParticle == arrVfx[0]->getEmitterParticles( 0 ) );
 }

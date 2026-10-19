@@ -154,6 +154,8 @@ namespace sw
         const vector<GPUMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
         /** @brief 투명 배치를 반환합니다. */
         const vector<GPUMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
+        /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
+        const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
         /** @brief 이 추가 뷰의 투명 순서(스냅샷이 싣고 온 것)입니다. 없으면 nullptr 입니다. */
         const GPUViewTransparentOrder* findViewTransparentOrder( uint64 viewID ) const;
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */

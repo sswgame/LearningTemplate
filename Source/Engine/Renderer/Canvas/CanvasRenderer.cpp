@@ -183,7 +183,7 @@ namespace sw
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( pso );
         // setPipelineState 가 슬롯 상태를 비운다 — 버퍼는 PSO 뒤에 건다.
-        cmd.bindStructuredBuffer( _quadBuffer._srv, shaderslot::kCanvasQuadBuffer );
+        cmd.bindStructuredBuffer( _quadBuffer._srv, shaderslot::kPassBuffer );
 
         const RHIScissorRect wholeTarget{ 0, 0, targetWidth, targetHeight };
         uint32               drawnBatchCount = 0;

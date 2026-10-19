@@ -57,7 +57,8 @@ namespace sw::editor
 
     string_view EditorDocumentPanel::getMatchingFocusedPath() const
     {
-        return EditorAssetTypeRegistry::matchingFocusedPath( _kind );
+        const string_view focused = EditorAssetTypeRegistry::matchingFocusedPath( _kind );
+        return focused.empty() == false && acceptsDocumentPath( focused ) ? focused : string_view{};
     }
 
     const utf8* EditorDocumentPanel::getPanelTitle() const
@@ -112,7 +113,7 @@ namespace sw::editor
             _listOpenCandidate.clear();
             for ( const EditorResourceIndexEntry& entry : listEntry )
             {
-                if ( entry._kind == _kind )
+                if ( entry._kind == _kind && acceptsDocumentPath( entry._path ) )
                     _listOpenCandidate.push_back( entry._path );
             }
             std::sort( _listOpenCandidate.begin(), _listOpenCandidate.end() );

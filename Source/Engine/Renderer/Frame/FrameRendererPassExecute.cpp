@@ -466,6 +466,8 @@ namespace sw
                     if ( beginColorPass( context, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
                     {
                         drawSceneMeshes( context, findPassPSO( RenderPassType::Transparent ), passCb, bTransparentBatch );
+                        // 입자는 메시 투명 배치 뒤에 방출기마다 그린다(방출기끼리는 먼 것부터 — GPUSceneBuilder::populateParticleBatches).
+                        drawParticles( context );
                         context._pCmd->endRenderPass();
                     }
                     break;

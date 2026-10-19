@@ -370,6 +370,23 @@ namespace sw
         _indirectDrawCallCount.fetch_add( drawCallCount, std::memory_order_relaxed );
     }
 
+    void FrameRenderer::drawParticles( FramePassContext& context )
+    {
+        const vector<GPUParticleBatch>& listBatch   = _gpuScene.getParticleBatches();
+        const RHIPipelineStateHandle    pso         = findParticlePSO();
+        const bool                      bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || listBatch.empty() || pso == 0;
+        if ( bCannotDraw )
+            return;
+        // 정점은 셰이더가 SV_VertexID 로 만든다 — 정점 버퍼 슬롯과 인스턴스 슬롯 스트림은 비운다(캔버스 · 풀스크린 패스와 같다).
+        context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
+        context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        context._pCmd->setPipelineState( pso );
+        setIdentityWorld( context );
+        // PassCB(g_ViewProj · g_InvViewProj)를 건다. 입자 버퍼 · 텍스처 · 루트 상수는 그 뒤에 입자 렌더러가 건다.
+        bindForDraw( context, pso, kInvalidDescriptorIndex );
+        (void)_particleRenderer.drawBatches( *context._pCmd, listBatch, _pDevice->supportsNativeBindlessSampling() );
+    }
+
     void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
     {
         (void)cbIndex;

@@ -20,12 +20,14 @@
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Vfx/VfxComponent.h"
 
 namespace sw
 {
@@ -118,6 +120,7 @@ namespace sw
         _snapshot._listOpaqueBatch.clear();
         _snapshot._listTransparentBatch.clear();
         _snapshot._listAllBatch.clear();
+        _snapshot._listParticleBatch.clear();
         // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로에서 인덱스를 찾는 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
         // 반환하고 GPUMaterialRegistry::materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
         // 그려지고, 투명 머티리얼은 알파 0이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인이다).
@@ -383,6 +386,17 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.GPUScene.build" );
 
+        // 메시 쪽은 "바뀐 것 없음" · "후보 없음" 으로 일찍 끝나는 길이 여럿이다. 입자는 단계마다 움직이므로 그 뒤에 따로, 매 프레임 모은다.
+        populateMeshesFromScene( pScene, cameraPos );
+        const GameObjectManager* pObjects = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        if ( pObjects != nullptr )
+            populateParticleBatches( *pObjects, cameraPos );
+        else
+            _snapshot._listParticleBatch.clear();
+    }
+
+    void GPUSceneBuilder::populateMeshesFromScene( Scene* pScene, const float3& cameraPos )
+    {
         if ( pScene == nullptr )
         {
             clear();
@@ -837,6 +851,51 @@ namespace sw
     void GPUSceneBuilder::setTransparentSortAxis( const float3& axis )
     {
         _transparentSorter.setAxis( axis );
+    }
+
+    void GPUSceneBuilder::populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos )
+    {
+        vector<GPUParticleBatch>& listBatch = _snapshot._listParticleBatch;
+        listBatch.clear();
+        for ( const VfxComponent* pVfx : objects.getComponentRegistry().getAll<VfxComponent>() )
+        {
+            const bool bHidden = pVfx->isPendingDestroy() || pVfx->isActive() == false;
+            if ( bHidden )
+                continue;
+            const float4x4 world     = pVfx->getWorldMatrix();
+            const float32  sizeScale = world.getMaximumAxisScale();
+            for ( uint32 emitterIndex = 0; emitterIndex < pVfx->getEmitterCount(); ++emitterIndex )
+            {
+                const shared_ptr<const vector<GPUParticle>>& pListParticle = pVfx->getEmitterParticles( emitterIndex );
+                if ( pListParticle == nullptr || pListParticle->empty() )
+                    continue;
+                const VfxEmitterDef& def   = pVfx->getEmitterDef( emitterIndex );
+                GPUParticleBatch&    batch = listBatch.emplace_back();
+                batch._pListParticle       = pListParticle;
+                batch._world               = world;
+                batch._texturePath         = hashed_string( def._texturePath );
+                batch._sizeScale           = sizeScale;
+                batch._bAdditive           = def._blendMode == VfxBlendMode::Additive ? SW_TRUE : SW_FALSE;
+            }
+        }
+        if ( listBatch.size() <= 1 )
+            return;
+
+        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 잰다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
+        const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        _listScratchParticleKey.resize( listBatch.size() );
+        for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
+        {
+            _listScratchParticleKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( defaultSortKey, listBatch[batchIndex]._world.getTranslation(), cameraPos,
+                                                                                                _transparentSorter.getAxis(), batchIndex );
+        }
+        std::sort( _listScratchParticleKey.begin(), _listScratchParticleKey.end(), &GPUTransparentSorter::isDrawnBefore );
+        _listScratchParticleBatch.clear();
+        for ( const GPUTransparentSortKey& key : _listScratchParticleKey )
+        {
+            _listScratchParticleBatch.push_back( std::move( listBatch[key._candidateIndex] ) );
+        }
+        listBatch.swap( _listScratchParticleBatch );
     }
 
     void GPUSceneBuilder::computeViewTransparentOrders( const vector<RenderViewRequest>& listView )

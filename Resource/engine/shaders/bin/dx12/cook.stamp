@@ -7,6 +7,7 @@ SWCOOK 4
 2634f1e7dd1ddc24 postbloom.hlsl
 30ca18ffc0224bf4 postbloom.hlsli
 312acf64fc5daeca forwardlit.hlsl
+32aa76b8c19a28cc bindingslots.hlsli
 3d6ec2c0ca01abf8 toon.hlsl
 3dd00791b2a0c92f foliage.hlsl
 432da0d9b59901be meshmodifier.hlsli
@@ -30,8 +31,8 @@ c6ac1e80c191a60a sprite2dlit.hlsl
 c7fccc4d4fc17a39 binding.hlsli
 cd950cde23768c4b instanceanimation.hlsl
 d4c27f6d50f42c87 postchain.hlsl
-d9b855d930619233 bindingslots.hlsli
+ddba901612fdf1e3 particle.hlsl
 df99ce7308ca1787 fullscreentriangle.hlsl
-e08116ead6587193 canvas.hlsl
 e68b240c33655d39 sprite2d.hlsl
+eb7c185f6128552e canvas.hlsl
 ee5aa6943269e9ee common.hlsli
