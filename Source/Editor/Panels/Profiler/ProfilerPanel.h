@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
@@ -117,6 +118,7 @@ namespace sw::editor
     private:
         float32                        _arrFrameTimeHistory[120];
         uint32                         _historyOffset;
+        Stopwatch                      _drawStopwatch; ///< 성능 탭을 마지막으로 그린 뒤의 벽시계 경과
         EditorResourceCatalogJob       _catalogJob;
         EditorResourceCatalogCounts    _catalogCounts;
         ProfilerScopeHistory           _scopeHistory;      ///< 최근 N 프레임을 담는 링 버퍼(ImGui 에 의존하지 않는다)

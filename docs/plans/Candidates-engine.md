@@ -25,13 +25,6 @@
 왜 필요한가: 게임 여럿을 빌드 한 번에 짓고 실행할 때 고르며 키트는 필요한 것만 싣는 구조입니다(2026-10-13 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md` 입니다.
 남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸습니다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 
-### RealElapsedTime
-제목: 실제 경과 시간을 엔진 한 곳에서 받게 하는 일의 남은 것 (확인 필요)
-옛번호: C-65
-왜 필요한가: `Engine::beginFrame` 인자 전환과 `FrameStall` 의 개발 명령 구성 한정은 들어갔습니다(`dd8f4c2c3`). 아래 후보가 코드에 아직 남았는지 확인이 필요합니다.
-남은 것: 녹화는 벽시계 · 재생은 `fixedDelta` 인 `EditorScenarioRecordCommands.cpp:100` · `InputMapPanel.cpp:299`, 미리보기 패널 넷(`SequencerPanel` · `AnimationGraphPanel` · `DialogueGraphPanel` · `InputMapPanel`), `Automation/README.md:30` 의 "에디터 코드는 unscaled 경과" 범위, 검증 레이어 조건에 `AND NOT SW_SHIPPING_BUILD`. 근본 해법은 플랫폼 `NewFrame` 뒤 `ImGui::NewFrame` 앞에서 `io.DeltaTime` 을 엔진 경과로 맞추기입니다.
-함정: 프로파일러 성능 탭은 벽시계를 따로 읽어야 합니다.
-
 ## 정리
 
 ### StableAddressMap
