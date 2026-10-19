@@ -41,7 +41,7 @@ namespace sw
 {
     /**
      * @brief 카메라의 출력 설정입니다. 어디로(화면 사각형, 렌더 텍스처), 얼마나 자주(갱신 주기), 얼마나 크게(해상도 배율), 무엇을 끄고(그림자, 후처리),
-     *        언제만(보일 때) 그릴지 정합니다. 언리얼의 SceneCapture2D, 유니티의 `Camera.targetTexture` 와 `Camera.rect` 에 해당합니다.
+     *        언제만(모니터가 화면에 충분히 크게 보일 때) 그릴지 정합니다. 언리얼의 SceneCapture2D, 유니티의 `Camera.targetTexture` 와 `Camera.rect` 에 해당합니다.
      * @details 렌더 텍스처 경로는 `rendertarget/` 로 시작한다(`TextureCache` 가 그 경로를 렌더 타깃으로 만든다). 머티리얼의 텍스처 프로퍼티나
      *          `MaterialInstance::setTextureParameter` 에 같은 경로를 적으면 그 이미지를 읽는다.
      */
@@ -69,8 +69,10 @@ namespace sw
         uint32 _upscaleZoom{ 0 };
         PROPERTY( Min = 0.0, Tooltip = "Renders per second; 0 renders every frame", Units = Hz )
         float32 _updateRate{ 0.0f };
-        PROPERTY( Tooltip = "Object whose bounds must be in the main view for this view to render (a CCTV monitor); empty always renders" )
+        PROPERTY( Tooltip = "Object whose bounds must be seen on screen (main view or a screen-rect view) for this view to render (a CCTV monitor); empty always renders, a destroyed object never" )
         GameObjectHandle _visibilityObject{};
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Smallest on-screen size of the visibility object (bounds diameter / screen height) for this view to render; 0 renders whenever it is in view" )
+        float32 _minScreenSize{ 0.0f };
         PROPERTY( Tooltip = "Where the picture goes" )
         CameraOutputTarget _target{ CameraOutputTarget::MainView };
         PROPERTY( Tooltip = "Draw shadows in this view" )

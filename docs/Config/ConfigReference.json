@@ -3487,7 +3487,15 @@
    "type": "int32",
    "default": "4",
    "kind": "일반",
-   "description": "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)",
+   "description": "한 프레임에 그리는 렌더 텍스처 뷰(CCTV · 백미러)의 최대 수 (0 = 제한 없음)",
+   "source": "Source/Engine/Renderer/Frame/View/RenderViewCollector.cpp"
+  },
+  {
+   "name": "gv_renderViewMegapixelBudget",
+   "type": "float32",
+   "default": "2.0",
+   "kind": "일반",
+   "description": "한 프레임에 그리는 렌더 텍스처 뷰의 픽셀 합 상한, 백만 픽셀 (0 = 제한 없음)",
    "source": "Source/Engine/Renderer/Frame/View/RenderViewCollector.cpp"
   },
   {
