@@ -370,7 +370,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   최악 프레임의 13 ~ 20 ms 한 프레임은 디스크 · 이 변경과 무관합니다 — 측정 창 안 파일 열기가 0 이고, 디스크 흉내를 끈 LowEnd 도 14.0 ms 였으며, `.meta` 변경만 뺀 같은 빌드와 3 판씩 견준 가운데 값이 3.2 ms 로 같았습니다(판마다 나오다 말다 한다 — 후보 `RuntimeQualityAdjust` ②).
   기동의 나머지 열기는 개발 배치에만 있는 것입니다 — 키트 DLL 섀도 복사 61 · 모듈 매니페스트 70 · 셰이더 원본 해시 약 30(Shipping 은 셋 다 없다, 후보 `RuntimeQualityAdjust` ①).
   부하 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`)은 같은 날 Release 세 번 중 최대 케이스 시간의 네 배입니다(`TaskManagerBenchTest` 3.2 s · `PackReadBenchTest` 3.1 s · `NetSimLoadTest` 2.5 s 가 가장 길다).
-- **CI 야간 잡**(`.github/workflows/load.yml`, 리눅스 `CI-Release`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터 — GPU 가 없어 App 드라이버 제외)를 돌리고 진 조합을 주석으로 올립니다(`CiFailureReport.py load`). 러너는 측정 기계가 아니므로 기준선은 알림뿐입니다. 첫 실행(2026-10-15, 실행 38813564584)은 connect × Mid, replication × Mid · LowEnd 가 통과했고 tick p99 는 약 15 ms 였습니다.
+- **CI 야간 잡**(`.github/workflows/load.yml`, 리눅스 `CI-Release`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터 — GPU 가 없어 App 드라이버 제외)를 돌리고 진 조합을 주석으로 올립니다(`CiFailureReport.py load`). 러너는 측정 기계가 아니므로 기준선은 알림뿐입니다. 첫 실행(2026-10-15, 실행 38813564584)은 connect × Mid, replication × Mid · LowEnd 가 통과했고 tick p99 는 약 15 ms 였습니다. 10-18 이후의 두 실행(39070069934 · 39167082107)은 결과 JSON 없이 "the load run did not finish" 로 졌습니다: 봇이 보고서를 남기지 못하면 `readJsonInternal`(필수 표용, 없으면 예외)이 멈춰 JSON 이 통째로 사라졌고, 이제 보고서 없음은 그 판의 실패로 기록됩니다. 봇이 보고서를 못 남긴 이유(러너에서 즉시 끝남)는 다음 야간 실행의 주석(`exit` 와 오류 줄)으로 읽습니다 — 로그를 못 읽어 추측입니다.
 
 ## 3. 검증할 때의 함정
 

@@ -12,6 +12,8 @@ C-41 의 순서는 결정 기록 5-12 `C-41` 행입니다. 네 단계 가운데 
 `ci.yml` 의 `Test on software renderer` 단계는 `continue-on-error: true` 입니다. 실패는 주석(annotation)으로만 보이고 잡은 초록입니다.
 `Test/TestPolicy.json` 의 `softwareRenderSeconds`(120)는 추정값입니다.
 
+2026-10-20 확인(main 의 초록 실행 39163263777 · 39162795196 · 39160434493): 단계 시간은 Windows 2~4 초, Linux 6 초(설치 4~6 초)지만 세 번 모두 진 것입니다. `continue-on-error` 가 단계 결론을 success 로 보이게 할 뿐 주석 단계가 돌았으니(`outcome == 'failure'`) 초록이 아닙니다. 주석: Linux 는 `RHIDeviceTest.DeviceCreationAllBackends`(DX11 · DX12 백엔드 없음 로그를 예상 밖 로그로 침)와 `gl` 백엔드가 서지 못함, Windows 는 `BackendSweepVisitsEveryBackendThatStandsUp`(검증 레이어 없음 · GL 4.5 / KHR_debug 없음 등 16 줄을 예상 밖 로그로 침). 그래서 V2 는 해제하지 않았습니다. 케이스를 고치거나 의도한 로그를 `SW_TEST_DEFENSIVE_SCOPE` 로 감싼 뒤 다시 셉니다.
+
 ### 1.2 해법
 
 - `py -3 -m Scripts ci-jobs --annotations` 로 main 의 최근 실행에서 `swrender` 주석을 봅니다. Windows(WARP) 와 Linux(lavapipe, xvfb) 두 잡이 연속 세 번 이상 초록이면 `continue-on-error` 를 지웁니다.
