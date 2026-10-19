@@ -38,18 +38,15 @@ namespace sw::editor
         , _pendingOpenPanelTitle{}
         , _pendingScenePath{}
         , _pendingSceneActionPath{}
-        , _emptyString{}
         , _copiedComponentXML{}
         , _copiedComponentTypeName{}
         , _pendingSceneMutex{}
         , _arrCameraBookmark{}
-        , _listPrefabIsolationFrame{}
         , _listLockedObjectID{}
         , _gizmoOperation{ 0 }
         , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _bGizmoLocalSpace{ SW_TRUE }
         , _bSceneDirty{ SW_FALSE }
-        , _bPrefabIsolation{ SW_FALSE }
         , _reservedWorkspace{ 0 }
     {
     }
@@ -203,20 +200,20 @@ namespace sw::editor
         _pendingSceneActionPath.clear();
     }
 
-    void EditorWorkspace::setPlacedPrefabPath( uint64 objectID, string_view prefabPath )
+    void EditorWorkspace::setPlacedPrefabPath( const GameObject& object, string_view prefabPath )
     {
-        Scene* pScene = editor::getActiveScene();
-        if ( objectID == 0 || pScene == nullptr )
+        Scene* pScene = editor::findSceneOf( object.getManager() );
+        if ( pScene == nullptr )
             return;
-        pScene->setEntityPrefabPath( objectID, prefabPath );
+        pScene->setEntityPrefabPath( object.getObjectID(), prefabPath );
     }
 
-    string_view EditorWorkspace::getPlacedPrefabPath( uint64 objectID ) const
+    string_view EditorWorkspace::getPlacedPrefabPath( const GameObject& object ) const
     {
-        const Scene* pScene = editor::getActiveScene();
+        const Scene* pScene = editor::findSceneOf( object.getManager() );
         if ( pScene == nullptr )
             return {};
-        return pScene->getEntityPrefabPath( objectID );
+        return pScene->getEntityPrefabPath( object.getObjectID() );
     }
 
     string_view EditorWorkspace::findPrefabPath( const GameObject* pObject ) const
@@ -225,7 +222,7 @@ namespace sw::editor
             return {};
         if ( isNestedPrefabPart( pObject ) )
             return pObject->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( pObject->getObjectID() )->_prefabPath; // 붙은 부품이면 기록이 있다
-        return getPlacedPrefabPath( pObject->getObjectID() );
+        return getPlacedPrefabPath( *pObject );
     }
 
     bool EditorWorkspace::isNestedPrefabPart( const GameObject* pObject ) const
@@ -276,52 +273,6 @@ namespace sw::editor
     bool EditorWorkspace::hasCopiedComponent() const
     {
         return _copiedComponentXML.empty() == false;
-    }
-
-    const string& EditorWorkspace::getPrefabIsolationPrefabPath() const
-    {
-        if ( _listPrefabIsolationFrame.empty() )
-            return _emptyString;
-        return _listPrefabIsolationFrame.back()._prefabPath;
-    }
-
-    uint64 EditorWorkspace::getPrefabIsolationRootID() const
-    {
-        if ( _listPrefabIsolationFrame.empty() )
-            return 0;
-        return _listPrefabIsolationFrame.back()._rootObjectID;
-    }
-
-    const PrefabIsolationFrame* EditorWorkspace::getPrefabIsolationFrame() const
-    {
-        if ( _listPrefabIsolationFrame.empty() )
-            return nullptr;
-        return &_listPrefabIsolationFrame.back();
-    }
-
-    void EditorWorkspace::pushPrefabIsolation( PrefabIsolationFrame frame )
-    {
-        _listPrefabIsolationFrame.push_back( std::move( frame ) );
-        _bPrefabIsolation = SW_TRUE;
-    }
-
-    bool EditorWorkspace::popPrefabIsolation()
-    {
-        if ( _listPrefabIsolationFrame.empty() )
-            return true;
-        _listPrefabIsolationFrame.pop_back();
-        if ( _listPrefabIsolationFrame.empty() )
-        {
-            _bPrefabIsolation = SW_FALSE;
-            return true;
-        }
-        return false;
-    }
-
-    void EditorWorkspace::clearPrefabIsolation()
-    {
-        _listPrefabIsolationFrame.clear();
-        _bPrefabIsolation = SW_FALSE;
     }
 
     bool EditorWorkspace::isObjectLocked( uint64 objectID ) const

@@ -25,7 +25,7 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorSceneGenerationSyncTest] 새 씬 세대를 보면 dirty · Undo · 프리팹 격리를 버리고, 같은 세대면 아무것도 건드리지 않는다
+ * @brief [EditorSceneGenerationSyncTest] 새 씬 세대를 보면 dirty · Undo 를 버리고, 같은 세대면 아무것도 건드리지 않는다
  */
 SW_TEST_CASE( EditorSceneGenerationSyncTest, NewGenerationDropsTheOldSceneStateOnce )
 {
@@ -34,14 +34,11 @@ SW_TEST_CASE( EditorSceneGenerationSyncTest, NewGenerationDropsTheOldSceneStateO
     CommandStack    stack;
     stack.push( makeProbeCommand() );
     workspace.markSceneDirty();
-    workspace.pushPrefabIsolation( PrefabIsolationFrame{} );
     SW_ASSERT_TRUE( stack.canUndo() );
-    SW_ASSERT_TRUE( workspace.isPrefabIsolationActive() );
 
     SW_EXPECT_TRUE( EditorSceneGenerationSync::apply( workspace, workspace.getObservedSceneGeneration() + 1, &stack ) );
     SW_EXPECT_FALSE( workspace.isSceneDirty() );
     SW_EXPECT_FALSE( stack.canUndo() );
-    SW_EXPECT_FALSE( workspace.isPrefabIsolationActive() );
 
     // 같은 세대 — 그 뒤의 편집은 그대로 남는다.
     workspace.markSceneDirty();

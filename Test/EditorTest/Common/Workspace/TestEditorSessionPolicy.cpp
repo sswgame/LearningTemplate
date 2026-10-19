@@ -60,11 +60,6 @@ SW_TEST_CASE( EditorSessionPolicyTest, RestoreClearsDirtyWhenMatchingLastSave )
     SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( false ) );
 }
 
-SW_TEST_CASE( EditorSessionPolicyTest, PrefabIsolationDoesNotRequireCleanScene )
-{
-    SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::requiresCleanSceneForPrefabIsolation() );
-}
-
 /**
  * @brief [EditorSessionPolicyTest] 축 하나만 움직여도 **움직인 것**이다
  * @details 그래프 패널들이 이 판단을 이 함수 하나로 한다. `&&` 로 적으면 노드를 정확히 수평으로만(또는 수직으로만)

@@ -33,6 +33,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorGlobalVariableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorLogCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorModuleOverrides.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorPrefabIsolation.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorNavigationCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Play/EditorNetConditions.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetPlayPresetStore.cpp"

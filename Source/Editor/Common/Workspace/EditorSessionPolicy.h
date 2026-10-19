@@ -54,8 +54,6 @@ namespace sw::editor
         }
         /** @brief Stopped 일 때만 씬 오브젝트 편집을 허용합니다. */
         static bool areSceneEditsAllowed( bool bPlayStopped ) { return bPlayStopped == true; }
-        /** @brief Isolation 은 활성 씬을 유지하므로 dirty 씬에서도 들어갈 수 있습니다. */
-        static bool requiresCleanSceneForPrefabIsolation() { return false; }
         /**
          * @brief 컨테이너 원소를 제자리에서 편집해도 되는지 판단합니다. 두 조건이 모두 허락해야 합니다.
          * @param bReadOnly                 프로퍼티가 `ReadOnly` 로 표시되어 있으면 true 입니다.

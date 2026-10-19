@@ -155,6 +155,22 @@ namespace sw::editor
         return pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
     }
 
+    Scene* findSceneOf( const GameObjectManager* pManager )
+    {
+        const SceneManager* pSceneManager = findSubsystem<SceneManager>();
+        if ( pSceneManager == nullptr || pManager == nullptr )
+            return nullptr;
+        Scene* pActive = pSceneManager->getActiveScene();
+        if ( pActive != nullptr && pActive->getObjectManager() == pManager )
+            return pActive;
+        for ( const PreviewSceneEntry& entry : pSceneManager->getPreviewScenes() )
+        {
+            if ( entry._scene->getObjectManager() == pManager )
+                return entry._scene.get();
+        }
+        return nullptr;
+    }
+
     GameObject* findGameObject( GameObjectHandle handle )
     {
         GameObjectManager* pManager = getActiveObjectManager();

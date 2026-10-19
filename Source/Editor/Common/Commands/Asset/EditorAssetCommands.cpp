@@ -102,7 +102,7 @@ namespace sw::editor
 
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( pSpawned->getObjectID(), pPath );
+            pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pSpawned, pPath );
 
         SW_LOG_TRACE( "Spawned prefab from %#", pPath );
         return pSpawned;

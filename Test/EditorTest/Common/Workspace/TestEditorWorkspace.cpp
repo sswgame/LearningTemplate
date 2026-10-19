@@ -18,9 +18,9 @@ using namespace sw;
 using namespace sw::editor;
 
 /**
- * @brief [EditorWorkspaceTest] 프리팹 인스턴스 경로는 활성 씬이 원본이다 — 워크스페이스는 사본을 들지 않는다
- * @details 씬에서 연결을 끊거나(`Scene::setEntityPrefabPath` 를 부르는 엔진 경로) 활성 씬이 바뀌면(플레이 세션이 씬을 다시 세운다) 워크스페이스도
- *          같은 답을 해야 한다. 사본을 들면 옛 씬의 경로가 새 씬의 같은 id 에 남아, 프리팹 적용 · 되돌리기 메뉴가 연결 없는 오브젝트에 뜬다.
+ * @brief [EditorWorkspaceTest] 프리팹 인스턴스 경로는 오브젝트가 사는 씬이 원본이다 — 워크스페이스는 사본을 들지 않는다
+ * @details 씬에서 연결을 끊으면(`Scene::setEntityPrefabPath` 를 부르는 엔진 경로) 워크스페이스도 같은 답을 해야 한다. 활성 씬이 바뀌어도(플레이 세션이 씬을 다시 세운다)
+ *          새 씬의 같은 id 오브젝트에 옛 씬의 경로가 남지 않는다 — 사본을 들면 프리팹 적용 · 되돌리기 메뉴가 연결 없는 오브젝트에 뜬다.
  */
 SW_TEST_CASE( EditorWorkspaceTest, PrefabPathIsReadFromTheActiveScene )
 {
@@ -36,18 +36,52 @@ SW_TEST_CASE( EditorWorkspaceTest, PrefabPathIsReadFromTheActiveScene )
 
     EditorSelection editorSelection;
     EditorWorkspace workspace{ &editorSelection };
-    workspace.setPlacedPrefabPath( heroID, "game/prefabs/hero.prefab" );
+    workspace.setPlacedPrefabPath( *pHero, "game/prefabs/hero.prefab" );
     SW_EXPECT_TRUE( pFirst->getEntityPrefabPath( heroID ) == "game/prefabs/hero.prefab" );
-    SW_EXPECT_TRUE( workspace.getPlacedPrefabPath( heroID ) == "game/prefabs/hero.prefab" );
+    SW_EXPECT_TRUE( workspace.getPlacedPrefabPath( *pHero ) == "game/prefabs/hero.prefab" );
 
     // 씬에서 끊은 연결은 워크스페이스에서도 끊겨 보인다.
     pFirst->setEntityPrefabPath( heroID, "" );
-    SW_EXPECT_TRUE_MSG( workspace.getPlacedPrefabPath( heroID ).empty(), sw::string{ workspace.getPlacedPrefabPath( heroID ) }.c_str() );
+    SW_EXPECT_TRUE_MSG( workspace.getPlacedPrefabPath( *pHero ).empty(), sw::string{ workspace.getPlacedPrefabPath( *pHero ) }.c_str() );
 
-    // 활성 씬이 바뀌면 옛 씬의 연결은 보이지 않는다.
-    workspace.setPlacedPrefabPath( heroID, "game/prefabs/hero.prefab" );
-    SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "Second" ) );
-    SW_EXPECT_TRUE_MSG( workspace.getPlacedPrefabPath( heroID ).empty(), sw::string{ workspace.getPlacedPrefabPath( heroID ) }.c_str() );
+    // 활성 씬이 바뀌면 옛 씬의 연결은 새 씬의 같은 id 오브젝트에 보이지 않는다.
+    workspace.setPlacedPrefabPath( *pHero, "game/prefabs/hero.prefab" );
+    Scene* pSecond = sceneManager.createEmptyActiveScene( "Second" );
+    SW_ASSERT_NOT_NULL( pSecond );
+    GameObject* pOther = pSecond->getObjectManager()->createGameObject( hashed_string( "Other" ) );
+    SW_ASSERT_NOT_NULL( pOther );
+    pSecond->getObjectManager()->mergePendingAdds();
+    SW_EXPECT_TRUE_MSG( workspace.getPlacedPrefabPath( *pOther ).empty(), sw::string{ workspace.getPlacedPrefabPath( *pOther ) }.c_str() );
+}
+
+/**
+ * @brief [EditorWorkspaceTest] 미리보기 씬에 놓은 인스턴스의 프리팹 경로는 그 미리보기 씬에 기록되고 읽힌다 — 활성 씬의 같은 id 와 섞이지 않는다
+ * @details 프리팹 창(`PrefabEditorPanel`)은 메인 씬이 아니라 미리보기 씬에 프리팹을 스폰한다. 표를 활성 씬의 id 로만 읽으면 그 인스턴스를 찾지 못해 중첩 격리가 깨진다.
+ */
+SW_TEST_CASE( EditorWorkspaceTest, PrefabPathOfAPreviewSceneObjectLivesInThePreviewScene )
+{
+    SceneManager sceneManager;
+    Scene*       pMain = sceneManager.createEmptyActiveScene( "Main" );
+    SW_ASSERT_NOT_NULL( pMain );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    const ScenePreviewPolicy  policy{};
+    Scene*                    pPreview = sceneManager.createPreviewScene( "PrefabWindow", policy );
+    SW_ASSERT_NOT_NULL( pPreview );
+
+    GameObject* pInMain    = pMain->getObjectManager()->createGameObject( hashed_string( "InMain" ) );
+    GameObject* pInPreview = pPreview->getObjectManager()->createGameObject( hashed_string( "InPreview" ) );
+    SW_ASSERT_NOT_NULL( pInMain );
+    SW_ASSERT_NOT_NULL( pInPreview );
+    pMain->getObjectManager()->mergePendingAdds();
+    pPreview->getObjectManager()->mergePendingAdds();
+
+    EditorSelection editorSelection;
+    EditorWorkspace workspace{ &editorSelection };
+    workspace.setPlacedPrefabPath( *pInPreview, "game/prefabs/crate.prefab.xml" );
+    SW_EXPECT_TRUE( pPreview->getEntityPrefabPath( pInPreview->getObjectID() ) == "game/prefabs/crate.prefab.xml" );
+    SW_EXPECT_TRUE( workspace.findPrefabPath( pInPreview ) == "game/prefabs/crate.prefab.xml" );
+    SW_EXPECT_TRUE( workspace.findPrefabPath( pInMain ).empty() );
+    SW_EXPECT_TRUE( pMain->getEntityPrefabPath( pInPreview->getObjectID() ).empty() ); // 활성 씬의 표에는 들어가지 않는다
 }
 
 /**
@@ -70,13 +104,13 @@ SW_TEST_CASE( EditorWorkspaceTest, PrefabPathCoversPlacedInstancesAndNestedParts
 
     EditorSelection editorSelection;
     EditorWorkspace workspace{ &editorSelection };
-    workspace.setPlacedPrefabPath( pPost->getObjectID(), "game/prefabs/post.prefab.xml" );
+    workspace.setPlacedPrefabPath( *pPost, "game/prefabs/post.prefab.xml" );
     objects.getSubsystem<PrefabInstanceRegistry>().registerNestedPart( pLamp->getObjectID(), pPost->getObjectID(), "game/prefabs/lamp.prefab.xml", "0" );
 
     SW_EXPECT_TRUE( workspace.findPrefabPath( pPost ) == "game/prefabs/post.prefab.xml" );
     SW_EXPECT_TRUE( workspace.findPrefabPath( pLamp ) == "game/prefabs/lamp.prefab.xml" ); // 씬 컴포넌트가 없는 부품 — 바깥 인스턴스가 살아 있으면 부품이다
     SW_EXPECT_TRUE( workspace.isNestedPrefabPart( pLamp ) );
-    SW_EXPECT_TRUE( workspace.getPlacedPrefabPath( pLamp->getObjectID() ).empty() );
+    SW_EXPECT_TRUE( workspace.getPlacedPrefabPath( *pLamp ).empty() );
     SW_EXPECT_TRUE( workspace.findPrefabPath( pLone ).empty() );
     SW_EXPECT_FALSE( workspace.isNestedPrefabPart( pPost ) );
 

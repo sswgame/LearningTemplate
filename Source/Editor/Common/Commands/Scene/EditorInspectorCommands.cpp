@@ -154,14 +154,14 @@ namespace sw::editor
         {
             pTarget = findOuterInstance( pTarget );
         }
-        if ( pTarget == nullptr || workspace.getPlacedPrefabPath( pTarget->getObjectID() ).empty() )
+        if ( pTarget == nullptr || workspace.getPlacedPrefabPath( *pTarget ).empty() )
         {
             SW_LOG_WARNING( "'%#' has no placed prefab instance to unlink", pObj->getName().c_str() );
             return;
         }
         if ( pTarget != pObj )
             SW_LOG_INFO( "'%#' is a nested prefab part - its outermost instance '%#' is unpacked one level", pObj->getName().c_str(), pTarget->getName().c_str() );
-        workspace.setPlacedPrefabPath( pTarget->getObjectID(), "" );
+        workspace.setPlacedPrefabPath( *pTarget, "" );
         workspace.markSceneDirty();
     }
 
@@ -213,11 +213,11 @@ namespace sw::editor
             {
                 if ( pChild == nullptr || pChild->isPendingDestroy() )
                     continue;
-                const string childPrefab{ workspace.getPlacedPrefabPath( pChild->getObjectID() ) };
+                const string childPrefab{ workspace.getPlacedPrefabPath( *pChild ) };
                 if ( childPrefab.empty() )
                     continue;                                                                                // 프리팹 인스턴스가 아니다 — 프리팹 본문에 들지 않는다
                 registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab, {} ); // 노드는 프리팹을 쓸 때 생긴다 — 키는 다음 로드에서 얻는다
-                workspace.setPlacedPrefabPath( pChild->getObjectID(), "" );
+                workspace.setPlacedPrefabPath( *pChild, "" );
                 listPending.push_back( pChild );
                 ++adoptedCount;
             }

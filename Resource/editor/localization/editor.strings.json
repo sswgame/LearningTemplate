@@ -419,27 +419,21 @@
             ]
         },
         "EdCommon.NotifyPrefabIsolated": {
-            "source": "Isolated the prefab in the current scene",
+            "source": "Opened the prefab in the Prefab Window",
             "origins": [
-                "Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp"
+                "Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp"
             ]
         },
         "EdCommon.NotifyPrefabIsolationExited": {
             "source": "Exited prefab isolation",
             "origins": [
-                "Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp"
-            ]
-        },
-        "EdCommon.NotifyPrefabSaveFirst": {
-            "source": "Save the scene before opening prefab isolation",
-            "origins": [
-                "Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp"
+                "Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp"
             ]
         },
         "EdCommon.NotifyPrefabTitle": {
             "source": "Prefab",
             "origins": [
-                "Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp"
+                "Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp"
             ]
         },
         "EdCommon.NotifyPresetApplyFailed": {
