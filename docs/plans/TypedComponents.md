@@ -27,7 +27,7 @@
 
 ## 남은 확인
 
-- **인스펙터 선택기 화면 확인**(`gpu-verifier`): 콤보 · `(none)` · 되돌리기 · Paste Value 비활성. 빈틈 둘(`set<TComponentHandle<T>>`, `FUNCTION` 인자)은 후보 `TypedHandleInspectorGaps`([Candidates-editor](Candidates-editor.md))입니다.
+- **인스펙터 선택기 화면 확인**: 시험대 컴포넌트 `TypedHandleProbeComponent`(Empty 게임)로 시나리오 `editor.inspectorhandle`(DX12)이 콤보 · `(none)` · 되돌리기 · Paste Value 비활성을 눈으로 확인했다(2026-10-20). 이 확인이 선택기가 고른 값을 쓰지 못하는 결함을 찾았다(`formatPropertyText` 에 값 주소를 넘겨 오프셋이 한 번 더 더해짐) — 수정과 함께 통과한다. 남은 것: 다른 세 백엔드 화면. 빈틈 둘(`set<TComponentHandle<T>>`, `FUNCTION` 인자)은 후보 `TypedHandleInspectorGaps`([Candidates-editor](Candidates-editor.md))입니다.
 - **앱 측정 넷**(8.4): `tickCostChurn` 전후(7-c 전 바이너리 필요), 비동기 씬 로드 중 조회, 큐브 20,000 개 `GT.Frame`, 개발 빌드 `resolveComponent<T>` 확인 비용(`BenchScene.cpp:1341`), 실제 8게임의 버킷 수 K.
 - 확인함(2026-10-20): 비동기 씬 로드 워커는 자기 전용 새 씬(`SceneManager.cpp:298`)의 저장소에만 넣고, 게임 스레드가 `updateTransitions` 에서 슬롯 뮤텍스로 꺼낸 뒤 활성화하므로 `_listComponent` 순회와 겹치지 않는다.
 - **미확인**: `destroyComponentInstance` 의 배타 잠금을 저장소 `_mutex` 를 쥔 채 부르는 경로가 없는지(Debug 단언이 드러냄). `ComponentHandle` 바이너리 형태. 7-b(다중 상속 금지)가 버킷의 `static_cast` 전제로 병합됐는지.
