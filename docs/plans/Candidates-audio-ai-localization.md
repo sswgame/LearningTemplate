@@ -12,7 +12,7 @@
 왜 필요한가: 오디오 엔진(`Source/Engine/Audio`)은 출력이 스테레오 · 리눅스 Null 이고 공간 음향 · 절차 소리 그래프가 없다.
 남은 것:
 - 에디터 비용 측정: 이벤트 창(`AudioEventBrowserPanel`)의 게시 상태가 블록마다 인스턴스 × 보이스를 훑는 비용.
-- 출력: HRTF(바이노럴), 5.1/7.1(지금 출력은 스테레오), 리눅스 출력 백엔드(지금 Null).
+- 출력: HRTF(바이노럴), 리눅스 출력 백엔드(지금 Null). 5.1/7.1 은 계획 [AudioChannelLayout](AudioChannelLayout.md) 로 올렸고, 이 둘은 그 위에 얹는다.
 - 회절.
 - 컨볼루션 리버브, 그래뉼러 · 절차 소리 그래프(MetaSounds 급).
 
