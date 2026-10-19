@@ -278,7 +278,7 @@
             "sourceHash": "51edd313f7fcc502"
         },
         "EdCommon.NotifyPrefabIsolated": {
-            "text": "현재 씬에서 프리팹을 격리했습니다",
+            "text": "프리팹 창에서 프리팹을 열었습니다",
             "sourceHash": "c9674114fd5c67ca"
         },
         "EdCommon.NotifyPrefabIsolationExited": {
