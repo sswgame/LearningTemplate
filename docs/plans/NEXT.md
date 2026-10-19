@@ -16,31 +16,24 @@
 
 ## 1. 지금 상태 (2026-10-20)
 
-- **작업자 브랜치 넷이 남아 있다(병합 안 함, `.claude/worktrees/agent-*`).** 하니스의 `isolation: worktree` 로 만들어 `Tools/vcpkg` · `Tools/LLVM` 이 비어 있고, 작업자가 vcpkg 를 30분 넘게 처음부터 설치해 세 명을 중단시켰다. **작업자는 `py -3 -m Scripts worktree-make <이름> --base main` 으로 만든 워크트리에서만 돌린다.** 아래 브랜치의 커밋 · 변경은 새 워크트리로 옮겨 이어 간다.
-  - `worktree-agent-a7aa1e7675ea7ab2b`(커밋 `035f8cb98`): RealElapsedTime — `io.DeltaTime` 을 엔진 경과로 맞춰 패널 다섯 곳을 한 곳에서 푼다. **빌드 · 테스트 안 함.** 남은 일: `Candidates-engine.md` RealElapsedTime 절과 `Automation/README.md:30` 정리.
-  - `worktree-agent-a313581f5dbaafb7a`(커밋 `3daf83ecf` "작업 중" + 변경 2개): EditorMultiWorld 6절 (1) 프리팹 창. 빌드 안 함.
-  - `worktree-agent-aec0f4ff3753fc47c`(커밋 없음, 변경 6개): Vfx V0 → V3. 코드를 쓰던 중에 멈춤.
-  - `worktree-agent-a0979596d02674a46`(커밋 `189e0343e`): GpuVerification V2 절반 — 지는 RHI 케이스를 `isBackendUnderTest` 로 풂. **컴파일 확인 안 함.** `continue-on-error` 해제는 못 했다(Linux `gl` 원인 모름, 연속 세 번 초록 필요).
-- 계획 문서를 새로 올렸다: [AsyncResourceLoading](AsyncResourceLoading.md)(0/6, 첫 단위 A1 조사), [AudioChannelLayout](AudioChannelLayout.md)(0/5, U1 이 먼저. 결정 다섯은 문서 2절에 있다).
-- 확인함: 비동기 씬 로드 워커는 활성 씬의 `_listComponent` 와 겹치지 않는다. 인스펙터 4-b 는 이미 끝났다(`7ce9eafe2`). SerializerSilentSkips 의 범위 검사와 한 번만 경고는 이미 풀렸다. NetSettingsRemaining 은 설정 데이터 형식을 새로 정해야 해서 DataDriven 과 함께 다룬다.
-- 후보 아이디어: GPU 셰이더 쪽 ASSERT · 로그(오류 버퍼에 원자적으로 기록해 CPU 가 읽음, Shipping 에서 제거). 셰이더 재빌드가 들어 `AsyncResourceLoading` B1 과 함께 한다. 아직 후보 절로 올리지 않았다.
-- main 은 origin 보다 앞서 있다(**push 안 함**, 문서 커밋 몇 개). 앞서 push 한 `1a9dc0537` 까지는 `full-build` 증거가 있다.
-- 앞서 병합한 것: 야간 Load 대응(`Scripts/qa/Load.py`), GimmickCircuitState 검증과 측정, PairedAnimation P0 ~ P2 검증과 상호작용 시작 · 에셋 캐시 · 세트 고르기.
-- 야간 `Load (Linux | Release, nightly)` 근본 원인은 모른다. 다음 야간 실행의 주석(봇 종료 코드와 오류 줄)으로 읽는다. 다른 `Scripts/qa` 스크립트의 자식 산출물 읽기도 같은 모양인지 확인하지 않았다.
-- GpuVerification V2(보고 전용 해제)는 `swrender` 단계가 실제로는 실패라 못 했다. 먼저 `RHIDeviceTest.DeviceCreationAllBackends`(Linux) · `BackendSweepVisitsEveryBackendThatStandsUp`(Windows)를 고치거나 의도한 로그를 `SW_TEST_DEFENSIVE_SCOPE` 로 감싼다.
-- GPU 나 독점 측정이 필요해 못 한 것: TypedComponents 인스펙터 선택기 화면 확인과 앱 측정 넷(8.4), GimmickCircuitState 2-d 화면 확인, IncrementalCook K0 측정.
-- PairedAnimation 남은 것: P3(애니메이터 시각 지정 훅이 선행), 시나리오 테스트(Shooter3D 활 · 화살 리소스 없음), M3 에디터. 재생 속도 소유자를 `SkeletalAnimatorComponent` 에 두는 구조 개선 후보.
-- ReflectionFormats 는 진행 12/12 인데 상태가 구현중이다. 끝으로 바꿀지 사용자에게 확인한다.
-- 측정 후보: 게임 스레드의 직렬 구간(`StructuralChangeBuffer::drain`, 프레임 시스템, 그룹 경계)을 Release 로 재서 더 병렬화할 만한지 본다. 컴포넌트 틱 자체는 이미 포크-조인 병렬이다. 루트의 `Multithreaded_Game_Simulation_Architecture.md` 는 추적되지 않는 초안이며, 이미 있는 것(태스크 의존성 · 작업 훔치기 · 병렬 for · 명령 버퍼)을 처음부터 쌓는 순서라 그대로 계획으로 올리지 않는다.
-- 후보 아이디어: 메시 컴포넌트가 머티리얼 슬롯을 하나만 가져 서브메시별 염색이 안 된다(`CharacterAppearanceComponent` 는 부품을 별도 메시로 나눠 처리).
-- 근본 원인 후보(미해결): `DiskPathVsResourceId`.
+- **진행 중인 작업자 둘(`worktree-make` 워크트리, 병합 안 함)**: `D:/w/audiolayout`(`wt/audiolayout`, AudioChannelLayout U1) · `D:/w/groundcarry`(`wt/groundcarry`, 캐릭터가 움직이는 바닥에 실리게 한다 — `moveCharacter` 안에서 바닥 속도(선속도 · 회전)를 더하고 딛고 선 바디를 상태에 노출, 수평 · 수직 상승/하강 · 대각선 테스트). 보고가 오면 확인하고 `git merge --no-ff` 로 병합한다. README 진행 표 충돌은 `status-board --write README.md` 로 다시 만든다.
+- **이번 세션에 main 으로 병합함(push 안 함)**: GpuVerification V2 절반(`isBackendUnderTest`, Linux `gl` 원인은 모름, `continue-on-error` 그대로) · RealElapsedTime · EditorMultiWorld 프리팹 창(화면 미확인) · Vfx V0 · V1(V2 렌더 경로와 V3 는 GPU · 셰이더 굽기가 필요해 못 했다) · GimmickCircuitState 2-d 통과(5/5) · AsyncResourceLoading A1 조사 · 문서 정리(측정 조건 형식 등) · `PairedAnimationDef` 캐시가 늘려 CI 를 깨던 테스트 수정. `worktree-agent-*` 옛 브랜치 넷은 워크트리를 지웠고 브랜치만 남았다(내용은 모두 옮겼으니 `git branch -D` 해도 된다).
+- **CI**: main CI 실행 `39295170988` 의 실패는 모두 `AssetCacheRegistryTest.BuiltInCachesAreReachableThroughTheRegistry` 하나였고 고쳤다(`4548c65d2`). push 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
+- **vcpkg**: 워크트리는 메인의 `Tools/vcpkg` · `build/vcpkg_installed` · `build/vcpkg_cache` 를 정션으로 공유하고 다시 설치하지 않는다(사용자 지시, 분리하지 않는다). 후보 `WorktreeVcpkgInstalledDir` 는 지웠다. 워크트리를 지울 때는 정션을 먼저 `rmdir` 로 끊는다. `git worktree remove` 는 긴 경로에서 실패할 수 있다.
+- **새 후보**: `UiTooltipAndCursor`(Candidates-ui), `ReflectionMaxCountConstant`(Candidates-engine). 런타임 UI 는 호버 경로 · `:hover` 스타일은 있고 툴팁 · 커서 모양 · 월드 위젯 입력(`WorldWidgetInput`)은 없다.
+- 새 계획 문서: [AsyncResourceLoading](AsyncResourceLoading.md)(1/6, A2 착수 전 `design-reviewer` 검토, 텍스처 GPU 업로드의 워커 안전성은 A3 앞에 확인), [AudioChannelLayout](AudioChannelLayout.md)(U1 진행 중).
+- 사용자 결정 대기: ReflectionFormats 는 진행 12/12 인데 상태가 구현중이다. 끝으로 바꿀지 확인한다. NetSettingsRemaining 은 설정 데이터 형식을 새로 정해야 해서 DataDriven 과 함께 다룬다.
+- 앱 실행 후 스스로 종료되지 않는 문제: `-gv_screenshot` 으로 띄운 `App.exe` 가 캡처 뒤에도 안 꺼져 타임아웃(종료 코드 124)으로 끊긴다. 고칠 후보.
+- GPU 나 독점 측정이 필요해 못 한 것: TypedComponents 인스펙터 선택기 화면 확인과 앱 측정 넷(8.4), IncrementalCook K0 측정, 프리팹 창 화면, Vfx V2 · V3.
+- PairedAnimation 남은 것: P3(애니메이터 시각 지정 훅이 선행), 시나리오 테스트, M3 에디터. 재생 속도 소유자를 `SkeletalAnimatorComponent` 에 두는 구조 개선 후보.
+- 야간 `Load (Linux | Release, nightly)` 근본 원인은 모른다(다음 야간 주석으로 읽는다). 측정 후보: 게임 스레드의 직렬 구간 Release 측정. 근본 원인 후보(미해결): `DiskPathVsResourceId`.
 
 ## 2. 첫 일
 
-1. 남은 작업자 브랜치 넷을 `worktree-make` 워크트리로 옮겨 빌드 · 테스트로 확인하고 병합한다(1절). 워크트리는 메인의 vcpkg 폴더를 정션으로 공유하고 다시 설치하지 않는다(분리하지 않는다).
-2. `AudioChannelLayout` U1(동작 불변의 평면 블록 형식) 또는 `AsyncResourceLoading` A1(조사)을 착수한다.
-3. 문서 커밋을 push 하기 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
-4. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터. `[병렬 가능]` 은 파일 소유가 겹치지 않으면 병렬로 띄운다.
+1. 작업자 둘(audiolayout · groundcarry) 보고를 확인해 병합하고 `worktree-remove` 로 지운다.
+2. push 하기 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다. main 은 origin 보다 앞서 있다.
+3. 병렬로 띄울 묶음(파일 소유가 겹치지 않으면): Roadmap 의 `[병렬 가능]` — Vfx V2 · V3 는 GPU 가 있어야 하니 `gpu-verifier` 와 함께, 카메라 디렉터(CameraRendererIntegration), 애니메이션 묶음(PairedAnimation · AnimationGraphLayers), 새로 쓴 정리(SerializerSilentSkips 등), AsyncResourceLoading A2(설계 검토 뒤). 동시 빌드는 최대 2.
+4. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터.
 
 ## 3. 새 세션 시작 절차
 
