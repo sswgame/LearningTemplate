@@ -14,7 +14,6 @@
 2. **구현 대기 설계**(구현 전에 `design-reviewer` 검토 결과를 반영).
    - `GimmickCircuit` 단계 2 — [GimmickCircuitState](GimmickCircuitState.md). [병렬 가능]
    - 서버 버스 A 전환 — [ServerBusFormat](ServerBusFormat.md) 단계 0~6. [단독: 메시지 형식을 바꿔 서버 · 클라이언트 모듈이 다시 빌드됨]
-   - 인스펙터 4-b — [ReflectionFormats](ReflectionFormats.md). [병렬 가능]
 3. **새 시스템**:
    - Vfx V0 → V3 먼저 — [Vfx](Vfx.md). [병렬 가능]
    - 클러스터드 라이팅 S2 → S5 — [ClusteredLighting](ClusteredLighting.md). [단독: 셰이더 재베이크]
