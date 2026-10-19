@@ -337,7 +337,8 @@ def runLoadBotDriver(declaration: LoadDeclaration, profile: HardwareProfile, tre
         measurement.command = [str(botPath), *listArgument]
         result = runApp(botPath, listArgument, cwd=tree.binDir, timeoutSeconds=declaration.durationSeconds * 3.0 + 120.0,
                         sampleIntervalSeconds=1.0, limits=profile.makeLimits())
-        report = readJsonInternal(reportPath)
+        # 봇이 보고서를 남기지 못한 것은 이 판의 실패다(아래에서 기록) — 필수 표용 readJsonInternal 은 없는 파일에서 멈춰 결과 JSON 이 통째로 사라진다.
+        report = json.loads(reportPath.read_text(encoding="utf-8")) if reportPath.is_file() else None
     measurement.listLine = result.listLine
     if not report:
         measurement.listFailure.append(f"OnlineLoadBot left no report (exit {result.exitCode}): {result.listErrorLine[:3]}")
