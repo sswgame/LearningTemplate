@@ -145,6 +145,7 @@ def checkRoadmap(repositoryRoot: Path) -> list[str]:
     for entry in parseRoadmap(text, kRoadmapRelPath):
         if entry.stem is not None and entry.stem not in setStem:
             listViolation.append(f"{kRoadmapRelPath}:{entry.lineNumber}: 항목의 문서 `{entry.stem}.md` 가 {kPlansRelDir} 에 계획 문서로 없습니다")
+    listViolation += checkFinishedPlanLinksInternal(text, readPlans(repositoryRoot))
     mapAnchorCache: dict[Path, set[str]] = {}
     bFence = False
     for lineNumber, line in enumerate(text.splitlines(), start=1):
@@ -165,6 +166,22 @@ def checkRoadmap(repositoryRoot: Path) -> list[str]:
                     mapAnchorCache[path] = collectAnchors(path.read_text(encoding="utf-8"))
                 if anchor.lower() not in mapAnchorCache[path]:
                     listViolation.append(f"{where}: 링크 `{target}` 의 제목(앵커)이 {path.name} 에 없습니다")
+    return listViolation
+
+
+def checkFinishedPlanLinksInternal(text: str, listPlan: list[PlanDoc]) -> list[str]:
+    """`## 지금 순서` 안의 모든 줄에서 머리 줄 상태가 `끝` 인 계획 문서를 가리키는 링크를 위반으로 모은다(끝난 일을 로드맵에 남기면 같은 일이 다시 배정된다).
+    전부 지워진 후보 절은 아래 앵커 검사가 잡는다."""
+    setFinished = {plan.stem for plan in listPlan if plan.status == "끝"}
+    listViolation: list[str] = []
+    bInSection = False
+    for lineNumber, line in enumerate(text.splitlines(), start=1):
+        if line.startswith("## "):
+            bInSection = line.strip() == _kRoadmapHeading
+        elif bInSection:
+            for stem in dict.fromkeys(_kPlanLinkRe.findall(line)):
+                if stem in setFinished:
+                    listViolation.append(f"{kRoadmapRelPath}:{lineNumber}: 문서 `{stem}.md` 의 상태가 `끝` 입니다 — 끝난 단위는 로드맵에서 지웁니다")
     return listViolation
 
 
