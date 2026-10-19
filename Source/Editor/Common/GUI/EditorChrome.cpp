@@ -61,20 +61,21 @@ namespace sw::editor
             }
 
             /**
-             * @brief 떠 있는 창의 제목 표시줄 X 단추를 시나리오가 누를 수 있게 `panel.close.<제목>` 으로 남긴다(ImGui 가 단추를 그린 자리와 같은 식으로 구한다).
-             * @details 도킹된 창은 탭의 X 라 자리가 다르므로 남기지 않는다 — 그런 창의 X 를 누르는 단계는 이름표가 없어 실패로 드러난다.
+             * @brief 창의 X 단추를 시나리오가 누를 수 있게 `panel.close.<제목>` 으로 남긴다(ImGui 가 단추를 그린 자리와 같은 식으로 구한다).
+             * @details 떠 있는 창은 제목 표시줄 오른쪽 끝, 도킹된 창은 보이는 탭의 오른쪽 끝이다. 안 보이는 탭과 접힌 창은 남기지 않는다.
              */
             static void noteCloseButton( const utf8* pTitle, const bool* pOpen )
             {
                 const ImGuiWindow* pWindow   = ImGui::GetCurrentWindow();
-                const bool         bNoButton = pOpen == nullptr || pWindow->DockIsActive || pWindow->Collapsed;
+                const bool         bDocked   = pWindow->DockIsActive;
+                const bool         bNoButton = pOpen == nullptr || pWindow->Collapsed || ( bDocked && pWindow->DockTabIsVisible == false );
                 if ( bNoButton || EditorSelfTestMarks::isEnabled() == false )
                     return;
-                const ImRect  title   = pWindow->TitleBarRect();
-                const float32 padding = ImGui::GetStyle().FramePadding.x;
+                const ImVec2  padding = ImGui::GetStyle().FramePadding;
                 const float32 size    = ImGui::GetFontSize();
-                const float32 left    = title.Max.x - padding - size;
-                const float32 top     = title.Min.y + ImGui::GetStyle().FramePadding.y;
+                const ImRect  strip   = bDocked ? pWindow->DC.DockTabItemRect : pWindow->TitleBarRect();
+                const float32 left    = bDocked ? ImMax( strip.Min.x, strip.Max.x - padding.x * 2.0f - size ) : strip.Max.x - padding.x - size;
+                const float32 top     = strip.Min.y + padding.y;
                 EditorSelfTestMarks::noteRect( ( string{ "panel.close." } + pTitle ).c_str(), float2{ left, top }, float2{ left + size, top + size } );
             }
 
