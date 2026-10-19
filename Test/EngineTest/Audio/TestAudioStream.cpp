@@ -113,6 +113,20 @@ namespace
             }
             return maxDifference;
         }
+
+        /** @brief 두 평면 블록의 최대 차이입니다(모든 채널, 유효 프레임). */
+        static float32 computeMaxDifference( const sw::AudioBlockView& left, const sw::AudioBlockView& right )
+        {
+            float32 maxDifference = 0.0f;
+            for ( uint32 channelIndex = 0; channelIndex < left._channelCount; ++channelIndex )
+            {
+                for ( uint32 frameIndex = 0; frameIndex < left._frameCount; ++frameIndex )
+                {
+                    maxDifference = sw::MathUtil::max( maxDifference, sw::MathUtil::abs( left.getChannel( channelIndex )[frameIndex] - right.getChannel( channelIndex )[frameIndex] ) );
+                }
+            }
+            return maxDifference;
+        }
     };
 } // namespace
 
@@ -187,16 +201,20 @@ SW_TEST_CASE( AudioStreamTest, StreamedVoiceMatchesMemoryVoiceAcrossTheLoopSeam 
         pVoice->setPlaybackRate( rate );
     }
 
-    sw::vector<float32> memoryBlock( static_cast<size_t>( sw::audio::kBlockFrameCount ) * 2, 0.0f );
-    sw::vector<float32> streamBlock( memoryBlock.size(), 0.0f );
-    float32             maxDifference = 0.0f;
-    const uint32        blockCount    = 3 * sw::audio::kSampleRate / sw::audio::kBlockFrameCount + 400; // 클립 3 초를 넘어 한 바퀴 돈다
+    sw::AudioBlockBuffer memoryBuffer;
+    sw::AudioBlockBuffer streamBuffer;
+    memoryBuffer.allocate( sw::AudioChannelLayout::Stereo );
+    streamBuffer.allocate( sw::AudioChannelLayout::Stereo );
+    const sw::AudioBlockView memoryBlock   = memoryBuffer.makeView( sw::audio::kBlockFrameCount );
+    const sw::AudioBlockView streamBlock   = streamBuffer.makeView( sw::audio::kBlockFrameCount );
+    float32                  maxDifference = 0.0f;
+    const uint32             blockCount    = 3 * sw::audio::kSampleRate / sw::audio::kBlockFrameCount + 400; // 클립 3 초를 넘어 한 바퀴 돈다
     for ( uint32 blockIndex = 0; blockIndex < blockCount; ++blockIndex )
     {
-        memoryBlock.assign( memoryBlock.size(), 0.0f );
-        streamBlock.assign( streamBlock.size(), 0.0f );
-        memoryVoice.mix( memoryBlock.data(), sw::audio::kBlockFrameCount, nullptr );
-        streamVoice.mix( streamBlock.data(), sw::audio::kBlockFrameCount, nullptr );
+        memoryBuffer.clear( sw::audio::kBlockFrameCount );
+        streamBuffer.clear( sw::audio::kBlockFrameCount );
+        memoryVoice.mix( memoryBlock, sw::AudioBlockView{} );
+        streamVoice.mix( streamBlock, sw::AudioBlockView{} );
         maxDifference = sw::MathUtil::max( maxDifference, AudioStreamTestInternal::computeMaxDifference( memoryBlock, streamBlock ) );
     }
     SW_EXPECT_TRUE( maxDifference < 1e-6f );
@@ -264,7 +282,7 @@ SW_TEST_CASE( AudioStreamTest, EngineRendersStreamedClipLikeMemoryClip )
     for ( uint32 caseIndex = 0; caseIndex < 2; ++caseIndex )
     {
         sw::AudioEngine engine;
-        SW_ASSERT_TRUE( engine.initialize( sw::AudioMixerDesc::makeDefault() ) );
+        SW_ASSERT_TRUE( engine.initialize( sw::AudioMixerDesc::makeDefault(), sw::AudioChannelLayout::Stereo ) );
         engine.getClipStore().addClip( sw::hashed_string( "test/long" ), caseIndex == 0 ? pMemory : pStream );
         sw::AudioClipPlayParams params;
         params._bLoop          = true;

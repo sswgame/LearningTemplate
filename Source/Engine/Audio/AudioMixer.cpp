@@ -16,19 +16,33 @@ namespace sw
         , _listOrder{}
         , _masterIndex{ 0 }
         , _blockFrameCount{ 0 }
+        , _layout{ AudioChannelLayout::Stereo }
     {
     }
 
     AudioMixer::~AudioMixer() = default;
 
-    bool AudioMixer::initialize( const AudioMixerDesc& desc )
+    bool AudioMixer::initialize( const AudioMixerDesc& desc, AudioChannelLayout layout )
     {
         _listBusState.clear();
         _listOrder.clear();
         if ( desc.validate( "mixer" ) == false || desc.makeProcessingOrder( _listOrder ) == false )
             return false;
 
-        _desc = desc;
+        // 이펙트는 스테레오만 처리한다. 맞지 않는 조합은 조용히 건너뛰지 않고 여기서 멈춘다(채널별 이펙트는 U3).
+        const bool bStereo = AudioChannelLayoutUtil::getChannelCount( layout ) == audio::kStereoChannelCount;
+        for ( const AudioBusDesc& busDesc : desc._listBus )
+        {
+            if ( bStereo == false && busDesc._listEffect.empty() == false )
+            {
+                SW_LOG_ERROR( "Bus '%#' has effects, which only process stereo, but the layout has %# channels", busDesc._name.c_str(),
+                              AudioChannelLayoutUtil::getChannelCount( layout ) );
+                return false;
+            }
+        }
+
+        _desc   = desc;
+        _layout = layout;
         _listBusState.resize( desc._listBus.size() );
         for ( size_t busIndex = 0; busIndex < desc._listBus.size(); ++busIndex )
         {
@@ -39,7 +53,7 @@ namespace sw
             bus._volumeDb               = busDesc._volumeDb;
             bus._bMuted                 = busDesc._bMuted ? SW_TRUE : SW_FALSE;
             bus._bSolo                  = busDesc._bSolo ? SW_TRUE : SW_FALSE;
-            bus._listInput.assign( static_cast<size_t>( audio::kBlockFrameCount ) * audio::kChannelCount, 0.0f );
+            bus._input.allocate( layout );
             for ( const AudioSendDesc& sendDesc : busDesc._listSend )
             {
                 Send send;
@@ -207,28 +221,29 @@ namespace sw
 
     void AudioMixer::beginBlock( uint32 frameCount )
     {
-        _blockFrameCount         = MathUtil::min( frameCount, audio::kBlockFrameCount );
-        const size_t sampleCount = static_cast<size_t>( _blockFrameCount ) * audio::kChannelCount;
+        _blockFrameCount = MathUtil::min( frameCount, audio::kBlockFrameCount );
         for ( Bus& bus : _listBusState )
         {
-            Memory::set( bus._listInput.data(), 0, sampleCount * sizeof( float32 ) );
+            bus._input.clear( _blockFrameCount );
         }
     }
 
-    void AudioMixer::process( float32* pOutput, uint32 frameCount )
+    void AudioMixer::process( const AudioBlockView& output )
     {
-        const uint32  blockFrames = MathUtil::min( frameCount, _blockFrameCount );
-        const float32 invFrames   = blockFrames > 0 ? 1.0f / static_cast<float32>( blockFrames ) : 0.0f;
+        SW_ASSERT( output._channelCount == AudioChannelLayoutUtil::getChannelCount( _layout ) );
+        const uint32  blockFrames  = MathUtil::min( output._frameCount, _blockFrameCount );
+        const uint32  channelCount = AudioChannelLayoutUtil::getChannelCount( _layout );
+        const float32 invFrames    = blockFrames > 0 ? 1.0f / static_cast<float32>( blockFrames ) : 0.0f;
         updateDucking( blockFrames );
         for ( const uint32 busIndex : _listOrder )
         {
-            Bus&     bus    = _listBusState[busIndex];
-            float32* pInput = bus._listInput.data();
+            Bus&                 bus   = _listBusState[busIndex];
+            const AudioBlockView input = bus._input.makeView( blockFrames );
 
             // 인서트 이펙트는 센드와 페이더 앞에서 처리한다(채널 스트립과 같은 위치).
             for ( const unique_ptr<IAudioEffect>& pEffect : bus._listEffect )
             {
-                pEffect->process( pInput, blockFrames );
+                pEffect->process( input );
             }
 
             // 프리 페이더 센드는 페이더 전의 신호를 보낸다.
@@ -236,15 +251,19 @@ namespace sw
             {
                 if ( send._bPreFader == false )
                     continue;
-                const float32 targetGain = AudioMath::dbToLinear( send._levelDb );
-                const float32 step       = ( targetGain - send._gain ) * invFrames;
-                float32*      pTarget    = _listBusState[send._targetIndex]._listInput.data();
-                float32       gain       = send._gain;
-                for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
+                const float32        targetGain = AudioMath::dbToLinear( send._levelDb );
+                const float32        step       = ( targetGain - send._gain ) * invFrames;
+                const AudioBlockView target     = _listBusState[send._targetIndex]._input.makeView( blockFrames );
+                for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
                 {
-                    gain += step;
-                    pTarget[frameIndex * 2] += pInput[frameIndex * 2] * gain;
-                    pTarget[frameIndex * 2 + 1] += pInput[frameIndex * 2 + 1] * gain;
+                    const float32* pSource = input.getChannel( channelIndex );
+                    float32*       pTarget = target.getChannel( channelIndex );
+                    float32        gain    = send._gain;
+                    for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
+                    {
+                        gain += step;
+                        pTarget[frameIndex] += pSource[frameIndex] * gain;
+                    }
                 }
                 send._gain = targetGain;
             }
@@ -253,14 +272,17 @@ namespace sw
             const float32 targetGain = computeBusGain( busIndex );
             const float32 startGain  = bus._bFirstBlock == SW_TRUE ? targetGain : bus._gain;
             const float32 gainStep   = ( targetGain - startGain ) * invFrames;
-            float32       gain       = startGain;
             float32       peak       = 0.0f;
-            for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
+            for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
             {
-                gain += gainStep;
-                pInput[frameIndex * 2] *= gain;
-                pInput[frameIndex * 2 + 1] *= gain;
-                peak = MathUtil::max( peak, MathUtil::max( MathUtil::abs( pInput[frameIndex * 2] ), MathUtil::abs( pInput[frameIndex * 2 + 1] ) ) );
+                float32* pChannel = input.getChannel( channelIndex );
+                float32  gain     = startGain;
+                for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
+                {
+                    gain += gainStep;
+                    pChannel[frameIndex] *= gain;
+                    peak = MathUtil::max( peak, MathUtil::abs( pChannel[frameIndex] ) );
+                }
             }
             bus._gain        = targetGain;
             bus._peak        = peak;
@@ -270,30 +292,42 @@ namespace sw
             {
                 if ( send._bPreFader )
                     continue;
-                const float32 sendTarget = AudioMath::dbToLinear( send._levelDb );
-                const float32 step       = ( sendTarget - send._gain ) * invFrames;
-                float32*      pTarget    = _listBusState[send._targetIndex]._listInput.data();
-                float32       sendGain   = send._gain;
-                for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
+                const float32        sendTarget = AudioMath::dbToLinear( send._levelDb );
+                const float32        step       = ( sendTarget - send._gain ) * invFrames;
+                const AudioBlockView target     = _listBusState[send._targetIndex]._input.makeView( blockFrames );
+                for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
                 {
-                    sendGain += step;
-                    pTarget[frameIndex * 2] += pInput[frameIndex * 2] * sendGain;
-                    pTarget[frameIndex * 2 + 1] += pInput[frameIndex * 2 + 1] * sendGain;
+                    const float32* pSource  = input.getChannel( channelIndex );
+                    float32*       pTarget  = target.getChannel( channelIndex );
+                    float32        sendGain = send._gain;
+                    for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
+                    {
+                        sendGain += step;
+                        pTarget[frameIndex] += pSource[frameIndex] * sendGain;
+                    }
                 }
                 send._gain = sendTarget;
             }
 
             if ( bus._parentIndex >= 0 )
             {
-                float32* pParent = _listBusState[static_cast<size_t>( bus._parentIndex )]._listInput.data();
-                for ( uint32 sampleIndex = 0; sampleIndex < blockFrames * 2; ++sampleIndex )
+                const AudioBlockView parent = _listBusState[static_cast<size_t>( bus._parentIndex )]._input.makeView( blockFrames );
+                for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
                 {
-                    pParent[sampleIndex] += pInput[sampleIndex];
+                    const float32* pSource = input.getChannel( channelIndex );
+                    float32*       pParent = parent.getChannel( channelIndex );
+                    for ( uint32 frameIndex = 0; frameIndex < blockFrames; ++frameIndex )
+                    {
+                        pParent[frameIndex] += pSource[frameIndex];
+                    }
                 }
             }
         }
 
-        const float32* pMaster = _listBusState[_masterIndex]._listInput.data();
-        Memory::copy( pOutput, pMaster, static_cast<size_t>( blockFrames ) * audio::kChannelCount * sizeof( float32 ) );
+        const AudioBlockView master = _listBusState[_masterIndex]._input.makeView( blockFrames );
+        for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
+        {
+            Memory::copy( output.getChannel( channelIndex ), master.getChannel( channelIndex ), static_cast<size_t>( blockFrames ) * sizeof( float32 ) );
+        }
     }
 } // namespace sw

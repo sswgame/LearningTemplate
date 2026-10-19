@@ -18,8 +18,10 @@ namespace sw
             {
                 if ( _bStereo )
                 {
-                    outLeft  = _pSample[index * 2] + ( _pSample[next * 2] - _pSample[index * 2] ) * fraction;
-                    outRight = _pSample[index * 2 + 1] + ( _pSample[next * 2 + 1] - _pSample[index * 2 + 1] ) * fraction;
+                    // 클립은 교차 저장이다(스테레오 클립의 프레임 간격).
+                    constexpr uint32 kStride = audio::kStereoChannelCount;
+                    outLeft                  = _pSample[index * kStride] + ( _pSample[next * kStride] - _pSample[index * kStride] ) * fraction;
+                    outRight                 = _pSample[index * kStride + 1] + ( _pSample[next * kStride + 1] - _pSample[index * kStride + 1] ) * fraction;
                 }
                 else
                 {
@@ -189,40 +191,55 @@ namespace sw
             _lowPass._coefficients = AudioBiquadCoefficients::make( AudioBiquadType::LowPass, cutoff, 0.7071f, 0.0f, static_cast<float32>( audio::kSampleRate ) );
     }
 
-    void AudioVoice::mix( float32* pBusInput, uint32 frameCount, float32* pScratch )
+    void AudioVoice::mix( const AudioBlockView& bus, const AudioBlockView& scratch )
     {
         if ( isActive() == false || _bPaused == SW_TRUE )
             return;
-        if ( _lowPassHz >= audio::kFilterOpenHz || pScratch == nullptr )
+        // 보이스는 아직 앞 두 채널(FL FR)에만 더한다. 그 밖의 레이아웃은 엔진이 초기화에서 거절한다(방향 패너는 U2).
+        SW_ASSERT( bus._channelCount == audio::kStereoChannelCount );
+        if ( _lowPassHz >= audio::kFilterOpenHz || scratch.isEmpty() )
         {
-            mixInto( pBusInput, frameCount );
+            mixInto( bus );
             return;
         }
-        const size_t sampleCount = static_cast<size_t>( frameCount ) * 2;
-        Memory::set( pScratch, 0, sampleCount * sizeof( float32 ) );
-        mixInto( pScratch, frameCount );
-        _lowPass.process( pScratch, frameCount );
-        for ( size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
+        AudioBlockView work = scratch;
+        work._channelCount  = bus._channelCount;
+        work._frameCount    = bus._frameCount;
+        for ( uint32 channelIndex = 0; channelIndex < audio::kStereoChannelCount; ++channelIndex )
         {
-            pBusInput[sampleIndex] += pScratch[sampleIndex];
+            Memory::set( work.getChannel( channelIndex ), 0, static_cast<size_t>( work._frameCount ) * sizeof( float32 ) );
+        }
+        mixInto( work );
+        _lowPass.process( work );
+        for ( uint32 channelIndex = 0; channelIndex < audio::kStereoChannelCount; ++channelIndex )
+        {
+            float32*       pTarget = bus.getChannel( channelIndex );
+            const float32* pSource = work.getChannel( channelIndex );
+            for ( uint32 frameIndex = 0; frameIndex < work._frameCount; ++frameIndex )
+            {
+                pTarget[frameIndex] += pSource[frameIndex];
+            }
         }
     }
 
-    void AudioVoice::mixInto( float32* pBusInput, uint32 frameCount )
+    void AudioVoice::mixInto( const AudioBlockView& target )
     {
         if ( _pClip->isStreamed() )
         {
             AudioVoiceStreamSampler sampler{ _stream, _firstFrameLeft, _firstFrameRight, _bHaveFirstFrame };
-            mixLoop( pBusInput, frameCount, sampler );
+            mixLoop( target, sampler );
             return;
         }
-        AudioVoiceMemorySampler sampler{ _pClip->_listSample.data(), _pClip->_channelCount >= 2 };
-        mixLoop( pBusInput, frameCount, sampler );
+        AudioVoiceMemorySampler sampler{ _pClip->_listSample.data(), _pClip->_channelCount >= audio::kStereoChannelCount };
+        mixLoop( target, sampler );
     }
 
     template <typename TSampler>
-    void AudioVoice::mixLoop( float32* pBusInput, uint32 frameCount, TSampler& sampler )
+    void AudioVoice::mixLoop( const AudioBlockView& target, TSampler& sampler )
     {
+        const uint32         frameCount   = target._frameCount;
+        float32*             pTargetLeft  = target.getChannel( 0 );
+        float32*             pTargetRight = target.getChannel( 1 );
         const AudioClipData& clip         = *_pClip;
         const uint32         clipFrames   = clip._frameCount;
         const float32        invFrames    = 1.0f / static_cast<float32>( frameCount );
@@ -259,8 +276,8 @@ namespace sw
             float32       left{ 0.0f };
             float32       right{ 0.0f };
             sampler.sample( index, next, fraction, left, right );
-            pBusInput[frameIndex * 2] += left * gainLeft * fade;
-            pBusInput[frameIndex * 2 + 1] += right * gainRight * fade;
+            pTargetLeft[frameIndex] += left * gainLeft * fade;
+            pTargetRight[frameIndex] += right * gainRight * fade;
 
             position += rate;
             if ( position >= clipFrames64 )

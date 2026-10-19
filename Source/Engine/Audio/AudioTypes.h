@@ -1,8 +1,9 @@
 /**
  * @file AudioTypes.h
  * @brief 오디오 엔진이 함께 쓰는 기본 정의입니다. 출력 형식 상수, 식별자, dB 변환, 결정적 난수를 담습니다.
- * @details 믹서는 **고정 형식** 하나로 동작한다. 48 kHz, 스테레오, float32 교차(interleaved)다. 클립은 읽을 때 float 로 풀고, 재생할 때 피치와 함께
- *          선형 보간으로 리샘플한다. 블록(`kAudioBlockFrameCount`) 단위로 명령, 파라미터, 공간화, 보이스 제한을 갱신하고, 블록 안에서는 샘플마다
+ * @details 믹서의 샘플레이트는 48 kHz 고정, 샘플은 float32, 채널 수는 `AudioChannelLayout` 이 정한다. 블록 안은 채널별 평면(`AudioBlock.h`)이고
+ *          교차(interleaved)는 장치 경계와 클립에만 남는다. 클립은 읽을 때 float 로 풀고, 재생할 때 피치와 함께
+ *          선형 보간으로 리샘플한다. 블록(`kBlockFrameCount`) 단위로 명령, 파라미터, 공간화, 보이스 제한을 갱신하고, 블록 안에서는 샘플마다
  *          게인을 램프한다(지퍼 잡음이 없다).
  */
 #pragma once
@@ -16,10 +17,8 @@ namespace sw
     /** @brief 오디오 엔진의 고정 값입니다. */
     namespace audio
     {
-        /** @brief 믹서 출력 샘플레이트(Hz)입니다. 장치도 이 형식으로 엽니다. */
+        /** @brief 믹서 출력 샘플레이트(Hz)입니다. 장치도 이 샘플레이트로 엽니다. */
         inline constexpr uint32 kSampleRate = 48000;
-        /** @brief 믹서 출력 채널 수입니다(스테레오). */
-        inline constexpr uint32 kChannelCount = 2;
         /** @brief 믹서가 한 번에 처리하는 프레임 수입니다(5.3 ms). 파라미터와 공간화는 블록마다 갱신합니다. */
         inline constexpr uint32 kBlockFrameCount = 256;
         /** @brief 블록 하나의 길이(초)입니다. 이벤트와 음악 페이드가 블록마다 이만큼 진행합니다. */

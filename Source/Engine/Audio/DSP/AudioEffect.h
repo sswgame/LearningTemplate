@@ -11,6 +11,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Audio/AudioBlock.h"
+
 namespace sw
 {
     /** @brief 이펙트 파라미터 하나의 서술입니다. */
@@ -42,7 +44,8 @@ namespace sw
 {
     /**
      * @class IAudioEffect
-     * @brief 스테레오 교차 버퍼를 제자리에서 바꾸는 이펙트입니다. 파라미터는 종류가 서술한 순서의 float 배열입니다.
+     * @brief 스테레오 평면 블록을 제자리에서 바꾸는 이펙트입니다. 파라미터는 종류가 서술한 순서의 float 배열입니다.
+     * @details 스테레오(`audio::kStereoChannelCount` 채널)만 처리합니다. 믹서가 다른 레이아웃에 이펙트가 있는 그래프를 거절합니다.
      * @details 파라미터가 바뀌면 `onParameterChanged` 가 계수를 다시 셉니다(오디오 스레드, 블록 경계).
      */
     class SW_API IAudioEffect
@@ -54,8 +57,8 @@ namespace sw
         IAudioEffect( const IAudioEffect& )            = delete;
         IAudioEffect& operator=( const IAudioEffect& ) = delete;
 
-        /** @brief @p frameCount 프레임(스테레오 교차)을 제자리에서 처리합니다. */
-        virtual void process( float32* pInterleaved, uint32 frameCount ) = 0;
+        /** @brief @p block(스테레오 평면, `_frameCount` 프레임)을 제자리에서 처리합니다. */
+        virtual void process( const AudioBlockView& block ) = 0;
         /** @brief 지연선과 필터 상태를 비웁니다. */
         virtual void reset() = 0;
 

@@ -215,7 +215,8 @@ namespace sw
             {
                 AudioEngine*         _pEngine{ nullptr };
                 IXAudio2SourceVoice* _pVoice{ nullptr };
-                vector<float32>      _listBuffer{}; ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것이다.
+                uint32               _channelCount{ 0 }; ///< 엔진 레이아웃의 채널 수다. 장치로 보내는 교차 버퍼의 프레임 크기다.
+                vector<float32>      _listBuffer{};      ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것이다.
                 uint32               _nextBuffer{ 0 };
                 std::atomic<bool>    _bStopping{ false };
 
@@ -226,10 +227,10 @@ namespace sw
                 {
                     if ( _bStopping.load( std::memory_order_acquire ) || _pVoice == nullptr )
                         return;
-                    float32* pBuffer = _listBuffer.data() + static_cast<size_t>( _nextBuffer ) * kStreamBufferFrameCount * audio::kChannelCount;
+                    float32* pBuffer = _listBuffer.data() + static_cast<size_t>( _nextBuffer ) * kStreamBufferFrameCount * _channelCount;
                     _pEngine->render( pBuffer, kStreamBufferFrameCount );
                     XAUDIO2_BUFFER buffer{};
-                    buffer.AudioBytes = kStreamBufferFrameCount * audio::kChannelCount * sizeof( float32 );
+                    buffer.AudioBytes = kStreamBufferFrameCount * _channelCount * sizeof( float32 );
                     buffer.pAudioData = reinterpret_cast<const BYTE*>( pBuffer );
                     (void)_pVoice->SubmitSourceBuffer( &buffer );
                     _nextBuffer = ( _nextBuffer + 1 ) % kStreamBufferCount;
@@ -322,7 +323,8 @@ namespace sw
             closeOutput();
             return false;
         }
-        hr = _impl->_pXAudio->CreateMasteringVoice( &_impl->_pMasterVoice, audio::kChannelCount, audio::kSampleRate );
+        const uint32 channelCount = AudioChannelLayoutUtil::getChannelCount( getEngine().getChannelLayout() );
+        hr                        = _impl->_pXAudio->CreateMasteringVoice( &_impl->_pMasterVoice, channelCount, audio::kSampleRate );
         if ( FAILED( hr ) || _impl->_pMasterVoice == nullptr )
         {
             // 출력 장치가 없는 기계(CI 러너, 서버, 원격 세션)는 고장이 아니다. 오프라인 렌더로 동작한다는 것만 알린다. 장치가 있는데 실패한 경우만 경고한다.
@@ -337,10 +339,10 @@ namespace sw
 
         WAVEFORMATEX format{};
         format.wFormatTag      = WAVE_FORMAT_IEEE_FLOAT;
-        format.nChannels       = static_cast<WORD>( audio::kChannelCount );
+        format.nChannels       = static_cast<WORD>( channelCount );
         format.nSamplesPerSec  = audio::kSampleRate;
         format.wBitsPerSample  = 32;
-        format.nBlockAlign     = static_cast<WORD>( audio::kChannelCount * sizeof( float32 ) );
+        format.nBlockAlign     = static_cast<WORD>( channelCount * sizeof( float32 ) );
         format.nAvgBytesPerSec = audio::kSampleRate * format.nBlockAlign;
         hr                     = _impl->_pXAudio->CreateSourceVoice( &_impl->_pStreamVoice, &format, 0, XAUDIO2_DEFAULT_FREQ_RATIO, &_impl->_callback );
         if ( FAILED( hr ) || _impl->_pStreamVoice == nullptr )
@@ -354,9 +356,10 @@ namespace sw
         XAudio2AudioBackendInternal::StreamCallback& callback = _impl->_callback;
         callback._pEngine                                     = &getEngine();
         callback._pVoice                                      = _impl->_pStreamVoice;
+        callback._channelCount                                = channelCount;
         callback._nextBuffer                                  = 0;
         callback._bStopping.store( false, std::memory_order_release );
-        callback._listBuffer.assign( static_cast<size_t>( XAudio2AudioBackendInternal::kStreamBufferFrameCount ) * audio::kChannelCount *
+        callback._listBuffer.assign( static_cast<size_t>( XAudio2AudioBackendInternal::kStreamBufferFrameCount ) * channelCount *
                                          XAudio2AudioBackendInternal::kStreamBufferCount,
                                      0.0f );
         // 처음 버퍼들은 여기서 채운다. 이후는 버퍼가 끝날 때마다 콜백이 하나씩 채운다.

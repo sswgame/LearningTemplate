@@ -33,6 +33,8 @@ namespace sw
             static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
             /** @brief 장치 없이 한 번의 update 가 렌더할 최대 시간(초)입니다. 멈춘 프레임 뒤에 몇 분을 몰아서 렌더하지 않게 합니다. */
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
+            /** @brief 엔진을 여는 출력 레이아웃입니다. 장치 협상(`openOutput` 이 형식을 돌려줌)이 들어오기 전까지 장치도 스테레오로만 엽니다. */
+            static constexpr AudioChannelLayout kOutputLayout = AudioChannelLayout::Stereo;
         };
     } // namespace
 } // namespace sw
@@ -85,7 +87,7 @@ namespace sw
             return false;
         }
         _mixerPath = kDefaultMixerPath;
-        if ( _pEngine->initialize( mixerDesc ) == false )
+        if ( _pEngine->initialize( mixerDesc, IAudioServiceInternal::kOutputLayout ) == false )
         {
             SW_LOG_ERROR( "Audio engine rejected the mixer graph '%#'", kDefaultMixerPath );
             return false;
@@ -101,7 +103,7 @@ namespace sw
             _pEngine->setBusUserVolume( busVolume._bus, busVolume._volume );
         }
 
-        _listOfflineBlock.assign( static_cast<size_t>( audio::kBlockFrameCount ) * audio::kChannelCount, 0.0f );
+        _listOfflineBlock.assign( static_cast<size_t>( audio::kBlockFrameCount ) * AudioChannelLayoutUtil::getChannelCount( _pEngine->getChannelLayout() ), 0.0f );
         _bOutputOpen  = openOutput();
         _bInitialized = true;
         SW_LOG_INFO( "Initialized (%#).", _bOutputOpen ? "device output" : "offline - no device" );

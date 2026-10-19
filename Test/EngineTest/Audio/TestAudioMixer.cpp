@@ -33,7 +33,7 @@ namespace
         /** @brief 직류 클립 둘(0.5 · 0.25)을 넣은 엔진을 기본 그래프로 만듭니다. */
         static bool initializeEngine( sw::AudioEngine& engine, const sw::AudioMixerDesc& desc )
         {
-            if ( engine.initialize( desc ) == false )
+            if ( engine.initialize( desc, sw::AudioChannelLayout::Stereo ) == false )
                 return false;
             engine.getClipStore().addClip( sw::hashed_string( "test/dc_half" ), test::AudioTestUtil::makeConstantClip( 0.5f, 48000 ) );
             engine.getClipStore().addClip( sw::hashed_string( "test/dc_quarter" ), test::AudioTestUtil::makeConstantClip( 0.25f, 48000 ) );
@@ -222,4 +222,75 @@ SW_TEST_CASE( AudioMixerTest, UserSettingsBusVolumeReachesTheMixer )
     system.setMute( false );
     SW_EXPECT_NEAR_EQUAL( 0.125f, AudioMixerTestInternal::renderSteadyLeft( engine ), 1e-3f );
     system.shutdown();
+}
+
+/**
+ * @brief [AudioMixerTest] 레이아웃의 채널 수 — 스테레오 2, 5.1 은 6, 7.1 은 8이고 모두 최대 채널 수 안이다
+ */
+SW_TEST_CASE( AudioMixerTest, ChannelLayoutCountsChannels )
+{
+    SW_EXPECT_EQUAL( 2u, sw::AudioChannelLayoutUtil::getChannelCount( sw::AudioChannelLayout::Stereo ) );
+    SW_EXPECT_EQUAL( 6u, sw::AudioChannelLayoutUtil::getChannelCount( sw::AudioChannelLayout::Surround51 ) );
+    SW_EXPECT_EQUAL( 8u, sw::AudioChannelLayoutUtil::getChannelCount( sw::AudioChannelLayout::Surround71 ) );
+    SW_EXPECT_TRUE( sw::AudioChannelLayoutUtil::getChannelCount( sw::AudioChannelLayout::Surround71 ) <= sw::audio::kMaxChannelCount );
+}
+
+/**
+ * @brief [AudioMixerTest] 5.1 · 7.1 믹서 — 버스 페이더 · 부모 합산이 채널마다 독립으로 같은 식을 따른다
+ * @details sfx(-6.0206 dB, ×0.5)의 채널 c 에 직류 0.1 × (c + 1)을 넣으면 master 출력의 채널 c 는 그 ×0.5 다. 채널을 섞거나 빠뜨리면 값이 어긋난다.
+ */
+SW_TEST_CASE( AudioMixerTest, SurroundLayoutMixesEveryChannelIndependently )
+{
+    sw::AudioMixerDesc desc;
+    SW_ASSERT_TRUE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus>
+        <AudioBusDesc _name="master" /><AudioBusDesc _name="sfx" _parent="master" _volumeDb="-6.0206" /></_listBus></AudioMixerDesc>)" ) );
+    const sw::AudioChannelLayout arrLayout[] = { sw::AudioChannelLayout::Surround51, sw::AudioChannelLayout::Surround71 };
+    for ( const sw::AudioChannelLayout layout : arrLayout )
+    {
+        const uint32   channelCount = sw::AudioChannelLayoutUtil::getChannelCount( layout );
+        sw::AudioMixer mixer;
+        SW_ASSERT_TRUE( mixer.initialize( desc, layout ) );
+        const uint32 sfxIndex = static_cast<uint32>( mixer.findBusIndex( sw::hashed_string( "sfx" ) ) );
+
+        mixer.beginBlock( sw::audio::kBlockFrameCount );
+        const sw::AudioBlockView input = mixer.getBusInput( sfxIndex );
+        SW_ASSERT_EQUAL( channelCount, input._channelCount );
+        for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
+        {
+            for ( uint32 frameIndex = 0; frameIndex < input._frameCount; ++frameIndex )
+            {
+                input.getChannel( channelIndex )[frameIndex] = 0.1f * static_cast<float32>( channelIndex + 1 );
+            }
+        }
+        sw::AudioBlockBuffer outputBuffer;
+        outputBuffer.allocate( layout );
+        const sw::AudioBlockView output = outputBuffer.makeView( sw::audio::kBlockFrameCount );
+        mixer.process( output );
+
+        for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
+        {
+            const float32 expected = 0.05f * static_cast<float32>( channelIndex + 1 );
+            SW_EXPECT_NEAR_EQUAL( expected, output.getChannel( channelIndex )[0], 1e-5f );
+            SW_EXPECT_NEAR_EQUAL( expected, output.getChannel( channelIndex )[sw::audio::kBlockFrameCount - 1], 1e-5f );
+        }
+        SW_EXPECT_NEAR_EQUAL( 0.05f * static_cast<float32>( channelCount ), mixer.getBusPeak( sfxIndex ), 1e-5f ); // 피크는 모든 채널의 최댓값
+    }
+}
+
+/**
+ * @brief [AudioMixerTest] 스테레오만 처리하는 부분(이펙트, 보이스 패너)이 있는 구성은 조용히 낮추지 않고 초기화 오류로 멈춘다
+ */
+SW_TEST_CASE( AudioMixerTest, StereoOnlyPartsRejectSurroundLayout )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "Effects and the voice panner only process stereo" );
+    sw::AudioMixerDesc desc;
+    SW_ASSERT_TRUE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master"><_listEffect><AudioEffectDesc _type="LowPass"><_listParameter>
+        <AudioEffectParameterDesc _name="frequencyHz" _value="200" /></_listParameter></AudioEffectDesc></_listEffect></AudioBusDesc></_listBus></AudioMixerDesc>)" ) );
+    sw::AudioMixer mixer;
+    SW_EXPECT_FALSE( mixer.initialize( desc, sw::AudioChannelLayout::Surround51 ) );
+    SW_EXPECT_TRUE( mixer.initialize( desc, sw::AudioChannelLayout::Stereo ) );
+
+    sw::AudioEngine engine;
+    SW_EXPECT_FALSE( engine.initialize( sw::AudioMixerDesc::makeDefault(), sw::AudioChannelLayout::Surround51 ) );
+    SW_EXPECT_FALSE( engine.isInitialized() );
 }

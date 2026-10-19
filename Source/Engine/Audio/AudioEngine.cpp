@@ -27,8 +27,8 @@ namespace sw
         , _listVoiceOrder{}
         , _listInstance{}
         , _listBusUserState{}
-        , _listBlockOutput{}
-        , _listVoiceScratch{}
+        , _blockOutput{}
+        , _voiceScratch{}
         , _listAttenuation{}
         , _listSnapshot{}
         , _music{}
@@ -44,6 +44,7 @@ namespace sw
         , _droppedEventCount{ 0 }
         , _peakRealVoiceCount{ 0 }
         , _blockCursor{ audio::kBlockFrameCount }
+        , _layout{ AudioChannelLayout::Stereo }
         , _published{}
         , _bInitialized{ false }
     {
@@ -54,11 +55,18 @@ namespace sw
         shutdown();
     }
 
-    bool AudioEngine::initialize( const AudioMixerDesc& mixerDesc )
+    bool AudioEngine::initialize( const AudioMixerDesc& mixerDesc, AudioChannelLayout layout )
     {
-        shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
-        if ( pMixer->initialize( mixerDesc ) == false )
+        // 보이스는 스테레오 패너뿐이다(방향 패너는 U2). 앞 두 채널에만 소리가 나는 5.1 로 두지 않고 여기서 멈춘다.
+        if ( AudioChannelLayoutUtil::getChannelCount( layout ) != audio::kStereoChannelCount )
+        {
+            SW_LOG_ERROR( "Audio engine supports only the stereo layout for now (requested %# channels)", AudioChannelLayoutUtil::getChannelCount( layout ) );
             return false;
+        }
+        shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
+        if ( pMixer->initialize( mixerDesc, layout ) == false )
+            return false;
+        _layout         = layout;
         _pMixer         = std::move( pMixer );
         _pGameMixerDesc = make_shared<AudioMixerDesc>( mixerDesc );
         _listVoice.clear();
@@ -66,8 +74,8 @@ namespace sw
         _listVoiceOrder.reserve( mixerDesc._maxVoiceCount );
         _listInstance.clear();
         _listInstance.resize( mixerDesc._maxVoiceCount );
-        _listBlockOutput.assign( static_cast<size_t>( audio::kBlockFrameCount ) * audio::kChannelCount, 0.0f );
-        _listVoiceScratch.assign( static_cast<size_t>( audio::kBlockFrameCount ) * audio::kChannelCount, 0.0f );
+        _blockOutput.allocate( layout );
+        _voiceScratch.allocate( AudioChannelLayout::Stereo );
         _blockCursor        = audio::kBlockFrameCount;
         _renderedFrameCount = 0;
         rebuildAttenuationTable();
@@ -104,7 +112,7 @@ namespace sw
     bool AudioEngine::loadMixer( const AudioMixerDesc& mixerDesc )
     {
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
-        if ( pMixer->initialize( mixerDesc ) == false )
+        if ( pMixer->initialize( mixerDesc, _layout ) == false )
             return false;
         {
             std::scoped_lock<mutex> lock{ _libraryMutex };
@@ -584,9 +592,10 @@ namespace sw
     {
         if ( pOutput == nullptr )
             return;
+        const uint32 channelCount = AudioChannelLayoutUtil::getChannelCount( _layout );
         if ( isInitialized() == false || _pMixer == nullptr )
         {
-            Memory::set( pOutput, 0, static_cast<size_t>( frameCount ) * audio::kChannelCount * sizeof( float32 ) );
+            Memory::set( pOutput, 0, static_cast<size_t>( frameCount ) * channelCount * sizeof( float32 ) );
             return;
         }
 
@@ -598,10 +607,18 @@ namespace sw
                 renderBlock();
                 _blockCursor = 0;
             }
-            const uint32 copyFrames = MathUtil::min( frameCount - written, audio::kBlockFrameCount - _blockCursor );
-            Memory::copy( pOutput + static_cast<size_t>( written ) * audio::kChannelCount,
-                          _listBlockOutput.data() + static_cast<size_t>( _blockCursor ) * audio::kChannelCount,
-                          static_cast<size_t>( copyFrames ) * audio::kChannelCount * sizeof( float32 ) );
+            const uint32         copyFrames = MathUtil::min( frameCount - written, audio::kBlockFrameCount - _blockCursor );
+            const AudioBlockView block      = _blockOutput.makeView( audio::kBlockFrameCount );
+            // 장치 경계: 평면 블록을 교차 출력으로 바꾼다.
+            for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
+            {
+                const float32* pSource = block.getChannel( channelIndex ) + _blockCursor;
+                float32*       pTarget = pOutput + static_cast<size_t>( written ) * channelCount + channelIndex;
+                for ( uint32 frameIndex = 0; frameIndex < copyFrames; ++frameIndex )
+                {
+                    pTarget[static_cast<size_t>( frameIndex ) * channelCount] = pSource[frameIndex];
+                }
+            }
             written += copyFrames;
             _blockCursor += copyFrames;
         }
@@ -1080,7 +1097,7 @@ namespace sw
             }
             else
             {
-                slot._voice.mix( mixer.getBusInput( slot._busIndex ), audio::kBlockFrameCount, _listVoiceScratch.data() );
+                slot._voice.mix( mixer.getBusInput( slot._busIndex ), _voiceScratch.makeView( audio::kBlockFrameCount ) );
                 ++realCount;
             }
             if ( slot._voice.isFinished() )
@@ -1089,11 +1106,16 @@ namespace sw
         updateInstances();
         sweepRemovedEmitters();
 
-        mixer.process( _listBlockOutput.data(), audio::kBlockFrameCount );
+        const AudioBlockView output = _blockOutput.makeView( audio::kBlockFrameCount );
+        mixer.process( output );
         // 장치는 [-1, 1] 밖의 값을 감아 돌릴 수 있으므로 마지막에 자른다(리미터가 master 에 있으면 여기에 닿지 않는다).
-        for ( float32& sample : _listBlockOutput )
+        for ( uint32 channelIndex = 0; channelIndex < output._channelCount; ++channelIndex )
         {
-            sample = MathUtil::clamp( sample, -1.0f, 1.0f );
+            float32* pChannel = output.getChannel( channelIndex );
+            for ( uint32 frameIndex = 0; frameIndex < output._frameCount; ++frameIndex )
+            {
+                pChannel[frameIndex] = MathUtil::clamp( pChannel[frameIndex], -1.0f, 1.0f );
+            }
         }
 
         _renderedFrameCount += audio::kBlockFrameCount;

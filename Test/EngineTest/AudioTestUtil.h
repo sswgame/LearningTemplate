@@ -8,6 +8,7 @@
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioTypes.h"
+#include "Engine/Audio/DSP/AudioEffect.h"
 
 namespace test
 {
@@ -44,9 +45,36 @@ namespace test
         /** @brief 엔진을 @p frameCount 프레임 렌더해 스테레오 교차 버퍼로 돌려줍니다. */
         static sw::vector<float32> render( sw::AudioEngine& engine, uint32 frameCount )
         {
-            sw::vector<float32> listSample( static_cast<size_t>( frameCount ) * sw::audio::kChannelCount, 0.0f );
+            sw::vector<float32> listSample( static_cast<size_t>( frameCount ) * sw::AudioChannelLayoutUtil::getChannelCount( engine.getChannelLayout() ), 0.0f );
             engine.render( listSample.data(), frameCount );
             return listSample;
+        }
+
+        /**
+         * @brief 스테레오 교차 버퍼 한 블록(@p frameCount 은 `kBlockFrameCount` 이하)을 이펙트에 통과시킵니다.
+         * @details 이펙트는 평면 블록을 받으므로 풀어서 넘기고 다시 교차로 되돌려 씁니다. 측정 도우미(`computeToneAmplitude` 등)가 교차 버퍼를 읽습니다.
+         */
+        static void processEffect( sw::IAudioEffect& effect, float32* pInterleaved, uint32 frameCount )
+        {
+            constexpr uint32     kChannelCount = sw::audio::kStereoChannelCount;
+            sw::AudioBlockBuffer buffer;
+            buffer.allocate( sw::AudioChannelLayout::Stereo );
+            const sw::AudioBlockView block = buffer.makeView( frameCount );
+            for ( uint32 channelIndex = 0; channelIndex < kChannelCount; ++channelIndex )
+            {
+                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+                {
+                    block.getChannel( channelIndex )[frameIndex] = pInterleaved[frameIndex * kChannelCount + channelIndex];
+                }
+            }
+            effect.process( block );
+            for ( uint32 channelIndex = 0; channelIndex < kChannelCount; ++channelIndex )
+            {
+                for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+                {
+                    pInterleaved[frameIndex * kChannelCount + channelIndex] = block.getChannel( channelIndex )[frameIndex];
+                }
+            }
         }
 
         /** @brief 한 채널(0 왼쪽 · 1 오른쪽)의 [first, first + count) 프레임 평균입니다. */

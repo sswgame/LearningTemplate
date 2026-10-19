@@ -21,6 +21,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Audio/AudioBlock.h"
+#include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Audio/AudioEvent.h"
@@ -69,8 +71,14 @@ namespace sw
         AudioEngine( const AudioEngine& )            = delete;
         AudioEngine& operator=( const AudioEngine& ) = delete;
 
-        /** @brief 믹서 그래프를 만들고 요청을 받을 준비를 합니다. 그래프가 검사를 통과하지 못하면 false 를 반환합니다. */
-        [[nodiscard]] bool initialize( const AudioMixerDesc& mixerDesc );
+        /**
+         * @brief 믹서 그래프를 만들고 요청을 받을 준비를 합니다. 그래프가 검사를 통과하지 못하면 false 를 반환합니다.
+         * @param layout 출력 채널 구성입니다. 레이아웃은 장치를 닫은 뒤에만(다시 초기화해서) 바꿉니다.
+         * @details 보이스가 아직 스테레오 패너뿐이라(U2 에서 방향 패너) 스테레오가 아니면 false 입니다. 앞 두 채널에만 소리가 나는 상태로 두지 않습니다.
+         */
+        [[nodiscard]] bool initialize( const AudioMixerDesc& mixerDesc, AudioChannelLayout layout );
+        /** @brief 초기화 때 받은 출력 채널 구성입니다. `render` 의 교차 출력이 이 채널 수를 가집니다. */
+        AudioChannelLayout getChannelLayout() const { return _layout; }
         /** @brief 보이스와 그래프를 해제합니다. 장치가 `render` 를 더 호출하지 않게 한 뒤에 호출해야 합니다. */
         void shutdown();
         /** @brief 초기화되었는지입니다. */
@@ -200,8 +208,8 @@ namespace sw
         // --- 오디오 스레드 --------------------------------------------------------------------------------------------------
 
         /**
-         * @brief @p frameCount 프레임을 렌더해 @p pOutput(스테레오 교차 float32, [-1, 1])에 씁니다. 장치 콜백이 부릅니다.
-         * @details 안에서는 블록(`audio::kBlockFrameCount`) 단위로 돌고, 블록을 시작할 때 쌓인 명령을 적용한다. 초기화 전이면 0 을 쓴다.
+         * @brief @p frameCount 프레임을 렌더해 @p pOutput(레이아웃의 채널 수만큼 교차한 float32, [-1, 1])에 씁니다. 장치 콜백이 부릅니다.
+         * @details 안에서는 블록(`audio::kBlockFrameCount`) 단위로 평면 렌더하고, 블록을 시작할 때 쌓인 명령을 적용한다. 장치 경계에서 교차로 바꾼다. 초기화 전이면 0 을 쓴다.
          */
         void render( float32* pOutput, uint32 frameCount );
         /** @brief 버스 하나의 마지막 블록 피크를 반환합니다. 오디오 스레드와 테스트가 씁니다. 없는 버스면 0 입니다. */
@@ -368,7 +376,7 @@ namespace sw
         void applyCommands();
         /** @brief 명령 하나를 적용합니다. */
         void applyCommand( Command& command );
-        /** @brief 블록 하나를 렌더해 `_listBlockOutput` 에 둡니다. */
+        /** @brief 블록 하나를 렌더해 `_blockOutput`(평면)에 둡니다. */
         void renderBlock();
         /** @brief 빈 보이스 슬롯을 잡습니다. 없으면 nullptr 를 반환합니다. */
         VoiceSlot* allocateVoice();
@@ -459,8 +467,8 @@ namespace sw
         vector<uint32>                               _listVoiceOrder;                 /**< 보이스를 고르는 작업 목록입니다. */
         vector<EventInstance>                        _listInstance;                   /**< 이벤트 인스턴스 슬롯입니다. */
         vector<BusUserState>                         _listBusUserState;               /**< 버스 이름의 사용자 상태입니다. */
-        vector<float32>                              _listBlockOutput;                /**< 마지막 블록의 출력입니다(스테레오 교차). */
-        vector<float32>                              _listVoiceScratch;               /**< 보이스 로우패스 작업 버퍼입니다(블록 길이). */
+        AudioBlockBuffer                             _blockOutput;                    /**< 마지막 블록의 출력입니다(평면). */
+        AudioBlockBuffer                             _voiceScratch;                   /**< 보이스 로우패스 작업 블록입니다(스테레오 평면, 블록 길이). */
         vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 테이블입니다. 그래프 프리셋과 라이브러리 프리셋을 합쳤습니다. */
         vector<SnapshotState>                        _listSnapshot;                   /**< 켜 둔 스냅샷입니다. 켠 순서대로 둡니다. */
         AudioMusicPlayback                           _music;                          /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
@@ -475,7 +483,8 @@ namespace sw
         uint64                                       _playedEventCount;               /**< 재생한 이벤트 수입니다. 게시용입니다. */
         uint64                                       _droppedEventCount;              /**< 버린 이벤트 수입니다. 게시용입니다. */
         uint32                                       _peakRealVoiceCount;             /**< 한 블록에 섞은 보이스의 최댓값입니다. 게시용입니다. */
-        uint32                                       _blockCursor;                    /**< `_listBlockOutput` 에서 다음에 내보낼 프레임입니다. */
+        uint32                                       _blockCursor;                    /**< `_blockOutput` 에서 다음에 내보낼 프레임입니다. */
+        AudioChannelLayout                           _layout;                         /**< 출력 채널 구성입니다. 초기화 때 정합니다. */
         // 게시(오디오 스레드 → 게임 스레드)
         AudioPublishedState _published;    /**< 게임 스레드가 읽는 사본입니다(재생 목록, 상태, 음악 위치). */
         atomic<bool>        _bInitialized; /**< 초기화되었는지입니다. */

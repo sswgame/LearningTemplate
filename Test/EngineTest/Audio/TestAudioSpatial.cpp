@@ -121,7 +121,7 @@ SW_TEST_CASE( AudioSpatialTest, EqualPowerPanFollowsListenerAxes )
 
     // 엔진에서: 오른쪽 2 m 의 모노 직류 → 오른쪽만 0.5(Inverse), 가운데 앞 2 m → 두 채널 0.5·cos 45°.
     sw::AudioEngine engine;
-    SW_ASSERT_TRUE( engine.initialize( AudioSpatialTestInternal::makeMixer() ) );
+    SW_ASSERT_TRUE( engine.initialize( AudioSpatialTestInternal::makeMixer(), sw::AudioChannelLayout::Stereo ) );
     engine.getClipStore().addClip( sw::hashed_string( "test/mono" ), test::AudioTestUtil::makeConstantClip( 1.0f, 48000, 1 ) );
     engine.setListener( 0, AudioSpatialTestInternal::makeListener() );
     engine.setEmitter( 1, sw::float3( 2.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
@@ -175,7 +175,7 @@ SW_TEST_CASE( AudioSpatialTest, OcclusionDimsAndMuffles )
         for ( uint32 caseIndex = 0; caseIndex < 2; ++caseIndex )
         {
             sw::AudioEngine engine;
-            SW_ASSERT_TRUE( engine.initialize( AudioSpatialTestInternal::makeMixer() ) );
+            SW_ASSERT_TRUE( engine.initialize( AudioSpatialTestInternal::makeMixer(), sw::AudioChannelLayout::Stereo ) );
             engine.getClipStore().addClip( sw::hashed_string( "test/tone" ), test::AudioTestUtil::makeSineClip( arrFrequency[toneIndex], 0.5f, 48000 ) );
             engine.setListener( 0, AudioSpatialTestInternal::makeListener() );
             engine.setEmitter( 1, sw::float3( 0.0f, 0.0f, 1.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
@@ -220,7 +220,7 @@ SW_TEST_CASE( AudioSpatialTest, Screen2DPansOnTheScreenPlane )
 SW_TEST_CASE( AudioSpatialTest, NearestListenerWins )
 {
     sw::AudioEngine engine;
-    SW_ASSERT_TRUE( engine.initialize( AudioSpatialTestInternal::makeMixer() ) );
+    SW_ASSERT_TRUE( engine.initialize( AudioSpatialTestInternal::makeMixer(), sw::AudioChannelLayout::Stereo ) );
     engine.getClipStore().addClip( sw::hashed_string( "test/stereo" ), test::AudioTestUtil::makeConstantClip( 1.0f, 48000, 2 ) );
     engine.setListener( 0, AudioSpatialTestInternal::makeListener( sw::float3( 0.0f, 0.0f, 0.0f ) ) );
     engine.setListener( 1, AudioSpatialTestInternal::makeListener( sw::float3( 100.0f, 0.0f, 0.0f ) ) );
@@ -294,7 +294,7 @@ SW_TEST_CASE( AudioSpatialTest, ListenerMixModeChangesWhatSplitScreenHears )
         sw::AudioMixerDesc desc = AudioSpatialTestInternal::makeMixer();
         desc._listenerMix       = arrMode[modeIndex];
         sw::AudioEngine engine;
-        SW_ASSERT_TRUE( engine.initialize( desc ) );
+        SW_ASSERT_TRUE( engine.initialize( desc, sw::AudioChannelLayout::Stereo ) );
         engine.getClipStore().addClip( sw::hashed_string( "test/stereo" ), test::AudioTestUtil::makeConstantClip( 1.0f, 48000, 2 ) );
         engine.setListener( 0, AudioSpatialTestInternal::makeListener( sw::float3( -10.0f, 0.0f, 0.0f ) ) );
         engine.setListener( 1, AudioSpatialTestInternal::makeListener( sw::float3( 10.0f, 0.0f, 0.0f ) ) );
