@@ -67,7 +67,7 @@ namespace sw::editor
                     _state._working = *pCurve;
                 if ( EditorCurveEditor::drawEditor( _state ) )
                 {
-                    const string text = SerializerUtil::formatPropertyText( makeValueProperty( prop ), &_state._working, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                    const string text = SerializerUtil::formatValueText( &_state._working, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                     grid.applyPropertyTextAsEdit( pInstance, prop, text, "Edit Curve" );
                 }
                 ImGui::EndPopup();
@@ -75,14 +75,6 @@ namespace sw::editor
             }
 
         private:
-            /** @brief 값 자체를 가리키는 프로퍼티입니다(오프셋 0) — 작업 사본을 글로 바꿀 때 쓴다. */
-            static PropertyInfo makeValueProperty( const PropertyInfo& prop )
-            {
-                PropertyInfo valueProp{};
-                valueProp._typeName = prop._typeName;
-                return valueProp;
-            }
-
             EditorCurveEditorState _state{};
             ImGuiID                _openPopupID{ 0 };
         };

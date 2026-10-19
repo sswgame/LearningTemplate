@@ -3688,6 +3688,31 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 객체 주소는 `formatPropertyText`, 값 주소는 `formatValueText` — 같은 값을 같은 글로 쓴다
+ * @details 두 주소를 한 함수로 받던 때 인스펙터 핸들 선택기가 값 주소를 넘겨 오프셋이 한 번 더 더해졌다(고른 값이 `0:0` 이 됐다).
+ *          값 주소 쪽은 프로퍼티를 받지 않아 오프셋을 더할 수 없다. 오프셋이 0 이 아닌 필드로 두 쪽이 같은 글을 내는지, 값 주소 쪽 읽기(`parseTextValue`)와 짝인지 본다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOffset )
+{
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
+    const sw::TypeInfo*         pBits   = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+    SW_ASSERT_NOT_NULL( pBits );
+    const sw::PropertyInfo* pScore = pBits->findPropertyInHierarchy( sw::hashed_string( "_score" ) );
+    SW_ASSERT_NOT_NULL( pScore );
+    SW_ASSERT_TRUE( pScore->_offset != 0 );
+
+    sw::BitfieldTestActor actor;
+    actor._score = 42;
+    SW_EXPECT_STREQ( "42", sw::SerializerUtil::formatPropertyText( *pScore, &actor, context ).c_str() );
+    SW_EXPECT_STREQ( "42", sw::SerializerUtil::formatValueText( &actor._score, pScore->_typeName, context ).c_str() );
+
+    int32 value = 0;
+    SW_ASSERT_TRUE( sw::SerializerUtil::parseTextValue( &value, pScore->_typeName, "7", context ) );
+    SW_EXPECT_EQUAL( 7, value );
+    SW_EXPECT_STREQ( "7", sw::SerializerUtil::formatValueText( &value, pScore->_typeName, context ).c_str() );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 불리언이 아닌 비트필드 글은 읽기 실패다 — 조용히 false 가 되지 않는다
  * @details 읽기는 실패를 알리고 값은 그대로다. XML 의 `parseBool( text, false )` 처럼 무엇이든 false 로 읽고 성공을 돌려주면, 손으로 고친 씬의
  *          오타("ture")가 그 플래그를 꺼도 아무도 모른다.

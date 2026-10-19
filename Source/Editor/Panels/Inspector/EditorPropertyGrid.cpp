@@ -93,7 +93,7 @@ namespace sw::editor
                     applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
             }
 
-            /** @brief 키나 맵 값 하나를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 시퀀스 원소는 `InspectorPropertyLayout::makeElementProperty` 입니다. 텍스트 변환(`SerializerUtil::formatPropertyText`, `applyPropertyText`)에 씁니다. */
+            /** @brief 맵 값 하나를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 위젯(`drawPropertyWidget`)에만 씁니다. 텍스트 변환은 값 주소 쪽(`SerializerUtil::formatValueText`, `parseTextValue`)이 타입 이름으로 한다. */
             static PropertyInfo makeValueProperty( const hashed_string& typeName )
             {
                 PropertyInfo valueProp{};
@@ -707,11 +707,10 @@ namespace sw::editor
         if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
             return;
 
-        const PropertyInfo keyProp   = EditorPropertyGridInternal::makeValueProperty( prop._keyTypeName );
-        PropertyInfo       valueProp = EditorPropertyGridInternal::makeValueProperty( prop._elementTypeName );
-        valueProp._name              = prop._name;
-        valueProp._metadata          = prop._metadata;
-        const bool bElementEditable  = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
+        PropertyInfo valueProp      = EditorPropertyGridInternal::makeValueProperty( prop._elementTypeName );
+        valueProp._name             = prop._name;
+        valueProp._metadata         = prop._metadata;
+        const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
 
         // 값은 맵 노드 안에서 그 자리에서 고친다. 되돌리기는 위젯 하나 단위다(`drawPropertyWidget`). 삭제는 순회가 끝난 뒤에 한다.
         size_t eraseOrdinal = static_cast<size_t>( -1 );
@@ -724,7 +723,7 @@ namespace sw::editor
             if ( bReadOnly == false )
                 ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted( SerializerUtil::formatPropertyText( keyProp, pKey, context ).c_str() );
+            ImGui::TextUnformatted( SerializerUtil::formatValueText( pKey, prop._keyTypeName, context ).c_str() );
             ImGui::SameLine();
             ImGui::BeginDisabled( bElementEditable == false );
             ImGui::SetNextItemWidth( -FLT_MIN );
@@ -749,13 +748,13 @@ namespace sw::editor
             void* pValue = Memory::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
             mapWrapper.defaultConstructKey( pKey );
             mapWrapper.defaultConstructValue( pValue );
-            if ( SerializerUtil::applyPropertyText( keyProp, pKey, keyText, context ) )
+            if ( SerializerUtil::parseTextValue( pKey, prop._keyTypeName, keyText, context ) )
             {
-                const string stagedText = SerializerUtil::formatPropertyText( keyProp, pKey, context );
+                const string stagedText = SerializerUtil::formatValueText( pKey, prop._keyTypeName, context );
                 bool         bExists    = false;
                 mapWrapper.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pExistingKey, const void* )
                 {
-                    if ( SerializerUtil::formatPropertyText( keyProp, pExistingKey, context ) == stagedText )
+                    if ( SerializerUtil::formatValueText( pExistingKey, prop._keyTypeName, context ) == stagedText )
                         bExists = true;
                 } ) );
                 if ( bExists == false )
@@ -782,11 +781,12 @@ namespace sw::editor
         if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
             return;
 
-        const PropertyInfo elementProp      = InspectorPropertyLayout::makeElementProperty( prop );
-        const bool         bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
-        size_t             eraseIndex       = static_cast<size_t>( -1 );
-        size_t             replaceIndex     = static_cast<size_t>( -1 );
-        string             replaceText;
+        // 원소는 값 주소다. 텍스트 변환은 값 주소 쪽(`formatValueText`, `parseTextValue`)을 원소 타입 이름으로 쓴다.
+        const hashed_string& elementTypeName  = prop._elementTypeName;
+        const bool           bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
+        size_t               eraseIndex       = static_cast<size_t>( -1 );
+        size_t               replaceIndex     = static_cast<size_t>( -1 );
+        string               replaceText;
         for ( size_t elemIndex = 0; elemIndex < count; ++elemIndex )
         {
             ImGui::PushID( static_cast<int32>( elemIndex ) );
@@ -795,7 +795,7 @@ namespace sw::editor
             if ( bReadOnly == false )
                 ImGui::SameLine();
             // 원소는 텍스트 입력란이다. Enter 로 확정한 텍스트를 원소 타입으로 읽어 지우고 다시 넣는다. 원소가 곧 정렬 키이므로 제자리에 쓰면 트리가 깨진다.
-            fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatPropertyText( elementProp, sequence.getElementConst( pContainer, elemIndex ), context ).c_str() };
+            fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatValueText( sequence.getElementConst( pContainer, elemIndex ), elementTypeName, context ).c_str() };
             const ImGuiInputTextFlags             flags = bElementEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly;
             ImGui::SetNextItemWidth( -FLT_MIN );
             if ( ImGui::InputText( "##element", elementText.data(), elementText.capacity(), flags ) && bElementEditable )
@@ -811,7 +811,7 @@ namespace sw::editor
             EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Edit Set Element", [&]()
             {
                 (void)sequence.replaceElement( pContainer, replaceIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                { return SerializerUtil::applyPropertyText( elementProp, pElement, replaceText, context ); } ) );
+                { return SerializerUtil::parseTextValue( pElement, elementTypeName, replaceText, context ); } ) );
             } );
             notifyPropertyEdited( prop );
         }
@@ -828,7 +828,7 @@ namespace sw::editor
             EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Add Set Element", [&]()
             {
                 (void)sequence.appendElement( pContainer, sequence.getSize( pContainer ), SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                { return SerializerUtil::applyPropertyText( elementProp, pElement, addText, context ); } ) );
+                { return SerializerUtil::parseTextValue( pElement, elementTypeName, addText, context ); } ) );
             } );
             notifyPropertyEdited( prop );
         }

@@ -1003,7 +1003,13 @@ namespace sw
             ss.append( "]" );
             return ss.c_str();
         }
-        valueToText( ss, pValue, prop._typeName, context );
+        return formatValueText( pValue, prop._typeName, context );
+    }
+
+    string SerializerUtil::formatValueText( const void* pValue, const hashed_string& typeName, const SerializeContext& context )
+    {
+        StringBuilder<constant::kMaxBuffer8192> ss;
+        valueToText( ss, pValue, typeName, context );
         return ss.c_str();
     }
 
