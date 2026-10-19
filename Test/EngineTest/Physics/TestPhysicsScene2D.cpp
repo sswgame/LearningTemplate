@@ -381,6 +381,49 @@ SW_TEST_CASE( PhysicsScene2DTest, CharacterClimbsStepAndStopsAtWall )
 }
 
 /**
+ * @brief [PhysicsScene2DTest] 수평으로 움직이는 Kinematic 판 위의 2D 캐릭터는 판과 같이 움직이고(딛고 선 바디가 판), 멀리 정적 바닥에 선 캐릭터는 실리지 않는다
+ */
+SW_TEST_CASE( PhysicsScene2DTest, CharacterIsCarriedByMovingKinematicPlatform )
+{
+    sw::unique_ptr<sw::IPhysicsScene2D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsBodyHandle platform = addBody( *pScene, makeBox( sw::float2{ 3.0f, 0.5f } ), sw::float2{ 0.0f, -0.5f }, sw::PhysicsBodyType::Kinematic );
+    const sw::PhysicsBodyHandle ledge    = addBody( *pScene, makeBox( sw::float2{ 5.0f, 0.5f } ), sw::float2{ 25.0f, -0.5f }, sw::PhysicsBodyType::Static );
+    SW_ASSERT_TRUE( platform.isValid() && ledge.isValid() );
+
+    sw::PhysicsCharacterHandle  arrCharacter[2];
+    sw::PhysicsCharacterState2D arrState[2];
+    float32                     arrVerticalSpeed[2] = { 0.0f, 0.0f };
+    for ( uint32 characterIndex = 0; characterIndex < 2; ++characterIndex )
+    {
+        sw::PhysicsCharacterDesc2D desc;
+        desc._radius                 = 0.3f;
+        desc._halfHeight             = 0.4f;
+        desc._position               = sw::float2{ characterIndex == 0 ? 0.0f : 25.0f, 0.01f };
+        arrCharacter[characterIndex] = pScene->createCharacter( desc );
+        SW_ASSERT_TRUE( arrCharacter[characterIndex].isValid() );
+    }
+    // 판이 초속 2 m 로 +x 로 간다. 입력 속도 0 으로 선 캐릭터가 60 스텝(1 초) 뒤 x = 2 근처에 있어야 한다.
+    for ( uint32 stepIndex = 1; stepIndex <= 60; ++stepIndex )
+    {
+        pScene->moveKinematic( platform, sw::float2{ 2.0f * kStep2D * static_cast<float32>( stepIndex ), -0.5f }, 0.0f, kStep2D );
+        for ( uint32 characterIndex = 0; characterIndex < 2; ++characterIndex )
+        {
+            sw::PhysicsCharacterState2D& state = arrState[characterIndex];
+            arrVerticalSpeed[characterIndex]   = state._bGrounded ? -0.5f : arrVerticalSpeed[characterIndex] - 9.81f * kStep2D;
+            state                              = pScene->moveCharacter( arrCharacter[characterIndex], sw::float2{ 0.0f, arrVerticalSpeed[characterIndex] }, kStep2D );
+        }
+        pScene->step( kStep2D );
+    }
+    SW_EXPECT_TRUE( arrState[0]._bGrounded );
+    SW_EXPECT_TRUE( arrState[0]._groundBody == platform );
+    SW_EXPECT_NEAR_EQUAL( 1.97f, arrState[0]._position._x, 0.1f ); // 마지막 이동은 판이 59 스텝 만큼 간 자리에서 일어난다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, arrState[0]._position._y, 0.05f );
+    SW_EXPECT_TRUE( arrState[1]._groundBody == ledge );
+    SW_EXPECT_NEAR_EQUAL( 25.0f, arrState[1]._position._x, 0.02f );
+}
+
+/**
  * @brief [PhysicsScene2DTest] 같은 입력이면 같은 자리다(비트까지)
  */
 SW_TEST_CASE( PhysicsScene2DTest, StepIsDeterministic )

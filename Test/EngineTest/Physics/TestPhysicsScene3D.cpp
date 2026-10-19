@@ -482,6 +482,136 @@ SW_TEST_CASE( PhysicsScene3DTest, CharacterClimbsStepAndStopsAtWall )
 }
 
 /**
+ * @brief [PhysicsScene3DTest] 수평으로 움직이는 Kinematic 판 위의 캐릭터는 판과 같이 움직이고(딛고 선 바디가 판), 옆 정적 바닥에 선 캐릭터는 실리지 않는다
+ */
+SW_TEST_CASE( PhysicsScene3DTest, CharacterIsCarriedByMovingKinematicPlatform )
+{
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    // 판(윗면 y = 0, z -3..3)과 그 옆의 정적 바닥(z 5..10)을 따로 둔다 — 두 캐릭터가 서로 다른 바디를 딛는다.
+    const sw::PhysicsBodyHandle platform = addBody( *pScene, makeBox( sw::float3{ 3.0f, 0.5f, 3.0f } ), sw::float3{ 0.0f, -0.5f, 0.0f }, sw::PhysicsBodyType::Kinematic );
+    const sw::PhysicsBodyHandle ledge    = addBody( *pScene, makeBox( sw::float3{ 20.0f, 0.5f, 2.5f } ), sw::float3{ 0.0f, -0.5f, 7.5f }, sw::PhysicsBodyType::Static );
+    SW_ASSERT_TRUE( platform.isValid() && ledge.isValid() );
+
+    sw::PhysicsCharacterHandle  arrCharacter[2];
+    sw::PhysicsCharacterState3D arrState[2];
+    float32                     arrVerticalSpeed[2] = { 0.0f, 0.0f };
+    for ( uint32 characterIndex = 0; characterIndex < 2; ++characterIndex )
+    {
+        sw::PhysicsCharacterDesc3D desc;
+        desc._position               = sw::float3{ 0.0f, 0.0f, characterIndex == 0 ? 0.0f : 7.5f };
+        arrCharacter[characterIndex] = pScene->createCharacter( desc );
+        SW_ASSERT_TRUE( arrCharacter[characterIndex].isValid() );
+    }
+    // 판이 초속 2 m 로 +x 로 간다. 가만히 선 캐릭터(입력 속도 0)가 60 스텝(1 초) 뒤 x = 2 근처에 있어야 한다.
+    for ( uint32 stepIndex = 1; stepIndex <= 60; ++stepIndex )
+    {
+        pScene->moveKinematic( platform, sw::float3{ 2.0f * kStep3D * static_cast<float32>( stepIndex ), -0.5f, 0.0f }, sw::quaternion{}, kStep3D );
+        for ( uint32 characterIndex = 0; characterIndex < 2; ++characterIndex )
+        {
+            sw::PhysicsCharacterState3D& state = arrState[characterIndex];
+            arrVerticalSpeed[characterIndex]   = state._bGrounded ? 0.0f : arrVerticalSpeed[characterIndex] - 9.81f * kStep3D;
+            state                              = pScene->moveCharacter( arrCharacter[characterIndex], sw::float3{ 0.0f, arrVerticalSpeed[characterIndex], 0.0f }, kStep3D );
+        }
+        pScene->step( kStep3D );
+    }
+    SW_EXPECT_TRUE( arrState[0]._bGrounded );
+    SW_EXPECT_TRUE( arrState[0]._groundBody == platform );
+    SW_EXPECT_NEAR_EQUAL( 1.97f, arrState[0]._position._x, 0.1f ); // 마지막 이동은 판이 59 스텝 만큼 간 자리에서 일어난다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, arrState[0]._position._y, 0.05f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, arrState[0]._position._z, 0.05f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, arrState[0]._velocity._x, 0.05f ); // 반환 속도는 바닥 기준이다
+    SW_EXPECT_TRUE( arrState[1]._bGrounded );
+    SW_EXPECT_TRUE( arrState[1]._groundBody == ledge );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, arrState[1]._position._x, 0.02f );
+}
+
+/**
+ * @brief [PhysicsScene3DTest] 위 · 아래 · 대각선으로 움직이는 Kinematic 판도 캐릭터를 싣는다 — 내려가는 판에서 떠 떨어지지 않고, 올라가는 판에 파고들지 않는다
+ */
+SW_TEST_CASE( PhysicsScene3DTest, CharacterIsCarriedByVerticalAndDiagonalPlatform )
+{
+    const sw::float3 arrPlatformVelocity[4] = {
+        sw::float3{ 0.0f,  2.0f,  0.0f}, // 상승(엘리베이터)
+        sw::float3{ 0.0f, -2.0f,  0.0f}, // 하강
+        sw::float3{ 1.5f,  1.0f, -1.0f}, // 대각선 상승
+        sw::float3{-1.5f, -1.0f,  1.0f}, // 대각선 하강
+    };
+    for ( const sw::float3& velocity : arrPlatformVelocity )
+    {
+        sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+        SW_ASSERT_NOT_NULL( pScene.get() );
+        // 판 윗면이 y = 0 에서 출발한다. 넓게 만들어 캐릭터가 판 밖으로 나가지 않는다.
+        const sw::PhysicsBodyHandle platform = addBody( *pScene, makeBox( sw::float3{ 6.0f, 0.5f, 6.0f } ), sw::float3{ 0.0f, -0.5f, 0.0f }, sw::PhysicsBodyType::Kinematic );
+        SW_ASSERT_TRUE( platform.isValid() );
+        const sw::PhysicsCharacterHandle character = pScene->createCharacter( sw::PhysicsCharacterDesc3D{} );
+        SW_ASSERT_TRUE( character.isValid() );
+
+        sw::PhysicsCharacterState3D state;
+        float32                     verticalSpeed = 0.0f;
+        float32                     maxGap        = -100.0f; // 캐릭터 발 - 판 윗면(스텝 뒤)의 가장 큰 값
+        float32                     minGap        = 100.0f;
+        uint32                      airborneCount = 0;
+        constexpr uint32            kWarmupCount  = 10; // 판이 서 있는 동안 캐릭터가 먼저 디딘다 — 디딘 뒤에야 바닥에 붙는다(내려가는 판을 떨어지며 따라잡지 못한다)
+        for ( uint32 stepIndex = 1; stepIndex <= kWarmupCount + 90; ++stepIndex )
+        {
+            const float32 time = kStep3D * static_cast<float32>( stepIndex > kWarmupCount ? stepIndex - kWarmupCount : 0 );
+            pScene->moveKinematic( platform, velocity * time + sw::float3{ 0.0f, -0.5f, 0.0f }, sw::quaternion{}, kStep3D );
+            verticalSpeed = state._bGrounded ? 0.0f : verticalSpeed - 9.81f * kStep3D;
+            state         = pScene->moveCharacter( character, sw::float3{ 0.0f, verticalSpeed, 0.0f }, kStep3D );
+            pScene->step( kStep3D );
+            if ( stepIndex > kWarmupCount )
+            {
+                const float32 gap = state._position._y - ( getPosition( *pScene, platform )._y + 0.5f );
+                maxGap            = sw::MathUtil::max( maxGap, gap );
+                minGap            = sw::MathUtil::min( minGap, gap );
+                airborneCount += state._bGrounded ? 0u : 1u;
+            }
+        }
+        // 한 스텝 늦게 따라가므로 판 윗면과 어긋난 정도는 한 스텝 몫(속도 × 1/60, 최대 약 0.04) 안이다 — 파고들지도 뜨지도 않는다.
+        SW_EXPECT_TRUE_MSG( maxGap < 0.08f && minGap > -0.08f, "stays on the platform surface (no float, no sink)" );
+        SW_EXPECT_EQUAL( 0u, airborneCount );
+        SW_EXPECT_TRUE( state._groundBody == platform );
+        const sw::float3 platformPosition = getPosition( *pScene, platform );
+        SW_EXPECT_NEAR_EQUAL( platformPosition._x, state._position._x, 0.1f );
+        SW_EXPECT_NEAR_EQUAL( platformPosition._z, state._position._z, 0.1f );
+    }
+}
+
+/**
+ * @brief [PhysicsScene3DTest] 제자리에서 도는 Kinematic 판 위의 캐릭터는 회전 중심에서 떨어진 만큼의 속도(각속도 × 반지름)로 판을 따라 돈다
+ */
+SW_TEST_CASE( PhysicsScene3DTest, CharacterIsCarriedByRotatingKinematicPlatform )
+{
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsBodyHandle platform = addBody( *pScene, makeBox( sw::float3{ 4.0f, 0.5f, 4.0f } ), sw::float3{ 0.0f, -0.5f, 0.0f }, sw::PhysicsBodyType::Kinematic );
+    SW_ASSERT_TRUE( platform.isValid() );
+    sw::PhysicsCharacterDesc3D desc;
+    desc._position                             = sw::float3{ 2.0f, 0.0f, 0.0f };
+    const sw::PhysicsCharacterHandle character = pScene->createCharacter( desc );
+    SW_ASSERT_TRUE( character.isValid() );
+
+    sw::PhysicsCharacterState3D state;
+    float32                     verticalSpeed = 0.0f;
+    constexpr uint32            kStepCount    = 30; // 초속 1 라디안으로 0.5 초
+    for ( uint32 stepIndex = 1; stepIndex <= kStepCount; ++stepIndex )
+    {
+        const float32 angle = kStep3D * static_cast<float32>( stepIndex );
+        pScene->moveKinematic( platform, sw::float3{ 0.0f, -0.5f, 0.0f }, sw::quaternion::makeFromAxisAngle( sw::float3{ 0.0f, 1.0f, 0.0f }, angle ), kStep3D );
+        verticalSpeed = state._bGrounded ? 0.0f : verticalSpeed - 9.81f * kStep3D;
+        state         = pScene->moveCharacter( character, sw::float3{ 0.0f, verticalSpeed, 0.0f }, kStep3D );
+        pScene->step( kStep3D );
+    }
+    // 판이 29 스텝 만큼 돈 자리(마지막 이동 시점)에서 반지름 2 의 원 위에 있어야 한다. 실리지 않았다면 처음 자리(2, 0, 0)에 남는다.
+    const float32    angle    = kStep3D * static_cast<float32>( kStepCount - 1 );
+    const sw::float3 expected = sw::float3::transform( sw::float3{ 2.0f, 0.0f, 0.0f }, sw::quaternion::makeFromAxisAngle( sw::float3{ 0.0f, 1.0f, 0.0f }, angle ) );
+    SW_EXPECT_TRUE( state._groundBody == platform );
+    SW_EXPECT_NEAR_EQUAL( expected._x, state._position._x, 0.1f );
+    SW_EXPECT_NEAR_EQUAL( expected._z, state._position._z, 0.1f );
+}
+
+/**
  * @brief [PhysicsScene3DTest] 같은 입력이면 같은 자리다 — 두 씬에 같은 순서로 같은 바디를 넣고 같은 스텝을 돌리면 비트까지 같다
  */
 SW_TEST_CASE( PhysicsScene3DTest, StepIsDeterministic )
