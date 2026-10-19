@@ -129,7 +129,7 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 | P0 | `PairedAnimationDef` 로더와 검사(필수 역할 · 클립 없음 · NaN · 모르는 속성 · 앵커 규칙 · 알림 역할) | 완료(Debug 빌드 · `PairedAnimationDefTest` 통과) |
 | P1 | `PairedAnimationSession` · `PairedAnimationSystem` · `PairedAnimationComponent`, `AnimationNotifyComponent::processExternalNotify` | 완료(Debug 빌드 · `PairedAnimationTest` 통과) |
 | P2 | 정렬 `snap` · `warp`(`MotionWarpingComponent` 재사용, 새 노드 없음) | 완료(Debug 빌드 · `PairedAnimationTest` 통과) |
-| P3 | 네트워크 재현(7절) | 아래 "남은 것" — 선행(애니메이터 시각 지정 훅)이 없다 |
+| P3 | 네트워크 재현(7절) | 아래 "남은 것" — 선행(애니메이터 시각 지정 훅 `seekCurrentTime`)은 갖췄다 |
 | M3 | 에디터 미리보기(8절) | 아래 "남은 것" |
 | — | 상호작용 단계에서 세션 시작 · 에셋 캐시(핫 리로드) · 세트 고르기(`<Select>`) · 보폭 보정 쥠 | 완료(`InteractionTest` · `PairedAnimationTest`) |
 | — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 아래 "남은 것" — 클립 · 활 메시가 없다 |
@@ -138,7 +138,7 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 
 - 에디터 미리보기(M3): 역할마다 메시를 놓고 한 시계로 스크럽 · 오프셋 기즈모 · 알림 시각 편집.
 - 네트워크 재현(P3): 서버가 세션 id · 시작 틱 · 역할 → 오브젝트를 복제한다. 롤백은 `ReplicationServer::setOwnerState`(main 에 있다)에 세션 상태를 소유 상태로 싣는다.
-  **선행**: 클라이언트 따라잡기에 애니메이터 시각 지정 훅(`SkeletalAnimatorComponent` 가 재생 중 클립의 시각을 옮기는 공개 함수)이 필요하다. feat20 · feat21 은 main 에 들어왔지만 이 훅은 없다(있는 것은 시작 전 `setInitialTime` 뿐) — 훅을 먼저 애니메이션 쪽에서 더한다.
+  **선행(훅은 갖췄다)**: 클라이언트 따라잡기는 `SkeletalAnimatorComponent::seekCurrentTime( 초 )` 로 재생 중 클립의 시각을 옮긴다. 재생 중인 것이 없거나 시각이 음수 · NaN · 클립 길이 초과면 오류를 남기고 false 다(자르지 않는다). 반복 클립의 시각을 길이로 감는 일은 부르는 쪽(복제)이 한다.
 - 시나리오 테스트: Shooter3D 궁수 · 활 · 화살 실제 클립과 활 메시가 리소스에 없다(`data/anim/bow_shoot.pairedanim.xml` 은 형식 검사만 돈다). 클립 · 메시(CC0)가 들어오면 시나리오로 화면 확인까지 한다.
 
 ## 11. 알려진 한계
