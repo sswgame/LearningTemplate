@@ -33,11 +33,11 @@
 - ReflectionFormats 는 진행 12/12 인데 상태가 구현중이다. 끝으로 바꿀지 사용자에게 확인한다.
 - 측정 후보: 게임 스레드의 직렬 구간(`StructuralChangeBuffer::drain`, 프레임 시스템, 그룹 경계)을 Release 로 재서 더 병렬화할 만한지 본다. 컴포넌트 틱 자체는 이미 포크-조인 병렬이다. 루트의 `Multithreaded_Game_Simulation_Architecture.md` 는 추적되지 않는 초안이며, 이미 있는 것(태스크 의존성 · 작업 훔치기 · 병렬 for · 명령 버퍼)을 처음부터 쌓는 순서라 그대로 계획으로 올리지 않는다.
 - 후보 아이디어: 메시 컴포넌트가 머티리얼 슬롯을 하나만 가져 서브메시별 염색이 안 된다(`CharacterAppearanceComponent` 는 부품을 별도 메시로 나눠 처리).
-- 근본 원인 후보(미해결): `DiskPathVsResourceId`, `WorktreeVcpkgInstalledDir`.
+- 근본 원인 후보(미해결): `DiskPathVsResourceId`.
 
 ## 2. 첫 일
 
-1. 남은 작업자 브랜치 넷을 `worktree-make` 워크트리로 옮겨 빌드 · 테스트로 확인하고 병합한다(1절). 같은 시간에 워크트리끼리 vcpkg 를 다시 받지 않게 하는 근본 원인 후보 `WorktreeVcpkgInstalledDir` 를 먼저 본다.
+1. 남은 작업자 브랜치 넷을 `worktree-make` 워크트리로 옮겨 빌드 · 테스트로 확인하고 병합한다(1절). 워크트리는 메인의 vcpkg 폴더를 정션으로 공유하고 다시 설치하지 않는다(분리하지 않는다).
 2. `AudioChannelLayout` U1(동작 불변의 평면 블록 형식) 또는 `AsyncResourceLoading` A1(조사)을 착수한다.
 3. 문서 커밋을 push 하기 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
 4. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터. `[병렬 가능]` 은 파일 소유가 겹치지 않으면 병렬로 띄운다.

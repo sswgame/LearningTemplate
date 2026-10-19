@@ -1,6 +1,6 @@
 # 품질 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: quality · 옛번호: B-5, B-7, B-12, B-14, B-15, B-16, C-28, C-29, C-33, C-44, C-46, C-48, E-1, E-2, E-4, E-5, E-6, E-7, E-8, E-10, E-12, E-14, E-15, E-16, E-17 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: quality · 옛번호: B-5, B-7, B-12, B-14, B-15, B-16, C-28, C-29, C-33, C-44, C-46, C-48, E-1, E-2, E-4, E-5, E-8, E-10, E-14, E-17 · 진행: 해당없음
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 쿠킹, 간헐 실패 관찰 가운데 아직 착수하지 않은 후보의 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다.
 이미 계획 문서가 있는 일은 [BuildSpeed](BuildSpeed.md) · [GpuVerification](GpuVerification.md) · [IncrementalCook](IncrementalCook.md) 에 있습니다.
@@ -15,6 +15,12 @@ credits 표는 고쳤다 — `CheckResourceCredits` 의 패턴은 경로 마디 
 남은 것:
 - 임포트 규칙도 같은 마디 단위 매칭 + 둘 이상 맞으면 오류로: C++ `ModelImportConfig` · `TextureImportConfig` 매칭기. 순서가 뜻을 가진 규칙이 있어(`StarSkirmish_KayKitSpaceBase` 가 `StarSkirmish_KitLayoutOffset` 보다 먼저 맞아야 한다) 규칙 데이터를 겹치지 않게 다시 써야 한다.
 - 출처 목록의 해시가 맞으려면 산출물이 결정적이어야 한다. 인코더가 만드는 다른 산출물(텍스처 DDS 변환 등)의 비결정 바이트를 점검한다(같은 원본을 두 번 구워 바이트 비교, App 빌드와 실행 필요).
+
+### StlJobKitTestFailure
+제목: CI Windows Debug · STL 잡의 키트 테스트 22 건 실패
+옛번호: E-2
+왜 필요한가: run 37251047781(`a380e2ee3`)에서 유니티 켬 + PCH 끔 Debug 에서만 졌다. 이 PC 의 같은 구성(`CI-Debug -DSW_ENABLE_PCH=OFF`)에서 통과해 재현되지 않았다.
+착수 조건: 실패 보고(`CiFailureReport.py`)가 나아진 뒤 다음 CI 주석으로 본다. 그 뒤 액션 키트 테스트 넷이 네 실행 연속으로 지는 간헐 실패가 되었으므로 일회성으로 보지 않는다.
 
 ## 확인 대기
 
@@ -78,9 +84,8 @@ credits 표는 고쳤다 — `CheckResourceCredits` 의 패턴은 경로 마디 
 ### NightlyCiFollowups
 제목: 다음 CI 실행으로 확인할 것
 옛번호: E-1
-왜 필요한가: 리눅스는 컴파일까지 되고 테스트 단계에서 진다(CI 읽는 법은 [검증과 측정](../08_Verification.md) 4절). 고쳤으니 통과를 확인할 것이 있고, 원인을 아직 모르는 것이 있다.
+왜 필요한가: 리눅스는 컴파일까지 되고 테스트 단계에서 진다(CI 읽는 법은 [검증과 측정](../08_Verification.md) 4절). 고친 것은 2026-10-18 CI 전 잡 통과(run 39163263777)로 확인해 지웠고, 원인을 아직 모르는 것이 남았다.
 남은 것:
-- 고쳤고 통과를 확인: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대), ASan 둘(OpenSSL 스택 수명, `NetRequestTest` 선언 순서), `ServerBootTest` 접속 로그, Linux Debug `EngineTest_NoGPU` 샤드의 180 초 초과(멈춤이 아니라 느림 — 샤드를 여섯으로 늘렸다).
 - 원인을 모름: `UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening`(리눅스 Debug · Shipping · ASan, 포커스 위젯 ID 839 ≠ 823 `Tab.controls` — 창이 닫힌 뒤 탐색 Up 이 한 번 발화한 것으로 추정, 다음 실패 메시지가 포커스 위젯 이름을 보인다), ASan 중단 두 건(`PlatformLoginTest.Oidc…` · `NetRequestTest.IdempotentRetry…`), TSan 샤드의 새니타이저 보고.
 - Windows STL containers 잡에서 건너뛰게 한 테스트 셋(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`)이 기본 컨테이너 구성에서도 가끔 지는지 지켜본다.
 
@@ -136,12 +141,6 @@ credits 표는 고쳤다 — `CheckResourceCredits` 의 패턴은 경로 마디 
 
 ## 관찰
 
-### StlJobKitTestFailure
-제목: CI Windows Debug · STL 잡의 키트 테스트 22 건 실패
-옛번호: E-2
-왜 필요한가: run 37251047781(`a380e2ee3`)에서 유니티 켬 + PCH 끔 Debug 에서만 졌다. 이 PC 의 같은 구성(`CI-Debug -DSW_ENABLE_PCH=OFF`)에서 통과해 재현되지 않았다.
-착수 조건: 실패 보고(`CiFailureReport.py`)가 나아진 뒤 다음 CI 주석으로 본다. 그 뒤 액션 키트 테스트 넷이 네 실행 연속으로 지는 간헐 실패가 되었으므로 일회성으로 보지 않는다.
-
 ### ShardExitCodeAfterPass
 제목: 통과 뒤 0 이 아닌 종료 코드와 종료 멈춤
 옛번호: E-4, E-10
@@ -158,46 +157,17 @@ credits 표는 고쳤다 — `CheckResourceCredits` 의 패턴은 경로 마디 
 `StageModuleRuntimeDlls.cmake` 가 z-applocal 을 다섯 번까지 다시 띄운다. `OnlineLoadBot.exe` 쪽은 막지 못했다.
 착수 조건: 근본 의문 — `Build` 단계가 끝난 트리에서 `BuildTestBinaries` 가 또 294 단계를 링크한다(ninja 가 `Re-checking globbed directories` 뒤 `Re-running CMake` 를 도는 것을 로컬 드라이런에서 봤다). 빌드 직후 두 번째 빌드가 빈손이 아닌 이유를 찾으면 Test 단계의 재링크와 잠금 경합이 함께 사라진다.
 
-### ShippingTestSegfault
-제목: Shipping nogpu · HostOnly 간헐 세그폴트
-옛번호: E-6
-왜 필요한가: `EngineTest_NoGPU` · HostOnly 에서 09-20 · 21 · 22 에 한 번씩 났다(2026-10-06 nogpu 3 회 · host 3 회 재실행 깨끗).
-착수 조건: 다시 나면 크래시 핸들러의 스택 파일(`Bin/Saved/Logs/crash_<세션>.stack.txt` — Shipping 도 PDB 가 있어 함수 이름)을 본다. CI 는 그 파일을 아티팩트로 · 스택을 주석으로 올린다(`CiFailureReport.py`).
-
-### LavapipeSurfaceLost
-제목: WSL lavapipe 가 가끔 서피스를 잃음
-옛번호: E-7
-왜 필요한가: `AppTest_HostOnly` 43 회 중 3 회, 첫 `vkAcquireNextImageKHR` 가 `VK_ERROR_SURFACE_LOST_KHR` 를 냈다. 이제 서피스 · 스왑체인을 다시 만들고(사양대로) `Vulkan surface lost at acquire|present (N time(s) …)` 경고를 남긴다.
-착수 조건: WSL 에서 50 회 돌려 경고 수 · 실패 수를 본다(복구가 되면 지운다): `cd build/WSL-Debug/Bin && for i in $(seq 50); do ./AppTest --host_suites=only --test_filter=AppSmokeTest.* || echo FAIL $i; done` 와 `Saved/Logs` 의 경고 줄 수.
-
 ### WarpPixelTestFailure
 제목: CI Windows 러너(WARP)의 픽셀 테스트 실패
 옛번호: E-8
 왜 필요한가: `RenderPassGPUTest` 를 host 스위트로 빼서 우회했다. 이 PC 에서 `SW_RHI_SOFTWARE_ADAPTER=1`(`-gv_rhiSoftwareAdapter=1`)로 같은 래스터라이저를 고를 수 있다. 2026-10-06 이 PC 의 WARP(DX12 · DX11)로 `RenderPassGPUTest.*` 71 개 픽셀 테스트가 모두 통과했다(Vulkan 은 CPU 디바이스가 없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다.
 착수 조건: 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
 
-### UiPreviewMissingLabel
-제목: `editor.uipreview` Vulkan 1 회 "레이블 없음"
-옛번호: E-12
-왜 필요한가: 2026-10-13 전체 체인, 프레임 180 `uipreview.language.en` 에서 콤보는 눌렀는데 항목이 없었다. 2026-10-15 Vulkan 단독 10 회(유휴 5 · CPU 부하 5) 모두 통과해 재현하지 못했다.
-착수 조건: 에디터 입력 단계(`EditorClick` · `EditorDrag` · `EditorHover`)가 레이블이 그려질 때까지 시계를 60 프레임까지 붙잡고(`AutomationRunner::holdUntilReady`) 기다린 프레임을 `[Scenario] … held the clock for N frame(s)` 로 남긴다. 다시 지면 그 줄로 "늦게 열렸다"(기다려서 통과) · "닫혔다"(60 프레임 뒤에도 없음)를 가른다.
-
 ### MeshModifiersChainFailure
 제목: `meshmodifiers` Vulkan 체인 1 회
 옛번호: E-14
 왜 필요한가: 2026-10-15 에디터 체인(다른 hostgpu 와 GPU 공유 실행 중)에서 frame 585 `MeshModifiers.ReferenceListCount == 1, got 0`. 단독 Vulkan 2/2 통과, 앞선 순차 hostgpu 네 백엔드도 통과했다. 2026-10-16 독점 GPU 단독 Vulkan 5/5 통과.
 착수 조건: 다시 나면 참조 목록 항목 추가가 부하 아래 한 프레임 늦는지(고정 프레임 간격) 본다.
-
-### CloseWindowCursorClip
-제목: `shooter3d.closewindow` GL 1 회
-옛번호: E-15
-왜 필요한가: 2026-10-16 공유 GPU 잠금으로 돈 Debug hostgpu(`EveryGamePackScenarioPassesOnEveryBackend`)에서 frame 10 `ExpectCursorClip` 이 클립 0,0,2560,1440(화면 전체)을 봤다. 같은 때 다른 App 창(스크린샷 캡처)을 띄우고 있었다.
-이 시나리오는 실제 포커스 · 커서 클립을 쓰므로(`input="mixed"`) 독점으로 단독 GL 5/5 통과했다. 겹친 창이 포커스를 가져간 것으로 본다.
-
-### WslVmRespawn
-제목: `wsl --shutdown` 후 1 초 안에 WSL VM 이 다시 뜸
-옛번호: E-16
-왜 필요한가: Ubuntu-26.04 VM 이 `wsl --shutdown` 후에도 1 초 안에 다시 뜬다. VS Code 의 WSL 연결이나 다른 도구가 깨우는 것으로 보이며 원인을 특정하지 못했다.
 
 ### ShaderCookerStampFlake
 제목: `ShaderCookerTest.FailedSourcesAreLeftOutOfTheCookStamp` 병렬 실행 1 회 실패

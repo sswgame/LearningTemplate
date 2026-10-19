@@ -1,6 +1,6 @@
 # 프로젝트 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: project · 옛번호: C-11, C-16, C-17, C-57, C-73, C-74, C-75, C-76, G-11, H-1 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: project · 옛번호: C-11, C-16, C-17, C-57, C-74, C-75, C-76, G-11, H-1 · 진행: 해당없음
 
 저장소 규칙, 서드파티, 리소스처럼 한 영역에 속하지 않는 착수 전 후보의 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다. 긴 함수 정리는 [LongFunctions](LongFunctions.md) 로 착수했습니다.
 
@@ -44,33 +44,25 @@
 왜 필요한가: 결정 기록 · 계획 문서 · 커밋이 `D7-5.10` · `D7-5.3` · `D7-5.6` · `D5-1.*` · `D2-5.4~5.8` · `D3-8.6` 처럼 하위 번호로 가리키는데 옛 항목 본문에는 그 번호가 없었습니다(원 숫자 ①② 만 있었다). 항목을 계획 문서로 옮겼으므로 이름 체계로 다시 확인이 필요합니다.
 남은 것: 하위 번호를 가리키는 쪽을 계획 문서의 단위 이름이나 본문의 말로 바꾼다. `py -3 -m Scripts plans --find <옛번호>` 로 위치를 찾는다.
 
-### WorktreeVcpkgInstalledDir
-제목: 워크트리마다 VCPKG_INSTALLED_DIR 나누기
-옛번호: C-73
-왜 필요한가: `dcdc813e2` 로 triplet 은 맞췄지만, 매니페스트가 다른 워크트리(오버레이 포트가 다른 옛 main 기준 등)가 같은 `build/vcpkg_installed` 에 서로 다른 포트를 번갈아 깐다.
-남은 것: 워크트리마다 `VCPKG_INSTALLED_DIR` 를 나눈다. 서버 구성 빌드 폴더에 없는 `sccache.exe` 같은 낡은 컴파일러 런처 캐시가 남는 문제도 같은 계열이다.
-함정: 낡은 런처 캐시는 `cmake --preset <이름> -UCMAKE_CXX_COMPILER_LAUNCHER -UCMAKE_C_COMPILER_LAUNCHER` 로 지우고 다시 구성한다.
-
 ### InvalidMeasurementCleanup
-제목: 무효가 된 측정의 재측정과 낡은 관찰 항목 정리
+제목: 무효가 된 측정의 재측정
 옛번호: C-74
-왜 필요한가: 빌드 조건이 바뀌어 근거가 무효가 된 측정이 남아 있습니다. 이 목록은 2026-10-17 조사 기준이라 일부는 이미 처리됐을 수 있습니다(확인 필요).
+왜 필요한가: 빌드 조건이 바뀌어 근거가 무효가 된 측정을 다시 잰다. 2026-10-20 조사로 폐기 · 태그 · 낡은 값 표시는 끝냈고, 아래는 실제로 재야 하는 것이다(각각의 후보 절에 자세한 조건이 있다).
 남은 것:
-- 무효: `D6-6`, `D7-5` 온라인 부하 봇 Debug 값, `C-29 ⑤` 야간 기준선(온라인 B 이전), `D2-7` "BC7 Debug 10분"(Release 병렬 압축으로 이미 8초), `B-10` 서버 스레드 %(다른 빌드의 CPU 부하가 섞임).
-- 재측정: `D2-9` 반해상도 블룸, `D2-5 ⑺`(Debug → Release) · `⑹`, `C-2` 5단계, `C-13 ②`, `C-29 ②`.
-- 폐기 권고: `E-6` `E-12` `E-15` `E-16`, `E-7`(로컬 WSL 실행은 WSL 규칙과 충돌 — CI 리눅스 잡의 경고 줄 수로 바꾸지 않으면 폐기).
-- 태그: `E-4` 와 `E-10` 합침, `E-1` 의 통과 확인된 줄 삭제, `E-2` 는 `결함`, `G-9` · `G-10` 은 조건 문장을 적거나 폐기 결정.
+- `HalfResolutionBloomMeasurement`(옛 D2-9) · `TerrainWaterVegetationRemainders`(옛 D2-5 ⑹ · ⑺, Debug 값을 Release 로) · `HeaderIncludeSlimming` ②(옛 C-13, 2026-10-05 측정 기준이라 지금 TU 수로 다시 판정) · `RuntimeQualityAdjust` ②(옛 C-29, 13 ~ 20 ms 프레임의 Tracy) · `BuildSpeed` 5 단계(옛 C-2, 공유 설치가 조용할 때).
+- `UdpSocketLayerScaling`(옛 B-10): Windows 서버 스레드 % 는 다른 빌드의 CPU 부하가 섞여 무효로 표시했다. 다른 빌드가 없을 때 다시 잰다.
+- 부하 기준선(`Test/Load/Baselines.json` 의 connect · replication · soak 은 커밋 `14c775c55`, 2026-10-15)은 온라인 B([리플렉션 형식 계획](ReflectionFormats.md)) 이전 값이다. B 가 들어간 뒤 `py -3 -m Scripts load suite baseline --runs 3 --record` 로 다시 뜬다(옛 C-29 ⑤).
+- 판단이 모호해 남김: 옛 `D6-6` · `D7-5` 의 "온라인 부하 봇 Debug 값" 은 현재 `UiDrawPerformance` · `EpollAndRealStoreVerification` 본문에 없다. 부하 봇 Debug 값은 [검증과 측정](../08_Verification.md) 2절 "온라인 부하 봇 참고값" 에 Debug 로 표시돼 있고 Release 측정은 `OperationsAndDeployment` 후보가 맡는다. 더 지울 것이 있는지는 그 절을 고치는 사람이 본다.
 함정: 항목이 이름 체계로 옮겨지는 중이라 옛 번호는 `py -3 -m Scripts plans --find` 로 새 이름을 먼저 찾는다.
 
 ### DecisionMeasurementColumn
-제목: 문서 낡음과 결정 기록의 측정 조건 칸
+제목: 결정 기록의 측정 조건 칸 채우기
 옛번호: C-75
-왜 필요한가: 결정 기록에 측정 조건 칸(기계 · 규모 · 날짜 · 근거 커밋)이 없어 조건이 떨어져 나가 무조건 금지가 됩니다.
+왜 필요한가: 측정 조건(기계 · 규모 · 날짜 · 근거 커밋)이 떨어져 나가면 "그 조건에서 이득 없음" 이 무조건 금지가 된다. 형식은 정했고(결정 기록 3절 머리, `[측정: 기계 · 규모 · 날짜 · 근거 커밋]`, 모르면 `미상`), 낡은 문서 셋(`EditorCharacterEditor` · `EnginePartition` 3 단계 · `DataDriven` 4절)은 2026-10-20 에 고쳤다.
 남은 것:
-- 형식: 측정이 근거인 결정에 한 줄 형식을 두고 "하지 말 것"은 결정 번호를 링크한다.
-- 낡은 문서: `EditorCharacterEditor.md`(첫 단계가 `Source/GameFramework/PlugIn/Editor/CharacterEditor/` 에 들어감), `EnginePartition.md` 3단계(DLL 승격, 근거 없음), `DataDriven.md` 4절 "Alias 를 없앤다"(별칭 유지로 바뀜, 결정 기록 5-4).
-- 재측정: 스핀 늘리기(2→50 us) · hot pool 은 09-20 측정(조건 변수 시절, 0.7 ms 프레임, ±40 % 흔들림, p99 없음)이 근거라 무거운 프레임(8 ms 이상)에서 다시 잰다.
-- 재검토: "레인 없이 GT 병렬화" 기각은 High · Normal · Low 큐가 생겨 전제가 사라졌다.
+- 3절의 나머지 측정 기반 기각에 같은 줄을 적는다(지금은 태스크 · TaskManager 후보 셋 · 콜드 프리셋 · 층 DLL 넷뿐). 날짜 · 기계가 본문에 없으면 `git log -S` 로 찾고, 못 찾으면 `미상`.
+- 재측정: 스핀 늘리기(2→50 us) · hot pool 은 09-20 측정(조건 변수 시절, 0.7 ms 프레임, ±40 % 흔들림, p99 없음)이 근거라 무거운 프레임(8 ms 이상)에서 다시 잰다. 기계는 `미상` 이다.
+- 재검토: "레인 없이 GT 병렬화" 기각은 High · Normal · Low 큐(`TaskManager`)가 생겨 전제가 사라졌다. 레인 있는 설계로 다시 판단한다.
 
 ### CarriedOverChecks
 제목: 그 밖에 확인이 필요한 이월 항목

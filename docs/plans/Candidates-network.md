@@ -17,7 +17,7 @@
 옛번호: B-10
 왜 필요한가: 지금은 호스트당 논블로킹 UDP 소켓 하나 + 전용 스레드 하나(`poll`/`WSAPoll`), 데이터그램마다 `recvfrom`/`sendto`, `NetHost` 잠금 하나다. UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다.
 남은 것:
-- 리눅스 측정: Windows 측정은 [검증과 측정](../08_Verification.md) 2절 "UDP 소켓 계층" 에 있다(패킷당 약 6.5 us, 대부분 `recvfrom`/`sendto`). 리눅스(WSL Release, `ulimit -n 8192` 뒤 같은 필터)는 아직이다. 수치를 나란히 놓는다.
+- 리눅스 측정: Windows 측정은 [검증과 측정](../08_Verification.md) 2절 "UDP 소켓 계층" 에 있다(패킷당 약 6.5 us, 대부분 `recvfrom`/`sendto`). 그 표의 서버 스레드 %(14 · 54 %)는 다른 빌드가 CPU 를 20 ~ 46 % 쓰던 때 값이라 무효다. 패킷당 시간만 참고한다. 리눅스(WSL Release, `ulimit -n 8192` 뒤 같은 필터)와 함께 다른 빌드가 없을 때 Windows 를 다시 재서 나란히 놓는다.
 - 일괄 받기 · 보내기: 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`).
 - 포트 샤딩: 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. [ServerDebug](ServerDebug.md) S1 ⑤ 와 같은 일이다.
 함정: 일괄 받기와 샤딩 모두 `NetUDPBenchTest` 숫자로 전후를 측정한다.

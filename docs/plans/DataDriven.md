@@ -1,6 +1,6 @@
 # 데이터 주도 구조 정리 계획 (2026-10-16)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-30, C-36 · 진행: 5/15
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-30, C-36 · 진행: 5/14
 
 값의 정본은 데이터 파일이고 코드 · 헤더는 형식만 가진다. 필수 값이 없으면 조용히 기본값 · 대체로 가지 않고 오류로 멈춘다. 결정은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화"이고, 이 문서는 6 영역 조사(2026-10-16)가 드러낸 위반을 근본 원인부터 없애는 순서다. 진행 표는 린트 게이트 `CheckDataDrivenStructure`의 `--summary` 가 정본이다(기준선이 줄면 진척).
 
@@ -39,14 +39,14 @@
 
 ## 4. 정한 판단
 
-- `REFLECT( Alias = 옛이름 )` 와 XML · JSON · bin 이중 읽기 경로: 별칭 · 옛 형식 리더는 두지 않는 방침이라 쓰는 곳을 세어 데이터를 다시 쓰고 없앤다. 스키마 버전 이행(SchemaMigrate)은 별개라 남긴다.
+- `REFLECT( Alias = 옛이름 )` 와 별칭 읽기 경로는 없애지 않고 갖춰 둔다(결정 기록 5-4 "이름 변경 리다이렉트", 2026-10-18 사용자 결정): 출시 데이터가 생겼을 때 바로 쓰도록 기능은 두되, 제품 데이터 · 게임 코드에는 별칭을 쓰지 않는다. 옛 XML · JSON · bin 이중 읽기 경로 중 옛 형식 리더만 쓰는 곳을 세어 데이터를 다시 쓰고 없앤다. 스키마 버전 이행(SchemaMigrate)은 별개라 남긴다.
 - 도구 훅(`.claude/hooks`)의 fail-open 은 훅 오류로 세션이 막히지 않게 하려는 것이라 남기고 이유를 주석에 적는다.
 
 ## 5. W2 에서 남긴 것
 
 - 팩 키의 도메인 떼고 재조회 — 도메인 없는 리소스 id(검색 우선순위로 푸는 형식)가 떼어 낸 키를 1단계에서 맞히는 데 기대고 있다. 키를 전역 경로로 바꾸려면 도메인 없는 id 쓰는 곳을 먼저 없애야 한다.
 - `attachmentFormatOrDefault` · `getAttachmentClearColorOrDefault` — 근본 원인은 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것이다. 선언 필수화는 파이프라인 XML(셰이더 작업 소관)과 함께 한다.
-- `REFLECT( Alias )` — 제품 데이터 사용 0, 테스트 4. 리더 제거는 리플렉션 파서 · 코드젠 변경이라 따로 한다. 프리팹 JSON 리더는 데이터 0 이지만 에디터가 쓴다(에디터 작업 소관).
+- `REFLECT( Alias )` — 제품 데이터 사용 0, 테스트 4. 별칭 유지로 결정돼 제거하지 않는다(4절). 프리팹 JSON 리더는 데이터 0 이지만 에디터가 쓴다(에디터 작업 소관).
 - XML 저작본 ↔ bin 쿠킹본 두 리더(`PrefabAsset` · `SceneDocument`)는 옛 형식이 아니라 쿠킹 파이프라인이다.
 - 같은 모양이 더 있는 곳: `NavMeshSettings::ensureDefaults`, `PhysicsDesc` 의 모르는 재질 → 첫 재질, `MaterialUtil::parseBlendMode` 의 모르는 이름 → Opaque, `GameDataXML` · `CameraPreset`(GameFramework 작업 소관).
 
@@ -127,7 +127,6 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 | P1 | 경로 상수와 컴포넌트 기본 머티리얼을 `EngineDefaultAssets` 로 옮깁니다 | `Engine/UI/`, `Engine/Config/EngineDefaultAssets.*`, `Engine/Environment/`, `Engine/Object/Component/2D/TileMapRendererComponent.*`, 엔진 데이터 | 없음 | 기동, UI 테스트, 대표 셋 | 없음 |
 | P2 | 렌더러 첨부를 파이프라인 XML 이 모두 선언합니다(W7 과 함께) | `Engine/Renderer/Frame/`, 파이프라인 XML | 셰이더 묶음 | 네 백엔드 × 대표 셋, 골든 이미지 | 없음 |
 | P4 | 테스트가 원본을 거치게 합니다(W6) | `Test/` | D9, P1 | `-L nogpu` | 없음 |
-| R1(사용자 결정 대기 — 결정 기록 5-4 의 "별칭과 이관 등록은 미리 갖춘다" 와 부딪힌다) | `REFLECT( Alias )` 와 별칭 읽기 경로(`TypeInfo::_mapNameToPropertyWithBase` 의 별칭 항목)를 지웁니다. 제품 데이터 사용은 0 이고, 테스트 `ReflectionSerializationTest.StructuralMoveAndPropertyAlias` 의 별칭 절을 지웁니다. 값 계산이 필요한 이행만 `SW_SCHEMA_MIGRATION` 으로 남습니다 | `Tools/ReflectionParser/`, `Engine/Reflection/`, 해당 테스트 | 없음 | 파서 테스트, `-L nogpu` | 없음 |
 | G1 | 게임 코드의 튜닝 리터럴(C-30 ②)을 데이터로 옮깁니다. NileCity 자동 계획표 좌표, HarvestValley 작물 → 모델 테이블, StarSkirmish `makeAISettings`, FarmSun 라이트 곡선 | 게임마다 `Source/Games/<게임>/`, 그 팩 데이터 | 없음 | 게임별 기동과 스크린샷 비교 | 없음 |
 | G2 | Shipping 의 그림 비교(C-30 ⑤)를 구운 팩의 시나리오 스크린샷으로 둡니다 | `Test/AppTest/`, 팩 시나리오 | 없음 | Shipping 빌드와 `-L hostgpu` | 없음 |
 

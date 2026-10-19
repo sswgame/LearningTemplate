@@ -58,7 +58,7 @@
 착수 조건 / 남은 것:
 - 런타임 타입은 `Engine/Character` · `Engine/Animation` 에, BC7 재임포트는 Editor 임포터에 있어 그래픽 작업자의 파일 밖이다.
 - 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2). 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다.
-- VRoid 텍스처는 BC3 이다(Debug DirectXTex 의 BC7 은 512×256 한 장도 10 분이 넘는다). Release 로 BC7 임포트를 다시 한다.
+- VRoid 텍스처는 BC3 이다. BC7 은 Release 의 띠 병렬 압축으로 512² 한 장이 8 초라([검증과 측정](../08_Verification.md) 2절, 커밋 `e71f3b8ae`) 예전의 "Debug 10 분" 은 근거가 아니다. Release 로 BC7 임포트를 다시 한다.
 함정: `ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments` 는 Debug 에서 혼자 31 초라 EditorTest 한도를 30 → 120 초로 올려 두었다. 임포트를 줄이면 되돌린다.
 
 ### HalfResolutionBloomMeasurement

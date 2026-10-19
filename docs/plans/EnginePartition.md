@@ -36,7 +36,9 @@
 | `GameObject/Registry/PrimitiveRegistry.cpp:8` | `Component/3D/MeshComponent.h` | 레지스트리가 `MeshComponent*` 를 보관하고 `kInvalidPrimitiveIndex` 와 프리미티브 번호 접근자를 씁니다 |
 | `GameObject/Registry/PrimitiveRegistry.cpp:9` | `Component/3D/MeshInstanceBatch.h` | 인스턴스 배치의 `_pRegistry` 와 항목 번호를 씁니다 |
 
-## 3. 링크 단위로 승격
+## 3. 링크 단위로 승격 (하지 않음)
+
+근거가 없어 하지 않습니다. 2026-10-16 Debug 측정(PC `SW`)에서 `Engine.dll` 링크는 1.9 s 뿐이었고 증분 비용은 임포트 라이브러리 갱신이었습니다([결정 기록](../09_Decisions.md) 3절). 아래는 다른 이유(예: 서버 타깃이 Render 층을 링크하지 않는 것)가 생길 때 다시 볼 설계 메모입니다.
 
 - 먼저 `OBJECT` 라이브러리로 나눕니다(DLL 은 하나, 위험 낮음). 층은 Foundation(티어 0 ~ 2), Data(3 ~ 4), Render(5, Renderer, Environment), World(6 ~ 7 코어), Features(기능 컴포넌트), Tools(UI, Telemetry, Automation, Module), 루트(Engine)입니다.
 - 0 단계 측정으로 이득이 확인되면 Dev 만 층마다 DLL 로 올립니다. 내보내기 매크로는 층별로 늘리지 않고 `SW_API` 하나를 유지하되, 각 DLL 의 `SW_EXPORTS` 를 층 전체에 겁니다.

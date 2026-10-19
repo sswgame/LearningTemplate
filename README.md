@@ -15,11 +15,11 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 <!-- status-board:start -->
 | 순위 | 업무(계획 문서) | 상태 | 진행 | 선행 | 영역 | 옛번호 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 5/15 | 없음 | engine | C-30, C-36 |
+| 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 5/14 | 없음 | engine | C-30, C-36 |
 | 2 | [GimmickCircuitState](docs/plans/GimmickCircuitState.md) — 기믹 회로 상태 구조 계획 (2026-10-17) | 구현중 | 4/5 | ReflectionFormats | engine | 없음 |
 | 3 | [Vfx](docs/plans/Vfx.md) — 파티클 · VFX 구현 단위 (`D2-11`) | 구현대기 | 0/7 | 없음 | graphics | D2-11 |
 | 7 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
-| - | [AsyncResourceLoading](docs/plans/AsyncResourceLoading.md) — 리소스 비동기 로드와 디더 등장 계획 (2026-10-20) | 설계 | 0/6 | 없음 | engine | 없음 |
+| - | [AsyncResourceLoading](docs/plans/AsyncResourceLoading.md) — 리소스 비동기 로드와 디더 등장 계획 (2026-10-20) | 설계 | 1/6 | 없음 | engine | 없음 |
 | - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 설계 | 0/7 | ClusteredLighting | graphics | D2-12 |
 | - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 설계 | 1/7 | 없음 | engine | D1-7 |
 | - | [AudioChannelLayout](docs/plans/AudioChannelLayout.md) — 오디오 채널 레이아웃 계획 (2026-10-20) | 구현대기 | 0/5 | 없음 | audio-ai-localization | D5-1 |
@@ -38,7 +38,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 155개
+후보 문서 9개 · 후보 절 149개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.
