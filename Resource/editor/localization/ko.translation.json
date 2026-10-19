@@ -285,10 +285,6 @@
             "text": "프리팹 격리를 마쳤습니다",
             "sourceHash": "31b7126a789468fe"
         },
-        "EdCommon.NotifyPrefabSaveFirst": {
-            "text": "프리팹 격리를 열기 전에 씬을 저장하십시오",
-            "sourceHash": "4e9f4c46465c6008"
-        },
         "EdCommon.NotifyPrefabTitle": {
             "text": "프리팹",
             "sourceHash": "a2d5fac94c77c683"
