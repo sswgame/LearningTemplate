@@ -1,9 +1,9 @@
 # 기믹 회로 상태 구조 계획 (2026-10-17)
 
-> 상태: 구현중 · 선행: ReflectionFormats · 영역: engine · 옛번호: 없음 · 진행: 4/5
+> 상태: 구현중 · 선행: ReflectionFormats · 영역: engine · 옛번호: 없음 · 진행: 5/5
 
 [리플렉션 형식 계획](ReflectionFormats.md) 9절 단계 2(`GimmickCircuit` 을 B 로)의 설계입니다. 그 단계는 "상태 바이트가 씬 · 프리팹 · 레벨 세이브에 남는다"는 이유로 보류됐고, 이 문서는 그 보류를 푼 구조를 남깁니다.
-단계 2-a~2-c(상태 구조체 · 컴포넌트 · 번들)와 2-e(문서 · 헤더 주석)는 끝났고, 2026-10-20 에 Debug 테스트와 Release 측정도 끝냈습니다(아래 "검증 기록"). 남은 단위는 2-d(GPU 확인)뿐입니다.
+단계 2-a~2-c(상태 구조체 · 컴포넌트 · 번들)와 2-e(문서 · 헤더 주석)는 끝났고, 2026-10-20 에 Debug 테스트와 Release 측정도 끝냈습니다(아래 "검증 기록"). 2-d(GPU 확인)도 2026-10-20 에 끝났습니다(아래 "남은 확인").
 
 **정한 것(사용자 확정).**
 
@@ -56,7 +56,7 @@
 
 ## 남은 확인
 
-- **2-d GPU 확인.** `gpu-verifier` 가 쇼케이스 씬(`Resource/game/empty/maps/gimmickshowcase.scene.xml`)을 열고 캡처해 문 · 엘리베이터 · 무버가 움직이고 오류 로그가 없는지 봅니다. 실행 기록을 찾지 못했습니다.
+- **2-d GPU 확인.** `gpu-verifier` 가 쇼케이스 씬(`Resource/game/empty/maps/gimmickshowcase.scene.xml`)을 열고 캡처해 문 · 엘리베이터 · 무버가 움직이고 오류 로그가 없는지 봅니다. **끝(2026-10-20, Debug dx12).** `App.exe -dx12 -gv_firstScene=game/empty/maps/gimmickshowcase.scene.xml -gv_screenshot=… -gv_screenshotFrame=60 / 240` 두 장. 씬 13 엔티티 로드, 로그에 오류 · 실패 줄 0. 60 프레임은 노출이 오르는 중이라 어둡고, 240 프레임은 바닥 · 판 · 문짝이 보이며 두 장 사이에 문짝 · 판 네 개의 자리가 바뀌었다(왼쪽 판 열림 그라데이션, 위쪽 두 개 각도 변화). 문 · 엘리베이터 · 무버를 하나씩 가려 보지는 않았다.
 - **같은 결함이 다른 곳에.** `ElementGrid.cpp:380` 의 `cellBytes` 가 읽는 쪽에서 크기를 손으로 계산하는 같은 구조입니다. 이 계획의 범위 밖이라 따로 조사합니다.
 
 ## 검증 기록 (2026-10-20, `wt/gimmick-verify`)
