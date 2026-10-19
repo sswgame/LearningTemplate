@@ -12,7 +12,6 @@
    - K0 — [IncrementalCook](IncrementalCook.md). [단독: 측정이 든 단위라 Release 에서 혼자]
    - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
 2. **구현 대기 설계**(구현 전에 `design-reviewer` 검토 결과를 반영).
-   - `GimmickCircuit` 단계 2 — [GimmickCircuitState](GimmickCircuitState.md). [병렬 가능]
    - 서버 버스 A 전환 — [ServerBusFormat](ServerBusFormat.md) 단계 0~6. [단독: 메시지 형식을 바꿔 서버 · 클라이언트 모듈이 다시 빌드됨]
 3. **새 시스템**:
    - Vfx V2 → V3 먼저(V0 · V1 들어감) — [Vfx](Vfx.md). [병렬 가능]
