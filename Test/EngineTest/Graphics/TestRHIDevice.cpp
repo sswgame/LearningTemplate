@@ -302,7 +302,8 @@ SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 {
     for ( sw::RHIBackend backend : test::kArrAllRHIBackend )
     {
-        if ( test::isBackendInThisBuild( backend ) == false )
+        // 이 호스트에 런타임이 없는 백엔드(리눅스의 DX)를 만들면 엔진이 "백엔드 없음" Error 를 남긴다 — `RHITestDevice` 와 같은 거름이다.
+        if ( test::isBackendUnderTest( backend ) == false || sw::RHIAvailability::isAvailable( backend ) == false )
             continue;
         sw::shared_ptr<sw::IRHIDevice> device = sw::RHI::createDevice( backend );
         if ( device != nullptr )

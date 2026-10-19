@@ -89,6 +89,11 @@ namespace test
         return true;
     }
 
+    bool isBackendUnderTest( sw::RHIBackend backend )
+    {
+        return isBackendInThisBuild( backend ) && TestRegistry::getInstance().getOptions().isBackendSelected( backend );
+    }
+
     TestRegistry::TestRegistry()
         : TestRegistry( "(nested) " )
     {

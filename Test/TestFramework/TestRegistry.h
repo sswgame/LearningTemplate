@@ -120,6 +120,11 @@ namespace test
      *          "이 PC 에 GPU 가 있는데 Vulkan 이 서지 않는다" 가 건너뜀으로 초록이 되지 않게 한다(C-41 3단계).
      */
     bool reportUnusableBackend( sw::RHIBackend backend, const utf8* pReason, const utf8* pFile, int32 line );
+    /**
+     * @brief 이 실행이 그 백엔드를 세워 검증하는가 — 이 빌드에 있고(`isBackendInThisBuild`) 이 실행의 대상 목록(`TestRunOptions::isBackendSelected`)에 든다.
+     * @details `RHITestDevice` 가 이 답으로 백엔드를 거른다. 백엔드를 직접 만드는 케이스도 같은 답을 따른다.
+     */
+    bool isBackendUnderTest( sw::RHIBackend backend );
 } // namespace test
 
 /** @brief 현재 테스트를 사유와 함께 건너뜁니다 — 환경 탓(파일 · 장치 · 서버가 없음)일 때. 스위트가 전부 이것으로 건너뛰면 "아무것도 검증하지 않은 스위트" 로 진다. */
