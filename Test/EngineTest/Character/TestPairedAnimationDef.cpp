@@ -39,6 +39,46 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
 }
 
 /**
+ * @brief [PairedAnimationDefTest] 고르기 조건 — 앵커 앞에서 본 방위각 구간과 수평 거리로 맞춘다. 최소가 최대보다 크면 뒤쪽(±180° 를 지나는) 구간이다. 조건이 없으면 늘 맞다
+ * @details 앵커는 (1, 0, 1) 에서 요 90°(앞이 월드 +X). 월드 (2, 0, 1) 은 앞 0°, (1, 0, 0) 은 오른쪽 90°, (0, 0, 1) 은 뒤 180° 이다.
+ */
+SW_TEST_CASE( PairedAnimationDefTest, SelectMatchesBearingAndDistanceFromAnchor )
+{
+    PairedAnimationDef front;
+    SW_ASSERT_TRUE( front.loadFromXMLText( R"(<PairedAnimation duration="1">
+        <Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Select role="B" minAngle="-45" maxAngle="45" maxDistance="2"/>
+    </PairedAnimation>)",
+                                           "front" ) );
+    PairedAnimationDef back;
+    SW_ASSERT_TRUE( back.loadFromXMLText( R"(<PairedAnimation duration="1">
+        <Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Select role="B" minAngle="135" maxAngle="-135" maxDistance="2"/>
+    </PairedAnimation>)",
+                                          "back" ) );
+    PairedAnimationDef any;
+    SW_ASSERT_TRUE( any.loadFromXMLText( R"(<PairedAnimation duration="1">
+        <Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+    </PairedAnimation>)",
+                                         "any" ) );
+    SW_ASSERT_NOT_NULL( front.findSelect() );
+    SW_EXPECT_TRUE( front.findSelect()->_role == hashed_string( "B" ) );
+    SW_EXPECT_NULL( any.findSelect() );
+
+    const float4x4 anchor = float4x4::makeTrs( float3{ 1.0f, 0.0f, 1.0f }, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::kHalfPi ), float3{ 1.0f, 1.0f, 1.0f } );
+    SW_EXPECT_TRUE( front.matchesSelect( anchor, float3{ 2.0f, 5.0f, 1.0f } ) ); // 높이는 보지 않는다
+    SW_EXPECT_FALSE( back.matchesSelect( anchor, float3{ 2.0f, 0.0f, 1.0f } ) );
+    SW_EXPECT_FALSE( front.matchesSelect( anchor, float3{ 1.0f, 0.0f, 0.0f } ) ); // 오른쪽 90°
+    SW_EXPECT_TRUE( back.matchesSelect( anchor, float3{ 0.0f, 0.0f, 1.0f } ) );
+    SW_EXPECT_FALSE( front.matchesSelect( anchor, float3{ 0.0f, 0.0f, 1.0f } ) );
+    SW_EXPECT_FALSE( front.matchesSelect( anchor, float3{ 4.0f, 0.0f, 1.0f } ) ); // 3 m — 거리 밖
+    SW_EXPECT_TRUE( any.matchesSelect( anchor, float3{ 40.0f, 0.0f, -7.0f } ) );
+}
+
+/**
  * @brief [PairedAnimationDefTest] 에셋 — 필수 값 없음 · 유한하지 않은 수 · 규칙 위반은 읽기 오류다(조용히 기본값이 되지 않는다)
  */
 SW_TEST_CASE( PairedAnimationDefTest, DefRejectsMissingAndInvalidValues )
@@ -74,6 +114,16 @@ SW_TEST_CASE( PairedAnimationDefTest, DefRejectsMissingAndInvalidValues )
         R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Notify name="N" time="1.5" role="A"/></PairedAnimation>)",
         // 역할 이름이 겹친다
         R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="A" required="false" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)",
+        // 고르기 조건이 모르는 역할을 본다
+        R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="Z" minAngle="-45" maxAngle="45" maxDistance="2"/></PairedAnimation>)",
+        // 고르기 조건이 앵커를 본다
+        R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="A" minAngle="-45" maxAngle="45" maxDistance="2"/></PairedAnimation>)",
+        // 고르기 각이 반 바퀴 밖이다
+        R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-200" maxAngle="45" maxDistance="2"/></PairedAnimation>)",
+        // 고르기 거리가 없다
+        R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-45" maxAngle="45"/></PairedAnimation>)",
+        // 고르기 조건이 둘이다
+        R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-45" maxAngle="45" maxDistance="2"/><Select role="B" minAngle="135" maxAngle="-135" maxDistance="2"/></PairedAnimation>)",
     };
     for ( const utf8* pXML : kArrBadXML )
     {

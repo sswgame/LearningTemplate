@@ -5,6 +5,7 @@
  *          - **시계**: 앵커 역할 플레이어의 시각 하나가 정본이다. 세션은 그것을 읽고, 이번 프레임 평가가 갈 시각(`시각 + dt × 속도`)을 예측해 공유 알림을
  *            그 구간에서 낸다. 다음 프레임에 앵커 시각이 예측과 다르면 오류로 중단한다(조용히 맞추지 않는다).
  *          - **맞춤**: 역할은 같은 프레임 · 속도 1 로 각자 `play` 한다. 매 프레임 역할 시각 = 앵커 시각 − 진입 때 앵커 시각인지 검사한다.
+ *            같은 오브젝트의 보폭 보정(`LocomotionWarpingComponent`)은 역할에 있는 동안 재생 속도를 쥐어 둔다(`setPlayRateHeld`).
  *          - **정렬**: `Snap` 은 진입 때 트랜스폼을 맞추고, `Warp` 는 같은 오브젝트의 `MotionWarpingComponent` 에 목표 · 창을 넣는다(목표는 매 프레임 앵커에서 다시 구함).
  *          - **스레드**: 시작 · 갱신 · 중단은 모두 게임 스레드, 틱 밖(`PairedAnimationSystem` 의 프레임 시스템 단계)에서 부른다. 애니메이션 평가는 세션을 읽지 않는다.
  *          - **잃음**: 필수 역할(앵커 포함)의 애니메이터가 사라지거나 다른 것을 재생하면 중단, 선택 역할이면 그 역할만 빠진다.
@@ -45,6 +46,7 @@ namespace sw
         WarpingUnavailable,  ///< `warp` 역할의 오브젝트에 `MotionWarpingComponent` 가 없다(오류 로그)
         NotifyTargetMissing, ///< 공유 알림을 받을 역할의 알림 표에 그 항목이 없다(오류 로그)
         TooFarToAlign,       ///< 진입 조건 — 정렬할 역할이 목표에서 `maxAlignDistance` 보다 멀다(게임플레이의 정상 거절)
+        NoMatchingSet,       ///< 세트 고르기 — 지금 자리에 맞는 세트가 없다(게임플레이의 정상 거절, `PairedAnimationSystem::startMatchingSession`)
     };
 
     /** @enum PairedAnimationSessionState @brief 세션의 상태입니다. */

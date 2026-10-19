@@ -5,6 +5,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
@@ -29,6 +30,13 @@ namespace sw
             [[nodiscard]] static bool loadSocketSet( string_view path, SocketSet& outSocketSet ) { return outSocketSet.loadFromResource( path, loadDefaultKinds() ); }
             [[nodiscard]] static bool loadNotifyTable( string_view path, AnimationNotifyTable& outTable ) { return outTable.loadFromResource( path, AnimationNotifyHandlerRegistry::getDefault() ); }
             [[nodiscard]] static bool loadPhysicsAsset( string_view path, PhysicsAsset& outAsset ) { return outAsset.loadFromResource( path ); }
+            [[nodiscard]] static bool loadPairedAnimation( string_view path, PairedAnimationDef& outDef ) { return outDef.loadFromResource( path ); }
+
+            static SharedAssetTable<PairedAnimationDef>& getPairedAnimationTable()
+            {
+                static SharedAssetTable<PairedAnimationDef> s_table;
+                return s_table;
+            }
 
             static SharedAssetTable<SocketSet>& getSocketSetTable()
             {
@@ -122,6 +130,39 @@ namespace sw
         CharacterDataCacheInternal::getNotifyTable().clear();
     }
 
+    shared_ptr<const PairedAnimationDef> PairedAnimationDefCache::acquire( string_view path )
+    {
+        SW_MEMORY_SCOPE( Animation );
+        return CharacterDataCacheInternal::getPairedAnimationTable().acquire( path, &CharacterDataCacheInternal::loadPairedAnimation );
+    }
+
+    uint32 PairedAnimationDefCache::getReloadCount()
+    {
+        return CharacterDataCacheInternal::getPairedAnimationTable().getReloadCount();
+    }
+
+    bool PairedAnimationDefCache::isCached( string_view relativePath ) const
+    {
+        return CharacterDataCacheInternal::getPairedAnimationTable().findLive( relativePath ) != nullptr;
+    }
+
+    void PairedAnimationDefCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    {
+        (void)pDevice;
+        // 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않는다. 읽지 못하면 로더가 줄마다 오류를 남겼고 옛 에셋이 그대로다.
+        (void)CharacterDataCacheInternal::getPairedAnimationTable().detachShared( relativePath, &CharacterDataCacheInternal::loadPairedAnimation );
+    }
+
+    size_t PairedAnimationDefCache::getCachedCount() const
+    {
+        return CharacterDataCacheInternal::getPairedAnimationTable().countLive();
+    }
+
+    void PairedAnimationDefCache::clear()
+    {
+        CharacterDataCacheInternal::getPairedAnimationTable().clear();
+    }
+
     shared_ptr<const PhysicsAsset> PhysicsAssetCache::acquire( string_view path )
     {
         return CharacterDataCacheInternal::getPhysicsAssetTable().acquire( path, &CharacterDataCacheInternal::loadPhysicsAsset );
@@ -158,5 +199,6 @@ namespace sw
 {
     SW_BUILT_IN_ASSET_CACHE( SocketSetCache );
     SW_BUILT_IN_ASSET_CACHE( AnimationNotifyTableCache );
+    SW_BUILT_IN_ASSET_CACHE( PairedAnimationDefCache );
     SW_BUILT_IN_ASSET_CACHE( PhysicsAssetCache );
 } // namespace sw

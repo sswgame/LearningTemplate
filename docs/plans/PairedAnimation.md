@@ -3,7 +3,7 @@
 > 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 3/5
 
 활과 화살, 잡기 · 처형, 말 타기, 문 열기처럼 **여러 개체가 한 타임라인에 묶여 같이 도는 애니메이션**(언리얼의 Contextual Animation, 흔히 페어드 · 싱크드 · 인터랙션 애니메이션)의 일반 구조다.
-애니메이션 영역의 한 단위다([게임플레이 후보](Candidates-gameplay.md) 의 애니메이션 절과 이웃). 첫 단위(P0 ~ P2)는 `feat22` 브랜치에 코드와 테스트로 들어갔고, **빌드 없이** 썼다(통합 담당이 한 워크트리에 모아 빌드 한 번으로 검증한다).
+애니메이션 영역의 한 단위다([게임플레이 후보](Candidates-gameplay.md) 의 애니메이션 절과 이웃). 첫 단위(P0 ~ P2)와 상호작용 연결 · 에셋 캐시 · 세트 고르기 · 보폭 보정 쥠은 코드와 테스트(`PairedAnimationTest` · `PairedAnimationDefTest` · `InteractionTest`)로 들어갔다.
 
 ## 1. 지금 엔진에 있는 것과 없는 것
 
@@ -19,7 +19,8 @@
 | `AnimationNotifyComponent` + 처리기 레지스트리 | `Engine/Character/AnimationNotify` | 클립 알림 → 표(`*.notifies.xml`)의 처리기(`SpawnPrefab` · `GameplayEvent` · …) | 공유 타임라인 알림은 역할 오브젝트의 이 컴포넌트로 보낸다. 작은 훅 하나(`processExternalNotify`)를 더했다 |
 | 소켓(`SocketSetComponent` · `SocketBindingComponent`) | `Engine/Character/Socket` | 본에 붙은 이름 자리, 오브젝트 부착 | 활(프롭)은 궁수 손 소켓에 붙은 채로 역할에 참가한다. 부착이 평가 의존(레벨)을 이미 만든다 |
 | `AnimationCrowd` | `Engine/Object/SceneAnimation` | 반복 클립 하나를 재생하는 유닛의 포즈를 묶음과 나눈다 | 세션 클립은 반복하지 않으므로 `describeSharedPose` 가 거짓 — 세션 참가자는 자동으로 군중에서 빠진다 |
-| `InteractableComponent` | `GameFramework/.../Interaction` | 상호작용 정의와 맞춤 마커(소켓)로 맞춤 지점 계산 | 스마트 오브젝트 자리. 후속에서 상호작용이 세션을 시작하게 잇는다 |
+| `InteractableComponent` | `GameFramework/.../Interaction` | 상호작용 정의와 맞춤 마커(소켓)로 맞춤 지점 계산 | 단계의 `pairedAnimation`(세트 목록) · `interactorRole` · `interactableRole` 로 하는 쪽(`InteractorComponent`)이 단계 시작에 세션을 시작한다 |
+| `LocomotionWarpingComponent` | `Engine/Object/SceneAnimation` | 보폭 보정이 매 프레임 재생 속도를 쓴다 | 세션이 역할에 들어올 때 쥐고(`setPlayRateHeld`) 나갈 때 놓는다. 이쪽은 아래 티어(Object)라 세션을 묻지 않는다 |
 
 ## 2. 상용 선례
 
@@ -31,10 +32,10 @@
 | 언리얼 Sync Group / Sync Marker | 리더-팔로워 위상 동기(마커가 있으면 발 위상) | 리더 = 앵커 역할이라는 생각. 단 위상 동기는 쓰지 않고 같은 프레임 · 같은 속도 시작 + 시각 검사로 맞춘다(1절) | [문서] |
 | 언리얼 Motion Warping | 구간 알림 창과 이름 붙은 워프 목표로 루트 모션을 휨 | 정렬 방식 `warp` 가 엔진의 `MotionWarpingComponent` 를 그대로 쓴다 | [문서] · 엔진 쪽 [코드] |
 | 언리얼 Contextual Animation (`ContextualAnimSceneAsset`) | 역할 목록, 역할마다 몽타주, 정렬 섹션 · 워프 포인트, 장면 인스턴스가 몽타주를 함께 재생(`MontageSync_Follow` 로 리더를 따름) | 데이터 에셋 = 역할 목록 + 클립 + 앵커 기준 오프셋, 런타임 = 장면 인스턴스(여기서는 세션) | [기억] |
-| 언리얼 Gameplay Interactions · Smart Objects | 월드 오브젝트가 상호작용 슬롯을 광고하고, 예약한 쪽이 상호작용(컨텍스추얼 애니 포함)을 실행 | 진입 조건(거리)을 데이터로, 세션 시작은 게임플레이(상호작용)가 부른다. 연결은 후속 | [기억] |
+| 언리얼 Gameplay Interactions · Smart Objects | 월드 오브젝트가 상호작용 슬롯을 광고하고, 예약한 쪽이 상호작용(컨텍스추얼 애니 포함)을 실행 | 진입 조건(거리)을 데이터로, 세션 시작은 게임플레이(상호작용 단계의 `pairedAnimation`)가 부른다 | [기억] |
 | 유니티 Timeline | `PlayableDirector` 한 시계가 트랙마다 바인딩된 오브젝트를 구동 | "한 시계 + 역할 → 오브젝트 바인딩" 모양. 단 포즈는 각 애니메이터가 내고(루트 모션 · 알림 · 워핑을 그대로 쓰려고) 시계는 앵커가 갖는다 | [문서] |
 | Naughty Dog 컨텍스추얼 애니메이션(GDC 발표들) | 상호작용을 한 장면에서 함께 저작하고, 공통 기준점(애니메이션 기준점, apReference 류)에 모든 참가자의 루트를 상대로 둔다 | 오프셋은 "앵커 루트 기준 역할 루트" 하나 — 기준점을 별도 오브젝트로 두지 않고 앵커 역할이 기준점이다 | [기억] |
-| 'Assassin's Creed' 처형 · 'The Last of Us' 잡기 | 상대 위치 · 각도로 처형 세트를 고르고, 짧은 창에서 공격자를 피해자 기준 자리로 미끄러뜨려 맞춤 | `snap`(즉시) · `warp`(창 동안 휨) 두 정렬, 진입 조건 `maxAlignDistance`. 세트 고르기는 후속 | [기억] · [추정] |
+| 'Assassin's Creed' 처형 · 'The Last of Us' 잡기 | 상대 위치 · 각도로 처형 세트를 고르고, 짧은 창에서 공격자를 피해자 기준 자리로 미끄러뜨려 맞춤 | `snap`(즉시) · `warp`(창 동안 휨) 두 정렬, 진입 조건 `maxAlignDistance`, 세트 고르기 `<Select>`(앵커 앞에서 본 방위각 · 거리) | [기억] · [추정] |
 
 ## 3. 결정
 
@@ -50,6 +51,9 @@
 | 공유 알림 | 에셋의 `<Notify name time role/>` 를 그 역할 오브젝트의 `AnimationNotifyComponent` 표로 보낸다(순간 알림만). 표에 항목이 없으면 **시작 거절** | 화살은 기존 경로(`SpawnPrefab` 처리기)로 생긴다. 이름 → 처리기는 캐릭터 데이터가 정한다 |
 | 중단 정책 | 필수 역할 · 앵커를 잃으면(오브젝트가 없어짐, 애니메이터가 다른 것을 재생함) 세션 중단 — 남은 역할은 각자 `exitState` 로 `exitBlend` 동안 블렌드. 선택 역할을 잃으면 그 역할만 빠진다 | 데이터 없이 규칙 하나. 잃은 역할의 애니메이터는 건드리지 않는다(게임플레이가 이미 다른 것을 재생 중) |
 | 데이터 형식 | `*.pairedanim.xml`(캐릭터 데이터 XML 관례, `CharacterDataReader` — 모르는 속성 · 원소는 오류) | 알림 표 · 소켓과 같은 사람이 같은 도구로 고친다 |
+| 에셋 캐시 · 핫 리로드 | `PairedAnimationDefCache`(`CharacterDataCache.h`). 다시 읽기는 제자리에서 바꾸지 않고 표에서 떼어 낸다(`detachShared`). `PairedAnimationComponent` 는 다시 읽은 횟수가 바뀌면 다음 시작 전에 다시 받는다 | 돌고 있는 세션은 역할 인덱스로 에셋을 읽는다 — 제자리에서 역할 수가 바뀌면 범위 밖을 읽는다 |
+| 세트 고르기 | 에셋마다 `<Select>`, `PairedAnimationSystem::startMatchingSession` 이 목록에서 자리에 맞는 첫 세트로 시작(없으면 `NoMatchingSet`). 고른 세트의 시작이 거절되면 다음 세트로 넘어가지 않는다 | 조건을 통과한 세트가 시작하지 못하는 것은 데이터 · 배치 결함이다 — 다른 세트로 덮지 않는다 |
+| 재생 속도를 쓰는 다른 컴포넌트 | 세션이 역할에 들어올 때 `LocomotionWarpingComponent::setPlayRateHeld( true )`, 나갈 때 `false` | 보폭 보정은 Object 티어라 Character 의 세션을 include 할 수 없다(`CheckEngineLayers`). 세션이 알려 주는 쪽이 방향이 맞다 |
 | 에셋 이름 | `PairedAnimationDef`(+ `RoleDef` · `NotifyDef`) | 저작 데이터 정의는 `Def`(`docs/agents/NamingCpp.md` `Naming`) |
 
 ## 4. 데이터 — `*.pairedanim.xml`
@@ -79,6 +83,7 @@
 | `Role@maxAlignDistance` | `snap` · `warp` 에서 예 | 진입 조건. 시작 때 역할 루트와 목표의 거리가 이보다 멀면 시작 거절(`TooFarToAlign`) |
 | `Role@skeleton` | 아니오 | 적으면 참가자 메시의 스켈레톤 경로와 같아야 한다 |
 | `Notify@name` · `time` · `role` | 예 | 공유 알림. `0 ≤ time ≤ duration`, `role` 은 있는 역할 |
+| `Select@role` · `minAngle` · `maxAngle` · `maxDistance` | `<Select>` 는 없거나 하나, 적으면 넷 다 예 | 세트 고르기 조건. `role`(앵커가 아닌 역할) 루트가 앵커 앞(+Z)에서 본 수평 방위각(도, [-180, 180])과 수평 거리(m) 안에 있어야 이 세트를 고른다. `minAngle > maxAngle` 이면 ±180° 를 지나는 뒤쪽 구간. 없으면 어느 자리에서나 고른다 |
 
 숫자는 모두 유한해야 한다(`nan` · `inf` 는 오류). 어느 것도 조용히 기본값이 되지 않는다 — "없으면 0" 은 형식이 정한 "적지 않음" 값이고, 필수 값이 빠지면 읽기가 실패한다.
 
@@ -107,6 +112,7 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 - 세션 상태는 결정적이다: (에셋, 바인딩, 진입 시 앵커 시각 목록, 알림 커서, 상태). 스냅샷 · 롤백(feat17 의 `setOwnerState`)에서는 이 묶음을 소유 상태로 저장하고, 되감기 뒤 다시 적용할 때 공유 알림은 "이미 낸 시각" 커서로 두 번 내지 않는다.
 - 정렬(`snap` · `warp`)은 서버 권위 트랜스폼을 따른다 — 클라이언트는 정렬 결과를 예측하되 서버 보정을 받는다.
 - 세션 id 는 지금 씬 시스템의 일련번호다. 복제할 때는 서버가 정한 id 를 받는 시작 경로가 필요하다(후속).
+- 2026-10-20 확인: `setOwnerState` 는 main 에 있고, 애니메이터 시각 지정 훅은 없다 — 구현은 훅이 들어온 뒤다("남은 것").
 
 ## 8. 에디터(M3, 후속)
 
@@ -120,24 +126,25 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| P0 | `PairedAnimationDef` 로더와 검사(필수 역할 · 클립 없음 · NaN · 모르는 속성 · 앵커 규칙 · 알림 역할) | feat22, 빌드 전 |
-| P1 | `PairedAnimationSession` · `PairedAnimationSystem` · `PairedAnimationComponent`, `AnimationNotifyComponent::processExternalNotify` | feat22, 빌드 전 |
-| P2 | 정렬 `snap` · `warp`(`MotionWarpingComponent` 재사용, 새 노드 없음) | feat22, 빌드 전 |
-| P3 | 네트워크 재현(7절) | 아래 "남은 것" |
+| P0 | `PairedAnimationDef` 로더와 검사(필수 역할 · 클립 없음 · NaN · 모르는 속성 · 앵커 규칙 · 알림 역할) | 완료(Debug 빌드 · `PairedAnimationDefTest` 통과) |
+| P1 | `PairedAnimationSession` · `PairedAnimationSystem` · `PairedAnimationComponent`, `AnimationNotifyComponent::processExternalNotify` | 완료(Debug 빌드 · `PairedAnimationTest` 통과) |
+| P2 | 정렬 `snap` · `warp`(`MotionWarpingComponent` 재사용, 새 노드 없음) | 완료(Debug 빌드 · `PairedAnimationTest` 통과) |
+| P3 | 네트워크 재현(7절) | 아래 "남은 것" — 선행(애니메이터 시각 지정 훅)이 없다 |
 | M3 | 에디터 미리보기(8절) | 아래 "남은 것" |
-| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립), 상호작용(`InteractableComponent`)에서 세션 시작, 에셋 캐시(`CharacterDataCache` 처럼 핫 리로드), 상대 위치로 세트 고르기 | 아래 "남은 것" |
+| — | 상호작용 단계에서 세션 시작 · 에셋 캐시(핫 리로드) · 세트 고르기(`<Select>`) · 보폭 보정 쥠 | 완료(`InteractionTest` · `PairedAnimationTest`) |
+| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 아래 "남은 것" — 클립 · 활 메시가 없다 |
 
 ## 남은 것
 
 - 에디터 미리보기(M3): 역할마다 메시를 놓고 한 시계로 스크럽 · 오프셋 기즈모 · 알림 시각 편집.
-- 네트워크 재현(P3): 서버가 세션 id · 시작 틱 · 역할 → 오브젝트를 복제한다. 클라이언트 따라잡기에는 애니메이터 시각 지정 훅이 필요하다(feat20 · feat21 병합 뒤). 롤백은 feat17 `setOwnerState` 에 세션 상태를 소유 상태로 싣는다.
-- 시나리오 테스트: Shooter3D 궁수 · 활 · 화살 실제 클립과 활 메시(`data/anim/bow_shoot.pairedanim.xml` 은 형식 검사만 돈다).
-- 상호작용(`InteractableComponent`)에서 세션 시작, 에셋 캐시(핫 리로드), 상대 위치로 처형 세트 고르기.
-- 세션 중 `LocomotionWarpingComponent` 가 재생 속도를 쓰지 않게(`PairedAnimationSystem::isParticipant`).
+- 네트워크 재현(P3): 서버가 세션 id · 시작 틱 · 역할 → 오브젝트를 복제한다. 롤백은 `ReplicationServer::setOwnerState`(main 에 있다)에 세션 상태를 소유 상태로 싣는다.
+  **선행**: 클라이언트 따라잡기에 애니메이터 시각 지정 훅(`SkeletalAnimatorComponent` 가 재생 중 클립의 시각을 옮기는 공개 함수)이 필요하다. feat20 · feat21 은 main 에 들어왔지만 이 훅은 없다(있는 것은 시작 전 `setInitialTime` 뿐) — 훅을 먼저 애니메이션 쪽에서 더한다.
+- 시나리오 테스트: Shooter3D 궁수 · 활 · 화살 실제 클립과 활 메시가 리소스에 없다(`data/anim/bow_shoot.pairedanim.xml` 은 형식 검사만 돈다). 클립 · 메시(CC0)가 들어오면 시나리오로 화면 확인까지 한다.
 
 ## 11. 알려진 한계
 
-- 재생 속도를 매 프레임 쓰는 컴포넌트(`LocomotionWarpingComponent`)가 같은 오브젝트에 있으면 세션 시각 검사가 어긋남으로 보고 중단한다. 세션 중에는 그 컴포넌트가 멈춰야 한다(후속 — 세션 참가 여부를 묻는 길은 `PairedAnimationSystem::isParticipant`).
+- 재생 속도를 매 프레임 쓰는 컴포넌트는 지금 `LocomotionWarpingComponent` 하나이고 세션이 쥐어 둔다. 재생 속도를 쓰는 새 컴포넌트가 생기면 같은 쥠을 받아야 한다 — 받지 않으면 세션 시각 검사가 어긋남으로 보고 중단한다(조용히 틀어지지는 않는다).
+- 상호작용의 누름(`Press`) 단계는 누름으로 이미 끝나므로, 세션 시작이 거절되면 경고만 남고 상호작용은 끝난 채다. 누르고 있기 · 연타 단계는 취소된다.
 - 애니메이션 되감기(`AnimationRewind`) 스크럽 중에는 시각이 예측과 달라 중단된다(개발 빌드 진단 기능).
 - 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 클립 · 활 메시는 아직 없다. 데이터 형식 검사(`ResourceDataSchemaTest`)만 돈다.
 

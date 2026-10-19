@@ -2,6 +2,7 @@
 
 #include "Engine/Character/PairedAnimation/PairedAnimationComponent.h"
 
+#include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
@@ -17,6 +18,7 @@ namespace sw
         , _role{}
         , _def{}
         , _sessionID{ 0 }
+        , _seenReloadCount{ 0 }
         , _bSystemUser{ SW_FALSE }
     {
         // 세션은 씬의 프레임 시스템이 갱신한다. 자기 틱은 없다.
@@ -68,8 +70,9 @@ namespace sw
     {
         if ( _pairedAnimationPath.empty() )
             return;
-        shared_ptr<PairedAnimationDef> def = make_shared<PairedAnimationDef>();
-        if ( def->loadFromResource( _pairedAnimationPath ) == false )
+        _seenReloadCount                         = PairedAnimationDefCache::getReloadCount();
+        shared_ptr<const PairedAnimationDef> def = PairedAnimationDefCache::acquire( _pairedAnimationPath );
+        if ( def == nullptr )
         {
             // 읽기 오류는 로더가 줄마다 남겼다. 지난 에셋으로 이어 가지 않는다.
             SW_LOG_ERROR( "'%#': paired animation '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _pairedAnimationPath.c_str() );
@@ -84,6 +87,10 @@ namespace sw
         GameObject*                pOwner    = getOwner();
         GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        // 파일을 고쳐 캐시가 다시 읽었으면 새 에셋으로 시작한다(돌고 있는 세션은 옛 에셋을 끝까지 쥔다).
+        const bool bAssetReloaded = _pairedAnimationPath.empty() == false && _seenReloadCount != PairedAnimationDefCache::getReloadCount();
+        if ( bAssetReloaded )
+            loadDef();
         if ( _def == nullptr || pManager == nullptr )
             return PairedAnimationStartResult::AssetNotLoaded;
         if ( pAnimator == nullptr )

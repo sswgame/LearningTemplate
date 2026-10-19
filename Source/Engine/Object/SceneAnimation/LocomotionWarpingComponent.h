@@ -79,6 +79,13 @@ namespace sw
         const float3& getMeasuredVelocity() const { return _measuredVelocity; }
         /** @brief 뼈 목록을 정합니다(코드 · 테스트). */
         void setOrientationBones( const vector<LocomotionOrientationBone>& listBone ) { _listOrientationBone = listBone; }
+        /**
+         * @brief 재생 속도를 다른 쪽이 쥐었는지 정합니다(게임 스레드). 쥔 동안 보폭 보정은 재생 속도를 쓰지 않고 보폭 배율은 1 입니다.
+         * @details 페어드 애니메이션 세션(`PairedAnimationSession`)이 역할에 들어올 때 쥐고 나갈 때 놓는다 — 세션 시계는 모든 역할의 속도가 1 이라는
+         *          데에 기대므로, 여기서 속도를 바꾸면 세션이 어긋남으로 보고 중단한다. 세션은 위 티어(Character)라 이쪽이 세션을 묻지 않고 세션이 알려 준다.
+         */
+        void setPlayRateHeld( bool bHeld ) { _bPlayRateHeld = bHeld; }
+        bool isPlayRateHeld() const { return _bPlayRateHeld; }
 
     private:
         /** @brief 게임 스레드 — 속도를 재고 재생 배율 · 방향 각을 정합니다. */
@@ -111,5 +118,6 @@ namespace sw
         float32                  _strideScale;
         float32                  _lastDeltaSeconds;
         bool                     _bHasPrevious;
+        bool                     _bPlayRateHeld; ///< 재생 속도를 다른 쪽(페어드 애니메이션 세션)이 쥐었다
     };
 } // namespace sw

@@ -20,6 +20,20 @@ namespace sw
             static constexpr const utf8* kArrRoleAttribute[]      = { "name", "clip", "required", "anchor", "start", "enterBlend", "exitState",
                                                                       "exitBlend", "skeleton", "align", "offset", "yaw", "warpEnd", "maxAlignDistance" };
             static constexpr const utf8* kArrAlignOnlyAttribute[] = { "offset", "yaw", "maxAlignDistance" };
+            static constexpr const utf8* kArrSelectAttribute[]    = { "role", "minAngle", "maxAngle", "maxDistance" };
+
+            /** @brief 각(도)이 [-180, 180] 밖이거나 유한하지 않으면 오류를 남깁니다. */
+            static void requireHalfTurn( CharacterDataReader& reader, const XMLNode& node, const utf8* pName, float32 degrees )
+            {
+                requireFinite( reader, node, pName, degrees );
+                const bool bInRange = -180.0f <= degrees && degrees <= 180.0f;
+                if ( bInRange == false )
+                {
+                    utf8 arrMessage[constant::kMaxBuffer256];
+                    formatstring( arrMessage, constant::kMaxBuffer256, "attribute '%#' must be within -180 and 180 degrees", pName );
+                    reader.addError( node, arrMessage );
+                }
+            }
 
             /** @brief 유한하지 않으면(`nan` · `inf`) 오류를 남깁니다. */
             static void requireFinite( CharacterDataReader& reader, const XMLNode& node, const utf8* pName, float32 value )
@@ -67,8 +81,10 @@ namespace sw
     PairedAnimationDef::PairedAnimationDef()
         : _listRole{}
         , _listNotify{}
+        , _select{}
         , _duration{ 0.0f }
         , _anchorRoleIndex{ invalid_index::kUint32 }
+        , _bHasSelect{ false }
     {
     }
 
@@ -76,8 +92,27 @@ namespace sw
     {
         _listRole.clear();
         _listNotify.clear();
+        _select          = PairedAnimationSelectDef{};
         _duration        = 0.0f;
         _anchorRoleIndex = invalid_index::kUint32;
+        _bHasSelect      = false;
+    }
+
+    bool PairedAnimationDef::matchesSelect( const float4x4& anchorWorld, const float3& rolePosition ) const
+    {
+        if ( _bHasSelect == false )
+            return true;
+        const float3  forward   = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, anchorWorld );
+        const float32 anchorYaw = MathUtil::atan2( forward._x, forward._z );
+        float3        offset    = rolePosition - anchorWorld.getTranslation();
+        offset._y               = 0.0f;
+        if ( offset.getLength() > _select._maxDistance )
+            return false;
+        const float32 bearing = MathUtil::wrapAngle( MathUtil::atan2( offset._x, offset._z ) - anchorYaw );
+        // 최소가 최대보다 크면 ±180° 를 지나는 구간(뒤쪽)이다.
+        if ( _select._minBearingRadians <= _select._maxBearingRadians )
+            return _select._minBearingRadians <= bearing && bearing <= _select._maxBearingRadians;
+        return bearing >= _select._minBearingRadians || bearing <= _select._maxBearingRadians;
     }
 
     bool PairedAnimationDef::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -131,6 +166,8 @@ namespace sw
                 readRole( child, reader );
             else if ( StringUtil::equals( child.getName(), "Notify", true ) )
                 readNotify( child, reader );
+            else if ( StringUtil::equals( child.getName(), "Select", true ) )
+                readSelect( child, reader );
             else
                 reader.reportUnknownElement( child );
         }
@@ -215,6 +252,26 @@ namespace sw
         _listNotify.push_back( notify );
     }
 
+    void PairedAnimationDef::readSelect( const XMLNode& node, CharacterDataReader& reader )
+    {
+        reader.reportUnknownAttributes( node, PairedAnimationDefInternal::kArrSelectAttribute );
+        if ( _bHasSelect )
+        {
+            reader.addError( node, "repeats <Select> (a paired animation has at most one)" );
+            return;
+        }
+        _bHasSelect                = true;
+        _select._role              = reader.readName( node, "role", true );
+        const float32 minDegrees   = reader.readFloat( node, "minAngle" );
+        const float32 maxDegrees   = reader.readFloat( node, "maxAngle" );
+        _select._maxDistance       = reader.readFloat( node, "maxDistance" );
+        _select._minBearingRadians = minDegrees * MathUtil::kDegreeToRadian;
+        _select._maxBearingRadians = maxDegrees * MathUtil::kDegreeToRadian;
+        PairedAnimationDefInternal::requireHalfTurn( reader, node, "minAngle", minDegrees );
+        PairedAnimationDefInternal::requireHalfTurn( reader, node, "maxAngle", maxDegrees );
+        PairedAnimationDefInternal::requireNonNegative( reader, node, "maxDistance", _select._maxDistance );
+    }
+
     void PairedAnimationDef::validate( CharacterDataReader& reader )
     {
         // 앵커는 정확히 하나 — 세션 시계가 앵커 플레이어의 시각이다.
@@ -245,6 +302,19 @@ namespace sw
                 reader.addError( string( "notify '" ) + notify._name.c_str() + "' is after the end of the timeline" );
             if ( notify._role.empty() == false && findRoleIndex( notify._role ) == invalid_index::kUint32 )
                 reader.addError( string( "notify '" ) + notify._name.c_str() + "' names unknown role '" + notify._role.c_str() + "'" );
+        }
+        // 고르기 조건은 앵커 밖의 역할을 앵커에서 본다.
+        if ( _bHasSelect && _select._role.empty() == false )
+        {
+            const uint32 selectRoleIndex = findRoleIndex( _select._role );
+            utf8         arrMessage[constant::kMaxBuffer256];
+            arrMessage[0] = '\0';
+            if ( selectRoleIndex == invalid_index::kUint32 )
+                formatstring( arrMessage, constant::kMaxBuffer256, "<Select> names unknown role '%#'", _select._role.c_str() );
+            else if ( _listRole[selectRoleIndex]._bAnchor )
+                formatstring( arrMessage, constant::kMaxBuffer256, "<Select> role '%#' is the anchor (select measures another role from the anchor)", _select._role.c_str() );
+            if ( arrMessage[0] != '\0' )
+                reader.addError( arrMessage );
         }
         // 세션이 시각 순서로 한 커서를 지나며 낸다.
         std::stable_sort( _listNotify.begin(), _listNotify.end(), []( const PairedAnimationNotifyDef& lhs, const PairedAnimationNotifyDef& rhs )

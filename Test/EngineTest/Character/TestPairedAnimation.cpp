@@ -10,6 +10,8 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
+#include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationComponent.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
@@ -19,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
+#include "Engine/Object/SceneAnimation/LocomotionWarpingComponent.h"
 #include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -37,8 +40,11 @@ namespace
         /** @brief 이진으로 정확한 프레임 길이입니다 — 시각 비교가 반올림에 흔들리지 않는다. */
         static constexpr float32 kStep = 0.125f;
 
-        /** @brief 사슬 스켈레톤(3 뼈) 클립 하나를 @p folder 에 씁니다. 루트는 +Z 로 1 m/s 입니다. 길이는 (표본 - 1) / 30 초입니다. */
-        [[nodiscard]] static bool writeClip( const string& folder, const utf8* pName, uint32 sampleCount, bool bLoop )
+        /**
+         * @brief 사슬 스켈레톤(3 뼈) 클립 하나를 @p folder 에 씁니다. 루트는 +Z 로 1 m/s 입니다. 길이는 (표본 - 1) / 30 초입니다.
+         * @param authoredSpeed 0 보다 크면 보폭 보정이 읽는 `Speed` 커브(m/s)를 답니다.
+         */
+        [[nodiscard]] static bool writeClip( const string& folder, const utf8* pName, uint32 sampleCount, bool bLoop, float32 authoredSpeed )
         {
             const Skeleton         skeleton = test::makeChainSkeleton( 3 );
             const AnimationRawClip raw      = test::makeChainRawClip( skeleton, sampleCount, 30.0f, 0.0f );
@@ -46,18 +52,37 @@ namespace
             clip.setName( hashed_string( pName ) );
             clip.setLooping( bLoop );
             clip.setRootMotionTrack( 0 );
+            if ( authoredSpeed > 0.0f )
+            {
+                AnimationClipCurve curve{};
+                curve._name    = hashed_string( "Speed" );
+                curve._listKey = {
+                    AnimationClipCurveKey{0.0f, authoredSpeed},
+                    AnimationClipCurveKey{1.0f, authoredSpeed}
+                };
+                clip.addCurve( curve );
+            }
             if ( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) == false )
                 return false;
             return clip.saveToFile( FileUtil::joinPath( folder, StringUtil::toLower( pName ) + string( AnimationClip::kExtension ) ) );
         }
 
-        /** @brief 세션 테스트 클립 폴더입니다 — `Lead` · `Follow` (1 초), `Late` (0.5 초), 반복 `Idle` (1 초). */
-        static string writeClips( const utf8* pFolderName )
+        /** @brief 세션 테스트 클립 폴더입니다 — `Lead` · `Follow` (1 초), `Late` (0.5 초), 반복 `Idle` (1 초). @p leadSpeed 가 0 보다 크면 `Lead` 에 `Speed` 커브를 답니다. */
+        static string writeClips( const utf8* pFolderName, float32 leadSpeed )
         {
-            const string folder = test::makeTempPath( pFolderName );
-            const bool   bWritten =
-                writeClip( folder, "Lead", 31, false ) && writeClip( folder, "Follow", 31, false ) && writeClip( folder, "Late", 16, false ) && writeClip( folder, "Idle", 31, true );
+            const string folder   = test::makeTempPath( pFolderName );
+            const bool   bWritten = writeClip( folder, "Lead", 31, false, leadSpeed ) && writeClip( folder, "Follow", 31, false, 0.0f ) && writeClip( folder, "Late", 16, false, 0.0f ) &&
+                                  writeClip( folder, "Idle", 31, true, 0.0f );
             return bWritten ? folder : string{};
+        }
+
+        /** @brief 앵커 `Leader` 와 `snap` 으로 맞추는 `Follower` 두 역할 바인딩입니다. */
+        static vector<PairedAnimationBinding> makeBindings( SkeletalAnimatorComponent* pLeader, SkeletalAnimatorComponent* pFollower )
+        {
+            return {
+                PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pLeader )},
+                PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower )},
+            };
         }
 
         /** @brief 유닛 · 애니메이터를 단 참가자 오브젝트를 만들고 시작합니다(처음엔 `Idle` 반복). */
@@ -142,7 +167,7 @@ namespace
 SW_TEST_CASE( PairedAnimationTest, SessionSnapsAndPlaysOnOneClock )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string folder = TestPairedAnimationInternal::writeClips( "pairedsnap" );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedsnap", 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager          manager;
@@ -215,7 +240,7 @@ SW_TEST_CASE( PairedAnimationTest, SessionSnapsAndPlaysOnOneClock )
 SW_TEST_CASE( PairedAnimationTest, SessionWarpsRoleToAnchorOffset )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string folder = TestPairedAnimationInternal::writeClips( "pairedwarp" );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedwarp", 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager          manager;
@@ -263,7 +288,7 @@ SW_TEST_CASE( PairedAnimationTest, SessionWarpsRoleToAnchorOffset )
 SW_TEST_CASE( PairedAnimationTest, SessionAbortsWhenRequiredRoleIsInterrupted )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string folder = TestPairedAnimationInternal::writeClips( "pairedabort" );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedabort", 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager          manager;
@@ -298,7 +323,7 @@ SW_TEST_CASE( PairedAnimationTest, SessionAbortsWhenRequiredRoleIsInterrupted )
 SW_TEST_CASE( PairedAnimationTest, LateOptionalRoleEntersAndLeavesWithoutAborting )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string folder = TestPairedAnimationInternal::writeClips( "pairedlate" );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedlate", 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager          manager;
@@ -344,7 +369,7 @@ SW_TEST_CASE( PairedAnimationTest, LateOptionalRoleEntersAndLeavesWithoutAbortin
 SW_TEST_CASE( PairedAnimationTest, StartRefusesWithoutSideEffects )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string folder = TestPairedAnimationInternal::writeClips( "pairedrefuse" );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedrefuse", 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
 
     GameObjectManager          manager;
@@ -395,4 +420,152 @@ SW_TEST_CASE( PairedAnimationTest, StartRefusesWithoutSideEffects )
     uint32 secondID = 0;
     SW_EXPECT_TRUE( system.startSession( manager, longTimeline, { leader }, secondID ) == PairedAnimationStartResult::ParticipantBusy );
     SW_EXPECT_EQUAL( 0u, secondID );
+}
+
+/**
+ * @brief [PairedAnimationTest] 세션 — 같은 오브젝트의 보폭 보정은 역할에 있는 동안 재생 속도를 쓰지 않고(쥠), 세션이 끝나면 놓는다
+ * @details 앵커 클립 `Lead` 에 `Speed` 2 m/s 커브가 있고 오브젝트는 서 있다 — 쥐지 않으면 보폭 보정이 속도를 0.6(최소)으로 써서 세션이 시각 어긋남으로 중단한다.
+ */
+SW_TEST_CASE( PairedAnimationTest, SessionHoldsLocomotionPlayRate )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedstride", 2.0f );
+    SW_ASSERT_FALSE( folder.empty() );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pLeader   = TestPairedAnimationInternal::addParticipant( manager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pFollower = TestPairedAnimationInternal::addParticipant( manager, "Follower", folder, false );
+    SW_ASSERT_TRUE( pLeader != nullptr && pFollower != nullptr );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationInternal::addReleaseNotify( *pFollower ) );
+    LocomotionWarpingComponent* pLocomotion = pLeader->getOwner()->addComponent<LocomotionWarpingComponent>();
+    SW_ASSERT_NOT_NULL( pLocomotion );
+    pLocomotion->dispatchBeginPlay();
+
+    const shared_ptr<const PairedAnimationDef> def = TestPairedAnimationInternal::makeDef( TestPairedAnimationInternal::kSnapXML );
+    SW_ASSERT_NOT_NULL( def.get() );
+    PairedAnimationSystem& system    = PairedAnimationSystem::getOrCreate( manager );
+    uint32                 sessionID = 0;
+    SW_ASSERT_TRUE( system.startSession( manager, def, TestPairedAnimationInternal::makeBindings( pLeader, pFollower ), sessionID ) == PairedAnimationStartResult::Started );
+    SW_EXPECT_TRUE( pLocomotion->isPlayRateHeld() );
+
+    for ( uint32 frameIndex = 0; frameIndex < 6; ++frameIndex )
+    {
+        TestPairedAnimationInternal::step( manager, system );
+    }
+    const PairedAnimationSession* pSession = system.findSession( sessionID );
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_TRUE( pSession->isPlaying() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pLeader->getPlayRate(), 1e-6f );
+
+    for ( uint32 frameIndex = 0; frameIndex < 2; ++frameIndex )
+    {
+        TestPairedAnimationInternal::step( manager, system );
+    }
+    system.runBeforeTick( manager, TestPairedAnimationInternal::kStep );
+    pSession = system.findSession( sessionID );
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_TRUE( pSession->getState() == PairedAnimationSessionState::Finished );
+    SW_EXPECT_FALSE( pLocomotion->isPlayRateHeld() );
+}
+
+/**
+ * @brief [PairedAnimationTest] 세트 고르기 — 역할이 앵커 앞에서 보이는 자리에 맞는 첫 세트로 시작한다. 맞는 세트가 없으면 `NoMatchingSet` 이고 아무것도 바꾸지 않는다
+ * @details 앵커는 원점 · 앞 +Z. 앞 세트(방위 ±45°)는 앞 1 m, 뒤 세트(135° ~ -135°)는 뒤 1 m 로 맞춘다. 역할이 (0, 0, -2) 면 뒤 세트를 고른다.
+ */
+SW_TEST_CASE( PairedAnimationTest, MatchingSessionPicksSetByRelativePlacement )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedselect", 0.0f );
+    SW_ASSERT_FALSE( folder.empty() );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pLeader   = TestPairedAnimationInternal::addParticipant( manager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pFollower = TestPairedAnimationInternal::addParticipant( manager, "Follower", folder, false );
+    SW_ASSERT_TRUE( pLeader != nullptr && pFollower != nullptr );
+    SceneComponent* pFollowerRoot = pFollower->getOwner()->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pFollowerRoot );
+
+    const shared_ptr<const PairedAnimationDef> front = TestPairedAnimationInternal::makeDef( R"(<PairedAnimation duration="1">
+        <Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="Follower" required="true" clip="Follow" align="snap" offset="0 0 1" yaw="180" maxAlignDistance="10" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Select role="Follower" minAngle="-45" maxAngle="45" maxDistance="3"/>
+    </PairedAnimation>)" );
+    const shared_ptr<const PairedAnimationDef> back  = TestPairedAnimationInternal::makeDef( R"(<PairedAnimation duration="1">
+        <Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="Follower" required="true" clip="Follow" align="snap" offset="0 0 -1" maxAlignDistance="10" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Select role="Follower" minAngle="135" maxAngle="-135" maxDistance="3"/>
+    </PairedAnimation>)" );
+    SW_ASSERT_TRUE( front != nullptr && back != nullptr );
+    const vector<shared_ptr<const PairedAnimationDef>> listSet   = { front, back };
+    PairedAnimationSystem&                             system    = PairedAnimationSystem::getOrCreate( manager );
+    uint32                                             sessionID = 0;
+    uint32                                             setIndex  = 0;
+
+    // 옆 5 m — 어느 세트에도 맞지 않는다.
+    pFollowerRoot->setWorldPosition( float3{ 5.0f, 0.0f, 0.0f } );
+    SW_EXPECT_TRUE( system.startMatchingSession( manager, listSet, TestPairedAnimationInternal::makeBindings( pLeader, pFollower ), sessionID, setIndex ) ==
+                    PairedAnimationStartResult::NoMatchingSet );
+    SW_EXPECT_EQUAL( invalid_index::kUint32, setIndex );
+    SW_EXPECT_EQUAL( 0u, system.getSessionCount() );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pFollowerRoot->getWorldPosition()._x, 1e-5f );
+
+    // 뒤 2 m — 뒤 세트로 시작하고 뒤 1 m 로 맞춘다.
+    pFollowerRoot->setWorldPosition( float3{ 0.0f, 0.0f, -2.0f } );
+    SW_ASSERT_TRUE( system.startMatchingSession( manager, listSet, TestPairedAnimationInternal::makeBindings( pLeader, pFollower ), sessionID, setIndex ) ==
+                    PairedAnimationStartResult::Started );
+    SW_EXPECT_EQUAL( 1u, setIndex );
+    const PairedAnimationSession* pSession = system.findSession( sessionID );
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_TRUE( &pSession->getDef() == back.get() );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, pFollowerRoot->getWorldPosition()._z, 1e-4f );
+}
+
+/**
+ * @brief [PairedAnimationTest] 에셋 캐시 — 파일을 고쳐 캐시가 다시 읽으면 컴포넌트의 다음 시작이 새 에셋을 쓰고, 돌고 있던 세션은 옛 에셋을 끝까지 쥔다
+ */
+SW_TEST_CASE( PairedAnimationTest, ComponentStartsWithEditedAssetAfterCacheReload )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedreload", 0.0f );
+    SW_ASSERT_FALSE( folder.empty() );
+    const string path = FileUtil::joinPath( test::makeTempPath( "pairedreloadasset" ), "edited.pairedanim.xml" );
+    FileUtil::ensureParentDirectoryExists( path );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile(
+        path, R"(<PairedAnimation duration="1"><Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)" ) );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pLeader = TestPairedAnimationInternal::addParticipant( manager, "Leader", folder, false );
+    SW_ASSERT_NOT_NULL( pLeader );
+    PairedAnimationComponent* pComponent = pLeader->getOwner()->addComponent<PairedAnimationComponent>();
+    SW_ASSERT_NOT_NULL( pComponent );
+    pComponent->setRole( "Leader" );
+    pComponent->setPairedAnimationPath( path );
+    pComponent->dispatchBeginPlay();
+
+    SW_ASSERT_TRUE( pComponent->startSession( {} ) == PairedAnimationStartResult::Started );
+    PairedAnimationSystem* pSystem = PairedAnimationSystem::find( manager );
+    SW_ASSERT_NOT_NULL( pSystem );
+    const PairedAnimationSession* pFirst = pSystem->findSession( pComponent->getSessionID() );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), pFirst->getDef().getRoles().size() );
+
+    // 선택 역할을 더한 파일 — 캐시가 다시 읽는다(에디터 핫 리로드가 부르는 그 자리).
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<PairedAnimation duration="1">
+        <Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="Prop" required="false" clip="Late" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+    </PairedAnimation>)" ) );
+    PairedAnimationDefCache cache;
+    SW_EXPECT_TRUE( cache.isCached( path ) );
+    const uint32 reloadCount = PairedAnimationDefCache::getReloadCount();
+    cache.reload( path, nullptr );
+    SW_EXPECT_EQUAL( reloadCount + 1, PairedAnimationDefCache::getReloadCount() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), pFirst->getDef().getRoles().size() ); // 돌던 세션은 옛 에셋
+
+    pComponent->abortSession();
+    pSystem->runBeforeTick( manager, TestPairedAnimationInternal::kStep );
+    SW_ASSERT_TRUE( pComponent->startSession( {} ) == PairedAnimationStartResult::Started );
+    const PairedAnimationSession* pSecond = pSystem->findSession( pComponent->getSessionID() );
+    SW_ASSERT_NOT_NULL( pSecond );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), pSecond->getDef().getRoles().size() );
+    cache.clear(); // 임시 경로가 회차마다 같다 — `--test_repeat` 다음 회차가 고친 에셋을 읽지 않게
 }

@@ -2,6 +2,9 @@
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractorComponent.h"
 
+#include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -15,6 +18,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "Interaction" );
+
     namespace
     {
         struct InteractorComponentInternal
@@ -77,6 +82,7 @@ namespace sw
         , _session{}
         , _resumeState{}
         , _montageStep{ -1 }
+        , _pairedSessionID{ 0 }
         , _prompt{}
         , _listCandidate{}
         , _listCandidateComponent{}
@@ -86,6 +92,7 @@ namespace sw
         , _bHeld{ SW_FALSE }
         , _bWasHeld{ SW_FALSE }
         , _bPressed{ SW_FALSE }
+        , _bPairedStartPending{ SW_FALSE }
     {
     }
 
@@ -186,6 +193,87 @@ namespace sw
         } );
     }
 
+    void InteractorComponent::deferPairedAnimationStart( GameObjectManager& manager, const InteractionStepDef& step )
+    {
+        const TComponentHandle<InteractorComponent>   self{ this };
+        const TComponentHandle<InteractableComponent> target   = _focusComponent;
+        GameObjectManager*                            pManager = &manager;
+        _bPairedStartPending                                   = SW_TRUE;
+        // 세션은 다른 오브젝트(대상)의 애니메이터를 바꾸므로 틱 워커가 아닌 틱 뒤 게임 스레드에서 시작한다.
+        manager.executeOrDeferPostTick( [pManager, self, target, step]()
+        {
+            InteractorComponent* pSelf = pManager->resolveComponent( self );
+            if ( pSelf != nullptr )
+                pSelf->startPairedAnimation( *pManager, target, step );
+        } );
+    }
+
+    void InteractorComponent::startPairedAnimation( GameObjectManager& manager, TComponentHandle<InteractableComponent> target, const InteractionStepDef& step )
+    {
+        // 같은 틱에 상호작용이 취소됐으면 시작하지 않는다(누름 단계는 누름으로 이미 끝났을 수 있다 — 끝남은 막지 않는다).
+        if ( _bPairedStartPending == SW_FALSE )
+            return;
+        _bPairedStartPending                       = SW_FALSE;
+        GameObject*                pOwner          = getOwner();
+        InteractableComponent*     pTarget         = manager.resolveComponent( target );
+        GameObject*                pTargetObject   = pTarget != nullptr ? pTarget->getOwner() : nullptr;
+        SkeletalAnimatorComponent* pAnimator       = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        SkeletalAnimatorComponent* pTargetAnimator = pTargetObject != nullptr ? pTargetObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        if ( pAnimator == nullptr || pTargetAnimator == nullptr )
+        {
+            SW_LOG_ERROR( "'%#': interaction paired animation needs a SkeletalAnimatorComponent on the interactor and the interactable", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+            _session.cancel();
+            return;
+        }
+        vector<shared_ptr<const PairedAnimationDef>> listDef;
+        listDef.reserve( step._listPairedAnimationPath.size() );
+        for ( const string& path : step._listPairedAnimationPath )
+        {
+            shared_ptr<const PairedAnimationDef> def = PairedAnimationDefCache::acquire( path );
+            if ( def == nullptr )
+            {
+                // 읽기 오류는 로더가 줄마다 남겼다. 남은 세트로 고르지 않는다.
+                SW_LOG_ERROR( "'%#': interaction paired animation '%#' could not be loaded", pOwner->getName().c_str(), path.c_str() );
+                _session.cancel();
+                return;
+            }
+            listDef.push_back( std::move( def ) );
+        }
+        const vector<PairedAnimationBinding> listBinding = {
+            PairedAnimationBinding{  step._interactorRole,       TComponentHandle<SkeletalAnimatorComponent>( pAnimator )},
+            PairedAnimationBinding{step._interactableRole, TComponentHandle<SkeletalAnimatorComponent>( pTargetAnimator )},
+        };
+        uint32                           sessionID = 0;
+        uint32                           setIndex  = 0;
+        const PairedAnimationStartResult result    = PairedAnimationSystem::getOrCreate( manager ).startMatchingSession( manager, listDef, listBinding, sessionID, setIndex );
+        // 거절(자리에 맞는 세트 없음, 너무 멂, 다른 세션 중)은 진행 중인 상호작용을 취소한다 — 애니메이션 없이 진행하지 않는다. 데이터 결함은 세션이 오류로 남겼다.
+        if ( result != PairedAnimationStartResult::Started )
+        {
+            SW_LOG_WARNING( "'%#': interaction paired animation was refused (result %#)", pOwner->getName().c_str(), static_cast<uint32>( result ) );
+            _session.cancel();
+            return;
+        }
+        // 이미 끝난 상호작용(누름 단계)의 세션은 취소할 일이 없다 — 다음 상호작용의 취소가 이 세션을 끊지 않게 적지 않는다.
+        if ( _session.isActive() )
+            _pairedSessionID = sessionID;
+    }
+
+    void InteractorComponent::deferPairedAnimationAbort( GameObjectManager& manager )
+    {
+        _bPairedStartPending = SW_FALSE;
+        if ( _pairedSessionID == 0 )
+            return;
+        const uint32       sessionID = _pairedSessionID;
+        GameObjectManager* pManager  = &manager;
+        _pairedSessionID             = 0;
+        manager.executeOrDeferPostTick( [pManager, sessionID]()
+        {
+            PairedAnimationSystem* pSystem = PairedAnimationSystem::find( *pManager );
+            if ( pSystem != nullptr )
+                pSystem->abortSession( *pManager, sessionID );
+        } );
+    }
+
     void InteractorComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
@@ -262,16 +350,24 @@ namespace sw
             const bool bStepStarts       = event == InteractionSessionEvent::Started || event == InteractionSessionEvent::StepCompleted;
             const bool bStartMontageStep = bStepStarts && pEventDef != nullptr && 0 <= _montageStep && _montageStep < static_cast<int32>( pEventDef->_listStep.size() );
             if ( bStartMontageStep )
-                InteractorComponentInternal::playStepMontage( *pOwner, pEventDef->_listStep[static_cast<size_t>( _montageStep )], _resumeState );
+            {
+                const InteractionStepDef& step = pEventDef->_listStep[static_cast<size_t>( _montageStep )];
+                InteractorComponentInternal::playStepMontage( *pOwner, step, _resumeState );
+                if ( step._listPairedAnimationPath.empty() == false )
+                    deferPairedAnimationStart( *pManager, step );
+            }
             if ( event == InteractionSessionEvent::Cancelled )
             {
                 InteractorComponentInternal::restoreMontage( *pOwner, _resumeState );
                 _montageStep = -1;
+                deferPairedAnimationAbort( *pManager );
             }
             if ( event == InteractionSessionEvent::Completed )
             {
-                _resumeState = hashed_string{};
-                _montageStep = -1;
+                // 페어드 애니메이션은 상호작용이 끝나도 자기 타임라인 끝까지 간다.
+                _resumeState     = hashed_string{};
+                _montageStep     = -1;
+                _pairedSessionID = 0;
                 finishSession( *pManager, *pOwner );
             }
         }

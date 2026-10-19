@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/LocomotionWarpingComponent.h"
 #include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 
 namespace sw
@@ -287,7 +288,10 @@ namespace sw
         RoleState&                    role      = _listRole[roleIndex];
         SkeletalAnimatorComponent*    pAnimator = resolveAnimator( manager, role );
         SW_ASSERT( pAnimator != nullptr );
-        // 모든 역할이 같은 속도로 흘러야 앵커 시각에서 역할 시각을 정확히 안다. 끝나면 되돌린다.
+        // 모든 역할이 같은 속도로 흘러야 앵커 시각에서 역할 시각을 정확히 안다. 끝나면 되돌린다. 속도를 매 프레임 쓰는 보폭 보정은 그동안 쥐어 둔다.
+        LocomotionWarpingComponent* pLocomotion = PairedAnimationSessionInternal::findSibling<LocomotionWarpingComponent>( *pAnimator );
+        if ( pLocomotion != nullptr )
+            pLocomotion->setPlayRateHeld( true );
         role._previousPlayRate = pAnimator->getPlayRate();
         pAnimator->setPlayRate( 1.0f );
         // 클립은 시작 검사에서 읽어 두었다 — 여기서 못 찾으면 `play` 가 오류를 남긴다.
@@ -366,6 +370,9 @@ namespace sw
         SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
         if ( pAnimator == nullptr )
             return;
+        LocomotionWarpingComponent* pLocomotion = PairedAnimationSessionInternal::findSibling<LocomotionWarpingComponent>( *pAnimator );
+        if ( pLocomotion != nullptr )
+            pLocomotion->setPlayRateHeld( false );
         pAnimator->setPlayRate( role._previousPlayRate );
         // 게임플레이가 이미 다른 것을 재생하면(세션 클립이 빠졌으면) 그 결정을 덮지 않는다.
         float32 clipTime = 0.0f;
