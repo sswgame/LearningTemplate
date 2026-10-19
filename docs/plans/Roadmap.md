@@ -15,7 +15,7 @@
    - `GimmickCircuit` 단계 2 — [GimmickCircuitState](GimmickCircuitState.md). [병렬 가능]
    - 서버 버스 A 전환 — [ServerBusFormat](ServerBusFormat.md) 단계 0~6. [단독: 메시지 형식을 바꿔 서버 · 클라이언트 모듈이 다시 빌드됨]
 3. **새 시스템**:
-   - Vfx V0 → V3 먼저 — [Vfx](Vfx.md). [병렬 가능]
+   - Vfx V2 → V3 먼저(V0 · V1 들어감) — [Vfx](Vfx.md). [병렬 가능]
    - 클러스터드 라이팅 S2 → S5 — [ClusteredLighting](ClusteredLighting.md). [단독: 셰이더 재베이크]
    - 간접 조명 P0 부터(ClusteredLighting 뒤) — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 W2 → W7 — [WorldStreaming](WorldStreaming.md) (W1 은 들어갔고 W2 부터). [단독: W2 가 씬 파일 형식 판을 올려 씬 직렬화를 쓰는 모듈이 다시 빌드되고, W7 의 히치 측정은 Release 에서 혼자]
