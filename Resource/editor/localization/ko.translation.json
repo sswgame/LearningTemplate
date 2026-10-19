@@ -279,7 +279,7 @@
         },
         "EdCommon.NotifyPrefabIsolated": {
             "text": "프리팹 창에서 프리팹을 열었습니다",
-            "sourceHash": "c9674114fd5c67ca"
+            "sourceHash": "94881d213bcb5dd7"
         },
         "EdCommon.NotifyPrefabIsolationExited": {
             "text": "프리팹 격리를 마쳤습니다",

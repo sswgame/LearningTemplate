@@ -1390,6 +1390,10 @@
             "text": "이 중첩 프리팹을 격리 모드로 엽니다"
         },
         {
+            "source": "Opened the prefab in the Prefab Window",
+            "text": "프리팹 창에서 프리팹을 열었습니다"
+        },
+        {
             "source": "Opening the scene. Play starts when loading finishes (Stop cancels it).",
             "text": "씬을 여는 중 — 로드가 끝나면 플레이를 시작합니다 (Stop 으로 취소)"
         },
