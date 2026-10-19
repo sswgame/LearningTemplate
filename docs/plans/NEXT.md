@@ -16,8 +16,16 @@
 
 ## 1. 지금 상태 (2026-10-20)
 
-- main 은 origin 보다 앞서 있다(**push 안 함**). 병합 결과의 `full-build` 는 성공했고 증거가 있다(Debug, 경고 0). push 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
-- 병합한 것: 야간 Load 대응(`Scripts/qa/Load.py`), GimmickCircuitState 검증과 측정, PairedAnimation P0 ~ P2 검증과 상호작용 시작 · 에셋 캐시 · 세트 고르기. 새 후보 `AsyncResourceLoading`(`Candidates-engine.md`, 방향 정함).
+- **작업자 브랜치 넷이 남아 있다(병합 안 함, `.claude/worktrees/agent-*`).** 하니스의 `isolation: worktree` 로 만들어 `Tools/vcpkg` · `Tools/LLVM` 이 비어 있고, 작업자가 vcpkg 를 30분 넘게 처음부터 설치해 세 명을 중단시켰다. **작업자는 `py -3 -m Scripts worktree-make <이름> --base main` 으로 만든 워크트리에서만 돌린다.** 아래 브랜치의 커밋 · 변경은 새 워크트리로 옮겨 이어 간다.
+  - `worktree-agent-a7aa1e7675ea7ab2b`(커밋 `035f8cb98`): RealElapsedTime — `io.DeltaTime` 을 엔진 경과로 맞춰 패널 다섯 곳을 한 곳에서 푼다. **빌드 · 테스트 안 함.** 남은 일: `Candidates-engine.md` RealElapsedTime 절과 `Automation/README.md:30` 정리.
+  - `worktree-agent-a313581f5dbaafb7a`(커밋 `3daf83ecf` "작업 중" + 변경 2개): EditorMultiWorld 6절 (1) 프리팹 창. 빌드 안 함.
+  - `worktree-agent-aec0f4ff3753fc47c`(커밋 없음, 변경 6개): Vfx V0 → V3. 코드를 쓰던 중에 멈춤.
+  - `worktree-agent-a0979596d02674a46`(커밋 `189e0343e`): GpuVerification V2 절반 — 지는 RHI 케이스를 `isBackendUnderTest` 로 풂. **컴파일 확인 안 함.** `continue-on-error` 해제는 못 했다(Linux `gl` 원인 모름, 연속 세 번 초록 필요).
+- 계획 문서를 새로 올렸다: [AsyncResourceLoading](AsyncResourceLoading.md)(0/6, 첫 단위 A1 조사), [AudioChannelLayout](AudioChannelLayout.md)(0/5, U1 이 먼저. 결정 다섯은 문서 2절에 있다).
+- 확인함: 비동기 씬 로드 워커는 활성 씬의 `_listComponent` 와 겹치지 않는다. 인스펙터 4-b 는 이미 끝났다(`7ce9eafe2`). SerializerSilentSkips 의 범위 검사와 한 번만 경고는 이미 풀렸다. NetSettingsRemaining 은 설정 데이터 형식을 새로 정해야 해서 DataDriven 과 함께 다룬다.
+- 후보 아이디어: GPU 셰이더 쪽 ASSERT · 로그(오류 버퍼에 원자적으로 기록해 CPU 가 읽음, Shipping 에서 제거). 셰이더 재빌드가 들어 `AsyncResourceLoading` B1 과 함께 한다. 아직 후보 절로 올리지 않았다.
+- main 은 origin 보다 앞서 있다(**push 안 함**, 문서 커밋 몇 개). 앞서 push 한 `1a9dc0537` 까지는 `full-build` 증거가 있다.
+- 앞서 병합한 것: 야간 Load 대응(`Scripts/qa/Load.py`), GimmickCircuitState 검증과 측정, PairedAnimation P0 ~ P2 검증과 상호작용 시작 · 에셋 캐시 · 세트 고르기.
 - 야간 `Load (Linux | Release, nightly)` 근본 원인은 모른다. 다음 야간 실행의 주석(봇 종료 코드와 오류 줄)으로 읽는다. 다른 `Scripts/qa` 스크립트의 자식 산출물 읽기도 같은 모양인지 확인하지 않았다.
 - GpuVerification V2(보고 전용 해제)는 `swrender` 단계가 실제로는 실패라 못 했다. 먼저 `RHIDeviceTest.DeviceCreationAllBackends`(Linux) · `BackendSweepVisitsEveryBackendThatStandsUp`(Windows)를 고치거나 의도한 로그를 `SW_TEST_DEFENSIVE_SCOPE` 로 감싼다.
 - GPU 나 독점 측정이 필요해 못 한 것: TypedComponents 인스펙터 선택기 화면 확인과 앱 측정 넷(8.4), GimmickCircuitState 2-d 화면 확인, IncrementalCook K0 측정.
@@ -29,9 +37,10 @@
 
 ## 2. 첫 일
 
-1. push 전 CI 확인(`py -3 -m Scripts ci-jobs --runs`), 문제 없으면 push.
-2. `AsyncResourceLoading` 착수(핸들 형식 → 텍스처 · 메시 → 등장 비율과 디더 → 나머지). 시작 전에 비동기 씬 로드 워커와 `_listComponent` 순회가 겹치는지 확인한다.
-3. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터. `[병렬 가능]` 은 파일 소유가 겹치지 않으면 병렬로 띄운다.
+1. 남은 작업자 브랜치 넷을 `worktree-make` 워크트리로 옮겨 빌드 · 테스트로 확인하고 병합한다(1절). 같은 시간에 워크트리끼리 vcpkg 를 다시 받지 않게 하는 근본 원인 후보 `WorktreeVcpkgInstalledDir` 를 먼저 본다.
+2. `AudioChannelLayout` U1(동작 불변의 평면 블록 형식) 또는 `AsyncResourceLoading` A1(조사)을 착수한다.
+3. 문서 커밋을 push 하기 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
+4. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터. `[병렬 가능]` 은 파일 소유가 겹치지 않으면 병렬로 띄운다.
 
 ## 3. 새 세션 시작 절차
 
