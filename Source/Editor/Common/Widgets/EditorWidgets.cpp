@@ -617,12 +617,15 @@ namespace sw::editor
         EditorUnsavedChoice choice = EditorUnsavedChoice::None;
         if ( ImGui::Button( "Save" ) )
             choice = EditorUnsavedChoice::Save;
+        EditorSelfTestMarks::note( "unsaved.save" );
         ImGui::SameLine();
         if ( ImGui::Button( "Don't Save" ) )
             choice = EditorUnsavedChoice::Discard;
+        EditorSelfTestMarks::note( "unsaved.discard" );
         ImGui::SameLine();
         if ( ImGui::Button( "Cancel" ) )
             choice = EditorUnsavedChoice::Cancel;
+        EditorSelfTestMarks::note( "unsaved.cancel" );
         if ( choice != EditorUnsavedChoice::None )
             ImGui::CloseCurrentPopup();
         ImGui::EndPopup();

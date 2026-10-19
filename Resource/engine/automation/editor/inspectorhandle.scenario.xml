@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 인스펙터의 타입 컴포넌트 핸들 선택기(TComponentHandle<T>): SkeletalMeshComponent._leader 를 콤보로 고른다.
+  ① 오브젝트 둘(LeaderA · Follower)에 SkeletalMeshComponent 를 달고 Follower 를 고른다. ② 콤보를 열어 LeaderA 의 컴포넌트를 고르면 값이 바뀌고 되돌리기 하나가 쌓인다.
+  ③ Ctrl+Z 로 비운다. ④ 다시 고른 뒤 `(none)` 을 고르면 비워진다. ⑤ 이름 글을 오른쪽 클릭한 행 메뉴에서 Paste Value 는 비활성이다(글로 붙이면 타입 확인이 빠진다).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/inspectorhandle.scenario.xml -dx12
+-->
+<Scenario name="editor.inspectorhandle" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>
+	<At frame="1"><WaitUntil probe="Scene.Transitioning" equals="0" timeoutFrames="900"/></At>
+	<At frame="5"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="10"><DevCommand line="layout.reset"/></At>
+
+	<!-- ① 오브젝트 둘 -->
+	<At frame="30"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="45"><EditorClick mark="inspector.name"/></At>
+	<At frame="55"><EditorKey key="Ctrl+A"/></At>
+	<At frame="60"><EditorText value="LeaderA"/></At>
+	<At frame="65"><EditorKey key="Enter"/></At>
+	<At frame="80"><DevCommand line="component.add SkeletalMeshComponent"/></At>
+	<At frame="95"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="110"><EditorClick mark="inspector.name"/></At>
+	<At frame="120"><EditorKey key="Ctrl+A"/></At>
+	<At frame="125"><EditorText value="Follower"/></At>
+	<At frame="130"><EditorKey key="Enter"/></At>
+	<At frame="145"><DevCommand line="component.add SkeletalMeshComponent"/></At>
+	<At frame="160">
+		<Expect probe="Editor.SelectedNames" is="Follower"/>
+		<Remember probe="Object.Property" target="Follower" key="SkeletalMeshComponent._leader" as="emptyLeader"/>
+		<Remember probe="Editor.UndoCount" as="undoBefore"/>
+		<CaptureEditorUI file="inspectorhandle/inspector.png"/>
+	</At>
+
+	<!-- ② 콤보로 LeaderA 를 고른다 -->
+	<At frame="170"><EditorClick mark="inspector.property.SkeletalMeshComponent._leader"/></At>
+	<At frame="185"><CaptureEditorUI file="inspectorhandle/combo.png"/></At>
+	<At frame="190"><EditorClick mark="inspector.handle.choice.LeaderA / SkeletalMesh#0"/></At>
+	<At frame="210">
+		<Expect probe="Object.Property" target="Follower" key="SkeletalMeshComponent._leader" differsFrom="emptyLeader"/>
+		<Expect probe="Editor.UndoCount" differsFrom="undoBefore"/>
+		<CaptureEditorUI file="inspectorhandle/picked.png"/>
+	</At>
+
+	<!-- ③ 되돌리기 -->
+	<At frame="215"><EditorKey key="Ctrl+Z"/></At>
+	<At frame="235">
+		<Expect probe="Object.Property" target="Follower" key="SkeletalMeshComponent._leader" sameAs="emptyLeader"/>
+		<Expect probe="Editor.UndoCount" sameAs="undoBefore"/>
+	</At>
+
+	<!-- ④ 다시 고르고 (none) -->
+	<At frame="240"><EditorClick mark="inspector.property.SkeletalMeshComponent._leader"/></At>
+	<At frame="255"><EditorClick mark="inspector.handle.choice.LeaderA / SkeletalMesh#0"/></At>
+	<At frame="275"><Expect probe="Object.Property" target="Follower" key="SkeletalMeshComponent._leader" differsFrom="emptyLeader"/></At>
+	<At frame="280"><EditorClick mark="inspector.property.SkeletalMeshComponent._leader"/></At>
+	<At frame="295"><EditorClick mark="inspector.handle.none"/></At>
+	<At frame="315"><Expect probe="Object.Property" target="Follower" key="SkeletalMeshComponent._leader" sameAs="emptyLeader"/></At>
+
+	<!-- ⑤ 행 메뉴의 Paste Value 는 비활성 -->
+	<At frame="320"><EditorClick mark="inspector.label.SkeletalMeshComponent._leader" button="1" state="down"/></At>
+	<At frame="323"><EditorClick mark="inspector.label.SkeletalMeshComponent._leader" button="1" state="up"/></At>
+	<At frame="340"><CaptureEditorUI file="inspectorhandle/menu.png"/></At>
+	<At frame="345"><EditorClick mark="inspector.menu.pasteValue"/></At>
+	<At frame="360">
+		<Expect probe="Editor.UndoCount" sameAs="undoBefore"/>
+		<ExpectLog contains="[Error]" count="0"/>
+		<Variable name="gv_editorUiScale" value="0"/>
+		<Pass/>
+	</At>
+</Scenario>

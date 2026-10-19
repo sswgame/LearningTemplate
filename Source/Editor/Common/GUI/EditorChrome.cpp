@@ -7,8 +7,10 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
@@ -56,6 +58,24 @@ namespace sw::editor
                 if ( ( flags & EditorOverlayFlags::NoDecoration ) != EditorOverlayFlags::None )
                     imguiFlags |= ImGuiWindowFlags_NoDecoration;
                 return imguiFlags;
+            }
+
+            /**
+             * @brief 떠 있는 창의 제목 표시줄 X 단추를 시나리오가 누를 수 있게 `panel.close.<제목>` 으로 남긴다(ImGui 가 단추를 그린 자리와 같은 식으로 구한다).
+             * @details 도킹된 창은 탭의 X 라 자리가 다르므로 남기지 않는다 — 그런 창의 X 를 누르는 단계는 이름표가 없어 실패로 드러난다.
+             */
+            static void noteCloseButton( const utf8* pTitle, const bool* pOpen )
+            {
+                const ImGuiWindow* pWindow   = ImGui::GetCurrentWindow();
+                const bool         bNoButton = pOpen == nullptr || pWindow->DockIsActive || pWindow->Collapsed;
+                if ( bNoButton || EditorSelfTestMarks::isEnabled() == false )
+                    return;
+                const ImRect  title   = pWindow->TitleBarRect();
+                const float32 padding = ImGui::GetStyle().FramePadding.x;
+                const float32 size    = ImGui::GetFontSize();
+                const float32 left    = title.Max.x - padding - size;
+                const float32 top     = title.Min.y + ImGui::GetStyle().FramePadding.y;
+                EditorSelfTestMarks::noteRect( ( string{ "panel.close." } + pTitle ).c_str(), float2{ left, top }, float2{ left + size, top + size } );
             }
 
             static inline thread_local EditorSectionKind s_arrSectionStack[kMaxSectionDepth]{};
@@ -108,6 +128,7 @@ namespace sw::editor
         const bool bVisible = ImGui::Begin( pTitle, pOpen, EditorChromeInternal::toImGuiPanelFlags( flags ) );
         if ( bNoPadding )
             ImGui::PopStyleVar();
+        EditorChromeInternal::noteCloseButton( pTitle, pOpen );
         return bVisible;
     }
 

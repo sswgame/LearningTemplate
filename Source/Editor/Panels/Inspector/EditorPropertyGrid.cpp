@@ -346,6 +346,10 @@ namespace sw::editor
                     }
                     ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( *prop ) );
                     EditorWidgets::drawTooltip( prop->_metadata._tooltip.c_str() );
+                    // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 이름표를 남긴다(`inspector.label.<타입>.<프로퍼티>`).
+                    fixed_string<constant::kMaxBuffer128> labelMark;
+                    formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
+                    EditorSelfTestMarks::note( labelMark.c_str() );
 
                     if ( ImGui::BeginPopupContextItem( "PropCtx" ) )
                     {
@@ -370,6 +374,7 @@ namespace sw::editor
                         const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop->_handleTargetTypeName.empty();
                         if ( ImGui::MenuItem( "Paste Value", nullptr, false, bPasteAllowed ) )
                             applyPropertyTextAsEdit( pInstance, *prop, ImGui::GetClipboardText(), "Paste Value" );
+                        EditorSelfTestMarks::note( "inspector.menu.pasteValue" );
                         if ( ImGui::MenuItem( "Copy Property Name" ) )
                             ImGui::SetClipboardText( prop->_name.c_str() );
                         ImGui::EndPopup();

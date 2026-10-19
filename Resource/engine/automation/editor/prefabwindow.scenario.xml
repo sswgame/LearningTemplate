@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 프리팹 창(PrefabEditorPanel): 콘텐츠 브라우저에서 프리팹을 더블클릭하면 새 프리팹 창("Prefab Window", 패널 id prefab_window)이 뜨고,
+  미저장 편집이 있을 때 제목 표시줄 X 로 닫으면 Save / Don't Save / Cancel 확인이 뜬다.
+  ① 프리팹을 더블클릭해 연다(창이 닫혀 있다가 열린다). 편집이 없으니 아직 깨끗하다. ② 자식 행을 골라 인스펙터에서 이름을 바꾸면 문서가 더러워진다.
+  ③ X 를 누르면 창이 닫히지 않고 확인이 뜬다. Cancel 은 열어 둔다. ④ 다시 X 후 Don't Save 는 편집을 버리고 닫는다.
+  ⑤ 다시 열면 디스크의 프리팹이라 깨끗하고, 이때의 X 는 묻지 않고 닫는다.
+  X 단추 이름표(panel.close.<제목>)는 떠 있는 창에만 있다(도킹된 창은 탭의 X 라 자리가 다르다).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/prefabwindow.scenario.xml -dx12
+-->
+<Scenario name="editor.prefabwindow" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>
+	<At frame="1"><WaitUntil probe="Scene.Transitioning" equals="0" timeoutFrames="900"/></At>
+	<At frame="5"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="10"><DevCommand line="layout.reset"/><Variable name="gv_editorProbePanel" value="prefab_window"/></At>
+
+	<!-- ① 콘텐츠 브라우저에서 더블클릭 -->
+	<At frame="30"><DevCommand line="panel.focus content_browser"/></At>
+	<At frame="45"><DevCommand line="content.open game/empty/prefabs"/></At>
+	<At frame="60"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="70"><EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/></At>
+	<At frame="72"><EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/></At>
+	<At frame="80"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="300"/></At>
+	<At frame="120">
+		<Expect probe="Editor.PanelDirty" equals="0"/>
+		<CaptureEditorUI file="prefabwindow/open.png"/>
+	</At>
+
+	<!-- ② 편집 -->
+	<At frame="130"><EditorClick mark="prefabwindow.child.TestProp"/></At>
+	<At frame="145"><EditorClick mark="inspector.name"/></At>
+	<At frame="155"><EditorKey key="Ctrl+A"/></At>
+	<At frame="160"><EditorText value="Edited"/></At>
+	<At frame="165"><EditorKey key="Enter"/></At>
+	<At frame="180">
+		<Expect probe="Editor.PanelDirty" equals="1"/>
+		<CaptureEditorUI file="prefabwindow/edited.png"/>
+	</At>
+
+	<!-- ③ X → 확인 → Cancel -->
+	<At frame="190"><EditorClick mark="panel.close.Prefab Window"/></At>
+	<At frame="210">
+		<Expect probe="Editor.PanelOpen" equals="1"/>
+		<CaptureEditorUI file="prefabwindow/confirm.png"/>
+	</At>
+	<At frame="215"><EditorClick mark="unsaved.cancel"/></At>
+	<At frame="235">
+		<Expect probe="Editor.PanelOpen" equals="1"/>
+		<Expect probe="Editor.PanelDirty" equals="1"/>
+	</At>
+
+	<!-- ④ X → Don't Save -->
+	<At frame="240"><EditorClick mark="panel.close.Prefab Window"/></At>
+	<At frame="260"><EditorClick mark="unsaved.discard"/></At>
+	<At frame="280"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+
+	<!-- ⑤ 다시 열면 깨끗하고 X 가 묻지 않는다 -->
+	<At frame="290"><EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/></At>
+	<At frame="292"><EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/></At>
+	<At frame="300"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="300"/></At>
+	<At frame="340">
+		<Expect probe="Editor.PanelDirty" equals="0"/>
+		<CaptureEditorUI file="prefabwindow/reopened.png"/>
+	</At>
+	<At frame="345"><EditorClick mark="panel.close.Prefab Window"/></At>
+	<At frame="365"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="370"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

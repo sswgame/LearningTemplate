@@ -549,6 +549,7 @@ namespace sw::editor
                     bool            bPicked = false;
                     if ( ImGui::Selectable( "(none)", pValue->isValid() == false ) )
                         bPicked = true;
+                    EditorSelfTestMarks::note( "inspector.handle.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
                     if ( _listChoice.empty() )
                         ImGui::TextDisabled( "No %s in this scene", pTargetType->_name.c_str() );
                     for ( const InspectorComponentChoice& choice : _listChoice )
@@ -558,6 +559,8 @@ namespace sw::editor
                             picked  = choice._handle;
                             bPicked = true;
                         }
+                        if ( EditorSelfTestMarks::isEnabled() )
+                            EditorSelfTestMarks::note( ( "inspector.handle.choice." + choice._label ).c_str() );
                     }
                     ImGui::EndCombo();
 

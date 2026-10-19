@@ -1458,6 +1458,19 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `-gv_editorProbePanel` 의 패널 문서에 저장하지 않은 편집이 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
+            [[nodiscard]] static bool readProbedPanelDirty( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorProbePanel );
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = pPanel->isDocumentDirty() ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief 환경설정 창의 섹션 목록에서 지난 프레임에 보인 섹션 수입니다. 검색이 거른 뒤의 수입니다. */
             [[nodiscard]] static bool readPreferencesVisibleSections( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1810,6 +1823,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readAnimationGraphConditionCount );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
+    SW_AUTOMATION_PROBE( editorProbedPanelDirty, "Editor.PanelDirty", "1 when the document of the panel named by gv_editorProbePanel has unsaved edits",
+                         &EditorScenarioStepsInternal::readProbedPanelDirty );
     SW_AUTOMATION_PROBE( editorPreferencesVisibleSections, "Editor.PreferencesVisibleSections", "Sections the Preferences window listed in the last frame (after its search)",
                          &EditorScenarioStepsInternal::readPreferencesVisibleSections );
     SW_AUTOMATION_PROBE( editorPreferencesSavedKeyCount, "Editor.PreferencesSavedKeyCount", "Keys saved in EditorPreferences.json (only values that differ from the defaults)",
