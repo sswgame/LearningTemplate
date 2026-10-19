@@ -132,7 +132,7 @@ namespace sw::editor
         // 필드는 종류, 이름(단수), 브라우저 라벨, 패널 제목, 아이콘, 색, 액센트 색, Other 제외, 임포트 순서다
         constexpr EditorAssetTypeInfo kArrKindInfo[] = {
             {         EditorAssetType::Scene,          "Scene",        "Scenes",           nullptr,          editoricon::kScene,                       Color{},  true,  true, false},
-            {        EditorAssetType::Prefab,         "Prefab",       "Prefabs",   "Prefab Editor",         editoricon::kPrefab, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
+            {        EditorAssetType::Prefab,         "Prefab",       "Prefabs",   "Prefab Window",         editoricon::kPrefab, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
             {       EditorAssetType::Texture,        "Texture",      "Textures",           nullptr,        editoricon::kTexture, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
             {        EditorAssetType::Shader,         "Shader",       "Shaders",           nullptr,         editoricon::kShader, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
             {      EditorAssetType::Material,       "Material",     "Materials",        "Material",       editoricon::kMaterial, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},

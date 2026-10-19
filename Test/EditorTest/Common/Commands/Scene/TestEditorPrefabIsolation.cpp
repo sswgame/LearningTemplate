@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Scene/EditorPrefabIsolation.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/Prefab/PrefabEditorPanel.h"
 
 #include "EditorTest/EditorTestServices.h"
 
@@ -131,4 +132,15 @@ SW_TEST_CASE( EditorPrefabIsolationTest, MainSceneIsNeverTouched )
     isolation.clear(); // 문서를 바꿀 때 — 오브젝트는 되살리지 않고 단계만 버린다
     SW_EXPECT_FALSE( isolation.isActive() );
     SW_EXPECT_TRUE( pMainObject->isActive() );
+}
+
+/**
+ * @brief [EditorPrefabIsolationTest] X 로 닫을 때 편집이 남았거나 확인 중이면 묻고, 깨끗하면 그냥 닫는다
+ */
+SW_TEST_CASE( EditorPrefabIsolationTest, CloseAsksOnlyWhenEditsRemain )
+{
+    SW_EXPECT_TRUE( PrefabEditorPanel::shouldAskBeforeClosing( false, true, false ) );   // X + 미저장
+    SW_EXPECT_TRUE( PrefabEditorPanel::shouldAskBeforeClosing( true, true, true ) );     // 확인 중에는 열림을 되돌려 놓아도 계속 묻는다
+    SW_EXPECT_FALSE( PrefabEditorPanel::shouldAskBeforeClosing( false, false, false ) ); // X + 깨끗
+    SW_EXPECT_FALSE( PrefabEditorPanel::shouldAskBeforeClosing( true, true, false ) );   // 열려 있을 뿐
 }

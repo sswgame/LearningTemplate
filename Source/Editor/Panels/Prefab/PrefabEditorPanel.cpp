@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Localization/LocText.h"
@@ -60,6 +61,7 @@ namespace sw::editor
         , _pendingNestedPath{}
         , _spawnedDocumentPath{}
         , _status{}
+        , _bConfirmClose{ false }
         , _seenCommandCount{ 0 }
     {
     }
@@ -239,6 +241,29 @@ namespace sw::editor
         return true;
     }
 
+    void PrefabEditorPanel::revertDocument()
+    {
+        (void)rebuildDocumentRoot(); // 씬이 없으면 버릴 편집도 없다
+    }
+
+    void PrefabEditorPanel::drawCloseConfirm()
+    {
+        constexpr const utf8* kPopupID = "##UnsavedPrefabWindowClose";
+        if ( ImGui::IsPopupOpen( kPopupID ) == false )
+            ImGui::OpenPopup( kPopupID );
+        const EditorUnsavedChoice choice = EditorWidgets::drawUnsavedChangesModal( kPopupID, "This prefab has unsaved changes. Close anyway?" );
+        if ( choice == EditorUnsavedChoice::None )
+            return;
+
+        _bConfirmClose = false;
+        if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) && saveDocumentAndClearDirty() == false )
+            return; // 저장하지 못하면 닫지 않는다 — 닫으면 편집이 사라진다. 이유는 상태 줄에 남았다
+        if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
+            discardDirtyDocument();
+        if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
+            setOpen( false );
+    }
+
     void PrefabEditorPanel::trackEdits()
     {
         const size_t count = getPreviewCommandStack().getCommandCount();
@@ -283,6 +308,12 @@ namespace sw::editor
 
     void PrefabEditorPanel::drawContent()
     {
+        if ( shouldAskBeforeClosing( isOpen(), isDocumentDirty(), _bConfirmClose ) )
+        {
+            setOpen( true ); // X 가 내린 열림을 확인이 끝날 때까지 되돌린다
+            _bConfirmClose = true;
+            drawCloseConfirm();
+        }
         updateFocusedDocument();
         ensureDocumentLoaded();
         beginPreviewFrame();
