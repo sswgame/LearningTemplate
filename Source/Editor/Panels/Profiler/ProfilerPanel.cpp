@@ -847,7 +847,9 @@ namespace sw::editor
 
     void ProfilerPanel::drawPerformanceTab()
     {
-        const float32 dt          = ImGui::GetIO().DeltaTime;
+        // ImGui 경과는 엔진 경과(자동화에서는 고정 프레임 시간)라 프레임 비용을 재려면 벽시계를 따로 읽는다.
+        const float32 dt = static_cast<float32>( _drawStopwatch.getElapsedNanoseconds() ) / static_cast<float32>( constant::kNanosecondsPerSecond );
+        _drawStopwatch.restart();
         const float32 frameTimeMs = dt * constant::kMillisecondsPerSecond;
         const float32 fps         = ( dt > 0.0f ) ? ( 1.0f / dt ) : 0.0f;
 
