@@ -29,7 +29,8 @@ namespace sw::editor
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
-        const utf8* getPanelTitle() const override { return "Game"; }
+        const utf8*    getPanelTitle() const override { return "Game"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Center; }
         /** @brief 화면 비율 · HUD 툴바와 게임 화면을 그립니다. */
         void drawContent() override;
         /** @brief 창이 숨겨지면 게임 뷰 포커스를 해제합니다(게임 입력이 끊긴다). */

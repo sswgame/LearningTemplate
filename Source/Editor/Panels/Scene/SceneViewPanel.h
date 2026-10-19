@@ -29,7 +29,8 @@ namespace sw::editor
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
-        const utf8* getPanelTitle() const override { return "Scene"; }
+        const utf8*    getPanelTitle() const override { return "Scene"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::CenterFront; }
         /** @brief 뷰포트 툴바 · 씬 뷰 캔버스 · 기즈모를 그립니다. */
         void drawContent() override;
 

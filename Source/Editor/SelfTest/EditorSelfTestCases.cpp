@@ -214,7 +214,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // dock.corePanelsAreDocked: 기본 도킹 배치가 적는 제목과 패널 제목이 일치하는지 확인한다. `-gv_editorOpenPanel=all` 로 기본 배치일 때 검사한다
+            // dock.corePanelsAreDocked: 영역을 밝힌 열린 패널(`IEditorPanel::getDefaultDockSlot`)이 기본 배치에서 실제로 도킹됐는지 확인한다(열린 채 시작하는 도구 패널 포함)
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runCorePanelsAreDocked( EditorSelfTestContext& context )
             {
@@ -225,16 +225,16 @@ namespace sw::editor
                 uint32 checkedCount{ 0 };
                 for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
                 {
-                    const bool bSkipPanel = entry._category != EditorPanelCategory::Core || entry._pInstance == nullptr || entry._pInstance->isOpen() == false;
+                    const bool bSkipPanel = entry._pInstance == nullptr || entry._pInstance->isOpen() == false || entry._pInstance->getDefaultDockSlot() == EditorDockSlot::Floating;
                     if ( bSkipPanel )
                         continue;
                     const ImGuiWindow* pWindow = ImGui::FindWindowByName( entry._title.c_str() );
-                    string             what{ "core panel is not docked by the default layout: " };
+                    string             what{ "panel is not docked by the default layout: " };
                     what += entry._title;
                     (void)context.expect( pWindow != nullptr && pWindow->DockId != 0, what.c_str() );
                     ++checkedCount;
                 }
-                (void)context.expect( checkedCount > 0, "no core panel was open" );
+                (void)context.expect( checkedCount > 0, "no docked panel was open" );
                 return EditorSelfTestStep::Done;
             }
 

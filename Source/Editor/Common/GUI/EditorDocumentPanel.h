@@ -23,8 +23,9 @@ namespace sw::editor
     class SW_EDITOR_API EditorDocumentPanel : public IEditorPanel
     {
     public:
-        bool        isToolPanel() const override { return true; }
-        const utf8* getPanelTitle() const override;
+        bool           isToolPanel() const override { return true; }
+        const utf8*    getPanelTitle() const override;
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Center; }
 
     protected:
         /**

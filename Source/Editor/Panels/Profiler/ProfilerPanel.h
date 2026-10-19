@@ -39,7 +39,8 @@ namespace sw::editor
         // 1) IEditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
-        const utf8* getPanelTitle() const override { return "Profiler"; }
+        const utf8*    getPanelTitle() const override { return "Profiler"; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Center; }
         /** @brief 프로파일러 UI를 그립니다. */
         void drawContent() override;
         /** @brief 필요할 때 여는 도구이므로 닫힌 채로 시작합니다. */
