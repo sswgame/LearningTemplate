@@ -89,7 +89,7 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
     SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, "prefabs/hero.prefab.bin" ) );
     SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, "prefabs/hero.prefab" ) );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.bin" ).empty() );
-    SW_EXPECT_STREQ( "Prefab Editor", sw::string{ EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.json" ) }.c_str() );
+    SW_EXPECT_STREQ( "Prefab Window", sw::string{ EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.json" ) }.c_str() );
 
     // 접미사를 펼치는 쪽(핫 리로드 감시 · 대화상자 필터)도 같은 표다.
     sw::vector<sw::string> listPrefabSuffix;
@@ -124,7 +124,7 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
 
 SW_TEST_CASE( EditorAssetTypeTest, PanelTitlesAndToolKinds )
 {
-    SW_EXPECT_STREQ( "Prefab Editor", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::Prefab ) );
+    SW_EXPECT_STREQ( "Prefab Window", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::Prefab ) );
     SW_EXPECT_STREQ( "Animation Graph",
                      sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::AnimationGraph ) );
 

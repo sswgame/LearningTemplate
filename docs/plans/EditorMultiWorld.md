@@ -154,7 +154,7 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
     id 만 받던 옛 형태는 활성 씬으로 읽어 미리보기 씬의 인스턴스를 놓쳤다.
   - 저장은 지금 단계의 루트를 그 단계의 프리팹 파일에 쓴다(`EditorInspectorCommands::applyToPrefab`). 창의 편집은 창의 Undo 스택 · 선택에 남는다. 열기는 `PrefabEditorPanel::openWindow`(문서 포커스)이고 중첩은 `requestNestedIsolation`.
   - 테스트 `EditorPrefabIsolationTest.*` · `EditorWorkspaceTest.PrefabPathOfAPreviewSceneObjectLivesInThePreviewScene`(Debug 전체 빌드 경고 0, `Editor*` 스위트 EditorTest 300 · EditorUITest 6 통과). **확인 못 함**: 창을 실제로 연 화면(GPU)과 에디터 시나리오 — 아래 6절.
-  - 알려진 한계: 콘텐츠 브라우저의 프리팹 더블클릭은 아직 옛 "Prefab Editor"(`PrefabPanel`)를 연다(`EditorAssetCommands` 의 종류 → 패널 제목 경로). 저장하지 않은 편집은 문서를 바꿀 때 문서 패널이 묻지만 창을 X 로 닫을 때는 묻지 않는다.
+  - 알려진 한계: 없음(콘텐츠 브라우저 열기와 X 닫기 확인은 6절 1번에서 해소했다). 화면 확인(GPU)만 남았다.
 
 ### 단계 6 이후 — 나머지 창
 메시/모델(LOD 비교) · 애니메이션 · 카메라 프리셋 · 래그돌 · 이펙트 · 장르 도구 · 캐릭터 편집 창([EditorCharacterEditor.md](EditorCharacterEditor.md)). 창마다 단위 하나.
@@ -173,7 +173,9 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 
 단계 1~4 와 머티리얼 창은 들어갔습니다(각 단계의 "구현됨"). 규모가 XL 이라 에디터 보강 묶음에서 뺐고 설계부터 따로 짰습니다(2026-10-14 사용자 결정).
 
-1. **프리팹 창의 남은 것** — 본체는 단계 5 의 "구현됨". 콘텐츠 브라우저의 프리팹 열기를 새 창으로 돌리기(`EditorAssetCommands` 의 종류 → 패널 제목 경로), 창을 연 화면을 보는 에디터 시나리오(GPU), 창을 X 로 닫을 때의 미저장 확인.
+1. **프리팹 창의 남은 것** — 본체는 단계 5 의 "구현됨". 콘텐츠 브라우저의 프리팹 열기는 새 창으로 돌렸고(종류 테이블의 프리팹 패널 제목 = "Prefab Window", 오버라이드 도구 `PrefabPanel` 은 "Prefab Overrides" 로 따로 둠),
+   X 로 닫을 때의 미저장 확인(Save / Don't Save / Cancel, 저장 실패면 열어 둠, Don't Save 는 디스크 프리팹으로 문서 루트를 다시 세움)도 들어갔다. 둘 다 GPU 없이 테스트(`EditorPrefabIsolationTest.CloseAsksOnlyWhenEditsRemain` · `EditorAssetType` 제목 단언)했다.
+   남은 것: 창을 연 화면과 X 확인 모달을 보는 에디터 시나리오(GPU). 패널 메뉴 토글 등 X 가 아닌 닫는 길은 확인하지 않는다.
 3. **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
 4. **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 결정 2 대로 공유한다.
 5. **미리보기 렌더러 내리기의 GPU 안전** — 창을 닫으면 렌더 스레드가 `FrameRenderer::shutdown` 으로 그 렌더러를 바로 내린다. 디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대며,
