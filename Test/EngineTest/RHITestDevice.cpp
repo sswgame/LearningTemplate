@@ -36,7 +36,7 @@ namespace test
 
         // 빌드에 없는 백엔드(리눅스의 DX · 배포본의 고르지 않은 백엔드)는 구성 차이라 요구하지 않는다. 그 밖에 서지 못한 것은
         // 이 실행이 요구한 백엔드면(`--required_backends=`) 케이스를 실패로 기록한다 — 건너뜀으로 초록이 되지 않게.
-        if ( isBackendInThisBuild( backend ) == false )
+        if ( isBackendUnderTest( backend ) == false )
             return false;
         if ( sw::RHIAvailability::isAvailable( backend ) == false )
         {

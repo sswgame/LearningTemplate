@@ -69,6 +69,12 @@ namespace test
         void setRequiredBackends( const sw::string& text );
         /** @brief 이 실행이 그 백엔드를 요구하는가 — 요구한 백엔드가 서지 못하면 케이스는 건너뛰지 않고 진다. */
         bool isBackendRequired( sw::RHIBackend backend ) const;
+        /**
+         * @brief 이 실행이 그 백엔드를 검증 대상으로 두는가 — `--required_backends=` 가 없으면 전부, 있으면 그 목록만.
+         * @details 소프트웨어 렌더러 묶음은 WARP · lavapipe 가 서는 백엔드만 요구한다. 목록 밖 백엔드(Windows 러너의 Vulkan · GL 처럼 소프트웨어
+         *          드라이버가 없어 반쯤 서다 마는 것)를 세워 보면 환경 탓 경고가 쏟아지고 검증할 것도 없다 — 이 실행은 세우지 않는다.
+         */
+        bool isBackendSelected( sw::RHIBackend backend ) const;
         /** @brief 쿠킹 표의 명령줄 이름(`dx12` 등)입니다. 메시지에 씁니다. */
         static const utf8* getBackendName( sw::RHIBackend backend );
 

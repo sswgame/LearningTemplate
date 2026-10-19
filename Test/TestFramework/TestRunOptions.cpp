@@ -326,6 +326,11 @@ namespace test
         return false;
     }
 
+    bool TestRunOptions::isBackendSelected( sw::RHIBackend backend ) const
+    {
+        return _listRequiredBackend.empty() || isBackendRequired( backend );
+    }
+
     const utf8* TestRunOptions::getBackendName( sw::RHIBackend backend )
     {
         for ( const TestRunOptionsInternal::BackendName& row : TestRunOptionsInternal::kArrBackendName )
