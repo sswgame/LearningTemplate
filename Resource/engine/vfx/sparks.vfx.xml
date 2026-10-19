@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 엔진 표본 효과 — 연기(알파)와 불꽃(더하기) 두 방출기가 반복한다. VFX 미리보기 창 시나리오와 VfxComponentTest 가 읽는다. 텍스처는 Kenney 파티클 팩(CC0). -->
+<VfxEffectDef>
+	<_listEmitter>
+		<VfxEmitterDef _name="Smoke" _texturePath="engine/textures/particles/kenney_particle/smoke_07.dds" _blendMode="Alpha" _bLooping="true"
+		               _maxParticles="32" _duration="2" _spawnRate="8" _lifetimeMin="1.5" _lifetimeMax="2.5"
+		               _velocityMin="-0.2, 0.5, -0.2" _velocityMax="0.2, 1, 0.2" _gravity="0, 0, 0">
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="1.2" _interpolation="Linear"/><FloatCurveKey _time="1" _value="2.4" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VfxEmitterDef>
+		<VfxEmitterDef _name="Sparks" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Additive" _bLooping="true"
+		               _maxParticles="128" _duration="1" _spawnRate="60" _lifetimeMin="0.6" _lifetimeMax="1"
+		               _velocityMin="-1.5, 2, -1.5" _velocityMax="1.5, 4, 1.5" _gravity="0, -6, 0">
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.5" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.2" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="3" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="1.8" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.6" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.5" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.2" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VfxEmitterDef>
+	</_listEmitter>
+</VfxEffectDef>

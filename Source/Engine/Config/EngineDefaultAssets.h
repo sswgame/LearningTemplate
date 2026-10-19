@@ -107,6 +107,8 @@ namespace sw
         DataPath _shaderSprite2D; ///< 스프라이트(2D) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다
         PROPERTY( Required )
         DataPath _shaderSprite2DLit; ///< 빛 받는 스프라이트(2D 빛 · 그림자) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다
+        PROPERTY( Required )
+        DataPath _shaderParticle; ///< 파티클 빌보드(Vfx) — 방출기 하나 = 그리기 하나, 입자 하나 = 인스턴스 하나. 투명 패스 PSO 를 물려받는다
 
         // RHI · 렌더 테스트의 프로브 셰이더 — 런타임은 쓰지 않지만 Shipping 테스트가 쿠킹된 바이너리를 읽으므로 쿠킹 목록에 든다.
         PROPERTY( Required )

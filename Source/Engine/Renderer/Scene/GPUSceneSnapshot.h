@@ -10,11 +10,13 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Vfx/VfxParticle.h"
 
 namespace sw
 {
@@ -299,6 +301,24 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct GPUParticleBatch
+     * @brief 방출기 하나의 입자 그리기입니다. 투명 정렬 후보 하나이며, 투명 패스가 메시 투명 배치 뒤에 빌보드로 그립니다(`VfxParticleRenderer`).
+     * @details 입자는 방출기 로컬 좌표이고 `_world` 가 월드로 옮깁니다. 입자 배열은 **공유합니다** — 방출기가 단계마다 새 배열을 내므로(`VfxComponent`)
+     *          RT 가 읽는 동안 GT 가 고쳐 쓰지 않습니다. 텍스처는 경로로 싣고 RT 가 텍스처 캐시에서 빌립니다(캔버스 경로 이미지와 같다).
+     */
+    struct GPUParticleBatch
+    {
+        shared_ptr<const vector<GPUParticle>> _pListParticle;         ///< 살아 있는 입자(비지 않는다 — 빈 방출기는 싣지 않는다)
+        float4x4                              _world{};               ///< 방출기 행렬(행벡터 규약)
+        hashed_string                         _texturePath{};         ///< 입자 텍스처(리소스 id)
+        float32                               _sizeScale{ 1.0f };     ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
+        uint8                                 _bAdditive{ SW_FALSE }; ///< 더하기 블렌드(`VfxBlendMode::Additive`)면 SW_TRUE
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct GPUSceneSnapshot
      * @brief 게임 스레드가 만들어 렌더 패킷에 실어 렌더 스레드로 **옮기는 모든 데이터**입니다.
      *
@@ -372,6 +392,11 @@ namespace sw
         vector<GPUInstanceRun> _listDirtyInstanceRun;
         /// @brief 이번 프레임에 그리는 추가 뷰마다의 투명 순서입니다. 뷰가 투명을 보지 않거나 꼬리가 없으면 비어 있으며, 그 뷰는 주 순서로 그립니다.
         vector<GPUViewTransparentOrder> _listViewTransparentOrder;
+        /**
+         * @brief 방출기마다의 입자 그리기입니다. 주 시점에서 먼 것부터(투명 정렬 규칙 `GPUTransparentSorter::isDrawnBefore`) 놓입니다. 작아서 복사합니다.
+         * @details 메시 배치와 달리 씬이 그대로인 프레임에도 매번 다시 모은다(입자는 단계마다 움직인다 — `GPUSceneBuilder::populateParticleBatches`).
+         */
+        vector<GPUParticleBatch> _listParticleBatch;
 
         /** @brief 인스턴스 배열을 반환합니다. 아직 발행 전이면 빈 배열입니다. */
         const vector<GPUInstance>& getInstances() const

@@ -11,7 +11,7 @@
  * 번호 지도 (그래픽스 셰이더, space0 — 절 번호는 이 파일의 1~10 절):
  *   b0 PassCB · b1 MaterialCB(픽스처) · b2 루트 상수 에뮬(DX11/GL) | b0 space2 루트 상수(DX12 · Vulkan 푸시 상수) — 1 절
  *   t0..t3 엔진 텍스처(에뮬) · t4 인스턴스 · t5 머티리얼 데이터 · t6 가시 인스턴스 ID · t7 모프 정점 · t8 라이트 ·
- *   t9 배치 테이블 · t10 VAT · t11 캔버스 사각형 | t12..t27 머티리얼 텍스처(에뮬 — DX11 · GL 만, 띠 밖) — 2 절
+ *   t9 배치 테이블 · t10 VAT · t11 패스 전용(캔버스 사각형 · 입자) | t12..t27 머티리얼 텍스처(에뮬 — DX11 · GL 만, 띠 밖) — 2 절
  *   컴퓨트는 따로: b0 · t0..t3 읽기 버퍼 · u0..u3 쓰기 버퍼 · u4..u7 RW 텍스처(에뮬) — 3 절
  *   s0..s6 정적 샘플러 · s7 그림자 비교(DX12 · Vulkan) | DX11 은 s0..s3 엔진 슬롯 결합 샘플러 + s9..s15 정적 세트 — 4 절
  *   t0 space1 / u0 space1 bindless 텍스처 배열(DX12), Vulkan 은 set 1 binding 0..3 — 5 절
@@ -68,7 +68,7 @@
 #define SW_ROOT_DWORD_COUNT      16
 #define SW_SLOT_ROOT_CB_EMUL     2   // DX11/GL: 루트 상수를 담는 상수버퍼 슬롯 (SW_DECLARE_ROOT_CONSTANTS)
 // ------------------------------------------------------------------------------
-// 2) SRV (t#, space0). t0..t11 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 데이터·씬 표들·캔버스 사각형(네 백엔드의 띠).
+// 2) SRV (t#, space0). t0..t11 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 데이터·씬 표들·패스 전용 버퍼(네 백엔드의 띠).
 //    t12..t27 — 머티리얼 텍스처(에뮬, DX11 · GL 만). 띠 밖이라 DX12 테이블 · Vulkan t 밴드에 들지 않는다.
 // ------------------------------------------------------------------------------
 #define SW_SLOT_ENGINE_TEX0            0
@@ -115,9 +115,10 @@
 // 정점 셰이더가 배치 표의 vertexAnimationBase 와 인스턴스의 시각 오프셋으로 읽는다(binding.hlsli swLoadAnimatedVertex).
 #define SW_SLOT_VERTEX_ANIMATION_SRV   10
 
-// 캔버스(화면 2D — UI · 월드 글자) 사각형 구조버퍼 (StructuredBuffer<SwCanvasQuad> g_SwCanvasQuads). 캔버스 패스만 건다 —
-// 정점 셰이더가 (루트 상수의 시작 + SV_InstanceID) 번째 사각형을 읽고 SV_VertexID 로 모서리를 만든다(동적 정점 버퍼 없음).
-#define SW_SLOT_CANVAS_QUAD_SRV        11
+// 패스 전용 구조버퍼 — 한 그리기가 자기 원소를 (루트 상수의 시작 + SV_InstanceID) 번째로 읽고 SV_VertexID 로 모서리를 만든다(동적 정점 버퍼 없음).
+// 패스마다 거는 것이 다르다: 캔버스 패스는 사각형(StructuredBuffer<CanvasQuad> g_SwCanvasQuads, canvas.hlsl),
+// 투명 패스의 입자 그리기는 입자(StructuredBuffer<GPUParticle> g_SwParticles, particle.hlsl). 두 그리기는 같은 패스에서 겹치지 않는다.
+#define SW_SLOT_PASS_SRV               11
 
 #define SW_SRV_SLOT_COUNT              12  // t0..t11 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16) 안이다 — 더 늘리려면 밴드부터 넓힌다
 

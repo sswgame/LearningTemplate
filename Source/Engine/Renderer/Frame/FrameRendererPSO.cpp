@@ -1,9 +1,12 @@
 #include "pch.h"
 
+#include "Core/Common/FourCcUtil.h"
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -370,6 +373,50 @@ namespace sw
         // 여기는 아직 기록 시작 전이라 버퍼를 만들 수 있다. 새 변형을 만든 프레임에만 돈다.
         if ( bCreatedVariant )
             ensureMaterialFallbackBuffers();
+    }
+
+    void FrameRenderer::ensureParticlePSO()
+    {
+        _particlePSOKey                              = 0;
+        const RHIPipelineStateHandle transparentPSO  = findPassPSO( RenderPassType::Transparent );
+        const bool                   bNoParticlePass = _pDevice == nullptr || transparentPSO == 0 || _gpuScene.getParticleBatches().empty();
+        if ( bNoParticlePass )
+            return;
+
+        // 머티리얼 변형 캐시의 키 공간을 빌린다 — 퍼뮤테이션 해시 자리에 입자 셰이더 경로와 태그를 섞어 머티리얼 퍼뮤테이션과 겹치지 않게 한다.
+        const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderParticle.get();
+        const uint64  shaderHash = HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCcUtil::make( "VFXP" ) );
+        _particlePSOKey          = RenderPSOCache::materialPSOKey( transparentPSO, shaderHash, RenderViewMode::Lit, false );
+        if ( _psoCache.hasMaterialPSO( _particlePSOKey ) )
+            return;
+
+        RHIPipelineStateDesc desc{};
+        if ( _psoCache.findDesc( transparentPSO, desc ) == false )
+        {
+            SW_LOG_ERROR( "Transparent pass PSO has no recorded desc - particles are not drawn" );
+            _psoCache.setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry{ 0, 0 } );
+            return;
+        }
+        desc._vertexShaderPath = shaderPath;
+        desc._pixelShaderPath  = shaderPath;
+        desc._vertexEntryPoint = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+        desc._pixelEntryPoint  = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+        desc._listShaderDefine.clear();
+        desc._cullMode                      = RHICullMode::None;
+        desc._fillMode                      = RHIFillMode::Solid;
+        desc._bEnableBlend                  = 1;
+        desc._bPremultipliedAlpha           = SW_TRUE;
+        desc._bEnableDepthWrite             = 0;
+        const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
+        if ( handle == 0 )
+            SW_LOG_ERROR( "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );
+        registerPSOLayout( handle, desc );
+        _psoCache.setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry{ handle, static_cast<uint8>( handle != 0 ? 1 : 0 ) } );
+    }
+
+    RHIPipelineStateHandle FrameRenderer::findParticlePSO() const
+    {
+        return _particlePSOKey != 0 ? _psoCache.findMaterialPSO( _particlePSOKey ) : RHIPipelineStateHandle{ 0 };
     }
 
     bool FrameRenderer::findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const

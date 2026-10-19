@@ -522,6 +522,15 @@
        "description": "빛 받는 스프라이트(2D 빛 · 그림자) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다"
       },
       {
+       "name": "_shaderParticle",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "파티클 빌보드(Vfx) — 방출기 하나 = 그리기 하나, 입자 하나 = 인스턴스 하나. 투명 패스 PSO 를 물려받는다"
+      },
+      {
        "name": "_shaderProbeProvokingVertex",
        "type": "DataPath",
        "default": "",

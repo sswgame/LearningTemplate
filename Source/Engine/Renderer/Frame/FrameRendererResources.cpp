@@ -122,6 +122,8 @@ namespace sw
         _gpuScene.releaseGPU( _pDevice );
         // 캔버스의 아틀라스 텍스처 · 사각형 버퍼도 이 디바이스의 것이다(거울은 남아 다음 프레임에 다시 올린다).
         _canvasRenderer.release( _pDevice );
+        // 입자 버퍼와 빌린 입자 텍스처도 같다(다음 프레임의 prepareFrame 이 다시 만들고 빌린다).
+        _particleRenderer.release( _pDevice );
 
         _passCbRing.release( _pDevice );
         _frameContext._passCb      = 0;

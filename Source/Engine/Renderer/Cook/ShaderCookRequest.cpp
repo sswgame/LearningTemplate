@@ -291,6 +291,7 @@ namespace sw
                     engineDefaultAssets._shaderFullscreenTriangle.get(),
                     engineDefaultAssets._shaderSprite2D.get(),
                     engineDefaultAssets._shaderSprite2DLit.get(),
+                    engineDefaultAssets._shaderParticle.get(),
                     engineDefaultAssets._shaderProbeProvokingVertex.get(),
                     engineDefaultAssets._shaderProbeInstanceSlot.get() };
                 for ( const string& path : listEngineShader )

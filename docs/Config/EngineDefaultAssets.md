@@ -61,6 +61,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_shaderCanvas` | `DataPath` | — |  |  | 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프 |
 | `_shaderSprite2D` | `DataPath` | — |  |  | 스프라이트(2D) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다 |
 | `_shaderSprite2DLit` | `DataPath` | — |  |  | 빛 받는 스프라이트(2D 빛 · 그림자) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다 |
+| `_shaderParticle` | `DataPath` | — |  |  | 파티클 빌보드(Vfx) — 방출기 하나 = 그리기 하나, 입자 하나 = 인스턴스 하나. 투명 패스 PSO 를 물려받는다 |
 | `_shaderProbeProvokingVertex` | `DataPath` | — |  |  | 프로브: 플랫 보간이 첫 정점 값을 쓰는가(RHIDeviceTest) |
 | `_shaderProbeInstanceSlot` | `DataPath` | — |  |  | 프로브: 인스턴스 슬롯 스트림이 네 API 에서 같은가(RHIDeviceTest) |
 | `_shaderProbeSampleCompute` | `DataPath` | — |  |  | 프로브: 컴퓨트 쿠킹 · 리플렉션(ShaderTest) |

@@ -76,6 +76,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/IFontRasterizer.h"
+#include "Engine/Vfx/VfxComponent.h"
 #include "Engine/Window/IWindow.h"
 
 #include "EngineTest/AnimationTestUtil.h"
@@ -1546,6 +1547,69 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for the sprite shader test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 재생 중인 효과의 입자가 투명 패스에서 그려진다 — 같은 장면을 멈춘 효과로 그린 것보다 화면이 밝다 (4 백엔드).
+ * @details 입자 PSO 는 투명 패스 PSO 를 물려받아 셰이더만 particle.hlsl 로 바꾼다(`FrameRenderer::ensureParticlePSO`). Shipping 은 쿠킹한 바이너리로
+ *          만들므로 쿠커가 그 셰이더를 define 없이 굽지 않으면 이 케이스가 Shipping 에서 진다. 표본 효과는 연기(알파)와 불꽃(더하기, 1 보다 큰 색)이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::FrameRenderer renderer;
+        bool              bOk   = renderer.initialize( device.get() ) && renderer.isReady();
+        const sw::string  label = sw::string( device->getBackendName() );
+        sw::Scene         scene( "ParticleScene" );
+        bOk                                = bOk && scene.ensureDefaultCameras();
+        const sw::CameraComponent* pCamera = bOk ? scene.getActiveGameCamera() : nullptr;
+        sw::VfxComponent*          pVfx    = nullptr;
+        if ( pCamera != nullptr )
+        {
+            sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "Effect" ) );
+            pVfx                 = ( pObj != nullptr ) ? pObj->addComponent<sw::VfxComponent>() : nullptr;
+        }
+        bOk = bOk && pVfx != nullptr;
+        if ( bOk )
+        {
+            // 카메라 앞 4 m 아래쪽 — 불꽃이 위로 솟아도 화면 안이다.
+            pVfx->setWorldPosition( pCamera->getCameraPosition() + pCamera->getCameraForward() * 4.0f - sw::float3( 0.0f, 0.5f, 0.0f ) );
+            pVfx->setEffectPath( "engine/vfx/sparks.vfx.xml" );
+            pVfx->play();
+            for ( uint32 tickIndex = 0; tickIndex < 45; ++tickIndex )
+            {
+                pVfx->onTick( sw::VfxCPUSimulation::kFixedStepSeconds );
+            }
+            bOk = pVfx->getAliveParticleCount() > 0;
+            SW_EXPECT_TRUE_MSG( bOk, ( label + ": 효과가 입자를 내지 않았다" ).c_str() );
+        }
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        float64          playingRed{ 0.0 };
+        float64          stoppedRed{ 0.0 };
+        if ( bOk )
+        {
+            bOk        = renderSceneFrame( renderer, device.get(), scene, clear );
+            playingRed = readMeanChannel( renderer, "SceneColor" );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + ": 프레임 실행 실패" ).c_str() );
+            SW_EXPECT_TRUE_MSG( renderer.getGPUScene().getParticleBatches().size() == 2, ( label + ": 방출기 둘인데 입자 그리기가 둘이 아니다" ).c_str() );
+        }
+        if ( bOk )
+        {
+            pVfx->stop();
+            bOk        = renderSceneFrame( renderer, device.get(), scene, clear );
+            stoppedRed = readMeanChannel( renderer, "SceneColor" );
+            SW_EXPECT_TRUE_MSG( renderer.getGPUScene().getParticleBatches().empty(), ( label + ": 멈춘 효과의 입자 그리기가 남았다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( playingRed > stoppedRed + 0.05,
+                                ( label + ": 입자가 화면을 밝히지 않았다 — 재생 " + sw::to_string( playingRed ) + ", 멈춤 " + sw::to_string( stoppedRed ) ).c_str() );
+        }
+        renderer.shutdown();
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend available for the particle test" );
 }
 
 /**
