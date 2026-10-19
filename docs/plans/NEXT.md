@@ -16,8 +16,8 @@
 
 ## 1. 지금 상태 (2026-10-20)
 
-- **진행 중인 작업자 둘(`worktree-make` 워크트리, 병합 안 함)**: `D:/w/audiolayout`(`wt/audiolayout`, AudioChannelLayout U1) · `D:/w/groundcarry`(`wt/groundcarry`, 캐릭터가 움직이는 바닥에 실리게 한다 — `moveCharacter` 안에서 바닥 속도(선속도 · 회전)를 더하고 딛고 선 바디를 상태에 노출, 수평 · 수직 상승/하강 · 대각선 테스트). 보고가 오면 확인하고 `git merge --no-ff` 로 병합한다. README 진행 표 충돌은 `status-board --write README.md` 로 다시 만든다.
-- **이번 세션에 main 으로 병합함(push 안 함)**: GpuVerification V2 절반(`isBackendUnderTest`, Linux `gl` 원인은 모름, `continue-on-error` 그대로) · RealElapsedTime · EditorMultiWorld 프리팹 창(화면 미확인) · Vfx V0 · V1(V2 렌더 경로와 V3 는 GPU · 셰이더 굽기가 필요해 못 했다) · GimmickCircuitState 2-d 통과(5/5) · AsyncResourceLoading A1 조사 · 문서 정리(측정 조건 형식 등) · `PairedAnimationDef` 캐시가 늘려 CI 를 깨던 테스트 수정. `worktree-agent-*` 옛 브랜치 넷은 워크트리를 지웠고 브랜치만 남았다(내용은 모두 옮겼으니 `git branch -D` 해도 된다).
+- **진행 중인 작업자 하나(`worktree-make` 워크트리, 병합 안 함)**: `D:/w/audiolayout`(`wt/audiolayout`, AudioChannelLayout U1). 보고가 오면 확인하고 `git merge --no-ff` 로 병합한다. README 진행 표 충돌은 `status-board --write README.md` 로 다시 만든다.
+- **이번 세션에 main 으로 병합함(push 안 함)**: GpuVerification V2 절반(`isBackendUnderTest`, Linux `gl` 원인은 모름, `continue-on-error` 그대로) · RealElapsedTime · EditorMultiWorld 프리팹 창(화면 미확인) · Vfx V0 · V1(V2 렌더 경로와 V3 는 GPU · 셰이더 굽기가 필요해 못 했다) · 캐릭터가 움직이는 바닥의 속도를 받음(3D · 2D, 후속은 `MovingGroundFollowUps`) · GimmickCircuitState 2-d 통과(5/5) · AsyncResourceLoading A1 조사 · 문서 정리(측정 조건 형식 등) · `PairedAnimationDef` 캐시가 늘려 CI 를 깨던 테스트 수정. `worktree-agent-*` 옛 브랜치 넷은 워크트리를 지웠고 브랜치만 남았다(내용은 모두 옮겼으니 `git branch -D` 해도 된다).
 - **CI**: main CI 실행 `39295170988` 의 실패는 모두 `AssetCacheRegistryTest.BuiltInCachesAreReachableThroughTheRegistry` 하나였고 고쳤다(`4548c65d2`). push 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
 - **vcpkg**: 워크트리는 메인의 `Tools/vcpkg` · `build/vcpkg_installed` · `build/vcpkg_cache` 를 정션으로 공유하고 다시 설치하지 않는다(사용자 지시, 분리하지 않는다). 후보 `WorktreeVcpkgInstalledDir` 는 지웠다. 워크트리를 지울 때는 정션을 먼저 `rmdir` 로 끊는다. `git worktree remove` 는 긴 경로에서 실패할 수 있다.
 - **새 후보**: `UiTooltipAndCursor`(Candidates-ui), `ReflectionMaxCountConstant`(Candidates-engine). 런타임 UI 는 호버 경로 · `:hover` 스타일은 있고 툴팁 · 커서 모양 · 월드 위젯 입력(`WorldWidgetInput`)은 없다.
@@ -30,7 +30,7 @@
 
 ## 2. 첫 일
 
-1. 작업자 둘(audiolayout · groundcarry) 보고를 확인해 병합하고 `worktree-remove` 로 지운다.
+1. audiolayout 작업자 보고를 확인해 병합하고 `worktree-remove` 로 지운다.
 2. push 하기 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다. main 은 origin 보다 앞서 있다.
 3. 병렬로 띄울 묶음(파일 소유가 겹치지 않으면): Roadmap 의 `[병렬 가능]` — Vfx V2 · V3 는 GPU 가 있어야 하니 `gpu-verifier` 와 함께, 카메라 디렉터(CameraRendererIntegration), 애니메이션 묶음(PairedAnimation · AnimationGraphLayers), 새로 쓴 정리(SerializerSilentSkips 등), AsyncResourceLoading A2(설계 검토 뒤). 동시 빌드는 최대 2.
 4. 그다음은 [로드맵](Roadmap.md) 의 `## 지금 순서` 맨 위부터.
