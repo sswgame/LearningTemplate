@@ -214,6 +214,18 @@ cd build/Ninja-Debug/Bin
 
   격차의 원인: 사본을 돌려주는 연산 · `resize` 는 작은 크기에서 힙 할당(약 45 ns)이 전부다. `count` · `any` · `all` 은 8 비트에서 2 ns(DLL 호출),
   `push_back` 은 비트당 3 ns(수작업 0.6 ns)다. 호출부(직렬화 `to_string` · `parse` · `set` · `test`)가 쓰지 않아 두었다.
+- **기믹 회로 상태**(2026-10-20, `GimmickStateBenchTest`, Release, PC SW · Ryzen 7 6800H, 세 번 중 최대): `EngineTest.exe --load_suites=only --test_filter=GimmickStateBenchTest.*` 를 `Bin` 에서 돌린다(두 케이스 5.4 s).
+  쇼케이스 씬(`gimmickshowcase.scene.xml`)의 회로 5 개와 `common/prefabs/gimmicks` 의 프리팹 13 개(회로가 든 것)를 60 Hz 로 0 · 600 · 36000 스텝 돌리고 `FixedLayout::write( state )` 바이트와 조각 수(`kChunkPayloadBytes` 로 나눔),
+  `saveState`(목록 용량을 이어 쓰는 호출) 한 번의 시간과 sw 할당 수를 줄마다 찍는다. 시계 해상도(100 ns)보다 한 번이 짧아 표본 하나를 2000 번 부르고 표본 5 개의 중앙값을 낸다.
+
+  | 스텝 | 가장 큰 회로의 노드 수 | 가장 큰 바이트 | 조각 수 | `saveState` 한 번 | 할당(10000 호출) |
+  |---|---|---|---|---|---|
+  | 0(첫 틱 전, 상태가 비어 있음) | 0 | 15 | 1 | ≤ 60 ns | 0 |
+  | 600 | 8 | 243 | 1 | ≤ 60 ns | 0 |
+  | 36000 | 8 | 244 | 1 | ≤ 60 ns | 0 |
+
+  가장 큰 회로는 쇼케이스의 `ShowcaseLogic`(노드 8)이고 프리팹은 `Elevator` 101 바이트(노드 2) · `LockedDoor` · `KeycardDoor` 91(노드 3)이 가장 크다. 모두 한 조각이고 `kMaxCircuitBytes`(3,920) 의 약 6 % 안이다.
+  36000 스텝(10 분)에서 Delay 의 절대 스텝 번호가 varuint 를 늘려 600 스텝보다 1 바이트씩 커질 뿐 조각 수는 변하지 않는다. `crt` 열(CRT 힙 요청)은 Release 에서 재지 못해 -1 이다. Debug 의 시간은 단언 때문에 의미가 없다.
 - **Vulkan VSync 프레임 놓침**(2026-10-06 조사, Release 큐브 100, 165 Hz): 46 회 중 4 회에서 600 프레임 창 안에 한 프레임이 12 ~ 24 ms 였고, DXGI(DX12 · DX11)는 같은 조건에서 회당 한 주기 이하였습니다.
   평소 Vulkan 은 `vkAcquireNextImageKHR` 에서 약 5.2 ms 를 기다립니다(DXGI 는 Present 안에서 기다린다). 느린 프레임은 둘로 갈렸습니다.
   하나는 이미지가 한 주기 늦게 돌아온 것(acquire 약 10 ms)이고, 다른 하나는 GPU 일이 0.3 ms 인 프레임의 펜스가 13 ms 뒤에 신호된 것(창 모드 Vulkan 프레젠트가 합성기를 거치는 경로)입니다. 그 프레임에 엔진 CPU 일은 없었습니다.

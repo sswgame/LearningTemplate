@@ -39,6 +39,51 @@ namespace
         }
 
         static float32 getY( const GameObject* pObject ) { return pObject->getPrimarySceneComponent()->getWorldPosition()._y; }
+
+        /** @brief 플레이 중인 회로를 오브젝트 상태로 저장해 새 오브젝트로 읽고, 둘을 N 스텝 더 돌려 해시가 같은지 봅니다. XML 은 `float32` 를 9 자리로 써야 비트까지 같다. */
+        static void expectStateSurvivesRoundTripAndContinues( bool bXML )
+        {
+            GameObjectManager manager;
+            GameObject*       pLogic = manager.createGameObject( hashed_string( "Logic" ) );
+            SW_ASSERT_NOT_NULL( pLogic );
+            GimmickCircuitComponent* pCircuit = pLogic->addComponent<GimmickCircuitComponent>();
+            pCircuit->addNode( "clock", "Timer", "interval=0.25" );
+            pCircuit->addNode( "count", "Counter", "target=3" );
+            pCircuit->addNode( "delay", "Delay", "seconds=0.1" );
+            pCircuit->addWire( "clock.OnTick", "count.Count" );
+            pCircuit->addWire( "count.Reached", "delay.In" );
+            SW_ASSERT_TRUE( pCircuit->rebuild() );
+            manager.beginPlay();
+            test::updateFrames( manager, 47 ); // 지연 큐와 누적 시간이 비어 있지 않은 때
+
+            const sw::ObjectSaveOptions saveOptions{ sw::SerializePurpose::Snapshot };
+            const sw::ObjectLoadContext loadContext{ sw::SerializePurpose::Snapshot };
+            GameObjectManager           restoredManager;
+            GameObject*                 pRestored = restoredManager.createGameObject( hashed_string( "Logic" ) );
+            if ( bXML )
+            {
+                const string xml = ObjectStateSerializer::saveToXMLString( pLogic, saveOptions );
+                SW_ASSERT_FALSE( xml.empty() );
+                SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pRestored, xml, loadContext ) );
+            }
+            else
+            {
+                vector<uint8> bytes;
+                SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pLogic, bytes, saveOptions ) );
+                SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), loadContext ) > 0 );
+            }
+            GimmickCircuitComponent* pRestoredCircuit = pRestored->getComponent<GimmickCircuitComponent>();
+            SW_ASSERT_NOT_NULL( pRestoredCircuit );
+            SW_EXPECT_EQUAL( pCircuit->getCircuit().computeStateHash(), pRestoredCircuit->getCircuit().computeStateHash() );
+
+            for ( int32 stepIndex = 0; stepIndex < 120; ++stepIndex )
+            {
+                pCircuit->getCircuit().step();
+                pRestoredCircuit->getCircuit().step();
+            }
+            SW_EXPECT_EQUAL( pCircuit->getCircuit().computeStateHash(), pRestoredCircuit->getCircuit().computeStateHash() );
+            manager.endPlay();
+        }
     };
 } // namespace
 
@@ -145,35 +190,15 @@ SW_TEST_CASE( GimmickSceneTest, MoverFollowsSplineAndStateSurvivesSaveLoad )
  */
 SW_TEST_CASE( GimmickSceneTest, StateSurvivesBinaryObjectStateAndContinues )
 {
-    GameObjectManager manager;
-    GameObject*       pLogic = manager.createGameObject( hashed_string( "Logic" ) );
-    SW_ASSERT_NOT_NULL( pLogic );
-    GimmickCircuitComponent* pCircuit = pLogic->addComponent<GimmickCircuitComponent>();
-    pCircuit->addNode( "clock", "Timer", "interval=0.25" );
-    pCircuit->addNode( "count", "Counter", "target=3" );
-    pCircuit->addNode( "delay", "Delay", "seconds=0.1" );
-    pCircuit->addWire( "clock.OnTick", "count.Count" );
-    pCircuit->addWire( "count.Reached", "delay.In" );
-    SW_ASSERT_TRUE( pCircuit->rebuild() );
-    manager.beginPlay();
-    test::updateFrames( manager, 47 ); // 지연 큐와 누적 시간이 비어 있지 않은 때
+    GimmickSceneTestInternal::expectStateSurvivesRoundTripAndContinues( false );
+}
 
-    vector<uint8> bytes;
-    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pLogic, bytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
-    GameObjectManager restoredManager;
-    GameObject*       pRestored = restoredManager.createGameObject( hashed_string( "Logic" ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } ) > 0 );
-    GimmickCircuitComponent* pRestoredCircuit = pRestored->getComponent<GimmickCircuitComponent>();
-    SW_ASSERT_NOT_NULL( pRestoredCircuit );
-    SW_EXPECT_EQUAL( pCircuit->getCircuit().computeStateHash(), pRestoredCircuit->getCircuit().computeStateHash() );
-
-    for ( int32 stepIndex = 0; stepIndex < 120; ++stepIndex )
-    {
-        pCircuit->getCircuit().step();
-        pRestoredCircuit->getCircuit().step();
-    }
-    SW_EXPECT_EQUAL( pCircuit->getCircuit().computeStateHash(), pRestoredCircuit->getCircuit().computeStateHash() );
-    manager.endPlay();
+/**
+ * @brief [GimmickSceneTest] 같은 일을 XML 오브젝트 상태로 — 텍스트의 `float32`(타이머 누적 시간)가 비트까지 같아야 N 스텝 뒤 해시가 같다
+ */
+SW_TEST_CASE( GimmickSceneTest, StateSurvivesXMLObjectStateAndContinues )
+{
+    GimmickSceneTestInternal::expectStateSurvivesRoundTripAndContinues( true );
 }
 
 /**
