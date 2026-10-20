@@ -2,6 +2,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 
 #include "ReflectionTest/TestSampleActor.h"
 
@@ -141,7 +142,7 @@ SW_TEST_CASE( ReflectionInvokeTest, MulticastDelegatePropertyIsReflectedAsEvent 
     SW_EXPECT_EQUAL( sw::string( "string" ), pEvent->_listParameter[1]._typeName );
     SW_EXPECT_NOT_NULL( pEvent->_listParameter[1]._pType );
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Events" ), pEvent->_metadata._category );
+    SW_EXPECT_EQUAL( sw::string( "Events" ), pEvent->_metadata->_category );
 #endif
 
     const sw::EventInfo* pDied = type.findEvent( "_onDied" );

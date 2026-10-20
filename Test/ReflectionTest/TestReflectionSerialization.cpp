@@ -5,6 +5,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
@@ -313,8 +314,8 @@ namespace
         sw::PropertyInfo renamed = makeEvolutionField( "_renamed", SW_OFFSET_OF( FieldEvolutionHost, _renamed ) );
         if ( bDeclareOldName )
             renamed._listAlias = { sw::hashed_string( "_oldName" ) };
-        sw::PropertyInfo added        = makeEvolutionField( "_added", SW_OFFSET_OF( FieldEvolutionHost, _added ) );
-        added._metadata._defaultValue = "7";
+        sw::PropertyInfo added         = makeEvolutionField( "_added", SW_OFFSET_OF( FieldEvolutionHost, _added ) );
+        added._metadata->_defaultValue = "7";
         return makeEvolutionType( { makeEvolutionField( "_kept", SW_OFFSET_OF( FieldEvolutionHost, _kept ) ), renamed, added } );
     }
 
@@ -1823,12 +1824,12 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyDefaultOnMissing )
 
     sw::PropertyInfo manaProp( sw::hashed_string( "_mana" ), sw::hashed_string( "int32" ),
                                SW_OFFSET_OF( DefaultActor, _mana ) );
-    manaProp._metadata._defaultValue = "75";
+    manaProp._metadata->_defaultValue = "75";
     sw::PropertyInfo titleProp( sw::hashed_string( "_title" ), sw::hashed_string( "string" ),
                                 SW_OFFSET_OF( DefaultActor, _title ) );
-    titleProp._metadata._defaultValue  = "Apprentice";
-    titleProp._metadata._bXMLAttribute = SW_TRUE;
-    info._listProperty                 = { manaProp, titleProp };
+    titleProp._metadata->_defaultValue  = "Apprentice";
+    titleProp._metadata->_bXMLAttribute = SW_TRUE;
+    info._listProperty                  = { manaProp, titleProp };
 
     DefaultActor actor;
     const utf8*  emptyXML = R"(<?xml version="1.0"?><DefaultActor></DefaultActor>)";
@@ -1978,7 +1979,7 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
                            sw::hashed_string( "health" ) ); ///< 개명: 옛 키 health
     sw::PropertyInfo manaV2( sw::hashed_string( "_mana" ), sw::hashed_string( "int32" ),
                              SW_OFFSET_OF( LayoutV2, _mana ) );
-    manaV2._metadata._defaultValue = "9";
+    manaV2._metadata->_defaultValue = "9";
 
     sw::TypeInfo infoV2;
     infoV2._name               = sw::hashed_string( "LayoutActor" );
@@ -3121,12 +3122,12 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRPCPackInvoke )
     SW_ASSERT_TRUE( typeInfo != nullptr );
     const sw::FunctionInfo* fn = typeInfo->findMethod( sw::hashed_string( "applyDamage" ) );
     SW_ASSERT_TRUE( fn != nullptr );
-    SW_EXPECT_TRUE( fn->_metadata._netRole == sw::FunctionNetRole::Server );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( fn->_metadata._bReliable ) );
+    SW_EXPECT_TRUE( fn->_metadata->_netRole == sw::FunctionNetRole::Server );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fn->_metadata->_bReliable ) );
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), fn->_metadata._displayName );
-    SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), fn->_metadata._tooltip );
-    SW_EXPECT_EQUAL( sw::string( "Combat" ), fn->_metadata._category );
+    SW_EXPECT_EQUAL( sw::string( "Apply Damage" ), fn->_metadata->_displayName );
+    SW_EXPECT_EQUAL( sw::string( "Subtracts amount from HP" ), fn->_metadata->_tooltip );
+    SW_EXPECT_EQUAL( sw::string( "Combat" ), fn->_metadata->_category );
 #endif
 
     sw::RPCDemoActor actor;
@@ -3193,11 +3194,11 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAbstractAndStatic )
 
     const sw::FunctionInfo* doubleFn = staticInfo->findMethod( sw::hashed_string( "doubleInt" ) );
     SW_ASSERT_TRUE( doubleFn != nullptr );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( doubleFn->_metadata._bStatic ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( doubleFn->_metadata->_bStatic ) );
 #if !defined( SW_SHIPPING )
-    SW_EXPECT_EQUAL( sw::string( "Double Int" ), doubleFn->_metadata._displayName );
-    SW_EXPECT_EQUAL( sw::string( "Returns value * 2" ), doubleFn->_metadata._tooltip );
-    SW_EXPECT_EQUAL( sw::string( "Math" ), doubleFn->_metadata._category );
+    SW_EXPECT_EQUAL( sw::string( "Double Int" ), doubleFn->_metadata->_displayName );
+    SW_EXPECT_EQUAL( sw::string( "Returns value * 2" ), doubleFn->_metadata->_tooltip );
+    SW_EXPECT_EQUAL( sw::string( "Math" ), doubleFn->_metadata->_category );
 #endif
 
     sw::TaskArgs args;
@@ -3229,7 +3230,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyPolymorphic )
         SW_TEST_SKIP( "AssetPathActor type not registered" );
     const sw::PropertyInfo* albedo = typeInfo->findProperty( sw::hashed_string( "_albedo" ) );
     SW_ASSERT_TRUE( albedo != nullptr );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( albedo->_metadata._bAssetPath ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( albedo->_metadata->_bAssetPath ) );
 }
 
 /**

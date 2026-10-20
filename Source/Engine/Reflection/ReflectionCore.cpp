@@ -12,6 +12,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
@@ -229,6 +230,68 @@ namespace sw
         , _reserved{ 0 }
 #endif
     {
+    }
+
+    FunctionInfo::FunctionInfo() noexcept
+        : _name{}
+        , _hashName{}
+        , _returnTypeName{}
+        , _listParameter{}
+        , _metadata{}
+        , _invoker{}
+        , _pReturnType{ nullptr }
+    {
+    }
+
+    const string* FunctionInfo::findCustomMeta( const hashed_string& key ) const noexcept
+    {
+        return _metadata->findCustomMeta( key );
+    }
+
+    const string* PropertyInfo::findCustomMeta( const hashed_string& key ) const noexcept
+    {
+        return _metadata->findCustomMeta( key );
+    }
+
+    const string* TypeInfo::findCustomMeta( const hashed_string& key ) const noexcept
+    {
+        return _metadata->findCustomMeta( key );
+    }
+
+    string_view TypeInfo::getCategory() const noexcept
+    {
+#if !defined( SW_SHIPPING )
+        return _metadata->_category;
+#else
+        return {};
+#endif
+    }
+
+    const utf8* TypeInfo::getDisplayName() const noexcept
+    {
+#if !defined( SW_SHIPPING )
+        if ( _metadata->_displayName.empty() == false )
+            return _metadata->_displayName.c_str();
+#endif
+        return _name.c_str();
+    }
+
+    string_view TypeInfo::getTooltip() const noexcept
+    {
+#if !defined( SW_SHIPPING )
+        return _metadata->_tooltip;
+#else
+        return {};
+#endif
+    }
+
+    bool TypeInfo::isHiddenInMenu() const noexcept
+    {
+#if !defined( SW_SHIPPING )
+        return _metadata->_bHideInMenu != SW_FALSE;
+#else
+        return false;
+#endif
     }
 
     PropertyInfo::PropertyInfo() noexcept
@@ -536,7 +599,7 @@ namespace sw
         bool bHasSaveGame = false;
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
-            if ( prop._metadata._bSaveGame == SW_TRUE )
+            if ( prop._metadata->_bSaveGame == SW_TRUE )
             {
                 bHasSaveGame = true;
                 break;
@@ -884,21 +947,21 @@ namespace sw
                 if ( prop._bIsContainer == SW_TRUE )
                     out.appendFormat( "  [%# element=%#%#%#]", toString( prop._containerKind ), prop._elementTypeName.c_str(),
                                       prop._keyTypeName.empty() ? "" : " key=", prop._keyTypeName.c_str() );
-                if ( prop._metadata._bHasMinRange == SW_TRUE )
-                    out.appendFormat( "  Min=%#", prop._metadata._minRange );
-                if ( prop._metadata._bHasMaxRange == SW_TRUE )
-                    out.appendFormat( "  Max=%#", prop._metadata._maxRange );
-                if ( prop._metadata._defaultValue.empty() == false )
-                    out.appendFormat( "  Default=\"%#\"", prop._metadata._defaultValue.c_str() );
+                if ( prop._metadata->_bHasMinRange == SW_TRUE )
+                    out.appendFormat( "  Min=%#", prop._metadata->_minRange );
+                if ( prop._metadata->_bHasMaxRange == SW_TRUE )
+                    out.appendFormat( "  Max=%#", prop._metadata->_maxRange );
+                if ( prop._metadata->_defaultValue.empty() == false )
+                    out.appendFormat( "  Default=\"%#\"", prop._metadata->_defaultValue.c_str() );
                 const pair<bool, const utf8*> arrFlag[] = {
-                    {    prop._metadata._bReadOnly != SW_FALSE,     "ReadOnly"},
-                    {   prop._metadata._bTransient != SW_FALSE,    "Transient"},
-                    {prop._metadata._bXMLAttribute != SW_FALSE, "XMLAttribute"},
-                    {   prop._metadata._bAssetPath != SW_FALSE,    "AssetPath"},
-                    { prop._metadata._bPolymorphic != SW_FALSE,  "Polymorphic"},
-                    { prop._metadata._bSkipIfEmpty != SW_FALSE,  "SkipIfEmpty"},
-                    {    prop._metadata._bRequired != SW_FALSE,     "Required"},
-                    {prop._metadata._bRuntimeState != SW_FALSE, "RuntimeState"},
+                    {    prop._metadata->_bReadOnly != SW_FALSE,     "ReadOnly"},
+                    {   prop._metadata->_bTransient != SW_FALSE,    "Transient"},
+                    {prop._metadata->_bXMLAttribute != SW_FALSE, "XMLAttribute"},
+                    {   prop._metadata->_bAssetPath != SW_FALSE,    "AssetPath"},
+                    { prop._metadata->_bPolymorphic != SW_FALSE,  "Polymorphic"},
+                    { prop._metadata->_bSkipIfEmpty != SW_FALSE,  "SkipIfEmpty"},
+                    {    prop._metadata->_bRequired != SW_FALSE,     "Required"},
+                    {prop._metadata->_bRuntimeState != SW_FALSE, "RuntimeState"},
                 };
                 for ( const auto& [bSet, pFlagName] : arrFlag )
                 {

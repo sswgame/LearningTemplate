@@ -10,6 +10,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -34,7 +35,7 @@ namespace sw::editor
             bool            bComplete = true;
             for ( const PropertyInfo& prop : EditorToolDefaults::StaticType()->getPropertiesWithBase() )
             {
-                if ( prop._metadata._bRequired == SW_FALSE || root.has( prop._name.view(), false ) )
+                if ( prop._metadata->_bRequired == SW_FALSE || root.has( prop._name.view(), false ) )
                     continue;
                 SW_LOG_ERROR( "Editor tool defaults %#: required key '%#' is missing", pSourceLabel, prop._name.c_str() );
                 bComplete = false;

@@ -5,6 +5,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 #include "TestFramework/TestFramework.h"
@@ -31,10 +32,10 @@ SW_TEST_CASE( EditorDefaultObjectsTest, DefaultInstanceAndMetadataComparison )
     *pPriority->getValuePtr<int32>( pCamera ) = 4;
     SW_EXPECT_FALSE( EditorDefaultObjects::isDefaultValue( *pPriority, pCamera, pDefault ) );
 
-    PropertyInfo metaOnly            = *pPriority;
-    metaOnly._metadata._defaultValue = "4.0";
+    PropertyInfo metaOnly             = *pPriority;
+    metaOnly._metadata->_defaultValue = "4.0";
     SW_EXPECT_TRUE( EditorDefaultObjects::isDefaultValue( metaOnly, pCamera, nullptr ) );
-    metaOnly._metadata._defaultValue = "";
+    metaOnly._metadata->_defaultValue = "";
     SW_EXPECT_TRUE( EditorDefaultObjects::isDefaultValue( metaOnly, pCamera, nullptr ) ); // 기본을 모르면 차이도 없다
 
     defaults.clear();

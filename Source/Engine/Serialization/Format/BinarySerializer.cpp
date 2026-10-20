@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -143,7 +144,7 @@ namespace sw
 
                     // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
                     const size_t        matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash );
-                    const bool          bMatched     = matchedIndex < numProps && listProp[matchedIndex]._metadata._bTransient == SW_FALSE;
+                    const bool          bMatched     = matchedIndex < numProps && listProp[matchedIndex]._metadata->_bTransient == SW_FALSE;
                     const PropertyInfo* pTargetProp  = bMatched ? &listProp[matchedIndex] : nullptr;
 
                     if ( pTargetProp == nullptr )

@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
@@ -131,11 +132,11 @@ namespace sw
                         if ( bSequence == false )
                             continue;
                         const TypeInfo* pElement     = SerializerUtil::findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-                        const bool      bNumberRange = pElement == nullptr && prop._metadata.hasAllowedRange();
+                        const bool      bNumberRange = pElement == nullptr && prop._metadata->hasAllowedRange();
                         if ( pElement == nullptr && bNumberRange == false )
                             continue;
                         // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
-                        const PropertyAllowedRange range        = bNumberRange ? prop._metadata.computeAllowedRange( pInstance ) : PropertyAllowedRange{};
+                        const PropertyAllowedRange range        = bNumberRange ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
                         ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                         const size_t               elementCount = pSequence->getSize( pValue );
                         for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
@@ -152,7 +153,7 @@ namespace sw
                     float64 value = 0.0;
                     if ( readRangeNumber( prop._typeName.view(), pValue, value ) )
                     {
-                        if ( prop._metadata.hasAllowedRange() && prop._metadata.computeAllowedRange( pInstance ).contains( value ) == false )
+                        if ( prop._metadata->hasAllowedRange() && prop._metadata->computeAllowedRange( pInstance ).contains( value ) == false )
                             return false;
                         continue;
                     }
@@ -865,10 +866,10 @@ namespace sw
     {
         if ( instance.get() == nullptr || prop._bIsContainer != SW_FALSE )
             return;
-        if ( prop._metadata._defaultValue.empty() )
+        if ( prop._metadata->_defaultValue.empty() )
             return;
-        if ( applyPropertyText( prop, instance, prop._metadata._defaultValue, context ) == false )
-            SW_LOG_WARNING( "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata._defaultValue,
+        if ( applyPropertyText( prop, instance, prop._metadata->_defaultValue, context ) == false )
+            SW_LOG_WARNING( "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata->_defaultValue,
                             prop._name.c_str(), prop._typeName.c_str() );
     }
 
@@ -1156,7 +1157,7 @@ namespace sw
                 const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                 const size_t               elementCount = pSequence->getSize( pValue );
                 // 필드 경계는 원소가 아니라 이 프로퍼티를 가진 객체에서 읽는다(인스펙터와 같다).
-                const PropertyAllowedRange range = prop._metadata.hasAllowedRange() ? prop._metadata.computeAllowedRange( pInstance ) : PropertyAllowedRange{};
+                const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
                 for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                 {
                     const string      elementPath   = path + "[" + to_string( elementIndex ) + "]";
@@ -1176,8 +1177,8 @@ namespace sw
                 continue;
             }
             float64 value = 0.0;
-            if ( prop._metadata.hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
-                Internal::appendRangeError( path, value, prop._metadata.computeAllowedRange( pInstance ), outListError );
+            if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
+                Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
         }
     }
 

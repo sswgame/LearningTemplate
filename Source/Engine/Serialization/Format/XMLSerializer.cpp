@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
@@ -292,7 +293,7 @@ namespace sw
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
-                            if ( prop._metadata._bSkipIfEmpty == SW_TRUE && ss.size() == 0 )
+                            if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && ss.size() == 0 )
                                 return;
 
                             backend.writeAttribute( prop._name.c_str(), ss.c_str() );
