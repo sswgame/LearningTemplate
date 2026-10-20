@@ -2,9 +2,11 @@
  * @file EditorContextLifecycle.cpp
  * @brief EditorContext 의 생성 · 초기화 · 종료입니다. 에디터 UI 매니저들을 실제로 만드는 곳입니다.
  *
- * @details EditorContext::get() 과 한 파일에 두지 말 것 — 그러면 **컨텍스트를 조회하기만 해도** 패널 · 팝업 ·
+ * @details EditorContext::get() 과 한 파일에 두지 않습니다. 그러면 **컨텍스트를 조회하기만 해도** 패널 · 팝업 ·
  *          인스펙터 매니저가 모두 링크에 끌려옵니다(그 끝은 ImGui 입니다). 생성 · 소멸(매니저 타입이 완전해야 하는 쪽)만
  *          이 TU 에 두어, EditorContext 를 조회만 하는 코드(EditorSceneCommands 단위 테스트 등)가 UI 없이 링크되게 합니다.
+ *          모든 매니저를 만드는 조립점이라 셸과 같은 `Source/Editor` 바로 아래(최상위 층)에 둡니다. `Common/Workspace` 는
+ *          ImGui 를 모르는 `EditorModel` 이 짓습니다(Source/Editor/CMakeLists.txt).
  */
 #include "pch.h"
 
@@ -23,7 +25,6 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/Common/Workspace/EditorModuleUnloadListener.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -31,6 +32,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/EditorModuleUnloadListener.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
