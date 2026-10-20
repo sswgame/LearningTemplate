@@ -30,13 +30,13 @@ namespace sw
     void VoxelHighlightComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 플레이어(DuringPhysics)가 이번 프레임의 겨눔을 정한 뒤에 읽는다.
+        // 플레이어(DuringPhysics)가 이번 프레임에 겨눈 블록을 정한 뒤에 읽습니다.
         setTickGroup( TickGroup::PostUpdate );
         GameObject*    pOwner = getOwner();
         MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr )
             return;
-        // 단계마다 하나 — 부수는 동안 진해진다. 플레이 시작은 틱 밖이라 여기서 만든다.
+        // 단계마다 하나씩 만듭니다. 블록을 부수는 동안 단계가 올라가며 색이 진해집니다. 플레이 시작은 틱 밖이라서 여기서 만듭니다.
         for ( int32 level = 0; level < kLevelCount && pMesh->getMaterial() != nullptr; ++level )
         {
             const float32 step   = static_cast<float32>( level );
@@ -81,7 +81,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        // 디버그 선 큐는 게임 스레드의 것이다 — 에디터 게임 뷰에만 보인다.
+        // 디버그 선 큐는 게임 스레드에서만 쓸 수 있습니다. 이 선은 에디터 게임 뷰에서만 보입니다.
         pManager->executeOrDeferPostTick( [center]()
         {
             DebugDrawQueue* pDebugDraw = game::findSubsystem<DebugDrawQueue>();

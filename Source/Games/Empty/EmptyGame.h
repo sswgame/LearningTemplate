@@ -26,9 +26,9 @@ namespace sw
     protected:
         bool onInitialize() override;
         void onUpdate( float32 deltaTime ) override;
-        /** @brief 상태 스냅샷 직전 — 벤치는 절차 생성물이라 걷어서 스냅샷에 싣지 않는다. */
+        /** @brief 상태 스냅샷을 만들기 직전에 부릅니다. 벤치는 절차적으로 생성한 오브젝트라서 정리해 스냅샷에 싣지 않습니다. */
         void onBeforeStateSerialize() override;
-        /** @brief 상태 복원이 씬을 갈아 끼운 뒤 — 벤치는 스냅샷에 없으므로 다시 만든다. */
+        /** @brief 상태 복원이 씬을 교체한 뒤에 부릅니다. 벤치는 스냅샷에 없으므로 다시 만듭니다. */
         void onAfterStateDeserialize() override;
 
     private:

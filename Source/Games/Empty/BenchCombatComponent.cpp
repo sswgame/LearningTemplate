@@ -51,14 +51,14 @@ namespace sw
     void BenchCombatComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 애니메이션 · 물리 뒤 — 이번 프레임의 손 자리로 칼을 맞추고, 이번 프레임에 울린 알림을 센다.
+        // 애니메이션과 물리가 끝난 뒤에 실행합니다. 이번 프레임의 손 위치로 칼을 맞추고, 이번 프레임에 울린 알림을 셉니다.
         setTickGroup( TickGroup::PostUpdate );
     }
 
     GameObject* BenchCombatComponent::spawnEnemy( GameObjectManager& objects, const BenchSceneSettings& settings, const hashed_string& name,
                                                   const float3& position )
     {
-        // 적 — 유닛 · 애니메이터(걷기, 발소리 알림) · 알림 디스패치 · 소켓 표 · 래그돌(히트 존 · 움찔 · 기상).
+        // 적에게 필요한 컴포넌트를 붙입니다. 유닛, 애니메이터(걷기와 발소리 알림), 알림 디스패치, 소켓 테이블, 래그돌(히트 존, 움찔, 기상)입니다.
         GameObject* pEnemy = objects.createGameObject( name );
         if ( pEnemy == nullptr )
             return nullptr;
@@ -72,7 +72,7 @@ namespace sw
         pUnit->resolveRenderAssets();
         pUnit->setAnimateWhenOffscreen( true );
         pUnit->setLocalPosition( position );
-        // KayKit 은 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다.
+        // KayKit 모델은 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다.
         pUnit->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
         pAnimator->setClipFolder( settings._combatEnemyClips );
         pAnimator->setInitialState( "Walking_A" );
@@ -90,7 +90,7 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
-        // 바닥 — 정적 강체(재질 Stone — 발소리의 바닥 종류) + 보이는 평면.
+        // 바닥은 정적 강체(재질 Stone, 발소리가 고르는 바닥 종류)와 화면에 보이는 평면으로 구성합니다.
         GameObject*         pFloor     = pObjects->createGameObject( hashed_string( "CombatFloor" ) );
         RigidBodyComponent* pFloorBody = pFloor->addComponent<RigidBodyComponent>();
         MeshComponent*      pFloorMesh = pFloor->addComponent<MeshComponent>();
@@ -108,7 +108,7 @@ namespace sw
         GameObject* pEnemy = spawnEnemy( *pObjects, settings, hashed_string( "CombatEnemy" ), float3{} );
         outListObject.push_back( pEnemy->getHandle() );
 
-        // 칼 — 강체(손을 따르는 키네마틱 → 떼면 동적) + 메시 + 소켓 부착.
+        // 칼은 강체(손을 따라갈 때는 키네마틱, 손에서 떨어지면 동적)와 메시, 소켓 부착으로 구성합니다.
         GameObject*             pSword     = pObjects->createGameObject( hashed_string( "CombatSword" ) );
         RigidBodyComponent*     pSwordBody = pSword->addComponent<RigidBodyComponent>();
         MeshComponent*          pSwordMesh = pSword->addComponent<MeshComponent>();
@@ -124,7 +124,7 @@ namespace sw
         (void)pBinding;
         outListObject.push_back( pSword->getHandle() );
 
-        // 연출 — 시간표를 돈다.
+        // 연출 오브젝트가 프레임 순서대로 전투 연출을 진행합니다.
         GameObject*           pDirector = pObjects->createGameObject( hashed_string( "CombatDirector" ) );
         BenchCombatComponent* pCombat   = pDirector->addComponent<BenchCombatComponent>();
         pCombat->_enemy                 = pEnemy->getHandle();
@@ -142,7 +142,7 @@ namespace sw
         const bool              bHandUnavailable = pBinding == nullptr || pUnit == nullptr || pUnit->findBoneModelTransform( hashed_string( BenchCombatComponentInternal::kHandSocket ), hand ) == false;
         if ( bHandUnavailable )
             return;
-        // 유닛은 적의 루트다 — 모델 공간이 곧 루트 기준이다. 붙기 전이면 붙이고, 붙어 있으면 바뀐 손 자리만 넘긴다.
+        // 유닛이 적의 루트이므로 모델 공간이 곧 루트 기준입니다. 아직 붙지 않았다면 붙이고, 이미 붙어 있다면 바뀐 손 위치만 넘깁니다.
         if ( pBinding->getState() == SocketBindingState::Bound && pBinding->getHolder() == enemy.getHandle() )
             pBinding->updateSocketTransform( hand );
         else if ( _stage < 3 )
@@ -153,7 +153,7 @@ namespace sw
     {
         float3 target{};
         (void)SocketLookupUtil::findSocketWorldPosition( enemy, hashed_string( pBone ), target );
-        // 머리 · 가슴 뼈는 그 바디의 아래 끝이다 — 바디 가운데 높이로 조금 올려 쏜다.
+        // 머리와 가슴 뼈는 해당 바디의 아래쪽 끝에 있습니다. 바디 가운데 높이에 맞도록 조금 올려서 쏩니다.
         target._y += 0.15f;
         const float3 muzzle = target + float3{ 0.0f, 0.0f, -_shooterRange };
         HitInfo      hit;
@@ -203,7 +203,7 @@ namespace sw
             }
         }
 
-        // 물리 · 질의 · 스폰은 게임 스레드에서 — 틱 뒤로 미룬다(이 틱은 워커일 수 있다).
+        // 물리, 질의, 스폰은 게임 스레드에서 해야 하므로 틱이 끝난 뒤로 미룹니다. 이 틱은 워커 스레드에서 실행될 수 있습니다.
         const TComponentHandle<BenchCombatComponent> self{ this };
         pManager->executeOrDeferPostTick( [pManager, self]()
         {
@@ -245,7 +245,7 @@ namespace sw
         if ( second != _loggedSecond )
         {
             _loggedSecond = second;
-            // `[[maybe_unused]]` — 아래 SW_LOG_INFO 에만 쓰이고 그 매크로는 Shipping 에서 사라진다.
+            // `[[maybe_unused]]` 를 붙인 이유: 아래 SW_LOG_INFO 에서만 쓰이는데, 그 매크로는 Shipping 빌드에서 사라집니다.
             [[maybe_unused]] const RagdollComponent* pRagdoll = pEnemy->getComponent<RagdollComponent>();
             [[maybe_unused]] const float3            sword    = pSword->getPrimarySceneComponent() != nullptr ? pSword->getPrimarySceneComponent()->getWorldPosition() : float3{};
             SW_LOG_INFO( "[BenchCombat] t=%# footsteps %# ragdoll state %# sword (%#, %#, %#)", second, _footstepCount,

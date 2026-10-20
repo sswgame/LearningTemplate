@@ -46,7 +46,7 @@ namespace sw
         };
     } // namespace
 
-    /** @brief `-gv_voxelAutoPlay=1` — 디렉터의 자동 플레이를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 걷고 뛰고 부수고 놓기를 AI 가 한다. */
+    /** @brief `-gv_voxelAutoPlay=1` 이면 씬의 `_bAutoPlay` 가 꺼져 있어도 디렉터의 자동 플레이를 켭니다. 걷기, 점프, 부수기, 놓기를 AI 가 합니다. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_voxelAutoPlay, 0, "VoxelCraft: 걷기 · 부수기 · 놓기도 AI 가 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_voxelAutoPlay, "VoxelCraft", "Walk, break and place blocks by AI" );
 } // namespace sw
@@ -83,7 +83,7 @@ namespace sw
     void VoxelDirectorComponent::updateGame( float32 deltaTime )
     {
         if ( areViewsSpawned() == false )
-            return; // 상태 저장 전에 걷었다 — 베이스가 청크를 다시 세운다(블록은 그대로)
+            return; // 상태를 저장하기 전에 청크를 정리했습니다. 베이스가 청크를 다시 스폰합니다(블록은 그대로입니다).
         scheduleRebuilds();
         logStatus( deltaTime );
     }
@@ -91,7 +91,7 @@ namespace sw
     void VoxelDirectorComponent::onViewsDespawned()
     {
         _listChunk.clear();
-        // 자동 플레이 AI 오브젝트도 걷혔다 — 다시 세울 때 빙의를 다시 맞춘다.
+        // 자동 플레이 AI 오브젝트도 정리되었습니다. 다시 스폰할 때 빙의를 다시 맞춥니다.
         _autoPlayController = GameObjectHandle{};
         _appliedAutoPlay    = -1;
     }
@@ -106,7 +106,7 @@ namespace sw
         const bool     bAutoPlay     = isAutoPlayOn();
         GameObject*    pPlayerObject = manager.resolveGameObject( _player );
         PawnComponent* pPawn         = pPlayerObject != nullptr ? pPlayerObject->getComponent<PawnComponent>() : nullptr;
-        _appliedAutoPlay             = bAutoPlay ? 1 : 0; // 폰이 없어도 맞춘 것으로 친다 — 매 틱 플러시를 잡지 않게
+        _appliedAutoPlay             = bAutoPlay ? 1 : 0; // 폰이 없어도 적용한 것으로 봅니다. 그래야 매 틱 플러시를 예약하지 않습니다.
         if ( pPawn == nullptr )
             return;
         GameObject* pAIObject = manager.resolveGameObject( _autoPlayController );
@@ -126,7 +126,7 @@ namespace sw
             SW_LOG_INFO( "[Voxel] auto play took the player" );
             return;
         }
-        // 끔 — 플레이어 조종자에게 돌려주고 AI 를 걷는다. 이미 다른 조종자(플레이어)가 쥐었으면 그대로.
+        // 끄는 경우입니다. 플레이어 조종자에게 폰을 돌려주고 AI 를 정리합니다. 이미 다른 조종자(플레이어)가 폰을 가지고 있으면 그대로 둡니다.
         const VoxelAutoPlayControllerComponent* pAI = pAIObject != nullptr ? pAIObject->getComponent<VoxelAutoPlayControllerComponent>() : nullptr;
         if ( pPawn->isPossessed() == false || ( pAI != nullptr && pAI->getPawn() == pPawn->getHandle() ) )
         {
@@ -141,14 +141,14 @@ namespace sw
 
     bool VoxelDirectorComponent::applyBlockEdit( const VoxelCoord& coord, VoxelBlockIndex block )
     {
-        // 바뀐 청크(경계면 이웃 청크도)는 월드가 표시하고, 다음 틱에 다시 짓기를 맡긴다.
+        // 바뀐 청크는 월드가 표시합니다. 경계면에 맞닿은 이웃 청크도 표시합니다. 표시된 청크는 다음 틱에 다시 메싱하도록 요청합니다.
         return _world.setBlock( coord, block );
     }
 
     float3 VoxelDirectorComponent::findSpawnPosition() const
     {
-        // 가운데부터 나선으로 — 물 위가 아닌 첫 땅.
-        // 판이 열렸으면 카탈로그와 블록 이름은 startGame 이 확인했다.
+        // 가운데에서 시작해 나선으로 찾은, 물이 아닌 첫 땅입니다.
+        // 게임이 시작되었다면 카탈로그와 블록 이름은 startGame 이 이미 확인했습니다.
         const VoxelBlockIndex water   = _world.getCatalog()->findBlockIndex( _waterBlock );
         const int32           centerX = _world.getSizeX() / 2;
         const int32           centerZ = _world.getSizeZ() / 2;
@@ -226,7 +226,7 @@ namespace sw
 
     void VoxelDirectorComponent::decorateTerrain()
     {
-        // 돌 속 광석(깊을수록 철) · 높은 봉우리의 눈. 지형 생성기는 장르 공통이라 이런 꾸밈은 게임이 얹는다.
+        // 돌 속의 광석(깊을수록 철)과 높은 봉우리의 눈입니다. 지형 생성기는 장르 공통이라서, 이런 꾸밈은 게임이 추가합니다.
         const VoxelBlockCatalog& catalog = *_world.getCatalog();
         const VoxelBlockIndex    stone   = catalog.findBlockIndex( _stoneBlock );
         const VoxelBlockIndex    coal    = catalog.findBlockIndex( _coalOreBlock );
@@ -257,7 +257,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 청크 — 스폰은 틱 뒤 게임 스레드, 다시 짓기 지시는 PrePhysics
+    // 청크: 스폰은 틱이 끝난 뒤 게임 스레드에서, 다시 메싱하라는 요청은 PrePhysics 에서 합니다.
     // ------------------------------------------------------------------------------
     void VoxelDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
@@ -269,7 +269,7 @@ namespace sw
 
     void VoxelDirectorComponent::spawnChunks( GameObjectManager& manager )
     {
-        // 청크마다 오브젝트 하나 — 처음에는 전부 짓는다(이후는 바뀐 것만 한 프레임에 몇 개씩).
+        // 청크마다 오브젝트 하나를 스폰합니다. 처음에는 전부 메싱하고, 이후에는 바뀐 청크만 한 프레임에 몇 개씩 메싱합니다.
         const GameObjectHandle director = getOwner()->getHandle();
         _listChunk.assign( static_cast<size_t>( kChunkCountX * kChunkCountZ ), GameObjectHandle{} );
         for ( int32 chunkZ = 0; chunkZ < kChunkCountZ; ++chunkZ )
@@ -295,7 +295,7 @@ namespace sw
         {
             for ( int32 chunkX = 0; chunkX < kChunkCountX; ++chunkX )
             {
-                _world.clearChunkDirty( chunkX, chunkZ ); // 방금 모두 맡겼다
+                _world.clearChunkDirty( chunkX, chunkZ ); // 방금 전부 메싱을 요청했습니다.
             }
         }
     }
@@ -305,7 +305,7 @@ namespace sw
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
             return;
-        // 몸에서 가까운 청크부터 — 부순 자리가 먼저 다시 지어진다. 맡긴 청크는 표시를 지운다(청크는 같은 프레임 뒤 그룹에서 짓는다).
+        // 몸에서 가까운 청크부터 요청해서, 블록을 부순 곳이 먼저 다시 메싱됩니다. 요청한 청크는 표시를 지웁니다. 청크는 같은 프레임의 뒤쪽 그룹에서 메싱합니다.
         const GameObject*           pPlayerObject = pManager->resolveGameObject( _player );
         const VoxelPlayerComponent* pPlayer       = pPlayerObject != nullptr ? pPlayerObject->getComponent<VoxelPlayerComponent>() : nullptr;
         const float3                position      = pPlayer != nullptr ? pPlayer->getBody().getPosition() : float3{ 0.0f, 0.0f, 0.0f };

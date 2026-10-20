@@ -118,7 +118,7 @@ namespace sw
 
     void BenchScene::spawnRigSlope( Scene* pScene, GameObjectManager& objects, float32 halfWidth )
     {
-        // 기울기 — 물리(정적 상자, 발 디딤의 광선이 맞는다)와 그림(같은 자리 · 크기의 큐브).
+        // 기울어진 바닥입니다. 물리용 정적 상자(발 디딤의 광선이 맞는 대상)와, 같은 위치와 크기의 큐브(화면에 보이는 것)로 이루어집니다.
         const float3  slopeRotation{ 0.0f, 0.0f, _settings._rigSlopeAngle };
         const float3& slopeCenter = _settings._rigSlopeCenter;
         GameObject*   pSlope      = objects.createGameObject( "RigSlope" );
@@ -149,7 +149,7 @@ namespace sw
 
     void BenchScene::spawnRigLookTarget( Scene* pScene, GameObjectManager& objects )
     {
-        // 시선 목표 — 작은 구. update 가 기사 앞에서 원을 그린다.
+        // 시선 목표인 작은 구입니다. update 가 기사 앞에서 원을 그리며 움직입니다.
         GameObject* pLook = objects.createGameObject( "RigLookTarget" );
         if ( pLook == nullptr )
             return;
@@ -167,7 +167,7 @@ namespace sw
 
     SkeletalMeshComponent* BenchScene::spawnRigWeapon( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
     {
-        // 무기 유닛 — 오른손 소켓 자리를 리그(CopyTransform)가 따른다. 스킨 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그린다.
+        // 무기 유닛입니다. 리그(CopyTransform)가 오른손 소켓 위치를 따라갑니다. 스킨이 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그립니다.
         GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
         SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, _settings._rigWeaponMesh ) : nullptr;
         if ( pWeaponUnit == nullptr || pWeaponUnit->getMesh() == nullptr )
@@ -188,7 +188,7 @@ namespace sw
 
     void BenchScene::spawnRigCape( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
     {
-        // 망토 유닛 — 데모 데이터의 사슬 뼈 넷. 뿌리는 가슴 자리를 따르고(CopyTransform) 나머지는 스프링이다.
+        // 망토 유닛입니다. 데모 데이터에는 사슬 뼈가 네 개 있습니다. 뿌리 뼈는 가슴 위치를 따라가고(CopyTransform) 나머지는 스프링으로 움직입니다.
         GameObject*            pCape     = objects.createGameObject( "RigCape" );
         SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh ) : nullptr;
         if ( pCapeUnit == nullptr || pCapeUnit->getMesh() == nullptr )
@@ -219,7 +219,7 @@ namespace sw
         if ( pBody == nullptr || pAnimator == nullptr )
             return;
         pBody->setSkeletonPath( _settings._knightSkeleton.c_str() );
-        // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보게 돌린다. 줄은 X 로 — 기울기라 사람마다 땅 높이가 다르다.
+        // 기사는 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다. 기사는 X 축을 따라 한 줄로 서고, 바닥이 기울어 있어서 사람마다 땅 높이가 다릅니다.
         const float32 x = origin + static_cast<float32>( index ) * _settings._rigSpacing;
         pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle ) * x, 0.0f } );
         pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
@@ -314,7 +314,7 @@ namespace sw
         if ( listCamera.empty() == false )
             pObjects->getSubsystem<AnimationSystem>().setLODViewPosition( listCamera.front()->getCameraPosition() );
 
-        // `-gv_benchAnimate=0` 이면 멈춘 그림(스크린샷 비교) — 시선 목표 · 몸 틀기를 움직이지 않는다.
+        // `-gv_benchAnimate=0` 이면 화면을 멈춰 둡니다(스크린샷 비교용). 시선 목표와 몸 돌리기를 움직이지 않습니다.
         const float32 time = ( gv_benchAnimate != 0 ) ? _benchElapsed : _settings._rigStillTime;
         if ( MeshComponent* pBall = pObjects->resolveComponent( _rigLookTarget ) )
             pBall->setLocalPosition( float3{ _settings._rigLookSwing * MathUtil::sin( time * _settings._rigLookSwingRate ),

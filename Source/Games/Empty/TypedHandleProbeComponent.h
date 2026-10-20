@@ -1,9 +1,9 @@
 /**
  * @file TypedHandleProbeComponent.h
- * @brief 인스펙터의 타입 컴포넌트 핸들 선택기를 화면으로 확인하는 시나리오(`editor.inspectorhandle`)가 쓰는 시험대 컴포넌트입니다.
+ * @brief 인스펙터의 타입 컴포넌트 핸들 선택기를 화면에서 확인하는 시나리오(`editor.inspectorhandle`)가 쓰는 테스트용 컴포넌트입니다.
  *
- * @details 엔진 · 키트 컴포넌트 가운데 `TComponentHandle<T>` 를 PROPERTY 로 내놓은 것이 없어, 선택기를 그릴 프로퍼티가 이 컴포넌트에만 있다.
- *          `BenchScene.*` 와 함께 새 게임을 시작할 때 지울 파일이다(그때는 이 컴포넌트를 쓰는 시나리오도 함께 지운다).
+ * @details 엔진과 키트의 컴포넌트 중에는 `TComponentHandle<T>` 를 PROPERTY 로 노출한 것이 없어서, 선택기를 그릴 프로퍼티가 이 컴포넌트에만 있습니다.
+ *          새 게임을 시작할 때는 `BenchScene.*` 와 함께 지우는 파일이며, 이 컴포넌트를 쓰는 시나리오도 함께 지웁니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

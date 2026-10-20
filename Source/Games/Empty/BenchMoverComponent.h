@@ -1,11 +1,11 @@
 /**
  * @file BenchMoverComponent.h
- * @brief 벤치 큐브가 **틱 안에서** 자기 위치를 쓰게 하는 컴포넌트 — `-gv_benchTickMovers=N` 으로 붙는다.
+ * @brief 벤치 큐브가 **틱 안에서** 자기 위치를 쓰게 하는 컴포넌트입니다. `-gv_benchTickMovers=N` 으로 붙습니다.
  *
- * @details 게임플레이의 보통 모양은 `onTick` 안에서 자기 트랜스폼을 바꾸는 것이다(`GravityComponent` ·
- *          `ProjectileComponent`). 그런데 기본 벤치는 게임 스레드가 틱 **밖에서** 배치로 쓰므로 그 경로를
- *          측정하지 않는다 — 병렬 틱 중의 세터는 지연 경로를 타는데, 그 비용은 기본 벤치 프로파일에 나오지 않는다.
- *          이 컴포넌트가 그 경로를 태운다. `BenchScene.*` 와 함께 새 게임을 시작할 때 지울 파일이다.
+ * @details 게임플레이 코드는 보통 `onTick` 안에서 자기 트랜스폼을 바꿉니다(`GravityComponent`, `ProjectileComponent`).
+ *          그런데 기본 벤치는 게임 스레드가 틱 **밖에서** 배치로 위치를 쓰므로, 틱 안에서 쓰는 경로는 측정하지 못합니다.
+ *          병렬 틱 중에 호출한 세터는 지연 경로를 타는데, 그 비용이 기본 벤치 프로파일에는 나오지 않습니다.
+ *          이 컴포넌트가 그 경로를 실행합니다. 새 게임을 시작할 때는 `BenchScene.*` 와 함께 지우는 파일입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

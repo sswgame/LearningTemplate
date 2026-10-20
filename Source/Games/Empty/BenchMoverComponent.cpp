@@ -35,13 +35,13 @@ namespace sw
         if ( _bWritesTransform == SW_FALSE || _pTarget == nullptr )
             return;
 
-        // BenchScene::update 의 배치 쓰기와 같은 사인파 — 두 경로의 그림이 같아야 비교가 된다.
+        // BenchScene::update 의 배치 쓰기와 같은 사인파입니다. 두 경로가 같은 이미지를 만들어야 비교할 수 있습니다.
         const float32 wave  = MathUtil::sin( _elapsed + _phase );
         const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
         _pTarget->setLocalPosition( float3{ _basePosition._x, wave * 0.75f, _basePosition._z } );
         _pTarget->setLocalScale( float3{ scale, scale, scale } );
     }
 
-    // 큐브마다 무버 하나면(`-gv_benchTickMovers=1`) 오브젝트 칸 대신 타입별 일괄 목록으로 돈다(`TickBatchRegistry`).
+    // 큐브마다 무버가 하나면(`-gv_benchTickMovers=1`) 오브젝트 슬롯 대신 타입별 일괄 목록으로 틱을 실행합니다(`TickBatchRegistry`).
     SW_REGISTER_TICK_BATCH( BenchMoverComponent );
 } // namespace sw
