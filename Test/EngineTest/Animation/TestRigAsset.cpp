@@ -627,3 +627,41 @@ SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
     SW_LOG_INFO( "Cape rig (spring chain 4 bones, 1 capsule): %# us per prepare + evaluate", capeMicroseconds );
     SW_EXPECT_TRUE( capeMicroseconds < kLimit );
 }
+
+/**
+ * @brief [RigAssetTest] 노드 설정 되쓰기 — 이름의 노드 `weight` · `enabled` 만 바뀌고(다른 키 · 노드는 그대로), 다시 읽으면 그 값이며, 끈 노드만 `enabled` 를 쓴다.
+ *        없는 노드 이름 · 범위 밖 가중치는 쓰지 않는다
+ */
+SW_TEST_CASE( RigAssetTest, RewriteNodeSettingsKeepsOtherKeys )
+{
+    const string_view source = R"({ "targets": [ { "name": "Goal", "object": "Ball" } ],
+        "nodes": [ { "type": "Aim", "name": "Look", "bone": "bone2", "target": "Goal", "max_degrees": 45 },
+                   { "type": "Aim", "name": "Head", "bone": "bone1", "target": "Goal", "weight": 0.5 } ] })";
+    string            rewritten;
+    SW_ASSERT_TRUE( RigAsset::rewriteNodeSettings( source, "test.rig.json",
+                                                   {
+                                                       RigNodeSaveParams{hashed_string( "Look" ), 0.25f, false},
+                                                       RigNodeSaveParams{hashed_string( "Head" ),  0.5f,  true},
+    },
+                                                   rewritten ) );
+    shared_ptr<const RigAsset> asset = TestRigAssetInternal::parseRig( rewritten );
+    SW_ASSERT_NOT_NULL( asset );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( asset->getNodes().size() ) );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, asset->getNodes()[0]->getWeight(), 1e-6f );
+    SW_EXPECT_FALSE( asset->getNodes()[0]->isEnabled() );
+    SW_EXPECT_TRUE( asset->getNodes()[1]->isEnabled() );
+    SW_EXPECT_TRUE( rewritten.find( "max_degrees" ) != string::npos );
+    SW_EXPECT_TRUE( rewritten.find( "\"enabled\"" ) == rewritten.rfind( "\"enabled\"" ) ); // 끈 노드 하나에만
+
+    test::ScopedDefensiveTestLog expected( "rewriting a rig refuses an unknown node and an out-of-range weight" );
+    string                       unchanged = "keep";
+    SW_EXPECT_FALSE( RigAsset::rewriteNodeSettings( source, "test.rig.json", {
+                                                                                 RigNodeSaveParams{ hashed_string( "Nobody" ), 1.0f, true }
+    },
+                                                    unchanged ) );
+    SW_EXPECT_FALSE( RigAsset::rewriteNodeSettings( source, "test.rig.json", {
+                                                                                 RigNodeSaveParams{ hashed_string( "Look" ), 2.0f, true }
+    },
+                                                    unchanged ) );
+    SW_EXPECT_TRUE( unchanged == "keep" );
+}
