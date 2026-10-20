@@ -3,7 +3,8 @@
  * @brief 테스트 안의 가짜 RESP 서버 — 루프백 스트림 위에서 RESP 드라이버가 쓰는 명령 부분집합만 Valkey 처럼 답합니다(만료 · WATCH · MULTI/EXEC · 정렬 집합 · 발행/구독 · AUTH).
  * @details - 스레드가 없다 — 루프백 전송은 한 스레드에서만 돈다. RESP 앞에는 `createClientTransport` 가 준 전송을 준다: 앞이 자기 전송을 돌 때
  *            (`pollIO`) 서버도 한 번 돈다. 그래서 테스트 스레드 하나로 결정적이다.
- *          - 시계는 손으로 민다(`advanceTimeMs`). 실패 주입: 답 붙잡기(시한) · 모든 연결 끊기(`dropAllConnections`).
+ *          - 시계는 손으로 민다(`advanceTimeMs`). 서버가 `IRespClock` 이라 RESP 저장소에 그대로 주면 요청 시한 · 백오프도 이 시계로 잰다
+ *            (실제 시간이 아니라서 느린 머신 · TSan 에서도 시한이 넘지 않는다). 실패 주입: 답 붙잡기(시한) · 모든 연결 끊기(`dropAllConnections`).
  *          - TLS 컨텍스트를 주면 연결마다 서버 세션을 지난다.
  */
 #pragma once
@@ -18,6 +19,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespCodec.h"
+#include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
 
 #include <algorithm>
 #include <cctype>
@@ -57,7 +59,7 @@ namespace test
 
 namespace test
 {
-    class FakeRespServer final : public sw::IStreamHandler
+    class FakeRespServer final : public sw::IStreamHandler, public sw::IRespClock
     {
     public:
         FakeRespServer( sw::LoopbackStreamNetwork& network, sw::ITLSContext* pTLSContext = nullptr )
@@ -94,7 +96,9 @@ namespace test
         void pump() { (void)_transport->pollIO( 0 ); }
 
         void setPassword( const sw::string& password ) { _password = password; }
-        void advanceTimeMs( int64 deltaMs ) { _nowMs += deltaMs; }
+        /** @brief 서버의 만료 시계와 RESP 저장소의 시한 · 백오프 시계를 함께 민다 — 서버가 저장소에 주는 시계(`IRespClock`)이다. */
+        void  advanceTimeMs( int64 deltaMs ) { _nowMs += deltaMs; }
+        int64 nowNanoseconds() const noexcept override { return _nowMs * sw::constant::kNanosecondsPerMillisecond; }
 
         /** @brief 켜 두면 받은 명령에 답하지 않는다(시한 테스트). */
         void setHoldReplies( bool bHold ) { _bHoldReplies = bHold; }
