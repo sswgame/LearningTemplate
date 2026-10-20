@@ -911,6 +911,19 @@ namespace sw
                 }
             }
 
+            /** @brief 유저 바인딩의 2D 방향 합성 줄을 읽습니다. 네 방향 키가 모두 있어야 묶습니다. */
+            static void loadUserVector2D( InputMap& inputMap, XMLNode bindNode, const utf8* pAction, string_view layer )
+            {
+                const Key     upKey                  = KeyCodeUtil::fromName( bindNode.getAttributeText( "up" ) );
+                const Key     downKey                = KeyCodeUtil::fromName( bindNode.getAttributeText( "down" ) );
+                const Key     leftKey                = KeyCodeUtil::fromName( bindNode.getAttributeText( "left" ) );
+                const Key     rightKey               = KeyCodeUtil::fromName( bindNode.getAttributeText( "right" ) );
+                const float32 deadzone               = bindNode.getAttributeFloat( "deadzone", kVector2DDeadzoneDefault );
+                const bool    bAllDirectionKeysBound = upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown;
+                if ( bAllDirectionKeysBound )
+                    inputMap.bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
+            }
+
             /** @brief 유저 바인딩 줄 하나를 종류에 맞게 읽어 맵에 묶습니다. 저장할 때와 같은 형태만 읽습니다. */
             static void loadUserBindingNode( InputMap& inputMap, XMLNode bindNode, const utf8* pAction, const utf8* pKindStr, BindingKind parsedKind, string_view layer )
             {
@@ -927,14 +940,7 @@ namespace sw
                     }
                     case BindingKind::Vector2DComposite:
                     {
-                        const Key     upKey                  = KeyCodeUtil::fromName( bindNode.getAttributeText( "up" ) );
-                        const Key     downKey                = KeyCodeUtil::fromName( bindNode.getAttributeText( "down" ) );
-                        const Key     leftKey                = KeyCodeUtil::fromName( bindNode.getAttributeText( "left" ) );
-                        const Key     rightKey               = KeyCodeUtil::fromName( bindNode.getAttributeText( "right" ) );
-                        const float32 deadzone               = bindNode.getAttributeFloat( "deadzone", kVector2DDeadzoneDefault );
-                        const bool    bAllDirectionKeysBound = upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown;
-                        if ( bAllDirectionKeysBound )
-                            inputMap.bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
+                        loadUserVector2D( inputMap, bindNode, pAction, layer );
                         break;
                     }
                     case BindingKind::GamepadStick2D:
