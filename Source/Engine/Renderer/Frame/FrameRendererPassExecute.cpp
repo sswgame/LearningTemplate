@@ -684,6 +684,7 @@ namespace sw
                 case RenderPassType::InstanceSort:
                 case RenderPassType::MeshMorph:
                 case RenderPassType::MeshSkin:
+                case RenderPassType::LightGrid:
                 {
                     SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );
                     break;

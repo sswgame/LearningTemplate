@@ -1,6 +1,6 @@
 # 클러스터드 라이팅 구현 단위 (`D2-13`)
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-13 · 진행: 2/6
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-13 · 진행: 3/6
 
 결정은 [결정 기록](../09_Decisions.md) 5-12 의 `D2-13` 행이 원본입니다. 이 문서는 그 결정을 구현 단위로 나눈 계획과 단위마다의 계약을 적습니다.
 단위가 끝나면 그 단위의 절을 지우고, 남는 교훈은 코드의 헤더 주석으로 옮깁니다.
@@ -16,51 +16,13 @@
 | 단위 | 내용 | 선행 |
 |---|---|---|
 | S0 | 키 라이트 폴백 제거, 라이트 순회 커서 API(`swBeginLights`, `swNextLight`) — **들어감**(`9c24255b6`) | 없음 |
-| S1 | 빛 목록 형식 `LightGrid`, CPU 생산자, 셰이더 소비(커서 안쪽), `gv_lightCulling` — **들어감**(`9c24255b6`, `LightGridTest` 있음). 셰이더 다시 베이크 · 골든 바이트 비교(`gv_lightCulling` 0 과 1) · `RenderPassGPUTest` 확인은 했는지 기록이 없어 **확인 필요** | S0 |
-| S2 | GPU 컴퓨트 생산자(`lightgrid.hlsl`), 전용 SRV 슬롯으로 이전, Shipping 은 GPU 고정 | S1, `D2-6.3` 의 16 슬롯 지도 재작성 |
+| S1 | 빛 목록 형식 `LightGrid`, CPU 생산자, 셰이더 소비(커서 안쪽), `gv_lightCulling` — **들어감**(`9c24255b6`, `LightGridTest` 있음). 골든 바이트 비교(`gv_lightCulling` 0 · 1 · 2)는 S2 의 `RenderPassGPUTest.LightCullingProducersDrawTheSameImage` 로 갈음한다 — **확인 필요**(재베이크 뒤) | S0 |
+| S2 | GPU 컴퓨트 생산자(`lightgrid.hlsl`, 그룹 하나 = 뷰 하나의 단일 디스패치), 전용 SRV 슬롯 t12(`SW_SLOT_LIGHT_GRID_SRV`, 머티리얼 에뮬 슬롯은 t16..t31 로), Shipping 은 GPU 고정 — **들어감**. 셰이더 재베이크 · `LightCullingProducersDrawTheSameImage` · `ShaderBindingValidatorTest` 는 **확인 필요** | S1 |
 | S3 | Release 측정과 클러스터 크기 조정(16×9×24 에서 시작), 라이트 1024 개 벤치 | S1 |
 | S4 | Light Complexity 보기 모드(`D2-10.3`)가 클러스터 라이트 수를 색으로 보입니다 | S1 |
 | S5 | 프로브(`D2-12`)와 파티클 라이트(`D2-11`)를 같은 그리드에 넣습니다 | S1, 각 항목의 P1 |
 
-S0 · S1 의 두 절은 S2 가 이어받는 계약(형식 · 위치 · 선택)이라 S2 가 끝날 때 함께 지웁니다. 형식의 정본은 `bindingslots.hlsli` 10절의 `SW_LIGHT_GRID_*` 입니다.
-
-### S0 — 키 라이트 폴백 제거와 커서 API
-
-- 셰이더는 3D 라이트가 없을 때 PassCB 의 키 라이트로 대신 비추지 않습니다. 앰비언트만 남습니다.
-- C++ 의 주 광원 기본값(`FrameRenderer::FrameLightState`)은 "주 광원 없음"(세기 0, 앰비언트 0)입니다.
-- 그림자 빛이 없는 프레임의 그림자 볼륨은 지어내지 않고 그림자 없는 뷰(`ShadowSetupUtil::makeUnshadowedView`)를 씁니다. `populateFrame` 의 `bHasKeyLight` 인자는 없어졌습니다.
-- 조명 식은 라이트를 커서로만 돕니다. 컬링 방식이 바뀌어도 조명 식(`swShadeLights`, `shadeToonLights`, `computeDirectLighting`)은 고치지 않습니다.
-- 골든 이미지는 바이트까지 같아야 합니다. 골든을 찍는 네 게임(Empty, NileCity, Shooter3D, StarSkirmish)은 모두 방향광을 데이터로 가집니다.
-- 확인할 것: `RenderPassGPUTest` 중 라이트 없이 밝기를 단언하는 케이스가 있으면 테스트 씬에 방향광을 넣습니다(키 라이트에 기대던 테스트).
-
-### S1 — `LightGrid` 와 CPU 생산자
-
-**형식.** 클러스터는 뷰의 NDC 를 X 16 칸, Y 9 칸, 깊이 24 조각으로 나눈 것입니다. 원근 카메라의 깊이는 클립 w 의 로그 조각이고, 직교 카메라는 NDC z 의 선형 조각입니다.
-화면 크기와 무관하게 NDC 로 정의하므로 해상도 배율과 추가 뷰가 같은 형식을 씁니다.
-그리드는 32 비트 단어 배열이고, 헤더 단어 16 개, 클러스터마다 (목록 시작, 개수) 두 단어, 라이트 번호 목록 순서로 놓입니다.
-방향광은 모든 클러스터에 들어가므로 목록 앞의 전역 구간에 한 번만 둡니다. 2D 라이트와 2D 그림자 세그먼트는 그리드에 넣지 않습니다(2D 셰이딩은 목록을 직접 돕니다).
-단어 배치의 원본은 `bindingslots.hlsli` 10절의 `SW_LIGHT_GRID_*` 입니다.
-
-**위치.** S1 은 그리드를 라이트 버퍼(`g_SwLights`, t12)의 그림자 타일 원소 뒤에 붙입니다. SRV 슬롯 t0..t15 가 꽉 차 있고, 슬롯을 늘리는 일은 `D2-6.3` 의 지도 재작성과 한 번에 하기로 했기 때문입니다.
-뷰마다 그리드가 하나이고, PassCB `g_SwLightGridBase` 가 지금 그리는 뷰의 그리드 첫 원소를 가리킵니다. 셰이더는 그리드를 `swLoadLightGridWord` 하나로만 읽으므로, S2 에서 전용 슬롯으로 옮길 때 이 함수와 C++ 바인딩만 바뀝니다.
-
-**생산자.** `LightGrid::populate` 가 렌더 스레드에서 라이트마다 경계 구의 클러스터 범위를 구하고(월드 AABB 모서리 여덟 개를 클립으로 투영), 두 번 돌아(개수, 채우기) 목록을 압축합니다.
-범위는 보수적입니다. 경계 구에 닿을 수 있는 클러스터는 빠지지 않고, 닿지 않는 클러스터가 조금 들어갈 수 있습니다.
-
-**선택.** `gv_lightCulling` 이 0 이면 그리드 없이 목록 전체를 돕니다(비교 기준), 1 이면 CPU 그리드입니다. 개발 빌드 전용 변수이고 Shipping 은 S2 전까지 CPU 그리드로 고정합니다.
-
-**테스트.** `LightGridTest`(nogpu)는 셰이더와 같은 식으로 그리드를 읽는 C++ 조회(`LightGrid::collectLights`)로 봅니다.
-경계 구 안의 점은 그 라이트를 받고, 방향광은 어디서나 받고, 화면 밖 라이트는 어느 클러스터에도 없습니다.
-GPU 확인은 `gv_lightCulling` 0 과 1 의 스크린샷이 같은지로 합니다(골든 네 게임).
-
-### S2 — GPU 컴퓨트 생산자
-
-- 같은 형식을 컴퓨트 셰이더가 만듭니다. 라이트마다 스레드 하나가 범위를 구해 원자적 카운터로 개수를 세고, 접두사 합과 채우기를 디스패치 셋으로 나눕니다.
-- 라이트 버퍼는 업로드 힙이라 UAV 로 쓸 수 없습니다. 그래서 GPU 생산자는 전용 버퍼(기본 힙)에 쓰고, 그리드는 전용 SRV 슬롯(`SW_SLOT_LIGHT_GRID_SRV`)으로 옮깁니다. CPU 생산자도 같은 슬롯에 동적 버퍼로 바인딩합니다.
-- 렌더 그래프에 컴퓨트 패스 상태가 없으므로, 컬링 디스패치(`FrameRendererCompute.cpp`)처럼 그래프 앞의 셋업 단계에서 디스패치합니다.
-- DX11 은 간접 인자가 필요 없습니다(디스패치 크기는 CPU 가 압니다). 네 백엔드가 같은 경로입니다.
-- 테스트: 같은 라이트와 같은 뷰로 CPU 와 GPU 그리드의 클러스터마다 라이트 집합이 같은지 비교합니다(hostgpu).
-- `gv_lightCulling` 2 가 GPU 이고, Shipping 은 GPU 로 고정하고 변수를 두지 않습니다.
+형식 · 위치 · 범위 식의 정본은 `bindingslots.hlsli` 10절의 `SW_LIGHT_GRID_*` 이고, 생산자 둘의 계약은 `LightGrid.h` · `lightgrid.hlsl` 헤더 주석에 있습니다.
 
 ### S3 — 측정
 

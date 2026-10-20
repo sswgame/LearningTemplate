@@ -515,8 +515,10 @@ namespace sw
         hashed_string _swBatchCount{ "g_SwBatchCount" };
         /// @brief 씬 라이트 버퍼의 빛 원소 수입니다. PassCB g_SwLightCount 에 대응하며, 0이면 셰이더가 빛을 돌지 않습니다(앰비언트만).
         hashed_string _swLightCount{ "g_SwLightCount" };
-        /// @brief 지금 뷰의 라이트 그리드 첫 원소입니다. PassCB g_SwLightGridBase 에 대응하며, 없으면 invalid_index::kUint32 입니다(셰이더는 목록 전체를 돕니다).
+        /// @brief 지금 뷰의 라이트 그리드 첫 단어입니다. PassCB g_SwLightGridBase 에 대응하며, 없으면 invalid_index::kUint32 입니다(셰이더는 목록 전체를 돕니다).
         hashed_string _swLightGridBase{ "g_SwLightGridBase" };
+        /// @brief 뷰마다의 라이트 그리드 버퍼입니다. lighting.hlsli g_SwLightGrid(t12)와 "SwLightGrid" 에 대응하며, 패스당 한 번 바인딩합니다(CPU · GPU 생산자 공통).
+        hashed_string _swLightGrid{ "SwLightGrid" };
         /// @brief 정점 애니메이션(VAT) 테이블입니다. binding.hlsli g_SwVertexAnimation 과 "SwVertexAnimation" 에 대응하며, 패스당 한 번 바인딩합니다.
         hashed_string _swVertexAnimation{ "SwVertexAnimation" };
         /// @brief 그 테이블의 원소 수입니다. PassCB g_SwVertexAnimationCount 에 대응합니다.

@@ -214,7 +214,7 @@ namespace sw
                 }
                 else
                 {
-                    // 에뮬 백엔드(DX11 · GL)는 머티리얼 텍스처 슬롯 t12..t15 에 서수로 건다 — swSampleMaterialTexture 가 서수로 고른다.
+                    // 에뮬 백엔드(DX11 · GL)는 머티리얼 텍스처 슬롯 t16..t19 에 서수로 건다 — swSampleMaterialTexture 가 서수로 고른다.
                     cmd.bindShaderResource( srv, shaderslot::kMaterialTexture0 + slot );
                     arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = slot;
                 }
