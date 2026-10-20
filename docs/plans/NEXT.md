@@ -30,6 +30,8 @@
 7. 정리: `wt/corenet`(묶음 1) `wt/kitclean`(2a) `wt/baseclean`(2b) `wt/longfn`(5) `wt/editorcommon`(6a)
 충돌이 가장 많은 곳은 `Roadmap.md` 와 README 표(생성물 — `status-board --write` 로 다시 만든다), `Candidates-engine.md`, 렌더러 파일, `GameInstanceBase.cpp`, `docs/Config/*`(`GenerateConfigReference.py`). 린트 기준선 `Scripts/lint/rules/CheckDataDrivenStructure.toml` 에 한 작업자가 main 체크아웃에 잘못 쓴 줄이 한 번 있었다(되돌림) — 병합 전 `git status` 로 main 이 깨끗한지 본다.
 
+**직렬화 병합 메모**: `wt/silentskip3`(S3, `FieldReadResult`)는 `wt/voidstar` 를 이미 병합해 두 변경을 합쳤다. `wt/voidstar2`(남은 `void*`)는 시작할 때 `silentskip3` 를 가져오게 했으니 둘 중 나중 것 하나만 병합해도 된다. **S4(남은 단위)**: 바이너리 `BinarySerializer::deserialize` · `deserializeValueBinary` · `applyPropertyBinary` 가 아직 필드 실패와 객체 실패를 `bool` 하나로 돌려준다 — `deserializeTagged` 등이 `FieldReadResult` 를 돌려주게 해야 한다(`SerializerSilentSkips` 3절). 추측: `tryCoerceBinaryPayload` 가 기록 타입이 다른 비트필드의 바이트 주소에 바로 쓸 수 있다.
+
 **아직 못 띄운 것**: `wt/panelclean`(묶음 6b: FunctorLambda Panels/Inspector 2 · LongFunctions Editor/Panels 27 · CommentRewrite Panels 약 25). 이후 묶음 3(HeaderIncludeSlimming · EngineServiceInjection, 전 모듈 재빌드, GameObjectManager.h 는 enginepart 가 먼저) · 4(그래픽 긴 함수 + DiskPathVsResourceId, 경로 형식 결정이 먼저) · 7(시험→테스트) · 8(NamingAuditNext, 전역이라 마지막 단독). 보류: PreludeAndFwdCleanup(프렐류드 위치 미확인), NameReferenceAudit ③(`SW_DEV_COMMAND` 구조 결정), CarriedOverChecks 의 bindless 진입 구조 · 겹침 도구(사용자 확인). 동시 실행 한도는 20 명(`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`)이라 일곱 건이 거절됐고 지금은 위 둘만 남았다.
 
 **병합 뒤에 해야 할 측정 · 검증 목록**(구현 중 모두 미뤘다):
