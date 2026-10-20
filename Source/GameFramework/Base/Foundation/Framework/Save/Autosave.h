@@ -1,7 +1,7 @@
 /**
  * @file Autosave.h
  * @brief 자동 저장 정책을 정의합니다.
- * @details 언제(간격, 지역 이동, 체크포인트, 보스 앞, 종료) 어느 칸(돌림 칸)에 저장하는지와 체크포인트로 되돌리는 방법을 정한다. UI 는 없다.
+ * @details 언제(간격, 지역 이동, 체크포인트, 보스 앞, 종료) 어느 슬롯(순환 슬롯)에 저장하는지와 체크포인트로 되돌리는 방법을 정한다. UI 는 없다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -18,7 +18,7 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 자동 저장을 부른 까닭입니다. 칸 정보에 함께 적히며, 목록 UI 와 체크포인트 되돌리기가 이것으로 칸을 고릅니다. */
+    /** @brief 자동 저장을 부른 까닭입니다. 슬롯 정보에 함께 적히며, 목록 UI 와 체크포인트 되돌리기가 이것으로 슬롯을 고릅니다. */
     ENUM()
     enum class AutosaveTrigger : uint8
     {
@@ -43,11 +43,11 @@ namespace sw
      */
     struct SW_GF_API AutosaveSettings
     {
-        string  _directory{ "saves" };     ///< 칸 파일을 둘 폴더(저장 경로 기준)
-        string  _prefix{ "autosave_" };    ///< 칸 파일 이름 앞부분 — `<폴더>/<앞부분><칸>.sav`
+        string  _directory{ "saves" };     ///< 슬롯 파일을 둘 폴더(저장 경로 기준)
+        string  _prefix{ "autosave_" };    ///< 슬롯 파일 이름의 접두사. 경로는 `<폴더>/<접두사><슬롯>.sav` 다
         float32 _interval{ 300.0f };       ///< 간격 자동 저장(초, 플레이 시간). 0 이면 끈다
         float32 _minimumGap{ 30.0f };      ///< 두 자동 저장 사이의 최소 간격(초). 종료 · 직접 부른 것은 이 간격을 무시한다
-        int32   _slotCount{ 3 };           ///< 돌려 쓰는 칸 수(1 이상) — 새 저장은 가장 새 칸을 건드리지 않는다
+        int32   _slotCount{ 3 };           ///< 순환해 쓰는 슬롯 수(1 이상). 새 저장은 가장 새 슬롯을 건드리지 않는다
         uint8   _bOnAreaChange{ SW_TRUE }; ///< 지역 이동에 저장한다
         uint8   _bOnCheckpoint{ SW_TRUE }; ///< 체크포인트에 저장한다
         uint8   _bOnBeforeBoss{ SW_TRUE }; ///< 보스 앞에 저장한다
@@ -55,7 +55,7 @@ namespace sw
 
         [[nodiscard]] bool loadFromResource( string_view path );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
-        /** @brief 칸 번호의 저장 파일 경로입니다. */
+        /** @brief 슬롯 번호의 저장 파일 경로입니다. */
         string makeSlotPath( int32 slot ) const;
 
     private:
@@ -65,12 +65,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 칸 하나의 기록입니다. 칸 파일 옆의 `.info` 에 저장이 끝난 뒤 원자적으로 씁니다. */
+    /** @brief 슬롯 하나의 기록입니다. 슬롯 파일 옆의 `.info` 에 저장이 끝난 뒤 원자적으로 씁니다. */
     struct AutosaveSlotInfo
     {
         string          _path{};
-        hashed_string   _label{};       ///< 지역 · 체크포인트 · 보스 이름
-        uint64          _sequence{ 0 }; ///< 저장 순번 — 클수록 새것
+        hashed_string   _label{};       ///< 지역, 체크포인트, 보스 이름
+        uint64          _sequence{ 0 }; ///< 저장 순번. 클수록 새것이다
         float64         _playTime{ 0.0 };
         int32           _slot{ -1 };
         AutosaveTrigger _trigger{ AutosaveTrigger::Manual };
@@ -85,12 +85,12 @@ namespace sw
      * @details 저장과 불러오기 자체는 게임이 넘긴 델리게이트(보통 `GameInstanceBase::saveStateToFile` 과 `loadStateFromFile`)가 한다.
      *          언리얼과 유니티에는 자동 저장 정책이 없어서 게임마다 만든다. 이 클래스는 그 정책을 장르와 무관하게 줄인 것이다.
      *          - 요청(`requestSave`, `notifyAreaChanged`, `reachCheckpoint`, `notifyBeforeBoss`)은 쌓였다가 `update` 에서 하나로 합쳐 저장한다.
-     *            한 프레임에 지역 이동과 체크포인트가 겹쳐도 저장은 한 번이며, 더 중요한 까닭(체크포인트, 보스, 지역, 간격 순)이 칸 기록에 남는다.
+     *            한 프레임에 지역 이동과 체크포인트가 겹쳐도 저장은 한 번이며, 더 중요한 까닭(체크포인트, 보스, 지역, 간격 순)이 슬롯 기록에 남는다.
      *          - 막기(`setBlocked`)가 있으면(전투, 연출, 대화 중) 요청은 기다렸다가 풀린 뒤 저장한다. 종료(`notifyQuit`)만 막기를 무시하고 기다리지 않는다.
-     *          - 돌림 칸: 새 저장은 가장 새 칸의 **다음** 칸에 쓴다. 파일 쓰기가 원자적(임시 파일에 쓰고 바꿔 끼우기, `FileUtil::writeFile`)이고
-     *            가장 새 칸은 건드리지 않으므로, 저장 도중 꺼져도 마지막 좋은 저장이 남는다. 칸 기록(`.info`)은 저장이 성공한 뒤에 쓴다.
-     *          - 되돌리기: `restoreLatest` 는 가장 새 칸을, `restoreCheckpoint` 는 가장 새 체크포인트 칸을 불러온다. 보스에게 지면 보스 앞으로 돌아간다.
-     *          시작할 때 폴더의 칸 기록을 읽어 순번과 다음 칸을 잇는다. 다른 실행에서 한 저장도 이어진다.
+     *          - 순환 슬롯: 새 저장은 가장 새 슬롯의 **다음** 슬롯에 쓴다. 파일 쓰기가 원자적(임시 파일에 쓰고 바꿔 끼우기, `FileUtil::writeFile`)이고
+     *            가장 새 슬롯은 건드리지 않으므로, 저장 도중 꺼져도 마지막 좋은 저장이 남는다. 슬롯 기록(`.info`)은 저장이 성공한 뒤에 쓴다.
+     *          - 되돌리기: `restoreLatest` 는 가장 새 슬롯을, `restoreCheckpoint` 는 가장 새 체크포인트 슬롯을 불러온다. 보스에게 지면 보스 앞으로 돌아간다.
+     *          시작할 때 폴더의 슬롯 기록을 읽어 순번과 다음 슬롯을 잇는다. 다른 실행에서 한 저장도 이어진다.
      */
     class SW_GF_API AutosaveManager
     {
@@ -102,7 +102,7 @@ namespace sw
 
         AutosaveManager();
 
-        /** @brief 정책과 델리게이트를 두고 폴더의 칸 기록을 읽어 순번을 잇습니다. 타이머, 요청, 막기는 비웁니다. */
+        /** @brief 정책과 델리게이트를 두고 폴더의 슬롯 기록을 읽어 순번을 잇습니다. 타이머, 요청, 막기는 비웁니다. */
         void initialize( const AutosaveSettings& settings, const SaveDelegate& onSave, const LoadDelegate& onLoad );
         /** @brief 플레이 시간을 넘기고(간격 저장), 쌓인 요청을 막기가 없을 때 하나로 저장합니다. 게임 업데이트에서 부릅니다. */
         void update( float32 deltaTime );
@@ -123,14 +123,14 @@ namespace sw
         void clearBlocked( const hashed_string& reason );
         bool isBlocked() const { return _listBlockReason.empty() == false; }
 
-        /** @brief 가장 새 칸을 불러옵니다. 칸이 없거나 읽지 못하면 false 입니다. */
+        /** @brief 가장 새 슬롯을 불러옵니다. 슬롯이 없거나 읽지 못하면 false 입니다. */
         [[nodiscard]] bool restoreLatest();
-        /** @brief 가장 새 체크포인트 칸을 불러옵니다(없으면 false). */
+        /** @brief 가장 새 체크포인트 슬롯을 불러옵니다(없으면 false). */
         [[nodiscard]] bool restoreCheckpoint();
 
-        /** @brief 칸 기록을 순번이 큰 것(새것)부터 담습니다. */
+        /** @brief 슬롯 기록을 순번이 큰 것(새것)부터 담습니다. */
         void collectSlots( vector<AutosaveSlotInfo>& outListSlot ) const;
-        /** @brief 가장 새 칸을 반환합니다. @p trigger 를 주면 그 까닭의 칸 중에서 고르며, 없으면 nullptr 입니다. */
+        /** @brief 가장 새 슬롯을 반환합니다. @p trigger 를 주면 그 까닭의 슬롯 중에서 고르며, 없으면 nullptr 입니다. */
         const AutosaveSlotInfo* findLatestSlot() const;
         const AutosaveSlotInfo* findLatestSlot( AutosaveTrigger trigger ) const;
 
@@ -143,9 +143,9 @@ namespace sw
 
     private:
         bool isTriggerEnabled( AutosaveTrigger trigger ) const;
-        /** @brief 다음 칸에 저장하고 성공하면 칸 기록을 씁니다. */
+        /** @brief 다음 슬롯에 저장하고 성공하면 슬롯 기록을 씁니다. */
         bool performSave( AutosaveTrigger trigger, const hashed_string& label );
-        /** @brief 폴더의 칸 기록을 다시 읽습니다. */
+        /** @brief 폴더의 슬롯 기록을 다시 읽습니다. */
         void                      scanSlots();
         [[nodiscard]] static bool writeSlotInfo( const AutosaveSlotInfo& info );
         [[nodiscard]] static bool readSlotInfo( string_view infoPath, AutosaveSlotInfo& outInfo );
@@ -154,7 +154,7 @@ namespace sw
         AutosaveSettings         _settings;
         SaveDelegate             _onSave;
         LoadDelegate             _onLoad;
-        vector<AutosaveSlotInfo> _listSlot; ///< 칸마다(칸 번호 자리) — 기록이 없으면 `_sequence` 0
+        vector<AutosaveSlotInfo> _listSlot; ///< 슬롯 번호마다 하나다. 기록이 없으면 `_sequence` 가 0 이다
         vector<hashed_string>    _listBlockReason;
         hashed_string            _pendingLabel;
         hashed_string            _lastCheckpointID;
@@ -165,6 +165,6 @@ namespace sw
         uint32                   _saveCount;
         AutosaveTrigger          _pendingTrigger;
         uint8                    _bPending;
-        uint8                    _bSaving; ///< 저장 델리게이트 안이다 — 그 안에서 부른 요청은 쌓기만 한다
+        uint8                    _bSaving; ///< 저장 델리게이트 안이다. 그 안에서 부른 요청은 쌓기만 한다
     };
 } // namespace sw

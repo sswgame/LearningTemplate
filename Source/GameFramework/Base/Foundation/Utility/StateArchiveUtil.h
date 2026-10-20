@@ -65,7 +65,7 @@ namespace sw
         /** @brief 남은 시간을 그대로 씁니다. 음수 늦음까지 써야 복원한 뒤 같은 발생 시각이 나옵니다. */
         static void               writeCountdown( Archive& outArchive, const Countdown& countdown );
         [[nodiscard]] static bool readCountdown( Archive& archive, Countdown& outCountdown );
-        /** @brief 아직 정수가 되지 않은 몫을 씁니다. */
+        /** @brief 아직 정수가 되지 않은 누적 양을 씁니다. */
         static void               writeRateAccumulator( Archive& outArchive, const RateAccumulator& accumulator );
         [[nodiscard]] static bool readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator );
     };

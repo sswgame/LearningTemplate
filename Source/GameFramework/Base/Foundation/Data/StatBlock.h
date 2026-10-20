@@ -1,6 +1,6 @@
 /**
  * @file StatBlock.h
- * @brief 이름 → 수치 묶음입니다 — 장비 능력치 · 스킬 보너스 · 보상 · 비용처럼 "종류를 코드가 정하지 않는" 숫자 목록에 씁니다.
+ * @brief 이름마다 수치를 두는 집합입니다. 장비 능력치, 스킬 보너스, 보상, 비용처럼 "종류를 코드가 정하지 않는" 숫자 목록에 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -40,12 +40,12 @@ namespace sw
         /** @brief @p other 의 값을 더합니다(@p scale 배). */
         void merge( const StatBlock& other, float32 scale = 1.0f );
         void clear() { _listValue.clear(); }
-        /** @brief 여러 자원 비용 @p cost 의 모든 이름에서 이 블록의 값이 모자라지 않은가입니다(자원 묶음 지갑 — RTS · 도시 건설 · 정복). */
+        /** @brief 여러 자원 비용 @p cost 의 모든 이름에서 이 블록의 값이 모자라지 않은지입니다. RTS, 도시 건설, 정복 장르의 여러 자원 지갑에 씁니다. */
         bool canAfford( const StatBlock& cost ) const;
         /** @brief @p cost 를 모두 낼 수 있으면 빼고 true, 하나라도 모자라면 아무것도 빼지 않고 false 입니다. */
         [[nodiscard]] bool trySpend( const StatBlock& cost );
 
-        /** @brief 노드의 속성을 모두 읽어 더합니다. @p pSkipName 은 건너뛸 속성 이름(쉼표 목록 — "id,name"). 읽은 수입니다. */
+        /** @brief 노드의 속성을 모두 읽어 더합니다. @p pSkipName 은 건너뛸 속성 이름의 쉼표 목록("id,name")입니다. 읽은 수를 돌려줍니다. */
         uint32 loadFromAttributes( const XMLNode& node, const utf8* pSkipName = nullptr );
 
         const vector<StatValue>& getValues() const { return _listValue; }

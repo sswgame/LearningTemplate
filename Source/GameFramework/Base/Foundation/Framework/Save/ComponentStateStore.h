@@ -20,19 +20,19 @@ namespace sw
 
     /**
      * @class ComponentStateStore
-     * @brief 컴포넌트마다 바이트 덩어리 하나를 (타입 이름, 컴포넌트 id) 로 들고, 게임 상태 봉투(`GameInstanceBase::serializeState`)의 한 섹션으로 씁니다.
+     * @brief 컴포넌트마다 바이트 덩어리 하나를 (타입 이름, 컴포넌트 id) 로 보관하고, 게임 상태 봉투(`GameInstanceBase::serializeState`)의 한 섹션으로 씁니다.
      * @details 리플렉션 PROPERTY 는 씬 오브젝트 스냅샷이 이미 옮긴다.
      *          디렉터가 키트의 보통 클래스로 든 시뮬레이션(밭, 도시, 전장)은 PROPERTY 가 아니라서 여기에 싣는다.
      *          언리얼의 `UObject::Serialize` 오버라이드와 유니티의 `ISerializationCallbackReceiver` 에 해당한다.
      *
      *          컴포넌트 쪽 약속은 다음과 같다. 템플릿이 이름으로 부른다.
      *          - `void writeState( Archive& outArchive ) const`: 지금 상태를 쓴다. 첫 값은 그 컴포넌트의 형식 버전으로 둔다.
-     *          - `void restoreState( vector<uint8>&& bytes )`: 다시 만든 컴포넌트가 받는다. 아직 `onBeginPlay` 전이면 들고 있다가 시작할 때 적용한다.
+     *          - `void restoreState( vector<uint8>&& bytes )`: 다시 만든 컴포넌트가 받는다. 아직 `onBeginPlay` 전이면 보관했다가 시작할 때 적용한다.
      *            읽지 못하면(버전이나 길이가 맞지 않음) 알리고 새 판으로 시작한다.
      *
-     *          짝짓기는 언제나 컴포넌트 id 다. 같은 프로세스(핫 리로드)는 컴포넌트 id 가 되살아난다.
+     *          짝짓기는 언제나 컴포넌트 id 다. 같은 프로세스(핫 리로드)에서는 컴포넌트 id 가 복원된다.
      *          다른 실행의 세이브는 id 가 새로 나가므로, 씬 섹션을 읽은 쪽이 "저장된 id → 새 id" 표를 만들어 `remapComponentIDs` 로 바꾼다
-     *          (오브젝트마다 저장된 컴포넌트와 다시 만든 컴포넌트를 안정 키 `이름#n` 과 타입으로 잇는다 — 같은 타입 둘의 순서가 바뀌어도 이름으로 맞는다).
+     *          (오브젝트마다 저장된 컴포넌트와 다시 만든 컴포넌트를 안정 키 `이름#n` 과 타입으로 짝짓는다. 같은 타입 둘의 순서가 바뀌어도 이름으로 맞는다).
      *          예전에는 같은 타입 안의 전역 순회 순서로 맞췄는데, 그 순서는 실행마다 달라 두 디렉터의 상태가 서로 바뀔 수 있었다.
      */
     class SW_GF_API ComponentStateStore
@@ -69,8 +69,8 @@ namespace sw
          */
         void remapComponentIDs( const vector<SavedComponentID>& listRemap );
         /**
-         * @brief 다른 실행의 세이브에서 오브젝트 하나의 저장된 컴포넌트 id(@p identity)를 다시 만든 @p object 의 컴포넌트 id 에 잇는 표를 더합니다.
-         * @details 안정 키(`ComponentStableKey`, `이름#n`)와 타입이 같은 것끼리 잇는다. 키는 씬 파일의 부착 대상과 에디터 선택 복원이 쓰는 규칙이라, 같은 타입
+         * @brief 다른 실행의 세이브에서 오브젝트 하나의 저장된 컴포넌트 id(@p identity)를 다시 만든 @p object 의 컴포넌트 id 에 연결하는 매핑을 더합니다.
+         * @details 안정 키(`ComponentStableKey`, `이름#n`)와 타입이 같은 것끼리 짝짓는다. 키는 씬 파일의 부착 대상과 에디터 선택 복원이 쓰는 규칙이라, 같은 타입
          *          컴포넌트 둘의 순서가 바뀌어도 이름으로 맞는다(타입 차례로 이으면 두 상태가 서로 바뀐다). 키가 맞지 않는 저장 항목은 표에 넣지 않아 `remapComponentIDs` 가 지운다.
          */
         static void          appendComponentIDRemap( const ObjectIdentity& identity, const GameObject& object, vector<SavedComponentID>& outListRemap );
@@ -103,7 +103,7 @@ namespace sw
 
         /**
          * @brief @p manager 의 @p TComponent 마다 짝지은 상태를 `restoreState` 로 넘기고, 넘긴 수를 반환합니다.
-         * @details 컴포넌트를 먼저 모으고 순회 밖에서 넘긴다. `restoreState` 가 세운 오브젝트를 걷을 수 있는데, 순회 콜백 안(매니저 잠금)에서는 지울 수 없기 때문이다.
+         * @details 컴포넌트를 먼저 모으고 순회 밖에서 넘긴다. `restoreState` 가 스폰한 오브젝트를 정리할 수 있는데, 순회 콜백 안(매니저 잠금)에서는 지울 수 없기 때문이다.
          */
         template <typename TComponent, typename TManager>
         uint32 restore( TManager& manager ) const
@@ -134,12 +134,12 @@ namespace sw
 {
     /**
      * @class StatefulComponentRegistration
-     * @brief 게임 프레임워크의 컴포넌트 타입 하나를 **모든 게임**의 상태 스냅샷에 올리는 정적 등록입니다. 컴포넌트를 정의한 .cpp 에 하나 둡니다.
-     * @details `GameInstanceBase` 생성자가 등록된 타입을 모두 올린다(`registerStatefulComponent` 와 같은 일). 게임마다 한 줄씩 넣으면 빠뜨린 게임만
+     * @brief 게임 프레임워크의 컴포넌트 타입 하나를 **모든 게임**의 상태 스냅샷에 등록하는 정적 등록입니다. 컴포넌트를 정의한 .cpp 에 하나 둡니다.
+     * @details `GameInstanceBase` 생성자가 등록된 타입을 모두 스냅샷에 넣는다(`registerStatefulComponent` 와 같은 일). 게임마다 한 줄씩 넣으면 빠뜨린 게임만
      *          세이브 · 핫 리로드에서 그 상태를 조용히 잃으므로, 타입을 정의한 쪽이 한 번 등록한다. 층이 위인 컴포넌트(Actor 의 카메라 디렉터)도
      *          기반 층(Foundation)의 게임 인스턴스가 include 하지 않고 올라온다.
      *          등록은 프레임워크 모듈의 정적 초기화에서 돌아 어떤 게임 인스턴스보다 먼저 끝난다. 같은 이름은 두 번 오르지 않는다.
-     *          게임 모듈의 타입은 이것을 쓰지 않고 게임 인스턴스 생성자에서 `registerStatefulComponent<T>()` 로 올린다(모듈 리로드와 수명이 같다).
+     *          게임 모듈의 타입은 이것을 쓰지 않고 게임 인스턴스 생성자에서 `registerStatefulComponent<T>()` 로 등록한다(모듈 리로드와 수명이 같다).
      */
     class SW_GF_API StatefulComponentRegistration
     {
@@ -170,7 +170,7 @@ namespace sw
 {
     /**
      * @class StatefulComponentRegistrar
-     * @brief @p TComponent 의 `writeState` / `restoreState` 를 `ComponentStateStore` 로 잇는 정적 등록입니다.
+     * @brief @p TComponent 의 `writeState` / `restoreState` 를 `ComponentStateStore` 에 연결하는 정적 등록입니다.
      * @details 오브젝트 매니저를 include 한 .cpp 에서 만든다(순회 템플릿이 그때 인스턴스화된다).
      */
     template <typename TComponent>

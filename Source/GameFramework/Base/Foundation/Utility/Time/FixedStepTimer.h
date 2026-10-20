@@ -1,6 +1,6 @@
 /**
  * @file FixedStepTimer.h
- * @brief 고정 스텝 누적기 — 들쭉날쭉한 프레임 시간을 같은 크기의 시뮬레이션 걸음으로 바꿉니다.
+ * @brief 고정 스텝 누적기입니다. 들쭉날쭉한 프레임 시간을 같은 크기의 시뮬레이션 스텝으로 바꿉니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -9,7 +9,7 @@ namespace sw
 {
     /**
      * @struct FixedStepTimer
-     * @brief 프레임 시간을 쌓아 `_step` 이 찰 때마다 한 걸음을 냅니다. 한 프레임에 받는 시간은 `_maxFrameTime` 에서 잘라 디버거 정지가 수천 걸음이 되지
+     * @brief 프레임 시간을 쌓아 `_step` 이 찰 때마다 한 스텝을 냅니다. 한 프레임에 받는 시간은 `_maxFrameTime` 에서 잘라 디버거 정지가 수천 스텝이 되지
      *        않게 합니다. 열차 물리 · 경영 시뮬레이션처럼 프레임 수와 상관없이 같은 결과를 내야 하는 곳이 씁니다(Gaffer "Fix Your Timestep").
      * @code
      *     const int32 stepCount = _timer.consume( deltaTime );
@@ -31,7 +31,7 @@ namespace sw
         {
         }
 
-        /** @brief @p deltaTime 을 쌓고 이번에 낼 걸음 수를 돌려줍니다(남은 시간은 다음 프레임으로). */
+        /** @brief @p deltaTime 을 쌓고 이번에 낼 스텝 수를 돌려줍니다(남은 시간은 다음 프레임으로). */
         constexpr int32 consume( float32 deltaTime )
         {
             if ( deltaTime <= 0.0f )
@@ -48,7 +48,7 @@ namespace sw
 
         constexpr void    reset() { _accumulator = 0.0f; }
         constexpr float32 getStep() const { return _step; }
-        /** @brief 다음 걸음까지 찬 비율(0..1)입니다 — 그리기 보간에 씁니다. */
+        /** @brief 다음 스텝까지 찬 비율(0..1)입니다. 렌더링 보간에 씁니다. */
         constexpr float32 getAlpha() const { return _accumulator / _step; }
     };
 } // namespace sw

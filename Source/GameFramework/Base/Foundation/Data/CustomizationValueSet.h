@@ -1,6 +1,6 @@
 /**
  * @file CustomizationValueSet.h
- * @brief 꾸미기 값 묶음 — 매개변수 이름 → 값(슬라이더 · 색 · 고른 항목)입니다. 캐릭터 프리셋과 아이템 인스턴스가 함께 씁니다.
+ * @brief 꾸미기 값 집합입니다. 매개변수 이름마다 값(슬라이더, 색, 고른 항목)을 둡니다. 캐릭터 프리셋과 아이템 인스턴스가 함께 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,7 +14,7 @@
 namespace sw
 {
     /**
-     * @brief 꾸미기 값 하나입니다. 종류(슬라이더 · 색 · 고르기 · 부착)는 값이 아니라 스키마(`CustomizationSchema`)가 압니다.
+     * @brief 꾸미기 값 하나입니다. 종류(슬라이더, 색, 고르기, 부착)는 값이 아니라 스키마(`CustomizationSchema`)가 압니다.
      * @details 슬라이더는 `_number._x`, 색은 `_number` 의 rgba, 고르기 · 부착은 `_option` 을 씁니다.
      */
     struct CustomizationValue
@@ -35,7 +35,7 @@ namespace sw
     /**
      * @class CustomizationValueSet
      * @brief 넣은 순서를 지키는 작은 이름 → 꾸미기 값 목록입니다(보통 수십 개 안이라 선형 조회).
-     * @details 값은 스키마 범위 · 격자로 맞추기 전의 것일 수 있습니다 — 해석기(`AppearanceResolver`)가 스키마로 정규화한 뒤 씁니다.
+     * @details 값은 스키마의 범위와 간격에 맞추기 전의 것일 수 있습니다. 해석기(`AppearanceResolver`)가 스키마로 정규화한 뒤 씁니다.
      */
     class SW_GF_API CustomizationValueSet
     {
@@ -51,7 +51,7 @@ namespace sw
         void clear() { _listValue.clear(); }
 
         const CustomizationValue* findValue( const hashed_string& parameter ) const;
-        /** @brief 같은 이름 · 같은 값의 묶음인가입니다(순서는 보지 않는다). */
+        /** @brief 이름과 값이 모두 같은 집합인지입니다. 순서는 보지 않습니다. */
         bool                              isEquivalent( const CustomizationValueSet& other ) const;
         const vector<CustomizationValue>& getValues() const { return _listValue; }
         bool                              isEmpty() const { return _listValue.empty(); }

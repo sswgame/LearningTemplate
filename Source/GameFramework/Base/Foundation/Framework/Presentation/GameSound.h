@@ -40,8 +40,8 @@ namespace sw
         /** @brief 이벤트를 2D(공간화 없음)로 냅니다. UI 와 플레이어 자신의 소리에 씁니다. */
         static AudioPlayingID postEvent( const hashed_string& eventName );
         /**
-         * @brief 이벤트를 월드 자리 하나에서 냅니다. 따라 움직이지 않는 원샷이며 폭발, 착탄, 죽음에 씁니다.
-         * @details 한 번 쓰는 에미터를 만들어 그 자리에 두고, 소리가 끝나면 엔진이 지운다.
+         * @brief 이벤트를 월드 위치 하나에서 냅니다. 따라 움직이지 않는 원샷이며 폭발, 착탄, 죽음에 씁니다.
+         * @details 한 번 쓰는 에미터를 만들어 그 위치에 두고, 소리가 끝나면 엔진이 지운다.
          */
         static AudioPlayingID postEventAt( const hashed_string& eventName, const float3& position );
     };
@@ -52,7 +52,7 @@ namespace sw
     /**
      * @class GameSoundQueue
      * @brief 틱 안(워커)에서 낼 소리를 모았다가, 틱 뒤 게임 스레드에서 쌓은 순서대로 냅니다. 오디오는 게임 스레드에서만 부릅니다.
-     * @details 이름은 포인터만 들고 있으므로 리터럴이나 정적 문자열을 넘겨야 한다.
+     * @details 이름은 포인터만 보관하므로 리터럴이나 정적 문자열을 넘겨야 한다.
      *          언리얼은 게임 스레드에서 바로 내지만, 여기서는 컴포넌트 틱이 워커에서 돈다.
      */
     class SW_GF_API GameSoundQueue
@@ -64,7 +64,7 @@ namespace sw
         void queueClip( const utf8* pPath );
         /** @brief 이벤트(2D, `GameSound::postEvent`)를 쌓습니다. */
         void queueEvent( const utf8* pEventName );
-        /** @brief 이벤트를 월드 자리 하나에서 내도록(`GameSound::postEventAt`) 쌓습니다. */
+        /** @brief 이벤트를 월드 위치 하나에서 내도록(`GameSound::postEventAt`) 쌓습니다. */
         void queueEventAt( const utf8* pEventName, const float3& position );
 
         /** @brief 쌓인 소리를 쌓은 순서대로 내고 비웁니다. 게임 스레드(틱 밖이나 틱 뒤 큐)에서만 부릅니다. */
