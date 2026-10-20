@@ -32,7 +32,7 @@ namespace sw
     enum class VfxRenderMode : uint8
     {
         Billboard, ///< 카메라를 보는 사각형 하나(`particle.hlsl`)
-        Ribbon,    ///< 태어난 순서로 이웃 입자를 잇는 띠 — 꼬리 · 칼 궤적(`particle.hlsl` 의 띠 경로)
+        Ribbon,    ///< 태어난 순서로 이웃 입자를 잇는 띠 — 꼬리 · 칼 궤적(`particle.hlsl` 의 띠 경로). 텍스처 u 는 길이(수명 비율), v 는 폭이다(언리얼 · 유니티 띠와 같다) — 세로로 그린 줄 텍스처(Kenney `trace_*`)는 한 열만 읽혀 보이지 않는다
         Mesh,      ///< 입자마다 메시 하나(`_mesh` — 메시 인스턴스 배치로 메시 경로를 그대로 탄다)
     };
 

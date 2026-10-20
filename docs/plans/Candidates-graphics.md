@@ -82,6 +82,12 @@
 왜 필요한가: 실시간 전역 조명과 볼륨 표현이 없다. [IndirectLighting](IndirectLighting.md)의 프로브 뒤 단계다.
 착수 조건 / 남은 것: 라이트맵 또는 실시간 GI(Lumen · SDFGI · APV 갱신 방식 비교), 볼륨 안개 · 구름 · 대기 산란(`TerrainWaterVegetationRemainders` 의 안개 항목과 합침). 설계 문서가 먼저다. [ClusteredLighting](ClusteredLighting.md)이 선행이다.
 
+### ForwardHdrSceneColor
+제목: 포워드 파이프라인의 HDR 장면 색
+옛번호: 없음
+왜 필요한가: 3D 포워드 파이프라인 넷(`forwardpipeline` · `forwardpipelinestaged` · `forwardprepasspipeline` · `forwardtoonpipeline`)은 `SceneColor` 가 `R8G8B8A8_UNORM` 이라 1.0 에서 잘린 값을 Present 가 Reinhard(`x / (x + 1)`)로 눌러 화면 최대가 0.5(128)다. 밝게 비친 바닥은 이미 128 이라 더하기 블렌드 입자(Vfx 띠 · 불꽃)가 그 위에서 보이지 않는다(2026-10-21 통합 GPU 검증 — main 도 같다, 미리보기 PPM 최댓값 128). 언리얼 · 유니티 URP · 고도는 포워드도 HDR 장면 색(RGBA16F · R11G11B10)이 기본이다.
+착수 조건 / 남은 것: 의도한 룩 변경이다. `postchain.hlsl` 의 블룸 뒤 `saturate`(단계 파이프라인과 같은 그림을 내려고 둔 자름)를 지우고, 넷의 `SceneColor`(단계 파이프라인은 `BloomColor` 도)를 `R16G16B16A16_FLOAT` 로 바꾼다 — 형식만 바꾸면 그 자름 때문에 그대로 128 이다(확인함). 1.0 을 넘던 픽셀만 밝아지므로 골든 넷(Empty · NileCity · Shooter3D · StarSkirmish)을 `--record --runs 3` 로 다시 뜬다. 대역폭 차이를 Release 로 잰다. 2D 파이프라인은 톤맵을 안 하므로 그대로다.
+
 ## 관찰
 
 ### VulkanVsyncFrameMiss
