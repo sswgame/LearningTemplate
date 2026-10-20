@@ -164,6 +164,18 @@ namespace sw
         Right = 1
     };
 
+    /**
+     * @brief 스틱 바인딩이 내는 성분입니다(`<stick axis="Y">`). `Both` 는 2D 값이고, `X` · `Y` 는 그 성분 하나를 1D 축 값으로 냅니다.
+     * @details 언리얼의 `Gamepad_RightY` 키, 유니티 Input System 의 `<Gamepad>/rightStick/y` 경로에 해당한다. 확대처럼 1D 액션이 스틱 한 축을 읽을 때 쓴다.
+     *          `scaleByDelta` 와 함께 쓰면 값이 초당 양(확대 칸/초)이 된다 — 칸 단위 액션에 스틱 값을 매 프레임 그대로 넣으면 너무 빠르다.
+     */
+    enum class GamepadStickAxis : uint8
+    {
+        Both = 0, ///< 2D 값(x, y)
+        X,        ///< 가로 성분을 1D 값으로
+        Y,        ///< 세로 성분(위가 +)을 1D 값으로
+    };
+
     enum class DeadzoneShape : uint8
     {
         Radial = 0, ///< 360도 원형 거리 기반 데드존(자유 이동).
@@ -253,19 +265,20 @@ namespace sw
         /** @brief `_cachedLayerIndex` 가 아직 정해지지 않았음을 나타내는 무효값입니다. */
         static constexpr uint32 kInvalidLayerIndex = invalid_index::kUint32;
 
-        hashed_string _layer{};
-        BindingKind   _kind{ BindingKind::SingleSlot };
-        ActionTrigger _trigger{ ActionTrigger::Pressed };
-        uint8         _deviceIndex{ 0 };
-        uint8         _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
-        InputSlot     _arrSlot[4]{};      /**< SingleSlot[0], Axis1D[0=Neg,1=Pos], Vector2D[0=Up,1=Down,2=Left,3=Right], Chord[0=Mod,1=Trig] */
-        GamepadStick  _stick{ GamepadStick::Left };
-        float32       _deadzone{ 0.0f };
-        float32       _outerDeadzone{ 1.0f };
-        float32       _responseExponent{ 1.0f };
-        float32       _scale{ 1.0f };           /**< MouseDelta2D · MouseWheel1D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
-        float2        _axisScale{ 1.0f, 1.0f }; /**< GamepadStick2D: 축마다 배율(언리얼 Enhanced Input 의 Scale). 마우스 Y 는 아래가 +라 스틱을 Look 에 묶으려면 Y 를 음수로 둔다. */
-        bool          _bScaleByDelta{ false };  /**< GamepadStick2D: 프레임 시간을 곱한다(Scale By Delta Time). 배율을 초당 값(픽셀/초)으로 적을 수 있다. */
+        hashed_string    _layer{};
+        BindingKind      _kind{ BindingKind::SingleSlot };
+        ActionTrigger    _trigger{ ActionTrigger::Pressed };
+        uint8            _deviceIndex{ 0 };
+        uint8            _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
+        InputSlot        _arrSlot[4]{};      /**< SingleSlot[0], Axis1D[0=Neg,1=Pos], Vector2D[0=Up,1=Down,2=Left,3=Right], Chord[0=Mod,1=Trig] */
+        GamepadStick     _stick{ GamepadStick::Left };
+        GamepadStickAxis _stickAxis{ GamepadStickAxis::Both }; /**< GamepadStick2D: 내는 성분. X · Y 면 그 성분이 1D 값(x)이다. */
+        float32          _deadzone{ 0.0f };
+        float32          _outerDeadzone{ 1.0f };
+        float32          _responseExponent{ 1.0f };
+        float32          _scale{ 1.0f };           /**< MouseDelta2D · MouseWheel1D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
+        float2           _axisScale{ 1.0f, 1.0f }; /**< GamepadStick2D: 축마다 배율(언리얼 Enhanced Input 의 Scale). 마우스 Y 는 아래가 +라 스틱을 Look 에 묶으려면 Y 를 음수로 둔다. */
+        bool             _bScaleByDelta{ false };  /**< GamepadStick2D: 프레임 시간을 곱한다(Scale By Delta Time). 배율을 초당 값(픽셀/초)으로 적을 수 있다. */
         /**
          * @brief 이 바인딩의 발화 시간(초)입니다. 0 이면 맵 전체 값을 씁니다(`InputMap::getEffectiveTriggerTime`).
          * @details Hold · HoldAndRelease 는 누를 시간, Tap 은 떼야 할 최대 시간, Pulse 는 반복 간격, DoubleTap · DoubleClicked 는 두 누름 사이 최대 간격이다.
@@ -388,9 +401,10 @@ namespace sw
         /**
          * @param axisScale 축마다 배율입니다. 1 이 아니거나 @p bScaleByDelta 면 값이 [-1, 1] 을 넘는 이동량이 되어 마우스 이동(`bindMouseDelta`)과 같은 액션에 합쳐집니다.
          * @param bScaleByDelta 켜면 값에 프레임 시간(초)을 곱합니다. 오른쪽 스틱을 `Look` 에 묶을 때 @p axisScale 을 초당 픽셀로 적으면 프레임률과 무관한 속도가 됩니다.
+         * @param axis `Both` 가 아니면 그 성분 하나를 1D 축 값으로 냅니다(액션 값 형식이 Axis1D). 배율은 그 성분의 것(`axisScale` 의 x 또는 y)입니다.
          */
         void bindGamepadStick2D( const hashed_string& action, GamepadStick stick = GamepadStick::Left, float32 deadzone = 0.15f, const hashed_string& layer = {}, uint8 padIndex = 0, float32 outerDeadzone = 1.0f, float32 responseExponent = 1.0f,
-                                 float2 axisScale = float2{ 1.0f, 1.0f }, bool bScaleByDelta = false );
+                                 float2 axisScale = float2{ 1.0f, 1.0f }, bool bScaleByDelta = false, GamepadStickAxis axis = GamepadStickAxis::Both );
         void bindMouseDelta( const hashed_string& action, float32 sensitivity = 1.0f, const hashed_string& layer = {} );
         /** @brief 마우스 휠을 1D 축으로 등록합니다. 값은 이번 프레임 휠 이동량(한 칸 = 1, 위가 +)에 @p scale 을 곱한 값이며, 휠을 굴린 프레임에만 0 이 아닙니다. */
         void bindMouseWheel( const hashed_string& action, float32 scale = 1.0f, const hashed_string& layer = {} );

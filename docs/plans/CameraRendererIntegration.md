@@ -35,7 +35,7 @@
 
 S1(카메라별 후처리 값)은 빌드 · 화면 확인 전이다. 통합 때 아래를 돌린다.
 
-- 셰이더 재베이크(`App.exe --cook-shaders`) — `binding.hlsli` 의 PassCB 에 `g_CameraGrade` · `g_CameraFrame` 이 늘었다. 굽기 전에는 `ShaderBindingValidatorTest.EveryBoundNameIsInCookedReflection` 이 두 이름을 모른다고 실패한다.
+- 셰이더 소스(`binding.hlsli` 의 PassCB 에 `g_CameraGrade` · `g_CameraFrame`, 새 `postgrade.hlsli`, `tonemap.hlsl` · `postchain.hlsl`)는 쿠킹 바이너리와 함께 커밋해야 해서(`CheckShaderStamps`) 브랜치 `wt/camera` 의 작업 폴더에 커밋하지 않은 채 있다. 빌드한 뒤 `App.exe --cook-shaders` 로 굽고 소스와 바이너리를 함께 커밋한다. 그 전에는 두 이름이 리플렉션에 없어 화면이 그대로다.
 - `EngineTest --test_filter=RenderViewCollectorTest.*`, 카메라 테스트(`CameraModeTest.*` · `CameraBlendTest.*`).
 - 골든 이미지 테스트 — 중립 값이면 결과가 같아야 한다(채도 `lerp` · 대비 식의 부동소수 오차만).
 - 네 백엔드 스크린샷: 프리셋 `<PostProcess exposure · saturation · vignette · letterbox>` 를 준 카메라(디퍼드 `tonemap.hlsl`, 포워드 `postchain.hlsl` 의 `SW_POST_TONEMAP`). 후처리를 끈 CCTV 뷰는 값이 걸리지 않아야 한다.

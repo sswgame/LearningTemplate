@@ -1,6 +1,6 @@
 # 게임플레이 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-3,D4-4,D4-6,D4-7,D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-16,D4-17,G-4,G-6,G-7 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-4,D4-6,D4-7,D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-16,D4-17,G-4,G-6,G-7 · 진행: 해당없음
 
 GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 착수 전 후보 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
 이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md).
@@ -15,14 +15,6 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 - 렌더러 몫: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 · 텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다).
 - 머리 흔들림은 데이터(`<HeadBob>` · `FirstPersonCameraComponent::_headBob`)로 켜는데 켠 게임이 없다 — Shooter3D · VoxelCraft 1인칭에 진폭을 넣고 화면으로 확인한다. 카메라 세 값은 `CameraUserSettings` 가 읽는다.
 - X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
-
-### GamepadVirtualCursor
-제목: 패드 가상 커서의 남은 것
-옛번호: D4-3
-왜 필요한가: 명령형 게임에서 패드로 마우스 커서를 대신하는 가상 커서가 들어갔지만(입력 맵 `virtualCursor` · 충돌 검사 `reportVirtualCursorConflict`), 줌과 실기 확인이 남았다. Nile · StarSkirmish 는 커서가 왼쪽 스틱, 오른쪽 스틱이 카메라 이동이다.
-남은 것:
-- 오른쪽 스틱 줌: 1D 축 액션이 스틱의 Y 를 읽는 바인딩이 없고, 확대는 칸 단위라 스틱 값을 매 프레임 넣으면 너무 빠르다(지금은 D 패드 위 · 아래).
-- 실제 패드로 확인하기(시나리오 동안 가상 커서는 쉬어 패드 길을 시나리오가 보지 않는다).
 
 ### KitCompositionGames
 제목: 키트 조립의 두 번째 테스트 게임과 땅 쓰기
