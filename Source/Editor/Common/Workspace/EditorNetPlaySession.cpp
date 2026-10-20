@@ -18,7 +18,7 @@
 
 namespace sw::editor
 {
-    /** @brief 자식 프로세스 하나 — 읽기 스레드가 줄을 쌓고, 게임 스레드가 `update` 에서 꺼낸다. */
+    /** @brief 자식 프로세스 하나입니다. 읽기 스레드가 로그 줄을 쌓고, 게임 스레드가 `update` 에서 꺼냅니다. */
     struct EditorNetPlaySession::ChildProcess
     {
         Process            _process{};
@@ -36,7 +36,7 @@ namespace sw::editor
         atomic<uint32>     _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
         int32              _processID{ 0 }; ///< 띄울 때의 pid(거둔 뒤에도 패널에 보인다)
         bool               _bExitReported{ false };
-        bool               _bConnected{ false }; ///< 클라이언트 — 서버에 붙었다는 줄을 남겼다
+        bool               _bConnected{ false }; ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다
     };
 } // namespace sw::editor
 
@@ -52,7 +52,7 @@ namespace sw::editor
             static constexpr const utf8* kConnectedLine = "Net session connected to ";
             /** @brief 로그 출력이 사건 줄 다음에 붙이는 소스 위치 줄의 머리입니다. */
             static constexpr const utf8* kSourceLocationPrefix = " -> ";
-            /** @brief 트레이스 파일 확장자입니다(`ProfilerTraceExport::kFileExtension` 과 같은 글 — 트레이스가 빠진 빌드에도 이름은 있어야 한다). */
+            /** @brief 트레이스 파일 확장자입니다. `ProfilerTraceExport::kFileExtension` 과 같은 값을 따로 둡니다. 트레이스가 빠진 빌드에도 이름은 있어야 하기 때문입니다. */
 #if SW_PROFILER_TRACE_ENABLED
             static constexpr const utf8* kTraceExtension = ProfilerTraceExport::kFileExtension;
 #else
@@ -61,12 +61,12 @@ namespace sw::editor
 
             /** @brief 창 배치에서 이웃 창과 띄우는 가로 폭(픽셀)입니다. 위치는 틀의 왼쪽 위이고 크기는 클라이언트 영역이라 테두리 두 쪽만큼 더 띄운다. */
             static constexpr int32 kWindowFrameWidth = 16;
-            /** @brief 위와 같다(세로) — 제목 줄과 아래 테두리입니다. */
+            /** @brief 위와 같은 값의 세로 폭입니다. 제목 줄과 아래 테두리만큼 띄웁니다. */
             static constexpr int32 kWindowFrameHeight = 40;
             /** @brief 창 배치의 가장 작은 클라이언트 영역 한 변(픽셀)입니다(`EditorNetPlaySettings` 의 `Min` 과 같다). */
             static constexpr int32 kMinWindowSide = 64;
 
-            /** @brief 창 배치를 켠 구성의 크기 · 열 수가 쓸 수 있는 값이면 true 입니다. 아니면 이유를 오류로 남깁니다. */
+            /** @brief 창 배치를 켠 구성의 크기와 열 수가 쓸 수 있는 값이면 true 입니다. 아니면 이유를 오류로 남깁니다. */
             static bool isWindowLayoutValid( const EditorNetPlaySettings& settings )
             {
                 const bool bValid = settings._bArrangeWindows == false ||
@@ -81,7 +81,7 @@ namespace sw::editor
             static string quote( string_view text ) { return "\"" + string( text ) + "\""; }
 
 #if SW_PROFILER_TRACE_ENABLED
-            /** @brief 경로를 앞으로 빗금으로 — 명령줄에서 `\"` 가 따옴표를 깨지 않게. 트레이스 폴더 인자에만 쓴다. */
+            /** @brief 경로의 구분자를 `/` 로 바꿉니다. 명령줄에서 `\"` 가 따옴표를 깨지 않게 하며, 트레이스 폴더 인자에만 씁니다. */
             static string toForwardSlashes( string path )
             {
                 for ( utf8& character : path )
@@ -128,8 +128,8 @@ namespace sw::editor
 
     SubsystemInitResult EditorNetPlaySession::initializeSubsystem()
     {
-        // 사용자 파일이라 깨졌어도 기동은 잇는다 — 치우고 오류를 남기는 일은 `load` 가 했다(`EditorUserFile`).
-        // 고른 프리셋은 읽은 파일에만 있다(없는 파일 · 치운 파일은 빈 목록) — 그때만 다음 세션의 구성으로 입힌다.
+        // 사용자 파일이라 깨졌어도 기동은 계속한다. 깨진 파일을 치우고 오류를 남기는 일은 `load` 가 이미 했다(`EditorUserFile`).
+        // 고른 프리셋은 읽은 파일에만 있다. 파일이 없거나 치웠으면 빈 목록이므로, 읽었을 때만 다음 세션의 구성으로 적용한다.
         const EditorUserFileResult   loadResult = _presetStore.load( EditorNetPlayPresetStore::getDefaultFilePath() );
         const EditorNetPlaySettings* pSelected  = loadResult == EditorUserFileResult::Loaded ? _presetStore.findSelectedPreset() : nullptr;
         if ( pSelected != nullptr )
@@ -163,7 +163,7 @@ namespace sw::editor
     EditorNetPlaySession::~EditorNetPlaySession()
     {
         if ( isRunning() )
-            (void)stop(); // 합친 경로는 쓸 곳이 없다 — 로그에 남는다
+            (void)stop(); // 합친 경로는 쓸 곳이 없다. 경로는 로그에 남는다
     }
 
     string EditorNetPlaySession::makeDefaultExecutablePath( const utf8* pBaseName )
@@ -212,10 +212,10 @@ namespace sw::editor
         if ( tracePath.empty() == false )
             command += " " + EditorNetPlaySessionInternal::quote( "-gv_traceSaveOnExit=" + tracePath );
 #if !defined( SW_PLATFORM_WINDOWS )
-        command = "exec " + command; // `sh -c` 가 부모로 남지 않게 — 종료 코드 · 신호가 실제 프로그램에 닿는다
+        command = "exec " + command; // `sh -c` 가 부모로 남지 않게 한다. 그래야 종료 코드와 신호가 실제 프로그램에 전달된다
 #endif
         ProcessOptions options;
-        options._bPipeStandardInput = true; // `quit` · `pause` 채널
+        options._bPipeStandardInput = true; // `quit` 과 `pause` 를 보내는 채널
         if ( FileUtil::exists( executablePath ) == false || pChild->_process.launch( command, options ) == false )
         {
             SW_LOG_ERROR( "Could not launch %#: %#", label, command );
@@ -274,8 +274,8 @@ namespace sw::editor
         const string clientArguments =
             EditorNetPlaySessionInternal::quote( "-gv_netConnectAddress=127.0.0.1:" + port ) + " -gv_standardInputCommands=1 " + settings._clientArguments;
 
-        // 서버를 먼저 띄운다 — 클라이언트는 서버가 늦게 서도 연결을 다시 시도하지만(연결 시한 안), 먼저 서 있으면 첫 시도에 붙는다.
-        // `App` 창은 띄우는 순서대로 나란히 놓는다 — 리슨 호스트가 첫 칸이다(전용 서버는 창이 없다).
+        // 서버를 먼저 띄운다. 클라이언트는 서버가 늦게 떠도 연결 시한 안에서 다시 시도하지만, 서버가 먼저 떠 있으면 첫 시도에 연결된다.
+        // `App` 창은 띄우는 순서대로 나란히 놓는다. 리슨 호스트가 첫 위치이고, 전용 서버는 창이 없다.
         const bool  bDedicated  = settings._mode == EditorNetMode::DedicatedServer;
         int32       windowIndex = 0;
         bool        bLaunched   = bDedicated ? launchChild( "Server", serverPath, "-gv_netListenPort=" + port, makeTracePath( "server" ) )
@@ -291,7 +291,7 @@ namespace sw::editor
         }
         if ( bLaunched == false )
         {
-            (void)stop(); // 띄운 것은 끈다 — 합칠 트레이스는 없다
+            (void)stop(); // 띄운 프로세스는 끈다. 합칠 트레이스는 없다
             return false;
         }
         SW_LOG_INFO( "Multiplayer session started - %#, %# player(s), UDP port %#, traces %#", toString( settings._mode ), settings._clientCount, _port,
@@ -311,22 +311,22 @@ namespace sw::editor
             }
             for ( string& line : listLine )
             {
-                // 자식 로그의 소스 위치 줄(` -> 파일:줄`)은 옮기지 않는다 — 한 사건이 두 줄이 되어 Output Log 를 메운다.
+                // 자식 로그의 소스 위치 줄(` -> 파일:줄`)은 옮기지 않는다. 옮기면 한 사건이 두 줄이 되어 Output Log 를 채운다.
                 if ( line.rfind( EditorNetPlaySessionInternal::kSourceLocationPrefix, 0 ) == 0 )
                     continue;
-                // Profiler 탭의 주기 질의 답은 보관만 한다 — 0.5 초마다 프로세스 수만큼 오므로 Output Log 와 마지막 줄을 메운다.
+                // Profiler 탭의 주기 질의 응답은 보관만 한다. 0.5 초마다 프로세스 수만큼 오므로, 출력하면 Output Log 와 마지막 줄을 채운다.
                 if ( NetStatsReport::tryParseLine( line, child._statsReport ) )
                 {
                     ++child._statsReportCount;
                     continue;
                 }
-                // 자식의 오류 줄은 경고로 — 에디터 로그의 오류 수는 에디터 자신의 것으로 남긴다. 줄에는 자식의 수준 꼬리표가 그대로 있다.
+                // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 줄에는 자식의 로그 수준 레이블이 그대로 있다.
                 if ( line.find( "[Error]" ) != string::npos )
                     SW_LOG_WARNING( "[%#] %#", child._label, line );
                 else
                     SW_LOG_INFO( "[%#] %#", child._label, line );
                 if ( processIndex > 0 && line.find( EditorNetPlaySessionInternal::kConnectedLine ) != string::npos )
-                    child._bConnected = true; // 0 번은 서버(전용 서버 · 리슨 호스트)다
+                    child._bConnected = true; // 0 번은 서버(전용 서버나 리슨 호스트)다
                 if ( NetEmulationReport::tryParseLine( line, child._emulationReport ) )
                     ++child._emulationReportCount;
                 child._lastLine = line;
@@ -391,7 +391,7 @@ namespace sw::editor
     {
         if ( _listProcess.empty() )
             return {};
-        // 정상 종료 — 클라이언트부터 끄면 서버 로그에 끊김이 남는다(접속 · 끊김을 한 줄로 확인할 수 있게). 이미 끝난 것은 건너뛴다.
+        // 정상 종료한다. 클라이언트부터 끄면 서버 로그에 끊김이 남아 접속과 끊김을 한 줄로 확인할 수 있다. 이미 끝난 프로세스는 건너뛴다.
         for ( size_t processIndex = _listProcess.size(); processIndex-- > 0; )
         {
             ChildProcess& child  = *_listProcess[processIndex];

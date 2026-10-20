@@ -20,7 +20,7 @@ namespace sw::editor
     {
         struct EditorDataTableCommandsInternal
         {
-            /** @brief 원문 표들을 읽습니다. 못 읽은 표가 있으면 false 입니다. */
+            /** @brief 원문 테이블들을 읽습니다. 못 읽은 테이블이 있으면 false 입니다. */
             [[nodiscard]] static bool readSourceTables( const LocalizationSheet& sheet, vector<SourceStringTable>& outListTable )
             {
                 outListTable.clear();
@@ -38,7 +38,7 @@ namespace sw::editor
                 return bAllRead;
             }
 
-            /** @brief 번역 표 하나를 읽습니다 — 파일이 없으면 빈 표로 true, 있는데 못 읽으면 false 입니다. */
+            /** @brief 번역 테이블 하나를 읽습니다. 파일이 없으면 빈 테이블로 true 이고, 있는데 못 읽으면 false 입니다. */
             [[nodiscard]] static bool readTranslation( const string& path, string_view culture, TranslationTable& outTable )
             {
                 outTable = TranslationTable{};
@@ -72,7 +72,7 @@ namespace sw::editor
     void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )
     {
         outListProjectPath.clear();
-        // 엔진 문자열 프로젝트 경로의 정본은 데이터에서 읽은 엔진 기본 에셋 표다 — 표가 없으면 대신 쓸 값이 없으므로 오류로 알리고 빼고 모은다.
+        // 엔진 문자열 프로젝트 경로의 원본은 데이터에서 읽은 엔진 기본 에셋 테이블이다. 테이블이 없으면 대신 쓸 값이 없으므로 오류로 알리고 엔진 프로젝트를 빼고 모은다.
         const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
         if ( pDefaultAssets == nullptr )
             SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
@@ -94,7 +94,7 @@ namespace sw::editor
 
     bool EditorDataTableCommands::loadLocalizationProject( string_view projectPathView, LocalizationSheet& outSheet )
     {
-        const string projectPath( projectPathView ); // @p outSheet 의 경로를 넘겨받았을 수 있다 — 비우기 전에 복사한다
+        const string projectPath( projectPathView ); // @p outSheet 의 경로를 넘겨받았을 수 있으므로 비우기 전에 복사한다
         outSheet = LocalizationSheet{};
         LocalizationProject project;
         string              error;
@@ -144,7 +144,7 @@ namespace sw::editor
 
     bool EditorDataTableCommands::saveLocalizationProject( LocalizationSheet& inoutSheet )
     {
-        // 디스크의 지금 내용 위에 고친 줄만 얹는다 — 수집기가 적은 자리 · 번역가 메모 · 검토 표시를 지킨다.
+        // 디스크의 지금 내용 위에 고친 줄만 적용한다. 그래야 수집기가 적은 출처, 번역가 메모, 검토 표시가 유지된다.
         vector<SourceStringTable> listTable;
         if ( EditorDataTableCommandsInternal::readSourceTables( inoutSheet, listTable ) == false )
         {
@@ -169,11 +169,11 @@ namespace sw::editor
         {
             for ( SourceStringTable& table : listTable )
             {
-                (void)table.removeEntry( removedKey ); // 그 표에 없는 키면 false — 할 일이 없다
+                (void)table.removeEntry( removedKey ); // 그 테이블에 없는 키면 false 이고 할 일이 없다
             }
             for ( TranslationTable& translation : listTranslation )
             {
-                (void)translation.removeEntry( removedKey ); // 번역이 없는 키면 false — 할 일이 없다
+                (void)translation.removeEntry( removedKey ); // 번역이 없는 키면 false 이고 할 일이 없다
             }
         }
 
@@ -194,12 +194,12 @@ namespace sw::editor
                 const string&     text        = record._listTranslation[cultureIndex];
                 if ( text.empty() )
                 {
-                    (void)translation.removeEntry( record._key ); // 번역이 없던 키면 false — 할 일이 없다
+                    (void)translation.removeEntry( record._key ); // 번역이 없던 키면 false 이고 할 일이 없다
                     continue;
                 }
                 const TranslationEntry* pExisting = translation.findEntry( record._key );
                 if ( pExisting != nullptr && pExisting->_text == text )
-                    continue; // 번역은 그대로 — 원문만 고쳤으면 이 번역은 낡은 것이 된다
+                    continue; // 번역은 그대로 둔다. 원문만 고쳤으면 이 번역은 낡은 것이 된다
                 TranslationEntry& entry = translation.getOrAddEntry( record._key );
                 entry._text             = text;
                 entry._sourceHash       = sourceHash;
@@ -229,7 +229,7 @@ namespace sw::editor
             }
         }
         if ( bAllWritten == false )
-            return false; // 고친 표시를 지우지 않는다 — 저장되지 않은 것이 남아 있다
+            return false; // 저장되지 않은 것이 남아 있으므로 고친 표시를 지우지 않는다
 
         for ( LocalizationRecord& record : inoutSheet._listRecord )
         {
@@ -239,7 +239,7 @@ namespace sw::editor
 
         LocalizationManager* pLocalizationManager = editor::findSubsystem<LocalizationManager>();
         if ( pLocalizationManager != nullptr )
-            (void)pLocalizationManager->reloadChangedFile( inoutSheet._projectPath ); // 올린 프로젝트가 아니면 false — 다시 읽을 것이 없다
+            (void)pLocalizationManager->reloadChangedFile( inoutSheet._projectPath ); // 로드한 프로젝트가 아니면 false 이고 다시 읽을 것이 없다
         SW_LOG_INFO( "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );
         return true;
     }

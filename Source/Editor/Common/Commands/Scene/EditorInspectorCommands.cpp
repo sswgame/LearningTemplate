@@ -33,12 +33,12 @@ namespace sw::editor
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
 
-        // 에셋 관리자와 에디터 컨텍스트가 없으면(도구 · 테스트) 파일만 쓴다 — 캐시도 다른 인스턴스도 없다.
+        // 도구나 테스트처럼 에셋 관리자와 에디터 컨텍스트가 없으면 파일만 쓴다. 캐시도 다른 인스턴스도 없기 때문이다.
         AssetManager*  pResources   = editor::findSubsystem<AssetManager>();
         EditorContext* pContext     = EditorContext::get();
         PrefabCache*   pPrefabCache = pResources != nullptr ? &pResources->getAssetCache<PrefabCache>() : nullptr;
 
-        // 고치기 전 원형과 파일 글 — 다른 인스턴스의 덮어쓴 값을 옛 원형과 견줘 뽑고, 되돌리기가 파일을 되돌린다.
+        // 고치기 전의 원형과 파일 내용이다. 다른 인스턴스의 덮어쓴 값을 옛 원형과 비교해 뽑고, 되돌리기가 이것으로 파일을 되돌린다.
         const string       filePath = ResourcePaths::getWritePath( prefabPath );
         string             oldFileText;
         string             oldBaseState;
@@ -47,13 +47,13 @@ namespace sw::editor
         if ( pOldPrefab == nullptr || PrefabOverrides::makeBaseState( *pOldPrefab, oldBaseState ) == false )
             oldBaseState.clear();
 
-        // 형식은 경로가 정한다(`.prefab.json` 에는 JSON) — 프리팹 경로가 아니면 쓰지 않는다.
+        // 형식은 경로가 정한다(`.prefab.json` 에는 JSON). 프리팹 경로가 아니면 쓰지 않는다.
         PrefabAsset asset;
         asset.setFromGameObject( pObj );
         if ( asset.saveToFile( prefabPath ) == false )
             return false;
         string newFileText;
-        (void)FileUtil::readTextFile( filePath, newFileText ); // 방금 쓴 파일이다 — 못 읽으면 다시 실행이 파일을 쓰지 않을 뿐이다
+        (void)FileUtil::readTextFile( filePath, newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
 
         SW_LOG_INFO( "Saved prefab changes to %#", string{ prefabPath }.c_str() );
         if ( pPrefabCache == nullptr || pContext == nullptr )
@@ -63,7 +63,7 @@ namespace sw::editor
         prefabCache.reload( prefabPath, nullptr );
 
         // 같은 프리팹의 다른 인스턴스에 퍼뜨린다(덮어쓴 값은 남긴다). 파일 쓰기와 인스턴스 갱신을 되돌리기 하나로 묶는다.
-        // 인스턴스는 두 갈래다 — 씬에 놓은 인스턴스(에디터 작업 공간이 경로를 기록)와, 다른 프리팹 인스턴스가 스폰한 중첩 부품
+        // 인스턴스는 두 종류다. 씬에 놓은 인스턴스(에디터 작업 공간이 경로를 기록)와 다른 프리팹 인스턴스가 스폰한 중첩 부품이다.
         // (`PrefabInstanceRegistry`). 부품은 씬에 저장되지 않고 바깥 프리팹이 다시 스폰하므로 지금 보이는 부품만 고치면 된다(언리얼 차일드 액터).
         EditorWorkspace&    workspace = pContext->getSubsystem<EditorWorkspace>();
         GameObjectManager*  pManager  = pObj->getManager();
@@ -126,7 +126,7 @@ namespace sw::editor
         if ( pResources == nullptr )
             return false;
 
-        // 되돌리기는 엔진이 한다 — 형식(XML · JSON)과 인스턴스의 자리(부모 · 이름 · 루트 위치 · 회전)를 프리팹 쪽이 안다.
+        // 되돌리기는 엔진이 한다. 형식(XML, JSON)과 인스턴스의 배치(부모, 이름, 루트 위치, 회전)를 프리팹 쪽이 알고 있다.
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         if ( pResources->getAssetCache<PrefabCache>().revertInstance( pObj, prefabPath ) == false )
             return false;
@@ -147,8 +147,8 @@ namespace sw::editor
             return;
 
         EditorWorkspace& workspace = pContext->getSubsystem<EditorWorkspace>();
-        // 부품은 바깥 프리팹 인스턴스가 다시 스폰한다 — 부품만 끊으면 다음 로드에 같은 부품이 하나 더 생긴다(유니티도 중첩 자식만 따로 풀지 못한다).
-        // 그래서 맨 바깥에 놓인 인스턴스를 한 겹 푼다(유니티 Unpack Prefab). 그 바로 아래 부품은 씬이 자기 프리팹의 인스턴스로 적는다.
+        // 부품은 바깥 프리팹 인스턴스가 다시 스폰한다. 부품만 연결을 끊으면 다음 로드에 같은 부품이 하나 더 생긴다. 유니티도 중첩 자식만 따로 풀지 못한다.
+        // 그래서 맨 바깥에 놓인 인스턴스를 한 단계 푼다(유니티 Unpack Prefab). 그 바로 아래 부품은 씬이 자기 프리팹의 인스턴스로 기록한다.
         GameObject* pTarget = pObj;
         while ( workspace.isNestedPrefabPart( pTarget ) )
         {
@@ -200,7 +200,7 @@ namespace sw::editor
         EditorWorkspace&        workspace = pContext->getSubsystem<EditorWorkspace>();
         PrefabInstanceRegistry& registry  = pManager->getSubsystem<PrefabInstanceRegistry>();
 
-        // 부모를 먼저 기록한다 — 프리팹 쓰기가 기록 순서(스폰 순서)로 돌며 부모 노드가 자식 노드보다 앞에 있기를 바란다.
+        // 부모를 먼저 기록한다. 프리팹 쓰기는 기록 순서(스폰 순서)로 돌며 부모 노드가 자식 노드보다 앞에 있다고 가정한다.
         uint32              adoptedCount = 0;
         vector<GameObject*> listPending{ pRoot };
         vector<GameObject*> listChild;
@@ -215,8 +215,8 @@ namespace sw::editor
                     continue;
                 const string childPrefab{ workspace.getPlacedPrefabPath( *pChild ) };
                 if ( childPrefab.empty() )
-                    continue;                                                                                // 프리팹 인스턴스가 아니다 — 프리팹 본문에 들지 않는다
-                registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab, {} ); // 노드는 프리팹을 쓸 때 생긴다 — 키는 다음 로드에서 얻는다
+                    continue;                                                                                // 프리팹 인스턴스가 아니므로 프리팹 본문에 들어가지 않는다
+                registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab, {} ); // 노드는 프리팹을 쓸 때 생기므로 키는 다음 로드에서 얻는다
                 workspace.setPlacedPrefabPath( *pChild, "" );
                 listPending.push_back( pChild );
                 ++adoptedCount;

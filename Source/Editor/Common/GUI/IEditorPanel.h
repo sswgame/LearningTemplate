@@ -25,7 +25,7 @@ namespace sw::editor
      */
     enum class EditorDockSlot : uint8
     {
-        Floating = 0, ///< 붙이지 않는다 — 떠 있는 창으로 연다
+        Floating = 0, ///< 도킹하지 않고 떠 있는 창으로 연다
         Left,
         Right,
         Center,
@@ -67,7 +67,7 @@ namespace sw::editor
         virtual EditorDockSlot getDefaultDockSlot() const { return EditorDockSlot::Floating; }
         /**
          * @brief 이 패널이 여는 문서의 애셋 종류입니다. 문서 패널이 아니면 `Unknown` 입니다.
-         * @details 경로 · 애셋 종류로 여는 요청(`EditorWorkspace::requestOpenDocumentPanel`)이 이것으로 패널을 찾는다 — 종류 표의 패널 제목 글로 찾지 않는다.
+         * @details 경로와 애셋 종류로 여는 요청(`EditorWorkspace::requestOpenDocumentPanel`)이 이것으로 패널을 찾는다. 종류 테이블의 패널 제목 문자열로 찾지 않는다.
          */
         virtual EditorAssetType getDocumentKind() const { return EditorAssetType::Unknown; }
         /** @brief 마지막 draw 에서 이 패널 창에 포커스가 있었으면 true 입니다. */
@@ -117,13 +117,13 @@ namespace sw::editor
 
         // ------------------------------------------------------------------------------
         // 4) 열림 상태. ImGui Begin 의 p_open
-        //    **닫는 길은 하나다 — `requestClose`.** X 도, 패널 메뉴 토글도, 프리팹 창의 Close 단추도, 레이아웃 불러오기도, 최대화도 이것을 거친다.
-        //    미저장 편집이 있으면 닫지 않고 Save / Don't Save / Cancel 확인을 기다린다. 길마다 확인을 손으로 부르게 두면 새 길이 확인을 빼먹는다.
+        //    **닫는 경로는 `requestClose` 하나다.** X, 패널 메뉴 토글, 프리팹 창의 Close 단추, 레이아웃 불러오기, 최대화가 모두 이것을 거친다.
+        //    미저장 편집이 있으면 닫지 않고 Save / Don't Save / Cancel 확인을 기다린다. 경로마다 확인을 직접 부르게 두면 새 경로가 확인을 빼먹는다.
         // ------------------------------------------------------------------------------
         /** @brief 패널이 열려 있으면 true 입니다. 닫기 확인을 기다리는 동안에도 true 입니다. */
         bool isOpen() const { return _bOpen; }
         /**
-         * @brief true 면 엽니다. false 면 `requestClose` 입니다 — 미저장 편집이 있으면 바로 닫히지 않으므로 부른 뒤에 `isOpen()` 이 true 일 수 있습니다.
+         * @brief true 면 엽니다. false 면 `requestClose` 를 부릅니다. 미저장 편집이 있으면 바로 닫히지 않으므로 부른 뒤에도 `isOpen()` 이 true 일 수 있습니다.
          * @details 확인 없이 닫는 입구는 없다. 편집을 버리고 닫으려면 `applyCloseChoice( EditorUnsavedChoice::Discard )` 로 명시한다.
          */
         void setOpen( bool open )
@@ -135,7 +135,7 @@ namespace sw::editor
         }
         /**
          * @brief 패널을 닫으려 합니다. 깨끗하면(또는 `asksBeforeClose` 가 false 면) 바로 닫고, 미저장 편집이 있으면 열어 둔 채 확인을 기다립니다.
-         * @details 이미 닫힌 패널이면 아무 일도 하지 않는다 — 그려지지 않는 패널이 확인을 쥔 채 남지 않게 한다.
+         * @details 이미 닫힌 패널이면 아무 일도 하지 않는다. 그려지지 않는 패널이 확인 대기 상태로 남지 않게 하기 위해서다.
          */
         void requestClose()
         {
@@ -195,8 +195,9 @@ namespace sw::editor
          */
         virtual bool asksBeforeClose() const { return true; }
         /**
-         * @brief 닫기 확인과 제목의 미저장 표시보다 앞서 부릅니다(`draw()` 마다, 패널이 접혀 있어도). 편집을 패널 바깥의 기록(미리보기 씬의 Undo 스택 등)에서 읽는 패널이
-         *        여기서 `markDocumentDirty` 를 해, 편집한 바로 다음 프레임에 X 를 눌러도 확인을 건너뛰지 않게 합니다. 기본은 아무 일도 하지 않습니다.
+         * @brief 닫기 확인과 제목의 미저장 표시보다 먼저 부릅니다. 패널이 접혀 있어도 `draw()` 마다 부릅니다.
+         * @details 미리보기 씬의 Undo 스택처럼 패널 바깥의 기록에서 편집을 읽는 패널은 여기서 `markDocumentDirty` 를 부른다.
+         *          그래야 편집한 바로 다음 프레임에 X 를 눌러도 확인을 건너뛰지 않는다. 기본은 아무 일도 하지 않는다.
          */
         virtual void syncDocumentDirty() {}
 
@@ -205,7 +206,8 @@ namespace sw::editor
         /** @brief 패널이 접히거나 탭이 숨겨졌을 때 호출합니다. */
         virtual void onPanelCollapsed() {}
         /**
-         * @brief 패널이 닫힌 순간 한 번 부릅니다(`requestClose` · `applyCloseChoice` 가 닫는 모든 길). 닫힌 패널은 `draw()` 가 돌지 않으므로, 창이 쥐고 있던 전역 상태(초점 씬 · Undo 스택)는 여기서 풀어야 한다.
+         * @brief 패널이 닫힌 순간 한 번 부릅니다. `requestClose` 와 `applyCloseChoice` 가 닫는 모든 경로에서 부릅니다.
+         * @details 닫힌 패널은 `draw()` 가 돌지 않으므로, 창이 가지고 있던 전역 상태(초점 씬, Undo 스택)는 여기서 해제해야 한다.
          */
         virtual void onPanelClosed() {}
         /**
@@ -237,7 +239,7 @@ namespace sw::editor
         virtual void revertDocument() {}
 
     private:
-        /** @brief 열림 표시를 내리고 `onPanelClosed` 를 부릅니다. 패널을 닫는 유일한 자리입니다. */
+        /** @brief 열림 표시를 내리고 `onPanelClosed` 를 부릅니다. 패널을 닫는 유일한 위치입니다. */
         void closeNow()
         {
             _bOpen = false;

@@ -33,12 +33,13 @@ namespace sw::editor
     inline constexpr uint32 kImGuiDrawsPerViewportPerFrame = 2u;
 
     /**
-     * @brief ImGui 렌더러 백엔드(Vulkan · DX12)가 뷰포트마다 두는 정점 · 인덱스 버퍼 링의 칸 수입니다.
-     * @details 두 백엔드는 `RenderDrawData` 를 부를 **때마다** 링을 한 칸 넘기고, 칸이 모자라면 그 칸의 버퍼를 GPU 를 기다리지 않고 바로 지우고 새로 만든다
-     *          (`imgui_impl_vulkan` 의 `CreateOrResizeBuffer`, `imgui_impl_dx12` 의 `SafeRelease`). 그래서 칸은 GPU 가 그 칸을 다 읽은 뒤에야 돌아와야 한다.
-     *          한 프레임에 여러 번 그리면 링이 프레임보다 빨리 돈다 — 링을 인플라이트 프레임 수로만 두면 캡처 프레임이 아직 GPU 에 있는 앞 프레임의 칸을
-     *          다시 쓰고, 그 칸을 늘리면 쓰는 중인 버퍼를 지운다(Vulkan 검증 레이어 VUID-vkDestroyBuffer-buffer-00922, 2026-10-20 `editor.inspectorhandle`).
-     *          "인플라이트 프레임 수 × 프레임당 그리는 수" 칸이면 어느 칸이든 인플라이트 프레임 수만큼 뒤의 프레임에서야 다시 쓰인다.
+     * @brief ImGui 렌더러 백엔드(Vulkan, DX12)가 뷰포트마다 두는 정점 버퍼와 인덱스 버퍼 링의 슬롯 수입니다.
+     * @details 두 백엔드는 `RenderDrawData` 를 부를 **때마다** 링을 한 슬롯 넘긴다. 슬롯이 모자라면 그 슬롯의 버퍼를 GPU 를 기다리지 않고 바로 지우고
+     *          새로 만든다(`imgui_impl_vulkan` 의 `CreateOrResizeBuffer`, `imgui_impl_dx12` 의 `SafeRelease`). 그래서 GPU 가 슬롯을 다 읽은 뒤에야
+     *          그 슬롯이 다시 돌아와야 한다. 한 프레임에 여러 번 그리면 링이 프레임보다 빨리 돈다. 링을 인플라이트 프레임 수로만 두면 캡처 프레임이
+     *          아직 GPU 에 있는 앞 프레임의 슬롯을 다시 쓰고, 그 슬롯을 키우면 쓰는 중인 버퍼를 지운다
+     *          (Vulkan 검증 레이어 VUID-vkDestroyBuffer-buffer-00922, 2026-10-20 `editor.inspectorhandle`).
+     *          슬롯 수를 "인플라이트 프레임 수 × 프레임당 그리는 수" 로 두면 어느 슬롯이든 인플라이트 프레임 수만큼 뒤의 프레임에서야 다시 쓰인다.
      */
     inline constexpr uint32 kImGuiDrawBufferRingSize = constant::kMaxFrameCountInFlight * kImGuiDrawsPerViewportPerFrame;
 
