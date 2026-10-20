@@ -1105,48 +1105,48 @@
      "fields": [
       {
        "name": "_startMap",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "시작 맵 / 레벨 경로"
+       "description": "시작 맵 / 레벨 경로. 타이틀 씬 · 타이틀 다음 씬이 없을 때 처음 여는 씬이다"
       },
       {
        "name": "_titleScene",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "타이틀 씬"
+       "description": "타이틀 씬. 없으면 처음 씬은 시작 맵이고 \"타이틀로\" 명령을 걸지 않는다"
       },
       {
        "name": "_entranceScene",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "타이틀 다음 씬"
+       "description": "타이틀 다음 씬. 없으면 시작 맵이다"
       },
       {
        "name": "_defaultSavePath",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstanceBase::saveStateToFile` · `loadStateFromFile`)"
+       "description": "기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstanceBase::saveStateToFile` · `loadStateFromFile`). 없으면 경로 없는 저장은 오류다"
       },
       {
        "name": "_localizationProject",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다"
+       "description": "로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음"
       },
       {
        "name": "_defaultLanguage",
@@ -1168,16 +1168,16 @@
       },
       {
        "name": "_inputMap",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다)"
+       "description": "게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다). 없으면 입력 맵을 바꾸지 않는다"
       },
       {
        "name": "_loadingScreen",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
@@ -1186,7 +1186,7 @@
       },
       {
        "name": "_audioEvents",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
@@ -1516,30 +1516,30 @@
      "fields": [
       {
        "name": "_defaultMap",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "타일맵 패널이 처음 여는 맵(리소스 경로, 비면 없음)"
+       "description": "타일맵 패널이 처음 여는 맵(리소스 경로, 칸이 없으면 없음)"
       },
       {
        "name": "_warpMap",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "타일맵 패널의 워프 대상 기본값(리소스 경로, 비면 없음)"
+       "description": "타일맵 패널의 워프 대상 기본값(리소스 경로, 칸이 없으면 없음)"
       },
       {
        "name": "_spriteAtlas",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 비면 없음)"
+       "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 칸이 없으면 없음)"
       },
       {
        "name": "_uiPreviewDocument",

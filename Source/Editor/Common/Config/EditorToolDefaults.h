@@ -29,11 +29,11 @@ namespace sw::editor
     {
         REFLECT_BODY();
         PROPERTY()
-        string _defaultMap{}; ///< 타일맵 패널이 처음 여는 맵(리소스 경로, 비면 없음)
+        DataPath _defaultMap; ///< 타일맵 패널이 처음 여는 맵(리소스 경로, 칸이 없으면 없음)
         PROPERTY()
-        string _warpMap{}; ///< 타일맵 패널의 워프 대상 기본값(리소스 경로, 비면 없음)
+        DataPath _warpMap; ///< 타일맵 패널의 워프 대상 기본값(리소스 경로, 칸이 없으면 없음)
         PROPERTY()
-        string _spriteAtlas{}; ///< 스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 비면 없음)
+        DataPath _spriteAtlas; ///< 스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 칸이 없으면 없음)
         PROPERTY( Required )
         DataPath _uiPreviewDocument; ///< UI 미리보기 패널이 처음 여는 UI 문서(리소스 경로)
 

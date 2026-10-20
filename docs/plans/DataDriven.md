@@ -116,7 +116,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 ### 7.5 단위
 
-동시 빌드는 둘까지입니다. D1(새 읽기 함수 `readRequiredAttribute` · `readOptionalAttribute` · `readRequiredChild` · `readOptionalChild`, `JSONValue::readRequired` · `readOptional`, `KeyValueFile::readRequired` · `readOptional`, `GameSettings` 커스텀 모음 삭제)과 D2 ~ D5(키트 카탈로그를 `readFields` 스키마 읽기로)는 들어갔습니다. D6 ~ D8 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
+동시 빌드는 둘까지입니다. D1(새 읽기 함수 `readRequiredAttribute` · `readOptionalAttribute` · `readRequiredChild` · `readOptionalChild`, `JSONValue::readRequired` · `readOptional`, `KeyValueFile::readRequired` · `readOptional`, `GameSettings` 커스텀 모음 삭제)과 D2 ~ D5(키트 카탈로그를 `readFields` 스키마 읽기로)는 들어갔습니다. `GameSettings` 의 경로 칸 8 개도 `DataPath` 가 됐고(`_startMap` 은 필수, 읽기는 리플렉션 칸 표), 빌드와 `GameFrameworkTest` 확인이 남았습니다. 같은 모양이던 `BootstrapConfig::_packRoot` · `LoadingScreenSettings::_documentPath` · `EditorToolDefaults` 의 선택 경로 3 칸도 `DataPath` 가 됐습니다(빌드 확인이 남았습니다). D6 ~ D8 은 폴더가 겹치지 않으므로 둘씩 병렬로 돌립니다. 각 단위는 끝날 때 두 게이트의 기준선을 `--print-baseline` 으로 다시 적습니다.
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
