@@ -100,7 +100,7 @@ namespace sw::editor
     {
     }
 
-    void VfxPreviewPanel::drawContent()
+    void VfxPreviewPanel::drawDocumentContent()
     {
         updateFocusedDocument();
         ensureDocumentLoaded();

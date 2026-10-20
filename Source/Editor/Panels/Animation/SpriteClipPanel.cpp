@@ -50,7 +50,7 @@ namespace sw::editor
         _listFrame.push_back( Frame{} );
     }
 
-    void SpriteClipPanel::drawContent()
+    void SpriteClipPanel::drawDocumentContent()
     {
         updateFocusedDocument();
         ensureDocumentLoaded();

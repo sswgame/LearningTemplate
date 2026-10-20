@@ -282,7 +282,7 @@ namespace sw::editor
     {
     }
 
-    void MaterialPanel::drawContent()
+    void MaterialPanel::drawDocumentContent()
     {
         updateFocusedDocument();
         ensureDocumentLoaded();

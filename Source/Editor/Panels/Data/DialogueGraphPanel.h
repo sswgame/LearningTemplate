@@ -31,7 +31,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         void shutdown( IRHIDevice* pRHIDevice ) override;
         /** @brief 대화 노드 그래프 UI 를 그립니다. */
-        void               drawContent() override;
+        void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
 
     private:

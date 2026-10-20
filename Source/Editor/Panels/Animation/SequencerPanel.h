@@ -37,7 +37,7 @@ namespace sw::editor
         SequencerPanel();
         ~SequencerPanel() override;
 
-        void               drawContent() override;
+        void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
 
         /** @brief 고른 키 트랙의 키 프레임 수입니다(채널마다 같은 프레임의 키는 하나로 센다). 고른 트랙이 없으면 false 입니다. */

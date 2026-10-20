@@ -131,7 +131,7 @@ namespace sw::editor
         resize( 8, 8 );
     }
 
-    void TileMapPanel::drawContent()
+    void TileMapPanel::drawDocumentContent()
     {
         updateFocusedDocument();
         if ( isDocumentLoaded() == false )

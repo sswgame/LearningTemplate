@@ -19,6 +19,9 @@ namespace sw::editor
     /**
      * @class EditorDocumentPanel
      * @brief 워크스페이스 포커스 경로가 지정한 애셋 종류와 맞으면 문서를 바꿉니다.
+     * @details **닫기 확인은 이 클래스가 한다.** `drawContent` 를 `final` 로 막고 파생이 `drawDocumentContent` 를 구현하게 했으므로, 문서 패널은
+     *          X 로 닫을 때의 미저장 확인(Save / Don't Save / Cancel)을 건너뛸 수 없다. 저장하지 않고 닫으면 `revertDocument` 로 편집을 버린다
+     *          (기본은 `reloadDocument`). 패널 메뉴 토글 등 X 가 아닌 닫는 길은 확인하지 않는다.
      */
     class SW_EDITOR_API EditorDocumentPanel : public IEditorPanel
     {
@@ -26,6 +29,16 @@ namespace sw::editor
         bool           isToolPanel() const override { return true; }
         const utf8*    getPanelTitle() const override;
         EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Center; }
+
+        /**
+         * @brief X 로 닫으려는 순간 미저장 확인을 그려야 하면 true 입니다.
+         * @details ImGui 는 X 를 누르면 그 프레임에 열림 표시만 내리므로, 열림이 내려갔는데 편집이 남았거나 이미 확인 중이면 묻는다.
+         *          결정을 한 곳에 모아 두어 닫는 길(X)이 확인 없이 문서를 잃는 일이 없게 한다.
+         */
+        [[nodiscard]] static constexpr bool shouldAskBeforeClosing( bool bOpen, bool bDirty, bool bConfirming )
+        {
+            return bConfirming || ( bOpen == false && bDirty );
+        }
 
     protected:
         /**
@@ -35,6 +48,14 @@ namespace sw::editor
         explicit EditorDocumentPanel( EditorAssetType kind, bool bLoadOnOpen );
         /** @brief 쌓여 있는 되돌리기 항목이 사라진 패널을 부르지 않게 표지를 비웁니다(백엔드 교체는 패널을 다시 만들어도 되돌리기 스택을 남긴다). */
         ~EditorDocumentPanel() override;
+
+        /** @brief 패널 본문을 그립니다. 닫기 확인은 `drawContent` 가 먼저 처리하므로 파생은 확인을 신경 쓰지 않는다. */
+        virtual void drawDocumentContent() = 0;
+        /**
+         * @brief 닫기 확인보다 앞서 부릅니다. 편집을 패널 바깥의 기록(미리보기 씬의 Undo 스택 등)에서 읽는 패널이 여기서 `markDocumentDirty` 를 해,
+         *        편집한 바로 다음 프레임에 X 를 눌러도 확인을 건너뛰지 않게 합니다. 기본은 아무 일도 하지 않습니다.
+         */
+        virtual void syncDocumentDirty() {}
 
         /** @brief 포커스가 이 종류이고 현재 로드 경로와 다르면 true 입니다. */
         bool hasNewFocusedDocument() const;
@@ -86,6 +107,12 @@ namespace sw::editor
          *          가상으로 선언한다. 구현을 잊으면 컴파일이 실패한다.
          */
         [[nodiscard]] bool saveDocument() override = 0;
+        /**
+         * @brief 저장하지 않고 닫거나 장면을 바꿀 때 편집을 버립니다. 기본은 디스크에서 문서를 다시 읽습니다(`reloadDocument`).
+         * @details 기본이 있어야 한다. 구현이 없으면 "저장 안 함" 뒤에도 편집한 메모리 상태가 남아, 다시 열면 미저장 표시 없이 편집본이 보인다.
+         *          문서가 읽기만으로 돌아오지 않는 패널(미리보기 씬을 쓰는 프리팹 창)이 재정의한다.
+         */
+        void revertDocument() override { reloadDocument(); }
         /** @brief 편집 단위로 Undo 를 남기고 dirty 로 표시합니다. */
         void notifyDocumentEdited( string_view label, string_view coalesceKey = {} );
         /** @brief 로드나 저장 직후에 Undo 기준 텍스트를 맞춥니다. */
@@ -108,6 +135,11 @@ namespace sw::editor
 
     private:
         static constexpr uint32 kMaxRecentDocumentCount = 8;
+
+        /** @brief 닫기 확인(`shouldAskBeforeClosing`)을 처리한 뒤 `drawDocumentContent` 를 부른다. 파생이 이 확인을 건너뛰지 못하게 `final` 이다. */
+        void drawContent() final;
+        /** @brief X 로 닫기 전의 Save / Don't Save / Cancel 확인을 그립니다. 선택이 나면 창을 닫거나(Save · Don't Save) 열어 둡니다(Cancel · 저장 실패). */
+        void drawCloseConfirm();
 
         /** @brief 이 종류의 에셋 목록 팝업을 그립니다. */
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
@@ -134,6 +166,7 @@ namespace sw::editor
         uint8                                 _bLoaded        : 1;
         uint8                                 _bConfirmSwitch : 1;
         uint8                                 _bLoadFailed    : 1;
-        [[maybe_unused]] uint8                _reserved       : 5;
+        uint8                                 _bConfirmClose  : 1; ///< X 로 닫으려다 미저장 확인을 기다리는 중
+        [[maybe_unused]] uint8                _reserved       : 4;
     };
 } // namespace sw::editor

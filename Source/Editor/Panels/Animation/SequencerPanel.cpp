@@ -177,7 +177,7 @@ namespace sw::editor
 
     SequencerPanel::~SequencerPanel() = default;
 
-    void SequencerPanel::drawContent()
+    void SequencerPanel::drawDocumentContent()
     {
         updateFocusedDocument();
         ensureDocumentLoaded();

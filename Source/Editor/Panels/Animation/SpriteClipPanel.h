@@ -30,7 +30,7 @@ namespace sw::editor
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 스프라이트 클립 편집 UI를 그립니다. */
-        void               drawContent() override;
+        void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
         /** @brief 아틀라스 그림을 놓습니다. */
         void shutdown( IRHIDevice* pRHIDevice ) override;
