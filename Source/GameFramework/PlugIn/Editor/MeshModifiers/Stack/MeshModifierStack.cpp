@@ -8,6 +8,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -372,23 +373,39 @@ namespace sw::editor
     void MeshModifierStack::apply( MeshModifierMesh& inoutMesh, const MeshModifierEvaluation& evaluation ) const
     {
         // 원본 위치가 필요한 모디파이어가 있을 때만 스택 입력을 복사해 넘긴다(바깥 스택이 이미 넘겼으면 그것을 쓴다)
+        vector<float3>         listStackInputPosition;
+        MeshModifierEvaluation stackEvaluation = evaluation;
+        if ( needsStackInputPosition() && stackEvaluation._pListStackInputPosition == nullptr )
+        {
+            listStackInputPosition                   = inoutMesh._listPosition;
+            stackEvaluation._pListStackInputPosition = &listStackInputPosition;
+        }
+        applyRange( inoutMesh, stackEvaluation, 0, getModifierCount() );
+        finishApply( inoutMesh );
+    }
+
+    void MeshModifierStack::applyRange( MeshModifierMesh& inoutMesh, const MeshModifierEvaluation& evaluation, int32 firstIndex, int32 endIndex ) const
+    {
+        const int32 first = MathUtil::max( firstIndex, 0 );
+        const int32 end   = MathUtil::min( endIndex, getModifierCount() );
+        for ( int32 index = first; index < end; ++index )
+        {
+            _listModifier[static_cast<size_t>( index )]->apply( inoutMesh, evaluation );
+        }
+    }
+
+    bool MeshModifierStack::needsStackInputPosition() const
+    {
         bool bNeedsOriginal = false;
         for ( const unique_ptr<MeshModifier>& modifier : _listModifier )
         {
             bNeedsOriginal = bNeedsOriginal || ( modifier->isEnabled() && modifier->needsOriginalPosition() );
         }
-        vector<float3>         listStackInputPosition;
-        MeshModifierEvaluation stackEvaluation = evaluation;
-        if ( bNeedsOriginal && stackEvaluation._pListStackInputPosition == nullptr )
-        {
-            listStackInputPosition                   = inoutMesh._listPosition;
-            stackEvaluation._pListStackInputPosition = &listStackInputPosition;
-        }
+        return bNeedsOriginal;
+    }
 
-        for ( const unique_ptr<MeshModifier>& modifier : _listModifier )
-        {
-            modifier->apply( inoutMesh, stackEvaluation );
-        }
+    void MeshModifierStack::finishApply( MeshModifierMesh& inoutMesh ) const
+    {
         if ( _bRecomputeNormals )
             MeshModifierUtil::recomputeFaceNormals( inoutMesh._listPosition, inoutMesh._listNormal );
     }
@@ -406,6 +423,18 @@ namespace sw::editor
             MeshModifierStackInternal::writeModifier( *modifier, modifiers.pushBack() );
         }
         return document.dump( indent );
+    }
+
+    string MeshModifierStack::makePrefixJSONText( int32 endIndex ) const
+    {
+        JSONDocument    document;
+        const JSONValue modifiers = document.makeArray();
+        const int32     end       = MathUtil::min( endIndex, getModifierCount() );
+        for ( int32 index = 0; index < end; ++index )
+        {
+            MeshModifierStackInternal::writeModifier( *_listModifier[static_cast<size_t>( index )], modifiers.pushBack() );
+        }
+        return document.dump( -1 );
     }
 
     bool MeshModifierStack::readJSONText( string_view jsonText )

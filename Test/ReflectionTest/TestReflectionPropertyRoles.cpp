@@ -6,6 +6,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -43,13 +44,13 @@ namespace
 SW_TEST_CASE( ReflectionPropertyRoleTest, AnnotationsReachPropertyMetadata )
 {
     const sw::PropertyInfo& health = getRoleProperty( "_health" );
-    SW_EXPECT_TRUE( health._metadata._bReplicated == SW_TRUE );
-    SW_EXPECT_TRUE( health._metadata._repNotify == sw::hashed_string( "onHealthReplicated" ) );
+    SW_EXPECT_TRUE( health._metadata->_bReplicated == SW_TRUE );
+    SW_EXPECT_TRUE( health._metadata->_repNotify == sw::hashed_string( "onHealthReplicated" ) );
     SW_EXPECT_NOT_NULL( health._pRepNotify );
 
-    SW_EXPECT_TRUE( getRoleProperty( "_gold" )._metadata._bSaveGame == SW_TRUE );
-    SW_EXPECT_TRUE( getRoleProperty( "_sessionScore" )._metadata._bSaveGame == SW_FALSE );
-    SW_EXPECT_TRUE( getRoleProperty( "_opacity" )._metadata._bInterp == SW_TRUE );
+    SW_EXPECT_TRUE( getRoleProperty( "_gold" )._metadata->_bSaveGame == SW_TRUE );
+    SW_EXPECT_TRUE( getRoleProperty( "_sessionScore" )._metadata->_bSaveGame == SW_FALSE );
+    SW_EXPECT_TRUE( getRoleProperty( "_opacity" )._metadata->_bInterp == SW_TRUE );
 
     sw::vector<const sw::PropertyInfo*> listReplicated;
     sw::PropertyRoleUtil::collectReplicatedProperties( getRoleType(), listReplicated );
@@ -182,9 +183,9 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, EveryRegisteredRolePropertyIsUsable )
     {
         for ( const sw::PropertyInfo& prop : type._listProperty )
         {
-            if ( prop._metadata._bInterp == SW_TRUE && sw::PropertyRoleUtil::isInterpolatable( prop ) == false )
+            if ( prop._metadata->_bInterp == SW_TRUE && sw::PropertyRoleUtil::isInterpolatable( prop ) == false )
                 failures += sw::string( type._fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (Interp) ";
-            if ( prop._metadata._repNotify.empty() == false && prop._pRepNotify == nullptr )
+            if ( prop._metadata->_repNotify.empty() == false && prop._pRepNotify == nullptr )
                 failures += sw::string( type._fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (RepNotify) ";
         }
     } );

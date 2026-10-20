@@ -211,14 +211,14 @@ namespace sw
         context._lastCbRegistryVersion = registryVersion;
     }
 
-    void FrameRenderer::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
 
         if ( _gpuScene.isUploaded() )
         {
-            drawGPUBatches( context, pso, cbIndex, bTransparentPass );
+            drawGPUBatches( context, pso, bTransparentPass );
             return;
         }
 
@@ -234,11 +234,10 @@ namespace sw
         commitBindlessTextureBindings( context );
     }
 
-    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
     {
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
-        (void)cbIndex;
         const bool bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false;
         if ( bCannotDraw )
             return;
@@ -387,9 +386,8 @@ namespace sw
         (void)_particleRenderer.drawBatches( *context._pCmd, listBatch, _pDevice->supportsNativeBindlessSampling() );
     }
 
-    void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
+    void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )
     {
-        (void)cbIndex;
         if ( context._pCmd == nullptr )
             return;
         setIdentityWorld( context );

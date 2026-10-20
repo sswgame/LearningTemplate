@@ -43,6 +43,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -179,7 +180,7 @@ namespace sw::editor
     void EditorPropertyGrid::resetPropertyToDefault( void* pInstance, const PropertyInfo& prop, const void* pDefaultInstance )
     {
         const string text = pDefaultInstance != nullptr ? SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaultInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) )
-                                                        : prop._metadata._defaultValue;
+                                                        : prop._metadata->_defaultValue;
         applyPropertyTextAsEdit( pInstance, prop, text, "Reset to Default" );
     }
 
@@ -325,7 +326,7 @@ namespace sw::editor
                         ImGui::SameLine();
                     }
                     ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( *prop ) );
-                    EditorWidgets::drawTooltip( prop->_metadata._tooltip.c_str() );
+                    EditorWidgets::drawTooltip( prop->_metadata->_tooltip.c_str() );
                     // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 이름표를 남긴다(`inspector.label.<타입>.<프로퍼티>`).
                     fixed_string<constant::kMaxBuffer128> labelMark;
                     formatstring( labelMark.data(), labelMark.capacity(), "inspector.label.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
@@ -343,7 +344,7 @@ namespace sw::editor
                             }
                             ImGui::Separator();
                         }
-                        if ( pDefaultInstance != nullptr || prop->_metadata._defaultValue.empty() == false )
+                        if ( pDefaultInstance != nullptr || prop->_metadata->_defaultValue.empty() == false )
                         {
                             if ( ImGui::MenuItem( "Reset to Default" ) )
                                 resetPropertyToDefault( pInstance, *prop, pDefaultInstance );
@@ -372,7 +373,7 @@ namespace sw::editor
                         EditorSelfTestMarks::note( resetMark.c_str() );
                     }
 
-                    if ( prop->_metadata._bTransient == SW_TRUE )
+                    if ( prop->_metadata->_bTransient == SW_TRUE )
                     {
                         ImGui::SameLine();
                         ImGui::TextDisabled( "(T)" );
@@ -445,7 +446,7 @@ namespace sw::editor
                 return;
         }
 
-        const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
+        const bool bReadOnly = prop._metadata->_bReadOnly != SW_FALSE;
 
         auto* pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pRegistry == nullptr )
@@ -884,16 +885,16 @@ namespace sw::editor
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
             // 생성자 호출기는 초기화되지 않은 저장 공간(placement new)을 기대한다. 살아 있는 인스펙터 인스턴스에 호출하면 안전하지 않다.
-            if ( method._metadata._bConstructor != SW_FALSE )
+            if ( method._metadata->_bConstructor != SW_FALSE )
                 continue;
 
             const utf8* pLabelName = method._name.c_str();
-            if ( method._metadata._displayName.empty() == false )
-                pLabelName = method._metadata._displayName.c_str();
+            if ( method._metadata->_displayName.empty() == false )
+                pLabelName = method._metadata->_displayName.c_str();
 
             const uint32 paramCount = method.getParameterCount();
 
-            if ( method._metadata._bCallInEditor != SW_FALSE && paramCount == 0 )
+            if ( method._metadata->_bCallInEditor != SW_FALSE && paramCount == 0 )
             {
                 ImGui::PushID( method._hashName.c_str() );
                 ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButton ) );
@@ -907,7 +908,7 @@ namespace sw::editor
                     invokeTypeMethod( pInstance, pTypeInfo, method, TaskArgs{} );
                 }
                 ImGui::PopStyleColor( 3 );
-                EditorWidgets::drawTooltip( method._metadata._tooltip.c_str() );
+                EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
                 ImGui::PopID();
                 continue;
             }
@@ -915,12 +916,12 @@ namespace sw::editor
             ImGui::PushID( method._hashName.c_str() );
             ImGui::Text( "%s (%s)", pLabelName,
                          method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
-            if ( method._metadata._bCallInEditor != SW_FALSE )
+            if ( method._metadata->_bCallInEditor != SW_FALSE )
             {
                 ImGui::SameLine();
                 ImGui::TextColored( EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorText ), "[Editor]" );
             }
-            EditorWidgets::drawTooltip( method._metadata._tooltip.c_str() );
+            EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
             const uint64                    slotKey  = static_cast<uint64>( pTypeInfo->_fullyQualifiedName.getHash() ) * 31u + static_cast<uint64>( method._hashName.getHash() );
             vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
             const bool                      bArgsOk  = InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot );
@@ -971,7 +972,7 @@ namespace sw::editor
             ImGui::PushID( event._name.c_str() );
             const string signature = InspectorPropertyLayout::formatParameterList( event._listParameter );
             ImGui::BulletText( "%s(%s)", event._name.c_str(), signature.c_str() );
-            EditorWidgets::drawTooltip( event._metadata._tooltip.c_str() );
+            EditorWidgets::drawTooltip( event._metadata->_tooltip.c_str() );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", ReflectionInvoke::isEventBound( event, pInstance ) ? "(bound)" : "(unbound)" );
             if ( event.getParameterCount() == 0 )

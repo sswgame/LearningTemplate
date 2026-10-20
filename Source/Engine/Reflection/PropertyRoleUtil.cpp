@@ -7,6 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
@@ -95,7 +96,7 @@ namespace sw
         outListProperty.clear();
         for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
         {
-            if ( prop._metadata._bReplicated == SW_TRUE )
+            if ( prop._metadata->_bReplicated == SW_TRUE )
                 outListProperty.push_back( &prop );
         }
     }
@@ -118,7 +119,7 @@ namespace sw
         outListProperty.clear();
         for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
         {
-            if ( prop._metadata._bInterp == SW_TRUE )
+            if ( prop._metadata->_bInterp == SW_TRUE )
                 outListProperty.push_back( &prop );
         }
     }

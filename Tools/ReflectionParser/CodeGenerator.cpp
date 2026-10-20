@@ -61,7 +61,7 @@ namespace sw
                     return;
                 // 접근자 프로퍼티는 메서드를 부른다(`_pValueAccessor` 와 같은 규칙). 이름이 틀리거나 숫자가 아닌 필드면 생성된 코드가 컴파일되지 않는다.
                 const utf8* pCall = pField->_bIsAccessor == SW_TRUE ? "()" : "";
-                emit.linef( "p._metadata.%# = []( const void* pInstance ) -> ::float64 { return %#static_cast<::float64>( static_cast<const %#*>( pInstance )->%#%# ); };",
+                emit.linef( "p._metadata->%# = []( const void* pInstance ) -> ::float64 { return %#static_cast<::float64>( static_cast<const %#*>( pInstance )->%#%# ); };",
                             pMemberName, bNegate ? "-" : "", typeInfo._fullyQualifiedName, pField->_memberName, pCall );
             }
 
@@ -314,7 +314,7 @@ namespace sw
 
     void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const
     {
-        AnnotationFields::emitMetadata( emit, prop, "p._metadata." );
+        AnnotationFields::emitMetadata( emit, prop, "p._metadata->" );
 
         // 범위는 경계마다 값과 "있음" 표시가 함께 가는 Manual 필드다. 적힌 쪽만 낸다 — 표시가 하나면 `Min` 만 적어도
         // 위 경계(기본 1)까지 나가 인스펙터가 그 값을 1 에서 막는다.
@@ -331,13 +331,13 @@ namespace sw
         };
         if ( prop._bHasMinRange != SW_FALSE )
         {
-            emit.linef( "p._metadata._minRange     = %#;", formatRangeLiteral( prop._minRange ).c_str() );
-            emit.assign( "p._metadata._bHasMinRange", "SW_TRUE" );
+            emit.linef( "p._metadata->_minRange     = %#;", formatRangeLiteral( prop._minRange ).c_str() );
+            emit.assign( "p._metadata->_bHasMinRange", "SW_TRUE" );
         }
         if ( prop._bHasMaxRange != SW_FALSE )
         {
-            emit.linef( "p._metadata._maxRange     = %#;", formatRangeLiteral( prop._maxRange ).c_str() );
-            emit.assign( "p._metadata._bHasMaxRange", "SW_TRUE" );
+            emit.linef( "p._metadata->_maxRange     = %#;", formatRangeLiteral( prop._maxRange ).c_str() );
+            emit.assign( "p._metadata->_bHasMaxRange", "SW_TRUE" );
         }
         // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
@@ -348,13 +348,13 @@ namespace sw
             emit.line( "#if !defined( SW_SHIPPING )" );
             if ( prop._bHasUIMinRange != SW_FALSE )
             {
-                emit.linef( "p._metadata._uiMinRange   = %#f;", prop._uiMinRange );
-                emit.assign( "p._metadata._bHasUIMinRange", "SW_TRUE" );
+                emit.linef( "p._metadata->_uiMinRange   = %#f;", prop._uiMinRange );
+                emit.assign( "p._metadata->_bHasUIMinRange", "SW_TRUE" );
             }
             if ( prop._bHasUIMaxRange != SW_FALSE )
             {
-                emit.linef( "p._metadata._uiMaxRange   = %#f;", prop._uiMaxRange );
-                emit.assign( "p._metadata._bHasUIMaxRange", "SW_TRUE" );
+                emit.linef( "p._metadata->_uiMaxRange   = %#f;", prop._uiMaxRange );
+                emit.assign( "p._metadata->_bHasUIMaxRange", "SW_TRUE" );
             }
             emit.line( "#endif" );
         }
@@ -589,12 +589,12 @@ namespace sw
                 emit.assign( "funcInfo._pReturnType", CodeGeneratorInternal::makeTypeOpsExpr( returnType ) );
             CodeGeneratorInternal::emitParameterList( emit, "funcInfo._listParameter", method._listParameter, _session, true );
 
-            AnnotationFields::emitMetadata( emit, method, "funcInfo._metadata." );
+            AnnotationFields::emitMetadata( emit, method, "funcInfo._metadata->" );
 
             // 애노테이션이 아니라 선언에서 온 사실들이다.
-            emit.flagIf( method._bConstructor != SW_FALSE, "funcInfo._metadata._bConstructor", "SW_TRUE" );
-            emit.flagIf( method._bStatic != SW_FALSE, "funcInfo._metadata._bStatic", "SW_TRUE" );
-            emit.flagIf( method._bConst != SW_FALSE, "funcInfo._metadata._bConst", "SW_TRUE" );
+            emit.flagIf( method._bConstructor != SW_FALSE, "funcInfo._metadata->_bConstructor", "SW_TRUE" );
+            emit.flagIf( method._bStatic != SW_FALSE, "funcInfo._metadata->_bStatic", "SW_TRUE" );
+            emit.flagIf( method._bConst != SW_FALSE, "funcInfo._metadata->_bConst", "SW_TRUE" );
 
             const string callArgs = CodeGeneratorInternal::makeInvokerCallArgs( method._listParameter, _session );
 
@@ -619,7 +619,7 @@ namespace sw
             CodeGeneratorInternal::emitParameterList( emit, "e._listParameter", event._listParameter, _session, false );
             // 묶기 · 부르기 · 인자 변환 표는 필드 타입(`MulticastDelegate<void( Args... )>`)에서 템플릿이 만든다.
             emit.linef( "e.setOps( &::sw::ReflectEventOpsOf<decltype(%#::%#)>::kOps );", typeInfo._fullyQualifiedName, event._memberName );
-            AnnotationFields::emitMetadata( emit, event._annotation, "e._metadata." );
+            AnnotationFields::emitMetadata( emit, event._annotation, "e._metadata->" );
             emit.line( "return e;" );
             emit.pop();
             emit.line( "}()," );
@@ -681,7 +681,7 @@ namespace sw
         CodeEmit emit( outBuffer );
         emit.push( 3 );
 
-        AnnotationFields::emitMetadata( emit, typeInfo, "info._metadata." );
+        AnnotationFields::emitMetadata( emit, typeInfo, "info._metadata->" );
 
         if ( typeInfo._listProperty.empty() == false )
         {

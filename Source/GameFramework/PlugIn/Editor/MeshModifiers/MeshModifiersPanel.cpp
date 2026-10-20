@@ -238,6 +238,7 @@ namespace sw::editor
         drawSelectedModifier( session );
         ImGui::Separator();
         drawFooter( session );
+        session.advancePreviewTime( ImGui::GetIO().DeltaTime );
         session.refreshPreview();
     }
 
@@ -1116,8 +1117,14 @@ namespace sw::editor
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdMeshModifiers", "GPUPreviewBlockedByStack" ) );
         }
         float32 time = session.getPreviewTime();
-        if ( ImGui::DragFloat( SW_LOCKEY( "EdMeshModifiers", "PreviewTime" ), &time, 0.01f, 0.0f, 600.0f ) )
+        if ( ImGui::DragFloat( SW_LOCKEY( "EdMeshModifiers", "PreviewTime" ), &time, 0.01f, 0.0f, MeshModifierSession::kMaxPreviewTimeSeconds ) )
             session.setPreviewTime( time );
+        // 재생하면 시간만 바뀌는 애니메이션 모디파이어(Waving · Ripple · Vertex Anim …)가 칸을 끌지 않아도 움직인다
+        ImGui::SameLine();
+        bool bPlaying = session.isPreviewPlaying();
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "PlayPreviewTime" ), &bPlaying ) )
+            session.setPreviewPlaying( bPlaying );
+        EditorSelfTestMarks::note( "meshmodifiers.playPreviewTime" );
 
         ImGui::BeginDisabled( session.canUndo() == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kUndo, SW_LOCKEY( "EdMeshModifiers", "Undo" ) ) ) )

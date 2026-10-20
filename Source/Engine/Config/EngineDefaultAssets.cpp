@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -47,7 +48,7 @@ namespace sw
         bool bComplete = true;
         for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
         {
-            if ( prop._metadata._bRequired == SW_FALSE )
+            if ( prop._metadata->_bRequired == SW_FALSE )
                 continue;
             const DataPath* pValue = prop.getValuePtr<DataPath>( this );
             if ( pValue == nullptr || pValue->isSet() == false )

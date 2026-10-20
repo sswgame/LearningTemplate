@@ -7,6 +7,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TextAddress.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
@@ -253,16 +254,16 @@ namespace sw
          */
         static bool shouldSerializeProperty( const TypeInfo& owner, const PropertyInfo& prop, const SerializeContext& context )
         {
-            if ( prop._metadata._bTransient == SW_TRUE )
+            if ( prop._metadata->_bTransient == SW_TRUE )
                 return false;
             switch ( context.getPurpose() )
             {
                 case SerializePurpose::Authoring:
-                    return prop._metadata._bRuntimeState == SW_FALSE;
+                    return prop._metadata->_bRuntimeState == SW_FALSE;
                 case SerializePurpose::Snapshot:
                     return true;
                 case SerializePurpose::SaveGame:
-                    return prop._metadata._bSaveGame == SW_TRUE || owner.hasSaveGameProperty() == false;
+                    return prop._metadata->_bSaveGame == SW_TRUE || owner.hasSaveGameProperty() == false;
             }
             return false;
         }
@@ -274,7 +275,7 @@ namespace sw
          */
         static bool isForbiddenInFile( const PropertyInfo& prop, const SerializeContext& context )
         {
-            return context.getPurpose() == SerializePurpose::Authoring && prop._metadata._bTransient == SW_FALSE && prop._metadata._bRuntimeState == SW_TRUE;
+            return context.getPurpose() == SerializePurpose::Authoring && prop._metadata->_bTransient == SW_FALSE && prop._metadata->_bRuntimeState == SW_TRUE;
         }
 
         /** @brief 저작 파일에 있으면 안 되는 필드(`isForbiddenInFile`)를 타입과 필드 이름으로 오류 로그에 남깁니다. */

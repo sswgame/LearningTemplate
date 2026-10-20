@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -208,7 +209,7 @@ namespace sw
         // 2) 필수 칸이 빠졌는지 본다. 초기값은 형식일 뿐이라 대신 쓰지 않는다.
         for ( const PropertyInfo& prop : listProperty )
         {
-            if ( prop._metadata._bRequired == SW_FALSE )
+            if ( prop._metadata->_bRequired == SW_FALSE )
                 continue;
             const string attributeName = Internal::makeAttributeName( prop );
             if ( node.findAttribute( attributeName.c_str() ) == nullptr )
@@ -256,25 +257,22 @@ namespace sw
         { outListName.push_back( hashed_string( token ) ); } );
     }
 
-    uint32 GameDataXML::parseFloats( string_view text, float32* pOutValue, uint32 maxCount )
+    bool GameDataXML::parseFloatList( string_view text, uint32 maxCount, vector<float32>& outListValue )
     {
-        if ( pOutValue == nullptr )
-            return 0;
-        uint32 tokenIndex = 0;
-        uint32 readCount  = 0;
+        vector<float32> listValue;
+        bool            bValid = true;
         StringUtil::forEachToken( text, GameDataXMLInternal::kNumberSeparators, [&]( string_view token )
         {
-            if ( tokenIndex >= maxCount )
-                return;
             float32 value = 0.0f;
-            if ( StringUtil::parseFloat( token, value ) )
-            {
-                pOutValue[tokenIndex] = value;
-                ++readCount;
-            }
-            ++tokenIndex;
+            if ( listValue.size() >= maxCount || StringUtil::parseFloat( token, value ) == false )
+                bValid = false;
+            else
+                listValue.push_back( value );
         } );
-        return readCount;
+        if ( bValid == false || listValue.empty() )
+            return false;
+        outListValue = std::move( listValue );
+        return true;
     }
 
     bool GameDataXML::parseFloat2( string_view text, float2& outValue )
