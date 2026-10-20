@@ -110,6 +110,86 @@ namespace sw
 
             /** @brief 원소 수가 남은 바이트로 담길 수 있는지 확인합니다. 잘린 파일이 큰 할당을 일으키지 않게 하려는 것입니다. */
             static bool canHold( const Reader& reader, uint64 count, uint64 elementSize ) { return count * elementSize <= reader._size - reader._offset; }
+
+            /** @brief 노드 · 자식 번호 · 연결을 읽습니다. */
+            static void readGraph( Reader& reader, uint32 leafCount, uint32 nodeCount, uint32 childCount, uint32 linkCount, FractureGraph& outGraph )
+            {
+                outGraph._leafCount = leafCount;
+                outGraph._listNode.resize( nodeCount );
+                for ( FractureNode& node : outGraph._listNode )
+                {
+                    node._centroid   = reader.readFloat3();
+                    node._volume     = reader.readFloat32();
+                    node._parent     = static_cast<int32>( reader.readUint32() );
+                    node._firstChild = reader.readUint32();
+                    node._childCount = reader.readUint32();
+                    node._firstLeaf  = reader.readUint32();
+                    node._leafCount  = reader.readUint32();
+                    node._depth      = static_cast<uint8>( reader.readUint32() );
+                }
+                outGraph._listChildNode.resize( childCount );
+                for ( uint32& child : outGraph._listChildNode )
+                {
+                    child = reader.readUint32();
+                }
+                outGraph._listLink.resize( linkCount );
+                for ( FractureLink& link : outGraph._listLink )
+                {
+                    link._leafA = reader.readUint32();
+                    link._leafB = reader.readUint32();
+                    link._area  = reader.readFloat32();
+                }
+            }
+
+            /** @brief 조각마다 경계와 정점 · 껍질 점 구간을 읽습니다. */
+            static void readPieces( Reader& reader, uint32 leafCount, vector<FracturePiece>& outListPiece )
+            {
+                outListPiece.resize( leafCount );
+                for ( FracturePiece& piece : outListPiece )
+                {
+                    piece._boundsMin      = reader.readFloat3();
+                    piece._boundsMax      = reader.readFloat3();
+                    piece._firstVertex    = reader.readUint32();
+                    piece._vertexCount    = reader.readUint32();
+                    piece._firstHullPoint = reader.readUint32();
+                    piece._hullPointCount = reader.readUint32();
+                }
+            }
+
+            /** @brief 정점 · 삼각형 슬롯 · 껍질 점을 읽습니다. */
+            static void readMesh( Reader& reader, uint32 vertexCount, uint32 hullCount, FractureAsset& inoutAsset )
+            {
+                inoutAsset._listVertex.resize( vertexCount );
+                for ( RHIVertex& vertex : inoutAsset._listVertex )
+                {
+                    for ( float32& value : vertex._arrPosition )
+                    {
+                        value = reader.readFloat32();
+                    }
+                    for ( float32& value : vertex._arrNormal )
+                    {
+                        value = reader.readFloat32();
+                    }
+                    for ( float32& value : vertex._arrUv )
+                    {
+                        value = reader.readFloat32();
+                    }
+                    for ( float32& value : vertex._arrColor )
+                    {
+                        value = reader.readFloat32();
+                    }
+                }
+                inoutAsset._listTriangleSlot.resize( vertexCount / 3 );
+                for ( uint8& slot : inoutAsset._listTriangleSlot )
+                {
+                    slot = reader.readUint8();
+                }
+                inoutAsset._listHullPoint.resize( hullCount );
+                for ( float3& point : inoutAsset._listHullPoint )
+                {
+                    point = reader.readFloat3();
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -299,71 +379,9 @@ namespace sw
             clear();
             return false;
         }
-        _graph._leafCount = leafCount;
-        _graph._listNode.resize( nodeCount );
-        for ( FractureNode& node : _graph._listNode )
-        {
-            node._centroid   = reader.readFloat3();
-            node._volume     = reader.readFloat32();
-            node._parent     = static_cast<int32>( reader.readUint32() );
-            node._firstChild = reader.readUint32();
-            node._childCount = reader.readUint32();
-            node._firstLeaf  = reader.readUint32();
-            node._leafCount  = reader.readUint32();
-            node._depth      = static_cast<uint8>( reader.readUint32() );
-        }
-        _graph._listChildNode.resize( childCount );
-        for ( uint32& child : _graph._listChildNode )
-        {
-            child = reader.readUint32();
-        }
-        _graph._listLink.resize( linkCount );
-        for ( FractureLink& link : _graph._listLink )
-        {
-            link._leafA = reader.readUint32();
-            link._leafB = reader.readUint32();
-            link._area  = reader.readFloat32();
-        }
-        _listPiece.resize( leafCount );
-        for ( FracturePiece& piece : _listPiece )
-        {
-            piece._boundsMin      = reader.readFloat3();
-            piece._boundsMax      = reader.readFloat3();
-            piece._firstVertex    = reader.readUint32();
-            piece._vertexCount    = reader.readUint32();
-            piece._firstHullPoint = reader.readUint32();
-            piece._hullPointCount = reader.readUint32();
-        }
-        _listVertex.resize( vertexCount );
-        for ( RHIVertex& vertex : _listVertex )
-        {
-            for ( float32& value : vertex._arrPosition )
-            {
-                value = reader.readFloat32();
-            }
-            for ( float32& value : vertex._arrNormal )
-            {
-                value = reader.readFloat32();
-            }
-            for ( float32& value : vertex._arrUv )
-            {
-                value = reader.readFloat32();
-            }
-            for ( float32& value : vertex._arrColor )
-            {
-                value = reader.readFloat32();
-            }
-        }
-        _listTriangleSlot.resize( vertexCount / 3 );
-        for ( uint8& slot : _listTriangleSlot )
-        {
-            slot = reader.readUint8();
-        }
-        _listHullPoint.resize( hullCount );
-        for ( float3& point : _listHullPoint )
-        {
-            point = reader.readFloat3();
-        }
+        FractureAssetInternal::readGraph( reader, leafCount, nodeCount, childCount, linkCount, _graph );
+        FractureAssetInternal::readPieces( reader, leafCount, _listPiece );
+        FractureAssetInternal::readMesh( reader, vertexCount, hullCount, *this );
 
         string     error;
         const bool bMalformedFractureAsset = reader._bFailed || reader._offset != size || isValid( &error ) == false;

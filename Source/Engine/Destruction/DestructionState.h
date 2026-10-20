@@ -150,6 +150,26 @@ namespace sw
         void splitComponents( const vector<uint32>& listNode, vector<vector<uint32>>& outListComponent ) const;
         /** @brief 붙은 덩어리의 하중을 앵커 쪽으로 흘려 지지 세기를 넘는 연결을 끊습니다. 끊었으면 true 입니다. */
         bool relieveOverload( const vector<uint32>& listNode, DestructionChange& outChange );
+        /** @brief 이웃한 활성 노드 하나와 맞닿은 지지 세기입니다. 같은 쌍의 연결들은 `_pairIndex` 로 묶입니다. */
+        struct OverloadNeighbor
+        {
+            uint32  _other;
+            float32 _capacity;
+            uint32  _pairIndex;
+        };
+        /** @brief 붙은 덩어리의 노드 사이 이웃 관계(인덱스는 `listNode` 안의 위치)와, 쌍마다 연결들 · 지지 세기입니다. */
+        struct OverloadGraph
+        {
+            vector<vector<OverloadNeighbor>> _listNeighbor;
+            vector<vector<uint32>>           _listPairLink;
+            vector<float32>                  _listPairCapacity;
+        };
+        /** @brief 이웃 쌍(작은 인덱스에서 큰 인덱스로)마다 맞닿은 넓이와 그 사이의 연결들을 구합니다. */
+        void computeOverloadGraph( const vector<uint32>& listNode, OverloadGraph& outGraph ) const;
+        /** @brief 앵커에서 너비 우선으로 깊이(앵커까지 몇 단계인지)를 구합니다. 큐는 너비 우선 방문 순서입니다. */
+        void measureAnchorDepth( const vector<uint32>& listNode, const OverloadGraph& graph, vector<uint32>& outListDepth, vector<uint32>& outListQueue ) const;
+        /** @brief 깊은 노드부터 자기 무게와 받은 하중을 얕은 이웃에게 세기 비율로 넘기고, 세기를 넘으면 그 사이를 끊습니다. 끊었으면 true 입니다. */
+        bool spreadLoad( const vector<uint32>& listNode, const OverloadGraph& graph, const vector<uint32>& listDepth, const vector<uint32>& listQueue, DestructionChange& outChange );
         /** @brief 활성 노드가 앵커 잎을 포함하는지 반환합니다. */
         bool hasAnchoredLeaf( uint32 node ) const;
         /** @brief 그룹 번호의 인덱스를 반환합니다. 없으면 -1 입니다. */

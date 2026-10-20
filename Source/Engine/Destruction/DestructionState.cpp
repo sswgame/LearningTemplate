@@ -360,20 +360,13 @@ namespace sw
         }
     }
 
-    bool DestructionState::relieveOverload( const vector<uint32>& listNode, DestructionChange& outChange )
+    void DestructionState::computeOverloadGraph( const vector<uint32>& listNode, OverloadGraph& outGraph ) const
     {
         const FractureGraph& graph     = *_pGraph;
         const uint32         nodeCount = static_cast<uint32>( listNode.size() );
-        // 이웃 쌍(작은 인덱스에서 큰 인덱스로)마다 맞닿은 넓이와 그 사이의 연결들을 구한다.
-        struct Neighbor
-        {
-            uint32  _other;
-            float32 _capacity;
-            uint32  _pairIndex;
-        };
-        vector<vector<Neighbor>> listNeighbor( nodeCount );
-        vector<vector<uint32>>   listPairLink;
-        vector<float32>          listPairCapacity;
+        outGraph._listNeighbor.assign( nodeCount, vector<OverloadNeighbor>{} );
+        outGraph._listPairLink.clear();
+        outGraph._listPairCapacity.clear();
         for ( uint32 index = 0; index < nodeCount; ++index )
         {
             const FractureNode& data = graph._listNode[listNode[index]];
@@ -389,88 +382,95 @@ namespace sw
                         continue;
                     const uint32 other = static_cast<uint32>( otherAt );
                     uint32       pair  = 0xFFFFFFFFu;
-                    for ( const Neighbor& neighbor : listNeighbor[index] )
+                    for ( const OverloadNeighbor& neighbor : outGraph._listNeighbor[index] )
                     {
                         if ( neighbor._other == other )
                             pair = neighbor._pairIndex;
                     }
                     if ( pair == 0xFFFFFFFFu )
                     {
-                        pair = static_cast<uint32>( listPairLink.size() );
-                        listPairLink.push_back( vector<uint32>{} );
-                        listPairCapacity.push_back( 0.0f );
-                        listNeighbor[index].push_back( Neighbor{ other, 0.0f, pair } );
-                        listNeighbor[other].push_back( Neighbor{ index, 0.0f, pair } );
+                        pair = static_cast<uint32>( outGraph._listPairLink.size() );
+                        outGraph._listPairLink.push_back( vector<uint32>{} );
+                        outGraph._listPairCapacity.push_back( 0.0f );
+                        outGraph._listNeighbor[index].push_back( OverloadNeighbor{ other, 0.0f, pair } );
+                        outGraph._listNeighbor[other].push_back( OverloadNeighbor{ index, 0.0f, pair } );
                     }
-                    listPairLink[pair].push_back( link );
-                    listPairCapacity[pair] += linkData._area * _profile._supportStrength;
+                    outGraph._listPairLink[pair].push_back( link );
+                    outGraph._listPairCapacity[pair] += linkData._area * _profile._supportStrength;
                 }
             }
         }
-        for ( vector<Neighbor>& list : listNeighbor )
+        for ( vector<OverloadNeighbor>& list : outGraph._listNeighbor )
         {
-            for ( Neighbor& neighbor : list )
+            for ( OverloadNeighbor& neighbor : list )
             {
-                neighbor._capacity = listPairCapacity[neighbor._pairIndex];
+                neighbor._capacity = outGraph._listPairCapacity[neighbor._pairIndex];
             }
-            std::sort( list.begin(), list.end(), []( const Neighbor& lhs, const Neighbor& rhs )
+            std::sort( list.begin(), list.end(), []( const OverloadNeighbor& lhs, const OverloadNeighbor& rhs )
             { return lhs._other < rhs._other; } );
         }
+    }
 
-        // 앵커에서 너비 우선으로 깊이(앵커까지 몇 단계인지)를 구한다.
-        vector<uint32> listDepth( nodeCount, 0xFFFFFFFFu );
-        vector<uint32> listQueue;
+    void DestructionState::measureAnchorDepth( const vector<uint32>& listNode, const OverloadGraph& graph, vector<uint32>& outListDepth, vector<uint32>& outListQueue ) const
+    {
+        const uint32 nodeCount = static_cast<uint32>( listNode.size() );
+        outListDepth.assign( nodeCount, 0xFFFFFFFFu );
+        outListQueue.clear();
         for ( uint32 index = 0; index < nodeCount; ++index )
         {
             if ( hasAnchoredLeaf( listNode[index] ) )
             {
-                listDepth[index] = 0;
-                listQueue.push_back( index );
+                outListDepth[index] = 0;
+                outListQueue.push_back( index );
             }
         }
-        for ( size_t cursor = 0; cursor < listQueue.size(); ++cursor )
+        for ( size_t cursor = 0; cursor < outListQueue.size(); ++cursor )
         {
-            const uint32 current = listQueue[cursor];
-            for ( const Neighbor& neighbor : listNeighbor[current] )
+            const uint32 current = outListQueue[cursor];
+            for ( const OverloadNeighbor& neighbor : graph._listNeighbor[current] )
             {
-                if ( listDepth[neighbor._other] != 0xFFFFFFFFu )
+                if ( outListDepth[neighbor._other] != 0xFFFFFFFFu )
                     continue;
-                listDepth[neighbor._other] = listDepth[current] + 1;
-                listQueue.push_back( neighbor._other );
+                outListDepth[neighbor._other] = outListDepth[current] + 1;
+                outListQueue.push_back( neighbor._other );
             }
         }
+    }
 
-        // 깊은 노드부터 자기 무게와 받은 하중을 더 얕은 이웃에게 맞닿은 세기의 비율로 나눠 넘긴다. 나눠 받은 하중이 세기를 넘으면 그 사이가 끊긴다.
-        vector<float32> listIncoming( nodeCount, 0.0f );
-        bool            bBroke  = false;
-        const float32   gravity = PhysicsSystem::getConfiguredGravityMagnitude(); // 설정된 물리 중력이다. 서버와 클라이언트가 같은 설정을 읽는다.
+    bool DestructionState::spreadLoad( const vector<uint32>& listNode, const OverloadGraph& graph, const vector<uint32>& listDepth, const vector<uint32>& listQueue,
+                                       DestructionChange& outChange )
+    {
+        const FractureGraph& fractureGraph = *_pGraph;
+        vector<float32>      listIncoming( listNode.size(), 0.0f );
+        bool                 bBroke  = false;
+        const float32        gravity = PhysicsSystem::getConfiguredGravityMagnitude(); // 설정된 물리 중력이다. 서버와 클라이언트가 같은 설정을 읽는다.
         for ( size_t order = listQueue.size(); order > 0; --order )
         {
             const uint32 current = listQueue[order - 1];
             if ( listDepth[current] == 0 )
                 continue;
-            const float32 load          = graph._listNode[listNode[current]]._volume * _profile._density * gravity + listIncoming[current];
+            const float32 load          = fractureGraph._listNode[listNode[current]]._volume * _profile._density * gravity + listIncoming[current];
             float32       totalCapacity = 0.0f;
-            for ( const Neighbor& neighbor : listNeighbor[current] )
+            for ( const OverloadNeighbor& neighbor : graph._listNeighbor[current] )
             {
                 if ( listDepth[neighbor._other] < listDepth[current] )
                     totalCapacity += neighbor._capacity;
             }
             if ( totalCapacity <= 0.0f )
                 continue;
-            for ( const Neighbor& neighbor : listNeighbor[current] )
+            for ( const OverloadNeighbor& neighbor : graph._listNeighbor[current] )
             {
                 if ( listDepth[neighbor._other] >= listDepth[current] )
                     continue;
                 const float32 share = load * neighbor._capacity / totalCapacity;
                 listIncoming[neighbor._other] += share;
-                for ( const uint32 link : listPairLink[neighbor._pairIndex] )
+                for ( const uint32 link : graph._listPairLink[neighbor._pairIndex] )
                 {
                     _listLinkLoad[link] = share;
                 }
                 if ( share <= neighbor._capacity )
                     continue;
-                for ( const uint32 link : listPairLink[neighbor._pairIndex] )
+                for ( const uint32 link : graph._listPairLink[neighbor._pairIndex] )
                 {
                     if ( _listLinkBroken[link] != SW_FALSE )
                         continue;
@@ -482,6 +482,16 @@ namespace sw
             }
         }
         return bBroke;
+    }
+
+    bool DestructionState::relieveOverload( const vector<uint32>& listNode, DestructionChange& outChange )
+    {
+        OverloadGraph graph;
+        computeOverloadGraph( listNode, graph );
+        vector<uint32> listDepth;
+        vector<uint32> listQueue;
+        measureAnchorDepth( listNode, graph, listDepth, listQueue );
+        return spreadLoad( listNode, graph, listDepth, listQueue, outChange );
     }
 
     void DestructionState::regroup( vector<uint32>& inoutListDirtyGroupID, DestructionChange& outChange )

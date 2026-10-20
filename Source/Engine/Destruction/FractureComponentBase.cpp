@@ -1143,6 +1143,81 @@ namespace sw
         _bPoseDirty = SW_TRUE;
     }
 
+    void FractureComponentBase::removeGroupRuntimes( const DestructionChange& change, vector<PhysicsBodyHandle>& outListDestroy, vector<FractureGroupRuntime>& outListRemoved )
+    {
+        for ( const uint32 groupID : change._listRemovedGroup )
+        {
+            FractureGroupRuntime* pRuntime = findRuntime( groupID );
+            if ( pRuntime == nullptr )
+                continue;
+            outListRemoved.push_back( *pRuntime );
+            if ( pRuntime->_body.isValid() )
+            {
+                outListDestroy.push_back( pRuntime->_body );
+                changeDebrisBodyCount( -1 );
+            }
+            if ( pRuntime->_shape.isValid() )
+                _physics->destroyShape( pRuntime->_shape );
+            _listRuntime.erase( _listRuntime.begin() + ( pRuntime - _listRuntime.data() ) );
+        }
+    }
+
+    float3 FractureComponentBase::computeImpactVelocity( const DestructionGroup& group, const FractureGroupRuntime& runtime, const DestructionDamageEvent& event, DestructionRandom& random ) const
+    {
+        float3 center{};
+        (void)_state.computeGroupMass( group, center );
+        float3 push = event._kind == DestructionDamageKind::Radial ? ( center - event._position ) : event._direction;
+        if ( push.getLengthSquared() < 1.0e-8f )
+            push = float3{ 0.0f, 1.0f, 0.0f };
+        push = push.normalize();
+        // 같은 시드와 같은 사건이면 같은 흩기가 나온다. 보기 좋게 조금 비틀지만 상태에는 영향이 없다.
+        push            = ( push + random.nextPointInUnitSphere() * 0.25f ).normalize();
+        float32 falloff = 1.0f;
+        if ( event._kind == DestructionDamageKind::Radial && event._radius > 0.0f )
+            falloff = MathUtil::max( 0.0f, 1.0f - float3::getDistance( center, event._position ) / event._radius );
+        float3        mass3{};
+        const float32 mass = _state.computeGroupMass( group, mass3 ) * _objectScale * _objectScale * _objectScale;
+        return float3::transform( push, runtime._rotation ) * ( event._impulse * falloff / MathUtil::max( mass, 1.0f ) );
+    }
+
+    void FractureComponentBase::createGroupRuntime( const DestructionGroup& group, bool bFirst, const vector<FractureGroupRuntime>& listRemoved, const DestructionDamageEvent* pEvent,
+                                                    DestructionRandom& random )
+    {
+        FractureGroupRuntime runtime;
+        runtime._groupID       = group._id;
+        runtime._position      = _objectPosition;
+        runtime._rotation      = _objectRotation;
+        float3 linearVelocity  = bFirst ? _intactLinearVelocity : float3{};
+        float3 angularVelocity = bFirst ? _intactAngularVelocity : float3{};
+        for ( const FractureGroupRuntime& parent : listRemoved )
+        {
+            if ( parent._groupID != group._parentID )
+                continue;
+            runtime._position = parent._position;
+            runtime._rotation = parent._rotation;
+            if ( parent._body.isValid() )
+            {
+                // 부모 질량 중심의 속도 + 각속도 × (자식 질량 중심 - 부모 원점)이다. 떨어지던 덩어리가 갈라져도 같은 운동을 이어 간다.
+                float3 parentLinear{};
+                float3 parentAngular{};
+                _physics->readVelocity( parent._body, parentLinear, parentAngular );
+                float3 childCenter{};
+                (void)_state.computeGroupMass( group, childCenter );
+                const float3 offset = float3::transform( childCenter * _objectScale, parent._rotation );
+                linearVelocity      = parentLinear + parentAngular.cross( offset );
+                angularVelocity     = parentAngular;
+            }
+        }
+        runtime._bAnchored = group._bAnchored;
+        if ( runtime._bAnchored == SW_FALSE )
+        {
+            if ( pEvent != nullptr && pEvent->_impulse > 0.0f )
+                linearVelocity += computeImpactVelocity( group, runtime, *pEvent, random );
+            spawnGroup( runtime, group, linearVelocity, angularVelocity );
+        }
+        _listRuntime.push_back( runtime );
+    }
+
     void FractureComponentBase::applyGroupChange( ScenePhysics& physics, const DestructionChange& change, const DestructionDamageEvent* pEvent, uint32 eventIndex )
     {
         (void)physics;
@@ -1150,21 +1225,7 @@ namespace sw
         vector<FractureGroupRuntime> listRemoved;
         // 갓 쪼갰으면 런타임이 아직 없다. 모든 그룹이 오브젝트 자세에서 새로 생성된다.
         const bool bFirst = _listRuntime.empty();
-        for ( const uint32 groupID : change._listRemovedGroup )
-        {
-            FractureGroupRuntime* pRuntime = findRuntime( groupID );
-            if ( pRuntime == nullptr )
-                continue;
-            listRemoved.push_back( *pRuntime );
-            if ( pRuntime->_body.isValid() )
-            {
-                listDestroy.push_back( pRuntime->_body );
-                changeDebrisBodyCount( -1 );
-            }
-            if ( pRuntime->_shape.isValid() )
-                _physics->destroyShape( pRuntime->_shape );
-            _listRuntime.erase( _listRuntime.begin() + ( pRuntime - _listRuntime.data() ) );
-        }
+        removeGroupRuntimes( change, listDestroy, listRemoved );
 
         vector<uint32> listCreated;
         if ( bFirst )
@@ -1185,54 +1246,7 @@ namespace sw
             const DestructionGroup* pGroup = _state.findGroup( groupID );
             if ( pGroup == nullptr )
                 continue;
-            FractureGroupRuntime runtime;
-            runtime._groupID       = groupID;
-            runtime._position      = _objectPosition;
-            runtime._rotation      = _objectRotation;
-            float3 linearVelocity  = bFirst ? _intactLinearVelocity : float3{};
-            float3 angularVelocity = bFirst ? _intactAngularVelocity : float3{};
-            for ( const FractureGroupRuntime& parent : listRemoved )
-            {
-                if ( parent._groupID != pGroup->_parentID )
-                    continue;
-                runtime._position = parent._position;
-                runtime._rotation = parent._rotation;
-                if ( parent._body.isValid() )
-                {
-                    // 부모 질량 중심의 속도 + 각속도 × (자식 질량 중심 - 부모 원점)이다. 떨어지던 덩어리가 갈라져도 같은 운동을 이어 간다.
-                    float3 parentLinear{};
-                    float3 parentAngular{};
-                    _physics->readVelocity( parent._body, parentLinear, parentAngular );
-                    float3 childCenter{};
-                    (void)_state.computeGroupMass( *pGroup, childCenter );
-                    const float3 offset = float3::transform( childCenter * _objectScale, parent._rotation );
-                    linearVelocity      = parentLinear + parentAngular.cross( offset );
-                    angularVelocity     = parentAngular;
-                }
-            }
-            runtime._bAnchored = pGroup->_bAnchored;
-            if ( runtime._bAnchored == SW_FALSE )
-            {
-                if ( pEvent != nullptr && pEvent->_impulse > 0.0f )
-                {
-                    float3 center{};
-                    (void)_state.computeGroupMass( *pGroup, center );
-                    float3 push = pEvent->_kind == DestructionDamageKind::Radial ? ( center - pEvent->_position ) : pEvent->_direction;
-                    if ( push.getLengthSquared() < 1.0e-8f )
-                        push = float3{ 0.0f, 1.0f, 0.0f };
-                    push = push.normalize();
-                    // 같은 시드와 같은 사건이면 같은 흩기가 나온다. 보기 좋게 조금 비틀지만 상태에는 영향이 없다.
-                    push            = ( push + random.nextPointInUnitSphere() * 0.25f ).normalize();
-                    float32 falloff = 1.0f;
-                    if ( pEvent->_kind == DestructionDamageKind::Radial && pEvent->_radius > 0.0f )
-                        falloff = MathUtil::max( 0.0f, 1.0f - float3::getDistance( center, pEvent->_position ) / pEvent->_radius );
-                    float3        mass3{};
-                    const float32 mass = _state.computeGroupMass( *pGroup, mass3 ) * _objectScale * _objectScale * _objectScale;
-                    linearVelocity += float3::transform( push, runtime._rotation ) * ( pEvent->_impulse * falloff / MathUtil::max( mass, 1.0f ) );
-                }
-                spawnGroup( runtime, *pGroup, linearVelocity, angularVelocity );
-            }
-            _listRuntime.push_back( runtime );
+            createGroupRuntime( *pGroup, bFirst, listRemoved, pEvent, random );
         }
         std::sort( _listRuntime.begin(), _listRuntime.end(), []( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs )
         { return lhs._groupID < rhs._groupID; } );

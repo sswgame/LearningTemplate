@@ -153,6 +153,162 @@ namespace sw
                 }
                 return vertex;
             }
+
+            /** @brief 부피가 있는(넓이가 0 이 아닌) 조각의 번호표와 그래프입니다. */
+            struct PieceSet
+            {
+                vector<uint32> _listPieceOfSite;
+                vector<uint32> _listSiteOfPiece;
+                FractureGraph  _graph;
+            };
+
+            /** @brief 셀 꼭짓점의 위치만 모읍니다. */
+            static void collectPoints( const vector<Corner>& listCorner, vector<float2>& outListPoint )
+            {
+                outListPoint.clear();
+                for ( const Corner& corner : listCorner )
+                {
+                    outListPoint.push_back( corner._point );
+                }
+            }
+
+            /** @brief 시드 하나의 셀을 가까운 이웃부터 이등분 직선으로 자릅니다. 셀이 사라지면(꼭짓점 3 개 미만) 빈 목록입니다. */
+            static vector<Corner> cutCell( uint32 site, const vector<float2>& listSite, const vector<Corner>& listSource, vector<Corner>& inoutListScratch,
+                                           vector<std::pair<float32, uint32>>& inoutListNear )
+            {
+                const uint32   siteCount  = static_cast<uint32>( listSite.size() );
+                vector<Corner> listCorner = listSource;
+                inoutListNear.clear();
+                for ( uint32 other = 0; other < siteCount; ++other )
+                {
+                    if ( other != site )
+                        inoutListNear.emplace_back( float2::getDistanceSquared( listSite[site], listSite[other] ), other );
+                }
+                std::sort( inoutListNear.begin(), inoutListNear.end() );
+                for ( const std::pair<float32, uint32>& entry : inoutListNear )
+                {
+                    float32 radiusSquared = 0.0f;
+                    for ( const Corner& corner : listCorner )
+                    {
+                        radiusSquared = MathUtil::max( radiusSquared, float2::getDistanceSquared( corner._point, listSite[site] ) );
+                    }
+                    if ( entry.first * 0.25f > radiusSquared )
+                        break;
+                    const float2  delta  = listSite[entry.second] - listSite[site];
+                    const float2  normal = delta / MathUtil::sqrt( entry.first );
+                    const float2  middle = ( listSite[entry.second] + listSite[site] ) * 0.5f;
+                    const float32 offset = normal._x * middle._x + normal._y * middle._y;
+                    clip( listCorner, normal, offset, static_cast<int32>( entry.second ), inoutListScratch );
+                    listCorner.swap( inoutListScratch );
+                    if ( listCorner.size() < 3 )
+                    {
+                        listCorner.clear();
+                        break;
+                    }
+                }
+                return listCorner;
+            }
+
+            /** @brief 넓이가 0 이 아닌 조각만 번호를 매기고 그래프 노드(무게중심 · 넓이)를 만듭니다. */
+            static void numberPieces( const vector<vector<Corner>>& listCell, PieceSet& outPieces )
+            {
+                const uint32   siteCount = static_cast<uint32>( listCell.size() );
+                vector<float2> listPoint;
+                outPieces._listPieceOfSite.assign( siteCount, 0xFFFFFFFFu );
+                for ( uint32 site = 0; site < siteCount; ++site )
+                {
+                    collectPoints( listCell[site], listPoint );
+                    float2        pieceCentroid{};
+                    const float32 area = listPoint.size() >= 3 ? PolygonFractureUtil::computeArea( listPoint, pieceCentroid ) : 0.0f;
+                    if ( area <= 1.0e-10f )
+                        continue;
+                    outPieces._listPieceOfSite[site] = static_cast<uint32>( outPieces._listSiteOfPiece.size() );
+                    outPieces._listSiteOfPiece.push_back( site );
+                    FractureNode node;
+                    node._centroid = float3{ pieceCentroid, 0.0f };
+                    node._volume   = area;
+                    outPieces._graph._listNode.push_back( node );
+                }
+                outPieces._graph._leafCount = static_cast<uint32>( outPieces._listSiteOfPiece.size() );
+            }
+
+            /** @brief 연결: 조각 i 에서 j 쪽 직선이 만든 변 길이와 그 반대 방향 변 길이 중 짧은 것을 씁니다. */
+            static void linkPieces( const vector<vector<Corner>>& listCell, PieceSet& inoutPieces )
+            {
+                const uint32    pieceCount = static_cast<uint32>( inoutPieces._listSiteOfPiece.size() );
+                vector<float32> listLength( static_cast<size_t>( pieceCount ) * pieceCount, 0.0f );
+                for ( uint32 piece = 0; piece < pieceCount; ++piece )
+                {
+                    const vector<Corner>& listCorner = listCell[inoutPieces._listSiteOfPiece[piece]];
+                    for ( size_t index = 0; index < listCorner.size(); ++index )
+                    {
+                        const Corner& corner = listCorner[index];
+                        if ( corner._tag < 0 || inoutPieces._listPieceOfSite[static_cast<uint32>( corner._tag )] == 0xFFFFFFFFu )
+                            continue;
+                        const uint32 other = inoutPieces._listPieceOfSite[static_cast<uint32>( corner._tag )];
+                        listLength[static_cast<size_t>( piece ) * pieceCount + other] += float2::getDistance( corner._point, listCorner[( index + 1 ) % listCorner.size()]._point );
+                    }
+                }
+                for ( uint32 pieceA = 0; pieceA < pieceCount; ++pieceA )
+                {
+                    for ( uint32 pieceB = pieceA + 1; pieceB < pieceCount; ++pieceB )
+                    {
+                        const float32 length = MathUtil::min( listLength[static_cast<size_t>( pieceA ) * pieceCount + pieceB], listLength[static_cast<size_t>( pieceB ) * pieceCount + pieceA] );
+                        if ( length > 0.0f )
+                            inoutPieces._graph._listLink.push_back( FractureLink{ pieceA, pieceB, length } );
+                    }
+                }
+                FractureGraphUtil::normalizeLinks( inoutPieces._graph._listLink );
+            }
+
+            /** @brief 잎 조각 하나(번호 @p leaf)의 앞뒤 면 삼각형 · 경계 · 껍질 점을 에셋에 더합니다. */
+            static void appendPiece( const vector<Corner>& listCorner, uint32 leaf, const float2& boundsMin, const float2& extent, FractureAsset& inoutAsset )
+            {
+                vector<float2> listPoint;
+                collectPoints( listCorner, listPoint );
+                vector<uint32> listLoop( listPoint.size() );
+                for ( uint32 index = 0; index < static_cast<uint32>( listLoop.size() ); ++index )
+                {
+                    listLoop[index] = index;
+                }
+                vector<uint32> listIndex;
+                (void)PolygonTriangulationUtil::triangulate( listPoint, vector<vector<uint32>>{ listLoop }, listIndex ); // 실패하면 빈 목록이라 조각이 그려지지 않고, 아래 검증이 알린다
+
+                FracturePiece piece;
+                piece._firstVertex = static_cast<uint32>( inoutAsset._listVertex.size() );
+                for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
+                {
+                    // 앞면(+Z)은 반시계 그대로, 뒷면(-Z)은 뒤집어 만든다. 어느 쪽에서 보아도 보인다.
+                    const float2& a = listPoint[listIndex[index]];
+                    const float2& b = listPoint[listIndex[index + 1]];
+                    const float2& c = listPoint[listIndex[index + 2]];
+                    for ( const float2* pPoint : { &a, &b, &c } )
+                    {
+                        inoutAsset._listVertex.push_back( makeVertex( *pPoint, 1.0f, boundsMin, extent ) );
+                    }
+                    for ( const float2* pPoint : { &a, &c, &b } )
+                    {
+                        inoutAsset._listVertex.push_back( makeVertex( *pPoint, -1.0f, boundsMin, extent ) );
+                    }
+                    inoutAsset._listTriangleSlot.push_back( static_cast<uint8>( FractureSurfaceSlot::Outer ) );
+                    inoutAsset._listTriangleSlot.push_back( static_cast<uint8>( FractureSurfaceSlot::Outer ) );
+                }
+                piece._vertexCount        = static_cast<uint32>( inoutAsset._listVertex.size() ) - piece._firstVertex;
+                piece._firstHullPoint     = static_cast<uint32>( inoutAsset._listHullPoint.size() );
+                const float3& pieceCenter = inoutAsset._graph._listNode[leaf]._centroid;
+                float2        pieceMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+                float2        pieceMax{ MathUtil::kMinFloat, MathUtil::kMinFloat };
+                for ( const float2& point : listPoint )
+                {
+                    inoutAsset._listHullPoint.push_back( float3{ point, 0.0f } - pieceCenter );
+                    pieceMin = float2::min( pieceMin, point );
+                    pieceMax = float2::max( pieceMax, point );
+                }
+                piece._hullPointCount = static_cast<uint32>( listPoint.size() );
+                piece._boundsMin      = float3{ pieceMin, 0.0f };
+                piece._boundsMax      = float3{ pieceMax, 0.0f };
+                inoutAsset._listPiece.push_back( piece );
+            }
         };
     } // namespace
 } // namespace sw
@@ -213,96 +369,19 @@ namespace sw
         vector<std::pair<float32, uint32>> listNear;
         for ( uint32 site = 0; site < siteCount; ++site )
         {
-            vector<Corner> listCorner = listSource;
-            listNear.clear();
-            for ( uint32 other = 0; other < siteCount; ++other )
-            {
-                if ( other != site )
-                    listNear.emplace_back( float2::getDistanceSquared( listSite[site], listSite[other] ), other );
-            }
-            std::sort( listNear.begin(), listNear.end() );
-            for ( const std::pair<float32, uint32>& entry : listNear )
-            {
-                float32 radiusSquared = 0.0f;
-                for ( const Corner& corner : listCorner )
-                {
-                    radiusSquared = MathUtil::max( radiusSquared, float2::getDistanceSquared( corner._point, listSite[site] ) );
-                }
-                if ( entry.first * 0.25f > radiusSquared )
-                    break;
-                const float2  delta  = listSite[entry.second] - listSite[site];
-                const float2  normal = delta / MathUtil::sqrt( entry.first );
-                const float2  middle = ( listSite[entry.second] + listSite[site] ) * 0.5f;
-                const float32 offset = normal._x * middle._x + normal._y * middle._y;
-                Internal::clip( listCorner, normal, offset, static_cast<int32>( entry.second ), listScratch );
-                listCorner.swap( listScratch );
-                if ( listCorner.size() < 3 )
-                {
-                    listCorner.clear();
-                    break;
-                }
-            }
-            listCell[site] = std::move( listCorner );
+            listCell[site] = Internal::cutCell( site, listSite, listSource, listScratch, listNear );
         }
 
-        // 조각: 넓이 0 은 뺀다.
-        vector<uint32> listPieceOfSite( siteCount, 0xFFFFFFFFu );
-        vector<uint32> listSiteOfPiece;
-        FractureGraph  graph;
-        vector<float2> listPoint;
-        for ( uint32 site = 0; site < siteCount; ++site )
-        {
-            listPoint.clear();
-            for ( const Corner& corner : listCell[site] )
-            {
-                listPoint.push_back( corner._point );
-            }
-            float2        pieceCentroid{};
-            const float32 area = listPoint.size() >= 3 ? computeArea( listPoint, pieceCentroid ) : 0.0f;
-            if ( area <= 1.0e-10f )
-                continue;
-            listPieceOfSite[site] = static_cast<uint32>( listSiteOfPiece.size() );
-            listSiteOfPiece.push_back( site );
-            FractureNode node;
-            node._centroid = float3{ pieceCentroid, 0.0f };
-            node._volume   = area;
-            graph._listNode.push_back( node );
-        }
-        if ( listSiteOfPiece.empty() )
+        Internal::PieceSet pieces;
+        Internal::numberPieces( listCell, pieces );
+        if ( pieces._listSiteOfPiece.empty() )
         {
             outError = "no piece has area";
             return false;
         }
-        const uint32 pieceCount = static_cast<uint32>( listSiteOfPiece.size() );
-        graph._leafCount        = pieceCount;
-
-        // 연결: 조각 i 에서 j 쪽 직선이 만든 변 길이와 그 반대 방향 변 길이 중 짧은 것을 쓴다.
-        vector<float32> listLength( static_cast<size_t>( pieceCount ) * pieceCount, 0.0f );
-        for ( uint32 piece = 0; piece < pieceCount; ++piece )
-        {
-            const vector<Corner>& listCorner = listCell[listSiteOfPiece[piece]];
-            for ( size_t index = 0; index < listCorner.size(); ++index )
-            {
-                const Corner& corner = listCorner[index];
-                if ( corner._tag < 0 || listPieceOfSite[static_cast<uint32>( corner._tag )] == 0xFFFFFFFFu )
-                    continue;
-                const uint32 other = listPieceOfSite[static_cast<uint32>( corner._tag )];
-                listLength[static_cast<size_t>( piece ) * pieceCount + other] +=
-                    float2::getDistance( corner._point, listCorner[( index + 1 ) % listCorner.size()]._point );
-            }
-        }
-        for ( uint32 pieceA = 0; pieceA < pieceCount; ++pieceA )
-        {
-            for ( uint32 pieceB = pieceA + 1; pieceB < pieceCount; ++pieceB )
-            {
-                const float32 length = MathUtil::min( listLength[static_cast<size_t>( pieceA ) * pieceCount + pieceB], listLength[static_cast<size_t>( pieceB ) * pieceCount + pieceA] );
-                if ( length > 0.0f )
-                    graph._listLink.push_back( FractureLink{ pieceA, pieceB, length } );
-            }
-        }
-        FractureGraphUtil::normalizeLinks( graph._listLink );
+        Internal::linkPieces( listCell, pieces );
         vector<uint32> listLeafOrder;
-        FractureGraphUtil::populateHierarchy( graph, settings._listLevelCount, listLeafOrder );
+        FractureGraphUtil::populateHierarchy( pieces._graph, settings._listLevelCount, listLeafOrder );
 
         float2 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
         float2 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat };
@@ -311,62 +390,13 @@ namespace sw
             boundsMin = float2::min( boundsMin, point );
             boundsMax = float2::max( boundsMax, point );
         }
-        const float2 extent = boundsMax - boundsMin;
-        outAsset._graph     = std::move( graph );
+        outAsset._graph     = std::move( pieces._graph );
         outAsset._seed      = settings._seed;
         outAsset._boundsMin = float3{ boundsMin, 0.0f };
         outAsset._boundsMax = float3{ boundsMax, 0.0f };
-        vector<uint32> listIndex;
-        for ( uint32 leaf = 0; leaf < pieceCount; ++leaf )
+        for ( uint32 leaf = 0; leaf < static_cast<uint32>( pieces._listSiteOfPiece.size() ); ++leaf )
         {
-            const vector<Corner>& listCorner = listCell[listSiteOfPiece[listLeafOrder[leaf]]];
-            listPoint.clear();
-            for ( const Corner& corner : listCorner )
-            {
-                listPoint.push_back( corner._point );
-            }
-            listIndex.clear();
-            vector<uint32> listLoop( listPoint.size() );
-            for ( uint32 index = 0; index < static_cast<uint32>( listLoop.size() ); ++index )
-            {
-                listLoop[index] = index;
-            }
-            (void)PolygonTriangulationUtil::triangulate( listPoint, vector<vector<uint32>>{ listLoop }, listIndex );
-
-            FracturePiece piece;
-            piece._firstVertex = static_cast<uint32>( outAsset._listVertex.size() );
-            for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
-            {
-                // 앞면(+Z)은 반시계 그대로, 뒷면(-Z)은 뒤집어 만든다. 어느 쪽에서 보아도 보인다.
-                const float2& a = listPoint[listIndex[index]];
-                const float2& b = listPoint[listIndex[index + 1]];
-                const float2& c = listPoint[listIndex[index + 2]];
-                for ( const float2* pPoint : { &a, &b, &c } )
-                {
-                    outAsset._listVertex.push_back( Internal::makeVertex( *pPoint, 1.0f, boundsMin, extent ) );
-                }
-                for ( const float2* pPoint : { &a, &c, &b } )
-                {
-                    outAsset._listVertex.push_back( Internal::makeVertex( *pPoint, -1.0f, boundsMin, extent ) );
-                }
-                outAsset._listTriangleSlot.push_back( static_cast<uint8>( FractureSurfaceSlot::Outer ) );
-                outAsset._listTriangleSlot.push_back( static_cast<uint8>( FractureSurfaceSlot::Outer ) );
-            }
-            piece._vertexCount        = static_cast<uint32>( outAsset._listVertex.size() ) - piece._firstVertex;
-            piece._firstHullPoint     = static_cast<uint32>( outAsset._listHullPoint.size() );
-            const float3& pieceCenter = outAsset._graph._listNode[leaf]._centroid;
-            float2        pieceMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
-            float2        pieceMax{ MathUtil::kMinFloat, MathUtil::kMinFloat };
-            for ( const float2& point : listPoint )
-            {
-                outAsset._listHullPoint.push_back( float3{ point, 0.0f } - pieceCenter );
-                pieceMin = float2::min( pieceMin, point );
-                pieceMax = float2::max( pieceMax, point );
-            }
-            piece._hullPointCount = static_cast<uint32>( listPoint.size() );
-            piece._boundsMin      = float3{ pieceMin, 0.0f };
-            piece._boundsMax      = float3{ pieceMax, 0.0f };
-            outAsset._listPiece.push_back( piece );
+            Internal::appendPiece( listCell[pieces._listSiteOfPiece[listLeafOrder[leaf]]], leaf, boundsMin, boundsMax - boundsMin, outAsset );
         }
         string validation;
         if ( outAsset.isValid( &validation ) == false )

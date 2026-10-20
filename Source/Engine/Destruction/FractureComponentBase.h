@@ -44,6 +44,7 @@
 
 namespace sw
 {
+    struct DestructionRandom;
     struct FractureAsset;
 
     class GameObjectManager;
@@ -266,6 +267,12 @@ namespace sw
         void activate( ScenePhysics& physics );
         /** @brief 사건 하나의 결과로 그룹 바디를 고칩니다. */
         void applyGroupChange( ScenePhysics& physics, const DestructionChange& change, const DestructionDamageEvent* pEvent, uint32 eventIndex );
+        /** @brief 사라진 그룹의 런타임을 지웁니다. 지운 런타임의 사본은 @p outListRemoved 에, 파괴할 바디는 @p outListDestroy 에 담습니다. */
+        void removeGroupRuntimes( const DestructionChange& change, vector<PhysicsBodyHandle>& outListDestroy, vector<FractureGroupRuntime>& outListRemoved );
+        /** @brief 새 그룹의 런타임을 만듭니다. 부모 바디의 운동을 이어받고, 떨어진 그룹이면 사건의 충격을 더해 동적 바디를 지습니다. */
+        void createGroupRuntime( const DestructionGroup& group, bool bFirst, const vector<FractureGroupRuntime>& listRemoved, const DestructionDamageEvent* pEvent, DestructionRandom& random );
+        /** @brief 사건의 충격이 그룹에 주는 선속도 변화를 반환합니다(같은 시드와 사건이면 같은 흩기). */
+        float3 computeImpactVelocity( const DestructionGroup& group, const FractureGroupRuntime& runtime, const DestructionDamageEvent& event, DestructionRandom& random ) const;
         /** @brief 떨어진 그룹 하나의 동적 바디를 만듭니다(앵커 그룹은 `syncStaticBodies` 가 잎마다). */
         void spawnGroup( FractureGroupRuntime& inoutRuntime, const DestructionGroup& group, const float3& linearVelocity, const float3& angularVelocity );
         /** @brief 앵커 그룹의 잎에만 정적 바디가 있게 맞춥니다. 남은 바디는 그대로 두므로 붙은 벽이 갈라져도 다시 만들지 않습니다. */
