@@ -7,6 +7,7 @@
 
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
@@ -97,7 +98,7 @@ namespace sw
         const hashed_string dataPathType( "DataPath" );
         for ( const PropertyInfo& prop : listProperty )
         {
-            if ( prop._metadata._bRequired == SW_FALSE )
+            if ( prop._metadata->_bRequired == SW_FALSE )
                 continue;
             const DataPath* pPath    = prop._typeName == dataPathType ? prop.getValuePtr<DataPath>( this ) : nullptr;
             const bool      bMissing = pPath != nullptr && pPath->isSet() == false;

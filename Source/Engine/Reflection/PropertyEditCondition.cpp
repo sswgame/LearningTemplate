@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -62,7 +63,7 @@ namespace sw
         (void)prop;
         return true;
 #else
-        string_view text = StringUtil::trim( prop._metadata._editCondition );
+        string_view text = StringUtil::trim( prop._metadata->_editCondition );
         if ( text.empty() )
             return true;
 
@@ -136,13 +137,13 @@ namespace sw
         (void)pInstance;
         return PropertyEditState::Enabled;
 #else
-        if ( prop._metadata._editCondition.empty() )
+        if ( prop._metadata->_editCondition.empty() )
             return PropertyEditState::Enabled;
         PropertyEditConditionExpr expr;
         string                    error;
         if ( parse( type, prop, expr, error ) == false || evaluate( expr, pInstance ) )
             return PropertyEditState::Enabled;
-        return prop._metadata._bEditConditionHides == SW_TRUE ? PropertyEditState::Hidden : PropertyEditState::Disabled;
+        return prop._metadata->_bEditConditionHides == SW_TRUE ? PropertyEditState::Hidden : PropertyEditState::Disabled;
 #endif
     }
 } // namespace sw

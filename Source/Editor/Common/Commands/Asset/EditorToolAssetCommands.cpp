@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -277,7 +278,7 @@ namespace sw::editor
             pTypeInfo->forEachProperty(
                 [&]( const PropertyInfo& prop )
             {
-                if ( prop._metadata._bTransient == SW_TRUE )
+                if ( prop._metadata->_bTransient == SW_TRUE )
                     return;
                 PrefabOverrideItem item{};
                 item._componentName = pTypeInfo->getDisplayName();
@@ -286,8 +287,8 @@ namespace sw::editor
                 item._propertyLabel = prop._name.c_str();
 #if !defined( SW_SHIPPING )
                 // 표시 이름 메타데이터는 Shipping 에서 빠진다(EditorTest 는 Shipping 에서도 이 파일을 짓는다).
-                if ( prop._metadata._displayName.empty() == false )
-                    item._propertyLabel = prop._metadata._displayName.c_str();
+                if ( prop._metadata->_displayName.empty() == false )
+                    item._propertyLabel = prop._metadata->_displayName.c_str();
 #endif
                 item._defaultValue    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCdoComp }, context );
                 item._overriddenValue = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstanceComponent }, context );

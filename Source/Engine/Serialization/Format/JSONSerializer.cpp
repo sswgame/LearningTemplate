@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -495,7 +496,7 @@ namespace sw
             if ( bSkipCaseVariantKey )
                 continue;
 
-            if ( pMatched == nullptr || pMatched->_metadata._bTransient == SW_TRUE )
+            if ( pMatched == nullptr || pMatched->_metadata->_bTransient == SW_TRUE )
             {
                 if ( pOutListOrphan != nullptr )
                 {

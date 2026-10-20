@@ -33,6 +33,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
@@ -79,7 +80,7 @@ namespace sw::editor
             const utf8* _pLabel = "##value";
             void        showTooltipIfHovered( const PropertyInfo& prop )
             {
-                EditorWidgets::drawTooltip( prop._metadata._tooltip.c_str() );
+                EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
             }
             void drawReadOnlyText( const PropertyInfo& prop, const utf8* pValue )
             {
@@ -101,14 +102,14 @@ namespace sw::editor
             /** @brief 색 편집 플래그입니다. `ColorHdr` 이면 1 을 넘는 값을 받습니다. */
             ImGuiColorEditFlags getColorFlags( const PropertyInfo& prop )
             {
-                return ImGuiColorEditFlags_Float | ( prop._metadata._bColorHdr != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
+                return ImGuiColorEditFlags_Float | ( prop._metadata->_bColorHdr != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
             }
 
             /** @brief 비트필드는 포인터를 잡을 수 없으므로 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
             bool drawBitFieldCheckbox( void* pInstance, const PropertyInfo& prop )
             {
                 bool bValue = prop.getValue<bool>( pInstance );
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, bValue ? "true" : "false" );
                     return true;
@@ -166,7 +167,7 @@ namespace sw::editor
                     ImGui::BeginChild( "##pickerList", ImVec2{ 320.0f * EditorThemeUtil::getDpiScale(), 260.0f * EditorThemeUtil::getDpiScale() } );
                     for ( const EditorResourceIndexEntry& entry : picker._listEntry )
                     {
-                        if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, entry._path ) == false ||
+                        if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, entry._path ) == false ||
                              filter.matchesAny( { string_view{ entry._path }, string_view{ entry._title } } ) == false )
                             continue;
                         const bool bFirst = shownCount == 0;
@@ -404,7 +405,7 @@ namespace sw::editor
                 const InspectorDisplayUnit unit      = InspectorPropertyLayout::getDisplayUnit( prop );
                 const float64              scale     = kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
                 const float32              dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer64> buf;
                     if constexpr ( kIsInteger )
@@ -461,7 +462,7 @@ namespace sw::editor
                 T* pPtr = prop.getValuePtr<T>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyValue( prop, pPtr );
                     return true;
@@ -485,7 +486,7 @@ namespace sw::editor
                 T* pPtr = prop.getValuePtr<T>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyValue( prop, pPtr );
                     return true;
@@ -529,7 +530,7 @@ namespace sw::editor
                 fixed_string<constant::kMaxBuffer512> preview;
                 makePreview( *pManager, *pValue, state, preview );
 
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, preview.c_str() );
                     return true;
@@ -631,12 +632,12 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
-                const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
+                const bool bAssetPath = prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false;
 
                 string* pPtr = prop.getValuePtr<string>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, pPtr->c_str() );
                     return true;
@@ -649,12 +650,12 @@ namespace sw::editor
                         [pPtr]( const utf8* pID )
                     { EditorWidgets::drawTextField( pID, *pPtr ); }, prop, string_view{ *pPtr }, droppedPath );
                     // `FileFilter` 에 맞지 않는 파일은 받지 않는다. 드롭, 선택, 지우기는 위젯 편집이 아니라 그리드가 적용해야 알림과 되돌리기에 남는다.
-                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
+                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, droppedPath ) )
                         grid.applyPropertyTextAsEdit( pInstance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
                         grid.applyPropertyTextAsEdit( pInstance, prop, "", "Clear Asset" );
                 }
-                else if ( prop._metadata._bMultiline != SW_FALSE )
+                else if ( prop._metadata->_bMultiline != SW_FALSE )
                 {
                     EditorWidgets::drawTextFieldMultiline( _pLabel, *pPtr );
                 }
@@ -673,12 +674,12 @@ namespace sw::editor
         public:
             bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
-                const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
+                const bool bAssetPath = prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false;
 
                 hashed_string* pPtr = prop.getValuePtr<hashed_string>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     drawReadOnlyText( prop, pPtr->c_str() );
                     return true;
@@ -690,7 +691,7 @@ namespace sw::editor
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pID )
                     { drawNameInput( pID, *pPtr ); }, prop, pPtr->view(), droppedPath );
-                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
+                    if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, droppedPath ) )
                         grid.applyPropertyTextAsEdit( pInstance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
                         grid.applyPropertyTextAsEdit( pInstance, prop, "", "Clear Asset" );
@@ -716,7 +717,7 @@ namespace sw::editor
                     return true;
                 // 라디안으로 저장한 각도(`Units=rad`)는 도로 보여 주고 편집한다. 바뀌었을 때만 다시 쓴다.
                 const InspectorDisplayUnit unit = InspectorPropertyLayout::getDisplayUnit( prop );
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     const float3                          shown = *pPtr * unit._scale;
                     fixed_string<constant::kMaxBuffer128> buf;
@@ -749,7 +750,7 @@ namespace sw::editor
                 float2* pPtr = prop.getValuePtr<float2>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer128> buf;
                     formatstring( buf.data(), buf.capacity(), "(%#, %#)",
@@ -772,7 +773,7 @@ namespace sw::editor
                 float4* pPtr = prop.getValuePtr<float4>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
-                if ( prop._metadata._bReadOnly != SW_FALSE )
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer256> buf;
                     formatstring( buf.data(), buf.capacity(), "(%#, %#, %#, %#)",

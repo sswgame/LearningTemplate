@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -208,7 +209,7 @@ namespace sw
         // 2) 필수 칸이 빠졌는지 본다. 초기값은 형식일 뿐이라 대신 쓰지 않는다.
         for ( const PropertyInfo& prop : listProperty )
         {
-            if ( prop._metadata._bRequired == SW_FALSE )
+            if ( prop._metadata->_bRequired == SW_FALSE )
                 continue;
             const string attributeName = Internal::makeAttributeName( prop );
             if ( node.findAttribute( attributeName.c_str() ) == nullptr )

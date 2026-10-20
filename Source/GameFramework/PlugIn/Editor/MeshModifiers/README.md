@@ -69,14 +69,14 @@
   고른 하위 모디파이어의 기즈모 · 매개변수를 같은 입력칸으로 편집한다(되돌리기는 바깥 스택 문서째). 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장되고 두 단계 중첩도 왕복한다. UI 가 들고 다닐 "고른 모디파이어" 는 번호 목록 경로로 가리키고(`DeformableModifier::findByPath` · `findOwningStack` - 담은 스택에 추가 · 삭제 · 위아래를 건다), `DeformableNestingTest` 가 고정한다.
 - **Point Cache** 는 경로를 파일 경로로 그대로 읽는다(리소스 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요하다).
 - **Displace 계열** 은 세션의 `trySampleTexture` 가 CPU 텍스처 표본기(`Stack/MeshModifierTextureSampler`)를 부른다. 이미지를 float4 텍셀로 디코드해 캐시하고(디코드는 Editor 의 `ImageUtil::loadFloat4FromMemory`),
-  이중선형 · Repeat 로 표본한다. 파일이 바뀌면 최대 1 초 뒤 다시 읽는다. 4096² 한 장이 256 MB 이고 메모리 상한은 없다. 웹캠은 정적 프레임으로 대체한다.
+  이중선형 · Repeat 로 표본한다. 파일이 바뀌면 최대 1 초 뒤 다시 읽는다. 4096² 한 장이 256 MB 이고, 캐시 합이 512 MB 를 넘으면 1 초 넘게 안 쓴 이미지부터 내린다(한 적용이 번갈아 쓰는 이미지는 남긴다). 웹캠은 정적 프레임으로 대체한다.
 - **Rolled** 는 한 바퀴를 넘으면 겹이 같은 반경에 겹친다. 값 노이즈 해시는 `Stack/MeshModifierNoise.h` 한 곳이다(VertexAnim 만 해시 식이 달라 `hashToUnit` · `valueNoise1D` 로 따로 둔다).
 - **뷰포트 편집**(`MeshModifiersVisualizer` + 순수 계산 `Stack/ModifierGizmoLogic`): 기즈모 이동 화살표 · 회전 고리, 범위 표시(반경 · 한계 · 중심 · 방향 — 힌트 다음 이름 규칙),
   격자 · ffd2d 제어점 클릭 고르기와 끌기(대칭은 세션 설정). 회전 고리는 기준 축 둘레 증분 회전을 곱한 뒤 Rz·Ry·Rx 오일러로 다시 푼다(`applyRotationDelta`, 짐벌 근처는 X 를 0 으로 두고 Z 에 몰아 유한하게 만든다). 손잡이를 집는 순간
   `EditorViewportMouseClaim::acquire` 로 뷰포트의 클릭 선택 · 변환 기즈모를 양보시키고 끄는 동안 매 프레임 다시 잡으며 놓을 때 `release` 한다(호버만으로는 잡지 않는다). 뷰포트는 시각화를 그린 뒤에 클릭 선택을 처리하므로 첫 클릭이 새지 않고,
   끄는 중에 시각화 토글을 꺼도 다음 프레임 시작(`beginFrame`)에 양보가 거둬진다. 범위 표시와 ffd2d 격자 상자는 선택한 모디파이어의 **입력 메시 상자**(앞 모디파이어까지 건 결과)를 쓴다.
   툴바 "Stage" 는 고른 모디파이어까지만 건 결과를 다른 색으로 겹친다. 와이어(최대 2 만 삼각형)는 늘 CPU 결과이고, 셰이딩된 결과는 아래 셰이딩 미리보기다.
-  자동화 시나리오 `Resource/engine/automation/editor/meshmodifiers.scenario.xml` 이 패널 · 기즈모 끌기(선택이 그대로인지 = 첫 클릭 누수 없음) · 곡선 목록 · 참조 목록 · 하위 스택 · GPU · CPU 셰이딩 그림을 본다
+  자동화 시나리오 `Resource/engine/automation/editor/meshmodifiers.scenario.xml` 이 패널 · 기즈모 끌기(선택이 그대로인지 = 첫 클릭 누수 없음) · 곡선 목록 · 참조 목록 · 하위 스택 · GPU · CPU 셰이딩 그림을 보고, 패널 · 기즈모 · 하위 스택을 `<CaptureEditorUI>` 로 찍는다
   (패널이 씬 뷰 위에 떠 있으면 손잡이를 가려서 끌기 전에 패널을 닫는다).
 - 굽기는 스킨 가중치를 옮기고 모프 타깃은 위치가 맞지 않아 버리며 경고한다. 결과 메시는 씬이 쓰기 전까지 아무도 참조하지 않아 `orphans` 규칙이 경고(오류 아님)를 낸다 - 쓰이지 않는 에셋이라는 사실 그대로의 알림이라 고칠 결함이 아니고, 메시 컴포넌트가 가리키면 사라진다
   (규칙 표에 예외를 달면 "어떤 파일에도 안 맞는 예외" 검사가 오래된 예외로 잡는다).
@@ -93,6 +93,10 @@
 - **CPU 가 정본이다.** 프로그램은 `Stack/MeshModifierGPUProgram` 이 만든다 — 종류 번호(셰이더 `SW_MODIFIER_*` 와 같은 순서의 표) · 공간 행렬(`MeshModifier::apply` 와 같은 것) ·
   입력 상자 · 야코비안 걸음 · 매개변수(`packGPUParams` 기본 배치). 입력 상자는 앞 모디파이어까지 건 결과라 GPU 가 다시 셀 수 없어서, 미리보기가 이미 도는 CPU 적용에서
   `MeshModifierEvaluation::_pListInputBounds` 로 공짜로 모은다. 그래서 매개변수가 바뀌면 CPU 가 한 번 돌고, 정점 버퍼는 다시 만들지 않고 프로그램만 바뀐다(렌더 스레드는 잠금으로 사본을 잡는다).
+- **앞부분 캐시**: 세션은 고른 모디파이어 앞까지 건 결과와 그 입력 상자를 들고(`MeshModifierSession::updatePrefixCache`), 앞부분 모디파이어의 한 줄 저장 글(`MeshModifierStack::makePrefixJSONText`) ·
+  시간 · 메시 변환이 그대로면 고른 것부터만 다시 건다(`MeshModifierStack::applyRange` · `finishApply` — 나눠 걸어도 `apply` 한 번과 같다). 기즈모 끌기 · 입력 중 앞 모디파이어를 매 프레임 다시 걸지 않고,
+  범위 표시의 입력 상자와 "Stage" 단계 미리보기도 이 캐시에서 얻는다. 앞부분이 읽는 씬 입력(참조 오브젝트 · 곡선 · 텍스처 파일)은 캐시를 만들 때의 값이다.
+- **시간 재생**: 시간 칸 옆 "Play" 를 켜면 패널이 프레임마다 시간을 흘려(`advancePreviewTime`, 600 초에서 되감음) 시간만 바뀌는 애니메이션 모디파이어가 움직인다. 패널이 그려지는 동안만 흐른다.
 - **옮기는 조건**: 켜진 모디파이어가 모두 `supportsGPU()` 이고 표에 있으며(33 종, `MeshModifierGPUProgramTest.KindTableMatchesSupportsGPU` 가 둘이 같은지 본다),
   "Recompute Normals" 를 끄고, 선택 가중치 채널이 없을 때. 하나라도 어기면 CPU 결과 정점을 올린 새 메시를 바뀔 때마다 끼운다(패널에 CPU 로 내린 모디파이어 이름이 보인다).
   그리는 중인 메시의 정점을 고치지 않고 메시째 바꾸는 것은 렌더 스레드가 든 사본과 겹치지 않게 하려는 것이다. 상용 도구(언리얼 모델링 · 3ds Max 스택)처럼 어느 경로든 셰이딩 결과를 보인다.

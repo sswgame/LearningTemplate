@@ -29,6 +29,59 @@ SW_TEST_CASE( MeshModifierStackTest, OrderChangesTheResult )
     SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( twistThenBend._listPosition, bendThenTwist._listPosition ) > 1e-2f );
 }
 
+SW_TEST_CASE( MeshModifierStackTest, SplitApplyMatchesApply )
+{
+    // 에디터 세션의 앞부분 캐시: 앞 구간 결과에 뒷 구간만 이어 건 것이 apply 한 번과 비트 단위로 같고, 입력 상자도 같은 순서로 모인다
+    const MeshModifierMesh source = test::MeshModifierTestUtil::makeBoxMesh( 3 );
+    MeshModifierStack      stack;
+    const int32            twist  = stack.addModifier( "twist" );
+    const int32            bend   = stack.addModifier( "bend" );
+    const int32            limits = stack.addModifier( "displacelimits" );
+    SW_ASSERT_TRUE( limits >= 0 );
+    SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *stack.findModifier( limits ), "Clamp Displacement", 1.0f ) ); // 스택 입력 위치가 필요해진다
+    SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *stack.findModifier( twist ), "Angle", 90.0f ) );
+    SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *stack.findModifier( bend ), "Angle", 60.0f ) );
+    stack.setRecomputingNormals( true );
+    SW_ASSERT_TRUE( stack.needsStackInputPosition() );
+
+    vector<MeshModifierBounds> listWholeBounds;
+    MeshModifierEvaluation     wholeEvaluation{};
+    wholeEvaluation._pListInputBounds = &listWholeBounds;
+    MeshModifierMesh whole            = source;
+    stack.apply( whole, wholeEvaluation );
+
+    vector<MeshModifierBounds> listSplitBounds;
+    MeshModifierEvaluation     splitEvaluation{};
+    splitEvaluation._pListInputBounds        = &listSplitBounds;
+    splitEvaluation._pListStackInputPosition = &source._listPosition;
+    MeshModifierMesh split                   = source;
+    stack.applyRange( split, splitEvaluation, 0, 1 );
+    stack.applyRange( split, splitEvaluation, 1, stack.getModifierCount() );
+    stack.finishApply( split );
+
+    SW_EXPECT_TRUE( test::MeshModifierTestUtil::isBitwiseEqual( whole._listPosition, split._listPosition ) );
+    SW_EXPECT_TRUE( test::MeshModifierTestUtil::isBitwiseEqual( whole._listNormal, split._listNormal ) );
+    SW_ASSERT_EQUAL( listWholeBounds.size(), listSplitBounds.size() );
+    for ( size_t index = 0; index < listWholeBounds.size(); ++index )
+    {
+        SW_EXPECT_TRUE( listWholeBounds[index]._min == listSplitBounds[index]._min );
+        SW_EXPECT_TRUE( listWholeBounds[index]._max == listSplitBounds[index]._max );
+    }
+}
+
+SW_TEST_CASE( MeshModifierStackTest, PrefixTextFollowsOnlyThePrefix )
+{
+    MeshModifierStack stack;
+    const int32       twist  = stack.addModifier( "twist" );
+    const int32       bend   = stack.addModifier( "bend" );
+    const string      before = stack.makePrefixJSONText( 1 );
+    SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *stack.findModifier( bend ), "Angle", 30.0f ) );
+    SW_EXPECT_EQUAL( before, stack.makePrefixJSONText( 1 ) ); // 뒤쪽(고른 것)만 바뀌면 앞부분 캐시는 그대로다
+    SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *stack.findModifier( twist ), "Angle", 30.0f ) );
+    SW_EXPECT_TRUE( before != stack.makePrefixJSONText( 1 ) );
+    SW_EXPECT_EQUAL( MeshModifierStack{}.makePrefixJSONText( 2 ), stack.makePrefixJSONText( 0 ) ); // 앞부분이 없으면 빈 스택과 같다
+}
+
 SW_TEST_CASE( MeshModifierStackTest, EditOperationsCheckRange )
 {
     MeshModifierStack stack;

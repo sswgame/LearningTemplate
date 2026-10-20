@@ -16,6 +16,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
@@ -39,7 +40,7 @@ namespace sw::editor
             {
                 static const hashed_string s_string( "string" );
                 static const hashed_string s_hashedString( "hashed_string" );
-                if ( prop._metadata._bAssetPath == SW_FALSE && prop._metadata._assetType.empty() )
+                if ( prop._metadata->_bAssetPath == SW_FALSE && prop._metadata->_assetType.empty() )
                     return {};
                 if ( prop._typeName == s_string )
                 {
