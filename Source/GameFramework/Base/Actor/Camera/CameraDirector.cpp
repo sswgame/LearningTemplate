@@ -29,8 +29,8 @@ namespace sw
                 outArchive << pose._orthoHeight;
                 outArchive << pose._nearPlane;
                 outArchive << pose._farPlane;
-                outArchive << pose._focusDistance;
-                outArchive << pose._aperture;
+                outArchive << pose._depthOfField._focusDistance;
+                outArchive << pose._depthOfField._aperture;
                 outArchive << pose._lensShift;
                 outArchive << pose._postProcess._exposureCompensation;
                 outArchive << pose._postProcess._bloomScale;
@@ -51,8 +51,8 @@ namespace sw
                 archive >> outPose._orthoHeight;
                 archive >> outPose._nearPlane;
                 archive >> outPose._farPlane;
-                archive >> outPose._focusDistance;
-                archive >> outPose._aperture;
+                archive >> outPose._depthOfField._focusDistance;
+                archive >> outPose._depthOfField._aperture;
                 archive >> outPose._lensShift;
                 archive >> outPose._postProcess._exposureCompensation;
                 archive >> outPose._postProcess._bloomScale;

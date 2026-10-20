@@ -21,6 +21,8 @@ namespace sw
         , _priority{ 0 }
         , _role{ CameraRole::Game }
         , _renderOutput{}
+        , _postProcess{}
+        , _depthOfField{}
         , _bOrthographic{ false }
         , _bCutPending{ SW_FALSE }
     {

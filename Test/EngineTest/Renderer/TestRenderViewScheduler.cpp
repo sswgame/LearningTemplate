@@ -274,6 +274,61 @@ SW_TEST_CASE( RenderViewCollectorTest, MissingVisibilityObjectStopsTheView )
 }
 
 /**
+ * @brief [RenderViewCollectorTest] 카메라의 후처리 값과 컷 표시가 주 시점 · 추가 뷰 설정에 실리고, 컷은 한 번만 읽힌다
+ * @details 렌더러는 뷰 설정만 본다(`FrameRenderer::applyViewPassConstants` 가 g_CameraGrade · g_CameraFrame 을 채운다). 카메라에서 뷰로 가는 값이 하나라도 빠지면
+ *          그 카메라의 노출 · 레터박스가 화면에 나오지 않는다.
+ */
+SW_TEST_CASE( RenderViewCollectorTest, CameraPostProcessAndCutReachTheViewSettings )
+{
+    RenderViewCollectorTestScene stage;
+    SW_ASSERT_TRUE( stage.populate( 0.0f ) );
+    CameraPostProcessValues mainPost;
+    mainPost._exposureCompensation = 1.5f;
+    mainPost._letterboxAspectRatio = 2.39f;
+    stage._pMainCamera->setPostProcess( mainPost );
+    stage._pMainCamera->markCut();
+    CameraPostProcessValues capturePost;
+    capturePost._saturation = 0.0f;
+    stage._pCapture->setPostProcess( capturePost );
+
+    const RenderViewSettings mainSettings = RenderViewCollector::makeMainSettings( stage._pMainCamera );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, mainSettings._postProcess._exposureCompensation, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.39f, mainSettings._postProcess._letterboxAspectRatio, 1e-6f );
+    SW_EXPECT_TRUE( mainSettings._bCut == SW_TRUE );
+    SW_EXPECT_TRUE( RenderViewCollector::makeMainSettings( stage._pMainCamera )._bCut == SW_FALSE );
+
+    RenderViewScheduler     scheduler;
+    const RenderViewRequest request = stage.collectAt( float3{ 0.0f, 0.0f, 10.0f }, scheduler, 0.0 );
+    SW_EXPECT_EQUAL( stage._pCapture->getComponentID(), request._viewID );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, request._settings._postProcess._saturation, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, request._settings._postProcess._exposureCompensation, 1e-6f );
+}
+
+/**
+ * @brief [RenderViewCollectorTest] 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개)이 주 시점과 추가 뷰의 설정에 실린다 — 카메라마다 따로
+ */
+SW_TEST_CASE( RenderViewCollectorTest, CameraDepthOfFieldReachesTheViewSettings )
+{
+    RenderViewCollectorTestScene stage;
+    SW_ASSERT_TRUE( stage.populate( 0.0f ) );
+    CameraDepthOfFieldValues mainLens;
+    mainLens._focusDistance = 3.5f;
+    mainLens._aperture      = 1.4f;
+    stage._pMainCamera->setDepthOfField( mainLens );
+
+    const RenderViewSettings mainSettings = RenderViewCollector::makeMainSettings( stage._pMainCamera );
+    SW_EXPECT_NEAR_EQUAL( 3.5f, mainSettings._depthOfField._focusDistance, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.4f, mainSettings._depthOfField._aperture, 1e-6f );
+
+    RenderViewScheduler     scheduler;
+    const RenderViewRequest request = stage.collectAt( float3{ 0.0f, 0.0f, 10.0f }, scheduler, 0.0 );
+    SW_EXPECT_EQUAL( stage._pCapture->getComponentID(), request._viewID );
+    const CameraDepthOfFieldValues defaults;
+    SW_EXPECT_NEAR_EQUAL( defaults._focusDistance, request._settings._depthOfField._focusDistance, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( defaults._aperture, request._settings._depthOfField._aperture, 1e-6f );
+}
+
+/**
  * @brief [RenderViewSchedulerTest] 출력 사각형이 전체인지의 판정 — 주 시점 Present 가 뷰포트를 걸지(사각형) 말지(전체)를 가른다
  */
 SW_TEST_CASE( RenderViewSchedulerTest, FullRectIsDetected )

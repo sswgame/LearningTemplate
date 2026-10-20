@@ -7,19 +7,33 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+namespace sw
+{
+    struct PropertyInfo;
+    struct TypeInfo;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
      * @class InspectorFavorites
-     * @brief 즐겨찾기한 프로퍼티의 키(`<타입 이름>.<프로퍼티 이름>`)를 정렬된 집합으로 가집니다.
-     * @details 언리얼 Details 패널의 Favorites 에 해당한다. 키는 컴포넌트(또는 오브젝트) 타입과 프로퍼티 이름이라 같은 타입의 모든 오브젝트에 적용된다.
+     * @brief 즐겨찾기한 프로퍼티의 키(`<선언한 타입 이름>.<프로퍼티 이름>`)를 정렬된 집합으로 가집니다.
+     * @details 언리얼 Details 패널의 Favorites 에 해당한다. 키의 타입은 그 프로퍼티를 **선언한** 타입이라(`makePropertyKey`), 기반 클래스의 프로퍼티를
+     *          즐겨찾기하면 그 기반을 잇는 모든 타입에 함께 보인다(파생 타입마다 따로 저장하지 않는다).
      *          저장 형식은 줄마다 키 하나인 텍스트다. 에디터 상태 폴더의 `InspectorFavorites.txt` 에 둔다. 사용자 파일이므로 읽기 실패는 빈 집합이다.
      */
     class InspectorFavorites
     {
     public:
-        /** @brief 타입 이름과 프로퍼티 이름으로 키를 만듭니다. */
+        /** @brief 타입 이름과 프로퍼티 이름으로 키를 만듭니다. 인스펙터는 선언한 타입을 고르는 `makePropertyKey` 를 씁니다. */
         static string makeKey( string_view typeName, string_view propertyName );
+        /**
+         * @brief @p type 에서 보이는 프로퍼티 @p prop 의 키입니다. 타입 자리는 @p type 부터 기반 쪽으로 올라가며 그 이름의 프로퍼티를 처음 선언한 타입입니다.
+         * @details 파생 타입이 같은 이름을 다시 선언하면 파생 타입이 이긴다(리플렉션의 병합 규칙과 같다).
+         */
+        static string makePropertyKey( const TypeInfo& type, const PropertyInfo& prop );
+        /** @brief @p type 이나 그 기반 타입의 키가 하나라도 있으면 true 입니다(즐겨찾기 구역에 그릴 것이 있는지). */
+        bool hasAnyForTypeOrBase( const TypeInfo& type ) const;
 
         /** @brief 키가 집합에 있으면 true 입니다. */
         bool contains( string_view key ) const;

@@ -2,6 +2,9 @@
 
 #include "Editor/Panels/Inspector/InspectorFavorites.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectionCore.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -40,4 +43,29 @@ SW_TEST_CASE( InspectorFavoritesTest, AddRemoveToggleAndTextRoundTrip )
     SW_ASSERT_EQUAL( size_t{ 2 }, restored.getKeys().size() );
     SW_EXPECT_TRUE( restored.getKeys()[0] == "A.x" ); // 정렬된다
     SW_EXPECT_TRUE( restored.getKeys()[1] == "B.y" );
+}
+
+/**
+ * @brief [InspectorFavoritesTest] 기반 클래스가 선언한 프로퍼티의 키는 선언한 타입이라, 파생 타입에서 즐겨찾기해도 그 기반을 잇는 모든 타입에 함께 보인다
+ * @details 키가 가장 파생된 타입이면 같은 프로퍼티(트랜스폼의 위치)를 컴포넌트 종류마다 따로 즐겨찾기해야 했다.
+ */
+SW_TEST_CASE( InspectorFavoritesTest, BaseDeclaredPropertyKeyIsSharedByDerivedTypes )
+{
+    const TypeRegistry& registry    = engine::getSubsystem<TypeRegistry>();
+    const TypeInfo*     pCameraType = registry.findType( hashed_string( "CameraComponent" ) );
+    const TypeInfo*     pMeshType   = registry.findType( hashed_string( "MeshComponent" ) );
+    const TypeInfo*     pSceneType  = registry.findType( hashed_string( "SceneComponent" ) );
+    SW_ASSERT_TRUE( pCameraType != nullptr && pMeshType != nullptr && pSceneType != nullptr );
+    const PropertyInfo* pPosition = pCameraType->findPropertyInHierarchy( hashed_string( "_localPosition" ) );
+    const PropertyInfo* pFov      = pCameraType->findPropertyInHierarchy( hashed_string( "_fovY" ) );
+    SW_ASSERT_TRUE( pPosition != nullptr && pFov != nullptr );
+
+    const string positionKey = InspectorFavorites::makePropertyKey( *pCameraType, *pPosition );
+    SW_EXPECT_TRUE( positionKey == InspectorFavorites::makeKey( pSceneType->_name.c_str(), "_localPosition" ) );
+    SW_EXPECT_TRUE( InspectorFavorites::makePropertyKey( *pCameraType, *pFov ) == InspectorFavorites::makeKey( pCameraType->_name.c_str(), "_fovY" ) );
+
+    InspectorFavorites favorites;
+    SW_EXPECT_TRUE( favorites.add( positionKey ) );
+    SW_EXPECT_TRUE( favorites.hasAnyForTypeOrBase( *pMeshType ) ); // 다른 파생 타입에도 보인다
+    SW_EXPECT_FALSE( favorites.hasAnyForType( pCameraType->_name.c_str() ) );
 }

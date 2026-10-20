@@ -1,6 +1,6 @@
 # 게임플레이 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-3,D4-4,D4-5,D4-6,D4-7,D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-16,D4-17,G-4,G-6,G-7 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2,D4-4,D4-6,D4-7,D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-16,D4-17,G-4,G-6,G-7 · 진행: 해당없음
 
 GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 착수 전 후보 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
 이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [PairedAnimation](PairedAnimation.md) · [EditorCharacterEditor](EditorCharacterEditor.md) · [MotionMatching](MotionMatching.md).
@@ -16,29 +16,12 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 - 머리 흔들림은 데이터(`<HeadBob>` · `FirstPersonCameraComponent::_headBob`)로 켜는데 켠 게임이 없다 — Shooter3D · VoxelCraft 1인칭에 진폭을 넣고 화면으로 확인한다. 카메라 세 값은 `CameraUserSettings` 가 읽는다.
 - X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 
-### GamepadVirtualCursor
-제목: 패드 가상 커서의 남은 것
-옛번호: D4-3
-왜 필요한가: 명령형 게임에서 패드로 마우스 커서를 대신하는 가상 커서가 들어갔지만(입력 맵 `virtualCursor` · 충돌 검사 `reportVirtualCursorConflict`), 줌과 실기 확인이 남았다. Nile · StarSkirmish 는 커서가 왼쪽 스틱, 오른쪽 스틱이 카메라 이동이다.
-남은 것:
-- 오른쪽 스틱 줌: 1D 축 액션이 스틱의 Y 를 읽는 바인딩이 없고, 확대는 칸 단위라 스틱 값을 매 프레임 넣으면 너무 빠르다(지금은 D 패드 위 · 아래).
-- 실제 패드로 확인하기(시나리오 동안 가상 커서는 쉬어 패드 길을 시나리오가 보지 않는다).
-
 ### KitCompositionGames
 제목: 키트 조립의 두 번째 테스트 게임과 땅 쓰기
 옛번호: D4-4
 왜 필요한가: 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest`)과 `MeadowVillage` 는 들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 필요해지기 전까지 남긴 몫이다.
 착수 조건 / 남은 것: 둘째 조립(RTS + City)의 테스트 게임이 필요해지면 MeadowVillage 모양으로 만든다. 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다.
 함정: SRPG 는 전투 끝에 `releaseLand`. 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다.
-
-### CameraRendererIntegration
-제목: 카메라의 렌더러 쪽 연결과 다중 뷰 검증
-옛번호: D4-5
-왜 필요한가: 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일, 다중 뷰의 화면 크기 보임 판정과 뷰 수 · 픽셀 예산(`RenderViewCollector` · `RenderViewScheduler` 헤더), 에디터 게임 뷰의 화면 사각형 뷰 시나리오(`screenrectview`)는 들어갔다(`Source/GameFramework/` "카메라" 절). 아래가 남았다.
-남은 것:
-- 다중 뷰 보임의 가려짐: 렌더러에 가림 컬링 결과가 없다. HZB 가림 컬링(이 문서 아래 "중간" 목록)이 들어오면 모니터가 지난 프레임에 그려졌는지(언리얼 `WasRecentlyRendered`)로 판정을 바꾼다(`RenderViewCollector` 헤더).
-- 컷 프레임 신호는 카메라 쪽이 끝났다(디렉터 `consumeCut` → `CameraComponent::markCut` → `RenderViewSettings::_bCut`, 테스트 `CameraModeTest.DirectorComponentMarksTheCameraCutOnce`). 남은 것은 렌더러 쪽뿐이다: `_bCut` 는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다. 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](#preloadandlod).
-- 렌더러 쪽: 피사계 심도 패스, 카메라별 후처리 값(`CameraPostProcessValues` — 포즈가 나르기만 한다)을 렌더러가 읽기.
 
 ### RigEditing
 제목: 후처리 리그 편집 저장과 기즈모

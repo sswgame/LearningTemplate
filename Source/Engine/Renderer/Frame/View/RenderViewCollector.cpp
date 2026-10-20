@@ -38,14 +38,22 @@ namespace sw
             /// 보임을 재는 화면의 최대 수입니다(주 시점 + 화면 사각형 뷰).
             static constexpr uint32 kMaxVisibilityView = kMaxExtraRenderView + 1;
 
-            static RenderViewSettings makeSettings( const CameraRenderOutput& output )
+            /**
+             * @brief 카메라 하나의 뷰 설정입니다 — 출력 설정, 후처리 값, 피사계 심도 렌즈 값, 컷 표시(읽고 지운다).
+             * @details 세 뷰(주 시점 · 추가 뷰 · 호스트 뷰)가 모두 이 함수로 만든다. 카메라에서 뷰로 가는 값이 늘면 여기 한 곳에만 더한다.
+             */
+            static RenderViewSettings makeSettings( CameraComponent& camera )
             {
-                RenderViewSettings settings;
+                const CameraRenderOutput& output = camera.getRenderOutput();
+                RenderViewSettings        settings;
                 settings._screenRect      = output._screenRect;
                 settings._resolutionScale = MathUtil::clamp( output._resolutionScale, 0.1f, 2.0f );
+                settings._postProcess     = camera.getPostProcess();
+                settings._depthOfField    = camera.getDepthOfField();
                 settings._upscaleZoom     = static_cast<uint8>( MathUtil::min( output._upscaleZoom, kMaxUpscaleZoom ) );
                 settings._bShadows        = output._bShadows ? SW_TRUE : SW_FALSE;
                 settings._bPostProcess    = output._bPostProcess ? SW_TRUE : SW_FALSE;
+                settings._bCut            = camera.consumeCut() ? SW_TRUE : SW_FALSE;
                 return settings;
             }
 
@@ -84,9 +92,7 @@ namespace sw
     {
         if ( pMainCamera == nullptr )
             return RenderViewSettings{};
-        RenderViewSettings settings = RenderViewCollectorInternal::makeSettings( pMainCamera->getRenderOutput() );
-        settings._bCut              = pMainCamera->consumeCut() ? SW_TRUE : SW_FALSE;
-        return settings;
+        return RenderViewCollectorInternal::makeSettings( *pMainCamera );
     }
 
     float32 RenderViewCollector::computeAspect( const RenderViewSettings& settings, uint32 outputWidth, uint32 outputHeight )
@@ -131,9 +137,8 @@ namespace sw
             if ( output._target == CameraOutputTarget::MainView )
                 continue;
             RenderViewRequest request;
-            request._settings       = RenderViewCollectorInternal::makeSettings( output );
-            request._settings._bCut = pCamera->consumeCut() ? SW_TRUE : SW_FALSE;
-            request._viewID         = pCamera->getComponentID();
+            request._settings = RenderViewCollectorInternal::makeSettings( *pCamera );
+            request._viewID   = pCamera->getComponentID();
             if ( output._target == CameraOutputTarget::RenderTexture )
             {
                 if ( output._renderTexture.empty() )
@@ -205,9 +210,8 @@ namespace sw
         if ( target.isValid() == false )
             return;
         RenderViewRequest request;
-        request._settings             = RenderViewCollectorInternal::makeSettings( camera.getRenderOutput() );
+        request._settings             = RenderViewCollectorInternal::makeSettings( camera );
         request._settings._screenRect = float4{ 0.0f, 0.0f, 1.0f, 1.0f };
-        request._settings._bCut       = camera.consumeCut() ? SW_TRUE : SW_FALSE;
         request._settings._viewMode   = viewMode;
         request._viewID               = camera.getComponentID();
         request._outputKind           = RenderViewOutputKind::HostTarget;

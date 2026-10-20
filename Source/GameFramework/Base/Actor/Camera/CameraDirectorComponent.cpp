@@ -489,7 +489,7 @@ namespace sw
         if ( _fieldOfViewOverride > 0.0f )
             pose._fieldOfViewY = _fieldOfViewOverride;
         if ( _focusDistanceOverride > 0.0f )
-            pose._focusDistance = _focusDistanceOverride;
+            pose._depthOfField._focusDistance = _focusDistanceOverride;
         pose._postProcess._exposureCompensation += _exposureOffset;
         // 포토 모드는 마지막에 덮는다 — 디렉터 상태는 그대로라서 끄면 이 줄만 빠진다.
         pose = _photoMode.makePose( pose );
