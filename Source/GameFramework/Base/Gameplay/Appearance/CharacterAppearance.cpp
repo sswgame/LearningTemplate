@@ -32,11 +32,16 @@ namespace sw
             static constexpr uint64 kKeyBody      = 0xe7a90c4b6612f3d5ull;
             static constexpr uint64 kKeySlot      = 0x9d3b5c7e1f2a4068ull;
 
-            static void readColors( string_view text, vector<float4>& outListColor )
+            /** @brief ";" 로 나뉜 "r g b a" 색 목록을 읽습니다. 정확히 네 실수가 아닌 색은 @p report 에 오류를 더하고 목록에 넣지 않습니다. */
+            static void readColors( string_view text, vector<float4>& outListColor, AppearanceLoadReport& report, string_view sourceName )
             {
                 StringUtil::forEachToken( text, ";", [&]( string_view token )
                 {
-                    outListColor.push_back( GameDataXML::parseFloat4( token, float4( 1.0f, 1.0f, 1.0f, 1.0f ) ) );
+                    float4 color{};
+                    if ( GameDataXML::parseFloat4( token, color ) )
+                        outListColor.push_back( color );
+                    else
+                        report.addError( "%#: color '%#' must be four numbers \"r g b a\"", sourceName, token );
                 } );
             }
 
@@ -47,8 +52,8 @@ namespace sw
                 value._parameter = AppearanceXMLUtil::readName( node, "name" );
                 AppearanceXMLUtil::readNameList( node, "option", value._listOption );
                 AppearanceXMLUtil::readNameList( node, "options", value._listOption );
-                readColors( node.getAttributeText( "color" ), value._listColor );
-                readColors( node.getAttributeText( "colors" ), value._listColor );
+                readColors( node.getAttributeText( "color" ), value._listColor, report, sourceName );
+                readColors( node.getAttributeText( "colors" ), value._listColor, report, sourceName );
                 const bool bFixed              = node.findAttribute( "value" ) != nullptr;
                 const bool bRange              = node.findAttribute( "min" ) != nullptr && node.findAttribute( "max" ) != nullptr;
                 value._bHasNumber              = bFixed || bRange ? SW_TRUE : SW_FALSE;
@@ -79,7 +84,11 @@ namespace sw
                 if ( node.findAttribute( "option" ) != nullptr )
                     inoutSlot._customization.setOption( parameter, AppearanceXMLUtil::readName( node, "option" ) );
                 else if ( node.findAttribute( "color" ) != nullptr )
-                    inoutSlot._customization.setColor( parameter, AppearanceXMLUtil::readFloat4( node, "color", float4( 1.0f, 1.0f, 1.0f, 1.0f ) ) );
+                {
+                    float4 color{};
+                    AppearanceXMLUtil::readRequiredFloat4( node, "color", color, report, sourceName );
+                    inoutSlot._customization.setColor( parameter, color );
+                }
                 else if ( node.findAttribute( "value" ) != nullptr )
                     inoutSlot._customization.setNumber( parameter, node.getAttributeFloat( "value", 0.0f ) );
                 else
@@ -154,7 +163,7 @@ namespace sw
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSocketAttribute, report, sourceName );
                         AppearanceSocketOverride socketOverride;
                         socketOverride._name = AppearanceXMLUtil::readName( child, "name" );
-                        AppearanceXMLUtil::readPlacement( child, "parent", socketOverride._placement );
+                        AppearanceXMLUtil::readPlacement( child, "parent", socketOverride._placement, report, sourceName );
                         if ( socketOverride._name.empty() || socketOverride._placement.isEmpty() )
                             report.addError( "%#: preset '%#' <SocketOverride> needs a name and a parent", sourceName, outDef._id.c_str() );
                         else

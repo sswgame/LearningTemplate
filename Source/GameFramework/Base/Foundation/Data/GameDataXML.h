@@ -149,10 +149,25 @@ namespace sw
          * @details 못 읽은 토큰은 그 칸을 건드리지 않고 넘어간다. 호출부가 기본값을 채워 두어야 한다.
          */
         static uint32 parseFloats( string_view text, float32* pOutValue, uint32 maxCount );
-        /** @brief "r g b [a]" 같은 네 실수를 읽습니다. 빠진 성분은 @p fallback 의 것을 씁니다. */
-        static float4 parseFloat4( string_view text, const float4& fallback );
-        /** @brief "x y z" 같은 세 실수를 읽습니다. */
-        static float3 parseFloat3( string_view text, const float3& fallback );
+        /**
+         * @brief "x y" 처럼 정확히 두 실수를 읽습니다. 개수가 모자라거나 남거나 숫자가 아닌 토큰이 있으면 false 이고 @p outValue 는 그대로입니다.
+         * @details `parseFloat3` · `parseFloat4` 도 같다. 빠진 성분을 기본값으로 메우지 않으므로 호출부가 실패를 로드 오류로 올려야 한다.
+         */
+        [[nodiscard]] static bool parseFloat2( string_view text, float2& outValue );
+        /** @brief "x y z" 처럼 정확히 세 실수를 읽습니다. 규칙은 `parseFloat2` 와 같습니다. */
+        [[nodiscard]] static bool parseFloat3( string_view text, float3& outValue );
+        /** @brief "r g b a" 처럼 정확히 네 실수를 읽습니다. 규칙은 `parseFloat2` 와 같습니다. */
+        [[nodiscard]] static bool parseFloat4( string_view text, float4& outValue );
+
+        /**
+         * @brief 선택 속성 @p pAttribute 를 "x y" 두 실수로 읽습니다. 속성이 없으면 @p inoutValue 를 그대로 두고 true 입니다(호출부가 초기값을 정한다).
+         * @details 속성이 있는데 정확히 두 실수가 아니면 속성 이름과 함께 오류를 알리고 false 이며 @p inoutValue 는 그대로입니다. `readOptionalFloat3` 도 같다.
+         */
+        [[nodiscard]] static bool readOptionalFloat2( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float2& inoutValue );
+        /** @brief 선택 속성 @p pAttribute 를 "x y z" 세 실수로 읽습니다. 규칙은 `readOptionalFloat2` 와 같습니다. */
+        [[nodiscard]] static bool readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& inoutValue );
+        /** @brief 필수 속성 @p pAttribute 를 "x y z" 세 실수로 읽습니다. 속성이 없거나 정확히 세 실수가 아니면 오류를 알리고 false 입니다. */
+        [[nodiscard]] static bool readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue );
 
         /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
         static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }

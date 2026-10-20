@@ -127,7 +127,7 @@ namespace sw
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSocketAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::OverrideSocket;
                     outAction._name = AppearanceXMLUtil::readName( node, "name" );
-                    AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement );
+                    AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement, report, sourceName );
                     return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
                 }
                 report.addError( "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );

@@ -215,12 +215,19 @@ namespace sw
         if ( StringUtil::equals( pName, "Place", true ) )
         {
             Internal::warnUnknownAttributes( node, Internal::kArrPlaceAttribute, false, sourceName );
+            // 위치 없는 장소를 원점에 두지 않는다 — 읽히지 않으면 오류를 알리고 장소를 더하지 않는다(그 장소를 가리키는 약속이 "unknown place" 로 걸러진다).
             SchedulePlaceDef place;
+            float3           position{};
+            const bool       bValidPosition = GameDataXML::readRequiredFloat3( node, "position", sourceName, position );
+
             place._id       = hashed_string( pID );
             place._area     = hashed_string( node.getAttributeText( "area" ) );
-            place._position = GameDataXML::parseFloat3( node.getAttributeText( "position" ), place._position );
+            place._position = position;
             place._radius   = MathUtil::max( 0.0f, node.getAttributeFloat( "radius", place._radius ) );
-            (void)_placeCatalog.add( place );
+            if ( bValidPosition )
+                (void)_placeCatalog.add( place );
+            else
+                SW_LOG_ERROR( "%#: place '%#' has no valid position - skipped", sourceName, pID );
         }
         else if ( StringUtil::equals( pName, "Spot", true ) )
         {
@@ -229,9 +236,10 @@ namespace sw
             spot._id       = hashed_string( pID );
             spot._kind     = hashed_string( node.getAttributeText( "kind" ) );
             spot._area     = hashed_string( node.getAttributeText( "area" ) );
-            spot._position = GameDataXML::parseFloat3( node.getAttributeText( "position" ), spot._position );
             spot._capacity = MathUtil::max( 1, node.getAttributeInt( "capacity", spot._capacity ) );
-            if ( spot._kind.empty() )
+            if ( GameDataXML::readRequiredFloat3( node, "position", sourceName, spot._position ) == false )
+                SW_LOG_ERROR( "%#: spot '%#' has no valid position - skipped", sourceName, pID );
+            else if ( spot._kind.empty() )
                 SW_LOG_WARNING( "%#: spot '%#' has no kind - skipped", sourceName, pID );
             else
                 (void)_spotCatalog.add( spot );

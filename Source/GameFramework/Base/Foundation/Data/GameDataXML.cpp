@@ -40,6 +40,57 @@ namespace sw
                 return attribute;
             }
 
+            /** @brief @p text 가 정확히 `Count` 개의 실수로 읽힐 때만 @p outArr 를 채우고 true 입니다(모자라거나 남거나 숫자가 아닌 토큰이 있으면 false, @p outArr 는 그대로). */
+            template <size_t Count>
+            [[nodiscard]] static bool parseExactFloats( string_view text, float32 ( &outArr )[Count] )
+            {
+                float32 arrValue[Count] = {};
+                size_t  tokenCount      = 0;
+                bool    bValid          = true;
+                StringUtil::forEachToken( text, kNumberSeparators, [&]( string_view token )
+                {
+                    float32 value = 0.0f;
+                    if ( tokenCount >= Count || StringUtil::parseFloat( token, value ) == false )
+                        bValid = false;
+                    else
+                        arrValue[tokenCount] = value;
+                    ++tokenCount;
+                } );
+                if ( bValid == false || tokenCount != Count )
+                    return false;
+                for ( size_t index = 0; index < Count; ++index )
+                {
+                    outArr[index] = arrValue[index];
+                }
+                return true;
+            }
+
+            /**
+             * @brief 속성 하나를 @p pParse 로 읽어 @p inoutValue 에 담습니다. 선택 속성(@p bRequired = false)은 없으면 값을 두고 true 입니다.
+             * @details 있는데 읽히지 않거나 필수인데 없으면 어느 파일 · 원소 · 속성인지 오류로 알리고 false 입니다(값은 그대로).
+             */
+            template <typename TVector>
+            [[nodiscard]] static bool readFloatAttribute( const XMLNode& node, const utf8* pAttribute, string_view sourceName, bool bRequired, const utf8* pShape, TVector& inoutValue,
+                                                          bool ( *pParse )( string_view, TVector& ) )
+            {
+                const utf8* pText = node.findAttribute( pAttribute );
+                if ( pText == nullptr )
+                {
+                    if ( bRequired == false )
+                        return true;
+                    SW_LOG_ERROR( "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
+                    return false;
+                }
+                TVector parsed{};
+                if ( pParse( string_view( pText ), parsed ) == false )
+                {
+                    SW_LOG_ERROR( "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
+                    return false;
+                }
+                inoutValue = parsed;
+                return true;
+            }
+
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )
             {
                 for ( const string_view handRead : listHandRead )
@@ -226,18 +277,46 @@ namespace sw
         return readCount;
     }
 
-    float4 GameDataXML::parseFloat4( string_view text, const float4& fallback )
+    bool GameDataXML::parseFloat2( string_view text, float2& outValue )
     {
-        float32 arrValue[4] = { fallback._x, fallback._y, fallback._z, fallback._w };
-        (void)parseFloats( text, arrValue, 4 ); // 빠진 성분은 기본값 그대로
-        return float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };
+        float32 arrValue[2] = {};
+        if ( GameDataXMLInternal::parseExactFloats( text, arrValue ) == false )
+            return false;
+        outValue = float2{ arrValue[0], arrValue[1] };
+        return true;
     }
 
-    float3 GameDataXML::parseFloat3( string_view text, const float3& fallback )
+    bool GameDataXML::parseFloat3( string_view text, float3& outValue )
     {
-        float32 arrValue[3] = { fallback._x, fallback._y, fallback._z };
-        (void)parseFloats( text, arrValue, 3 ); // 못 읽은 칸은 대체값이 남는다
-        return float3{ arrValue[0], arrValue[1], arrValue[2] };
+        float32 arrValue[3] = {};
+        if ( GameDataXMLInternal::parseExactFloats( text, arrValue ) == false )
+            return false;
+        outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
+        return true;
+    }
+
+    bool GameDataXML::parseFloat4( string_view text, float4& outValue )
+    {
+        float32 arrValue[4] = {};
+        if ( GameDataXMLInternal::parseExactFloats( text, arrValue ) == false )
+            return false;
+        outValue = float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };
+        return true;
+    }
+
+    bool GameDataXML::readOptionalFloat2( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float2& inoutValue )
+    {
+        return GameDataXMLInternal::readFloatAttribute( node, pAttribute, sourceName, false, "x y", inoutValue, &GameDataXML::parseFloat2 );
+    }
+
+    bool GameDataXML::readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& inoutValue )
+    {
+        return GameDataXMLInternal::readFloatAttribute( node, pAttribute, sourceName, false, "x y z", inoutValue, &GameDataXML::parseFloat3 );
+    }
+
+    bool GameDataXML::readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue )
+    {
+        return GameDataXMLInternal::readFloatAttribute( node, pAttribute, sourceName, true, "x y z", outValue, &GameDataXML::parseFloat3 );
     }
 
     bool GameDataXML::readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName )

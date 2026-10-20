@@ -127,9 +127,9 @@ namespace sw
                 const hashed_string prefab = AppearanceXMLUtil::readName( node, "prefab" );
                 const hashed_string sprite = AppearanceXMLUtil::readName( node, "sprite" );
                 option._asset              = prefab.empty() ? sprite : prefab;
-                option._offset             = AppearanceXMLUtil::readFloat3( node, "offset", float3::Zero );
-                option._rotation           = AppearanceXMLUtil::readFloat3( node, "rotation", float3::Zero );
-                const bool bChoiceOnly     = option._visual.empty() == false || option._variant.empty() == false || option._materialVariant.empty() == false;
+                AppearanceXMLUtil::readOptionalFloat3( node, "offset", option._offset, report, sourceName );
+                AppearanceXMLUtil::readOptionalFloat3( node, "rotation", option._rotation, report, sourceName );
+                const bool bChoiceOnly = option._visual.empty() == false || option._variant.empty() == false || option._materialVariant.empty() == false;
                 if ( option._name.empty() || inoutParam.findOption( option._name ) != nullptr )
                     report.addError( "%#: schema '%#' parameter '%#' has an option without a name ('None' reads as no name) or a duplicate option '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
                 else if ( inoutParam._kind == CustomizationKind::Attachment && bChoiceOnly )
@@ -201,7 +201,7 @@ namespace sw
                 else
                     param._default = param._min;
                 if ( kind == CustomizationKind::Color )
-                    param._defaultColor = AppearanceXMLUtil::readFloat4( node, "default", param._defaultColor );
+                    AppearanceXMLUtil::readOptionalFloat4( node, "default", param._defaultColor, report, sourceName );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName      = child.getName();

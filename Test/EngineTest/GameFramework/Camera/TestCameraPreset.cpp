@@ -345,6 +345,32 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsLensDollyAndPostProcess )
 }
 
 /**
+ * @brief [CameraPresetTest] 벡터 속성(`offset` · `sensor` · `Point position`)이 정확한 개수의 실수가 아니면 프리셋을 건너뛴다 — 모자란 성분을 기본값으로 메우지 않는다
+ */
+SW_TEST_CASE( CameraPresetTest, MalformedVectorAttributeSkipsThePreset )
+{
+    test::ScopedLogCollector logs;
+    CameraPresetCatalog      catalog;
+    {
+        test::ScopedDefensiveTestLog expected( "malformed vector attributes are load errors" );
+        SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<CameraPresets>
+            <Preset id="shortOffset"><View mode="Fixed" offset="1 2"/></Preset>
+            <Preset id="shortSensor"><Lens sensor="36"/></Preset>
+            <Preset id="noPoint"><Dolly><Point/></Dolly></Preset>
+            <Preset id="ok"><View mode="Fixed" offset="1 2 3"/></Preset>
+        </CameraPresets>)",
+                                                 "malformed-vector" ) );
+    }
+    SW_EXPECT_TRUE( catalog.find( "shortOffset" ) == nullptr );
+    SW_EXPECT_TRUE( catalog.find( "shortSensor" ) == nullptr );
+    SW_EXPECT_TRUE( catalog.find( "noPoint" ) == nullptr );
+    SW_EXPECT_TRUE( catalog.find( "ok" ) != nullptr );
+    SW_EXPECT_EQUAL( 1u, logs.countContaining( "offset=\"1 2\" must be numbers shaped" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countContaining( "sensor=\"36\" must be numbers shaped" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countContaining( "needs position=" ) );
+}
+
+/**
  * @brief [CameraPresetTest] 블렌드 도중 다시 켜면 그 순간의 섞인 포즈에서 이어 간다 — 화면이 튀지 않는다
  * @details a(원점) → b(+X 10) 를 1 초 직선으로 반쯤 섞은 자리(5, 0, 0)에서 c(+Y 10)를 켠다. 다음 1 ms 의 포즈가 (5, 0, 0) 곁이어야 한다 —
  *          출발점을 나가는 프리셋(b) · 처음 프리셋(a)으로 잡으면 10 m · 5 m 를 한 번에 뛴다.
