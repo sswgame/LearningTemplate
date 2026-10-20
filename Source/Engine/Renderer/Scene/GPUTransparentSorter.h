@@ -96,7 +96,7 @@ namespace sw
          * @details 꼬리 전체를 정렬해 꼬리 번호마다 순번을 매기고, 배치 안을 순번 순으로 다시 놓은 꼬리 슬롯(컬링 없는 백엔드의 인스턴스 슬롯 스트림)과
          *          배치 순서(배치마다 가장 먼저 그릴 인스턴스의 순번 순, 같으면 원래 순서)를 만듭니다. 꼬리 안에 온전히 들지 않는 배치는 순서만 따릅니다.
          */
-        GPUViewTransparentOrder computeViewOrder( uint64 viewID, uint32 tailBase, const vector<GPUMeshBatch>& listBatch );
+        GPUViewTransparentOrder computeViewOrder( uint64 viewID, uint32 tailBase, vector_reference<const GPUMeshBatch> listBatch );
 
     private:
         /**
