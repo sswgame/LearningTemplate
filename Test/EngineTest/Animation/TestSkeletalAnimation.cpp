@@ -467,6 +467,14 @@ SW_TEST_CASE( SkeletalAnimationTest, SystemEvaluatesDependenciesInOrder )
         system.evaluate( 0.016f );
     }
     SW_EXPECT_TRUE( system.hasDependencyCycle() );
+    // 고리의 유닛은 서로의 포즈를 읽으므로 한 레벨(병렬)에 모이면 레이스다 — 유닛마다 레벨을 따로 둔다.
+    // 예전에는 셋을 한 레벨에 모아 병렬로 돌렸고, 위 기록 벡터에 동시에 써서 경합 감지기가 CI 에서 가끔 멈췄다.
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( system.getLevels().size() ) );
+    for ( const vector<SkeletalMeshComponent*>& level : system.getLevels() )
+    {
+        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( level.size() ) );
+    }
+    SW_EXPECT_EQUAL( 6u, static_cast<uint32>( listOrder.size() ) );
     pUnitA->removeAnimationDependency( pUnitC );
     system.evaluate( 0.016f );
     SW_EXPECT_FALSE( system.hasDependencyCycle() );

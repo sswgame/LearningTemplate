@@ -350,19 +350,20 @@ namespace sw
 
         if ( placedCount == unitCount )
             return;
-        // 고리 — 데이터 오류다. 알리고, 남은 유닛은 순서 없이 마지막 레벨에서 돈다(서로의 지난 프레임 포즈를 읽는다).
+        // 고리 — 데이터 오류다. 알리고, 남은 유닛은 등록 순서로 한 유닛씩 따로 레벨을 둔다.
+        // 레벨 안은 병렬로 돈다(runPhase). 고리의 유닛은 서로의 포즈를 읽고 쓰므로 한 레벨에 모으면 데이터 레이스다 — "레벨 안의 유닛은 서로 의존하지 않는다" 를 고리에서도 지킨다.
         _bCycle = SW_TRUE;
-        vector<SkeletalMeshComponent*> listRemaining;
         for ( size_t unitIndex = 0; unitIndex < unitCount; ++unitIndex )
         {
             if ( listPendingCount[unitIndex] > 0 )
             {
-                listRemaining.push_back( _listUnit[unitIndex] );
+                vector<SkeletalMeshComponent*> listCycleLevel;
+                listCycleLevel.push_back( _listUnit[unitIndex] );
+                _listLevel.push_back( std::move( listCycleLevel ) );
                 const GameObject* pOwner = _listUnit[unitIndex]->getOwner();
                 SW_LOG_ERROR( "Animation dependency cycle includes unit on '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
             }
         }
-        _listLevel.push_back( std::move( listRemaining ) );
     }
 
     void AnimationSystem::evaluate( float32 deltaSeconds )
