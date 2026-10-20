@@ -29,6 +29,9 @@ namespace sw
 
         static INetSecurityProvider& getProvider();
 
+        /** @brief 설정 파일이 준 상대 경로를 프로젝트 루트 기준으로 펼칩니다(서버 설정과 같은 기준). 빈 경로, 절대 경로, 루트를 모를 때(테스트)는 그대로 돌려줍니다. */
+        static string makeProjectPath( string_view path );
+
         /**
          * @brief 서버 TLS 컨텍스트입니다. 실패하면 nullptr 이고 @p outError 에 까닭.
          * @param privateKeyPassphrase 키가 암호로 잠겼을 때만(서버 설정의 환경 변수에서 `ServerSecret::read` 로 읽은 값). 비우면 암호 없는 키.
