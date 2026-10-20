@@ -98,13 +98,29 @@ namespace sw
                 return true;
             }
 
-            /** @brief `MaxCount` 값의 꼴입니다. 1 이상의 32 비트 정수여야 합니다(실수로 읽어 반올림하지 않습니다). */
+            /**
+             * @brief `MaxCount` 값의 꼴입니다. 1 이상의 32 비트 정수이거나, C++ 정수 상수 이름(`kMaxSlotCount`, `LedgerConstant::kMaxMemoSize`)이어야 합니다.
+             * @details 실수는 읽어 반올림하지 않습니다. 이름이 가리키는 상수가 있는지 · 값이 범위 안인지는 선언을 아는 `AstVisitor` 가 봅니다.
+             */
             static bool isCountValue( const string_view value )
             {
-                uint64 parsed = 0;
-                if ( StringUtil::parseUint64( StringUtil::trim( value ), parsed ) == false )
-                    return false;
-                return 1 <= parsed && parsed <= static_cast<uint64>( std::numeric_limits<uint32>::max() );
+                const string_view trimmed = StringUtil::trim( value );
+                uint64            parsed  = 0;
+                if ( StringUtil::parseUint64( trimmed, parsed ) )
+                    return 1 <= parsed && parsed <= static_cast<uint64>( std::numeric_limits<uint32>::max() );
+                // 이름 조각을 `::` 하나로만 잇는다(빈 조각 · 부호 · 공백은 거절).
+                string_view rest = trimmed;
+                while ( true )
+                {
+                    const size_t      separator   = rest.find( "::" );
+                    const string_view part        = rest.substr( 0, separator );
+                    const bool        bIdentifier = part.empty() == false && part.front() != '-' && isFieldNameTerm( part );
+                    if ( bIdentifier == false )
+                        return false;
+                    if ( separator == string_view::npos )
+                        return true;
+                    rest = rest.substr( separator + 2 );
+                }
             }
 
             /**
@@ -257,7 +273,7 @@ namespace sw
             }
             if ( pField->_value == AnnotationValue::Count && AnnotationApplyInternal::isCountValue( value ) == false )
             {
-                outListUnknownToken.push_back( token + "  (value is not a whole number of at least 1)" );
+                outListUnknownToken.push_back( token + "  (value is not a whole number of at least 1 or an integer constant name)" );
                 continue;
             }
             pField->_pApply( target, value );

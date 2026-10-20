@@ -18,6 +18,7 @@
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -103,23 +104,23 @@ namespace sw
     struct AdminRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 8 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxAttachmentCount )
         vector<ServiceMailAttachment> _listAttachment{}; ///< SendMail, BulkMail, CreateCampaign 에서 쓴다. 상한은 `ServiceMailConstant::kMaxAttachmentCount` 와 같다
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxBulkCount )
         vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 16개 이하이다
         PROPERTY( MaxCount = 256 )
         string _displayName{}; ///< LookupAccount 에서 계정 id 대신 쓴다. 이 프로세스에 접속해 있는 계정만 찾을 수 있다
         PROPERTY( MaxCount = 256 )
         string _subject{}; ///< ListAudit 의 주체 접두어이다(예: `acct.<16진>/`)
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{}; ///< 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같다
         PROPERTY( MaxCount = 256 )
         string _reasonCode{}; ///< 제재 표시 사유이며 로컬라이제이션 키이다
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxMemoSize )
         string _memo{}; ///< 티켓이나 사유이다. 상태를 바꾸는 명령에는 필수이며 1 KB 이하이다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxTitleSize )
         string _titleKey{}; ///< 상한은 `ServiceMailConstant::kMaxTitleSize` 와 같다
-        PROPERTY( MaxCount = 2048 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxBodySize )
         string _body{}; ///< 상한은 `ServiceMailConstant::kMaxBodySize` 와 같다
         PROPERTY( MaxCount = 256 )
         string _cursor{};
@@ -153,11 +154,11 @@ namespace sw
     struct AdminJournalLine
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listChange{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxReasonSize )
         string _reason{}; ///< 상한은 `LedgerConstant::kMaxReasonSize` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxMemoSize )
         string _memo{}; ///< 상한은 `LedgerConstant::kMaxMemoSize` 와 같다
         PROPERTY()
         int64 _timeMs{ 0 };
@@ -175,11 +176,11 @@ namespace sw
     struct AdminReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
-        PROPERTY( MaxCount = 100 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxListCount )
         vector<AdminJournalLine> _listJournal{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
-        PROPERTY( MaxCount = 100 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxListCount )
         vector<ServiceAuditEntry> _listAudit{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
         PROPERTY()
         ServiceSanctionState _sanction{};

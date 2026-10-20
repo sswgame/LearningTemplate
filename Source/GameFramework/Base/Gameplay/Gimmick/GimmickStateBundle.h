@@ -48,10 +48,10 @@ namespace sw
     {
         REFLECT_BODY();
 
-        /** @brief 항목 수의 상한입니다. `_listEntry` 의 `MaxCount` 와 같은 값입니다. */
+        /** @brief 항목 수의 상한입니다. `_listEntry` 의 `MaxCount` 가 이 상수입니다. */
         static constexpr uint32 kMaxEntryCount = 65536;
 
-        PROPERTY( MaxCount = 65536 )
+        PROPERTY( MaxCount = kMaxEntryCount )
         vector<GimmickStateEntry> _listEntry{};
 
         /** @brief 오브젝트 이름의 키입니다(대소문자를 가리지 않는 해시). */

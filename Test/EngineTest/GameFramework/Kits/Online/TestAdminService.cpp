@@ -361,25 +361,6 @@ SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
 }
 
 /**
- * @brief [AdminProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( AdminProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminRequest>( "_listAttachment" ), uint32( ServiceMailConstant::kMaxAttachmentCount ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminRequest>( "_listAccountID" ), uint32( AdminProtocol::kMaxBulkCount ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminRequest>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminRequest>( "_memo" ), uint32( AdminProtocol::kMaxMemoSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminRequest>( "_titleKey" ), uint32( ServiceMailConstant::kMaxTitleSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminRequest>( "_body" ), uint32( ServiceMailConstant::kMaxBodySize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminJournalLine>( "_reason" ), uint32( LedgerConstant::kMaxReasonSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminJournalLine>( "_memo" ), uint32( LedgerConstant::kMaxMemoSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminReply>( "_listBalance" ), uint32( OnlineLimit::kMaxBalanceCount ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminReply>( "_listJournal" ), uint32( AdminProtocol::kMaxListCount ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<AdminReply>( "_listAudit" ), uint32( AdminProtocol::kMaxListCount ) );
-}
-
-/**
  * @brief [AdminProtocolTest] GM 메시지는 상한까지 왕복하고, 목록 개수 범위와 누구도 가질 수 없는 등급은 쓰지 않는다
  */
 SW_TEST_CASE( AdminProtocolTest, MessagesRoundTripAndRefuseOutOfRange )

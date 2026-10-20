@@ -330,18 +330,6 @@ SW_TEST_CASE( MailboxTest, ServiceClaimNeedsAKeyAndSweepsOnItsPeriod )
 }
 
 /**
- * @brief [MailboxProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( MailboxProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<MailView>( "_listAttachment" ), uint32( ServiceMailConstant::kMaxAttachmentCount ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<MailView>( "_titleKey" ), uint32( ServiceMailConstant::kMaxTitleSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<MailView>( "_body" ), uint32( ServiceMailConstant::kMaxBodySize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<MailView>( "_senderName" ), uint32( ServiceMailConstant::kMaxSenderNameSize ) );
-}
-
-/**
  * @brief [MailboxProtocolTest] 우편함 메시지는 상한까지 왕복하고, 범위 밖 개수와 상태는 쓰지 않으며, 잘린 바이트는 거절한다
  */
 SW_TEST_CASE( MailboxProtocolTest, MessagesRoundTripAndRefuseOutOfRange )

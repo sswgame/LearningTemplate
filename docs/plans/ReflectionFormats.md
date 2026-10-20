@@ -139,6 +139,9 @@ _netChannel.registerMessage<MechArenaSnapshot>( kSnapshotMessage );
 - 개수는 `[0, MaxCount]` 범위 정수로 씁니다. 쓸 때 개수가 `MaxCount` 를 넘으면 쓰기가 실패합니다(조용히 자르지 않습니다).
 - 읽을 때 개수가 `MaxCount` 를 넘으면 `FixedReadResult::OutOfRange`, 잘린 스트림은 `Truncated` 입니다.
 - 상한은 정적 값입니다. 런타임 설정이 상한이면, 데이터가 정하는 최대값보다 크거나 같은 정적 상한을 적고 데이터 쪽 검증을 따로 둡니다.
+- `MaxCount` 는 1 이상의 정수 리터럴이나 C++ 정수 상수 이름(`MaxCount = kMaxSlotCount`, `MaxCount = LedgerConstant::kMaxAssetIDSize`)을 받습니다. 같은 상한을 코드도 쓰면 상수 이름으로 적습니다(정본은 상수 하나).
+  생성기(`AstVisitor` 의 `resolveMaxCountName`)가 필드가 든 타입과 바깥 타입을 안쪽부터, 그다음 바깥 네임스페이스를 안쪽부터 보며 그 상수를 찾아 값을 계산하고, 그 값이 코덱 · 정규 문자열(스키마 해시) · `PropertyMetadata::_maxCount` 에 들어갑니다.
+  찾지 못한 이름, 정수가 아닌 상수, 1 보다 작은 값은 생성 오류입니다. 상수가 다른 헤더에 있으면 그 헤더를 include 해야 합니다(파서도 같은 번역 단위만 봅니다).
 
 ### 3.6 중첩 형식과 필드 순서
 
@@ -179,7 +182,7 @@ struct MechArenaSnapshot
 - 인스펙터는 같은 타입의 필드 하나를 가리키는 경계(`Min = "-_halfSize"`)를 그 객체의 지금 값으로 막습니다(단계 4-b). 생성기가 그 필드를 읽는 함수(`PropertyMetadata::_pReadMinRange` · `_pReadMaxRange`)를 내므로 이름이 틀리면 생성된 코드가 컴파일되지 않습니다.
   인스펙터와 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 `PropertyMetadata::computeAllowedRange` 하나로 범위를 풀어서 이 함수는 Shipping 에도 있습니다. 바깥 타입의 필드를 가리키는 경계와 성분 목록은 읽기 함수가 없습니다(인스펙터는 바깥 객체를 모르고 벡터 성분에는 범위를 두지 않음).
 
-**한계.** 키 값은 리터럴이나 필드 이름만 받고 C++ 상수(`kMaxCount`)는 받지 않습니다. 파서가 상수 식을 계산하지 않기 때문입니다. 같은 값이 여러 필드에 반복될 수 있습니다(8.1 위험 4).
+**한계.** `Min` · `Max` · `Step` 값은 리터럴이나 필드 이름만 받고 C++ 상수는 받지 않습니다. 같은 값이 여러 필드에 반복될 수 있습니다(8.1 위험 4). `MaxCount` 는 상수 이름을 받습니다(3.5).
 데이터(카탈로그 크기 등)로 정해지는 범위는 키로 표현하지 않고 3.10 의 검증 훅에 둡니다.
 
 ### 3.9 엔디언과 정렬
@@ -341,7 +344,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 2. **다른 헤더의 중첩 타입**: 생성기는 그 타입의 `PROPERTY` 를 다시 모으지 않고 실행 시간에 코덱 테이블 유무를 확인합니다(3.6).
 3. **의도하지 않은 와이어 변경**: 선언이 없으므로 `REFLECT` 타입의 필드를 정리하거나 순서를 바꾸면 B 형식이 바뀝니다. 롤백 · 스냅샷은 같은 빌드끼리라 영향이 없고, 넷 · 온라인은 해시가 달라져 옛 빌드와의 연결이 거절될 뿐 조용히 잘못 읽지는 않습니다.
    알 수 있는 수단은 거절 로그의 양쪽 해시, `FixedSchemas.gen.txt` 비교, `PROPERTY` 헤더 주석과 Reflection README 의 "선언 순서는 와이어 형식" 문단입니다. 온라인 스키마 해시를 커밋된 기준 파일과 비교하는 테스트는 알림이지 정확성 장치가 아니라 두지 않습니다.
-4. **리터럴 반복**: 3.8 의 키 값이 C++ 상수를 참조하지 못해 같은 값이 여러 필드에 반복됩니다. 값이 어긋나도 해시가 바뀌므로 잘못 읽지는 않지만, 의도와 다른 범위가 됩니다.
+4. **리터럴 반복**: 3.8 의 범위 키(`Min` · `Max` · `Step`)는 C++ 상수를 참조하지 못해 같은 값이 여러 필드에 반복됩니다. 값이 어긋나도 해시가 바뀌므로 잘못 읽지는 않지만, 의도와 다른 범위가 됩니다.
+   `MaxCount` 는 상수 이름을 받으므로(3.5) 상한을 코드와 두 곳에 적지 않습니다. 남은 숫자 `MaxCount` 중 같은 값의 상수가 있는데 뜻이 같은지 이름만으로 정할 수 없는 것(2026-10-21 기준 약 20 곳, 주로 온라인 키트의 커서 · 문구 길이)은 그 키트를 고칠 때 상수 이름으로 바꿉니다.
 5. **`Min` · `Max` 의 뜻이 강해집니다.** 허용 범위가 와이어 범위가 되므로, 게임 코드가 허용 범위 밖 값을 잠깐 쓰던 곳은 B 쓰기 실패로 드러납니다. 결함이 드러나는 것이므로 의도한 결과입니다.
 6. **해시에 들어가지 않는 의미 변경**: 단위를 미터에서 센티미터로 바꾸는 변경은 해시를 바꾸지 않습니다. 넷은 손 버전 상수를, 온라인은 `kBaseVersion` 을 남겨 이 경우에 올립니다.
 7. **`REFLECT` 를 처음 붙이는 타입**: 스냅샷 구조체에 `REFLECT` 를 붙이면 `TypeRegistry` 에 등록되고 인스펙터 · A 직렬화 대상이 됩니다. 의도한 결과이지만 등록 수가 늘어납니다.
@@ -368,6 +372,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 7-b | `REFLECT` 둘째 · 가상 베이스를 생성 오류로(7.4, 결정 기록 5-4) | 끝남(`58a651537`) |
 | 7-c | 매니저의 타입별 컴포넌트 목록 | 끝남(2026-10-19, 계획은 [TypedComponents](TypedComponents.md)) |
 | 7-d | 타입 핸들 `TComponentHandle<T>` | 끝남(2026-10-19, 계획은 [TypedComponents](TypedComponents.md)) |
+| 8 | `MaxCount` 가 C++ 정수 상수 이름을 받고 `PropertyMetadata::_maxCount` 에 상한을 둠(3.5). 기믹 · 온라인 키트의 숫자 중복 117 곳을 상수 이름으로, 대조 테스트(`StateLimitsMatchDeclaredMaxCount`, 키트 11 개의 `DeclaredLimitsMatchTheConstants`) 삭제 | 구현 끝(2026-10-21, `wt/maxcount`, 빌드 · 테스트 미확인) |
 
 단계 3 에서 바뀐 기반 헤더 셋은 `FrameData.h`(`MoveTimeline` 의 `REFLECT`, `GuardStance` 의 `ENUM`), `InputCommandBuffer.h`(`InputFrame` · `InputCommandBuffer` 의 `REFLECT`), `RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.
 세이브 읽기의 `Min` · `Max` 는 자기 기술형 세 포맷의 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 봅니다. 시퀀스 원소까지 늘 보고, 범위를 어디까지 볼지 고르는 인자를 두지 않습니다(설정 JSON · 데이터 XML · 세이브가 같은 계약).

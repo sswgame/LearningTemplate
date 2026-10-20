@@ -923,9 +923,9 @@
   - 범위 밖 요청은 클라이언트가 보내지 않고 `kInvalidRequest` 응답으로 끝냅니다(서버가 거절한 것과 같은 결과). 쓰기와 거절은 `ServiceClientCallTable::sendMessage` 하나가 맡고,
     거절 응답은 `OnlineServiceClient::rejectRequest` 가 만들어 서버 응답과 같은 처리기를 지납니다. 약속: 0 이 아닌 요청 번호를 돌려주고, 콜백(또는 받은 응답 목록)의 번호가 그 번호와 같으며, 보내지 못한 요청의 콜백은 요청 함수 안에서 바로 옵니다.
     서버는 응답 메시지를 `OnlineServiceHost::respondMessage` 하나로 보내고, 쓰지 못하면 오류 로그와 `kInternal` 로 답합니다. 계정 키트만 계정을 연결에 묶은 뒤에 응답해야 하므로 몸을 먼저 써 두고 같은 약속으로 답합니다. 알림이 범위 밖이면 오류 로그를 남기고 보내지 않습니다.
-  - 애노테이션은 정수 리터럴만 받으므로(`AnnotationMeta.txt`) 같은 상한을 상수로도 두는 곳(`LedgerConstant::kMaxAssetIDSize`, `ChatLimit`, `ServiceAuditEntry::kMaxStateSize` 등)은
-    키트 테스트 `DeclaredLimitsMatchTheConstants` 가 생성된 코덱의 정규 문자열(`FixedCodec::_pCanonical`)에서 `MaxCount` 를 읽어 상수와 묶습니다.
-    구조로 풀려면 생성기가 `MaxCount` 에 상수 이름을 받아 코덱에 그 식을 내보내야 하는데, 정규 문자열(스키마 해시)에 들어갈 수를 생성기가 알아야 하므로 상수 정의를 읽거나 정규 문자열을 컴파일 때 만들어야 합니다. 이 단계에서는 하지 않고 테스트로 묶었습니다.
+  - 같은 상한을 상수로도 두는 곳(`LedgerConstant::kMaxAssetIDSize`, `ChatLimit`, `ServiceAuditEntry::kMaxStateSize` 등)은 `PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )` 처럼 상수 이름을 적습니다(2026-10-21).
+    생성기가 libclang 으로 그 상수의 값을 계산해 코덱 · 정규 문자열(스키마 해시) · `PropertyMetadata::_maxCount` 에 넣으므로 정본이 상수 하나입니다([리플렉션 형식](plans/ReflectionFormats.md) 3.5).
+    전에는 애노테이션이 정수 리터럴만 받아 키트 테스트 `DeclaredLimitsMatchTheConstants` 가 정규 문자열에서 `MaxCount` 를 읽어 상수와 대조했는데, 그 게이트를 지웠습니다.
   - **서버 버스는 A 입니다**(2026-10-17, 사용자 결정 — 서버 사이에는 핸드셰이크가 없고 배포 중에는 빌드가 섞인다, [계획](plans/ServerBusFormat.md)).
     주제 정의(`ServerBusTopic<T>` · `ServerBusTopicFamily<T>`)가 이름과 본문 타입을 묶고, 본문은 `T::kBusVersion`(의미 버전) 머리 + `BinarySerializer` 입니다.
     읽기는 엄격 태그 루프 하나로, 모르는 이름의 필드는 건너뛰고 읽지 못한 아는 필드(모르는 열거자)와 다른 의미 버전은 거절합니다(이관 없음, 로그 한 번 + 카운터). 중첩 구조체까지 같은 정책입니다(`SerializeContext` 플래그 둘).

@@ -557,24 +557,6 @@ SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
 }
 
 /**
- * @brief [ChatProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( ChatProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatChannelRequest>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatSendRequest>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatSendRequest>( "_text" ), uint32( ChatLimit::kMaxTextSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatWhisperRequest>( "_text" ), uint32( ChatLimit::kMaxTextSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatHistoryRequest>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatHistoryRequest>( "_cursor" ), uint32( ChatProtocol::kMaxCursorSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatReply>( "_listHistory" ), uint32( ChatLimit::kMaxHistoryPage ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatReply>( "_nextCursor" ), uint32( ChatProtocol::kMaxCursorSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatMessage>( "_channelID" ), uint32( ChatLimit::kMaxChannelIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<ChatMessage>( "_text" ), uint32( ChatLimit::kMaxTextSize ) );
-}
-
-/**
  * @brief [ChatProtocolTest] 채팅 요청은 상한까지 왕복하고, 상한을 넘는 글과 개수는 쓰지 않으며, 다른 요청 타입의 바이트는 거절한다
  */
 SW_TEST_CASE( ChatProtocolTest, RequestsRoundTripAndRefuseOutOfRange )

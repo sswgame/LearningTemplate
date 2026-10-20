@@ -339,6 +339,9 @@ namespace sw
             emit.linef( "p._metadata->_maxRange     = %#;", formatRangeLiteral( prop._maxRange ).c_str() );
             emit.assign( "p._metadata->_bHasMaxRange", "SW_TRUE" );
         }
+        // 상한은 코덱이 지키는 값 그대로다(상수 이름으로 적었으면 `AstVisitor` 가 푼 값).
+        if ( prop._bHasMaxCount != SW_FALSE )
+            emit.linef( "p._metadata->_maxCount     = %#u;", prop._maxCount );
         // 숫자가 아닌 경계 중 이 타입의 필드 하나를 가리키는 것은 인스턴스에서 읽는 함수로 낸다(인스펙터와 읽기 공통 끝이 그 값으로 막는다).
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._minRangeExpr._text, "_pReadMinRange" );
         CodeGeneratorInternal::emitRangeReader( emit, typeInfo, prop._maxRangeExpr._text, "_pReadMaxRange" );

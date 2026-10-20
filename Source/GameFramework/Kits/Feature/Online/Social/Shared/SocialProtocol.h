@@ -102,7 +102,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = 256 )
         string _text{}; ///< kRequestFriendByName 과 kGuildCreate 의 이름, kSetPresence 의 활동 문구, kGuildSetNotice 의 공지이다. 상한은 가장 긴 공지(`GuildLimit::kMaxNoticeSize`)와 같다
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{}; ///< kGuildDeposit · kGuildWithdraw 의 자산. 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같다
         PROPERTY()
         AccountID _otherID{ kInvalidAccountID }; ///< 상대이거나 길드 작업의 대상이다
@@ -126,11 +126,11 @@ namespace sw
     struct SocialReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 1000 )
+        PROPERTY( MaxCount = SocialLimit::kMaxLinkPage )
         vector<SocialLink> _listLink{}; ///< kListLinks. 상한은 `SocialLimit::kMaxLinkPage` 와 같다
-        PROPERTY( MaxCount = 200 )
+        PROPERTY( MaxCount = SocialLimit::kMaxFriend )
         vector<SocialPresence> _listPresence{}; ///< kFriendPresence. 상한은 `SocialLimit::kMaxFriend` 와 같다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = GuildLimit::kMaxStorageItem )
         vector<GuildStorageItem> _listStorage{}; ///< kGuildStorage 는 창고 전체, kGuildDeposit · kGuildWithdraw 는 옮긴 자산의 창고 잔액 하나. 상한은 `GuildLimit::kMaxStorageItem` 와 같다
         PROPERTY()
         GuildInfo _guild{}; ///< kGuildCreate 에서는 id 와 이름이고 kGuildGet 에서는 전체 정보이다

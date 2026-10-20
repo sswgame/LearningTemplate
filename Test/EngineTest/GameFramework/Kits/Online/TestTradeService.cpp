@@ -445,16 +445,6 @@ SW_TEST_CASE( TradeProtocolTest, MethodTableHashCoversTheNameOrder )
 }
 
 /**
- * @brief [TradeProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( TradeProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<TradeBalance>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<TradeLeg>( "_assetID" ), uint32( LedgerConstant::kMaxAssetIDSize ) );
-}
-
-/**
  * @brief [TradeProtocolTest] 거래 메시지는 상한까지 왕복하고, 거래 레코드는 자기 기술형으로 왕복하며, 한쪽 상한을 넘는 스냅샷은 쓰지 않는다
  */
 SW_TEST_CASE( TradeProtocolTest, MessagesAndRecordsRoundTrip )

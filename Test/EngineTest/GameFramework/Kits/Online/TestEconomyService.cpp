@@ -208,16 +208,6 @@ SW_TEST_CASE( EconomyServiceTest, ShippingRefusesDevelopmentValidator )
 }
 
 /**
- * @brief [EconomyProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( EconomyProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<EconomyHistoryEntry>( "_reason" ), uint32( LedgerConstant::kMaxReasonSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<EconomyHistoryEntry>( "_memo" ), uint32( LedgerConstant::kMaxMemoSize ) );
-}
-
-/**
  * @brief [EconomyProtocolTest] 경제 메시지는 상한까지 왕복하고, 범위 밖 값은 쓰지 않으며, 잘린 바이트와 다른 타입의 바이트는 거절한다
  */
 SW_TEST_CASE( EconomyProtocolTest, MessagesRoundTripAndRefuseOutOfRange )

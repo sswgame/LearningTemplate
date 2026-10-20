@@ -714,12 +714,90 @@ SW_TEST_CASE( ReflectionParserTest, FixedLayoutAnnotationMistakesStopTheBuild )
                                                             "\t};\n"
                                                             "}\n" );
     SW_EXPECT_TRUE_MSG( countRun._exitCode != 0, countRun._log.c_str() );
-    SW_EXPECT_TRUE_MSG( countRun._log.find( "MaxCount = 2.5  (value is not a whole number of at least 1)" ) != sw::string::npos, countRun._log.c_str() );
+    SW_EXPECT_TRUE_MSG( countRun._log.find( "MaxCount = 2.5  (value is not a whole number of at least 1 or an integer constant name)" ) != sw::string::npos,
+                        countRun._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_count': MaxCount applies to string, vector and DynamicBitset fields only" ) != sw::string::npos,
                         run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "'sw::FixedWideRangeSample::_orphan': range name '_missing' is not a field of this type" ) != sw::string::npos,
                         run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "_pIgnored" ) == sw::string::npos, "an ineligible field is not an error" );
+#endif
+}
+
+/**
+ * @brief [ReflectionParserTest] `MaxCount` 는 C++ 정수 상수 이름을 받아 그 값을 코덱 · 정규 문자열 · `PropertyMetadata::_maxCount` 에 넣습니다
+ * @details 상한의 정본을 상수 하나로 두려는 것입니다. 이름은 필드가 든 타입에서 먼저 찾고, 없으면 바깥 네임스페이스에서 한정 이름(`Limit::kMax`)으로 찾습니다.
+ *          찾지 못한 이름, 정수가 아닌 상수, 1 보다 작은 값은 생성 오류입니다 — 상한을 조용히 빼면 그 필드는 코덱 없이 넘어갑니다.
+ */
+SW_TEST_CASE( ReflectionParserTest, MaxCountReadsANamedIntegerConstant )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "NamedCountSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Common/Types.h\"\n"
+                                                       "#include \"Core/Container/string.h\"\n"
+                                                       "#include \"Core/Container/vector.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tstruct NamedCountLimit\n"
+                                                       "\t{\n"
+                                                       "\t\tstatic constexpr int32 kMaxNameSize = 24;\n"
+                                                       "\t};\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct NamedCountSample\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tstatic constexpr uint32 kMaxSlotCount = 37;\n"
+                                                       "\t\tPROPERTY( MaxCount = kMaxSlotCount )\n"
+                                                       "\t\tvector<int32> _listSlot;\n"
+                                                       "\t\tPROPERTY( MaxCount = NamedCountLimit::kMaxNameSize )\n"
+                                                       "\t\tstring _name;\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedCpp.size() );
+    const sw::string generated = run._listGeneratedCpp[0] + run._listGeneratedHeader[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "_listSlot:" ) != sw::string::npos && generated.find( ":maxcount=37" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( ":maxcount=24" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_maxCount     = 37u;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_maxCount     = 24u;" ) != sw::string::npos, generated.c_str() );
+
+#if defined( SW_DEBUG )
+    const ParserRunResult badRun = runParserOnTempHeader( parserExe, "NamedCountMistakeSample",
+                                                          "#pragma once\n"
+                                                          "#include \"Core/Common/Types.h\"\n"
+                                                          "#include \"Core/Container/vector.h\"\n"
+                                                          "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                          "namespace sw\n"
+                                                          "{\n"
+                                                          "\tREFLECT()\n"
+                                                          "\tstruct NamedCountMistakeSample\n"
+                                                          "\t{\n"
+                                                          "\t\tREFLECT_BODY();\n"
+                                                          "\t\tstatic constexpr int32   kNegativeCount = -1;\n"
+                                                          "\t\tstatic constexpr float32 kRatio         = 2.5f;\n"
+                                                          "\t\tPROPERTY( MaxCount = kMissingCount )\n"
+                                                          "\t\tvector<int32> _listMissing;\n"
+                                                          "\t\tPROPERTY( MaxCount = kNegativeCount )\n"
+                                                          "\t\tvector<int32> _listNegative;\n"
+                                                          "\t\tPROPERTY( MaxCount = kRatio )\n"
+                                                          "\t\tvector<int32> _listRatio;\n"
+                                                          "\t};\n"
+                                                          "}\n" );
+    SW_EXPECT_TRUE_MSG( badRun._exitCode != 0, badRun._log.c_str() );
+    const bool bMissing =
+        badRun._log.find( "'sw::NamedCountMistakeSample::_listMissing': MaxCount constant 'kMissingCount' is not declared" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bMissing, badRun._log.c_str() );
+    const bool bNegative =
+        badRun._log.find( "'sw::NamedCountMistakeSample::_listNegative': MaxCount constant 'kNegativeCount' must be an integer constant" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bNegative, badRun._log.c_str() );
+    const bool bRatio = badRun._log.find( "'sw::NamedCountMistakeSample::_listRatio': MaxCount constant 'kRatio' must be an integer constant" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bRatio, badRun._log.c_str() );
 #endif
 }
 

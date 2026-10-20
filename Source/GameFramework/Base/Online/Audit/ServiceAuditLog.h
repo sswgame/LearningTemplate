@@ -38,11 +38,11 @@ namespace sw
         string _action{}; ///< 동작 코드 `[0-9a-z_.]` — "trade.settle" · "admin.sanction" · "account.link"
         PROPERTY( MaxCount = 256 )
         string _subject{}; ///< 대상(키 앞부분 — 키 규칙)
-        PROPERTY( MaxCount = 2048 )
+        PROPERTY( MaxCount = kMaxStateSize )
         string _before{}; ///< 전 상태(짧은 JSON 또는 요약)
-        PROPERTY( MaxCount = 2048 )
+        PROPERTY( MaxCount = kMaxStateSize )
         string _after{};
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = kMaxMemoSize )
         string _memo{};
         PROPERTY()
         int64 _timeMs{ 0 }; ///< UTC 벽시계 밀리초(0 이상)

@@ -253,23 +253,6 @@ SW_TEST_CASE( LiveOpsServiceTest, StoreFailureOnPutLeavesNothing )
 }
 
 /**
- * @brief [LiveOpsProtocolTest] 애노테이션은 정수 리터럴만 받으므로, 같은 상한을 적은 `PROPERTY( MaxCount )` 와 상수가 어긋나지 않는지 생성된 코덱의 정규 문자열로 본다
- */
-SW_TEST_CASE( LiveOpsProtocolTest, DeclaredLimitsMatchTheConstants )
-{
-    using Util = test::OnlineMessageTestUtil;
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveOpsDeviceKey>( "_token" ), uint32( PushLimit::kMaxTokenSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<PushDeviceRegistration>( "_providerID" ), uint32( PushLimit::kMaxProviderIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<PushDeviceRegistration>( "_token" ), uint32( PushLimit::kMaxTokenSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<PushDeviceRegistration>( "_locale" ), uint32( PushLimit::kMaxLocaleSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventParameter>( "_key" ), uint32( LiveOpsLimit::kMaxParameterKey ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventParameter>( "_value" ), uint32( LiveOpsLimit::kMaxParameterValue ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventState>( "_listParameter" ), uint32( LiveOpsLimit::kMaxParameterCount ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventState>( "_eventID" ), uint32( LiveOpsLimit::kMaxIDSize ) );
-    SW_EXPECT_EQUAL( Util::declaredMaxCount<LiveEventState>( "_kind" ), uint32( LiveOpsLimit::kMaxKindSize ) );
-}
-
-/**
  * @brief [LiveOpsProtocolTest] 라이브 운영 메시지는 상한까지 왕복하고, 이벤트 정의와 기기 레코드는 자기 기술형으로 왕복하며, 다른 판의 레코드는 읽지 않는다
  */
 SW_TEST_CASE( LiveOpsProtocolTest, MessagesAndRecordsRoundTrip )

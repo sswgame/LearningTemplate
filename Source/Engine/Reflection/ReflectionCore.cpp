@@ -172,6 +172,7 @@ namespace sw
         , _pReadMaxRange{ nullptr }
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
+        , _maxCount{ 0 }
         , _bHasMinRange{ SW_FALSE }
         , _bHasMaxRange{ SW_FALSE }
         , _bReadOnly{ SW_FALSE }
@@ -951,6 +952,8 @@ namespace sw
                     out.appendFormat( "  Min=%#", prop._metadata->_minRange );
                 if ( prop._metadata->_bHasMaxRange == SW_TRUE )
                     out.appendFormat( "  Max=%#", prop._metadata->_maxRange );
+                if ( prop._metadata->_maxCount != 0 )
+                    out.appendFormat( "  MaxCount=%#", prop._metadata->_maxCount );
                 if ( prop._metadata->_defaultValue.empty() == false )
                     out.appendFormat( "  Default=\"%#\"", prop._metadata->_defaultValue.c_str() );
                 const pair<bool, const utf8*> arrFlag[] = {

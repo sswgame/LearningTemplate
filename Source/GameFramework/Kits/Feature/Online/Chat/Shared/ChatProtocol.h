@@ -79,7 +79,7 @@ namespace sw
     struct ChatChannelRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = ChatLimit::kMaxChannelIDSize )
         string _channelID{}; ///< 상한은 `ChatLimit::kMaxChannelIDSize` 와 같다
     };
 } // namespace sw
@@ -91,9 +91,9 @@ namespace sw
     struct ChatSendRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = ChatLimit::kMaxChannelIDSize )
         string _channelID{}; ///< 상한은 `ChatLimit::kMaxChannelIDSize` 와 같다
-        PROPERTY( MaxCount = 512 )
+        PROPERTY( MaxCount = ChatLimit::kMaxTextSize )
         string _text{}; ///< 상한은 `ChatLimit::kMaxTextSize` 와 같다
     };
 } // namespace sw
@@ -107,7 +107,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         AccountID _recipientID{ kInvalidAccountID };
-        PROPERTY( MaxCount = 512 )
+        PROPERTY( MaxCount = ChatLimit::kMaxTextSize )
         string _text{}; ///< 상한은 `ChatLimit::kMaxTextSize` 와 같다
     };
 } // namespace sw
@@ -119,9 +119,9 @@ namespace sw
     struct ChatHistoryRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = ChatLimit::kMaxChannelIDSize )
         string _channelID{}; ///< 채널 id 이거나 귓속말 기록 키이다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ChatProtocol::kMaxCursorSize )
         string _cursor{}; ///< 상한은 `ChatProtocol::kMaxCursorSize` 와 같다
         PROPERTY( Min = 0, Max = 50 )
         int32 _maxCount{ 0 }; ///< 상한은 `ChatLimit::kMaxHistoryPage` 와 같다
@@ -135,11 +135,11 @@ namespace sw
     struct ChatReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 50 )
+        PROPERTY( MaxCount = ChatLimit::kMaxHistoryPage )
         vector<ChatMessage> _listHistory{}; ///< History 의 결과이며 최근 것부터 담는다. 상한은 `ChatLimit::kMaxHistoryPage` 와 같다
         PROPERTY()
         ChatMessage _message{}; ///< Send 와 Whisper 의 결과이다. 필터를 거친 메시지(되울림)이다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ChatProtocol::kMaxCursorSize )
         string _nextCursor{}; ///< History 의 다음 커서이다. 비어 있으면 끝이다
         PROPERTY()
         int64 _retryAfterMs{ 0 }; ///< Muted, RateLimited, Repeated 일 때 기다릴 시간(ms)이다

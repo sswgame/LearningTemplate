@@ -49,9 +49,9 @@ namespace sw
     struct LiveEventParameter
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxParameterKey )
         string _key{}; ///< `[0-9a-z_.]` 형식이며 32바이트 이하이다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxParameterValue )
         string _value{}; ///< 128바이트 이하이다
     };
 } // namespace sw
@@ -67,13 +67,13 @@ namespace sw
     struct LiveEventDefinition
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxParameterCount )
         vector<LiveEventParameter> _listParameter{}; ///< 16개 이하이다
         PROPERTY()
         vector<string> _listRegion{}; ///< 비면 모든 지역에 열린다. 16개 이하이며 이름은 `ServerRecord::kMaxNameSize` 바이트 이하이다
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxIDSize )
         string _eventID{}; ///< `[0-9a-z_.]` 형식이며 48바이트 이하이다. 저장소 키로 쓴다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxKindSize )
         string _kind{}; ///< 게임이 해석하는 종류 코드이다(예: "xp_boost", "shop_sale")
         PROPERTY()
         int64 _startMs{ 0 };
@@ -103,11 +103,11 @@ namespace sw
     struct LiveEventState
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxParameterCount )
         vector<LiveEventParameter> _listParameter{}; ///< 상한은 `LiveOpsLimit::kMaxParameterCount` 와 같다
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxIDSize )
         string _eventID{}; ///< 상한은 `LiveOpsLimit::kMaxIDSize` 와 같다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxKindSize )
         string _kind{}; ///< 상한은 `LiveOpsLimit::kMaxKindSize` 와 같다
         PROPERTY()
         int64 _windowEndMs{ 0 }; ///< 이번 회차(또는 기간)의 끝이다. 화면의 "남은 시간" 에 쓴다
@@ -139,11 +139,11 @@ namespace sw
     struct PushDeviceRegistration
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = PushLimit::kMaxProviderIDSize )
         string _providerID{}; ///< `[0-9a-z_]` 형식이며 16바이트 이하이다(예: "fake", "apns", "fcm")
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = PushLimit::kMaxTokenSize )
         string _token{}; ///< 256바이트 이하이다. 값으로만 두며 저장소 키는 토큰 해시를 쓴다
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = PushLimit::kMaxLocaleSize )
         string _locale{}; ///< 언어 코드이다(예: "ko-KR")
         PROPERTY()
         int64 _registeredMs{ 0 }; ///< 서버가 등록 시각으로 덮어쓴다

@@ -1251,6 +1251,138 @@ namespace sw
                 return true;
             }
 
+            /** @brief 한 범위의 자식에서 이름 조각(`A::B::kX`)을 차례로 따라가 변수 선언을 찾는 상태입니다(`constantSearchVisitor`). */
+            struct ConstantSearch
+            {
+                const vector<string>* _pListPart;
+                size_t                _partIndex;
+                CXCursor              _found;
+                bool                  _bFound;
+            };
+
+            static CXChildVisitResult constantSearchVisitor( CXCursor cursor, CXCursor, CXClientData data )
+            {
+                ConstantSearch*       pSearch  = static_cast<ConstantSearch*>( data );
+                const vector<string>& listPart = *pSearch->_pListPart;
+                if ( isStringEqual( clang_getCursorSpelling( cursor ), listPart[pSearch->_partIndex] ) == false )
+                    return CXChildVisit_Continue;
+                const CXCursorKind kind = clang_getCursorKind( cursor );
+                if ( pSearch->_partIndex + 1 == listPart.size() )
+                {
+                    if ( kind != CXCursor_VarDecl )
+                        return CXChildVisit_Continue;
+                    pSearch->_found  = cursor;
+                    pSearch->_bFound = true;
+                    return CXChildVisit_Break;
+                }
+                const bool bScope = kind == CXCursor_Namespace || kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl;
+                if ( bScope == false )
+                    return CXChildVisit_Continue;
+                // 타입은 정의 안을 본다(앞선 선언에는 자식이 없다). 네임스페이스는 블록마다 따로 열리므로 이 블록을 보고, 다른 블록은 바깥 순회가 만난다.
+                const CXCursor definition = clang_getCursorDefinition( cursor );
+                const CXCursor scope      = ( kind == CXCursor_Namespace || clang_Cursor_isNull( definition ) != 0 ) ? cursor : definition;
+                ConstantSearch inner{ pSearch->_pListPart, pSearch->_partIndex + 1, clang_getNullCursor(), false };
+                clang_visitChildren( scope, constantSearchVisitor, &inner );
+                if ( inner._bFound == false )
+                    return CXChildVisit_Continue;
+                pSearch->_found  = inner._found;
+                pSearch->_bFound = true;
+                return CXChildVisit_Break;
+            }
+
+            /** @brief @p scope 의 자식에서 @p listPart 를 따라간 변수 선언을 찾습니다. 없으면 null 커서입니다. */
+            static CXCursor findConstantIn( const CXCursor scope, const vector<string>& listPart )
+            {
+                ConstantSearch search{ &listPart, 0, clang_getNullCursor(), false };
+                clang_visitChildren( scope, constantSearchVisitor, &search );
+                return search._found;
+            }
+
+            /**
+             * @brief `MaxCount = 상수 이름` 의 상수를 선언에서 찾아 값을 `_maxCount` 에 넣습니다. 숫자로 적었으면(`_maxCountName` 이 비었으면) 할 일이 없습니다.
+             * @details 상한의 정본을 C++ 상수 하나로 둡니다. 생성기가 그 값을 읽으므로 코덱 · 정규 문자열(스키마 해시) · `PropertyMetadata::_maxCount` 가
+             *          모두 같은 수를 봅니다. 상수를 바꾸면 그 헤더를 읽는 생성물이 다시 만들어집니다(depfile).
+             *          이름 찾기는 C++ 를 좁게 따릅니다. 필드가 든 타입과 그 바깥 타입을 안쪽부터 보고, 그다음 바깥 네임스페이스 경로를 안쪽부터 붙여
+             *          번역 단위 맨 위에서 찾습니다(네임스페이스는 여러 블록에 걸쳐 열리므로 맨 위에서 모든 블록을 봅니다). 기반 클래스 · using 은 보지 않습니다.
+             *          찾지 못했거나 정수 상수가 아니거나 1 이상의 32 비트 값이 아니면 생성 오류입니다 — 상한을 조용히 빼면 그 필드는 코덱 없이 넘어갑니다.
+             */
+            [[nodiscard]] static bool resolveMaxCountName( const CXCursor memberCursor, ParsedPropertyInfo& prop, const string_view owner )
+            {
+                if ( prop._maxCountName.empty() )
+                    return true;
+                vector<string> listPart;
+                string_view    rest = prop._maxCountName;
+                for ( size_t separator = rest.find( "::" ); separator != string_view::npos; separator = rest.find( "::" ) )
+                {
+                    listPart.emplace_back( rest.substr( 0, separator ) );
+                    rest = rest.substr( separator + 2 );
+                }
+                listPart.emplace_back( rest );
+
+                // 바깥 범위 사슬: 타입은 안쪽부터, 네임스페이스 이름은 바깥부터 모은다.
+                vector<CXCursor> listRecord;
+                vector<string>   listNamespace;
+                CXCursor         scope = clang_getCursorSemanticParent( memberCursor );
+                while ( clang_Cursor_isNull( scope ) == 0 && clang_getCursorKind( scope ) != CXCursor_TranslationUnit )
+                {
+                    if ( clang_getCursorKind( scope ) == CXCursor_Namespace )
+                        listNamespace.insert( listNamespace.begin(), getCursorSpelling( scope ) );
+                    else
+                        listRecord.push_back( scope );
+                    scope = clang_getCursorSemanticParent( scope );
+                }
+
+                CXCursor found = clang_getNullCursor();
+                for ( const CXCursor record : listRecord )
+                {
+                    found = findConstantIn( record, listPart );
+                    if ( clang_Cursor_isNull( found ) == 0 )
+                        break;
+                }
+                const CXCursor translationUnit = clang_getTranslationUnitCursor( clang_Cursor_getTranslationUnit( memberCursor ) );
+                for ( size_t depth = listNamespace.size() + 1; clang_Cursor_isNull( found ) != 0 && depth > 0; --depth )
+                {
+                    vector<string> listPath( listNamespace.begin(), listNamespace.begin() + static_cast<ptrdiff_t>( depth - 1 ) );
+                    listPath.insert( listPath.end(), listPart.begin(), listPart.end() );
+                    found = findConstantIn( translationUnit, listPath );
+                }
+                if ( clang_Cursor_isNull( found ) != 0 )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY() '%#': MaxCount constant '%#' is not declared in this type or an enclosing scope", owner,
+                                  prop._maxCountName.c_str() );
+                    return false;
+                }
+
+                constexpr int64    kMaxCountLimit = static_cast<int64>( std::numeric_limits<uint32>::max() );
+                int64              value          = 0;
+                bool               bInteger       = false;
+                const CXEvalResult result         = clang_Cursor_Evaluate( found );
+                if ( result != nullptr )
+                {
+                    bInteger = clang_EvalResult_getKind( result ) == CXEval_Int;
+                    if ( bInteger && clang_EvalResult_isUnsignedInt( result ) != 0 )
+                    {
+                        const uint64 unsignedValue = static_cast<uint64>( clang_EvalResult_getAsUnsigned( result ) );
+                        value                      = unsignedValue > static_cast<uint64>( kMaxCountLimit ) ? kMaxCountLimit + 1 : static_cast<int64>( unsignedValue );
+                    }
+                    else if ( bInteger )
+                    {
+                        value = static_cast<int64>( clang_EvalResult_getAsLongLong( result ) );
+                    }
+                    clang_EvalResult_dispose( result );
+                }
+                const bool bWithinLimit = 1 <= value && value <= kMaxCountLimit;
+                if ( bInteger == false || bWithinLimit == false )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY() '%#': MaxCount constant '%#' must be an integer constant between 1 and 4294967295", owner,
+                                  prop._maxCountName.c_str() );
+                    return false;
+                }
+                prop._maxCount     = static_cast<uint32>( value );
+                prop._bHasMaxCount = SW_TRUE;
+                return true;
+            }
+
             /** @brief 필드 선언에서 PROPERTY 메타를 수집합니다. 멀티캐스트 델리게이트면 이벤트로 수집합니다. */
             static void collectField( const CXCursor cursor, MemberCollector& collector )
             {
@@ -1299,7 +1431,7 @@ namespace sw
                 }
 
                 const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._memberName );
-                if ( applyAnnotation( spelling, prop, session, owner ) == false )
+                if ( applyAnnotation( spelling, prop, session, owner ) == false || resolveMaxCountName( cursor, prop, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;
@@ -1373,7 +1505,7 @@ namespace sw
                 // libclang 에는 없다 — 쓰지 말 것.
                 prop._typeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( valueType ) ) );
 
-                if ( applyAnnotation( spelling, prop, session, owner ) == false )
+                if ( applyAnnotation( spelling, prop, session, owner ) == false || resolveMaxCountName( cursor, prop, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;

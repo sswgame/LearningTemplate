@@ -259,6 +259,10 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 범위 밖 값은 쓰기가 실패합니다. 키를 잘못 적은 것(범위 필드가 뒤에 있음, float32 로 정확히 나타낼 수 없는 정수 경계, 찾지 못한 범위 이름, 숫자가 아닌 필드의 `Min` · `Max`, 가변 길이가 아닌 필드의 `MaxCount`)은
 헤더 경로 · 줄 · 필드와 함께 생성 오류입니다. 표 밖의 타입(포인터, `MaxCount` 없는 vector)은 오류가 아니라 코덱이 없을 뿐입니다. 명세는 [리플렉션 직렬화 형식 계획](../../docs/plans/ReflectionFormats.md)입니다.
 
+**같은 상한을 코드도 쓰면 `MaxCount` 에 상수 이름을 적으세요.** `PROPERTY( MaxCount = kMaxSlotCount )`, `MaxCount = LedgerConstant::kMaxAssetIDSize` 처럼 적으면
+`AstVisitor::resolveMaxCountName` 이 필드가 든 타입과 바깥 범위에서 그 정수 상수를 찾아 값을 계산합니다. 숫자를 상수와 애노테이션 두 곳에 적지 않습니다.
+상수가 다른 헤더에 있으면 그 헤더를 include 합니다. 찾지 못한 이름 · 정수가 아닌 상수 · 1 보다 작은 값은 생성 오류입니다.
+
 **`REFLECT` 타입은 비가상 베이스를 하나까지만 둡니다.** 둘째 베이스나 가상 베이스가 있으면 헤더 · 줄 · 타입 이름과 함께 생성 오류입니다(`AstVisitor.cpp` `collectBase`).
 `castTo` 는 리플렉션 부모 사슬로 파생을 판단하고 `reinterpret_cast` 로 내려가므로, 부모가 offset 0 에 있지 않으면 잘못된 주소가 됩니다. 베이스가 `REFLECT()` 없는 인터페이스여도 막습니다.
 

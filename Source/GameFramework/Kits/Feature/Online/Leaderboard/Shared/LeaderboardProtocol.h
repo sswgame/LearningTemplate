@@ -64,7 +64,7 @@ namespace sw
     struct LeaderboardRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
         string _boardID{}; ///< 상한은 `LeaderboardLimit::kMaxIDSize` 와 같다
         PROPERTY()
         int64 _score{ 0 }; ///< kSubmitScore
@@ -84,11 +84,11 @@ namespace sw
     struct LeaderboardReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 100 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxPage )
         vector<LeaderboardEntry> _listEntry{}; ///< 상한은 `LeaderboardLimit::kMaxPage` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxStatCount )
         vector<LeaderboardStat> _listStat{}; ///< 상한은 `LeaderboardLimit::kMaxStatCount` 와 같다
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
         vector<AchievementState> _listAchievement{}; ///< 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
         PROPERTY()
         uint64 _periodID{ 0 };

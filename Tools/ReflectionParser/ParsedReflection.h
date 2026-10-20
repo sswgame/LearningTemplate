@@ -169,23 +169,29 @@ namespace sw
         shared_ptr<ParsedFixedType> _fixedType;
         ParsedRangeExpr             _minRangeExpr; ///< `Min` 의 글입니다. 숫자 하나면 `_minRange` 에도 들어갑니다
         ParsedRangeExpr             _maxRangeExpr;
-        float32                     _minRange;
-        float32                     _maxRange;
-        float32                     _uiMinRange; ///< `UIMin` — 슬라이더 범위(허용 범위와 따로)
-        float32                     _uiMaxRange;
-        float32                     _step;     ///< `Step` 양자화 간격입니다(`_bHasStep`)
-        uint32                      _maxCount; ///< `MaxCount` 문자열 · 컨테이너 최대 길이입니다(`_bHasMaxCount`)
-        uint32                      _line;     ///< 선언 줄입니다. 생성 오류 메시지에 씁니다
-        ContainerKind               _containerKind;
-        uint8                       _bIsBitField   : 1;
-        uint8                       _bReadOnly     : 1;
-        uint8                       _bXMLAttribute : 1;
-        uint8                       _bAssetPath    : 1;
-        uint8                       _bPolymorphic  : 1;
-        uint8                       _bHasMinRange  : 1;
-        uint8                       _bHasMaxRange  : 1;
-        uint8                       _bIsContainer  : 1;
-        uint8                       _bTransient    : 1;
+        /**
+         * @brief `MaxCount` 에 적은 C++ 정수 상수 이름입니다(`MaxCount = kMaxSlotCount`, `MaxCount = LedgerConstant::kMaxMemoSize`). 숫자로 적었으면 비어 있습니다.
+         * @details 애노테이션 단계는 이름만 받아 두고, 선언을 아는 `AstVisitor` 가 그 상수를 찾아 값을 `_maxCount` 에 넣습니다(`resolveMaxCountName`).
+         *          상한의 정본을 C++ 상수 하나로 두려는 것입니다 — 숫자를 두 곳에 적으면 둘이 어긋나도 아무도 모릅니다.
+         */
+        string        _maxCountName;
+        float32       _minRange;
+        float32       _maxRange;
+        float32       _uiMinRange; ///< `UIMin` — 슬라이더 범위(허용 범위와 따로)
+        float32       _uiMaxRange;
+        float32       _step;     ///< `Step` 양자화 간격입니다(`_bHasStep`)
+        uint32        _maxCount; ///< `MaxCount` 문자열 · 컨테이너 최대 길이입니다(`_bHasMaxCount`)
+        uint32        _line;     ///< 선언 줄입니다. 생성 오류 메시지에 씁니다
+        ContainerKind _containerKind;
+        uint8         _bIsBitField   : 1;
+        uint8         _bReadOnly     : 1;
+        uint8         _bXMLAttribute : 1;
+        uint8         _bAssetPath    : 1;
+        uint8         _bPolymorphic  : 1;
+        uint8         _bHasMinRange  : 1;
+        uint8         _bHasMaxRange  : 1;
+        uint8         _bIsContainer  : 1;
+        uint8         _bTransient    : 1;
         /** @brief 값이 비어 있으면 직렬화에서 생략합니다(PROPERTY(SkipIfEmpty)). */
         uint8 _bSkipIfEmpty : 1;
         /** @brief 데이터 파일이 반드시 적어야 하는 칸입니다(PROPERTY(Required)). */
@@ -238,6 +244,7 @@ namespace sw
             , _fixedType{ nullptr }
             , _minRangeExpr{}
             , _maxRangeExpr{}
+            , _maxCountName{}
             , _minRange{ 0.0f }
             , _maxRange{ 1.0f }
             , _uiMinRange{ 0.0f }

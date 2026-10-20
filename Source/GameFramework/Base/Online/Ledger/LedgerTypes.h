@@ -77,7 +77,7 @@ namespace sw
     struct LedgerBalance
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{};
         PROPERTY()
         int64  _amount{ 0 };

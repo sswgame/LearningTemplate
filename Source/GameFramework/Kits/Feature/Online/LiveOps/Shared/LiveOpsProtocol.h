@@ -12,6 +12,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -57,7 +58,7 @@ namespace sw
     struct LiveOpsStateRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _region{}; ///< 상한은 `ServerRecord::kMaxNameSize` 와 같다
         PROPERTY()
         uint32 _buildVersion{ 0 };
@@ -71,9 +72,9 @@ namespace sw
     struct LiveOpsDeviceKey
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = PushLimit::kMaxProviderIDSize )
         string _providerID{}; ///< 상한은 `PushLimit::kMaxProviderIDSize` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = PushLimit::kMaxTokenSize )
         string _token{}; ///< 상한은 `PushLimit::kMaxTokenSize` 와 같다
     };
 } // namespace sw
@@ -85,7 +86,7 @@ namespace sw
     struct LiveOpsReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = LiveOpsLimit::kMaxEventCount )
         vector<LiveEventState> _listEvent{}; ///< 상한은 `LiveOpsLimit::kMaxEventCount` 와 같다
         PROPERTY()
         LiveOpsResult _result{ LiveOpsResult::Ok };

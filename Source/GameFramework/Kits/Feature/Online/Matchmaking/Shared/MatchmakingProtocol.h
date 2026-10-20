@@ -126,9 +126,9 @@ namespace sw
     struct MatchmakingModeRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxIDSize )
         string _modeID{}; ///< 상한은 `MatchmakingLimit::kMaxIDSize` 와 같다
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _region{}; ///< 상한은 `ServerRecord::kMaxNameSize` 와 같다
     };
 } // namespace sw
@@ -153,7 +153,7 @@ namespace sw
     struct MatchmakingReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 50 )
+        PROPERTY( MaxCount = PartyLobbyLimit::kMaxLobbyList )
         vector<LobbySnapshot> _listLobby{}; ///< LobbyList. 상한은 `PartyLobbyLimit::kMaxLobbyList` 와 같다
         PROPERTY()
         PartySnapshot _party{};
