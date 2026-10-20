@@ -1432,6 +1432,61 @@ SW_TEST_CASE( InputMapTest, MissingShellInputMapLeavesNoBindings )
 }
 
 /**
+ * @brief [InputMapTest] 키를 누른 채 레이어를 켜면 Pressed 가 아니라 Held 로 시작하고, 뗐다 다시 누르면 Pressed 가 나온다
+ * @details 변이: 꺼진 레이어의 바인딩이 눌림을 추적하지 않으면(`_bPhysicalDown`) 레이어가 켜지는 프레임에 이미 눌려 있던 키가 새 누름으로 발화한다 —
+ *          일시정지를 연 Esc 를 누르고 있으면 층 안 Back 이 바로 발화해 메뉴가 닫히던 결함의 뿌리다.
+ */
+SW_TEST_CASE( InputMapTest, KeyHeldWhenTheLayerTurnsOnStartsHeldNotPressed )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.registerLayer( "Menu", 10, false, false, false );
+    inputMap.bind( "MenuBack", sw::Key::F8, sw::ActionTrigger::Pressed, "Menu" );
+    inputMap.bind( "MenuHeld", sw::Key::F8, sw::ActionTrigger::Down, "Menu" );
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f ); // 레이어가 꺼진 채 누른다
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "MenuBack" ) );
+    SW_EXPECT_FALSE( inputMap.isActionDown( "MenuHeld" ) );
+    input.endFrame();
+
+    inputMap.setLayerEnabled( "Menu", true );
+    input.beginFrame( 1.0f / 60.0f ); // 누른 채 켜진 첫 프레임
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "MenuBack" ) );
+    SW_EXPECT_FALSE( inputMap.wasActionPressed( "MenuBack" ) );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "MenuHeld" ) ); // 눌려 있는 것은 Held 로 보인다
+    input.endFrame();
+
+    input.beginFrame( 1.0f / 60.0f ); // 계속 누르는 동안에도 새 누름이 아니다
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "MenuBack" ) );
+    input.endFrame();
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "MenuBack" ) );
+    input.endFrame();
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) ); // 뗐다 다시 누른 것은 새 누름이다
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "MenuBack" ) );
+    input.endFrame();
+
+    // 레이어를 끄고 키를 뗀 뒤, 켜는 프레임에 누르면 새 누름이다.
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::F8 ) );
+    inputMap.setLayerEnabled( "Menu", false );
+    input.beginFrame( 1.0f / 60.0f );
+    input.endFrame();
+    inputMap.setLayerEnabled( "Menu", true );
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::F8 ) );
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "MenuBack" ) );
+    input.endFrame();
+
+    input.shutdown();
+}
+
+/**
  * @brief [InputMapTest] 합성 바인딩(axis1d · vector2d)도 같은 프레임 안의 누름 + 뗌을 한 번 눌린 것으로 본다 — 단일 키와 같은 규칙
  * @details 매크로 · 초고속 탭 · 가상 입력(hold=0)은 한 `beginFrame` 에 누름과 뗌이 함께 들어온다. 합성 갈래가 "지금 눌려 있나" 만 보면
  *          그 프레임 축이 0 이라 `Pressed` 로 묶은 무기 교체(Shooter3D SwitchWeapon)가 발동하지 않는다.

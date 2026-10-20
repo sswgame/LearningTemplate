@@ -579,6 +579,11 @@ namespace sw
         static const utf8*   actionTriggerToName( ActionTrigger trigger );
 
     private:
+        /**
+         * @brief 바인딩 하나의 프레임 사이 상태입니다.
+         * @details `_bPhysicalDown` 은 레이어가 꺼져 있어도 매 프레임 장치를 읽어 갱신한다(`_bDown` 은 켜진 레이어에서만 눌림이다).
+         *          레이어가 켜지는 프레임에 이미 눌려 있던 입력이 새 누름(Pressed)으로 읽히지 않게 하는 근거다 — `update` 가 `_bWasDown` 을 맞춘다.
+         */
         struct ActionBindingState
         {
             float32                _holdDuration;
@@ -593,7 +598,9 @@ namespace sw
             uint8                  _bHoldThreshold : 1;
             uint8                  _bWasDown       : 1;
             uint8                  _bTriggered     : 1;
-            [[maybe_unused]] uint8 _reserved       : 1;
+            uint8                  _bPhysicalDown  : 1; ///< 직전 프레임에 레이어와 상관없이 장치가 눌려 있었는지입니다.
+            uint8                  _bLayerActive   : 1; ///< 직전 프레임에 바인딩의 레이어가 켜져 있었는지입니다.
+            [[maybe_unused]] uint8 _reserved       : 7;
 
             ActionBindingState()
                 : _holdDuration{ 0.0f }
@@ -608,6 +615,8 @@ namespace sw
                 , _bHoldThreshold{ SW_FALSE }
                 , _bWasDown{ SW_FALSE }
                 , _bTriggered{ SW_FALSE }
+                , _bPhysicalDown{ SW_FALSE }
+                , _bLayerActive{ SW_FALSE }
                 , _reserved{ 0 } {}
         };
 

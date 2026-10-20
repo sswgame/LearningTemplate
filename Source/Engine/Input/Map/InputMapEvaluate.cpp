@@ -55,9 +55,11 @@ namespace sw
                 const ActionBinding& binding = actionEntry._listBinding[bindIndex];
                 ActionBindingState&  state   = actionEntry._listBindingState[bindIndex];
 
+                // 꺼진 레이어의 바인딩도 장치를 읽어 눌림을 추적한다. 레이어가 켜지는 프레임에 이미 눌려 있던 입력을 새 누름으로 읽지 않기 위해서다(아래 `_bWasDown`).
                 const bool bLayerActive = isBindingLayerActive( binding );
                 float2     bindingValue{ 0.0f, 0.0f };
-                const bool bRawDown = bLayerActive && evaluateBindingDown( binding, bindingValue );
+                const bool bPhysicalDown = evaluateBindingDown( binding, bindingValue );
+                const bool bRawDown      = bLayerActive && bPhysicalDown;
                 if ( binding._bNegate )
                 {
                     bindingValue._x = -bindingValue._x;
@@ -72,6 +74,13 @@ namespace sw
 
                 state._bWasDown = state._bDown;
                 state._bDown    = bRawDown ? SW_TRUE : SW_FALSE;
+                // 레이어가 막 켜졌고 그 전부터 눌려 있었으면 Pressed 가 아니라 Held 로 시작한다(눌린 채 켜진 입력을 새 누름으로 읽으면 일시정지를 연 Esc 가 층 안 Back 이 된다).
+                // 눌린 채 켜진 프레임에 뗐으면 아무 일도 아니다. 켜진 뒤 뗐다 다시 누른 입력은 새 누름이다.
+                const bool bLayerJustActivated = bLayerActive && state._bLayerActive == SW_FALSE;
+                if ( bLayerJustActivated && state._bPhysicalDown == SW_TRUE )
+                    state._bWasDown = state._bDown;
+                state._bPhysicalDown = bPhysicalDown ? SW_TRUE : SW_FALSE;
+                state._bLayerActive  = bLayerActive ? SW_TRUE : SW_FALSE;
 
                 state._bPressed       = ( state._bDown == SW_TRUE && state._bWasDown == SW_FALSE ) ? SW_TRUE : SW_FALSE;
                 state._bReleased      = ( state._bDown == SW_FALSE && state._bWasDown == SW_TRUE ) ? SW_TRUE : SW_FALSE;

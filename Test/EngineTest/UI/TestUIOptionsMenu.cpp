@@ -402,7 +402,7 @@ SW_TEST_CASE( UIOptionsMenuTest, PauseActionOpensPauseMenu )
 
 /**
  * @brief [UIOptionsMenuTest] 일시정지 메뉴를 연 Esc 를 계속 누르고 있어도 메뉴가 닫히지 않는다(사람의 누름은 여러 프레임이다)
- * @details 변이: `UIInputRouter::processActions` 의 `isPressFired` 가 소비 검사를 빼면 UI 층이 켜진 첫 프레임에 같은 Esc 의 Back 이 발화해 다음 프레임에 활성 화면이 없다.
+ * @details 변이: `InputMap::update` 가 층이 켜지는 프레임의 `_bWasDown` 을 맞추지 않으면 UI 층이 켜진 첫 프레임에 같은 Esc 의 Back 이 새 누름으로 발화해 다음 프레임에 활성 화면이 없다.
  *          한 프레임짜리 누름(`tapKey`)은 층이 켜지기 전에 떼어져 이 결함을 가렸다(시나리오 `Tap hold="1"` 도 같았다).
  */
 SW_TEST_CASE( UIOptionsMenuTest, HeldPauseKeyDoesNotCloseThePauseMenu )
