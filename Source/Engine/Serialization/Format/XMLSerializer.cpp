@@ -398,7 +398,7 @@ namespace sw
                             // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 false 로 삼키지 않고 실패로 남긴다.
                             if ( prop._bIsBitField == SW_TRUE )
                             {
-                                if ( SerializerUtil::applyPropertyText( prop, pInstance, strValue, context ) == false )
+                                if ( SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, strValue, context ) == false )
                                 {
                                     bFieldError = true;
                                     recordDroppedText( pOutListOrphan, prop, strValue );

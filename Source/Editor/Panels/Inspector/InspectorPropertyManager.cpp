@@ -570,7 +570,7 @@ namespace sw::editor
                         // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
                         const string undoLabel = InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( prop ) );
                         grid.applyPropertyTextAsEdit( pInstance, prop,
-                                                      SerializerUtil::formatValueText( &picked, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
+                                                      SerializerUtil::formatValueText( ValueAddress{ &picked }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
                                                       undoLabel.c_str() );
                     }
                 }

@@ -812,9 +812,10 @@ namespace sw
         ss.append( "null" );
     }
 
-    bool SerializerUtil::parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
+    bool SerializerUtil::parseTextValue( MutableValueAddress value, const hashed_string& typeName, string_view valStr,
                                          const SerializeContext& context )
     {
+        void* const                         pValPtr     = value.get();
         const hashed_string                 resolved    = SerializerUtil::resolveHandlerTypeName( typeName, context );
         const SerializeContext::TextReadFn* pTextReader = context.findTextReader( resolved );
         if ( pTextReader != nullptr )
@@ -863,7 +864,7 @@ namespace sw
             return;
         if ( prop._metadata._defaultValue.empty() )
             return;
-        if ( applyPropertyText( prop, pInstance, prop._metadata._defaultValue, context ) == false )
+        if ( applyPropertyText( prop, MutableObjectAddress{ pInstance }, prop._metadata._defaultValue, context ) == false )
             SW_LOG_WARNING( "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata._defaultValue,
                             prop._name.c_str(), prop._typeName.c_str() );
     }
@@ -921,8 +922,9 @@ namespace sw
         return bWritten && bytesA == bytesB;
     }
 
-    bool SerializerUtil::applyPropertyText( const PropertyInfo& prop, void* pInstance, string_view text, const SerializeContext& context )
+    bool SerializerUtil::applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context )
     {
+        void* const pInstance = instance.get();
         if ( pInstance == nullptr || prop._bIsContainer == SW_TRUE )
             return false;
         if ( prop._bIsBitField == SW_TRUE )
@@ -935,7 +937,7 @@ namespace sw
             return true;
         }
         void* pValue = prop.getRawPtr( pInstance );
-        return pValue != nullptr && parseTextValue( pValue, prop._typeName, text, context );
+        return pValue != nullptr && parseTextValue( MutableValueAddress{ pValue }, prop._typeName, text, context );
     }
 
     bool SerializerUtil::applyPropertyBinary( const PropertyInfo& prop, void* pInstance, const uint8* pPayload, size_t payloadSize, const SerializeContext& context,
@@ -1002,8 +1004,9 @@ namespace sw
         }
     }
 
-    string SerializerUtil::formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& context )
+    string SerializerUtil::formatPropertyText( const PropertyInfo& prop, ObjectAddress instance, const SerializeContext& context )
     {
+        const void* const pInstance = instance.get();
         if ( pInstance == nullptr )
             return {};
         if ( prop._bIsBitField == SW_TRUE )
@@ -1020,13 +1023,13 @@ namespace sw
             ss.append( "]" );
             return ss.c_str();
         }
-        return formatValueText( pValue, prop._typeName, context );
+        return formatValueText( ValueAddress{ pValue }, prop._typeName, context );
     }
 
-    string SerializerUtil::formatValueText( const void* pValue, const hashed_string& typeName, const SerializeContext& context )
+    string SerializerUtil::formatValueText( ValueAddress value, const hashed_string& typeName, const SerializeContext& context )
     {
         StringBuilder<constant::kMaxBuffer8192> ss;
-        valueToText( ss, pValue, typeName, context );
+        valueToText( ss, value.get(), typeName, context );
         return ss.c_str();
     }
 

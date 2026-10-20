@@ -289,8 +289,8 @@ namespace sw::editor
                 if ( prop._metadata._displayName.empty() == false )
                     item._propertyLabel = prop._metadata._displayName.c_str();
 #endif
-                item._defaultValue    = SerializerUtil::formatPropertyText( prop, pCdoComp, context );
-                item._overriddenValue = SerializerUtil::formatPropertyText( prop, pInstanceComponent, context );
+                item._defaultValue    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCdoComp }, context );
+                item._overriddenValue = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstanceComponent }, context );
                 item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, pCdoComp, pInstanceComponent, context ) == false );
                 outListOverride.push_back( std::move( item ) );
             },

@@ -616,11 +616,11 @@ namespace sw
             return false;
 
         const string_view stripped = SchemaMigrateInternal::stripJSONQuotes( valStr );
-        if ( SerializerUtil::parseTextValue( pValPtr, typeName, valStr, context ) )
+        if ( SerializerUtil::parseTextValue( MutableValueAddress{ pValPtr }, typeName, valStr, context ) )
             return true;
         if ( stripped.data() != valStr.data() || stripped.size() != valStr.size() )
         {
-            if ( SerializerUtil::parseTextValue( pValPtr, typeName, stripped, context ) )
+            if ( SerializerUtil::parseTextValue( MutableValueAddress{ pValPtr }, typeName, stripped, context ) )
                 return true;
         }
 

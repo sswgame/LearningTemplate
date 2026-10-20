@@ -54,10 +54,10 @@ namespace sw::editor
         if ( listInstance.size() < 2 )
             return false;
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const string            first   = SerializerUtil::formatPropertyText( prop, listInstance[0], context );
+        const string            first   = SerializerUtil::formatPropertyText( prop, ObjectAddress{ listInstance[0] }, context );
         for ( size_t index = 1; index < listInstance.size(); ++index )
         {
-            if ( SerializerUtil::formatPropertyText( prop, listInstance[index], context ) != first )
+            if ( SerializerUtil::formatPropertyText( prop, ObjectAddress{ listInstance[index] }, context ) != first )
                 return true;
         }
         return false;
@@ -68,12 +68,12 @@ namespace sw::editor
         if ( listComponent.size() < 2 || listComponent[0] == nullptr )
             return 0;
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        const string            text    = SerializerUtil::formatPropertyText( prop, listComponent[0], context );
+        const string            text    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ listComponent[0] }, context );
         uint32                  copiedCount{ 0 };
         for ( size_t index = 1; index < listComponent.size(); ++index )
         {
             Component* pComponent = listComponent[index];
-            if ( pComponent == nullptr || SerializerUtil::applyPropertyText( prop, pComponent, text, context ) == false )
+            if ( pComponent == nullptr || SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pComponent }, text, context ) == false )
                 continue;
             pComponent->onPropertyChanged( prop._name );
             ++copiedCount;

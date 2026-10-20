@@ -295,7 +295,7 @@ namespace sw
                 {
                     BlendCurveDef       scratch{};
                     const PropertyInfo* pCurve = BlendCurveDef::StaticType()->findProperty( hashed_string( "_curve" ) );
-                    if ( pCurve == nullptr || SerializerUtil::applyPropertyText( *pCurve, &scratch, arrToken[nextToken], SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                    if ( pCurve == nullptr || SerializerUtil::applyPropertyText( *pCurve, MutableObjectAddress{ &scratch }, arrToken[nextToken], SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
                     {
                         outError = "transition item '" + string( item ) + "' has an unknown curve '" + string( arrToken[nextToken] ) + "'";
                         return false;

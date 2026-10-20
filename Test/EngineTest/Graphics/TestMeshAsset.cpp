@@ -218,7 +218,7 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     const sw::PropertyInfo* pMeshID = pMesh->getTypeInfo()->findPropertyInHierarchy( sw::hashed_string( "_meshID" ) );
     SW_ASSERT_NOT_NULL( pMeshID );
 
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, path, context ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, sw::MutableObjectAddress{ pMesh }, path, context ) );
     pMesh->onPropertyChanged( pMeshID->_name );
     SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
     SW_EXPECT_EQUAL( 6u, pMesh->getRawMesh()->getVertexCount() );

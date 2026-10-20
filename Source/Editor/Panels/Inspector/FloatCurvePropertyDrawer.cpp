@@ -67,7 +67,7 @@ namespace sw::editor
                     _state._working = *pCurve;
                 if ( EditorCurveEditor::drawEditor( _state ) )
                 {
-                    const string text = SerializerUtil::formatValueText( &_state._working, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                    const string text = SerializerUtil::formatValueText( ValueAddress{ &_state._working }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                     grid.applyPropertyTextAsEdit( pInstance, prop, text, "Edit Curve" );
                 }
                 ImGui::EndPopup();

@@ -198,7 +198,7 @@ namespace sw::editor
 
     void EditorPropertyGrid::resetPropertyToDefault( void* pInstance, const PropertyInfo& prop, const void* pDefaultInstance )
     {
-        const string text = pDefaultInstance != nullptr ? SerializerUtil::formatPropertyText( prop, pDefaultInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) )
+        const string text = pDefaultInstance != nullptr ? SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaultInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) )
                                                         : prop._metadata._defaultValue;
         applyPropertyTextAsEdit( pInstance, prop, text, "Reset to Default" );
     }
@@ -211,7 +211,7 @@ namespace sw::editor
         const string value{ text };
         auto         apply = [this, &prop, pInstance, &value]()
         {
-            if ( SerializerUtil::applyPropertyText( prop, pInstance, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
+            if ( SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
                 notifyPropertyEdited( prop );
             else
                 SW_LOG_WARNING( "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
@@ -369,7 +369,7 @@ namespace sw::editor
                                 resetPropertyToDefault( pInstance, *prop, pDefaultInstance );
                         }
                         if ( ImGui::MenuItem( "Copy Value" ) )
-                            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( *prop, pInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
+                            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( *prop, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) ).c_str() );
                         // 타입 핸들은 선택기만이 입력 길이다. 글로 붙이면 대상 타입을 확인하지 않은 값이 들어간다.
                         const bool bPasteAllowed = ImGui::GetClipboardText() != nullptr && prop->_handleTargetTypeName.empty();
                         if ( ImGui::MenuItem( "Paste Value", nullptr, false, bPasteAllowed ) )
@@ -723,7 +723,7 @@ namespace sw::editor
             if ( bReadOnly == false )
                 ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted( SerializerUtil::formatValueText( pKey, prop._keyTypeName, context ).c_str() );
+            ImGui::TextUnformatted( SerializerUtil::formatValueText( ValueAddress{ pKey }, prop._keyTypeName, context ).c_str() );
             ImGui::SameLine();
             ImGui::BeginDisabled( bElementEditable == false );
             ImGui::SetNextItemWidth( -FLT_MIN );
@@ -748,13 +748,13 @@ namespace sw::editor
             void* pValue = Memory::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
             mapWrapper.defaultConstructKey( pKey );
             mapWrapper.defaultConstructValue( pValue );
-            if ( SerializerUtil::parseTextValue( pKey, prop._keyTypeName, keyText, context ) )
+            if ( SerializerUtil::parseTextValue( MutableValueAddress{ pKey }, prop._keyTypeName, keyText, context ) )
             {
-                const string stagedText = SerializerUtil::formatValueText( pKey, prop._keyTypeName, context );
+                const string stagedText = SerializerUtil::formatValueText( ValueAddress{ pKey }, prop._keyTypeName, context );
                 bool         bExists    = false;
                 mapWrapper.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pExistingKey, const void* )
                 {
-                    if ( SerializerUtil::formatValueText( pExistingKey, prop._keyTypeName, context ) == stagedText )
+                    if ( SerializerUtil::formatValueText( ValueAddress{ pExistingKey }, prop._keyTypeName, context ) == stagedText )
                         bExists = true;
                 } ) );
                 if ( bExists == false )
@@ -795,7 +795,7 @@ namespace sw::editor
             if ( bReadOnly == false )
                 ImGui::SameLine();
             // 원소는 텍스트 입력란이다. Enter 로 확정한 텍스트를 원소 타입으로 읽어 지우고 다시 넣는다. 원소가 곧 정렬 키이므로 제자리에 쓰면 트리가 깨진다.
-            fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatValueText( sequence.getElementConst( pContainer, elemIndex ), elementTypeName, context ).c_str() };
+            fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatValueText( ValueAddress{ sequence.getElementConst( pContainer, elemIndex ) }, elementTypeName, context ).c_str() };
             const ImGuiInputTextFlags             flags = bElementEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly;
             ImGui::SetNextItemWidth( -FLT_MIN );
             if ( ImGui::InputText( "##element", elementText.data(), elementText.capacity(), flags ) && bElementEditable )
@@ -811,7 +811,7 @@ namespace sw::editor
             EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Edit Set Element", [&]()
             {
                 (void)sequence.replaceElement( pContainer, replaceIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                { return SerializerUtil::parseTextValue( pElement, elementTypeName, replaceText, context ); } ) );
+                { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, elementTypeName, replaceText, context ); } ) );
             } );
             notifyPropertyEdited( prop );
         }
@@ -828,7 +828,7 @@ namespace sw::editor
             EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Add Set Element", [&]()
             {
                 (void)sequence.appendElement( pContainer, sequence.getSize( pContainer ), SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                { return SerializerUtil::parseTextValue( pElement, elementTypeName, addText, context ); } ) );
+                { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, elementTypeName, addText, context ); } ) );
             } );
             notifyPropertyEdited( prop );
         }
