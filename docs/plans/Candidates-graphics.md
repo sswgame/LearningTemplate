@@ -70,12 +70,11 @@
 ### ViewModeCompletion
 제목: 뷰포트 보기 모드의 남은 것
 옛번호: D2-10, D2-10.2, D2-10.3
-왜 필요한가: `RenderViewMode`(언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다)에서 `LightingOnly` · Roughness · Metallic · Mipmaps 는 들어갔다. 아래가 남았다.
+왜 필요한가: `RenderViewMode`(언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다)에서 `LightingOnly` · Roughness · Metallic · Mipmaps · LightComplexity 는 들어갔다. 아래가 남았다.
 착수 조건 / 남은 것:
 - Shipping 베이크: 쿠킹한 LightingOnly 변형으로 Shipping hostgpu 를 돌린다. Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
 - Metallic 금속도 칸은 PBR([IndirectLighting](IndirectLighting.md) P5)과 함께 생긴다.
 - Shaded Wireframe: 패스가 둘 필요하다.
-- Light Complexity: 디퍼드는 G버퍼 패스가 빛 목록을 보지 않아 조명 패스에 보기 모드 변형이 필요하다. [ClusteredLighting](ClusteredLighting.md) S4 와 같은 일이다.
 함정: `swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다. `toon` · `sprite2dlit` 포워드 경로도 LightingOnly 에서는 회색으로 바뀐다.
 
 ### RealtimeGlobalIllumination
