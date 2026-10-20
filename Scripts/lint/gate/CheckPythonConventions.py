@@ -29,11 +29,10 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.RuleData import kKindTextList  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kRuleSchema = {"lexical_os_path_function": kKindTextList, "legacy_typing_name": kKindTextList}
 _kRuleData = LintGate.readRules("CheckPythonConventions", _kRuleSchema, requiredKeys=tuple(_kRuleSchema))

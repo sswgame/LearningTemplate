@@ -51,11 +51,10 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintFixer
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from gate.CheckLoopBraces import insertLoopBraces  # noqa: E402
-from LintFixer import FixPass, LintFixer  # noqa: E402
+from lint.gate.CheckLoopBraces import insertLoopBraces  # noqa: E402
+from lint.LintFixer import FixPass, LintFixer  # noqa: E402
 # 중괄호를 벗기면 안 되는 본문: 스스로 분기/반복을 여는 문장(달랑거리는 else 위험) 및 레이블.
 _kNestedControlRe = re.compile(r"^(if|else|for|while|do|switch|case|default)\b")
 _kIfHeadRe = re.compile(r"^if(\s+constexpr)?\s*\(")

@@ -23,7 +23,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Callable, Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (  # noqa: E402
     collectRepositoryFiles,

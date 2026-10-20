@@ -23,12 +23,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — StagedScope
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import ProcessResult, getAllStagedFiles, getMergeHeadRevisions, resolveGitExecutable, runProcess  # noqa: E402
-from StagedScope import selectFileScopedStaged  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.StagedScope import selectFileScopedStaged  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 열 줄짜리 본문 — 두 부모가 서로 다른 줄을 고치면 git 이 자동 병합한다.
 _kBaseText = "".join(f"line {index}\n" for index in range(10))

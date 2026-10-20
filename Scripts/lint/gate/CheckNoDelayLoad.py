@@ -22,11 +22,10 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import kLintTargetRelDirs  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 #: 지연 로드를 켜는 CMake 낱말 — 링커 옵션과 그 헬퍼 라이브러리.
 _kDelayLoadRe = re.compile(r"DELAYLOAD\s*:|\bdelayimp\b", re.IGNORECASE)

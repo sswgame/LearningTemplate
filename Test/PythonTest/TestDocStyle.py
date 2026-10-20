@@ -12,10 +12,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "lint"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "lint" / "report"))
 
-import RunDocStyle  # noqa: E402
+from lint.report import RunDocStyle  # noqa: E402
 
 _kBadDocument = """# 제목
 

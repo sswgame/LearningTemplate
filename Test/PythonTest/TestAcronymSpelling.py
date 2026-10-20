@@ -12,10 +12,8 @@ from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint" / "fixer"))
 
-import FormatAcronymSpelling as codemod  # noqa: E402
+from lint.fixer import FormatAcronymSpelling as codemod  # noqa: E402
 from common import AcronymRegistry as registry  # noqa: E402
 from common import runProcess  # noqa: E402
 

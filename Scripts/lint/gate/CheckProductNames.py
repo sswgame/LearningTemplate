@@ -28,14 +28,13 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import findFast, kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText, kKindTextList  # noqa: E402
-from gate.CheckThirdPartyIsolation import _kListLibraryRule  # noqa: E402
-from LintGate import LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile  # noqa: E402
+from lint.gate.CheckThirdPartyIsolation import _kListLibraryRule  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 #: `rules/CheckProductNames.toml` 에서 예외 표 말고 읽는 것 — 제품 낱말 → 라이브러리 규칙 이름, 뒤에 대문자가 와야 하는 낱말.

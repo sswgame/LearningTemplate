@@ -27,12 +27,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import blankCommentsAndLiterals  # noqa: E402
-from LintGate import BaselineSourceGate, CountedFinding  # noqa: E402
-from SourceScan import SourceFile  # noqa: E402
+from lint.LintGate import BaselineSourceGate, CountedFinding  # noqa: E402
+from lint.SourceScan import SourceFile  # noqa: E402
 
 _kScanRoot = ("Source/Editor", "Source/GameFramework/PlugIn/Editor")
 _kSuffixes = (".h", ".hpp", ".inl", ".cc", ".cpp", ".cxx")

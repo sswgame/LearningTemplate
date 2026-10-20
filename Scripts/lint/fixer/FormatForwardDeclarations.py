@@ -21,10 +21,9 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintFixer
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from LintFixer import FixPass, LintFixer  # noqa: E402
+from lint.LintFixer import FixPass, LintFixer  # noqa: E402
 _kSingleFwdRe = re.compile(
     r"^(\s*)(?:template\s*<[^;{}>]+>\s*)?"
     r"(enum(?:\s+class|\s+struct)?|struct|class)\s+"

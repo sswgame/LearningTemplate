@@ -32,8 +32,7 @@ import functools
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import (  # noqa: E402
     kCppAllExtensions,
@@ -51,9 +50,9 @@ from common import (  # noqa: E402
     normalizePath,
     startsWithPathComponent,
 )
-from LayerRules import engineLayerOf, kEngineLayerSchema, kEnginePreludePrefix, kEngineRootLayerName, kEngineWiringPrefix, readEngineLayerRules  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+from lint.LayerRules import engineLayerOf, kEngineLayerSchema, kEnginePreludePrefix, kEngineRootLayerName, kEngineWiringPrefix, readEngineLayerRules  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 #: 층 규칙이 보는 뿌리 — 걷는 뿌리이자 커밋 훅이 이 게이트를 부르는 자리다.
 _kListScanRoot = (kDirSourceEngine, kDirSourceGames, kDirSourceGameFramework, kDirSourceRuntimeAPI, kDirSourceCore, kDirSourceApp,

@@ -27,13 +27,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import AcronymRegistry as registry  # noqa: E402
 from common import kLintTargetRelDirs, kNotOurCodeDirNames, lineOf  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 #: 대문자 셋 이상이 이어진 이름 — 규칙 4 후보를 찾는 앞 거르기.
 _kUpperRunRe = re.compile(r"[A-Z]{3,}")

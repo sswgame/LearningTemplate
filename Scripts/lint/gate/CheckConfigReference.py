@@ -23,12 +23,11 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import kCookContractConfigRelative  # noqa: E402
 from common.ConfigReference import buildConfigReference, kConfigReferenceDir  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 셀프 테스트가 저장소에서 그대로 복사하는 문서의 재료 — 없으면 게이트가 위반이 아니라 종료 2 로 멈춘다.
 _kSelfTestRepoFiles = [kCookContractConfigRelative, "Source/Engine/UserSettings/UserSettingsSchema.h", "Source/Engine/UserSettings/UserSettingsSchema.cpp",

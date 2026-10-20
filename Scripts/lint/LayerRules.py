@@ -9,7 +9,7 @@ C++ 폴더 층 규칙의 공용 자리 — 게이트(`gate/CheckEngineLayers.py`
 from __future__ import annotations
 
 from common.RuleData import kKindInteger, kKindTextList
-from LintGate import LintGate
+from lint.LintGate import LintGate
 
 #: Engine 최상위 폴더를 담지 않는 파일(Engine.cpp 등)의 가상 레이어 이름.
 kEngineRootLayerName = "<root>"

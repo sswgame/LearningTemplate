@@ -9,7 +9,8 @@ Scripts/lint/gate/CheckScriptEntryPoints.py
 를 낸다 — 결과를 알리려던 print 가 스크립트를 죽인다. `common` 패키지는 import 될 때 stdout · stderr 를 UTF-8 로 맞추므로
 (`Scripts/common/__init__.py` 머리), 진입점이 `common` 을 부르면 이 결함이 원리상 생기지 않는다.
 
-- 직접(`import common` · `from common import ...`)이든, `common` 을 부르는 `Scripts/` 안 모듈(`LintGate` · `LintFixer` …)을 거쳐서든 된다.
+- 직접(`import common` · `from common import ...`)이든, `common` 을 부르는 `Scripts/` 안 모듈(`lint.LintGate` · `lint.LintFixer` …)을 거쳐서든 된다.
+  모듈은 `Scripts/` 기준 점 이름으로 찾는다(import 루트가 하나다 — `docs/plans/ScriptsStructure.md`).
 - **함수 안의 import 는 치지 않는다** — 그 함수가 불리기 전의 출력은 보호받지 못한다(`RunForwardDeclarationCandidates.py` 가
   `--verify-unused` 갈래에서만 `common` 을 끌어와 `--apply` 끝에서 죽었다).
 
@@ -26,10 +27,9 @@ import ast
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 #: 콘솔을 UTF-8 로 맞추는 패키지 — import 하는 것만으로 맞춰진다.
 _kInitializingPackage = "common"
@@ -97,7 +97,6 @@ class ScriptModuleGraph:
         self._scriptRoot = (repositoryRoot / _kScriptRoot).resolve()
         self._mapPathToImport: dict[Path, list[str]] = {}
         self._mapPathToEntryPoint: dict[Path, bool] = {}
-        self._mapStemToPath: dict[str, list[Path]] = {}
         self._mapPathToReach: dict[Path, bool] = {}
         self._mapPathToArgumentProblem: dict[Path, list[str]] = {}
         self.listParseError: list[str] = []
@@ -113,8 +112,6 @@ class ScriptModuleGraph:
             self._mapPathToImport[resolved] = listName
             self._mapPathToEntryPoint[resolved] = path.name == "__main__.py" or any(isMainGuardInternal(node) for node in tree.body)
             self._mapPathToArgumentProblem[resolved] = findArgumentProblemsInternal(tree)
-            if path.stem != "__init__":
-                self._mapStemToPath.setdefault(path.stem, []).append(resolved)
 
     def isEntryPoint(self, path: Path) -> bool:
         return self._mapPathToEntryPoint.get(path.resolve(), False)
@@ -146,13 +143,12 @@ class ScriptModuleGraph:
         return bReach
 
     def findLocalModuleInternal(self, dottedName: str) -> Path | None:
-        """점 이름에 맞는 `Scripts/` 안 파일. 스크립트들이 `sys.path` 에 자기 폴더를 넣고 맨 이름으로 부르므로 유일한 파일 이름도 받는다."""
+        """점 이름에 맞는 `Scripts/` 안 파일. import 루트는 `Scripts/` 하나라 점 이름이 곧 경로다(맨 이름 import 는 `CheckScriptLayers` 가 막는다)."""
         listPart = dottedName.split(".")
         for candidate in (self._scriptRoot.joinpath(*listPart).with_suffix(".py"), self._scriptRoot.joinpath(*listPart, "__init__.py")):
             if candidate in self._mapPathToImport:
                 return candidate
-        listSameStem = self._mapStemToPath.get(listPart[-1], [])
-        return listSameStem[0] if len(listSameStem) == 1 else None
+        return None
 
 
 def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> tuple[list[str], int]:
@@ -210,7 +206,7 @@ class CheckScriptEntryPointsGate(LintGate):
             "expectedViolation": "Scripts/report/ProbeEntry.py: 진입점이 모듈 수준에서 common 을 import 하지 않습니다",
             "files": {
                 "Scripts/report/ProbeHelper.py": "import os\n\nkProbeValue = os.sep\n",
-                "Scripts/report/ProbeEntry.py": "import sys\nfrom ProbeHelper import kProbeValue\n\n"
+                "Scripts/report/ProbeEntry.py": "import sys\nfrom report.ProbeHelper import kProbeValue\n\n"
                                                 "if __name__ == \"__main__\":\n    print(kProbeValue)\n",
             },
         },

@@ -27,7 +27,6 @@ import types
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import BuildTree, BuildTreeError, addBuildTreeArguments, getProcessWorkerCount, getProjectRoot  # noqa: E402
 

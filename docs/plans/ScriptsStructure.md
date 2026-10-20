@@ -47,7 +47,7 @@ Scripts/
 | L1b HostTools · AcronymRegistry | `setup/HostTools.py` · `lint/AcronymRegistry.py` 를 `common/` 으로. `EditorIconFont` 의 함수 안 sys.path 조작을 지운다 | 끝남 |
 | L1c 린트 명령끼리 | 새 `lint/LayerRules.py`(Engine · Core 티어를 게이트와 보고서가 같이 씀), `RunCoreLayerGraph.loadGateTiers` 의 `None` 폴백을 지운다. 새 `lint/StagedScope.py`(`selectFileScopedStaged` 공개) | 끝남 |
 | L2a 린트 밖 폴더 패키지화 | `dev` · `generate` · `qa` · `asset` 에 `__init__.py`, 진입점 sys.path 를 `Scripts` 한 줄로, 테스트의 `Scripts/dev` · `Scripts/setup` 루트를 지운다 | 끝남 |
-| L2b 린트 폴더 패키지화 | 한 커밋. `lint/__init__.py`, 모든 importer 를 `lint.LintGate` 등 점 이름으로, `LintCatalog` 의 모듈 이름에 `lint.` 접두, 라이브러리의 sys.path 줄 삭제 | 대기 |
+| L2b 린트 폴더 패키지화 | 한 커밋. `lint/__init__.py`, 모든 importer 를 `lint.LintGate` 등 점 이름으로, `LintCatalog` 의 모듈 이름에 `lint.` 접두, 라이브러리의 sys.path 줄 삭제 | 끝남 |
 | L2c 이름 하나 테스트 | `Test/PythonTest/TestScriptsImportIdentity.py` — 모든 모듈을 점 이름으로 import 해 같은 파일이 두 이름으로 로드되지 않는지 본다 | 대기 |
 | L3 층 게이트 | `lint/gate/CheckScriptLayers.py` + `lint/rules/CheckScriptLayers.toml`. sys.path 규칙은 `CheckScriptEntryPoints` 에 | 대기 |
 | L4 `common` 파사드 제거 | `common/__init__.py` 의 `import *` 를 지우고 `from common import X` 를 `from common.<모듈> import X` 로 | 대기 |

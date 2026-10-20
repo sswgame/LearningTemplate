@@ -32,7 +32,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 from common import blankComments, blankCommentsAndLiterals, collectRepositoryFiles, flatMapInProcesses, resolveFileArguments  # noqa: E402
 

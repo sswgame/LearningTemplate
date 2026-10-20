@@ -20,12 +20,11 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import (collectRepositoryFiles, flatMapConcurrent, getProjectRoot, kCppAllExtensions, kCppSourceExtensions,  # noqa: E402
                     kLintTargetBaseDirNames, kLintTargetRelDirs)
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 

@@ -23,12 +23,11 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import findFast, kLintTargetRelDirs  # noqa: E402
-from LintGate import LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
 # 한 줄 안에 로그 호출과 `<식별자>.data()` 가 같이 있는 모양만 본다.
 # 여러 줄로 쪼갠 호출은 놓친다 — 그 대신 오탐이 없다(이 저장소의 로그는 거의 한 줄이다).

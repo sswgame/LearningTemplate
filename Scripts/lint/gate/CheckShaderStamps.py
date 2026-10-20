@@ -22,11 +22,10 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import CookContractSpec, kCookContractConfigRelative  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 판정 함수를 가진 쿠커. 판정은 도구의 것이므로 `--root`(셀프 테스트의 임시 트리)가 아니라 이 저장소의 쿠커를 쓴다.
 kCookerPath = Path(__file__).resolve().parents[2] / "generate" / "CookAssets.py"

@@ -34,11 +34,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import kNotOurDirNames  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 _kTag = "BuildScriptInventory"
 _kCmakeDefinitionRe = re.compile(r"^\s*(function|macro)\s*\(\s*([A-Za-z_0-9]+)", re.MULTILINE | re.IGNORECASE)

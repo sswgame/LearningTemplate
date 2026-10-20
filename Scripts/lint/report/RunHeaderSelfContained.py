@@ -38,11 +38,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from LintReport import LintReport, ReportContext  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 from common.HeaderSelfContained import (collectCheckedHeaders, findHeaderProbeProblem, findHeadersNotSelfContained,  # noqa: E402
                                         isCheckedHeader)
 

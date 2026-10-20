@@ -33,12 +33,11 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import normalizePath  # noqa: E402
-from LayerRules import readCoreTiers  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+from lint.LayerRules import readCoreTiers  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kDirSourceCore = "Source/Core"
 kRootNode = "(root)"

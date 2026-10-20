@@ -35,11 +35,10 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import blankComments  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 # 옮겨지는 것이 선언되는 헤더. 여기 있는 구조체는 **전부** 검사 대상이다.
 _kTransportedHeaders: list[str] = [

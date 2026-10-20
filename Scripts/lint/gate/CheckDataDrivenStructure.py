@@ -34,12 +34,11 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import blankComments, normalizePath, runGit  # noqa: E402
 from common.RuleData import kKindInteger, kKindText, kKindTextList  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 kRuleSchema = {"scanRoots": kKindTextList, "reportOnly": kKindTextList, "language": kKindText, "pattern": kKindText,
                 "scope": kKindText, "bodyEscape": kKindText, "baseline": kKindInteger}

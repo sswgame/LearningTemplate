@@ -26,10 +26,9 @@ import ast
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 뿌리 튜플을 이루는 이름 — 이것 말고 다른 낱말이 들면 뿌리 표가 아니라 다른 표다(문서 경로의 최상위 이름 등).
 _kRootVocabulary = frozenset({"Source", "Test", "Tools", "cmake", "ThirdParty"})

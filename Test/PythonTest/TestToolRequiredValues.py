@@ -14,12 +14,11 @@ from unittest import mock
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
 from common import BuildTree, Host  # noqa: E402
 from common.CookContract import CookContractSpec, kCookContractConfigRelative  # noqa: E402
 from common.PackFormat import PackFormatSpec, kPackFormatConfigRelative  # noqa: E402
-from conventions import FileScan  # noqa: E402
+from lint.conventions import FileScan  # noqa: E402
 from generate import CookAssets  # noqa: E402
 from qa import PerfRegression  # noqa: E402
 

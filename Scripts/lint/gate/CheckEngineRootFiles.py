@@ -19,12 +19,11 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import kDirSourceEngine  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 # 엔진 루트에 둘 수 있는 파일(`rules/CheckEngineRootFiles.toml`).
 _kRuleSchema = {"root_file": kKindTextList}

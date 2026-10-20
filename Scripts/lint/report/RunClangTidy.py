@@ -29,10 +29,9 @@ from collections import Counter
 import pathlib
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common import TranslationUnitSweep, getProjectRoot, runProcess
-from LintReport import LintReport, ReportContext  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 _kDiagnosticRe = re.compile(r"\[([a-z][a-zA-Z0-9.-]*-[a-zA-Z0-9.-]+)\]\s*$")
 

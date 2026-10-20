@@ -20,12 +20,11 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import firstFolderAfter, iterIncludes, normalizePath  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kNetworkPrefix = "Core/Network/"
 _kSourceNetworkPrefix = "Source/Core/Network/"

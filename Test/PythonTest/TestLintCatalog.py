@@ -11,9 +11,8 @@ from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
-from LintCatalog import LintScript, discoverLintScripts, makeLintTarget  # noqa: E402
+from lint.LintCatalog import LintScript, discoverLintScripts, makeLintTarget  # noqa: E402
 
 
 class LintCatalogTest(unittest.TestCase):

@@ -22,11 +22,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -125,7 +124,7 @@ class CheckScriptLayoutGate(LintGate):
     hint = "  폴더에 맞는 이름으로 옮기거나(git mv) 기반 클래스를 상속합니다 — Scripts/docs/Layout.md 의 Layout 표."
     selfTestCases = [
         {"name": "report/ 의 접두 어긋남", "expectedViolation": "Scripts/lint/report/ProbeReport.py: lint/report/ 의 파일 이름은 ^Run[A-Z]\\w+$",
-         "files": {"Scripts/lint/report/ProbeReport.py": "from LintReport import LintReport\n\n\nclass ProbeReport(LintReport):\n    pass\n"}},
+         "files": {"Scripts/lint/report/ProbeReport.py": "from lint.LintReport import LintReport\n\n\nclass ProbeReport(LintReport):\n    pass\n"}},
         {"name": "report/ 인데 LintReport 가 아님", "expectedViolation": "Scripts/lint/report/RunProbe.py: lint/report/ 의 스크립트는 LintReport 하위 클래스다",
          "files": {"Scripts/lint/report/RunProbe.py": "def main(argv=None):\n    return 0\n"}},
         {"name": "dev/ 의 동사 없는 이름", "expectedViolation": "Scripts/dev/BackendProbe.py: dev/ 의 파일 이름은 ^(Run|Compare|Make|Move|Remove|Configure|Sample|Store|List|Ci)[A-Z]\\w*$",

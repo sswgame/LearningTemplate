@@ -39,8 +39,7 @@ import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · conventions
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import (  # noqa: E402
     collectRepositoryFiles,
@@ -51,12 +50,12 @@ from common import (  # noqa: E402
     kNotOurCodeDirNames,
     kNotOurDirNames,
 )
-from LintGate import GateResult, LintGate  # noqa: E402
-from conventions.InternalHelperScan import kBaselineSchema  # noqa: E402
-from conventions.Model import ConventionViolation  # noqa: E402
-from conventions.Patterns import getExactPathMapInternal  # noqa: E402
-from conventions.FileScan import checkFileConventionsInternal, scopedTextCache  # noqa: E402
-from conventions.CrossFile import (  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.conventions.InternalHelperScan import kBaselineSchema  # noqa: E402
+from lint.conventions.Model import ConventionViolation  # noqa: E402
+from lint.conventions.Patterns import getExactPathMapInternal  # noqa: E402
+from lint.conventions.FileScan import checkFileConventionsInternal, scopedTextCache  # noqa: E402
+from lint.conventions.CrossFile import (  # noqa: E402
     checkFileAndCollectFactsInternal,
     CrossFileFacts,
     reportBitfieldBooleanLiteralsInternal,

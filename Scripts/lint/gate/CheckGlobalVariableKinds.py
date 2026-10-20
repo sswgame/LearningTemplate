@@ -29,12 +29,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import blankMatch, collectSourceFiles, kLintTargetRelDirs, normalizePath  # noqa: E402
 from common.RuleData import kKindReason  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 #: 배포본에 남겨도 되는 테스트용 변수 → 배포 실행 파일을 조종하는 곳(`rules/CheckGlobalVariableKinds.toml` 의 `[shipped]`).
 _kRuleSchema = {"shipped": kKindReason}

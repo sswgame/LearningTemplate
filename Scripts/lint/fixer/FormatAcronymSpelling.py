@@ -40,8 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintFixer
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import AcronymRegistry as registry  # noqa: E402
 from common import (  # noqa: E402
@@ -54,7 +53,7 @@ from common import (  # noqa: E402
     mapConcurrent,
     runProcess,
 )
-from LintFixer import FixerFileKind, FixPass, LintFixer, addFileArguments, selectFixerTargetFiles  # noqa: E402
+from lint.LintFixer import FixerFileKind, FixPass, LintFixer, addFileArguments, selectFixerTargetFiles  # noqa: E402
 from common.HostTools import findWindowsSdkPath  # noqa: E402
 
 #: 이번 실행이 고르는 약어(`--acronym`) — 변환(FixPass)이 읽는다. 조각 테스트는 기본값(전체)으로 돈다.

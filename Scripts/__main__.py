@@ -94,10 +94,7 @@ _kFolderCommand: dict[str, str] = {"gate": "gate", "fix": "fixer", "report": "re
 
 def runFolderCommand(folderName: str, listArgument: list[str]) -> int:
     """lint/ 의 폴더 하나에서 스크립트를 이름으로 부른다. 이름이 없으면 그 폴더의 목록을 찍는다(모르는 이름이면 1)."""
-    lintDir = str(_scriptRoot / "lint")
-    if lintDir not in sys.path:
-        sys.path.insert(0, lintDir)
-    from LintCatalog import discoverLintScripts
+    from lint.LintCatalog import discoverLintScripts
     mapScript = {script.name: script for script in discoverLintScripts(folderName)}
     if not listArgument or listArgument[0] not in mapScript:
         if listArgument:

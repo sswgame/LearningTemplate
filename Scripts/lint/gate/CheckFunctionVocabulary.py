@@ -42,14 +42,13 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import AcronymRegistry as registry  # noqa: E402
 from common import kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 # 훑을 곳 — 우리가 이름을 정하는 코드만.
 _kScanRoots = kLintTargetRelDirs

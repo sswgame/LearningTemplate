@@ -10,10 +10,8 @@ from pathlib import Path
 
 kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
-sys.path.insert(0, str(kScriptsRoot / "lint"))
-sys.path.insert(0, str(kScriptsRoot / "lint" / "gate"))
 
-import CheckDataDrivenStructure  # noqa: E402
+from lint.gate import CheckDataDrivenStructure  # noqa: E402
 
 kRuleSet = CheckDataDrivenStructure.buildRuleSet(
     CheckDataDrivenStructure.CheckDataDrivenStructureGate.readRules("CheckDataDrivenStructure", CheckDataDrivenStructure.kRuleSchema))

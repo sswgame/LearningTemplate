@@ -22,12 +22,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs  # noqa: E402
-from LintGate import LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 _kLoopHeadRe = re.compile(r"\b(for|while)\s*\(")

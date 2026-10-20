@@ -17,10 +17,9 @@ from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
 from common.HeaderSelfContained import findHeaderProbeProblem, findSeedEntry, makeSeedIndex, makeSyntaxOnlyCommand  # noqa: E402
-from LintCatalog import discoverLintScripts, discoverLintTargets  # noqa: E402
+from lint.LintCatalog import discoverLintScripts, discoverLintTargets  # noqa: E402
 
 kProbe = Path("probe.cpp")
 

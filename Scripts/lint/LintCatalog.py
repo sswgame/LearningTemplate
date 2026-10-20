@@ -20,9 +20,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from LintGate import LintGate, findGateClass  # noqa: E402
+from lint.LintGate import LintGate, findGateClass  # noqa: E402
 
 #: CMake 가 타깃·CTest 로 등록하는 린트가 사는 폴더 (`lint/` 기준).
 #: `fixer/` 와 `report/` 는 빌드를 막지 않으므로 등록하지 않는다 — 폴더가 곧 성격이다(CLAUDE.md).
@@ -88,7 +87,7 @@ def discoverLintScripts(folderName: str = "") -> list[LintScript]:
                     folderName=folder,
                     relPath=f"Scripts/lint/{folder}/{name}.py",
                     scriptPath=scriptPath,
-                    module=importlib.import_module(f"{folder}.{name}"),
+                    module=importlib.import_module(f"lint.{folder}.{name}"),
                 )
             )
     return listScript

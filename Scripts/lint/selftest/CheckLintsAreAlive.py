@@ -40,12 +40,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — 사촌 린트 패키지 · LintGate
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import getProcessWorkerCount, mapConcurrent, runProcess  # noqa: E402
-from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
-from LintGate import GateError, GateResult, LintGate, findGateClass  # noqa: E402
+from lint.LintCatalog import LintScript, discoverLintScripts  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate, findGateClass  # noqa: E402
 
 #: `--cases-of` 하위 프로세스가 결과 JSON 앞에 찍는 표식 — 게이트가 찍는 줄과 가른다.
 _kResultMarker = "\n@@CheckLintsAreAlive-result@@"
@@ -105,7 +104,7 @@ def runCasesOfInternal(gateName: str) -> int:
     # 그 게이트 모듈 하나만 import 한다 — 폴더 전부(`discoverLintScripts`)를 import 하면 하위 프로세스마다 게이트 수만큼 import 한다.
     gateClass = None
     if (Path(__file__).resolve().parents[1] / "gate" / f"{gateName}.py").is_file():
-        gateClass = findGateClass(importlib.import_module(f"gate.{gateName}"))
+        gateClass = findGateClass(importlib.import_module(f"lint.gate.{gateName}"))
     if gateClass is None:
         print(f"[CheckLintsAreAlive] gate/ 에 게이트 '{gateName}' 가 없습니다", file=sys.stderr)
         return 2

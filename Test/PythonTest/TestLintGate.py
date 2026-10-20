@@ -15,9 +15,8 @@ from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 
 class _FixedGate(LintGate):

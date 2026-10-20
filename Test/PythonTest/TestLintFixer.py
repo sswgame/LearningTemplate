@@ -10,9 +10,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "lint"))
 
-from LintFixer import FixPass, LintFixer  # noqa: E402
+from lint.LintFixer import FixPass, LintFixer  # noqa: E402
 
 
 def replaceBadInternal(text: str) -> tuple[str, bool]:

@@ -41,15 +41,12 @@ from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
 
-# 부모 경로들을 sys.path에 추가하여 공통 스크립트 모듈 로드
-scriptDir = Path(__file__).resolve().parent
-sys.path.insert(0, str(scriptDir))
-sys.path.insert(0, str(scriptDir.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from LintCatalog import LintScript, discoverLintScripts
-from StagedScope import selectFileScopedStaged
-from fixer import FormatBranchBraces
-from fixer import FormatForwardDeclarations
+from lint.LintCatalog import LintScript, discoverLintScripts
+from lint.StagedScope import selectFileScopedStaged
+from lint.fixer import FormatBranchBraces
+from lint.fixer import FormatForwardDeclarations
 from common import (
     findAppExecutable,
     findShaderCompileFailures,

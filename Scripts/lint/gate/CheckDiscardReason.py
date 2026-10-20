@@ -22,13 +22,12 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs  # noqa: E402
-from gate.CheckFallibleNodiscard import _kListFallibleVerb  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+from lint.gate.CheckFallibleNodiscard import _kListFallibleVerb  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 #: `(void)` 뒤의 호출 — 마지막 이름(`a.b->c::load`)을 뽑는다. 템플릿 인자 `<…>` 는 건너뛴다.

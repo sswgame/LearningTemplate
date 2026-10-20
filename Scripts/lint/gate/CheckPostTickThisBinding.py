@@ -16,12 +16,11 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import kLintTargetRelDirs  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kQueueCall = r"\b(?:deferPostTick|executeOrDeferPostTick)\s*\(\s*"
 #: `this` 토큰(`*this` 는 값 복사라 뺀다). 인스턴스 인자가 `static_cast<Base*>( this )` 처럼 감싸여도 잡는다.

@@ -63,12 +63,10 @@ from pathlib import Path
 from types import ModuleType
 from typing import Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parent))       # Scripts/lint — SourceScan
 
 from common import collectRepositoryFiles, getMergeHeadRevisions, getProjectRoot, kNotOurDirNames, readTextFiles, resolveFileArguments, runGit  # noqa: E402
 from common.RuleData import RuleDataError, kExemptionKey, kKindInteger, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
-from SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
+from lint.SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
 
 
 #: 음성 테스트 조각(`LintGate.selfTestCases`)이 가질 수 있는 키. `name` · `expectedViolation` 은 필수다.
