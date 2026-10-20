@@ -78,6 +78,17 @@ namespace sw
         void makeView( InteractionView& outViewer ) const;
         void gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer );
         void setFocus( GameObjectManager& manager, GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent );
+        /** @brief 진행 중인 상호작용을 이어 갑니다. 진행 중에는 대상을 바꾸지 않고, 대상을 쓸 수 없게 됐거나 멀어지면 취소합니다. */
+        void updateActiveSession( GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed );
+        /** @brief 가장 알맞은 후보로 초점을 옮기고, 눌렀으면 권한을 확인한 뒤 상호작용을 시작합니다. */
+        void updateFocusAndBegin( GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed );
+        /**
+         * @brief 세션 이벤트마다 몽타주와 페어드 애니메이션을 처리합니다.
+         * @details 몽타주는 단계가 시작될 때 튼다. 시작은 첫 단계이고, 마지막이 아닌 단계를 끝내면 다음 단계다. 취소하면 끊고 그 전 상태로 돌아간다.
+         */
+        void handleSessionEvents( GameObjectManager& manager, GameObject& owner );
+        /** @brief 화면 안내(`_prompt`)를 초점과 진행 단계로 다시 채웁니다. 진행 중이 아니면 첫 단계의 안내를 보입니다. */
+        void updatePrompt( GameObjectManager& manager );
         void finishSession( GameObjectManager& manager, const GameObject& owner );
         /** @brief 단계의 페어드 애니메이션 세트를 틱 뒤(게임 스레드)에 시작하도록 미룹니다. */
         void deferPairedAnimationStart( GameObjectManager& manager, const InteractionStepDef& step );

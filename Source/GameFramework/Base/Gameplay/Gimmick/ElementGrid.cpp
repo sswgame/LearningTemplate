@@ -211,12 +211,9 @@ namespace sw
         }
     }
 
-    void ElementGrid::step()
+    void ElementGrid::advanceStatusTimers()
     {
-        if ( _pTable == nullptr )
-            return;
         const vector<ElementStatusDef>& listStatus = _pTable->getStatuses();
-        // 1) 상태의 시간: 셀마다 따로 처리하므로 순서와 상관없다.
         for ( Cell& cell : _listCell )
         {
             for ( size_t status = 0; status < listStatus.size(); ++status )
@@ -238,8 +235,10 @@ namespace sw
                 }
             }
         }
+    }
 
-        // 2) 스텝 규칙을 지금 상태만 보고 모은다. 규칙 순서가 먼저이고 그다음이 행 우선이다.
+    void ElementGrid::collectStepChanges()
+    {
         const vector<ElementStepRule>& listRule = _pTable->getStepRules();
         _listPending.clear();
         for ( size_t ruleIndex = 0; ruleIndex < listRule.size(); ++ruleIndex )
@@ -266,7 +265,7 @@ namespace sw
                         {
                             for ( int32 neighbor = 0; neighbor < GridTopology::kOrthogonalCount; ++neighbor )
                             {
-                                const int2 next = GridTopology::getNeighbor( int2{ x, y }, neighbor );
+                                const int2 next = GridTopology::getNeighbor( position, neighbor );
                                 if ( isInside( next ) && getMaterial( next ) == rule._material )
                                     _listPending.push_back( PendingChange{ next, static_cast<int32>( ruleIndex ) } );
                             }
@@ -282,8 +281,11 @@ namespace sw
                 }
             }
         }
+    }
 
-        // 3) 모은 순서대로 적용한다. 앞의 것이 바꾼 셀은 뒤의 것이 다시 확인한다. 이렇게 하지 않으면 두 불이 같은 얼음을 녹이는 일이 생긴다.
+    void ElementGrid::applyStepChanges()
+    {
+        const vector<ElementStepRule>& listRule = _pTable->getStepRules();
         for ( const PendingChange& change : _listPending )
         {
             if ( isInside( change._cell ) == false )
@@ -318,6 +320,15 @@ namespace sw
                 }
             }
         }
+    }
+
+    void ElementGrid::step()
+    {
+        if ( _pTable == nullptr )
+            return;
+        advanceStatusTimers();
+        collectStepChanges();
+        applyStepChanges();
         ++_stepCount;
     }
 

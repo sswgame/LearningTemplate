@@ -375,105 +375,137 @@ namespace sw
         return true;
     }
 
+    bool HTTPMessageParser::advanceHead()
+    {
+        size_t headEnd = string::npos;
+        for ( size_t index = 0; index + 3 < _buffer.size(); ++index )
+        {
+            const bool bHeaderTerminator = _buffer[index] == '\r' && _buffer[index + 1] == '\n' && _buffer[index + 2] == '\r' && _buffer[index + 3] == '\n';
+            if ( bHeaderTerminator )
+            {
+                headEnd = index;
+                break;
+            }
+        }
+        if ( headEnd == string::npos )
+        {
+            if ( static_cast<int32>( _buffer.size() ) > HTTPConstant::kMaxHeaderBytes )
+                fail( "header is too large" );
+            return false;
+        }
+        const string_view head( reinterpret_cast<const utf8*>( _buffer.data() ), headEnd );
+        if ( parseHead( head ) == false )
+        {
+            fail( "malformed head" );
+            return false;
+        }
+        _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( headEnd + 4 ) );
+        const HTTPHeader* pEncoding = HTTPUtil::findHeader( _listHeader, "Transfer-Encoding" );
+        const HTTPHeader* pLength   = HTTPUtil::findHeader( _listHeader, "Content-Length" );
+        if ( pEncoding != nullptr && HTTPUtil::isEqualIgnoreCase( pEncoding->_value, "chunked" ) )
+        {
+            _phase = Phase::ChunkSize;
+        }
+        else if ( pEncoding != nullptr )
+        {
+            fail( "unsupported transfer encoding" );
+            return false;
+        }
+        else if ( pLength != nullptr )
+        {
+            if ( HTTPTypesInternal::parseUnsigned( pLength->_value, 10, _remainingBytes ) == false )
+            {
+                fail( "malformed Content-Length" );
+                return false;
+            }
+            if ( _remainingBytes > _maxBodyBytes )
+            {
+                fail( "body is too large" );
+                return false;
+            }
+            _phase = Phase::FixedBody;
+        }
+        else
+        {
+            // 요청은 길이가 없으면 몸이 없다. 응답은 닫힐 때까지가 몸이다(1xx, 204, 304 는 쓰지 않는다).
+            _phase = _kind == HTTPMessageKind::Request ? Phase::Done : Phase::UntilClose;
+        }
+        return true;
+    }
+
+    bool HTTPMessageParser::takeBodyBytes( Phase nextPhase )
+    {
+        const size_t take = std::min( _buffer.size(), static_cast<size_t>( _remainingBytes ) );
+        _bodyBytes.insert( _bodyBytes.end(), _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( take ) );
+        _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( take ) );
+        _remainingBytes -= static_cast<int64>( take );
+        if ( _remainingBytes > 0 )
+            return false;
+        _phase = nextPhase;
+        return true;
+    }
+
+    bool HTTPMessageParser::advanceChunkSize()
+    {
+        using Internal       = HTTPTypesInternal;
+        const size_t lineEnd = Internal::findLineEnd( _buffer, 0 );
+        if ( lineEnd == string::npos )
+        {
+            if ( static_cast<int32>( _buffer.size() ) > Internal::kMaxChunkLine )
+                fail( "malformed chunk size" );
+            return false;
+        }
+        string_view sizeText( reinterpret_cast<const utf8*>( _buffer.data() ), lineEnd );
+        sizeText = sizeText.substr( 0, sizeText.find( ';' ) ); // 확장 무시
+        if ( Internal::parseUnsigned( StringUtil::trim( sizeText ), 16, _remainingBytes ) == false || _remainingBytes > Internal::kMaxChunkSize )
+        {
+            fail( "malformed chunk size" );
+            return false;
+        }
+        _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( lineEnd + 2 ) );
+        if ( static_cast<int64>( _bodyBytes.size() ) + _remainingBytes > _maxBodyBytes )
+        {
+            fail( "body is too large" );
+            return false;
+        }
+        _phase = _remainingBytes == 0 ? Phase::Trailer : Phase::ChunkData;
+        return true;
+    }
+
     HTTPParseState HTTPMessageParser::advance()
     {
-        using Internal = HTTPTypesInternal;
-        while ( _state == HTTPParseState::NeedMore )
+        bool bProgress = true;
+        while ( _state == HTTPParseState::NeedMore && bProgress )
         {
             switch ( _phase )
             {
                 case Phase::Head:
                 {
-                    size_t headEnd = string::npos;
-                    for ( size_t index = 0; index + 3 < _buffer.size(); ++index )
-                    {
-                        const bool bHeaderTerminator = _buffer[index] == '\r' && _buffer[index + 1] == '\n' && _buffer[index + 2] == '\r' && _buffer[index + 3] == '\n';
-                        if ( bHeaderTerminator )
-                        {
-                            headEnd = index;
-                            break;
-                        }
-                    }
-                    if ( headEnd == string::npos )
-                    {
-                        if ( static_cast<int32>( _buffer.size() ) > HTTPConstant::kMaxHeaderBytes )
-                            return fail( "header is too large" );
-                        return _state;
-                    }
-                    const string_view head( reinterpret_cast<const utf8*>( _buffer.data() ), headEnd );
-                    if ( parseHead( head ) == false )
-                        return fail( "malformed head" );
-                    _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( headEnd + 4 ) );
-                    const HTTPHeader* pEncoding = HTTPUtil::findHeader( _listHeader, "Transfer-Encoding" );
-                    const HTTPHeader* pLength   = HTTPUtil::findHeader( _listHeader, "Content-Length" );
-                    if ( pEncoding != nullptr && HTTPUtil::isEqualIgnoreCase( pEncoding->_value, "chunked" ) )
-                    {
-                        _phase = Phase::ChunkSize;
-                    }
-                    else if ( pEncoding != nullptr )
-                    {
-                        return fail( "unsupported transfer encoding" );
-                    }
-                    else if ( pLength != nullptr )
-                    {
-                        if ( Internal::parseUnsigned( pLength->_value, 10, _remainingBytes ) == false )
-                            return fail( "malformed Content-Length" );
-                        if ( _remainingBytes > _maxBodyBytes )
-                            return fail( "body is too large" );
-                        _phase = Phase::FixedBody;
-                    }
-                    else
-                    {
-                        // 요청은 길이가 없으면 몸이 없다. 응답은 닫힐 때까지가 몸이다(1xx · 204 · 304 는 쓰지 않는다).
-                        _phase = _kind == HTTPMessageKind::Request ? Phase::Done : Phase::UntilClose;
-                    }
+                    bProgress = advanceHead();
                     break;
                 }
                 case Phase::FixedBody:
                 {
-                    const size_t take = std::min( _buffer.size(), static_cast<size_t>( _remainingBytes ) );
-                    _bodyBytes.insert( _bodyBytes.end(), _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( take ) );
-                    _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( take ) );
-                    _remainingBytes -= static_cast<int64>( take );
-                    if ( _remainingBytes > 0 )
-                        return _state;
-                    _phase = Phase::Done;
+                    bProgress = takeBodyBytes( Phase::Done );
                     break;
                 }
                 case Phase::ChunkSize:
                 {
-                    const size_t lineEnd = Internal::findLineEnd( _buffer, 0 );
-                    if ( lineEnd == string::npos )
-                    {
-                        if ( static_cast<int32>( _buffer.size() ) > Internal::kMaxChunkLine )
-                            return fail( "malformed chunk size" );
-                        return _state;
-                    }
-                    string_view sizeText( reinterpret_cast<const utf8*>( _buffer.data() ), lineEnd );
-                    sizeText = sizeText.substr( 0, sizeText.find( ';' ) ); // 확장 무시
-                    if ( Internal::parseUnsigned( StringUtil::trim( sizeText ), 16, _remainingBytes ) == false || _remainingBytes > Internal::kMaxChunkSize )
-                        return fail( "malformed chunk size" );
-                    _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( lineEnd + 2 ) );
-                    if ( static_cast<int64>( _bodyBytes.size() ) + _remainingBytes > _maxBodyBytes )
-                        return fail( "body is too large" );
-                    _phase = _remainingBytes == 0 ? Phase::Trailer : Phase::ChunkData;
+                    bProgress = advanceChunkSize();
                     break;
                 }
                 case Phase::ChunkData:
                 {
-                    const size_t take = std::min( _buffer.size(), static_cast<size_t>( _remainingBytes ) );
-                    _bodyBytes.insert( _bodyBytes.end(), _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( take ) );
-                    _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( take ) );
-                    _remainingBytes -= static_cast<int64>( take );
-                    if ( _remainingBytes > 0 )
-                        return _state;
-                    _phase = Phase::ChunkDataEnd;
+                    bProgress = takeBodyBytes( Phase::ChunkDataEnd );
                     break;
                 }
                 case Phase::ChunkDataEnd:
                 {
                     if ( _buffer.size() < 2 )
-                        return _state;
+                    {
+                        bProgress = false;
+                        break;
+                    }
                     if ( _buffer[0] != '\r' || _buffer[1] != '\n' )
                         return fail( "chunk is not terminated" );
                     _buffer.erase( _buffer.begin(), _buffer.begin() + 2 );
@@ -482,12 +514,13 @@ namespace sw
                 }
                 case Phase::Trailer:
                 {
-                    const size_t lineEnd = Internal::findLineEnd( _buffer, 0 );
+                    const size_t lineEnd = HTTPTypesInternal::findLineEnd( _buffer, 0 );
                     if ( lineEnd == string::npos )
                     {
                         if ( static_cast<int32>( _buffer.size() ) > HTTPConstant::kMaxHeaderBytes )
                             return fail( "trailer is too large" );
-                        return _state;
+                        bProgress = false;
+                        break;
                     }
                     _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( lineEnd + 2 ) );
                     if ( lineEnd == 0 )
@@ -500,7 +533,8 @@ namespace sw
                         return fail( "body is too large" );
                     _bodyBytes.insert( _bodyBytes.end(), _buffer.begin(), _buffer.end() );
                     _buffer.clear();
-                    return _state;
+                    bProgress = false;
+                    break;
                 }
                 case Phase::Done:
                 {

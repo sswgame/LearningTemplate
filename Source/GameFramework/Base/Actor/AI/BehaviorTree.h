@@ -200,7 +200,17 @@ namespace sw
         float32     getElapsedTime() const { return _elapsedTime; }
 
     private:
+        /** @brief 노드 하나를 한 틱 돌립니다. 노드 종류마다 짧은 분기이고, 자식을 여럿 도는 합성 노드는 아래 함수로 나눴습니다. */
         BehaviorStatus tickNode( int32 index );
+        /** @brief 시퀀스 한 틱입니다. @p inoutCursor 번째 자식부터 성공하는 동안 다음 자식으로 갑니다. */
+        BehaviorStatus tickSequence( const BehaviorNode& node, int32& inoutCursor );
+        /**
+         * @brief 셀렉터 한 틱입니다. 실패하지 않은 첫 자식의 상태를 돌려줍니다.
+         * @details 반응형이면 매 틱 앞 자식부터 봅니다. 앞 자식이 실패하지 않으면 돌던 뒤 자식을 중단하고 그쪽으로 커서를 옮깁니다.
+         */
+        BehaviorStatus tickSelector( const BehaviorNode& node, int32& inoutCursor );
+        /** @brief @p node 의 @p order 번째 자식 노드 번호입니다. 자식이 모자라면 -1 입니다. */
+        int32 findChild( const BehaviorNode& node, int32 order ) const;
         /** @brief 이동 노드 한 틱입니다(목적지를 요청하거나 다시 요청하고, 이동 인터페이스의 상태를 노드 상태로 옮긴다). */
         BehaviorStatus tickMoveTo( int32 index, bool bFirst );
         /** @brief 노드를 끝난 상태로 돌립니다. 커서, 타이머, 횟수를 비우되 쿨다운은 남깁니다. */

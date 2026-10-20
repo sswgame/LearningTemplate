@@ -252,6 +252,7 @@ namespace sw
         return listMember;
     }
 
+    // 연산마다 짧은 분기인 switch 디스패처라 나누지 않는다. 연산 하나의 규칙(RESP 와 같은 동작)을 한곳에서 읽는다.
     void MemoryEphemeralDatabase::executeValue( const EphemeralRequest& request, int64 nowMs, EphemeralReply& outReply )
     {
         ValueEntry* pValue = findValue( request._key, nowMs );

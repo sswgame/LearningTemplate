@@ -138,6 +138,18 @@ namespace sw
 
         uint32             gatherInputs( const NodeRuntime& node ) const;
         GimmickNodeContext makeContext( NodeRuntime& node );
+        /** @brief `populate` 1 단계입니다. 노드의 id, 종류, 매개변수를 읽고 상태 슬롯을 나눠 줍니다. */
+        void populateNodes( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError );
+        /** @brief `populate` 2 단계입니다. 배선을 받는 노드 순서대로 모읍니다. 같은 입력에 여러 배선이 오면 OR 로 처리합니다. */
+        void populateWires( const GimmickCircuitDef& def, vector<string>& outListError );
+        /** @brief `populate` 3 단계입니다. 종류의 초기화가 매개변수를 해석해 처음 상태를 채웁니다. 틀린 이름이나 형식은 여기서 거절합니다. */
+        void initializeNodeStates( const GimmickCircuitDef& def, vector<string>& outListError );
+        /**
+         * @brief `populate` 4 단계입니다. 평가 순서를 정합니다.
+         * @details 고리를 끊는 노드(지연)가 먼저이고, 나머지는 위상 순서입니다. 위상 순서가 같으면 정의 순서를 따릅니다.
+         *          남는 노드가 있으면 지연 없는 고리가 있다는 뜻이라 오류로 알립니다.
+         */
+        void computeEvaluationOrder( const GimmickCircuitDef& def, vector<string>& outListError );
         /** @brief 저장 노드 하나를 이 회로의 @p nodeIndex 노드에 옮깁니다. 종류와 슬롯 수는 부르는 쪽이 이미 대조했습니다. */
         void writeNode( size_t nodeIndex, const GimmickNodeState& state );
         /** @brief 같은 회로가 쓴 상태(노드 순서가 같음)를 그대로 옮깁니다. `resetToInitial` 과 `loadState` 가 씁니다. */

@@ -156,6 +156,12 @@ namespace sw
         bool isTouching( const PlatformTileMap& map, PlatformTile tile ) const;
         void moveAxis( const PlatformTileMap& map, float32 delta, bool bVertical );
         void startJump( float32 speed, uint32 event );
+        /** @brief 대시를 누르고 쓸 수 있으면 입력 방향으로 대시를 시작합니다. 입력이 없으면 바라보는 쪽입니다. 대시는 중력 없이 곧게 갑니다. */
+        void tryStartDash( const PlatformerInput& input, float32 moveX, float32 moveY, bool bWasGrounded );
+        /** @brief 걷기와 공중 상태의 한 틱입니다. 좌우 가속, 벽 미끄러짐, 점프, 짧은 점프, 중력을 차례로 적용합니다. */
+        void updateRunAndJump( const PlatformTileMap& map, const PlatformerInput& input, float32 moveX, bool bWasGrounded, float32 deltaTime );
+        /** @brief 버퍼된 점프를 땅(코요테 포함), 벽, 공중 점프 순으로 시도합니다. @p bWallLeft 와 @p bWallRight 는 양옆 벽이 막혔는지입니다. */
+        void tryJump( bool bWallLeft, bool bWallRight );
 
         PlatformerSettings _settings;
         float2             _position;

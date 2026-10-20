@@ -28,7 +28,7 @@
 |---|---|---|---|---|---|
 | L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
 
-L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다). 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
+L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다), `Source/GameFramework/Base`(2026-10-21 — 14 개 중 12 개를 단계 함수로 나눴다. 카메라 평가, 외형 해석, 외형 부품 내보내기, 기믹 회로 만들기, 행동 트리 합성 노드, 플랫포머 이동, HTTP 파서 단계, 기믹 액추에이터, 절단, 상호작용 틱, 원소 격자 스텝, 외형 프리셋 펼치기다. `MemoryEphemeralDatabase::executeValue` 와 나눈 뒤 남은 `BehaviorTreeRunner::tickNode` · `CameraModeInternal::placeByMode` 는 짧은 분기의 switch 디스패처라 유지하고 이유를 주석에 적었다). 남은 것: `ScheduleCatalog::loadElement` 는 원소별 함수로 옮기면 속성 기본값 리터럴(`getAttributeFloat( "radius", ... )` 등 5 곳)이 새 줄로 잡혀 `CheckDataDrivenLiterals` 가 막는다. 일정 Def 를 리플렉션 Def 와 `GameDataXML::readFields` 로 읽게 바꾸는 일과 함께 나눈다. 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
 
 ## 3. 목록
 

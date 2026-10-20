@@ -274,75 +274,60 @@ namespace sw
         } );
     }
 
-    void InteractorComponent::onTick( float32 deltaTime )
+    void InteractorComponent::updateActiveSession( GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed )
     {
-        Component::onTick( deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
-        const bool bPressed = _bPressed == SW_TRUE;
-        const bool bHeld    = _bHeld == SW_TRUE;
-        _bPressed           = SW_FALSE;
-
-        InteractionView viewer;
-        makeView( viewer );
-        gatherCandidates( *pManager, *pOwner, viewer );
-
-        if ( _session.isActive() )
+        InteractableComponent* pTarget = manager.resolveComponent( _focusComponent );
+        bool                   bKeep   = pTarget != nullptr && pTarget->isActive() && pTarget->getDefinition() != nullptr;
+        if ( bKeep )
         {
-            // 진행 중에는 대상을 바꾸지 않는다. 쓸 수 없게 됐거나 멀어지면 취소한다.
-            InteractableComponent* pTarget = pManager->resolveComponent( _focusComponent );
-            bool                   bKeep   = pTarget != nullptr && pTarget->isActive() && pTarget->getDefinition() != nullptr;
-            if ( bKeep )
-            {
-                InteractionCandidate candidate;
-                const GameObject*    pTargetObject = pTarget->getOwner();
-                candidate._position                = pTargetObject->getPrimarySceneComponent() != nullptr ? pTargetObject->getPrimarySceneComponent()->getWorldPosition() : float3{};
-                candidate._maxDistance             = pTarget->getDefinition()->_maxDistance * _keepDistanceScale;
-                float32 distance{ 0.0f };
-                bKeep = InteractionSelector::isInReach( viewer, candidate, distance );
-            }
-            if ( bKeep )
-                _session.update( deltaTime, bHeld, bPressed );
-            else
-                _session.cancel();
+            InteractionCandidate candidate;
+            const GameObject*    pTargetObject = pTarget->getOwner();
+            candidate._position                = pTargetObject->getPrimarySceneComponent() != nullptr ? pTargetObject->getPrimarySceneComponent()->getWorldPosition() : float3{};
+            candidate._maxDistance             = pTarget->getDefinition()->_maxDistance * _keepDistanceScale;
+            float32 distance{ 0.0f };
+            bKeep = InteractionSelector::isInReach( viewer, candidate, distance );
+        }
+        if ( bKeep )
+            _session.update( deltaTime, bHeld, bPressed );
+        else
+            _session.cancel();
+    }
+
+    void InteractorComponent::updateFocusAndBegin( GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed )
+    {
+        const WorldLineOfSightQuery lineOfSight{ manager };
+        const int32                 best = InteractionSelector::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
+        if ( best >= 0 )
+        {
+            const size_t index = static_cast<size_t>( best );
+            setFocus( manager, GameObjectHandle::make( _listCandidate[index]._objectID ), _listCandidateComponent[index] );
         }
         else
         {
-            const WorldLineOfSightQuery lineOfSight{ *pManager };
-            const int32                 best = InteractionSelector::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
-            if ( best >= 0 )
-            {
-                const size_t index = static_cast<size_t>( best );
-                setFocus( *pManager, GameObjectHandle::make( _listCandidate[index]._objectID ), _listCandidateComponent[index] );
-            }
-            else
-            {
-                setFocus( *pManager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
-            }
-            InteractableComponent* pTarget = best >= 0 ? pManager->resolveComponent( _focusComponent ) : nullptr;
-            if ( bPressed && pTarget != nullptr )
-            {
-                const InteractionDef*  pDef       = pTarget->getDefinition();
-                IInteractionAuthority* pAuthority = pDef->_authority == InteractionAuthority::Server ? game::findSubsystem<IInteractionAuthority>() : nullptr;
-                InteractionRequest     request;
-                request._interactor   = pOwner->getHandle();
-                request._interactable = _focus;
-                request._interaction  = pDef->_id;
-                const bool bAllowed   = pAuthority == nullptr || pAuthority->canBeginInteraction( request );
-                if ( bAllowed && _session.begin( pDef, static_cast<uint32>( pOwner->getObjectID() ) ) )
-                    InteractorComponentInternal::setAlignmentWarpTarget( *pOwner, *pTarget, *pDef );
-            }
+            setFocus( manager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
         }
+        InteractableComponent* pTarget = best >= 0 ? manager.resolveComponent( _focusComponent ) : nullptr;
+        if ( bPressed == false || pTarget == nullptr )
+            return;
+        const InteractionDef*  pDef       = pTarget->getDefinition();
+        IInteractionAuthority* pAuthority = pDef->_authority == InteractionAuthority::Server ? game::findSubsystem<IInteractionAuthority>() : nullptr;
+        InteractionRequest     request;
+        request._interactor   = owner.getHandle();
+        request._interactable = _focus;
+        request._interaction  = pDef->_id;
+        const bool bAllowed   = pAuthority == nullptr || pAuthority->canBeginInteraction( request );
+        if ( bAllowed && _session.begin( pDef, static_cast<uint32>( owner.getObjectID() ) ) )
+            InteractorComponentInternal::setAlignmentWarpTarget( owner, *pTarget, *pDef );
+    }
 
+    void InteractorComponent::handleSessionEvents( GameObjectManager& manager, GameObject& owner )
+    {
         _listSessionEvent.clear();
         _session.drainEvents( _listSessionEvent );
-        const InteractableComponent* pEventTarget = pManager->resolveComponent( _focusComponent );
+        const InteractableComponent* pEventTarget = manager.resolveComponent( _focusComponent );
         const InteractionDef*        pEventDef    = pEventTarget != nullptr ? pEventTarget->getDefinition() : nullptr;
         for ( const InteractionSessionEvent event : _listSessionEvent )
         {
-            // 몽타주는 단계가 시작될 때 튼다: 시작은 첫 단계, 마지막이 아닌 단계를 끝내면 다음 단계. 취소하면 끊고 돌아간다.
             if ( event == InteractionSessionEvent::Started )
                 _montageStep = 0;
             else if ( event == InteractionSessionEvent::StepCompleted )
@@ -352,15 +337,15 @@ namespace sw
             if ( bStartMontageStep )
             {
                 const InteractionStepDef& step = pEventDef->_listStep[static_cast<size_t>( _montageStep )];
-                InteractorComponentInternal::playStepMontage( *pOwner, step, _resumeState );
+                InteractorComponentInternal::playStepMontage( owner, step, _resumeState );
                 if ( step._listPairedAnimationPath.empty() == false )
-                    deferPairedAnimationStart( *pManager, step );
+                    deferPairedAnimationStart( manager, step );
             }
             if ( event == InteractionSessionEvent::Cancelled )
             {
-                InteractorComponentInternal::restoreMontage( *pOwner, _resumeState );
+                InteractorComponentInternal::restoreMontage( owner, _resumeState );
                 _montageStep = -1;
-                deferPairedAnimationAbort( *pManager );
+                deferPairedAnimationAbort( manager );
             }
             if ( event == InteractionSessionEvent::Completed )
             {
@@ -368,11 +353,14 @@ namespace sw
                 _resumeState     = hashed_string{};
                 _montageStep     = -1;
                 _pairedSessionID = 0;
-                finishSession( *pManager, *pOwner );
+                finishSession( manager, owner );
             }
         }
+    }
 
-        const InteractableComponent* pFocus = pManager->resolveComponent( _focusComponent );
+    void InteractorComponent::updatePrompt( GameObjectManager& manager )
+    {
+        const InteractableComponent* pFocus = manager.resolveComponent( _focusComponent );
         const InteractionStepDef*    pStep  = _session.getStep();
         const InteractionDef*        pDef   = pFocus != nullptr ? pFocus->getDefinition() : nullptr;
         _prompt                             = InteractionPrompt{};
@@ -390,5 +378,27 @@ namespace sw
             _prompt._prompt = pStep->_prompt;
             _prompt._mode   = pStep->_mode;
         }
+    }
+
+    void InteractorComponent::onTick( float32 deltaTime )
+    {
+        Component::onTick( deltaTime );
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        const bool bPressed = _bPressed == SW_TRUE;
+        const bool bHeld    = _bHeld == SW_TRUE;
+        _bPressed           = SW_FALSE;
+
+        InteractionView viewer;
+        makeView( viewer );
+        gatherCandidates( *pManager, *pOwner, viewer );
+        if ( _session.isActive() )
+            updateActiveSession( *pManager, viewer, deltaTime, bHeld, bPressed );
+        else
+            updateFocusAndBegin( *pManager, *pOwner, viewer, bPressed );
+        handleSessionEvents( *pManager, *pOwner );
+        updatePrompt( *pManager );
     }
 } // namespace sw

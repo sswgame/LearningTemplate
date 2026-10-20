@@ -105,6 +105,15 @@ namespace sw
         void  removeStatus( Cell& cell, int32 status ) const;
         void  pushEvent( const hashed_string& name, const int2& cell );
         void  collectSpread( const ElementStepRule& rule, int32 ruleIndex, const int2& position );
+        /** @brief `step` 1 단계입니다. 상태의 시간을 넘깁니다. 셀마다 따로 처리하므로 순서와 상관없습니다. */
+        void advanceStatusTimers();
+        /** @brief `step` 2 단계입니다. 스텝 규칙을 지금 상태만 보고 `_listPending` 에 모읍니다. 규칙 순서가 먼저이고 그다음이 행 우선입니다. */
+        void collectStepChanges();
+        /**
+         * @brief `step` 3 단계입니다. 모은 순서대로 적용합니다.
+         * @details 앞의 것이 바꾼 셀은 뒤의 것이 다시 확인합니다. 이렇게 하지 않으면 두 불이 같은 얼음을 녹이는 일이 생깁니다.
+         */
+        void applyStepChanges();
 
         vector<Cell>              _listCell;
         EventBuffer<ElementEvent> _eventBuffer;
