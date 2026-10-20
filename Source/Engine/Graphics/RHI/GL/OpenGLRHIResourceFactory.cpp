@@ -187,10 +187,7 @@ namespace sw
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
             return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) )
-        {
-            const uint32 stride = ( desc._elementSize == 2 ) ? 2u : 4u;
-            return _pDevice->createIndexBuffer( desc._pInitialData, desc._sizeBytes, stride );
-        }
+            return _pDevice->createIndexBuffer( desc._pInitialData, desc._sizeBytes );
 
         uint32 sizeBytes = desc._sizeBytes;
         if ( sizeBytes == 0 )
@@ -227,12 +224,12 @@ namespace sw
         return _pDevice->storeGlBuffer( ssbo, alignedSize );
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    RHIBufferHandle OpenGLRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
         ScopedOpenGLContext contextScope( _pDevice );
-        return _pDevice->createIndexBuffer( pData, sizeBytes, ( indexStride == 2 ) ? 2u : 4u );
+        return _pDevice->createIndexBuffer( pData, sizeBytes );
     }
 
     RHIBufferHandle OpenGLRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )

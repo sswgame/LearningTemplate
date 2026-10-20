@@ -3,6 +3,7 @@
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceIO.h"
@@ -94,17 +95,6 @@ namespace sw::editor
                                                                     "uvAnimationScrollYSpeedFactor",
                                                                     "uvAnimationRotationSpeedFactor" };
 
-            template <size_t Count>
-            static bool contains( const string_view ( &arrKey )[Count], string_view key )
-            {
-                for ( const string_view known : arrKey )
-                {
-                    if ( known == key )
-                        return true;
-                }
-                return false;
-            }
-
             static const IgnoredFloat* findIgnoredFloat( string_view key )
             {
                 for ( const IgnoredFloat& entry : kArrVrm0IgnoredFloat )
@@ -130,7 +120,7 @@ namespace sw::editor
             {
                 for ( const string& key : object.getMemberNames() )
                 {
-                    if ( contains( arrKnown, key ) == false )
+                    if ( VectorUtil::contains( arrKnown, key ) == false )
                     {
                         outError = string( context ) + ": unknown key '" + key + "'";
                         return false;
@@ -302,7 +292,7 @@ namespace sw::editor
             return false;
 
         // MToon 이 아닌 셰이더(언릿, glTF 셰이더)는 glTF 머티리얼을 평면 툰으로 옮긴다.
-        if ( Internal::contains( Internal::kArrVrm0FlatShader, shader ) )
+        if ( VectorUtil::contains( Internal::kArrVrm0FlatShader, shader ) )
         {
             if ( Internal::readGltfBase( gltfMaterial, outDesc, pOutListIgnored, outError ) == false )
             {
@@ -388,7 +378,7 @@ namespace sw::editor
             }
             if ( bKnown )
                 continue;
-            if ( Internal::contains( Internal::kArrVrm0Texture, key ) == false && Internal::contains( Internal::kArrVrm0IgnoredTexture, key ) == false )
+            if ( VectorUtil::contains( Internal::kArrVrm0Texture, key ) == false && VectorUtil::contains( Internal::kArrVrm0IgnoredTexture, key ) == false )
             {
                 outError = context + ": unknown vector property '" + key + "'";
                 return false;
@@ -427,7 +417,7 @@ namespace sw::editor
             }
             if ( bKnown )
                 continue;
-            if ( Internal::contains( Internal::kArrVrm0IgnoredTexture, key ) == false )
+            if ( VectorUtil::contains( Internal::kArrVrm0IgnoredTexture, key ) == false )
             {
                 outError = context + ": unknown texture property '" + key + "'";
                 return false;
@@ -530,9 +520,9 @@ namespace sw::editor
         }
         for ( const string& key : mtoon.getMemberNames() )
         {
-            if ( Internal::contains( Internal::kArrMtoon1Key, key ) )
+            if ( VectorUtil::contains( Internal::kArrMtoon1Key, key ) )
                 continue;
-            if ( Internal::contains( Internal::kArrMtoon1IgnoredKey, key ) == false )
+            if ( VectorUtil::contains( Internal::kArrMtoon1IgnoredKey, key ) == false )
             {
                 outError = context + ": unknown VRMC_materials_mtoon key '" + key + "'";
                 return false;

@@ -104,9 +104,7 @@ namespace sw
         // 2) 락프리 원시 이벤트 큐(Lock-Free Event Queue)
         // ------------------------------------------------------------------------------
         /** @brief OS 창 스레드나 백그라운드 폴러에서 잠금 없이 원시 이벤트를 넣습니다. */
-        bool postRawEvent( const RawInputEvent& rawEvent );
-        /** @brief 대기 중인 원시 이벤트를 꺼냅니다. */
-        uint32 drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount );
+        bool   postRawEvent( const RawInputEvent& rawEvent );
         uint32 getPendingRawEventCount() const { return _queueRawEvent.size(); }
 
         // ------------------------------------------------------------------------------

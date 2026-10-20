@@ -70,34 +70,6 @@ namespace sw
 #endif
             }
 
-            /** @brief 단계 속성 이름이 @p listAllowed 안에 있는지 봅니다. 아니면 false 와 이유. */
-            static bool checkAttributeNames( const AutomationStep& step, std::initializer_list<string_view> listAllowed, string& outError )
-            {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    bool bKnown = false;
-                    for ( const string_view allowed : listAllowed )
-                    {
-                        bKnown = bKnown || string_view{ attribute._name } == allowed;
-                    }
-                    if ( bKnown == false )
-                    {
-                        outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            /** @brief 꼭 있어야 하는 속성입니다. 없으면 nullptr 와 이유. */
-            static const string* requireAttribute( const AutomationStep& step, string_view name, string& outError )
-            {
-                const string* pValue = step.findAttribute( name );
-                if ( pValue == nullptr )
-                    outError = step.describe() + ": needs " + string( name ) + "=\"…\"";
-                return pValue;
-            }
-
             /** @brief 있으면 수로 읽습니다(없으면 @p fallback). 형식이 틀리면 false 와 이유. */
             [[nodiscard]] static bool readFloat( const AutomationStep& step, string_view name, float32 fallback, float32& outValue, string& outError )
             {
@@ -134,14 +106,14 @@ namespace sw
             static bool validateSlotStep( const AutomationStep& step, string& outError )
             {
                 uint32 count = 0;
-                if ( checkAttributeNames( step, { "slot", "hold" }, outError ) == false || readUint( step, "hold", 1, count, outError ) == false )
+                if ( step.hasOnlyAttributes( { "slot", "hold" }, outError ) == false || readUint( step, "hold", 1, count, outError ) == false )
                     return false;
                 if ( string_view{ step._kind } != "Tap" && step.findAttribute( "hold" ) != nullptr )
                 {
                     outError = step.describe() + ": hold is only for <Tap>";
                     return false;
                 }
-                const string* pSlot = requireAttribute( step, "slot", outError );
+                const string* pSlot = step.requireAttribute( "slot", outError );
                 InputSlot     slot{};
                 if ( pSlot == nullptr )
                     return false;
@@ -156,20 +128,20 @@ namespace sw
             static bool validateMouseDelta( const AutomationStep& step, string& outError )
             {
                 float32 value = 0.0f;
-                return checkAttributeNames( step, { "x", "y" }, outError ) && readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError );
+                return step.hasOnlyAttributes( { "x", "y" }, outError ) && readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError );
             }
 
             /** @brief `Wheel` 입니다. `y` 는 세로 휠, `x` 는 가로 휠 눈금이고 없으면 0 입니다. */
             static bool validateWheel( const AutomationStep& step, string& outError )
             {
                 float32 value = 0.0f;
-                return checkAttributeNames( step, { "x", "y" }, outError ) && readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError );
+                return step.hasOnlyAttributes( { "x", "y" }, outError ) && readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError );
             }
 
             static bool validateMousePosition( const AutomationStep& step, string& outError )
             {
-                const bool bInvalidMouseAttributes = checkAttributeNames( step, { "x", "y" }, outError ) == false || requireAttribute( step, "x", outError ) == nullptr ||
-                                                     requireAttribute( step, "y", outError ) == nullptr;
+                const bool bInvalidMouseAttributes = step.hasOnlyAttributes( { "x", "y" }, outError ) == false || step.requireAttribute( "x", outError ) == nullptr ||
+                                                     step.requireAttribute( "y", outError ) == nullptr;
                 if ( bInvalidMouseAttributes )
                     return false;
                 float32 valueX = 0.0f;
@@ -189,22 +161,22 @@ namespace sw
             {
                 float32 value = 0.0f;
                 uint32  count = 0;
-                return checkAttributeNames( step, { "axis", "value", "pad" }, outError ) && requireAttribute( step, "axis", outError ) != nullptr &&
-                       requireAttribute( step, "value", outError ) != nullptr && readUint( step, "axis", 0, count, outError ) && readFloat( step, "value", 0.0f, value, outError ) &&
+                return step.hasOnlyAttributes( { "axis", "value", "pad" }, outError ) && step.requireAttribute( "axis", outError ) != nullptr &&
+                       step.requireAttribute( "value", outError ) != nullptr && readUint( step, "axis", 0, count, outError ) && readFloat( step, "value", 0.0f, value, outError ) &&
                        readUint( step, "pad", 0, count, outError );
             }
 
             static bool validateText( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "value" }, outError ) && requireAttribute( step, "value", outError ) != nullptr;
+                return step.hasOnlyAttributes( { "value" }, outError ) && step.requireAttribute( "value", outError ) != nullptr;
             }
 
             static bool validateVariable( const AutomationStep& step, string& outError )
             {
-                if ( checkAttributeNames( step, { "name", "value" }, outError ) == false )
+                if ( step.hasOnlyAttributes( { "name", "value" }, outError ) == false )
                     return false;
-                const string* pName = requireAttribute( step, "name", outError );
-                if ( pName == nullptr || requireAttribute( step, "value", outError ) == nullptr )
+                const string* pName = step.requireAttribute( "name", outError );
+                if ( pName == nullptr || step.requireAttribute( "value", outError ) == nullptr )
                     return false;
                 if ( engine::areEngineServicesBound() == false || engine::getSubsystem<GlobalVariableManager>().findVariable( *pName ) == nullptr )
                 {
@@ -217,7 +189,7 @@ namespace sw
             /** @brief 탐침 이름과 그 탐침이 꼭 받아야 하는 `target` · `key` 를 봅니다. */
             static bool validateProbeReference( const AutomationStep& step, string& outError )
             {
-                const string* pProbe = requireAttribute( step, "probe", outError );
+                const string* pProbe = step.requireAttribute( "probe", outError );
                 if ( pProbe == nullptr )
                     return false;
                 const AutomationProbeRegistration* pRegistration = AutomationProbes::find( *pProbe );
@@ -232,9 +204,9 @@ namespace sw
                     outError = step.describe() + ": probe '" + *pProbe + "' takes no target or key";
                     return false;
                 }
-                if ( pRegistration->_bNeedsTarget && requireAttribute( step, "target", outError ) == nullptr )
+                if ( pRegistration->_bNeedsTarget && step.requireAttribute( "target", outError ) == nullptr )
                     return false;
-                return pRegistration->_bNeedsKey == false || requireAttribute( step, "key", outError ) != nullptr;
+                return pRegistration->_bNeedsKey == false || step.requireAttribute( "key", outError ) != nullptr;
             }
 
             /** @brief 탐침 단계(`Expect`, `WaitUntil`)의 공통 부분입니다. 탐침이 있고 비교가 정확히 하나이며 수 비교는 수로 읽혀야 합니다(`is` 는 글 비교). */
@@ -255,7 +227,7 @@ namespace sw
 
             static bool validateExpect( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom" }, outError ) &&
+                return step.hasOnlyAttributes( { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom" }, outError ) &&
                        validateProbeComparison( step, outError );
             }
 
@@ -264,10 +236,9 @@ namespace sw
             {
                 uint32  count   = 0;
                 float32 seconds = 0.0f;
-                if ( checkAttributeNames( step,
-                                          { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom", "timeoutFrames",
-                                            "timeoutSeconds" },
-                                          outError ) == false )
+                if ( step.hasOnlyAttributes( { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom", "timeoutFrames",
+                                               "timeoutSeconds" },
+                                             outError ) == false )
                     return false;
                 if ( step.findAttribute( "timeoutFrames" ) != nullptr && step.findAttribute( "timeoutSeconds" ) != nullptr )
                 {
@@ -282,7 +253,7 @@ namespace sw
             static bool validateExpectVisited( const AutomationStep& step, string& outError )
             {
                 uint32 since = 0;
-                if ( checkAttributeNames( step, { "probe", "target", "key", "is", "sequence", "since" }, outError ) == false || validateProbeReference( step, outError ) == false )
+                if ( step.hasOnlyAttributes( { "probe", "target", "key", "is", "sequence", "since" }, outError ) == false || validateProbeReference( step, outError ) == false )
                     return false;
                 if ( countComparisons( step, { "is", "sequence" } ) == false )
                 {
@@ -295,13 +266,13 @@ namespace sw
             /** @brief `Record` 입니다. 탐침 값을 보고의 `records` 에 남깁니다. */
             static bool validateRecord( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "probe", "target", "key" }, outError ) && validateProbeReference( step, outError );
+                return step.hasOnlyAttributes( { "probe", "target", "key" }, outError ) && validateProbeReference( step, outError );
             }
 
             /** @brief `Remember` 입니다. 탐침 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 견준다). */
             static bool validateRemember( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "probe", "target", "key", "as" }, outError ) && requireAttribute( step, "as", outError ) != nullptr &&
+                return step.hasOnlyAttributes( { "probe", "target", "key", "as" }, outError ) && step.requireAttribute( "as", outError ) != nullptr &&
                        validateProbeReference( step, outError );
             }
 
@@ -325,7 +296,7 @@ namespace sw
 
             static bool validateExpectLog( const AutomationStep& step, string& outError )
             {
-                if ( checkAttributeNames( step, { "contains", "count", "atLeast", "since" }, outError ) == false || requireAttribute( step, "contains", outError ) == nullptr )
+                if ( step.hasOnlyAttributes( { "contains", "count", "atLeast", "since" }, outError ) == false || step.requireAttribute( "contains", outError ) == nullptr )
                     return false;
                 if ( countComparisons( step, { "count", "atLeast" } ) == false )
                 {
@@ -338,15 +309,15 @@ namespace sw
 
             static bool validateScreenshot( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "file" }, outError ) && requireAttribute( step, "file", outError ) != nullptr;
+                return step.hasOnlyAttributes( { "file" }, outError ) && step.requireAttribute( "file", outError ) != nullptr;
             }
 
             static bool validateExpectImage( const AutomationStep& step, string& outError )
             {
-                if ( checkAttributeNames( step, { "file", "region", "metric", "ratio", "reference", "equals", "near", "tolerance", "atLeast", "atMost" }, outError ) == false ||
-                     requireAttribute( step, "file", outError ) == nullptr )
+                if ( step.hasOnlyAttributes( { "file", "region", "metric", "ratio", "reference", "equals", "near", "tolerance", "atLeast", "atMost" }, outError ) == false ||
+                     step.requireAttribute( "file", outError ) == nullptr )
                     return false;
-                const string*             pMetric = requireAttribute( step, "metric", outError );
+                const string*             pMetric = step.requireAttribute( "metric", outError );
                 AutomationImageMetricKind metric  = AutomationImageMetricKind::MeanLuma;
                 if ( pMetric == nullptr )
                     return false;
@@ -382,16 +353,16 @@ namespace sw
             static bool validateExitSeconds( const AutomationStep& step, const utf8* pName, string& outError )
             {
                 float32 value = 0.0f;
-                return checkAttributeNames( step, { pName }, outError ) && readFloat( step, pName, 0.0f, value, outError );
+                return step.hasOnlyAttributes( { pName }, outError ) && readFloat( step, pName, 0.0f, value, outError );
             }
 
             static bool validateCloseWindow( const AutomationStep& step, string& outError ) { return validateExitSeconds( step, "withinSeconds", outError ); }
 
             static bool validateExpectExitWithin( const AutomationStep& step, string& outError ) { return validateExitSeconds( step, "seconds", outError ); }
 
-            static bool validatePass( const AutomationStep& step, string& outError ) { return checkAttributeNames( step, {}, outError ); }
+            static bool validatePass( const AutomationStep& step, string& outError ) { return step.hasOnlyAttributes( {}, outError ); }
 
-            static bool validateFailOrSkip( const AutomationStep& step, string& outError ) { return checkAttributeNames( step, { "reason" }, outError ); }
+            static bool validateFailOrSkip( const AutomationStep& step, string& outError ) { return step.hasOnlyAttributes( { "reason" }, outError ); }
 
             /** @brief 값 비교 단계(`Expect`)의 비교 하나를 읽습니다. 정확히 하나여야 합니다. */
             static bool countComparisons( const AutomationStep& step, std::initializer_list<string_view> listName )

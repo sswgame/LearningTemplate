@@ -99,8 +99,6 @@ namespace sw::editor
         uint32 getLoadedTraceThreadCount() const { return _bLoadedTrace == SW_TRUE ? static_cast<uint32>( _loadedTrace._listThread.size() ) : 0; }
         /** @brief 프로브용입니다. 마지막으로 그린 타임라인에서 검색어와 일치한 이벤트 수를 반환합니다. 검색어가 없으면 모든 이벤트입니다. */
         uint32 getTraceSearchMatchCount() const { return _traceSearchMatched; }
-        /** @brief 구간 이름 검색어를 정합니다. 자동화가 입력을 흉내 내지 않고 바로 설정할 때 씁니다. */
-        void setTraceSearch( const utf8* pText );
         /** @brief 저장 폴더의 가장 최근 트레이스를 불러옵니다. 성공하면 true 입니다. */
         [[nodiscard]] bool loadLatestTrace();
         /** @brief 지정한 파일을 불러옵니다. 성공하면 true 입니다. "Load Trace" 단추와 `openTraceInTimeline` 이 같이 쓰는 한 길입니다. */

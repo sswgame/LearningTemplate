@@ -131,16 +131,6 @@ namespace sw
         return false;
     }
 
-    float32 AudioMixer::getSendLevelDb( uint32 busIndex, uint32 targetBusIndex ) const
-    {
-        for ( const Send& send : _listBusState[busIndex]._listSend )
-        {
-            if ( send._targetIndex == targetBusIndex )
-                return send._levelDb;
-        }
-        return audio::kSilenceDb;
-    }
-
     IAudioEffect* AudioMixer::findEffect( uint32 busIndex, const hashed_string& effectName ) const
     {
         const Bus& bus = _listBusState[busIndex];

@@ -2,21 +2,7 @@
 
 #include "Editor/Panels/Catalog/CatalogDocument.h"
 
-namespace sw::editor
-{
-    namespace
-    {
-        bool hasColumn( const vector<string>& listColumn, string_view name )
-        {
-            for ( const string& column : listColumn )
-            {
-                if ( string_view( column ) == name )
-                    return true;
-            }
-            return false;
-        }
-    } // namespace
-} // namespace sw::editor
+#include "Core/Container/VectorUtil.h"
 
 namespace sw::editor
 {
@@ -87,7 +73,7 @@ namespace sw::editor
             pGroup->_listRow.push_back( rowIndex );
             for ( const CatalogXMLAttribute& attribute : row._listAttribute )
             {
-                if ( hasColumn( pGroup->_listColumn, attribute._name ) == false )
+                if ( VectorUtil::contains( pGroup->_listColumn, attribute._name ) == false )
                     pGroup->_listColumn.push_back( attribute._name );
             }
         }

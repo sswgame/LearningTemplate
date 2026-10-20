@@ -443,7 +443,7 @@ namespace sw
             // **여기가 GPU 백프레셔다.** 백엔드의 `beginFrame` 은 이번 프레임이 쓸 커맨드
             // 얼로케이터와 프레임 리소스가 풀릴 때까지 펜스를 기다린다.
             SW_PROFILE_SCOPE( "RT.BeginFrame" );
-            _pDevice->beginFrame( packet._clearColor );
+            _pDevice->beginFrame();
         }
 
         // 게임 뷰 렌더 타깃을 잡는다. 오프스크린도 프레임 스트림과 같은 스트림, 같은 제출이고, 순서는 큐 순서와

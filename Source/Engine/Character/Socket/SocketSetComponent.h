@@ -41,8 +41,6 @@ namespace sw
         /** @brief 소켓 에셋 경로를 바꾸고 다시 읽습니다. */
         void          setSocketSetPath( string_view path );
         const string& getSocketSetPath() const { return _socketSetPath; }
-        /** @brief 소켓 에셋입니다(읽지 못했으면 nullptr). 파일이 다시 읽혔으면 새 내용입니다. */
-        const SocketSet* getSocketSet() const;
 
         /**
          * @brief 소켓의 유닛 공간 변환을 구합니다(부모 본, 가상 본, 루트). @p pUnit 이 없으면 본을 부모로 둔 소켓은 구하지 못합니다.

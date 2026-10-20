@@ -129,15 +129,6 @@ namespace sw
         return nullptr;
     }
 
-    void TimeZoneUtil::collectZoneNames( vector<string>& outListName )
-    {
-        outListName.clear();
-        for ( const TimeZoneInfo& zone : TimeZoneUtilInternal::kArrZone )
-        {
-            outListName.push_back( zone._pName );
-        }
-    }
-
     int32 TimeZoneUtil::computeOffsetMinutes( int64 unixSeconds, const TimeZoneInfo& zone )
     {
         const int32 daylightMinutes = TimeZoneUtilInternal::isDaylight( unixSeconds, zone ) ? TimeZoneUtilInternal::kDaylightShiftMinutes : 0;

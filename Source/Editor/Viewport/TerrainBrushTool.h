@@ -26,7 +26,5 @@ namespace sw::editor
         static void process( const EditorViewportVisualizerArgs& args );
         /** @brief 브러시 설정입니다(설정 창과 개발 명령 `terrain.brush` 가 고칩니다). */
         static TerrainBrushSettings& getSettings();
-        /** @brief 드래그를 마치고 되돌리기를 남긴 횟수입니다(탐침 `Editor.TerrainBrushStrokeCount`). */
-        static uint32 getStrokeCount();
     };
 } // namespace sw::editor

@@ -104,8 +104,6 @@ namespace sw
         bool getParameter( hashed_string name, string& outValue ) const;
         /** @brief 스칼라 파라미터를 반환합니다. */
         float32 getScalarParameter( hashed_string name, float32 defaultValue = 0.0f ) const;
-        /** @brief 벡터 파라미터를 반환합니다. */
-        const float32* getVectorParameter( hashed_string name ) const;
         /** @brief 텍스처 파라미터의 에셋 경로입니다. 덮어썼으면 그 경로, 아니면 부모 프로퍼티의 경로, 둘 다 없으면 빈 문자열입니다. */
         string getTextureParameter( hashed_string name ) const;
         /**
@@ -114,8 +112,6 @@ namespace sw
          *          인스턴스의 것이다(합치기는 네이티브 bindless 에서만 켜진다).
          */
         void collectTextureSlotSrvs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const;
-        /** @brief 키워드가 켜져 있으면 true 입니다. */
-        bool isKeywordEnabled( hashed_string keyword ) const;
         /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. */

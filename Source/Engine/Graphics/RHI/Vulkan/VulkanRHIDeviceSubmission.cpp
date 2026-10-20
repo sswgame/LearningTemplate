@@ -282,7 +282,7 @@ namespace sw
         RHITimestamp::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
     }
 
-    void VulkanRHIDevice::beginFrame( const float4& clearColor )
+    void VulkanRHIDevice::beginFrame()
     {
         // 앞 프레임이 시작되지 못해 버려진 리스트가 있었으면 그 리스트가 앞서 바꾼 레이아웃 기록부터 되돌린다.
         restoreDroppedFrameLayouts();
@@ -424,7 +424,6 @@ namespace sw
         // 백버퍼 렌더패스는 여기서 열지 않는다. beginFrame 은 프레임 수명주기 전용이고, 백버퍼
         // 타깃팅은 RenderThread 가 여는 beginRenderPass(핸들 0) 가 명시적으로 한다.
         // 클리어도 그 렌더패스의 loadOp 이 맡는다.
-        (void)clearColor;
     }
 
     void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )

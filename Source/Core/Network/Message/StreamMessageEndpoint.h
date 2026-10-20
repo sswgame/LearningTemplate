@@ -109,7 +109,6 @@ namespace sw
         /** @brief 연결을 닫습니다. 우아하게 닫으면 쌓인 것을 다 보낸 뒤 닫습니다. 리스너가 받는 이유는 LocalClose 입니다. */
         void close( StreamConnectionHandle handle, StreamCloseMode mode );
 
-        IStreamTransport* getTransport() const;
         /** @brief 연결의 RTT(핑으로 측정한 마지막 값, 초)를 반환합니다. 모르면 -1 입니다. */
         float64 getRoundTripSeconds( StreamConnectionHandle handle ) const;
 

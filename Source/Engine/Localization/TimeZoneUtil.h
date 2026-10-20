@@ -40,8 +40,6 @@ namespace sw
     {
         /** @brief 이름의 시간대입니다(대소문자 구분, 없으면 nullptr). `UTC` 는 항상 있습니다. */
         static const TimeZoneInfo* findZone( string_view zoneName );
-        /** @brief 표에 있는 시간대 이름을 모읍니다. */
-        static void collectZoneNames( vector<string>& outListName );
         /** @brief UTC 유닉스 시각(초)에서 그 시간대의 UTC 오프셋(분)입니다. 일광 절약 시간 중이면 표준 오프셋에 60 분이 더해집니다. */
         static int32 computeOffsetMinutes( int64 unixSeconds, const TimeZoneInfo& zone );
         /** @brief UTC 유닉스 시각(밀리초)을 그 시간대의 날짜 · 시각으로 바꿉니다. `_bZoned` 와 `_utcOffsetMinutes` 가 채워집니다. */

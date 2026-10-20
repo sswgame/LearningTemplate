@@ -256,7 +256,7 @@ namespace sw
         void unregisterCommandList( D3D12RHICommandList* pCmdList );
 
         /** @brief 프레임을 엽니다. 링 슬롯이 풀릴 때까지 기다리고 프레임 스트림 리스트를 엽니다. 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
-        void beginFrame( const float4& clearColor ) override;
+        void beginFrame() override;
         void endFrame( bool vsync = true, bool bPresent = true ) override;
 
         void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }

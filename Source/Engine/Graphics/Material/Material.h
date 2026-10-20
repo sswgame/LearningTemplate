@@ -121,8 +121,6 @@ namespace sw
         void packPropertiesIntoBytes( uint32 minimumByteSize );
         /** @brief 한 프로퍼티를 `_defaultValue` 로 되돌리고 CB 를 다시 올립니다. */
         bool resetParameterToDefault( IRHIDevice* pRHI, hashed_string name );
-        /** @brief 모든 프로퍼티를 기본값으로 되돌립니다. */
-        void resetAllToDefaults( IRHIDevice* pRHI );
         /**
          * @brief 이 머티리얼 레이아웃으로 외부 버퍼에 값을 패킹합니다.
          * @details MaterialInstance 가 마스터를 건드리지 않고 오버라이드 CB 를 만들 때 쓴다.
@@ -139,8 +137,6 @@ namespace sw
          */
         bool packRawDataIntoBuffer( hashed_string name, const void* pData, uint32 byteSize, vector<uint8>& inoutBuffer ) const;
 
-        /** @brief 패킹 버퍼 오프셋에 바이트를 그대로 씁니다. */
-        void setParameterData( IRHIDevice* pRHI, uint32 offset, uint32 size, const void* pData );
         /** @brief 이름으로 찾은 프로퍼티 값을 텍스트로 설정합니다. */
         bool setParameter( IRHIDevice* pRHI, hashed_string name, string_view value );
         /** @brief 텍스처 슬롯에 디스크립터를 설정합니다. */
@@ -177,8 +173,6 @@ namespace sw
         uint32 findTextureSlot( hashed_string name ) const;
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
-        /** @brief 사용 플래그를 설정합니다. */
-        void setUsageFlags( MaterialUsageFlags flags );
         /**
          * @brief 정적 스위치를 켜거나 끕니다.
          * @note Shipping 에서 런타임에 바꿔도 되는 것은 `bShaderFeature="0"` 인 스위치뿐이다(켬과 끔 둘 다 쿠킹된다). 나머지는 에셋 상태만 쿠킹되어

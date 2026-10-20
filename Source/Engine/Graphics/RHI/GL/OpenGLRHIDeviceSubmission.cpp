@@ -99,7 +99,7 @@ namespace sw
         RHITimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );
     }
 
-    void OpenGLRHIDevice::beginFrame( const float4& clearColor )
+    void OpenGLRHIDevice::beginFrame()
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -110,7 +110,6 @@ namespace sw
         // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
         // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩하고 클리어하는 것은 RenderThread 가 여는 명시적
         // beginRenderPass(핸들 0) 뿐이다. 뷰포트만 창 크기 전체로 되돌려 둔다.
-        (void)clearColor;
         glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
 
         // 이 슬롯은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.

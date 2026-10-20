@@ -221,8 +221,6 @@ namespace sw
         void registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler );
         /** @brief 이름의 처리기입니다. 없으면 nullptr 입니다. */
         const IAnimationNotifyHandler* findHandler( const hashed_string& name ) const;
-        /** @brief 등록된 이름들을 반환합니다(테이블 순서). */
-        void collectHandlerNames( vector<hashed_string>& outListName ) const;
 
     private:
         NameRegistry<unique_ptr<IAnimationNotifyHandler>> _registry; ///< 이름 → 처리기(등록 순서)

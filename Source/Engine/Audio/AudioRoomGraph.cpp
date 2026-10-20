@@ -47,16 +47,6 @@ namespace sw
         return true;
     }
 
-    float32 AudioRoomGraph::getPortalOpenness( uint32 portalIndex ) const
-    {
-        return portalIndex < _listPortal.size() ? _listPortal[portalIndex]._openness : 0.0f;
-    }
-
-    void AudioRoomGraph::setOpenPortalOcclusion( float32 occlusion )
-    {
-        _openPortalOcclusion = MathUtil::saturate( occlusion );
-    }
-
     void AudioRoomGraph::setWallLeak( float32 leak )
     {
         _wallLeak = MathUtil::saturate( leak );

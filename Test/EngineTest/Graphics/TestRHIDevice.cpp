@@ -979,7 +979,7 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
         uint32           redFrameCount{ 0 };
         for ( uint32 frame = 0; frame < kFrameCount; ++frame )
         {
-            device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            device->beginFrame();
             sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
             SW_ASSERT_TRUE( cmd != nullptr );
 
@@ -1198,7 +1198,7 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
         record._indexCountPerInstance        = 3;
         record._instanceCount                = 1;
         const sw::RHIBufferHandle vertexBuf  = pResource->createVertexBuffer( arrVertex, static_cast<uint32>( sizeof( arrVertex ) ) );
-        const sw::RHIBufferHandle indexBuf   = pResource->createIndexBuffer( arrIndex, static_cast<uint32>( sizeof( arrIndex ) ), 4 );
+        const sw::RHIBufferHandle indexBuf   = pResource->createIndexBuffer( arrIndex, static_cast<uint32>( sizeof( arrIndex ) ) );
         const sw::RHIBufferHandle slotStream = pResource->createVertexBuffer( &slotValue, static_cast<uint32>( sizeof( slotValue ) ) );
         sw::RHIBufferDesc         argDesc{};
         argDesc._sizeBytes                 = sizeof( record );
@@ -1741,7 +1741,7 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
         uint32                slotCount{ 0 };
         for ( uint32 frameIndex = 0; frameIndex < kFrameCount && bGotSample == false; ++frameIndex )
         {
-            device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            device->beginFrame();
             // **쿼리 자원은 첫 beginFrame 에서 만들어진다** — 프레임 밖에서 물으면 아직 0 이다.
             slotCount = pTimestamps->getTimestampSlotCount();
 
@@ -2073,7 +2073,7 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFrame )
         uint32           callCount{ 0 };
         uint32*          pCallCount = &callCount;
 
-        device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        device->beginFrame();
         device->enqueueGPURelease( SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [pCallCount]()
         { ++( *pCallCount ); } ) );
         SW_EXPECT_TRUE_MSG( callCount == 0, ( label + ": 기록 중인 프레임에서 곧바로 불렀다" ).c_str() );
@@ -2082,7 +2082,7 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFrame )
         constexpr uint32 kFollowingFrameCount = sw::constant::kGPUReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
         for ( uint32 frame = 0; frame < kFollowingFrameCount; ++frame )
         {
-            device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            device->beginFrame();
             device->endFrame( false, false );
         }
         SW_EXPECT_TRUE_MSG( callCount == 1, ( label + ": 프레임이 지나도 한 번 불리지 않았다" ).c_str() );
@@ -2104,7 +2104,7 @@ SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
     test::RHITestDevice device( sw::RHIBackend::Vulkan );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "Vulkan device unavailable" );
-    device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+    device->beginFrame();
     device->endFrame( false, false );
     device->waitIdle(); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
     SW_TEST_DEFENSIVE_SCOPE( "marking the Vulkan device lost on request warns once" );
@@ -2117,7 +2117,7 @@ SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
     constexpr uint32 kFrameCount = sw::constant::kGPUReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
     for ( uint32 frame = 0; frame < kFrameCount; ++frame )
     {
-        device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        device->beginFrame();
         device->endFrame( false, true );
     }
     SW_EXPECT_TRUE_MSG( callCount == 0, "a frame after the device loss waited on a fence and released GPU work" );
@@ -2199,7 +2199,7 @@ SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
         constexpr uint32 kFollowingFrameCount = sw::constant::kGPUReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
         for ( uint32 frame = 0; frame <= kFollowingFrameCount; ++frame )
         {
-            device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            device->beginFrame();
             device->endFrame( false, false );
         }
 

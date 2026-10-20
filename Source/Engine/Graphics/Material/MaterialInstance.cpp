@@ -528,19 +528,6 @@ namespace sw
         return defaultValue;
     }
 
-    const float32* MaterialInstance::getVectorParameter( hashed_string name ) const
-    {
-        const array<float32, 4>* pVal = MaterialInstanceInternal::findValue( _listVectorOverride, name );
-        if ( pVal != nullptr )
-            return pVal->data();
-        if ( _pParentMaterial != nullptr )
-        {
-            const void* pData = _pParentMaterial->getParameterData( name.c_str() ? name.c_str() : "" );
-            return pData ? reinterpret_cast<const float32*>( pData ) : nullptr;
-        }
-        return nullptr;
-    }
-
     string MaterialInstance::getTextureParameter( hashed_string name ) const
     {
         for ( const TextureOverride& texture : _listTextureOverride )
@@ -555,25 +542,6 @@ namespace sw
                 return pProp->_assetPath;
         }
         return string{};
-    }
-
-    bool MaterialInstance::isKeywordEnabled( hashed_string keyword ) const
-    {
-        const bool* pVal = MaterialInstanceInternal::findValue( _listKeywordOverride, keyword );
-        if ( pVal != nullptr )
-            return *pVal;
-        if ( _pParentMaterial == nullptr )
-            return false;
-        const vector<string>& defs = _pParentMaterial->getCachedShaderDefines();
-        const utf8*           pKey = keyword.c_str();
-        if ( pKey == nullptr )
-            return false;
-        for ( const string& defineStr : defs )
-        {
-            if ( defineStr == pKey )
-                return true;
-        }
-        return false;
     }
 
     const vector<string>& MaterialInstance::getCachedShaderDefines() const

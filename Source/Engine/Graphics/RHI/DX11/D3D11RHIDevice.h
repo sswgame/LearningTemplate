@@ -112,7 +112,7 @@ namespace sw
         void resizeInternal( uint32 width, uint32 height ) override;
 
         /** @brief 프레임을 엽니다(타임스탬프, 백버퍼 RTV 재취득, 정적 샘플러). 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
-        void beginFrame( const float4& clearColor ) override;
+        void beginFrame() override;
 
         /** @brief 프레임을 닫고 Present 합니다(bPresent=false 면 Present 를 생략합니다). */
         void endFrame( bool vsync = true, bool bPresent = true ) override;

@@ -44,6 +44,12 @@ namespace sw
         const string* findAttribute( string_view name ) const;
         /** @brief 보고에 적는 위치(`frame 40 <Expect> #7`)입니다. */
         string describe() const;
+        /** @brief 속성 이름이 모두 @p listAllowed 안에 있는지 봅니다. 아니면 false 와 이유(@p outError). */
+        bool hasOnlyAttributes( std::initializer_list<string_view> listAllowed, string& outError ) const;
+        /** @brief `hasOnlyAttributes` 에 더해 @p listRequired 의 속성이 모두 있는지 봅니다. 없으면 false 와 이유. */
+        bool hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired, string& outError ) const;
+        /** @brief 꼭 있어야 하는 속성입니다. 없으면 nullptr 와 이유(@p outError). */
+        const string* requireAttribute( string_view name, string& outError ) const;
     };
 } // namespace sw
 

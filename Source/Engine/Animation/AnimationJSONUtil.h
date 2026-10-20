@@ -29,9 +29,5 @@ namespace sw
         [[nodiscard]] static bool readFloats( const JSONValue& value, float32* pOutValue, uint32 count );
         /** @brief @p count 개의 숫자로 배열을 씁니다. */
         static void writeFloats( const JSONValue& value, const float32* pValue, uint32 count );
-        /** @brief 객체의 "translation", "rotation"(x,y,z,w), "scale" 을 읽습니다. 하나라도 없거나 틀리면 false 를 반환합니다. */
-        [[nodiscard]] static bool readBoneTransform( const JSONValue& object, BoneTransform& outTransform );
-        /** @brief 객체에 "translation", "rotation", "scale" 을 씁니다. */
-        static void writeBoneTransform( const JSONValue& object, const BoneTransform& transform );
     };
 } // namespace sw

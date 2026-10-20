@@ -93,19 +93,8 @@ namespace sw::editor
             /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 검사합니다. 위젯 레이블 기록을 시작합니다. 레이블은 기록을 켠 뒤에 그린 위젯만 기록됩니다. */
             static bool validate( const AutomationStep& step, std::initializer_list<string_view> listAllowed, const utf8* pRequired, string& outError )
             {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    bool bKnown = false;
-                    for ( const string_view allowed : listAllowed )
-                    {
-                        bKnown = bKnown || string_view{ attribute._name } == allowed;
-                    }
-                    if ( bKnown == false )
-                    {
-                        outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                        return false;
-                    }
-                }
+                if ( step.hasOnlyAttributes( listAllowed, outError ) == false )
+                    return false;
                 if ( pRequired != nullptr && step.findAttribute( pRequired ) == nullptr )
                 {
                     outError = step.describe() + ": needs " + pRequired + "=\"…\"";

@@ -617,17 +617,6 @@ namespace sw
         return setParameter( pRHI, name, prop->_defaultValue );
     }
 
-    void Material::resetAllToDefaults( IRHIDevice* pRHI )
-    {
-        for ( MaterialProperty& prop : _data._listProperty )
-        {
-            prop._value = prop._defaultValue;
-        }
-        rebuildPackedBuffer();
-        if ( pRHI != nullptr && _constantBuffer != 0 )
-            pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
-    }
-
     bool Material::packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const
     {
         const MaterialProperty* pSrc = findProperty( name );
@@ -668,17 +657,6 @@ namespace sw
 
         Memory::copy( inoutBuffer.data() + pProp->_offset, pData, copySize );
         return true;
-    }
-
-    void Material::setParameterData( IRHIDevice* pRHI, uint32 offset, uint32 size, const void* pData )
-    {
-        if ( pData == nullptr || offset + size > _data._bytes.size() )
-            return;
-
-        Memory::copy( _data._bytes.data() + offset, pData, size );
-
-        if ( pRHI != nullptr && _constantBuffer != 0 )
-            pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
     }
 
     bool Material::setParameter( IRHIDevice* pRHI, hashed_string name, string_view value )
@@ -732,16 +710,6 @@ namespace sw
         {
             _desc._permutations._quality = level;
             _bDefinesDirty               = SW_TRUE;
-            MaterialUtil::bumpPermutationGeneration();
-        }
-    }
-
-    void Material::setUsageFlags( MaterialUsageFlags flags )
-    {
-        if ( _desc._permutations._usage != flags )
-        {
-            _desc._permutations._usage = flags;
-            _bDefinesDirty             = SW_TRUE;
             MaterialUtil::bumpPermutationGeneration();
         }
     }

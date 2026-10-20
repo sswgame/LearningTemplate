@@ -25,7 +25,7 @@ namespace sw
                                                               const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
         void                   updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle        createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride ) override;
+        RHIBufferHandle        createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
         void                   destroyBuffer( RHIBufferHandle buffer ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;

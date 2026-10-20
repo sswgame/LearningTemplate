@@ -33,7 +33,7 @@ namespace sw
             const uint32 codepoint = ChatWordFilter::normalizeCodepoint( StringUtil::decodeUtf8( text, offset ) );
             if ( codepoint == 0 )
                 continue;
-            hash = ( hash ^ codepoint ) * HashUtil::kFnvPrime64;
+            hash = HashUtil::fnvStep64( hash, codepoint );
         }
         return hash;
     }

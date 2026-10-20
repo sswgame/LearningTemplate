@@ -136,8 +136,6 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
-        /** @brief 축을 더합니다(같은 이름이면 바꿈). */
-        void addAxis( const BodyShapeAxis& axis );
         /** @brief 이름의 축입니다. 없으면 nullptr 입니다. */
         const BodyShapeAxis* findAxis( const hashed_string& name ) const;
         /** @brief 축들입니다. */

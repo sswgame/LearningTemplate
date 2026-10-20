@@ -231,11 +231,6 @@ namespace sw
         return bPushed;
     }
 
-    uint32 InputManager::drainRawEvents( RawInputEvent* pOutBuffer, uint32 maxCount )
-    {
-        return _queueRawEvent.drain( pOutBuffer, maxCount );
-    }
-
     void InputManager::registerDevice( unique_ptr<IInputDevice> pDevice )
     {
         if ( pDevice == nullptr )

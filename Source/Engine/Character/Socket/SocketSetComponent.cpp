@@ -68,11 +68,6 @@ namespace sw
         loadSocketSet();
     }
 
-    const SocketSet* SocketSetComponent::getSocketSet() const
-    {
-        return _socketSet.get();
-    }
-
     void SocketSetComponent::loadSocketSet()
     {
         _socketSet = _socketSetPath.empty() ? nullptr : SocketSetCache::acquire( _socketSetPath );

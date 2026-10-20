@@ -277,12 +277,6 @@ namespace sw
         _published.takeSubtitleCues( outListCue );
     }
 
-    bool AudioEngine::hasEventLibrary( const hashed_string& libraryName ) const
-    {
-        std::scoped_lock<mutex> lock{ _libraryMutex };
-        return _mapGameLibrary.find( libraryName ) != _mapGameLibrary.end();
-    }
-
     bool AudioEngine::hasEvent( const hashed_string& eventName ) const
     {
         std::scoped_lock<mutex> lock{ _libraryMutex };

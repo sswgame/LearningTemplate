@@ -25,7 +25,7 @@ namespace
         {
             for ( int32 index = 0; index < size; ++index )
             {
-                inoutHash = ( inoutHash ^ pData[index] ) * HashUtil::kFnvPrime64;
+                inoutHash = HashUtil::fnvStep64( inoutHash, pData[index] );
             }
         }
 
@@ -34,7 +34,7 @@ namespace
         {
             for ( int32 index = 0; index < size; ++index )
             {
-                hash        = ( hash ^ static_cast<uint64>( index ) ) * HashUtil::kFnvPrime64;
+                hash        = HashUtil::fnvStep64( hash, static_cast<uint64>( index ) );
                 pOut[index] = static_cast<uint8>( hash >> 56 );
             }
         }

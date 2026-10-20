@@ -331,24 +331,6 @@ namespace sw
         notifyLanguageChanged( oldLanguage, currentLanguage );
     }
 
-    bool LocalizationManager::reloadProjects()
-    {
-        vector<string> listPath;
-        {
-            std::shared_lock<std::shared_mutex> lock( _mutex );
-            for ( const MountedProject& project : _listProject )
-            {
-                listPath.push_back( project._projectPath );
-            }
-        }
-        bool bAllReloaded{ true };
-        for ( const string& path : listPath )
-        {
-            bAllReloaded = reloadChangedFile( path ) && bAllReloaded;
-        }
-        return bAllReloaded;
-    }
-
     bool LocalizationManager::reloadChangedFile( string_view changedPath )
     {
         string            projectPath;
@@ -794,12 +776,6 @@ namespace sw
         return _listLookupCulture;
     }
 
-    CultureInfo LocalizationManager::getCurrentCulture() const
-    {
-        std::shared_lock<std::shared_mutex> lock( _mutex );
-        return _currentCulture;
-    }
-
     bool LocalizationManager::isRightToLeft() const
     {
         std::shared_lock<std::shared_mutex> lock( _mutex );
@@ -887,14 +863,6 @@ namespace sw
     bool LocalizationManager::hasString( const hashed_string& key ) const
     {
         return findByHash( key.getHash() ) != nullptr;
-    }
-
-    bool LocalizationManager::hasStringInLanguage( string_view languageCode, const hashed_string& key ) const
-    {
-        const string                        code = normalizeLanguageCode( languageCode );
-        std::shared_lock<std::shared_mutex> lock( _mutex );
-        const auto                          it = _mapLanguageTable.find( code );
-        return it != _mapLanguageTable.end() && it->second->contains( key );
     }
 
     const StringTable* LocalizationManager::getLanguageTable( string_view languageCode ) const

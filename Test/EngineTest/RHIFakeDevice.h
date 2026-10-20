@@ -89,7 +89,7 @@ namespace test
         void                     waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
         void                     detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
         void                     resizeInternal( uint32, uint32 ) override {}
-        void                     beginFrame( const sw::float4& ) override {}
+        void                     beginFrame() override {}
         void                     endFrame( bool, bool ) override {}
         sw::IRHICommandContext*  getFrameStreamContext() override { return nullptr; }
         sw::RHIBackend           getBackendType() const override { return sw::RHIBackend::DirectX12; }

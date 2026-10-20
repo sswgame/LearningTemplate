@@ -52,29 +52,4 @@ namespace sw
             value.pushBack().setFloat( static_cast<float64>( pValue[index] ) );
         }
     }
-
-    bool AnimationJSONUtil::readBoneTransform( const JSONValue& object, BoneTransform& outTransform )
-    {
-        float32    arrTranslation[3]{};
-        float32    arrRotation[4]{};
-        float32    arrScale[3]{};
-        const bool bRead = readFloats( object.get( "translation" ), arrTranslation, 3 ) && readFloats( object.get( "rotation" ), arrRotation, 4 ) &&
-                           readFloats( object.get( "scale" ), arrScale, 3 );
-        if ( bRead == false )
-            return false;
-        outTransform._translation = float3{ arrTranslation };
-        outTransform._rotation    = quaternion{ arrRotation }.normalize();
-        outTransform._scale       = float3{ arrScale };
-        return true;
-    }
-
-    void AnimationJSONUtil::writeBoneTransform( const JSONValue& object, const BoneTransform& transform )
-    {
-        const float32 arrTranslation[3] = { transform._translation._x, transform._translation._y, transform._translation._z };
-        const float32 arrRotation[4]    = { transform._rotation._x, transform._rotation._y, transform._rotation._z, transform._rotation._w };
-        const float32 arrScale[3]       = { transform._scale._x, transform._scale._y, transform._scale._z };
-        writeFloats( object.set( "translation" ), arrTranslation, 3 );
-        writeFloats( object.set( "rotation" ), arrRotation, 4 );
-        writeFloats( object.set( "scale" ), arrScale, 3 );
-    }
 } // namespace sw

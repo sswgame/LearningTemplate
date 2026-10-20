@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -36,11 +37,6 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 return pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
-            }
-
-            static bool contains( const vector<string>& listID, const string& resourceID )
-            {
-                return std::find( listID.begin(), listID.end(), resourceID ) != listID.end();
             }
         };
     } // namespace
@@ -96,7 +92,7 @@ namespace sw::editor
             entry._lastUsedFrame = _frame;
             return entry._pTextureID;
         }
-        const bool bKnown = EditorThumbnailCacheInternal::contains( _listPendingID, key ) || EditorThumbnailCacheInternal::contains( _listFailedID, key );
+        const bool bKnown = VectorUtil::contains( _listPendingID, key ) || VectorUtil::contains( _listFailedID, key );
         if ( bKnown == false )
             _listPendingID.push_back( key );
         return nullptr;

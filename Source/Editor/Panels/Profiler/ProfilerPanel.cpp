@@ -469,11 +469,6 @@ namespace sw::editor
     }
 
 #if SW_PROFILER_TRACE_ENABLED
-    void ProfilerPanel::setTraceSearch( const utf8* pText )
-    {
-        std::snprintf( _arrTraceSearch, constant::kMaxBuffer128, "%s", pText != nullptr ? pText : "" );
-    }
-
     bool ProfilerPanel::loadTraceFile( string_view path )
     {
         string error;

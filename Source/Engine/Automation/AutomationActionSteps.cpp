@@ -29,24 +29,6 @@ namespace sw
             static constexpr uint16 kLeftStickAxisX  = 0;
             static constexpr uint16 kRightStickAxisX = 2;
 
-            static bool checkAttributeNames( const AutomationStep& step, std::initializer_list<string_view> listAllowed, string& outError )
-            {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    bool bKnown = false;
-                    for ( const string_view allowed : listAllowed )
-                    {
-                        bKnown = bKnown || string_view{ attribute._name } == allowed;
-                    }
-                    if ( bKnown == false )
-                    {
-                        outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                        return false;
-                    }
-                }
-                return true;
-            }
-
             /** @brief 있으면 음이 아닌 정수로 읽습니다(없으면 @p fallback). */
             [[nodiscard]] static bool readUint( const AutomationStep& step, string_view name, uint32 fallback, uint32& outValue, string& outError )
             {
@@ -139,7 +121,7 @@ namespace sw
                 uint32          frames = 0;
                 bool            bAny   = true;
                 InputDeviceKind kind   = InputDeviceKind::Keyboard;
-                if ( checkAttributeNames( step, { "name", "hold", "seconds", "count", "interval", "intervalSeconds", "device" }, outError ) == false || validateName( step, outError ) == false )
+                if ( step.hasOnlyAttributes( { "name", "hold", "seconds", "count", "interval", "intervalSeconds", "device" }, outError ) == false || validateName( step, outError ) == false )
                     return false;
                 return readDuration( nullptr, step, "hold", "seconds", 1, frames, outError ) && readUint( step, "count", 1, frames, outError ) &&
                        readDuration( nullptr, step, "interval", "intervalSeconds", 0, frames, outError ) && readDevice( step, bAny, kind, outError );
@@ -149,7 +131,7 @@ namespace sw
             {
                 bool            bAny = true;
                 InputDeviceKind kind = InputDeviceKind::Keyboard;
-                return checkAttributeNames( step, { "name", "device" }, outError ) && validateName( step, outError ) && readDevice( step, bAny, kind, outError );
+                return step.hasOnlyAttributes( { "name", "device" }, outError ) && validateName( step, outError ) && readDevice( step, bAny, kind, outError );
             }
 
             static bool validateAxis( const AutomationStep& step, string& outError )
@@ -158,7 +140,7 @@ namespace sw
                 float32         value  = 0.0f;
                 bool            bAny   = true;
                 InputDeviceKind kind   = InputDeviceKind::Keyboard;
-                if ( checkAttributeNames( step, { "name", "x", "y", "frames", "seconds", "device" }, outError ) == false || validateName( step, outError ) == false )
+                if ( step.hasOnlyAttributes( { "name", "x", "y", "frames", "seconds", "device" }, outError ) == false || validateName( step, outError ) == false )
                     return false;
                 return readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError ) &&
                        readDuration( nullptr, step, "frames", "seconds", 1, frames, outError ) && readDevice( step, bAny, kind, outError );

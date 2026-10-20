@@ -82,8 +82,6 @@ namespace sw
         float32 getBusVolumeOffsetDb( uint32 busIndex ) const { return _listBusState[busIndex]._volumeOffsetDb; }
         /** @brief 센드 레벨(dB)을 바꿉니다. 그 센드가 없으면 false 입니다. */
         bool setSendLevelDb( uint32 busIndex, uint32 targetBusIndex, float32 levelDb );
-        /** @brief 센드 레벨(dB)입니다. 그 센드가 없으면 데이터 바닥 값입니다. */
-        float32 getSendLevelDb( uint32 busIndex, uint32 targetBusIndex ) const;
 
         /** @brief 버스의 이펙트를 이름(`AudioEffectDesc::getEffectName`)으로 찾습니다. 없으면 nullptr 입니다. */
         IAudioEffect* findEffect( uint32 busIndex, const hashed_string& effectName ) const;

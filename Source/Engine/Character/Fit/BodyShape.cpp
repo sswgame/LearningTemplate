@@ -225,19 +225,6 @@ namespace sw
         }
     }
 
-    void BodyShapeSet::addAxis( const BodyShapeAxis& axis )
-    {
-        for ( BodyShapeAxis& existing : _listAxis )
-        {
-            if ( existing._name == axis._name )
-            {
-                existing = axis;
-                return;
-            }
-        }
-        _listAxis.push_back( axis );
-    }
-
     const BodyShapeAxis* BodyShapeSet::findAxis( const hashed_string& name ) const
     {
         for ( const BodyShapeAxis& axis : _listAxis )

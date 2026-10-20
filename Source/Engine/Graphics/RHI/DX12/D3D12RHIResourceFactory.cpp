@@ -643,11 +643,10 @@ namespace sw
         pDest->Unmap( 0, nullptr );
     }
 
-    RHIBufferHandle D3D12RHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    RHIBufferHandle D3D12RHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
     {
         // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 인덱스 버퍼는 구조버퍼가 아니라 정점 버퍼처럼
         // 업로드 힙의 GENERIC_READ 로 둔다. 그 상태가 INDEX_BUFFER 읽기를 포함하므로 전이 없이 걸 수 있다.
-        (void)indexStride;
         return createUploadBuffer( pData, sizeBytes );
     }
 

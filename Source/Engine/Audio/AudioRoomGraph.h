@@ -37,10 +37,6 @@ namespace sw
         uint32 addPortal( uint32 roomA, uint32 roomB, float32 openness = 1.0f );
         /** @brief 포털 열림(0..1)을 바꿉니다. 없는 포털이면 false 입니다. */
         bool setPortalOpenness( uint32 portalIndex, float32 openness );
-        /** @brief 포털 열림입니다. 없는 포털이면 0 입니다. */
-        float32 getPortalOpenness( uint32 portalIndex ) const;
-        /** @brief 열린 포털 하나가 깎는 투과율 비율(0..1, 기본 0.15)입니다. 소리가 문을 돌아 들어올 때 생기는 손실입니다. */
-        void setOpenPortalOcclusion( float32 occlusion );
         /** @brief 포털 없이 벽을 통과하는 투과율(0..1, 기본 0)입니다. 가림은 이 값보다 작아지지 않습니다. */
         void setWallLeak( float32 leak );
         /** @brief 방과 포털을 모두 지웁니다. */

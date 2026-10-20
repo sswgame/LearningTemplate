@@ -218,7 +218,7 @@ namespace sw
          * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 백엔드 안의 구체 클래스
          *       `<백엔드>RHISwapChain` 이 소유합니다. 가상 인터페이스로 되돌리지 않습니다(RHI/README.md). GL 에는 없습니다.
          */
-        virtual void beginFrame( const float4& clearColor ) = 0;
+        virtual void beginFrame() = 0;
         /** @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 하지 않습니다. */
         virtual void endFrame( bool vsync = true, bool bPresent = true ) = 0;
 

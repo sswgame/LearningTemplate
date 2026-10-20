@@ -160,7 +160,7 @@ namespace sw
         bool bRendered = true;
         for ( uint32 frameIndex = 0; frameIndex < PortraitRendererInternal::kWarmupFrameCount && bRendered; ++frameIndex )
         {
-            _pDevice->beginFrame( request._backgroundColor );
+            _pDevice->beginFrame();
             bRendered = _renderer->execute( _pDevice, studio );
             _pDevice->endFrame( false, false );
             _pDevice->waitIdle();

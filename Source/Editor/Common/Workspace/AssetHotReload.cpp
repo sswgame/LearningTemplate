@@ -53,16 +53,6 @@ namespace sw::editor
                 }
                 return {};
             }
-            /** @brief 확장자가 목록에 있으면 true 입니다(대소문자 무시). */
-            static bool contains( const vector<string>& listExtension, string_view extension )
-            {
-                for ( const string& candidate : listExtension )
-                {
-                    if ( StringUtil::equals( candidate, extension, true ) )
-                        return true;
-                }
-                return false;
-            }
 
             /**
              * @brief 실제로 감시할 확장자 목록을 정합니다.
@@ -85,7 +75,8 @@ namespace sw::editor
                 listExtension.reserve( listConfigured.size() );
                 for ( const string& extension : listConfigured )
                 {
-                    if ( contains( listHandled, extension ) )
+                    if ( std::any_of( listHandled.begin(), listHandled.end(), [&extension]( const string& handled )
+                    { return StringUtil::equals( handled, extension, true ); } ) )
                     {
                         listExtension.push_back( extension );
                         continue;

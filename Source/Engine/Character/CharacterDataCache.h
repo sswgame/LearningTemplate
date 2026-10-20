@@ -29,8 +29,6 @@ namespace sw
         static shared_ptr<const SocketSet> acquire( string_view path );
         /** @brief 이 테이블에서 다시 읽은 횟수를 반환합니다. */
         static uint32 getReloadCount();
-        /** @brief 엔진 기본 소켓 종류 표(`engine/character/default.socketkinds.xml`)입니다. 처음 부를 때 한 번 읽습니다. */
-        static const SocketKindTable& getDefaultKinds();
 
         const utf8* getAssetKindName() const override { return "SocketSet"; }
         bool        isCached( string_view relativePath ) const override;

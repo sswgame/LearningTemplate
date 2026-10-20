@@ -200,12 +200,6 @@ namespace sw
         return pText != nullptr ? parseFloat3Text( node, pName, pText ) : absentValue;
     }
 
-    quaternion CharacterDataReader::readOptionalRotation( const XMLNode& node, const utf8* pName, const quaternion& absentValue )
-    {
-        const utf8* pText = node.findAttribute( pName );
-        return pText != nullptr ? parseRotationText( node, pName, pText ) : absentValue;
-    }
-
     hashed_string CharacterDataReader::readName( const XMLNode& node, const utf8* pName, bool bRequired )
     {
         const hashed_string name = XMLReadUtil::readName( node, pName );
@@ -223,18 +217,6 @@ namespace sw
         {
             outListName.push_back( hashed_string( token ) );
         }
-    }
-
-    string CharacterDataReader::getErrorText() const
-    {
-        string text;
-        for ( const string& error : _listError )
-        {
-            if ( text.empty() == false )
-                text += "\n";
-            text += error;
-        }
-        return text;
     }
 
     bool CharacterDataReader::finish() const

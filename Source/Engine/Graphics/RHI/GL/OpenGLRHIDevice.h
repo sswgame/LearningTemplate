@@ -76,7 +76,7 @@ namespace sw
 
     public:
         RHIBufferHandle createBuffer( const RHIBufferDesc& desc );
-        RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride );
+        RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes );
         friend class OpenGLRHIResourceFactory;
         /** @brief 빈 OpenGL 디바이스를 만듭니다. */
         OpenGLRHIDevice();
@@ -96,7 +96,7 @@ namespace sw
         void resizeInternal( uint32 width, uint32 height ) override;
 
         /** @brief 프레임을 엽니다(컨텍스트 되찾기, 뷰포트, 타임스탬프 수거). 백버퍼 클리어는 beginRenderPass(핸들 0)가 합니다. */
-        void beginFrame( const float4& clearColor ) override;
+        void beginFrame() override;
 
         /** @brief 프레임을 닫고, bPresent 면 플랫폼 컨텍스트로 백버퍼를 내보냅니다(SwapBuffers 등). */
         void endFrame( bool vsync, bool bPresent = true ) override;

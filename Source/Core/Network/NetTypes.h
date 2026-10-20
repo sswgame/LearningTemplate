@@ -49,7 +49,7 @@ namespace sw
             {
                 for ( int32 shift = 0; shift < 32; shift += 8 )
                 {
-                    hash = ( hash ^ ( ( version >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
+                    hash = HashUtil::fnvStep32( hash, ( version >> shift ) & 0xFFu );
                 }
             }
             return hash;

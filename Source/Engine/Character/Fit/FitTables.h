@@ -112,8 +112,6 @@ namespace sw
         void addLayer( const FitLayerDef& layer );
         /** @brief 몸 영역을 더합니다(같은 이름은 바꿈). */
         void addRegion( const BodyRegionDef& region );
-        /** @brief 프로필을 더합니다(같은 이름은 바꿈). */
-        void addProfile( const FitProfileDef& profile );
         /** @brief 상호작용 줄을 더합니다(끝에). */
         void addInteraction( const FitInteractionDef& interaction );
 

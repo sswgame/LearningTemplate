@@ -48,8 +48,7 @@ namespace sw
                 {
                     for ( uint32 byteIndex = 0; byteIndex < 8; ++byteIndex )
                     {
-                        _value ^= ( value >> ( byteIndex * 8 ) ) & 0xffu;
-                        _value *= HashUtil::kFnvPrime64;
+                        _value = HashUtil::fnvStep64( _value, ( value >> ( byteIndex * 8 ) ) & 0xffu );
                     }
                 }
                 void addName( const hashed_string& name ) { addUint64( name.empty() ? 0ull : static_cast<uint64>( name.getHash() ) ); }

@@ -28,24 +28,6 @@ namespace sw
     {
         struct AutomationWindowStepsInternal
         {
-            static bool checkOnly( const AutomationStep& step, string_view allowed, bool bRequired, string& outError )
-            {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    if ( string_view{ attribute._name } != allowed )
-                    {
-                        outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                        return false;
-                    }
-                }
-                if ( bRequired && step.findAttribute( allowed ) == nullptr )
-                {
-                    outError = step.describe() + ": needs " + string( allowed ) + "=\"…\"";
-                    return false;
-                }
-                return true;
-            }
-
             static bool isKnownMessage( string_view message )
             {
                 return message == "WM_ACTIVATE_INACTIVE" || message == "WM_ACTIVATE_ACTIVE" || message == "WM_KILLFOCUS" || message == "WM_SETFOCUS" ||
@@ -54,7 +36,7 @@ namespace sw
 
             static bool validateMessage( const AutomationStep& step, string& outError )
             {
-                if ( checkOnly( step, "message", true, outError ) == false )
+                if ( step.hasRequiredAttributes( { "message" }, { "message" }, outError ) == false )
                     return false;
                 if ( isKnownMessage( *step.findAttribute( "message" ) ) )
                     return true;
@@ -65,7 +47,7 @@ namespace sw
 
             static bool validateClip( const AutomationStep& step, string& outError )
             {
-                if ( checkOnly( step, "state", true, outError ) == false )
+                if ( step.hasRequiredAttributes( { "state" }, { "state" }, outError ) == false )
                     return false;
                 const string& state = *step.findAttribute( "state" );
                 if ( state == "locked" || state == "free" )
@@ -74,11 +56,11 @@ namespace sw
                 return false;
             }
 
-            static bool validateForeground( const AutomationStep& step, string& outError ) { return checkOnly( step, "", false, outError ); }
+            static bool validateForeground( const AutomationStep& step, string& outError ) { return step.hasOnlyAttributes( {}, outError ); }
 
             static bool validateCapture( const AutomationStep& step, string& outError )
             {
-                if ( checkOnly( step, "file", true, outError ) == false )
+                if ( step.hasRequiredAttributes( { "file" }, { "file" }, outError ) == false )
                     return false;
                 if ( StringUtil::endsWith( *step.findAttribute( "file" ), ".png", true ) )
                     return true;

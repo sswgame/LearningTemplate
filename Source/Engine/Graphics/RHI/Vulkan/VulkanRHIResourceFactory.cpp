@@ -310,11 +310,10 @@ namespace sw
             _pDevice->reportQueueResult( static_cast<int32>( oneShot->getLastResult() ), "updateStructuredBuffer: one-shot submit" );
     }
 
-    RHIBufferHandle VulkanRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    RHIBufferHandle VulkanRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
     {
         // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 구조버퍼에는 VK_BUFFER_USAGE_INDEX_BUFFER_BIT 가 없어
         // vkCmdBindIndexBuffer 에 거는 것이 용도 위반이므로 인덱스 용도로 따로 만든다.
-        (void)indexStride;
         if ( pData == nullptr )
             return 0;
         return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pData );

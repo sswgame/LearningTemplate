@@ -198,9 +198,6 @@ namespace sw
         /** @brief 셰이더 바이트코드 디스크 캐시를 켜거나 끕니다. */
         static void enableDiskCache( bool bEnable );
 
-        /** @brief 셰이더 바이트코드 디스크 캐시가 켜져 있는지 반환합니다. */
-        static bool isDiskCacheEnabled();
-
         /** @brief 저장된 셰이더 디스크 캐시 파일을 모두 지웁니다. */
         static void clearDiskCache();
     };

@@ -341,11 +341,6 @@ namespace sw
         return t_currentWorkerIndex >= 0;
     }
 
-    void TaskManager::ensureWorkerThread() const
-    {
-        SW_ASSERT( isWorkerThread() );
-    }
-
     uint32 TaskManager::getCurrentThreadScratchSlot()
     {
         if ( t_currentWorkerIndex >= 0 )

@@ -61,8 +61,6 @@ namespace sw
 
         /** @brief 정렬 레이어 수입니다. */
         uint32 getSortingLayerCount() const { return static_cast<uint32>( _listSortingLayer.size() ); }
-        /** @brief 순번에 해당하는 레이어 이름입니다. 범위 밖이면 빈 이름입니다. */
-        const hashed_string& getSortingLayerName( uint32 layerIndex ) const;
         /** @brief 이름에 해당하는 레이어 순번입니다(대소문자 무시). 없으면 -1 입니다. */
         int32 findSortingLayer( const hashed_string& layerName ) const;
         /** @brief `Default` 레이어의 순번입니다. */

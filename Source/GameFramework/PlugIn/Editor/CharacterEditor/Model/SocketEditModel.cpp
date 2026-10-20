@@ -2,6 +2,7 @@
 
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/SocketEditModel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -11,17 +12,6 @@ namespace sw::editor
     {
         struct SocketEditModelInternal
         {
-            /** @brief 이름 목록에서 @p name 을 찾습니다(대소문자 무시, 해시 비교). */
-            static bool containsName( const vector<hashed_string>& listName, const hashed_string& name )
-            {
-                for ( const hashed_string& candidate : listName )
-                {
-                    if ( candidate == name )
-                        return true;
-                }
-                return false;
-            }
-
             static hashed_string makeName( const string& text ) { return hashed_string( string_view( text ) ); }
 
             /** @brief 이름의 반대편이 있으면 그것을, 없으면 같은 이름을 반환합니다. */
@@ -382,7 +372,7 @@ namespace sw::editor
         // 비어 있으면 메시 루트이고, 본 목록이 없으면 검증하지 않는다. 가상 본도 부모가 될 수 있다.
         if ( parent.empty() || _listBoneName.empty() )
             return true;
-        return SocketEditModelInternal::containsName( _listBoneName, parent ) || _sockets.findVirtualBone( parent ) != nullptr;
+        return VectorUtil::contains( _listBoneName, parent ) || _sockets.findVirtualBone( parent ) != nullptr;
     }
 
     bool SocketEditModel::isKindAllowed( const hashed_string& kind ) const

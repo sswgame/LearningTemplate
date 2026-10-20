@@ -24,37 +24,9 @@ namespace sw
     {
         struct AutomationEnvironmentStepsInternal
         {
-            /** @brief 속성이 @p listAllowed 안에만 있고 @p listRequired 가 모두 있는지 봅니다. */
-            static bool checkAttributes( const AutomationStep& step, std::initializer_list<string_view> listAllowed,
-                                         std::initializer_list<string_view> listRequired, string& outError )
-            {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    bool bKnown = false;
-                    for ( const string_view allowed : listAllowed )
-                    {
-                        bKnown = bKnown || string_view{ attribute._name } == allowed;
-                    }
-                    if ( bKnown == false )
-                    {
-                        outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                        return false;
-                    }
-                }
-                for ( const string_view required : listRequired )
-                {
-                    if ( step.findAttribute( required ) == nullptr )
-                    {
-                        outError = step.describe() + ": needs " + string( required ) + "=\"…\"";
-                        return false;
-                    }
-                }
-                return true;
-            }
-
             static bool validateDevCommand( const AutomationStep& step, string& outError )
             {
-                if ( checkAttributes( step, { "line" }, { "line" }, outError ) == false )
+                if ( step.hasRequiredAttributes( { "line" }, { "line" }, outError ) == false )
                     return false;
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
@@ -120,7 +92,7 @@ namespace sw
 
             static bool validateResize( const AutomationStep& step, string& outError )
             {
-                if ( checkAttributes( step, { "width", "height" }, { "width", "height" }, outError ) == false )
+                if ( step.hasRequiredAttributes( { "width", "height" }, { "width", "height" }, outError ) == false )
                     return false;
                 uint32 width  = 0;
                 uint32 height = 0;

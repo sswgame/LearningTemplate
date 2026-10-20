@@ -218,11 +218,10 @@ namespace sw
         }
     }
 
-    RHIBufferHandle D3D11RHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    RHIBufferHandle D3D11RHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
     {
         // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. D3D11 규칙상 인덱스 버퍼는 BIND_INDEX_BUFFER 로 만들어야 하고
         // 구조버퍼(BUFFER_STRUCTURED)에는 그 플래그를 붙일 수 없다. 주의: 구조버퍼로 만들어도 드라이버가 받아 줘 그려지므로 틀려도 티가 안 난다.
-        (void)indexStride;
         return createFilledBuffer( pData, sizeBytes, D3D11_BIND_INDEX_BUFFER );
     }
 

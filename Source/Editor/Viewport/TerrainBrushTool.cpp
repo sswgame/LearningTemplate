@@ -451,11 +451,6 @@ namespace sw::editor
         return TerrainBrushToolInternal::getState()._settings;
     }
 
-    uint32 TerrainBrushTool::getStrokeCount()
-    {
-        return TerrainBrushToolInternal::getState()._strokeCount;
-    }
-
     void TerrainBrushTool::process( const EditorViewportVisualizerArgs& args )
     {
         using Internal         = TerrainBrushToolInternal;

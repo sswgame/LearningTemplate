@@ -93,8 +93,6 @@ namespace sw
         static const AudioEffectTypeInfo* findType( const hashed_string& name );
         /** @brief 이름의 이펙트를 기본 파라미터로 만듭니다. 모르는 이름이면 nullptr 입니다. */
         static unique_ptr<IAudioEffect> createEffect( const hashed_string& name );
-        /** @brief 등록된 종류 수입니다. */
-        static uint32 getTypeCount();
         /** @brief 번호의 종류입니다. */
         static const AudioEffectTypeInfo& getType( uint32 typeIndex );
     };

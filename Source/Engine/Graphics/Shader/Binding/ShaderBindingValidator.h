@@ -87,8 +87,5 @@ namespace sw
 
         /// @brief 계약 테이블입니다. 예약 리소스 모두를 담습니다(테스트와 문서용).
         static const vector<ShaderReservedBinding>& getReservedBindings();
-
-        /// @brief 프로세스 시작 이후 validate 가 보고한 위반 누계입니다(앱과 테스트가 "한 번도 없었는가"를 확인할 때).
-        static uint32 getTotalViolationCount();
     };
 } // namespace sw

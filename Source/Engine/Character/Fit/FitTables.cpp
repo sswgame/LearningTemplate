@@ -208,19 +208,6 @@ namespace sw
         _listRegion.push_back( region );
     }
 
-    void FitTables::addProfile( const FitProfileDef& profile )
-    {
-        for ( FitProfileDef& existing : _listProfile )
-        {
-            if ( existing._name == profile._name )
-            {
-                existing = profile;
-                return;
-            }
-        }
-        _listProfile.push_back( profile );
-    }
-
     void FitTables::addInteraction( const FitInteractionDef& interaction )
     {
         _listInteraction.push_back( interaction );

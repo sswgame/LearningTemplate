@@ -152,7 +152,6 @@ namespace sw::editor
         void                  setCameraBookmark( uint32 slot, const CameraBookmark& bookmark );
         const CameraBookmark* getCameraBookmark( uint32 slot ) const;
         bool                  hasCameraBookmark( uint32 slot ) const;
-        void                  clearCameraBookmark( uint32 slot );
 
         // ------------------------------------------------------------------------------
         // 9) 컴포넌트 복사, 붙여 넣기, 프리셋(에디터 클립보드)

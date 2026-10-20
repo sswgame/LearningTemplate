@@ -394,11 +394,6 @@ namespace sw
         return readFromBytes( bytes.data(), bytes.size() );
     }
 
-    bool FractureAsset::isFracturePath( string_view path )
-    {
-        return FileUtil::hasExtension( path, kExtension );
-    }
-
     string FractureAsset::makePathForMesh( string_view meshPath )
     {
         const size_t dot = meshPath.rfind( '.' );

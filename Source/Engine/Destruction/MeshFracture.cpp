@@ -64,8 +64,7 @@ namespace sw
                 uint64 hash = HashUtil::kFnvOffset64;
                 for ( const uint32 bits : arrBit )
                 {
-                    hash ^= bits;
-                    hash *= HashUtil::kFnvPrime64;
+                    hash = HashUtil::fnvStep64( hash, bits );
                     hash ^= hash >> 29;
                 }
                 return hash;

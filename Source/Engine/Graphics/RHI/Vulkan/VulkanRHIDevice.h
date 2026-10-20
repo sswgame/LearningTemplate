@@ -199,7 +199,7 @@ namespace sw
         void               applyVSyncInternal() override;
         [[nodiscard]] bool createRenderPass();
         /** @brief 프레임을 엽니다(펜스 대기, 스왑체인 이미지 획득, 커맨드 버퍼 기록 시작). */
-        void beginFrame( const float4& clearColor ) override;
+        void beginFrame() override;
 
         /** @brief 프레임을 닫습니다(vkQueueSubmit, bPresent 면 vkQueuePresentKHR). */
         void endFrame( bool vsync, bool bPresent = true ) override;

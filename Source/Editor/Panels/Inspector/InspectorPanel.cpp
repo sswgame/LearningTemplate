@@ -30,6 +30,7 @@
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/InspectorObjectEdit.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
@@ -60,27 +61,6 @@ namespace sw::editor
         struct InspectorPanelInternal
         {
             static constexpr Color kMultiSelectionText{ 0.4f, 0.7f, 1.0f, 1.0f };
-
-            /**
-             * @brief 오브젝트 하나를 바꾸는 인스펙터 편집입니다. 정지 상태이면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
-             * @details 이름, 활성, 부모 해제, 컴포넌트 활성, 컴포넌트 제거가 이 함수를 지난다. 기록도 dirty 도 없이 바꾸면 그 편집은
-             *          다른 씬을 열거나 에디터를 끌 때 묻지도 않고 사라지고 Ctrl+Z 로도 돌릴 수 없다. 플레이 중에는 씬 명령이 막히므로
-             *          (플레이 사본은 Stop 이 되돌린다) 바로 바꾼다.
-             */
-            template <typename EditFunc>
-            static void applyObjectEdit( GameObject* pObj, string_view undoLabel, EditFunc&& edit )
-            {
-                if ( pObj == nullptr )
-                    return;
-                if ( EditorPlaySession::areSceneEditsAllowed() == false )
-                {
-                    edit();
-                    return;
-                }
-                const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
-                edit();
-                EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -484,13 +464,13 @@ namespace sw::editor
                 EditorWidgets::endComponentCard();
             }
             if ( bActive != bWasActive )
-                InspectorPanelInternal::applyObjectEdit( pObj, "Toggle Component Active", [pComp, bActive]()
+                InspectorObjectEdit::applyObjectEdit( pObj, "Toggle Component Active", [pComp, bActive]()
                 { pComp->setActive( bActive ); } );
 
             if ( _pPendingMoveComponent == pComp && _pendingMoveDirection != 0 )
             {
                 const int32 direction = _pendingMoveDirection;
-                InspectorPanelInternal::applyObjectEdit( pObj, direction < 0 ? "Move Component Up" : "Move Component Down", [pObj, pComp, direction]()
+                InspectorObjectEdit::applyObjectEdit( pObj, direction < 0 ? "Move Component Up" : "Move Component Down", [pObj, pComp, direction]()
                 { (void)pObj->moveComponent( pComp, direction ); } ); // 끝 · 주 씬 컴포넌트면 그대로 — 메뉴가 이미 막는다
                 _pPendingMoveComponent = nullptr;
                 _pendingMoveDirection  = 0;
@@ -657,7 +637,7 @@ namespace sw::editor
         const bool bLeftAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
         const bool bNameChanged   = _nameEditBuffer.empty() == false && pObj->getName().isEqual( hashed_string( _nameEditBuffer.c_str() ), NameCase::CaseSensitive ) == false;
         if ( ( bEnter || bLeftAfterEdit ) && bNameChanged )
-            InspectorPanelInternal::applyObjectEdit( pObj, "Rename GameObject", [pObj, this]()
+            InspectorObjectEdit::applyObjectEdit( pObj, "Rename GameObject", [pObj, this]()
             { pObj->setName( hashed_string( _nameEditBuffer.c_str() ) ); } );
         EditorSelfTestMarks::note( "inspector.name" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ObjectName" ) );
@@ -673,7 +653,7 @@ namespace sw::editor
             ImGui::Text( "Parent: %s", pParent->getName().c_str() );
             ImGui::SameLine();
             if ( ImGui::SmallButton( "Unparent" ) )
-                InspectorPanelInternal::applyObjectEdit( pObj, "Unparent GameObject", [pObj]()
+                InspectorObjectEdit::applyObjectEdit( pObj, "Unparent GameObject", [pObj]()
                 { pObj->detachFromParent(); } );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "Unparent" ) );
         }

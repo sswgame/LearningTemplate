@@ -412,7 +412,6 @@ namespace sw
         void bindActionCallback( const hashed_string& action, ActionTrigger trigger, ActionCallbackDelegate callback );
         void bindPhaseCallback( const hashed_string& action, ActionPhase phase, ActionCallbackDelegate callback );
         void bindVector2DCallback( const hashed_string& action, Vector2DCallbackDelegate callback );
-        void clearCallbacks();
 
         // ------------------------------------------------------------------------------
         // 4) LIFO 컨텍스트 스택, 모달/비모달 제어

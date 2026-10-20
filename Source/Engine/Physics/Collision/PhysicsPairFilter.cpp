@@ -2,36 +2,7 @@
 
 #include "Engine/Physics/Collision/PhysicsPairFilter.h"
 
-namespace sw
-{
-    namespace
-    {
-        struct PhysicsPairFilterInternal
-        {
-            static void removeValue( vector<uint64>& inoutListValue, uint64 value )
-            {
-                for ( size_t valueIndex = 0; valueIndex < inoutListValue.size(); ++valueIndex )
-                {
-                    if ( inoutListValue[valueIndex] != value )
-                        continue;
-                    inoutListValue[valueIndex] = inoutListValue.back();
-                    inoutListValue.pop_back();
-                    return;
-                }
-            }
-
-            static bool containsValue( const vector<uint64>& listValue, uint64 value )
-            {
-                for ( const uint64 item : listValue )
-                {
-                    if ( item == value )
-                        return true;
-                }
-                return false;
-            }
-        };
-    } // namespace
-} // namespace sw
+#include "Core/Container/VectorUtil.h"
 
 namespace sw
 {
@@ -52,24 +23,24 @@ namespace sw
             unordered_map<uint64, vector<uint64>>::iterator iterA = _mapBodyToDisabled.find( keyA );
             if ( iterA != _mapBodyToDisabled.end() )
             {
-                PhysicsPairFilterInternal::removeValue( iterA->second, keyB );
+                (void)VectorUtil::removeSingleSwap( iterA->second, keyB ); // 없으면 지울 것이 없다
                 if ( iterA->second.empty() )
                     _mapBodyToDisabled.erase( iterA );
             }
             unordered_map<uint64, vector<uint64>>::iterator iterB = _mapBodyToDisabled.find( keyB );
             if ( iterB != _mapBodyToDisabled.end() )
             {
-                PhysicsPairFilterInternal::removeValue( iterB->second, keyA );
+                (void)VectorUtil::removeSingleSwap( iterB->second, keyA ); // 없으면 지울 것이 없다
                 if ( iterB->second.empty() )
                     _mapBodyToDisabled.erase( iterB );
             }
             return;
         }
         vector<uint64>& listA = _mapBodyToDisabled[keyA];
-        if ( PhysicsPairFilterInternal::containsValue( listA, keyB ) == false )
+        if ( VectorUtil::contains( listA, keyB ) == false )
             listA.push_back( keyB );
         vector<uint64>& listB = _mapBodyToDisabled[keyB];
-        if ( PhysicsPairFilterInternal::containsValue( listB, keyA ) == false )
+        if ( VectorUtil::contains( listB, keyA ) == false )
             listB.push_back( keyA );
     }
 
@@ -80,7 +51,7 @@ namespace sw
         unordered_map<uint64, vector<uint64>>::const_iterator iter = _mapBodyToDisabled.find( bodyA.packed() );
         if ( iter == _mapBodyToDisabled.end() )
             return true;
-        return PhysicsPairFilterInternal::containsValue( iter->second, bodyB.packed() ) == false;
+        return VectorUtil::contains( iter->second, bodyB.packed() ) == false;
     }
 
     void PhysicsPairFilter::removeBodies( span<const PhysicsBodyHandle> listBody )
@@ -97,7 +68,7 @@ namespace sw
                 unordered_map<uint64, vector<uint64>>::iterator iterOther = _mapBodyToDisabled.find( other );
                 if ( iterOther == _mapBodyToDisabled.end() )
                     continue;
-                PhysicsPairFilterInternal::removeValue( iterOther->second, body.packed() );
+                (void)VectorUtil::removeSingleSwap( iterOther->second, body.packed() ); // 없으면 지울 것이 없다
                 if ( iterOther->second.empty() )
                     _mapBodyToDisabled.erase( iterOther );
             }

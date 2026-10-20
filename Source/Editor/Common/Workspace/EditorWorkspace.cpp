@@ -252,15 +252,6 @@ namespace sw::editor
         return slot < _arrCameraBookmark.size() && _arrCameraBookmark[slot]._bValid == true;
     }
 
-    void EditorWorkspace::clearCameraBookmark( uint32 slot )
-    {
-        if ( slot < _arrCameraBookmark.size() )
-        {
-            _arrCameraBookmark[slot]         = CameraBookmark{};
-            _arrCameraBookmark[slot]._bValid = false;
-        }
-    }
-
     void EditorWorkspace::copyComponent( const Component* pComp )
     {
         if ( pComp == nullptr || pComp->getTypeInfo() == nullptr )

@@ -222,12 +222,6 @@ namespace sw
         return true;
     }
 
-    const hashed_string& Render2DSettings::getSortingLayerName( uint32 layerIndex ) const
-    {
-        static const hashed_string s_empty{};
-        return ( layerIndex < _listSortingLayer.size() ) ? _listSortingLayer[layerIndex] : s_empty;
-    }
-
     int32 Render2DSettings::findSortingLayer( const hashed_string& layerName ) const
     {
         for ( size_t layerIndex = 0; layerIndex < _listSortingLayer.size(); ++layerIndex )

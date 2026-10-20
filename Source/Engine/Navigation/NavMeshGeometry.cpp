@@ -238,16 +238,6 @@ namespace sw
         }
     }
 
-    void NavMeshGeometry::addConvexVolume( const NavConvexVolume& volume )
-    {
-        if ( volume._listPoint.size() < 3 || volume._maxY < volume._minY )
-            return;
-        _listVolume.push_back( volume );
-        const AABB bounds = volume.computeBounds();
-        expandBounds( bounds._min );
-        expandBounds( bounds._max );
-    }
-
     void NavMeshGeometry::addHeightfield( const float32* pHeight, uint32 resolution, const float3& origin, const float2& cellSize, const uint8* pHoleCell, uint8 area )
     {
         const bool bInvalidHeightfield = pHeight == nullptr || resolution < 2 || cellSize._x <= 0.0f || cellSize._y <= 0.0f;

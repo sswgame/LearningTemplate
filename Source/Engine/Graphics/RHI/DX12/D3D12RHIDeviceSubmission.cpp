@@ -479,7 +479,7 @@ namespace sw
         _timestampReadback->Unmap( 0, &emptyRange );
     }
 
-    void D3D12RHIDevice::beginFrame( const float4& clearColor )
+    void D3D12RHIDevice::beginFrame()
     {
         if ( _frameStreamState._bRecording == SW_FALSE )
         {
@@ -520,7 +520,6 @@ namespace sw
         // 백버퍼 바인딩(RENDER_TARGET 배리어 + OMSetRenderTargets + Clear)은 여기서 하지 않는다.
         // beginFrame 은 프레임 수명주기 전용이고, 백버퍼 타깃팅은 RenderThread 가 여는 beginRenderPass(핸들 0) 가
         // 배리어까지 포함해 명시적으로 한다. 뷰포트/시저는 기본값으로 남긴다.
-        (void)clearColor;
 
         constexpr float32 kDefaultViewportX        = 0.0f;
         constexpr float32 kDefaultViewportY        = 0.0f;

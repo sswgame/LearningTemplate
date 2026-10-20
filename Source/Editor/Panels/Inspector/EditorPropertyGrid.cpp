@@ -27,6 +27,7 @@
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/InspectorFavorites.h"
+#include "Editor/Panels/Inspector/InspectorObjectEdit.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
@@ -62,27 +63,6 @@ namespace sw::editor
             static constexpr Color kCallInEditorButtonActive{ 0.12f, 0.35f, 0.55f, 1.0f };
             static constexpr Color kCallInEditorText{ 0.3f, 0.8f, 1.0f, 1.0f };
 
-            /**
-             * @brief 오브젝트 하나를 바꾸는 인스펙터 편집입니다. 정지 상태이면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
-             * @details 이름, 활성, 부모 해제, 컴포넌트 활성, 컴포넌트 제거가 이 함수를 지난다. 기록도 dirty 도 없이 바꾸면 그 편집은
-             *          다른 씬을 열거나 에디터를 끌 때 묻지도 않고 사라지고 Ctrl+Z 로도 돌릴 수 없다. 플레이 중에는 씬 명령이 막히므로
-             *          (플레이 사본은 Stop 이 되돌린다) 바로 바꾼다.
-             */
-            template <typename EditFunc>
-            static void applyObjectEdit( GameObject* pObj, string_view undoLabel, EditFunc&& edit )
-            {
-                if ( pObj == nullptr )
-                    return;
-                if ( EditorPlaySession::areSceneEditsAllowed() == false )
-                {
-                    edit();
-                    return;
-                }
-                const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
-                edit();
-                EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
-            }
-
             /** @brief 컨테이너 구조 편집(추가, 삭제, 다시 넣기)입니다. 주인 오브젝트가 있으면 되돌리기에 남기고, 없으면 그냥 바꿉니다. */
             template <typename EditFunc>
             static void applyContainerEdit( GameObject* pOwner, string_view undoLabel, EditFunc&& edit )
@@ -90,7 +70,7 @@ namespace sw::editor
                 if ( pOwner == nullptr )
                     edit();
                 else
-                    applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
+                    InspectorObjectEdit::applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
             }
 
             /** @brief 맵 값 하나를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 위젯(`drawPropertyWidget`)에만 씁니다. 텍스트 변환은 값 주소 쪽(`SerializerUtil::formatValueText`, `parseTextValue`)이 타입 이름으로 한다. */
@@ -217,7 +197,7 @@ namespace sw::editor
                 SW_LOG_WARNING( "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
         };
         if ( pOwnerObj != nullptr )
-            EditorPropertyGridInternal::applyObjectEdit( pOwnerObj, pUndoLabel, apply );
+            InspectorObjectEdit::applyObjectEdit( pOwnerObj, pUndoLabel, apply );
         else
             apply();
     }

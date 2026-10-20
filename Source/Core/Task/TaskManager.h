@@ -243,8 +243,6 @@ namespace sw
         void ensureMainThread() const;
         /** @brief 현재 스레드가 이 풀의 워커인지 확인합니다. */
         bool isWorkerThread() const;
-        /** @brief Debug: 워커 스레드가 아니면 assert 합니다. */
-        void ensureWorkerThread() const;
 
         /**
          * @brief 태스크 본문을 실행할 수 있는 스레드의 최대 수입니다. 워커 수 + 기다리는 동안 다른 일을 돕는 스레드 몫(`kMaxHelperThreadCount`).

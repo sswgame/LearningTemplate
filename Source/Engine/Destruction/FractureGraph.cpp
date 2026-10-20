@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/FractureGraph.h"
 
+#include "Core/Container/UnionFindUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -20,36 +21,6 @@ namespace sw
                 float32        _volume{ 0.0f };
                 uint32         _leaf{ 0xFFFFFFFFu };
             };
-
-            /** @brief 유니온 파인드(경로 압축)입니다. */
-            static uint32 findRoot( vector<uint32>& inoutListParent, uint32 item )
-            {
-                uint32 root = item;
-                while ( inoutListParent[root] != root )
-                {
-                    root = inoutListParent[root];
-                }
-                while ( inoutListParent[item] != root )
-                {
-                    const uint32 next     = inoutListParent[item];
-                    inoutListParent[item] = root;
-                    item                  = next;
-                }
-                return root;
-            }
-
-            static void unite( vector<uint32>& inoutListParent, uint32 lhs, uint32 rhs )
-            {
-                const uint32 rootLhs = findRoot( inoutListParent, lhs );
-                const uint32 rootRhs = findRoot( inoutListParent, rhs );
-                if ( rootLhs == rootRhs )
-                    return;
-                // 작은 번호를 뿌리로 삼는다. 결과가 합치는 순서에 좌우되지 않는다.
-                if ( rootLhs < rootRhs )
-                    inoutListParent[rootRhs] = rootLhs;
-                else
-                    inoutListParent[rootLhs] = rootRhs;
-            }
 
             /** @brief 자식들을 묶는 노드를 추가하고 그 번호를 반환합니다(부피 가중 중심). */
             static uint32 makeCluster( vector<BuildNode>& inoutListBuild, vector<uint32> listChild )
@@ -207,7 +178,7 @@ namespace sw
                     if ( bSkipLinkOwners )
                         continue;
                     if ( listGroupOf[ownerA] == listGroupOf[ownerB] )
-                        unite( listParent, ownerA, ownerB );
+                        UnionFindUtil::unite( listParent, ownerA, ownerB );
                 }
                 vector<vector<uint32>> listSplit;
                 for ( const vector<uint32>& group : inoutListGroup )
@@ -216,7 +187,7 @@ namespace sw
                     vector<vector<uint32>> listPart;
                     for ( const uint32 node : group )
                     {
-                        const uint32 root = findRoot( listParent, node );
+                        const uint32 root = UnionFindUtil::findRoot( listParent, node );
                         size_t       part = 0;
                         while ( part < listRootSeen.size() && listRootSeen[part] != root )
                         {

@@ -109,7 +109,7 @@ namespace sw
                 return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
             const bool bHasIndexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
             if ( bHasIndexInitialData )
-                return createIndexBuffer( desc._pInitialData, desc._sizeBytes, ( desc._elementSize == 2 ) ? 2u : 4u );
+                return createIndexBuffer( desc._pInitialData, desc._sizeBytes );
             if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
                 return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
             const uint32    elemSize                  = desc._elementSize > 0 ? desc._elementSize : 4u;
@@ -130,7 +130,7 @@ namespace sw
          *          검증 레이어가 용도 위반으로 잡는다). 드라이버가 받아 줘서 그려지는 백엔드도 있어 이미지만으로는 드러나지 않는다
          *          (RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream).
          */
-        virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride = 4 ) = 0;
+        virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes ) = 0;
 
         /** @brief GPU 버퍼 리소스를 삭제합니다. */
         virtual void destroyBuffer( RHIBufferHandle buffer ) = 0;

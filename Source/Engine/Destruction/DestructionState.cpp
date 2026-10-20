@@ -5,6 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/UnionFindUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/BitStream.h"
@@ -77,34 +78,6 @@ namespace sw
                     outListValue[static_cast<size_t>( index )] = value;
                 }
                 return reader.hasOverflowed() == false;
-            }
-
-            static uint32 findRoot( vector<uint32>& inoutListParent, uint32 item )
-            {
-                uint32 root = item;
-                while ( inoutListParent[root] != root )
-                {
-                    root = inoutListParent[root];
-                }
-                while ( inoutListParent[item] != root )
-                {
-                    const uint32 next     = inoutListParent[item];
-                    inoutListParent[item] = root;
-                    item                  = next;
-                }
-                return root;
-            }
-
-            static void unite( vector<uint32>& inoutListParent, uint32 lhs, uint32 rhs )
-            {
-                const uint32 rootLhs = findRoot( inoutListParent, lhs );
-                const uint32 rootRhs = findRoot( inoutListParent, rhs );
-                if ( rootLhs == rootRhs )
-                    return;
-                if ( rootLhs < rootRhs )
-                    inoutListParent[rootRhs] = rootLhs;
-                else
-                    inoutListParent[rootLhs] = rootRhs;
             }
 
             static uint64 mixHash( uint64 hash, uint64 value )
@@ -369,7 +342,7 @@ namespace sw
                     const uint32        other    = linkData._leafA == leaf ? linkData._leafB : linkData._leafA;
                     const int32         otherAt  = DestructionStateInternal::findSorted( listNode, _listLeafActive[other] );
                     if ( otherAt >= 0 && static_cast<uint32>( otherAt ) != index )
-                        DestructionStateInternal::unite( listParent, index, static_cast<uint32>( otherAt ) );
+                        UnionFindUtil::unite( listParent, index, static_cast<uint32>( otherAt ) );
                 }
             }
         }
@@ -377,7 +350,7 @@ namespace sw
         vector<int32> listComponentOfRoot( listNode.size(), -1 );
         for ( uint32 index = 0; index < static_cast<uint32>( listNode.size() ); ++index )
         {
-            const uint32 root = DestructionStateInternal::findRoot( listParent, index );
+            const uint32 root = UnionFindUtil::findRoot( listParent, index );
             if ( listComponentOfRoot[root] < 0 )
             {
                 listComponentOfRoot[root] = static_cast<int32>( outListComponent.size() );

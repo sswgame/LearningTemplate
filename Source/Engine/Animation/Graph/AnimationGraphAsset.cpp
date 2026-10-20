@@ -630,14 +630,4 @@ namespace sw
         const uint32 index = static_cast<uint32>( blend );
         return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrLayerBlendText ) ) ? AnimationGraphAssetInternal::kArrLayerBlendText[index] : "";
     }
-
-    int32 AnimationGraphAsset::findFirstOutgoingNodeID( int32 fromNodeID ) const
-    {
-        for ( const AnimationGraphLink& link : _listLink )
-        {
-            if ( link._fromNode == fromNodeID )
-                return link._toNode;
-        }
-        return 0;
-    }
 } // namespace sw

@@ -83,8 +83,6 @@ namespace sw
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
-        /** @brief 경로가 `.fracture` 인지 반환합니다. */
-        static bool isFracturePath( string_view path );
         /** @brief 메시 경로 옆의 파쇄 경로입니다(`a/b.mesh` → `a/b.fracture`). */
         static string makePathForMesh( string_view meshPath );
     };

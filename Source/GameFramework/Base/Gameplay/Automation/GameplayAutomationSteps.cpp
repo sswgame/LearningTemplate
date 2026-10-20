@@ -44,24 +44,6 @@ namespace sw
     {
         struct GameplayAutomationStepsInternal
         {
-            static bool checkAttributeNames( const AutomationStep& step, std::initializer_list<string_view> listAllowed, string& outError )
-            {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    bool bKnown = false;
-                    for ( const string_view allowed : listAllowed )
-                    {
-                        bKnown = bKnown || string_view{ attribute._name } == allowed;
-                    }
-                    if ( bKnown == false )
-                    {
-                        outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                        return false;
-                    }
-                }
-                return true;
-            }
-
             /** @brief 속성 @p name 을 음이 아닌 수로 읽습니다. 없으면 true 이고 @p outbPresent 가 false 입니다. */
             [[nodiscard]] static bool readNonNegative( const AutomationStep& step, string_view name, float32& outValue, bool& outbPresent, string& outError )
             {
@@ -97,7 +79,7 @@ namespace sw
                 bool       bMinutes = false;
                 bool       bHours   = false;
                 bool       bToHour  = false;
-                const bool bRead    = checkAttributeNames( step, { "minutes", "hours", "toHour" }, outError ) && readNonNegative( step, "minutes", value, bMinutes, outError ) &&
+                const bool bRead    = step.hasOnlyAttributes( { "minutes", "hours", "toHour" }, outError ) && readNonNegative( step, "minutes", value, bMinutes, outError ) &&
                                    readNonNegative( step, "hours", value, bHours, outError ) && readNonNegative( step, "toHour", value, bToHour, outError );
                 if ( bRead == false )
                     return false;
@@ -313,14 +295,6 @@ namespace sw
                 return true;
             }
 
-            static const string* requireAttribute( const AutomationStep& step, string_view name, string& outError )
-            {
-                const string* pValue = step.findAttribute( name );
-                if ( pValue == nullptr )
-                    outError = step.describe() + ": needs " + string( name ) + "=\"…\"";
-                return pValue;
-            }
-
             /** @brief 대상 고르기 규칙(`AutomationTarget` — `Name` · `Name[N]`)으로 찾은 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
             static GameObject* findObject( AutomationRunner& runner, const AutomationStep& step, const string& objectName )
             {
@@ -334,13 +308,13 @@ namespace sw
 
             static bool validateMountStep( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "rider", "vehicle" }, outError ) && requireAttribute( step, "rider", outError ) != nullptr &&
-                       requireAttribute( step, "vehicle", outError ) != nullptr;
+                return step.hasOnlyAttributes( { "rider", "vehicle" }, outError ) && step.requireAttribute( "rider", outError ) != nullptr &&
+                       step.requireAttribute( "vehicle", outError ) != nullptr;
             }
 
             static bool validateDismountStep( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "rider" }, outError ) && requireAttribute( step, "rider", outError ) != nullptr;
+                return step.hasOnlyAttributes( { "rider" }, outError ) && step.requireAttribute( "rider", outError ) != nullptr;
             }
 
             static const utf8* toText( MountResult result )

@@ -383,11 +383,6 @@ namespace sw
         _pTransport->close( handle, mode );
     }
 
-    IStreamTransport* StreamMessageEndpoint::getTransport() const
-    {
-        return _pTransport;
-    }
-
     float64 StreamMessageEndpoint::getRoundTripSeconds( StreamConnectionHandle handle ) const
     {
         const shared_ptr<Connection> connection  = findConnection( handle );

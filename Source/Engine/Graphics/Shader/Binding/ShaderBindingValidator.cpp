@@ -408,11 +408,6 @@ namespace sw
         return reservedBindings();
     }
 
-    uint32 ShaderBindingValidator::getTotalViolationCount()
-    {
-        return ShaderBindingValidatorInternal::s_totalViolation.load( std::memory_order_relaxed );
-    }
-
     uint32 ShaderBindingValidator::validate( const ShaderReflectionData& reflection, ShaderTargetFormat targetFormat, string_view shaderLabel,
                                              vector<ShaderBindingValidatorIssue>* pOutIssue )
     {

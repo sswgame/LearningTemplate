@@ -126,7 +126,7 @@ namespace sw
                     uint64 hash = HashUtil::kFnvOffset64;
                     for ( const uint32 word : arrWord )
                     {
-                        hash = ( hash ^ word ) * HashUtil::kFnvPrime64;
+                        hash = HashUtil::fnvStep64( hash, word );
                     }
                     return static_cast<size_t>( hash );
                 }

@@ -456,16 +456,6 @@ namespace sw
         entry._listVector2DCallback.push_back( std::move( callback ) );
     }
 
-    void InputMap::clearCallbacks()
-    {
-        for ( ActionEntry& entry : _listActionEntry )
-        {
-            entry._listActionCallback.clear();
-            entry._listPhaseCallback.clear();
-            entry._listVector2DCallback.clear();
-        }
-    }
-
     void InputMap::registerLayer( const hashed_string& name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
     {
         ensureLayer( name, priority, enabled, blockLower, alwaysOn );

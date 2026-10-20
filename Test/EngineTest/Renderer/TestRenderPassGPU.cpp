@@ -123,9 +123,9 @@ namespace
      * @brief 씬을 한 프레임 그리고(Present 없이) GPU 가 끝날 때까지 기다립니다. `execute` 의 결과를 돌려줍니다.
      * @details 렌더 스레드와 같은 순서다 — beginFrame → execute → endFrame. 실패해도 프레임은 닫는다.
      */
-    bool renderSceneFrame( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, const sw::float4& clear )
+    bool renderSceneFrame( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene )
     {
-        pDevice->beginFrame( clear );
+        pDevice->beginFrame();
         const bool bExecuted = renderer.execute( pDevice, scene );
         pDevice->endFrame( false, false );
         pDevice->waitIdle();
@@ -136,7 +136,7 @@ namespace
      * @brief 한 프레임을 그리고 Present 전에 백버퍼를 텍스처로 읽어 옵니다(창에 나갈 그림 — 0 행이 화면 위). 실패면 false.
      * @details 백버퍼는 Present 뒤 내용이 버려지므로 프레임 스트림에 복사를 기록한 뒤 endFrame 한다.
      */
-    bool renderSceneFrameReadingBackBuffer( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, const sw::float4& clear,
+    bool renderSceneFrameReadingBackBuffer( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene,
                                             test::RHITestImage& outImage )
     {
         sw::IRHIResourceFactory* pFactory = pDevice->getResourceFactory();
@@ -150,7 +150,7 @@ namespace
         if ( backCopy == 0 )
             return false;
 
-        pDevice->beginFrame( clear );
+        pDevice->beginFrame();
         bool                    bOk     = renderer.execute( pDevice, scene );
         sw::IRHICommandContext* pStream = pDevice->getFrameStreamContext();
         bOk                             = bOk && pStream != nullptr;
@@ -196,7 +196,6 @@ namespace
     int64 renderPacketFramesAndCountDrawn( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, sw::GPUSceneBuilder& gtGPUScene )
     {
         constexpr uint32 kFrameCount = 3;
-        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
         for ( uint32 frame = 0; frame < kFrameCount; ++frame )
         {
             sw::RenderFramePacket packet{};
@@ -207,7 +206,7 @@ namespace
             gtGPUScene.exportCPUSnapshot( packet._gpuScene );
             if ( packet._gpuScene.getInstances().empty() )
                 return -1;
-            pDevice->beginFrame( clear );
+            pDevice->beginFrame();
             const bool bOk = renderer.executePacket( pDevice, packet );
             pDevice->endFrame( true, false );
             if ( bOk == false )
@@ -297,7 +296,7 @@ namespace
         constexpr uint32 kWarmupFrameCount = 3;
         for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
         {
-            pDevice->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            pDevice->beginFrame();
             if ( renderer.execute( pDevice, scene ) == false )
             {
                 pDevice->endFrame( false, false );
@@ -656,7 +655,7 @@ namespace
         for ( uint32 frame = 0; frame < kFrameCount; ++frame )
         {
             scene.getObjectManager()->getSubsystem<sw::AnimationSystem>().evaluate( 0.0f );
-            if ( renderSceneFrame( renderer, pDevice, scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } ) == false )
+            if ( renderSceneFrame( renderer, pDevice, scene ) == false )
                 return false;
         }
         return outImage.readTransient( renderer, pAttachment );
@@ -889,7 +888,7 @@ namespace
                                           MultiViewScene::makeTextureOutput( "rendertarget/test_shadow_view", 0.0f ), sw::CameraRole::Capture ) != nullptr;
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, pDevice, stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            bOk = renderSceneFrame( renderer, pDevice, stage._scene );
         }
         const sw::Texture2D*  pTexture = bOk ? sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>().find( "rendertarget/test_shadow_view" ) : nullptr;
         sw::vector<uint8>     bytes;
@@ -973,8 +972,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererInitializeAndExecuteSmoke )
     SW_ASSERT_NOT_NULL( mesh );
     mesh->setMesh( cube );
 
-    sw::float4 clear = { 0.02f, 0.02f, 0.05f, 1.0f };
-    device->beginFrame( clear );
+    device->beginFrame();
     SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
     device->waitIdle();
@@ -1024,8 +1022,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileRebuildsPipelineStates )
     SW_ASSERT_NOT_NULL( pMesh );
     pMesh->setMesh( cube );
 
-    const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-    device->beginFrame( clear );
+    device->beginFrame();
     SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), scene ), "PSO 재생성 후 프레임 실행" );
     device->endFrame( false, false );
 }
@@ -1047,8 +1044,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
     sw::Scene scene( "TaaHistoryScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
 
-    const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-    device->beginFrame( clear );
+    device->beginFrame();
     SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
     SW_ASSERT_TRUE_MSG( renderer.getTaaHistory() != 0, "디퍼드 파이프라인의 첫 프레임 뒤 TAA 히스토리가 없다" );
@@ -1057,7 +1053,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
     result._bSuccess = true;
     renderer.onShaderRecompiled( test::getEngineDefaultAssets()._shaderForwardLit.get(), result );
 
-    device->beginFrame( clear );
+    device->beginFrame();
     SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
     device->waitIdle();
@@ -1089,7 +1085,6 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
     mesh->setMesh( cube );
 
     sw::GPUSceneBuilder gtGPUScene; // Engine::_gpuSceneBuilder 역할 — 여기서는 테스트 로컬로 흉내
-    sw::float4          clear{ 0.02f, 0.02f, 0.05f, 1.0f };
     sw::RHIBufferHandle instanceBufferAfterFrame1{ 0 };
 
     for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
@@ -1100,7 +1095,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
         gtGPUScene.populateFromScene( &scene, packet._cameraPos );
         gtGPUScene.exportCPUSnapshot( packet._gpuScene );
 
-        device->beginFrame( clear );
+        device->beginFrame();
         SW_EXPECT_TRUE( renderer.executePacket( device.get(), packet ) );
         device->endFrame( false, false );
 
@@ -1117,7 +1112,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
     noViewPacket._bValid = 1;
     gtGPUScene.populateFromScene( &scene, noViewPacket._cameraPos );
     gtGPUScene.exportCPUSnapshot( noViewPacket._gpuScene );
-    device->beginFrame( clear );
+    device->beginFrame();
     {
         SW_TEST_DEFENSIVE_SCOPE( "render packet without a main view" );
         SW_EXPECT_FALSE( renderer.executePacket( device.get(), noViewPacket ) );
@@ -1159,7 +1154,6 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
     mesh->setMaterialInstance( instance );
 
     sw::GPUSceneBuilder gtGPUScene;
-    sw::float4          clear{ 0.02f, 0.02f, 0.05f, 1.0f };
 
     // 1 프레임: 정상 경로로 한 번 올린다 (버퍼·CB 가 만들어진다).
     {
@@ -1168,7 +1162,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
         SW_ASSERT_TRUE( setMainViewFromScene( packet, scene, *device.get() ) );
         gtGPUScene.populateFromScene( &scene, packet._cameraPos );
         gtGPUScene.exportCPUSnapshot( packet._gpuScene );
-        device->beginFrame( clear );
+        device->beginFrame();
         SW_EXPECT_TRUE( renderer.executePacket( device.get(), packet ) );
         device->endFrame( false, false );
     }
@@ -1188,7 +1182,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
     instance.reset();
     material.reset();
 
-    device->beginFrame( clear );
+    device->beginFrame();
     SW_EXPECT_TRUE( renderer.executePacket( device.get(), lateePacket ) );
     device->endFrame( false, false );
 }
@@ -1298,13 +1292,12 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
         // 부족하다: 기록 레이스는 예외도 실패 코드도 내지 않고 **픽셀만** 바꾼다. "돌았다" 만 보면
         // DX11 의 기록 레이스를 그대로 통과시킨다.
         // 직렬 경로가 기준이고, 병렬이 같은 값을 내야 한다는 것이 이 기능의 유일한 계약이다.
-        const sw::float4 clear               = { 0.02f, 0.02f, 0.05f, 1.0f };
-        auto             renderAndMeasureLit = [&]( sw::TaskManager* pTaskManager ) -> float64
+        auto renderAndMeasureLit = [&]( sw::TaskManager* pTaskManager ) -> float64
         {
             renderer.bindServices( pTaskManager );
             for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
             {
-                device->beginFrame( clear );
+                device->beginFrame();
                 SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), scene ), ( label + ": execute 실패" ).c_str() );
                 device->endFrame( false, false );
             }
@@ -1408,8 +1401,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
         if ( bOk )
         {
             // 한 프레임을 돌려야 배치가 서고 ensureMaterialPSOs 가 퍼뮤테이션 PSO 를 만든다.
-            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
+            bOk = renderSceneFrame( renderer, device.get(), scene );
         }
 
         const sw::string label = sw::string( device->getBackendName() );
@@ -1525,8 +1517,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
             }
             if ( bOk )
             {
-                const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-                bOk = renderSceneFrame( renderer, device.get(), scene, clear );
+                bOk = renderSceneFrame( renderer, device.get(), scene );
                 SW_EXPECT_TRUE_MSG( bOk, ( label + ": 프레임 실행 실패" ).c_str() );
             }
             if ( bOk )
@@ -1587,12 +1578,11 @@ SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
             bOk = pVfx->getAliveParticleCount() > 0;
             SW_EXPECT_TRUE_MSG( bOk, ( label + ": 효과가 입자를 내지 않았다" ).c_str() );
         }
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-        float64          playingRed{ 0.0 };
-        float64          stoppedRed{ 0.0 };
+        float64 playingRed{ 0.0 };
+        float64 stoppedRed{ 0.0 };
         if ( bOk )
         {
-            bOk        = renderSceneFrame( renderer, device.get(), scene, clear );
+            bOk        = renderSceneFrame( renderer, device.get(), scene );
             playingRed = readMeanChannel( renderer, "SceneColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + ": 프레임 실행 실패" ).c_str() );
             SW_EXPECT_TRUE_MSG( renderer.getGPUScene().getParticleBatches().size() == 2, ( label + ": 방출기 둘인데 입자 그리기가 둘이 아니다" ).c_str() );
@@ -1600,7 +1590,7 @@ SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
         if ( bOk )
         {
             pVfx->stop();
-            bOk        = renderSceneFrame( renderer, device.get(), scene, clear );
+            bOk        = renderSceneFrame( renderer, device.get(), scene );
             stoppedRed = readMeanChannel( renderer, "SceneColor" );
             SW_EXPECT_TRUE_MSG( renderer.getGPUScene().getParticleBatches().empty(), ( label + ": 멈춘 효과의 입자 그리기가 남았다" ).c_str() );
             SW_EXPECT_TRUE_MSG( playingRed > stoppedRed + 0.05,
@@ -1667,10 +1657,7 @@ SW_TEST_CASE( RenderPassGPUTest, MainPassCullsWithCameraFrustumNotLight )
         }
 
         if ( bOk )
-        {
-            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
-        }
+            bOk = renderSceneFrame( renderer, device.get(), scene );
 
         test::RHITestImage image;
         if ( bOk && image.readTransient( renderer, "SceneColor" ) )
@@ -1775,10 +1762,7 @@ SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
         }
 
         if ( bOk )
-        {
-            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
-        }
+            bOk = renderSceneFrame( renderer, device.get(), scene );
 
         test::RHITestImage image;
         if ( bOk && image.readTransient( renderer, "SceneColor" ) )
@@ -1915,10 +1899,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUGeneratedCommandsDrawOnlyVisibleInstances )
         }
 
         if ( bOk )
-        {
-            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
-        }
+            bOk = renderSceneFrame( renderer, device.get(), scene );
 
         test::RHITestImage image;
         if ( bOk && image.readTransient( renderer, "SceneColor" ) )
@@ -2043,10 +2024,7 @@ SW_TEST_CASE( RenderPassGPUTest, PerBatchMaterialColorsReachShader )
         }
 
         if ( bOk )
-        {
-            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
-        }
+            bOk = renderSceneFrame( renderer, device.get(), scene );
 
         test::RHITestImage image;
         if ( bOk && image.readTransient( renderer, "SceneColor" ) )
@@ -2152,10 +2130,7 @@ SW_TEST_CASE( RenderPassGPUTest, MultiBatchPassKeepsPerBatchConstants )
         }
 
         if ( bOk )
-        {
-            const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
-        }
+            bOk = renderSceneFrame( renderer, device.get(), scene );
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
 
         if ( bOk )
@@ -2247,8 +2222,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceAnimationKeepsInstancesReadable )
         // 두 프레임 돌린다 — 첫 프레임에 UAV 로 쓰고 두 번째 프레임이 그걸 SRV 로 읽는 순서까지 태운다.
         for ( uint32 frame = 0; frame < 2 && bOk; ++frame )
         {
-            const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
+            bOk = renderSceneFrame( renderer, device.get(), scene );
         }
 
         if ( bOk )
@@ -2341,10 +2315,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
         cube = arrMesh[0];
 
         if ( bOk )
-        {
-            const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
-        }
+            bOk = renderSceneFrame( renderer, device.get(), scene );
 
         // 실행 성공만으로는 부족하다 — 실제로 큐브가 찍혔는지, 백엔드끼리 같은 그림인지 SceneColor 픽셀로 본다.
         // 실행 성공만 보면 한 백엔드가 아무것도 안 그리거나 큐브를 한 자리에 겹쳐 그려도 통과한다.
@@ -2497,8 +2468,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
         // 조회한다 — drawGPUBatches 가 배치마다 부르는 것과 같은 함수다.
         auto renderOneFrame = [&]() -> bool
         {
-            const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            device->beginFrame( clear );
+            device->beginFrame();
             const bool bFrameOk = renderer.execute( device.get(), scene );
             device->endFrame( false, false );
             device->waitIdle();
@@ -2868,10 +2838,9 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPipelineDrawsGeometry )
 
     // 첫 프레임엔 GPUScene 업로드가 아직이라 그릴 게 없다 — 몇 프레임 돌린 뒤에 읽는다.
     constexpr uint32 kWarmupFrames = 4;
-    const sw::float4 clear         = { 0.02f, 0.02f, 0.05f, 1.0f };
     for ( uint32 frame = 0; frame < kWarmupFrames; ++frame )
     {
-        device->beginFrame( clear );
+        device->beginFrame();
         SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
         device->endFrame( false, false );
         device->waitIdle();
@@ -2934,10 +2903,9 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
     {
         Snapshot         result{};
         constexpr uint32 kFrames = 4;
-        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
         for ( uint32 frame = 0; frame < kFrames; ++frame )
         {
-            device.beginFrame( clear );
+            device.beginFrame();
             if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
@@ -3153,10 +3121,9 @@ SW_TEST_CASE( RenderPassGPUTest, AmbientOcclusionReachesBloom )
 
         auto renderFrames = [&]( uint32 frameCount )
         {
-            const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
             for ( uint32 frame = 0; frame < frameCount; ++frame )
             {
-                device->beginFrame( clear );
+                device->beginFrame();
                 if ( renderer.execute( device.get(), scene ) == false )
                     return false;
                 device->endFrame( false, false );
@@ -3306,10 +3273,9 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
         Snapshot result{};
         // 풀 빌드·GPUScene 업로드가 한 프레임 늦으므로 몇 프레임 돌린 뒤 읽는다.
         constexpr uint32 kFrames = 4;
-        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
         for ( uint32 frame = 0; frame < kFrames; ++frame )
         {
-            device.beginFrame( clear );
+            device.beginFrame();
             if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
@@ -3480,13 +3446,12 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
     };
     auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
     {
-        Snapshot         result{};
-        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        Snapshot result{};
         for ( uint32 frame = 0; frame < 4; ++frame )
         {
             // 팔레트는 애니메이션 시스템이 틱 뒤에 만든다 — 테스트는 틱 대신 평가만 부른다.
             scene.getObjectManager()->getSubsystem<sw::AnimationSystem>().evaluate( 0.0f );
-            device.beginFrame( clear );
+            device.beginFrame();
             if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
@@ -3670,12 +3635,11 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
     };
     auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
     {
-        Snapshot         result{};
-        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        Snapshot result{};
         for ( uint32 frame = 0; frame < 4; ++frame )
         {
             scene.getObjectManager()->getSubsystem<sw::AnimationSystem>().evaluate( 0.0f );
-            device.beginFrame( clear );
+            device.beginFrame();
             if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
@@ -4394,7 +4358,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPresentCopiesTheTonemapResult )
                 // 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다.
                 for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
                 {
-                    device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                    device->beginFrame();
                     bOk = renderer.execute( device.get(), scene );
                     device->endFrame( false, false );
                     device->waitIdle();
@@ -4532,7 +4496,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
             constexpr uint32 kWarmupFrameCount = 3;
             for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
             {
-                device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                device->beginFrame();
                 if ( renderer.execute( device.get(), scene ) == false )
                 {
                     device->endFrame( false, false );
@@ -5061,7 +5025,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth )
         bool bRendered = true;
         for ( uint32 frameIndex = 0; frameIndex < 3 && bRendered; ++frameIndex )
         {
-            bRendered = renderSceneFrame( renderer, device.get(), cube._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            bRendered = renderSceneFrame( renderer, device.get(), cube._scene );
         }
         sw::vector<uint8>     bytes;
         sw::RHITextureMipSpan layout{};
@@ -5135,7 +5099,7 @@ SW_TEST_CASE( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth )
             bool bRendered = true;
             for ( uint32 frameIndex = 0; frameIndex < 3 && bRendered; ++frameIndex )
             {
-                bRendered = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                bRendered = renderSceneFrame( renderer, device.get(), scene );
             }
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
@@ -5308,7 +5272,7 @@ SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
                     constexpr uint32 kWarmupFrameCount = 4;
                     for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
                     {
-                        device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                        device->beginFrame();
                         SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
                         device->endFrame( false, false );
                         device->waitIdle();
@@ -5395,7 +5359,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
                 constexpr uint32 kFrameCount = 3;
                 for ( uint32 frameIndex = 0; frameIndex < kFrameCount; ++frameIndex )
                 {
-                    device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                    device->beginFrame();
                     SW_EXPECT_TRUE( renderer.execute( device.get(), cube._scene ) );
                     device->endFrame( false, false );
                     device->waitIdle();
@@ -5573,7 +5537,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
                 {
-                    bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                    bOk = renderSceneFrame( renderer, device.get(), scene );
                 }
                 bOk = bOk && countMixed( renderer, count );
                 SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
@@ -5730,7 +5694,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
             constexpr uint32 kWarmupFrameCount = 3;
             for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
             {
-                bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                bOk = renderSceneFrame( renderer, device.get(), scene );
             }
             bOk = bOk && capture._sceneColor.readTransient( renderer, "SceneColor" ) && capture._bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
@@ -5854,7 +5818,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
                 {
-                    bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+                    bOk = renderSceneFrame( renderer, device.get(), scene );
                 }
                 SW_EXPECT_TRUE_MSG( bOk, ( label + "프레임 실행 실패" ).c_str() );
             }
@@ -6040,7 +6004,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
             constexpr uint32 kWarmupFrameCount = 3;
             for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
             {
-                bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                bOk = renderSceneFrame( renderer, device.get(), scene );
             }
             bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
@@ -6178,7 +6142,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
             SW_EXPECT_TRUE_MSG( bOk, ( label + "반해상도 원본 · 블룸 파이프라인을 만들지 못했다" ).c_str() );
             for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
             {
-                bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene );
             }
             bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
@@ -6223,7 +6187,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredBloomBrightIsHalfResolution )
             bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
             for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
             {
-                bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene );
             }
             bOk = bOk && litColor.readTransient( renderer, "LitColor" ) && bloomBright.readTransient( renderer, "BloomBright" ) &&
                   bloomColor.readTransient( renderer, "BloomColor" );
@@ -6276,7 +6240,7 @@ SW_TEST_CASE( RenderPassGPUTest, MultiViewRendersEachCaptureCameraToItsTexture )
         SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
         }
         SW_EXPECT_EQUAL( 2u, renderer.getExtraViewCount() );
         SW_EXPECT_EQUAL( 2u, renderer.getLastRenderedExtraViewCount() );
@@ -6325,7 +6289,7 @@ SW_TEST_CASE( RenderPassGPUTest, PostProcessOffViewSkipsThePostChain )
         SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
         }
 
         int64  onDiff   = 0;
@@ -6364,15 +6328,14 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSkipsFramesByItsUpdateRate )
     SW_ASSERT_TRUE( renderer.initialize( device.get() ) && stage.populate() );
     SW_ASSERT_NOT_NULL( stage.addViewCamera( "CameraRed", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f },
                                              MultiViewScene::makeTextureOutput( "rendertarget/test_rate", 1.0f ), sw::CameraRole::Capture ) );
-    const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-    int64            diff  = 0;
-    uint32           drawn = 0;
-    uint32           width = 0;
+    int64  diff  = 0;
+    uint32 drawn = 0;
+    uint32 width = 0;
 
     sw::FrameDebugOverrides overrides{};
     overrides._animationTime = 0.0f;
     renderer.setDebugOverrides( overrides );
-    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene, clear ) );
+    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene ) );
     SW_EXPECT_EQUAL( 1u, renderer.getLastRenderedExtraViewCount() );
     SW_ASSERT_TRUE( MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_rate", diff, drawn, width ) );
     SW_EXPECT_TRUE_MSG( diff > 10, ( "첫 그림이 붉지 않다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
@@ -6380,14 +6343,14 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSkipsFramesByItsUpdateRate )
     stage._pCubeRed->setMaterial( stage._materialBlue.get() );
     overrides._animationTime = 0.1f;
     renderer.setDebugOverrides( overrides );
-    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene, clear ) );
+    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene ) );
     SW_EXPECT_EQUAL( 0u, renderer.getLastRenderedExtraViewCount() );
     SW_ASSERT_TRUE( MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_rate", diff, drawn, width ) );
     SW_EXPECT_TRUE_MSG( diff > 10, ( "쉬는 프레임에 다시 그렸다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
 
     overrides._animationTime = 1.1f;
     renderer.setDebugOverrides( overrides );
-    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene, clear ) );
+    SW_ASSERT_TRUE( renderSceneFrame( renderer, device.get(), stage._scene ) );
     SW_EXPECT_EQUAL( 1u, renderer.getLastRenderedExtraViewCount() );
     SW_ASSERT_TRUE( MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_rate", diff, drawn, width ) );
     SW_EXPECT_TRUE_MSG( diff < -10, ( "주기가 지났는데 다시 그리지 않았다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
@@ -6416,7 +6379,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
         renderer.getCapture().setPresentEnabled( true );
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
         }
         sw::vector<uint8>     bytes;
         sw::RHITextureMipSpan layout{};
@@ -6473,7 +6436,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOverScreenRectView )
         output._screenRect = sw::float4{ 0.55f, 0.55f, 0.4f, 0.4f };
         bOk                = bOk && stage.addViewCamera( "PictureInPicture", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f }, output, sw::CameraRole::Game ) != nullptr;
         renderer.getCapture().setPresentEnabled( true );
-        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
         sw::vector<uint8>     bytes;
         sw::RHITextureMipSpan layout{};
         bOk = bOk && renderer.getCapture().readbackPresent( bytes, layout );
@@ -6500,7 +6463,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOverScreenRectView )
         renderer.setCanvasFrame( canvas );
         for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
         }
         bOk = bOk && renderer.getCapture().readbackPresent( bytes, layout );
         SW_EXPECT_TRUE_MSG( bOk, ( label + "캔버스 프레임 · 캡처" ).c_str() );
@@ -6709,13 +6672,12 @@ SW_TEST_CASE( RenderPassGPUTest, PresentedBackBufferMatchesTheCapture )
             stage._scene.getObjectManager()->flushSceneTransforms();
         }
         renderer.getCapture().setPresentEnabled( true );
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
         }
         test::RHITestImage window;
-        bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, window );
         sw::vector<uint8>     captureBytes;
         sw::RHITextureMipSpan captureLayout{};
         bOk = bOk && renderer.getCapture().readbackPresent( captureBytes, captureLayout );
@@ -6839,7 +6801,6 @@ SW_TEST_CASE( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput )
         renderer.getCapture().setPresentEnabled( true );
 
         sw::GPUSceneBuilder builder;
-        const sw::float4    clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
             sw::RenderFramePacket packet{};
@@ -6850,7 +6811,7 @@ SW_TEST_CASE( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput )
             bOk                        = setMainViewFromScene( packet, stage._scene, *device.get() );
             builder.populateFromScene( &stage._scene, packet._cameraPos );
             builder.exportCPUSnapshot( packet._gpuScene );
-            device->beginFrame( clear );
+            device->beginFrame();
             bOk = renderer.executePacket( device.get(), packet );
             device->endFrame( false, false );
             device->waitIdle();
@@ -6928,7 +6889,6 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
     renderer.getCapture().setPresentEnabled( true );
 
     sw::GPUSceneBuilder builder;
-    const sw::float4    clear{ 0.0f, 0.0f, 0.0f, 1.0f };
     bool                bOk = true;
     for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
     {
@@ -6940,7 +6900,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
         SW_ASSERT_TRUE( setMainViewFromScene( packet, stage._scene, *device.get() ) );
         builder.populateFromScene( &stage._scene, packet._cameraPos );
         builder.exportCPUSnapshot( packet._gpuScene );
-        device->beginFrame( clear );
+        device->beginFrame();
         bOk = renderer.executePacket( device.get(), packet );
         device->endFrame( false, false );
         device->waitIdle();
@@ -7000,13 +6960,12 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
         output._screenRect = sw::float4{ 0.55f, 0.55f, 0.4f, 0.4f };
         bOk                = bOk && stage.addViewCamera( "PictureInPicture", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f }, output, sw::CameraRole::Game ) != nullptr;
         renderer.getCapture().setPresentEnabled( false );
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
         }
         test::RHITestImage window;
-        bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, window );
         SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 백버퍼 읽기" ).c_str() );
         if ( bOk )
         {
@@ -7082,7 +7041,6 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
             return true;
         };
         const sw::float3 captureEye{ 0.4f, 1.0f, -4.0f }; // 주 카메라(기본: +Z 쪽)의 반대편
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
 
         // 1) 추가 뷰로 그린 그림.
         sw::Scene                    viewScene( "ExtraViewTransparency" );
@@ -7113,7 +7071,7 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
         }
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( viewRenderer, device.get(), viewScene, clear );
+            bOk = renderSceneFrame( viewRenderer, device.get(), viewScene );
         }
         test::RHITestImage viewImage;
         if ( bOk )
@@ -7148,7 +7106,7 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
         mainRenderer.getCapture().setPresentEnabled( true );
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( mainRenderer, device.get(), mainScene, clear );
+            bOk = renderSceneFrame( mainRenderer, device.get(), mainScene );
         }
         sw::vector<uint8>     mainBytes;
         sw::RHITextureMipSpan mainLayout{};
@@ -7287,14 +7245,14 @@ SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
             bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.02 0.02 1.0" );
             for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
             {
-                bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene );
             }
             bOk                          = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "0.02 0.02 1.0 1.0" );
             sw::CameraComponent* pCamera = stage._scene.getActiveGameCamera();
             bOk                          = bOk && pCamera != nullptr;
             if ( bOk && bCut )
                 pCamera->markCut();
-            bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
             test::RHITestImage image;
             bOk = bOk && image.readTransient( renderer, "TaaColor" );
             if ( bOk )
@@ -7500,12 +7458,11 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
             pAnimator->dispatchBeginPlay();
         }
         manager.flushSceneTransforms();
-        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
         for ( uint32 frame = 0; frame < 4; ++frame )
         {
             // 팔레트 · 묶음은 애니메이션 시스템이 틱 뒤에 만든다 — 테스트는 틱 대신 평가만 부른다(시간은 흐르지 않는다).
             manager.getSubsystem<sw::AnimationSystem>().evaluate( 0.0f );
-            device->beginFrame( clear );
+            device->beginFrame();
             if ( renderer.execute( device.get(), scene ) == false )
                 return result;
             device->endFrame( false, false );
@@ -7774,7 +7731,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
             pSprite->resolveRenderAssets();
             sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
             // 첫 프레임으로 그리는 크기를 안다 — 배율 4 가 되게 기준 해상도를 그 크기의 4 분의 1 로 둔다.
-            bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            bOk = renderSceneFrame( renderer, device.get(), scene );
         }
         test::RHITestImage firstImage;
         bOk = bOk && firstImage.readTransient( renderer, "SceneColor" );
@@ -7799,7 +7756,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
             sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
             for ( uint32 frame = 0; frame < 3; ++frame )
             {
-                (void)renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+                (void)renderSceneFrame( renderer, device.get(), scene );
             }
             test::RHITestImage image;
             outListPixel.clear();
@@ -7941,7 +7898,7 @@ SW_TEST_CASE( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBackend )
             outListRed.clear();
             for ( uint32 frame = 0; frame < 4 && bOk; ++frame )
             {
-                bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+                bOk = renderSceneFrame( renderer, device.get(), scene );
             }
             test::RHITestImage image;
             if ( bOk == false || image.readTransient( renderer, "SceneColor" ) == false )
@@ -8359,10 +8316,9 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
         LitCubeScene      stage;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
         renderer.getCapture().setPresentEnabled( true );
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
         }
         sw::vector<uint8>     bytesWithout;
         sw::RHITextureMipSpan layoutWithout{};
@@ -8411,7 +8367,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
 
         test::RHITestImage window;
         const uint32       validationBefore = device->getValidationMessageCount();
-        bOk                                 = renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        bOk                                 = renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, window );
         // 캔버스는 메시 없이 사각형마다 정점 여섯을 그린다. 장치 공용 대체 정점 버퍼가 그만큼 담지 못하면 슬롯 0 을 범위 밖까지 읽는다(Debug DX12 디버그 레이어가 센다).
         const uint32 validationAdded = device->getValidationMessageCount() - validationBefore;
         SW_EXPECT_TRUE_MSG( validationAdded == 0, ( label + "캔버스 프레임이 검증 경고 " + sw::to_string( validationAdded ) + " 개를 냈다" ).c_str() );
@@ -8528,8 +8484,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasTargetDrawsIntoRenderTexture )
         };
         sw::CanvasFrameData red = makeFrame( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f }, 1 );
         renderer.setCanvasFrame( red );
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
         SW_EXPECT_EQUAL( 1u, renderer.getCanvasRenderer().getLastDrawnTargetCount() );
         int64  diff  = 0;
         uint32 drawn = 0;
@@ -8540,11 +8495,11 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasTargetDrawsIntoRenderTexture )
         SW_EXPECT_TRUE_MSG( drawn >= 32u * 32u - 64u && drawn <= 32u * 32u + 64u, ( label + "빨간 사각형 넓이가 아니다 (" + sw::to_string( drawn ) + ")" ).c_str() );
         SW_EXPECT_TRUE_MSG( diff > 200, ( label + "대상이 붉지 않다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
 
-        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear ); // 같은 번호 — 그리지 않는다
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene ); // 같은 번호 — 그리지 않는다
         SW_EXPECT_EQUAL( 0u, renderer.getCanvasRenderer().getLastDrawnTargetCount() );
         sw::CanvasFrameData blue = makeFrame( sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f }, 2 );
         renderer.setCanvasFrame( blue );
-        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
         SW_EXPECT_EQUAL( 1u, renderer.getCanvasRenderer().getLastDrawnTargetCount() );
         SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "두 번째 읽기" ).c_str() );
         SW_EXPECT_TRUE_MSG( diff < -200, ( label + "번호가 올랐는데 다시 그리지 않았다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
@@ -8583,10 +8538,9 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasTargetRecreatesTextureWhenWidgetResizes )
             painter.fillRect( sw::float2{ size * 0.25f, size * 0.25f }, sw::float2{ size * 0.5f, size * 0.5f }, brush );
             return frame;
         };
-        const sw::float4    clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         sw::CanvasFrameData smallFrame = makeFrame( 64.0f, 1 );
         renderer.setCanvasFrame( smallFrame );
-        bOk          = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        bOk          = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
         int64  diff  = 0;
         uint32 drawn = 0;
         uint32 width = 0;
@@ -8595,7 +8549,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasTargetRecreatesTextureWhenWidgetResizes )
 
         sw::CanvasFrameData largeFrame = makeFrame( 128.0f, 2 );
         renderer.setCanvasFrame( largeFrame );
-        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
         SW_EXPECT_EQUAL( 1u, renderer.getCanvasRenderer().getLastDrawnTargetCount() );
         SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "두 번째 읽기" ).c_str() );
         SW_EXPECT_EQUAL( 128u, width );
@@ -8664,10 +8618,9 @@ SW_TEST_CASE( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled )
             painter.fillRect( sw::float2{ 16.0f, 16.0f }, sw::float2{ 32.0f, 32.0f }, blue );
         }
         renderer.setCanvasFrame( frame );
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
-            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
         }
         sw::vector<uint8>     bytes;
         sw::RHITextureMipSpan layout{};
@@ -8742,8 +8695,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasColorVisionChangesRedGreen )
         LitCubeScene      stage;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
         renderer.getCapture().setPresentEnabled( true );
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
         sw::vector<uint8>     bytesFirst;
         sw::RHITextureMipSpan layoutFirst{};
         bOk = bOk && renderer.getCapture().readbackPresent( bytesFirst, layoutFirst );
@@ -8772,7 +8724,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasColorVisionChangesRedGreen )
             renderer.setCanvasFrame( canvas );
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            const bool            bFrame    = renderSceneFrame( renderer, device.get(), stage._scene, clear ) && renderer.getCapture().readbackPresent( bytes, layout );
+            const bool            bFrame    = renderSceneFrame( renderer, device.get(), stage._scene ) && renderer.getCapture().readbackPresent( bytes, layout );
             const sw::string      modeLabel = label + "방식 " + sw::to_string( mode ) + " ";
             SW_EXPECT_TRUE_MSG( bFrame, ( modeLabel + "프레임" ).c_str() );
             if ( bFrame == false )
@@ -8811,8 +8763,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasAnchorMovesQuadsWithoutReupload )
         LitCubeScene      stage;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
         renderer.getCapture().setPresentEnabled( true );
-        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
         sw::vector<uint8>     bytesFirst;
         sw::RHITextureMipSpan layoutFirst{};
         bOk = bOk && renderer.getCapture().readbackPresent( bytesFirst, layoutFirst );
@@ -8854,7 +8805,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasAnchorMovesQuadsWithoutReupload )
             renderer.setCanvasFrame( canvas );
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            const bool            bFrame    = renderSceneFrame( renderer, device.get(), stage._scene, clear ) && renderer.getCapture().readbackPresent( bytes, layout );
+            const bool            bFrame    = renderSceneFrame( renderer, device.get(), stage._scene ) && renderer.getCapture().readbackPresent( bytes, layout );
             const sw::string      stepLabel = label + "앵커 (" + sw::to_string( step._anchor._x ) + ", " + sw::to_string( step._anchor._y ) + ") ";
             SW_EXPECT_TRUE_MSG( bFrame, ( stepLabel + "프레임" ).c_str() );
             if ( bFrame == false )

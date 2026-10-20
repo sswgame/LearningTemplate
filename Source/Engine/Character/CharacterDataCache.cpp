@@ -72,11 +72,6 @@ namespace sw
         return CharacterDataCacheInternal::getSocketSetTable().getReloadCount();
     }
 
-    const SocketKindTable& SocketSetCache::getDefaultKinds()
-    {
-        return CharacterDataCacheInternal::loadDefaultKinds();
-    }
-
     bool SocketSetCache::isCached( string_view relativePath ) const
     {
         return CharacterDataCacheInternal::getSocketSetTable().findLive( relativePath ) != nullptr;

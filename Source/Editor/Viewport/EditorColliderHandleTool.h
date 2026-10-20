@@ -26,7 +26,5 @@ namespace sw::editor
         static bool isCapturingMouse();
         /** @brief 끌기를 마치고 되돌리기를 남긴 횟수입니다(탐침 `Editor.ColliderHandleCommitCount`). */
         static uint32 getCommitCount();
-        /** @brief 이번 프레임에 그린 손잡이 수입니다(탐침 `Editor.ColliderHandleCount`). */
-        static uint32 getDrawnHandleCount();
     };
 } // namespace sw::editor

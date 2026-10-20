@@ -38,9 +38,9 @@ namespace
         {
             for ( const uint8 byte : input )
             {
-                hash = ( hash ^ byte ) * sw::HashUtil::kFnvPrime32;
+                hash = sw::HashUtil::fnvStep32( hash, byte );
             }
-            hash = ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime32;
+            hash = sw::HashUtil::fnvStep32( hash, 0xFFu );
         }
         return hash;
     }

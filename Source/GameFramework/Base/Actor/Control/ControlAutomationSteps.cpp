@@ -28,32 +28,6 @@ namespace sw
     {
         struct ControlAutomationStepsInternal
         {
-            static bool checkAttributeNames( const AutomationStep& step, std::initializer_list<string_view> listAllowed, string& outError )
-            {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    bool bKnown = false;
-                    for ( const string_view allowed : listAllowed )
-                    {
-                        bKnown = bKnown || string_view{ attribute._name } == allowed;
-                    }
-                    if ( bKnown == false )
-                    {
-                        outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            static const string* requireAttribute( const AutomationStep& step, string_view name, string& outError )
-            {
-                const string* pValue = step.findAttribute( name );
-                if ( pValue == nullptr )
-                    outError = step.describe() + ": needs " + string( name ) + "=\"…\"";
-                return pValue;
-            }
-
             /** @brief 있으면 수로 읽습니다. @p outbPresent 는 속성이 있었는가입니다. 형식이 틀리면 false 와 이유. */
             [[nodiscard]] static bool readFloat( const AutomationStep& step, string_view name, float32& outValue, bool& outbPresent, string& outError )
             {
@@ -117,8 +91,8 @@ namespace sw
                 bool    bPresent = false;
                 float2  move{};
                 uint32  frameCount = 0;
-                return checkAttributeNames( step, { "pawn", "move", "up", "yaw", "pitch", "buttons", "frames" }, outError ) &&
-                       requireAttribute( step, "pawn", outError ) != nullptr && readMove( step, move, outError ) &&
+                return step.hasOnlyAttributes( { "pawn", "move", "up", "yaw", "pitch", "buttons", "frames" }, outError ) &&
+                       step.requireAttribute( "pawn", outError ) != nullptr && readMove( step, move, outError ) &&
                        readFloat( step, "up", value, bPresent, outError ) && readFloat( step, "yaw", value, bPresent, outError ) &&
                        readFloat( step, "pitch", value, bPresent, outError ) && readFrameCount( step, frameCount, outError );
             }
@@ -186,7 +160,7 @@ namespace sw
 
             static bool validatePossessStep( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "controller", "pawn" }, outError ) && requireAttribute( step, "controller", outError ) != nullptr;
+                return step.hasOnlyAttributes( { "controller", "pawn" }, outError ) && step.requireAttribute( "controller", outError ) != nullptr;
             }
 
             /** @brief 조종자 오브젝트가 폰을 쥐게 한다(`pawn` 이 없으면 놓게). */

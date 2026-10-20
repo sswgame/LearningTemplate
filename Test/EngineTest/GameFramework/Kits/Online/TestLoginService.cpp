@@ -76,12 +76,12 @@ namespace
                 uint64 hash = sw::HashUtil::kFnvOffset64 ^ ( seed + static_cast<uint64>( blockIndex ) * sw::HashUtil::kGoldenRatio64 );
                 for ( int32 index = 0; index < firstSize; ++index )
                 {
-                    hash = ( hash ^ pFirst[index] ) * sw::HashUtil::kFnvPrime64;
+                    hash = sw::HashUtil::fnvStep64( hash, pFirst[index] );
                 }
-                hash = ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime64;
+                hash = sw::HashUtil::fnvStep64( hash, 0xFFu );
                 for ( int32 index = 0; index < secondSize; ++index )
                 {
-                    hash = ( hash ^ pSecond[index] ) * sw::HashUtil::kFnvPrime64;
+                    hash = sw::HashUtil::fnvStep64( hash, pSecond[index] );
                 }
                 for ( int32 byteIndex = 0; byteIndex < 8 && blockIndex * 8 + byteIndex < outSize; ++byteIndex )
                 {

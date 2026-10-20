@@ -66,7 +66,7 @@ namespace sw
         for ( const string& defineStr : listDefine )
         {
             hash = HashUtil::computeStringHash64( defineStr, false, hash );
-            hash = ( hash ^ 0xFFull ) * HashUtil::kFnvPrime64;
+            hash = HashUtil::fnvStep64( hash, 0xFFull );
         }
         return hash;
     }

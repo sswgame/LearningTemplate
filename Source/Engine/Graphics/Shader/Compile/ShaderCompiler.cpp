@@ -249,11 +249,6 @@ namespace sw
         ShaderCompilerInternal::s_bDiskCacheEnabled.store( bEnable, std::memory_order_relaxed );
     }
 
-    bool ShaderCompiler::isDiskCacheEnabled()
-    {
-        return ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed );
-    }
-
     void ShaderCompiler::clearDiskCache()
     {
         const string cacheDir = ShaderCompilerInternal::getShaderCacheDirectory();

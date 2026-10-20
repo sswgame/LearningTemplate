@@ -286,13 +286,4 @@ namespace sw
         const unique_ptr<IAnimationNotifyHandler>* pHandler = _registry.find( name );
         return pHandler == nullptr ? nullptr : pHandler->get();
     }
-
-    void AnimationNotifyHandlerRegistry::collectHandlerNames( vector<hashed_string>& outListName ) const
-    {
-        outListName.clear();
-        for ( uint32 index = 0; index < _registry.getCount(); ++index )
-        {
-            outListName.push_back( _registry.getNameAt( index ) );
-        }
-    }
 } // namespace sw

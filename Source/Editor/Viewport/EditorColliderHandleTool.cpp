@@ -240,11 +240,6 @@ namespace sw::editor
         return EditorColliderHandleToolInternal::getState()._commitCount;
     }
 
-    uint32 EditorColliderHandleTool::getDrawnHandleCount()
-    {
-        return EditorColliderHandleToolInternal::getState()._drawnHandleCount;
-    }
-
     SW_AUTOMATION_PROBE( editorColliderHalfExtentX, "Editor.ColliderHalfExtentX", "Half size X of the first shape of the selected RigidBody (0 when none)",
                          &EditorColliderHandleToolInternal::readHalfExtentX );
     SW_AUTOMATION_PROBE( editorColliderHandleCommitCount, "Editor.ColliderHandleCommitCount", "Collider handle drags that finished and left an undo entry",

@@ -105,8 +105,6 @@ namespace sw
          *          콜백과 빠진 키 기록은 복사하지 않는다. 텍스트 버전은 오른다.
          */
         void copyStateFrom( const LocalizationManager& source );
-        /** @brief 로드한 프로젝트를 모두 디스크에서 다시 읽습니다. 하나라도 읽지 못하면 false 이고 그 프로젝트는 기존 내용을 유지합니다. */
-        [[nodiscard]] bool reloadProjects();
         /** @brief 바뀐 파일이 로드한 프로젝트의 것이면 그 프로젝트를 다시 읽고 true 를 반환합니다(핫 리로드). 아니면 아무것도 하지 않고 false 입니다. */
         [[nodiscard]] bool reloadChangedFile( string_view changedPath );
         /** @brief 그 경로가 로드한 프로젝트의 파일(프로젝트, 원문 테이블, 번역 테이블)인지 확인합니다. */
@@ -157,8 +155,6 @@ namespace sw
         size_t getLanguageCount() const;
         /** @brief 지금의 조회 사슬입니다(앞이 먼저). */
         vector<string> getLookupChain() const;
-        /** @brief 지금 문화권의 형식 데이터입니다(값). */
-        CultureInfo getCurrentCulture() const;
         /** @brief 지금 문화권이 오른쪽→왼쪽인지입니다(UI 배치를 뒤집는다). */
         bool isRightToLeft() const;
         /** @brief 그 문화권(빈 값이면 지금 문화권)의 폰트 대체 목록입니다. 적힌 것이 없으면 폴백 문화권의 것입니다. */
@@ -182,8 +178,6 @@ namespace sw
         const utf8* getStringFromLanguage( string_view languageCode, const hashed_string& key, const utf8* pDefaultText = nullptr ) const;
         /** @brief 조회 사슬 어딘가에 그 키가 있는지 확인합니다. */
         bool hasString( const hashed_string& key ) const;
-        /** @brief 지정한 언어에 그 키가 있는지 확인합니다. */
-        bool hasStringInLanguage( string_view languageCode, const hashed_string& key ) const;
         /** @brief 지정한 언어의 실행 테이블입니다(없으면 nullptr). 테이블 객체는 언어가 사는 동안 같은 주소입니다. */
         const StringTable* getLanguageTable( string_view languageCode ) const;
 

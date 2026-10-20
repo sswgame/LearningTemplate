@@ -132,6 +132,47 @@ namespace sw
         return "frame " + to_string( _frameIndex ) + " <" + _kind + "> #" + to_string( _orderInFile + 1 );
     }
 
+    bool AutomationStep::hasOnlyAttributes( std::initializer_list<string_view> listAllowed, string& outError ) const
+    {
+        for ( const AutomationAttribute& attribute : _listAttribute )
+        {
+            bool bKnown = false;
+            for ( const string_view allowed : listAllowed )
+            {
+                bKnown = bKnown || string_view{ attribute._name } == allowed;
+            }
+            if ( bKnown == false )
+            {
+                outError = describe() + ": unknown attribute '" + attribute._name + "'";
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool AutomationStep::hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired, string& outError ) const
+    {
+        if ( hasOnlyAttributes( listAllowed, outError ) == false )
+            return false;
+        for ( const string_view required : listRequired )
+        {
+            if ( findAttribute( required ) == nullptr )
+            {
+                outError = describe() + ": needs " + string( required ) + "=\"…\"";
+                return false;
+            }
+        }
+        return true;
+    }
+
+    const string* AutomationStep::requireAttribute( string_view name, string& outError ) const
+    {
+        const string* pValue = findAttribute( name );
+        if ( pValue == nullptr )
+            outError = describe() + ": needs " + string( name ) + "=\"…\"";
+        return pValue;
+    }
+
     AutomationScenario::AutomationScenario()
         : _listStep{}
         , _load{}

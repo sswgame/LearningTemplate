@@ -87,8 +87,6 @@ namespace sw
          *          삼각형 둘이다(지형 렌더 메시와 같은 나눔). @p pHoleCell(없어도 된다)은 (N-1)² 셀 마스크이고 0 이 아닌 셀은 넣지 않는다(구멍).
          */
         void addHeightfield( const float32* pHeight, uint32 resolution, const float3& origin, const float2& cellSize, const uint8* pHoleCell, uint8 area );
-        /** @brief 볼록 부피를 더합니다. */
-        void addConvexVolume( const NavConvexVolume& volume );
         /** @brief 오프 메시 링크를 더합니다. */
         void addOffMeshLink( const NavOffMeshLink& link );
 

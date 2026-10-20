@@ -176,12 +176,11 @@ namespace
 
         static Snapshot snapshot( FrameRenderer& renderer, IRHIDevice& device, Scene& scene )
         {
-            Snapshot     result{};
-            const float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+            Snapshot result{};
             // 풀 빌드 · 프로그램 업로드 · GPUScene 업로드가 한 프레임 늦으므로 몇 프레임 돌린 뒤 읽는다
             for ( uint32 frame = 0; frame < 4; ++frame )
             {
-                device.beginFrame( clear );
+                device.beginFrame();
                 if ( renderer.execute( &device, scene ) == false )
                     return result;
                 device.endFrame( false, false );

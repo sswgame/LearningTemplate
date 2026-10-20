@@ -584,11 +584,6 @@ namespace sw
         return pTypeInfo == nullptr ? nullptr : pTypeInfo->_pCreate( *pTypeInfo );
     }
 
-    uint32 AudioEffectRegistry::getTypeCount()
-    {
-        return static_cast<uint32>( sizeof( AudioEffectInternal::kArrEffectType ) / sizeof( AudioEffectInternal::kArrEffectType[0] ) );
-    }
-
     const AudioEffectTypeInfo& AudioEffectRegistry::getType( uint32 typeIndex )
     {
         return AudioEffectInternal::kArrEffectType[typeIndex];

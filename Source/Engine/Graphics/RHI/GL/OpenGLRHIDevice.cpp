@@ -115,9 +115,8 @@ namespace sw
         return true;
     }
 
-    RHIBufferHandle OpenGLRHIDevice::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
+    RHIBufferHandle OpenGLRHIDevice::createIndexBuffer( const void* pData, uint32 sizeBytes )
     {
-        (void)indexStride;
         if ( _bInitialized == SW_FALSE || sizeBytes == 0 )
             return 0;
 

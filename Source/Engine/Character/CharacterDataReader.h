@@ -69,8 +69,6 @@ namespace sw
         int32              readOptionalInt( const XMLNode& node, const utf8* pName, int32 absentValue );
         [[nodiscard]] bool readOptionalBool( const XMLNode& node, const utf8* pName, bool bAbsentValue );
         float3             readOptionalFloat3( const XMLNode& node, const utf8* pName, const float3& absentValue );
-        /** @brief 회전 선택 필드를 읽습니다(도 단위 "피치 요 롤"). */
-        quaternion readOptionalRotation( const XMLNode& node, const utf8* pName, const quaternion& absentValue );
         /** @brief 이름 필드를 읽습니다. @p bRequired 인데 비어 있으면 오류입니다. */
         hashed_string readName( const XMLNode& node, const utf8* pName, bool bRequired );
         /** @brief 공백이나 쉼표로 나눈 이름 목록 필드를 읽습니다(비우고 채웁니다). */
@@ -80,8 +78,6 @@ namespace sw
 
         /** @brief 오류가 하나라도 있으면 true 입니다. */
         bool hasError() const { return _listError.empty() == false; }
-        /** @brief 오류를 줄바꿈으로 이은 글입니다. */
-        string getErrorText() const;
         /** @brief 오류가 있으면 한 줄씩 로그(Error)로 내고 false, 없으면 true 입니다. 로더가 끝에서 부릅니다. */
         [[nodiscard]] bool finish() const;
         /** @brief 읽는 파일 이름입니다. */

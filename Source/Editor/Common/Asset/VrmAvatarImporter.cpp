@@ -15,6 +15,7 @@
 #include "Editor/Common/Asset/VrmAvatarImporter.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -116,17 +117,6 @@ namespace sw::editor
             static constexpr string_view kArrVrm1SpringKey[]      = { "name", "joints", "colliderGroups", "center" };
             static constexpr string_view kArrVrm1JointKey[]       = { "node", "hitRadius", "stiffness", "gravityPower", "gravityDir", "dragForce" };
 
-            template <size_t N>
-            static bool contains( const string_view ( &arrName )[N], string_view name )
-            {
-                for ( const string_view candidate : arrName )
-                {
-                    if ( candidate == name )
-                        return true;
-                }
-                return false;
-            }
-
             /** @brief @p object 의 키 가운데 @p arrKnown 과 공통 키가 아닌 것을 `<context>.<키>` 로 무시 목록에 모읍니다. */
             template <size_t N>
             static void collectUnknownKeys( const JSONValue& object, const string_view ( &arrKnown )[N], string_view context, vector<string>* pOutListIgnored )
@@ -135,7 +125,7 @@ namespace sw::editor
                     return;
                 for ( const string& key : object.getMemberNames() )
                 {
-                    if ( contains( arrKnown, key ) || contains( kArrCommonKey, key ) )
+                    if ( VectorUtil::contains( arrKnown, key ) || VectorUtil::contains( kArrCommonKey, key ) )
                         continue;
                     pOutListIgnored->push_back( string( context ) + "." + key + " (unknown key)" );
                 }
@@ -335,7 +325,7 @@ namespace sw::editor
                             break;
                         }
                     }
-                    if ( contains( kArrHumanBone, humanBone ) == false )
+                    if ( VectorUtil::contains( kArrHumanBone, humanBone ) == false )
                     {
                         outError = "VRM 0.x humanoid: unknown human bone '" + humanBone + "'";
                         return false;
@@ -718,7 +708,7 @@ namespace sw::editor
         const JSONValue humanBones = humanoid.get( "humanBones", false );
         for ( const string& humanBone : humanBones.getMemberNames() )
         {
-            if ( Internal::contains( Internal::kArrHumanBone, humanBone ) == false )
+            if ( VectorUtil::contains( Internal::kArrHumanBone, humanBone ) == false )
             {
                 outError = "VRM 1.0 humanoid: unknown human bone '" + humanBone + "'";
                 return false;
@@ -737,7 +727,7 @@ namespace sw::editor
         const JSONValue preset = expressions.get( "preset", false );
         for ( const string& name : preset.getMemberNames() )
         {
-            if ( Internal::contains( Internal::kArrVrm1Preset, name ) == false )
+            if ( VectorUtil::contains( Internal::kArrVrm1Preset, name ) == false )
             {
                 outError = "VRM 1.0 expressions: unknown preset '" + name + "'";
                 return false;
