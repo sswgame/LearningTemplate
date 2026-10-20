@@ -46,6 +46,10 @@ namespace sw
             }
             case AdminMethod::kAdjustAsset:
             case AdminMethod::kSendMail:
+            case AdminMethod::kSetMaintenance:
+            case AdminMethod::kClearMaintenance:
+            case AdminMethod::kPostNotice:
+            case AdminMethod::kRemoveNotice:
             {
                 return AdminRole::Operator;
             }

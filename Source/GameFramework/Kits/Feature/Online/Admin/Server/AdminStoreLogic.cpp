@@ -202,7 +202,7 @@ namespace sw
                 const ServiceStoreResult staged = ServiceReportStore::stageResolve( connection, request._reportKey, request._reportStatus, command._adminID, request._memo,
                                                                                     command._nowMs, inoutTransaction, report );
                 if ( staged == ServiceStoreResult::NotFound )
-                    return AdminResult::UnknownReport;
+                    return AdminResult::NotFound;
                 if ( staged == ServiceStoreResult::Invalid )
                     return AdminResult::InvalidRequest;
                 if ( staged != ServiceStoreResult::Ok )
@@ -315,6 +315,12 @@ namespace sw
                         return bHasAccount;
                     case AdminMethod::kResolveReport:
                         return request._reportKey.empty() == false && request._reportStatus != ServiceReportStatus::Open;
+                    case AdminMethod::kSetMaintenance:
+                    case AdminMethod::kClearMaintenance:
+                        return request._scope.empty() == false;
+                    case AdminMethod::kPostNotice:
+                    case AdminMethod::kRemoveNotice:
+                        return request._noticeID != 0;
                     default:
                         return true;
                 }
@@ -395,6 +401,8 @@ namespace sw
             return AdminStoreLogicInternal::finish( outReply, AdminResult::Forbidden );
         if ( AdminStoreLogicInternal::isWellFormed( command ) == false )
             return AdminStoreLogicInternal::finish( outReply, AdminResult::InvalidRequest );
+        if ( AdminMethod::isDirectoryMethod( command._method ) )
+            return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok ); // 등급만 확인했다. 효과와 감사 기록은 서비스가 넘긴 서버 디렉터리 키트가 쓴다
         if ( command._method == AdminMethod::kLookupAccount )
             return AdminStoreLogicInternal::finish( outReply, AdminStoreLogicInternal::lookup( connection, command._request, outReply ) );
         if ( command._method == AdminMethod::kListAudit )
