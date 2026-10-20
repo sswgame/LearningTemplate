@@ -52,7 +52,7 @@ namespace sw
          * @details 투명 패스는 메시 투명 배치 사이의 자리마다 그 자리의 구간으로 부른다(`FrameRenderer::drawParticleSlots`).
          * @param listBatch      `prepareFrame` 에 넘긴 것과 같은 목록(같은 프레임)
          * @param listSlot       그릴 입자 그리기(`GPUTransparentParticleSlot::_particleBatchIndex` 가 @p listBatch 의 번호)
-         * @param bNativeBindless DX12 와 Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 t12 에 서수 0 으로 겁니다
+         * @param bNativeBindless DX12 와 Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 머티리얼 텍스처 슬롯 t16 에 서수 0 으로 겁니다
          * @return 그린 방출기 수입니다(텍스처가 없는 방출기는 그리지 않습니다)
          */
         uint32 drawBatches( IRHICommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot,

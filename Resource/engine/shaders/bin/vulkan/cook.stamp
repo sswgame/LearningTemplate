@@ -24,6 +24,7 @@ SWCOOK 4
 87d4b16fffbfa14f lighting2d.hlsli
 88738b81e14f71c4 water.hlsl
 980c18c4c174d3fb postoutline.hlsli
+997cfbc36784e999 particle.hlsl
 9d98e045b0f2f92f meshskin.hlsl
 a16db7b2113a3424 colorvision.hlsli
 afbc0927cc4e0ea8 terrain.hlsl
@@ -34,7 +35,6 @@ bfc1abf7672a9a07 ssao.hlsl
 c6ac1e80c191a60a sprite2dlit.hlsl
 cd950cde23768c4b instanceanimation.hlsl
 d4c27f6d50f42c87 postchain.hlsl
-ddba901612fdf1e3 particle.hlsl
 df99ce7308ca1787 fullscreentriangle.hlsl
 e68b240c33655d39 sprite2d.hlsl
 ee5aa6943269e9ee common.hlsli
