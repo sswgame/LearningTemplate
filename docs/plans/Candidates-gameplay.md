@@ -47,6 +47,9 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 남은 것:
 - 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기([PreloadAndLod](#preloadandlod)).
 - 군중의 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중 켜기.
+- Shooter3D 군중 켜기의 선행(2026-10-21 코드로 확인): 적 몸에는 애니메이터 작업 말고 외형의 소켓 작업(`CharacterAppearanceSocketTask`)이 붙어 `SkeletalMeshComponent::describeSharedPose` 가 늘 거짓이고(작업 수 ≠ 1),
+  옷 · 머리 부품은 몸을 리더로 따라 몸에 따르는 유닛이 있다. 프리팹의 `_bShareCrowdPose` 만 켜면 모두 사본(`Solo`)으로 돌 뿐이다. 먼저 작업이 포즈를 쓰는지 읽기만 하는지를 형식으로 나누고(읽기 작업은 묶음의 포즈를 읽게),
+  리더를 따르는 부품이 묶음 포즈를 따르게 해야 한다.
 
 ### FacialAnimation
 제목: 얼굴 애니메이션의 남은 것
