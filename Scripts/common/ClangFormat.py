@@ -176,5 +176,7 @@ def resolveClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str
     거부하고, 고쳐서 올리면 원래 PC 가 다시 되돌리는 왕복이 생깁니다(판마다 이어붙인 줄의 정렬 칸 수가 다릅니다).
     """
     if not llvmPath:
-        llvmPath = str(loadToolchainConfig().get(kKeyLlvmPath, "") or "")
+        cache = loadToolchainConfig()
+        # 캐시가 없으면 LLVM 경로를 모른다 — 빈 경로는 고정본 탐색 · 설치로 넘어간다(ensureClangFormat).
+        llvmPath = "" if cache is None else str(cache.get(kKeyLlvmPath, "") or "")
     return ensureClangFormat(llvmPath, allowDownload=allowDownload)

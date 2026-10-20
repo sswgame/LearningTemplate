@@ -127,7 +127,7 @@ class EnvironmentSetupManager:
         self.logger = logging.getLogger("SetupEnvironment")
         self.existing_config: dict[str, Any] = {}
         if not self.force_refresh:
-            self.existing_config = loadToolchainConfig()
+            self.existing_config = loadToolchainConfig() or {}  # 처음 실행은 캐시가 없다
 
     # 도구 탐색 함수는 "없음" 을 빈 값으로 돌려준다. 예외는 탐색 중 실패(받기 · 풀기 · 잘못된 설정)이므로 삼키지 않고 멈춘다 —
     # 경고 한 줄로 넘기면 빈 경로가 toolchain_config 에 적혀 다음 configure 가 엉뚱한 자리에서 깨진다.

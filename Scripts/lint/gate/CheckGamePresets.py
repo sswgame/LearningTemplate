@@ -13,7 +13,8 @@ Dev 는 실행할 때 `-game=<게임>` 으로 프리셋 파일을 골라 팩 루
 - `Source/Games/<G>/CMakeLists.txt` 가 있으면 `Config/Game/<G>.json` 이 있어야 한다.
 - 프리셋에는 게임 폴더가 있어야 한다(지운 게임의 프리셋이 남지 않게).
 - `_packRoot` 는 `game/<폴더>` 이고 `Resource/<_packRoot>/` 가 있어야 한다.
-- `_userSettingsSchema` · `_telemetrySchema` 가 있으면 그 파일이 팩(`Resource/<_packRoot>/`) 아래에 있어야 한다.
+- 프리셋의 키는 `_packRoot` 하나뿐이다(나머지 설정은 팩의 `data/gamesettings.xml` 이 가진다).
+- 팩의 `data/gamesettings.xml` 에 `<Engine>` 요소가 있어야 하고(없으면 기동이 멈춘다), 그 `_userSettingsSchema` · `_telemetrySchema` 속성이 있으면 가리키는 파일이 `Resource/` 아래에 있어야 한다.
 - 게임 폴더마다 `SWGame.module.json`(게임 매니페스트)이 있다.
 - CMake 프리셋이 `SW_ACTIVE_GAME` 을 정하면 있는 게임이어야 한다(게임별 프리셋은 없다 — `Ninja-Debug` 가 게임 전부를 짓고 `-game=` 으로 고른다).
 """
@@ -23,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
@@ -52,6 +54,27 @@ def findCMakePresetViolations(repositoryRoot: Path, listGame: list[str]) -> list
         activeGame = preset.get("cacheVariables", {}).get("SW_ACTIVE_GAME")
         if activeGame is not None and activeGame not in listGame:
             violations.append(f"[Game Preset] CMake 프리셋 {name} 이 없는 게임 `{activeGame}` 을 고릅니다")
+    return violations
+
+
+def findPackEngineSettingsViolations(resourceRoot: Path, packRoot: str) -> list[str]:
+    """팩 `data/gamesettings.xml` 의 `<Engine>` 요소와 그 스키마 경로를 봅니다(`PackEngineSettings` 가 읽는 칸)."""
+    settingsPath = resourceRoot / packRoot / "data" / "gamesettings.xml"
+    label = f"Resource/{packRoot}/data/gamesettings.xml"
+    if settingsPath.is_file() is False:
+        return [f"[Game Preset] 팩의 설정 파일이 없습니다: {label}"]
+    try:
+        root = ElementTree.parse(settingsPath).getroot()
+    except (OSError, ElementTree.ParseError) as error:
+        return [f"[Game Preset] 팩의 설정 파일을 읽지 못했습니다: {label} ({error})"]
+    engine = root.find("Engine")
+    if engine is None:
+        return [f"[Game Preset] `<Engine>` 요소가 없습니다: {label}"]
+    violations: list[str] = []
+    for schemaKey in ("_userSettingsSchema", "_telemetrySchema"):
+        schemaPath = engine.get(schemaKey, "")
+        if schemaPath and (resourceRoot / schemaPath).is_file() is False:
+            violations.append(f"[Game Preset] `{schemaKey}` 파일이 없습니다: {label} → Resource/{schemaPath}")
     return violations
 
 
@@ -88,10 +111,9 @@ def findGamePresetViolations(repositoryRoot: Path) -> tuple[list[str], int]:
             violations.append(f"[Game Preset] `_packRoot` 는 `game/<폴더>` 입니다: {presetPath} (`{packRoot}`)")
         elif (resourceRoot / packRoot).is_dir() is False:
             violations.append(f"[Game Preset] `_packRoot` 의 폴더가 없습니다: {presetPath} → Resource/{packRoot}/")
-        for schemaKey in ("_userSettingsSchema", "_telemetrySchema"):
-            schemaPath = str(data.get(schemaKey, ""))
-            if schemaPath and (resourceRoot / packRoot / schemaPath).is_file() is False:
-                violations.append(f"[Game Preset] `{schemaKey}` 파일이 없습니다: {presetPath} → Resource/{packRoot}/{schemaPath}")
+        for extraKey in sorted(set(data) - {"_packRoot"}):
+            violations.append(f"[Game Preset] 프리셋은 `_packRoot` 만 가집니다 — `{extraKey}` 는 팩의 gamesettings.xml `<Engine>` 으로 옮깁니다: {presetPath}")
+        violations.extend(findPackEngineSettingsViolations(resourceRoot, packRoot))
     violations.extend(findCMakePresetViolations(repositoryRoot, listGame))
     return violations, len(listGame)
 
@@ -105,7 +127,7 @@ class CheckGamePresetsGate(LintGate):
     preCommitPattern = ("Config/Game/*", "Source/Games/*/CMakeLists.txt", "Source/Games/*/SWGame.module.json", "Resource/game/*", "CMakePresets.json")
     preCommitFileArgument = ""
     violationHeader = "게임 프리셋 위반"
-    hint = ("  `Config/Game/<게임 폴더 이름>.json` 에 `_packRoot`(`game/<폴더>`)를 적습니다(시작 씬은 팩의 `data/gamesettings.xml`). "
+    hint = ("  `Config/Game/<게임 폴더 이름>.json` 에 `_packRoot`(`game/<폴더>`)를 적습니다(그 밖의 설정은 팩의 `data/gamesettings.xml`, 스키마 경로는 `<Engine>` 속성). "
             "게임 폴더를 지웠으면 그 프리셋도 지웁니다.")
     selfTestCases = [
         {
@@ -140,17 +162,35 @@ class CheckGamePresetsGate(LintGate):
                 "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
                 "Source/Games/Probe/SWGame.module.json": "{}",
                 "Config/Game/Probe.json": '{ "_packRoot": "game/probe" }',
-                "Resource/game/probe/readme.md": "probe",
+                "Resource/game/probe/data/gamesettings.xml": "<GameSettings><Engine/></GameSettings>",
                 "CMakePresets.json": '{ "configurePresets": [ { "name": "Ninja-Debug", "cacheVariables": { "SW_ACTIVE_GAME": "Gone" } } ] }',
             },
         },
         {
-            "name": "없는 사용자 설정 스키마를 가리키는 프리셋",
-            "expectedViolation": "`_userSettingsSchema` 파일이 없습니다: Config/Game/Probe.json",
+            "name": "없는 사용자 설정 스키마를 가리키는 팩 설정",
+            "expectedViolation": "`_userSettingsSchema` 파일이 없습니다: Resource/game/probe/data/gamesettings.xml",
             "files": {
                 "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
-                "Config/Game/Probe.json": '{ "_packRoot": "game/probe", "_userSettingsSchema": "data/missing.settings.xml" }',
-                "Resource/game/probe/readme.md": "probe",
+                "Config/Game/Probe.json": '{ "_packRoot": "game/probe" }',
+                "Resource/game/probe/data/gamesettings.xml": '<GameSettings><Engine _userSettingsSchema="game/probe/data/missing.settings.xml"/></GameSettings>',
+            },
+        },
+        {
+            "name": "팩 설정에 Engine 요소가 없음",
+            "expectedViolation": "`<Engine>` 요소가 없습니다: Resource/game/probe/data/gamesettings.xml",
+            "files": {
+                "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
+                "Config/Game/Probe.json": '{ "_packRoot": "game/probe" }',
+                "Resource/game/probe/data/gamesettings.xml": "<GameSettings/>",
+            },
+        },
+        {
+            "name": "프리셋에 팩 루트 말고 다른 키",
+            "expectedViolation": "프리셋은 `_packRoot` 만 가집니다 — `_windowTitle`",
+            "files": {
+                "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
+                "Config/Game/Probe.json": '{ "_packRoot": "game/probe", "_windowTitle": "x" }',
+                "Resource/game/probe/data/gamesettings.xml": "<GameSettings><Engine/></GameSettings>",
             },
         },
         {
