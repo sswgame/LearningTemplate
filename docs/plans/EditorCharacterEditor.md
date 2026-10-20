@@ -16,7 +16,7 @@
 ### 2.1 엔진 — `Source/Engine/Character`
 | 영역 | 파일 | 창에서 쓰는 것 |
 |---|---|---|
-| 소켓 | `Socket/SocketSet.h`(`SocketDef` · `SocketKindTable`), `SocketSetComponent.h`(`*.sockets.xml` 을 `SocketSetCache` 에서 받고 파일이 바뀌면 다시 읽음), `SocketBindingComponent`, `ResolvedSocketTable`, `SocketImportUtil` | 소켓 목록 · 추가 · 이동 · 저장 |
+| 소켓 | `Socket/SocketSet.h`(`SocketDef` · `SocketKindTable`), `SocketSetComponent.h`(`*.sockets.xml` 을 `SharedAssetCache<SocketSet>` 에서 받고 파일이 바뀌면 다시 읽음), `SocketBindingComponent`, `ResolvedSocketTable`, `SocketImportUtil` | 소켓 목록 · 추가 · 이동 · 저장 |
 | 체형 | `Fit/BodyShape.h`(`BodyShapeSet`, `*.bodyshape.xml`, `BoneProportion`) | 체형 슬라이더 |
 | 피팅 | `Fit/FitSolver.h` — `FitSolver::solve( FitTables, FitInput, FitResult& )`, 결과 `FitPartResult`(삼각형 보임 마스크 · 바인드 공간 정점 델타 `_listVertexDelta`), `FitPenetration`, `FitReport` | 관통 표시 · 잘린 면 · 보고 |
 | 형상 | `Fit/CharacterGeometry`, `GeometryCut`, `MeshMerger`, `SurfaceTransfer`, `SurfaceState` | 병합 미리보기 · 표면 상태 |

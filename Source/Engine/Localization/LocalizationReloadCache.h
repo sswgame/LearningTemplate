@@ -12,7 +12,7 @@ namespace sw
     /**
      * @class LocalizationReloadCache
      * @brief 상태가 없는 어댑터입니다. 테이블은 엔진 서비스 `LocalizationManager` 가 가지고, 이 클래스는 바뀐 파일을 그 매니저에 넘깁니다.
-     * @details 티어 규칙 때문에 Resource 에 둔다(`IAssetCache` 를 구현하며 `SpriteClipCache` 와 같은 위치다). `clear()` 는 아무것도 비우지 않는다.
+     * @details 티어 규칙 때문에 Resource 에 둔다(`IAssetCache` 를 구현하며 `SpriteClipCache.h` 와 같은 위치다). `clear()` 는 아무것도 비우지 않는다.
      *          캐시 비우기(재초기화)가 화면의 텍스트를 지우면 안 되고, 텍스트의 수명은 매니저가 정하기 때문이다.
      */
     class SW_API LocalizationReloadCache final : public IAssetCache

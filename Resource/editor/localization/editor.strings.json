@@ -2622,6 +2622,30 @@
                 "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
+        "EditorMultiplayer.InspectorAttach": {
+            "source": "Attach to a server that is already running: its debug channel address (127.0.0.1:port) and token, as given with -gv_debugChannelPort and -gv_debugChannelToken",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.InspectorConsoleHint": {
+            "source": "Dev command for the server (help lists them, Tab completes the name)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.InspectorNoChannel": {
+            "source": "The Inspector reads a dedicated server through its debug channel. Start a Dedicated Server session, or attach by address",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.InspectorRefresh": {
+            "source": "Read the server's hierarchy again (scene.tree). Click a name to read its component values (object.dump) - this works while the server is paused",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp"
+            ]
+        },
         "EditorMultiplayer.LogSource": {
             "source": "Show the log of one process or of every process",
             "origins": [

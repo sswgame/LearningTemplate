@@ -3,7 +3,6 @@
 #include "Engine/Destruction/FractureAssetCache.h"
 
 #include "Engine/Destruction/FractureAsset.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetCacheDefinition.h"
 
 namespace sw
@@ -22,7 +21,5 @@ namespace sw
 
 namespace sw
 {
-    template class SW_API SharedAssetCache<FractureAsset>;
-
-    SW_BUILT_IN_ASSET_CACHE( FractureAssetCache );
+    SW_SHARED_ASSET_CACHE( FractureAsset );
 } // namespace sw

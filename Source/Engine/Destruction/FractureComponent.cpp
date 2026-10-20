@@ -73,8 +73,8 @@ namespace sw
         const string path = resolveFracturePath();
         if ( path.empty() )
             return nullptr;
-        _seenReloadCount                      = FractureAssetCache::getReloadCount();
-        shared_ptr<const FractureAsset> asset = FractureAssetCache::acquire( path );
+        _seenReloadCount                      = SharedAssetCache<FractureAsset>::getReloadCount();
+        shared_ptr<const FractureAsset> asset = SharedAssetCache<FractureAsset>::acquire( path );
         if ( asset == nullptr )
             SW_LOG_ERROR( "'%#': fracture asset '%#' could not be read - the object stays intact", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", path.c_str() );
         return asset;
@@ -82,7 +82,7 @@ namespace sw
 
     bool FractureComponent::isFractureStale() const
     {
-        return _seenReloadCount != FractureAssetCache::getReloadCount();
+        return _seenReloadCount != SharedAssetCache<FractureAsset>::getReloadCount();
     }
 } // namespace sw
 

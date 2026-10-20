@@ -778,7 +778,13 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     class SceneGameInstance : public GameInstanceBase
     {
     public:
-        void setEntranceScene( const string& scenePath ) { _bootstrap._data._entranceScene = scenePath; }
+        // 경로 칸(`DataPath`)은 데이터 읽기만 채운다 — 시작 맵(필수)과 입구 씬을 gamesettings 문자열로 준다.
+        [[nodiscard]] bool setEntranceScene( const string& scenePath )
+        {
+            fixed_string<constant::kMaxBuffer2048> xml;
+            formatstring( xml.data(), xml.capacity(), "<GameSettings><startMap>%#</startMap><entranceScene>%#</entranceScene></GameSettings>", scenePath, scenePath );
+            return _bootstrap._data.loadFromXMLText( xml.c_str(), "test" );
+        }
     };
 
     const string scenePath = test::makeTempPath( "level_events.scene.xml" );
@@ -828,7 +834,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     // 엔진 없이 게임 인스턴스를 돌리므로 `Engine::beginFrame` 대신 실제 경과를 직접 적는다(페이드 · 로딩 화면이 읽는다).
     sw::GameTimeScale::setUnscaledDeltaTime( 0.016f );
     SceneGameInstance gameInstance;
-    gameInstance.setEntranceScene( scenePath );
+    SW_ASSERT_TRUE( gameInstance.setEntranceScene( scenePath ) );
     SW_ASSERT_EQUAL( scenePath, gameInstance.getEntranceScene() );
     SW_ASSERT_TRUE( gameInstance.requestEntranceScene() );
     SW_ASSERT_EQUAL( size_t( 1 ), listRequested.size() );
@@ -846,7 +852,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
 
     // 읽지 못하는 씬은 요청은 알리고 실패로 끝난다.
     const string missingPath = test::makeTempPath( "no_such_level.scene.xml" );
-    gameInstance.setEntranceScene( missingPath );
+    SW_ASSERT_TRUE( gameInstance.setEntranceScene( missingPath ) );
     {
         test::ScopedDefensiveTestLog expected( "a scene file that does not exist" );
         SW_ASSERT_TRUE( gameInstance.requestEntranceScene() );
@@ -1671,7 +1677,8 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )
 }
 
 /**
- * @brief [GameFrameworkTest] gamesettings 의 표준 칸 철자가 틀린 원소와 자유 키-값 `<custom>` 은 로드 오류다 — `<Defaults>` 는 읽힌다
+ * @brief [GameFrameworkTest] gamesettings 의 표준 칸 철자가 틀린 원소, 자유 키-값 `<custom>`, 빠진 필수 칸(`startMap`)은 로드 오류다 — `<Defaults>` 는 읽힌다
+ * @details 경로 칸은 `DataPath` 라 적지 않은 선택 칸은 "읽지 않음"(`isSet` false)으로 남는다.
  */
 SW_TEST_CASE( GameFrameworkTest, GameSettingsUnknownElementIsALoadError )
 {
@@ -1680,11 +1687,15 @@ SW_TEST_CASE( GameFrameworkTest, GameSettingsUnknownElementIsALoadError )
         GameSettings settings;
         SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><startmap>game/x/maps/a.scene.xml</startmap></GameSettings>", "typo" ) );
         SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><custom><prop key=\"party\">3</prop></custom></GameSettings>", "custom" ) );
+        SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><inputMap>game/x/data/a.input.xml</inputMap></GameSettings>", "no start map" ) );
+        SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><startMap>  </startMap></GameSettings>", "blank start map" ) );
     }
     GameSettings settings;
     SW_ASSERT_TRUE( settings.loadFromXMLText( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap><Defaults /></GameSettings>",
                                               "ok" ) );
-    SW_EXPECT_EQUAL( sw::string( "game/x/maps/a.scene.xml" ), settings._startMap );
+    SW_EXPECT_EQUAL( sw::string( "game/x/maps/a.scene.xml" ), settings._startMap.get() );
+    SW_EXPECT_FALSE( settings._titleScene.isSet() );
+    SW_EXPECT_FALSE( settings._inputMap.isSet() );
 }
 
 /**
