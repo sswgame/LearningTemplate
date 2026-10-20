@@ -45,6 +45,8 @@ namespace sw
             {
                 _settings._pPolicy         = context._pLedgerPolicy; // 경제 키트가 없으면 원장 상한만 적용된다
                 _settings._pMetricRegistry = context._pMetricRegistry;
+                _settings._pPresence       = context._pPresence;    // 계정 키트(다른 서버에 붙은 계정)
+                _settings._pOfflinePush    = context._pOfflinePush; // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
                 if ( _service.initialize( context._pStore, _settings ) == false )
                 {
                     outError = "the mailbox service needs a store";

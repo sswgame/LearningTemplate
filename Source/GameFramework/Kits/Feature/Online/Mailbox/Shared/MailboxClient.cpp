@@ -6,8 +6,18 @@ namespace sw
 {
     MailboxClient::MailboxClient()
         : _listMail{}
+        , _newMailBuffer{}
         , _revision{ 0 }
     {
+    }
+
+    void MailboxClient::onServicePush( uint16 kind, BitReader& body )
+    {
+        if ( kind != MailboxMethod::kPushNewMail )
+            return;
+        MailboxNewMail newMail;
+        if ( MailboxProtocol::MessageTypes::read( body, newMail ) == FixedReadResult::Ok )
+            _newMailBuffer.push( std::move( newMail ) );
     }
 
     uint64 MailboxClient::requestList( string_view cursor, int32 maxCount, ReplyDelegate onReply )

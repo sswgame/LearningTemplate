@@ -537,7 +537,7 @@ SW_TEST_CASE( AdminProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
     using Util     = test::OnlineMessageTestUtil;
     AdminRequest request;
     request._listAttachment.assign( 8, ServiceMailAttachment{ "cur.gold", 10 } );
-    request._listAccountID.assign( 16, AccountID( 0x201 ) );
+    request._listAccountID.assign( AdminProtocol::kMaxBulkCount, AccountID( 0x201 ) );
     request._memo         = string( 1024, 'm' );
     request._body         = string( 2048, 'b' );
     request._maxCount     = 100;

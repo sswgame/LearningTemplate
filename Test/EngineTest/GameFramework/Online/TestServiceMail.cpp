@@ -62,6 +62,28 @@ SW_TEST_CASE( ServiceMailTest, MintFundedMailMovesNothingUntilClaim )
     SW_EXPECT_EQUAL( recipient, kRecipient );
 }
 
+SW_TEST_CASE( ServiceMailTest, EveryMailLeavesANoticeThatIsClaimedOnce )
+{
+    MemoryServiceDatabase database;
+    string                mailKey;
+    bool                  bReplayed = false;
+    SW_ASSERT_TRUE( send( database, makeMessage( "reward.n1", LedgerHolder::makeMint(), 1 ), mailKey, bReplayed ) == LedgerResult::Ok );
+    SW_ASSERT_TRUE( send( database, makeMessage( "reward.n2", LedgerHolder::makeMint(), 2 ), mailKey, bReplayed ) == LedgerResult::Ok );
+    SW_ASSERT_TRUE( send( database, makeMessage( "reward.n2", LedgerHolder::makeMint(), 2 ), mailKey, bReplayed ) == LedgerResult::Ok ); // 다시 보낸 우편은 알림도 하나다
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getNoticeTable() ), 2 );
+
+    vector<ServiceMailNotice> listNotice;
+    SW_ASSERT_TRUE( ServiceMail::claimNotices( database, 1, listNotice ) == ServiceStoreResult::Ok );
+    SW_ASSERT_EQUAL( listNotice.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( listNotice[0]._recipientAccountID, kRecipient );
+    SW_EXPECT_EQUAL( listNotice[0]._titleKey, string( "mail.title.reward" ) );
+    SW_ASSERT_TRUE( ServiceMail::claimNotices( database, 32, listNotice ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( listNotice.size(), size_t( 1 ) );
+    SW_ASSERT_TRUE( ServiceMail::claimNotices( database, 32, listNotice ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listNotice.empty() );                                       // 가져간 알림은 다시 오지 않는다
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 2 ); // 우편은 그대로다
+}
+
 SW_TEST_CASE( ServiceMailTest, AccountFundedMailEscrowsAtSend )
 {
     MemoryServiceDatabase database;

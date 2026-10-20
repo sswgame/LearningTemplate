@@ -25,8 +25,8 @@ namespace sw
         {
             static constexpr uint8       kFormatVersion        = 1;
             static constexpr int32       kRebuildBatch         = 256;
-            static constexpr int32       kPlayersPerCommit     = 15;  ///< 사람마다 쓰기가 넷이다. 결과, 우편, 보낸 기록, 만료 인덱스이며 트랜잭션 상한 64 안에 든다
-            static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 40 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
+            static constexpr int32       kPlayersPerCommit     = 12;  ///< 사람마다 쓰기가 다섯이다. 결과, 우편, 보낸 기록, 만료 인덱스, 새 우편 알림이며 트랜잭션 상한 64 안에 든다
+            static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 50 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
             static constexpr int64       kDayMs                = 86400000;
             static constexpr int64       kWeekMs               = 604800000;
             static constexpr int64       kRankRetentionGraceMs = 86400000;  ///< 기간이 끝난 뒤 캐시 순위를 남기는 시간(시계 차이와 경계 직후 읽기를 흡수한다)
@@ -664,7 +664,7 @@ namespace sw
         };
 
         /**
-         * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 15명씩 결과와 보상 우편을 한 트랜잭션으로 씁니다.
+         * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 12명씩 결과와 보상 우편을 한 트랜잭션으로 씁니다.
          * @details 결과가 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다. 실패하면 다음 실행(임대가 지나 다른 서버가 맡거나 다시 부름)이 남은 사람부터 잇는다.
          */
         class SeasonSettlementPageWork final : public IServiceStoreWork

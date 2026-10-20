@@ -33,18 +33,27 @@ namespace sw
         Delete,
         Count,
     };
+
+    /** @brief 우편함 알림 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)입니다. 새 알림은 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class MailboxPushName : uint8
+    {
+        NewMail,
+        Count,
+    };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 우편함 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox, OnlineNoPushName>
+    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox, MailboxPushName>
     {
-        static constexpr uint16 kList     = toMethod( MailboxMethodName::List );
-        static constexpr uint16 kMarkRead = toMethod( MailboxMethodName::MarkRead );
-        static constexpr uint16 kClaim    = toMethod( MailboxMethodName::Claim );    ///< 멱등 키가 필수이다
-        static constexpr uint16 kClaimAll = toMethod( MailboxMethodName::ClaimAll ); ///< 멱등 키가 필수이다
-        static constexpr uint16 kDelete   = toMethod( MailboxMethodName::Delete );
+        static constexpr uint16 kList        = toMethod( MailboxMethodName::List );
+        static constexpr uint16 kMarkRead    = toMethod( MailboxMethodName::MarkRead );
+        static constexpr uint16 kClaim       = toMethod( MailboxMethodName::Claim );    ///< 멱등 키가 필수이다
+        static constexpr uint16 kClaimAll    = toMethod( MailboxMethodName::ClaimAll ); ///< 멱등 키가 필수이다
+        static constexpr uint16 kDelete      = toMethod( MailboxMethodName::Delete );
+        static constexpr uint16 kPushNewMail = toPush( MailboxPushName::NewMail ); ///< `MailboxNewMail`. 새 우편이 왔다. 클라이언트는 목록을 다시 읽는다
 
         /** @brief 상태를 바꾸는 수령이면 true 입니다. 멱등 키가 필수입니다. */
         static constexpr bool isClaim( uint16 method ) { return method == kClaim || method == kClaimAll; }
@@ -140,13 +149,28 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 새 우편 알림의 본문입니다. 서버 간 push 중계에도 실립니다. */
+    REFLECT()
+    struct SW_KIT_API MailboxNewMail
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        PROPERTY( MaxCount = 256 )
+        string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
+        PROPERTY( MaxCount = 128 )
+        string _titleKey{}; ///< 상한은 `ServiceMailConstant::kMaxTitleSize` 와 같다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct MailboxProtocol
      * @brief 우편함 키트의 메시지 타입 목록, 등록 항목, 목록 상한입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      */
     struct SW_KIT_API MailboxProtocol
     {
-        using MessageTypes = OnlineMessageTypes<MailboxRequest, MailboxReply>;
+        using MessageTypes = OnlineMessageTypes<MailboxRequest, MailboxReply, MailboxNewMail>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxListCount   = 50;

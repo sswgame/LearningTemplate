@@ -159,6 +159,50 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 경기 중 빈자리(백필) 요청입니다. 전용 게임 서버가 권한 매처에 보내는 서버 버스(`mm.backfill.<모드>`)의 본문입니다.
+     * @details 팀마다 빈자리 수를 싣습니다. 매처는 대기 티켓을 실력 허용 범위와 지역 규칙으로 골라 채우고, 채운 사람을 같은 경기 id 의 배정으로 게임 서버에 알립니다.
+     *          빈자리가 모두 차거나 모드의 `_maxWaitMs` 가 지나면 요청이 끝납니다. 같은 경기 id 로 다시 보내면 빈자리 수를 바꿉니다.
+     */
+    REFLECT()
+    struct SW_KIT_API MatchBackfillRequest
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        PROPERTY( MaxCount = 16 )
+        vector<int32> _listOpenSlot{}; ///< 팀마다 빈자리 수이다. 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
+        PROPERTY( MaxCount = 32 )
+        string _modeID{};
+        PROPERTY( MaxCount = 16 )
+        string _region{}; ///< 경기의 지역이다
+        PROPERTY( MaxCount = 128 )
+        string _address{}; ///< 채운 사람이 접속할 게임 서버 주소이다. 상한은 `ServerRecord::kMaxAddressSize` 와 같다
+        PROPERTY()
+        uint64 _matchID{ 0 };
+        PROPERTY()
+        uint64 _serverID{ 0 }; ///< 요청한 게임 서버이다. 채운 사람의 배정을 이 서버의 배정 주제로 보낸다
+        PROPERTY()
+        int64 _requestedMs{ 0 };
+        PROPERTY()
+        int32 _averageRating{ 0 }; ///< 남은 사람들의 평균 실력이다
+        PROPERTY()
+        uint16 _port{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 백필로 채운 티켓 하나입니다. 매처가 내고 대기열 서비스가 배정으로 보냅니다. */
+    struct MatchBackfilled
+    {
+        MatchBackfillRequest _request{}; ///< 채운 뒤의 남은 빈자리가 아니라 요청의 서버 정보를 쓴다
+        MatchTicket          _ticket{};
+        int32                _team{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 매칭의 상한 값들입니다. */
     struct MatchmakingLimit
     {
