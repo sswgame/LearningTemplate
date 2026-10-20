@@ -38,6 +38,13 @@
 - 포토모드: 포토 모드는 게임 HUD 를 그대로 둔다. 의도인지 확인.
 - 팝업잘림: 뷰포트 옵션 팝업은 패널이 화면 오른쪽 끝이면 메인 창 밖으로 나가 클라이언트 캡처에 안 잡힌다.
 
+### PanelIDLiterals
+제목: 패널을 id 글자로 여는 남은 호출
+옛번호: 없음
+왜 필요한가: 패널 열기 요청은 패널 형식(`requestOpenPanel<T>()`)으로 바꿨지만(2026-10-20) 같은 모양이 남았다. `EditorPlayCommands.cpp` 의 `focusPanel( "scene_view" )` · `"game_view"`(Common 이 Panels 를 모른다),
+GameFramework 에디터 플러그인의 `setPanelOpen( "admin.tool" )` · `"gimmick_graph"` · `"charactereditor.main"`, `EditorSelfTestDevTools.cpp` 의 `ImGui::SetWindowFocus( "Scene" )`(창 제목 글). 오타는 실행 중 false 로만 드러난다.
+남은 것: 같은 모듈이면 `setPanelOpen<T>()` 로, 층이 막히면 id 상수를 아래 층(패널 호스트 창구)으로 내린다.
+
 ### DesignerDataToolsAudit
 제목: 디자이너용 데이터 도구 점검
 옛번호: D3-13
