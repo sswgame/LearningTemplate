@@ -45,6 +45,12 @@ namespace sw
         void setSpacing( float32 spacing );
         /** @brief 베이크 결과(`.probes`) 경로입니다. 비었으면 굽지 않은 볼륨입니다. */
         const string& getProbeDataPath() const { return _probeDataPath; }
+        /** @brief 베이크가 프로브마다 쏘는 균일 구 방향 수입니다(`LightProbeBaker`). */
+        uint32 getBakeSampleCount() const { return _bakeSampleCount; }
+        /**
+         * @brief 베이크가 레이가 닿은 면에 두는 반사율입니다. 물리 씬은 표면의 머티리얼을 모르므로 볼륨이 한 값으로 정한다(회색 0.5 가 기본).
+         */
+        float32 getBounceAlbedo() const { return _bounceAlbedo; }
 
         /**
          * @brief 지금 트랜스폼과 칸으로 격자의 모양을 구합니다. 축마다 프로브 수는 floor(크기 / 간격) + 1 이고, 상자의 양 끝에 프로브가 놓입니다.
@@ -82,6 +88,10 @@ namespace sw
         float32 _spacing;
         PROPERTY( Category = "Light Probe", DisplayName = "Baked Probes", Tooltip = "Baked .probes resource path (written by the probe bake)", Validate = validateProbeData )
         string _probeDataPath;
+        PROPERTY( Category = "Light Probe Bake", DisplayName = "Samples Per Probe", Min = 16, Max = 65536, Tooltip = "Uniform sphere rays each probe casts while baking" )
+        uint32 _bakeSampleCount;
+        PROPERTY( Category = "Light Probe Bake", DisplayName = "Bounce Albedo", Min = 0.0, Max = 1.0, Tooltip = "Reflectance assumed for every surface a bake ray hits" )
+        float32 _bounceAlbedo;
 
         LightProbeGrid _probeData; ///< 읽은 베이크 데이터(비었으면 굽지 않았거나 읽지 못했다)
     };

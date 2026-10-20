@@ -20,6 +20,9 @@ namespace sw
             /// @brief 기본 상자와 간격 — 방 하나 크기에 2 m 간격(유니티 APV 의 기본 최소 간격 1 m 보다 성기게, 학습용 씬의 프로브 수를 작게).
             static constexpr float3  kDefaultExtent{ 10.0f, 4.0f, 10.0f };
             static constexpr float32 kDefaultSpacing{ 2.0f };
+            /// @brief 기본 베이크 — 프로브마다 레이 256 개(SH9 의 9 계수에 넉넉한 표본), 닿은 면의 반사율 0.5.
+            static constexpr uint32  kDefaultBakeSampleCount{ 256 };
+            static constexpr float32 kDefaultBounceAlbedo{ 0.5f };
             /// @brief 간격의 하한 — 0 이면 프로브 수가 무한이다.
             static constexpr float32 kMinSpacing{ 0.1f };
             /// @brief 읽은 격자와 지금 격자를 같다고 볼 위치 · 간격의 오차(m).
@@ -42,6 +45,8 @@ namespace sw
         : _extent{ LightProbeVolumeComponentInternal::kDefaultExtent }
         , _spacing{ LightProbeVolumeComponentInternal::kDefaultSpacing }
         , _probeDataPath{}
+        , _bakeSampleCount{ LightProbeVolumeComponentInternal::kDefaultBakeSampleCount }
+        , _bounceAlbedo{ LightProbeVolumeComponentInternal::kDefaultBounceAlbedo }
         , _probeData{}
     {
     }
