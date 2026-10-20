@@ -15,6 +15,7 @@
 
 - **T1 청크 메시를 워커로 나눠 만든다**(`TerrainComponent::rebuildChunkMeshes`). LOD 교체 · 쓰기 뒤 미룬 청크 · 처음 만들기가 모두 이 한 함수로 지난다. 정점 만들기(높이장 읽기만)는 `engine::runParallel` 로 청크마다 나누고, 메시 생성과 배치 교체(레지스트리 더티 표시)는 호출 스레드가 한다. 이음매는 같은 프레임 안에서 모두 맞춘다(청크를 프레임에 나눠 미루면 틈이 보인다). 렌더 스레드 정점 풀은 이미 바뀐 메시의 구간만 올린다(`GPUMeshVertexPool`, C-43).
 - **T2 식생은 바뀐 곳만 다시 계산한다**(`FoliageComponent::refreshFromTerrainEdits`). 배치를 두 단계로 갈랐다 — 후보마다의 표면 판정(`PlacementScatter::sampleCandidates`)과 최소 거리 이후(`resolveCandidates`). 식생은 레이어마다 후보 판정을 들고, 지형이 알려 주는 편집 사각형(`TerrainComponent::findEditedArea` — 높이 · 스플랫 세대를 청크마다 적는다) 안의 후보만 다시 판정한다(`resampleCandidates`). 최소 거리는 앞 번호가 이기는 순서 규칙이라 연쇄로 바뀔 수 있어 늘 전부 다시 푼다. 그래서 결과는 처음부터 계산한 것과 비트까지 같다. 셀마다 내용 해시를 견줘 바뀐 셀의 배치만 새로 만든다.
+  - 같은 모양 점검(2026-10-21): `PropScatterComponent` 는 플레이 시작에 한 번 계산하고, 지형 쓰기는 정지 상태에서만 열려(`EditorSessionPolicy::areSceneEditsAllowed`) 세운 동안 표면이 바뀌지 않는다. 다시 계산할 계기가 없어 부분 계산을 붙이지 않았다(헤더 주석에 조건을 적었다). 디퍼드의 `sprite2dlit` 은 `Transparent` 머티리얼이라 G버퍼를 지나지 않고 포워드 투명 패스가 2D 빛을 직접 계산하므로 `ForwardOnlyOpaque` 로 옮길 것이 없다.
   - 위치 순서와 무관한 최소 거리(우선순위 해시)로 바꾸면 최소 거리까지 지역 계산이 되지만, 모든 씬의 식생 · 소품 배치가 달라져 골든 이미지를 다시 떠야 하므로 하지 않았다.
 
 ## 3. 남은 단위
