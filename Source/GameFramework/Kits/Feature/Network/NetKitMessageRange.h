@@ -14,15 +14,16 @@ namespace sw
     /** @struct NetKitMessageRange @brief 키트마다 16개씩 할당한 메시지 영역의 시작 값입니다. */
     struct NetKitMessageRange
     {
-        static constexpr uint8 kClientServer = NetMessageRange::kFramework + 0 * NetMessageRange::kSize; ///< GF_NetClientServer
-        static constexpr uint8 kLockstep     = NetMessageRange::kFramework + 1 * NetMessageRange::kSize; ///< GF_NetLockstep
-        static constexpr uint8 kTurnRelay    = NetMessageRange::kFramework + 2 * NetMessageRange::kSize; ///< GF_NetTurnRelay
-        static constexpr uint8 kMMO          = NetMessageRange::kFramework + 3 * NetMessageRange::kSize; ///< GF_NetMMO
-        static constexpr uint8 kDestruction  = NetMessageRange::kFramework + 4 * NetMessageRange::kSize; ///< GF_NetDestruction
+        static constexpr uint8 kClientServer    = NetMessageRange::kFramework + 0 * NetMessageRange::kSize; ///< GF_NetClientServer
+        static constexpr uint8 kLockstep        = NetMessageRange::kFramework + 1 * NetMessageRange::kSize; ///< GF_NetLockstep
+        static constexpr uint8 kTurnRelay       = NetMessageRange::kFramework + 2 * NetMessageRange::kSize; ///< GF_NetTurnRelay
+        static constexpr uint8 kMMO             = NetMessageRange::kFramework + 3 * NetMessageRange::kSize; ///< GF_NetMMO
+        static constexpr uint8 kDestruction     = NetMessageRange::kFramework + 4 * NetMessageRange::kSize; ///< GF_NetDestruction
+        static constexpr uint8 kPairedAnimation = NetMessageRange::kFramework + 5 * NetMessageRange::kSize; ///< GF_NetPairedAnimation
 
-        static_assert( kDestruction + NetMessageRange::kSize <= NetMessageRange::kGame, "network kit message ranges must stay below the game range" );
+        static_assert( kPairedAnimation + NetMessageRange::kSize <= NetMessageRange::kGame, "network kit message ranges must stay below the game range" );
         // 첫 바이트는 와이어 형식이다. 값이 바뀌면 다른 빌드와 통신할 수 없으므로, 바꾸려면 프로토콜 버전을 올려야 한다.
-        static_assert( kClientServer == 0x10 && kLockstep == 0x20 && kTurnRelay == 0x30 && kMMO == 0x40 && kDestruction == 0x50,
+        static_assert( kClientServer == 0x10 && kLockstep == 0x20 && kTurnRelay == 0x30 && kMMO == 0x40 && kDestruction == 0x50 && kPairedAnimation == 0x60,
                        "network kit message ranges are wire format" );
     };
 } // namespace sw
@@ -39,10 +40,11 @@ namespace sw
      */
     struct NetKitWireVersion
     {
-        static constexpr uint32 kClientServer = 4; ///< 버전 4부터 스냅샷 머리에 처리한 입력 틱 대신 소유자 상태 칸(입력 틱 + 상태)을 싣는다
-        static constexpr uint32 kLockstep     = 3;
-        static constexpr uint32 kTurnRelay    = 3; ///< 버전 3부터 행동 상한이 8 KB이다
-        static constexpr uint32 kMMO          = 3; ///< 버전 3부터 새로 보임을 틱마다 메시지 하나로 보낸다
-        static constexpr uint32 kDestruction  = 2; ///< 버전 2부터 스냅샷을 조각이 아니라 메시지 하나로 보낸다
+        static constexpr uint32 kClientServer    = 4; ///< 버전 4부터 스냅샷 머리에 처리한 입력 틱 대신 소유자 상태 칸(입력 틱 + 상태)을 싣는다
+        static constexpr uint32 kLockstep        = 3;
+        static constexpr uint32 kTurnRelay       = 3; ///< 버전 3부터 행동 상한이 8 KB이다
+        static constexpr uint32 kMMO             = 3; ///< 버전 3부터 새로 보임을 틱마다 메시지 하나로 보낸다
+        static constexpr uint32 kDestruction     = 2; ///< 버전 2부터 스냅샷을 조각이 아니라 메시지 하나로 보낸다
+        static constexpr uint32 kPairedAnimation = 1;
     };
 } // namespace sw

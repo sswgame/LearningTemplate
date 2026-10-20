@@ -120,6 +120,8 @@ namespace sw
         const PairedAnimationDef& getDef() const { return *_def; }
         /** @brief 그 애니메이터가 이 세션에 묶여 아직 나가지 않았으면 true 입니다. */
         bool hasParticipant( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const;
+        /** @brief 역할(에셋의 역할 인덱스)에 묶인 애니메이터입니다. 바인딩이 없는 선택 역할이면 빈 핸들입니다. 네트워크 복제가 역할 → 오브젝트 대응을 보낼 때 씁니다. */
+        const TComponentHandle<SkeletalAnimatorComponent>& getRoleAnimator( uint32 roleIndex ) const { return _listRole[roleIndex]._animator; }
         /** @brief 지금 재생 중인(들어왔고 나가지 않은) 역할 수입니다. */
         uint32 getPlayingRoleCount() const;
         /** @brief 이름의 역할이 지금 재생 중이면 true 입니다. */
