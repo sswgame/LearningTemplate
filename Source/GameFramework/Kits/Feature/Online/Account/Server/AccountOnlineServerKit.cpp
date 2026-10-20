@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 
 #include "Engine/Config/Server/ServerSecret.h"
 
@@ -10,6 +11,7 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/AccountNameIndex.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
@@ -19,6 +21,8 @@
 //   ticketKeySecretEnvironment  게임 접속 티켓 주 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름. 비우면 Dev 만 개발용 키, Shipping 은 기동 실패.
 //   attemptBurst                주소마다 한꺼번에 받는 로그인 시도 수(부하 봇은 크게).
 //   lightPasswordHash           1 이면 가벼운 Argon2id(테스트 · 부하 봇 — Dev 만, 실제 비용을 재려면 끈다).
+//   platformProvidersFile       외부 로그인 제공자 설정 JSON(프로젝트 루트 기준, 형식은 `PlatformLoginProviderFactory::readSettings`). 비우면 외부 로그인이 없다.
+//   platformTrustFile           제공자 HTTPS 를 검증할 CA 묶음 PEM(프로젝트 루트 기준). `https://` 제공자가 있으면 필수다.
 
 namespace sw
 {
@@ -65,6 +69,7 @@ namespace sw
         public:
             AccountOnlineServerKit()
                 : _crypto{ &NetSecurity::getProvider() }
+                , _platformProviders{}
                 , _loginService{}
                 , _accountServer{}
                 , _nameIndex{}
@@ -78,10 +83,14 @@ namespace sw
                 LoginServiceConfig loginSettings;
                 bool               bLightHash = false;
                 string             ticketKeyEnvironment;
+                string             providersFile;
+                string             trustFile;
                 const bool         bOptionOk = entry.readOptions( {
                                                               {"ticketKeySecretEnvironment",        ticketKeyEnvironment},
                                                               {              "attemptBurst", loginSettings._attemptBurst},
-                                                              {         "lightPasswordHash",                  bLightHash}
+                                                              {         "lightPasswordHash",                  bLightHash},
+                                                              {     "platformProvidersFile",               providersFile},
+                                                              {         "platformTrustFile",                   trustFile}
                 },
                                                                   outError );
                 if ( bOptionOk == false )
@@ -102,6 +111,8 @@ namespace sw
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
                 Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
                 _bLoginStarted = true;
+                if ( createPlatformProviders( providersFile, trustFile, outError ) == false )
+                    return false;
                 _loginService.setRemoteConfig( context._pRemoteConfig );
                 _accountServer.initialize( &_loginService, AccountServerConfig{} );
                 if ( registerHostService( context, entry, &_accountServer, outError ) == false )
@@ -130,9 +141,45 @@ namespace sw
                 if ( _bLoginStarted )
                     _loginService.shutdown();
                 _bLoginStarted = false;
+                _platformProviders.shutdown(); // 로그인 서비스가 빌려 쓰던 제공자다 — 서비스 뒤에 내린다
             }
 
         private:
+            /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */
+            [[nodiscard]] bool createPlatformProviders( const string& providersFile, const string& trustFile, string& outError )
+            {
+                if ( providersFile.empty() )
+                {
+                    if ( trustFile.empty() == false )
+                    {
+                        outError = "platformTrustFile is set but platformProvidersFile is not";
+                        return false;
+                    }
+                    return true;
+                }
+                const string providersPath = NetSecurity::makeProjectPath( providersFile );
+                string       jsonText;
+                if ( FileUtil::readTextFile( providersPath, jsonText ) == false )
+                {
+                    outError = "cannot read the platform login providers file " + providersPath;
+                    return false;
+                }
+                vector<PlatformLoginProviderConfig> listSettings;
+                if ( PlatformLoginProviderFactory::readSettings( jsonText, listSettings, outError ) == false )
+                    return false;
+                if ( _platformProviders.initialize( listSettings, trustFile, outError ) == false )
+                    return false;
+                for ( int32 index = 0; index < _platformProviders.getProviderCount(); ++index )
+                {
+                    if ( _loginService.registerPlatformProvider( _platformProviders.getProvider( index ) ) == false )
+                    {
+                        outError = "platform login provider names must be unique and valid";
+                        return false;
+                    }
+                }
+                return true;
+            }
+
             /** @brief 옵션의 환경 변수에서 주 키를 읽습니다. 변수를 정하지 않았으면 Dev 는 개발용 키(경고), Shipping 은 실패입니다. */
             [[nodiscard]] static bool readTicketKey( const string& environment, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize], string& outError )
             {
@@ -163,11 +210,12 @@ namespace sw
                 return true;
             }
 
-            NetSecurityLoginCrypto _crypto;
-            LoginService           _loginService;
-            AccountServer          _accountServer;
-            AccountNameIndex       _nameIndex;
-            bool                   _bLoginStarted;
+            NetSecurityLoginCrypto   _crypto;
+            PlatformLoginProviderSet _platformProviders; ///< 로그인 서비스보다 오래 산다(먼저 선언)
+            LoginService             _loginService;
+            AccountServer            _accountServer;
+            AccountNameIndex         _nameIndex;
+            bool                     _bLoginStarted;
         };
     } // namespace
 } // namespace sw
