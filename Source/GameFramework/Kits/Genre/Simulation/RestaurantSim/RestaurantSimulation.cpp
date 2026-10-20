@@ -42,6 +42,61 @@ namespace sw
             {
                 return choice._weight;
             }
+
+            /** @brief `writeState` 가 쓴 직원 하나를 읽습니다. 역할이 범위 밖이거나 플래그가 깨졌으면 false 입니다. */
+            [[nodiscard]] static bool readStaff( Archive& archive, StaffMember& outStaff )
+            {
+                uint8 role = 0;
+                if ( StateArchiveUtil::readName( archive, outStaff._name ) == false || outStaff._level.readState( archive ) == false )
+                    return false;
+                archive >> outStaff._busyMinutes;
+                archive >> outStaff._dailyWage;
+                archive >> outStaff._taskCustomer;
+                archive >> role;
+                archive >> outStaff._bHired;
+                const bool bInvalidStaffData = archive.isError() || role > static_cast<uint8>( StaffRole::Cashier ) || outStaff._bHired > SW_TRUE;
+                if ( bInvalidStaffData )
+                    return false;
+                outStaff._role = static_cast<StaffRole>( role );
+                return true;
+            }
+
+            /** @brief `writeState` 가 쓴 손님 하나를 읽습니다. 자리 번호가 @p seatCount 밖이거나 상태가 범위 밖이면 false 입니다. */
+            [[nodiscard]] static bool readCustomer( Archive& archive, int32 seatCount, RestaurantCustomer& outCustomer )
+            {
+                uint8 state = 0;
+                if ( StateArchiveUtil::readName( archive, outCustomer._typeID ) == false || StateArchiveUtil::readName( archive, outCustomer._dishID ) == false )
+                    return false;
+                archive >> outCustomer._waited;
+                archive >> outCustomer._patience;
+                archive >> outCustomer._eatRemaining;
+                archive >> outCustomer._price;
+                archive >> outCustomer._id;
+                archive >> outCustomer._seat;
+                archive >> outCustomer._quality;
+                archive >> state;
+                archive >> outCustomer._bServing;
+                archive >> outCustomer._bCheckingOut;
+                const bool bValid = archive.isOk() && state <= static_cast<uint8>( CustomerState::Left ) && -1 <= outCustomer._seat && outCustomer._seat < seatCount &&
+                                    outCustomer._bServing <= SW_TRUE && outCustomer._bCheckingOut <= SW_TRUE;
+                if ( bValid == false )
+                    return false;
+                outCustomer._state = static_cast<CustomerState>( state );
+                return true;
+            }
+
+            /** @brief `writeState` 가 쓴 주문 하나를 읽습니다. 요리사 번호가 @p staffCount 밖이면 false 입니다. */
+            [[nodiscard]] static bool readOrder( Archive& archive, int32 staffCount, KitchenOrder& outOrder )
+            {
+                if ( StateArchiveUtil::readName( archive, outOrder._dishID ) == false || StateArchiveUtil::readName( archive, outOrder._station ) == false )
+                    return false;
+                archive >> outOrder._remaining;
+                archive >> outOrder._customerID;
+                archive >> outOrder._cook;
+                archive >> outOrder._quality;
+                archive >> outOrder._bReady;
+                return archive.isOk() && -1 <= outOrder._cook && outOrder._cook < staffCount && outOrder._bReady <= SW_TRUE;
+            }
         };
     } // namespace
 } // namespace sw
@@ -411,18 +466,8 @@ namespace sw
         restored._listStaff.assign( count, StaffMember{} );
         for ( StaffMember& staff : restored._listStaff )
         {
-            uint8 role = 0;
-            if ( StateArchiveUtil::readName( archive, staff._name ) == false || staff._level.readState( archive ) == false )
+            if ( RestaurantSimulationInternal::readStaff( archive, staff ) == false )
                 return false;
-            archive >> staff._busyMinutes;
-            archive >> staff._dailyWage;
-            archive >> staff._taskCustomer;
-            archive >> role;
-            archive >> staff._bHired;
-            const bool bInvalidStaffData = archive.isError() || role > static_cast<uint8>( StaffRole::Cashier ) || staff._bHired > SW_TRUE;
-            if ( bInvalidStaffData )
-                return false;
-            staff._role = static_cast<StaffRole>( role );
         }
 
         // 손님마다 이름 둘(8) + 기다림, 인내, 먹기(12) + 가격(8) + 번호, 자리, 품질(12) + 상태, 서빙, 계산(3)
@@ -431,24 +476,8 @@ namespace sw
         restored._listCustomer.assign( count, RestaurantCustomer{} );
         for ( RestaurantCustomer& customer : restored._listCustomer )
         {
-            uint8 state = 0;
-            if ( StateArchiveUtil::readName( archive, customer._typeID ) == false || StateArchiveUtil::readName( archive, customer._dishID ) == false )
+            if ( RestaurantSimulationInternal::readCustomer( archive, _settings._seatCount, customer ) == false )
                 return false;
-            archive >> customer._waited;
-            archive >> customer._patience;
-            archive >> customer._eatRemaining;
-            archive >> customer._price;
-            archive >> customer._id;
-            archive >> customer._seat;
-            archive >> customer._quality;
-            archive >> state;
-            archive >> customer._bServing;
-            archive >> customer._bCheckingOut;
-            const bool bValid = archive.isOk() && state <= static_cast<uint8>( CustomerState::Left ) && -1 <= customer._seat &&
-                                customer._seat < _settings._seatCount && customer._bServing <= SW_TRUE && customer._bCheckingOut <= SW_TRUE;
-            if ( bValid == false )
-                return false;
-            customer._state = static_cast<CustomerState>( state );
         }
 
         // 주문마다 이름 둘(8) + 남은 시간, 손님, 요리사, 품질(16) + 준비(1)
@@ -458,15 +487,7 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             KitchenOrder order;
-            if ( StateArchiveUtil::readName( archive, order._dishID ) == false || StateArchiveUtil::readName( archive, order._station ) == false )
-                return false;
-            archive >> order._remaining;
-            archive >> order._customerID;
-            archive >> order._cook;
-            archive >> order._quality;
-            archive >> order._bReady;
-            const bool bValid = archive.isOk() && -1 <= order._cook && order._cook < static_cast<int32>( restored._listStaff.size() ) && order._bReady <= SW_TRUE;
-            if ( bValid == false )
+            if ( RestaurantSimulationInternal::readOrder( archive, static_cast<int32>( restored._listStaff.size() ), order ) == false )
                 return false;
             restored._listOrder.push_back( order );
         }

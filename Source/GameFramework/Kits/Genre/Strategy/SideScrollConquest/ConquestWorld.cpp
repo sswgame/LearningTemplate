@@ -35,6 +35,79 @@ namespace sw
                 const float32 side = targetX > x ? 1.0f : -1.0f;
                 return targetX - side * range * kApproachRatio;
             }
+
+            /** @brief `writeState` 가 쓴 거점 하나를 읽습니다. 카탈로그에 없는 거점이거나 편이 범위 밖이면 false 입니다. */
+            [[nodiscard]] static bool readSite( Archive& archive, const ConquestCatalog& catalog, ConquestSite& outSite )
+            {
+                hashed_string siteID;
+                uint8         owner       = 0;
+                uint8         captureTeam = 0;
+                if ( StateArchiveUtil::readName( archive, siteID ) == false )
+                    return false;
+                outSite._pDef = catalog.findSite( siteID );
+                archive >> outSite._gateHealth;
+                archive >> outSite._wallHealth;
+                archive >> outSite._captureProgress;
+                archive >> owner;
+                archive >> captureTeam;
+                const bool bValid = archive.isOk() && outSite._pDef != nullptr && owner <= static_cast<uint8>( ConquestTeam::Enemy ) &&
+                                    captureTeam <= static_cast<uint8>( ConquestTeam::Enemy );
+                if ( bValid == false )
+                    return false;
+                outSite._owner       = static_cast<ConquestTeam>( owner );
+                outSite._captureTeam = static_cast<ConquestTeam>( captureTeam );
+                return true;
+            }
+
+            /** @brief `writeState` 가 쓴 건물 하나를 읽습니다. 카탈로그에 없는 건물 · 병사이거나 거점 번호가 @p siteCount 밖이면 false 입니다. */
+            [[nodiscard]] static bool readBuilding( Archive& archive, const ConquestCatalog& catalog, int32 siteCount, ConquestBuilding& outBuilding )
+            {
+                hashed_string buildingID;
+                uint32        queueCount = 0;
+                if ( StateArchiveUtil::readName( archive, buildingID ) == false || StateArchiveUtil::readCount( archive, 4, queueCount ) == false )
+                    return false;
+                outBuilding._pDef = catalog.findBuilding( buildingID );
+                outBuilding._listQueue.assign( queueCount, hashed_string{} );
+                for ( hashed_string& unitID : outBuilding._listQueue )
+                {
+                    if ( StateArchiveUtil::readName( archive, unitID ) == false || catalog.findUnit( unitID ) == nullptr )
+                        return false;
+                }
+                archive >> outBuilding._cycleProgress;
+                archive >> outBuilding._trainProgress;
+                archive >> outBuilding._siteIndex;
+                archive >> outBuilding._workers;
+                return archive.isOk() && outBuilding._pDef != nullptr && 0 <= outBuilding._siteIndex && outBuilding._siteIndex < siteCount && 0 <= outBuilding._workers;
+            }
+
+            /** @brief `writeState` 가 쓴 병사 하나를 읽습니다. 카탈로그에 없는 병사이거나 열거형 · 플래그가 깨졌으면 false 입니다. */
+            [[nodiscard]] static bool readUnit( Archive& archive, const ConquestCatalog& catalog, ConquestUnit& outUnit )
+            {
+                hashed_string unitID;
+                uint8         team  = 0;
+                uint8         order = 0;
+                if ( StateArchiveUtil::readName( archive, unitID ) == false )
+                    return false;
+                outUnit._pDef = catalog.findUnit( unitID );
+                archive >> outUnit._x;
+                archive >> outUnit._health;
+                const bool bCooldownRead = StateArchiveUtil::readCountdown( archive, outUnit._attackCooldown );
+                archive >> outUnit._holdX;
+                archive >> outUnit._damageDealt;
+                archive >> outUnit._unitID;
+                archive >> outUnit._squadSlot;
+                archive >> team;
+                archive >> order;
+                archive >> outUnit._bAlive;
+                archive >> outUnit._bPlanted;
+                const bool bValid = bCooldownRead && archive.isOk() && outUnit._pDef != nullptr && team <= static_cast<uint8>( ConquestTeam::Enemy ) &&
+                                    order <= static_cast<uint8>( ConquestOrder::Charge ) && outUnit._bAlive <= SW_TRUE && outUnit._bPlanted <= SW_TRUE;
+                if ( bValid == false )
+                    return false;
+                outUnit._team  = static_cast<ConquestTeam>( team );
+                outUnit._order = static_cast<ConquestOrder>( order );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -300,23 +373,8 @@ namespace sw
             return false;
         for ( ConquestSite& site : restored._listSite )
         {
-            hashed_string siteID;
-            uint8         owner       = 0;
-            uint8         captureTeam = 0;
-            if ( StateArchiveUtil::readName( archive, siteID ) == false )
+            if ( ConquestWorldInternal::readSite( archive, *_pCatalog, site ) == false )
                 return false;
-            site._pDef = _pCatalog->findSite( siteID );
-            archive >> site._gateHealth;
-            archive >> site._wallHealth;
-            archive >> site._captureProgress;
-            archive >> owner;
-            archive >> captureTeam;
-            const bool bValid = archive.isOk() && site._pDef != nullptr && owner <= static_cast<uint8>( ConquestTeam::Enemy ) &&
-                                captureTeam <= static_cast<uint8>( ConquestTeam::Enemy );
-            if ( bValid == false )
-                return false;
-            site._owner       = static_cast<ConquestTeam>( owner );
-            site._captureTeam = static_cast<ConquestTeam>( captureTeam );
         }
 
         // 건물마다 이름(4) + 대기열 수(4) + 진행 둘(8) + 슬롯, 일꾼(8)
@@ -326,23 +384,7 @@ namespace sw
         restored._listBuilding.assign( count, ConquestBuilding{} );
         for ( ConquestBuilding& building : restored._listBuilding )
         {
-            hashed_string buildingID;
-            uint32        queueCount = 0;
-            if ( StateArchiveUtil::readName( archive, buildingID ) == false || StateArchiveUtil::readCount( archive, 4, queueCount ) == false )
-                return false;
-            building._pDef = _pCatalog->findBuilding( buildingID );
-            building._listQueue.assign( queueCount, hashed_string{} );
-            for ( hashed_string& unitID : building._listQueue )
-            {
-                if ( StateArchiveUtil::readName( archive, unitID ) == false || _pCatalog->findUnit( unitID ) == nullptr )
-                    return false;
-            }
-            archive >> building._cycleProgress;
-            archive >> building._trainProgress;
-            archive >> building._siteIndex;
-            archive >> building._workers;
-            const bool bValid = archive.isOk() && building._pDef != nullptr && 0 <= building._siteIndex && building._siteIndex < siteCount && 0 <= building._workers;
-            if ( bValid == false )
+            if ( ConquestWorldInternal::readBuilding( archive, *_pCatalog, siteCount, building ) == false )
                 return false;
         }
 
@@ -352,29 +394,8 @@ namespace sw
         restored._listUnit.assign( count, ConquestUnit{} );
         for ( ConquestUnit& unit : restored._listUnit )
         {
-            hashed_string unitID;
-            uint8         team  = 0;
-            uint8         order = 0;
-            if ( StateArchiveUtil::readName( archive, unitID ) == false )
+            if ( ConquestWorldInternal::readUnit( archive, *_pCatalog, unit ) == false )
                 return false;
-            unit._pDef = _pCatalog->findUnit( unitID );
-            archive >> unit._x;
-            archive >> unit._health;
-            const bool bCooldownRead = StateArchiveUtil::readCountdown( archive, unit._attackCooldown );
-            archive >> unit._holdX;
-            archive >> unit._damageDealt;
-            archive >> unit._unitID;
-            archive >> unit._squadSlot;
-            archive >> team;
-            archive >> order;
-            archive >> unit._bAlive;
-            archive >> unit._bPlanted;
-            const bool bValid = bCooldownRead && archive.isOk() && unit._pDef != nullptr && team <= static_cast<uint8>( ConquestTeam::Enemy ) &&
-                                order <= static_cast<uint8>( ConquestOrder::Charge ) && unit._bAlive <= SW_TRUE && unit._bPlanted <= SW_TRUE;
-            if ( bValid == false )
-                return false;
-            unit._team  = static_cast<ConquestTeam>( team );
-            unit._order = static_cast<ConquestOrder>( order );
         }
 
         if ( restored._resource.readState( archive ) == false )

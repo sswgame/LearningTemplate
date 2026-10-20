@@ -355,6 +355,10 @@ namespace sw
         MatchSettings makeMatchSettings() const;
         /** @brief 생존자 하나의 상태를 읽어 덮어씁니다(규칙과 치료 설정은 `addSurvivor` 가 만든 것을 씁니다). 데이터가 깨졌으면 false 를 반환합니다. */
         [[nodiscard]] bool readSurvivor( Archive& archive, HorrorSurvivor& outSurvivor ) const;
+        /** @brief 무대(갈고리, 판자, 사물함, 창문, 발전기, 탈출문)를 위치로 다시 만들고 그 위에 상태를 덮습니다. 판자 수를 @p outPalletCount 에 적습니다. */
+        [[nodiscard]] bool readStage( Archive& archive, uint32& outPalletCount );
+        /** @brief 살인마 상태를 읽어 덮습니다. 든 생존자 · 부수는 판자 번호가 @p survivorCount · @p palletCount 밖이면 false 입니다. */
+        [[nodiscard]] bool readKiller( Archive& archive, uint32 survivorCount, uint32 palletCount );
         void               makeNoise( int32 survivor, float32 radius, const float3& position );
         void               pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position );
 

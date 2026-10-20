@@ -20,6 +20,112 @@ namespace sw
             static constexpr uint32 kMinUnitStateBytes   = 128; ///< 유닛 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
             static constexpr uint32 kMinOrderStateBytes  = 34;  ///< 명령 하나의 상태가 최소한 차지하는 바이트 수
             static constexpr uint32 kMinPlayerStateBytes = 30;  ///< 플레이어 하나의 상태가 최소한 차지하는 바이트 수
+
+            /** @brief `writeState` 가 쓴 명령 하나를 읽습니다. 흐름장을 쓰던 명령인지는 @p outListFlowFieldOrder 끝에 붙입니다. */
+            [[nodiscard]] static bool readOrder( Archive& archive, RTSOrder& outOrder, vector<uint8>& outListFlowFieldOrder )
+            {
+                uint64 targetUnit = 0;
+                uint8  type       = 0;
+                uint8  bFlowField = SW_FALSE;
+                if ( StateArchiveUtil::readName( archive, outOrder._buildID ) == false )
+                    return false;
+                archive >> outOrder._target;
+                StateArchiveUtil::readInt2( archive, outOrder._buildCell );
+                archive >> targetUnit;
+                archive >> outOrder._arriveRadius;
+                archive >> type;
+                archive >> bFlowField;
+                if ( archive.isError() || type > static_cast<uint8>( RTSOrderType::Hold ) )
+                    return false;
+                outOrder._targetUnit = RTSUnitID::fromPacked( targetUnit );
+                outOrder._type       = static_cast<RTSOrderType>( type );
+                outListFlowFieldOrder.push_back( bFlowField );
+                return true;
+            }
+
+            /** @brief 유닛의 필드(정의 · 명령 · 생산 줄을 뺀 나머지)를 읽습니다. 열거형이 범위 밖이거나 정의 없이 살아 있으면 false 입니다. */
+            [[nodiscard]] static bool readUnitFields( Archive& archive, RTSUnit& outUnit )
+            {
+                uint64 id             = 0;
+                uint64 attackTarget   = 0;
+                uint64 gatherTarget   = 0;
+                uint64 harvester      = 0;
+                uint64 builder        = 0;
+                uint64 linkedResource = 0;
+                uint8  cargoType      = 0;
+                uint8  gatherPhase    = 0;
+                archive >> outUnit._position;
+                archive >> outUnit._rallyPoint;
+                archive >> outUnit._moveGoal;
+                StateArchiveUtil::readInt2( archive, outUnit._cell );
+                archive >> id;
+                archive >> attackTarget;
+                archive >> gatherTarget;
+                archive >> harvester;
+                archive >> builder;
+                archive >> linkedResource;
+                archive >> outUnit._hp;
+                archive >> outUnit._cooldown._remaining;
+                archive >> outUnit._buildProgress;
+                archive >> outUnit._productionTimer;
+                archive >> outUnit._gatherTimer;
+                archive >> outUnit._owner;
+                archive >> outUnit._resourceLeft;
+                archive >> outUnit._cargoAmount;
+                archive >> outUnit._supplyReserved;
+                archive >> cargoType;
+                archive >> gatherPhase;
+                archive >> outUnit._bAlive;
+                archive >> outUnit._bHasRally;
+                archive >> outUnit._bSupplyBlocked;
+                const bool bEnumValid       = cargoType <= static_cast<uint8>( RTSResourceType::None ) && gatherPhase <= static_cast<uint8>( RTSGatherPhase::Returning );
+                const bool bAliveValid      = outUnit._bAlive == SW_FALSE || outUnit._pDef != nullptr;
+                const bool bInvalidUnitData = archive.isError() || bEnumValid == false || bAliveValid == false;
+                if ( bInvalidUnitData )
+                    return false;
+                outUnit._id             = RTSUnitID::fromPacked( id );
+                outUnit._attackTarget   = RTSUnitID::fromPacked( attackTarget );
+                outUnit._gatherTarget   = RTSUnitID::fromPacked( gatherTarget );
+                outUnit._harvester      = RTSUnitID::fromPacked( harvester );
+                outUnit._builder        = RTSUnitID::fromPacked( builder );
+                outUnit._linkedResource = RTSUnitID::fromPacked( linkedResource );
+                outUnit._cargoType      = static_cast<RTSResourceType>( cargoType );
+                outUnit._gatherPhase    = static_cast<RTSGatherPhase>( gatherPhase );
+                // 경로와 흐름장은 싣지 않는다. 맨 앞 명령을 처음부터 다시 진행시키면 이 격자에서 경로를 다시 구한다.
+                outUnit._bOrderStarted = SW_FALSE;
+                outUnit._repathTimer.clear();
+                return true;
+            }
+
+            /** @brief 유닛 하나(정의 id, 명령, 생산 줄, 필드)를 읽습니다. 카탈로그에서 빠진 정의면 판을 맞출 수 없으므로 false 입니다. */
+            [[nodiscard]] static bool readUnit( Archive& archive, const RTSCatalog& catalog, RTSUnit& outUnit, vector<uint8>& outListFlowFieldOrder )
+            {
+                hashed_string defID;
+                if ( StateArchiveUtil::readName( archive, defID ) == false )
+                    return false;
+                outUnit._pDef = defID.empty() ? nullptr : catalog.find( defID );
+                if ( defID.empty() == false && outUnit._pDef == nullptr )
+                    return false;
+                uint32 orderCount = 0;
+                if ( StateArchiveUtil::readCount( archive, kMinOrderStateBytes, orderCount ) == false )
+                    return false;
+                for ( uint32 orderIndex = 0; orderIndex < orderCount; ++orderIndex )
+                {
+                    if ( readOrder( archive, outUnit._listOrder.emplace_back(), outListFlowFieldOrder ) == false )
+                        return false;
+                }
+                uint32 productionCount = 0;
+                if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), productionCount ) == false )
+                    return false;
+                for ( uint32 productionIndex = 0; productionIndex < productionCount; ++productionIndex )
+                {
+                    hashed_string productionID;
+                    if ( StateArchiveUtil::readName( archive, productionID ) == false )
+                        return false;
+                    outUnit._listProduction.push_back( productionID );
+                }
+                return readUnitFields( archive, outUnit );
+            }
         };
     } // namespace
 
@@ -129,95 +235,9 @@ namespace sw
         vector<uint8>  listFlowFieldOrder; // 무리 이동 명령마다 흐름장이 있었는지(유닛, 명령 순서)
         for ( uint32 index = 0; index < unitCount; ++index )
         {
-            RTSUnit&      unit = listUnit.emplace_back();
-            hashed_string defID;
             archive >> listGeneration[index];
-            if ( StateArchiveUtil::readName( archive, defID ) == false )
+            if ( Internal::readUnit( archive, *_pCatalog, listUnit.emplace_back(), listFlowFieldOrder ) == false )
                 return false;
-            unit._pDef = defID.empty() ? nullptr : _pCatalog->find( defID );
-            if ( defID.empty() == false && unit._pDef == nullptr )
-                return false; // 카탈로그에서 빠진 유닛이라 판을 맞출 수 없다
-            uint32 orderCount = 0;
-            if ( StateArchiveUtil::readCount( archive, Internal::kMinOrderStateBytes, orderCount ) == false )
-                return false;
-            for ( uint32 orderIndex = 0; orderIndex < orderCount; ++orderIndex )
-            {
-                RTSOrder& order      = unit._listOrder.emplace_back();
-                uint64    targetUnit = 0;
-                uint8     type       = 0;
-                uint8     bFlowField = SW_FALSE;
-                if ( StateArchiveUtil::readName( archive, order._buildID ) == false )
-                    return false;
-                archive >> order._target;
-                StateArchiveUtil::readInt2( archive, order._buildCell );
-                archive >> targetUnit;
-                archive >> order._arriveRadius;
-                archive >> type;
-                archive >> bFlowField;
-                if ( archive.isError() || type > static_cast<uint8>( RTSOrderType::Hold ) )
-                    return false;
-                order._targetUnit = RTSUnitID::fromPacked( targetUnit );
-                order._type       = static_cast<RTSOrderType>( type );
-                listFlowFieldOrder.push_back( bFlowField );
-            }
-            uint32 productionCount = 0;
-            if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), productionCount ) == false )
-                return false;
-            for ( uint32 productionIndex = 0; productionIndex < productionCount; ++productionIndex )
-            {
-                hashed_string productionID;
-                if ( StateArchiveUtil::readName( archive, productionID ) == false )
-                    return false;
-                unit._listProduction.push_back( productionID );
-            }
-            uint64 id             = 0;
-            uint64 attackTarget   = 0;
-            uint64 gatherTarget   = 0;
-            uint64 harvester      = 0;
-            uint64 builder        = 0;
-            uint64 linkedResource = 0;
-            uint8  cargoType      = 0;
-            uint8  gatherPhase    = 0;
-            archive >> unit._position;
-            archive >> unit._rallyPoint;
-            archive >> unit._moveGoal;
-            StateArchiveUtil::readInt2( archive, unit._cell );
-            archive >> id;
-            archive >> attackTarget;
-            archive >> gatherTarget;
-            archive >> harvester;
-            archive >> builder;
-            archive >> linkedResource;
-            archive >> unit._hp;
-            archive >> unit._cooldown._remaining;
-            archive >> unit._buildProgress;
-            archive >> unit._productionTimer;
-            archive >> unit._gatherTimer;
-            archive >> unit._owner;
-            archive >> unit._resourceLeft;
-            archive >> unit._cargoAmount;
-            archive >> unit._supplyReserved;
-            archive >> cargoType;
-            archive >> gatherPhase;
-            archive >> unit._bAlive;
-            archive >> unit._bHasRally;
-            archive >> unit._bSupplyBlocked;
-            const bool bEnumValid       = cargoType <= static_cast<uint8>( RTSResourceType::None ) && gatherPhase <= static_cast<uint8>( RTSGatherPhase::Returning );
-            const bool bAliveValid      = unit._bAlive == SW_FALSE || unit._pDef != nullptr;
-            const bool bInvalidUnitData = archive.isError() || bEnumValid == false || bAliveValid == false;
-            if ( bInvalidUnitData )
-                return false;
-            unit._id             = RTSUnitID::fromPacked( id );
-            unit._attackTarget   = RTSUnitID::fromPacked( attackTarget );
-            unit._gatherTarget   = RTSUnitID::fromPacked( gatherTarget );
-            unit._harvester      = RTSUnitID::fromPacked( harvester );
-            unit._builder        = RTSUnitID::fromPacked( builder );
-            unit._linkedResource = RTSUnitID::fromPacked( linkedResource );
-            unit._cargoType      = static_cast<RTSResourceType>( cargoType );
-            unit._gatherPhase    = static_cast<RTSGatherPhase>( gatherPhase );
-            // 경로와 흐름장은 싣지 않는다. 맨 앞 명령을 처음부터 다시 진행시키면 이 격자에서 경로를 다시 구한다.
-            unit._bOrderStarted = SW_FALSE;
-            unit._repathTimer.clear();
         }
 
         uint32 freeSlotCount = 0;
@@ -288,24 +308,14 @@ namespace sw
         _teamCount              = teams;
         _winningTeam            = winningTeam;
 
-        // 격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다. 같은 데이터에서 나오므로 저장하지 않는다.
+        // 격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다(`repaintGrid`). 같은 데이터에서 나오므로 저장하지 않는다.
         const float32 cellSize = _grid.getCellSize();
         const float3  origin   = _grid.getOrigin();
         _grid.initialize( width, height, cellSize, origin );
-        for ( int32 y = 0; y < height; ++y )
-        {
-            for ( int32 x = 0; x < width; ++x )
-            {
-                if ( _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE || _land.isBlocked( x, y ) )
-                    _grid.setBlocked( x, y, true );
-            }
-        }
+        repaintGrid();
         size_t flowFieldOrderIndex = 0;
         for ( RTSUnit& unit : _listUnit )
         {
-            const bool bStaticBlocker = unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE;
-            if ( bStaticBlocker )
-                placeFootprint( unit, true );
             if ( unit._bAlive != SW_FALSE && unit.isMobile() )
             {
                 NavAgentSettings agentSettings;
