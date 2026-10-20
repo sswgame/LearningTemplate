@@ -16,7 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import mapConcurrent, runProcess  # noqa: E402
+from common.Parallel import mapConcurrent  # noqa: E402
+from common.Process import runProcess  # noqa: E402
 from lint.LintCatalog import LintScript, discoverLintScripts  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 from lint.LintReport import findReportClass  # noqa: E402

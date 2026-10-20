@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 
-from common import BuildTree, BuildTreeError, addBuildTreeArguments  # noqa: E402
+from common.BuildTree import addBuildTreeArguments, BuildTree, BuildTreeError  # noqa: E402
 
 
 def makeRepositoryInternal(root: Path) -> None:

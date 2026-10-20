@@ -38,7 +38,8 @@ from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import getProjectRoot, runGit  # noqa: E402
+from common.Host import runGit  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 
 kApiRoot = "https://api.github.com"
 #: `git@github.com:owner/name.git` · `https://github.com/owner/name(.git)` 에서 owner/name.

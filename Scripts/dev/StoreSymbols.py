@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import BuildTree, addBuildTreeArguments  # noqa: E402
+from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 
 _kMsfMagic = b"Microsoft C/C++ MSF 7.00\r\n\x1aDS\x00\x00\x00"
 _kPdbInfoStream = 1

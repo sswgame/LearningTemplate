@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common.Paths import getProjectRoot
 
 #: 스플래시 크기 — 스플래시 창이 이 크기로 뜬다(`ISplashWindow`).
 kSplashSize = (1376, 768)

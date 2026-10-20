@@ -37,7 +37,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import iterIncludes, kCppAllExtensions, kDirSourceGameFramework  # noqa: E402
+from common.CodeText import iterIncludes  # noqa: E402
+from common.Constants import kCppAllExtensions, kDirSourceGameFramework  # noqa: E402
 from common.RuleData import kKindInteger  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402

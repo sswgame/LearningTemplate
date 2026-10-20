@@ -51,7 +51,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
-from common import TranslationUnitSweep, runProcess  # noqa: E402
+from common.Process import runProcess  # noqa: E402
+from common.TranslationUnits import TranslationUnitSweep  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 _kTag = "RunPaddingReport"

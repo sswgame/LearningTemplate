@@ -47,18 +47,11 @@ from lint.LintCatalog import LintScript, discoverLintScripts
 from lint.StagedScope import selectFileScopedStaged
 from lint.fixer import FormatBranchBraces
 from lint.fixer import FormatForwardDeclarations
-from common import (
-    findAppExecutable,
-    findShaderCompileFailures,
-    getAllStagedFiles,
-    getProjectRoot,
-    getCpuCount,
-    getStagedCppFiles,
-    runClangFormatBatch,
-    runGit,
-    runProcess,
-    runShaderCook,
-)
+from common.AppBinary import findAppExecutable, findShaderCompileFailures, runShaderCook
+from common.Host import getAllStagedFiles, getStagedCppFiles, runClangFormatBatch, runGit
+from common.Parallel import getCpuCount
+from common.Paths import getProjectRoot
+from common.Process import runProcess
 
 
 def listMatchingStagedInternal(listStaged: list[Path], projectRoot: Path,

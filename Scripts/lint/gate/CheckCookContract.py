@@ -27,7 +27,7 @@ from types import ModuleType
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import CookContractSpec, kCookContractConfigRelative  # noqa: E402
+from common.CookContract import CookContractSpec, kCookContractConfigRelative  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 검사하는 쿠커 (저장소 기준 경로).

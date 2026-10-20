@@ -11,7 +11,8 @@ import re
 from pathlib import Path
 from typing import Iterator
 
-from common import kCppHeaderExtensions, kCppSourceExtensions, normalizePath
+from common.Constants import kCppHeaderExtensions, kCppSourceExtensions
+from common.Paths import normalizePath
 from . import LineRules  # noqa: F401 — 규칙 클래스는 import 될 때 `_kRulesByScope` 에 오른다(워커 프로세스도 이 모듈을 거친다)
 from .Model import _kRulesByScope, ConventionViolation, LineScanContext
 from .Patterns import (

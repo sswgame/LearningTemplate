@@ -20,7 +20,7 @@ from pathlib import Path
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-from common import BuildTree  # noqa: E402
+from common.BuildTree import BuildTree  # noqa: E402
 
 
 def findBuildTreeInternal() -> BuildTree | None:

@@ -25,7 +25,7 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common.Paths import getProjectRoot
 
 # `MeshUtil::createPrimitive` 가 아는 이름들. 정점 수가 서로 달라야 섞는 의미가 있다.
 _kListShape = ("Cube", "Sphere", "Cylinder", "Capsule", "Cone", "Quad")

@@ -39,7 +39,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import collectSourceFiles, normalizePath  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
+from common.Search import collectSourceFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 전역 변수 정의 — 매크로(첫 인자 타입, 둘째 이름)와 이름 문자열로 등록하는 두 호출.

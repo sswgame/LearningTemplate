@@ -37,7 +37,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import collectRepositoryFiles, kNotOurDirNames  # noqa: E402
+from common.Constants import kNotOurDirNames  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kDefaultMaxSentenceLength = 120

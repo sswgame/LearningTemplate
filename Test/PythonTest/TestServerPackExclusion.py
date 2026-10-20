@@ -17,7 +17,8 @@ from pathlib import Path
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-from common import CookContractSpec, kFilePackConfig  # noqa: E402
+from common.Constants import kFilePackConfig  # noqa: E402
+from common.CookContract import CookContractSpec  # noqa: E402
 from generate import CookAssets  # noqa: E402
 
 

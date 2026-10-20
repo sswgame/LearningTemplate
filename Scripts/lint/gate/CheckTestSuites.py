@@ -65,7 +65,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankComments, collectRepositoryFiles  # noqa: E402
+from common.CodeText import blankComments  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"

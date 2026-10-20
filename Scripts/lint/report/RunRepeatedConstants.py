@@ -41,7 +41,9 @@ from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankComments, normalizePath, readTextFiles  # noqa: E402
+from common.CodeText import blankComments  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
+from common.Search import readTextFiles  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kListScanRoot = ("Source", "Tools/ReflectionParser")

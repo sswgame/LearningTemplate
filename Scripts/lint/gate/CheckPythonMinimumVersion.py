@@ -48,7 +48,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import kMinimumPythonVersion, kNotOurCodeDirNames  # noqa: E402
+from common.Constants import kMinimumPythonVersion, kNotOurCodeDirNames  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 정본은 `common.Constants.kMinimumPythonVersion` 이다(CI 러너 ubuntu-22.04 의 `python3`). 여기서 파싱되지 않으면 리눅스 CI 가 멈춘다.

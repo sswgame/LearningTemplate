@@ -43,16 +43,12 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import AcronymRegistry as registry  # noqa: E402
-from common import (  # noqa: E402
-    blankComments,
-    collectRepositoryFiles,
-    getProjectRoot,
-    kLintTargetRelDirs,
-    kNotOurCodeDirNames,
-    kNotOurDirNames,
-    mapConcurrent,
-    runProcess,
-)
+from common.CodeText import blankComments  # noqa: E402
+from common.Constants import kLintTargetRelDirs, kNotOurCodeDirNames, kNotOurDirNames  # noqa: E402
+from common.Parallel import mapConcurrent  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.Process import runProcess  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintFixer import FixerFileKind, FixPass, LintFixer, addFileArguments, selectFixerTargetFiles  # noqa: E402
 from common.HostTools import findWindowsSdkPath  # noqa: E402
 

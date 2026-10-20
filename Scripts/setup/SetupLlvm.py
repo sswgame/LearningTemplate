@@ -23,15 +23,10 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import (
-    autoBootstrapEnabled,
-    ensureCachedDownload,
-    ensureClangFormat,
-    findFirstExistingFile,
-    findFirstExistingFileRecursive,
-    ToolSpec,
-    findToolRoot,
-    getProjectRoot,
+from common.Archive import ensureCachedDownload, resolveToolsSubdir, toolsCacheDir
+from common.ClangFormat import ensureClangFormat
+from common.Config import autoBootstrapEnabled, loadSearchPaths, recordEnginePath
+from common.Constants import (
     kEnvSwLlvmAutoBootstrap,
     kKeyLibclangDllPath,
     kKeyLlvmAutoBootstrap,
@@ -39,14 +34,10 @@ from common import (
     kKeyLlvmPath,
     kKeyLlvmSearchRoots,
     kKeyLlvmToolsSubdir,
-    loadSearchPaths,
-    normalizePath,
-    platformKey,
-    recordEnginePath,
-    resolveToolsSubdir,
-    sharedLibraryNames,
-    toolsCacheDir,
 )
+from common.Paths import getProjectRoot, normalizePath, platformKey, sharedLibraryNames
+from common.Search import findFirstExistingFile, findFirstExistingFileRecursive
+from common.ToolLocator import ToolSpec, findToolRoot
 
 # llvm-lib / llvm-ar 는 **LTO 때문에** 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라
 # MSVC lib.exe 가 못 읽고(LNK1107), 그러면 CMake 의 `check_ipo_supported` 가 실패해 IPO 가 통째로

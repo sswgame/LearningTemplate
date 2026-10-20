@@ -27,7 +27,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import runProcess  # noqa: E402
+from common.Process import runProcess  # noqa: E402
 
 _kMarker = "Template engine linux-dev"
 

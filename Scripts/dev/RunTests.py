@@ -33,7 +33,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import ChangedTests  # noqa: E402
 from common.LogDigest import runDigested  # noqa: E402
-from common import BuildTree, ProcessResult, addBuildTreeArguments, getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
+from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
+from common.Host import runGit  # noqa: E402
+from common.Parallel import getCpuCount, mapConcurrent  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.Process import ProcessResult, runProcess  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
 _kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")

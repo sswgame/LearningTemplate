@@ -14,27 +14,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
-from common import (
-    ToolSpec,
-    runProcess,
-    ensureCachedDownload,
-    extractZipSafe,
-    findFirstExistingFileInBinDirs,
-    findFirstExistingFileRecursive,
-    findToolRoot,
-    kKeyNinjaDownloadUrls,
-    kKeyNinjaSearchRoots,
-    kKeyNinjaToolsSubdir,
-    kKeyVcpkgInstalledRel,
-    loadSearchPaths,
-    normalizePath,
-    platformKey,
-    recordEnginePath,
-    resolveToolsSubdir,
-    selectLatestVersion,
-    sharedLibraryNames,
-    toolsCacheDir,
-)
+from .Archive import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
+from .Config import loadSearchPaths, recordEnginePath
+from .Constants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
+from .Paths import normalizePath, platformKey, sharedLibraryNames
+from .Process import runProcess
+from .Search import findFirstExistingFileInBinDirs, findFirstExistingFileRecursive, selectLatestVersion
+from .ToolLocator import ToolSpec, findToolRoot
 
 
 def findVcpkgInstalledDirsInternal(projectRoot: Path) -> list[Path]:

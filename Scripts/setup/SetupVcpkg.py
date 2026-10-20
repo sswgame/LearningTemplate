@@ -19,13 +19,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import (
-    ToolSpec,
-    runProcess,
-    autoBootstrapEnabled,
-    ensureGitOnPath,
-    findToolRoot,
-    isVcpkgRoot,
+from common.Archive import resolveToolsSubdir
+from common.Config import autoBootstrapEnabled, loadSearchPaths, recordEnginePath
+from common.Constants import (
     kEnvSwVcpkgAutoBootstrap,
     kKeyVcpkgAutoBootstrap,
     kKeyVcpkgGitCommit,
@@ -33,13 +29,12 @@ from common import (
     kKeyVcpkgRoot,
     kKeyVcpkgSearchRoots,
     kKeyVcpkgToolsSubdir,
-    loadSearchPaths,
-    platformKey,
-    platformScriptCommand,
-    recordEnginePath,
-    resolveToolsSubdir,
-    runGit,
 )
+from common.Host import ensureGitOnPath, runGit
+from common.Paths import platformKey, platformScriptCommand
+from common.Process import runProcess
+from common.Search import isVcpkgRoot
+from common.ToolLocator import ToolSpec, findToolRoot
 
 kVcpkgToolSpec = ToolSpec(
     name="SetupVcpkg",

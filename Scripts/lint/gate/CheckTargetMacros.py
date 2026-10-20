@@ -30,7 +30,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import findFast, kLintTargetRelDirs  # noqa: E402
+from common.CodeText import findFast  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText  # noqa: E402
 from lint.LintGate import GateError, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile  # noqa: E402

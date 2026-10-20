@@ -10,7 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 
-from common import HostTools, naturalVersionKey, selectLatestVersion  # noqa: E402
+from common import HostTools  # noqa: E402
+from common.Search import naturalVersionKey, selectLatestVersion  # noqa: E402
 
 
 class HostToolsTest(unittest.TestCase):

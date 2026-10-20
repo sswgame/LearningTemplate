@@ -29,7 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import kDirRuntimeGamePreset, kDirSourceGames  # noqa: E402
+from common.Constants import kDirRuntimeGamePreset, kDirSourceGames  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kPresetFolder = kDirRuntimeGamePreset

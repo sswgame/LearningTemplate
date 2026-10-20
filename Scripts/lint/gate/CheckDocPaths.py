@@ -36,7 +36,8 @@ from urllib.parse import unquote
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import kNotOurDirNames, runProcess  # noqa: E402
+from common.Constants import kNotOurDirNames  # noqa: E402
+from common.Process import runProcess  # noqa: E402
 from common.ConfigCatalog import kListConfigFile  # noqa: E402
 from common.MarkdownAnchor import collectAnchors  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402

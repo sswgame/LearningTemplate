@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import kNotOurDirNames  # noqa: E402
+from common.Constants import kNotOurDirNames  # noqa: E402
 from lint.LintFixer import FixerFileKind, FixPass, LintFixer  # noqa: E402
 
 _kLeadingWhitespaceRe = re.compile(r"^[ \t]+")

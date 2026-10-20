@@ -11,7 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from common import kCppAllExtensions, normalizePath
+from common.Constants import kCppAllExtensions
+from common.Paths import normalizePath
 from .Model import ConventionViolation
 from .Patterns import _kAnonHelperStructRe, _kBareConstantDeclRe, _kCommentStripRe, _kConstructorDefinitionLineRe, _kStringLiteralStripRe
 from .FileScan import checkFileConventionsInternal, readSourceTextInternal, scopedTextCache

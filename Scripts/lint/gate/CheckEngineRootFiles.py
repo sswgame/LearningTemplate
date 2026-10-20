@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import kDirSourceEngine  # noqa: E402
+from common.Constants import kDirSourceEngine  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 

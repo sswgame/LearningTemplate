@@ -24,8 +24,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import getProjectRoot  # noqa: E402
-from common import BuildTree  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.BuildTree import BuildTree  # noqa: E402
 from common.AppRun import addAppRunArguments, kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 kMegabyte = 1024.0 * 1024.0

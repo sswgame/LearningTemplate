@@ -24,7 +24,7 @@ import sys
 import zlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common.Paths import getProjectRoot
 
 #: 텍스처 한 변(텍셀).
 kSize = 256

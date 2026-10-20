@@ -27,7 +27,9 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common · generate
 
-from common import getProjectRoot, kDirRuntimeGamePreset, runGenerator  # noqa: E402
+from common.Constants import kDirRuntimeGamePreset  # noqa: E402
+from common.GeneratedFile import runGenerator  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 from generate.GenerateCMakeConstants import generateCMakeConstants  # noqa: E402
 from generate.GenerateCookContract import generateCookContract  # noqa: E402
 from generate.GenerateLintTargets import generateLintTargets  # noqa: E402

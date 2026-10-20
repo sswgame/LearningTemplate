@@ -27,7 +27,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import collectRepositoryFiles, kLintTargetRelDirs, readTextFiles  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
+from common.Search import collectRepositoryFiles, readTextFiles  # noqa: E402
 from lint.gate.CheckDiscardReason import findFallibleDiscards  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 

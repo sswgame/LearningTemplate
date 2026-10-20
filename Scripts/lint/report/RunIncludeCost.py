@@ -38,7 +38,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import TranslationUnitSweep, mapConcurrent  # noqa: E402
+from common.Parallel import mapConcurrent  # noqa: E402
+from common.TranslationUnits import TranslationUnitSweep  # noqa: E402
 from common.HeaderSelfContained import findHeaderProbeProblem, runSyntaxOnly  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 

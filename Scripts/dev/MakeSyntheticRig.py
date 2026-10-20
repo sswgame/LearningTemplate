@@ -47,7 +47,7 @@ import sys
 from dataclasses import dataclass, field
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common.Paths import getProjectRoot
 
 #: 위상 이름 — 인자 `--topology` 가 고른다.
 kTopologies = ("biped", "quadruped", "multileg", "serpent")

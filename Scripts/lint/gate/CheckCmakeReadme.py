@@ -30,7 +30,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import collectRepositoryFiles, kLintTargetRelDirs  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 문서 안의 `` `sw_foo` `` — 백틱에 싸인 함수 이름.

@@ -32,7 +32,9 @@ from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import BuildTree, getProjectRoot, kTestBuildTargets, runGit  # noqa: E402
+from common.BuildTree import BuildTree, kTestBuildTargets  # noqa: E402
+from common.Host import runGit  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 from common.BuildTree import kDefaultPreset  # noqa: E402
 
 from common.LogDigest import getLogPath, printDigest  # noqa: E402

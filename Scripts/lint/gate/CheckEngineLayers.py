@@ -34,7 +34,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import (  # noqa: E402
+from common.CodeText import iterIncludes  # noqa: E402
+from common.Constants import (  # noqa: E402
     kCppAllExtensions,
     kDirSourceApp,
     kDirSourceModuleHost,
@@ -46,10 +47,8 @@ from common import (  # noqa: E402
     kDirSourceRuntimeAPI,
     kDirSourceServer,
     kFileEngineServices,
-    iterIncludes,
-    normalizePath,
-    startsWithPathComponent,
 )
+from common.Paths import normalizePath, startsWithPathComponent  # noqa: E402
 from lint.LayerRules import engineLayerOf, kEngineLayerSchema, kEnginePreludePrefix, kEngineRootLayerName, kEngineWiringPrefix, readEngineLayerRules  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402

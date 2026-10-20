@@ -31,7 +31,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import iterIncludes, kDirSourceEngine, normalizePath  # noqa: E402
+from common.CodeText import iterIncludes  # noqa: E402
+from common.Constants import kDirSourceEngine  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
 from common.RuleData import kExemptionKey  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 from lint.LayerRules import engineLayerOf, kEnginePreludePrefix, kEngineRootLayerName, kEngineWiringPrefix, readEngineLayerRules  # noqa: E402

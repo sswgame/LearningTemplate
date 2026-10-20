@@ -34,7 +34,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankCommentsAndLiterals, blankMatch, lineOf  # noqa: E402
+from common.CodeText import blankCommentsAndLiterals, blankMatch, lineOf  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 

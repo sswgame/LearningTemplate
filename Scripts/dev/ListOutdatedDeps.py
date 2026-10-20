@@ -25,7 +25,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import getProjectRoot, loadSearchPaths, runGit  # noqa: E402
+from common.Config import loadSearchPaths  # noqa: E402
+from common.Host import runGit  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 from common.Constants import kKeyVcpkgInstalledRel  # noqa: E402
 
 #: 기준선과 따로 올리는 것(docs/09_Decisions.md 5-2) — 최신이 이 접두로 시작하면 "따로" 로 적는다.

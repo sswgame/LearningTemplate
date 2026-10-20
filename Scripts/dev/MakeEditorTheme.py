@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 
 #: 토큰 키의 원본 표 — 그룹 → 키 이름(앞 `_` 없이). 변수 이름 매핑 · 키 집합 검사 · 수 범위 검사가 모두 이 표를 쓴다.
 #: 같은 키 집합이 C++ 쪽 구조체(리플렉션 멤버)와 다크 세트에도 있다 — 하나를 바꾸면 셋을 같이 바꾼다(검사 `check` 가 다크 세트와 견준다).

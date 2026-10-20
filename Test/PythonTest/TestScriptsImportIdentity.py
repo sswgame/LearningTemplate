@@ -10,8 +10,10 @@ import 루트가 여럿이면 같은 파일이 `gate.CheckX` 와 `CheckX` 처럼
 
 from __future__ import annotations
 
+import __future__
 import importlib
 import sys
+import types
 import unittest
 from pathlib import Path
 
@@ -51,6 +53,13 @@ class ScriptsImportIdentityTest(unittest.TestCase):
         listDuplicate = [f"{path.relative_to(kScriptsRoot).as_posix()}: {', '.join(sorted(names))}"
                          for path, names in sorted(mapFileToName.items()) if len(names) > 1]
         self.assertEqual(listDuplicate, [], "같은 파일이 여러 모듈 이름으로 로드됐습니다 — Scripts 기준 점 이름 하나로 import 합니다")
+
+    def testCommonPackageReexportsNothing(self) -> None:
+        # `common` 은 이름을 다시 내보내지 않는다 — 파사드가 있으면 어느 모듈에 기대는지 import 줄에 보이지 않고, 클래스가 같은 이름의
+        # 모듈을 가린다(옛 `common.BuildTree`). 패키지에 남는 공개 이름은 하위 모듈뿐이다.
+        listName = [name for name, value in vars(common).items()
+                    if not name.startswith("_") and not isinstance(value, (types.ModuleType, __future__._Feature))]
+        self.assertEqual(listName, [], "common/__init__.py 가 이름을 내보냅니다 — 쓰는 쪽이 from common.<모듈> import 로 부른다")
 
 
 if __name__ == "__main__":

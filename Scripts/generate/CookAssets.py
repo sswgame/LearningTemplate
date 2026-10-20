@@ -32,11 +32,11 @@ import zlib
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import (
-    CookContractSpec,
-    PackFormatSpec,
-    findAppExecutable,
-    getProjectRoot,
+from common.AppBinary import findAppExecutable, runSceneCook, runShaderCook
+from common.AssetPipeline import resolveDefaultOutputDir
+from common.BuildTree import BuildTreeError
+from common.Config import readOptionalConfig, requireConfig, ConfigError
+from common.Constants import (
     kDirRuntimeGamePreset,
     kFilePackConfig,
     kFileRuntimeEngineConfig,
@@ -46,16 +46,10 @@ from common import (
     kKeyGlobalExcludePatterns,
     kKeyRecursive,
     kKeyRules,
-    kPackRecordSuffix,
-    normalizePath,
-    readOptionalConfig,
-    requireConfig,
-    ConfigError,
-    resolveDefaultOutputDir,
-    BuildTreeError,
-    runSceneCook,
-    runShaderCook,
 )
+from common.CookContract import CookContractSpec
+from common.PackFormat import PackFormatSpec, kPackRecordSuffix
+from common.Paths import getProjectRoot, normalizePath
 
 # ==============================================================================
 # 1. 포맷 매직 및 상수 정의

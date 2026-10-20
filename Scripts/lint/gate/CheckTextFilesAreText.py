@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import kNotOurCodeDirNames  # noqa: E402
+from common.Constants import kNotOurCodeDirNames  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 텍스트로 다뤄야 하는 확장자. 여기 없는 것(이미지·폰트·바이너리 에셋)은 검사하지 않는다.

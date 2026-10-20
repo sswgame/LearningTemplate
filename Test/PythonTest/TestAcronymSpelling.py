@@ -15,7 +15,7 @@ sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
 from lint.fixer import FormatAcronymSpelling as codemod  # noqa: E402
 from common import AcronymRegistry as registry  # noqa: E402
-from common import runProcess  # noqa: E402
+from common.Process import runProcess  # noqa: E402
 
 _kHeader = """#pragma once
 namespace sw

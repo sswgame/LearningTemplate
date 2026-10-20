@@ -31,7 +31,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankComments, kLintTargetRelDirs, lineOf  # noqa: E402
+from common.CodeText import blankComments, lineOf  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kTagRe = re.compile(r"\b(k[A-Z]\w*Tag)\s*=\s*(?:sw::)?FourCcUtil::make\s*\(\s*\"([^\"\n]{4})\"\s*\)")

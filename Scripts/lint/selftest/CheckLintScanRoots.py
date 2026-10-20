@@ -3,7 +3,7 @@
 """
 Scripts/lint/selftest/CheckLintScanRoots.py
 
-게이트가 대상 뿌리를 스스로 조립하지 않는지 본다 — 우리 C++ 의 뿌리는 `common.kLintTargetRelDirs` 하나다.
+게이트가 대상 뿌리를 스스로 조립하지 않는지 본다 — 우리 C++ 의 뿌리는 `common.Constants.kLintTargetRelDirs` 하나다.
 
 뿌리를 게이트마다 따로 적으면 조합이 갈린다(일곱 조합이 있었고, `Tools/OnlineLoadBot` 은 시계 게이트 하나만 보고 있었다). 그래서
 `gate/` 의 파이썬 소스에서 다음 둘을 막는다.
@@ -47,7 +47,7 @@ def findRootLiteralsInternal(relPath: str, text: str) -> list[str]:
         if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
             for operand in (node.left, node.right):
                 if isinstance(operand, ast.Set) and any(isinstance(element, ast.Constant) and element.value == "Tools" for element in operand.elts):
-                    listViolation.append(f"{relPath}:{operand.lineno}: 'Tools' 폴더를 통째로 뺍니다 — 우리 도구가 그 아래 있습니다(common.kNotOurCodeDirNames)")
+                    listViolation.append(f"{relPath}:{operand.lineno}: 'Tools' 폴더를 통째로 뺍니다 — 우리 도구가 그 아래 있습니다(common.Constants.kNotOurCodeDirNames)")
         if isinstance(node, (ast.Tuple, ast.Set, ast.List)) is False:
             continue
         listValue = [element.value for element in node.elts if isinstance(element, ast.Constant) and isinstance(element.value, str)]
@@ -56,7 +56,7 @@ def findRootLiteralsInternal(relPath: str, text: str) -> list[str]:
         bHasSource = "Source" in listValue
         bHasOther = any(value == "Test" or value == "Tools" or value.startswith("Tools/") for value in listValue)
         if bHasSource and bHasOther:
-            listViolation.append(f"{relPath}:{node.lineno}: 대상 뿌리를 직접 적었습니다 {tuple(listValue)} — common.kLintTargetRelDirs 를 쓰세요")
+            listViolation.append(f"{relPath}:{node.lineno}: 대상 뿌리를 직접 적었습니다 {tuple(listValue)} — common.Constants.kLintTargetRelDirs 를 쓰세요")
     return listViolation
 
 

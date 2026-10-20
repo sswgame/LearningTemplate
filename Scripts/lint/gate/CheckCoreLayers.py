@@ -30,7 +30,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankComments, firstFolderAfter, iterIncludes, normalizePath  # noqa: E402
+from common.CodeText import blankComments, firstFolderAfter, iterIncludes  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
 from lint.LayerRules import kCoreLayerSchema, readCoreTiers  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402

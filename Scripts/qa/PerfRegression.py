@@ -28,8 +28,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import getProjectRoot  # noqa: E402
-from common import BuildTree  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.BuildTree import BuildTree  # noqa: E402
 from common.AppRun import addAppRunArguments, kBackendSwitch, kSkipExitCode, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 #: 기준으로 들고 있는 구간 — 프레임 전체(게임 · 렌더 스레드 · GPU)와 그 아래 큰 덩어리. `GPU.Frame` 은 네 백엔드의 타임스탬프(프레임 첫 명령 ~ 마지막 패스 끝)다 —
