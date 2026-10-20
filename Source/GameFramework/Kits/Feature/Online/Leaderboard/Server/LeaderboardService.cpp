@@ -291,12 +291,14 @@ namespace sw
         class LeaderboardStatReadWork final : public IServiceStoreWork
         {
         public:
-            LeaderboardStatReadWork( LeaderboardService* pService, AccountID accountID, uint64 requestTag )
+            /** @brief @p bCache 이면 응답 대신 접속한 계정의 통계 메모리를 채운다. */
+            LeaderboardStatReadWork( LeaderboardService* pService, AccountID accountID, uint64 requestTag, bool bCache )
                 : _listStat{}
                 , _pService{ pService }
                 , _accountID{ accountID }
                 , _requestTag{ requestTag }
                 , _result{ LeaderboardResult::Unavailable }
+                , _bCache{ bCache ? SW_TRUE : SW_FALSE }
             {
             }
 
@@ -311,13 +313,23 @@ namespace sw
                 {
                     LeaderboardStat stat;
                     stat._name = record._key.substr( prefix.size() );
-                    if ( LeaderboardServiceInternal::decodeScore( record._bytes, stat._value ) )
-                        _listStat.push_back( std::move( stat ) );
+                    if ( LeaderboardServiceInternal::decodeScore( record._bytes, stat._value ) == false )
+                    {
+                        _listStat.clear(); // 손상된 통계는 건너뛰지 않고 이 읽기를 실패로 돌려준다
+                        return;
+                    }
+                    _listStat.push_back( std::move( stat ) );
                 }
                 _result = LeaderboardResult::Ok;
             }
 
-            void complete() override { _pService->applyStats( _requestTag, _result, std::move( _listStat ) ); }
+            void complete() override
+            {
+                if ( _bCache == SW_TRUE )
+                    _pService->applyStatCache( _accountID, _result == LeaderboardResult::Ok, std::move( _listStat ) );
+                else
+                    _pService->applyStats( _requestTag, _result, std::move( _listStat ) );
+            }
 
         private:
             vector<LeaderboardStat> _listStat;
@@ -325,6 +337,7 @@ namespace sw
             AccountID               _accountID;
             uint64                  _requestTag;
             LeaderboardResult       _result;
+            uint8                   _bCache;
         };
 
         /** @brief 업적 하나를 "없어야 함" 조건으로 쓰고 보상 우편을 같은 트랜잭션에 넣는 작업입니다. 이미 있으면 아무것도 하지 않습니다. */
@@ -745,6 +758,7 @@ namespace sw
         , _mapNameRequestToIndex{}
         , _mapQuery{}
         , _mapAchievement{}
+        , _mapAccountStats{}
         , _mapJobToRun{}
         , _mapSettlement{}
         , _uniqueExpiringRankKeys{}
@@ -789,6 +803,7 @@ namespace sw
         _mapRankKeyToWaitingRead.clear();
         _mapRankKeyToLateWrite.clear();
         _mapJobToRun.clear();
+        _mapAccountStats.clear();
         _mapSettlement.clear(); // 남은 페이지는 맡기지 않는다 — 결과가 있는 사람은 건너뛰므로 다음 실행이 이어서 처리한다
         _uniqueExpiringRankKeys.clear();
         _dependencies = LeaderboardServiceDependencies{};
@@ -964,7 +979,10 @@ namespace sw
             return;
         if ( operation == LeaderboardOperation::StatChange )
         {
-            for ( const auto& [id, board] : _mapBoard ) // 통계에 연결된 보드에 같은 값을 낸다. 요청 태그가 0이라 완료가 없다
+            const auto statsIt = _mapAccountStats.find( accountID );
+            if ( statsIt != _mapAccountStats.end() && statsIt->second._bLoaded == SW_TRUE )
+                statsIt->second._mapValue[boardID] = finalScore; // 접속한 계정의 메모리 통계를 같이 고친다(매칭 실력)
+            for ( const auto& [id, board] : _mapBoard )          // 통계에 연결된 보드에 같은 값을 낸다. 요청 태그가 0이라 완료가 없다
             {
                 if ( board._sourceStat == boardID )
                     submitScore( board._boardID, accountID, displayName, finalScore, nowMs, 0 );
@@ -1308,7 +1326,51 @@ namespace sw
     void LeaderboardService::readStats( AccountID accountID, uint64 requestTag )
     {
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadWork>( this, accountID, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadWork>( this, accountID, requestTag, false ) );
+    }
+
+    void LeaderboardService::loadAccountStats( AccountID accountID )
+    {
+        AccountStats& stats = _mapAccountStats[accountID];
+        stats._bLoaded      = SW_FALSE;
+        stats._mapValue.clear();
+        ++_pendingCount;
+        _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadWork>( this, accountID, 0, true ) );
+    }
+
+    void LeaderboardService::dropAccountStats( AccountID accountID )
+    {
+        _mapAccountStats.erase( accountID );
+    }
+
+    void LeaderboardService::applyStatCache( AccountID accountID, bool bReadOk, vector<LeaderboardStat>&& listStat )
+    {
+        --_pendingCount;
+        const auto statsIt = _mapAccountStats.find( accountID );
+        if ( statsIt == _mapAccountStats.end() )
+            return; // 그사이 떠났다
+        if ( bReadOk == false )
+        {
+            SW_LOG_WARNING( "Leaderboard: stats of account %# could not be read - matchmaking reports RatingUnavailable until it reconnects", accountID );
+            return;
+        }
+        for ( LeaderboardStat& stat : listStat )
+        {
+            statsIt->second._mapValue[std::move( stat._name )] = stat._value;
+        }
+        statsIt->second._bLoaded = SW_TRUE;
+    }
+
+    AccountStatLookup LeaderboardService::findStat( AccountID accountID, string_view statName, int64& outValue ) const
+    {
+        const auto statsIt = _mapAccountStats.find( accountID );
+        if ( statsIt == _mapAccountStats.end() || statsIt->second._bLoaded == SW_FALSE )
+            return AccountStatLookup::NotLoaded;
+        const auto valueIt = statsIt->second._mapValue.find( string( statName ) );
+        if ( valueIt == statsIt->second._mapValue.end() )
+            return AccountStatLookup::Missing;
+        outValue = valueIt->second;
+        return AccountStatLookup::Found;
     }
 
     void LeaderboardService::applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat )

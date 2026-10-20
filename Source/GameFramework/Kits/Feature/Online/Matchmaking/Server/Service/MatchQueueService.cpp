@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Base/Online/Identity/AccountStatSource.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 
@@ -70,9 +71,18 @@ namespace sw
         return MatchQueueBus::kAssignTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
     }
 
-    void MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode )
+    bool MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode )
     {
         SW_ASSERT( dependencies._pRouter != nullptr );
+        for ( const MatchModeDefinition& mode : listMode )
+        {
+            if ( mode._ratingStat.empty() == false && dependencies._pStatSource == nullptr )
+            {
+                SW_LOG_ERROR( "MatchQueue: mode '%#' is rated by stat '%#' but no stat source is assembled (the leaderboard kit provides it)", mode._modeID,
+                              mode._ratingStat );
+                return false;
+            }
+        }
         _dependencies = dependencies;
         for ( const MatchModeDefinition& mode : listMode )
         {
@@ -94,6 +104,7 @@ namespace sw
         }
         if ( dependencies._pBus != nullptr )
             _topicBuffer.push( MatchQueueTopicChange{ makeResultTopic( dependencies._serverID ), SW_TRUE } );
+        return true;
     }
 
     void MatchQueueService::shutdown()
@@ -140,9 +151,18 @@ namespace sw
         return stateIt == _mapModeState.end() ? 0 : stateIt->second._maker.getTicketCount();
     }
 
-    int32 MatchQueueService::findRating( AccountID accountID, string_view modeID ) const
+    bool MatchQueueService::findRating( AccountID accountID, const MatchModeDefinition& mode, int32& outRating ) const
     {
-        return _dependencies._pRatingSource != nullptr ? _dependencies._pRatingSource->findRating( accountID, modeID ) : MatchQueueLimit::kDefaultRating;
+        outRating = mode._initialRating;
+        if ( mode._ratingStat.empty() )
+            return true; // 실력을 보지 않는 모드이다
+        int64                   value  = 0;
+        const AccountStatLookup lookup = _dependencies._pStatSource->findStat( accountID, mode._ratingStat, value );
+        if ( lookup == AccountStatLookup::NotLoaded )
+            return false;
+        if ( lookup == AccountStatLookup::Found )
+            outRating = static_cast<int32>( std::clamp<int64>( value, INT32_MIN, INT32_MAX ) );
+        return true;
     }
 
     void MatchQueueService::update( int64 nowMs )
@@ -298,7 +318,13 @@ namespace sw
         ticket._enqueuedMs     = join._nowMs;
         for ( const AccountID accountID : listAccount )
         {
-            ticket._listMember.push_back( MatchMember{ accountID, findRating( accountID, join._modeID ) } );
+            int32 rating = 0;
+            if ( findRating( accountID, mode, rating ) == false )
+            {
+                _completionBuffer.push( MatchQueueCompletion{ join._requestTag, 0, MatchmakingResult::RatingUnavailable } );
+                return;
+            }
+            ticket._listMember.push_back( MatchMember{ accountID, rating } );
         }
         if ( static_cast<int32>( ticket._listMember.size() ) > mode._teamSize )
         {
@@ -429,10 +455,12 @@ namespace sw
         match._modeID  = lobby._modeID;
         match._matchID = ( _dependencies._serverID << kMatchQueueIDShift ) | MatchQueueLimit::kLobbyMatchBit | ++_lobbySequence;
         match._listTeam.resize( static_cast<size_t>( PartyLobbyLimit::kLobbyTeamCount ) );
+        const auto  modeIt      = _mapMode.find( lobby._modeID );
+        const int32 lobbyRating = modeIt != _mapMode.end() ? modeIt->second._initialRating : 0; // 모르는 모드는 아래 배치가 거절한다
         for ( const LobbyMember& member : lobby._listMember )
         {
             const size_t team = static_cast<size_t>( std::clamp( member._team, 0, PartyLobbyLimit::kLobbyTeamCount - 1 ) );
-            match._listTeam[team]._listMember.push_back( MatchMember{ member._accountID, findRating( member._accountID, lobby._modeID ) } );
+            match._listTeam[team]._listMember.push_back( MatchMember{ member._accountID, lobbyRating } ); // 로비 경기는 실력으로 고르지 않는다
         }
         ServerStatus picked;
         bool         bPlaced = false;

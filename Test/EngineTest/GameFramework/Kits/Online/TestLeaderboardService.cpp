@@ -145,6 +145,29 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksOnlyTheGivenAccounts )
     SW_EXPECT_TRUE( node._listCompletion[lastIndex]._result == LeaderboardResult::Invalid );
 }
 
+SW_TEST_CASE( LeaderboardServiceTest, JoinedAccountStatsAreKeptInMemoryForMatchmaking )
+{
+    MemoryServiceDatabase   database;
+    MemoryEphemeralDatabase cacheDatabase;
+    BoardNode               node( &database, &cacheDatabase );
+    node._service.changeStat( 7, "p", "mmr_duo", 1700, LeaderboardUpdate::Latest, 0, 1 );
+    node.step();
+    int64 value = 0;
+    SW_EXPECT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::NotLoaded ); // 접속하지 않았다
+    node._service.loadAccountStats( 7 );
+    SW_EXPECT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::NotLoaded ); // 읽는 중이다
+    node.step();
+    SW_ASSERT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::Found );
+    SW_EXPECT_EQUAL( value, int64( 1700 ) );
+    SW_EXPECT_TRUE( node._service.findStat( 7, "wins", value ) == AccountStatLookup::Missing );
+    node._service.changeStat( 7, "p", "mmr_duo", 1750, LeaderboardUpdate::Latest, 0, 2 );
+    node.step();
+    SW_ASSERT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::Found );
+    SW_EXPECT_EQUAL( value, int64( 1750 ) ); // 바뀐 통계가 메모리에도 들어간다
+    node._service.dropAccountStats( 7 );
+    SW_EXPECT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::NotLoaded );
+}
+
 SW_TEST_CASE( LeaderboardServiceTest, AscendingSumAndLatest )
 {
     using Internal = LeaderboardServiceTestInternal;

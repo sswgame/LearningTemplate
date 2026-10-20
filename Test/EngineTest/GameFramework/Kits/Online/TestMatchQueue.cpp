@@ -1,6 +1,7 @@
 // 매칭 대기열 — 서버 하나: 넷이 줄 서면 등록된 게임 서버로 배정 + 결과 넷. 서버 둘: 권한은 하나만(임대), 다른 서버의 표가 버스로 권한에 가고 결과가 낸 서버로 돌아옴,
 // 게임 서버 에이전트가 올 사람을 앎. 권한 서버가 멈추면 TTL 뒤 다른 서버가 권한을 잡고, 잃은 표는 낸 서버의 시한으로 Timeout. 자리가 없으면 기다렸다 서버가 생기면 배정,
 // 끝내 없으면 NoServer. 파티 장이 줄 서면 파티 전체가 한 팀, 장이 아니면 거절. 로비 시작은 로비의 편 그대로 배정.
+// 실력 모드는 통계 창이 있어야 기동하고 통계를 읽지 않은 계정은 RatingUnavailable, 게임 서버 에이전트는 배정받은 계정만 받아들인다.
 #include "pch.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
@@ -10,6 +11,8 @@
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistration.h"
+#include "GameFramework/Base/Online/Identity/AccountStatSource.h"
+#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
@@ -83,7 +86,7 @@ namespace
             dependencies._pBus        = _busFront.get();
             dependencies._pPartyLobby = &_partyLobby;
             dependencies._serverID    = serverID;
-            _service.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestInternal::makeDuoMode( maxWaitMs ) } );
+            SW_EXPECT_TRUE( _service.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestInternal::makeDuoMode( maxWaitMs ) } ) );
         }
 
         ~QueueNode()
@@ -133,6 +136,22 @@ namespace
         }
     };
 
+    /** @brief 계정 1 은 실력 1800 을 읽어 두었고, 2 는 읽었지만 통계가 없으며, 나머지는 아직 읽지 않았다. */
+    class FakeStatSource final : public IAccountStatSource
+    {
+    public:
+        AccountStatLookup findStat( AccountID accountID, string_view statName, int64& outValue ) const override
+        {
+            (void)statName;
+            if ( accountID == 1 )
+            {
+                outValue = 1800;
+                return AccountStatLookup::Found;
+            }
+            return accountID == 2 ? AccountStatLookup::Missing : AccountStatLookup::NotLoaded;
+        }
+    };
+
     /** @brief 게임 서버 쪽 — 버스 하나에 배정 주제만 구독하고 에이전트에 넘긴다. */
     struct GameServerNode
     {
@@ -159,6 +178,70 @@ namespace
         }
     };
 } // namespace
+
+SW_TEST_CASE( MatchQueueTest, RatedModeNeedsAStatSourceAndRefusesAccountsWhoseStatsAreNotLoaded )
+{
+    using Internal = MatchQueueTestInternal;
+    MemoryEphemeralDatabase cacheDatabase;
+    cacheDatabase.setManualTimeMs( 0 );
+    MemoryEphemeralStore cache{ &cacheDatabase };
+    EphemeralStoreRouter router;
+    router.initialize( &cache );
+    MatchModeDefinition rated = Internal::makeDuoMode();
+    rated._ratingStat         = "mmr_duo";
+    MatchQueueDependencies dependencies;
+    dependencies._pRouter  = &router;
+    dependencies._serverID = 1;
+    MatchQueueService withoutStats;
+    SW_EXPECT_FALSE( withoutStats.initialize( dependencies, vector<MatchModeDefinition>{ rated } ) ); // 기본 실력으로 조용히 돌지 않는다
+
+    FakeStatSource stats;
+    dependencies._pStatSource = &stats;
+    MatchQueueService service;
+    SW_ASSERT_TRUE( service.initialize( dependencies, vector<MatchModeDefinition>{ rated } ) );
+    service.joinQueue( 1, "duo", "kr", 0, 11 );
+    service.joinQueue( 2, "duo", "kr", 0, 12 ); // 통계가 없으면 모드의 처음 실력이다
+    service.joinQueue( 3, "duo", "kr", 0, 13 ); // 아직 읽지 않았다
+    for ( int32 round = 0; round < 8; ++round )
+    {
+        service.update( 0 );
+        (void)router.pump();
+    }
+    vector<MatchQueueCompletion> listCompletion;
+    service.drainCompletions( listCompletion );
+    int32 queuedCount = 0;
+    for ( const MatchQueueCompletion& completion : listCompletion )
+    {
+        if ( completion._requestTag == 13 )
+            SW_EXPECT_TRUE( completion._result == MatchmakingResult::RatingUnavailable );
+        else
+            queuedCount += completion._result == MatchmakingResult::Ok ? 1 : 0;
+    }
+    SW_EXPECT_EQUAL( queuedCount, 2 );
+    service.shutdown();
+    router.shutdown();
+}
+
+SW_TEST_CASE( MatchQueueTest, AgentAdmitsOnlyAssignedAccounts )
+{
+    LocalServerBusHub hub;
+    GameServerNode    gameServer( &hub, 50 );
+    LocalServerBus    matcherTransport( &hub, 1 );
+    ServerBus         matcherBus( matcherTransport );
+    MatchFormed       match;
+    match._matchID = 77;
+    match._listTeam.resize( 2 );
+    match._listTeam[0]._listMember.push_back( MatchMember{ 5, 1500 } );
+    match._listTeam[1]._listMember.push_back( MatchMember{ 6, 1500 } );
+    SW_ASSERT_TRUE( MatchQueueBus::kAssignTopic.publish( matcherBus, ServiceKeyUtil::makeHex64( 50 ), match ) );
+    gameServer.step( 1000 );
+    const IConnectAdmission& admission = gameServer._agent;
+    SW_EXPECT_TRUE( admission.isAdmitted( 5 ) );
+    SW_EXPECT_TRUE( admission.isAdmitted( 6 ) );
+    SW_EXPECT_FALSE( admission.isAdmitted( 7 ) ); // 티켓이 맞아도 배정 밖이면 받지 않는다
+    gameServer.step( 1000 + MatchServerAgent::kExpectTtlMs );
+    SW_EXPECT_FALSE( admission.isAdmitted( 5 ) ); // 오지 않은 사람은 시한 뒤 지운다
+}
 
 SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
 {

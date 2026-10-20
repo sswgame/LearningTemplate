@@ -38,7 +38,8 @@ namespace sw
         Invalid,
         Unavailable,
         Conflict,
-        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        RatingUnavailable, ///< 실력 모드인데 이 서버가 아직 멤버의 통계를 읽지 않았다. 잠시 뒤 다시 줄을 선다
         Count
     };
 } // namespace sw
@@ -74,6 +75,10 @@ namespace sw
         int32 _maxRatingWindow{ 1000 };
         PROPERTY()
         uint32 _buildVersion{ 0 }; ///< 전용 서버 빌드 버전이다. 0이면 상관없다
+        PROPERTY()
+        string _ratingStat{}; ///< 실력으로 쓰는 계정 통계 이름(순위표 키트 통계)이다. 비우면 실력을 보지 않는 모드이고 모두 `_initialRating` 이다
+        PROPERTY()
+        int32 _initialRating{ 1500 }; ///< 통계가 한 번도 바뀌지 않은 계정의 실력이고, 실력을 보지 않는 모드와 로비 경기의 실력이다
     };
 } // namespace sw
 
@@ -172,7 +177,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 `IMatchRatingSource` 가 모드마다 줍니다.
+     * @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 모드의 실력 통계(`_ratingStat`)를 `IAccountStatSource` 에서 읽습니다.
      * @details 알림과 응답은 고정 배치형(B)이고, 캐시 기록은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `MatchmakingProtocol::encodeParty`)입니다.
      */
     REFLECT()
