@@ -26,6 +26,82 @@ namespace sw
         Alpha,    ///< SrcAlpha / InvSrcAlpha
         Additive, ///< SrcAlpha / One — 불꽃 · 빛줄기
     };
+
+    /** @brief 방출기의 입자를 그리는 모양입니다(Niagara 의 렌더러 · 유니티 ParticleSystemRenderer 의 Render Mode). */
+    ENUM()
+    enum class VfxRenderMode : uint8
+    {
+        Billboard, ///< 카메라를 보는 사각형 하나(`particle.hlsl`)
+        Ribbon,    ///< 태어난 순서로 이웃 입자를 잇는 띠 — 꼬리 · 칼 궤적(`particle.hlsl` 의 띠 경로)
+        Mesh,      ///< 입자마다 메시 하나(`_mesh` — 메시 인스턴스 배치로 메시 경로를 그대로 탄다)
+    };
+
+    /** @brief 입자가 물리 씬에 닿았을 때의 반응입니다. */
+    ENUM()
+    enum class VfxCollisionMode : uint8
+    {
+        None,   ///< 닿음을 보지 않는다
+        Bounce, ///< 닿은 면에서 튄다(`_restitution` · `_friction`)
+        Kill,   ///< 닿으면 사라진다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 메시 입자(`VfxRenderMode::Mesh`)의 메시와 머티리얼입니다. */
+    REFLECT()
+    struct SW_API VfxMeshRenderDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset path or built-in shape id of each particle (required for Mesh render mode)" )
+        string _meshID{};
+        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "Material of the particle meshes; empty uses the scene default" )
+        string _materialPath{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 입자 충돌입니다. 한 단계에 움직인 선분을 물리 씬(3D)에 쏘아 처음 닿은 면에서 반응합니다(언리얼 Niagara 의 CPU 레이 트레이스 충돌).
+     * @details 좌표는 방출기 로컬이고 월드 변환은 부르는 쪽이 한다(`IVfxCollisionScene`). 입자 크기는 보지 않는다(점 충돌).
+     */
+    REFLECT()
+    struct SW_API VfxCollisionDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "What a particle does when it hits the physics scene" )
+        VfxCollisionMode _mode{ VfxCollisionMode::None };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Share of the normal speed kept after a bounce (0 = stops on the surface)" )
+        float32 _restitution{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Share of the tangent speed lost on a bounce" )
+        float32 _friction{ 0.0f };
+        PROPERTY( Tooltip = "Physics layers the particles collide with (bit per layer)" )
+        uint32 _layerMask{ 0xFFFFFFFFu };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 파티클 라이트입니다. 살아 있는 입자 중 앞의 `_maxLights` 개가 점광 하나씩을 냅니다(언리얼 Niagara Light Renderer).
+     * @details 빛 색은 입자 색(RGB), 세기는 `_intensity` × 입자 알파, 반경은 `_radius` × 방출기 배율이다. 씬 라이트 목록에 붙어
+     *          라이트 그리드(`LightGrid`)에 들어간다(`collectSceneLights`). `_maxLights` 가 0 이면 빛을 내지 않는다.
+     */
+    REFLECT()
+    struct SW_API VfxLightDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0, Tooltip = "Particles that emit a point light (0 = no lights)" )
+        uint32 _maxLights{ 0 };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Light radius in emitter space (required when _maxLights is above 0)" )
+        float32 _radius{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Light intensity, multiplied by the particle alpha (required when _maxLights is above 0)" )
+        float32 _intensity{ 0.0f };
+    };
 } // namespace sw
 
 namespace sw
@@ -76,10 +152,14 @@ namespace sw
 
         PROPERTY( Meta = "NotLocalizable", Tooltip = "Emitter name, unique inside the effect" )
         string _name{};
-        PROPERTY( AssetPath, AssetType = "Texture", Tooltip = "Particle texture (required)" )
+        PROPERTY( Tooltip = "Shape each particle draws as" )
+        VfxRenderMode _renderMode{ VfxRenderMode::Billboard };
+        PROPERTY( AssetPath, AssetType = "Texture", Tooltip = "Particle texture (required for Billboard and Ribbon, must be empty for Mesh)" )
         string _texturePath{};
-        PROPERTY( Tooltip = "How particle colour blends with the scene" )
+        PROPERTY( Tooltip = "How particle colour blends with the scene (Billboard and Ribbon; Mesh uses its material)" )
         VfxBlendMode _blendMode{ VfxBlendMode::Alpha };
+        PROPERTY( Tooltip = "Mesh and material of each particle (Mesh render mode only)" )
+        VfxMeshRenderDef _mesh{};
         PROPERTY( Tooltip = "The emitter restarts after _duration instead of stopping" )
         bool _bLooping{ false };
 
@@ -107,6 +187,11 @@ namespace sw
         FloatCurve _sizeOverLife{};
         PROPERTY( Tooltip = "Particle colour over life ratio (required)" )
         VfxColorCurveDef _colorOverLife{};
+
+        PROPERTY( Tooltip = "Collision with the 3D physics scene" )
+        VfxCollisionDef _collision{};
+        PROPERTY( Tooltip = "Point lights carried by the particles" )
+        VfxLightDef _light{};
 
         /** @brief 커브를 시각 순으로 정렬하고 자동 접선을 다시 셉니다. 파일을 읽은 뒤 `validate` 전에 부릅니다. */
         void sortCurves();

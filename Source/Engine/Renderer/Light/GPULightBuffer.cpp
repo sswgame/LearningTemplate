@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Vfx/VfxComponent.h"
 
 namespace sw
 {
@@ -61,6 +62,13 @@ namespace sw
                     pOutListShadowLightIndex->push_back( static_cast<uint32>( outList.size() ) );
                 outList.push_back( light );
             }
+        }
+
+        // 파티클 라이트(점광, 그림자 없음)는 라이트 컴포넌트 뒤 · 2D 가림막 앞에 붙는다. 그리드는 종류를 묻지 않고 같은 목록에서 만든다(LightGrid).
+        for ( const VfxComponent* pVfx : registry.getAll<VfxComponent>() )
+        {
+            if ( pVfx != nullptr && pVfx->isPendingDestroy() == false )
+                pVfx->appendGPULights( outList );
         }
 
         // 2D 그림자 가림막 세그먼트는 빛 **뒤에** 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting2d.hlsli).
