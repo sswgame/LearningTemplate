@@ -14,25 +14,41 @@
 
 한 일은 `git log` 가 정본입니다.
 
-## 1. 지금 상태 (2026-10-20, 밤 세션 끝)
+## 1. 지금 상태 (2026-10-20, 오후 세션 끝)
 
-- **진행 중인 작업자는 없다.** 워크트리는 모두 지웠다(`git worktree list`). 빈 폴더 `D:/w/audiolayout` · `D:/w/vfx` 는 다른 프로세스가 쥐고 있어 남았다. 나중에 지운다.
-- **이번 세션에 main 으로 병합함**: ReflectionFormats · GimmickCircuitState 를 끝으로 바꿈, `SkeletalAnimatorComponent::seekCurrentTime`(PairedAnimation P3 의 선행 훅), 프리팹 창 열기 경로 · X 닫을 때 미저장 확인, 에디터 시나리오 `editor.prefabwindow` · `editor.inspectorhandle`(DX12 PASS, 프리팹 창 화면과 인스펙터 선택기 화면 확인 끝), 핸들 선택기가 값을 못 쓰던 결함 수정, `formatValueText` 로 값 주소와 객체 주소 형식 분리, IncrementalCook K0 측정(6/6, 결과는 [검증과 측정](../08_Verification.md)). 마지막 push 는 `33c8734fa`, 그 뒤 K0 문서 병합 `bd126548d` 는 push 전이다. push 전에 `ci-jobs --runs` 로 직전 CI 를 확인한다.
-- **CI**: main CI `39295170988` 의 실패 하나(`AssetCacheRegistryTest...`)는 고쳤다(`4548c65d2`). 고친 뒤 CI 가 통과하는지는 아직 못 봤다.
-- **K0 결과 요약**: 이득은 셰이더 컴파일 캐시(252 → 5 s)와 팩 증분(12 → 1.7 s)에서 난다. 씬 · 프리팹 · 레지스트리 · 내비메시는 합쳐 1.4 s 라 몫이 작다. 쿠커에 단계별 타이머가 없어 측정이 파일 수정 시각 추정에 기댔다(후보: 쿠킹 요약 로그에 단계별 ms).
-- **새로 찾은 후보(아직 문서에 안 옮김)**: (1) DX12 `AppScenarioTest.EditorScenariosPassOnDirectX12` 의 savedstate.1·2 · viewportoverlay.1·2 묶음이 main 에서도 실패한다(SceneViewDrawn · OverlayDock · OverlayVertical, 원인 모름). (2) `layout.reset` 직후 "Prefab Overrides" 도구가 도킹 대신 큰 떠 있는 창으로 뜬다. (3) `-scenario=` 에 리소스 ID 를 주면 not found 이고 절대 경로여야 돈다. (4) `formatPropertyText` · `applyPropertyText` 는 아직 `const void*` 라 진짜 프로퍼티에 값 주소를 넘기는 실수를 컴파일러가 못 막는다. (5) 모든 문서 패널이 X 로 닫을 때 미저장 확인이 없다(`EditorDocumentPanel` 로 끌어올리는 것이 구조적 해결). (6) 앱 실행 후 스스로 종료되지 않는 문제(`-gv_screenshot` 뒤 종료 코드 124).
-- **vcpkg**: 워크트리는 메인의 `Tools/vcpkg` · `build/vcpkg_installed` · `build/vcpkg_cache` 를 정션으로 공유한다(사용자 지시). 워크트리를 지울 때는 `worktree-remove`.
-- GPU 는 이 PC 에서 된다(RTX 3070 Ti, DX12). 못 한 것: TypedComponents 앱 측정 넷(8.4), 다른 세 백엔드 화면, Vfx V2 · V3, 패널 메뉴 토글 등 X 가 아닌 닫는 길.
-- 사용자 결정 대기 없음. NetSettingsRemaining 은 설정 데이터 형식을 새로 정해야 해서 DataDriven 과 함께 다룬다.
+- **push 완료**: main `26cafecb8`. 이번 세션 병합분 — IncrementalCook 을 끝으로, GpuVerification V2 일부(리눅스 소프트웨어 렌더러 요구 백엔드에서 `gl` 제외), 문서 패널 닫기 확인을 `EditorDocumentPanel` 기반으로(`drawContent` final, `drawDocumentContent` 필수, `revertDocument` 기본), `TextAddress` 로 객체 주소 · 값 주소 형식 분리(`formatPropertyText` · `applyPropertyText` · `formatValueText` · `parseTextValue`), 결정 기록 5-12 에 "셰이더 바이너리 계속 커밋", "백엔드 등급제 안 함".
+- **진행 중인 작업자(끝났는지 `git worktree list` 와 각 브랜치 로그로 먼저 본다)**: `panelgap`(비문서 패널 · X 가 아닌 닫는 길 · `revertDocument` 테스트, 브랜치 `wt/panelgap`), `structplan`(계획 문서 `StructureSimplification.md` 작성, 문서만, 브랜치 `wt/structplan`). 둘 다 push 하지 않았다. 병합한 뒤 병합본에서 `py -3 -m Scripts full-build --owner <이름>` 을 돌려야 push 된다(마크다운만 바뀐 병합은 직전 증거를 쓴다).
+- **다른 세션의 `wt/edcand`**(패널 열기 요청을 패널 형식으로 받는 변경, 커밋 3 개, 미커밋 수정 2 개)가 병합 전이다. `panelgap` 과 에디터 패널 코드에서 부딪힐 수 있다.
+- **GpuVerification V2 남은 일**: 정책 수정이 든 main 의 CI 가 리눅스에서 통과하는지 세 번 읽은 뒤 `continue-on-error` 해제와 `softwareRenderSeconds` 수정(단계 시간이 한 자리 초라 120 초는 크다).
+- **결함 두 개의 조사 결과(코드는 아직 안 고침)**: (6) 앱이 스스로 종료하지 않는 것은 설계다 — `-gv_screenshot` 은 종료를 요청하지 않고 메인 루프는 `isQuitRequested()` 나 표준 입력 quit 에서만 빠진다(`App.cpp:436`). 해법은 사진을 다 찍은 뒤 `Engine::requestQuit` 를 부르는 옵션이다(`RenderThread.cpp:561`, `Engine.cpp:506`). 쓰기 실패는 0 이 아닌 코드로. `-gv_screenshotEditor`(`EditorUICapture.cpp:143`)도 같은 모양. (3) `-scenario=` 리소스 ID 는 읽는 경로가 이미 받는 구조이고, `startAutomationSession` 이 모듈을 올리기 전에 돌아 도메인 루트가 아직 없는 것이 원인 후보다(미확인, `App.cpp:152`).
+- **TypedComponents 앱 측정 넷**(독점 Release)은 아직. 6/6 이지만 "구현대기"로 남은 이유.
+- **TextAddress 후속**: `valueToText` · `serializeValueBinary` · `deserializeValueBinary` · `parseTextValueCoerced` · `copyPropertyValue` · `applyPropertyBinary` 가 아직 `void*` 를 받는다.
+
+### 1.1 리팩토링 후보(읽기 전용 감사 셋의 결과, 코드는 안 고침)
+
+작업자 묶음은 서로 파일이 겹치지 않게 나눈다. 위험이 낮은 것부터, [동작] 이 붙은 것은 테스트 · 스크린샷과 함께.
+- **먼저(기계적, 낮음)**: Kits 카탈로그 18 개의 `readInto` · `readSetting` · `loadRoot` 반복을 `GameDataXML` 한 곳으로(A1~A3), 해시 사본(`ScheduleSystem*` · `SceneStateHash` · `GimmickStateBundle` · `GimmickCircuit` · `FixedLayout`)을 `HashUtil` 로(FNV-1a 인지 확인), `computeYaw` 사본 4 곳, 죽은 인자 `cbIndex` · `clearColor` · `indexStride`, 호출처 없는 선언 약 35 개와 접근자, float↔비트 변환 약 10 곳을 `BitUtil` 로, 유니온 파인드 2 벌, `applyObjectEdit` 사본, 자체 `contains` 래퍼 5 개, 자동화 단계의 속성 검사 도우미 중복.
+- **그다음(중간)**: 배치 목록 3 벌 복사를 1 벌 + 구간 뷰로(`GPUSceneSnapshot.h`, 성능 이득이 큼), 캐시 클래스 10 개를 `SharedAssetCache` 템플릿으로, `captureSnapshot` 의 직렬화 두 번 돌기 · `makeGameObjectXMLContext` 반복 등록, `parseFloat3/4` · `readFloat2` 의 조용한 기본값을 오류로(폴백 금지 원칙, 호출 약 21 곳), `ServerApp` 설정 읽기 실패의 기본값 폴백.
+- **마지막(GPU · 벤치 · 셰이더 회귀 필요)**: `FrameRendererPassExecute` 462 줄, `GPUSceneBuilder::populateMeshesFromScene` 383 줄, `GPUMeshVertexPool` ↔ `MorphPool` 공용화, `FrameRenderer::execute(Scene&)` 이중 경로 합치기, 2D · 3D 물리 컴포넌트 쌍 템플릿화, `reflectSpirv` 416 줄.
+- **하지 않는다**: `VfxCPUSimulation` 의 `lerp` 를 `MathUtil::lerp` 로 바꾸기(부동소수 결과가 달라지고 GPU 시뮬레이션과 수열이 어긋난다). `StateArchiveUtil` 쓰기 · 읽기 두 벌 구조는 큰 구조 변경이라 건별로 하지 않는다.
+
+### 1.2 구조 단순화(상용 엔진 비교)
+
+결정: 셰이더 바이너리 커밋 유지, 백엔드 등급제 안 함(결정 기록 5-12). 하기로 한 것은 `StructureSimplification`(계획 문서, `structplan` 이 작성 중)의 순서 — 5(설정 `T{}` 폴백 제거 · 게임 설정 정본 하나) → 2(팩 쓰기 · 스탬프를 C++ 로) → 3(에셋 종류를 등록 줄 하나로, "에셋 로더 등록제" 보류를 다시 연다) → 4(텍스트 형식을 역할마다 하나로, `KeyValueFile` 제거). 키트 51 개(게임이 이름으로 부르는 것은 9 개)를 견본으로 둘지 기본 빌드에서 뺄지는 사용자가 아직 정하지 않았다.
+
+- **vcpkg**: 워크트리는 메인의 `Tools/vcpkg` · `build/vcpkg_installed` · `build/vcpkg_cache` 를 정션으로 공유한다(사용자 지시). 워크트리를 지울 때는 `worktree-remove`. 빈 폴더 `D:/w/audiolayout` · `D:/w/vfx` 는 다른 프로세스가 쥐고 있어 남았다.
+- GPU 는 이 PC 에서 된다(RTX 3070 Ti, DX12). 못 한 것: TypedComponents 앱 측정 넷(8.4), 다른 세 백엔드 화면, Vfx V2 · V3, 패널 메뉴 토글 등 X 가 아닌 닫는 길(`panelgap` 이 다룸).
+- NetSettingsRemaining 은 설정 데이터 형식을 새로 정해야 해서 DataDriven 과 함께 다룬다.
 - PairedAnimation 남은 것: P3 본체(복제), 시나리오 테스트(활 · 클립 에셋 없음), M3 에디터.
 - 야간 `Load (Linux | Release, nightly)` 근본 원인은 모른다. 근본 원인 후보(미해결): `DiskPathVsResourceId`.
 
 ## 2. 첫 일
 
-1. 사용자 지침(2026-10-20): 되묻지 않고, 상용 엔진과 우리 엔진이 발전할 방향을 기준으로 구조적 해결을 한다.
-2. push 한 main 의 CI 를 `ci-jobs --summary` 로 확인하고 K0 문서 병합을 push 한다.
-3. 위 새 후보 (1) 의 DX12 에디터 시나리오 실패 원인을 먼저 본다(main 에서 재현된다).
-4. TypedComponents 앱 측정 넷(독점, Release), 그다음 Roadmap 의 `[병렬 가능]` 묶음: Vfx V2 · V3(`gpu-verifier` 와), 카메라 디렉터, 애니메이션(AnimationGraphLayers, PairedAnimation P3), SerializerSilentSkips, AsyncResourceLoading A2(설계 검토 뒤). 동시 빌드는 최대 2.
+1. 사용자 지침(2026-10-20): 되묻지 않고, 상용 엔진과 우리 엔진이 발전할 방향을 기준으로 구조적 해결을 한다. 각 작업이 끝날 때마다 push 한다(`full-build` 증거 게이트를 지킨다).
+2. `panelgap` · `structplan` 의 보고를 확인해 병합하고, 병합본에서 `full-build` 후 push.
+3. 리팩토링 1.1 의 "먼저" 묶음을 파일이 겹치지 않게 작업자 둘(동시 빌드 최대 2)에게 맡긴다. 그다음 `StructureSimplification` 의 첫 단위(정책 5).
+4. TypedComponents 앱 측정 넷(독점, Release), 그다음 Roadmap 의 `[병렬 가능]` 묶음: Vfx V2 · V3(`gpu-verifier` 와), 카메라 디렉터, 애니메이션(AnimationGraphLayers, PairedAnimation P3), SerializerSilentSkips, AsyncResourceLoading A2(설계 검토 뒤).
+
 ## 3. 새 세션 시작 절차
 
 1. 이 문서만 먼저 읽는다. 일을 정하면 그 일의 계획 문서를 `py -3 -m Scripts plans --file <이름>` 으로 읽고, [작업 방식](../11_Workflow.md) 은 필요한 절(빌드 2절 · 검증 3절 · push 4절)만 읽는다. 에이전트를 띄울 때만 [에이전트와 토큰](../12_Agents.md) 과 [작업자 규칙](WorkerRules.md). C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md) 목차에서 일에 맞는 파일만.
