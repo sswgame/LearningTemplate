@@ -200,10 +200,3 @@
 왜 필요한가: 기믹 상태 구조체는 개수 상한을 `PROPERTY( MaxCount = 32 )` 와 C++ 상수(`kMaxSlotCount` · `kMaxNodeCount`) 두 곳에 적는다. 생성기가 상수를 키로 받지 않고(`ReflectionFormats.md` 3.8) `PropertyInfo` 에 `MaxCount` 를 읽는 메타데이터가 없기 때문이다. 두 값이 같은지는 테스트(`StateLimitsMatchDeclaredMaxCount`)가 대조하는데, 형식으로 막은 것이 아니라 게이트로 막은 것이다.
 남은 것: 생성기가 `MaxCount = 상수 이름` 을 받아 해석하고 `PropertyInfo` 가 상한을 읽게 한다. 그러면 상수 중복과 대조 테스트가 사라진다. 같은 모양으로 상한을 두 번 적는 다른 구조체가 있는지 먼저 센다.
 착수 조건: 상한이 있는 상태 구조체가 늘어 중복이 부담이 될 때, 또는 `ReflectionFormats` 생성기를 다시 열 때.
-
-### TextAddressRemainingVoid
-제목: 값 · 객체 주소를 아직 `void*` 로 받는 직렬화 함수를 주소 형식으로
-옛번호: 없음
-왜 필요한가: `SerializerUtil` 의 텍스트 · 이진 함수 열 개는 `ObjectAddress` · `ValueAddress`(`Engine/Serialization/Base/TextAddress.h`)로 옮겼는데, 아직 `void*` 를 받는 것이 남았다: `arePropertyValuesEqual` · `applyPropertyDefault` · `tryCoerceBinaryPayload`(`SchemaMigrate.h`)와 컨테이너 방문자 인터페이스. 객체 주소와 값 주소를 한 함수가 받으면 오프셋이 한 번 더 더해지는 결함이 다시 나올 수 있다(핸들 선택기에서 한 번 나왔다).
-남은 것: 위 함수와 방문자의 시그니처를 주소 형식으로 바꾸고, 반대쪽 주소를 넘기면 컴파일이 안 되게 `static_assert` 테스트를 더한다.
-착수 조건: 직렬화 경로를 다시 열 때, 또는 같은 모양의 주소 혼동 결함이 한 번 더 나올 때.
