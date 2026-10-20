@@ -63,7 +63,7 @@ namespace sw
             static constexpr uint16 kFirstEphemeralPort = 40000;
         };
 
-        /** @brief 망 전체 — 잠금 하나가 링크 · 전송의 자리 표 · 사건 줄 · 난수를 지킨다. 콜백은 잠금 밖에서. */
+        /** @brief 망 전체 — 잠금 하나가 링크 · 전송의 슬롯 테이블 · 이벤트 큐 · 난수를 지킨다. 콜백은 잠금 밖에서. */
         struct LoopbackNetworkState
         {
             mutable mutex                                   _mutex;

@@ -22,7 +22,7 @@ namespace sw
 {
     /**
      * @struct StreamConnectionHandle
-     * @brief 스트림 연결 하나 — 자리 번호 + 세대입니다. 세대 0 은 무효. 닫힌 자리를 다시 쓰면 세대가 올라 옛 핸들은 아무것도 가리키지 않습니다.
+     * @brief 스트림 연결 하나 — 슬롯 번호 + 세대입니다. 세대 0 은 무효. 닫힌 슬롯을 다시 쓰면 세대가 올라 옛 핸들은 아무것도 가리키지 않습니다.
      */
     struct StreamConnectionHandle
     {

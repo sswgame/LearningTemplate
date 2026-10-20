@@ -45,6 +45,8 @@ namespace sw
     private:
         /** @brief ReadDirectoryChangesW 의 완료 결과를 이벤트 큐에 넣습니다. */
         void workerThreadMain( MemoryTag memoryTag );
+        /** @brief 완료된 `FILE_NOTIFY_INFORMATION` 목록(@p pBuffer 부터 `NextEntryOffset` 으로 이어진다)을 변경으로 바꿔 큐에 넣습니다. */
+        void pushNotifyEntries( const uint8* pBuffer );
 
         // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 IFileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
         HANDLE       _hDirectory;

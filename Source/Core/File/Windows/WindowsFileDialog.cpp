@@ -12,7 +12,7 @@ namespace sw
 {
     wstring WindowsFileDialog::makeFilterText( const FileDialogParams& params )
     {
-        // 널이 구분자인 다중 문자열이다 — 널을 데이터로 담으므로 길이를 따로 드는 `wstring` 에 짓는다(`fixed_string` 은 첫 널에서 끝난다).
+        // 널이 구분자인 다중 문자열이다 — 널을 데이터로 담으므로 길이를 따로 보관하는 `wstring` 으로 만든다(`fixed_string` 은 첫 널에서 끝난다).
         wstring filterText = StringUtil::utf8ToUtf16( params._description.empty() ? "All Files" : params._description.c_str() );
         filterText.push_back( L'\0' );
 

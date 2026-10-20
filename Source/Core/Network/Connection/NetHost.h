@@ -326,8 +326,27 @@ namespace sw
             NetConnectResult              _result{};
         };
 
+        /** @brief 데이터 패킷이 아닌 제어 패킷 하나에서 읽은 값입니다(값 둘의 뜻은 종류마다 다르다). */
+        struct ControlPacket
+        {
+            NetAddress _from{};
+            float64    _nowSeconds{ 0.0 };
+            int32      _slotIndex{ -1 }; ///< 보낸 주소의 슬롯(없으면 무효)
+            uint64     _valueA{ 0 };
+            uint64     _valueB{ 0 };
+        };
+
         // 아래 함수는 모두 잠금을 잡은 채로 부른다.
+        /** @brief 받은 데이터그램 하나의 헤더와 종류를 검사하고 종류별 처리로 넘깁니다. 틀린 패킷은 `_rejectedPacketCount` 로만 셉니다. */
         void handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size );
+        /** @brief 암호화하지 않은 데이터 패킷의 연결 값을 확인하고 본문을 연결에 넘깁니다. */
+        void handlePayloadPacket( float64 nowSeconds, int32 slotIndex, BitReader& reader );
+        /** @brief 제어 패킷을 종류별로 처리합니다(핸드셰이크 · 거절 · 끊기). */
+        void handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader );
+        /** @brief 서버가 연결 요청에 답합니다. 프로토콜이 다르면 거절, 빈 슬롯이 없으면 가득 참, 아니면 챌린지를 보냅니다. */
+        void handleConnectRequest( const ControlPacket& packet );
+        /** @brief 서버가 챌린지 응답을 확인하고 슬롯을 할당해 수락합니다. 이미 연결된 주소의 같은 응답이면 수락만 다시 보냅니다. */
+        void handleChallengeResponse( const ControlPacket& packet, BitReader& reader );
         void updateSlots( float64 nowSeconds );
         void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
         /** @brief 연결 요청을 거절합니다. 이유, 이 호스트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */

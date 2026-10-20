@@ -20,4 +20,5 @@ gv_shooterAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json �
 gv_skirmishAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_voxelAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
 gv_wildWestAutoPlay = "Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
-gv_cameraPreset = "Test/QA/Games.json 골든이 배포본에서도 캡처 카메라를 고른다(Shooter3D)"
+gv_netConnectAddress = "배포 클라이언트가 게임 서버에 붙는 유일한 입구다(런처 · 매치메이킹이 실행 인자로 넘긴다, 언리얼 실행 인자 URL 자리)"
+gv_cameraPreset ="Test/QA/Games.json 골든이 배포본에서도 캡처 카메라를 고른다(Shooter3D)"

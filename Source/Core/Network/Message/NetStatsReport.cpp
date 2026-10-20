@@ -13,7 +13,7 @@ namespace sw
     {
         struct NetStatsReportInternal
         {
-            /** @brief 실수 칸의 소수점 아래 자릿수입니다(고정 소수점 — 큰 바이트 값이 지수 표기로 나가지 않게). */
+            /** @brief 실수 필드의 소수점 아래 자릿수입니다(고정 소수점 — 큰 바이트 값이 지수 표기로 나가지 않게). */
             static constexpr int32 kFractionDigits = 2;
 
             static void appendFloat( string& inoutText, const utf8* pKey, float32 value )

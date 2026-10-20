@@ -3,8 +3,8 @@
  * @brief 메시지 하나 안의 비트 예산입니다 — 종류 바이트 · 머리 · 목록 길이 · 항목 · 끝 표시까지 실제로 쓸 비트를 쓰기 전에 셉니다.
  * @details 메시지가 채널 상한(`NetConnection::getMaxMessageSize` — 순서만 · 비신뢰는 `kMaxSingleMessageSize`, 신뢰 순서는 `kMaxReliableMessageSize`)을 넘으면
  *          보내기가 오류와 함께 통째로 버린다. 그래서 예산은 그 상한(생성자의 `limitBytes`, 기본은 조각나지 않는 상한)으로 자르고, 항목 크기는 어림이 아니라
- *          `BitMath::computeVarUintBits` · `computeBlobBits` 로 정확히 센다. 목록 길이처럼 항목보다 먼저 쓰는 칸은 가장 큰 값으로 미리 잡는다.
- *          키트 틱 예산의 기본은 `computeTickBudget( 설정값, NetHost::getMaxBytesPerSecond(), 틱 간격 )` — 설정과 연결 상한의 몫 중 작은 것이다.
+ *          `BitMath::computeVarUintBits` · `computeBlobBits` 로 정확히 센다. 목록 길이처럼 항목보다 먼저 쓰는 필드는 가장 큰 값으로 미리 잡는다.
+ *          키트 틱 예산의 기본은 `computeTickBudget( 설정값, NetHost::getMaxBytesPerSecond(), 틱 간격 )` — 설정과 연결 상한의 할당량 중 작은 것이다.
  * @code
  *     BitWriter&    writer = _messageWriter.begin( kKind );
  *     writer.writeVarUint( tick );
@@ -24,11 +24,11 @@ namespace sw
     class NetSendBudget
     {
     public:
-        static constexpr float32 kReplicationShare = 0.5f; ///< 연결 상한 가운데 상태 복제 하나(스냅샷 · MMO 갱신)가 틱마다 쓰는 몫 — 나머지는 신뢰 메시지 · 재전송 · 다른 키트
+        static constexpr float32 kReplicationShare = 0.5f; ///< 연결 상한 가운데 상태 복제 하나(스냅샷 · MMO 갱신)가 틱마다 쓰는 비율 — 나머지는 신뢰 메시지 · 재전송 · 다른 키트
 
         /**
-         * @brief 키트의 틱 예산 — 설정값 @p configuredBytes 와 연결 상한의 몫(@p bytesPerSecond × @p tickInterval × `kReplicationShare`) 중 작은 것입니다.
-         *        상한이나 간격을 모르면(0 이하) 설정값 그대로입니다. 연결 상한을 낮추면 키트 예산이 따라 준다(언리얼 `NetSpeed ÷ 틱` 의 자리).
+         * @brief 키트의 틱 예산 — 설정값 @p configuredBytes 와 연결 상한의 할당량(@p bytesPerSecond × @p tickInterval × `kReplicationShare`) 중 작은 것입니다.
+         *        상한이나 간격을 모르면(0 이하) 설정값 그대로입니다. 연결 상한을 낮추면 키트 예산이 따라 준다(언리얼 `NetSpeed ÷ 틱` 에 해당).
          */
         static int32 computeTickBudget( int32 configuredBytes, int32 bytesPerSecond, float64 tickInterval )
         {

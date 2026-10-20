@@ -23,7 +23,7 @@ namespace sw
         struct LinuxFileWatcherInternal
         {
             static constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
-            // IN_ATTRIB 는 mtime 만 바뀐 변경(`touch`, 시각을 지키는 복사)을 알린다. Windows 의 FILE_NOTIFY_CHANGE_ATTRIBUTES 와 같은 자리다.
+            // IN_ATTRIB 는 mtime 만 바뀐 변경(`touch`, 시각을 지키는 복사)을 알린다. Windows 의 FILE_NOTIFY_CHANGE_ATTRIBUTES 에 해당한다.
             static constexpr uint32 kInotifyMask = IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
 
             static string makeRelativePath( string_view root, string_view absolutePath )
@@ -181,89 +181,98 @@ namespace sw
                     break;
             }
 
-            if ( FD_ISSET( _inotifyFd, &readSet ) == false )
-                continue;
-
-            while ( true )
+            if ( FD_ISSET( _inotifyFd, &readSet ) && drainEvents( buffer, sizeof( buffer ) ) == false )
             {
-                const ssize_t bytesRead = read( _inotifyFd, buffer, sizeof( buffer ) );
-                if ( bytesRead < 0 )
-                {
-                    if ( errno == EAGAIN || errno == EWOULDBLOCK )
-                        break;
-                    if ( errno == EINTR )
-                        continue;
-                    reportWatchLost( string( "inotify read failed: " ) + strerror( errno ) );
-                    _bIsWatching = false;
-                    return;
-                }
-                if ( bytesRead == 0 )
-                    break;
-
-                ssize_t offset{ 0 };
-                while ( offset < bytesRead )
-                {
-                    const inotify_event* pEvent = reinterpret_cast<const inotify_event*>( buffer + offset );
-                    offset += static_cast<ssize_t>( sizeof( inotify_event ) + pEvent->len );
-
-                    if ( pEvent->mask & IN_Q_OVERFLOW )
-                    {
-                        SW_LOG_WARNING( "inotify queue overflow — emitting synthetic rescan event." );
-                        pushRelativeChange( FileWatcherAction::Modified, _directoryPath, {} );
-                        continue;
-                    }
-
-                    string watchedDir;
-                    {
-                        std::scoped_lock<mutex> lock{ _watchMutex };
-                        auto                    it = _mapWatchDescriptorToPath.find( pEvent->wd );
-                        if ( it == _mapWatchDescriptorToPath.end() )
-                            continue;
-                        watchedDir = it->second;
-                    }
-
-                    if ( pEvent->mask & ( IN_DELETE_SELF | IN_MOVE_SELF | IN_IGNORED ) )
-                    {
-                        removeWatch( pEvent->wd );
-                        // 하위 폴더가 사라지는 것은 평범한 변경이지만, 루트가 사라지면 이 뒤로 아무 변경도 오지 않는다.
-                        if ( watchedDir == _directoryPath )
-                        {
-                            reportWatchLost( "the watched root directory was deleted or moved" );
-                            _bIsWatching = false;
-                            return;
-                        }
-                        continue;
-                    }
-
-                    if ( pEvent->len == 0 || pEvent->name[0] == '\0' )
-                        continue;
-
-                    const string name( pEvent->name );
-                    const bool   bIsDir = ( pEvent->mask & IN_ISDIR ) != 0;
-
-                    const bool bNewRecursiveDirectory = ( pEvent->mask & IN_CREATE ) && bIsDir && _bRecursive;
-                    if ( bNewRecursiveDirectory )
-                    {
-                        const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
-                        if ( addWatchDirectory( childDir ) == false )
-                            SW_LOG_WARNING( "Failed to watch new directory: %#", childDir.c_str() );
-                        pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
-                        continue;
-                    }
-
-                    if ( pEvent->mask & IN_CREATE )
-                        pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
-                    else if ( pEvent->mask & IN_DELETE )
-                        pushRelativeChange( FileWatcherAction::Removed, watchedDir, name );
-                    else if ( pEvent->mask & IN_MOVED_FROM )
-                        pushRelativeChange( FileWatcherAction::RenamedOldName, watchedDir, name );
-                    else if ( pEvent->mask & IN_MOVED_TO )
-                        pushRelativeChange( FileWatcherAction::RenamedNewName, watchedDir, name );
-                    else if ( pEvent->mask & ( IN_MODIFY | IN_CLOSE_WRITE | IN_ATTRIB ) )
-                        pushRelativeChange( FileWatcherAction::Modified, watchedDir, name );
-                }
+                _bIsWatching = false;
+                return;
             }
         }
+    }
+
+    bool LinuxFileWatcher::drainEvents( uint8* pBuffer, uint32 bufferSize )
+    {
+        while ( true )
+        {
+            const ssize_t bytesRead = read( _inotifyFd, pBuffer, bufferSize );
+            if ( bytesRead < 0 )
+            {
+                if ( errno == EAGAIN || errno == EWOULDBLOCK )
+                    return true;
+                if ( errno == EINTR )
+                    continue;
+                reportWatchLost( string( "inotify read failed: " ) + strerror( errno ) );
+                return false;
+            }
+            if ( bytesRead == 0 )
+                return true;
+
+            ssize_t offset{ 0 };
+            while ( offset < bytesRead )
+            {
+                const inotify_event* pEvent = reinterpret_cast<const inotify_event*>( pBuffer + offset );
+                offset += static_cast<ssize_t>( sizeof( inotify_event ) + pEvent->len );
+                // 이름은 NUL 로 채워 정렬되므로 string_view 가 첫 NUL 에서 끊는다. 이름이 없는 이벤트(디렉터리 자신)는 빈 이름이다.
+                const string_view name = pEvent->len > 0 ? string_view{ pEvent->name } : string_view{};
+                if ( handleWatchEvent( pEvent->wd, pEvent->mask, name ) == false )
+                    return false;
+            }
+        }
+    }
+
+    bool LinuxFileWatcher::handleWatchEvent( int32 watchDescriptor, uint32 mask, string_view name )
+    {
+        if ( mask & IN_Q_OVERFLOW )
+        {
+            SW_LOG_WARNING( "inotify queue overflow — emitting synthetic rescan event." );
+            pushRelativeChange( FileWatcherAction::Modified, _directoryPath, {} );
+            return true;
+        }
+
+        string watchedDir;
+        {
+            std::scoped_lock<mutex> lock{ _watchMutex };
+            auto                    it = _mapWatchDescriptorToPath.find( watchDescriptor );
+            if ( it == _mapWatchDescriptorToPath.end() )
+                return true;
+            watchedDir = it->second;
+        }
+
+        if ( mask & ( IN_DELETE_SELF | IN_MOVE_SELF | IN_IGNORED ) )
+        {
+            removeWatch( watchDescriptor );
+            // 하위 폴더가 사라지는 것은 평범한 변경이지만, 루트가 사라지면 이 뒤로 아무 변경도 오지 않는다.
+            if ( watchedDir == _directoryPath )
+            {
+                reportWatchLost( "the watched root directory was deleted or moved" );
+                return false;
+            }
+            return true;
+        }
+
+        if ( name.empty() )
+            return true;
+
+        const bool bNewRecursiveDirectory = ( mask & IN_CREATE ) && ( mask & IN_ISDIR ) && _bRecursive;
+        if ( bNewRecursiveDirectory )
+        {
+            const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
+            if ( addWatchDirectory( childDir ) == false )
+                SW_LOG_WARNING( "Failed to watch new directory: %#", childDir.c_str() );
+            pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
+            return true;
+        }
+
+        if ( mask & IN_CREATE )
+            pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
+        else if ( mask & IN_DELETE )
+            pushRelativeChange( FileWatcherAction::Removed, watchedDir, name );
+        else if ( mask & IN_MOVED_FROM )
+            pushRelativeChange( FileWatcherAction::RenamedOldName, watchedDir, name );
+        else if ( mask & IN_MOVED_TO )
+            pushRelativeChange( FileWatcherAction::RenamedNewName, watchedDir, name );
+        else if ( mask & ( IN_MODIFY | IN_CLOSE_WRITE | IN_ATTRIB ) )
+            pushRelativeChange( FileWatcherAction::Modified, watchedDir, name );
+        return true;
     }
 
     bool LinuxFileWatcher::addWatchRecursive( string_view directoryPath )

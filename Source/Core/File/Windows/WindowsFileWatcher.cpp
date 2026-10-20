@@ -18,6 +18,27 @@
 SW_LOG_CALLER( "WindowsFileWatcher" );
 namespace sw
 {
+    namespace
+    {
+        /** @brief `FILE_ACTION_*` 를 변경 종류로 바꿉니다. `FILE_ACTION_MODIFIED` 와 문서에 없는 값은 Modified(그 파일을 다시 확인하라)입니다. */
+        FileWatcherAction toWindowsFileWatcherAction( DWORD fileAction )
+        {
+            switch ( fileAction )
+            {
+                case FILE_ACTION_ADDED:
+                    return FileWatcherAction::Added;
+                case FILE_ACTION_REMOVED:
+                    return FileWatcherAction::Removed;
+                case FILE_ACTION_RENAMED_OLD_NAME:
+                    return FileWatcherAction::RenamedOldName;
+                case FILE_ACTION_RENAMED_NEW_NAME:
+                    return FileWatcherAction::RenamedNewName;
+                default:
+                    return FileWatcherAction::Modified;
+            }
+        }
+    } // namespace
+
     WindowsFileWatcher::WindowsFileWatcher()
         : _hDirectory{ nullptr }
         , _hCompletionPort{ nullptr }
@@ -171,64 +192,33 @@ namespace sw
                 return;
             }
 
-            if ( pOverlapped )
+            if ( pOverlapped == nullptr )
+                continue;
+            if ( bytesTransferred == 0 )
             {
-                if ( bytesTransferred == 0 )
-                {
-                    // 버퍼가 넘치면 놓친 변경이 생기므로, 감시 디렉터리에 대한 Modified 이벤트를 만들어 다시 훑게 한다.
-                    // 파일 이름이 비어 있으면 "전부 다시 확인하라" 는 약속이다.
-                    pushChange( FileWatcherAction::Modified, _directoryPath, {} );
-                    continue;
-                }
-
-                FILE_NOTIFY_INFORMATION* pNotify = reinterpret_cast<FILE_NOTIFY_INFORMATION*>( buffer.data() );
-
-                while ( pNotify )
-                {
-                    wstring wFileName( pNotify->FileName, pNotify->FileNameLength / sizeof( WCHAR ) );
-                    string  fileName = StringUtil::utf16ToUtf8( wFileName.c_str() );
-
-                    FileWatcherAction action = FileWatcherAction::Modified;
-                    switch ( pNotify->Action )
-                    {
-                        case FILE_ACTION_ADDED:
-                        {
-                            action = FileWatcherAction::Added;
-                            break;
-                        }
-                        case FILE_ACTION_REMOVED:
-                        {
-                            action = FileWatcherAction::Removed;
-                            break;
-                        }
-                        case FILE_ACTION_RENAMED_OLD_NAME:
-                        {
-                            action = FileWatcherAction::RenamedOldName;
-                            break;
-                        }
-                        case FILE_ACTION_RENAMED_NEW_NAME:
-                        {
-                            action = FileWatcherAction::RenamedNewName;
-                            break;
-                        }
-                        case FILE_ACTION_MODIFIED:
-                        default:
-                        {
-                            action = FileWatcherAction::Modified;
-                            break;
-                        }
-                    }
-
-                    // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
-                    // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 오는데 둘 다 Modified 로 합쳐지므로, 그 중복을 거르는 것도
-                    // 거기서 한다(세 플랫폼이 같은 규칙을 쓴다).
-                    pushChange( action, _directoryPath, fileName );
-
-                    if ( pNotify->NextEntryOffset == 0 )
-                        break;
-                    pNotify = reinterpret_cast<FILE_NOTIFY_INFORMATION*>( reinterpret_cast<uint8*>( pNotify ) + pNotify->NextEntryOffset );
-                }
+                // 버퍼가 넘치면 놓친 변경이 생기므로, 감시 디렉터리에 대한 Modified 이벤트를 만들어 다시 훑게 한다.
+                // 파일 이름이 비어 있으면 "전부 다시 확인하라" 는 약속이다.
+                pushChange( FileWatcherAction::Modified, _directoryPath, {} );
+                continue;
             }
+            pushNotifyEntries( buffer.data() );
+        }
+    }
+
+    void WindowsFileWatcher::pushNotifyEntries( const uint8* pBuffer )
+    {
+        const FILE_NOTIFY_INFORMATION* pNotify = reinterpret_cast<const FILE_NOTIFY_INFORMATION*>( pBuffer );
+        while ( pNotify != nullptr )
+        {
+            const wstring wFileName( pNotify->FileName, pNotify->FileNameLength / sizeof( WCHAR ) );
+            const string  fileName = StringUtil::utf16ToUtf8( wFileName.c_str() );
+            // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
+            // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 오는데 둘 다 Modified 로 합쳐지므로, 그 중복을 거르는 것도
+            // 거기서 한다(세 플랫폼이 같은 규칙을 쓴다).
+            pushChange( toWindowsFileWatcherAction( pNotify->Action ), _directoryPath, fileName );
+            if ( pNotify->NextEntryOffset == 0 )
+                break;
+            pNotify = reinterpret_cast<const FILE_NOTIFY_INFORMATION*>( reinterpret_cast<const uint8*>( pNotify ) + pNotify->NextEntryOffset );
         }
     }
 } // namespace sw

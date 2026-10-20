@@ -28,7 +28,7 @@
 |---|---|---|---|---|---|
 | L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
 
-L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다). 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
+L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다), `Source/Core/Network`(2026-10-21 — 패킷 읽기 · 쓰기와 제어 패킷 처리, 요청 프레임을 단계 함수로), `Source/Core/File`(2026-10-21 — 감시 워커의 이벤트 처리를 따로). 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
 
 ## 3. 목록
 
@@ -64,7 +64,6 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 
 | `Source/Engine/Object` | 5 | `SceneAudio::update` (`Component/Audio/SceneAudio.cpp:131`) 136 · 3 · 1 · 0 | 3 |
 |  |  | `DirectionalLightComponent::computeShadowProjectionForView` (`Component/3D/DirectionalLightComponent.cpp:285`) 127 · 2 · 3 · 0 | 3 |
 |  |  | `TickRegistry::applyStageDelta` (`GameObject/Tick/TickRegistry.cpp:609`) 119 · 5 · 3 · 4 | 4 |
-| `Source/Core/Network` | 4 | `NetHost::handlePacket` (`Connection/NetHost.cpp:691`) 213 · 4 · 32 · 0 | 3 |
 |  |  | `NetRequestServer::handleFrame` (`Message/NetRequest.cpp:353`) 133 · 4 · 5 · 0 | 3 |
 |  |  | `NetConnection::writePacket` (`Connection/NetConnection.cpp:262`) 117 · 2 · 0 · 48 | 3 |
 | `Source/Engine/Character` | 4 | `FitSolver::solve` (`Fit/FitSolver.cpp:254`) 148 · 4 · 3 · 0 | 3 |
@@ -85,7 +84,6 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 
 | `Source/Games/Empty` | 3 | `BenchScene::spawn` (`BenchScene.cpp:388`) 181 · 3 · 5 · 0 | 3 |
 |  |  | `BenchScene::spawnRigCharacters` (`BenchSceneRig.cpp:120`) 135 · 3 · 1 · 0 | 3 |
 |  |  | `BenchScene::update` (`BenchScene.cpp:1167`) 105 · 3 · 4 · 0 | 3 |
-| `Source/Core/File` | 2 | `WindowsFileWatcher::workerThreadMain` (`Windows/WindowsFileWatcher.cpp:113`) 120 · 5 · 2 · 0 | 4 |
 |  |  | `LinuxFileWatcher::workerThreadMain` (`Linux/LinuxFileWatcher.cpp:151`) 116 · 5 · 3 · 0 | 4 |
 | `Source/Core/Process` | 2 | `Process::launch` (`Posix/PosixProcess.cpp:91`) 120 · 2 · 5 · 0 | 3 |
 |  |  | `Process::launch` (`Windows/WindowsProcess.cpp:59`) 118 · 2 · 5 · 0 | 3 |

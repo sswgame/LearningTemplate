@@ -133,6 +133,8 @@ def reportDuplicateAnonymousFunctionsInternal(listFacts: list[CrossFileFacts]) -
     구조체 이름은 `Naming/DuplicateInternalHelper` 가 파일마다 유일하게 지키게 했지만 자유 함수는 이름을 가리는 층이 없다. 그래서 풀린 함수끼리 이름이 겹치면
     유니티 빌드(`CI-*`)가 .cpp 를 한 TU 로 묶는 순간 재정의로 깨진다. 형식(구조체 이름)으로 막을 수 없는 자리라 이름 표를 모아 보는 게이트로 막는다.
     파일 짝이 필요해 전체 스캔에서만 돈다. 시그니처가 달라 오버로드로 공존할 수 있어도 이름이 겹치면 알린다(같은 이름은 어차피 헷갈린다).
+    `Test/` 는 보지 않는다 — 테스트 타겟은 `sw_setUnityBuild` 를 부르지 않아 한 TU 로 묶이지 않는다. 익명 네임스페이스의 타입 · 데이터 이름은
+    보지 않는다(2026-10-21 유니티 타겟 Engine · Editor · GameFramework · Games 를 한 번 훑어 겹침 0).
     """
     mapNameToSite: dict[str, list[tuple[str, int]]] = {}
     for facts in listFacts:

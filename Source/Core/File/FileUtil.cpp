@@ -38,8 +38,8 @@ namespace sw
             }
 
             /**
-             * @brief @p fileName 을 **원자적으로** 씁니다: 같은 폴더의 임시 파일에 다 쓰고, 쓰기 · 닫기 결과를 확인한 뒤 원본 자리로 바꿔 끼웁니다.
-             * @details 주의: 원본을 "wb" 로 열면 그 순간 길이 0 이 됩니다. 그 자리에 쓰면서 `fwrite` · `fclose` 결과를 보지 않으면, 디스크가
+             * @brief @p fileName 을 **원자적으로** 씁니다: 같은 폴더의 임시 파일에 다 쓰고, 쓰기 · 닫기 결과를 확인한 뒤 원본 경로로 교체합니다.
+             * @details 주의: 원본을 "wb" 로 열면 그 순간 길이 0 이 됩니다. 그 파일에 바로 쓰면서 `fwrite` · `fclose` 결과를 보지 않으면, 디스크가
              *          차거나 백신이 파일을 잡거나 쓰는 도중 죽을 때 씬 · 에셋 · `.meta` 가 빈 파일로 남는데 저장은 성공으로 보입니다. 4 KB 보다
              *          작은 쓰기는 stdio 버퍼에 머물다 `fclose` 에서야 디스크로 가므로, 가득 찬 디스크는 `fclose` 만 알려 줍니다.
              *          언리얼 `FFileHelper::SaveArrayToFile` 과 같은 방식(임시 파일 → 이름 바꾸기)입니다.
@@ -124,7 +124,7 @@ namespace sw
              *          시스템 호출 네 번입니다. stdio 경로(`fopen_s` → 끝으로 이동 → 위치 질의 → 처음으로 되감기 → `fread`)는 크기를
              *          측정하려고 파일 위치를 세 번 옮기고, UCRT 의 잠금과 버퍼 준비를 거칩니다. 게다가 `fopen_s` 는 좁은 문자 경로를
              *          **ANSI 코드 페이지**로 해석해서 UTF-8 경로의 한글이 깨집니다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않습니다).
-             *          여기서는 UTF-16 으로 바꿔 엽니다. `readFile` 은 시작 시간에 큰 몫입니다(셰이더 쿠킹 스탬프가 소스를 읽어 해시합니다).
+             *          여기서는 UTF-16 으로 바꿔 엽니다. `readFile` 은 시작 시간에서 큰 비중을 차지합니다(셰이더 쿠킹 스탬프가 소스를 읽어 해시합니다).
              *          공유 모드는 stdio(`_SH_DENYNO`)와 같이 읽기 · 쓰기를 허용하므로, 에디터가 쓰고 있는 파일도 열립니다.
              */
             template <typename BufferType>
@@ -211,7 +211,7 @@ namespace sw
                 if ( dataSize > 0 )
                     readBytes = std::fread( outBuffer.data(), 1, static_cast<size_t>( dataSize ), pFile );
                 std::fclose( pFile );
-                // Windows 갈래와 같은 규칙: 측정한 크기만큼 읽지 못했으면 실패다.
+                // Windows 분기와 같은 규칙: 측정한 크기만큼 읽지 못했으면 실패다.
                 if ( readBytes != static_cast<size_t>( dataSize ) )
                 {
                     outBuffer.clear();
@@ -621,7 +621,7 @@ namespace sw
         outStamp._writeTime = ( static_cast<uint64>( attribute.ftLastWriteTime.dwHighDateTime ) << 32 ) | attribute.ftLastWriteTime.dwLowDateTime;
         return true;
 #else
-        // 시스템 호출 하나 — Windows 갈래와 같은 "한 번의 조회". 디렉터리는 false(Windows 갈래와 같다).
+        // 시스템 호출 하나 — Windows 분기와 같은 "한 번의 조회". 디렉터리는 false(Windows 분기와 같다).
         struct stat fileStat{};
         if ( ::stat( filePath.c_str(), &fileStat ) != 0 || S_ISREG( fileStat.st_mode ) == 0 )
             return false;
