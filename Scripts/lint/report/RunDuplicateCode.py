@@ -71,11 +71,10 @@ import sys
 from pathlib import Path
 from typing import Iterable, NamedTuple
 
-sys.path.insert( 0, str( Path( __file__ ).resolve().parents[ 2 ] ) )   # Scripts — common
-sys.path.insert( 0, str( Path( __file__ ).resolve().parents[ 1 ] ) )   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import collectRepositoryFiles  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 #: 해시할 창의 줄 수. 짧으면 잡음이, 길면 놓치는 것이 는다 — 6 이 이 저장소에서 쓸 만했다.
 kWindowLines = 6

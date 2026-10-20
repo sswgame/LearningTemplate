@@ -24,12 +24,13 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import iterIncludes, kLintTargetRelDirs, normalizePath  # noqa: E402
-from LintGate import LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile  # noqa: E402
+from common.CodeText import iterIncludes  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
 #: X11 매크로를 정의하는 시스템 헤더의 접두어입니다.
 _kListX11SystemPrefix = ("X11/", "GL/glx", "vulkan/vulkan_xlib")

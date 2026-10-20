@@ -50,10 +50,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
-from common import TranslationUnitSweep, runProcess  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
+from common.Process import runProcess  # noqa: E402
+from common.TranslationUnits import TranslationUnitSweep  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 _kTag = "RunPaddingReport"
 

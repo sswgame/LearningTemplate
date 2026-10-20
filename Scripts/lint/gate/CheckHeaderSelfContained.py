@@ -22,13 +22,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import BuildTree, addBuildTreeArguments  # noqa: E402
+from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.HeaderSelfContained import (findHeaderProbeProblem, findHeadersNotSelfContained, isCheckedHeader,  # noqa: E402
                                         kHeaderScanRoot)
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 
 class CheckHeaderSelfContainedGate(LintGate):

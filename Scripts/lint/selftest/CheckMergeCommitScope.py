@@ -23,12 +23,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — PreCommitLint
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import ProcessResult, getAllStagedFiles, getMergeHeadRevisions, resolveGitExecutable, runProcess  # noqa: E402
-from PreCommitLint import selectFileScopedStagedInternal  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from common.Host import getAllStagedFiles, getMergeHeadRevisions, resolveGitExecutable  # noqa: E402
+from common.Process import ProcessResult, runProcess  # noqa: E402
+from lint.StagedScope import selectFileScopedStaged  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 열 줄짜리 본문 — 두 부모가 서로 다른 줄을 고치면 git 이 자동 병합한다.
 _kBaseText = "".join(f"line {index}\n" for index in range(10))
@@ -119,7 +119,7 @@ class CheckMergeCommitScopeGate(LintGate):
             runGitInternal(plainRoot, "add", "-A")
             if getMergeHeadRevisions(plainRoot):
                 errors.append("병합 중이 아닌데 MERGE_HEAD 를 찾았습니다")
-            if namesInternal(selectFileScopedStagedInternal(plainRoot, getAllStagedFiles(plainRoot))) != {"Plain.cpp"}:
+            if namesInternal(selectFileScopedStaged(plainRoot, getAllStagedFiles(plainRoot))) != {"Plain.cpp"}:
                 errors.append("병합 중이 아닐 때 staged 전체를 넘기지 않습니다")
 
             repoRoot = tempRoot.resolve() / "merge"
@@ -131,7 +131,7 @@ class CheckMergeCommitScopeGate(LintGate):
 
             listStaged = getAllStagedFiles(repoRoot)
             setStaged = namesInternal(listStaged)
-            setScoped = namesInternal(selectFileScopedStagedInternal(repoRoot, listStaged))
+            setScoped = namesInternal(selectFileScopedStaged(repoRoot, listStaged))
             if args.verbose:
                 print(f"  staged : {sorted(setStaged)}")
                 print(f"  scoped : {sorted(setScoped)}")

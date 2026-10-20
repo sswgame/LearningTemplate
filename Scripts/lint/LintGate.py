@@ -46,7 +46,7 @@ class CheckSomethingGate(LintGate):
 ```
 
 파일 사이의 관계를 보거나 파일마다가 아닌 일을 하는 게이트는 `scan()` 을 쓴다. 그런 게이트가 파일마다 파이썬 정규식을 오래 돌린다면
-파일별 일을 `common.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) — 스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면
+파일별 일을 `common.Parallel.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) — 스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면
 `mapConcurrent` · `readTextFiles` 로 충분하다(`common/Parallel.py` 머리말).
 
 `gate/` 에 놓으면 `CheckLintsAreAlive` 가 알아서 집어 가고(목록이 아니라 자리가 규칙이다),
@@ -63,12 +63,14 @@ from pathlib import Path
 from types import ModuleType
 from typing import Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parent))       # Scripts/lint — SourceScan
 
-from common import collectRepositoryFiles, getMergeHeadRevisions, getProjectRoot, kNotOurDirNames, readTextFiles, resolveFileArguments, runGit  # noqa: E402
+from common.Constants import kNotOurDirNames  # noqa: E402
+from common.Host import getMergeHeadRevisions, runGit  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.Search import collectRepositoryFiles, readTextFiles, resolveFileArguments  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.RuleData import RuleDataError, kExemptionKey, kKindInteger, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
-from SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
+from lint.SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
 
 
 #: 음성 테스트 조각(`LintGate.selfTestCases`)이 가질 수 있는 키. `name` · `expectedViolation` 은 필수다.
@@ -325,29 +327,29 @@ class LintGate:
         return args, (args.root or getProjectRoot()).resolve()
 
     def beginRun(self) -> int:
-        """훑기 전 — 예외 기록을 비우고 규칙 데이터 · 예외 표를 확인합니다. 검사가 서지 않으면 2, 아니면 0."""
+        """훑기 전 — 예외 기록을 비우고 규칙 데이터 · 예외 표를 확인합니다. 검사가 서지 않으면 `CheckInvalid`, 아니면 `Passed`."""
         cls = type(self)
         cls._setSeenExemption = set()
         cls._setUsedExemption = set()
         if self._ruleDataError:
             print(f"[{self.name}] {self._ruleDataError}", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
         listNoReason = [key for key, reason in self.mapExemption.items() if not reason.strip()]
         if listNoReason:
             print(f"[{self.name}] 이유 없는 예외: {', '.join(listNoReason)} — 이유 없는 예외는 없다", file=sys.stderr)
-            return 2
-        return 0
+            return ExitCode.CheckInvalid
+        return ExitCode.Passed
 
     def main(self, argv: list[str] | None = None) -> int:
         args, repositoryRoot = self.parseArguments(argv)
         returnCode = self.beginRun()
-        if returnCode != 0:
+        if returnCode != ExitCode.Passed:
             return returnCode
         try:
             result = self.scan(repositoryRoot, args)
         except (GateError, RuleDataError) as exception:
             print(f"[{self.name}] {exception}", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
         return self.endRun(repositoryRoot, args, result)
 
     def endRun(self, repositoryRoot: Path, args: argparse.Namespace, result: GateResult) -> int:
@@ -383,10 +385,10 @@ class LintGate:
             self.printListInternal(result.listViolation, self.maxViolationShown)
             if self.hint:
                 print(self.hint)
-            return 1
+            return ExitCode.Violation
 
         print(f"[{self.name}] OK ({result.summary})" if result.summary else f"[{self.name}] OK")
-        return 0
+        return ExitCode.Passed
 
     # --- 대상 파일 고르기 — `--files` 를 받는 게이트가 함께 쓴다 ---------------
 
@@ -405,8 +407,8 @@ class LintGate:
                           excludedDirNames: Iterable[str] = kNotOurDirNames,
                           bAnySuffix: bool = False) -> list[Path]:
         """
-        게이트가 볼 파일을 고릅니다. `--files` 가 있으면 그 파일 가운데서(`common.resolveFileArguments`), 없으면 `listScanRoot` 를 걸어서
-        (`common.collectRepositoryFiles`) — **같은 규칙으로**.
+        게이트가 볼 파일을 고릅니다. `--files` 가 있으면 그 파일 가운데서(`common.Search.resolveFileArguments`), 없으면 `listScanRoot` 를 걸어서
+        (`common.Search.collectRepositoryFiles`) — **같은 규칙으로**.
 
         - 확장자가 `suffixes` 이거나 이름이 `fileNames` 인 파일만(`bAnySuffix` 면 모두).
         - `excludedDirNames` 의 폴더 아래는 뺀다(기본은 빌드 산출물 · 내려받은 외부 도구, `kNotOurDirNames`). 걸을 때는 그 폴더로 내려가지 않는다.
@@ -427,7 +429,7 @@ class LintGate:
     def readFiles(listPath: Iterable[Path], *, encoding: str = "utf-8", errors: str = "replace",
                   mustContain: str | None = None) -> list[tuple[Path, str]]:
         """
-        게이트가 파일 내용을 읽는 **창구** — 지금은 `common.readTextFiles`(동시 읽기 · `mustContain` 앞 거르기)를 그대로 부른다.
+        게이트가 파일 내용을 읽는 **창구** — 지금은 `common.Search.readTextFiles`(동시 읽기 · `mustContain` 앞 거르기)를 그대로 부른다.
         한 번 읽어 여러 게이트가 나눠 쓰기 · 내용 해시 캐시를 얹을 자리는 이 메서드와 `selectTargetFiles` 둘이다 — 게이트가 `open()` ·
         `read_text()` 를 직접 부르면 그 최적화를 비켜 간다.
         """

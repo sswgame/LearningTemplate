@@ -28,7 +28,7 @@ import sys
 import zlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common.Paths import getProjectRoot
 
 kResolution = 257
 kHeightRange = 40.0

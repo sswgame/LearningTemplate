@@ -9,11 +9,10 @@ import unittest
 from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-import RunLintSuite  # noqa: E402
-from LintCatalog import LintTarget  # noqa: E402
+from lint import RunLintSuite  # noqa: E402
+from lint.LintCatalog import LintTarget  # noqa: E402
 
 
 class RunLintSuiteTest(unittest.TestCase):

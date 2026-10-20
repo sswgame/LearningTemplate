@@ -80,6 +80,15 @@
 남은 것: 한글 로그 줄을 찾아 영어로 바꾼다. 로그 문자열을 매칭하는 테스트가 있으면 함께 고친다.
 함정: 주석 문체 작업(CommentRewriteRemaining)과 같은 파일을 건드리므로 같은 작업자에게 묶는다.
 
+### ScriptsPairedLintRules
+제목: 게이트와 짝 픽서 · 보고서가 나눠 쓰는 판정을 린트 틀 층으로
+옛번호: 없음
+왜 필요한가: [ScriptsStructure](ScriptsStructure.md) 의 층 게이트(`CheckScriptLayers`)는 명령끼리의 import 를 막는데, 게이트의 변환 · 판정을 짝 명령이
+부르는 간선 다섯이 예외 표(`Scripts/lint/rules/CheckScriptLayers.toml`)에 있다: `FormatBranchBraces` → `CheckLoopBraces.insertLoopBraces`,
+`FormatIncludeOrder` → `CheckIncludeOrder.fixText`, `FormatNamespaceBlocks` → `CheckNamespaceBlocks`, `RunDiscardReasons` → `CheckDiscardReason.findFallibleDiscards`,
+셀프테스트 둘 → 자기 게이트. 판정을 `lint/` 의 틀 모듈(층 1)로 옮기면 예외 줄이 지워지고 게이트 · 픽서 · 보고서가 같은 자리를 import 한다.
+착수 조건: 없음. 같은 파일을 고치는 다른 작업이 `Scripts/lint` 에 없을 때.
+
 ## 조건부
 
 ### ThirdPartyGaps

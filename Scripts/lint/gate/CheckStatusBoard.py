@@ -16,12 +16,11 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Plans import PlanFormatError  # noqa: E402
 from common.StatusBoard import StatusBoardError, buildBoard, diffBoard, kReadmeName  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kPlanHeader = "# 계획\n\n> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 1/2\n"
 _kRoadmap = "# 로드맵\n\n## 지금 순서\n\n1. [계획](A.md) 먼저.\n"

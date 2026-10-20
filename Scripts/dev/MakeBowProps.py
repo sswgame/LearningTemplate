@@ -29,8 +29,8 @@ import struct
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
-from dev.MakeSyntheticRig import BufferWriter
+from common.GltfBufferWriter import BufferWriter  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 
 #: 기본 출력 폴더(저장소 루트 기준).
 kDefaultFolder = "Resource/game/shooter3d/models_raw/props"

@@ -33,11 +33,11 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import normalizePath  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
+from lint.LayerRules import readCoreTiers  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kDirSourceCore = "Source/Core"
 kRootNode = "(root)"
@@ -181,16 +181,6 @@ def findMinimalOrder(mapEdge: EdgeMap) -> list[str]:
     return listOrder
 
 
-def loadGateTiers() -> dict[str, int] | None:
-    """게이트가 있으면 그 표를 쓴다(없으면 None — 표 비교를 건너뛴다)."""
-    gateDir = Path(__file__).resolve().parents[1] / "gate"
-    if not (gateDir / "CheckCoreLayers.py").is_file():
-        return None
-    sys.path.insert(0, str(gateDir))
-    import CheckCoreLayers as gate  # noqa: E402
-    return dict(gate._kCoreTier)
-
-
 def printEdges(mapEdge: EdgeMap, sourceLayer: str, destLayer: str, bDetail: bool, indent: str) -> None:
     listFile = mapEdge[sourceLayer][destLayer]
     print(f"{indent}{sourceLayer} -> {destLayer}: {len(listFile)}")
@@ -209,7 +199,7 @@ class RunCoreLayerGraphReport(LintReport):
     def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
         mapEdge = collectEdges(context.repositoryRoot)
         listComponent = findComponents(mapEdge)
-        mapGateTier = loadGateTiers()
+        mapGateTier = readCoreTiers()   # 표가 없거나 틀리면 RuleDataError 로 멈춘다 — 비교를 건너뛰지 않는다
 
         if args.all_edges:
             print("[RunCoreLayerGraph] 폴더 간 간선:")
@@ -236,11 +226,9 @@ class RunCoreLayerGraphReport(LintReport):
             print("[RunCoreLayerGraph] 강결합 묶음 없음 — DAG")
 
         mapTier = computeTiers(mapEdge)
-        print("\n티어 (0 = 토대)" + (". rules/CheckCoreLayers.toml 의 [tier] 와 다르면 표가 낡은 것이다:" if mapGateTier is not None else ":"))
+        print("\n티어 (0 = 토대). rules/CheckCoreLayers.toml 의 [tier] 와 다르면 표가 낡은 것이다:")
         for layer in sorted(mapTier, key=lambda name: (mapTier[name], name)):
-            marker = ""
-            if mapGateTier is not None and mapGateTier.get(layer) != mapTier[layer]:
-                marker = f"   <- 게이트 표는 {mapGateTier.get(layer)}"
+            marker = "" if mapGateTier.get(layer) == mapTier[layer] else f"   <- 게이트 표는 {mapGateTier.get(layer)}"
             print(f"  {mapTier[layer]:2d}  {layer:16s} -> {', '.join(sorted(mapEdge.get(layer, {})))}{marker}")
         return 0
 

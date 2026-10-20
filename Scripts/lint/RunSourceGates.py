@@ -21,14 +21,13 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parent))       # Scripts/lint — LintCatalog · LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from common import getProjectRoot  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 from common.RuleData import RuleDataError  # noqa: E402
-from LintCatalog import discoverSourceGateScripts  # noqa: E402
-from LintGate import GateError  # noqa: E402
-from SourceScan import scanSourceGates  # noqa: E402
+from lint.LintCatalog import discoverSourceGateScripts  # noqa: E402
+from lint.LintGate import GateError  # noqa: E402
+from lint.SourceScan import scanSourceGates  # noqa: E402
 
 #: 끝에 시간을 찍을 게이트 수.
 _kSlowestShown = 5

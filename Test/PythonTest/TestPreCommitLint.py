@@ -15,12 +15,11 @@ from unittest import mock
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
-from LintCatalog import LintScript, discoverLintScripts, discoverLintTargets  # noqa: E402
-from LintGate import LintGate  # noqa: E402
-import PreCommitLint  # noqa: E402
-from PreCommitLint import GateOutcome, StagedContentProbe, formatGateSummary, selectGatesForStaged  # noqa: E402
+from lint.LintCatalog import LintScript, discoverLintScripts, discoverLintTargets  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint import PreCommitLint  # noqa: E402
+from lint.PreCommitLint import GateOutcome, StagedContentProbe, formatGateSummary, selectGatesForStaged  # noqa: E402
 
 
 def makeScript(name: str, **mapAttribute: object) -> LintScript:

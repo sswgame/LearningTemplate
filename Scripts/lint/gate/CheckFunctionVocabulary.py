@@ -9,7 +9,7 @@
 
 규칙은 docs/agents/NamingCpp.md "Function names" 에 적혀 있고 여기서 강제한다.
 
-  1) AcronymRun  — 함수 이름의 대문자 묶음은 레지스트리(`Scripts/lint/AcronymRegistry.py`)의 강제 약어 하나여야 한다
+  1) AcronymRun  — 함수 이름의 대문자 묶음은 레지스트리(`Scripts/common/AcronymRegistry.py`)의 강제 약어 하나여야 한다
                    (`updateUI` · `queryAABB` — 약어는 대문자, docs/agents/NamingCpp.md "Function names"). 레지스트리에 없거나 아직 강제하지 않은
                    약어의 대문자 묶음(`bindComputeUAV`)은 잡는다. 마지막 대문자가 다음 낱말의 첫 글자면 묶음에서 뺀다
                    (`getHUDScale` 의 묶음은 `HUD`, `bindVector2DCallback` 의 `DC` 는 묶음이 아니다). 강제 약어를 Pascal 로 쓴 이름
@@ -42,14 +42,13 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-import AcronymRegistry as registry  # noqa: E402
-from common import kLintTargetRelDirs  # noqa: E402
+from common import AcronymRegistry as registry  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 # 훑을 곳 — 우리가 이름을 정하는 코드만.
 _kScanRoots = kLintTargetRelDirs
@@ -141,7 +140,7 @@ def scanFileInternal(source: SourceFile) -> list[str]:
         if acronymRun is not None:
             violations.append(
                 f"{relativePath}:{lineIndex}: [AcronymRun] '{name}' — 대문자 묶음 '{acronymRun}' 은 강제 약어가 아닙니다."
-                f" 등록부(Scripts/lint/AcronymRegistry.py)의 kEnforced 에 오르기 전에는 camelCase 낱말 하나로 씁니다(UAV→Uav)."
+                f" 등록부(Scripts/common/AcronymRegistry.py)의 kEnforced 에 오르기 전에는 camelCase 낱말 하나로 씁니다(UAV→Uav)."
             )
 
         verbMatch = _kBannedVerbRe.match(name)

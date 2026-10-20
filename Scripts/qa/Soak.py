@@ -24,8 +24,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import getProjectRoot  # noqa: E402
-from common import BuildTree  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.BuildTree import BuildTree  # noqa: E402
 from common.AppRun import addAppRunArguments, kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 kMegabyte = 1024.0 * 1024.0
@@ -57,7 +58,7 @@ def main(listArgument: list[str] | None = None) -> int:
     listFailure: list[str] = []
     if result.bBackendUnusable:
         print(f"[Soak] {args.backend} 는 이 기계에서 못 돈다", flush=True)
-        return 77
+        return ExitCode.Skipped
     if not result.bClean:
         detail = result.listErrorLine[:3] if result.listErrorLine else [f"exit {result.exitCode}, timed out={result.bTimedOut}"]
         listFailure.append(f"App did not finish cleanly: {detail}")

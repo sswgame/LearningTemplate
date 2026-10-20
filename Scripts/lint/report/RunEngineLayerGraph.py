@@ -29,13 +29,14 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gate"))   # 게이트 모듈의 규칙을 그대로 쓴다
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import iterIncludes, kDirSourceEngine, normalizePath  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
-import CheckEngineLayers as gate  # noqa: E402
+from common.CodeText import iterIncludes  # noqa: E402
+from common.Constants import kDirSourceEngine  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
+from common.RuleData import kExemptionKey  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
+from lint.LayerRules import engineLayerOf, kEnginePreludePrefix, kEngineRootLayerName, kEngineWiringPrefix, readEngineLayerRules  # noqa: E402
 
 kSourceSuffix = (".h", ".cpp", ".inl", ".xxx")
 
@@ -43,21 +44,21 @@ kSourceSuffix = (".h", ".cpp", ".inl", ".xxx")
 def collectEdgesInternal(repositoryRoot: Path) -> dict[str, dict[str, list[str]]]:
     """레이어 → 레이어 → [그 엣지를 만든 파일]. 게이트가 빼는 파일·헤더는 여기서도 뺀다."""
     engineDir = repositoryRoot / kDirSourceEngine
-    mapExemption = gate.CheckEngineLayersGate.mapExemption
+    mapExemption = readEngineLayerRules()[kExemptionKey]
     listEdge: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
     for filePath in engineDir.rglob("*"):
         if filePath.suffix not in kSourceSuffix or not filePath.is_file():
             continue
         relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
-        if gate._kWiringPrefix + relativeFilePath in mapExemption:
+        if kEngineWiringPrefix + relativeFilePath in mapExemption:
             continue
-        sourceLayer = gate.engineLayerOfInternal(filePath.relative_to(engineDir).as_posix())
+        sourceLayer = engineLayerOf(filePath.relative_to(engineDir).as_posix())
         text = filePath.read_text(encoding="utf-8", errors="replace")
         for _, includePath in iterIncludes(text):
             normalizedInclude = normalizePath(includePath)
-            if not normalizedInclude.startswith("Engine/") or gate._kPreludePrefix + normalizedInclude in mapExemption:
+            if not normalizedInclude.startswith("Engine/") or kEnginePreludePrefix + normalizedInclude in mapExemption:
                 continue
-            destLayer = gate.engineLayerOfInternal(normalizedInclude[len("Engine/"):])
+            destLayer = engineLayerOf(normalizedInclude[len("Engine/"):])
             if destLayer != sourceLayer:
                 listEdge[sourceLayer][destLayer].append(relativeFilePath)
     return listEdge
@@ -183,7 +184,7 @@ def writeTierTablesInternal(repositoryRoot: Path, mapTier: dict[str, int]) -> li
             continue
         layerName = match.group(1) or match.group(2)
         tier = mapTier.get(layerName, int(match.group(3)))
-        if layerName == gate._kRootLayerName and layerName not in mapTier:
+        if layerName == kEngineRootLayerName and layerName not in mapTier:
             tier = max(mapTier.values(), default=0) + 1
         keyText = f'"{match.group(1)}"' if match.group(1) else match.group(2)
         listEntry.append((tier, len(listEntry), layerName, listComment + [f"{keyText} = {tier}{match.group(4) or ''}"]))
@@ -229,9 +230,10 @@ class RunEngineLayerGraphReport(LintReport):
             print("[RunEngineLayerGraph] 강결합 묶음 없음 — DAG")
 
         mapTier = computeTiersInternal(listEdge)
+        mapGateTier: dict[str, int] = readEngineLayerRules()["tier"]
         print("\n티어 (0 = 토대). rules/CheckEngineLayers.toml 의 [tier] 와 다르면 표가 낡은 것이다:")
         for layer in sorted(mapTier, key=lambda name: (mapTier[name], name)):
-            expected = gate._kEngineTier.get(layer)
+            expected = mapGateTier.get(layer)
             marker = "" if expected == mapTier[layer] else f"   <- 게이트 표는 {expected}"
             listDependency = sorted(listEdge.get(layer, {}))
             print(f"  {mapTier[layer]:2d}  {layer:20s} -> {', '.join(listDependency)}{marker}")

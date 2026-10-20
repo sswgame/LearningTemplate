@@ -29,8 +29,9 @@ from pathlib import Path
 from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import (GeneratorError, formatCMakeSet, getProjectRoot, kDirConfigEnv, kFileToolchainConfig, runGenerator,  # noqa: E402
-                    writeGeneratedFile)
+from common.Constants import kDirConfigEnv, kFileToolchainConfig  # noqa: E402
+from common.GeneratedFile import GeneratorError, formatCMakeSet, runGenerator, writeGeneratedFile  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 
 kTag = "GenerateToolchainCMake"
 

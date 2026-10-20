@@ -31,11 +31,13 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))          # Scripts/lint — LintCatalog
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))      # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from common import getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
-from LintCatalog import LintTarget, discoverLintTargets  # noqa: E402
+from common.Host import runGit  # noqa: E402
+from common.Parallel import getCpuCount, mapConcurrent  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.Process import runProcess  # noqa: E402
+from lint.LintCatalog import LintTarget, discoverLintTargets  # noqa: E402
 
 #: 요약 줄에 보이는 가장 느린 린트 수.
 kSlowestCount = 3

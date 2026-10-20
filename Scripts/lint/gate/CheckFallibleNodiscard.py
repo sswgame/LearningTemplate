@@ -35,17 +35,15 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import kLintTargetRelDirs  # noqa: E402
-from common.RuleData import kKindTextList  # noqa: E402
-from LintGate import LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SharedRules import kFallibleVerbSchema, readFallibleVerbs  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
-# 실패할 수 있는 동사(`rules/CheckFallibleNodiscard.toml`).
-_kRuleSchema = {"fallible_verb": kKindTextList}
-_kListFallibleVerb: tuple[str, ...] = LintGate.readRules("CheckFallibleNodiscard", _kRuleSchema, requiredKeys=("fallible_verb",))["fallible_verb"]
+# 실패할 수 있는 동사(`rules/CheckFallibleNodiscard.toml`, `CheckDiscardReason` 도 읽는다).
+_kListFallibleVerb: tuple[str, ...] = readFallibleVerbs()
 
 # 실패할 수 있는 동사로(또는 `re` + 그 동사로) 시작하는 이름.
 _kFallibleNamePattern = r"(?P<name>(?:re)?(?:" + "|".join(_kListFallibleVerb) + r")(?:[A-Z0-9]\w*)?)"
@@ -149,7 +147,7 @@ def findFallibleDeclarationsWithoutNodiscard(source: SourceFile) -> list[str]:
 class CheckFallibleNodiscardGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    ruleSchema = _kRuleSchema
+    ruleSchema = kFallibleVerbSchema
 
     description = "실패 가능 bool 함수의 [[nodiscard]] 검사"
     buildComment = "Checking fallible bool declarations for [[nodiscard]]..."

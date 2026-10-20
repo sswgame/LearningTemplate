@@ -19,11 +19,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -44,11 +43,11 @@ class HelperRule:
 
 
 _kRule: tuple[HelperRule, ...] = (
-    HelperRule("subprocess", re.compile(r"\bsubprocess\.(run|check_output|check_call|call)\("), "common.runProcess"),
+    HelperRule("subprocess", re.compile(r"\bsubprocess\.(run|check_output|check_call|call)\("), "common.Process.runProcess"),
     HelperRule("compile DB", re.compile(r"[\"']compile_commands\.json[\"']"), "BuildTree.readCompileDatabase"),
     HelperRule("빌드 폴더 조립", re.compile(r"/\s*[\"']build[\"']\s*/|os\.path\.join\([^)\n]*[\"']build[\"']"), "BuildTree.fromArguments · fromPreset"),
     HelperRule("콘솔 인코딩", re.compile(r"\.reconfigure\(\s*encoding"), "모듈 수준 `import common`(common/__init__.py)"),
-    HelperRule("바뀌었을 때만 쓰기", re.compile(r"previous\s*!=\s*content|read_text\([^)\n]*\)\s*==\s*content"), "common.writeGeneratedFile"),
+    HelperRule("바뀌었을 때만 쓰기", re.compile(r"previous\s*!=\s*content|read_text\([^)\n]*\)\s*==\s*content"), "common.GeneratedFile.writeGeneratedFile"),
     HelperRule("CMakeCache 읽기", re.compile(r"[\"']CMakeCache\.txt[\"']"), "BuildTree.readCacheValue"),
 )
 

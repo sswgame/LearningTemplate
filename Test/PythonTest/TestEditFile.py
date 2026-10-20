@@ -14,9 +14,8 @@ from pathlib import Path
 
 kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
-sys.path.insert(0, str(kScriptsRoot / "dev"))
 
-import RunEditFile  # noqa: E402
+from dev import RunEditFile  # noqa: E402
 
 
 class EditFileTest(unittest.TestCase):

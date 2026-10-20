@@ -111,7 +111,7 @@
 | PK3 | 셰이더 스탬프 판정을 C++ 한 곳으로 합니다. `ShaderCookStamp::verify` 와 `App --verify-shaders` 를 더하고 `CheckShaderStamps` 게이트를 C++ 테스트로 바꿉니다. 커밋 훅은 셰이더 파일을 고친 커밋에서만 빌드된 `App` 을 부르고, 없으면 안내와 함께 실패합니다(건너뛰지 않음) | `Engine/Graphics/Shader/Compile/`, `App/`, `Scripts/lint/gate/`, `Scripts/lint/`(커밋 훅 패턴) | 없음 | `ShaderCookStampTest`, 스탬프가 틀린 커밋 시도, `-L lint` | 없음 |
 | PK4 | 호출부를 옮기고 파이썬을 지웁니다. `MakePackage.py` · CMake `CookAssets` 타깃이 `App --cook-all` 류 한 호출을 부르게 하고, `CookAssets.py` · `PackFormat.py` · `GeneratePackFormat.py` · `PackFormat.json` · 관련 파이썬 테스트(`TestPackIncremental.py` 등)를 지웁니다. `CookContract.json` 의 파이썬 소비자도 정리합니다 | `Scripts/generate/`, `Scripts/common/`, `Scripts/dev/`, `CMake/Engine/`, `Test/PythonTest/`, `Config/Engine/PackFormat.json` | PK2, PK3 | 전 프리셋 컴파일, `MakePackage` 로 Shipping 패키지 한 벌, `-L lint`, `-L nogpu` | 있습니다. 전체 패키징 시간 전후 |
 
-단위가 끝날 때 고칠 문서: `Scripts/generate/README.md`, `Scripts/docs/TreeCommon.md` · `Commands.md` · `TrapsBuild.md`, `CMake/README.md`, 결정 기록 5-2 의 쿠킹 항목, `Config/README.md`(압축 설명), `ZlibCompressionCodec.h` 주석("파이썬 표준 라이브러리" 문장), `ResourcePakReader.cpp` 368 행 오류 문구("CookAssets.py" → 새 명령).
+단위가 끝날 때 고칠 문서: `Scripts/generate/README.md`, `Scripts/docs/Commands.md` · `TrapsBuild.md`, `CMake/README.md`, 결정 기록 5-2 의 쿠킹 항목, `Config/README.md`(압축 설명), `ZlibCompressionCodec.h` 주석("파이썬 표준 라이브러리" 문장), `ResourcePakReader.cpp` 368 행 오류 문구("CookAssets.py" → 새 명령).
 
 ### 4.5 위험
 

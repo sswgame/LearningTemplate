@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-@file ListChangedTests.py
+@file ChangedTests.py
 @brief 바뀐 파일에서 돌릴 테스트를 고른다 — `py -3 -m Scripts test --changed` 가 쓴다.
 
 Bazel · Buck 의 영향 기반 선택과 같은 자리다. 소스 → 테스트 의존은 빌드 그래프에서 계산한다.
@@ -28,8 +26,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import BuildTree, runProcess  # noqa: E402
+from .BuildTree import BuildTree
+from .Process import runProcess
 
 #: 경로 머리 → 뜻. 위에서 아래로 처음 맞는 줄을 쓴다. `full` 은 전체, `lint` 는 린트만, `python` 은 린트 + 파이썬 테스트,
 #: `source` 는 빌드 그래프로, `test` 는 테스트 폴더 규칙(`Test/<실행 파일>/`)으로 고른다. 표에 없는 경로는 오류다.
@@ -234,7 +232,7 @@ def selectTests(listChangedPath: list[str], sourceRoot: Path, setTestExecutable:
         path = relativePath.replace("\\", "/")
         rule = classifyPath(path)
         if rule is None:
-            listUnresolved.append(f"{path}: 테스트 영향 표(ListChangedTests.kListPathRule)에 없는 경로 — 표에 줄을 더한다")
+            listUnresolved.append(f"{path}: 테스트 영향 표(ChangedTests.kListPathRule)에 없는 경로 — 표에 줄을 더한다")
             continue
         if rule == "lint":
             continue

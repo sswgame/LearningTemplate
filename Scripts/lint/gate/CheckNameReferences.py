@@ -37,11 +37,11 @@ import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import collectSourceFiles, normalizePath  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
+from common.Search import collectSourceFiles  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 전역 변수 정의 — 매크로(첫 인자 타입, 둘째 이름)와 이름 문자열로 등록하는 두 호출.
 _kDefinitionMacroRe = re.compile(r"\bSW_(?:TEST_)?GLOBAL_VARIABLE(?:_SHIPPED)?\s*\(\s*[^,()]+(?:\([^()]*\))?\s*,\s*(gv_\w+)")

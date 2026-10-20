@@ -1110,12 +1110,7 @@ def buildHeader(listNamed: list[tuple[str, int]]) -> str:
         "namespace sw::editor::editoricon",
         "{",
     ]
-    import pathlib
-    import sys
-    lintDir = str(pathlib.Path(__file__).resolve().parents[1] / "lint")   # Scripts/lint — 약어 레지스트리 한 자리
-    if lintDir not in sys.path:
-        sys.path.insert(0, lintDir)
-    import AcronymRegistry as acronymRegistry
+    from . import AcronymRegistry as acronymRegistry   # 약어 레지스트리 한 자리 — 규칙 데이터를 읽으므로 상수를 만들 때만
     width = max(len(name) for name, code in listNamed) + 1
     listConstant: list[str] = []
     for name, code in listNamed:

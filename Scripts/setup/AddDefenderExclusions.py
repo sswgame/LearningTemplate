@@ -15,7 +15,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot, runProcess
+from common.Paths import getProjectRoot
+from common.Process import runProcess
 
 
 def isUserAdmin() -> bool:

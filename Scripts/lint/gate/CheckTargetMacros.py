@@ -28,13 +28,13 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import findFast, kLintTargetRelDirs  # noqa: E402
+from common.CodeText import findFast  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
 from common.RuleData import kKindText  # noqa: E402
-from LintGate import GateError, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile  # noqa: E402
+from lint.LintGate import GateError, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
 #: 내장 매크로를 읽어도 되는 유일한 파일(CMake 판정과 실제 컴파일러를 대조한다).
 _kCheckHeader = "Source/Core/Common/TargetMacroCheck.h"

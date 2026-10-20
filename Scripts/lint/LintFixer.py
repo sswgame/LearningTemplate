@@ -23,19 +23,12 @@ from pathlib import Path
 from types import ModuleType
 from typing import Callable, Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import (  # noqa: E402
-    collectRepositoryFiles,
-    collectSourceFiles,
-    flatMapConcurrent,
-    getLintSearchDirs,
-    getModifiedCppFiles,
-    getProjectRoot,
-    kCppAllExtensions,
-    kNotOurDirNames,
-    resolveFileArguments,
-)
+from common.Constants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
+from common.Host import getModifiedCppFiles  # noqa: E402
+from common.Parallel import flatMapConcurrent  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.Search import collectRepositoryFiles, collectSourceFiles, getLintSearchDirs, resolveFileArguments  # noqa: E402
 
 
 def addFileArguments(parser: argparse.ArgumentParser) -> None:
@@ -82,7 +75,7 @@ class FixerFileKind:
 
 def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str, fileKind: FixerFileKind | None = None) -> list[Path]:
     """
-    무엇을 고칠지 고릅니다: 지정한 파일(`--files` — 게이트와 같은 규칙, `common.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
+    무엇을 고칠지 고릅니다: 지정한 파일(`--files` — 게이트와 같은 규칙, `common.Search.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
     `fileKind` 가 없으면 C++ 소스, 있으면 그 종류(CMake 처럼).
 
     마지막 폴백("변경된 파일이 없으면 전체")이 이 규칙의 핵심이다. 깨끗한 트리에서 돌려도

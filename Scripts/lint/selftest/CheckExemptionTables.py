@@ -12,7 +12,7 @@ Scripts/lint/selftest/CheckExemptionTables.py
   1) `gate/` 의 모듈 수준 · 클래스 수준 대입 가운데 이름이 `_k…Allow/Allowed/Exempt/Exception/Wiring/Ubiquitous/Deferred/Skipped…` 이고
      값이 표(사전 · 집합 · 튜플 · 목록 리터럴, `frozenset(…)` · `set(…)` · `dict(…)` · `tuple(…)` 호출)인 것 — `rules/` 의 `[exemption]` 으로 옮긴다.
   2) `gate/` · `selftest/` 의 클래스가 `mapExemption` 을 직접 대입한다 — 데이터 파일로 옮긴다.
-  3) `rules/` 의 파일 — 읽는 스크립트(`Scripts/lint/**/<이름>.py`)가 없다(낡은 데이터), `[exemption]` 이 50 줄을 넘는다(예외가 규칙보다 많다,
+  3) `rules/` 의 파일 — 읽는 스크립트(`Scripts/**/<이름>.py` — 게이트면 lint/, 공용 라이브러리면 common/)가 없다(낡은 데이터), `[exemption]` 이 50 줄을 넘는다(예외가 규칙보다 많다,
      규칙을 고친다), `tomllib` 과 3.10 용 부분 집합 읽기(`common.RuleData.readTomlSubset`)의 결과가 다르다(CI 린트 잡의 파이썬은 3.10 이다).
 
 정규식 · 앞말 문자열(`_kWiringPrefix = "wiring:"`)처럼 표가 아닌 것은 막지 않는다.
@@ -29,11 +29,10 @@ import sys
 from pathlib import Path
 from typing import Iterator
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.RuleData import RuleDataError, kExemptionKey, kRuleDataRelDir, readTomlSubset, readTomlText  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kTableNameRe = re.compile(r"^_?k\w*(Allow|Allowed|Exempt|Exception|Wiring|Ubiquitous|Deferred|Skipped)\w*$", re.IGNORECASE)
 _kTableFactoryName = frozenset({"frozenset", "set", "dict", "tuple", "list"})
@@ -79,8 +78,8 @@ def findRuleFileViolationsInternal(repositoryRoot: Path, path: Path) -> list[str
     """`rules/` 파일 하나 — 읽는 스크립트, 예외 표 크기, 두 읽기의 일치."""
     relPath = path.relative_to(repositoryRoot).as_posix()
     listViolation: list[str] = []
-    if not any((repositoryRoot / "Scripts" / "lint").rglob(f"{path.stem}.py")):
-        listViolation.append(f"{relPath}: 읽는 스크립트(Scripts/lint/**/{path.stem}.py)가 없습니다 — 옮겼으면 파일 이름을 맞추고, 지웠으면 이 파일도 지웁니다")
+    if not any((repositoryRoot / "Scripts").rglob(f"{path.stem}.py")):
+        listViolation.append(f"{relPath}: 읽는 스크립트(Scripts/**/{path.stem}.py)가 없습니다 — 옮겼으면 파일 이름을 맞추고, 지웠으면 이 파일도 지웁니다")
     try:
         text = path.read_text(encoding="utf-8")
         data = readTomlText(text, relPath)

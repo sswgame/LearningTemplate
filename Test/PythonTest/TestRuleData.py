@@ -11,11 +11,10 @@ from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
 from common import RuleData  # noqa: E402
 from common.RuleData import RuleDataError, kKindInteger, kKindReason, kKindText, kKindTextList, readTomlSubset  # noqa: E402
-from LintGate import LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
 
 _kSample = """# 머리 주석
 list = [

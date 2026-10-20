@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.Process import runProcess  # noqa: E402
 
 kNewline = "\n"
 _kAnsi = re.compile(r"\x1b\[[0-9;]*m")
@@ -85,7 +86,7 @@ def collectCrashStacksInternal(ctestDir: Path) -> list[str]:
 
 def readTestTimeouts(ctestDir: Path) -> dict[str, float]:
     """테스트 이름 → `TIMEOUT` 속성(초)입니다. ctest 를 못 부르거나 속성이 없는 테스트는 빠집니다."""
-    result = common.runProcess(["ctest", "--test-dir", ctestDir, "--show-only=json-v1"], timeoutSeconds=60)
+    result = runProcess(["ctest", "--test-dir", ctestDir, "--show-only=json-v1"], timeoutSeconds=60)
     if not result.bSucceeded:
         return {}
     try:

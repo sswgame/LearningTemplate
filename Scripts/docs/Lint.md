@@ -11,12 +11,12 @@
 | --- | --- |
 | 파일마다 따로 보는 C++ · 셰이더 검사 | **소스 게이트** — `LintGate.sourceScanRoots` · `sourceSuffixes` + `checkSourceFile`(+ 필요하면 `finishSourceScan`). 걷기 · 읽기 · 가리기(`SourceFile.masked` · `noComment`)를 함께 도는 게이트와 나눠 쓰고, CTest · CI 는 `CheckSourceFiles` 하나로 돈다 |
 | `--files` · 대상 파일 고르기 · 읽기(소스 게이트가 아닐 때) | `LintGate.addFilesArgument` · `selectTargetFiles` · `readFiles(mustContain=…)` |
-| 파일 전체에 대는 "있기나 한가" 정규식 | `common.findFast` — 머리 lookbehind · `\b` 를 뗀 식으로 먼저 거른다(그런 식은 `re` 가 접두 훑기를 못 써 39 MB 에 1 s) |
+| 파일 전체에 대는 "있기나 한가" 정규식 | `common.CodeText.findFast` — 머리 lookbehind · `\b` 를 뗀 식으로 먼저 거른다(그런 식은 `re` 가 접두 훑기를 못 써 39 MB 에 1 s) |
 | 예외(이유 · 낡음 검사 포함) | `lint/rules/<게이트>.toml` 의 `[exemption]` → `LintGate.mapExemption` · `seeExemption` · `useExemption` |
 | 게이트가 읽는 목록 · 표(티어 · 어휘 · 허용 파일) | `lint/rules/<게이트>.toml` 의 다른 키 → 클래스 `ruleSchema` + 모듈 수준 `LintGate.readRules` |
-| 주석 · 리터럴 가리기, 줄 번호 | `common.blankComments` · `blankCommentsAndLiterals` · `blankMatch` · `lineOf` |
-| include 줄 · 층 폴더 · include 가 가리키는 파일 | `common.iterIncludes` · `firstFolderAfter` · `IncludeResolver` |
-| 파일마다 무거운 정규식 | `common.flatMapInProcesses`(스레드는 GIL 에 막힌다) |
+| 주석 · 리터럴 가리기, 줄 번호 | `common.CodeText.blankComments` · `blankCommentsAndLiterals` · `blankMatch` · `lineOf` |
+| include 줄 · 층 폴더 · include 가 가리키는 파일 | `common.CodeText.iterIncludes` · `firstFolderAfter` · `IncludeResolver` |
+| 파일마다 무거운 정규식 | `common.Parallel.flatMapInProcesses`(스레드는 GIL 에 막힌다) |
 
 예: `CheckCoreNetworkLayers` 는 `selectTargetFiles` → `readFiles` → `iterIncludes` · `firstFolderAfter` 로 층 표 하나를 대조하고,
 `CheckModuleTargets` 는 `IncludeResolver` 로 include 를 소속 모듈로 푼다. 자기 테스트 조각(`selfTestCases`)이 없으면 `CheckLintsAreAlive` 가 실패한다.

@@ -6,7 +6,7 @@
 게이트 하나가 프로세스 하나로 돌며 트리를 따로 걷고 읽고 가리면, 같은 C++ 수천 파일에 같은 일이 게이트 수만큼 되풀이된다
 (`blankCommentsAndLiterals` 를 열다섯 게이트가 각자 돌렸다). 그래서 실행 단위를 게이트가 아니라 **파일**로 둔다: 파일 하나를 읽어
 `SourceFile` 로 만들고, 그 파일을 보는 게이트들의 `checkSourceFile` 을 차례로 부른다. 가린 글(`masked` · `noComment`)은 처음 묻는
-게이트가 만들고 나머지는 나눠 쓴다. 파일들은 코어 수만큼의 프로세스 덩어리로 나눈다(`common.flatMapInProcesses` — 파일마다 파이썬
+게이트가 만들고 나머지는 나눠 쓴다. 파일들은 코어 수만큼의 프로세스 덩어리로 나눈다(`common.Parallel.flatMapInProcesses` — 파일마다 파이썬
 정규식을 돌리는 일이라 스레드로는 겹치지 않는다).
 
 게이트가 이 길을 타는 법은 `LintGate.sourceScanRoots` 를 채우는 것이다(`LintGate.py` 의 "소스 게이트"). 게이트를 혼자 돌려도
@@ -32,9 +32,10 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
-from common import blankComments, blankCommentsAndLiterals, collectRepositoryFiles, flatMapInProcesses, resolveFileArguments  # noqa: E402
+from common.CodeText import blankComments, blankCommentsAndLiterals  # noqa: E402
+from common.Parallel import flatMapInProcesses  # noqa: E402
+from common.Search import collectRepositoryFiles, resolveFileArguments  # noqa: E402
 
 #: `git diff -U0` 의 덩어리 머리 — 새 쪽 시작 줄과 줄 수(없으면 1).
 _kHunkRe = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")

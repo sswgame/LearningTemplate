@@ -1,4 +1,4 @@
-# 약어 레지스트리의 데이터 — 읽는 코드와 철자 규칙은 Scripts/lint/AcronymRegistry.py, 규칙 설명은 docs/agents/NamingCpp.md "Function names".
+# 약어 레지스트리의 데이터 — 읽는 코드와 철자 규칙은 Scripts/common/AcronymRegistry.py, 규칙 설명은 docs/agents/NamingCpp.md "Function names".
 # 게이트(CheckAcronymSpelling · CheckFunctionVocabulary) · 코드모드(FormatAcronymSpelling) · 에디터 아이콘 생성기가 같이 읽는다.
 
 # 등록된 약어(대문자 철자).

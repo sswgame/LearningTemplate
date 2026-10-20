@@ -28,9 +28,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import getProjectRoot  # noqa: E402
-from common import BuildTree  # noqa: E402
-from common.AppRun import addAppRunArguments, kBackendSwitch, kSkipExitCode, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.BuildTree import BuildTree  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
+from common.AppRun import addAppRunArguments, kBackendSwitch, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 #: 기준으로 들고 있는 구간 — 프레임 전체(게임 · 렌더 스레드 · GPU)와 그 아래 큰 덩어리. `GPU.Frame` 은 네 백엔드의 타임스탬프(프레임 첫 명령 ~ 마지막 패스 끝)다 —
 #: 기준에 없는 구간은 비교하지 않으므로(`compareInternal` 은 기준을 돈다) 새로 뜬 기준부터 잡힌다.
@@ -134,7 +135,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if listFailure:
         for failure in listFailure:
             print(f"[Perf] FAIL {failure}", flush=True)
-        return kSkipExitCode if listFailure == ["backend unusable on this machine"] else 1
+        return ExitCode.Skipped if listFailure == ["backend unusable on this machine"] else 1
     if "GT.Frame" not in measured:
         print("[Perf] FAIL no [Profile] table in the output", flush=True)
         return 1
@@ -159,7 +160,7 @@ def main(listArgument: list[str] | None = None) -> int:
     entry = document["machines"].get(entryKey)
     if entry is None:
         print(f"[Perf] 이 기계의 기준이 없다({entryKey}) — --record 로 남기십시오", flush=True)
-        return kSkipExitCode
+        return ExitCode.Skipped
     if entry.get("frames") != args.frames or entry.get("arguments") != listAppArgument:
         print("[Perf] 기준이 다른 인자로 재어졌다 — 다시 남기십시오", flush=True)
         return 1

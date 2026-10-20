@@ -29,7 +29,7 @@ The single source is `kMinimumPythonVersion` in `Scripts/common/Constants.py`; i
 - A script exits with `sys.exit(…)`, never `raise SystemExit(…)` `[exit]`. Its `__main__` guard is the single line `sys.exit(main())` — a test file's is `unittest.main()` `[mainGuard]`;
   `main` takes `argv` and returns the exit code (`CheckScriptEntryPoints.py`).
 - `argparse.ArgumentParser` gets a `description=` `[argparse]`.
-- Not checked by a gate: child processes go through `common.runProcess` under `Scripts/` (`CheckScriptCommonHelpers.py`); console output is plain `print` (there is no logging wrapper —
+- Not checked by a gate: child processes go through `common.Process.runProcess` under `Scripts/` (`CheckScriptCommonHelpers.py`); console output is plain `print` (there is no logging wrapper —
   gates, fixers and reports print through their base class); catch the exceptions you expect, and `except Exception` only at a boundary that must keep going and reports what it swallowed
   (a setup step, a session hook).
 

@@ -22,11 +22,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -38,14 +37,12 @@ class FolderRule:
     - `namePattern` : 파일 이름(확장자 없이) 규칙 — 비우면 보지 않는다
     - `baseClass`   : 이 이름의 클래스를 상속한 클래스가 있어야 한다 — 비우면 보지 않는다
     - `exemptName`  : 이 모듈 수준 이름이 있으면 기반 클래스 규칙에서 뺀다(이유를 그 이름이 든다 — `kFixerSkipReason`)
-    - `bLibraryExempt`: `if __name__ == "__main__"` 이 없는 파일(라이브러리)은 이름 규칙에서 뺀다
     """
 
     folder: str
     namePattern: str = ""
     baseClass: str = ""
     exemptName: str = ""
-    bLibraryExempt: bool = False
 
 
 #: `Scripts/docs/Layout.md` 의 Layout 표 그대로.
@@ -55,7 +52,7 @@ _kRule: tuple[FolderRule, ...] = (
     FolderRule("lint/fixer", r"^Format[A-Z]\w+$", "LintFixer", exemptName="kFixerSkipReason"),
     FolderRule("lint/report", r"^Run[A-Z]\w+$", "LintReport"),
     FolderRule("generate", r"^(Generate|Cook)[A-Z]\w+$"),
-    FolderRule("setup", r"^(Setup|Install|Add)[A-Z]\w+$", bLibraryExempt=True),
+    FolderRule("setup", r"^(Setup|Install|Add)[A-Z]\w+$"),
     FolderRule("dev", r"^(Run|Compare|Make|Move|Remove|Configure|Sample|Store|List|Ci)[A-Z]\w*$"),
 )
 
@@ -97,10 +94,6 @@ def definesNameInternal(tree: ast.Module, name: str) -> bool:
                for node in tree.body)
 
 
-def hasMainGuardInternal(text: str) -> bool:
-    return re.search(r"^if\s+__name__\s*==\s*[\"']__main__[\"']\s*:", text, re.MULTILINE) is not None
-
-
 def checkScriptInternal(relPath: str, text: str) -> list[str]:
     """`Scripts/<폴더>/<이름>.py` 하나의 위반."""
     folder, _, fileName = relPath.removeprefix("Scripts/").rpartition("/")
@@ -109,8 +102,7 @@ def checkScriptInternal(relPath: str, text: str) -> list[str]:
     if rule is None or stem == "__init__":
         return []
     listViolation: list[str] = []
-    bLibrary = not hasMainGuardInternal(text)
-    if rule.namePattern and not re.match(rule.namePattern, stem) and not (rule.bLibraryExempt and bLibrary):
+    if rule.namePattern and not re.match(rule.namePattern, stem):
         listViolation.append(f"{relPath}: {folder}/ 의 파일 이름은 {rule.namePattern} — Scripts/docs/Layout.md 의 Layout 표")
     if rule.baseClass:
         try:
@@ -132,7 +124,7 @@ class CheckScriptLayoutGate(LintGate):
     hint = "  폴더에 맞는 이름으로 옮기거나(git mv) 기반 클래스를 상속합니다 — Scripts/docs/Layout.md 의 Layout 표."
     selfTestCases = [
         {"name": "report/ 의 접두 어긋남", "expectedViolation": "Scripts/lint/report/ProbeReport.py: lint/report/ 의 파일 이름은 ^Run[A-Z]\\w+$",
-         "files": {"Scripts/lint/report/ProbeReport.py": "from LintReport import LintReport\n\n\nclass ProbeReport(LintReport):\n    pass\n"}},
+         "files": {"Scripts/lint/report/ProbeReport.py": "from lint.LintReport import LintReport\n\n\nclass ProbeReport(LintReport):\n    pass\n"}},
         {"name": "report/ 인데 LintReport 가 아님", "expectedViolation": "Scripts/lint/report/RunProbe.py: lint/report/ 의 스크립트는 LintReport 하위 클래스다",
          "files": {"Scripts/lint/report/RunProbe.py": "def main(argv=None):\n    return 0\n"}},
         {"name": "dev/ 의 동사 없는 이름", "expectedViolation": "Scripts/dev/BackendProbe.py: dev/ 의 파일 이름은 ^(Run|Compare|Make|Move|Remove|Configure|Sample|Store|List|Ci)[A-Z]\\w*$",

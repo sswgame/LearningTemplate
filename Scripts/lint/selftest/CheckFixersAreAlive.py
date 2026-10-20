@@ -30,13 +30,12 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — 사촌 린트 패키지
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from LintCatalog import discoverLintScripts  # noqa: E402
-from LintFixer import findFixerClass  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintCatalog import discoverLintScripts  # noqa: E402
+from lint.LintFixer import findFixerClass  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 
 

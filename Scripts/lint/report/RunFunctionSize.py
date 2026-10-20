@@ -39,11 +39,12 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankCommentsAndLiterals, blankMatch, collectSourceFiles, kCppAllExtensions, kNotOurDirNames  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+from common.CodeText import blankCommentsAndLiterals, blankMatch  # noqa: E402
+from common.Constants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
+from common.Search import collectSourceFiles  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kDefaultMinLines = 100
 kDefaultRoots: tuple[str, ...] = ("Source",)

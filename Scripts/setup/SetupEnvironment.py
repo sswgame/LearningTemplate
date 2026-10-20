@@ -22,12 +22,9 @@ from typing import Any
 # Scripts/ → sys.path (common 패키지 부트스트랩)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import (
-    autoBootstrapEnabled,
-    ensureClangFormat,
-    getOrFindCached,
-    getProjectRoot,
-    isVcpkgRoot,
+from common.ClangFormat import ensureClangFormat
+from common.Config import autoBootstrapEnabled, loadSearchPaths, loadToolchainConfig, readOptionalConfig, requireConfig
+from common.Constants import (
     kDirConfigEnv,
     kEnvSwVcpkgAutoBootstrap,
     kFileParserConfig,
@@ -50,13 +47,10 @@ from common import (
     kKeyVcpkgRoot,
     kKeyWindowsSdkDir,
     kKeyWindowsSdkVersion,
-    loadSearchPaths,
-    loadToolchainConfig,
-    normalizePath,
-    readOptionalConfig,
-    requireConfig,
 )
-from setup.HostTools import (
+from common.Paths import getProjectRoot, normalizePath
+from common.Search import getOrFindCached, isVcpkgRoot
+from common.HostTools import (
     findDxcDlls,
     findMsvcPath,
     findWindowsSdkPath,

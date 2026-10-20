@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 
-from common import collectRepositoryFiles, naturalVersionKey, resolveFileArguments  # noqa: E402
+from common.Search import collectRepositoryFiles, naturalVersionKey, resolveFileArguments  # noqa: E402
 
 
 class CommonSearchTest(unittest.TestCase):

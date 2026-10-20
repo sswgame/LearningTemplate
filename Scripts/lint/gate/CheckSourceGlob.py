@@ -24,15 +24,10 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import (  # noqa: E402
-    BuildTree,
-    BuildTreeError,
-    addBuildTreeArguments,
-    collectSourceFiles,
-    kUnbuiltSourceListRelPath,
+from common.BuildTree import addBuildTreeArguments, BuildTree, BuildTreeError, kUnbuiltSourceListRelPath  # noqa: E402
+from common.Constants import (  # noqa: E402
     kCppSourceExtensions,
     kDirSourceApp,
     kDirSourceModuleHost,
@@ -43,7 +38,8 @@ from common import (  # noqa: E402
     kDirSourceGames,
     kDirSourceServer,
 )
-from LintGate import GateResult, LintGate  # noqa: E402
+from common.Search import collectSourceFiles  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kScanRoots = (
     kDirSourceEngine,

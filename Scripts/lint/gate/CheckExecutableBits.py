@@ -26,11 +26,12 @@ import stat
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import kNotOurDirNames, mapConcurrent, runProcess  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from common.Constants import kNotOurDirNames  # noqa: E402
+from common.Parallel import mapConcurrent  # noqa: E402
+from common.Process import runProcess  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 kExecutableMode = "100755"
 kRegularModes = ("100644", "100755")

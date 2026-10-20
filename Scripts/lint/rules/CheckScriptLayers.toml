@@ -1,0 +1,48 @@
+# CheckScriptLayers 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckScriptLayers.py.
+
+# 모듈 접두(Scripts 기준 점 이름) → 층. 숫자가 큰 쪽이 위다. 가장 긴 접두가 맞는다. 층 2 끼리는 import 하지 않는다.
+[tier]
+"common" = 0
+"lint" = 1                  # 린트 틀: LintGate, LintFixer, LintReport, LintCatalog, SourceScan, LayerRules, StagedScope, conventions
+"lint.gate" = 2
+"lint.fixer" = 2
+"lint.report" = 2
+"lint.selftest" = 2
+"lint.PreCommitLint" = 2
+"lint.RunLintSuite" = 2
+"lint.RunSourceGates" = 2
+"setup" = 2
+"generate" = 2
+"dev" = 2
+"qa" = 2
+"asset" = 2
+"__main__" = 3
+
+# '<파일>|<모듈>' -> 이유. 조립 명령과 이유가 있는 간선만 둔다.
+[exemption]
+"Scripts/generate/GenerateConfigureFiles.py|generate.GenerateCMakeConstants" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
+"Scripts/generate/GenerateConfigureFiles.py|generate.GenerateCookContract" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
+"Scripts/generate/GenerateConfigureFiles.py|generate.GenerateLintTargets" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
+"Scripts/generate/GenerateConfigureFiles.py|generate.GeneratePackFormat" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
+"Scripts/generate/GenerateConfigureFiles.py|generate.GenerateShippingHostDefaults" = "configure 생성기 다섯을 한 프로세스로 돌리는 조립 명령(docs/09_Decisions.md 5-2, 2026-10-06)"
+"Scripts/setup/SetupEnvironment.py|setup.InstallGitHooks" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
+"Scripts/setup/SetupEnvironment.py|setup.SetupLinuxDevEnvironment" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
+"Scripts/setup/SetupEnvironment.py|setup.SetupLlvm" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
+"Scripts/setup/SetupEnvironment.py|setup.SetupVcpkg" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
+"Scripts/lint/fixer/FormatModified.py|lint.fixer.FormatBranchBraces" = "픽서 넷과 clang-format 을 순서대로 부르는 조립 명령(kFixerSkipReason)"
+"Scripts/lint/fixer/FormatModified.py|lint.fixer.FormatForwardDeclarations" = "픽서 넷과 clang-format 을 순서대로 부르는 조립 명령(kFixerSkipReason)"
+"Scripts/lint/fixer/FormatModified.py|lint.fixer.FormatIncludeOrder" = "픽서 넷과 clang-format 을 순서대로 부르는 조립 명령(kFixerSkipReason)"
+"Scripts/lint/fixer/FormatModified.py|lint.fixer.FormatNamespaceBlocks" = "픽서 넷과 clang-format 을 순서대로 부르는 조립 명령(kFixerSkipReason)"
+"Scripts/lint/fixer/FormatClangFormat.py|lint.fixer.FormatBranchBraces" = "clang-format 앞에 전방 선언 · 중괄호 픽서를 돌리는 조립 명령"
+"Scripts/lint/fixer/FormatClangFormat.py|lint.fixer.FormatForwardDeclarations" = "clang-format 앞에 전방 선언 · 중괄호 픽서를 돌리는 조립 명령"
+"Scripts/lint/PreCommitLint.py|lint.fixer.FormatBranchBraces" = "커밋 훅이 staged 파일에 픽서 둘을 돌린다(훅은 게이트 · 픽서를 부르는 조립 명령)"
+"Scripts/lint/PreCommitLint.py|lint.fixer.FormatForwardDeclarations" = "커밋 훅이 staged 파일에 픽서 둘을 돌린다(훅은 게이트 · 픽서를 부르는 조립 명령)"
+"Scripts/lint/fixer/FormatBranchBraces.py|lint.gate.CheckLoopBraces" = "픽서가 짝 게이트의 변환(insertLoopBraces)을 부른다 — 규칙 한 자리"
+"Scripts/lint/fixer/FormatIncludeOrder.py|lint.gate.CheckIncludeOrder" = "픽서가 짝 게이트의 변환(fixText)을 부른다 — 규칙 한 자리"
+"Scripts/lint/fixer/FormatNamespaceBlocks.py|lint.gate.CheckNamespaceBlocks" = "픽서가 짝 게이트의 변환을 부른다 — 규칙 한 자리"
+"Scripts/lint/report/RunDiscardReasons.py|lint.gate.CheckDiscardReason" = "보고서가 짝 게이트의 판정(findFallibleDiscards)으로 버린 자리를 모은다"
+"Scripts/lint/selftest/CheckCodeConventionsSelfTest.py|lint.gate.CheckCodeConventions" = "셀프테스트가 자기 게이트를 부른다"
+"Scripts/lint/selftest/CheckServiceAccessSelfTest.py|lint.gate.CheckServiceAccess" = "셀프테스트가 자기 게이트를 부른다"
+"Scripts/dev/MakePackage.py|generate.CookAssets" = "generate.CookAssets 의 팩 이름 목록. StructureSimplification PK4 가 쿠커를 C++ 로 옮겨 generate/CookAssets.py 를 지우면 이 줄도 지운다"
+"Scripts/dev/RemoveWorktree.py|generate.CookAssets" = "쿠킹 스탬프 경로의 정본(kCookStampPathPattern). StructureSimplification PK4 가 쿠커를 C++ 로 옮겨 generate/CookAssets.py 를 지우면 이 줄도 지운다"
+"Scripts/lint/gate/CheckShaderStamps.py|generate.CookAssets" = "쿠커의 셰이더 스탬프 판정을 부른다. StructureSimplification PK4 가 쿠커를 C++ 로 옮겨 generate/CookAssets.py 를 지우면 이 줄도 지운다"

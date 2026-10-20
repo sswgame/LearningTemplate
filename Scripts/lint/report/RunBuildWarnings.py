@@ -50,10 +50,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
-from common import TranslationUnitSweep
-from LintReport import LintReport, ReportContext  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
+from common.TranslationUnits import TranslationUnitSweep
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 # "path(line,col): warning: 본문 [-Wname]" / GNU 드라이버의 "path:line:col: warning: ..." 둘 다 받는다.
 _kDiagnosticRe = re.compile(r"^(?P<where>.+?):\s*(?P<kind>warning|error):\s*(?P<text>.*)$")

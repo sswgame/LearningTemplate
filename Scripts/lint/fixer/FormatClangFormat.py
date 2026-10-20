@@ -17,13 +17,13 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — 사촌 린트 패키지
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from fixer import FormatBranchBraces
-from fixer import FormatForwardDeclarations
-from LintFixer import addFileArguments, selectFixerTargetFiles
-from common import getProjectRoot, runClangFormatBatch
+from lint.fixer import FormatBranchBraces
+from lint.fixer import FormatForwardDeclarations
+from lint.LintFixer import addFileArguments, selectFixerTargetFiles
+from common.Host import runClangFormatBatch
+from common.Paths import getProjectRoot
 
 # 파일을 고쳐 쓰므로 `report/` 가 아니라 `fixer/` 에 있다. 변환이 clang-format 이라 파이썬 변환(`FixPass`)이 없다.
 kFixerSkipReason = "파이썬 변환(FixPass)이 아니라 clang-format 을 부르는 실행기다 — 대상 파일 고르기만 LintFixer 와 같다"

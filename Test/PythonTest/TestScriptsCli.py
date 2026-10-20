@@ -32,6 +32,15 @@ class ScriptsCliTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("CheckEngineLayers", result.stdout)
 
+    def testListShowsDocstringSummaryAndCommand(self) -> None:
+        # 파일 목록은 docstring 에서 만든다 — 경로 · @file 줄을 건너뛰고, 명령으로 부르는 파일에는 부르는 법이 붙는다.
+        result = runCli("--list", "lint")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("[py -3 -m Scripts gate CheckEngineLayers]", result.stdout)
+        self.assertIn("[py -3 -m Scripts lint]", result.stdout)
+        self.assertNotIn("Scripts/lint/PreCommitLint.py", result.stdout)
+        self.assertEqual(runCli("--list", "NoSuchFolder").returncode, 1)
+
     def testUnknownNameFails(self) -> None:
         result = runCli("gate", "NoSuchGate")
         self.assertEqual(result.returncode, 1)

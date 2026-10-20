@@ -8,7 +8,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from common import collectRepositoryFiles, kCppAllExtensions, kLintTargetRelDirs
+from common.Constants import kCppAllExtensions, kLintTargetRelDirs
+from common.Search import collectRepositoryFiles
 
 
 # --- 4. 정규표현식 패턴 ------------------------------------------------------

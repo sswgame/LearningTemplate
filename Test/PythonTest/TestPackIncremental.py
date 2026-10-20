@@ -9,11 +9,9 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 import tempfile
-import types
 import unittest
 from pathlib import Path
 
@@ -21,16 +19,7 @@ kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
 
-def loadCookerInternal() -> types.ModuleType:
-    """쿠커 스크립트를 모듈로 불러옵니다."""
-    cookerPath = kRepositoryRoot / "Scripts" / "generate" / "CookAssets.py"
-    moduleSpec = importlib.util.spec_from_file_location("CookAssetsPackIncremental", cookerPath)
-    module = importlib.util.module_from_spec(moduleSpec)
-    moduleSpec.loader.exec_module(module)
-    return module
-
-
-kCooker = loadCookerInternal()
+from generate import CookAssets  # noqa: E402
 
 
 class PackIncrementalTest(unittest.TestCase):
@@ -47,7 +36,7 @@ class PackIncrementalTest(unittest.TestCase):
         self._folder.cleanup()
 
     def writePack(self, packPath: Path | None = None, compressionLevel: int = 6) -> object:
-        writer = kCooker.PackWriter(kCooker._gPackFormat, compression=kCooker._gPackFormat.codecZlib, compressionLevel=compressionLevel)
+        writer = CookAssets.PackWriter(CookAssets._gPackFormat, compression=CookAssets._gPackFormat.codecZlib, compressionLevel=compressionLevel)
         for filePath in sorted(self.sourceDir.rglob("*")):
             if filePath.is_file():
                 writer.addFile(filePath.relative_to(self.sourceDir).as_posix(), filePath)
@@ -58,7 +47,7 @@ class PackIncrementalTest(unittest.TestCase):
         first = self.writePack()
         self.assertTrue(first.bWritten)
         self.assertEqual(first.reason, "기록이 없습니다")
-        recordPath = kCooker.PackRecord.pathFor(self.packPath)
+        recordPath = CookAssets.PackRecord.pathFor(self.packPath)
         self.assertTrue(recordPath.is_file())
         before = self.packPath.stat().st_mtime_ns
 
@@ -86,18 +75,18 @@ class PackIncrementalTest(unittest.TestCase):
 
     def testOldRecordFormatIsRewrittenNotSkipped(self) -> None:
         self.writePack()
-        recordPath = kCooker.PackRecord.pathFor(self.packPath)
+        recordPath = CookAssets.PackRecord.pathFor(self.packPath)
         data = json.loads(recordPath.read_text(encoding="utf-8"))
-        data["record_format"] = kCooker.kPackRecordFormatVersion - 1
+        data["record_format"] = CookAssets.kPackRecordFormatVersion - 1
         recordPath.write_text(json.dumps(data), encoding="utf-8")
         result = self.writePack()
         self.assertTrue(result.bWritten)
         self.assertIn("기록 형식이 낡았습니다", result.reason)
-        self.assertEqual(json.loads(recordPath.read_text(encoding="utf-8"))["record_format"], kCooker.kPackRecordFormatVersion)
+        self.assertEqual(json.loads(recordPath.read_text(encoding="utf-8"))["record_format"], CookAssets.kPackRecordFormatVersion)
 
     def testBrokenRecordAndTamperedPackAreRewritten(self) -> None:
         self.writePack()
-        recordPath = kCooker.PackRecord.pathFor(self.packPath)
+        recordPath = CookAssets.PackRecord.pathFor(self.packPath)
         recordPath.write_text("{ not json", encoding="utf-8")
         self.assertIn("기록을 읽지 못했습니다", self.writePack().reason)
 

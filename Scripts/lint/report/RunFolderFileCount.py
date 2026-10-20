@@ -26,11 +26,11 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import collectSourceFiles, getLintSearchDirs, kCppAllExtensions, kNotOurDirNames  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+from common.Constants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
+from common.Search import collectSourceFiles, getLintSearchDirs  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kDefaultMaxFileCount = 40
 

@@ -15,7 +15,8 @@ from pathlib import Path
 from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot, writeGeneratedFile  # noqa: E402
+from common.GeneratedFile import writeGeneratedFile  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 from common.ConfigReference import buildConfigReference, kConfigReferenceDir  # noqa: E402
 
 

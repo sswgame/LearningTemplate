@@ -43,7 +43,7 @@ import urllib.request
 import zipfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
-from common import getProjectRoot  # noqa: E402 — import 하면 콘솔이 UTF-8 이 된다
+from common.Paths import getProjectRoot  # noqa: E402 — import 하면 콘솔이 UTF-8 이 된다
 
 _kRepositoryRoot = getProjectRoot()
 _kCommonRoot = _kRepositoryRoot / "Resource" / "common"

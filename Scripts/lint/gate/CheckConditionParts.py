@@ -29,12 +29,12 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs  # noqa: E402
-from LintGate import BaselineSourceGate, CountedFinding  # noqa: E402
-from SourceScan import SourceFile  # noqa: E402
+from common.CodeText import blankComments, blankCommentsAndLiterals  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
+from lint.LintGate import BaselineSourceGate, CountedFinding  # noqa: E402
+from lint.SourceScan import SourceFile  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 _kConditionHeadRe = re.compile(r"\b(if|while)\b\s*(?:constexpr\b\s*)?\(")

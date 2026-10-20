@@ -34,12 +34,12 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankCommentsAndLiterals, findFast, kLintProductRelDirs  # noqa: E402
-from LintGate import GateError, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile  # noqa: E402
+from common.CodeText import blankCommentsAndLiterals, findFast  # noqa: E402
+from common.Constants import kLintProductRelDirs  # noqa: E402
+from lint.LintGate import GateError, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
 # 테스트는 기대값을 리터럴로 적는 곳이라 뺀다(kLintProductRelDirs).
 _kListScanRoot = kLintProductRelDirs + ("Resource/engine/shaders", "Resource/common/shaders")

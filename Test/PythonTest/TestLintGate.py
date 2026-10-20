@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""LintGate — 대상 고르기(`selectTargetFiles` = `common.resolveFileArguments`)와 껍데기(종료 코드 0 · 1 · 2, `--root` 기본)."""
+"""LintGate — 대상 고르기(`selectTargetFiles` = `common.Search.resolveFileArguments`)와 껍데기(종료 코드 0 · 1 · 2, `--root` 기본)."""
 
 from __future__ import annotations
 
@@ -15,9 +15,8 @@ from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
-sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 
 class _FixedGate(LintGate):

@@ -14,14 +14,11 @@ from pathlib import Path
 
 kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
-sys.path.insert(0, str(kScriptsRoot / "dev"))
-sys.path.insert(0, str(kScriptsRoot / "lint"))
-sys.path.insert(0, str(kScriptsRoot / "lint" / "gate"))
 
-import CheckDocPaths  # noqa: E402
-import CheckStatusBoard  # noqa: E402
-import ListPlans  # noqa: E402
-import RunStatusBoard  # noqa: E402
+from lint.gate import CheckDocPaths  # noqa: E402
+from lint.gate import CheckStatusBoard  # noqa: E402
+from dev import ListPlans  # noqa: E402
+from dev import RunStatusBoard  # noqa: E402
 from common.MarkdownAnchor import collectAnchors  # noqa: E402
 from common.StatusBoard import StatusBoardError, parseRoadmap  # noqa: E402
 from common.Plans import PlanFormatError, kListPlanStatus, parsePlanText, readPlans  # noqa: E402

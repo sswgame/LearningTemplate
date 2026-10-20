@@ -13,9 +13,8 @@ from pathlib import Path
 
 kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
-sys.path.insert(0, str(kScriptsRoot / "dev"))
 
-import RunDoc  # noqa: E402
+from dev import RunDoc  # noqa: E402
 from common import MarkdownSections  # noqa: E402
 
 kLines = ["# 제목", "## 5. 영역", "### 5-4. 데이터", "본문", "```", "# 울타리 안", "```", "#### 5-4.1 세부", "### 5-40. 다른", "### 15-4. 또 다른", "### 5-4a 가나"]

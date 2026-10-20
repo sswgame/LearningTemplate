@@ -17,34 +17,31 @@ Scripts/lint/gate/CheckShaderStamps.py
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import CookContractSpec, kCookContractConfigRelative  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
+from common.CookContract import CookContractSpec, kCookContractConfigRelative  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
-#: 판정 함수를 가진 쿠커. 판정은 도구의 것이므로 `--root`(셀프 테스트의 임시 트리)가 아니라 이 저장소의 쿠커를 쓴다.
-kCookerPath = Path(__file__).resolve().parents[2] / "generate" / "CookAssets.py"
+#: 판정 함수를 가진 쿠커(`generate.CookAssets`). 판정은 도구의 것이므로 `--root`(셀프 테스트의 임시 트리)가 아니라 이 저장소의 쿠커를 쓴다.
+kCookerModule = "generate.CookAssets"
 
 #: 셀프 테스트 조각 — 소스는 있는데 dx12 하나만 쿠킹한 트리. 나머지 세 백엔드의 바이너리 폴더가 없다.
 _kOneBackendStamp = "SWCOOK 4\n0000000000000000 probe.hlsl\n0000000000000000 @toolchain\n"
 
 
 def loadCookerInternal() -> ModuleType:
-    """쿠커를 파일 경로로 불러옵니다. 불러오지 못하면 검사가 성립하지 않는다."""
-    moduleSpec = importlib.util.spec_from_file_location("CookAssetsUnderStampCheck", kCookerPath)
-    if moduleSpec is None or moduleSpec.loader is None:
-        raise GateError(f"쿠커를 불러올 수 없습니다: {kCookerPath}")
-    module = importlib.util.module_from_spec(moduleSpec)
-    moduleSpec.loader.exec_module(module)
-    if not callable(getattr(module, "verifyShaderCookInternal", None)):
-        raise GateError(f"{kCookerPath} 에 verifyShaderCookInternal() 가 없습니다 - 이 게이트가 부르는 판정 함수입니다")
-    return module
+    """
+    쿠커를 점 이름 하나(`generate.CookAssets`)로 불러옵니다 — 다른 모듈 이름으로 파일을 실으면 같은 파일이 두 모듈이 된다.
+    쿠킹할 때만 필요해 함수 안에서 부른다. StructureSimplification PK4 가 쿠커를 C++ 로 옮기면 이 import 도 사라진다.
+    """
+    from generate import CookAssets
+    if not callable(getattr(CookAssets, "verifyShaderCookInternal", None)):
+        raise GateError(f"{kCookerModule} 에 verifyShaderCookInternal() 가 없습니다 - 이 게이트가 부르는 판정 함수입니다")
+    return CookAssets
 
 
 class CheckShaderStampsGate(LintGate):

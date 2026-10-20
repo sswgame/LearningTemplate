@@ -19,8 +19,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import (GeneratorError, PackFormatSpec, PackStruct, getProjectRoot, kPackFormatConfigRelative, runGenerator,  # noqa: E402
-                    writeGeneratedFile)
+from common.GeneratedFile import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
+from common.PackFormat import PackFormatSpec, PackStruct, kPackFormatConfigRelative  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 
 kTag = "GeneratePackFormat"
 

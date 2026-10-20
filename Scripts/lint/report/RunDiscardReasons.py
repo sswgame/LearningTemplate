@@ -25,12 +25,12 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport · gate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import collectRepositoryFiles, kLintTargetRelDirs, readTextFiles  # noqa: E402
-from gate.CheckDiscardReason import findFallibleDiscards  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
+from common.Search import collectRepositoryFiles, readTextFiles  # noqa: E402
+from lint.gate.CheckDiscardReason import findFallibleDiscards  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 kSuspectMarker = "결함 의심"

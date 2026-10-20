@@ -25,12 +25,12 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import findFast, kDirSourceGameFramework, kDirSourceGames  # noqa: E402
-from LintGate import LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile  # noqa: E402
+from common.CodeText import findFast  # noqa: E402
+from common.Constants import kDirSourceGameFramework, kDirSourceGames  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
 _kListScanRoot = (kDirSourceGameFramework, kDirSourceGames)
 _kSuffixes = (".h", ".hpp", ".inl", ".cpp")

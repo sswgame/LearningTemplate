@@ -13,16 +13,14 @@ import argparse
 import sys
 from pathlib import Path
 
-# 부모 경로들을 sys.path에 추가하여 공통 스크립트 모듈 로드
-scriptDir = Path(__file__).resolve().parent
-sys.path.insert(0, str(scriptDir.parent))       # Scripts/lint — 사촌 린트 패키지
-sys.path.insert(0, str(scriptDir.parents[1]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from fixer import FormatBranchBraces
-from fixer import FormatForwardDeclarations
-from fixer import FormatIncludeOrder
-from fixer import FormatNamespaceBlocks
-from common import getModifiedCppFiles, getProjectRoot, runClangFormatBatch
+from lint.fixer import FormatBranchBraces
+from lint.fixer import FormatForwardDeclarations
+from lint.fixer import FormatIncludeOrder
+from lint.fixer import FormatNamespaceBlocks
+from common.Host import getModifiedCppFiles, runClangFormatBatch
+from common.Paths import getProjectRoot
 
 #: 이 파일은 `LintFixer` 가 아니다 — 자기 변환이 없고, 다른 픽서 셋과 clang-format 을 **순서대로**
 #: 부르는 조율자다. `CheckFixersAreAlive` 가 이 이유를 읽고 건너뛴다 (이유 없는 예외는 없다).

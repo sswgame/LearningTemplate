@@ -39,11 +39,12 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankComments, normalizePath, readTextFiles  # noqa: E402
-from LintReport import LintReport, ReportContext  # noqa: E402
+from common.CodeText import blankComments  # noqa: E402
+from common.Paths import normalizePath  # noqa: E402
+from common.Search import readTextFiles  # noqa: E402
+from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kListScanRoot = ("Source", "Tools/ReflectionParser")
 kSuffixes = (".h", ".hpp", ".inl", ".cpp", ".xxx")

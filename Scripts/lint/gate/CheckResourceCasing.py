@@ -21,10 +21,9 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 def findCasingViolations(repositoryRoot: Path, listPath: Sequence[Path]) -> list[str]:
     """Resource/ 아래 파일의 경로 조각(폴더 · 파일 이름)에 대문자가 있으면 위반입니다(README.md 만 예외). 빈 폴더는 git 이 들지 않으므로 파일 경로로 본다."""

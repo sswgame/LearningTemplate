@@ -14,13 +14,13 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · LintCatalog · LintReport
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import mapConcurrent, runProcess  # noqa: E402
-from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
-from LintReport import findReportClass  # noqa: E402
+from common.Parallel import mapConcurrent  # noqa: E402
+from common.Process import runProcess  # noqa: E402
+from lint.LintCatalog import LintScript, discoverLintScripts  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintReport import findReportClass  # noqa: E402
 
 
 class CheckReportsRunGate(LintGate):

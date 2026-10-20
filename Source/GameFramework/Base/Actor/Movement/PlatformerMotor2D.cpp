@@ -269,7 +269,7 @@ namespace sw
     void PlatformerMotor2D::tryStartDash( const PlatformerInput& input, float32 moveX, float32 moveY, bool bWasGrounded )
     {
         const bool bCanDash = _dashCooldown.isActive() == false && _dash.isActive() == false && ( bWasGrounded || _airDashesLeft > 0 );
-        if ( input._bDashPressed == false || bCanDash == false )
+        if ( input._bDashPressed == SW_FALSE || bCanDash == false )
             return;
         float2 direction{ moveX, moveY };
         if ( direction.getLengthSquared() < 0.01f )

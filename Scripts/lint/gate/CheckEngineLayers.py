@@ -33,10 +33,10 @@ import functools
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import (  # noqa: E402
+from common.CodeText import iterIncludes  # noqa: E402
+from common.Constants import (  # noqa: E402
     kCppAllExtensions,
     kDirSourceApp,
     kDirSourceModuleHost,
@@ -48,13 +48,11 @@ from common import (  # noqa: E402
     kDirSourceRuntimeAPI,
     kDirSourceServer,
     kFileEngineServices,
-    iterIncludes,
-    normalizePath,
-    startsWithPathComponent,
 )
-from common.RuleData import kKindInteger, kKindTextList  # noqa: E402
-from LintGate import GateError, GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+from common.Paths import normalizePath, startsWithPathComponent  # noqa: E402
+from lint.LayerRules import engineLayerOf, kEngineLayerSchema, kEnginePreludePrefix, kEngineRootLayerName, kEngineWiringPrefix, readEngineLayerRules  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 #: 층 규칙이 보는 뿌리 — 걷는 뿌리이자 커밋 훅이 이 게이트를 부르는 자리다.
 _kListScanRoot = (kDirSourceEngine, kDirSourceGames, kDirSourceGameFramework, kDirSourceRuntimeAPI, kDirSourceCore, kDirSourceApp,
@@ -128,12 +126,8 @@ _kForbiddenPrefixRules: tuple[tuple[str, tuple[str, ...]], ...] = (
     (kDirSourceGames, ("App/", "ModuleHost/", "Server/", "Editor/")),
 )
 
-# Engine 최상위 폴더를 담지 않는 파일(Engine.cpp 등)의 가상 티어 이름.
-_kRootLayerName = "<root>"
-
 # Engine 내부 티어 — 숫자가 큰 쪽이 위다(`rules/CheckEngineLayers.toml` 의 `[tier]`, 계산 · 고쳐 쓰기는 RunEngineLayerGraph --apply).
-_kRuleSchema = {"tier": kKindInteger, "subtier": kKindInteger, "coreFolder": kKindTextList, "coreTree": kKindTextList, "coreBannedLayer": kKindTextList}
-_kRuleData = LintGate.readRules("CheckEngineLayers", _kRuleSchema, requiredKeys=("tier",))
+_kRuleData = readEngineLayerRules()
 _kEngineTier: dict[str, int] = _kRuleData["tier"]
 #: 하위 티어 — `<최상위 폴더>/<하위 폴더>` → 숫자(`[subtier]`). 키가 있는 최상위 폴더만 하위 폴더 사이를 본다.
 _kEngineSubTier: dict[str, int] = _kRuleData["subtier"]
@@ -147,10 +141,6 @@ _kCoreBannedLayer: tuple[str, ...] = tuple(_kRuleData["coreBannedLayer"])
 #: 코어 예외 키 접두 — `core:<저장소 기준 파일>|<include 경로>`.
 _kCorePrefix = "core:"
 
-#: 티어 예외 — `prelude:<include 경로>` 는 어느 티어에서 include 해도 되는 헤더, `wiring:<파일>` 은 모든 서브시스템을 알아야 해
-#: 위 티어를 include 해도 되는 배선 파일이다(`rules/CheckEngineLayers.toml` 의 `[exemption]`).
-_kPreludePrefix = "prelude:"
-_kWiringPrefix = "wiring:"
 #: `subprelude:<include 경로>` 는 같은 최상위 폴더 안의 어느 하위 티어에서 include 해도 되는 헤더다(최상위 티어 검사에는 쓰이지 않는다).
 _kSubPreludePrefix = "subprelude:"
 
@@ -160,19 +150,11 @@ def engineTierOfInternal(folderName: str) -> int | None:
     return _kEngineTier.get(folderName)
 
 
-def engineLayerOfInternal(engineRelativePath: str) -> str:
-    """Engine/ 아래 상대 경로 → 레이어 이름(최상위 폴더, 루트 파일은 `_kRootLayerName`)."""
-    parts = engineRelativePath.split("/")
-    if len(parts) == 1:
-        return _kRootLayerName
-    return parts[0]
-
-
 def engineSubLayerOfInternal(engineRelativePath: str) -> str:
     """Engine/ 아래 상대 경로 → `<최상위 폴더>/<하위 폴더>`(최상위 폴더 바로 아래 파일은 `<최상위 폴더>/<root>`)."""
     parts = engineRelativePath.split("/")
     if len(parts) <= 2:
-        return f"{parts[0]}/{_kRootLayerName}"
+        return f"{parts[0]}/{kEngineRootLayerName}"
     return f"{parts[0]}/{parts[1]}"
 
 
@@ -191,7 +173,7 @@ def findSubTierViolationsInternal(relativeFilePath: str, engineRelativePath: str
         if normalizedInclude.startswith("Engine/") is False:
             continue
         destRelative = normalizedInclude[len("Engine/") :]
-        if engineLayerOfInternal(destRelative) != sourceLayer:
+        if engineLayerOf(destRelative) != sourceLayer:
             continue
         subPreludeKey = _kSubPreludePrefix + normalizedInclude
         if subPreludeKey in gate.mapExemption:
@@ -270,7 +252,7 @@ def processFile(relativeFilePath: str, text: str) -> list[str]:
     if startsWithPathComponent(relativeFilePath, kDirSourceEngine) is False:
         return fileViolations
     gate = CheckEngineLayersGate
-    wiringKey = _kWiringPrefix + relativeFilePath
+    wiringKey = kEngineWiringPrefix + relativeFilePath
     bWiring = wiringKey in gate.mapExemption
     if bWiring:
         gate.seeExemption(wiringKey)
@@ -280,7 +262,7 @@ def processFile(relativeFilePath: str, text: str) -> list[str]:
     engineRelativePath = relativeFilePath[enginePrefixLen:]
     # 코어 규칙은 배선 예외로 넘기지 않는다 — 티어 위반과 따로 센다.
     fileViolations += findCoreViolationsInternal(relativeFilePath, engineRelativePath, listRawInclude)
-    sourceLayer = engineLayerOfInternal(engineRelativePath)
+    sourceLayer = engineLayerOf(engineRelativePath)
     sourceTier = engineTierOfInternal(sourceLayer)
     if sourceTier is None:
         fileViolations.append(f"{relativeFilePath}: Engine 최상위 폴더 '{sourceLayer}' 가 티어 표(rules/CheckEngineLayers.toml 의 [tier])에 없습니다.")
@@ -290,10 +272,10 @@ def processFile(relativeFilePath: str, text: str) -> list[str]:
         normalizedInclude = normalizePath(includePath)
         if normalizedInclude.startswith("Engine/") is False:
             continue
-        if _kPreludePrefix + normalizedInclude in gate.mapExemption:
-            gate.seeExemption(_kPreludePrefix + normalizedInclude)
+        if kEnginePreludePrefix + normalizedInclude in gate.mapExemption:
+            gate.seeExemption(kEnginePreludePrefix + normalizedInclude)
         destRelative = normalizedInclude[len("Engine/") :]
-        destLayer = engineLayerOfInternal(destRelative)
+        destLayer = engineLayerOf(destRelative)
         if destLayer == sourceLayer:
             continue
         destTier = engineTierOfInternal(destLayer)
@@ -301,7 +283,7 @@ def processFile(relativeFilePath: str, text: str) -> list[str]:
             fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (티어 표에 없는 폴더 \'{destLayer}\')')
             continue
         if destTier > sourceTier:
-            preludeKey = _kPreludePrefix + normalizedInclude
+            preludeKey = kEnginePreludePrefix + normalizedInclude
             if preludeKey in gate.mapExemption:
                 gate.useExemption(preludeKey)
                 continue
@@ -320,7 +302,7 @@ def processFile(relativeFilePath: str, text: str) -> list[str]:
 class CheckEngineLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
-    ruleSchema = _kRuleSchema
+    ruleSchema = kEngineLayerSchema
 
     description = "Engine 레이어 금지 include 검사"
     buildComment = "Checking Engine layer include rules..."

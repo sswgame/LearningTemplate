@@ -40,7 +40,9 @@ from typing import Any, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
-from common import BuildTree, getProjectRoot, runProcess  # noqa: E402
+from common.BuildTree import BuildTree  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.Process import runProcess  # noqa: E402
 
 _kTag = "ConfigureSnapshot"
 #: 이 도구가 File API 에 남기는 질의 — 클라이언트 이름을 따로 둬 VS Code 등 다른 클라이언트의 질의와 섞이지 않게 한다.

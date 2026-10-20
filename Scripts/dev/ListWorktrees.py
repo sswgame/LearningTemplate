@@ -6,7 +6,7 @@
 
     py -3 -m Scripts worktree-list
 
-주인은 `MakeWorktree.py` 가 만들 때 적은 기록(`kOwnerFileName`)이다. 주인 프로세스가 살아 있으면 "쓰는 중", 끝났으면 "주인 프로세스 끝남"
+주인은 `MakeWorktree.py` 가 만들 때 적은 기록(`common/Worktree.py` 의 `kOwnerFileName`)이다. 주인 프로세스가 살아 있으면 "쓰는 중", 끝났으면 "주인 프로세스 끝남"
 (지워도 된다), 기록이 없으면 "주인 기록 없음"(이 기능 전에 만든 워크트리 — 누가 쓰는지 모르므로 사용자에게 묻는다)이다.
 """
 
@@ -20,10 +20,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import getProjectRoot, runGit  # noqa: E402
+from common.Host import runGit  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from MakeWorktree import describeWorktreeOwner, findMainRoot, getWorktreeGitDirectory, readWorktreeOwner  # noqa: E402
+from common.Worktree import describeWorktreeOwner, findMainRoot, getWorktreeGitDirectory, readWorktreeOwner  # noqa: E402
 
 
 @dataclass(frozen=True)

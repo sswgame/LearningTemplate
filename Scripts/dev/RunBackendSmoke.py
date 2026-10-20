@@ -23,7 +23,9 @@ from collections.abc import Sequence
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import BuildTree, CookContractSpec, addBuildTreeArguments, runProcess  # noqa: E402
+from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
+from common.CookContract import CookContractSpec  # noqa: E402
+from common.Process import runProcess  # noqa: E402
 from common.AppRun import kBackendSwitch  # noqa: E402
 
 kArrBackgroundColor = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18

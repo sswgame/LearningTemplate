@@ -22,19 +22,19 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common import blankComments, blankCommentsAndLiterals, kLintTargetRelDirs  # noqa: E402
-from gate.CheckFallibleNodiscard import _kListFallibleVerb  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
-from SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
+from common.CodeText import blankComments, blankCommentsAndLiterals  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
+from lint.SharedRules import readFallibleVerbs  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 #: `(void)` 뒤의 호출 — 마지막 이름(`a.b->c::load`)을 뽑는다. 템플릿 인자 `<…>` 는 건너뛴다.
 _kVoidCallRe = re.compile(r"\(\s*void\s*\)\s*(?P<callee>[A-Za-z_][\w:.\->]*?)\s*(?:<[^;()]*?>)?\s*\(")
 #: 실패 가능 동사(또는 `re` + 동사)로 시작하는 이름 — `CheckFallibleNodiscard` 와 같은 판정.
-_kFallibleNameRe = re.compile(r"^(?:re)?(?:" + "|".join(_kListFallibleVerb) + r")(?:[A-Z0-9_]\w*)?$")
+_kFallibleNameRe = re.compile(r"^(?:re)?(?:" + "|".join(readFallibleVerbs()) + r")(?:[A-Z0-9_]\w*)?$")
 
 
 def findFallibleDiscards(text: str, source: SourceFile | None = None) -> list[tuple[int, str, str]]:

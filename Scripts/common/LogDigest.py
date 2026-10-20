@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-@file RunLogDigest.py
+@file LogDigest.py
 @brief 긴 빌드 · 테스트 출력을 요약해 보인다 — 전체는 파일에 남긴다.
 
 에이전트와 세션은 도구 출력을 매번 입력으로 다시 읽는다. 통과한 빌드의 수천 줄은 정보가 없다.
@@ -23,8 +21,8 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import ProcessResult, runGit, runProcess  # noqa: E402
+from .Host import runGit
+from .Process import ProcessResult, runProcess
 
 #: 공통 .git 아래 로그 폴더.
 kLogDirName = "sw-build-logs"
@@ -104,7 +102,7 @@ def runDigested(command: list[str], repositoryRoot: Path, name: str, *, bVerbose
     result = runProcess(command, cwd=cwd, stdoutPath=logPath, bBelowNormalPriority=bBelowNormalPriority)
     seconds = time.perf_counter() - startTime
     if not result.bLaunched:
-        print(f"[RunLogDigest] {result.stderr}", file=sys.stderr)
+        print(f"[LogDigest] {result.stderr}", file=sys.stderr)
         return result
     printDigest(logPath, result.returnCode, seconds)
     return result
