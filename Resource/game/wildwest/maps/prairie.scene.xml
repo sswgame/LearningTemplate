@@ -1,7 +1,10 @@
-<Scene formatVersion="1" name="WildWest">
+<Scene formatVersion="2" name="WildWest">
+	<WorldSettings _bStreaming="true" _unloadMargin="8" _maxCellLoadsPerFrame="2">
+		<_cellGrid _cellSize="16" _loadingRadius="32" />
+	</WorldSettings>
 	<entities>
 		<entity id="1" name="GameCamera">
-			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<CameraComponent _componentName="CameraComponent"
 					                 _bActive="true"
@@ -30,7 +33,7 @@
 			</GameObject>
 		</entity>
 		<entity id="2" name="Sun">
-			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<DirectionalLightComponent _componentName="DirectionalLightComponent"
 					                           _bActive="true"
@@ -50,7 +53,7 @@
 			</GameObject>
 		</entity>
 		<entity id="3" name="Ground">
-			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<RigidBodyComponent _componentName="RigidBodyComponent"
 					                    _bActive="true"
@@ -102,7 +105,7 @@
 			</GameObject>
 		</entity>
 		<entity id="4" name="Player">
-			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<CharacterControllerComponent _componentName="CharacterControllerComponent"
 					                              _bActive="true"
@@ -195,7 +198,7 @@
 			</GameObject>
 		</entity>
 		<entity id="5" name="Bessie">
-			<GameObject _schemaVersion="0" _name="Bessie" _bActive="true">
+			<GameObject _schemaVersion="0" _name="Bessie" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<SceneComponent _componentName="SceneComponent"
 					                _bActive="true"
@@ -401,7 +404,7 @@
 			</GameObject>
 		</entity>
 		<entity id="6" name="Shadow">
-			<GameObject _schemaVersion="0" _name="Shadow" _bActive="true">
+			<GameObject _schemaVersion="0" _name="Shadow" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<SceneComponent _componentName="SceneComponent"
 					                _bActive="true"
@@ -607,7 +610,7 @@
 			</GameObject>
 		</entity>
 		<entity id="7" name="BessieAI">
-			<GameObject _schemaVersion="0" _name="BessieAI" _bActive="true">
+			<GameObject _schemaVersion="0" _name="BessieAI" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<HorseFollowAIController _componentName="HorseFollowAIController"
 					                         _bActive="true"
@@ -621,7 +624,7 @@
 			</GameObject>
 		</entity>
 		<entity id="8" name="ShadowAI">
-			<GameObject _schemaVersion="0" _name="ShadowAI" _bActive="true">
+			<GameObject _schemaVersion="0" _name="ShadowAI" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<HorseFollowAIController _componentName="HorseFollowAIController"
 					                         _bActive="true"
@@ -635,7 +638,7 @@
 			</GameObject>
 		</entity>
 		<entity id="9" name="Ranch">
-			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true">
+			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
 					<WildWestDirectorComponent _componentName="WildWestDirectorComponent"
 					                           _bActive="true"
