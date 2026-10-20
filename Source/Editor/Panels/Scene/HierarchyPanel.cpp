@@ -119,6 +119,23 @@ namespace sw::editor
                 return s_state;
             }
 
+            /** @brief 프레임 시작에 행 순서를 다시 모읍니다(지난 프레임의 것은 `_listPreviousRow` 로 넘긴다). 주 선택이 외부(뷰포트, 다른 패널)에서 바뀌었으면 그 행을 펼쳐 보여 줍니다. */
+            static void beginRowFrame()
+            {
+                RowState& rowState = getRowState();
+                rowState._listPreviousRow.swap( rowState._listDrawnRow );
+                rowState._listDrawnRow.clear();
+
+                EditorContext*    pContext             = EditorContext::get();
+                const GameObject* pPrimary             = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
+                const uint64      primaryID            = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
+                const bool        bRevealPrimaryObject = primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0;
+                if ( bRevealPrimaryObject )
+                    rowState._revealObjectID = primaryID;
+                rowState._lastPrimaryID     = primaryID;
+                rowState._bClickedThisFrame = false;
+            }
+
             /** @brief `gv_editorProbeHierarchyObject` 오브젝트가 마지막 프레임에 그린 행에서 몇 번째인지입니다(0 부터). 그리지 않았거나 없으면 -1 입니다. */
             [[nodiscard]] static bool readProbedRowIndex( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -800,21 +817,24 @@ namespace sw::editor
         GameObjectManager* pManager = pScene->getObjectManager();
         EditorSceneCommands::collectRootsInOrder( *pManager, _listSceneObject ); // 루트만 id 순서로 모은다. 지우고 되돌려도 위치가 그대로다
 
-        // 행 순서를 프레임마다 다시 모은다. 주 선택이 외부(뷰포트, 다른 패널)에서 바뀌었으면 그 행을 펼쳐 보여 준다.
-        HierarchyPanelInternal::RowState& rowState = HierarchyPanelInternal::getRowState();
-        rowState._listPreviousRow.swap( rowState._listDrawnRow );
-        rowState._listDrawnRow.clear();
-        {
-            EditorContext*    pContext             = EditorContext::get();
-            const GameObject* pPrimary             = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
-            const uint64      primaryID            = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
-            const bool        bRevealPrimaryObject = primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0;
-            if ( bRevealPrimaryObject )
-                rowState._revealObjectID = primaryID;
-            rowState._lastPrimaryID     = primaryID;
-            rowState._bClickedThisFrame = false;
-        }
+        HierarchyPanelInternal::beginRowFrame();
+        drawToolbar( pManager );
 
+        ImGui::Separator();
+
+        editor::EditorSectionDesc treeDesc{};
+        treeDesc._pID  = "##HierarchyTree";
+        treeDesc._kind = editor::EditorSectionKind::Child;
+        if ( EditorChrome::beginSection( treeDesc ) )
+        {
+            drawRootRows( pScene, pManager );
+            drawTreeEmptyArea( pManager );
+        }
+        EditorChrome::endSection();
+    }
+
+    void HierarchyPanel::drawToolbar( GameObjectManager* pManager )
+    {
         // 상단 툴바에는 생성 버튼과 검색창이 있다
         if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
         {
@@ -841,99 +861,96 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "HierarchySearch" ) );
         }
         EditorChrome::endToolbar();
+    }
 
-        ImGui::Separator();
+    void HierarchyPanel::drawRootRows( Scene* pScene, GameObjectManager* pManager )
+    {
+        // `drawGameObjectNode` 는 서브트리가 필터에 걸리지 않으면 조용히 빠진다. 그래서 같은 술어로
+        // 미리 세어 두고, 전부 빠질 때는 빈 상자 대신 이유를 보여 준다.
+        const EditorListFilter treeFilter{ _filterBuffer.c_str() };
+        const bool             bFilterActive = treeFilter.isActive();
+        uint32                 visibleRootCount{ 0 };
+        uint32                 drawnRootCount{ 0 };
+        uint64                 lastDrawnRootID{ 0 };
 
-        editor::EditorSectionDesc treeDesc{};
-        treeDesc._pID  = "##HierarchyTree";
-        treeDesc._kind = editor::EditorSectionKind::Child;
-        if ( EditorChrome::beginSection( treeDesc ) )
+        // 화면 밖의 접힌 루트는 그리지 않고 같은 높이의 빈 공간만 둔다. 스크롤 막대와 다음 행의 위치는 그대로다. 모두 그리면 큐브 8000개 씬에서 노드 8000개
+        // (버튼, 배지 문자열, 트리 노드, 드래그 앤 드롭)를 프레임마다 그린다. 이어진 빈 행은 빈 공간 하나로 합친다.
+        // 접힌 루트 행의 높이는 프레임 높이(버튼, 트리 노드)에 행 간격을 더한 값이다.
+        const float32 rowStride        = ImGui::GetFrameHeightWithSpacing();
+        const float32 rowSpacing       = rowStride - ImGui::GetFrameHeight();
+        uint32        pendingSkipRow   = 0;
+        float32       nextRowY         = ImGui::GetCursorScreenPos().y;
+        auto          flushSkippedRows = [&pendingSkipRow, rowStride, rowSpacing]()
         {
-            // `drawGameObjectNode` 는 서브트리가 필터에 걸리지 않으면 조용히 빠진다. 그래서 같은 술어로
-            // 미리 세어 두고, 전부 빠질 때는 빈 상자 대신 이유를 보여 준다.
-            const EditorListFilter treeFilter{ _filterBuffer.c_str() };
-            const bool             bFilterActive = treeFilter.isActive();
-            uint32                 visibleRootCount{ 0 };
-            uint32                 drawnRootCount{ 0 };
-            uint64                 lastDrawnRootID{ 0 };
-
-            // 화면 밖의 접힌 루트는 그리지 않고 같은 높이의 빈 공간만 둔다. 스크롤 막대와 다음 행의 위치는 그대로다. 모두 그리면 큐브 8000개 씬에서 노드 8000개
-            // (버튼, 배지 문자열, 트리 노드, 드래그 앤 드롭)를 프레임마다 그린다. 이어진 빈 행은 빈 공간 하나로 합친다.
-            // 접힌 루트 행의 높이는 프레임 높이(버튼, 트리 노드)에 행 간격을 더한 값이다.
-            const float32 rowStride        = ImGui::GetFrameHeightWithSpacing();
-            const float32 rowSpacing       = rowStride - ImGui::GetFrameHeight();
-            uint32        pendingSkipRow   = 0;
-            float32       nextRowY         = ImGui::GetCursorScreenPos().y;
-            auto          flushSkippedRows = [&pendingSkipRow, rowStride, rowSpacing]()
+            if ( pendingSkipRow == 0 )
+                return;
+            ImGui::Dummy( ImVec2( 0.0f, static_cast<float32>( pendingSkipRow ) * rowStride - rowSpacing ) );
+            pendingSkipRow = 0;
+        };
+        // 화면을 그리는 에디터 카메라는 씬 오브젝트지만 편집 대상이 아니다. 저장에서도 빠진다. 그래서 목록에 표시하지 않는다.
+        const CameraComponent* pEditorCamera       = EditorCamera::find( pScene );
+        const GameObject*      pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
+        for ( GameObject* pObj : _listSceneObject )
+        {
+            if ( pObj == pEditorCameraObject )
+                continue;
+            const bool bMatches = bFilterActive == false || HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() );
+            if ( bMatches == false )
+                continue;
+            ++visibleRootCount;
+            const bool bSkip = _bSkipOffscreenRows && HierarchyPanelInternal::canSkipRootRow( pObj, _renamingObjectID, nextRowY, ImGui::GetFrameHeight() );
+            if ( bSkip )
             {
-                if ( pendingSkipRow == 0 )
-                    return;
-                ImGui::Dummy( ImVec2( 0.0f, static_cast<float32>( pendingSkipRow ) * rowStride - rowSpacing ) );
-                pendingSkipRow = 0;
-            };
-            // 화면을 그리는 에디터 카메라는 씬 오브젝트지만 편집 대상이 아니다. 저장에서도 빠진다. 그래서 목록에 표시하지 않는다.
-            const CameraComponent* pEditorCamera       = EditorCamera::find( pScene );
-            const GameObject*      pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
-            for ( GameObject* pObj : _listSceneObject )
-            {
-                if ( pObj == pEditorCameraObject )
-                    continue;
-                const bool bMatches = bFilterActive == false || HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() );
-                if ( bMatches == false )
-                    continue;
-                ++visibleRootCount;
-                const bool bSkip = _bSkipOffscreenRows && HierarchyPanelInternal::canSkipRootRow( pObj, _renamingObjectID, nextRowY, ImGui::GetFrameHeight() );
-                if ( bSkip )
-                {
-                    ++pendingSkipRow;
-                    nextRowY += rowStride;
-                    continue;
-                }
-                flushSkippedRows();
-                HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectID, _renameBuffer, _bFocusRenameInput );
-                nextRowY = ImGui::GetCursorScreenPos().y;
-                ++drawnRootCount;
-                lastDrawnRootID = pObj->getObjectID();
+                ++pendingSkipRow;
+                nextRowY += rowStride;
+                continue;
             }
             flushSkippedRows();
-            _drawnRootCount  = drawnRootCount;
-            _lastDrawnRootID = lastDrawnRootID;
-
-            _visibleRootCount = visibleRootCount;
-            if ( visibleRootCount == 0 && treeFilter.isActive() )
-                EditorWidgets::drawNoSearchResultHint( treeFilter.getText() );
-
-            // 빈 영역을 SW_ASSET_PATH 드래그 앤 드롭 대상으로 만든다
-            if ( ImGui::BeginDragDropTarget() )
-            {
-                const ImGuiPayload* pGoPayload = ImGui::AcceptDragDropPayload( HierarchyPanelInternal::kHierarchyGoPayload );
-                if ( pGoPayload != nullptr && pGoPayload->DataSize == static_cast<int32>( sizeof( uint64 ) ) )
-                {
-                    const uint64      draggedID = *static_cast<const uint64*>( pGoPayload->Data );
-                    GameObject* const pDragged  = pManager->findGameObjectByID( draggedID );
-                    if ( pDragged != nullptr && pDragged->getParent() != nullptr )
-                        EditorSceneCommands::unparent( pDragged, "Detach GameObject to Root" );
-                }
-
-                string droppedAssetPath;
-                if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
-                    EditorAssetCommands::spawnPrefab( pManager, droppedAssetPath.c_str(), nullptr );
-                ImGui::EndDragDropTarget();
-            }
-
-            handleHierarchyShortcuts( pManager );
-            // 빈 공간 우클릭 메뉴
-            if ( ImGui::BeginPopupContextWindow( "HierarchyEmptyCtx",
-                                                 ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems ) )
-            {
-                if ( ImGui::MenuItem( "Create Empty GameObject" ) )
-                    EditorSceneCommands::create( pManager, nullptr );
-                if ( ImGui::MenuItem( "Create Folder" ) )
-                    (void)EditorSiblingOrder::createFolder( *pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
-                ImGui::EndPopup();
-            }
+            HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectID, _renameBuffer, _bFocusRenameInput );
+            nextRowY = ImGui::GetCursorScreenPos().y;
+            ++drawnRootCount;
+            lastDrawnRootID = pObj->getObjectID();
         }
-        EditorChrome::endSection();
+        flushSkippedRows();
+        _drawnRootCount  = drawnRootCount;
+        _lastDrawnRootID = lastDrawnRootID;
+
+        _visibleRootCount = visibleRootCount;
+        if ( visibleRootCount == 0 && treeFilter.isActive() )
+            EditorWidgets::drawNoSearchResultHint( treeFilter.getText() );
+    }
+
+    void HierarchyPanel::drawTreeEmptyArea( GameObjectManager* pManager )
+    {
+        // 빈 영역을 SW_ASSET_PATH 드래그 앤 드롭 대상으로 만든다
+        if ( ImGui::BeginDragDropTarget() )
+        {
+            const ImGuiPayload* pGoPayload = ImGui::AcceptDragDropPayload( HierarchyPanelInternal::kHierarchyGoPayload );
+            if ( pGoPayload != nullptr && pGoPayload->DataSize == static_cast<int32>( sizeof( uint64 ) ) )
+            {
+                const uint64      draggedID = *static_cast<const uint64*>( pGoPayload->Data );
+                GameObject* const pDragged  = pManager->findGameObjectByID( draggedID );
+                if ( pDragged != nullptr && pDragged->getParent() != nullptr )
+                    EditorSceneCommands::unparent( pDragged, "Detach GameObject to Root" );
+            }
+
+            string droppedAssetPath;
+            if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
+                EditorAssetCommands::spawnPrefab( pManager, droppedAssetPath.c_str(), nullptr );
+            ImGui::EndDragDropTarget();
+        }
+
+        handleHierarchyShortcuts( pManager );
+        // 빈 공간 우클릭 메뉴
+        if ( ImGui::BeginPopupContextWindow( "HierarchyEmptyCtx",
+                                             ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems ) )
+        {
+            if ( ImGui::MenuItem( "Create Empty GameObject" ) )
+                EditorSceneCommands::create( pManager, nullptr );
+            if ( ImGui::MenuItem( "Create Folder" ) )
+                (void)EditorSiblingOrder::createFolder( *pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
+            ImGui::EndPopup();
+        }
     }
 
     void HierarchyPanel::handleHierarchyShortcuts( GameObjectManager* pManager )
