@@ -3,6 +3,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/YawUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationPlayer.h"
@@ -143,12 +144,6 @@ namespace
             return releaseCount;
         }
 
-        static float32 computeYaw( const SceneComponent& scene )
-        {
-            const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, scene.getWorldMatrix() );
-            return MathUtil::atan2( forward._x, forward._z );
-        }
-
         /** @brief 두 역할(앵커 `Leader` · `snap` 으로 앞 1 m 에서 마주 보는 `Follower`), 0.3 초에 `Follower` 로 `Release` 알림. */
         static constexpr const utf8* kSnapXML = R"(<PairedAnimation duration="1">
             <Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0.1"/>
@@ -199,7 +194,7 @@ SW_TEST_CASE( PairedAnimationTest, SessionSnapsAndPlaysOnOneClock )
     // 진입 정렬(snap).
     SW_EXPECT_NEAR_EQUAL( 2.0f, pFollowerRoot->getWorldPosition()._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pFollowerRoot->getWorldPosition()._z, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( -MathUtil::kHalfPi, TestPairedAnimationInternal::computeYaw( *pFollowerRoot ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( -MathUtil::kHalfPi, YawUtil::fromWorld( pFollowerRoot->getWorldMatrix() ), 1e-3f );
 
     // 한 시계 — 같은 프레임 · 같은 속도로 흘러 두 역할 시각이 같다. 알림은 셋째 갱신에서 한 번.
     for ( uint32 frameIndex = 0; frameIndex < 4; ++frameIndex )
@@ -275,7 +270,7 @@ SW_TEST_CASE( PairedAnimationTest, SessionWarpsRoleToAnchorOffset )
     const float3 position = pFollowerRoot->getWorldPosition();
     SW_EXPECT_NEAR_EQUAL( 0.0f, position._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, position._z, 1e-3f );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::kPi, MathUtil::abs( TestPairedAnimationInternal::computeYaw( *pFollowerRoot ) ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kPi, MathUtil::abs( YawUtil::fromWorld( pFollowerRoot->getWorldMatrix() ) ), 1e-3f );
     // 다음 갱신이 창을 닫는다(목표에 닿았으니 오류 없음).
     TestPairedAnimationInternal::step( manager, system );
     SW_EXPECT_EQUAL( 0u, pWarping->getOpenWindowCount() );

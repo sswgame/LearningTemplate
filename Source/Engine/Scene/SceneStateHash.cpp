@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/SceneStateHash.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 
@@ -19,21 +20,10 @@ namespace sw
     {
         struct SceneStateHashInternal
         {
-            static void foldBytes( uint64& inoutHash, const void* pData, size_t size )
-            {
-                const uint8* pByte = static_cast<const uint8*>( pData );
-                for ( size_t byteIndex = 0; byteIndex < size; ++byteIndex )
-                {
-                    inoutHash ^= pByte[byteIndex];
-                    inoutHash *= HashUtil::kFnvPrime64;
-                }
-            }
-
             static void foldFloat( uint64& inoutHash, float32 value )
             {
-                uint32 bits = 0;
-                std::memcpy( &bits, &value, sizeof( bits ) );
-                foldBytes( inoutHash, &bits, sizeof( bits ) );
+                const uint32 bits = BitUtil::floatToBits( value );
+                inoutHash         = HashUtil::appendBytes64( inoutHash, &bits, sizeof( bits ) );
             }
 
             struct Entry
@@ -75,8 +65,8 @@ namespace sw
         uint64 hash = HashUtil::kFnvOffset64;
         for ( const SceneStateHashInternal::Entry& entry : listEntry )
         {
-            SceneStateHashInternal::foldBytes( hash, entry._name.data(), entry._name.size() );
-            SceneStateHashInternal::foldBytes( hash, &entry._bActive, sizeof( entry._bActive ) );
+            hash = HashUtil::appendBytes64( hash, entry._name.data(), entry._name.size() );
+            hash = HashUtil::appendBytes64( hash, &entry._bActive, sizeof( entry._bActive ) );
             SceneStateHashInternal::foldFloat( hash, entry._position._x );
             SceneStateHashInternal::foldFloat( hash, entry._position._y );
             SceneStateHashInternal::foldFloat( hash, entry._position._z );

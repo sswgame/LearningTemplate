@@ -2,6 +2,7 @@
 
 #include "Engine/Object/SceneAnimation/VertexAnimationCooker.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -17,8 +18,6 @@
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
-
-#include <cstring>
 
 namespace sw
 {
@@ -158,13 +157,10 @@ namespace sw
     CookJobDesc VertexAnimationCooker::makeCookJobDesc( float32 framesPerSecond )
     {
         CookJobDesc desc;
-        desc._cookerName           = "VertexAnimation";
-        desc._cookerVersion        = kCookVersion;
-        desc._target               = "Any";
-        uint32 framesPerSecondBits = 0; // 설정 해시는 프레임율의 비트 그대로다
-        static_assert( sizeof( framesPerSecondBits ) == sizeof( framesPerSecond ) );
-        std::memcpy( &framesPerSecondBits, &framesPerSecond, sizeof( framesPerSecondBits ) );
-        desc._settingsHash = framesPerSecondBits;
+        desc._cookerName    = "VertexAnimation";
+        desc._cookerVersion = kCookVersion;
+        desc._target        = "Any";
+        desc._settingsHash  = BitUtil::floatToBits( framesPerSecond ); // 설정 해시는 프레임율의 비트 그대로다
         return desc;
     }
 

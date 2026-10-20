@@ -2,14 +2,13 @@
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-
-#include <cstring>
 
 namespace sw
 {
@@ -30,8 +29,7 @@ namespace sw
             {
                 outWriter.writeBits( static_cast<uint32>( value._type ), kTypeBitCount );
                 outWriter.writeVarInt( value._integer );
-                uint64 realBits = 0;
-                std::memcpy( &realBits, &value._real, sizeof( realBits ) );
+                const uint64 realBits = BitUtil::doubleToBits( value._real );
                 outWriter.writeUint32( static_cast<uint32>( realBits ) );
                 outWriter.writeUint32( static_cast<uint32>( realBits >> 32 ) );
                 ServiceKeyUtil::writeString( outWriter, value._text );
@@ -46,7 +44,7 @@ namespace sw
                 const uint64 lowBits  = reader.readUint32();
                 const uint64 highBits = reader.readUint32();
                 const uint64 realBits = lowBits | ( highBits << 32 );
-                std::memcpy( &outValue._real, &realBits, sizeof( realBits ) );
+                outValue._real        = BitUtil::bitsToDouble( realBits );
                 if ( ServiceKeyUtil::readString( reader, RemoteConfigValue::kMaxTextSize, outValue._text ) == false )
                     return false;
                 const int64 rollout          = reader.readVarInt();

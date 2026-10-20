@@ -77,6 +77,21 @@ namespace sw
             return mix64( inoutState );
         }
 
+        /**
+         * @brief FNV-1a 64 비트로 바이트열을 이어 섞습니다. 처음이면 @p hash 에 `kFnvOffset64` 를 넘기고, 이어 섞을 때는 앞 결과를 넘깁니다.
+         * @details 바이트를 낮은 주소부터 하나씩 `xor` 한 뒤 소수를 곱합니다. 저장 · 네트워크로 나가는 상태 해시가 쓰므로 순서와 상수를 바꾸지 않습니다.
+         *          객체의 바이트가 곧 해시 입력이라 패딩이 있는 구조체에는 쓰지 않습니다.
+         */
+        [[nodiscard]] static uint64 appendBytes64( uint64 hash, const void* pData, const size_t byteCount ) noexcept
+        {
+            const uint8* pByte = static_cast<const uint8*>( pData );
+            for ( size_t index = 0; index < byteCount; ++index )
+            {
+                hash = ( hash ^ pByte[index] ) * kFnvPrime64;
+            }
+            return hash;
+        }
+
         /** @brief @p seed 에 @p value 를 섞습니다(boost `hash_combine` 의 64 비트 판). */
         [[nodiscard]] static constexpr uint64 combine( const uint64 seed, const uint64 value ) noexcept
         {

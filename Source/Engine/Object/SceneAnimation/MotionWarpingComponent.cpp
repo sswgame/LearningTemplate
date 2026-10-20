@@ -4,36 +4,13 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/YawUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct MotionWarpingComponentInternal
-        {
-
-            /** @brief 회전이 +Z 를 돌린 방향의 요(라디안)입니다. */
-            static float32 computeYaw( const quaternion& rotation )
-            {
-                const float3 forward = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, rotation );
-                return MathUtil::atan2( forward._x, forward._z );
-            }
-
-            /** @brief 월드 행렬의 앞(+Z)의 요입니다. */
-            static float32 computeYaw( const float4x4& world )
-            {
-                const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
-                return MathUtil::atan2( forward._x, forward._z );
-            }
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -107,7 +84,7 @@ namespace sw
 
     void MotionWarpingComponent::setWarpTargetFromTransform( const hashed_string& name, const float4x4& worldTransform )
     {
-        setWarpTarget( name, worldTransform.getTranslation(), MotionWarpingComponentInternal::computeYaw( worldTransform ) );
+        setWarpTarget( name, worldTransform.getTranslation(), YawUtil::fromWorld( worldTransform ) );
     }
 
     void MotionWarpingComponent::clearWarpTarget( const hashed_string& name )
@@ -185,9 +162,9 @@ namespace sw
             }
             if ( window._bRotation )
             {
-                const float32    currentYaw   = MotionWarpingComponentInternal::computeYaw( world );
-                const float32    frameYaw     = MotionWarpingComponentInternal::computeYaw( inoutFrame._rotation );
-                const float32    remainingYaw = MotionWarpingComponentInternal::computeYaw( remaining._rotation );
+                const float32    currentYaw   = YawUtil::fromWorld( world );
+                const float32    frameYaw     = YawUtil::fromRotation( inoutFrame._rotation );
+                const float32    remainingYaw = YawUtil::fromRotation( remaining._rotation );
                 const float32    needed       = MathUtil::wrapAngle( pTarget->_yaw - currentYaw - frameYaw - remainingYaw );
                 const quaternion turn         = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, needed * fraction );
                 inoutFrame._rotation          = ( inoutFrame._rotation * turn ).normalize();

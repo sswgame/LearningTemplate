@@ -3,6 +3,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/YawUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationPlayer.h"
@@ -30,13 +31,6 @@ namespace sw
             {
                 static const hashed_string s_name( "PairedAnimation" );
                 return s_name;
-            }
-
-            /** @brief 월드 행렬의 앞(+Z)의 요(라디안, `atan2( x, z )`)입니다. `MotionWarpingComponent` 와 같은 규칙입니다. */
-            static float32 computeYaw( const float4x4& world )
-            {
-                const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
-                return MathUtil::atan2( forward._x, forward._z );
             }
 
             /** @brief 애니메이터 오브젝트의 이름입니다(로그용). */
@@ -136,7 +130,7 @@ namespace sw
         if ( pRoot == nullptr )
             return false;
         // 오프셋은 앵커 요로 돌린다(+Z 가 앞). 같은 축 · 각 규칙을 `MotionWarpingComponent` 가 목표 요로 쓴다.
-        const float32    anchorYaw = PairedAnimationSessionInternal::computeYaw( pRoot->getWorldMatrix() );
+        const float32    anchorYaw = YawUtil::fromWorld( pRoot->getWorldMatrix() );
         const quaternion turn      = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, anchorYaw );
         outPosition                = pRoot->getWorldPosition() + float3::transform( roleDef._offset, turn );
         outYaw                     = MathUtil::wrapAngle( anchorYaw + roleDef._yawRadians );
