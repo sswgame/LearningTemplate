@@ -38,7 +38,7 @@
  *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
  *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
  *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
- *   │ DX11   │ 슬롯 에뮬        │ 엔진 텍스처 t0..t3 · 머티리얼 t12..t27    │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 텍스처 t0..t3 · 머티리얼 t16..t31    │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
  *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 0..3 · 5..8 (결합 샘플러)   │ 머티리얼: 서수 0..3 (DX11 과 같다)       │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
@@ -77,6 +77,7 @@
 
 #include "common.hlsli"
 #include "instancedata.hlsli"
+#include "lightgridcommon.hlsli"
 
 static const uint kInvalidIndex = 0xFFFFFFFFu;
 
@@ -121,7 +122,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
 	uint     g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
 	uint     g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
-	uint     g_SwLightGridBase;           // 지금 뷰의 라이트 그리드 첫 원소(라이트 버퍼 안). kInvalidIndex 면 그리드 없이 목록 전체를 돈다(gv_lightCulling 0)
+	uint     g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
+	uint     g_SwLightGridBase;           // 지금 뷰의 라이트 그리드 첫 단어(g_SwLightGrid 안). kInvalidIndex 면 그리드 없이 목록 전체를 돈다(gv_lightCulling 0)
+	uint     g_SwLightProbesIndex;        // 라이트 프로브 SH9 버퍼(g_SwLightProbes, t13)가 걸려 있으면 유효, 아니면 kInvalidIndex — 프로브 볼륨 원소는 이것이 유효할 때만 읽는다
 	uint     g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 kInvalidIndex (풀스크린·픽스처)
 	uint     g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
 	uint     g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
@@ -636,7 +639,7 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, SW_SLOT_ENGINE_TEX1 )
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, SW_SLOT_ENGINE_TEX2 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, SW_SLOT_ENGINE_TEX3 );
 
-// 머티리얼 텍스처 고정 슬롯 t12..t27(16 칸) — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
+// 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
 // DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 짝 샘플러를 두지 않는다 — 정적 세트의 머티리얼 샘플러(SW_MATERIAL_TEXTURE_SAMPLER)로 읽는다.
 // GL 은 결합 샘플러뿐이라 슬롯마다 짝을 두고, 엔진이 그 유닛에 머티리얼 샘플러를 건다(OpenGLRHIDevice 초기화).
 #if defined( DX11 )
@@ -828,7 +831,7 @@ float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
  * @details swSampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
  *          DX11/OpenGL 은 bindless 가 없어 t0..t3 에 걸린 엔진 텍스처를 인덱스 값 비교로 되짚는
  *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그래서 엔진이 머티리얼 텍스처를
- *          t12..t27 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
+ *          t16..t31 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
  */
 #if defined( SW_VIEWMODE_MIPMAPS )
 /**
@@ -916,7 +919,7 @@ float4 swSampleMaterialTexture( uint index, float2 uv )
 	return swSampleMaterialTextureMipColor( index, uv );
 #endif
 	// 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
-	// 엔진이 그 서수 순서대로 t12..t27 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
+	// 엔진이 그 서수 순서대로 t16..t31 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
 	// (그건 SM5.1 = D3D12) 리터럴 분기로 고른다 — 칸 수가 16 이라 분기도 16 개다.
 	// DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 슬롯의 결합 샘플러(엔진이 머티리얼 샘플러를 건다)로 읽는다.
 	switch ( index )
@@ -1128,11 +1131,76 @@ struct SwSurfaceOutput
 #endif
 #define SW_SURFACE_OUTPUT SwSurfaceOutput
 
+// ------------------------------------------------------------------------------
+// 라이트 목록과 라이트 그리드 읽기 — 조명 식(lighting.hlsli 의 커서)과 보기 모드 Light Complexity(G버퍼 · 포워드 표면)가 같은 함수를 쓴다.
+// 라이트 원소 구조체와 버퍼(g_SwLights)는 lighting.hlsli 다. 여기는 개수와 그리드(g_SwLightGrid, t12)만 안다.
+// ------------------------------------------------------------------------------
+// 뷰마다의 라이트 그리드(32 비트 단어, 배치는 bindingslots.hlsli 10 절). CPU 생산자와 GPU 생산자가 같은 슬롯에 건다 — 읽는 함수는 swLoadLightGridWord 하나다.
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwLightGrid, SW_SLOT_LIGHT_GRID_SRV );
+
+/** @brief 이번 패스에 바인딩된 라이트 수입니다. 라이트 버퍼가 바인딩되지 않았으면 0 이고, 그 씬은 앰비언트만 받습니다(키 라이트로 대신하지 않습니다). */
+uint swComputeLightCount()
+{
+	return ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
+}
+
+/**
+ * @brief 지금 뷰의 라이트 그리드 단어 하나를 읽습니다. @p wordIndex 는 그리드 첫 단어 기준입니다(bindingslots.hlsli 10절의 배치).
+ * @details 이 함수만 그리드의 위치를 안다(g_SwLightGrid, t12 — CPU · GPU 생산자가 같은 슬롯에 건다).
+ */
+uint swLoadLightGridWord( uint wordIndex )
+{
+	return g_SwLightGrid[g_SwLightGridBase + wordIndex];
+}
+
+/** @brief 지금 뷰에 라이트 그리드가 있는지 — 버퍼가 걸려 있고 이 뷰의 그리드 첫 단어가 있어야 한다. 없으면 커서는 목록 전체를 돈다. */
+bool swHasLightGrid()
+{
+	return g_SwLightGridIndex != kInvalidIndex && g_SwLightGridBase != kInvalidIndex;
+}
+
+/**
+ * @brief 이 월드 위치가 든 클러스터 번호입니다. C++ `LightGrid::computeClusterIndex` 와 같은 식입니다(LightGridTest 가 C++ 쪽으로 확인한다).
+ * @details 클러스터는 지금 뷰의 NDC 를 X · Y 칸으로, 깊이를 조각으로 나눈 것이다. 원근은 클립 w 의 로그 조각, 직교는 NDC z 의 선형 조각이다.
+ *          NDC 로 정의하므로 화면 크기 · 해상도 배율과 무관하다. 화면 밖 위치는 가장자리 칸으로 자른다.
+ */
+uint swComputeLightGridCluster( float3 worldPosition )
+{
+	const uint   dimX          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_X );
+	const uint   dimY          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Y );
+	const uint   dimZ          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Z );
+	const bool   bPerspective  = swLoadLightGridWord( SW_LIGHT_GRID_WORD_PERSPECTIVE ) != 0u;
+	const float  nearDepth     = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_NEAR_DEPTH ) );
+	const float  sliceScale    = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_SLICE_SCALE ) );
+	const float4 clip          = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+	const float3 ndc           = clip.xyz / clip.w;
+	const uint   tileX         = swComputeLightGridTile( ndc.x, dimX );
+	const uint   tileY         = swComputeLightGridTile( ndc.y, dimY );
+	const float  slicePosition = swComputeLightGridSlicePosition( bPerspective ? clip.w : ndc.z, bPerspective, nearDepth, sliceScale );
+	const uint   slice         = min( (uint)max( slicePosition, 0.0f ), dimZ - 1u );
+	return ( slice * dimY + tileY ) * dimX + tileX;
+}
+
+/**
+ * @brief 이 월드 위치를 비추는 라이트 수입니다(전역 구간 포함). 그리드가 없으면 목록 전체의 수입니다. 보기 모드 Light Complexity 가 색으로 보입니다.
+ * @details 커서가 도는 항목 수와 같다 — 조명 식이 실제로 도는 비용이다(언리얼 Light Complexity, 유니티 Forward+ 디버그 보기).
+ */
+uint swComputeLightVisitCount( float3 worldPosition )
+{
+	uint visitCount = swComputeLightCount();
+	if ( visitCount > 0u && swHasLightGrid() )
+	{
+		const uint clusterWord = swLoadLightGridWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + swComputeLightGridCluster( worldPosition ) * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
+		visitCount             = swLoadLightGridWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT ) + swLoadLightGridWord( clusterWord + 1u );
+	}
+	return visitCount;
+}
+
 // 보기 모드 Unlit · Normals · Depth · Overdraw — 조명 · 그림자 · 림 · 반사를 컴파일 아웃한다. 조명을 하는 셰이더는 **모두** 이 매크로로 가르고,
 // 내보낼 색은 swStoreSurface 가 보기 모드대로 바꾼다(swComputeViewModeColor). C++ 정본은 RenderView.h 의 보기 모드 표(kArrRenderViewModeInfo)다 —
 // 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.ViewModesProduceDistinctPictures).
 #if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW ) || \
-	defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS )
+	defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS ) || defined( SW_VIEWMODE_LIGHTCOMPLEXITY )
 #define SW_VIEWMODE_SKIPS_LIGHTING 1
 #else
 #define SW_VIEWMODE_SKIPS_LIGHTING 0
@@ -1144,6 +1212,17 @@ struct SwSurfaceOutput
 
 static const float kViewModeDepthRange   = 100.0f; // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
 static const float kViewModeOverdrawStep = 0.08f;  // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
+static const float kViewModeLightComplexityMax = 16.0f; // Light Complexity 보기: 이 라이트 수부터 빨강
+
+/** @brief 라이트 수를 색 띠로 바꿉니다 — 0 은 검정, 1 부터 파랑 · 초록 · 노랑 · 빨강(kViewModeLightComplexityMax 이상)이다. */
+float3 swComputeLightComplexityColor( uint visitCount )
+{
+	const float  ratio  = saturate( (float)visitCount / kViewModeLightComplexityMax );
+	const float3 cold   = lerp( float3( 0.0f, 0.1f, 0.8f ), float3( 0.0f, 0.9f, 0.2f ), saturate( ratio * 3.0f ) );
+	const float3 warm   = lerp( float3( 1.0f, 0.9f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), saturate( ratio * 3.0f - 2.0f ) );
+	const float3 middle = lerp( cold, float3( 1.0f, 0.9f, 0.0f ), saturate( ratio * 3.0f - 1.0f ) );
+	return ( visitCount == 0u ) ? float3( 0.0f, 0.0f, 0.0f ) : ( ratio > 2.0f / 3.0f ? warm : middle );
+}
 
 /**
  * @brief 보기 모드가 바꾼 표면 색이다. Lit 에서는 부르지 않는다(SW_VIEWMODE_SKIPS_LIGHTING 이 0).
@@ -1163,6 +1242,9 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
 	return float4( saturate( viewDepth / kViewModeDepthRange ).xxx, 1.0f );
 #elif defined( SW_VIEWMODE_OVERDRAW )
 	return float4( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f, 0.0f );
+#elif defined( SW_VIEWMODE_LIGHTCOMPLEXITY )
+	// 조명 식이 이 위치에서 도는 라이트 수 — 커서(swBeginLights)와 같은 그리드를 읽는다. 표면에서 세므로 디퍼드도 G버퍼가 색을 넘긴다.
+	return float4( swComputeLightComplexityColor( swComputeLightVisitCount( worldPosition ) ), 1.0f );
 #else
 	// Unlit — 셰이더가 조명 없이 만든 색(알베도) 그대로.
 	return float4( albedo.rgb, shadedColor.a );

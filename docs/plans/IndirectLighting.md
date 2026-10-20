@@ -1,6 +1,6 @@
 # 간접 조명 구현 단위 (`D2-12`)
 
-> 상태: 설계 · 선행: ClusteredLighting · 영역: graphics · 옛번호: D2-12 · 진행: 0/7
+> 상태: 구현중 · 선행: ClusteredLighting · 영역: graphics · 옛번호: D2-12 · 진행: 5/7
 
 결정은 [결정 기록](../09_Decisions.md) 5-12 의 `D2-12` 행이 원본입니다. 이 문서는 그 결정을 구현 단위로 나눈 계획과 단위마다의 계약을 적습니다.
 단위가 끝나면 그 단위의 절을 지우고, 남는 교훈은 코드의 헤더 주석으로 옮깁니다.
@@ -17,24 +17,13 @@
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| P0 | SH9 수학(`Core/Math` 의 투영, 평가, 회전 없이 합산)과 테스트 | 없음 |
-| P1 | `LightProbeVolumeComponent`(격자 범위, 간격)와 `.probes` 형식(버전, 격자 크기, 프로브마다 SH9 RGB 27 실수) | P0 |
-| P2 | CPU 베이크 도구: 프로브마다 하늘(스카이 컴포넌트 `D3-7.4`)과 방향광, 점광의 직접광을 SH 로 투영합니다. 가림은 물리 레이캐스트로 봅니다 | P1, `D3-7.4` |
-| P3 | 셰이더 소비: 프로브 격자를 클러스터 그리드(`D2-13` S5)의 항목으로 넣고, `swShadeLights` 가 앰비언트 대신 SH 를 평가합니다 | P1, `D2-13` S1 |
+| P0 | SH9 수학(`Core/Math/SphericalHarmonics.h` `SH9Color` — 투영, 평가, 회전 없이 합산, GPU 원소 float4 일곱 개)과 `SphericalHarmonicsTest` — **들어감**. 테스트 실행은 **확인 필요**(빌드 미확인) | 없음 |
+| P1 | `LightProbeVolumeComponent`(축 정렬 상자 `_extent`, 목표 간격 `_spacing`, 베이크 경로 `_probeDataPath`)와 `.probes` 형식(`LightProbeGrid` — 매직 `SWLP`, 버전, 격자 모양, 프로브마다 SH9 RGB 27 실수) — **들어감**. 모양이 다른 베이크는 쓰지 않는다. `LightProbeGridTest` 실행은 **확인 필요** | P0 |
+| P2 | CPU 베이크(`LightProbeBaker`): 프로브마다 균일 구 레이를 쏘아 닿은 면이 튕긴 직접광(반사율은 볼륨의 `_bounceAlbedo`)과 빈 방향의 하늘을 SH 로 투영한다. 직접광 자체는 담지 않는다(조명 식이 이미 계산해 두 번 비춘다). 가림은 물리 레이캐스트 — **들어감**. 하늘 항은 스카이 컴포넌트(`D3-7.4`)가 생기면 `LightProbeBaker::collectInput` 에 잇는다(지금은 0). 물리 씬이 있는 굽기 테스트는 **남음** | P1, `D3-7.4`(하늘) |
+| P3 | 셰이더 소비: 볼륨은 라이트 목록의 `SW_LIGHT_TYPE_PROBE_VOLUME` 원소(클러스터 그리드 항목), SH9 는 전용 슬롯 t13 `g_SwLightProbes`(`swLoadProbe` 하나만 위치를 안다). `swShadeLights` 가 덮는 볼륨들의 SH(삼선형, 가중 평균)로 앰비언트를 바꾼다. 상자 밖은 자르지 않는다 — **들어감**. 스카이 전역 항목(볼륨 밖)은 D3-7.4 뒤로 남음, 그때까지 볼륨 밖은 지금의 앰비언트. 툰(`toon.hlsl`)은 자기 앰비언트를 그대로 쓴다. `RenderPassGPUTest.LightProbeVolumeReplacesAmbient` · `SceneLightTest.CollectsBakedProbeVolumesAfterLights` 실행은 **확인 필요** | P1, `D2-13` S1 |
 | P4 | 반사 프로브: GPU 베이크(씬을 여섯 면으로 그려 옥타헤드럴로 접고 거칠기 밉을 만듭니다)와 아틀라스 슬롯 | `D2-6.3` 슬롯 지도, P5 |
 | P5 | 금속도와 거칠기 PBR(GGX, 슐릭 프레넬), 머티리얼 필드와 G버퍼 칸 | `D2-6.4` G버퍼 확장 |
-| P6 | 에디터 베이크 UI(볼륨 선택, 베이크 단추, 진행 표시)와 에디터 시나리오 | P2 |
-
-### P0 계약
-
-- `SH9Color` 는 실수 27 개(계수 아홉 × RGB)입니다. 셰이더 레이아웃과 같게 float4 일곱 개(마지막 셋은 0)로 GPU 원소를 만듭니다.
-- 투영은 균일 구 샘플(결정적 씨앗)이고, 평가는 코사인 로브 컨볼루션(램버트)을 곱한 값입니다. 상수(π 계열)는 `MathUtil` 만 씁니다.
-- 테스트: 상수 하늘은 모든 방향에서 같은 값, 한 방향의 빛은 그 방향에서 최대, 투영 후 평가가 해석해와 허용 오차 안입니다.
-
-### P3 계약
-
-- 프로브 데이터는 S2 이전에는 라이트 버퍼 꼬리(그리드 뒤)에, S2 이후에는 전용 슬롯에 둡니다. 셰이더는 읽는 함수 하나(`swLoadProbe`)만 위치를 압니다.
-- 격자 밖의 점은 가장 가까운 프로브로 자르지 않습니다. 볼륨이 없는 곳은 스카이의 SH(볼륨 하나짜리 전역 항목)를 씁니다. 스카이도 없으면 0 입니다(폴백 금지).
+| P6 | 에디터 베이크: 커맨드 `lighting.bakeProbes`(Build > Bake Light Probes — 선택한 볼륨, 없으면 모든 볼륨), 결과는 씬 옆 `<씬>.<오브젝트>.probes` 와 볼륨의 `_probeDataPath`, 탐침 `Editor.LightProbeBakeCount` · `Editor.BakedLightProbeVolumeCount`, 시나리오 `engine/automation/editor/lightprobebake.scenario.xml` — **들어감**. 굽기는 동기라 진행 표시는 끝난 뒤 알림 하나다(긴 굽기를 비동기 작업으로 옮기는 일은 **남음**). 볼륨을 실제로 굽는 시나리오(파일을 쓰는)와 시나리오 실행은 **확인 필요** | P2 |
 
 ## 3. 충돌 주의
 

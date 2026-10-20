@@ -450,6 +450,15 @@
        "description": "투명 인스턴스 바이토닉 정렬(컴퓨트)"
       },
       {
+       "name": "_shaderLightGrid",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "라이트 그리드 생산(컴퓨트) — 클러스터드 라이팅의 빛 목록"
+      },
+      {
        "name": "_shaderFullscreenTriangle",
        "type": "DataPath",
        "default": "",
@@ -3268,9 +3277,9 @@
   {
    "name": "gv_lightCulling",
    "type": "int32",
-   "default": "1",
+   "default": "2",
    "kind": "시험",
-   "description": "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드)",
+   "description": "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드, 2=GPU 클러스터 그리드)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
@@ -3926,7 +3935,7 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps)",
+   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {

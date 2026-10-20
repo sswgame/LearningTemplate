@@ -40,7 +40,7 @@
 - 지형 LOD 교체 프레임 시간: 최악이 기준(GT 2 ms)을 넘는다(측정값은 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체"). 메시 집합이 바뀌어 RT 는 정점 풀을 통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다(옛 D2-5.6).
 - 지오모프(LOD 튐)와 레이어 다섯 이상: 머티리얼 텍스처 칸은 16 개로 늘었지만 `.layerweights` · 스플랫 업로드 · 브러시 · 셰이더가 레이어 넷이다. 두 번째 스플랫이 필요하다.
 - 지형 쓰기(결정은 [결정 기록](../09_Decisions.md) 5-5)의 남은 것(옛 D2-5.7): 측정이 Debug 뿐이라 `TerrainBenchTest.ColliderRebuildAfterBrushWrite` · `WriteHeightsRectSizes` 를 Release 로 다시 재고 `TerrainComponent` 의 청크 재생성 예산(쓰기 · 틱마다 넷)을 GT 2 ms 에 맞춘다. 식생은 드래그가 끝나면 숲 전체를 다시 뿌린다(쇼케이스 Debug 약 0.86 s) — 바뀐 셀만 다시 계산한다. 내비는 런타임 내비메시 타일만 다시 굽는다(에디터가 구운 내비 에셋은 다시 굽기 명령으로). 에디터 편집 모드에서도 틱이 남은 청크를 만드는지 확인하지 않았다(브러시 한 번은 쓰기에서 끝난다). 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로 지형을 훑는다(측정 안 함).
-함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯을 SRV 띠 밖 t12..t27 로 옮기고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
+함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯은 Vulkan t 밴드 뒤 t16..t31 이라 SRV 띠(지금 t0..t12)가 밴드 끝까지 자라도 밀리지 않고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
 
 ### ToonShadingCompletion
 제목: 툰 머티리얼(MToon 1.0)의 남은 것
@@ -70,12 +70,11 @@
 ### ViewModeCompletion
 제목: 뷰포트 보기 모드의 남은 것
 옛번호: D2-10, D2-10.2, D2-10.3
-왜 필요한가: `RenderViewMode`(언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다)에서 `LightingOnly` · Roughness · Metallic · Mipmaps 는 들어갔다. 아래가 남았다.
+왜 필요한가: `RenderViewMode`(언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다)에서 `LightingOnly` · Roughness · Metallic · Mipmaps · LightComplexity 는 들어갔다. 아래가 남았다.
 착수 조건 / 남은 것:
 - Shipping 베이크: 쿠킹한 LightingOnly 변형으로 Shipping hostgpu 를 돌린다. Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
 - Metallic 금속도 칸은 PBR([IndirectLighting](IndirectLighting.md) P5)과 함께 생긴다.
 - Shaded Wireframe: 패스가 둘 필요하다.
-- Light Complexity: 디퍼드는 G버퍼 패스가 빛 목록을 보지 않아 조명 패스에 보기 모드 변형이 필요하다. [ClusteredLighting](ClusteredLighting.md) S4 와 같은 일이다.
 함정: `swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다. `toon` · `sprite2dlit` 포워드 경로도 LightingOnly 에서는 회색으로 바뀐다.
 
 ### RealtimeGlobalIllumination

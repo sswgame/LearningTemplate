@@ -117,13 +117,22 @@ namespace sw
     {
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 빛을 돌지 않는다(앰비언트만).
         context._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
-        // 지금 그리는 뷰의 라이트 그리드. 없으면(gv_lightCulling 0, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
-        const uint32 gridBase = _lightBuffer.isBindable() ? _lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : invalid_index::kUint32;
+        // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(gv_lightCulling 0, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
+        // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(swHasLightGrid 가 둘 다 본다).
+        const RHIStructuredBufferSlot* pGridBuffer = _lightBuffer.isBindable() ? _lightBuffer.findGridBuffer() : nullptr;
+        const bool                     bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
+        const uint32                   gridBase    = bGridReady ? _lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : invalid_index::kUint32;
         context._passValues.setUint( passConstantNames()._swLightGridBase, gridBase );
         if ( _lightBuffer.isBindable() == false )
             return;
         const RHIStructuredBufferSlot& buffer = _lightBuffer.getBuffer();
         context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
+        if ( bGridReady )
+            context._resourceRegistry.registerBuffer( passConstantNames()._swLightGrid, pGridBuffer->_buffer, pGridBuffer->_srv );
+        // 라이트 프로브 SH9(t13) — 볼륨 원소가 라이트 목록에 있는 프레임에만 있다. 셰이더는 g_SwLightProbesIndex 로 걸렸는지 본다.
+        const RHIStructuredBufferSlot* pProbeBuffer = _lightBuffer.findProbeBuffer();
+        if ( pProbeBuffer != nullptr )
+            context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
     }
 
     void FrameRenderer::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
@@ -218,7 +227,7 @@ namespace sw
 
         if ( _gpuScene.isUploaded() )
         {
-            drawGPUBatches( context, pso, bTransparentPass );
+            drawGPUBatches( context, pso, bTransparentPass, nullptr );
             return;
         }
 
@@ -234,7 +243,30 @@ namespace sw
         commitBindlessTextureBindings( context );
     }
 
-    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
+    void FrameRenderer::drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso )
+    {
+        if ( _pDevice == nullptr || context._pCmd == nullptr )
+            return;
+        const vector<GPUTransparentParticleSlot>& listParticleSlot = findActiveParticleSlots();
+        if ( _gpuScene.isUploaded() )
+        {
+            drawGPUBatches( context, pso, true, &listParticleSlot );
+            return;
+        }
+        // 메시가 없으면 입자만 이 뷰의 순서로 그린다.
+        drawSceneMeshes( context, pso, true );
+        (void)drawParticleSlots( context, vector_reference<const GPUTransparentParticleSlot>( listParticleSlot ) );
+    }
+
+    const vector<GPUTransparentParticleSlot>& FrameRenderer::findActiveParticleSlots() const
+    {
+        if ( isRenderingExtraView() && _pActiveView->_bHasParticleOrder == SW_TRUE )
+            return _pActiveView->_listParticleSlot;
+        return _gpuScene.getParticleSlots();
+    }
+
+    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass,
+                                        const vector<GPUTransparentParticleSlot>* pParticleSlot )
     {
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
@@ -317,8 +349,20 @@ namespace sw
         uint32          drawCallCount{ 0 };
         uint32          orderIndex{ 0 };
         const uint32    batchCount = static_cast<uint32>( batches.size() );
+
+        // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 와 정점 슬롯을 바꾸므로
+        // 메시로 돌아올 때 PSO · 정점 버퍼를 다시 건다(`drawParticleRun` 이 슬롯 스트림과 에뮬 텍스처 슬롯을, bindForDraw 가 PSO 가 바뀐 바인딩을 다시 건다).
+        const vector_reference<const GPUTransparentParticleSlot> listParticleSlot =
+            ( pParticleSlot != nullptr ) ? vector_reference<const GPUTransparentParticleSlot>( *pParticleSlot ) : vector_reference<const GPUTransparentParticleSlot>{};
+        uint32 particleSlotCursor{ 0 };
+
         while ( orderIndex < batchCount )
         {
+            if ( drawParticleRun( context, listParticleSlot, particleSlotCursor, orderIndex, slotStream ) )
+            {
+                boundPSO          = 0;
+                boundVertexBuffer = 0;
+            }
             const uint32        batchIndex       = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex] : orderIndex;
             const GPUMeshBatch& head             = batches[batchIndex];
             const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false;
@@ -333,7 +377,11 @@ namespace sw
                 while ( orderIndex + groupCount < batchCount )
                 {
                     const uint32 nextBatchIndex = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex + groupCount] : orderIndex + groupCount;
-                    if ( nextBatchIndex != batchIndex + groupCount || sameDrawGroup( head, batches[nextBatchIndex] ) == false )
+                    // 다음 입자의 자리가 묶음 안에 들면 멀티 드로우 묶음을 그 자리에서 끊는다.
+                    const bool bParticleInside = particleSlotCursor < listParticleSlot.size() &&
+                                                 listParticleSlot[particleSlotCursor]._drawPosition <= orderIndex + groupCount;
+                    const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
+                    if ( bGroupEnds || sameDrawGroup( head, batches[nextBatchIndex] ) == false )
                         break;
                     ++groupCount;
                 }
@@ -365,17 +413,40 @@ namespace sw
             ++drawCallCount;
             orderIndex += groupCount;
         }
+        // 모든 배치보다 가까운 입자(자리 = 배치 수)를 마저 그린다.
+        (void)drawParticleRun( context, listParticleSlot, particleSlotCursor, MathUtil::kMaxUInt32, slotStream );
         SW_PROFILE_COUNT( "RT.Draw.indirectCalls", drawCallCount );
         _indirectDrawCallCount.fetch_add( drawCallCount, std::memory_order_relaxed );
     }
 
-    void FrameRenderer::drawParticles( FramePassContext& context )
+    bool FrameRenderer::drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
+                                         RHIBufferHandle slotStream )
+    {
+        uint32 slotEnd = inOutCursor;
+        while ( slotEnd < listSlot.size() && listSlot[slotEnd]._drawPosition <= position )
+        {
+            ++slotEnd;
+        }
+        if ( slotEnd == inOutCursor )
+            return false;
+        const vector_reference<const GPUTransparentParticleSlot> listRun = listSlot.subspan( inOutCursor, slotEnd - inOutCursor );
+        inOutCursor                                                      = slotEnd;
+        if ( drawParticleSlots( context, listRun ) == false )
+            return false;
+        // 메시 드로우가 읽는 패스 단위 상태를 되돌린다 — 입자 그리기가 인스턴스 슬롯 스트림을 비웠고 PSO 가 바뀌어 에뮬 텍스처 슬롯이 비었다.
+        if ( slotStream != 0 )
+            context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, slotStream, constant::kInstanceSlotStreamStride, 0 );
+        commitBindlessTextureBindings( context );
+        return true;
+    }
+
+    bool FrameRenderer::drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot )
     {
         const vector<GPUParticleBatch>& listBatch   = _gpuScene.getParticleBatches();
         const RHIPipelineStateHandle    pso         = findParticlePSO();
-        const bool                      bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || listBatch.empty() || pso == 0;
+        const bool                      bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || listBatch.empty() || listSlot.empty() || pso == 0;
         if ( bCannotDraw )
-            return;
+            return false;
         // 정점은 셰이더가 SV_VertexID 로 만든다 — 정점 버퍼 슬롯과 인스턴스 슬롯 스트림은 비운다(캔버스 · 풀스크린 패스와 같다).
         context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
         context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
@@ -383,7 +454,8 @@ namespace sw
         setIdentityWorld( context );
         // PassCB(g_ViewProj · g_InvViewProj)를 건다. 입자 버퍼 · 텍스처 · 루트 상수는 그 뒤에 입자 렌더러가 건다.
         bindForDraw( context, pso, kInvalidDescriptorIndex );
-        (void)_particleRenderer.drawBatches( *context._pCmd, listBatch, _pDevice->supportsNativeBindlessSampling() );
+        (void)_particleRenderer.drawBatches( *context._pCmd, listBatch, listSlot, _pDevice->supportsNativeBindlessSampling() );
+        return true;
     }
 
     void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )

@@ -31,6 +31,8 @@ struct SwLightData
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwLightData, g_SwLights, SW_SLOT_LIGHT_SRV );
+// 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개). 볼륨 원소(SW_LIGHT_TYPE_PROBE_VOLUME)가 첫 프로브 번호를 싣는다 — 읽는 함수는 swLoadProbe 하나다.
+SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwLightProbes, SW_SLOT_LIGHT_PROBE_SRV );
 
 /**
  * @brief 아틀라스의 한 점 둘레를 3x3 PCF 로 비교합니다 — 탭 하나가 2x2 쌍선형 비교라 가장자리의 텍셀 계단이 보이지 않는다(가장자리가 텍셀 세 개 폭으로 번진다).
@@ -241,10 +243,66 @@ bool swComputeLightIncidence( SwLightData light, float3 worldPosition, out float
 	return bLight3d;
 }
 
-/** @brief 이번 패스에 바인딩된 라이트 수입니다. 라이트 버퍼가 바인딩되지 않았으면 0 이고, 그 씬은 앰비언트만 받습니다(키 라이트로 대신하지 않습니다). */
-uint swComputeLightCount()
+/**
+ * @brief 라이트 프로브 하나의 SH9 원소 @p element(0..SW_LIGHT_PROBE_FLOAT4_COUNT-1)를 읽습니다. 이 함수만 프로브의 위치를 안다(g_SwLightProbes, t13).
+ */
+float4 swLoadProbe( uint probeIndex, uint element )
 {
-	return ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
+	return g_SwLightProbes[probeIndex * SW_LIGHT_PROBE_FLOAT4_COUNT + element];
+}
+
+/**
+ * @brief 프로브 하나의 SH9 를 노멀 @p normal 로 평가합니다. 결과는 조도 / π 다 — 알베도에 곱하면 램버트 반사광이다(앰비언트와 같은 단위).
+ * @details C++ `SH9Color::makeGPUElement` 가 상수를 미리 곱해 둔 배치(유니티 ShadeSH9)다: A · (n, 1) + B · (xy, yz, z², xz) + C · (x² − y²).
+ *          SphericalHarmonicsTest.GPUElementEvaluatesToIrradianceOverPi 가 같은 식을 C++ 로 확인한다.
+ */
+float3 swEvaluateSphericalHarmonics( uint probeIndex, float3 normal )
+{
+	const float4 linearInput    = float4( normal, 1.0f );
+	const float4 quadraticInput = normal.xyzz * normal.yzzx;
+	const float  squareInput    = normal.x * normal.x - normal.y * normal.y;
+	const float3 linearTerm     = float3( dot( swLoadProbe( probeIndex, 0u ), linearInput ), dot( swLoadProbe( probeIndex, 1u ), linearInput ),
+	                                      dot( swLoadProbe( probeIndex, 2u ), linearInput ) );
+	const float3 quadraticTerm  = float3( dot( swLoadProbe( probeIndex, 3u ), quadraticInput ), dot( swLoadProbe( probeIndex, 4u ), quadraticInput ),
+	                                      dot( swLoadProbe( probeIndex, 5u ), quadraticInput ) );
+	return max( linearTerm + quadraticTerm + swLoadProbe( probeIndex, 6u ).rgb * squareInput, 0.0f );
+}
+
+/**
+ * @brief 프로브 볼륨 원소 하나(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)에서 이 위치의 간접광을 구합니다.
+ * @return rgb = 조도 / π(이웃 프로브 여덟의 삼선형 보간), a = 가중치 — 상자 안이면 1, 밖이면 0 이다. 상자 밖을 가장 가까운 프로브로 자르지 않는다
+ *         (IndirectLighting.md P3 계약 — 볼륨이 없는 곳은 볼륨의 빛을 받지 않는다). 프로브 버퍼가 안 걸렸으면 0 이다.
+ */
+float4 swSampleProbeVolume( SwLightData volume, float3 worldPosition, float3 normal )
+{
+	const float3 origin     = volume.colorIntensity.xyz;
+	const float3 spacing    = max( volume.directionType.xyz, 1e-4f );
+	const uint3  count      = uint3( volume.params.xyz + 0.5f );
+	const uint   probeBase  = (uint)( volume.params.w + 0.5f );
+	const float3 lastCell   = float3( max( count, 1u ) - 1u );
+	const float3 local      = ( worldPosition - origin ) / spacing;
+	// 프로브가 하나뿐인 축은 그 축의 두께가 0 이다 — 간격 반 안을 안으로 본다.
+	const float3 multiAxis  = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
+	const float3 lowBound   = multiAxis * 0.5f - 0.5f;
+	const float3 highBound  = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis );
+	const bool   bInside    = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
+	const float3 clamped    = clamp( local, 0.0f, lastCell );
+	const uint3  cell       = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
+	const float3 blend      = saturate( clamped - float3( cell ) ) * multiAxis;
+	const uint3  nextOffset = uint3( count > 1u );
+	float3       result     = float3( 0.0f, 0.0f, 0.0f );
+	if ( bInside )
+	{
+		[unroll] for ( uint corner = 0u; corner < 8u; ++corner )
+		{
+			const uint3  pick        = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
+			const uint3  probeCell   = cell + pick * nextOffset;
+			const float3 axisWeight  = lerp( 1.0f - blend, blend, float3( pick ) );
+			const uint   probeIndex  = probeBase + ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
+			result += swEvaluateSphericalHarmonics( probeIndex, normal ) * ( axisWeight.x * axisWeight.y * axisWeight.z );
+		}
+	}
+	return float4( result, bInside ? 1.0f : 0.0f );
 }
 
 /**
@@ -267,49 +325,8 @@ struct SwLightCursor
 };
 
 /**
- * @brief 지금 뷰의 라이트 그리드 단어 하나를 읽습니다. @p wordIndex 는 그리드 첫 단어 기준입니다(bindingslots.hlsli 10절의 배치).
- * @details 그리드는 라이트 버퍼의 원소(float4 네 개 = 단어 16 개)에 담겨 있다. 원소를 읽은 **바로 뒤에** 정수로 바꾼다 — 실수 연산을 거치면
- *          작은 정수의 비트(비정규 수)가 0 으로 바뀔 수 있다. 실수 선택(movc)도 하지 않고 정수 벡터로 고른다.
- *          이 함수만 그리드의 위치를 안다. 그리드를 전용 슬롯으로 옮기면(ClusteredLighting.md S2) 이 함수와 C++ 바인딩만 바뀐다.
- */
-uint swLoadLightGridWord( uint wordIndex )
-{
-	const SwLightData element = g_SwLights[g_SwLightGridBase + wordIndex / SW_LIGHT_GRID_WORDS_PER_ELEMENT];
-	const uint4       row0    = asuint( element.positionRadius );
-	const uint4       row1    = asuint( element.colorIntensity );
-	const uint4       row2    = asuint( element.directionType );
-	const uint4       row3    = asuint( element.params );
-	const uint        lane    = wordIndex % SW_LIGHT_GRID_WORDS_PER_ELEMENT;
-	const uint4       row     = ( lane < 4u ) ? row0 : ( ( lane < 8u ) ? row1 : ( ( lane < 12u ) ? row2 : row3 ) );
-	const uint        column  = lane % 4u;
-	return ( column == 0u ) ? row.x : ( ( column == 1u ) ? row.y : ( ( column == 2u ) ? row.z : row.w ) );
-}
-
-/**
- * @brief 이 월드 위치가 든 클러스터 번호입니다. C++ `LightGrid::computeClusterIndex` 와 같은 식입니다(LightGridTest 가 C++ 쪽으로 확인한다).
- * @details 클러스터는 지금 뷰의 NDC 를 X · Y 칸으로, 깊이를 조각으로 나눈 것이다. 원근은 클립 w 의 로그 조각, 직교는 NDC z 의 선형 조각이다.
- *          NDC 로 정의하므로 화면 크기 · 해상도 배율과 무관하다. 화면 밖 위치는 가장자리 칸으로 자른다.
- */
-uint swComputeLightGridCluster( float3 worldPosition )
-{
-	const uint   dimX         = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_X );
-	const uint   dimY         = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Y );
-	const uint   dimZ         = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Z );
-	const bool   bPerspective = swLoadLightGridWord( SW_LIGHT_GRID_WORD_PERSPECTIVE ) != 0u;
-	const float  nearDepth    = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_NEAR_DEPTH ) );
-	const float  sliceScale   = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_SLICE_SCALE ) );
-	const float4 clip         = mul( float4( worldPosition, 1.0f ), g_ViewProj );
-	const float3 ndc          = clip.xyz / clip.w;
-	const uint   tileX        = min( (uint)( saturate( ndc.x * 0.5f + 0.5f ) * (float)dimX ), dimX - 1u );
-	const uint   tileY        = min( (uint)( saturate( ndc.y * 0.5f + 0.5f ) * (float)dimY ), dimY - 1u );
-	const float  slicePosition = bPerspective ? log2( max( clip.w, nearDepth ) / nearDepth ) * sliceScale : saturate( ndc.z ) * sliceScale;
-	const uint   slice        = min( (uint)max( slicePosition, 0.0f ), dimZ - 1u );
-	return ( slice * dimY + tileY ) * dimX + tileX;
-}
-
-/**
  * @brief 이 월드 위치를 비추는 라이트의 순회를 엽니다. 라이트 버퍼가 바인딩되지 않았으면 빈 커서입니다.
- * @details 지금 뷰에 라이트 그리드가 있으면(`g_SwLightGridBase`) 전역 구간(방향광)과 이 위치의 클러스터 목록을 돈다. 없으면(`gv_lightCulling` 0) 목록 전체를 돈다.
+ * @details 지금 뷰에 라이트 그리드가 있으면(`swHasLightGrid`) 전역 구간(방향광)과 이 위치의 클러스터 목록을 돈다. 없으면(`gv_lightCulling` 0) 목록 전체를 돈다.
  */
 SwLightCursor swBeginLights( float3 worldPosition )
 {
@@ -319,7 +336,7 @@ SwLightCursor swBeginLights( float3 worldPosition )
 	cursor.clusterPosition = 0u;
 	cursor.clusterEnd      = 0u;
 	cursor.bGrid           = 0u;
-	if ( cursor.end > 0u && g_SwLightGridBase != kInvalidIndex )
+	if ( cursor.end > 0u && swHasLightGrid() )
 	{
 		const uint cluster     = swComputeLightGridCluster( worldPosition );
 		const uint indexBase   = swLoadLightGridWord( SW_LIGHT_GRID_WORD_INDEX_BASE );
@@ -366,6 +383,9 @@ bool swNextLight( inout SwLightCursor inoutCursor, out SwLightData outLight )
  * @param normal   월드 노멀 (정규화되어 있어야 한다)
  * @param shadow   `swSampleShadowAtWorld` 가 준 방향광 값 — `params.x` 가 켜진 방향광에만 곱한다(점광 · 스폿은 `swComputeLightShadow` 가 자기 타일을 읽는다)
  * @details 3D 라이트가 하나도 없으면 앰비언트만 남습니다. 키 라이트로 대신 비추지 않습니다. 3D 씬은 방향광이나 스카이를 데이터로 가집니다(결정 기록 5-12 D2-13).
+ *          이 위치를 덮는 라이트 프로브 볼륨(커서가 도는 SW_LIGHT_TYPE_PROBE_VOLUME 원소)이 있으면 앰비언트 대신 그 볼륨들의 SH 를 가중 평균해 쓴다
+ *          (IndirectLighting.md P3). 볼륨이 없는 곳은 지금까지의 앰비언트 그대로다 — 스카이(D3-7.4)가 생기면 전역 항목으로 그 자리를 잇는다.
+ *          볼륨이 없는 씬은 연산 순서까지 예전과 같다(골든 바이트 비교).
  */
 float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow )
 {
@@ -374,12 +394,23 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 	albedo = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
 #endif
 	// 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
-	float3 lit = albedo * g_KeyLightColor.rgb * g_KeyLightColor.a;
+	const float3 ambient = g_KeyLightColor.rgb * g_KeyLightColor.a;
+	float3       lit     = albedo * ambient;
+	float3       probeSum    = float3( 0.0f, 0.0f, 0.0f );
+	float        probeWeight = 0.0f;
 
 	SwLightCursor cursor = swBeginLights( worldPosition );
 	SwLightData   light;
 	while ( swNextLight( cursor, light ) )
 	{
+		const uint lightType = (uint)( light.directionType.w + 0.5f );
+		if ( lightType == SW_LIGHT_TYPE_PROBE_VOLUME )
+		{
+			const float4 probe = swSampleProbeVolume( light, worldPosition, normal );
+			probeSum += probe.rgb * probe.a;
+			probeWeight += probe.a;
+			continue;
+		}
 		float3 toLight;
 		float  attenuation;
 		if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
@@ -392,6 +423,9 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 		const float shadowTerm = swComputeLightShadow( light, worldPosition, normal, shadow );
 		lit += albedo * normalDotLight * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
 	}
+	// 볼륨이 덮는 곳은 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
+	if ( probeWeight > 0.0f )
+		lit += albedo * ( probeSum / probeWeight - ambient );
 	return lit;
 }
 

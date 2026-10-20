@@ -11,12 +11,13 @@
  * 번호 지도 (그래픽스 셰이더, space0 — 절 번호는 이 파일의 1~10 절):
  *   b0 PassCB · b1 MaterialCB(픽스처) · b2 루트 상수 에뮬(DX11/GL) | b0 space2 루트 상수(DX12 · Vulkan 푸시 상수) — 1 절
  *   t0..t3 엔진 텍스처(에뮬) · t4 인스턴스 · t5 머티리얼 데이터 · t6 가시 인스턴스 ID · t7 모프 정점 · t8 라이트 ·
- *   t9 배치 테이블 · t10 VAT · t11 패스 전용(캔버스 사각형 · 입자) | t12..t27 머티리얼 텍스처(에뮬 — DX11 · GL 만, 띠 밖) — 2 절
+ *   t9 배치 테이블 · t10 VAT · t11 패스 전용(캔버스 사각형 · 입자) · t12 라이트 그리드 · t13 라이트 프로브 | t14..t15 빈 자리(띠 안) |
+ *   t16..t31 머티리얼 텍스처(에뮬 — DX11 · GL 만, 띠 밖) — 2 절
  *   컴퓨트는 따로: b0 · t0..t3 읽기 버퍼 · u0..u3 쓰기 버퍼 · u4..u7 RW 텍스처(에뮬) — 3 절
  *   s0..s6 정적 샘플러 · s7 그림자 비교(DX12 · Vulkan) | DX11 은 s0..s3 엔진 슬롯 결합 샘플러 + s9..s15 정적 세트 — 4 절
  *   t0 space1 / u0 space1 bindless 텍스처 배열(DX12), Vulkan 은 set 1 binding 0..3 — 5 절
  *   그 밖: Vulkan set 0 시프트(6) · GL SSBO · 이미지 유닛(7) · 라이트 타입(8) · 패스 플래그(9) · 버퍼 배치 상수(10).
- *   에뮬 슬롯(t0..t3 · t12..t27)이 bindless 를 어떻게 흉내 내는지는 binding.hlsli 0 절(bindless 입문).
+ *   에뮬 슬롯(t0..t3 · t16..t31)이 bindless 를 어떻게 흉내 내는지는 binding.hlsli 0 절(bindless 입문).
  *
  * 모델 (언리얼 GPUScene 식): 셰이더 선언은 네 백엔드에서 **같다** — register(b#/t#/u#) 하나로 쓰고, 백엔드는
  * 그 번호를 각자의 방식으로 건다. 드로우마다 바뀌는 데이터는 바인딩을 갈아 끼우지 않고 **큰 버퍼에서 인덱스로 읽는다**
@@ -32,7 +33,7 @@
  *   │ 엔진 텍스처 슬롯   │ t0..t3 (에뮬)│ (없음)              │ (없음)              │ 텍스처 유닛 0..3 │
  *   │ 인스턴스 구조버퍼  │ t4           │ t 테이블            │ SSBO binding 16+4   │ SSBO 4           │
  *   │ 머티리얼 데이터    │ t5           │ t 테이블            │ SSBO binding 16+5   │ SSBO 5           │
- *   │ 머티리얼 텍스처    │ t12..t27(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 12..27│
+ *   │ 머티리얼 텍스처    │ t16..t31(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 16..31│
  *   │ 컴퓨트 읽기 버퍼   │ t0..t3       │ t 테이블            │ SSBO binding 16+#   │ SSBO #           │
  *   │ 컴퓨트 쓰기 버퍼   │ u0..u3       │ u 테이블            │ SSBO binding 32+#   │ SSBO 16+#        │
  *   │ bindless 텍스처    │ t0 space1    │ 테이블 (힙 전체)    │ set 1 binding 0     │ (없음)           │
@@ -46,9 +47,10 @@
  *   - OpenGL: DescriptorSet 을 무시하고 binding 만 본다 — b# 가 곧 UBO #, t# 가 곧 텍스처 유닛/SSBO #, u# 는 SSBO 16+#.
  *   - DX11(SM5.0): space 를 모르고 리소스 배열 동적 인덱싱이 없다 — 텍스처는 고정 슬롯이다.
  *   - 머티리얼 텍스처 칸은 16 개다(언리얼 머티리얼 샘플러 한도와 같다 — 결정 기록 5-12). 네 백엔드가 같은 수를 받는다: DX12 · Vulkan 은 bindless 라
- *     칸이 머티리얼 데이터의 인덱스일 뿐이고, DX11 · GL 은 t12..t27 고정 슬롯이다. 그 슬롯은 DX12 테이블 · Vulkan t 밴드(t0..t11) **밖**이라 두 백엔드의
- *     자리를 쓰지 않는다. DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 샘플러를 짝으로 두지 않고 정적 세트의 머티리얼 샘플러(s9 + 0)로 읽는다.
- *     GL 은 텍스처 유닛 12..27 의 결합 샘플러라 프래그먼트 텍스처 유닛이 28 개 이상이어야 한다(디바이스 초기화가 확인한다 — 데스크톱 드라이버는 32).
+ *     칸이 머티리얼 데이터의 인덱스일 뿐이고, DX11 · GL 은 t16..t31 고정 슬롯이다. 그 슬롯은 Vulkan t 밴드(t0..t15) 전체의 **뒤**라, SRV 띠가
+ *     밴드 끝까지 자라도 머티리얼 슬롯은 움직이지 않는다(결정 기록 5-12 D2-13 — 라이트 그리드 t12 를 넣으며 띠와 머티리얼 슬롯을 갈랐다).
+ *     DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 샘플러를 짝으로 두지 않고 정적 세트의 머티리얼 샘플러(s9 + 0)로 읽는다.
+ *     GL 은 텍스처 유닛 16..31 의 결합 샘플러라 프래그먼트 텍스처 유닛이 32 개 이상이어야 한다(디바이스 초기화가 확인한다 — 데스크톱 드라이버는 32).
  */
 
 #ifndef SW_ENGINE_BINDINGSLOTS_HLSLI
@@ -68,8 +70,8 @@
 #define SW_ROOT_DWORD_COUNT      16
 #define SW_SLOT_ROOT_CB_EMUL     2   // DX11/GL: 루트 상수를 담는 상수버퍼 슬롯 (SW_DECLARE_ROOT_CONSTANTS)
 // ------------------------------------------------------------------------------
-// 2) SRV (t#, space0). t0..t11 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 데이터·씬 표들·패스 전용 버퍼(네 백엔드의 띠).
-//    t12..t27 — 머티리얼 텍스처(에뮬, DX11 · GL 만). 띠 밖이라 DX12 테이블 · Vulkan t 밴드에 들지 않는다.
+// 2) SRV (t#, space0). t0..t12 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 데이터·씬 표들·패스 전용 버퍼·라이트 그리드(네 백엔드의 띠).
+//    띠는 Vulkan t 밴드(t0..t15)까지 자랄 수 있다. t16..t31 — 머티리얼 텍스처(에뮬, DX11 · GL 만). 밴드 뒤라 DX12 테이블 · Vulkan t 밴드에 들지 않는다.
 // ------------------------------------------------------------------------------
 #define SW_SLOT_ENGINE_TEX0            0
 #define SW_SLOT_ENGINE_TEX1            1
@@ -120,27 +122,37 @@
 // 투명 패스의 입자 그리기는 입자(StructuredBuffer<GPUParticle> g_SwParticles, particle.hlsl). 두 그리기는 같은 패스에서 겹치지 않는다.
 #define SW_SLOT_PASS_SRV               11
 
-#define SW_SRV_SLOT_COUNT              12  // t0..t11 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16) 안이다 — 더 늘리려면 밴드부터 넓힌다
+// 지금 뷰의 라이트 그리드 (StructuredBuffer<uint> g_SwLightGrid) — 클러스터드 라이팅의 빛 목록(배치는 10 절 SW_LIGHT_GRID_*).
+// 뷰마다 그리드 하나가 이 버퍼에 이어 붙고, PassCB g_SwLightGridBase 가 지금 뷰의 첫 단어다. 만드는 쪽은 둘이다 — CPU(LightGrid, 동적 버퍼)와
+// GPU 컴퓨트(lightgrid.hlsl, 기본 힙 UAV). 셰이더는 어느 쪽이 만들었는지 모른다(lighting.hlsli swLoadLightGridWord 하나만 읽는다).
+#define SW_SLOT_LIGHT_GRID_SRV         12
 
-// 머티리얼 텍스처 고정 슬롯 t12..t27(16 칸). DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
+// 라이트 프로브의 SH9 (StructuredBuffer<float4> g_SwLightProbes) — 프로브 하나가 float4 SW_LIGHT_PROBE_FLOAT4_COUNT 개(C++ SH9Color::makeGPUElement 배치).
+// 볼륨은 라이트 목록(g_SwLights)의 SW_LIGHT_TYPE_PROBE_VOLUME 원소이고 그 원소가 이 버퍼의 첫 프로브를 가리킨다. 읽는 함수는 lighting.hlsli swLoadProbe 하나다.
+#define SW_SLOT_LIGHT_PROBE_SRV        13
+
+#define SW_SRV_SLOT_COUNT              14  // t0..t13 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)까지 늘릴 수 있다 — 머티리얼 슬롯은 밴드 뒤라 밀리지 않는다
+
+// 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸). DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
 // 엔진이 텍스처를 이 슬롯에 걸고 머티리얼 데이터에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스라 이 슬롯을 선언하지 않는다.
+// 첫 칸은 Vulkan t 밴드 폭(SW_VK_SLOT_RANGE_SIZE)과 같다 — SRV 띠가 밴드 끝까지 자라도 겹치지 않는다(ShaderBindingSlots.h 가 확인한다).
 // 레지스터는 리터럴이어야 해서(register( SW_CAT( t, slot ) )) 칸마다 번호를 적는다 — 연속인지는 ShaderBindingSlots.h 가 확인한다.
-#define SW_SLOT_MATERIAL_TEX0          12
-#define SW_SLOT_MATERIAL_TEX1          13
-#define SW_SLOT_MATERIAL_TEX2          14
-#define SW_SLOT_MATERIAL_TEX3          15
-#define SW_SLOT_MATERIAL_TEX4          16
-#define SW_SLOT_MATERIAL_TEX5          17
-#define SW_SLOT_MATERIAL_TEX6          18
-#define SW_SLOT_MATERIAL_TEX7          19
-#define SW_SLOT_MATERIAL_TEX8          20
-#define SW_SLOT_MATERIAL_TEX9          21
-#define SW_SLOT_MATERIAL_TEX10         22
-#define SW_SLOT_MATERIAL_TEX11         23
-#define SW_SLOT_MATERIAL_TEX12         24
-#define SW_SLOT_MATERIAL_TEX13         25
-#define SW_SLOT_MATERIAL_TEX14         26
-#define SW_SLOT_MATERIAL_TEX15         27
+#define SW_SLOT_MATERIAL_TEX0          16
+#define SW_SLOT_MATERIAL_TEX1          17
+#define SW_SLOT_MATERIAL_TEX2          18
+#define SW_SLOT_MATERIAL_TEX3          19
+#define SW_SLOT_MATERIAL_TEX4          20
+#define SW_SLOT_MATERIAL_TEX5          21
+#define SW_SLOT_MATERIAL_TEX6          22
+#define SW_SLOT_MATERIAL_TEX7          23
+#define SW_SLOT_MATERIAL_TEX8          24
+#define SW_SLOT_MATERIAL_TEX9          25
+#define SW_SLOT_MATERIAL_TEX10         26
+#define SW_SLOT_MATERIAL_TEX11         27
+#define SW_SLOT_MATERIAL_TEX12         28
+#define SW_SLOT_MATERIAL_TEX13         29
+#define SW_SLOT_MATERIAL_TEX14         30
+#define SW_SLOT_MATERIAL_TEX15         31
 #define SW_MATERIAL_TEXTURE_SLOT_COUNT 16
 
 // 캔버스(UI) 배치 하나가 쓰는 텍스처 수 — 머티리얼 텍스처 슬롯의 앞 넷을 빌려 쓴다(에뮬 백엔드). 루트 상수 16 dword 안에 들어야 해서
@@ -182,7 +194,7 @@
 // 슬롯 종류마다 읽는 샘플러(위 SW_SAMPLER_* 번호) — 네 백엔드가 같은 값을 쓴다. 네이티브 bindless(DX12/Vulkan)는 셰이더가 이 번호로
 // 고르고, 슬롯 결합 샘플러(DX11/GL)는 엔진이 그 슬롯에 같은 샘플러를 건다.
 //   엔진 텍스처 슬롯 t0..t3 (풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵): 선형 · 클램프(1) — 화면 가장자리의 탭이 반대편을 읽지 않는다.
-//   머티리얼 텍스처 t12..t27: 선형 · 랩(0). DX11 은 슬롯에 걸지 않고 셰이더가 정적 세트의 이 번호로 읽는다(샘플러 슬롯이 16 개뿐이다).
+//   머티리얼 텍스처 t16..t31: 선형 · 랩(0). DX11 은 슬롯에 걸지 않고 셰이더가 정적 세트의 이 번호로 읽는다(샘플러 슬롯이 16 개뿐이다).
 #define SW_ENGINE_TEXTURE_SAMPLER   1
 #define SW_MATERIAL_TEXTURE_SAMPLER 0
 
@@ -254,6 +266,12 @@
 #define SW_LIGHT_TYPE_COUNT            5
 // 빛이 아니라 2D 그림자 가림막 토막 하나(빛 목록 뒤에 붙는다). 등록부의 빛 종류가 아니라 COUNT 밖이다.
 #define SW_LIGHT_TYPE_SHADOW2D         15
+// 빛이 아니라 라이트 프로브 볼륨 하나(IndirectLighting.md P3). 3D 라이트 뒤, 2D 그림자 토막 앞에 붙고 라이트 그리드가 경계 구로 클러스터에 넣는다.
+// 원소: positionRadius = (상자 중심 xyz, 상자 대각선 반) · colorIntensity = (첫 프로브 위치 xyz, 0) · directionType = (축마다 간격 xyz, 이 타입) ·
+//       params = (축마다 프로브 수 xyz, g_SwLightProbes 의 첫 프로브 번호) — 수와 번호는 정확한 정수 실수(2^24 안)다.
+#define SW_LIGHT_TYPE_PROBE_VOLUME     14
+// 프로브 하나의 g_SwLightProbes 원소 수(SH9 RGB 를 조도 / π 로 접은 float4 일곱 개).
+#define SW_LIGHT_PROBE_FLOAT4_COUNT    7u
 
 // 한 프레임에 GPU 로 보내는 라이트 수 상한(2D 그림자 토막 포함). 넘으면 엔진이 잘라 보내고 경고한다 —
 // 셰이더 루프가 이 수를 넘게 도는 일은 없다(g_SwLightCount 가 이 값으로 클램프된다).
@@ -291,12 +309,26 @@
 // 타일 원소는 g_SwLights 의 빛 뒤(g_SwLightCount 부터)에 붙고, 빛 원소의 `params.w` 가 첫 타일의 상대 번호다. 점광은 면 여섯(+X −X +Y −Y +Z −Z 순)이다.
 #define SW_SHADOW_TILE_ELEMENT_COUNT   2u
 #define SW_POINT_SHADOW_FACE_COUNT     6u
-// 라이트 그리드(클러스터드 라이팅, lighting.hlsli swBeginLights · C++ LightGrid) — 32 비트 단어의 배열이다. 라이트 버퍼 원소 하나(float4 네 개)가 단어 16 개다.
-// 그리드는 라이트 버퍼의 그림자 타일 원소 뒤에 뷰마다 하나씩 붙고, PassCB g_SwLightGridBase 가 지금 뷰의 첫 원소다.
+// 라이트 그리드(클러스터드 라이팅, lighting.hlsli swBeginLights · C++ LightGrid · 컴퓨트 lightgrid.hlsl) — 32 비트 단어의 배열이다(g_SwLightGrid, t12).
+// 그리드는 뷰마다 하나씩 그 버퍼에 이어 붙고, PassCB g_SwLightGridBase 가 지금 뷰의 첫 단어다.
 // 배치: 헤더 단어 16 개 → 클러스터마다 단어 두 개(목록 안의 시작, 개수) → 라이트 번호 목록(전역 구간이 맨 앞). 클러스터 번호는 (조각 × Y + y) × X + x 다.
-#define SW_LIGHT_GRID_WORDS_PER_ELEMENT 16u
 #define SW_LIGHT_GRID_HEADER_WORD_COUNT 16u
 #define SW_LIGHT_GRID_WORDS_PER_CLUSTER 2u
+// 클러스터 칸 수 — 뷰의 NDC 를 X · Y 칸으로, 깊이를 조각으로 나눈다(결정 기록 5-12 D2-13 의 시작값, 측정 뒤 조정은 ClusteredLighting.md S3).
+// 컴퓨트 생산자는 클러스터마다의 개수를 그룹 공유 메모리에 두므로 칸 수 × 4 바이트가 그 한도(32KB) 안이어야 한다(ShaderBindingSlots.h 가 확인한다).
+#define SW_LIGHT_GRID_DIM_X             16u
+#define SW_LIGHT_GRID_DIM_Y             9u
+#define SW_LIGHT_GRID_DIM_Z             24u
+// GPU 생산자의 뷰 하나에 담는 라이트 번호 목록의 상한(항목 수). 버퍼를 프레임 전에 잡아야 해서(GPU 가 센 수를 CPU 가 모른다) 정한다.
+// 넘친 항목은 버린다 — 넘친 클러스터부터 뒤는 개수가 잘린다. CPU 생산자는 상한이 없다(실제 수만큼 잡는다).
+#define SW_LIGHT_GRID_GPU_MAX_ENTRY_COUNT 131072u
+// GPU 생산자의 스레드 그룹 크기 — 뷰 하나가 그룹 하나다(라이트 상한 SW_MAX_FRAME_LIGHT 를 그룹 하나가 돈다).
+#define SW_LIGHT_GRID_GPU_THREAD_COUNT  256u
+// 라이트 범위의 여유 — CPU 와 GPU 생산자, 읽는 셰이더의 부동소수 차이로 경계의 픽셀이 이웃 클러스터에 떨어져도 라이트가 빠지지 않게 한다.
+// 모서리 클립 w 가 SW_LIGHT_GRID_MIN_CORNER_CLIP_W 보다 작으면 경계 구가 카메라 면을 넘은 것이라 XY 범위를 화면 전체로 둔다.
+#define SW_LIGHT_GRID_NDC_PAD           0.001f
+#define SW_LIGHT_GRID_SLICE_PAD         0.01f
+#define SW_LIGHT_GRID_MIN_CORNER_CLIP_W 0.0001f
 // 헤더 단어의 번호. 실수 값은 비트 그대로 담는다(셰이더는 asfloat 로 읽는다).
 #define SW_LIGHT_GRID_WORD_DIM_X        0u  // NDC x 방향 칸 수
 #define SW_LIGHT_GRID_WORD_DIM_Y        1u  // NDC y 방향 칸 수
@@ -307,5 +339,9 @@
 #define SW_LIGHT_GRID_WORD_GLOBAL_COUNT 6u  // 전역 구간(방향광)의 라이트 수
 #define SW_LIGHT_GRID_WORD_CLUSTER_BASE 7u  // 클러스터 단어의 시작(그리드 첫 단어 기준)
 #define SW_LIGHT_GRID_WORD_INDEX_BASE   8u  // 라이트 번호 목록의 시작(그리드 첫 단어 기준)
+#define SW_LIGHT_GRID_WORD_ENTRY_COUNT  9u  // 목록이 담아야 했던 항목 수(전역 구간 포함). GPU 생산자에서 SW_LIGHT_GRID_GPU_MAX_ENTRY_COUNT 를 넘으면 넘친 것이다
+// GPU 생산자의 뷰 정보(StructuredBuffer<float4> g_LightGridViews) — 뷰 하나가 float4 여섯 개다.
+// [0..3] 뷰-투영 행 넷(행벡터 규약, 셰이더의 g_ViewProj 와 같다) · [4] (가까운 면 w, 조각 배율, 원근 1/직교 0, 0) · [5] asuint (라이트 수, 그리드 첫 단어, 0, 0).
+#define SW_LIGHT_GRID_VIEW_FLOAT4_COUNT 6u
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

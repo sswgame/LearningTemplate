@@ -76,9 +76,26 @@ namespace sw
     {
         using Check = VfxEffectDefInternal;
 
-        bool bValid       = Check::expect( _name.empty() == false, sourceLabel, _name, "_name is required" );
-        bValid            = Check::expect( _texturePath.empty() == false, sourceLabel, _name, "_texturePath is required" ) && bValid;
-        bValid            = Check::expect( _maxParticles >= 1, sourceLabel, _name, "_maxParticles must be 1 or more" ) && bValid;
+        bool bValid = Check::expect( _name.empty() == false, sourceLabel, _name, "_name is required" );
+        // 모양마다 쓰는 칸이 다르다. 쓰지 않는 칸에 값이 있으면 데이터가 뜻한 것과 다르게 그려지므로 오류다.
+        if ( _renderMode == VfxRenderMode::Mesh )
+        {
+            bValid = Check::expect( _mesh._meshID.empty() == false, sourceLabel, _name, "_mesh._meshID is required for the Mesh render mode" ) && bValid;
+            bValid = Check::expect( _texturePath.empty(), sourceLabel, _name, "_texturePath must be empty for the Mesh render mode (the material draws it)" ) && bValid;
+        }
+        else
+        {
+            bValid             = Check::expect( _texturePath.empty() == false, sourceLabel, _name, "_texturePath is required" ) && bValid;
+            const bool bNoMesh = _mesh._meshID.empty() && _mesh._materialPath.empty();
+            bValid             = Check::expect( bNoMesh, sourceLabel, _name, "_mesh is only for the Mesh render mode" ) && bValid;
+        }
+        const uint32 minParticles = _renderMode == VfxRenderMode::Ribbon ? 2u : 1u;
+        bValid                    = Check::expect( _maxParticles >= minParticles, sourceLabel, _name, "_maxParticles must be 1 or more (2 or more for a ribbon)" ) && bValid;
+        if ( _light._maxLights > 0 )
+        {
+            bValid = Check::expect( _light._radius > 0.0f, sourceLabel, _name, "_light._radius must be above 0 when _light._maxLights is set" ) && bValid;
+            bValid = Check::expect( _light._intensity > 0.0f, sourceLabel, _name, "_light._intensity must be above 0 when _light._maxLights is set" ) && bValid;
+        }
         bValid            = Check::expect( _duration > 0.0f, sourceLabel, _name, "_duration must be above 0" ) && bValid;
         bValid            = Check::expect( _lifetimeMin > 0.0f, sourceLabel, _name, "_lifetimeMin must be above 0" ) && bValid;
         bValid            = Check::expect( _lifetimeMin <= _lifetimeMax, sourceLabel, _name, "_lifetimeMax must not be below _lifetimeMin" ) && bValid;

@@ -144,7 +144,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, SyntheticViolationsAreDetected )
     namespace bindless = sw::shaderslot::bindless;
     sw::vector<sw::ShaderBindingValidatorIssue> listIssue;
 
-    // 1) GL: 계약대로 — PassCB binding 0, MaterialCB binding 1, 인스턴스 SSBO 4, 머티리얼 SSBO 5, 텍스처 유닛 0..3/12..27
+    // 1) GL: 계약대로 — PassCB binding 0, MaterialCB binding 1, 인스턴스 SSBO 4, 머티리얼 SSBO 5, 텍스처 유닛 0..3/16..31
     {
         sw::ShaderReflectionData ok{};
         ok._listConstantBuffer.push_back( makeCb( "PassCB", 0, sw::shaderslot::kPassConstantBuffer ) );
@@ -218,7 +218,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, SyntheticViolationsAreDetected )
         SW_EXPECT_TRUE_MSG( hasIssueContaining( listIssue, "종류" ), "종류 불일치가 보고돼야 한다" );
     }
 
-    // 7) DX11: 계약대로 (엔진 텍스처+샘플러 짝, 머티리얼 텍스처는 짝 없이 t12, 인스턴스 t4, 머티리얼 t5)
+    // 7) DX11: 계약대로 (엔진 텍스처+샘플러 짝, 머티리얼 텍스처는 짝 없이 t16, 인스턴스 t4, 머티리얼 t5)
     {
         sw::ShaderReflectionData ok{};
         ok._listConstantBuffer.push_back( makeCb( "PassCB", 0, 0 ) );
@@ -863,6 +863,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
         &passNames._swVisibleInstanceIDs,
         &passNames._swMaterials,
         &passNames._swLights,
+        &passNames._swLightGrid,
+        &passNames._swLightProbes,
         &passNames._swBatches,
     };
     for ( const sw::hashed_string* pName : arrRegistryName )

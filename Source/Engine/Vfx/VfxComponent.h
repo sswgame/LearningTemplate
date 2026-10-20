@@ -16,13 +16,24 @@
 
 namespace sw
 {
+    struct GPULight;
+
+    class EnvironmentMaterial;
     class GameObjectManager;
+    class MeshInstanceBatch;
+    class PrimitiveRegistry;
 
     /**
      * @class VfxComponent
      * @brief 효과의 방출기마다 시뮬레이션 하나(`VfxCPUSimulation`)를 돌리고, 틱마다 살아 있는 입자(`GPUParticle`)를 방출기별 새 배열로 냅니다.
-     * @details 렌더러는 씬의 컴포넌트 목록(`ComponentRegistry`)에서 이 컴포넌트를 찾아 방출기마다 투명 그리기 하나를 만든다(`GPUSceneBuilder::populateParticleBatches`).
+     * @details 렌더러는 씬의 컴포넌트 목록(`ComponentRegistry`)에서 이 컴포넌트를 찾아 빌보드 · 띠 방출기마다 투명 그리기 하나를 만든다(`GPUSceneBuilder::populateParticleBatches`).
      *          낸 배열은 고쳐 쓰지 않는다 — 렌더 스레드가 몇 프레임 뒤까지 읽으므로 다음 틱은 새 배열을 만든다.
+     *
+     *          메시 방출기(`VfxRenderMode::Mesh`)는 풀 크기만큼 항목을 가진 메시 인스턴스 배치(`MeshInstanceBatch`)를 프리미티브 레지스트리에 올리고
+     *          틱마다 항목 행렬을 고친다 — 메시 경로(머티리얼 · 그림자 · 컬링 · 투명 정렬)를 그대로 탄다(언리얼 Niagara 메시 렌더러가 메시 드로우를 내는 것과 같다).
+     *          shortcut: 죽은 자리는 크기 0 행렬로 둔다(`setEntryVisible` 을 매 틱 바꾸면 빌더가 그 프레임을 전체 수집으로 돈다). 풀이 크고 대부분 비어 있는
+     *          방출기가 많아지면 항목 수를 살아 있는 수에 맞추는 배치 재구성을 따로 둔다.
+     *          충돌은 물리 씬(3D)을 방출기 로컬로 감싼 질의(`IVfxCollisionScene`)로 묻는다. 파티클 라이트는 `appendGPULights` 가 씬 라이트 목록에 붙인다.
      *
      *          효과는 `_effectPath` 를 읽을 때(상태 로드 · 프로퍼티 변경 · `setEffectPath`) 다시 만든다. 읽지 못하면 방출기가 없고 아무것도 그리지 않는다(효과 데이터가 오류를 남긴다).
      *          방출기 씨앗은 `_seed` 와 방출기 번호로 정해진다(같은 씨앗이면 같은 입자 — `VfxCPUSimulation`). 플레이를 시작하면 `_bPlayOnBegin` 일 때 재생하고,
@@ -30,7 +41,7 @@ namespace sw
      *
      *          shortcut: 컴포넌트마다 효과 파일을 따로 읽는다(효과 캐시가 없다) — 같은 효과를 자주 스폰하게 되면 `IAssetCache` 로 공유한다.
      */
-    REFLECT( Category = "Effects", DisplayName = "Vfx", Tooltip = "Plays a particle effect (.vfx.xml); each emitter draws as one transparent billboard batch" )
+    REFLECT( Category = "Effects", DisplayName = "Vfx", Tooltip = "Plays a particle effect (.vfx.xml); billboard and ribbon emitters draw as one transparent batch each, mesh emitters as mesh instances" )
     class SW_API VfxComponent : public SceneComponent
     {
     public:
@@ -77,17 +88,41 @@ namespace sw
         const shared_ptr<const vector<GPUParticle>>& getEmitterParticles( uint32 emitterIndex ) const;
         /** @brief 모든 방출기의 살아 있는 입자 수입니다. */
         uint32 getAliveParticleCount() const;
+        /** @brief 메시 방출기 @p emitterIndex 의 인스턴스 배치입니다. 메시 방출기가 아니거나 등록 전 · 메시를 잡지 못했으면 nullptr 입니다. */
+        const MeshInstanceBatch* findEmitterMeshBatch( uint32 emitterIndex ) const;
+
+        /**
+         * @brief 파티클 라이트(`VfxLightDef`)를 @p outList 끝에 점광으로 붙입니다(마지막 틱에 낸 입자로). 꺼져 있거나 입자가 없으면 붙이지 않습니다.
+         * @details 씬 라이트 수집(`collectSceneLights`)이 라이트 컴포넌트 뒤에 부른다. 방출기마다 낸 순서의 앞 `_maxLights` 개다.
+         */
+        void appendGPULights( vector<GPULight>& outList ) const;
 
     private:
+        /** @brief 메시 방출기 하나의 인스턴스 배치와 그 머티리얼입니다. 메시 방출기가 아니면 둘 다 비어 있습니다. */
+        struct MeshEmitter
+        {
+            unique_ptr<MeshInstanceBatch>   _batch;
+            unique_ptr<EnvironmentMaterial> _material;
+            float32                         _meshRadius{ 0.0f }; ///< 메시 원점에서 가장 먼 꼭짓점까지(크기 1 기준) — 항목 바운드에 곱한다
+        };
+
         /** @brief `_effectPath` 를 읽어 방출기마다 시뮬레이션을 만듭니다. 재생은 멈춥니다. 경로가 비었거나 읽지 못하면 방출기가 없습니다. */
         void loadEffect();
-        /** @brief 방출기마다 살아 있는 입자를 새 배열로 냅니다(입자가 없으면 nullptr). */
+        /** @brief 방출기마다 살아 있는 입자를 새 배열로 냅니다(입자가 없으면 nullptr). 메시 방출기는 인스턴스 배치의 항목도 고칩니다. */
         void publishParticles();
+        /** @brief 메시 방출기마다 인스턴스 배치를 만들어 레지스트리에 올립니다. 등록 전(레지스트리 없음)이면 아무것도 하지 않습니다. */
+        void rebuildMeshEmitters();
+        /** @brief 메시 방출기의 배치를 레지스트리에서 내리고 머티리얼을 놓습니다. */
+        void releaseMeshEmitters();
+        /** @brief 메시 방출기 @p emitterIndex 의 항목을 @p listParticle(비면 모두 크기 0)로 고칩니다. */
+        void writeMeshEntries( uint32 emitterIndex, const vector<GPUParticle>* pListParticle );
 
         PROPERTY( Category = "Vfx", DisplayName = "Effect", AssetPath, FileFilter = "*.vfx.xml", Tooltip = "Particle effect (.vfx.xml)" )
         string                                        _effectPath;
         vector<VfxCPUSimulation>                      _listSimulation;
         vector<shared_ptr<const vector<GPUParticle>>> _listPublished;
+        vector<MeshEmitter>                           _listMeshEmitter;    ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
+        PrimitiveRegistry*                            _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "Vfx", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )
         uint32 _seed;
         PROPERTY( Category = "Playback", DisplayName = "Play On Begin", Tooltip = "Start playing when gameplay begins" )

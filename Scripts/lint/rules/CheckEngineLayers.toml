@@ -132,6 +132,8 @@ Renderer = 14
 [subtier]
 "Graphics/Shader" = 0
 "Graphics/RHI" = 1
+# 조명 데이터(라이트 프로브 격자 `.probes`) — 컴포넌트(Object)가 들고 렌더러가 올린다. 셰이더 계약(Shader)만 읽을 수 있다.
+"Graphics/Lighting" = 1
 "Graphics/Debug" = 2
 "Graphics/Mesh" = 2
 "Graphics/Texture" = 2

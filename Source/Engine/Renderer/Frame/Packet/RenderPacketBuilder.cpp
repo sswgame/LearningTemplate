@@ -146,7 +146,7 @@ namespace sw
 
         // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 앰비언트의 출처이고, 목록이 비면
         // 그 씬은 앰비언트만 받는다(키라이트로 대신 비추지 않는다). 그림자를 켠 점광 · 스폿은 번호를 따로 받아 아래에서 아틀라스 칸을 준다.
-        collectSceneLights( pActiveScene, packet._listLight, &_listShadowLightIndex );
+        collectSceneLights( pActiveScene, packet._listLight, &_listShadowLightIndex, &packet._listLightProbe );
 
         pActiveScene->ensureDefaultCameras();
         // 핫 리로드 · 씬 전환 · 씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다. 씬 뷰 카메라는 씬 뷰가 있을 때만 묻는다.
@@ -288,7 +288,7 @@ namespace sw
                 preview._lightColorAmbient = float4{ color._x, color._y, color._z, pLight->getAmbient() };
                 preview._bHasLight         = SW_TRUE;
             }
-            collectSceneLights( pScene, preview._listLight, &_listShadowLightIndex );
+            collectSceneLights( pScene, preview._listLight, &_listShadowLightIndex, &preview._listLightProbe );
             ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, &preview._viewProj, FrameRenderer::getShadowMapResolution(), _listShadowLightIndex,
                                             preview._listLight, preview._shadow );
 
