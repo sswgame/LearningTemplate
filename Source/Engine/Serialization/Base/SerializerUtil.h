@@ -155,9 +155,17 @@ namespace sw
         /** @brief 텍스트 하나를 프로퍼티 값으로 씁니다(비트필드는 그 비트만). 읽지 못하면 false 이고 값은 그대로입니다. 컨테이너는 받지 않습니다. */
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context );
         /**
+         * @brief 프로퍼티 값 하나(그 프로퍼티 값 전부)를 바이너리 페이로드로 @p outBytes 끝에 덧붙입니다. 짝은 `applyPropertyBinary` 입니다. 비트필드는 `bool` 로 씁니다.
+         * @details 태그 스트림 쓰기, 값 복사, 읽기 실패 되돌리기(`BinarySerializer` 의 태그 스트림 읽기)가 함께 쓴다. 비트필드 · 컨테이너 · 값 세 갈래를 한 벌로 둔다.
+         * @return 그 값이나 안의 값에 바이너리 · 열거형 · 구조체 · 텍스트 처리기가 없으면 false 이고, 그때 @p outBytes 는 쓰면 안 됩니다.
+         */
+        [[nodiscard]] SW_API static bool writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context );
+        /**
          * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 true 입니다. @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
          * @details 바이트가 남으면 스트림이 이 필드를 다른 형태로 적은 것이다(`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공한다). 그래서 오프셋을
          *          부른 쪽에 돌려주지 않고 여기서 끝을 본다 — 태그 스트림, diff, 값 복사가 "읽힌 만큼" 받는 사본을 따로 두지 않게.
+         *          false 이면 그 필드는 **읽다 만 값**일 수 있다(컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패한다). 실패한 뒤에도 이어 읽는 쪽은
+         *          읽기 전에 `writePropertyBinary` 로 값을 담아 두고 실패하면 되돌린다(태그 스트림 읽기가 그렇게 한다).
          */
         [[nodiscard]] SW_API static bool applyPropertyBinary( const PropertyInfo& prop, MutableObjectAddress instance, const uint8* pPayload, size_t payloadSize,
                                                               const SerializeContext& context, BinaryWireVersion wireVersion = kCurrentBinaryWireVersion );

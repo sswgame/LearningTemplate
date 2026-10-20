@@ -4057,6 +4057,64 @@ SW_TEST_CASE( ReflectionSerializationTest, MixedBuildReadRejectsAnUnknownEnumera
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 읽지 못한 필드를 넘기고 이어 읽는 읽기는 그 필드를 **읽기 전 값**으로 남긴다 — 읽다 만 컨테이너가 남지 않는다
+ * @details 컨테이너는 원소를 채운 뒤 끝에서 실패한다(모르는 열거자 원소만 빼고 필드는 실패). 예전에는 오브젝트 상태의 엄격 읽기와 소프트 읽기가 그 필드를
+ *          건너뛰면서 앞 원소가 써진 채로 남았다(`docs/plans/SerializerSilentSkips.md`). 엄격 읽기(실패하면 객체째 버림)는 그대로 실패다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, UnreadableFieldKeepsItsValueBeforeTheRead )
+{
+    struct ColorListHolder
+    {
+        sw::vector<WireShiftColor> _listColor;
+        int32                      _after{ 0 };
+    };
+
+    const MixedBuildSide newBuild( true, true );
+    const MixedBuildSide oldBuild( true, false ); // 옛 빌드의 열거형에는 Green 이 없다
+
+    sw::TypeInfo holderType;
+    holderType._name               = sw::hashed_string( "ColorListHolder" );
+    holderType._fullyQualifiedName = sw::hashed_string( "sw::ColorListHolder" );
+    holderType._size               = sizeof( ColorListHolder );
+    holderType._listProperty       = {
+        { sw::hashed_string( "_listColor" ), sw::hashed_string( "vector" ), SW_OFFSET_OF( ColorListHolder, _listColor ), true, sw::ContainerKind::Sequence,
+         sw::hashed_string( "sw::WireShiftColor" ), sw::hashed_string(), sw::make_shared<sw::VectorWrapper<sw::vector<WireShiftColor>>>() },
+        { sw::hashed_string( "_after" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( ColorListHolder, _after ) },
+    };
+
+    ColorListHolder saved;
+    saved._listColor = { WireShiftColor::Red, WireShiftColor::Green, WireShiftColor::Blue };
+    saved._after     = 9;
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::BinarySerializer::serialize( &saved, holderType, bytes, newBuild.makeContext( false, false ) ) );
+
+    test::ScopedLogSuppressor suppressor; // 모르는 열거자 · 읽지 못한 필드 경고
+
+    // 오브젝트 상태처럼 읽지 못한 필드를 넘기는 엄격 읽기: 목록은 읽기 전 값 그대로이고 뒤 필드는 읽힌다.
+    ColorListHolder lenient;
+    lenient._listColor = { WireShiftColor::Blue };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &lenient, holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, true ) ) );
+    SW_ASSERT_TRUE_MSG( lenient._listColor.size() == size_t( 1 ), "읽다 만 목록(앞 원소가 써진 채)이 남았습니다" );
+    SW_EXPECT_TRUE( lenient._listColor[0] == WireShiftColor::Blue );
+    SW_EXPECT_EQUAL( 9, lenient._after );
+
+    // 소프트 읽기: 그 필드는 orphan 으로 넘어가고 필드 자신은 읽기 전 값이다.
+    ColorListHolder                   soft;
+    sw::vector<sw::SchemaOrphanValue> listOrphan;
+    soft._listColor = { WireShiftColor::Blue };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &soft, holderType, bytes.data(), bytes.size(), &listOrphan, oldBuild.makeContext( false, false ) ) ==
+                    sw::SoftReadResult::Read );
+    SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
+    SW_ASSERT_EQUAL( size_t( 1 ), soft._listColor.size() );
+    SW_EXPECT_TRUE( soft._listColor[0] == WireShiftColor::Blue );
+    SW_EXPECT_EQUAL( 9, soft._after );
+
+    // 실패하면 객체째 버리는 엄격 읽기는 그대로 실패다.
+    ColorListHolder strict;
+    SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &strict, holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, false ) ) );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 소프트 읽기는 기록 타입이 다르고 변환이 안 되는 필드를 제 타입으로 "읽힌 만큼" 받지 않고 orphan 으로 남긴다
  * @details 예전에는 `int32` 0 으로 기록된 필드를 `vector<int32>` 로 읽으면 그 4 바이트를 원소 수 0 으로 읽어 빈 목록으로 성공했다(docs/plans/ServerBusFormat.md 3.3 ⓒ).
  *          버전 붙은 바이너리 읽기는 orphan 을 이관 없이 거절하므로 이제 실패가 드러난다.
