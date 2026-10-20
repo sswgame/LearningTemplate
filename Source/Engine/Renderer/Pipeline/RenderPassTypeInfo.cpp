@@ -214,6 +214,13 @@ namespace sw
                         info._flags          = Flag::kCompute;
                         break;
                     }
+                    case RenderPassType::LightGrid:
+                    {
+                        // 구조 버퍼 UAV 와 그룹 공유 메모리 원자 연산만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderLightGrid;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
                 }
                 return info;
             }

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -37,6 +38,8 @@ namespace sw
          *          라이트 목록이 비어도 키라이트 하나로 그리는 폴백 경로이기도 합니다.
          */
         vector<GPULight> _listLight;
+        /** @brief 씬의 하늘(`SkyComponent`)입니다. `_bHasSky` 가 0 이면 값이 없고 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색). */
+        SkyGradient _sky;
         /** @brief 이번 프레임의 추가 뷰(CCTV, 백미러, 분할 화면, PiP)입니다. 쉬는 뷰도 실립니다(`RenderViewRequest::_bRender`). */
         vector<RenderViewRequest> _listView;
         /**
@@ -65,8 +68,10 @@ namespace sw
         uint8 _bHasViewProj : 1;
         uint8 _bValid       : 1;
         /** @brief 씬에 DirectionalLightComponent 가 있어 라이트 필드가 유효하면 1 입니다. */
-        uint8                  _bHasLight : 1;
-        [[maybe_unused]] uint8 _reserved  : 5;
+        uint8 _bHasLight : 1;
+        /** @brief 씬에 활성 `SkyComponent` 가 있어 `_sky` 가 유효하면 1 입니다. */
+        uint8                  _bHasSky  : 1;
+        [[maybe_unused]] uint8 _reserved : 4;
 
         RenderFramePacket()
             : _gpuScene{}
@@ -76,6 +81,8 @@ namespace sw
             , _shadow{}
             , _lightDirIntensity{}
             , _lightColorAmbient{}
+            , _listLight{}
+            , _sky{}
             , _listView{}
             , _canvas{}
             , _mainView{}
@@ -90,6 +97,7 @@ namespace sw
             , _bHasViewProj{ SW_FALSE }
             , _bValid{ SW_FALSE }
             , _bHasLight{ SW_FALSE }
+            , _bHasSky{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
@@ -120,6 +128,7 @@ namespace sw
             _lightDirIntensity = float4{};
             _lightColorAmbient = float4{};
             _listLight.clear();
+            _sky = SkyGradient{};
             _listView.clear();
             _canvas.clear();
             _mainView = RenderViewSettings{};
@@ -133,6 +142,7 @@ namespace sw
             _bHasViewProj       = SW_FALSE;
             _bValid             = SW_FALSE;
             _bHasLight          = SW_FALSE;
+            _bHasSky            = SW_FALSE;
         }
     };
 } // namespace sw

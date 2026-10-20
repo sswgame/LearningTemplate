@@ -29,7 +29,7 @@ namespace sw
             return;
         // gv_rhiBackend(전역) 대신 이 FrameRenderer 가 실제로 물려 있는 디바이스의 백엔드를 넘긴다.
         // 한 프로세스에 여러 IRHIDevice 가 동시에 있으면 전역값이 어긋날 수 있다.
-        _psoCache.registerLayout( pso, desc, _pDevice->getBackendType() );
+        _pPSOCache->registerLayout( pso, desc, _pDevice->getBackendType() );
     }
 
     void FrameRenderer::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
@@ -37,12 +37,9 @@ namespace sw
         if ( result._bSuccess == false || _pDevice == nullptr )
             return;
 
-        // 미리보기 씬 렌더러도 같은 셰이더로 PSO 를 만들었다.
-        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
-        {
-            preview._renderer->onShaderRecompiled( shaderPath, result );
-        }
-        _psoCache.invalidateLayoutsByShaderPath( shaderPath );
+        // 빌려 쓰는 캐시(미리보기 씬 렌더러)는 소유자인 주 렌더러가 이미 무효화하고 다시 채웠다.
+        if ( _pPSOCache == &_psoCache )
+            _pPSOCache->invalidateLayoutsByShaderPath( shaderPath );
 
         // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
         // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
@@ -54,11 +51,18 @@ namespace sw
         ensurePassResources();
         ensureTransientResources();
         bindPassCallbacks();
+
+        // 미리보기 씬 렌더러는 주 렌더러의 PSO 캐시를 함께 쓴다. 주 렌더러가 캐시를 다시 채운 **뒤에** 자기 몫(레이아웃을 가리키는 폴백 버퍼 표,
+        // 바인딩 캐시, 패스 콜백)을 다시 만들어야 새 PSO 를 집는다.
+        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
+        {
+            preview._renderer->onShaderRecompiled( shaderPath, result );
+        }
     }
 
     const ShaderBindingLayout* FrameRenderer::layoutForPSO( RHIPipelineStateHandle pso ) const
     {
-        return _psoCache.findLayout( pso );
+        return _pPSOCache->findLayout( pso );
     }
 
     void FrameRenderer::registerInstanceBuffer( FramePassContext& context )
@@ -117,13 +121,18 @@ namespace sw
     {
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 빛을 돌지 않는다(앰비언트만).
         context._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
-        // 지금 그리는 뷰의 라이트 그리드. 없으면(gv_lightCulling 0, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
-        const uint32 gridBase = _lightBuffer.isBindable() ? _lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : invalid_index::kUint32;
+        // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(gv_lightCulling 0, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
+        // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(swHasLightGrid 가 둘 다 본다).
+        const RHIStructuredBufferSlot* pGridBuffer = _lightBuffer.isBindable() ? _lightBuffer.findGridBuffer() : nullptr;
+        const bool                     bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
+        const uint32                   gridBase    = bGridReady ? _lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : invalid_index::kUint32;
         context._passValues.setUint( passConstantNames()._swLightGridBase, gridBase );
         if ( _lightBuffer.isBindable() == false )
             return;
         const RHIStructuredBufferSlot& buffer = _lightBuffer.getBuffer();
         context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
+        if ( bGridReady )
+            context._resourceRegistry.registerBuffer( passConstantNames()._swLightGrid, pGridBuffer->_buffer, pGridBuffer->_srv );
     }
 
     void FrameRenderer::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
@@ -211,14 +220,14 @@ namespace sw
         context._lastCbRegistryVersion = registryVersion;
     }
 
-    void FrameRenderer::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
 
         if ( _gpuScene.isUploaded() )
         {
-            drawGPUBatches( context, pso, cbIndex, bTransparentPass );
+            drawGPUBatches( context, pso, bTransparentPass );
             return;
         }
 
@@ -234,11 +243,10 @@ namespace sw
         commitBindlessTextureBindings( context );
     }
 
-    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
     {
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
-        (void)cbIndex;
         const bool bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false;
         if ( bCannotDraw )
             return;
@@ -257,7 +265,7 @@ namespace sw
         if ( bInstanced )
             registerInstanceBuffer( context );
 
-        const vector<GPUMeshBatch>& batches =
+        const vector_reference<const GPUMeshBatch> batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", batches.size() );
@@ -387,9 +395,8 @@ namespace sw
         (void)_particleRenderer.drawBatches( *context._pCmd, listBatch, _pDevice->supportsNativeBindlessSampling() );
     }
 
-    void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
+    void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )
     {
-        (void)cbIndex;
         if ( context._pCmd == nullptr )
             return;
         setIdentityWorld( context );

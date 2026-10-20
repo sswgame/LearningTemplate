@@ -200,7 +200,7 @@ namespace sw
 
         // 패스가 정한 렌더 상태를 통째로 물려받는다. 블렌드, 뎁스, RT 포맷은 패스의 사실이지 머티리얼의 것이 아니다.
         RHIPipelineStateDesc desc{};
-        if ( _psoCache.findDesc( passPSO, desc ) == false )
+        if ( _pPSOCache->findDesc( passPSO, desc ) == false )
             return entry; // desc 를 모르는 PSO 다. 변형을 만들 근거가 없다.
 
         bool bChanged{ false };
@@ -289,7 +289,7 @@ namespace sw
         // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
         // 퍼뮤테이션이 없는 배치(머티리얼을 붙이지 않은 메시)도 모은다. Lit 이 아니거나 거울 배치면 그 배치에도
         // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드와 컬 반전이 적용되지 않아 화면이 섞인다.
-        auto collect = []( const vector<GPUMeshBatch>& listBatch, vector<MaterialPSORequest>& outList )
+        auto collect = []( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outList )
         {
             for ( const GPUMeshBatch& batch : listBatch )
             {
@@ -323,14 +323,14 @@ namespace sw
                                                        uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode )
         {
             const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
-            if ( _psoCache.hasMaterialPSO( key ) )
+            if ( _pPSOCache->hasMaterialPSO( key ) )
                 return;
             const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling );
-            _psoCache.setMaterialPSO( key, entry );
+            _pPSOCache->setMaterialPSO( key, entry );
             bCreatedVariant = true;
         };
 
-        for ( const auto& [passType, passPSO] : _psoCache.getEnginePSOs() )
+        for ( const auto& [passType, passPSO] : _pPSOCache->getEnginePSOs() )
         {
             if ( passPSO == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false )
                 continue;
@@ -387,14 +387,14 @@ namespace sw
         const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderParticle.get();
         const uint64  shaderHash = HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCcUtil::make( "VFXP" ) );
         _particlePSOKey          = RenderPSOCache::materialPSOKey( transparentPSO, shaderHash, RenderViewMode::Lit, false );
-        if ( _psoCache.hasMaterialPSO( _particlePSOKey ) )
+        if ( _pPSOCache->hasMaterialPSO( _particlePSOKey ) )
             return;
 
         RHIPipelineStateDesc desc{};
-        if ( _psoCache.findDesc( transparentPSO, desc ) == false )
+        if ( _pPSOCache->findDesc( transparentPSO, desc ) == false )
         {
             SW_LOG_ERROR( "Transparent pass PSO has no recorded desc - particles are not drawn" );
-            _psoCache.setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry{ 0, 0 } );
+            _pPSOCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry{ 0, 0 } );
             return;
         }
         desc._vertexShaderPath = shaderPath;
@@ -411,17 +411,17 @@ namespace sw
         if ( handle == 0 )
             SW_LOG_ERROR( "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );
         registerPSOLayout( handle, desc );
-        _psoCache.setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry{ handle, static_cast<uint8>( handle != 0 ? 1 : 0 ) } );
+        _pPSOCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry{ handle, static_cast<uint8>( handle != 0 ? 1 : 0 ) } );
     }
 
     RHIPipelineStateHandle FrameRenderer::findParticlePSO() const
     {
-        return _particlePSOKey != 0 ? _psoCache.findMaterialPSO( _particlePSOKey ) : RHIPipelineStateHandle{ 0 };
+        return _particlePSOKey != 0 ? _pPSOCache->findMaterialPSO( _particlePSOKey ) : RHIPipelineStateHandle{ 0 };
     }
 
     bool FrameRenderer::findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const
     {
-        return _psoCache.findDesc( pso, outDesc );
+        return _pPSOCache->findDesc( pso, outDesc );
     }
 
     RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch ) const
@@ -450,7 +450,7 @@ namespace sw
 
         // 찾지 못하면 패스 PSO 로 그린다. ensureMaterialPSOs 가 기록 전에 채우므로 정상 경로에서는 항상 있다.
         const RHIPipelineStateHandle variant =
-            _psoCache.findMaterialPSO( RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling ) );
+            _pPSOCache->findMaterialPSO( RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling ) );
         return ( variant != 0 ) ? variant : passPSO;
     }
 

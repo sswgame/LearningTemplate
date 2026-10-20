@@ -106,7 +106,7 @@ namespace sw
          * @brief 불투명 배치를 머티리얼이 아니라 **셰이더 퍼뮤테이션**(셰이더 경로 + 정적 define)으로 묶을지 정합니다(언리얼 GPUScene 방식).
          * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽는다. 그래서 텍스처를 인덱스로 고를 수 있는 백엔드
          *          (DX12, Vulkan 의 네이티브 bindless)에서는 같은 메시와 같은 퍼뮤테이션이면 머티리얼이 달라도 드로우 하나로 그린다.
-         *          DX11 과 GL 은 머티리얼 텍스처를 t12..t27 슬롯에 바인딩해야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer 와 Engine 가
+         *          DX11 과 GL 은 머티리얼 텍스처를 t16..t31 슬롯에 바인딩해야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer 와 Engine 가
          *          디바이스 caps(supportsNativeBindlessSampling)로 값을 정한다. 값이 바뀌면 다음 populateFromScene 이 다시 묶는다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );
@@ -115,10 +115,10 @@ namespace sw
 
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
-        /** @brief 불투명 배치를 반환합니다. */
-        const vector<GPUMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
-        /** @brief 투명 배치를 반환합니다. */
-        const vector<GPUMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
+        /** @brief 불투명 배치 구간을 반환합니다. */
+        vector_reference<const GPUMeshBatch> getOpaqueBatches() const { return _snapshot.getOpaqueBatches(); }
+        /** @brief 투명 배치 구간을 반환합니다. */
+        vector_reference<const GPUMeshBatch> getTransparentBatches() const { return _snapshot.getTransparentBatches(); }
         /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
         const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
@@ -144,11 +144,11 @@ namespace sw
         void emitTransparentBatches();
         /**
          * @brief 투명 정렬 순서만 바뀐 프레임에 불투명 접두부는 그대로 두고 투명 꼬리만 다시 방출합니다.
-         * @details 투명 인스턴스는 불투명 인스턴스 뒤에 연속으로 놓인다(`_opaqueInstanceCount`). 접두부는 제자리 갱신이 맡고,
+         * @details 투명 인스턴스는 불투명 인스턴스 뒤에 연속으로 놓인다(`GPUSceneSnapshot::getOpaqueInstanceCount`). 접두부는 제자리 갱신이 맡고,
          *          여기서는 꼬리를 잘라 내고 새 순서로 다시 붙인다. 투명 순서만 바뀐 프레임(투명 물체가 흔들리는 씬에서는 거의
          *          매 프레임)에 **불투명까지** 통째로 다시 만들지 않으려는 것이다.
          * @note **접두부 갱신과 같은 병렬 구간에서 돈다**(`refreshInstancesInPlace` 의 블록 0). 워커에서 실행될 수도 있다.
-         *       쓰기 슬롯의 [0, `_opaqueInstanceCount`) 는 워커들이 포인터로 쓰는 중이라 건드리지 않는다. 자르고 뒤에 붙일 뿐이고,
+         *       쓰기 슬롯의 [0, 불투명 인스턴스 수) 는 워커들이 포인터로 쓰는 중이라 건드리지 않는다. 자르고 뒤에 붙일 뿐이고,
          *       붙일 공간은 호출하는 쪽이 미리 확보해 둔다(재할당이 없다). 접두부 청크가 읽는 것(발행본, raw, 원천 인덱스의 접두부)도
          *       쓰지 않는다. 여기에 접두부를 건드리는 코드를 추가하면 레이스가 생긴다.
          */
@@ -491,20 +491,59 @@ namespace sw
         vector<uint32> _listInstanceSrcIndex;
         /// @brief 마지막 방출이 쓴 투명 정렬 순서입니다. 이 순서가 바뀌면 투명 꼬리를 다시 방출합니다(`rebuildTransparentTail`).
         vector<uint32> _listBuiltTransparentIdx;
-        /// @brief 마지막 전체 빌드에서 불투명이 차지한 인스턴스 수, 배치 수, 원소 테이블 항목 수입니다. 투명 꼬리를 자르는 위치입니다.
-        uint32 _opaqueInstanceCount{ 0 };
-        uint32 _opaqueBatchCount{ 0 };
-        uint32 _opaqueElementEntryCount{ 0 };
+        // 투명 꼬리를 자르는 위치(불투명 인스턴스 수 · 원소 항목 수)는 따로 들지 않는다. 경계는 스냅샷의 불투명 배치 수 하나이고
+        // 나머지는 그 배치에서 끌어낸다(`GPUSceneSnapshot::getOpaqueInstanceCount`, `BatchElementTable::truncateToBatches`).
         /// @brief 마지막으로 본 `TextureCache::getReloadGeneration()` 입니다. 값이 다르면 머티리얼의 텍스처 인덱스를 새로 받게 합니다.
         uint32 _lastTextureReloadGeneration{ 0 };
 
         /**
-         * @brief 배치마다 그 배치의 인스턴스가 쓰는 머티리얼 원소 인덱스(중복 없음)입니다. `_listBatchElementRange` 로 자릅니다.
+         * @class BatchElementTable
+         * @brief 배치마다 그 배치의 인스턴스가 쓰는 머티리얼 원소 인덱스(중복 없음)입니다. 배치 하나에 구간 하나이며 스냅샷의 배치 목록과 나란하다.
          * @details 회수 시계 스탬프는 **원소**에 찍는 것이라 인스턴스 8000개가 아니라 (배치, 원소) 쌍만 돌면 된다.
          *          합치기가 꺼져 있으면 배치당 원소 하나이고, 켜져 있어도 배치당 머티리얼 종류 수만큼이다.
+         *          항목과 구간을 함께 고치는 길은 아래 함수뿐이다. 자르는 위치는 배치 수로만 받고 항목 수는 구간에서 끌어내므로
+         *          두 목록이 어긋날 수 없다(전에는 불투명 항목 수를 따로 기록해 두고 그 값으로 잘랐다).
          */
-        vector<uint32>         _listBatchElementIndex;
-        vector<GPUInstanceRun> _listBatchElementRange;
+        class BatchElementTable
+        {
+        public:
+            /** @brief 원소 인덱스 목록입니다. 배치의 구간(`getBatchRanges`)으로 자릅니다. */
+            const vector<uint32>& getElementIndices() const { return _listElementIndex; }
+            /** @brief 배치마다 `getElementIndices` 의 구간입니다. 배치 번호와 같은 번호입니다. */
+            const vector<GPUInstanceRun>& getBatchRanges() const { return _listBatchRange; }
+
+            /** @brief 모두 지웁니다. */
+            void clear()
+            {
+                _listElementIndex.clear();
+                _listBatchRange.clear();
+            }
+            /** @brief 다음 배치의 빈 구간을 엽니다. 이후 `appendElement` 는 이 배치에 들어갑니다. */
+            void beginBatch() { _listBatchRange.push_back( GPUInstanceRun{ static_cast<uint32>( _listElementIndex.size() ), 0 } ); }
+            /** @brief 지금 배치에 원소를 붙입니다. 정렬되어 같은 원소가 연속으로 오므로 직전 것과 같으면 넣지 않습니다. */
+            void appendElement( uint32 elementIndex )
+            {
+                SW_ASSERT( _listBatchRange.empty() == false );
+                GPUInstanceRun& range = _listBatchRange.back();
+                if ( range._count != 0 && _listElementIndex.back() == elementIndex )
+                    return;
+                _listElementIndex.push_back( elementIndex );
+                ++range._count;
+            }
+            /** @brief 앞쪽 `batchCount` 개 배치만 남깁니다(투명 꼬리를 다시 붙이기 전). 항목은 남은 마지막 구간의 끝에서 자릅니다. 용량은 남습니다. */
+            void truncateToBatches( uint32 batchCount )
+            {
+                SW_ASSERT( batchCount <= _listBatchRange.size() );
+                const uint32 entryCount = ( batchCount == 0 ) ? 0u : _listBatchRange[batchCount - 1]._start + _listBatchRange[batchCount - 1]._count;
+                _listElementIndex.resize( entryCount );
+                _listBatchRange.resize( batchCount );
+            }
+
+        private:
+            vector<uint32>         _listElementIndex;
+            vector<GPUInstanceRun> _listBatchRange;
+        };
+        BatchElementTable _batchElementTable;
 
         /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 레지스트리가 바뀐 것입니다. */
         uint64 _lastPrimitiveSetGeneration{ 0 };

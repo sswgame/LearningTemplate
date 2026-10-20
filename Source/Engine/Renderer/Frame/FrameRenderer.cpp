@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -54,20 +55,22 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( int32, gv_vertexPool, 1, "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)" );
 
+#if !defined( SW_SHIPPING )
     /**
-     * @brief 라이트 컬링 방식입니다. 0 이면 라이트 그리드 없이 픽셀마다 목록 전체를 돕니다(비교 기준), 1 이면 CPU 가 만든 클러스터 그리드를 씁니다.
-     * @details 학습용으로 두 방식을 나란히 보게 둔다(결정 기록 5-12 D2-13). Shipping 은 변수가 등록되지 않아 기본값(CPU 그리드)으로 고정된다.
-     *          GPU 생산자(2)는 ClusteredLighting.md S2 에서 더한다.
+     * @brief 라이트 컬링 방식입니다. 0 이면 라이트 그리드 없이 픽셀마다 목록 전체를 돕니다(비교 기준), 1 이면 CPU 가 만든 클러스터 그리드, 2 이면 GPU 컴퓨트가 만든 그리드입니다.
+     * @details 학습용으로 세 방식을 나란히 보게 둔다(결정 기록 5-12 D2-13). 기본값은 Shipping 과 같은 GPU 다. Shipping 은 변수를 두지 않고 GPU 로 고정한다
+     *          (`FrameRenderer::selectLightGridProducer`).
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_lightCulling, 1, "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_lightCulling, 2, "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드, 2=GPU 클러스터 그리드)" );
+#endif
 
     /**
-     * @brief `-gv_viewMode=<n>` 은 주 출력(게임 창)의 보기 모드입니다(0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps).
+     * @brief `-gv_viewMode=<n>` 은 주 출력(게임 창)의 보기 모드입니다(0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity).
      * @details 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다.
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
      *          모드를 고를 수 있어야 한다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 된다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps)" );
+    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
@@ -102,6 +105,7 @@ namespace sw
         , _mapLayoutMaterialFallback{}
         , _transparentRankPlaceholder{}
         , _psoCache{}
+        , _pPSOCache{ &_psoCache }
         , _outputRenderTarget{ 0 }
         , _capture{ _pDevice, _mainView._transientPool, _pipelineResource }
         , _canvasRenderer{}
@@ -114,16 +118,20 @@ namespace sw
         , _statusMessage{}
         , _graphContext{}
         , _frameLight{}
+        , _frameSky{}
         , _outputWidth{ 0 }
         , _outputHeight{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
         , _directOutputWidth{ 0 }
         , _directOutputHeight{ 0 }
+        , _scenePreviewRendererCount{ 0 }
         , _bGPUCullingActive{ SW_FALSE }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
         , _bScenePreview{ SW_FALSE }
+        , _bHasFrameSky{ SW_FALSE }
+        , _bLightGridPSOMissingLogged{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
@@ -240,12 +248,14 @@ namespace sw
         // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 **디바이스가 살아 있을 때** 해제한다. 스냅샷은 소유권을 함께
         // 싣고 있으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 소멸할 때까지 그것들이 살아 있어, 디바이스가 먼저
         // 사라진 뒤 소멸자가 사라진 디바이스에 GPU 자원을 반환하려 한다(해제 후 사용).
-        // 미리보기 씬 렌더러도 같은 디바이스의 자원을 든다 — 디바이스가 살아 있을 때 먼저 내린다.
+        // 미리보기 씬 렌더러도 같은 디바이스의 자원을 든다 — 디바이스가 살아 있을 때 먼저 내린다. 그 렌더러들은 이 렌더러의 PSO 캐시를 빌려 쓰므로
+        // 캐시를 놓는 `releasePassResources` 보다 먼저여야 한다.
         for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
         {
             preview._renderer->shutdown();
         }
         _listScenePreviewRenderer.clear();
+        _scenePreviewRendererCount.store( 0 );
         _graph.releaseCommandLists();
         if ( _pDevice != nullptr )
             _gpuScene.releaseGPU( _pDevice );
@@ -425,8 +435,10 @@ namespace sw
         dispatchMeshMorph();
         dispatchMeshSkin();
         dispatchCullAndSort( animationInstanceCount );
+        // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
+        dispatchLightGrid();
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
-        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, _psoCache, getEnginePSO( RenderPassType::Canvas ) );
+        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGPUTime )
@@ -550,6 +562,10 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
+        // 하늘도 패킷 경로(RenderPacketBuilder)와 같은 규칙으로 씬에서 읽는다.
+        SkyGradient sceneSky;
+        const bool  bSceneSky = scene.getObjectManager() != nullptr && SkyComponent::findSky( *scene.getObjectManager(), sceneSky );
+        applyFrameSky( bSceneSky, sceneSky );
         // 출력 크기(인자가 없으면 스왑체인)를 먼저 정한다 — 주 시점의 비율이 그것을 본다.
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
@@ -641,6 +657,8 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
+        // 하늘도 패킷으로만 온다.
+        applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
         // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         std::swap( _frameShadow, packet._shadow );
         applyFrameShadow();
@@ -674,7 +692,8 @@ namespace sw
         {
             pView->_lightGridIndex = invalid_index::kUint32;
         }
-        if ( gv_lightCulling != 0 )
+        const LightGridProducer producer = selectLightGridProducer();
+        if ( producer != LightGridProducer::None )
         {
             _mainView._lightGridIndex = static_cast<uint32>( _listScratchGridViewProj.size() );
             _listScratchGridViewProj.push_back( view( RenderViewType::Main )._viewProj );
@@ -686,7 +705,29 @@ namespace sw
                 _listScratchGridViewProj.push_back( pView->_cullInput._viewProj );
             }
         }
-        _lightBuffer.update( pDevice, _listScratchGridViewProj );
+        _lightBuffer.update( pDevice, _listScratchGridViewProj, producer );
+    }
+
+    LightGridProducer FrameRenderer::selectLightGridProducer()
+    {
+#if defined( SW_SHIPPING )
+        const int32 requested = 2;
+#else
+        const int32 requested = gv_lightCulling;
+#endif
+        if ( requested == 0 )
+            return LightGridProducer::None;
+        if ( requested == 1 )
+            return LightGridProducer::CPU;
+        // GPU 생산자는 컴퓨트 PSO 가 있어야 한다. 없으면 그리드 버퍼를 채울 쪽이 없다 — 채우지 않은 버퍼를 읽게 두지 않고 그리드 없이 그린다(그림은 같고 비용만 다르다).
+        if ( getEnginePSO( RenderPassType::LightGrid ) != 0 )
+            return LightGridProducer::GPU;
+        if ( _bLightGridPSOMissingLogged == SW_FALSE )
+        {
+            _bLightGridPSOMissingLogged = SW_TRUE;
+            SW_LOG_ERROR( "The light grid compute PSO (%#) is missing - every pixel walks every light", engine::getSubsystem<EngineDefaultAssets>()._shaderLightGrid.c_str() );
+        }
+        return LightGridProducer::None;
     }
 
     void FrameRenderer::setCanvasFrame( CanvasFrameData& inoutFrame )

@@ -991,7 +991,7 @@ SW_TEST_CASE( GPUSceneTest, PerBatchMaterialElementsAreDistinct )
     gpuScene.populateFromScene( &scene, sw::float3{ 0.0f, 1.2f, 3.2f } );
 
     // 배치가 둘 생기고, 각 배치가 자기 머티리얼의 원소를 가리켜야 한다.
-    const sw::vector<sw::GPUMeshBatch>& batches = gpuScene.getOpaqueBatches();
+    const sw::vector_reference<const sw::GPUMeshBatch> batches = gpuScene.getOpaqueBatches();
     SW_EXPECT_TRUE_MSG( batches.size() == 2, "메시가 둘이면 배치도 둘이어야 한다" );
     SW_ASSERT_TRUE( batches.size() == 2 );
     SW_EXPECT_TRUE_MSG( batches[0]._materialIndex != batches[1]._materialIndex,
@@ -1065,7 +1065,7 @@ SW_TEST_CASE( GPUSceneTest, PermutationSplitsBatchesAcrossMaterials )
     gpuScene.setMergeBatchesAcrossMaterials( true );
     gpuScene.populateFromScene( &scene, sw::float3{ 0.0f, 1.2f, 3.2f } );
 
-    const sw::vector<sw::GPUMeshBatch>& batches = gpuScene.getOpaqueBatches();
+    const sw::vector_reference<const sw::GPUMeshBatch> batches = gpuScene.getOpaqueBatches();
     SW_EXPECT_TRUE_MSG( batches.size() == 2,
                         "퍼뮤테이션이 다른 두 머티리얼이 한 배치로 접혔다 — 배치는 PSO 하나로 그리므로 한쪽이 버려진다" );
     SW_ASSERT_TRUE( batches.size() == 2 );
@@ -1317,7 +1317,7 @@ SW_TEST_CASE( GPUSceneTest, SwappedMeshesAndVisibilityTogglesKeepBatchesValid )
             visibleCount += pComp->isVisible() ? 1u : 0u;
         }
         SW_ASSERT_EQUAL( visibleCount, static_cast<uint32>( snapshot.getInstances().size() ) );
-        for ( const sw::GPUMeshBatch& batch : snapshot._listAllBatch )
+        for ( const sw::GPUMeshBatch& batch : snapshot.getAllBatches() )
         {
             SW_ASSERT_NOT_NULL( batch._mesh.get() );
             SW_ASSERT_EQUAL( batch._vertexCount, batch._mesh->getVertexCount() );
@@ -1485,7 +1485,7 @@ SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
     sw::GPUSceneBuilder gtScene;
     gtScene.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, 0.0f } );
 
-    const sw::vector<sw::GPUMeshBatch>& gtBatches = gtScene.getTransparentBatches();
+    const sw::vector_reference<const sw::GPUMeshBatch> gtBatches = gtScene.getTransparentBatches();
     SW_ASSERT_FALSE( gtBatches.empty() ); // 반투명 머티리얼인데 반투명 배치가 없으면 전제가 깨진 것이다
     const uint32 permutationIndex = gtBatches[0]._shaderPermutation;
     SW_ASSERT_TRUE( permutationIndex != sw::kInvalidShaderPermutation ); // 배치에 퍼뮤테이션이 붙어야 한다
@@ -1499,7 +1499,7 @@ SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
     sw::GPUScene rtScene;
     rtScene.adoptCPUSnapshot( packetScene ); // 바꿔치기 — 패킷 자리에는 RT 의 지난(빈) 스냅샷이 남는다
 
-    const sw::vector<sw::GPUMeshBatch>& rtBatches = rtScene.getTransparentBatches();
+    const sw::vector_reference<const sw::GPUMeshBatch> rtBatches = rtScene.getTransparentBatches();
     SW_EXPECT_TRUE_MSG( rtBatches.empty() == false, "스냅샷에 반투명 배치가 없다" );
     if ( rtBatches.empty() == false )
     {
@@ -1576,7 +1576,7 @@ SW_TEST_CASE( GPUSceneTest, InstancePermutationChangeRebuildsBatches )
     instance->enableKeyword( sw::hashed_string( "MATERIAL_TEST_SWITCH" ) );
     gpuScene.populateFromScene( &scene, cameraPos );
 
-    const sw::vector<sw::GPUMeshBatch>& batches = gpuScene.getOpaqueBatches();
+    const sw::vector_reference<const sw::GPUMeshBatch> batches = gpuScene.getOpaqueBatches();
     SW_EXPECT_TRUE_MSG( batches.size() == 2,
                         "인스턴스의 퍼뮤테이션이 달라졌는데 한 배치로 남았다 — 배치는 PSO 하나로 그린다" );
     SW_ASSERT_TRUE( batches.size() == 2 );
@@ -1633,7 +1633,7 @@ SW_TEST_CASE( GPUSceneTest, InstanceOnlyMeshUsesInstanceParent )
     sw::GPUSceneBuilder gpuScene;
     gpuScene.populateFromScene( &scene, sw::float3{ 0.0f, 1.2f, 3.2f } );
 
-    const sw::vector<sw::GPUMeshBatch>& batches = gpuScene.getOpaqueBatches();
+    const sw::vector_reference<const sw::GPUMeshBatch> batches = gpuScene.getOpaqueBatches();
     SW_EXPECT_TRUE_MSG( batches.size() == 1, "인스턴스만 붙은 메시가 배치로 나오지 않았다" );
     SW_ASSERT_TRUE( batches.size() == 1 );
     SW_EXPECT_TRUE_MSG( batches[0]._material.get() == parent.get(),
@@ -2098,7 +2098,7 @@ SW_TEST_CASE( GPUSceneTest, IncrementalTransparentTailMatchesFreshBuild )
                 return ElementIdentity{};
             return ElementIdentity{ group._listEntry[instance._materialIndex]._material.get(), group._listEntry[instance._materialIndex]._instance.get() };
         };
-        auto expectSameBatches = []( const sw::vector<sw::GPUMeshBatch>& listExpected, const sw::vector<sw::GPUMeshBatch>& listActual )
+        auto expectSameBatches = []( sw::vector_reference<const sw::GPUMeshBatch> listExpected, sw::vector_reference<const sw::GPUMeshBatch> listActual )
         {
             SW_ASSERT_EQUAL( static_cast<uint32>( listExpected.size() ), static_cast<uint32>( listActual.size() ) );
             for ( size_t batchIndex = 0; batchIndex < listExpected.size(); ++batchIndex )
@@ -2268,8 +2268,8 @@ SW_TEST_CASE( GPUSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingThe
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( first.getInstances().size() ) );
     // 같은 텍스처(머티리얼 인스턴스)라 프레임 · 색이 달라도 배치 하나다. (디바이스 없는 테스트라 머티리얼 파일이 아직 안 읽혀 블렌드는 기본값이다 —
     // 반투명 배치인지는 RenderPassGPUTest.SpriteFramesAndTintsArePerInstance 가 실제 디바이스에서 본다.)
-    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( first._listAllBatch.size() ) );
-    SW_EXPECT_EQUAL( 3u, first._listAllBatch[0]._instanceCount );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( first.getAllBatches().size() ) );
+    SW_EXPECT_EQUAL( 3u, first.getAllBatches()[0]._instanceCount );
 
     const sw::SpriteComponent* arrSprite[] = { pRed, pMagenta, pGhost };
     const float32              arrX[]      = { -1.0f, 0.0f, 1.0f };
@@ -2285,7 +2285,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingThe
     builder.populateFromScene( &scene, cameraPos );
     sw::GPUSceneSnapshot flipped;
     builder.exportCPUSnapshot( flipped );
-    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( flipped._listAllBatch.size() ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( flipped.getAllBatches().size() ) );
     SW_EXPECT_TRUE( flipped._bAllInstancesDirty == SW_FALSE );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( flipped._listDirtyInstanceRun.size() ) );
     SW_EXPECT_EQUAL( 1u, flipped._listDirtyInstanceRun[0]._count );
@@ -2330,8 +2330,8 @@ SW_TEST_CASE( GPUSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
     // 같은 텍스처 인스턴스 · 같은 사각형 · 같은 머티리얼 — 스프라이트 컴포넌트와 한 배치다.
     sw::GPUSceneSnapshot snapshot;
     builder.exportCPUSnapshot( snapshot );
-    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( snapshot._listAllBatch.size() ) );
-    SW_EXPECT_EQUAL( 3u, snapshot._listAllBatch[0]._instanceCount );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( snapshot.getAllBatches().size() ) );
+    SW_EXPECT_EQUAL( 3u, snapshot.getAllBatches()[0]._instanceCount );
 
     const sw::GPUInstance* pLeft = findInstanceAtX( builder.getInstances(), -1.0f );
     SW_ASSERT_NOT_NULL( pLeft );

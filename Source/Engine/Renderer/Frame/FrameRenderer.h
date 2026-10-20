@@ -40,6 +40,7 @@ namespace sw
 {
     struct RenderFramePacket;
     struct ShaderCompileResult;
+    struct SkyGradient;
 
     class CameraComponent;
     class IRHICommandList;
@@ -151,8 +152,11 @@ namespace sw
         bool executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /** @brief @p mainPacket 의 미리보기 목록에 없는 씬의 렌더러를 내립니다(창을 닫았거나 가렸다). 미리보기 패킷을 다 그린 뒤 부릅니다. */
         void retireScenePreviews( const RenderFramePacket& mainPacket );
-        /** @brief 지금 살아 있는 미리보기 씬 렌더러 수입니다(진단과 테스트용). */
-        uint32 getScenePreviewRendererCount() const { return static_cast<uint32>( _listScenePreviewRenderer.size() ); }
+        /**
+         * @brief 지금 살아 있는 미리보기 씬 렌더러 수입니다(진단, 테스트, 자동화 탐침 `Editor.ScenePreviewRenderers`).
+         * @details 렌더 스레드가 렌더러를 세우고 내릴 때 공개하는 값이라 어느 스레드에서 읽어도 된다. 창을 닫으면 다음 렌더 프레임에 줄어든다(`retireScenePreviews`).
+         */
+        uint32 getScenePreviewRendererCount() const { return _scenePreviewRendererCount.load(); }
 
         // ------------------------------------------------------------------------------
         // 3) 조회
@@ -529,6 +533,18 @@ namespace sw
             float4 _colorAmbient{ 0.0f, 0.0f, 0.0f, 0.0f };
         };
         /**
+         * @brief 이번 프레임의 하늘을 셰이더 상수 모양으로 둔 것입니다(`g_SkyZenith` · `g_SkyHorizon` · `g_SkyGround`, 배치는 `SkyGradient` 머리 주석).
+         * @details 씬에 하늘이 없으면 `_bHasFrameSky` 가 0 이고 스카이 패스가 그리지 않는다 — 배경은 SceneColor 클리어 색이다(기본 하늘로 대신 칠하지 않는다).
+         */
+        struct FrameSkyState
+        {
+            float4 _zenithExponent{};  ///< rgb 천정 색, w 지평선 지수
+            float4 _horizon{};         ///< rgb 지평선 색
+            float4 _groundIntensity{}; ///< rgb 땅 색, w 세기
+        };
+        /** @brief 이번 프레임의 하늘(`_frameSky` · `_bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
+        void applyFrameSky( bool bHasSky, const SkyGradient& sky );
+        /**
          * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(게임 스레드가 배치를 만들지 않았다) 그림자 없는 뷰로 두고, 주 시점 뷰에 옮깁니다.
          * @details 라이트 버퍼 업로드보다 먼저 부른다 — 점광 · 스폿 타일 원소가 라이트 버퍼 꼬리에 붙는다.
          */
@@ -539,7 +555,7 @@ namespace sw
          * @brief 그림자 패스 하나를 그립니다 — 지금 뷰의 캐스케이드 타일과 프레임의 점광 · 스폿 타일을 아틀라스의 자기 칸(뷰포트)에 그립니다.
          * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 컬링은 모든 타일을 덮는 상자(`ViewShadowData::_cullViewProj`) 하나다.
          */
-        void drawShadowTiles( FramePassContext& context, RHIDescriptorIndex passCb, bool bTransparentBatch );
+        void drawShadowTiles( FramePassContext& context, bool bTransparentBatch );
         /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
         uint32 computeShadowTileCountPerView() const;
         /**
@@ -568,11 +584,11 @@ namespace sw
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 이름으로 등록합니다. */
         void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */
-        void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+        void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass );
         /** @brief GPUScene 배치를 간접 드로우로 그립니다. */
-        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass );
         /** @brief 풀스크린 삼각형을 그립니다. */
-        void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
+        void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso );
         /**
          * @brief 방출기마다의 입자 그리기(`GPUScene::getParticleBatches`)를 지금 열린 투명 패스에 그립니다. 메시 투명 배치 **뒤**에 부릅니다.
          * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VfxParticleRenderer::drawBatches` 로 넘긴다. 순서는 주 시점의 정렬 순서다(추가 뷰도 같은 순서로 그린다).
@@ -626,10 +642,16 @@ namespace sw
          */
         bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
         /**
-         * @brief 뷰마다 라이트 그리드를 만들어 라이트 버퍼를 올립니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(`gv_lightCulling` 0 이면 그리드 없이).
+         * @brief 라이트 버퍼를 올리고 뷰마다 라이트 그리드를 준비합니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(생산자는 `selectLightGridProducer`).
          * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `ViewTarget::_lightGridIndex` 에 남는다.
+         *          GPU 생산자면 그리드 채우기는 커맨드 리스트가 열린 뒤 `dispatchLightGrid` 가 한다.
          */
         void updateLightBuffer( IRHIDevice* pDevice );
+        /**
+         * @brief 이번 프레임의 라이트 그리드 생산자입니다. 개발 빌드는 `gv_lightCulling`(0 없음, 1 CPU, 2 GPU), Shipping 은 GPU 로 고정입니다.
+         * @details GPU 를 골랐는데 컴퓨트 PSO 가 없으면 오류를 한 번 남기고 그리드 없이 그린다 — 채우지 않은 그리드 버퍼를 셰이더가 읽게 두지 않는다.
+         */
+        LightGridProducer selectLightGridProducer();
 
         // ------------------------------------------------------------------------------
         // 6) 어태치먼트 · PSO
@@ -854,6 +876,11 @@ namespace sw
          */
         void dispatchCullAndSort( uint32 instanceCount );
         /**
+         * @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(lightgrid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다.
+         * @details 그리기 전에, 그래프 밖의 컴퓨트 프리패스로 기록한다(렌더 그래프에 컴퓨트 패스 상태가 없다). 끝나면 그리드 버퍼를 SRV 로 돌린다.
+         */
+        void dispatchLightGrid();
+        /**
          * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 디스패치를 돌렸으면 true 입니다.
          * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
          */
@@ -877,12 +904,20 @@ namespace sw
             RHIStructuredBufferSlot _buffer;
         };
         vector<MaterialFallback> _listMaterialFallback;
-        /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 `_psoCache` 가 소유하며 PSO 마다 하나입니다.
+        /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 `_pPSOCache` 가 소유하며 PSO 마다 하나입니다.
         unordered_map<const ShaderBindingLayout*, uint32> _mapLayoutMaterialFallback;
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
         RHIStructuredBufferSlot _transparentRankPlaceholder;
-        /// @brief 엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃입니다. 소유와 해제 순서는 캐시가 관리합니다.
-        RenderPSOCache                       _psoCache;
+        /// @brief 이 렌더러가 소유하는 PSO 저장소입니다(엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃). 소유와 해제 순서는 캐시가 관리합니다.
+        ///        미리보기 씬 렌더러는 이것을 비워 둔다 — `_pPSOCache` 가 주 렌더러의 것을 가리킨다.
+        RenderPSOCache _psoCache;
+        /**
+         * @brief 이 렌더러가 PSO 를 찾고 넣는 저장소입니다. 주 렌더러는 자기 `_psoCache`, 미리보기 씬 렌더러는 주 렌더러의 것입니다(`executeScenePreviewPacket` 이 만들 때 건다).
+         * @details 미리보기 씬은 주 렌더러와 같은 디바이스 · 파이프라인 XML 로 그리므로 PSO 가 같다. 나눠 두면 창을 열 때마다(닫으면 렌더러를 내리므로 다시 열 때마다)
+         *          엔진 PSO 를 모두 다시 만들어 첫 프레임이 끊기고, 같은 PSO 가 창 수만큼 메모리에 남는다(다중 월드 결정 2). 해제는 소유자만 한다(`releasePassResources`).
+         *          미리보기 렌더러는 주 렌더러보다 먼저 내려가고(`shutdown`), 렌더 스레드에서 주 렌더러와 차례로 기록하므로 캐시를 동시에 고치지 않는다.
+         */
+        RenderPSOCache*                      _pPSOCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         RHITextureHandle                     _outputRenderTarget;
         /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
@@ -916,6 +951,7 @@ namespace sw
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameLightState _frameLight; ///< float4 둘(32바이트)이다.
+        FrameSkyState   _frameSky;   ///< float4 셋(48바이트)이다. `_bHasFrameSky` 가 0 이면 쓰지 않는다.
         /// @brief 주 출력(백버퍼, 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이 크기 × 사각형 × 해상도 배율이고, 화면 사각형 뷰와 Present 캡처는 이 크기를 씁니다.
         uint32 _outputWidth;
         uint32 _outputHeight;
@@ -924,6 +960,8 @@ namespace sw
         /// @brief 씬 직접 경로의 출력 크기(`setOutputSizeOverride`)입니다. 0이면 백버퍼 크기를 씁니다.
         uint32 _directOutputWidth;
         uint32 _directOutputHeight;
+        /// @brief `_listScenePreviewRenderer` 의 크기를 렌더 스레드가 공개한 값입니다. 다른 스레드(자동화 탐침)는 목록 대신 이것을 읽습니다.
+        atomic<uint32> _scenePreviewRendererCount;
         /**
          * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지 여부입니다. 가시 목록이 유효한지를 나타냅니다.
          * @details 드로우가 가시 목록을 바인딩할지 정하는 값이다. 목록을 바인딩했는데 컬링이 돌지 않았다면 셰이더가
@@ -931,10 +969,12 @@ namespace sw
          */
         uint8                  _bGPUCullingActive;
         FrameRendererStatus    _status;
-        uint8                  _bCallbacksBound     : 1;
-        uint8                  _bPassResourcesReady : 1;
-        uint8                  _bScenePreview       : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
-        [[maybe_unused]] uint8 _reservedFlags       : 4;
+        uint8                  _bCallbacksBound            : 1;
+        uint8                  _bPassResourcesReady        : 1;
+        uint8                  _bScenePreview              : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
+        uint8                  _bHasFrameSky               : 1; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
+        uint8                  _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
+        [[maybe_unused]] uint8 _reservedFlags              : 2;
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
          * @details 게임 스레드(패킷)와 직접 경로가 프레임 시작에 읽어 뷰 설정에 싣고, 드로우는 뷰 설정만 본다. 쓰는 쪽이 다른 스레드이므로 atomic 이다.

@@ -266,15 +266,11 @@ namespace sw
             return markAttachmentCleared( name ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
         };
 
-        // b0 에 들어갈 패스 상수다. 머티리얼 CB 로 폴백하면 안 된다. 레이아웃이 다르다.
-        // 머티리얼 상수는 드로우마다 메시와 배치에서 직접 넘긴다.
-        const RHIDescriptorIndex passCb = context._passCbIndex;
-
         auto executeFullscreenPass = [&]( RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
         {
             if ( beginColorPass( context, targetName.view(), "", passClearColor, colorLoadFor( targetName, false ), RHIRenderPassLoadOp::Load ) == false )
                 return;
-            drawFullscreen( context, pso, passCb );
+            drawFullscreen( context, pso );
             context._pCmd->endRenderPass();
         };
 
@@ -379,7 +375,7 @@ namespace sw
                     beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
                     if ( _pActiveView->_settings._bShadows == SW_TRUE )
-                        drawShadowTiles( context, passCb, bTransparentBatch );
+                        drawShadowTiles( context, bTransparentBatch );
                     context._pCmd->endRenderPass();
                     break;
                 }
@@ -387,7 +383,7 @@ namespace sw
                 {
                     const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
                     beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
-                    drawSceneMeshes( context, findPassPSO( RenderPassType::DepthPrepass ), passCb, bTransparentBatch );
+                    drawSceneMeshes( context, findPassPSO( RenderPassType::DepthPrepass ), bTransparentBatch );
                     context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
                     break;
@@ -416,7 +412,7 @@ namespace sw
                         const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass.load() != 0 && getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0 )
                                                                     ? getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite )
                                                                     : getEnginePSO( RenderPassType::ForwardOpaque );
-                        drawSceneMeshes( context, psoForward, passCb, bTransparentBatch );
+                        drawSceneMeshes( context, psoForward, bTransparentBatch );
                         context._pCmd->endRenderPass();
                     }
                     break;
@@ -440,7 +436,7 @@ namespace sw
                     const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ) };
                     if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) ) )
                     {
-                        drawSceneMeshes( context, getEnginePSO( RenderPassType::GBuffer ), passCb, bTransparentBatch );
+                        drawSceneMeshes( context, getEnginePSO( RenderPassType::GBuffer ), bTransparentBatch );
                         context._pCmd->endRenderPass();
                     }
                     break;
@@ -465,7 +461,7 @@ namespace sw
 
                     if ( beginColorPass( context, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
                     {
-                        drawSceneMeshes( context, findPassPSO( RenderPassType::Transparent ), passCb, bTransparentBatch );
+                        drawSceneMeshes( context, findPassPSO( RenderPassType::Transparent ), bTransparentBatch );
                         // 입자는 메시 투명 배치 뒤에 방출기마다 그린다(방출기끼리는 먼 것부터 — GPUSceneBuilder::populateParticleBatches).
                         drawParticles( context );
                         context._pCmd->endRenderPass();
@@ -483,7 +479,7 @@ namespace sw
                     const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
                     if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
                     {
-                        drawSceneMeshes( context, getEnginePSO( RenderPassType::MeshOutline ), passCb, bTransparentBatch );
+                        drawSceneMeshes( context, getEnginePSO( RenderPassType::MeshOutline ), bTransparentBatch );
                         context._pCmd->endRenderPass();
                     }
                     break;
@@ -548,7 +544,7 @@ namespace sw
                     {
                         const RHIPipelineStateHandle taaPSO = getEnginePSO( RenderPassType::TAA );
                         if ( taaPSO != 0 )
-                            drawFullscreen( context, taaPSO, passCb );
+                            drawFullscreen( context, taaPSO );
                         else if ( pSrcName != nullptr && taaTarget.view() != pSrcName )
                             context._pCmd->blitTexture( findTransient( pSrcName ), findTransient( taaTarget.view() ) );
                         context._pCmd->endRenderPass();
@@ -621,7 +617,7 @@ namespace sw
                             }
                             context._pCmd->setViewport( viewport );
                         }
-                        drawFullscreen( context, psoBlit, passCb );
+                        drawFullscreen( context, psoBlit );
                         context._pCmd->endRenderPass();
                         if ( bCaptureToBack )
                             context._pCmd->blitTexture( dstTarget, 0 );
@@ -638,7 +634,7 @@ namespace sw
                         beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
                         beginInfo._bBindColor = SW_TRUE;
                         context._pCmd->beginRenderPass( beginInfo );
-                        drawFullscreen( context, 0, passCb );
+                        drawFullscreen( context, 0 );
                         context._pCmd->endRenderPass();
                     }
                     if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
@@ -688,6 +684,7 @@ namespace sw
                 case RenderPassType::InstanceSort:
                 case RenderPassType::MeshMorph:
                 case RenderPassType::MeshSkin:
+                case RenderPassType::LightGrid:
                 {
                     SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );
                     break;
@@ -770,7 +767,7 @@ namespace sw
         return _frameShadow._layout.getCascadeCount() + static_cast<uint32>( _frameShadow._listLocalTile.size() );
     }
 
-    void FrameRenderer::drawShadowTiles( FramePassContext& context, RHIDescriptorIndex passCb, bool bTransparentBatch )
+    void FrameRenderer::drawShadowTiles( FramePassContext& context, bool bTransparentBatch )
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
@@ -783,7 +780,7 @@ namespace sw
                                  shadow._arrCascadeTile[0]._cell._size == _frameShadow._layout.getAtlasResolution();
         if ( bWholeAtlas )
         {
-            drawSceneMeshes( context, pso, passCb, bTransparentBatch );
+            drawSceneMeshes( context, pso, bTransparentBatch );
         }
         else
         {
@@ -803,7 +800,7 @@ namespace sw
                 // 모든 타일이 마지막에 쓴 행렬을 본다(DX11 · GL 은 업데이트가 명령 순서대로 들어가 가려진다).
                 acquirePassCb( context );
                 context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
-                drawSceneMeshes( context, pso, passCb, bTransparentBatch );
+                drawSceneMeshes( context, pso, bTransparentBatch );
             }
             // 이 패스 컨텍스트는 패스마다 시드의 사본이지만, 기준 행렬로 되돌려 두면 뒤에 무엇이 붙어도 셰이딩과 같은 행렬을 본다.
             context._passValues.setMatrix( names._lightViewProj, shadow._lightViewProj );
