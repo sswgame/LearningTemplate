@@ -157,7 +157,7 @@ namespace sw
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
         configureBootstrap( _bootstrap );
-        _bootstrap._packRoot = GameConfig::getActive()._packRoot.get();
+        _bootstrap._packRoot = GameConfig::getActive()._packRoot;
         // gamesettings.xml 은 필수다. 못 읽으면 기본값으로 서지 않고 게임 초기화를 멈춘다.
         if ( loadGameSettings() == false )
         {
@@ -252,7 +252,7 @@ namespace sw
     bool GameInstanceBase::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
     {
         string error;
-        if ( GamePackDataUtil::tryMakeKindPath( _bootstrap._packRoot, kindLabel, outPath, error ) )
+        if ( GamePackDataUtil::tryMakeKindPath( _bootstrap._packRoot.get(), kindLabel, outPath, error ) )
             return true;
         SW_LOG_ERROR( "Required game data '%#' has no path in pack '%#': %# - the game does not start", kindLabel, _bootstrap._packRoot.c_str(), error.c_str() );
         return false;
@@ -347,7 +347,7 @@ namespace sw
         }
         _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, std::move( future ) } );
         LoadingScreenController& loadingScreen = getSubsystem<LoadingScreenController>();
-        if ( loadingScreen.getSettings()._documentPath.empty() == false )
+        if ( loadingScreen.getSettings()._documentPath.isSet() )
             (void)loadingScreen.beginLoading();
 
         SceneLoadRequestedEvent event{};

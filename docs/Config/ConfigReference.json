@@ -1411,30 +1411,30 @@
      "fields": [
       {
        "name": "_defaultMap",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "타일맵 패널이 처음 여는 맵(리소스 경로, 비면 없음)"
+       "description": "타일맵 패널이 처음 여는 맵(리소스 경로, 칸이 없으면 없음)"
       },
       {
        "name": "_warpMap",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "타일맵 패널의 워프 대상 기본값(리소스 경로, 비면 없음)"
+       "description": "타일맵 패널의 워프 대상 기본값(리소스 경로, 칸이 없으면 없음)"
       },
       {
        "name": "_spriteAtlas",
-       "type": "string",
+       "type": "DataPath",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 비면 없음)"
+       "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 칸이 없으면 없음)"
       },
       {
        "name": "_uiPreviewDocument",

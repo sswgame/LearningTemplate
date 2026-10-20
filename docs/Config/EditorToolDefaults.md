@@ -24,9 +24,9 @@ editortooldefaults.json 의 에디터 도구 시드입니다. 읽기는 `JSONSer
 
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
-| `_defaultMap` | `string` | — |  |  | 타일맵 패널이 처음 여는 맵(리소스 경로, 비면 없음) |
-| `_warpMap` | `string` | — |  |  | 타일맵 패널의 워프 대상 기본값(리소스 경로, 비면 없음) |
-| `_spriteAtlas` | `string` | — |  |  | 스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 비면 없음) |
+| `_defaultMap` | `DataPath` | — |  |  | 타일맵 패널이 처음 여는 맵(리소스 경로, 칸이 없으면 없음) |
+| `_warpMap` | `DataPath` | — |  |  | 타일맵 패널의 워프 대상 기본값(리소스 경로, 칸이 없으면 없음) |
+| `_spriteAtlas` | `DataPath` | — |  |  | 스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 칸이 없으면 없음) |
 | `_uiPreviewDocument` | `DataPath` | — |  |  | UI 미리보기 패널이 처음 여는 UI 문서(리소스 경로) |
 | `_clearColor` | `float4` | — |  |  | 씬 뷰 · 게임 뷰 렌더 타깃 클리어 색 |
 | `_listBaseFont` | `vector<string>` | — |  |  | 라틴 글꼴 후보 — 에디터 팩 `fonts/` → OS 글꼴 폴더 순으로 앞의 것부터 찾는다. 하나도 없으면 에디터가 서지 않는다 |

@@ -124,9 +124,9 @@ namespace sw::editor
         , _bRectActive{ false }
     {
         const EditorToolDefaults& editorToolDefaults = editor::getEditorToolDefaults();
-        if ( editorToolDefaults._defaultMap.empty() == false )
+        if ( editorToolDefaults._defaultMap.isSet() )
             _pathBuffer = editorToolDefaults._defaultMap.c_str();
-        if ( editorToolDefaults._warpMap.empty() == false )
+        if ( editorToolDefaults._warpMap.isSet() )
             _warpTarget = editorToolDefaults._warpMap.c_str();
         resize( 8, 8 );
     }

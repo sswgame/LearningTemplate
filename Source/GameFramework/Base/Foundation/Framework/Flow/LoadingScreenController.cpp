@@ -54,7 +54,7 @@ namespace sw
         if ( const GameSettings* pSettings = game::findSubsystem<GameSettings>() )
         {
             LoadingScreenSettings settings = _settings;
-            settings._documentPath         = pSettings->_loadingScreen.isSet() ? pSettings->_loadingScreen.get() : string{}; // 비면 로딩 화면 없음(`_documentPath`)
+            settings._documentPath         = pSettings->_loadingScreen; // 칸이 없으면 로딩 화면 없음(`_documentPath.isSet()`)
             setSettings( settings );
         }
         UISystem* pUISystem = game::findSubsystem<UISystem>();
@@ -85,11 +85,11 @@ namespace sw
     {
         _shownSeconds       = 0.0f;
         const bool bUIReady = _pUISystem != nullptr && _pUISystem->isInitialized();
-        if ( bUIReady == false || _settings._documentPath.empty() )
+        if ( bUIReady == false || _settings._documentPath.isSet() == false )
             return false; // 문서를 적지 않은 게임은 로딩 화면이 없다(gamesettings 의 `loadingScreen`)
         if ( findLoadingScreen() != nullptr )
             return true;
-        _loadingScreen    = _pUISystem->openScreen<LoadingScreen>( _settings._documentPath );
+        _loadingScreen    = _pUISystem->openScreen<LoadingScreen>( _settings._documentPath.get() );
         UIScreen* pScreen = findLoadingScreen();
         if ( pScreen == nullptr )
         {

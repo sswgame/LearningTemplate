@@ -44,8 +44,8 @@ namespace sw::editor
         , _sliceRows{ 4 }
         , _atlasThumbnail{}
     {
-        const string& atlas = editor::getEditorToolDefaults()._spriteAtlas;
-        if ( atlas.empty() == false )
+        const DataPath& atlas = editor::getEditorToolDefaults()._spriteAtlas;
+        if ( atlas.isSet() )
             _atlasPath = atlas.c_str();
         _listFrame.push_back( Frame{} );
     }

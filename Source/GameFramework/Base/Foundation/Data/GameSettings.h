@@ -92,8 +92,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        PROPERTY()
-        string _packRoot{}; ///< Resource 상대 팩 폴더
+        PROPERTY( Required )
+        DataPath _packRoot; ///< Resource 상대 팩 폴더 — `GameConfig::_packRoot` 를 그대로 받는다(문자열을 넣을 수 없다)
 
         PROPERTY()
         GameSettings _data{}; ///< `{packRoot}/data/gamesettings.xml` 테이블
