@@ -13,6 +13,27 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        /** @brief 알림 종류의 의미 색(테마 토큰)입니다. 토스트의 테두리와 제목이 함께 씁니다. */
+        const Color& getNotificationTypeColor( NotificationType type )
+        {
+            switch ( type )
+            {
+                case NotificationType::Success:
+                    return EditorThemeUtil::getSuccessColor();
+                case NotificationType::Warning:
+                    return EditorThemeUtil::getWarningColor();
+                case NotificationType::Error:
+                    return EditorThemeUtil::getErrorColor();
+                case NotificationType::Info:
+                    return EditorThemeUtil::getInfoColor();
+            }
+            SW_ASSERT( false ); // 열거자 밖의 값은 들어오지 않는다
+            return EditorThemeUtil::getInfoColor();
+        }
+    } // namespace
+
     void EditorNotificationView::draw( const EditorNotificationManager& manager, float32 screenWidth, float32 screenHeight )
     {
         const vector<NotificationItem>& listNotification = manager.getNotifications();
@@ -41,37 +62,8 @@ namespace sw::editor
             if ( remainingTime < 0.5f )
                 alpha = remainingTime / 0.5f;
 
-            const Color bgColor = EditorThemeUtil::getOverlayBgColor().withAlpha( 0.92f * alpha );
-            Color       borderColor{ 0.3f, 0.3f, 0.3f, 0.8f * alpha };
-            Color       titleColor{ 1.0f, 1.0f, 1.0f, 1.0f * alpha };
-
-            switch ( item._type )
-            {
-                case NotificationType::Success:
-                {
-                    borderColor = Color{ 0.2f, 0.7f, 0.3f, alpha };
-                    titleColor  = Color{ 0.4f, 0.9f, 0.5f, alpha };
-                    break;
-                }
-                case NotificationType::Warning:
-                {
-                    borderColor = Color{ 0.9f, 0.6f, 0.1f, alpha };
-                    titleColor  = Color{ 1.0f, 0.8f, 0.3f, alpha };
-                    break;
-                }
-                case NotificationType::Error:
-                {
-                    borderColor = Color{ 0.9f, 0.2f, 0.2f, alpha };
-                    titleColor  = Color{ 1.0f, 0.4f, 0.4f, alpha };
-                    break;
-                }
-                case NotificationType::Info:
-                {
-                    borderColor = Color{ 0.2f, 0.5f, 0.9f, alpha };
-                    titleColor  = Color{ 0.4f, 0.7f, 1.0f, alpha };
-                    break;
-                }
-            }
+            const Color bgColor   = EditorThemeUtil::getOverlayBgColor().withAlpha( 0.92f * alpha );
+            const Color typeColor = getNotificationTypeColor( item._type ).withAlpha( alpha );
 
             float32 posX = viewportPos._x + screenWidth - toastWidth - toastMargin;
             currentY -= 75.0f;
@@ -91,11 +83,11 @@ namespace sw::editor
                                editor::EditorOverlayFlags::NoSavedSettings | editor::EditorOverlayFlags::NoFocusOnAppearing;
 
             ImGui::PushStyleColor( ImGuiCol_WindowBg, EditorColorUtil::toImVec4( bgColor ) );
-            ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( borderColor ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( typeColor ) );
 
             if ( EditorChrome::beginOverlay( toastDesc ) )
             {
-                ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( titleColor ) );
+                ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( typeColor ) );
                 ImGui::TextUnformatted( item._title.c_str() );
                 ImGui::PopStyleColor();
 

@@ -114,6 +114,11 @@ namespace sw::editor
         static string makeDefaultConfigPath();
 
     private:
+        /** @brief `fracture` 의 정수 키(pieces · seed · max_hull_points, 1 이상)와 실수 키(0 이상)를 읽습니다. */
+        [[nodiscard]] static bool parseFractureNumbers( const JSONValue& fractureValue, const string& context, FractureSettings& inoutSettings );
+        /** @brief `fracture` 의 배열 키(impact_point · interior_color · slices · levels)를 읽습니다. 길이가 틀리거나 양수가 아닌 원소가 있으면 false 입니다. */
+        [[nodiscard]] static bool parseFractureArrays( const JSONValue& fractureValue, const string& context, FractureSettings& inoutSettings );
+
         vector<ModelImportRule> _listRule;
     };
 } // namespace sw::editor

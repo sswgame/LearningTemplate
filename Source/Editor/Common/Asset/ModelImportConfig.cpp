@@ -283,8 +283,17 @@ namespace sw::editor
                 return false;
             }
         }
+        const bool bRead = parseFractureNumbers( fractureValue, context, settings ) && parseFractureArrays( fractureValue, context, settings );
+        if ( bRead == false )
+            return false;
+        inoutRule._bFracture = SW_TRUE;
+        return true;
+    }
+
+    bool ModelImportConfig::parseFractureNumbers( const JSONValue& fractureValue, const string& context, FractureSettings& inoutSettings )
+    {
         const utf8* const arrIntegerKey[3] = { "pieces", "seed", "max_hull_points" };
-        uint64            arrInteger[3]    = { settings._pieceCount, settings._seed, settings._maxHullPoint };
+        uint64            arrInteger[3]    = { inoutSettings._pieceCount, inoutSettings._seed, inoutSettings._maxHullPoint };
         for ( uint32 keyIndex = 0; keyIndex < 3; ++keyIndex )
         {
             if ( fractureValue.has( arrIntegerKey[keyIndex] ) == false )
@@ -297,11 +306,11 @@ namespace sw::editor
             }
             arrInteger[keyIndex] = static_cast<uint64>( value.asFloat() );
         }
-        settings._pieceCount                = static_cast<uint32>( arrInteger[0] );
-        settings._seed                      = arrInteger[1];
-        settings._maxHullPoint              = static_cast<uint32>( arrInteger[2] );
+        inoutSettings._pieceCount           = static_cast<uint32>( arrInteger[0] );
+        inoutSettings._seed                 = arrInteger[1];
+        inoutSettings._maxHullPoint         = static_cast<uint32>( arrInteger[2] );
         const utf8* const arrNumberKey[4]   = { "cluster_radius", "cluster_fraction", "slice_jitter", "interior_uv_scale" };
-        float32* const    arrNumberValue[4] = { &settings._clusterRadius, &settings._clusterFraction, &settings._sliceJitter, &settings._interiorUvScale };
+        float32* const    arrNumberValue[4] = { &inoutSettings._clusterRadius, &inoutSettings._clusterFraction, &inoutSettings._sliceJitter, &inoutSettings._interiorUvScale };
         for ( uint32 keyIndex = 0; keyIndex < 4; ++keyIndex )
         {
             if ( fractureValue.has( arrNumberKey[keyIndex] ) == false )
@@ -314,12 +323,17 @@ namespace sw::editor
             }
             *arrNumberValue[keyIndex] = static_cast<float32>( value.asFloat() );
         }
-        if ( fractureValue.has( "impact_point" ) && AnimationJSONUtil::readFloats( fractureValue.get( "impact_point" ), &settings._impactPoint._x, 3 ) == false )
+        return true;
+    }
+
+    bool ModelImportConfig::parseFractureArrays( const JSONValue& fractureValue, const string& context, FractureSettings& inoutSettings )
+    {
+        if ( fractureValue.has( "impact_point" ) && AnimationJSONUtil::readFloats( fractureValue.get( "impact_point" ), &inoutSettings._impactPoint._x, 3 ) == false )
         {
             SW_LOG_ERROR( "%#: impact_point must be an array of three numbers.", context.c_str() );
             return false;
         }
-        if ( fractureValue.has( "interior_color" ) && AnimationJSONUtil::readFloats( fractureValue.get( "interior_color" ), &settings._interiorColor._x, 4 ) == false )
+        if ( fractureValue.has( "interior_color" ) && AnimationJSONUtil::readFloats( fractureValue.get( "interior_color" ), &inoutSettings._interiorColor._x, 4 ) == false )
         {
             SW_LOG_ERROR( "%#: interior_color must be an array of four numbers.", context.c_str() );
             return false;
@@ -336,7 +350,7 @@ namespace sw::editor
             }
             for ( uint32 axis = 0; axis < 3; ++axis )
             {
-                settings._arrSliceCount[axis] = static_cast<uint32>( arrSlice[axis] );
+                inoutSettings._arrSliceCount[axis] = static_cast<uint32>( arrSlice[axis] );
             }
         }
         if ( fractureValue.has( "levels" ) )
@@ -356,10 +370,9 @@ namespace sw::editor
                     SW_LOG_ERROR( "%#: levels must be an array of positive integers.", context.c_str() );
                     return false;
                 }
-                settings._listLevelCount.push_back( static_cast<uint32>( level.asFloat() ) );
+                inoutSettings._listLevelCount.push_back( static_cast<uint32>( level.asFloat() ) );
             }
         }
-        inoutRule._bFracture = SW_TRUE;
         return true;
     }
 

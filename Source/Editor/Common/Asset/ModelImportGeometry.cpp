@@ -267,10 +267,14 @@ namespace sw::editor
             inoutMesh._listVertex.push_back( vertex );
         }
         appendMorphTargets( primitive, pSourceMesh, arrWorld, baseVertex, pPosition->count, inoutMesh );
+        appendPrimitiveTriangles( primitive, arrWorld, baseVertex, pPosition->count, inoutMesh );
+    }
 
-        const cgltf_size indexCount = primitive.indices != nullptr ? primitive.indices->count : pPosition->count;
-        // X 를 뒤집은 거울상이 감김을 한 번 뒤집고, 노드 변환이 거울상(행렬식 < 0)이면 한 번 더 뒤집는다(glTF 규약).
-        const bool bSwapWinding = computeDeterminant3( arrWorld ) >= 0.0f;
+    void ModelImportUtil::appendPrimitiveTriangles( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], uint32 baseVertex, cgltf_size vertexCount,
+                                                    MergedMesh& inoutMesh )
+    {
+        const cgltf_size indexCount   = primitive.indices != nullptr ? primitive.indices->count : vertexCount;
+        const bool       bSwapWinding = computeDeterminant3( arrWorld ) >= 0.0f;
         for ( cgltf_size triangleStart = 0; triangleStart + 2 < indexCount; triangleStart += 3 )
         {
             uint32 arrCorner[3]{};

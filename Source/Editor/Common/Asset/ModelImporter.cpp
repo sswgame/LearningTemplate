@@ -317,16 +317,7 @@ namespace sw::editor
                     const auto itExtra = mapExtra.find( clipName );
                     if ( itExtra != mapExtra.end() )
                     {
-                        if ( itExtra->second._loopOverride >= 0 )
-                            imported._clip.setLooping( itExtra->second._loopOverride != 0 );
-                        for ( const AnimationNotifyEvent& event : itExtra->second._listNotify )
-                        {
-                            imported._clip.addNotify( event );
-                        }
-                        for ( const AnimationClipCurve& curve : itExtra->second._listCurve )
-                        {
-                            imported._clip.addCurve( curve );
-                        }
+                        applyClipExtra( itExtra->second, imported );
                         mapExtra.erase( itExtra );
                     }
                     if ( imported._clip.compressFrom( rawClip, *pCodec, settings, &imported._stats ) == false )
@@ -339,7 +330,31 @@ namespace sw::editor
                     imported._fileStem    = makeNumberedStem( baseStem, useCount );
                     inoutResult._listClip.push_back( std::move( imported ) );
                 }
+                return checkClipNamesMatched( rule, listRequestedFound, mapExtra, sourcePath );
+            }
 
+            /** @brief 클립 부가 데이터(루프 덮어쓰기 · 알림 · 커브)를 가져온 클립에 얹습니다. */
+            static void applyClipExtra( const ClipExtra& extra, ModelImportClip& inoutImported )
+            {
+                if ( extra._loopOverride >= 0 )
+                    inoutImported._clip.setLooping( extra._loopOverride != 0 );
+                for ( const AnimationNotifyEvent& event : extra._listNotify )
+                {
+                    inoutImported._clip.addNotify( event );
+                }
+                for ( const AnimationClipCurve& curve : extra._listCurve )
+                {
+                    inoutImported._clip.addCurve( curve );
+                }
+            }
+
+            /**
+             * @brief 규칙이 고른 클립이 원본에 모두 있었는지, 부가 데이터가 가리킨 클립이 모두 가져와졌는지 봅니다. 하나라도 어긋나면 이름을 남기고 false 입니다.
+             * @details 부가 데이터에 남은 이름은 원본(또는 규칙이 고른 클립)에 없는 클립입니다. 철자가 틀린 알림이 조용히 사라지지 않도록 오류로 처리합니다.
+             */
+            [[nodiscard]] static bool checkClipNamesMatched( const ModelImportRule& rule, const vector<uint8>& listRequestedFound,
+                                                             const unordered_map<string, ClipExtra>& mapLeftoverExtra, string_view sourcePath )
+            {
                 bool bValid = true;
                 for ( size_t requestIndex = 0; requestIndex < rule._listClipName.size(); ++requestIndex )
                 {
@@ -348,8 +363,7 @@ namespace sw::editor
                     SW_LOG_ERROR( "glTF '%#': import rule asks for clip '%#' which the source does not have", sourcePath, rule._listClipName[requestIndex].c_str() );
                     bValid = false;
                 }
-                // 부가 데이터에 남은 이름은 원본(또는 규칙이 고른 클립)에 없는 클립이다. 철자가 틀린 알림이 조용히 사라지지 않도록 오류로 처리한다.
-                for ( const auto& [clipName, extra] : mapExtra )
+                for ( const auto& [clipName, extra] : mapLeftoverExtra )
                 {
                     SW_LOG_ERROR( "Clip data for '%#' names clip '%#' which is not imported", sourcePath, clipName.c_str() );
                     bValid = false;

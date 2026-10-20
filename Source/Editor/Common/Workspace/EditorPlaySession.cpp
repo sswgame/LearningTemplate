@@ -91,6 +91,65 @@ namespace sw::editor
                               static_cast<uint32>( data._listSnapshot.size() ) );
             }
 
+            /** @brief 되돌리기 1 단계: 스냅샷에 없는 오브젝트(플레이 도중 생성된 것)를 파괴합니다. */
+            static void destroySpawnedDuringPlay( const PlaySessionData& data, GameObjectManager& objects )
+            {
+                unordered_set<uint64> uniqueSnapIDs;
+                uniqueSnapIDs.reserve( data._listSnapshot.size() );
+                for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
+                {
+                    uniqueSnapIDs.insert( snap._identity._objectID );
+                }
+
+                vector<GameObject*> listAllObject;
+                objects.getAllGameObjects( listAllObject );
+
+                vector<GameObject*> listToDestroy;
+                for ( GameObject* pObj : listAllObject )
+                {
+                    if ( pObj != nullptr && uniqueSnapIDs.find( pObj->getObjectID() ) == uniqueSnapIDs.end() )
+                        listToDestroy.push_back( pObj );
+                }
+                for ( GameObject* pObj : listToDestroy )
+                {
+                    objects.destroyObject( pObj );
+                }
+            }
+
+            /**
+             * @brief 되돌리기 2 단계: 기존 오브젝트의 상태를 복구하고 삭제된 오브젝트를 원래 id 로 다시 만듭니다.
+             * @details 계층은 @p inoutBatch 에 모아 두고 부르는 쪽이 모두 읽은 뒤 한꺼번에 연결합니다.
+             */
+            static void restoreSnapshotObjects( const PlaySessionData& data, Scene* pScene, GameObjectManager& objects, ObjectStateBatch& inoutBatch )
+            {
+                for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
+                {
+                    GameObject* pObj = objects.findGameObjectByID( snap._identity._objectID );
+
+                    // 플레이 중에 사라진 오브젝트는 원래 id 로 복원한다. 플레이 전에 보관하던 핸들이 이어지게 하기 위해서다.
+                    if ( pObj == nullptr )
+                    {
+                        pObj = objects.createGameObjectWithID( hashed_string( snap._name.c_str() ), snap._identity._objectID );
+                        if ( pObj == nullptr )
+                        {
+                            SW_LOG_WARNING( "Failed to recreate '%#' from play snapshot.", snap._name.c_str() );
+                            continue;
+                        }
+                    }
+
+                    if ( snap._prefabPath.empty() == false && pScene != nullptr )
+                        pScene->setEntityPrefabPath( pObj->getObjectID(), snap._prefabPath );
+                    if ( snap._bNestedPart )
+                        objects.getSubsystem<PrefabInstanceRegistry>().restoreNestedPart( pObj->getObjectID(), snap._nestedPart );
+
+                    ObjectLoadContext context{ SerializePurpose::Snapshot };
+                    context._pIdentity = &snap._identity;
+                    context._pBatch    = &inoutBatch;
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), context ) == 0 )
+                        SW_LOG_WARNING( "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
+                }
+            }
+
             static void restorePlaySnapshot( PlaySessionData& data )
             {
                 if ( data._bHasSnapshot == SW_FALSE )
@@ -120,57 +179,11 @@ namespace sw::editor
                 }
 
                 // 1. 플레이 도중 생성된 오브젝트를 파괴한다
-                {
-                    unordered_set<uint64> uniqueSnapIDs;
-                    uniqueSnapIDs.reserve( data._listSnapshot.size() );
-                    for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
-                    {
-                        uniqueSnapIDs.insert( snap._identity._objectID );
-                    }
-
-                    vector<GameObject*> listAllObject;
-                    pObjects->getAllGameObjects( listAllObject );
-
-                    vector<GameObject*> listToDestroy;
-                    for ( GameObject* pObj : listAllObject )
-                    {
-                        if ( pObj != nullptr && uniqueSnapIDs.find( pObj->getObjectID() ) == uniqueSnapIDs.end() )
-                            listToDestroy.push_back( pObj );
-                    }
-                    for ( GameObject* pObj : listToDestroy )
-                    {
-                        pObjects->destroyObject( pObj );
-                    }
-                }
+                destroySpawnedDuringPlay( data, *pObjects );
 
                 // 2. 기존 오브젝트의 상태를 복구하고 삭제된 오브젝트를 다시 만든다. 계층은 모두 읽은 뒤 한꺼번에 연결한다(아래 3).
                 ObjectStateBatch batch( ObjectIDSpace::Live );
-                for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
-                {
-                    GameObject* pObj = pObjects->findGameObjectByID( snap._identity._objectID );
-
-                    // 플레이 중에 사라진 오브젝트는 원래 id 로 복원한다. 플레이 전에 보관하던 핸들이 이어지게 하기 위해서다.
-                    if ( pObj == nullptr )
-                    {
-                        pObj = pObjects->createGameObjectWithID( hashed_string( snap._name.c_str() ), snap._identity._objectID );
-                        if ( pObj == nullptr )
-                        {
-                            SW_LOG_WARNING( "Failed to recreate '%#' from play snapshot.", snap._name.c_str() );
-                            continue;
-                        }
-                    }
-
-                    if ( snap._prefabPath.empty() == false && pScene != nullptr )
-                        pScene->setEntityPrefabPath( pObj->getObjectID(), snap._prefabPath );
-                    if ( snap._bNestedPart )
-                        pObjects->getSubsystem<PrefabInstanceRegistry>().restoreNestedPart( pObj->getObjectID(), snap._nestedPart );
-
-                    ObjectLoadContext context{ SerializePurpose::Snapshot };
-                    context._pIdentity = &snap._identity;
-                    context._pBatch    = &batch;
-                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, snap._bytes.data(), snap._bytes.size(), context ) == 0 )
-                        SW_LOG_WARNING( "Failed to restore '%#' from binary play snapshot.", snap._name.c_str() );
-                }
+                restoreSnapshotObjects( data, pScene, *pObjects, batch );
 
                 // 3. 계층을 다시 연결한다. 모두 읽은 뒤에 부모의 원래 id 로 연결해야 한다. 읽으면서 바로 연결하면, 플레이 중에 부모도 지워졌고 자식이
                 // 스냅샷에서 먼저 나올 때 부모가 아직 없어 루트로 남는다. 이름으로 찾으면 플레이 중에 이름을 바꾼 오브젝트(A 가 B 의

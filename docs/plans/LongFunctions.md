@@ -28,7 +28,7 @@
 |---|---|---|---|---|---|
 | L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
 
-L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다). 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
+L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 끝난 영역: `Source/Editor/Viewport`(2026-10-18 — 페이스 버튼 표, 기즈모 설정 · 단일 조작, 바 손잡이를 단계 함수로. 격자 `drawAdaptiveGrid` 는 람다를 옮기면 숫자 색 리터럴이 새 줄로 잡혀, 테마 토큰 작업(editorux) 때 함께 나눈다), `Source/Editor/Common`(2026-10-21 — 12 개 모두 100 줄 아래. 텍스처 임포트의 밉 · 압축을 HDR 경로와 한 함수로, 원문 테이블 대응 만들기를 한 함수로 합치고 나머지는 단계 함수로). 영역을 맡기 전에 3절 목록을 같은 명령으로 다시 뽑습니다.
 
 ## 3. 목록
 
@@ -55,9 +55,6 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 
 | `Source/Engine/Input` | 13 | `InputMap::loadFromResource` (`Map/InputMapSerialization.cpp:436`) 340 · 5 · 5 · 252 | 3(람다를 단계 함수로) |
 |  |  | `InputKeyTable::mapWin32VirtualKey` (`Windows/InputKeyTableWin32.cpp:188`) 302 · 2 · 75 · 0 | 유지(switch 디스패처) |
 |  |  | `InputKeyTable::mapX11KeySym` (`Linux/InputKeyTableX11.cpp:13`) 252 · 1 · 105 · 0 | 유지(switch 디스패처) |
-| `Source/Editor/Common` | 12 | `VrmMaterialImporter::readVrm0Material` (`Asset/VrmMaterialImporter.cpp:290`) 220 · 3 · 16 · 7 | 2 · 3 |
-|  |  | `ImGuiVulkanRendererBackend::initialize` (`Backend/Render/ImGuiVulkanRendererBackend.cpp:83`) 123 · 3 · 7 · 38 | 3 |
-|  |  | `LocalizationTools::gatherProject` (`Localization/LocalizationTools.cpp:411`) 116 · 3 · 3 · 0 | 3 |
 | `Source/Engine/Destruction` | 9 | `simplifyCaps` (`MeshFracture.cpp:606`) 272 · 5 · 3 · 2 | 4 |
 |  |  | `MeshFractureUtil::fracture` (`MeshFracture.cpp:1223`) 233 · 5 · 5 · 17 | 4 |
 |  |  | `PolygonFractureUtil::fracture` (`PolygonFracture.cpp:180`) 199 · 3 · 4 · 0 | 3 |
