@@ -281,10 +281,10 @@ namespace sw::editor
     {
         if ( _pMultiEditCurrent == nullptr )
             return false;
-        vector<const void*> listInstance;
+        vector<ObjectAddress> listInstance;
         for ( const Component* pComponent : _pMultiEditCurrent->_listComponent )
         {
-            listInstance.push_back( pComponent );
+            listInstance.push_back( ObjectAddress{ pComponent } );
         }
         return EditorMultiEditUtil::hasMixedValues( prop, listInstance );
     }

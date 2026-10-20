@@ -29,7 +29,7 @@ namespace sw::editor
                 uint32 writtenCount{ 0 };
                 for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
                 {
-                    if ( EditorPreferencesStore::isPropertyModified( prop, pCurrent, pDefault ) == false )
+                    if ( EditorPreferencesStore::isPropertyModified( prop, ObjectAddress{ pCurrent }, ObjectAddress{ pDefault } ) == false )
                         continue;
                     object.set( prop._name.c_str() ).setString( SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCurrent }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
                     ++writtenCount;
@@ -248,10 +248,10 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorPreferencesStore::isPropertyModified( const PropertyInfo& prop, const void* pCurrent, const void* pDefault )
+    bool EditorPreferencesStore::isPropertyModified( const PropertyInfo& prop, const ObjectAddress current, const ObjectAddress defaultInstance )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        return SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCurrent }, context ) != SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefault }, context );
+        return SerializerUtil::formatPropertyText( prop, current, context ) != SerializerUtil::formatPropertyText( prop, defaultInstance, context );
     }
 
     void EditorPreferencesStore::resetSection( const EditorSettingsRegistration& registration )

@@ -207,7 +207,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange
     height._metadata->_bHasUIMinRange = SW_TRUE;
     height._metadata->_bHasUIMaxRange = SW_TRUE;
 
-    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( height, nullptr );
+    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( height, ObjectAddress{ nullptr } );
     SW_EXPECT_TRUE( range._bSlider );
     SW_EXPECT_NEAR_EQUAL( 50.0, range._widgetMin, 1e-9 );
     SW_EXPECT_NEAR_EQUAL( 250.0, range._widgetMax, 1e-9 );
@@ -222,17 +222,17 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange
     ratio._metadata->_maxRange     = 1.0f;
     ratio._metadata->_bHasMinRange = SW_TRUE;
     ratio._metadata->_bHasMaxRange = SW_TRUE;
-    InspectorNumericRange plain    = InspectorPropertyLayout::getNumericRange( ratio, nullptr );
+    InspectorNumericRange plain    = InspectorPropertyLayout::getNumericRange( ratio, ObjectAddress{ nullptr } );
     SW_EXPECT_FALSE( plain._bSlider );
     SW_EXPECT_NEAR_EQUAL( 1.0, plain._widgetMax, 1e-9 );
     ratio._metadata->_mapCustomMeta[hashed_string( "Slider" )] = "1";
-    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( ratio, nullptr )._bSlider );
+    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( ratio, ObjectAddress{ nullptr } )._bSlider );
 
     // 한쪽만 적은 범위는 그쪽만 막는다
     PropertyInfo lowOnly;
     lowOnly._metadata->_minRange     = 1.0f;
     lowOnly._metadata->_bHasMinRange = SW_TRUE;
-    const InspectorNumericRange low  = InspectorPropertyLayout::getNumericRange( lowOnly, nullptr );
+    const InspectorNumericRange low  = InspectorPropertyLayout::getNumericRange( lowOnly, ObjectAddress{ nullptr } );
     SW_EXPECT_FALSE( low._bHasWidgetMax );
     SW_EXPECT_NEAR_EQUAL( 99999.0, InspectorPropertyLayout::clampToAllowedRange( low, 99999.0 ), 1e-9 );
 }
@@ -255,7 +255,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, FieldNamedRangeFollowsTheInstance )
     };
 
     FieldBoundSample            sample;
-    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( offset, &sample );
+    const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( offset, ObjectAddress{ &sample } );
     SW_EXPECT_TRUE( range._bHasClampMin && range._bHasClampMax );
     SW_EXPECT_NEAR_EQUAL( -10.0, range._clampMin, 1e-9 );
     SW_EXPECT_NEAR_EQUAL( 10.0, range._clampMax, 1e-9 );
@@ -265,11 +265,11 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, FieldNamedRangeFollowsTheInstance )
     // 두 경계가 다 있으니 `Meta = "Slider"` 면 슬라이더다(숫자 범위와 같은 규칙).
     SW_EXPECT_FALSE( range._bSlider );
     offset._metadata->_mapCustomMeta[hashed_string( "Slider" )] = "1";
-    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( offset, &sample )._bSlider );
+    SW_EXPECT_TRUE( InspectorPropertyLayout::getNumericRange( offset, ObjectAddress{ &sample } )._bSlider );
 
     // 범위 필드가 바뀌면 다음 그리기의 범위도 바뀐다.
     sample._halfSize                   = 2.5f;
-    const InspectorNumericRange shrunk = InspectorPropertyLayout::getNumericRange( offset, &sample );
+    const InspectorNumericRange shrunk = InspectorPropertyLayout::getNumericRange( offset, ObjectAddress{ &sample } );
     SW_EXPECT_NEAR_EQUAL( -2.5, shrunk._clampMin, 1e-9 );
     SW_EXPECT_NEAR_EQUAL( 2.5, InspectorPropertyLayout::clampToAllowedRange( shrunk, 7.0 ), 1e-9 );
 }

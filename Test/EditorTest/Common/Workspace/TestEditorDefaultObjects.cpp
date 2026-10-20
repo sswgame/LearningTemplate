@@ -28,15 +28,15 @@ SW_TEST_CASE( EditorDefaultObjectsTest, DefaultInstanceAndMetadataComparison )
     CameraComponent*    pCamera   = pObject->addComponent<CameraComponent>();
     const PropertyInfo* pPriority = CameraComponent::StaticType()->findPropertyInHierarchy( hashed_string( "_priority" ) );
     SW_ASSERT_TRUE( pCamera != nullptr && pPriority != nullptr );
-    SW_EXPECT_TRUE( EditorDefaultObjects::isDefaultValue( *pPriority, pCamera, pDefault ) );
+    SW_EXPECT_TRUE( EditorDefaultObjects::isDefaultValue( *pPriority, ObjectAddress{ pCamera }, ObjectAddress{ pDefault } ) );
     *pPriority->getValuePtr<int32>( pCamera ) = 4;
-    SW_EXPECT_FALSE( EditorDefaultObjects::isDefaultValue( *pPriority, pCamera, pDefault ) );
+    SW_EXPECT_FALSE( EditorDefaultObjects::isDefaultValue( *pPriority, ObjectAddress{ pCamera }, ObjectAddress{ pDefault } ) );
 
     PropertyInfo metaOnly             = *pPriority;
     metaOnly._metadata->_defaultValue = "4.0";
-    SW_EXPECT_TRUE( EditorDefaultObjects::isDefaultValue( metaOnly, pCamera, nullptr ) );
+    SW_EXPECT_TRUE( EditorDefaultObjects::isDefaultValue( metaOnly, ObjectAddress{ pCamera }, ObjectAddress{ nullptr } ) );
     metaOnly._metadata->_defaultValue = "";
-    SW_EXPECT_TRUE( EditorDefaultObjects::isDefaultValue( metaOnly, pCamera, nullptr ) ); // 기본을 모르면 차이도 없다
+    SW_EXPECT_TRUE( EditorDefaultObjects::isDefaultValue( metaOnly, ObjectAddress{ pCamera }, ObjectAddress{ nullptr } ) ); // 기본을 모르면 차이도 없다
 
     defaults.clear();
     SW_EXPECT_TRUE( defaults.findDefault( *CameraComponent::StaticType() ) != nullptr );

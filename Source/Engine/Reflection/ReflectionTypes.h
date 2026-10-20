@@ -13,6 +13,7 @@
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/TextAddress.h"
 
 namespace sw
 {
@@ -148,7 +149,7 @@ namespace sw
     /// @brief 프로퍼티 하나의 리플렉션 정보입니다. 오프셋, 타입, 별칭, 컨테이너 래퍼를 담습니다.
     struct SW_API PropertyInfo
     {
-        using PropertyBindingDelegate = Delegate<void( const PropertyInfo& prop, const void* pInstance )>;
+        using PropertyBindingDelegate = Delegate<void( const PropertyInfo& prop, ObjectAddress instance )>;
         /**
          * @brief 값이 객체 **밖**에 있는 프로퍼티의 값 주소를 반환하는 함수입니다. 참조를 반환하는 메서드에 `PROPERTY` 를 붙이면 생성됩니다.
          * @details 인자는 오프셋의 기준이 되는 객체 주소(`getRawPtr` 의 인자와 같다)이고, 반환값은 그 인스턴스의 값 주소다.
@@ -327,7 +328,7 @@ namespace sw
                 }
 
                 if ( _onPropertyBoundChanged.isBound() )
-                    _onPropertyBoundChanged( *this, pInstance );
+                    _onPropertyBoundChanged( *this, ObjectAddress{ pInstance } );
                 return;
             }
 
@@ -348,7 +349,7 @@ namespace sw
             }
 
             if ( _onPropertyBoundChanged.isBound() )
-                _onPropertyBoundChanged( *this, pInstance );
+                _onPropertyBoundChanged( *this, ObjectAddress{ pInstance } );
         }
 
         /** @brief 프로퍼티 값의 포인터입니다. 비트필드는 nullptr 입니다. 위치는 `getRawPtr` 가 정합니다. */

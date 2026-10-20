@@ -32,10 +32,10 @@ SW_TEST_CASE( ReflectionBindingTest, BiDirectionalPropertyBinding )
     sw::PropertyInfo prop( sw::hashed_string( "score" ), sw::hashed_string( "uint32" ), SW_OFFSET_OF( TestBindingActor, _score ) );
 
     bool bCalled{ false };
-    prop.bindOnChanged( SW_DELEGATE_LAMBDA( sw::PropertyInfo::PropertyBindingDelegate, [&bCalled]( const sw::PropertyInfo& p, const void* pInst )
+    prop.bindOnChanged( SW_DELEGATE_LAMBDA( sw::PropertyInfo::PropertyBindingDelegate, [&bCalled]( const sw::PropertyInfo& p, const sw::ObjectAddress inst )
     {
         (void)p;
-        (void)pInst;
+        (void)inst;
         bCalled = true;
     } ) );
 

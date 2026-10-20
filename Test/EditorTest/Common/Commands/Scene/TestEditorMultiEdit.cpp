@@ -39,11 +39,11 @@ SW_TEST_CASE( EditorMultiEditTest, CommonComponentsMixedValuesAndCopy )
     SW_ASSERT_TRUE( pPriority != nullptr );
     *pPriority->getValuePtr<int32>( pFirstCamera )  = 3;
     *pPriority->getValuePtr<int32>( pSecondCamera ) = 1;
-    SW_EXPECT_TRUE( EditorMultiEditUtil::hasMixedValues( *pPriority, { pFirstCamera, pSecondCamera } ) );
+    SW_EXPECT_TRUE( EditorMultiEditUtil::hasMixedValues( *pPriority, { ObjectAddress{ pFirstCamera }, ObjectAddress{ pSecondCamera } } ) );
 
     SW_EXPECT_EQUAL( 1u, EditorMultiEditUtil::copyPropertyToOthers( *pPriority, listCommon[0]._listComponent ) );
     SW_EXPECT_EQUAL( 3, *pPriority->getValuePtr<int32>( pSecondCamera ) );
-    SW_EXPECT_FALSE( EditorMultiEditUtil::hasMixedValues( *pPriority, { pFirstCamera, pSecondCamera } ) );
+    SW_EXPECT_FALSE( EditorMultiEditUtil::hasMixedValues( *pPriority, { ObjectAddress{ pFirstCamera }, ObjectAddress{ pSecondCamera } } ) );
     if ( pScale != nullptr )
-        SW_EXPECT_FALSE( EditorMultiEditUtil::hasMixedValues( *pScale, { pFirstCamera, pSecondCamera } ) );
+        SW_EXPECT_FALSE( EditorMultiEditUtil::hasMixedValues( *pScale, { ObjectAddress{ pFirstCamera }, ObjectAddress{ pSecondCamera } } ) );
 }

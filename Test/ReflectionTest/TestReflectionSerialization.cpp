@@ -3,6 +3,7 @@
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/PropertyEditCondition.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -3850,6 +3851,12 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueAddressTextDoesNotAddPropertyOff
     static_assert( std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, sw::MutableObjectAddress, sw::ValueAddress, sw::ValueAddress, float32> );
     static_assert( !std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, sw::MutableValueAddress, sw::ValueAddress, sw::ValueAddress, float32> );
     static_assert( !std::is_invocable_v<InterpolateFn, const sw::PropertyInfo&, void*, const void*, const void*, float32> );
+    // 인스펙터의 EditCondition 판정도 프로퍼티를 가진 객체를 받는다(에디터 쪽 `IInspectorProperty::draw` · `EditorPropertyGrid` 와 같은 주소 형식).
+    using EditStateFn = decltype( &sw::PropertyEditCondition::getEditState );
+    static_assert( std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::ObjectAddress> );
+    static_assert( std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::MutableObjectAddress> );
+    static_assert( !std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, sw::ValueAddress> );
+    static_assert( !std::is_invocable_v<EditStateFn, const sw::TypeInfo&, const sw::PropertyInfo&, const void*> );
 
     sw::BitfieldTestActor actor;
     actor._score = 42;

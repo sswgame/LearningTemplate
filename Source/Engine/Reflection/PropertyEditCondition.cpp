@@ -14,15 +14,15 @@ namespace sw
     namespace
     {
         /** @brief 보는 프로퍼티의 값을 정수로 읽습니다(bool · 비트필드 · 정수 · 열거형). 읽을 수 없는 타입이면 false 입니다. */
-        [[nodiscard]] bool readSubjectValue( const PropertyEditConditionExpr& expr, const void* pInstance, int64& outValue )
+        [[nodiscard]] bool readSubjectValue( const PropertyEditConditionExpr& expr, const ObjectAddress instance, int64& outValue )
         {
             const PropertyInfo& subject = *expr._pSubject;
             if ( subject._bIsBitField == SW_TRUE )
             {
-                outValue = subject.getValue<bool>( pInstance ) ? 1 : 0;
+                outValue = subject.getValue<bool>( instance.get() ) ? 1 : 0;
                 return true;
             }
-            const void* pValue = subject.getRawPtr( pInstance );
+            const void* pValue = subject.getRawPtr( instance.get() );
             if ( expr._pEnum != nullptr )
             {
                 outValue = expr._pEnum->readValueFromMemory( pValue );
@@ -118,30 +118,30 @@ namespace sw
 #endif
     }
 
-    bool PropertyEditCondition::evaluate( const PropertyEditConditionExpr& expr, const void* pInstance )
+    bool PropertyEditCondition::evaluate( const PropertyEditConditionExpr& expr, const ObjectAddress instance )
     {
-        if ( expr._pSubject == nullptr || pInstance == nullptr )
+        if ( expr._pSubject == nullptr || instance.get() == nullptr )
             return true;
         int64 value{ 0 };
-        if ( readSubjectValue( expr, pInstance, value ) == false )
+        if ( readSubjectValue( expr, instance, value ) == false )
             return true;
         const bool bHolds = expr._bCompare ? ( value == expr._compareValue ) : ( value != 0 );
         return expr._bNegate ? ( bHolds == false ) : bHolds;
     }
 
-    PropertyEditState PropertyEditCondition::getEditState( const TypeInfo& type, const PropertyInfo& prop, const void* pInstance )
+    PropertyEditState PropertyEditCondition::getEditState( const TypeInfo& type, const PropertyInfo& prop, const ObjectAddress instance )
     {
 #if defined( SW_SHIPPING )
         (void)type;
         (void)prop;
-        (void)pInstance;
+        (void)instance;
         return PropertyEditState::Enabled;
 #else
         if ( prop._metadata->_editCondition.empty() )
             return PropertyEditState::Enabled;
         PropertyEditConditionExpr expr;
         string                    error;
-        if ( parse( type, prop, expr, error ) == false || evaluate( expr, pInstance ) )
+        if ( parse( type, prop, expr, error ) == false || evaluate( expr, instance ) )
             return PropertyEditState::Enabled;
         return prop._metadata->_bEditConditionHides == SW_TRUE ? PropertyEditState::Hidden : PropertyEditState::Disabled;
 #endif

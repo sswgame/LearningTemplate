@@ -341,10 +341,10 @@ namespace sw
              *          쌓인 orphan 을 지우고 칸 원문 하나로 바꾼다(바이너리 · JSON 이 칸 페이로드 하나를 orphan 으로 남기는 것과 같다).
              * @return 되돌리지 못하거나(소유 포인터 목록, 코덱 결함) 칸 원문을 읽지 못하면 오류를 남기고 false 입니다. 부른 쪽은 객체째 실패한다.
              */
-            [[nodiscard]] static bool restoreContainerField( const PropertyReadRollback& rollback, const PropertyInfo& prop, void* pInstance, IXMLBackend& backend,
+            [[nodiscard]] static bool restoreContainerField( const PropertyReadRollback& rollback, const PropertyInfo& prop, const MutableObjectAddress instance, IXMLBackend& backend,
                                                              const SerializeContext& context, size_t orphanCountBefore, vector<SchemaOrphanValue>& outListOrphan )
             {
-                if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
+                if ( rollback.restoreValueBeforeRead( instance, context ) == false )
                     return false;
                 string fieldXML;
                 if ( backend.readCurrentNodeXML( fieldXML ) == false )
@@ -419,7 +419,7 @@ namespace sw
                                     {
                                         bFieldError = true;
                                         if ( bContinuesAfterUnreadable )
-                                            bObjectFailed = restoreContainerField( rollback, prop, pInstance, backend, context, orphanCountBefore, *pOutListOrphan ) == false;
+                                            bObjectFailed = restoreContainerField( rollback, prop, instance, backend, context, orphanCountBefore, *pOutListOrphan ) == false;
                                         break;
                                     }
                                     case FieldReadResult::ObjectRejected:
