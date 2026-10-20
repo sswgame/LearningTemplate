@@ -53,6 +53,8 @@ namespace sw::editor
         bool               isToolPanel() const override { return true; }
         [[nodiscard]] bool saveDocument() override;
         void               revertDocument() override;
+        /** @brief 값은 전역 변수 관리자에 바로 적용되어 있어 창을 닫아도 잃는 것이 없다 — 닫기에 확인을 두면 저장하거나 값을 초기화하지 않고는 창을 숨길 수 없다. */
+        bool asksBeforeClose() const override { return false; }
 
     private:
         /** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */

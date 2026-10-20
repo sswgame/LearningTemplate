@@ -133,14 +133,3 @@ SW_TEST_CASE( EditorPrefabIsolationTest, MainSceneIsNeverTouched )
     SW_EXPECT_FALSE( isolation.isActive() );
     SW_EXPECT_TRUE( pMainObject->isActive() );
 }
-
-/**
- * @brief [EditorPrefabIsolationTest] 문서 패널을 X 로 닫을 때 편집이 남았거나 확인 중이면 묻고, 깨끗하면 그냥 닫는다
- */
-SW_TEST_CASE( EditorPrefabIsolationTest, CloseAsksOnlyWhenEditsRemain )
-{
-    SW_EXPECT_TRUE( EditorDocumentPanel::shouldAskBeforeClosing( false, true, false ) );   // X + 미저장
-    SW_EXPECT_TRUE( EditorDocumentPanel::shouldAskBeforeClosing( true, true, true ) );     // 확인 중에는 열림을 되돌려 놓아도 계속 묻는다
-    SW_EXPECT_FALSE( EditorDocumentPanel::shouldAskBeforeClosing( false, false, false ) ); // X + 깨끗
-    SW_EXPECT_FALSE( EditorDocumentPanel::shouldAskBeforeClosing( true, true, false ) );   // 열려 있을 뿐
-}

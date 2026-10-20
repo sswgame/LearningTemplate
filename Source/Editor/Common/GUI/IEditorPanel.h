@@ -8,6 +8,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 namespace sw
 {
@@ -110,12 +111,65 @@ namespace sw::editor
 
         // ------------------------------------------------------------------------------
         // 4) 열림 상태. ImGui Begin 의 p_open
+        //    **닫는 길은 하나다 — `requestClose`.** X 도, 패널 메뉴 토글도, 프리팹 창의 Close 단추도, 레이아웃 불러오기도, 최대화도 이것을 거친다.
+        //    미저장 편집이 있으면 닫지 않고 Save / Don't Save / Cancel 확인을 기다린다. 길마다 확인을 손으로 부르게 두면 새 길이 확인을 빼먹는다.
         // ------------------------------------------------------------------------------
-        /** @brief 패널이 열려 있으면 true 입니다. */
+        /** @brief 패널이 열려 있으면 true 입니다. 닫기 확인을 기다리는 동안에도 true 입니다. */
         bool isOpen() const { return _bOpen; }
-        /** @brief 패널의 열림 상태를 설정합니다. */
-        void setOpen( bool open ) { _bOpen = open; }
-        /** @brief ImGui 에 넘길 열림 상태 포인터를 반환합니다. */
+        /**
+         * @brief true 면 엽니다. false 면 `requestClose` 입니다 — 미저장 편집이 있으면 바로 닫히지 않으므로 부른 뒤에 `isOpen()` 이 true 일 수 있습니다.
+         * @details 확인 없이 닫는 입구는 없다. 편집을 버리고 닫으려면 `applyCloseChoice( EditorUnsavedChoice::Discard )` 로 명시한다.
+         */
+        void setOpen( bool open )
+        {
+            if ( open )
+                _bOpen = true;
+            else
+                requestClose();
+        }
+        /**
+         * @brief 패널을 닫으려 합니다. 깨끗하면(또는 `asksBeforeClose` 가 false 면) 바로 닫고, 미저장 편집이 있으면 열어 둔 채 확인을 기다립니다.
+         * @details 이미 닫힌 패널이면 아무 일도 하지 않는다 — 그려지지 않는 패널이 확인을 쥔 채 남지 않게 한다.
+         */
+        void requestClose()
+        {
+            if ( _bOpen == false )
+                return;
+            if ( _bDocumentDirty && asksBeforeClose() )
+                _bConfirmClose = true;
+            else
+                _bOpen = false;
+        }
+        /** @brief 닫기 확인(Save / Don't Save / Cancel)을 기다리는 중이면 true 입니다. */
+        bool isCloseConfirmPending() const { return _bConfirmClose; }
+        /**
+         * @brief 닫기 확인에서 고른 항목을 적용합니다. 선택이 없으면 아무 일도 하지 않습니다.
+         * @details Save 는 저장에 성공해야 닫는다(실패하면 열어 두어 편집을 지키고 확인도 끝낸다). Don't Save 는 `revertDocument` 로 편집을 버린 뒤 닫고, Cancel 은 열어 둔다.
+         */
+        void applyCloseChoice( EditorUnsavedChoice choice )
+        {
+            if ( choice == EditorUnsavedChoice::None )
+                return;
+            _bConfirmClose = false;
+            if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) && saveDocumentAndClearDirty() == false )
+                return;
+            if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
+                discardDirtyDocument();
+            if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
+                _bOpen = false;
+        }
+        /**
+         * @brief ImGui 가 X 로 내린 열림 표시를 닫기 요청으로 바꿉니다. `draw()` 가 창을 연 직후 부릅니다.
+         * @details ImGui 는 X 를 누르면 그 프레임에 `p_open` 만 내린다. 그대로 두면 미저장 편집이 확인 없이 닫힌다.
+         */
+        void absorbCloseButton()
+        {
+            if ( _bOpen )
+                return;
+            _bOpen = true;
+            requestClose();
+        }
+        /** @brief ImGui 에 넘길 열림 상태 포인터를 반환합니다. X 가 내린 값은 `absorbCloseButton` 이 받습니다. */
         bool* getOpenFlagAddress() { return &_bOpen; }
 
     protected:
@@ -124,8 +178,21 @@ namespace sw::editor
             : _bOpen{ bOpenByDefault }
             , _bWindowFocused{ false }
             , _bDocumentDirty{ false }
+            , _bConfirmClose{ false }
         {
         }
+
+        /**
+         * @brief 닫을 때 미저장 편집을 확인해야 하면 true 입니다. 기본은 true 입니다.
+         * @details 편집이 패널 밖(전역 변수 관리자처럼 바로 적용되는 곳)에 살아 있어서 패널을 닫아도 아무것도 잃지 않는 패널만 false 로 재정의한다.
+         *          그런 패널에 확인을 두면 "저장하거나 값을 초기화하거나" 말고는 창을 숨길 수 없다.
+         */
+        virtual bool asksBeforeClose() const { return true; }
+        /**
+         * @brief 닫기 확인과 제목의 미저장 표시보다 앞서 부릅니다(`draw()` 마다, 패널이 접혀 있어도). 편집을 패널 바깥의 기록(미리보기 씬의 Undo 스택 등)에서 읽는 패널이
+         *        여기서 `markDocumentDirty` 를 해, 편집한 바로 다음 프레임에 X 를 눌러도 확인을 건너뛰지 않게 합니다. 기본은 아무 일도 하지 않습니다.
+         */
+        virtual void syncDocumentDirty() {}
 
         /** @brief 패널 본문을 그립니다. Begin 과 End 는 draw() 가 처리합니다. */
         virtual void drawContent() = 0;
@@ -160,8 +227,12 @@ namespace sw::editor
         virtual void revertDocument() {}
 
     private:
+        /** @brief 닫기 확인 모달을 그리고 고른 항목을 적용합니다. */
+        void drawCloseConfirm();
+
         bool _bOpen;
         bool _bWindowFocused;
         bool _bDocumentDirty;
+        bool _bConfirmClose; ///< 닫으려다 미저장 확인을 기다리는 중
     };
 } // namespace sw::editor
