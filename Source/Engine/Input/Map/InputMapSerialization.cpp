@@ -253,7 +253,6 @@ namespace sw
 
             /** @brief 슬롯 하나짜리 바인딩을 `<bind>` 로 씁니다. 키보드 · 마우스 · 게임패드 밖의 장치면 오류를 남기고 false 를 반환합니다. */
             [[nodiscard]] static bool writeSingleSlotDefinition( XMLNode actionNode, const utf8* pActionName, const ActionBinding& binding, const utf8* pTriggerName )
-                [[nodiscard]] static bool writeSingleSlotDefinition( XMLNode actionNode, const utf8* pActionName, const ActionBinding& binding, const utf8* pTriggerName )
             {
                 const InputSlot& slot     = binding._arrSlot[0];
                 XMLNode          bindNode = actionNode.appendChild( InputMapXML::kBind );
