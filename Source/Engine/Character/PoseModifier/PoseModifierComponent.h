@@ -152,8 +152,18 @@ namespace sw
 
         /** @brief 유닛, 에셋, 대상을 다시 바인딩합니다(게임 스레드). */
         void bindRig();
+        /** @brief 소켓 · 본 대상이 가리키는 유닛과 본(소켓이면 부모 본과 소켓 로컬)입니다. */
+        struct SocketTargetResolution
+        {
+            SkeletalMeshComponent* _pTargetUnit{ nullptr };
+            hashed_string          _boneName{};
+            BoneTransform          _socketLocal{};
+            bool                   _bSocketRoot{ false };
+        };
         /** @brief 바깥 대상을 오브젝트와 유닛에 연결하고 의존을 등록합니다. */
         void bindExternalTargets();
+        /** @brief 유닛 · 소켓 대상이 가리키는 유닛과 본을 찾습니다. 소켓이 없으면 오류를 남기고 false 이며, 아직 유닛이 없는 것은 true 로 두고 `_pTargetUnit` 이 null 입니다. */
+        [[nodiscard]] bool resolveSocketTarget( const RigTargetDef& def, string_view label, SocketTargetResolution& outResolved ) const;
         /** @brief 묶을 때 건 의존을 뗍니다. */
         void releaseDependencies();
         /** @brief 이름의 유닛(명시 → 자식 → 매니저)입니다. */

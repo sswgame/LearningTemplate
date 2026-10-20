@@ -434,6 +434,53 @@ namespace sw
         return false;
     }
 
+    bool PoseModifierComponent::resolveSocketTarget( const RigTargetDef& def, string_view label, SocketTargetResolution& outResolved ) const
+    {
+        SkeletalMeshComponent*      pTargetUnit = nullptr;
+        shared_ptr<const SocketSet> sockets;
+        hashed_string               boneName = def._bone;
+        BoneTransform               socketLocal{};
+        bool                        bSocketRoot = false;
+        if ( def._unit.empty() == false )
+        {
+            pTargetUnit = findUnitByName( def._unit, &sockets );
+            if ( pTargetUnit != nullptr && def._kind == RigTargetKind::Socket )
+            {
+                const SocketDef* pDef = ( sockets != nullptr ) ? sockets->findSocket( def._socket ) : nullptr;
+                if ( pDef == nullptr )
+                {
+                    SW_LOG_ERROR( "Rig '%#': target '%#' names socket '%#' but unit '%#' has no such socket (bindUnit with its sockets)", label, def._name.c_str(),
+                                  def._socket.c_str(), def._unit.c_str() );
+                    return false;
+                }
+                boneName    = pDef->_parent;
+                socketLocal = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
+                bSocketRoot = boneName.empty();
+            }
+        }
+        else if ( _pSocketTable != nullptr )
+        {
+            const SocketID   socketID  = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
+            const SocketDef* pDef      = ( socketID != kInvalidSocketID ) ? _pSocketTable->findSocketDef( socketID ) : nullptr;
+            const uint32     unitIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketID ) : MathUtil::kMaxUInt32;
+            if ( unitIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
+                pTargetUnit = getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] );
+            if ( pDef != nullptr )
+            {
+                float4x4 local = pDef->makeLocalTransform();
+                (void)_pSocketTable->computeLocalTransform( socketID, local ); // 체형 보정을 더한다. 켜진 소켓이라 실패하지 않는다
+                boneName    = pDef->_parent;
+                socketLocal = BoneTransform::makeFromMatrix( local );
+                bSocketRoot = boneName.empty();
+            }
+        }
+        outResolved._pTargetUnit = pTargetUnit;
+        outResolved._boneName    = boneName;
+        outResolved._socketLocal = socketLocal;
+        outResolved._bSocketRoot = bSocketRoot;
+        return true;
+    }
+
     void PoseModifierComponent::bindExternalTargets()
     {
         if ( hasBegunPlay() == false )
@@ -471,44 +518,13 @@ namespace sw
             }
 
             // 다른 유닛의 본이나 소켓이다. 유닛 이름이 없으면 해석된 소켓 테이블의 다른 유닛 소켓이다.
-            SkeletalMeshComponent*      pTargetUnit = nullptr;
-            shared_ptr<const SocketSet> sockets;
-            hashed_string               boneName = def._bone;
-            BoneTransform               socketLocal{};
-            bool                        bSocketRoot = false;
-            if ( def._unit.empty() == false )
-            {
-                pTargetUnit = findUnitByName( def._unit, &sockets );
-                if ( pTargetUnit != nullptr && def._kind == RigTargetKind::Socket )
-                {
-                    const SocketDef* pDef = ( sockets != nullptr ) ? sockets->findSocket( def._socket ) : nullptr;
-                    if ( pDef == nullptr )
-                    {
-                        SW_LOG_ERROR( "Rig '%#': target '%#' names socket '%#' but unit '%#' has no such socket (bindUnit with its sockets)", label, def._name.c_str(),
-                                      def._socket.c_str(), def._unit.c_str() );
-                        continue;
-                    }
-                    boneName    = pDef->_parent;
-                    socketLocal = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
-                    bSocketRoot = boneName.empty();
-                }
-            }
-            else if ( _pSocketTable != nullptr )
-            {
-                const SocketID   socketID  = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
-                const SocketDef* pDef      = ( socketID != kInvalidSocketID ) ? _pSocketTable->findSocketDef( socketID ) : nullptr;
-                const uint32     unitIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketID ) : MathUtil::kMaxUInt32;
-                if ( unitIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
-                    pTargetUnit = getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] );
-                if ( pDef != nullptr )
-                {
-                    float4x4 local = pDef->makeLocalTransform();
-                    (void)_pSocketTable->computeLocalTransform( socketID, local ); // 체형 보정을 더한다. 켜진 소켓이라 실패하지 않는다
-                    boneName    = pDef->_parent;
-                    socketLocal = BoneTransform::makeFromMatrix( local );
-                    bSocketRoot = boneName.empty();
-                }
-            }
+            SocketTargetResolution resolved;
+            if ( resolveSocketTarget( def, label, resolved ) == false )
+                continue;
+            SkeletalMeshComponent* pTargetUnit = resolved._pTargetUnit;
+            const hashed_string&   boneName    = resolved._boneName;
+            const BoneTransform&   socketLocal = resolved._socketLocal;
+            const bool             bSocketRoot = resolved._bSocketRoot;
             if ( pTargetUnit == nullptr || pTargetUnit == _pUnit )
                 continue; // 아직 없다. bindUnit 이 다시 바인딩한다.
             external._unitBone = bSocketRoot ? -1 : pTargetUnit->getSkeleton().findBoneIndex( boneName );

@@ -83,6 +83,136 @@ namespace sw
                         state._listLayerSurface[layerIndex].build();
                 }
             }
+
+            /** @brief 부품마다 변위 누적을 비웁니다(반복의 시작). */
+            static void clearDisplacements( FitSolveState& state )
+            {
+                for ( FitPartState& part : state._listPart )
+                {
+                    std::fill( part._listDisplacement.begin(), part._listDisplacement.end(), float3::Zero );
+                    std::fill( part._listDisplacementCount.begin(), part._listDisplacementCount.end(), 0u );
+                }
+            }
+
+            /** @brief 쌓은 변위를 정점마다 평균해 한 번에 적용합니다(야코비). 움직인 정점이 있으면 true 입니다. */
+            [[nodiscard]] static bool applyDisplacements( FitSolveState& state )
+            {
+                bool bAnyMoved = false;
+                for ( FitPartState& part : state._listPart )
+                {
+                    for ( size_t vertex = 0; vertex < part._listPosition.size(); ++vertex )
+                    {
+                        const uint32 count = part._listDisplacementCount[vertex];
+                        if ( count == 0 )
+                            continue;
+                        const float3 displacement = part._listDisplacement[vertex] * ( 1.0f / static_cast<float32>( count ) );
+                        if ( displacement.getLengthSquared() <= 1.0e-14f )
+                            continue;
+                        part._listPosition[vertex] += displacement;
+                        part._bMoved = SW_TRUE;
+                        bAnyMoved    = true;
+                    }
+                }
+                return bAnyMoved;
+            }
+
+            /** @brief 손 보정 조각을 체형 모프 가중치만큼 적용합니다. */
+            static void applyCorrectives( const FitInput& input, FitSolveState& state )
+            {
+                for ( FitPartState& part : state._listPart )
+                {
+                    for ( const FitCorrectiveDef& corrective : part._pInput->_pFitData->getCorrectives() )
+                    {
+                        const float32 weight = findMorphWeight( input, corrective._morph );
+                        if ( weight == 0.0f )
+                            continue;
+                        for ( const FitCorrectiveDelta& delta : corrective._listDelta )
+                        {
+                            if ( delta._vertex >= part._listPosition.size() )
+                                continue;
+                            part._listPosition[delta._vertex] += delta._offset * weight;
+                            part._bMoved = SW_TRUE;
+                        }
+                    }
+                }
+            }
+
+            /** @brief 숨김 영역을 가진 바깥 부품이 안쪽 부품의 삼각형 중 꼭짓점이 모두 그 영역에 있는 것을 숨김으로 적습니다. */
+            static void markHiddenTriangles( const FitTables& tables, FitSolveState& state )
+            {
+                const uint32 partCount = static_cast<uint32>( state._listPart.size() );
+                for ( uint32 outer = 0; outer < partCount; ++outer )
+                {
+                    const vector<hashed_string>& listHiddenRegion = state._listPart[outer]._pInput->_pFitData->getHiddenRegions();
+                    if ( listHiddenRegion.empty() )
+                        continue;
+                    vector<uint16> listHiddenIndex;
+                    for ( const hashed_string& region : listHiddenRegion )
+                    {
+                        const int32 regionIndex = tables.findRegionIndex( region );
+                        if ( regionIndex >= 0 )
+                            listHiddenIndex.push_back( static_cast<uint16>( regionIndex ) );
+                    }
+                    for ( uint32 inner = 0; inner < partCount; ++inner )
+                    {
+                        if ( isInnerOuterPair( state, inner, outer ) == false )
+                            continue;
+                        FitPartState&             innerPart = state._listPart[inner];
+                        const AppearanceGeometry& geometry  = *innerPart._pInput->_pGeometry;
+                        for ( uint32 triangle = 0; triangle < geometry.getTriangleCount(); ++triangle )
+                        {
+                            bool bAllHidden = true;
+                            for ( uint32 corner = 0; corner < 3 && bAllHidden; ++corner )
+                            {
+                                const uint16 region = innerPart._listVertexRegion[geometry._listIndex[triangle * 3 + corner]];
+                                bAllHidden          = std::find( listHiddenIndex.begin(), listHiddenIndex.end(), region ) != listHiddenIndex.end();
+                            }
+                            if ( bAllHidden )
+                                innerPart._listHidden[triangle] = SW_TRUE;
+                        }
+                    }
+                }
+            }
+
+            /** @brief 부품 하나의 결과를 만듭니다. 덮였어도 덮이지 않은 삼각형과 정점을 나누면 남깁니다(경계 한 겹). */
+            static void extractPartResult( const FitPartState& part, FitPartResult& outResult )
+            {
+                const AppearanceGeometry& geometry = *part._pInput->_pGeometry;
+                outResult._name                    = part._pInput->_name;
+                outResult.initialize( geometry.getTriangleCount(), static_cast<uint32>( part._listPosition.size() ) );
+                for ( size_t vertex = 0; vertex < part._listPosition.size(); ++vertex )
+                {
+                    outResult._listVertexDelta[vertex] = part._listPosition[vertex] - part._listBindPosition[vertex];
+                }
+                vector<uint8> listTouchesUncovered( geometry.getVertexCount(), SW_FALSE );
+                for ( uint32 triangle = 0; triangle < outResult._triangleCount; ++triangle )
+                {
+                    if ( part._listCovered[triangle] == SW_TRUE )
+                        continue;
+                    for ( uint32 corner = 0; corner < 3; ++corner )
+                    {
+                        listTouchesUncovered[geometry._listIndex[triangle * 3 + corner]] = SW_TRUE;
+                    }
+                }
+                for ( uint32 triangle = 0; triangle < outResult._triangleCount; ++triangle )
+                {
+                    bool bCut = part._listHidden[triangle] == SW_TRUE;
+                    if ( bCut == false && part._listCovered[triangle] == SW_TRUE )
+                    {
+                        bCut = true;
+                        for ( uint32 corner = 0; corner < 3; ++corner )
+                        {
+                            if ( listTouchesUncovered[geometry._listIndex[triangle * 3 + corner]] == SW_TRUE )
+                                bCut = false;
+                        }
+                    }
+                    if ( bCut )
+                    {
+                        outResult.setTriangleVisible( triangle, false );
+                        ++outResult._cutTriangleCount;
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -250,6 +380,7 @@ namespace sw
         }
     }
 
+    // 변형 → 보정 → 덮임 → 검증 → 결과의 순서가 곧 의미인 단계 본문이다. 단계마다 하는 일은 FitSolverInternal 의 함수로 뺐다.
     bool FitSolver::solve( const FitTables& tables, const FitInput& input, FitResult& outResult ) const
     {
         outResult._listPart.clear();
@@ -272,131 +403,30 @@ namespace sw
         // 1) 변형: 야코비 방식이다. 쌍마다 변위를 쌓고 정점마다 평균을 한 번에 적용한다.
         for ( uint32 iteration = 0; iteration < _iterationCount; ++iteration )
         {
-            for ( FitPartState& part : state._listPart )
-            {
-                std::fill( part._listDisplacement.begin(), part._listDisplacement.end(), float3::Zero );
-                std::fill( part._listDisplacementCount.begin(), part._listDisplacementCount.end(), 0u );
-            }
+            FitSolverInternal::clearDisplacements( state );
             runPhase( FitPhase::Deform, tables, state );
-            bool bAnyMoved = false;
-            for ( FitPartState& part : state._listPart )
-            {
-                for ( size_t vertex = 0; vertex < part._listPosition.size(); ++vertex )
-                {
-                    const uint32 count = part._listDisplacementCount[vertex];
-                    if ( count == 0 )
-                        continue;
-                    const float3 displacement = part._listDisplacement[vertex] * ( 1.0f / static_cast<float32>( count ) );
-                    if ( displacement.getLengthSquared() <= 1.0e-14f )
-                        continue;
-                    part._listPosition[vertex] += displacement;
-                    part._bMoved = SW_TRUE;
-                    bAnyMoved    = true;
-                }
-            }
-            if ( bAnyMoved == false )
+            if ( FitSolverInternal::applyDisplacements( state ) == false )
                 break;
             FitSolverInternal::rebuildMovedSurfaces( state );
         }
 
         // 2) 손 보정 조각: 체형 모프 가중치만큼 적용한다.
-        for ( FitPartState& part : state._listPart )
-        {
-            for ( const FitCorrectiveDef& corrective : part._pInput->_pFitData->getCorrectives() )
-            {
-                const float32 weight = FitSolverInternal::findMorphWeight( input, corrective._morph );
-                if ( weight == 0.0f )
-                    continue;
-                for ( const FitCorrectiveDelta& delta : corrective._listDelta )
-                {
-                    if ( delta._vertex >= part._listPosition.size() )
-                        continue;
-                    part._listPosition[delta._vertex] += delta._offset * weight;
-                    part._bMoved = SW_TRUE;
-                }
-            }
-        }
+        FitSolverInternal::applyCorrectives( input, state );
         FitSolverInternal::rebuildMovedSurfaces( state );
 
         // 3) 덮임: 변형 뒤의 위치로 판정한다. 숨김 영역은 바깥 부품이 안쪽 부품에 적는다.
         runPhase( FitPhase::Coverage, tables, state );
-        const uint32 partCount = static_cast<uint32>( state._listPart.size() );
-        for ( uint32 outer = 0; outer < partCount; ++outer )
-        {
-            const vector<hashed_string>& listHiddenRegion = state._listPart[outer]._pInput->_pFitData->getHiddenRegions();
-            if ( listHiddenRegion.empty() )
-                continue;
-            vector<uint16> listHiddenIndex;
-            for ( const hashed_string& region : listHiddenRegion )
-            {
-                const int32 regionIndex = tables.findRegionIndex( region );
-                if ( regionIndex >= 0 )
-                    listHiddenIndex.push_back( static_cast<uint16>( regionIndex ) );
-            }
-            for ( uint32 inner = 0; inner < partCount; ++inner )
-            {
-                if ( FitSolverInternal::isInnerOuterPair( state, inner, outer ) == false )
-                    continue;
-                FitPartState&             innerPart = state._listPart[inner];
-                const AppearanceGeometry& geometry  = *innerPart._pInput->_pGeometry;
-                for ( uint32 triangle = 0; triangle < geometry.getTriangleCount(); ++triangle )
-                {
-                    bool bAllHidden = true;
-                    for ( uint32 corner = 0; corner < 3 && bAllHidden; ++corner )
-                    {
-                        const uint16 region = innerPart._listVertexRegion[geometry._listIndex[triangle * 3 + corner]];
-                        bAllHidden          = std::find( listHiddenIndex.begin(), listHiddenIndex.end(), region ) != listHiddenIndex.end();
-                    }
-                    if ( bAllHidden )
-                        innerPart._listHidden[triangle] = SW_TRUE;
-                }
-            }
-        }
+        FitSolverInternal::markHiddenTriangles( tables, state );
 
         // 4) 검증: 고치지 않고 보고만 한다.
         runPhase( FitPhase::Validate, tables, state );
 
-        // 5) 결과: 덮였어도 덮이지 않은 삼각형과 정점을 나누면 남긴다(경계 한 겹).
+        // 5) 결과
+        const uint32 partCount = static_cast<uint32>( state._listPart.size() );
         outResult._listPart.resize( partCount );
         for ( uint32 partIndex = 0; partIndex < partCount; ++partIndex )
         {
-            const FitPartState&       part     = state._listPart[partIndex];
-            const AppearanceGeometry& geometry = *part._pInput->_pGeometry;
-            FitPartResult&            result   = outResult._listPart[partIndex];
-            result._name                       = part._pInput->_name;
-            result.initialize( geometry.getTriangleCount(), static_cast<uint32>( part._listPosition.size() ) );
-            for ( size_t vertex = 0; vertex < part._listPosition.size(); ++vertex )
-            {
-                result._listVertexDelta[vertex] = part._listPosition[vertex] - part._listBindPosition[vertex];
-            }
-            vector<uint8> listTouchesUncovered( geometry.getVertexCount(), SW_FALSE );
-            for ( uint32 triangle = 0; triangle < result._triangleCount; ++triangle )
-            {
-                if ( part._listCovered[triangle] == SW_TRUE )
-                    continue;
-                for ( uint32 corner = 0; corner < 3; ++corner )
-                {
-                    listTouchesUncovered[geometry._listIndex[triangle * 3 + corner]] = SW_TRUE;
-                }
-            }
-            for ( uint32 triangle = 0; triangle < result._triangleCount; ++triangle )
-            {
-                bool bCut = part._listHidden[triangle] == SW_TRUE;
-                if ( bCut == false && part._listCovered[triangle] == SW_TRUE )
-                {
-                    bCut = true;
-                    for ( uint32 corner = 0; corner < 3; ++corner )
-                    {
-                        if ( listTouchesUncovered[geometry._listIndex[triangle * 3 + corner]] == SW_TRUE )
-                            bCut = false;
-                    }
-                }
-                if ( bCut )
-                {
-                    result.setTriangleVisible( triangle, false );
-                    ++result._cutTriangleCount;
-                }
-            }
+            FitSolverInternal::extractPartResult( state._listPart[partIndex], outResult._listPart[partIndex] );
         }
         return true;
     }

@@ -153,6 +153,18 @@ namespace sw
          * @details 통과한 역할은 `Waiting` 이고 클립 포인터와 길이를 읽어 두었습니다. `start` 와 `restore` 가 함께 씁니다.
          */
         [[nodiscard]] PairedAnimationStartResult bindParticipants( GameObjectManager& manager, const vector<PairedAnimationBinding>& listBinding );
+        /** @brief 바인딩을 역할에 묶습니다. 모르는 역할, 같은 역할 두 번, 같은 애니메이터 두 번은 부르는 쪽의 결함이라 `InvalidBinding` 입니다. */
+        [[nodiscard]] PairedAnimationStartResult bindRoles( const vector<PairedAnimationBinding>& listBinding );
+        /** @brief 묶인 역할 하나를 검사합니다(해석, 스켈레톤, 클립과 길이, 워핑). 통과하면 클립을 읽어 두고 `Waiting` 으로 둡니다. */
+        [[nodiscard]] PairedAnimationStartResult validateParticipant( GameObjectManager& manager, uint32 roleIndex );
+        /** @brief 공유 알림을 받을 역할이 묶였으면 그 오브젝트의 알림 표에 항목이 있는지 봅니다(조용히 건너뛰지 않는다). */
+        [[nodiscard]] PairedAnimationStartResult validateNotifyTargets( GameObjectManager& manager ) const;
+        /** @brief 잃은 역할 — 애니메이터가 없거나 세션 클립을 재생하지 않는 역할을 처리합니다. 세션이 끝났으면 true 입니다. */
+        [[nodiscard]] bool loseVanishedRoles( GameObjectManager& manager );
+        /** @brief 앵커가 아닌 재생 중 역할의 시각이 앵커를 따라 흐르는지 봅니다. 어긋나면 세션을 중단하고 true 입니다. */
+        [[nodiscard]] bool abortOnRoleClockDrift( GameObjectManager& manager, float32 anchorTime );
+        /** @brief 늦은 역할 진입, 워프 목표 · 창, 클립이 끝난 역할 나감을 처리합니다. 세션이 끝났으면 true 입니다. */
+        [[nodiscard]] bool advanceRoles( GameObjectManager& manager, float32 anchorTime );
         /** @brief 역할의 재생을 시작합니다 — 보폭 보정 쥠, 속도 1, 클립 `play`. 진입(`enterRole`)과 복원이 함께 씁니다. */
         void startRolePlayback( SkeletalAnimatorComponent& animator, uint32 roleIndex, float32 blendSeconds );
         /** @brief 역할을 들여보냅니다 — 속도 1, `play`, 정렬. */
