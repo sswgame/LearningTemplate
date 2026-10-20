@@ -48,7 +48,11 @@ namespace sw
     class IRespClock
     {
     public:
+        IRespClock()          = default;
         virtual ~IRespClock() = default;
+
+        IRespClock( const IRespClock& )            = default;
+        IRespClock& operator=( const IRespClock& ) = default;
 
         /** @brief 지금 시각(나노초)입니다. 두 시각의 차이로만 쓴다. I/O 스레드에서도 부른다. */
         virtual int64 nowNanoseconds() const noexcept = 0;

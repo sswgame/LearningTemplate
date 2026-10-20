@@ -161,7 +161,6 @@ namespace sw
 
     void ScheduleSystem::collectCandidates( int32 npcIndex, int32 day, vector<BlockCandidate>& outListCandidate ) const
     {
-        using Internal = ScheduleSystemPlanInternal;
         outListCandidate.clear();
         const NpcRuntime&     npc    = _listNpc[static_cast<size_t>( npcIndex )];
         const ScheduleNpcDef& def    = _pCatalog->getNpcs()[static_cast<size_t>( npc._defIndex )];
@@ -262,7 +261,6 @@ namespace sw
     void ScheduleSystem::resolveTarget( int32 npcIndex, int32 day, const BlockCandidate* pCandidate, int32 startMinute, int32 endMinute,
                                         vector<ScheduleSegment>& outListSegment )
     {
-        using Internal                    = ScheduleSystemPlanInternal;
         const NpcRuntime&          npc    = _listNpc[static_cast<size_t>( npcIndex )];
         const ScheduleNpcDef&      def    = _pCatalog->getNpcs()[static_cast<size_t>( npc._defIndex )];
         const SchedulePlaceDef*    pHome  = _pCatalog->findPlace( def._home );

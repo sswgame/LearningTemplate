@@ -65,7 +65,7 @@ namespace sw::editor
         void markLocalizationDirty();
         void markGameDataDirty();
         /** @brief 두 문서의 dirty 비트를 기반 클래스의 문서 dirty 비트에 반영합니다. */
-        void syncDocumentDirty();
+        void syncDocumentDirty() override;
 
     private:
         fixed_string<constant::kMaxBuffer128> _localizationFilter;

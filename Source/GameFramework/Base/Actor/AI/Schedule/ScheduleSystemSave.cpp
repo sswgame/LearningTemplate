@@ -256,7 +256,6 @@ namespace sw
 
     uint64 ScheduleSystem::computeStateHash() const
     {
-        using Internal = ScheduleSystemSaveInternal;
         vector<ScheduleNetSummary> listSummary;
         fillNetSummary( listSummary );
         vector<uint8> bytes;
