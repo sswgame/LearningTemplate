@@ -15,6 +15,38 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
+			<RigidBodyComponent _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Kinematic"
+			                    _layer="Debris"
+			                    _material="None"
+			                    _mass="1.5"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="false"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="0.286,0.749,0.111"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0.42,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
 		</_listComponent>
 	</GameObject>
 </Prefab>

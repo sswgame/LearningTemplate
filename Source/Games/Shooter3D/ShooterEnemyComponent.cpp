@@ -4,14 +4,17 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include "Games/Shooter3D/ShooterAnimationParameter.h"
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
@@ -123,6 +126,7 @@ namespace sw
         if ( _vitality.isAlive() == false )
         {
             enterPhase( ShooterEnemyPhase::Dying );
+            requestDropSocketParts();
             return;
         }
         // 일어나는 중 · 휘두르는 중에는 클립을 끊지 않는다(맞은 표시는 HP 바).
@@ -272,6 +276,29 @@ namespace sw
             ShooterPlayerComponent* pComponent = pPlayer != nullptr ? pPlayer->getComponent<ShooterPlayerComponent>() : nullptr;
             if ( pComponent != nullptr )
                 pComponent->takeDamage( damage );
+        } );
+    }
+
+    void ShooterEnemyComponent::requestDropSocketParts() const
+    {
+        GameObject*                         pOwner      = getOwner();
+        GameObjectManager*                  pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const CharacterAppearanceComponent* pAppearance = pOwner != nullptr ? pOwner->getComponent<CharacterAppearanceComponent>() : nullptr;
+        if ( pManager == nullptr || pAppearance == nullptr )
+            return;
+        vector<GameObjectHandle> listPart;
+        pAppearance->collectPartObjects( listPart );
+        // 강체를 동적으로 바꾸는 일은 물리 단계와 겹치지 않게 틱 뒤에 한다.
+        pManager->executeOrDeferPostTick( [pManager, listPart]()
+        {
+            for ( const GameObjectHandle part : listPart )
+            {
+                GameObject*             pPart      = pManager->resolveGameObject( part );
+                SocketBindingComponent* pBinding   = pPart != nullptr ? pPart->getComponent<SocketBindingComponent>() : nullptr;
+                const bool              bDroppable = pBinding != nullptr && pPart->getComponent<RigidBodyComponent>() != nullptr;
+                if ( bDroppable && pBinding->release( SocketReleaseMode::Physics ) == false )
+                    SW_LOG_ERROR( "Enemy part '%#' has a rigid body but could not be released to physics", pPart->getName().c_str() );
+            }
         } );
     }
 } // namespace sw

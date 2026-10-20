@@ -1,0 +1,191 @@
+<Scene formatVersion="1" name="ClothShowcase">
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,1.5,-4.2"
+					                 _localRotation="0.05,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.8"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.6,2.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.0"
+					                           _ambient="0.3"
+					                           _shadowExtent="6"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="8,1,8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="plane"
+					               _materialPath="game/empty/materials/toonshowcase_ground.material"
+					               _boundsRadius="6"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Curtain">
+			<GameObject _schemaVersion="0" _name="Curtain" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-1.2,2.4,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID=""
+					               _materialPath="game/empty/materials/toonshowcase_lit.material"
+					               _boundsRadius="2"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ClothComponent _componentName="ClothComponent"
+					                _bActive="true"
+					                _width="1.6"
+					                _height="1.8"
+					                _columnCount="17"
+					                _rowCount="17"
+					                _pinMode="TopEdge"
+					                _mass="1"
+					                _stretchCompliance="0"
+					                _shearCompliance="0"
+					                _bendCompliance="0.001"
+					                _linearDamping="0.1"
+					                _friction="0.2"
+					                _gravityFactor="1"
+					                _vertexRadius="0.02"
+					                _iterationCount="6"
+					                _layer="Default" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Obstacle">
+			<GameObject _schemaVersion="0" _name="Obstacle" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="-1.2,1.2,-0.15"
+					               _localRotation="0,0,0"
+					               _localScale="0.7,0.7,0.7"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="sphere"
+					               _materialPath="game/empty/materials/toonshowcase_ground.material"
+					               _boundsRadius="0.5"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<RigidBodyComponent _componentName="RigidBodyComponent"
+					                    _bActive="true"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _localScale="1,1,1"
+					                    _attachOwner="None"
+					                    _attachOwnerID="0"
+					                    _attachComponent="None"
+					                    _bodyType="Static"
+					                    _layer="Static"
+					                    _material="None"
+					                    _mass="0"
+					                    _linearDamping="0.05"
+					                    _angularDamping="0.05"
+					                    _gravityFactor="1"
+					                    _bTrigger="false"
+					                    _bContinuous="false"
+					                    _bLockRotation="false"
+					                    _bInterpolate="false">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Sphere"
+							                    _halfExtents="0.5,0.5,0.5"
+							                    _radius="0.35"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Flag">
+			<GameObject _schemaVersion="0" _name="Flag" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="1.2,2.4,0"
+					               _localRotation="0,0.5,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID=""
+					               _materialPath="game/empty/materials/toonshowcase_lit.material"
+					               _boundsRadius="2"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ClothComponent _componentName="ClothComponent"
+					                _bActive="true"
+					                _width="1.4"
+					                _height="1.0"
+					                _columnCount="15"
+					                _rowCount="11"
+					                _pinMode="TopCorners"
+					                _mass="0.6"
+					                _stretchCompliance="0"
+					                _shearCompliance="0"
+					                _bendCompliance="0.002"
+					                _linearDamping="0.1"
+					                _friction="0.2"
+					                _gravityFactor="1"
+					                _vertexRadius="0.02"
+					                _iterationCount="6"
+					                _layer="Default" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
