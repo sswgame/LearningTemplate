@@ -101,6 +101,89 @@ namespace sw
                 _bHasTranslation = false;
                 _field           = PortableObjectField::None;
             }
+
+            /**
+             * @brief 비어 있지 않은 줄 하나를 읽습니다. 항목의 시작 줄이면 앞 항목을 마칩니다.
+             * @return 줄이 틀리면 오류 문구를, 아니면 nullptr 를 반환합니다.
+             */
+            [[nodiscard]] const utf8* consumeLine( string_view line )
+            {
+                const bool bStartsEntryPart = line[0] == '#' || StringUtil::startsWith( line, "msgctxt" ) || StringUtil::startsWith( line, "msgid " );
+                if ( bStartsEntryPart && _bHasTranslation )
+                    flush();
+
+                if ( StringUtil::startsWith( line, "#," ) )
+                {
+                    _current._bFuzzy = _current._bFuzzy || line.find( "fuzzy" ) != string_view::npos;
+                    _field           = PortableObjectField::None;
+                }
+                else if ( StringUtil::startsWith( line, "#|" ) )
+                {
+                    const string_view rest = StringUtil::trim( line.substr( 2 ) );
+                    if ( StringUtil::startsWith( rest, "msgid " ) )
+                    {
+                        _field = PortableObjectField::PreviousSource;
+                        if ( PortableObjectFileInternal::appendQuoted( rest.substr( 6 ), _current._previousSource ) == false )
+                            return "bad #| msgid";
+                    }
+                    else if ( _field == PortableObjectField::PreviousSource && PortableObjectFileInternal::appendQuoted( rest, _current._previousSource ) == false )
+                        return "bad #| continuation";
+                }
+                else if ( StringUtil::startsWith( line, "#." ) )
+                {
+                    _current._listExtractedComment.push_back( string( StringUtil::trim( line.substr( 2 ) ) ) );
+                    _field = PortableObjectField::None;
+                }
+                else if ( StringUtil::startsWith( line, "#:" ) )
+                {
+                    _current._listReference.push_back( string( StringUtil::trim( line.substr( 2 ) ) ) );
+                    _field = PortableObjectField::None;
+                }
+                else if ( line[0] == '#' )
+                {
+                    if ( _current._translatorComment.empty() == false )
+                        _current._translatorComment.push_back( '\n' );
+                    _current._translatorComment.append( StringUtil::trim( line.substr( 1 ) ) );
+                    _field = PortableObjectField::None;
+                }
+                else if ( StringUtil::startsWith( line, "msgid_plural" ) || StringUtil::startsWith( line, "msgstr[" ) )
+                    return "msgid_plural is not used - plurals are ICU {n, plural, ...} inside one msgid";
+                else if ( StringUtil::startsWith( line, "msgctxt " ) )
+                {
+                    _field = PortableObjectField::Context;
+                    if ( PortableObjectFileInternal::appendQuoted( line.substr( 8 ), _current._context ) == false )
+                        return "bad msgctxt";
+                }
+                else if ( StringUtil::startsWith( line, "msgid " ) )
+                {
+                    _field      = PortableObjectField::Source;
+                    _bHasSource = true;
+                    if ( PortableObjectFileInternal::appendQuoted( line.substr( 6 ), _current._source ) == false )
+                        return "bad msgid";
+                }
+                else if ( StringUtil::startsWith( line, "msgstr " ) )
+                {
+                    _field           = PortableObjectField::Translation;
+                    _bHasTranslation = true;
+                    if ( _bHasSource == false || PortableObjectFileInternal::appendQuoted( line.substr( 7 ), _current._translation ) == false )
+                        return "msgstr without msgid";
+                }
+                else if ( line[0] == PortableObjectFileInternal::kDoubleQuote )
+                {
+                    string* pTarget = nullptr;
+                    if ( _field == PortableObjectField::Context )
+                        pTarget = &_current._context;
+                    else if ( _field == PortableObjectField::Source )
+                        pTarget = &_current._source;
+                    else if ( _field == PortableObjectField::Translation )
+                        pTarget = &_current._translation;
+                    if ( pTarget == nullptr || PortableObjectFileInternal::appendQuoted( line, *pTarget ) == false )
+                        return "string continuation without a keyword";
+                }
+                else
+                    return "unknown line";
+                return nullptr;
+            }
         };
     } // namespace
 } // namespace sw
@@ -157,80 +240,9 @@ namespace sw
                 continue;
             }
 
-            const bool bStartsEntryPart = line[0] == '#' || StringUtil::startsWith( line, "msgctxt" ) || StringUtil::startsWith( line, "msgid " );
-            if ( bStartsEntryPart && state._bHasTranslation )
-                state.flush();
-
-            if ( StringUtil::startsWith( line, "#," ) )
-            {
-                state._current._bFuzzy = state._current._bFuzzy || line.find( "fuzzy" ) != string_view::npos;
-                state._field           = PortableObjectField::None;
-            }
-            else if ( StringUtil::startsWith( line, "#|" ) )
-            {
-                const string_view rest = StringUtil::trim( line.substr( 2 ) );
-                if ( StringUtil::startsWith( rest, "msgid " ) )
-                {
-                    state._field = PortableObjectField::PreviousSource;
-                    if ( PortableObjectFileInternal::appendQuoted( rest.substr( 6 ), state._current._previousSource ) == false )
-                        error = "bad #| msgid";
-                }
-                else if ( state._field == PortableObjectField::PreviousSource && PortableObjectFileInternal::appendQuoted( rest, state._current._previousSource ) == false )
-                    error = "bad #| continuation";
-            }
-            else if ( StringUtil::startsWith( line, "#." ) )
-            {
-                state._current._listExtractedComment.push_back( string( StringUtil::trim( line.substr( 2 ) ) ) );
-                state._field = PortableObjectField::None;
-            }
-            else if ( StringUtil::startsWith( line, "#:" ) )
-            {
-                state._current._listReference.push_back( string( StringUtil::trim( line.substr( 2 ) ) ) );
-                state._field = PortableObjectField::None;
-            }
-            else if ( line[0] == '#' )
-            {
-                if ( state._current._translatorComment.empty() == false )
-                    state._current._translatorComment.push_back( '\n' );
-                state._current._translatorComment.append( StringUtil::trim( line.substr( 1 ) ) );
-                state._field = PortableObjectField::None;
-            }
-            else if ( StringUtil::startsWith( line, "msgid_plural" ) || StringUtil::startsWith( line, "msgstr[" ) )
-                error = "msgid_plural is not used - plurals are ICU {n, plural, ...} inside one msgid";
-            else if ( StringUtil::startsWith( line, "msgctxt " ) )
-            {
-                state._field = PortableObjectField::Context;
-                if ( PortableObjectFileInternal::appendQuoted( line.substr( 8 ), state._current._context ) == false )
-                    error = "bad msgctxt";
-            }
-            else if ( StringUtil::startsWith( line, "msgid " ) )
-            {
-                state._field      = PortableObjectField::Source;
-                state._bHasSource = true;
-                if ( PortableObjectFileInternal::appendQuoted( line.substr( 6 ), state._current._source ) == false )
-                    error = "bad msgid";
-            }
-            else if ( StringUtil::startsWith( line, "msgstr " ) )
-            {
-                state._field           = PortableObjectField::Translation;
-                state._bHasTranslation = true;
-                if ( state._bHasSource == false || PortableObjectFileInternal::appendQuoted( line.substr( 7 ), state._current._translation ) == false )
-                    error = "msgstr without msgid";
-            }
-            else if ( line[0] == PortableObjectFileInternal::kDoubleQuote )
-            {
-                string* pTarget = nullptr;
-                if ( state._field == PortableObjectField::Context )
-                    pTarget = &state._current._context;
-                else if ( state._field == PortableObjectField::Source )
-                    pTarget = &state._current._source;
-                else if ( state._field == PortableObjectField::Translation )
-                    pTarget = &state._current._translation;
-                if ( pTarget == nullptr || PortableObjectFileInternal::appendQuoted( line, *pTarget ) == false )
-                    error = "string continuation without a keyword";
-            }
-            else
-                error = "unknown line";
+            const utf8* pLineError = state.consumeLine( line );
+            if ( pLineError != nullptr )
+                error = pLineError;
 
             if ( lineEnd == text.size() )
                 break;

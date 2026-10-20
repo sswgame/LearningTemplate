@@ -183,6 +183,86 @@ namespace sw
                 }
                 return false;
             }
+
+            /** @brief 관절 종류에 맞는 Box2D 관절을 만듭니다. 만들지 못하는 종류(Cone)면 널 관절입니다. */
+            static b2JointId createJointOfType( b2WorldId worldID, const PhysicsJointDesc2D& desc, b2BodyId bodyIDA, b2BodyId bodyIDB, const b2Vec2& anchor, float32 referenceAngle )
+            {
+                const bool bCollideConnected = desc._bCollideConnectedBodies;
+                b2JointId  jointID           = b2_nullJointId;
+                switch ( desc._type )
+                {
+                    case PhysicsJointType::Fixed:
+                    {
+                        b2WeldJointDef jointDef   = b2DefaultWeldJointDef();
+                        jointDef.bodyIdA          = bodyIDA;
+                        jointDef.bodyIdB          = bodyIDB;
+                        jointDef.localAnchorA     = b2Body_GetLocalPoint( bodyIDA, anchor );
+                        jointDef.localAnchorB     = b2Body_GetLocalPoint( bodyIDB, anchor );
+                        jointDef.referenceAngle   = referenceAngle;
+                        jointDef.collideConnected = bCollideConnected;
+                        jointID                   = b2CreateWeldJoint( worldID, &jointDef );
+                        break;
+                    }
+                    case PhysicsJointType::Hinge:
+                    {
+                        b2RevoluteJointDef jointDef = b2DefaultRevoluteJointDef();
+                        jointDef.bodyIdA            = bodyIDA;
+                        jointDef.bodyIdB            = bodyIDB;
+                        jointDef.localAnchorA       = b2Body_GetLocalPoint( bodyIDA, anchor );
+                        jointDef.localAnchorB       = b2Body_GetLocalPoint( bodyIDB, anchor );
+                        jointDef.referenceAngle     = referenceAngle;
+                        jointDef.enableLimit        = desc._bLimitsEnabled;
+                        jointDef.lowerAngle         = desc._minLimit;
+                        jointDef.upperAngle         = desc._maxLimit;
+                        jointDef.collideConnected   = bCollideConnected;
+                        jointID                     = b2CreateRevoluteJoint( worldID, &jointDef );
+                        break;
+                    }
+                    case PhysicsJointType::Cone:
+                    {
+                        break; // createJoint 첫머리의 supportsJoint 가 이미 걸렀다
+                    }
+                    case PhysicsJointType::Distance:
+                    {
+                        const b2Vec2       anchorB  = Box2DUtil::toBox2D( desc._anchorB );
+                        b2DistanceJointDef jointDef = b2DefaultDistanceJointDef();
+                        jointDef.bodyIdA            = bodyIDA;
+                        jointDef.bodyIdB            = bodyIDB;
+                        jointDef.localAnchorA       = b2Body_GetLocalPoint( bodyIDA, anchor );
+                        jointDef.localAnchorB       = b2Body_GetLocalPoint( bodyIDB, anchorB );
+                        jointDef.length             = b2Distance( anchor, anchorB );
+                        jointDef.enableLimit        = desc._bLimitsEnabled;
+                        jointDef.minLength          = desc._minLimit;
+                        jointDef.maxLength          = desc._maxLimit;
+                        if ( desc._bLimitsEnabled )
+                        {
+                            // 범위가 있으면 막대가 아니라 줄이다. 범위 안에서는 자유롭다.
+                            jointDef.enableSpring = true;
+                            jointDef.hertz        = 0.0f;
+                        }
+                        jointDef.collideConnected = bCollideConnected;
+                        jointID                   = b2CreateDistanceJoint( worldID, &jointDef );
+                        break;
+                    }
+                    case PhysicsJointType::Slider:
+                    {
+                        b2PrismaticJointDef jointDef = b2DefaultPrismaticJointDef();
+                        jointDef.bodyIdA             = bodyIDA;
+                        jointDef.bodyIdB             = bodyIDB;
+                        jointDef.localAnchorA        = b2Body_GetLocalPoint( bodyIDA, anchor );
+                        jointDef.localAnchorB        = b2Body_GetLocalPoint( bodyIDB, anchor );
+                        jointDef.localAxisA          = b2Body_GetLocalVector( bodyIDA, b2Normalize( Box2DUtil::toBox2D( desc._axis ) ) );
+                        jointDef.referenceAngle      = referenceAngle;
+                        jointDef.enableLimit         = desc._bLimitsEnabled;
+                        jointDef.lowerTranslation    = desc._minLimit;
+                        jointDef.upperTranslation    = desc._maxLimit;
+                        jointDef.collideConnected    = bCollideConnected;
+                        jointID                      = b2CreatePrismaticJoint( worldID, &jointDef );
+                        break;
+                    }
+                }
+                return jointID;
+            }
         };
     } // namespace
 } // namespace sw
@@ -211,85 +291,12 @@ namespace sw
             SW_LOG_ERROR( "createJoint: a body handle is stale" );
             return PhysicsJointHandle{};
         }
-        const b2BodyId bodyIDA           = pRecordA->_bodyID;
-        const b2BodyId bodyIDB           = pRecordB != nullptr ? pRecordB->_bodyID : _groundBodyID;
-        const b2Vec2   anchor            = Box2DUtil::toBox2D( desc._anchor );
-        const bool     bCollideConnected = desc._bCollideConnectedBodies;
-        const float32  referenceAngle    = b2Rot_GetAngle( b2InvMulRot( b2Body_GetRotation( bodyIDA ), b2Body_GetRotation( bodyIDB ) ) );
+        const b2BodyId bodyIDA        = pRecordA->_bodyID;
+        const b2BodyId bodyIDB        = pRecordB != nullptr ? pRecordB->_bodyID : _groundBodyID;
+        const b2Vec2   anchor         = Box2DUtil::toBox2D( desc._anchor );
+        const float32  referenceAngle = b2Rot_GetAngle( b2InvMulRot( b2Body_GetRotation( bodyIDA ), b2Body_GetRotation( bodyIDB ) ) );
 
-        b2JointId jointID = b2_nullJointId;
-        switch ( desc._type )
-        {
-            case PhysicsJointType::Fixed:
-            {
-                b2WeldJointDef jointDef   = b2DefaultWeldJointDef();
-                jointDef.bodyIdA          = bodyIDA;
-                jointDef.bodyIdB          = bodyIDB;
-                jointDef.localAnchorA     = b2Body_GetLocalPoint( bodyIDA, anchor );
-                jointDef.localAnchorB     = b2Body_GetLocalPoint( bodyIDB, anchor );
-                jointDef.referenceAngle   = referenceAngle;
-                jointDef.collideConnected = bCollideConnected;
-                jointID                   = b2CreateWeldJoint( _worldID, &jointDef );
-                break;
-            }
-            case PhysicsJointType::Hinge:
-            {
-                b2RevoluteJointDef jointDef = b2DefaultRevoluteJointDef();
-                jointDef.bodyIdA            = bodyIDA;
-                jointDef.bodyIdB            = bodyIDB;
-                jointDef.localAnchorA       = b2Body_GetLocalPoint( bodyIDA, anchor );
-                jointDef.localAnchorB       = b2Body_GetLocalPoint( bodyIDB, anchor );
-                jointDef.referenceAngle     = referenceAngle;
-                jointDef.enableLimit        = desc._bLimitsEnabled;
-                jointDef.lowerAngle         = desc._minLimit;
-                jointDef.upperAngle         = desc._maxLimit;
-                jointDef.collideConnected   = bCollideConnected;
-                jointID                     = b2CreateRevoluteJoint( _worldID, &jointDef );
-                break;
-            }
-            case PhysicsJointType::Cone:
-            {
-                return PhysicsJointHandle{}; // 함수 첫머리의 supportsJoint 가 이미 걸렀다
-            }
-            case PhysicsJointType::Distance:
-            {
-                const b2Vec2       anchorB  = Box2DUtil::toBox2D( desc._anchorB );
-                b2DistanceJointDef jointDef = b2DefaultDistanceJointDef();
-                jointDef.bodyIdA            = bodyIDA;
-                jointDef.bodyIdB            = bodyIDB;
-                jointDef.localAnchorA       = b2Body_GetLocalPoint( bodyIDA, anchor );
-                jointDef.localAnchorB       = b2Body_GetLocalPoint( bodyIDB, anchorB );
-                jointDef.length             = b2Distance( anchor, anchorB );
-                jointDef.enableLimit        = desc._bLimitsEnabled;
-                jointDef.minLength          = desc._minLimit;
-                jointDef.maxLength          = desc._maxLimit;
-                if ( desc._bLimitsEnabled )
-                {
-                    // 범위가 있으면 막대가 아니라 줄이다. 범위 안에서는 자유롭다.
-                    jointDef.enableSpring = true;
-                    jointDef.hertz        = 0.0f;
-                }
-                jointDef.collideConnected = bCollideConnected;
-                jointID                   = b2CreateDistanceJoint( _worldID, &jointDef );
-                break;
-            }
-            case PhysicsJointType::Slider:
-            {
-                b2PrismaticJointDef jointDef = b2DefaultPrismaticJointDef();
-                jointDef.bodyIdA             = bodyIDA;
-                jointDef.bodyIdB             = bodyIDB;
-                jointDef.localAnchorA        = b2Body_GetLocalPoint( bodyIDA, anchor );
-                jointDef.localAnchorB        = b2Body_GetLocalPoint( bodyIDB, anchor );
-                jointDef.localAxisA          = b2Body_GetLocalVector( bodyIDA, b2Normalize( Box2DUtil::toBox2D( desc._axis ) ) );
-                jointDef.referenceAngle      = referenceAngle;
-                jointDef.enableLimit         = desc._bLimitsEnabled;
-                jointDef.lowerTranslation    = desc._minLimit;
-                jointDef.upperTranslation    = desc._maxLimit;
-                jointDef.collideConnected    = bCollideConnected;
-                jointID                      = b2CreatePrismaticJoint( _worldID, &jointDef );
-                break;
-            }
-        }
+        const b2JointId jointID = Box2DPhysicsSceneQueryInternal::createJointOfType( _worldID, desc, bodyIDA, bodyIDB, anchor, referenceAngle );
         if ( B2_IS_NULL( jointID ) )
             return PhysicsJointHandle{};
         JointRecord record;

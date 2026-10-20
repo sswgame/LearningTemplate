@@ -177,6 +177,24 @@ namespace sw
                 return false;
             }
 
+            /**
+             * @brief 패턴의 작은따옴표 구간을 문자 그대로 @p outText 에 쓰고 @p inoutPosition 을 구간 뒤로 옮깁니다.
+             * @details `''` 는 작은따옴표 하나, 그 밖은 다음 작은따옴표까지 그대로 쓴다. 닫는 따옴표가 없으면 끝까지 쓴다.
+             */
+            static void appendQuotedLiteral( string& outText, string_view pattern, size_t& inoutPosition )
+            {
+                if ( inoutPosition + 1 < pattern.size() && pattern[inoutPosition + 1] == '\'' )
+                {
+                    outText.push_back( '\'' );
+                    inoutPosition += 2;
+                    return;
+                }
+                const size_t closePos = pattern.find( '\'', inoutPosition + 1 );
+                const size_t endPos   = closePos == string_view::npos ? pattern.size() : closePos;
+                outText.append( pattern.substr( inoutPosition + 1, endPos - inoutPosition - 1 ) );
+                inoutPosition = endPos == pattern.size() ? endPos : endPos + 1;
+            }
+
             /** @brief 2 자리 이상이 되도록 0 을 채운 ASCII 정수입니다. */
             static string makePadded( int64 value, uint32 width )
             {
@@ -234,47 +252,36 @@ namespace sw
                 return true;
             }
 
-            /** @brief 한 문화권 객체의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). */
-            [[nodiscard]] static bool applyFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
+            /** @brief 문자열 필드 하나(적힌 것만)를 덮어씁니다. */
+            static void applyStringField( const JSONValue& entry, const utf8* pFieldName, string& outTarget )
             {
-                for ( const string& fieldName : entry.getMemberNames() )
-                {
-                    if ( isKnownField( fieldName ) == false )
-                    {
-                        outError = "unknown field '" + fieldName + "'";
-                        return false;
-                    }
-                }
+                const JSONValue field = entry.get( pFieldName, false );
+                if ( field.isValid() )
+                    outTarget = field.asString();
+            }
 
-                const JSONValue nativeName = entry.get( "nativeName", false );
-                if ( nativeName.isValid() )
-                    inoutInfo._nativeName = nativeName.asString();
-                const JSONValue pluralRule = entry.get( "pluralRule", false );
-                if ( pluralRule.isValid() )
+            /** @brief 복수형 규칙 이름 필드(적힌 것만)를 규칙 함수로 풀어 덮어씁니다. 모르는 이름이면 false 입니다. */
+            [[nodiscard]] static bool applyRuleField( const JSONValue& entry, const utf8* pFieldName, PluralRuleFunc ( *pFindRule )( string_view ), string& outRuleName, PluralRuleFunc& outRule,
+                                                      string& outError )
+            {
+                const JSONValue field = entry.get( pFieldName, false );
+                if ( field.isValid() == false )
+                    return true;
+                const string   ruleName = field.asString();
+                PluralRuleFunc pRule    = pFindRule( ruleName );
+                if ( pRule == nullptr )
                 {
-                    const string   ruleName = pluralRule.asString();
-                    PluralRuleFunc pRule    = CultureInfoInternal::findRule( ruleName );
-                    if ( pRule == nullptr )
-                    {
-                        outError = "unknown pluralRule '" + ruleName + "'";
-                        return false;
-                    }
-                    inoutInfo._pluralRuleName = ruleName;
-                    inoutInfo._pPluralRule    = pRule;
+                    outError = string( "unknown " ) + pFieldName + " '" + ruleName + "'";
+                    return false;
                 }
-                const JSONValue ordinalRule = entry.get( "ordinalRule", false );
-                if ( ordinalRule.isValid() )
-                {
-                    const string   ruleName = ordinalRule.asString();
-                    PluralRuleFunc pRule    = CultureInfoInternal::findOrdinalRule( ruleName );
-                    if ( pRule == nullptr )
-                    {
-                        outError = "unknown ordinalRule '" + ruleName + "'";
-                        return false;
-                    }
-                    inoutInfo._ordinalRuleName = ruleName;
-                    inoutInfo._pOrdinalRule    = pRule;
-                }
+                outRuleName = ruleName;
+                outRule     = pRule;
+                return true;
+            }
+
+            /** @brief 글쓰기 방향 · 숫자 체계 · 의사 로케일을 덮어씁니다. 모르는 이름이면 false 입니다. */
+            [[nodiscard]] static bool applyScriptFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
+            {
                 const JSONValue rightToLeft = entry.get( "rightToLeft", false );
                 if ( rightToLeft.isValid() )
                     inoutInfo._bRightToLeft = rightToLeft.asBool( false );
@@ -306,57 +313,75 @@ namespace sw
                         return false;
                     }
                 }
+                return true;
+            }
 
-                const JSONValue decimalSeparator = entry.get( "decimalSeparator", false );
-                if ( decimalSeparator.isValid() )
-                    inoutInfo._decimalSeparator = decimalSeparator.asString();
-                const JSONValue groupSeparator = entry.get( "groupSeparator", false );
-                if ( groupSeparator.isValid() )
-                    inoutInfo._groupSeparator = groupSeparator.asString();
-                const JSONValue percentPattern = entry.get( "percentPattern", false );
-                if ( percentPattern.isValid() )
-                    inoutInfo._percentPattern = percentPattern.asString();
-                const JSONValue currencyCode = entry.get( "currencyCode", false );
-                if ( currencyCode.isValid() )
-                    inoutInfo._currencyCode = currencyCode.asString();
-                const JSONValue currencyPattern = entry.get( "currencyPattern", false );
-                if ( currencyPattern.isValid() )
-                    inoutInfo._currencyPattern = currencyPattern.asString();
+            /** @brief 문자열 배열 필드 한 칸의 규칙입니다. `_expectedCount` 가 0 이 아니면 그 개수여야 합니다. */
+            struct ListFieldRow
+            {
+                const utf8*    _pName;
+                vector<string> CultureInfo::* _pMember;
+                size_t                        _expectedCount;
+                const utf8*                   _pError;
+            };
 
+            static constexpr ListFieldRow kArrListField[] = {
+                {        "monthNames",         &CultureInfo::_listMonthName, 12,         "monthNames must be 12 strings"},
+                {"monthAbbreviations", &CultureInfo::_listMonthAbbreviation, 12, "monthAbbreviations must be 12 strings"},
+                {        "dayPeriods",         &CultureInfo::_listDayPeriod,  2,          "dayPeriods must be 2 strings"},
+                {             "fonts",              &CultureInfo::_listFont,  0,     "fonts must be an array of strings"},
+            };
+
+            /** @brief 날짜 · 시간 패턴 모음과 문자열 배열 필드를 덮어씁니다. 모양이 틀리면 false 입니다. */
+            [[nodiscard]] static bool applyPatternAndListFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
+            {
                 const JSONValue datePatterns = entry.get( "datePatterns", false );
                 if ( datePatterns.isValid() && readPatternGroup( datePatterns, &inoutInfo._dateShort, &inoutInfo._dateMedium, &inoutInfo._dateLong, outError ) == false )
                     return false;
                 const JSONValue timePatterns = entry.get( "timePatterns", false );
                 if ( timePatterns.isValid() && readPatternGroup( timePatterns, &inoutInfo._timeShort, &inoutInfo._timeMedium, nullptr, outError ) == false )
                     return false;
-
-                const JSONValue monthNames = entry.get( "monthNames", false );
-                if ( monthNames.isValid() && ( readStringArray( monthNames, inoutInfo._listMonthName ) == false || inoutInfo._listMonthName.size() != 12 ) )
+                for ( const ListFieldRow& row : kArrListField )
                 {
-                    outError = "monthNames must be 12 strings";
-                    return false;
-                }
-                const JSONValue monthAbbreviations = entry.get( "monthAbbreviations", false );
-                const bool      bBadAbbreviations  = monthAbbreviations.isValid() &&
-                                               ( readStringArray( monthAbbreviations, inoutInfo._listMonthAbbreviation ) == false || inoutInfo._listMonthAbbreviation.size() != 12 );
-                if ( bBadAbbreviations )
-                {
-                    outError = "monthAbbreviations must be 12 strings";
-                    return false;
-                }
-                const JSONValue dayPeriods = entry.get( "dayPeriods", false );
-                if ( dayPeriods.isValid() && ( readStringArray( dayPeriods, inoutInfo._listDayPeriod ) == false || inoutInfo._listDayPeriod.size() != 2 ) )
-                {
-                    outError = "dayPeriods must be 2 strings";
-                    return false;
-                }
-                const JSONValue fonts = entry.get( "fonts", false );
-                if ( fonts.isValid() && readStringArray( fonts, inoutInfo._listFont ) == false )
-                {
-                    outError = "fonts must be an array of strings";
-                    return false;
+                    const JSONValue field = entry.get( row._pName, false );
+                    if ( field.isValid() == false )
+                        continue;
+                    vector<string>& list      = inoutInfo.*( row._pMember );
+                    const bool      bBadField = readStringArray( field, list ) == false || ( row._expectedCount != 0 && list.size() != row._expectedCount );
+                    if ( bBadField )
+                    {
+                        outError = row._pError;
+                        return false;
+                    }
                 }
                 return true;
+            }
+
+            /** @brief 한 문화권 객체의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). */
+            [[nodiscard]] static bool applyFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
+            {
+                for ( const string& fieldName : entry.getMemberNames() )
+                {
+                    if ( isKnownField( fieldName ) == false )
+                    {
+                        outError = "unknown field '" + fieldName + "'";
+                        return false;
+                    }
+                }
+
+                applyStringField( entry, "nativeName", inoutInfo._nativeName );
+                if ( applyRuleField( entry, "pluralRule", &findRule, inoutInfo._pluralRuleName, inoutInfo._pPluralRule, outError ) == false )
+                    return false;
+                if ( applyRuleField( entry, "ordinalRule", &findOrdinalRule, inoutInfo._ordinalRuleName, inoutInfo._pOrdinalRule, outError ) == false )
+                    return false;
+                if ( applyScriptFields( entry, inoutInfo, outError ) == false )
+                    return false;
+                applyStringField( entry, "decimalSeparator", inoutInfo._decimalSeparator );
+                applyStringField( entry, "groupSeparator", inoutInfo._groupSeparator );
+                applyStringField( entry, "percentPattern", inoutInfo._percentPattern );
+                applyStringField( entry, "currencyCode", inoutInfo._currencyCode );
+                applyStringField( entry, "currencyPattern", inoutInfo._currencyPattern );
+                return applyPatternAndListFields( entry, inoutInfo, outError );
             }
         };
     } // namespace
@@ -604,17 +629,7 @@ namespace sw
             const utf8 character = pattern[position];
             if ( character == '\'' )
             {
-                // `''` 는 작은따옴표 하나, 그 밖은 다음 작은따옴표까지 그대로 쓴다.
-                if ( position + 1 < pattern.size() && pattern[position + 1] == '\'' )
-                {
-                    text.push_back( '\'' );
-                    position += 2;
-                    continue;
-                }
-                const size_t closePos = pattern.find( '\'', position + 1 );
-                const size_t endPos   = closePos == string_view::npos ? pattern.size() : closePos;
-                text.append( pattern.substr( position + 1, endPos - position - 1 ) );
-                position = endPos == pattern.size() ? endPos : endPos + 1;
+                CultureInfoInternal::appendQuotedLiteral( text, pattern, position );
                 continue;
             }
             const bool bLetter = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' );

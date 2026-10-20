@@ -124,6 +124,86 @@ namespace sw
                     }
                 }
             }
+
+            /** @brief 관절 종류에 맞는 Jolt 구속을 만듭니다. 만들지 못하면 null 입니다. */
+            static JPH::TwoBodyConstraint* createConstraint( JPH::BodyInterface& bodyInterface, const PhysicsJointDesc3D& desc, const JPH::BodyID& bodyIDA, const JPH::BodyID& bodyIDB )
+            {
+                const JPH::Vec3 anchor = JoltUtil::toJolt( desc._anchor );
+                const JPH::Vec3 axis   = JoltUtil::toJolt( desc._axis ).NormalizedOr( JPH::Vec3::sAxisY() );
+
+                JPH::TwoBodyConstraint* pConstraint = nullptr;
+                switch ( desc._type )
+                {
+                    case PhysicsJointType::Fixed:
+                    {
+                        JPH::FixedConstraintSettings settings;
+                        settings.SetEmbedded();
+                        settings.mAutoDetectPoint = true;
+                        pConstraint               = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
+                        break;
+                    }
+                    case PhysicsJointType::Hinge:
+                    {
+                        JPH::HingeConstraintSettings settings;
+                        settings.SetEmbedded();
+                        settings.mPoint1 = settings.mPoint2 = anchor;
+                        settings.mHingeAxis1 = settings.mHingeAxis2 = axis;
+                        settings.mNormalAxis1 = settings.mNormalAxis2 = JoltPhysicsSceneQueryInternal::makePerpendicular( axis );
+                        if ( desc._bLimitsEnabled )
+                        {
+                            settings.mLimitsMin = desc._minLimit;
+                            settings.mLimitsMax = desc._maxLimit;
+                        }
+                        pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
+                        break;
+                    }
+                    case PhysicsJointType::Cone:
+                    {
+                        JPH::SwingTwistConstraintSettings settings;
+                        settings.SetEmbedded();
+                        const JPH::Vec3 planeAxis = JoltUtil::toJolt( desc._normalAxis ).NormalizedOr( JoltPhysicsSceneQueryInternal::makePerpendicular( axis ) );
+                        settings.mPosition1 = settings.mPosition2 = anchor;
+                        settings.mTwistAxis1 = settings.mTwistAxis2 = axis;
+                        settings.mPlaneAxis1 = settings.mPlaneAxis2 = planeAxis;
+                        // 엔진은 "축 둘레의 스윙 한계"로 적는다. Jolt 의 plane 반각이 plane 축 둘레, normal 반각이 그 둘에 수직인 축 둘레다.
+                        settings.mPlaneHalfConeAngle  = desc._swingLimitNormal;
+                        settings.mNormalHalfConeAngle = desc._swingLimitPlane;
+                        settings.mTwistMinAngle       = desc._minLimit;
+                        settings.mTwistMaxAngle       = desc._maxLimit;
+                        pConstraint                   = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
+                        break;
+                    }
+                    case PhysicsJointType::Distance:
+                    {
+                        JPH::DistanceConstraintSettings settings;
+                        settings.SetEmbedded();
+                        settings.mPoint1 = anchor;
+                        settings.mPoint2 = JoltUtil::toJolt( desc._anchorB );
+                        if ( desc._bLimitsEnabled )
+                        {
+                            settings.mMinDistance = desc._minLimit;
+                            settings.mMaxDistance = desc._maxLimit;
+                        }
+                        pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
+                        break;
+                    }
+                    case PhysicsJointType::Slider:
+                    {
+                        JPH::SliderConstraintSettings settings;
+                        settings.SetEmbedded();
+                        settings.mPoint1 = settings.mPoint2 = anchor;
+                        settings.SetSliderAxis( axis );
+                        if ( desc._bLimitsEnabled )
+                        {
+                            settings.mLimitsMin = desc._minLimit;
+                            settings.mLimitsMax = desc._maxLimit;
+                        }
+                        pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
+                        break;
+                    }
+                }
+                return pConstraint;
+            }
         };
     } // namespace
 } // namespace sw
@@ -141,83 +221,10 @@ namespace sw
             SW_LOG_ERROR( "createJoint: a body handle is stale" );
             return PhysicsJointHandle{};
         }
-        const JPH::BodyID bodyIDA = pRecordA->_bodyID;
-        const JPH::BodyID bodyIDB = pRecordB != nullptr ? pRecordB->_bodyID : JPH::BodyID{};
-        const JPH::Vec3   anchor  = JoltUtil::toJolt( desc._anchor );
-        const JPH::Vec3   axis    = JoltUtil::toJolt( desc._axis ).NormalizedOr( JPH::Vec3::sAxisY() );
-
-        JPH::TwoBodyConstraint* pConstraint   = nullptr;
+        const JPH::BodyID       bodyIDA       = pRecordA->_bodyID;
+        const JPH::BodyID       bodyIDB       = pRecordB != nullptr ? pRecordB->_bodyID : JPH::BodyID{};
         JPH::BodyInterface&     bodyInterface = _system.GetBodyInterface();
-        switch ( desc._type )
-        {
-            case PhysicsJointType::Fixed:
-            {
-                JPH::FixedConstraintSettings settings;
-                settings.SetEmbedded();
-                settings.mAutoDetectPoint = true;
-                pConstraint               = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
-                break;
-            }
-            case PhysicsJointType::Hinge:
-            {
-                JPH::HingeConstraintSettings settings;
-                settings.SetEmbedded();
-                settings.mPoint1 = settings.mPoint2 = anchor;
-                settings.mHingeAxis1 = settings.mHingeAxis2 = axis;
-                settings.mNormalAxis1 = settings.mNormalAxis2 = JoltPhysicsSceneQueryInternal::makePerpendicular( axis );
-                if ( desc._bLimitsEnabled )
-                {
-                    settings.mLimitsMin = desc._minLimit;
-                    settings.mLimitsMax = desc._maxLimit;
-                }
-                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
-                break;
-            }
-            case PhysicsJointType::Cone:
-            {
-                JPH::SwingTwistConstraintSettings settings;
-                settings.SetEmbedded();
-                const JPH::Vec3 planeAxis = JoltUtil::toJolt( desc._normalAxis ).NormalizedOr( JoltPhysicsSceneQueryInternal::makePerpendicular( axis ) );
-                settings.mPosition1 = settings.mPosition2 = anchor;
-                settings.mTwistAxis1 = settings.mTwistAxis2 = axis;
-                settings.mPlaneAxis1 = settings.mPlaneAxis2 = planeAxis;
-                // 엔진은 "축 둘레의 스윙 한계"로 적는다. Jolt 의 plane 반각이 plane 축 둘레, normal 반각이 그 둘에 수직인 축 둘레다.
-                settings.mPlaneHalfConeAngle  = desc._swingLimitNormal;
-                settings.mNormalHalfConeAngle = desc._swingLimitPlane;
-                settings.mTwistMinAngle       = desc._minLimit;
-                settings.mTwistMaxAngle       = desc._maxLimit;
-                pConstraint                   = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
-                break;
-            }
-            case PhysicsJointType::Distance:
-            {
-                JPH::DistanceConstraintSettings settings;
-                settings.SetEmbedded();
-                settings.mPoint1 = anchor;
-                settings.mPoint2 = JoltUtil::toJolt( desc._anchorB );
-                if ( desc._bLimitsEnabled )
-                {
-                    settings.mMinDistance = desc._minLimit;
-                    settings.mMaxDistance = desc._maxLimit;
-                }
-                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
-                break;
-            }
-            case PhysicsJointType::Slider:
-            {
-                JPH::SliderConstraintSettings settings;
-                settings.SetEmbedded();
-                settings.mPoint1 = settings.mPoint2 = anchor;
-                settings.SetSliderAxis( axis );
-                if ( desc._bLimitsEnabled )
-                {
-                    settings.mLimitsMin = desc._minLimit;
-                    settings.mLimitsMax = desc._maxLimit;
-                }
-                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
-                break;
-            }
-        }
+        JPH::TwoBodyConstraint* pConstraint   = JoltPhysicsSceneQueryInternal::createConstraint( bodyInterface, desc, bodyIDA, bodyIDB );
         if ( pConstraint == nullptr )
         {
             SW_LOG_ERROR( "createJoint: Jolt could not create the joint" );
