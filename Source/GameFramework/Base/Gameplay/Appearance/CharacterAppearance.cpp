@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -54,11 +55,21 @@ namespace sw
                 AppearanceXMLUtil::readNameList( node, "options", value._listOption );
                 readColors( node.getAttributeText( "color" ), value._listColor, report, sourceName );
                 readColors( node.getAttributeText( "colors" ), value._listColor, report, sourceName );
-                const bool bFixed              = node.findAttribute( "value" ) != nullptr;
-                const bool bRange              = node.findAttribute( "min" ) != nullptr && node.findAttribute( "max" ) != nullptr;
-                value._bHasNumber              = bFixed || bRange ? SW_TRUE : SW_FALSE;
-                value._min                     = bFixed ? node.getAttributeFloat( "value", 0.0f ) : node.getAttributeFloat( "min", 0.0f );
-                value._max                     = bFixed ? value._min : node.getAttributeFloat( "max", 0.0f );
+                const bool bFixed = node.findAttribute( "value" ) != nullptr;
+                const bool bRange = node.findAttribute( "min" ) != nullptr && node.findAttribute( "max" ) != nullptr;
+                value._bHasNumber = bFixed || bRange ? SW_TRUE : SW_FALSE;
+                // 고정값이면 min = max = value 이다. 어느 모양도 아니면 아래의 모양 검사가 오류로 남긴다.
+                constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
+                if ( bFixed )
+                {
+                    AppearanceXMLUtil::readOptionalFloat( node, "value", -kAnyFloat, kAnyFloat, value._min, report, sourceName );
+                    value._max = value._min;
+                }
+                else if ( bRange )
+                {
+                    AppearanceXMLUtil::readOptionalFloat( node, "min", -kAnyFloat, kAnyFloat, value._min, report, sourceName );
+                    AppearanceXMLUtil::readOptionalFloat( node, "max", -kAnyFloat, kAnyFloat, value._max, report, sourceName );
+                }
                 const int32 shapeCount         = ( value._bHasNumber == SW_TRUE ? 1 : 0 ) + ( value._listOption.empty() ? 0 : 1 ) + ( value._listColor.empty() ? 0 : 1 );
                 const bool  bInvalidValueShape = value._parameter.empty() || shapeCount != 1 || value._max < value._min;
                 if ( bInvalidValueShape )
@@ -90,7 +101,13 @@ namespace sw
                     inoutSlot._customization.setColor( parameter, color );
                 }
                 else if ( node.findAttribute( "value" ) != nullptr )
-                    inoutSlot._customization.setNumber( parameter, node.getAttributeFloat( "value", 0.0f ) );
+                {
+                    const std::optional<float32> number = node.readRequiredAttribute<float32>( "value" );
+                    if ( number.has_value() )
+                        inoutSlot._customization.setNumber( parameter, *number );
+                    else
+                        report.addError( "%#: preset '%#' slot '%#' item value '%#' has an invalid value", sourceName, presetID.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
+                }
                 else
                     report.addError( "%#: preset '%#' slot '%#' item value '%#' needs value / color / option", sourceName, presetID.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
             }
@@ -113,7 +130,7 @@ namespace sw
                 slot._bClear        = node.findAttribute( "item" ) != nullptr && slot._listItem.empty() ? SW_TRUE : SW_FALSE;
                 slot._visibleVisual = AppearanceXMLUtil::readName( node, "visible" );
                 slot._state         = AppearanceXMLUtil::readName( node, "state" );
-                slot._damage        = node.getAttributeFloat( "damage", 0.0f );
+                AppearanceXMLUtil::readOptionalFloat( node, "damage", 0.0f, 1.0f, slot._damage, report, sourceName );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Value", true ) )

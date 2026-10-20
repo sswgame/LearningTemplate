@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "WeatherSystem" );
+
     float32 WeatherDef::computeWeight( const hashed_string& season ) const
     {
         if ( _listSeasonWeight.empty() )
@@ -27,7 +29,10 @@ namespace sw
 
     uint32 WeatherCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        _transitionTime    = MathUtil::max( 0.0f, root.getAttributeFloat( "transition", _transitionTime ) );
+        // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
+        constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
+        if ( GameDataXML::readOptionalNumber( root, "transition", sourceName, 0.0f, kAnyFloat, _transitionTime ) == false )
+            return 0;
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
         {
@@ -35,20 +40,30 @@ namespace sw
             if ( pID == nullptr )
                 continue;
             WeatherDef weather;
-            weather._id          = hashed_string( pID );
-            weather._weight      = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", weather._weight ) );
-            weather._minDuration = MathUtil::max( 1.0f, node.getAttributeFloat( "minDuration", weather._minDuration ) );
-            weather._maxDuration = MathUtil::max( weather._minDuration, node.getAttributeFloat( "maxDuration", weather._maxDuration ) );
-            // "Spring:3,Summer:1" — 계절:가중치(가중치를 빼면 `weight`).
-            // 읽히지 않는 가중치도 경고 없이 `weight` 다.
+            weather._id = hashed_string( pID );
+            bool bValid = GameDataXML::readOptionalNumber( node, "weight", sourceName, 0.0f, kAnyFloat, weather._weight );
+            bValid      = GameDataXML::readOptionalNumber( node, "minDuration", sourceName, WeatherDef::kMinDuration, kAnyFloat, weather._minDuration ) && bValid;
+            bValid      = GameDataXML::readOptionalNumber( node, "maxDuration", sourceName, weather._minDuration, kAnyFloat, weather._maxDuration ) && bValid;
+            // "Spring:3,Summer:1" — 계절:가중치(가중치를 빼면 그 날씨의 `weight`). 읽히지 않거나 음수인 가중치는 오류다.
             GameDataXML::forEachNamedNumber( node.getAttributeText( "seasons" ), ", ", weather._weight, GameDataXML::MissingValue::UseDefault,
-                                             [&]( string_view, string_view seasonName, float32 weight, bool )
+                                             [&]( string_view token, string_view seasonName, float32 weight, bool bNumberValid )
             {
+                if ( bNumberValid == false || weight < 0.0f )
+                {
+                    SW_LOG_ERROR( "%#: weather '%#' has an invalid season weight '%#'", sourceName, pID, token );
+                    bValid = false;
+                    return;
+                }
                 WeatherSeasonWeight seasonWeight;
                 seasonWeight._season = hashed_string( seasonName );
-                seasonWeight._weight = MathUtil::max( 0.0f, weight );
+                seasonWeight._weight = weight;
                 weather._listSeasonWeight.push_back( seasonWeight );
             } );
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: weather '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
+            }
             const XMLNode valueNode = node.findChild( "Values" );
             if ( valueNode )
                 (void)weather._values.loadFromAttributes( valueNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 값이다

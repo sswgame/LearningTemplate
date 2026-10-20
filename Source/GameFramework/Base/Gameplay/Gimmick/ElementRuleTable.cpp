@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Gimmick/ElementRuleTable.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -50,7 +51,7 @@ namespace sw
         _listStatus.clear();
         _listStimulus.clear();
         _listStepRule.clear();
-        _stepTime = 0.25f;
+        _stepTime = kDefaultStepTime;
     }
 
     int32 ElementRuleTable::addFlag( const hashed_string& id )
@@ -250,8 +251,8 @@ namespace sw
         bValid                    = readIndex( node, "neighbor", &ElementRuleTable::findMaterial, outRule._material, sourceName ) && bValid;
         bValid                    = readIndex( node, "setMaterial", &ElementRuleTable::findMaterial, outRule._setMaterial, sourceName ) && bValid;
         bValid                    = readIndex( node, "to", &ElementRuleTable::findFlag, outRule._toFlag, sourceName ) && bValid;
-        outRule._after            = node.getAttributeInt( "after", 1 );
-        outRule._bCrosswind       = node.getAttributeBool( "crosswind", false ) ? SW_TRUE : SW_FALSE;
+        bValid                    = GameDataXML::readOptionalNumber( node, "after", sourceName, 0, MathUtil::kMaxInt32, outRule._after ) && bValid;
+        bValid                    = GameDataXML::readOptionalFlag( node, "crosswind", outRule._bCrosswind ) && bValid;
         outRule._stepsParam       = hashed_string( string( node.getAttributeText( "stepsParam" ) ).c_str() );
         outRule._event            = hashed_string( string( node.getAttributeText( "event" ) ).c_str() );
         const string_view pattern = node.getAttributeText( "pattern" );
@@ -275,8 +276,13 @@ namespace sw
     bool ElementRuleTable::loadRoot( const XMLNode& root, string_view sourceName )
     {
         clear();
-        _stepTime   = root.getAttributeFloat( "stepTime", 0.25f );
-        bool bValid = true;
+        // 적지 않으면 clear() 가 둔 기본 스텝 길이다. 0 이하 · 깨진 값은 오류다.
+        bool bValid = GameDataXML::readOptionalNumber( root, "stepTime", sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
+        if ( _stepTime <= 0.0f )
+        {
+            SW_LOG_ERROR( "%#: stepTime must be positive", sourceName );
+            bValid = false;
+        }
         // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 재질, 상태를 먼저 모두 읽고 규칙을 읽는다.
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
@@ -299,7 +305,9 @@ namespace sw
                     SW_LOG_WARNING( "%#: <Status> has unknown kind '%#' (Age, Countdown)", sourceName, kindText );
                     bValid = false;
                 }
-                if ( addStatus( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), kind, child.getAttributeInt( "steps", 1 ) ) < 0 )
+                int32 steps = ElementStatusDef{}._steps;
+                bValid      = GameDataXML::readOptionalNumber( child, "steps", sourceName, 1, MathUtil::kMaxInt32, steps ) && bValid;
+                if ( addStatus( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), kind, steps ) < 0 )
                 {
                     SW_LOG_WARNING( "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
                     bValid = false;

@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitDef.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -71,8 +72,13 @@ namespace sw
     bool GimmickCircuitDef::loadRoot( const XMLNode& root )
     {
         clear();
-        _stepTime   = root.getAttributeFloat( "stepTime", kDefaultStepTime );
-        bool bValid = true;
+        // 적지 않으면 clear() 가 둔 기본 스텝 길이(kDefaultStepTime)다. 0 이하 · 깨진 값은 오류다.
+        bool bValid = GameDataXML::readOptionalNumber( root, "stepTime", _sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
+        if ( _stepTime <= 0.0f )
+        {
+            SW_LOG_ERROR( "%#: stepTime must be positive", _sourceName );
+            bValid = false;
+        }
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Node", true ) )
@@ -96,7 +102,12 @@ namespace sw
             }
             if ( StringUtil::equals( child.getName(), "Wire", true ) )
             {
-                const bool bInvert = child.getAttributeBool( "invert", false );
+                bool bInvert = false; // 적지 않으면 뒤집지 않는다
+                if ( GameDataXML::readOptionalBool( child, "invert", bInvert ) == false )
+                {
+                    bValid = false;
+                    continue;
+                }
                 if ( addWire( child.getAttributeText( "from" ), child.getAttributeText( "to" ), bInvert ) == false )
                 {
                     SW_LOG_WARNING( "%#: <Wire from=\"%#\" to=\"%#\"> needs node.port on both ends", _sourceName, child.getAttributeText( "from" ),

@@ -34,6 +34,8 @@ namespace sw
     /** @brief 날씨 한 종류입니다. */
     struct SW_GF_API WeatherDef
     {
+        static constexpr float32 kMinDuration = 1.0f; ///< `minDuration` 의 하한(게임 초) — 0 이면 한 프레임마다 날씨가 바뀐다
+
         hashed_string               _id{};
         vector<WeatherSeasonWeight> _listSeasonWeight{}; ///< 비면 모든 계절에 `_weight`
         StatBlock                   _values{};           ///< `<Values wetness="1" wind="0.6" fog="0.2"/>` — 렌더 · 게임 규칙이 읽는다

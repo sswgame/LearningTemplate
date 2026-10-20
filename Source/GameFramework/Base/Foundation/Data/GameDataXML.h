@@ -194,8 +194,8 @@ namespace sw
 
         /**
          * @brief @p parent 의 첫 @p pElement 자식(`<Curve>`)이 든 `<Key time value interpolation/>` 를 읽어 @p outCurve 를 채웁니다. 먼저 키를 비웁니다.
-         * @details 값은 @p minValue 아래로 내려가지 않는다. `interpolation` 은 `linear`(기본) · `constant` · `cubic` 이고, 접선은 이웃 키로 센다.
-         *          원소가 없으면 키도 없다(커브가 대체값을 쓴다). 모르는 속성 · 원소나 모르는 보간 이름이 있으면 경고하고 false 를 반환한다(읽을 수 있는 키는 읽는다).
+         * @details `time` · `value` 는 필수이고 값이 @p minValue 아래면 오류다(자르지 않는다). `interpolation` 은 `linear`(기본) · `constant` · `cubic` 이고, 접선은 이웃 키로 센다.
+         *          원소가 없으면 키도 없다(커브가 대체값을 쓴다). 모르는 속성 · 원소 · 보간 이름, 빠진 · 깨진 값이 있으면 오류를 남기고 false 를 반환한다(그 키는 넣지 않는다).
          * @code
          *     <Curve><Key time="0" value="0.5"/><Key time="600" value="2" interpolation="cubic"/></Curve>
          * @endcode

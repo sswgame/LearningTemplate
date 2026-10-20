@@ -15,18 +15,29 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "Crafting" );
+
     namespace
     {
         struct CraftingInternal
         {
-            static void readItems( const XMLNode& node, const utf8* pChildName, ItemStackList& outItems )
+            static constexpr int32 kDefaultItemCount = 1; ///< `count` 를 적지 않은 줄은 한 개다
+
+            /** @brief @p pChildName 줄들을 읽습니다. `item` 은 필수, `count` 는 1 이상이고 깨지면 오류와 false 입니다(그 줄은 넣지 않는다). */
+            [[nodiscard]] static bool readItems( const XMLNode& node, const utf8* pChildName, ItemStackList& outItems, string_view sourceName )
             {
+                bool bValid = true;
                 for ( XMLNode child = node.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
-                    const utf8* pItem = child.findAttribute( "item" );
-                    if ( pItem != nullptr )
-                        outItems.addItem( hashed_string( pItem ), MathUtil::max( 1, child.getAttributeInt( "count", 1 ) ) );
+                    const std::optional<string> item   = child.readRequiredAttribute<string>( "item" );
+                    int32                       count  = kDefaultItemCount;
+                    const bool                  bCount = GameDataXML::readOptionalNumber( child, "count", sourceName, 1, MathUtil::kMaxInt32, count );
+                    if ( item.has_value() && bCount )
+                        outItems.addItem( hashed_string( *item ), count );
+                    else
+                        bValid = false;
                 }
+                return bValid;
             }
 
             /** @brief 결과를 모두 넣을 공간이 있는지 확인합니다. 재료를 뺀 뒤의 상태를 가정하지 않고 보수적으로 판정합니다. */
@@ -74,15 +85,21 @@ namespace sw
             if ( pID == nullptr )
                 continue;
             RecipeDef recipe;
-            recipe._id            = hashed_string( pID );
-            const utf8* pStation  = node.findAttribute( "station" );
-            recipe._station       = pStation != nullptr ? hashed_string( pStation ) : hashed_string{};
-            recipe._time          = MathUtil::max( 0.0f, node.getAttributeFloat( "time", recipe._time ) );
-            recipe._requiredLevel = node.getAttributeInt( "level", recipe._requiredLevel );
-            recipe._bStartsKnown  = node.getAttributeBool( "known", true ) ? SW_TRUE : SW_FALSE;
-            CraftingInternal::readItems( node, "In", recipe._inputs );
-            CraftingInternal::readItems( node, "Tool", recipe._tools );
-            CraftingInternal::readItems( node, "Out", recipe._outputs );
+            recipe._id           = hashed_string( pID );
+            const utf8* pStation = node.findAttribute( "station" );
+            recipe._station      = pStation != nullptr ? hashed_string( pStation ) : hashed_string{};
+            // 적지 않은 칸은 RecipeDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 레시피를 넣지 않는 오류다(자르지 않는다).
+            bool bValid = GameDataXML::readOptionalNumber( node, "time", sourceName, 0.0f, MathUtil::kMaxFloat, recipe._time );
+            bValid      = GameDataXML::readOptionalNumber( node, "level", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, recipe._requiredLevel ) && bValid;
+            bValid      = GameDataXML::readOptionalFlag( node, "known", recipe._bStartsKnown ) && bValid;
+            bValid      = CraftingInternal::readItems( node, "In", recipe._inputs, sourceName ) && bValid;
+            bValid      = CraftingInternal::readItems( node, "Tool", recipe._tools, sourceName ) && bValid;
+            bValid      = CraftingInternal::readItems( node, "Out", recipe._outputs, sourceName ) && bValid;
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: recipe '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
+            }
             add( recipe );
             ++loadedCount;
         }

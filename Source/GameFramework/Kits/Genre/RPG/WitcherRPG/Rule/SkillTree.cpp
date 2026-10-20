@@ -50,20 +50,32 @@ namespace sw
                 skill._name          = pName != nullptr ? pName : pID;
                 skill._group         = pGroup != nullptr ? hashed_string( pGroup ) : hashed_string{};
                 skill._ability       = pAbility != nullptr ? hashed_string( pAbility ) : hashed_string{};
-                skill._maxRank       = MathUtil::max( 1, node.getAttributeInt( "maxRank", skill._maxRank ) );
-                skill._cost          = MathUtil::max( 0, node.getAttributeInt( "cost", skill._cost ) );
-                skill._requiredLevel = node.getAttributeInt( "level", skill._requiredLevel );
-                skill._requiredSpent = MathUtil::max( 0, node.getAttributeInt( "spent", skill._requiredSpent ) );
-                // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 1 이다.
-                // 읽히지 않는 랭크는 경고 없이 기본값이다.
+                // 적지 않은 칸은 SkillDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 스킬을 넣지 않는 오류다(자르지 않는다).
+                constexpr int32 kAnyInt = MathUtil::kMaxInt32;
+                bool            bValid  = GameDataXML::readOptionalNumber( node, "maxRank", sourceName, 1, kAnyInt, skill._maxRank );
+                bValid                  = GameDataXML::readOptionalNumber( node, "cost", sourceName, 0, kAnyInt, skill._cost ) && bValid;
+                bValid                  = GameDataXML::readOptionalNumber( node, "level", sourceName, MathUtil::kMinInt32, kAnyInt, skill._requiredLevel ) && bValid;
+                bValid                  = GameDataXML::readOptionalNumber( node, "spent", sourceName, 0, kAnyInt, skill._requiredSpent ) && bValid;
+                // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 SkillRequirement 의 초기값(1)이다. 읽히지 않거나 1 아래인 랭크는 오류다.
                 GameDataXML::forEachNamedNumber( node.getAttributeText( "requires" ), ", ", SkillRequirement{}._rank, GameDataXML::MissingValue::UseDefault,
-                                                 [&]( string_view, string_view skillName, int32 rank, bool )
+                                                 [&]( string_view token, string_view skillName, int32 rank, bool bNumberValid )
                 {
+                    if ( bNumberValid == false || rank < 1 )
+                    {
+                        SW_LOG_ERROR( "%#: skill '%#' has an invalid requirement '%#'", sourceName, pID, token );
+                        bValid = false;
+                        return;
+                    }
                     SkillRequirement requirement;
                     requirement._skillID = hashed_string( skillName );
-                    requirement._rank    = MathUtil::max( 1, rank );
+                    requirement._rank    = rank;
                     skill._listRequirement.push_back( requirement );
                 } );
+                if ( bValid == false )
+                {
+                    SW_LOG_ERROR( "%#: skill '%#' has invalid fields - skipped", sourceName, pID );
+                    continue;
+                }
                 const XMLNode statNode = node.findChild( "Stats" );
                 if ( statNode )
                     (void)skill._statsPerRank.loadFromAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다

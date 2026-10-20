@@ -376,13 +376,27 @@ namespace sw
         if ( curveNode.isValid() == false )
             return true;
 
-        bool bValid = XMLNameCheck::reportUnknownChildren( curveNode, GameDataXMLInternal::kArrCurveChild, sourceName, LogLevel::Warning );
+        bool bValid = XMLNameCheck::reportUnknownChildren( curveNode, GameDataXMLInternal::kArrCurveChild, sourceName );
         for ( XMLNode keyNode = curveNode.findChild( "Key" ); keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
         {
-            bValid = XMLNameCheck::reportUnknownAttributes( keyNode, GameDataXMLInternal::kArrCurveKeyAttribute, sourceName, LogLevel::Warning ) && bValid;
+            bValid = XMLNameCheck::reportUnknownAttributes( keyNode, GameDataXMLInternal::kArrCurveKeyAttribute, sourceName ) && bValid;
+            // 키의 시간과 값은 필수다. 값은 @p minValue 아래면 자르지 않고 오류다.
+            const std::optional<float32> time  = keyNode.readRequiredAttribute<float32>( "time" );
+            const std::optional<float32> value = keyNode.readRequiredAttribute<float32>( "value" );
+            if ( time.has_value() == false || value.has_value() == false )
+            {
+                bValid = false;
+                continue;
+            }
+            if ( *value < minValue )
+            {
+                SW_LOG_ERROR( "%#: <Key time=\"%#\" value=\"%#\"> is below %#", sourceName, *time, *value, minValue );
+                bValid = false;
+                continue;
+            }
             FloatCurveKey key{};
-            key._time                           = keyNode.getAttributeFloat( "time", 0.0f );
-            key._value                          = MathUtil::max( minValue, keyNode.getAttributeFloat( "value", 1.0f ) );
+            key._time                           = *time;
+            key._value                          = *value;
             key._interpolation                  = CurveInterpolation::Linear;
             const string_view interpolationText = keyNode.getAttributeText( "interpolation" );
             if ( interpolationText.empty() == false )
@@ -395,8 +409,9 @@ namespace sw
                     key._interpolation = CurveInterpolation::Cubic;
                 else
                 {
-                    SW_LOG_WARNING( "%#: <Key> has unknown interpolation '%#' - linear is used", sourceName, interpolationText );
+                    SW_LOG_ERROR( "%#: <Key> has unknown interpolation '%#'", sourceName, interpolationText );
                     bValid = false;
+                    continue;
                 }
             }
             outCurve._listKey.push_back( key );

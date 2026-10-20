@@ -143,9 +143,10 @@ namespace sw
     class SW_GF_API ElementRuleTable
     {
     public:
-        static constexpr int32 kMaxFlagCount     = 32;
-        static constexpr int32 kMaxStatusCount   = 4;
-        static constexpr int32 kMaxMaterialCount = 255;
+        static constexpr int32   kMaxFlagCount     = 32;
+        static constexpr int32   kMaxStatusCount   = 4;
+        static constexpr int32   kMaxMaterialCount = 255;
+        static constexpr float32 kDefaultStepTime  = 0.25f; ///< `stepTime` 을 적지 않은 표의 스텝 길이(초)
 
         [[nodiscard]] bool loadFromResource( string_view path );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
@@ -196,6 +197,6 @@ namespace sw
         vector<ElementStatusDef>   _listStatus{};
         vector<ElementStimulusDef> _listStimulus{};
         vector<ElementStepRule>    _listStepRule{};
-        float32                    _stepTime{ 0.25f };
+        float32                    _stepTime{ kDefaultStepTime };
     };
 } // namespace sw
