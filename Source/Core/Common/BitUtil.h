@@ -5,8 +5,6 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include <bit>
-
 namespace sw
 {
     /**
@@ -29,16 +27,16 @@ namespace sw
         }
 
         /** @brief float32 의 IEEE 754 비트 패턴입니다(저장 · 해시 · 비트 단위 비교용). 값이 NaN 이어도 비트를 그대로 돌려줍니다. */
-        [[nodiscard]] static constexpr uint32 floatToBits( const float32 value ) noexcept { return std::bit_cast<uint32>( value ); }
+        [[nodiscard]] static constexpr uint32 floatToBits( const float32 value ) noexcept { return __builtin_bit_cast( uint32, value ); }
 
         /** @brief `floatToBits` 의 역입니다. */
-        [[nodiscard]] static constexpr float32 bitsToFloat( const uint32 bits ) noexcept { return std::bit_cast<float32>( bits ); }
+        [[nodiscard]] static constexpr float32 bitsToFloat( const uint32 bits ) noexcept { return __builtin_bit_cast( float32, bits ); }
 
         /** @brief float64 의 IEEE 754 비트 패턴입니다. */
-        [[nodiscard]] static constexpr uint64 doubleToBits( const float64 value ) noexcept { return std::bit_cast<uint64>( value ); }
+        [[nodiscard]] static constexpr uint64 doubleToBits( const float64 value ) noexcept { return __builtin_bit_cast( uint64, value ); }
 
         /** @brief `doubleToBits` 의 역입니다. */
-        [[nodiscard]] static constexpr float64 bitsToDouble( const uint64 bits ) noexcept { return std::bit_cast<float64>( bits ); }
+        [[nodiscard]] static constexpr float64 bitsToDouble( const uint64 bits ) noexcept { return __builtin_bit_cast( float64, bits ); }
     };
 
     static_assert( BitUtil::packBytes( 0x11u, 0x22u, 0x33u, 0x44u ) == 0x11223344u, "packBytes 는 높은 바이트부터다" );
