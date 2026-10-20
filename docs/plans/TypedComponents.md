@@ -1,6 +1,6 @@
 # 타입별 컴포넌트 목록과 타입 핸들 구현 계획 (2026-10-17)
 
-> 상태: 구현대기 · 선행: ReflectionFormats · 영역: engine · 옛번호: C-52 · 진행: 6/6
+> 상태: 끝 · 선행: ReflectionFormats · 영역: engine · 옛번호: C-52 · 진행: 6/6
 
 [리플렉션 직렬화 형식 계획](ReflectionFormats.md) 9절의 단계 7-c(매니저의 타입별 컴포넌트 목록)와 7-d(타입 핸들 `TComponentHandle<T>`)를 구현하고 병합했습니다(7-c · 7-d-1 · 7-d-2 · 7-d-3, T3 · T4, `design-reviewer` 검토 ⓐ~ⓗ 반영).
 단위는 모두 끝났고, 이 문서는 코드 주석이 가리키는 절(3.3 ⓑ · 3.7 · 3.8 · 8.4)의 규칙과 남은 확인만 남깁니다. 결정은 [결정 기록](../09_Decisions.md) 5-6 의 "타입별 버킷"(757)과 "삭제 대기 불변식"(760)에 있습니다.
@@ -27,11 +27,10 @@
 
 ## 남은 확인
 
-- **인스펙터 선택기 화면 확인**: 시험대 컴포넌트 `TypedHandleProbeComponent`(Empty 게임)로 시나리오 `editor.inspectorhandle`(DX12)이 콤보 · `(none)` · 되돌리기 · Paste Value 비활성을 눈으로 확인했다(2026-10-20). 이 확인이 선택기가 고른 값을 쓰지 못하는 결함을 찾았다(`formatPropertyText` 에 값 주소를 넘겨 오프셋이 한 번 더 더해짐) — 수정과 함께 통과한다. 근본 원인(객체 주소와 값 주소를 한 함수가 받음)은 함수를 나누고 주소를 형식으로 갈라 막았다: 값 주소는 프로퍼티를 받지 않는 `SerializerUtil::formatValueText` · `parseTextValue` 만 받고, 오프셋 0 짜리 가짜 `PropertyInfo` 로 텍스트를 바꾸던 인스펙터 세 곳(핸들 선택기, 곡선 편집기, 맵 키 · 정렬 시퀀스 원소)을 옮겼다. 네 함수는 `const void*` 대신 `ObjectAddress` · `MutableObjectAddress`(프로퍼티 쪽)와 `ValueAddress` · `MutableValueAddress`(값 쪽)를 받아, 맨 포인터나 반대쪽 주소를 넘기면 컴파일이 안 된다(테스트 `ValueAddressTextDoesNotAddPropertyOffset` 의 `static_assert`). 값이나 객체를 `void*` 로 받던 나머지 여섯도 같은 형식으로 옮겼다(2026-10-20): 값 주소는 `valueToText` · `serializeValueBinary` · `deserializeValueBinary` · `parseTextValueCoerced`, 객체 주소는 `copyPropertyValue` · `applyPropertyBinary`. 주소 형식은 `Engine/Serialization/Base/TextAddress.h` 로 옮겼다(`SchemaMigrate.h` 도 쓰므로). 아직 `void*` 인 것: `arePropertyValuesEqual` · `applyPropertyDefault` · `tryCoerceBinaryPayload`(SchemaMigrate) 와 컨테이너 방문자 인터페이스. 남은 것: Vulkan 화면(체인은 통과했고 이 시나리오의 화면은 직접 보지 않았다). DX11 · OpenGL 은 체인이 통과하고 콤보 · `(none)` · 되돌리기 · Paste Value 비활성을 눈으로 확인했다(2026-10-20). 빈틈 둘(`set<TComponentHandle<T>>`, `FUNCTION` 인자)은 후보 `TypedHandleInspectorGaps`([Candidates-editor](Candidates-editor.md))입니다.
-- **앱 측정 넷**(8.4): `tickCostChurn` 전후(7-c 전 바이너리 필요), 비동기 씬 로드 중 조회, 큐브 20,000 개 `GT.Frame`, 개발 빌드 `resolveComponent<T>` 확인 비용(`updateMaterialChurn` 의 `resolveComponent<MeshComponent>`), 실제 게임의 버킷 수 K.
-  **하네스와 실행 절차는 준비했고(8.5) 측정값은 아직 없습니다**(독점 Release 에서 한 번에 돌린다). 확인 비용과 비동기 로드 중 조회는 GPU 없는 벤치 케이스(`TypedComponentBenchTest.ResolveTypedCheckCost` · `.QueryWhileAsyncSceneLoad`)로 더했고, 나머지는 기존 `-gv_` 스위치와 임시 시나리오로 잰다. 이 벤치 둘은 아직 빌드한 적이 없어 첫 빌드에서 컴파일 오류가 날 수 있다.
+- **인스펙터 선택기 화면 확인**: 시험대 컴포넌트 `TypedHandleProbeComponent`(Empty 게임)로 시나리오 `editor.inspectorhandle`(DX12)이 콤보 · `(none)` · 되돌리기 · Paste Value 비활성을 눈으로 확인했다(2026-10-20). 이 확인이 선택기가 고른 값을 쓰지 못하는 결함을 찾았다(`formatPropertyText` 에 값 주소를 넘겨 오프셋이 한 번 더 더해짐) — 수정과 함께 통과한다. 근본 원인(객체 주소와 값 주소를 한 함수가 받음)은 함수를 나누고 주소를 형식으로 갈라 막았다: 값 주소는 프로퍼티를 받지 않는 `SerializerUtil::formatValueText` · `parseTextValue` 만 받고, 오프셋 0 짜리 가짜 `PropertyInfo` 로 텍스트를 바꾸던 인스펙터 세 곳(핸들 선택기, 곡선 편집기, 맵 키 · 정렬 시퀀스 원소)을 옮겼다. 네 함수는 `const void*` 대신 `ObjectAddress` · `MutableObjectAddress`(프로퍼티 쪽)와 `ValueAddress` · `MutableValueAddress`(값 쪽)를 받아, 맨 포인터나 반대쪽 주소를 넘기면 컴파일이 안 된다(테스트 `ValueAddressTextDoesNotAddPropertyOffset` 의 `static_assert`). 값이나 객체를 `void*` 로 받던 나머지 여섯도 같은 형식으로 옮겼다(2026-10-20): 값 주소는 `valueToText` · `serializeValueBinary` · `deserializeValueBinary` · `parseTextValueCoerced`, 객체 주소는 `copyPropertyValue` · `applyPropertyBinary`. 주소 형식은 `Engine/Serialization/Base/TextAddress.h` 로 옮겼다(`SchemaMigrate.h` 도 쓰므로). 아직 `void*` 인 것(`arePropertyValuesEqual` · `applyPropertyDefault` · `tryCoerceBinaryPayload` 와 컨테이너 방문자 인터페이스)은 후보 `TextAddressRemainingVoid`([Candidates-engine](Candidates-engine.md))로 옮겼다. Vulkan · DX11 · OpenGL 도 체인이 통과하고 콤보 · `(none)` · 되돌리기 · Paste Value 비활성을 눈으로 확인했다(2026-10-20). 빈틈 둘(`set<TComponentHandle<T>>`, `FUNCTION` 인자)은 후보 `TypedHandleInspectorGaps`([Candidates-editor](Candidates-editor.md))입니다.
+- **앱 측정 넷**은 2026-10-20 에 끝냈다(결과는 8.4, 재현 절차는 8.5).
 - 확인함(2026-10-20): 비동기 씬 로드 워커는 자기 전용 새 씬(`SceneManager.cpp:298`)의 저장소에만 넣고, 게임 스레드가 `updateTransitions` 에서 슬롯 뮤텍스로 꺼낸 뒤 활성화하므로 `_listComponent` 순회와 겹치지 않는다.
-- **미확인**: `destroyComponentInstance` 의 배타 잠금을 저장소 `_mutex` 를 쥔 채 부르는 경로가 없는지(Debug 단언이 드러냄). `ComponentHandle` 바이너리 형태. 7-b(다중 상속 금지)가 버킷의 `static_cast` 전제로 병합됐는지.
+- 확인함(2026-10-20, 코드 추적, 실행은 안 함): `destroyComponentInstance` 의 배타 잠금(`GameObjectStore.cpp:434`)은 저장소 `_mutex` 를 쥔 블록 안에서 부르는 경로가 없다(지연 파괴는 잠금을 푼 뒤 `removeComponent` 를 부르고, 순회 안 호출은 `SW_ASSERT( isInsideWalk == false )` 가 막는다). 순회 콜백(shared 잠금)에서 사용자 코드가 부르는 경로는 단언이 실행 중에만 잡는다. `ComponentHandle` 바이너리는 16 바이트(objectID, componentID)이고 파일 형태 `{대상 저장 id, 키 해시(최상위 비트 표지)}` · 런타임 형태 `{런타임 id, id}` 를 읽는 쪽이 표지 비트로 가르며 텍스트는 `오브젝트:컴포넌트` 다(`ComponentHandle.h:47`, `ObjectStateSerializer.cpp:336`). 7-b(다중 상속 금지)는 병합돼 있고 린트가 아니라 반사 생성기가 둘째 기반 · 가상 기반을 오류로 막는다(`AstVisitor.cpp` 의 `collectBase`).
 - **허용 여부 판단**: 타입 없는 `ComponentHandle` 의 `PROPERTY` 는 막혀 있습니다(3.7). 안정 키 `이름#n` 은 같은 이름의 컴포넌트 순서가 바뀌면 다른 컴포넌트를 가리킵니다(부착과 같은 한계).
 - 모든 헤더 템플릿이 멤버 위치를 컴파일해 넣으므로(`GameObjectStore.h`) 이 영역을 바꾸면 게임 · 킷 · 에디터 · RHI 를 함께 다시 빌드합니다. 부분 빌드로 확인하지 않습니다.
 
@@ -186,13 +185,18 @@
 - 오브젝트 하나 만들고 지우기(1만 · K 200, 컴포넌트 하나)는 p50 433 · p99 543 ns 로 불변식 전 422 · 481 ns 와 같은 크기입니다. 경합 없는 `std::shared_mutex` 배타 잠금 한 쌍은 4.2 ~ 4.3 ns 라 버킷이 더한 잠금 두 쌍은 약 9 ns(2 %)로 추정합니다.
   `sizeof( Component )` 는 88 B, `GameObject` 는 새 플래그 `_bBeingDestroyed` 가 꼬리 패딩에 들어가 크기를 묶는 `static_assert` 를 통과합니다.
 - 등록형 기반 목록은 1만에서만 쟀습니다(`add` 의 중복 검사와 순서를 지키는 `remove` 가 길이에 비례해 10만에서 장면 만들기가 O(n²)).
-- 앱 측정 넷은 남았습니다(위 "남은 확인", 실행 절차는 8.5).
+- **앱 측정 결과 (2026-10-20, 독점 Release, 같은 PC, 5 판 순서 교대, 프로파일 표가 정수 µs 라 낮은 값은 해상도 한 칸 이하).** 전 = 7-c 바로 앞 `a458db532`, 후 = 측정 시점 HEAD. **이 비교는 7-c 만이 아니라 그 뒤 453 커밋을 함께 견준 값이다.**
+  - ① `tickCostChurn`(benchMeshes 4000): churn20 은 `GT.Game.update` p50 28 → 30 µs 로 해상도 안이다. churn500 은 `GT.Game.update` p50 294 → 327 µs(+11 %), `GT.Frame` p50 589 → 720 µs 로 후가 일관되게 10 ~ 20 % 높다(만들고 지우기 500 회 기준 약 66 ns 씩). 원인이 7-c 인지 그 뒤 커밋인지는 가르지 못했다.
+  - ③ 큐브 20,000 개: `GT.Frame` p50 1310 → 1179 µs, p99 1703 → 1703 µs, `GT.Game.update` p50 720 → 720 µs, `RT.Frame` p50 1179 → 1048 µs 로 차이가 5 판 퍼짐 안이다. `startup`(버킷 넣기 2 만 번 포함)은 632 → 639 ms.
+  - ② 비동기 씬 로드 중 조회(N 1 만 · K 200 leaf, 로드 5 만 개): 조회 한 번 p50 · p99 가 idle 과 같다(p50 400 ~ 500 ns, p99 500 ~ 600 ns). 로드 35 ~ 37 ms 동안 6.1 ~ 7.2 만 번 돌았고 max 는 두 경우 모두 한 자릿수 ~ 십수 µs(로드 중 한 판만 28.8 µs). 로드 워커가 조회를 막지 않는다는 코드 읽기 결과와 맞는다. 시계 해상도 100 ns.
+  - ④ `resolveComponent<T>` 확인 비용: base 1 만 핸들 typed(checked) 약 110 µs 대 untyped + `static_cast` 약 75 µs, 차 약 35 µs(핸들당 약 3.5 ns). leaf 50 핸들은 423 ~ 457 대 217 ~ 232 ns(핸들당 약 4 ~ 4.5 ns).
+  - ⑤ 게임별 버킷 수 K(600 프레임 시점): Empty 3 · AbilityArena 3 · NileCity 6 · MeadowVillage 7 · StarSkirmish 7 · ThemeParkTycoon 7 · VoxelCraft 10 · PixelTown 11 · HarvestValley 13 · Shooter3D 19 · WildWest 21. 모두 수십 이하라 위 표의 K 50 줄(버킷 훑기 몫이 작다)이 실제 게임에 해당한다. 같은 짧은 이름은 하나로 세어 약간 낮을 수 있다.
 
 K 가 수백인 씬에서 자주 묻는 질의는 조회 타입마다 맞는 버킷 목록을 캐시하는 안(B 안)이 먼저 필요합니다. 넣을 때는 타입 레지스트리 세대로 무효화하고, 측정으로 필요가 확인될 때만 넣습니다.
 
 ### 8.5 앱 측정 실행 절차 (독점 Release, 한 번에)
 
-남은 앱 측정(위 "남은 확인")을 독점 Release 에서 한 번에 돌리는 절차입니다. 아직 아무것도 돌리지 않았고 이 절에 숫자는 없습니다. 값이 나오면 8.4 표 아래에 옮기고 이 절과 "남은 확인"의 해당 줄을 지웁니다.
+앱 측정을 독점 Release 에서 한 번에 돌리는 절차입니다. 2026-10-20 에 이 절차로 한 번 돌렸고 값은 8.4 에 있습니다. 다시 재려면(예: 측정 PC 가 바뀔 때) 같은 절차를 되풀이합니다.
 
 | 측정 | 도구 | 읽을 지표 |
 |---|---|---|

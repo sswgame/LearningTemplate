@@ -22,7 +22,6 @@
 - **남은 확인 한계**: 플로팅 창 캡처는 창이 별도 플랫폼 창(뷰포트)으로 떠서 합본에 든 경우까지는 보지 못했고 수정 전 코드와 대조하지 않았다. Shipping 은 `-game=` 을 무시하고 에디터 시나리오를 못 돌려 게임 선택이 필요한 검증은 Release(`SW_GAMES=ALL`)로 한다. 바인딩이 만들어진 프레임에 눌렸다 바로 뗀 단발 탭은 Held 로 시작해 다음 프레임 Pressed 가 안 읽힐 수 있다(홀드는 정확).
 - **같은 날 밤 끝낸 결함 넷**: 일시정지 메뉴가 Esc 를 쥐면 바로 닫힘(`UIInputRouter` 소비 검사 → 이후 `InputMap` 이 꺼진 레이어 · 리바인딩 · 초기화 직후 눌림을 `_bLive` 하나의 규칙으로 Held 시작), OpenGL 에디터 캡처가 연 패스를 닫지 않아 플로팅 창이 한 번 더 그려짐(`EditorUICapture::renderJob`), 시나리오 `ExpectVariable` 스텝 신설(`fieldofview.scenario.xml` 로 Shooter3D 기본 FOV 80 단언). 콘솔이 쥔 키는 `InputManager` 의 captured 마스크가 이미 뗄 때까지 가린다(콘솔 경로는 결함이 아니었고 테스트 기대를 고쳤다). Release 로 일시정지 네 백엔드 · 8 개 게임, FOV 통과와 틀린 값 실패, 플로팅 창 캡처 네 백엔드, 에디터 체인 네 백엔드를 확인했다.
 - **CI**: push 뒤 Windows Debug · Linux TSan 이 통과해야 GpuVerification V2 의 "연속 3 회" 를 센다. 정책 수정이 든 main 의 CI 를 세 번 읽은 뒤 `continue-on-error` 해제와 `softwareRenderSeconds` 수정.
-- **TypedComponents 앱 측정 넷**(독점 Release)은 아직. 하네스는 `ea3c769c4`, 옛 바이너리는 `worktree-make tcbefore` 로 `1828fc879^` 에서. 측정 뒤 `끝` 으로.
 - **TextAddress 후속**: `arePropertyValuesEqual` · `applyPropertyDefault` · `tryCoerceBinaryPayload` · `applyOrphanBinary` · 컨테이너 방문자 인터페이스가 아직 `void*`.
 - **그 밖의 남은 작은 것**: `FrameRenderer` 의 `cbIndex` 죽은 인자, `GameDataXML::parseFloats` 직접 사용처(`SRPGCatalog:235` · `WesternCatalog:24` · `GimmickNodeRegistry:499` · `GimmickCircuit:47`), `TradeService` 의 `serverID * kFnvPrime64`, `TickRegistry::containsSorted` · `AIDirector::containsAny`, `GameSettings` 문자열 경로 필드, `using Internal` 복붙 별칭(구조로 못 막음 — 클린 빌드의 경고로만 보임).
 - **AudioChannelLayout U1** Release 비교, **EditorMultiWorld 6절 5·6**(열고 닫기 반복, `-gv_rhiSwapAtFrame`)은 시나리오를 새로 만들어야 할 수 있다.
@@ -41,7 +40,7 @@
 결정: 셰이더 바이너리 커밋 유지, 백엔드 등급제 안 함(결정 기록 5-12). 하기로 한 것은 `StructureSimplification`(계획 문서, `structplan` 이 작성 중)의 순서 — 5(HC1~HC3 끝, HC4 남음) → 2(팩 쓰기 · 스탬프를 C++ 로) → 3(에셋 종류를 등록 줄 하나로, "에셋 로더 등록제" 보류를 다시 연다) → 4(텍스트 형식을 역할마다 하나로, `KeyValueFile` 제거). 키트 51 개(게임이 이름으로 부르는 것은 9 개)를 견본으로 둘지 기본 빌드에서 뺄지는 사용자가 아직 정하지 않았다.
 
 - **vcpkg**: 워크트리는 메인의 `Tools/vcpkg` · `build/vcpkg_installed` · `build/vcpkg_cache` 를 정션으로 공유한다(사용자 지시). 워크트리를 지울 때는 `worktree-remove`. 빈 폴더 `D:/w/audiolayout` · `D:/w/vfx` 는 다른 프로세스가 쥐고 있어 남았다.
-- GPU 는 이 PC 에서 된다(RTX 3070 Ti, DX12). 못 한 것: TypedComponents 앱 측정 넷(8.4), 다른 세 백엔드 화면, Vfx V2 · V3, 패널 메뉴 토글 등 X 가 아닌 닫는 길(`panelgap` 이 다룸).
+- GPU 는 이 PC 에서 된다(RTX 3070 Ti, DX12). 못 한 것: Vfx V2 · V3, 패널 메뉴 토글 등 X 가 아닌 닫는 길(`panelgap` 이 다룸).
 - NetSettingsRemaining 은 설정 데이터 형식을 새로 정해야 해서 DataDriven 과 함께 다룬다.
 - PairedAnimation 남은 것: P3 본체(복제), 시나리오 테스트(활 · 클립 에셋 없음), M3 에디터.
 - 야간 `Load (Linux | Release, nightly)` 근본 원인은 모른다. 근본 원인 후보(미해결): `DiskPathVsResourceId`.
@@ -52,7 +51,7 @@
 2. 이 세션의 push 와 CI 통과를 확인하고 워크트리를 지운다(위 1절).
 3. **다음 일**: `StructureSimplification` HC4(`ConfigCatalog.py` · `docs/Config/*` · `Config/README.md` 의 `ensureConfig` 문장, `Scripts/common/Config.py` 가 `{}` 를 돌려주는 곳 W5) → PK → AT → TX(진행 3/21). 각 단위 전에 위 결정 대기 PK3 · TX2 권고를 알린다.
    병렬로 띄울 묶음(`[병렬 가능]`, 파일 겹침 없이, 동시 빌드 최대 2): (가) 1.1 "그다음(중간)" — `GPUSceneSnapshot.h` 배치 목록 3 벌 복사, `SharedAssetCache` 템플릿, `captureSnapshot` 직렬화 두 번 돌기. (나) 위 1절 "그 밖의 남은 작은 것"과 TextAddress 후속 `void*`. (다) Roadmap 의 `[병렬 가능]` — Vfx V2 · V3(`gpu-verifier` 와), 카메라 디렉터, 애니메이션 · PairedAnimation P3b(결정 뒤), SerializerSilentSkips, AsyncResourceLoading A2(설계 검토 뒤).
-4. TypedComponents 앱 측정 넷(독점, Release)과 AudioChannelLayout U1 은 PC 를 혼자 쓸 때 한꺼번에.
+4. AudioChannelLayout U1 Release 비교는 PC 를 혼자 쓸 때(TypedComponents 는 2026-10-20 에 끝남).
 
 ## 3. 새 세션 시작 절차
 
