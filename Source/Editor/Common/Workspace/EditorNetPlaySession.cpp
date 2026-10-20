@@ -297,8 +297,9 @@ namespace sw::editor
             _traceDirectory = EditorNetPlaySessionInternal::toForwardSlashes( _traceDirectory );
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {
-                SW_LOG_WARNING( "Trace folder %# could not be created - the session runs without traces", _traceDirectory );
+                SW_LOG_ERROR( "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );
                 _traceDirectory.clear();
+                return false;
             }
         }
 #endif

@@ -157,6 +157,8 @@ namespace sw
                 bValid = NetStatsReportInternal::tryParseKinds( value, parsed._listKindEntry );
             else if ( key == "sentKinds" )
                 bValid = NetStatsReportInternal::tryParseKinds( value, parsed._listSentKindEntry );
+            else
+                bValid = false; // 모르는 키는 다른 형식의 줄이다 — 건너뛰지 않고 거절한다
             return bValid;
         } );
         if ( bValid )

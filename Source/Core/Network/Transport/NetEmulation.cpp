@@ -164,6 +164,8 @@ namespace sw
                 bOk = StringUtil::parseFloat( value, parsed._measuredLossPercent );
             else if ( key == "rttMs" )
                 bOk = StringUtil::parseFloat( value, parsed._rttMilliseconds );
+            else
+                bOk = false; // 모르는 키는 다른 형식의 줄이다 — 건너뛰지 않고 거절한다
             return bOk;
         } );
         if ( bOk )
