@@ -168,8 +168,8 @@ namespace sw
 
     void RagdollComponent::loadAsset()
     {
-        _seenAssetReloadCount = PhysicsAssetCache::getReloadCount();
-        _asset                = _physicsAssetPath.empty() ? nullptr : PhysicsAssetCache::acquire( _physicsAssetPath );
+        _seenAssetReloadCount = SharedAssetCache<PhysicsAsset>::getReloadCount();
+        _asset                = _physicsAssetPath.empty() ? nullptr : SharedAssetCache<PhysicsAsset>::acquire( _physicsAssetPath );
         if ( _physicsAssetPath.empty() == false && _asset == nullptr )
             SW_LOG_ERROR( "'%#': physics asset '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _physicsAssetPath.c_str() );
         _bRebuild = true;
@@ -608,7 +608,7 @@ namespace sw
         IPhysicsScene3D* pScene = physics.getScene3D();
         if ( pScene == nullptr || _pUnit == nullptr )
             return;
-        if ( _seenAssetReloadCount != PhysicsAssetCache::getReloadCount() )
+        if ( _seenAssetReloadCount != SharedAssetCache<PhysicsAsset>::getReloadCount() )
             loadAsset(); // 물리 에셋 파일을 고쳤다. 바디를 다시 만든다.
         if ( consumeRebuild() || _bRebuild )
         {

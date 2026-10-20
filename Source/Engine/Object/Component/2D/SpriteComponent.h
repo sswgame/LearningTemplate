@@ -72,7 +72,7 @@ namespace sw
 
         /** @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 비어 있으면 클립 없이 `_uvRect` 를 보입니다. */
         const string& getClipPath() const { return _clipPath; }
-        /** @brief 클립을 바꾸고 읽습니다(같은 클립은 스프라이트끼리 공유합니다. `SpriteClipCache::acquire` 참고). */
+        /** @brief 클립을 바꾸고 읽습니다(같은 클립은 스프라이트끼리 공유합니다. `SharedAssetCache<SpriteClipAsset>::acquire` 참고). */
         void setClipPath( string_view path );
         /** @brief 읽은 클립입니다. 경로가 비었거나 읽지 못했으면 nullptr 입니다. */
         const SpriteClipAsset* getClip() const { return _clip.get(); }

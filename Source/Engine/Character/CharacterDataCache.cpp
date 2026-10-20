@@ -8,7 +8,6 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetCacheDefinition.h"
 
 namespace sw
@@ -85,13 +84,8 @@ namespace sw
 
 namespace sw
 {
-    template class SW_API SharedAssetCache<SocketSet>;
-    template class SW_API SharedAssetCache<AnimationNotifyTable>;
-    template class SW_API SharedAssetCache<PairedAnimationDef>;
-    template class SW_API SharedAssetCache<PhysicsAsset>;
-
-    SW_BUILT_IN_ASSET_CACHE( SocketSetCache );
-    SW_BUILT_IN_ASSET_CACHE( AnimationNotifyTableCache );
-    SW_BUILT_IN_ASSET_CACHE( PairedAnimationDefCache );
-    SW_BUILT_IN_ASSET_CACHE( PhysicsAssetCache );
+    SW_SHARED_ASSET_CACHE( SocketSet );
+    SW_SHARED_ASSET_CACHE( AnimationNotifyTable );
+    SW_SHARED_ASSET_CACHE( PairedAnimationDef );
+    SW_SHARED_ASSET_CACHE( PhysicsAsset );
 } // namespace sw

@@ -51,7 +51,7 @@
 | 공유 알림 | 에셋의 `<Notify name time role/>` 를 그 역할 오브젝트의 `AnimationNotifyComponent` 표로 보낸다(순간 알림만). 표에 항목이 없으면 **시작 거절** | 화살은 기존 경로(`SpawnPrefab` 처리기)로 생긴다. 이름 → 처리기는 캐릭터 데이터가 정한다 |
 | 중단 정책 | 필수 역할 · 앵커를 잃으면(오브젝트가 없어짐, 애니메이터가 다른 것을 재생함) 세션 중단 — 남은 역할은 각자 `exitState` 로 `exitBlend` 동안 블렌드. 선택 역할을 잃으면 그 역할만 빠진다 | 데이터 없이 규칙 하나. 잃은 역할의 애니메이터는 건드리지 않는다(게임플레이가 이미 다른 것을 재생 중) |
 | 데이터 형식 | `*.pairedanim.xml`(캐릭터 데이터 XML 관례, `CharacterDataReader` — 모르는 속성 · 원소는 오류) | 알림 표 · 소켓과 같은 사람이 같은 도구로 고친다 |
-| 에셋 캐시 · 핫 리로드 | `PairedAnimationDefCache`(`CharacterDataCache.h`). 다시 읽기는 제자리에서 바꾸지 않고 표에서 떼어 낸다(`detachShared`). `PairedAnimationComponent` 는 다시 읽은 횟수가 바뀌면 다음 시작 전에 다시 받는다 | 돌고 있는 세션은 역할 인덱스로 에셋을 읽는다 — 제자리에서 역할 수가 바뀌면 범위 밖을 읽는다 |
+| 에셋 캐시 · 핫 리로드 | `SharedAssetCache<PairedAnimationDef>`(`CharacterDataCache.h`). 다시 읽기는 제자리에서 바꾸지 않고 표에서 떼어 낸다(`detachShared`). `PairedAnimationComponent` 는 다시 읽은 횟수가 바뀌면 다음 시작 전에 다시 받는다 | 돌고 있는 세션은 역할 인덱스로 에셋을 읽는다 — 제자리에서 역할 수가 바뀌면 범위 밖을 읽는다 |
 | 세트 고르기 | 에셋마다 `<Select>`, `PairedAnimationSystem::startMatchingSession` 이 목록에서 자리에 맞는 첫 세트로 시작(없으면 `NoMatchingSet`). 고른 세트의 시작이 거절되면 다음 세트로 넘어가지 않는다 | 조건을 통과한 세트가 시작하지 못하는 것은 데이터 · 배치 결함이다 — 다른 세트로 덮지 않는다 |
 | 재생 속도를 쓰는 다른 컴포넌트 | 세션이 역할에 들어올 때 `LocomotionWarpingComponent::setPlayRateHeld( true )`, 나갈 때 `false` | 보폭 보정은 Object 티어라 Character 의 세션을 include 할 수 없다(`CheckEngineLayers`). 세션이 알려 주는 쪽이 방향이 맞다 |
 | 에셋 이름 | `PairedAnimationDef`(+ `RoleDef` · `NotifyDef`) | 저작 데이터 정의는 `Def`(`docs/agents/NamingCpp.md` `Naming`) |

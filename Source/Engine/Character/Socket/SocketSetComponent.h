@@ -24,7 +24,7 @@ namespace sw
 
     /**
      * @class SocketSetComponent
-     * @brief 소켓 에셋 하나를 이 오브젝트의 소켓 테이블로 씁니다. 에셋은 공유 캐시(`SocketSetCache`)에서 받고, 파일을 고치면 다시 받습니다.
+     * @brief 소켓 에셋 하나를 이 오브젝트의 소켓 테이블로 씁니다. 에셋은 공유 캐시(`SharedAssetCache<SocketSet>`)에서 받고, 파일을 고치면 다시 받습니다.
      */
     REFLECT( Category = "Character", DisplayName = "Socket Set", Tooltip = "Named sockets and markers (*.sockets.xml) of this object, relative to its bones or root" )
     class SW_API SocketSetComponent : public Component
