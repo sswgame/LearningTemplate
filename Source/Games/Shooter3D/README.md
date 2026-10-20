@@ -39,18 +39,20 @@ cd build/Ninja-Debug/Bin
 ### 자동화 시나리오
 
 시나리오는 `Resource/game/shooter3d/automation/` 에 있습니다. 고정 프레임 시간과 가상 입력으로 돌고, 결과는 종료 코드입니다.
-`ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly` 가 셋을 백엔드마다 돌립니다.
+`ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly` 가 이 시나리오들을 백엔드마다 돌립니다.
 
 ```powershell
 ./App.exe -game=Shooter3D -dx12 -scenario=game/shooter3d/automation/weaponswitch.scenario.xml   # E/Q 와 숫자 키가 무기를 정확히 한 단계씩
 ./App.exe -game=Shooter3D -dx12 -scenario=game/shooter3d/automation/closewindow.scenario.xml    # 커서 잠금, Esc, 창 닫기
 ./App.exe -game=Shooter3D -dx12 -scenario=game/shooter3d/automation/autoplay.scenario.xml       # 자동 플레이 = AI 빙의, 끄면 플레이어 키가 먹는다
+./App.exe -game=Shooter3D -dx12 -scenario=game/shooter3d/automation/fieldofview.scenario.xml    # 팩 설정의 기본 시야각 80 이 적용됐는지
 ```
 
 - `weaponswitch` 는 E 와 Q 를 짧게, 길게, 같은 프레임에 눌러 무기 번호가 정확히 한 단계씩 바뀌는지 봅니다. 누르는 동안 매 프레임 바뀌는 회귀를 잡습니다.
 - `closewindow` 는 진짜 커서 잠금(`ClipCursor`)을 보므로 OS 입력도 받는 `input="mixed"` 로 돕니다. 도는 동안 키보드와 마우스를 만지지 않습니다.
   전경 창을 얻지 못하는 세션(원격, 잠긴 화면)이나 Windows 밖에서는 13(건너뜀)으로 끝납니다.
 - `autoplay` 는 자동 플레이를 켜면 AI 가 쏘고 맞히고, 끄면 플레이어 조종자가 폰을 되찾아 3 키로 권총을 고르는지 봅니다.
+- `fieldofview` 는 팩 `gamesettings.xml` 의 `gameplay.fieldOfView` 80 이 전역 변수 `gv_cameraFieldOfView` 로 적용됐는지 `ExpectVariable` 로 봅니다.
 
 탐침은 `Shooter3D.WeaponIndex`, `PlayerAlive`, `ShotCount`, `EnemyHitCount`, `PlayerControllerKind`(0 플레이어, 1 AI, −1 없음)입니다.
 

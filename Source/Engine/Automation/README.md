@@ -90,6 +90,9 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 **단언과 이력.** 단언 단계는 그 프레임의 씬 틱 뒤에 돕니다. `ExpectVisited` 가 있으면 시작할 때 그 탐침(탐침, 대상, 키 조합)마다 이력을 만들고, 프레임마다 값을 읽어 바뀔 때만 프레임 번호와 함께 적습니다.
 `sequence="A, B, C"` 는 그 값들을 이 순서로 거쳤는지(사이에 다른 값이 끼어도 된다), `since` 는 그 프레임에 이미 들어 있던 값부터 셀지를 정합니다.
 
+**전역 변수 단언.** `<ExpectVariable name="gv_cameraFieldOfView" value="80" tolerance="0.001"/>` 가 전역 변수의 지금 값을 타입대로 견줍니다(bool · int · 글 · enum 은 숫자). `tolerance` 는 실수 변수에만 붙고 없으면 정확히 같아야 합니다.
+없는 변수 · 모르는 속성 · 그 타입으로 읽히지 않는 `value` 는 읽기 오류, 값이 다르면 실패입니다. 팩 설정이나 사용자 설정이 변수에 적용됐는지를 화면 캡처 없이 봅니다(`shooter3d/automation/fieldofview.scenario.xml`).
+
 **경계 전후 견주기.** `<Remember probe="Editor.StateHash" as="edited"/>` 가 그 프레임의 탐침 값을 이름으로 기억하고, 뒤의 `Expect` · `WaitUntil` 이
 `sameAs="edited"` · `differsFrom="edited"` 로 견줍니다. 값은 글 그대로 견주므로 64 비트 해시도 뭉개지지 않습니다. 실행기는 엔진 쪽이라 플레이 인/아웃,
 모듈 리로드, 백엔드 교체를 넘어 기억합니다. `SwapBackend backend="other"` 는 지금과 다른 백엔드(DirectX 12 가 아니면 DirectX 12, DirectX 12 면 DirectX 11)로,
