@@ -709,13 +709,17 @@ SW_TEST_CASE( PairedAnimationTest, RestoreKeepsPendingNotifyAndExitsFinishedRole
     system.runBeforeTick( manager, TestPairedAnimationInternal::kStep );
     SW_EXPECT_EQUAL( 1u, TestPairedAnimationInternal::countRelease( *pNotify ) );
     manager.getSubsystem<AnimationSystem>().evaluate( TestPairedAnimationInternal::kStep );
+    // 처리 기록은 프레임마다 바뀌므로 이어지는 프레임마다 합산해 알림이 다시 나오지 않음을 확인한다.
+    uint32 laterReleaseCount = 0;
     for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
     {
-        TestPairedAnimationInternal::step( manager, system );
+        system.runBeforeTick( manager, TestPairedAnimationInternal::kStep );
+        laterReleaseCount += TestPairedAnimationInternal::countRelease( *pNotify );
+        manager.getSubsystem<AnimationSystem>().evaluate( TestPairedAnimationInternal::kStep );
     }
     SW_EXPECT_TRUE( pSession->isRolePlaying( hashed_string( "Prop" ) ) );
     SW_EXPECT_TRUE( pSession->isPlaying() );
-    SW_EXPECT_EQUAL( 1u, TestPairedAnimationInternal::countRelease( *pNotify ) );
+    SW_EXPECT_EQUAL( 0u, laterReleaseCount );
 
     // 클립이 이미 끝난 역할 — Prop 이 0.2 초에 들어와 0.5 초 클립을 도는데 0.8 초에서 이어 받는다.
     const shared_ptr<const PairedAnimationDef> finishedDef = TestPairedAnimationInternal::makeDef( R"(<PairedAnimation duration="1">

@@ -44,6 +44,26 @@ namespace sw
                 }
                 inoutValue = parsed;
             }
+
+            /** @brief 셰이더 파라미터 값 "x" · "x y" · "x y z" · "x y z w" 를 읽습니다. 파라미터가 스칼라인지 색인지는 읽는 때 알 수 없어 1~4 개를 받고, 모자란 성분은 0 입니다. */
+            [[nodiscard]] static bool parseShaderValue( string_view text, float4& outValue )
+            {
+                float4  vec4{};
+                float3  vec3{};
+                float2  vec2{};
+                float32 scalar = 0.0f;
+                if ( GameDataXML::parseFloat4( text, vec4 ) )
+                    outValue = vec4;
+                else if ( GameDataXML::parseFloat3( text, vec3 ) )
+                    outValue = float4( vec3._x, vec3._y, vec3._z, 0.0f );
+                else if ( GameDataXML::parseFloat2( text, vec2 ) )
+                    outValue = float4( vec2._x, vec2._y, 0.0f, 0.0f );
+                else if ( StringUtil::parseFloat( text, scalar ) )
+                    outValue = float4( scalar, 0.0f, 0.0f, 0.0f );
+                else
+                    return false;
+                return true;
+            }
         };
     } // namespace
 
@@ -115,6 +135,11 @@ namespace sw
     void AppearanceXMLUtil::readRequiredFloat4( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName )
     {
         AppearanceXMLUtilInternal::readVector( node, pAttribute, true, "r g b a", outValue, &GameDataXML::parseFloat4, report, sourceName );
+    }
+
+    void AppearanceXMLUtil::readRequiredShaderValue( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName )
+    {
+        AppearanceXMLUtilInternal::readVector( node, pAttribute, true, "x [y [z [w]]]", outValue, &AppearanceXMLUtilInternal::parseShaderValue, report, sourceName );
     }
 
     void AppearanceXMLUtil::readPlacement( const XMLNode& node, const utf8* pSocketAttribute, AppearancePlacement& outPlacement, AppearanceLoadReport& report, string_view sourceName )

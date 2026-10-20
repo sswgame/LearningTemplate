@@ -120,7 +120,7 @@ namespace sw
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialAttribute, report, sourceName );
                     AppearanceMaterialValueDef value;
                     value._name = AppearanceXMLUtil::readName( child, "name" );
-                    AppearanceXMLUtil::readRequiredFloat4( child, "value", value._value, report, sourceName );
+                    AppearanceXMLUtil::readRequiredShaderValue( child, "value", value._value, report, sourceName );
                     inoutPart._listMaterialValue.push_back( value );
                 }
                 else if ( StringUtil::equals( pName, "HideRegion", true ) && bModification )
@@ -245,7 +245,7 @@ namespace sw
                         AppearanceMaterialValueDef value;
                         value._part = AppearanceXMLUtil::readName( child, "part" );
                         value._name = AppearanceXMLUtil::readName( child, "name" );
-                        AppearanceXMLUtil::readRequiredFloat4( child, "value", value._value, report, sourceName );
+                        AppearanceXMLUtil::readRequiredShaderValue( child, "value", value._value, report, sourceName );
                         if ( value._part.empty() || hasPart( inoutVisual, value._part, report, sourceName, "damage <Material>" ) )
                             stage._listMaterialValue.push_back( value );
                     }

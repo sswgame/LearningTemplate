@@ -48,6 +48,11 @@ namespace sw
         static void readOptionalFloat4( const XMLNode& node, const utf8* pAttribute, float4& inoutValue, AppearanceLoadReport& report, string_view sourceName );
         /** @brief 필수 속성을 "r g b a" 정확히 네 실수로 읽습니다. 속성이 없거나 읽히지 않으면 @p report 에 오류를 더합니다. */
         static void readRequiredFloat4( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName );
+        /**
+         * @brief 필수 셰이더 파라미터 값을 "x" · "x y" · "x y z" · "x y z w" 중 하나로 읽습니다. 모자란 성분은 0 이다.
+         * @details 파라미터가 스칼라인지 색인지는 읽는 때 알 수 없어 1~4 개를 받는다. 없거나 숫자가 아닌 토큰이 있거나 다섯 개 이상이면 @p report 에 오류를 더한다.
+         */
+        static void readRequiredShaderValue( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName );
         /** @brief @p pSocketAttribute 의 소켓 후보 목록과 `offset`, `rotation` 을 읽습니다. 적지 않은 `offset` · `rotation` 은 0 이고, 틀리게 적으면 @p report 에 오류를 더합니다. */
         static void readPlacement( const XMLNode& node, const utf8* pSocketAttribute, AppearancePlacement& outPlacement, AppearanceLoadReport& report, string_view sourceName );
         /** @brief 쉼표로 나뉜 계층 태그를 추가합니다(`Helmet.FullFace, Armor.Heavy`). */
