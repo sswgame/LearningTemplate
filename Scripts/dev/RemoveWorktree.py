@@ -9,11 +9,11 @@
     py -3 -m Scripts worktree-remove <이름> --force               # 커밋하지 않은 변경이 있어도 지운다
     py -3 -m Scripts worktree-remove <이름> --even-if-owned       # 다른 세션이 쓰는 중이어도 지운다(사용자가 시킨 때만)
 
-주인 기록(`MakeWorktree.kOwnerFileName`)의 프로세스가 살아 있고 내 프로세스(`--pid` · `CLAUDE_PID`)가 아니면 "다른 세션이 쓰는 중" 으로 건너뛴다.
+주인 기록(`common/Worktree.py` 의 `kOwnerFileName`)의 프로세스가 살아 있고 내 프로세스(`--pid` · `CLAUDE_PID`)가 아니면 "다른 세션이 쓰는 중" 으로 건너뛴다.
 `--force` 는 커밋하지 않은 변경만 넘는다 — 둘을 한 플래그로 두면 변경을 버리려고 준 `--force` 가 남의 워크트리까지 지운다.
 
 링크를 끊지 않고 폴더를 지우면 도구에 따라 링크 너머(main 의 LLVM · vcpkg 설치 트리)까지 지울 수 있습니다. 그래서 지우기 전에
-`MakeWorktree.kSharedFolders` 의 링크를 링크로서만 지우고, 그 뒤에 `git worktree remove` 를 부릅니다.
+`common/Worktree.py` 의 `kSharedFolders` 링크를 링크로서만 지우고, 그 뒤에 `git worktree remove` 를 부릅니다.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ from common import getProjectRoot, runGit  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "generate"))
 from CookAssets import kCookStampPathPattern  # noqa: E402 — 쿠킹 스탬프 경로의 정본
-from MakeWorktree import (  # noqa: E402
+from common.Worktree import (  # noqa: E402
     describeWorktreeOwner,
     findMainRoot,
     getWorktreeGitDirectory,

@@ -42,7 +42,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common import BuildTree, getProjectRoot, kTestBuildTargets, runGit, runProcess  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from MakeWorktree import findMainRoot, getDefaultWorktreeRoot  # noqa: E402
+from common.Worktree import findMainRoot, getDefaultWorktreeRoot  # noqa: E402
 
 kScenarioNames: tuple[str, ...] = ("full", "header", "cpp", "worktree")
 kDefaultHeader = "Source/Core/Container/vector.h"

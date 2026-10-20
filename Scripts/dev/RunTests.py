@@ -32,8 +32,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import ListChangedTests  # noqa: E402
-from RunLogDigest import runDigested  # noqa: E402
+from common import ChangedTests  # noqa: E402
+from common.LogDigest import runDigested  # noqa: E402
 from common import BuildTree, ProcessResult, addBuildTreeArguments, getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
@@ -81,11 +81,11 @@ def listChangedFiles(root: Path, base: str | None) -> list[str] | None:
     return sorted(path for path in setPath if path)
 
 
-def selectCtestEntries(tree: BuildTree, selection: ListChangedTests.TestSelection, bGpu: bool) -> list[str]:
+def selectCtestEntries(tree: BuildTree, selection: ChangedTests.TestSelection, bGpu: bool) -> list[str]:
     """고른 실행 파일 · 라벨에 해당하는 ctest 항목 이름. 린트는 늘 든다."""
     listing = runProcess(["ctest", "--test-dir", str(tree.path), "-N", "--show-only=json-v1"])
     if not listing.bSucceeded:
-        raise ListChangedTests.ChangedTestsError([f"`ctest --test-dir {tree.path} -N` 가 졌다 — 빌드 폴더를 구성하고 다시:\n{listing.output[-2000:]}"])
+        raise ChangedTests.ChangedTestsError([f"`ctest --test-dir {tree.path} -N` 가 졌다 — 빌드 폴더를 구성하고 다시:\n{listing.output[-2000:]}"])
     data = json.loads(listing.stdout)
     setLabelWanted = {"lint", "nogpu"} | ({"hostgpu"} if bGpu else set())
     listName: list[str] = []
@@ -117,13 +117,13 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
         return 2
     policy = json.loads((root / "Test" / "TestPolicy.json").read_text(encoding="utf-8"))
     setTestExecutable = set(policy["executables"])
-    # 해석하지 못하면 전체 · 일부로 물러서지 않고 까닭을 보이며 멈춘다(ListChangedTests 머리말).
+    # 해석하지 못하면 전체 · 일부로 물러서지 않고 까닭을 보이며 멈춘다(common/ChangedTests.py 머리말).
     try:
-        bNeedsGraph = any(ListChangedTests.classifyPath(path) == "source" for path in listChanged)
-        graph = ListChangedTests.readBuildGraph(tree.path, root) if bNeedsGraph else None
-        selection = ListChangedTests.selectTests(listChanged, root, setTestExecutable, graph)
+        bNeedsGraph = any(ChangedTests.classifyPath(path) == "source" for path in listChanged)
+        graph = ChangedTests.readBuildGraph(tree.path, root) if bNeedsGraph else None
+        selection = ChangedTests.selectTests(listChanged, root, setTestExecutable, graph)
         listEntry = selectCtestEntries(tree, selection, args.bGpu)
-    except ListChangedTests.ChangedTestsError as error:
+    except ChangedTests.ChangedTestsError as error:
         print(f"[RunTests] 바뀐 파일 {len(listChanged)} 개를 테스트로 옮기지 못했습니다:", file=sys.stderr)
         for reason in error.listReason:
             print(f"    {reason}", file=sys.stderr)

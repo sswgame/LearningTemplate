@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""워크트리 도구(MakeWorktree · RemoveWorktree)와 CI 도구(ListCiJobs · CiFailureReport)의 판단 — git · 네트워크 없이."""
+"""워크트리 도구(common.Worktree · RemoveWorktree)와 CI 도구(ListCiJobs · CiFailureReport)의 판단 — git · 네트워크 없이."""
 
 from __future__ import annotations
 
@@ -18,10 +18,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "dev"))
 import CiFailureReport  # noqa: E402
 import ListCiJobs  # noqa: E402
 import ListWorktrees  # noqa: E402
-import MakeWorktree  # noqa: E402
 import RemoveWorktree  # noqa: E402
 import RunFullBuild  # noqa: E402
-import RunSharedLock as SharedLock  # noqa: E402
+from common import SharedLock, Worktree  # noqa: E402
 
 
 class SharedLockTest(unittest.TestCase):
@@ -101,8 +100,8 @@ class SharedLockTest(unittest.TestCase):
 class MakeWorktreePlanTest(unittest.TestCase):
     def testPlanUsesSiblingFolderAndBranchPrefix(self) -> None:
         mainRoot = Path("/repo/LearningTemplate")
-        plan = MakeWorktree.makePlan(mainRoot, "a5-split", "origin/main", None)
-        self.assertEqual(plan.worktreePath, Path("/repo") / MakeWorktree.kWorktreeFolderName / "a5-split")
+        plan = Worktree.makePlan(mainRoot, "a5-split", "origin/main", None)
+        self.assertEqual(plan.worktreePath, Path("/repo") / Worktree.kWorktreeFolderName / "a5-split")
         self.assertEqual(plan.branch, "wt/a5-split")
         self.assertEqual(plan.base, "origin/main")
 
@@ -110,15 +109,15 @@ class MakeWorktreePlanTest(unittest.TestCase):
         for name in ("", "a/b", "..", "a b", "x;rm"):
             with self.subTest(name=name):
                 with self.assertRaises(ValueError):
-                    MakeWorktree.makePlan(Path("/repo/main"), name, "origin/main", None)
+                    Worktree.makePlan(Path("/repo/main"), name, "origin/main", None)
 
     def testSharedLinksListOnlyFoldersMainHas(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             mainRoot = Path(temp) / "main"
             (mainRoot / "Tools/LLVM").mkdir(parents=True)
             (mainRoot / "build/vcpkg_installed").mkdir(parents=True)
-            plan = MakeWorktree.makePlan(mainRoot, "unit", "origin/main", Path(temp) / "wt")
-            listRel = sorted(link.relative_to(plan.worktreePath).as_posix() for link, _ in MakeWorktree.listSharedLinks(plan))
+            plan = Worktree.makePlan(mainRoot, "unit", "origin/main", Path(temp) / "wt")
+            listRel = sorted(link.relative_to(plan.worktreePath).as_posix() for link, _ in Worktree.listSharedLinks(plan))
             self.assertEqual(listRel, ["Tools/LLVM", "build/vcpkg_installed"])
 
     def testDirectoryLinkIsRemovedWithoutTouchingItsTarget(self) -> None:
@@ -128,7 +127,7 @@ class MakeWorktreePlanTest(unittest.TestCase):
             target.mkdir(parents=True)
             (target / "keep.txt").write_text("x", encoding="utf-8")
             link = Path(temp) / "wt/Tools/LLVM"
-            self.assertTrue(MakeWorktree.createDirectoryLink(link, target))
+            self.assertTrue(Worktree.createDirectoryLink(link, target))
             self.assertTrue(RemoveWorktree.isDirectoryLink(link))
             self.assertFalse(RemoveWorktree.isDirectoryLink(target))
             RemoveWorktree.removeDirectoryLink(link)
@@ -153,37 +152,37 @@ class MakeWorktreePlanTest(unittest.TestCase):
     def testDifferentTripletBytesAreReported(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             mainRoot = Path(temp) / "main"
-            plan = MakeWorktree.makePlan(mainRoot, "unit", "origin/main", Path(temp) / "wt")
+            plan = Worktree.makePlan(mainRoot, "unit", "origin/main", Path(temp) / "wt")
             for root, text in ((mainRoot, b"set(A 1)\n"), (plan.worktreePath, b"set(A 1)\r\n")):
                 folder = root / "cmake/Modules/Toolchain/Vcpkg"
                 folder.mkdir(parents=True)
                 (folder / "x64-windows.cmake").write_bytes(text)
-            self.assertEqual(MakeWorktree.listDifferentTriplets(plan), ["cmake/Modules/Toolchain/Vcpkg/x64-windows.cmake"])
+            self.assertEqual(Worktree.listDifferentTriplets(plan), ["cmake/Modules/Toolchain/Vcpkg/x64-windows.cmake"])
 
 
 class WorktreeOwnerTest(unittest.TestCase):
     def testOwnerRecordRoundTripsAndTellsOtherLiveOwners(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             gitDirectory = Path(temp)
-            self.assertIsNone(MakeWorktree.readWorktreeOwner(gitDirectory))   # 이 기능 전 워크트리
-            owner = MakeWorktree.WorktreeOwner(owner="unit", pid=os.getpid(), session="s1", startTime=1000.0)
-            MakeWorktree.writeWorktreeOwner(gitDirectory, owner)
-            self.assertEqual(MakeWorktree.readWorktreeOwner(gitDirectory), owner)
-            self.assertFalse(MakeWorktree.isOwnedByOtherLiveProcess(owner, os.getpid()))   # 내 것
-            self.assertTrue(MakeWorktree.isOwnedByOtherLiveProcess(owner, None))           # 내 번호를 모르면 살아 있는 주인은 남이다
-            gone = MakeWorktree.WorktreeOwner(owner="gone", pid=0, session="", startTime=1000.0)
-            self.assertFalse(MakeWorktree.isOwnedByOtherLiveProcess(gone, None))           # 끝난 주인
-            (gitDirectory / MakeWorktree.kOwnerFileName).write_text("{}", encoding="utf-8")
+            self.assertIsNone(Worktree.readWorktreeOwner(gitDirectory))   # 이 기능 전 워크트리
+            owner = Worktree.WorktreeOwner(owner="unit", pid=os.getpid(), session="s1", startTime=1000.0)
+            Worktree.writeWorktreeOwner(gitDirectory, owner)
+            self.assertEqual(Worktree.readWorktreeOwner(gitDirectory), owner)
+            self.assertFalse(Worktree.isOwnedByOtherLiveProcess(owner, os.getpid()))   # 내 것
+            self.assertTrue(Worktree.isOwnedByOtherLiveProcess(owner, None))           # 내 번호를 모르면 살아 있는 주인은 남이다
+            gone = Worktree.WorktreeOwner(owner="gone", pid=0, session="", startTime=1000.0)
+            self.assertFalse(Worktree.isOwnedByOtherLiveProcess(gone, None))           # 끝난 주인
+            (gitDirectory / Worktree.kOwnerFileName).write_text("{}", encoding="utf-8")
             with self.assertRaises(ValueError):
-                MakeWorktree.readWorktreeOwner(gitDirectory)   # 깨진 기록은 "없음" 이 아니다
+                Worktree.readWorktreeOwner(gitDirectory)   # 깨진 기록은 "없음" 이 아니다
 
     def testOwnerPidComesFromArgumentThenEnvironment(self) -> None:
         from unittest import mock
-        with mock.patch.dict(os.environ, {MakeWorktree.kOwnerPidEnvironment: "4321"}):
-            self.assertEqual(MakeWorktree.resolveOwnerProcessId(None), 4321)
-            self.assertEqual(MakeWorktree.resolveOwnerProcessId(7), 7)
-        with mock.patch.dict(os.environ, {MakeWorktree.kOwnerPidEnvironment: ""}):
-            self.assertIsNone(MakeWorktree.resolveOwnerProcessId(None))
+        with mock.patch.dict(os.environ, {Worktree.kOwnerPidEnvironment: "4321"}):
+            self.assertEqual(Worktree.resolveOwnerProcessId(None), 4321)
+            self.assertEqual(Worktree.resolveOwnerProcessId(7), 7)
+        with mock.patch.dict(os.environ, {Worktree.kOwnerPidEnvironment: ""}):
+            self.assertIsNone(Worktree.resolveOwnerProcessId(None))
 
     def testWorktreeListIsParsed(self) -> None:
         text = ("worktree D:/repo\nHEAD abc\nbranch refs/heads/main\n\n"

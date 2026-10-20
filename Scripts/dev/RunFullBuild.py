@@ -36,9 +36,9 @@ from common import BuildTree, getProjectRoot, kTestBuildTargets, runGit  # noqa:
 from common.BuildTree import kDefaultPreset  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from RunLogDigest import getLogPath, printDigest  # noqa: E402
-from MakeWorktree import findMainRoot  # noqa: E402
-from RunSharedLock import getSharedSlotCount, kDefaultWaitSeconds, runHolding  # noqa: E402
+from common.LogDigest import getLogPath, printDigest  # noqa: E402
+from common.SharedLock import getSharedSlotCount, kDefaultWaitSeconds, runHolding  # noqa: E402
+from common.Worktree import findMainRoot  # noqa: E402
 
 #: 공통 .git 아래 증거 폴더.
 kEvidenceDirName = "sw-build-evidence"
@@ -168,7 +168,7 @@ def runFullBuild(repositoryRoot: Path, args: argparse.Namespace) -> int:
     lockArgs = argparse.Namespace(resource=kBuildLockResource, owner=args.owner, shared=True, slots=getSharedSlotCount(kBuildLockResource),
                                   purpose=f"full-build {args.preset} {inputHash[:12]}", wait=args.wait, belowNormal=args.belowNormal)
     startTime = time.time()
-    # 출력은 로그 파일로 가고 끝나서 요약만 보인다(`RunLogDigest`) — `--verbose` 면 지금까지처럼 흘린다. 잠금 동작은 그대로다.
+    # 출력은 로그 파일로 가고 끝나서 요약만 보인다(`common/LogDigest.py`) — `--verbose` 면 지금까지처럼 흘린다. 잠금 동작은 그대로다.
     logPath = None if args.bVerbose else getLogPath(repositoryRoot, f"full-build-{args.preset}")
     returnCode = runHolding(findMainRoot(repositoryRoot), lockArgs, tree.buildCommand(kTestBuildTargets, args.jobs), logPath)
     if logPath is not None and logPath.is_file():
