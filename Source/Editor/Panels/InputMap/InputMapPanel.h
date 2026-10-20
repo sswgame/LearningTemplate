@@ -13,6 +13,11 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/InputReplay.h"
 
+namespace sw
+{
+    class InputManager;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
@@ -85,6 +90,10 @@ namespace sw::editor
         void drawInputGraphTab();
         void drawInputSimulatorTab();
         void drawInputReplayTab();
+        /** @brief 입력 녹화 시작 · 중지 줄입니다. */
+        void drawRecordControls( InputManager& input, bool bPlaying );
+        /** @brief 녹화한 입력의 재생 · 일시정지 · 한 프레임 이동 · 타임라인 슬라이더입니다. */
+        void drawPlaybackControls( InputManager& input, bool bPlaying, uint32 currentFrame );
         void drawViewportOverlayTab();
 
         void drawLayerList();

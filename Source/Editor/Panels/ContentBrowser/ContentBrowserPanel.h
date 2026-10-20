@@ -145,6 +145,12 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 검색, 필터, 뷰 모드 툴바를 그립니다. */
         void drawToolbar();
+        /** @brief 툴바의 이동 단추(뒤로 · 앞으로), 추가 메뉴, 검색창입니다. */
+        void drawNavigationControls();
+        /** @brief 툴바의 형식 필터, 타일 · 목록 전환, 타일 크기입니다. */
+        void drawViewControls();
+        /** @brief 툴바의 가져오기, 새로 고침, 모든 팩 보기입니다. */
+        void drawFileControls();
         /** @brief 왼쪽 루트와 폴더 트리를 그립니다. */
         void drawSourcesSection();
         /** @brief 폴더 트리 노드 하나를 재귀로 그립니다. */

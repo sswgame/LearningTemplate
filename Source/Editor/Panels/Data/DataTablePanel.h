@@ -16,6 +16,11 @@
 
 namespace sw::editor
 {
+    class EditorListFilter;
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @class DataTablePanel
      * @brief 로컬라이제이션 프로젝트(엔진 · 게임)의 원문 표와 문화권 번역을 한 표로 편집하고, 데이터 XML 파일을 원소별 표(또는 XML 원문)로 편집 · 저장하는 에디터 창입니다.
@@ -51,6 +56,10 @@ namespace sw::editor
         void drawLocalizationToolbar();
         /** @brief 로컬라이즈 레코드 표를 그립니다. */
         void drawLocalizationTable();
+        /** @brief 필터를 지난 레코드 순번을 모읍니다(@p outListVisibleIndex 는 호출한 쪽이 재사용하는 버퍼). */
+        void collectVisibleLocalizationRecords( const EditorListFilter& filter, vector<size_t>& outListVisibleIndex ) const;
+        /** @brief 현지화 표의 한 줄(키 · 원문 · 번역 칸 · 삭제 단추)을 그립니다. 삭제 단추를 눌렀으면 true 입니다. */
+        [[nodiscard]] bool drawLocalizationRow( size_t recordIndex, size_t cultureCount );
         /** @brief 번역 칸 하나를 상태 색 · 길이 경고 · 맥락 툴팁과 함께 그립니다. 고쳤으면 true 입니다. */
         bool drawTranslationCell( LocalizationRecord& record, size_t cultureIndex );
         void drawGameDataTab();

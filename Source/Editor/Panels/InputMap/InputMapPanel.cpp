@@ -1084,8 +1084,29 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        // 녹화 제어
         const bool bPlaying = pInput->getVirtualInput() == &_replay;
+        drawRecordControls( *pInput, bPlaying );
+
+        ImGui::Separator();
+
+        // 재생 제어. 재생은 리플레이를 붙이는 것이고, 일시정지는 그 프레임으로 seekTo 하는 것이다(상태를 재현한 뒤 뗀다). 탐색도 seekTo 다.
+        ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", _replay.getFrameCount(), static_cast<float64>( _replay.getTotalDuration() ) );
+        const uint32 currentFrame = _replay.getStartFrameIndex() + ( bPlaying ? pInput->getVirtualFrameIndex() : 0u );
+        drawPlaybackControls( *pInput, bPlaying, currentFrame );
+
+        if ( currentFrame < _replay.getFrameCount() )
+        {
+            const InputReplayFrame&               frame = _replay.getFrames()[currentFrame];
+            fixed_string<constant::kMaxBuffer128> frameBuf;
+            formatstring( frameBuf.data(), frameBuf.capacity(), "Frame #%u | DeltaTime: %#s | Events: %d", currentFrame,
+                          Fmt( static_cast<float64>( frame._deltaTime ), Format().precision( 4 ) ), static_cast<int32>( frame._listRawEvent.size() ) );
+            EditorThemeUtil::textInfo( frameBuf.c_str() );
+        }
+    }
+
+    void InputMapPanel::drawRecordControls( InputManager& input, bool bPlaying )
+    {
+        // 녹화 제어
         if ( _replay.isRecording() )
         {
             EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
@@ -1101,24 +1122,22 @@ namespace sw::editor
             if ( ImGui::Button( "● Start Recording" ) )
             {
                 _replay.startRecording( "GameplaySession" );
-                _recordedBeginFrameCount = pInput->getBeginFrameCount();
+                _recordedBeginFrameCount = input.getBeginFrameCount();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StartRecordingTip" ) );
         }
+    }
 
-        ImGui::Separator();
-
-        // 재생 제어. 재생은 리플레이를 붙이는 것이고, 일시정지는 그 프레임으로 seekTo 하는 것이다(상태를 재현한 뒤 뗀다). 탐색도 seekTo 다.
-        ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", _replay.getFrameCount(), static_cast<float64>( _replay.getTotalDuration() ) );
-        const uint32 currentFrame = _replay.getStartFrameIndex() + ( bPlaying ? pInput->getVirtualFrameIndex() : 0u );
+    void InputMapPanel::drawPlaybackControls( InputManager& input, bool bPlaying, uint32 currentFrame )
+    {
         if ( bPlaying )
         {
             if ( ImGui::Button( "⏸ Pause" ) )
-                _replay.seekTo( *pInput, currentFrame );
+                _replay.seekTo( input, currentFrame );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PauseReplayTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "⏹ Stop" ) )
-                _replay.seekTo( *pInput, 0 );
+                _replay.seekTo( input, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StopReplayTip" ) );
         }
         else if ( _replay.isRecording() == false && _replay.getFrameCount() > 0 )
@@ -1126,33 +1145,24 @@ namespace sw::editor
             if ( ImGui::Button( "▶ Play Replay" ) )
             {
                 if ( currentFrame >= _replay.getFrameCount() )
-                    _replay.seekTo( *pInput, 0 );
-                pInput->attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
+                    _replay.seekTo( input, 0 );
+                input.attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PlayReplayTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "⏮ Step Back" ) && currentFrame > 0 )
-                _replay.seekTo( *pInput, currentFrame - 1 );
+                _replay.seekTo( input, currentFrame - 1 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StepBackTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "⏭ Step Forward (1 Frame)" ) )
-                _replay.seekTo( *pInput, currentFrame + 1 );
+                _replay.seekTo( input, currentFrame + 1 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StepForwardTip" ) );
 
             int32       frameIdx  = static_cast<int32>( currentFrame );
             const int32 maxFrames = static_cast<int32>( _replay.getFrameCount() );
             if ( ImGui::SliderInt( "Timeline Frame", &frameIdx, 0, maxFrames ) )
-                _replay.seekTo( *pInput, static_cast<uint32>( frameIdx ) );
+                _replay.seekTo( input, static_cast<uint32>( frameIdx ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TimelineFrameTip" ) );
-        }
-
-        if ( currentFrame < _replay.getFrameCount() )
-        {
-            const InputReplayFrame&               frame = _replay.getFrames()[currentFrame];
-            fixed_string<constant::kMaxBuffer128> frameBuf;
-            formatstring( frameBuf.data(), frameBuf.capacity(), "Frame #%u | DeltaTime: %#s | Events: %d", currentFrame,
-                          Fmt( static_cast<float64>( frame._deltaTime ), Format().precision( 4 ) ), static_cast<int32>( frame._listRawEvent.size() ) );
-            EditorThemeUtil::textInfo( frameBuf.c_str() );
         }
     }
 

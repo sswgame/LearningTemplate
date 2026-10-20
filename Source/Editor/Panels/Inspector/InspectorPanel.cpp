@@ -518,106 +518,121 @@ namespace sw::editor
             const TypeInfo* pTInfo = pComp->getTypeInfo();
             if ( pTInfo != nullptr )
             {
-                if ( ImGui::MenuItem( "Copy Component" ) )
-                    workspace.copyComponent( pComp );
-                const string compTypeName = pComp->getTypeName().c_str();
-                const bool   bCanPaste    = ( workspace.hasCopiedComponent() &&
-                                         workspace.getCopiedComponentTypeName() == compTypeName );
-                if ( bCanPaste )
-                {
-                    if ( ImGui::MenuItem( "Paste Component Values" ) )
-                        (void)EditorTransformCommands::pasteCopiedComponentValues( workspace, pComp ); // 실패는 붙여넣기가 로그로 알린다
-                }
-                else
-                {
-                    ImGui::BeginDisabled();
-                    ImGui::MenuItem( "Paste Component Values" );
-                    ImGui::EndDisabled();
-                }
-
-                if ( workspace.hasCopiedComponent() )
-                {
-                    if ( ImGui::MenuItem( "Paste as New Component" ) )
-                        (void)EditorTransformCommands::pasteCopiedComponentAsNew( workspace, pObj ); // 실패는 붙여넣기가 로그로 알린다
-                }
-                ImGui::Separator();
-                // 주 씬 컴포넌트(루트 트랜스폼)는 옮기지 않고, 그 위치로 옮겨 들어가지도 않는다(`GameObject::moveComponent`).
-                const auto& listComponent = pObj->getComponents();
-                size_t      index         = 0;
-                while ( index < listComponent.size() && listComponent[index] != pComp )
-                {
-                    ++index;
-                }
-                const Component* pPrimary = pObj->getPrimarySceneComponent();
-                const bool       bCanUp   = index > 0 && index < listComponent.size() && pComp != pPrimary && listComponent[index - 1] != pPrimary;
-                const bool       bCanDown = index + 1 < listComponent.size() && pComp != pPrimary && listComponent[index + 1] != pPrimary;
-                if ( ImGui::MenuItem( "Move Up", nullptr, false, bCanUp ) )
-                {
-                    _pPendingMoveComponent = pComp;
-                    _pendingMoveDirection  = -1;
-                }
-                if ( ImGui::MenuItem( "Move Down", nullptr, false, bCanDown ) )
-                {
-                    _pPendingMoveComponent = pComp;
-                    _pendingMoveDirection  = 1;
-                }
+                drawComponentCopyPasteItems( pObj, pComp, workspace );
+                drawComponentMoveItems( pObj, pComp );
 
                 ImGui::Separator();
-                if ( ImGui::BeginMenu( "Presets" ) )
-                {
-                    static fixed_string<constant::kMaxBuffer64> s_presetNameBuf;
-                    ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), s_presetNameBuf.data(),
-                                              s_presetNameBuf.capacity() );
-                    ImGui::SameLine();
-                    if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
-                    {
-                        if ( EditorTransformCommands::saveComponentPreset( pComp, s_presetNameBuf.c_str() ) )
-                        {
-                            s_presetNameBuf.clear();
-                            _bComponentPresetDirty = SW_TRUE;
-                        }
-                        else
-                        {
-                            SW_LOG_ERROR( "Could not save component preset '%#'", s_presetNameBuf.c_str() );
-                        }
-                    }
-                    ImGui::Separator();
-
-                    vector<string>       listNewPresetFile;
-                    const EditorTaskPoll presetPoll = _componentPresetJob.take( listNewPresetFile );
-                    if ( presetPoll == EditorTaskPoll::Ready )
-                    {
-                        _listComponentPresetFile = std::move( listNewPresetFile );
-                        _bComponentPresetDirty   = SW_FALSE;
-                    }
-                    else if ( _bComponentPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
-                    {
-                        _componentPresetJob.request(
-                            EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
-                    }
-
-                    bool bFoundPresets{ false };
-                    for ( const string& presetFile : _listComponentPresetFile )
-                    {
-                        const string displayPreset = EditorTransformCommands::getComponentPresetName( pComp, presetFile );
-                        if ( displayPreset.empty() == false )
-                        {
-                            bFoundPresets = true;
-                            if ( ImGui::MenuItem( displayPreset.c_str() ) )
-                                if ( EditorTransformCommands::loadComponentPreset( pComp, presetFile ) == false )
-                                    SW_LOG_ERROR( "Could not apply component preset '%#'", presetFile.c_str() );
-                        }
-                    }
-                    if ( bFoundPresets == false )
-                        ImGui::TextDisabled( "No saved presets." );
-
-                    ImGui::EndMenu();
-                }
+                drawComponentPresetsMenu( pComp );
             }
             ImGui::Separator();
             if ( ImGui::MenuItem( "Remove Component" ) )
                 bOutRemove = true;
             ImGui::EndPopup();
+        }
+    }
+
+    void InspectorPanel::drawComponentCopyPasteItems( GameObject* pObj, Component* pComp, EditorWorkspace& workspace )
+    {
+        if ( ImGui::MenuItem( "Copy Component" ) )
+            workspace.copyComponent( pComp );
+        const string compTypeName = pComp->getTypeName().c_str();
+        const bool   bCanPaste    = ( workspace.hasCopiedComponent() &&
+                                 workspace.getCopiedComponentTypeName() == compTypeName );
+        if ( bCanPaste )
+        {
+            if ( ImGui::MenuItem( "Paste Component Values" ) )
+                (void)EditorTransformCommands::pasteCopiedComponentValues( workspace, pComp ); // 실패는 붙여넣기가 로그로 알린다
+        }
+        else
+        {
+            ImGui::BeginDisabled();
+            ImGui::MenuItem( "Paste Component Values" );
+            ImGui::EndDisabled();
+        }
+
+        if ( workspace.hasCopiedComponent() )
+        {
+            if ( ImGui::MenuItem( "Paste as New Component" ) )
+                (void)EditorTransformCommands::pasteCopiedComponentAsNew( workspace, pObj ); // 실패는 붙여넣기가 로그로 알린다
+        }
+        ImGui::Separator();
+    }
+
+    void InspectorPanel::drawComponentMoveItems( GameObject* pObj, Component* pComp )
+    {
+        // 주 씬 컴포넌트(루트 트랜스폼)는 옮기지 않고, 그 위치로 옮겨 들어가지도 않는다(`GameObject::moveComponent`).
+        const auto& listComponent = pObj->getComponents();
+        size_t      index         = 0;
+        while ( index < listComponent.size() && listComponent[index] != pComp )
+        {
+            ++index;
+        }
+        const Component* pPrimary = pObj->getPrimarySceneComponent();
+        const bool       bCanUp   = index > 0 && index < listComponent.size() && pComp != pPrimary && listComponent[index - 1] != pPrimary;
+        const bool       bCanDown = index + 1 < listComponent.size() && pComp != pPrimary && listComponent[index + 1] != pPrimary;
+        if ( ImGui::MenuItem( "Move Up", nullptr, false, bCanUp ) )
+        {
+            _pPendingMoveComponent = pComp;
+            _pendingMoveDirection  = -1;
+        }
+        if ( ImGui::MenuItem( "Move Down", nullptr, false, bCanDown ) )
+        {
+            _pPendingMoveComponent = pComp;
+            _pendingMoveDirection  = 1;
+        }
+    }
+
+    void InspectorPanel::drawComponentPresetsMenu( Component* pComp )
+    {
+        if ( ImGui::BeginMenu( "Presets" ) )
+        {
+            static fixed_string<constant::kMaxBuffer64> s_presetNameBuf;
+            ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), s_presetNameBuf.data(),
+                                      s_presetNameBuf.capacity() );
+            ImGui::SameLine();
+            if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
+            {
+                if ( EditorTransformCommands::saveComponentPreset( pComp, s_presetNameBuf.c_str() ) )
+                {
+                    s_presetNameBuf.clear();
+                    _bComponentPresetDirty = SW_TRUE;
+                }
+                else
+                {
+                    SW_LOG_ERROR( "Could not save component preset '%#'", s_presetNameBuf.c_str() );
+                }
+            }
+            ImGui::Separator();
+
+            vector<string>       listNewPresetFile;
+            const EditorTaskPoll presetPoll = _componentPresetJob.take( listNewPresetFile );
+            if ( presetPoll == EditorTaskPoll::Ready )
+            {
+                _listComponentPresetFile = std::move( listNewPresetFile );
+                _bComponentPresetDirty   = SW_FALSE;
+            }
+            else if ( _bComponentPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
+            {
+                _componentPresetJob.request(
+                    EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
+            }
+
+            bool bFoundPresets{ false };
+            for ( const string& presetFile : _listComponentPresetFile )
+            {
+                const string displayPreset = EditorTransformCommands::getComponentPresetName( pComp, presetFile );
+                if ( displayPreset.empty() == false )
+                {
+                    bFoundPresets = true;
+                    if ( ImGui::MenuItem( displayPreset.c_str() ) )
+                        if ( EditorTransformCommands::loadComponentPreset( pComp, presetFile ) == false )
+                            SW_LOG_ERROR( "Could not apply component preset '%#'", presetFile.c_str() );
+                }
+            }
+            if ( bFoundPresets == false )
+                ImGui::TextDisabled( "No saved presets." );
+
+            ImGui::EndMenu();
         }
     }
 
