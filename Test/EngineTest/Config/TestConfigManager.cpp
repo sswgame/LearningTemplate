@@ -113,40 +113,45 @@ SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
 }
 
 /**
- * @brief [ConfigManagerTest] 파일이 없을 때 생성된 JSON → C++ 기본값 순으로 떨어지는지 검증
- * @details 설정이 없다고 기동을 멈추지 않는다. 다만 **무엇으로 떨어졌는지** 는 값으로 드러나야 한다.
+ * @brief [ConfigManagerTest] 필수 설정 파일이 없으면 실패하고, 구운 JSON · C++ 기본값으로 대신하지 않는다
+ * @details 설정이 없는데 서는 것은 값이 어디서 왔는지 아무도 모르는 상태다. 선택 설정(`loadOptionalConfig`)만 없음(`Missing`)을 돌려준다.
  */
-SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToGeneratedThenCppDefaults )
+SW_TEST_CASE( ConfigManagerTest, MissingRequiredFileFails )
 {
     test::ScopedLogSuppressor suppressor;
 
     const string missingPath = test::makeTempPath( "sw_config_that_does_not_exist.json" );
     SW_ASSERT_TRUE( FileUtil::removeFile( missingPath ) );
 
-    // 1) 생성된 JSON 이 있으면 그것으로 떨어진다.
+    // 1) 필수 설정은 파일이 없으면 nullptr 이다. 값이 파일에만 있는 EngineConfig 도, 헤더에 기본값이 있는 GameConfig 도 같다.
     {
         ConfigManager manager;
-        const string  generated     = makeEngineConfigJSON( 640, 480 );
-        EngineConfig* pEngineConfig = manager.ensureConfig<EngineConfig>( missingPath, generated.c_str() );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( missingPath ) ) );
+        SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
+    }
+    {
+        ConfigManager manager;
+        SW_EXPECT_NULL( manager.loadHostConfig<GameConfig>( ConfigSource::disk( missingPath ) ) );
+        SW_EXPECT_NULL( manager.getConfig<GameConfig>() );
+    }
+
+    // 2) 선택 설정은 없음을 돌려주고 아무것도 등록하지 않는다.
+    {
+        ConfigManager manager;
+        SW_EXPECT_TRUE( manager.loadOptionalConfig<GameConfig>( ConfigSource::disk( missingPath ) ) == ConfigReadResult::Missing );
+        SW_EXPECT_NULL( manager.getConfig<GameConfig>() );
+    }
+
+    // 3) 구운 JSON 은 출처를 명시한 때만 읽는다(Shipping 의 길).
+    {
+        ConfigManager manager;
+        const string  baked         = makeEngineConfigJSON( 640, 480 );
+        EngineConfig* pEngineConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::baked( baked.c_str() ) );
         SW_EXPECT_NOT_NULL( pEngineConfig );
         SW_EXPECT_EQUAL( 640u, pEngineConfig->_window._width );
     }
 
-    // 2) 생성된 JSON 도 없으면 C++ 형식이다. 값이 파일에만 있는 EngineConfig 는 형식이 범위 밖이라 기동이 멈춘다(조용히 0 크기 창이 되지 않는다).
-    {
-        ConfigManager manager;
-        SW_EXPECT_NULL( manager.ensureConfig<EngineConfig>( missingPath, nullptr ) );
-        SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
-    }
-    // 기본값을 헤더에 두는 설정(GameConfig)은 C++ 기본값으로 선다 — nullptr 이 아니다.
-    {
-        ConfigManager manager;
-        GameConfig*   pGameConfig = manager.ensureConfig<GameConfig>( missingPath, nullptr );
-        SW_EXPECT_NOT_NULL( pGameConfig );
-        SW_EXPECT_EQUAL( pGameConfig, manager.getConfig<GameConfig>() );
-    }
-
-    // 3) 깨진 JSON 은 로드 실패다 — 절반만 채워 넣지 않는다.
+    // 4) 깨진 JSON 은 로드 실패다 — 절반만 채워 넣지 않는다.
     {
         ConfigManager manager;
         SW_EXPECT_FALSE( manager.loadConfigFromJSON<EngineConfig>( string( "{ this is not json" ), "test" ) );
@@ -200,7 +205,7 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
 
 /**
  * @brief [ConfigManagerTest] 틀린 설정 파일은 기본값으로 떨어지지 않고 nullptr — 모르는 키 · 대소문자만 다른 키 · 범위 밖 값을 이름으로 알린다
- * @details 구운 사본으로 조용히 떨어지면 고친 값이 무시된 것을 아무도 모른다. 파일이 **없을** 때만 기본값이다.
+ * @details 구운 사본으로 조용히 떨어지면 고친 값이 무시된 것을 아무도 모른다. 파일이 없을 때도 같다(`MissingRequiredFileFails`).
  */
 SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
 {
@@ -210,7 +215,6 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
     const string rootDir = test::makeTempPath( "sw_config_invalid_test" );
     const string path    = FileUtil::joinPath( rootDir, "InvalidEngineConfig.json" );
     FileUtil::ensureDirectoryExists( rootDir );
-    const string generated = makeEngineConfigJSON( 640, 480 );
 
     struct Case
     {
@@ -229,7 +233,7 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
         test::ScopedDefensiveTestLog defensive( "틀린 설정 파일을 일부러 읽는다" );
         test::ScopedLogCollector     logs;
         ConfigManager                manager;
-        SW_EXPECT_TRUE_MSG( manager.ensureConfig<EngineConfig>( path, generated.c_str() ) == nullptr, testCase._pJSON );
+        SW_EXPECT_TRUE_MSG( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( path ) ) == nullptr, testCase._pJSON );
         SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
         SW_EXPECT_TRUE_MSG( logs.countContaining( testCase._pExpectedName ) >= 1u, string( testCase._pJSON ) + logs.joined() );
     }

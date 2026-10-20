@@ -276,23 +276,17 @@ namespace sw
         }
         if ( pConfigManager == nullptr )
             return false;
-        // Shipping 도 디스크에서 읽는다. 운영자가 고치는 파일이므로 베이크하지 않는다. 파일이 없으면 Shipping 은 서버를 시작하지 않는다.
-        // 기본 포트로 조용히 뜬 서버는 틀린 DB 와 캐시에 붙는 서버이기 때문이다.
+        // 모든 구성이 디스크에서 읽는다. 운영자가 고치는 파일이므로 베이크하지 않는다. 파일이 없으면 서버를 시작하지 않는다.
+        // 기본 포트로 조용히 뜬 서버는 틀린 DB 와 캐시에 붙는 서버이기 때문이다(Dev 도 같다).
         _serverConfigPath = path;
-        if ( pConfigManager->loadConfig<ServerConfig>( path ) )
+        _pServerConfig    = pConfigManager->loadHostConfig<ServerConfig>( ConfigSource::disk( path ) );
+        if ( _pServerConfig == nullptr )
         {
-            _pServerConfig = pConfigManager->getConfig<ServerConfig>();
-            SW_LOG_INFO( "Server config: %#", path.c_str() );
-            return _pServerConfig != nullptr;
+            SW_LOG_ERROR( "Server config '%#' could not be read - pass -server-config=<path>", path.c_str() );
+            return false;
         }
-#if defined( SW_SHIPPING )
-        SW_LOG_ERROR( "Server config '%#' could not be read - pass -server-config=<path>", path.c_str() );
-        return false;
-#else
-        SW_LOG_WARNING( "Server config '%#' could not be read - using built-in defaults (Dev only)", path.c_str() );
-        _pServerConfig = pConfigManager->ensureConfig<ServerConfig>( path );
-        return _pServerConfig != nullptr;
-#endif
+        SW_LOG_INFO( "Server config: %#", path.c_str() );
+        return true;
     }
 
     bool ServerApp::initializeObservability()

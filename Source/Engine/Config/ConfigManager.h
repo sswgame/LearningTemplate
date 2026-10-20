@@ -27,14 +27,42 @@ namespace sw
     /** @brief 설정 하나를 파일에서 다시 읽었다는 알림입니다. 인자는 설정 타입의 이름(`T::StaticType()->_fullyQualifiedName`)입니다. */
     using ConfigReloadedDelegate = MulticastDelegate<void( const hashed_string& configTypeName )>;
 
-    /** @brief 설정 파일 하나를 읽은 결과입니다. 없는 파일만 기본값으로 대체하고, 틀린 파일은 기동을 멈춥니다. */
+    /** @brief 설정 파일 하나를 읽은 결과입니다. 없는 파일을 기본값으로 대신하지 않습니다. 필수 설정이면 오류이고, 없어도 되는 설정만 부르는 쪽이 없음으로 다룹니다. */
     enum class ConfigReadResult : uint8
     {
         Loaded = 0, ///< 읽었다
-        Missing,    ///< 파일이 없다. 부르는 쪽이 기본값을 쓴다
+        Missing,    ///< 파일이 없다. 필수 설정(`loadHostConfig`)이면 오류이고, 선택 설정(`loadOptionalConfig`)만 없음으로 다룬다
         Invalid,    ///< 파일이 있는데 틀렸다. 키 이름과 함께 오류를 남겼다
     };
 
+    /**
+     * @brief 호스트 설정 하나를 어디서 읽는지입니다. `disk`(파일 경로)와 `baked`(configure 때 구운 JSON) 두 값뿐입니다.
+     * @details 출처를 호출 서명에 둔다. "디스크에 없으면 구운 JSON" 같은 연결은 만들 수 없다 — 부르는 쪽(빌드 구성)이 하나를 고른다.
+     */
+    class ConfigSource
+    {
+    public:
+        [[nodiscard]] static ConfigSource disk( string path ) { return ConfigSource( std::move( path ), nullptr ); }
+        [[nodiscard]] static ConfigSource baked( const utf8* pJSON ) { return ConfigSource( string(), pJSON ); }
+
+        [[nodiscard]] bool          isBaked() const { return _pBakedJSON != nullptr; }
+        [[nodiscard]] const string& getPath() const { return _path; }
+        [[nodiscard]] const utf8*   getBakedJSON() const { return _pBakedJSON; }
+
+    private:
+        ConfigSource( string path, const utf8* pBakedJSON )
+            : _path{ std::move( path ) }
+            , _pBakedJSON{ pBakedJSON }
+        {
+        }
+
+        string      _path;
+        const utf8* _pBakedJSON;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class ConfigManager
      * @brief 호스트 설정(EngineConfig, GameConfig 등)의 테이블입니다. 파일에서 읽은 설정은 그 경로를 기억해 실행 중에 다시 읽을 수 있습니다
@@ -91,7 +119,7 @@ namespace sw
             }
             if ( loadConfigFromJSON<T>( jsonStr, resolvedPath.c_str() ) == false )
                 return ConfigReadResult::Invalid;
-            _mapSource[getConfigKey<T>()] = ConfigSource{ resolvedPath, &ConfigManager::reloadFromSource<T> };
+            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, &ConfigManager::reloadFromSource<T> };
             return ConfigReadResult::Loaded;
         }
 
@@ -138,48 +166,39 @@ namespace sw
         }
 
         /**
-         * @brief 설정 하나를 등록하고 포인터를 반환합니다. **파일이 없을 때만** 생성 JSON(있으면), 그다음 `T{}` 로 대체합니다.
-         * @details 파일이 있는데 틀리면(모르는 키, 읽지 못한 값, 범위 밖) nullptr 입니다. 오류는 키 이름과 함께 이미 남겼고, 부르는 쪽이 기동을 멈춘다.
-         *          생성된 사본으로 조용히 대체하면 고친 값이 무시된 것을 아무도 모른다.
-         *          **Shipping 은 디스크의 `Config/` 를 보지 않습니다.** 생성 JSON 만 쓰고, 그것이 틀려도 nullptr 입니다.
+         * @brief 선택 설정 하나를 @p source 에서 읽어 등록합니다. 없는 것을 `Missing` 으로 돌려주고 로그는 남기지 않습니다.
+         * @details `disk` 는 `loadConfigFile` 과 같다. `baked` 는 구운 JSON 을 읽으며 없음이 없다(읽으면 `Loaded`, 틀리면 `Invalid`).
+         *          없어도 되는 설정만 쓴다 — 없을 때 무엇을 할지는 부르는 쪽이 정하되 `T{}` 를 대신 만들어 쓰지 않는다.
          */
         template <typename T>
-        T* ensureConfig( const string& filePath, const utf8* pGeneratedJSON = nullptr )
+        [[nodiscard]] ConfigReadResult loadOptionalConfig( const ConfigSource& source )
+        {
+            if ( source.isBaked() == false )
+                return loadConfigFile<T>( source.getPath() );
+            return loadConfigFromJSON<T>( string( source.getBakedJSON() ), "baked_config" ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
+        }
+
+        /**
+         * @brief 필수 호스트 설정 하나를 @p source 에서 읽어 등록하고 포인터를 반환합니다. 없거나 틀리면 nullptr 이고, 부르는 쪽이 기동을 멈춥니다.
+         * @details 파일이 없는 것도 오류다(경로와 함께 남긴다). 구운 JSON · `T{}` 로 조용히 대신하지 않는다 — 고친 값이 무시되거나 틀린 상태로 서는 것을 아무도 모른다.
+         *          틀린 파일(모르는 키, 읽지 못한 값, 범위 밖)의 오류는 키 이름과 함께 이미 남았다. 출처는 빌드 구성이 고른다(Shipping 은 `baked`, 그 밖은 `disk`).
+         */
+        template <typename T>
+        [[nodiscard]] T* loadHostConfig( const ConfigSource& source )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
-            const utf8* const pTypeName = T::StaticType()->_fullyQualifiedName.c_str();
-
-#if defined( SW_SHIPPING )
-            (void)filePath;
-#else
-            const ConfigReadResult result = loadConfigFile<T>( filePath );
-            if ( result == ConfigReadResult::Loaded )
+            const utf8* const      pTypeName = T::StaticType()->_fullyQualifiedName.c_str();
+            const ConfigReadResult result    = loadOptionalConfig<T>( source );
+            if ( result == ConfigReadResult::Missing )
             {
-                SW_LOG_TRACE( "%# source=file (%#)", pTypeName, filePath.c_str() );
-                return getConfig<T>();
+                SW_LOG_ERROR( "Required config %# was not found at '%#' (cwd, project root, or exe directory)", pTypeName, source.getPath().c_str() );
+                return nullptr;
             }
             if ( result == ConfigReadResult::Invalid )
                 return nullptr;
-#endif
-            if ( StringUtil::isNullOrEmpty( pGeneratedJSON ) == false )
-            {
-                if ( loadConfigFromJSON<T>( string( pGeneratedJSON ), "shipping_host_generated" ) == false )
-                    return nullptr;
-#if !defined( SW_SHIPPING )
-                SW_LOG_WARNING( "%# file %# is missing - using the generated defaults", pTypeName, filePath.c_str() );
-#endif
-                return getConfig<T>();
-            }
-
-            // 파일도 생성 JSON 도 없으면 C++ 형식이다. 값이 파일에만 있는 설정(`EngineConfig`)은 형식이 범위를 넘으므로 여기서 기동이 멈춘다.
-            unique_ptr<T> fallback = make_unique<T>();
-            if ( isWithinRange( fallback.get(), *T::StaticType(), "cpp defaults" ) == false )
-                return nullptr;
-            T* const pRaw                 = fallback.get();
-            _mapConfig[getConfigKey<T>()] = std::move( fallback );
-            SW_LOG_WARNING( "%# using cpp defaults", pTypeName );
-            return pRaw;
+            SW_LOG_TRACE( "%# source=%#", pTypeName, source.isBaked() ? "baked" : source.getPath().c_str() );
+            return getConfig<T>();
         }
 
         /** @brief 등록된 설정을 반환합니다. 아직 없으면 nullptr 입니다. */
@@ -244,7 +263,7 @@ namespace sw
 
     private:
         /** @brief 파일에서 읽은 설정 하나의 경로와 다시 읽는 함수입니다. */
-        struct ConfigSource
+        struct ReloadSource
         {
             using ReloadFunc = bool ( * )( ConfigManager& manager, const string& resolvedPath );
 
@@ -337,7 +356,7 @@ namespace sw
         }
 
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
-        unordered_map<uint32, ConfigSource>        _mapSource; ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
+        unordered_map<uint32, ReloadSource>        _mapSource; ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
         ConfigReloadedDelegate                     _onConfigReloaded;
         /// @brief 상대 Config 경로의 기준 디렉터리입니다. 비어 있으면 작업 디렉터리와 실행 파일 위치만 봅니다.
         string _rootDirectory;
