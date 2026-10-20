@@ -62,6 +62,12 @@ namespace sw
         Roughness,    ///< 표면의 거칠기를 회색으로 보인다(언리얼 Buffer Visualization Roughness). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceRoughness)을 보인다.
         Metallic,     ///< 표면의 금속도를 회색으로 보인다(언리얼 Buffer Visualization Metallic). 금속도 칸이 아직 없어 모든 표면이 0 이다.
         Mipmaps,      ///< 머티리얼 텍스처를 읽는 밉 단계를 색으로 보인다(유니티 Scene 뷰 Mipmaps). 확대는 파랑, 밉 0 초록, 1 노랑, 2 주황, 3 이상 빨강.
+        /**
+         * @brief 픽셀마다 조명 식이 도는 라이트 수(라이트 그리드의 전역 구간 + 그 클러스터 목록)를 색 띠로 보인다(언리얼 Light Complexity, 유니티 Forward+ 디버그 보기).
+         * @details 0 은 검정, 그 뒤로 파랑 · 초록 · 노랑 · 빨강(binding.hlsli kViewModeLightComplexityMax 이상)이다. 그리드가 없으면(gv_lightCulling 0) 목록 전체의 수다.
+         *          G버퍼가 표면에서 셈하므로 디퍼드 조명 패스에 보기 모드 변형이 필요 없다.
+         */
+        LightComplexity,
 
         Count
     };
@@ -78,16 +84,17 @@ namespace sw
 
     /** @brief 보기 모드 테이블입니다. 쿠커, PSO 변형, 툴바, 로그가 모두 이것을 읽습니다. 항목 순서가 열거값입니다. */
     inline constexpr RenderViewModeInfo kArrRenderViewModeInfo[] = {
-        {         "Lit",                      nullptr, false, false, false},
-        {       "Unlit",        "SW_VIEWMODE_UNLIT=1", false, false, false},
-        {   "Wireframe",                      nullptr,  true, false, false},
-        {     "Normals",      "SW_VIEWMODE_NORMALS=1", false, false,  true},
-        {       "Depth",        "SW_VIEWMODE_DEPTH=1", false, false,  true},
-        {    "Overdraw",     "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
-        {"LightingOnly", "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false},
-        {   "Roughness",    "SW_VIEWMODE_ROUGHNESS=1", false, false,  true},
-        {    "Metallic",     "SW_VIEWMODE_METALLIC=1", false, false,  true},
-        {     "Mipmaps",      "SW_VIEWMODE_MIPMAPS=1", false, false,  true},
+        {            "Lit",                         nullptr, false, false, false},
+        {          "Unlit",           "SW_VIEWMODE_UNLIT=1", false, false, false},
+        {      "Wireframe",                         nullptr,  true, false, false},
+        {        "Normals",         "SW_VIEWMODE_NORMALS=1", false, false,  true},
+        {          "Depth",           "SW_VIEWMODE_DEPTH=1", false, false,  true},
+        {       "Overdraw",        "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
+        {   "LightingOnly",    "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false},
+        {      "Roughness",       "SW_VIEWMODE_ROUGHNESS=1", false, false,  true},
+        {       "Metallic",        "SW_VIEWMODE_METALLIC=1", false, false,  true},
+        {        "Mipmaps",         "SW_VIEWMODE_MIPMAPS=1", false, false,  true},
+        {"LightComplexity", "SW_VIEWMODE_LIGHTCOMPLEXITY=1", false, false,  true},
     };
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );

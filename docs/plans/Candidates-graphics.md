@@ -39,7 +39,7 @@
 - 물의 굴절 · 화면 공간 두께: 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는 계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다).
 - 지오모프(LOD 튐)와 레이어 다섯 이상: 머티리얼 텍스처 칸은 16 개로 늘었지만 `.layerweights` · 스플랫 업로드 · 브러시 · 셰이더가 레이어 넷이다. 두 번째 스플랫이 필요하다.
 - 지형 LOD 교체 · 지형 쓰기의 비용과 식생 부분 계산은 계획 [TerrainEditCost](TerrainEditCost.md) 에 있다.
-함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯을 SRV 띠 밖 t12..t27 로 옮기고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
+함정: 머티리얼 텍스처 칸 16 — 에뮬 슬롯은 Vulkan t 밴드 뒤 t16..t31 이라 SRV 띠(지금 t0..t12)가 밴드 끝까지 자라도 밀리지 않고 DX11 은 정적 머티리얼 샘플러로 읽는다(옛 D2-6.3, 정본은 `ShaderBindingSlots.h` 헤더).
 
 ### ToonShadingCompletion
 제목: 툰 머티리얼(MToon 1.0)의 남은 것
@@ -69,12 +69,11 @@
 ### ViewModeCompletion
 제목: 뷰포트 보기 모드의 남은 것
 옛번호: D2-10, D2-10.2, D2-10.3
-왜 필요한가: `RenderViewMode`(언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다)에서 `LightingOnly` · Roughness · Metallic · Mipmaps 는 들어갔다. 아래가 남았다.
+왜 필요한가: `RenderViewMode`(언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다)에서 `LightingOnly` · Roughness · Metallic · Mipmaps · LightComplexity 는 들어갔다. 아래가 남았다.
 착수 조건 / 남은 것:
 - Shipping 베이크: 쿠킹한 LightingOnly 변형으로 Shipping hostgpu 를 돌린다. Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
 - Metallic 금속도 칸은 PBR([IndirectLighting](IndirectLighting.md) P5)과 함께 생긴다.
 - Shaded Wireframe: 패스가 둘 필요하다(셰이딩한 면 위에 같은 배치를 선으로 한 번 더). 착수 조건은 RHI 다 — `RHIPipelineStateDesc` 에 깊이 비교 함수(LessEqual)와 깊이 바이어스가 없어(네 백엔드) 겹쳐 그린 선이 면과 z-fighting 한다. 선 색은 보기 모드 define 하나(`swStoreSurface` 가 단색을 낸다)이고 G버퍼에는 셰이딩 모델 Unlit 으로 적으면 디퍼드도 그대로 된다. 디퍼드에서 툰은 `ForwardOnlyOpaque` 패스가 그리므로 그 패스에도 같은 겹침이 필요하다.
-- Light Complexity: 디퍼드는 G버퍼 패스가 빛 목록을 보지 않아 조명 패스에 보기 모드 변형이 필요하다. [ClusteredLighting](ClusteredLighting.md) S4 와 같은 일이다.
 함정: `swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다. `toon` · `sprite2dlit` 포워드 경로도 LightingOnly 에서는 회색으로 바뀐다.
 
 ### RealtimeGlobalIllumination

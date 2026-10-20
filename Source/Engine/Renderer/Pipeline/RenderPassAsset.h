@@ -70,6 +70,8 @@ namespace sw
         MeshMorph,
         /// @brief 스킨드 메시의 바인드 포즈 정점을 본 팔레트로 블렌딩해 모프 풀의 스킨 구간에 쓰는 컴퓨트(meshskin.hlsl)입니다.
         MeshSkin,
+        /// @brief 뷰마다의 라이트 그리드(클러스터드 라이팅의 빛 목록)를 만드는 컴퓨트(lightgrid.hlsl)입니다. 그룹 하나가 뷰 하나입니다.
+        LightGrid,
     };
 
     /**
