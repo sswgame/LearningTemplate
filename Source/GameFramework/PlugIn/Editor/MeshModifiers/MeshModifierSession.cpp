@@ -203,7 +203,14 @@ namespace sw::editor
         , _bShadedPreview{ true }
         , _previewMesh{}
         , _stagePreviewMesh{}
+        , _prefixMesh{}
+        , _listPrefixInputBounds{}
+        , _prefixKey{}
+        , _prefixMeshToWorld{}
+        , _prefixTime{ 0.0f }
+        , _prefixEnd{ -1 }
         , _sourceData{}
+        , _listSourcePosition{}
         , _listUndo{}
         , _listRedo{}
         , _meshPath{}
@@ -213,13 +220,13 @@ namespace sw::editor
         , _selectedIndex{ -1 }
         , _inputBounds{}
         , _stagePreviewIndex{ -1 }
-        , _inputBoundsIndex{ -1 }
         , _selectedControlPoint{ -1 }
         , _mirrorAxis{ 0 }
         , _bPreviewDirty{ true }
         , _bStagePreviewDirty{ true }
         , _bInputBoundsDirty{ true }
         , _bMirrorEditing{ false }
+        , _bPreviewPlaying{ false }
     {
     }
 
@@ -240,13 +247,12 @@ namespace sw::editor
         _meshPath = pMesh->getMeshID();
         _target   = pObject->getHandle();
 
-        vector<float3> listPosition;
-        listPosition.reserve( _sourceData._listVertex.size() );
+        _listSourcePosition.reserve( _sourceData._listVertex.size() );
         for ( const RHIVertex& vertex : _sourceData._listVertex )
         {
-            listPosition.push_back( float3{ vertex._arrPosition } );
+            _listSourcePosition.push_back( float3{ vertex._arrPosition } );
         }
-        _sourceBounds = MeshModifierBounds::makeFromPoints( listPosition );
+        _sourceBounds = MeshModifierBounds::makeFromPoints( _listSourcePosition );
         (void)loadSidecar(); // 사이드카가 없으면 빈 스택으로 시작한다
         _bPreviewDirty = true;
         return true;
@@ -266,14 +272,18 @@ namespace sw::editor
         _stack.clear();
         _previewMesh      = MeshModifierMesh{};
         _stagePreviewMesh = MeshModifierMesh{};
-        _sourceData       = MeshAssetData{};
+        _prefixMesh       = MeshModifierMesh{};
+        _listPrefixInputBounds.clear();
+        _prefixKey.clear();
+        _prefixEnd  = -1; // 다음 refreshPreview 가 앞부분 캐시를 새로 건다
+        _sourceData = MeshAssetData{};
+        _listSourcePosition.clear();
         _meshPath.clear();
         _sourceBounds         = MeshModifierBounds{};
         _target               = GameObjectHandle{};
         _selectedIndex        = -1;
         _stagePreviewIndex    = -1;
         _inputBounds          = MeshModifierBounds{};
-        _inputBoundsIndex     = -1;
         _selectedControlPoint = -1;
         _listUndo.clear();
         _listRedo.clear();
@@ -325,18 +335,52 @@ namespace sw::editor
     {
         if ( _bPreviewDirty == false || hasTarget() == false )
             return;
-        _bPreviewDirty      = false;
-        _bStagePreviewDirty = true; // 단계 미리보기도 같은 스택 상태를 따라간다
-        _bInputBoundsDirty  = true;
-        makeSourceMesh( _previewMesh );
-        vector<MeshModifierBounds> listInputBounds;
-        MeshModifierEvaluation     evaluation{};
-        evaluation._meshToWorld      = computeMeshToWorld();
-        evaluation._pInputs          = this;
-        evaluation._time             = _previewTime;
-        evaluation._pListInputBounds = &listInputBounds; // GPU 프로그램이 싣는 입력 상자 - 이 적용에서 공짜로 모은다
-        _stack.apply( _previewMesh, evaluation );
+        _bPreviewDirty                    = false;
+        _bStagePreviewDirty               = true; // 단계 미리보기도 같은 스택 상태를 따라간다
+        MeshModifierEvaluation evaluation = makeEvaluation();
+        updatePrefixCache( evaluation, true );
+        // 고른 모디파이어 앞까지는 캐시를 이어 쓰고 그 뒤만 다시 건다 - 끌기 · 입력 중에는 보통 고른 것만 바뀐다
+        _previewMesh                               = _prefixMesh;
+        vector<MeshModifierBounds> listInputBounds = _listPrefixInputBounds;
+        evaluation._pListInputBounds               = &listInputBounds; // GPU 프로그램이 싣는 입력 상자 - 이 적용에서 공짜로 모은다
+        _stack.applyRange( _previewMesh, evaluation, _prefixEnd, _stack.getModifierCount() );
+        _stack.finishApply( _previewMesh );
         updateShadedPreview( evaluation, listInputBounds );
+    }
+
+    MeshModifierEvaluation MeshModifierSession::makeEvaluation() const
+    {
+        MeshModifierEvaluation evaluation{};
+        evaluation._meshToWorld = computeMeshToWorld();
+        evaluation._pInputs     = this;
+        evaluation._time        = _previewTime;
+        // 나눠 걸어도 스택 입력은 원본 위치다(`MeshModifierStack::apply` 가 복사해 넘기는 것과 같은 값)
+        if ( _stack.needsStackInputPosition() )
+            evaluation._pListStackInputPosition = &_listSourcePosition;
+        return evaluation;
+    }
+
+    void MeshModifierSession::updatePrefixCache( const MeshModifierEvaluation& evaluation, bool bStackChanged )
+    {
+        const int32 prefixEnd = MathUtil::clamp( _selectedIndex, 0, _stack.getModifierCount() );
+        if ( bStackChanged == false && prefixEnd == _prefixEnd )
+            return;
+        // 앞부분의 결과는 앞부분 모디파이어 상태(저장 글) · 시간 · 메시 변환으로 정해진다. 셋이 같으면 다시 걸지 않는다
+        string     key   = _stack.makePrefixJSONText( prefixEnd );
+        const bool bSame = prefixEnd == _prefixEnd && key == _prefixKey && evaluation._time == _prefixTime && evaluation._meshToWorld == _prefixMeshToWorld;
+        if ( bSame )
+            return;
+        _prefixEnd         = prefixEnd;
+        _prefixKey         = std::move( key );
+        _prefixTime        = evaluation._time;
+        _prefixMeshToWorld = evaluation._meshToWorld;
+        makeSourceMesh( _prefixMesh );
+        _listPrefixInputBounds.clear();
+        MeshModifierEvaluation prefixEvaluation = evaluation;
+        prefixEvaluation._pListInputBounds      = &_listPrefixInputBounds;
+        _stack.applyRange( _prefixMesh, prefixEvaluation, 0, prefixEnd );
+        _bInputBoundsDirty  = true;
+        _bStagePreviewDirty = true;
     }
 
     void MeshModifierSession::setShadedPreviewEnabled( bool bEnabled )
@@ -417,22 +461,15 @@ namespace sw::editor
         const bool  bNoNextModifier = hasTarget() == false || lastIndex < 0 || lastIndex + 1 >= _stack.getModifierCount();
         if ( bNoNextModifier )
             return;
+        const MeshModifierEvaluation evaluation = makeEvaluation();
+        updatePrefixCache( evaluation, false ); // 고른 번호만 바뀌었으면 앞부분 캐시를 그 번호로 옮긴다
         if ( _bStagePreviewDirty || _stagePreviewIndex != lastIndex )
         {
             _bStagePreviewDirty = false;
             _stagePreviewIndex  = lastIndex;
-            makeSourceMesh( _stagePreviewMesh );
-            MeshModifierEvaluation evaluation{};
-            evaluation._meshToWorld = computeMeshToWorld();
-            evaluation._pInputs     = this;
-            evaluation._time        = _previewTime;
-            // 스택의 apply 와 같은 순서로 고른 모디파이어까지만 건다. 법선 재계산은 위치에 영향이 없어 건너뛴다(선만 그린다)
-            for ( int32 index = 0; index <= lastIndex; ++index )
-            {
-                const MeshModifier* pModifier = _stack.findModifier( index );
-                if ( pModifier != nullptr )
-                    pModifier->apply( _stagePreviewMesh, evaluation );
-            }
+            // 앞부분 캐시(고른 것 앞까지)에 고른 모디파이어 하나만 더 건다. 법선 재계산은 위치에 영향이 없어 건너뛴다(선만 그린다)
+            _stagePreviewMesh = _prefixMesh;
+            _stack.applyRange( _stagePreviewMesh, evaluation, lastIndex, lastIndex + 1 );
         }
         makeSegments( _stagePreviewMesh, outListSegmentPoint );
     }
@@ -444,34 +481,12 @@ namespace sw::editor
         const bool  bNoPreviousModifier = hasTarget() == false || selectedIndex <= 0 || selectedIndex >= _stack.getModifierCount();
         if ( bNoPreviousModifier )
             return _sourceBounds; // 첫 모디파이어의 입력은 원본 그대로다
-        if ( _bInputBoundsDirty || _inputBoundsIndex != selectedIndex )
+        // 고른 모디파이어의 입력 = 앞부분 캐시(앞 모디파이어까지 건 결과). 캐시가 다시 걸렸을 때만 상자를 다시 센다
+        updatePrefixCache( makeEvaluation(), false );
+        if ( _bInputBoundsDirty )
         {
-            _bInputBoundsDirty            = false;
-            _inputBoundsIndex             = selectedIndex;
-            const int32 lastIndex         = selectedIndex - 1;
-            const bool  bStageCacheUsable = _bStagePreviewDirty == false && _stagePreviewIndex == lastIndex && _stagePreviewMesh._listPosition.empty() == false;
-            if ( bStageCacheUsable )
-            {
-                // 단계 미리보기 캐시가 바로 앞 모디파이어까지 건 결과면 그대로 쓴다
-                _inputBounds = MeshModifierBounds::makeFromPoints( _stagePreviewMesh._listPosition );
-            }
-            else
-            {
-                // 스택의 apply 와 같은 순서로 앞 모디파이어까지만 건다(꺼진 것은 apply 가 건너뛴다)
-                MeshModifierMesh mesh;
-                makeSourceMesh( mesh );
-                MeshModifierEvaluation evaluation{};
-                evaluation._meshToWorld = computeMeshToWorld();
-                evaluation._pInputs     = this;
-                evaluation._time        = _previewTime;
-                for ( int32 index = 0; index <= lastIndex; ++index )
-                {
-                    const MeshModifier* pModifier = _stack.findModifier( index );
-                    if ( pModifier != nullptr )
-                        pModifier->apply( mesh, evaluation );
-                }
-                _inputBounds = MeshModifierBounds::makeFromPoints( mesh._listPosition );
-            }
+            _bInputBoundsDirty = false;
+            _inputBounds       = MeshModifierBounds::makeFromPoints( _prefixMesh._listPosition );
         }
         return _inputBounds.isValid() ? _inputBounds : _sourceBounds;
     }
@@ -577,6 +592,16 @@ namespace sw::editor
             return;
         _previewTime   = time;
         _bPreviewDirty = true;
+    }
+
+    void MeshModifierSession::advancePreviewTime( float32 deltaSeconds )
+    {
+        const bool bValidDelta = MathUtil::isFinite( deltaSeconds ) && deltaSeconds > 0.0f;
+        const bool bAdvance    = _bPreviewPlaying && hasTarget() && bValidDelta;
+        if ( bAdvance == false )
+            return;
+        // 시간 칸의 범위 [0, kMaxPreviewTimeSeconds] 안에서 되감아 돈다
+        setPreviewTime( MathUtil::fmod( _previewTime + deltaSeconds, kMaxPreviewTimeSeconds ) );
     }
 
     bool MeshModifierSession::tryGetWorldMatrix( string_view reference, float4x4& outMatrix ) const
