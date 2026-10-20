@@ -59,7 +59,7 @@ namespace sw
         uint32 getSessionID() const { return _sessionID; }
 
     private:
-        /** @brief 경로의 에셋을 캐시(`PairedAnimationDefCache`)에서 받습니다. 경로가 비면 코드가 넣은 에셋을 그대로 둡니다. */
+        /** @brief 경로의 에셋을 캐시(`SharedAssetCache<PairedAnimationDef>`)에서 받습니다. 경로가 비면 코드가 넣은 에셋을 그대로 둡니다. */
         void loadDef();
 
         PROPERTY( Category = "Animation", DisplayName = "Paired Animation", AssetPath, Tooltip = "Roles, clips, alignment and shared notifies (*.pairedanim.xml)" )
@@ -69,7 +69,7 @@ namespace sw
 
         shared_ptr<const PairedAnimationDef> _def;
         uint32                               _sessionID;
-        uint32                               _seenReloadCount; ///< 에셋을 받을 때의 `PairedAnimationDefCache::getReloadCount`. 달라지면 시작 전에 다시 받는다
+        uint32                               _seenReloadCount; ///< 에셋을 받을 때의 `SharedAssetCache<PairedAnimationDef>::getReloadCount`. 달라지면 시작 전에 다시 받는다
         uint8                                _bSystemUser;     ///< 씬의 `PairedAnimationSystem` 사용자로 올렸다(끝에서 내린다)
     };
 } // namespace sw

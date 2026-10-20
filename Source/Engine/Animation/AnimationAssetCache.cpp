@@ -8,7 +8,6 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetCacheDefinition.h"
 
 namespace sw
@@ -65,13 +64,8 @@ namespace sw
 
 namespace sw
 {
-    template class SW_API SharedAssetCache<Skeleton>;
-    template class SW_API SharedAssetCache<AnimationClip>;
-    template class SW_API SharedAssetCache<SkeletonBoneLOD>;
-    template class SW_API SharedAssetCache<RigAsset>;
-
-    SW_BUILT_IN_ASSET_CACHE( SkeletonCache );
-    SW_BUILT_IN_ASSET_CACHE( AnimationClipCache );
-    SW_BUILT_IN_ASSET_CACHE( SkeletonBoneLODCache );
-    SW_BUILT_IN_ASSET_CACHE( RigAssetCache );
+    SW_SHARED_ASSET_CACHE( Skeleton );
+    SW_SHARED_ASSET_CACHE( AnimationClip );
+    SW_SHARED_ASSET_CACHE( SkeletonBoneLOD );
+    SW_SHARED_ASSET_CACHE( RigAsset );
 } // namespace sw

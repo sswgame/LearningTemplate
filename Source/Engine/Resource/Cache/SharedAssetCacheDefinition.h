@@ -1,8 +1,8 @@
 /**
  * @file SharedAssetCacheDefinition.h
  * @brief `SharedAssetCache` 의 멤버 정의입니다. 에셋 종류를 명시적으로 인스턴스화하는 Engine 의 .cpp 만 포함합니다.
- * @details 그 .cpp 는 이 헤더를 포함하고 `SharedAssetCacheTraits<에셋>` 을 특수화한 뒤 `template class SW_API SharedAssetCache<에셋>;` 으로
- *          인스턴스화하고, 같은 파일 끝에서 `SW_BUILT_IN_ASSET_CACHE` 로 레지스트리에 올립니다. 특수화가 갖출 것은 아래와 같습니다.
+ * @details 그 .cpp 는 이 헤더를 포함하고 `SharedAssetCacheTraits<에셋>` 을 특수화한 뒤 `SW_SHARED_ASSET_CACHE( 에셋 );` 한 줄로(`namespace sw`
+ *          안) 명시적 인스턴스화와 레지스트리 등록을 함께 합니다. 둘 중 하나만 빠질 수 없습니다. 특수화가 갖출 것은 아래와 같습니다.
  *
  *          - `kKindName`   : 레지스트리의 종류 이름(정적 문자열)
  *          - `kMemoryTag`  : 읽는 동안 거는 할당 태그
@@ -14,6 +14,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetTable.h"
 
@@ -89,3 +90,10 @@ namespace sw
         return s_table;
     }
 } // namespace sw
+
+/**
+ * @brief `SharedAssetCache<AssetType>` 을 Engine.dll 에서 내보내도록 인스턴스화하고 내장 캐시로 등록합니다(인스턴스화하는 .cpp, `namespace sw` 안, 특수화 뒤).
+ */
+#define SW_SHARED_ASSET_CACHE( AssetType )             \
+    template class SW_API SharedAssetCache<AssetType>; \
+    SW_BUILT_IN_ASSET_CACHE_WITH_ID( AssetType, ::sw::SharedAssetCache<AssetType> )

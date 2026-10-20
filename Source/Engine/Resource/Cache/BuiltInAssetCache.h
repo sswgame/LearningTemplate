@@ -74,12 +74,17 @@ namespace sw
 /**
  * @brief 소유 캐시 @p Type 을 내장 캐시로 등록합니다(캐시의 .cpp, 파일 범위, `namespace sw` 안). 매니저마다 하나씩 만듭니다.
  */
-#define SW_BUILT_IN_ASSET_CACHE( Type )                                                                                 \
-    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##Type{ &::sw::createBuiltInAssetCache<Type>, \
-                                                                                  nullptr };                            \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##Type                               \
-    {                                                                                                                   \
-        &sw_builtInAssetCache_##Type                                                                                    \
+#define SW_BUILT_IN_ASSET_CACHE( Type ) SW_BUILT_IN_ASSET_CACHE_WITH_ID( Type, Type )
+
+/**
+ * @brief 이름이 식별자가 아닌 소유 캐시 @p Type(템플릿 인스턴스 `SharedAssetCache<Skeleton>` 등)을 등록합니다. @p id 는 정적 이름을 만드는 식별자입니다.
+ */
+#define SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, Type )                                                                   \
+    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ &::sw::createBuiltInAssetCache<Type>, \
+                                                                                nullptr };                            \
+    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                               \
+    {                                                                                                                 \
+        &sw_builtInAssetCache_##id                                                                                    \
     }
 
 /**
