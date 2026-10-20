@@ -195,6 +195,7 @@
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>
 			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
 		</_alwaysDefines>
 		<_staticSwitches>
 			<item name="Outline" keyword="MATERIAL_OUTLINE" bEnabled="0" bShaderFeature="1" />

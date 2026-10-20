@@ -53,6 +53,11 @@ namespace sw
          *        Swapchain 을 쓰는 마지막 패스여야 합니다(검증). 추가 뷰에서는 그리지 않습니다(UI 는 주 시점에만 있습니다).
          */
         Canvas,
+        /**
+         * @brief 디퍼드에서 G버퍼로 나타낼 수 없는 머티리얼(퍼뮤테이션에 `MATERIAL_FORWARD_ONLY` — 툰의 계단 · 림 · 맷캡)만 포워드 셰이딩으로 그리는 불투명 패스입니다.
+         *        G버퍼 패스는 그 배치를 빼므로 조명 패스 뒤에 두고 같은 장면 깊이를 테스트 · 쓰기 합니다(유니티 URP 디퍼드의 `UniversalForwardOnly` 패스와 같은 자리).
+         */
+        ForwardOnlyOpaque,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
@@ -76,7 +81,7 @@ namespace sw
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
     constexpr bool isPipelinePassType( RenderPassType type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Canvas );
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::ForwardOnlyOpaque );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 클리어 색, 클리어 여부)입니다.

@@ -456,7 +456,7 @@ namespace sw
 
     bool FrameRenderer::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const
     {
-        if ( getRenderPassTypeInfo( passType )._pRequiredMaterialDefine == nullptr )
+        if ( FrameRendererUtil::filtersBatchesByMaterial( passType ) == false )
             return true;
         const GPUShaderPermutation* pPermutation =
             ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( batch._shaderPermutation );

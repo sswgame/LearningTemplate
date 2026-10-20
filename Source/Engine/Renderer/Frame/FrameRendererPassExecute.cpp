@@ -389,7 +389,10 @@ namespace sw
                     break;
                 }
                 case RenderPassType::ForwardOpaque:
+                case RenderPassType::ForwardOnlyOpaque:
                 {
+                    // ForwardOnlyOpaque 는 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY — 툰)만 조명 패스가 쓴 색과 장면 깊이 위에 그린다(거르기는 drawsBatchInPass).
+                    // 첨부는 앞 패스가 이미 썼으므로 colorLoadFor 가 Load 를 고른다.
                     // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언이 없을 때만 원본 이름으로 찾는다.
                     const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = nullptr;
                     if ( pPassDesc != nullptr )
@@ -409,9 +412,9 @@ namespace sw
                     const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
                     if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
                     {
-                        const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass.load() != 0 && getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0 )
-                                                                    ? getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite )
-                                                                    : getEnginePSO( RenderPassType::ForwardOpaque );
+                        const bool bDepthAlreadyWritten = passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
+                                                          getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
+                        const RHIPipelineStateHandle psoForward = bDepthAlreadyWritten ? getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) : getEnginePSO( passType );
                         drawSceneMeshes( context, psoForward, bTransparentBatch );
                         context._pCmd->endRenderPass();
                     }

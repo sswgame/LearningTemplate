@@ -43,11 +43,11 @@
 
 ### ToonShadingCompletion
 제목: 툰 머티리얼(MToon 1.0)의 남은 것
-옛번호: D2-6, D2-6.4
+옛번호: D2-6
 왜 필요한가: `toon.hlsl` 은 MToon 1.0 체계이고 아래가 빠졌다.
 착수 조건 / 남은 것:
+- 포워드 전용 지킴: toon.hlsl 의 `SW_PASS_GBUFFER` 분기를 `#error "toon.hlsl is forward-only ..."` 로 바꾼다 — `MATERIAL_FORWARD_ONLY` 를 빠뜨린 머티리얼이 G버퍼에서 램버트로 조용히 칠해지지 않고 쿠킹에서 멈춘다. 커밋 훅(`CheckShaderStamps`)이 다시 굽기를 요구하므로 App 빌드가 있는 통합 때 `--cook-shaders` 와 함께 한다(G버퍼 분기의 "디퍼드 조명은 램버트로 칠한다" 주석도 그때 지운다).
 - UV 스크롤 애니메이션(`uvAnimation*`): VRM 머티리얼 임포터(`Source/Editor`)의 매핑과 같이 바꾼다.
-- 디퍼드의 계단 셰이딩: G버퍼는 표면만 적어 램버트로 칠해진다. 셋째 타깃(셰이딩 모델 ID · 그림자색 · 시프트 · 계단 · 그림자 받기)이 필요하다(옛 D2-6.4). 에뮬 백엔드의 엔진 텍스처 칸 · 입력 역할 · G버퍼 PSO 의 타깃 수가 함께 바뀌어 빌드로 확인하는 단위다. 통합 빌드가 초록인 뒤에 단위 하나로 한다.
 - 스킨 · 모프 메시의 탄젠트: 스키닝 · 모프 컴퓨트가 위치 · 노멀만 돌려 노멀 맵이 레스트 탄젠트를 쓴다. `GPUMorphVertex` 에 탄젠트 칸이 필요하다.
 
 ### VrmRuntimeConsumption
@@ -73,7 +73,7 @@
 착수 조건 / 남은 것:
 - Shipping 베이크: 쿠킹한 LightingOnly 변형으로 Shipping hostgpu 를 돌린다. Shipping 전체 빌드가 필요해 통합 담당의 Shipping 확인 때 돌린다.
 - Metallic 금속도 칸은 PBR([IndirectLighting](IndirectLighting.md) P5)과 함께 생긴다.
-- Shaded Wireframe: 패스가 둘 필요하다.
+- Shaded Wireframe: 패스가 둘 필요하다(셰이딩한 면 위에 같은 배치를 선으로 한 번 더). 착수 조건은 RHI 다 — `RHIPipelineStateDesc` 에 깊이 비교 함수(LessEqual)와 깊이 바이어스가 없어(네 백엔드) 겹쳐 그린 선이 면과 z-fighting 한다. 선 색은 보기 모드 define 하나(`swStoreSurface` 가 단색을 낸다)이고 G버퍼에는 셰이딩 모델 Unlit 으로 적으면 디퍼드도 그대로 된다. 디퍼드에서 툰은 `ForwardOnlyOpaque` 패스가 그리므로 그 패스에도 같은 겹침이 필요하다.
 - Light Complexity: 디퍼드는 G버퍼 패스가 빛 목록을 보지 않아 조명 패스에 보기 모드 변형이 필요하다. [ClusteredLighting](ClusteredLighting.md) S4 와 같은 일이다.
 함정: `swStoreSurface` 가 셰이더마다 명시한 거칠기 · 금속도를 받는다. `toon` · `sprite2dlit` 포워드 경로도 LightingOnly 에서는 회색으로 바뀐다.
 
