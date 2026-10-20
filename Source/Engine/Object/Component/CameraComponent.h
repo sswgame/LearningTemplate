@@ -6,6 +6,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Object/Component/CameraPostProcessValues.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -181,6 +182,11 @@ namespace sw
         /** @brief 출력 설정을 바꿉니다. 렌더 텍스처면 그 크기를 텍스처 캐시에 알립니다. */
         void setRenderOutput( const CameraRenderOutput& output );
 
+        /** @brief 이 카메라의 후처리 값(노출 · 블룸 배율 · 비네트 · 채도 · 대비 · 레터박스)입니다. 렌더 뷰가 이 값을 렌더러로 나릅니다. */
+        const CameraPostProcessValues& getPostProcess() const { return _postProcess; }
+        /** @brief 후처리 값을 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPoseUtil::applyToCamera`). */
+        void setPostProcess( const CameraPostProcessValues& values ) { _postProcess = values; }
+
         /**
          * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼의 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버립니다.
          * @details 블렌드 없는 프리셋과 뷰 타깃 전환이 부른다. 게임 스레드에서 쓰고 패킷을 만드는 쪽이 `consumeCut` 으로 한 번 읽어 지운다.
@@ -214,6 +220,8 @@ namespace sw
         CameraRole _role;
         PROPERTY( Category = "Output", DisplayName = "Render Output", Tooltip = "Render texture / screen rectangle, update rate and feature switches" )
         CameraRenderOutput _renderOutput;
+        PROPERTY( Category = "Post Process", DisplayName = "Post Process", Tooltip = "Per-camera exposure, bloom, vignette, saturation, contrast and letterbox" )
+        CameraPostProcessValues _postProcess;
         PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
         bool  _bOrthographic;
         uint8 _bCutPending; ///< `markCut` 이 켜고 `consumeCut` 이 지운다(저장하지 않는다)
