@@ -71,6 +71,8 @@ namespace sw
         bool isParticipant( const TComponentHandle<SkeletalAnimatorComponent>& animator ) const;
         /** @brief 세션 수입니다(끝났지만 아직 빠지지 않은 것 포함). */
         uint32 getSessionCount() const { return static_cast<uint32>( _listSession.size() ); }
+        /** @brief 목록의 @p index 번째 세션입니다(`index < getSessionCount()`). 네트워크 복제가 재생 중인 세션을 훑을 때 씁니다(틱 동안 목록은 바뀌지 않는다). */
+        const PairedAnimationSession& getSessionAt( uint32 index ) const { return *_listSession[index]; }
 
         /** @brief 시스템을 쓰는 컴포넌트 수를 하나 올립니다. */
         void registerUser() { ++_userCount; }

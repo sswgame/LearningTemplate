@@ -82,6 +82,7 @@ namespace sw
         : _listRole{}
         , _listNotify{}
         , _select{}
+        , _sourcePath{}
         , _duration{ 0.0f }
         , _anchorRoleIndex{ invalid_index::kUint32 }
         , _bHasSelect{ false }
@@ -92,7 +93,8 @@ namespace sw
     {
         _listRole.clear();
         _listNotify.clear();
-        _select          = PairedAnimationSelectDef{};
+        _select = PairedAnimationSelectDef{};
+        _sourcePath.clear();
         _duration        = 0.0f;
         _anchorRoleIndex = invalid_index::kUint32;
         _bHasSelect      = false;
@@ -139,8 +141,12 @@ namespace sw
             readRoot( root, reader );
         const bool bLoaded = reader.finish();
         if ( bLoaded == false )
+        {
             clear();
-        return bLoaded;
+            return false;
+        }
+        _sourcePath = string{ path };
+        return true;
     }
 
     uint32 PairedAnimationDef::findRoleIndex( const hashed_string& roleName ) const
