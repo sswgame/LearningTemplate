@@ -486,6 +486,41 @@ SW_TEST_CASE( CameraModeTest, DirectorReportsCutsOnce )
 }
 
 /**
+ * @brief [CameraModeTest] 디렉터 컴포넌트는 디렉터의 컷을 같은 오브젝트의 카메라 컴포넌트에 한 번 표시하고(렌더러의 `RenderViewSettings::_bCut` 로 가는 길), 블렌드 전환 · 처음 켠 프리셋은 표시하지 않는다
+ */
+SW_TEST_CASE( CameraModeTest, DirectorComponentMarksTheCameraCutOnce )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "CutRig" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    CameraComponent*         pCamera   = pObject->addComponent<CameraComponent>();
+    CameraDirectorComponent* pDirector = pObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_TRUE( pCamera != nullptr && pDirector != nullptr );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
+        <Preset id="a"><View mode="Fixed" offset="0 0 0"/></Preset>
+        <Preset id="b"><View mode="Fixed" offset="5 0 0"/></Preset>
+    </CameraPresets>)",
+                                                             "camera-cut-mark-test" ) );
+    pDirector->setInputEnabled( false );
+    manager.beginPlay();
+    SW_EXPECT_FALSE( pCamera->consumeCut() ); // 처음 켠 프리셋은 컷이 아니다(지난 화면이 없다)
+
+    SW_ASSERT_TRUE( pDirector->activatePreset( hashed_string( "b" ), CameraModeTestInternal::makeLinear( 0.5f ) ) );
+    pDirector->updateCamera( 0.016f );
+    SW_EXPECT_FALSE( pCamera->consumeCut() ); // 블렌드 전환은 화면이 이어진다
+    pDirector->updateCamera( 1.0f );
+
+    BlendCurveDef cut;
+    cut._curve = BlendCurve::Cut;
+    SW_ASSERT_TRUE( pDirector->activatePreset( hashed_string( "a" ), cut ) );
+    pDirector->updateCamera( 0.016f );
+    SW_EXPECT_TRUE( pCamera->consumeCut() );
+    pDirector->updateCamera( 0.016f );
+    SW_EXPECT_FALSE( pCamera->consumeCut() ); // 한 프레임만 표시한다
+    manager.endPlay();
+}
+
+/**
  * @brief [CameraModeTest] XY 평면 따라가기(2D)는 초점의 X · Y 를 따르고 Z 는 카메라 평면에 두며, 이동 키는 화면 위(+Y) · 오른쪽(+X)으로 민다
  * @details 땅(XZ) 기준 모드로 2D 씬을 풀면 카메라가 초점 위(+Y)로 올라가 평면을 옆에서 본다.
  */

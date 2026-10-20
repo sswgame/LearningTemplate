@@ -37,7 +37,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일, 다중 뷰의 화면 크기 보임 판정과 뷰 수 · 픽셀 예산(`RenderViewCollector` · `RenderViewScheduler` 헤더), 에디터 게임 뷰의 화면 사각형 뷰 시나리오(`screenrectview`)는 들어갔다(`Source/GameFramework/` "카메라" 절). 아래가 남았다.
 남은 것:
 - 다중 뷰 보임의 가려짐: 렌더러에 가림 컬링 결과가 없다. HZB 가림 컬링(이 문서 아래 "중간" 목록)이 들어오면 모니터가 지난 프레임에 그려졌는지(언리얼 `WasRecentlyRendered`)로 판정을 바꾼다(`RenderViewCollector` 헤더).
-- 컷 프레임 신호(`RenderViewSettings::_bCut`)는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다. 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](#preloadandlod).
+- 컷 프레임 신호는 카메라 쪽이 끝났다(디렉터 `consumeCut` → `CameraComponent::markCut` → `RenderViewSettings::_bCut`, 테스트 `CameraModeTest.DirectorComponentMarksTheCameraCutOnce`). 남은 것은 렌더러 쪽뿐이다: `_bCut` 는 TAA 기록만 리셋한다 — 렌더러에 모션 벡터 · 자동 노출 · 모션 블러가 생기면 같은 신호로 0 · 즉시 맞춤 · 끔을 붙인다. 대기 뷰 신호(`CameraManagerComponent::setPendingView`)를 듣는 쪽은 [PreloadAndLod](#preloadandlod).
 - 렌더러 쪽: 피사계 심도 패스, 카메라별 후처리 값(`CameraPostProcessValues` — 포즈가 나르기만 한다)을 렌더러가 읽기.
 
 ### RigEditing
