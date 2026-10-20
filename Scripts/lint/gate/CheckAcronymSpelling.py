@@ -4,7 +4,7 @@
 Scripts/lint/gate/CheckAcronymSpelling.py
 
 약어 철자 게이트 — Pascal 낱말로 쓴 약어(`UiSystem` · `updateUi`)와 이어 붙은 대문자 약어(`RHIUIPass`)를 막습니다
-(docs/agents/NamingCpp.md "Function names" 규칙 2 · 3 · 4, 목록과 철자 판정은 `Scripts/lint/AcronymRegistry.py` 한 자리).
+(docs/agents/NamingCpp.md "Function names" 규칙 2 · 3 · 4, 목록과 철자 판정은 `Scripts/common/AcronymRegistry.py` 한 자리).
 
 **강제는 약어 하나씩이다.** 트리에는 아직 바꾸지 않은 약어 철자가 수만 곳 있다. 그것을 모두 예외로 적지 않는다 —
 레지스트리의 `kEnforced` 에 오른 약어(그 약어를 트리 전체에서 바꾼 커밋이 올린다)와 `--enforce` 로 넘긴 약어만 위반이고,
@@ -28,9 +28,9 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · AcronymRegistry
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-import AcronymRegistry as registry  # noqa: E402
+from common import AcronymRegistry as registry  # noqa: E402
 from common import kLintTargetRelDirs, kNotOurCodeDirNames, lineOf  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 from SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
@@ -52,7 +52,7 @@ class CheckAcronymSpellingGate(LintGate):
     buildComment = "Checking acronym spelling (enforced acronyms only)..."
     timeoutSeconds = 120
     violationHeader = "약어 철자 위반"
-    hint = "고치기: py -3 Scripts/lint/fixer/FormatAcronymSpelling.py --acronym <약어> --files <파일> (규칙: Scripts/lint/AcronymRegistry.py)"
+    hint = "고치기: py -3 Scripts/lint/fixer/FormatAcronymSpelling.py --acronym <약어> --files <파일> (규칙: Scripts/common/AcronymRegistry.py)"
     preCommitPattern = ("Source/*", "Test/*", "Tools/*")
     preCommitFileArgument = "--files"
     maxViolationShown = 200

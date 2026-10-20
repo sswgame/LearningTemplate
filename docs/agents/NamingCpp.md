@@ -77,7 +77,7 @@ the domain's own term (`UUID::generate`, `SurfaceBvh::build`), and a fixed name 
 reports keys that no longer match. The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym is written in capitals, everywhere.** What counts as an acronym is one list,
-  `acronym` in `Scripts/lint/rules/AcronymRegistry.toml` (read by `Scripts/lint/AcronymRegistry.py` as `kAcronym`); a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
+  `acronym` in `Scripts/lint/rules/AcronymRegistry.toml` (read by `Scripts/common/AcronymRegistry.py` as `kAcronym`); a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
   enums, folders, modules and test executables: `UISystem`, `GPUScene`, `HTTPClient`, `UISystem.h`. Functions, variables and
   members: capitals in the middle or at the end (`updateUI`, `queryAABB`, `entityID`, `pUISystem`, `_pGPUScene`), all lower case
   as the first word (`uiSystem`, `_gpuScene`, `_id`). Two capital acronyms never touch (`RHIUI…` hides the boundary — spell one

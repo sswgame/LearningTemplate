@@ -1,5 +1,5 @@
 """
-Scripts/setup/HostTools.py
+Scripts/common/HostTools.py
 
 호스트 SDK/컴파일러 경로 탐색 (MSVC, Windows SDK, DXC, system includes).
 """

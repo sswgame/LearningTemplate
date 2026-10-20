@@ -269,7 +269,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         ownerDoc="Tools/ReflectionParser/README.md", bOptional=True),
     ConfigFileEntry(
         page="", pathPattern="Config/Environment/search_paths.json", layer=kLayerLocal, fileFormat="json",
-        reader="`Scripts/setup/HostTools.py`", readWhen="환경 준비", shipping="없음", bCommitted=False,
+        reader="`Scripts/common/HostTools.py`", readWhen="환경 준비", shipping="없음", bCommitted=False,
         ownerDoc="Scripts/setup/README.md", bOptional=True),
     ConfigFileEntry(
         page="", pathPattern="Saved/Editor/*", layer=kLayerEditor, fileFormat="ini · json · xml",

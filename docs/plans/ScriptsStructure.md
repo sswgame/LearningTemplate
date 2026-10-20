@@ -44,7 +44,7 @@ Scripts/
 | 단계 | 내용 | 상태 |
 | --- | --- | --- |
 | L1a 워크트리 · 빌드 라이브러리 | `dev/MakeWorktree` · `RunSharedLock` 의 라이브러리 부분을 `common/Worktree.py` · `common/SharedLock.py` 로, `dev/RunLogDigest` · `ListChangedTests` 를 `common/LogDigest.py` · `common/ChangedTests.py` 로 | 끝남 |
-| L1b HostTools · AcronymRegistry | `setup/HostTools.py` · `lint/AcronymRegistry.py` 를 `common/` 으로. `EditorIconFont` 의 함수 안 sys.path 조작을 지운다 | 대기 |
+| L1b HostTools · AcronymRegistry | `setup/HostTools.py` · `lint/AcronymRegistry.py` 를 `common/` 으로. `EditorIconFont` 의 함수 안 sys.path 조작을 지운다 | 끝남 |
 | L1c 린트 명령끼리 | 새 `lint/LayerRules.py`(Engine · Core 티어를 게이트와 보고서가 같이 씀), `RunCoreLayerGraph.loadGateTiers` 의 `None` 폴백을 지운다. 새 `lint/StagedScope.py`(`selectFileScopedStaged` 공개) | 대기 |
 | L2a 린트 밖 폴더 패키지화 | `dev` · `generate` · `qa` · `asset` 에 `__init__.py`, 진입점 sys.path 를 `Scripts` 한 줄로, 테스트의 `Scripts/dev` · `Scripts/setup` 루트를 지운다 | 대기 |
 | L2b 린트 폴더 패키지화 | 한 커밋. `lint/__init__.py`, 모든 importer 를 `lint.LintGate` 등 점 이름으로, `LintCatalog` 의 모듈 이름에 `lint.` 접두, 라이브러리의 sys.path 줄 삭제 | 대기 |

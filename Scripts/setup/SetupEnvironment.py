@@ -56,7 +56,7 @@ from common import (
     readOptionalConfig,
     requireConfig,
 )
-from setup.HostTools import (
+from common.HostTools import (
     findDxcDlls,
     findMsvcPath,
     findWindowsSdkPath,

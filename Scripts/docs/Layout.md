@@ -27,7 +27,7 @@
 | `lint/fixer/` | `Format*` | `LintFixer`(조율자는 `kFixerSkipReason`) |
 | `lint/report/` | `Run*` | `LintReport` |
 | `generate/` | `Generate*` · `Cook*` | 빌드 · configure 가 부르는 생성기(`runGenerator`) |
-| `setup/` | `Setup*` · `Install*` · `Add*` | 외부 도구 찾기 · 설치(`__main__` 이 없는 파일은 라이브러리 — `HostTools`) |
+| `setup/` | `Setup*` · `Install*` · `Add*` | 외부 도구 찾기 · 설치(도구 찾기 라이브러리는 `common/HostTools.py`) |
 | `dev/` | 동사로 시작(`Run*` · `Compare*` · `Make*` · `Move*` · `Remove*` · `Configure*` · `Sample*` · `List*` …) | 사람이 가끔 — 테스트 데이터를 만드는 것은 `Make*`(`generate/` 와 겹치지 않게) |
 | `qa/` | 명사(`GoldenImages` · `Soak` …) | App 을 돌려 비교하기 |
 

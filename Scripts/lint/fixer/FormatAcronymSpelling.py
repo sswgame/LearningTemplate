@@ -3,7 +3,7 @@
 """
 Scripts/lint/fixer/FormatAcronymSpelling.py
 
-약어 철자 코드모드 — Pascal 낱말로 쓴 약어를 대문자로 고칩니다(docs/agents/NamingCpp.md "Function names", 규칙 원본은 `Scripts/lint/AcronymRegistry.py`).
+약어 철자 코드모드 — Pascal 낱말로 쓴 약어를 대문자로 고칩니다(docs/agents/NamingCpp.md "Function names", 규칙 원본은 `Scripts/common/AcronymRegistry.py`).
 
 `UiSystem` → `UISystem`, `updateUi` → `updateUI`, `_pGpuScene` → `_pGPUScene`, `entityIds` → `entityIDs`. 이름 맨 앞의 소문자 약어(`uiSystem`)는 그대로다.
 문자열 리터럴 · 주석 · `#include` 줄 · `gv_` 전역 변수 · `SW_*` 매크로 · 서드파티 이름 · 제품 이름(`ImGui`)은 건드리지 않는다.
@@ -41,9 +41,9 @@ from pathlib import Path
 from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintFixer · AcronymRegistry
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintFixer
 
-import AcronymRegistry as registry  # noqa: E402
+from common import AcronymRegistry as registry  # noqa: E402
 from common import (  # noqa: E402
     blankComments,
     collectRepositoryFiles,
@@ -55,7 +55,7 @@ from common import (  # noqa: E402
     runProcess,
 )
 from LintFixer import FixerFileKind, FixPass, LintFixer, addFileArguments, selectFixerTargetFiles  # noqa: E402
-from setup.HostTools import findWindowsSdkPath  # noqa: E402
+from common.HostTools import findWindowsSdkPath  # noqa: E402
 
 #: 이번 실행이 고르는 약어(`--acronym`) — 변환(FixPass)이 읽는다. 조각 테스트는 기본값(전체)으로 돈다.
 _kState: dict[str, tuple[str, ...]] = {"acronyms": registry.kSelectable}
@@ -384,7 +384,7 @@ _kProseSuffix: tuple[str, ...] = (".md", ".cmake", ".py", ".txt", ".natvis", ".y
 
 #: 옛 철자를 일부러 적는 파일 — 규칙 · 도구 · 테스트 · 계획 문서.
 _kTextExcludedRel: frozenset[str] = frozenset({
-    "Scripts/lint/AcronymRegistry.py", "Scripts/lint/fixer/FormatAcronymSpelling.py", "Scripts/lint/gate/CheckAcronymSpelling.py",
+    "Scripts/common/AcronymRegistry.py", "Scripts/lint/fixer/FormatAcronymSpelling.py", "Scripts/lint/gate/CheckAcronymSpelling.py",
     "Test/PythonTest/TestAcronymSpelling.py", "docs/04_CodingGuidelines.md",
     "Scripts/lint/gate/CheckFunctionVocabulary.py",
     "Scripts/lint/rules/AcronymRegistry.toml", "Scripts/lint/rules/CheckFunctionVocabulary.toml", "Scripts/lint/rules/CheckProductNames.toml",

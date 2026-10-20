@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 약어 레지스트리 — 무엇이 약어이고 어떻게 쓰는지를 정하는 한 자리입니다(docs/agents/NamingCpp.md "Function names").
 
-게이트(`gate/CheckAcronymSpelling.py`) · 코드모드(`fixer/FormatAcronymSpelling.py`) · 사전 실행 보고가 모두 이 모듈을 읽는다.
+게이트(`lint/gate/CheckAcronymSpelling.py` · `CheckFunctionVocabulary.py`) · 코드모드(`lint/fixer/FormatAcronymSpelling.py`) · 사전 실행 보고 · 에디터 아이콘 상수 생성(`common/EditorIconFont.py`)이 모두 이 모듈을 읽는다.
 목록과 규칙을 한 파일에 두는 이유는 하나다 — 게이트가 막는 철자와 코드모드가 고치는 철자가 갈리면 고친 코드를 게이트가 다시 막는다.
 
 규칙(계획 2절):
@@ -22,16 +20,12 @@
 from __future__ import annotations
 
 import re
-import sys
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
 from typing import Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
-
-from common.CodeText import blankCommentsAndLiterals, blankMatch  # noqa: E402
-from common.RuleData import kKindReason, kKindText, kKindTextList, readRuleFile  # noqa: E402
+from .CodeText import blankCommentsAndLiterals, blankMatch
+from .RuleData import kKindReason, kKindText, kKindTextList, readRuleFile
 
 _kRuleData = readRuleFile("AcronymRegistry", {
     "acronym": kKindTextList, "enforced": kKindTextList, "no_plural": kKindTextList, "product": kKindTextList,

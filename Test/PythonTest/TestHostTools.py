@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""setup.HostTools 의 버전 고르기 — MSVC · Windows SDK 버전 폴더는 사전순이 아니라 자연순으로 최신을 고른다."""
+"""common.HostTools 의 버전 고르기 — MSVC · Windows SDK 버전 폴더는 사전순이 아니라 자연순으로 최신을 고른다."""
 
 from __future__ import annotations
 
@@ -9,10 +9,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "setup"))
 
-import HostTools  # noqa: E402
-from common import naturalVersionKey, selectLatestVersion  # noqa: E402
+from common import HostTools, naturalVersionKey, selectLatestVersion  # noqa: E402
 
 
 class HostToolsTest(unittest.TestCase):

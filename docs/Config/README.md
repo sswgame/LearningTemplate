@@ -93,7 +93,7 @@
 | `Config/Environment/*.defaults.json` | `Scripts/setup/SetupEnvironment.py` (로컬 `*.json` 의 시드) — 환경 준비 · configure | 없음 | 한다 | [형식 설명](../../Scripts/setup/README.md) |
 | `Config/Environment/toolchain_config.json` | `GenerateToolchainCMake.py` · ReflectionParser — configure · 리플렉션 코드젠. SetupEnvironment 가 채운 절대 경로 캐시 | 없음 | 안 한다 | [형식 설명](../../Scripts/setup/README.md) |
 | `Config/Environment/parser_config.json` | ReflectionParser `ParserConfig::load` — 리플렉션 코드젠 | 없음 | 안 한다 | [형식 설명](../../Tools/ReflectionParser/README.md) |
-| `Config/Environment/search_paths.json` | `Scripts/setup/HostTools.py` — 환경 준비 | 없음 | 안 한다 | [형식 설명](../../Scripts/setup/README.md) |
+| `Config/Environment/search_paths.json` | `Scripts/common/HostTools.py` — 환경 준비 | 없음 | 안 한다 | [형식 설명](../../Scripts/setup/README.md) |
 
 ## 타입 읽는 법
 
