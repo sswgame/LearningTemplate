@@ -1,6 +1,6 @@
 # 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션)
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 3/5
+> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 4/6
 
 활과 화살, 잡기 · 처형, 말 타기, 문 열기처럼 **여러 개체가 한 타임라인에 묶여 같이 도는 애니메이션**(언리얼의 Contextual Animation, 흔히 페어드 · 싱크드 · 인터랙션 애니메이션)의 일반 구조다.
 애니메이션 영역의 한 단위다([게임플레이 후보](Candidates-gameplay.md) 의 애니메이션 절과 이웃). 첫 단위(P0 ~ P2)와 상호작용 연결 · 에셋 캐시 · 세트 고르기 · 보폭 보정 쥠은 코드와 테스트(`PairedAnimationTest` · `PairedAnimationDefTest` · `InteractionTest`)로 들어갔다.
@@ -106,13 +106,22 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 - 활은 자기 스켈레톤(시위 · 활대 본)과 애니메이터가 있는 오브젝트다. 궁수 손 소켓에 **붙은 채로** `Bow` 역할로 참가해(`align="none"`) 같은 시각을 재생한다. 부착이 평가 의존을 만들어 활은 궁수 다음 레벨에서 평가된다.
 - 화살 발사는 공유 알림 `ReleaseArrow` → 활 오브젝트 알림 표의 `SpawnPrefab`(투사체 프리팹, 시위 소켓) — 기존 경로 그대로다. 메긴 화살(`Arrow` 역할)은 선택 역할로 놓는 시각에 클립이 끝나 나간다(숨김 상태로).
 
-## 7. 네트워크(설계만, 구현은 후속)
+## 7. 네트워크(엔진 쪽 복사 · 복원은 구현함, 네트워크 연결은 후속)
 
 - 시작은 **서버가 결정**한다. 서버는 (세션 id, 에셋 경로, 시작 틱, 역할 → 오브젝트 id 목록)을 복제한다. 클라이언트는 같은 에셋 · 같은 바인딩으로 같은 `startSession` 을 부르고, 시작 틱과 지금 틱의 차이만큼 시각을 앞당겨 따라잡는다(앵커 시각을 옮기는 길이 필요하다 — 애니메이터에 시각 지정 훅, feat20 · feat21 병합 뒤).
 - 세션 상태는 결정적이다: (에셋, 바인딩, 진입 시 앵커 시각 목록, 알림 커서, 상태). 스냅샷 · 롤백(feat17 의 `setOwnerState`)에서는 이 묶음을 소유 상태로 저장하고, 되감기 뒤 다시 적용할 때 공유 알림은 "이미 낸 시각" 커서로 두 번 내지 않는다.
 - 정렬(`snap` · `warp`)은 서버 권위 트랜스폼을 따른다 — 클라이언트는 정렬 결과를 예측하되 서버 보정을 받는다.
-- 세션 id 는 지금 씬 시스템의 일련번호다. 복제할 때는 서버가 정한 id 를 받는 시작 경로가 필요하다(후속).
-- 2026-10-20 확인: `setOwnerState` 는 main 에 있고, 애니메이터 시각 지정 훅은 없다 — 구현은 훅이 들어온 뒤다("남은 것").
+- 세션 id 는 씬 시스템의 일련번호다. 서버가 정한 id 는 `PairedAnimationSystem::restoreSession` 이 받는다(아래 "복제 상태"). 복원한 id 보다 시스템의 다음 일련번호가 커진다.
+- 2026-10-20 확인: `setOwnerState` 는 main 에 있다. 애니메이터 시각 지정 훅(`SkeletalAnimatorComponent::seekCurrentTime`)도 들어왔다.
+
+**복제 상태(엔진 쪽, 구현함)**: 세션 상태는 `PairedAnimationSessionSnapshot`(`PairedAnimationSnapshot.h`)이다. 세션 id, 마지막 갱신이 읽은 앵커 시각, 알림 커서, 역할마다 단계와 진입 시각을 담고 `writeBytes` · `readBytes` 로 `BitStream` 바이트가 된다.
+에셋 경로와 역할 → 오브젝트 id 는 담지 않는다. 오브젝트 id 를 로컬 핸들로 바꾸는 일은 네트워크 계층(GameFramework)의 몫이다.
+
+- 서버: `PairedAnimationSession::captureSnapshot` 으로 복사한다. 마지막 갱신 때의 상태이고 재생 중일 때만 된다.
+- 시작 틱만 복제하는 경로: `PairedAnimationSessionSnapshot::makeAtElapsedTime( def, 서버 id, 지난 시간 )` 이 이상적인 상태를 만든다. 진입 시각은 `start` 로 치므로 서버의 실제 진입(프레임 단위)과 최대 한 프레임 다르다.
+- 클라이언트: `restoreSession( manager, def, 바인딩, 스냅샷 )` 이 `start` 와 같은 검사를 하고, 스냅샷이 에셋과 맞는지 보고(역할 수, 앵커 단계, 시각 범위, 진입 시각, 바인딩 있는 역할의 `Unbound`), 그다음 바꾼다. 틀리면 `InvalidSnapshot`, 같은 id 가 재생 중이면 `SessionIDInUse` 다.
+- 복원은 서버 상태에 맞추는 일이라 진입 블렌드 없이(0 초) 재생하고 클립 시각을 옮긴다. 들어와 있던 역할은 `앵커 시각 − 진입 시각`, 클립이 이미 끝난(또는 서버가 내보낸) 역할은 `exitState` 를 재생한다. 아직 들어오지 않은 역할은 다음 갱신이 `start` 를 보고 들여보낸다.
+- 알림은 커서 앞의 것을 내지 않는다(건너뛴 알림은 울리지 않는다). 트랜스폼은 서버 권위라 복원은 `snap` · `warp` 정렬과 진입 거리 검사를 하지 않는다. 롤백은 `abortSession` 으로 옛 세션을 중단한 뒤 복원한다.
 
 ## 8. 에디터(M3, 후속)
 
@@ -129,7 +138,8 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 | P0 | `PairedAnimationDef` 로더와 검사(필수 역할 · 클립 없음 · NaN · 모르는 속성 · 앵커 규칙 · 알림 역할) | 완료(Debug 빌드 · `PairedAnimationDefTest` 통과) |
 | P1 | `PairedAnimationSession` · `PairedAnimationSystem` · `PairedAnimationComponent`, `AnimationNotifyComponent::processExternalNotify` | 완료(Debug 빌드 · `PairedAnimationTest` 통과) |
 | P2 | 정렬 `snap` · `warp`(`MotionWarpingComponent` 재사용, 새 노드 없음) | 완료(Debug 빌드 · `PairedAnimationTest` 통과) |
-| P3 | 네트워크 재현(7절) | 아래 "남은 것" — 선행(애니메이터 시각 지정 훅 `seekCurrentTime`)은 갖췄다 |
+| P3a | 세션 상태 복사 · 복원(7절 "복제 상태": `PairedAnimationSessionSnapshot` · `captureSnapshot` · `restoreSession`) | 코드와 `PairedAnimationTest` 작성(빌드 · 테스트 미확인, 병합 뒤 한 번 확인) |
+| P3b | 네트워크 계층 연결(서버가 세션 시작 · 상태를 복제, 클라이언트가 복원, 롤백 소유 상태) | 아래 "남은 것" |
 | M3 | 에디터 미리보기(8절) | 아래 "남은 것" |
 | — | 상호작용 단계에서 세션 시작 · 에셋 캐시(핫 리로드) · 세트 고르기(`<Select>`) · 보폭 보정 쥠 | 완료(`InteractionTest` · `PairedAnimationTest`) |
 | — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 아래 "남은 것" — 클립 · 활 메시가 없다 |
@@ -137,8 +147,10 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 ## 남은 것
 
 - 에디터 미리보기(M3): 역할마다 메시를 놓고 한 시계로 스크럽 · 오프셋 기즈모 · 알림 시각 편집.
-- 네트워크 재현(P3): 서버가 세션 id · 시작 틱 · 역할 → 오브젝트를 복제한다. 롤백은 `ReplicationServer::setOwnerState`(main 에 있다)에 세션 상태를 소유 상태로 싣는다.
-  **선행(훅은 갖췄다)**: 클라이언트 따라잡기는 `SkeletalAnimatorComponent::seekCurrentTime( 초 )` 로 재생 중 클립의 시각을 옮긴다. 재생 중인 것이 없거나 시각이 음수 · NaN · 클립 길이 초과면 오류를 남기고 false 다(자르지 않는다). 반복 클립의 시각을 길이로 감는 일은 부르는 쪽(복제)이 한다.
+- 네트워크 계층 연결(P3b): 서버가 세션 id · 에셋 경로 · 시작 틱 · 역할 → 오브젝트 id 를 복제하고, 클라이언트가 바인딩을 만들어 `restoreSession` 을 부른다. 롤백은 `ReplicationServer::setOwnerState`(main 에 있다)에 `captureSnapshot` 의 바이트를 소유 상태로 싣는다.
+  엔진 쪽(복사 · 복원 · 바이트 형식)은 P3a 에서 갖췄다. 이 단위는 GameFramework 의 네트워크 키트를 만지므로 그쪽 소유자와 정한다. 정할 것은 아래 목록이다.
+  복원은 `SkeletalAnimatorComponent::seekCurrentTime( 초 )` 로 클립 시각을 옮긴다. 반복 클립의 시각을 길이로 감는 일은 부르는 쪽이 한다(세션 클립은 반복하지 않는다).
+- 정할 것: ① 세션 시작 메시지를 어느 키트에 두는가(복제 계층이 오브젝트 id 를 어떻게 `TComponentHandle<SkeletalAnimatorComponent>` 로 바꾸는가). ② 늦게 들어온 클라이언트에 서버가 `makeAtElapsedTime`(시작 틱만) 대신 `captureSnapshot` 의 정확한 진입 시각을 보내는가. ③ 복원이 클립이 끝난 역할에 `exitState` 를 재생하는 규칙(서버가 게임플레이 때문에 내보낸 선택 역할도 같이 `exitState` 로 간다)이 맞는가.
 - 시나리오 테스트: Shooter3D 궁수 · 활 · 화살 실제 클립과 활 메시가 리소스에 없다(`data/anim/bow_shoot.pairedanim.xml` 은 형식 검사만 돈다). 클립 · 메시(CC0)가 들어오면 시나리오로 화면 확인까지 한다.
 
 ## 11. 알려진 한계
@@ -147,6 +159,7 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 - 상호작용의 누름(`Press`) 단계는 누름으로 이미 끝나므로, 세션 시작이 거절되면 경고만 남고 상호작용은 끝난 채다. 누르고 있기 · 연타 단계는 취소된다.
 - 애니메이션 되감기(`AnimationRewind`) 스크럽 중에는 시각이 예측과 달라 중단된다(개발 빌드 진단 기능).
 - 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 클립 · 활 메시는 아직 없다. 데이터 형식 검사(`ResourceDataSchemaTest`)만 돈다.
+- 복원(`restoreSession`)은 `warp` 창을 다시 열지 않는다. 창 도중에 이어 받은 클라이언트는 휘어지지 않은 루트 모션으로 가고 서버의 트랜스폼 보정을 받는다(7절).
 
 ## 12. 다른 작업과 겹치는 자리
 

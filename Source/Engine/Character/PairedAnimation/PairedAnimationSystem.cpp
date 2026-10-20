@@ -10,6 +10,11 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "PairedAnimation" );
+} // namespace sw
+
+namespace sw
+{
     PairedAnimationSystem::PairedAnimationSystem()
         : _listSession{}
         , _nextSessionID{ 1 }
@@ -121,6 +126,42 @@ namespace sw
             return startSession( manager, listDef[setIndex], listBinding, outSessionID );
         }
         return PairedAnimationStartResult::NoMatchingSet;
+    }
+
+    PairedAnimationStartResult PairedAnimationSystem::restoreSession( GameObjectManager& manager, shared_ptr<const PairedAnimationDef> def, const vector<PairedAnimationBinding>& listBinding,
+                                                                      const PairedAnimationSessionSnapshot& snapshot )
+    {
+        SW_ASSERT( def != nullptr );
+        if ( snapshot._sessionID == 0 )
+        {
+            SW_LOG_ERROR( "Paired animation snapshot has no session id" );
+            return PairedAnimationStartResult::InvalidSnapshot;
+        }
+        size_t endedIndex = _listSession.size(); // 같은 id 로 끝나 아직 빠지지 않은 세션(없으면 끝 인덱스)
+        for ( size_t sessionIndex = 0; sessionIndex < _listSession.size(); ++sessionIndex )
+        {
+            if ( _listSession[sessionIndex]->getID() != snapshot._sessionID )
+                continue;
+            if ( _listSession[sessionIndex]->isPlaying() )
+                return PairedAnimationStartResult::SessionIDInUse;
+            endedIndex = sessionIndex;
+        }
+        for ( const PairedAnimationBinding& binding : listBinding )
+        {
+            if ( isParticipant( binding._animator ) )
+                return PairedAnimationStartResult::ParticipantBusy;
+        }
+        unique_ptr<PairedAnimationSession> session = sw::make_unique<PairedAnimationSession>( snapshot._sessionID, std::move( def ) );
+        const PairedAnimationStartResult   result  = session->restore( manager, listBinding, snapshot );
+        if ( result != PairedAnimationStartResult::Started )
+            return result;
+        if ( _nextSessionID <= snapshot._sessionID )
+            _nextSessionID = snapshot._sessionID + 1;
+        if ( endedIndex < _listSession.size() )
+            _listSession[endedIndex] = std::move( session );
+        else
+            _listSession.push_back( std::move( session ) );
+        return result;
     }
 
     void PairedAnimationSystem::abortSession( GameObjectManager& manager, uint32 sessionID )

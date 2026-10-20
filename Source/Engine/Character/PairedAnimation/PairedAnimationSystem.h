@@ -5,6 +5,7 @@
  *          돌 수 없고, 평가보다 먼저 이번 프레임의 결정(진입 · 정렬 · 공유 알림)을 끝내야 한다. 참가자는 한 번에 한 세션에만 있다(`ParticipantBusy`).
  *          `PairedAnimationComponent` 가 플레이 시작에 붙이고(`acquire`), 마지막 컴포넌트가 끝나면 뗀다(엔진 모듈 타입이라 핫 리로드와 상관없다).
  *          끝난 세션(`Finished` · `Aborted`)은 그 프레임 동안 조회되고 다음 갱신 앞에서 빠진다.
+ *          네트워크 클라이언트는 서버가 정한 id 와 상태(`PairedAnimationSessionSnapshot`)로 `restoreSession` 을 불러 세션을 이어 받는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -55,6 +56,13 @@ namespace sw
          */
         [[nodiscard]] PairedAnimationStartResult startMatchingSession( GameObjectManager& manager, const vector<shared_ptr<const PairedAnimationDef>>& listDef,
                                                                        const vector<PairedAnimationBinding>& listBinding, uint32& outSessionID, uint32& outSetIndex );
+        /**
+         * @brief 서버가 정한 id 의 세션을 스냅샷의 상태로 이어 받아 시작합니다(게임 스레드, 틱 밖). 늦게 들어온 클라이언트의 따라잡기와 롤백 뒤 복원이 씁니다.
+         * @details 세션 id 는 `snapshot._sessionID` 입니다(0 이면 `InvalidSnapshot`). 같은 id 의 세션이 재생 중이면 `SessionIDInUse` 이고, 끝났지만 아직 빠지지 않은 세션이면 새 세션이 그 자리를 대신합니다.
+         *          롤백은 먼저 `abortSession` 으로 중단한 뒤 부릅니다. 거절되면 아무것도 바꾸지 않습니다. 세션 일련번호는 복원한 id 보다 앞서 가도록 올립니다(클라이언트가 같은 id 를 새로 받지 않게).
+         */
+        [[nodiscard]] PairedAnimationStartResult restoreSession( GameObjectManager& manager, shared_ptr<const PairedAnimationDef> def, const vector<PairedAnimationBinding>& listBinding,
+                                                                 const PairedAnimationSessionSnapshot& snapshot );
         /** @brief 세션을 중단합니다. 없거나 끝났으면 할 일이 없습니다. */
         void abortSession( GameObjectManager& manager, uint32 sessionID );
         /** @brief id 의 세션입니다. 없으면(빠졌으면) nullptr 입니다. */

@@ -15,6 +15,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationComponent.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationSnapshot.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -563,4 +564,308 @@ SW_TEST_CASE( PairedAnimationTest, ComponentStartsWithEditedAssetAfterCacheReloa
     SW_ASSERT_NOT_NULL( pSecond );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), pSecond->getDef().getRoles().size() );
     cache.clear(); // 임시 경로가 회차마다 같다 — `--test_repeat` 다음 회차가 고친 에셋을 읽지 않게
+}
+
+/**
+ * @brief [PairedAnimationTest] 스냅샷 — 이상적인 상태(`makeAtElapsedTime`)가 시각에 맞게 역할 단계와 알림 커서를 정하고, 바이트로 썼다 읽어도 같으며, 깨진 바이트는 거절한다
+ * @details 역할은 순서대로 Leader(앵커) · Follower · Prop(0.5 초에 들어옴), 알림 `Release` 는 0.3 초다.
+ */
+SW_TEST_CASE( PairedAnimationTest, SnapshotMakesElapsedStateAndSurvivesBytes )
+{
+    const shared_ptr<const PairedAnimationDef> def = TestPairedAnimationInternal::makeDef( TestPairedAnimationInternal::kSnapXML );
+    SW_ASSERT_NOT_NULL( def.get() );
+
+    const PairedAnimationSessionSnapshot early = PairedAnimationSessionSnapshot::makeAtElapsedTime( *def, 7, 0.25f );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), early._listRole.size() );
+    SW_EXPECT_EQUAL( 7u, early._sessionID );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, early._anchorTime, 1e-6f );
+    SW_EXPECT_EQUAL( 0u, early._nextNotifyIndex ); // 0.3 초 알림은 아직 안 지났다
+    SW_EXPECT_TRUE( early._listRole[0]._stage == PairedAnimationRoleStage::Playing );
+    SW_EXPECT_TRUE( early._listRole[1]._stage == PairedAnimationRoleStage::Playing );
+    SW_EXPECT_TRUE( early._listRole[2]._stage == PairedAnimationRoleStage::Waiting );
+
+    const PairedAnimationSessionSnapshot late = PairedAnimationSessionSnapshot::makeAtElapsedTime( *def, 7, 0.625f );
+    SW_EXPECT_EQUAL( 1u, late._nextNotifyIndex ); // 지난 알림은 넘긴다
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), late._listRole.size() );
+    SW_EXPECT_TRUE( late._listRole[2]._stage == PairedAnimationRoleStage::Playing );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, late._listRole[2]._entryAnchorTime, 1e-6f );
+
+    vector<uint8> bytes;
+    late.writeBytes( bytes );
+    PairedAnimationSessionSnapshot parsed{};
+    SW_ASSERT_TRUE( PairedAnimationSessionSnapshot::readBytes( bytes, parsed ) == PairedAnimationSessionSnapshot::ReadResult::Success );
+    SW_EXPECT_EQUAL( late._sessionID, parsed._sessionID );
+    SW_EXPECT_NEAR_EQUAL( late._anchorTime, parsed._anchorTime, 1e-7f );
+    SW_EXPECT_EQUAL( late._nextNotifyIndex, parsed._nextNotifyIndex );
+    SW_ASSERT_EQUAL( late._listRole.size(), parsed._listRole.size() );
+    for ( size_t roleIndex = 0; roleIndex < late._listRole.size(); ++roleIndex )
+    {
+        SW_EXPECT_TRUE( late._listRole[roleIndex]._stage == parsed._listRole[roleIndex]._stage );
+        SW_EXPECT_NEAR_EQUAL( late._listRole[roleIndex]._entryAnchorTime, parsed._listRole[roleIndex]._entryAnchorTime, 1e-7f );
+    }
+
+    // 깨진 바이트 — 매직이 다르거나, 잘렸거나, 역할 수가 남은 바이트보다 크다. 거절하면 출력은 비어 있다.
+    vector<uint8> wrongMagic = bytes;
+    wrongMagic[0]            = static_cast<uint8>( wrongMagic[0] ^ 0xFFu );
+    SW_EXPECT_TRUE( PairedAnimationSessionSnapshot::readBytes( wrongMagic, parsed ) == PairedAnimationSessionSnapshot::ReadResult::WrongMagic );
+    SW_EXPECT_TRUE( parsed._listRole.empty() );
+    const vector<uint8> truncated( bytes.begin(), bytes.begin() + 8 );
+    SW_EXPECT_TRUE( PairedAnimationSessionSnapshot::readBytes( truncated, parsed ) == PairedAnimationSessionSnapshot::ReadResult::Truncated );
+    // 머리(매직 · id · 앵커 시각 · 알림 커서 · 역할 수 = 11 바이트)만 남으면 역할 수 3 이 남은 비트보다 크다.
+    const vector<uint8> headerOnly( bytes.begin(), bytes.begin() + 11 );
+    SW_EXPECT_TRUE( PairedAnimationSessionSnapshot::readBytes( headerOnly, parsed ) == PairedAnimationSessionSnapshot::ReadResult::Truncated );
+    SW_EXPECT_TRUE( parsed._listRole.empty() );
+    SW_EXPECT_TRUE( PairedAnimationSessionSnapshot::readBytes( {}, parsed ) == PairedAnimationSessionSnapshot::ReadResult::WrongMagic );
+}
+
+/**
+ * @brief [PairedAnimationTest] 복원 — 시작하고 0.625 초가 지난 상태로 이어 받으면 두 역할과 늦은 역할이 그 시각에서 이어 돌고, 지난 알림은 다시 울리지 않으며, 세션이 끝까지 간다
+ * @details 앵커 0.625 초, Prop 은 0.5 초에 들어왔으므로 0.125 초. 복원은 진입 블렌드 없이 시각을 옮기고, 이어 받은 시스템의 다음 세션 id 는 복원한 id 를 넘는다.
+ */
+SW_TEST_CASE( PairedAnimationTest, RestoreContinuesFromElapsedState )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedrestore", 0.0f );
+    SW_ASSERT_FALSE( folder.empty() );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pLeader   = TestPairedAnimationInternal::addParticipant( manager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pFollower = TestPairedAnimationInternal::addParticipant( manager, "Follower", folder, false );
+    SkeletalAnimatorComponent* pProp     = TestPairedAnimationInternal::addParticipant( manager, "Prop", folder, false );
+    SW_ASSERT_TRUE( pLeader != nullptr && pFollower != nullptr && pProp != nullptr );
+    AnimationNotifyComponent* pNotify = TestPairedAnimationInternal::addReleaseNotify( *pFollower );
+    SW_ASSERT_NOT_NULL( pNotify );
+    const shared_ptr<const PairedAnimationDef> def = TestPairedAnimationInternal::makeDef( TestPairedAnimationInternal::kSnapXML );
+    SW_ASSERT_NOT_NULL( def.get() );
+    PairedAnimationSystem&               system      = PairedAnimationSystem::getOrCreate( manager );
+    const vector<PairedAnimationBinding> listBinding = {
+        PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pLeader )},
+        PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower )},
+        PairedAnimationBinding{    hashed_string( "Prop" ),     TComponentHandle<SkeletalAnimatorComponent>( pProp )},
+    };
+
+    const PairedAnimationSessionSnapshot snapshot = PairedAnimationSessionSnapshot::makeAtElapsedTime( *def, 7, 0.625f );
+    SW_ASSERT_TRUE( system.restoreSession( manager, def, listBinding, snapshot ) == PairedAnimationStartResult::Started );
+    const PairedAnimationSession* pSession = system.findSession( 7 );
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_EQUAL( 3u, pSession->getPlayingRoleCount() );
+    SW_EXPECT_NEAR_EQUAL( 0.625f, TestPairedAnimationInternal::getCurrentTime( *pLeader ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.625f, TestPairedAnimationInternal::getCurrentTime( *pFollower ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.125f, TestPairedAnimationInternal::getCurrentTime( *pProp ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pLeader->getPlayRate(), 1e-6f );
+
+    // 한 시계로 끝까지 — 어긋남으로 중단하지 않고, 0.3 초 알림은 울리지 않는다.
+    for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+    {
+        TestPairedAnimationInternal::step( manager, system );
+        SW_EXPECT_TRUE( pSession->isPlaying() );
+    }
+    SW_EXPECT_NEAR_EQUAL( TestPairedAnimationInternal::getCurrentTime( *pLeader ), TestPairedAnimationInternal::getCurrentTime( *pFollower ), 1e-5f );
+    system.runBeforeTick( manager, TestPairedAnimationInternal::kStep );
+    SW_EXPECT_TRUE( pSession->getState() == PairedAnimationSessionState::Finished );
+    SW_EXPECT_EQUAL( 0u, TestPairedAnimationInternal::countRelease( *pNotify ) );
+
+    // 이어 받은 id 보다 새 세션의 id 가 크다.
+    SkeletalAnimatorComponent* pLeader2   = TestPairedAnimationInternal::addParticipant( manager, "Leader2", folder, false );
+    SkeletalAnimatorComponent* pFollower2 = TestPairedAnimationInternal::addParticipant( manager, "Follower2", folder, false );
+    SW_ASSERT_TRUE( pLeader2 != nullptr && pFollower2 != nullptr );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationInternal::addReleaseNotify( *pFollower2 ) );
+    uint32 newID = 0;
+    SW_ASSERT_TRUE( system.startSession( manager, def, TestPairedAnimationInternal::makeBindings( pLeader2, pFollower2 ), newID ) == PairedAnimationStartResult::Started );
+    SW_EXPECT_TRUE( newID > 7u );
+}
+
+/**
+ * @brief [PairedAnimationTest] 복원 — 이른 시각(0.25 초)에서 이어 받으면 아직 안 지난 알림은 울리고 늦은 역할은 기다리다 `start` 에 들어온다. 이미 클립이 끝난 역할은 종료 상태로 간다
+ */
+SW_TEST_CASE( PairedAnimationTest, RestoreKeepsPendingNotifyAndExitsFinishedRole )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedrestoreearly", 0.0f );
+    SW_ASSERT_FALSE( folder.empty() );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pLeader   = TestPairedAnimationInternal::addParticipant( manager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pFollower = TestPairedAnimationInternal::addParticipant( manager, "Follower", folder, false );
+    SkeletalAnimatorComponent* pProp     = TestPairedAnimationInternal::addParticipant( manager, "Prop", folder, false );
+    SW_ASSERT_TRUE( pLeader != nullptr && pFollower != nullptr && pProp != nullptr );
+    AnimationNotifyComponent* pNotify = TestPairedAnimationInternal::addReleaseNotify( *pFollower );
+    SW_ASSERT_NOT_NULL( pNotify );
+    const shared_ptr<const PairedAnimationDef> def = TestPairedAnimationInternal::makeDef( TestPairedAnimationInternal::kSnapXML );
+    SW_ASSERT_NOT_NULL( def.get() );
+    PairedAnimationSystem&               system      = PairedAnimationSystem::getOrCreate( manager );
+    const vector<PairedAnimationBinding> listBinding = {
+        PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pLeader )},
+        PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower )},
+        PairedAnimationBinding{    hashed_string( "Prop" ),     TComponentHandle<SkeletalAnimatorComponent>( pProp )},
+    };
+    SW_ASSERT_TRUE( system.restoreSession( manager, def, listBinding, PairedAnimationSessionSnapshot::makeAtElapsedTime( *def, 3, 0.25f ) ) == PairedAnimationStartResult::Started );
+    const PairedAnimationSession* pSession = system.findSession( 3 );
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_FALSE( pSession->isRolePlaying( hashed_string( "Prop" ) ) ); // 기다린다
+    SW_EXPECT_TRUE( pProp->getCurrentStateName() == hashed_string( "Idle" ) );
+
+    // 읽은 앵커 0.25 초의 갱신(예측 0.375)이 0.3 초 알림을 낸다. 앵커 0.5 초를 읽는 갱신에서 Prop 이 들어온다.
+    system.runBeforeTick( manager, TestPairedAnimationInternal::kStep );
+    SW_EXPECT_EQUAL( 1u, TestPairedAnimationInternal::countRelease( *pNotify ) );
+    manager.getSubsystem<AnimationSystem>().evaluate( TestPairedAnimationInternal::kStep );
+    for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+    {
+        TestPairedAnimationInternal::step( manager, system );
+    }
+    SW_EXPECT_TRUE( pSession->isRolePlaying( hashed_string( "Prop" ) ) );
+    SW_EXPECT_TRUE( pSession->isPlaying() );
+    SW_EXPECT_EQUAL( 1u, TestPairedAnimationInternal::countRelease( *pNotify ) );
+
+    // 클립이 이미 끝난 역할 — Prop 이 0.2 초에 들어와 0.5 초 클립을 도는데 0.8 초에서 이어 받는다.
+    const shared_ptr<const PairedAnimationDef> finishedDef = TestPairedAnimationInternal::makeDef( R"(<PairedAnimation duration="1">
+        <Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
+        <Role name="Prop" required="false" clip="Late" start="0.2" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>
+    </PairedAnimation>)" );
+    SW_ASSERT_NOT_NULL( finishedDef.get() );
+    SkeletalAnimatorComponent* pLeader2 = TestPairedAnimationInternal::addParticipant( manager, "Leader2", folder, false );
+    SkeletalAnimatorComponent* pProp2   = TestPairedAnimationInternal::addParticipant( manager, "Prop2", folder, false );
+    SW_ASSERT_TRUE( pLeader2 != nullptr && pProp2 != nullptr );
+    SW_ASSERT_TRUE( pProp2->play( hashed_string( "Late" ), false, 0.0f ) ); // 종료 상태(Idle)로 가는지 보려고 다른 것을 재생해 둔다
+    const vector<PairedAnimationBinding> listFinished = {
+        PairedAnimationBinding{hashed_string( "Leader" ), TComponentHandle<SkeletalAnimatorComponent>( pLeader2 )},
+        PairedAnimationBinding{  hashed_string( "Prop" ),   TComponentHandle<SkeletalAnimatorComponent>( pProp2 )},
+    };
+    SW_ASSERT_TRUE( system.restoreSession( manager, finishedDef, listFinished, PairedAnimationSessionSnapshot::makeAtElapsedTime( *finishedDef, 4, 0.8f ) ) ==
+                    PairedAnimationStartResult::Started );
+    const PairedAnimationSession* pFinished = system.findSession( 4 );
+    SW_ASSERT_NOT_NULL( pFinished );
+    SW_EXPECT_FALSE( pFinished->isRolePlaying( hashed_string( "Prop" ) ) );
+    SW_EXPECT_EQUAL( 1u, pFinished->getPlayingRoleCount() );
+    SW_EXPECT_TRUE( pProp2->getCurrentStateName() == hashed_string( "Idle" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, TestPairedAnimationInternal::getCurrentTime( *pLeader2 ), 1e-6f );
+}
+
+/**
+ * @brief [PairedAnimationTest] 복원 거절 — 에셋과 맞지 않는 스냅샷(역할 수 · 시각 범위 · 앵커 단계 · 세션 id 0 · 묶인 역할이 Unbound)과 재생 중인 같은 id 는 아무것도 바꾸지 않고 거절한다
+ */
+SW_TEST_CASE( PairedAnimationTest, RestoreRefusesMismatchedSnapshotWithoutSideEffects )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedrestorerefuse", 0.0f );
+    SW_ASSERT_FALSE( folder.empty() );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pLeader   = TestPairedAnimationInternal::addParticipant( manager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pFollower = TestPairedAnimationInternal::addParticipant( manager, "Follower", folder, false );
+    SW_ASSERT_TRUE( pLeader != nullptr && pFollower != nullptr );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationInternal::addReleaseNotify( *pFollower ) );
+    const shared_ptr<const PairedAnimationDef> def = TestPairedAnimationInternal::makeDef( TestPairedAnimationInternal::kSnapXML );
+    SW_ASSERT_NOT_NULL( def.get() );
+    PairedAnimationSystem&               system      = PairedAnimationSystem::getOrCreate( manager );
+    const vector<PairedAnimationBinding> listBinding = TestPairedAnimationInternal::makeBindings( pLeader, pFollower );
+    const PairedAnimationSessionSnapshot good        = PairedAnimationSessionSnapshot::makeAtElapsedTime( *def, 5, 0.5f );
+
+    PairedAnimationSessionSnapshot wrongRoleCount = good;
+    wrongRoleCount._listRole.pop_back();
+    SW_EXPECT_TRUE( system.restoreSession( manager, def, listBinding, wrongRoleCount ) == PairedAnimationStartResult::InvalidSnapshot );
+    PairedAnimationSessionSnapshot pastEnd = good;
+    pastEnd._anchorTime                    = 1.0f;
+    SW_EXPECT_TRUE( system.restoreSession( manager, def, listBinding, pastEnd ) == PairedAnimationStartResult::InvalidSnapshot );
+    PairedAnimationSessionSnapshot anchorWaiting = good;
+    anchorWaiting._listRole[0]._stage            = PairedAnimationRoleStage::Waiting;
+    SW_EXPECT_TRUE( system.restoreSession( manager, def, listBinding, anchorWaiting ) == PairedAnimationStartResult::InvalidSnapshot );
+    PairedAnimationSessionSnapshot noID = good;
+    noID._sessionID                     = 0;
+    SW_EXPECT_TRUE( system.restoreSession( manager, def, listBinding, noID ) == PairedAnimationStartResult::InvalidSnapshot );
+    PairedAnimationSessionSnapshot boundButUnbound = good;
+    boundButUnbound._listRole[1]._stage            = PairedAnimationRoleStage::Unbound;
+    SW_EXPECT_TRUE( system.restoreSession( manager, def, listBinding, boundButUnbound ) == PairedAnimationStartResult::InvalidSnapshot );
+    PairedAnimationSessionSnapshot badEntry = good;
+    badEntry._listRole[1]._entryAnchorTime  = 0.75f; // 앵커 시각(0.5)보다 뒤
+    SW_EXPECT_TRUE( system.restoreSession( manager, def, listBinding, badEntry ) == PairedAnimationStartResult::InvalidSnapshot );
+
+    // 거절은 재생을 바꾸지 않았고 세션을 남기지 않았다.
+    SW_EXPECT_EQUAL( 0u, system.getSessionCount() );
+    SW_EXPECT_TRUE( pLeader->getCurrentStateName() == hashed_string( "Idle" ) );
+    SW_EXPECT_TRUE( pFollower->getCurrentStateName() == hashed_string( "Idle" ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pLeader->getPlayRate(), 1e-6f );
+
+    // 맞는 스냅샷은 들어가고, 같은 id 는 재생 중에 다시 받지 않는다.
+    SW_ASSERT_TRUE( system.restoreSession( manager, def, listBinding, good ) == PairedAnimationStartResult::Started );
+    SkeletalAnimatorComponent* pOther = TestPairedAnimationInternal::addParticipant( manager, "Other", folder, false );
+    SW_ASSERT_NOT_NULL( pOther );
+    SW_EXPECT_TRUE( system.restoreSession( manager, def, {
+                                                             PairedAnimationBinding{ hashed_string( "Leader" ), TComponentHandle<SkeletalAnimatorComponent>( pOther ) }
+    },
+                                           good ) == PairedAnimationStartResult::SessionIDInUse );
+    SW_EXPECT_EQUAL( 1u, system.getSessionCount() );
+}
+
+/**
+ * @brief [PairedAnimationTest] 스냅샷 복사 — 돌고 있는 세션의 상태를 복사해 바이트를 거쳐 다른 씬에 복원하면, 한 프레임 뒤 두 씬의 앵커 · 늦은 역할 시각이 같고 지난 알림은 다시 울리지 않는다
+ * @details 첫 씬은 다섯 번 갱신한다(앵커 0.5 초를 읽은 갱신에서 Prop 이 들어오고 알림은 이미 울렸다). 복사한 상태는 그 갱신 때의 값(앵커 0.5, Prop 진입 0.5)이다.
+ */
+SW_TEST_CASE( PairedAnimationTest, CapturedSnapshotRestoresIntoAnotherSceneInStep )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder = TestPairedAnimationInternal::writeClips( "pairedcapture", 0.0f );
+    SW_ASSERT_FALSE( folder.empty() );
+
+    GameObjectManager          serverManager;
+    SkeletalAnimatorComponent* pServerLeader   = TestPairedAnimationInternal::addParticipant( serverManager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pServerFollower = TestPairedAnimationInternal::addParticipant( serverManager, "Follower", folder, false );
+    SkeletalAnimatorComponent* pServerProp     = TestPairedAnimationInternal::addParticipant( serverManager, "Prop", folder, false );
+    SW_ASSERT_TRUE( pServerLeader != nullptr && pServerFollower != nullptr && pServerProp != nullptr );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationInternal::addReleaseNotify( *pServerFollower ) );
+    const shared_ptr<const PairedAnimationDef> def = TestPairedAnimationInternal::makeDef( TestPairedAnimationInternal::kSnapXML );
+    SW_ASSERT_NOT_NULL( def.get() );
+    PairedAnimationSystem&               serverSystem  = PairedAnimationSystem::getOrCreate( serverManager );
+    uint32                               sessionID     = 0;
+    const vector<PairedAnimationBinding> serverBinding = {
+        PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pServerLeader )},
+        PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pServerFollower )},
+        PairedAnimationBinding{    hashed_string( "Prop" ),     TComponentHandle<SkeletalAnimatorComponent>( pServerProp )},
+    };
+    SW_ASSERT_TRUE( serverSystem.startSession( serverManager, def, serverBinding, sessionID ) == PairedAnimationStartResult::Started );
+    for ( uint32 frameIndex = 0; frameIndex < 5; ++frameIndex )
+    {
+        TestPairedAnimationInternal::step( serverManager, serverSystem );
+    }
+    const PairedAnimationSession* pServerSession = serverSystem.findSession( sessionID );
+    SW_ASSERT_NOT_NULL( pServerSession );
+    PairedAnimationSessionSnapshot captured{};
+    SW_ASSERT_TRUE( pServerSession->captureSnapshot( captured ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, captured._anchorTime, 1e-6f );
+    SW_EXPECT_EQUAL( 1u, captured._nextNotifyIndex );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), captured._listRole.size() );
+    SW_EXPECT_TRUE( captured._listRole[2]._stage == PairedAnimationRoleStage::Playing );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, captured._listRole[2]._entryAnchorTime, 1e-6f );
+
+    vector<uint8> bytes;
+    captured.writeBytes( bytes );
+    PairedAnimationSessionSnapshot received{};
+    SW_ASSERT_TRUE( PairedAnimationSessionSnapshot::readBytes( bytes, received ) == PairedAnimationSessionSnapshot::ReadResult::Success );
+
+    GameObjectManager          clientManager;
+    SkeletalAnimatorComponent* pClientLeader   = TestPairedAnimationInternal::addParticipant( clientManager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pClientFollower = TestPairedAnimationInternal::addParticipant( clientManager, "Follower", folder, false );
+    SkeletalAnimatorComponent* pClientProp     = TestPairedAnimationInternal::addParticipant( clientManager, "Prop", folder, false );
+    SW_ASSERT_TRUE( pClientLeader != nullptr && pClientFollower != nullptr && pClientProp != nullptr );
+    AnimationNotifyComponent* pClientNotify = TestPairedAnimationInternal::addReleaseNotify( *pClientFollower );
+    SW_ASSERT_NOT_NULL( pClientNotify );
+    PairedAnimationSystem&               clientSystem  = PairedAnimationSystem::getOrCreate( clientManager );
+    const vector<PairedAnimationBinding> clientBinding = {
+        PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pClientLeader )},
+        PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pClientFollower )},
+        PairedAnimationBinding{    hashed_string( "Prop" ),     TComponentHandle<SkeletalAnimatorComponent>( pClientProp )},
+    };
+    SW_ASSERT_TRUE( clientSystem.restoreSession( clientManager, def, clientBinding, received ) == PairedAnimationStartResult::Started );
+    SW_EXPECT_TRUE( clientSystem.findSession( sessionID ) != nullptr );
+
+    // 클라이언트가 한 프레임 가면 서버가 방금 평가한 시각에 닿는다.
+    TestPairedAnimationInternal::step( clientManager, clientSystem );
+    SW_EXPECT_NEAR_EQUAL( TestPairedAnimationInternal::getCurrentTime( *pServerLeader ), TestPairedAnimationInternal::getCurrentTime( *pClientLeader ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( TestPairedAnimationInternal::getCurrentTime( *pServerProp ), TestPairedAnimationInternal::getCurrentTime( *pClientProp ), 1e-5f );
+    SW_EXPECT_EQUAL( 0u, TestPairedAnimationInternal::countRelease( *pClientNotify ) );
+
+    // 캡처는 재생 중에만 된다.
+    serverSystem.abortSession( serverManager, sessionID );
+    PairedAnimationSessionSnapshot afterAbort{};
+    SW_EXPECT_FALSE( pServerSession->captureSnapshot( afterAbort ) );
 }
