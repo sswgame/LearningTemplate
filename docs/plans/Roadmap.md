@@ -7,7 +7,7 @@
 ## 지금 순서
 
 1. **`integrator` 설계의 미구현 단위**(설계는 끝났고 코드가 없음).
-   - 데이터화: D6 → D7 → D8 → D9, 이어서 P1 · P2 → P4(D9, P1 뒤), G1 · G2 — [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
+   - 데이터화: D6 ~ D9 · P1 · P4 · G1 코드가 들어갔다(`wt/datadriven`, 빌드 미확인). 남은 것: 묶음 빌드와 검증, P2 의 남은 클리어 색 폴백(골든 이미지와 함께), G2(배포본 시나리오 기준값을 잰다) — [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
    - E3(E4 가 뒤따름) — [EnginePartition](EnginePartition.md) 6.4. `GameObjectManager.h` 를 바꿔 모든 모듈이 다시 빌드된다. [단독: 모든 모듈 재빌드]
    - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
 2. **새 시스템**:
